@@ -6,7 +6,7 @@
 // — 그러면 앱을 다시 켤 때 새 익명 계정이 된다. 반영하지 않은 교환은 저장의 pending 으로 이어 가지만 채널은 찾지 못한다.
 import fs from "node:fs";
 import path from "node:path";
-import { safeStorage } from "electron";
+import { app, safeStorage } from "electron";
 import { PATHS } from "./paths.js";
 import { createTradeNet, type SessionStorage } from "../trade/net.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
@@ -51,19 +51,46 @@ export interface MainTrade {
   onView: (fn: (view: TradeViewModel) => void) => () => void;
 }
 
-// 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다
+// 개발용 시험 장치 — 개발 실행에서만 읽는다. 설치본은 무시한다 (docs/work/trade/record.md "E2E 설계")
+//   POKEBUDDY_TRADE_FAULT=before-apply   서버 완료 뒤 로컬 반영 직전에 앱을 끝낸다
+//   POKEBUDDY_TRADE_DATA_VERSION         데이터 버전을 바꿔 참가 거절을 재현한다
+//   POKEBUDDY_TRADE_POLL_MS · _RETRY_MS  다시 읽기·재시도 간격
+export interface TradeDevHooks {
+  fault: "before-apply" | null;
+  dataVersion: string | null;
+  pollMs: number | null;
+  retryMs: number | null;
+}
+
+export function devHooks(env: NodeJS.ProcessEnv = process.env, packaged = app.isPackaged): TradeDevHooks {
+  if (packaged) return { fault: null, dataVersion: null, pollMs: null, retryMs: null };
+  const ms = (v: string | undefined): number | null => (v && /^\d+$/.test(v) ? Number(v) : null);
+  return {
+    fault: env.POKEBUDDY_TRADE_FAULT === "before-apply" ? "before-apply" : null,
+    dataVersion: env.POKEBUDDY_TRADE_DATA_VERSION || null,
+    pollMs: ms(env.POKEBUDDY_TRADE_POLL_MS),
+    retryMs: ms(env.POKEBUDDY_TRADE_RETRY_MS),
+  };
+}
+
+// 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
 export function createMainTrade(game: GameV3): MainTrade | null {
-  const config = onlineConfig();
+  const config = onlineConfig(undefined, app.isPackaged ? {} : process.env);
   if (!config.url || !config.publishableKey) return null;
+  const dev = devHooks();
   const listeners = new Set<(view: TradeViewModel) => void>();
   const session = createTradeSession({
     net: createTradeNet({ url: config.url, key: config.publishableKey, storage: encryptedStorage() }),
     run: (id, name, args) => game.executor.run({ id, name, args }),
     read: game.read,
     protocol: config.protocol,
-    dataVersion: dataVersion(),
+    dataVersion: dev.dataVersion ?? dataVersion(),
     linkOf: (token) => linkOf(config, token),
     onView: (view) => { for (const fn of listeners) fn(view); },
+    ...(dev.pollMs ? { pollMs: dev.pollMs } : {}),
+    ...(dev.retryMs ? { retryMs: dev.retryMs } : {}),
+    // 반영을 건너뛰고 바로 끝낸다. process.exit 는 Electron 에서 창을 정리하며 끝나 그 사이 반영이 돌 수 있다(2026-09-27 E2E 에서 발견)
+    ...(dev.fault === "before-apply" ? { beforeApply: () => { setImmediate(() => process.kill(process.pid, "SIGKILL")); return true; } } : {}),
   });
   return {
     session,

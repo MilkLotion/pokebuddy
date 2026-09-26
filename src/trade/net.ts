@@ -71,13 +71,17 @@ export function codeOf(error: { message?: string; details?: string | null; code?
   const message = (error?.message ?? "").trim();
   const m = CODE.exec(message);
   if (m) return { code: m[1] as TradeErrorCode, ...(error?.details ? { detail: error.details } : {}) };
-  if (/fetch|network|Failed to fetch|ECONN|ENOTFOUND|ETIMEDOUT|socket/i.test(message) || error?.code === "") return { code: "NETWORK" };
+  if (/fetch|network|Failed to fetch|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i.test(message) || error?.code === "") return { code: "NETWORK" };
   return { code: "UNKNOWN", ...(message ? { detail: message } : {}) };
 }
+
+const FETCH_TIMEOUT_MS = 15_000;
 
 export function createTradeNet({ url, key, storage }: TradeNetOptions): TradeNet {
   const client = createClient(url, key, {
     auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    // 요청마다 제한 시간을 둔다 — 서버가 답하지 않으면 명령 통로(mailbox)가 그동안 막힌다(2026-09-27 검수)
+    global: { fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS) }) },
   });
 
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => {
@@ -91,7 +95,13 @@ export function createTradeNet({ url, key, storage }: TradeNetOptions): TradeNet
   };
 
   // 로그인하지 않았으면 익명 계정을 만든다. 교환에는 로그인이 필요 없다(2026-09-26 사용자 결정)
-  const ensureSession: TradeNet["ensureSession"] = async () => {
+  // 동시에 불려도 익명 계정을 두 개 만들지 않게 진행 중인 확인을 나눠 쓴다
+  let ensuring: ReturnType<TradeNet["ensureSession"]> | null = null;
+  const ensureSession: TradeNet["ensureSession"] = () => {
+    ensuring ??= ensureOnce().finally(() => { ensuring = null; });
+    return ensuring;
+  };
+  const ensureOnce: TradeNet["ensureSession"] = async () => {
     try {
       const { data } = await client.auth.getSession();
       let user = data.session?.user ?? null;

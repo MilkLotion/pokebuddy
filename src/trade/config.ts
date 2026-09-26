@@ -2,6 +2,7 @@
 //
 // data/online.json 은 공개해도 되는 값만 둔다(주소, publishable 키, 규약 번호).
 // 개발 중에는 환경 변수로 로컬 Supabase 를 가리킨다: POKEBUDDY_SUPABASE_URL, POKEBUDDY_SUPABASE_KEY
+// 설치본은 환경 변수를 넘기지 않는다(src/main/trade.ts) — 다른 서버로 바꿔 세션 토큰을 빼 가지 못하게(2026-09-27 검수)
 import { createHash } from "node:crypto";
 import { loadJson, type DexOptions } from "../dex/data.js";
 import { slugs } from "../dex/species.js";

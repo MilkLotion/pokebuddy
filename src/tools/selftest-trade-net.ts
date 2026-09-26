@@ -54,7 +54,7 @@ function player(species: string, url: string, key: string) {
 async function main(): Promise<void> {
   const cfg = local();
   if (!cfg) { process.stdout.write("selftest-trade-net: 로컬 Supabase 가 없어 건너뜀\n"); return; }
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(cfg.url)) throw new Error("로컬 주소가 아니다 — 실제 프로젝트에는 붙지 않는다");
+  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(cfg.url)) throw new Error("로컬 주소가 아니다 — 실제 프로젝트에는 붙지 않는다");
 
   const a = player("charmander", cfg.url, cfg.key);
   const b = player("eevee", cfg.url, cfg.key);
@@ -116,14 +116,22 @@ async function main(): Promise<void> {
     await b.session.join(open);
     await c.session.join(open);
     assert.equal(c.session.view().error?.code, "TRADE_LINK_USED", "세 번째 사람");
-    await b.session.leave();
-    c.session.stop();
     process.stdout.write("(7) 오류 코드 전달  ok\n");
+
+    // 거절 이유: 진행 중 채널이 있으면 새로 만들지 않는다. 채널이 없으면 확정하지 않는다. 멈춘 세션은 조작하지 않는다
+    assert.deepEqual(await a.session.create(), { ok: false, reason: "in-trade" });
+    assert.deepEqual(await c.session.ready(), { ok: false, reason: "no-channel" });
+    assert.equal((await b.session.ready()).ok, false, "제안이 없으면 확정하지 않는다");
+    assert.deepEqual(await a.session.leave(), { ok: true });
+    c.session.stop();
+    assert.deepEqual(await c.session.create(), { ok: false, reason: "stopped" });
+    await b.session.leave();
+    process.stdout.write("(8) 조작 거절 이유  ok\n");
   } finally {
     a.session.stop();
     b.session.stop();
   }
-  process.stdout.write("selftest-trade-net: 통과 (만들기·참가·제안·확정·완료·반영·나가기·오류)\n");
+  process.stdout.write("selftest-trade-net: 통과 (만들기·참가·제안·확정·완료·반영·나가기·오류·거절)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

@@ -2,7 +2,7 @@
 //
 // 1. npm run build 로 dist/ 를 만든다 (package.json 의 스크립트가 먼저 부른다)
 // 2. release/app/ 에 실행에 필요한 파일만 복사한다. 목록은 package.json 의 `files` 와 같다
-// 3. release/app/ 에 의존성이 없는 작은 package.json 을 만든다
+// 3. release/app/ 에 작은 package.json 을 만든다. dependencies 에는 electron 을 뺀 실행 의존성만 둔다
 // 4. electron-builder 로 release/app/ 을 묶는다
 //
 // 따로 모아 묶는 이유 — electron-builder 는 앱의 dependencies 에 electron 이 있으면 묶기를 거부한다.
@@ -31,6 +31,24 @@ function expand(entry) {
   return fs.readdirSync(abs).filter((name) => pattern.test(name)).map((name) => `${dir}/${name}`);
 }
 
+// 실행 때 쓰는 npm 패키지 — dependencies 에서 electron 을 뺀 것과 그 하위 의존성 전부.
+// 루트 node_modules 에서 그대로 복사한다. 네트워크 없이 개발 PC 와 같은 버전이 들어간다.
+// 2026-09-27: 친구 교환이 @supabase/supabase-js 를 쓰면서 더했다. 전에는 electron 말고 실행 의존성이 없었다
+function runtimePackages() {
+  const seen = new Set();
+  const visit = (name) => {
+    if (seen.has(name)) return;
+    const dir = path.join(root, "node_modules", name);
+    if (!fs.existsSync(path.join(dir, "package.json"))) throw new Error(`실행 의존성이 설치돼 있지 않다: ${name} — npm install 을 먼저 한다`);
+    seen.add(name);
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8"));
+    for (const dep of Object.keys(meta.dependencies ?? {})) visit(dep);
+    for (const dep of Object.keys(meta.optionalDependencies ?? {})) if (fs.existsSync(path.join(root, "node_modules", dep))) visit(dep);
+  };
+  for (const name of Object.keys(pkg.dependencies ?? {})) if (name !== "electron") visit(name);
+  return [...seen].sort();
+}
+
 function stageFiles() {
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
@@ -46,6 +64,10 @@ function stageFiles() {
   // 앱이 처음 켜질 때 받아 캐시에 둔다 (src/main/portraits.ts prefetch)
   // 자체 검사와 데이터 생성 도구는 실행에 쓰지 않는다
   fs.rmSync(path.join(stage, "dist", "tools"), { recursive: true, force: true });
+  for (const name of runtimePackages()) {
+    fs.cpSync(path.join(root, "node_modules", name), path.join(stage, "node_modules", name), { recursive: true });
+    copied.push(`node_modules/${name}`);
+  }
   const appPkg = {
     name: pkg.name,
     productName: pkg.name,
@@ -54,6 +76,8 @@ function stageFiles() {
     license: pkg.license,
     author: "MilkLotion",
     main: pkg.main,
+    // electron-builder 는 dependencies 에 적힌 패키지만 node_modules 에서 골라 넣는다. 적지 않으면 복사한 node_modules 를 버린다(2026-09-27 검수)
+    dependencies: Object.fromEntries(Object.entries(pkg.dependencies ?? {}).filter(([name]) => name !== "electron")),
   };
   fs.writeFileSync(path.join(stage, "package.json"), `${JSON.stringify(appPkg, null, 2)}\n`);
   return copied;

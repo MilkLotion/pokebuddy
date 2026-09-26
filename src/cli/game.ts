@@ -3,12 +3,15 @@ import { PATHS } from "../main/paths";
 import { send } from "../save/mailbox";
 import type { Command, CommandName } from "../shared/types";
 
-const allowed: CommandName[] = ["snapshot", "shop.buy", "evolve", "pet.look", "pet.set", "pet.form", "feed", "play", "party.show", "party.hide"];
+const allowed: CommandName[] = [
+  "snapshot", "shop.buy", "evolve", "pet.look", "pet.set", "pet.form", "feed", "play", "party.show", "party.hide",
+  "trade.create", "trade.join", "trade.offer", "trade.ready", "trade.unready", "trade.leave", "trade.status",
+];
 
 export async function game(argv: string[]): Promise<void> {
   const [name = "snapshot", target, ...fields] = argv;
   if (name === "--help") {
-    process.stdout.write("pokebuddy game <command> [pet-id|product-id|-] [key=value ... | JSON]\nCommands: snapshot, shop.buy, evolve, pet.set, pet.form, feed, play, party.show, party.hide\nExamples: pokebuddy game shop.buy random · pokebuddy game evolve p1 to=umbreon · pokebuddy game pet.form p1 species=lunala\n");
+    process.stdout.write("pokebuddy game <command> [pet-id|product-id|-] [key=value ... | JSON]\nCommands: snapshot, shop.buy, evolve, pet.set, pet.form, feed, play, party.show, party.hide,\n  trade.create, trade.join, trade.offer, trade.ready, trade.unready, trade.leave, trade.status\nExamples: pokebuddy game shop.buy random · pokebuddy game evolve p1 to=umbreon · pokebuddy game pet.form p1 species=lunala\n  pokebuddy game trade.join - link=<trade link> · pokebuddy game trade.offer p1 · pokebuddy game trade.ready\n");
     return;
   }
   try {

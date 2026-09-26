@@ -180,6 +180,7 @@ export type CommandName =
   | "settings.set"
   | "shop.buy"
   | "snapshot"
+  | "trade.create" | "trade.join" | "trade.offer" | "trade.ready" | "trade.unready" | "trade.leave" | "trade.status"
   | "quit";
 
 export type CommandSource = "menu" | "tray" | "settings" | "cli" | "vscode" | "pet";

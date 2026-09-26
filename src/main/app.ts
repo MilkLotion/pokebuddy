@@ -19,6 +19,7 @@ import { lockExcept, petMenu, trayMenu } from "./menus";
 import { createSandboxParty, type PartyPet, type PartySource } from "./party";
 import { createSaveParty, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
+import { createMainTrade, type MainTrade } from "./trade";
 import { careItem, petStatus } from "./status";
 import { openManage } from "./manage-window";
 import { createPortraits } from "./portraits";
@@ -130,6 +131,7 @@ let stageWin: StageWindow | null = null;
 let stage: Stage | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
+let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (docs/work/trade/record.md)
 let tray: TrayHandle | null = null;
 let shortcuts: Shortcuts | null = null;
 let lastState: string | null = null;
@@ -415,6 +417,26 @@ function showPetMenu(id: string): void {
 }
 
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
+// 친구 교환 세션 — 저장을 쓰는 동반자(writer)일 때 처음 부를 때 만들고 한 번 시작한다(로그인 확보·반영하지 않은 교환 복구).
+// 교환이 끝나 개체가 바뀌면 무대를 다시 그린다
+function tradeSession(): MainTrade["session"] | null {
+  if (quitting || mode !== "companion" || !game || !party || party.kind !== "save" || !party.isWriter()) return null;
+  if (!mainTrade) {
+    mainTrade = createMainTrade(game);
+    if (!mainTrade) return null;
+    let lastReceived: string | null = null;
+    mainTrade.onView((view) => {
+      const got = view.received?.petId ?? null;
+      if (got && got !== lastReceived) {
+        lastReceived = got;
+        if (party?.kind === "save") party.refresh(); // 저장을 다시 읽으면 onChange 가 무대를 다시 그린다
+      }
+    });
+    void mainTrade.session.start();
+  }
+  return mainTrade.session;
+}
+
 async function refreshParty(): Promise<void> {
   if (!party || !stage) return;
   await stage.setParty(party.pets());
@@ -661,8 +683,17 @@ async function main(): Promise<void> {
     },
     quit: () => app.quit(),
     log,
+    trade: tradeSession,
   });
-  party.onRole((w) => commands?.setWriter(w));
+  party.onRole((w) => {
+    commands?.setWriter(w);
+    // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
+    if (w) tradeSession();
+    else {
+      mainTrade?.session.stop();
+      mainTrade = null;
+    }
+  });
   commands.setWriter(party.isWriter());
   party.onChange(() => {
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
@@ -684,6 +715,7 @@ async function main(): Promise<void> {
     app.quit();
     return;
   }
+  tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
 
   if (mode === "companion") {
     tray = createTray({
@@ -742,6 +774,8 @@ app.on("before-quit", () => {
   tray?.destroy();
   tray = null;
   commands?.stop();
+  mainTrade?.session.stop();
+  mainTrade = null;
   bannerWin?.close();
   bannerWin = null;
   party?.stop(); // 저장 잠금을 놓는다

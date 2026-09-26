@@ -1389,3 +1389,160 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 | T-01 | `selftest` 스크립트에 `selftest-trade`·`selftest-trade-net` 더하기 | 열림 |
 | T-04 | 앱 시작 때 `start`(로그인 확보·복구)와 설정창 IPC 연결 | 2c |
 | T-05 | 교환 링크의 정적 페이지 | 2d |
+
+## 구현 2c~2e 계획과 E2E 설계 (2026-09-27)
+
+사용자 지시: "작업할 때 계획을 먼저 탄탄하게 잡고 설계->작업->검수->피드백->수정 으로 작업진행해줘", "다른 세션들은 거의 다 꺼서 sub agent 써도 돼."
+상태: 설계. 사용자 확인 전. 구현 미시작.
+
+### 근거 — 지금 구조 (2026-09-27 조사)
+
+서브에이전트가 코드를 읽고 보고했다. 주요 사실은 아래와 같다.
+
+| 항목 | 사실 | 근거 |
+|---|---|---|
+| 교환 코드 연결 | `createMainTrade`를 부르는 곳이 없다. 명령·CLI·IPC·탭 어디에도 연결되지 않았다 | grep 0건 |
+| CLI 경로 | `pokebuddy game <명령>`이 mailbox 파일로 명령을 보내고 결과 JSON 을 stdout 에 쓴다. 제한 시간 기본 2초, 느린 명령 45초 | [src/cli/game.ts](../../../src/cli/game.ts), [src/save/mailbox.ts](../../../src/save/mailbox.ts) |
+| 명령 처리 | writer 프로세스만 mailbox 를 처리한다 | [src/main/commands.ts](../../../src/main/commands.ts) |
+| HOME 격리 | `POKEBUDDY_HOME` 변수는 없다. `HOME`·`USERPROFILE`·`APPDATA`·`LOCALAPPDATA`·`TEMP`·`TMP`를 바꾸면 두 앱을 동시에 띄울 수 있다. 기존 E2E 가 이 방식이다 | [scripts/e2e-companion.cjs](../../../scripts/e2e-companion.cjs), [config.js](../../../config.js) |
+| 준비 완료·종료 | 앱은 초기화가 끝나면 `companion.lock`에 ready 를 적는다. `companion stop`이 lock 을 지우면 앱이 끝난다 | [src/main/app.ts](../../../src/main/app.ts), [cli/run.js](../../../cli/run.js) |
+| 설정창 | IPC 채널은 `manage.d.ts`·`manage-window.ts`·`preload.ts` 세 곳에 함께 더한다. 모든 처리기가 보낸 창을 검사한다. 창으로 밀어 보내는 `toManage`가 있다. 탭은 `manage.ts`의 `TabId`·`TABS`·`draw()` | [src/main/manage-window.ts](../../../src/main/manage-window.ts), [src/renderer/manage.ts](../../../src/renderer/manage.ts) |
+| 딥링크 | 처리 코드가 없다. `second-instance`는 설정창만 연다 | [src/main/app.ts](../../../src/main/app.ts) |
+
+### 목표와 범위
+
+- 목표: 교환을 실제 앱에서 쓸 수 있게 하고, 앱 두 개를 띄워 로컬 Supabase 에서 끝까지 검사한다.
+- 범위: 교환만. 로그인·클라우드 저장의 앱 코드는 이번 범위가 아니다. 서버 SQL 은 이미 있다.
+- 제외: 실제 프로젝트(원격)에서의 E2E. 원격은 사용자가 두 PC 로 확인한다.
+
+### 단계
+
+| 단계 | 내용 | 주로 바꿀 곳 |
+|---|---|---|
+| 2c-1 앱 연결 | companion·writer 일 때 교환 세션을 만들고 `start`(로그인 확보·복구). 종료 때 `stop`. 명령 `trade.create`·`trade.join`·`trade.offer`·`trade.ready`·`trade.unready`·`trade.leave`·`trade.status`를 명령 처리기에 등록하고 결과로 교환 보기를 돌려준다. mailbox 느린 명령 목록과 `pokebuddy game` 허용 목록에 더한다. reader 는 `not-writer`로 거절한다 | `app.ts`, `commands.ts`, `shared/types.ts`, `save/mailbox.ts`, `save/rules.ts`, `cli/game.ts` |
+| 2c-2 화면 | 설정창에 `교환` 탭(가방 옆). 05 Screens 확정 시안(`633:18522`의 교환 6화면)대로 그린다. 교환 보기는 IPC 로 밀어 보내고, 조작은 IPC 요청으로 보낸다. 내 포켓몬 고르기는 파티·박스 개체이며 단일 포켓몬은 비활성. 링크 복사는 메인의 `clipboard`로 한다 | `manage.d.ts`, `manage-window.ts`, `preload.ts`, `renderer/manage.ts`·`manage.html`, `lib/i18n` |
+| 2c-3 Figma 마무리 | D-01 메인 탭 `Primary Navigation`에 `교환`과 `Active=Trade`. D-02 교환 화면의 풀어 둔 배너·대화상자·버튼을 인스턴스로 | Figma. 글자 덮어쓰기는 Chrome 으로 한다 |
+| 2d 링크 열기 | `pokebuddy trade <링크>` 명령(`game trade.join`을 감싼다). 설정창 붙여넣기 칸(2c-2). 설치본의 `pokebuddy://` 프로토콜 등록과 `second-instance`·`open-url`에서 링크 받기. GitHub Pages 정적 페이지 `/pokebuddy/trade` | `bin/pokebuddy`, `cli/args.js`, `app.ts`, 새 정적 페이지 |
+| 2e E2E | 아래 E2E 설계 | 새 `scripts/e2e-trade.cjs` |
+
+### E2E 설계
+
+**조작 방법** — 화면 클릭 대신 CLI 명령으로 조작한다. `pokebuddy game trade.* …`의 JSON 결과로 판정한다. 결과가 결정적이고 기존 E2E 와 같은 방식이다. 화면은 개발용 실행기(`dev-manage.cjs --tab trade --shot`)로 캡처해 시안과 따로 비교한다.
+
+**앱 격리** — 앱마다 임시 폴더 하나를 두고 `HOME`·`USERPROFILE`·`APPDATA`·`LOCALAPPDATA`·`TEMP`·`TMP`를 그 아래로 바꾼다. 저장·세션 파일·잠금·Electron 데이터가 모두 따로 간다. 딥링크 등록은 쓰지 않는다. 앱은 A·B 두 개, 필요할 때 C 를 더한다.
+
+**서버** — `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY`로 로컬 Supabase 를 가리킨다. 주소가 127.0.0.1·localhost 가 아니면 시작하지 않는다. 시작 전에 `npx supabase db reset`으로 DB 를 비운다.
+
+**저장 준비** — 앱을 켜기 전에 각 HOME 에 저장 v3 를 쓴다. 빌드한 `dist`의 `empty`·`newPet`으로 만든다. A: 파이리(파티 1칸), 뮤츠(박스). B: 이브이(파티 1칸).
+
+**개발용 시험 장치** — 개발 실행(`app.isPackaged === false`)에서만 읽는다. 설치본은 무시한다.
+
+| 변수 | 쓰는 곳 | 뜻 |
+|---|---|---|
+| `POKEBUDDY_TRADE_FAULT=before-apply` | 수용 조건 5 | 서버가 done 을 알린 뒤 로컬 반영 직전에 앱을 끝낸다 |
+| `POKEBUDDY_TRADE_DATA_VERSION` | 수용 조건 8 | 데이터 버전을 바꿔 참가 거절을 재현한다 |
+| `POKEBUDDY_TRADE_POLL_MS`, `POKEBUDDY_TRADE_RETRY_MS` | 실시간·재시도 | 다시 읽기·재시도 간격을 줄인다 |
+
+**관측** — `trade.status`는 서버를 다시 읽지 않고 지금 보기를 돌려준다. 보기에 마지막 새로 고침 이유(`signal`·`poll`·`direct`)와 시각을 더한다. 실시간 신호가 도착했는지는 이 값으로 본다.
+
+**만료 재현** — 10분을 기다리지 않는다. 로컬 DB 컨테이너에서 `expires_at`을 과거로 옮긴다(`docker exec supabase_db_pokebuddy psql …`). 로컬 컨테이너 이름이 아니면 멈춘다.
+
+**오프라인 재현** — 서버 주소를 닫힌 포트로 둔 앱을 따로 띄운다. `trade.create`가 `NETWORK`를 돌려주고, 돌봄 같은 게임 명령은 그대로 되는지 본다.
+
+**조작한 앱 재현** — 규칙 밖 제안(전설)은 앱이 보내지 않는다. 그래서 E2E 스크립트가 supabase-js 로 익명 사용자를 만들어 A 의 링크로 참가하고 `set_offer`로 뮤츠를 올린다. A 의 보기에 `friendBlocked=single`이 나오고 확정이 되지 않는지 본다.
+
+**시나리오와 수용 조건**
+
+| 번호 | 시나리오 | 확인 | 수용 조건 |
+|---|---|---|---|
+| E1 | A 가 만들고 B 가 참가, C 가 같은 링크로 참가 | C 는 `TRADE_LINK_USED` | 1 |
+| E2 | A 가 만든 링크의 만료 시각을 과거로 옮기고 B 가 참가 | `TRADE_LINK_EXPIRED` | 2 |
+| E3 | 둘 다 제안, A 확정 뒤 B 가 제안 변경 | A 의 확정이 풀리고 A 의 로컬 잠금도 풀린다. 실시간 신호로 A 보기가 바뀐다(이유 `signal`) | 3, 실시간 |
+| E4 | 둘 다 확정 | 양쪽 저장에서 개체가 맞바뀌고 같은 칸에 있다. 개체 수·칸 수 그대로 | 4 |
+| E5 | A 를 `before-apply`로 켜 완료 직후 끝낸 뒤 보통으로 다시 켠다 | 다시 켠 뒤 한 번만 반영된다. 또 켜도 그대로 | 5 |
+| E6 | A 가 뮤츠를 올린다. 조작한 클라이언트가 뮤츠를 올린다 | 올리기는 `single`로 거절. 받는 쪽은 `friendBlocked=single`, 확정 안 됨 | 6 |
+| E7 | 닫힌 포트 서버로 켠 앱 | 교환은 `NETWORK`, 게임 명령은 된다 | 7 |
+| E8 | B 의 데이터 버전을 바꿔 참가 | `TRADE_VERSION_MISMATCH` | 8 |
+| E9 | B 가 나간다 | A 보기 `closed`, 이유 `guest_left`, A 잠금 없음 | 친구 나감 |
+
+**통과 기준** — E1~E9 전부 통과. 같은 스크립트를 두 번 연속 돌려도 통과. 끝나면 앱을 모두 끄고 임시 폴더를 지운다. 자체 검사(`selftest-trade`, `selftest-trade-net`, 관련 검사)도 통과.
+
+### 위험
+
+| 위험 | 대응 |
+|---|---|
+| 설정창 코드(`manage.ts`·`manage.html`)에 다른 세션의 미커밋 변경이 있다 | 작업 전에 그 세션(`terminal-pokemon-18`)에 알리고 순서를 맞춘다. 커밋은 내 덩어리만 고른다 |
+| mailbox 2초 제한 | 교환 명령을 느린 명령 목록에 넣는다 |
+| 시험 장치가 설치본에 남아 오동작 | `app.isPackaged`면 읽지 않는다 |
+| 원격 프로젝트의 Realtime 비공개 채널 설정 | 로컬에서는 된다. 원격은 설치 전 사용자 확인 때 본다 |
+| GitHub Pages 켜기 | 저장소 설정 변경이다. 사용자 확인 뒤 한다 |
+
+### 작업 방식
+
+- 단계마다 설계 → 작업 → 검수 → 피드백 → 수정 순서로 한다. 단계 결과를 이 기록에 남긴다.
+- 검수에 서브에이전트를 쓴다. 코드 변경마다 독립 검토 에이전트가 수정 내용을 읽고 문제를 보고한다. 구현은 이 세션이 한다 — 같은 파일을 여러 에이전트가 동시에 고치지 않기 위해서다.
+
+## 구현 2c-1·2e — 앱 연결과 E2E (2026-09-27)
+
+사용자 지시: "진행하는데, 작업할 때 계획을 먼저 탄탄하게 잡고 설계->작업->검수->피드백->수정 으로 작업진행해줘". 설계는 위 "구현 2c~2e 계획과 E2E 설계"다.
+순서를 2c-1 → 2e → 2c-2 로 바꾸었다. 이유: 설정창 코드(`manage.ts`)에 다른 세션(`terminal-pokemon-18`)의 미커밋 변경이 있었다. 화면 없이 CLI 로 E2E 를 먼저 끝낼 수 있다.
+사용자 요구: E2E 는 사람이 누르지 않고 끝까지 돈다("계속 내가 엔터를 쳐야하면 e2e가 아니지않아?"). 그래서 셸의 `rm -rf`를 쓰지 않는다. 임시 폴더는 Node `fs.rmSync`로 지운다.
+
+### 작업
+
+| 파일 | 내용 |
+|---|---|
+| [src/main/app.ts](../../../src/main/app.ts) | 동반자이면서 writer 일 때 교환 세션을 한 번 만들고 `start`한다. writer 를 놓으면 멈춘다. 끝날 때 `stop`. 받은 개체가 바뀌면 저장을 다시 읽는다(무대는 `onChange`가 다시 그린다) |
+| [src/main/commands.ts](../../../src/main/commands.ts) | `trade.create`·`join`·`offer`·`ready`·`unready`·`leave`·`status`. 결과는 조작의 결과(`ok`·`reason`·`detail`)와 교환 보기(`trade`). reader 는 mailbox 로 writer 에 넘긴다. 세션이 없으면 `trade-off` |
+| [src/trade/session.ts](../../../src/trade/session.ts) | 조작이 결과를 돌려준다. 거절 이유 `busy`·`no-channel`·`not-ready`·`in-trade`·`stopped`. 진행 중 채널이 있으면 새로 만들거나 참가하지 않는다. `stop` 뒤에는 타이머·재시도·구독을 다시 만들지 않는다. 시작 확인(`start`) 중에는 `busy`. 새로 고침 이유(`signal`·`poll`·`direct`·`recover`)와 시각을 보기에 남긴다. 실시간 구독이 실패해도 주기 새로 고침으로 이어 간다 |
+| [src/trade/net.ts](../../../src/trade/net.ts) | 요청마다 15초 제한. 동시에 부른 로그인 확인은 하나를 나눠 쓴다(익명 계정을 두 개 만들지 않는다) |
+| [src/main/trade.ts](../../../src/main/trade.ts), [src/trade/config.ts](../../../src/trade/config.ts) | 개발용 시험 장치(`POKEBUDDY_TRADE_FAULT`·`_DATA_VERSION`·`_POLL_MS`·`_RETRY_MS`). 설치본은 시험 장치와 `POKEBUDDY_SUPABASE_*`를 모두 무시한다 |
+| [src/save/mailbox.ts](../../../src/save/mailbox.ts), [src/cli/game.ts](../../../src/cli/game.ts), [src/shared/types.ts](../../../src/shared/types.ts) | 교환 명령 이름, CLI 허용 목록·도움말. 교환 명령은 제한 45초, `trade.status`는 기본 제한 |
+| [scripts/build-exe.cjs](../../../scripts/build-exe.cjs) | 실행 의존성(`@supabase/*`, `iceberg-js`, `tslib`)을 `release/app/node_modules`에 복사하고, 설치본 `package.json`의 `dependencies`에 적는다 |
+| [scripts/e2e-trade.cjs](../../../scripts/e2e-trade.cjs) | E1~E9 E2E. 앱마다 임시 HOME. 로컬 Supabase 주소만 허용. DB 컨테이너 이름은 `supabase/config.toml`의 `project_id`로 정한다 |
+| [src/tools/selftest-trade-net.ts](../../../src/tools/selftest-trade-net.ts), [package.json](../../../package.json) | 거절 이유 검사 (8). `npm run selftest`에 `selftest-trade`·`selftest-trade-net`을 더했다(T-01) |
+
+### 검수
+
+| 명령 | 결과 |
+|---|---|
+| `npm run check`, `npm run build` | 통과 |
+| `node dist/tools/selftest-{trade,trade-net,commands,tx,save,bag,flow,achievement,stage,manage}.js` | 통과 |
+| `node scripts/e2e-trade.cjs` | 수정 뒤 두 번 연속 통과 (10개) |
+| `npm run dist:win` | 통과. `release/win-unpacked/resources/app/node_modules`에 `@supabase` 7개·`iceberg-js`·`tslib`이 있다. 그 폴더에서 `require('@supabase/supabase-js')`가 된다. 설치본 실행은 확인하지 않았다 |
+
+독립 검토 에이전트가 수정 전 변경을 읽고 18건을 보고했다. 조치는 아래와 같다.
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| R-01 높음 | electron-builder 는 `dependencies`에 적힌 패키지만 넣는다. 설치본에 `node_modules`가 빠진다 | 설치본 `package.json`에 `dependencies`를 적었다. 빌드 결과로 확인 |
+| R-02 | 중첩 `node_modules`·peer 의존성 | 지금 실행 의존성에는 중첩 폴더가 없다. `cpSync`가 패키지 폴더를 통째로 복사한다. peer 는 `supabase-js`의 `@opentelemetry/api` 하나이고 설치돼 있지 않다. 조치 없음 |
+| R-03 | 설치본에서도 `POKEBUDDY_SUPABASE_URL`로 서버를 바꿀 수 있다. 세션 토큰이 다른 서버로 간다 | 설치본은 환경 변수를 넘기지 않는다 |
+| R-04 | 조작이 아무것도 하지 않아도 `ok:true`. 앞선 새로 고침 오류가 남아 `status`가 `ok:false` | 조작이 결과를 돌려준다. 명령 결과는 그 결과로 정한다 |
+| R-05 | 서버가 답하지 않으면 mailbox 처리가 오래 막힌다 | 요청 15초 제한. `trade.status`는 느린 목록에서 뺐다. mailbox 는 여전히 요청을 하나씩 처리한다 — 교환 명령이 도는 동안 다른 명령은 기다린다(최대 수십 초). 열어 둔다(T-06) |
+| R-06 | 로그인 확인이 동시에 돌면 익명 계정이 둘 생긴다 | 진행 중인 확인을 나눠 쓴다 |
+| R-07 | 시작 복구와 새 채널 만들기가 겹친다 | 시작 확인 중 `busy`. 진행 중 채널이 있으면 `in-trade` |
+| R-08 | `stop` 뒤에도 주기 새로 고침·재시도가 다시 생긴다 | `stopped` 뒤에는 만들지 않는다 |
+| R-09 | writer 를 놓아도 교환 세션이 돈다 | 멈추고 버린다. 다시 writer 가 되면 새로 만든다 |
+| R-10 | 받은 개체가 바뀌면 무대를 두 번 그린다 | `party.refresh()`의 `onChange`만 쓴다 |
+| R-11 | 겹친 새로 고침의 이유가 섞인다 | 도는 차례마다 이유를 따로 잡는다 |
+| R-12 | 잘못된 링크의 실패가 다른 조작의 `busy`를 푼다 | `busy` 확인 뒤에 링크를 검사한다 |
+| R-13 | E2E 가 고정 3초를 기다린다 | 시작 확인이 끝날 때까지(`busy=false`) 기다린다 |
+| R-14 | 로컬 주소 검사가 `localhost.example.com`을 통과시킨다 | 끝을 고정했다(E2E·자체 검사) |
+| R-15 | DB 컨테이너 이름이 고정값 | `config.toml`에서 읽는다 |
+| R-16 | 앱이 끝나지 않으면 E2E 정리가 멈춘다. 임시 폴더 지우기 실패가 전체를 실패로 만든다 | pid 로 강제 종료, 지우기 실패는 알리기만, `main().catch` |
+| R-17 | E6 판정식이 늘 참이 되는 모양. 규약 번호를 1 로 고정 | `LOCAL`·`single`로 고정. 규약 번호는 설정에서 읽는다 |
+| R-18 | 스크립트의 `console.log` | 기존 `scripts/*.cjs` 관례대로 둔다. 조치 없음 |
+
+### 피드백
+
+| 번호 | 내용 | 상태 |
+|---|---|---|
+| T-01 | `selftest` 스크립트에 교환 검사 더하기 | 닫힘 |
+| T-04 | 앱 시작 때 `start`와 명령 연결 | 닫힘. 설정창 IPC 는 2c-2 |
+| T-05 | 교환 링크의 정적 페이지 | 2d |
+| T-06 | mailbox 가 교환 명령을 기다리는 동안 다른 명령이 밀린다 | 열림. 설정창 조작은 IPC 로 바로 부르므로 2c-2 에서 다시 본다 |
+| T-07 | 설치본을 실제로 설치해 교환이 되는지 | 열림. 사용자 확인 때 본다 |
+| T-08 | `terminal-pokemon-18` 보고: 연결 탭에 "오늘 작업 적립"이 없다 | 이 작업의 범위가 아니다. 확인하지 않았다 |
+
+문서 검토: 이 절을 쓰기 지침 점검표로 보았다. 한 문장 한 사실, 식별자는 코드 그대로, 사용자 발언과 관찰을 나누었다.

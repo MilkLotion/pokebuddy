@@ -18,6 +18,7 @@ import { candidates, dayPartOf } from "../dex/evolve";
 import { appearanceOf } from "../dex/appearance";
 import { unlockRules } from "../dex/unlocks";
 import type { SaveV3 } from "../shared/save-v3";
+import type { TradeActionResult, TradeSession } from "../trade/session";
 
 export interface CommandSettings {
   hidden(): boolean;
@@ -39,6 +40,7 @@ export interface CommandContext {
   prepareLook?(look: string): Promise<boolean>;
   onChanged?(evolvedId?: string): Promise<void>;
   log?: ((o: Record<string, unknown>) => void) | null;
+  trade?: () => TradeSession | null; // 친구 교환 — 앱이 준비된 뒤 생기므로 부를 때 가져온다 (src/main/trade.ts)
 }
 
 export interface Commands {
@@ -224,6 +226,26 @@ export function createCommands(ctx: CommandContext): Commands {
     return result;
   });
 
+
+  // 친구 교환 — 서버를 타므로 결과를 기다려 교환 보기를 돌려준다. writer 만 교환 세션을 가진다.
+  // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (docs/work/trade/record.md "구현 2c~2e 계획과 E2E 설계")
+  // 결과는 조작의 결과다. 보기의 error 는 앞선 새로 고침의 실패일 수 있어 결과로 쓰지 않는다
+  const tradeCommand = (run: (session: TradeSession, c: Command) => Promise<TradeActionResult> | TradeActionResult) => async (c: Command): Promise<CommandResult> => {
+    if (ctx.party.kind !== "save") return { ok: false, reason: "sandbox" };
+    if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : send(ctx.mailboxDir, c);
+    const session = ctx.trade?.() ?? null;
+    if (!session) return { ok: false, reason: "trade-off" };
+    const r = await run(session, c);
+    return r.ok ? { ok: true, reason: "ok", trade: session.view() } : { ...r, trade: session.view() };
+  };
+  const argStr = (c: Command, key: string): string => (isObj(c.args) && typeof c.args[key] === "string" ? (c.args[key] as string) : "");
+  dispatcher.register("trade.create", tradeCommand((s) => s.create()));
+  dispatcher.register("trade.join", tradeCommand((s, c) => s.join(argStr(c, "link") || target(c) || "")));
+  dispatcher.register("trade.offer", tradeCommand((s, c) => s.offer(target(c) ?? argStr(c, "petId"))));
+  dispatcher.register("trade.ready", tradeCommand((s) => s.ready()));
+  dispatcher.register("trade.unready", tradeCommand((s) => s.unready()));
+  dispatcher.register("trade.leave", tradeCommand((s) => s.leave()));
+  dispatcher.register("trade.status", tradeCommand(() => ({ ok: true }))); // 서버를 다시 읽지 않는다 — 실시간 신호·주기 새로 고침이 바꾼 보기를 본다
 
   // CLI·확장이 읽는 현재 상태. 저장 v3 의 값을 그대로 준다 — 화면 문구는 표면이 만든다
   dispatcher.register("snapshot", () => {
