@@ -11,6 +11,7 @@
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
+// `--close` 를 주면 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
 // `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 const fs = require("node:fs");
@@ -188,6 +189,19 @@ app.whenReady().then(async () => {
             fs.writeFileSync(dexShot, d.toPNG());
             process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
           });
+        })
+        .then(() => {
+          // --close 는 찍은 뒤 관리 창을 닫고 잠깐 기다린다 — 도감 기기 창이 떠 있을 때 닫아도 오류가 없는지 본다
+          if (process.argv.includes("--close")) {
+            let crashed = false;
+            process.on("uncaughtException", (e) => {
+              crashed = true;
+              process.stderr.write(`uncaught: ${String(e)}\n`);
+            });
+            app.on("window-all-closed", () => {}); // 창이 다 닫혀도 결과를 적을 때까지 끝내지 않는다
+            win.close();
+            return new Promise((r) => setTimeout(r, 1500)).then(() => process.stdout.write(`close: ${crashed ? "오류" : "오류 없음"}\n`));
+          }
         })
         .then(() => {
           // --linger 는 찍은 뒤 창을 그만큼 열어 둔다 — OS 가 그리는 창 단추는 페이지 캡처에 없어 밖에서 찍을 때 쓴다

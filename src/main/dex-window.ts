@@ -50,7 +50,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   let height = DEX_WINDOW.height;
   let side: "right" | "left" = "right";
 
-  const alive = (): BrowserWindow | null => (win && !win.isDestroyed() ? win : null);
+  const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() ? win : null);
   const mine = (e: IpcMainEvent | IpcMainInvokeEvent): boolean => !!alive() && e.sender === win?.webContents;
 
   function place(): void {
@@ -75,7 +75,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   };
 
   function detach(): void {
-    if (!owner || owner.isDestroyed()) return;
+    if (!owner || owner.isDestroyed()) return; // 닫힌 창은 듣는 것도 함께 사라진다
     owner.removeListener("move", follow);
     owner.removeListener("resize", follow);
     owner.removeListener("minimize", hideWithOwner);

@@ -71,6 +71,12 @@ const mine = (e: IpcMainInvokeEvent): boolean => !!win && !win.isDestroyed() && 
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
+// 관리 창 문서로 보낸다 — 창이나 문서가 이미 닫혔으면 버린다. 창보다 문서(webContents)가 먼저 없어지는 순간이 있다
+function toManage(channel: ManageChannel, ...args: unknown[]): void {
+  if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return;
+  win.webContents.send(channel, ...args);
+}
+
 // 채널을 한 번만 건다. 창을 여러 번 열어도 처리기는 하나다
 function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, preload: string, html: string): void {
   if (wired) return;
@@ -129,12 +135,9 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       const s = game.read()?.settings;
       return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
     },
-    onStep: (delta) => {
-      if (win && !win.isDestroyed()) win.webContents.send(CH.dexStep, delta);
-    },
-    onClosed: () => {
-      if (win && !win.isDestroyed()) win.webContents.send(CH.dexClosed);
-    },
+    onStep: (delta) => toManage(CH.dexStep, delta),
+    // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
+    onClosed: () => toManage(CH.dexClosed),
   });
   ipcMain.on(CH.dexOpen, (e, slug: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;

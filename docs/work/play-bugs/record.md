@@ -125,3 +125,18 @@
 - Figma `Species Card` `State=Locked` `336:274`: 초상 위에 검은 실루엣 예시(`628:17105`)를 얹었다. 미해금 종을 고른 칸은 `Locked` 변형에 선택 배경을 쓴다.
 - Figma `99 · 시안`: 채택하지 않은 패러독스알 B를 지웠다. 기기 창 B의 문구를 코드와 맞췄다.
 - 새 글자의 Galmuri 재배치는 `terminal-pokemon-1a`에 요청했다.
+
+## 관리 창을 닫을 때의 오류 (2026-09-27)
+
+**증상** — 사용자 보고. 관리 창을 닫으면 가끔 "A JavaScript error occurred in the main process / TypeError: Object has been destroyed at WebContents.send … at Object.onClosed" 창이 뜬다.
+
+**원인** — 도감 기기 창은 관리 창의 자식 창이다. 관리 창을 닫으면 기기 창도 같이 닫히고, 기기 창의 `closed`가 `onClosed`로 관리 창에 `manage:dex-closed`를 보낸다. 이때 관리 창 `BrowserWindow`는 아직 살아 있지만 문서(`webContents`)가 먼저 없어진 순간이 있다. `win.isDestroyed()`만 보고 보내서 오류가 났다.
+
+**수정**
+- `src/main/manage-window.ts`: 관리 창으로 보내는 곳을 `toManage`로 모았다. 창과 문서가 둘 다 살아 있을 때만 보낸다.
+- `src/main/dex-window.ts`: `alive()`가 문서가 없어진 창도 죽은 것으로 본다.
+- `scripts/dev-manage.cjs`: `--close`를 더했다. 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
+
+**검수**
+- 고치기 전 코드: `npx electron --disable-gpu scripts/dev-manage.cjs --tab 도감 --click '.dex-cell' --wait 1500 --shot <파일> --close` 세 번 가운데 한 번 `uncaught: TypeError: Object has been destroyed`가 재현됐다.
+- 고친 코드: 같은 명령 세 번 모두 "오류 없음".
