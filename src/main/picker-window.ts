@@ -2,9 +2,8 @@
 import { BrowserWindow, ipcMain } from "electron";
 import { nextOf } from "../dex/evo";
 import type { PickerPayload, StageChannel } from "../shared/stage";
-import path from "node:path";
-import { PATHS, windowIcon } from "./paths";
-import { createPortraits } from "./portraits";
+import { windowIcon } from "./paths";
+import type { Portraits } from "./portraits";
 import { petName, t } from "./text";
 
 const CH = {
@@ -18,6 +17,7 @@ export interface PickerOptions {
   html: string;
   starters: string[]; // data/unlocks.json 의 starter 표시 순서 — 세대별 3종 × 9 + 피카츄·이브이
   onPicking(on: boolean): void; // 선택 창이 열려 있는 동안 window-all-closed 로 끝나지 않게
+  portraits: Portraits; // 미리 받기와 같은 것을 쓴다 — 같은 그림을 두 번 받지 않고, 받는 중인 그림을 함께 기다린다
 }
 
 // 진화 줄 — 한 갈래면 끝까지 "리자드 → 리자몽", 갈래가 여럿이면 그 단계의 이름을 모두 적고 멈춘다 ("샤미드 · 쥬피썬더 · …")
@@ -79,9 +79,8 @@ export function pickStarter(opts: PickerOptions): Promise<string | null> {
     const onStart = (_e: unknown, slug: unknown): void => finish(typeof slug === "string" && opts.starters.includes(slug) ? slug : null);
     ipcMain.handle(CH.list, () => pickerPayload(opts.starters));
     // 카드의 초상 — 후보 종만 받는다
-    const portraits = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
     ipcMain.handle(CH.portraits, (_e, slugs: unknown) =>
-      portraits.get((Array.isArray(slugs) ? slugs : []).filter((s): s is string => typeof s === "string" && opts.starters.includes(s)).map((slug) => ({ slug, shiny: false }))),
+      opts.portraits.get((Array.isArray(slugs) ? slugs : []).filter((s): s is string => typeof s === "string" && opts.starters.includes(s)).map((slug) => ({ slug, shiny: false }))),
     );
     ipcMain.on(CH.start, onStart);
     picker.removeMenu(); // 기본 File·Edit·View·Window 메뉴를 없앤다

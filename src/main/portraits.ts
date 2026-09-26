@@ -47,6 +47,7 @@ const BASE = `${SPRITES}/pokemon`;
 const PARALLEL = 4;
 // 미리 받기의 동시 요청 수 — 그림이 작아(평균 1KB) 요청 수가 비용이다. 16 이면 2천 장이 이 연결에서 10초 안팎이었다(2026-09-26 측정)
 const PREFETCH_PARALLEL = 16;
+const MISSING_RETRY_MS = 15_000; // 못 받은 그림을 다시 청하기까지 — 첫 실행의 네트워크 혼잡·끊김이 영영 빈 칸으로 남지 않게
 
 export interface PortraitAsk {
   slug: string;
@@ -100,13 +101,22 @@ export interface Portraits {
   // 디스크에 이미 있는 그림 전부 — 초상 열쇠(slug · slug:shiny)와 도구·알 열쇠. 네트워크는 쓰지 않는다
   // 관리 창이 첫 화면 전에 한 번 받아 둔다. 상점·상세에 들어갈 때 그림이 하나씩 차오르지 않게 하려는 것이다
   all(): Promise<Record<string, string>>;
-  // 캐시에 없는 그림을 모두 받는다 — 보통·이로치 초상, 도구, 알. 받은 수·없는 수(404)·실패 수를 돌려준다
-  prefetch(onProgress?: (done: number, total: number) => void): Promise<{ got: number; had: number; missing: number; failed: number }>;
+  // 캐시에 없는 그림을 모두 받는다 — 보통·이로치 초상, 도구, 알. 받은 수·없는 수(404)·실패 수를 돌려준다.
+  // first 의 종(보통 초상)을 맨 앞에 받는다 — 첫 실행 선택 창의 스타터
+  prefetch(onProgress?: (done: number, total: number) => void, first?: string[]): Promise<{ got: number; had: number; missing: number; failed: number }>;
 }
 
 // dir 은 사용자 캐시, bundled 는 앱에 들어 있는 그림 폴더(없어도 된다). 두 폴더의 파일 이름은 같다
 export function createPortraits(dir: string, bundled?: string): Portraits {
-  const missing = new Set<string>(); // 못 받은 파일 — 다시 청하지 않는다
+  const missing = new Map<string, number>(); // 못 받은 파일 → 시각. MISSING_RETRY_MS 동안 다시 청하지 않는다(네트워크 실패가 영영 남지 않게)
+  const inflight = new Map<string, Promise<{ buf: Buffer } | null>>(); // 받는 중인 파일 — get·icons·prefetch 가 같은 파일을 두 번 받지 않는다
+  const fetchOnce = (file: string, url: string): Promise<{ buf: Buffer } | null> => {
+    const going = inflight.get(file);
+    if (going) return going;
+    const job = cached(file, url, isPng).finally(() => inflight.delete(file));
+    inflight.set(file, job);
+    return job;
+  };
   const memo = new Map<string, string>(); // 이미 읽은 data URI
   let running = 0;
   const waiting: (() => void)[] = [];
@@ -126,7 +136,8 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     const file = path.join(dir, rel);
     const known = memo.get(file);
     if (known) return known;
-    if (missing.has(file)) return null;
+    const failedAt = missing.get(file);
+    if (failedAt != null && Date.now() - failedAt < MISSING_RETRY_MS) return null;
     if (bundled) {
       try {
         const buf = fs.readFileSync(path.join(bundled, rel));
@@ -139,11 +150,12 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
         // 앱에 없는 그림 — 캐시와 네트워크로 간다
       }
     }
-    const got = await slot(() => cached(file, url, isPng));
+    const got = await slot(() => fetchOnce(file, url));
     if (!got) {
-      missing.add(file);
+      missing.set(file, Date.now());
       return null;
     }
+    missing.delete(file);
     const uri = `data:image/png;base64,${got.buf.toString("base64")}`;
     memo.set(file, uri);
     return uri;
@@ -231,8 +243,10 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       );
       return out;
     },
-    async prefetch(onProgress) {
+    async prefetch(onProgress, first = []) {
       const jobs: { rel: string; url: string }[] = [];
+      const firstDex = first.map((slug) => profile(slug).dex).filter((d) => d > 0);
+      for (const dex of firstDex) jobs.push({ rel: `${String(dex).padStart(4, "0")}.png`, url: portraitUrl(dex, false) });
       const dexes = [...new Set(slugs().map((slug) => profile(slug).dex).filter((d) => d > 0))].sort((a, b) => a - b);
       for (const dex of dexes) {
         const d = String(dex).padStart(4, "0");
@@ -260,11 +274,11 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
           const job = jobs[next++];
           if (!job) break;
           const file = path.join(dir, job.rel);
-          if (fs.existsSync(file) || (bundled && fs.existsSync(path.join(bundled, job.rel)))) count.had++;
+          if (fs.existsSync(file) || (bundled && fs.existsSync(path.join(bundled, job.rel)))) count.had++; // 앞에 받은 first 도 여기로 온다
           else if (absent.has(job.url)) count.missing++;
           else {
             try {
-              const got = await cached(file, job.url, isPng);
+              const got = await fetchOnce(file, job.url);
               if (got) count.got++;
               else {
                 count.missing++; // 404 — 그림이 없는 도구 등
