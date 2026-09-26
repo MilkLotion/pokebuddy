@@ -1631,6 +1631,74 @@ function settingRow(label: string, hint: string, control: HTMLElement, stack = f
   return row;
 }
 
+// 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 + 숫자 입력 + 스피커 단추(누르면 음소거, 다시 누르면 켬).
+// 음소거는 설정의 sound 를 끈다. 크기 값은 그대로 남긴다. 슬라이더는 놓을 때, 숫자는 입력을 마칠 때 한 번 저장한다
+function volumeControl(volume: number, on: boolean, set: (key: string, value: unknown) => void): HTMLElement {
+  const box = el("div", on ? "volume" : "volume muted");
+  const range = document.createElement("input");
+  range.type = "range";
+  range.min = "0";
+  range.max = "100";
+  range.step = "1";
+  range.value = String(volume);
+  range.setAttribute("aria-label", "소리 크기");
+  const number = document.createElement("input");
+  number.type = "number";
+  number.min = "0";
+  number.max = "100";
+  number.step = "1";
+  number.value = String(volume);
+  number.setAttribute("aria-label", "소리 크기 숫자");
+  const paint = (v: number): void => range.style.setProperty("--p", `${v}%`);
+  paint(volume);
+  range.addEventListener("input", () => {
+    number.value = range.value;
+    paint(Number(range.value));
+  });
+  range.addEventListener("change", () => set("volume", Number(range.value)));
+  // 숫자 칸 — 범위 밖이나 소수는 0~100 정수로 맞춘다. 빈 칸이면 원래 값으로 되돌린다
+  number.addEventListener("change", () => {
+    const raw = Number(number.value);
+    if (number.value.trim() === "" || !Number.isFinite(raw)) {
+      number.value = String(volume);
+      return;
+    }
+    const v = Math.max(0, Math.min(100, Math.round(raw)));
+    number.value = String(v);
+    range.value = String(v);
+    paint(v);
+    if (v !== volume) set("volume", v);
+  });
+  number.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") number.blur();
+  });
+  const mute = button("mute", "");
+  mute.setAttribute("aria-pressed", String(!on));
+  mute.setAttribute("aria-label", on ? "음소거" : "소리 켜기");
+  mute.title = on ? "음소거" : "소리 켜기";
+  mute.appendChild(speakerIcon(!on));
+  mute.addEventListener("click", () => set("sound", !on));
+  box.append(range, number, mute);
+  return box;
+}
+
+// 스피커 그림 16px — Figma `Icon / Sound` `645:346` (On · Muted). 선 색은 글자색을 따른다
+function speakerIcon(muted: boolean): SVGSVGElement {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  svg.setAttribute("aria-hidden", "true");
+  const paths = ["M4 6 H7 L11 3 V13 L7 10 H4 Z", ...(muted ? ["M12 6 L16 10", "M16 6 L12 10"] : ["M12.5 5.5 Q14 8 12.5 10.5", "M14 3.5 Q16.5 8 14 12.5"])];
+  for (const d of paths) {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d);
+    svg.appendChild(p);
+  }
+  return svg;
+}
+
 function drawGeneral(scroll: HTMLElement): void {
   if (!view) return;
   const s = view.settings;
@@ -1791,74 +1859,6 @@ function drawDialog(): void {
 
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
   restoreSearchFocus();
-// 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 + 숫자 입력 + 스피커 단추(누르면 음소거, 다시 누르면 켬).
-// 음소거는 설정의 sound 를 끈다. 크기 값은 그대로 남긴다. 슬라이더는 놓을 때, 숫자는 입력을 마칠 때 한 번 저장한다
-function volumeControl(volume: number, on: boolean, set: (key: string, value: unknown) => void): HTMLElement {
-  const box = el("div", on ? "volume" : "volume muted");
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = "0";
-  range.max = "100";
-  range.step = "1";
-  range.value = String(volume);
-  range.setAttribute("aria-label", "소리 크기");
-  const number = document.createElement("input");
-  number.type = "number";
-  number.min = "0";
-  number.max = "100";
-  number.step = "1";
-  number.value = String(volume);
-  number.setAttribute("aria-label", "소리 크기 숫자");
-  const paint = (v: number): void => range.style.setProperty("--p", `${v}%`);
-  paint(volume);
-  range.addEventListener("input", () => {
-    number.value = range.value;
-    paint(Number(range.value));
-  });
-  range.addEventListener("change", () => set("volume", Number(range.value)));
-  // 숫자 칸 — 범위 밖이나 소수는 0~100 정수로 맞춘다. 빈 칸이면 원래 값으로 되돌린다
-  number.addEventListener("change", () => {
-    const raw = Number(number.value);
-    if (number.value.trim() === "" || !Number.isFinite(raw)) {
-      number.value = String(volume);
-      return;
-    }
-    const v = Math.max(0, Math.min(100, Math.round(raw)));
-    number.value = String(v);
-    range.value = String(v);
-    paint(v);
-    if (v !== volume) set("volume", v);
-  });
-  number.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") number.blur();
-  });
-  const mute = button("mute", "");
-  mute.setAttribute("aria-pressed", String(!on));
-  mute.setAttribute("aria-label", on ? "음소거" : "소리 켜기");
-  mute.title = on ? "음소거" : "소리 켜기";
-  mute.appendChild(speakerIcon(!on));
-  mute.addEventListener("click", () => set("sound", !on));
-  box.append(range, number, mute);
-  return box;
-}
-
-// 스피커 그림 16px — Figma `Icon / Sound` `645:346` (On · Muted). 선 색은 글자색을 따른다
-function speakerIcon(muted: boolean): SVGSVGElement {
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("width", "16");
-  svg.setAttribute("height", "16");
-  svg.setAttribute("aria-hidden", "true");
-  const paths = ["M4 6 H7 L11 3 V13 L7 10 H4 Z", ...(muted ? ["M12 6 L16 10", "M16 6 L12 10"] : ["M12.5 5.5 Q14 8 12.5 10.5", "M14 3.5 Q16.5 8 14 12.5"])];
-  for (const d of paths) {
-    const p = document.createElementNS(NS, "path");
-    p.setAttribute("d", d);
-    svg.appendChild(p);
-  }
-  return svg;
-}
-
 }
 
 // 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
