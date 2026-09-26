@@ -1252,3 +1252,54 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 2026-09-27 Save Indicator 문구 수정 뒤 재배치(Figma 전용 세션): `Offline` "오프라인"과 `SaveNeeded` "저장 필요"를 Galmuri 로 다시 배치했다. 스타일 값은 모두 원래대로다. 변형 폭은 118·78·84, 높이는 모두 24다. 05 섹션의 SaveNeeded 인스턴스 2개는 폭이 77로 남아 있어 다시 계산해 84로 맞췄다. Chrome 렌더로 헤더에 "저장 필요"가 보이는 것을 확인했다.
 
 주의(2026-09-27): Supabase 의 GitHub 설정 창을 열면 브라우저 자동 완성이 Client ID·Secret 칸을 다른 값으로 채운다. 이 설정을 다시 저장할 때는 두 칸의 값을 확인한다.
+
+## 구현 1단계 — 서버 SQL (2026-09-27)
+
+사용자 지시: "커밋하고 구현 시작해".
+
+### 설계
+
+- 목표: [서버 설계](#서버-설계), [아이디와 비밀번호](#아이디와-비밀번호), [클라우드 저장](#클라우드-저장)의 서버 부분을 마이그레이션으로 만들고 로컬 Supabase 에서 검사한다.
+- 범위: `supabase/migrations/` 3개, `supabase/tests/` 3개. 앱 코드는 바꾸지 않는다. 실제 프로젝트에 올리는 것(`supabase db push`)은 이 단계에 넣지 않는다.
+- 설계에서 바꾼 점: 로그인만 하고 아직 올리지 않은 계정도 활성 PC 를 기록해야 한다. 그래서 `cloud_saves.save`·`save_v`·`app_version`을 비어 있을 수 있게 했다. 오류 코드 `TRADE_AUTH_REQUIRED`, `TRADE_BAD_ARGS`, `TRADE_NOT_DONE`, `AUTH_USERNAME_RESERVED`, `AUTH_NAME_INVALID`, `CLOUD_BAD_ARGS`, `CLOUD_TOO_LARGE`를 더했다.
+- 수용: `npx supabase start`가 세 마이그레이션을 적용한다. `npx supabase test db` 전부 통과. `npx supabase db lint` 오류 없음.
+
+### 작업
+
+| 파일 | 내용 |
+|---|---|
+| [`20260927100000_trade.sql`](../../../supabase/migrations/20260927100000_trade.sql) | `trade_channels` 테이블(RLS 켬, 정책 없음, 앱 역할 권한 회수), 공개 함수 7개, 실시간 권한 `is_trade_participant`와 `realtime.messages` 읽기 정책, `pg_cron` 작업 2개. 내부 도우미는 API 로 노출하지 않는 `trade_private` 스키마에 둔다. 규칙 값(10분·30분·1시간 20개·4KB)은 `trade_private.rule` 한 곳에 둔다 |
+| [`20260927100100_username.sql`](../../../supabase/migrations/20260927100100_username.sql) | `is_username_available`, 가입 전 검사 트리거 `auth_private.check_username_signup`(L-01). 내부 주소 가입만 검사하고 GitHub 가입은 건드리지 않는다 |
+| [`20260927100200_cloud_save.sql`](../../../supabase/migrations/20260927100200_cloud_save.sql) | `cloud_saves` 테이블, `claim_device`·`download_save`·`upload_save`, `account:<user_id>` 주제 읽기 정책, 익명 사용자 정리 작업 |
+| [`supabase/tests/`](../../../supabase/tests/trade_test.sql) | `trade_test.sql`, `username_test.sql`, `cloud_save_test.sql` |
+
+### 검수
+
+| 명령 | 결과 |
+|---|---|
+| `npx supabase start` | 세 마이그레이션 적용 성공. Docker Desktop 을 켜고 이미지를 처음 받았다 |
+| `npx supabase test db` | 첫 실행 91개 중 90개 통과. 실패 1개는 검사 쪽 JSON 만들기 오류였다. 고친 뒤 3개 파일 91개 전부 통과 |
+| `npx supabase db lint --level warning` | 5개 스키마 오류 없음 |
+
+검사가 확인한 것:
+
+- 권한: 앱 역할은 두 테이블을 직접 읽거나 쓰지 못한다. 내부 도우미를 부르지 못한다. 로그인하지 않으면 거절한다. 익명 계정은 클라우드 저장을 쓰지 못한다.
+- 상태 전이 표의 모든 줄: open→joined, open→cancelled(나가기·새 채널·다른 링크 참가), open→expired, joined→joined(판 +1), joined→done, joined→cancelled, joined→expired, done 뒤 제안 값 삭제.
+- 동시에 일어나는 경우 5가지: 같은 판 확정, 확정 중 제안 변경(양쪽 순서), 만료와 확정, 나가기와 확정(양쪽 순서), 완료 뒤 다시 확인.
+- 오류 코드: LINK_INVALID·EXPIRED·USED, OWN_LINK, VERSION_MISMATCH, NOT_FOUND, OFFER_INVALID·MISSING·CHANGED, CLOSED, ALREADY_DONE·ACTIVE, RATE_LIMITED.
+- 실시간: 바뀔 때마다 신호를 보내고 신호에 제안 값이 없다. 참가자만 받는다. PC 를 넘겨받으면 앞 PC 에 `kicked`를 보낸다.
+- 아이디: 중복(대소문자 무시), 예약어, 규칙 밖(4자 미만·숫자 시작·한글·16자 초과), 이름 없음·12자 초과, 같은 아이디 두 번 가입.
+- 클라우드 저장: 활성 PC 만 올리고 받는다, 옛 rev 거절, 256KB 초과 거절, 다른 PC 가 교환 중이면 넘겨받지 못한다, 같은 PC 재시작은 허용.
+
+검사하지 못한 것:
+
+- 진짜 동시 실행(두 연결이 같은 순간에 잠금 경쟁). 순서를 바꿔 재현했다. 행 잠금(`for update`)으로 한 줄로 선다는 설계에 기댄다.
+- 실시간 신호가 실제 앱 구독자에게 도착하는지. 앱 구현 때 E2E 로 본다.
+- `pg_cron` 작업이 정해진 시각에 도는지. 작업 등록과 함수 실행만 확인했다.
+
+### 피드백
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| I-01 | 실제 프로젝트에 마이그레이션을 올리지 않았다 | 2026-09-27 닫음. 사용자가 별도 터미널에서 `supabase login`과 `supabase link`를 했다. `npx supabase db push --dry-run`으로 세 파일을 확인한 뒤 `db push`로 올렸다. `npx supabase migration list`에서 로컬과 원격 기록이 같고, `npx supabase db lint --linked` 오류가 없다 |
+| I-02 | 앱 코드(교환·로그인·클라우드 저장)는 미시작이다 | 다음 단계 |
