@@ -9,6 +9,8 @@ import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
 import { createPortraits, type PortraitAsk, type Portraits } from "./portraits.js";
+import { createCries, type Cries } from "./cries.js";
+import { createDexWindow, type DexWindow } from "./dex-window.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -24,6 +26,9 @@ const CH = {
   portraits: "manage:portraits",
   icons: "manage:icons",
   art: "manage:art",
+  dexOpen: "manage:dex-open",
+  dexStep: "manage:dex-step",
+  dexClosed: "manage:dex-closed",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -49,6 +54,7 @@ let win: BrowserWindow | null = null;
 let wired = false;
 let drawRegion: ManageOptions["drawRegion"] = undefined; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
 let display: ManageOptions["display"] = undefined;
+let dexWin: DexWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -65,7 +71,7 @@ const mine = (e: IpcMainInvokeEvent): boolean => !!win && !win.isDestroyed() && 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
 // 채널을 한 번만 건다. 창을 여러 번 열어도 처리기는 하나다
-function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>): void {
+function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, preload: string, html: string): void {
   if (wired) return;
   wired = true;
   ipcMain.handle(CH.snapshot, (e) => {
@@ -107,6 +113,30 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>):
     portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
     return portraits.all();
   });
+  // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
+  let cries: Cries | null = null;
+  dexWin = createDexWindow({
+    preload,
+    html: path.join(path.dirname(html), "dex.html"),
+    detail: (slug) => game.dexDetail(slug),
+    portrait: async (slug) => {
+      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
+      return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
+    },
+    cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
+    sound: () => game.read()?.settings.sound !== false,
+    onStep: (delta) => {
+      if (win && !win.isDestroyed()) win.webContents.send(CH.dexStep, delta);
+    },
+    onClosed: () => {
+      if (win && !win.isDestroyed()) win.webContents.send(CH.dexClosed);
+    },
+  });
+  ipcMain.on(CH.dexOpen, (e, slug: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (typeof slug === "string") void dexWin?.show(win, slug);
+    else dexWin?.close();
+  });
   ipcMain.on(CH.dim, (e, on: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     const c = on === true ? CHROME_DIM : CHROME;
@@ -140,7 +170,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     return win;
   }
   const game = opts.game ?? createGame();
-  wire(game, opts.send ?? (async (req) => game.send(req, "settings")));
+  wire(game, opts.send ?? (async (req) => game.send(req, "settings")), opts.preload, opts.html);
   win = new BrowserWindow({
     width: WINDOW_V3_RULES.width,
     height: WINDOW_V3_RULES.height,

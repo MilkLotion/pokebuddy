@@ -358,6 +358,35 @@ check("waiting → yield · act null · 자리 그대로. 그 사이 클릭은 r
   assert.ok(work.some((t) => t.out.phase === "walk"), "실패 표시가 끝나 일로 돌아왔는데 곧바로 움직이지 않았다");
 });
 
+check("reactMs — 상태 변화를 마리마다 0~reactMs 뒤에 따른다. 활동 시각은 바로 잡는다", () => {
+  const starts: number[] = [];
+  for (let seed = 30; seed < 36; seed += 1) {
+    const logs: Record<string, unknown>[] = [];
+    const m = pet({ seed, reactMs: 1_500, log: (o) => logs.push(o) });
+    run(m, 0, 100_000, "idle");
+    m.state("waiting", null, 100_000);
+    const ticks = run(m, 100_000, 102_000, "waiting");
+    const first = ticks.find((t) => t.out.phase === "yield");
+    assert.ok(first, "지연 뒤에도 신호 상태로 가지 않았다");
+    assert.ok(first.now <= 100_000 + 1_500 + TICK, "reactMs 보다 늦게 반응했다");
+    starts.push(first.now);
+    // 되돌아온 상태가 아직 적용 전인 상태와 같으면 기다리지 않는다
+    m.state("idle", null, 102_000);
+    m.state("waiting", null, 102_000);
+    assert.strictEqual(last(run(m, 102_000, 102_000, "waiting")).out.phase, "yield");
+  }
+  assert.ok(new Set(starts).size > 1, "여러 마리가 같은 틱에 반응했다");
+  // 활동 시각은 지연 없이 — 반응 뒤 찍힌 idleSec 이 상태를 받은 때부터 센 값(반응 지연 이하)
+  const logs: Record<string, unknown>[] = [];
+  const b = pet({ seed: 40, reactMs: 1_500, log: (o) => logs.push(o) });
+  run(b, 0, 100_000, "idle");
+  const before = logs.length;
+  b.state("running", null, 100_000);
+  run(b, 100_000, 102_000, "running");
+  assert.ok(logs.length > before, "반응한 기록이 없다");
+  assert.ok(Number(logs[logs.length - 1]?.idleSec) <= 2, "idle→running 이 활동으로 바로 잡히지 않았다");
+});
+
 // ── 활동 bump 규칙 (옛 body.js) ───────────────────────────────────────────────
 out("활동 bump 규칙");
 check("promptAt(초) · idle→running · →idle · failed→running(안 침) · focus 변화", () => {

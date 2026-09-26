@@ -8,7 +8,6 @@ import type {
   AchievementView,
   AgentRow,
   BagItemView,
-  DexDetail,
   DexEntry,
   EggView,
   FormView,
@@ -59,7 +58,6 @@ const SLEEP_CHOICES = [
   { id: "0", label: "잠들지 않음" },
 ];
 
-const DEX_COLUMNS = 5; // manage.html 의 .dex-grid 열 수와 같다
 
 // 한 번에 살 수 있는 최대 수량. `[스펙 미확정]` 정식 상한이 정해지면 여기를 고친다
 const BUY_MAX = 10;
@@ -152,9 +150,8 @@ let tab: TabId = "party";
 let view: Snapshot | null = null;
 let detailPet: string | null = null; // 개체 상세 페이지에 띄운 개체 — 있으면 탭 본문 대신 상세를 그린다
 let dexRows: DexEntry[] | null = null;
-// 도감에서 고른 칸과 그 상세 — 상세는 칸을 누를 때 한 종만 따로 읽는다
+// 도감에서 고른 칸 — 상세는 관리 창 옆 도감 기기 창이 보인다 (src/main/dex-window.ts)
 let dexPick: string | null = null;
-let dexDetail: DexDetail | null = null;
 let agentRows: AgentRow[] | null = null;
 let boxPage = 0;
 // 검색어 — 탭을 옮겨도 남는다 (docs/specs/s5.md "검색과 선택을 유지한다")
@@ -781,61 +778,46 @@ function drawBox(v: Snapshot): void {
 
 function dexCell(row: DexEntry): HTMLElement {
   const cell = button(row.state === "locked" ? "dex-cell locked" : "dex-cell");
+  cell.dataset.slug = row.slug;
   cell.setAttribute("aria-pressed", String(row.slug === dexPick));
-  cell.addEventListener("click", () => void pickDex(row.slug));
-  // 미해금 종은 그림을 보이지 않는다 — 이름을 숨기는 것과 같다
-  cell.append(el("div", "no", `#${String(row.dex).padStart(4, "0")}`), row.state === "locked" ? el("div", "dot") : portraitOf(row.slug, false, "dot", "", true));
+  cell.addEventListener("click", () => pickDex(row.slug));
+  // 미해금 종은 그림을 검은 실루엣으로 보인다 — CSS .dex-cell.locked .art (2026-09-27 사용자 결정 "모든 미해금에 다 하자")
+  cell.append(el("div", "no", `#${String(row.dex).padStart(4, "0")}`), portraitOf(row.slug, false, "dot", "", true));
   cell.appendChild(el("div", undefined, row.state === "locked" ? "???" : row.name));
   if (row.state === "obtained") cell.appendChild(el("div", "no", row.shiny ? "이로치 획득" : "획득"));
   if (row.condition) cell.title = `발견한 조건: ${row.condition}`;
   return cell;
 }
 
-// 도감 상세 패널 — 격자 아래에 둔다 (Figma Dex / Base 의 species-detail)
-const DEX_STATE_WORD: Record<string, string> = { obtained: "획득", unlocked: "해금", locked: "미해금" };
-
-function dexPanel(d: DexDetail): HTMLElement {
-  const panel = el("div", "dex-detail");
-  const headRow = el("div", "head");
-  const meta = d.state === "locked"
-    ? "미해금 · 이름과 진화는 해금하면 보여요"
-    : `${DEX_STATE_WORD[d.state] ?? d.state} · 이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
-  headRow.append(el("strong", undefined, `#${String(d.dex).padStart(4, "0")} ${d.name}`), el("span", "meta", d.genus ? `${d.genus} · ${meta}` : meta));
-  panel.appendChild(headRow);
-  // 공식 도감 설명 — 해금한 종만 온다
-  if (d.flavor) panel.appendChild(el("p", "flavor", d.flavor));
-  const rows: [string, string][] = [
-    ["입수 방법", d.methods],
-    ["진화", d.evolution],
-    ["알 행동 조건", d.eggCondition],
-    ["특수 기믹", d.gimmick],
-  ];
-  if (d.types.length) {
-    const row = el("div", "row");
-    const badges = el("span", "value types");
-    d.types.forEach((name, i) => badges.appendChild(typeBadge(name, d.typeIds[i])));
-    row.append(el("span", "key", "타입"), badges);
-    panel.appendChild(row);
-  }
-  for (const [key, value] of rows) {
-    const row = el("div", "row");
-    row.append(el("span", "key", key), el("span", "value", value));
-    panel.appendChild(row);
-  }
-  return panel;
+// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (docs/work/play-bugs/record.md)
+function markDexPick(): void {
+  for (const cell of bodyEl.querySelectorAll<HTMLElement>(".dex-cell")) cell.setAttribute("aria-pressed", String(cell.dataset.slug === dexPick));
 }
 
-// 칸을 누르면 그 종의 상세를 읽는다. 다시 누르면 닫는다
-async function pickDex(slug: string): Promise<void> {
-  if (dexPick === slug) {
-    dexPick = null;
-    dexDetail = null;
-    draw();
-    return;
-  }
-  dexPick = slug;
-  dexDetail = await window.pokebuddyManage.dexDetail(slug);
-  if (tab === "dex") draw();
+// 칸을 누르면 도감 기기 창에 그 종을 띄운다. 같은 칸을 다시 누르면 닫는다
+function pickDex(slug: string): void {
+  dexPick = dexPick === slug ? null : slug;
+  window.pokebuddyManage.dexOpen(dexPick);
+  markDexPick();
+}
+
+// 지금 격자에 보이는 목록 — 검색어와 등록 상태 칩을 적용한다. 기기 창의 이전·다음도 이 순서를 따른다
+function dexShown(): DexEntry[] {
+  if (!dexRows) return [];
+  const q = normQuery(dexQuery);
+  return dexRows.filter((r) => (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
+}
+
+function stepDex(delta: -1 | 1): void {
+  const rows = dexShown();
+  if (!rows.length) return;
+  const at = rows.findIndex((r) => r.slug === dexPick);
+  const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
+  if (!next || next.slug === dexPick) return;
+  dexPick = next.slug;
+  window.pokebuddyManage.dexOpen(dexPick);
+  markDexPick();
+  bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(dexPick)}"]`)?.scrollIntoView({ block: "nearest" });
 }
 
 function drawDex(v: Snapshot): void {
@@ -860,21 +842,14 @@ function drawDex(v: Snapshot): void {
     return;
   }
   const q = normQuery(dexQuery);
-  const rows = dexRows.filter((r) => (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
+  const rows = dexShown();
   if (!rows.length) {
     bodyEl.appendChild(el("div", "empty-note", q ? "검색 결과 없음" : "해당하는 종이 없습니다."));
     return;
   }
-  // 상세 패널은 고른 칸이 있는 줄 바로 아래에 격자 폭으로 끼운다. 목록이 길어도 눈앞에 열린다
   // 전부 그린다(2026-09-25 사용자 요청). 화면 밖 칸은 CSS content-visibility 로 그리기를 미루고, 초상은 보이는 칸만 받는다
-  const shown = rows;
-  const picked = dexDetail && dexDetail.slug === dexPick ? shown.findIndex((r) => r.slug === dexPick) : -1;
-  const panelAfter = picked < 0 ? -1 : Math.min(Math.floor(picked / DEX_COLUMNS) * DEX_COLUMNS + DEX_COLUMNS - 1, shown.length - 1);
   const grid = el("div", "dex-grid");
-  shown.forEach((row, i) => {
-    grid.appendChild(dexCell(row));
-    if (i === panelAfter && dexDetail) grid.appendChild(dexPanel(dexDetail));
-  });
+  for (const row of rows) grid.appendChild(dexCell(row));
   bodyEl.appendChild(grid);
 }
 
@@ -1939,7 +1914,7 @@ async function agent(name: string, action: "connect" | "disconnect" | "check"): 
 
 async function loadDex(): Promise<void> {
   dexRows = await window.pokebuddyManage.dex();
-  if (dexPick) dexDetail = await window.pokebuddyManage.dexDetail(dexPick);
+  if (dexPick) window.pokebuddyManage.dexOpen(dexPick); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
   if (tab === "dex") draw();
 }
 
@@ -1999,6 +1974,11 @@ async function loadArt(): Promise<void> {
 
 // 첫 화면을 그린 뒤에 옮긴다 — 창을 새로 열면서 온 목적지는 스냅샷보다 먼저 올 수 있다
 const firstDraw = loadArt().then(refresh);
+window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
+window.pokebuddyManage.onDexClosed(() => {
+  dexPick = null;
+  markDexPick();
+});
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 창이 떠 있는 동안 주기적으로 다시 읽는다
 setInterval(() => void refresh().then(drawDialog), 5000);

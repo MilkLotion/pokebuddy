@@ -9,6 +9,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import { dexDetail } from "../tx/dex-detail";
 import { iconUrl, portraitKey, portraitUrl } from "../main/portraits";
 import { cryUrl } from "../main/cries";
+import { dockAt } from "../main/dex-window";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 
@@ -133,4 +134,18 @@ function seed(): SaveV3 {
   process.stdout.write("(9) 공식 분류와 설명  ok\n");
 }
 
-process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명)\n");
+// (10) 키·몸무게 — 도감 기기 창. 소수 한 자리, 미해금은 숨긴다
+{
+  const d = dexDetail(seed(), "charmander");
+  assert.deepStrictEqual([d?.height, d?.weight], ["0.6m", "8.5kg"]);
+  const locked = dexDetail(seed(), "omanyte");
+  assert.deepStrictEqual([locked?.height, locked?.weight], ["", ""], "미해금은 숨긴다");
+  // 붙일 자리 — 오른쪽에 자리가 없으면 왼쪽. 아래가 모자라면 위로 올린다
+  const area = { x: 0, y: 0, width: 1920, height: 1040 };
+  assert.deepStrictEqual(dockAt({ x: 100, y: 50, width: 640, height: 780 }, area, { width: 380, height: 508 }), { x: 740, y: 50, side: "right" });
+  assert.deepStrictEqual(dockAt({ x: 1400, y: 50, width: 640, height: 780 }, area, { width: 380, height: 508 }), { x: 1020, y: 50, side: "left" });
+  assert.equal(dockAt({ x: 100, y: 800, width: 640, height: 780 }, area, { width: 380, height: 508 }).y, 532);
+  process.stdout.write("(10) 키·몸무게 · 기기 창 자리  ok\n");
+}
+
+process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명·키 몸무게·기기 창 자리)\n");

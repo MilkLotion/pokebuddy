@@ -32,7 +32,7 @@ function seed(): SaveV3 {
   s.pets.push(pet({ id: "p3", species: "squirtle", level: 5 }));
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 2 * MIN, ready: false, candidates: [], careCooldownMs: 30_000, actions: { pat: 2, song: 0 } });
   s.bag = { "adamant-mint": 2, "exp-candy-s": 1, "없는도구": 3 };
-  s.dex = { unlocked: ["pikachu", "charmander"], obtained: ["pikachu"], shinyObtained: [], discovered: {} };
+  s.dex = { unlocked: ["pikachu", "charmander"], obtained: ["pikachu"], shinyObtained: [], discovered: {}, rulesRev: 1 };
   s.achievements = { a1: { achievedAt: T0, claimedAt: null }, a2: { achievedAt: T0, claimedAt: T0 }, a3: { achievedAt: null, claimedAt: null } };
   return s;
 }

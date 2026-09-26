@@ -46,7 +46,7 @@ export function empty(now: number): SaveV3 {
     eggSeq: 0,
     bag: {},
     points: { balance: 0, progressMs: 0 },
-    dex: { unlocked: [], obtained: [], shinyObtained: [], discovered: {} },
+    dex: { unlocked: [], obtained: [], shinyObtained: [], discovered: {}, rulesRev: SAVE_V3_RULES.unlockRev },
     achievements: {},
     tutorials: {},
     settings: emptySettings(),
@@ -236,6 +236,7 @@ function normalizeDex(raw: unknown): DexV3 {
     obtained: unique(strings(r.obtained)),
     shinyObtained: unique(strings(r.shinyObtained)),
     discovered,
+    rulesRev: nonNeg(r.rulesRev),
   };
 }
 

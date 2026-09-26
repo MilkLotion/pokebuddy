@@ -264,14 +264,15 @@ export class Animator {
     if (prev && prev.anim === next.anim && prev.mode === "loop" && next.mode === "loop") return;
     const sheet = art.anims[next.anim];
     if (!sheet) return;
-    this.frame = 0;
+    // 되풀이 동작은 아무 프레임에서 시작한다 — 여러 마리가 같은 틱에 같은 동작을 받아도 박자가 어긋난다
+    this.frame = next.mode === "loop" ? Math.floor(Math.random() * sheet.frames.length) : 0;
     this.frozen = false;
     // 이미 쓰러진 상태로 돌아오면 쓰러지는 과정을 다시 보이지 않고 마지막 자세로 둔다
     if (!this.act && next.mode === "hold" && this.doneState === this.state) {
       this.frame = sheet.frames.length - 1;
       this.frozen = true;
     }
-    this.due = now + msOf(sheet, this.frame, next.rate);
+    this.due = now + msOf(sheet, this.frame, next.rate) * (next.mode === "loop" ? Math.random() : 1);
     if (next.mode === "once") this.onceUntil = now + ONCE_MIN_MS;
   }
 }

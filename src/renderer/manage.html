@@ -1305,47 +1305,13 @@
       .dex-cell.locked[aria-pressed="true"] {
         background: var(--accent-bg);
       }
-      /* 도감 상세 패널 — 격자 아래 (Figma Dex / Base) */
-      .dex-detail .flavor {
-        margin: 0;
-        color: var(--muted);
-        line-height: 1.6;
-      }
-      .dex-detail {
-        grid-column: 1 / -1;
-        margin: 4px 0;
-        padding: 16px 20px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        background: var(--surface);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        font-size: 12px;
-      }
-      .dex-detail .head {
-        display: flex;
-        align-items: baseline;
-        gap: 10px;
-      }
-      .dex-detail .head strong {
-        font-size: 12px;
-      }
-      .dex-detail .meta {
-        color: var(--muted);
-      }
-      .dex-detail .row {
-        display: grid;
-        grid-template-columns: 96px 1fr;
-        gap: 12px;
-      }
-      .dex-detail .key {
-        font-weight: 600;
-        color: var(--muted);
-      }
       .dex-cell.locked {
         background: var(--subtle);
         color: var(--muted);
+      }
+      /* 미해금 종 — 그림을 검은 실루엣으로 (2026-09-27 사용자 결정 "모든 미해금에 다 하자") */
+      .dex-cell.locked .art {
+        filter: brightness(0);
       }
       .dex-cell .no {
         font-size: 10px;

@@ -17,11 +17,13 @@
 //   4. 진화 전 첫 단계 종(evolves_from 없음) 가운데 위에서 규칙을 받지 않은 종   { "base": true } — 처음부터 해금 (2026-09-25 사용자 결정)
 //      전설·환상(is_legendary · is_mythical)과 울트라비스트(ULTRA_BEASTS)는 넣지 않는다 — 입수 경로를 따로 정한다.
 //      울트라비스트는 PokeAPI 에 표시가 없어 목록으로 둔다. 알에서 얻을 수 없는 종이다 (docs/specs/s5.md "알 행동 조건")
+//      종 목록 알(data/eggs.json pool)의 종도 넣지 않는다 — 화석은 태고의돌, 패러독스는 랜덤패러독스알에서 나와야 해금 (2026-09-27 사용자 결정)
 //   그 밖의 종은 넣지 않는다 (아직 해금 길 없음)
 // 순서: 스타터 → 진화 대상(슬러그순) → 손으로 적은 것(스타터·진화 대상이 아닌 것만 뒤에)
 import fs from "node:fs";
 import path from "node:path";
 import { starters, unlockRules } from "../dex/unlocks";
+import { fixedEggs } from "../shop/catalog";
 import type { UnlockRule } from "../shared/types";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
@@ -104,7 +106,8 @@ export function build(evo: EvoTable, babies: Set<string>, starterSlugs: string[]
     if (out[slug]) replaced += 1;
     out[slug] = rule;
   }
-  for (const slug of bases) if (!out[slug]) out[slug] = { base: true };
+  const fixed = new Set(fixedEggs({ dataDir: DATA_DIR }).flatMap(([, pool]) => pool));
+  for (const slug of bases) if (!out[slug] && !fixed.has(slug)) out[slug] = { base: true };
   return { out, skipped, replaced };
 }
 

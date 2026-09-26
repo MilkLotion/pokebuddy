@@ -85,6 +85,7 @@ export interface DexV3 {
   obtained: string[];
   shinyObtained: string[];
   discovered: Record<string, string>; // 종 → 발견한 알 행동 조건 식별자
+  rulesRev: number; // 해금 정리를 마친 판 — SAVE_V3_RULES.unlockRev. 옛 저장은 0
 }
 
 export interface AchievementV3 {

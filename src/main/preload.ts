@@ -27,6 +27,9 @@ type RegionInit = import("../shared/manage").RegionInit;
 type MenuBridge = import("../shared/manage").MenuBridge;
 type MenuChannel = import("../shared/manage").MenuChannel;
 type MenuView = import("../shared/manage").MenuView;
+type DexDeviceBridge = import("../shared/manage").DexDeviceBridge;
+type DexDeviceChannel = import("../shared/manage").DexDeviceChannel;
+type DexDeviceView = import("../shared/manage").DexDeviceView;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
@@ -81,6 +84,9 @@ const MANAGE = {
   portraits: "manage:portraits",
   icons: "manage:icons",
   art: "manage:art",
+  dexOpen: "manage:dex-open",
+  dexStep: "manage:dex-step",
+  dexClosed: "manage:dex-closed",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -95,6 +101,9 @@ const manage: ManageBridge = {
   portraits: (asks) => ipcRenderer.invoke(MANAGE.portraits, asks) as Promise<Record<string, string | null>>,
   icons: (keys) => ipcRenderer.invoke(MANAGE.icons, keys) as Promise<Record<string, string | null>>,
   art: () => ipcRenderer.invoke(MANAGE.art) as Promise<Record<string, string>>,
+  dexOpen: (slug) => ipcRenderer.send(MANAGE.dexOpen, slug),
+  onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
+  onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, () => cb()),
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);
@@ -141,3 +150,22 @@ const menu: MenuBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyMenu", menu);
+
+// 도감 기기 창 — 한 종의 항목을 받고, 그린 높이와 이전·다음·울음소리·닫기를 보낸다
+const DEX = {
+  show: "dexdev:show",
+  size: "dexdev:size",
+  step: "dexdev:step",
+  cry: "dexdev:cry",
+  close: "dexdev:close",
+} satisfies Record<string, DexDeviceChannel>;
+
+const dex: DexDeviceBridge = {
+  onShow: (cb) => ipcRenderer.on(DEX.show, (_e, view: DexDeviceView) => cb(view)),
+  size: (h) => ipcRenderer.send(DEX.size, h),
+  step: (delta) => ipcRenderer.send(DEX.step, delta),
+  cry: () => ipcRenderer.invoke(DEX.cry) as Promise<string | null>,
+  close: () => ipcRenderer.send(DEX.close),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyDex", dex);

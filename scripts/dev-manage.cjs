@@ -10,11 +10,12 @@
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
+// `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { app } = require("electron");
+const { app, BrowserWindow } = require("electron");
 
 const root = path.join(__dirname, "..");
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-dev-manage-"));
@@ -177,6 +178,15 @@ app.whenReady().then(async () => {
         .then((img) => {
           fs.writeFileSync(shotFile, img.toPNG());
           process.stdout.write(`shot: ${shotFile}\n`);
+          const dexShot = argAfter("--dex-shot");
+          const dex = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("dex.html"));
+          if (!dexShot || !dex) return;
+          return dex.webContents.capturePage().then((d) => {
+            fs.writeFileSync(dexShot, d.toPNG());
+            process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+          });
+        })
+        .then(() => {
           // --linger 는 찍은 뒤 창을 그만큼 열어 둔다 — OS 가 그리는 창 단추는 페이지 캡처에 없어 밖에서 찍을 때 쓴다
           const linger = Number(argAfter("--linger")) || 0;
           setTimeout(() => app.exit(0), linger);

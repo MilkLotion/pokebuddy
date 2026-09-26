@@ -11,7 +11,7 @@
 // 옛 body.js 와 다른 점
 //   Date.now 를 부르지 않는다 — now 는 tick·pickup·drop·click·rehome 의 인자. state·focus 는 now 를 선택 인자로 받고,
 //   없으면 마지막 tick 의 now 로 친다 (틱이 40ms 간격이라 어긋남은 그 안)
-//   활동 시각(activeAt)은 인스턴스 안 — 마리마다 따로 잠든다 (지금은 신호가 전원 공통이라 같이 잠들지만, S3 성격 배율로 갈린다)
+//   활동 시각(activeAt)은 인스턴스 안 — 마리마다 따로 잠든다 (신호는 전원 공통이라 reactMs 지연과 성격 배율로 갈린다)
 //   PMD 검사(art.kind)·mode "off" 처리는 무대 쪽 — 여기는 caps 만 받는다
 import type { StageState } from "../shared/stage";
 import { createBrain } from "./brain";
@@ -40,6 +40,7 @@ export function createPetMotion({
   mode = "on",
   timeScale = 1,
   rng = Math.random,
+  reactMs = 0,
   log = null,
   now: bornAt,
 }: PetMotionOptions): PetMotion {
@@ -60,7 +61,9 @@ export function createPetMotion({
 
   let lastNow: number | null = bornAt ?? null; // 마지막으로 본 시각 — now 를 안 주는 state·focus 의 기준
   let activeAt: number | null = bornAt ?? null; // 마지막 사용자 활동 — 막 켰으면 사용자가 있는 것. 모르면 첫 틱 시각
-  let agent: StageState = "idle";
+  let seen: StageState = "idle"; // 훅이 알려 준 최신 상태 — 활동 시각 규칙은 이것으로 판단
+  let agent: StageState = "idle"; // brain 에 넘기는 상태 — seen 을 마리별 지연 뒤에 따라간다
+  let pending: { next: StageState; at: number } | null = null;
   let focusKey: string | null = null;
   let lastLogged: string | null = null; // 마지막으로 찍은 단계·동작 — 작업 동작은 같은 단계(work)에서 동작만 바뀐다
 
@@ -78,12 +81,20 @@ export function createPetMotion({
   //                       실패 표시가 끝나 작업으로 돌아가는 것(failed→running)은 자동이라 빼고
   //   일이 끝남          사용자가 결과를 읽는 때다. 안 치면 수면 시계가 프롬프트부터 돌아,
   //                       수면 시간보다 긴 작업이 끝나자마자 잠든다 (3분 시절 시뮬레이션: 프롬프트의 46% 가 자는 펫에 도착)
+  //   반응 지연  여러 마리가 같은 신호를 같은 틱에 받아 똑같이 움직이지 않게, 마리마다 0~reactMs 뒤에 따른다
   function state(next: StageState, promptAt: number | null, now?: number): void {
     const at = clock(now);
     if (promptAt) bump(promptAt * 1000);
-    if (next !== agent && next === "running" && agent !== "failed") bump(at);
-    if (next !== agent && next === "idle") bump(at);
-    agent = next;
+    if (next !== seen && next === "running" && seen !== "failed") bump(at);
+    if (next !== seen && next === "idle") bump(at);
+    if (next !== seen) {
+      if (next !== agent && reactMs > 0 && at !== null) pending = { next, at: at + rng() * reactMs * timeScale };
+      else {
+        agent = next;
+        pending = null;
+      }
+    }
+    seen = next;
   }
 
   // 포커스 묶음(포커스·활성 터미널·터미널 목록 등)이 달라졌으면 사용자가 뭔가 한 것.
@@ -100,7 +111,11 @@ export function createPetMotion({
     clock(now);
     if (activeAt === null) activeAt = now;
     // 틱의 agent 가 state() 로 받은 것과 다르면 상태 변화로 친다 — state() 를 안 부르는 무대도 bump 규칙을 탄다
-    if (input.agent !== agent) state(input.agent, null, now);
+    if (input.agent !== seen) state(input.agent, null, now);
+    if (pending && now >= pending.at) {
+      agent = pending.next;
+      pending = null;
+    }
     const o = brain.tick({ ...input, agent, activeAt });
     const logKey = `${o.phase}|${o.act ? o.act.anim : ""}`;
     if (log && logKey !== lastLogged) {

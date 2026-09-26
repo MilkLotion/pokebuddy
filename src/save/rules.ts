@@ -43,6 +43,7 @@ export const isCommandSource = (v: unknown): v is CommandSource =>
 // 저장 v3 의 기본값 — 계약은 docs/specs/modules.md "저장 구조". 게임 숫자는 docs/specs/balance.md 를 따른다
 export const SAVE_V3_RULES = {
   version: 3 as const,
+  unlockRev: 1, // 해금 정리 판 — src/dex/unlocks.ts pruneUnlocks. 판을 올리면 옛 저장에서 한 번 정리가 돈다
   party: {
     total: 6, // 파티 칸은 항상 여섯이다. 열림·빈 칸·잠김으로 상태를 나눈다
     openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다

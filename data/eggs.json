@@ -12,6 +12,7 @@
     "bonus": {
       "sub-legendary": 0.015,
       "ultra-beast": 0.02,
+      "paradox": 0.02,
       "mythical": 0.02,
       "legendary": 0.005
     }
@@ -129,6 +130,46 @@
       "#c8f8ff",
       "#7a68b8",
       "#2898c0"
+    ]
+  },
+  "paradox": {
+    "ko": "랜덤패러독스알",
+    "en": "Random Paradox Egg",
+    "price": 2000,
+    "note": "아직 없는 패러독스 포켓몬이 나온다",
+    "single": true,
+    "pool": [
+      "great-tusk",
+      "scream-tail",
+      "brute-bonnet",
+      "flutter-mane",
+      "slither-wing",
+      "sandy-shocks",
+      "roaring-moon",
+      "walking-wake",
+      "gouging-fire",
+      "raging-bolt",
+      "iron-treads",
+      "iron-bundle",
+      "iron-hands",
+      "iron-jugulis",
+      "iron-moth",
+      "iron-thorns",
+      "iron-valiant",
+      "iron-leaves",
+      "iron-boulder",
+      "iron-crown"
+    ],
+    "palette": [
+      "#4a1f3a",
+      "#ffffff",
+      "#a04a78",
+      "#181818",
+      "#f0d8e4",
+      "#e8308a",
+      "#ff9cc8",
+      "#d0a8bc",
+      "#9a1858"
     ]
   },
   "mythical": {

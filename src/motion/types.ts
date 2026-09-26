@@ -66,6 +66,7 @@ export interface PetMotionOptions {
   mode?: "on" | "calm";
   timeScale?: number;
   rng?: () => number;
+  reactMs?: number; // 작업 상태가 바뀐 뒤 반응하기까지 최대 지연(ms) — 마리마다 0~이 값 사이. 기본 0(바로)
   log?: ((o: Record<string, unknown>) => void) | null;
   now?: number; // 만든 시각 — 마지막 사용자 활동의 시작값 (막 켰으면 사용자가 있는 것). 없으면 첫 tick 의 now
 }

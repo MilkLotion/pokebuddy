@@ -138,6 +138,8 @@ export interface DexDetail {
   gimmick: string;
   genus: string; // 공식 분류 — "쥐포켓몬". 미해금이면 빈 문자열
   flavor: string; // 공식 도감 설명문. 한국어가 없으면 영어. 미해금이면 빈 문자열
+  height: string; // "1.1m". 미해금이면 빈 문자열
+  weight: string; // "19.0kg". 미해금이면 빈 문자열
 }
 
 // 달성 전 · 달성했고 보상이 남음 · 보상까지 받음
@@ -226,7 +228,10 @@ export interface ManageReply {
 // manage:dim 은 렌더러 → 메인 — 모달 가림막을 켜고 끈다. OS 가 그리는 창 단추 자리도 같은 색으로 어둡게 한다
 // manage:portraits 는 초상 — 종과 이로치 여부를 보내면 열쇠(slug 또는 slug:shiny)별 data URI 를 돌려준다. 못 받으면 null
 // manage:art 는 디스크에 이미 있는 초상·도구·알 그림 전부 — 창을 열 때 한 번 받아 첫 화면부터 그림을 채운다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art";
+// manage:dex-open 은 렌더러 → 메인 — 도감 칸을 눌렀다. 도감 기기 창에 그 종을 띄운다. null 이면 기기 창을 닫는다
+// manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
+// manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/s5.md "알림 배너의 개별 표시")
 export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string };
@@ -243,6 +248,33 @@ export interface ManageBridge {
   portraits: (asks: PortraitAsk[]) => Promise<Record<string, string | null>>;
   icons: (keys: string[]) => Promise<Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
   art: () => Promise<Record<string, string>>; // 초상(slug · slug:shiny)과 도구·알(egg · item:<식별자>) 열쇠별 data URI
+  dexOpen: (slug: string | null) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다
+  onDexStep: (cb: (delta: -1 | 1) => void) => void; // 기기 창의 이전·다음
+  onDexClosed: (cb: () => void) => void; // 기기 창이 닫혔다
+}
+
+// ── 도감 기기 창 ────────────────────────────────────────────────────────────────
+// 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (docs/work/play-bugs/record.md)
+export interface DexDeviceView {
+  detail: DexDetail;
+  portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
+  side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
+  sound: boolean; // 설정의 소리 — 끄면 울음소리 단추를 막는다
+}
+
+// dexdev:show 는 메인 → 렌더러. 나머지는 렌더러 → 메인이다
+//   size   그린 높이 — 창 높이를 내용에 맞춘다
+//   step   이전(-1) · 다음(1)
+//   cry    지금 종의 울음소리 data URI (못 받으면 null)
+//   close  닫기
+export type DexDeviceChannel = "dexdev:show" | "dexdev:size" | "dexdev:step" | "dexdev:cry" | "dexdev:close";
+
+export interface DexDeviceBridge {
+  onShow: (cb: (view: DexDeviceView) => void) => void;
+  size: (height: number) => void;
+  step: (delta: -1 | 1) => void;
+  cry: () => Promise<string | null>;
+  close: () => void;
 }
 
 // 놀이공간 영역 그리기 창 — Figma `Playground / Region Draw` `396:8541`. 좌표는 창 안 좌표(DIP)다

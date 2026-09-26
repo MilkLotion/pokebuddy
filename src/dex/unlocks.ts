@@ -14,6 +14,7 @@
 // 시간대는 RULES.night — 18시부터 다음날 6시 전까지 night [스펙 미확정]
 
 import { localDate } from "../shared/clock";
+import { SAVE_V3_RULES } from "../save/rules";
 import type { SaveV3 } from "../shared/save-v3";
 import type { DayPart, Pet, UnlockRule, World } from "../shared/types";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
@@ -107,6 +108,19 @@ export function evolvers(rule: UnlockRule, world: World): Pet[] {
 // data/unlocks.json 전부
 export const unlockRules = (opts?: DexOptions): UnlockRules => loadJson<UnlockRules>("unlocks.json", opts);
 
+// ── 해금 정리 (한 번) ──────────────────────────────────────────────────────────
+// 옛 규칙이 처음부터 해금한 종 가운데 이제 알에서만 나오는 종을 되돌린다 (2026-09-27 사용자 결정 "획득하지 않은 것만 한 번 정리")
+//   판 1  화석·패러독스가 기본형에서 빠졌다. 규칙이 없고 얻지 않은 종의 해금을 지운다. 얻은 종은 그대로 둔다
+//   정리는 판(SAVE_V3_RULES.unlockRev)마다 한 번 — 새 저장은 지금 판으로 시작한다
+export function pruneUnlocks(save: SaveV3, rules: UnlockRules): string[] {
+  if (save.dex.rulesRev >= SAVE_V3_RULES.unlockRev) return [];
+  const obtained = new Set(save.dex.obtained.map(normalizeSlug));
+  const removed = save.dex.unlocked.filter((slug) => !rules[slug] && !obtained.has(normalizeSlug(slug)));
+  save.dex.unlocked = save.dex.unlocked.filter((slug) => !removed.includes(slug));
+  save.dex.rulesRev = SAVE_V3_RULES.unlockRev;
+  return removed;
+}
+
 // ── v3 저장 해금 ───────────────────────────────────────────────────────────────
 // 규칙을 만족한 종을 save.dex.unlocked 에 더한다. 새로 해금한 슬러그를 돌려준다
 //   게임 틱(state/time.ts applyTime)과 모든 거래 뒤(tx/executor.ts)에 부른다 — 첫 선택 직후 다른 후보·기본형도 해금된다
@@ -114,6 +128,7 @@ export const unlockRules = (opts?: DexOptions): UnlockRules => loadJson<UnlockRu
 //   파티 마리 수는 칸에 든 마리, 친밀도는 가진 마리 전부로 본다
 export function unlockByRules(save: SaveV3, now: number, opts?: DexOptions): string[] {
   const rules = unlockRules(opts);
+  pruneUnlocks(save, rules);
   const done = new Set(save.dex.unlocked.map(normalizeSlug));
   const partyCount = save.party.slots.filter((s) => s.state === "pokemon" && s.petId).length;
   const part = dayPartOf(new Date(now).getHours());

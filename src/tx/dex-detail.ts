@@ -37,6 +37,8 @@ export function stepText(step: EvoStep, opts?: DexOptions): string {
 interface DexText {
   genus: { ko?: string; en?: string };
   flavor: { ko?: string; en?: string };
+  height?: number; // 데시미터
+  weight?: number; // 헥토그램
 }
 const dexTexts = (opts?: DexOptions): Record<string, DexText> => loadJson<Record<string, DexText>>("dex-text.json", opts);
 
@@ -87,6 +89,15 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     gimmick: "없음", // 특수 기믹은 아직 없다
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종(899번부터)은 영어로 대신한다
     ...officialText(unlocked ? dexTexts(opts)[String(row.dex)] : undefined),
+    ...bodySize(unlocked ? dexTexts(opts)[String(row.dex)] : undefined),
+  };
+}
+
+// 키·몸무게 — 공식 도감처럼 소수 한 자리. 미해금 종과 값이 없는 종은 빈 문자열
+function bodySize(t: DexText | undefined): { height: string; weight: string } {
+  return {
+    height: t?.height ? `${(t.height / 10).toFixed(1)}m` : "",
+    weight: t?.weight ? `${(t.weight / 10).toFixed(1)}kg` : "",
   };
 }
 

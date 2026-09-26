@@ -13,6 +13,9 @@ import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type 
 import type { PartyPet } from "./party";
 import type { StageWindow } from "./stage-window";
 
+// 작업 상태가 바뀐 뒤 마리마다 반응하기까지 최대 지연 — 0~이 값 사이에서 무작위
+const REACT_SPREAD_MS = 1200;
+
 export interface StageOptions {
   mode: Mode;
   index: number; // 세션 펫의 순번 — stackShift
@@ -104,6 +107,8 @@ export function createStage(opts: StageOptions): Stage {
       caps: capsOf({ anims: look.art.anims, work: look.art.work, workOnly: look.art.workOnly, zoom }),
       mode: buddyMode,
       timeScale,
+      // 여러 마리가 같은 신호에 같은 틱에 움직이면 똑같아 보인다 — 마리마다 반응 시점을 어긋낸다
+      reactMs: REACT_SPREAD_MS,
       params,
       now: now(),
       log: log ? (o) => log({ pet: pet.id, ...o }) : null,

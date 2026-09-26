@@ -196,13 +196,14 @@ const fixed = (...values: number[]): (() => number) => {
   process.stdout.write("(13) 개체 식별자 이어 붙이기  ok\n");
 }
 
-// (14) 랜덤알에서 단일 포켓몬 알이 나온다 — 누적 확률 준전설 1.5 · 울트라비스트 2 · 환상 2 · 전설 0.5 (%)
+// (14) 랜덤알에서 단일 포켓몬 알이 나온다 — 누적 확률 준전설 1.5 · 울트라비스트 2 · 패러독스 2 · 환상 2 · 전설 0.5 (%)
 {
   const cases: [number, string, number][] = [
     [0.01, "sub-legendary", 42],
     [0.02, "ultra-beast", 10],
-    [0.04, "mythical", 22],
-    [0.057, "legendary", 24],
+    [0.04, "paradox", 20],
+    [0.06, "mythical", 22],
+    [0.077, "legendary", 24],
   ];
   for (const [roll, kind, count] of cases) {
     const s = seed({ remainMs: 0, ready: true });
@@ -260,9 +261,10 @@ const fixed = (...values: number[]): (() => number) => {
 {
   const s = empty(T0);
   const prices = Object.fromEntries(shopList(s).filter((p) => p.category === "egg").map((p) => [p.id, p.price]));
-  assert.deepStrictEqual(prices, { random: 120, "ancient-stone": 200, "sub-legendary": 2000, "ultra-beast": 2000, mythical: 3000, legendary: 5000 });
+  assert.deepStrictEqual(prices, { random: 120, "ancient-stone": 200, "sub-legendary": 2000, "ultra-beast": 2000, paradox: 2000, mythical: 3000, legendary: 5000 });
   assert.equal(dexDetail(s, "mewtwo")?.methods, "랜덤전설알");
   assert.equal(dexDetail(s, "kartana")?.methods, "랜덤울트라비스트알");
+  assert.equal(dexDetail(s, "iron-crown")?.methods, "랜덤패러독스알");
   process.stdout.write("(17) 상점 가격 · 도감 입수 방법  ok\n");
 }
 

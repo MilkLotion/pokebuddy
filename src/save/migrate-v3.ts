@@ -102,6 +102,7 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
   out.points.progressMs = Math.max(0, Math.round(progress));
 
   out.dex.unlocked = [...new Set(v2.unlocked)];
+  out.dex.rulesRev = 0; // 옛 규칙으로 해금한 종이라 첫 해금 판정 때 한 번 정리한다 (src/dex/unlocks.ts pruneUnlocks)
   out.dex.obtained = [...new Set(out.pets.map((p) => p.species))];
   out.dex.shinyObtained = [...new Set(out.pets.filter((p) => p.shiny).map((p) => p.species))];
 
