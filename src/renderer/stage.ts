@@ -365,11 +365,30 @@ function placeCoach(r: { x: number; y: number; w: number; h: number }): void {
     if (d) Object.assign(d.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
   });
   const bh = bubbleEl.offsetHeight;
-  const left = Math.min(Math.max(COACH.margin, r.x + r.w / 2 - COACH.width / 2), W - COACH.width - COACH.margin);
+  const bw = COACH.width;
+  const clampX = (x: number): number => Math.min(Math.max(COACH.margin, x), W - bw - COACH.margin);
+  const clampY = (y: number): number => Math.min(Math.max(COACH.margin, y), H - bh - COACH.margin);
   const above = hole.t - COACH.gap - bh;
-  const top = above >= COACH.margin ? above : Math.min(hole.b + COACH.gap, H - bh - COACH.margin);
-  bubbleEl.style.left = `${Math.round(left)}px`;
-  bubbleEl.style.top = `${Math.round(top)}px`;
+  const below = hole.b + COACH.gap;
+  const centerX = clampX(r.x + r.w / 2 - bw / 2);
+  const baseTop = above >= COACH.margin ? above : clampY(below);
+  let spot = { left: centerX, top: baseTop };
+  // 열린 메뉴를 덮지 않는 자리 — 기본 자리 → 메뉴 왼쪽 → 메뉴 오른쪽 → 메뉴 위 → 메뉴 아래 순서로 처음 맞는 곳
+  const a = coach?.avoid;
+  if (a) {
+    const hits = (s: { left: number; top: number }): boolean => s.left < a.x + a.w && s.left + bw > a.x && s.top < a.y + a.h && s.top + bh > a.y;
+    const fits = (s: { left: number; top: number }): boolean => s.left >= 0 && s.left + bw <= W && s.top >= 0 && s.top + bh <= H;
+    const candidates = [
+      spot,
+      { left: a.x - COACH.gap - bw, top: clampY(baseTop) },
+      { left: a.x + a.w + COACH.gap, top: clampY(baseTop) },
+      { left: clampX(a.x + a.w / 2 - bw / 2), top: a.y - COACH.gap - bh },
+      { left: clampX(a.x + a.w / 2 - bw / 2), top: a.y + a.h + COACH.gap },
+    ];
+    spot = candidates.find((s) => fits(s) && !hits(s)) ?? spot;
+  }
+  bubbleEl.style.left = `${Math.round(spot.left)}px`;
+  bubbleEl.style.top = `${Math.round(spot.top)}px`;
 }
 
 // 놀이공간 — 말풍선을 무대 가운데에

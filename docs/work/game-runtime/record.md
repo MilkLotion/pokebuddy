@@ -1455,3 +1455,16 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
   - `Tutorial / First Care 2 of 2`(`611:13009`, 1/2 아래 y 820): 말풍선 "메뉴에서 놀아주기를 눌러 보세요"와 2/2 본문, 메뉴 `611:13033`(파이리, 밥 주기 Disabled·이유 "배부름", 놀아주기 Default, 설정 Disabled).
   - 글자는 Chrome 에서 컴포넌트 속성 칸으로 고쳤다([Figma 글자 작업](../../contributing/figma.md)). 구조는 `use_figma` 로 만들었다. 99 시안 `579:16959` 는 옛 "밥 주기" 안내가 남은 이전 시안이다. 기준은 05 다.
   - `docs/design.md` "화면 크기" 행에 Figma 전용 세션의 682 반영(Page Header 한 줄 36, 간격 14·12, 템플릿 최소 682)을 적었다.
+- 사용자 피드백(2026-09-27, 시험용 HOME 새 게임, 캡처): "우클릭이랑 튜토리얼이랑 겹쳐있어". 포켓몬이 화면 오른쪽 아래에 있으면 메뉴가 커서의 왼쪽 위로 뒤집혀 열린다. 말풍선은 포켓몬 위 가운데라 메뉴와 겹쳤다.
+- 수정:
+  - `src/main/menu-window.ts`: `onPlaced`(메뉴 자리, 화면 좌표, 그림자 제외)와 `onClosed` 콜백을 더했다.
+  - `src/main/app.ts`: 첫 돌봄 중에 연 메뉴의 자리를 무대 좌표로 바꿔 `CoachView.avoid` 로 보낸다. 메뉴가 닫히면 지운다.
+  - `src/renderer/stage.ts` `placeCoach`: `avoid` 가 있으면 기본 자리 → 메뉴 왼쪽 → 메뉴 오른쪽 → 메뉴 위 → 메뉴 아래 순서로 화면 안에 들고 메뉴를 덮지 않는 첫 자리에 둔다.
+  - `src/tools/smoke-renderer.ts`: 기본 자리를 `avoid` 로 주면 말풍선이 비켜 가는지 검사한다.
+- 검수(HEAD `cfbcd6d` 작업 폴더에 복사해 빌드): `smoke-renderer` "튜토리얼 말풍선 통과", `selftest-stage` 통과 130건, 저장소 `tsc --noEmit` 두 설정 오류 없음. 실기 확인은 사용자 몫으로 남았다.
+- 사용자 피드백(2026-09-27): "이 첫튜토리얼일땐, 포켓몬이 멈추게해야할거같아. 포켓몬이 움직이니까 튜토리얼도 따라움직여서".
+- 수정:
+  - `src/main/stage.ts`: `pin(id)` 를 더했다. 세운 마리는 산책 모션을 돌리지 않고 `play: null`(서 있는 동작)로 둔다. 들거나 돌보는 중이면 평소대로 움직인다. 풀면 산책분을 오프셋으로 옮기고 `motion.rehome` 으로 걷던 길을 버려 선 자리에서 이어 간다. 집은 바꾸지 않고 저장하지 않는다.
+  - `src/main/app.ts` `syncCoach`: 바탕화면 말풍선이 포켓몬을 밝히는 동안(첫 돌봄) 그 마리를 세우고, 말풍선이 없으면 푼다.
+  - `src/tools/selftest-stage.ts`: 풀 때까지(10분) 제자리·서 있는 동작·풀어도 선 자리에서 시작 3건. 세우는 시간은 정해져 있지 않다 — 첫 돌봄 말풍선이 떠 있는 동안이다.
+- 검수: `selftest-stage` 통과 133건, `smoke-renderer` 통과. 실기 확인은 사용자 몫이다.

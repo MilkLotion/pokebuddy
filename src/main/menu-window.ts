@@ -21,6 +21,8 @@ const SHADOW = 8;
 export interface MenuWindowOptions {
   preload: string;
   html: string;
+  onPlaced?: (rect: { x: number; y: number; w: number; h: number }) => void; // 메뉴를 띄운 자리(화면 좌표, 그림자 제외)
+  onClosed?: () => void;
 }
 
 let current: BrowserWindow | null = null;
@@ -60,6 +62,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     ipcMain.removeListener(CH.pick, onPick);
     if (current === win) current = null;
     if (!win.isDestroyed()) win.close();
+    opts.onClosed?.();
   };
   const mine = (e: Electron.IpcMainEvent): boolean => !win.isDestroyed() && e.sender === win.webContents;
 
@@ -75,6 +78,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     x = Math.max(area.x, x);
     y = Math.max(area.y, y);
     win.setBounds({ x, y, width, height });
+    opts.onPlaced?.({ x: x + SHADOW, y: y + SHADOW, w: width - SHADOW * 2, h: height - SHADOW * 2 });
     win.show();
     win.focus(); // 방향키·Enter·Esc 를 받고, 바깥을 누르면 blur 로 닫는다
   };

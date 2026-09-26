@@ -199,13 +199,17 @@ function syncCoach(): void {
   if (mode !== "companion" || !game || !stageWin) return;
   const save = game.read();
   const now = save ? currentTutorial(save) : null;
-  stageWin.sendCoach(now && now.surface === "stage" && save ? coachView(now.id, save.starterPetId) : null);
+  const view = now && now.surface === "stage" && save ? coachView(now.id, save.starterPetId) : null;
+  // 첫 돌봄 동안 밝힌 포켓몬을 세운다 — 걸으면 말풍선이 따라 움직인다 (2026-09-27 사용자 피드백)
+  stage?.pin(view?.kind === "pet" ? view.petId ?? null : null);
+  stageWin.sendCoach(view);
 }
 
 // 첫 돌봄의 단계 — 1/2 우클릭 유도, 포켓몬 메뉴가 열리면 2/2 메뉴에서 밥 주기 (2026-09-27 사용자 결정 "시안대로 진행", Figma `579:16959`).
 // 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
 // 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
 let firstCareMenu: string | null = null;
+let firstCareAvoid: CoachView["avoid"] = undefined; // 열린 메뉴의 자리(무대 좌표) — 말풍선이 피한다
 
 function coachView(id: string, starterPetId: string | null): CoachView | null {
   const menuStep = id === "first-care" && firstCareMenu != null;
@@ -216,7 +220,7 @@ function coachView(id: string, starterPetId: string | null): CoachView | null {
   // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
   const ids = stage?.petIds() ?? [];
   const petId = starterPetId && ids.includes(starterPetId) ? starterPetId : ids[0];
-  return petId ? { ...base, kind: "pet", petId } : null;
+  return petId ? { ...base, kind: "pet", petId, ...(id === "first-care" && firstCareAvoid ? { avoid: firstCareAvoid } : {}) } : null;
 }
 
 function playTarget(): HelperWindow {
@@ -391,7 +395,21 @@ function showPetMenu(id: string): void {
     }
   }
   // OS 기본 메뉴는 Windows 에서 왼쪽을 크게 비운다 — 앱이 그리는 메뉴를 커서 자리에 띄운다 (docs/specs/ui-components.md C-21)
-  popupMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
+  // 첫 돌봄 중이면 메뉴 자리를 말풍선에 알려 겹치지 않게 한다. 메뉴가 닫히면 말풍선은 제자리로 돌아간다
+  const avoid = firstCare && pet
+    ? {
+        onPlaced: (r: { x: number; y: number; w: number; h: number }) => {
+          const s = stageWin?.stage();
+          firstCareAvoid = s ? { x: r.x - s.x, y: r.y - s.y, w: r.w, h: r.h } : undefined;
+          syncCoach();
+        },
+        onClosed: () => {
+          firstCareAvoid = undefined;
+          syncCoach();
+        },
+      }
+    : {};
+  popupMenu({ preload: preloadFile(), html: rendererFile("menu.html"), ...avoid }, items, t("menu.on"));
 }
 
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다

@@ -88,6 +88,7 @@ export interface CoachView {
   button: string; // 확인 — 빈 글이면 버튼을 그리지 않는다(행동으로만 넘어가는 단계)
   petId?: string; // kind pet — 밝힐 마리
   areaLabel?: string; // kind area — "지금 · 화면 전체"
+  avoid?: { x: number; y: number; w: number; h: number }; // kind pet — 말풍선이 덮지 않을 사각형(무대 좌표). 첫 돌봄 2/2 의 열린 메뉴
 }
 export interface CoachAction {
   id: string;

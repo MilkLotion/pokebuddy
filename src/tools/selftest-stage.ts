@@ -319,6 +319,18 @@ async function stageRuntimeTests(): Promise<void> {
   eq(stage.lastFrame()?.pets[0]?.bubble, "배고파…", "말풍선이 프레임에 실린다");
   now += 1000; stage.tick();
   eq(stage.lastFrame()?.pets[0]?.bubble, undefined, "시간이 지나면 말풍선이 사라진다");
+  // 첫 돌봄 — 세운 마리는 오래 지나도 제자리에 서 있고, 풀어도 그 자리에서 이어 간다
+  stage.pin("p1");
+  now += 40; stage.tick();
+  const pinnedAt = stage.lastFrame()!.pets[0]!;
+  // 푸는 시각은 튜토리얼이 정한다 — 오래 두어도 그대로다(10분)
+  for (let n = 0; n < 15000; n++) { now += 40; stage.tick(); }
+  const stillAt = stage.lastFrame()!.pets[0]!;
+  eq([stillAt.x, stillAt.y], [pinnedAt.x, pinnedAt.y], "pin 한 마리는 풀 때까지(10분) 움직이지 않음");
+  eq(stillAt.play, null, "pin 한 마리는 서 있는 동작");
+  stage.pin(null);
+  now += 40; stage.tick();
+  eq([stage.lastFrame()!.pets[0]!.x, stage.lastFrame()!.pets[0]!.y], [pinnedAt.x, pinnedAt.y], "pin 을 풀어도 선 자리에서 시작");
   stage.setVisible(false);
   stage.setVisible(true);
   now += 40; stage.tick();

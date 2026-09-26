@@ -71,6 +71,7 @@ export interface Stage {
   petOf(id: string): PartyPet | null;
   heldId(): string | null;
   lastFrame(): StageFrame | null;
+  pin(id: string | null): void; // 그 마리를 제자리에 세운다(걷지 않고 서 있는 동작). null 이면 풀고 선 자리에서 다시 움직인다 — 첫 돌봄 튜토리얼
 }
 
 export function createStage(opts: StageOptions): Stage {
@@ -85,6 +86,7 @@ export function createStage(opts: StageOptions): Stage {
   let visible = false;
   let agent: StageState = "idle";
   let held: string | null = null;
+  let pinned: string | null = null;
   let generation = 0; // setParty 가 겹쳐 불렸을 때 옛 호출이 결과를 덮지 않게
   const sentLooks = new Set<string>();
   let last: StageFrame | null = null;
@@ -231,7 +233,8 @@ export function createStage(opts: StageOptions): Stage {
             p.quirkKey = key;
           }
         }
-        if (p.motion && !p.care) {
+        if (id === pinned && !p.care && !p.held) p.play = null; // 세운 마리는 산책을 멈추고 서 있는 동작만. 들거나 돌보는 중이면 평소대로
+        else if (p.motion && !p.care) {
           const home = spotOf(p);
           const local = (s: Spot): Spot => ({ x: s.x - home.x - p.offset.x - p.body.w / 2, y: s.y - home.y - p.offset.y - p.body.h / 2 });
           const out = p.motion.tick({ now: t, agent, box: roamBox(home, p.body, size), visible, company: positions.filter((s) => s.id !== id).map(local), cursor: cursor ? local(cursor) : null });
@@ -370,6 +373,17 @@ export function createStage(opts: StageOptions): Stage {
     petIds: () => order.filter((id) => pets.has(id)),
     petOf: (id) => pets.get(id)?.pet ?? null,
     heldId: () => held,
+    pin(id) {
+      if (id === pinned) return;
+      // 풀린 마리는 선 자리를 지킨다 — 산책분을 오프셋으로 옮기고 걷던 길을 버린다(집은 그대로, 저장하지 않는다)
+      const was = pinned ? pets.get(pinned) : undefined;
+      if (was) {
+        was.offset = { x: was.offset.x + was.roam.x, y: was.offset.y + was.roam.y };
+        was.roam = { x: 0, y: 0 };
+        was.motion?.rehome(now());
+      }
+      pinned = id;
+    },
     lastFrame: () => last,
   };
 }

@@ -91,15 +91,23 @@ void app.whenReady().then(async () => {
       fixture.callbacks.coach({ id: 'first-care', kind: 'pet', petId: 'last', step: 's', title: 't', body: 'b', button: '' });
       await new Promise((r) => setTimeout(r, 50));
       const noButton = !document.querySelector('.coach-bubble .go') && !!document.querySelector('.coach-bubble .x');
+      // 열린 메뉴 자리(avoid)를 기본 자리 위에 두면 말풍선이 비켜 간다
+      const first = document.querySelector('.coach-bubble').getBoundingClientRect();
+      const avoid = { x: first.left, y: first.top, w: first.width, h: first.height };
+      fixture.callbacks.coach({ id: 'first-care', kind: 'pet', petId: 'last', step: 's', title: 't', body: 'b', button: '', avoid });
+      await new Promise((r) => setTimeout(r, 100));
+      const moved = document.querySelector('.coach-bubble').getBoundingClientRect();
+      const clear = moved.right <= avoid.x || moved.left >= avoid.x + avoid.w || moved.bottom <= avoid.y || moved.top >= avoid.y + avoid.h;
       fixture.callbacks.coach(null);
-      return { onBubble, onPet, onDim, done, skip, noButton, hidden: document.getElementById('coach').hidden };
-    })()`) as { onBubble: string; onPet: string; onDim: string | null; done: { id: string; action: string }; skip: { action: string }; noButton: boolean; hidden: boolean };
+      return { onBubble, onPet, onDim, done, skip, noButton, clear, hidden: document.getElementById('coach').hidden };
+    })()`) as { onBubble: string; onPet: string; onDim: string | null; done: { id: string; action: string }; skip: { action: string }; noButton: boolean; clear: boolean; hidden: boolean };
     assert.equal(coach.onBubble, "coach", "말풍선 위는 클릭을 받는다");
     assert.equal(coach.onPet, "last", "밝힌 마리는 그대로 누를 수 있다");
     assert.equal(coach.onDim, null, "어두운 막 위는 아래 창으로 통과한다");
     assert.deepEqual(coach.done, { id: "first-care", action: "done" });
     assert.equal(coach.skip.action, "skip");
     assert.equal(coach.noButton, true, "버튼 문구가 없으면 버튼 없이 ✕ 만");
+    assert.equal(coach.clear, true, "열린 메뉴 자리를 덮지 않는다");
     assert.equal(coach.hidden, true, "null 이면 지운다");
     process.stdout.write("튜토리얼 말풍선 통과: 히트·버튼·지우기\n");
     if (process.env.POKEBUDDY_SMOKE_ART) {
