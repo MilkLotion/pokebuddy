@@ -13,6 +13,7 @@ import { hasProfile } from "../dex/species.js";
 import { findPet } from "../box/slots.js";
 import { fixedEggs, isSingleEgg } from "../shop/catalog.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { snapSize } from "../save/rules.js";
 import type { DexOptions } from "../dex/data";
 import type { NatureId } from "../shared/types";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
@@ -36,8 +37,6 @@ export type OfferFailure = "no-pet" | "single" | "locked";
 export type ReceiveFailure = "not-object" | "unknown-species" | "single" | "bad-level" | "bad-value" | "bad-nature";
 export type LockFailure = OfferFailure | "busy";
 
-const SIZE_MIN = 1;
-const SIZE_MAX = 6;
 
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
@@ -98,7 +97,7 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
   if (isSinglePet({ species, evolved: evolved as string[] }, opts)) return { ok: false, reason: "single" };
   if (!intIn(raw.level, 1, MAX_LEVEL)) return { ok: false, reason: "bad-level" };
   if (typeof raw.nature !== "string" || !isNatureId(raw.nature, opts)) return { ok: false, reason: "bad-nature" };
-  if (typeof raw.shiny !== "boolean" || !intIn(raw.size, SIZE_MIN, SIZE_MAX)
+  if (typeof raw.shiny !== "boolean" || typeof raw.size !== "number" || !Number.isFinite(raw.size)
       || !intIn(raw.affinity, 0, 100) || !intIn(raw.fullness, 0, 100) || !intIn(raw.mood, 0, 100)
       || !intIn(raw.stage, 0, 10) || !intIn(raw.exp, 0, Number.MAX_SAFE_INTEGER)) {
     return { ok: false, reason: "bad-value" };
@@ -109,7 +108,7 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
   return {
     ok: true,
     pet: {
-      species, shiny: raw.shiny, nature: raw.nature as NatureId, size: raw.size, level: raw.level, exp,
+      species, shiny: raw.shiny, nature: raw.nature as NatureId, size: snapSize(raw.size), level: raw.level, exp, // 크기는 도트 배율 — 가장 가까운 단계로 맞춘다
       affinity: raw.affinity, fullness: raw.fullness, mood: raw.mood, stage: raw.stage, evolved: [...(evolved as string[])],
     },
   };

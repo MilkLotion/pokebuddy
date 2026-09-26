@@ -29,7 +29,7 @@ function seed(): SaveV3 {
 }
 
 const eevee: TradePet = {
-  species: "eevee", shiny: false, nature: "calm", size: 2, level: 52, exp: 0,
+  species: "eevee", shiny: false, nature: "calm", size: 1.5, level: 52, exp: 0,
   affinity: 40, fullness: 80, mood: 60, stage: 0, evolved: [],
 };
 
@@ -56,7 +56,9 @@ const eevee: TradePet = {
   assert.deepStrictEqual(validateReceived({ ...eevee, species: "mewtwo" }), { ok: false, reason: "single" }, "조작한 앱이 전설을 보내도 받는 쪽이 막는다");
   assert.deepStrictEqual(validateReceived({ ...eevee, level: 101 }), { ok: false, reason: "bad-level" });
   assert.deepStrictEqual(validateReceived({ ...eevee, nature: "angry" }), { ok: false, reason: "bad-nature" });
-  assert.deepStrictEqual(validateReceived({ ...eevee, size: 9 }), { ok: false, reason: "bad-value" });
+  const big = validateReceived({ ...eevee, size: 9 });
+  assert.equal(big.ok && big.pet.size, 3, "크기(도트 배율)는 가장 가까운 단계로 맞춘다");
+  assert.deepStrictEqual(validateReceived({ ...eevee, size: "x" }), { ok: false, reason: "bad-value" });
   assert.deepStrictEqual(validateReceived({ ...eevee, affinity: 150 }), { ok: false, reason: "bad-value" });
   assert.deepStrictEqual(validateReceived("x"), { ok: false, reason: "not-object" });
   process.stdout.write("(2) 받은 값 검사  ok\n");

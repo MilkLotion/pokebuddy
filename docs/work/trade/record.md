@@ -1342,3 +1342,50 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 | T-01 | `package.json`의 `selftest` 스크립트에 `selftest-trade`를 넣지 않았다 | 열림. 같은 줄에 다른 세션의 미커밋 변경(`selftest-box`)이 있다. 그 커밋 뒤에 더한다 |
 | T-02 | [모듈 계약](../../specs/modules.md)에 `src/trade`와 저장의 `trade` 영역이 없다(F-02) | 열림. 다른 세션이 문서 정리 중이라 교환 구현을 마칠 때 한 번에 고친다 |
 | T-03 | 스냅샷(화면이 읽는 값)에 교환 상태가 없다 | 2c 화면 단계에서 더한다 |
+
+## 구현 2b — 서버 연결 (2026-09-27)
+
+사용자 지시: "커밋하고 다음 진행".
+
+### 설계
+
+- 목표: 메인 프로세스가 Supabase 공개 함수와 실시간 신호로 교환을 진행하고, 결과를 로컬 거래(`trade.lock`·`unlock`·`apply`)로 반영한다.
+- 층을 셋으로 나눈다. `src/trade/net.ts`(서버 호출), `src/trade/session.ts`(흐름 조율), `src/main/trade.ts`(Electron 세션 저장). 앞의 둘은 Electron 없이 돌아서 Node 에서 로컬 Supabase 로 검사한다.
+- 앱 시작 때 부르기(`start`)와 설정창 IPC 는 2c 화면 단계에서 `app.ts`·설정창 코드와 함께 붙인다.
+
+### 작업
+
+| 파일 | 내용 |
+|---|---|
+| [data/online.json](../../../data/online.json) | 프로젝트 주소, publishable 키, 규약 번호 1. service role 키는 없다. 키는 `supabase projects api-keys` 결과에서 publishable 만 골라 적고, 받은 임시 파일은 지웠다 |
+| [src/trade/config.ts](../../../src/trade/config.ts) | 설정 읽기(개발 중 `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY`로 덮어쓰기), `dataVersion`(종 ID 목록 SHA-256 앞 12자리), 링크 만들기. 링크 앞부분은 `https://milklotion.github.io/pokebuddy/trade`로 두었다. 정적 페이지는 2d 에서 만든다 |
+| [src/trade/net.ts](../../../src/trade/net.ts) | 익명 로그인 확보, 공개 함수 7개 호출, 서버 오류 메시지를 `TRADE_…` 코드로, 닿지 못하면 `NETWORK`. 비공개 채널 `trade:<id>` 구독. 링크·딥링크·토큰에서 토큰 꺼내기 |
+| [src/trade/session.ts](../../../src/trade/session.ts) | 만들기·참가·제안·확정·확정 풀기·나가기·새로 고침·복구. 확정은 로컬 잠금 뒤 서버 확정, 서버가 거절하면 잠금을 푼다. done 이면 친구 제안으로 반영하고 `ack_applied`. 앱을 켜면 pending 의 채널을 다시 읽고, 연결 실패면 5분 뒤 다시 본다. 채널이 없으면 풀어 준다 |
+| [src/main/trade.ts](../../../src/main/trade.ts) | 세션을 `safeStorage`로 암호화해 `<HOME>/online/session.bin`에 둔다. 암호화를 못 쓰면 메모리에만 둔다 |
+| [src/tools/selftest-trade-net.ts](../../../src/tools/selftest-trade-net.ts) | 로컬 Supabase 통합 검사. 주소가 127.0.0.1·localhost 가 아니면 멈춘다. 로컬 서버가 없으면 건너뛴다 |
+
+### 검수
+
+| 명령 | 결과 |
+|---|---|
+| `npm run check`, `npm run build` | 통과 |
+| `node dist/tools/selftest-trade-net.js` | 세 번 연속 통과. 만들기·참가·제안·확정·완료·양쪽 저장 반영·다시 읽어도 한 번·친구 나감·오류 코드(만료·사용됨) |
+| `node dist/tools/selftest-trade.js` | 통과 |
+
+통합 검사가 찾은 문제와 조치:
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| N-01 | 받기 검사가 `size`를 1~6 정수로 보았다. 저장의 `size`는 도트 배율(1·1.5·2·2.5·3)이라 정상 개체를 거절했다 | 거절하지 않고 `snapSize`로 가장 가까운 배율에 맞춘다. `selftest-trade`도 고쳤다 |
+| N-02 | 실시간 신호로 시작한 새로 고침이 확정 전 상태를 늦게 반영해, 방금 건 로컬 잠금을 풀었다. 그 결과 완료가 와도 한쪽이 반영하지 못했다 | 새로 고침을 한 번에 하나만 돌리고, 도는 중의 요청은 끝난 뒤 한 번 더 돈다. 잠금은 판 번호가 달라졌을 때만 푼다 |
+| N-03 | 닫힌 채널의 링크로 참가하면 `TRADE_LINK_EXPIRED`가 나온다. 검사가 `USED`를 기대했다 | 설계대로다. 검사를 고쳤다. `USED`는 참가가 끝난 채널에서 확인한다 |
+
+검사하지 못한 것: 실시간 신호가 실제로 도착해 새로 고침을 부르는지. 통합 검사는 새로 고침을 직접 불렀다. 2e 앱 E2E 에서 본다.
+
+### 피드백
+
+| 번호 | 내용 | 상태 |
+|---|---|---|
+| T-01 | `selftest` 스크립트에 `selftest-trade`·`selftest-trade-net` 더하기 | 열림 |
+| T-04 | 앱 시작 때 `start`(로그인 확보·복구)와 설정창 IPC 연결 | 2c |
+| T-05 | 교환 링크의 정적 페이지 | 2d |
