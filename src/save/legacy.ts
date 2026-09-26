@@ -1,4 +1,6 @@
-// save.json 읽기·쓰기 — 게임 진행의 유일한 저장소. 경로는 config.js PATHS.save (1판 game/save.js 를 옮기며 타입과 스키마 v2)
+// 옛 저장(v1·v2) 읽기와 파일 쓰기 도구 — 지금 저장은 v3 이다(src/save/v3.ts · store.ts). 여기는 v3 이전 파일을 읽어 v3 으로 옮기기 전 단계다.
+// writeAtomic·sleepSync 는 mailbox 등 다른 파일 통로도 쓴다. 아래는 v2 시절 설명이며 읽기·원자적 쓰기 규칙은 지금도 같다
+// (1판 game/save.js 를 옮기며 타입과 스키마 v2)
 //
 // 쓰기는 tmp 에 쓰고 rename (config.js save 와 같다) — 쓰다 죽어도 반쪽 파일이 남지 않는다.
 // Windows 는 읽는 쪽이 파일을 열고 있으면 rename 이 EPERM/EBUSY 를 낸다 — 50ms 뒤 다시 (확장 extension.js write 의 패턴).
@@ -6,7 +8,7 @@
 // 파손 파일은 save.json.bak 으로 옮기고 state:null — 부르는 쪽이 새로 시작한다.
 //   진행을 잃는 유일한 경로라 결과에 corrupted:true 를 담는다 (앱이 알림을 띄운다)
 // 스키마 검증은 너그럽다 — 빠진 필드는 기본값으로 채우고, 뼈대(v·party, 종 없는 마리)가 아니면 파손으로 본다
-// v1(한 마리 활성 + party 객체) 은 읽을 때 v2 로 이전한다 — 사용자의 진행을 잃지 않게. 쓰는 것은 항상 v2
+// v1(한 마리 활성 + party 객체) 은 읽을 때 v2 로 이전한다 — 사용자의 진행을 잃지 않게. 그 v2 를 migrate-v3 이 v3 으로 옮긴다
 // 시각은 전부 ms. 여기서 시계를 직접 부르지 않는다 — empty(now) 처럼 받는다
 import fs from "node:fs";
 import path from "node:path";

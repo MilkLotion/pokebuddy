@@ -321,7 +321,7 @@ const openManageWindow = (route?: ManageRoute): void => {
 
 // 상점·도감·가방은 관리 창이 맡는다. 트레이에는 창을 여는 자리만 둔다 (docs/specs/s5.md "화면 구조")
 const trayTemplate = () => [
-  { label: "관리 창 열기", click: () => openManageWindow() },
+  { label: "설정창 열기", click: () => openManageWindow() },
   { type: "separator" as const },
   ...trayMenu(
     { hidden: userHidden, ghost: !!config.clickThrough },
@@ -382,7 +382,7 @@ function showPetMenu(id: string): void {
   });
   if (pet) built.splice(built.length - 2, 0,
     { type: "separator" as const },
-    { label: "관리 창 열기", click: () => openManageWindow() },
+    { label: "설정창 열기", click: () => openManageWindow() },
   );
   // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다
   const save = mode === "companion" ? game?.read() : null;
@@ -604,7 +604,7 @@ async function main(): Promise<void> {
     },
     onMenu: showPetMenu,
     onArtMissing: (pet) => {
-      // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다 (s2-plan 2.2 h)
+      // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다
       process.stderr.write(`${pet.species}: PMD 그림을 받지 못함 — 무대에 나오지 않는다 (네트워크·프록시 확인)\n`);
       reportFailure(PATHS, pet.look, `${pet.look} 그림을 받지 못함 — 네트워크(프록시)를 확인하거나 다른 펫 이름으로 시도`);
     },

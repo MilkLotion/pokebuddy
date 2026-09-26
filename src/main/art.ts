@@ -1,6 +1,6 @@
-// 그림의 facade — art/pmd-load.js(S2 유지 · S5 에 이식)의 loadPmd 를 감싸 무대가 쓰는 모양(LookSheets)으로 낸다. 움직임용 보유 동작은 motion/pet-motion capsOf 가 뽑는다.
+// 그림의 facade — art/pmd-load.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다)의 loadPmd 를 감싸 무대가 쓰는 모양(LookSheets)으로 낸다. 움직임용 보유 동작은 motion/pet-motion capsOf 가 뽑는다.
 //
-// 무대 캔버스는 시트를 미리 디코드해 그리므로 PMD 전용이다 — showdown(GIF img 태그) · sheet(codex 팩)는 얹을 수 없다 (s2-plan 2.2 h).
+// 무대 캔버스는 시트를 미리 디코드해 그리므로 PMD 전용이다 — showdown(GIF img 태그) · sheet(codex 팩)는 얹을 수 없다.
 // PMD 를 못 받은 마리는 무대에 나오지 않는다 — 부르는 쪽이 stderr 한 줄 + last-error.json 을 남긴다.
 // look(모습) 하나는 한 번만 받는다 — 같은 종 여러 마리가 시트를 공유한다. 배율(zoom)은 마리별(Pet.size)이라 여기서 정하지 않고 zoomOf 로 뽑는다
 import { SIZE_STEPS, snapSize } from "../save/rules.js";

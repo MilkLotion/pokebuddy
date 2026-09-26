@@ -1570,70 +1570,6 @@
         border-color: var(--primary);
         color: var(--inverse);
       }
-      /* 설정 안의 다른 화면으로 가는 줄 — 가이드북 */
-      .go {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-        appearance: none;
-        font: inherit;
-        text-align: left;
-        color: inherit;
-        border: 0;
-        border-bottom: 1px solid var(--line);
-        background: none;
-        padding: 11px 0;
-        cursor: pointer;
-      }
-      .go .body {
-        flex: 1;
-        min-width: 0;
-      }
-      .go .label {
-        font-weight: 600;
-      }
-      .go .arrow {
-        flex: none;
-        color: var(--muted);
-      }
-
-      /* 업적 한 줄 — 상태는 좌측 dot 로 나눈다 */
-      .achievement {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .achievement:last-child {
-        border-bottom: 0;
-      }
-      .achievement .state {
-        flex: none;
-        width: 9px;
-        height: 9px;
-        border-radius: 50%;
-        background: var(--subtle);
-      }
-      .achievement.achieved .state {
-        background: var(--primary);
-      }
-      .achievement.claimed .state {
-        background: var(--muted);
-      }
-      .achievement .body {
-        flex: 1;
-        min-width: 0;
-      }
-      .achievement .label {
-        font-weight: 600;
-      }
-      .achievement.locked .label {
-        color: var(--muted);
-        font-weight: 400;
-      }
-      .achievement .hint {
       /* 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 120 · 숫자 칸 40×24 · 스피커 단추 28, 사이 8.
          음소거면 슬라이더·숫자를 흐리게 하고 값은 그대로 보인다 */
       .volume {
@@ -1717,6 +1653,70 @@
       .volume.muted input[type="number"] {
         color: var(--disabled);
       }
+      /* 설정 안의 다른 화면으로 가는 줄 — 가이드북 */
+      .go {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        appearance: none;
+        font: inherit;
+        text-align: left;
+        color: inherit;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: none;
+        padding: 11px 0;
+        cursor: pointer;
+      }
+      .go .body {
+        flex: 1;
+        min-width: 0;
+      }
+      .go .label {
+        font-weight: 600;
+      }
+      .go .arrow {
+        flex: none;
+        color: var(--muted);
+      }
+
+      /* 업적 한 줄 — 상태는 좌측 dot 로 나눈다 */
+      .achievement {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .achievement:last-child {
+        border-bottom: 0;
+      }
+      .achievement .state {
+        flex: none;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--subtle);
+      }
+      .achievement.achieved .state {
+        background: var(--primary);
+      }
+      .achievement.claimed .state {
+        background: var(--muted);
+      }
+      .achievement .body {
+        flex: 1;
+        min-width: 0;
+      }
+      .achievement .label {
+        font-weight: 600;
+      }
+      .achievement.locked .label {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .achievement .hint {
         color: var(--muted);
         font-size: 10px;
         font-family: var(--font-small);

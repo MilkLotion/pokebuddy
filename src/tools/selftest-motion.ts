@@ -2,7 +2,7 @@
 //
 // 테스트 프레임워크 없이 assert 만. 파일·Electron 없이 고정 rng 와 가짜 caps 로 시간을 돌린다.
 // 가짜 caps: Idle · Walk · Sleep · Wake · Nod · Hurt · Hop (작업 동작 시험에는 Attack(once) · Charge(loop) 를 더한다), durOf 고정
-// 확인하는 것 (s2-plan §4.B)
+// 확인하는 것
 //   (1) 한가: 일정 시간 안에 walk 가 나오고 roam 은 box 안      (2) 300초 입력 없음 → sleep, click → wake → rest
 //   (3) running → work 리듬, 잠 안 듦, Walk 만 있으면 걷기만     (4) pickup → held · drag 누적 6px → heldRow · drop → roam 0 + 반응
 //   (5) 신호 상태(waiting) → yield, act null                     (6) paceScale 2 → 같은 거리 walk.dur 절반 · sleepScale 0.5 → 150초에 잔다

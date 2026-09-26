@@ -1,4 +1,4 @@
-// 화면 문구·이름의 typed facade — lib/i18n.js · lib/names.js(S2 유지 · S5 에 이식).
+// 화면 문구·이름의 typed facade — lib/i18n.js · lib/names.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다).
 // 메뉴·트레이는 슬러그가 아니라 "피카츄" 를 보인다. 성격 이름은 data/natures.json 의 name (한국어·영어) — 언어 파일에 따로 두지 않는다
 import { nature as natureOf } from "../dex/natures";
 import type { Lang, NatureId } from "../shared/types";

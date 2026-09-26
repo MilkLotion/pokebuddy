@@ -1,6 +1,6 @@
 // 우클릭·트레이 메뉴의 항목 — Electron 을 import 하지 않고 MenuItemConstructorOptions 모양의 객체만 돌려준다 (node 시험 가능).
 // 문구는 언어 파일(lib/i18n)에서. 호칭(펫·동반자)은 쓰지 않고 동사만 (사용자 결정 2026-09-17).
-// S2 우클릭 = 그 마리의 "이름 · 성격" 한 줄(비활성) · 잠시 숨기기/다시 보이기 · 종료. 밥·놀기는 S3 에서 핸들러와 함께 들어온다 (s2-plan 2.2 j)
+// 우클릭 = 이름·상태 / 밥 주기·놀아주기 / 설정창 열기 세 묶음 (docs/specs/s5.md 2026-09-24 전환)
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다. 트레이가 없는 세션·창 펫은 단축키로 끈다
 import type { MenuItemConstructorOptions } from "electron";
 import type { MenuView } from "../shared/manage";
@@ -50,7 +50,7 @@ export function lockExcept(template: MenuItemConstructorOptions[], keep: readonl
   return template.map((m) => (m.click && !keep.includes(String(m.label)) ? { ...m, enabled: false } : m));
 }
 
-// 트레이 — 잠시 숨기기 / 클릭 통과 / 종료. 관리 창 열기는 부르는 쪽이 맨 위에 붙인다.
+// 트레이 — 잠시 숨기기 / 클릭 통과 / 종료. 설정창 열기는 부르는 쪽이 맨 위에 붙인다.
 // 이름 줄과 설정 파일 열기는 뺐다 — 관리 창이 그 일을 한다 (docs/work/game-runtime/record.md "트레이 메뉴와 표시 설정의 설계")
 export function trayMenu(model: TrayMenuModel, act: MenuActions): MenuItemConstructorOptions[] {
   return [

@@ -1,4 +1,4 @@
-// 경로·설정의 typed facade — config.js(S2 유지 · S5 에 이식)를 감싼다. 값·규칙·기본값은 그쪽이 소유하고 여기는 모양만 붙인다
+// 경로·설정의 typed facade — config.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다)를 감싼다. 값·규칙·기본값은 그쪽이 소유하고 여기는 모양만 붙인다
 // dist/main/paths.js 에서 ../../config.js = 프로젝트 루트의 config.js
 import fs from "node:fs";
 import path from "node:path";

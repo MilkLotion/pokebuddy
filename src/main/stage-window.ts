@@ -196,7 +196,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       if (!alive() || rect.w < 1 || rect.h < 1 || sameRect(rect, stageRect)) return false;
       const bounds = { x: rect.x, y: rect.y, width: rect.w, height: rect.h };
       win!.setBounds(bounds, false);
-      // resizable:false 창이 크기 변경을 거부하면(Windows 에서 가능) 잠깐 풀고 다시 (s2-plan 5.3)
+      // resizable:false 창이 크기 변경을 거부하면(Windows 에서 가능) 잠깐 풀고 다시
       const got = win!.getBounds();
       if (got.width !== bounds.width || got.height !== bounds.height) {
         win!.setResizable(true);

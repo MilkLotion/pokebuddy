@@ -21,7 +21,7 @@
 
 ## 문서 트리
 
-2026-09-22 기준 전체 문서 구조다. Figma 사본은 [0.1 · 전체 설계·문서 트리](https://www.figma.com/design/MA3K41Y6omAi5mRu6YDFly/pokebuddy?node-id=236-121) 페이지에 있다. 2026-09-26에 페이지 이름을 `06`에서 `0.1`로 바꿨다. 사본과 이 그림이 다르면 이 그림을 따른다. 실선은 폴더 구성이다. 점선은 결정이 기록되는 순서다. 사용자 발언을 작업 기록에 남긴다. 채택한 결정을 설계에 옮긴다. 세부 계약과 흐름을 기능 문서에 적는다. 현재 상태를 진행 현황에 적는다.
+2026-09-27 기준 전체 문서 구조다(2026-09-22 판에 뒤의 작업 폴더를 더했다). Figma 사본은 [0.1 · 전체 설계·문서 트리](https://www.figma.com/design/MA3K41Y6omAi5mRu6YDFly/pokebuddy?node-id=236-121) 페이지에 있다. 2026-09-26에 페이지 이름을 `06`에서 `0.1`로 바꿨다. 사본과 이 그림이 다르면 이 그림을 따른다. 실선은 폴더 구성이다. 점선은 결정이 기록되는 순서다. 사용자 발언을 작업 기록에 남긴다. 채택한 결정을 설계에 옮긴다. 세부 계약과 흐름을 기능 문서에 적는다. 현재 상태를 진행 현황에 적는다.
 설계 영역별 확정·미정 상태는 [전체 설계 트리](progress.md#전체-설계-트리)를 따른다. `s5` 이름의 파일과 폴더는 S5 설정창 설계에서 시작했다. 현재는 프로젝트 전체의 재설계 결정도 담는다.
 
 ```mermaid
@@ -37,18 +37,26 @@ flowchart TD
   SPE --> S5["s5.md<br/>기능 계약"]
   SPE --> SCN["s5-scenarios.md<br/>사용자 흐름 SC-01~11"]
   SPE --> UIC["ui-components.md<br/>UI 컴포넌트 계약"]
+  SPE --> MOD["modules.md<br/>모듈 책임·저장·명령"]
+  SPE --> BAL["balance.md<br/>밸런스 수치"]
   D --> WOR["work/<br/>작업별 기록"]
   WOR --> WI["구현"]
   WI --> W1["s3/ 육성"]
   WI --> W2["s4/ 상점·진화"]
   WI --> W3["runtime-e2e/ 실행 흐름 재검수"]
+  WI --> W10["game-runtime/ S5 게임 런타임 구현"]
+  WI --> W11["play-bugs/ 플레이 버그 3건"]
+  WI --> W12["sound-size/ 소리 크기·그림 크기 단계"]
   WOR --> WD["설계"]
   WD --> W4["s5-design-system-v2/<br/>전체 설계 결정 기록·Figma 검수"]
   WD --> W5["s5-terminology/ 명칭 출처 정정"]
   WD --> W6["s5-record-cleanup/ 이전 기록 정리"]
+  WD --> W15["trade/ 친구 교환 설계"]
   WOR --> WA["자산"]
   WA --> W7["logo/ 정식 로고"]
   WA --> W8["icon-concepts/ 아이콘 시안"]
+  WA --> W13["ui-pixel-style/ 화면 글꼴 Galmuri"]
+  WA --> W14["item-art/ 가상 도구 도트 그림"]
   WOR --> WX["문서"]
   WX --> W9["docs-organization/ 문서 구조·작성 절차"]
   D --> HIS["history/<br/>월별 완료 이력"]

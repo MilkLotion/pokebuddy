@@ -157,7 +157,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(locked.filter((v) => v.kind === "item" && !v.disabled).map((v) => (v.kind === "item" ? v.label : "")), [t("menu.feed")], "lockExcept 밥 주기만 남긴다");
   eq(locked.filter((v) => v.kind === "item" && v.disabled).length, 3, "lockExcept 놀아주기·숨기기·종료는 흐리다");
   eq(locked[0]?.kind, "status", "lockExcept 상태 줄은 그대로");
-  // 트레이 — 이름 줄과 설정 파일 열기는 없다. 관리 창 열기는 app.ts 가 맨 위에 붙인다
+  // 트레이 — 이름 줄과 설정 파일 열기는 없다. 설정창 열기는 app.ts 가 맨 위에 붙인다
   const tray = trayMenu({ hidden: false, ghost: true }, act);
   eq(tray.map((m) => m.label ?? m.type), [t("menu.hide"), t("menu.ghost"), "separator", t("menu.quit")], "trayMenu 순서·라벨");
   ok(tray[1]?.type === "checkbox" && tray[1]?.checked === true, "trayMenu 클릭 통과 체크");

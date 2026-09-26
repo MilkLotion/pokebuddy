@@ -1,7 +1,7 @@
 // 에이전트 연결 — Claude Code · Codex · Gemini 를 하나씩 잇고(훅 등록) 끊고, 연결 상태와 사용량 읽기 가능 여부를 알린다.
 // 설정창 "연결" 탭의 버튼과 커맨드 agent.connect / agent.disconnect 가 여기를 부른다 (docs/design.md "에이전트 연결").
 //
-// 훅 등록·해제의 실제 일은 아직 JS 인 cli/setup.js 가 한다(connectCli · disconnectCli · hookInstalled) — S5 에서 이 모듈로 옮긴다.
+// 훅 등록·해제의 실제 일은 아직 JS 인 cli/setup.js 가 한다(connectCli · disconnectCli · hookInstalled) — [리팩토링 대상] 이 모듈로 옮긴다.
 // 토큰 사용량 읽기는 ./usage 에 (배럴 없이 직접 import). CLI 마다 "읽을 수 있나" 가 다르다 — 못 읽는 CLI 는 상태 모듈이 일한 시간으로 대신한다
 import type { AgentName } from "../shared/types";
 
