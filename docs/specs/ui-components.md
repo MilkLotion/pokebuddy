@@ -52,6 +52,7 @@
 | C-24 | 돌봄 타일 | `Care Action` 모양 참고 | 신규 |
 | C-25 | 정보 상자 | 없음 | 신규 |
 | C-26 | 첫 선택 후보 카드 | `Species Card` 모양 참고 | 신규 |
+| C-27 | 저장 표시 | `Point Balance` 높이 참고 | 신규 (2026-09-27) |
 
 그대로 재사용하는 기초 자산: `Button`, `Type Badge`, `Status Dot`, `Divider`, `Visibility Marker`, `Portrait`, 텍스트 컴포넌트, 아이콘. `Portrait`와 `Visibility Marker`는 작은 크기 변형이 필요하다.
 상세 화면에서 계속 쓰는 자산: `Pokemon Profile`, `Page Header`, `Care Section`, `Care Action`, `Settings Section`, `Growth & Tools Section`, `Party Management Section`, `Traits`, `Debuff Badge`, `Notice`, `Status Banner`, `Action Group`, `Size Step`, `Size Selector`. 이번 와이어프레임에는 쓰이지 않았다. 삭제 대상으로 판정하지 않는다.
@@ -70,6 +71,7 @@ Figma 반영: 2026-09-23 C-01·C-02·C-03·C-04·C-05·C-13·C-18을 반영했�
 사용 화면: 관리 창 모든 탭, WF-01~WF-05, WF-01b.
 판정: `App Header`에 업적·설정 아이콘 자리를 더한다. 기존 설정 탭 진입은 아이콘으로 옮긴다.
 Figma: `App Header` `154:1017`의 오른쪽에 `header-actions`를 두었다. 순서는 보유 포인트, 업적 버튼, 설정 버튼이다. 두 버튼은 노출한 인스턴스다. 헤더 인스턴스에서 dot와 열림 상태를 바꾼다. 상태 예시는 `295:3297`이다.
+2026-09-27 추가: 보유 포인트 왼쪽에 C-27 저장 표시(`save-indicator`)를 두었다. `Show Save Indicator` 속성(기본 꺼짐)으로 켠다. 로그인했을 때만 켠다. 상태는 노출한 `save-indicator` 인스턴스의 `State`로 고른다.
 
 ### C-02 헤더 아이콘 버튼
 
@@ -185,6 +187,7 @@ Figma: `Quantity Stepper` `332:187`. 버튼은 노출한 인스턴스라 최소�
 사용: 가방 사용 패널의 `파티 | 박스`, 설정의 `일반 | 연결`, 설정의 `화면 전체 | 영역 지정`.
 규칙: 회색 틀 안에서 고른 칸만 흰 면이다.
 Figma: `Segmented Control` `331:145`(`Selected=First|Second`).
+2026-09-27 추가: 네 칸 변형을 더했다. 속성은 `Count=2|4`와 `Selected=First|Second|Third|Fourth`다. 기존 두 칸 변형은 `Count=2`다. 네 칸은 설정 모달의 `일반 | 화면 | 연결 | 계정`에 쓴다. 네 칸 변형의 글자는 인스턴스 안의 글자 노드를 바로 바꾼다. 노드는 `633:18389`(First)~`633:18416`(Fourth)다. 근거는 [친구 교환 기록](../work/trade/record.md#계정과-로그인)을 따른다.
 
 ### C-16 필터 칩
 
@@ -265,6 +268,15 @@ Figma: `Info Box` `334:269`. 보조 줄은 `Show Line 2`, `Show Line 3`으로 �
 사용: 첫 선택 화면의 후보 29개.
 재사용하지 않는 이유: `Species Card`는 도감 번호와 획득 상태를 끄는 속성이 없다. 첫 선택 화면에는 두 값이 없다.
 Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성으로 바꾼다.
+
+### C-27 저장 표시
+
+2026-09-27 추가. 근거는 [친구 교환 기록의 저장 상태와 저장 버튼](../work/trade/record.md#저장-상태와-저장-버튼)을 따른다.
+역할: 클라우드 저장 상태를 보여주고 저장 버튼 역할을 한다.
+상태: `Online`(초록 dot, 마지막 저장 시각, 누르면 바로 저장), `Offline`(회색 dot, 누를 수 없음), `SaveNeeded`(주 색 바탕, 노란 dot, 눌러야 오프라인 진행이 올라감). 로그인하지 않으면 표시하지 않는다.
+규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
+사용: C-01 앱 헤더의 보유 포인트 왼쪽.
+Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). 글자는 `Label` 속성으로 바꾼다.
 
 ## 남은 일
 
