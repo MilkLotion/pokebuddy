@@ -11,7 +11,7 @@ import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../main/anchor";
 import { ART_RULES, zoomOf } from "../main/art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, isDefaultHome, petSpot, roamBox, stackShift, stageOf, toLocal } from "../main/layout";
-import { menuView, petLine, petMenu, trayMenu } from "../main/menus";
+import { lockExcept, menuView, petLine, petMenu, trayMenu } from "../main/menus";
 import { t } from "../main/text";
 import { SAVE_RULES, SAVE_V3_RULES } from "../save/rules";
 import * as legacy from "../save/legacy";
@@ -149,6 +149,11 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   const feedView = cared.find((v) => v.kind === "item" && v.label === t("menu.feed"));
   eq(feedView?.kind === "item" ? [feedView.disabled, feedView.hint] : null, [true, "0:40"], "menuView 밥 주기 흐림과 남은 시간");
   eq(menuView(menu, "켜짐").filter((v) => v.kind === "separator").length, 2, "menuView 겹친 구분선은 하나");
+  // 첫 돌봄 2/2 — 밥 주기만 누를 수 있고 나머지 누르는 항목은 흐리다. 이름·상태 줄은 그대로 상태 줄이다
+  const locked = menuView(lockExcept(petMenu({ name: "이브이", nature: "용감", hidden: false, status: "배부름", feed: { enabled: true }, play: { enabled: true } }, act), [t("menu.feed")]), "켜짐");
+  eq(locked.filter((v) => v.kind === "item" && !v.disabled).map((v) => (v.kind === "item" ? v.label : "")), [t("menu.feed")], "lockExcept 밥 주기만 남긴다");
+  eq(locked.filter((v) => v.kind === "item" && v.disabled).length, 3, "lockExcept 놀아주기·숨기기·종료는 흐리다");
+  eq(locked[0]?.kind, "status", "lockExcept 상태 줄은 그대로");
   // 트레이 — 이름 줄과 설정 파일 열기는 없다. 관리 창 열기는 app.ts 가 맨 위에 붙인다
   const tray = trayMenu({ hidden: false, ghost: true }, act);
   eq(tray.map((m) => m.label ?? m.type), [t("menu.hide"), t("menu.ghost"), "separator", t("menu.quit")], "trayMenu 순서·라벨");

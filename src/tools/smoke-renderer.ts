@@ -88,14 +88,18 @@ void app.whenReady().then(async () => {
       const done = fixture.messages.at(-1);
       document.querySelector('.coach-bubble .x').click();
       const skip = fixture.messages.at(-1);
+      fixture.callbacks.coach({ id: 'first-care', kind: 'pet', petId: 'last', step: 's', title: 't', body: 'b', button: '' });
+      await new Promise((r) => setTimeout(r, 50));
+      const noButton = !document.querySelector('.coach-bubble .go') && !!document.querySelector('.coach-bubble .x');
       fixture.callbacks.coach(null);
-      return { onBubble, onPet, onDim, done, skip, hidden: document.getElementById('coach').hidden };
-    })()`) as { onBubble: string; onPet: string; onDim: string | null; done: { id: string; action: string }; skip: { action: string }; hidden: boolean };
+      return { onBubble, onPet, onDim, done, skip, noButton, hidden: document.getElementById('coach').hidden };
+    })()`) as { onBubble: string; onPet: string; onDim: string | null; done: { id: string; action: string }; skip: { action: string }; noButton: boolean; hidden: boolean };
     assert.equal(coach.onBubble, "coach", "말풍선 위는 클릭을 받는다");
     assert.equal(coach.onPet, "last", "밝힌 마리는 그대로 누를 수 있다");
     assert.equal(coach.onDim, null, "어두운 막 위는 아래 창으로 통과한다");
     assert.deepEqual(coach.done, { id: "first-care", action: "done" });
     assert.equal(coach.skip.action, "skip");
+    assert.equal(coach.noButton, true, "버튼 문구가 없으면 버튼 없이 ✕ 만");
     assert.equal(coach.hidden, true, "null 이면 지운다");
     process.stdout.write("튜토리얼 말풍선 통과: 히트·버튼·지우기\n");
     if (process.env.POKEBUDDY_SMOKE_ART) {

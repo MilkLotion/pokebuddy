@@ -326,11 +326,15 @@ function renderCoach(next: CoachView | null): void {
   x.setAttribute("aria-label", "튜토리얼 닫기");
   x.addEventListener("click", () => act("skip"));
   head.append(coachEl("span", "step", next.step), x);
-  const foot = coachEl("div", "foot");
-  const go = coachEl("button", "go", next.button);
-  go.addEventListener("click", () => act("done"));
-  foot.appendChild(go);
-  bubble.append(head, coachEl("div", "title", next.title), coachEl("div", "body", next.body), foot);
+  bubble.append(head, coachEl("div", "title", next.title), coachEl("div", "body", next.body));
+  // 버튼 문구가 없는 단계는 행동으로만 넘어간다 — 첫 돌봄은 우클릭·밥 주기 (Figma `579:16959`)
+  if (next.button) {
+    const foot = coachEl("div", "foot");
+    const go = coachEl("button", "go", next.button);
+    go.addEventListener("click", () => act("done"));
+    foot.appendChild(go);
+    bubble.appendChild(foot);
+  }
   // 말풍선을 누른 것이 포켓몬 잡기·우클릭 메뉴로 번지지 않게
   for (const type of ["pointerdown", "pointerup", "contextmenu"]) bubble.addEventListener(type, (e) => e.stopPropagation());
   coachBox.appendChild(bubble);
@@ -521,7 +525,7 @@ function mockBridge(): StageBridge {
       setTimeout(() => {
         cb(
           kind === "pet"
-            ? { id: "first-care", kind: "pet", petId: "a", step: "튜토리얼 · 첫 돌봄 1 / 1", title: "포켓몬 위에서 우클릭해 보세요", body: "밥 주기와 놀아주기로 돌볼 수 있어요. 포켓몬이 없는 곳의 우클릭은 뒤 앱으로 넘어가요.", button: "다음" }
+            ? { id: "first-care", kind: "pet", petId: "a", step: "튜토리얼 · 첫 돌봄 1 / 2", title: "포켓몬 위에서 우클릭해 보세요", body: "밥 주기와 놀아주기로 돌볼 수 있어요. 포켓몬이 없는 곳의 우클릭은 뒤 앱으로 넘어가요.", button: "" }
             : { id: "playground", kind: "area", areaLabel: "지금 · 화면 전체", step: "튜토리얼 · 놀이공간 1 / 1", title: "포켓몬이 다니는 공간을 바꿀 수 있어요", body: "설정의 놀이공간에서 화면 전체와 영역 지정 중에서 고르세요. 영역 지정은 드래그로 범위를 그려요.", button: "확인" },
         );
       }, 300);

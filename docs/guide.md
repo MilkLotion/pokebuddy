@@ -737,6 +737,45 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 - 시험 중 펫을 끝낼 때는 프로세스를 죽이지 않는다. pid 파일을 지운다. 세션 펫은 `<임시 폴더>/pokebuddy-pets/*.pid` 를 지운다.
   창 펫은 같은 폴더의 `w-<확장 호스트 pid>-<pid>.pid` 를 지운다. 동반자는 `~/.claude/pokebuddy/companion.lock` 을 지운다
 
+### 시험용 HOME 에서 실기 확인
+
+튜토리얼처럼 한 번 끝나면 다시 안 뜨는 화면은 진짜 저장으로 다시 볼 수 없다. 시험용 HOME 에서 동반자를 따로 띄운다.
+도구는 `src/tools/dev-test.ts` 다. 기록은 [게임 런타임 기록](work/game-runtime/record.md#시험용-home-실기-확인)에 있다.
+
+- 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 `<임시 폴더>/pokebuddy-test-home` 이다.
+- 저장·잠금·단일 실행 잠금이 모두 이 HOME 아래에 생긴다. 그래서 진짜 저장을 건드리지 않고, 쓰던 동반자와 나란히 뜬다.
+- 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(`src/main/app.ts` `syncLoginItem`).
+- 다른 세션의 미커밋 변경이 섞이면 안 될 때는 HEAD 를 `git worktree add --detach <폴더> HEAD` 로 따로 꺼낸다.
+  그 폴더의 `node_modules` 는 저장소의 것을 링크(Windows 는 junction)하고, 그 폴더에서 `npm run build` 한 뒤 도구를 부른다.
+
+```powershell
+npm run build
+node dist/tools/dev-test.js start --fresh      # HOME 을 비우고 첫 포켓몬 선택부터
+node dist/tools/dev-test.js show               # 포인트·개체·알·튜토리얼 상태
+node dist/tools/dev-test.js stop               # companion.lock 을 지워 스스로 저장하고 끝나게 한다
+node dist/tools/dev-test.js scene hatch        # 앱이 꺼진 상태에서만 저장을 고친다
+node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄운다
+```
+
+장면은 쉼표로 이어 줄 수 있다(`scene done-all,rich`). 튜토리얼 장면은 그 튜토리얼 앞의 것을 완료로, 그 튜토리얼과 뒤의 것을 미시작으로 둔다.
+첫 포켓몬이 없으면 `charmander` 로 시작 절차(`src/party/starter.ts` `begin`)를 밟는다.
+
+| 장면 | 저장을 이렇게 고친다 |
+|---|---|
+| `tutorials` | 튜토리얼 기록만 비운다. 나머지 진행은 그대로 둔다 |
+| `first-care` | 밥 주기·놀아주기 누계를 0 으로 둔다 |
+| `shop` | 알과 알 번호를 비우고, 포인트를 1000 이상으로 둔다 |
+| `hatch` | 준비된 랜덤알 하나를 넣는다 |
+| `party` | 숨긴 채 파티 칸에 든 새 개체 하나를 넣는다. 랜덤알은 뺀다 |
+| `achievement` | `show-two` 를 달성·미수령으로 두고, 받은 업적 기록을 지운다 |
+| `playground` | 놀이공간을 화면 전체로 둔다 |
+| `done-all` | 튜토리얼을 모두 완료로 둔다 |
+| `rich` | 포인트를 10000 이상으로 둔다 |
+
+- 앱이 떠 있으면 `scene` 은 저장을 고치지 않고 멈춘다. 앱이 메모리의 저장으로 파일을 덮어쓰기 때문이다.
+- `stop` 이 10초 안에 끝내지 못하면 트레이에서 끝낸다. 프로세스를 죽이지 않는다.
+- 확인이 끝나면 시험용 HOME 폴더를 지워도 된다.
+
 ## 그림에 대한 메모
 
 실측해서 정한 동작들이라 근거를 남겨 둔다.

@@ -82,10 +82,10 @@ export interface PointerMsg {
 export interface CoachView {
   id: string; // 튜토리얼 id — first-care · playground
   kind: "pet" | "area";
-  step: string; // "튜토리얼 · 첫 돌봄 1 / 1"
+  step: string; // "튜토리얼 · 첫 돌봄 1 / 2"
   title: string;
   body: string;
-  button: string; // 다음 · 확인
+  button: string; // 확인 — 빈 글이면 버튼을 그리지 않는다(행동으로만 넘어가는 단계)
   petId?: string; // kind pet — 밝힐 마리
   areaLabel?: string; // kind area — "지금 · 화면 전체"
 }
