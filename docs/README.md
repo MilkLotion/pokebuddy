@@ -69,6 +69,7 @@ flowchart TD
 | [history/](history/README.md) | 월별 완료 이력 |
 | [contributing/workflow.md](contributing/workflow.md) | 파일 생성·갱신·보관 절차 |
 | [contributing/writing.md](contributing/writing.md) | ASD-STE100에서 가져온 한국어 작성 원칙과 검수 항목 |
+| [contributing/figma.md](contributing/figma.md) | Figma 글자 작업과 Galmuri 재배치 절차 |
 | [archive/](archive/s5-legacy/README.md) | 대체된 설계·시안. 현재 지시로 사용하지 않는다. |
 
 `docs/` 바로 아래에는 위의 현재 기준 문서와 이 안내만 둔다. 기능 계획은 `specs/`에 둔다. 관측 JSON과 캡처는 해당 작업의 `evidence/`에 둔다.

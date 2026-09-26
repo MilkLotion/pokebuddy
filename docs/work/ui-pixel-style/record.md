@@ -144,6 +144,7 @@ Body와 Label은 같은 크기가 된다. 두 스타일은 글자색으로 구�
 **도구 제약과 해결** — Galmuri 글자 노드는 `use_figma`로 고칠 수 없다. 서버에 글꼴이 없기 때문이다. Chrome 연동으로 사용자 브라우저에서 고치는 방법은 2026-09-26 "Claude in Chrome is turned off in your settings"로 막혔다. 방법은 둘이다.
 - A. 사용자가 Claude in Chrome을 켠다. 브라우저 안에서는 Galmuri를 불러올 수 있다. 그러면 글자 수정도 이 세션이 한다. 가능 여부는 켠 뒤 확인한다. `[스펙 미확정]`
 - B. 글자를 고칠 때 이 세션이 스타일 9개를 Inter로 잠시 바꾼다. 모든 글자 수정을 한 번에 끝낸다. 마지막에 사용자가 스타일 9개를 Galmuri로 한 번 되돌린다. 넘침 검사는 Galmuri 상태에서 한다. 읽기는 글꼴 없이도 된다.
+- 2026-09-27 갱신: A가 풀렸다. 지금 절차는 [Figma 글자 작업과 Galmuri 재배치](../../contributing/figma.md)를 따른다. B는 쓰지 않는다.
 
 **남은 작업**
 
