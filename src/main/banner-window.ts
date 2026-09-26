@@ -3,7 +3,7 @@
 // 테두리 없음 · 배경 투명 · 항상 위 · 포커스를 뺏지 않음 · 작업 표시줄에 없음. 배너가 없을 때는 숨긴다.
 // 배너는 BANNER_RULES.showMs 동안 보인다. 커서가 배너 위에 있는 동안은 시간이 멈춘다.
 // 닫기 단추는 없다 — 누르지 않으면 사라진다 (docs/specs/ui-components.md C-19)
-import { BrowserWindow, ipcMain, screen, shell } from "electron";
+import { BrowserWindow, ipcMain, screen } from "electron";
 import type { BannerChannel, BannerView, ManageRoute } from "../shared/manage";
 import { windowIcon } from "./paths.js";
 
@@ -20,7 +20,7 @@ export const BANNER_RULES = { showMs: 8000, width: 296, height: 98, margin: 8 } 
 export interface BannerWindowOptions {
   preload: string;
   html: string;
-  sound: () => boolean; // 설정의 "알림 소리"
+  chime: () => number; // 알림음 음량 0~1 — 설정의 소리·소리 크기 (src/state/settings.ts gainOf)
   onGo: (route: ManageRoute) => void; // `바로가기` — 관리 창을 열고 옮긴다
   onDone: () => void; // 배너가 사라졌다. 다음 배너를 내보낼 차례다
 }
@@ -126,9 +126,9 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
       void ensure().then(() => {
         if (!win || win.isDestroyed() || current !== banner) return;
         place(win);
-        win.webContents.send(CH.show, banner);
+        // 알림음은 배너 창이 낸다 — OS 기본음(shell.beep)은 크기를 바꿀 수 없어 너무 컸다 (2026-09-27 사용자 요청)
+        win.webContents.send(CH.show, { ...banner, chime: opts.chime() });
         win.showInactive();
-        if (opts.sound()) shell.beep(); // OS 기본 알림음. 무음이어도 배너와 이동은 그대로다
         startTimer(BANNER_RULES.showMs);
       });
     },

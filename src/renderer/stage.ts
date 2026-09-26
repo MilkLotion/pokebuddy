@@ -273,10 +273,11 @@ bridge.onHover((q: HoverQuery) => {
   if (debugOn) renderDebug();
 });
 
-// 울음소리 — 메인이 받은 PokeAPI 울음소리(ogg)를 한 번 낸다. 원본이 커서 소리를 줄인다
-bridge.onCry((uri) => {
+// 울음소리 — 메인이 받은 PokeAPI 울음소리(ogg)를 한 번 낸다. 음량은 설정의 소리 크기를 곱한 값이다 (src/state/settings.ts gainOf)
+bridge.onCry((uri, volume) => {
+  if (volume <= 0) return;
   const audio = new Audio(uri);
-  audio.volume = 0.2;
+  audio.volume = Math.min(1, volume);
   void audio.play().catch(() => undefined); // 재생을 막는 환경이면 소리 없이 넘어간다
 });
 

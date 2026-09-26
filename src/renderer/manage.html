@@ -1552,6 +1552,89 @@
         font-weight: 400;
       }
       .achievement .hint {
+      /* 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 120 · 숫자 칸 40×24 · 스피커 단추 28, 사이 8.
+         음소거면 슬라이더·숫자를 흐리게 하고 값은 그대로 보인다 */
+      .volume {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+        --rail: #64748b; /* Figma bg/control-off */
+      }
+      .volume input[type="range"] {
+        appearance: none;
+        width: 120px;
+        height: 20px;
+        margin: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .volume input[type="range"]::-webkit-slider-runnable-track {
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(to right, var(--primary) var(--p, 0%), var(--rail) var(--p, 0%));
+      }
+      .volume input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        margin-top: -5px;
+        border-radius: 50%;
+        background: var(--surface);
+        border: 2px solid var(--primary);
+      }
+      .volume input[type="number"] {
+        width: 40px;
+        height: 24px;
+        padding: 0 6px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: var(--font-small);
+        font-size: 10px;
+        text-align: right;
+        appearance: textfield;
+      }
+      .volume input[type="number"]::-webkit-inner-spin-button,
+      .volume input[type="number"]::-webkit-outer-spin-button {
+        appearance: none;
+        margin: 0;
+      }
+      .volume .mute {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .volume .mute:hover {
+        background: var(--accent-bg);
+      }
+      .volume .mute svg {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .volume.muted .mute {
+        background: var(--subtle);
+      }
+      .volume.muted input[type="range"]::-webkit-slider-runnable-track {
+        background: linear-gradient(to right, var(--disabled) var(--p, 0%), var(--rail) var(--p, 0%));
+      }
+      .volume.muted input[type="range"]::-webkit-slider-thumb {
+        border-color: var(--disabled);
+      }
+      .volume.muted input[type="number"] {
+        color: var(--disabled);
+      }
         color: var(--muted);
         font-size: 10px;
         font-family: var(--font-small);

@@ -6,6 +6,26 @@
 import type { AgentName, CommandSource, NatureId } from "../shared/types.js";
 import { isNatureId as dexNatureId } from "../dex/natures";
 
+// 그림 크기 단계 — 단계 번호(1부터) 순서의 도트 배율. 저장(Pet.size)은 배율을 적고, 화면·명령은 단계 번호를 쓴다.
+// 더 큰 크기가 필요하면 배열 끝에 배율을 더한다(예: 3.5). 단계 수·단추 수는 이 배열 길이를 따른다.
+// 2026-09-27 사용자 결정: 옛 1과 2 사이 단계를 두고, 옛 3을 가장 크게 한다. 옛 저장의 더 큰 배율은 가장 큰 단계로 줄인다
+export const SIZE_STEPS: readonly number[] = [1, 1.5, 2, 2.5, 3];
+// 새 개체의 크기 단계 — 2026-09-27 사용자 결정 "기본크기 2로" (배율 1.5)
+export const DEFAULT_SIZE_LEVEL = 2;
+
+// 배율에서 가장 가까운 단계 번호 — 같은 거리면 작은 쪽
+export function sizeLevelOf(zoom: number): number {
+  let best = 0;
+  for (let i = 1; i < SIZE_STEPS.length; i++) if (Math.abs((SIZE_STEPS[i] ?? 0) - zoom) < Math.abs((SIZE_STEPS[best] ?? 0) - zoom)) best = i;
+  return best + 1;
+}
+
+// 단계 번호의 배율. 없는 단계면 null
+export const zoomOfLevel = (level: number): number | null => (Number.isInteger(level) ? (SIZE_STEPS[level - 1] ?? null) : null);
+
+// 저장 값을 단계 배율로 맞춘다
+export const snapSize = (zoom: number): number => SIZE_STEPS[sizeLevelOf(zoom) - 1] ?? 2;
+
 export const SAVE_RULES = {
   version: 2 as const, // save.json 스키마 버전 (v). 1 은 읽어서 이전한다
   slots: { min: 1, max: 6 }, // 파티 칸 — 처음 1, 최대 6, 원작 파티 여섯 칸 (design.md 상점)
@@ -56,7 +76,7 @@ export const SAVE_V3_RULES = {
     affinity: 0,
     fullness: 100, // 새 개체는 배부른 상태로 시작한다
     mood: 60,
-    size: 2, // 도트 배율 — SAVE_RULES.pet.size 와 같은 값이다
+    size: 1.5, // 도트 배율 — 크기 단계 DEFAULT_SIZE_LEVEL(2) 의 배율 SIZE_STEPS[1]
     home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — SAVE_RULES.pet.home 과 같은 값이다
   },
   feedCooldownMs: 10 * 60_000, // 밥 주기 쿨타임 10분. 기본먹이와 프리미엄먹이가 함께 쓴다

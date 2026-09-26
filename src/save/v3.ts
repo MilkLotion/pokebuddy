@@ -9,7 +9,7 @@ import type {
   PointsV3, SaveV3, SettingsV3, SlotState, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
-import { SAVE_RULES, SAVE_V3_RULES, isNatureId } from "./rules.js";
+import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
 
 type Raw = Record<string, unknown>;
 
@@ -70,10 +70,14 @@ export function emptySlots(): PartySlotV3[] {
 
 export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: SAVE_V3_RULES.box.size }, () => null) });
 
+// 소리 크기 기본값 — src/state/settings.ts SOUND_RULES.defaultVolume 과 같다 (저장 모듈이 상태 모듈을 부르지 않게 값만 둔다)
+const SOUND_DEFAULT_VOLUME = 30;
+
 const emptySettings = (): SettingsV3 => ({
   language: "ko",
   startOnLogin: true, // 계약 기본값 켜짐 (docs/specs/s5.md "설정과 연결"). 이미 값이 있는 저장은 그 값을 따른다
   sound: true,
+  volume: SOUND_DEFAULT_VOLUME,
   sleepAfterMin: 5,
   playArea: { mode: "full", rect: null },
   display: {},
@@ -124,7 +128,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     species,
     shiny: bool(raw.shiny),
     nature,
-    size: clamp(int(raw.size, SAVE_RULES.pet.size), 1, 6),
+    size: snapSize(num(raw.size, SAVE_V3_RULES.pet.size)), // 단계 배율로 맞춘다 — 옛 4~6 은 가장 큰 단계로 (src/save/rules.ts SIZE_STEPS)
     level: clamp(int(raw.level, SAVE_V3_RULES.pet.level), 1, 100),
     exp: nonNeg(raw.exp, SAVE_V3_RULES.pet.exp),
     affinity: clamp(int(raw.affinity, SAVE_V3_RULES.pet.affinity), 0, 100),
@@ -277,6 +281,7 @@ function normalizeSettings(raw: unknown): SettingsV3 {
     language: str(r.language, base.language),
     startOnLogin: bool(r.startOnLogin, base.startOnLogin),
     sound: bool(r.sound, base.sound),
+    volume: clamp(int(r.volume, base.volume), 0, 100), // 옛 저장에는 없어 기본값이다
     sleepAfterMin: clamp(int(r.sleepAfterMin, base.sleepAfterMin), 0, 600), // 0 은 잠들지 않음 (docs/specs/s5.md "설정과 연결")
     playArea: {
       mode: str(area.mode) === "region" ? "region" : "full",

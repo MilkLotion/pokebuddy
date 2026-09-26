@@ -33,6 +33,7 @@ import { langOf, natureName, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
+import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
 import type { ManageRoute } from "../shared/manage";
@@ -344,12 +345,13 @@ async function playCry(id: string): Promise<void> {
   if (at - (cryAt.get(id) ?? 0) < CRY_GAP_MS) return;
   cryAt.set(id, at);
   const save = game?.read();
-  if (!save || save.settings.sound === false) return;
+  const volume = save ? gainOf(save.settings, SOUND_RULES.cryMax) : 0;
+  if (!save || volume <= 0) return;
   const pet = save.pets.find((p) => p.id === id);
   if (!pet) return;
   cries ??= createCries(path.join(PATHS.home, "cries"));
   const uri = await cries.get(pet.species);
-  if (uri) stageWin?.sendCry(uri);
+  if (uri) stageWin?.sendCry(uri, volume);
 }
 
 function notifyGame(body: string): void {
@@ -484,7 +486,10 @@ async function main(): Promise<void> {
     bannerWin = createBannerWindow({
       preload: preloadFile(),
       html: rendererFile("banner.html"),
-      sound: () => reader.read()?.settings.sound ?? true,
+      chime: () => {
+        const s = reader.read()?.settings;
+        return s ? gainOf(s, SOUND_RULES.chimeMax) : 0;
+      },
       onGo: (route) => openManageWindow(route),
       onDone: () => notifier?.done(),
     });

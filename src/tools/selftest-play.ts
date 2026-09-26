@@ -6,6 +6,8 @@
 import assert from "node:assert";
 import { playAreaRect } from "../main/layout";
 import { setSize } from "../party/home";
+import { DEFAULT_SIZE_LEVEL, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules";
+import { zoomOf } from "../main/art";
 import { empty, normalize } from "../save/v3";
 import { REGION_MIN, setSetting } from "../state/settings";
 import { createExecutor } from "../tx/executor";
@@ -24,15 +26,31 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
   process.stdout.write("(1) 로그인 시 시작 기본값  ok\n");
 }
 
-// (2) 그림 크기 — 1~6 정수만
+// (2) 그림 크기 — 단계 번호 1~5 를 받아 배율(1·1.5·2·2.5·3)을 저장한다 (src/save/rules.ts SIZE_STEPS)
 {
   const save = seedPet();
   assert.deepStrictEqual(setSize(save, "p1", 4), { ok: true, petId: "p1", size: 4 });
-  assert.equal(save.pets[0]?.size, 4);
-  for (const bad of [0, 7, 2.5, "3", null]) assert.equal(setSize(save, "p1", bad).reason, "bad-value", String(bad));
+  assert.equal(save.pets[0]?.size, 2.5, "단계 4 = 배율 2.5");
+  assert.equal(setSize(save, "p1", 2).ok, true);
+  assert.equal(save.pets[0]?.size, 1.5, "옛 1과 2 사이 단계");
+  assert.equal(setSize(save, "p1", SIZE_STEPS.length).ok, true);
+  assert.equal(save.pets[0]?.size, 3, "가장 큰 단계 = 옛 3");
+  for (const bad of [0, SIZE_STEPS.length + 1, 2.5, "3", null]) assert.equal(setSize(save, "p1", bad).reason, "bad-value", String(bad));
   assert.equal(setSize(save, "없음", 3).reason, "no-pet");
-  assert.equal(save.pets[0]?.size, 4, "거부하면 바꾸지 않는다");
-  process.stdout.write("(2) 크기 1~6  ok\n");
+  assert.equal(save.pets[0]?.size, 3, "거부하면 바꾸지 않는다");
+  // 옛 저장 — 정수 배율 1~3 은 그대로, 4~6 은 가장 큰 단계로. 단계 사이 값은 가장 가까운 단계로
+  for (const [old, want] of [[1, 1], [2, 2], [3, 3], [4, 3], [6, 3], [1.4, 1.5]] as const) {
+    const raw = structuredClone(save);
+    (raw.pets[0] as { size: number }).size = old;
+    assert.equal(normalize(raw as unknown, T0)?.pets[0]?.size, want, `옛 크기 ${old}`);
+  }
+  assert.deepStrictEqual([1, 1.5, 2, 2.5, 3].map(sizeLevelOf), [1, 2, 3, 4, 5]);
+  assert.equal(sizeLevelOf(SAVE_V3_RULES.pet.size), DEFAULT_SIZE_LEVEL, "새 개체는 기본 단계");
+  assert.equal(DEFAULT_SIZE_LEVEL, 2);
+  // 무대 배율 — 단계 배율 그대로, 몸이 상한을 넘으면 들어가는 가장 큰 단계로
+  assert.equal(zoomOf(1.5, { w: 20, h: 20 }), 1.5);
+  assert.equal(zoomOf(3, { w: 1000, h: 1000 }), 1);
+  process.stdout.write("(2) 크기 단계  ok\n");
 }
 
 // (3) 실행기로 크기 저장 — pet.set 에 size 만 보내면 자리는 그대로
@@ -42,11 +60,11 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
   const home = state?.pets[0]?.home;
   const res = ex.run({ id: "size-1", name: "pet.set", args: { petId: "p1", size: 5 } });
   assert.ok(res.ok, JSON.stringify(res));
-  assert.equal(state?.pets[0]?.size, 5);
+  assert.equal(state?.pets[0]?.size, 3);
   assert.deepStrictEqual(state?.pets[0]?.home, home);
   const bad = ex.run({ id: "size-2", name: "pet.set", args: { petId: "p1", size: 9 } });
   assert.equal(bad.ok, false);
-  assert.equal(state?.pets[0]?.size, 5);
+  assert.equal(state?.pets[0]?.size, 3);
   process.stdout.write("(3) pet.set size  ok\n");
 }
 

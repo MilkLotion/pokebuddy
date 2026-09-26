@@ -11,6 +11,7 @@ import { PATHS, windowIcon } from "./paths.js";
 import { createPortraits, type PortraitAsk, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
+import { SOUND_RULES, gainOf } from "../state/settings.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -124,7 +125,10 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
     },
     cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
-    sound: () => game.read()?.settings.sound !== false,
+    volume: () => {
+      const s = game.read()?.settings;
+      return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
+    },
     onStep: (delta) => {
       if (win && !win.isDestroyed()) win.webContents.send(CH.dexStep, delta);
     },

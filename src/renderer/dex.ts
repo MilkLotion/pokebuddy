@@ -68,18 +68,20 @@ function sprite(uri: string): HTMLCanvasElement {
 }
 
 let audio: HTMLAudioElement | null = null;
+let volume = 0; // 설정의 소리 크기를 곱한 울음소리 음량 (메인이 준다)
 
 async function playCry(): Promise<void> {
   const uri = await api.cry();
   if (!uri) return;
   audio?.pause();
   audio = new Audio(uri);
-  audio.volume = 0.5;
+  audio.volume = volume;
   void audio.play().catch(() => undefined);
 }
 
 function render(v: DexDeviceView): void {
   const d = v.detail;
+  volume = v.volume;
   const locked = d.state === "locked";
   device.className = `device${v.side === "left" ? " left" : ""}${locked ? " locked" : ""}`;
   device.replaceChildren();
@@ -155,7 +157,7 @@ function render(v: DexDeviceView): void {
   const controls = el("div", "controls");
   const cry = button("cry", "울음소리", () => void playCry());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
-  cry.disabled = locked || !v.sound;
+  cry.disabled = locked || v.volume <= 0;
   controls.append(
     button("prev", "◀ 이전", () => api.step(-1)),
     cry,

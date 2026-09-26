@@ -5,7 +5,7 @@
 // 놀이공간 영역(`playRegion`)은 영역 그리기 창이 적용할 때 보낸다. 영역과 `region` 방식을 한 번에 바꾼다.
 import type { SaveV3 } from "../shared/save-v3";
 
-export type SettingKey = "language" | "startOnLogin" | "sound" | "sleepAfterMin" | "playArea" | "playRegion";
+export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion";
 
 export type SettingFailure = "bad-args" | "bad-value";
 
@@ -23,7 +23,17 @@ export const SETTING_CHOICES = {
   playArea: ["full", "region"],
 } as const;
 
-const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "sleepAfterMin", "playArea", "playRegion"];
+const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion"];
+
+// 소리 크기 — 설정 값(0~100)을 소리마다의 최대 음량에 곱한다. 앱 소리는 이 규칙 하나를 따른다 (2026-09-27 사용자 요청 "소리가 너무 커")
+//   defaultVolume  새 저장·옛 저장의 기본값
+//   cryMax         울음소리 최대 음량(0~1) — 무대·도감 기기 창
+//   chimeMax       배너 알림음 최대 음량(0~1) — OS 기본음(shell.beep)은 크기를 못 바꿔서 앱이 직접 낸다
+export const SOUND_RULES = { defaultVolume: 30, cryMax: 0.35, chimeMax: 0.35 } as const;
+
+// 실제로 낼 음량(0~1). 소리를 끄면 0
+export const gainOf = (settings: { sound: boolean; volume: number }, max: number): number =>
+  settings.sound === false ? 0 : Math.round(Math.max(0, Math.min(100, settings.volume)) * max * 10) / 1000;
 
 // 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (docs/work/game-runtime/record.md "놀이공간·설정의 설계")
 //   area  넓이 — 240 × 160 과 같은 넓이. 폭·높이 비율은 자유다(아래로 길게, 옆으로 길게) — 2026-09-26 사용자 요청
@@ -49,6 +59,11 @@ export function setSetting(save: SaveV3, key: SettingKey, value: unknown): SetRe
   if (key === "startOnLogin" || key === "sound") {
     if (typeof value !== "boolean") return { ok: false, reason: "bad-value" };
     s[key] = value;
+    return { ok: true, key, value };
+  }
+  if (key === "volume") {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) return { ok: false, reason: "bad-value" };
+    s.volume = value;
     return { ok: true, key, value };
   }
   if (key === "language") {

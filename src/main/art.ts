@@ -3,6 +3,7 @@
 // 무대 캔버스는 시트를 미리 디코드해 그리므로 PMD 전용이다 — showdown(GIF img 태그) · sheet(codex 팩)는 얹을 수 없다 (s2-plan 2.2 h).
 // PMD 를 못 받은 마리는 무대에 나오지 않는다 — 부르는 쪽이 stderr 한 줄 + last-error.json 을 남긴다.
 // look(모습) 하나는 한 번만 받는다 — 같은 종 여러 마리가 시트를 공유한다. 배율(zoom)은 마리별(Pet.size)이라 여기서 정하지 않고 zoomOf 로 뽑는다
+import { SIZE_STEPS, snapSize } from "../save/rules.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/stage";
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";
@@ -41,12 +42,14 @@ interface PmdLoadModule {
 
 const { loadPmd } = require("../../art/pmd-load.js") as PmdLoadModule;
 
-// 도트 배율 — Pet.size 를 그림 크기로 가둔 값. 1 이상, 몸이 상한을 넘지 않는 만큼
+// 도트 배율 — Pet.size 를 크기 단계(SIZE_STEPS) 가운데 몸이 상한을 넘지 않는 가장 큰 배율로 가둔 값. 가장 작은 단계보다 작아지지 않는다
 export function zoomOf(size: number, body: StageSize): number {
-  const want = Math.round(size) || ART_RULES.defaultZoom;
-  const byW = body.w > 0 ? Math.floor(ART_RULES.maxBody.w / body.w) : want;
-  const byH = body.h > 0 ? Math.floor(ART_RULES.maxBody.h / body.h) : want;
-  return Math.max(1, Math.min(want, byW, byH));
+  const want = size > 0 ? snapSize(size) : ART_RULES.defaultZoom; // 단계 사이 값(옛 설정의 dotSize 등)은 가까운 단계로
+  const byW = body.w > 0 ? ART_RULES.maxBody.w / body.w : want;
+  const byH = body.h > 0 ? ART_RULES.maxBody.h / body.h : want;
+  const cap = Math.min(want, byW, byH);
+  const fit = SIZE_STEPS.filter((z) => z <= cap);
+  return fit.length ? Math.max(...fit) : (SIZE_STEPS[0] ?? 1);
 }
 
 // 렌더러가 캐시하는 그림 묶음 — look 키로

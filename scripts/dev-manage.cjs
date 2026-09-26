@@ -6,6 +6,7 @@
 // `--tab <파티|박스|도감|상점|가방>` 을 주면 그 탭을 눌러 놓고 찍는다.
 // `--detail` 을 주면 첫 칸을 눌러 개체 상세까지 찍는다.
 // `--click <선택자>` 를 주면 그 요소를 한 번 눌러 놓고 찍는다. 여러 번 주면 순서대로 누른다.
+// `--scroll <선택자>` 를 주면 그 요소가 보이게 스크롤한다.
 // `--input <선택자>=<글자>` 를 주면 누른 뒤에 그 입력칸에 한 글자씩 넣는다. 다 넣은 뒤 포커스가 있는 요소의 id 를 출력한다.
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
@@ -157,6 +158,8 @@ app.whenReady().then(async () => {
       process.argv.forEach((flag, at) => {
         const value = process.argv[at + 1];
         if (flag === "--click" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).click(); true`));
+        // --scroll 은 그 요소가 보이게 스크롤한다 — 모달 아래쪽 줄을 찍을 때 쓴다
+        if (flag === "--scroll" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).scrollIntoView({ block: "center" }); true`));
         // --click-text 는 그 글자인 첫 단추를 누른다 — 선택자로 가르기 어려운 설정 단추용
         if (flag === "--click-text" && value) step = step.then(() => click(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(value)}).click(); true`));
         if (flag !== "--input" || !value) return;

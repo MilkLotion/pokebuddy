@@ -6,7 +6,7 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { defs } from "../achievement/core.js";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
 import { growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
 import { itemOf, mintFor } from "../bag/use.js";
@@ -75,7 +75,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     typeIds: [...profile(pet.species).types],
     nature: natureName(pet.nature),
     natureId: pet.nature,
-    size: pet.size,
+    size: sizeLevelOf(pet.size), // 단계 번호 — 저장은 배율이다
     affinity: pet.affinity,
     fullness: pet.fullness,
     zone: zoneOf(pet.fullness),
@@ -174,12 +174,14 @@ export function snapshot(
       language: save.settings.language,
       startOnLogin: save.settings.startOnLogin,
       sound: save.settings.sound,
+      volume: save.settings.volume,
       sleepAfterMin: save.settings.sleepAfterMin,
       playArea: save.settings.playArea.mode,
       hasRegion: save.settings.playArea.rect != null,
     },
     natures: natureOptions(),
     eggPalettes: eggPalettes(),
+    sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
   };
 }

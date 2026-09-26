@@ -113,12 +113,15 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
 
 // ── art.zoomOf ────────────────────────────────────────────────────────────────
 {
+  // 배율은 크기 단계(src/save/rules.ts SIZE_STEPS = 1 · 1.5 · 2 · 2.5 · 3) 가운데 하나다
   eq(zoomOf(3, { w: 40, h: 56 }), 3, "zoomOf 원하는 배율");
-  eq(zoomOf(100, { w: 40, h: 56 }), Math.min(Math.floor(ART_RULES.maxBody.w / 40), Math.floor(ART_RULES.maxBody.h / 56)), "zoomOf 몸 상한으로 가둔다");
+  eq(zoomOf(1.5, { w: 40, h: 56 }), 1.5, "zoomOf 반 단계");
+  eq(zoomOf(100, { w: 40, h: 56 }), 3, "zoomOf 가장 큰 단계로 가둔다");
+  eq(zoomOf(3, { w: ART_RULES.maxBody.w / 2.2, h: 10 }), 2, "zoomOf 몸 상한 안의 가장 큰 단계");
   eq(zoomOf(0, { w: 40, h: 56 }), ART_RULES.defaultZoom, "zoomOf 0 → 기본");
-  eq(zoomOf(0.4, { w: 40, h: 56 }), ART_RULES.defaultZoom, "zoomOf 0 으로 반올림되면 기본 (옛 pmd-load 와 같다)");
-  eq(zoomOf(1.2, { w: 40, h: 56 }), 1, "zoomOf 반올림 · 1 아래로 안 간다");
-  eq(zoomOf(4, { w: 0, h: 0 }), 4, "zoomOf 몸을 모르면 원하는 값");
+  eq(zoomOf(0.4, { w: 40, h: 56 }), 1, "zoomOf 가장 작은 단계 아래로 안 간다");
+  eq(zoomOf(1.2, { w: 40, h: 56 }), 1, "zoomOf 가까운 단계로");
+  eq(zoomOf(4, { w: 0, h: 0 }), 3, "zoomOf 몸을 모르면 원하는 값을 단계로");
 }
 
 // ── dev-save (저장 v3) ─────────────────────────────────────────────────────────

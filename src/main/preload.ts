@@ -58,7 +58,7 @@ const bridge: StageBridge = {
   onFrame: (cb) => ipcRenderer.on(CH.frame, (_e, frame: StageFrame) => cb(frame)),
   onHover: (cb) => ipcRenderer.on(CH.hover, (_e, q: HoverQuery) => cb(q)),
   onClickThrough: (cb) => ipcRenderer.on(CH.clickThrough, (_e, on: boolean) => cb(on)),
-  onCry: (cb) => ipcRenderer.on(CH.cry, (_e, uri: string) => cb(uri)),
+  onCry: (cb) => ipcRenderer.on(CH.cry, (_e, cry: { uri: string; volume: number }) => cb(cry.uri, cry.volume)),
   onCoach: (cb) => ipcRenderer.on(CH.coach, (_e, coach: CoachView | null) => cb(coach)),
   coachAction: (action) => ipcRenderer.send(CH.coachAction, action),
   hit: (id) => ipcRenderer.send(CH.hit, id),

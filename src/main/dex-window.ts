@@ -24,7 +24,7 @@ export interface DexWindowOptions {
   detail: (slug: string) => DexDetail | null;
   portrait: (slug: string) => Promise<string | null>;
   cry: (slug: string) => Promise<string | null>;
-  sound: () => boolean;
+  volume: () => number; // 울음소리 음량 0~1
   onStep: (delta: -1 | 1) => void; // 이전·다음 — 순서는 관리 창 목록이 정한다
   onClosed: () => void;
 }
@@ -128,7 +128,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (!w || !slug) return;
     const detail = opts.detail(slug);
     if (!detail) return;
-    const view: DexDeviceView = { detail, portrait: await opts.portrait(slug), side, sound: opts.sound() };
+    const view: DexDeviceView = { detail, portrait: await opts.portrait(slug), side, volume: opts.volume() };
     if (w.webContents.isLoading()) w.webContents.once("did-finish-load", () => alive()?.webContents.send(CH.show, view));
     else w.webContents.send(CH.show, view);
   }
@@ -143,7 +143,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   ipcMain.on(CH.step, (e, delta: unknown) => {
     if (mine(e) && (delta === 1 || delta === -1)) opts.onStep(delta);
   });
-  ipcMain.handle(CH.cry, async (e) => (mine(e) && slug && opts.sound() ? opts.cry(slug) : null));
+  ipcMain.handle(CH.cry, async (e) => (mine(e) && slug && opts.volume() > 0 ? opts.cry(slug) : null));
   ipcMain.on(CH.close, (e) => {
     if (mine(e)) alive()?.close();
   });

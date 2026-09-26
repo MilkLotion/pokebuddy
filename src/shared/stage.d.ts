@@ -117,7 +117,7 @@ export type StageChannel =
   | "stage:frame" // M→R  StageFrame
   | "stage:hover" // M→R  HoverQuery
   | "stage:click-through" // M→R  boolean
-  | "stage:cry" // M→R  울음소리 data URI (audio/ogg)
+  | "stage:cry" // M→R  울음소리 { uri: data URI, volume: 0~1 }
   | "stage:coach" // M→R  CoachView | null
   | "stage:coach-action" // R→M  CoachAction
   | "stage:ready" // R→M  없음
@@ -136,7 +136,7 @@ export interface StageBridge {
   onFrame(cb: (frame: StageFrame) => void): void;
   onHover(cb: (q: HoverQuery) => void): void;
   onClickThrough(cb: (on: boolean) => void): void;
-  onCry(cb: (uri: string) => void): void; // 울음소리 한 번 — 놀아주기가 성공했을 때
+  onCry(cb: (uri: string, volume: number) => void): void; // 울음소리 한 번 — 놀아주기가 성공했을 때
   onCoach(cb: (coach: CoachView | null) => void): void; // 바탕화면 튜토리얼 — null 이면 지운다
   coachAction(action: CoachAction): void;
   hit(id: HitReply): void;

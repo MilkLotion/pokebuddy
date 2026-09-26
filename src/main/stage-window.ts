@@ -58,7 +58,7 @@ export interface StageWindow {
   sendSheets(sheets: LookSheets): void;
   sendFrame(frame: StageFrame): void;
   sendClickThrough(on: boolean): void;
-  sendCry(uri: string): void; // 울음소리 한 번
+  sendCry(uri: string, volume: number): void; // 울음소리 한 번 — 음량 0~1
   sendCoach(coach: CoachView | null): void; // 바탕화면 튜토리얼 — 같은 값이면 보내지 않는다. 렌더러가 다시 뜨면 resendCoach
   resendCoach(): void;
   popup(template: MenuItemConstructorOptions[]): void;
@@ -274,7 +274,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     sendSheets: (sheets) => send(CH.sheets, sheets),
     sendFrame: (frame) => send(CH.frame, frame),
     sendClickThrough: (on) => send(CH.clickThrough, on),
-    sendCry: (uri) => send(CH.cry, uri),
+    sendCry: (uri, volume) => send(CH.cry, { uri, volume }),
     sendCoach(next) {
       const key = JSON.stringify(next);
       if (key === coachKey) return;

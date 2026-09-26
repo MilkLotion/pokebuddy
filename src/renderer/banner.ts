@@ -18,8 +18,37 @@ const goEl = need("go", HTMLButtonElement);
 const api = window.pokebuddyBanner;
 let key: string | null = null;
 
+// 알림음 — 짧은 두 음(원작 메뉴 효과음 느낌). 파일 없이 WebAudio 로 만든다. 음량은 메인이 준다(설정의 소리 크기)
+let audio: AudioContext | null = null;
+function chime(gain: number): void {
+  if (gain <= 0) return;
+  try {
+    audio ??= new AudioContext();
+    const t0 = audio.currentTime;
+    for (const [freq, at] of [
+      [988, 0],
+      [1319, 0.09],
+    ] as const) {
+      const osc = audio.createOscillator();
+      const env = audio.createGain();
+      osc.type = "square";
+      osc.frequency.value = freq;
+      // 네모파는 사인파보다 크게 들려 한 번 더 줄인다
+      env.gain.setValueAtTime(0, t0 + at);
+      env.gain.linearRampToValueAtTime(gain * 0.25, t0 + at + 0.01);
+      env.gain.exponentialRampToValueAtTime(0.0001, t0 + at + 0.16);
+      osc.connect(env).connect(audio.destination);
+      osc.start(t0 + at);
+      osc.stop(t0 + at + 0.18);
+    }
+  } catch {
+    // 소리를 낼 수 없는 환경이면 배너만 보인다
+  }
+}
+
 api.onShow((view: BannerView) => {
   key = view.key;
+  chime(view.chime ?? 0);
   titleEl.textContent = view.title;
   targetEl.className = `target ${view.kind}`;
   targetEl.textContent = view.kind === "achievement" ? "A" : "";

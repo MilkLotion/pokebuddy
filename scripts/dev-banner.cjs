@@ -27,7 +27,7 @@ app.whenReady().then(() => {
   const banner = createBannerWindow({
     preload: preloadFile(),
     html: rendererFile("banner.html"),
-    sound: () => false,
+    chime: () => 0,
     onGo: (route) => process.stdout.write(`go: ${JSON.stringify(route)}\n`),
     onDone: () => process.stdout.write("done\n"),
   });

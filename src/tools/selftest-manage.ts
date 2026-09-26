@@ -12,6 +12,7 @@ import { createGame } from "../main/game";
 import { SAVE_V3_RULES } from "../save/rules";
 import * as store from "../save/store";
 import { empty } from "../save/v3";
+import { SOUND_RULES, gainOf } from "../state/settings";
 import type { SaveV3 } from "../shared/save-v3";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -203,6 +204,14 @@ try {
     assert.equal(game.view()?.settings.sound, true, "기본은 켬");
     assert.equal(click2("settings.set", "sound", { value: false }).ok, true);
     assert.equal(game.view()?.settings.sound, false, "끔으로 바뀐다");
+    // 소리 크기 — 0~100 정수. 기본 30. 음량은 설정 값 × 소리별 최대, 끄면 0 (src/state/settings.ts gainOf)
+    assert.equal(game.view()?.settings.volume, SOUND_RULES.defaultVolume);
+    assert.equal(click2("settings.set", "volume", { value: 55 }).ok, true);
+    assert.equal(game.view()?.settings.volume, 55);
+    for (const v of [-1, 101, 12.5, "50"]) assert.equal(click2("settings.set", "volume", { value: v }).reason, "bad-value", String(v));
+    assert.equal(gainOf({ sound: true, volume: 30 }, SOUND_RULES.cryMax), 0.105);
+    assert.equal(gainOf({ sound: false, volume: 100 }, SOUND_RULES.cryMax), 0, "소리를 끄면 무음");
+    assert.equal(gainOf({ sound: true, volume: 0 }, SOUND_RULES.chimeMax), 0);
 
     const bad = click2("settings.set", "sleepAfterMin", { value: 7 });
     assert.equal(bad.ok, false);

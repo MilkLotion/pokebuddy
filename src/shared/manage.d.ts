@@ -31,7 +31,7 @@ export interface PetView {
   types: string[]; // 화면에 보이는 타입 이름
   typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등) — 타입 배지 색을 고른다
   nature: string; // 화면에 보이는 성격 이름
-  size: number; // 그림 크기 1~6
+  size: number; // 그림 크기 단계 번호 1~sizeLevels
   natureId: string; // 성격 id — 성격 변경 창이 지금 성격을 막을 때 쓴다
   affinity: number;
   fullness: number;
@@ -158,6 +158,7 @@ export interface SettingsView {
   language: string;
   startOnLogin: boolean;
   sound: boolean;
+  volume: number; // 소리 크기 0~100
   sleepAfterMin: number; // 0 이면 잠들지 않음
   playArea: "full" | "region";
   hasRegion: boolean; // 영역을 이미 그렸는가
@@ -174,6 +175,7 @@ export interface Snapshot {
   achievements: { total: number; unclaimed: number; list: AchievementView[] };
   settings: SettingsView;
   natures: NatureOption[];
+  sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/save/rules.ts SIZE_STEPS)
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · party). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/core.ts)
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
@@ -259,7 +261,7 @@ export interface DexDeviceView {
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
-  sound: boolean; // 설정의 소리 — 끄면 울음소리 단추를 막는다
+  volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
 }
 
 // dexdev:show 는 메인 → 렌더러. 나머지는 렌더러 → 메인이다
@@ -308,6 +310,7 @@ export interface BannerView {
   target: string; // 돌보미집 알 N · <이름> Lv.N · 업적 이름
   go: string; // 바로가기
   route: ManageRoute;
+  chime?: number; // 알림음 음량 0~1. 0 이면 소리를 내지 않는다 (src/state/settings.ts gainOf)
 }
 
 // banner:show 는 메인 → 렌더러, 나머지는 렌더러 → 메인

@@ -107,6 +107,7 @@ export interface SettingsV3 {
   language: string;
   startOnLogin: boolean;
   sound: boolean;
+  volume: number; // 소리 크기 0~100 (src/state/settings.ts SOUND_RULES). 2026-09-27 에 더했다
   sleepAfterMin: number;
   playArea: { mode: PlayAreaMode; rect: { x: number; y: number; w: number; h: number } | null };
   display: Record<string, unknown>;

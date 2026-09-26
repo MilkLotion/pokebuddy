@@ -44,7 +44,7 @@ export interface SaveParty {
   needsStarter(): boolean;
   begin(species: string): boolean;
   setHome(id: string, home: Home): Promise<CommandResult>; // 저장하지 못하면 그 이유를 돌려준다
-  setSize(id: string, size: number): Promise<CommandResult>; // 그림 크기 1~6. 규칙은 src/party/home.ts
+  setSize(id: string, size: number): Promise<CommandResult>; // 그림 크기 단계 번호. 규칙은 src/party/home.ts · src/save/rules.ts SIZE_STEPS
   setShown(id: string, shown: boolean): Promise<CommandResult>;
   save(): SaveV3 | null;
   refresh(): void; // 명령을 보낸 뒤 바로 다시 읽는다 — 감시를 기다리지 않는다
