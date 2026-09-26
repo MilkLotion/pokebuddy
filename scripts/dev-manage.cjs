@@ -9,6 +9,7 @@
 // `--scroll <선택자>` 를 주면 그 요소가 보이게 스크롤한다.
 // `--input <선택자>=<글자>` 를 주면 누른 뒤에 그 입력칸에 한 글자씩 넣는다. 다 넣은 뒤 포커스가 있는 요소의 id 를 출력한다.
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
+// `--drag <출발 선택자> <도착 선택자>` 를 주면 창 안에 마우스 누름·움직임·뗌을 넣어 끌어 놓는다(박스 칸 옮기기). OS 마우스는 쓰지 않는다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
 // `--close` 를 주면 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
@@ -163,6 +164,24 @@ app.whenReady().then(async () => {
         if (flag === "--scroll" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).scrollIntoView({ block: "center" }); true`));
         // --click-text 는 그 글자인 첫 단추를 누른다 — 선택자로 가르기 어려운 설정 단추용
         if (flag === "--click-text" && value) step = step.then(() => click(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(value)}).click(); true`));
+        // --drag 는 두 요소의 가운데를 잇는 마우스 입력을 창에 넣는다 — 포인터 이벤트로 끄는 박스 칸용
+        if (flag === "--drag" && value && process.argv[at + 2]) {
+          const to = process.argv[at + 2];
+          const center = (sel) => `(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2)]; })()`;
+          step = step.then(async () => {
+            const [x0, y0] = await win.webContents.executeJavaScript(center(value));
+            const [x1, y1] = await win.webContents.executeJavaScript(center(to));
+            const wc = win.webContents;
+            wc.sendInputEvent({ type: "mouseMove", x: x0, y: y0 });
+            wc.sendInputEvent({ type: "mouseDown", x: x0, y: y0, button: "left", clickCount: 1 });
+            for (let k = 1; k <= 10; k++) {
+              wc.sendInputEvent({ type: "mouseMove", x: Math.round(x0 + ((x1 - x0) * k) / 10), y: Math.round(y0 + ((y1 - y0) * k) / 10), button: "left", modifiers: ["leftButtonDown"] });
+              await new Promise((r) => setTimeout(r, 30));
+            }
+            wc.sendInputEvent({ type: "mouseUp", x: x1, y: y1, button: "left", clickCount: 1 });
+            await new Promise((r) => setTimeout(r, 800));
+          });
+        }
         if (flag !== "--input" || !value) return;
         const cut = value.indexOf("=");
         const sel = value.slice(0, cut);

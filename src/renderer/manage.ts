@@ -822,41 +822,84 @@ function drawBox(v: Snapshot): void {
     const cell = boxCell(pet, () => openPet(pet.id));
     cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
     cell.title = `${pet.name} · 눌러서 상세 보기 · 끌어서 옮기기`;
-    cell.draggable = true;
-    cell.addEventListener("dragstart", (e) => {
-      dragFrom = { boxId: box.id, slot };
-      boxSortOpen = false;
-      hideFormTipSoon();
-      e.dataTransfer?.setData("text/plain", pet.id);
-      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-      // 끄는 그림이 만들어진 뒤에 원래 자리를 빈 칸처럼 흐리게 한다
-      setTimeout(() => cell.classList.add("dragging"), 0);
-    });
-    cell.addEventListener("dragend", () => {
-      cell.classList.remove("dragging");
-      dragFrom = null;
-      for (const on of document.querySelectorAll(".drop-on")) on.classList.remove("drop-on");
-    });
+    cell.addEventListener("pointerdown", (e) => startBoxDrag(e, cell, { boxId: box.id, slot }));
+    cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
     dropZone(cell, onDrop);
     grid.appendChild(cell);
   });
   bodyEl.appendChild(grid);
 }
 
-// 끌어 놓을 수 있는 곳 — 끄는 중에 위로 오면 옅은 바탕(.drop-on)
+// 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)
+// 끌기는 브라우저의 끌어 놓기(OS 끌기)를 쓰지 않고 포인터 이벤트로 한다. 동반자의 무대 창이 화면 전체를 덮고 있어
+// OS 끌기 신호가 관리 창에 닿지 않았다 (2026-09-27 사용자 "박스에서 드래그드랍이 아예 안되네")
+const dropTargets = new WeakMap<Element, () => void>();
 function dropZone(target: HTMLElement, onDrop: () => void): void {
-  target.addEventListener("dragover", (e) => {
-    if (!dragFrom) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    target.classList.add("drop-on");
-  });
-  target.addEventListener("dragleave", () => target.classList.remove("drop-on"));
-  target.addEventListener("drop", (e) => {
-    e.preventDefault();
-    target.classList.remove("drop-on");
-    onDrop();
-  });
+  target.dataset.drop = "";
+  dropTargets.set(target, onDrop);
+}
+
+const BOX_DRAG_START_PX = 5; // 이만큼 움직여야 끌기로 본다 — 그보다 작으면 누르기(상세 보기)
+
+function startBoxDrag(down: PointerEvent, cell: HTMLElement, from: { boxId: string; slot: number }): void {
+  if (down.button !== 0) return;
+  const x0 = down.clientX;
+  const y0 = down.clientY;
+  let ghost: HTMLElement | null = null;
+  let over: Element | null = null;
+  const place = (e: PointerEvent): void => {
+    if (!ghost) return;
+    ghost.style.left = `${e.clientX - ghost.offsetWidth / 2 + 12}px`;
+    ghost.style.top = `${e.clientY - ghost.offsetHeight / 2 + 12}px`;
+    const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-drop]") ?? null;
+    const next = hit && hit !== cell ? hit : null;
+    if (next === over) return;
+    over?.classList.remove("drop-on");
+    next?.classList.add("drop-on");
+    over = next;
+  };
+  const move = (e: PointerEvent): void => {
+    if (!ghost) {
+      if (Math.hypot(e.clientX - x0, e.clientY - y0) < BOX_DRAG_START_PX) return;
+      dragFrom = from;
+      boxSortOpen = false;
+      hideFormTipSoon();
+      const rect = cell.getBoundingClientRect();
+      ghost = cell.cloneNode(true) as HTMLElement;
+      ghost.classList.add("drag-ghost");
+      ghost.removeAttribute("title");
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.height = `${rect.height}px`;
+      document.body.appendChild(ghost);
+      cell.classList.add("dragging");
+    }
+    place(e);
+  };
+  const end = (drop: boolean): void => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    window.removeEventListener("pointercancel", cancel);
+    if (!ghost) return;
+    ghost.remove();
+    cell.classList.remove("dragging");
+    over?.classList.remove("drop-on");
+    const target = over;
+    // 끈 뒤 손을 뗀 곳에서 이어 오는 click(상세 열기)을 한 번 막는다
+    const swallow = (c: Event): void => {
+      c.stopPropagation();
+      c.preventDefault();
+    };
+    window.addEventListener("click", swallow, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+    // 놓을 곳의 처리기는 dragFrom 을 읽는다 — 부른 뒤에 지운다
+    if (drop && target) dropTargets.get(target)?.();
+    dragFrom = null;
+  };
+  const up = (): void => end(true);
+  const cancel = (): void => end(false);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  window.addEventListener("pointercancel", cancel);
 }
 
 // 박스 이름 — 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(박스 N)

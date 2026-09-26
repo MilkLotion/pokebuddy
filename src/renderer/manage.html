@@ -1296,6 +1296,18 @@
       .cell.dragging {
         opacity: 0.35;
       }
+      /* 커서를 따라가는 칸 — 그림자로 들린 느낌만 준다 */
+      .drag-ghost {
+        position: fixed;
+        z-index: 50;
+        pointer-events: none;
+        opacity: 0.95;
+        box-shadow: 0 6px 14px rgba(26, 51, 48, 0.22);
+      }
+      .box-grid .cell {
+        touch-action: none;
+        -webkit-user-drag: none;
+      }
       .cell.drop-on,
       .pager button.drop-on {
         background: var(--accent-bg);
