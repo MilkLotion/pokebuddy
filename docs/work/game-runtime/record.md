@@ -1500,7 +1500,25 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 수용 조건: 정렬 5기준이 지금 박스에만 적용된다. 이동·맞바꿈·다른 박스로 보내기가 저장된다. 이름 변경이 저장되고 검색·가방 박스 목록에 반영된다. 모두 트랜잭션 명령으로 처리하고 자체 검사를 더한다.
 - 사용자 지시(2026-09-27): "커밋하고 다음작업하자". 설계 제안대로 시안을 만들었다.
 - 시안: Figma `99 · 시안 (테스트)` `633:17370`. A 정렬 목록 열림 `633:17372`, B 끌기 중 `633:17375`(비운 자리는 `bg/subtle`, 놓을 칸은 `bg/accent` 바탕), C 이름 입력 `633:17378`. 새 글자는 Noto 로 만들고 PB 스타일을 연결했다. Galmuri 재배치는 아직이다.
-- 상태: 시안 확인 대기. 코드는 시작하지 않았다.
+- 사용자 결정(2026-09-27): "시안대로 진행". 시안 세 장을 05 로 옮기고(`Box / Sort Open` `633:17372`, `Box / Dragging` `633:17375`, `Box / Rename` `633:17378`) 99 시안 섹션을 지웠다.
+- 작업:
+  - `src/box/slots.ts`: `sortBox`(한 박스, 5기준, 같으면 도감 번호·얻은 시각), `moveSlot`(옮기기·맞바꾸기), `moveToBox`(다른 박스 첫 빈 칸, 가득 차면 `box-full`), `renameBox`(공백 제거, 10자, 비면 `박스 N`), `BOX_RULES.nameMax`.
+  - 거래 명령 `box.sort`·`box.move`·`box.rename`(`src/tx/handlers.ts`, `src/tx/bridge.ts` `V3_COMMANDS`·`argsOf`, `src/shared/types.ts` `CommandName`). 이름순은 `petName` 으로 비교한다.
+  - `src/renderer/manage.ts` 박스 탭: 이름 단추 → 입력칸, `정렬 ▾` 목록, 칸 끌기(원래 자리 흐림, 놓을 칸·`◀`·`▶` 옅은 바탕), 실패 이유 한 줄(`box-full`·`no-box`). 끌기·이름 입력 중에는 5초 새로 그리기를 쉰다. `src/renderer/manage.html` 에 해당 CSS.
+  - 스펙: [s5 박스](../../specs/s5.md) 미확정 줄을 결정으로 바꿨다(부분 진행 저장만 남음). [C-07](../../specs/ui-components.md#c-07-박스-넘김검색-줄) 에 정렬·이름·끌기 규칙.
+  - 검사: 새 `src/tools/selftest-box.ts`(정렬 5기준·다른 박스 불변·옮기기·맞바꾸기·실패 이유·다른 박스로·가득 참·이름·거래 명령) 10건. `package.json` `selftest` 에 넣었다.
+- 검수(HEAD 작업 폴더에 이 작업 파일만 적용해 빌드):
+  - `selftest-box` 통과 10건. `selftest-tx`·`selftest-commands`·`selftest-manage`·`selftest-snapshot` 통과.
+  - `scripts/dev-manage.cjs --tab 박스`: 정렬 목록 캡처, "레벨 높은 순" 뒤 알통몬 21 → 꼬부기 14 → 이상해씨 9 → 이브이 7, 이름 입력칸 캡처. 첫 캡처는 명령이 끝나기 전에 찍혀 순서가 그대로였다(`--wait 2500` 으로 다시 찍음).
+  - 끌기는 실행기로 누를 수 없어 화면 확인은 사용자 몫이다. 저장 동작은 `selftest-box` 가 본다.
+- 사용자 피드백(2026-09-27, 시험 동반자 캡처): 박스 줄 아래에 "unknown-cmd".
+  - 원인: 앱은 관리 창 명령을 `src/main/commands.ts` 의 dispatcher 로 보내고, 저장 명령은 `SAVE_COMMANDS` 목록으로만 등록한다. 박스 명령이 목록에 없었다. `scripts/dev-manage.cjs` 는 `game.send` 로 실행기에 바로 넣어 이 경로를 거치지 않았다. 그래서 캡처 검수로는 드러나지 않았다.
+  - 수정: `SAVE_COMMANDS` 에 `box.sort`·`box.move`·`box.rename` 을 더했다. `src/tools/selftest-commands.ts` 에 앱 명령 경로의 `box.rename`·`box.sort` 확인을 더했다.
+  - 검수: `selftest-commands` 통과, `selftest-box` 통과 10건. 시험 동반자를 새 빌드로 다시 띄웠다.
+- 사용자 피드백(2026-09-27): "무슨정렬순인지가 안보이네".
+  - 수정: 관리 창이 박스마다 마지막으로 적용한 기준을 기억해 단추에 "레벨 높은 순 ▾" 처럼 보이고, 목록에서 그 항목을 옅은 바탕·굵은 글씨(`.sort-item.on`, `aria-checked`)로 표시한다. 그 박스의 칸을 옮기면(`box.move` 성공) 순서가 흐트러지므로 표시를 지운다. 저장하지 않는다 — 관리 창을 다시 열면 "정렬 ▾" 로 돌아간다. 단추 폭은 최소 100 으로 바꿔 긴 기준도 한 줄에 들어간다.
+  - 검수: `dev-manage --tab 박스` 로 "레벨 높은 순" 을 고른 뒤 단추 "레벨 높은 순 ▾" 와 목록 표시를 캡처로 보았다.
+- 상태: 사용자 실기 확인 대기.
 
 ### Figma 99 시안 페이지 정리 (2026-09-27)
 

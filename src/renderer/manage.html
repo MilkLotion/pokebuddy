@@ -1230,6 +1230,76 @@
       .pager .label {
         font-weight: 600;
       }
+      /* 박스 이름 — 누르면 입력칸이 된다 (Figma 05 `Box / Rename` `633:17378`) */
+      .pager button.box-name {
+        border-color: transparent;
+        background: none;
+        padding: 3px 4px;
+      }
+      .pager button.box-name:hover {
+        background: var(--accent-bg);
+      }
+      .pager .box-name-input {
+        width: 92px;
+        font-weight: 600;
+      }
+      /* 정렬 — 검색 칸과 같은 높이. 목록은 칸 아래에 뜬다 (Figma 05 `Box / Sort Open` `633:17372`) */
+      .box-sort {
+        position: relative;
+      }
+      .pager .sort-toggle {
+        height: 32px;
+        min-width: 100px;
+        white-space: nowrap;
+        padding: 0 11px;
+        border-radius: 8px;
+        text-align: left;
+        font-size: 12px;
+      }
+      .sort-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 4px);
+        z-index: 5;
+        width: 140px;
+        padding: 4px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 4px 12px rgba(26, 51, 48, 0.16);
+      }
+      .pager .sort-menu .sort-item {
+        display: block;
+        width: 100%;
+        height: 34px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        text-align: left;
+        font-size: 12px;
+      }
+      /* 가리킨 기준과 지금 적용된 기준 — 옅은 바탕 */
+      .pager .sort-menu .sort-item:hover,
+      .pager .sort-menu .sort-item.on {
+        background: var(--accent-bg);
+      }
+      .pager .sort-menu .sort-item.on {
+        font-weight: 600;
+      }
+      .box-note {
+        margin: -4px 0 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      /* 끌기 — 원래 자리는 빈 칸처럼 흐리고, 놓을 칸은 옅은 바탕. 테두리로 강조하지 않는다 (Figma 05 `Box / Dragging` `633:17375`) */
+      .cell.dragging {
+        opacity: 0.35;
+      }
+      .cell.drop-on,
+      .pager button.drop-on {
+        background: var(--accent-bg);
+      }
       .pager .used {
         font-size: 10px;
         font-family: var(--font-small);

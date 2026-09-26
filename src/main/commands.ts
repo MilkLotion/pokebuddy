@@ -82,6 +82,9 @@ const SAVE_COMMANDS: readonly CommandName[] = [
   "tutorial.skip",
   "tutorial.done",
   "starter.pick",
+  "box.sort",
+  "box.move",
+  "box.rename",
 ];
 
 export function createCommands(ctx: CommandContext): Commands {

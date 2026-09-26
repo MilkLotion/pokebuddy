@@ -52,6 +52,12 @@ async function main(): Promise<void> {
     assert.equal(store.read(paths.save, { repair: false }).state!.pets[0]!.species, "charmeleon", "진화가 디스크에 저장");
     assert.equal(changes, 1, "저장 뒤 무대 갱신");
 
+    // 박스 명령 — 관리 창이 앱 명령 경로로 보낸다. 목록에 빠지면 unknown-cmd 가 된다
+    const renamed = await commands.dispatcher.dispatch({ cmd: "box.rename", target: "b1", args: { name: "내 박스" }, from: "settings" });
+    assert.ok(renamed.ok, `box.rename 이 앱 명령 경로에서 동작 (${renamed.reason})`);
+    assert.equal(store.read(paths.save, { repair: false }).state!.boxes[0]!.name, "내 박스");
+    assert.ok((await commands.dispatcher.dispatch({ cmd: "box.sort", target: "b1", args: { by: "dex" }, from: "settings" })).ok, "box.sort 가 앱 명령 경로에서 동작");
+
     // mailbox 왕복 — CLI·확장의 요청이 writer 에 닿는다
     commands.setWriter(true);
     const bought = await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" });

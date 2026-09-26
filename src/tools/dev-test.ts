@@ -10,6 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomNature } from "../dex/natures";
+import { putPet } from "../box/slots";
 import { newPet, nextPetId, recordDex } from "../party/create";
 import { begin } from "../party/starter";
 import { SHOP_V3_RULES } from "../save/rules";
@@ -144,6 +145,21 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     apply: (s) => {
       s.tutorials = {};
       for (const t of TUTORIALS) s.tutorials[t.id] = { state: "done", steps: 0 };
+    },
+  },
+  box: {
+    note: "박스 정렬·끌기 — 레벨·친밀도가 다른 개체 8마리를 박스에 넣는다",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      const rows: [string, number, number][] = [["bulbasaur", 9, 20], ["squirtle", 14, 60], ["eevee", 7, 80], ["machop", 21, 10], ["pichu", 3, 40], ["totodile", 18, 5], ["mudkip", 11, 90], ["riolu", 25, 30]];
+      rows.forEach(([species, level, affinity], i) => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, now: now - (rows.length - i) * 60_000 });
+        pet.level = level;
+        pet.affinity = affinity;
+        s.pets.push(pet);
+        putPet(s.boxes, pet.id);
+        recordDex(s, species, false);
+      });
     },
   },
   rich: { note: `포인트를 ${DEV_TEST_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10)) },

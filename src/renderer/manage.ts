@@ -8,6 +8,7 @@ import type {
   AchievementView,
   AgentRow,
   BagItemView,
+  BoxView,
   DexEntry,
   EggView,
   FormView,
@@ -164,6 +165,22 @@ let boxQuery = "";
 let dexQuery = "";
 let pickQuery = "";
 let boxMarked: string | null = null; // 박스 검색 결과로 찾아간 개체 — 그 칸을 고른 칸으로 보인다
+// 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
+let boxSortOpen = false;
+let boxRenaming = false;
+let boxNote = ""; // 박스 명령이 실패했을 때 박스 줄 아래 한 줄
+let dragFrom: { boxId: string; slot: number } | null = null; // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다
+const BOX_SORTS: readonly { by: string; label: string }[] = [
+  { by: "dex", label: "도감 번호" },
+  { by: "level", label: "레벨 높은 순" },
+  { by: "affinity", label: "친밀도 높은 순" },
+  { by: "recent", label: "최근 얻은 순" },
+  { by: "name", label: "이름순" },
+];
+const BOX_NAME_MAX = 10; // src/box/slots.ts BOX_RULES.nameMax 와 같다
+// 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
+// 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
+const boxSortedBy = new Map<string, string>();
 // 다시 그린 뒤 되돌릴 검색 칸 — 입력 중에 화면을 새로 그려도 포커스와 커서가 남게
 let searchFocus: { key: string; caret: number } | null = null;
 let shopFilter = "all";
@@ -730,6 +747,7 @@ function drawBox(v: Snapshot): void {
   prev.addEventListener("click", () => {
     boxPage -= 1;
     boxMarked = null;
+    boxNote = "";
     draw();
   });
   const next = button("", "▶");
@@ -737,17 +755,30 @@ function drawBox(v: Snapshot): void {
   next.addEventListener("click", () => {
     boxPage += 1;
     boxMarked = null;
+    boxNote = "";
     draw();
   });
-  pager.append(prev, el("span", "label", box.name), el("span", "used", `${box.used} / ${box.size}`), next);
-  // 이름 검색 — 모든 박스를 대상으로 한다. 정렬은 기준이 미정이라 두지 않는다 (docs/specs/ui-components.md C-07)
+  // ◀·▶ 에 개체를 놓으면 앞·뒤 박스의 첫 빈 칸으로 보낸다. 지금 박스에 머문다
+  const dropToBox = (target: HTMLButtonElement, toIndex: number): void => {
+    dropZone(target, () => {
+      const to = v.boxes[toIndex];
+      const from = dragFrom;
+      if (from && to) void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: to.id }, () => unsorted(from.boxId, to.id));
+    });
+  };
+  if (!prev.disabled) dropToBox(prev, boxPage - 1);
+  if (!next.disabled) dropToBox(next, boxPage + 1);
+  pager.append(prev, boxNameEl(box), el("span", "used", `${box.used} / ${box.size}`), next);
+  // 이름 검색 — 모든 박스를 대상으로 한다 (docs/specs/ui-components.md C-07)
   pager.appendChild(
     searchBox("box", boxQuery, "이름 검색", (q) => {
       boxQuery = q;
       draw();
     }),
   );
+  pager.appendChild(boxSortEl(box));
   bodyEl.appendChild(pager);
+  if (boxNote) bodyEl.appendChild(el("div", "box-note", boxNote));
 
   const q = normQuery(boxQuery);
   if (q) {
@@ -775,18 +806,161 @@ function drawBox(v: Snapshot): void {
   }
 
   const grid = el("div", "box-grid");
-  for (const pet of box.slots) {
+  box.slots.forEach((pet, slot) => {
+    // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
+    const onDrop = (): void => {
+      const from = dragFrom;
+      if (!from || (from.boxId === box.id && from.slot === slot)) return;
+      void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id));
+    };
     if (!pet) {
-      grid.appendChild(el("div", "cell blank"));
-      continue;
+      const blank = el("div", "cell blank");
+      dropZone(blank, onDrop);
+      grid.appendChild(blank);
+      return;
     }
     const cell = boxCell(pet, () => openPet(pet.id));
     cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
-    cell.title = `${pet.name} · 눌러서 상세 보기`;
+    cell.title = `${pet.name} · 눌러서 상세 보기 · 끌어서 옮기기`;
+    cell.draggable = true;
+    cell.addEventListener("dragstart", (e) => {
+      dragFrom = { boxId: box.id, slot };
+      boxSortOpen = false;
+      hideFormTipSoon();
+      e.dataTransfer?.setData("text/plain", pet.id);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+      // 끄는 그림이 만들어진 뒤에 원래 자리를 빈 칸처럼 흐리게 한다
+      setTimeout(() => cell.classList.add("dragging"), 0);
+    });
+    cell.addEventListener("dragend", () => {
+      cell.classList.remove("dragging");
+      dragFrom = null;
+      for (const on of document.querySelectorAll(".drop-on")) on.classList.remove("drop-on");
+    });
+    dropZone(cell, onDrop);
     grid.appendChild(cell);
-  }
+  });
   bodyEl.appendChild(grid);
 }
+
+// 끌어 놓을 수 있는 곳 — 끄는 중에 위로 오면 옅은 바탕(.drop-on)
+function dropZone(target: HTMLElement, onDrop: () => void): void {
+  target.addEventListener("dragover", (e) => {
+    if (!dragFrom) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    target.classList.add("drop-on");
+  });
+  target.addEventListener("dragleave", () => target.classList.remove("drop-on"));
+  target.addEventListener("drop", (e) => {
+    e.preventDefault();
+    target.classList.remove("drop-on");
+    onDrop();
+  });
+}
+
+// 박스 이름 — 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(박스 N)
+function boxNameEl(box: BoxView): HTMLElement {
+  if (!boxRenaming) {
+    const name = button("label box-name", box.name);
+    name.title = "눌러서 이름 바꾸기";
+    name.addEventListener("click", () => {
+      boxRenaming = true;
+      boxSortOpen = false;
+      draw();
+    });
+    return name;
+  }
+  const input = document.createElement("input");
+  input.className = "search box-name-input";
+  input.value = box.name;
+  input.maxLength = BOX_NAME_MAX;
+  input.setAttribute("aria-label", "박스 이름");
+  let done = false;
+  const finish = (save: boolean): void => {
+    if (done) return;
+    done = true;
+    boxRenaming = false;
+    const name = input.value;
+    if (save && name.trim() !== box.name) void boxCommand("box.rename", box.id, { name });
+    else draw();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.isComposing) return;
+    if (e.key === "Enter") finish(true);
+    else if (e.key === "Escape") {
+      e.stopPropagation(); // 관리 창의 Esc(대화상자 닫기)로 번지지 않게
+      finish(false);
+    }
+  });
+  // 다시 그려서 빠진 칸의 blur 는 저장으로 치지 않는다
+  input.addEventListener("blur", () => setTimeout(() => input.isConnected && finish(true), 0));
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 0);
+  return input;
+}
+
+// 정렬 — 지금 보는 박스만 한 번 정렬한다. 목록은 바깥을 누르면 닫힌다
+function boxSortEl(box: BoxView): HTMLElement {
+  const wrap = el("div", "box-sort");
+  const current = BOX_SORTS.find((s) => s.by === boxSortedBy.get(box.id));
+  const toggle = button("sort-toggle", `${current?.label ?? "정렬"} ▾`);
+  toggle.title = current ? `${current.label}으로 정렬했어요 · 눌러서 다시 정렬` : "눌러서 정렬 기준 고르기";
+  toggle.setAttribute("aria-expanded", String(boxSortOpen));
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    boxSortOpen = !boxSortOpen;
+    draw();
+  });
+  wrap.appendChild(toggle);
+  if (boxSortOpen) {
+    const menu = el("div", "sort-menu");
+    menu.setAttribute("role", "menu");
+    for (const s of BOX_SORTS) {
+      const item = button(s.by === current?.by ? "sort-item on" : "sort-item", s.label);
+      item.setAttribute("role", "menuitemradio");
+      item.setAttribute("aria-checked", String(s.by === current?.by));
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        boxSortOpen = false;
+        void boxCommand("box.sort", box.id, { by: s.by }, () => boxSortedBy.set(box.id, s.by));
+      });
+      menu.appendChild(item);
+    }
+    wrap.appendChild(menu);
+  }
+  return wrap;
+}
+
+// 칸을 옮겨 순서가 흐트러진 박스는 정렬 표시를 지운다
+function unsorted(...boxIds: string[]): void {
+  for (const id of boxIds) boxSortedBy.delete(id);
+}
+
+// 박스 명령 — 대화상자 밖에서 보낸다. 실패하면 박스 줄 아래에 이유를 한 줄 보인다. 성공하면 onOk 를 먼저 부르고 다시 그린다
+async function boxCommand(cmd: string, target: string, extra: Record<string, unknown>, onOk?: () => void): Promise<void> {
+  if (busy) return;
+  busy = true;
+  let reply: ManageReply;
+  try {
+    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId: nextReqId(cmd, target) } });
+    if (reply.ok) onOk?.();
+    await refresh();
+  } finally {
+    busy = false;
+  }
+  boxNote = reply.ok ? "" : REASON[reply.reason] ?? reply.reason;
+  draw();
+}
+
+// 정렬 목록은 바깥을 누르면 닫는다
+document.addEventListener("click", () => {
+  if (!boxSortOpen) return;
+  boxSortOpen = false;
+  draw();
+});
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
@@ -1928,6 +2102,8 @@ const REASON: Record<string, string> = {
   "save-failed": "저장하지 못했어요. 잠시 뒤 다시 해 주세요.",
   "art-missing": "바뀔 모습의 그림을 받지 못했어요. 잠시 뒤 다시 해 주세요.",
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
+  "box-full": "그 박스는 가득 찼어요.",
+  "no-box": "그 박스를 찾지 못했어요.",
   timeout: "응답이 없어요. 잠시 뒤 다시 해 주세요.",
 };
 
@@ -2064,4 +2240,8 @@ window.pokebuddyManage.onDexClosed(() => {
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 창이 떠 있는 동안 주기적으로 다시 읽는다
-setInterval(() => void refresh().then(drawDialog), 5000);
+// 박스 칸을 끄는 중이거나 박스 이름을 입력하는 중에는 쉰다 — 다시 그리면 끌기와 입력이 끊긴다
+setInterval(() => {
+  if (dragFrom || boxRenaming) return;
+  void refresh().then(drawDialog);
+}, 5000);
