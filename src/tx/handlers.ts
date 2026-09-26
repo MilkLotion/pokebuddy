@@ -18,6 +18,7 @@ import { begin } from "../party/starter.js";
 import { buy } from "../shop/buy.js";
 import { isBoxSortKey, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
+import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
 import type { TxHandler } from "./executor";
 
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
@@ -329,3 +330,54 @@ const boxRenameHandler: TxHandler = (draft, args) => {
 HANDLERS["box.sort"] = boxSortHandler;
 HANDLERS["box.move"] = boxMoveHandler;
 HANDLERS["box.rename"] = boxRenameHandler;
+
+// ── 친구 교환 ───────────────────────────────────────────────────────────────────
+// 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/core.ts, docs/work/trade/record.md)
+
+const strOf = (args: unknown, key: string): string | null => {
+  const v = isObj(args) ? args[key] : undefined;
+  return typeof v === "string" && v ? v : null;
+};
+
+// 확정할 때 잠근다
+const tradeLockHandler: TxHandler = (draft, args) => {
+  const channelId = strOf(args, "channelId");
+  const petId = petIdOf(args);
+  const offerRev = intOf(args, "offerRev");
+  if (!channelId || !petId || offerRev == null || offerRev < 0) return { ok: false, reason: "bad-args" };
+  const res = lockTrade(draft, channelId, petId, offerRev);
+  if (!res.ok) return { ok: false, reason: res.reason };
+  return { ok: true, result: { channelId, petId, offerRev } };
+};
+
+// 확정 풀기·취소·만료
+const tradeUnlockHandler: TxHandler = (draft, args) => {
+  const channelId = strOf(args, "channelId");
+  if (!channelId) return { ok: false, reason: "bad-args" };
+  return { ok: true, result: { channelId, unlocked: unlockTrade(draft, channelId) } };
+};
+
+// 완료 반영 — 한 번의 저장으로 맞바꾼다. 이미 반영했으면 아무것도 하지 않는다
+const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
+  const channelId = strOf(args, "channelId");
+  if (!channelId) return { ok: false, reason: "bad-args" };
+  const res = applyTrade(draft, channelId, isObj(args) ? args.received : undefined, ctx.now);
+  if (!res.ok) return { ok: false, reason: res.reason };
+  return { ok: true, result: res.applied ? { channelId, applied: true, petId: res.newPetId, where: res.where } : { channelId, applied: false } };
+};
+
+HANDLERS["trade.lock"] = tradeLockHandler;
+HANDLERS["trade.unlock"] = tradeUnlockHandler;
+HANDLERS["trade.apply"] = tradeApplyHandler;
+
+// 교환에 걸린 개체는 값을 바꾸는 명령을 거절한다. 자리만 바꾸는 명령(파티·박스 이동)과 돌봄·숨기기는 막지 않는다
+// — 반영은 그때의 자리를 찾아 들어가므로 자리가 바뀌어도 된다. 값이 바뀌면 친구에게 간 값과 어긋난다
+for (const name of ["bag.use", "evolve", "pet.form"] as const) {
+  const inner = HANDLERS[name];
+  if (!inner) continue;
+  HANDLERS[name] = (draft, args, ctx) => {
+    const petId = petIdOf(args);
+    if (petId && isTradeLocked(draft, petId)) return { ok: false, reason: "trade-locked" };
+    return inner(draft, args, ctx);
+  };
+}

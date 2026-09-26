@@ -6,7 +6,7 @@
 import { localDate } from "../shared/clock.js";
 import type {
   AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, PartySlotV3, PetV3,
-  PointsV3, SaveV3, SettingsV3, SlotState, TutorialState, TutorialV3, TxRecordV3,
+  PointsV3, SaveV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
@@ -365,7 +365,15 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     tx: normalizeTx(raw.tx, now),
     legacy: isObj(raw.legacy) ? { ...raw.legacy } : {},
     log: normalizeLog(raw.log),
+    trade: normalizeTrade(raw.trade, seen),
   };
+}
+
+// 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (docs/work/trade/record.md "로컬 저장과 복구")
+function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
+  const p = isObj(raw) && isObj(raw.pending) ? raw.pending : null;
+  if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };
+  return { pending: { channelId: p.channelId, petId: p.petId, offerRev: nonNeg(p.offerRev), received: p.received ?? null } };
 }
 
 // 알 식별자 `e숫자` 의 가장 큰 번호

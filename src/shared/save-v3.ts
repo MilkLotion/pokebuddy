@@ -113,6 +113,15 @@ export interface SettingsV3 {
   display: Record<string, unknown>;
 }
 
+// 친구 교환에 걸린 개체 — 확정할 때 남기고, 반영·취소·만료 때 지운다 (src/trade/core.ts)
+// 저장 형식 번호는 올리지 않는다. 없으면 빈 값으로 읽는다
+export interface TradePendingV3 {
+  channelId: string; // 서버의 공유 채널
+  petId: string; // 내가 올린 개체
+  offerRev: number; // 내가 확정한 제안 판
+  received: unknown; // 완료 뒤 받은 개체 값. 반영 전에 앱이 꺼져도 다시 받아 오므로 비어 있을 수 있다
+}
+
 export interface TxRecordV3 {
   id: string; // 요청 식별자
   at: number;
@@ -141,4 +150,5 @@ export interface SaveV3 {
   tx: TxRecordV3[];
   legacy: Record<string, unknown>; // 새 화면에서 쓰지 않는 옛 값. 지우지 않고 보존한다
   log: LogEntry[];
+  trade?: { pending: TradePendingV3 | null };
 }
