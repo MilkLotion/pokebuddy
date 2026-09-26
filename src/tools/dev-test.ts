@@ -162,6 +162,24 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       });
     },
   },
+  boxes: {
+    note: "박스 넘기기·가득 참 — 박스를 모두 비우고 첫 박스 30칸을 채운 뒤 둘째 박스에 3마리",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      const inBox = new Set(s.boxes.flatMap((b) => b.slots).filter((id): id is string => id != null));
+      s.pets = s.pets.filter((p) => !inBox.has(p.id));
+      for (const b of s.boxes) b.slots = b.slots.map(() => null);
+      const kinds = ["bulbasaur", "charmander", "squirtle", "pikachu", "eevee", "machop", "pichu", "totodile", "mudkip", "riolu"];
+      for (let i = 0; i < 33; i++) {
+        const species = kinds[i % kinds.length] ?? "pikachu";
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, now: now - (33 - i) * 60_000 });
+        pet.level = 1 + ((i * 7) % 40);
+        s.pets.push(pet);
+        putPet(s.boxes, pet.id);
+        recordDex(s, species, false);
+      }
+    },
+  },
   rich: { note: `포인트를 ${DEV_TEST_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10)) },
 };
 

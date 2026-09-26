@@ -185,6 +185,23 @@ const boxSortedBy = new Map<string, string>();
 let searchFocus: { key: string; caret: number } | null = null;
 let shopFilter = "all";
 let dexFilter = "all";
+// 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
+// 지방 폼은 도감 자료에 따로 없어 번호 구간만으로 나눈다. 폼 항목이 생기면 번호로만 판정하지 않는다(스펙)
+let dexRegion = "all";
+let dexRegionOpen = false;
+const DEX_REGIONS: readonly { id: string; label: string; from: number; to: number }[] = [
+  { id: "all", label: "전체", from: 1, to: Number.MAX_SAFE_INTEGER },
+  { id: "kanto", label: "관동", from: 1, to: 151 },
+  { id: "johto", label: "성도", from: 152, to: 251 },
+  { id: "hoenn", label: "호연", from: 252, to: 386 },
+  { id: "sinnoh", label: "신오", from: 387, to: 493 },
+  { id: "unova", label: "하나", from: 494, to: 649 },
+  { id: "kalos", label: "칼로스", from: 650, to: 721 },
+  { id: "alola", label: "알로라", from: 722, to: 809 },
+  { id: "galar", label: "가라르", from: 810, to: 898 },
+  { id: "hisui", label: "히스이", from: 899, to: 905 }, // 최초 등장 지방 기준 (docs/specs/s5.md "전체 도감과 지방") — 레전드 아르세우스에서 처음 나온 종
+  { id: "paldea", label: "팔데아", from: 906, to: 1025 },
+];
 let dialog: Dialog | null = null;
 let notice = ""; // 마지막 실패 문구. 모달을 다시 그려도 남는다
 
@@ -998,10 +1015,11 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   draw();
 }
 
-// 정렬 목록은 바깥을 누르면 닫는다
+// 정렬·지방 목록은 바깥을 누르면 닫는다
 document.addEventListener("click", () => {
-  if (!boxSortOpen) return;
+  if (!boxSortOpen && !dexRegionOpen) return;
   boxSortOpen = false;
+  dexRegionOpen = false;
   draw();
 });
 
@@ -1032,11 +1050,45 @@ function pickDex(slug: string): void {
   markDexPick();
 }
 
-// 지금 격자에 보이는 목록 — 검색어와 등록 상태 칩을 적용한다. 기기 창의 이전·다음도 이 순서를 따른다
+// 지금 격자에 보이는 목록 — 지방, 검색어, 등록 상태 칩을 함께 적용한다. 기기 창의 이전·다음도 이 순서를 따른다
 function dexShown(): DexEntry[] {
   if (!dexRows) return [];
   const q = normQuery(dexQuery);
-  return dexRows.filter((r) => (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
+  const region = DEX_REGIONS.find((r) => r.id === dexRegion) ?? DEX_REGIONS[0];
+  const inRegion = (dex: number): boolean => !region || (dex >= region.from && dex <= region.to);
+  return dexRows.filter((r) => inRegion(r.dex) && (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
+}
+
+// 지방 고르기 — 박스 정렬과 같은 모양의 목록. 바깥을 누르면 닫힌다
+function dexRegionEl(): HTMLElement {
+  const wrap = el("div", "box-sort left");
+  const current = DEX_REGIONS.find((r) => r.id === dexRegion) ?? DEX_REGIONS[0];
+  const toggle = button("sort-toggle", `지방: ${current?.label ?? "전체"} ▾`);
+  toggle.setAttribute("aria-expanded", String(dexRegionOpen));
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dexRegionOpen = !dexRegionOpen;
+    draw();
+  });
+  wrap.appendChild(toggle);
+  if (dexRegionOpen) {
+    const menu = el("div", "sort-menu");
+    menu.setAttribute("role", "menu");
+    for (const r of DEX_REGIONS) {
+      const item = button(r.id === dexRegion ? "sort-item on" : "sort-item", r.label);
+      item.setAttribute("role", "menuitemradio");
+      item.setAttribute("aria-checked", String(r.id === dexRegion));
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dexRegion = r.id;
+        dexRegionOpen = false;
+        draw();
+      });
+      menu.appendChild(item);
+    }
+    wrap.appendChild(menu);
+  }
+  return wrap;
 }
 
 function stepDex(delta: -1 | 1): void {
@@ -1053,8 +1105,9 @@ function stepDex(delta: -1 | 1): void {
 
 function drawDex(v: Snapshot): void {
   bodyEl.appendChild(head("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`));
-  // 이름·번호 검색 — 등록 상태 칩과 함께 적용한다. 지방 셀렉트는 목록·매핑이 미정이라 두지 않는다
+  // 지방·이름·번호 검색 — 등록 상태 칩과 함께 적용한다
   const bar = el("div", "search-row");
+  bar.appendChild(dexRegionEl());
   bar.appendChild(
     searchBox("dex", dexQuery, "이름 또는 번호 검색", (q) => {
       dexQuery = q;
@@ -2051,12 +2104,21 @@ function setScrim(on: boolean): void {
   drawTutorial(); // 모달이 열리면 코치마크를 감추고, 닫히면 다시 그린다. 창 단추 자리 어둡게 하기도 여기서 맞춘다
 }
 
+// 다시 그린 대화상자의 스크롤 — 같은 대화상자·같은 탭이면 스크롤 위치를 되돌린다.
+// 버튼을 누르거나 5초 새로 그리기 때 대화상자를 통째로 다시 만들어 맨 위로 튀던 것을 막는다 (2026-09-27 사용자 "설정에서 스크롤 내리고, 버튼 누르면 스크롤이 올라가짐")
+let dialogScrollKey = "";
+const dialogKeyOf = (d: Dialog): string => `${d.kind}:${"tab" in d ? String(d.tab) : ""}`;
+
 function drawDialog(): void {
   if (!dialog) {
     setScrim(false);
+    dialogScrollKey = "";
     return;
   }
   setScrim(true);
+  const key = dialogKeyOf(dialog);
+  const keep = key === dialogScrollKey ? (dialogEl.querySelector<HTMLElement>(".scroll")?.scrollTop ?? 0) : 0;
+  dialogScrollKey = key;
   dialogEl.className = SHAPE[dialog.kind];
   dialogEl.replaceChildren();
 
@@ -2075,6 +2137,8 @@ function drawDialog(): void {
   else drawGuide();
 
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
+  const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
+  if (scroll && keep) scroll.scrollTop = keep;
   restoreSearchFocus();
 }
 

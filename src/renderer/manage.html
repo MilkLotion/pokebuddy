@@ -1239,36 +1239,50 @@
       .pager button.box-name:hover {
         background: var(--accent-bg);
       }
-      .pager .box-name-input {
+      /* 검색 칸 규칙(.pager .search 폭 170·왼쪽 자동 여백)보다 앞서야 한다 — 이름 입력칸이 넓어져 사용 칸 수가 두 줄로 밀렸다 */
+      .pager .search.box-name-input {
         width: 92px;
+        margin-left: 0;
         font-weight: 600;
+      }
+      .pager .used {
+        white-space: nowrap;
       }
       /* 정렬 — 검색 칸과 같은 높이. 목록은 칸 아래에 뜬다 (Figma 05 `Box / Sort Open` `633:17372`) */
       .box-sort {
         position: relative;
       }
-      .pager .sort-toggle {
+      .pager .sort-toggle,
+      .search-row .sort-toggle {
         height: 32px;
-        min-width: 100px;
+        width: 124px;
         white-space: nowrap;
         padding: 0 11px;
         border-radius: 8px;
         text-align: left;
         font-size: 12px;
       }
+      /* 목록은 누르는 칸과 같은 폭이다 (2026-09-27 사용자 "항상 select는 그 눌리는 input이랑 너비가 같아야해") */
       .sort-menu {
         position: absolute;
+        left: 0;
         right: 0;
         top: calc(100% + 4px);
         z-index: 5;
-        width: 140px;
         padding: 4px;
         border: 1px solid var(--line);
         border-radius: 12px;
         background: var(--surface);
         box-shadow: 0 4px 12px rgba(26, 51, 48, 0.16);
       }
-      .pager .sort-menu .sort-item {
+      .pager .sort-menu .sort-item,
+      .search-row .sort-menu .sort-item {
+        font: inherit;
+        font-size: 12px;
+        color: inherit;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         display: block;
         width: 100%;
         height: 34px;
@@ -1281,11 +1295,28 @@
       }
       /* 가리킨 기준과 지금 적용된 기준 — 옅은 바탕 */
       .pager .sort-menu .sort-item:hover,
-      .pager .sort-menu .sort-item.on {
+      .pager .sort-menu .sort-item.on,
+      .search-row .sort-menu .sort-item:hover,
+      .search-row .sort-menu .sort-item.on {
         background: var(--accent-bg);
       }
-      .pager .sort-menu .sort-item.on {
+      .pager .sort-menu .sort-item.on,
+      .search-row .sort-menu .sort-item.on {
         font-weight: 600;
+      }
+      /* 도감 지방 — 검색 칸 왼쪽. 목록은 왼쪽에 맞춘다 */
+      .search-row .box-sort {
+        margin-right: 8px;
+      }
+      .search-row .sort-toggle {
+        width: 112px;
+        appearance: none;
+        font: inherit;
+        font-size: 12px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        color: inherit;
+        cursor: pointer;
       }
       .box-note {
         margin: -4px 0 10px;
