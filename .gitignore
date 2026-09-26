@@ -10,5 +10,6 @@ release/
 # PC Settings
 .playwright-mcp/
 .claude/
+.supabase/
 
 font/
