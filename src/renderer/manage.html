@@ -1510,6 +1510,158 @@
         color: var(--primary);
       }
 
+      /* 설정 모달 — 탭을 바꿔도 560×500 (Figma 05 `Settings / General` `633:18937`). 내용은 위에서부터, 닫기는 바닥 */
+      .dialog.settings {
+        width: 560px;
+        height: 500px;
+        max-height: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .dialog.settings .settings-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .dialog.settings .titles {
+        flex: 1;
+        min-width: 0;
+      }
+      .dialog.settings .titles h2 {
+        margin: 0 0 4px;
+      }
+      .dialog-close {
+        appearance: none;
+        flex: none;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        cursor: pointer;
+      }
+      .dialog-close:hover {
+        background: var(--accent-bg);
+      }
+      .dialog.settings .segmented {
+        align-self: flex-start;
+        margin-bottom: -12px;
+      }
+      .dialog.settings .scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        margin: 0 -24px;
+        padding: 0 24px;
+      }
+      .dialog.settings .setting {
+        min-height: 49px;
+        box-sizing: border-box;
+        padding: 6px 0;
+        gap: 16px;
+        border-bottom: 0;
+      }
+      .dialog.settings .setting .label {
+        font-size: 12px;
+      }
+      .dialog.settings > .actions {
+        margin-top: 0;
+      }
+      .dialog.settings > .actions .act.primary {
+        min-width: 120px;
+        height: 36px;
+      }
+      .dialog.settings .titles .sub {
+        margin: 0;
+      }
+      /* 설정의 고르기 — 박스 정렬 목록과 같은 모양 */
+      .setting .setting-select .sort-toggle {
+        height: 28px;
+        padding: 0 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: inherit;
+        font: inherit;
+        font-size: 12px;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .setting .setting-select .sort-menu .sort-item {
+        display: block;
+        width: 100%;
+        height: 34px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-size: 12px;
+        text-align: left;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .setting .setting-select .sort-menu .sort-item:hover,
+      .setting .setting-select .sort-menu .sort-item.on {
+        background: var(--accent-bg);
+      }
+      .setting .setting-select .sort-menu .sort-item.on {
+        font-weight: 600;
+      }
+      /* 두 칸·네 칸 전환 — 회색 틀 안에서 고른 칸만 흰 면 (C-15) */
+      .segmented {
+        display: inline-flex;
+        flex: none;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 8px;
+        background: var(--subtle);
+      }
+      .segmented button {
+        appearance: none;
+        height: 24px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        color: var(--muted);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .segmented button[aria-pressed="true"] {
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 600;
+      }
+      /* 연결 상태 — dot(분류). 연결됨만 초록 */
+      .agent-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 5px;
+        border-radius: 50%;
+        background: var(--disabled);
+        vertical-align: middle;
+      }
+      .agent-dot.on {
+        background: var(--primary);
+      }
+      .agents-note {
+        margin-top: 8px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+
       /* 모달 안의 탭 — 설정의 일반 / 연결 */
       .subtabs {
         display: flex;
@@ -1573,33 +1725,6 @@
       .setting .chips {
         margin: 0;
         justify-content: flex-end;
-      }
-      /* 켬·끔 — 나란한 두 칸 하나. 막대 모양을 쓰지 않아 다른 칩과 높이가 같다 */
-      .toggle {
-        display: flex;
-        flex: none;
-      }
-      .toggle button {
-        appearance: none;
-        font: inherit;
-        font-size: 12px;
-        padding: 4px 12px;
-        border: 1px solid var(--line);
-        background: var(--surface);
-        color: var(--muted);
-        cursor: pointer;
-      }
-      .toggle button:first-child {
-        border-radius: 999px 0 0 999px;
-      }
-      .toggle button:last-child {
-        border-radius: 0 999px 999px 0;
-        border-left: 0;
-      }
-      .toggle button[aria-pressed="true"] {
-        background: var(--primary);
-        border-color: var(--primary);
-        color: var(--inverse);
       }
       /* 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 120 · 숫자 칸 40×24 · 스피커 단추 28, 사이 8.
          음소거면 슬라이더·숫자를 흐리게 하고 값은 그대로 보인다 */

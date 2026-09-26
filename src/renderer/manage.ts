@@ -147,7 +147,7 @@ type Dialog =
   | { kind: "pick-box"; slotIndex: number } // 칸이 정해졌고 넣을 박스 개체를 고른다
   | { kind: "pick-slot"; petId: string } // 개체가 정해졌고 넣을 파티 칸을 고른다
   | { kind: "achievements" }
-  | { kind: "settings"; tab: "general" | "agents" }
+  | { kind: "settings"; tab: SettingsTab }
   | { kind: "guide" }
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
   | { kind: "form"; petId: string; to: string }; // 공유 sid 계열의 모습 바꾸기 확인
@@ -243,19 +243,6 @@ function chips(items: { id: string; label: string }[], current: string, pick: (i
     row.appendChild(b);
   }
   return row;
-}
-
-// 켬·끔처럼 둘 중 하나 — 붙은 두 칸으로 그린다
-function toggle(on: boolean, labels: [string, string], pick: (on: boolean) => void): HTMLElement {
-  const box = el("div", "toggle");
-  for (const [i, label] of labels.entries()) {
-    const b = button("", label);
-    const isOn = i === 0;
-    b.setAttribute("aria-pressed", String(on === isOn));
-    b.addEventListener("click", () => pick(isOn));
-    box.appendChild(b);
-  }
-  return box;
 }
 
 function head(title: string, sub: string): HTMLElement {
@@ -1015,8 +1002,12 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   draw();
 }
 
-// 정렬·지방 목록은 바깥을 누르면 닫는다
+// 정렬·지방·설정 목록은 바깥을 누르면 닫는다
 document.addEventListener("click", () => {
+  if (settingSelectOpen) {
+    settingSelectOpen = null;
+    drawDialog();
+  }
   if (!boxSortOpen && !dexRegionOpen) return;
   boxSortOpen = false;
   dexRegionOpen = false;
@@ -1892,6 +1883,66 @@ function drawAchievements(): void {
 
 // ── 모달 · 설정 ────────────────────────────────────────────────────────────────
 
+// 설정 모달 탭 — 일반·화면·연결·계정 네 칸. 탭을 바꿔도 모달 크기(560×500)가 같다.
+// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `Settings / Connect` `633:19096` (docs/work/trade/record.md "계정 탭 구조로 수정").
+// 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
+type SettingsTab = "general" | "display" | "agents" | "account";
+const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
+  { id: "general", label: "일반" },
+  { id: "display", label: "화면" },
+  { id: "agents", label: "연결" },
+  { id: "account", label: "계정" },
+];
+
+// 두 칸·네 칸 전환 — 회색 틀 안에서 고른 칸만 흰 면 (docs/specs/ui-components.md C-15)
+function segmented<T extends string>(items: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {
+  const box = el("div", "segmented");
+  box.setAttribute("role", "tablist");
+  for (const item of items) {
+    const b = button("", item.label);
+    b.setAttribute("aria-pressed", String(item.id === current));
+    b.addEventListener("click", () => {
+      if (item.id !== current) pick(item.id);
+    });
+    box.appendChild(b);
+  }
+  return box;
+}
+
+// 설정의 고르기 — 박스 정렬과 같은 목록. 목록은 누르는 칸과 폭이 같다. 칸 폭은 가장 긴 선택지에 맞춘 고정값
+let settingSelectOpen: string | null = null;
+function settingSelect<T extends string>(id: string, options: readonly { value: T; label: string }[], current: T, width: number, pick: (value: T) => void): HTMLElement {
+  const wrap = el("div", "box-sort setting-select");
+  const now = options.find((o) => o.value === current);
+  const toggle = button("sort-toggle", `${now?.label ?? current} ▾`);
+  toggle.style.width = `${width}px`;
+  toggle.setAttribute("aria-expanded", String(settingSelectOpen === id));
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    settingSelectOpen = settingSelectOpen === id ? null : id;
+    drawDialog();
+  });
+  wrap.appendChild(toggle);
+  if (settingSelectOpen === id) {
+    const menu = el("div", "sort-menu");
+    menu.setAttribute("role", "menu");
+    for (const o of options) {
+      const item = button(o.value === current ? "sort-item on" : "sort-item", o.label);
+      item.setAttribute("role", "menuitemradio");
+      item.setAttribute("aria-checked", String(o.value === current));
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        settingSelectOpen = null;
+        if (o.value === current) drawDialog();
+        else pick(o.value);
+      });
+      menu.appendChild(item);
+    }
+    wrap.appendChild(menu);
+  }
+  return wrap;
+}
+
 // 설정 한 줄. 조작이 넓으면 이름 아래에 깐다 — 옆에 두면 설명이 좁아져 여러 줄로 접힌다
 function settingRow(label: string, hint: string, control: HTMLElement, stack = false): HTMLElement {
   const row = el("div", stack ? "setting stack" : "setting");
@@ -1969,57 +2020,69 @@ function speakerIcon(muted: boolean): SVGSVGElement {
   return svg;
 }
 
+const setSetting = (key: string, value: unknown): void => void send("settings.set", key, { value });
+
+// 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
 function drawGeneral(scroll: HTMLElement): void {
   if (!view) return;
   const s = view.settings;
-  const set = (key: string, value: unknown): void => void send("settings.set", key, { value });
+  const sleep = SLEEP_CHOICES.map((c) => ({ value: c.id, label: c.label }));
+  scroll.appendChild(
+    settingRow("잠들기 기준", "이 시간 동안 조작이 없으면 잠듦", settingSelect("sleep", sleep, String(s.sleepAfterMin), 104, (v) => setSetting("sleepAfterMin", Number(v)))),
+  );
+  const langs = [
+    { value: "ko", label: "한국어" },
+    { value: "en", label: "English" },
+  ] as const;
+  scroll.appendChild(settingRow("언어", "화면 문구 언어", settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
+  scroll.appendChild(settingRow("로그인 시 시작", "기본값 켜짐", switchButton(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
+  scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
+  const guide = button("act", "열기 ›");
+  guide.addEventListener("click", () => open({ kind: "guide" }));
+  scroll.appendChild(settingRow("가이드북", "사용법을 주제별로 봅니다", guide));
+}
 
-  // 포켓몬 표시·클릭 통과 — 이 앱의 창 상태다. 앱이 값을 줄 때만 둔다 (docs/specs/s5.md 설정 계약의 첫 두 항목)
-  if (view.display) {
-    const d = view.display;
-    scroll.appendChild(settingRow("포켓몬 표시", "끄면 포켓몬을 잠시 숨깁니다. 트레이에서도 바꿀 수 있습니다.", toggle(!d.hidden, ["켬", "끔"], (on) => set("hidden", !on))));
-    scroll.appendChild(settingRow("클릭 통과", "켜면 포켓몬을 눌러도 뒤의 창이 눌립니다.", toggle(d.clickThrough, ["켬", "끔"], (on) => set("clickThrough", on))));
+// 화면 — 포켓몬 표시, 클릭 통과, 다른 앱에서도 표시, 놀이공간. 앞의 세 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
+function drawDisplay(scroll: HTMLElement): void {
+  if (!view) return;
+  const s = view.settings;
+  const d = view.display;
+  if (d) {
+    scroll.appendChild(settingRow("포켓몬 표시", d.hidden ? "지금 숨김" : "지금 화면에 표시 중", switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
+    scroll.appendChild(settingRow("클릭 통과", "포켓몬이 없는 곳은 뒤 창을 클릭", switchButton(d.clickThrough, "클릭 통과", () => setSetting("clickThrough", !d.clickThrough))));
+    if (d.keepVisible !== undefined) {
+      const keep = d.keepVisible;
+      scroll.appendChild(settingRow("다른 앱에서도 표시", "작업 창 위에 항상 보이기", switchButton(keep, "다른 앱에서도 표시", () => setSetting("keepVisible", !keep))));
+    }
   }
-
+  const area = [
+    { id: "full", label: "화면 전체" },
+    { id: "region", label: "영역 지정" },
+  ] as const;
   scroll.appendChild(
     settingRow(
       "놀이공간",
-      s.playArea === "region" ? (s.hasRegion ? "그려 둔 영역 안에서만 돌아다닙니다." : "영역을 아직 그리지 않았습니다.") : "화면 전체를 씁니다.",
-      toggle(s.playArea === "full", ["화면 전체", "영역 지정"], (full) => set("playArea", full ? "full" : "region")),
+      s.playArea === "region" ? (s.hasRegion ? "그려 둔 영역 안에서만 돌아다님" : "영역을 아직 그리지 않았음") : "영역 지정을 고르면 [영역 그리기]",
+      segmented(area, s.playArea === "region" ? "region" : "full", (id) => setSetting("playArea", id)),
     ),
   );
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/s5.md 설정 계약)
   if (s.playArea === "region") {
     const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
-    scroll.appendChild(settingRow("영역", "동반자가 돌아다닐 영역을 그립니다.", draw));
+    scroll.appendChild(settingRow("영역", "포켓몬이 돌아다닐 영역을 그림", draw));
   }
+}
 
-  scroll.appendChild(
-    settingRow(
-      "잠들기 기준",
-      "이만큼 아무 입력이 없으면 잠듭니다.",
-      chips(SLEEP_CHOICES, String(s.sleepAfterMin), (id) => set("sleepAfterMin", Number(id))),
-      true,
-    ),
-  );
-  scroll.appendChild(settingRow("언어", "화면에 쓰는 말", toggle(s.language === "ko", ["한국어", "English"], (ko) => set("language", ko ? "ko" : "en"))));
-  scroll.appendChild(settingRow("로그인 시 시작", "PC 를 켜면 함께 켭니다.", toggle(s.startOnLogin, ["켬", "끔"], (on) => set("startOnLogin", on))));
-  scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, set)));
-
-  const guide = button("go");
-  const body = el("div", "body");
-  body.append(el("div", "label", "가이드북"), el("div", "hint", "돌봄, 상점과 알, 파티와 박스, 진화, 업적"));
-  guide.append(body, el("span", "arrow", "›"));
-  guide.addEventListener("click", () => open({ kind: "guide" }));
-  scroll.appendChild(guide);
-
+// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (docs/work/trade/record.md "계정과 로그인")
+function drawAccount(scroll: HTMLElement): void {
+  scroll.appendChild(el("div", "empty-note", "계정 화면은 준비 중입니다."));
 }
 
 // CLI 한 줄 — 상태를 네 가지로 나눈다 (docs/specs/s5.md "설정과 연결")
 function agentRow(row: AgentRow): HTMLElement {
-  const state = row.error ? "확인 필요" : !row.installed ? "미설치" : row.connected ? "연결됨" : "연결 안 됨";
   const usage = row.usage === "transcript" ? "토큰으로 적립" : "작업 시간으로 적립";
-  const hint = row.error ? row.error : !row.installed ? "이 CLI 를 쓰고 있지 않습니다." : `${usage} · 훅 ${row.registered}/${row.total}`;
+  // 상태 글자는 시안처럼 짧게 — 연결됨만 적립 방식을 붙이고, 확인이 필요하면 이유를 붙인다
+  const hint = row.error ? `확인 필요 · ${row.error}` : !row.installed ? "미설치" : row.connected ? `연결됨 · ${usage}` : "연결 안 됨";
 
   const control = el("div", "actions");
   control.style.margin = "0";
@@ -2027,7 +2090,11 @@ function agentRow(row: AgentRow): HTMLElement {
   else if (row.connected) control.appendChild(actionButton("해제", false, false, () => void agent(row.name, "disconnect")));
   else control.appendChild(actionButton("연결", true, false, () => void agent(row.name, "connect")));
 
-  return settingRow(row.label, `${state} · ${hint}`, control);
+  // 상태는 dot(분류)과 글자로 — 연결됨만 초록 (Figma `Settings / Connect` `633:19096`)
+  const line = settingRow(row.label, hint, control);
+  const hintEl = line.querySelector<HTMLElement>(".hint");
+  if (hintEl) hintEl.prepend(el("span", row.connected && !row.error ? "agent-dot on" : "agent-dot"));
+  return line;
 }
 
 function drawAgents(scroll: HTMLElement): void {
@@ -2036,28 +2103,35 @@ function drawAgents(scroll: HTMLElement): void {
     return;
   }
   for (const row of agentRows) scroll.appendChild(agentRow(row));
-  scroll.appendChild(el("div", "hint", "연결하면 각 CLI 의 설정에 훅을 넣습니다. 해제하면 다시 뺍니다."));
+  scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
 }
 
-function drawSettings(sub: "general" | "agents"): void {
-  dialogEl.append(...dialogHead("설정", ""));
-  const tabs = el("div", "subtabs");
-  for (const [id, label] of [["general", "일반"], ["agents", "연결"]] as const) {
-    const b = button("", label);
-    b.setAttribute("aria-selected", String(id === sub));
-    b.addEventListener("click", () => {
+function drawSettings(sub: SettingsTab): void {
+  // 제목·부제와 오른쪽 위 닫기
+  const head = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.append(el("h2", undefined, "설정"), el("div", "sub", "설정을 여기서 바꿉니다"));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  head.append(titles, x);
+  dialogEl.appendChild(head);
+
+  dialogEl.appendChild(
+    segmented(SETTINGS_TABS, sub, (id) => {
       if (id === "agents" && !agentRows) void loadAgents();
+      settingSelectOpen = null;
       open({ kind: "settings", tab: id });
-    });
-    tabs.appendChild(b);
-  }
-  dialogEl.appendChild(tabs);
+    }),
+  );
 
   const scroll = el("div", "scroll");
   if (sub === "general") drawGeneral(scroll);
-  else drawAgents(scroll);
+  else if (sub === "display") drawDisplay(scroll);
+  else if (sub === "agents") drawAgents(scroll);
+  else drawAccount(scroll);
   dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actions(closeButton()));
+  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("닫기", true, false, close)));
 }
 
 // ── 모달 · 가이드북 ────────────────────────────────────────────────────────────
@@ -2089,7 +2163,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   "pick-box": "dialog wide",
   "pick-slot": "dialog wide",
   achievements: "dialog tall",
-  settings: "dialog tall",
+  settings: "dialog settings",
   guide: "dialog tall",
   hatched: "dialog",
   form: "dialog",

@@ -307,7 +307,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       syncCoach();
       return reply;
     },
-    display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
+    display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough, keepVisible: !!config.keepVisible }),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
