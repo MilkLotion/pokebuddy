@@ -99,12 +99,12 @@
 | `node scripts/check-docs.cjs` | 통과 |
 | `git diff --check` | 통과 |
 | 앱 상점 화면 캡처 | 태고의돌·프리미엄먹이·장난감과 알 4종 색이 보인다. [shop.png](evidence/shop.png) |
-| 앱 가방 화면 캡처 | 두 번 `UnknownVizError`로 실패했다. 미확인 |
+| 앱 가방 화면 캡처 | 두 번 `UnknownVizError`로 실패했다. 2026-09-27 `--disable-gpu`로 찍었다. 장난감·프리미엄먹이 그림이 보인다. [bag.png](evidence/bag.png) |
 
 의미 검수: 이 기록의 문장을 [작성 원칙](../../contributing/writing.md) 목록으로 읽었다. 사용자 원문과 관측을 나눴다.
 
 ## 피드백과 수정
 
 - 기본먹이는 그릇 안쪽 테두리가 안 보여 머핀처럼 읽힐 수 있다. 사용자가 그대로 확정했다.
-- 가방 화면 캡처는 개발 실행기의 `UnknownVizError`로 실패했다. 상점 화면으로 대신 확인했다.
+- 가방 화면 캡처는 개발 실행기의 `UnknownVizError`로 실패했다. 상점 화면으로 대신 확인했다. 2026-09-27 `npx electron --disable-gpu scripts/dev-manage.cjs --tab 가방`으로 다시 찍어 확인했다.
 - 커밋: 사용자 지시 원문 "커밋."(2026-09-27). 이 작업 파일만 올렸다. 앱 연결 코드는 다른 세션이 올린다.

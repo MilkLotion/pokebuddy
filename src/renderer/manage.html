@@ -249,6 +249,39 @@
         font: inherit;
         color: inherit;
         cursor: pointer;
+        position: relative;
+      }
+      /* 디버프 배지 — Figma `Debuff Badge` `126:1065`. 칸 오른쪽 위(오른쪽 12, 위 12, 사이 4). 점 6px + 10px 글자.
+         지금 디버프는 배고픔 두 단계뿐이다 (docs/specs/balance.md "배고픔 디버프") */
+      .slot .debuffs {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        gap: 4px;
+      }
+      .debuff {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        height: 18px;
+        font-family: var(--font-small);
+        font-size: 10px;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .debuff::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .debuff.warning::before {
+        background: var(--warning);
+      }
+      .debuff.danger::before {
+        background: var(--danger);
       }
       /* 파티 칸 초상 — Figma 초상 96 */
       .slot > .portrait {

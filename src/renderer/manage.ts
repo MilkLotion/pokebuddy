@@ -32,6 +32,11 @@ const TABS: { id: TabId; label: string }[] = [
 
 // 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
+// 만복도 구간별 디버프 — 파티 칸의 상태 배지 (Figma `Party Slot Card` 의 debuff 자리)
+const DEBUFF: Record<string, { label: string; tone: "warning" | "danger"; note: string }> = {
+  hungry: { label: "배고픔", tone: "warning", note: "친밀도 증가량 −30%" },
+  starving: { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" },
+};
 
 const SHOP_TABS = [
   { id: "all", label: "전체" },
@@ -422,6 +427,15 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(meters);
 
   card.appendChild(info);
+  // 디버프 배지 — 배고픔 −30%, 매우 배고픔 −60% (docs/specs/balance.md). 디버프가 없으면 두지 않는다
+  const debuff = DEBUFF[pet.zone];
+  if (debuff) {
+    const box = el("div", "debuffs");
+    const badge = el("span", `debuff ${debuff.tone}`, debuff.label);
+    badge.title = debuff.note;
+    box.appendChild(badge);
+    card.appendChild(box);
+  }
   card.addEventListener("click", () => openPet(pet.id));
   if (pet.hidden) card.dataset.tut = "party"; // 파티 튜토리얼은 숨긴 칸 가운데 첫 칸을 밝힌다
   const state = `${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
