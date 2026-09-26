@@ -7,9 +7,11 @@
     "reward": "party-slot"
   },
   "starter-final": {
-    "ko": "첫 포켓몬의 마지막 모습",
-    "en": "First Partner, Final Form",
-    "desc": "첫 선택으로 만난 포켓몬을 최종 진화까지 키운다",
-    "reward": "party-slot"
+    "_comment": "키는 옛 조건(첫 포켓몬 최종 진화)의 이름을 그대로 쓴다. 이미 달성·수령한 저장을 그대로 인정하려고 바꾸지 않는다 (2026-09-27)",
+    "ko": "최초로 50레벨 포켓몬 달성",
+    "en": "First Level 50",
+    "desc": "포켓몬을 처음으로 50레벨 이상으로 레벨업한다. 교환으로 받은 포켓몬은 레벨업해야 센다",
+    "reward": "party-slot",
+    "level": 50
   }
 }

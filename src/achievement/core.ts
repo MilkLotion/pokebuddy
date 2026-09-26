@@ -2,11 +2,12 @@
 //
 // 조건은 코드가 판정한다. 업적마다 보는 것이 달라서 데이터로 적을 수 없다.
 //   show-two        파티의 두 마리를 동시에 꺼냈다. 숨긴 채 배치만 한 것은 아니다
-//   starter-final   첫 선택으로 만난 개체가 더 갈 곳이 없는 종이 됐다
+//   starter-final   포켓몬 한 마리를 처음으로 기준 레벨(data 의 level, 50) 이상으로 레벨업했다
+//                   키는 옛 조건(첫 포켓몬 최종 진화)의 이름이다. 이미 달성·수령한 저장을 그대로 인정하려고 두었다 (2026-09-27)
+//                   레벨업은 거래 전후 저장을 비교해 본다. 교환으로 받은 개체는 거래 전에 없으므로 받는 순간은 세지 않는다
 // 달성은 한 번 기록하면 되돌리지 않는다. 두 마리를 다시 숨겨도 달성은 남는다.
 // 보상은 업적창에서 사용자가 직접 받는다. 업적당 한 번만 받는다.
 import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
-import { nextOf } from "../dex/evo.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export interface AchievementDef {
@@ -14,6 +15,7 @@ export interface AchievementDef {
   en?: string; // 영어 이름 — 다른 데이터(도구·알)처럼 함께 둔다. 화면은 지금 한국어만 쓴다
   desc: string;
   reward: "party-slot";
+  level?: number; // starter-final 의 기준 레벨
 }
 
 export type ClaimFailure = "no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot";
@@ -36,30 +38,30 @@ export const defOf = (id: string, opts?: DexOptions): AchievementDef | null => (
 const shownCount = (save: SaveV3): number =>
   save.party.slots.filter((s) => s.state === "pokemon" && s.petId && s.hidden !== true).length;
 
-// 첫 개체가 최종 진화까지 갔는가 — 더 갈 곳이 없으면 최종이다
-function starterIsFinal(save: SaveV3, opts?: DexOptions): boolean {
-  const id = save.starterPetId;
-  if (!id) return false;
-  const pet = save.pets.find((p) => p.id === id);
-  if (!pet) return false;
-  if (!pet.evolved.length) return false; // 한 번도 진화하지 않았으면 최종이 아니다
-  return nextOf(pet.species, opts).length === 0;
+// 이번 거래에서 기준 레벨 이상으로 레벨업한 개체가 있는가 — 거래 전에도 있던 같은 개체의 레벨이 올랐을 때만 센다
+function leveledTo(save: SaveV3, prev: SaveV3 | undefined, level: number): boolean {
+  if (!prev) return false;
+  return save.pets.some((p) => {
+    const before = prev.pets.find((b) => b.id === p.id);
+    return !!before && p.level > before.level && p.level >= level;
+  });
 }
 
-// 업적 하나의 조건을 지금 채웠는가
-export function isAchieved(save: SaveV3, id: string, opts?: DexOptions): boolean {
+// 업적 하나의 조건을 지금 채웠는가. prev 는 거래 전 저장이다 — 레벨업처럼 변화를 보는 조건이 쓴다
+export function isAchieved(save: SaveV3, id: string, opts?: DexOptions, prev?: SaveV3): boolean {
   if (id === "show-two") return shownCount(save) >= 2;
-  if (id === "starter-final") return starterIsFinal(save, opts);
+  if (id === "starter-final") return leveledTo(save, prev, defOf(id, opts)?.level ?? Number.POSITIVE_INFINITY);
   return false;
 }
 
 // 달성을 기록한다. 이번에 새로 달성한 업적을 돌려준다 — 배너가 쓴다
-export function evaluate(save: SaveV3, now: number, opts?: DexOptions): string[] {
+// prev 를 주지 않으면(시간 흐름) 레벨업 조건은 달성하지 않는다. 시간만으로는 레벨이 오르지 않는다
+export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: SaveV3): string[] {
   const fresh: string[] = [];
   for (const [id] of defs(opts)) {
     const row = save.achievements[id];
     if (row?.achievedAt != null) continue; // 한 번 달성하면 되돌리지 않는다
-    if (!isAchieved(save, id, opts)) continue;
+    if (!isAchieved(save, id, opts, prev)) continue;
     save.achievements[id] = { achievedAt: now, claimedAt: row?.claimedAt ?? null };
     fresh.push(id);
   }

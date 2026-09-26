@@ -80,7 +80,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     // 상태가 바뀌었으니 해금 규칙과 업적을 다시 본다. 첫 선택 한 번으로 다른 후보·기본형이 해금되고, 꺼내기 한 번으로도 달성이 생긴다
     unlockByRules(draft, now);
     queueTutorials(draft, now);
-    const achieved = evaluate(draft, now);
+    const achieved = evaluate(draft, now, undefined, save); // save 는 거래 전 — 레벨업 업적이 비교한다
 
     const result = out.result ?? null;
     draft.tx = trimTx([...draft.tx, { id: req.id, at: now, result }], now);

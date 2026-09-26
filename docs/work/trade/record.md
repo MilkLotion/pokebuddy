@@ -883,6 +883,25 @@ trade?: {
 
 구현 미시작. 2026-09-26 기준 다른 작업이 `src/tools/selftest-achievement.ts`를 고치고 있다. 그 작업이 끝난 뒤 구현한다.
 
+2026-09-27 구현 (사용자 지시 "진행"):
+
+- 판정은 거래 전후 저장을 비교한다. 같은 개체의 레벨이 이번 거래에서 올랐고 결과가 기준 레벨 이상이면 달성이다. 교환으로 받은 개체는 거래 전 저장에 없으므로 받는 순간은 세지 않는다. 시간 흐름(`src/state/time.ts`)은 거래 전 저장을 넘기지 않으므로 이 조건을 달성하지 않는다.
+- 업적 키는 `starter-final`을 그대로 쓴다. 이미 옛 조건으로 달성·수령한 저장은 그대로 인정된다. 키를 바꾸면 옛 수령 기록과 업적 파티 칸 보상이 어긋난다.
+- 기준 레벨 50은 `data/achievements.json`의 `level`에 둔다. 이름 "최초로 50레벨 포켓몬 달성", 영어 "First Level 50".
+- 바꾼 파일: `data/achievements.json`, [업적 판정](../../../src/achievement/core.ts)(`isAchieved`·`evaluate`에 거래 전 저장 `prev`, 옛 최종 진화 판정 삭제), [거래 실행기](../../../src/tx/executor.ts)(`evaluate`에 거래 전 저장을 넘김), [업적 자체 검사](../../../src/tools/selftest-achievement.ts)((4)~(6-1) 교체).
+
+검수 (2026-09-27):
+
+| 명령 | 결과 |
+|---|---|
+| `npm run check` | 통과 |
+| `npm run build` | 통과 |
+| `node dist/tools/selftest-achievement.js` | 통과. 새 항목 (4) 49→50 달성, (5) 받은 52 는 안 셈·53 으로 올리면 셈, (6) 시간 흐름·옛 달성 기록, (6-1) 이상한사탕 거래로 달성 |
+| `selftest-bag`, `selftest-flow`, `selftest-notify`, `selftest-commands` | 통과 |
+| `npm run selftest` 전체 | 미실행. 작업 트리에 다른 세션의 미커밋 코드가 있다 |
+
+피드백: 관리 창과 배너는 업적 이름을 데이터에서 읽으므로 화면 코드는 바꾸지 않았다. 앱을 띄운 화면 확인은 미실행이다.
+
 ### 위험
 
 | 위험 | 대응 |

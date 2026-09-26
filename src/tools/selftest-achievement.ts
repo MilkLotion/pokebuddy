@@ -11,6 +11,7 @@ import { begin } from "../party/starter";
 import { buy } from "../shop/buy";
 import { open } from "../egg/open";
 import { HANDLERS } from "../tx/handlers";
+import { createExecutor } from "../tx/executor";
 import { canShow, currentTutorial, done, queueTutorials, skip } from "../tutorial/core";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -74,38 +75,69 @@ function seed(): SaveV3 {
   process.stdout.write("(3) 달성 기록은 되돌리지 않는다  ok\n");
 }
 
-// (4) 첫 포켓몬 최종 진화 — 진화하지 않았으면 아니다
+// (4) 최초로 50레벨 포켓몬 달성 — 거래 전보다 레벨이 올랐고 50 이상이면 달성 (2026-09-27 조건 변경)
 {
-  const s = seed();
-  assert.equal(isAchieved(s, "starter-final"), false, "파이리는 최종이 아니다");
-  const starter = s.pets[0];
-  if (starter) {
-    starter.species = "charizard";
-    starter.evolved = ["charmander", "charmeleon"];
-  }
-  assert.equal(isAchieved(s, "starter-final"), true, "리자몽은 최종이다");
-  process.stdout.write("(4) 첫 포켓몬 최종 진화 조건  ok\n");
+  const prev = seed();
+  const p0 = prev.pets[0];
+  if (p0) p0.level = 49;
+  const s = structuredClone(prev);
+  const n0 = s.pets[0];
+  if (n0) n0.level = 50;
+  assert.equal(isAchieved(s, "starter-final", undefined, prev), true, "49 → 50 이면 달성");
+  if (n0) n0.level = 49;
+  assert.equal(isAchieved(s, "starter-final", undefined, prev), false, "레벨이 그대로면 아니다");
+  const low = structuredClone(prev);
+  const l0 = low.pets[0];
+  if (l0) l0.level = 48;
+  const up = structuredClone(low);
+  const u0 = up.pets[0];
+  if (u0) u0.level = 49;
+  assert.equal(isAchieved(up, "starter-final", undefined, low), false, "50 에 못 미치면 아니다");
+  process.stdout.write("(4) 50레벨 이상으로 레벨업하면 달성  ok\n");
 }
 
-// (5) 진화하지 않은 단독 종은 최종으로 보지 않는다
+// (5) 교환으로 받은 52레벨은 받는 순간 세지 않고, 53 으로 올리면 센다
 {
-  const s = seed();
-  const starter = s.pets[0];
-  if (starter) starter.species = "lapras"; // 진화가 없는 종
-  assert.equal(isAchieved(s, "starter-final"), false, "한 번도 진화하지 않았다");
-  process.stdout.write("(5) 진화 없이 최종으로 보지 않는다  ok\n");
+  const prev = seed();
+  const got = structuredClone(prev);
+  got.pets.push(pet({ id: "p9", species: "pikachu", level: 52 }));
+  assert.equal(isAchieved(got, "starter-final", undefined, prev), false, "받은 개체는 거래 전에 없다");
+  const next = structuredClone(got);
+  const p9 = next.pets.find((p) => p.id === "p9");
+  if (p9) p9.level = 53;
+  assert.equal(isAchieved(next, "starter-final", undefined, got), true, "받은 개체도 레벨업하면 센다");
+  process.stdout.write("(5) 받은 개체는 레벨업해야 센다  ok\n");
 }
 
-// (6) 첫 개체가 아닌 개체의 진화는 세지 않는다
+// (6) 거래 전 저장이 없으면(시간 흐름) 레벨업 조건은 달성하지 않는다. 옛 달성 기록은 그대로 둔다
 {
   const s = seed();
-  const other = s.pets[1];
-  if (other) {
-    other.species = "blastoise";
-    other.evolved = ["squirtle", "wartortle"];
-  }
-  assert.equal(isAchieved(s, "starter-final"), false, "첫 개체가 아니다");
-  process.stdout.write("(6) 첫 개체만 센다  ok\n");
+  const p0 = s.pets[0];
+  if (p0) p0.level = 70;
+  assert.equal(isAchieved(s, "starter-final"), false, "비교할 거래 전 저장이 없다");
+  assert.deepStrictEqual(evaluate(s, T0), [], "시간 흐름만으로는 알리지 않는다");
+  const old = seed();
+  old.achievements["starter-final"] = { achievedAt: T0 - 1000, claimedAt: T0 - 500 };
+  const again = structuredClone(old);
+  const a0 = again.pets[0];
+  if (a0) a0.level = 60;
+  assert.deepStrictEqual(evaluate(again, T0, undefined, old), [], "옛 조건으로 받은 기록은 다시 알리지 않는다");
+  assert.equal(again.achievements["starter-final"]?.claimedAt, T0 - 500, "옛 수령 기록을 지우지 않는다");
+  process.stdout.write("(6) 시간 흐름과 옛 달성 기록  ok\n");
+}
+
+// (6-1) 이상한사탕 거래로 49 → 50 이 되면 거래 결과가 달성을 알린다
+{
+  let disk: SaveV3 = seed();
+  const p0 = disk.pets[0];
+  if (p0) p0.level = 49;
+  disk.bag["rare-candy"] = 1;
+  const tx = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0 }, HANDLERS);
+  const res = tx.run({ id: "r1", name: "bag.use", args: { itemId: "rare-candy", petId: "p1" } });
+  assert.equal(res.ok, true, "사탕 사용 성공");
+  assert.deepStrictEqual(res.ok ? res.achieved : null, ["starter-final"], "거래가 달성을 돌려준다");
+  assert.equal(disk.achievements["starter-final"]?.achievedAt, T0, "달성을 저장한다");
+  process.stdout.write("(6-1) 이상한사탕 거래로 달성  ok\n");
 }
 
 // (7) 보상 수령 — 업적당 한 번, 잠긴 칸 하나를 연다
