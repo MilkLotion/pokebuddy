@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MilkLotion/terminal_pokemon.git"
+    "url": "git+https://github.com/MilkLotion/pokebuddy.git"
   },
   "keywords": [
     "claude-code",
@@ -68,6 +68,7 @@
   "devDependencies": {
     "@types/node": "^24.13.5",
     "electron-builder": "^26.15.3",
+    "supabase": "^2.118.0",
     "typescript": "^7.0.2"
   }
 }

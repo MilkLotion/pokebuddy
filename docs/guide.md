@@ -139,8 +139,8 @@ npm 에 있는 `termimon` 패키지는 이름만 같은 다른 프로젝트(터�
 ### 저장소에서 바로 쓰기 (개발용)
 
 ```bash
-git clone https://github.com/MilkLotion/terminal_pokemon.git
-cd terminal_pokemon
+git clone https://github.com/MilkLotion/pokebuddy.git
+cd pokebuddy
 npm install              # TypeScript 빌드(prepare → npm run build)까지 한다. mac 은 Swift 컴파일러가 있으면 헬퍼를 이 컴퓨터용으로 빌드한다
 bin/pokebuddy setup      # 탭 구분 확장 vsix 가 없으면 먼저 묶어서 설치한다 (Windows cmd 는 bin\pokebuddy.cmd setup)
 ```

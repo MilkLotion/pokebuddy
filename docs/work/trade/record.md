@@ -1219,3 +1219,32 @@ D-03 처리(2026-09-27, Figma 전용 세션): Chrome 에서 Caption/Regular·Cap
 
 앞으로 이 작업의 시안도 같은 규칙을 따른다. 시안은 99 페이지에서 만든다. 작업을 시작할 때 05 Screens 로 옮기고 99 의 원본은 지운다.
 Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세션이 커밋할 때 함께 올린다(사용자 지시 "그럼 커밋하지말고, 해당 세션에 같이 올리라고 전달해.").
+
+2026-09-27 정정: `Save Indicator`를 만들 때 `Label` 속성을 세 변형의 글자에 모두 묶어, Offline·SaveNeeded 도 "저장됨 · 3분 전"으로 보였다. Figma 전용 세션이 찾았다. Offline·SaveNeeded 의 글자를 속성에서 떼어 "오프라인"·"저장 필요"로 되돌리고, 세 변형의 폭을 글자에 맞췄다(118·75·77). 새 글자 두 개는 Galmuri 재배치를 다시 요청했다.
+
+### 2026-09-27 구현 준비 — Supabase
+
+사용자 지시: "나눠서 진행해", "추천대로할게. 나머진 마저 진행". 비밀 값 입력은 사용자가 하고, 나머지는 이 세션이 한다.
+방법 결정(사용자, 추천 채택): 한 번만 하는 설정(프로젝트·인증·GitHub 연결)은 브라우저 대시보드로 한다. 서버 코드는 Supabase CLI 로 저장소의 SQL 을 로컬에서 검사한 뒤 올린다. Supabase MCP 는 붙이지 않는다. 같은 계정에 다른 서비스(Coflanet) 프로젝트가 있어 권한 범위가 넓어지기 때문이다.
+
+| 단계 | 상태 |
+|---|---|
+| Supabase 조직 | 완료. 새 무료 조직 `pokebuddy`를 만들었다(사용자 선택 "새 조직 pokebuddy"). 기존 조직 Coflanet 과 분리한다 |
+| Supabase 프로젝트 | 완료. 이름 `pokebuddy`, 지역 서울(`ap-northeast-2`), 주소 `https://sdsjyefksbzundsgthuy.supabase.co`. "Automatically expose new tables" 끔, "Enable automatic RLS" 켬, Data API 켬. DB 비밀번호는 사용자가 입력하고 보관한다. 이름·지역·보안 옵션 입력과 만들기는 사용자 지시("너가 해줘")로 이 세션이 했다 |
+| 인증 설정 | 완료. 익명 로그인 켬, 이메일 확인 끔, 비밀번호 최소 8자, 직접 계정 연결(manual linking) 끔. 대시보드의 저장 완료 메시지를 확인했다 |
+| GitHub OAuth App | 대기. Chrome 확장이 `github.com`에서 "Permission denied for this action on this domain"을 돌려준다. 등록 값: 이름 `pokebuddy`, 홈페이지 `https://github.com/MilkLotion/pokebuddy`, 콜백 `https://sdsjyefksbzundsgthuy.supabase.co/auth/v1/callback`, Device Flow 끔. Client secret 은 사용자가 만들어 Supabase 에 넣는다 |
+| Supabase CLI | 완료. `supabase` 2.118.0 을 `devDependencies`에 더했다. `npm install` 결과 취약점 0건 |
+| 로컬 설정 | 완료. `npx supabase init`으로 [supabase/config.toml](../../../supabase/config.toml)을 만들었다. `project_id = "pokebuddy"`, 익명 로그인 켬, 비밀번호 8자 이상. 이메일 확인은 기본값이 꺼짐이다 |
+| Docker | 설치돼 있지만 2026-09-27 엔진이 꺼져 있다. 로컬 Supabase 를 띄울 때 Docker Desktop 을 켠다 |
+
+### 2026-09-27 저장소 이름 변경
+
+사용자 지시: "git project이름이랑 이 디렉토리이름이랑 등등을 pokebuddy로 바꾸고 싶었는데", "진행. gh로 하고, 다른세션들에도 알려놔."
+
+| 대상 | 상태 |
+|---|---|
+| GitHub 저장소 | 완료. `gh repo rename`으로 `MilkLotion/terminal_pokemon` → `MilkLotion/pokebuddy`. 옛 주소는 GitHub 가 넘겨 준다 |
+| 원격 주소 | 완료. `origin` → `https://github.com/MilkLotion/pokebuddy.git` |
+| 저장소 안의 현재 참조 | 완료. `package.json` 저장소 주소, `docs/guide.md` 의 clone·cd 두 줄, `docs/progress.md` 릴리스 링크. 세션 이름(`terminal-pokemon-xx`)이 적힌 과거 기록은 그대로 둔다 |
+| 다른 세션 알림 | 완료. terminal-pokemon-1a, -e8, -18 |
+| 로컬 폴더 | 대기. 모든 세션을 닫은 뒤 사용자가 `...\projects\terminal_pokemon` → `...\projects\pokebuddy`로 바꾼다. Claude 메모리 폴더(`~\.claude\projects\C--Users-znald-Desktop-projects-terminal-pokemon\memory`)도 새 경로 이름의 폴더로 복사해야 한다 |

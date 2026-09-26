@@ -276,7 +276,7 @@ Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성�
 상태: `Online`(초록 dot, 마지막 저장 시각, 누르면 바로 저장), `Offline`(회색 dot, 누를 수 없음), `SaveNeeded`(주 색 바탕, 노란 dot, 눌러야 오프라인 진행이 올라감). 로그인하지 않으면 표시하지 않는다.
 규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
 사용: C-01 앱 헤더의 보유 포인트 왼쪽.
-Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). 글자는 `Label` 속성으로 바꾼다.
+Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline("오프라인")·SaveNeeded("저장 필요")는 고정 문구다. 폭은 글자에 맞춘다.
 
 ## 남은 일
 
