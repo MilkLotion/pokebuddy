@@ -1445,4 +1445,13 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
   - `electron dist/tools/smoke-renderer.js`: "튜토리얼 말풍선 통과: 히트·버튼·지우기".
   - 저장소 `npx tsc -p tsconfig.json --noEmit`·`tsconfig.renderer.json --noEmit`: 오류 없음.
   - 실기: `dev-test.js scene first-care` 뒤 시험 동반자에서 1/2 말풍선이 `다음` 없이 ✕ 만으로 뜨는 것을 화면으로 보았다. 2/2(메뉴 잠금)는 사용자 실기 확인 대기다.
-- 상태: 사용자 지시("커밋해")로 커밋했다. 2/2 메뉴 잠금의 사용자 실기 확인이 남았다.
+- 상태: 사용자 지시("커밋해")로 `e69d73b` 에 커밋했다.
+- 관찰(2026-09-27, 시험 저장): 첫 돌봄이 놀아주기 1회로 끝났고 밥 주기는 0회였다. 새 개체는 만복도 100 으로 시작한다(`SAVE_V3_RULES.pet.fullness`). 그래서 첫 돌봄 때 밥 주기는 늘 "배부름"으로 막히고 메뉴에는 놀아주기가 남는다. 그런데 2/2 제목은 "밥 주기"를 안내했다.
+- 수정: 2/2 제목을 `coach.first-care.menu.title` "메뉴에서 {action}를 눌러 보세요"로 바꿨다. `firstCareMenu` 에 메뉴에 남긴 항목 이름을 담아 `{action}` 에 넣는다.
+- 사용자 지시(2026-09-27): "포켓몬이 없는 곳의 우클릭은 ... << 문구 삭제." 1/2 본문을 "밥 주기와 놀아주기로 돌볼 수 있어요."로 줄였다(`lib/i18n` `coach.first-care.body`, `src/renderer/stage.ts` 가짜 모드 예시). Figma 도 고쳤다: 시안 `579:17010` 은 Chrome 에서 직접 입력했고, `05 · Screens` `Tutorial / First Care` 말풍선 `397:8574` 는 body 속성을 고친 뒤 body 틀을 HUG 로 바꿨다(높이 152 → 136).
+- 검수: `npx tsc -p tsconfig.json --noEmit` 오류 없음. 시험 동반자에서 1/2 말풍선을 화면으로 보았다. 2/2 의 놀아주기 안내는 사용자 실기 확인이 남았다.
+- 사용자 지시(2026-09-27): "05 도 두 단계로 바꾸고 design.md 고친 뒤 커밋해".
+  - `05 · Screens` `Tutorial / First Care 1 of 2`(`397:8552`): 단계 "1 / 2", `다음` 버튼(footer)을 숨겼다.
+  - `Tutorial / First Care 2 of 2`(`611:13009`, 1/2 아래 y 820): 말풍선 "메뉴에서 놀아주기를 눌러 보세요"와 2/2 본문, 메뉴 `611:13033`(파이리, 밥 주기 Disabled·이유 "배부름", 놀아주기 Default, 설정 Disabled).
+  - 글자는 Chrome 에서 컴포넌트 속성 칸으로 고쳤다([Figma 글자 작업](../../contributing/figma.md)). 구조는 `use_figma` 로 만들었다. 99 시안 `579:16959` 는 옛 "밥 주기" 안내가 남은 이전 시안이다. 기준은 05 다.
+  - `docs/design.md` "화면 크기" 행에 Figma 전용 세션의 682 반영(Page Header 한 줄 36, 간격 14·12, 템플릿 최소 682)을 적었다.

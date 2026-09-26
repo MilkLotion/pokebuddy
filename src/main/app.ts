@@ -203,14 +203,15 @@ function syncCoach(): void {
 }
 
 // 첫 돌봄의 단계 — 1/2 우클릭 유도, 포켓몬 메뉴가 열리면 2/2 메뉴에서 밥 주기 (2026-09-27 사용자 결정 "시안대로 진행", Figma `579:16959`).
+// 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
 // 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
-let firstCareMenu = false;
+let firstCareMenu: string | null = null;
 
 function coachView(id: string, starterPetId: string | null): CoachView | null {
-  const menuStep = id === "first-care" && firstCareMenu;
+  const menuStep = id === "first-care" && firstCareMenu != null;
   const key = menuStep ? `coach.${id}.menu` : `coach.${id}`;
   const total = id === "first-care" ? 2 : 1;
-  const base = { id, step: t("coach.step", { name: t(`coach.${id}.name`), at: menuStep ? 2 : 1, total }), title: t(`${key}.title`), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
+  const base = { id, step: t("coach.step", { name: t(`coach.${id}.name`), at: menuStep ? 2 : 1, total }), title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
   if (id === "playground") return { ...base, kind: "area", areaLabel: t(playArea.mode === "region" ? "coach.area.region" : "coach.area.full") };
   // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
   const ids = stage?.petIds() ?? [];
@@ -384,8 +385,8 @@ function showPetMenu(id: string): void {
   if (firstCare && pet) {
     const keep = care.feed?.enabled ? t("menu.feed") : care.play?.enabled ? t("menu.play") : null;
     items = lockExcept(built, keep ? [keep] : []);
-    if (!firstCareMenu) {
-      firstCareMenu = true;
+    if (keep && firstCareMenu !== keep) {
+      firstCareMenu = keep;
       syncCoach();
     }
   }
@@ -535,7 +536,7 @@ async function main(): Promise<void> {
     },
     // 튜토리얼 말풍선의 버튼 — `다음`·`확인` 은 완료, ✕ 는 스킵
     onCoachAction: ({ id, action }) => {
-      if (id === "first-care") firstCareMenu = false;
+      if (id === "first-care") firstCareMenu = null;
       void commands?.dispatcher
         .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, args: { steps: 1 }, from: "pet" })
         .then(() => syncCoach());
