@@ -1232,7 +1232,7 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 | Supabase 조직 | 완료. 새 무료 조직 `pokebuddy`를 만들었다(사용자 선택 "새 조직 pokebuddy"). 기존 조직 Coflanet 과 분리한다 |
 | Supabase 프로젝트 | 완료. 이름 `pokebuddy`, 지역 서울(`ap-northeast-2`), 주소 `https://sdsjyefksbzundsgthuy.supabase.co`. "Automatically expose new tables" 끔, "Enable automatic RLS" 켬, Data API 켬. DB 비밀번호는 사용자가 입력하고 보관한다. 이름·지역·보안 옵션 입력과 만들기는 사용자 지시("너가 해줘")로 이 세션이 했다 |
 | 인증 설정 | 완료. 익명 로그인 켬, 이메일 확인 끔, 비밀번호 최소 8자, 직접 계정 연결(manual linking) 끔. 대시보드의 저장 완료 메시지를 확인했다 |
-| GitHub OAuth App | 대기. Chrome 확장이 `github.com`에서 "Permission denied for this action on this domain"을 돌려준다. 등록 값: 이름 `pokebuddy`, 홈페이지 `https://github.com/MilkLotion/pokebuddy`, 콜백 `https://sdsjyefksbzundsgthuy.supabase.co/auth/v1/callback`, Device Flow 끔. Client secret 은 사용자가 만들어 Supabase 에 넣는다 |
+| GitHub OAuth App | 완료. GitHub OAuth App `pokebuddy`(홈페이지 `https://github.com/MilkLotion/pokebuddy`, 콜백 `https://sdsjyefksbzundsgthuy.supabase.co/auth/v1/callback`, Device Flow 끔)을 이 세션이 등록했다. Client ID·Secret 입력과 GitHub 켜기는 사용자가 했다. Supabase 목록에서 GitHub 가 Enabled 인 것을 확인했다. 처음 `github.com` 설정 화면은 확장이 "Permission denied"를 돌려줬고, 다시 열자 열렸다. 원인은 확인하지 못했다 |
 | Supabase CLI | 완료. `supabase` 2.118.0 을 `devDependencies`에 더했다. `npm install` 결과 취약점 0건 |
 | 로컬 설정 | 완료. `npx supabase init`으로 [supabase/config.toml](../../../supabase/config.toml)을 만들었다. `project_id = "pokebuddy"`, 익명 로그인 켬, 비밀번호 8자 이상. 이메일 확인은 기본값이 꺼짐이다 |
 | Docker | 설치돼 있지만 2026-09-27 엔진이 꺼져 있다. 로컬 Supabase 를 띄울 때 Docker Desktop 을 켠다 |
@@ -1248,3 +1248,7 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 | 저장소 안의 현재 참조 | 완료. `package.json` 저장소 주소, `docs/guide.md` 의 clone·cd 두 줄, `docs/progress.md` 릴리스 링크. 세션 이름(`terminal-pokemon-xx`)이 적힌 과거 기록은 그대로 둔다 |
 | 다른 세션 알림 | 완료. terminal-pokemon-1a, -e8, -18 |
 | 로컬 폴더 | 대기. 모든 세션을 닫은 뒤 사용자가 `...\projects\terminal_pokemon` → `...\projects\pokebuddy`로 바꾼다. Claude 메모리 폴더(`~\.claude\projects\C--Users-znald-Desktop-projects-terminal-pokemon\memory`)도 새 경로 이름의 폴더로 복사해야 한다 |
+
+2026-09-27 Save Indicator 문구 수정 뒤 재배치(Figma 전용 세션): `Offline` "오프라인"과 `SaveNeeded` "저장 필요"를 Galmuri 로 다시 배치했다. 스타일 값은 모두 원래대로다. 변형 폭은 118·78·84, 높이는 모두 24다. 05 섹션의 SaveNeeded 인스턴스 2개는 폭이 77로 남아 있어 다시 계산해 84로 맞췄다. Chrome 렌더로 헤더에 "저장 필요"가 보이는 것을 확인했다.
+
+주의(2026-09-27): Supabase 의 GitHub 설정 창을 열면 브라우저 자동 완성이 Client ID·Secret 칸을 다른 값으로 채운다. 이 설정을 다시 저장할 때는 두 칸의 값을 확인한다.
