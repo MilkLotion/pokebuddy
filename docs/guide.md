@@ -206,6 +206,8 @@ npm 이 만든 `pokebuddy.ps1` 이 실행 정책에 걸린 것이다. `pokebuddy
 | `POKEBUDDY_DEBUG=1` | 판정 로그를 `~/.claude/pokebuddy/debug-companion.log` 에 남긴다 |
 | `POKEBUDDY_SLUG` | 개발 실행(`npm start`)의 첫 스타터. `pokebuddy companion` 은 이 값을 넘기지 않는다 |
 
+교환·계정·클라우드 저장 서버를 바꾸는 `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY` 와 시험용 `POKEBUDDY_TRADE_*`·`POKEBUDDY_CLOUD_*` 는 저장소에서 직접 띄운 개발 실행에서만 읽는다. exe 설치본과 npm 설치본은 무시한다. 판정 기준은 앱 폴더에 `src/main/app.ts` 원본이 있는가다(`src/trade/config.ts` `devRunAt`). 설치본에는 이 파일이 들어가지 않는다.
+
 - 포켓몬을 드래그해 원하는 자리에 놓으면 위치가 기억된다. 마리마다 따로 기억한다(`save.json` 의 마리 `home`, 놀이공간 오른쪽 아래 기준 오프셋). buddy 는 거기를 집으로 삼는다.
 - 한 무대의 여러 마리는 겹칠 수 있다. 나중에 소환한 마리가 앞에 보인다.
 

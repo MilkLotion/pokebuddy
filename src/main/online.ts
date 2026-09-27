@@ -13,7 +13,7 @@ import { createAccount, viewOf, type Account, type AccountView } from "../online
 import { createCloud, type Cloud, type CloudSyncState, type CloudView } from "../online/cloud.js";
 import { githubLogin } from "../online/github.js";
 import { onlineConfig } from "../trade/config.js";
-import { encryptedStorage } from "./trade.js";
+import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
 import { writeAtomic } from "../save/legacy.js";
 import { normalize as normalizeV3 } from "../save/v3.js";
 import * as store from "../save/store.js";
@@ -42,7 +42,7 @@ export interface MainOnline {
 // 개발용 시험 장치 — 개발 실행에서만 읽는다. 설치본은 무시한다 (E2E 가 기다리지 않게)
 //   POKEBUDDY_CLOUD_UPLOAD_MS · _RETRY_MS  자동 저장까지·다시 연결까지의 간격
 const devMs = (name: string): number | undefined => {
-  const v = app.isPackaged ? undefined : process.env[name];
+  const v = isDevRun() ? process.env[name] : undefined;
   return v && /^\d+$/.test(v) ? Number(v) : undefined;
 };
 
@@ -55,7 +55,7 @@ const isState = (v: unknown): v is CloudSyncState => {
 };
 
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
-  const config = onlineConfig(undefined, app.isPackaged ? {} : process.env);
+  const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
   const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: encryptedStorage() });
   const cloudFile = path.join(path.dirname(o.saveFile), "cloud.json");

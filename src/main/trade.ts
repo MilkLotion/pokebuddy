@@ -11,7 +11,7 @@ import { PATHS } from "./paths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTradeNet, type SessionStorage } from "../trade/net.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
-import { dataVersion, linkOf, onlineConfig } from "../trade/config.js";
+import { dataVersion, devRunAt, linkOf, onlineConfig } from "../trade/config.js";
 import type { GameV3 } from "./game";
 
 const sessionFile = (): string => path.join(PATHS.home, "online", "session.bin");
@@ -63,8 +63,18 @@ export interface TradeDevHooks {
   retryMs: number | null;
 }
 
-export function devHooks(env: NodeJS.ProcessEnv = process.env, packaged = app.isPackaged): TradeDevHooks {
-  if (packaged) return { fault: null, dataVersion: null, pollMs: null, retryMs: null };
+// 개발 실행 — 저장소에서 직접 띄웠을 때만 참. exe·npm 설치본은 거짓이다 (src/trade/config.ts devRunAt)
+let devRun: boolean | null = null;
+export function isDevRun(): boolean {
+  if (devRun == null) devRun = devRunAt(app.isPackaged, app.getAppPath());
+  return devRun;
+}
+
+// 개발 실행이 아니면 환경 변수를 넘기지 않는다 — 서버 주소를 바꿔 세션 토큰을 빼 가지 못하게
+export const devEnv = (): NodeJS.ProcessEnv => (isDevRun() ? process.env : {});
+
+export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun()): TradeDevHooks {
+  if (!dev) return { fault: null, dataVersion: null, pollMs: null, retryMs: null };
   const ms = (v: string | undefined): number | null => (v && /^\d+$/.test(v) ? Number(v) : null);
   return {
     fault: env.POKEBUDDY_TRADE_FAULT === "before-apply" ? "before-apply" : null,
@@ -77,7 +87,7 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, packaged = app.is
 // 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
 // client — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트(src/main/online.ts). 없으면 따로 만든다
 export function createMainTrade(game: GameV3, client?: SupabaseClient): MainTrade | null {
-  const config = onlineConfig(undefined, app.isPackaged ? {} : process.env);
+  const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
   const dev = devHooks();
   const listeners = new Set<(view: TradeViewModel) => void>();

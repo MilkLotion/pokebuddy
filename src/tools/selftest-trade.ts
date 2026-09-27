@@ -4,6 +4,8 @@
 // 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import path from "node:path";
+import { devRunAt } from "../trade/config";
 import { apply, isLocked, isSinglePet, lock, offerable, snapshot, unlock, validateReceived, type TradePet } from "../trade/core";
 import { newPet } from "../party/create";
 import { empty, normalize } from "../save/v3";
@@ -155,4 +157,13 @@ const eevee: TradePet = {
   process.stdout.write("(7) 거래 명령  ok\n");
 }
 
-process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령)\n");
+// (8) 개발 실행 판정 — 저장소 실행만 참. exe(packaged)·npm 설치본(src/main 원본 없음)은 거짓이라 개발용 환경 변수를 읽지 않는다
+{
+  const has = (file: string): boolean => file.split(path.sep).join("/").endsWith("/repo/src/main/app.ts");
+  assert.equal(devRunAt(false, "/repo", has), true, "저장소에서 electron . 으로 띄움");
+  assert.equal(devRunAt(false, "/npm/node_modules/pokebuddy", has), false, "npm 설치본도 electron . 이지만 src/main 원본이 없다");
+  assert.equal(devRunAt(true, "/repo", has), false, "exe 설치본");
+  process.stdout.write("(8) 개발 실행 판정  ok\n");
+}
+
+process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령·개발 실행 판정)\n");

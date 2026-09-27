@@ -74,7 +74,8 @@ async function run() {
   await until(() => has(A, ['로그인하지 않아도 교환할 수 있어요', 'GitHub로 계속']), 'AC1 로그인 화면');
   await A.shot(path.join(shots, 'account-sign-in.png'));
   assert.equal(await A.press('가입'), true);
-  await until(() => has(A, ['아이디와 이름으로 가입해요']), 'AC1 가입 화면');
+  // 가입 화면 — 설명 문구는 문구 정리(0e8a76f)로 뺐다. 아이디 입력칸이 보이면 가입 화면이다
+  await until(() => A.dom(`!!document.getElementById('search-acct-new-user')`), 'AC1 가입 화면');
   await fill(A, 'search-acct-new-user', 'admin');
   await until(() => has(A, ['이미 쓰는 아이디']), 'AC1 예약 아이디는 이미 쓰는 아이디');
   await fill(A, 'search-acct-new-user', name);
@@ -84,7 +85,7 @@ async function run() {
   await fill(A, 'search-acct-new-pass2', pw);
   await A.shot(path.join(shots, 'account-sign-up.png'));
   assert.equal(await A.press('가입'), true);
-  await until(() => has(A, ['다른 PC에서도 같은 계정으로 로그인해요', '지우', `아이디 ${name}`]), 'AC1 로그인 뒤 화면');
+  await until(() => has(A, ['지우', `아이디 ${name}`]), 'AC1 로그인 뒤 화면');
   await until(() => revOf() >= 1, 'AC1 첫 저장이 올라간다');
   await until(async () => (await indicator(A)).includes('저장됨'), 'AC1 헤더 저장 표시');
   await A.shot(path.join(shots, 'account-signed-in.png'));
