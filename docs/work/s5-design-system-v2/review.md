@@ -237,7 +237,7 @@ Hidden 화면의 상단은 `파티 1번 · 숨김`이다. 마커도 표시된다
 
 Scrim Atom `141:125`의 노드 opacity와 fill opacity는 모두 1이다. `overlay/scrim` 별칭의 색상 alpha도 1이다. Modal Scrim과 Screen 인스턴스의 opacity도 1이다. 결과적으로 Confirm과 Error에서 기존 화면이 보이지 않는다.
 
-Legacy에서는 같은 문제를 노드 opacity 0.16으로 수정했다. [이전 F-02 기록](../../archive/s5-legacy/review-s5.md)을 참고한다. v2의 최종 불투명도는 정해야 한다. 검수 판정에서는 현재 모달을 반투명 오버레이로 기록하지 않는다.
+Legacy에서는 같은 문제를 노드 opacity 0.16으로 수정했다. 이전 F-02 기록을 참고한다. v2의 최종 불투명도는 정해야 한다. 검수 판정에서는 현재 모달을 반투명 오버레이로 기록하지 않는다.
 
 ### V2-09 — 친밀도 숫자와 막대 비율 불일치
 

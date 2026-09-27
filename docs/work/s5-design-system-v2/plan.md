@@ -17,7 +17,7 @@
 - 추가 작업 설명: [두 번째 공유 대화](https://chatgpt.com/share/6aaffe73-d0e0-83ee-8d3c-8a674cbcb916).
 - 결정: [design.md](../../design.md). 현황: [progress.md](../../progress.md).
 - 제품 계약: [S5 계획](../../specs/s5.md). 사용자 명칭: [terms.md](../../terms.md).
-- 이전 자산: [공통 목록](../../archive/s5-legacy/figma-s5-inventory.json), [상세 목록](../../archive/s5-legacy/figma-s5-detail-inventory.json).
+- 이전 자산: 공통 목록, 상세 목록.
 - 공유 대화의 완료 주장은 당시 기록이다. 현재값은 Figma를 직접 읽어 확인한다.
 - Figma 시안은 런타임 구현의 증거로 사용하지 않는다.
 
