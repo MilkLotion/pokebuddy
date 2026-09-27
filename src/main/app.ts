@@ -18,8 +18,10 @@ import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { createMainTrade, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
+import { createMainOnline, type MainOnline } from "./online";
+import { pendingOf } from "../trade/core";
 import { careItem, petStatus } from "./status";
-import { openManage, pushTrade } from "./manage-window";
+import { openManage, pushAccount, pushTrade } from "./manage-window";
 import { createPortraits } from "./portraits";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
@@ -149,6 +151,8 @@ let anchor: Anchor | null = null;
 let commands: Commands | null = null;
 let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (docs/work/trade/record.md)
 let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 값
+let mainOnline: MainOnline | null = null; // 공유 Supabase 클라이언트·계정·클라우드 저장 — writer 인 동반자만 가진다
+let onlineFlushed = false; // 끄기 전에 클라우드 저장을 한 번 올렸다
 let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
 // 아직 참가하지 않은 교환 링크와 받은 시각. 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const TRADE_LINK_TTL_MS = 10 * 60_000;
@@ -319,6 +323,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       return reply;
     },
     display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
+    ...(mainOnline ? { account: mainOnline.act } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
@@ -432,13 +437,14 @@ function showPetMenu(id: string): void {
 function tradeSession(): MainTrade["session"] | null {
   if (quitting || !game || !party || !party.isWriter()) return null;
   if (!mainTrade) {
-    mainTrade = createMainTrade(game);
+    mainTrade = createMainTrade(game, online()?.client);
     if (!mainTrade) return null;
     const screen = createTradeScreen(() => game?.read() ?? null);
     tradeScreen = screen;
     let lastReceived: string | null = null;
     mainTrade.onView((view) => {
       pushTrade(screen.build(view));
+      if (mainOnline) pushAccount(mainOnline.screen()); // 교환이 걸리고 풀림에 따라 계정 탭의 막힘 안내가 바뀐다
       const got = view.received?.petId ?? null;
       if (got && got !== lastReceived) {
         lastReceived = got;
@@ -450,6 +456,37 @@ function tradeSession(): MainTrade["session"] | null {
     });
   }
   return mainTrade.session;
+}
+
+// 걸린 교환이 있는가 — 열린 채널(hosting·trading)이나 반영하지 않은 교환. 있으면 로그인·로그아웃을 막는다
+function tradeBlocked(): boolean {
+  const phase = mainTrade?.session.view().phase;
+  if (phase === "hosting" || phase === "trading") return true;
+  const save = game?.read();
+  return !!(save && pendingOf(save));
+}
+
+// 온라인 기능 — writer 인 동반자에서 처음 부를 때 만든다. 서버 설정이 없으면 null
+function online(): MainOnline | null {
+  if (quitting || !game || !party || !party.isWriter()) return null;
+  if (!mainOnline) {
+    mainOnline = createMainOnline({
+      saveFile: PATHS.save,
+      tradeBlocked,
+      // 사용자가 바뀌었다 — 교환 채널은 사용자에 묶여 있으므로 교환 세션을 새로 만든다
+      onUserChanged: () => {
+        mainTrade?.session.stop();
+        mainTrade = null;
+        tradeScreen = null;
+        tradeSession();
+      },
+      onSaveReplaced: () => {
+        if (party?.kind === "save") party.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
+      },
+    });
+    mainOnline?.onScreen((screen) => pushAccount(screen));
+  }
+  return mainOnline;
 }
 
 // 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
@@ -548,6 +585,7 @@ function stateTick(): void {
 async function main(): Promise<void> {
   if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
   powerMonitor.on("lock-screen", () => {
+    void mainOnline?.flush(); // 잠그기 직전 — 온라인이고 바뀌었으면 클라우드에 올린다
     screenLocked = true;
     log?.({ screen: "locked" });
   });
@@ -563,7 +601,7 @@ async function main(): Promise<void> {
   }
 
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다
-  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false });
+  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false, onWrite: () => mainOnline?.noteSaved() });
   game = reader;
   bannerWin = createBannerWindow({
     preload: preloadFile(),
@@ -737,12 +775,15 @@ async function main(): Promise<void> {
     commands?.setWriter(w);
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
     if (w) {
+      void online()?.start();
       tradeSession();
       flushTradeLink();
     } else {
       mainTrade?.session.stop();
       mainTrade = null;
       tradeScreen = null;
+      mainOnline?.dispose();
+      mainOnline = null;
     }
   });
   commands.setWriter(saveSource.isWriter());
@@ -766,6 +807,7 @@ async function main(): Promise<void> {
     app.quit();
     return;
   }
+  void online()?.start(); // 로그인한 채 켰으면 클라우드 저장을 시작한다 — 교환보다 먼저 만들어 같은 클라이언트를 나눠 쓴다
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
@@ -804,7 +846,14 @@ process.on("SIGINT", () => app.quit());
 
 // 창을 닫기 전에 온다 — 주기 작업·감시·헬퍼를 먼저 멈춘다 (quitting 설명 참고).
 // 창이 따로 닫혀 끝나는 경로(window-all-closed → app.quit)도 이곳을 지난다
-app.on("before-quit", () => {
+app.on("before-quit", (e) => {
+  // 끄기 전에 클라우드 저장을 한 번 올린다 — 최대 3초. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다)
+  if (mainOnline && !onlineFlushed && mainOnline.cloud.unsaved() === "dirty") {
+    e.preventDefault();
+    onlineFlushed = true;
+    void mainOnline.flush().finally(() => app.quit());
+    return;
+  }
   quitting = true;
   for (const id of intervals) clearInterval(id);
   anchor?.stop(); // 헬퍼도 멈춘다
@@ -815,6 +864,8 @@ app.on("before-quit", () => {
   mainTrade?.session.stop();
   mainTrade = null;
   tradeScreen = null;
+  mainOnline?.dispose();
+  mainOnline = null;
   bannerWin?.close();
   bannerWin = null;
   party?.stop(); // 저장 잠금을 놓는다

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { app, safeStorage } from "electron";
 import { PATHS } from "./paths.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTradeNet, type SessionStorage } from "../trade/net.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
 import { dataVersion, linkOf, onlineConfig } from "../trade/config.js";
@@ -74,13 +75,14 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, packaged = app.is
 }
 
 // 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
-export function createMainTrade(game: GameV3): MainTrade | null {
+// client — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트(src/main/online.ts). 없으면 따로 만든다
+export function createMainTrade(game: GameV3, client?: SupabaseClient): MainTrade | null {
   const config = onlineConfig(undefined, app.isPackaged ? {} : process.env);
   if (!config.url || !config.publishableKey) return null;
   const dev = devHooks();
   const listeners = new Set<(view: TradeViewModel) => void>();
   const session = createTradeSession({
-    net: createTradeNet({ url: config.url, key: config.publishableKey, storage: encryptedStorage() }),
+    net: createTradeNet(client ? { client } : { url: config.url, key: config.publishableKey, storage: encryptedStorage() }),
     run: (id, name, args) => game.executor.run({ id, name, args }),
     read: game.read,
     protocol: config.protocol,

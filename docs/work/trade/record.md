@@ -1695,3 +1695,68 @@ F-02·T-02 닫음. C-03(`cloud.json`)은 로그인·클라우드 저장 구현 �
 
 - L5: Supabase 대시보드 → Authentication → URL Configuration 의 Redirect URLs 에 `http://127.0.0.1:<포트>/auth/callback` 세 개를 넣는다. 포트는 L5 에서 정한다.
 - L2: Edge Function 원격 배포 확인.
+
+## 로그인·클라우드 저장 구현 L1~L6 (2026-09-27)
+
+사용자 지시: "추천순서대로 진행". 계획은 위 [로그인·클라우드 저장 구현 계획](#로그인클라우드-저장-구현-계획-2026-09-27)이다. L4 는 `terminal-pokemon-18`에 알리고 그 세션이 해당 파일을 비운 동안 했다.
+
+### 작업
+
+| 단계 | 파일 | 내용 |
+|---|---|---|
+| L1 | [src/online/client.ts](../../../src/online/client.ts), [src/online/account.ts](../../../src/online/account.ts), [src/trade/net.ts](../../../src/trade/net.ts), [src/main/trade.ts](../../../src/main/trade.ts) | 공유 클라이언트(PKCE, 요청 15초 제한). 아이디·이름 규칙, 중복검사(세션이 없으면 익명 세션을 먼저 만든다), 가입·로그인·로그아웃(`local`)·이름 바꾸기. 걸린 교환이 있으면 `AUTH_TRADE_ACTIVE`. 교환은 공유 클라이언트를 받는다 |
+| L2 | [supabase/functions/delete-account](../../../supabase/functions/delete-account/index.ts) | 본인 토큰 확인 → 익명 거절 → 열린 교환 거절 → `auth.admin.deleteUser`. 서비스 역할 키는 함수 환경 변수만 쓴다 |
+| L3 | [src/online/cloud.ts](../../../src/online/cloud.ts) | `cloud.json`, 켤 때 흐름, 30초 자동 저장, 오프라인 → 저장 필요, 밀려남(`kicked` 신호·`CLOUD_NOT_ACTIVE`), 로그인 때 고르기. 로그인 맞추기가 끝나기 전에는 `cloud.json`에 계정을 적지 않는다 — 도중에 꺼져도 다음에 다시 묻는다 |
+| L4 | [src/main/online.ts](../../../src/main/online.ts), `app.ts`, `game.ts`(`onWrite`), `manage-window.ts`, `preload.ts`, `manage.d.ts`, `manage.ts`·`manage.html` | 받은 저장은 v3 검사 → 백업(`save.json.cloud-<시각>.bak`) → 원자적 교체 → 파티 다시 읽기. 끄기 전 3초 안에 한 번 올리기, 잠그기 직전 올리기. 사용자가 바뀌면 교환 세션을 새로 만든다. 계정 탭(로그인·가입·로그인 뒤·삭제 확인·로그아웃 확인·고르기·막힘), 헤더 저장 표시, 밀려남 배너 |
+| L5 | [src/online/github.ts](../../../src/online/github.ts), [supabase/config.toml](../../../supabase/config.toml) | `127.0.0.1:54380~54382` 임시 서버 PKCE. 로컬 설정의 리디렉션 허용 목록에 세 주소를 넣었다 |
+| L6 | [scripts/e2e-account.cjs](../../../scripts/e2e-account.cjs), [scripts/e2e/apps.cjs](../../../scripts/e2e/apps.cjs), `selftest-account`·`selftest-cloud`·`selftest-github` | 앱 두 개와 끊을 수 있는 TCP 중계로 계정 탭을 끝까지 누른다. E2E 공용 도구를 `e2e-trade`에서 떼어 냈다 |
+
+자체 검사·E2E 가 찾은 문제:
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| L-05 | 동시 가입에서 진 쪽이 `UNKNOWN`("Database error")으로 왔다 | 알 수 없는 가입 실패는 중복검사를 다시 해 이미 쓰는 아이디로 보인다 |
+| L-06 | 다시 켠 PC 가 활성 기기가 된 직후 다른 PC 가 넘겨받으면 밀려남 신호를 놓쳤다 | 신호 구독을 끝낸 뒤 `claim_device`를 부른다. 먼저 넣었던 "옛 채널 치우기"는 되돌려도 통과해 되돌렸다(겹친 수정 재검증) |
+| L-07 | 로그인 뒤 오프라인이면 다음 재연결이 켤 때 흐름으로 가 고르기 없이 서버 저장으로 바꿀 수 있었다 | `loginPending` — 맞추기가 끝나야 계정을 적는다 |
+| L-08 | 고르기 창의 이 PC 저장 시각이 비었다 | 요약이 최상위 `savedAt`을 읽는다 |
+| L-09 | 교환이 걸려도 계정 탭의 막힘 안내가 늦게 바뀌었다 | 교환 보기가 바뀔 때 계정 화면 값도 보낸다 |
+
+### 검수
+
+| 명령 | 결과 |
+|---|---|
+| `npm run check`, `npm run build`, `npm run selftest` | 통과 |
+| `selftest-account` | 통과(10). 계정 삭제는 `npx supabase functions serve`가 떠 있을 때 본다 |
+| `selftest-cloud` | 통과(10) — (8)~(10)은 검수 뒤 더했다. (9)·(10)은 고친 곳을 되돌리면 실패하는 것을 확인했다. (10)은 처음에 실시간 연결을 살려 둔 채라 되돌려도 통과해, 연결까지 끊게 고쳤다 |
+| `selftest-github` | 통과 — 취소·다른 Host 무시를 더했다 |
+| `node scripts/e2e-account.cjs` | 두 번 연속 통과(8) — 가입·예약·중복, 다른 PC 로그인·고르기·백업·밀려남 배너, 자동 저장, 오프라인 → 저장 필요 → 저장, 교환 중 막힘, 로그아웃, 계정 삭제 |
+| `node scripts/e2e-trade.cjs` | 통과(18) — 공유 클라이언트로 바꾼 뒤 회귀 없음 |
+| 화면 비교 | [evidence](evidence/) 의 `account-*.png` 7장을 Figma 05 Screens `633:19206`~`633:20029`와 견줬다 |
+
+독립 검토 에이전트가 수정 전 변경을 읽고 11건을 보고했다. 저장을 영구히 잃는 경로는 없다고 보았다(바꾸기 전 백업, 고르지 않은 쪽 백업). 조치는 아래와 같다.
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| R3-01 높음 | 켤 때 연결하는 동안의 주기 저장이 오프라인 진행으로 세어져, 평소에도 저장 필요로 빠지고 자동 저장이 멈췄다 | 오프라인 진행은 오프라인 상태에서 바뀐 것만 센다 |
+| R3-02 | 다시 연결할 때도 넘겨받아(claim), 끊긴 사이 사용자가 옮겨 간 PC 를 밀어냈다 | 한 번 활성이 된 뒤의 다시 연결은 넘겨받지 않고 받기(`download_save`)로 활성인지만 본다. 아니면 이 PC 가 물러난다 |
+| R3-03 | 올리기가 겹치면 rev 충돌 뒤 로컬 저장을 옛 사본으로 바꿀 수 있었다 | 올리기는 한 번에 하나. 충돌 뒤 다시 맞추기는 기다리지 않고 이어서 돈다 |
+| R3-04 | "저장하고 로그아웃"에서 저장이 실패해도 로그아웃했다 | 로그아웃하지 않고 오류를 돌려준다 |
+| R3-05 | 로그인 첫 올리기가 실패하면 올릴 것이 없다고 보았다 | 맞추기가 끝날 때 `dirty`로 둔다 |
+| R3-06 | 고르기에서 받은 저장을 쓸 수 없으면 오류가 보이지 않고 창이 사라졌다 | 고르기 창을 두고 오류를 보인다 |
+| R3-07 | 고르기를 기다리는 동안 헤더 표시가 없어 끄고 켜면 모른다 | 헤더에 "저장 고르기"(강조) — 누르면 계정 탭 |
+| R3-08 | GitHub 로그인을 기다리는 5분 동안 취소할 수 없었다 | 기다리는 동안 "취소" 단추(`github-cancel`) |
+| R3-09 | writer 가 바뀌면 옛 클라이언트의 토큰 갱신·실시간 연결이 남았다 | `dispose` — 토큰 갱신 멈춤, 채널 모두 닫기 |
+| R3-10 | catch 밖의 `console.error` 두 곳 | catch 안으로 옮겼다 |
+| R3-11 | 콜백 서버가 Host 를 보지 않았다 | `127.0.0.1:<포트>`가 아니면 받지 않는다 |
+
+### 피드백
+
+| 번호 | 내용 | 상태 |
+|---|---|---|
+| L-10 | 게임이 15초마다 저장을 써서, 온라인이면 약 30초마다 올리기가 돈다(16KB 안팎). 무료 요금제 한도에서 문제가 되는지 | 열림. 사용량을 본 뒤 자동 저장 간격이나 "바뀐 것만" 판정을 정한다 |
+| L-11 | 원격 프로젝트의 Redirect URLs 에 GitHub 돌아오는 주소 세 개 | 사용자 할 일 |
+| L-12 | 계정 삭제 함수 원격 배포(`npx supabase functions deploy delete-account`) | 사용자 확인 뒤 |
+| L-13 | 실제 GitHub 로그인·두 PC 클라우드 저장 실기 | 사용자 실기 |
+| L-14 | 워크플로 액션 SHA 고정(T-10) | 열림 |
+
+문서 검토: 이 절을 쓰기 지침 점검표로 보았다.

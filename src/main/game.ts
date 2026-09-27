@@ -41,9 +41,10 @@ export interface GameV3Options {
   now?: () => number;
   rand?: () => number;
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
+  onWrite?: () => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다 (src/online/cloud.ts noteSaved)
 }
 
-export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, canWrite }: GameV3Options = {}): GameV3 {
+export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, canWrite, onWrite }: GameV3Options = {}): GameV3 {
   // 파손 격리와 v2 이전 파일 교체는 쓰는 프로세스만 한다
   const read = (): SaveV3 | null => store.read(file, { repair: canWrite ? canWrite() : true }).state;
   // 이어서 실패한 횟수 — 명령과 주기 저장(tick)을 함께 센다. writer 가 아니어서 쓰지 않은 것은 세지 않는다
@@ -52,6 +53,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     if (canWrite && !canWrite()) return false;
     const ok = store.write(file, s);
     failStreak = ok ? 0 : failStreak + 1;
+    if (ok) onWrite?.();
     return ok;
   };
 

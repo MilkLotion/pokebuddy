@@ -5,6 +5,9 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type {
+  AccountAction,
+  AccountReply,
+  AccountScreen,
   AchievementView,
   AgentRow,
   BagItemView,
@@ -18,6 +21,7 @@ import type {
   PortraitAsk,
   ShopItemView,
   SlotView,
+  SaveSummaryView,
   Snapshot,
   TradeCardView,
   TradeScreen,
@@ -1518,6 +1522,409 @@ window.pokebuddyManage.onTrade((screen) => {
   else if (tab === "trade" && !detailPet) draw();
 });
 
+// ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────
+// Figma 05 Screens `633:19206`(로그인)·`633:19302`(가입)·`633:19425`(로그인 뒤)·`633:19529`(저장 필요)·`633:19631`(삭제 확인)·
+// `633:19744`(막힘)·`633:19841`(밀려남 배너)·`633:19895`(로그아웃 확인)·`633:20029`(로그인 때 고르기). 헤더 저장 표시는 C-27.
+// 값은 메인이 준다(src/main/online.ts). 입력한 글자는 여기 들고 있다 — 5초마다 다시 그려도 사라지지 않게
+
+let acct: AccountScreen | null = null;
+let acctLoading = false;
+let acctBusy = false;
+let acctGithub = false; // 브라우저에서 GitHub 로그인을 기다리는 중
+const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | "available" | "taken" | "invalid" | "NETWORK" };
+let acctRename: string | null = null; // 이름 바꾸는 중이면 입력한 이름
+let acctConfirm: "delete" | "logout" | null = null;
+let acctPick: "server" | "local" = "server"; // 로그인 때 고르기 — 기본은 계정 저장
+let checkTimer: ReturnType<typeof setTimeout> | null = null;
+
+const saveIndicatorEl = need("save-indicator", HTMLElement);
+
+const ACCT_ERROR: Record<string, string> = {
+  AUTH_INVALID_LOGIN: "아이디 또는 비밀번호가 맞지 않아요",
+  AUTH_USERNAME_TAKEN: "이미 쓰는 아이디",
+  AUTH_USERNAME_INVALID: "영문 소문자로 시작, 소문자·숫자·_ 4~16자",
+  AUTH_NAME_INVALID: "이름은 1~12자로 적어 주세요",
+  AUTH_PASSWORD_WEAK: "비밀번호는 8자 이상이에요",
+  AUTH_TRADE_ACTIVE: "교환 중에는 계정을 바꿀 수 없어요",
+  AUTH_RATE_LIMITED: "잠시 뒤에 다시 해 주세요",
+  AUTH_PORT_BUSY: "로그인 창을 열 수 없어요. 잠시 뒤에 다시 해 주세요",
+  NETWORK: "서버에 연결할 수 없어요",
+  CLOUD_TRADE_ACTIVE: "다른 PC 에서 교환 중이라 넘겨받을 수 없어요",
+};
+const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : ACCT_ERROR[code] ?? `계정 작업을 하지 못했어요 (${code})`);
+
+// 마지막 저장 시각 — "3분 전"처럼 짧게
+function ago(at: number | null): string {
+  if (!at) return "";
+  const min = Math.floor((Date.now() - at) / 60_000);
+  if (min < 1) return "방금";
+  if (min < 60) return `${min}분 전`;
+  const hour = Math.floor(min / 60);
+  return hour < 24 ? `${hour}시간 전` : `${Math.floor(hour / 24)}일 전`;
+}
+
+// 헤더 저장 표시 — 로그인하지 않았으면 숨긴다. 누르면 계정 탭을 연다
+function drawSaveIndicator(): void {
+  const c = acct?.signedIn ? acct.cloud : null;
+  // 고르기를 기다리는 동안은 "저장 고르기"를 강조해 보인다 — 끄고 다시 켜도 기다리는 것을 알게(R3-07). 누르면 계정 탭
+  const state = !c || c.status === "off" ? null : c.status === "choose" ? "need" : c.status === "save-needed" ? "need" : c.status === "online" ? "ok" : "offline";
+  saveIndicatorEl.hidden = !state;
+  if (!state || !c) return;
+  saveIndicatorEl.dataset.state = state;
+  const text = state === "need" ? (c.status === "choose" ? "저장 고르기" : "저장 필요") : state === "ok" ? (c.lastSavedAt ? `저장됨 · ${ago(c.lastSavedAt)}` : "저장됨") : c.status === "connecting" ? "연결 중" : "오프라인";
+  saveIndicatorEl.replaceChildren(el("i"), document.createTextNode(text));
+}
+saveIndicatorEl.addEventListener("click", () => open({ kind: "settings", tab: "account" }));
+
+async function loadAccount(): Promise<void> {
+  if (acctLoading) return;
+  acctLoading = true;
+  try {
+    const reply = await window.pokebuddyManage.account({ action: "status" });
+    acct = reply?.screen ?? { ...ACCOUNT_OFF };
+  } catch (e) {
+    console.error("계정 상태를 읽지 못했다", e);
+    acct = { ...ACCOUNT_OFF };
+  } finally {
+    acctLoading = false;
+  }
+  drawSaveIndicator();
+  redrawAccount();
+}
+
+const ACCOUNT_OFF: AccountScreen = {
+  available: false, signedIn: false, method: null, username: null, displayName: null, blocked: false, kicked: false,
+  cloud: { status: "off", lastSavedAt: null, busy: false, error: null, choice: null },
+};
+
+// 계정 탭이 열려 있으면 다시 그린다
+function redrawAccount(): void {
+  if (dialog?.kind === "settings" && dialog.tab === "account") drawDialog();
+}
+
+async function acctSend(req: AccountAction): Promise<AccountReply | null> {
+  acctBusy = true;
+  redrawAccount();
+  let reply: AccountReply | null = null;
+  try {
+    reply = await window.pokebuddyManage.account(req);
+  } catch (e) {
+    console.error("계정 요청을 보내지 못했다", e);
+  } finally {
+    acctBusy = false;
+  }
+  if (reply) acct = reply.screen;
+  acctForm.error = reply ? acctErrorText(reply.code) : acctErrorText("NETWORK");
+  drawSaveIndicator();
+  redrawAccount();
+  draw();
+  return reply;
+}
+
+// 입력칸 — searchBox 의 포커스 복원을 쓴다. 다시 그려도 커서가 그대로다
+function acctInput(key: string, value: string, placeholder: string, type: "text" | "password", onChange: (v: string) => void): HTMLInputElement {
+  const input = searchBox(key, value, placeholder, onChange);
+  input.type = type;
+  input.classList.add("acct-input");
+  input.autocomplete = "off";
+  input.disabled = acctBusy || !!acct?.blocked;
+  return input;
+}
+
+function acctField(label: string, input: HTMLElement, note?: { text: string; tone: "ok" | "bad" | "idle" | "warn" }): HTMLElement {
+  const box = el("label", "acct-field");
+  box.append(el("span", "acct-label", label), input);
+  if (note?.text) {
+    const line = el("span", `acct-note ${note.tone}`);
+    line.append(el("i"), document.createTextNode(note.text));
+    box.appendChild(line);
+  }
+  return box;
+}
+
+function acctNotice(title: string, desc: string, tone: "warn" | "bad"): HTMLElement {
+  const box = el("div", "trade-card trade-banner acct-notice");
+  const head = el("div", "trade-banner-title");
+  head.append(el("i", tone === "warn" ? "warn" : "bad"), document.createTextNode(title));
+  box.append(head, el("div", "trade-desc", desc));
+  return box;
+}
+
+function usernameNote(): { text: string; tone: "ok" | "bad" | "idle" } | undefined {
+  if (acctForm.check === "available") return { text: "사용할 수 있는 아이디", tone: "ok" };
+  if (acctForm.check === "taken") return { text: "이미 쓰는 아이디", tone: "bad" };
+  if (acctForm.check === "invalid") return { text: "영문 소문자로 시작, 소문자·숫자·_ 4~16자", tone: "bad" };
+  return undefined;
+}
+
+// 아이디 입력을 멈추고 0.5초 뒤 중복을 묻는다. 규칙 밖이면 묻지 않는다
+function scheduleUsernameCheck(): void {
+  if (checkTimer) clearTimeout(checkTimer);
+  const name = acctForm.username.trim().toLowerCase();
+  if (!name) {
+    acctForm.check = "";
+    return;
+  }
+  if (!/^[a-z][a-z0-9_]{3,15}$/.test(name)) {
+    acctForm.check = "invalid";
+    return;
+  }
+  checkTimer = setTimeout(() => {
+    checkTimer = null;
+    void window.pokebuddyManage.account({ action: "check-username", username: name }).then((r) => {
+      if (acctForm.username.trim().toLowerCase() !== name) return; // 그사이 바뀌었다
+      acctForm.check = r?.check ?? "NETWORK";
+      redrawAccount();
+    });
+  }, 500);
+}
+
+function drawSignIn(scroll: HTMLElement): void {
+  const blocked = !!acct?.blocked;
+  if (blocked) scroll.appendChild(acctNotice("교환 중에는 계정을 바꿀 수 없어요", "교환을 끝내거나 나간 뒤 다시 시도해 주세요", "warn"));
+  else scroll.appendChild(el("div", "acct-lead", "로그인하지 않아도 교환할 수 있어요"));
+  if (acctGithub) {
+    // 기다리는 동안 다른 단추는 막히고 취소만 된다(R3-08)
+    const wait = el("div", "acct-inline acct-github-wait");
+    wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButton("취소", false, false, () => void window.pokebuddyManage.account({ action: "github-cancel" })));
+    scroll.appendChild(wait);
+  } else {
+    const gh = button("act acct-github", "GitHub로 계속");
+    gh.disabled = blocked || acctBusy;
+    gh.addEventListener("click", () => {
+      acctGithub = true;
+      void acctSend({ action: "github" }).finally(() => { acctGithub = false; redrawAccount(); });
+    });
+    scroll.appendChild(gh);
+  }
+  const or = el("div", "acct-or");
+  or.append(el("span"), document.createTextNode("또는"), el("span"));
+  scroll.appendChild(or);
+  scroll.appendChild(acctField("아이디", acctInput("acct-user", acctForm.username, "아이디", "text", (v) => { acctForm.username = v; })));
+  const pass = acctInput("acct-pass", acctForm.password, "비밀번호", "password", (v) => { acctForm.password = v; });
+  pass.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") void signIn();
+  });
+  scroll.appendChild(acctField("비밀번호", pass, acctForm.error ? { text: acctForm.error, tone: "bad" } : undefined));
+}
+
+function drawSignUp(scroll: HTMLElement): void {
+  const back = el("div", "acct-lead");
+  const link = button("acct-back", "‹ 로그인");
+  link.addEventListener("click", () => {
+    acctForm.mode = "sign-in";
+    acctForm.error = "";
+    redrawAccount();
+  });
+  back.append(link, document.createTextNode(" · 아이디와 이름으로 가입해요"));
+  scroll.appendChild(back);
+  const grid = el("div", "acct-grid");
+  const user = acctInput("acct-new-user", acctForm.username, "아이디", "text", (v) => {
+    acctForm.username = v;
+    const before = acctForm.check;
+    scheduleUsernameCheck();
+    if (acctForm.check !== before) redrawAccount();
+  });
+  grid.append(
+    acctField("아이디", user, usernameNote()),
+    acctField("이름", acctInput("acct-new-name", acctForm.displayName, "이름", "text", (v) => { acctForm.displayName = v; }), { text: "화면에 보이는 이름 · 1~12자", tone: "idle" }),
+    acctField("비밀번호", acctInput("acct-new-pass", acctForm.password, "비밀번호", "password", (v) => { acctForm.password = v; }), { text: "8자 이상", tone: "idle" }),
+    acctField("비밀번호 확인", acctInput("acct-new-pass2", acctForm.password2, "비밀번호 확인", "password", (v) => { acctForm.password2 = v; })),
+  );
+  scroll.appendChild(grid);
+  const warn = el("div", "acct-note warn");
+  warn.append(el("i"), document.createTextNode("비밀번호를 잊으면 찾을 수 없어요"));
+  scroll.appendChild(warn);
+  if (acctForm.error) {
+    const err = el("div", "acct-note bad");
+    err.append(el("i"), document.createTextNode(acctForm.error));
+    scroll.appendChild(err);
+  }
+}
+
+function acctRow(title: string, hint: string, control: HTMLElement): HTMLElement {
+  const row = el("div", "setting acct-row");
+  const body = el("div", "body");
+  body.append(el("div", "label", title), el("div", "hint", hint));
+  row.append(body, control);
+  return row;
+}
+
+function drawSignedIn(scroll: HTMLElement): void {
+  const a = acct!;
+  scroll.appendChild(el("div", "acct-lead", "다른 PC에서도 같은 계정으로 로그인해요"));
+  if (acct?.blocked) scroll.appendChild(acctNotice("교환 중에는 계정을 바꿀 수 없어요", "교환을 끝내거나 나간 뒤 다시 시도해 주세요", "warn"));
+  // 이름
+  const who = a.method === "github" ? `GitHub · ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
+  if (acctRename != null) {
+    const input = acctInput("acct-rename", acctRename, "이름", "text", (v) => { acctRename = v; });
+    input.disabled = acctBusy;
+    const ctl = el("div", "acct-inline");
+    ctl.append(
+      input,
+      actionButton("취소", false, acctBusy, () => { acctRename = null; redrawAccount(); }),
+      actionButton("저장", true, acctBusy, () => {
+        void acctSend({ action: "rename", displayName: acctRename ?? "" }).then((r) => {
+          if (r?.ok) {
+            acctRename = null;
+            redrawAccount();
+          }
+        });
+      }),
+    );
+    scroll.appendChild(acctRow(a.displayName ?? "", acctForm.error || who, ctl));
+  } else {
+    scroll.appendChild(acctRow(a.displayName ?? "", who, actionButton("이름 바꾸기", false, acctBusy, () => { acctRename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
+  }
+  // 저장
+  const c = a.cloud;
+  const need = c.status === "save-needed";
+  const saveHint = need ? "저장하지 않은 진행이 있어요"
+    : c.status === "online" ? (c.lastSavedAt ? `계정에 저장됨 · ${ago(c.lastSavedAt)}` : "계정에 저장됨")
+    : c.status === "offline" ? "오프라인이에요 · 게임은 그대로 할 수 있어요"
+    : "연결하는 중이에요";
+  const save = button(need ? "act primary acct-save need" : "act", need ? "" : "지금 저장");
+  if (need) save.append(el("i"), document.createTextNode("저장"));
+  save.disabled = acctBusy || c.busy || !(c.status === "online" || need);
+  save.addEventListener("click", () => void acctSend({ action: "save-now" }));
+  scroll.appendChild(acctRow("저장", c.error && c.status !== "online" ? `${saveHint} · ${acctErrorText(c.error)}` : saveHint, save));
+  // 로그아웃·삭제
+  scroll.appendChild(acctRow("로그아웃", "게임 진행은 그대로예요", actionButton("로그아웃", false, acctBusy || a.blocked, () => {
+    if (a.cloud.status === "save-needed") {
+      acctConfirm = "logout";
+      redrawAccount();
+    } else void acctSend({ action: "sign-out" });
+  })));
+  scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; redrawAccount(); })));
+}
+
+// 설정 모달 위의 작은 확인 창 — 계정 삭제·로그아웃·로그인 때 고르기
+function acctOverlay(): HTMLElement | null {
+  const a = acct;
+  if (!a) return null;
+  const box = el("div", "acct-overlay");
+  const card = el("div", "acct-confirm");
+  const head = el("div", "acct-confirm-head");
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  const shut = (): void => { acctConfirm = null; redrawAccount(); };
+  x.addEventListener("click", shut);
+  if (a.cloud.status === "choose" && a.cloud.choice) {
+    const choice = a.cloud.choice;
+    // 고르지 않고 닫으면 로그인하지 않은 것으로 — 로그아웃한다
+    const cancel = (): void => void acctSend({ action: "sign-out" });
+    x.onclick = cancel;
+    head.append(el("h3", undefined, "어느 저장을 쓸까요?"), x);
+    card.append(head, el("p", "acct-confirm-body", "이 계정에 이미 저장이 있어요. 고르지 않은 쪽은 백업 파일로 남아요."));
+    if (a.cloud.error) {
+      const err = el("div", "acct-note bad");
+      err.append(el("i"), document.createTextNode(a.cloud.error === "CLOUD_BAD_SAVE" ? "계정 저장을 읽을 수 없어요. 이 PC 저장을 골라 주세요" : acctErrorText(a.cloud.error)));
+      card.appendChild(err);
+    }
+    // "오늘 09:12 저장"·"어제 21:40 저장"·"9월 25일 18:03 저장" (Figma `633:20029`)
+    const when = (at: number | null): string => {
+      if (!at) return "";
+      const d = new Date(at);
+      const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      const day = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const diff = Math.round((day(new Date()) - day(d)) / 86_400_000);
+      return `${diff === 0 ? "오늘" : diff === 1 ? "어제" : `${d.getMonth() + 1}월 ${d.getDate()}일`} ${hm} 저장`;
+    };
+    const option = (id: "server" | "local", title: string, s: SaveSummaryView | null): HTMLElement => {
+      const b = button("acct-option", "");
+      b.setAttribute("aria-pressed", String(acctPick === id));
+      b.append(el("strong", undefined, title), el("span", undefined, s ? [`포켓몬 ${s.pets}마리`, point(s.points), when(s.savedAt)].filter(Boolean).join(" · ") : "저장 없음"));
+      b.disabled = acctBusy || (id === "local" && !s);
+      b.addEventListener("click", () => { acctPick = id; redrawAccount(); });
+      return b;
+    };
+    card.append(option("server", "계정 저장", choice.server), option("local", "이 PC 저장", choice.local));
+    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, cancel), actionButton("이 저장으로 계속", true, acctBusy, () => void acctSend({ action: "choose", which: acctPick }))));
+  } else if (acctConfirm === "delete") {
+    head.append(el("h3", undefined, "계정을 삭제할까요?"), x);
+    const who = a.method === "github" ? `GitHub 계정 ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
+    card.append(head, el("p", "acct-confirm-body", `${who} 을 지워요. 게임 진행은 그대로예요.\n교환이 끝나지 않은 친구의 포켓몬은 그대로 받아요.`));
+    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => {
+      void acctSend({ action: "delete" }).then(() => { acctConfirm = null; redrawAccount(); });
+    })));
+  } else if (acctConfirm === "logout") {
+    head.append(el("h3", undefined, "저장하지 않은 진행이 있어요"), x);
+    card.append(head, el("p", "acct-confirm-body", "그냥 로그아웃하면 오프라인 진행은 이 PC에만 남아요."));
+    card.appendChild(actions(el("div", "spacer"),
+      actionButton("그냥 로그아웃", false, acctBusy, () => void acctSend({ action: "sign-out" }).then(() => { acctConfirm = null; redrawAccount(); })),
+      actionButton("저장하고 로그아웃", true, acctBusy, () => void acctSend({ action: "sign-out", save: true }).then(() => { acctConfirm = null; redrawAccount(); }))));
+  } else return null;
+  box.appendChild(card);
+  return box;
+}
+
+async function signIn(): Promise<void> {
+  if (!acctForm.username.trim() || !acctForm.password) {
+    acctForm.error = ACCT_ERROR.AUTH_INVALID_LOGIN ?? "";
+    redrawAccount();
+    return;
+  }
+  const r = await acctSend({ action: "sign-in", username: acctForm.username, password: acctForm.password });
+  if (r?.ok) Object.assign(acctForm, { password: "", password2: "", error: "" });
+}
+
+async function signUp(): Promise<void> {
+  if (acctForm.password !== acctForm.password2) {
+    acctForm.error = "비밀번호가 서로 달라요";
+    redrawAccount();
+    return;
+  }
+  const r = await acctSend({ action: "sign-up", username: acctForm.username, displayName: acctForm.displayName, password: acctForm.password });
+  if (r?.ok) Object.assign(acctForm, { mode: "sign-in", password: "", password2: "", displayName: "", error: "", check: "" });
+}
+
+function drawAccount(scroll: HTMLElement): void {
+  if (!acct) {
+    scroll.appendChild(el("div", "empty-note", "계정 상태를 읽는 중이에요."));
+    void loadAccount();
+    return;
+  }
+  if (!acct.available) {
+    scroll.appendChild(el("div", "empty-note", "지금은 계정을 쓸 수 없어요. 동반자로 켠 pokebuddy 에서, 서버 설정이 있을 때 쓸 수 있어요."));
+    return;
+  }
+  if (acct.signedIn) drawSignedIn(scroll);
+  else if (acctForm.mode === "sign-up") drawSignUp(scroll);
+  else drawSignIn(scroll);
+}
+
+// 계정 탭 바닥 단추 — 로그인 화면은 가입·로그인, 가입 화면은 가입, 로그인 뒤는 닫기
+function accountActions(): HTMLElement {
+  const a = acct;
+  if (!a?.available || a.signedIn) return actions(el("div", "spacer"), actionButton("닫기", true, false, close));
+  const off = acctBusy || a.blocked;
+  if (acctForm.mode === "sign-up") return actions(el("div", "spacer"), actionButton("가입", true, off, () => void signUp()));
+  return actions(el("div", "spacer"), actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
+}
+
+// 밀려남 배너 — 탭 본문 맨 위. 닫을 때까지 남는다
+function kickedBanner(): HTMLElement | null {
+  if (!acct?.kicked) return null;
+  const box = el("div", "trade-card trade-banner kicked-banner");
+  const head = el("div", "trade-banner-title");
+  head.append(el("i", "warn"), document.createTextNode("다른 PC에서 로그인해 로그아웃됐어요"));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", () => void acctSend({ action: "dismiss-kicked" }));
+  box.append(head, el("div", "trade-desc", "이 PC의 진행은 계정에 저장되지 않아요"), x);
+  return box;
+}
+
+window.pokebuddyManage.onAccount((screen) => {
+  const wasKicked = acct?.kicked;
+  acct = screen;
+  drawSaveIndicator();
+  redrawAccount();
+  if (screen.kicked !== wasKicked) draw();
+});
+void loadAccount();
+setInterval(drawSaveIndicator, 30_000); // "3분 전" 글자만 바꾼다
+
 // ── 그리기 ─────────────────────────────────────────────────────────────────────
 
 function drawTabs(): void {
@@ -1554,6 +1961,8 @@ function draw(): void {
     return;
   }
   detailPet = null;
+  const kicked = kickedBanner();
+  if (kicked) bodyEl.appendChild(kicked);
   if (tab === "party") drawParty(view);
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
@@ -2410,9 +2819,6 @@ function drawDisplay(scroll: HTMLElement): void {
 }
 
 // 계정 — 로그인·계정 화면은 교환 세션이 채운다 (docs/work/trade/record.md "계정과 로그인")
-function drawAccount(scroll: HTMLElement): void {
-  scroll.appendChild(el("div", "empty-note", "계정 화면은 준비 중입니다."));
-}
 
 // CLI 한 줄 — 상태를 네 가지로 나눈다 (docs/specs/s5.md "설정과 연결")
 function agentRow(row: AgentRow): HTMLElement {
@@ -2467,7 +2873,10 @@ function drawSettings(sub: SettingsTab): void {
   else if (sub === "agents") drawAgents(scroll);
   else drawAccount(scroll);
   dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("닫기", true, false, close)));
+  dialogEl.appendChild(sub === "account" ? accountActions() : actions(el("div", "spacer"), actionButton("닫기", true, false, close)));
+  // 계정 탭의 확인 창(삭제·로그아웃·로그인 때 고르기)은 설정 모달 위에 뜬다
+  const overlay = sub === "account" ? acctOverlay() : null;
+  if (overlay) dialogEl.appendChild(overlay);
 }
 
 // ── 모달 · 가이드북 ────────────────────────────────────────────────────────────

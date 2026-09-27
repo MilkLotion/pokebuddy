@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, TradeScreen } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, TradeScreen } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -32,6 +32,8 @@ const CH = {
   dexClosed: "manage:dex-closed",
   trade: "manage:trade",
   copy: "manage:copy",
+  account: "manage:account",
+  accountView: "manage:account-view",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -51,12 +53,14 @@ export interface ManageOptions {
   // 설정의 `영역 그리기`. 영역 그리기 창을 열고 적용한 영역을 저장한다. 없으면 이 기능을 쓸 수 없다
   drawRegion?: () => Promise<ManageReply>;
   display?: () => DisplayView; // 포켓몬 표시·클릭 통과의 지금 값. 저장 밖이라 앱이 준다
+  account?: (req: AccountAction) => Promise<AccountReply>; // 계정·클라우드 저장 (src/main/online.ts). 없으면 계정 탭은 쓸 수 없다고 보인다
 }
 
 let win: BrowserWindow | null = null;
 let wired = false;
 let drawRegion: ManageOptions["drawRegion"] = undefined; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
 let display: ManageOptions["display"] = undefined;
+let account: ManageOptions["account"] = undefined;
 let dexWin: DexWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
@@ -160,6 +164,13 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     if (typeof text === "string" && text.length <= 2000) clipboard.writeText(text);
   });
+  // 계정 — 요청 모양은 action 문자열만 확인한다. 값의 검사는 src/online/account.ts 가 한다
+  ipcMain.handle(CH.account, async (e, req: unknown): Promise<AccountReply | null> => {
+    if (!mine(e)) return null;
+    if (!account) return null;
+    if (req == null || typeof req !== "object" || typeof (req as { action?: unknown }).action !== "string") return null;
+    return account(req as AccountAction);
+  });
   ipcMain.handle(CH.drawRegion, async (e): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!drawRegion) return { ok: false, reason: "not-ready" };
@@ -176,6 +187,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
 export function openManage(opts: ManageOptions): BrowserWindow {
   drawRegion = opts.drawRegion;
   display = opts.display;
+  account = opts.account;
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -216,5 +228,10 @@ export function openManage(opts: ManageOptions): BrowserWindow {
 // 교환 보기를 관리 창에 밀어 보낸다 — 창이 없으면 버린다. 창을 열면 렌더러가 trade.status 로 다시 받는다
 export function pushTrade(screen: TradeScreen): void {
   toManage(CH.trade, screen);
+}
+
+// 계정·저장 상태를 관리 창에 밀어 보낸다 — 창이 없으면 버린다
+export function pushAccount(screen: AccountScreen): void {
+  toManage(CH.accountView, screen);
 }
 

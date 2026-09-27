@@ -19,6 +19,8 @@ type DexDetail = import("../shared/manage").DexDetail;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
+type AccountReply = import("../shared/manage").AccountReply;
+type AccountScreen = import("../shared/manage").AccountScreen;
 type BannerBridge = import("../shared/manage").BannerBridge;
 type BannerChannel = import("../shared/manage").BannerChannel;
 type BannerView = import("../shared/manage").BannerView;
@@ -90,6 +92,8 @@ const MANAGE = {
   dexClosed: "manage:dex-closed",
   trade: "manage:trade",
   copy: "manage:copy",
+  account: "manage:account",
+  accountView: "manage:account-view",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -109,6 +113,8 @@ const manage: ManageBridge = {
   onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, () => cb()),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
+  account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
+  onAccount: (cb) => ipcRenderer.on(MANAGE.accountView, (_e, screen: AccountScreen) => cb(screen)),
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);

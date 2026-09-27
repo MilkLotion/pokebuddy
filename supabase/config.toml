@@ -159,7 +159,8 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# GitHub 로그인이 돌아오는 앱의 임시 서버(src/online/github.ts GITHUB_PORTS). 원격 프로젝트는 대시보드의 Redirect URLs 에 같은 세 주소를 넣는다
+additional_redirect_urls = ["https://127.0.0.1:3000", "http://127.0.0.1:54380/auth/callback", "http://127.0.0.1:54381/auth/callback", "http://127.0.0.1:54382/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

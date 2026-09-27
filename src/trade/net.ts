@@ -3,7 +3,10 @@
 // Electron 을 모른다. 세션 저장소를 받아서 쓴다 — 메인은 safeStorage 파일을, 자체 검사는 메모리를 넘긴다.
 // 서버 오류는 raise exception 의 메시지(TRADE_…)를 코드로 옮긴다. 닫힌 이유는 details 로 온다.
 // 서버에 닿지 못하면 NETWORK 다. 앱은 연결 실패 안내를 보인다.
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "../online/client.js";
+
+export type { SessionStorage };
 
 export type TradeErrorCode =
   | "TRADE_AUTH_REQUIRED" | "TRADE_BAD_ARGS" | "TRADE_VERSION_MISMATCH" | "TRADE_RATE_LIMITED" | "TRADE_ALREADY_ACTIVE"
@@ -38,18 +41,8 @@ export interface CreatedChannel {
   expiresAt: string;
 }
 
-// 세션을 두는 곳 — supabase-js 의 저장소 모양과 같다
-export interface SessionStorage {
-  getItem: (key: string) => string | null | Promise<string | null>;
-  setItem: (key: string, value: string) => void | Promise<void>;
-  removeItem: (key: string) => void | Promise<void>;
-}
-
-export interface TradeNetOptions {
-  url: string;
-  key: string; // publishable 키
-  storage: SessionStorage;
-}
+// 클라이언트를 받거나(앱 — 계정·클라우드 저장과 같은 세션) 만든다(자체 검사)
+export type TradeNetOptions = { client: SupabaseClient } | OnlineClientOptions;
 
 export interface TradeNet {
   client: SupabaseClient;
@@ -75,14 +68,8 @@ export function codeOf(error: { message?: string; details?: string | null; code?
   return { code: "UNKNOWN", ...(message ? { detail: message } : {}) };
 }
 
-const FETCH_TIMEOUT_MS = 15_000;
-
-export function createTradeNet({ url, key, storage }: TradeNetOptions): TradeNet {
-  const client = createClient(url, key, {
-    auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
-    // 요청마다 제한 시간을 둔다 — 서버가 답하지 않으면 명령 통로(mailbox)가 그동안 막힌다(2026-09-27 검수)
-    global: { fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS) }) },
-  });
+export function createTradeNet(opts: TradeNetOptions): TradeNet {
+  const client = "client" in opts ? opts.client : createOnlineClient(opts);
 
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => {
     try {

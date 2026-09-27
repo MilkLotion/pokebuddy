@@ -237,11 +237,56 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/s5.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다
 export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" };
+
+// ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────────
+// 설정의 계정 탭·헤더 저장 표시·밀려남 배너가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
+// manage:account 는 렌더러 → 메인 요청(결과에 screen), manage:account-view 는 메인 → 렌더러 밀어 보내기다
+export type CloudStatusView = "off" | "connecting" | "choose" | "online" | "offline" | "save-needed";
+export interface SaveSummaryView {
+  pets: number;
+  points: number;
+  savedAt: number | null;
+}
+export interface AccountScreen {
+  available: boolean; // 서버 설정이 있고 이 앱이 저장을 쓴다
+  signedIn: boolean;
+  method: "password" | "github" | null;
+  username: string | null;
+  displayName: string | null;
+  blocked: boolean; // 걸린 교환이 있어 로그인·로그아웃·삭제를 할 수 없다
+  kicked: boolean; // 다른 PC 에서 로그인해 이 PC 가 로그아웃됐다 — 배너를 닫을 때까지
+  cloud: {
+    status: CloudStatusView;
+    lastSavedAt: number | null;
+    busy: boolean;
+    error: string | null;
+    choice: { server: SaveSummaryView; local: SaveSummaryView | null } | null;
+  };
+}
+export type AccountAction =
+  | { action: "status" }
+  | { action: "check-username"; username: string }
+  | { action: "sign-up"; username: string; displayName: string; password: string }
+  | { action: "sign-in"; username: string; password: string }
+  | { action: "github" }
+  | { action: "github-cancel" } // 브라우저 로그인을 기다리다 취소
+  | { action: "sign-out"; save?: boolean } // save — 저장 필요 상태에서 "저장하고 로그아웃"
+  | { action: "rename"; displayName: string }
+  | { action: "delete" }
+  | { action: "save-now" }
+  | { action: "choose"; which: "server" | "local" }
+  | { action: "dismiss-kicked" };
+export interface AccountReply {
+  ok: boolean;
+  code: string | null; // 실패 코드 — AUTH_* · CLOUD_* · NETWORK
+  check?: "available" | "taken" | "invalid" | "NETWORK"; // check-username 의 결과
+  screen: AccountScreen;
+}
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
 // 교환 탭이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
@@ -293,6 +338,8 @@ export interface ManageBridge {
   onDexClosed: (cb: () => void) => void; // 기기 창이 닫혔다
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
+  account: (req: AccountAction) => Promise<AccountReply>;
+  onAccount: (cb: (screen: AccountScreen) => void) => void; // 계정·저장 상태가 바뀌었다
 }
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
