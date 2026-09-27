@@ -4,7 +4,7 @@
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
-import { app, nativeImage, screen, Notification } from "electron";
+import { app, nativeImage, powerMonitor, screen, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { pidAlive } from "../save/writer";
@@ -45,6 +45,9 @@ let lastTick = 0;
 let workMs = 0;
 let lastPollAt = 0;
 let lastMenuPoints = -1;
+// 화면이 잠겨 있다 — 잠긴 동안은 게임 틱을 돌리지 않는다. 풀리면 다음 틱이 그 틈을 버린다(game.tick 은 틈을 TIME_V3_RULES.maxTickMs 로 자른다).
+// 절전은 폴링이 멈춰 저절로 같은 결과가 된다. 잠금만 하고 절전하지 않으면 폴링이 계속 돌아 따로 막는다 (2026-09-27)
+let screenLocked = false;
 
 // POKEBUDDY_LOG 가 있으면 출력(console·stderr)을 그 파일에 이어 쓴다 — pokebuddy 는 펫에 출력 핸들을 넘기지 않는다
 // (Windows 는 Start-Process 로 띄워 넘길 수도 없다. cli/run.js launchPet)
@@ -504,7 +507,7 @@ function stateTick(): void {
   stage.setState(state, promptAt);
 
   const worker = saveParty();
-  if (worker?.isWriter() && game) {
+  if (worker?.isWriter() && game && !screenLocked) {
     const now = Date.now();
     // 폴링 사이가 크게 벌어졌으면(절전·writer 가 아니던 동안) 그 틈은 작업으로 세지 않는다
     const gap = lastPollAt > 0 ? now - lastPollAt : 0;
@@ -532,7 +535,7 @@ function stateTick(): void {
       }
     }
   } else {
-    // writer 가 아니면 쌓지 않는다. 다시 writer 가 되면 새로 센다
+    // writer 가 아니거나 화면이 잠겼으면 쌓지 않는다. 다시 돌면 새로 센다
     workMs = 0;
     lastPollAt = 0;
   }
@@ -544,6 +547,14 @@ function stateTick(): void {
 
 async function main(): Promise<void> {
   if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
+  powerMonitor.on("lock-screen", () => {
+    screenLocked = true;
+    log?.({ screen: "locked" });
+  });
+  powerMonitor.on("unlock-screen", () => {
+    screenLocked = false;
+    log?.({ screen: "unlocked" });
+  });
   if (process.platform === "darwin") {
     // Dock 을 숨기기 전에 로고를 한 번 — 숨기지 않는 구간(선택 창 등)이 생겨도 기본 Electron 아이콘이 아니게. 로고가 아직 없으면 건너뛴다
     const logo = logoFile(512);
