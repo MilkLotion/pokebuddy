@@ -532,11 +532,11 @@
         position: absolute;
         top: 8px;
         right: 8px;
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         padding: 0;
         border: 0;
-        border-radius: 14px;
+        border-radius: 16px;
         background: transparent;
         cursor: pointer;
       }
@@ -546,13 +546,13 @@
       .ball-toggle::before {
         content: "";
         position: absolute;
-        inset: 4px;
+        inset: 0;
       }
       .ball-toggle.open::before {
-        background: var(--ball-open) center / 20px 20px no-repeat;
+        background: var(--ball-open) center / 24px 24px no-repeat;
       }
       .ball-toggle.closed::before {
-        background: var(--ball-closed) center / 17px 17px no-repeat;
+        background: var(--ball-closed) center / 21px 21px no-repeat;
       }
       .pet-side .portrait.big {
         width: 112px;
