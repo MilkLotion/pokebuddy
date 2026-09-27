@@ -79,7 +79,7 @@ try {
   // ── 시작 — 첫 선택을 마친 직후의 저장을 만든다 (SC-01·SC-03) ──────────────
   const seed = empty(T0);
   seed.points.balance = SHOP_V3_RULES.startPoints;
-  seed.dex.unlocked = ["charmander", "squirtle", "pikachu"];
+  seed.dex.unlocked = ["charmander", "squirtle", "pichu"];
   seed.pets.push({
     id: "p1", species: "charmander", shiny: false, nature: "hardy", size: 2,
     level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
@@ -100,7 +100,7 @@ try {
   assert.equal(w.save().points.balance, 0, "포인트를 다 썼다");
   const eggId = String(bought.eggId);
   assert.equal(w.save().eggs.length, 1);
-  assert.deepStrictEqual(w.save().eggs[0]?.candidates, ["charmander", "squirtle", "pikachu"], "해금한 종이 후보");
+  assert.deepStrictEqual(w.save().eggs[0]?.candidates, ["charmander", "squirtle", "pichu"], "해금한 종이 후보");
   process.stdout.write("(2) SC-03 · 랜덤알 구매와 후보 저장  ok\n");
 
   // 같은 요청을 다시 보내도 알이 늘지 않는다

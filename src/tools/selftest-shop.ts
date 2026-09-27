@@ -54,9 +54,9 @@ function seed(points: number): SaveV3 {
 // (2b) 랜덤알 후보는 진화 전용 종을 뺀다 — 리자드·라이츄는 빠지고, 첫 선택 후보 피카츄는 남는다
 {
   const s = seed(200);
-  s.dex.unlocked = ["charmander", "charmeleon", "pikachu", "raichu"];
+  s.dex.unlocked = ["charmander", "charmeleon", "pichu", "pikachu", "raichu"];
   buy(s, "random", T0, rand);
-  assert.deepStrictEqual(s.eggs[0]?.candidates, ["charmander", "pikachu"]);
+  assert.deepStrictEqual(s.eggs[0]?.candidates, ["charmander", "pichu"]); // 피카츄는 피츄 진화로만 얻는다 (2026-09-27 스타터 교체)
   process.stdout.write("(2b) 랜덤알 · 진화 전용 종 제외  ok\n");
 }
 

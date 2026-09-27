@@ -309,8 +309,9 @@ function world(over: Partial<Pick<World, "now" | "hour">> = {}, save: Partial<Sa
   const table = dex.unlockRules();
   const st = dex.starters(table);
   assert.strictEqual(st.length, 29, "스타터 29");
-  assert.ok(st.includes("pikachu") && st.includes("eevee") && st.includes("bulbasaur"));
-  assert.deepStrictEqual(table.pikachu, { starter: true }, "스타터는 starter 만 (피츄 진화 규칙 없음)");
+  assert.ok(st.includes("pichu") && st.includes("eevee") && st.includes("bulbasaur") && !st.includes("pikachu"), "2026-09-27 피카츄 대신 피츄");
+  assert.deepStrictEqual(table.pichu, { starter: true }, "스타터는 starter 만");
+  assert.deepStrictEqual(table.pikachu, { evolve: { from: "pichu", affinity: 500 } }, "피카츄는 피츄 진화로 해금");
   assert.deepStrictEqual(table.raichu, { evolve: { from: "pikachu", affinity: 500 } }, "아기 포켓몬은 단계에 안 센다");
   assert.deepStrictEqual(table.umbreon, { evolve: { from: "eevee", affinity: 500, when: "night" } });
   assert.deepStrictEqual(table.charizard, { evolve: { from: "charmeleon", affinity: 1500 } });
@@ -319,7 +320,7 @@ function world(over: Partial<Pick<World, "now" | "hour">> = {}, save: Partial<Sa
   assert.deepStrictEqual(table.lapras, { work: { hours: 100 } });
   assert.deepStrictEqual(table.chansey, { streak: { days: 14 } });
   assert.strictEqual(table.mewtwo, undefined, "전설·환상은 기본형 규칙을 받지 않는다 — 해금 길 없는 종은 표에 없다");
-  assert.deepStrictEqual(table.pichu, { base: true }, "아기 포켓몬도 진화 전 첫 단계라 기본형");
+  assert.deepStrictEqual(table.cleffa, { base: true }, "아기 포켓몬도 진화 전 첫 단계라 기본형"); // 피츄는 2026-09-27 스타터가 됐다
   assert.deepStrictEqual(table.rattata, { base: true }, "기본형은 처음부터 해금 (2026-09-25 사용자 결정)");
   // 표의 모든 규칙이 아는 조건만 쓰고, evolve 의 from·to 가 evo.json 과 맞는다
   const known = ["starter", "base", "evolve", "shop", "party", "work", "streak", "bond", "time", "event"];

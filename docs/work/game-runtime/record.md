@@ -1700,3 +1700,13 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 1번 구현(사용자 "그렇게해", 시안 확인): `src/main/game.ts` 가 저장 쓰기를 감싸 이어진 실패를 센다(명령·주기 저장 함께, writer 가 아니라 쓰지 않은 것은 빼고). 3번이면 `game.view()` 에 `saveFailing` 을 싣는다(`Snapshot.saveFailing`). `src/renderer/manage.ts` `drawSaveFailing` 이 모든 탭의 제목 줄 아래에 교환 탭과 같은 Status Banner(`tradeBanner`, 점 + 제목 + 설명)를 넣는다. 본문은 낱말 단위로 줄을 바꾼다(`word-break: keep-all`). 설정창은 보기를 만들 때 먼저 저장하므로, 쓰기가 되살아나면 다음 새로 읽기에서 사라진다.
 - 검수: `selftest-play` (8) 추가(임시 파일 자리를 폴더로 막아 실패 3번 → 안내, 풀고 한 번 저장 → 사라짐), `npm run selftest` 통과. `scripts/dev-manage.cjs --save-failing`(새 옵션)으로 파티·상점 탭을 찍어 시안과 같은 자리·모양을 확인했다. 첫 화면에서 본문이 "저 / 장되면"으로 끊겨 `keep-all` 을 더했다.
 - Figma: 시안을 05 `Party / Save Failing` `716:17993`(y 6800 줄, x 8200)으로 옮기고 99 섹션 `716:18365` 을 지웠다. 새 글자 두 개는 아직 Galmuri 다시 배치 전이다.
+- 3번 실기 확인(2026-09-27, 사용자가 Win+L 로 잠갔다 풂): 시험 HOME `party` 장면, `POKEBUDDY_DEBUG` 기록. 기록에 `{"screen":"locked"}`·`{"screen":"unlocked"}` 가 두 번씩 찍혔다. 11:45:22~11:48:22 벽시계 180초 동안 포인트 진행량이 125,850(두 마리, 친밀도 0 → 1ms 에 2)만큼 늘었다 — 게임 시간 약 63초. 잠긴 동안 창 추적 폴링 355번(약 142초). 잠기지 않은 약 38초와 풀린 뒤 첫 틱의 30초 상한을 더하면 63초와 맞는다. 멈추지 않았다면 180초가 쌓였어야 한다.
+- 옛 확장 정리(사용자 "진행"): 실제 `pokebuddy setup` 을 돌렸다. Cursor·VS Code·Antigravity 의 `local.termimon-active-terminal` 제거, `~/.claude/pokebuddy/windows` 삭제, 옛 훅 파일 `termimon-state.cjs`·옛 데이터 폴더 `~/.claude/termimon` 삭제, Gemini 설정의 옛 훅 6개를 새 훅으로 바꿈(백업 `settings.json.pokebuddy-backup-2026-09-27T02-45-02-312Z`).
+- 첫 실행 확인(2026-09-27): 새 시험 HOME(`dev-test start --fresh`)에서 선택창 → 첫 돌봄 1/2 → 우클릭 2/2 → 끝까지 사용자가 확인했다("확인했어").
+
+### 스타터 피카츄 → 피츄 (2026-09-27)
+
+- 사용자 지시: "추가로 스타팅 피카츄를 피츄로 바꿔줘."
+- 작업: `data/unlocks.json` 에서 `pikachu` 의 `starter` 를 빼고 `pichu` 를 `base` 에서 `starter` 로 바꿨다. 피카츄는 `{"evolve":{"from":"pichu","affinity":500}}` — 삐→삐삐·토게피→토게틱과 같은 규칙(아기 포켓몬은 단계에 세지 않는다, `src/tools/build-unlocks.ts`). 빌드 도구의 스타터 예외 주석을 고쳤다. 스타터는 그대로 29종이다.
+- 따라 바뀌는 것: 피카츄는 이제 진화 전용 종이라 랜덤알 후보에서 빠지고, 첫 선택 직후 해금 목록에도 없다(피츄를 친밀도 500 까지 키우면 해금). 이미 피카츄를 가진 저장은 그대로다.
+- 검수: `selftest-dex`·`selftest-flow`·`selftest-unlocks`·`selftest-shop` 의 기대값을 피츄 기준으로 고쳤다(삐로 기본형 검사를 옮김). `npm run selftest` 통과. `scripts/dev-picker.cjs --shot` 으로 선택창 마지막 줄에 피츄가 나오는 것을 확인했다.
