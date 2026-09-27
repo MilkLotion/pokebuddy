@@ -4,8 +4,10 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const docs = path.join(root, 'docs');
-const allowedRootFiles = new Set(['README.md', 'design.md', 'progress.md', 'terms.md', 'guide.md']);
-const allowedRootDirectories = new Set(['specs', 'work', 'history', 'contributing', 'archive']);
+// 작업 기록 — 저장소 밖(.gitignore). 있으면 링크를 검사하고, 공개 문서가 이곳을 가리키지 않는지 본다 (2026-09-27 문서 구조 개편)
+const worklog = path.join(root, 'worklog');
+const allowedRootFiles = new Set(['README.md', 'design.md', 'terms.md', 'guide.md']);
+const allowedRootDirectories = new Set(['specs', 'contributing']);
 const failures = [];
 
 function walk(directory) {
@@ -32,7 +34,10 @@ for (const name of allowedRootFiles) {
   if (!fs.existsSync(path.join(docs, name))) failures.push(`필수 문서 누락: docs/${name}`);
 }
 
-const allFiles = walk(docs);
+const publicFiles = walk(docs);
+const worklogFiles = fs.existsSync(worklog) ? walk(worklog) : [];
+const allFiles = [...publicFiles, ...worklogFiles];
+const isPublic = (file) => !file.startsWith(worklog + path.sep);
 const documents = [
   ...allFiles.filter((file) => /\.(md|html)$/.test(file)),
   path.join(root, 'AGENTS.md'),
@@ -66,7 +71,9 @@ for (const file of documents) {
       ? path.join(root, target)
       : path.resolve(path.dirname(file), target);
     checkedLinks++;
-    if (!fs.existsSync(absolute)) failures.push(`파일 링크 누락: ${display(file)} → ${link}`);
+    // 공개 문서(docs/·README·AGENTS)는 저장소에 없는 작업 기록을 가리키지 않는다 — 클론에서 끊긴다
+    if (isPublic(file) && (absolute === worklog || absolute.startsWith(worklog + path.sep))) failures.push(`공개 문서가 작업 기록을 가리킴: ${display(file)} → ${link}`);
+    else if (!fs.existsSync(absolute)) failures.push(`파일 링크 누락: ${display(file)} → ${link}`);
   }
 }
 
@@ -80,7 +87,7 @@ for (const file of jsonFiles) {
 }
 
 for (const file of allFiles.filter((file) => file.endsWith(`${path.sep}record.md`))) {
-  if (!display(file).startsWith('docs/work/')) continue;
+  if (!display(file).startsWith('worklog/records/')) continue;
   const content = read(file);
   for (const section of ['설계', '작업', '검수', '피드백과 수정']) {
     if (!content.includes(`\n## ${section}\n`)) failures.push(`작업 기록 절 누락: ${display(file)} → ${section}`);

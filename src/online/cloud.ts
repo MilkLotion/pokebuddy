@@ -1,4 +1,4 @@
-// 클라우드 저장 — 로그인한 계정에 save.json 사본을 올리고 받는다. 설계는 docs/work/trade/record.md "클라우드 저장"
+// 클라우드 저장 — 로그인한 계정에 save.json 사본을 올리고 받는다. 설계는 worklog/records/trade/record.md "클라우드 저장"
 //
 // Electron 을 모른다. 공유 클라이언트와 파일 입출력(동기화 정보·저장 읽기·바꾸기)을 받는다.
 //   로컬 save.json 이 정본이다. 한 계정은 한 번에 한 PC 만 활성이다 — 나중에 켠 PC 가 claim_device 로 활성이 된다

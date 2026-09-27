@@ -85,7 +85,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
   };
 
   // 실제 종의 이름과 그림을 보인다. v2 에서 옮겨 온 별명·모습은 legacy 에 보존만 하고 쓰지 않는다
-  // (docs/specs/s5.md "별명 입력과 모습 선택을 제공하지 않는다. 실제 종의 이름과 그림을 표시한다")
+  // (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다. 실제 종의 이름과 그림을 표시한다")
   const petView = (save: SaveV3, petId: string, hidden: boolean): PartyPet | null => {
     const pet = save.pets.find((p) => p.id === petId);
     if (!pet) return null;

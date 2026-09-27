@@ -1,6 +1,6 @@
 // 도감 기기 창 — 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창. 문서는 src/renderer/dex.html
 //
-// 관리 창의 도감 칸을 누르면 뜬다. 관리 창 격자 아래에 상세를 끼우던 방식은 격자를 다시 그려 스크롤이 튀었다 (docs/work/play-bugs/record.md).
+// 관리 창의 도감 칸을 누르면 뜬다. 관리 창 격자 아래에 상세를 끼우던 방식은 격자를 다시 그려 스크롤이 튀었다 (worklog/records/play-bugs/record.md).
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창 내용 영역의 오른쪽 위에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다.
 // 관리 창을 옮기면 따라간다. 관리 창이 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";

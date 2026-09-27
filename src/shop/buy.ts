@@ -1,4 +1,4 @@
-// 상점 구매 — 규칙은 docs/specs/s5.md "상점", 가격은 docs/specs/balance.md
+// 상점 구매 — 규칙은 docs/specs/game.md "상점", 가격은 docs/specs/balance.md
 //
 // 한 거래로 검사와 반영을 묶는다. 하나라도 걸리면 아무것도 바꾸지 않는다.
 //   알      돌보미집에 빈 칸이 있어야 한다. 사면 바로 들어가고 준비 시간이 시작된다
@@ -57,7 +57,7 @@ function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boo
   return { toBox: true };
 }
 
-// 새 알 하나 — 후보는 이 순간에 정해 저장한다 (docs/specs/s5.md "알 결과 저장"). 저장에 넣는 것은 부르는 쪽이다
+// 새 알 하나 — 후보는 이 순간에 정해 저장한다 (docs/specs/game.md "알 결과 저장"). 저장에 넣는 것은 부르는 쪽이다
 //   단일 포켓몬 알   아직 얻지 않은 종
 //   종 목록 알       그 목록
 //   랜덤알           해금한 종 가운데 랜덤알에서 나올 수 있는 종

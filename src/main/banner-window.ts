@@ -13,7 +13,7 @@ const CH = {
   hover: "banner:hover",
 } satisfies Record<string, BannerChannel>;
 
-// 표시 시간 8초 — 2026-09-25 구현에서 정하고 2026-09-27 사용자가 확정했다 (docs/specs/s5.md 알 절, docs/work/game-runtime/record.md "알림 배너의 설계").
+// 표시 시간 8초 — 2026-09-25 구현에서 정하고 2026-09-27 사용자가 확정했다 (docs/specs/game.md 알 절, worklog/records/game-runtime/record.md "알림 배너의 설계").
 // 창 크기는 배너 280 × 82 에 그림자 자리 8 을 둘렀다. margin 은 작업 영역 가장자리와의 거리다
 export const BANNER_RULES = { showMs: 8000, width: 296, height: 98, margin: 8 } as const;
 

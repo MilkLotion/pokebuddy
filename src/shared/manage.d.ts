@@ -244,7 +244,7 @@ export interface ManageReply {
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
 export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view";
 
-// 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/s5.md "알림 배너의 개별 표시")
+// 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
 export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" };
 
@@ -348,7 +348,7 @@ export interface ManageBridge {
 }
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
-// 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (docs/work/play-bugs/record.md)
+// 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/record.md)
 export interface DexDeviceView {
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다

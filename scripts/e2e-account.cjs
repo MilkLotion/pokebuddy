@@ -1,5 +1,5 @@
 // 계정·클라우드 저장 E2E — 실제 앱(동반자) 두 개를 임시 HOME 으로 띄우고 로컬 Supabase 에서 설정의 계정 탭을 눌러 본다.
-// 설계: docs/work/trade/record.md "로그인·클라우드 저장 구현 계획" L6
+// 설계: worklog/records/trade/record.md "로그인·클라우드 저장 구현 계획" L6
 //   준비: Docker Desktop 과 `npx supabase start`. 계정 삭제까지 보려면 `npx supabase functions serve` 도 띄운다. 빌드: `npm run build`
 //   실행: node scripts/e2e-account.cjs   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
 //   앱은 로컬 서버를 직접 보지 않고 이 스크립트의 TCP 중계를 거친다 — 중계를 끊어 오프라인을 재현한다
@@ -47,7 +47,7 @@ async function run() {
   checks.push('로컬 Supabase 확인과 DB 초기화');
   const proxy = await tcpProxy(local.url);
   const server = { url: proxy.url, key: local.key };
-  const shots = path.join(root, 'docs/work/trade/evidence');
+  const shots = path.join(root, 'worklog/records/trade/evidence');
   fs.mkdirSync(shots, { recursive: true });
   const env = { POKEBUDDY_CLOUD_UPLOAD_MS: '1000', POKEBUDDY_CLOUD_RETRY_MS: '1500' };
   const name = `e2e${Date.now().toString(36)}`;

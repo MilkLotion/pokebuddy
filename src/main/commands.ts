@@ -207,7 +207,7 @@ export function createCommands(ctx: CommandContext): Commands {
     return result;
   });
 
-  // 모습 선택은 제거했다 — 실제 종의 이름과 그림을 보인다 (docs/specs/s5.md "별명 입력과 모습 선택을 제공하지 않는다").
+  // 모습 선택은 제거했다 — 실제 종의 이름과 그림을 보인다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다").
   // 옛 값은 legacy 에 남아 있다. 명령은 CLI 호환으로 남기고 제거됐다고 답한다
   dispatcher.register("pet.look", () => ({ ok: false, reason: "removed" }));
 
@@ -220,7 +220,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
 
   // 친구 교환 — 서버를 타므로 결과를 기다려 교환 보기를 돌려준다. writer 만 교환 세션을 가진다.
-  // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (docs/work/trade/record.md "구현 2c~2e 계획과 E2E 설계")
+  // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (worklog/records/trade/record.md "구현 2c~2e 계획과 E2E 설계")
   // 결과는 조작의 결과다. 보기의 error 는 앞선 새로 고침의 실패일 수 있어 결과로 쓰지 않는다
   const tradeCommand = (run: (session: TradeSession, c: Command) => Promise<TradeActionResult> | TradeActionResult) => async (c: Command): Promise<CommandResult> => {
     if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : send(ctx.mailboxDir, c);
@@ -272,7 +272,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   return {
     dispatcher,
-    // 포켓몬 클릭은 놀아주기다 (docs/specs/s5.md "직접 돌봄 — 클릭 한 번으로 반응을 구경한다").
+    // 포켓몬 클릭은 놀아주기다 (docs/specs/game.md "직접 돌봄 — 클릭 한 번으로 반응을 구경한다").
     // 클릭 반응은 무대가 이미 보였다. 놀아주기에 성공하면 play 명령이 놀이 연출을 더한다.
     // 쿨타임처럼 못 놀아주면 반응만으로 끝난다. 실패를 알림으로 띄우지 않는다
     async click(id) {

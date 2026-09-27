@@ -11,7 +11,7 @@
 //   - data/evo.json 의 `need.kind === "item"` 에 실제로 쓰인 도구만 담는다
 //   - bond-cord(연결의끈)·blank-cd(빈 기술머신)는 우리 도구라 이름을 여기서 준다. 빈 기술머신은 2026-09-26 "빈 CD"에서,
 //     연결의끈(원작 레전드 아르세우스의 Linking Cord)은 2026-09-27 "유대의끈"에서 바꿨다(사용자 결정). id 는 저장 호환을 위해 그대로다
-//   - 상점의 진화 탭이 이 목록을 그대로 보여준다 (docs/specs/s5.md "진화 계약")
+//   - 상점의 진화 탭이 이 목록을 그대로 보여준다 (docs/specs/game.md "진화 계약")
 import fs from "node:fs";
 import path from "node:path";
 import type { EvoNeed } from "../shared/types";

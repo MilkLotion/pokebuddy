@@ -1,4 +1,4 @@
-// 알 돌봄 — 규칙은 docs/specs/s5.md "알", 수치는 docs/specs/balance.md
+// 알 돌봄 — 규칙은 docs/specs/game.md "알", 수치는 docs/specs/balance.md
 //
 // 쓰다듬기와 노래 들려주기는 단축량이 같다. 결과 조건만 다르다.
 // 인정 간격은 1분이다. 버튼을 계속 눌러도 반복 차감하지 않는다.

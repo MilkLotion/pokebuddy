@@ -3,7 +3,7 @@
 // 원작에 그림이 없는 이 게임만의 도구를 원작 도구 아이콘 규칙으로 그린다(30×30, 1px 외곽선, 4~5단계 명암, 왼쪽 위 빛, 흰 반짝임).
 // 우리가 새로 그린 그림이라 저장소와 설치본에 넣는다. 원작 그림(PokeAPI·pokesprite)은 넣지 않고 실행 때 받는다.
 // 기법: 그늘 쪽(아래·오른쪽) 외곽선은 재질의 짙은 색, 그늘 쪽 가장자리 안쪽은 한 단계 밝은 반사광.
-// 시안과 결정 경과: docs/work/item-art/record.md, Figma `99 · 시안 (테스트)` 의 가상 도구 도트 시안.
+// 시안과 결정 경과: worklog/records/item-art/record.md, Figma `99 · 시안 (테스트)` 의 가상 도구 도트 시안.
 // 새 패키지 없이 Node 기본 모듈로 PNG 를 쓴다.
 const fs = require("node:fs");
 const zlib = require("node:zlib");

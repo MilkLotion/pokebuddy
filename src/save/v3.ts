@@ -75,7 +75,7 @@ const SOUND_DEFAULT_VOLUME = 30;
 
 const emptySettings = (): SettingsV3 => ({
   language: "ko",
-  startOnLogin: true, // 계약 기본값 켜짐 (docs/specs/s5.md "설정과 연결"). 이미 값이 있는 저장은 그 값을 따른다
+  startOnLogin: true, // 계약 기본값 켜짐 (docs/specs/game.md "설정과 연결"). 이미 값이 있는 저장은 그 값을 따른다
   sound: true,
   volume: SOUND_DEFAULT_VOLUME,
   sleepAfterMin: 5,
@@ -282,7 +282,7 @@ function normalizeSettings(raw: unknown): SettingsV3 {
     startOnLogin: bool(r.startOnLogin, base.startOnLogin),
     sound: bool(r.sound, base.sound),
     volume: clamp(int(r.volume, base.volume), 0, 100), // 옛 저장에는 없어 기본값이다
-    sleepAfterMin: clamp(int(r.sleepAfterMin, base.sleepAfterMin), 0, 600), // 0 은 잠들지 않음 (docs/specs/s5.md "설정과 연결")
+    sleepAfterMin: clamp(int(r.sleepAfterMin, base.sleepAfterMin), 0, 600), // 0 은 잠들지 않음 (docs/specs/game.md "설정과 연결")
     playArea: {
       mode: str(area.mode) === "region" ? "region" : "full",
       rect: rect ? { x: int(rect.x), y: int(rect.y), w: nonNeg(rect.w), h: nonNeg(rect.h) } : null,
@@ -369,7 +369,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
   };
 }
 
-// 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (docs/work/trade/record.md "로컬 저장과 복구")
+// 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/record.md "로컬 저장과 복구")
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
   const p = isObj(raw) && isObj(raw.pending) ? raw.pending : null;
   if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };

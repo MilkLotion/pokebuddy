@@ -63,7 +63,7 @@ export interface Stage {
   poke(id: string): boolean;
   care(id: string, action: CareAction): void;
   celebrate(id: string): void;
-  say(id: string, text: string, ms: number): void; // 말풍선을 ms 동안 — 배고픔 구간 진입 (docs/specs/s5.md "배고픔 말풍선")
+  say(id: string, text: string, ms: number): void; // 말풍선을 ms 동안 — 배고픔 구간 진입 (docs/specs/game.md "배고픔 말풍선")
   petIds(): string[];
   petOf(id: string): PartyPet | null;
   heldId(): string | null;

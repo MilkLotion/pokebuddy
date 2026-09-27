@@ -1,4 +1,4 @@
-// 친구 교환의 서버 호출 — Supabase 공개 함수(RPC)와 실시간 신호. 설계는 docs/work/trade/record.md "서버 설계"
+// 친구 교환의 서버 호출 — Supabase 공개 함수(RPC)와 실시간 신호. 설계는 worklog/records/trade/record.md "서버 설계"
 //
 // Electron 을 모른다. 세션 저장소를 받아서 쓴다 — 메인은 safeStorage 파일을, 자체 검사는 메모리를 넘긴다.
 // 서버 오류는 raise exception 의 메시지(TRADE_…)를 코드로 옮긴다. 닫힌 이유는 details 로 온다.

@@ -9,7 +9,7 @@
 import type { AgentStats, LogEntry, NatureId, PetDaily, Totals } from "./types";
 
 // ── 개체 ───────────────────────────────────────────────────────────────────────
-// 장난감은 오래 놀아주기와 같은 버프를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/s5.md "장난감")
+// 장난감은 오래 놀아주기와 같은 버프를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")
 export type BuffKind = "premium-food" | "long-play";
 
 export interface BuffV3 {

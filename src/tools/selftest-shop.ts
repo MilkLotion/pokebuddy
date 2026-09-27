@@ -1,7 +1,7 @@
 // 상점 구매 자체 확인 — npm run build 뒤 node dist/tools/selftest-shop.js
 //
 // 테스트 프레임워크 없이 assert 만. 무작위는 정해진 값을 넣는다.
-// 계약은 docs/specs/s5.md "상점", 가격은 docs/specs/balance.md 가격표다.
+// 계약은 docs/specs/game.md "상점", 가격은 docs/specs/balance.md 가격표다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules";

@@ -1,6 +1,6 @@
 // 펫 오버레이 메인 프로세스 — 기동 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
 // 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (follow/front).
-// 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (docs/work/game-runtime/record.md "세션·창 모드 삭제")
+// 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
@@ -151,7 +151,7 @@ let stageWin: StageWindow | null = null;
 let stage: Stage | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
-let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (docs/work/trade/record.md)
+let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (worklog/records/trade/record.md)
 let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 값
 let mainOnline: MainOnline | null = null; // 공유 Supabase 클라이언트·계정·클라우드 저장 — writer 인 동반자만 가진다
 let onlineFlushed = false; // 끄기 전에 클라우드 저장을 한 번 올렸다
@@ -222,7 +222,7 @@ function syncPlayArea(): void {
   anchor?.poll(); // 무대 사각형을 바로 다시 정한다
 }
 
-// 바탕화면 튜토리얼 — 대기열 맨 앞이 바탕화면 것이면 무대에 말풍선을 보낸다 (src/tutorial/core.ts, docs/specs/s5.md "코치마크")
+// 바탕화면 튜토리얼 — 대기열 맨 앞이 바탕화면 것이면 무대에 말풍선을 보낸다 (src/tutorial/core.ts, docs/specs/game.md "코치마크")
 // 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 부른다. 같은 값이면 무대 창이 다시 보내지 않는다
 function syncCoach(): void {
   if (!game || !stageWin) return;
@@ -339,7 +339,7 @@ const openManageWindow = (route?: ManageRoute): void => {
   });
 };
 
-// 상점·도감·가방은 관리 창이 맡는다. 트레이에는 창을 여는 자리만 둔다 (docs/specs/s5.md "화면 구조")
+// 상점·도감·가방은 관리 창이 맡는다. 트레이에는 창을 여는 자리만 둔다 (docs/specs/game.md "화면 구조")
 const trayTemplate = () => [
   { label: "설정창 열기", click: () => openManageWindow() },
   { type: "separator" as const },
@@ -537,13 +537,13 @@ async function refreshParty(): Promise<void> {
 }
 
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
-// (docs/work/game-runtime/record.md "배고픔 말풍선 되풀이")
+// (worklog/records/game-runtime/record.md "배고픔 말풍선 되풀이")
 const BUBBLE_MS = 5000;
 const hungerBubbles = createHungerBubbles();
 
 // 게임 시간 — 흐른 만큼 한 번에 적용한다. 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 부른다.
 // 주기는 저장 주기와 같다. 주기보다 크게 벌어진 틈(앱 종료·절전)은 `game.tick` 이 버린다
-// (docs/specs/s5.md "복귀할 때 중단 기간을 소급 진행하지 않는다")
+// (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다")
 // 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스")
 function stateTick(): void {
   if (!anchor || !stage) return;

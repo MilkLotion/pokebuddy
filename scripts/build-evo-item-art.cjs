@@ -3,7 +3,7 @@
 // PokeAPI·pokesprite 에 그림이 없는 진화 도구를 원작 9세대 아이콘(포켓몬 위키, 160×160)을 보고 30×30 도트로 옮긴다.
 // 순서: 면적 평균 축소 → 도구별 색 수 줄이기(k-평균) → 외톨이 화소 정리 → 1px 외곽선.
 // 원작 아이콘은 저장소에 넣지 않는다. .cache/evo-icons/ 에 받아 두고 변환한다. 위키는 스크립트 요청을 막아(403) curl 에 브라우저 User-Agent 를 준다.
-// 2026-09-27 사용자 결정: 결과 그림은 저장소에 넣는다. 결정 경과: docs/work/item-art/record.md
+// 2026-09-27 사용자 결정: 결과 그림은 저장소에 넣는다. 결정 경과: worklog/records/item-art/record.md
 const fs = require("node:fs"), zlib = require("node:zlib"), path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const ROOT = path.join(__dirname, "..");

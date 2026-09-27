@@ -1,6 +1,6 @@
 // 알림 배너 줄 — 미처리 상태를 줄에 세우고, 한 번 표시한 상태는 다시 세우지 않는다
 //
-// 계약은 docs/specs/s5.md "알림 배너의 개별 표시", 모듈 경계는 docs/specs/modules.md `src/notify`.
+// 계약은 docs/specs/game.md "알림 배너의 개별 표시", 모듈 경계는 docs/specs/modules.md `src/notify`.
 // 상태 판정(부화 준비·진화 가능·업적 미수령)은 도메인 모듈이 한다. 여기서는 줄 세우기·한 번 규칙·순서만 맡는다.
 // 대상 키
 //   hatch:<알 id>                 알 하나마다

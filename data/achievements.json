@@ -1,5 +1,5 @@
 {
-  "_comment": "업적 — 규칙은 docs/specs/s5.md '파티 칸과 업적'. 조건 판정은 코드(src/achievement/core.ts)가 하고 여기는 이름(ko·en)과 보상만 둔다. reward 가 party-slot 이면 업적으로 여는 파티 칸 하나를 연다",
+  "_comment": "업적 — 규칙은 docs/specs/game.md '파티 칸과 업적'. 조건 판정은 코드(src/achievement/core.ts)가 하고 여기는 이름(ko·en)과 보상만 둔다. reward 가 party-slot 이면 업적으로 여는 파티 칸 하나를 연다",
   "show-two": {
     "ko": "두 마리 꺼내기",
     "en": "Two Out Together",

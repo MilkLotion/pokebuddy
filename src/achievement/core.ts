@@ -1,4 +1,4 @@
-// 업적 달성 판정과 보상 수령 — 규칙은 docs/specs/s5.md "파티 칸과 업적", 이름과 보상은 data/achievements.json
+// 업적 달성 판정과 보상 수령 — 규칙은 docs/specs/game.md "파티 칸과 업적", 이름과 보상은 data/achievements.json
 //
 // 조건은 코드가 판정한다. 업적마다 보는 것이 달라서 데이터로 적을 수 없다.
 //   show-two        파티의 두 마리를 동시에 꺼냈다. 숨긴 채 배치만 한 것은 아니다

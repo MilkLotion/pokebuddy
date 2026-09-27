@@ -1,7 +1,7 @@
 // 박스 정렬·이동·이름 자체 확인 — npm run build 뒤 node dist/tools/selftest-box.js
 //
 // 순수 함수(src/box/slots.ts)와 거래 명령(box.sort · box.move · box.rename)을 본다. 파일을 만들지 않는다.
-// 설계는 docs/work/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
+// 설계는 worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
 import assert from "node:assert";
 import { BOX_RULES, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots";
 import { newPet } from "../party/create";

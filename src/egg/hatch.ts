@@ -1,4 +1,4 @@
-// 부화 결과 판정 — 규칙은 docs/specs/s5.md "알", 수치는 docs/specs/balance.md
+// 부화 결과 판정 — 규칙은 docs/specs/game.md "알", 수치는 docs/specs/balance.md
 //
 // 결정 순서
 //   1. 쌓은 행동 조건에 맞는 조건이 있으면 그 조건의 종들에서 뽑는다. 조건은 구매 당시 후보 범위를 넘어선다

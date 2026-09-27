@@ -1,7 +1,7 @@
 // 클라우드 저장 확인 — 로컬 Supabase 에서 두 PC(같은 계정)의 활성 기기·자동 저장·밀려남·오프라인·로그인 때 선택
 //   npx supabase start 뒤: npm run build && node dist/tools/selftest-cloud.js
 //   로컬 서버가 없으면 건너뛴다(종료 코드 0). 주소가 127.0.0.1·localhost 가 아니면 멈춘다
-// 설계는 docs/work/trade/record.md "클라우드 저장", "로그인·클라우드 저장 구현 계획"
+// 설계는 worklog/records/trade/record.md "클라우드 저장", "로그인·클라우드 저장 구현 계획"
 import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";

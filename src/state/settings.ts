@@ -1,4 +1,4 @@
-// 설정 한 항목 바꾸기 — 규칙은 docs/specs/s5.md "설정과 연결"
+// 설정 한 항목 바꾸기 — 규칙은 docs/specs/game.md "설정과 연결"
 //
 // 한 번에 한 항목만 바꾼다. 어떤 항목인지와 허용 값을 여기가 모두 가진다.
 // 화면은 무엇을 보여 줄지만 정하고 값 검사는 하지 않는다. 허용 밖의 값이면 저장을 바꾸지 않는다.
@@ -35,7 +35,7 @@ export const SOUND_RULES = { defaultVolume: 30, cryMax: 0.35, chimeMax: 0.35 } a
 export const gainOf = (settings: { sound: boolean; volume: number }, max: number): number =>
   settings.sound === false ? 0 : Math.round(Math.max(0, Math.min(100, settings.volume)) * max * 10) / 1000;
 
-// 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (docs/work/game-runtime/record.md "놀이공간·설정의 설계")
+// 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (worklog/records/game-runtime/record.md "놀이공간·설정의 설계")
 //   area  넓이 — 240 × 160 과 같은 넓이. 폭·높이 비율은 자유다(아래로 길게, 옆으로 길게) — 2026-09-26 사용자 요청
 //   side  한 변 — 기본 크기(2) 포켓몬 한 마리가 들어가는 길이. 이보다 얇으면 움직일 자리가 없다
 export const REGION_MIN = { area: 240 * 160, side: 80 } as const;

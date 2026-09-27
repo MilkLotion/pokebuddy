@@ -1,6 +1,6 @@
 // 알림 배너 창 — 메인이 준 배너 하나를 그린다. 문구와 목적지는 메인이 정한다 (src/notify/banner.ts)
 //
-// 배너 본문 클릭 동작은 없다. `바로가기` 만 누른다 (docs/specs/s5.md "알림 배너의 개별 표시")
+// 배너 본문 클릭 동작은 없다. `바로가기` 만 누른다 (docs/specs/game.md "알림 배너의 개별 표시")
 import type { BannerView } from "../shared/manage.js";
 
 function need<T extends HTMLElement>(id: string, type: { new (): T }): T {

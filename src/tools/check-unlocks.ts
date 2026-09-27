@@ -1,7 +1,7 @@
 // 해금 사슬 보고 — npm run build 뒤 node dist/tools/check-unlocks.js
 //
 // 모든 종이 실제로 얻어질 수 있는지 보고한다 (src/dex/reach.ts). 막지 않고 알리기만 한다 —
-// 전설·환상·울트라비스트 종의 입수 경로는 스펙에서 아직 정하지 않았다 (docs/specs/s5.md "이후 획득").
+// 전설·환상·울트라비스트 종의 입수 경로는 스펙에서 아직 정하지 않았다 (docs/specs/game.md "이후 획득").
 // 막아야 하는 규칙(첫 선택 후보 도달, 진화 규칙의 출발 종이 도감에 있음)은 selftest-unlocks 가 본다
 import { reach } from "../dex/reach";
 import { empty } from "../save/v3";

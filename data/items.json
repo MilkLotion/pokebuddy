@@ -1,5 +1,5 @@
 {
-  "_comment": "가방 도구 — 가격은 docs/specs/balance.md 가격표, 효과는 docs/specs/s5.md 를 따른다. 손으로 다듬는 콘텐츠 데이터다. 알은 data/eggs.json, 진화용 도구는 data/evo-items.json 이 따로 가진다. 기본먹이는 무료이며 무제한이라 상점에 두지 않는다. price 가 null 이면 상점에서 팔지 않는다. 민트는 성격별 21종이다(키는 공식 식별자 <성격>-mint) — natures 는 바꿀 수 있는 성격이다. 성실민트만 보정 없는 성격 5개를 가진다(2026-09-25 결정)",
+  "_comment": "가방 도구 — 가격은 docs/specs/balance.md 가격표, 효과는 docs/specs/game.md 를 따른다. 손으로 다듬는 콘텐츠 데이터다. 알은 data/eggs.json, 진화용 도구는 data/evo-items.json 이 따로 가진다. 기본먹이는 무료이며 무제한이라 상점에 두지 않는다. price 가 null 이면 상점에서 팔지 않는다. 민트는 성격별 21종이다(키는 공식 식별자 <성격>-mint) — natures 는 바꿀 수 있는 성격이다. 성실민트만 보정 없는 성격 5개를 가진다(2026-09-25 결정)",
   "basic-food": { "ko": "기본먹이", "en": "Basic Food", "price": null, "effect": "fullness", "amount": 20 },
   "premium-food": { "ko": "프리미엄먹이", "en": "Premium Food", "price": 60, "effect": "fullness-full-buff", "amount": 100 },
   "toy": { "ko": "장난감", "en": "Toy", "price": 40, "effect": "play-buff", "amount": 0 },

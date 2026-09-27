@@ -1,4 +1,4 @@
-// 진화 판정과 실행 — 규칙은 docs/specs/s5.md "진화 계약", 조건은 data/evo.json 의 `need`
+// 진화 판정과 실행 — 규칙은 docs/specs/game.md "진화 계약", 조건은 data/evo.json 의 `need`
 //
 // 조건을 채워도 저절로 진화하지 않는다. 사용자가 직접 진화시킨다.
 // 조건을 둘 이상 채우면 후보를 보여 주고 사용자가 고른다. 하나면 그것으로 간다.
@@ -38,7 +38,7 @@ export interface EvolveResult {
 }
 
 // 게임 시간 — 30분마다 낮과 밤이 바뀐다. 매시 0~29분이 낮이고 30~59분이 밤이다.
-// 하루를 기다리지 않아도 시간대 진화를 볼 수 있게 한 사용자 결정이다 (docs/specs/s5.md "진화 계약").
+// 하루를 기다리지 않아도 시간대 진화를 볼 수 있게 한 사용자 결정이다 (docs/specs/game.md "진화 계약").
 export const GAME_DAY = { halfMin: 30 };
 export const dayPartOf = (now: number): DayPart => (new Date(now).getMinutes() < GAME_DAY.halfMin ? "day" : "night");
 

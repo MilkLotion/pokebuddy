@@ -9,7 +9,7 @@
 //   진화           data/evo.json 을 거꾸로 — 앞 단계 종에서 진화한다
 //   상점 구매      data/unlocks.json 의 shop (해금한 종만 산다)
 // 미해금 종은 이름·타입과 진화 줄을 숨긴다. 진화 줄은 다음 종 이름을 드러내기 때문이다.
-// 입수 방법과 알 조건 힌트는 보인다 (docs/specs/s5.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
+// 입수 방법과 알 조건 힌트는 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
 import { profile } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf, type EvoStep } from "../dex/evo.js";

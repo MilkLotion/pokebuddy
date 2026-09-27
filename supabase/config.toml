@@ -175,7 +175,7 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-# 교환은 로그인 없이 익명 계정으로 한다 (docs/work/trade/record.md 계정과 로그인)
+# 교환은 로그인 없이 익명 계정으로 한다 (worklog/records/trade/record.md 계정과 로그인)
 enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false

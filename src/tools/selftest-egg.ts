@@ -1,7 +1,7 @@
 // 알 돌봄·조건·부화 자체 확인 — npm run build 뒤 node dist/tools/selftest-egg.js
 //
 // 테스트 프레임워크 없이 assert 만. 무작위는 정해진 값을 넣어 결과를 고정한다.
-// 계약은 docs/specs/s5.md "알"과 "알 행동 조건", 표는 data/egg-conditions.json 이다.
+// 계약은 docs/specs/game.md "알"과 "알 행동 조건", 표는 data/egg-conditions.json 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { care } from "../egg/care";

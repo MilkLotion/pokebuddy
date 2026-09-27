@@ -95,7 +95,7 @@ export const TIME_V3_RULES = {
   affinityGainMs: 600_000, // 친밀도 1 획득에 걸리는 가중 시간. 10분에 1
   pointGainMs: 120_000, // 포인트 1 획득에 걸리는 가중 시간. 개체 1마리당 2분에 1
   // 한 번에 흘릴 수 있는 최대 시간. 앱은 15초마다 시간을 적용한다. 그보다 크게 벌어진 틈은 앱 종료·절전·잠금으로 본다.
-  // 틈은 소급하지 않는다 (docs/specs/s5.md "PC 잠금·절전·앱 종료 중에는 … 소급 진행하지 않는다")
+  // 틈은 소급하지 않는다 (docs/specs/game.md "PC 잠금·절전·앱 종료 중에는 … 소급 진행하지 않는다")
   maxTickMs: 30_000,
   // 만복도 구간 — 아래 경계값 이상이면 그 구간이다
   zone: { full: 60, normal: 40, hungry: 15 },
@@ -137,7 +137,7 @@ export const BAG_V3_RULES = {
   playAffinity: 3, // 놀아주기로 오르는 친밀도
 };
 
-// 관리 창의 크기 — docs/specs/s5.md "관리 창". Figma 의 640 px 를 DIP 로 그대로 쓴다
+// 관리 창의 크기 — docs/specs/game.md "관리 창". Figma 의 640 px 를 DIP 로 그대로 쓴다
 export const WINDOW_V3_RULES = {
   width: 640, // 폭은 고정이다. 박스 6열과 도감 5열 격자가 이 폭에 맞춰져 있다
   // 기본 세로 — 파티 탭이 스크롤 없이 딱 맞는 높이다(2026-09-26 사용자 결정 "화면은 파티창을 기준으로 높이가 정해져야해").

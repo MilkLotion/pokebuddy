@@ -11,3 +11,5 @@ release/
 .playwright-mcp/
 .claude/
 .supabase
+# 작업 기록 — 저장소 밖에 둔다 (2026-09-27 사용자 결정). 설계·작업·검수 기록, 월간 이력, 진행 현황
+worklog/

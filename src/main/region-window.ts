@@ -1,6 +1,6 @@
 // 놀이공간 영역 그리기 창 — 커서가 있는 화면을 덮고 드래그로 사각형을 그린다. 문서는 src/renderer/region.html
 //
-// 화면 하나만 덮는다. 여러 화면에 걸친 영역은 두지 않는다 (docs/work/game-runtime/record.md "놀이공간·설정의 설계").
+// 화면 하나만 덮는다. 여러 화면에 걸친 영역은 두지 않는다 (worklog/records/game-runtime/record.md "놀이공간·설정의 설계").
 // 적용하면 화면 좌표의 사각형을, 취소하거나 창을 닫으면 null 을 돌려준다. 저장은 부른 쪽이 한다 — 여기서는 그리기만 한다
 import { BrowserWindow, ipcMain, screen } from "electron";
 import type { RegionChannel, RegionInit, RegionRect } from "../shared/manage";

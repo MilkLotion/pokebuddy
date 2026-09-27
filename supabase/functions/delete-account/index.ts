@@ -1,4 +1,4 @@
-// 계정 삭제 — 요청한 사용자 본인만 지운다. 설계는 docs/work/trade/record.md "로그아웃과 계정 삭제"
+// 계정 삭제 — 요청한 사용자 본인만 지운다. 설계는 worklog/records/trade/record.md "로그아웃과 계정 삭제"
 //
 // 서비스 역할 키가 필요해 앱이 아니라 이 함수가 한다. 키는 함수 환경 변수(SUPABASE_SERVICE_ROLE_KEY)로만 쓴다.
 //   1. Authorization 의 사용자 토큰으로 본인을 확인한다. 익명 계정은 지우지 않는다(정리 작업이 지운다)

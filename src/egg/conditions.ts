@@ -1,4 +1,4 @@
-// 알 행동 조건 — 규칙은 docs/specs/s5.md "알 행동 조건", 표는 data/egg-conditions.json
+// 알 행동 조건 — 규칙은 docs/specs/game.md "알 행동 조건", 표는 data/egg-conditions.json
 //
 // 조건은 쓰다듬기와 노래 들려주기의 인정 횟수로 갈린다. 일곱 조건은 서로 겹치지 않는다.
 // 어디에도 맞지 않는 조합이 있다. 그런 알은 일반 추첨으로 간다 — 부화를 막지 않는다.

@@ -1,5 +1,5 @@
 {
-  "_comment": "친구 교환·로그인·클라우드 저장 서버 — 공개해도 되는 값만 둔다(주소, publishable 키, 교환 규약 번호). service role 키는 넣지 않는다. docs/work/trade/record.md 프로젝트 구성",
+  "_comment": "친구 교환·로그인·클라우드 저장 서버 — 공개해도 되는 값만 둔다(주소, publishable 키, 교환 규약 번호). service role 키는 넣지 않는다. worklog/records/trade/record.md 프로젝트 구성",
   "url": "https://sdsjyefksbzundsgthuy.supabase.co",
   "publishableKey": "sb_publishable_pQtgsZ1FuTA5OUVcYuMBuA_in6wcih-",
   "protocol": 1

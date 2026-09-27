@@ -139,7 +139,7 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
   return Object.entries(eggs(opts)[kind]?.bonus ?? {}).filter(([k, p]) => typeof p === "number" && p > 0 && eggs(opts)[k] != null);
 }
 
-// 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/s5.md "랜덤알", "알 행동 조건")
+// 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "알 행동 조건")
 //   해금 규칙이 없는 종        뺀다. 전설·환상·울트라비스트는 규칙이 없다 — 입수 경로를 따로 정한다.
 //                              옛 규칙으로 이미 해금된 저장도 여기서 걸러진다
 //   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다(피카츄)

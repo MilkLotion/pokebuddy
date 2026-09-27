@@ -411,7 +411,7 @@ async function stageRuntimeTests(): Promise<void> {
       ok(fs.existsSync(store.backupName(migPaths.save)), "원본을 옆에 남긴다");
       ok(!migParty.needsStarter(), "이미 개체가 있으면 첫 선택을 묻지 않는다");
       eq(migParty.pets().map((p) => p.id), ["p1", "p2"], "무대에 두 마리");
-      // 별명·모습은 쓰지 않는다. 실제 종의 이름과 그림이다 (docs/specs/s5.md). 옛 값은 legacy 에 남는다
+      // 별명·모습은 쓰지 않는다. 실제 종의 이름과 그림이다 (docs/specs/game.md). 옛 값은 legacy 에 남는다
       eq(migParty.pets()[0]!.nick, null, "별명을 보이지 않는다");
       eq(migParty.pets()[0]!.look, "eevee", "고른 모습이 아니라 종의 그림");
       eq(moved.legacy["nick:p1"], "뽀야", "별명은 legacy 에 보존");

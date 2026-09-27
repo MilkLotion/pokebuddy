@@ -1,4 +1,4 @@
-// GitHub 로그인 — 데스크톱 PKCE. 설계는 docs/work/trade/record.md "GitHub 로그인"
+// GitHub 로그인 — 데스크톱 PKCE. 설계는 worklog/records/trade/record.md "GitHub 로그인"
 //
 // Electron 을 모른다. 브라우저 열기(openExternal)를 받는다.
 //   1. 127.0.0.1 의 고정 포트(세 개 중 빈 것)에 임시 HTTP 서버를 연다

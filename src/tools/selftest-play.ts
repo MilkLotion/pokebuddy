@@ -1,7 +1,7 @@
 // 놀이공간·설정 자체 확인 — npm run build 뒤 node dist/tools/selftest-play.js
 //
 // 테스트 프레임워크 없이 assert 만. 로그인 시 시작 기본값, 그림 크기, 놀이공간 영역 저장, 동반자 무대 사각형을 본다.
-// 설계는 docs/work/game-runtime/record.md "놀이공간·설정의 설계".
+// 설계는 worklog/records/game-runtime/record.md "놀이공간·설정의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../main/hunger-bubble";

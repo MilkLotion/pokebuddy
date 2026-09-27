@@ -15,7 +15,7 @@
 //     dusk · full-moon 같은 다른 값은 시간대 없음으로 본다
 //   - 부모가 도감에 없으면 그 간선은 버린다 (사슬이 끊긴 채 남지 않게 개수를 출력)
 //
-// need 의 우선순위 — 한 종에 원작 조건이 여럿이면 위에서부터 고른다 (docs/specs/s5.md "진화 계약")
+// need 의 우선순위 — 한 종에 원작 조건이 여럿이면 위에서부터 고른다 (docs/specs/game.md "진화 계약")
 //   1 레벨      원작 값 그대로
 //   2 친밀도    원작 친밀도 0~255 를 0~100 으로 환산해 5 단위로 반올림
 //   3 도구      원작 도구를 그대로 쓴다 (진화의돌 10종 + 사과·주전자 같은 특수 도구)
@@ -30,7 +30,7 @@ import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 const OUT = path.join(DATA_DIR, "evo.json");
 
 // 사용자 결정으로 정한 시간대 — PokeAPI 에는 게임 버전 조건이라 시간대가 없다.
-// 코스모움은 게임 시간이 낮이면 솔가레오, 밤이면 루나아라가 된다 (docs/specs/s5.md "진화 실행 시 게임 시간의 낮이면")
+// 코스모움은 게임 시간이 낮이면 솔가레오, 밤이면 루나아라가 된다 (docs/specs/game.md "진화 실행 시 게임 시간의 낮이면")
 export const WHEN_BY_DECISION: Readonly<Record<string, DayPart>> = { solgaleo: "day", lunala: "night" };
 const DAY_PARTS = new Set<string>(["day", "night"] satisfies DayPart[]);
 

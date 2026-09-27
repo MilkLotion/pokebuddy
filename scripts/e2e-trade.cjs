@@ -1,5 +1,5 @@
 // 친구 교환 E2E — 실제 앱(동반자) 여러 개를 임시 HOME 으로 띄우고 로컬 Supabase 에서 교환을 끝까지 돌린다.
-// 설계: docs/work/trade/record.md "구현 2c~2e 계획과 E2E 설계"
+// 설계: worklog/records/trade/record.md "구현 2c~2e 계획과 E2E 설계"
 //   준비: Docker Desktop 과 `npx supabase start`. 빌드: `npm run build`
 //   실행: node scripts/e2e-trade.cjs [--ui]   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다. --ui 면 화면 시나리오만)
 //   조작은 `pokebuddy game trade.*` CLI 의 JSON 결과로 판정한다. 창은 관측기가 숨긴다
@@ -145,9 +145,9 @@ async function run() {
 }
 
 // ── 화면 — 관리 창의 교환 탭을 실제 앱에서 눌러 본다 ─────────────────────────────
-// 찍은 화면은 docs/work/trade/evidence/ 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
+// 찍은 화면은 worklog/records/trade/evidence/ 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
 async function ui(server) {
-  const shots = path.join(root, 'docs/work/trade/evidence');
+  const shots = path.join(root, 'worklog/records/trade/evidence');
   fs.mkdirSync(shots, { recursive: true });
   const shot = (X, name) => X.shot(path.join(shots, name));
   const has = async (X, words) => { const t = await X.text(); return words.every((w) => t.includes(w)); };

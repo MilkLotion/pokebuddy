@@ -1,4 +1,4 @@
-// 가방 도구 사용 — 규칙은 docs/specs/s5.md, 수치는 docs/specs/balance.md, 효과는 data/items.json
+// 가방 도구 사용 — 규칙은 docs/specs/game.md, 수치는 docs/specs/balance.md, 효과는 data/items.json
 //
 // 검사와 반영을 한 거래로 묶는다. 하나라도 걸리면 아무것도 바꾸지 않는다.
 // 기본먹이는 무료이며 무제한이라 가방에서 차감하지 않는다. 나머지는 하나씩 쓴다.

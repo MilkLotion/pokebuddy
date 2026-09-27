@@ -1,4 +1,4 @@
-// 박스 칸 다루기 — 규칙은 docs/specs/s5.md "박스". 순수 함수이며 저장을 쓰지 않는다.
+// 박스 칸 다루기 — 규칙은 docs/specs/game.md "박스". 순수 함수이며 저장을 쓰지 않는다.
 //
 // 한 박스는 30칸이다. 모두 차면 새 박스를 자동으로 추가한다.
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
@@ -50,7 +50,7 @@ export function putPet(boxes: BoxV3[], petId: string): BoxSpot {
 
 export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== null).length;
 
-// ── 정렬·이동·이름 (docs/work/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
+// ── 정렬·이동·이름 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
 export const BOX_RULES = {
   nameMax: 10, // 박스 이름 최대 글자 수

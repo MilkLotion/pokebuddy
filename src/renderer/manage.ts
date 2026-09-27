@@ -35,7 +35,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "dex", label: "도감" },
   { id: "shop", label: "상점" },
   { id: "bag", label: "가방" },
-  { id: "trade", label: "교환" }, // 친구 교환 — 가방 옆 (docs/work/trade/record.md, 2026-09-26 사용자 결정)
+  { id: "trade", label: "교환" }, // 친구 교환 — 가방 옆 (worklog/records/trade/record.md, 2026-09-26 사용자 결정)
 ];
 
 // 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
@@ -77,7 +77,7 @@ const MULTI_BUY = new Set(["tool", "evolution"]);
 
 // 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
 
-// 가이드북 — 구성은 docs/specs/s5.md "튜토리얼과 가이드북" 의 다섯 주제다.
+// 가이드북 — 구성은 docs/specs/game.md "튜토리얼과 가이드북" 의 다섯 주제다.
 // 숫자는 적지 않는다. 밸런스 값이 바뀌어도 이 문구가 어긋나지 않게 한다
 const GUIDE: { title: string; lines: string[] }[] = [
   {
@@ -163,7 +163,7 @@ let dexRows: DexEntry[] | null = null;
 let dexPick: string | null = null;
 let agentRows: AgentRow[] | null = null;
 let boxPage = 0;
-// 검색어 — 탭을 옮겨도 남는다 (docs/specs/s5.md "검색과 선택을 유지한다")
+// 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
 let boxQuery = "";
 let dexQuery = "";
 let pickQuery = "";
@@ -202,7 +202,7 @@ const DEX_REGIONS: readonly { id: string; label: string; from: number; to: numbe
   { id: "kalos", label: "칼로스", from: 650, to: 721 },
   { id: "alola", label: "알로라", from: 722, to: 809 },
   { id: "galar", label: "가라르", from: 810, to: 898 },
-  { id: "hisui", label: "히스이", from: 899, to: 905 }, // 최초 등장 지방 기준 (docs/specs/s5.md "전체 도감과 지방") — 레전드 아르세우스에서 처음 나온 종
+  { id: "hisui", label: "히스이", from: 899, to: 905 }, // 최초 등장 지방 기준 (docs/specs/game.md "전체 도감과 지방") — 레전드 아르세우스에서 처음 나온 종
   { id: "paldea", label: "팔데아", from: 906, to: 1025 },
 ];
 let dialog: Dialog | null = null;
@@ -522,7 +522,7 @@ function eggCard(egg: EggView): HTMLElement {
   return card;
 }
 
-// 알 열기 — 끝나면 부화 결과 창을 연다 (docs/specs/s5.md "부화 결과 창은 태어난 개체와 들어간 자리를 보여주고 `확인`만 둔다")
+// 알 열기 — 끝나면 부화 결과 창을 연다 (docs/specs/game.md "부화 결과 창은 태어난 개체와 들어간 자리를 보여주고 `확인`만 둔다")
 async function openEggAndShow(eggId: string): Promise<void> {
   if (!(await send("egg.open", eggId))) return;
   const r = lastReply;
@@ -533,7 +533,7 @@ async function openEggAndShow(eggId: string): Promise<void> {
 }
 
 // 부화 결과 — Figma `Box / Hatch Result` `389:9488`. 태어난 개체는 종·타입·레벨·성격과 들어간 자리.
-// 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/s5.md 단일 포켓몬 알)
+// 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/game.md 단일 포켓몬 알)
 function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
   const card = el("div", "nat-card");
   const info = el("div", "info-box");
@@ -1034,7 +1034,7 @@ function dexCell(row: DexEntry): HTMLElement {
   return cell;
 }
 
-// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (docs/work/play-bugs/record.md)
+// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (worklog/records/play-bugs/record.md)
 function markDexPick(): void {
   for (const cell of bodyEl.querySelectorAll<HTMLElement>(".dex-cell")) cell.setAttribute("aria-pressed", String(cell.dataset.slug === dexPick));
 }
@@ -2545,7 +2545,7 @@ function drawPetPage(pet: PetView): void {
 
 // ── 모달 · 진화 확인 ───────────────────────────────────────────────────────────
 // 후보마다 결과 종과 상태를 보인다. 가능한 후보가 하나면 그것을 고른 채로 연다.
-// `취소` 는 아무것도 바꾸지 않는다 (docs/specs/s5.md "진화 확인 화면에서 취소한 개체는 진화 가능 상태를 유지한다")
+// `취소` 는 아무것도 바꾸지 않는다 (docs/specs/game.md "진화 확인 화면에서 취소한 개체는 진화 가능 상태를 유지한다")
 
 function drawEvolve(petId: string, to?: string, itemId?: string): void {
   const pet = petOf(petId);
@@ -2578,7 +2578,7 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
     const item = picked.item ? view?.bag.find((b) => b.id === picked.item) : undefined;
     info.appendChild(el("div", "note", item ? `${item.name} 1개를 씁니다. 레벨·친밀도·성격은 그대로입니다.` : "레벨·친밀도·성격은 그대로입니다."));
-    // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/s5-scenarios.md 진화 흐름)
+    // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/scenarios.md 진화 흐름)
     info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));
     dialogEl.appendChild(info);
   }
@@ -2771,7 +2771,7 @@ function drawPickBox(slotIndex: number): void {
   const pets = q ? all.filter((p) => matchesName(p.name, q)) : all;
   const filled = view?.party.slots[slotIndex]?.state === "pokemon";
   dialogEl.append(...dialogHead("박스에서 고르기", filled ? `${slotIndex + 1}번 칸의 개체와 맞바꿉니다.` : `${slotIndex + 1}번 칸에 넣습니다.`));
-  // 박스 탭과 같은 검색 줄 (docs/work/s5-design-system-v2/plan.md "원작식 박스 구조와 검색")
+  // 박스 탭과 같은 검색 줄 (worklog/records/s5-design-system-v2/plan.md "원작식 박스 구조와 검색")
   if (all.length) {
     const bar = el("div", "search-row");
     bar.appendChild(
@@ -2860,7 +2860,7 @@ function drawAchievements(): void {
 // ── 모달 · 설정 ────────────────────────────────────────────────────────────────
 
 // 설정 모달 탭 — 일반·화면·연결·계정 네 칸. 탭을 바꿔도 모달 크기(560×500)가 같다.
-// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `Settings / Connect` `633:19096` (docs/work/trade/record.md "계정 탭 구조로 수정").
+// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `Settings / Connect` `633:19096` (worklog/records/trade/record.md "계정 탭 구조로 수정").
 // 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
 type SettingsTab = "general" | "display" | "agents" | "account";
 const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
@@ -3038,16 +3038,16 @@ function drawDisplay(scroll: HTMLElement): void {
       segmented(area, s.playArea === "region" ? "region" : "full", (id) => setSetting("playArea", id)),
     ),
   );
-  // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/s5.md 설정 계약)
+  // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
     const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
     scroll.appendChild(settingRow("영역", "포켓몬이 돌아다닐 영역을 그림", draw));
   }
 }
 
-// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (docs/work/trade/record.md "계정과 로그인")
+// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
 
-// CLI 한 줄 — 상태를 네 가지로 나눈다 (docs/specs/s5.md "설정과 연결")
+// CLI 한 줄 — 상태를 네 가지로 나눈다 (docs/specs/game.md "설정과 연결")
 function agentRow(row: AgentRow): HTMLElement {
   const usage = row.usage === "transcript" ? "토큰으로 적립" : "작업 시간으로 적립";
   // 상태 글자는 시안처럼 짧게 — 연결됨만 적립 방식을 붙이고, 확인이 필요하면 이유를 붙인다
@@ -3271,7 +3271,7 @@ let seq = 0;
 const nextReqId = (cmd: string, target: string): string => `ui:${Date.now()}:${++seq}:${cmd}:${target}`;
 
 // 응답이 없던 조작(timeout)은 결과를 모른다. 같은 조작을 다시 누르면 같은 요청 ID 로 보내 실행기가 한 번만 반영하게 한다.
-// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (docs/work/game-runtime/record.md "결과를 모를 때")
+// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (worklog/records/game-runtime/record.md "결과를 모를 때")
 let unknownReq: { key: string; id: string } | null = null;
 function reqIdFor(cmd: string, target: string, extra: Record<string, unknown>): string {
   const key = JSON.stringify([cmd, target, extra]);
@@ -3362,7 +3362,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && dialog) close();
 });
 
-// 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/s5.md "알림 배너의 개별 표시")
+// 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")
 function goTo(route: ManageRoute): void {
   if (route.to === "daycare") {
     close();

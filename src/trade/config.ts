@@ -1,4 +1,4 @@
-// 친구 교환 서버 설정과 버전 값 — docs/work/trade/record.md "프로젝트 구성", "버전 값"
+// 친구 교환 서버 설정과 버전 값 — worklog/records/trade/record.md "프로젝트 구성", "버전 값"
 //
 // data/online.json 은 공개해도 되는 값만 둔다(주소, publishable 키, 규약 번호).
 // 개발 중에는 환경 변수로 로컬 Supabase 를 가리킨다: POKEBUDDY_SUPABASE_URL, POKEBUDDY_SUPABASE_KEY

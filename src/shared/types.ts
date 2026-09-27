@@ -58,7 +58,7 @@ export interface SpeciesProfile {
 export type DayPart = "day" | "night";
 
 // ── 진화 조건 ──────────────────────────────────────────────────────────────────
-// data/evo.json 의 간선마다 하나. 원작 조건을 우리 게임의 조건으로 바꾼 결과다 (docs/specs/s5.md "진화 계약")
+// data/evo.json 의 간선마다 하나. 원작 조건을 우리 게임의 조건으로 바꾼 결과다 (docs/specs/game.md "진화 계약")
 //   level    원작 레벨 그대로
 //   affinity 친밀도 0~100. 원작 친밀도(0~255)를 환산하고, 우리에 없는 특수 조건도 여기로 모은다
 //   item     진화용 도구 슬러그. 원작 도구와 새 도구(bond-cord · blank-cd)를 함께 쓴다

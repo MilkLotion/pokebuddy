@@ -1,6 +1,6 @@
 // GitHub 로그인 확인 — 실제 GitHub 없이 가짜 클라이언트로 임시 서버·포트 고르기·코드 교환·취소·막힘을 본다
 //   npm run build && node dist/tools/selftest-github.js
-// 실제 GitHub 화면과 Supabase 리디렉션 허용 목록은 사용자 실기로 본다 (docs/work/trade/record.md "로그인·클라우드 저장 구현 계획")
+// 실제 GitHub 화면과 Supabase 리디렉션 허용 목록은 사용자 실기로 본다 (worklog/records/trade/record.md "로그인·클라우드 저장 구현 계획")
 import assert from "node:assert";
 import http from "node:http";
 import type { SupabaseClient } from "@supabase/supabase-js";

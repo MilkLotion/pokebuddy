@@ -112,7 +112,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     const percent = affinityPercent(pet);
     pet.affinityProgressMs += Math.round((earning * percent) / 100);
     // 오늘 작업 보너스로 쌓은 친밀도 진행(ms). 저장은 정수만 받으므로 ms 로 둔다.
-    // 친밀도로 보일 때는 affinityGainMs 로 나눈다 (docs/specs/s5.md "오늘 날짜의 파티 전체 작업 적립")
+    // 친밀도로 보일 때는 affinityGainMs 로 나눈다 (docs/specs/game.md "오늘 날짜의 파티 전체 작업 적립")
     if (work > 0) pet.daily.work += Math.round((work * percent) / 100);
     const gain = Math.floor(pet.affinityProgressMs / affinityGainMs);
     if (gain > 0) {

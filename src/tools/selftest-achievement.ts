@@ -1,7 +1,7 @@
 // 업적과 튜토리얼 자체 확인 — npm run build 뒤 node dist/tools/selftest-achievement.js
 //
 // 테스트 프레임워크 없이 assert 만. 조건은 코드가, 이름과 보상은 data/achievements.json 이 가진다.
-// 계약은 docs/specs/s5.md "파티 칸과 업적", "튜토리얼" 이다.
+// 계약은 docs/specs/game.md "파티 칸과 업적", "튜토리얼" 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { claim, defs, evaluate, isAchieved } from "../achievement/core";

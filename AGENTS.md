@@ -2,19 +2,24 @@
 
 ## Source of Truth and History
 
-Keep project knowledge in `docs/`.
+Public documentation lives in `docs/` and describes current behavior and rules. Work records live in `worklog/`, which is git-ignored and never published (decided 2026-09-27).
 
-- `docs/progress.md`: current stage, next action, and validation status.
-- `docs/design.md`: architecture and accepted decisions.
-- `docs/specs/<feature>.md`: current feature contracts.
-- `docs/work/<task>/record.md`: design, work, review, feedback, and revision in one record.
-- `docs/work/<task>/evidence/`: observations, JSON, and screenshots for that task.
-- `docs/history/YYYY-MM.md`: concise dated record of completed work cycles.
+Public (`docs/`, committed):
+- `docs/guide.md`: how to install and use the app.
+- `docs/design.md`: product structure and design principles.
+- `docs/specs/<feature>.md`: current feature contracts (`game.md`, `scenarios.md`, `balance.md`, `modules.md`, `ui-components.md`).
 - `docs/terms.md`: canonical name and meaning for each user-facing term.
+- `docs/contributing/`: workflow, writing rules, Figma notes.
 
-Keep only README, design, progress, terms, and guide at the docs root. Reuse an existing task record for follow-up work. Do not create separate plan/review/feedback files for each small edit. Keep existing split records in their task folder. Follow [the workflow](docs/contributing/workflow.md).
+Local only (`worklog/`, git-ignored):
+- `worklog/progress.md`: current stage, next action, and validation status.
+- `worklog/records/<task>/record.md`: design, work, review, feedback, and revision in one record.
+- `worklog/records/<task>/evidence/`: observations, JSON, and screenshots for that task.
+- `worklog/history/YYYY-MM.md`: concise dated record of completed work cycles.
 
-Link source files, data, commands, and review evidence. Resolve conflicts with `design.md` for decisions and `progress.md` for status. Code proves current behavior, not user approval. Preserve reasons, corrections, constraints, and context beside the relevant task. Link them from the affected specification. Record the source and whether a claim is confirmed or proposed. Never infer missing intent.
+Keep only README, design, terms, and guide at the docs root. Public docs must not link into `worklog/`; `scripts/check-docs.cjs` fails on such links. Code comments may name a worklog path as a private pointer. Reuse an existing task record for follow-up work. Do not create separate plan/review/feedback files for each small edit. Keep existing split records in their task folder. Follow [the workflow](docs/contributing/workflow.md).
+
+Link source files, data, commands, and review evidence. Resolve conflicts with `design.md` for decisions and `worklog/progress.md` for status. Code proves current behavior, not user approval. Preserve reasons, corrections, constraints, and context beside the relevant task. Link them from the affected specification. Record the source and whether a claim is confirmed or proposed. Never infer missing intent.
 
 ## Required Work Cycle
 

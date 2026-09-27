@@ -1,5 +1,5 @@
 // 놀이공간 영역 그리기 — 드래그로 사각형을 그리고 `적용` 하면 메인에 보낸다. 좌표는 창 안 좌표(DIP)다.
-// 저장은 메인이 한다. `취소`·Esc 는 아무것도 바꾸지 않는다 (docs/specs/s5.md "놀이공간 변경을 취소하면 적용 전 영역을 유지한다")
+// 저장은 메인이 한다. `취소`·Esc 는 아무것도 바꾸지 않는다 (docs/specs/game.md "놀이공간 변경을 취소하면 적용 전 영역을 유지한다")
 import type { RegionInit, RegionRect } from "../shared/manage.js";
 
 function need<T extends HTMLElement>(id: string, ctor: new () => T): T {

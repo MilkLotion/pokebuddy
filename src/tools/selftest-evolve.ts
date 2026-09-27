@@ -1,7 +1,7 @@
 // 진화 판정과 실행 자체 확인 — npm run build 뒤 node dist/tools/selftest-evolve.js
 //
 // 테스트 프레임워크 없이 assert 만. 조건은 data/evo.json 의 실제 값을 쓴다.
-// 계약은 docs/specs/s5.md "진화 계약"이다.
+// 계약은 docs/specs/game.md "진화 계약"이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { candidates, canEvolve, dayPartOf, evolve } from "../dex/evolve";
@@ -153,7 +153,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(10) 친밀도 조건  ok\n");
 }
 
-// (12) 공유 sid — 코스모움은 낮에 솔가레오가 되고 루나아라도 함께 받는다 (docs/specs/s5.md "코스모움에서 진화를 한 번 실행하면")
+// (12) 공유 sid — 코스모움은 낮에 솔가레오가 되고 루나아라도 함께 받는다 (docs/specs/game.md "코스모움에서 진화를 한 번 실행하면")
 {
   const s = seed({ species: "cosmoem", level: 53, evolved: ["cosmog"], stage: 1 });
   assert.deepStrictEqual(candidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["solgaleo"], "낮에는 솔가레오만");
