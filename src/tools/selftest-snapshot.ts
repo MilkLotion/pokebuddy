@@ -90,6 +90,17 @@ function seed(): SaveV3 {
   process.stdout.write("(5) 잠긴 칸은 뒤에, 출처 없음  ok\n");
 }
 
+// (5b) 개체 상세 튜토리얼 — 끝내거나 건너뛰기 전까지 켜져 있다
+{
+  const s = seed();
+  assert.equal(snapshot(s).detailTutorial, true, "처음에는 보여 줄 차례");
+  s.tutorials.detail = { state: "done", steps: 5 };
+  assert.equal(snapshot(s).detailTutorial, false, "끝내면 다시 보이지 않는다");
+  s.tutorials.detail = { state: "skipped", steps: 0 };
+  assert.equal(snapshot(s).detailTutorial, false, "건너뛰어도 다시 보이지 않는다");
+  process.stdout.write("(5b) 개체 상세 튜토리얼 표시 여부  ok\n");
+}
+
 // (6) 박스는 사용 칸 수와 개체를 준다
 {
   const v = snapshot(seed());

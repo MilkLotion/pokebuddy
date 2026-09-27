@@ -213,6 +213,17 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return node;
 };
 
+// 남은 시간 — 1분 미만은 초, 1시간 미만은 분(올림), 그 위는 시간과 분. 쿨타임·알 준비가 10분·몇 시간이라 초로 쓰면 읽기 어렵다
+function waitWord(sec: number): string {
+  const s = Math.max(0, Math.ceil(sec));
+  if (s < 60) return `${s}초`;
+  const min = Math.ceil(s / 60);
+  if (min < 60) return `${min}분`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h}시간 ${m}분` : `${h}시간`;
+}
+
 const button = (cls: string, text?: string): HTMLButtonElement => {
   const b = el("button", cls || undefined, text);
   b.type = "button";
@@ -461,7 +472,6 @@ function petCard(pet: PetView): HTMLElement {
     card.appendChild(box);
   }
   card.addEventListener("click", () => openPet(pet.id));
-  if (pet.hidden) card.dataset.tut = "party"; // 파티 튜토리얼은 숨긴 칸 가운데 첫 칸을 밝힌다
   const state = `${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
   if (pet.forms && pet.forms.length > 1) {
     // 공유 sid 계열 — 마우스를 올리면 박스와 같은 모습 툴팁. 두 툴팁이 겹치지 않게 title 대신 툴팁 머리 줄에 상태를 적는다
@@ -500,7 +510,7 @@ function eggCard(egg: EggView): HTMLElement {
   const card = el("div", "egg");
   card.appendChild(eggIcon(egg.kind, "shell"));
   card.appendChild(el("div", undefined, egg.name));
-  card.appendChild(el("div", "note", egg.ready ? "준비 완료" : `${egg.percent}% · ${egg.remainSec}초`));
+  card.appendChild(el("div", "note", egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`));
   card.appendChild(el("div", "note", `쓰다듬기 ${egg.actions.pat} · 노래 ${egg.actions.song}`));
 
   // 열기는 한 줄을 혼자 쓴다. 돌봄 두 개와 나란히 두면 글자가 줄바꿈된다
@@ -1294,7 +1304,7 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
     case "fullness":
     case "fullness-full-buff":
       if (pet.fullness >= 100) return "배가 불러요.";
-      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${pet.feedInSec}초).`;
+      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${waitWord(pet.feedInSec)}).`;
     case "shiny-on":
       return pet.shiny ? "이미 이로치예요." : null;
     case "shiny-off":
@@ -2246,20 +2256,16 @@ interface TutorialText {
 }
 const TUTORIAL_TEXT: Record<string, TutorialText> = {
   shop: {
-    name: "상점", tab: "shop", title: "랜덤알로 새 포켓몬을 만나 보세요", body: "시작 포인트로 하나 살 수 있어요.",
-    guideTitle: "랜덤알로 새 포켓몬을 만나 보세요", guideBody: "시작 포인트로 알을 살 수 있어요.", guideButton: "상점으로 가기",
+    name: "상점", tab: "shop", title: "시작 포인트로 랜덤알 하나를 살 수 있어요", body: "",
+    guideTitle: "시작 포인트로 랜덤알 하나를 살 수 있어요", guideBody: "", guideButton: "상점으로 가기",
   },
   hatch: {
     name: "부화", tab: "box", title: "알을 돌보면 더 빨리 준비돼요", body: "준비가 끝나면 열기를 눌러야 부화해요.",
     guideTitle: "알은 박스의 돌보미집에 들어갔어요", guideBody: "", guideButton: "박스로 가기",
   },
-  party: {
-    name: "파티", tab: "party", title: "새 포켓몬은 숨긴 상태로 들어와요", body: "칸을 눌러 상세에서 꺼내기를 누르면 바탕화면에 나타나요. 초상의 몬스터볼은 숨김 표시예요.",
-    guideTitle: "새 포켓몬이 파티에 들어왔어요", guideBody: "파티 탭에서 새 포켓몬을 꺼낼 수 있어요.", guideButton: "파티로 가기",
-  },
 };
-// 업적 안내 — 헤더의 업적 아이콘을 밝힌다 (Figma 시안 G `514:2444`). 어느 탭에서든 보인다
-const ACHIEVEMENT_GUIDE = { title: "보상을 받으면 파티 칸이 하나 열려요", body: "업적창에서 보상 받기를 눌러 주세요.", button: "업적 보기" };
+// 업적 튜토리얼 — 헤더의 업적 아이콘을 밝힌다 (Figma 시안 G `514:2444`). 어느 탭에서든 보인다
+const ACHIEVEMENT_GUIDE = { title: "보상을 받으면 파티 칸이 하나 열려요", body: "", button: "업적 보기" };
 
 interface CoachSpec {
   step: string;
@@ -2272,27 +2278,58 @@ const COACH = { pad: 8, gap: 12, width: 280, margin: 8 };
 
 let coachEl: HTMLElement | null = null;
 
+// 개체 상세 튜토리얼 — 파티 개체 상세를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 99 766:17274 ~ 770:709)
+const DETAIL_STEPS = [
+  { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
+  { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
+  { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격은 민트로 바꿔요." },
+  { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
+  { tut: "detail-manage", title: "교체와 박스 보관", body: "박스에 보관하면 성장이 멈춰요." },
+] as const;
+let detailStep = 0;
+
 function drawTutorial(): void {
   coachEl?.remove();
   coachEl = null;
   const id = view?.tutorial ?? null;
-  if (id && view && !dialog && !detailPet) {
+  const detailInParty = detailPet != null && slotOfPet(detailPet) != null;
+  if (view && !dialog && detailInParty && view.detailTutorial) {
+    const step = DETAIL_STEPS[detailStep];
+    const target = step ? bodyEl.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
+    if (step && target) {
+      const last = detailStep === DETAIL_STEPS.length - 1;
+      coachEl = coachLayer("detail", target, {
+        step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`,
+        title: step.title,
+        body: step.body,
+        button: last ? "확인" : "다음",
+        onGo: () => {
+          if (last) void send("tutorial.done", "detail", { steps: DETAIL_STEPS.length });
+          else {
+            detailStep += 1;
+            drawTutorial();
+          }
+        },
+      });
+    }
+  } else if (id && view && !dialog && !detailPet) {
     const text = TUTORIAL_TEXT[id];
     if (id === "achievement") {
       const done = view.achievements.list.find((a) => a.state === "achieved");
       const target = document.getElementById("open-achievements");
       if (done && target) {
-        coachEl = coachLayer(id, target, { step: `업적 달성 · ${done.name}`, ...ACHIEVEMENT_GUIDE, onGo: () => open({ kind: "achievements" }) });
+        coachEl = coachLayer(id, target, { step: "튜토리얼 · 업적", ...ACHIEVEMENT_GUIDE, onGo: () => open({ kind: "achievements" }) });
       }
     } else if (text && tab === text.tab) {
       const target = bodyEl.querySelector<HTMLElement>(`[data-tut="${id}"]`);
-      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name} 1 / 1`, title: text.title, body: text.body, button: "다음", onGo: () => void send("tutorial.done", id, { steps: 1 }) });
+      // 한 단계뿐이면 "1 / 1" 을 붙이지 않고 단추는 "확인" — 바탕화면 튜토리얼과 같다
+      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id, { steps: 1 }) });
     } else if (text) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다
       const target = tabsEl.children[TABS.findIndex((t) => t.id === text.tab)] as HTMLElement | undefined;
       if (target) {
         coachEl = coachLayer(id, target, {
-          step: `튜토리얼 · ${text.name} 1 / 1`,
+          step: `튜토리얼 · ${text.name}`,
           title: text.guideTitle,
           body: text.guideBody,
           button: text.guideButton,
@@ -2483,6 +2520,7 @@ function drawPetPage(pet: PetView): void {
   if (inParty) {
     const action = pet.hidden ? "꺼내기" : "볼에 넣기";
     const ball = button(`ball-toggle ${pet.hidden ? "closed" : "open"}`);
+    ball.dataset.tut = "detail-ball";
     ball.title = action;
     ball.setAttribute("aria-label", action);
     ball.addEventListener("click", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id));
@@ -2521,9 +2559,10 @@ function drawPetPage(pet: PetView): void {
   if (inParty) {
     main.appendChild(label("돌봄"));
     const care = el("div", "care-row");
+    care.dataset.tut = "detail-care";
     const full = pet.fullness >= 100;
     care.append(
-      pageButton(full ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${pet.feedInSec}초`, true, !pet.feedReady || full, () => void send("feed", pet.id)),
+      pageButton(full ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`, true, !pet.feedReady || full, () => void send("feed", pet.id)),
       pageButton(pet.playReady ? "놀아주기" : "놀아주기 · 쉬는 중", false, !pet.playReady, () => void send("play", pet.id)),
     );
     main.appendChild(care);
@@ -2537,18 +2576,19 @@ function drawPetPage(pet: PetView): void {
     : ready.length
       ? listRow(`진화 · ${ready.map((e) => e.name).join(" · ")}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
       : listRow(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve); // 필요 조건은 화면에 없는 조건이라 남긴다
-  main.appendChild(listCard(evoRow, listRow(`성격 · ${pet.nature}`, null, [], () => open({ kind: "nature", petId: pet.id }))));
+  const growth = listCard(evoRow, listRow(`성격 · ${pet.nature}`, null, [], () => open({ kind: "nature", petId: pet.id })));
+  growth.dataset.tut = "detail-growth";
+  main.appendChild(growth);
 
   if (inParty) {
     main.appendChild(label("표시"));
-    main.appendChild(
-      listCard(
-        listRow("크기", null, [sizeButtons(pet)]),
-      ),
-    );
+    const size = listCard(listRow("크기", null, [sizeButtons(pet)]));
+    size.dataset.tut = "detail-size";
+    main.appendChild(size);
   }
 
   const manage = el("div", "manage-row");
+  manage.dataset.tut = "detail-manage";
   if (inParty) {
     manage.append(pageButton("교체", false, false, () => open({ kind: "pick-box", slotIndex: slot })), pageButton("박스에 보관", false, false, () => void send("party.keep", pet.id)));
   } else {

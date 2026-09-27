@@ -193,7 +193,7 @@ function seed(): SaveV3 {
   process.stdout.write("(10) 튜토리얼 상태 기록  ok\n");
 }
 
-// (11) 튜토리얼 대기열 — 첫 선택 → 첫 돌봄·상점, 첫 돌봄 끝 → 놀이공간, 랜덤알 구매 → 부화, 새 개체 → 파티. 이미 한 행동은 완료로 넘긴다
+// (11) 튜토리얼 대기열 — 첫 선택 → 첫 돌봄·상점, 첫 돌봄 끝 → 놀이공간(첫 돌봄 바로 뒤), 랜덤알 구매 → 부화. 이미 한 행동은 완료로 넘긴다
 {
   const s = empty(T0);
   assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
@@ -201,11 +201,17 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0), ["first-care", "shop"], "같은 순간이면 첫 돌봄이 상점보다 먼저");
   assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "두 번 불러도 다시 넣지 않는다");
+  // 바탕화면에 나온 포켓몬이 없으면 첫 돌봄은 차례를 넘긴다 — 설정창 튜토리얼을 막지 않는다. 다시 꺼내면 돌아온다
+  for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = true;
+  assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄이 막히면 상점이 먼저");
+  for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
+  assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" }, "꺼내면 첫 돌봄이 다시 앞");
   // 밥 주기 한 번이면 첫 돌봄은 이미 한 행동으로 완료 — 그 뒤 놀이공간이 줄에 든다
   s.totals.fed += 1;
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["playground"]);
   assert.equal(s.tutorials["first-care"]?.state, "done");
-  assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "먼저 줄에 든 상점이 놀이공간보다 먼저");
+  assert.equal(s.tutorials.playground?.queuedAt, s.tutorials["first-care"]?.queuedAt, "놀이공간은 첫 돌봄의 대기 시각을 물려받는다");
+  assert.deepStrictEqual(currentTutorial(s), { id: "playground", surface: "stage" }, "놀이공간이 첫 돌봄 바로 뒤, 상점보다 먼저");
   assert.ok(skip(s, "playground").ok);
 
   assert.ok(buy(s, "random", T0 + 2, () => 0.5).ok);
@@ -216,7 +222,7 @@ function seed(): SaveV3 {
   const egg = s.eggs[0]!;
   Object.assign(egg, { ready: true, remainMs: 0, actions: { pat: 1, song: 0 }, candidates: ["rattata"] });
   assert.ok(open(s, egg.id, T0 + 3, () => 0.99).ok);
-  assert.deepStrictEqual(queueTutorials(s, T0 + 3), [], "파티 튜토리얼은 껐다 — 새 개체가 꺼낸 상태로 들어온다");
+  assert.deepStrictEqual(queueTutorials(s, T0 + 3), [], "새 개체를 얻어도 대기열 튜토리얼은 없다 — 개체 상세 튜토리얼은 화면이 띄운다");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
   assert.equal(currentTutorial(s), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
@@ -229,6 +235,7 @@ function seed(): SaveV3 {
   assert.ok(buy(s, "random", T0, () => 0.5).ok);
   s.eggSeq = 0; // 산 기록이 없는 옛 저장처럼 — 상점이 넘어가지 않게
   s.totals.fed = 1; // 첫 돌봄은 이미 했다 — 상점과 부화의 순서만 본다
+  s.tutorials.playground = { state: "skipped", steps: 0 }; // 놀이공간도 넘겼다
   queueTutorials(s, T0);
   assert.equal(currentTutorial(s)?.id, "shop", "같은 순간이면 상점이 부화보다 먼저");
 
@@ -240,16 +247,16 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 튜토리얼 순서 · 옛 저장  ok\n");
 }
 
-// (12b) 업적 안내 — 달성하면 줄에 들고, 한 번 받으면 끝. 파티 튜토리얼은 껐다
+// (12b) 업적 튜토리얼 — 달성하면 줄에 들고, 한 번 받으면 끝
 {
   const s = empty(T0);
   assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
   s.totals.fed = 1;
   s.eggSeq = 1; // 상점도 이미 했다
+  s.tutorials.playground = { state: "skipped", steps: 0 }; // 놀이공간도 넘겼다
   s.pets.push({ ...s.pets[0]!, id: "p9" }); // 파티가 가득 차 박스로 간 새 개체 — 파티 칸에 없다
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: null };
   queueTutorials(s, T0);
-  assert.notEqual(s.tutorials.party?.state, "active", "파티 튜토리얼은 껐다 — 줄에 들지 않는다");
   assert.equal(currentTutorial(s)?.id, "achievement");
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: T0 + 1 };
   queueTutorials(s, T0 + 1);

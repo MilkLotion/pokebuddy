@@ -429,6 +429,7 @@ function showPetMenu(id: string): void {
         },
         onClosed: () => {
           firstCareAvoid = undefined;
+          firstCareMenu = null; // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게
           syncCoach();
         },
       }

@@ -319,7 +319,8 @@ function renderCoach(next: CoachView | null): void {
   x.setAttribute("aria-label", "튜토리얼 닫기");
   x.addEventListener("click", () => act("skip"));
   head.append(coachEl("span", "step", next.step), x);
-  bubble.append(head, coachEl("div", "title", next.title), coachEl("div", "body", next.body));
+  bubble.append(head, coachEl("div", "title", next.title));
+  if (next.body) bubble.appendChild(coachEl("div", "body", next.body)); // 본문이 없으면 제목만
   // 버튼 문구가 없는 단계는 행동으로만 넘어간다 — 첫 돌봄은 우클릭·밥 주기 (Figma `579:16959`)
   if (next.button) {
     const foot = coachEl("div", "foot");
