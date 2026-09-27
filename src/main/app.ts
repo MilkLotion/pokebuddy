@@ -31,6 +31,7 @@ import { langOf, natureName, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
+import { createHungerBubbles } from "./hunger-bubble";
 import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
@@ -488,8 +489,10 @@ async function refreshParty(): Promise<void> {
   tray?.refresh();
 }
 
-// 말풍선을 보이는 시간 — 스펙 미확정이라 2026-09-25 구현에서 정했다 (docs/work/game-runtime/record.md "배고픔 말풍선")
+// 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
+// (docs/work/game-runtime/record.md "배고픔 말풍선 되풀이")
 const BUBBLE_MS = 5000;
+const hungerBubbles = createHungerBubbles();
 
 // 게임 시간 — 흐른 만큼 한 번에 적용한다. 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 부른다.
 // 주기는 저장 주기와 같다. 주기보다 크게 벌어진 틈(앱 종료·절전)은 `game.tick` 이 버린다
@@ -511,9 +514,14 @@ function stateTick(): void {
       lastTick = now;
       const events = game.tick({ workMs });
       if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
-      // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어갈 때 한 번. 숨긴 포켓몬은 무대에 없어 띄우지 않는다
-      if (events && !userHidden) for (const e of events.hungerEnter) if (stage.petOf(e.petId)) stage.say(e.petId, t(e.zone === "starving" ? "bubble.starving" : "bubble.hungry"), BUBBLE_MS);
       worker.refresh();
+      // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
+      // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
+      if (!userHidden) {
+        const st = stage;
+        const shown = (worker.save()?.pets ?? []).filter((p) => st.petOf(p.id));
+        for (const b of hungerBubbles.due(shown, now)) st.say(b.id, t(b.zone === "starving" ? "bubble.starving" : "bubble.hungry"), BUBBLE_MS);
+      }
       notifier?.tick(); // 부화 준비·진화 가능·업적 미수령을 배너 줄에 세운다 (src/notify)
       syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
       syncCoach();

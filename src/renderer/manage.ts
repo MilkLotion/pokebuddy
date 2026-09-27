@@ -68,9 +68,6 @@ const SLEEP_CHOICES = [
 ];
 
 
-// 한 번에 살 수 있는 최대 수량. `[스펙 미확정]` 정식 상한이 정해지면 여기를 고친다
-const BUY_MAX = 10;
-
 // 여러 개 살 수 있는 상품 — 알·포켓몬·파티 칸은 하나씩만 산다
 const MULTI_BUY = new Set(["tool", "evolution"]);
 
@@ -2064,9 +2061,9 @@ function drawBuy(productId: string, qty: number): void {
     close();
     return;
   }
-  // 살 수 있는 개수는 포인트와 상한 중 작은 쪽이다. 값이 0이면 개수를 따지지 않는다
-  const affordable = item.price > 0 ? Math.floor(view.points / item.price) : BUY_MAX;
-  const cap = Math.max(1, Math.min(BUY_MAX, affordable));
+  // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다
+  const afford = item.price > 0 ? Math.floor(view.points / item.price) : 1;
+  const cap = Math.max(1, Math.min(afford, item.room ?? afford));
   const many = MULTI_BUY.has(item.category);
   const count = many ? Math.max(1, Math.min(qty, cap)) : 1;
   const total = item.price * count;
@@ -2082,7 +2079,11 @@ function drawBuy(productId: string, qty: number): void {
     const plus = button("", "+");
     plus.disabled = count >= cap;
     plus.addEventListener("click", () => open({ kind: "buy", productId, qty: count + 1 }));
-    box.append(minus, el("span", "count", String(count)), plus);
+    // `최대` — 살 수 있는 만큼 한 번에 (05 `Shop / Buy` 387:6618 의 Quantity Stepper Show Max)
+    const max = button("max", "최대");
+    max.disabled = count >= cap;
+    max.addEventListener("click", () => open({ kind: "buy", productId, qty: cap }));
+    box.append(minus, el("span", "count", count.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `최대 ${cap.toLocaleString("ko-KR")}`));
     row.append(el("span", undefined, "수량"), box);
     dialogEl.appendChild(row);
   }
@@ -2109,12 +2110,9 @@ function drawBuy(productId: string, qty: number): void {
   dialogEl.appendChild(actions(...acts));
 }
 
-// 여러 개 사기 — 구매는 한 번에 하나다. 순서대로 보내고 하나라도 걸리면 거기서 멈춘다
+// 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
 async function buy(productId: string, count: number): Promise<void> {
-  for (let i = 0; i < count; i += 1) {
-    const ok = await send("shop.buy", productId, {}, { keepOpen: i < count - 1 });
-    if (!ok) return;
-  }
+  await send("shop.buy", productId, count > 1 ? { count } : {});
 }
 
 // ── 모달 · 개체와 칸 고르기 ────────────────────────────────────────────────────
@@ -2587,6 +2585,7 @@ const REASON: Record<string, string> = {
   "not-pokemon": "그 칸에 개체가 없어요.",
   "not-enough-points": "포인트가 모자라요.",
   "daycare-full": "돌보미집이 가득 찼어요.",
+  "bag-full": "가방이 가득 찼어요. 한 종류에 999개까지예요.",
   "sold-out": "이 알에서 나올 포켓몬을 모두 모았어요.",
   "bad-form": "고를 수 없는 모습이에요.",
   "not-shared": "모습을 바꿀 수 없는 포켓몬이에요.",

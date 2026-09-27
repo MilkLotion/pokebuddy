@@ -109,6 +109,7 @@ export interface ShopItemView {
   category: ShopCategory;
   affordable: boolean; // 지금 포인트로 살 수 있다
   blocked?: string; // 살 수 없는 다른 이유 — 화면이 그대로 보여 준다
+  room?: number; // 도구 — 가방에 더 담을 수 있는 개수 (최대 999 − 가진 개수). 구매 수량의 상한
 }
 
 export type DexState = "obtained" | "unlocked" | "locked";

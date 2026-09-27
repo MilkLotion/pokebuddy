@@ -4,6 +4,7 @@
 // 설계는 docs/work/game-runtime/record.md "놀이공간·설정의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../main/hunger-bubble";
 import { playAreaRect } from "../main/layout";
 import { setSize } from "../party/home";
 import { DEFAULT_SIZE_LEVEL, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules";
@@ -136,4 +137,58 @@ function seedPet(): SaveV3 {
   return s;
 }
 
-process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형)\n");
+// (6) 배고픔 말풍선 — 들어갈 때 한 번, 머무는 동안 배고픔 10분·매우 배고픔 5분마다. 벗어나면 멈추고 다시 들어가면 바로
+{
+  const b = createHungerBubbles();
+  const { hungry, starving } = HUNGER_BUBBLE_RULES.repeatMs;
+  const ids = (list: Array<{ id: string }>) => list.map((x) => x.id);
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 80 }], T0)), [], "배부름·보통은 띄우지 않는다");
+  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 30 }], T0), [{ id: "p1", zone: "hungry" }], "배고픔에 들어가면 바로");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 29 }], T0 + hungry - 1)), [], "배고픔은 10분 안에 다시 띄우지 않는다");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 28 }], T0 + hungry)), ["p1"], "10분이 지나면 다시");
+  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 10 }], T0 + hungry + 1), [{ id: "p1", zone: "starving" }], "매우 배고픔에 들어가면 바로");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 9 }], T0 + hungry + 1 + starving)), ["p1"], "매우 배고픔은 5분마다");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 70 }], T0 + hungry + starving + 2)), [], "밥을 먹어 벗어나면 멈춘다");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 30 }], T0 + hungry + starving + 3)), ["p1"], "다시 들어가면 바로");
+  assert.deepStrictEqual(ids(b.due([], T0 + hungry + starving + 4)), [], "무대에서 빠진 마리는 기록을 지운다");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 30 }], T0 + hungry + starving + 5)), ["p1"], "다시 나오면 처음부터");
+  process.stdout.write("(6) 배고픔 말풍선 되풀이  ok\n");
+}
+
+// (7) 여러 개 구매 — 명령 하나(count)로 한 거래. 모자라면 하나도 사지 않는다. 알·0개 이하·소수는 거절
+{
+  let state: SaveV3 | null = seedPet();
+  state.points.balance = 100;
+  const ex = createExecutor({ read: () => structuredClone(state), write: (s) => ((state = s), true), now: () => T0, rand: () => 0.5 }, HANDLERS);
+  const ok3 = ex.run({ id: "buy-3", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  assert.ok(ok3.ok, JSON.stringify(ok3));
+  assert.equal(state?.bag["exp-candy-xs"], 3, "세 개가 가방에");
+  assert.equal(state?.points.balance, 40, "60P 를 한 번에 쓴다");
+  const short = ex.run({ id: "buy-9", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  assert.equal(short.ok, false, "40P 로 세 개(60P)는 못 산다");
+  assert.equal(state?.bag["exp-candy-xs"], 3, "모자라면 하나도 사지 않는다");
+  assert.equal(state?.points.balance, 40);
+  for (const count of [0, -1, 1.5, "2"]) {
+    const bad = ex.run({ id: `buy-bad-${String(count)}`, name: "shop.buy", args: { productId: "exp-candy-xs", count } });
+    assert.equal(bad.ok, false, `수량 ${String(count)} 거절`);
+  }
+  state.points.balance = 1000;
+  const eggs = ex.run({ id: "buy-egg", name: "shop.buy", args: { productId: "random", count: 2 } });
+  assert.equal(eggs.ok, false, "알은 하나씩만");
+  assert.equal(state?.eggs.length, 0);
+  assert.equal(state?.points.balance, 1000);
+  // 가방 최대 999 — 가진 개수를 넘겨 사지 못한다. 넘치는 묶음은 하나도 사지 않는다
+  state.points.balance = 100_000;
+  state.bag["exp-candy-xs"] = 997;
+  const over = ex.run({ id: "buy-over", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  assert.equal(over.ok, false, "997 + 3 은 999 를 넘는다");
+  assert.equal(state?.bag["exp-candy-xs"], 997, "넘치면 하나도 사지 않는다");
+  const fit = ex.run({ id: "buy-fit", name: "shop.buy", args: { productId: "exp-candy-xs", count: 2 } });
+  assert.ok(fit.ok, JSON.stringify(fit));
+  assert.equal(state?.bag["exp-candy-xs"], 999, "999 까지는 산다");
+  const full = ex.run({ id: "buy-full", name: "shop.buy", args: { productId: "exp-candy-xs" } });
+  assert.equal(full.ok ? "ok" : full.reason, "bag-full", "가득 차면 bag-full");
+  process.stdout.write("(7) 여러 개 구매 · 가방 최대 999  ok\n");
+}
+
+process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매)\n");

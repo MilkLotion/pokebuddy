@@ -11,7 +11,7 @@ import type { DexOptions } from "../dex/data";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import type { Rand } from "../egg/hatch";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { maxEggNo } from "../save/v3.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 import { canGiveEgg, eggPool, find, inRandomEgg, isSingleEgg, singleLeft, slotPrice } from "./catalog.js";
@@ -20,6 +20,7 @@ export type BuyFailure =
   | "no-product" // 그런 상품이 없다
   | "not-enough" // 포인트가 모자라다
   | "daycare-full" // 돌보미집이 가득 찼다
+  | "bag-full" // 그 도구가 가방에 이미 최대 개수(SHOP_V3_RULES.bagMax)만큼 있다
   | "no-locked-slot" // 상점으로 열 칸이 남지 않았다
   | "not-unlocked" // 해금하지 않은 종이다
   | "sold-out"; // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
@@ -93,6 +94,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   if (product?.kind === "egg" && save.eggs.length >= EGG_V3_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
   if (product?.kind === "egg" && !canGiveEgg(save, product.ref, opts)) return { ok: false, reason: "sold-out" };
   if (product?.kind === "species" && !save.dex.unlocked.includes(product.ref)) return { ok: false, reason: "not-unlocked" };
+  if (product?.kind === "tool" && (save.bag[product.ref] ?? 0) >= SHOP_V3_RULES.bagMax) return { ok: false, reason: "bag-full" };
 
   save.points.balance -= price;
   const done: BuyResult = { ok: true, spent: price, balance: save.points.balance };

@@ -4,7 +4,7 @@
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { canGiveEgg, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry, ShopItemView } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
@@ -42,6 +42,11 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   const add = (item: ShopItemView): void => {
     out.push({ ...item, affordable: save.points.balance >= item.price });
   };
+  // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (SHOP_V3_RULES.bagMax)
+  const bagRoom = (id: string): Pick<ShopItemView, "room" | "blocked"> => {
+    const room = Math.max(0, SHOP_V3_RULES.bagMax - (save.bag[id] ?? 0));
+    return room > 0 ? { room } : { room, blocked: `가방이 가득 찼어요 (최대 ${SHOP_V3_RULES.bagMax}개)` };
+  };
 
   // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다
   const daycareFull = save.eggs.length >= EGG_V3_RULES.maxEggs;
@@ -70,7 +75,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   // 도구 — 상점에 파는 것만
   for (const [id, item] of Object.entries(items(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
-    add({ id, name: item.ko, note: "가방에 담긴다", price: item.price, category: "tool", affordable: false });
+    add({ id, name: item.ko, note: "가방에 담긴다", price: item.price, category: "tool", affordable: false, ...bagRoom(id) });
   }
 
   // 진화용 도구 — 종류와 무관하게 같은 값이다
@@ -78,7 +83,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     if (isMetaKey(id)) continue;
     const price = toolPrice(id, opts);
     if (price === null) continue;
-    add({ id, name: item.ko, note: `대상 ${item.targets.length}종`, price, category: "evolution", affordable: false });
+    add({ id, name: item.ko, note: `대상 ${item.targets.length}종`, price, category: "evolution", affordable: false, ...bagRoom(id) });
   }
 
   // 파티 칸 — 순서마다 값이 다르다

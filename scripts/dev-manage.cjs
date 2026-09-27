@@ -162,8 +162,8 @@ app.whenReady().then(async () => {
         if (flag === "--click" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).click(); true`));
         // --scroll 은 그 요소가 보이게 스크롤한다 — 모달 아래쪽 줄을 찍을 때 쓴다
         if (flag === "--scroll" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).scrollIntoView({ block: "center" }); true`));
-        // --click-text 는 그 글자인 첫 단추를 누른다 — 선택자로 가르기 어려운 설정 단추용
-        if (flag === "--click-text" && value) step = step.then(() => click(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(value)}).click(); true`));
+        // --click-text 는 그 글자인 첫 단추를 누른다 — 선택자로 가르기 어려운 설정 단추용. 제목(.title)이 그 글자인 줄 단추(상점 줄 등)도 된다
+        if (flag === "--click-text" && value) step = step.then(() => click(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(value)} || b.querySelector(".title")?.textContent.trim() === ${JSON.stringify(value)}).click(); true`));
         // --drag 는 두 요소의 가운데를 잇는 마우스 입력을 창에 넣는다 — 포인터 이벤트로 끄는 박스 칸용
         if (flag === "--drag" && value && process.argv[at + 2]) {
           const to = process.argv[at + 2];

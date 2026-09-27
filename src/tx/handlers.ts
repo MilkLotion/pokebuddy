@@ -124,11 +124,23 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
   if (!isObj(args)) return { ok: false, reason: "bad-args" };
   const productId = typeof args.productId === "string" ? args.productId : "";
   if (!productId) return { ok: false, reason: "bad-args" };
-  const res = buy(draft, productId, ctx.now, ctx.rand);
+  // 수량 — 없으면 1. 여러 개는 값이 있는 도구만 된다(알·포켓몬·파티 칸·0P 상품은 하나씩). 상한은 포인트다
+  const count = args.count === undefined ? 1 : args.count;
+  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
+  let res = buy(draft, productId, ctx.now, ctx.rand);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  let spent = res.spent ?? 0;
+  if (count > 1) {
+    if (!spent || res.eggId || res.petId || res.slotIndex !== undefined) return { ok: false, reason: "bad-args" };
+    for (let i = 1; i < count; i += 1) {
+      res = buy(draft, productId, ctx.now, ctx.rand);
+      if (!res.ok) return { ok: false, reason: res.reason ?? "failed" }; // 실행기가 사본을 버린다 — 앞서 산 것도 반영하지 않는다
+      spent += res.spent ?? 0;
+    }
+  }
   return {
     ok: true,
-    result: { productId, spent: res.spent, balance: res.balance, eggId: res.eggId, petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox },
+    result: { productId, count, spent, balance: res.balance, eggId: res.eggId, petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox },
   };
 };
 
