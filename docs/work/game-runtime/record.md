@@ -1780,3 +1780,30 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 검수: `npm run build`, `npm run selftest` 통과. `scripts/dev-manage.cjs` 로 경험사탕M 3개(보유 1,240P → 최대 15, 합계 240P, 구매 후 보유 1,000P), 랜덤전설알(포인트 모자람), 가방 패널을 찍어 시안과 비교했다.
 - Figma 글자 다시 배치(2026-09-27, 사용자 "남은것도 진행하자", 전용 세션 없음): `docs/contributing/figma.md` 절차대로 이 세션이 Chrome 에서 했다. Figma Agent `font-files` 200, Chrome 탭 `fetch` 200 확인. `PB/Type/Label/Semibold` 18→19→18, `PB/Type/Caption/Regular` 16→17→16. 두 번 다 되돌리는 입력이 한 번 빠져 편집 창에서 다시 넣었고, 끝에 스타일 9개가 모두 원래 값인 것을 `use_figma` 로 확인했다. 결과: `Party / Save Failing` 제목 `716:18533` 131×18, 본문 `716:18535` 574×32(두 줄), 안내 틀 `716:18357` 높이 79. Figma 는 낱말 단위 줄바꿈이 없어 본문이 "저장 / 되면"으로 끊긴다(앱은 `keep-all`).
 - 수정(사용자 "시안대로 옅은 청록으로 바꿔"): 막힌 주 버튼을 Figma `Button` `Style=Primary`·`State=Disabled`(05 `Shop / Buy Blocked` 의 `구매`: 채움 `#0f766e`, 단추 전체 투명도 0.45)대로 바꿨다. `src/renderer/manage.html` `button.act.primary:disabled` 는 모든 막힌 주 버튼에 쓰이는 공통 규칙이라, 설정창의 다른 막힌 주 버튼도 같이 옅은 청록이 된다. 이 규칙은 앞 기록의 "곁가지 2"(채움을 빼는 CSS)를 바꾼 것이다 — 그때 문제였던 "누를 수 있는 버튼과 거의 같게 보임"은 투명도 0.45 로 가린다. `npm run build`, 구매 창(랜덤전설알, 포인트 모자람)을 찍어 시안과 비교했다.
+
+### 남은 [스펙 미확정] 추천안 확정 (2026-09-27)
+
+- 사용자 지시: 어시스턴트가 남은 `[스펙 미확정]` 항목의 추천안을 보였다. 사용자 답: "추천대로진행". 아래 1~11은 확정이다. 12는 보류다. 13·14는 태그를 정리했다.
+- 항목과 바꾼 곳(줄 번호는 수정 전 기준):
+  1. 장난감 사용: 가방 사용 패널에서 대상을 고른다. 숨긴 개체와 박스 개체에도 쓸 수 있다. 바탕화면 포켓몬에 끌어 놓기는 두지 않는다. `specs/s5.md` 78. 74의 2026-09-22 드래그·드롭 문장은 과거 결정이라 그대로 두고, 78에서 대신한다고 적었다. 코드 확인: `src/renderer/manage.ts` `bagPanel` 은 파티·박스 탭에서 대상을 고른다. `partyPets` 는 숨긴 개체를 포함한다. `src/bag/use.ts` `play-buff` 는 숨김·박스 여부를 보지 않는다. 바탕화면 `drop` 메시지(`src/renderer/pointer.ts`)는 포켓몬 옮기기용이다.
+  2. 해금 유지 기간: 한 번 해금하면 계속 해금이다. `specs/s5.md` 215. 코드 확인: 해금을 지우는 곳은 규칙 판마다 한 번 하는 `src/dex/unlocks.ts` `pruneUnlocks` 뿐이다. 이 정리는 별도 결정이라 예외로 적었다.
+  3. 진화 외 추가 조건: 없다. `specs/s5.md` 213.
+  4. 진화 시 개체 정보: 종만 바뀐다. 레벨·경험치·친밀도·성격·이로치·버프는 그대로다. `design.md` 226, `terms.md` 67. 코드 확인: `src/dex/evolve.ts` `evolve` 는 `species` 를 바꾸고 `evolved`·`stage` 를 늘린다. 다른 값은 건드리지 않는다. `design.md` 226의 "저장 이식과 남은 승계 항목은 별도로 설계한다"는 지웠다. 저장 이식은 2026-09-24 저장 v3 전환으로 끝났고, 승계 항목은 이번 확정이 다룬다.
+  5. 재소환 기록 복원: 박스에서 다시 꺼내도 모든 기록이 그대로다. `terms.md` 67. 코드 확인: `src/party/placement.ts` `place`·`swap` 은 칸만 바꾸고 개체 값은 바꾸지 않는다.
+  6. 상점 구매 결과 표: 지금 동작으로 바꿨다. `specs/s5.md` 619 태그와 표. 코드 확인: `src/shop/buy.ts` `buy` — 종 지정은 `newPet` 뒤 `placeNew`, 알은 `save.eggs`(돌보미집), 도구는 `save.bag` +1(`SHOP_V3_RULES.bagMax` 999), 파티 칸은 상점용 잠긴 칸 하나를 빈 칸으로 연다.
+  7. 해금 조건표 도달 가능성: `selftest-unlocks` 로 확인한다. `specs/s5.md` 204 첫 문장. 같은 줄의 나머지 두 문장(구매 뒤 해금 종의 알 제외, 알 결과 예약)은 이번 확정 범위가 아니라 태그를 남겼다.
+  8. 종별 육성 규칙: 지금 자료를 규칙으로 한다. `specs/s5.md` 763.
+  9. 돌봄 실패 표현: 포커스를 빼앗지 않는 지금 방식이다. `specs/s5-scenarios.md` 83. 코드 확인: `src/main/menus.ts` 가 못 하는 항목을 흐리게 두고 `sublabel` 을 붙인다. 쿨타임 문구는 `lib/i18n/ko.json` `care.cooldown`("{n}초 뒤")이다. 원래 줄의 "어떤 행동이 가능한지 안내한다"는 코드에 그런 안내가 없어 남은 초 표시로 바꿔 적었다.
+  10. 에이전트 연결: 연결 탭은 연결 상태만 보인다. 감지 실패·연결 해제 때도 기본 돌봄과 적립은 유지한다. `specs/s5-scenarios.md` 332·334. 코드 확인: `src/renderer/manage.ts` `agentRow` 는 미설치·연결 안 됨·연결됨(적립 방식)·확인 필요만 보인다. `src/state/time.ts` `applyTime` 은 흐른 시간으로 쌓고 `workMs` 를 추가분으로만 더한다. 334의 "확인된 활동의 중복 지급을 막는다"는 추천안에 없고 코드도 확인하지 않아 태그를 남겼다. 332의 "연결 확인 전에는 사용량을 얻었다고 표시하지 않는다"는 탭이 얻은 이득을 전혀 보이지 않아 지웠다.
+  11. 진화의 되돌릴 수 없음 안내: 진화 확인 창에 한 줄을 둔다. `specs/s5-scenarios.md` 207. 구현: 진화 확인 창(`src/renderer/manage.ts` `drawEvolve`). 다른 세션이 구현 중이라 문구는 인용하지 않았다.
+  12. 리전폼 조건: 보류 — 콘텐츠 기획 때 정한다. `specs/s5.md` 498, `specs/s5-scenarios.md` 199. 태그를 유지했다.
+  13. 구현 순서 초안: 과거 계획이라고 적었다. 실제 구현은 이 기록의 작업 순서를 따랐다. `specs/s5.md` 721.
+  14. 가이드북 문구, 작업 결과 공통 표시 위치, 다섯 탭 시각 배치: 화면 시안 작업 때 정한다. 태그 대신 이 문구를 썼다. `specs/s5.md` 384·138·765.
+- 코드가 달라 확정 문장을 바꾼 것:
+  - 3번: 추천안은 "`need`(레벨·도구·친밀도)만 본다"였다. `src/dex/evolve.ts` `checkNeed` 는 `data/evo.json` 의 `when`(낮·밤)도 본다. 그래서 `need` 와 `when` 을 함께 적었다.
+  - 8번: 추천안은 "성장 곡선·친밀도 배율·배고픔 배율 등"을 규칙으로 들었다. 저장 v3 코드는 `growthRate`(`src/dex/growth.ts`)만 육성에 읽는다. `affinityRate`·`hungerRate` 는 `src/dex/species.ts` 기본값과 `src/shared/types.ts` 타입에만 있고 읽는 곳이 없다. `sleepiness` 는 움직임(`src/main/stage.ts`)에만 쓴다. 그래서 "지금 자료를 따른다"는 확정과 이 관측을 나눠 적었다. 두 배율의 적용 여부에 `[스펙 미확정]` 을 붙였다. 사용자 확인이 필요하다.
+- 그대로 둔 곳: `guide.md` 328 Git Bash 태그(관측). 보류 항목 C16·C17(`specs/s5.md` 107·206·207·423, `design.md` 343, `specs/s5-scenarios.md` 293). `specs/s5.md` 177 종별 계약 제안. `specs/s5-scenarios.md` 12·16과 `terms.md` 12는 태그 설명이다.
+- 바꾼 파일: `docs/specs/s5.md`, `docs/specs/s5-scenarios.md`, `docs/design.md`, `docs/terms.md`, 이 기록. 코드는 바꾸지 않았다.
+- 문장 검수: 바꾼 문장을 [작성 원칙](../../contributing/writing.md)의 완료 전 의미 검수 목록으로 읽었다. 한 문장 한 사실, 결정 원문 인용("추천대로진행"), 확정·보류·관측의 분리, 코드 식별자 표기를 확인했다. 명칭은 `terms.md` 의 장난감·가방·돌보미집·박스·파티 칸을 썼다.
+- 검수: `node dist/tools/selftest-unlocks.js`(2026-09-27 빌드본) 통과 — 참고 값 얻을 수 있는 종 1025/1025.
+- 검수: `node scripts/check-docs.cjs` PASS(문서 47개, 파일 링크 1315개, JSON 5개). `git diff --check -- docs` 문제 없음. 새 앵커는 `#남은-스펙-미확정-추천안-확정-2026-09-27` 이다. 문서만 바꿔 빌드와 전체 자체 검사는 미실행이다.

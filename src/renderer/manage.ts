@@ -2578,6 +2578,8 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
     const item = picked.item ? view?.bag.find((b) => b.id === picked.item) : undefined;
     info.appendChild(el("div", "note", item ? `${item.name} 1개를 씁니다. 레벨·친밀도·성격은 그대로입니다.` : "레벨·친밀도·성격은 그대로입니다."));
+    // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/s5-scenarios.md 진화 흐름)
+    info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));
     dialogEl.appendChild(info);
   }
 
