@@ -28,6 +28,8 @@ export interface PetView {
   shiny: boolean;
   level: number;
   percentToNext: number; // 다음 레벨까지 백분율
+  exp: number; // 누적 경험치 — 가방 사용 패널이 사탕 미리보기와 최대 개수를 셈한다
+  growth: string; // 경험치 타입 (src/dex/growth.ts) — Snapshot.growthCurves 의 키
   types: string[]; // 화면에 보이는 타입 이름
   typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등) — 타입 배지 색을 고른다
   nature: string; // 화면에 보이는 성격 이름
@@ -89,6 +91,8 @@ export interface BagItemView {
   count: number;
   evolution: boolean; // 진화용 도구 — 누르면 진화할 개체를 고른다
   natures?: string[]; // 민트 — 바꿀 수 있는 성격 id. 성실민트는 보정 없는 성격 5개
+  effect?: string; // 효과 종류 (src/bag/use.ts ItemEffect) — 가방 분류 칩과 사용 패널의 미리보기가 쓴다. 진화용 도구는 없다
+  amount?: number; // 효과의 양 — 경험사탕은 경험치, 기본먹이는 만복도
 }
 
 // 성격 변경 창의 선택지 하나. 자료 순서다
@@ -176,6 +180,7 @@ export interface Snapshot {
   achievements: { total: number; unclaimed: number; list: AchievementView[] };
   settings: SettingsView;
   natures: NatureOption[];
+  growthCurves: Record<string, number[]>; // 경험치 타입별 레벨 L 이 되는 누적 경험치 — 칸 L(1~100). 가방 사용 패널의 미리보기
   sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/save/rules.ts SIZE_STEPS)
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · party). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/core.ts)

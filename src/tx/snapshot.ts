@@ -7,7 +7,7 @@
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { defs } from "../achievement/core.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
-import { growthOf, progressTo } from "../dex/growth.js";
+import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
 import { itemOf, mintFor } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
@@ -61,6 +61,12 @@ function formsView(pet: PetV3): { forms?: FormView[] } {
   return { forms: list.map((slug) => ({ species: slug, name: petName(slug), types: profile(slug).types.map((t) => typeName(t)), typeIds: [...profile(slug).types] })) };
 }
 
+// 경험치 타입별 누적 경험치 표 — 칸 L 이 레벨 L. 한 번 만들어 둔다
+const GROWTH_RATES = ["fast", "medium-fast", "medium-slow", "slow", "erratic", "fluctuating"] as const;
+const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
+  GROWTH_RATES.map((rate) => [rate, Array.from({ length: MAX_LEVEL + 1 }, (_, level) => (level < 1 ? 0 : expForLevel(rate, level)))]),
+);
+
 export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = dayPartOf(Date.now())): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
@@ -71,6 +77,8 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     shiny: pet.shiny,
     level: pet.level,
     percentToNext: percent,
+    exp: pet.exp,
+    growth: rate,
     types: profile(pet.species).types.map((t) => typeName(t)),
     typeIds: [...profile(pet.species).types],
     nature: natureName(pet.nature),
@@ -137,7 +145,12 @@ export function snapshot(
     .filter(([, n]) => n > 0)
     .map(([id, count]) => {
       const natures = itemOf(id)?.natures;
-      return { id, name: itemOf(id)?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id), ...(natures ? { natures: [...natures] } : {}) };
+      const item = itemOf(id);
+      return {
+        id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
+        ...(natures ? { natures: [...natures] } : {}),
+        ...(item ? { effect: item.effect, amount: item.amount } : {}),
+      };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -181,6 +194,7 @@ export function snapshot(
     },
     natures: natureOptions(),
     eggPalettes: eggPalettes(),
+    growthCurves: GROWTH_CURVES,
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
   };

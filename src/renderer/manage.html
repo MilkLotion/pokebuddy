@@ -1884,6 +1884,187 @@
         color: var(--muted);
       }
 
+      /* 가방 — Figma 05 Bag / Base 381:6555. 칸은 4열 · 60 높이, 고른 칸은 옅은 바탕만(색 테두리 강조 없음) */
+      .bag-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .bag-card {
+        appearance: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        height: 60px;
+        padding: 10px 13px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .bag-card[aria-pressed="true"] {
+        border-color: var(--accent-bg);
+        background: var(--accent-bg);
+      }
+      .bag-card .thumb {
+        width: 32px;
+        height: 32px;
+      }
+      .bag-card .info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        font-size: 12px;
+      }
+      .bag-card .info .name {
+        font-family: var(--font-body);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .bag-card .qty {
+        color: var(--muted);
+      }
+      .use-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        font-size: 12px;
+      }
+      .use-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .use-head .stock {
+        color: var(--muted);
+      }
+      .use-head .spacer {
+        flex: 1;
+      }
+      .use-head .close {
+        appearance: none;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .use-columns {
+        display: flex;
+        gap: 16px;
+      }
+      .use-targets,
+      .use-detail {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .use-targets {
+        gap: 8px;
+      }
+      .use-targets .segmented {
+        align-self: flex-start;
+      }
+      .use-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 204px;
+        overflow-y: auto;
+      }
+      .use-target {
+        appearance: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+        height: 46px;
+        padding: 8px 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .use-target[aria-pressed="true"] {
+        border-color: var(--accent-bg);
+        background: var(--accent-bg);
+      }
+      .use-target .lv {
+        color: var(--muted);
+      }
+      .use-portrait {
+        flex: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: var(--accent-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .use-current {
+        font-weight: 700;
+      }
+      .use-detail .qty {
+        gap: 8px;
+      }
+      /* 사용 패널의 수량 단추는 32 칸 네모다 (시안). 최대는 글자 단추 */
+      .use-detail .qty button {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+      }
+      .use-detail .qty button.max {
+        width: auto;
+        padding: 0 12px;
+        font-size: 12px;
+      }
+      .use-detail .qty .count {
+        min-width: 32px;
+      }
+      .use-detail .qty .qty-hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .use-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--canvas);
+        color: var(--muted);
+      }
+      .use-preview strong {
+        color: var(--ink);
+      }
+      .use-detail .notice {
+        margin-top: 0;
+      }
+      .use-detail .actions {
+        margin-top: 0;
+        justify-content: flex-end;
+      }
       /* 구매 창 — 수량과 합계 */
       .buy-row {
         display: flex;

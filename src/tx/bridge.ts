@@ -64,7 +64,7 @@ export function argsOf(command: Command): Record<string, unknown> {
     case "egg.open":
       return { eggId: target ?? str(a.eggId) };
     case "bag.use":
-      return { itemId: target ?? str(a.itemId), petId: str(a.petId), nature: str(a.nature) };
+      return { itemId: target ?? str(a.itemId), petId: str(a.petId), nature: str(a.nature), ...(a.count !== undefined ? { count: a.count } : {}) };
     case "shop.buy":
       return { productId: target ?? str(a.productId), ...(a.count !== undefined ? { count: a.count } : {}) };
     case "evolve":

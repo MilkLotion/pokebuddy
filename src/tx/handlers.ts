@@ -2,7 +2,7 @@
 //
 // 처리기는 사본만 고치고 성공 여부를 돌려준다. 저장은 거래 실행기가 한다.
 // 도메인 규칙은 각 모듈(src/party 등)에 두고 여기서는 인자를 풀어 넘기기만 한다.
-import { use } from "../bag/use.js";
+import { itemOf, use } from "../bag/use.js";
 import { claim } from "../achievement/core.js";
 import { dayPartOf, evolve } from "../dex/evolve.js";
 import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
@@ -155,8 +155,17 @@ const useHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!itemId || !petId) return { ok: false, reason: "bad-args" };
   const nature = typeof args.nature === "string" ? args.nature : undefined;
-  const res = use(draft, itemId, petId, { nature });
+  // 수량 — 없으면 1. 여러 개는 경험사탕·이상한사탕만 된다(가방 사용 패널의 수량, 2026-09-27 사용자 결정).
+  // 한 거래로 쓴다. 하나라도 못 쓰면 실행기가 사본을 버려 앞서 쓴 것도 반영하지 않는다
+  const count = args.count === undefined ? 1 : args.count;
+  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
+  if (count > 1 && !["exp", "level"].includes(itemOf(itemId)?.effect ?? "")) return { ok: false, reason: "bad-args" };
+  let res = use(draft, itemId, petId, { nature });
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  for (let i = 1; i < count; i += 1) {
+    res = use(draft, itemId, petId, { nature });
+    if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  }
   return {
     ok: true,
     result: { itemId, petId, left: res.left, level: res.level, exp: res.exp, fullness: res.fullness, nature: res.nature, shiny: res.shiny },

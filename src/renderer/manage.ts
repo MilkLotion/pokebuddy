@@ -142,7 +142,6 @@ const achDotEl = need("achievements-dot", HTMLElement);
 // 모달 하나. 어느 것인지와 그 모달만 쓰는 값을 함께 담는다
 type Dialog =
   | { kind: "pet"; petId: string }
-  | { kind: "use"; itemId: string }
   | { kind: "evolve"; petId: string; to?: string; itemId?: string } // 진화 확인 — to 는 고른 후보, itemId 는 가방의 돌로 왔을 때
   | { kind: "evo-target"; itemId: string } // 가방의 진화용 도구 — 진화할 개체를 고른다
   | { kind: "nature"; petId: string; pick?: string; itemId?: string; listOpen?: boolean } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
@@ -1175,28 +1174,257 @@ function drawShop(v: Snapshot): void {
 }
 
 // ── 가방 ───────────────────────────────────────────────────────────────────────
+// Figma 05 `Bag / Base` `381:6555` — 분류 칩, 4열 도구 칸, 고른 도구의 사용 패널(파티·박스 대상, 수량과 최대, 미리보기).
+// 진화용 도구와 민트는 대상과 결과를 고르는 창이 따로 있어 그 창을 연다. 여러 개 쓰기는 경험사탕·이상한사탕만 되고 한 거래다
+// (2026-09-27 사용자 결정 "수량 선택 + 최대", src/tx/handlers.ts useHandler)
 
-function bagRow(item: BagItemView): HTMLElement {
-  const card = button("row-card");
-  card.appendChild(iconOf(`item:${item.id}`, "thumb"));
-  const body = el("div", "body");
-  const note = item.evolution ? "눌러서 진화할 포켓몬 고르기" : item.natures ? "눌러서 성격을 바꿀 포켓몬 고르기" : "눌러서 사용";
-  body.append(el("div", "title", item.name), el("div", "note", note));
-  card.append(body, el("div", "count", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표 — 큰 수량도 칸을 넘치지 않게
-  const next: Dialog = item.evolution ? { kind: "evo-target", itemId: item.id } : item.natures ? { kind: "nature-target", itemId: item.id } : { kind: "use", itemId: item.id };
-  card.addEventListener("click", () => open(next));
+const BAG_TABS = [
+  { id: "all", label: "전체" },
+  { id: "candy", label: "사탕" },
+  { id: "food", label: "먹이" },
+  { id: "evolution", label: "진화의돌" },
+  { id: "mint", label: "민트" },
+  { id: "toy", label: "장난감" },
+  { id: "potion", label: "약" },
+];
+let bagFilter = "all";
+let bagPick: string | null = null; // 사용 패널에 연 도구
+let bagScope: "party" | "box" = "party";
+let bagTarget: string | null = null;
+let bagQty = 1;
+
+function bagCategory(item: BagItemView): string {
+  if (item.evolution) return "evolution";
+  if (item.natures) return "mint";
+  if (item.effect === "exp" || item.effect === "level") return "candy";
+  if (item.effect === "fullness" || item.effect === "fullness-full-buff") return "food";
+  if (item.effect === "play-buff") return "toy";
+  return "potion";
+}
+const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";
+
+function bagCard(item: BagItemView): HTMLElement {
+  const card = button("bag-card");
+  card.setAttribute("aria-pressed", String(item.id === bagPick));
+  const info = el("div", "info");
+  info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
+  card.append(iconOf(`item:${item.id}`, "thumb"), info);
+  card.addEventListener("click", () => {
+    if (item.evolution) return open({ kind: "evo-target", itemId: item.id });
+    if (item.natures) return open({ kind: "nature-target", itemId: item.id });
+    bagPick = bagPick === item.id ? null : item.id;
+    bagQty = 1;
+    notice = "";
+    draw();
+  });
   return card;
 }
 
 function drawBag(v: Snapshot): void {
-  bodyEl.appendChild(head("가방", `도구 ${v.bag.length}종`));
+  bodyEl.appendChild(head("가방", "도구를 골라 대상에게 사용"));
   if (!v.bag.length) {
     bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다. 상점에서 도구를 살 수 있어요."));
     return;
   }
-  const list = el("div", "rows");
-  for (const item of v.bag) list.appendChild(bagRow(item));
-  bodyEl.appendChild(list);
+  bodyEl.appendChild(
+    chips(BAG_TABS, bagFilter, (id) => {
+      bagFilter = id;
+      draw();
+    }),
+  );
+  const items = v.bag.filter((i) => bagFilter === "all" || bagCategory(i) === bagFilter);
+  if (!items.length) bodyEl.appendChild(el("div", "empty-note", "이 분류의 도구가 없습니다."));
+  else {
+    const grid = el("div", "bag-grid");
+    for (const item of items) grid.appendChild(bagCard(item));
+    bodyEl.appendChild(grid);
+  }
+  const picked = v.bag.find((i) => i.id === bagPick);
+  if (!picked) {
+    bagPick = null;
+    return;
+  }
+  bodyEl.appendChild(bagPanel(v, picked));
+}
+
+// 사탕을 qty 개 쓰면 — 경험치 곡선으로 새 레벨과 넘쳐 사라지는 경험치를 셈한다 (src/bag/use.ts 와 같은 규칙)
+function candyResult(v: Snapshot, pet: PetView, item: BagItemView, qty: number): { level: number; gain: number; lost: number } {
+  const curve = v.growthCurves[pet.growth] ?? [];
+  const cap = curve[100] ?? pet.exp;
+  if (item.effect === "level") {
+    const level = Math.min(100, pet.level + qty);
+    return { level, gain: Math.max(0, (curve[level] ?? pet.exp) - pet.exp), lost: 0 };
+  }
+  const raw = pet.exp + (item.amount ?? 0) * qty;
+  const exp = Math.min(cap, raw);
+  let level = pet.level;
+  while (level < 100 && (curve[level + 1] ?? Infinity) <= exp) level += 1;
+  return { level, gain: exp - pet.exp, lost: raw - exp };
+}
+
+// 한 번에 쓸 수 있는 최대 개수 — 가진 개수와 100레벨까지 필요한 개수 중 작은 쪽
+function candyMax(v: Snapshot, pet: PetView, item: BagItemView): number {
+  if (pet.level >= 100) return 0;
+  if (item.effect === "level") return Math.min(item.count, 100 - pet.level);
+  const cap = v.growthCurves[pet.growth]?.[100] ?? pet.exp;
+  const per = item.amount ?? 0;
+  return per > 0 ? Math.min(item.count, Math.ceil((cap - pet.exp) / per)) : 0;
+}
+
+// 쓸 수 없는 까닭 — 없으면 null. 실행기와 같은 규칙이다 (src/bag/use.ts)
+function bagBlocked(pet: PetView, item: BagItemView): string | null {
+  switch (item.effect) {
+    case "exp":
+    case "level":
+      return pet.level >= 100 ? "이미 최고 레벨이에요." : null;
+    case "fullness":
+    case "fullness-full-buff":
+      if (pet.fullness >= 100) return "배가 불러요.";
+      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${pet.feedInSec}초).`;
+    case "shiny-on":
+      return pet.shiny ? "이미 이로치예요." : null;
+    case "shiny-off":
+      return pet.shiny ? null : "이미 일반 색이에요.";
+    default:
+      return null;
+  }
+}
+
+function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): string[] {
+  const keep = "파티·박스 위치와 숨김 상태는 그대로";
+  switch (item.effect) {
+    case "exp":
+    case "level": {
+      const r = candyResult(v, pet, item, qty);
+      const lost = item.effect === "exp" ? ` · 소멸 ${r.lost.toLocaleString("ko-KR")}` : "";
+      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${r.gain.toLocaleString("ko-KR")}${lost}`, keep];
+    }
+    case "fullness":
+      return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
+    case "fullness-full-buff":
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, "친밀도 증가량 ×2 · 2시간"];
+    case "play-buff":
+      return ["오래 놀아주기", "친밀도 증가량 ×1.5 · 30분"];
+    case "shiny-on":
+      return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
+    case "shiny-off":
+      return ["일반 색으로 돌아가요", "도감의 이로치 기록은 남아요"];
+    default:
+      return [item.name];
+  }
+}
+
+function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
+  const panel = el("div", "use-panel");
+  const top = el("div", "use-head");
+  const x = button("close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", () => {
+    bagPick = null;
+    notice = "";
+    draw();
+  });
+  top.append(el("strong", undefined, item.name), el("span", "stock", `보유 ×${item.count.toLocaleString("ko-KR")}`), el("span", "spacer"), x);
+
+  const party = partyPets();
+  const box = boxPets();
+  const list = bagScope === "box" ? box : party;
+  if (!list.some((p) => p.id === bagTarget)) bagTarget = list[0]?.id ?? null;
+  const pet = list.find((p) => p.id === bagTarget) ?? null;
+
+  const left = el("div", "use-targets");
+  left.appendChild(
+    segmented(
+      [
+        { id: "party", label: `파티 ${party.length}` },
+        { id: "box", label: `박스 ${box.length}` },
+      ] as const,
+      bagScope,
+      (id) => {
+        bagScope = id;
+        bagTarget = null;
+        bagQty = 1;
+        notice = "";
+        draw();
+      },
+    ),
+  );
+  const rows = el("div", "use-list");
+  for (const p of list) {
+    const row = button("use-target");
+    row.setAttribute("aria-pressed", String(p.id === bagTarget));
+    row.append(portraitOf(p.species, p.shiny, "use-portrait"), el("strong", undefined, p.name), el("span", "lv", `Lv.${p.level}`));
+    row.addEventListener("click", () => {
+      bagTarget = p.id;
+      bagQty = 1;
+      notice = "";
+      draw();
+    });
+    rows.appendChild(row);
+  }
+  if (!list.length) rows.appendChild(el("div", "empty-note", bagScope === "box" ? "박스가 비었습니다." : "파티에 포켓몬이 없습니다."));
+  left.appendChild(rows);
+
+  const right = el("div", "use-detail");
+  if (pet) {
+    const blocked = bagBlocked(pet, item);
+    const many = bagMany(item);
+    const cap = many ? Math.max(1, candyMax(v, pet, item)) : 1;
+    bagQty = Math.max(1, Math.min(bagQty, cap));
+    right.appendChild(el("div", "use-current", many ? `${pet.name} Lv.${pet.level} · 다음 레벨까지 ${pet.percentToNext}%` : `${pet.name} Lv.${pet.level}`));
+    if (many) {
+      const q = el("div", "qty");
+      const minus = button("", "−");
+      minus.disabled = bagQty <= 1 || !!blocked;
+      minus.addEventListener("click", () => {
+        bagQty -= 1;
+        draw();
+      });
+      const plus = button("", "+");
+      plus.disabled = bagQty >= cap || !!blocked;
+      plus.addEventListener("click", () => {
+        bagQty += 1;
+        draw();
+      });
+      const max = button("max", "최대");
+      max.disabled = bagQty >= cap || !!blocked;
+      max.addEventListener("click", () => {
+        bagQty = cap;
+        draw();
+      });
+      q.append(minus, el("span", "count", bagQty.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `보유 ${item.count.toLocaleString("ko-KR")}`));
+      right.appendChild(q);
+    }
+    const preview = el("div", "use-preview");
+    const [lead, ...lines] = blocked ? [blocked] : bagPreview(v, pet, item, bagQty);
+    preview.appendChild(el("strong", undefined, lead ?? ""));
+    for (const line of lines) preview.appendChild(el("div", undefined, line));
+    right.appendChild(preview);
+    if (notice) right.appendChild(el("div", "notice bad", notice));
+    const label = many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용";
+    right.appendChild(
+      actions(
+        actionButton("취소", false, false, () => {
+          bagPick = null;
+          notice = "";
+          draw();
+        }),
+        actionButton(label, true, !!blocked, () => {
+          const target = pet.id;
+          void send("bag.use", item.id, { petId: target, ...(many && bagQty > 1 ? { count: bagQty } : {}) }).then((ok) => {
+            if (!ok) return draw();
+            bagQty = 1;
+            if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 썼다
+            draw();
+          });
+        }),
+      ),
+    );
+  }
+  const cols = el("div", "use-columns");
+  cols.append(left, right);
+  panel.append(top, cols);
+  return panel;
 }
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
@@ -2458,16 +2686,6 @@ function drawNatureTarget(itemId: string): void {
   dialogEl.appendChild(actions(...acts, closeButton()));
 }
 
-// ── 모달 · 도구 사용 대상 고르기 ───────────────────────────────────────────────
-
-function drawUse(itemId: string): void {
-  const item = view?.bag.find((i) => i.id === itemId);
-  const pets = partyPets();
-  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구에게 쓸까요?" : "파티에 개체가 없습니다."));
-  const acts = pets.map((p) => actionButton(`${p.name} (Lv.${p.level})`, false, false, () => void send("bag.use", itemId, { petId: p.id })));
-  dialogEl.appendChild(actions(...acts, closeButton()));
-}
-
 // ── 모달 · 구매 창 ─────────────────────────────────────────────────────────────
 
 function buyRow(label: string, value: string): HTMLElement {
@@ -2899,7 +3117,6 @@ function drawGuide(): void {
 // 모달마다 폭이 다르다. 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
 const SHAPE: Record<Dialog["kind"], string> = {
   pet: "dialog",
-  use: "dialog",
   evolve: "dialog",
   "evo-target": "dialog",
   nature: "dialog",
@@ -2941,8 +3158,7 @@ function drawDialog(): void {
   dialogEl.className = SHAPE[dialog.kind];
   dialogEl.replaceChildren();
 
-  if (dialog.kind === "use") drawUse(dialog.itemId);
-  else if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to, dialog.itemId);
+  if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to, dialog.itemId);
   else if (dialog.kind === "evo-target") drawEvoTarget(dialog.itemId);
   else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId, dialog.listOpen === true);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);

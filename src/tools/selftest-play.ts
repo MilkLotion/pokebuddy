@@ -223,4 +223,29 @@ function seedPet(): SaveV3 {
   process.stdout.write("(8) 이어진 저장 실패 안내  ok\n");
 }
 
-process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매·저장 실패 안내)\n");
+// (9) 사탕 여러 개 쓰기 — 명령 하나(count)로 한 거래. 하나라도 못 쓰면 하나도 쓰지 않는다. 사탕이 아닌 도구는 하나씩
+{
+  let state: SaveV3 | null = seedPet();
+  state.bag["exp-candy-s"] = 3;
+  state.bag["rare-candy"] = 5;
+  state.bag["premium-food"] = 2;
+  const ex = createExecutor({ read: () => structuredClone(state), write: (s) => ((state = s), true), now: () => T0, rand: () => 0.5 }, HANDLERS);
+  const before = state.pets[0]!.exp;
+  const two = ex.run({ id: "use-2", name: "bag.use", args: { itemId: "exp-candy-s", petId: "p1", count: 2 } });
+  assert.ok(two.ok, JSON.stringify(two));
+  assert.equal(state?.bag["exp-candy-s"], 1, "두 개를 쓴다");
+  assert.equal(state?.pets[0]?.exp, before + 1600, "경험치 800 × 2");
+  const over = ex.run({ id: "use-over", name: "bag.use", args: { itemId: "exp-candy-s", petId: "p1", count: 2 } });
+  assert.equal(over.ok, false, "하나만 남았는데 두 개");
+  assert.equal(state?.bag["exp-candy-s"], 1, "모자라면 하나도 쓰지 않는다");
+  const lvBefore = state!.pets[0]!.level;
+  assert.ok(ex.run({ id: "use-rare", name: "bag.use", args: { itemId: "rare-candy", petId: "p1", count: 3 } }).ok);
+  assert.equal(state?.pets[0]?.level, lvBefore + 3, "이상한사탕 세 개면 세 레벨");
+  assert.equal(state?.bag["rare-candy"], 2);
+  const food = ex.run({ id: "use-food", name: "bag.use", args: { itemId: "premium-food", petId: "p1", count: 2 } });
+  assert.equal(food.ok, false, "먹이는 하나씩");
+  assert.equal(state?.bag["premium-food"], 2);
+  process.stdout.write("(9) 사탕 여러 개 쓰기  ok\n");
+}
+
+process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매·저장 실패 안내·사탕 여러 개)\n");
