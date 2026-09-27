@@ -5,7 +5,12 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../main/hunger-bubble";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createGame } from "../main/game";
 import { playAreaRect } from "../main/layout";
+import * as store from "../save/store";
 import { setSize } from "../party/home";
 import { DEFAULT_SIZE_LEVEL, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules";
 import { zoomOf } from "../main/art";
@@ -191,4 +196,31 @@ function seedPet(): SaveV3 {
   process.stdout.write("(7) 여러 개 구매 · 가방 최대 999  ok\n");
 }
 
-process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매)\n");
+// (8) 이어진 저장 실패 — 3번 이어서 못 쓰면 보기에 saveFailing. 한 번 쓰면 사라진다. 명령과 주기 저장을 함께 센다
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-play-"));
+  try {
+    const file = path.join(dir, "save.json");
+    const seed = seedPet();
+    seed.points.balance = 100;
+    store.write(file, seed);
+    const game = createGame({ file, now: () => T0 });
+    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic)
+    const block = `${file}.${process.pid}.tmp`;
+    fs.mkdirSync(block);
+    assert.equal(game.tick(), null, "1번째 실패");
+    assert.equal(game.send({ cmd: "shop.buy", target: "exp-candy-xs" }, "settings").reason, "save-failed", "2번째 실패");
+    assert.equal(game.view()?.saveFailing, undefined, "두 번까지는 안내하지 않는다");
+    game.tick();
+    assert.equal(game.saveFailing(), true, "3번 이어서 실패");
+    assert.equal(game.view()?.saveFailing, true, "보기에 싣는다");
+    fs.rmdirSync(block);
+    assert.ok(game.tick(), "다시 쓸 수 있다");
+    assert.equal(game.view()?.saveFailing, undefined, "한 번 쓰면 사라진다");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  process.stdout.write("(8) 이어진 저장 실패 안내  ok\n");
+}
+
+process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매·저장 실패 안내)\n");

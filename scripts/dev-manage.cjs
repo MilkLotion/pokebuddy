@@ -15,6 +15,7 @@
 // `--close` 를 주면 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
 // `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
+// `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -134,6 +135,14 @@ app.whenReady().then(async () => {
 
   const route = routeArg ? JSON.parse(routeArg) : undefined;
   const game = createGame({ file });
+  if (process.argv.includes("--save-failing")) {
+    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic). 설정창은 보기를 만들 때마다 먼저 저장하므로
+    // 막음을 두는 동안 실패가 이어진다. 끝날 때 푼다 — 임시 폴더째 지워지기도 한다
+    const block = `${file}.${process.pid}.tmp`;
+    fs.mkdirSync(block);
+    for (let i = 0; i < 3; i += 1) game.tick();
+    app.on("will-quit", () => fs.rmSync(block, { recursive: true, force: true }));
+  }
   // 설정의 `영역 그리기` — 앱과 같은 창을 띄우고, 적용하면 저장한다
   const drawRegion = async () => {
     const { drawRegion: draw } = require(path.join(root, "dist/main/region-window.js"));

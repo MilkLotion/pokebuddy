@@ -1560,8 +1560,20 @@ function draw(): void {
   else if (tab === "shop") drawShop(view);
   else if (tab === "trade") drawTrade();
   else drawBag(view);
+  drawSaveFailing();
   restoreSearchFocus();
   drawTutorial();
+}
+
+// 이어진 저장 실패 안내 — 제목 줄 바로 아래. 한 번 저장하면 다음 새로 읽기에서 사라진다. 조작은 막지 않는다
+// Figma 99 `Party / Save Failing` `716:17993` (Status Banner Tone=Error). 2026-09-27 사용자 "그렇게해"
+function drawSaveFailing(): void {
+  if (!view?.saveFailing) return;
+  const banner = tradeBanner("저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요. 게임은 계속할 수 있고, 저장되면 이 안내가 사라져요.", "bad");
+  banner.classList.add("save-failing");
+  const first = bodyEl.firstElementChild;
+  if (first?.classList.contains("head")) first.after(banner);
+  else bodyEl.prepend(banner);
 }
 
 // ── 튜토리얼 코치마크 ───────────────────────────────────────────────────────────

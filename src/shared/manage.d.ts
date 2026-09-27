@@ -181,6 +181,7 @@ export interface Snapshot {
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · party). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/core.ts)
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
   display?: DisplayView;
+  saveFailing?: boolean; // 저장이 이어서 3번 실패했다 — 모든 탭 위쪽에 안내를 띄운다 (src/main/game.ts)
 }
 
 export interface DisplayView {

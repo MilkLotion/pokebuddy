@@ -7,7 +7,7 @@
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
 import { PATHS } from "./paths.js";
 import * as store from "../save/store.js";
-import { TIME_V3_RULES } from "../save/rules.js";
+import { SAVE_V3_RULES, TIME_V3_RULES } from "../save/rules.js";
 import { applyTime, type TickEvents, type TimeInput } from "../state/time.js";
 import { createExecutor, type Executor, type TxResult } from "../tx/executor.js";
 import { HANDLERS } from "../tx/handlers.js";
@@ -33,6 +33,7 @@ export interface GameV3 {
   agents: (req?: { name: string; action: AgentAction }) => AgentReply;
   send: (req: ManageRequest, from: CommandSource) => ManageReply;
   executor: Executor;
+  saveFailing: () => boolean; // 저장이 이어서 SAVE_V3_RULES.saveFailNotifyAfter 번 실패했다 — 설정창이 안내를 띄운다
 }
 
 export interface GameV3Options {
@@ -45,7 +46,14 @@ export interface GameV3Options {
 export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, canWrite }: GameV3Options = {}): GameV3 {
   // 파손 격리와 v2 이전 파일 교체는 쓰는 프로세스만 한다
   const read = (): SaveV3 | null => store.read(file, { repair: canWrite ? canWrite() : true }).state;
-  const write = (s: SaveV3): boolean => (canWrite && !canWrite() ? false : store.write(file, s));
+  // 이어서 실패한 횟수 — 명령과 주기 저장(tick)을 함께 센다. writer 가 아니어서 쓰지 않은 것은 세지 않는다
+  let failStreak = 0;
+  const write = (s: SaveV3): boolean => {
+    if (canWrite && !canWrite()) return false;
+    const ok = store.write(file, s);
+    failStreak = ok ? 0 : failStreak + 1;
+    return ok;
+  };
 
   const executor = createExecutor({ read, write, now, rand }, HANDLERS);
 
@@ -64,7 +72,9 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
 
   const view = (): Snapshot | null => {
     const save = read();
-    return save ? snapshot(save, undefined, undefined, undefined, now()) : null;
+    if (!save) return null;
+    const snap = snapshot(save, undefined, undefined, undefined, now());
+    return failStreak >= SAVE_V3_RULES.saveFailNotifyAfter ? { ...snap, saveFailing: true } : snap;
   };
 
   // 화면이 보낸 요청을 명령으로 바꿔 실행기에 넘긴다. 다리와 같은 규칙을 쓴다
@@ -93,5 +103,5 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return save ? dexDetail(save, slug) : null;
   };
 
-  return { file, read, tick, view, dex, dexDetail: detail, agents, send, executor };
+  return { file, read, tick, view, dex, dexDetail: detail, agents, send, executor, saveFailing: () => failStreak >= SAVE_V3_RULES.saveFailNotifyAfter };
 }
