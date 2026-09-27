@@ -7,7 +7,7 @@
 // 1판의 petSpot·moveBody 는 여기 없다 (마리 자리는 stage.ts 가 무대 안에서 계산한다)
 import * as follow from "../follow/front";
 import * as pkstate from "../follow/state";
-import type { HelperInfo, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
+import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
 import { helperCommand, parseInfo, queryHelper, stopHelper } from "../follow/winbounds";
 import type { Paths } from "./paths";
 
@@ -47,6 +47,7 @@ export interface AnchorOptions {
   flags(): AnchorFlags;
   onUpdate(u: AnchorUpdate): void;
   onFocus(key: string | null): void; // 포커스 묶음이 바뀌었다 — 움직임 모듈의 "사용자가 뭔가 했다"
+  onInput?(input: HelperInput): void; // 헬퍼가 센 클릭·Esc — 포커스를 쥐지 않은 트레이 메뉴를 닫는다
   log: ((o: Record<string, unknown>) => void) | null;
 }
 
@@ -142,6 +143,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
 
       const info = parseInfo(stdout);
       if (!info) return;
+      if (info.input) opts.onInput?.(info.input);
       const windows = info.windows.map((w) => host.toDip(w));
       // Space 전환 중 — mac 에서만 일어난다. Windows 는 다른 가상 데스크톱의 창이 헬퍼에서 걸러져 들어오지 않고,
       // 화면 밖에 걸어 둔 창 하나(떼어 낸 모니터 자리 등) 때문에 표본을 매번 버리면 펫이 영영 자리를 못 잡는다

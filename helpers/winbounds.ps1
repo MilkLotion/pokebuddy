@@ -13,7 +13,11 @@
 # EnumWindows 로 직접 열거해야 창마다 HWND 를 얻을 수 있다.
 #
 # 좌표는 물리 픽셀이다 (모니터별 DPI 인식). Electron 창 좌표(DIP)로 바꾸는 일은 받는 쪽(src/main/app.ts toDip)이 한다.
-# 출력: {"frontmost":"Code","frontId":123456,"windows":[{"app":"Code","pid":2108,"id":65792,"x":0,"y":0,"w":1600,"h":900}]}
+# 출력: {"frontmost":"Code","frontId":123456,"windows":[{"app":"Code","pid":2108,"id":65792,"x":0,"y":0,"w":1600,"h":900}],
+#        "input":{"click":3,"x":10,"y":20,"esc":1}}
+#   input 은 -Serve 에서만 — 마우스 버튼(왼·오른)을 누른 횟수와 마지막 누른 자리(물리 픽셀), Esc 를 누른 횟수.
+#   앱이 그리는 트레이 메뉴는 포커스를 쥐지 않으므로(쥐면 숨겨진 아이콘 창이 닫힌다) 바깥 클릭·Esc 를 이것으로 안다.
+#   전역 후크 없이 15ms 마다 GetAsyncKeyState 로 본다.
 #
 # ★ 이 파일은 UTF-8 BOM 으로 저장한다. Windows PowerShell 5.1 은 BOM 없는 스크립트를 시스템 코드 페이지
 #   (한국어 Windows 는 CP949)로 읽는다. 그러면 한국어 주석 끝 바이트가 줄바꿈을 삼켜 다음 C# 줄이 주석이 되고,
@@ -30,6 +34,8 @@ public class PokeBuddyWin {
   public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
   [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr lParam);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vk);
+  [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
   [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h, uint cmd);
@@ -46,6 +52,31 @@ public class PokeBuddyWin {
 
   [StructLayout(LayoutKind.Sequential)]
   public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct POINT { public int X; public int Y; }
+
+  // 입력 감시 — 누른 순간(떼었다가 눌림)마다 센다. 읽는 쪽은 수가 늘었는지만 본다
+  static volatile bool watching = false;
+  static int clicks = 0, escs = 0, clickX = 0, clickY = 0;
+  static bool Down(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
+  public static void WatchInput() {
+    if (watching) return;
+    watching = true;
+    var t = new System.Threading.Thread(() => {
+      bool mouse = false, esc = false;
+      while (true) {
+        bool m = Down(0x01) || Down(0x02) || Down(0x04); // 왼·오른·가운데 버튼
+        if (m && !mouse) { POINT p; if (GetCursorPos(out p)) { clickX = p.X; clickY = p.Y; } System.Threading.Interlocked.Increment(ref clicks); }
+        mouse = m;
+        bool e = Down(0x1B);
+        if (e && !esc) System.Threading.Interlocked.Increment(ref escs);
+        esc = e;
+        System.Threading.Thread.Sleep(15);
+      }
+    });
+    t.IsBackground = true;
+    t.Start();
+  }
 
   const uint GW_OWNER = 4;
   const int PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
@@ -126,7 +157,8 @@ public class PokeBuddyWin {
       GetWindowThreadProcessId(fg, out frontPid);
       front = ProcessName(frontPid, names);
     }
-    return "{\"frontmost\":" + Json(front) + ",\"frontId\":" + frontId + ",\"frontPid\":" + frontPid + ",\"windows\":[" + String.Join(",", items) + "]}";
+    string input = watching ? ",\"input\":{\"click\":" + clicks + ",\"x\":" + clickX + ",\"y\":" + clickY + ",\"esc\":" + escs + "}" : "";
+    return "{\"frontmost\":" + Json(front) + ",\"frontId\":" + frontId + ",\"frontPid\":" + frontPid + ",\"windows\":[" + String.Join(",", items) + "]" + input + "}";
   }
 }
 "@ -ErrorAction SilentlyContinue
@@ -137,6 +169,7 @@ if (-not ("PokeBuddyWin" -as [type])) { exit 1 }
 [PokeBuddyWin]::MakeDpiAware()
 
 if ($Serve) {
+  [PokeBuddyWin]::WatchInput()
   while ($null -ne [Console]::In.ReadLine()) {
     [Console]::Out.WriteLine([PokeBuddyWin]::Snapshot())
     [Console]::Out.Flush()

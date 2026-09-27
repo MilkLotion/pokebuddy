@@ -3,6 +3,8 @@
 // OS 기본 메뉴는 Windows 에서 체크 표시 자리로 왼쪽을 크게 비운다. 그래서 메뉴를 직접 그린다 (docs/specs/ui-components.md C-21).
 // 메뉴 모델은 Electron 메뉴와 같은 모양(MenuItemConstructorOptions)을 받는다 — src/main/menus.ts 가 그대로 쓸 수 있다.
 // 커서 자리에 띄우고 화면 끝에서는 방향을 뒤집는다. 항목을 고르거나 Esc 를 누르거나 포커스를 잃으면(바깥 클릭) 닫는다.
+// inactive 메뉴(Windows 트레이)는 포커스를 가져오지 않는다 — 가져오면 Windows 가 숨겨진 아이콘 창을 닫는다.
+//   그래서 바깥 클릭·Esc 는 부르는 쪽이 헬퍼의 입력 감시로 알아채 closeMenu 를 부른다 (helpers/winbounds.ps1).
 // 메뉴는 한 번에 하나다. 새로 띄우면 앞의 메뉴를 닫는다
 import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
 import type { MenuChannel } from "../shared/manage";
@@ -23,9 +25,29 @@ export interface MenuWindowOptions {
   html: string;
   onPlaced?: (rect: { x: number; y: number; w: number; h: number }) => void; // 메뉴를 띄운 자리(화면 좌표, 그림자 제외)
   onClosed?: () => void;
+  inactive?: boolean; // 포커스를 가져오지 않고 띄운다 (Windows 트레이)
 }
 
 let current: BrowserWindow | null = null;
+let closedAt = 0; // 마지막으로 닫힌 시각 — 아이콘을 다시 눌러 닫은 것인지 가른다
+
+export const menuOpen = (): boolean => current != null && !current.isDestroyed();
+
+// 떠 있는 메뉴를 닫는다 — inactive 메뉴의 바깥 클릭·Esc·아이콘 다시 누르기
+export function closeMenu(): void {
+  if (current && !current.isDestroyed()) current.close();
+}
+
+// 방금(ms 안에) 닫혔는가 — 아이콘을 누른 클릭이 먼저 바깥 클릭으로 메뉴를 닫았을 때 다시 열지 않게
+export const closedWithin = (ms: number): boolean => Date.now() - closedAt < ms;
+
+// 떠 있는 메뉴가 보이는 자리(화면 DIP) — 창에서 그림자 여백을 뺀다. 메뉴는 모서리가 커서(트레이 아이콘)에 붙어 뜨므로
+// 여백까지 넣으면 아이콘을 다시 누른 클릭이 메뉴 안으로 잡힌다
+export function menuBounds(): Electron.Rectangle | null {
+  if (!menuOpen()) return null;
+  const b = current!.getBounds();
+  return { x: b.x + SHADOW, y: b.y + SHADOW, width: b.width - SHADOW * 2, height: b.height - SHADOW * 2 };
+}
 
 export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructorOptions[], on: string): void {
   if (current && !current.isDestroyed()) current.close();
@@ -34,8 +56,8 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
   const win = new BrowserWindow({
     x: at.x,
     y: at.y,
-    width: 216,
-    height: 100,
+    width: 400, // 재기 전 자리 — 메뉴가 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
+    height: 400,
     show: false,
     frame: false,
     transparent: true,
@@ -49,6 +71,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     skipTaskbar: true,
     alwaysOnTop: true,
     icon: windowIcon(),
+    focusable: !opts.inactive,
     webPreferences: { preload: opts.preload },
   });
   win.setAlwaysOnTop(true, "pop-up-menu");
@@ -61,6 +84,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     ipcMain.removeListener(CH.size, onSize);
     ipcMain.removeListener(CH.pick, onPick);
     if (current === win) current = null;
+    closedAt = Date.now();
     if (!win.isDestroyed()) win.close();
     opts.onClosed?.();
   };
@@ -79,6 +103,10 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     y = Math.max(area.y, y);
     win.setBounds({ x, y, width, height });
     opts.onPlaced?.({ x: x + SHADOW, y: y + SHADOW, w: width - SHADOW * 2, h: height - SHADOW * 2 });
+    if (opts.inactive) {
+      win.showInactive();
+      return;
+    }
     win.show();
     win.focus(); // 방향키·Enter·Esc 를 받고, 바깥을 누르면 blur 로 닫는다
   };

@@ -59,8 +59,11 @@
         -webkit-user-select: none;
         user-select: none;
       }
+      /* 폭은 내용에 맞춘다 — 트레이 메뉴처럼 짧은 항목만 있으면 오른쪽이 비지 않게 */
       #menu {
-        width: 200px;
+        width: max-content;
+        min-width: 120px;
+        max-width: 280px;
         padding: 4px;
         border: 1px solid var(--line);
         border-radius: 12px;

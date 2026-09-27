@@ -17,6 +17,15 @@ export interface HelperInfo {
   frontPid?: number;
   frontId?: number;
   windows: HelperWindow[];
+  input?: HelperInput; // Windows -Serve 헬퍼만 — 트레이 메뉴의 바깥 클릭·Esc (helpers/winbounds.ps1)
+}
+
+// 헬퍼가 센 입력 — 마우스 버튼을 누른 횟수와 마지막 누른 자리(물리 픽셀), Esc 를 누른 횟수
+export interface HelperInput {
+  click: number;
+  x: number;
+  y: number;
+  esc: number;
 }
 
 // 훅이 세션마다 적는 기록 (state/*.json)

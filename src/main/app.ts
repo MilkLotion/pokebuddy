@@ -31,7 +31,7 @@ import { createStage, type Stage } from "./stage";
 import { createStageWindow, type StageWindow } from "./stage-window";
 import { langOf, natureName, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
-import { popupMenu } from "./menu-window";
+import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
 import { createHungerBubbles } from "./hunger-bubble";
 import { SOUND_RULES, gainOf } from "../state/settings";
@@ -238,6 +238,74 @@ function syncCoach(): void {
 // 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
 // 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
 let firstCareMenu: string | null = null;
+
+// 트레이 메뉴 — Windows 는 포커스를 쥐지 않게 띄운다(숨겨진 아이콘 창이 닫히지 않게). 바깥 클릭·Esc 는 헬퍼의 입력 감시로 닫는다.
+// 떠 있는 동안만 헬퍼를 자주(50ms) 묻는다. 기준 수는 띄운 뒤 첫 답이다 — 메뉴를 연 그 클릭은 세지 않는다
+const TRAY_INPUT_MS = 50;
+let trayInputBase: { click: number; esc: number } | null = null;
+let trayInputTimer: NodeJS.Timeout | null = null;
+// 아이콘을 다시 눌러 메뉴를 닫은 때 — 메뉴가 떠 있는 동안에는 아이콘 클릭 신호가 오지 않아 Windows 가 더블클릭을 만들지 못한다.
+// 이 뒤 DOUBLE_CLICK_MS 안에 아이콘을 한 번 더 누르면 더블클릭으로 보고 설정창을 연다
+const DOUBLE_CLICK_MS = 200; // 2026-09-28 사용자 "0.2초로 해도 될듯"
+let iconClosed: { at: number; click: number } | null = null;
+
+const stopTrayInput = (): void => {
+  if (trayInputTimer) clearInterval(trayInputTimer);
+  trayInputTimer = null;
+  iconClosed = null;
+};
+
+function popupTrayMenu(): void {
+  const inactive = process.platform === "win32";
+  trayInputBase = null;
+  popupMenu(
+    {
+      preload: preloadFile(),
+      html: rendererFile("menu.html"),
+      inactive,
+      onClosed: () => {
+        if (!iconClosed) stopTrayInput(); // 아이콘으로 닫았으면 더블클릭을 볼 동안 더 묻는다
+      },
+    },
+    trayTemplate(),
+    t("menu.on"),
+  );
+  if (inactive && !trayInputTimer) trayInputTimer = setInterval(() => anchor?.poll(), TRAY_INPUT_MS);
+}
+
+function onTrayInput(input: { click: number; x: number; y: number; esc: number }): void {
+  if (!trayInputTimer) return;
+  const at = screen.screenToDipPoint({ x: input.x, y: input.y });
+  const icon = tray?.bounds();
+  const onIcon = !!icon && icon.width > 0 && at.x >= icon.x && at.x < icon.x + icon.width && at.y >= icon.y && at.y < icon.y + icon.height;
+  if (iconClosed) {
+    const late = Date.now() - iconClosed.at > DOUBLE_CLICK_MS;
+    const again = input.click > iconClosed.click && onIcon;
+    if (again && !late) {
+      stopTrayInput();
+      tray?.holdClick(DOUBLE_CLICK_MS); // 뒤따라 오는 아이콘 클릭 신호로 메뉴가 다시 뜨지 않게
+      openManageWindow();
+    } else if (late) stopTrayInput();
+    return;
+  }
+  if (!menuOpen()) return;
+  if (!trayInputBase) {
+    trayInputBase = { click: input.click, esc: input.esc };
+    return;
+  }
+  if (input.esc !== trayInputBase.esc) return closeMenu();
+  if (input.click === trayInputBase.click) return;
+  trayInputBase.click = input.click;
+  // 트레이 아이콘을 다시 누른 것 — 메뉴가 아이콘 위에 걸쳐 떠도 닫는다(메뉴가 떠 있는 동안 아이콘 클릭 신호는 오지 않는다)
+  if (onIcon) {
+    iconClosed = { at: Date.now(), click: input.click };
+    return closeMenu();
+  }
+  // 메뉴 안을 누른 것은 메뉴가 처리한다(항목 고르기). 바깥이면 닫는다 — 테두리에 걸친 점(메뉴가 붙은 아이콘 자리)은 바깥이다
+  const b = menuBounds();
+  if (b && at.x > b.x && at.x < b.x + b.width - 1 && at.y > b.y && at.y < b.y + b.height - 1) return;
+  closeMenu();
+}
 let firstCareAvoid: CoachView["avoid"] = undefined; // 열린 메뉴의 자리(무대 좌표) — 말풍선이 피한다
 
 function coachView(id: string, starterPetId: string | null): CoachView | null {
@@ -749,6 +817,7 @@ async function main(): Promise<void> {
     flags: () => ({ userHidden, held: stage?.heldId() != null }),
     onUpdate: onAnchorUpdate,
     onFocus: (key) => stage?.focus(key),
+    onInput: onTrayInput,
     log,
   });
 
@@ -826,7 +895,11 @@ async function main(): Promise<void> {
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
     template: trayTemplate,
-    popup: () => popupMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, trayTemplate(), t("menu.on")),
+    popup: popupTrayMenu,
+    open: () => openManageWindow(),
+    menuOpen,
+    closeMenu,
+    closedWithin,
   });
 
   applyClickThrough(!!config.clickThrough);
