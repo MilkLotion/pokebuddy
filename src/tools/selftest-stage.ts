@@ -17,15 +17,14 @@ import { SAVE_RULES, SAVE_V3_RULES } from "../save/rules";
 import * as legacy from "../save/legacy";
 import * as writer from "../save/writer";
 import type { LookSheets, PointerMsg, StageFrame, StageState } from "../shared/stage";
-import type { AgentState, Mode } from "../shared/types";
+import type { AgentState } from "../shared/types";
 import { devSaveState } from "./dev-save";
 import { createStage } from "../main/stage";
 import type { Look, ArtLoader } from "../main/art";
 import type { StageWindow } from "../main/stage-window";
-import type { PartyPet } from "../main/party";
 import { createCommands } from "../main/commands";
 import { createGame } from "../main/game";
-import { createSaveParty, type SaveParty } from "../main/save-party";
+import { createSaveParty, type PartyPet, type SaveParty } from "../main/save-party";
 import { begin } from "../party/starter";
 import * as store from "../save/store";
 import { empty as emptyV3 } from "../save/v3";
@@ -96,10 +95,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(clampInStage(-5, 999, body, stage), { x: 0, y: 544 }, "clampInStage");
   const spot = homeSpot(home, body, anchor, stage);
   eq(homeOf(spot, body, anchor), home, "homeOf 는 homeSpot 의 역함수 (안에 있을 때)");
-  const shift = stackShift(body, 1, "session");
-  eq(shift, Math.round(40 * STAGE_RULES.stackRatio), "stackShift 세션 순번 1");
-  eq(stackShift(body, 0, "companion"), shift, "stackShift 동반자는 한 칸 더");
-  eq(stackShift(body, 0, "window"), 0, "stackShift 창 펫 순번 0 은 0");
+  const shift = stackShift(body);
+  eq(shift, Math.round(40 * STAGE_RULES.stackRatio), "stackShift 는 몸 한 칸 — 저장된 집과 맞추려고 그대로 둔다");
   const shifted = homeSpot(home, body, anchor, stage, shift);
   eq(shifted.x, spot.x - shift, "shift 만큼 왼콍");
   eq(homeOf(shifted, body, anchor, shift), home, "저장 때 shift 를 더해 상쇄");
@@ -177,10 +174,10 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
 
 // ── party — 파일 · writer/reader · 옛 저장 · 첫 실행 (저장 v3) ─────────────────────
 // 앱과 같게 묶는다 — 실행기는 잠금을 잡은 프로세스만 쓴다 (src/main/app.ts)
-function openParty(p: ReturnType<typeof pathsIn>, mode: Mode) {
+function openParty(p: ReturnType<typeof pathsIn>) {
   let party: SaveParty | null = null;
   const game = createGame({ file: p.save, canWrite: () => party?.isWriter() ?? false, rand: () => 0.5 });
-  party = createSaveParty({ game, paths: p, mode });
+  party = createSaveParty({ game, paths: p });
   return { game, party };
 }
 
@@ -189,7 +186,7 @@ async function partyTests(): Promise<void> {
   {
     const p = pathsIn(tmpDir("writer"));
     store.write(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
-    const { party } = openParty(p, "companion");
+    const { party } = openParty(p);
     ok(party.isWriter(), "writer 가 됐다");
     eq(party.pets().map((x) => x.id), ["p1", "p2"], "writer 가 파티를 읽었다");
     eq(party.pets()[0]?.nature, "hardy", "성격이 실렸다");
@@ -210,7 +207,7 @@ async function partyTests(): Promise<void> {
     const p = pathsIn(tmpDir("v1"));
     const v1 = { v: 1, active: "eevee#1", points: 3, party: { "eevee#1": { species: "eevee", since: T0, affinity: 5 } }, daily: { date: "2026-09-17", streak: 2 } };
     fs.writeFileSync(p.save, JSON.stringify(v1));
-    const { party } = openParty(p, "companion");
+    const { party } = openParty(p);
     const bak = store.backupName(p.save);
     ok(fs.existsSync(bak), "원본 사본 save.json.v2.bak 이 생겼다");
     eq(JSON.parse(fs.readFileSync(bak, "utf8")).v, 1, "사본은 v1 그대로");
@@ -219,7 +216,7 @@ async function partyTests(): Promise<void> {
     party.stop();
     fs.writeFileSync(bak, "marker");
     fs.writeFileSync(p.save, JSON.stringify(v1));
-    openParty(p, "companion").party.stop();
+    openParty(p).party.stop();
     eq(fs.readFileSync(bak, "utf8"), "marker", "사본은 덮지 않는다 (한 번만)");
   }
   // reader — 살아 있는 남이 잠금을 쥐면 파일만 읽는다. 바꾸는 요청은 mailbox 로 가고 파일은 쓰지 않는다
@@ -231,7 +228,7 @@ async function partyTests(): Promise<void> {
 `);
       store.write(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
       const before = fs.readFileSync(p.save, "utf8");
-      const { game, party } = openParty(p, "window");
+      const { game, party } = openParty(p);
       ok(!party.isWriter(), "잠금이 남의 것이면 reader");
       eq(party.pets().length, 2, "reader 도 파일을 읽는다");
       ok(!party.needsStarter(), "reader 는 첫 실행을 맡지 않는다");
@@ -257,7 +254,7 @@ async function partyTests(): Promise<void> {
   // 첫 실행 — 파일 없음 → writer → begin(첫 선택)
   {
     const p = pathsIn(tmpDir("first"));
-    const { party } = openParty(p, "companion");
+    const { party } = openParty(p);
     ok(party.isWriter() && party.needsStarter(), "파일이 없으면 writer 이고 첫 실행");
     eq(party.pets(), [], "첫 실행 전에는 빈 파티");
     ok(party.begin("eevee"), "begin 이 첫 선택으로 시작한다");
@@ -286,7 +283,7 @@ async function stageRuntimeTests(): Promise<void> {
     cached: (look) => looks.get(look) ?? null,
   };
   const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;
-  const stage = createStage({ mode: "companion", index: 0, buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, cursor: () => ({ x: 100, y: 100 }), onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
+  const stage = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, cursor: () => ({ x: 100, y: 100 }), onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
   const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, shown: true, nick: null };
   stage.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
   stage.setVisible(true);
@@ -342,7 +339,7 @@ async function stageRuntimeTests(): Promise<void> {
   stage.tick();
   eq(stage.petIds(), [], "빈 파티에서 무대 제거");
 
-  const overlap = createStage({ mode: "companion", index: 0, buddyMode: "off", timeScale: 1, window: win, art, ghost: () => false,
+  const overlap = createStage({ buddyMode: "off", timeScale: 1, window: win, art, ghost: () => false,
     onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
   overlap.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
   overlap.setVisible(true);
@@ -383,7 +380,7 @@ async function stageRuntimeTests(): Promise<void> {
   {
     const lost = pathsIn(tmpDir("lost-writer"));
     store.write(lost.save, devSaveState(["eevee"], { now: T0 }));
-    const { game, party } = openParty(lost, "companion");
+    const { game, party } = openParty(lost);
     const other = spawnIdle();
     try {
       ok(party.isWriter(), "처음에는 writer");
@@ -406,7 +403,7 @@ async function stageRuntimeTests(): Promise<void> {
     old.points = 1234;
     legacy.write(migPaths.save, old);
     const migGame = createGame({ file: migPaths.save });
-    const migParty = createSaveParty({ game: migGame, paths: migPaths, mode: "companion" });
+    const migParty = createSaveParty({ game: migGame, paths: migPaths });
     try {
       const moved = store.read(migPaths.save, { repair: false }).state!;
       eq(moved.pets.length, 2, "두 마리가 그대로 옮겨진다");
@@ -429,11 +426,11 @@ async function stageRuntimeTests(): Promise<void> {
   seed.pets[0]!.fullness = 40;
   store.write(commandPaths.save, seed);
   const game = createGame({ file: commandPaths.save, rand: () => 0 });
-  const source = createSaveParty({ game, paths: commandPaths, mode: "companion" });
+  const source = createSaveParty({ game, paths: commandPaths });
   let animations = 0;
-  const commands = createCommands({ mode: "companion", mailboxDir: commandPaths.mailbox, party: source, game,
+  const commands = createCommands({ mailboxDir: commandPaths.mailbox, party: source, game,
     stage: { poke: () => true, care: () => void animations++, petIds: () => ["p1"], size: () => ({ w: 800, h: 600 }), visible: () => true },
-    settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {}, keepVisible: () => true, setKeepVisible() {} }, quit() {},
+    settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} }, quit() {},
   });
   try {
     ok(source.isWriter(), "잠금을 잡아 writer 로 시작");
@@ -482,15 +479,11 @@ async function anchorTests(): Promise<void> {
   const win = { app: "Fake", pid: 424242, id: 77, x: 10, y: 20, w: 800, h: 600 };
   fs.writeFileSync(helper, `#!/bin/sh\nprintf '%s\\n' '${JSON.stringify({ frontmost: "Fake", frontPid: 424242, windows: [win] })}'\n`, { mode: 0o755 });
   const env = { ...process.env, POKEBUDDY_WINBOUNDS: helper };
-  const runtime = (mode: Mode) => ({
-    mode, termPid: null, hostPid: null, session: null, ancestors: [424242], matchCwd: null, index: 0, anchorApp: null,
-    windowsDir: path.join(dir, "windows"), debug: false, buddyTimeScale: 1,
-  });
   const fakeArea = { id: -1, pid: 0, app: "", x: 0, y: 0, w: 1440, h: 900, fake: true as const };
-  const make = (mode: Mode, flags: { userHidden: boolean; keepVisible: boolean; held: boolean }, updates: AnchorUpdate[]) => {
+  const make = (flags: { userHidden: boolean; held: boolean }, updates: AnchorUpdate[]) => {
     let quits = 0;
     const anchor = createAnchor({
-      mode, runtime: runtime(mode), paths: { state: path.join(dir, "state"), project: dir }, self: { pid: process.pid, appNames: new Set(["electron"]) }, env,
+      paths: { state: path.join(dir, "state"), project: dir }, self: { pid: process.pid, appNames: new Set(["electron"]) }, env,
       host: { platform: "darwin", now: Date.now, toDip: (w) => w, offScreen: () => false, workArea: () => fakeArea, quit: () => void (quits += 1), quitting: () => false },
       flags: () => flags, onUpdate: (u) => updates.push(u), onFocus: () => {}, log: null,
     });
@@ -502,15 +495,15 @@ async function anchorTests(): Promise<void> {
     ok(await waitFor(() => updates.length > n), "헬퍼 답이 왔다");
     return updates[updates.length - 1]!;
   };
-  // 세션 펫 — 조상(424242)이 창 주인 → 첫 폴링은 후보, 둘째에 확정. 표시도 2회 연속 뒤
+  // 맨 앞 창이 터미널 호스트가 아니면(모르는 앱) 작업 영역(가짜 창)에 남는다. 표시는 2회 연속 뒤. 직접 숨김·들기 판정
   {
     const updates: AnchorUpdate[] = [];
-    const flags = { userHidden: false, keepVisible: false, held: false };
-    const { anchor } = make("session", flags, updates);
+    const flags = { userHidden: false, held: false };
+    const { anchor } = make(flags, updates);
     const u1 = await pollOnce(anchor, updates);
-    eq([u1.target?.id, u1.visible, u1.placeId, u1.frontIsMine], [77, false, 77, true], "1회: 창은 찾았지만 표시는 아직 (VISIBLE_CONFIRM)");
+    eq([u1.target?.fake, u1.visible], [true, false], `1회: 표시는 아직 (visibleConfirm=${ANCHOR_RULES.visibleConfirm})`);
     const u2 = await pollOnce(anchor, updates);
-    eq([u2.target?.id, u2.visible, u2.placeId], [77, true, 77], `2회: 앵커 확정(CAPTURE_CONFIRM=${ANCHOR_RULES.captureConfirm}) · 표시`);
+    eq([u2.target?.fake, u2.visible], [true, true], "2회: 호스트 없음 → 가짜 창 · 늘 보임");
     eq(anchor.currentInfo(), { state: "idle", promptAt: null }, "훅 기록이 없으면 대기");
     flags.userHidden = true;
     await pollOnce(anchor, updates);
@@ -523,21 +516,12 @@ async function anchorTests(): Promise<void> {
     eq(u4.visible, false, "들고 있는 동안은 판정 보류 — 직전 상태 유지");
     anchor.stop();
   }
-  // 동반자 — 맨 앞 창이 터미널 호스트가 아니면(모르는 앱) 작업 영역(가짜 창)에 남고 늘 보인다
-  {
-    const updates: AnchorUpdate[] = [];
-    const { anchor } = make("companion", { userHidden: false, keepVisible: false, held: false }, updates);
-    await pollOnce(anchor, updates);
-    const u = await pollOnce(anchor, updates);
-    eq([u.target?.fake, u.visible, u.placeId, u.frontIsMine], [true, true, null, true], "동반자: 호스트 없음 → 가짜 창 · 늘 보임 · 늘 위");
-    anchor.stop();
-  }
-  // 동반자 — 훅 기록이 그 창 주인을 조상으로 가지면 호스트 (b) → 그 창을 따른다
+  // 훅 기록이 그 창 주인을 조상으로 가지면 호스트 (a) → 그 창을 따른다
   {
     const stateDir = tmpDir("anchor/state");
     fs.writeFileSync(path.join(stateDir, "s.json"), JSON.stringify({ at: Date.now() / 1000, state: "running", ancestors: [424242], promptAt: 1 }));
     const updates: AnchorUpdate[] = [];
-    const { anchor } = make("companion", { userHidden: false, keepVisible: false, held: false }, updates);
+    const { anchor } = make({ userHidden: false, held: false }, updates);
     await pollOnce(anchor, updates);
     const u = await pollOnce(anchor, updates);
     eq([u.target?.id, u.visible], [77, true], "동반자: 훅 기록으로 호스트를 알아 그 창을 따른다");

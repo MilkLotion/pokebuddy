@@ -15,7 +15,11 @@ for (const key of Object.keys(env)) {
 let checks = 0;
 assert.deepEqual(parseArgs(['companion']), { kind: 'companion', opts: {} }); checks++;
 assert.deepEqual(parseArgs(['companion', 'buddy=calm', '--click', 'on']).opts, { buddy: 'calm', click: 'on' }); checks++;
-assert.equal(parseArgs(['eevee', 'dot=3']).opts.pet, 'eevee'); checks++;
+// 세션 펫 명령(pokebuddy <종> · stop)은 없어졌다 — 알 수 없는 명령으로 멈춘다. 인자가 없으면 도움말
+for (const args of [['eevee'], ['eevee', 'dot=3'], ['stop'], ['stop', 'all']]) {
+  assert.equal(parseArgs(args).kind, 'unknown', args.join(' ')); checks++;
+}
+assert.equal(parseArgs([]).kind, 'help'); checks++;
 for (const name of ['pet', 'pokemon', 'pokebuddy', 'PET']) {
   for (const args of [[`${name}=eevee`], [`--${name}`, 'eevee']]) {
     assert.match(parseArgs(['companion', ...args]).error, /포켓몬 이름을 받지 않는다/); checks++;

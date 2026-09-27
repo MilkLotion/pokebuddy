@@ -1,4 +1,4 @@
-// 무대 BrowserWindow — 테두리 없음 · 배경 투명 · 따라가는 창 크기. 만들기 · setBounds(무대 사각형) · show/hide · place(z-order) ·
+// 무대 BrowserWindow — 테두리 없음 · 배경 투명 · 늘 위 · 따라가는 창 크기. 만들기 · setBounds(무대 사각형) · show/hide ·
 // 클릭 통과 · hoverTick · IPC(init/sheets/frame/hover/hit/pointer/click-through) · 렌더러 재시작.
 //
 // 창은 더 이상 움직이지 않는다 — 마리가 무대 안에서 움직인다. 그래서 1판의 commanded · movedByUs · MOVE_TOLERANCE · DRAG_GRACE ·
@@ -7,7 +7,6 @@
 import fs from "node:fs";
 import { BrowserWindow, Menu, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
 import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageChannel, StageFrame, StageInit } from "../shared/stage";
-import type { Mode } from "../shared/types";
 import { sameRect, type Rect, type Size } from "./layout";
 import { windowIcon } from "./paths";
 
@@ -31,7 +30,6 @@ const CH = {
 const BLANK_URL = "data:text/html,<html><body style='margin:0;background:transparent'></body></html>";
 
 export interface StageWindowOptions {
-  mode: Mode;
   debug: boolean;
   preload: string;
   html: string; // src/renderer/stage.html — 없으면 로그 한 줄 뒤 창만 만든다
@@ -51,7 +49,6 @@ export interface StageWindow {
   setStage(rect: Rect): boolean; // 바뀔 때만 setBounds. 바뀌었으면 true (렌더러에 stage:init 도 보낸다)
   setVisible(on: boolean): void;
   isVisible(): boolean;
-  place(anchorWindowId: number | null, frontIsMine: boolean): void;
   setPassing(on: boolean): void;
   hoverTick(held: boolean, ghost: boolean): void;
   sendInit(): void;
@@ -66,7 +63,7 @@ export interface StageWindow {
 }
 
 export function createStageWindow(opts: StageWindowOptions): StageWindow {
-  const { mode, debug, log } = opts;
+  const { debug, log } = opts;
   let win: BrowserWindow | null = new BrowserWindow({
     width: 1,
     height: 1,
@@ -78,8 +75,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     hasShadow: false,
     resizable: false,
     skipTaskbar: true,
-    // 동반자는 항상 위. 나머지는 일반 레벨 — 내 창 위에만 있고 다른 창이 올라오면 그 아래로 내려간다
-    alwaysOnTop: mode === "companion",
+    alwaysOnTop: true, // 동반자는 항상 위
     fullscreenable: false,
     focusable: false, // 클릭해도 터미널 포커스를 뺏지 않음
     icon: windowIcon(), // Windows 작업 표시줄·작업 관리자용 로고 (없으면 undefined — 기본)
@@ -96,21 +92,13 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     },
   });
   let stageRect: Rect | null = null;
-  let level: "float" | "normal" | null = null; // 지금 창 레벨
   let passing: boolean | null = null; // 지금 클릭을 아래 창으로 통과시키는 중인가 — setIgnoreMouseEvents 의 마지막 값
   let coach: CoachView | null = null; // 마지막으로 보낸 튜토리얼 — 렌더러가 다시 뜨면 다시 보낸다
   let coachKey = "null";
   let loaded = false; // 문서를 실제로 읽었나 (렌더러가 없으면 false — IPC 를 보내도 받는 이가 없다)
 
-  if (mode === "companion") {
-    // 동반자는 Space(데스크탑)를 옮겨도 따라온다 — 늘 보이는 펫이 만들어진 Space 에 남으면 사라진 것처럼 보인다
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    level = "float";
-  } else {
-    // 첫 인자 false — Space 를 전환해도 펫이 따라오지 않고 자기 창이 있는 Space 에 남는다.
-    // visibleOnFullScreen 은 별개 속성이라 풀스크린 창 위 표시는 그대로 유지된다
-    win.setVisibleOnAllWorkspaces(false, { visibleOnFullScreen: true });
-  }
+  // Space(데스크탑)를 옮겨도 따라온다 — 늘 보이는 펫이 만들어진 Space 에 남으면 사라진 것처럼 보인다
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   const mine = (sender: unknown): boolean => !!win && !win.isDestroyed() && sender === win.webContents;
   const onReady = (e: Electron.IpcMainEvent): void => {
@@ -221,32 +209,6 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       }
     },
     isVisible: () => alive() && win!.isVisible(),
-
-    // 펫을 z-order 의 알맞은 자리에 놓는다 — 포커스는 빼앗지 않는다
-    //   내 창이 맨 앞  → floating. 그 위에 있어야 할 창이 없고, 창을 클릭해도 묻히지 않는다
-    //   내 창이 뒤     → 일반 레벨로 내리고 내 창 "바로 위"에 꽂는다. 그 위의 창들이 자연히 가린다
-    // moveTop() 은 쓰지 않는다 — 백그라운드 앱에서는 창을 활성 앱 아래로 밀어넣는다 (실측 확인)
-    place(anchorWindowId, frontIsMine) {
-      if (!alive() || !win!.isVisible()) return;
-      if (frontIsMine) {
-        if (level !== "float") {
-          win!.setAlwaysOnTop(true, "floating");
-          level = "float";
-        }
-        return;
-      }
-      if (level !== "normal") {
-        win!.setAlwaysOnTop(false);
-        level = "normal";
-      }
-      if (anchorWindowId == null) return;
-      try {
-        // 다른 앱 창 바로 위에 꽂는다 — mediaSourceId 의 번호는 mac 의 CGWindowNumber, Windows 의 HWND
-        win!.moveAbove(`window:${anchorWindowId}:0`);
-      } catch {
-        // 그 창이 사라졌다 — 다음 폴링에서 다시 잡는다
-      }
-    },
 
     setPassing,
 

@@ -4,8 +4,8 @@
 //   2. 상태 훅         dist/hooks/pokebuddy-state.js(TS 빌드 산출물)를 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사 +
 //                      쓰고 있는 CLI LLM 마다 이벤트 등록 — claude settings.json · gemini settings.json · codex hooks.json
 //                      dist/ 가 없으면(git clone 직후) tsc 가 있을 때 npm run build 를 먼저 돌리고, 못 하면 훅 단계를 건너뛰고 알린다
-//   3. 에디터 확장      VS Code 계열에 탭 구분 확장 설치 (에디터 CLI 가 있을 때만)
-//   4. 옛 이름          termimon·pkmon 데이터 폴더를 가져오고, 옛 훅 등록·훅 파일·확장·데이터 폴더를 걷는다
+//   3. 옛 에디터 확장   예전 버전이 설치한 VS Code 계열 확장과 그 기록(cli.json · windows/)을 걷는다 (2026-09-27 창 모드 삭제)
+//   4. 옛 이름          termimon·pkmon 데이터 폴더를 가져오고, 옛 훅 등록·훅 파일·데이터 폴더를 걷는다
 //
 // 원칙
 //   - 설정 파일은 백업을 남기고, 이미 있는 항목은 건드리지 않고, 몇 번을 돌려도 결과가 같다
@@ -16,16 +16,15 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { PATHS, LEGACY_HOME_ITEMS, migrateLegacyHome } = require("../config.js");
-const { electronPath } = require("../lib/electron.js");
 
 const PROJECT = path.join(__dirname, "..");
 const HOOK_NAME = "pokebuddy-state.cjs";
 // 훅 원본은 TS 빌드 산출물 (src/hooks/pokebuddy-state.ts → dist/). 목적지 이름은 .cjs — 내용이 CJS 라 그대로 돈다
 const HOOK_SOURCE = path.join(PROJECT, "dist", "hooks", "pokebuddy-state.js");
-const EXTENSION_ID = "local.pokebuddy-active-terminal";
-// 옛 이름(termimon·pkmon) 시절에 설치한 것 — setup 이 새 이름으로 바꾸고, uninstall 이 함께 지운다
+// 옛 이름(termimon·pkmon) 시절에 설치한 훅 — setup 이 새 이름으로 바꾸고, uninstall 이 함께 지운다
 const LEGACY_HOOK_NAMES = ["termimon-state.cjs", "pkmon-state.cjs"];
-const LEGACY_EXTENSION_IDS = ["local.termimon-active-terminal", "local.pkmon-active-terminal"];
+// 예전 버전이 설치한 에디터 확장 — 지금 이름과 옛 이름. setup·uninstall 이 깔려 있으면 지운다
+const RETIRED_EXTENSION_IDS = ["local.pokebuddy-active-terminal", "local.termimon-active-terminal", "local.pkmon-active-terminal"];
 
 // Claude Code 는 CLAUDE_CONFIG_DIR 로 설정 폴더를 옮길 수 있다
 const claudeDir = () => process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
@@ -297,30 +296,6 @@ function editorName(real) {
   return path.basename(real);
 }
 
-function vsixFile() {
-  const dir = path.join(PROJECT, "vscode-extension");
-  // 지금 이름의 확장만 — 같은 폴더에 남은 옛 이름(termimon·pkmon) vsix 를 설치하지 않게
-  const prefix = `${EXTENSION_ID.split(".")[1]}-`;
-  try {
-    const hits = fs.readdirSync(dir).filter((f) => f.startsWith(prefix) && f.endsWith(".vsix")).sort();
-    return hits.length ? path.join(dir, hits[hits.length - 1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-// git clone 으로 받았으면 vsix 가 없다 — 빌드 산출물이라 저장소에 넣지 않는다 (npm 배포본에는 prepack 이 넣는다).
-// 묶는 스크립트는 의존성 없는 Node 라 어느 OS 에서나 돈다. 배포본에는 스크립트가 없어 null
-const VSIX_BUILDER = path.join(PROJECT, "scripts", "build-vsix.js");
-function buildVsix() {
-  if (!fs.existsSync(VSIX_BUILDER)) return null;
-  try {
-    return require(VSIX_BUILDER).build();
-  } catch {
-    return null;
-  }
-}
-
 // 에디터 CLI 실행 — Windows 의 .cmd 는 셸을 거쳐야 한다
 function runEditor(cli, args) {
   const opts = { encoding: "utf8", timeout: 60_000, stdio: ["ignore", "pipe", "pipe"], windowsHide: true };
@@ -336,7 +311,7 @@ function runEditor(cli, args) {
 const say = (line = "") => process.stdout.write(`${line}\n`);
 
 // 훅 원본(dist/)이 있게 한다 — git clone 으로 받았으면 dist/ 가 없다 (빌드 산출물이라 저장소에 넣지 않는다. npm 배포본에는 prepack 이 넣는다).
-// tsc 가 있으면(개발 의존성 설치됨) npm run build 를 돌린다. buildVsix 와 같은 태도 — 미리 보기에서는 만들지 않고 예정으로만 둔다.
+// tsc 가 있으면(개발 의존성 설치됨) npm run build 를 돌린다. 미리 보기에서는 만들지 않고 예정으로만 둔다.
 // 없는 원본을 등록하면 CLI 이벤트마다 없는 파일을 실행하게 되므로, 못 만들면 부르는 쪽이 훅 단계(파일·등록)를 건너뛴다
 // 반환: { ready: true, built? } · { ready: false, willBuild: true } (미리 보기) · { ready: false, note } (못 만듦)
 const TSC = path.join(PROJECT, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
@@ -547,46 +522,10 @@ function setup({ dryRun = false, editor = true } = {}) {
     }
   }
 
-  // 3.5 실행 경로 — VS Code 확장이 창마다 펫을 직접 띄우는 데 쓴다. Dock 으로 띄운 VS Code 는 PATH 에 npm 전역 폴더가
-  // 없고 Node 버전도 다를 수 있어, 명령 이름 대신 Electron 실행 파일과 이 폴더의 절대 경로를 적어 둔다.
-  // Node 버전 관리자로 경로가 바뀌면 setup 을 다시 돌려 갱신한다. Electron 을 못 받았으면 null 로 적고 알린다
-  const cliInfo = { electron: electronPath(), project: PROJECT, version: require("../package.json").version };
-  say(
-    `실행 경로      ${PATHS.cli}  ${dryRun ? "적을 예정" : "적음"}` +
-      (cliInfo.electron ? "" : " — Electron 이 없어 확장이 펫을 못 띄운다 (네트워크가 되는 곳에서 다시 setup)"),
-  );
-  if (!dryRun) fs.writeFileSync(PATHS.cli, `${JSON.stringify(cliInfo, null, 2)}\n`);
-
-  // 4. 에디터 확장 — 창마다 펫을 띄우고, 같은 창의 여러 터미널 탭 중 활성 탭을 알려 준다
-  let vsix = vsixFile();
-  const clis = editor ? editorClis() : [];
-  // git clone 설치 — 묶는 스크립트로 vsix 를 만든다. 미리 보기에서는 파일을 만들지 않고 예정으로만 둔다
-  const toBuild = editor && !vsix && fs.existsSync(VSIX_BUILDER);
-  if (toBuild && dryRun) say("에디터 확장    vsix 파일이 없음 — 묶어서 설치할 예정");
-  if (toBuild && !dryRun) {
-    vsix = buildVsix();
-    say(`에디터 확장    vsix 파일이 없어 묶음${vsix ? `: ${vsix}` : " — 실패"}`);
-  }
-  if (!editor) say("에디터 확장    --no-editor — 건너뜀");
-  else if (!vsix && !(toBuild && dryRun)) say("에디터 확장    vsix 파일이 없음 — 건너뜀");
-  else if (!clis.length) {
-    say("에디터 확장    VS Code 계열 에디터 CLI 를 못 찾음 — 에디터에서 직접 설치:");
-    if (vsix) say(`               확장 보기 → … → VSIX 에서 설치 → ${vsix}`);
-  } else {
-    for (const { name, file: cli } of clis) {
-      if (dryRun) {
-        say(`에디터 확장    ${name}: 설치할 예정 (${cli})`);
-        continue;
-      }
-      try {
-        runEditor(cli, ["--install-extension", vsix, "--force"]);
-        say(`에디터 확장    ${name}: 설치함 — 열려 있는 창은 다시 불러와야 적용된다`);
-      } catch (e) {
-        say(`에디터 확장    ${name}: 설치 실패 (${String(e.message).split("\n")[0]})`);
-      }
-    }
-  }
-  for (const { name, file: cli } of clis) removeLegacyExtensions(name, cli, dryRun);
+  // 4. 옛 에디터 확장 — 예전 버전이 창마다 펫을 띄우던 확장과 그 기록을 걷는다. 남겨 두면 확장이 창 펫을 계속 띄우려 든다
+  removeRetiredEditorFiles(dryRun);
+  if (!editor) say("옛 에디터 확장 --no-editor — 건너뜀");
+  else for (const { name, file: cli } of editorClis()) removeRetiredExtensions(name, cli, dryRun);
 
   removeLegacyHomes(dryRun);
 
@@ -594,34 +533,42 @@ function setup({ dryRun = false, editor = true } = {}) {
   if (dryRun) say("실제로 적용하려면: pokebuddy setup");
   else if (process.exitCode) say("설치가 덜 끝났다 — 위 메시지를 확인한 뒤 다시 pokebuddy setup");
   else {
-    say("끝. CLI(claude·codex·gemini)를 새로 열고 !pokebuddy eevee 로 띄워 보세요. 일반 터미널에서는 pokebuddy eevee");
-    say("    늘 떠 있는 동반자는 pokebuddy companion. VS Code 는 창을 다시 불러오면 창마다 펫이 뜬다 (설정 pokebuddy.autoLaunch)");
+    say("끝. pokebuddy companion 으로 동반자를 띄우세요. CLI(claude·codex·gemini)는 새로 열어야 훅이 적용된다");
   }
 }
 
-// 옛 이름(termimon·pkmon) 확장이 깔려 있으면 지운다 — 두면 옛 데이터 폴더에 창 기록을 계속 쓴다.
+// 예전 버전이 설치한 에디터 확장이 깔려 있으면 지운다 — 두면 창 기록을 계속 쓰고 창 펫을 띄우려 든다.
 // 목록으로 먼저 본다 — 없는 확장을 지우면 실패로 끝나 "없음"과 "못 지움"을 가를 수 없다
-function removeLegacyExtensions(name, cli, dryRun) {
+function removeRetiredExtensions(name, cli, dryRun) {
   let installed;
   try {
     const ids = runEditor(cli, ["--list-extensions"])
       .split(/\r?\n/)
       .map((id) => id.trim().toLowerCase());
-    installed = LEGACY_EXTENSION_IDS.filter((id) => ids.includes(id));
+    installed = RETIRED_EXTENSION_IDS.filter((id) => ids.includes(id));
   } catch {
     return;
   }
   for (const id of installed) {
     if (dryRun) {
-      say(`에디터 확장    ${name}: 옛 확장 ${id} 제거할 예정`);
+      say(`옛 에디터 확장 ${name}: ${id} 제거할 예정`);
       continue;
     }
     try {
       runEditor(cli, ["--uninstall-extension", id]);
-      say(`에디터 확장    ${name}: 옛 확장 ${id} 제거함`);
+      say(`옛 에디터 확장 ${name}: ${id} 제거함 — 열려 있는 창은 다시 불러와야 적용된다`);
     } catch (e) {
-      say(`에디터 확장    ${name}: 옛 확장 ${id} 제거 실패 (${String(e.message).split("\n")[0]})`);
+      say(`옛 에디터 확장 ${name}: ${id} 제거 실패 (${String(e.message).split("\n")[0]})`);
     }
+  }
+}
+
+// 예전 확장이 쓰던 실행 경로 기록(cli.json)과 창 기록 폴더(windows/) — 남아 있으면 지운다
+function removeRetiredEditorFiles(dryRun) {
+  for (const file of [PATHS.legacyCli, PATHS.legacyWindows]) {
+    if (!fs.existsSync(file)) continue;
+    say(`옛 확장 기록   ${file}  ${dryRun ? "지울 예정" : "지움"}`);
+    if (!dryRun) fs.rmSync(file, { recursive: true, force: true });
   }
 }
 
@@ -727,25 +674,9 @@ function uninstall({ dryRun = false, purge = false, editor = true } = {}) {
     }
   }
 
-  // 실행 경로 기록 — 남겨 두면 확장이 지워진 프로그램을 띄우려 든다
-  if (fs.existsSync(PATHS.cli)) {
-    say(`실행 경로      ${PATHS.cli}  ${dryRun ? "지울 예정" : "지움"}`);
-    if (!dryRun) fs.rmSync(PATHS.cli, { force: true });
-  }
-
-  for (const { name, file: cli } of editor ? editorClis() : []) {
-    removeLegacyExtensions(name, cli, dryRun);
-    if (dryRun) {
-      say(`에디터 확장    ${name}: 제거할 예정`);
-      continue;
-    }
-    try {
-      runEditor(cli, ["--uninstall-extension", EXTENSION_ID]);
-      say(`에디터 확장    ${name}: 제거함`);
-    } catch {
-      say(`에디터 확장    ${name}: 설치돼 있지 않음`);
-    }
-  }
+  // 예전 버전의 에디터 확장과 그 기록
+  removeRetiredEditorFiles(dryRun);
+  for (const { name, file: cli } of editor ? editorClis() : []) removeRetiredExtensions(name, cli, dryRun);
 
   if (purge) {
     say(`펫 데이터      ${PATHS.home}  ${dryRun ? "지울 예정" : "지움"} (설정·위치·그림 캐시)`);

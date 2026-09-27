@@ -17,15 +17,9 @@ export const HELPER_START_TIMEOUT_MS = 20000; // 막 띄운 serve 헬퍼의 첫 
 
 // 헬퍼 실행 명령 — mac 은 컴파일된 Swift, Windows 는 PowerShell. 그 밖의 플랫폼·파일 없음이면 null (추적 수단 없음)
 // env.POKEBUDDY_WINBOUNDS 로 다른 실행 파일을 가리킬 수 있다 (테스트가 실제 헬퍼를 건드리지 않도록)
-// serve 면 한 번 띄워 두고 한 줄씩 묻는다 (line-helper.ts)
-// anchorApp 은 헬퍼에 그대로 넘기지만 헬퍼는 무시한다 — 목록은 전체로 받고, 내 창은 프로세스 조상으로 가린다
-export function helperCommand(
-  platform: NodeJS.Platform,
-  projectDir: string,
-  env: NodeJS.ProcessEnv = process.env,
-  anchorApp = "",
-): HelperCommand | null {
-  const args = anchorApp ? [anchorApp] : [];
+// serve 면 한 번 띄워 두고 한 줄씩 묻는다 (line-helper.ts). 목록은 늘 전체로 받는다
+export function helperCommand(platform: NodeJS.Platform, projectDir: string, env: NodeJS.ProcessEnv = process.env): HelperCommand | null {
+  const args: string[] = [];
   const override = env.POKEBUDDY_WINBOUNDS;
   if (override) return fs.existsSync(override) ? { cmd: override, args } : null;
   if (platform === "darwin") {

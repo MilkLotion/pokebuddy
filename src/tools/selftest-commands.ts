@@ -31,13 +31,13 @@ async function main(): Promise<void> {
   store.write(paths.save, seed);
 
   const game = createGame({ file: paths.save, rand: () => 0 });
-  const party = createSaveParty({ game, paths, mode: "companion" });
+  const party = createSaveParty({ game, paths });
   let artOk = false;
   let beforeArt: (() => void) | undefined;
   let changes = 0;
-  const commands = createCommands({ mode: "companion", mailboxDir: paths.mailbox, party, game,
+  const commands = createCommands({ mailboxDir: paths.mailbox, party, game,
     stage: { poke: () => true, petIds: () => [], size: () => ({ w: 1, h: 1 }), visible: () => true },
-    settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {}, keepVisible: () => true, setKeepVisible() {} },
+    settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} },
     quit() {}, prepareLook: async () => { beforeArt?.(); return artOk; }, onChanged: async () => { changes++; },
   });
   const evolveCmd: Command = { cmd: "evolve", target: "p1", from: "cli" };

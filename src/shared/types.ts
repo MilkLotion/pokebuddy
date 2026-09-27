@@ -6,9 +6,6 @@ export type Lang = "ko" | "en";
 // 훅이 알려 주는 에이전트 상태 (src/follow/state.ts resolveState 가 주는 값 그대로)
 export type AgentState = "idle" | "running" | "waiting" | "waving" | "failed";
 
-// 펫이 무엇에 묶여 사는가 (config.js MODES)
-export type Mode = "session" | "window" | "companion";
-
 // 연결할 수 있는 CLI 에이전트
 export type AgentName = "claude" | "codex" | "gemini";
 

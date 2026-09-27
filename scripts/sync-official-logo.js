@@ -1,4 +1,4 @@
-// 공식 SVG 로고에서 앱·확장 아이콘 산출물을 만든다.
+// 공식 SVG 로고에서 앱 아이콘 산출물을 만든다.
 // macOS의 sips, iconutil을 사용한다.
 const fs = require('node:fs');
 const os = require('node:os');
@@ -8,7 +8,6 @@ const { execFileSync } = require('node:child_process');
 const root = path.join(__dirname, '..');
 const source = path.join(root, 'assets', 'logo', 'src', 'logo.svg');
 const out = path.join(root, 'assets', 'logo', 'out');
-const extensionLogo = path.join(root, 'vscode-extension', 'logo.png');
 const sizes = [16, 32, 48, 64, 128, 256, 512, 1024];
 
 function run(command, args) {
@@ -56,7 +55,6 @@ try {
   }
 
   fs.copyFileSync(source, path.join(out, 'logo.svg'));
-  fs.copyFileSync(png.get(128), extensionLogo);
 
   const icoEntries = [16, 32, 48, 256].map((size) => ({ size, data: fs.readFileSync(png.get(size)) }));
   fs.writeFileSync(path.join(out, 'logo.ico'), ico(icoEntries));

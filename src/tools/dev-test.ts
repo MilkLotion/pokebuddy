@@ -200,7 +200,7 @@ function start(home: string, fresh: boolean): void {
     cwd: PROJECT,
     detached: true,
     stdio: "ignore",
-    env: { ...process.env, HOME: home, USERPROFILE: home, POKEBUDDY_MODE: "companion" },
+    env: { ...process.env, HOME: home, USERPROFILE: home },
   });
   child.unref();
   process.stdout.write(`시작 pid=${child.pid} HOME=${home}\n`);

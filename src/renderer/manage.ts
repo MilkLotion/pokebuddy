@@ -2372,7 +2372,7 @@ function drawGeneral(scroll: HTMLElement): void {
   scroll.appendChild(settingRow("가이드북", "사용법을 주제별로 봅니다", guide));
 }
 
-// 화면 — 포켓몬 표시, 클릭 통과, 다른 앱에서도 표시, 놀이공간. 앞의 세 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
+// 화면 — 포켓몬 표시, 클릭 통과, 놀이공간. 앞의 두 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
 function drawDisplay(scroll: HTMLElement): void {
   if (!view) return;
   const s = view.settings;
@@ -2380,10 +2380,6 @@ function drawDisplay(scroll: HTMLElement): void {
   if (d) {
     scroll.appendChild(settingRow("포켓몬 표시", d.hidden ? "지금 숨김" : "지금 화면에 표시 중", switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
     scroll.appendChild(settingRow("클릭 통과", "포켓몬이 없는 곳은 뒤 창을 클릭", switchButton(d.clickThrough, "클릭 통과", () => setSetting("clickThrough", !d.clickThrough))));
-    if (d.keepVisible !== undefined) {
-      const keep = d.keepVisible;
-      scroll.appendChild(settingRow("다른 앱에서도 표시", "작업 창 위에 항상 보이기", switchButton(keep, "다른 앱에서도 표시", () => setSetting("keepVisible", !keep))));
-    }
   }
   const area = [
     { id: "full", label: "화면 전체" },

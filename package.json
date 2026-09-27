@@ -36,8 +36,7 @@
     "helpers/winbounds.swift",
     "bin/pokebuddy",
     "scripts/postinstall.js",
-    "scripts/build-helper.js",
-    "vscode-extension/pokebuddy-active-terminal-*.vsix"
+    "scripts/build-helper.js"
   ],
   "engines": {
     "node": ">=22.12"
@@ -49,9 +48,8 @@
   "scripts": {
     "start": "npm run build && electron .",
     "build:helper": "node scripts/build-helper.js",
-    "build:vsix": "node scripts/build-vsix.js",
     "dist:win": "npm run build && node scripts/build-exe.cjs",
-    "prepack": "npm run build && node scripts/build-helper.js && node scripts/build-vsix.js",
+    "prepack": "npm run build && node scripts/build-helper.js",
     "postinstall": "node scripts/postinstall.js",
     "prepare": "npm run build",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json",

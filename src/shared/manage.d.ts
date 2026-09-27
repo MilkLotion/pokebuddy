@@ -185,7 +185,6 @@ export interface Snapshot {
 export interface DisplayView {
   hidden: boolean; // 잠시 숨김 (트레이의 잠시 숨기기와 같다)
   clickThrough: boolean; // 클릭 통과
-  keepVisible?: boolean; // 다른 앱에서도 표시 — 없으면 설정 화면 탭에 그 줄을 두지 않는다
 }
 
 // ── CLI 연결 ───────────────────────────────────────────────────────────────────

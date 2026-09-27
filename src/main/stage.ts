@@ -5,20 +5,17 @@ import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import type { PetMotion, Phase } from "../motion/types";
 import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/stage";
-import type { Mode } from "../shared/types";
 import type { CareAction } from "../state/types";
 import { MOTION_RULES } from "../motion/rules";
 import { zoomOf, type ArtLoader, type Look } from "./art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Rect, type Size, type Spot } from "./layout";
-import type { PartyPet } from "./party";
+import type { PartyPet } from "./save-party";
 import type { StageWindow } from "./stage-window";
 
 // 작업 상태가 바뀐 뒤 마리마다 반응하기까지 최대 지연 — 0~이 값 사이에서 무작위
 const REACT_SPREAD_MS = 1200;
 
 export interface StageOptions {
-  mode: Mode;
-  index: number; // 세션 펫의 순번 — stackShift
   buddyMode: "on" | "calm" | "off"; // off 면 움직임 없이 집에 서 있다 (상태 동작만)
   timeScale: number;
   window: StageWindow;
@@ -75,7 +72,7 @@ export interface Stage {
 }
 
 export function createStage(opts: StageOptions): Stage {
-  const { mode, index, buddyMode, timeScale, window: win, art } = opts;
+  const { buddyMode, timeScale, window: win, art } = opts;
   const now = opts.now ?? Date.now;
   const log = opts.log ?? null;
   const pets = new Map<string, PetState>();
@@ -91,7 +88,7 @@ export function createStage(opts: StageOptions): Stage {
   const sentLooks = new Set<string>();
   let last: StageFrame | null = null;
 
-  const shiftOf = (body: Size): number => stackShift(body, index, mode);
+  const shiftOf = (body: Size): number => stackShift(body);
   const spotOf = (p: PetState): Spot => homeSpot(p.pet.home, p.body, anchor, size, shiftOf(p.body));
   // 집 + 산책 + 돌봄 이동을 화면 안으로 제한
   const settle = (p: PetState): Spot => {

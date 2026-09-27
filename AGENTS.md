@@ -42,7 +42,7 @@ Before completion, manually review changed prose with the writing checklist. Rec
 - `src/renderer/`: stage and picker windows.
 - `data/`: editable rules and species data. `lib/`: generated or compatibility JavaScript.
 - `art/`, `assets/`: sprite and logo assets. `scripts/`, `bin/`, `helpers/`: packaging tools.
-- `vscode-extension/`: VS Code companion. `docs/`: records.
+- `docs/`: records.
 
 ## Build and Test Commands
 
@@ -55,7 +55,6 @@ npm run check               # type-check without output
 npm run selftest            # build and run all self-tests
 npm start                   # build and launch Electron
 npm run data:build          # rebuild generated data
-npm run build:vsix          # package the VS Code extension
 ```
 
 Run a focused check, such as `node dist/tools/selftest-shop.js`, after building.

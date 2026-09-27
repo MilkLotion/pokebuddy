@@ -1,4 +1,4 @@
-// 마리 목록의 출처 (저장 v3) — 무대는 이것 하나만 본다. 세션 펫은 src/main/party.ts 의 샌드박스를 쓴다.
+// 마리 목록의 출처 (저장 v3) — 무대는 이것 하나만 본다.
 //
 // 저장을 직접 고치지 않는다. 모든 변경은 거래 실행기(`src/main/game.ts`)를 거친다.
 // 그래서 여기는 세 가지만 한다 — 잠금 잡기, 파일 다시 읽기, 무대가 읽을 모양으로 바꾸기.
@@ -7,7 +7,6 @@
 // (docs/specs/modules.md "창이 여러 개여도 저장 쓰기는 주 프로세스 하나가 한다").
 //   writer  잠금을 잡았다. 명령을 직접 실행한다
 //   reader  못 잡았다. 명령을 mailbox 로 보내고, 파일이 바뀌면 다시 읽는다. 10초마다 다시 잡아 본다
-// 창 펫(window)은 독립 펫(companion)이 살아 있으면 자리를 내준다.
 //
 // 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다.
 import fs from "node:fs";
@@ -16,21 +15,31 @@ import * as mailbox from "../save/mailbox.js";
 import * as store from "../save/store.js";
 import { empty } from "../save/v3.js";
 import * as writer from "../save/writer.js";
-import type { CommandResult, Mode } from "../shared/types";
+import type { CommandResult, NatureId } from "../shared/types";
 import type { SaveV3 } from "../shared/save-v3";
 import type { GameV3 } from "./game";
 import type { Home } from "./layout";
-import type { PartyPet } from "./party";
 import type { Paths } from "./paths";
 
+// 무대가 보는 마리 하나 — 무대에 필요한 것만
+export interface PartyPet {
+  id: string;
+  species: string;
+  look: string; // 그릴 그림 — 종(이로치면 ":shiny" 를 붙인다)
+  size: number; // 도트 배율 (zoomOf 로 가둔다)
+  nature: NatureId | null;
+  nick: string | null;
+  home: Home;
+  shown: boolean;
+}
+
 export const SAVE_PARTY_RULES = {
-  reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격. 창 펫이 독립 펫에 자리를 내주는 확인도 같은 주기다
+  reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격
 };
 
 export interface SavePartyOptions {
   game: GameV3;
-  paths: Pick<Paths, "save" | "saveLock" | "mailbox" | "companionLock">;
-  mode: Mode;
+  paths: Pick<Paths, "save" | "saveLock" | "mailbox">;
   now?: () => number;
   pid?: number;
   log?: ((o: Record<string, unknown>) => void) | null;
@@ -54,7 +63,7 @@ export interface SaveParty {
 }
 
 export function createSaveParty(opts: SavePartyOptions): SaveParty {
-  const { game, paths, mode } = opts;
+  const { game, paths } = opts;
   const now = opts.now ?? Date.now;
   const pid = opts.pid ?? process.pid;
   const log = opts.log ?? null;
@@ -157,16 +166,6 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     }
   }
 
-  // 독립 펫이 살아 있나 — 창 펫이 저장 잠금을 내줄지 정할 때. 자기 자신은 빼고 본다
-  function companionAlive(): boolean {
-    try {
-      const other = Number(fs.readFileSync(paths.companionLock, "utf8").split("\n")[0]);
-      return other > 0 && other !== pid && writer.pidAlive(other);
-    } catch {
-      return false;
-    }
-  }
-
   function claim(): boolean {
     if (closed) return false;
     if (amWriter && writer.isMine(paths.saveLock, pid)) return true;
@@ -193,10 +192,6 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
 
   function tick(): void {
     if (closed) return;
-    if (mode === "window" && amWriter && companionAlive()) {
-      resign(); // 독립 펫이 우선
-      return;
-    }
     if (!amWriter) claim();
   }
 

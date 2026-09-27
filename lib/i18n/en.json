@@ -120,7 +120,6 @@
   "game.reason.not-owned": "Buy the item first",
   "game.reason.bad-value": "Invalid value",
   "game.reason.bad-nature": "Invalid nature",
-  "game.reason.sandbox": "Game commands are unavailable for session pets",
   "game.reason.unknown-item": "Unknown shop item",
   "game.reason.choose-evolution": "Select an evolution",
   "game.reason.no-evolution": "No evolution is available",

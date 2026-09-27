@@ -63,9 +63,9 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 
 | 항목 | 결정 | 근거 |
 |---|---|---|
-| 제품 구조 | 상주 Electron 앱과 얇은 VS Code 확장으로 구성한다. 앱이 런타임과 저장을 맡는다. | [기동](../src/main/app.ts), [설명서](guide.md) |
+| 제품 구조 | 상주 Electron 앱 하나로 구성한다. 앱이 런타임과 저장을 맡는다. 2026-09-27 사용자 결정으로 VS Code 확장을 지웠다. | [기동](../src/main/app.ts), [설명서](guide.md), [삭제 기록](work/game-runtime/record.md#세션창-모드-삭제-2026-09-27) |
 | 독립 실행 | `pokebuddy companion`을 사용한다. 첫 실행에서 스타터를 고른다. 이후에는 저장된 파티를 복원한다. | [설명서](guide.md) |
-| 실행 모드 | `companion`, `window`, `session` 식별자를 유지한다. 세션 펫은 게임 저장과 분리한다. | [파티](../src/main/party.ts) |
+| 실행 모드 | 동반자(`companion`) 하나만 둔다. 2026-09-27 사용자 결정으로 세션 펫(`session`)과 창 펫(`window`)을 지웠다. 특정 창에만 펫을 띄우는 기능은 두지 않는다. | [기동](../src/main/app.ts), [삭제 기록](work/game-runtime/record.md#세션창-모드-삭제-2026-09-27) |
 | 표시 구조 | 투명 창 하나에 최대 여섯 마리를 그린다. 마리별 크기·성격·표시 상태를 유지한다. | [표시 창](../src/main/stage-window.ts), [무대](../src/main/stage.ts) |
 | 정식 로고 | 원본은 `assets/logo/src/logo.svg`다. 산출물은 `assets/logo/out/`에 둔다. | [원본](../assets/logo/src/logo.svg), [검수](work/logo/review.md) |
 | 구현 기술 | `src/`에 TypeScript를 작성한다. 메인과 렌더러를 `tsc`로 각각 빌드한다. | [패키지 설정](../package.json) |

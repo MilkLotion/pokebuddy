@@ -1601,3 +1601,27 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 지움: 첫 돌봄 2단계 시안 `579:16959`(05 `397:8552`·`611:13009` 가 기준), 동전 시안 `527:2528`, 초상 자리표시 시안 `629:16748`, 튜토리얼 흐름 시안 `514:1669`(옮긴 뒤 빈 섹션). 이 기록의 옛 시안 노드 ID 는 Figma 버전 기록에만 남는다.
 - 관찰: 이 세션이 지우기 전에 개체 상세 `500:14436`, 화면 스타일 `500:14437`, 공유 sid `500:14438`, 도감 기기 창 `579:17691` 섹션이 이미 없었다. Figma 전용 세션 회신(2026-09-27): terminal-pokemon-e8 이 도감 기기 창 `579:17691` 을 05 `Dex / Device` 로 옮긴 뒤 지웠고, 화면 스타일 `500:14437` 은 "채택분은 Party Slot Card 로 옮김"이라며 지웠다. 개체 상세 `500:14436`·공유 sid `500:14438` 을 지운 세션은 확인되지 않았다(1a·67 은 아니라고 답했다). 두 섹션의 채택 화면은 지워지기 전에 이 세션이 05 로 옮겼다.
 - 남은 일: 05 상세 화면 여러 장(`Detail / Base` 등)은 아직 옛 한 줄 배치다. 앱과 같은 2단 배치로 맞추는 일은 따로 한다.
+
+### 세션·창 모드 삭제 (2026-09-27)
+
+- 사용자 지시: "문서정리랑 같이 …\vscode-extension 도 제거하자." 확장 기능을 조사해 보인 뒤 "2단계로. 그 기능은 예전 잔재라서 아예 필요가없긴해. 특정창에만 띄우는걸 안하려고 하는거라서." 질문 답: "세션 모드도 없애기". 파일별 계획과 정할 것 세 가지를 보인 뒤 "추천대로 진행".
+- 설계: 펫은 동반자(`companion`) 하나만 둔다. 세션 펫(`pokebuddy <종>`·`!pokebuddy <종>`·`pokebuddy stop`), 창 펫(`window`), VS Code 확장(`vscode-extension/`), 창 기록(`~/.claude/pokebuddy/windows/`), 확장용 실행 경로 기록(`cli.json`)을 지운다. 정한 것: 동반자에 효과가 없던 `다른 앱에서도 표시`(`keepVisible`) 설정 줄과 옵션을 지운다. 세션 펫용 전역 단축키(`src/main/shortcuts.ts`, Cmd/Ctrl+Alt+P·H·Q·K)를 지운다. 기본 자리 한 칸 밀기(`stackShift`)는 남긴다.
+- 정정: 계획에서 "`stackShift` 를 없애면 기본 자리만 조금 바뀌고 저장된 집은 영향이 없다"고 적었다. 코드를 보니 저장된 집도 이 값을 더해 저장한다(`homeOf`·`homeSpot`). 없애면 모든 포켓몬이 몸 한 칸씩 밀린다. 그래서 동반자 값(몸 한 칸)으로 고정했다. 자리는 바뀌지 않는다.
+- 잃는 동작: VS Code 창이 여럿일 때 창·활성 탭별로 CLI 상태를 가려 따르던 기능이 없어졌다. 동반자는 맨 앞 창 주인이 조상에 있는 최신 훅 기록을 따른다(`src/follow/front.ts` `hostOf`). 창 포커스 반응은 확장 기록 감시 대신 0.4초 폴링이다.
+- 작업(코드):
+  - `config.js`: 모드·세션 실행 정보·`dotSize`·`keepVisible`·창 위치 저장(`save`)·`petFile` 을 지웠다. 앱은 `config.json` 에 쓰지 않는다. `npm start` 도 동반자로 뜬다.
+  - `src/main`: `party.ts`(세션 파티, `PartyPet` 은 `save-party.ts` 로)·`shortcuts.ts` 삭제. `anchor.ts` 는 동반자 판정만, `lifetime.ts` 는 `companion.lock` 만, `stage-window.ts` 는 늘 위(`place` 삭제). `app.ts`·`commands.ts`·`stage.ts`·`save-party.ts`·`layout.ts`·`paths.ts` 에서 모드 분기를 걷었다. 교환 딥링크 분기는 그대로다.
+  - `src/follow`: 창 기록·조상 추적·탭 판정·세션 판정 함수를 지웠다. `hostOf` 는 (a) 훅 기록 (b) 알려진 터미널 두 규칙이다.
+  - CLI: `cli/run.js` 는 `companion`·`companion stop` 만, `cli/session.js`·`cli/checklist.js` 삭제, `cli/status.js` 는 동반자 진단(맨 앞 창·호스트 판정·상태 기록·동반자·게임), `cli/args.js`·`bin/pokebuddy` 는 옛 명령을 "알 수 없는 명령"으로 멈춘다. `pokebuddy setup` 은 확장을 설치하지 않고, 예전에 깔린 확장(`local.pokebuddy-active-terminal` 과 옛 이름)과 `cli.json`·`windows/` 를 지운다.
+  - 기타: `scripts/build-vsix.js`·`build:vsix`·`prepack` 의 vsix·`files` 항목, 로고 동기화·설치 파일·문서 검사의 확장 참조, 예시 설정, 설정 화면의 `다른 앱에서도 표시` 줄, `game.reason.sandbox` 문구를 지웠다. 명령 출처 값 `"vscode"` 는 옛 저장의 기록 줄을 읽으려고 남겼다.
+- 작업 방법: 공유 작업 트리에 교환 세션의 미커밋 변경이 있어, HEAD 기준 임시 worktree 에서 고치고 검사했다. 교환 세션이 `92ce3ec` 로 커밋한 뒤 겹치는 여섯 파일(`app.ts`·`commands.ts`·`cli/args.js`·`bin/pokebuddy`·`manage.ts`·`manage.d.ts`)은 기준 문구 교체 스크립트로, 나머지는 파일째 옮겼다.
+- 검수:
+  - `npm run build` 통과.
+  - `npm run selftest` 전체 통과(`selftest-cli` 37개 포함). 창 추적 가짜 헬퍼 검사는 Windows 에서 건너뛴다(원래 그렇다).
+  - `node scripts/e2e-companion.cjs` PASS 9개 항목.
+  - `node scripts/e2e-trade.cjs` 18개 통과(교환 세션 요청 — 딥링크·교환 세션 생성 경로 확인).
+  - 임시 HOME 에서 `pokebuddy status`·`pokebuddy eevee`(종료 코드 2, 안내)·`pokebuddy setup --dry-run` 을 확인했다.
+- 피드백·수정: 동반자 E2E 의 크기 기대값이 `c41bbf7`(크기 1~5단계, 저장은 배율) 뒤로 낡아 HEAD 에서도 실패했다. 3단계 = 배율 2 로 기대값을 고쳤다. 새 `companion()` 이 셸의 `POKEBUDDY_SLUG` 를 넘겨 첫 선택창을 건너뛸 수 있어, 예전처럼 지우고 띄우게 했다.
+- 문서: `guide.md`·`README.md` 를 동반자 기준으로 다시 썼다. `design.md`(제품 구조·실행 모드), `specs/s5.md`(놀이공간·설정 화면 탭·창 보안·구현 순서), `specs/modules.md`, `terms.md`(실행 환경 명칭 세 줄 → `동반자` 한 줄), `progress.md`, `AGENTS.md` 를 고쳤다. 지난 기록·이력은 그대로 둔다.
+- 문장 검수: 이 절과 `design.md`·`s5.md`·`modules.md`·`terms.md`·`progress.md`·`AGENTS.md` 의 바뀐 문장을 `contributing/writing.md` 목록으로 확인했다(한 문장 한 사실, 정확한 식별자, 결정 출처 표기). `guide.md`·`README.md` 는 하위 에이전트가 같은 목록으로 다시 썼다. 코드로 확인하지 못한 옛 관측(Git Bash 조상 체인, Windows 우클릭 메뉴 `[확인 필요]`)은 그대로 두었다. `node scripts/check-docs.cjs` PASS(문서 47개, 링크 1154개), `git diff --check` 문제 없음.
+- 남은 일: 현재 문서의 `[스펙 미확정]` 89곳 가운데 결정 기록이 있는 40곳의 표시 정리, 구현됐으나 승인 기록이 없는 24곳의 사용자 확인.

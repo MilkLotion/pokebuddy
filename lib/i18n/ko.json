@@ -120,7 +120,6 @@
   "game.reason.not-owned": "아이템을 먼저 구매하세요",
   "game.reason.bad-value": "잘못된 값",
   "game.reason.bad-nature": "잘못된 성격",
-  "game.reason.sandbox": "세션 펫은 육성 기능을 사용하지 않음",
   "game.reason.unknown-item": "없는 상점 항목",
   "game.reason.choose-evolution": "진화할 종을 선택하세요",
   "game.reason.no-evolution": "다음 진화가 없음",

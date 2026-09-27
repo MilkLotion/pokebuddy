@@ -94,7 +94,7 @@ export interface CoachAction {
   id: string;
   action: "done" | "skip"; // 버튼은 완료, ✕ 는 스킵
 }
-// 말풍선 위라는 히트 답은 문자열 "coach" 다 — 마리 id(p숫자·세션 펫 이름)와 겹치지 않는다. 선언 파일이라 상수를 두지 못한다
+// 말풍선 위라는 히트 답은 문자열 "coach" 다 — 마리 id(p숫자)와 겹치지 않는다. 선언 파일이라 상수를 두지 못한다
 
 // 첫 포켓몬 선택 창 — Figma `First Run / Starter Selected` `402:9417`, `Starter Empty` `402:9579`
 export interface PickerItem {

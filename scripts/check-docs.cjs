@@ -37,7 +37,6 @@ const documents = [
   ...allFiles.filter((file) => /\.(md|html)$/.test(file)),
   path.join(root, 'AGENTS.md'),
   path.join(root, 'README.md'),
-  path.join(root, 'vscode-extension/README.md'),
 ];
 let checkedLinks = 0;
 for (const file of documents) {

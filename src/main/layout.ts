@@ -11,7 +11,6 @@
 // 자리는 전부 "몸"(작업 동작을 뺀 칸 × 배율)으로 계산한다 — 작업 동작이 그림 칸을 키워도 펫이 서는 자리는 그대로다 (옛 main.js bodySize)
 import type { RoamBox } from "../motion/types";
 import { SAVE_RULES } from "../save/rules";
-import type { Mode } from "../shared/types";
 
 export interface Rect {
   x: number;
@@ -78,11 +77,10 @@ export function clampInStage(x: number, y: number, body: Size, stage: Size): Spo
   };
 }
 
-// 여러 마리의 기본 자리를 한 칸씩 옆으로 — 세션 펫은 순번대로, 동반자는 세션 펫과 같은 창에 함께 뜨면 정확히 겹치므로 한 칸 더.
-// 저장된 집은 shift 를 더해 저장하고 빼서 쓰므로(homeOf · homeSpot) 상쇄된다 — 기본 자리만 움직인다 (옛 main.js stackShift)
-export function stackShift(body: Size, index: number, mode: Mode): number {
-  return Math.round(body.w * STAGE_RULES.stackRatio) * (index + (mode === "companion" ? 1 : 0));
-}
+// 기본 자리를 몸 한 칸 옆으로 — 옛 세션 펫과 같은 창에 함께 뜨면 겹치지 않게 두었던 값이다.
+// 저장된 집은 이 값을 더해 저장하고 빼서 쓴다(homeOf · homeSpot). 없애면 저장된 자리가 한 칸씩 밀리므로 그대로 둔다
+// (2026-09-27 세션 모드 삭제, 옛 main.js stackShift)
+export const stackShift = (body: Size): number => Math.round(body.w * STAGE_RULES.stackRatio);
 
 // 집 자리 — 창 오른쪽 아래 기준 오프셋을 무대 안에 가둔 것
 export function homeSpot(home: Home, body: Size, anchor: Rect, stage: Size, shift = 0): Spot {

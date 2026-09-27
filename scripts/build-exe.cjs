@@ -17,8 +17,8 @@ const release = path.join(root, "release");
 const stage = path.join(release, "app");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
-// 설치 파일에 넣지 않는 것 — VS Code 확장과 npm 설치 뒤 스크립트는 npm 판에만 쓴다
-const SKIP = new Set(["vscode-extension/pokebuddy-active-terminal-*.vsix", "scripts/postinstall.js"]);
+// 설치 파일에 넣지 않는 것 — npm 설치 뒤 스크립트는 npm 판에만 쓴다
+const SKIP = new Set(["scripts/postinstall.js"]);
 
 // `files` 한 줄을 실제 경로 목록으로. 끝의 `/` 는 폴더, `*` 는 한 폴더 안의 이름 맞추기만 쓴다
 function expand(entry) {

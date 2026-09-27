@@ -1,8 +1,6 @@
-// 펫 오버레이 메인 프로세스 — 기동 · 모드 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
-// 세 모드로 돈다 (config.runtime.mode — POKEBUDDY_MODE)
-//   session    앵커 앱(VS Code 등) 창을 따라다니고, 그 앱이 앞에 없거나 내 터미널 탭이 아닐 때는 숨는다. 부른 세션이 끝나면 함께 끝난다
-//   window     VS Code 확장이 창마다 띄운 펫 — 그 창 위에만, 그 창의 활성 터미널 상태를 따른다. 확장 호스트와 함께 끝난다
-//   companion  기기당 하나, 항상 위. 맨 앞 터미널 창을 따르고 그 창의 활성 터미널 상태를 따른다 (follow/front). 트레이로 끝낸다
+// 펫 오버레이 메인 프로세스 — 기동 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
+// 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (follow/front).
+// 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (docs/work/game-runtime/record.md "세션·창 모드 삭제")
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
@@ -14,10 +12,9 @@ import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader } from "./art";
 import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES, playAreaRect, stageOf, toLocal, type Rect } from "./layout";
-import { clearFailure, createLifetime, petFileOf, reportFailure, type Lifetime } from "./lifetime";
+import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
 import { lockExcept, petMenu, trayMenu } from "./menus";
-import { createSandboxParty, type PartyPet, type PartySource } from "./party";
-import { createSaveParty, type SaveParty } from "./save-party";
+import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { createMainTrade, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
@@ -26,9 +23,8 @@ import { openManage, pushTrade } from "./manage-window";
 import { createPortraits } from "./portraits";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
-import { PATHS, loadConfig, logoFile, preloadFile, rendererFile, saveConfig } from "./paths";
+import { PATHS, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
 import { pickStarter } from "./picker-window";
-import { createShortcuts, type Shortcuts } from "./shortcuts";
 import { createStage, type Stage } from "./stage";
 import { createStageWindow, type StageWindow } from "./stage-window";
 import { langOf, natureName, petLabel, setLang, t } from "./text";
@@ -82,18 +78,18 @@ app.commandLine.appendSwitch("disable-gpu-shader-disk-cache");
 
 const config = loadConfig();
 const { runtime } = config;
-const { mode, debug } = runtime;
+const { debug } = runtime;
 setLang(langOf(config));
 // POKEBUDDY_DEBUG — 판정 로그를 JSON 한 줄씩 (POKEBUDDY_LOG 가 있으면 그 파일로). console.log 대신 stdout 직접
 const log = debug ? (o: Record<string, unknown>) => void process.stdout.write(`${JSON.stringify(o)}\n`) : null;
 
-// 동반자는 기기당 하나 — Electron 의 잠금은 userData 단위인데 세션·창 펫은 이 잠금을 부르지 않으므로 서로 막지 않는다.
-// pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다 — 둘째는 창을 만들기 전에 끝난다
-const duplicate = mode === "companion" && !app.requestSingleInstanceLock();
+// 동반자는 기기당 하나 — pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다.
+// 둘째는 창을 만들기 전에 끝난다
+const duplicate = !app.requestSingleInstanceLock();
 if (duplicate) app.quit();
 // 떠 있는 동반자를 다시 실행했다(설치한 앱의 바로가기를 한 번 더 누름 등) — 새로 띄우지 않고 관리 창을 연다.
 // 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 탭을 연다
-else if (mode === "companion") {
+else {
   app.on("second-instance", (_e, argv) => {
     const link = tradeLinkOf(argv);
     if (link) openTradeLink(link);
@@ -122,7 +118,7 @@ function syncLoginItem(): void {
   } catch (e) { log?.({ loginItem: "failed", message: String(e) }); }
 }
 
-// 펫 자신을 가리는 표 — 세션·창 펫은 전부 같은 Electron 이라 이름으로 함께 걸러야 맨 앞 창에서 빠진다 (follow/front frontWindow)
+// 펫 자신을 가리는 표 — 개발 실행은 Electron 이라 이름으로 함께 걸러야 맨 앞 창에서 빠진다 (follow/front frontWindow)
 const SELF: SelfMark = { pid: process.pid, appNames: new Set(["electron", String(app.getName() || "").toLowerCase()]) };
 
 // 끝내는 중 — 창이 파괴되는 사이에 주기 작업·감시·헬퍼가 그 창을 건드리지 않게 before-quit 에서 멈춘다.
@@ -132,7 +128,7 @@ let quitting = false;
 let picking = false; // 첫 실행 선택 창이 열려 있다 — 그 창이 닫혀도 앱을 끝내지 않는다 (window-all-closed)
 let staged = false; // 무대 창을 만들었다 — 그 전에 닫힌 창(선택 창)으로는 끝내지 않는다
 let bootReady = false; // 그림·명령·수명 잠금 준비 후에만 CLI에 성공 통지
-let userHidden = false; // Cmd+Alt+H · 우클릭 · 트레이로 직접 숨김
+let userHidden = false; // 우클릭 · 트레이 · 설정으로 직접 숨김
 const intervals: NodeJS.Timeout[] = [];
 
 // 저장을 쓰는 곳은 하나다 — 거래 실행기. 무대·메뉴·관리 창이 모두 이 하나를 본다
@@ -140,8 +136,8 @@ let game: GameV3 | null = null;
 // 알림 배너 — 줄은 notifier 가, 창은 bannerWin 이 맡는다. 저장을 쓰는 프로세스만 배너를 띄운다
 let notifier: Notifier | null = null;
 let bannerWin: BannerWindow | null = null;
-let party: PartySource | SaveParty | null = null;
-const saveParty = (): SaveParty | null => (party?.kind === "save" ? party : null);
+let party: SaveParty | null = null;
+const saveParty = (): SaveParty | null => party;
 let lifetime: Lifetime | null = null;
 let stageWin: StageWindow | null = null;
 let stage: Stage | null = null;
@@ -152,10 +148,9 @@ let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 �
 let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
 // 아직 참가하지 않은 교환 링크와 받은 시각. 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const TRADE_LINK_TTL_MS = 10 * 60_000;
-const firstLink = mode === "companion" ? tradeLinkOf(process.argv) : null;
+const firstLink = tradeLinkOf(process.argv);
 let tradeLink: { link: string; at: number } | null = firstLink ? { link: firstLink, at: Date.now() } : null;
 let tray: TrayHandle | null = null;
-let shortcuts: Shortcuts | null = null;
 let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
@@ -206,12 +201,11 @@ function workAreaTarget(): HelperWindow {
 
 // ── 배선 ─────────────────────────────────────────────────────────────────────
 
-// 동반자의 놀이공간 — 설정의 `화면 전체 | 영역 지정`. 터미널 창 대신 이 사각형을 따라가는 창으로 삼는다.
-// 세션 펫·창 펫은 지금처럼 터미널 창을 따른다 (2026-09-25 사용자 선택 "동반자만")
+// 동반자의 놀이공간 — 설정의 `화면 전체 | 영역 지정`. 터미널 창 대신 이 사각형을 따라가는 창으로 삼는다 (2026-09-25 사용자 선택)
 // 저장을 매 폴링마다 읽지 않는다. 게임 틱과 관리 창의 설정 변경 뒤에 다시 읽는다
 let playArea: { mode: "full" | "region"; rect: Rect | null } = { mode: "full", rect: null };
 function syncPlayArea(): void {
-  if (mode !== "companion" || !game) return;
+  if (!game) return;
   const next = game.read()?.settings.playArea;
   if (!next || (next.mode === playArea.mode && JSON.stringify(next.rect) === JSON.stringify(playArea.rect))) return;
   playArea = { mode: next.mode, rect: next.rect ? { ...next.rect } : null };
@@ -221,7 +215,7 @@ function syncPlayArea(): void {
 // 바탕화면 튜토리얼 — 대기열 맨 앞이 바탕화면 것이면 무대에 말풍선을 보낸다 (src/tutorial/core.ts, docs/specs/s5.md "코치마크")
 // 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 부른다. 같은 값이면 무대 창이 다시 보내지 않는다
 function syncCoach(): void {
-  if (mode !== "companion" || !game || !stageWin) return;
+  if (!game || !stageWin) return;
   const save = game.read();
   const now = save ? currentTutorial(save) : null;
   const view = now && now.surface === "stage" && save ? coachView(now.id, save.starterPetId) : null;
@@ -255,30 +249,26 @@ function playTarget(): HelperWindow {
   return { id: -2, pid: 0, app: "", x: r.x, y: r.y, w: r.w, h: r.h };
 }
 
-// 무대 사각형 = target ∩ 그 창이 있는 디스플레이. 바뀔 때만 setBounds (stage-window 가 가른다)
+// 무대 사각형 = 놀이공간 ∩ 그 사각형이 있는 디스플레이. 바뀔 때만 setBounds (stage-window 가 가른다)
+// 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
 function onAnchorUpdate(update: AnchorUpdate): void {
   if (quitting || !stageWin || !stage) return;
-  // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지와 앞뒤 순서는 앵커가 정한 그대로다
-  const u = mode === "companion" ? { ...update, target: playTarget() } : update;
-  if (u.target) {
-    const target: Rect = { x: u.target.x, y: u.target.y, w: u.target.w, h: u.target.h };
-    const d = screen.getDisplayMatching({ x: target.x, y: target.y, width: target.w, height: target.h }).bounds;
-    const rect = stageOf(target, { x: d.x, y: d.y, w: d.width, h: d.height });
-    if (rect) {
-      stageWin.setStage(rect);
-      stage.setStage(toLocal(target, rect), { w: rect.w, h: rect.h }, !!u.target.fake);
-    }
+  const play = playTarget();
+  const target: Rect = { x: play.x, y: play.y, w: play.w, h: play.h };
+  const d = screen.getDisplayMatching({ x: target.x, y: target.y, width: target.w, height: target.h }).bounds;
+  const rect = stageOf(target, { x: d.x, y: d.y, w: d.width, h: d.height });
+  if (rect) {
+    stageWin.setStage(rect);
+    stage.setStage(toLocal(target, rect), { w: rect.w, h: rect.h }, false);
   }
-  const show = u.visible && stageWin.stage() != null; // 아직 무대 사각형이 없으면 1×1 창을 보이지 않는다
+  const show = update.visible && stageWin.stage() != null; // 아직 무대 사각형이 없으면 1×1 창을 보이지 않는다
   stageWin.setVisible(show);
   stage.setVisible(show);
-  stageWin.place(u.placeId, u.frontIsMine);
 }
 
-function applyClickThrough(on: boolean, persist = true): void {
-  // 기동 시 적용은 저장하지 않는다 — 인자로 받은 값이 파일에 눌러앉으면 다음 실행까지 따라온다
-  if (persist) saveConfig(config, { clickThrough: on });
-  else config.clickThrough = on;
+// 클릭 통과는 이번 실행에만 둔다 — config.json 에 쓰지 않는다
+function applyClickThrough(on: boolean): void {
+  config.clickThrough = on;
   // 들고 있는 중에 클릭 통과를 켜면 pointerup 이 영영 안 온다 — 커서에 붙은 채로 남지 않게 놓는다
   if (on) stage?.releaseHeld();
   // 무대는 늘 통과로 시작해 그림 위에서만 받는다 — 커서 밑은 다음 hoverTick 이 본다
@@ -287,18 +277,13 @@ function applyClickThrough(on: boolean, persist = true): void {
   tray?.refresh();
 }
 
-// 직접 숨기기·보이기 — 폴링이 되돌리지 않도록 상태로 남긴다 (Cmd+Alt+H · 우클릭 · 트레이)
+// 직접 숨기기·보이기 — 폴링이 되돌리지 않도록 상태로 남긴다 (우클릭 · 트레이 · 설정)
 function setHidden(on: boolean): void {
   userHidden = on;
   anchor?.poll();
   tray?.refresh();
 }
 const toggleHidden = (): void => setHidden(!userHidden);
-
-function setKeepVisible(on: boolean): void {
-  saveConfig(config, { keepVisible: on });
-  anchor?.poll();
-}
 
 const firstPet = (): PartyPet | null => {
   const id = stage?.petIds()[0];
@@ -329,7 +314,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       syncCoach();
       return reply;
     },
-    display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough, keepVisible: !!config.keepVisible }),
+    display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
@@ -352,8 +337,7 @@ const trayTemplate = () => [
     {
       toggleHidden,
       quit: () => app.quit(),
-      // 동반자의 토글은 저장하지 않는다 — 전역 설정이라 세션 펫의 다음 실행까지 번진다
-      toggleGhost: () => applyClickThrough(!config.clickThrough, mode !== "companion"),
+      toggleGhost: () => applyClickThrough(!config.clickThrough),
     },
   ),
 ];
@@ -409,7 +393,7 @@ function showPetMenu(id: string): void {
     { label: "설정창 열기", click: () => openManageWindow() },
   );
   // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다
-  const save = mode === "companion" ? game?.read() : null;
+  const save = game?.read();
   const firstCare = save ? currentTutorial(save)?.id === "first-care" : false;
   let items = built;
   if (firstCare && pet) {
@@ -442,7 +426,7 @@ function showPetMenu(id: string): void {
 // 친구 교환 세션 — 저장을 쓰는 동반자(writer)일 때 처음 부를 때 만들고 한 번 시작한다(로그인 확보·반영하지 않은 교환 복구).
 // 교환이 끝나 개체가 바뀌면 무대를 다시 그린다
 function tradeSession(): MainTrade["session"] | null {
-  if (quitting || mode !== "companion" || !game || !party || party.kind !== "save" || !party.isWriter()) return null;
+  if (quitting || !game || !party || !party.isWriter()) return null;
   if (!mainTrade) {
     mainTrade = createMainTrade(game);
     if (!mainTrade) return null;
@@ -559,32 +543,26 @@ async function main(): Promise<void> {
     app.dock?.hide();
   }
 
-  if (mode === "session") {
-    party = createSandboxParty({ config, saveConfig });
-  } else {
-    // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다
-    game = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false });
-    const reader = game;
-    bannerWin = createBannerWindow({
-      preload: preloadFile(),
-      html: rendererFile("banner.html"),
-      chime: () => {
-        const s = reader.read()?.settings;
-        return s ? gainOf(s, SOUND_RULES.chimeMax) : 0;
-      },
-      onGo: (route) => openManageWindow(route),
-      onDone: () => notifier?.done(),
-    });
-    notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, show: (b) => bannerWin?.show(b) });
-    party = createSaveParty({ game, paths: PATHS, mode, log });
-  }
+  // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다
+  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false });
+  game = reader;
+  bannerWin = createBannerWindow({
+    preload: preloadFile(),
+    html: rendererFile("banner.html"),
+    chime: () => {
+      const s = reader.read()?.settings;
+      return s ? gainOf(s, SOUND_RULES.chimeMax) : 0;
+    },
+    onGo: (route) => openManageWindow(route),
+    onDone: () => notifier?.done(),
+  });
+  notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, show: (b) => bannerWin?.show(b) });
+  const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
+  party = saveSource;
 
-  // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)·확장 호스트 종료가 와도 끝나야 한다
+  // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
   lifetime = createLifetime({
-    mode,
-    petFile: petFileOf(mode, runtime, config.slug, PATHS),
-    hostPid: runtime.hostPid,
-    termPid: () => anchor?.termPid() ?? runtime.termPid,
+    lockFile: PATHS.companionLock,
     pidAlive,
     hasWindow: () => bootReady && !!stageWin?.alive(),
     quit: () => app.quit(),
@@ -595,17 +573,15 @@ async function main(): Promise<void> {
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
   const portraits = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
-  const starterList = party.needsStarter() ? starters(unlockRules()) : [];
-  if (mode === "companion") {
-    const started = Date.now();
-    void portraits
-      .prefetch(undefined, starterList)
-      .then((r) => log?.({ prefetch: "done", ms: Date.now() - started, ...r }))
-      .catch((e) => log?.({ prefetch: "failed", message: String(e) }));
-  }
+  const starterList = saveSource.needsStarter() ? starters(unlockRules()) : [];
+  const prefetchAt = Date.now();
+  void portraits
+    .prefetch(undefined, starterList)
+    .then((r) => log?.({ prefetch: "done", ms: Date.now() - prefetchAt, ...r }))
+    .catch((e) => log?.({ prefetch: "failed", message: String(e) }));
 
   // 첫 실행 — 명령에 스타터를 직접 줬으면 그걸로 바로 시작하고, 아니면 선택 창. reader 면 writer 쪽이 첫 실행을 맡는다
-  if (party.needsStarter()) {
+  if (saveSource.needsStarter()) {
     const list = starterList;
     let species: string | null = config.fromEnv.has("slug") && list.includes(config.slug) ? config.slug : null;
     if (!species) {
@@ -624,7 +600,7 @@ async function main(): Promise<void> {
       if (!quitting) app.quit();
       return;
     }
-    if (!party.begin(species)) {
+    if (!saveSource.begin(species)) {
       reportFailure(PATHS, config.slug, t("game.reason.save-failed"), "save-failed");
       app.quit();
       return;
@@ -633,7 +609,6 @@ async function main(): Promise<void> {
 
   const art = createArtLoader(PATHS);
   stageWin = createStageWindow({
-    mode,
     debug,
     preload: preloadFile(),
     html: rendererFile("stage.html"),
@@ -658,8 +633,6 @@ async function main(): Promise<void> {
   staged = true;
 
   stage = createStage({
-    mode,
-    index: runtime.index,
     buddyMode: config.buddy,
     timeScale: runtime.buddyTimeScale,
     window: stageWin,
@@ -694,8 +667,6 @@ async function main(): Promise<void> {
   });
 
   anchor = createAnchor({
-    mode,
-    runtime,
     paths: PATHS,
     self: SELF,
     host: {
@@ -707,17 +678,16 @@ async function main(): Promise<void> {
       quit: () => app.quit(),
       quitting: () => quitting,
     },
-    flags: () => ({ userHidden, keepVisible: !!config.keepVisible, held: stage?.heldId() != null }),
+    flags: () => ({ userHidden, held: stage?.heldId() != null }),
     onUpdate: onAnchorUpdate,
     onFocus: (key) => stage?.focus(key),
     log,
   });
 
   commands = createCommands({
-    mode,
     mailboxDir: PATHS.mailbox,
-    party,
-    game,
+    party: saveSource,
+    game: reader,
     prepareLook: async (look) => !!await art.loadLook(look),
     onChanged: async (evolvedId) => {
       await refreshParty();
@@ -737,16 +707,14 @@ async function main(): Promise<void> {
       hidden: () => userHidden,
       setHidden,
       clickThrough: () => !!config.clickThrough,
-      setClickThrough: (on) => applyClickThrough(on, mode !== "companion"),
-      keepVisible: () => !!config.keepVisible,
-      setKeepVisible,
+      setClickThrough: (on) => applyClickThrough(on),
     },
     quit: () => app.quit(),
     log,
     trade: tradeSession,
     tradeScreen: () => (mainTrade && tradeScreen ? tradeScreen.build(mainTrade.session.view()) : null),
   });
-  party.onRole((w) => {
+  saveSource.onRole((w) => {
     commands?.setWriter(w);
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
     if (w) {
@@ -758,16 +726,16 @@ async function main(): Promise<void> {
       tradeScreen = null;
     }
   });
-  commands.setWriter(party.isWriter());
-  party.onChange(() => {
+  commands.setWriter(saveSource.isWriter());
+  saveSource.onChange(() => {
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 
   await refreshParty();
   if (quitting) return;
-  if (party.pets().length && !stage.petIds().length) {
+  if (saveSource.pets().length && !stage.petIds().length) {
     // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
-    process.stderr.write(`펫 그림을 찾을 수 없음: ${party.pets().map((p) => p.look).join(", ")}\n`);
+    process.stderr.write(`펫 그림을 찾을 수 없음: ${saveSource.pets().map((p) => p.look).join(", ")}\n`);
     app.exit(3);
     return;
   }
@@ -782,38 +750,24 @@ async function main(): Promise<void> {
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
-  if (mode === "companion") {
-    tray = createTray({
-      icon: logoFile(256),
-      tooltip: t("tray.title", { name: displayName() }),
-      template: trayTemplate,
-      popup: () => popupMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, trayTemplate(), t("menu.on")),
-    });
-  } else {
-    // 전역 단축키 — 동반자는 잡지 않는다 (shortcuts.ts 머리 주석)
-    shortcuts = createShortcuts(
-      {
-        ghost: () => applyClickThrough(!config.clickThrough),
-        hidden: toggleHidden,
-        quit: () => app.quit(),
-        keep: () => setKeepVisible(!config.keepVisible),
-      },
-      log,
-    );
-    shortcuts.start();
-  }
+  tray = createTray({
+    icon: logoFile(256),
+    tooltip: t("tray.title", { name: displayName() }),
+    template: trayTemplate,
+    popup: () => popupMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, trayTemplate(), t("menu.on")),
+  });
 
-  applyClickThrough(!!config.clickThrough, false);
+  applyClickThrough(!!config.clickThrough);
   syncLoginItem();
   syncPlayArea();
   syncCoach();
   bootReady = true;
-  lifetime.check(); // 창이 생겼으니 pid 파일에 ready 를 적는다 — pokebuddy 명령이 이걸 보고 기다림을 끝낸다
+  lifetime.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
 
   intervals.push(setInterval(stateTick, STAGE_RULES.statePollMs));
   intervals.push(setInterval(() => stage?.tick(), STAGE_RULES.tickMs));
   anchor.start();
-  log?.({ boot: mode, pets: stage.petIds(), writer: party.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
+  log?.({ boot: "companion", pets: stage.petIds(), writer: saveSource.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
 }
 
 app
@@ -848,8 +802,7 @@ app.on("before-quit", () => {
 });
 
 app.on("will-quit", () => {
-  shortcuts?.stop(); // 단축키 해제
-  lifetime?.release(); // 떠 있는 펫 목록에서 빠진다
+  lifetime?.release(); // 내 lock 을 지운다
 });
 
 // 첫 실행 선택 창은 무대 창보다 먼저 열리고 닫힌다 — 그때는 끝내지 않는다 (main 이 이어서 무대 창을 만든다)
