@@ -41,7 +41,6 @@ export function evolutionLine(slug: string): string {
 export function pickerPayload(starters: string[]): PickerPayload {
   return {
     title: t("starter.title"),
-    subtitle: t("starter.subtitle"),
     start: t("starter.start"),
     empty: t("starter.empty"),
     items: starters.map((slug) => ({ slug, name: petName(slug), evolution: evolutionLine(slug) })),

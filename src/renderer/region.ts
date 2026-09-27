@@ -10,7 +10,6 @@ function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
 const veil = need("veil", HTMLElement);
 const regionEl = need("region", HTMLElement);
 const sizeEl = need("size", HTMLElement);
-const hintEl = need("hint", HTMLElement);
 const toolbar = need("toolbar", HTMLElement);
 const message = need("message", HTMLElement);
 const redraw = need("redraw", HTMLButtonElement);
@@ -43,8 +42,6 @@ function paint(): void {
   const small = r.w * r.h < min.area;
   apply.disabled = thin || small;
   message.textContent = thin ? `폭과 높이를 ${min.side} 이상으로 그리세요` : small ? "조금 더 넓게 그리세요" : MESSAGE;
-  // 영역이 작으면 미리보기 문구가 넘친다 — 넓을 때만 보인다
-  hintEl.hidden = r.w < 360 || r.h < 80;
 }
 
 api.onInit((init: RegionInit) => {

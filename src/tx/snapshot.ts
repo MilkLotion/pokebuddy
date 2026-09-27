@@ -159,7 +159,7 @@ export function snapshot(
     return {
       id,
       name: def.ko,
-      desc: def.desc,
+      desc: def.desc ?? "",
       reward: REWARD_WORD[def.reward] ?? def.reward,
       state: row?.claimedAt != null ? "claimed" : row?.achievedAt != null ? "achieved" : "locked",
     };

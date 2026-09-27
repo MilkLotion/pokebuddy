@@ -11,7 +11,6 @@ function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
 }
 const list = need("list", HTMLElement);
 const title = need("title", HTMLElement);
-const subtitle = need("subtitle", HTMLElement);
 const start = need("start", HTMLButtonElement);
 const chosenName = need("chosen-name", HTMLElement);
 const chosenNote = need("chosen-note", HTMLElement);
@@ -52,7 +51,6 @@ function card(item: PickerItem): HTMLButtonElement {
 
 function render(payload: PickerPayload) {
   title.textContent = payload.title;
-  subtitle.textContent = payload.subtitle;
   document.title = payload.title;
   start.textContent = payload.start;
   chosenNote.textContent = payload.empty;

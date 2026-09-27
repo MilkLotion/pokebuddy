@@ -153,7 +153,7 @@ export type AchievementState = "locked" | "achieved" | "claimed";
 export interface AchievementView {
   id: string;
   name: string;
-  desc: string;
+  desc: string; // 빈 문자열이면 설명 줄을 그리지 않는다
   reward: string; // 보상 설명. 화면이 그대로 보여 준다
   state: AchievementState;
 }

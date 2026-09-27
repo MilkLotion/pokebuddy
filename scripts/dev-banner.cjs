@@ -18,7 +18,7 @@ const kind = argAfter("--kind") ?? "hatch";
 const SAMPLES = {
   hatch: { key: "hatch:e2", kind: "hatch", title: "부화 준비 완료", target: "돌보미집 알 2", go: "바로가기", route: { to: "daycare" } },
   evolve: { key: "evolve:p1:charmander", kind: "evolve", title: "진화 가능", target: "파이리 Lv.16", go: "바로가기", route: { to: "pet", petId: "p1" } },
-  achievement: { key: "achievement:show-two", kind: "achievement", title: "업적 달성", target: "두 마리 꺼내기 달성", go: "바로가기", route: { to: "achievements", id: "show-two" } },
+  achievement: { key: "achievement:show-two", kind: "achievement", title: "업적 달성", target: "두 마리 함께 꺼내기 달성", go: "바로가기", route: { to: "achievements", id: "show-two" } },
 };
 
 app.whenReady().then(() => {

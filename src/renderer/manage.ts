@@ -92,7 +92,7 @@ const GUIDE: { title: string; lines: string[] }[] = [
   {
     title: "상점과 알",
     lines: [
-      "포인트로 알, 도구, 진화용 도구, 파티 칸을 산다.",
+      "포인트로 알, 포켓몬, 도구, 진화용 도구, 파티 칸을 산다.",
       "산 알은 돌보미집으로 간다. 쓰다듬기와 노래로 준비 시간을 줄인다.",
       "돌봄 행동의 종류와 횟수가 나오는 종을 바꾼다. 어떤 조합이 어떤 종을 부르는지는 직접 찾는다.",
       "준비를 마친 알을 열면 개체가 나온다. 파티가 차 있으면 박스로 간다.",
@@ -104,7 +104,6 @@ const GUIDE: { title: string; lines: string[] }[] = [
       "파티 칸은 처음부터 다 열려 있지 않다. 상점과 업적으로 연다.",
       "파티에 있는 개체만 시간이 흐른다. 박스에 둔 개체는 멈춘다.",
       "꺼낸 개체만 바탕화면에 보인다. 숨겨도 포인트와 친밀도는 쌓인다.",
-      "박스 개체를 파티에 배치하거나 파티 개체와 맞바꾼다.",
     ],
   },
   {
@@ -112,16 +111,15 @@ const GUIDE: { title: string; lines: string[] }[] = [
     lines: [
       "조건을 채운 개체는 상세에서 직접 진화시킨다. 저절로 진화하지 않는다.",
       "조건은 종마다 다르다. 레벨, 친밀도, 도구, 시간대를 본다.",
-      "진화할 곳이 여럿인 종은 어디로 갈지 골라야 한다.",
       "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다.",
     ],
   },
   {
     title: "업적",
     lines: [
-      "업적은 조건을 채우면 달성으로 남는다. 나중에 상태가 바뀌어도 달성은 사라지지 않는다.",
-      "달성과 보상 수령은 다르다. 보상은 업적창에서 직접 받는다.",
-      "받지 않은 보상이 있으면 헤더의 업적창 아이콘에 점이 뜬다.",
+      "달성한 업적은 나중에 상태가 바뀌어도 사라지지 않는다.",
+      "보상은 업적창에서 직접 받는다.",
+      "받지 않은 보상이 있으면 탭 줄 오른쪽의 업적창 아이콘에 점이 뜬다.",
     ],
   },
 ];
@@ -248,9 +246,11 @@ function chips(items: { id: string; label: string }[], current: string, pick: (i
   return row;
 }
 
-function head(title: string, sub: string): HTMLElement {
+// 부제가 없으면 부제 줄을 그리지 않는다
+function head(title: string, sub?: string): HTMLElement {
   const box = el("div", "head");
-  box.append(el("h1", undefined, title), el("div", "sub", sub));
+  box.appendChild(el("h1", undefined, title));
+  if (sub) box.appendChild(el("div", "sub", sub));
   return box;
 }
 
@@ -541,7 +541,7 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
     const egg = view?.eggs.list.find((e) => e.id === eggId);
     dialogEl.append(...dialogHead("알에서 새 알이 나왔어요", ""));
     card.append(eggIcon(egg?.kind ?? "random", "portrait"), el("div", "name", egg?.name ?? "알"));
-    info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "준비가 끝나면 직접 열어요. 아직 얻지 않은 포켓몬이 나와요."));
+    info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "아직 얻지 않은 포켓몬이 나와요."));
   } else {
     const pet = petId ? petOf(petId) : undefined;
     if (!pet) {
@@ -554,7 +554,7 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
     tags.appendChild(el("span", "note", `Lv.${pet.level} · ${pet.nature}`));
     card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
     if (slotIndex != null) info.append(el("div", undefined, `파티 ${slotIndex + 1}번 칸에 들어갔어요.`));
-    else info.append(el("div", undefined, "파티가 가득 차 박스에 보관했어요."), el("div", "note", "박스에서 파티에 넣을 수 있어요."));
+    else info.append(el("div", undefined, "파티가 가득 차 박스에 보관했어요."));
   }
   const row = el("div", "compare");
   row.appendChild(card);
@@ -658,7 +658,7 @@ function showFormTip(cell: HTMLElement, pet: PetView, status?: string): void {
   const tip = el("div", "form-tip");
   tip.setAttribute("role", "menu");
   if (status) tip.appendChild(el("div", "tip-head", status));
-  tip.appendChild(el("div", "tip-head", "모습 바꾸기 · 누르면 바꿔요"));
+  tip.appendChild(el("div", "tip-head", "모습 바꾸기"));
   for (const f of pet.forms ?? []) {
     const now = f.species === pet.species;
     const row = button("form-row");
@@ -690,12 +690,25 @@ function showFormTip(cell: HTMLElement, pet: PetView, status?: string): void {
   formTip = tip;
 }
 
+// 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
+// 숫자로 끝나면 한국어로 읽은 소리 기준 (0·1·3·6·7·8 받침 있음, 1·7·8 은 ㄹ 받침)
+type JosaPair = "은/는" | "이/가" | "을/를" | "으로/로" | "과/와";
+function josa(word: string, pair: JosaPair): string {
+  const [withBatchim, without] = pair.split("/") as [string, string];
+  const last = word.trim().slice(-1);
+  let b: "none" | "rieul" | "other" = "none";
+  if (/[0-9]/.test(last)) b = "178".includes(last) ? "rieul" : "036".includes(last) ? "other" : "none";
+  else {
+    const code = last.charCodeAt(0) - 0xac00;
+    if (code >= 0 && code <= 11171 && code % 28 !== 0) b = code % 28 === 8 ? "rieul" : "other";
+  }
+  if (pair === "으로/로") return b === "other" ? withBatchim : without;
+  return b === "none" ? without : withBatchim;
+}
+
 // 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
 function toParticle(word: string): string {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  if (code < 0 || code > 11171) return "로";
-  const jong = code % 28;
-  return jong === 0 || jong === 8 ? "로" : "으로";
+  return josa(word, "으로/로");
 }
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
@@ -740,7 +753,7 @@ function drawBox(v: Snapshot): void {
   daycare.appendChild(title);
   const eggs = el("div", "eggs");
   if (v.eggs.list.length) for (const egg of v.eggs.list) eggs.appendChild(eggCard(egg));
-  else eggs.appendChild(el("div", "note", "알이 없습니다. 상점에서 살 수 있어요."));
+  else eggs.appendChild(el("div", "note", "알이 없습니다."));
   daycare.appendChild(eggs);
   bodyEl.appendChild(daycare);
 
@@ -805,7 +818,7 @@ function drawBox(v: Snapshot): void {
         draw();
       });
       cell.appendChild(el("div", "note", boxName));
-      cell.title = `${pet.name} · ${boxName}로 가기`;
+      cell.title = `${pet.name} · ${boxName}${josa(boxName, "으로/로")} 가기`;
       results.appendChild(cell);
     }
     bodyEl.appendChild(results);
@@ -828,7 +841,7 @@ function drawBox(v: Snapshot): void {
     }
     const cell = boxCell(pet, () => openPet(pet.id));
     cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
-    cell.title = `${pet.name} · 눌러서 상세 보기 · 끌어서 옮기기`;
+    cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => startBoxDrag(e, cell, { boxId: box.id, slot }));
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
     dropZone(cell, onDrop);
@@ -957,7 +970,6 @@ function boxSortEl(box: BoxView): HTMLElement {
   const wrap = el("div", "box-sort");
   const current = BOX_SORTS.find((s) => s.by === boxSortedBy.get(box.id));
   const toggle = button("sort-toggle", `${current?.label ?? "정렬"} ▾`);
-  toggle.title = current ? `${current.label}으로 정렬했어요 · 눌러서 다시 정렬` : "눌러서 정렬 기준 고르기";
   toggle.setAttribute("aria-expanded", String(boxSortOpen));
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1147,7 +1159,9 @@ function shopRow(item: ShopItemView): HTMLElement {
   const card = button("row-card");
   card.appendChild(shopThumb(item));
   const body = el("div", "body");
-  body.append(el("div", "title", item.name), el("div", "note", item.blocked ?? item.note));
+  body.appendChild(el("div", "title", item.name));
+  const note = item.blocked ?? item.note;
+  if (note) body.appendChild(el("div", "note", note)); // 설명이 없는 상품은 이름 한 줄만
   card.append(body, el("div", "price", point(item.price)));
   // 살 수 없어도 누를 수 있다. 이유는 구매 창이 보여 준다
   card.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
@@ -1156,7 +1170,7 @@ function shopRow(item: ShopItemView): HTMLElement {
 }
 
 function drawShop(v: Snapshot): void {
-  bodyEl.appendChild(head("상점", `보유 ${point(v.points)}`));
+  bodyEl.appendChild(head("상점"));
   bodyEl.appendChild(
     chips(SHOP_TABS, shopFilter, (id) => {
       shopFilter = id;
@@ -1221,9 +1235,9 @@ function bagCard(item: BagItemView): HTMLElement {
 }
 
 function drawBag(v: Snapshot): void {
-  bodyEl.appendChild(head("가방", "도구를 골라 대상에게 사용"));
+  bodyEl.appendChild(head("가방"));
   if (!v.bag.length) {
-    bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다. 상점에서 도구를 살 수 있어요."));
+    bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다."));
     return;
   }
   bodyEl.appendChild(
@@ -1291,13 +1305,12 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
 }
 
 function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): string[] {
-  const keep = "파티·박스 위치와 숨김 상태는 그대로";
   switch (item.effect) {
     case "exp":
     case "level": {
       const r = candyResult(v, pet, item, qty);
       const lost = item.effect === "exp" ? ` · 소멸 ${r.lost.toLocaleString("ko-KR")}` : "";
-      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${r.gain.toLocaleString("ko-KR")}${lost}`, keep];
+      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${r.gain.toLocaleString("ko-KR")}${lost}`];
     }
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
@@ -1392,7 +1405,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
         bagQty = cap;
         draw();
       });
-      q.append(minus, el("span", "count", bagQty.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `보유 ${item.count.toLocaleString("ko-KR")}`));
+      q.append(minus, el("span", "count", bagQty.toLocaleString("ko-KR")), plus, max);
       right.appendChild(q);
     }
     const preview = el("div", "use-preview");
@@ -1517,7 +1530,8 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
 function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
   const line = el("div", "trade-pet");
   if (!card) {
-    line.append(el("div", "trade-portrait"), el("div", "trade-empty", empty));
+    line.appendChild(el("div", "trade-portrait"));
+    if (empty) line.appendChild(el("div", "trade-empty", empty));
     return line;
   }
   const info = el("div", "trade-info");
@@ -1536,11 +1550,13 @@ function tradeState(text: string, tone: "ok" | "wait" | "bad" | "idle"): HTMLEle
   return box;
 }
 
+// 설명이 없으면 제목 줄만 그린다
 function tradeBanner(title: string, desc: string, tone: "ok" | "bad"): HTMLElement {
   const box = el("div", "trade-card trade-banner");
   const head = el("div", "trade-banner-title");
   head.append(el("i", tone), document.createTextNode(title));
-  box.append(head, el("div", "trade-desc", desc));
+  box.appendChild(head);
+  if (desc) box.appendChild(el("div", "trade-desc", desc));
   return box;
 }
 
@@ -1585,14 +1601,14 @@ function drawTradeStart(t: TradeScreen): void {
     acts.append(link, copy, actionButton("취소", false, t.busy, () => void tradeSend("trade.leave")));
     host.append(left, acts);
   } else {
-    host.append(tradeCardHead("공유 채널 만들기"), el("div", "trade-desc", "링크를 친구에게 보내면 교환을 시작해요"));
+    host.appendChild(tradeCardHead("공유 채널 만들기"));
     const acts = el("div", "trade-acts");
     acts.appendChild(actionButton("링크 만들기", true, t.busy, () => void tradeSend("trade.create")));
     host.appendChild(acts);
   }
 
   const join = el("div", "trade-card");
-  join.append(tradeCardHead("링크로 참가"), el("div", "trade-desc", "친구가 보낸 링크를 붙여 넣어요"));
+  join.appendChild(tradeCardHead("링크로 참가"));
   const acts = el("div", "trade-acts");
   const input = searchBox("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
     tradeInput = q;
@@ -1665,13 +1681,13 @@ function drawTradeOffer(t: TradeScreen): void {
   const friend = el("div", "trade-card");
   const friendTitle = t.friendName ? `${t.friendName}의 포켓몬` : "친구 포켓몬";
   const friendState = t.friendBlocked ? tradeState("받을 수 없음", "bad") : t.friendReady ? tradeState("확정함", "ok") : t.friend ? tradeState("확정 전", "idle") : tradeState("고르는 중", "wait");
-  friend.append(tradeCardHead(friendTitle, friendState), tradePetLine(t.friend, "친구가 고르는 중이에요"));
+  friend.append(tradeCardHead(friendTitle, friendState), tradePetLine(t.friend, ""));
   row.append(mine, friend);
   bodyEl.appendChild(row);
 
   if (t.friendBlocked) {
     const name = t.friend?.name ?? "이 포켓몬";
-    const why = t.friendBlocked === "single" ? `${name}는 단일 포켓몬이라 교환할 수 없어요.` : `${name}는 받을 수 없는 값이에요.`;
+    const why = t.friendBlocked === "single" ? `${name}${josa(name, "은/는")} 단일 포켓몬이라 교환할 수 없어요.` : `${name}의 정보가 올바르지 않아요.`;
     bodyEl.appendChild(tradeBanner("받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`, "bad"));
   }
 
@@ -1688,7 +1704,7 @@ function drawTradeOffer(t: TradeScreen): void {
 
 // 교환 완료 — Done
 function drawTradeDone(t: TradeScreen): void {
-  bodyEl.appendChild(tradeBanner("교환 완료", "공유 채널을 닫았어요", "ok"));
+  bodyEl.appendChild(tradeBanner("교환 완료", "", "ok"));
   const r = t.received;
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("받은 포켓몬"));
@@ -1698,7 +1714,7 @@ function drawTradeDone(t: TradeScreen): void {
     card.appendChild(big);
     const place = el("div", "trade-place");
     place.appendChild(el("strong", undefined, r.party != null ? `파티 ${r.party + 1}번 칸에 들어갔어요` : `${r.box ?? "박스"}에 들어갔어요`));
-    if (r.sent) place.appendChild(el("div", "trade-desc", `보낸 포켓몬 ${r.sent.name} Lv.${r.sent.level} 이 있던 자리`));
+    if (r.sent) place.appendChild(el("div", "trade-desc", `보낸 포켓몬 ${r.sent.name} Lv.${r.sent.level}${josa(String(r.sent.level), "이/가")} 있던 자리`));
     if (r.party != null) place.appendChild(el("div", "trade-desc", r.hidden ? "숨김 상태는 그 칸 그대로" : "꺼낸 상태는 그 칸 그대로"));
     card.appendChild(place);
   }
@@ -1709,7 +1725,7 @@ function drawTradeDone(t: TradeScreen): void {
 }
 
 function drawTrade(): void {
-  bodyEl.appendChild(head("교환", "친구와 포켓몬을 한 마리씩 맞바꾸기"));
+  bodyEl.appendChild(head("교환"));
   const t = trade;
   if (!t) {
     bodyEl.appendChild(el("div", "empty-note", "교환 상태를 읽는 중이에요."));
@@ -1717,13 +1733,13 @@ function drawTrade(): void {
     return;
   }
   if (!t.available) {
-    bodyEl.appendChild(el("div", "empty-note", "지금은 교환을 할 수 없어요. 동반자로 켠 pokebuddy 에서, 서버 설정이 있을 때 할 수 있어요."));
+    bodyEl.appendChild(el("div", "empty-note", "교환을 쓸 수 없어요."));
     return;
   }
   // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다
   const err = t.error;
   if (err) {
-    const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
+    const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
     bodyEl.appendChild(tradeBanner(text[0] ?? "", text[1] ?? "", "bad"));
   } else if (t.phase === "closed") {
     const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
@@ -1944,7 +1960,7 @@ function drawSignUp(scroll: HTMLElement): void {
     acctForm.error = "";
     redrawAccount();
   });
-  back.append(link, document.createTextNode(" · 아이디와 이름으로 가입해요"));
+  back.appendChild(link);
   scroll.appendChild(back);
   const grid = el("div", "acct-grid");
   const user = acctInput("acct-new-user", acctForm.username, "아이디", "text", (v) => {
@@ -1980,7 +1996,6 @@ function acctRow(title: string, hint: string, control: HTMLElement): HTMLElement
 
 function drawSignedIn(scroll: HTMLElement): void {
   const a = acct!;
-  scroll.appendChild(el("div", "acct-lead", "다른 PC에서도 같은 계정으로 로그인해요"));
   if (acct?.blocked) scroll.appendChild(acctNotice("교환 중에는 계정을 바꿀 수 없어요", "교환을 끝내거나 나간 뒤 다시 시도해 주세요", "warn"));
   // 이름
   const who = a.method === "github" ? `GitHub · ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
@@ -2071,7 +2086,7 @@ function acctOverlay(): HTMLElement | null {
   } else if (acctConfirm === "delete") {
     head.append(el("h3", undefined, "계정을 삭제할까요?"), x);
     const who = a.method === "github" ? `GitHub 계정 ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
-    card.append(head, el("p", "acct-confirm-body", `${who} 을 지워요. 게임 진행은 그대로예요.\n교환이 끝나지 않은 친구의 포켓몬은 그대로 받아요.`));
+    card.append(head, el("p", "acct-confirm-body", `${who}${josa(who, "을/를")} 지워요. 게임 진행은 그대로예요.\n교환이 끝나지 않은 친구의 포켓몬은 그대로 받아요.`));
     card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => {
       void acctSend({ action: "delete" }).then(() => { acctConfirm = null; redrawAccount(); });
     })));
@@ -2113,7 +2128,7 @@ function drawAccount(scroll: HTMLElement): void {
     return;
   }
   if (!acct.available) {
-    scroll.appendChild(el("div", "empty-note", "지금은 계정을 쓸 수 없어요. 동반자로 켠 pokebuddy 에서, 서버 설정이 있을 때 쓸 수 있어요."));
+    scroll.appendChild(el("div", "empty-note", "계정을 쓸 수 없어요."));
     return;
   }
   if (acct.signedIn) drawSignedIn(scroll);
@@ -2206,7 +2221,7 @@ function draw(): void {
 // Figma 99 `Party / Save Failing` `716:17993` (Status Banner Tone=Error). 2026-09-27 사용자 "그렇게해"
 function drawSaveFailing(): void {
   if (!view?.saveFailing) return;
-  const banner = tradeBanner("저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요. 게임은 계속할 수 있고, 저장되면 이 안내가 사라져요.", "bad");
+  const banner = tradeBanner("저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.", "bad");
   banner.classList.add("save-failing");
   const first = bodyEl.firstElementChild;
   if (first?.classList.contains("head")) first.after(banner);
@@ -2231,12 +2246,12 @@ interface TutorialText {
 }
 const TUTORIAL_TEXT: Record<string, TutorialText> = {
   shop: {
-    name: "상점", tab: "shop", title: "랜덤알로 새 포켓몬을 만나 보세요", body: "시작 포인트로 하나 살 수 있어요. 카드를 누르면 구매 창이 열려요.",
-    guideTitle: "랜덤알로 새 포켓몬을 만나 보세요", guideBody: "상점 탭에서 시작 포인트로 알을 살 수 있어요.", guideButton: "상점으로 가기",
+    name: "상점", tab: "shop", title: "랜덤알로 새 포켓몬을 만나 보세요", body: "시작 포인트로 하나 살 수 있어요.",
+    guideTitle: "랜덤알로 새 포켓몬을 만나 보세요", guideBody: "시작 포인트로 알을 살 수 있어요.", guideButton: "상점으로 가기",
   },
   hatch: {
-    name: "부화", tab: "box", title: "알을 돌보면 더 빨리 준비돼요", body: "알을 눌러 쓰다듬거나 노래를 들려주세요. 준비가 끝나면 열기를 눌러야 부화해요.",
-    guideTitle: "알은 박스의 돌보미집에 들어갔어요", guideBody: "박스 탭에서 알을 돌보고 준비가 끝나면 열어요.", guideButton: "박스로 가기",
+    name: "부화", tab: "box", title: "알을 돌보면 더 빨리 준비돼요", body: "준비가 끝나면 열기를 눌러야 부화해요.",
+    guideTitle: "알은 박스의 돌보미집에 들어갔어요", guideBody: "", guideButton: "박스로 가기",
   },
   party: {
     name: "파티", tab: "party", title: "새 포켓몬은 숨긴 상태로 들어와요", body: "칸을 눌러 상세에서 꺼내기를 누르면 바탕화면에 나타나요. 초상의 몬스터볼은 숨김 표시예요.",
@@ -2317,7 +2332,9 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   x.addEventListener("click", () => void send("tutorial.skip", id)); // 닫기는 스킵이다
   head.append(el("span", "step", spec.step), x);
   const next = actionButton(spec.button, true, false, spec.onGo);
-  bubble.append(head, el("div", "title", spec.title), el("div", "body", spec.body), actions(el("div", "spacer"), next));
+  bubble.append(head, el("div", "title", spec.title));
+  if (spec.body) bubble.appendChild(el("div", "body", spec.body)); // 본문이 없으면 제목 아래 바로 단추
+  bubble.appendChild(actions(el("div", "spacer"), next));
   layer.appendChild(bubble);
   document.body.appendChild(layer);
   const left = Math.min(Math.max(COACH.margin, r.left), W - COACH.width - COACH.margin);
@@ -2514,15 +2531,15 @@ function drawPetPage(pet: PetView): void {
   const evoRow = !pet.evolutions.length
     ? listRow("진화", "더 진화하지 않아요", [])
     : ready.length
-      ? listRow(`진화 · ${ready.map((e) => e.name).join(" · ")}`, "조건을 채웠어요. 한 단계씩 직접 진화해요", [el("span", "chip-ready", "진화 가능")], evolve)
-      : listRow(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || "조건을 채우면 진화해요", [], evolve);
-  main.appendChild(listCard(evoRow, listRow(`성격 · ${pet.nature}`, "민트로 바꿀 수 있어요", [], () => open({ kind: "nature", petId: pet.id }))));
+      ? listRow(`진화 · ${ready.map((e) => e.name).join(" · ")}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
+      : listRow(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve); // 필요 조건은 화면에 없는 조건이라 남긴다
+  main.appendChild(listCard(evoRow, listRow(`성격 · ${pet.nature}`, null, [], () => open({ kind: "nature", petId: pet.id }))));
 
   if (inParty) {
     main.appendChild(label("표시"));
     main.appendChild(
       listCard(
-        listRow("화면 표시", pet.hidden ? "숨겨 둔 상태예요" : null, [switchButton(!pet.hidden, "화면 표시", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id))]),
+        listRow("화면 표시", null, [switchButton(!pet.hidden, "화면 표시", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id))]),
         listRow("크기", null, [sizeButtons(pet)]),
       ),
     );
@@ -2661,7 +2678,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   const have = picked ? (view.bag.find((b) => b.id === picked.mint)?.count ?? 0) : 0;
   if (picked) {
     const info = el("div", "info-box");
-    if (have > 0) info.append(el("div", undefined, `${picked.mintName} 1개를 씁니다`), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 성격만 바뀌고 레벨·친밀도는 그대로`));
+    if (have > 0) info.append(el("div", undefined, `${picked.mintName} 1개를 씁니다`), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
     else {
       const price = view.shop.find((p) => p.id === picked.mint)?.price;
       info.append(el("div", undefined, `${picked.mintName}가 없어요`), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
@@ -2809,7 +2826,7 @@ function drawPickSlot(petId: string): void {
     close();
     return;
   }
-  dialogEl.append(...dialogHead("파티 칸 고르기", `${pet.name}을(를) 어느 칸에 넣을까요?`));
+  dialogEl.append(...dialogHead("파티 칸 고르기", `${pet.name}${josa(pet.name, "을/를")} 어느 칸에 넣을까요?`));
   const grid = el("div", "pick-grid");
   for (const slot of view.party.slots) {
     if (slot.state === "locked") {
@@ -2834,7 +2851,8 @@ function achievementRow(a: AchievementView): HTMLElement {
   row.dataset.id = a.id; // 알림 배너의 `바로가기` 가 이 줄로 옮겨 온다
   row.appendChild(el("span", "state"));
   const body = el("div", "body");
-  body.append(el("div", "label", a.name), el("div", "hint", a.desc));
+  body.appendChild(el("div", "label", a.name));
+  if (a.desc) body.appendChild(el("div", "hint", a.desc));
   row.appendChild(body);
   if (a.state === "achieved") {
     const claim = button("act primary", "보상 받기");
@@ -2923,10 +2941,12 @@ function settingSelect<T extends string>(id: string, options: readonly { value: 
 }
 
 // 설정 한 줄. 조작이 넓으면 이름 아래에 깐다 — 옆에 두면 설명이 좁아져 여러 줄로 접힌다
-function settingRow(label: string, hint: string, control: HTMLElement, stack = false): HTMLElement {
+// 힌트가 없으면 .hint 줄을 만들지 않는다 — 라벨 한 줄만 남는다
+function settingRow(label: string, hint: string | undefined, control: HTMLElement, stack = false): HTMLElement {
   const row = el("div", stack ? "setting stack" : "setting");
   const body = el("div", "body");
-  body.append(el("div", "label", label), el("div", "hint", hint));
+  body.appendChild(el("div", "label", label));
+  if (hint) body.appendChild(el("div", "hint", hint));
   row.append(body, control);
   return row;
 }
@@ -3013,12 +3033,12 @@ function drawGeneral(scroll: HTMLElement): void {
     { value: "ko", label: "한국어" },
     { value: "en", label: "English" },
   ] as const;
-  scroll.appendChild(settingRow("언어", "화면 문구 언어", settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
-  scroll.appendChild(settingRow("로그인 시 시작", "기본값 켜짐", switchButton(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
+  scroll.appendChild(settingRow("언어", undefined, settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
+  scroll.appendChild(settingRow("로그인 시 시작", undefined, switchButton(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
   scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
   const guide = button("act", "열기 ›");
   guide.addEventListener("click", () => open({ kind: "guide" }));
-  scroll.appendChild(settingRow("가이드북", "사용법을 주제별로 봅니다", guide));
+  scroll.appendChild(settingRow("가이드북", undefined, guide));
 }
 
 // 화면 — 포켓몬 표시, 클릭 통과, 놀이공간. 앞의 두 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
@@ -3027,8 +3047,8 @@ function drawDisplay(scroll: HTMLElement): void {
   const s = view.settings;
   const d = view.display;
   if (d) {
-    scroll.appendChild(settingRow("포켓몬 표시", d.hidden ? "지금 숨김" : "지금 화면에 표시 중", switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
-    scroll.appendChild(settingRow("클릭 통과", "포켓몬이 없는 곳은 뒤 창을 클릭", switchButton(d.clickThrough, "클릭 통과", () => setSetting("clickThrough", !d.clickThrough))));
+    scroll.appendChild(settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
+    scroll.appendChild(settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setSetting("clickThrough", !d.clickThrough))));
   }
   const area = [
     { id: "full", label: "화면 전체" },
@@ -3037,14 +3057,14 @@ function drawDisplay(scroll: HTMLElement): void {
   scroll.appendChild(
     settingRow(
       "놀이공간",
-      s.playArea === "region" ? (s.hasRegion ? "그려 둔 영역 안에서만 돌아다님" : "영역을 아직 그리지 않았음") : "영역 지정을 고르면 [영역 그리기]",
+      s.playArea === "region" ? (s.hasRegion ? "그려 둔 영역 안에서만 돌아다님" : "영역을 아직 그리지 않았음") : undefined,
       segmented(area, s.playArea === "region" ? "region" : "full", (id) => setSetting("playArea", id)),
     ),
   );
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
     const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
-    scroll.appendChild(settingRow("영역", "포켓몬이 돌아다닐 영역을 그림", draw));
+    scroll.appendChild(settingRow("영역", undefined, draw));
   }
 }
 
@@ -3082,7 +3102,7 @@ function drawSettings(sub: SettingsTab): void {
   // 제목·부제와 오른쪽 위 닫기
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
-  titles.append(el("h2", undefined, "설정"), el("div", "sub", "설정을 여기서 바꿉니다"));
+  titles.appendChild(el("h2", undefined, "설정"));
   const x = button("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
@@ -3234,7 +3254,7 @@ const REASON: Record<string, string> = {
   "not-pokemon": "그 칸에 개체가 없어요.",
   "not-enough-points": "포인트가 모자라요.",
   "daycare-full": "돌보미집이 가득 찼어요.",
-  "bag-full": "가방이 가득 찼어요. 한 종류에 999개까지예요.",
+  "bag-full": "한 종류는 999개까지만 살 수 있어요.",
   "sold-out": "이 알에서 나올 포켓몬을 모두 모았어요.",
   "bad-form": "고를 수 없는 모습이에요.",
   "not-shared": "모습을 바꿀 수 없는 포켓몬이에요.",
@@ -3259,7 +3279,7 @@ const REASON: Record<string, string> = {
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
   "box-full": "그 박스는 가득 찼어요.",
   "no-box": "그 박스를 찾지 못했어요.",
-  timeout: "응답이 없어요. 화면을 새로 읽었으니 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",
+  timeout: "응답이 없어요. 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",
 };
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다

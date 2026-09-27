@@ -21,16 +21,35 @@ import { eggName, fixedEggs, inRandomEgg, speciesPrice } from "../shop/catalog.j
 import type { DexDetail } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
 import { nameOfItem } from "./lists.js";
+import { josa } from "../shared/josa.js";
 
 // 진화 한 단계의 문구 — "Lv.16에서 리자드", "불꽃의돌로 부스터", "밤에 친밀도 65로 블래키"
+// 조사는 앞 낱말 받침에 맞춘다 (src/shared/josa.ts)
 export function stepText(step: EvoStep, opts?: DexOptions): string {
   const to = petName(step.to);
   const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
   const need = step.need;
-  if (!need) return `${time}친밀도 100으로 ${to}`;
+  if (!need) return `${time}친밀도 100${josa("100", "으로/로")} ${to}`;
   if (need.kind === "level") return `${time}Lv.${need.level}에서 ${to}`;
-  if (need.kind === "affinity") return `${time}친밀도 ${need.value}로 ${to}`;
-  return `${time}${nameOfItem(need.item, opts)}로 ${to}`;
+  if (need.kind === "affinity") return `${time}친밀도 ${need.value}${josa(String(need.value), "으로/로")} ${to}`;
+  const item = nameOfItem(need.item, opts);
+  return `${time}${item}${josa(item, "으로/로")} ${to}`;
+}
+
+// 한 단계뿐인 진화 — "Lv.16에서 리자드로 진화", "천둥의돌을 쓰면 라이츄로 진화"
+// 조건 뒤에 '로'가 두 번 겹치지 않게 도구·친밀도는 다른 꼴로 쓴다
+function onlyStepText(step: EvoStep, opts?: DexOptions): string {
+  const to = petName(step.to);
+  const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
+  const need = step.need;
+  const cond = !need
+    ? `${time}친밀도 100이 되면`
+    : need.kind === "level"
+      ? `${time}Lv.${need.level}에서`
+      : need.kind === "affinity"
+        ? `${time}친밀도 ${need.value}${josa(String(need.value), "이/가")} 되면`
+        : `${time}${nameOfItem(need.item, opts)}${josa(nameOfItem(need.item, opts), "을/를")} 쓰면`;
+  return `${cond} ${to}${josa(to, "으로/로")} 진화`;
 }
 
 // 공식 분류와 설명문 — data/dex-text.json (src/tools/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
@@ -61,18 +80,22 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (price != null) methods.push(unlocked ? `상점 구매 ${price}P` : `상점 구매 ${price}P(해금 후)`);
 
   const steps = nextOf(slug, opts);
+  // 한 단계면 "Lv.16에서 리자드로 진화", 여러 갈래면 단계 문구만 잇는다
+  const onlyStep = steps.length === 1 ? steps[0] : undefined;
   const evolution = !unlocked
-    ? "해금하면 보여요"
-    : steps.length
-      ? `${steps.map((s) => stepText(s, opts)).join(" · ")} · 진화는 개체 상세에서 직접`
-      : "더 진화하지 않아요";
+    ? "???"
+    : onlyStep
+      ? onlyStepText(onlyStep, opts)
+      : steps.length
+        ? steps.map((s) => stepText(s, opts)).join(" · ")
+        : "더 진화하지 않아요";
 
   const discovered = save.dex.discovered[slug];
   const eggCondition = !condition
     ? "없음"
     : discovered
       ? `발견 · ${textOf(discovered, opts) ?? discovered}`
-      : "미발견 · 알을 돌보는 방법에 따라 나올 수 있어요";
+      : "미발견";
 
   return {
     slug,
@@ -83,7 +106,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     typeIds: unlocked ? [...row.types] : [],
     shiny: save.dex.shinyObtained.includes(slug),
     owned: save.pets.filter((p) => p.species === slug).length,
-    methods: methods.length ? methods.join(" · ") : "획득 방법 준비 중",
+    methods: methods.length ? methods.join(" · ") : lockedEggOnly(slug, opts),
     evolution,
     eggCondition,
     gimmick: "없음", // 특수 기믹은 아직 없다
@@ -91,6 +114,13 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     ...officialText(unlocked ? dexTexts(opts)[String(row.dex)] : undefined),
     ...bodySize(unlocked ? dexTexts(opts)[String(row.dex)] : undefined),
   };
+}
+
+// 입수 경로가 하나도 없을 때 — 미해금이라 랜덤알 후보에서 빠진 종이면 해금 뒤 랜덤알로 나온다
+// 랜덤알 후보도 아닌 종은 경로가 없다
+function lockedEggOnly(slug: string, opts?: DexOptions): string {
+  if (inRandomEgg(slug, opts)) return `${eggName("random", opts) ?? "랜덤알"}(해금 후)`;
+  return "획득 방법 준비 중";
 }
 
 // 키·몸무게 — 공식 도감처럼 소수 한 자리. 미해금 종과 값이 없는 종은 빈 문자열

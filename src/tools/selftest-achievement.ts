@@ -49,7 +49,7 @@ function seed(): SaveV3 {
   process.stdout.write("(1) 업적 목록과 보상  ok\n");
 }
 
-// (2) 두 마리 꺼내기 — 숨긴 채 배치만 한 것은 아니다
+// (2) 두 마리 함께 꺼내기 — 숨긴 채 배치만 한 것은 아니다
 {
   const s = seed();
   assert.equal(isAchieved(s, "show-two"), false, "둘 다 숨겼으면 아니다");
@@ -59,7 +59,7 @@ function seed(): SaveV3 {
   const slot1 = s.party.slots[1];
   if (slot1) slot1.hidden = false;
   assert.equal(isAchieved(s, "show-two"), true);
-  process.stdout.write("(2) 두 마리 꺼내기 조건  ok\n");
+  process.stdout.write("(2) 두 마리 함께 꺼내기 조건  ok\n");
 }
 
 // (3) 달성은 한 번 기록하면 되돌리지 않는다

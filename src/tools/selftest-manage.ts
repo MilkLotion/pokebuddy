@@ -230,7 +230,7 @@ try {
     const list = game.view()?.achievements.list ?? [];
     assert.equal(list.length, 2, "업적 2개");
     const two = list.find((a) => a.id === "show-two");
-    assert.equal(two?.name, "두 마리 꺼내기");
+    assert.equal(two?.name, "두 마리 함께 꺼내기");
     assert.equal(two?.reward, "파티 칸 +1", "보상은 화면 문구로");
     assert.equal(two?.state, "locked", "한 마리뿐이라 아직 달성 전");
     assert.equal(game.view()?.achievements.unclaimed, 0);

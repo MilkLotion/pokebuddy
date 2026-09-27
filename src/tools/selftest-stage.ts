@@ -157,7 +157,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   // 트레이 — 이름 줄과 설정 파일 열기는 없다. 설정창 열기는 app.ts 가 맨 위에 붙인다
   const tray = trayMenu({ hidden: false, ghost: true }, act);
   eq(tray.map((m) => m.label ?? m.type), [t("menu.hide"), t("menu.ghost"), "separator", t("menu.quit")], "trayMenu 순서·라벨");
-  ok(tray[1]?.type === "checkbox" && tray[1]?.checked === true, "trayMenu 클릭 통과 체크");
+  ok(tray[1]?.type === "checkbox" && tray[1]?.checked === true, "trayMenu 고스트 모드 체크");
   (tray[1]!.click as () => void)();
   (tray[3]!.click as () => void)();
   eq([ghost, quit], [1, 2], "trayMenu 클릭이 동작을 부른다");

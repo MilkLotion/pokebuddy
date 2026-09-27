@@ -144,7 +144,7 @@ try {
   // ── SC-05 두 마리가 보인다 — 새 개체는 꺼낸 상태로 들어왔다 ─────────────────
   const shown = w.save().party.slots.filter((s) => s.state === "pokemon" && s.hidden !== true).length;
   assert.equal(shown, 2, "두 마리가 보인다");
-  process.stdout.write("(7) SC-05 · 두 마리 꺼내기  ok\n");
+  process.stdout.write("(7) SC-05 · 두 마리 함께 꺼내기  ok\n");
 
   // ── SC-02 시간이 흐르면 만복도가 줄고 포인트가 쌓인다 ────────────────────
   // 앞의 돌봄 사이에 이미 8분이 흘러 포인트가 조금 쌓여 있다. 증가분으로 본다

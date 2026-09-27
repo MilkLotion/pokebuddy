@@ -140,10 +140,10 @@ function render(v: DexDeviceView): void {
   device.appendChild(bezel);
 
   const records = el("div", "records");
-  const state = locked ? "미해금" : `${STATE_WORD[d.state] ?? d.state} · 이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
+  const state = locked ? "미해금" : `이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
   for (const [key, value] of [
     ["상태", state],
-    ["입수 방법", d.methods],
+    ["입수처", d.methods],
     ["진화", d.evolution],
     ["알 행동 조건", d.eggCondition],
     ["특수 기믹", d.gimmick],

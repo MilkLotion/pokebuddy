@@ -244,7 +244,9 @@ function coachView(id: string, starterPetId: string | null): CoachView | null {
   const menuStep = id === "first-care" && firstCareMenu != null;
   const key = menuStep ? `coach.${id}.menu` : `coach.${id}`;
   const total = id === "first-care" ? 2 : 1;
-  const base = { id, step: t("coach.step", { name: t(`coach.${id}.name`), at: menuStep ? 2 : 1, total }), title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
+  const name = t(`coach.${id}.name`);
+  const step = total === 1 ? t("coach.step.single", { name }) : t("coach.step", { name, at: menuStep ? 2 : 1, total }); // 한 단계뿐이면 "1 / 1" 을 붙이지 않는다
+  const base = { id, step, title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
   if (id === "playground") return { ...base, kind: "area", areaLabel: t(playArea.mode === "region" ? "coach.area.region" : "coach.area.full") };
   // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
   const ids = stage?.petIds() ?? [];
@@ -341,7 +343,7 @@ const openManageWindow = (route?: ManageRoute): void => {
 
 // 상점·도감·가방은 관리 창이 맡는다. 트레이에는 창을 여는 자리만 둔다 (docs/specs/game.md "화면 구조")
 const trayTemplate = () => [
-  { label: "설정창 열기", click: () => openManageWindow() },
+  { label: t("menu.manage"), click: () => openManageWindow() },
   { type: "separator" as const },
   ...trayMenu(
     { hidden: userHidden, ghost: !!config.clickThrough },
@@ -401,7 +403,7 @@ function showPetMenu(id: string): void {
   });
   if (pet) built.splice(built.length - 2, 0,
     { type: "separator" as const },
-    { label: "설정창 열기", click: () => openManageWindow() },
+    { label: t("menu.manage"), click: () => openManageWindow() },
   );
   // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다
   const save = game?.read();

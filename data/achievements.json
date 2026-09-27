@@ -1,16 +1,15 @@
 {
   "_comment": "업적 — 규칙은 docs/specs/game.md '파티 칸과 업적'. 조건 판정은 코드(src/achievement/core.ts)가 하고 여기는 이름(ko·en)과 보상만 둔다. reward 가 party-slot 이면 업적으로 여는 파티 칸 하나를 연다",
   "show-two": {
-    "ko": "두 마리 꺼내기",
+    "ko": "두 마리 함께 꺼내기",
     "en": "Two Out Together",
-    "desc": "파티의 두 마리를 동시에 꺼낸다",
     "reward": "party-slot"
   },
   "starter-final": {
     "_comment": "키는 옛 조건(첫 포켓몬 최종 진화)의 이름을 그대로 쓴다. 이미 달성·수령한 저장을 그대로 인정하려고 바꾸지 않는다 (2026-09-27)",
     "ko": "최초로 50레벨 포켓몬 달성",
     "en": "First Level 50",
-    "desc": "포켓몬을 처음으로 50레벨 이상으로 레벨업한다. 교환으로 받은 포켓몬은 레벨업해야 센다",
+    "desc": "교환으로 받은 포켓몬은 레벨업해야 센다",
     "reward": "party-slot",
     "level": 50
   }

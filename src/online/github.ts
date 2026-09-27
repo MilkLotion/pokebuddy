@@ -32,7 +32,7 @@ export const APP_LINK = "pokebuddy://account";
 // 문구는 고정 문자열이다. 요청에서 온 값은 넣지 않는다
 export function callbackPage(ok: boolean): string {
   const title = ok ? "로그인했어요" : "로그인하지 못했어요";
-  const body = ok ? "pokebuddy 로 돌아가면 계정 탭에서 로그인한 계정을 볼 수 있어요." : "pokebuddy 의 설정 → 계정 탭에서 다시 시도해 주세요.";
+  const body = ok ? "" : "pokebuddy 의 설정 → 계정 탭에서 다시 시도해 주세요."; // 성공 쪽은 설명 없이 제목과 단추만
   const note = ok ? "브라우저가 pokebuddy 를 열지 물으면 열기를 눌러 주세요. 이 창은 닫아도 돼요." : "이 창은 닫아도 돼요.";
   return `<!doctype html>
 <html lang="ko">
@@ -64,8 +64,8 @@ export function callbackPage(ok: boolean): string {
 <main>
   <div class="brand">pokebuddy</div>
   <h1><i></i>${title}</h1>
-  <p>${body}</p>
-  <a class="open" href="${APP_LINK}">pokebuddy 열기</a>
+${body ? `  <p>${body}</p>
+` : ""}  <a class="open" href="${APP_LINK}">pokebuddy 열기</a>
   <p class="note">${note}</p>
 </main>
 ${ok ? `<script>setTimeout(function () { location.href = "${APP_LINK}"; }, 400);</script>` : ""}

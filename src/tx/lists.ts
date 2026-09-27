@@ -45,7 +45,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (SHOP_V3_RULES.bagMax)
   const bagRoom = (id: string): Pick<ShopItemView, "room" | "blocked"> => {
     const room = Math.max(0, SHOP_V3_RULES.bagMax - (save.bag[id] ?? 0));
-    return room > 0 ? { room } : { room, blocked: `가방이 가득 찼어요 (최대 ${SHOP_V3_RULES.bagMax}개)` };
+    return room > 0 ? { room } : { room, blocked: `${SHOP_V3_RULES.bagMax}개까지만 살 수 있어요` };
   };
 
   // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다
@@ -69,13 +69,13 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const slug of save.dex.unlocked) {
     const price = speciesPrice(slug, opts);
     if (price === null) continue;
-    add({ id: slug, name: petName(slug), note: "종 지정 구매 · 새 개체", price, category: "pokemon", affordable: false });
+    add({ id: slug, name: petName(slug), note: "", price, category: "pokemon", affordable: false });
   }
 
   // 도구 — 상점에 파는 것만
   for (const [id, item] of Object.entries(items(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
-    add({ id, name: item.ko, note: "가방에 담긴다", price: item.price, category: "tool", affordable: false, ...bagRoom(id) });
+    add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, ...bagRoom(id) });
   }
 
   // 진화용 도구 — 종류와 무관하게 같은 값이다

@@ -13,7 +13,7 @@ import type { SaveV3 } from "../shared/save-v3";
 export interface AchievementDef {
   ko: string;
   en?: string; // 영어 이름 — 다른 데이터(도구·알)처럼 함께 둔다. 화면은 지금 한국어만 쓴다
-  desc: string;
+  desc?: string; // 이름만으로 조건이 드러나면 두지 않는다 — 업적창에 설명 줄이 그려지지 않는다
   reward: "party-slot";
   level?: number; // starter-final 의 기준 레벨
 }

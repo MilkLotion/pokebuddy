@@ -560,7 +560,7 @@ function mockBridge(): StageBridge {
       else if (msg.type === "click") p.zoom = p.zoom >= 3 ? 1 : p.zoom + 1;
       else if (msg.type === "menu") note(`(mock) 메뉴 ${msg.id} — 마지막 ${last.type}`);
     },
-    pickerList: () => Promise.resolve({ title: "", subtitle: "", start: "", empty: "", items: [] }),
+    pickerList: () => Promise.resolve({ title: "", start: "", empty: "", items: [] }),
     pickerPortraits: () => Promise.resolve({}),
     pickerStart: () => {},
   };

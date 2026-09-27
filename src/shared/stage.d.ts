@@ -104,7 +104,6 @@ export interface PickerItem {
 }
 export interface PickerPayload {
   title: string; // 첫 포켓몬 선택
-  subtitle: string; // 함께 시작할 포켓몬을 한 마리 고르세요
   start: string; // 함께하기
   empty: string; // 고르기 전 아래 줄 문구
   items: PickerItem[]; // data/unlocks.json 의 starter 순서 (세대별 3종 × 9 + 피카츄·이브이)

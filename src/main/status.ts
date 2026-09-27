@@ -5,7 +5,7 @@
 import { zoneOf } from "../state/time.js";
 import type { CommandResult } from "../shared/types";
 import type { PetV3 } from "../shared/save-v3";
-import { moodWord, t } from "./text.js";
+import { moodWord, t, untilWord } from "./text.js";
 
 // 이름 옆 한 줄 — "배고픔 · 기분 좋음". 구간 낱말은 관리 창(src/renderer/manage.ts)의 표와 뜻이 같다
 export const petStatus = (pet: PetV3): string => {
@@ -22,7 +22,10 @@ export function careState(pet: PetV3, action: "feed" | "play"): CommandResult {
 }
 
 // 메뉴 항목 하나의 모양 — 막혔으면 이유를 라벨 뒤에 붙인다
+// 쿨타임은 초가 아니라 분·시간 단위 남은 시간 ("3분 뒤", 1분 안이면 "곧")
 export function careItem(pet: PetV3, action: "feed" | "play"): { enabled: boolean; reason?: string } {
   const r = careState(pet, action);
-  return { enabled: r.ok, reason: r.ok ? undefined : t(`care.${r.reason}`, { n: r.seconds }) };
+  if (r.ok) return { enabled: true };
+  if (r.reason === "cooldown") return { enabled: false, reason: untilWord(Date.now() + Number(r.seconds ?? 0) * 1000) };
+  return { enabled: false, reason: t(`care.${r.reason}`) };
 }

@@ -7,6 +7,7 @@ import assert from "node:assert";
 import { empty } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
 import { dexDetail } from "../tx/dex-detail";
+import { josa } from "../shared/josa";
 import { iconUrl, portraitKey, portraitUrl } from "../main/portraits";
 import { cryUrl } from "../main/cries";
 import { dockAt } from "../main/dex-window";
@@ -28,7 +29,7 @@ function seed(): SaveV3 {
   assert.equal(d.state, "obtained");
   assert.deepStrictEqual(d.types, ["불꽃"]);
   assert.equal(d.methods, "첫 선택 후보 · 랜덤알", "첫 선택 후보이고 해금했으니 랜덤알에서도 나온다");
-  assert.equal(d.evolution, "Lv.16에서 리자드 · 진화는 개체 상세에서 직접");
+  assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
   assert.equal(d.eggCondition, "없음");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
@@ -41,7 +42,7 @@ function seed(): SaveV3 {
   assert.equal(d.state, "unlocked");
   assert.equal(d.owned, 0);
   assert.equal(d.methods, "파이리에서 진화", "진화 전용 종은 랜덤알에서 나오지 않는다");
-  assert.equal(d.evolution, "Lv.36에서 리자몽 · 진화는 개체 상세에서 직접");
+  assert.equal(d.evolution, "Lv.36에서 리자몽으로 진화");
   process.stdout.write("(2) 해금 · 앞 단계에서 진화  ok\n");
 }
 
@@ -53,6 +54,19 @@ function seed(): SaveV3 {
   process.stdout.write("(3) 최종 단계  ok\n");
 }
 
+// (3b) 갈래가 여럿이면 단계 문구만 잇는다. 조사는 도구 이름 받침에 맞춘다
+{
+  const s = seed();
+  s.dex.unlocked.push("gloom", "poliwhirl");
+  assert.equal(dexDetail(s, "gloom")?.evolution, "리프의돌로 라플레시아 · 태양의돌로 아르코");
+  assert.equal(dexDetail(s, "poliwhirl")?.evolution, "물의돌로 강챙이 · 연결의끈으로 왕구리");
+  assert.deepStrictEqual(
+    ["박스 3", "박스 1", "박스 2", "피카츄", "리자몽"].map((w) => [josa(w, "으로/로"), josa(w, "을/를"), josa(w, "은/는")]),
+    [["으로", "을", "은"], ["로", "을", "은"], ["로", "를", "는"], ["로", "를", "는"], ["으로", "을", "은"]],
+  );
+  process.stdout.write("(3b) 여러 갈래 진화와 조사  ok\n");
+}
+
 // (4) 미해금 화석 종 — 이름·타입·진화는 숨기고 입수 방법은 보인다
 {
   const d = dexDetail(seed(), "omanyte");
@@ -61,7 +75,7 @@ function seed(): SaveV3 {
   assert.equal(d.name, "???");
   assert.deepStrictEqual(d.types, []);
   assert.equal(d.methods, "태고의돌", "해금 전이라 랜덤알은 붙지 않는다");
-  assert.equal(d.evolution, "해금하면 보여요");
+  assert.equal(d.evolution, "???");
   process.stdout.write("(4) 미해금 · 태고의돌  ok\n");
 }
 
@@ -79,7 +93,7 @@ function seed(): SaveV3 {
   const before = dexDetail(s, "arcanine");
   assert.ok(before);
   assert.ok(before.methods.includes("알 행동 조건"), before.methods);
-  assert.equal(before.eggCondition, "미발견 · 알을 돌보는 방법에 따라 나올 수 있어요");
+  assert.equal(before.eggCondition, "미발견");
   s.dex.discovered.arcanine = "pat-3";
   const after = dexDetail(s, "arcanine");
   assert.equal(after?.eggCondition, "발견 · 쓰다듬기만 3~7회");
@@ -87,13 +101,19 @@ function seed(): SaveV3 {
 }
 
 // (6) 전설 종 — 해금 규칙이 없어도 단일 포켓몬 알이 입수 방법이다 (2026-09-26 사용자 결정).
-// 지금 데이터에는 경로가 없는 종이 없다. 경로가 없으면 "획득 방법 준비 중" 이다(src/tx/dex-detail.ts)
+// 경로가 없으면 미해금 랜덤알 후보는 "랜덤알(해금 후)", 그 밖은 "획득 방법 준비 중" 이다(src/tx/dex-detail.ts)
 {
   const d = dexDetail(seed(), "cosmog");
   assert.ok(d);
   assert.equal(d.state, "locked");
   assert.equal(d.methods, "랜덤전설알");
   process.stdout.write("(6) 전설 종 · 랜덤전설알  ok\n");
+}
+
+// (6b) 미해금 랜덤알 후보 — 경로가 랜덤알뿐이면 "해금 후"를 붙여 보인다
+{
+  assert.equal(dexDetail(seed(), "abra")?.methods, "랜덤알(해금 후)");
+  process.stdout.write("(6b) 미해금 랜덤알 후보  ok\n");
 }
 
 // (7) 상점 종 — 해금 전에는 "해금 후"를 붙인다. 모르는 종은 null
@@ -146,6 +166,14 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(dockAt({ x: 1400, y: 50, width: 640, height: 780 }, area, { width: 380, height: 508 }), { x: 1020, y: 50, side: "left" });
   assert.equal(dockAt({ x: 100, y: 800, width: 640, height: 780 }, area, { width: 380, height: 508 }).y, 532);
   process.stdout.write("(10) 키·몸무게 · 기기 창 자리  ok\n");
+}
+
+// (11) 도구로 한 단계 진화 — 조건 뒤에 '로'가 겹치지 않는다
+{
+  const s = seed();
+  s.dex.unlocked.push("pikachu");
+  assert.equal(dexDetail(s, "pikachu")?.evolution, "천둥의돌을 쓰면 라이츄로 진화");
+  process.stdout.write("(11) 도구 한 단계 진화 문구  ok\n");
 }
 
 process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명·키 몸무게·기기 창 자리)\n");
