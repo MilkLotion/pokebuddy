@@ -992,7 +992,9 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   busy = true;
   let reply: ManageReply;
   try {
-    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId: nextReqId(cmd, target) } });
+    const reqId = reqIdFor(cmd, target, extra);
+    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId } });
+    rememberReply(cmd, target, extra, reqId, reply);
     if (reply.ok) onOk?.();
     await refresh();
   } finally {
@@ -1176,7 +1178,7 @@ function bagRow(item: BagItemView): HTMLElement {
   const body = el("div", "body");
   const note = item.evolution ? "눌러서 진화할 포켓몬 고르기" : item.natures ? "눌러서 성격을 바꿀 포켓몬 고르기" : "눌러서 사용";
   body.append(el("div", "title", item.name), el("div", "note", note));
-  card.append(body, el("div", "count", `×${item.count}`));
+  card.append(body, el("div", "count", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표 — 큰 수량도 칸을 넘치지 않게
   const next: Dialog = item.evolution ? { kind: "evo-target", itemId: item.id } : item.natures ? { kind: "nature-target", itemId: item.id } : { kind: "use", itemId: item.id };
   card.addEventListener("click", () => open(next));
   return card;
@@ -1680,7 +1682,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   const have = picked ? (view.bag.find((b) => b.id === picked.mint)?.count ?? 0) : 0;
   if (picked) {
     const info = el("div", "info-box");
-    if (have > 0) info.append(el("div", undefined, `${picked.mintName} 1개를 씁니다`), el("div", "note", `가방에 ${have}개 있어요 · 성격만 바뀌고 레벨·친밀도는 그대로`));
+    if (have > 0) info.append(el("div", undefined, `${picked.mintName} 1개를 씁니다`), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 성격만 바뀌고 레벨·친밀도는 그대로`));
     else {
       const price = view.shop.find((p) => p.id === picked.mint)?.price;
       info.append(el("div", undefined, `${picked.mintName}가 없어요`), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
@@ -2285,7 +2287,7 @@ const REASON: Record<string, string> = {
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
   "box-full": "그 박스는 가득 찼어요.",
   "no-box": "그 박스를 찾지 못했어요.",
-  timeout: "응답이 없어요. 잠시 뒤 다시 해 주세요.",
+  timeout: "응답이 없어요. 화면을 새로 읽었으니 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",
 };
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
@@ -2299,6 +2301,18 @@ const TOUCHES_DEX = new Set(["egg.open", "shop.buy", "evolve", "bag.use"]);
 let seq = 0;
 const nextReqId = (cmd: string, target: string): string => `ui:${Date.now()}:${++seq}:${cmd}:${target}`;
 
+// 응답이 없던 조작(timeout)은 결과를 모른다. 같은 조작을 다시 누르면 같은 요청 ID 로 보내 실행기가 한 번만 반영하게 한다.
+// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (docs/work/game-runtime/record.md "결과를 모를 때")
+let unknownReq: { key: string; id: string } | null = null;
+function reqIdFor(cmd: string, target: string, extra: Record<string, unknown>): string {
+  const key = JSON.stringify([cmd, target, extra]);
+  if (unknownReq?.key === key) return unknownReq.id;
+  return nextReqId(cmd, target);
+}
+function rememberReply(cmd: string, target: string, extra: Record<string, unknown>, id: string, reply: ManageReply): void {
+  unknownReq = !reply.ok && reply.reason === "timeout" ? { key: JSON.stringify([cmd, target, extra]), id } : null;
+}
+
 // 답을 기다리는 조작이 있으면 새 조작을 받지 않는다. 빠른 두 번 클릭이 두 번 사거나 두 번 쓰지 않게 한다.
 // 여러 개 사기는 앞 조작의 답을 받은 뒤 다음을 보내므로 막히지 않는다
 let busy = false;
@@ -2310,8 +2324,9 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
   busy = true;
   let reply: ManageReply;
   try {
-    const args = { ...extra, reqId: nextReqId(cmd, target) };
-    reply = await window.pokebuddyManage.command({ cmd, target, args });
+    const reqId = reqIdFor(cmd, target, extra);
+    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId } });
+    rememberReply(cmd, target, extra, reqId, reply);
     if (reply.ok && TOUCHES_DEX.has(cmd)) dexRows = null;
     await refresh();
   } finally {

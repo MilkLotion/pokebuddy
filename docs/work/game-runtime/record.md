@@ -1562,6 +1562,16 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 빠진 것: 연결 탭 시안의 "오늘 작업 적립 · 파티 전체 +NP" 줄. 관리 창이 받는 스냅샷·연결 목록에 오늘 작업 적립 포인트 값이 없다(`PetDaily.work` 는 친밀도 증가량이다). 값을 더하는 일은 따로 한다.
 - 검수: 렌더러·메인 `tsc --noEmit` 오류 없음. HEAD 작업 폴더에 적용해 `selftest-manage`·`selftest-play` 통과. `dev-manage --click #open-settings` 로 네 탭과 잠들기 목록을 찍어 시안과 비교했다(모달 높이는 탭마다 같다).
 
+### 남은 결정 다섯 가지 (2026-09-27)
+
+- 사용자 결정: "추천대로 전체 진행." 브리핑의 추천을 그대로 따른다.
+1. 도감 지방 구간: 확정. 멜탄·멜메탈(808–809)은 알로라, DLC 지역(북신의 고장·블루베리 학원)에서 처음 나온 종은 팔데아. [s5 전체 도감과 지방](../../specs/s5.md#5-전체-도감과-지방).
+2. 알림 배너 표시 시간: 8초 확정, 커서를 올리면 멈춤. `src/main/banner-window.ts` 주석과 [s5](../../specs/s5.md) 알 절을 고쳤다.
+3. 결과를 모를 때: `src/renderer/manage.ts` `reqIdFor`·`rememberReply`. 응답이 없던(timeout) 조작은 명령·대상·인자가 같으면 같은 요청 ID 로 다시 보내 실행기가 한 번만 반영한다. 답을 받으면 잊는다. 안내 문구는 "응답이 없어요. 화면을 새로 읽었으니 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요." — 보낸 뒤에는 이미 화면을 새로 읽는다(`send`·`boxCommand`).
+4. 사탕 큰 수량: 가방 칸 수량과 민트 보유 문구에 천 단위 쉼표(`toLocaleString("ko-KR")`). 보유 상한은 두지 않는다.
+5. Figma 상세: 05 에 앱과 같은 2단 기준 화면 `Detail / Two Column` `667:16476` 을 새로 그렸다(y 6800 줄). 옛 상세 11장 위에 "옛 한 줄 배치 — 앱의 상세 기준은 Detail / Two Column (667:16476)" 표시를 붙였다(화면 이름은 문서와 맞추려고 바꾸지 않았다). 새 글자는 [Figma 글자 작업](../../contributing/figma.md) 절차로 Title·Body·Label/Semibold·Label/Regular·Caption/Regular·Caption/Semibold·Badge/Semibold 줄 높이를 +1 했다가 되돌려 다시 배치했다(옛 배치 글자 0개, 스타일 9개 원래 값 확인).
+- 검수: 렌더러 `tsc --noEmit` 오류 없음. HEAD 작업 폴더에 적용해 `selftest-manage` 통과, `dev-manage --tab 가방` 캡처. 시간 초과 재전송은 개발용 실행기로 만들 수 없어 코드로만 확인했다.
+
 ### 설치 파일 0.3.2 빌드 (배포 전)
 
 - 사용자 지시(2026-09-27): "새로 exe파일 생성".
