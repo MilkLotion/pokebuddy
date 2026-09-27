@@ -43,9 +43,11 @@
 | `src/hooks` | CLI 훅 이벤트를 세션별 상태 파일로 남긴다 | 게임 규칙 | SC-11 |
 | `src/shared` | 모듈 사이의 공유 타입과 시계 | 규칙 | 전체 |
 | `src/tools` | 데이터 빌드와 자체 검사(`selftest-*`) | 앱 실행 | — |
+| `src/online` | 온라인 공통과 계정. `client`는 교환·계정·클라우드 저장이 함께 쓰는 Supabase 클라이언트, `account`는 아이디 가입·로그인·로그아웃·이름·삭제 요청, `github`는 GitHub 로그인(`127.0.0.1` 임시 서버 PKCE), `cloud`는 클라우드 저장(활성 기기·자동 저장·오프라인·밀려남·로그인 때 고르기) | 저장 파일 쓰기(메인이 받은 저장을 검사·백업 뒤 바꾼다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 탭 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
+계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
 
 알림 배너의 상태 판정은 도메인 모듈이 한다. `src/notify`는 줄 세우기와 표시만 맡는다.
 
@@ -82,6 +84,17 @@
 | `trade` | 확정했지만 아직 반영하지 않은 교환 하나 |
 
 로그인·클라우드 동기화 정보는 `save.json`과 같은 폴더의 `cloud.json`에 둔다. `save.json`에는 필드를 더하지 않는다(`src/online/cloud.ts`).
+
+| `cloud.json` 필드 | 뜻 |
+|---|---|
+| `deviceId` | 설치마다 한 번 만드는 무작위 ID. 서버의 활성 기기와 견준다 |
+| `userId` | 이 저장을 올리는 계정. 로그인 뒤 서버와 맞추기(첫 올리기 또는 고르기)가 끝나야 적는다. 로그아웃·밀려나면 `null` |
+| `syncedRev` | 마지막으로 서버와 맞춘 판 번호 |
+| `dirty` | 마지막 올리기 뒤 저장이 바뀌었다 |
+| `offlineDirty` | 오프라인 상태에서 바뀐 진행이 있다. 저장 단추로만 올린다 |
+| `lastSavedAt` | 마지막으로 올린 시각 |
+
+받은 서버 저장으로 로컬 저장을 바꾸기 전 `save.json.cloud-<시각>.bak`을 남긴다. 로그인 때 고르지 않은 서버 저장은 `save.json.cloud-server-<시각>.bak`으로 남긴다.
 
 ### 영역별 필드
 

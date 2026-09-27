@@ -436,6 +436,35 @@ async function testWriter(): Promise<void> {
 }
 
 // ── 5. mailbox ───────────────────────────────────────────────────────────────
+// 서버를 기다리는 교환 명령은 줄을 막지 않는다 — 뒤에 보낸 돌봄이 먼저 끝난다(교환 T-06)
+async function testMailboxDetached(): Promise<void> {
+  const dir = path.join(tmpDir("mailbox-detached"), "box");
+  const done: string[] = [];
+  const server = save.serve(
+    dir,
+    async (command) => {
+      if (command.cmd === "trade.create") await sleep(1500); // 서버를 기다린다
+      done.push(command.cmd);
+      return { ok: true, reason: "ok" };
+    },
+    { pollMs: 30 },
+  );
+  const sendOpts = { timeoutMs: 5000, pollMs: 20 };
+  try {
+    const slow = save.send(dir, { cmd: "trade.create", from: "cli" }, sendOpts);
+    await sleep(150);
+    const started = Date.now();
+    const fed = await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts);
+    assert.strictEqual(fed.ok, true);
+    assert.ok(Date.now() - started < 1000, "돌봄은 교환 명령을 기다리지 않는다");
+    assert.strictEqual((await slow).ok, true, "교환 명령도 끝난다");
+    assert.deepStrictEqual(done, ["feed", "trade.create"]);
+  } finally {
+    server.stop();
+  }
+  console.log("  mailbox 교환 명령은 줄을 막지 않음");
+}
+
 async function testMailbox(): Promise<void> {
   const dir = path.join(tmpDir("mailbox"), "box");
   const seen: Command[] = [];
@@ -655,6 +684,7 @@ async function main(): Promise<void> {
   testFiles();
   await testWriter();
   await testMailbox();
+  await testMailboxDetached();
   await testDispatcher();
   out("통과");
 }

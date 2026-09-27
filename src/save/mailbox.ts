@@ -44,6 +44,11 @@ export const isCmdName = (v: unknown): v is CommandName => typeof v === "string"
 export const requestName = (at: number, pid: number, cmd: string): string => `${at}-${pid}-${cmd}.json`;
 export const resultName = (name: string): string => name.replace(/\.json$/, ".result.json");
 
+// 서버를 타는 명령 — 교환의 조작. 상태 보기(trade.status)는 서버를 타지 않는다
+const serverBound = (cmd: string): boolean => cmd.startsWith("trade.") && cmd !== "trade.status";
+// 처리 줄을 막지 않고 따로 도는 명령
+const detached = serverBound;
+
 // 같은 밀리초에 같은 명령이 여러 번 와도 요청·회신 파일을 공유하지 않음
 let sequence = 0;
 
@@ -73,7 +78,7 @@ function toCommand(raw: unknown): Command | null {
 //   at 은 여기서 찍는다 (보낸 시각) — writer 가 오래된 요청을 가르는 기준
 export function send(dir: string, command: Command, opts: SendOptions = {}): Promise<CommandResult> {
   const name = isObj(command) && typeof command.cmd === "string" ? command.cmd : ""; // 옛 형식·파손 요청은 cmd 가 없을 수 있다 — 아래에서 bad-cmd 로 돌려준다
-  const slow = ["shop.buy", "evolve", "pet.look"].includes(name) || (name.startsWith("trade.") && name !== "trade.status"); // 교환은 서버를 탄다. 상태 보기는 서버를 타지 않는다
+  const slow = ["shop.buy", "evolve", "pet.look"].includes(name) || serverBound(name); // 교환은 서버를 탄다
   const { timeoutMs = slow ? 45_000 : SAVE_RULES.io.sendTimeoutMs, pollMs = SAVE_RULES.io.sendPollMs, clock = realClock } = opts;
   return new Promise((resolve) => {
     const cmd = isObj(command) ? command.cmd : undefined;
@@ -137,15 +142,21 @@ export function serve(dir: string, handler: MailHandler, opts: ServeOptions = {}
     const command = toCommand(raw);
     if (!command) return;
     if (command.at != null && clock() - command.at > SAVE_RULES.io.requestTtlMs) return; // 오래된 요청은 버린다
-    let result: CommandResult;
-    try {
-      const r = await handler(command);
-      result = isResult(r) ? r : { ok: false, reason: "no-result", cmd: command.cmd };
-    } catch (e) {
-      log?.({ mailbox: "handle-error", cmd: command.cmd, error: errMessage(e) });
-      result = { ok: false, reason: "error", message: errMessage(e), cmd: command.cmd };
-    }
-    writeAtomic(path.join(dir, resultName(name)), result);
+    const run = async (): Promise<void> => {
+      let result: CommandResult;
+      try {
+        const r = await handler(command);
+        result = isResult(r) ? r : { ok: false, reason: "no-result", cmd: command.cmd };
+      } catch (e) {
+        log?.({ mailbox: "handle-error", cmd: command.cmd, error: errMessage(e) });
+        result = { ok: false, reason: "error", message: errMessage(e), cmd: command.cmd };
+      }
+      writeAtomic(path.join(dir, resultName(name)), result);
+    };
+    // 서버를 기다리는 명령은 줄에서 빼 따로 돌린다 — 뒤에 온 돌봄 같은 명령이 수십 초 기다리지 않게(교환 T-06).
+    // 교환 명령끼리 겹치면 교환 세션이 busy 로 거절한다
+    if (detached(command.cmd)) void run();
+    else await run();
   }
 
   function sweepResult(name: string): void {
