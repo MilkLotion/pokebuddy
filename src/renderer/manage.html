@@ -843,10 +843,11 @@
         color: var(--disabled);
         cursor: default;
       }
-      /* 주 버튼이 막히면 채움도 뺀다 — 누를 수 있는 버튼과 헷갈리지 않게 */
+      /* 주 버튼이 막히면 옅은 청록 — 채움은 그대로 두고 단추 전체를 0.45 로 흐리게 (Figma Button Style=Primary State=Disabled,
+         05 Shop / Buy Blocked 387:6958). 2026-09-27 사용자 "시안대로 옅은 청록으로 바꿔" — 옛 회색 채움 규칙을 바꿨다 */
       button.act.primary:disabled {
-        background: var(--subtle);
-        border-color: var(--subtle);
+        color: var(--inverse);
+        opacity: 0.45;
       }
       /* 알림 — 할 말이 없으면 자리도 차지하지 않는다 */
       .notice {
