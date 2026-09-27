@@ -17,6 +17,7 @@ import type {
   FormView,
   ManageReply,
   ManageRoute,
+  PatchNotesView,
   PetView,
   PortraitAsk,
   ShopItemView,
@@ -25,6 +26,7 @@ import type {
   Snapshot,
   TradeCardView,
   TradeScreen,
+  UpdateView,
 } from "../shared/manage.js";
 
 type TabId = "party" | "box" | "dex" | "shop" | "bag" | "trade";
@@ -151,7 +153,9 @@ type Dialog =
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "guide" }
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
-  | { kind: "form"; petId: string; to: string }; // 공유 sid 계열의 모습 바꾸기 확인
+  | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
+  | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
+  | { kind: "notes-new"; version: string }; // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
 
 let tab: TabId = "party";
 let view: Snapshot | null = null;
@@ -2146,13 +2150,13 @@ function drawAccount(scroll: HTMLElement): void {
   else drawSignIn(scroll);
 }
 
-// 계정 탭 바닥 단추 — 로그인 화면은 가입·로그인, 가입 화면은 가입, 로그인 뒤는 닫기
+// 계정 탭 바닥 단추 — 로그인 화면은 가입·로그인, 가입 화면은 가입, 로그인 뒤는 버전만. 닫기 단추는 없다(✕·바깥 클릭·Esc)
 function accountActions(): HTMLElement {
   const a = acct;
-  if (!a?.available || a.signedIn) return actions(el("div", "spacer"), actionButton("닫기", true, false, close));
+  if (!a?.available || a.signedIn) return actions(versionFoot());
   const off = acctBusy || a.blocked;
-  if (acctForm.mode === "sign-up") return actions(el("div", "spacer"), actionButton("가입", true, off, () => void signUp()));
-  return actions(el("div", "spacer"), actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
+  if (acctForm.mode === "sign-up") return actions(versionFoot(), actionButton("가입", true, off, () => void signUp()));
+  return actions(versionFoot(), actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
 }
 
 // 밀려남 배너 — 탭 본문 맨 위. 닫을 때까지 남는다
@@ -3166,7 +3170,8 @@ function drawSettings(sub: SettingsTab): void {
   else if (sub === "agents") drawAgents(scroll);
   else drawAccount(scroll);
   dialogEl.appendChild(scroll);
-  dialogEl.appendChild(sub === "account" ? accountActions() : actions(el("div", "spacer"), actionButton("닫기", true, false, close)));
+  // 바닥 — 왼쪽은 버전·업데이트, 오른쪽은 계정 탭의 단추. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
+  dialogEl.appendChild(sub === "account" ? accountActions() : actions(versionFoot()));
   // 계정 탭의 확인 창(삭제·로그아웃·로그인 때 고르기)은 설정 모달 위에 뜬다
   const overlay = sub === "account" ? acctOverlay() : null;
   if (overlay) dialogEl.appendChild(overlay);
@@ -3187,6 +3192,119 @@ function drawGuide(): void {
   dialogEl.appendChild(actions(closeButton()));
 }
 
+// ── 설정 바닥 · 버전과 업데이트 ─────────────────────────────────────────────────
+// Figma `99 · 시안` 업데이트 시안 `789:17471` — 바닥 왼쪽에 버전과 업데이트 상태, 그 옆에 `패치노트` (src/main/updater.ts)
+
+let upd: UpdateView | null = null;
+let patch: PatchNotesView | null = null;
+
+function versionWord(u: UpdateView): string {
+  if (u.status === "latest") return `pokebuddy ${u.version} · 최신 버전`;
+  if (u.status === "downloading") return `새 버전 ${u.next ?? ""} 받는 중 ${u.percent ?? 0}%`;
+  if (u.status === "ready") return `새 버전 ${u.next ?? ""} 준비됨`;
+  if (u.status === "error") return "업데이트를 확인하지 못했어요";
+  return `pokebuddy ${u.version}`; // 꺼 둠(개발 실행·npm 설치본)·확인 전·확인 중
+}
+
+async function updateSend(action: "check" | "install"): Promise<void> {
+  const next = await window.pokebuddyManage.update(action);
+  if (next) upd = next;
+  if (dialog?.kind === "settings") drawDialog();
+}
+
+function versionFoot(): HTMLElement {
+  const box = el("div", "version-foot");
+  if (upd) {
+    box.appendChild(el("span", "version-word", versionWord(upd)));
+    if (upd.status === "ready") box.appendChild(smallButton("다시 시작", true, () => void updateSend("install")));
+    else if (upd.status === "error") box.appendChild(smallButton("다시 확인", false, () => void updateSend("check")));
+  }
+  if (patch?.notes.length) box.appendChild(smallButton("패치노트", false, () => open({ kind: "notes" })));
+  return box;
+}
+
+const smallButton = (label: string, primary: boolean, run: () => void): HTMLButtonElement => {
+  const b = actionButton(label, primary, false, run);
+  b.classList.add("small");
+  return b;
+};
+
+async function loadUpdate(): Promise<void> {
+  try {
+    const [u, n] = await Promise.all([window.pokebuddyManage.update("status"), window.pokebuddyManage.notes("list")]);
+    upd = u;
+    patch = n;
+  } catch (e) {
+    console.error("버전·패치노트를 읽지 못했다", e);
+    return;
+  }
+  if (dialog?.kind === "settings") drawDialog();
+}
+
+// 업데이트한 뒤 처음 열었다 — 그 버전의 노트를 한 번 띄운다. 다른 모달이 떠 있으면 가리지 않고 다음에 연다
+function showUnseenNotes(): void {
+  const v = patch?.unseen;
+  if (!v || dialog) return;
+  open({ kind: "notes-new", version: v });
+  void window.pokebuddyManage.notes("seen").then((n) => {
+    if (n) patch = n;
+  });
+}
+
+window.pokebuddyManage.onUpdate((next) => {
+  upd = next;
+  if (dialog?.kind === "settings") drawDialog();
+});
+
+// ── 모달 · 패치노트 ────────────────────────────────────────────────────────────
+// Figma `99 · 시안` `800:18345`(설정에서 연 것 — 왼쪽 버전 목록, 오른쪽 내용)·`800:18549`(업데이트 뒤 처음 켤 때)
+
+function noteDetail(version: string): HTMLElement {
+  const box = el("div", "notes-detail");
+  const note = patch?.notes.find((n) => n.version === version);
+  if (!note) return box;
+  const head = el("div", "notes-version");
+  head.append(el("h3", undefined, note.version), el("span", "notes-date", note.date));
+  box.appendChild(head);
+  for (const line of note.lines) box.appendChild(el("p", "notes-line", `· ${line}`));
+  return box;
+}
+
+function notesHead(title: string, sub: string, onClose: () => void): HTMLElement {
+  const head = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.append(el("h2", undefined, title), el("div", "sub", sub));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", onClose);
+  head.append(titles, x);
+  return head;
+}
+
+// ✕ 는 설정으로 돌아간다 — 설정 바닥에서 열었다
+function drawNotes(pick?: string): void {
+  const notes = patch?.notes ?? [];
+  const current = pick ?? notes[0]?.version ?? "";
+  dialogEl.appendChild(notesHead("패치노트", "버전마다 바뀐 것", () => open({ kind: "settings", tab: "general" })));
+  const body = el("div", "notes-body");
+  const list = el("div", "notes-list scroll");
+  for (const n of notes) {
+    const item = button(n.version === current ? "notes-item on" : "notes-item");
+    item.append(el("span", "notes-item-version", n.version), el("span", "notes-date", n.date));
+    item.setAttribute("aria-pressed", String(n.version === current));
+    item.addEventListener("click", () => {
+      if (n.version !== current) open({ kind: "notes", pick: n.version });
+    });
+    list.appendChild(item);
+  }
+  body.append(list, noteDetail(current));
+  dialogEl.appendChild(body);
+}
+
+function drawNotesNew(version: string): void {
+  dialogEl.append(notesHead(`${version} 으로 업데이트했어요`, "이번 버전에서 바뀐 것", close), noteDetail(version));
+}
+
 // ── 모달 · 여닫기 ──────────────────────────────────────────────────────────────
 
 // 모달마다 폭이 다르다. 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
@@ -3204,6 +3322,8 @@ const SHAPE: Record<Dialog["kind"], string> = {
   guide: "dialog tall",
   hatched: "dialog",
   form: "dialog",
+  notes: "dialog settings notes",
+  "notes-new": "dialog settings notes-new",
 };
 
 // 가림막 — 켜고 끌 때 메인에도 알린다. OS 가 그리는 창 단추 자리는 CSS 가 덮지 못한다
@@ -3244,6 +3364,8 @@ function drawDialog(): void {
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.slotIndex, dialog.eggId);
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
+  else if (dialog.kind === "notes") drawNotes(dialog.pick);
+  else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
   else drawGuide();
 
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
@@ -3474,6 +3596,8 @@ async function loadArt(): Promise<void> {
 
 // 첫 화면을 그린 뒤에 옮긴다 — 창을 새로 열면서 온 목적지는 스냅샷보다 먼저 올 수 있다
 const firstDraw = loadArt().then(refresh);
+// 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
+void firstDraw.then(loadUpdate).then(showUnseenNotes);
 window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
 window.pokebuddyManage.onDexClosed(() => {
   dexPick = null;

@@ -13,9 +13,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
-const release = path.join(root, "release");
-const stage = path.join(release, "app");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+// 업데이트 실기 시험 빌드 (scripts/e2e-update.cjs) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
+// 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않고, 대신 update-test.json 표시 파일로 임시 홈을 쓰고 OS 등록(링크·로그인 시 시작)을 건너뛴다
+const TEST = process.env.PB_UPDATE_TEST === "1";
+// 시험 빌드의 앱은 이 임시 홈만 쓴다 — 사용자의 저장을 건드리지 않게 반드시 준다
+const testHome = process.env.PB_UPDATE_HOME ?? "";
+if (TEST && !path.isAbsolute(testHome)) throw new Error("시험 빌드는 PB_UPDATE_HOME(임시 홈의 절대 경로)이 필요하다");
+const version = TEST && process.env.PB_UPDATE_VERSION ? process.env.PB_UPDATE_VERSION : pkg.version;
+const name = TEST ? `${pkg.name}-update-test` : pkg.name;
+const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : path.join(root, "release");
+const stage = path.join(release, "app");
 
 // 설치 파일에 넣지 않는 것 — npm 설치 뒤 스크립트는 npm 판에만 쓴다
 const SKIP = new Set(["scripts/postinstall.js"]);
@@ -68,10 +76,12 @@ function stageFiles() {
     fs.cpSync(path.join(root, "node_modules", name), path.join(stage, "node_modules", name), { recursive: true });
     copied.push(`node_modules/${name}`);
   }
+  // home — 앱이 쓸 임시 홈(config.js updateTestHome). 업데이트 설치 파일이 다시 켠 앱도 사용자의 홈 대신 이 홈을 쓴다
+  if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: "업데이트 실기 시험 빌드 — scripts/e2e-update.cjs", home: testHome })}\n`);
   const appPkg = {
-    name: pkg.name,
-    productName: pkg.name,
-    version: pkg.version,
+    name,
+    productName: name,
+    version,
     description: pkg.description,
     license: pkg.license,
     author: "MilkLotion",
@@ -93,14 +103,20 @@ async function main() {
     targets: builder.Platform.WINDOWS.createTarget("nsis", builder.Arch.x64),
     publish: "never",
     config: {
-      appId: "io.github.milklotion.pokebuddy",
-      productName: pkg.name,
+      appId: TEST ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy",
+      productName: name,
       electronVersion,
       npmRebuild: false,
       asar: false,
       electronLanguages: ["ko", "en-US"], // 화면 언어 두 가지만 남긴다. Chromium 언어 파일이 50MB 가까이 된다
       directories: { output: release },
       files: ["**/*"],
+      // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml 이 생긴다.
+      // 릴리스 때 exe 와 함께 latest.yml·.blockmap 을 GitHub Release 에 올린다.
+      // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
+      publish: process.env.PB_UPDATE_FEED
+        ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
+        : [{ provider: "github", owner: "MilkLotion", repo: "pokebuddy" }],
       win: { icon: path.join(root, "assets", "logo", "out", "logo.ico") },
       // 원클릭 설치 — 묻지 않고 사용자 폴더(%LOCALAPPDATA%\Programs\pokebuddy)에 설치한 뒤 앱을 띄운다 (2026-09-25 사용자 선택).
       // 단계식 마법사는 "모든 사용자/나만" 화면을 끌 수 없어 쓰지 않는다
@@ -111,9 +127,9 @@ async function main() {
         installerIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
         uninstallerIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
         installerHeaderIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
-        shortcutName: pkg.name,
-        createDesktopShortcut: true,
-        createStartMenuShortcut: true,
+        shortcutName: TEST ? name : "PokeBuddy", // 바탕 화면·시작 메뉴·점프 목록 앱 이름 줄. 설치 폴더·실행 파일 이름은 pkg.name 그대로
+        createDesktopShortcut: !TEST,
+        createStartMenuShortcut: !TEST,
         deleteAppDataOnUninstall: false, // 저장(~/.claude/pokebuddy)은 지우지 않는다
         artifactName: "${productName}-Setup-${version}.${ext}",
       },

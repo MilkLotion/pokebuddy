@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, TradeScreen } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -34,6 +34,9 @@ const CH = {
   copy: "manage:copy",
   account: "manage:account",
   accountView: "manage:account-view",
+  update: "manage:update",
+  updateView: "manage:update-view",
+  notes: "manage:notes",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -54,6 +57,8 @@ export interface ManageOptions {
   drawRegion?: () => Promise<ManageReply>;
   display?: () => DisplayView; // 포켓몬 표시·클릭 통과의 지금 값. 저장 밖이라 앱이 준다
   account?: (req: AccountAction) => Promise<AccountReply>; // 계정·클라우드 저장 (src/main/online.ts). 없으면 계정 탭은 쓸 수 없다고 보인다
+  update?: (action: UpdateAction) => Promise<UpdateView>; // 버전·업데이트 (src/main/updater.ts). 없으면 설정 바닥에 버전을 그리지 않는다
+  notes?: (action: "list" | "seen") => PatchNotesView; // 패치노트 (src/main/patch-notes.ts). 없으면 `패치노트` 단추를 두지 않는다
 }
 
 let win: BrowserWindow | null = null;
@@ -61,6 +66,8 @@ let wired = false;
 let drawRegion: ManageOptions["drawRegion"] = undefined; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
 let display: ManageOptions["display"] = undefined;
 let account: ManageOptions["account"] = undefined;
+let update: ManageOptions["update"] = undefined;
+let notes: ManageOptions["notes"] = undefined;
 let dexWin: DexWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
@@ -171,6 +178,17 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (req == null || typeof req !== "object" || typeof (req as { action?: unknown }).action !== "string") return null;
     return account(req as AccountAction);
   });
+  // 업데이트 — 정한 세 동작만 받는다
+  ipcMain.handle(CH.update, async (e, action: unknown): Promise<UpdateView | null> => {
+    if (!mine(e) || !update) return null;
+    if (action !== "status" && action !== "check" && action !== "install") return null;
+    return update(action);
+  });
+  ipcMain.handle(CH.notes, (e, action: unknown): PatchNotesView | null => {
+    if (!mine(e) || !notes) return null;
+    if (action !== "list" && action !== "seen") return null;
+    return notes(action);
+  });
   ipcMain.handle(CH.drawRegion, async (e): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!drawRegion) return { ok: false, reason: "not-ready" };
@@ -188,6 +206,8 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   drawRegion = opts.drawRegion;
   display = opts.display;
   account = opts.account;
+  update = opts.update;
+  notes = opts.notes;
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -233,5 +253,10 @@ export function pushTrade(screen: TradeScreen): void {
 // 계정·저장 상태를 관리 창에 밀어 보낸다 — 창이 없으면 버린다
 export function pushAccount(screen: AccountScreen): void {
   toManage(CH.accountView, screen);
+}
+
+// 버전·업데이트 상태를 관리 창에 밀어 보낸다 — 창이 없으면 버린다
+export function pushUpdate(view: UpdateView): void {
+  toManage(CH.updateView, view);
 }
 

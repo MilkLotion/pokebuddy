@@ -5,7 +5,18 @@ const os = require("os");
 const path = require("path");
 
 const PROJECT_DIR = __dirname;
-const POKEBUDDY_HOME = path.join(os.homedir(), ".claude", "pokebuddy");
+// 업데이트 실기 시험 빌드(scripts/build-exe.cjs PB_UPDATE_TEST)만 표시 파일의 임시 홈을 쓴다.
+// 업데이트 설치 파일이 앱을 다시 켤 때는 시험의 환경 변수를 물려받지 않아 사용자의 홈으로 켜진다(2026-09-28 실기에서 확인)
+function updateTestHome() {
+  try {
+    const home = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, "update-test.json"), "utf8")).home;
+    return typeof home === "string" && path.isAbsolute(home) ? home : null;
+  } catch {
+    return null; // 보통 빌드 — 표시 파일이 없다
+  }
+}
+const USER_HOME = updateTestHome() ?? os.homedir();
+const POKEBUDDY_HOME = path.join(USER_HOME, ".claude", "pokebuddy");
 
 // 경로 — 하드코딩을 한 곳에 모은다
 const PATHS = {
@@ -15,7 +26,7 @@ const PATHS = {
   config: path.join(POKEBUDDY_HOME, "config.json"),
   legacyConfig: path.join(PROJECT_DIR, "pkmon.config.json"), // 예전 위치 — 처음 읽을 때 한 번 가져온다
   // 옛 이름 시절의 데이터 폴더 — 최근 이름부터 (termimon ← pkmon). migrateLegacyHome
-  legacyHomes: ["termimon", "pkmon"].map((name) => path.join(os.homedir(), ".claude", name)),
+  legacyHomes: ["termimon", "pkmon"].map((name) => path.join(USER_HOME, ".claude", name)),
   lastError: path.join(POKEBUDDY_HOME, "last-error.json"), // 펫이 못 떴을 때의 이유 — 펫 출력은 버려지므로 여기 남긴다
   electronData: path.join(POKEBUDDY_HOME, "electron"), // Electron 캐시·세션 — uninstall --purge 로 같이 지워지게 홈 아래에
   home: POKEBUDDY_HOME,

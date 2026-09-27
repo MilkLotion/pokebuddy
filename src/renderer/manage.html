@@ -1614,6 +1614,102 @@
       .dialog.settings .titles .sub {
         margin: 0;
       }
+      /* 설정 바닥 왼쪽 — 버전·업데이트 상태와 작은 단추 (Figma 업데이트 시안 `789:17471`). 닫기 단추는 없다 */
+      .version-foot {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .version-word {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font: 12px/18px var(--font-body);
+      }
+      .dialog.settings > .actions .version-foot .act.small {
+        flex: none;
+        min-width: 0;
+        height: 32px;
+        padding: 0 12px;
+        font-weight: 700;
+      }
+      /* 패치노트 — 왼쪽 버전 목록(넘치면 목록만 스크롤), 오른쪽 고른 버전 (Figma `800:18345`) */
+      .notes-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        gap: 20px;
+      }
+      .dialog.settings .notes-list.scroll {
+        flex: none;
+        width: 136px;
+        margin: 0;
+        padding: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+      .notes-item {
+        appearance: none;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .notes-item:hover {
+        background: var(--canvas);
+      }
+      /* 고른 버전은 tonal 배경만 */
+      .notes-item.on {
+        background: var(--accent-bg);
+      }
+      .notes-item-version {
+        font: 700 12px/18px var(--font-body);
+      }
+      .notes-date {
+        color: var(--muted);
+        font: 12px/16px var(--font-body);
+      }
+      .notes-detail {
+        flex: 1;
+        min-width: 0;
+        overflow-y: auto;
+      }
+      .notes-version {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .notes-version h3 {
+        margin: 0;
+        font: 15px/22px var(--font-large);
+      }
+      .notes-line {
+        margin: 0;
+        padding-left: 10px;
+        text-indent: -10px; /* 줄이 넘치면 둘째 줄을 "· " 뒤에 맞춘다 */
+        font: 12px/18px var(--font-body);
+        font-weight: 400;
+      }
+      /* 업데이트 뒤 처음 켤 때 — 한 버전뿐이라 높이는 내용에 맞춘다 (Figma `800:18549`) */
+      .dialog.settings.notes-new {
+        height: auto;
+      }
       /* 설정의 고르기 — 박스 정렬 목록과 같은 모양 */
       .setting .setting-select .sort-toggle {
         height: 28px;

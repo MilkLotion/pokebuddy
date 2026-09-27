@@ -241,11 +241,36 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
 export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" };
+
+// ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
+// 설정 모달 바닥 왼쪽이 그린다 (src/main/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
+export interface UpdateView {
+  version: string; // 지금 버전
+  status: "off" | "idle" | "checking" | "latest" | "downloading" | "ready" | "error";
+  next: string | null; // 받는 중이거나 준비된 새 버전
+  percent: number | null; // 받은 정도 0~100
+  error: string | null;
+}
+
+// 설정 바닥의 업데이트 요청 — status 는 읽기만, check 는 `다시 확인`, install 은 `다시 시작`
+export type UpdateAction = "status" | "check" | "install";
+
+// 패치노트 — data/patch-notes.json 의 한 버전 (src/main/patch-notes.ts). Figma `99 · 시안` `800:18345`·`800:18549`
+export interface PatchNote {
+  version: string;
+  date: string; // YYYY-MM-DD
+  lines: string[];
+}
+
+export interface PatchNotesView {
+  notes: PatchNote[]; // 새 버전이 맨 앞
+  unseen: string | null; // 업데이트 뒤 아직 띄우지 않은 버전 — 관리 창을 열면 한 번 띄운다
+}
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────────
 // 설정의 계정 탭·헤더 저장 표시·밀려남 배너가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
@@ -344,6 +369,9 @@ export interface ManageBridge {
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
   onAccount: (cb: (screen: AccountScreen) => void) => void; // 계정·저장 상태가 바뀌었다
+  update: (action: UpdateAction) => Promise<UpdateView | null>; // 업데이트가 연결되지 않았으면 null
+  onUpdate: (cb: (view: UpdateView) => void) => void; // 버전·업데이트 상태가 바뀌었다
+  notes: (action: "list" | "seen") => Promise<PatchNotesView | null>; // seen 은 안 본 노트를 띄웠다고 알린다
 }
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────

@@ -82,6 +82,8 @@ PMD 스프라이트는 **CC BY-NC 4.0** 이다 — [라이선스](#라이선스)
 - 떠 있을 때 바로가기를 다시 누르면 설정창을 연다.
 - 설정의 "로그인 시 시작"을 켜면 Windows 에 로그인할 때 함께 뜬다.
 - 코드 서명이 없다. 처음 실행하면 SmartScreen 경고가 뜬다. "추가 정보 → 실행"을 누른다.
+- 0.7.0 부터 켜진 채로 새 버전을 받는다. 다 받으면 설정 창 아래에 "새 버전 준비됨"과 `다시 시작`이 뜬다. 누르지 않아도 끌 때 적용한다. 0.6.0 이하는 0.7.0 설치 파일을 한 번 손으로 실행해야 한다.
+- 설정 창 아래의 `패치노트`에서 버전마다 바뀐 것을 본다.
 - 끝내기는 트레이 아이콘의 메뉴에서 한다. 제거는 Windows 설정의 앱 목록에서 한다. 제거해도 저장 폴더는 남는다.
 - CLI 상태 연동(설정창 설정의 "연결")은 훅을 `node` 로 실행한다. 쓰려면 Node.js 가 있어야 한다.
 
@@ -631,6 +633,9 @@ npm run dist:win    # release/pokebuddy-Setup-<버전>.exe
 - 처음 만들 때 Electron 과 NSIS 를 내려받는다. 인터넷이 필요하다.
 - 설치 파일에는 포켓몬 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다. `scripts/fetch-sprites.cjs` 는 저장소 실행용으로 `.cache/sprites/`(git 제외)에 받는다.
 - 코드 서명을 하지 않는다. 설치 확인은 `release/win-unpacked/pokebuddy.exe` 를 먼저 띄워 본 뒤 설치 파일로 한다.
+- 릴리스 전에 `data/patch-notes.json` 맨 앞에 새 버전의 날짜와 바뀐 것을 적는다. `selftest-patch-notes` 는 `package.json` 버전의 노트가 없으면 실패한다.
+- GitHub Release 에는 설치 파일과 함께 `release/latest.yml` 과 `release/pokebuddy-Setup-<버전>.exe.blockmap` 을 올린다. 설치본은 이 `latest.yml` 로 새 버전을 찾는다. 올린 파일 이름은 `latest.yml` 안의 이름과 같아야 한다.
+- 업데이트 실기 시험은 `node scripts/e2e-update.cjs` 다. 시험용 설치본(`pokebuddy-update-test`)을 조용히 설치해 로컬 서버의 다음 버전으로 업데이트한 뒤 제거한다. 사용자의 설치본과 섞이지 않는다.
 
 ### 로고
 

@@ -21,11 +21,13 @@ import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
 import { pendingOf } from "../trade/core";
 import { careItem, petStatus } from "./status";
-import { openManage, pushAccount, pushTrade } from "./manage-window";
+import { openManage, pushAccount, pushTrade, pushUpdate } from "./manage-window";
+import { createAppUpdater, type AppUpdater } from "./updater";
+import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits } from "./portraits";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
-import { PATHS, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
+import { PATHS, PROJECT, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
 import { pickStarter } from "./picker-window";
 import { createStage, type Stage } from "./stage";
 import { createStageWindow, type StageWindow } from "./stage-window";
@@ -38,7 +40,7 @@ import { createHungerBubbles } from "./hunger-bubble";
 import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
-import type { ManageRoute } from "../shared/manage";
+import type { ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
 import type { Command } from "../shared/types";
 import type { CoachView } from "../shared/stage";
 import { currentTutorial } from "../tutorial/core";
@@ -90,6 +92,11 @@ setLang(langOf(config));
 // POKEBUDDY_DEBUG — 판정 로그를 JSON 한 줄씩 (POKEBUDDY_LOG 가 있으면 그 파일로). console.log 대신 stdout 직접
 const log = debug ? (o: Record<string, unknown>) => void process.stdout.write(`${JSON.stringify(o)}\n`) : null;
 
+// 작업 표시줄·점프 목록이 설치본 바로 가기(scripts/build-exe.cjs appId)와 같은 앱으로 묶이게 — 앱 이름 줄이 "PokeBuddy" 로 보인다
+// 업데이트 실기 시험 빌드(scripts/build-exe.cjs PB_UPDATE_TEST)는 다른 ID 를 쓰고, 사용자의 설치본이 가진 OS 등록(링크·로그인 시 시작)을 건드리지 않는다
+const updateTestBuild = app.isPackaged && fs.existsSync(path.join(PROJECT, "update-test.json"));
+if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy");
+
 // 동반자는 기기당 하나 — pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다.
 // 둘째는 창을 만들기 전에 끝난다
 const duplicate = !app.requestSingleInstanceLock();
@@ -114,14 +121,14 @@ else {
     else if (isAccountLink(url)) openManageWindow({ to: "account" });
   });
   // 설치한 앱만 등록한다 — 개발 실행의 electron 을 등록하면 앱 없는 빈 Electron 이 링크를 받는다
-  if (app.isPackaged) app.setAsDefaultProtocolClient("pokebuddy");
+  if (app.isPackaged && !updateTestBuild) app.setAsDefaultProtocolClient("pokebuddy");
 }
 
 // 로그인 시 시작 — 설정 값을 OS 에 적용한다. 설치한 앱에서만 한다.
 // 저장소의 `electron .` 을 등록하면 다음 로그인 때 앱 없는 빈 Electron 이 뜨기 때문이다
 let loginItem: boolean | null = null;
 function syncLoginItem(): void {
-  if (!app.isPackaged || !game) return;
+  if (!app.isPackaged || updateTestBuild || !game) return;
   const on = game.read()?.settings.startOnLogin;
   if (on == null || on === loginItem) return;
   try {
@@ -165,6 +172,10 @@ const TRADE_LINK_TTL_MS = 10 * 60_000;
 const firstLink = tradeLinkOf(process.argv);
 let tradeLink: { link: string; at: number } | null = firstLink ? { link: firstLink, at: Date.now() } : null;
 let tray: TrayHandle | null = null;
+// 패치노트 — 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다. 그래서 첫 선택 창이 저장을 만들기 전에 만든다
+const hadSave = fs.existsSync(PATHS.save);
+let patchNotes: PatchNotes | null = null;
+let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/updater.ts)
 let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
@@ -389,6 +400,45 @@ const displayName = (): string => {
   return p ? petLabel(p) : party?.pets()[0]?.species ?? config.slug;
 };
 
+// 앱 업데이트를 켠다 — 수명 잠금을 쥔 동반자 하나만. 상태가 바뀌면 관리 창에 밀어 보낸다
+function startUpdater(): void {
+  if (updater) return;
+  patchNotes ??= createPatchNotes({
+    notesFile: path.join(PROJECT, "data", "patch-notes.json"),
+    seenFile: path.join(path.dirname(PATHS.save), "notes-seen.json"),
+    version: app.getVersion(),
+    hadSave,
+    autoShow: app.isPackaged, // 개발 실행·E2E 는 띄우지 않는다 — 관리 창 조작을 가린다
+  });
+  updater = createAppUpdater({
+    version: app.getVersion(),
+    enabled: app.isPackaged && process.platform === "win32",
+    onView: (view) => pushUpdate(view),
+    // 다시 시작 전 — 바뀐 저장을 클라우드에 올린다. 끄기 경로(before-quit)가 같은 일을 다시 하지 않게 표시한다
+    beforeInstall: async () => {
+      if (mainOnline && !onlineFlushed && mainOnline.cloud.unsaved() === "dirty") {
+        onlineFlushed = true;
+        await mainOnline.flush();
+      }
+    },
+  });
+}
+
+// 패치노트 요청 — 목록 읽기, 안 본 노트를 띄웠다는 알림
+function notesAct(action: "list" | "seen"): PatchNotesView {
+  if (!patchNotes) return { notes: [], unseen: null };
+  if (action === "seen") patchNotes.markSeen();
+  return patchNotes.view();
+}
+
+// 설정 바닥의 업데이트 요청 — 읽기·다시 확인·다시 시작
+async function updateAct(action: UpdateAction): Promise<UpdateView> {
+  if (!updater) throw new Error("updater not started");
+  if (action === "check") await updater.check();
+  else if (action === "install") await updater.install();
+  return updater.view();
+}
+
 // 관리 창의 명령도 커맨드 처리기를 거친다. reader 면 mailbox 로 writer 에 보내고,
 // 진화 그림 준비와 무대 반응도 다른 표면과 같은 길로 간다
 // route — 알림 배너의 `바로가기` 가 옮겨 갈 곳
@@ -411,6 +461,8 @@ const openManageWindow = (route?: ManageRoute): void => {
     },
     display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
     ...(mainOnline ? { account: mainOnline.act } : {}),
+    ...(updater ? { update: updateAct } : {}),
+    ...(patchNotes ? { notes: notesAct } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
@@ -907,6 +959,8 @@ async function main(): Promise<void> {
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
+  startUpdater();
+
   tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
@@ -961,6 +1015,7 @@ app.on("before-quit", (e) => {
   lifetime?.stop();
   tray?.destroy();
   tray = null;
+  updater?.stop();
   commands?.stop();
   mainTrade?.session.stop();
   mainTrade = null;

@@ -21,6 +21,8 @@ type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
 type AccountReply = import("../shared/manage").AccountReply;
 type AccountScreen = import("../shared/manage").AccountScreen;
+type UpdateView = import("../shared/manage").UpdateView;
+type PatchNotesView = import("../shared/manage").PatchNotesView;
 type BannerBridge = import("../shared/manage").BannerBridge;
 type BannerChannel = import("../shared/manage").BannerChannel;
 type BannerView = import("../shared/manage").BannerView;
@@ -94,6 +96,9 @@ const MANAGE = {
   copy: "manage:copy",
   account: "manage:account",
   accountView: "manage:account-view",
+  update: "manage:update",
+  updateView: "manage:update-view",
+  notes: "manage:notes",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -115,6 +120,9 @@ const manage: ManageBridge = {
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
   onAccount: (cb) => ipcRenderer.on(MANAGE.accountView, (_e, screen: AccountScreen) => cb(screen)),
+  update: (action) => ipcRenderer.invoke(MANAGE.update, action) as Promise<UpdateView | null>,
+  onUpdate: (cb) => ipcRenderer.on(MANAGE.updateView, (_e, view: UpdateView) => cb(view)),
+  notes: (action) => ipcRenderer.invoke(MANAGE.notes, action) as Promise<PatchNotesView | null>,
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);
