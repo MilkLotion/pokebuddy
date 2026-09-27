@@ -9,6 +9,7 @@
 // 보상은 업적창에서 사용자가 직접 받는다. 업적당 한 번만 받는다.
 import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
 import type { SaveV3 } from "../shared/save-v3";
+import { openSlot } from "../party/slots.js";
 
 export interface AchievementDef {
   ko: string;
@@ -68,7 +69,7 @@ export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: Sa
   return fresh;
 }
 
-// 보상 수령 — 업적당 한 번. 파티 칸 보상은 업적으로 여는 잠긴 칸 하나를 연다
+// 보상 수령 — 업적당 한 번. 파티 칸 보상은 칸 +1 — 첫 잠긴 칸을 연다
 export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions): ClaimResult {
   const def = defOf(id, opts);
   if (!def) return { ok: false, reason: "no-achievement" };
@@ -76,9 +77,8 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions):
   if (!row || row.achievedAt == null) return { ok: false, reason: "not-achieved" };
   if (row.claimedAt != null) return { ok: false, reason: "already-claimed" };
 
-  const i = save.party.slots.findIndex((s) => s.state === "locked" && s.unlockBy === "achievement");
+  const i = openSlot(save.party.slots, "achievement");
   if (i < 0) return { ok: false, reason: "no-locked-slot" };
-  save.party.slots[i] = { state: "empty" };
   save.achievements[id] = { achievedAt: row.achievedAt, claimedAt: now };
   return { ok: true, id, slotIndex: i };
 }

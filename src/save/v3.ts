@@ -10,6 +10,7 @@ import type {
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
+import { compactSlots } from "../party/slots.js";
 
 type Raw = Record<string, unknown>;
 
@@ -172,7 +173,7 @@ function normalizeSlots(raw: unknown, petIds: Set<string>): PartySlotV3[] {
     const by = str(r.unlockBy) === "achievement" ? "achievement" : "shop";
     out[i] = { state: "locked", unlockBy: by };
   }
-  return out;
+  return compactSlots(out); // 열린 칸은 앞에서부터 — 옛 저장의 1·2·5번 열림도 1·2·3번으로
 }
 
 function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<string>): BoxV3[] {

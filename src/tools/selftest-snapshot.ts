@@ -80,14 +80,14 @@ function seed(): SaveV3 {
   process.stdout.write("(4) 숨김과 표시 수  ok\n");
 }
 
-// (5) 잠긴 칸은 여는 방법을 알려준다
+// (5) 잠긴 칸은 뒤에 모인다 — 여는 경로는 화면에 보이지 않는다
 {
   const v = snapshot(seed());
   const locked = v.party.slots.filter((s) => s.state === "locked");
   assert.equal(locked.length, 4);
-  assert.equal(locked.filter((s) => s.unlockBy === "shop").length, 2);
-  assert.equal(locked.filter((s) => s.unlockBy === "achievement").length, 2);
-  process.stdout.write("(5) 잠긴 칸의 해제 출처  ok\n");
+  assert.equal(v.party.slots.findIndex((s) => s.state === "locked"), 2, "열린 칸이 앞, 잠긴 칸은 뒤");
+  assert.equal("unlockBy" in locked[0]!, false, "여는 경로는 화면에 넘기지 않는다 — 칸 +1");
+  process.stdout.write("(5) 잠긴 칸은 뒤에, 출처 없음  ok\n");
 }
 
 // (6) 박스는 사용 칸 수와 개체를 준다

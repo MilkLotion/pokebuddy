@@ -10,6 +10,7 @@ import { putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { openSlot } from "../party/slots.js";
 import type { Rand } from "../egg/hatch";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { maxEggNo } from "../save/v3.js";
@@ -100,8 +101,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   const done: BuyResult = { ok: true, spent: price, balance: save.points.balance };
 
   if (slot) {
-    const i = save.party.slots.findIndex((s) => s.state === "locked" && s.unlockBy === "shop");
-    if (i >= 0) save.party.slots[i] = { state: "empty" };
+    const i = openSlot(save.party.slots, "shop"); // 칸 +1 — 첫 잠긴 칸을 연다
     return { ...done, slotIndex: i };
   }
 

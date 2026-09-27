@@ -83,7 +83,6 @@ export interface UnlockRule {
 // 해금 판정에 필요한 세상 — 저장 + 시각
 export interface World {
   now: number; // ms
-  hour: number; // 0~23, 로컬
   save: SaveV2;
 }
 

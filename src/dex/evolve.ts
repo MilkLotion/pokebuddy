@@ -5,6 +5,7 @@
 // 진화해도 같은 개체다. 식별자·친밀도·성격·레벨·경험치·만복도·버프를 그대로 둔다. 종만 바뀐다.
 // 도구 진화는 도구 하나를 쓴다. 진화와 소비는 한 거래로 묶인다.
 // 공유 sid 계열(src/dex/forms.ts)은 이미 가진 종으로 가는 진화를 후보에서 뺀다 — 그 종은 모습 바꾸기로 고른다.
+import { gameDayPart } from "../shared/clock";
 import type { DayPart, EvoNeed } from "../shared/types";
 import type { SaveV3 } from "../shared/save-v3";
 import { nextOf, type EvoStep } from "./evo.js";
@@ -37,10 +38,9 @@ export interface EvolveResult {
   choices?: string[]; // need-choice 일 때 고를 수 있는 종
 }
 
-// 게임 시간 — 30분마다 낮과 밤이 바뀐다. 매시 0~29분이 낮이고 30~59분이 밤이다.
-// 하루를 기다리지 않아도 시간대 진화를 볼 수 있게 한 사용자 결정이다 (docs/specs/game.md "진화 계약").
-export const GAME_DAY = { halfMin: 30 };
-export const dayPartOf = (now: number): DayPart => (new Date(now).getMinutes() < GAME_DAY.halfMin ? "day" : "night");
+// 게임 시간 — 30분마다 낮과 밤이 바뀐다 (src/shared/clock.ts gameDayPart, docs/specs/game.md "진화 계약")
+export { GAME_DAY } from "../shared/clock";
+export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 
 // 조건 하나를 지금 채웠는가. 못 채웠으면 이유를 돌려준다
 export function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): { ready: boolean; missing?: string } {

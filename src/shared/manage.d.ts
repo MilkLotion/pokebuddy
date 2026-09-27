@@ -5,7 +5,6 @@
 
 export type ViewZone = "full" | "normal" | "hungry" | "starving";
 export type ViewSlotState = "pokemon" | "empty" | "locked";
-export type ViewUnlockBy = "shop" | "achievement";
 
 export interface ViewBuff {
   kind: string;
@@ -62,7 +61,6 @@ export interface FormView {
 export interface SlotView {
   index: number;
   state: ViewSlotState;
-  unlockBy?: ViewUnlockBy;
   pet?: PetView;
 }
 

@@ -113,7 +113,7 @@ export function snapshot(
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 
   const slots: SlotView[] = save.party.slots.map((s, index) => {
-    if (s.state !== "pokemon" || !s.petId) return { index, state: s.state, unlockBy: s.unlockBy };
+    if (s.state !== "pokemon" || !s.petId) return { index, state: s.state };
     const pet = byId.get(s.petId);
     if (!pet) return { index, state: "empty" };
     return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart) };

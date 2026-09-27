@@ -479,7 +479,7 @@ function blankCard(slot: SlotView): HTMLElement {
   if (slot.state === "locked") {
     card.classList.add("locked");
     card.disabled = true;
-    card.append(el("strong", undefined, "잠긴 칸"), el("small", undefined, slot.unlockBy === "achievement" ? "업적 보상으로 열기" : "상점에서 구매"));
+    card.append(el("strong", undefined, "잠긴 칸"));
     return card;
   }
   card.append(el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 고르기"));

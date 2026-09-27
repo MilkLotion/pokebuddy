@@ -11,7 +11,8 @@ import { migrate, verify } from "../save/migrate-v3";
 import * as legacy from "../save/legacy";
 import * as store from "../save/store";
 import { SAVE_V3_RULES } from "../save/rules";
-import { empty, normalize } from "../save/v3";
+import { empty, emptySlots, normalize } from "../save/v3";
+import { openSlot } from "../party/slots";
 import type { Pet, SaveV2 } from "../shared/types";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime(); // 2026-09-24 10:00 로컬
@@ -173,6 +174,42 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   assert.equal(normalize(null, T0), null);
   assert.equal(normalize("x", T0), null);
   process.stdout.write("(8) 정규화 · 뼈대가 아니면 null  ok\n");
+}
+
+// (9) 파티 칸 — 열린 칸은 앞에서부터. 경로와 관계없이 칸 +1
+{
+  // 옛 저장: 업적 보상으로 5번 칸이 열려 1·2·5번이 열린 채
+  const raw = {
+    ...empty(T0),
+    pets: [{ id: "p1", species: "pikachu" }],
+    party: {
+      slots: [
+        { state: "empty" },
+        { state: "empty" },
+        { state: "locked", unlockBy: "shop" },
+        { state: "locked", unlockBy: "shop" },
+        { state: "pokemon", petId: "p1" },
+        { state: "locked", unlockBy: "achievement" },
+      ],
+    },
+  };
+  const s = normalize(raw, T0);
+  assert.ok(s);
+  assert.deepStrictEqual(s.party.slots.map((x) => x.state), ["empty", "empty", "pokemon", "locked", "locked", "locked"], "1·2·5번 열림은 1·2·3번으로");
+  assert.equal(s.party.slots[2]?.petId, "p1", "칸의 포켓몬은 순서대로 따라온다");
+  const tags = s.party.slots.filter((x) => x.state === "locked").map((x) => x.unlockBy).sort();
+  assert.deepStrictEqual(tags, ["achievement", "shop", "shop"], "경로별 남은 칸 수는 그대로");
+
+  // 업적 보상 뒤 상점 구매 — 둘 다 첫 잠긴 칸을 연다
+  const slots = emptySlots();
+  assert.equal(openSlot(slots, "achievement"), 2);
+  assert.equal(openSlot(slots, "shop"), 3);
+  assert.equal(openSlot(slots, "achievement"), 4);
+  assert.equal(openSlot(slots, "achievement"), -1, "업적으로 열 칸은 둘뿐");
+  assert.equal(openSlot(slots, "shop"), 5);
+  assert.equal(openSlot(slots, "shop"), -1, "상점으로 열 칸은 둘뿐");
+  assert.ok(slots.every((x) => x.state === "empty"));
+  process.stdout.write("(9) 파티 칸 · 앞에서부터 칸 +1  ok\n");
 }
 
 process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규화)\n");

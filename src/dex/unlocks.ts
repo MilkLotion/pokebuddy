@@ -9,23 +9,19 @@
 //   work     에이전트와 함께 일한 누적 시간 totals.workMs ≥ hours
 //   streak   연속 교감 일수 daily.streak ≥ days
 //   bond     `of` 종을 가진 마리의 친밀도 ≥ affinity
-//   time     지금 시간대 = day | night
+//   time     지금 게임 시간대 = day | night
 //   event    오늘(로컬) = "MM-DD"
-// 시간대는 RULES.night — 18시부터 다음날 6시 전까지 night [스펙 미확정]
+// 시간대는 게임 시간 — 30분마다 낮과 밤이 바뀐다. 진화와 같은 기준이다 (src/shared/clock.ts gameDayPart)
 
-import { localDate } from "../shared/clock";
+import { gameDayPart, localDate } from "../shared/clock";
 import { SAVE_V3_RULES } from "../save/rules";
 import type { SaveV3 } from "../shared/save-v3";
 import type { DayPart, Pet, UnlockRule, World } from "../shared/types";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 
-export const RULES = {
-  night: { from: 18, to: 6 }, // from 이상 또는 to 미만이면 night
-};
-
 export type UnlockRules = Record<string, UnlockRule>;
 
-export const dayPartOf = (hour: number): DayPart => (hour >= RULES.night.from || hour < RULES.night.to ? "night" : "day");
+export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 
 // 그 종을 가진 마리들 — 슬러그는 정규화해 비교
 const petsOf = (species: string, party: Pet[]): Pet[] => {
@@ -38,7 +34,7 @@ export const checkStarter = (_flag: true, _world: World): boolean => true;
 export const checkBase = (_flag: true, _world: World): boolean => true;
 
 export function checkEvolve(cond: NonNullable<UnlockRule["evolve"]>, world: World): boolean {
-  if (cond.when && dayPartOf(world.hour) !== cond.when) return false;
+  if (cond.when && dayPartOf(world.now) !== cond.when) return false;
   return petsOf(cond.from, world.save.party).some((p) => p.affinity >= cond.affinity);
 }
 
@@ -53,7 +49,7 @@ export const checkStreak = (cond: NonNullable<UnlockRule["streak"]>, world: Worl
 export const checkBond = (cond: NonNullable<UnlockRule["bond"]>, world: World): boolean =>
   petsOf(cond.of, world.save.party).some((p) => p.affinity >= cond.affinity);
 
-export const checkTime = (part: DayPart, world: World): boolean => dayPartOf(world.hour) === part;
+export const checkTime = (part: DayPart, world: World): boolean => dayPartOf(world.now) === part;
 
 export const checkEvent = (cond: NonNullable<UnlockRule["event"]>, world: World): boolean => localDate(world.now).slice(5) === cond.date;
 
@@ -131,7 +127,7 @@ export function unlockByRules(save: SaveV3, now: number, opts?: DexOptions): str
   pruneUnlocks(save, rules);
   const done = new Set(save.dex.unlocked.map(normalizeSlug));
   const partyCount = save.party.slots.filter((s) => s.state === "pokemon" && s.petId).length;
-  const part = dayPartOf(new Date(now).getHours());
+  const part = dayPartOf(now);
   const out: string[] = [];
   for (const [slug, r] of Object.entries(rules)) {
     if (isMetaKey(slug) || r.evolve || done.has(normalizeSlug(slug))) continue;
