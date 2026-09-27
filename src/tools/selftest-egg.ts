@@ -18,7 +18,6 @@ import { empty } from "../save/v3";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
-const MIN = 60_000;
 
 const egg = (over: Partial<EggV3> = {}): EggV3 => ({
   id: "e1",

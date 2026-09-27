@@ -5,7 +5,7 @@
 // 보존 대상: 개체 식별자, 친밀도, 성격, 포인트, 파티 순서, 표시 상태, 도감 기록, 구매 권리.
 // v2 에는 레벨과 경험치가 없다. 새 값으로 시작한다.
 import { localDate } from "../shared/clock.js";
-import type { BoxV3, PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
+import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { Pet, SaveV2 } from "../shared/types";
 import { SAVE_V3_RULES } from "./rules.js";
 import { empty, emptySlots, putStrays } from "./v3.js";
@@ -140,5 +140,3 @@ export function verify(v2: SaveV2, v3: SaveV3): CheckResult[] {
   ];
 }
 
-// 박스에 담긴 개체 식별자 — 검사와 자체 검사에서 쓴다
-export const boxedIds = (boxes: BoxV3[]): string[] => boxes.flatMap((b) => b.slots.filter((s): s is string => typeof s === "string"));

@@ -4,7 +4,7 @@ import { profile } from "../dex/species";
 import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import type { PetMotion, Phase } from "../motion/types";
-import type { HitReply, Play, PointerMsg, SpriteSheet, StageFrame, StageState } from "../shared/stage";
+import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/stage";
 import type { Mode } from "../shared/types";
 import type { CareAction } from "../state/types";
 import { MOTION_RULES } from "../motion/rules";

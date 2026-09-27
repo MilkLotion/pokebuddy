@@ -206,7 +206,3 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   return win;
 }
 
-export function closeManage(): void {
-  if (win && !win.isDestroyed()) win.close();
-  win = null;
-}

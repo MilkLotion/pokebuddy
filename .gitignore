@@ -11,5 +11,3 @@ release/
 .playwright-mcp/
 .claude/
 .supabase
-
-font/

@@ -111,8 +111,7 @@ export function homeOf(spot: Spot, body: Size, anchor: Rect, shift = 0): Home {
   return { dx: spot.x - (anchor.x + anchor.w - body.w) + shift, dy: spot.y - (anchor.y + anchor.h - body.h) };
 }
 
-// 저장 규칙표의 기본 집 — 옛 anchorDx/Dy 와 같다. 복사본
-export const defaultHome = (): Home => ({ ...SAVE_RULES.pet.home });
+// 저장 규칙표의 기본 집 — 옛 anchorDx/Dy 와 같다
 export const isDefaultHome = (home: Home): boolean => home.dx === SAVE_RULES.pet.home.dx && home.dy === SAVE_RULES.pet.home.dy;
 
 export const sameRect = (a: Rect | null, b: Rect | null): boolean =>

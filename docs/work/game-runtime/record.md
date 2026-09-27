@@ -1572,6 +1572,16 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 5. Figma 상세: 05 에 앱과 같은 2단 기준 화면 `Detail / Two Column` `667:16476` 을 새로 그렸다(y 6800 줄). 옛 상세 11장 위에 "옛 한 줄 배치 — 앱의 상세 기준은 Detail / Two Column (667:16476)" 표시를 붙였다(화면 이름은 문서와 맞추려고 바꾸지 않았다). 새 글자는 [Figma 글자 작업](../../contributing/figma.md) 절차로 Title·Body·Label/Semibold·Label/Regular·Caption/Regular·Caption/Semibold·Badge/Semibold 줄 높이를 +1 했다가 되돌려 다시 배치했다(옛 배치 글자 0개, 스타일 9개 원래 값 확인).
 - 검수: 렌더러 `tsc --noEmit` 오류 없음. HEAD 작업 폴더에 적용해 `selftest-manage` 통과, `dev-manage --tab 가방` 캡처. 시간 초과 재전송은 개발용 실행기로 만들 수 없어 코드로만 확인했다.
 
+### 잔재 정리 (2026-09-27)
+
+- 사용자 지시: "디렉토리에서 작업하다가 나온 잔재나 작업변경되면서 남은 필요없는 파일들, 디렉토리들 좀 정리하고 싶어. 문서나 코드나 뭐든 다 정리하고싶어" → 조사 목록을 보인 뒤 "모두 정리".
+- 조사: 저장소의 스크립트·도구·데이터·`lib`·최상위 폴더는 모두 어딘가에서 참조된다. 문서는 작업 규칙상 기록을 보존하고, 낡은 문구는 `b390902` 에서 정리됐다. 추적되지 않는 `.github/`·`site/`·`src/main/trade-screen.ts` 등은 교환 세션의 작업 중인 파일이라 두었다.
+- 코드(선언만 있고 쓰지 않음, `tsc --noUnusedLocals` 와 export 이름 검색으로 찾음): `src/box/slots.ts` `totalUsed`, `src/main/layout.ts` `defaultHome`, `src/main/manage-window.ts` `closeManage`, `src/save/migrate-v3.ts` `boxedIds`(와 그 때문에 남은 `BoxV3` import), `src/shared/clock.ts` `isYesterday`·`localHour`, `src/main/stage.ts` import `SpriteSheet`, `src/renderer/stage.ts` `petRect`(와 `StagePet` import), `src/tools/selftest-egg.ts` `MIN`. 문서에 이 이름이 남은 곳은 없다.
+- 검수: HEAD 에 이 정리만 적용한 작업 폴더에서 `tsc --noUnusedLocals` 두 설정 오류 없음, `selftest-cli`·그 밖의 자체 검사 24개 통과. `selftest-legacy` 는 HEAD 그대로도 `mailbox.send` 에서 멈췄다(교환 커밋 `92cbf7d` 의 회귀). 교환 세션에 알렸고 그쪽이 고쳤다(미커밋).
+- 저장소 밖: `%TEMP%` 의 시험 잔재 폴더 483개(약 800MB — dev-manage·cli·companion-e2e·renderer·리뷰·시안 캡처 등)와 이 세션의 시험 작업 폴더(git worktree `pokebuddy-test-app`, 연결된 `node_modules` junction 을 먼저 끊고 등록을 풀었다)·시험용 HOME 을 지웠다. `pokebuddy-pets`(실행 중인 펫의 pid 폴더)는 남겼다. 교환 세션의 `trade-e2e-*` 는 정리 시점에 이미 없었다.
+- 로컬 무시 폴더: `font/`(Galmuri 원본 묶음 102MB — 앱은 `assets/fonts` 의 woff2 를 쓴다)를 지웠다. `.cache/`(개발 스크립트 그림 캐시)·`release/`·`.vsix`·`supabase/.temp` 는 남겼다.
+- 관찰: `release/` 의 0.3.0 설치 파일과 이 세션이 만든 0.3.2 설치 파일은 정리 전에 이미 없었다.
+
 ### 설치 파일 0.3.2 빌드 (배포 전)
 
 - 사용자 지시(2026-09-27): "새로 exe파일 생성".

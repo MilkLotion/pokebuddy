@@ -3,7 +3,7 @@
 // 위치의 주인은 메인이다. 40ms 마다 오는 StageFrame 을 그대로 그리고, 애니 프레임 진행(어느 프레임인지)만 스스로 한다.
 // 렌더러가 죽고 다시 떠도 ready → 메인의 재송신(init · sheets · 마지막 frame)으로 복구된다.
 // 다시 그리는 때: 프레임이 새로 왔거나 · 어느 마리의 애니 프레임이 바뀌었거나 · 캔버스 크기가 바뀌었을 때만
-import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageBridge, StageFrame, StageInit, StagePet, StageSize } from "../shared/stage.js";
+import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageBridge, StageFrame, StageInit, StageSize } from "../shared/stage.js";
 import { hitAt, rectOf, type HitLookup } from "./hit.js";
 import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";
@@ -95,14 +95,6 @@ const lookup: HitLookup = (pet) => {
   return { body: art.body, sprite: { fw: sheet.fw, fh: sheet.fh, col: shown.col, row: shown.row, alpha } };
 };
 const hitAtStage = (x: number, y: number) => (frame ? hitAt(frame, lookup, x, y) : null);
-
-// 마리가 지금 그려진 사각형(무대 안 DIP) — 그림이 아직 없으면 null
-function petRect(pet: StagePet): { x: number; y: number; w: number; h: number } | null {
-  const art = store.get(pet.look);
-  const shown = animators.get(pet.id)?.current();
-  const sheet = shown ? art?.anims[shown.anim] : undefined;
-  return art && sheet ? rectOf(pet, art.body, sheet) : null;
-}
 
 function paint() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);

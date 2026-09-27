@@ -11,12 +11,3 @@ export function localDate(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// 로컬 시각 0~23
-export const localHour = (ms: number): number => new Date(ms).getHours();
-
-// 어제인가 — 스트릭 판정
-export function isYesterday(date: string, todayMs: number): boolean {
-  const y = new Date(todayMs);
-  y.setDate(y.getDate() - 1);
-  return localDate(y.getTime()) === date;
-}

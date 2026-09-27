@@ -118,4 +118,3 @@ export function renameBox(box: BoxV3, name: string, boxIndex: number): string {
 
 const validSlot = (box: BoxV3, i: number): boolean => Number.isInteger(i) && i >= 0 && i < box.slots.length;
 
-export const totalUsed = (boxes: BoxV3[]): number => boxes.reduce((a, b) => a + usedCount(b), 0);
