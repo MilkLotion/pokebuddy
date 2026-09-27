@@ -1373,7 +1373,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
     bagQty = Math.max(1, Math.min(bagQty, cap));
     right.appendChild(el("div", "use-current", many ? `${pet.name} Lv.${pet.level} · 다음 레벨까지 ${pet.percentToNext}%` : `${pet.name} Lv.${pet.level}`));
     if (many) {
-      const q = el("div", "qty");
+      const q = el("div", "qty square");
       const minus = button("", "−");
       minus.disabled = bagQty <= 1 || !!blocked;
       minus.addEventListener("click", () => {
@@ -2688,12 +2688,6 @@ function drawNatureTarget(itemId: string): void {
 
 // ── 모달 · 구매 창 ─────────────────────────────────────────────────────────────
 
-function buyRow(label: string, value: string): HTMLElement {
-  const row = el("div", "buy-row");
-  row.append(el("span", undefined, label), el("span", "value", value));
-  return row;
-}
-
 function drawBuy(productId: string, qty: number): void {
   const item = view?.shop.find((i) => i.id === productId);
   if (!item || !view) {
@@ -2703,50 +2697,63 @@ function drawBuy(productId: string, qty: number): void {
   // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다
   const afford = item.price > 0 ? Math.floor(view.points / item.price) : 1;
   const cap = Math.max(1, Math.min(afford, item.room ?? afford));
-  const many = MULTI_BUY.has(item.category);
+  const many = MULTI_BUY.has(item.category) && !item.blocked;
   const count = many ? Math.max(1, Math.min(qty, cap)) : 1;
   const total = item.price * count;
+  const short = total > view.points;
 
-  dialogEl.append(...dialogHead(item.name, item.note));
+  // 머리 — 제목·보유 포인트와 오른쪽 위 ✕ (시안 `Shop / Buy` 의 head)
+  const head = el("div", "buy-head");
+  const titles = el("div", "titles");
+  titles.append(el("h2", undefined, `${item.name} ${item.price === 0 ? "받기" : "구매"}`), el("div", "sub", `보유 ${point(view.points)}`));
+  const x = button("close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  head.append(titles, x);
+  dialogEl.appendChild(head);
 
+  // 수량 — − · 수량 · + · 최대 · 최대 N (05 `Shop / Buy` 의 Quantity Stepper Show Max). 막혔으면 두지 않는다
   if (many) {
-    const row = el("div", "buy-row");
-    const box = el("div", "qty");
+    const box = el("div", "qty square");
     const minus = button("", "−");
     minus.disabled = count <= 1;
     minus.addEventListener("click", () => open({ kind: "buy", productId, qty: count - 1 }));
     const plus = button("", "+");
     plus.disabled = count >= cap;
     plus.addEventListener("click", () => open({ kind: "buy", productId, qty: count + 1 }));
-    // `최대` — 살 수 있는 만큼 한 번에 (05 `Shop / Buy` 387:6618 의 Quantity Stepper Show Max)
     const max = button("max", "최대");
     max.disabled = count >= cap;
     max.addEventListener("click", () => open({ kind: "buy", productId, qty: cap }));
     box.append(minus, el("span", "count", count.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `최대 ${cap.toLocaleString("ko-KR")}`));
-    row.append(el("span", undefined, "수량"), box);
-    dialogEl.appendChild(row);
+    dialogEl.appendChild(box);
   }
 
-  dialogEl.appendChild(buyRow("합계", point(total)));
-  dialogEl.appendChild(buyRow("보유 포인트", point(view.points)));
+  // 합계 상자 — 살 수 있으면 합계와 구매 후 보유, 막혔으면 까닭과 한 줄 안내 (시안 `Shop / Buy Blocked`)
+  const summary = el("div", "buy-total");
+  if (item.blocked) {
+    const daycare = item.category === "egg" && view.eggs.used >= view.eggs.size;
+    summary.appendChild(el("strong", undefined, daycare ? `${item.blocked}. (${view.eggs.used} / ${view.eggs.size})` : item.blocked));
+    if (daycare) summary.appendChild(el("div", undefined, "부화한 뒤 다시 살 수 있어요"));
+  } else if (short) {
+    summary.append(el("strong", undefined, "포인트가 모자라요"), el("div", undefined, `합계 ${point(total)} · 보유 ${point(view.points)}`));
+  } else {
+    summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}`));
+  }
+  dialogEl.appendChild(summary);
+  if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
 
-  const short = total > view.points;
-  const why = item.blocked ?? (short ? "포인트가 모자라요." : "");
-  if (why) dialogEl.appendChild(el("div", "notice bad", why));
-
-  const acts: HTMLElement[] = [];
-  acts.push(actionButton(item.price === 0 ? "받기" : "구매", true, !!item.blocked || short, () => void buy(productId, count)));
-  // 돌보미집이 가득 찼을 때만 그리로 보낸다. 비우고 나면 다시 살 수 있다
+  // 바닥 — 왼쪽 `돌보미집 보기`(돌보미집이 찼을 때), 오른쪽 `취소`·`구매`
+  const foot = el("div", "buy-foot");
   if (item.blocked && item.category === "egg") {
-    acts.push(
+    foot.appendChild(
       actionButton("돌보미집 보기", false, false, () => {
         tab = "box";
         close();
       }),
     );
   }
-  acts.push(closeButton());
-  dialogEl.appendChild(actions(...acts));
+  foot.append(el("span", "spacer"), actionButton("취소", false, false, close), actionButton(item.price === 0 ? "받기" : "구매", true, !!item.blocked || short, () => void buy(productId, count)));
+  dialogEl.appendChild(foot);
 }
 
 // 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
@@ -3121,7 +3128,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   "evo-target": "dialog",
   nature: "dialog",
   "nature-target": "dialog",
-  buy: "dialog",
+  buy: "dialog buy",
   "pick-box": "dialog wide",
   "pick-slot": "dialog wide",
   achievements: "dialog tall",

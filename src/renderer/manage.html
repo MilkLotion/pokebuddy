@@ -2028,20 +2028,6 @@
       .use-detail .qty {
         gap: 8px;
       }
-      /* 사용 패널의 수량 단추는 32 칸 네모다 (시안). 최대는 글자 단추 */
-      .use-detail .qty button {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-      }
-      .use-detail .qty button.max {
-        width: auto;
-        padding: 0 12px;
-        font-size: 12px;
-      }
-      .use-detail .qty .count {
-        min-width: 32px;
-      }
       .use-detail .qty .qty-hint {
         color: var(--muted);
         font-size: 12px;
@@ -2065,20 +2051,79 @@
         margin-top: 0;
         justify-content: flex-end;
       }
-      /* 구매 창 — 수량과 합계 */
-      .buy-row {
+      /* 구매 창 — Figma 05 Shop / Buy 387:6618 · Shop / Buy Blocked 387:6958. 폭 440, 머리 오른쪽 ✕, 합계 상자, 오른쪽 정렬 단추 */
+      .dialog.buy {
+        width: 440px;
+        padding: 24px;
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 9px 0;
-        border-bottom: 1px solid var(--line);
+        flex-direction: column;
+        gap: 16px;
       }
-      .buy-row:last-of-type {
-        border-bottom: 0;
+      .buy-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
       }
-      .buy-row .value {
-        font-weight: 600;
+      .buy-head .titles {
+        flex: 1;
+        min-width: 0;
       }
+      .buy-head h2 {
+        margin: 0 0 4px;
+      }
+      .buy-head .close {
+        appearance: none;
+        flex: none;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        font: inherit;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .buy-total {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--canvas);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .buy-total strong {
+        color: var(--ink);
+      }
+      .dialog.buy .notice {
+        margin-top: 0;
+      }
+      .buy-foot {
+        display: flex;
+        gap: 12px;
+      }
+      .buy-foot .spacer {
+        flex: 1;
+      }
+      .buy-foot button.act {
+        width: 120px;
+        height: 36px;
+      }
+      /* 32 칸 네모 수량 단추 — 구매 창과 가방 사용 패널이 같다 */
+      .qty.square button {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+      }
+      .qty.square button.max {
+        width: auto;
+        padding: 0 12px;
+      }
+      .qty.square .count {
+        min-width: 32px;
+      }
+      /* 구매 창 — 수량과 합계 */
       .qty {
         display: flex;
         align-items: center;
