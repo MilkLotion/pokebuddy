@@ -43,7 +43,8 @@ export const TUTORIALS: readonly TutorialRule[] = [
   {
     id: "party",
     surface: "manage",
-    enabled: true,
+    // 끔 — 새 개체가 꺼낸 상태로 들어와(2026-09-27 사용자 "기본 숨기기로 되어있는것들 기본꺼내기로 변경") 가르칠 조작이 없다
+    enabled: false,
     start: (s) => otherPet(s) != null,
     // 새 개체를 이미 꺼냈다(숨김이 풀린 파티 칸) — 또는 파티가 가득 차 박스로 갔다. 박스면 밝힐 칸이 없어 줄이 막히므로 넘긴다
     already: (s) => {

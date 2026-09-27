@@ -139,7 +139,7 @@ const fixed = (...values: number[]): (() => number) => {
   process.stdout.write("(8) 이로치 추첨  ok\n");
 }
 
-// (9) 열기 — 개체가 생기고 빈 파티 칸에 숨김으로 들어간다
+// (9) 열기 — 개체가 생기고 빈 파티 칸에 꺼낸 상태로 들어간다
 {
   const s = seed({ remainMs: 0, ready: true, actions: { pat: 0, song: 0 } });
   const res = open(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
@@ -149,7 +149,7 @@ const fixed = (...values: number[]): (() => number) => {
   assert.equal(s.pets[0]?.level, 1);
   const slot = s.party.slots[res.slotIndex ?? -1];
   assert.equal(slot?.state, "pokemon");
-  assert.equal(slot?.hidden, true, "숨김으로 들어간다");
+  assert.equal(slot?.hidden, false, "꺼낸 상태로 들어간다");
   assert.equal(s.eggs.length, 0, "알은 사라진다");
   assert.ok(s.dex.obtained.includes(res.species ?? ""), "도감에 획득 기록");
   assert.ok(s.dex.unlocked.includes(res.species ?? ""), "해금 기록도 남는다");

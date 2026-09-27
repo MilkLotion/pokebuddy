@@ -142,7 +142,7 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
 // 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "알 행동 조건")
 //   해금 규칙이 없는 종        뺀다. 전설·환상·울트라비스트는 규칙이 없다 — 입수 경로를 따로 정한다.
 //                              옛 규칙으로 이미 해금된 저장도 여기서 걸러진다
-//   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다(피카츄)
+//   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다
 //   상점에서 파는 종           뺀다. 값을 치르고 산다(잠만보)
 //   고정 후보 알의 종          뺀다. 화석은 태고의돌로만, 단일 포켓몬은 그 알로만 얻는다
 export function inRandomEgg(slug: string, opts?: DexOptions): boolean {

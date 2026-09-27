@@ -4,7 +4,7 @@
 //   알      돌보미집에 빈 칸이 있어야 한다. 사면 바로 들어가고 준비 시간이 시작된다
 //   도구    가방에 쌓는다. 칸 수 제한은 없다
 //   파티 칸 상점으로 여는 칸이 남아 있어야 한다. 값은 순서마다 다르다
-//   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 숨김으로, 없으면 박스로
+//   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 꺼낸 상태로, 없으면 박스로
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
@@ -50,7 +50,7 @@ const boughtSlots = (save: SaveV3): number =>
 function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } {
   const i = save.party.slots.findIndex((s) => s.state === "empty");
   if (i >= 0) {
-    save.party.slots[i] = { state: "pokemon", petId, hidden: true };
+    save.party.slots[i] = { state: "pokemon", petId, hidden: false };
     return { slotIndex: i, toBox: false };
   }
   putPet(save.boxes, petId);

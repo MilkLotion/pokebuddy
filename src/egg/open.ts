@@ -3,7 +3,7 @@
 // 하는 일은 넷이다. 결과 판정, 개체 생성, 배치, 도감 기록.
 // 랜덤알은 낮은 확률로 포켓몬 대신 단일 포켓몬 알을 준다(data/eggs.json 의 bonus). 그 알은 연 알의 자리에 들어간다.
 // 단일 포켓몬 알은 이미 얻은 종을 빼고 뽑는다. 알 행동 조건은 보지 않는다.
-// 배치는 빈 파티 칸에 숨김으로 넣는다. 칸이 없으면 박스로 보낸다.
+// 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
 // 조건으로 나온 종은 해금되지 않았을 수 있다. 그때는 해금 기록도 함께 남긴다.
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import { putPet } from "../box/slots.js";
@@ -65,11 +65,11 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
   const id = nextPetId(save);
   save.pets.push(newPet({ id, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, now }));
 
-  // 배치 — 빈 파티 칸에 숨김으로. 없으면 박스로
+  // 배치 — 빈 파티 칸에 꺼낸 상태로. 없으면 박스로
   const slotIndex = save.party.slots.findIndex((s) => s.state === "empty");
   let toBox = false;
   if (slotIndex >= 0) {
-    save.party.slots[slotIndex] = { state: "pokemon", petId: id, hidden: true };
+    save.party.slots[slotIndex] = { state: "pokemon", petId: id, hidden: false };
   } else {
     putPet(save.boxes, id);
     toBox = true;

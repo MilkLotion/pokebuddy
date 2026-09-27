@@ -553,7 +553,7 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
     pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
     tags.appendChild(el("span", "note", `Lv.${pet.level} · ${pet.nature}`));
     card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
-    if (slotIndex != null) info.append(el("div", undefined, `파티 ${slotIndex + 1}번 칸에 숨김 상태로 들어갔어요.`), el("div", "note", "꺼내기는 파티에서 합니다."));
+    if (slotIndex != null) info.append(el("div", undefined, `파티 ${slotIndex + 1}번 칸에 들어갔어요.`));
     else info.append(el("div", undefined, "파티가 가득 차 박스에 보관했어요."), el("div", "note", "박스에서 파티에 넣을 수 있어요."));
   }
   const row = el("div", "compare");
@@ -2437,6 +2437,8 @@ function sizeButtons(pet: PetView): HTMLElement {
 
 const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots.some((p) => p?.id === id))?.name ?? null;
 
+const BACK_TO: Record<string, string> = { party: "파티로", box: "박스로", dex: "도감으로", shop: "상점으로", bag: "가방으로", trade: "교환으로" };
+
 function drawPetPage(pet: PetView): void {
   const slot = slotOfPet(pet.id);
   const inParty = slot != null;
@@ -2445,7 +2447,8 @@ function drawPetPage(pet: PetView): void {
 
   // 돌아가기 줄 — 왼쪽 링크, 오른쪽 자리와 상태
   const back = el("div", "back-row");
-  const link = button("back-link", inParty ? "‹  파티로" : "‹  박스로");
+  // 돌아갈 곳은 연 탭이다 — 개체가 지금 있는 곳이 아니다. 파티에서 박스로 보관해도 파티 탭으로 돌아간다
+  const link = button("back-link", `‹  ${BACK_TO[tab] ?? "돌아가기"}`);
   link.addEventListener("click", () => {
     detailPet = null;
     draw();

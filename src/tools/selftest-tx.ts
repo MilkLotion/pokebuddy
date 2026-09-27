@@ -170,7 +170,7 @@ function seedBox(): SaveV3 {
   return s;
 }
 
-// (8) 배치 — 박스 개체가 빈 칸에 숨김으로 들어간다
+// (8) 배치 — 박스 개체가 빈 칸에 꺼낸 상태로 들어간다
 {
   const f = fake(seedBox());
   const tx = createExecutor(f.ports, HANDLERS);
@@ -179,9 +179,9 @@ function seedBox(): SaveV3 {
   const slot = f.state.party.slots[1];
   assert.equal(slot?.state, "pokemon");
   assert.equal(slot?.petId, "p2");
-  assert.equal(slot?.hidden, true, "배치한 개체는 숨김으로 시작한다");
+  assert.equal(slot?.hidden, false, "배치한 개체는 꺼낸 상태로 시작한다");
   assert.equal(f.state.boxes[0]?.slots[0], null, "박스에서 빠진다");
-  process.stdout.write("(8) 배치 · 빈 칸에 숨김으로  ok\n");
+  process.stdout.write("(8) 배치 · 빈 칸에 꺼낸 상태로  ok\n");
 }
 
 // (9) 배치 — 잠긴 칸과 이미 찬 칸은 거절한다
@@ -206,7 +206,7 @@ function seedBox(): SaveV3 {
   assert.equal(res.ok, true);
   const slot = f.state.party.slots[0];
   assert.equal(slot?.petId, "p2");
-  assert.equal(slot?.hidden, true, "교체로 들어와도 숨김이다");
+  assert.equal(slot?.hidden, false, "교체로 들어와도 꺼낸 상태다");
   const boxed = f.state.boxes[0]?.slots.filter(Boolean);
   assert.deepStrictEqual(boxed?.sort(), ["p1", "p3"], "나간 개체가 박스로");
   assert.equal(f.writes, 1, "한 번에 맞바꾼다");

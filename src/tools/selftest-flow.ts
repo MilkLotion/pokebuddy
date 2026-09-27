@@ -138,11 +138,10 @@ try {
   assert.ok(after.dex.discovered[String(hatched.species)], "발견한 조건을 적는다");
   assert.ok(after.dex.unlocked.includes(String(hatched.species)), "조건은 해금을 넘어선다");
   const slot = after.party.slots.find((s) => s.petId === born);
-  assert.equal(slot?.hidden, true, "새 개체는 숨김으로 들어간다");
-  process.stdout.write("(6) SC-04 · 부화와 숨김 배치, 조건 발견  ok\n");
+  assert.equal(slot?.hidden, false, "새 개체는 꺼낸 상태로 들어간다");
+  process.stdout.write("(6) SC-04 · 부화와 배치, 조건 발견  ok\n");
 
-  // ── SC-05 두 마리를 꺼낸다 ───────────────────────────────────────────────
-  w.ok("show1", "party.show", { petId: born });
+  // ── SC-05 두 마리가 보인다 — 새 개체는 꺼낸 상태로 들어왔다 ─────────────────
   const shown = w.save().party.slots.filter((s) => s.state === "pokemon" && s.hidden !== true).length;
   assert.equal(shown, 2, "두 마리가 보인다");
   process.stdout.write("(7) SC-05 · 두 마리 꺼내기  ok\n");
@@ -188,7 +187,7 @@ try {
   assert.equal(w.save().pets.find((p) => p.id === born)?.fullness, boxedBefore, "박스 개체는 그대로");
   w.ok("place1", "party.place", { petId: born });
   const placed = w.save();
-  assert.equal(placed.party.slots.find((s) => s.petId === born)?.hidden, true, "돌아와도 숨김으로 시작");
+  assert.equal(placed.party.slots.find((s) => s.petId === born)?.hidden, false, "돌아와도 꺼낸 상태로 시작");
   process.stdout.write("(11) SC-07 · 보관 중 정지와 재배치  ok\n");
 
   // ── SC-09 파티 칸을 산다 ─────────────────────────────────────────────────

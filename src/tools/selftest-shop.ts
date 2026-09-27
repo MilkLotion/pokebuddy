@@ -142,7 +142,7 @@ function seed(points: number): SaveV3 {
   assert.equal(res.spent, 800);
   assert.equal(s.pets.length, 1);
   assert.equal(s.pets[0]?.species, slug);
-  assert.equal(s.party.slots[res.slotIndex ?? -1]?.hidden, true, "숨김으로 들어간다");
+  assert.equal(s.party.slots[res.slotIndex ?? -1]?.hidden, false, "꺼낸 상태로 들어간다");
   assert.ok(s.dex.obtained.includes(slug));
   process.stdout.write("(9) 종 지정 구매 · 해금한 종만  ok\n");
 }

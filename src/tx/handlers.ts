@@ -50,7 +50,7 @@ const placeHandler: TxHandler = (draft, args) => {
   if (!petId) return { ok: false, reason: "bad-args" };
   const res = place(draft, petId, slotOf(args) ?? undefined);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { petId, slotIndex: res.slotIndex, hidden: true } };
+  return { ok: true, result: { petId, slotIndex: res.slotIndex, hidden: false } };
 };
 
 // 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다
@@ -60,7 +60,7 @@ const swapHandler: TxHandler = (draft, args) => {
   if (!petId || slotIndex == null) return { ok: false, reason: "bad-args" };
   const res = swap(draft, slotIndex, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { petId, slotIndex: res.slotIndex, movedOut: res.movedOut, hidden: true } };
+  return { ok: true, result: { petId, slotIndex: res.slotIndex, movedOut: res.movedOut, hidden: false } };
 };
 
 // 파티 개체를 박스에 보관한다

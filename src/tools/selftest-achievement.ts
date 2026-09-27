@@ -216,11 +216,8 @@ function seed(): SaveV3 {
   const egg = s.eggs[0]!;
   Object.assign(egg, { ready: true, remainMs: 0, actions: { pat: 1, song: 0 }, candidates: ["rattata"] });
   assert.ok(open(s, egg.id, T0 + 3, () => 0.99).ok);
-  assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"]);
+  assert.deepStrictEqual(queueTutorials(s, T0 + 3), [], "파티 튜토리얼은 껐다 — 새 개체가 꺼낸 상태로 들어온다");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
-  assert.equal(currentTutorial(s)?.id, "party");
-
-  assert.ok(skip(s, "party").ok, "✕ 는 스킵");
   assert.equal(currentTutorial(s), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
 }
@@ -243,7 +240,7 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 튜토리얼 순서 · 옛 저장  ok\n");
 }
 
-// (12b) 업적 안내 — 달성하면 줄에 들고, 한 번 받으면 끝. 새 개체가 박스로 갔으면 파티 튜토리얼은 넘긴다
+// (12b) 업적 안내 — 달성하면 줄에 들고, 한 번 받으면 끝. 파티 튜토리얼은 껐다
 {
   const s = empty(T0);
   assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
@@ -252,7 +249,7 @@ function seed(): SaveV3 {
   s.pets.push({ ...s.pets[0]!, id: "p9" }); // 파티가 가득 차 박스로 간 새 개체 — 파티 칸에 없다
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: null };
   queueTutorials(s, T0);
-  assert.equal(s.tutorials.party?.state, "done", "박스로 갔으면 밝힐 칸이 없어 넘긴다");
+  assert.notEqual(s.tutorials.party?.state, "active", "파티 튜토리얼은 껐다 — 줄에 들지 않는다");
   assert.equal(currentTutorial(s)?.id, "achievement");
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: T0 + 1 };
   queueTutorials(s, T0 + 1);

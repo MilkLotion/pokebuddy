@@ -1,7 +1,7 @@
 // 박스와 파티 사이의 배치·교체·보관 — 규칙은 docs/specs/game.md "개체 획득과 파티 교체".
 //
 // 세 가지 규칙만 지킨다
-//   1. 박스에서 파티로 들어온 개체는 숨김 상태로 시작한다. 교체로 들어와도 같다
+//   1. 박스에서 파티로 들어온 개체는 꺼낸 상태로 시작한다. 교체로 들어와도 같다
 //   2. 교체는 한 번에 맞바꾼다. 먼저 빈 칸을 만드는 조작을 요구하지 않는다
 //   3. 개체의 값은 그대로 둔다. 칸의 이전 개체 값을 새 개체에 복사하지 않는다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
@@ -42,11 +42,11 @@ export function place(save: SaveV3, petId: string, slotIndex?: number): Placemen
   if (slot.state !== "empty") return { ok: false, reason: "slot-not-empty" };
 
   takePet(save.boxes, petId);
-  save.party.slots[i] = { state: "pokemon", petId, hidden: true };
+  save.party.slots[i] = { state: "pokemon", petId, hidden: false }; // 꺼낸 상태로 들어온다
   return { ok: true, slotIndex: i };
 }
 
-// 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다. 들어온 개체는 숨김으로 시작한다
+// 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다. 들어온 개체는 꺼낸 상태로 시작한다
 export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   if (!findPet(save.boxes, petId)) return { ok: false, reason: "not-in-box" };
@@ -59,7 +59,7 @@ export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementR
   const out = slot.petId;
   takePet(save.boxes, petId);
   putPet(save.boxes, out);
-  save.party.slots[slotIndex] = { state: "pokemon", petId, hidden: true };
+  save.party.slots[slotIndex] = { state: "pokemon", petId, hidden: false };
   return { ok: true, slotIndex, movedOut: out };
 }
 
