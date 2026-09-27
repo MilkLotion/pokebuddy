@@ -2099,6 +2099,198 @@
       .coach-bubble .actions {
         margin-top: 0;
       }
+
+      /* 교환 — Figma 05 Screens `633:18522` 교환 6화면. 카드는 중립 테두리 1px, 상태는 점으로 보인다 */
+      .trade-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .trade-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        margin-bottom: 16px;
+      }
+      .trade-row .trade-card {
+        margin-bottom: 0;
+        min-height: 124px;
+        min-width: 0;
+      }
+      .trade-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 18px;
+      }
+      .trade-card-head strong {
+        font-weight: 700;
+      }
+      .trade-desc,
+      .trade-hint {
+        color: var(--muted);
+      }
+      .trade-left {
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .trade-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .trade-state i,
+      .trade-banner-title i {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .trade-state.ok i,
+      .trade-banner-title i.ok {
+        background: #10b981;
+      }
+      .trade-state.wait i {
+        background: var(--warning);
+      }
+      .trade-state.bad i,
+      .trade-banner-title i.bad {
+        background: var(--danger);
+      }
+      .trade-acts {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: auto;
+      }
+      .trade-acts.end {
+        justify-content: flex-end;
+      }
+      .trade-acts button.act {
+        height: 32px;
+        padding: 0 14px;
+        white-space: nowrap;
+        font-weight: 700;
+      }
+      .trade-input,
+      .search.trade-input {
+        flex: 1;
+        min-width: 0;
+        height: 32px;
+        padding: 0 11px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        font: inherit;
+        font-size: 12px;
+        color: inherit;
+      }
+      .trade-input:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+      .trade-link {
+        flex: none;
+        width: 116px;
+        color: var(--muted);
+      }
+      .trade-banner {
+        gap: 2px;
+        padding: 12px 16px;
+      }
+      .trade-banner-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+      }
+      .trade-pet {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .trade-portrait {
+        flex: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--accent-bg);
+        overflow: hidden;
+      }
+      .trade-pet.big .trade-portrait {
+        width: 80px;
+        height: 80px;
+      }
+      .trade-pet.big .trade-info strong {
+        font-size: 15px;
+        font-family: var(--font-large);
+        font-weight: 400;
+      }
+      .trade-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .trade-meta,
+      .trade-empty {
+        color: var(--muted);
+      }
+      .trade-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .trade-bar .trade-desc {
+        flex: 1;
+      }
+      .trade-bar button.act {
+        height: 32px;
+        padding: 0 14px;
+        font-weight: 700;
+      }
+      .trade-group {
+        font-weight: 700;
+        margin-top: 4px;
+      }
+      .trade-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+      }
+      /* 보낼 포켓몬 칸 — Figma `Trade / Offer` 의 86×66, 초상 26 */
+      .trade-cell {
+        aspect-ratio: auto;
+        height: 66px;
+      }
+      .trade-cell .dot {
+        width: 26px;
+        height: 26px;
+      }
+      .trade-cell:disabled {
+        cursor: default;
+      }
+      .trade-cell.off {
+        opacity: 0.4;
+      }
+      .trade-place {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--canvas);
+      }
     </style>
   </head>
   <body>

@@ -19,9 +19,11 @@ import type {
   ShopItemView,
   SlotView,
   Snapshot,
+  TradeCardView,
+  TradeScreen,
 } from "../shared/manage.js";
 
-type TabId = "party" | "box" | "dex" | "shop" | "bag";
+type TabId = "party" | "box" | "dex" | "shop" | "bag" | "trade";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "party", label: "파티" },
@@ -29,6 +31,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "dex", label: "도감" },
   { id: "shop", label: "상점" },
   { id: "bag", label: "가방" },
+  { id: "trade", label: "교환" }, // 친구 교환 — 가방 옆 (docs/work/trade/record.md, 2026-09-26 사용자 결정)
 ];
 
 // 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
@@ -1195,6 +1198,329 @@ function drawBag(v: Snapshot): void {
   bodyEl.appendChild(list);
 }
 
+// ── 교환 ───────────────────────────────────────────────────────────────────────
+// Figma 05 Screens `633:18522` 의 교환 6화면 — Base·Link Created·Offer·Blocked·Done·Error.
+// 값은 메인이 만든 TradeScreen(src/main/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
+// 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다
+
+let trade: TradeScreen | null = null;
+let tradeLoading = false;
+let tradeInput = ""; // 링크로 참가 칸에 붙여 넣은 글자
+let tradeCopied = false; // 링크 복사 직후 — 단추 글자를 바꾼다
+
+// 오류 배너 — 제목·문구 (Figma `Trade / Error` 와 주석 `633:18930`)
+const TRADE_ERROR: Record<string, [string, string]> = {
+  TRADE_LINK_EXPIRED: ["링크가 만료됐어요", "참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요"],
+  TRADE_LINK_USED: ["이미 사용된 링크예요", "다른 사람이 먼저 참가했어요"],
+  TRADE_OWN_LINK: ["내가 만든 링크예요", "친구에게 보내 주세요"],
+  TRADE_VERSION_MISMATCH: ["앱 버전이 달라요", "두 사람 모두 앱을 업데이트해 주세요"],
+  NETWORK: ["서버에 연결할 수 없어요", "교환 밖의 게임은 그대로 할 수 있어요"],
+  TRADE_LINK_INVALID: ["링크가 올바르지 않아요", "친구가 보낸 링크를 그대로 붙여 넣어 주세요"],
+  TRADE_RATE_LIMITED: ["잠시 뒤에 다시 해 주세요", "짧은 시간에 링크를 너무 많이 만들었어요"],
+  TRADE_CLOSED: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
+  "in-trade": ["진행 중인 교환이 있어요", "지금 교환에서 나간 뒤 다시 해 주세요"],
+  busy: ["잠시 뒤에 다시 해 주세요", "앞의 조작을 처리하는 중이에요"],
+  "not-ready": ["아직 확정할 수 없어요", "두 사람 모두 포켓몬을 올려야 확정할 수 있어요"],
+  timeout: ["응답이 늦어요", "잠시 뒤에 다시 해 주세요"],
+};
+// 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
+const TRADE_CLOSED: Record<string, [string, string]> = {
+  guest_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
+  host_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
+  expired: ["링크가 만료됐어요", "참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요"],
+};
+const TRADE_LOCAL: Record<string, string> = {
+  single: "단일 포켓몬은 교환할 수 없어요",
+  locked: "확정한 포켓몬은 바꿀 수 없어요",
+  "no-pet": "그 포켓몬을 찾을 수 없어요",
+};
+
+async function loadTrade(): Promise<void> {
+  if (tradeLoading) return;
+  tradeLoading = true;
+  try {
+    const reply = await window.pokebuddyManage.command({ cmd: "trade.status" });
+    trade = tradeOf(reply);
+  } finally {
+    tradeLoading = false;
+  }
+  if (tab === "trade") draw();
+}
+
+// 결과의 screen 을 꺼낸다. 교환 세션이 없을 때(trade-off·sandbox)만 쓸 수 없다고 보인다.
+// 그 밖의 실패(시간 초과·준비 전)는 지금 화면에 오류 배너만 더한다
+const TRADE_UNAVAILABLE = new Set(["trade-off", "sandbox"]);
+function tradeOf(reply: ManageReply): TradeScreen {
+  const screen = reply.screen;
+  if (screen && typeof screen === "object" && typeof screen.phase === "string") return screen;
+  if (TRADE_UNAVAILABLE.has(reply.reason)) return { ...(trade ?? TRADE_OFF), available: false };
+  return { ...(trade ?? { ...TRADE_OFF, available: true }), busy: false, error: { code: reply.reason } };
+}
+
+const TRADE_OFF: TradeScreen = {
+  available: false, phase: "idle", link: null, expiresAt: null, busy: false, error: null, closedReason: null,
+  friendJoined: false, friendName: null, mine: null, myPetId: null, myReady: false, friend: null, friendReady: false,
+  friendBlocked: null, singles: [], received: null,
+};
+
+async function tradeSend(cmd: string, target?: string, args?: Record<string, unknown>): Promise<ManageReply> {
+  const before = trade?.received?.petId ?? null;
+  if (trade) {
+    trade = { ...trade, busy: true };
+    draw();
+  }
+  let reply: ManageReply;
+  try {
+    reply = await window.pokebuddyManage.command({ cmd, ...(target ? { target } : {}), ...(args ? { args } : {}) });
+  } catch (e) {
+    console.error("교환 명령을 보내지 못했다", e);
+    reply = { ok: false, reason: "error" };
+  }
+  trade = tradeOf(reply);
+  // 거절(진행 중인 교환 등)은 보기에 남지 않는다 — 배너로 보인다
+  if (!reply.ok && !trade.error && trade.available) trade = { ...trade, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };
+  if (trade.received && trade.received.petId !== before) view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
+  draw();
+  return reply;
+}
+
+// 카드 안의 개체 한 줄 — 초상, 이름, 레벨·성격, 타입 배지 (Figma `Trade / Offer` 의 카드)
+function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
+  const line = el("div", "trade-pet");
+  if (!card) {
+    line.append(el("div", "trade-portrait"), el("div", "trade-empty", empty));
+    return line;
+  }
+  const info = el("div", "trade-info");
+  info.append(el("strong", undefined, card.name), el("div", "trade-meta", card.shiny ? `Lv.${card.level} · ${card.nature} · 이로치` : `Lv.${card.level} · ${card.nature}`));
+  const tags = el("div", "tags");
+  card.types.forEach((name, i) => tags.appendChild(typeBadge(name, card.typeIds[i])));
+  info.appendChild(tags);
+  line.append(portraitOf(card.species, card.shiny, "trade-portrait"), info);
+  return line;
+}
+
+// 상태 점과 글자 — 분류는 점으로 보인다(색 테두리 강조 대신)
+function tradeState(text: string, tone: "ok" | "wait" | "bad" | "idle"): HTMLElement {
+  const box = el("span", `trade-state ${tone}`);
+  box.append(el("i"), document.createTextNode(text));
+  return box;
+}
+
+function tradeBanner(title: string, desc: string, tone: "ok" | "bad"): HTMLElement {
+  const box = el("div", "trade-card trade-banner");
+  const head = el("div", "trade-banner-title");
+  head.append(el("i", tone), document.createTextNode(title));
+  box.append(head, el("div", "trade-desc", desc));
+  return box;
+}
+
+function tradeCardHead(title: string, right?: HTMLElement): HTMLElement {
+  const row = el("div", "trade-card-head");
+  row.appendChild(el("strong", undefined, title));
+  if (right) row.appendChild(right);
+  return row;
+}
+
+const leftText = (ms: number): string => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+// 링크 만들기·참가 두 카드와 규칙 — Base·Link Created·Error
+function drawTradeStart(t: TradeScreen): void {
+  const row = el("div", "trade-row");
+
+  const host = el("div", "trade-card");
+  if (t.phase === "hosting" && t.link) {
+    host.appendChild(tradeCardHead("공유 채널", tradeState("친구 기다리는 중", "wait")));
+    const left = el("div", "trade-desc");
+    const time = el("strong", "trade-left", t.expiresAt ? leftText(t.expiresAt - Date.now()) : "");
+    time.dataset.expires = String(t.expiresAt ?? "");
+    left.append(document.createTextNode("참가 전 남은 시간 "), time);
+    const acts = el("div", "trade-acts");
+    const link = el("input", "trade-input trade-link");
+    link.readOnly = true;
+    link.value = `…#${t.link.slice(t.link.lastIndexOf("#") + 1, t.link.lastIndexOf("#") + 7)}`; // 앞 6자만 — 전체는 title 과 복사로 (Figma `Trade / Link Created` "…#Qm7xK2")
+    link.title = t.link;
+    link.setAttribute("aria-label", "내 교환 링크");
+    const copy = actionButton(tradeCopied ? "복사됨" : "링크 복사", true, false, () => {
+      window.pokebuddyManage.copyText(t.link ?? "");
+      tradeCopied = true;
+      draw();
+      setTimeout(() => {
+        tradeCopied = false;
+        if (tab === "trade") draw();
+      }, 1500);
+    });
+    acts.append(link, copy, actionButton("취소", false, t.busy, () => void tradeSend("trade.leave")));
+    host.append(left, acts);
+  } else {
+    host.append(tradeCardHead("공유 채널 만들기"), el("div", "trade-desc", "링크를 친구에게 보내면 교환을 시작해요"));
+    const acts = el("div", "trade-acts");
+    acts.appendChild(actionButton("링크 만들기", true, t.busy, () => void tradeSend("trade.create")));
+    host.appendChild(acts);
+  }
+
+  const join = el("div", "trade-card");
+  join.append(tradeCardHead("링크로 참가"), el("div", "trade-desc", "친구가 보낸 링크를 붙여 넣어요"));
+  const acts = el("div", "trade-acts");
+  const input = searchBox("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
+    tradeInput = q;
+  });
+  input.type = "text";
+  input.classList.add("trade-input");
+  const go = actionButton("참가", false, t.busy || t.phase === "hosting", () => {
+    const link = tradeInput.trim();
+    if (!link) return;
+    void tradeSend("trade.join", undefined, { link }).then((reply) => {
+      if (reply.ok) {
+        tradeInput = "";
+        draw();
+      }
+    });
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") go.click();
+  });
+  acts.append(input, go);
+  join.appendChild(acts);
+
+  row.append(host, join);
+  bodyEl.appendChild(row);
+
+  const rules = el("div", "trade-card");
+  rules.appendChild(tradeCardHead("교환 규칙"));
+  for (const line of ["한 번에 한 마리씩 맞바꿔요", "받은 포켓몬은 보낸 포켓몬이 있던 자리로 가요", "단일 포켓몬은 교환할 수 없어요"]) rules.appendChild(el("div", "trade-desc", line));
+  bodyEl.appendChild(rules);
+}
+
+// 보낼 포켓몬 고르기 — 파티와 박스. 단일 포켓몬 칸은 흐리게 막는다
+function tradePicker(t: TradeScreen): HTMLElement {
+  const box = el("div", "trade-card");
+  box.appendChild(tradeCardHead("보낼 포켓몬", el("span", "trade-hint", "흐린 칸: 단일 포켓몬, 교환 불가")));
+  const singles = new Set(t.singles);
+  const cell = (pet: PetView): HTMLElement => {
+    const b = button("cell trade-cell");
+    b.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
+    const single = singles.has(pet.id);
+    b.disabled = single || t.myReady || t.busy;
+    if (single) b.classList.add("off");
+    b.setAttribute("aria-pressed", String(pet.id === t.myPetId));
+    b.addEventListener("click", () => void tradeSend("trade.offer", pet.id));
+    return b;
+  };
+  const party = partyPets();
+  if (party.length) {
+    box.appendChild(el("div", "trade-group", "파티"));
+    const grid = el("div", "trade-grid");
+    for (const pet of party) grid.appendChild(cell(pet));
+    box.appendChild(grid);
+  }
+  for (const b of view?.boxes ?? []) {
+    const pets = b.slots.filter((p): p is PetView => p != null);
+    if (!pets.length) continue;
+    box.appendChild(el("div", "trade-group", b.name));
+    const grid = el("div", "trade-grid");
+    for (const pet of pets) grid.appendChild(cell(pet));
+    box.appendChild(grid);
+  }
+  return box;
+}
+
+// 두 사람이 제안하고 확정하는 화면 — Offer·Blocked
+function drawTradeOffer(t: TradeScreen): void {
+  const row = el("div", "trade-row");
+  const mine = el("div", "trade-card");
+  mine.append(tradeCardHead("내 포켓몬", t.myReady ? tradeState("확정함", "ok") : tradeState("확정 전", "idle")), tradePetLine(t.mine, "아래에서 보낼 포켓몬을 골라요"));
+  const friend = el("div", "trade-card");
+  const friendTitle = t.friendName ? `${t.friendName}의 포켓몬` : "친구 포켓몬";
+  const friendState = t.friendBlocked ? tradeState("받을 수 없음", "bad") : t.friendReady ? tradeState("확정함", "ok") : t.friend ? tradeState("확정 전", "idle") : tradeState("고르는 중", "wait");
+  friend.append(tradeCardHead(friendTitle, friendState), tradePetLine(t.friend, "친구가 고르는 중이에요"));
+  row.append(mine, friend);
+  bodyEl.appendChild(row);
+
+  if (t.friendBlocked) {
+    const name = t.friend?.name ?? "이 포켓몬";
+    const why = t.friendBlocked === "single" ? `${name}는 단일 포켓몬이라 교환할 수 없어요.` : `${name}는 받을 수 없는 값이에요.`;
+    bodyEl.appendChild(tradeBanner("받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`, "bad"));
+  }
+
+  const bar = el("div", "trade-bar");
+  bar.appendChild(el("div", "trade-desc", "한쪽이 포켓몬을 바꾸면 양쪽 확정이 풀려요"));
+  const canReady = !!t.mine && !!t.friend && !t.friendBlocked && !t.busy;
+  bar.append(
+    actionButton("나가기", false, t.busy, () => void tradeSend("trade.leave")),
+    t.myReady ? actionButton("확정 취소", false, t.busy, () => void tradeSend("trade.unready")) : actionButton("확정", true, !canReady, () => void tradeSend("trade.ready")),
+  );
+  bodyEl.appendChild(bar);
+  bodyEl.appendChild(tradePicker(t));
+}
+
+// 교환 완료 — Done
+function drawTradeDone(t: TradeScreen): void {
+  bodyEl.appendChild(tradeBanner("교환 완료", "공유 채널을 닫았어요", "ok"));
+  const r = t.received;
+  const card = el("div", "trade-card");
+  card.appendChild(tradeCardHead("받은 포켓몬"));
+  if (r) {
+    const big = tradePetLine(r.card, "");
+    big.classList.add("big");
+    card.appendChild(big);
+    const place = el("div", "trade-place");
+    place.appendChild(el("strong", undefined, r.party != null ? `파티 ${r.party + 1}번 칸에 들어갔어요` : `${r.box ?? "박스"}에 들어갔어요`));
+    if (r.sent) place.appendChild(el("div", "trade-desc", `보낸 포켓몬 ${r.sent.name} Lv.${r.sent.level} 이 있던 자리`));
+    if (r.party != null) place.appendChild(el("div", "trade-desc", r.hidden ? "숨김 상태는 그 칸 그대로" : "꺼낸 상태는 그 칸 그대로"));
+    card.appendChild(place);
+  }
+  const acts = el("div", "trade-acts end");
+  acts.appendChild(actionButton("확인", true, t.busy, () => void tradeSend("trade.leave")));
+  card.appendChild(acts);
+  bodyEl.appendChild(card);
+}
+
+function drawTrade(): void {
+  bodyEl.appendChild(head("교환", "친구와 포켓몬을 한 마리씩 맞바꾸기"));
+  const t = trade;
+  if (!t) {
+    bodyEl.appendChild(el("div", "empty-note", "교환 상태를 읽는 중이에요."));
+    void loadTrade();
+    return;
+  }
+  if (!t.available) {
+    bodyEl.appendChild(el("div", "empty-note", "지금은 교환을 할 수 없어요. 동반자로 켠 pokebuddy 에서, 서버 설정이 있을 때 할 수 있어요."));
+    return;
+  }
+  // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다
+  const err = t.error;
+  if (err) {
+    const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
+    bodyEl.appendChild(tradeBanner(text[0] ?? "", text[1] ?? "", "bad"));
+  } else if (t.phase === "closed") {
+    const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
+    bodyEl.appendChild(tradeBanner(text[0], text[1], "bad"));
+  }
+  if (t.phase === "trading") drawTradeOffer(t);
+  else if (t.phase === "done") drawTradeDone(t);
+  else drawTradeStart(t);
+}
+
+// 참가 전 남은 시간 — 글자만 1초마다 바꾼다. 본문을 다시 그리지 않는다
+setInterval(() => {
+  for (const node of document.querySelectorAll<HTMLElement>(".trade-left")) {
+    const at = Number(node.dataset.expires);
+    if (at) node.textContent = leftText(at - Date.now());
+  }
+}, 1000);
+
+window.pokebuddyManage.onTrade((screen) => {
+  const got = screen.received?.petId !== trade?.received?.petId && screen.received != null;
+  trade = screen;
+  // 교환이 끝나 개체가 바뀌었다 — 스냅샷도 다시 받는다. 받지 않으면 보낸 개체가 파티·박스에 남아 보인다(2026-09-27 화면 E2E 에서 발견)
+  if (got) void refresh();
+  else if (tab === "trade" && !detailPet) draw();
+});
+
 // ── 그리기 ─────────────────────────────────────────────────────────────────────
 
 function drawTabs(): void {
@@ -1206,6 +1532,7 @@ function drawTabs(): void {
       tab = t.id;
       detailPet = null;
       if (t.id === "dex" && !dexRows) void loadDex();
+      if (t.id === "trade") void loadTrade();
       draw();
     });
     tabsEl.appendChild(b);
@@ -1234,6 +1561,7 @@ function draw(): void {
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
   else if (tab === "shop") drawShop(view);
+  else if (tab === "trade") drawTrade();
   else drawBag(view);
   restoreSearchFocus();
   drawTutorial();
@@ -2402,6 +2730,12 @@ function goTo(route: ManageRoute): void {
     bodyEl.querySelector(".daycare")?.scrollIntoView({ block: "start" });
   } else if (route.to === "pet") {
     if (petOf(route.petId)) openPet(route.petId);
+  } else if (route.to === "trade") {
+    close();
+    tab = "trade";
+    detailPet = null;
+    void loadTrade();
+    draw();
   } else {
     open({ kind: "achievements" });
     dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });

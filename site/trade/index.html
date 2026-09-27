@@ -1,0 +1,149 @@
+<!doctype html>
+<!--
+  친구 교환 링크의 정적 페이지 — https://milklotion.github.io/pokebuddy/trade#<토큰>
+  설계: docs/work/trade/record.md "링크". 토큰은 # 뒤에 있어 페이지 서버 기록에 남지 않는다.
+  pokebuddy://trade/<토큰> 으로 설치한 앱을 연다. 앱이 열리지 않으면 링크를 앱에 붙여 넣는 길을 보인다.
+  외부 스크립트·글꼴·추적을 쓰지 않는다
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>pokebuddy 친구 교환</title>
+<style>
+  :root {
+    --bg: #f0efea;
+    --surface: #ffffff;
+    --line: #dcdcd4;
+    --text: #1a3330;
+    --muted: #4a6663;
+    --primary: #13786b;
+    --primary-text: #ffffff;
+    --danger: #d8332f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141c1b;
+      --surface: #1d2927;
+      --line: #2f3d3b;
+      --text: #e6eeec;
+      --muted: #9fb3b0;
+      --primary: #2aa593;
+      --primary-text: #0b1413;
+      --danger: #ff6b66;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 { margin: 0; font-size: 22px; }
+  p { margin: 0; color: var(--muted); }
+  .open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .steps { margin: 0; padding-left: 20px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  .copy { display: flex; gap: 8px; }
+  .copy input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+  .copy button {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  code { font-size: 13px; word-break: break-all; }
+  .bad { color: var(--danger); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>친구 교환</h1>
+  <section id="ok" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <p>친구가 pokebuddy 포켓몬 교환에 초대했어요. 링크는 만든 뒤 10분 동안, 한 사람만 쓸 수 있어요.</p>
+      <a class="open" id="open" href="#">앱에서 열기</a>
+      <p>앱이 열리지 않으면 아래 링크를 복사해 앱의 <strong>교환</strong> 탭 → <strong>링크로 참가</strong> 칸에 붙여 넣어 주세요.</p>
+      <div class="copy">
+        <input id="link" readonly aria-label="교환 링크">
+        <button id="copy" type="button">복사</button>
+      </div>
+      <ol class="steps">
+        <li>pokebuddy 가 켜져 있어야 해요.</li>
+        <li>터미널에서는 <code id="cli">pokebuddy trade &lt;링크&gt;</code> 로도 참가할 수 있어요.</li>
+      </ol>
+    </div>
+  </section>
+  <section id="bad" hidden>
+    <p class="bad">교환 링크가 올바르지 않아요. 친구에게 링크를 다시 받아 주세요.</p>
+  </section>
+</main>
+<script>
+  (function () {
+    var token = "";
+    try { token = decodeURIComponent(location.hash.slice(1)); } catch (e) { token = ""; } // 깨진 % 표기는 잘못된 링크로 본다
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) {
+      document.getElementById("bad").hidden = false;
+      return;
+    }
+    var link = location.origin + location.pathname + "#" + token;
+    var deep = "pokebuddy://trade/" + token;
+    document.getElementById("ok").hidden = false;
+    document.getElementById("open").href = deep;
+    document.getElementById("link").value = link;
+    document.getElementById("cli").textContent = "pokebuddy trade " + link;
+    document.getElementById("copy").addEventListener("click", function () {
+      var input = document.getElementById("link");
+      var done = function () { document.getElementById("copy").textContent = "복사됨"; };
+      if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, function () { input.select(); });
+      else { input.select(); document.execCommand("copy"); done(); }
+    });
+  })();
+</script>
+</body>
+</html>

@@ -20,8 +20,9 @@ import { createSandboxParty, type PartyPet, type PartySource } from "./party";
 import { createSaveParty, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { createMainTrade, type MainTrade } from "./trade";
+import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { careItem, petStatus } from "./status";
-import { openManage } from "./manage-window";
+import { openManage, pushTrade } from "./manage-window";
 import { createPortraits } from "./portraits";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
@@ -90,8 +91,23 @@ const log = debug ? (o: Record<string, unknown>) => void process.stdout.write(`$
 // pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다 — 둘째는 창을 만들기 전에 끝난다
 const duplicate = mode === "companion" && !app.requestSingleInstanceLock();
 if (duplicate) app.quit();
-// 떠 있는 동반자를 다시 실행했다(설치한 앱의 바로가기를 한 번 더 누름 등) — 새로 띄우지 않고 관리 창을 연다
-else if (mode === "companion") app.on("second-instance", () => openManageWindow());
+// 떠 있는 동반자를 다시 실행했다(설치한 앱의 바로가기를 한 번 더 누름 등) — 새로 띄우지 않고 관리 창을 연다.
+// 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 탭을 연다
+else if (mode === "companion") {
+  app.on("second-instance", (_e, argv) => {
+    const link = tradeLinkOf(argv);
+    if (link) openTradeLink(link);
+    else openManageWindow();
+  });
+  // mac 은 딥링크를 open-url 로 준다
+  app.on("open-url", (e, url) => {
+    e.preventDefault();
+    const link = tradeLinkOf([url]);
+    if (link) openTradeLink(link);
+  });
+  // 설치한 앱만 등록한다 — 개발 실행의 electron 을 등록하면 앱 없는 빈 Electron 이 링크를 받는다
+  if (app.isPackaged) app.setAsDefaultProtocolClient("pokebuddy");
+}
 
 // 로그인 시 시작 — 설정 값을 OS 에 적용한다. 설치한 앱에서만 한다.
 // 저장소의 `electron .` 을 등록하면 다음 로그인 때 앱 없는 빈 Electron 이 뜨기 때문이다
@@ -132,6 +148,12 @@ let stage: Stage | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
 let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (docs/work/trade/record.md)
+let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 값
+let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
+// 아직 참가하지 않은 교환 링크와 받은 시각. 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
+const TRADE_LINK_TTL_MS = 10 * 60_000;
+const firstLink = mode === "companion" ? tradeLinkOf(process.argv) : null;
+let tradeLink: { link: string; at: number } | null = firstLink ? { link: firstLink, at: Date.now() } : null;
 let tray: TrayHandle | null = null;
 let shortcuts: Shortcuts | null = null;
 let lastState: string | null = null;
@@ -424,17 +446,55 @@ function tradeSession(): MainTrade["session"] | null {
   if (!mainTrade) {
     mainTrade = createMainTrade(game);
     if (!mainTrade) return null;
+    const screen = createTradeScreen(() => game?.read() ?? null);
+    tradeScreen = screen;
     let lastReceived: string | null = null;
     mainTrade.onView((view) => {
+      pushTrade(screen.build(view));
       const got = view.received?.petId ?? null;
       if (got && got !== lastReceived) {
         lastReceived = got;
         if (party?.kind === "save") party.refresh(); // 저장을 다시 읽으면 onChange 가 무대를 다시 그린다
       }
     });
-    void mainTrade.session.start();
+    tradeStarted = mainTrade.session.start().catch((e) => {
+      console.error("교환 세션 시작 확인에 실패했다", e);
+    });
   }
   return mainTrade.session;
+}
+
+// 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
+// 시작 확인 중에 참가하면 busy 로 거절되고 링크가 사라진다(2026-09-27 검수 R2-01)
+function flushTradeLink(): void {
+  if (!tradeLink) return;
+  if (Date.now() - tradeLink.at > TRADE_LINK_TTL_MS) {
+    tradeLink = null;
+    return;
+  }
+  const session = tradeSession();
+  if (!session) return;
+  const { link } = tradeLink;
+  tradeLink = null;
+  void tradeStarted
+    .then(() => session.join(link))
+    .then((r) => {
+      // 거절(진행 중인 교환·다른 조작)은 보기에 남지 않는다 — 교환 탭 배너로 알린다
+      if (!r.ok && mainTrade && tradeScreen) pushTrade({ ...tradeScreen.build(mainTrade.session.view()), error: { code: r.reason, ...(r.detail ? { detail: r.detail } : {}) } });
+    });
+  openManageWindow({ to: "trade" });
+}
+
+// 교환 링크 — 인자 가운데 pokebuddy://trade/ 로 시작하는 것
+function tradeLinkOf(argv: readonly string[]): string | null {
+  return argv.find((a) => a.startsWith("pokebuddy://trade/")) ?? null;
+}
+
+// 교환 링크로 참가하고 교환 탭을 연다. 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
+function openTradeLink(link: string): void {
+  tradeLink = { link, at: Date.now() };
+  flushTradeLink();
+  openManageWindow({ to: "trade" });
 }
 
 async function refreshParty(): Promise<void> {
@@ -684,14 +744,18 @@ async function main(): Promise<void> {
     quit: () => app.quit(),
     log,
     trade: tradeSession,
+    tradeScreen: () => (mainTrade && tradeScreen ? tradeScreen.build(mainTrade.session.view()) : null),
   });
   party.onRole((w) => {
     commands?.setWriter(w);
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
-    if (w) tradeSession();
-    else {
+    if (w) {
+      tradeSession();
+      flushTradeLink();
+    } else {
       mainTrade?.session.stop();
       mainTrade = null;
+      tradeScreen = null;
     }
   });
   commands.setWriter(party.isWriter());
@@ -716,6 +780,7 @@ async function main(): Promise<void> {
     return;
   }
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
+  flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
   if (mode === "companion") {
     tray = createTray({
@@ -776,6 +841,7 @@ app.on("before-quit", () => {
   commands?.stop();
   mainTrade?.session.stop();
   mainTrade = null;
+  tradeScreen = null;
   bannerWin?.close();
   bannerWin = null;
   party?.stop(); // 저장 잠금을 놓는다

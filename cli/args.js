@@ -17,6 +17,7 @@ const USAGE = `사용 — 터미널에서 그대로, CLI LLM(claude·codex·gemi
   pokebuddy uninstall [--dry-run] [--purge] [--no-editor]   설치한 것 되돌리기 (--purge 면 설정·캐시까지)
   pokebuddy status [펫]                                     지금 판정 상태와 PMD 저작자 보기
   pokebuddy game --help                                    육성·상점·진화 명령 보기
+  pokebuddy trade <교환 링크>                               친구 교환 링크로 참가 — 떠 있는 동반자에 보낸다
 
 예:
   pokebuddy eevee                     터미널 — 셸이 끝나면 펫도 사라진다

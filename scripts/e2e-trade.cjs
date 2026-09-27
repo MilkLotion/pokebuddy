@@ -1,7 +1,7 @@
 // 친구 교환 E2E — 실제 앱(동반자) 여러 개를 임시 HOME 으로 띄우고 로컬 Supabase 에서 교환을 끝까지 돌린다.
 // 설계: docs/work/trade/record.md "구현 2c~2e 계획과 E2E 설계"
 //   준비: Docker Desktop 과 `npx supabase start`. 빌드: `npm run build`
-//   실행: node scripts/e2e-trade.cjs   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
+//   실행: node scripts/e2e-trade.cjs [--ui]   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다. --ui 면 화면 시나리오만)
 //   조작은 `pokebuddy game trade.*` CLI 의 JSON 결과로 판정한다. 창은 관측기가 숨긴다
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -42,7 +42,8 @@ function makeApp(name, server, pets, extraEnv = {}) {
   const env = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, 'appdata'), LOCALAPPDATA: path.join(dir, 'localappdata'), TEMP: temp, TMP: temp };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'NODE_OPTIONS' || key === 'ELECTRON_RUN_AS_NODE') delete env[key];
   env.PB_E2E_DIR = dir;
-  env.NODE_OPTIONS = `--require "${path.join(__dirname, 'e2e/companion-observer.cjs').split(path.sep).join('/')}"`;
+  const observer = (file) => `--require "${path.join(__dirname, file).split(path.sep).join('/')}"`;
+  env.NODE_OPTIONS = `${observer('e2e/companion-observer.cjs')} ${observer('e2e/manage-observer.cjs')}`;
   env.POKEBUDDY_SUPABASE_URL = server.url;
   env.POKEBUDDY_SUPABASE_KEY = server.key;
   env.POKEBUDDY_TRADE_POLL_MS = '600000'; // 주기 새로 고침을 사실상 끈다 — 보기가 바뀌면 실시간 신호 때문이다
@@ -60,7 +61,7 @@ function makeApp(name, server, pets, extraEnv = {}) {
     else save.boxes[0].slots[save.boxes[0].slots.indexOf(null)] = p.id;
   }
   save.starterPetId = pets[0].id;
-  save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party'].map((k) => [k, { state: 'skipped', steps: 0 }]));
+  save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party', 'achievement'].map((k) => [k, { state: 'skipped', steps: 0 }]));
   fs.writeFileSync(path.join(data, 'save.json'), JSON.stringify(save));
 
   const app = { name, dir, env, data, lock: path.join(data, 'companion.lock') };
@@ -99,6 +100,26 @@ function makeApp(name, server, pets, extraEnv = {}) {
   app.status = async () => (await app.game('trade.status')).trade;
   app.save = () => JSON.parse(fs.readFileSync(path.join(data, 'save.json'), 'utf8'));
   app.partyPet = () => { const s = app.save(); const id = s.party.slots[0].petId; return s.pets.find((p) => p.id === id); };
+  // 관리 창 조작 — scripts/e2e/manage-observer.cjs 가 처리한다
+  let uiSeq = 0;
+  app.ui = async (kind, extra = {}) => {
+    const id = `${name}-${++uiSeq}`;
+    fs.writeFileSync(path.join(dir, 'ui.json'), JSON.stringify({ id, kind, ...extra }));
+    let got = null;
+    await until(() => {
+      const file = path.join(dir, 'ui-events.jsonl');
+      if (!fs.existsSync(file)) return false;
+      got = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((e) => e.id === id) ?? null;
+      return got != null;
+    }, `[${name}] 관리 창 ${kind}`);
+    if (!got.ok) throw new Error(`[${name}] 관리 창 ${kind} 실패: ${got.message}`);
+    return got.value;
+  };
+  app.dom = (js) => app.ui('eval', { js });
+  app.text = () => app.dom('document.body.innerText');
+  // 글자가 같은 단추를 누른다. 막힌 단추면 false
+  app.press = (label) => app.dom(`(() => { const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)}); if (!b || b.disabled) return false; b.click(); return true; })()`);
+  app.shot = (file) => app.ui('shot', { file });
   apps.push(app);
   return app;
 }
@@ -119,6 +140,7 @@ async function run() {
   const server = localServer();
   execSync('npx supabase db reset', { cwd: root, stdio: 'ignore', timeout: 300_000 });
   checks.push('로컬 Supabase 확인과 DB 초기화');
+  if (process.argv.includes('--ui')) return ui(server); // 화면 시나리오만 — 고칠 때 빨리 돌린다
 
   const A = makeApp('a', server, [{ id: 'p1', species: 'charmander', where: 'party' }, { id: 'p2', species: 'mewtwo', where: 'box' }]);
   const B = makeApp('b', server, [{ id: 'p1', species: 'eevee', where: 'party' }]);
@@ -242,6 +264,106 @@ async function run() {
   assert.equal((await D.game('trade.create')).reason, 'NETWORK');
   ok(await D.game('play', 'p1'), 'E7 오프라인에서 놀아주기');
   checks.push('E7 연결 실패 → NETWORK, 게임 명령은 된다');
+
+  await ui(server);
+}
+
+// ── 화면 — 관리 창의 교환 탭을 실제 앱에서 눌러 본다 ─────────────────────────────
+// 찍은 화면은 docs/work/trade/evidence/ 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
+async function ui(server) {
+  const shots = path.join(root, 'docs/work/trade/evidence');
+  fs.mkdirSync(shots, { recursive: true });
+  const shot = (X, name) => X.shot(path.join(shots, name));
+  const has = async (X, words) => { const t = await X.text(); return words.every((w) => t.includes(w)); };
+  const opened = (X) => until(async () => { try { return await X.dom('!!document.querySelector("nav .tabs button")'); } catch { return false; } }, `[${X.name}] 관리 창`);
+  // 보낼 포켓몬 칸 하나를 누른다
+  const pick = (X, petName) => X.dom(`(() => { const c = [...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === ${JSON.stringify(petName)}); if (!c || c.disabled) return false; c.click(); return true; })()`);
+
+  const UA = makeApp('ua', server, [{ id: 'p1', species: 'charmander', where: 'party' }, { id: 'p2', species: 'pikachu', where: 'party' }, { id: 'p3', species: 'mewtwo', where: 'box' }]);
+  const UB = makeApp('ub', server, [{ id: 'p1', species: 'eevee', where: 'party' }]);
+  await UA.start(); await UB.start();
+
+  // U1 교환 탭 — 두 카드와 규칙
+  await UA.ui('open');
+  await opened(UA);
+  assert.equal(await UA.press('교환'), true, '교환 탭');
+  await until(() => has(UA, ['공유 채널 만들기', '링크로 참가', '교환 규칙']), 'U1 교환 탭 첫 화면');
+  await shot(UA, 'trade-base.png');
+  checks.push('U1 교환 탭 첫 화면(공유 채널 만들기·링크로 참가·규칙)');
+
+  // U2 링크 만들기 — 남은 시간과 링크 복사
+  assert.equal(await UA.press('링크 만들기'), true);
+  await until(() => has(UA, ['친구 기다리는 중', '참가 전 남은 시간', '링크 복사']), 'U2 링크 만든 화면');
+  await shot(UA, 'trade-link.png');
+  const link = (await UA.status()).link;
+  assert.ok(link, 'U2 링크');
+  checks.push('U2 링크 만들기 → 공유 채널 카드(남은 시간·링크 복사·취소)');
+
+  // U3 딥링크로 참가 — B 는 링크로 앱을 연 것처럼 second-instance 를 받는다. A 는 실시간 신호로 바뀐다
+  await UB.ui('link', { url: `pokebuddy://trade/${link.split('#')[1]}` });
+  await opened(UB);
+  await until(() => has(UB, ['내 포켓몬', '친구 포켓몬', '보낼 포켓몬']), 'U3 B 교환 화면');
+  await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U3 A 가 참가를 본다');
+  assert.equal(await UA.dom(`[...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠')?.disabled === true`), true, 'U3 단일 포켓몬 칸은 막힌다');
+  checks.push('U3 딥링크(second-instance)로 참가 → 양쪽 교환 화면, 단일 포켓몬 칸 막힘');
+
+  // U4 두 사람이 화면에서 고른다
+  assert.equal(await pick(UA, '파이리'), true);
+  assert.equal(await pick(UB, '이브이'), true);
+  await until(() => has(UA, ['파이리', '이브이', '확정 전']), 'U4 A 가 두 제안을 본다');
+  await shot(UA, 'trade-offer.png');
+  checks.push('U4 화면에서 제안 → 양쪽 카드');
+
+  // U5 둘 다 확정 → 완료 화면
+  assert.equal(await UA.press('확정'), true);
+  await until(() => has(UA, ['확정함', '확정 취소']), 'U5 A 확정');
+  assert.equal(await UB.press('확정'), true);
+  await until(() => has(UA, ['교환 완료', '받은 포켓몬', '파티 1번 칸에 들어갔어요']), 'U5 A 완료 화면');
+  await until(() => has(UB, ['교환 완료', '파이리']), 'U5 B 완료 화면');
+  await shot(UA, 'trade-done.png');
+  assert.equal(UA.partyPet().species, 'eevee');
+  assert.equal(UB.partyPet().species, 'charmander');
+  checks.push('U5 화면에서 확정 → 완료 화면(받은 포켓몬·들어간 칸), 저장 반영');
+
+  // U6 잘못된 링크 → 오류 배너
+  assert.equal(await UA.press('확인'), true);
+  await until(() => has(UA, ['공유 채널 만들기']), 'U6 첫 화면으로');
+  await UA.dom(`(() => { const i = document.querySelector('.trade-input:not([readonly])'); i.value = 'https://example.invalid/trade#bad'; i.dispatchEvent(new Event('input')); return true; })()`);
+  assert.equal(await UA.press('참가'), true);
+  await until(() => has(UA, ['링크가 올바르지 않아요']), 'U6 오류 배너');
+  await shot(UA, 'trade-error.png');
+  checks.push('U6 잘못된 링크 → 오류 배너');
+
+  // U7 받을 수 없는 제안 → 막힘 화면, 확정 단추 막힘
+  assert.equal(await UA.press('링크 만들기'), true);
+  await until(() => has(UA, ['링크 복사']), 'U7 링크');
+  const token = (await UA.status()).link.split('#')[1];
+  const { createClient } = require(path.join(root, 'node_modules/@supabase/supabase-js'));
+  const bad = createClient(server.url, server.key, { auth: { persistSession: false } });
+  await bad.auth.signInAnonymously();
+  const { data: ch } = await bad.rpc('join_channel', { p_token: token, p_protocol: online().onlineConfig().protocol, p_data_version: online().dataVersion() });
+  await bad.rpc('set_offer', { p_channel: ch, p_pet: { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 70, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] } });
+  await until(() => has(UA, ['받을 수 없음', '받을 수 없는 포켓몬이에요']), 'U7 막힘 화면');
+  assert.equal(await pick(UA, '이브이'), true, `U7 이브이 칸: ${JSON.stringify(await UA.dom("[...document.querySelectorAll('.trade-cell')].map((c) => [c.querySelector('.who')?.textContent, c.disabled])"))}`);
+  await until(() => has(UA, ['받을 수 없는 포켓몬이에요', 'Lv.']), 'U7 내 제안');
+  assert.equal(await UA.press('확정'), false, 'U7 확정 막힘');
+  await shot(UA, 'trade-blocked.png');
+  assert.equal(await UA.press('나가기'), true);
+  await until(() => has(UA, ['공유 채널 만들기']), 'U7 나가기');
+  checks.push('U7 받을 수 없는 제안 → 막힘 배너, 확정 단추 막힘, 나가기');
+
+  // U8 링크로 처음 켜기 — 교환 세션의 시작 확인 중에 참가해도 링크가 사라지지 않는다(2026-09-27 검수 R2-01)
+  assert.equal(await UA.press('링크 만들기'), true);
+  await until(() => has(UA, ['링크 복사']), 'U8 링크');
+  const first = (await UA.status()).link.split('#')[1];
+  const UC = makeApp('uc', server, [{ id: 'p1', species: 'bulbasaur', where: 'party' }], { PB_E2E_ARGV_LINK: `pokebuddy://trade/${first}` });
+  await UC.start();
+  await until(async () => (await UC.status())?.phase === 'trading', 'U8 C 가 참가한다', 60_000);
+  await opened(UC);
+  await until(() => has(UC, ['내 포켓몬', '보낼 포켓몬']), 'U8 C 의 교환 탭이 열린다');
+  await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U8 A 가 참가를 본다');
+  assert.equal(await UA.press('나가기'), true);
+  checks.push('U8 링크로 처음 켜기(인자) → 시작 확인 뒤 참가, 교환 탭 열림');
 }
 
 async function main() {

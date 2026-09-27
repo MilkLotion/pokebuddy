@@ -1546,3 +1546,80 @@ Figma 전용 세션이 이 파일에 더하는 재배치 결과 줄은 이 세�
 | T-08 | `terminal-pokemon-18` 보고: 연결 탭에 "오늘 작업 적립"이 없다 | 이 작업의 범위가 아니다. 확인하지 않았다 |
 
 문서 검토: 이 절을 쓰기 지침 점검표로 보았다. 한 문장 한 사실, 식별자는 코드 그대로, 사용자 발언과 관찰을 나누었다.
+
+## 구현 2c-2·2c-3·2d — 교환 탭, Figma 마무리, 링크 열기 (2026-09-27)
+
+사용자 지시: "커밋하고 끝까지 작업다해. e2e라니까?" 설계는 위 "구현 2c~2e 계획과 E2E 설계"의 단계표다.
+2c-2 작업 전 `terminal-pokemon-18`이 설정 모달 네 탭을 커밋했다(`f6024ae`, `923b842`). 교환 탭은 그 위에 얹었다.
+
+### 설계
+
+- 조작 경로: 교환 탭의 조작은 기존 명령 통로(`manage:command` → `commands.dispatcher`)의 `trade.*`를 쓴다. 새 요청 채널은 만들지 않는다.
+- 보기 경로: 메인이 교환 보기를 화면 값 `TradeScreen`으로 바꿔 밀어 보낸다(`manage:trade`). 명령 결과에도 같은 값(`screen`)을 싣는다. 모양은 [src/shared/manage.d.ts](../../../src/shared/manage.d.ts)다.
+- 링크 복사: 메인의 `clipboard`로 쓴다(`manage:copy`). 보낸 창을 확인하고 2000자까지만 받는다.
+- 딥링크: 설치본만 `pokebuddy://` 프로토콜을 등록한다. `second-instance`·`open-url`·첫 실행 인자에서 `pokebuddy://trade/<토큰>`을 찾아 참가하고 교환 탭을 연다. 교환 세션이 아직 없으면 생길 때 참가한다.
+- CLI: `pokebuddy trade <링크>`는 `pokebuddy game trade.join - link=<링크>`와 같다.
+- 정적 페이지: `site/`만 GitHub Actions 로 Pages 에 올린다(`.github/workflows/pages.yml`). 토큰은 `#` 뒤에 있어 서버 기록에 남지 않는다. 외부 스크립트·글꼴·추적은 쓰지 않는다.
+- 화면 E2E: 실제 앱의 관리 창을 관측기(`scripts/e2e/manage-observer.cjs`)로 연다. `second-instance`를 내서 관리 창과 딥링크를 재현하고, 문서 안에서 단추를 누르고, 창을 투명하게 잠깐 띄워 찍는다. 사용자가 누를 일이 없다.
+
+### 작업
+
+| 파일 | 내용 |
+|---|---|
+| [src/main/trade-screen.ts](../../../src/main/trade-screen.ts) | 교환 보기 + 저장 → `TradeScreen`. 내 카드·친구 카드(검사에 걸린 제안도 종을 알면 카드로), 올릴 수 없는 개체 ID(단일 포켓몬), 완료 때 받은 개체의 자리(파티 칸·박스 이름·숨김)와 보낸 카드 |
+| [src/renderer/manage.ts](../../../src/renderer/manage.ts), [manage.html](../../../src/renderer/manage.html) | `교환` 탭(가방 옆). 첫 화면·링크 만든 화면·제안·막힘·완료·오류 배너. 남은 시간은 글자만 1초마다 바꾼다. 교환이 끝나면 스냅샷을 다시 받는다 |
+| [src/main/app.ts](../../../src/main/app.ts) | 보기 밀어 보내기, 딥링크 처리, 프로토콜 등록(설치본만) |
+| [src/main/manage-window.ts](../../../src/main/manage-window.ts), [src/main/preload.ts](../../../src/main/preload.ts), [src/shared/manage.d.ts](../../../src/shared/manage.d.ts) | `manage:trade`·`manage:copy`, `ManageRoute {to:"trade"}` |
+| [src/main/commands.ts](../../../src/main/commands.ts) | `trade.*` 결과에 `screen` |
+| [bin/pokebuddy](../../../bin/pokebuddy), [cli/args.js](../../../cli/args.js) | `pokebuddy trade <링크>` |
+| [site/trade/index.html](../../../site/trade/index.html), [.github/workflows/pages.yml](../../../.github/workflows/pages.yml) | 교환 링크 페이지 — `앱에서 열기`(pokebuddy://), 링크 복사, CLI 안내 |
+| [src/save/mailbox.ts](../../../src/save/mailbox.ts) | `92cbf7d`의 회귀 수정 — `cmd`가 없는 요청에서 `startsWith`를 불렀다. `terminal-pokemon-18`이 `selftest-legacy`에서 찾았다 |
+| [scripts/e2e-trade.cjs](../../../scripts/e2e-trade.cjs), [scripts/e2e/manage-observer.cjs](../../../scripts/e2e/manage-observer.cjs) | 화면 시나리오 U1~U8, `--ui`로 화면만 돌리기. U8 은 관측기가 앱 인자에 링크를 더해 링크로 처음 켜진 경우를 재현한다 |
+
+화면 E2E 가 찾은 문제:
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| U-01 | 교환이 끝난 뒤 관리 창의 스냅샷이 옛 값이라 보낼 포켓몬 목록에 보낸 개체가 남았다 | 받은 개체가 바뀌면 스냅샷을 다시 받는다(밀어 보내기·명령 결과 두 경로) |
+| U-02 | 링크 만든 카드에서 긴 링크가 칸을 밀어 카드가 넘쳤다 | 링크는 토큰 앞 6자만 보인다(Figma `…#Qm7xK2`와 같다). 칸 폭 116, 카드 `min-width: 0` |
+| U-03 | 숨긴 창은 찍히지 않고, 찍혀도 숨기기 전 화면이 나왔다 | 관측기가 창을 투명하게 띄우고 다시 그리게 한 뒤 찍는다. 두 관측기가 같은 표시로 숨기기를 멈춘다 |
+
+### 2c-3 Figma
+
+- D-01 닫음: `Primary Navigation`(`208:542`)의 다섯 변형에 `item/교환`을 더하고 `Active=Trade` 변형(`678:16791`)을 만들었다. 아이콘은 새 컴포넌트 `Icon / Trade`(`678:16753`, 01 Atoms)다. 탭 끝 x=510, 아이콘 시작 x=560 으로 시안과 같다. 모든 화면의 탭 줄에 `교환`이 보인다. 교환 6화면의 풀어 둔 탭 줄은 `Active=Trade` 인스턴스로 바꿨다.
+- D-02 부분 닫음: 교환 6화면의 풀어 둔 버튼 12개를 `Button`(Size=Small) 인스턴스로 바꿨다. 폭은 전과 같다(90·50·78·62·48). 막힘 화면의 `확정`은 `State=Disabled`다. 배너 3개(`notice/받을 수 없음`, `status-banner/교환 완료`·`링크 만료`)는 그대로 둔다. `Notice`·`Status Banner` 컴포넌트는 글자 속성이 없고 모양(톤 배경)이 확정 시안과 다르다. 바꾸면 확정 화면이 달라진다.
+- 글자: `use_figma`는 Galmuri 를 불러오지 못해 라벨을 바꾸지 못한다. Chrome 의 Figma 속성 칸에 직접 입력했다. 캔버스 글자 편집에는 한글 입력이 들어가지 않았다. 붙여넣기는 창에 포커스가 없으면 클립보드 쓰기가 막혔다.
+- `use_figma`로 상태를 바꾼 라벨은 굵기 배치가 옛 값으로 남았다(`Active=Trade`의 `가방`). Chrome 에서 글자를 다시 넣어 다시 배치했다.
+
+### 검수
+
+| 명령 | 결과 |
+|---|---|
+| `npm run check`, `npm run build` | 통과 |
+| `npm run selftest` | 통과(교환 두 검사 포함) |
+| `node scripts/e2e-trade.cjs` | 수정 뒤 두 번 연속 통과 (18개 — E1~E9, U1~U8) |
+| 화면 비교 | [evidence](evidence/) 의 `trade-base`·`trade-link`·`trade-offer`·`trade-blocked`·`trade-done`·`trade-error`를 Figma 05 Screens `633:18522`와 견줬다. 제목 줄은 다른 탭과 같은 앱 공통 머리(제목 옆 부제)를 쓴다 |
+
+독립 검토 에이전트가 수정 전 변경을 읽고 8건을 보고했다. 조치는 아래와 같다.
+
+| 번호 | 발견 | 조치 |
+|---|---|---|
+| R2-01 높음 | 교환 세션을 막 만든 직후(링크로 처음 켜기, 시작 확인 중 받은 링크)에 참가하면 시작 확인의 `busy`로 거절되고 링크가 사라졌다 | 받은 링크는 시작 확인이 끝난 뒤 참가한다(`flushTradeLink`). 거절되면 교환 탭 배너로 알린다. U8 을 더했다. 수정을 되돌리면 U8 이 실패하는 것을 확인했다 |
+| R2-02 중간 | 대기 링크에 만료가 없고, 명령 처리 안에서 소비됐다 | 받은 시각을 두고 10분이 지나면 버린다. 명령 처리(`ctx.trade`)에서는 소비하지 않는다 |
+| R2-03 | 정적 페이지가 깨진 `%` 표기에서 멈춘다 | `decodeURIComponent` 실패를 잘못된 링크로 본다 |
+| R2-04 | 명령 전송이 실패하면 `busy`가 풀리지 않는다 | 실패도 결과로 바꿔 화면을 다시 그린다 |
+| R2-05 | 참가가 거절돼도 붙여 넣은 링크가 지워진다 | 결과 `ok`일 때만 지운다 |
+| R2-06 | 일시 실패에도 교환 탭이 "쓸 수 없음"으로 바뀐다 | `trade-off`·`sandbox`일 때만 쓸 수 없다고 보인다. 그 밖에는 오류 배너 |
+| R2-07 | 쓰지 않는 `UNAVAILABLE`, `screen` 형 단언 | 지웠다. `ManageReply.screen`을 더했다 |
+| R2-08 | 워크플로 액션을 태그로 고정 | 조치 없음. 권한은 최소 범위다. SHA 고정은 T-10 으로 남긴다 |
+
+### 피드백
+
+| 번호 | 내용 | 상태 |
+|---|---|---|
+| T-05 | 교환 링크의 정적 페이지 | 페이지·배포 작업은 만들었다. Pages 켜기(저장소 설정)와 첫 배포는 푸시 뒤에 한다 |
+| T-06 | mailbox 가 교환 명령을 기다리는 동안 다른 CLI 명령이 밀린다 | 열림. 교환 탭은 IPC 로 바로 부르므로 화면 조작은 밀리지 않는다 |
+| T-07 | 설치본을 실제로 설치해 교환·딥링크가 되는지 | 열림. 프로토콜 등록은 설치본에서만 된다. 사용자 확인 때 본다 |
+| T-09 | D-02 배너 3개 | 조치 없음(위 이유) |
+| T-10 | Pages 워크플로 액션의 SHA 고정 | 열림 |
+| T-11 | 커밋·푸시·Pages 켜기 | 사용자 지시 전. 규칙상 앞선 "커밋하고 끝까지 작업다해"의 커밋은 그때까지의 변경(`92cbf7d`)에만 해당한다 |

@@ -13,7 +13,7 @@ if (process.versions.electron && process.type === 'browser' && process.env.PB_E2
     app.on('browser-window-created', (_event, win) => {
       // 시험 창이 사용자의 작업 화면을 가리지 않게 숨김.
       win.hide();
-      win.on('show', () => win.hide());
+      win.on('show', () => { if (!global.__pbE2eShooting) win.hide(); }); // 관리 창 찍기 중에는 두 관측기가 함께 비킨다 (e2e/manage-observer.cjs)
       win.webContents.on('preload-error', (_event, file, error) => emit({ event: 'preload-error', file, message: error.message }));
       win.webContents.on('console-message', (_event, details, message) => emit({ event: 'console', message: message ?? details?.message }));
       win.webContents.on('did-finish-load', async () => {

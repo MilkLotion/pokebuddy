@@ -3,8 +3,8 @@
 // 폭은 고정이고 세로만 조절한다. 박스 6열과 도감 5열 격자가 640 폭에 맞춰져 있다 (docs/specs/s5.md "관리 창").
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
-import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute } from "../shared/manage";
+import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
+import type { AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, TradeScreen } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -30,6 +30,8 @@ const CH = {
   dexOpen: "manage:dex-open",
   dexStep: "manage:dex-step",
   dexClosed: "manage:dex-closed",
+  trade: "manage:trade",
+  copy: "manage:copy",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -153,6 +155,11 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       // 창 단추를 OS 가 그리지 않는 곳(mac 등)에서는 할 일이 없다
     }
   });
+  // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
+  ipcMain.on(CH.copy, (e, text: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (typeof text === "string" && text.length <= 2000) clipboard.writeText(text);
+  });
   ipcMain.handle(CH.drawRegion, async (e): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!drawRegion) return { ok: false, reason: "not-ready" };
@@ -204,5 +211,10 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   if (route) win.webContents.once("did-finish-load", () => win?.webContents.send(CH.route, route));
   void win.loadFile(opts.html);
   return win;
+}
+
+// 교환 보기를 관리 창에 밀어 보낸다 — 창이 없으면 버린다. 창을 열면 렌더러가 trade.status 로 다시 받는다
+export function pushTrade(screen: TradeScreen): void {
+  toManage(CH.trade, screen);
 }
 

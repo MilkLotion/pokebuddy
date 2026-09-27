@@ -41,6 +41,7 @@ export interface CommandContext {
   onChanged?(evolvedId?: string): Promise<void>;
   log?: ((o: Record<string, unknown>) => void) | null;
   trade?: () => TradeSession | null; // 친구 교환 — 앱이 준비된 뒤 생기므로 부를 때 가져온다 (src/main/trade.ts)
+  tradeScreen?: () => unknown; // 교환 탭이 그리는 값 (src/main/trade-screen.ts) — 결과의 screen 에 싣는다
 }
 
 export interface Commands {
@@ -236,7 +237,9 @@ export function createCommands(ctx: CommandContext): Commands {
     const session = ctx.trade?.() ?? null;
     if (!session) return { ok: false, reason: "trade-off" };
     const r = await run(session, c);
-    return r.ok ? { ok: true, reason: "ok", trade: session.view() } : { ...r, trade: session.view() };
+    const screen = ctx.tradeScreen?.();
+    const extra = { trade: session.view(), ...(screen ? { screen } : {}) };
+    return r.ok ? { ok: true, reason: "ok", ...extra } : { ...r, ...extra };
   };
   const argStr = (c: Command, key: string): string => (isObj(c.args) && typeof c.args[key] === "string" ? (c.args[key] as string) : "");
   dispatcher.register("trade.create", tradeCommand((s) => s.create()));

@@ -31,9 +31,19 @@ function needDist() {
   process.exit(1);
 }
 
-const parsed = process.argv[2] === "game" ? { kind: "game" } : parseArgs(process.argv.slice(2));
+const parsed = process.argv[2] === "game" ? { kind: "game" } : process.argv[2] === "trade" ? { kind: "trade" } : parseArgs(process.argv.slice(2));
 
 switch (parsed.kind) {
+  // 친구 교환 링크로 참가 — 떠 있는 동반자에 game trade.join 으로 보낸다 (docs/work/trade/record.md "링크")
+  case "trade":
+    needDist();
+    if (!process.argv[3]) {
+      process.stderr.write("사용: pokebuddy trade <교환 링크>\n");
+      process.exitCode = 2;
+      break;
+    }
+    void require("../dist/cli/game.js").game(["trade.join", "-", `link=${process.argv[3]}`]);
+    break;
   case "game":
     needDist();
     void require("../dist/cli/game.js").game(process.argv.slice(3));

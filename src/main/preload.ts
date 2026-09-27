@@ -18,6 +18,7 @@ type DexEntry = import("../shared/manage").DexEntry;
 type DexDetail = import("../shared/manage").DexDetail;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
+type TradeScreen = import("../shared/manage").TradeScreen;
 type BannerBridge = import("../shared/manage").BannerBridge;
 type BannerChannel = import("../shared/manage").BannerChannel;
 type BannerView = import("../shared/manage").BannerView;
@@ -87,6 +88,8 @@ const MANAGE = {
   dexOpen: "manage:dex-open",
   dexStep: "manage:dex-step",
   dexClosed: "manage:dex-closed",
+  trade: "manage:trade",
+  copy: "manage:copy",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -104,6 +107,8 @@ const manage: ManageBridge = {
   dexOpen: (slug) => ipcRenderer.send(MANAGE.dexOpen, slug),
   onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
   onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, () => cb()),
+  onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
+  copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);
