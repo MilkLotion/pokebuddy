@@ -29,8 +29,9 @@ import { PATHS, loadConfig, logoFile, preloadFile, rendererFile } from "./paths"
 import { pickStarter } from "./picker-window";
 import { createStage, type Stage } from "./stage";
 import { createStageWindow, type StageWindow } from "./stage-window";
-import { langOf, natureName, petLabel, setLang, t } from "./text";
+import { langOf, natureName, petLabel, petName, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
+import { careArgOf, syncJumpList } from "./jump-list";
 import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
 import { createHungerBubbles } from "./hunger-bubble";
@@ -97,6 +98,9 @@ if (duplicate) app.quit();
 // 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 탭을 연다
 else {
   app.on("second-instance", (_e, argv) => {
+    // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/jump-list.ts)
+    const care = careArgOf(argv);
+    if (care) return runGameCommand({ cmd: care.action, target: care.petId, from: "menu" });
     const link = tradeLinkOf(argv);
     if (link) openTradeLink(link);
     else if (argv.some(isAccountLink)) openManageWindow({ to: "account" }); // GitHub 로그인을 마친 브라우저에서 돌아왔다
@@ -238,6 +242,17 @@ function syncCoach(): void {
 // 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
 // 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
 let firstCareMenu: string | null = null;
+
+// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
+function syncJump(): void {
+  const save = saveParty()?.save();
+  if (!save) return;
+  const pets = save.party.slots
+    .map((slot) => (slot.state === "pokemon" ? save.pets.find((p) => p.id === slot.petId) : undefined))
+    .filter((p): p is NonNullable<typeof p> => p != null)
+    .map((p) => ({ id: p.id, name: petName(p.species), level: p.level }));
+  syncJumpList(pets, { feed: t("menu.feed"), play: t("menu.play") });
+}
 
 // 트레이 메뉴 — Windows 는 포커스를 쥐지 않게 띄운다(숨겨진 아이콘 창이 닫히지 않게). 바깥 클릭·Esc 는 헬퍼의 입력 감시로 닫는다.
 // 떠 있는 동안만 헬퍼를 자주(50ms) 묻는다. 기준 수는 띄운 뒤 첫 답이다 — 메뉴를 연 그 클릭은 세지 않는다
@@ -644,6 +659,7 @@ function stateTick(): void {
       notifier?.tick(); // 부화 준비·진화 가능·업적 미수령을 배너 줄에 세운다 (src/notify)
       syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
       syncCoach();
+      syncJump();
       const points = Math.floor(worker.save()?.points.balance ?? 0);
       if (points !== lastMenuPoints) {
         lastMenuPoints = points;
@@ -903,6 +919,7 @@ async function main(): Promise<void> {
   });
 
   applyClickThrough(!!config.clickThrough);
+  syncJump();
   syncLoginItem();
   syncPlayArea();
   syncCoach();
