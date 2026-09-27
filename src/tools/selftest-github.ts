@@ -4,7 +4,9 @@
 import assert from "node:assert";
 import http from "node:http";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { callbackUrl, githubLogin } from "../online/github";
+import { APP_LINK, callbackPage, callbackUrl, githubLogin } from "../online/github";
+
+const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // 가짜 인증 — 로그인 주소에 redirectTo 를 담아 돌려주고, 코드 교환을 기록한다
 function fakeClient(exchanged: string[]): SupabaseClient {
@@ -91,6 +93,29 @@ async function main(): Promise<void> {
   assert.ok(hostTest.ok);
   assert.deepEqual(hosts, ["good"], "다른 Host 의 코드는 쓰지 않는다");
   process.stdout.write("(5-2) 다른 Host 로 온 콜백은 무시  ok\n");
+
+  // (5-3) 브라우저 쪽 — 세션으로 바꾼 결과를 보고 답한다. 성공이면 앱 링크를 곧바로 연다(브라우저의 "pokebuddy 열기" 알림)
+  const ok1 = callbackPage(true), bad1 = callbackPage(false);
+  assert.ok(ok1.includes("로그인했어요") && ok1.includes(`href="${APP_LINK}"`) && ok1.includes(`location.href = "${APP_LINK}"`), "성공 쪽은 앱 링크를 연다");
+  assert.ok(bad1.includes("로그인하지 못했어요") && !bad1.includes("location.href"), "실패 쪽은 자동으로 열지 않는다");
+  let seen = "";
+  const failing = {
+    auth: {
+      signInWithOAuth: async ({ options }: { options: { redirectTo: string } }) => ({ data: { url: `https://github.invalid/login?redirect=${encodeURIComponent(options.redirectTo)}` }, error: null }),
+      exchangeCodeForSession: async () => ({ data: { user: null }, error: { message: "invalid flow state" } }),
+    },
+  } as unknown as SupabaseClient;
+  const failed = await githubLogin({
+    client: failing, blocked: () => false, ports,
+    openExternal: (url) => {
+      const back = new URL(decodeURIComponent(new URL(url).searchParams.get("redirect") ?? ""));
+      setTimeout(() => void fetch(`${back.origin}${back.pathname}?code=z`).then((r) => r.text()).then((t) => { seen = t; }), 20);
+    },
+  });
+  assert.equal(failed.ok, false);
+  await sleepMs(100);
+  assert.ok(seen.includes("로그인하지 못했어요"), "코드를 받았어도 세션으로 못 바꾸면 실패 쪽을 보인다");
+  process.stdout.write("(5-3) 브라우저 쪽 — 결과를 보고 답하고, 성공이면 앱 링크를 연다  ok\n");
 
   // (6) 끝나면 포트를 닫는다 — 같은 포트로 다시 열 수 있다
   const again = http.createServer();

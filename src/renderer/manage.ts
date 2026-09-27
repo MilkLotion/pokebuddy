@@ -3146,6 +3146,10 @@ function goTo(route: ManageRoute): void {
     bodyEl.querySelector(".daycare")?.scrollIntoView({ block: "start" });
   } else if (route.to === "pet") {
     if (petOf(route.petId)) openPet(route.petId);
+  } else if (route.to === "account") {
+    detailPet = null;
+    open({ kind: "settings", tab: "account" });
+    void loadAccount();
   } else if (route.to === "trade") {
     close();
     tab = "trade";

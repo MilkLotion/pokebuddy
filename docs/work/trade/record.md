@@ -1754,9 +1754,25 @@ F-02·T-02 닫음. C-03(`cloud.json`)은 로그인·클라우드 저장 구현 �
 | 번호 | 내용 | 상태 |
 |---|---|---|
 | L-10 | 게임이 15초마다 저장을 써서, 온라인이면 약 30초마다 올리기가 돈다(16KB 안팎). 무료 요금제 한도에서 문제가 되는지 | 열림. 사용량을 본 뒤 자동 저장 간격이나 "바뀐 것만" 판정을 정한다 |
-| L-11 | 원격 프로젝트의 Redirect URLs 에 GitHub 돌아오는 주소 세 개 | 사용자 할 일 |
-| L-12 | 계정 삭제 함수 원격 배포(`npx supabase functions deploy delete-account`) | 사용자 확인 뒤 |
-| L-13 | 실제 GitHub 로그인·두 PC 클라우드 저장 실기 | 사용자 실기 |
+| L-11 | 원격 프로젝트의 Redirect URLs 에 GitHub 돌아오는 주소 세 개 | 닫힘. 2026-09-27 사용자 지시("claude in chrome으로 너가 수행")로 이 세션이 대시보드에 넣었다(Total URLs 3) |
+| L-12 | 계정 삭제 함수 원격 배포 | 닫힘. `npx supabase functions deploy delete-account --use-api`로 배포했다. 인증 없는 요청은 401 |
+| L-13 | 실제 GitHub 로그인·두 PC 클라우드 저장 실기 | GitHub 로그인은 확인했다(아래). 두 PC 클라우드 저장 실기는 남았다 |
 | L-14 | 워크플로 액션 SHA 고정(T-10) | 열림 |
 
 문서 검토: 이 절을 쓰기 지침 점검표로 보았다.
+
+### 실기 확인 — GitHub 로그인 (2026-09-27)
+
+앱의 `githubLogin`(src/online/github.ts)을 원격 프로젝트에 붙여 임시 서버(`127.0.0.1:54380`)를 띄우고, 로그인 주소를 Chrome 에서 열었다. GitHub 권한 승인 화면(`user:email`, MilkLotion 계정)은 이 세션이 누르지 않고 사용자에게 물었다. 사용자가 승인했고, 브라우저가 임시 서버로 돌아와 "로그인했어요"를 보였다. 결과는 `{ signedIn: true, method: "github", displayName: "MilkLotion" }`이다. 원격 `auth.users`에 이 GitHub 계정이 생겼다.
+
+### GitHub 로그인 뒤 브라우저 쪽과 앱으로 돌아가기 (2026-09-27)
+
+사용자 지시: "이거 브라우저화면 ui 개선하고 앱으로바로가기 알림뜨는거? 그거까지해줘."
+
+| 파일 | 내용 |
+|---|---|
+| [src/online/github.ts](../../../src/online/github.ts) | `callbackPage` — 교환 링크 페이지와 같은 색·카드(다크 모드 포함), 성공·실패 두 쪽. 성공이면 0.4초 뒤 `pokebuddy://account`를 연다 — 브라우저가 "pokebuddy 열기" 알림을 띄운다. 알림을 닫았으면 `pokebuddy 열기` 단추로 다시 연다. 코드를 받은 뒤 세션으로 바꾼 결과를 보고 답한다 — 전에는 코드만 받으면 성공 쪽을 보였다 |
+| [src/main/app.ts](../../../src/main/app.ts), [manage.d.ts](../../../src/shared/manage.d.ts), [manage.ts](../../../src/renderer/manage.ts) | `pokebuddy://account`(`second-instance`·`open-url`) → 관리 창을 앞으로 가져와 설정의 계정 탭을 연다(`ManageRoute {to:"account"}`) |
+
+검수: `npm run check`, `selftest-github` 통과((5-3) 성공 쪽의 앱 링크·자동 열기, 실패 쪽은 자동 열기 없음, 세션 교환 실패면 실패 쪽). `e2e-account` 통과(9, AC6-1 `pokebuddy://account` → 계정 탭). Chrome 에서 두 쪽을 자동 열기 줄만 빼고 띄워 보았다 — 브라우저 알림이 확장을 막지 않게.
+남은 점: 프로토콜 등록은 설치본만 한다. 지금 설치된 0.4.0 은 `pokebuddy://account`를 받으면 관리 창만 연다(계정 탭 라우트 없음). 다음 설치본부터 계정 탭으로 간다.

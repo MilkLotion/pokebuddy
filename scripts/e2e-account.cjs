@@ -147,6 +147,13 @@ async function run() {
   assert.equal(await indicator(B), '', 'AC6 저장 표시 없음');
   checks.push('AC6 로그아웃 — 로그인 화면, 저장 표시 사라짐');
 
+  // AC6-1 GitHub 로그인을 마친 브라우저가 pokebuddy://account 를 열면 설정의 계정 탭이 열린다
+  await B.dom(`document.querySelector('#dialog .dialog-close')?.click()`);
+  await until(async () => !(await B.dom('document.getElementById("scrim").classList.contains("open")')), 'AC6-1 설정 닫힘');
+  await B.ui('link', { url: 'pokebuddy://account' });
+  await until(() => has(B, ['로그인하지 않아도 교환할 수 있어요', 'GitHub로 계속']), 'AC6-1 계정 탭이 열린다');
+  checks.push('AC6-1 pokebuddy://account — 설정의 계정 탭이 열린다');
+
   // AC7 계정 삭제 — 로컬 함수 서버가 있을 때만
   const probe = await fetch(`${local.url}/functions/v1/delete-account`, { method: 'POST' }).then((r) => r.status, () => 0);
   if (probe === 404 || probe === 0) {

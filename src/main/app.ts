@@ -99,6 +99,7 @@ else {
   app.on("second-instance", (_e, argv) => {
     const link = tradeLinkOf(argv);
     if (link) openTradeLink(link);
+    else if (argv.some(isAccountLink)) openManageWindow({ to: "account" }); // GitHub 로그인을 마친 브라우저에서 돌아왔다
     else openManageWindow();
   });
   // mac 은 딥링크를 open-url 로 준다
@@ -106,6 +107,7 @@ else {
     e.preventDefault();
     const link = tradeLinkOf([url]);
     if (link) openTradeLink(link);
+    else if (isAccountLink(url)) openManageWindow({ to: "account" });
   });
   // 설치한 앱만 등록한다 — 개발 실행의 electron 을 등록하면 앱 없는 빈 Electron 이 링크를 받는다
   if (app.isPackaged) app.setAsDefaultProtocolClient("pokebuddy");
@@ -508,6 +510,11 @@ function flushTradeLink(): void {
       if (!r.ok && mainTrade && tradeScreen) pushTrade({ ...tradeScreen.build(mainTrade.session.view()), error: { code: r.reason, ...(r.detail ? { detail: r.detail } : {}) } });
     });
   openManageWindow({ to: "trade" });
+}
+
+// 계정 링크 — GitHub 로그인 뒤 브라우저 쪽(src/online/github.ts callbackPage)이 여는 pokebuddy://account
+function isAccountLink(arg: string): boolean {
+  return /^pokebuddy:\/\/account\/?$/.test(arg);
 }
 
 // 교환 링크 — 인자 가운데 pokebuddy://trade/ 로 시작하는 것

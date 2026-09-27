@@ -240,8 +240,8 @@ export interface ManageReply {
 export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/s5.md "알림 배너의 개별 표시")
-// 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다
-export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" };
+// 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
+export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" };
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────────
 // 설정의 계정 탭·헤더 저장 표시·밀려남 배너가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
