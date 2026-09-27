@@ -47,8 +47,10 @@
 | `src/hooks` | 유지 | CLI 훅 이벤트를 세션별 상태 파일로 남긴다 | 게임 규칙 | SC-11 |
 | `src/shared` | 유지 | 모듈 사이의 공유 타입과 시계 | 규칙 | 전체 |
 | `src/tools` | 유지 | 데이터 빌드와 자체 검사(`selftest-*`) | 앱 실행 | — |
+| `src/trade` | 신규 | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 2026-09-27 정리: 위 다섯 줄은 설계 표에 없던 기존 폴더다. 현재 `src/` 구성을 따라 더했다.
+2026-09-27: `src/trade`를 더했다. Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 탭 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다. 설계와 결정은 [친구 교환 기록](../work/trade/record.md)이다.
 
 2026-09-23 결정: 알림 배너는 `src/notify`로 뺀다. 상태 판정은 도메인 모듈이 하고 `src/notify`는 줄 세우기와 표시만 맡는다. 근거는 [저장과 거래의 남은 값 확정](../work/s5-design-system-v2/plan.md#저장과-거래의-남은-값-확정)을 따른다.
 
@@ -82,6 +84,7 @@
 | `tutorials` | 튜토리얼별 미시작·진행 중·스킵·완료 |
 | `settings` | 표시, 동작, 언어, 시작, 놀이공간 영역, 알림 소리 |
 | `tx` | 완료한 요청 ID와 결과 |
+| `trade` | 확정했지만 아직 반영하지 않은 교환 하나 |
 
 ### 영역별 필드
 
@@ -104,6 +107,7 @@
 | `totals` · `log` | 기존 구조를 유지한다. `log`는 최근 200건 |
 | `tx` | 완료한 요청의 `id`, `at`, `result`. 최근 200건 또는 24시간 중 큰 쪽을 남긴다 |
 | `legacy` | `nick`, `look`처럼 새 화면에서 쓰지 않는 값. 지우지 않고 보존한다 |
+| `trade` | `pending`: 없으면 `null`. 있으면 `channelId`(서버 채널), `petId`(올린 개체), `offerRev`(확정한 제안 판), `received`(받은 개체 값). 확정할 때 쓰고, 반영하거나 닫히면 `null`로 돌린다. 걸린 개체에는 값을 바꾸는 명령(`bag.use`·`evolve`·`pet.form`)이 `trade-locked`로 거절된다. 자리만 바꾸는 명령과 돌봄·숨기기는 막지 않는다 — 반영은 그때의 자리를 찾아 들어간다. 선택 필드라 저장 형식 번호는 그대로 3이다 |
 
 ### V2 → V3 변환 규칙
 
@@ -158,6 +162,8 @@
 | `starter.pick` | 첫 선택 | `src/party` |
 | `box.sort` / `box.move` / `box.rename` | 박스 정렬·칸 옮기기·이름 바꾸기 | `src/box` |
 | `agent.connect` / `agent.disconnect` | 개별 연결 | `src/agents` |
+| `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/trade/session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 우편함으로 넘긴다 | `src/trade`, `src/main` |
+| `trade.lock` / `trade.unlock` / `trade.apply` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영. 교환 세션만 부른다 | `src/trade`, `src/tx` |
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다(2026-09-27 정리: `settings.open`은 구현하지 않았다) | `src/state`, `src/main` |
 
 모든 명령은 거래 실행기를 지난다. 완료한 요청을 다시 보내도 중복 반영하지 않는다.
@@ -166,4 +172,4 @@
 
 ## 남은 일
 
-2026-09-27 정리: 설계 당시의 남은 일(사용자 검토, 저장 필드 코드화, 콘텐츠 데이터 정의, 구현 순서)은 모두 끝났다. 저장 필드는 [저장 v3 타입](../../src/shared/save-v3.ts)이 기준이다. 교환의 저장 구조는 [친구 교환 기록](../work/trade/record.md)에서 이어서 정한다.
+2026-09-27 정리: 설계 당시의 남은 일(사용자 검토, 저장 필드 코드화, 콘텐츠 데이터 정의, 구현 순서)은 모두 끝났다. 저장 필드는 [저장 v3 타입](../../src/shared/save-v3.ts)이 기준이다. 교환의 저장 구조(`trade`)는 2026-09-27 위 표에 더했다. 로그인·클라우드 저장의 `cloud.json`은 구현 때 더한다([친구 교환 기록](../work/trade/record.md#클라우드-저장) C-03).
