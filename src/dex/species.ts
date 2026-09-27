@@ -14,8 +14,6 @@ export const DEFAULT_PROFILE: Readonly<Omit<Stored, "dex">> = {
   bst: 0,
   stage: 1,
   rank: 1,
-  affinityRate: 1,
-  hungerRate: 1,
   sleepiness: 1,
   moodBase: 60,
   moodSwing: 1,

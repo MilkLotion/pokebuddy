@@ -1807,3 +1807,10 @@ SSOT: `docs/specs/s5.md` 의 종료와 재개, `docs/specs/modules.md` 의 저�
 - 문장 검수: 바꾼 문장을 [작성 원칙](../../contributing/writing.md)의 완료 전 의미 검수 목록으로 읽었다. 한 문장 한 사실, 결정 원문 인용("추천대로진행"), 확정·보류·관측의 분리, 코드 식별자 표기를 확인했다. 명칭은 `terms.md` 의 장난감·가방·돌보미집·박스·파티 칸을 썼다.
 - 검수: `node dist/tools/selftest-unlocks.js`(2026-09-27 빌드본) 통과 — 참고 값 얻을 수 있는 종 1025/1025.
 - 검수: `node scripts/check-docs.cjs` PASS(문서 47개, 파일 링크 1315개, JSON 5개). `git diff --check -- docs` 문제 없음. 새 앵커는 `#남은-스펙-미확정-추천안-확정-2026-09-27` 이다. 문서만 바꿔 빌드와 전체 자체 검사는 미실행이다.
+
+### 종별 친밀도·배고픔 배율 삭제 (2026-09-27)
+
+- 사용자 결정: 앞 절 8번에서 `affinityRate`·`hungerRate` 를 읽는 코드가 없다는 관측을 보이고 "① 모든 종이 같게 두고 두 배율을 자료에서 뺀다(추천) / ② 실제로 적용한다"를 물었다 → "8번은 추천대로".
+- 작업: `src/shared/types.ts` `SpeciesProfile`·`src/dex/species.ts` `DEFAULT_PROFILE` 에서 두 필드를 지웠다. `src/tools/build-species.ts` 의 규칙표 줄·`RULES.affinity`·`RULES.hunger`·출력 필드·전설 수 출력을 지웠다. `data/species.defaults.json` 1110종과 `data/species.overrides.json` 스타터 29종(`hungerRate` 4곳 포함)에서 값을 지웠다. `selftest-dex` 는 두 값이 없음을 검사한다.
+- 남은 종별 값: 성장 곡선(`growthRate`, 레벨), `sleepiness`·`moodBase`·`moodSwing`·`likes`(움직임과 기분 표시), `bst`·`stage`·`rank`(도감·수집). 이 값들은 이번에 건드리지 않았다.
+- 검수: `npm run build`, `npm run selftest` 통과. 두 JSON 을 다시 읽어 문법을 확인했다. `node scripts/check-docs.cjs`.

@@ -24,8 +24,7 @@
 // |---------------|---------------------------------------------------------------------------|
 // | baseSpeed     | 종족값 speed 그대로                                                       |
 // | weightKg      | pokemon.csv weight(hg) / 10                                               |
-// | affinityRate  | 1.0. 전설·환상은 0.8 (귀한 종은 천천히). 가벼운 종(≤10kg)·3단계 사슬의 끝은 조정 없이 1.0 |
-// | hungerRate    | 0.7 + 0.6 × 체중pct (무거우면 빨리) + (스피드pct − 0.5) × 0.2 (±0.1)      |
+// 종별 친밀도·배고픔 배율(affinityRate·hungerRate)은 두지 않는다 — 모든 종이 같은 속도다 (2026-09-27 사용자 결정)
 // | sleepiness    | 0.7 + 0.6 × 체중pct                                                      |
 // | moodBase      | 60 + 타입별 MOOD 합, 55~65 로 자른다                                       |
 // | moodSwing     | 스피드pct ≥ 0.8 → 1.2 · < 0.2 → 0.8 · 나머지 1.0                            |
@@ -41,8 +40,6 @@ import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi
 const OUT = path.join(DATA_DIR, "species.defaults.json");
 
 export const RULES = {
-  affinity: { base: 1.0, rare: 0.8 },
-  hunger: { min: 0.7, span: 0.6, speedSwing: 0.2 },
   sleepiness: { min: 0.7, span: 0.6 },
   mood: { base: 60, min: 55, max: 65 },
   swing: { fast: 0.8, slow: 0.2, high: 1.2, low: 0.8, mid: 1.0 },
@@ -83,8 +80,6 @@ interface StoredProfile {
   bst: number;
   stage: number;
   rank: number;
-  affinityRate: number;
-  hungerRate: number;
   sleepiness: number;
   moodBase: number;
   moodSwing: number;
@@ -92,7 +87,7 @@ interface StoredProfile {
 }
 
 // 못 이은 슬러그의 값
-export const DEFAULT: Readonly<Omit<StoredProfile, "dex">> = { growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, affinityRate: 1.0, hungerRate: 1.0, sleepiness: 1.0, moodBase: 60, moodSwing: 1.0, likes: ["play"], types: [] };
+export const DEFAULT: Readonly<Omit<StoredProfile, "dex">> = { growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, sleepiness: 1.0, moodBase: 60, moodSwing: 1.0, likes: ["play"], types: [] };
 
 // 1차에 모은 원자료 — 못 이은 슬러그는 null
 interface RawProfile {
@@ -276,8 +271,6 @@ export async function build(): Promise<void> {
       bst: r.bst,
       stage: r.stage,
       rank: rankOf(r),
-      affinityRate: r.rare ? RULES.affinity.rare : RULES.affinity.base,
-      hungerRate: round2(RULES.hunger.min + RULES.hunger.span * w + (s - 0.5) * RULES.hunger.speedSwing),
       sleepiness: round2(RULES.sleepiness.min + RULES.sleepiness.span * w),
       moodBase: moodOf(r.types),
       moodSwing: s >= RULES.swing.fast ? RULES.swing.high : s < RULES.swing.slow ? RULES.swing.low : RULES.swing.mid,
@@ -289,8 +282,6 @@ export async function build(): Promise<void> {
   writeLineJson(OUT, out);
   process.stdout.write(`종 프로필: ${OUT} — ${Object.keys(out).length}종\n`);
   process.stdout.write(`못 이은 슬러그 ${missing.length}${missing.length ? `: ${missing.slice(0, 30).join(", ")}${missing.length > 30 ? " …" : ""}` : ""}\n`);
-  const rare = Object.values(out).filter((p) => p.affinityRate === RULES.affinity.rare).length;
-  process.stdout.write(`전설·환상 ${rare}종 (affinityRate ${RULES.affinity.rare})\n`);
   const byGrowth = new Map<string, number>();
   const byRank = new Map<number, number>();
   for (const p of Object.values(out)) {

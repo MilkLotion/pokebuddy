@@ -128,21 +128,18 @@ function world(over: Partial<Pick<World, "now" | "hour">> = {}, save: Partial<Sa
   assert.strictEqual(pika.slug, "pikachu");
   assert.strictEqual(pika.dex, 25);
   assert.deepStrictEqual(pika.likes, ["work", "play"], "overrides 의 likes");
-  assert.strictEqual(pika.affinityRate, 1);
   assert.deepStrictEqual(pika.types, ["electric"], "defaults 의 타입은 그대로");
   assert.strictEqual(pika.baseSpeed, 90);
   assert.strictEqual(pika.weightKg, 6);
-  assert.ok(pika.hungerRate > 0.6 && pika.hungerRate < 1.4);
   assert.deepStrictEqual(dex.profile("pikachu-3d"), pika, "-3d 는 같은 종");
   assert.deepStrictEqual(dex.profile("  PIKACHU "), pika, "공백·대소문자 정규화");
   assert.deepStrictEqual(dex.profile("eevee").likes, ["company", "play"]);
   assert.deepStrictEqual(dex.profile("squirtle").likes, ["food", "company"]);
-  assert.strictEqual(dex.profile("mewtwo").affinityRate, 0.8, "전설은 0.8");
   assert.strictEqual(dex.profile("rowlet").sleepiness, 1.3, "override 의 부분 필드");
   assert.strictEqual(dex.profile("rowlet").moodBase, 60 + 2 + 2, "override 에 없는 필드는 defaults (grass+flying)");
 
   const unknown = dex.profile("not-a-mon");
-  assert.deepStrictEqual(unknown, { slug: "not-a-mon", dex: 0, growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, affinityRate: 1, hungerRate: 1, sleepiness: 1, moodBase: 60, moodSwing: 1, likes: ["play"], types: [] }, "모르는 슬러그는 기본 프로필");
+  assert.deepStrictEqual(unknown, { slug: "not-a-mon", dex: 0, growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, sleepiness: 1, moodBase: 60, moodSwing: 1, likes: ["play"], types: [] }, "모르는 슬러그는 기본 프로필");
   assert.strictEqual(dex.hasProfile("pikachu"), true);
   assert.strictEqual(dex.hasProfile("pikachu-3d"), true);
   assert.strictEqual(dex.hasProfile("not-a-mon"), false);
@@ -157,11 +154,10 @@ function world(over: Partial<Pick<World, "now" | "hour">> = {}, save: Partial<Sa
   for (const s of dex.slugs()) {
     const p = dex.profile(s);
     assert.ok(p.dex > 0, `${s} 도감번호`);
-    assert.ok(p.hungerRate >= 0.6 && p.hungerRate <= 1.4, `${s} hungerRate`);
+    assert.ok(!("affinityRate" in p) && !("hungerRate" in p), `${s} 종별 배율은 없다 (2026-09-27)`);
     assert.ok(p.sleepiness >= 0.7 && p.sleepiness <= 1.3, `${s} sleepiness`);
     assert.ok(p.moodBase >= 55 && p.moodBase <= 65, `${s} moodBase`);
     assert.ok([0.8, 1, 1.2].includes(p.moodSwing), `${s} moodSwing`);
-    assert.ok([0.8, 1].includes(p.affinityRate), `${s} affinityRate`);
     assert.ok(p.likes.length >= 1 && p.likes.length <= 2, `${s} likes 1~2`);
     for (const l of p.likes) assert.ok(["work", "play", "company", "food"].includes(l), `${s} like ${l}`);
   }

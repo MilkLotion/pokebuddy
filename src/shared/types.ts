@@ -44,8 +44,6 @@ export interface SpeciesProfile {
   bst: number; // 종족값 합계 — 수집 난이도 계산에 쓴다
   stage: number; // 사슬 뿌리부터의 거리 + 1 (1 이 진화 전)
   rank: number; // 수집 난이도 1~5 — 1 이 흔하고 5 가 귀하다
-  affinityRate: number; // 시간 원천(켜 두기·일한 양·턴) 배율 — 1 이 기준
-  hungerRate: number; // 배고픔이 차는 속도 배율 — 1 이 기준
   sleepiness: number; // 잠이 드는 빠름 배율 — 1 이 기준
   moodBase: number; // 기분 기준값 0~100
   moodSwing: number; // 기분 변동 폭 배율 — 1 이 기준
