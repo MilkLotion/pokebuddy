@@ -2470,7 +2470,7 @@ function drawPetPage(pet: PetView): void {
     detailPet = null;
     draw();
   });
-  back.append(link, el("span", "where", inParty ? `${where} · ${pet.hidden ? "숨긴 상태" : "표시 중"}` : `${where} · 보관 중`));
+  back.append(link, el("span", "where", inParty ? `${where} · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${where} · 보관 중`));
   page.appendChild(back);
 
   const cols = el("div", "pet-cols");
@@ -2478,12 +2478,16 @@ function drawPetPage(pet: PetView): void {
   // 왼쪽 기둥 — 초상, 이름, 레벨·성격, 타입, 네 막대
   const side = el("div", "pet-side");
   const portrait = portraitOf(pet.species, pet.shiny, "portrait big", pet.shiny ? "이로치" : "");
-  if (inParty && pet.hidden) {
-    const mark = el("span", "mark");
-    mark.title = "숨긴 상태";
-    portrait.appendChild(mark);
-  }
   side.appendChild(portrait);
+  // 볼 토글 — 열린 볼은 바탕화면에 나와 있음, 닫힌 볼은 볼 안. 이름은 누르면 일어날 일
+  if (inParty) {
+    const action = pet.hidden ? "꺼내기" : "볼에 넣기";
+    const ball = button(`ball-toggle ${pet.hidden ? "closed" : "open"}`);
+    ball.title = action;
+    ball.setAttribute("aria-label", action);
+    ball.addEventListener("click", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id));
+    side.appendChild(ball);
+  }
   side.appendChild(el("div", "name", pet.name));
   side.appendChild(el("div", "sub", `Lv.${pet.level} · ${pet.nature}`));
   const badges = el("div", "badges");
@@ -2539,7 +2543,6 @@ function drawPetPage(pet: PetView): void {
     main.appendChild(label("표시"));
     main.appendChild(
       listCard(
-        listRow("화면 표시", null, [switchButton(!pet.hidden, "화면 표시", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id))]),
         listRow("크기", null, [sizeButtons(pet)]),
       ),
     );

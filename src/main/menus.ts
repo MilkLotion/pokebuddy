@@ -24,6 +24,7 @@ export interface MenuActions {
   toggleGhost?(): void;
   feed?(): void;
   play?(): void;
+  ball?(): void; // 이 포켓몬만 볼에 넣는다 — 파티 개체일 때만
 }
 
 // 첫 줄 — "이브이 · 용감". 성격이 없으면 이름만
@@ -37,6 +38,7 @@ export function petMenu(model: PetMenuModel, act: MenuActions): MenuItemConstruc
     { type: "separator" },
     ...(model.feed ? [{ label: t("menu.feed"), ...(model.feed.reason ? { sublabel: model.feed.reason } : {}), enabled: model.feed.enabled, click: () => act.feed?.() }] : []),
     ...(model.play ? [{ label: t("menu.play"), ...(model.play.reason ? { sublabel: model.play.reason } : {}), enabled: model.play.enabled, click: () => act.play?.() }] : []),
+    ...(act.ball ? [{ label: t("menu.ball"), click: () => act.ball?.() }] : []),
     { type: "separator" },
     { label: t(model.hidden ? "menu.show" : "menu.hide"), click: () => act.toggleHidden() },
     { type: "separator" },

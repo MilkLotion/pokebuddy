@@ -143,6 +143,14 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   (menu[3]!.click as () => void)();
   (menu[5]!.click as () => void)();
   eq([hid, quit], [1, 1], "petMenu 클릭이 동작을 부른다");
+  // 볼에 넣기 — 파티 개체일 때만(ball 동작이 있을 때) 놀아주기 아래에 나온다
+  let balled = 0;
+  const withBall = petMenu({ name: "이브이", nature: "용감", hidden: false, play: { enabled: true } }, { ...act, ball: () => void (balled += 1) });
+  const ballAt = withBall.findIndex((m) => m.label === t("menu.ball"));
+  eq(ballAt, withBall.findIndex((m) => m.label === t("menu.play")) + 1, "볼에 넣기는 놀아주기 바로 아래");
+  (withBall[ballAt]!.click as () => void)();
+  eq(balled, 1, "볼에 넣기 클릭이 동작을 부른다");
+  eq(menu.some((m) => m.label === t("menu.ball")), false, "ball 동작이 없으면 볼에 넣기가 없다");
   // 앱이 그리는 모양 — 이름·상태 두 줄, 못 하는 돌봄은 흐리게 이유를 오른쪽에, 겹친 구분선은 하나로
   const cared = menuView(petMenu({ name: "이브이", nature: "용감", hidden: false, status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, act), "켜짐");
   eq(cared[0], { kind: "status", title: t("menu.pet", { name: "이브이", nature: "용감" }), caption: "배부름 · 기분 좋음" }, "menuView 상태 줄");

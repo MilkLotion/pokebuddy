@@ -400,6 +400,7 @@ function showPetMenu(id: string): void {
     toggleHidden, quit: () => app.quit(),
     feed: () => runGameCommand({ cmd: "feed", target: id, from: "menu" }),
     play: () => runGameCommand({ cmd: "play", target: id, from: "menu" }),
+    ...(pet ? { ball: () => runGameCommand({ cmd: "party.hide", target: id, from: "menu" }) } : {}),
   });
   if (pet) built.splice(built.length - 2, 0,
     { type: "separator" as const },

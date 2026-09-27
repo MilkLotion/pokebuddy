@@ -7,6 +7,7 @@
   "menu.pet": "{name} · {nature}",
   "menu.feed": "밥 주기",
   "menu.play": "놀아주기",
+  "menu.ball": "볼에 넣기",
   "menu.evolve": "진화하기",
   "menu.switch": "다른 포켓몬으로",
   "menu.shop": "상점",
