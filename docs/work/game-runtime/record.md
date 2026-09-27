@@ -633,6 +633,12 @@ SSOT: `docs/specs/s5.md` 의 화면 구조와 저장, `docs/specs/modules.md` �
 - 게시: `main` 푸시(`d76e0ee..12ffe62`), 태그 `v0.3.1` → `12ffe62`, GitHub Release `v0.3.1` 에 `pokebuddy-Setup-0.3.1.exe`. `--target 12ffe62`(짧은 id)는 거부돼 태그를 먼저 올리고 `--verify-tag` 로 만들었다.
 - 담긴 것(0.3.0 뒤): 경험사탕·민트·진화 도구 그림(pokesprite), 도트 P 동전, 빈 기술머신·연결의끈 이름, 단일 포켓몬 알 색, 우리 도구 그림 15장(폰트 세션).
 
+**v0.4.0 릴리스** (2026-09-27, 사용자 결정 "0.4.0", "다른 세션작업끝나면 전부 다" — 교환 세션 terminal-pokemon-67 이 했다)
+- 버전 0.3.1 → 0.4.0(`e8beef6`, `package.json`·`package-lock.json` 의 버전 줄만). 친구 교환이라는 큰 기능이 들어가 두 번째 자리를 올렸다.
+- 빌드: 작업 트리에 미커밋 계정 코드가 있어, 커밋 `e8beef6` 그대로의 임시 git worktree 에서 `npm ci` 와 `npm run dist:win` 을 돌렸다. 설치 파일 107.6MB. 앱 안 그림은 우리 도구 그림 15장과 로고 8장뿐이고 포켓몬 그림은 없다. 실행 의존성(`@supabase` 7개·`iceberg-js`·`tslib`)이 들어갔다. 임시 HOME 으로 띄워 25초 안에 그림 2093개 받기와 첫 선택 대기를 확인했다. 빌드 뒤 worktree 는 지웠다.
+- 게시: `main` 푸시(`5a7ad7e..e8beef6`), 태그 `v0.4.0` → `e8beef6`, GitHub Release `v0.4.0` 에 `pokebuddy-Setup-0.4.0.exe`(`--verify-tag`).
+- 담긴 것(0.3.1 뒤 47 커밋): 친구 교환(교환 탭·링크로 열기·`pokebuddy trade`), 박스 정렬·끌어 옮기기·이름, 소리 크기·알림음·그림 크기 1~5, 설정 네 탭(계정 탭은 준비 중), 두 번째 파티 칸 업적 50레벨, 스타터 피츄, 첫 돌봄 두 단계, 잠금 중 시간 정지, 저장 실패 안내. 세션·창 모드와 VS Code 확장은 지웠다.
+
 **경험사탕·민트 그림** (폰트 세션 인계 — 사용자 결정 "경험사탕·민트 그림을 실행 때 받아오게 연결")
 - 출처: PokeAPI 에 없어(404) msikma/pokesprite 에서 받는다(코드 MIT, 그림 © Nintendo·Creatures·GAME FREAK, 32×32). 폰트 세션이 주소를 조사해 넘겼다. 15개 주소를 받아 모두 200·PNG 임을 확인했다.
 - `src/main/portraits.ts` `itemUrl`: 경험사탕 `exp-candy/<크기>.png`, 민트 21종은 올려 주는 능력치별 6장(`mint/attack` 등, 성실민트는 `neutral`), 진화 도구 4종(`galarica-wreath`·`sweet-apple`·`tart-apple`·`cracked-pot`)은 `evo-item/`. 나머지는 PokeAPI. 미리 받기와 필요할 때 받기(`iconUrl`)가 같은 주소를 쓴다.
