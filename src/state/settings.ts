@@ -3,9 +3,11 @@
 // 한 번에 한 항목만 바꾼다. 어떤 항목인지와 허용 값을 여기가 모두 가진다.
 // 화면은 무엇을 보여 줄지만 정하고 값 검사는 하지 않는다. 허용 밖의 값이면 저장을 바꾸지 않는다.
 // 놀이공간 영역(`playRegion`)은 영역 그리기 창이 적용할 때 보낸다. 영역과 `region` 방식을 한 번에 바꾼다.
+// 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
+import { screenRefOf } from "../save/v3.js";
 import type { SaveV3 } from "../shared/save-v3";
 
-export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion";
+export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
 
 export type SettingFailure = "bad-args" | "bad-value";
 
@@ -20,10 +22,10 @@ export interface SetResult {
 export const SETTING_CHOICES = {
   language: ["ko", "en"],
   sleepAfterMin: [3, 5, 10, 15, 0], // 0 은 잠들지 않음
-  playArea: ["full", "region"],
+  playArea: ["all", "screen", "region"],
 } as const;
 
-const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion"];
+const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion", "playScreen"];
 
 // 소리 크기 — 설정 값(0~100)을 소리마다의 최대 음량에 곱한다. 앱 소리는 이 규칙 하나를 따른다 (2026-09-27 사용자 요청 "소리가 너무 커")
 //   defaultVolume  새 저장·옛 저장의 기본값
@@ -79,11 +81,17 @@ export function setSetting(save: SaveV3, key: SettingKey, value: unknown): SetRe
   if (key === "playRegion") {
     const rect = regionOf(value);
     if (!rect) return { ok: false, reason: "bad-value" };
-    s.playArea = { mode: "region", rect };
+    s.playArea = { ...s.playArea, mode: "region", rect };
     return { ok: true, key, value: rect };
   }
-  // 놀이공간은 방식만 바꾼다. 그려 둔 영역은 지우지 않는다 — 화면 전체로 갔다가 돌아와도 그대로다
+  if (key === "playScreen") {
+    const screen = screenRefOf(value);
+    if (!screen) return { ok: false, reason: "bad-value" };
+    s.playArea = { ...s.playArea, mode: "screen", screen };
+    return { ok: true, key, value: screen };
+  }
+  // 놀이공간은 방식만 바꾼다. 그려 둔 영역과 고른 화면은 지우지 않는다 — 다른 방식으로 갔다가 돌아와도 그대로다
   if (!SETTING_CHOICES.playArea.some((v) => v === value)) return { ok: false, reason: "bad-value" };
-  s.playArea = { mode: value as "full" | "region", rect: s.playArea.rect };
+  s.playArea = { ...s.playArea, mode: value as SaveV3["settings"]["playArea"]["mode"] };
   return { ok: true, key, value };
 }

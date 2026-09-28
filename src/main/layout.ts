@@ -50,9 +50,9 @@ export function stageOf(target: Rect, display: Rect): Rect | null {
   return { x: Math.round(x1), y: Math.round(y1), w: Math.round(x2 - x1), h: Math.round(y2 - y1) };
 }
 
-// 동반자의 놀이공간 — 화면 전체면 주 화면 작업 영역, 영역 지정이면 그려 둔 영역을 가장 많이 겹치는 화면 안으로 자른다.
-// 영역이 어느 화면과도 겹치지 않으면(모니터 변경) 화면 전체로 대신한다. 저장된 영역은 지우지 않는다 (docs/specs/game.md "놀이공간")
-export function playAreaRect(area: { mode: "full" | "region"; rect: Rect | null }, displays: Rect[], primaryWork: Rect): Rect {
+// 동반자의 놀이공간 사각형 하나 — 영역 지정이면 그려 둔 영역을 가장 많이 겹치는 화면 안으로 자르고, 그 밖의 방식은 주 화면 작업 영역이다.
+// 영역이 어느 화면과도 겹치지 않으면(모니터 변경) 주 화면으로 대신한다. 저장된 영역은 지우지 않는다 (docs/specs/game.md "놀이공간")
+export function playAreaRect(area: { mode: string; rect: Rect | null }, displays: Rect[], primaryWork: Rect): Rect {
   if (area.mode === "region" && area.rect) {
     let best: Rect | null = null;
     for (const d of displays) {
@@ -62,6 +62,108 @@ export function playAreaRect(area: { mode: "full" | "region"; rect: Rect | null 
     if (best) return best;
   }
   return { ...primaryWork };
+}
+
+// ── 여러 화면 (2026-09-28) ─────────────────────────────────────────────────────
+// 놀이공간 방식 — 모든 화면(화면마다 무대 창 하나) · 한 화면(고른 화면) · 영역 지정(그린 영역). 설계는 worklog/records/multi-display/record.md
+
+// 지금 화면 하나 — Electron Display 에서 필요한 것만. 좌표는 DIP
+export interface ScreenInfo {
+  id: number;
+  bounds: Rect;
+  work: Rect; // 작업 영역 — 메뉴 막대·Dock·작업 표시줄을 뺀 곳
+  primary: boolean;
+}
+
+// 저장에 두는 화면 가리키기 — id 와 그 화면의 사각형 (src/shared/save-v3.ts ScreenRefV3)
+export interface ScreenRef extends Rect {
+  id: number;
+}
+
+export const screenRefOfInfo = (s: ScreenInfo): ScreenRef => ({ id: s.id, ...s.bounds });
+
+const overlapArea = (a: Rect, b: Rect): number => {
+  const cut = stageOf(a, b);
+  return cut ? cut.w * cut.h : 0;
+};
+
+// 화면 번호 순서 — 주 화면이 1, 나머지는 왼쪽에서 오른쪽, 같으면 위에서 아래
+export function screenOrder(screens: readonly ScreenInfo[]): ScreenInfo[] {
+  return [...screens].sort((a, b) => (a.primary !== b.primary ? (a.primary ? -1 : 1) : a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y));
+}
+
+// 저장된 화면 → 지금 화면. id 가 같은 화면, 없으면 사각형이 가장 많이 겹치는 화면, 그것도 없으면 주 화면. 화면이 하나도 없으면 null
+// id 가 바뀌는 경우(Windows 모니터 재연결 등)는 사각형으로 되찾는다. 저장된 값은 바꾸지 않는다 — 모니터를 다시 꽂으면 돌아온다
+export function resolveScreen(ref: ScreenRef | null, screens: readonly ScreenInfo[]): ScreenInfo | null {
+  const primary = screens.find((s) => s.primary) ?? screens[0] ?? null;
+  if (!ref) return primary;
+  const same = screens.find((s) => s.id === ref.id);
+  if (same) return same;
+  let best: ScreenInfo | null = null;
+  let bestArea = 0;
+  for (const s of screens) {
+    const area = overlapArea(ref, s.bounds);
+    if (area > bestArea) {
+      best = s;
+      bestArea = area;
+    }
+  }
+  return best ?? primary;
+}
+
+// 무대 창 하나 — key 는 화면 id. target 은 놀이공간(화면 좌표), rect 는 무대 창 사각형(= target ∩ 화면)
+export interface PlayLane {
+  key: string;
+  screen: ScreenInfo;
+  target: Rect;
+  rect: Rect;
+}
+
+const laneOf = (screen: ScreenInfo, target: Rect): PlayLane | null => {
+  const rect = stageOf(target, screen.bounds);
+  return rect ? { key: String(screen.id), screen, target: { ...target }, rect } : null;
+};
+
+// 놀이공간 → 무대 창 목록. 모든 화면은 화면마다 하나(번호 순), 한 화면·영역 지정은 하나다
+export function playLanes(area: { mode: string; rect: Rect | null; screen: ScreenRef | null }, screens: readonly ScreenInfo[]): PlayLane[] {
+  if (!screens.length) return [];
+  if (area.mode === "all") return screenOrder(screens).flatMap((s) => laneOf(s, s.work) ?? []);
+  if (area.mode === "region" && area.rect) {
+    let best: PlayLane | null = null;
+    for (const s of screenOrder(screens)) {
+      const lane = laneOf(s, area.rect);
+      if (lane && (!best || lane.rect.w * lane.rect.h > best.rect.w * best.rect.h)) best = lane;
+    }
+    // 놀이공간은 그린 영역 그대로다(무대 창만 화면 안으로 자른다) — 여러 화면 전의 계산과 같다
+    if (best) return [best];
+  }
+  const chosen = area.mode === "screen" ? resolveScreen(area.screen, screens) : resolveScreen(null, screens);
+  const lane = chosen ? laneOf(chosen, chosen.work) : null;
+  return lane ? [lane] : [];
+}
+
+// 모든 화면 방식의 개체 배분 — 사는 화면이 있으면 그 화면(없어졌으면 resolveScreen 규칙으로 대신), 없으면 개체가 가장 적은 화면.
+// 개수가 같으면 번호가 앞인 화면. 저장하지 않는다 — 같은 파티·같은 화면이면 늘 같은 결과다. 끌어다 놓아야 사는 화면이 저장된다
+export function assignScreens(pets: readonly { id: string; screen: ScreenRef | null }[], screens: readonly ScreenInfo[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const order = screenOrder(screens);
+  if (!order.length) return out;
+  const count = new Map<number, number>(order.map((s) => [s.id, 0]));
+  for (const p of pets) {
+    if (!p.screen) continue;
+    const s = resolveScreen(p.screen, order);
+    if (!s) continue;
+    out.set(p.id, s.id);
+    count.set(s.id, (count.get(s.id) ?? 0) + 1);
+  }
+  for (const p of pets) {
+    if (out.has(p.id)) continue;
+    let pick = order[0]!;
+    for (const s of order) if ((count.get(s.id) ?? 0) < (count.get(pick.id) ?? 0)) pick = s;
+    out.set(p.id, pick.id);
+    count.set(pick.id, (count.get(pick.id) ?? 0) + 1);
+  }
+  return out;
 }
 
 // 화면 좌표의 사각형을 무대 안 좌표로

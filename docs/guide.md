@@ -45,7 +45,7 @@ pokebuddy는 화면 위에 떠 있는 포켓몬 동반자다. 테두리 없는 �
 macOS · Windows 에서 동작한다.
 
 ```
-pokebuddy setup             # 처음 한 번 — CLI LLM 상태 훅 설치
+pokebuddy setup             # 처음 한 번 — 데이터 폴더와 상태 훅 파일 준비 (CLI 연결은 설정창 연결 탭)
 pokebuddy companion         # 동반자 띄우기 — 첫 실행이면 선택창을 열고, 이후 저장된 파티를 복원한다
 pokebuddy companion stop    # 동반자 내리기
 ```
@@ -97,7 +97,8 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 - 켜면 Dock 에 남지 않고 메뉴 막대 아이콘으로 있다. 처음이면 첫 포켓몬 선택 창이 뜬다.
 - 떠 있을 때 앱을 다시 열면 설정창을 연다.
 - 설정의 "로그인 시 시작"을 켜면 Mac 에 로그인할 때 함께 뜬다.
-- 자동 업데이트가 없다. 새 버전은 새 dmg 로 앱을 덮어 설치한다. 설정 창 아래에는 지금 버전만 보인다.
+- 켜진 채로 새 버전을 받는다. 다 받으면 설정 창 아래에 "새 버전 준비됨"과 `다시 시작`이 뜬다. 누르면 앱을 새 버전으로 바꾸고 다시 켠다. 누르지 않아도 끌 때 바꾼다. 이 기능은 0.9.0 부터다. 0.8.0 이하 Mac 앱은 0.9.0 dmg 로 한 번 덮어 설치해야 한다.
+- 앱 폴더에 쓸 수 없거나 dmg 안에서 바로 실행 중이면 바꾸지 못한다. 이때는 설정 창 아래에 `새 버전 <버전>` 과 `받기` 가 뜬다. `받기` 는 이 Mac 용 dmg 를 연다.
 - 끝내기는 메뉴 막대 아이콘의 메뉴에서 한다. 제거는 `Applications` 의 `PokeBuddy` 를 휴지통으로 옮긴다. 저장 폴더는 남는다.
 - CLI 상태 연동은 Windows 실행 파일과 같이 훅을 `node` 로 실행한다. 쓰려면 Node.js 가 있어야 한다.
 
@@ -115,10 +116,9 @@ pokebuddy companion
 - `pokebuddy setup` 은 처음 한 번만 하면 된다. 하는 일은 다음과 같다:
   - Electron 확인 — 실행 파일이 없으면 받는다
   - 펫 데이터 폴더 `~/.claude/pokebuddy` 생성
-  - 상태 훅 설치 — `~/.claude/scripts/hooks/pokebuddy-state.cjs` 를 복사한다. 쓰고 있는 CLI(설정 폴더가 있는 것)마다 등록한다.
-    등록 위치는 다음과 같다 — Claude Code `~/.claude/settings.json`, Gemini CLI `~/.gemini/settings.json`, Codex CLI `~/.codex/hooks.json`.
-    **바꾸기 전에 백업을 남긴다. 이미 있는 항목은 건드리지 않는다. 여러 번 실행해도 결과가 같다.**
-    CLI 를 나중에 설치했으면 `pokebuddy setup` 을 다시 실행한다
+  - 상태 훅 파일 준비 — `~/.claude/scripts/hooks/pokebuddy-state.cjs` 를 복사한다. **CLI 마다 훅을 등록하지는 않는다** (2026-09-28 사용자 결정).
+    CLI 연결은 설정창 → 사용자 → `연결` 탭의 버튼으로 CLI 마다 한다. 이미 등록된 훅은 건드리지 않는다
+  - 옛 이름 훅 정리 — 예전 이름(termimon·pkmon)으로 등록된 훅이 있으면 걷는다. 바꾸기 전에 백업을 남긴다
   - 옛 에디터 확장 제거 — 예전 버전이 VS Code 계열 에디터에 설치한 확장(`local.pokebuddy-active-terminal`, 옛 이름 `local.termimon-active-terminal` · `local.pkmon-active-terminal`)이 있으면 지운다. setup 은 에디터 CLI 를 PATH 나 앱 안에서 찾는다. 열려 있는 에디터 창은 다시 불러와야 적용된다
   - 옛 확장 기록 제거 — `~/.claude/pokebuddy/cli.json` 과 `~/.claude/pokebuddy/windows/` 가 남아 있으면 지운다
 - 무엇을 바꿀지 먼저 보려면 `pokebuddy setup --dry-run` 을 쓴다. 에디터를 건드리지 않으려면 `--no-editor` 를 쓴다.
@@ -263,8 +263,8 @@ npm 이 만든 `pokebuddy.ps1` 이 실행 정책에 걸린 것이다. `pokebuddy
 ## 동반자
 
 동반자는 기기당 하나다. **항상 위**에 뜬다. 어느 터미널을 보든 그 창에서 도는 CLI LLM 의 상태를 따른다.
-포켓몬은 놀이공간 안에서만 움직인다. 놀이공간은 설정창 설정에서 `화면 전체` 나 `영역 지정` 으로 고른다.
-`화면 전체` 는 주 모니터의 작업 영역이다. `영역 지정` 은 드래그로 그린 사각형이다.
+포켓몬은 놀이공간 안에서만 움직인다. 놀이공간은 설정 → `화면` 탭에서 `모든 화면`·`한 화면`·`영역 지정` 으로 고른다.
+`한 화면` 은 고른 모니터의 작업 영역이다(기본은 주 모니터). 목록에서 고르거나 `화면에서 고르기` 로 모니터를 눌러 고른다. `모든 화면` 은 모니터마다 포켓몬이 나뉘어 논다. 다른 모니터로 끌어다 놓으면 그 모니터로 옮겨 가고, 놓은 자리가 새 집이다(`save.json` 의 마리 `screen`). 끄는 동안 그림은 원래 모니터 가장자리에서 잘리고 놓는 순간 옮겨 간다. `영역 지정` 은 드래그로 그린 사각형이다.
 저장(`save.json`)의 파티 중 보이게 둔 마리(최대 6마리)를 [무대 창 하나](#화면-구조--무대-창-하나)에 함께 그린다.
 
 ### 무엇을 따르는가 — 매 폴링 다시 고른다
@@ -350,14 +350,20 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 
 ## CLI LLM 상태 연동
 
-`pokebuddy setup` 이 쓰고 있는 CLI 마다 훅을 등록한다. 동반자는 맨 앞 터미널 앱에서 띄운 CLI 의 훅 상태에 따라 동작을 바꾼다.
+설정창 → 사용자 → `연결` 탭에서 CLI 마다 훅을 등록한다 (2026-09-28 사용자 결정). `pokebuddy setup` 은 등록하지 않는다. 동반자는 맨 앞 터미널 앱에서 띄운 CLI 의 훅 상태에 따라 동작을 바꾼다.
+등록 위치는 Claude Code `~/.claude/settings.json`, Gemini CLI `~/.gemini/settings.json`, Codex CLI `~/.codex/hooks.json` 이다. 바꾸기 전에 백업을 남긴다. 같은 묶음의 다른 훅은 건드리지 않는다.
+
+- `연결` 은 훅 파일을 최신으로 두고 그 CLI 에 등록한다. `해제` 는 그 CLI 에서 우리 등록만 지운다. 훅 파일은 CLI 들이 같이 쓰므로 지우지 않는다(`pokebuddy uninstall` 이 지운다).
+- 등록된 이벤트가 지금 목록과 다르면 연결 탭에 `연결됨 · 갱신 필요` 와 `갱신` 이 뜬다. `갱신` 은 빠진 이벤트를 더하고 목록에 없는 우리 등록을 걷는다.
+- 앱이 켜질 때 한 번 정리한다: 연결된 CLI 에서 목록에 없는 우리 이벤트 등록만 걷고, 훅 파일이 이미 있으면 새 버전으로 바꾼다. 새로 등록하거나 파일을 새로 만들지는 않는다.
+- Codex 는 도구 전 이벤트(`PreToolUse`)를 등록하지 않는다. Windows 의 Codex 데몬은 훅을 부를 때마다 콘솔 창을 띄운다([openai/codex#44768](https://github.com/openai/codex/issues/44768)). 그래서 도구마다 도는 훅을 줄였다. 창이 계속 깜빡이면 `codex --no-daemon` 으로 실행하거나 Codex 를 `해제` 한다. Windows 에서 Codex 가 연결돼 있으면 한 번 이 안내 배너가 뜬다.
 훅 기록이 없으면 상태별 동작 없이 기본 동작(buddy)만 돈다.
 훅 스크립트는 `src/hooks/pokebuddy-state.ts` 하나다(빌드 → `dist/hooks/pokebuddy-state.js`, 설치 이름은 `pokebuddy-state.cjs`). CLI 마다 이벤트 이름만 다르다.
 
 | 동반자 상태 | Claude Code | Codex CLI (0.124+) | Gemini CLI (0.26+) | PMD 동작 (앞에서부터 가진 것) |
 |---|---|---|---|---|
 | `waving` (6초·4초) → 대기 | `SessionStart` · `Stop` | `SessionStart` · `Stop` | `SessionStart` · `AfterAgent` | `Pose`(2초 되풀이) · `Charge` · `Nod` |
-| `running` | `UserPromptSubmit` · `PreToolUse` · `PostToolUse` · `PostToolUseFailure`(셸 명령의 0 아닌 종료 코드) | `UserPromptSubmit` · `PreToolUse` · `PostToolUse` | `BeforeAgent` · `AfterTool` | buddy 의 [작업 모드](#buddy--돌아다니고-졸고-반응하기). `buddy=off` 면 `Walk`(옆모습) · `Hop` |
+| `running` | `UserPromptSubmit` · `PreToolUse` · `PostToolUse` · `PostToolUseFailure`(셸 명령의 0 아닌 종료 코드) | `UserPromptSubmit` · `PostToolUse` | `BeforeAgent` · `AfterTool` | buddy 의 [작업 모드](#buddy--돌아다니고-졸고-반응하기). `buddy=off` 면 `Walk`(옆모습) · `Hop` |
 | `waiting` | `PermissionRequest` · `PreToolUse`(`AskUserQuestion` · `ExitPlanMode`) | `PermissionRequest` | `Notification`(`ToolPermission`) | `Rotate` · `LookUp` · `Nod` |
 | `failed` (6~10초) | `PostToolUseFailure`(그 밖) · `StopFailure` | `PostToolUse`(종료 코드·오류 표시가 있을 때) | `AfterTool`(`tool_response.error`) | `Faint`(쓰러진 채) · `Trip` · `Cringe` · `Hurt` |
 | `idle` | 그 밖 · `PostToolUseFailure`(`is_interrupt` — Esc) | `Interrupt` · `SessionEnd` | `SessionEnd` | `Idle` |
@@ -390,7 +396,7 @@ Windows 는 조상을 구하는 데 PowerShell 을 띄워야 한다(수백 ms). 
 훅은 아무것도 출력하지 않는다. claude 는 일부 훅의 출력을 대화에 넣는다. gemini 는 출력을 훅 결과로 읽는다.
 
 훅은 마지막 프롬프트 시각(`promptAt`)도 이어서 적는다. buddy 가 "사용자가 마지막으로 뭔가 한 때"를
-알아야 잠들 수 있어서다. 업데이트한 뒤에는 `pokebuddy setup` 을 다시 실행하면 훅 파일이 새 버전으로 바뀐다.
+알아야 잠들 수 있어서다. 앱을 업데이트하면 켜질 때 훅 파일이 새 버전으로 바뀐다.
 
 ### 상태에 따라 동작이 달라지는 방식
 
@@ -472,7 +478,7 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 마리마다 창을 두지 않는다. 여러 마리여도 창 추적·프로세스는 하나다.
 
 - **무대의 마리** — 저장(`save.json`) 파티 중 보이게 둔 마리다. 슬롯 수까지, 최대 6마리다 (`src/save/rules.ts` 의 `slots.max`).
-- **무대 = 놀이공간 ∩ 그 놀이공간이 있는 디스플레이.** 화면 밖 부분은 보이지도 않는다. GPU 만 먹는다. 그래서 잘라 낸다. 창은 `setBounds` 로만 옮긴다.
+- **무대 = 놀이공간 ∩ 그 놀이공간이 있는 디스플레이.** `모든 화면` 이면 디스플레이마다 무대 창이 하나씩이다(`src/main/stage-group.ts`). 화면 밖 부분은 보이지도 않는다. GPU 만 먹는다. 그래서 잘라 낸다. 창은 `setBounds` 로만 옮긴다.
   사각형이 바뀔 때만 부른다. 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있기 때문이다
 - **자리는 메인이 정한다.** 마리 위치·집·들고 있는 마리 정보는 메인(`src/main/stage.ts`)에 있다. 40ms(25fps)마다 무대 프레임
   (마리별 id · 모습 · 배율 · 자리 · 동작)을 렌더러에 보낸다. 렌더러(`src/renderer/stage.ts`)는 받은 대로 그린다. 애니 프레임 진행만 스스로 한다.
@@ -547,7 +553,7 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 | `hatch` | 준비된 랜덤알 하나를 넣는다 |
 | `party` | 숨긴 채 파티 칸에 든 새 개체 하나를 넣는다. 랜덤알은 뺀다 |
 | `achievement` | `show-two` 를 달성·미수령으로 두고, 받은 업적 기록을 지운다 |
-| `playground` | 놀이공간을 화면 전체로 둔다 |
+| `playground` | 놀이공간을 한 화면(주 화면)으로 둔다 |
 | `box` | 레벨·친밀도가 다른 개체 8마리를 박스에 넣는다(박스 정렬·끌기 확인) |
 | `boxes` | 박스를 비우고 첫 박스 30칸을 채운 뒤 둘째 박스에 3마리를 넣는다(`◀`·`▶` 로 보내기·가득 참 확인) |
 | `done-all` | 튜토리얼을 모두 완료로 둔다 |
@@ -661,7 +667,9 @@ npm run dist:mac    # release/PokeBuddy-<버전>-arm64.dmg · release/PokeBuddy-
 - **mac 에서 만든다.** universal 헬퍼(`scripts/build-helper.js`)를 먼저 만든 뒤 `scripts/build-exe.cjs --mac` 으로 묶는다. 모으는 파일은 Windows 실행 파일과 같다.
 - 헬퍼에 arm64·x86_64 가 모두 없으면 멈춘다. Intel 용 dmg 가 창 추적 없이 나가지 않게 하기 위해서다.
 - 서명은 ad-hoc(`identity: "-"`)이다. Apple 개발자 인증서와 공증이 없다. Apple Silicon 은 서명이 전혀 없는 앱을 열지 않는다.
-- 자동 업데이트를 켜지 않는다. mac 의 electron-updater(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치한다. 그래서 GitHub Release 에는 dmg 두 개만 올린다.
+- zip 두 개(`PokeBuddy-<버전>-arm64.zip`·`-x64.zip`)와 `release/latest-mac.yml` 도 함께 만든다. GitHub Release 에는 dmg·zip 네 개와 `latest-mac.yml` 을 올린다. Mac 앱은 `latest-mac.yml` 로 새 버전을 찾고 zip 으로 바꾼다.
+- Mac 업데이트는 electron-updater 를 쓰지 않는다. electron-updater 의 mac 설치기(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치하기 때문이다. `src/main/mac-updater.ts` 가 같은 이벤트를 내는 자체 엔진이다. 받은 zip 은 sha512 로 검사하고, 앱이 끝난 뒤 도우미 스크립트가 같은 폴더 안에서 앱을 바꾼다. 실패하면 옛 앱을 되돌린다.
+- 업데이트 실기 시험은 `node dist/tools/e2e-update-mac.js` 다. 임시 폴더에 시험 앱(`pokebuddy-update-test.app`)을 두고 로컬 서버의 다음 버전으로 바꾼다. 사용자의 앱·저장·키체인은 건드리지 않는다.
 - `pokebuddy://` 링크는 앱의 `Info.plist` 에 등록한다. mac 은 여기에 적힌 스킴만 앱에 넘긴다.
 - 확인은 `release/mac-arm64/PokeBuddy.app` 을 먼저 띄워 본 뒤 dmg 로 한다.
 

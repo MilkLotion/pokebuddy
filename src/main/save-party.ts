@@ -16,7 +16,7 @@ import * as store from "../save/store.js";
 import { empty } from "../save/v3.js";
 import * as writer from "../save/writer.js";
 import type { CommandResult, NatureId } from "../shared/types";
-import type { SaveV3 } from "../shared/save-v3";
+import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { GameV3 } from "./game";
 import type { Home } from "./layout";
 import type { Paths } from "./paths";
@@ -30,6 +30,7 @@ export interface PartyPet {
   nature: NatureId | null;
   nick: string | null;
   home: Home;
+  screen: ScreenRefV3 | null; // 모든 화면 방식에서 사는 화면 — 없으면 무대 묶음이 개체가 가장 적은 화면에 둔다 (src/main/stage-group.ts)
   shown: boolean;
 }
 
@@ -52,7 +53,7 @@ export interface SaveParty {
   isWriter(): boolean;
   needsStarter(): boolean;
   begin(species: string): boolean;
-  setHome(id: string, home: Home): Promise<CommandResult>; // 저장하지 못하면 그 이유를 돌려준다
+  setHome(id: string, home: Home, screen?: unknown): Promise<CommandResult>; // 저장하지 못하면 그 이유를 돌려준다. screen 은 사는 화면(모든 화면 방식)
   setSize(id: string, size: number): Promise<CommandResult>; // 그림 크기 단계 번호. 규칙은 src/party/home.ts · src/save/rules.ts SIZE_STEPS
   setShown(id: string, shown: boolean): Promise<CommandResult>;
   save(): SaveV3 | null;
@@ -97,6 +98,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
       nature: pet.nature,
       nick: null,
       home: { ...pet.home },
+      screen: pet.screen ? { ...pet.screen } : null,
       shown: !hidden,
     };
   };
@@ -219,9 +221,10 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
       reload(true);
       return r.ok;
     },
-    async setHome(id, home) {
-      if (!amWriter) return ask("pet.set", id, { home });
-      const r = game.send({ cmd: "pet.set", target: id, args: { home, reqId: `home:${id}:${now()}` } }, "pet");
+    async setHome(id, home, screen) {
+      const extra = screen !== undefined ? { screen } : {};
+      if (!amWriter) return ask("pet.set", id, { home, ...extra });
+      const r = game.send({ cmd: "pet.set", target: id, args: { home, ...extra, reqId: `home:${id}:${now()}` } }, "pet");
       reload(true);
       return r;
     },

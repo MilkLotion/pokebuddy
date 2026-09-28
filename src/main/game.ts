@@ -94,10 +94,11 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   // CLI 연결 — 저장이 아니라 각 CLI 의 설정 파일을 본다. 읽기만 하는 호출과 바꾸는 호출을 한 입구로 받는다
   const agents = (req?: { name: string; action: AgentAction }): AgentReply => {
     const list = (): AgentRow[] => status().map((a) => ({ ...a }));
-    if (!req || req.action === "check") return { ok: true, reason: "ok", list: list() };
-    if (!agentInfo(req.name)) return { ok: false, reason: "unknown-cli", list: list() };
+    const platform = process.platform;
+    if (!req || req.action === "check") return { ok: true, reason: "ok", list: list(), platform };
+    if (!agentInfo(req.name)) return { ok: false, reason: "unknown-cli", list: list(), platform };
     const res = req.action === "connect" ? connect(req.name as AgentName) : disconnect(req.name as AgentName);
-    return { ok: res.ok, reason: res.reason, list: list() };
+    return { ok: res.ok, reason: res.reason, list: list(), platform };
   };
 
   const detail = (slug: string): DexDetail | null => {

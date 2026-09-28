@@ -28,6 +28,7 @@ export interface ConnectResult {
   changed?: boolean;
   added?: string[];
   fixed?: string[];
+  stale?: string[]; // 목록에서 빠져 걷은 이벤트
   backup?: string | null;
   notes?: string[];
   hookFile?: string;
@@ -43,9 +44,17 @@ export interface DisconnectResult {
   detail?: string;
 }
 
+// 켤 때 정리의 결과 — cli/setup.js tidyInstalled
+export interface TidyResult {
+  clis: Array<{ cli: string; removed: string[]; backup?: string | null; error?: string }>; // 옛 이벤트를 걷은(또는 못 읽은) CLI 만
+  hookFile: "최신" | "바꿈" | "없음" | "원본 없음" | "실패";
+  error?: string;
+}
+
 export interface AgentStatus extends AgentInfo {
   installed: boolean; // 그 CLI 의 설정 폴더가 있나 (CLI 를 쓰고 있나)
-  connected: boolean; // 우리 훅이 이벤트 전부에 등록돼 있나
+  connected: boolean; // 우리 훅이 하나라도 등록돼 있나
+  outdated: boolean; // 연결됐지만 지금 등록 목록·훅 파일과 다르다 — 연결 탭 "갱신"(connect)이 맞춘다. 켤 때 정리(tidy)가 옛 이벤트·옛 파일은 먼저 맞춘다
   registered: number;
   total: number;
   error?: string;
@@ -55,7 +64,8 @@ export interface AgentStatus extends AgentInfo {
 interface SetupModule {
   connectCli(cli: string, opts?: { dryRun?: boolean }): ConnectResult;
   disconnectCli(cli: string, opts?: { dryRun?: boolean }): DisconnectResult;
-  hookInstalled(): { file: boolean; current: boolean; clis: Array<{ name: string; used: boolean; error?: string; registered?: number; total?: number }> };
+  hookInstalled(): { file: boolean; current: boolean; source: boolean; clis: Array<{ name: string; used: boolean; error?: string; registered?: number; total?: number; stale?: string[] }> };
+  tidyInstalled(opts?: { dryRun?: boolean }): TidyResult;
   TARGET_CLIS: Array<{ cli: string; name: string }>;
 }
 
@@ -76,18 +86,33 @@ export function disconnect(name: AgentName, { dryRun = false } = {}): Disconnect
   return setup().disconnectCli(name, { dryRun });
 }
 
-// 세 CLI 의 연결 상태 — 설정창 "연결" 탭 한 줄씩
+// 켤 때 정리 — 새로 등록하지 않는다. 연결된 CLI 의 옛 이벤트(목록에 없는 우리 등록)만 걷고, 있는 훅 파일만 새 버전으로 바꾼다.
+// 앱 시작 때 writer 하나가 부른다 (src/main/hook-upkeep.ts). 사용자의 설정 파일은 백업을 남기고 우리 항목만 고친다
+export function tidy({ dryRun = false } = {}): TidyResult {
+  return setup().tidyInstalled({ dryRun });
+}
+
+// 세 CLI 의 연결 상태 — 설정창 "연결" 탭 한 줄씩.
+// 연결됨은 우리 훅이 하나라도 있는 것. 빠진 이벤트·목록에 없는 이벤트(옛 codex PreToolUse)·옛 훅 파일이면 갱신 필요.
+// 훅 파일(~/.claude/scripts/hooks/pokebuddy-state.cjs)은 모든 CLI 가 함께 쓴다 — 옛 버전이면 연결된 줄이 모두 갱신 필요다.
+// 원본(dist/)이 없으면 파일은 판정하지 않는다. 켤 때 정리(tidy)가 이미 있는 파일은 새 버전으로 바꾼다 — 남는 것은 빠진 이벤트 등 "갱신" 이 할 일
 export function status(): AgentStatus[] {
-  const { clis, TARGET_CLIS } = { clis: setup().hookInstalled().clis, TARGET_CLIS: setup().TARGET_CLIS };
+  const installed = setup().hookInstalled();
+  const { clis } = installed;
+  const fileStale = installed.source && !installed.current;
+  const TARGET_CLIS = setup().TARGET_CLIS;
   return AGENTS.map((a) => {
     const label = TARGET_CLIS.find((t) => t.cli === a.name)?.name;
     const row = clis.find((c) => c.name === label);
     const registered = row?.registered ?? 0;
     const total = row?.total ?? 0;
+    const stale = row?.stale ?? [];
+    const connected = !!row?.used && !row.error && (registered > 0 || stale.length > 0);
     return {
       ...a,
       installed: !!row?.used,
-      connected: !!row?.used && total > 0 && registered === total,
+      connected,
+      outdated: connected && (registered < total || stale.length > 0 || fileStale),
       registered,
       total,
       ...(row?.error ? { error: row.error } : {}),

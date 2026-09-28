@@ -54,6 +54,8 @@ api.onShow((view: BannerView) => {
   targetEl.textContent = view.kind === "achievement" ? "A" : "";
   nameEl.textContent = view.target;
   nameEl.title = view.target;
+  // 안내(notice)는 대상 그림 없이 문구를 두 줄까지 보인다 — 한 줄 말줄임이면 안내가 잘린다
+  nameEl.classList.toggle("wrap", view.kind === "notice");
   goEl.textContent = view.go;
   bannerEl.hidden = false;
   // 앞 배너 때 올려 둔 커서가 그대로면 mouseenter 가 다시 오지 않는다. 새 배너도 멈춰 둔다

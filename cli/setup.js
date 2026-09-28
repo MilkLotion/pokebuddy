@@ -1,8 +1,9 @@
 // pokebuddy setup / uninstall — 남의 컴퓨터에 설치하는 부분이라 가장 조심스럽게 다룬다.
 //
 //   1. 펫 데이터 폴더   ~/.claude/pokebuddy — 훅은 이 폴더가 없으면 아무것도 안 한다
-//   2. 상태 훅         dist/hooks/pokebuddy-state.js(TS 빌드 산출물)를 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사 +
-//                      쓰고 있는 CLI LLM 마다 이벤트 등록 — claude settings.json · gemini settings.json · codex hooks.json
+//   2. 상태 훅         dist/hooks/pokebuddy-state.js(TS 빌드 산출물)를 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사.
+//                      CLI 마다 이벤트 등록은 하지 않는다 — 설정창 → 사용자 → 연결 탭의 버튼(connectCli)으로만 한다 (2026-09-28 사용자 결정).
+//                      setup 은 옛 이름(termimon·pkmon) 등록 걷기만 계속한다
 //                      dist/ 가 없으면(git clone 직후) tsc 가 있을 때 npm run build 를 먼저 돌리고, 못 하면 훅 단계를 건너뛰고 알린다
 //   3. 옛 에디터 확장   예전 버전이 설치한 VS Code 계열 확장과 그 기록(cli.json · windows/)을 걷는다 (2026-09-27 창 모드 삭제)
 //   4. 옛 이름          termimon·pkmon 데이터 폴더를 가져오고, 옛 훅 등록·훅 파일·데이터 폴더를 걷는다
@@ -80,10 +81,12 @@ const TARGETS = [
     file: "hooks.json",
     // 훅은 codex 0.124 부터 (Interrupt 0.150 · SessionEnd 0.145). 옛 버전은 모르는 이벤트 이름을 무시한다.
     // async 는 넣지 않는다 — 0.148 전에는 async 훅을 "지원 안 함"으로 통째로 건너뛴다
+    // PreToolUse 는 넣지 않는다 — codex 에서는 running 을 다시 알릴 뿐인데 도구마다 한 번 더 돈다.
+    // Windows codex 데몬은 훅을 부를 때마다 콘솔 창을 띄운다(openai/codex#44768) — 도구당 실행을 반으로 줄인다 (2026-09-28 사용자 결정).
+    // 옛 등록에 남은 PreToolUse 는 연결 탭 "갱신"(connectCli)이 걷는다
     events: {
       SessionStart: undefined,
       UserPromptSubmit: undefined,
-      PreToolUse: undefined,
       PermissionRequest: undefined,
       PostToolUse: undefined,
       Stop: undefined,
@@ -167,12 +170,13 @@ function addHooks(data, target) {
   return { added, fixed };
 }
 
-// 우리 훅만 걷어낸다 — 같은 묶음에 남의 훅이 있으면 그건 남긴다. match 로 옛 이름 훅만 고를 수 있다
-function removeHooks(data, match = isOurs) {
+// 우리 훅만 걷어낸다 — 같은 묶음에 남의 훅이 있으면 그건 남긴다. match 로 옛 이름 훅만 고를 수 있다.
+// keepEvent 가 참인 이벤트는 건드리지 않는다 — 지금 목록에 없는 이벤트의 우리 등록만 걷을 때 쓴다
+function removeHooks(data, match = isOurs, keepEvent = () => false) {
   const removed = [];
   if (!data.hooks || typeof data.hooks !== "object") return removed;
   for (const [event, groups] of Object.entries(data.hooks)) {
-    if (!Array.isArray(groups)) continue;
+    if (!Array.isArray(groups) || keepEvent(event)) continue;
     let touched = false;
     const kept = [];
     for (const g of groups) {
@@ -191,6 +195,14 @@ function removeHooks(data, match = isOurs) {
   }
   if (data.hooks && !Object.keys(data.hooks).length) delete data.hooks;
   return removed;
+}
+
+// 지금 이벤트 목록에 없는데 우리 훅이 남아 있는 이벤트 — 옛 버전이 등록한 것(예: codex PreToolUse)
+function staleEvents(data, target) {
+  const hooks = data.hooks && typeof data.hooks === "object" ? data.hooks : {};
+  return Object.keys(hooks).filter(
+    (e) => !(e in target.events) && Array.isArray(hooks[e]) && hooks[e].some((g) => Array.isArray(g?.hooks) && g.hooks.some(isOurs)),
+  );
 }
 
 // 백업을 남기고 원자적으로 쓴다 — 쓰다 죽어도 반쪽 파일이 남지 않는다.
@@ -338,13 +350,16 @@ function registerTarget(t, { dryRun = false } = {}) {
   if (read.error) return { error: read.error, wrote: false };
   // 옛 이름 등록은 걷고 새 훅으로 다시 등록한다 — 두면 옛 훅과 새 훅이 함께 돈다
   const legacy = removeHooks(read.data, isLegacy);
+  // 목록에서 빠진 이벤트의 우리 등록을 걷는다 — 우리 명령만. 남의 훅은 그대로
+  const stale = removeHooks(read.data, isOurs, (e) => e in t.events);
   const { added, fixed } = addHooks(read.data, t);
   const what = [
     legacy.length ? `옛 이름(termimon·pkmon) 훅 ${legacy.length}개 걷음${dryRun ? " 예정" : ""}` : "",
+    stale.length ? `목록에 없는 이벤트 ${stale.length}개 걷음${dryRun ? " 예정" : ""}: ${stale.join(", ")}` : "",
     added.length ? `이벤트 ${added.length}개 추가${dryRun ? " 예정" : ""}: ${added.join(", ")}` : "",
     fixed.length ? `없는 경로를 가리키던 ${fixed.length}개 고침${dryRun ? " 예정" : ""}: ${fixed.join(", ")}` : "",
   ].filter(Boolean);
-  const out = { changed: what.length > 0, what, legacy, added, fixed, wrote: false, notes: hookNotes(t, read.data, added.length > 0) };
+  const out = { changed: what.length > 0, what, legacy, stale, added, fixed, wrote: false, notes: hookNotes(t, read.data, added.length > 0) };
   if (out.changed && !dryRun) {
     const wrote = writeSettings(t, read.data, read.existed);
     out.wrote = !wrote.error;
@@ -360,6 +375,23 @@ function unregisterTarget(t, { dryRun = false } = {}) {
   const read = readSettings(t);
   if (read.error) return { error: read.error, removed: [] };
   const removed = removeHooks(read.data, (h) => isOurs(h) || isLegacy(h));
+  const out = { removed, wrote: false };
+  if (removed.length && !dryRun) {
+    const wrote = writeSettings(t, read.data, read.existed);
+    out.wrote = !wrote.error;
+    if (wrote.error) out.error = wrote.error;
+    else out.backup = wrote.backup;
+  }
+  return out;
+}
+
+// CLI 하나의 옛 이름 훅 등록만 걷는다 — setup 이 쓴다. 우리 훅은 등록하지도 걷지도 않는다.
+// 반환: { skipped } · { error, removed:[] } (설정 파일을 못 읽음) · { removed[], wrote, backup?, error? }
+function cleanLegacyTarget(t, { dryRun = false } = {}) {
+  if (!fs.existsSync(settingsFile(t))) return { skipped: true, removed: [] };
+  const read = readSettings(t);
+  if (read.error) return { error: read.error, removed: [] };
+  const removed = removeHooks(read.data, isLegacy);
   const out = { removed, wrote: false };
   if (removed.length && !dryRun) {
     const wrote = writeSettings(t, read.data, read.existed);
@@ -399,7 +431,7 @@ function connectCli(cli, { dryRun = false } = {}) {
   const r = registerTarget(t, { dryRun });
   if (r.skipped) return { ok: false, reason: "not-installed", detail: r.skipped, hookFile };
   if (r.error && !r.wrote) return { ok: false, reason: "settings-error", detail: r.error, hookFile };
-  return { ok: true, reason: "ok", changed: r.changed, added: r.added, fixed: r.fixed, backup: r.backup || null, notes: r.notes, hookFile, error: r.error || null };
+  return { ok: true, reason: "ok", changed: r.changed, added: r.added, fixed: r.fixed, stale: r.stale, backup: r.backup || null, notes: r.notes, hookFile, error: r.error || null };
 }
 
 // 에이전트 연결 해제 — 그 CLI 의 훅 등록만 걷는다. 훅 파일은 다른 CLI 가 쓰고 있을 수 있어 남긴다
@@ -486,31 +518,26 @@ function setup({ dryRun = false, editor = true } = {}) {
     }
   }
 
-  // 3. CLI 마다 훅 등록 — 쓰고 있는 CLI(설정 폴더가 있는 것)만. 하나가 실패해도 나머지는 계속한다. 훅 원본이 없으면 통째로 건너뛴다
+  // 3. CLI 마다 옛 이름(termimon·pkmon) 훅 등록만 걷는다 — 새 등록은 하지 않는다.
+  //    CLI 연결은 설정창 → 사용자 → 연결 탭의 버튼으로만 한다 (2026-09-28 사용자 결정). 이미 등록된 우리 훅은 그대로 둔다
   for (const t of skipHooks ? [] : TARGETS) {
-    const label = `훅 등록        ${t.name.padEnd(12)}`;
-    const r = registerTarget(t, { dryRun });
-    if (r.skipped) {
-      say(`${label}${r.skipped}`);
-      continue;
-    }
-    if (r.error && !r.wrote) {
+    const label = `옛 훅 등록     ${t.name.padEnd(12)}`;
+    const r = cleanLegacyTarget(t, { dryRun });
+    if (r.skipped || (!r.error && !r.removed.length)) continue;
+    if (!r.removed.length) {
+      // 설정 파일을 못 읽었다 — 옛 등록이 남았을 수 있어 옛 훅 파일을 지우지 않는다
       say(`${label}${r.error}`);
-      process.exitCode = 1;
       legacyKept = true;
       continue;
     }
-    if (!r.changed) say(`${label}${settingsFile(t)}  이미 등록됨`);
-    else {
-      say(`${label}${settingsFile(t)}  ${r.what.join(" · ")}`);
-      if (r.error) {
-        say(`               ${r.error}`);
-        process.exitCode = 1;
-        if (r.legacy.length) legacyKept = true;
-      } else if (r.backup) say(`               백업: ${r.backup}`);
-    }
-    for (const note of r.notes) say(`               ${note}`);
+    say(`${label}${settingsFile(t)}  ${r.removed.length}개 ${dryRun ? "걷을 예정" : "걷음"}`);
+    if (r.error) {
+      say(`               ${r.error}`);
+      process.exitCode = 1;
+      legacyKept = true;
+    } else if (r.backup) say(`               백업: ${r.backup}`);
   }
+  say("CLI 연결       설정창 → 사용자 → 연결 탭에서 CLI 마다 연결한다");
 
   // 옛 훅 파일 — 옛 등록을 다 걷었을 때만 지운다. 등록만 남고 파일이 없으면 CLI 이벤트마다 없는 파일을 실행한다
   for (const legacyHook of legacyHookTargets()) {
@@ -533,7 +560,7 @@ function setup({ dryRun = false, editor = true } = {}) {
   if (dryRun) say("실제로 적용하려면: pokebuddy setup");
   else if (process.exitCode) say("설치가 덜 끝났다 — 위 메시지를 확인한 뒤 다시 pokebuddy setup");
   else {
-    say("끝. pokebuddy companion 으로 동반자를 띄우세요. CLI(claude·codex·gemini)는 새로 열어야 훅이 적용된다");
+    say("끝. pokebuddy companion 으로 동반자를 띄우세요. CLI(claude·codex·gemini) 연결은 설정창 → 사용자 → 연결 탭에서 한다");
   }
 }
 
@@ -692,7 +719,8 @@ function uninstall({ dryRun = false, purge = false, editor = true } = {}) {
 }
 
 // 진단용 — 훅 파일이 최신인가, CLI 마다 등록돼 있는가
-// 반환: { file, current, clis: [{ name, used, error?, registered?, total? }] } — used 가 false 면 그 CLI 를 안 쓴다
+// 반환: { file, current, clis: [{ name, used, error?, registered?, total?, stale? }] } — used 가 false 면 그 CLI 를 안 쓴다.
+// stale 은 지금 목록에 없는데 우리 훅이 남은 이벤트 — 연결 탭 "갱신" 이 걷는다
 function hookInstalled() {
   const file = fs.existsSync(hookTarget());
   // 업데이트 뒤 훅 파일이 옛 버전인지 — 내용이 번들(dist/)과 다르면 pokebuddy setup 으로 바꿔야 한다. dist/ 가 없으면(빌드 전) 최신으로 볼 수 없다
@@ -706,9 +734,45 @@ function hookInstalled() {
     const registered = events.filter(
       (e) => Array.isArray(hooks[e]) && hooks[e].some((g) => Array.isArray(g?.hooks) && g.hooks.some(isOurs)),
     ).length;
-    return { name: t.name, used: true, registered, total: events.length };
+    return { name: t.name, used: true, registered, total: events.length, stale: staleEvents(read.data, t) };
   });
-  return { file, current, clis };
+  // source — 비교할 원본(dist/)이 있는가. 없으면(개발 실행에서 빌드 전) 옛 버전인지 판정하지 않는다
+  return { file, current, source: fs.existsSync(HOOK_SOURCE), clis };
 }
 
-module.exports = { setup, uninstall, hookInstalled, connectCli, disconnectCli, TARGET_CLIS: TARGETS.map((t) => ({ cli: t.cli, name: t.name })) };
+// 앱이 켤 때 부르는 정리 — 새로 등록하지 않는다 (2026-09-28 사용자 결정 "기존 훅 사용자 자동 정리").
+//   CLI 등록  우리 훅이 남은 설정 파일에서 지금 목록에 없는 우리 이벤트만 걷는다(예: 옛 codex PreToolUse). 남의 훅·백업 규칙 그대로. 걷을 게 없으면 쓰지 않는다
+//   훅 파일   이미 있을 때만 원본과 다르면 새 버전으로 바꾼다. 없으면 만들지 않는다 — 연결은 연결 탭 버튼으로만 한다
+// 반환: { clis: [{ cli, removed[], backup?, error? }] (걷은 CLI 만), hookFile: "최신" | "바꿈" | "없음" | "원본 없음" | "실패", error? }
+function tidyInstalled({ dryRun = false } = {}) {
+  const clis = [];
+  for (const t of TARGETS) {
+    if (!fs.existsSync(settingsFile(t))) continue;
+    const read = readSettings(t);
+    if (read.error) {
+      clis.push({ cli: t.cli, removed: [], error: read.error });
+      continue;
+    }
+    if (!staleEvents(read.data, t).length) continue;
+    const removed = removeHooks(read.data, isOurs, (e) => e in t.events);
+    const out = { cli: t.cli, removed };
+    if (!dryRun) {
+      const wrote = writeSettings(t, read.data, read.existed);
+      if (wrote.error) out.error = wrote.error;
+      else out.backup = wrote.backup;
+    }
+    clis.push(out);
+  }
+  const target = hookTarget();
+  if (!fs.existsSync(target)) return { clis, hookFile: "없음" };
+  if (!fs.existsSync(HOOK_SOURCE)) return { clis, hookFile: "원본 없음" };
+  if (fs.readFileSync(target).equals(fs.readFileSync(HOOK_SOURCE))) return { clis, hookFile: "최신" };
+  try {
+    if (!dryRun) fs.copyFileSync(HOOK_SOURCE, target);
+    return { clis, hookFile: "바꿈" };
+  } catch (e) {
+    return { clis, hookFile: "실패", error: `${target} 에 쓰지 못함 (${e.code || e.message})` };
+  }
+}
+
+module.exports = { setup, uninstall, hookInstalled, connectCli, disconnectCli, tidyInstalled, TARGET_CLIS: TARGETS.map((t) => ({ cli: t.cli, name: t.name })) };

@@ -16,6 +16,7 @@
 // `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
+// `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -29,6 +30,15 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-dev-manage-"));
 function loadApp() {
   process.env.HOME = dir;
   process.env.USERPROFILE = dir;
+  // CLI 설정 폴더도 임시 HOME 안으로 — 사용자 환경 변수가 연결 탭을 진짜 ~/.codex·~/.claude 로 돌리지 않게
+  process.env.CODEX_HOME = path.join(dir, ".codex");
+  delete process.env.CLAUDE_CONFIG_DIR;
+  if (process.argv.includes("--agents-outdated")) {
+    const hook = `node "${path.join(dir, ".claude", "scripts", "hooks", "pokebuddy-state.cjs")}" --cli codex`;
+    const events = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse", "Stop", "Interrupt", "SessionEnd"];
+    fs.mkdirSync(process.env.CODEX_HOME, { recursive: true });
+    fs.writeFileSync(path.join(process.env.CODEX_HOME, "hooks.json"), JSON.stringify({ hooks: Object.fromEntries(events.map((e) => [e, [{ hooks: [{ type: "command", command: hook, timeout: 5 }] }]])) }));
+  }
   return {
     createGame: require(path.join(root, "dist/main/game.js")).createGame,
     openManage: require(path.join(root, "dist/main/manage-window.js")).openManage,
@@ -150,7 +160,17 @@ app.whenReady().then(async () => {
     if (!rect) return { ok: false, reason: "cancelled" };
     return game.send({ cmd: "settings.set", target: "playRegion", args: { value: rect } }, "settings");
   };
-  const win = openManage({ preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, display: () => ({ hidden: false, clickThrough: false }), ...(route ? { route } : {}) });
+  // 설정의 한 화면 — 앱과 같은 목록·번호 덮개·화면에서 고르기 (src/main/screen-picker.ts)
+  const { createScreenPicker, currentScreens, screenViews } = require(path.join(root, "dist/main/screen-picker.js"));
+  const picker = createScreenPicker({ preload: paths.preloadFile(), html: paths.rendererFile("screens.html"), screens: currentScreens });
+  const screens = () => screenViews(currentScreens(), game.read()?.settings.playArea.screen ?? null);
+  const pickScreen = async () => {
+    const ref = await picker.pick();
+    if (!ref) return { ok: false, reason: "cancelled" };
+    return game.send({ cmd: "settings.set", target: "playScreen", args: { value: ref } }, "settings");
+  };
+  app.on("will-quit", () => picker.close());
+  const win = openManage({ preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ hidden: false, clickThrough: false }), ...(route ? { route } : {}) });
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다

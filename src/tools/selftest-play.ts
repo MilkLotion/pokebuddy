@@ -78,7 +78,7 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 {
   const s = empty(T0);
   assert.deepStrictEqual(setSetting(s, "playRegion", { x: 10.4, y: 20.6, w: 800, h: 400 }), { ok: true, key: "playRegion", value: { x: 10, y: 21, w: 800, h: 400 } });
-  assert.deepStrictEqual(s.settings.playArea, { mode: "region", rect: { x: 10, y: 21, w: 800, h: 400 } });
+  assert.deepStrictEqual(s.settings.playArea, { mode: "region", rect: { x: 10, y: 21, w: 800, h: 400 }, screen: null });
   assert.equal(setSetting(s, "playRegion", { x: 0, y: 0, w: 200, h: 150 }).reason, "bad-value", "넓이가 모자라다");
   assert.equal(setSetting(s, "playRegion", { x: 0, y: 0, w: REGION_MIN.side - 1, h: 1000 }).reason, "bad-value", "한 변이 너무 얇다");
   // 넓이만 넘으면 비율은 자유다 — 아래로 길게, 옆으로 길게 (2026-09-26 사용자 요청)
@@ -88,8 +88,10 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
   assert.equal(setSetting(s, "playRegion", { x: 10, y: 21, w: 800, h: 400 }).ok, true);
   assert.equal(setSetting(s, "playRegion", { x: 0, y: 0, w: 800 }).reason, "bad-value");
   assert.equal(s.settings.playArea.rect?.w, 800, "거부하면 이전 영역을 유지한다");
-  setSetting(s, "playArea", "full");
-  assert.deepStrictEqual(s.settings.playArea, { mode: "full", rect: { x: 10, y: 21, w: 800, h: 400 } });
+  // 옛 "full" 은 이제 고를 수 없다 — 읽을 때만 한 화면(주 화면)으로 옮긴다 (2026-09-28 여러 화면)
+  assert.equal(setSetting(s, "playArea", "full").reason, "bad-value");
+  setSetting(s, "playArea", "screen");
+  assert.deepStrictEqual(s.settings.playArea, { mode: "screen", rect: { x: 10, y: 21, w: 800, h: 400 }, screen: null });
   process.stdout.write("(4) 영역 저장과 유지  ok\n");
 }
 

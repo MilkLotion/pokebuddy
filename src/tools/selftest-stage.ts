@@ -293,7 +293,7 @@ async function stageRuntimeTests(): Promise<void> {
   };
   const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;
   const stage = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, cursor: () => ({ x: 100, y: 100 }), onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
-  const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, shown: true, nick: null };
+  const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, screen: null, shown: true, nick: null };
   stage.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
   stage.setVisible(true);
   await stage.setParty([pet]);

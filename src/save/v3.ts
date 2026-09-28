@@ -6,7 +6,7 @@
 import { localDate } from "../shared/clock.js";
 import type {
   AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, PartySlotV3, PetV3,
-  PointsV3, SaveV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
+  PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
@@ -18,6 +18,18 @@ const isObj = (v: unknown): v is Raw => v != null && typeof v === "object" && !A
 const num = (v: unknown, d = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const int = (v: unknown, d = 0): number => Math.round(num(v, d));
 const nonNeg = (v: unknown, d = 0): number => Math.max(0, int(v, d));
+
+// 화면 하나를 가리키는 값 — id 와 사각형이 모두 유한한 수이고 크기가 있어야 한다. 아니면 null (설정·개체·명령이 같은 규칙을 쓴다)
+export function screenRefOf(raw: unknown): ScreenRefV3 | null {
+  if (!isObj(raw)) return null;
+  const { id, x, y, w, h } = raw;
+  if (![id, x, y, w, h].every((n) => typeof n === "number" && Number.isFinite(n))) return null;
+  const ref = { id: Math.round(id as number), x: Math.round(x as number), y: Math.round(y as number), w: Math.round(w as number), h: Math.round(h as number) };
+  return ref.w > 0 && ref.h > 0 ? ref : null;
+}
+
+// 놀이공간 방식 — 옛 "full"(주 화면)과 모르는 값은 "screen"(고른 화면 없음 = 주 화면)이다 (2026-09-28 여러 화면)
+const playModeOf = (v: unknown): SettingsV3["playArea"]["mode"] => (v === "region" || v === "all" ? v : "screen");
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 const bool = (v: unknown, d = false): boolean => (typeof v === "boolean" ? v : d);
 const str = (v: unknown, d = ""): string => (typeof v === "string" ? v : d);
@@ -80,7 +92,7 @@ const emptySettings = (): SettingsV3 => ({
   sound: true,
   volume: SOUND_DEFAULT_VOLUME,
   sleepAfterMin: 5,
-  playArea: { mode: "full", rect: null },
+  playArea: { mode: "screen", rect: null, screen: null }, // 새 저장은 주 화면 (2026-09-28 사용자 결정)
   display: {},
 });
 
@@ -144,6 +156,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     playStreak: nonNeg(raw.playStreak),
     buffs: normalizeBuffs(raw.buffs),
     home: { dx: int(home.dx, SAVE_RULES.pet.home.dx), dy: int(home.dy, SAVE_RULES.pet.home.dy) },
+    ...(screenRefOf(raw.screen) ? { screen: screenRefOf(raw.screen)! } : {}), // 2026-09-28 에 더했다. 모든 화면 방식에서 끌어다 놓은 개체만 가진다
     since: nonNeg(raw.since),
     stage: nonNeg(raw.stage),
     evolved: strings(raw.evolved),
@@ -285,8 +298,9 @@ function normalizeSettings(raw: unknown): SettingsV3 {
     volume: clamp(int(r.volume, base.volume), 0, 100), // 옛 저장에는 없어 기본값이다
     sleepAfterMin: clamp(int(r.sleepAfterMin, base.sleepAfterMin), 0, 600), // 0 은 잠들지 않음 (docs/specs/game.md "설정과 연결")
     playArea: {
-      mode: str(area.mode) === "region" ? "region" : "full",
+      mode: playModeOf(area.mode),
       rect: rect ? { x: int(rect.x), y: int(rect.y), w: nonNeg(rect.w), h: nonNeg(rect.h) } : null,
+      screen: screenRefOf(area.screen),
     },
     display: isObj(r.display) ? { ...r.display } : {},
   };

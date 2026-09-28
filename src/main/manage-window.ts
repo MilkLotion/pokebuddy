@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -37,6 +37,9 @@ const CH = {
   update: "manage:update",
   updateView: "manage:update-view",
   notes: "manage:notes",
+  screens: "manage:screens",
+  identifyScreens: "manage:identify-screens",
+  pickScreen: "manage:pick-screen",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -59,6 +62,10 @@ export interface ManageOptions {
   account?: (req: AccountAction) => Promise<AccountReply>; // 계정·클라우드 저장 (src/main/online.ts). 없으면 계정 탭은 쓸 수 없다고 보인다
   update?: (action: UpdateAction) => Promise<UpdateView>; // 버전·업데이트 (src/main/updater.ts). 없으면 설정 바닥에 버전을 그리지 않는다
   notes?: (action: "list" | "seen") => PatchNotesView; // 패치노트 (src/main/patch-notes.ts). 없으면 `패치노트` 단추를 두지 않는다
+  // 놀이공간 화면 — 목록·번호 보기·화면에서 고르기 (src/main/screen-picker.ts). 없으면 목록이 비고 고르기를 쓸 수 없다
+  screens?: () => ScreenView[];
+  identifyScreens?: (on: boolean) => void;
+  pickScreen?: () => Promise<ManageReply>;
 }
 
 let win: BrowserWindow | null = null;
@@ -68,6 +75,9 @@ let display: ManageOptions["display"] = undefined;
 let account: ManageOptions["account"] = undefined;
 let update: ManageOptions["update"] = undefined;
 let notes: ManageOptions["notes"] = undefined;
+let screens: ManageOptions["screens"] = undefined;
+let identifyScreens: ManageOptions["identifyScreens"] = undefined;
+let pickScreen: ManageOptions["pickScreen"] = undefined;
 let dexWin: DexWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
@@ -103,7 +113,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.dex, (e) => (mine(e) ? game.dex() : []));
   ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? game.dexDetail(slug) : null));
   ipcMain.handle(CH.agents, (e, req: unknown) => {
-    if (!mine(e)) return { ...DENIED, list: [] };
+    if (!mine(e)) return { ...DENIED, list: [], platform: process.platform };
     return game.agents(isAgentRequest(req) ? req : undefined);
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
@@ -189,6 +199,16 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (action !== "list" && action !== "seen") return null;
     return notes(action);
   });
+  ipcMain.handle(CH.screens, (e): ScreenView[] => (mine(e) && screens ? screens() : []));
+  ipcMain.on(CH.identifyScreens, (e, on: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    identifyScreens?.(on === true);
+  });
+  ipcMain.handle(CH.pickScreen, async (e): Promise<ManageReply> => {
+    if (!mine(e)) return DENIED;
+    if (!pickScreen) return { ok: false, reason: "not-ready" };
+    return pickScreen();
+  });
   ipcMain.handle(CH.drawRegion, async (e): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!drawRegion) return { ok: false, reason: "not-ready" };
@@ -208,6 +228,9 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   account = opts.account;
   update = opts.update;
   notes = opts.notes;
+  screens = opts.screens;
+  identifyScreens = opts.identifyScreens;
+  pickScreen = opts.pickScreen;
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -237,6 +260,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   });
   win.on("closed", () => {
     win = null;
+    identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
   });
   const route = opts.route;
   // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다

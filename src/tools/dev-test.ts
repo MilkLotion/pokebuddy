@@ -133,11 +133,11 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     },
   },
   playground: {
-    note: "바탕화면 놀이공간 — 첫 돌봄을 마쳤고 놀이공간은 화면 전체",
+    note: "바탕화면 놀이공간 — 첫 돌봄을 마쳤고 놀이공간은 주 화면",
     apply: (s, now) => {
       ensureStarter(s, now);
       tutorialsFrom(s, "playground");
-      s.settings.playArea = { mode: "full", rect: null };
+      s.settings.playArea = { mode: "screen", rect: null, screen: null };
     },
   },
   "done-all": {

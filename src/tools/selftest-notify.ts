@@ -197,4 +197,27 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   process.stdout.write("(8) 하나씩 표시와 재시작  ok\n");
 }
 
-process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작)\n");
+// (9) 줄 밖의 안내 배너(showOnce) — 보이는 배너가 없을 때만 보이고, 보이는 동안 틱이 줄의 배너로 덮지 않는다 (src/main/hook-upkeep.ts)
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-notify-"));
+  const file = path.join(dir, "notify.json");
+  try {
+    const s = seed();
+    const shown: BannerView[] = [];
+    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b) });
+    const notice: BannerView = { key: "notice:x", kind: "notice", title: "안내", target: "본문", go: "바로가기", route: { to: "agents" } };
+    assert.equal(n.showOnce(notice), true, "비어 있으면 보인다");
+    n.tick();
+    assert.deepStrictEqual(shown.map((b) => b.key), ["notice:x"], "보이는 동안 틱이 덮지 않는다");
+    assert.equal(n.showOnce({ ...notice, key: "notice:y" }), false, "보이는 배너가 있으면 거절");
+    n.done();
+    assert.ok(!shown.slice(1).some((b) => b.key === "notice:x"), "끝난 안내는 다시 보이지 않는다");
+    assert.equal(n.showing() === null || n.showing() !== "notice:x", true, "안내가 끝나면 보이는 배너에서 빠진다");
+    if (n.showing() === null) assert.equal(n.showOnce({ ...notice, key: "notice:z" }), true, "비면 다음 안내를 받는다");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  process.stdout.write("(9) 줄 밖의 안내 배너  ok\n");
+}
+
+process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작·안내)\n");

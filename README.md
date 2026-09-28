@@ -34,7 +34,7 @@ pokebuddy companion
 
 `setup` 은 처음 한 번만 실행한다. 바꾸기 전에 백업을 남기고, 여러 번 실행해도 결과가 같다.
 
-- **상태 훅** — 쓰고 있는 CLI(claude · codex · gemini)마다 `pokebuddy-state.cjs` 를 등록
+- **상태 훅 파일** — `pokebuddy-state.cjs` 를 준비한다. CLI(claude · codex · gemini) 연결은 설정창 → 사용자 → `연결` 탭에서 CLI 마다 한다
 - **데이터 폴더** — `~/.claude/pokebuddy` (설정·저장·그림 캐시)
 - **옛 흔적 정리** — 예전 버전이 설치한 VS Code 계열 확장과 그 기록(`cli.json` · `windows/`)이 있으면 지운다
 

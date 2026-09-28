@@ -151,7 +151,9 @@ export function createCommands(ctx: CommandContext): Commands {
     if (!isObj(home)) return { ok: false, reason: "not-yet", id };
     const { dx, dy } = home;
     if (typeof dx !== "number" || typeof dy !== "number" || !Number.isFinite(dx) || !Number.isFinite(dy)) return { ok: false, reason: "bad-value", id };
-    return ctx.party.setHome(id, { dx, dy });
+    // 사는 화면 — 모든 화면 방식에서 끌어다 놓았을 때만 온다. 값 검사는 실행기(src/party/home.ts)가 한다
+    const screen = isObj(c.args) && c.args.screen !== undefined ? c.args.screen : undefined;
+    return ctx.party.setHome(id, { dx, dy }, screen);
   });
 
   // 돌봄 — 저장은 실행기가 바꾸고 무대는 반응만 보인다

@@ -90,7 +90,7 @@ export function argsOf(command: Command): Record<string, unknown> {
     case "pet.form":
       return { petId: target ?? str(a.petId), species: str(a.species) };
     case "pet.set":
-      return { petId: target ?? str(a.petId), home: a.home, ...(a.size !== undefined ? { size: a.size } : {}) };
+      return { petId: target ?? str(a.petId), home: a.home, ...(a.screen !== undefined ? { screen: a.screen } : {}), ...(a.size !== undefined ? { size: a.size } : {}) };
     default:
       return { ...a };
   }

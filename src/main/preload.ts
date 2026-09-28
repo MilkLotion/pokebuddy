@@ -29,6 +29,10 @@ type BannerView = import("../shared/manage").BannerView;
 type RegionBridge = import("../shared/manage").RegionBridge;
 type RegionChannel = import("../shared/manage").RegionChannel;
 type RegionInit = import("../shared/manage").RegionInit;
+type ScreensBridge = import("../shared/manage").ScreensBridge;
+type ScreensChannel = import("../shared/manage").ScreensChannel;
+type ScreenOverlayInit = import("../shared/manage").ScreenOverlayInit;
+type ScreenView = import("../shared/manage").ScreenView;
 type MenuBridge = import("../shared/manage").MenuBridge;
 type MenuChannel = import("../shared/manage").MenuChannel;
 type MenuView = import("../shared/manage").MenuView;
@@ -99,6 +103,9 @@ const MANAGE = {
   update: "manage:update",
   updateView: "manage:update-view",
   notes: "manage:notes",
+  screens: "manage:screens",
+  identifyScreens: "manage:identify-screens",
+  pickScreen: "manage:pick-screen",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -109,6 +116,9 @@ const manage: ManageBridge = {
   agents: (req) => ipcRenderer.invoke(MANAGE.agents, req) as Promise<AgentReply>,
   onRoute: (cb) => ipcRenderer.on(MANAGE.route, (_e, route: ManageRoute) => cb(route)),
   drawRegion: () => ipcRenderer.invoke(MANAGE.drawRegion) as Promise<ManageReply>,
+  screens: () => ipcRenderer.invoke(MANAGE.screens) as Promise<ScreenView[]>,
+  identifyScreens: (on) => ipcRenderer.send(MANAGE.identifyScreens, on),
+  pickScreen: () => ipcRenderer.invoke(MANAGE.pickScreen) as Promise<ManageReply>,
   dim: (on) => ipcRenderer.send(MANAGE.dim, on),
   portraits: (asks) => ipcRenderer.invoke(MANAGE.portraits, asks) as Promise<Record<string, string | null>>,
   icons: (keys) => ipcRenderer.invoke(MANAGE.icons, keys) as Promise<Record<string, string | null>>,
@@ -154,6 +164,21 @@ const region: RegionBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyRegion", region);
+
+// 놀이공간 화면 번호 덮개 창 — 번호를 받고, 이 화면을 골랐는지·취소했는지 알린다
+const SCREENS = {
+  init: "screens:init",
+  pick: "screens:pick",
+  cancel: "screens:cancel",
+} satisfies Record<string, ScreensChannel>;
+
+const screensBridge: ScreensBridge = {
+  onInit: (cb) => ipcRenderer.on(SCREENS.init, (_e, init: ScreenOverlayInit) => cb(init)),
+  pick: () => ipcRenderer.send(SCREENS.pick),
+  cancel: () => ipcRenderer.send(SCREENS.cancel),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyScreens", screensBridge);
 
 // 앱이 그리는 메뉴 창 — 항목을 받고, 그린 크기와 고른 항목을 돌려준다
 const MENU = {

@@ -3,15 +3,17 @@
 // 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { app, nativeImage, powerMonitor, screen, Notification } from "electron";
+import { app, nativeImage, powerMonitor, screen, shell, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { pidAlive } from "../save/writer";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader } from "./art";
 import { createCommands, type Commands } from "./commands";
-import { STAGE_RULES, playAreaRect, stageOf, toLocal, type Rect } from "./layout";
+import { STAGE_RULES, playLanes, type PlayLane } from "./layout";
+import { createScreenPicker, currentScreens, screenViews, type ScreenPicker } from "./screen-picker";
 import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
 import { lockExcept, petMenu, trayMenu } from "./menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
@@ -23,14 +25,16 @@ import { pendingOf } from "../trade/core";
 import { careItem, petStatus } from "./status";
 import { openManage, pushAccount, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, type AppUpdater } from "./updater";
+import { createMacUpdater } from "./mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits } from "./portraits";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
 import { PATHS, PROJECT, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
 import { pickStarter } from "./picker-window";
-import { createStage, type Stage } from "./stage";
-import { createStageWindow, type StageWindow } from "./stage-window";
+import { createStage } from "./stage";
+import { createStageGroup, type StageGroup } from "./stage-group";
+import { createStageWindow } from "./stage-window";
 import { langOf, natureName, petLabel, petName, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { careArgOf, syncJumpList } from "./jump-list";
@@ -40,8 +44,10 @@ import { createHungerBubbles } from "./hunger-bubble";
 import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
+import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
 import type { Command } from "../shared/types";
+import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/stage";
 import { currentTutorial } from "../tutorial/core";
 
@@ -95,6 +101,9 @@ const log = debug ? (o: Record<string, unknown>) => void process.stdout.write(`$
 // 작업 표시줄·점프 목록이 설치본 바로 가기(scripts/build-exe.cjs appId)와 같은 앱으로 묶이게 — 앱 이름 줄이 "PokeBuddy" 로 보인다
 // 업데이트 실기 시험 빌드(scripts/build-exe.cjs PB_UPDATE_TEST)는 다른 ID 를 쓰고, 사용자의 설치본이 가진 OS 등록(링크·로그인 시 시작)을 건드리지 않는다
 const updateTestBuild = app.isPackaged && fs.existsSync(path.join(PROJECT, "update-test.json"));
+// 시험 빌드는 로그인 키체인을 쓰지 않는다 — safeStorage(src/main/trade.ts)가 키를 만들며 키체인 대화상자를 띄운다
+// (2026-09-28 mac 업데이트 실기 시험에서 "…Key 를 저장할 키체인을 찾을 수 없습니다" 가 뜸). 업데이트 도우미가 open 으로 다시 켤 때도 적용되게 앱이 스스로 켠다
+if (updateTestBuild) app.commandLine.appendSwitch("use-mock-keychain");
 if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy");
 
 // 동반자는 기기당 하나 — pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다.
@@ -154,12 +163,13 @@ const intervals: NodeJS.Timeout[] = [];
 let game: GameV3 | null = null;
 // 알림 배너 — 줄은 notifier 가, 창은 bannerWin 이 맡는다. 저장을 쓰는 프로세스만 배너를 띄운다
 let notifier: Notifier | null = null;
+let hookUpkeep: HookUpkeep | null = null; // 켤 때 훅 정리와 Codex 창 깜빡임 한 번 알림 — writer 만 (src/main/hook-upkeep.ts)
 let bannerWin: BannerWindow | null = null;
 let party: SaveParty | null = null;
 const saveParty = (): SaveParty | null => party;
 let lifetime: Lifetime | null = null;
-let stageWin: StageWindow | null = null;
-let stage: Stage | null = null;
+// 무대 — 화면마다 무대 창과 마리 움직임 한 쌍. 한 화면·영역 지정이면 한 쌍이다 (src/main/stage-group.ts)
+let stages: StageGroup | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
 let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (worklog/records/trade/record.md)
@@ -175,7 +185,7 @@ let tray: TrayHandle | null = null;
 // 패치노트 — 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다. 그래서 첫 선택 창이 저장을 만들기 전에 만든다
 const hadSave = fs.existsSync(PATHS.save);
 let patchNotes: PatchNotes | null = null;
-let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/updater.ts)
+let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe·mac 앱)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/updater.ts)
 let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
@@ -215,7 +225,7 @@ function offScreen(windows: HelperWindow[]): boolean {
 function workAreaTarget(): HelperWindow {
   let display: Electron.Display;
   try {
-    const cur = stageWin?.stage();
+    const cur = stages?.firstRect();
     display = cur ? screen.getDisplayMatching({ x: cur.x, y: cur.y, width: cur.w, height: cur.h }) : screen.getPrimaryDisplay();
   } catch {
     display = screen.getPrimaryDisplay();
@@ -226,27 +236,33 @@ function workAreaTarget(): HelperWindow {
 
 // ── 배선 ─────────────────────────────────────────────────────────────────────
 
-// 동반자의 놀이공간 — 설정의 `화면 전체 | 영역 지정`. 터미널 창 대신 이 사각형을 따라가는 창으로 삼는다 (2026-09-25 사용자 선택)
-// 저장을 매 폴링마다 읽지 않는다. 게임 틱과 관리 창의 설정 변경 뒤에 다시 읽는다
-let playArea: { mode: "full" | "region"; rect: Rect | null } = { mode: "full", rect: null };
+// 동반자의 놀이공간 — 설정의 `모든 화면 | 한 화면 | 영역 지정`. 터미널 창 대신 이 사각형을 따라가는 창으로 삼는다
+// (2026-09-25 사용자 선택, 2026-09-28 여러 화면). 저장을 매 폴링마다 읽지 않는다. 게임 틱과 관리 창의 설정 변경 뒤에 다시 읽는다
+let playArea: SaveV3["settings"]["playArea"] = { mode: "screen", rect: null, screen: null };
 function syncPlayArea(): void {
   if (!game) return;
   const next = game.read()?.settings.playArea;
-  if (!next || (next.mode === playArea.mode && JSON.stringify(next.rect) === JSON.stringify(playArea.rect))) return;
-  playArea = { mode: next.mode, rect: next.rect ? { ...next.rect } : null };
+  if (!next || JSON.stringify(next) === JSON.stringify(playArea)) return;
+  playArea = JSON.parse(JSON.stringify(next)) as SaveV3["settings"]["playArea"];
   anchor?.poll(); // 무대 사각형을 바로 다시 정한다
 }
+
+const lanesNow = (): PlayLane[] => playLanes(playArea, currentScreens());
+
+// 놀이공간 화면 번호 덮개 — 설정의 한 화면 목록이 열린 동안 번호를 보이고, `화면에서 고르기` 로 누른 화면을 고른다
+let screenPicker: ScreenPicker | null = null;
+const picker = (): ScreenPicker => (screenPicker ??= createScreenPicker({ preload: preloadFile(), html: rendererFile("screens.html"), screens: currentScreens }));
 
 // 바탕화면 튜토리얼 — 대기열 맨 앞이 바탕화면 것이면 무대에 말풍선을 보낸다 (src/tutorial/core.ts, docs/specs/game.md "코치마크")
 // 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 부른다. 같은 값이면 무대 창이 다시 보내지 않는다
 function syncCoach(): void {
-  if (!game || !stageWin) return;
+  if (!game || !stages) return;
   const save = game.read();
   const now = save ? currentTutorial(save) : null;
   const view = now && now.surface === "stage" && save ? coachView(now.id, save.starterPetId) : null;
   // 첫 돌봄 동안 밝힌 포켓몬을 세운다 — 걸으면 말풍선이 따라 움직인다 (2026-09-27 사용자 피드백)
-  stage?.pin(view?.kind === "pet" ? view.petId ?? null : null);
-  stageWin.sendCoach(view);
+  stages.pin(view?.kind === "pet" ? view.petId ?? null : null);
+  stages.sendCoach(view);
 }
 
 // 첫 돌봄의 단계 — 1/2 우클릭 유도, 포켓몬 메뉴가 열리면 2/2 메뉴에서 밥 주기 (2026-09-27 사용자 결정 "시안대로 진행", Figma `579:16959`).
@@ -341,45 +357,29 @@ function coachView(id: string, starterPetId: string | null): CoachView | null {
   const name = t(`coach.${id}.name`);
   const step = total === 1 ? t("coach.step.single", { name }) : t("coach.step", { name, at: menuStep ? 2 : 1, total }); // 한 단계뿐이면 "1 / 1" 을 붙이지 않는다
   const base = { id, step, title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
-  if (id === "playground") return { ...base, kind: "area", areaLabel: t(playArea.mode === "region" ? "coach.area.region" : "coach.area.full") };
+  if (id === "playground") return { ...base, kind: "area", areaLabel: t(`coach.area.${playArea.mode}`) };
   // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
-  const ids = stage?.petIds() ?? [];
+  const ids = stages?.petIds() ?? [];
   const petId = starterPetId && ids.includes(starterPetId) ? starterPetId : ids[0];
   return petId ? { ...base, kind: "pet", petId, ...(id === "first-care" && firstCareAvoid ? { avoid: firstCareAvoid } : {}) } : null;
 }
 
-function playTarget(): HelperWindow {
-  const displays = screen.getAllDisplays().map((d) => ({ x: d.bounds.x, y: d.bounds.y, w: d.bounds.width, h: d.bounds.height }));
-  const work = screen.getPrimaryDisplay().workArea;
-  const r = playAreaRect(playArea, displays, { x: work.x, y: work.y, w: work.width, h: work.height });
-  return { id: -2, pid: 0, app: "", x: r.x, y: r.y, w: r.w, h: r.h };
-}
-
-// 무대 사각형 = 놀이공간 ∩ 그 사각형이 있는 디스플레이. 바뀔 때만 setBounds (stage-window 가 가른다)
+// 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
 function onAnchorUpdate(update: AnchorUpdate): void {
-  if (quitting || !stageWin || !stage) return;
-  const play = playTarget();
-  const target: Rect = { x: play.x, y: play.y, w: play.w, h: play.h };
-  const d = screen.getDisplayMatching({ x: target.x, y: target.y, width: target.w, height: target.h }).bounds;
-  const rect = stageOf(target, { x: d.x, y: d.y, w: d.width, h: d.height });
-  if (rect) {
-    stageWin.setStage(rect);
-    stage.setStage(toLocal(target, rect), { w: rect.w, h: rect.h }, false);
-  }
-  const show = update.visible && stageWin.stage() != null; // 아직 무대 사각형이 없으면 1×1 창을 보이지 않는다
-  stageWin.setVisible(show);
-  stage.setVisible(show);
+  if (quitting || !stages) return;
+  stages.layout(lanesNow(), playArea.mode === "all");
+  stages.setVisible(update.visible);
 }
 
 // 클릭 통과는 이번 실행에만 둔다 — config.json 에 쓰지 않는다
 function applyClickThrough(on: boolean): void {
   config.clickThrough = on;
   // 들고 있는 중에 클릭 통과를 켜면 pointerup 이 영영 안 온다 — 커서에 붙은 채로 남지 않게 놓는다
-  if (on) stage?.releaseHeld();
+  if (on) stages?.releaseHeld();
   // 무대는 늘 통과로 시작해 그림 위에서만 받는다 — 커서 밑은 다음 hoverTick 이 본다
-  stageWin?.setPassing(true);
-  stageWin?.sendClickThrough(on);
+  stages?.setPassing(true);
+  stages?.sendClickThrough(on);
   tray?.refresh();
 }
 
@@ -392,8 +392,8 @@ function setHidden(on: boolean): void {
 const toggleHidden = (): void => setHidden(!userHidden);
 
 const firstPet = (): PartyPet | null => {
-  const id = stage?.petIds()[0];
-  return id ? (stage?.petOf(id) ?? null) : null;
+  const id = stages?.petIds()[0];
+  return id ? (stages?.petOf(id) ?? null) : null;
 };
 const displayName = (): string => {
   const p = firstPet();
@@ -410,9 +410,26 @@ function startUpdater(): void {
     hadSave,
     autoShow: app.isPackaged, // 개발 실행·E2E 는 띄우지 않는다 — 관리 창 조작을 가린다
   });
+  const installed = app.isPackaged && (process.platform === "win32" || process.platform === "darwin");
   updater = createAppUpdater({
     version: app.getVersion(),
-    enabled: app.isPackaged && process.platform === "win32",
+    enabled: installed,
+    // mac 은 자체 엔진 — Squirrel.Mac 은 정식 서명이 없는 앱을 바꾸지 않는다 (src/main/mac-updater.ts). Windows 는 electron-updater
+    ...(installed && process.platform === "darwin"
+      ? {
+          updater: createMacUpdater({
+            version: app.getVersion(),
+            resourcesPath: process.resourcesPath,
+            exePath: app.getPath("exe"),
+            arch: process.arch,
+            home: os.homedir(),
+            pid: process.pid,
+            quit: () => app.quit(),
+            onWillQuit: (fn) => app.on("will-quit", fn),
+            openExternal: (url) => void shell.openExternal(url),
+          }),
+        }
+      : {}),
     onView: (view) => pushUpdate(view),
     // 다시 시작 전 — 바뀐 저장을 클라우드에 올린다. 끄기 경로(before-quit)가 같은 일을 다시 하지 않게 표시한다
     beforeInstall: async () => {
@@ -473,6 +490,17 @@ const openManageWindow = (route?: ManageRoute): void => {
       syncPlayArea();
       return reply;
     },
+    // 설정의 한 화면 — 목록, 목록이 열린 동안 번호 덮개, `화면에서 고르기`. 고른 화면을 저장하면 한 화면 방식이 된다
+    screens: () => screenViews(currentScreens(), game?.read()?.settings.playArea.screen ?? null),
+    identifyScreens: (on) => picker().identify(on),
+    pickScreen: async () => {
+      const ref = await picker().pick();
+      if (!ref) return { ok: false, reason: "cancelled" };
+      if (!commands) return { ok: false, reason: "not-ready" };
+      const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playScreen", args: { value: ref }, from: "settings" });
+      syncPlayArea();
+      return reply;
+    },
   });
 };
 
@@ -507,7 +535,7 @@ async function playCry(id: string): Promise<void> {
   if (!pet) return;
   cries ??= createCries(path.join(PATHS.home, "cries"));
   const uri = await cries.get(pet.species);
-  if (uri) stageWin?.sendCry(uri, volume);
+  if (uri) stages?.sendCry(id, uri, volume);
 }
 
 function notifyGame(body: string): void {
@@ -526,8 +554,8 @@ function runGameCommand(command: Command): void {
 
 // 포켓몬 위 우클릭 — 이름·상태 / 밥 주기·놀아주기 / 상세 보기. 앱 전체 조작은 트레이가 맡는다
 function showPetMenu(id: string): void {
-  const p = stage?.petOf(id);
-  if (!p || !stageWin) return;
+  const p = stages?.petOf(id);
+  if (!p) return;
   const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null };
   const pet = saveParty()?.save()?.pets.find((row) => row.id === id) ?? null;
   const care = pet ? { status: petStatus(pet), feed: careItem(pet, "feed"), play: careItem(pet, "play") } : {};
@@ -558,7 +586,7 @@ function showPetMenu(id: string): void {
   const avoid = firstCare && pet
     ? {
         onPlaced: (r: { x: number; y: number; w: number; h: number }) => {
-          const s = stageWin?.stage();
+          const s = stages?.stageRectOf(id);
           firstCareAvoid = s ? { x: r.x - s.x, y: r.y - s.y, w: r.w, h: r.h } : undefined;
           syncCoach();
         },
@@ -669,8 +697,8 @@ function openTradeLink(link: string): void {
 }
 
 async function refreshParty(): Promise<void> {
-  if (!party || !stage) return;
-  await stage.setParty(party.pets());
+  if (!party || !stages) return;
+  await stages.setParty(party.pets());
   tray?.setIcon(logoFile(256));
   tray?.refresh();
 }
@@ -685,9 +713,9 @@ const hungerBubbles = createHungerBubbles();
 // (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다")
 // 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스")
 function stateTick(): void {
-  if (!anchor || !stage) return;
+  if (!anchor || !stages) return;
   const { state, promptAt } = anchor.currentInfo();
-  stage.setState(state, promptAt);
+  stages.setState(state, promptAt);
 
   const worker = saveParty();
   if (worker?.isWriter() && game && !screenLocked) {
@@ -704,11 +732,12 @@ function stateTick(): void {
       // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
       // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
       if (!userHidden) {
-        const st = stage;
+        const st = stages;
         const shown = (worker.save()?.pets ?? []).filter((p) => st.petOf(p.id));
         for (const b of hungerBubbles.due(shown, now)) st.say(b.id, t(b.zone === "starving" ? "bubble.starving" : "bubble.hungry"), BUBBLE_MS);
       }
       notifier?.tick(); // 부화 준비·진화 가능·업적 미수령을 배너 줄에 세운다 (src/notify)
+      hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
       syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
       syncCoach();
       syncJump();
@@ -768,7 +797,7 @@ async function main(): Promise<void> {
   lifetime = createLifetime({
     lockFile: PATHS.companionLock,
     pidAlive,
-    hasWindow: () => bootReady && !!stageWin?.alive(),
+    hasWindow: () => bootReady && !!stages?.alive(),
     quit: () => app.quit(),
   });
   lifetime.start();
@@ -812,63 +841,60 @@ async function main(): Promise<void> {
   }
 
   const art = createArtLoader(PATHS);
-  stageWin = createStageWindow({
-    debug,
-    preload: preloadFile(),
-    html: rendererFile("stage.html"),
-    log,
-    onReady: () => {
-      stage?.releaseHeld(); // 렌더러가 새로 떴다 — 들고 있던 포인터도 사라졌다
-      stage?.resend();
-      stageWin?.resendCoach();
-    },
-    // 튜토리얼 말풍선의 버튼 — `다음`·`확인` 은 완료, ✕ 는 스킵
-    onCoachAction: ({ id, action }) => {
-      if (id === "first-care") firstCareMenu = null;
-      void commands?.dispatcher
-        .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, args: { steps: 1 }, from: "pet" })
-        .then(() => syncCoach());
-    },
-    onHit: (id) => stage?.hit(id),
-    onPointer: (msg) => stage?.pointer(msg),
-    onGone: () => stage?.releaseHeld(),
-    onHidden: () => stage?.releaseHeld(),
-  });
-  staged = true;
-
-  stage = createStage({
-    buddyMode: config.buddy,
-    timeScale: runtime.buddyTimeScale,
-    window: stageWin,
-    art,
-    ghost: () => !!config.clickThrough,
-    cursor: () => {
-      const rect = stageWin?.stage();
-      if (!rect || !stageWin?.isVisible()) return null;
-      const p = screen.getCursorScreenPoint();
-      const x = p.x - rect.x, y = p.y - rect.y;
-      return x >= 0 && y >= 0 && x <= rect.w && y <= rect.h ? { x, y } : null;
-    },
-    onDrop: (id, home) => {
-      void commands?.dispatcher.dispatch({ cmd: "pet.set", target: id, args: { home }, from: "pet" }).then(async (result) => {
+  // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage-group.ts)
+  stages = createStageGroup({
+    createWindow: (hooks) =>
+      createStageWindow({
+        debug,
+        preload: preloadFile(),
+        html: rendererFile("stage.html"),
+        log,
+        ...hooks,
+        // 튜토리얼 말풍선의 버튼 — `다음`·`확인` 은 완료, ✕ 는 스킵
+        onCoachAction: ({ id, action }) => {
+          if (id === "first-care") firstCareMenu = null;
+          void commands?.dispatcher
+            .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, args: { steps: 1 }, from: "pet" })
+            .then(() => syncCoach());
+        },
+      }),
+    createStage: (win, hooks) =>
+      createStage({
+        buddyMode: config.buddy,
+        timeScale: runtime.buddyTimeScale,
+        window: win,
+        art,
+        ghost: () => !!config.clickThrough,
+        cursor: hooks.cursor,
+        onDrop: hooks.onDrop,
+        // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
+        onClick: (id) => {
+          void commands?.click(id);
+          void playCry(id);
+        },
+        onMenu: showPetMenu,
+        onArtMissing: (pet) => {
+          // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다
+          process.stderr.write(`${pet.species}: PMD 그림을 받지 못함 — 무대에 나오지 않는다 (네트워크·프록시 확인)\n`);
+          reportFailure(PATHS, pet.look, `${pet.look} 그림을 받지 못함 — 네트워크(프록시)를 확인하거나 다른 펫 이름으로 시도`);
+        },
+        log,
+      }),
+    cursorPoint: () => screen.getCursorScreenPoint(),
+    // 놓은 자리(와 모든 화면이면 사는 화면)를 저장한다. 실패하면 저장된 자리로 되돌린다
+    onDrop: (id, home, onScreen) => {
+      void commands?.dispatcher.dispatch({ cmd: "pet.set", target: id, args: { home, ...(onScreen ? { screen: onScreen } : {}) }, from: "pet" }).then(async (result) => {
         if (result.ok) return;
         log?.({ drop: "failed", id, reason: result.reason });
         await refreshParty();
       });
     },
-    // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
-    onClick: (id) => {
-      void commands?.click(id);
-      void playCry(id);
-    },
-    onMenu: showPetMenu,
-    onArtMissing: (pet) => {
-      // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다
-      process.stderr.write(`${pet.species}: PMD 그림을 받지 못함 — 무대에 나오지 않는다 (네트워크·프록시 확인)\n`);
-      reportFailure(PATHS, pet.look, `${pet.look} 그림을 받지 못함 — 네트워크(프록시)를 확인하거나 다른 펫 이름으로 시도`);
-    },
     log,
   });
+  // 첫 배치 — 마리를 싣기 전에 무대 창이 있어야 한다(아래 "그림을 하나도 못 받음" 판정이 무대를 본다)
+  syncPlayArea();
+  stages.layout(lanesNow(), playArea.mode === "all");
+  staged = true;
 
   anchor = createAnchor({
     paths: PATHS,
@@ -882,9 +908,9 @@ async function main(): Promise<void> {
       quit: () => app.quit(),
       quitting: () => quitting,
     },
-    flags: () => ({ userHidden, held: stage?.heldId() != null }),
+    flags: () => ({ userHidden, held: stages?.heldId() != null }),
     onUpdate: onAnchorUpdate,
-    onFocus: (key) => stage?.focus(key),
+    onFocus: (key) => stages?.focus(key),
     onInput: onTrayInput,
     log,
   });
@@ -896,17 +922,17 @@ async function main(): Promise<void> {
     prepareLook: async (look) => !!await art.loadLook(look),
     onChanged: async (evolvedId) => {
       await refreshParty();
-      if (evolvedId) stage?.celebrate(evolvedId);
+      if (evolvedId) stages?.celebrate(evolvedId);
     },
     stage: {
-      poke: (id) => !!stage?.poke(id),
+      poke: (id) => !!stages?.poke(id),
       care: (id, action) => {
-        stage?.care(id, action);
+        stages?.care(id, action);
         if (action === "play") void playCry(id); // 메뉴·관리 창에서 고른 놀아주기
       },
-      petIds: () => stage?.petIds() ?? [],
-      size: () => stageWin?.size() ?? { w: 0, h: 0 },
-      visible: () => !!stageWin?.isVisible(),
+      petIds: () => stages?.petIds() ?? [],
+      size: () => stages?.size() ?? { w: 0, h: 0 },
+      visible: () => !!stages?.isVisible(),
     },
     settings: {
       hidden: () => userHidden,
@@ -941,7 +967,7 @@ async function main(): Promise<void> {
 
   await refreshParty();
   if (quitting) return;
-  if (saveSource.pets().length && !stage.petIds().length) {
+  if (saveSource.pets().length && !stages.petIds().length) {
     // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
     process.stderr.write(`펫 그림을 찾을 수 없음: ${saveSource.pets().map((p) => p.look).join(", ")}\n`);
     app.exit(3);
@@ -960,6 +986,11 @@ async function main(): Promise<void> {
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
   startUpdater();
+  // 기존 훅 정리 — 옛 이벤트를 걷고 있는 훅 파일을 새 버전으로. 새로 등록하지 않는다. 시작을 막지 않게 뒤로 미룬다
+  if (saveSource.isWriter()) {
+    hookUpkeep = createHookUpkeep({ noticesFile: path.join(path.dirname(PATHS.save), "notices.json"), show: (b) => notifier?.showOnce(b) ?? false, log });
+    setImmediate(() => hookUpkeep?.start());
+  }
 
   tray = createTray({
     icon: logoFile(256),
@@ -981,9 +1012,14 @@ async function main(): Promise<void> {
   lifetime.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
 
   intervals.push(setInterval(stateTick, STAGE_RULES.statePollMs));
-  intervals.push(setInterval(() => stage?.tick(), STAGE_RULES.tickMs));
+  intervals.push(setInterval(() => stages?.tick(), STAGE_RULES.tickMs));
+  // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
+  const relayout = (): void => anchor?.poll();
+  screen.on("display-added", relayout);
+  screen.on("display-removed", relayout);
+  screen.on("display-metrics-changed", relayout);
   anchor.start();
-  log?.({ boot: "companion", pets: stage.petIds(), writer: saveSource.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
+  log?.({ boot: "companion", pets: stages.petIds(), writer: saveSource.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
 }
 
 app
@@ -1023,6 +1059,7 @@ app.on("before-quit", (e) => {
   mainOnline?.dispose();
   mainOnline = null;
   bannerWin?.close();
+  screenPicker?.close();
   bannerWin = null;
   party?.stop(); // 저장 잠금을 놓는다
 });

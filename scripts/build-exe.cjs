@@ -1,8 +1,9 @@
 // Windows 설치 파일 만들기 — `npm run dist:win` → release/pokebuddy-Setup-<버전>.exe
-// mac 디스크 이미지 만들기 — `npm run dist:mac` → release/PokeBuddy-<버전>-arm64.dmg
-//                                                 release/PokeBuddy-<버전>-x64.dmg
+// mac 디스크 이미지 만들기 — `npm run dist:mac` → release/PokeBuddy-<버전>-arm64.dmg · -x64.dmg
+//                                                 release/PokeBuddy-<버전>-arm64.zip · -x64.zip · latest-mac.yml
 //   mac 은 ad-hoc 서명만 한다. Apple 개발자 인증서가 없어 공증도 없다. 처음 실행 때 Gatekeeper 가 막는다
-//   mac 은 자동 업데이트가 없다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다
+//   mac 업데이트는 electron-updater(Squirrel.Mac)가 아니라 src/main/mac-updater.ts 가 한다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다.
+//   zip·latest-mac.yml 은 그 업데이트가 받는 파일이다. 릴리스 때 dmg 와 함께 올린다
 //
 // 1. npm run build 로 dist/ 를 만든다 (package.json 의 스크립트가 먼저 부른다)
 // 2. release/app/ 에 실행에 필요한 파일만 복사한다. 목록은 package.json 의 `files` 와 같다
@@ -25,14 +26,14 @@ if (MAC && process.platform !== "darwin") throw new Error("mac 설치 파일은 
 // 업데이트 실기 시험 빌드 (scripts/e2e-update.cjs) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
 // 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않고, 대신 update-test.json 표시 파일로 임시 홈을 쓰고 OS 등록(링크·로그인 시 시작)을 건너뛴다
 const TEST = process.env.PB_UPDATE_TEST === "1";
-if (MAC && TEST) throw new Error("업데이트 실기 시험은 Windows 설치본만 만든다 — mac 은 자동 업데이트가 없다");
 // 시험 빌드의 앱은 이 임시 홈만 쓴다 — 사용자의 저장을 건드리지 않게 반드시 준다
 const testHome = process.env.PB_UPDATE_HOME ?? "";
 if (TEST && !path.isAbsolute(testHome)) throw new Error("시험 빌드는 PB_UPDATE_HOME(임시 홈의 절대 경로)이 필요하다");
 const version = TEST && process.env.PB_UPDATE_VERSION ? process.env.PB_UPDATE_VERSION : pkg.version;
 const name = TEST ? `${pkg.name}-update-test` : pkg.name;
-// 앱 이름 — mac 은 앱 번들 이름(PokeBuddy.app)이 된다. Windows 는 설치 폴더·실행 파일 이름이라 pkg.name 그대로
-const productName = MAC ? "PokeBuddy" : name;
+// 앱 이름 — mac 은 앱 번들 이름(PokeBuddy.app)이 된다. Windows 는 설치 폴더·실행 파일 이름이라 pkg.name 그대로.
+// 업데이트 시험 빌드는 mac 도 pkg.name 계열 이름(pokebuddy-update-test.app)이라 사용자의 앱과 섞이지 않는다
+const productName = MAC && !TEST ? "PokeBuddy" : name;
 const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : path.join(root, "release");
 const stage = path.join(release, "app");
 
@@ -97,7 +98,7 @@ function stageFiles() {
     copied.push(`node_modules/${name}`);
   }
   // home — 앱이 쓸 임시 홈(config.js updateTestHome). 업데이트 설치 파일이 다시 켠 앱도 사용자의 홈 대신 이 홈을 쓴다
-  if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: "업데이트 실기 시험 빌드 — scripts/e2e-update.cjs", home: testHome })}\n`);
+  if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: `업데이트 실기 시험 빌드 — ${MAC ? "src/tools/e2e-update-mac.ts" : "scripts/e2e-update.cjs"}`, home: testHome })}\n`);
   const appPkg = {
     name,
     productName,
@@ -130,13 +131,14 @@ async function main() {
     directories: { output: release },
     files: ["**/*"],
   };
+  // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml(Windows)·latest-mac.yml(mac)이 생긴다.
+  // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
+  const publish = process.env.PB_UPDATE_FEED
+    ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
+    : [{ provider: "github", owner: "MilkLotion", repo: "pokebuddy" }];
   const windows = {
-    // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml 이 생긴다.
-    // 릴리스 때 exe 와 함께 latest.yml·.blockmap 을 GitHub Release 에 올린다.
-    // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
-    publish: process.env.PB_UPDATE_FEED
-      ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
-      : [{ provider: "github", owner: "MilkLotion", repo: "pokebuddy" }],
+    // 릴리스 때 exe 와 함께 latest.yml·.blockmap 을 GitHub Release 에 올린다
+    publish,
     win: { icon: logo("logo.ico") },
     // 원클릭 설치 — 묻지 않고 사용자 폴더(%LOCALAPPDATA%\Programs\pokebuddy)에 설치한 뒤 앱을 띄운다 (2026-09-25 사용자 선택).
     // 단계식 마법사는 "모든 사용자/나만" 화면을 끌 수 없어 쓰지 않는다
@@ -154,10 +156,10 @@ async function main() {
       artifactName: "${productName}-Setup-${version}.${ext}",
     },
   };
-  // mac 은 자동 업데이트를 쓰지 않는다 — publish 를 null 로 막아 app-update.yml·latest-mac.yml 을 만들지 않는다.
-  // 키를 빼면 electron-builder 가 git 원격으로 공급처를 짐작해 넣는다(2026-09-28 빌드에서 provider: gitlab 로 생김)
+  // mac 업데이트는 src/main/mac-updater.ts 가 app-update.yml 로 공급처를 알고 latest-mac.yml·zip 을 받는다.
+  // publish 를 적지 않으면 electron-builder 가 git 원격으로 공급처를 짐작한다(2026-09-28 빌드에서 provider: gitlab 로 생김) — Windows 와 같은 값을 적는다
   const mac = {
-    publish: null,
+    publish,
     mac: {
       icon: logo("logo.icns"),
       category: "public.app-category.entertainment",
@@ -169,11 +171,15 @@ async function main() {
       artifactName: "${productName}-${version}-${arch}.${ext}",
     },
     dmg: { artifactName: "${productName}-${version}-${arch}.${ext}" },
+    // 업데이트가 받는 zip 도 mac.artifactName 을 따른다 — 확장자만 달라 dmg 와 겹치지 않는다(electron-builder 에 zip 전용 설정은 없다)
   };
   const out = await builder.build({
     projectDir: stage,
+    // mac 업데이트 시험 빌드는 이 Mac 아키텍처의 zip 만 만든다 — dmg·다른 아키텍처는 시험에 쓰지 않고 몇 분 걸린다
     targets: MAC
-      ? builder.Platform.MAC.createTarget("dmg", builder.Arch.arm64, builder.Arch.x64)
+      ? TEST
+        ? builder.Platform.MAC.createTarget(["zip"], process.arch === "arm64" ? builder.Arch.arm64 : builder.Arch.x64)
+        : builder.Platform.MAC.createTarget(["dmg", "zip"], builder.Arch.arm64, builder.Arch.x64)
       : builder.Platform.WINDOWS.createTarget("nsis", builder.Arch.x64),
     publish: "never",
     config: { ...common, ...(MAC ? mac : windows) },

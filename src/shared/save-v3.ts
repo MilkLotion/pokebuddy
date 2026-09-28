@@ -37,6 +37,7 @@ export interface PetV3 {
   playStreak: number; // 이어서 놀아준 횟수. 정해진 수에 닿으면 오래 놀아주기 버프가 붙는다
   buffs: BuffV3[];
   home: { dx: number; dy: number };
+  screen?: ScreenRefV3; // 모든 화면 놀이공간에서 사는 화면 — 끌어다 놓을 때 정한다. 없으면 개체가 가장 적은 화면 (2026-09-28 여러 화면)
   since: number;
   stage: number; // 이 개체가 진화한 횟수
   evolved: string[]; // 거쳐 온 종
@@ -101,7 +102,17 @@ export interface TutorialV3 {
   queuedAt?: number; // 시작 조건을 채운 시각 — 먼저 생긴 것부터 보여 준다 (src/tutorial/core.ts)
 }
 
-export type PlayAreaMode = "full" | "region";
+// 놀이공간 방식 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면). 옛 "full"(주 화면)은 읽을 때 "screen" + 주 화면이 된다
+export type PlayAreaMode = "all" | "screen" | "region";
+
+// 화면 하나를 가리키는 값 — Electron Display.id 와 그 화면의 사각형(DIP). id 가 없어지면 사각형이 가장 많이 겹치는 화면을 쓴다
+export interface ScreenRefV3 {
+  id: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export interface SettingsV3 {
   language: string;
@@ -109,7 +120,7 @@ export interface SettingsV3 {
   sound: boolean;
   volume: number; // 소리 크기 0~100 (src/state/settings.ts SOUND_RULES). 2026-09-27 에 더했다
   sleepAfterMin: number;
-  playArea: { mode: PlayAreaMode; rect: { x: number; y: number; w: number; h: number } | null };
+  playArea: { mode: PlayAreaMode; rect: { x: number; y: number; w: number; h: number } | null; screen: ScreenRefV3 | null }; // screen 은 한 화면 방식의 고른 화면. null 이면 주 화면
   display: Record<string, unknown>;
 }
 

@@ -66,6 +66,7 @@ export interface Stage {
   say(id: string, text: string, ms: number): void; // 말풍선을 ms 동안 — 배고픔 구간 진입 (docs/specs/game.md "배고픔 말풍선")
   petIds(): string[];
   petOf(id: string): PartyPet | null;
+  bodyOf(id: string): Size | null; // 몸 크기 (DIP) — 다른 화면에 놓을 때 자리를 잡는다 (src/main/stage-group.ts)
   heldId(): string | null;
   lastFrame(): StageFrame | null;
   pin(id: string | null): void; // 그 마리를 제자리에 세운다(걷지 않고 서 있는 동작). null 이면 풀고 선 자리에서 다시 움직인다 — 첫 돌봄 튜토리얼
@@ -369,6 +370,10 @@ export function createStage(opts: StageOptions): Stage {
     },
     petIds: () => order.filter((id) => pets.has(id)),
     petOf: (id) => pets.get(id)?.pet ?? null,
+    bodyOf: (id) => {
+      const p = pets.get(id);
+      return p ? { ...p.body } : null;
+    },
     heldId: () => held,
     pin(id) {
       if (id === pinned) return;

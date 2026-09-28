@@ -135,6 +135,17 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      /* 안내 — 대상 그림 없이 두 줄까지. 두 줄(16px × 2)이 단추 높이 32px 와 같아 배너 창 높이가 그대로다 */
+      .target.notice {
+        display: none;
+      }
+      .name.wrap {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: keep-all;
+      }
       .go {
         flex: none;
         height: 32px;

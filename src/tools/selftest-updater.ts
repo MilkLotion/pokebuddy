@@ -22,6 +22,10 @@ class FakeUpdater extends EventEmitter implements UpdaterLike {
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void {
     this.installed = [isSilent, isForceRunAfter];
   }
+  opened = 0;
+  openDownload(): void {
+    this.opened += 1;
+  }
 }
 
 async function main(): Promise<void> {
@@ -87,7 +91,19 @@ async function main(): Promise<void> {
   assert.equal(await up2.install(), false, "준비되지 않았으면 다시 시작하지 않는다");
   process.stdout.write("(5) 확인 실패·다시 확인  ok\n");
 
-  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패)\n");
+  // (6) mac 수동 — 앱을 그 자리에서 바꿀 수 없다. 새 버전만 보이고 `받기` 는 받을 곳을 열 뿐 앱을 끄지 않는다
+  const fake3 = new FakeUpdater();
+  let flushed3 = 0;
+  const up3 = createAppUpdater({ version: "0.8.0", enabled: true, updater: fake3, onView: () => undefined, beforeInstall: async () => { flushed3 += 1; }, setTimer: () => 0, clearTimer: () => undefined });
+  fake3.emit("update-manual", { version: "0.9.0", reason: "disk-image" });
+  assert.deepEqual({ s: up3.view().status, n: up3.view().next }, { s: "manual", n: "0.9.0" });
+  assert.equal(await up3.install(), true);
+  assert.equal(fake3.opened, 1, "받을 곳을 연다");
+  assert.equal(fake3.installed, null, "앱을 끄고 설치하지 않는다");
+  assert.equal(flushed3, 0, "끄지 않으니 정리도 하지 않는다");
+  process.stdout.write("(6) mac 수동 — 새 버전 알림·받기  ok\n");
+
+  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

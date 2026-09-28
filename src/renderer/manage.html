@@ -1719,6 +1719,16 @@
       .dialog.settings.notes-new {
         height: auto;
       }
+      /* 놀이공간 한 화면 — 화면 목록과 `화면에서 고르기` 를 한 줄에. 단추를 목록 칸 높이(28)에 맞춘다 */
+      .screen-pick {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .screen-pick button.act {
+        height: 28px;
+        padding: 0 11px;
+      }
       /* 설정의 고르기 — 박스 정렬 목록과 같은 모양 */
       .setting .setting-select .sort-toggle {
         height: 28px;
@@ -1794,6 +1804,12 @@
       }
       .agent-dot.on {
         background: var(--primary);
+      }
+      .agent-dot.warn {
+        background: var(--warning);
+      }
+      .agent-tip {
+        margin-top: 2px;
       }
       .agents-note {
         margin-top: 8px;

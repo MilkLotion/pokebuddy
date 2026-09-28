@@ -20,6 +20,7 @@ import type {
   PatchNotesView,
   PetView,
   PortraitAsk,
+  ScreenView,
   ShopItemView,
   SlotView,
   SaveSummaryView,
@@ -165,6 +166,7 @@ let dexRows: DexEntry[] | null = null;
 // 도감에서 고른 칸 — 상세는 관리 창 옆 도감 기기 창이 보인다 (src/main/dex-window.ts)
 let dexPick: string | null = null;
 let agentRows: AgentRow[] | null = null;
+let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
 let boxPage = 0;
 // 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
 let boxQuery = "";
@@ -3104,17 +3106,35 @@ function drawDisplay(scroll: HTMLElement): void {
     scroll.appendChild(settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
     scroll.appendChild(settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setSetting("clickThrough", !d.clickThrough))));
   }
+  // 놀이공간 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면, worklog/records/multi-display/record.md)
   const area = [
-    { id: "full", label: "화면 전체" },
+    { id: "all", label: "모든 화면" },
+    { id: "screen", label: "한 화면" },
     { id: "region", label: "영역 지정" },
   ] as const;
-  scroll.appendChild(
-    settingRow(
-      "놀이공간",
-      s.playArea === "region" ? (s.hasRegion ? "그려 둔 영역 안에서만 돌아다님" : "영역을 아직 그리지 않았음") : undefined,
-      segmented(area, s.playArea === "region" ? "region" : "full", (id) => setSetting("playArea", id)),
-    ),
-  );
+  const hint =
+    s.playArea === "all"
+      ? "다른 화면으로 끌어다 놓으면 그 화면으로 옮겨 감"
+      : s.playArea === "region"
+        ? s.hasRegion
+          ? "그려 둔 영역 안에서만 돌아다님"
+          : "영역을 아직 그리지 않았음"
+        : undefined;
+  scroll.appendChild(settingRow("놀이공간", hint, segmented(area, s.playArea, (id) => setSetting("playArea", id))));
+  // 한 화면 — 목록에서 고르거나 화면 위에서 눌러 고른다. 목록이 열린 동안 모든 모니터에 번호를 띄운다(syncIdentify)
+  if (s.playArea === "screen") {
+    void loadScreens();
+    const rows = screenRows ?? [];
+    const options = rows.map((r) => ({ value: String(r.ref.id), label: [`화면 ${r.number}`, r.primary ? "주 화면" : "", `${r.w}×${r.h}`].filter(Boolean).join(" · ") }));
+    const now = rows.find((r) => r.current) ?? rows[0];
+    const box = el("div", "screen-pick");
+    if (now) box.appendChild(settingSelect("screen", options, String(now.ref.id), 224, (id) => {
+      const row = rows.find((r) => String(r.ref.id) === id);
+      if (row) setSetting("playScreen", row.ref);
+    }));
+    box.appendChild(actionButton("화면에서 고르기", false, false, () => void screenPick()));
+    scroll.appendChild(settingRow("화면", undefined, box));
+  }
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
     const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
@@ -3122,24 +3142,64 @@ function drawDisplay(scroll: HTMLElement): void {
   }
 }
 
+// 한 화면 목록 — 그릴 때마다 새로 읽고, 바뀌었을 때만 다시 그린다(모니터를 꽂거나 뺐을 수 있다)
+let screenRows: ScreenView[] | null = null;
+let screensLoading = false;
+async function loadScreens(): Promise<void> {
+  if (screensLoading) return;
+  screensLoading = true;
+  try {
+    const next = await window.pokebuddyManage.screens();
+    const changed = JSON.stringify(next) !== JSON.stringify(screenRows);
+    screenRows = next;
+    if (changed && dialog?.kind === "settings" && dialog.tab === "display") drawDialog();
+  } finally {
+    screensLoading = false;
+  }
+}
+
+// 한 화면 목록이 열린 동안만 모든 모니터에 번호 덮개 — 바뀔 때만 메인에 알린다
+let identifying = false;
+function syncIdentify(): void {
+  const on = dialog?.kind === "settings" && dialog.tab === "display" && settingSelectOpen === "screen";
+  if (on === identifying) return;
+  identifying = on;
+  window.pokebuddyManage.identifyScreens(on);
+}
+
 // 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
 
-// CLI 한 줄 — 상태를 네 가지로 나눈다 (docs/specs/game.md "설정과 연결")
+// CLI 한 줄 — 상태를 다섯 가지로 나눈다 (docs/specs/game.md "설정과 연결").
+// 갱신 필요 — 연결됐지만 등록 목록·훅 파일이 지금과 다르다(옛 codex PreToolUse 등). "갱신" 이 connect 를 다시 불러 맞춘다
 function agentRow(row: AgentRow): HTMLElement {
   const usage = row.usage === "transcript" ? "토큰으로 적립" : "작업 시간으로 적립";
   // 상태 글자는 시안처럼 짧게 — 연결됨만 적립 방식을 붙이고, 확인이 필요하면 이유를 붙인다
-  const hint = row.error ? `확인 필요 · ${row.error}` : !row.installed ? "미설치" : row.connected ? `연결됨 · ${usage}` : "연결 안 됨";
+  const hint = row.error
+    ? `확인 필요 · ${row.error}`
+    : !row.installed
+      ? "미설치"
+      : row.connected && row.outdated
+        ? "연결됨 · 갱신 필요"
+        : row.connected
+          ? `연결됨 · ${usage}`
+          : "연결 안 됨";
 
   const control = el("div", "actions");
   control.style.margin = "0";
   if (!row.installed) control.appendChild(actionButton("다시 확인", false, false, () => void agent(row.name, "check")));
+  else if (row.connected && row.outdated) control.appendChild(actionButton("갱신", true, false, () => void agent(row.name, "connect")));
   else if (row.connected) control.appendChild(actionButton("해제", false, false, () => void agent(row.name, "disconnect")));
   else control.appendChild(actionButton("연결", true, false, () => void agent(row.name, "connect")));
 
-  // 상태는 dot(분류)과 글자로 — 연결됨만 초록 (Figma `Settings / Connect` `633:19096`)
+  // 상태는 dot(분류)과 글자로 — 연결됨은 초록, 갱신 필요는 주황 (Figma `Settings / Connect` `633:19096`)
   const line = settingRow(row.label, hint, control);
   const hintEl = line.querySelector<HTMLElement>(".hint");
-  if (hintEl) hintEl.prepend(el("span", row.connected && !row.error ? "agent-dot on" : "agent-dot"));
+  const dot = row.error || !row.connected ? "agent-dot" : row.outdated ? "agent-dot warn" : "agent-dot on";
+  if (hintEl) hintEl.prepend(el("span", dot));
+  // Windows codex 데몬은 훅마다 콘솔 창을 띄운다(openai/codex#44768) — 알려진 우회를 줄 아래에 둔다
+  if (row.name === "codex" && row.installed && agentPlatform === "win32") {
+    line.querySelector(".body")?.appendChild(el("div", "hint agent-tip", "Windows 에서 창이 깜빡이면 codex --no-daemon 으로 실행하세요"));
+  }
   return line;
 }
 
@@ -3222,6 +3282,7 @@ function versionWord(u: UpdateView): string {
   if (u.status === "latest") return `pokebuddy ${u.version} · 최신 버전`;
   if (u.status === "downloading") return `새 버전 ${u.next ?? ""} 받는 중 ${u.percent ?? 0}%`;
   if (u.status === "ready") return `새 버전 ${u.next ?? ""} 준비됨`;
+  if (u.status === "manual") return `새 버전 ${u.next ?? ""}`;
   if (u.status === "error") return "업데이트를 확인하지 못했어요";
   return `pokebuddy ${u.version}`; // 꺼 둠(개발 실행·npm 설치본)·확인 전·확인 중
 }
@@ -3237,6 +3298,8 @@ function versionFoot(): HTMLElement {
   if (upd) {
     box.appendChild(el("span", "version-word", versionWord(upd)));
     if (upd.status === "ready") box.appendChild(smallButton("다시 시작", true, () => void updateSend("install")));
+    // mac 에서 앱을 그 자리에서 바꿀 수 없다(dmg 안·쓰기 불가) — 이 Mac 용 dmg 를 연다 (src/main/mac-updater.ts)
+    else if (upd.status === "manual") box.appendChild(smallButton("받기", true, () => void updateSend("install")));
     else if (upd.status === "error") box.appendChild(smallButton("다시 확인", false, () => void updateSend("check")));
   }
   if (patch?.notes.length) box.appendChild(smallButton("패치노트", false, () => open({ kind: "notes" })));
@@ -3365,6 +3428,7 @@ function drawDialog(): void {
   if (!dialog) {
     setScrim(false);
     dialogScrollKey = "";
+    syncIdentify();
     return;
   }
   setScrim(true);
@@ -3394,6 +3458,7 @@ function drawDialog(): void {
   const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
   if (scroll && keep) scroll.scrollTop = keep;
   restoreSearchFocus();
+  syncIdentify();
 }
 
 // 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
@@ -3418,6 +3483,7 @@ function close(): void {
   dialog = null;
   notice = "";
   setScrim(false);
+  syncIdentify();
 }
 
 const openPet = (id: string): void => open({ kind: "pet", petId: id });
@@ -3524,6 +3590,21 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
   return true;
 }
 
+// 화면 고르기 덮개를 연다. 누른 화면을 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
+async function screenPick(): Promise<void> {
+  if (busy) return;
+  busy = true;
+  let reply: ManageReply;
+  try {
+    reply = await window.pokebuddyManage.pickScreen();
+    await refresh();
+  } finally {
+    busy = false;
+  }
+  notice = reply.ok || reply.reason === "cancelled" ? "" : REASON[reply.reason] ?? reply.reason;
+  drawDialog();
+}
+
 // 영역 그리기 창을 연다. 적용하면 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
 async function regionDraw(): Promise<void> {
   if (busy) return;
@@ -3542,6 +3623,7 @@ async function regionDraw(): Promise<void> {
 async function agent(name: string, action: "connect" | "disconnect" | "check"): Promise<void> {
   const reply = await window.pokebuddyManage.agents({ name, action });
   agentRows = reply.list;
+  agentPlatform = reply.platform;
   notice = reply.ok ? "" : (REASON[reply.reason] ?? reply.reason);
   drawDialog();
 }
@@ -3553,7 +3635,9 @@ async function loadDex(): Promise<void> {
 }
 
 async function loadAgents(): Promise<void> {
-  agentRows = (await window.pokebuddyManage.agents()).list;
+  const reply = await window.pokebuddyManage.agents();
+  agentRows = reply.list;
+  agentPlatform = reply.platform;
   if (dialog?.kind === "user" && dialog.tab === "agents") drawDialog();
 }
 
@@ -3592,6 +3676,11 @@ function goTo(route: ManageRoute): void {
     detailPet = null;
     void loadTrade();
     draw();
+  } else if (route.to === "agents") {
+    // Codex 창 깜빡임 알림 — 사용자 모달의 연결 탭 (src/agents/notice.ts)
+    detailPet = null;
+    open({ kind: "user", tab: "agents" });
+    void loadAgents();
   } else {
     open({ kind: "achievements" });
     dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });

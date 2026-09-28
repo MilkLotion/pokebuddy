@@ -21,6 +21,7 @@ export interface Notifier {
   tick(): void; // 저장을 훑어 줄을 고치고, 비어 있으면 다음 배너를 내보낸다
   done(): void; // 보이던 배너가 사라졌다
   showing(): string | null; // 지금 보이는 배너의 키
+  showOnce(banner: BannerView): boolean; // 줄 밖의 배너(안내) — 보이는 배너가 없을 때만 보이고 true. 보이는 동안 틱이 덮지 않는다
 }
 
 // 파일이 없거나 모양이 틀리면 null — 처음 켠 것으로 본다
@@ -76,5 +77,11 @@ export function createNotifier({ file, read, now = Date.now, show }: NotifierOpt
       scan();
     },
     showing: () => current,
+    showOnce(banner) {
+      if (current) return false;
+      current = banner.key; // done 이 올 때까지 줄의 다음 배너를 내보내지 않는다
+      show(banner);
+      return true;
+    },
   };
 }

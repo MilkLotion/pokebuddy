@@ -163,7 +163,7 @@ export interface SettingsView {
   sound: boolean;
   volume: number; // 소리 크기 0~100
   sleepAfterMin: number; // 0 이면 잠들지 않음
-  playArea: "full" | "region";
+  playArea: "all" | "screen" | "region"; // 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면)
   hasRegion: boolean; // 영역을 이미 그렸는가
 }
 
@@ -201,7 +201,8 @@ export interface AgentRow {
   name: string;
   label: string;
   installed: boolean; // 그 CLI 를 쓰고 있는가
-  connected: boolean; // 우리 훅이 전부 등록돼 있는가
+  connected: boolean; // 우리 훅이 하나라도 등록돼 있는가
+  outdated: boolean; // 연결됐지만 등록 목록·훅 파일이 지금과 다르다 — 연결 탭 "갱신"
   registered: number;
   total: number;
   usage: string; // transcript 이면 토큰을 읽는다. none 이면 작업 시간으로 적립한다
@@ -212,6 +213,7 @@ export interface AgentReply {
   ok: boolean;
   reason: string;
   list: AgentRow[]; // 처리 뒤 다시 읽은 상태
+  platform: string; // process.platform — Windows 에서만 붙이는 안내(codex --no-daemon)를 가른다
 }
 
 // 화면이 보내는 요청 — 이름과 인자는 src/tx/bridge.ts 가 푼다.
@@ -241,23 +243,23 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
-export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" };
+export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" };
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
 // 설정 모달 바닥 왼쪽이 그린다 (src/main/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
 export interface UpdateView {
   version: string; // 지금 버전
-  status: "off" | "idle" | "checking" | "latest" | "downloading" | "ready" | "error";
+  status: "off" | "idle" | "checking" | "latest" | "downloading" | "ready" | "manual" | "error"; // manual — mac 에서 앱을 그 자리에서 바꿀 수 없어 새 버전만 알린다
   next: string | null; // 받는 중이거나 준비된 새 버전
   percent: number | null; // 받은 정도 0~100
   error: string | null;
 }
 
-// 설정 바닥의 업데이트 요청 — status 는 읽기만, check 는 `다시 확인`, install 은 `다시 시작`
+// 설정 바닥의 업데이트 요청 — status 는 읽기만, check 는 `다시 확인`, install 은 `다시 시작`(manual 이면 `받기`)
 export type UpdateAction = "status" | "check" | "install";
 
 // 패치노트 — data/patch-notes.json 의 한 버전 (src/main/patch-notes.ts). Figma `99 · 시안` `800:18345`·`800:18549`
@@ -358,6 +360,9 @@ export interface ManageBridge {
   agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>; // 인자가 없으면 읽기만 한다
   onRoute: (cb: (route: ManageRoute) => void) => void; // 배너의 `바로가기` 로 옮겨 갈 곳
   drawRegion: () => Promise<ManageReply>; // 적용하면 ok, 취소하면 reason "cancelled"
+  screens: () => Promise<ScreenView[]>; // 지금 화면 목록 — 번호 순. 화면을 모르면(개발 실행기 등) 빈 목록
+  identifyScreens: (on: boolean) => void; // 모든 화면에 번호 덮개를 띄운다·치운다 — 한 화면 목록이 열린 동안
+  pickScreen: () => Promise<ManageReply>; // 화면 위에서 눌러 고른다. 고르면 저장하고 ok, 취소하면 reason "cancelled"
   dim: (on: boolean) => void; // 모달 가림막이 켜졌다·꺼졌다
   portraits: (asks: PortraitAsk[]) => Promise<Record<string, string | null>>;
   icons: (keys: string[]) => Promise<Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
@@ -419,8 +424,37 @@ export interface RegionBridge {
   done: (rect: RegionRect | null) => void;
 }
 
+// ── 놀이공간 화면 고르기 (2026-09-28 여러 화면) ────────────────────────────────
+// 설정의 한 화면 목록 한 줄. ref 를 그대로 `playScreen` 설정 값으로 보낸다
+export interface ScreenView {
+  number: number; // 화면 번호 — 주 화면이 1 (src/main/layout.ts screenOrder)
+  primary: boolean;
+  w: number;
+  h: number;
+  current: boolean; // 한 화면 방식이 지금 쓰는 화면
+  ref: { id: number; x: number; y: number; w: number; h: number };
+}
+
+// 화면 덮개 창 하나 — 번호를 크게 보인다. pick 이면 눌러서 고른다(Esc 취소), 아니면 클릭을 통과시키고 보기만 한다
+export interface ScreenOverlayInit {
+  number: number;
+  primary: boolean;
+  w: number;
+  h: number;
+  pick: boolean;
+}
+
+// screens:init 은 메인 → 렌더러, screens:pick·screens:cancel 은 렌더러 → 메인
+export type ScreensChannel = "screens:init" | "screens:pick" | "screens:cancel";
+
+export interface ScreensBridge {
+  onInit: (cb: (init: ScreenOverlayInit) => void) => void;
+  pick: () => void; // 이 화면을 골랐다
+  cancel: () => void;
+}
+
 // 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/notify/banner.ts 가 만든다
-export type BannerKind = "hatch" | "evolve" | "achievement";
+export type BannerKind = "hatch" | "evolve" | "achievement" | "notice"; // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts)
 
 export interface BannerView {
   key: string;

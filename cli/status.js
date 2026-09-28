@@ -32,8 +32,10 @@ function status(petArg) {
     const head = `  ${cli.name.padEnd(12)}`;
     if (!cli.used) say(`${head}안 씀 (설정 폴더 없음)`);
     else if (cli.error) say(`${head}${cli.error}`);
-    else if (cli.registered < cli.total) say(`${head}덜 등록됨 (${cli.registered}/${cli.total}) — pokebuddy setup`);
-    else say(`${head}등록됨 (${cli.registered}/${cli.total})`);
+    // 연결은 설정창 → 사용자 → 연결 탭에서만 한다 (setup 은 등록하지 않는다)
+    else if (!cli.registered && !(cli.stale || []).length) say(`${head}연결 안 됨 — 설정창 → 사용자 → 연결 탭`);
+    else if (cli.registered < cli.total || (cli.stale || []).length) say(`${head}갱신 필요 (${cli.registered}/${cli.total}) — 설정창 → 사용자 → 연결 탭의 갱신`);
+    else say(`${head}연결됨 (${cli.registered}/${cli.total})`);
   }
 
   // 동반자가 스스로 끝난 이유 — 동반자의 출력은 평소 버려지므로 여기서만 보인다

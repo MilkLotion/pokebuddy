@@ -278,9 +278,9 @@ const homeHandler: TxHandler = (draft, args) => {
     if (!sized.ok) return { ok: false, reason: sized.reason ?? "failed" };
     return { ok: true, result: { petId, size: sized.size } };
   }
-  const res = setHome(draft, petId, isObj(args) ? args.home : null);
+  const res = setHome(draft, petId, isObj(args) ? args.home : null, isObj(args) ? args.screen : undefined);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { petId, home: res.home } };
+  return { ok: true, result: { petId, home: res.home, ...(res.screen ? { screen: res.screen } : {}) } };
 };
 
 HANDLERS["starter.pick"] = starterHandler;

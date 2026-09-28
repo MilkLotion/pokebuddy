@@ -1,4 +1,4 @@
-// 알림 배너 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron scripts/dev-banner.cjs --shot <파일> [--kind hatch|evolve|achievement]`
+// 알림 배너 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron scripts/dev-banner.cjs --shot <파일> [--kind hatch|evolve|achievement|notice]`
 //
 // 저장을 읽지 않는다. 보기용 배너 하나를 바로 창에 넣고 찍은 뒤 끝낸다. 소리는 내지 않는다.
 // 찍은 그림은 Figma `Notification Banner` `338:732` 와 비교한다.
@@ -18,6 +18,7 @@ const kind = argAfter("--kind") ?? "hatch";
 const SAMPLES = {
   hatch: { key: "hatch:e2", kind: "hatch", title: "부화 준비 완료", target: "돌보미집 알 2", go: "바로가기", route: { to: "daycare" } },
   evolve: { key: "evolve:p1:charmander", kind: "evolve", title: "진화 가능", target: "파이리 Lv.16", go: "바로가기", route: { to: "pet", petId: "p1" } },
+  notice: { key: "notice:codex-console", kind: "notice", title: "Codex 창이 깜빡이면", target: "codex --no-daemon 으로 실행하거나 연결 해제", go: "바로가기", route: { to: "agents" } },
   achievement: { key: "achievement:show-two", kind: "achievement", title: "업적 달성", target: "두 마리 함께 꺼내기 달성", go: "바로가기", route: { to: "achievements", id: "show-two" } },
 };
 
