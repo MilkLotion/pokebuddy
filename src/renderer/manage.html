@@ -170,29 +170,56 @@
         height: 40px;
         display: flex;
         align-items: center;
-        padding: 0 12px 0 20px;
+        padding: 4px 12px 4px 10px;
         background: var(--surface);
         border-bottom: 1px solid var(--line);
       }
+      /* 탭 — Figma 03 `Primary Navigation` `208:542`. 72×32 알약(반지름 10), 아이콘 16 + 글자, 사이 8.
+         고른 탭은 옅은 배경과 굵은 글자, 아래 60×2 밑줄(x 10, y 31.5) (2026-09-29 사용자 결정 "Figma 디자인 유지") */
       nav .tabs {
-        align-self: stretch;
         display: flex;
         gap: 4px;
       }
       nav .tabs button {
         appearance: none;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 72px;
+        height: 32px;
+        padding: 0 10px;
         border: 0;
-        background: none;
+        border-radius: 10px;
+        background: var(--surface);
         color: var(--muted);
         font: inherit;
-        padding: 2px 14px 0;
-        border-bottom: 2px solid transparent;
+        white-space: nowrap;
         cursor: pointer;
       }
+      nav .tabs button:hover {
+        background: var(--accent-bg);
+      }
+      nav .tabs button svg {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: var(--muted);
+      }
       nav .tabs button[aria-selected="true"] {
-        color: var(--primary);
-        border-bottom-color: var(--primary);
-        font-weight: 600;
+        background: var(--accent-bg);
+        color: var(--ink);
+        font-weight: 700;
+      }
+      nav .tabs button[aria-selected="true"]::after {
+        content: "";
+        position: absolute;
+        left: 10px;
+        top: 31.5px;
+        width: 60px;
+        height: 2px;
+        background: var(--primary-hover);
       }
       nav .nav-actions {
         display: flex;
@@ -313,24 +340,43 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      /* 빈 칸·잠긴 칸 — Figma `Party Slot` state/empty·state/locked. 48 옅은 네모 안의 +·자물쇠, 제목, (빈 칸만) 설명 */
       .slot.blank {
         align-items: center;
         justify-content: center;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
         color: var(--muted);
+      }
+      .slot.blank .blank-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--accent-bg);
+        display: grid;
+        place-items: center;
+      }
+      .slot.blank .blank-icon svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: var(--ink);
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
       .slot.blank strong {
         color: var(--ink);
         font-size: 12px;
       }
       .slot.blank small {
-        font-size: 10px;
-        font-family: var(--font-small);
+        font-size: 12px;
       }
       .slot.locked {
         cursor: default;
-        color: var(--disabled);
+      }
+      .slot.locked:disabled {
+        opacity: 1;
       }
       .portrait {
         position: relative;
@@ -883,6 +929,10 @@
         font-size: 12px;
         font-weight: 600;
         white-space: nowrap;
+      }
+      .row-card .chevron {
+        flex: none;
+        color: var(--muted);
       }
       .row-card .count {
         font-size: 12px;

@@ -499,15 +499,25 @@ function petCard(pet: PetView): HTMLElement {
   return card;
 }
 
+// 빈 칸·잠긴 칸 그림 — Figma `Party Slot` state/empty·state/locked 의 +·자물쇠
+function blankIcon(locked: boolean): HTMLElement {
+  const box = el("span", "blank-icon");
+  box.innerHTML = locked
+    ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 6.86H4c-.63 0-1.14.51-1.14 1.14v5.14c0 .63.51 1.15 1.14 1.15h8c.63 0 1.14-.52 1.14-1.15V8c0-.63-.51-1.14-1.14-1.14Z"/><path d="M5.14 6.86V5.14a2.86 2.86 0 0 1 5.72 0v1.72"/></svg>'
+    : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.64v8.72M3.64 8h8.72"/></svg>';
+  return box;
+}
+
 function blankCard(slot: SlotView): HTMLElement {
   const card = button("slot blank");
   if (slot.state === "locked") {
     card.classList.add("locked");
     card.disabled = true;
-    card.append(el("strong", undefined, "잠긴 칸"));
+    card.append(blankIcon(true), el("strong", undefined, "잠긴 칸"));
     return card;
   }
-  card.append(el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 고르기"));
+  // 문구는 Figma `Party Slot` state/empty 의 "박스에서 배치"
+  card.append(blankIcon(false), el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
   card.addEventListener("click", () => open({ kind: "pick-box", slotIndex: slot.index }));
   return card;
 }
@@ -1177,7 +1187,8 @@ function shopRow(item: ShopItemView): HTMLElement {
   body.appendChild(el("div", "title", item.name));
   const note = item.blocked ?? item.note;
   if (note) body.appendChild(el("div", "note", note)); // 설명이 없는 상품은 이름 한 줄만
-  card.append(body, el("div", "price", point(item.price)));
+  // 줄 끝 › — 누르면 구매 창이 열린다 (Figma `Shop Layout` product 의 chevron)
+  card.append(body, el("div", "price", point(item.price)), el("span", "chevron", "›"));
   // 살 수 없어도 누를 수 있다. 이유는 구매 창이 보여 준다
   card.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
   if (item.id === "random") card.dataset.tut = "shop"; // 상점 튜토리얼이 밝히는 곳
@@ -2383,10 +2394,22 @@ setInterval(drawSaveIndicator, 30_000); // "3분 전" 글자만 바꾼다
 
 // ── 그리기 ─────────────────────────────────────────────────────────────────────
 
+// 탭 아이콘 — Figma 03 `Primary Navigation` `208:542` 의 16px 그림 그대로(선 색은 CSS)
+const TAB_ICON: Record<TabId, string> = {
+  party: '<path d="M8 13.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Z" stroke-width="1.5"/><path d="M2.7 8h3.6m3.4 0h3.6" stroke-width="1.5" stroke-linecap="round"/><path d="M8 9.7a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4Z" stroke-width="1.5"/>',
+  box: '<path d="M3.5 2.5h9c.83 0 1.5.67 1.5 1.5v8c0 .83-.67 1.5-1.5 1.5h-9c-.83 0-1.5-.67-1.5-1.5V4c0-.83.67-1.5 1.5-1.5Z" stroke-width="1.5" stroke-linecap="round"/><path d="M2 6.5h12M6.5 9.5h3" stroke-width="1.5" stroke-linejoin="round"/>',
+  dex: '<path d="M4 3.25h7.25c.97 0 1.75.78 1.75 1.75v6.25c0 .97-.78 1.75-1.75 1.75h-6.5C3.78 13 3 12.22 3 11.25V5c0-.97.78-1.75 1.75-1.75H4Z" stroke-width="1.35" stroke-linejoin="round"/><path d="M4.1 3.2 5 1.9m.6 3.7h3.9M5.6 8h4.8m-4.8 2.4h3.1" stroke-width="1.35" stroke-linecap="round"/><circle cx="4.9" cy="5.6" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="8" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="10.4" r=".55" fill="currentColor" stroke="none"/>',
+  shop: '<path d="M3.2 6.4h9.6v6.2H3.2V6.4Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M2.5 6.4 3.7 3.2h8.6l1.2 3.2h-11Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.55 12.6V9.2h2.9v3.4" stroke-width="1.25" stroke-linejoin="round"/><circle cx="8" cy="4.8" r="1.1" stroke-width="1.05"/><path d="M6.9 4.8h.55m1.1 0h.55" stroke-width="1.05" stroke-linecap="round"/>',
+  bag: '<path d="M12.5 5.5h-9C2.67 5.5 2 6.17 2 7v6c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V7c0-.83-.67-1.5-1.5-1.5Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.75 2.75 0 0 1 5.5 0v1.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  trade: '<path d="M2 5h11m-3 3 3-3-3-3m4 9H3m3 3-3-3 3-3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+};
+
 function drawTabs(): void {
   tabsEl.replaceChildren();
   for (const t of TABS) {
-    const b = button("", t.label);
+    const b = button("");
+    b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" style="color: var(--muted)">${TAB_ICON[t.id]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
+    b.appendChild(el("span", undefined, t.label));
     b.setAttribute("aria-selected", String(t.id === tab));
     b.addEventListener("click", () => {
       tab = t.id;

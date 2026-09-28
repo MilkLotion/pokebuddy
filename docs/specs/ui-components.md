@@ -88,6 +88,7 @@ Figma: `Header Icon Button` `295:3083`. 상태는 `Default`·`Hover`·`Open`·`F
 역할: 파티 / 박스 / 도감 / 상점 / 가방 사이를 이동한다.
 상태: 탭별 선택(옅은 배경과 밑줄), 기본. 업적·설정·사용자 모달이 열려도 탭 선택은 그대로다.
 판정: `Primary Navigation`의 `Active` 변형을 `Party|Box|Pokédex|Shop|Bag`로 바꾼다. `Settings`를 뺀다. 박스 아이콘이 새로 필요하다. 선택 밑줄은 내비게이션 `114:967`의 규칙을 따른다.
+구현: 탭은 72×32 알약(반지름 10)에 16px 아이콘과 글자다. 고른 탭은 옅은 배경, 굵은 글자, 60×2 밑줄(x 10, y 31.5)이다. `src/renderer/manage.ts` `TAB_ICON`·`drawTabs`, `manage.html` `nav .tabs` 다(2026-09-29 코드를 Figma 에 맞춤).
 Figma: `Primary Navigation` `208:542`의 항목을 `파티·박스·도감·상점·가방` 순서로 바꿨다. `Active=Settings`는 인스턴스가 없어서 `Active=Box`로 바꿨다. `Icon / Box` `294:353`을 새로 만들었다.
 
 ### C-04 파티 칸 카드
