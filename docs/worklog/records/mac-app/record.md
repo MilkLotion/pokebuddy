@@ -81,3 +81,13 @@
 - 검수: `npm run build`, `selftest-stage` 통과. 합성 클릭 실험(`CGEvent`)은 이 터미널에 손쉬운 사용 권한이 없어 클릭이 전달되지 않았다. 결론을 내지 못했다.
 - 사용자 실기(2026-09-28): "해결된거같은데? 원래는 맥 밑에 독? 거기에 떴었는데, 그것도 사라진게 마음에 들어." — 설정창이 올라오지 않는다. 포켓몬 클릭 때 Dock 에 앱 아이콘이 뜨던 현상도 사라졌다(앱 활성화가 멈춘 결과로 본다). 사용자가 이 변화를 좋다고 했다.
 - 남은 확인: 드래그, 우클릭 메뉴, 터미널 포커스 유지, 전체 화면 앱 위 표시는 따로 보고받지 않았다.
+
+## 후속 — Mac 자체 업데이트 (2026-09-28)
+
+- 사용자 관찰: Mac 0.7.0 에서 릴리스를 올려도 업데이트가 뜨지 않는다("업데이트 기능을 넣었었는데, 왜 안뜨지?"). 원인: 업데이트를 Windows 에서만 켰다(`app.ts` `enabled: … win32`). Squirrel.Mac 은 정식 서명이 필요하다.
+- 사용자 결정: B안(자체 업데이트, Windows 와 같은 `다시 시작` 경험). electron-updater 는 Windows 에 그대로 둔다(제안에 동의, "그렇게 진행하자").
+- 구현(서브 에이전트): `src/main/mac-updater.ts`(자체 엔진, 같은 이벤트), `updater.ts`(`manual` 상태·`openDownload`), `app.ts`(Mac 켬, 시험 빌드 `use-mock-keychain`), `manage.d.ts`·`manage.ts`(바닥 `받기`), `scripts/build-exe.cjs`(mac zip·`latest-mac.yml`·시험 빌드 허용), 시험 `selftest-mac-updater`(13건)·`selftest-updater`(6)·`e2e-update-mac`.
+- 검수: 도우미 스크립트를 직접 읽었다 — 경로는 인자로만 받고 모두 따옴표로 감싼다. 교체 실패 때 옛 앱을 되돌린다.
+- 실기(서브 에이전트, `node dist/tools/e2e-update-mac.js`, 0.7.9 → 0.8.0): 받는 중 → 준비됨 → `다시 시작` → 같은 자리 0.8.0 으로 다시 켜짐, 첫 패치노트 한 번, 저장 유지, 사용자의 `/Applications/PokeBuddy.app`·`companion.lock` 무변경. 전체 `npm run selftest` 종료 코드 0.
+- 피드백: 실기 시험 첫 실행이 시험 앱 HOME 을 임시 폴더로 바꿔 사용자 화면에 "키체인 발견할 수 없음" 대화상자가 떴다(사용자 보고). 사용자에게 `취소` 를 안내했다. 조치: 앱 HOME 을 바꾸지 않고 `update-test.json` 으로만 임시 홈, 시험 빌드는 `--use-mock-keychain`. 뒤 실행에서 키체인 항목이 생기지 않음을 `security find-generic-password` 로 확인했다.
+- 남은 위험: 관리자 권한이 필요한 `/Applications` 에서의 동작(수동 모드로 물러남) 실기 전. Intel 교체 실기 전. 수동 모드 화면 실기 전. 이 기능이 든 첫 버전(0.9.0)은 손으로 한 번 설치해야 한다. 그 릴리스부터 zip 두 개와 `latest-mac.yml` 을 올린다.

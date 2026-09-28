@@ -63,6 +63,8 @@
 | 5 | 새 `User / Account`, `User / Connect` | 제목 `사용자`, 두 칸 전환 `계정 \| 연결`, 크기 560×500, 바닥 버전 줄 없음. `Settings / Connect` `633:19096` 은 이름을 `User / Connect` 로 바꿔 재사용한다(중복 프레임을 남기지 않는다). Account 는 기존 계정 탭 프레임이 있으면 그 내용, 없으면 로그인 전 화면 | `manage.ts` `USER_TABS`, `drawUser`, `drawAccount` |
 | 6 | `Context Menu` `338:738` 과 이 메뉴를 쓰는 화면 인스턴스 | 구성을 이름·상태 / 밥 주기·놀아주기·볼에 넣기 / 상세 보기로. `잠시 숨기기`·`다시 보이기`·`종료` 를 지우고 `설정창 열기` → `상세 보기`. 트레이 메뉴 시안은 그대로 둔다 | `src/main/menus.ts` `petMenu`, `src/main/app.ts` `showPetMenu` |
 
+| 7 | `Settings / Display` `633:19017` 의 놀이공간 | 전환을 `모든 화면 \| 한 화면 \| 영역 지정` 세 칸으로. 한 화면일 때 화면 목록과 `화면에서 고르기`. 화면 번호 덮개 시안 | `worklog/records/multi-display/record.md` (구현 뒤 코드) |
+
 **글자 처리 순서.** (a) 컴포넌트 속성·variant·인스턴스 교체·숨김/삭제 → (b) 같은 문구의 기존 글자 노드 복제 → (c) figma.md §1 절차로 새 글자. (c)로 만든 글자는 노드 ID·문구·스타일을 이 기록에 적는다. 끝나면 Chrome 에서 Galmuri 재배치를 한다(figma.md §3). 새 글자 후보: `사용자`, `상세 보기`.
 
 **끝나면.**

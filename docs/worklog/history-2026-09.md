@@ -3,3 +3,4 @@
 - 2026-09-28 Mac 앱(dmg) 배포 추가 — `npm run dist:mac` 이 arm64·x64 dmg 를 만든다. ad-hoc 서명, 자동 업데이트 없음. 기록: `worklog/records/mac-app/record.md`
 - 2026-09-28 포켓몬 우클릭 메뉴에서 `잠시 숨기기`·`종료` 를 뺐다 — 그 포켓몬 관련 기능만 둔다. 둘은 트레이에만 남긴다. `설정창 열기` 는 그 포켓몬 상세를 여는 `상세 보기` 로 바꿨다. 기록: `worklog/records/game-runtime/record.md` (추가분)
 - 2026-09-28 설정창 헤더에 로고와 톱니바퀴 설정 아이콘, 유저 아이콘을 넣었다. 계정·연결은 새 사용자 모달로 옮기고 설정 모달은 일반·화면만 둔다. 기록: `worklog/records/user-modal/record.md`
+- 2026-09-28 0.8.0 릴리스 — 커밋 `8835b61`, 태그 `v0.8.0`. 패치노트는 사용자 문구("포켓몬 우클릭 메뉴 수정", "설정, 계정 분리"). 처음으로 Mac dmg(arm64·x64)를 함께 올렸다. Windows exe 도 이 Mac 에서 만들었다(electron-builder NSIS, 서명 없음).
