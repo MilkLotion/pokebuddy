@@ -91,3 +91,13 @@
 - 실기(서브 에이전트, `node dist/tools/e2e-update-mac.js`, 0.7.9 → 0.8.0): 받는 중 → 준비됨 → `다시 시작` → 같은 자리 0.8.0 으로 다시 켜짐, 첫 패치노트 한 번, 저장 유지, 사용자의 `/Applications/PokeBuddy.app`·`companion.lock` 무변경. 전체 `npm run selftest` 종료 코드 0.
 - 피드백: 실기 시험 첫 실행이 시험 앱 HOME 을 임시 폴더로 바꿔 사용자 화면에 "키체인 발견할 수 없음" 대화상자가 떴다(사용자 보고). 사용자에게 `취소` 를 안내했다. 조치: 앱 HOME 을 바꾸지 않고 `update-test.json` 으로만 임시 홈, 시험 빌드는 `--use-mock-keychain`. 뒤 실행에서 키체인 항목이 생기지 않음을 `security find-generic-password` 로 확인했다.
 - 남은 위험: 관리자 권한이 필요한 `/Applications` 에서의 동작(수동 모드로 물러남) 실기 전. Intel 교체 실기 전. 수동 모드 화면 실기 전. 이 기능이 든 첫 버전(0.9.0)은 손으로 한 번 설치해야 한다. 그 릴리스부터 zip 두 개와 `latest-mac.yml` 을 올린다.
+
+## 후속 — 키체인 허용 창과 고정 서명 (2026-09-28)
+
+- 사용자 관찰: 0.9.0 설치 뒤 "PokeBuddy이(가) 키체인에서 'PokeBuddy Safe Storage' 키 접근을 허용하고자 합니다" 창, 그리고 "업데이트하니 기존포켓몬들을 꺼내도 안보이는데" → 설정을 다시 하니 보임.
+- 원인: ad-hoc 서명의 designated requirement 가 `cdhash` 라 빌드마다 바뀐다(`/Applications/PokeBuddy.app` 0.9.0 에서 확인). 0.7.0 이 만든 키를 0.9.0 이 다른 앱으로 보고 묻는다. 동기 `safeStorage.decryptString` 이 창에 답할 때까지 메인을 멈춘다 — 포켓몬이 안 보인 까닭으로 추정(사용자 저장 사본 재현에서 영역·화면 모드는 정상).
+- 사용자 결정: A(고정 자체 서명 인증서). "다른 맥 사용자들은 어떻게 해?" → 사용자 Mac 에는 설치할 것이 없다고 답함.
+- 작업: 인증서 `PokeBuddy Code Signing`(SHA1 8154B11E…, 2036-09 만료)을 만들어 로그인 키체인에 가져옴. 서명 시험 명령은 자동 권한 판정에 막혀 사용자가 `!` 로 직접 실행 — 신뢰 설정 없이 `certificate leaf` 요구 사항이 나옴. 빌드 첫 시도는 파일마다 키체인 창이 떠 실패 → 사용자가 터미널에서 `security set-key-partition-list … -l "PokeBuddy Code Signing"` 실행(첫 시도 `-l pb` 는 찾지 못함).
+- 코드: `scripts/build-exe.cjs` — mac `identity: null` + `afterPack` 의 `signMac`(인증서 확인 → `codesign --force --deep` → `--verify --deep --strict` → 요구 사항에 certificate leaf 확인). `src/main/trade.ts` `encryptedStorage` — 비동기 safeStorage(`isAsyncEncryptionAvailable`·`decryptStringAsync`·`encryptStringAsync`), 한 번 읽기, 쓰기 차례 보장, `shouldReEncrypt` 면 다시 씀.
+- 검수: `npm run build`, `selftest-trade` 통과(계정·클라우드·교환 네트 시험은 로컬 Supabase 없어 건너뜀). `npm run dist:mac` — 두 앱 모두 `designated => identifier "io.github.milklotion.pokebuddy" and certificate leaf = H"8154b11e…"`, verify ok, 빌드 중 키체인 창 없음. 서명된 arm64 앱을 임시 홈·mock 키체인으로 띄워 네 마리 부팅·`session.bin` 쓰기·오류 없음.
+- 남은 일: 이 서명은 다음 릴리스(0.9.1 등)부터 나간다. 개인키 `.p12` 백업. 세션 임시 폴더의 `pb.key`·`pb.p12`·`pw.txt` 정리. 실제 키체인에서 비동기 읽기 중 허용 창이 뜰 때 포켓몬이 멈추지 않는지 실기.
