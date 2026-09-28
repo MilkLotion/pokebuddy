@@ -61,7 +61,7 @@ async function run() {
   const accountTab = async (X) => {
     await X.ui('open');
     await opened(X);
-    await X.dom(`document.getElementById('open-settings').click()`);
+    await X.dom(`document.getElementById('open-user').click()`);
     await until(() => X.press('계정'), `[${X.name}] 계정 탭`);
   };
 

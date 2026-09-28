@@ -151,6 +151,7 @@ type Dialog =
   | { kind: "pick-slot"; petId: string } // 개체가 정해졌고 넣을 파티 칸을 고른다
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
+  | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
   | { kind: "guide" }
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
@@ -1821,7 +1822,7 @@ function ago(at: number | null): string {
   return hour < 24 ? `${hour}시간 전` : `${Math.floor(hour / 24)}일 전`;
 }
 
-// 헤더 저장 표시 — 로그인하지 않았으면 숨긴다. 누르면 계정 탭을 연다
+// 헤더 저장 표시 — 로그인하지 않았으면 숨긴다. 누르면 사용자 모달의 계정 탭을 연다
 function drawSaveIndicator(): void {
   const c = acct?.signedIn ? acct.cloud : null;
   // 고르기를 기다리는 동안은 "저장 고르기"를 강조해 보인다 — 끄고 다시 켜도 기다리는 것을 알게(R3-07). 누르면 계정 탭
@@ -1832,7 +1833,7 @@ function drawSaveIndicator(): void {
   const text = state === "need" ? (c.status === "choose" ? "저장 고르기" : "저장 필요") : state === "ok" ? (c.lastSavedAt ? `저장됨 · ${ago(c.lastSavedAt)}` : "저장됨") : c.status === "connecting" ? "연결 중" : "오프라인";
   saveIndicatorEl.replaceChildren(el("i"), document.createTextNode(text));
 }
-saveIndicatorEl.addEventListener("click", () => open({ kind: "settings", tab: "account" }));
+saveIndicatorEl.addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
 async function loadAccount(): Promise<void> {
   if (acctLoading) return;
@@ -1857,7 +1858,7 @@ const ACCOUNT_OFF: AccountScreen = {
 
 // 계정 탭이 열려 있으면 다시 그린다
 function redrawAccount(): void {
-  if (dialog?.kind === "settings" && dialog.tab === "account") drawDialog();
+  if (dialog?.kind === "user" && dialog.tab === "account") drawDialog();
 }
 
 async function acctSend(req: AccountAction): Promise<AccountReply | null> {
@@ -2055,7 +2056,7 @@ function drawSignedIn(scroll: HTMLElement): void {
   scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; redrawAccount(); })));
 }
 
-// 설정 모달 위의 작은 확인 창 — 계정 삭제·로그아웃·로그인 때 고르기
+// 사용자 모달 위의 작은 확인 창 — 계정 삭제·로그아웃·로그인 때 고르기
 function acctOverlay(): HTMLElement | null {
   const a = acct;
   if (!a) return null;
@@ -2150,13 +2151,15 @@ function drawAccount(scroll: HTMLElement): void {
   else drawSignIn(scroll);
 }
 
-// 계정 탭 바닥 단추 — 로그인 화면은 가입·로그인, 가입 화면은 가입, 로그인 뒤는 버전만. 닫기 단추는 없다(✕·바깥 클릭·Esc)
-function accountActions(): HTMLElement {
+// 계정 탭 바닥 단추 — 로그인 화면은 가입·로그인, 가입 화면은 가입, 로그인 뒤는 없음. 닫기 단추는 없다(✕·바깥 클릭·Esc).
+// 버전·업데이트는 설정 모달 바닥에만 둔다 — 왼쪽 빈 자리(spacer)로 단추를 오른쪽에 붙인다
+function accountActions(): HTMLElement | null {
   const a = acct;
-  if (!a?.available || a.signedIn) return actions(versionFoot());
+  if (!a?.available || a.signedIn) return null;
   const off = acctBusy || a.blocked;
-  if (acctForm.mode === "sign-up") return actions(versionFoot(), actionButton("가입", true, off, () => void signUp()));
-  return actions(versionFoot(), actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
+  const left = el("span", "spacer");
+  if (acctForm.mode === "sign-up") return actions(left, actionButton("가입", true, off, () => void signUp()));
+  return actions(left, actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
 }
 
 // 밀려남 배너 — 탭 본문 맨 위. 닫을 때까지 남는다
@@ -2927,15 +2930,19 @@ function drawAchievements(): void {
 
 // ── 모달 · 설정 ────────────────────────────────────────────────────────────────
 
-// 설정 모달 탭 — 일반·화면·연결·계정 네 칸. 탭을 바꿔도 모달 크기(560×500)가 같다.
+// 설정 모달 탭 — 일반·화면 두 칸. 사용자 모달 탭 — 계정·연결 두 칸 (2026-09-28 사용자 "설정모달에서 계정은 빼고, 설정옆에 유저아이콘 추가 후 해당 메뉴에서 계정,연결 설정").
+// 두 모달은 같은 틀이다. 탭을 바꿔도 모달 크기(560×500)가 같다.
 // Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `Settings / Connect` `633:19096` (worklog/records/trade/record.md "계정 탭 구조로 수정").
 // 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
-type SettingsTab = "general" | "display" | "agents" | "account";
+type SettingsTab = "general" | "display";
 const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
   { id: "general", label: "일반" },
   { id: "display", label: "화면" },
-  { id: "agents", label: "연결" },
+];
+type UserTab = "account" | "agents";
+const USER_TABS: readonly { id: UserTab; label: string }[] = [
   { id: "account", label: "계정" },
+  { id: "agents", label: "연결" },
 ];
 
 // 두 칸·네 칸 전환 — 회색 틀 안에서 고른 칸만 흰 면 (docs/specs/ui-components.md C-15)
@@ -3145,35 +3152,48 @@ function drawAgents(scroll: HTMLElement): void {
   scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
 }
 
-function drawSettings(sub: SettingsTab): void {
-  // 제목·부제와 오른쪽 위 닫기
+// 설정·사용자 모달의 틀 — 제목과 오른쪽 위 닫기, 두 칸 전환, 스크롤 본문. 바닥과 덧창은 모달마다 붙인다
+function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "설정"));
+  titles.appendChild(el("h2", undefined, title));
   const x = button("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   head.append(titles, x);
   dialogEl.appendChild(head);
-
-  dialogEl.appendChild(
-    segmented(SETTINGS_TABS, sub, (id) => {
-      if (id === "agents" && !agentRows) void loadAgents();
-      settingSelectOpen = null;
-      open({ kind: "settings", tab: id });
-    }),
-  );
-
+  dialogEl.appendChild(segmented(tabs, current, pick));
   const scroll = el("div", "scroll");
-  if (sub === "general") drawGeneral(scroll);
-  else if (sub === "display") drawDisplay(scroll);
-  else if (sub === "agents") drawAgents(scroll);
-  else drawAccount(scroll);
   dialogEl.appendChild(scroll);
-  // 바닥 — 왼쪽은 버전·업데이트, 오른쪽은 계정 탭의 단추. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
-  dialogEl.appendChild(sub === "account" ? accountActions() : actions(versionFoot()));
-  // 계정 탭의 확인 창(삭제·로그아웃·로그인 때 고르기)은 설정 모달 위에 뜬다
-  const overlay = sub === "account" ? acctOverlay() : null;
+  return scroll;
+}
+
+function drawSettings(sub: SettingsTab): void {
+  const scroll = drawTabbedHead("설정", SETTINGS_TABS, sub, (id) => {
+    settingSelectOpen = null;
+    open({ kind: "settings", tab: id });
+  });
+  if (sub === "general") drawGeneral(scroll);
+  else drawDisplay(scroll);
+  // 바닥 — 왼쪽은 버전·업데이트. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
+  dialogEl.appendChild(actions(versionFoot()));
+}
+
+// 사용자 모달 — 계정·연결. 버전·업데이트 바닥은 두지 않는다(설정 모달에만)
+function drawUser(sub: UserTab): void {
+  const scroll = drawTabbedHead("사용자", USER_TABS, sub, (id) => {
+    if (id === "agents" && !agentRows) void loadAgents();
+    open({ kind: "user", tab: id });
+  });
+  if (sub === "agents") {
+    drawAgents(scroll);
+    return;
+  }
+  drawAccount(scroll);
+  const foot = accountActions();
+  if (foot) dialogEl.appendChild(foot);
+  // 계정 탭의 확인 창(삭제·로그아웃·로그인 때 고르기)은 사용자 모달 위에 뜬다
+  const overlay = acctOverlay();
   if (overlay) dialogEl.appendChild(overlay);
 }
 
@@ -3319,6 +3339,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   "pick-slot": "dialog wide",
   achievements: "dialog tall",
   settings: "dialog settings",
+  user: "dialog settings",
   guide: "dialog tall",
   hatched: "dialog",
   form: "dialog",
@@ -3362,6 +3383,7 @@ function drawDialog(): void {
   else if (dialog.kind === "pick-slot") drawPickSlot(dialog.petId);
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
+  else if (dialog.kind === "user") drawUser(dialog.tab);
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.slotIndex, dialog.eggId);
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
@@ -3532,7 +3554,7 @@ async function loadDex(): Promise<void> {
 
 async function loadAgents(): Promise<void> {
   agentRows = (await window.pokebuddyManage.agents()).list;
-  if (dialog?.kind === "settings" && dialog.tab === "agents") drawDialog();
+  if (dialog?.kind === "user" && dialog.tab === "agents") drawDialog();
 }
 
 async function refresh(): Promise<void> {
@@ -3542,6 +3564,7 @@ async function refresh(): Promise<void> {
 
 need("open-achievements", HTMLButtonElement).addEventListener("click", () => open({ kind: "achievements" }));
 need("open-settings", HTMLButtonElement).addEventListener("click", () => open({ kind: "settings", tab: "general" }));
+need("open-user", HTMLButtonElement).addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
 scrimEl.addEventListener("click", (e) => {
   if (e.target === scrimEl) close();
@@ -3561,7 +3584,7 @@ function goTo(route: ManageRoute): void {
     if (petOf(route.petId)) openPet(route.petId);
   } else if (route.to === "account") {
     detailPet = null;
-    open({ kind: "settings", tab: "account" });
+    open({ kind: "user", tab: "account" });
     void loadAccount();
   } else if (route.to === "trade") {
     close();

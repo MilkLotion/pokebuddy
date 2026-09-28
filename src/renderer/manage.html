@@ -70,7 +70,7 @@
         overflow: hidden;
       }
 
-      /* 헤더 — 브랜드와 보유 포인트만 둔다. 업적창·설정 아이콘은 탭 줄 오른쪽이다.
+      /* 헤더 — 브랜드(로고·이름)와 보유 포인트만 둔다. 업적창·설정·사용자 아이콘은 탭 줄 오른쪽이다.
          제목 표시줄 자리를 이 헤더가 대신하므로 끌어서 창을 옮길 수 있어야 한다.
          오른쪽은 OS 가 그리는 창 조작 단추의 폭만큼 비운다. 높이는 manage-window.ts 의 CHROME 과 같다 */
       header {
@@ -86,7 +86,7 @@
         border-bottom: 1px solid var(--line);
         -webkit-app-region: drag;
       }
-      /* 업적창·설정 아이콘 — 선으로만 그린다. 채움이 없어 글자와 같은 무게로 보인다 */
+      /* 업적창·설정·사용자 아이콘 — 선으로만 그린다. 채움이 없어 글자와 같은 무게로 보인다 */
       .icon {
         position: relative;
         appearance: none;
@@ -122,9 +122,18 @@
         background: var(--primary);
       }
       .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-size: 15px;
         font-family: var(--font-large);
         font-weight: 600;
+      }
+      /* 앱 로고 — assets/logo/src/logo.svg 를 그대로 옮겼다. CSP 가 파일 그림(img-src)을 막아 인라인으로 둔다 */
+      .brand-logo {
+        flex: none;
+        width: 20px;
+        height: 20px;
       }
       .spacer {
         flex: 1;
@@ -155,7 +164,7 @@
         font-weight: 600;
       }
 
-      /* 탭 줄 — 왼쪽은 탭, 오른쪽은 업적창·설정 아이콘 */
+      /* 탭 줄 — 왼쪽은 탭, 오른쪽은 업적창·설정·사용자 아이콘 */
       nav {
         flex: none;
         height: 40px;
@@ -2901,7 +2910,29 @@
   </head>
   <body>
     <header>
-      <span class="brand">PokeBuddy</span>
+      <span class="brand"
+        ><svg class="brand-logo" viewBox="0 0 128 128" aria-hidden="true">
+          <defs>
+            <linearGradient id="brand-logo-tile" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#304d6b" />
+              <stop offset="1" stop-color="#18283f" />
+            </linearGradient>
+          </defs>
+          <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#brand-logo-tile)" />
+          <rect x="22" y="24" width="84" height="72" rx="13" fill="#111b2d" stroke="#e9f0f2" stroke-width="5" />
+          <path d="M24 42h80" stroke="#e9f0f2" stroke-width="5" />
+          <circle cx="35" cy="33" r="4" fill="#ff6b62" />
+          <circle cx="48" cy="33" r="4" fill="#ffd66f" />
+          <circle cx="61" cy="33" r="4" fill="#63d6ad" />
+          <path d="M38 59h9l-6 6 6 6M54 72h22" fill="none" stroke="#63d6ad" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M54 59h18" stroke="#8fa3bb" stroke-width="4" stroke-linecap="round" />
+          <circle cx="95" cy="88" r="24" fill="#fff" />
+          <path d="M71 88A24 24 0 0 1 119 88Z" fill="#e3484c" />
+          <circle cx="95" cy="88" r="24" fill="none" stroke="#111b2d" stroke-width="6" />
+          <path d="M72 88h46" stroke="#111b2d" stroke-width="6" />
+          <circle cx="95" cy="88" r="9" fill="#fff" stroke="#111b2d" stroke-width="5" /></svg
+        >PokeBuddy</span
+      >
       <span class="spacer"></span>
       <button type="button" class="save-chip" id="save-indicator" hidden title="계정 저장"></button>
       <span class="point-chip" title="보유 포인트" aria-label="보유 포인트">
@@ -2923,11 +2954,20 @@
           </svg>
           <span class="dot" id="achievements-dot" hidden></span>
         </button>
+        <!-- 설정 — 톱니바퀴. 톱니 여덟 개(끝 반지름 7.6, 뿌리 5.7)를 바깥 윤곽 한 줄로 그리고 가운데 구멍을 둔다 (2026-09-28 사용자 "설정아이콘 변경") -->
         <button type="button" class="icon" id="open-settings" title="설정">
           <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M3 6.5h8.5M15.5 6.5H17M3 13.5h1.5M8.5 13.5H17" />
-            <circle cx="13.5" cy="6.5" r="2" />
-            <circle cx="6.5" cy="13.5" r="2" />
+            <path
+              d="M8.14 4.61L8.29 2.59L11.71 2.59L11.86 4.61A5.7 5.7 0 0 1 12.50 4.88L14.03 3.55L16.45 5.97L15.12 7.50A5.7 5.7 0 0 1 15.39 8.14L17.41 8.29L17.41 11.71L15.39 11.86A5.7 5.7 0 0 1 15.12 12.50L16.45 14.03L14.03 16.45L12.50 15.12A5.7 5.7 0 0 1 11.86 15.39L11.71 17.41L8.29 17.41L8.14 15.39A5.7 5.7 0 0 1 7.50 15.12L5.97 16.45L3.55 14.03L4.88 12.50A5.7 5.7 0 0 1 4.61 11.86L2.59 11.71L2.59 8.29L4.61 8.14A5.7 5.7 0 0 1 4.88 7.50L3.55 5.97L5.97 3.55L7.50 4.88A5.7 5.7 0 0 1 8.14 4.61Z"
+            />
+            <circle cx="10" cy="10" r="2.5" />
+          </svg>
+        </button>
+        <!-- 사용자 — 계정·연결 모달을 연다. 설정 오른쪽 (2026-09-28 사용자 "설정옆에 유저아이콘 추가") -->
+        <button type="button" class="icon" id="open-user" title="사용자">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="7" r="3.2" />
+            <path d="M3.8 17c.6-3.2 3.1-5 6.2-5s5.6 1.8 6.2 5" />
           </svg>
         </button>
       </div>
