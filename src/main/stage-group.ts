@@ -5,6 +5,9 @@
 //   모든 화면            화면마다 쌍 하나 — 마리는 사는 화면의 무대에만 있다 (layout.ts assignScreens)
 //
 // 끌어다 놓을 때 커서가 다른 화면의 무대 위면 그 화면으로 옮긴다. 놓은 자리가 새 집이고 사는 화면과 함께 저장한다.
+// 끄는 도중에도 커서가 다른 화면에 들어가면 그 화면 무대로 넘긴다 — 원래 창 밖은 그려지지 않기 때문이다
+// (2026-09-28 사용자 보고 "드래그하면 화면에서 안움직이고 드랍하면 다른화면으로 옮겨짐", worklog/records/multi-display/record.md).
+// 입력은 잡은 창으로 계속 온다(포인터 캡처). 묶음이 좌표를 바꿔 마리를 든 무대로 보내고, 잡은 창은 끝날 때까지 통과시키지 않는다
 // 창·무대를 만드는 일은 부르는 쪽이 준다 — 이 모듈은 Electron 을 부르지 않아 자체 시험에서 가짜로 돌린다
 import type { CoachView, HitReply, PointerMsg, StageState } from "../shared/stage";
 import type { CareAction } from "../state/types";
@@ -44,6 +47,17 @@ interface Lane {
   stage: Stage;
 }
 
+// 끄는 중인 마리 — source 는 잡은 창(입력이 오는 곳), owner 는 지금 마리를 든 무대
+interface Drag {
+  id: string;
+  source: Lane;
+  owner: Lane;
+  origin: { home: Home; screen: ScreenRef | null } | null; // 잡을 때의 집·사는 화면 — 끊기면 되돌린다
+  moving: boolean; // 다른 무대로 넘기는 중(그림 준비)
+  dropped: boolean; // 넘기는 중에 놓았다
+  last: Spot | null; // 마지막 몸 좌상단(화면 좌표)
+}
+
 export interface StageGroup {
   layout(lanes: PlayLane[], all: boolean): void; // 폴링마다 부른다 — 화면 구성이 바뀔 때만 창을 만들고 닫는다
   setParty(list: PartyPet[]): Promise<void>;
@@ -81,6 +95,7 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
   let coach: CoachView | null = null;
   let visible = false;
   let pinned: string | null = null;
+  let drag: Drag | null = null;
 
   const laneWith = (id: string): Lane | null => lanes.find((l) => l.stage.petOf(id) != null) ?? null;
   const laneAt = (p: Spot): Lane | null => lanes.find((l) => p.x >= l.plan.rect.x && p.y >= l.plan.rect.y && p.x < l.plan.rect.x + l.plan.rect.w && p.y < l.plan.rect.y + l.plan.rect.h) ?? null;
@@ -136,20 +151,97 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
     opts.onDrop(id, home, screen);
   }
 
+  // 포인터 — 끄는 마리를 커서가 있는 화면의 무대로 넘기고, 이후 입력을 그 무대 좌표로 바꿔 보낸다
+  function onLanePointer(lane: Lane, msg: PointerMsg): void {
+    if (msg.type === "grab") {
+      const p = party.find((x) => x.id === msg.id);
+      drag = { id: msg.id, source: lane, owner: lane, origin: p ? { home: { ...p.home }, screen: p.screen ? { ...p.screen } : null } : null, moving: false, dropped: false, last: null };
+      lane.stage.pointer(msg);
+      return;
+    }
+    const d = drag;
+    if (!d || d.id !== msg.id || d.source !== lane) {
+      lane.stage.pointer(msg);
+      return;
+    }
+    if (msg.type === "drag") {
+      const src = d.source.plan.rect;
+      d.last = { x: src.x + msg.x, y: src.y + msg.y };
+      if (d.moving) return;
+      const to = all && lanes.length > 1 ? laneAt(opts.cursorPoint()) : null;
+      if (to && to !== d.owner) {
+        void handOver(d, to);
+        return;
+      }
+      const o = d.owner.plan.rect;
+      d.owner.stage.pointer({ ...msg, x: d.last.x - o.x, y: d.last.y - o.y });
+      return;
+    }
+    if (msg.type === "drop") {
+      if (d.moving) {
+        d.dropped = true; // 넘기기가 끝나면 그 무대에서 놓는다
+        return;
+      }
+      drag = null;
+      d.owner.stage.pointer(msg);
+      return;
+    }
+    lane.stage.pointer(msg);
+  }
+
+  // 다른 화면 무대로 넘긴다 — 사는 화면을 바꿔 다시 나누고, 새 무대가 들린 채로 받는다. 저장은 놓을 때 한다
+  async function handOver(d: Drag, to: Lane): Promise<void> {
+    d.moving = true;
+    const cur = party.find((p) => p.id === d.id);
+    if (cur) remember(d.id, cur.home, screenRefOfInfo(to.plan.screen));
+    log?.({ stage: "hand-over", id: d.id, from: d.owner.key, to: to.key });
+    await distribute();
+    d.moving = false;
+    if (drag !== d) return; // 도중에 끊겼다 — cancelDrag 가 되돌렸다
+    d.owner = to;
+    const o = to.plan.rect;
+    const at = d.last ?? { x: o.x, y: o.y };
+    to.stage.adopt(d.id, { x: at.x - o.x, y: at.y - o.y });
+    if (d.dropped) {
+      drag = null;
+      to.stage.pointer({ type: "drop", id: d.id, x: 0, y: 0 });
+    }
+  }
+
+  // 끄다가 끊겼다(창이 사라짐 등) — 저장하지 않고, 다른 무대로 넘겼으면 잡을 때의 화면·집으로 되돌린다
+  function cancelDrag(): void {
+    const d = drag;
+    if (!d) return;
+    drag = null;
+    d.owner.stage.releaseHeld();
+    if (d.owner === d.source || !d.origin) return;
+    const origin = d.origin;
+    party = party.map((p) => (p.id === d.id ? { ...p, home: { ...origin.home }, screen: origin.screen ? { ...origin.screen } : null } : p));
+    void distribute();
+  }
+
+  // 무대 창 하나의 입력이 끊겼다 — 그 무대가 든 마리를 놓고, 묶음의 끄기가 그 창에 걸려 있으면 끊는다
+  function laneLost(lane: Lane): void {
+    lane.stage?.releaseHeld();
+    if (drag && (drag.source === lane || drag.owner === lane)) cancelDrag();
+  }
+
   function makeLane(plan: PlayLane): Lane {
     // 창·무대가 서로를 부르므로 틀을 먼저 만들고 채운다
     const lane = { key: plan.key, plan } as Lane;
-    lane.win = opts.createWindow({
+    const raw = opts.createWindow({
       onReady: () => {
-        lane.stage?.releaseHeld(); // 렌더러가 새로 떴다 — 들고 있던 포인터도 사라졌다
+        laneLost(lane); // 렌더러가 새로 떴다 — 들고 있던 포인터도 사라졌다
         lane.stage?.resend();
         lane.win.resendCoach();
       },
       onHit: (id) => lane.stage?.hit(id),
-      onPointer: (msg) => lane.stage?.pointer(msg),
-      onGone: () => lane.stage?.releaseHeld(),
-      onHidden: () => lane.stage?.releaseHeld(),
+      onPointer: (msg) => onLanePointer(lane, msg),
+      onGone: () => laneLost(lane),
+      onHidden: () => laneLost(lane),
     });
+    // 잡은 창은 마리를 다른 무대로 넘긴 뒤에도 끝날 때까지 든 것으로 친다 — 통과로 바뀌면 포인터 캡처가 끊겨 떼기를 잃는다
+    lane.win = { ...raw, hoverTick: (held, ghost) => raw.hoverTick(held || drag?.source === lane, ghost) };
     lane.stage = opts.createStage(lane.win, {
       cursor: () => {
         const rect = lane.win.stage();
@@ -199,7 +291,7 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
         } else built.push(makeLane(p));
       }
       for (const gone of keep.values()) {
-        gone.stage.releaseHeld();
+        laneLost(gone);
         gone.win.close();
       }
       lanes = built;
@@ -229,6 +321,7 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
       for (const l of lanes) l.stage.tick();
     },
     releaseHeld() {
+      cancelDrag();
       for (const l of lanes) l.stage.releaseHeld();
     },
     poke: (id) => laneWith(id)?.stage.poke(id) ?? false,

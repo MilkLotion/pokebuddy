@@ -57,6 +57,8 @@ export interface Stage {
   focus(key: string | null): void;
   tick(): void; // 40ms
   pointer(msg: PointerMsg): void;
+  // 다른 화면의 무대에서 끌려 온 마리를 들린 채로 받는다 — at 은 몸 좌상단(이 무대 좌표). 그 마리가 없으면 false (src/main/stage-group.ts)
+  adopt(id: string, at: Spot): boolean;
   hit(id: HitReply): void; // 렌더러의 답 — 커서 밑의 마리
   releaseHeld(): void; // 들고 있던 마리를 놓은 것으로 친다 — pointerup 이 영영 안 오는 경로의 탈출구. 저장하지 않는다
   resend(): void; // 렌더러가 새로 떴다 — init · 모든 look 의 sheets · 마지막 frame 을 다시 보낸다
@@ -323,6 +325,20 @@ export function createStage(opts: StageOptions): Stage {
       } else if (msg.type === "menu") {
         opts.onMenu(msg.id);
       }
+    },
+
+    adopt(id, at) {
+      const p = pets.get(id);
+      if (!p) return false;
+      if (held && held !== id) release(held);
+      held = id;
+      p.care = null;
+      p.held = true;
+      const next = clampInStage(at.x, at.y, p.body, size);
+      p.dragPos = next;
+      p.pos = next;
+      p.motion?.pickup(now());
+      return true;
     },
 
     hit(id) {

@@ -373,6 +373,15 @@ async function stageRuntimeTests(): Promise<void> {
   await overlap.setParty(six.map((p) => p.id === "p1" ? { ...p, look: "umbreon", species: "umbreon" } : p));
   overlap.tick();
   eq(overlap.petIds(), six.map((p) => p.id), "진화 그림 교체 후 소환 순서 유지");
+  // 다른 화면에서 끌려 온 마리를 들린 채로 받는다 — 자리는 무대 안에 가둔다 (src/main/stage-group.ts 넘기기)
+  ok(overlap.adopt("p2", { x: 10_000, y: 20 }), "있는 마리는 받는다");
+  eq(overlap.heldId(), "p2", "받은 마리를 든다");
+  overlap.tick();
+  const adopted = overlap.lastFrame()!.pets.find((p) => p.id === "p2")!;
+  ok(adopted.held && adopted.x < 800 && adopted.y === 20, "들린 채로 무대 안 자리");
+  overlap.pointer({ type: "drop", id: "p2", x: 0, y: 0 });
+  eq(overlap.heldId(), null, "받은 무대에서 놓는다");
+  ok(!overlap.adopt("없는마리", { x: 0, y: 0 }), "없는 마리는 받지 않는다");
   overlap.celebrate("p1"); overlap.tick();
   ok(overlap.lastFrame()!.pets[0]!.evolution, "진화 연출 시작");
   now += 1300; overlap.tick();

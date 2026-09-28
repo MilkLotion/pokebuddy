@@ -7,11 +7,11 @@ import assert from "node:assert/strict";
 import { assignScreens, playLanes, resolveScreen, screenOrder, type PlayLane, type Rect, type ScreenInfo, type Size } from "../main/layout";
 import type { PartyPet } from "../main/save-party";
 import type { Stage } from "../main/stage";
-import { createStageGroup, type LaneStageHooks } from "../main/stage-group";
+import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../main/stage-group";
 import type { StageWindow } from "../main/stage-window";
 import { setHome } from "../party/home";
 import { empty, normalize } from "../save/v3";
-import type { CoachView } from "../shared/stage";
+import type { CoachView, PointerMsg } from "../shared/stage";
 import { setSetting } from "../state/settings";
 
 const T0 = Date.UTC(2026, 8, 28, 3, 0, 0);
@@ -117,14 +117,18 @@ const refB = { id: 7, x: 1920, y: 0, w: 2560, h: 1440 };
 // ── 무대 묶음 — 가짜 창·가짜 무대 ────────────────────────────────────────────────
 
 interface FakeWin extends StageWindow {
+  hooks: LaneHooks | null;
+  held: boolean[]; // hoverTick 이 받은 "들고 있음"
   rect: Rect | null;
   shown: boolean;
   closed: boolean;
   coach: CoachView | null;
   cries: string[];
 }
-function fakeWin(): FakeWin {
+function fakeWin(hooks: LaneHooks | null = null): FakeWin {
   const w = {
+    hooks,
+    held: [] as boolean[],
     rect: null as Rect | null,
     shown: false,
     closed: false,
@@ -140,7 +144,7 @@ function fakeWin(): FakeWin {
     setVisible: (on: boolean) => void (w.shown = on),
     isVisible: () => w.shown,
     setPassing() {},
-    hoverTick() {},
+    hoverTick: (held: boolean) => void w.held.push(held),
     sendInit() {},
     sendSheets() {},
     sendFrame() {},
@@ -155,6 +159,9 @@ function fakeWin(): FakeWin {
 }
 
 interface FakeStage extends Stage {
+  msgs: PointerMsg[];
+  adopted: [string, { x: number; y: number }][];
+  releases: number;
   list: PartyPet[];
   hooks: LaneStageHooks;
   anchor: Rect | null;
@@ -162,6 +169,9 @@ interface FakeStage extends Stage {
 }
 function fakeStage(hooks: LaneStageHooks): FakeStage {
   const s = {
+    msgs: [] as PointerMsg[],
+    adopted: [] as [string, { x: number; y: number }][],
+    releases: 0,
     list: [] as PartyPet[],
     hooks,
     anchor: null as Rect | null,
@@ -172,9 +182,10 @@ function fakeStage(hooks: LaneStageHooks): FakeStage {
     setState() {},
     focus() {},
     tick() {},
-    pointer() {},
+    pointer: (msg: PointerMsg) => void s.msgs.push(msg),
+    adopt: (id: string, at: { x: number; y: number }) => (s.list.some((p) => p.id === id) ? (s.adopted.push([id, at]), true) : false),
     hit() {},
-    releaseHeld() {},
+    releaseHeld: () => void s.releases++,
     resend() {},
     poke: () => true,
     care() {},
@@ -196,15 +207,17 @@ const lanes = (area: Parameters<typeof playLanes>[0], screens: ScreenInfo[]): Pl
 async function groupChecks(): Promise<void> {
   const wins: FakeWin[] = [];
   const stages: FakeStage[] = [];
+  const laneWins: StageWindow[] = [];
   let cursor = { x: 0, y: 0 };
   const drops: { id: string; home: { dx: number; dy: number }; screen: unknown }[] = [];
   const g = createStageGroup({
-    createWindow: () => {
-      const w = fakeWin();
+    createWindow: (hooks) => {
+      const w = fakeWin(hooks);
       wins.push(w);
       return w;
     },
-    createStage: (_w, hooks) => {
+    createStage: (w, hooks) => {
+      laneWins.push(w); // 묶음이 감싼 창 — 무대는 이것으로 hoverTick 을 부른다
       const s = fakeStage(hooks);
       stages.push(s);
       return s;
@@ -260,7 +273,52 @@ async function groupChecks(): Promise<void> {
   assert.deepEqual(drops.pop(), { id: "b", home: { dx: -3, dy: -4 }, screen: refB });
   process.stdout.write("(9) 다른 화면에 놓기  ok\n");
 
+  // (9b) 끄는 도중 다른 화면으로 넘기기 — 커서가 화면 B 에 들어가면 B 무대가 들린 채로 받고, 이후 입력은 B 좌표로 간다
+  //      (2026-09-28 사용자 보고 "드래그하면 화면에서 안움직이고 드랍하면 다른화면으로 옮겨짐")
+  await g.setParty([pet("a"), pet("b", refB)]);
+  await flush();
+  const [sa, sb] = [stages[0]!, stages[1]!];
+  assert.deepEqual([sa.list.map((p) => p.id), sb.list.map((p) => p.id)], [["a"], ["b"]]);
+  const hooksA = wins[0]!.hooks!;
+  cursor = { x: 1000, y: 500 };
+  hooksA.onPointer({ type: "grab", id: "a", x: 1000, y: 475 });
+  hooksA.onPointer({ type: "drag", id: "a", x: 990, y: 440 });
+  assert.deepEqual(sa.msgs.slice(-2).map((m) => m.type), ["grab", "drag"], "같은 화면 안에서는 그 무대로");
+  cursor = { x: 2000, y: 500 }; // 화면 B 로 넘어갔다
+  hooksA.onPointer({ type: "drag", id: "a", x: 1990, y: 440 }); // 몸 좌상단 — 화면 A 창 기준
+  await flush();
+  assert.deepEqual([sa.list.map((p) => p.id), sb.list.map((p) => p.id)], [[], ["a", "b"]], "끄는 도중에 B 무대로 옮긴다");
+  // 화면 좌표 (0+1990, 25+440) = (1990, 465) → B 무대 좌표 (70, 465)
+  assert.deepEqual(sb.adopted.pop(), ["a", { x: 70, y: 465 }], "B 무대가 들린 채로 받는다");
+  hooksA.onPointer({ type: "drag", id: "a", x: 2090, y: 440 });
+  assert.deepEqual(sb.msgs.pop(), { type: "drag", id: "a", x: 170, y: 465 }, "이후 입력은 B 좌표로 바꿔 보낸다");
+  // 잡은 창(A)은 끝날 때까지 든 것으로 친다 — 통과로 바뀌면 포인터 캡처가 끊긴다
+  laneWins[0]!.hoverTick(false, false); // A 무대는 이제 마리가 없다 — 그래도 창에는 "들고 있음"으로 간다
+  assert.equal(wins[0]!.held.pop(), true, "잡은 창은 통과시키지 않는다");
+  assert.equal(drops.length, 0, "끄는 동안은 저장하지 않는다");
+  hooksA.onPointer({ type: "drop", id: "a", x: 2090, y: 465 });
+  assert.equal(sb.msgs.pop()?.type, "drop", "놓기도 B 무대로");
+  laneWins[0]!.hoverTick(false, false);
+  assert.equal(wins[0]!.held.pop(), false, "놓은 뒤에는 평소대로");
+  process.stdout.write("(9b) 끄는 도중 다른 화면으로 넘기기  ok\n");
+
+  // (9c) 넘긴 뒤 끊기면(창이 사라짐) 저장하지 않고 잡을 때의 화면으로 되돌린다
+  await g.setParty([pet("a"), pet("b", refB)]);
+  await flush();
+  cursor = { x: 1000, y: 500 };
+  hooksA.onPointer({ type: "grab", id: "a", x: 1000, y: 475 });
+  cursor = { x: 2000, y: 500 };
+  hooksA.onPointer({ type: "drag", id: "a", x: 1990, y: 440 });
+  await flush();
+  assert.deepEqual(sb.list.map((p) => p.id), ["a", "b"]);
+  hooksA.onGone();
+  await flush();
+  assert.deepEqual([sa.list.map((p) => p.id), sb.list.map((p) => p.id)], [["a"], ["b"]], "잡을 때의 화면으로");
+  assert.equal(drops.length, 0, "저장하지 않는다");
+  process.stdout.write("(9c) 끊기면 되돌린다  ok\n");
+
   // (10) 화면이 빠지면 그 창을 닫고 마리는 주 화면으로(저장된 사는 화면은 그대로 남는다)
+  await g.setParty([pet("a", refB), pet("b", refB)]); // (9) 에서 가 마리를 화면 B 에 놓은 상태
   g.layout(lanes({ mode: "all", rect: null, screen: null }, [A]), true);
   await flush();
   assert.equal(wins[1]!.closed, true, "빠진 화면의 창을 닫는다");
