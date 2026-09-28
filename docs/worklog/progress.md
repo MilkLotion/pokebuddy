@@ -14,3 +14,4 @@
 - 다음 버전으로 미룸: 연결 점검 기능(가벼운 확인·`점검` 실행 시험·마지막 신호 표시, node 없으면 연결 막기). 2026-09-28 제안, 사용자가 0.9.0 범위를 지금 작업으로 정함.
 - 다음 버전 후보: Windows 제거 프로그램(NSIS)이 CLI 훅 등록을 걷지 않는다 — 제거 뒤에도 저장 폴더가 남으면 훅이 계속 돈다(Codex 는 창도). 제거 때 `uninstall` 의 등록 해제를 부르거나, 앱 제거 전 `해제` 를 안내한다. 2026-09-28 발견.
 - 0.9.0 패치노트 제안: "Codex 를 쓰면 설정 → 사용자 → 연결에서 `갱신` 을 눌러 주세요"(옛 Codex 훅의 도구 전 이벤트를 걷는다). 사용자 확인 전.
+- 0.9.0 릴리스: 완료. https://github.com/MilkLotion/pokebuddy/releases/tag/v0.9.0 — exe·blockmap·latest.yml, dmg·zip 각 2개, latest-mac.yml. `releases/latest/download/latest.yml`·`latest-mac.yml` 이 0.9.0 을 가리키고 arm64 zip 이 200 으로 받아진다. 사용자 실기 필요: Mac 0.7.0 → 0.9.0 dmg 덮어 설치, 모니터 사이 드래그·모니터 빼기·`화면에서 고르기`, Windows 0.8.0 → 0.9.0 자동 업데이트와 Codex 정리·안내 배너.
