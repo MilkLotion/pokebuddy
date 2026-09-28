@@ -2,6 +2,14 @@
   "_comment": "관리 창 패치노트 (src/main/patch-notes.ts). 새 버전이 맨 앞. 릴리스 때 GitHub Release 본문의 '새 기능·바뀐 것·고친 것'을 한 줄씩 짧게 옮긴다. date 는 릴리스 날짜(YYYY-MM-DD)",
   "notes": [
     {
+      "version": "0.11.1",
+      "date": "2026-09-29",
+      "lines": [
+        "설정창 탭에 아이콘이 생겼어요",
+        "빈 칸과 잠긴 칸이 더 잘 보여요"
+      ]
+    },
+    {
       "version": "0.11.0",
       "date": "2026-09-29",
       "lines": [
