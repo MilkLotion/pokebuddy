@@ -24,6 +24,7 @@ Claude Code · Codex CLI · Gemini CLI 를 쓰면 맨 앞 터미널에서 그 CL
 
 Windows 는 설치 파일 `pokebuddy-Setup-<버전>.exe` 로도 설치한다. 누르면 동반자로 뜬다 — [Windows 실행 파일](docs/guide.md#windows-실행-파일).
 만드는 방법은 `npm run dist:win` 이다.
+Mac 은 `PokeBuddy-<버전>-<arm64|x64>.dmg` 로 설치한다 — [Mac 앱](docs/guide.md#mac-앱). 만드는 방법은 `npm run dist:mac` 이다.
 
 ```bash
 npm install -g pokebuddy

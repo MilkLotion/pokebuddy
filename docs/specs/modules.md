@@ -48,7 +48,7 @@
 
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 탭 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
-앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본에서만 켠다.
+앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본에서만 켠다. Mac 앱은 ad-hoc 서명이라 켜지 않는다.
 패치노트는 `src/main/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
 
 알림 배너의 상태 판정은 도메인 모듈이 한다. `src/notify`는 줄 세우기와 표시만 맡는다.

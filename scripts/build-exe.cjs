@@ -1,4 +1,8 @@
 // Windows 설치 파일 만들기 — `npm run dist:win` → release/pokebuddy-Setup-<버전>.exe
+// mac 디스크 이미지 만들기 — `npm run dist:mac` → release/PokeBuddy-<버전>-arm64.dmg
+//                                                 release/PokeBuddy-<버전>-x64.dmg
+//   mac 은 ad-hoc 서명만 한다. Apple 개발자 인증서가 없어 공증도 없다. 처음 실행 때 Gatekeeper 가 막는다
+//   mac 은 자동 업데이트가 없다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다
 //
 // 1. npm run build 로 dist/ 를 만든다 (package.json 의 스크립트가 먼저 부른다)
 // 2. release/app/ 에 실행에 필요한 파일만 복사한다. 목록은 package.json 의 `files` 와 같다
@@ -9,19 +13,26 @@
 // 루트 package.json 은 npm 판 CLI 가 실행 때 electron 을 쓰므로 dependencies 에 둔다. 그래서 루트를 바꾸지 않고 따로 모은다.
 // asar 로 묶지 않는다 — 훅 원본 복사(cli/setup.js)와 창 추적 도우미(helpers/winbounds.ps1)가 실제 파일 경로를 쓴다.
 // 코드 서명은 하지 않는다. 처음 실행 때 SmartScreen 경고가 뜬다 (worklog/records/game-runtime/record.md "Windows 실행 파일의 설계")
+const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
 const root = path.join(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+// mac 디스크 이미지 — 인자 없으면 Windows 설치 파일
+const MAC = process.argv.includes("--mac");
+if (MAC && process.platform !== "darwin") throw new Error("mac 설치 파일은 mac 에서만 만든다 — 헬퍼 universal 빌드·ad-hoc 서명에 Xcode 도구가 필요하다");
 // 업데이트 실기 시험 빌드 (scripts/e2e-update.cjs) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
 // 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않고, 대신 update-test.json 표시 파일로 임시 홈을 쓰고 OS 등록(링크·로그인 시 시작)을 건너뛴다
 const TEST = process.env.PB_UPDATE_TEST === "1";
+if (MAC && TEST) throw new Error("업데이트 실기 시험은 Windows 설치본만 만든다 — mac 은 자동 업데이트가 없다");
 // 시험 빌드의 앱은 이 임시 홈만 쓴다 — 사용자의 저장을 건드리지 않게 반드시 준다
 const testHome = process.env.PB_UPDATE_HOME ?? "";
 if (TEST && !path.isAbsolute(testHome)) throw new Error("시험 빌드는 PB_UPDATE_HOME(임시 홈의 절대 경로)이 필요하다");
 const version = TEST && process.env.PB_UPDATE_VERSION ? process.env.PB_UPDATE_VERSION : pkg.version;
 const name = TEST ? `${pkg.name}-update-test` : pkg.name;
+// 앱 이름 — mac 은 앱 번들 이름(PokeBuddy.app)이 된다. Windows 는 설치 폴더·실행 파일 이름이라 pkg.name 그대로
+const productName = MAC ? "PokeBuddy" : name;
 const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : path.join(root, "release");
 const stage = path.join(release, "app");
 
@@ -57,7 +68,16 @@ function runtimePackages() {
   return [...seen].sort();
 }
 
+// mac 창 추적 헬퍼가 두 아키텍처를 다 가졌는지 — arm64·x64 이미지가 같은 헬퍼를 쓴다. 한쪽이 빠지면 그 맥에서 조용히 창 추적을 못 한다
+function checkMacHelper() {
+  const helper = path.join(root, "helpers", "winbounds");
+  const archs = fs.existsSync(helper) ? execFileSync("lipo", ["-archs", helper], { encoding: "utf8" }).trim().split(/\s+/) : [];
+  const missing = ["arm64", "x86_64"].filter((a) => !archs.includes(a));
+  if (missing.length) throw new Error(`helpers/winbounds 에 ${missing.join(", ")} 가 없다 — npm run dist:mac 으로 만든다(헬퍼 universal 빌드 포함)`);
+}
+
 function stageFiles() {
+  if (MAC) checkMacHelper();
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
   const copied = [];
@@ -80,7 +100,7 @@ function stageFiles() {
   if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: "업데이트 실기 시험 빌드 — scripts/e2e-update.cjs", home: testHome })}\n`);
   const appPkg = {
     name,
-    productName: name,
+    productName,
     version,
     description: pkg.description,
     license: pkg.license,
@@ -98,42 +118,65 @@ async function main() {
   process.stdout.write(`모은 파일: ${copied.join(", ")}\n`);
   const builder = require("electron-builder");
   const electronVersion = String(pkg.dependencies.electron).replace(/^[^\d]*/, "");
+  const logo = (file) => path.join(root, "assets", "logo", "out", file);
+  // 두 플랫폼이 같이 쓰는 설정
+  const common = {
+    appId: TEST ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy",
+    productName,
+    electronVersion,
+    npmRebuild: false,
+    asar: false,
+    electronLanguages: ["ko", "en-US"], // 화면 언어 두 가지만 남긴다. Chromium 언어 파일이 50MB 가까이 된다
+    directories: { output: release },
+    files: ["**/*"],
+  };
+  const windows = {
+    // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml 이 생긴다.
+    // 릴리스 때 exe 와 함께 latest.yml·.blockmap 을 GitHub Release 에 올린다.
+    // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
+    publish: process.env.PB_UPDATE_FEED
+      ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
+      : [{ provider: "github", owner: "MilkLotion", repo: "pokebuddy" }],
+    win: { icon: logo("logo.ico") },
+    // 원클릭 설치 — 묻지 않고 사용자 폴더(%LOCALAPPDATA%\Programs\pokebuddy)에 설치한 뒤 앱을 띄운다 (2026-09-25 사용자 선택).
+    // 단계식 마법사는 "모든 사용자/나만" 화면을 끌 수 없어 쓰지 않는다
+    nsis: {
+      oneClick: true,
+      perMachine: false, // 관리자 권한이 필요 없다
+      runAfterFinish: true, // 설치가 끝나면 동반자를 띄운다. 처음이면 첫 포켓몬 선택 창이 뜬다
+      installerIcon: logo("logo.ico"),
+      uninstallerIcon: logo("logo.ico"),
+      installerHeaderIcon: logo("logo.ico"),
+      shortcutName: TEST ? name : "PokeBuddy", // 바탕 화면·시작 메뉴·점프 목록 앱 이름 줄. 설치 폴더·실행 파일 이름은 pkg.name 그대로
+      createDesktopShortcut: !TEST,
+      createStartMenuShortcut: !TEST,
+      deleteAppDataOnUninstall: false, // 저장(~/.claude/pokebuddy)은 지우지 않는다
+      artifactName: "${productName}-Setup-${version}.${ext}",
+    },
+  };
+  // mac 은 자동 업데이트를 쓰지 않는다 — publish 를 null 로 막아 app-update.yml·latest-mac.yml 을 만들지 않는다.
+  // 키를 빼면 electron-builder 가 git 원격으로 공급처를 짐작해 넣는다(2026-09-28 빌드에서 provider: gitlab 로 생김)
+  const mac = {
+    publish: null,
+    mac: {
+      icon: logo("logo.icns"),
+      category: "public.app-category.entertainment",
+      identity: "-", // ad-hoc 서명 — Apple 개발자 인증서 없음. Apple Silicon 은 서명 없는 앱을 "손상됨"으로 막는다
+      hardenedRuntime: false, // 공증을 하지 않으므로 끈다. 켜면 ad-hoc 서명에서 라이브러리 검증에 걸린다
+      gatekeeperAssess: false,
+      // 교환·로그인 링크 — mac 은 Info.plist 에 적힌 스킴만 setAsDefaultProtocolClient 가 받는다. Windows 는 실행 중 등록이라 mac 에만 둔다
+      protocols: [{ name: "PokeBuddy", schemes: ["pokebuddy"] }],
+      artifactName: "${productName}-${version}-${arch}.${ext}",
+    },
+    dmg: { artifactName: "${productName}-${version}-${arch}.${ext}" },
+  };
   const out = await builder.build({
     projectDir: stage,
-    targets: builder.Platform.WINDOWS.createTarget("nsis", builder.Arch.x64),
+    targets: MAC
+      ? builder.Platform.MAC.createTarget("dmg", builder.Arch.arm64, builder.Arch.x64)
+      : builder.Platform.WINDOWS.createTarget("nsis", builder.Arch.x64),
     publish: "never",
-    config: {
-      appId: TEST ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy",
-      productName: name,
-      electronVersion,
-      npmRebuild: false,
-      asar: false,
-      electronLanguages: ["ko", "en-US"], // 화면 언어 두 가지만 남긴다. Chromium 언어 파일이 50MB 가까이 된다
-      directories: { output: release },
-      files: ["**/*"],
-      // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml 이 생긴다.
-      // 릴리스 때 exe 와 함께 latest.yml·.blockmap 을 GitHub Release 에 올린다.
-      // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
-      publish: process.env.PB_UPDATE_FEED
-        ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
-        : [{ provider: "github", owner: "MilkLotion", repo: "pokebuddy" }],
-      win: { icon: path.join(root, "assets", "logo", "out", "logo.ico") },
-      // 원클릭 설치 — 묻지 않고 사용자 폴더(%LOCALAPPDATA%\Programs\pokebuddy)에 설치한 뒤 앱을 띄운다 (2026-09-25 사용자 선택).
-      // 단계식 마법사는 "모든 사용자/나만" 화면을 끌 수 없어 쓰지 않는다
-      nsis: {
-        oneClick: true,
-        perMachine: false, // 관리자 권한이 필요 없다
-        runAfterFinish: true, // 설치가 끝나면 동반자를 띄운다. 처음이면 첫 포켓몬 선택 창이 뜬다
-        installerIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
-        uninstallerIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
-        installerHeaderIcon: path.join(root, "assets", "logo", "out", "logo.ico"),
-        shortcutName: TEST ? name : "PokeBuddy", // 바탕 화면·시작 메뉴·점프 목록 앱 이름 줄. 설치 폴더·실행 파일 이름은 pkg.name 그대로
-        createDesktopShortcut: !TEST,
-        createStartMenuShortcut: !TEST,
-        deleteAppDataOnUninstall: false, // 저장(~/.claude/pokebuddy)은 지우지 않는다
-        artifactName: "${productName}-Setup-${version}.${ext}",
-      },
-    },
+    config: { ...common, ...(MAC ? mac : windows) },
   });
   process.stdout.write(`만든 파일:\n${out.map((f) => `  ${path.relative(root, f)}`).join("\n")}\n`);
 }

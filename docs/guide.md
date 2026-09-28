@@ -64,13 +64,13 @@ PMD 스프라이트는 **CC BY-NC 4.0** 이다 — [라이선스](#라이선스)
 
 ## 요구사항
 
-- Node.js 22.12 이상 — Electron 44 설치기가 요구한다. 이보다 버전이 낮으면 설치는 끝나도 동반자가 뜨지 않는다. Windows 실행 파일은 Node.js 가 필요 없다
+- Node.js 22.12 이상 — Electron 44 설치기가 요구한다. 이보다 버전이 낮으면 설치는 끝나도 동반자가 뜨지 않는다. Windows 실행 파일과 Mac 앱은 Node.js 가 필요 없다
 - macOS(Apple Silicon·Intel) 또는 Windows
 - 상태 연동을 쓰려면 Claude Code, Codex CLI 0.124 이상, Gemini CLI 0.26 이상 중 하나가 있어야 한다
 
 ## 설치
 
-두 가지 판이 있다. 두 판은 같은 저장 폴더(`~/.claude/pokebuddy`)를 쓴다. 파티와 포인트가 같다.
+설치 파일 판(Windows 실행 파일·Mac 앱)과 npm 판이 있다. 모든 판은 같은 저장 폴더(`~/.claude/pokebuddy`)를 쓴다. 파티와 포인트가 같다.
 
 ### Windows 실행 파일
 
@@ -86,6 +86,20 @@ PMD 스프라이트는 **CC BY-NC 4.0** 이다 — [라이선스](#라이선스)
 - 설정 창 아래의 `패치노트`에서 버전마다 바뀐 것을 본다.
 - 끝내기는 트레이 아이콘의 메뉴에서 한다. 제거는 Windows 설정의 앱 목록에서 한다. 제거해도 저장 폴더는 남는다.
 - CLI 상태 연동(설정창 설정의 "연결")은 훅을 `node` 로 실행한다. 쓰려면 Node.js 가 있어야 한다.
+
+### Mac 앱
+
+Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-x64.dmg` 를 연다. Node.js 는 필요 없다.
+
+- `PokeBuddy` 를 `Applications` 로 끌어 넣는다.
+- Apple 서명·공증이 없다. 처음 열면 "Apple 이 확인할 수 없음" 경고가 뜬다. 시스템 설정 → 개인정보 보호 및 보안 → 아래의 `그래도 열기` 를 누른다.
+- 경고 대신 "손상되었기 때문에 열 수 없습니다"가 뜨면 터미널에서 `xattr -dr com.apple.quarantine /Applications/PokeBuddy.app` 을 실행한 뒤 다시 연다.
+- 켜면 Dock 에 남지 않고 메뉴 막대 아이콘으로 있다. 처음이면 첫 포켓몬 선택 창이 뜬다.
+- 떠 있을 때 앱을 다시 열면 설정창을 연다.
+- 설정의 "로그인 시 시작"을 켜면 Mac 에 로그인할 때 함께 뜬다.
+- 자동 업데이트가 없다. 새 버전은 새 dmg 로 앱을 덮어 설치한다. 설정 창 아래에는 지금 버전만 보인다.
+- 끝내기는 메뉴 막대 아이콘의 메뉴에서 한다. 제거는 `Applications` 의 `PokeBuddy` 를 휴지통으로 옮긴다. 저장 폴더는 남는다.
+- CLI 상태 연동은 Windows 실행 파일과 같이 훅을 `node` 로 실행한다. 쓰려면 Node.js 가 있어야 한다.
 
 ### npm
 
@@ -636,6 +650,19 @@ npm run dist:win    # release/pokebuddy-Setup-<버전>.exe
 - 릴리스 전에 `data/patch-notes.json` 맨 앞에 새 버전의 날짜와 바뀐 것을 적는다. `selftest-patch-notes` 는 `package.json` 버전의 노트가 없으면 실패한다.
 - GitHub Release 에는 설치 파일과 함께 `release/latest.yml` 과 `release/pokebuddy-Setup-<버전>.exe.blockmap` 을 올린다. 설치본은 이 `latest.yml` 로 새 버전을 찾는다. 올린 파일 이름은 `latest.yml` 안의 이름과 같아야 한다.
 - 업데이트 실기 시험은 `node scripts/e2e-update.cjs` 다. 시험용 설치본(`pokebuddy-update-test`)을 조용히 설치해 로컬 서버의 다음 버전으로 업데이트한 뒤 제거한다. 사용자의 설치본과 섞이지 않는다.
+
+### Mac 앱 만들기
+
+```bash
+npm run dist:mac    # release/PokeBuddy-<버전>-arm64.dmg · release/PokeBuddy-<버전>-x64.dmg
+```
+
+- **mac 에서 만든다.** universal 헬퍼(`scripts/build-helper.js`)를 먼저 만든 뒤 `scripts/build-exe.cjs --mac` 으로 묶는다. 모으는 파일은 Windows 실행 파일과 같다.
+- 헬퍼에 arm64·x86_64 가 모두 없으면 멈춘다. Intel 용 dmg 가 창 추적 없이 나가지 않게 하기 위해서다.
+- 서명은 ad-hoc(`identity: "-"`)이다. Apple 개발자 인증서와 공증이 없다. Apple Silicon 은 서명이 전혀 없는 앱을 열지 않는다.
+- 자동 업데이트를 켜지 않는다. mac 의 electron-updater(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치한다. 그래서 GitHub Release 에는 dmg 두 개만 올린다.
+- `pokebuddy://` 링크는 앱의 `Info.plist` 에 등록한다. mac 은 여기에 적힌 스킴만 앱에 넘긴다.
+- 확인은 `release/mac-arm64/PokeBuddy.app` 을 먼저 띄워 본 뒤 dmg 로 한다.
 
 ### 로고
 
