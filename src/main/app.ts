@@ -524,22 +524,22 @@ function runGameCommand(command: Command): void {
   });
 }
 
-// 포켓몬 위 우클릭 — 이름·상태 / 밥 주기·놀아주기 / 설정. 나머지 조작은 관리 창이 맡는다
+// 포켓몬 위 우클릭 — 이름·상태 / 밥 주기·놀아주기 / 상세 보기. 앱 전체 조작은 트레이가 맡는다
 function showPetMenu(id: string): void {
   const p = stage?.petOf(id);
   if (!p || !stageWin) return;
-  const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null, hidden: userHidden };
+  const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null };
   const pet = saveParty()?.save()?.pets.find((row) => row.id === id) ?? null;
   const care = pet ? { status: petStatus(pet), feed: careItem(pet, "feed"), play: careItem(pet, "play") } : {};
   const built = petMenu({ ...model, ...care }, {
-    toggleHidden, quit: () => app.quit(),
     feed: () => runGameCommand({ cmd: "feed", target: id, from: "menu" }),
     play: () => runGameCommand({ cmd: "play", target: id, from: "menu" }),
     ...(pet ? { ball: () => runGameCommand({ cmd: "party.hide", target: id, from: "menu" }) } : {}),
   });
-  if (pet) built.splice(built.length - 2, 0,
+  if (pet) built.push(
     { type: "separator" as const },
-    { label: t("menu.manage"), click: () => openManageWindow() },
+    // 그 포켓몬의 개체 상세를 연다 — 우클릭 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
+    { label: t("menu.detail"), click: () => openManageWindow({ to: "pet", petId: id }) },
   );
   // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다
   const save = game?.read();

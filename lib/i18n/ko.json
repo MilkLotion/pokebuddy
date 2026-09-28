@@ -14,6 +14,7 @@
   "menu.dex": "도감",
   "menu.settings": "설정…",
   "menu.manage": "설정창 열기",
+  "menu.detail": "상세 보기",
   "menu.later": "{what} · {when}",
   "menu.info": "{name} · 친밀도 {affinity}/{next} · 기분 {mood}",
   "menu.infoMax": "{name} · 친밀도 {affinity} · 기분 {mood}",

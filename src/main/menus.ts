@@ -9,7 +9,6 @@ import { t } from "./text";
 export interface PetMenuModel {
   name: string;
   nature: string | null; // 성격의 화면 이름 — 세션 샌드박스 펫처럼 없으면 이름만
-  hidden: boolean;
   status?: string;
   feed?: { enabled: boolean; reason?: string };
   play?: { enabled: boolean; reason?: string };
@@ -18,10 +17,14 @@ export interface TrayMenuModel {
   hidden: boolean;
   ghost: boolean; // 클릭 통과
 }
+// 트레이 — 앱 전체 조작
 export interface MenuActions {
   toggleHidden(): void;
   quit(): void;
   toggleGhost?(): void;
+}
+// 포켓몬 위 우클릭 — 그 포켓몬 조작만. 숨기기·종료 같은 앱 전체 조작은 받지 않는다
+export interface PetMenuActions {
   feed?(): void;
   play?(): void;
   ball?(): void; // 이 포켓몬만 볼에 넣는다 — 파티 개체일 때만
@@ -31,18 +34,16 @@ export interface MenuActions {
 export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
   model.nature ? t("menu.pet", { name: model.name, nature: model.nature }) : model.name;
 
+// 우클릭한 포켓몬 관련 항목만 둔다 — 잠시 숨기기(전체)·종료는 트레이에만 (2026-09-28 사용자 결정). 숨긴 동안에는 우클릭할 포켓몬도 없다
+// 상세 보기(그 포켓몬의 개체 상세)는 부르는 쪽(app.ts)이 파티 개체일 때 끝에 붙인다
 // 첫 항목은 이름·상태 두 줄이다 (sublabel 이 둘째 줄). 밥 주기·놀아주기를 못 하면 흐리게 두고 이유를 오른쪽에 붙인다 (Figma `Context Menu` `338:738`)
-export function petMenu(model: PetMenuModel, act: MenuActions): MenuItemConstructorOptions[] {
+export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
   return [
     { label: petLine(model), ...(model.status ? { sublabel: model.status } : {}), enabled: false },
     { type: "separator" },
     ...(model.feed ? [{ label: t("menu.feed"), ...(model.feed.reason ? { sublabel: model.feed.reason } : {}), enabled: model.feed.enabled, click: () => act.feed?.() }] : []),
     ...(model.play ? [{ label: t("menu.play"), ...(model.play.reason ? { sublabel: model.play.reason } : {}), enabled: model.play.enabled, click: () => act.play?.() }] : []),
     ...(act.ball ? [{ label: t("menu.ball"), click: () => act.ball?.() }] : []),
-    { type: "separator" },
-    { label: t(model.hidden ? "menu.show" : "menu.hide"), click: () => act.toggleHidden() },
-    { type: "separator" },
-    { label: t("menu.quit"), click: () => act.quit() },
   ];
 }
 

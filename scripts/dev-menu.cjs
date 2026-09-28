@@ -19,10 +19,10 @@ app.whenReady().then(() => {
   const { petMenu, trayMenu } = require(path.join(root, "dist/main/menus.js"));
   const { preloadFile, rendererFile } = require(path.join(root, "dist/main/paths.js"));
   const say = (what) => () => process.stdout.write(`picked: ${what}\n`);
-  const act = { toggleHidden: say("hide"), quit: say("quit"), toggleGhost: say("ghost"), feed: say("feed"), play: say("play") };
-  // --pet 은 포켓몬 위 우클릭 메뉴 — 앱과 같게 관리 창 열기를 종료 앞에 넣는다 (src/main/app.ts showPetMenu)
-  const pet = petMenu({ name: "피카츄", nature: "노력", hidden: false, status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, act);
-  pet.splice(pet.length - 2, 0, { type: "separator" }, { label: "관리 창 열기", click: say("manage") });
+  const act = { toggleHidden: say("hide"), quit: say("quit"), toggleGhost: say("ghost") };
+  // --pet 은 포켓몬 위 우클릭 메뉴 — 앱과 같게 상세 보기를 끝에 붙인다 (src/main/app.ts showPetMenu)
+  const pet = petMenu({ name: "피카츄", nature: "노력", status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, { feed: say("feed"), play: say("play"), ball: say("ball") });
+  pet.push({ type: "separator" }, { label: "상세 보기", click: say("detail") });
   const template = process.argv.includes("--pet")
     ? pet
     : [{ label: "관리 창 열기", click: say("manage") }, { type: "separator" }, ...trayMenu({ hidden: false, ghost: true }, act)];
