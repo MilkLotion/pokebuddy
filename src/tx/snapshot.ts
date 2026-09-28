@@ -196,6 +196,7 @@ export function snapshot(
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
     detailTutorial: canShow(save, "detail"),
+    areaTutorial: canShow(save, "area"),
   };
 }
 

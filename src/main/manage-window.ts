@@ -4,13 +4,14 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
-import { createPortraits, type PortraitAsk, type Portraits } from "./portraits.js";
+import { createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
+import { createPetWindow, type PetWindow } from "./pet-window.js";
 import { SOUND_RULES, gainOf } from "../state/settings.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +31,10 @@ const CH = {
   dexOpen: "manage:dex-open",
   dexStep: "manage:dex-step",
   dexClosed: "manage:dex-closed",
+  petOpen: "manage:pet-open",
+  petStep: "manage:pet-step",
+  petAct: "manage:pet-act",
+  petClosed: "manage:pet-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -79,6 +84,7 @@ let screens: ManageOptions["screens"] = undefined;
 let identifyScreens: ManageOptions["identifyScreens"] = undefined;
 let pickScreen: ManageOptions["pickScreen"] = undefined;
 let dexWin: DexWindow | null = null;
+let petWin: PetWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -161,6 +167,29 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     onStep: (delta) => toManage(CH.dexStep, delta),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
     onClosed: () => toManage(CH.dexClosed),
+  });
+  // 파티 상세 기기 창 — 관리 창이 개체를 정해 보낸다. 누른 단추·이전·다음은 관리 창으로 돌려보낸다
+  petWin = createPetWindow({
+    preload,
+    html: path.join(path.dirname(html), "pet.html"),
+    portrait: async (slug, shiny) => {
+      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
+      return (await portraits.get([{ slug, shiny }]))[portraitKey({ slug, shiny })] ?? null;
+    },
+    cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
+    volume: () => {
+      const s = game.read()?.settings;
+      return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
+    },
+    onStep: (delta) => toManage(CH.petStep, delta),
+    onAct: (action) => toManage(CH.petAct, action),
+    onClosed: () => toManage(CH.petClosed),
+  });
+  ipcMain.on(CH.petOpen, (e, open: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
+    if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen);
+    else petWin?.close();
   });
   ipcMain.on(CH.dexOpen, (e, slug: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;

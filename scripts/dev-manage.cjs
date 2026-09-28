@@ -14,6 +14,7 @@
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
 // `--close` 를 주면 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
 // `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
+// `--pet-shot <파일>` 을 주면 파티 상세 기기 창도 PNG 로 저장한다. `--detail` 이나 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
@@ -170,7 +171,16 @@ app.whenReady().then(async () => {
     return game.send({ cmd: "settings.set", target: "playScreen", args: { value: ref } }, "settings");
   };
   app.on("will-quit", () => picker.close());
-  const win = openManage({ preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ hidden: false, clickThrough: false }), ...(route ? { route } : {}) });
+  // 포켓몬 표시·고스트 모드 — 앱은 저장 밖에서 처리한다(src/main/commands.ts). 여기서는 값만 바꿔 화면 탭 튜토리얼을 확인할 수 있게 한다
+  const shown = { hidden: false, clickThrough: false };
+  const devSend = async (req) => {
+    if (req.cmd === "settings.set" && (req.target === "hidden" || req.target === "clickThrough")) {
+      shown[req.target] = !!req.args?.value;
+      return { ok: true, result: { key: req.target, value: shown[req.target] } };
+    }
+    return game.send({ cmd: req.cmd, target: req.target, args: req.args }, "settings");
+  };
+  const win = openManage({ preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ ...shown }), send: devSend, ...(route ? { route } : {}) });
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다
@@ -230,13 +240,24 @@ app.whenReady().then(async () => {
         .then((img) => {
           fs.writeFileSync(shotFile, img.toPNG());
           process.stdout.write(`shot: ${shotFile}\n`);
+          const petShot = argAfter("--pet-shot");
+          const pet = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("pet.html"));
+          const petDone =
+            petShot && pet
+              ? pet.webContents.capturePage().then((d) => {
+                  fs.writeFileSync(petShot, d.toPNG());
+                  process.stdout.write(`pet shot: ${petShot} ${JSON.stringify(pet.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+                })
+              : Promise.resolve();
           const dexShot = argAfter("--dex-shot");
           const dex = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("dex.html"));
-          if (!dexShot || !dex) return;
-          return dex.webContents.capturePage().then((d) => {
-            fs.writeFileSync(dexShot, d.toPNG());
-            process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
-          });
+          if (!dexShot || !dex) return petDone;
+          return petDone.then(() =>
+            dex.webContents.capturePage().then((d) => {
+              fs.writeFileSync(dexShot, d.toPNG());
+              process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+            }),
+          );
         })
         .then(() => {
           // --close 는 찍은 뒤 관리 창을 닫고 잠깐 기다린다 — 도감 기기 창이 떠 있을 때 닫아도 오류가 없는지 본다

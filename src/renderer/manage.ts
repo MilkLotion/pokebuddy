@@ -18,6 +18,7 @@ import type {
   ManageReply,
   ManageRoute,
   PatchNotesView,
+  PetDeviceAction,
   PetView,
   PortraitAsk,
   ScreenView,
@@ -153,6 +154,7 @@ type Dialog =
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
   | { kind: "guide" }
+  | { kind: "keep"; petId: string } // 박스에 보관 확인 — 파티 상세 기기 창의 `박스에 보관`
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
@@ -478,6 +480,7 @@ function petCard(pet: PetView): HTMLElement {
     card.appendChild(box);
   }
   card.addEventListener("click", () => openPet(pet.id));
+  if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
   const state = `${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
   if (pet.forms && pet.forms.length > 1) {
     // 공유 sid 계열 — 마우스를 올리면 박스와 같은 모습 툴팁. 두 툴팁이 겹치지 않게 title 대신 툴팁 머리 줄에 상태를 적는다
@@ -846,6 +849,7 @@ function drawBox(v: Snapshot): void {
     }
     const cell = boxCell(pet, () => openPet(pet.id));
     cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
+    if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => startBoxDrag(e, cell, { boxId: box.id, slot }));
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
@@ -2201,15 +2205,9 @@ function draw(): void {
   }
   pointsEl.textContent = view.points.toLocaleString("ko-KR");
   achDotEl.hidden = view.achievements.unclaimed === 0;
-  // 개체 상세 페이지 — 개체가 사라졌으면 탭으로 돌아간다
-  const detail = detailPet ? petOf(detailPet) : null;
-  if (detail) {
-    drawPetPage(detail);
-    restoreSearchFocus();
-    drawTutorial();
-    return;
-  }
-  detailPet = null;
+  // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
+  if (detailPet && !petOf(detailPet)) detailPet = null;
+  syncPetDevice();
   const kicked = kickedBanner();
   if (kicked) bodyEl.appendChild(kicked);
   if (tab === "party") drawParty(view);
@@ -2269,43 +2267,86 @@ interface CoachSpec {
   body: string;
   button: string;
   onGo: () => void;
+  // 구멍 안의 대상이 그 단계의 목표 행동인가(상점 카드·업적 아이콘·탭 버튼). 아니면 대상도 막고 다음·확인·✕ 만 받는다
+  // (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
+  interactive?: boolean;
+  also?: HTMLElement | null; // 함께 밝힐 요소 — 구멍을 둘을 감싸는 사각형으로 넓힌다(놀이공간 줄 + 화면 줄)
 }
 const COACH = { pad: 8, gap: 12, width: 280, margin: 8 };
 
 let coachEl: HTMLElement | null = null;
+// 튜토리얼 중 초점을 둘 수 있는 곳 — 말풍선, 그리고 목표 행동이면 대상. 막 밖으로 Tab 이 나가면 말풍선 단추로 되돌린다
+let coachAllows: ((n: Node) => boolean) | null = null;
+let coachHome: HTMLElement | null = null;
 
-// 개체 상세 튜토리얼 — 파티 개체 상세를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 99 766:17274 ~ 770:709)
-const DETAIL_STEPS = [
-  { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
-  { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
-  { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격은 민트로 바꿔요." },
-  { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
-  { tut: "detail-manage", title: "교체와 박스 보관", body: "박스에 보관하면 성장이 멈춰요." },
-] as const;
-let detailStep = 0;
+// 개체 상세 튜토리얼은 파티 상세 기기 창이 그린다(src/renderer/pet.ts) — 끝내거나 닫으면 여기로 알려 와 기록한다
+
+// 설정 › 화면 튜토리얼 — 줄마다 무엇인지 알리고 직접 해 보게 한다. 해 보는 단계는 다음 단추가 없고, 그 동작을 하면 넘어간다
+// (2026-09-28 사용자 "화면 튜토리얼도 각각이 뭐가있고, 사용자가 직접해보는거까지 튜토리얼해").
+// 바탕화면 표시 줄(포켓몬 표시·고스트 모드)이 없는 창이면 그 단계는 건너뛴다. 마지막 단계는 고른 놀이공간 방식을 설명한다
+interface AreaStep {
+  tut: string;
+  also?: (v: Snapshot) => string | null; // 함께 밝힐 줄
+  title: string;
+  body: (v: Snapshot) => string;
+  // 해 보는 단계 — 이 조건이 되면 넘어간다. start 는 단계에 들어온 때의 스냅샷
+  until?: (v: Snapshot, start: Snapshot) => boolean;
+  needsDisplay?: boolean;
+}
+const AREA_BODY: Record<string, string> = {
+  all: "모든 화면이면 화면마다 놀아요. 끌어서 다른 화면으로 옮길 수 있어요.",
+  screen: "한 화면이면 목록이나 화면에서 고르기로 놀 화면을 정해요.",
+  region: "영역 지정이면 영역 그리기로 놀 곳을 직접 그려요.",
+};
+const AREA_STEPS: readonly AreaStep[] = [
+  { tut: "set-hidden", title: "포켓몬 표시", body: () => "끄면 바탕화면의 포켓몬이 모두 숨어요. 스위치를 눌러 꺼 보세요.", until: (v) => v.display?.hidden === true, needsDisplay: true },
+  { tut: "set-hidden", title: "다시 켜 보세요", body: () => "켜면 포켓몬이 다시 나와요.", until: (v) => v.display?.hidden === false, needsDisplay: true },
+  { tut: "set-ghost", title: "고스트 모드", body: () => "켜면 포켓몬 위를 눌러도 뒤 창이 눌려요. 켜 보세요.", until: (v) => v.display?.clickThrough === true, needsDisplay: true },
+  { tut: "set-ghost", title: "다시 꺼 보세요", body: () => "끄면 포켓몬을 다시 만질 수 있어요.", until: (v) => v.display?.clickThrough === false, needsDisplay: true },
+  { tut: "area", title: "포켓몬이 놀 곳을 골라요", body: () => "모든 화면, 한 화면, 영역 지정이 있어요. 다른 칸을 눌러 보세요.", until: (v, start) => v.settings.playArea !== start.settings.playArea },
+  {
+    tut: "area",
+    also: (v) => (v.settings.playArea === "screen" ? "area-screen" : v.settings.playArea === "region" ? "area-region" : null),
+    title: "놀이공간을 바꿨어요",
+    body: (v) => AREA_BODY[v.settings.playArea] ?? "",
+  },
+];
+let areaStep = 0;
+let areaStart: Snapshot | null = null; // 지금 단계에 들어온 때
+// 쓸 수 있는 단계 — 바탕화면 표시 줄이 없으면 그 단계를 뺀다
+const areaSteps = (v: Snapshot): AreaStep[] => AREA_STEPS.filter((st) => !st.needsDisplay || v.display != null);
 
 function drawTutorial(): void {
   coachEl?.remove();
   coachEl = null;
   const id = view?.tutorial ?? null;
-  const detailInParty = detailPet != null && slotOfPet(detailPet) != null;
-  if (view && !dialog && detailInParty && view.detailTutorial) {
-    const step = DETAIL_STEPS[detailStep];
-    const target = step ? bodyEl.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
+  coachAllows = null;
+  coachHome = null;
+  if (view && dialog?.kind === "settings" && dialog.tab === "display" && view.areaTutorial) {
+    // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다
+    // (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아", Figma 99 `Tutorial / Playground · 설정`)
+    const steps = areaSteps(view);
+    // 해 보는 단계의 동작을 했으면 다음 단계로 — 설정이 바뀌면 스냅샷이 새로 와서 여기로 다시 온다
+    for (;;) {
+      const cur = steps[areaStep];
+      if (!areaStart) areaStart = view;
+      if (!cur?.until || !cur.until(view, areaStart) || areaStep >= steps.length - 1) break;
+      areaStep += 1;
+      areaStart = view;
+    }
+    const step = steps[areaStep];
+    const target = step ? dialogEl.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
     if (step && target) {
-      const last = detailStep === DETAIL_STEPS.length - 1;
-      coachEl = coachLayer("detail", target, {
-        step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`,
+      const alsoKey = step.also?.(view) ?? null;
+      const tryIt = step.until != null;
+      coachEl = coachLayer("area", target, {
+        step: `튜토리얼 · 화면 ${areaStep + 1} / ${steps.length}`,
         title: step.title,
-        body: step.body,
-        button: last ? "확인" : "다음",
-        onGo: () => {
-          if (last) void send("tutorial.done", "detail", { steps: DETAIL_STEPS.length });
-          else {
-            detailStep += 1;
-            drawTutorial();
-          }
-        },
+        body: step.body(view),
+        button: tryIt ? "" : "확인", // 해 보는 단계는 그 동작으로만 넘어간다
+        onGo: () => void send("tutorial.done", "area", { steps: steps.length }),
+        interactive: tryIt,
+        also: alsoKey ? dialogEl.querySelector<HTMLElement>(`[data-tut="${alsoKey}"]`) : null,
       });
     }
   } else if (id && view && !dialog && !detailPet) {
@@ -2314,12 +2355,13 @@ function drawTutorial(): void {
       const done = view.achievements.list.find((a) => a.state === "achieved");
       const target = document.getElementById("open-achievements");
       if (done && target) {
-        coachEl = coachLayer(id, target, { step: "튜토리얼 · 업적", ...ACHIEVEMENT_GUIDE, onGo: () => open({ kind: "achievements" }) });
+        coachEl = coachLayer(id, target, { step: "튜토리얼 · 업적", ...ACHIEVEMENT_GUIDE, onGo: () => open({ kind: "achievements" }), interactive: true });
       }
     } else if (text && tab === text.tab) {
       const target = bodyEl.querySelector<HTMLElement>(`[data-tut="${id}"]`);
       // 한 단계뿐이면 "1 / 1" 을 붙이지 않고 단추는 "확인" — 바탕화면 튜토리얼과 같다
-      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id, { steps: 1 }) });
+      // 상점은 랜덤알 카드를 눌러 사는 것이 목표 행동이다. 부화는 안내만 한다
+      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id, { steps: 1 }), interactive: id === "shop" });
     } else if (text) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다
       const target = tabsEl.children[TABS.findIndex((t) => t.id === text.tab)] as HTMLElement | undefined;
@@ -2334,6 +2376,7 @@ function drawTutorial(): void {
             detailPet = null;
             draw();
           },
+          interactive: true,
         });
       }
     }
@@ -2344,21 +2387,36 @@ function drawTutorial(): void {
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {
   const layer = el("div", "coach");
-  const r = target.getBoundingClientRect();
+  const t0 = target.getBoundingClientRect();
+  const t1 = spec.also?.getBoundingClientRect();
+  const r = t1 ? { left: Math.min(t0.left, t1.left), top: Math.min(t0.top, t1.top), right: Math.max(t0.right, t1.right), bottom: Math.max(t0.bottom, t1.bottom) } : t0;
   const W = window.innerWidth;
   const H = window.innerHeight;
   const hole = { l: Math.max(0, r.left - COACH.pad), t: Math.max(0, r.top - COACH.pad), r: Math.min(W, r.right + COACH.pad), b: Math.min(H, r.bottom + COACH.pad) };
+  const bubble = el("div", "coach-bubble");
+  // 막을 누르면 아무 일도 없고 말풍선을 한 번 흔든다 — 넘어가거나 스킵되지 않는다
+  const nudge = (): void => {
+    bubble.classList.remove("nudge");
+    void bubble.offsetWidth; // 애니메이션을 처음부터 다시
+    bubble.classList.add("nudge");
+  };
+  const block = (cls: string, x: number, y: number, w: number, h: number): void => {
+    const dim = el("div", cls);
+    Object.assign(dim.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
+    dim.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      nudge();
+    });
+    layer.appendChild(dim);
+  };
   for (const [x, y, w, h] of [
     [0, 0, W, hole.t],
     [0, hole.b, W, H - hole.b],
     [0, hole.t, hole.l, hole.b - hole.t],
     [hole.r, hole.t, W - hole.r, hole.b - hole.t],
-  ] as const) {
-    const dim = el("div", "coach-dim");
-    Object.assign(dim.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
-    layer.appendChild(dim);
-  }
-  const bubble = el("div", "coach-bubble");
+  ] as const) block("coach-dim", x, y, w, h);
+  // 안내만 하는 단계는 구멍도 막는다 — 대상은 보이되 눌리지 않는다(예: 개체 상세의 박스에 보관)
+  if (!spec.interactive) block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t);
   const head = el("div", "head");
   const x = button("x", "✕");
   x.setAttribute("aria-label", "튜토리얼 닫기");
@@ -2367,7 +2425,7 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   const next = actionButton(spec.button, true, false, spec.onGo);
   bubble.append(head, el("div", "title", spec.title));
   if (spec.body) bubble.appendChild(el("div", "body", spec.body)); // 본문이 없으면 제목 아래 바로 단추
-  bubble.appendChild(actions(el("div", "spacer"), next));
+  if (spec.button) bubble.appendChild(actions(el("div", "spacer"), next)); // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
   layer.appendChild(bubble);
   document.body.appendChild(layer);
   const left = Math.min(Math.max(COACH.margin, r.left), W - COACH.width - COACH.margin);
@@ -2375,13 +2433,34 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   const top = below + bubble.offsetHeight > H - COACH.margin ? hole.t - COACH.gap - bubble.offsetHeight : below;
   bubble.style.left = `${Math.round(left)}px`;
   bubble.style.top = `${Math.round(Math.max(COACH.margin, top))}px`;
+  coachAllows = (n) => bubble.contains(n) || (spec.interactive === true && target.contains(n));
+  coachHome = spec.button ? next : x;
+  const active = document.activeElement;
+  if (!active || active === document.body || !coachAllows(active)) coachHome.focus({ preventScroll: true });
   return layer;
 }
 
-// 본문이 스크롤되거나 창 크기가 바뀌면 자리를 다시 잰다
+// 튜토리얼 중에는 키보드 초점도 말풍선(과 목표 대상) 안에 둔다 — Tab·Enter 로 막 밖의 단추를 누르지 않게
+document.addEventListener(
+  "focusin",
+  (e) => {
+    if (!coachEl || !coachAllows || !coachHome) return;
+    if (e.target instanceof Node && !coachAllows(e.target)) coachHome.focus({ preventScroll: true });
+  },
+  true,
+);
+
+// 본문·대화상자가 스크롤되거나 창 크기가 바뀌면 자리를 다시 잰다
 bodyEl.addEventListener("scroll", () => {
   if (coachEl) drawTutorial();
 });
+dialogEl.addEventListener(
+  "scroll",
+  () => {
+    if (coachEl) drawTutorial();
+  },
+  true,
+);
 window.addEventListener("resize", () => {
   if (coachEl) drawTutorial();
 });
@@ -2425,39 +2504,6 @@ function actions(...items: HTMLElement[]): HTMLElement {
 
 const closeButton = (label = "닫기"): HTMLButtonElement => actionButton(label, false, false, close);
 
-// ── 개체 상세 페이지 ───────────────────────────────────────────────────────────
-// Figma `08 · 개체 상세 시안` 의 시안 C(2단) `453:946` — 2026-09-25 사용자 선택. 모달이 아니라 탭 본문을 차지하는 페이지다.
-// 왼쪽 기둥은 프로필(초상·이름·레벨·성격·타입·네 막대), 오른쪽은 돌봄·성장·표시·관리를 짧게 쌓는다.
-// 박스 개체는 돌봄·표시가 없다(계약: 박스 상세에는 표시 항목을 두지 않는다). 진화·성격 모달은 이 페이지 위에 뜨고 돌아온다
-
-function pageButton(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
-  const b = button(primary ? "page-btn primary" : "page-btn", label);
-  b.disabled = disabled;
-  b.addEventListener("click", run);
-  return b;
-}
-
-// 목록 카드의 한 줄 — 왼쪽에 이름과 설명, 오른쪽에 딸린 것. run 이 있으면 줄 전체를 누른다
-function listRow(title: string, desc: string | null, right: HTMLElement[], run?: () => void): HTMLElement {
-  const row = run ? button("list-row") : el("div", "list-row");
-  const copy = el("div", "copy");
-  copy.appendChild(el("div", "title", title));
-  if (desc) copy.appendChild(el("div", "desc", desc));
-  row.appendChild(copy);
-  row.append(...right);
-  if (run) {
-    row.appendChild(el("span", "chev", "›"));
-    row.addEventListener("click", run);
-  }
-  return row;
-}
-
-function listCard(...rows: HTMLElement[]): HTMLElement {
-  const box = el("div", "list-card");
-  box.append(...rows);
-  return box;
-}
-
 // 켬·끔 스위치 — Figma `Toggle` `299:3593`
 function switchButton(on: boolean, label: string, run: () => void): HTMLButtonElement {
   const b = button("switch");
@@ -2468,138 +2514,67 @@ function switchButton(on: boolean, label: string, run: () => void): HTMLButtonEl
   return b;
 }
 
-// 크기 단계 1~sizeLevels — 누를 때마다 한 번 저장한다. 고른 단계는 채운 단추다. 단계 수는 스냅샷이 준다
-function sizeButtons(pet: PetView): HTMLElement {
-  const group = el("div", "sizes");
-  group.setAttribute("role", "group");
-  group.setAttribute("aria-label", "크기");
-  const levels = view?.sizeLevels ?? 5;
-  for (let n = 1; n <= levels; n++) {
-    const b = button("size", String(n));
-    b.setAttribute("aria-pressed", String(n === pet.size));
-    b.addEventListener("click", () => {
-      if (n !== pet.size) void send("pet.set", pet.id, { size: n });
-    });
-    group.appendChild(b);
-  }
-  return group;
-}
-
 const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots.some((p) => p?.id === id))?.name ?? null;
 
-const BACK_TO: Record<string, string> = { party: "파티로", box: "박스로", dex: "도감으로", shop: "상점으로", bag: "가방으로", trade: "교환으로" };
+// ── 파티 상세 기기 창 ─────────────────────────────────────────────────────────────
+// 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)).
+// 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
 
-function drawPetPage(pet: PetView): void {
+let petDeviceOpen = false;
+let petDeviceSent = ""; // 마지막으로 보낸 내용 — 같으면 다시 보내지 않는다(5초 새로 읽기마다 기기 창을 다시 그리지 않게)
+
+function syncPetDevice(): void {
+  const pet = detailPet ? petOf(detailPet) : null;
+  if (!pet || !view) {
+    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
+    if (petDeviceOpen || petDeviceSent) window.pokebuddyManage.petOpen(null);
+    petDeviceOpen = false;
+    petDeviceSent = "";
+    return;
+  }
   const slot = slotOfPet(pet.id);
   const inParty = slot != null;
-  const where = inParty ? `파티 ${slot + 1}번` : (boxNameOf(pet.id) ?? "박스");
-  const page = el("div", "pet-page");
+  const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${boxNameOf(pet.id) ?? "박스"} · 보관 중`;
+  const open = { pet, where, inParty, slotIndex: slot, emptySlot: inParty ? null : emptySlot(), sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial };
+  const key = JSON.stringify(open);
+  if (petDeviceOpen && key === petDeviceSent) return;
+  window.pokebuddyManage.petOpen(open);
+  petDeviceOpen = true;
+  petDeviceSent = key;
+}
 
-  // 돌아가기 줄 — 왼쪽 링크, 오른쪽 자리와 상태
-  const back = el("div", "back-row");
-  // 돌아갈 곳은 연 탭이다 — 개체가 지금 있는 곳이 아니다. 파티에서 박스로 보관해도 파티 탭으로 돌아간다
-  const link = button("back-link", `‹  ${BACK_TO[tab] ?? "돌아가기"}`);
-  link.addEventListener("click", () => {
-    detailPet = null;
-    draw();
-  });
-  back.append(link, el("span", "where", inParty ? `${where} · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${where} · 보관 중`));
-  page.appendChild(back);
+// 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
+function stepPet(delta: -1 | 1): void {
+  if (!detailPet) return;
+  const list = slotOfPet(detailPet) != null ? partyPets() : boxPets();
+  if (list.length < 2) return;
+  const at = list.findIndex((p) => p.id === detailPet);
+  const next = list[(at + delta + list.length) % list.length];
+  if (!next) return;
+  detailPet = next.id;
+  draw();
+}
 
-  const cols = el("div", "pet-cols");
-
-  // 왼쪽 기둥 — 초상, 이름, 레벨·성격, 타입, 네 막대
-  const side = el("div", "pet-side");
-  const portrait = portraitOf(pet.species, pet.shiny, "portrait big", pet.shiny ? "이로치" : "");
-  side.appendChild(portrait);
-  // 볼 토글 — 열린 볼은 바탕화면에 나와 있음, 닫힌 볼은 볼 안. 이름은 누르면 일어날 일
-  if (inParty) {
-    const action = pet.hidden ? "꺼내기" : "볼에 넣기";
-    const ball = button(`ball-toggle ${pet.hidden ? "closed" : "open"}`);
-    ball.dataset.tut = "detail-ball";
-    ball.title = action;
-    ball.setAttribute("aria-label", action);
-    ball.addEventListener("click", () => void send(pet.hidden ? "party.show" : "party.hide", pet.id));
-    side.appendChild(ball);
+// 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
+function onPetAction(action: PetDeviceAction): void {
+  const id = detailPet;
+  if (!id || action.petId !== id) return; // 기기 창이 다른 개체를 보이던 때 누른 것 — 버린다
+  if (action.kind === "cmd") {
+    void send(action.cmd, id, action.args);
+    return;
   }
-  side.appendChild(el("div", "name", pet.name));
-  side.appendChild(el("div", "sub", `Lv.${pet.level} · ${pet.nature}`));
-  const badges = el("div", "badges");
-  pet.types.forEach((name, i) => badges.appendChild(typeBadge(name, pet.typeIds[i])));
-  side.appendChild(badges);
-  const bars = el("div", "bars");
-  const bar = (label: string, value: number, shown: string, cls = ""): HTMLElement => {
-    const box = el("div", "bar");
-    const head = el("div", "head");
-    head.append(el("span", undefined, label), el("strong", undefined, shown));
-    const track = el("div", "track");
-    const fill = el("div", cls ? `fill ${cls}` : "fill");
-    fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
-    track.appendChild(fill);
-    box.append(head, track);
-    return box;
-  };
-  bars.append(
-    bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
-    bar("친밀도", pet.affinity, `${pet.affinity}`),
-    bar("만복도", pet.fullness, `${pet.fullness} · ${ZONE_WORD[pet.zone] ?? pet.zone}`, pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : ""),
-    bar("기분", pet.mood, `${pet.mood} · ${pet.moodWord}`, "mood"),
-  );
-  side.appendChild(bars);
-  if (inParty && pet.longPlay) side.appendChild(el("span", "chip-note", "오래 놀아주기"));
-  cols.appendChild(side);
-
-  // 오른쪽 — 돌봄, 성장, 표시, 관리
-  const main = el("div", "pet-main");
-  const label = (s: string): HTMLElement => el("div", "section-label", s);
-  if (inParty) {
-    main.appendChild(label("돌봄"));
-    const care = el("div", "care-row");
-    care.dataset.tut = "detail-care";
-    const full = pet.fullness >= 100;
-    care.append(
-      pageButton(full ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`, true, !pet.feedReady || full, () => void send("feed", pet.id)),
-      pageButton(pet.playReady ? "놀아주기" : "놀아주기 · 쉬는 중", false, !pet.playReady, () => void send("play", pet.id)),
-    );
-    main.appendChild(care);
+  if (action.kind === "tutorial") {
+    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail", action.action === "done" ? { steps: 5 } : undefined);
+    return;
   }
-
-  main.appendChild(label("성장"));
-  const ready = pet.evolutions.filter((e) => e.ready);
-  const evolve = (): void => open({ kind: "evolve", petId: pet.id });
-  const evoRow = !pet.evolutions.length
-    ? listRow("진화", "더 진화하지 않아요", [])
-    : ready.length
-      ? listRow(`진화 · ${ready.map((e) => e.name).join(" · ")}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
-      : listRow(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve); // 필요 조건은 화면에 없는 조건이라 남긴다
-  const growth = listCard(evoRow, listRow(`성격 · ${pet.nature}`, null, [], () => open({ kind: "nature", petId: pet.id })));
-  growth.dataset.tut = "detail-growth";
-  main.appendChild(growth);
-
-  if (inParty) {
-    main.appendChild(label("표시"));
-    const size = listCard(listRow("크기", null, [sizeButtons(pet)]));
-    size.dataset.tut = "detail-size";
-    main.appendChild(size);
+  if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
+  else if (action.dialog === "keep") open({ kind: "keep", petId: id });
+  else if (action.dialog === "nature") open({ kind: "nature", petId: id });
+  else if (action.dialog === "pick-slot") open({ kind: "pick-slot", petId: id });
+  else {
+    const slot = slotOfPet(id);
+    if (slot != null) open({ kind: "pick-box", slotIndex: slot });
   }
-
-  const manage = el("div", "manage-row");
-  manage.dataset.tut = "detail-manage";
-  if (inParty) {
-    manage.append(pageButton("교체", false, false, () => open({ kind: "pick-box", slotIndex: slot })), pageButton("박스에 보관", false, false, () => void send("party.keep", pet.id)));
-  } else {
-    const free = emptySlot();
-    manage.appendChild(
-      free != null
-        ? pageButton("파티에 배치", true, false, () => void send("party.place", pet.id, { slotIndex: free }))
-        : pageButton("교체", true, false, () => open({ kind: "pick-slot", petId: pet.id })),
-    );
-  }
-  main.appendChild(manage);
-  if (notice) main.appendChild(el("div", "notice bad", notice));
-  cols.appendChild(main);
-  page.appendChild(cols);
-  bodyEl.appendChild(page);
 }
 
 // ── 모달 · 진화 확인 ───────────────────────────────────────────────────────────
@@ -2649,6 +2624,31 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     });
   });
   dialogEl.appendChild(actions(go, actionButton("취소", false, false, () => open(back.to))));
+}
+
+// 박스에 보관 확인 — 명세대로 확인한 뒤에 보낸다 (docs/specs/game.md "파티 개체의 상세에는 `교체`와 나란히 `박스에 보관`",
+// 2026-09-28 사용자 "제안대로 하자"). 문구는 Figma `Detail / Box Keep Confirm` `914:22998`. 저장에 실패하면 창에 실패 문구가 남고 파티는 그대로다
+function drawKeep(petId: string): void {
+  const pet = petOf(petId);
+  const slot = slotOfPet(petId);
+  if (!pet || slot == null) {
+    close();
+    return;
+  }
+  dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 박스에 보관할까요?`, ""));
+  const info = el("div", "info-box");
+  info.append(
+    el("div", undefined, `파티 ${slot + 1}번 칸이 비워져요.`),
+    el("div", "note", "박스에서는 친밀도·만복도·적립이 멈추고 값은 보존돼요."),
+    el("div", "note", "박스 개체 상세의 [파티에 배치]로 다시 데려올 수 있어요."),
+  );
+  dialogEl.appendChild(info);
+  const keep = actionButton("박스에 보관", true, false, () => {
+    void send("party.keep", petId).then((ok) => {
+      if (ok) close();
+    });
+  });
+  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, close), keep));
 }
 
 // 가방의 진화용 도구 — 그 도구로 지금 진화할 수 있는 개체를 고른다. 박스 개체에게도 쓸 수 있다
@@ -3090,8 +3090,11 @@ function drawDisplay(scroll: HTMLElement): void {
   const s = view.settings;
   const d = view.display;
   if (d) {
-    scroll.appendChild(settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden))));
-    scroll.appendChild(settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setSetting("clickThrough", !d.clickThrough))));
+    const shown = settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden)));
+    shown.dataset.tut = "set-hidden"; // 화면 탭 튜토리얼이 밝히는 곳
+    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setSetting("clickThrough", !d.clickThrough)));
+    ghost.dataset.tut = "set-ghost";
+    scroll.append(shown, ghost);
   }
   // 놀이공간 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면, worklog/records/multi-display/record.md)
   const area = [
@@ -3107,7 +3110,9 @@ function drawDisplay(scroll: HTMLElement): void {
           ? "그려 둔 영역 안에서만 돌아다님"
           : "영역을 아직 그리지 않았음"
         : undefined;
-  scroll.appendChild(settingRow("놀이공간", hint, segmented(area, s.playArea, (id) => setSetting("playArea", id))));
+  const areaRow = settingRow("놀이공간", hint, segmented(area, s.playArea, (id) => setSetting("playArea", id)));
+  areaRow.dataset.tut = "area"; // 놀이공간 튜토리얼이 밝히는 곳
+  scroll.appendChild(areaRow);
   // 한 화면 — 목록에서 고르거나 화면 위에서 눌러 고른다. 목록이 열린 동안 모든 모니터에 번호를 띄운다(syncIdentify)
   if (s.playArea === "screen") {
     void loadScreens();
@@ -3120,12 +3125,16 @@ function drawDisplay(scroll: HTMLElement): void {
       if (row) setSetting("playScreen", row.ref);
     }));
     box.appendChild(actionButton("화면에서 고르기", false, false, () => void screenPick()));
-    scroll.appendChild(settingRow("화면", undefined, box));
+    const screenRow = settingRow("화면", undefined, box);
+    screenRow.dataset.tut = "area-screen"; // 놀이공간 튜토리얼이 함께 밝힌다
+    scroll.appendChild(screenRow);
   }
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
     const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
-    scroll.appendChild(settingRow("영역", undefined, draw));
+    const regionRow = settingRow("영역", undefined, draw);
+    regionRow.dataset.tut = "area-region"; // 화면 탭 튜토리얼이 함께 밝힌다
+    scroll.appendChild(regionRow);
   }
 }
 
@@ -3392,6 +3401,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   user: "dialog settings",
   guide: "dialog tall",
   hatched: "dialog",
+  keep: "dialog",
   form: "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
@@ -3436,6 +3446,7 @@ function drawDialog(): void {
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "user") drawUser(dialog.tab);
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.slotIndex, dialog.eggId);
+  else if (dialog.kind === "keep") drawKeep(dialog.petId);
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
@@ -3446,11 +3457,18 @@ function drawDialog(): void {
   if (scroll && keep) scroll.scrollTop = keep;
   restoreSearchFocus();
   syncIdentify();
+  drawTutorial(); // 대화상자 안의 튜토리얼(설정 › 화면의 놀이공간)
 }
 
 // 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
 function open(next: Dialog): void {
-  // 개체 상세는 모달이 아니라 페이지다 — 모달을 닫고 그 개체가 있는 탭에서 상세를 그린다
+  // 설정 › 화면에 새로 들어오면 화면 탭 튜토리얼은 1단계부터
+  if (next.kind === "settings" && next.tab === "display" && !(dialog?.kind === "settings" && dialog.tab === "display")) {
+    areaStep = 0;
+    areaStart = null;
+  }
+  // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
+  // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
     dialog = null;
     notice = "";
@@ -3458,7 +3476,6 @@ function open(next: Dialog): void {
     detailPet = next.petId;
     tab = slotOfPet(next.petId) != null ? "party" : "box";
     draw();
-    bodyEl.scrollTop = 0;
     return;
   }
   dialog = next;
@@ -3473,7 +3490,14 @@ function close(): void {
   syncIdentify();
 }
 
-const openPet = (id: string): void => open({ kind: "pet", petId: id });
+const openPet = (id: string): void => {
+  if (detailPet === id && !dialog) {
+    detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
+    draw();
+    return;
+  }
+  open({ kind: "pet", petId: id });
+};
 
 // ── 명령 보내기 ────────────────────────────────────────────────────────────────
 
@@ -3652,7 +3676,7 @@ function goTo(route: ManageRoute): void {
     draw();
     bodyEl.querySelector(".daycare")?.scrollIntoView({ block: "start" });
   } else if (route.to === "pet") {
-    if (petOf(route.petId)) openPet(route.petId);
+    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 우클릭 상세 보기·진화 배너
   } else if (route.to === "account") {
     detailPet = null;
     open({ kind: "user", tab: "account" });
@@ -3701,6 +3725,15 @@ window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
 window.pokebuddyManage.onDexClosed(() => {
   dexPick = null;
   markDexPick();
+});
+window.pokebuddyManage.onPetStep((delta) => stepPet(delta));
+window.pokebuddyManage.onPetAct((action) => onPetAction(action));
+window.pokebuddyManage.onPetClosed(() => {
+  petDeviceOpen = false;
+  petDeviceSent = "";
+  if (!detailPet) return;
+  detailPet = null;
+  draw();
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 창이 떠 있는 동안 주기적으로 다시 읽는다

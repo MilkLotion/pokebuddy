@@ -206,13 +206,22 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄이 막히면 상점이 먼저");
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
   assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" }, "꺼내면 첫 돌봄이 다시 앞");
-  // 밥 주기 한 번이면 첫 돌봄은 이미 한 행동으로 완료 — 그 뒤 놀이공간이 줄에 든다
+  // 튜토리얼 밖(설정창·점프 목록·CLI)의 밥 주기는 첫 돌봄을 끝내지 않는다 — 튜토리얼 메뉴에서 고른 돌봄으로만 끝난다
+  // (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
   s.totals.fed += 1;
-  assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["playground"]);
-  assert.equal(s.tutorials["first-care"]?.state, "done");
-  assert.equal(s.tutorials.playground?.queuedAt, s.tutorials["first-care"]?.queuedAt, "놀이공간은 첫 돌봄의 대기 시각을 물려받는다");
-  assert.deepStrictEqual(currentTutorial(s), { id: "playground", surface: "stage" }, "놀이공간이 첫 돌봄 바로 뒤, 상점보다 먼저");
-  assert.ok(skip(s, "playground").ok);
+  assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "바탕화면 놀이공간 튜토리얼은 줄에 들지 않는다");
+  assert.equal(s.tutorials["first-care"]?.state, "none", "다른 곳의 밥 주기는 완료가 아니다");
+  assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
+  assert.ok(done(s, "first-care", 2).ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
+  assert.deepStrictEqual(queueTutorials(s, T0 + 1), []);
+  assert.equal(s.tutorials.playground, undefined, "놀이공간 설명은 설정 › 화면으로 옮겼다(area, 대기열 밖)");
+  assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
+  // 줄에 들 때 이미 돌본 옛 저장은 바로 완료로 넘긴다
+  const old = empty(T0);
+  assert.ok(begin(old, "charmander", T0, () => 0.5).ok);
+  old.totals.played = 3;
+  queueTutorials(old, T0);
+  assert.equal(old.tutorials["first-care"]?.state, "done", "이미 돌본 저장은 첫 돌봄을 띄우지 않는다");
 
   assert.ok(buy(s, "random", T0 + 2, () => 0.5).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);

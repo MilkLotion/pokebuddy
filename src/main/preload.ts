@@ -16,6 +16,10 @@ type ManageReply = import("../shared/manage").ManageReply;
 type Snapshot = import("../shared/manage").Snapshot;
 type DexEntry = import("../shared/manage").DexEntry;
 type DexDetail = import("../shared/manage").DexDetail;
+type PetDeviceAction = import("../shared/manage").PetDeviceAction;
+type PetDeviceChannel = import("../shared/manage").PetDeviceChannel;
+type PetDeviceView = import("../shared/manage").PetDeviceView;
+type PetDeviceBridge = import("../shared/manage").PetDeviceBridge;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
@@ -96,6 +100,10 @@ const MANAGE = {
   dexOpen: "manage:dex-open",
   dexStep: "manage:dex-step",
   dexClosed: "manage:dex-closed",
+  petOpen: "manage:pet-open",
+  petStep: "manage:pet-step",
+  petAct: "manage:pet-act",
+  petClosed: "manage:pet-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -126,6 +134,10 @@ const manage: ManageBridge = {
   dexOpen: (slug) => ipcRenderer.send(MANAGE.dexOpen, slug),
   onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
   onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, () => cb()),
+  petOpen: (open) => ipcRenderer.send(MANAGE.petOpen, open),
+  onPetStep: (cb) => ipcRenderer.on(MANAGE.petStep, (_e, delta: -1 | 1) => cb(delta)),
+  onPetAct: (cb) => ipcRenderer.on(MANAGE.petAct, (_e, action: PetDeviceAction) => cb(action)),
+  onPetClosed: (cb) => ipcRenderer.on(MANAGE.petClosed, () => cb()),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
@@ -213,3 +225,24 @@ const dex: DexDeviceBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyDex", dex);
+
+// 파티 상세 기기 창 — 개체 하나를 받고, 그린 높이와 이전·다음·울음소리·닫기·누른 단추를 보낸다
+const PET = {
+  show: "petdev:show",
+  size: "petdev:size",
+  step: "petdev:step",
+  cry: "petdev:cry",
+  close: "petdev:close",
+  act: "petdev:act",
+} satisfies Record<string, PetDeviceChannel>;
+
+const pet: PetDeviceBridge = {
+  onShow: (cb) => ipcRenderer.on(PET.show, (_e, view: PetDeviceView) => cb(view)),
+  size: (h) => ipcRenderer.send(PET.size, h),
+  step: (delta) => ipcRenderer.send(PET.step, delta),
+  cry: () => ipcRenderer.invoke(PET.cry) as Promise<string | null>,
+  close: () => ipcRenderer.send(PET.close),
+  act: (action) => ipcRenderer.send(PET.act, action),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyPet", pet);

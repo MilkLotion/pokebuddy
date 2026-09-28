@@ -263,6 +263,11 @@
         cursor: pointer;
         position: relative;
       }
+      /* 옆 기기 창에 떠 있는 개체 — 옅은 배경만 쓴다(강조 테두리 없음). Figma 05 `908:23772` 의 관리 창 `862:21998` */
+      .slot.selected,
+      .cell.selected {
+        background: var(--accent-bg);
+      }
       /* 디버프 배지 — Figma `Debuff Badge` `126:1065`. 칸 오른쪽 위(오른쪽 12, 위 12, 사이 4). 점 6px + 10px 글자.
          지금 디버프는 배고픔 두 단계뿐이다 (docs/specs/balance.md "배고픔 디버프") */
       .slot .debuffs {
@@ -489,254 +494,6 @@
         display: flex;
         gap: 10px;
       }
-      /* 개체 상세 페이지 — Figma `08 · 개체 상세 시안` 시안 C(2단) `453:946` */
-      .pet-page {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .pet-page .back-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      .pet-page .back-link {
-        border: 0;
-        padding: 0;
-        background: none;
-        color: var(--primary);
-        font: inherit;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .pet-page .where {
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .pet-cols {
-        display: flex;
-        align-items: flex-start;
-        gap: 16px;
-      }
-      /* 왼쪽 기둥 — 폭 220, 가운데 정렬 */
-      .pet-side {
-        flex: none;
-        width: 220px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 24px 20px 20px;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: var(--surface);
-      }
-      /* 개체 상세 볼 토글 — 카드 우상단. 열린 볼 = 바탕화면에 나와 있음, 닫힌 볼 = 볼 안. 누르면 바뀐다 (Figma 99 시안 739:17453) */
-      .pet-side {
-        position: relative;
-      }
-      .ball-toggle {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        border: 0;
-        border-radius: 16px;
-        background: transparent;
-        cursor: pointer;
-      }
-      .ball-toggle:hover {
-        background: var(--accent-bg);
-      }
-      .ball-toggle::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-      }
-      .ball-toggle.open::before {
-        background: var(--ball-open) center / 24px 24px no-repeat;
-      }
-      .ball-toggle.closed::before {
-        background: var(--ball-closed) center / 21px 21px no-repeat;
-      }
-      .pet-side .portrait.big {
-        width: 112px;
-        height: 112px;
-      }
-      .pet-side .name {
-        font-size: 24px;
-        font-family: var(--font-body);
-        line-height: 28px;
-        font-weight: 700;
-      }
-      .pet-side .sub {
-        margin-top: -8px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .pet-side .badges {
-        display: flex;
-        gap: 6px;
-      }
-      .pet-side .bars {
-        align-self: stretch;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .pet-side .bar .head {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 6px;
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .pet-side .bar .head strong {
-        color: var(--ink);
-        font-weight: 600;
-      }
-      .pet-side .bar .track {
-        height: 6px;
-        border-radius: 999px;
-        background: var(--subtle);
-        overflow: hidden;
-      }
-      .pet-side .bar .fill {
-        height: 100%;
-        border-radius: 999px;
-        background: var(--primary);
-      }
-      .pet-side .bar .fill.mood,
-      .pet-side .bar .fill.hungry {
-        background: var(--warning);
-      }
-      .pet-side .bar .fill.starving {
-        background: var(--danger);
-      }
-      .pet-side .chip-note {
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: var(--accent-bg);
-        color: var(--primary);
-        font-size: 10px;
-        font-family: var(--font-small);
-        font-weight: 600;
-      }
-      /* 오른쪽 — 돌봄·성장·표시·관리 */
-      .pet-main {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-      .pet-main .section-label {
-        font-size: 12px;
-        font-weight: 600;
-      }
-      .pet-main .care-row,
-      .pet-main .manage-row {
-        display: flex;
-        gap: 8px;
-      }
-      .pet-main .care-row .page-btn,
-      .pet-main .manage-row .page-btn {
-        flex: 1;
-        width: auto;
-      }
-      .pet-main .care-row .page-btn {
-        height: 36px;
-      }
-      .page-btn {
-        flex: none;
-        width: 120px;
-        height: 32px;
-        padding: 0 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-        color: var(--ink);
-        font: inherit;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .page-btn:hover:not(:disabled) {
-        background: var(--accent-bg);
-      }
-      .page-btn.primary {
-        border: 0;
-        background: var(--primary);
-        color: var(--inverse);
-      }
-      .page-btn.primary:hover:not(:disabled) {
-        background: var(--primary-hover);
-      }
-      .page-btn:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
-      .list-card {
-        display: flex;
-        flex-direction: column;
-        padding: 0 16px;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: var(--surface);
-      }
-      .list-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-        min-height: 52px;
-        padding: 12px 0;
-        border: 0;
-        background: none;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-      }
-      button.list-row {
-        cursor: pointer;
-      }
-      .list-row + .list-row {
-        border-top: 1px solid var(--line);
-      }
-      .list-row .copy {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .list-row .title {
-        font-size: 12px;
-        font-weight: 600;
-      }
-      .list-row .desc {
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .list-row .chev {
-        font-size: 15px;
-        font-family: var(--font-large);
-        color: var(--muted);
-      }
-      .chip-ready {
-        flex: none;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: var(--accent-bg);
-        color: var(--primary);
-        font-size: 10px;
-        font-family: var(--font-small);
-        font-weight: 600;
-      }
       /* 켬·끔 스위치 — Figma `Toggle` `299:3593` (36 × 20) */
       .switch {
         position: relative;
@@ -769,33 +526,6 @@
       .switch:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
-      }
-      .pet-main .sizes .size {
-        width: 30px;
-        height: 30px;
-      }
-      .sizes {
-        display: flex;
-        gap: 8px;
-      }
-      .sizes .size {
-        width: 36px;
-        height: 36px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-        color: var(--ink);
-        font: inherit;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .sizes .size:hover {
-        background: var(--accent-bg);
-      }
-      .sizes .size[aria-pressed="true"] {
-        border-color: var(--primary);
-        background: var(--primary);
-        color: var(--inverse);
       }
       .meter {
         flex: 1;
@@ -2442,6 +2172,42 @@
         position: fixed;
         background: var(--scrim);
         pointer-events: auto;
+      }
+      /* 안내만 하는 단계의 구멍 — 대상은 보이되 눌리지 않는다 */
+      .coach-block {
+        position: fixed;
+        background: transparent;
+        pointer-events: auto;
+      }
+      /* 막을 누르면 말풍선을 한 번 흔든다 (2026-09-28 튜토리얼 입력 규칙) */
+      .coach-bubble.nudge {
+        animation: coach-nudge 360ms ease-in-out;
+      }
+      @keyframes coach-nudge {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-4px);
+        }
+        80% {
+          transform: translateX(4px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .coach-bubble.nudge {
+          animation: none;
+          box-shadow:
+            0 0 0 3px var(--accent-bg),
+            0 8px 24px rgba(0, 0, 0, 0.18);
+        }
       }
       .coach-bubble {
         position: fixed;

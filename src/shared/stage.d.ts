@@ -89,6 +89,7 @@ export interface CoachView {
   petId?: string; // kind pet — 밝힐 마리
   areaLabel?: string; // kind area — "지금 · 화면 전체"
   avoid?: { x: number; y: number; w: number; h: number }; // kind pet — 말풍선이 덮지 않을 사각형(무대 좌표). 첫 돌봄 2/2 의 열린 메뉴
+  passive?: boolean; // 할 수 있는 행동이 없는 단계(첫 돌봄 쉬는 중) — 창이 클릭을 가로채지 않고 말풍선만 받는다
 }
 export interface CoachAction {
   id: string;

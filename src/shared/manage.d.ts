@@ -179,6 +179,7 @@ export interface Snapshot {
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/core.ts)
   detailTutorial: boolean; // 개체 상세 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 파티 개체 상세를 처음 열면 화면이 5단계를 보여 준다
+  areaTutorial: boolean; // 놀이공간 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 설정 › 화면을 처음 열면 놀이공간 줄을 밝힌다 (2026-09-28 바탕화면에서 옮김)
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
   display?: DisplayView;
   saveFailing?: boolean; // 저장이 이어서 3번 실패했다 — 모든 탭 위쪽에 안내를 띄운다 (src/main/game.ts)
@@ -239,7 +240,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
@@ -366,6 +367,10 @@ export interface ManageBridge {
   dexOpen: (slug: string | null) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다
   onDexStep: (cb: (delta: -1 | 1) => void) => void; // 기기 창의 이전·다음
   onDexClosed: (cb: () => void) => void; // 기기 창이 닫혔다
+  petOpen: (open: PetDeviceOpen | null) => void; // 파티 상세 기기 창에 이 개체를 띄운다. null 이면 닫는다
+  onPetStep: (cb: (delta: -1 | 1) => void) => void; // 파티 상세 기기 창의 이전·다음
+  onPetAct: (cb: (action: PetDeviceAction) => void) => void; // 파티 상세 기기 창에서 누른 단추 — 관리 창이 처리한다
+  onPetClosed: (cb: () => void) => void; // 파티 상세 기기 창이 닫혔다
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
@@ -390,6 +395,39 @@ export interface DexDeviceView {
 //   cry    지금 종의 울음소리 data URI (못 받으면 null)
 //   close  닫기
 export type DexDeviceChannel = "dexdev:show" | "dexdev:size" | "dexdev:step" | "dexdev:cry" | "dexdev:close";
+
+// 파티 상세 기기 창 — 관리 창이 정해 보내는 것(PetDeviceOpen)에 메인이 그림·붙은 쪽·음량을 더한다 (src/main/pet-window.ts)
+export interface PetDeviceOpen {
+  pet: PetView;
+  where: string; // "파티 1번 · 나와 있음" · "박스 1 · 보관 중"
+  inParty: boolean;
+  slotIndex: number | null; // 파티 칸 — 교체 대화상자가 쓴다
+  emptySlot: number | null; // 박스 개체 — 비어 있는 파티 칸이 있으면 바로 배치한다
+  sizeLevels: number;
+  notice: string; // 마지막 실패 문구
+  tutorial: boolean; // 개체 상세 튜토리얼을 보일 차례 — 파티 개체이고 아직 끝내거나 건너뛰지 않았다
+}
+export interface PetDeviceView extends PetDeviceOpen {
+  portrait: string | null; // data URI
+  side: "right" | "left";
+  volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
+}
+// 기기 창에서 누른 단추. 명령은 관리 창의 명령 경로로, 대화상자는 관리 창에서 연다
+// petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)
+export type PetDeviceAction = { petId: string } & (
+  | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "party.place" | "pet.set"; args?: Record<string, unknown> }
+  | { kind: "dialog"; dialog: "evolve" | "nature" | "pick-box" | "pick-slot" | "keep" }
+  | { kind: "tutorial"; action: "done" | "skip" } // 개체 상세 튜토리얼을 끝냈다·닫았다
+);
+export type PetDeviceChannel = "petdev:show" | "petdev:size" | "petdev:step" | "petdev:cry" | "petdev:close" | "petdev:act";
+export interface PetDeviceBridge {
+  onShow: (cb: (view: PetDeviceView) => void) => void;
+  size: (height: number) => void;
+  step: (delta: -1 | 1) => void;
+  cry: () => Promise<string | null>;
+  close: () => void;
+  act: (action: PetDeviceAction) => void;
+}
 
 export interface DexDeviceBridge {
   onShow: (cb: (view: DexDeviceView) => void) => void;

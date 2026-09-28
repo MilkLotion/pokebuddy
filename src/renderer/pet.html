@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
+    <title>pokebuddy</title>
+    <style>
+      /* 글꼴 — Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
+         Galmuri11 은 12·24px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md) */
+      @font-face {
+        font-family: "Galmuri11";
+        src: url("../../assets/fonts/Galmuri11.woff2") format("woff2");
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: "Galmuri11";
+        src: url("../../assets/fonts/Galmuri11-Bold.woff2") format("woff2");
+        font-weight: 700;
+      }
+      @font-face {
+        font-family: "Galmuri9";
+        src: url("../../assets/fonts/Galmuri9.woff2") format("woff2");
+      }
+      :root {
+        --font-body: "Galmuri11", "Malgun Gothic", sans-serif;
+        --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
+        font-synthesis: none;
+      }
+      /* 파티 상세 기기 — Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`) (2026-09-28 사용자 "a로 하자").
+         도감 기기(dex.html)와 같은 틀에 몸 색만 청록이다 — 도감(빨강)과 짝. 기기 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다.
+         기록 칸 아래 흰 판의 단추·막대 색은 관리 창과 같은 값이다 */
+      :root {
+        --body: #0f766e;
+        --hinge: #0a5750;
+        --joint: #074540;
+        --bezel: #3b2c31;
+        --screen: #f5f3ea;
+        --stage: #e6e3d5;
+        --paper: #ffffff;
+        --records: #fbfaf6;
+        --ink: #1a3330;
+        --muted: #4a6663;
+        --line: #dde1db;
+        --subtle: #e7ebe6;
+        --accent-bg: #ebf4f1;
+        --primary: #0f766e;
+        --warning: #f59e0b;
+        --danger: #dc2626;
+        --inverse: #ffffff;
+        --unknown: #d5d2c6;
+        --ball-closed: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 13.7755 13.7728%22%3E%3Cg%3E%3Cg%3E%3Cpath d=%22M6.88638 9.14594C5.79835 9.14594 4.89076 8.37569 4.67531 7.3523H1.05571C1.31156 10.3282 3.80811 12.6632 6.84868 12.6632C9.88925 12.6632 12.3885 10.3282 12.6416 7.3523H9.09746C8.88201 8.37839 7.97442 9.14594 6.88638 9.14594Z%22 fill=%22white%22/%3E%3Cpath d=%22M8.21949 6.88638C8.2168 6.88638 8.2168 6.88638 8.21949 6.88638C8.2168 6.7221 8.18717 6.5659 8.13331 6.42047C7.94479 5.91416 7.45733 5.55597 6.88638 5.55597C6.31544 5.55597 5.82798 5.91685 5.63946 6.42047C5.58559 6.5659 5.55597 6.7221 5.55597 6.88638H5.55866C5.55866 7.05067 5.58829 7.20687 5.64215 7.3523C5.83067 7.85861 6.31813 8.2168 6.88908 8.2168C7.46002 8.2168 7.94748 7.85592 8.13601 7.3523C8.18987 7.20956 8.21949 7.05067 8.21949 6.88638Z%22 fill=%22white%22/%3E%3Cpath d=%22M6.88892 4.62952C7.97696 4.62952 8.88455 5.39976 9.1 6.42316H12.7196C12.4637 3.44454 9.96719 1.10958 6.92394 1.10958C3.88068 1.10958 1.38682 3.44454 1.13097 6.42047H4.67785C4.8933 5.39707 5.80089 4.62952 6.88892 4.62952Z%22 fill=%22%23FF1C1C%22/%3E%3C/g%3E%3Cpath d=%22M6.92409 1.10958C9.96735 1.10958 12.4639 3.44454 12.7171 6.42047H9.09746C8.88201 5.39707 7.97442 4.62683 6.88638 4.62683C5.79835 4.62683 4.89076 5.39707 4.67531 6.42047H1.13112C1.38697 3.44454 3.88352 1.10958 6.92409 1.10958ZM8.13331 6.42047C8.18717 6.5659 8.2168 6.7221 8.2168 6.88638H8.21949C8.21949 7.05067 8.18987 7.20687 8.136 7.3523C7.94748 7.85861 7.46002 8.2168 6.88908 8.2168C6.31813 8.2168 5.83067 7.85592 5.64215 7.3523C5.58829 7.20687 5.55866 7.05067 5.55866 6.88638H5.55597C5.55597 6.7221 5.58559 6.5659 5.63945 6.42047C5.82798 5.91416 6.31544 5.55597 6.88638 5.55597C7.45733 5.55597 7.94479 5.91685 8.13331 6.42047ZM6.84868 12.6659C3.80542 12.6659 1.30887 10.3309 1.05571 7.35499H4.67531C4.89076 8.37839 5.79835 9.14863 6.88638 9.14863C7.97442 9.14863 8.88201 8.37839 9.09746 7.35499H12.6443C12.3885 10.3282 9.89194 12.6659 6.84868 12.6659ZM6.88638 0C3.08366 0 0 3.08366 0 6.88638C0 10.6891 3.08366 13.7728 6.88638 13.7728C10.6891 13.7728 13.7755 10.6918 13.7755 6.88638C13.7755 3.08096 10.6918 0 6.88638 0Z%22 fill=%22black%22/%3E%3C/g%3E%3C/svg%3E");
+        --ball-open: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2096%2096%22%3E%3Cpath%20d=%22M80.7%2058A32.7%2032.7%200%200%201%2015.3%2058H39.49A8.51%208.51%200%200%200%2056.51%2058Z%22%20fill=%22white%22%20stroke=%22black%22%20stroke-width=%226.6%22/%3E%3Cg%20transform=%22rotate(-30%2012%2058)%22%3E%3Cpath%20d=%22M15.3%2058A32.7%2032.7%200%200%201%2080.7%2058Z%22%20fill=%22%23FF1C1C%22%20stroke=%22black%22%20stroke-width=%226.6%22/%3E%3Ccircle%20cx=%2248%22%20cy=%2258%22%20r=%228.4%22%20fill=%22white%22%20stroke=%22black%22%20stroke-width=%226%22/%3E%3C/g%3E%3C/svg%3E");
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: transparent;
+        overflow: hidden;
+        font-family: var(--font-body);
+        font-size: 12px;
+        line-height: 18px;
+        color: var(--ink);
+        user-select: none;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      .device {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 380px;
+        padding: 14px 16px 16px 26px;
+        background: var(--body);
+        border-radius: 6px 18px 18px 6px;
+        box-shadow:
+          inset -4px -6px 0 rgba(4, 52, 48, 0.55),
+          inset 3px 3px 0 rgba(143, 224, 214, 0.45);
+        overflow: hidden;
+      }
+      .device.left {
+        padding: 14px 26px 16px 16px;
+        border-radius: 18px 6px 6px 18px;
+      }
+      .hinge {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 12px;
+        background: var(--hinge);
+      }
+      .device.left .hinge {
+        left: auto;
+        right: 0;
+      }
+      .hinge::before,
+      .hinge::after {
+        content: "";
+        position: absolute;
+        left: 2px;
+        width: 8px;
+        height: 24px;
+        border-radius: 3px;
+        background: var(--joint);
+      }
+      .hinge::before {
+        top: 60px;
+      }
+      .hinge::after {
+        bottom: 60px;
+      }
+      /* 윗줄 — 창을 끄는 손잡이. 단추는 끌기에서 뺀다 */
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        -webkit-app-region: drag;
+      }
+      .light {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #8fe0d6;
+        box-shadow: 0 0 0 3px #ffffff;
+      }
+      .led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .top .title {
+        margin-left: auto;
+        font-weight: 700;
+        color: var(--inverse);
+      }
+      .close {
+        -webkit-app-region: no-drag;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--inverse);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .close:hover {
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .bezel {
+        padding: 8px;
+        border-radius: 12px;
+        background: var(--bezel);
+      }
+      .screen {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: var(--screen);
+      }
+      .where {
+        color: var(--muted);
+      }
+      .entry {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .stage {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        background: var(--stage);
+        overflow: hidden;
+      }
+      .stage canvas {
+        image-rendering: pixelated;
+      }
+      .info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+      .name {
+        font-size: 24px;
+        line-height: 28px;
+        font-weight: 700;
+      }
+      .sub {
+        color: var(--muted);
+      }
+      .types {
+        display: flex;
+        gap: 4px;
+      }
+      .type {
+        display: inline-flex;
+        align-items: center;
+        height: 18px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--unknown);
+        color: var(--ink);
+        font-family: var(--font-small);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      /* 볼 토글 — 화면 오른쪽 위. 열린 볼 = 바탕화면에 나와 있음, 닫힌 볼 = 볼 안 */
+      .ball-toggle {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 16px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .ball-toggle:hover {
+        background: var(--accent-bg);
+      }
+      .ball-toggle.open {
+        background: var(--ball-open) center / 24px 24px no-repeat;
+      }
+      .ball-toggle.closed {
+        background: var(--ball-closed) center / 21px 21px no-repeat;
+      }
+      .records {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 10px;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--records);
+      }
+      .bar .head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        color: var(--muted);
+      }
+      .bar .head strong {
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .bar .track {
+        height: 6px;
+        border-radius: 999px;
+        background: var(--subtle);
+        overflow: hidden;
+      }
+      .bar .fill {
+        height: 100%;
+        border-radius: 999px;
+        background: var(--primary);
+      }
+      .bar .fill.mood,
+      .bar .fill.hungry {
+        background: var(--warning);
+      }
+      .bar .fill.starving {
+        background: var(--danger);
+      }
+      .chip-note {
+        grid-column: 1 / -1;
+        justify-self: start;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-bg);
+        color: var(--primary);
+        font-family: var(--font-small);
+        font-size: 10px;
+      }
+      /* 흰 판 — 돌봄 · 성장 · 크기 · 관리 */
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--records);
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row > button {
+        flex: 1;
+      }
+      .act {
+        height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        color: var(--ink);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .act.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--inverse);
+      }
+      .act:hover:not(:disabled) {
+        background: var(--accent-bg);
+      }
+      .act.primary:hover:not(:disabled) {
+        background: #0c5f58;
+      }
+      .act:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--paper);
+      }
+      .line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 52px;
+        padding: 8px 14px;
+        border: 0;
+        background: transparent;
+        text-align: left;
+      }
+      button.line {
+        cursor: pointer;
+      }
+      button.line:hover {
+        background: var(--accent-bg);
+      }
+      .line + .line {
+        border-top: 1px solid var(--line);
+      }
+      .line .copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .line .copy strong {
+        font-weight: 700;
+      }
+      .line .copy span {
+        color: var(--muted);
+      }
+      .line .go {
+        color: var(--muted);
+      }
+      .chip-ready {
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--accent-bg);
+        color: var(--primary);
+        font-family: var(--font-small);
+        font-size: 10px;
+      }
+      .sizes {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .size {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .size[aria-pressed="true"] {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--inverse);
+      }
+      .notice {
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: #fdecec;
+        color: var(--danger);
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+      .controls button {
+        height: 30px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 15px;
+        background: var(--bezel);
+        color: var(--inverse);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .controls .cry {
+        flex: 1;
+      }
+      .controls button:hover:not(:disabled) {
+        background: #56424a;
+      }
+      .controls button:disabled {
+        background: #8a6a70;
+        cursor: default;
+      }
+      /* 개체 상세 튜토리얼 — 관리 창 코치마크와 같은 모양. 대상 둘레를 비운 막 네 장과 말풍선 */
+      .coach {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        pointer-events: none;
+      }
+      .coach-dim {
+        position: fixed;
+        background: rgba(26, 51, 48, 0.45);
+        pointer-events: auto;
+      }
+      .coach-block {
+        position: fixed;
+        background: transparent;
+        pointer-events: auto;
+      }
+      .coach-bubble {
+        position: fixed;
+        width: 280px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: var(--paper);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+        color: var(--muted);
+        word-break: keep-all;
+        pointer-events: auto;
+      }
+      .coach-bubble .head {
+        display: flex;
+        align-items: center;
+      }
+      .coach-bubble .step {
+        flex: 1;
+      }
+      .coach-bubble .x {
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .coach-bubble .title {
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .coach-bubble .foot {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .coach-bubble.nudge {
+        animation: coach-nudge 360ms ease-in-out;
+      }
+      @keyframes coach-nudge {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20% {
+          transform: translateX(-6px);
+        }
+        40% {
+          transform: translateX(6px);
+        }
+        60% {
+          transform: translateX(-4px);
+        }
+        80% {
+          transform: translateX(4px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .coach-bubble.nudge {
+          animation: none;
+          box-shadow:
+            0 0 0 3px var(--accent-bg),
+            0 8px 24px rgba(0, 0, 0, 0.22);
+        }
+      }
+      /* 타입 색 — 관리 창 `.type[data-type]` 과 같은 Scarlet·Violet 팔레트 */
+      .type[data-type="electric"] { background: #fac000; }
+      .type[data-type="fire"] { background: #e52829; color: var(--inverse); }
+      .type[data-type="flying"] { background: #81b9ef; }
+      .type[data-type="bug"] { background: #91a119; }
+      .type[data-type="dark"] { background: #624d4e; color: var(--inverse); }
+      .type[data-type="dragon"] { background: #5060e1; color: var(--inverse); }
+      .type[data-type="fairy"] { background: #ef70ef; }
+      .type[data-type="fighting"] { background: #ff8000; }
+      .type[data-type="ghost"] { background: #704170; color: var(--inverse); }
+      .type[data-type="grass"] { background: #358722; color: var(--inverse); }
+      .type[data-type="ground"] { background: #915121; color: var(--inverse); }
+      .type[data-type="ice"] { background: #3dcef3; }
+      .type[data-type="normal"] { background: #9fa19f; }
+      .type[data-type="poison"] { background: #9141cb; color: var(--inverse); }
+      .type[data-type="psychic"] { background: #d53a6c; color: var(--inverse); }
+      .type[data-type="rock"] { background: #afa981; }
+      .type[data-type="steel"] { background: #60a1b8; }
+      .type[data-type="water"] { background: #2675db; color: var(--inverse); }
+    </style>
+  </head>
+  <body>
+    <div id="device" class="device"></div>
+    <script type="module" src="../../dist/renderer/pet.js"></script>
+  </body>
+</html>

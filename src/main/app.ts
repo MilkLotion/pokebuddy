@@ -22,7 +22,7 @@ import { createMainTrade, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
 import { pendingOf } from "../trade/core";
-import { careItem, petStatus } from "./status";
+import { careItem, careState, petStatus } from "./status";
 import { openManage, pushAccount, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
@@ -259,7 +259,10 @@ function syncCoach(): void {
   if (!game || !stages) return;
   const save = game.read();
   const now = save ? currentTutorial(save) : null;
-  const view = now && now.surface === "stage" && save ? coachView(now.id, save.starterPetId) : null;
+  // 고스트 모드·숨김 중에는 띄우지 않고 기다린다 — 말풍선의 ✕ 도 못 누르는 상태를 만들지 않는다 (2026-09-28 튜토리얼 입력 규칙)
+  const quiet = !!config.clickThrough || userHidden;
+  const view = now && now.surface === "stage" && save && !quiet ? coachView(now.id, save.starterPetId) : null;
+  coachShown = view;
   // 첫 돌봄 동안 밝힌 포켓몬을 세운다 — 걸으면 말풍선이 따라 움직인다 (2026-09-27 사용자 피드백)
   stages.pin(view?.kind === "pet" ? view.petId ?? null : null);
   stages.sendCoach(view);
@@ -269,6 +272,10 @@ function syncCoach(): void {
 // 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
 // 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
 let firstCareMenu: string | null = null;
+// 무대에 떠 있는 바탕화면 말풍선 — 떠 있는 동안 포켓몬 왼쪽 클릭은 놀아주기가 아니다
+let coachShown: CoachView | null = null;
+// 첫 돌봄 2/2 에서 밥 주기·놀아주기가 둘 다 쉬는 중이면 기다리는 문구와 남은 시간을 보인다
+let firstCareWait: string | null = null;
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
 function syncJump(): void {
@@ -351,17 +358,19 @@ function onTrayInput(input: { click: number; x: number; y: number; esc: number }
 let firstCareAvoid: CoachView["avoid"] = undefined; // 열린 메뉴의 자리(무대 좌표) — 말풍선이 피한다
 
 function coachView(id: string, starterPetId: string | null): CoachView | null {
-  const menuStep = id === "first-care" && firstCareMenu != null;
-  const key = menuStep ? `coach.${id}.menu` : `coach.${id}`;
+  const waitStep = id === "first-care" && firstCareWait != null;
+  const menuStep = id === "first-care" && (firstCareMenu != null || waitStep);
+  const key = waitStep ? `coach.${id}.wait` : menuStep ? `coach.${id}.menu` : `coach.${id}`;
   const total = id === "first-care" ? 2 : 1;
   const name = t(`coach.${id}.name`);
   const step = total === 1 ? t("coach.step.single", { name }) : t("coach.step", { name, at: menuStep ? 2 : 1, total }); // 한 단계뿐이면 "1 / 1" 을 붙이지 않는다
-  const base = { id, step, title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`), button: t(`coach.${id}.button`) };
+  const base = { id, step, title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`, { when: firstCareWait ?? "" }), button: t(`coach.${id}.button`) };
   if (id === "playground") return { ...base, kind: "area", areaLabel: t(`coach.area.${playArea.mode}`) };
   // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
   const ids = stages?.petIds() ?? [];
   const petId = starterPetId && ids.includes(starterPetId) ? starterPetId : ids[0];
-  return petId ? { ...base, kind: "pet", petId, ...(id === "first-care" && firstCareAvoid ? { avoid: firstCareAvoid } : {}) } : null;
+  // 쉬는 중 단계는 할 수 있는 행동이 없다 — 클릭을 막지 않고 말풍선만 받는다(passive)
+  return petId ? { ...base, kind: "pet", petId, ...(waitStep ? { passive: true } : {}), ...(id === "first-care" && firstCareAvoid ? { avoid: firstCareAvoid } : {}) } : null;
 }
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
@@ -381,6 +390,7 @@ function applyClickThrough(on: boolean): void {
   stages?.setPassing(true);
   stages?.sendClickThrough(on);
   tray?.refresh();
+  syncCoach(); // 고스트 모드 동안 바탕화면 튜토리얼은 기다린다
 }
 
 // 직접 숨기기·보이기 — 폴링이 되돌리지 않도록 상태로 남긴다 (우클릭 · 트레이 · 설정)
@@ -388,6 +398,7 @@ function setHidden(on: boolean): void {
   userHidden = on;
   anchor?.poll();
   tray?.refresh();
+  syncCoach(); // 숨긴 동안 바탕화면 튜토리얼은 기다린다
 }
 const toggleHidden = (): void => setHidden(!userHidden);
 
@@ -544,11 +555,19 @@ function notifyGame(body: string): void {
   } catch (e) { log?.({ notification: "failed", message: String(e) }); }
 }
 
-function runGameCommand(command: Command): void {
-  void commands?.dispatcher.dispatch(command).then((result) => {
+// then — 성공하면 이어서 보낼 명령(첫 돌봄 튜토리얼 완료)
+function runGameCommand(command: Command, then?: () => Command): void {
+  void commands?.dispatcher.dispatch(command).then(async (result) => {
     if (!result.ok) notifyGame(t("game.failed", { reason: t(`game.reason.${result.reason}`) }));
+    else if (then) {
+      try {
+        await commands?.dispatcher.dispatch(then());
+      } catch (e) {
+        console.error(e); // 튜토리얼 기록이 실패해도 트레이·말풍선은 맞춘다 — 다음 메뉴 선택 때 다시 끝난다
+      }
+    }
     tray?.refresh();
-    syncCoach(); // 밥 주기·놀아주기로 첫 돌봄 튜토리얼이 끝났을 수 있다
+    syncCoach(); // 첫 돌봄 튜토리얼이 끝났을 수 있다
   });
 }
 
@@ -559,9 +578,16 @@ function showPetMenu(id: string): void {
   const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null };
   const pet = saveParty()?.save()?.pets.find((row) => row.id === id) ?? null;
   const care = pet ? { status: petStatus(pet), feed: careItem(pet, "feed"), play: careItem(pet, "play") } : {};
+  // 첫 돌봄 튜토리얼 중이면 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
+  const save = game?.read();
+  const firstCare = save ? currentTutorial(save)?.id === "first-care" : false;
+  const careCmd = (cmd: "feed" | "play") => (): void => {
+    if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", args: { steps: 2 }, from: "pet" }));
+    else runGameCommand({ cmd, target: id, from: "menu" });
+  };
   const built = petMenu({ ...model, ...care }, {
-    feed: () => runGameCommand({ cmd: "feed", target: id, from: "menu" }),
-    play: () => runGameCommand({ cmd: "play", target: id, from: "menu" }),
+    feed: careCmd("feed"),
+    play: careCmd("play"),
     ...(pet ? { ball: () => runGameCommand({ cmd: "party.hide", target: id, from: "menu" }) } : {}),
   });
   if (pet) built.push(
@@ -569,15 +595,18 @@ function showPetMenu(id: string): void {
     // 그 포켓몬의 개체 상세를 연다 — 우클릭 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
     { label: t("menu.detail"), click: () => openManageWindow({ to: "pet", petId: id }) },
   );
-  // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다
-  const save = game?.read();
-  const firstCare = save ? currentTutorial(save)?.id === "first-care" : false;
+  // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다.
+  // 둘 다 쉬는 중이면 모두 잠그고, 말풍선은 놀아주기까지 남은 시간을 보인다
   let items = built;
   if (firstCare && pet) {
     const keep = care.feed?.enabled ? t("menu.feed") : care.play?.enabled ? t("menu.play") : null;
     items = lockExcept(built, keep ? [keep] : []);
-    if (keep && firstCareMenu !== keep) {
+    // 쉬는 중(쿨타임)일 때만 남은 시간을 붙인다 — 배부름 같은 다른 이유면 "곧" 으로
+    const cooling = (a: "feed" | "play"): string | null => (pet && careState(pet, a).reason === "cooldown" ? (care[a]?.reason ?? null) : null);
+    const wait = keep ? null : (cooling("play") ?? cooling("feed") ?? t("coach.first-care.wait.soon"));
+    if (firstCareMenu !== keep || firstCareWait !== wait) {
       firstCareMenu = keep;
+      firstCareWait = wait;
       syncCoach();
     }
   }
@@ -592,7 +621,8 @@ function showPetMenu(id: string): void {
         },
         onClosed: () => {
           firstCareAvoid = undefined;
-          firstCareMenu = null; // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게
+          firstCareMenu = null; // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게. 스킵이 아니다
+          firstCareWait = null;
           syncCoach();
         },
       }
@@ -869,6 +899,8 @@ async function main(): Promise<void> {
         onDrop: hooks.onDrop,
         // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
         onClick: (id) => {
+          // 바탕화면 튜토리얼 중에는 왼쪽 클릭이 놀아주기가 아니다 — 무대 렌더러가 먼저 막고, 여기서 한 번 더 막는다
+          if (coachShown) return;
           void commands?.click(id);
           void playCry(id);
         },

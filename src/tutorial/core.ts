@@ -10,6 +10,9 @@
 //   막힌 튜토리얼(blocked)은 차례를 넘긴다. 첫 돌봄은 바탕화면에 나온 포켓몬이 없으면 막힌다 — 뒤의 설정창 튜토리얼을 막지 않는다.
 //   관리 창은 튜토리얼의 탭이 아닌 곳에 있으면 그 탭 버튼으로 이어 준다 — 버튼을 누를 때만 옮긴다(2026-09-26 사용자 결정 "자연스럽게 이동")
 //   보여 줄 차례에 목표 행동을 이미 했으면 완료로 기록하고 띄우지 않는다(2026-09-23 결정 "끝낸 단계를 건너뛴다").
+//   첫 돌봄은 줄에 들 때만 본다(onlyAtStart) — 뜬 뒤에는 튜토리얼 메뉴에서 고른 돌봄으로만 끝난다. 다른 곳(설정창·점프 목록·CLI)의
+//   밥 주기·놀아주기는 완료로 치지 않는다 (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
+//   바탕화면 놀이공간 튜토리얼은 껐다 — 설정 › 화면을 처음 열 때 설명한다(관리 창의 area, 대기열 밖) (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아")
 //   대기만 한 튜토리얼은 스킵이 아니다. 앱이 꺼져도 queuedAt 이 남아 다시 켜면 같은 순서로 보인다.
 // 문구와 대상은 화면(src/renderer/manage.ts)이 가진다. 첫 돌봄(2단계)을 빼고 한 단계다.
 // 개체 상세 튜토리얼(detail, 5단계)은 대기열 밖이다 — 화면이 상세를 처음 열 때 띄우고 done·skip 만 여기 적는다.
@@ -33,6 +36,7 @@ interface TutorialRule {
   enabled: boolean; // 끄면 줄에 넣지 않는다. 바탕화면 2종은 무대 코치마크(src/renderer/stage.ts)가 생긴 2026-09-26 에 켰다
   start: (save: SaveV3) => boolean; // 시작 조건
   already: (save: SaveV3) => boolean; // 목표 행동을 이미 했는가
+  onlyAtStart?: boolean; // already 를 줄에 들 때만 본다 — 뜬 뒤에는 튜토리얼 안의 행동으로만 끝난다
   after?: string; // 이 튜토리얼의 대기 시각을 물려받는다 — 그 튜토리얼 바로 뒤에 선다
   blocked?: (save: SaveV3) => boolean; // 지금 보여 줄 수 없다 — 차례를 넘긴다(기록은 그대로)
 }
@@ -42,8 +46,8 @@ const noShownPet = (save: SaveV3): boolean => !save.party.slots.some((s) => s.st
 
 // 스펙 표의 순서 그대로. 같은 순간에 생긴 조건은 이 순서로 보여 준다
 export const TUTORIALS: readonly TutorialRule[] = [
-  { id: "first-care", surface: "stage", enabled: true, start: (s) => s.starterPetId != null, already: (s) => s.totals.fed + s.totals.played > 0, blocked: noShownPet },
-  { id: "playground", surface: "stage", enabled: true, after: "first-care", start: (s) => ["skipped", "done"].includes(s.tutorials["first-care"]?.state ?? "none"), already: (s) => s.settings.playArea.mode === "region" },
+  { id: "first-care", surface: "stage", enabled: true, start: (s) => s.starterPetId != null, already: (s) => s.totals.fed + s.totals.played > 0, onlyAtStart: true, blocked: noShownPet },
+  { id: "playground", surface: "stage", enabled: false, after: "first-care", start: (s) => ["skipped", "done"].includes(s.tutorials["first-care"]?.state ?? "none"), already: (s) => s.settings.playArea.mode === "region" },
   { id: "shop", surface: "manage", enabled: true, start: (s) => s.starterPetId != null, already: (s) => s.eggSeq > 0 || s.pets.some((p) => p.id !== s.starterPetId) },
   { id: "hatch", surface: "manage", enabled: true, start: hasRandomEgg, already: (s) => !hasRandomEgg(s) },
   // 업적 — 달성하고 아직 받지 않은 업적이 생기면 헤더의 업적 아이콘으로 이어 준다. 한 번이라도 받으면 끝이다.
@@ -93,8 +97,10 @@ export function queueTutorials(save: SaveV3, now: number): string[] {
       const queuedAt = rule.after ? (save.tutorials[rule.after]?.queuedAt ?? now) : now;
       save.tutorials[rule.id] = { state: row?.state ?? "none", steps: row?.steps ?? 0, queuedAt };
       fresh.push(rule.id);
+      if (rule.already(save)) done(save, rule.id, 0);
+      continue;
     }
-    if (rule.already(save)) done(save, rule.id, 0);
+    if (!rule.onlyAtStart && rule.already(save)) done(save, rule.id, 0);
   }
   return fresh;
 }

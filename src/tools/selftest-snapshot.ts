@@ -101,6 +101,16 @@ function seed(): SaveV3 {
   process.stdout.write("(5b) 개체 상세 튜토리얼 표시 여부  ok\n");
 }
 
+// (5c) 놀이공간 튜토리얼 — 설정 › 화면으로 옮겼다(2026-09-28). 옛 바탕화면 놀이공간 기록과는 별개다
+{
+  const s = seed();
+  s.tutorials.playground = { state: "done", steps: 1 };
+  assert.equal(snapshot(s).areaTutorial, true, "옛 바탕화면 놀이공간을 끝냈어도 설정 쪽은 보여 줄 차례");
+  s.tutorials.area = { state: "done", steps: 1 };
+  assert.equal(snapshot(s).areaTutorial, false, "끝내면 다시 보이지 않는다");
+  process.stdout.write("(5c) 놀이공간 튜토리얼 표시 여부  ok\n");
+}
+
 // (6) 박스는 사용 칸 수와 개체를 준다
 {
   const v = snapshot(seed());

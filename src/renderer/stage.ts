@@ -260,7 +260,11 @@ bridge.onFrame((f) => syncFrame(f, performance.now()));
 bridge.onHover((q: HoverQuery) => {
   const onBubble = !pointer.pressedId() && overCoach(q.x, q.y);
   hoverId = pointer.pressedId() ?? (onBubble ? null : hitAtStage(q.x, q.y));
-  bridge.hit(onBubble ? "coach" : hoverId); // 말풍선 위에서는 클릭을 받는다 — 버튼을 누를 수 있게
+  // 첫 돌봄 말풍선이 떠 있으면 창이 모든 클릭을 받는다 — 막을 누르면 아래 창으로 가지 않고 말풍선이 흔들린다.
+  // 대상 포켓몬 위에서만 그 마리로 답한다(우클릭을 받게) (2026-09-28 튜토리얼 입력 규칙)
+  const guarded = coach?.kind === "pet" && !coach.passive && !pointer.pressedId();
+  if (guarded && !onBubble && hoverId !== coach?.petId) hoverId = null;
+  bridge.hit(onBubble || (guarded && hoverId == null) ? "coach" : hoverId); // 말풍선 위에서는 클릭을 받는다 — 버튼을 누를 수 있게
   if (!pointer.pressedId()) document.body.style.cursor = hoverId ? "grab" : "default";
   if (debugOn) renderDebug();
 });
@@ -394,6 +398,27 @@ function placeArea(): void {
 addEventListener("resize", () => {
   if (coach?.kind === "area") placeArea();
 });
+
+// 첫 돌봄 말풍선이 떠 있는 동안의 입력 — 받는 것은 대상 포켓몬 우클릭과 말풍선 단추뿐이다.
+// 왼쪽 누름(잡기·클릭=놀아주기)과 다른 곳 우클릭은 막고 말풍선을 한 번 흔든다. 포인터 모듈(pointer.ts)보다 먼저 본다(캡처)
+function nudgeCoach(): void {
+  if (!bubbleEl) return;
+  bubbleEl.classList.remove("nudge");
+  void bubbleEl.offsetWidth; // 애니메이션을 처음부터 다시
+  bubbleEl.classList.add("nudge");
+}
+const guardCoach = (e: MouseEvent): boolean => {
+  if (coach?.kind !== "pet" || coach.passive) return false;
+  if (overCoach(e.clientX, e.clientY)) return false; // 말풍선 단추는 그대로
+  const onTarget = hitAtStage(e.clientX, e.clientY) === coach.petId;
+  if (e.type === "contextmenu" && onTarget) return false; // 목표 행동 — 대상 우클릭
+  if (e.type === "pointerdown" && (e as PointerEvent).button === 2 && onTarget) return false;
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.type !== "pointerup") nudgeCoach();
+  return true;
+};
+for (const type of ["pointerdown", "pointerup", "contextmenu"] as const) addEventListener(type, guardCoach, true);
 
 // 커서가 말풍선 위인가 (무대 안 좌표)
 function overCoach(x: number, y: number): boolean {
