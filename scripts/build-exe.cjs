@@ -1,7 +1,9 @@
 // Windows 설치 파일 만들기 — `npm run dist:win` → release/pokebuddy-Setup-<버전>.exe
 // mac 디스크 이미지 만들기 — `npm run dist:mac` → release/PokeBuddy-<버전>-arm64.dmg · -x64.dmg
 //                                                 release/PokeBuddy-<버전>-arm64.zip · -x64.zip · latest-mac.yml
-//   mac 은 ad-hoc 서명만 한다. Apple 개발자 인증서가 없어 공증도 없다. 처음 실행 때 Gatekeeper 가 막는다
+//   mac 은 이 Mac 로그인 키체인의 자체 서명 인증서 "PokeBuddy Code Signing" 으로 서명한다. Apple 공증은 없다 — 처음 실행 때 Gatekeeper 가 막는다.
+//   인증서로 서명해야 macOS 가 버전이 바뀌어도 같은 앱으로 본다(designated = identifier + certificate leaf). ad-hoc 은 빌드마다 해시가 바뀌어
+//   업데이트마다 키체인 허용 창이 떴다 (2026-09-28 사용자 결정 A). 인증서가 없으면 mac 빌드는 멈춘다 — 개인키는 저장소에 넣지 않는다
 //   mac 업데이트는 electron-updater(Squirrel.Mac)가 아니라 src/main/mac-updater.ts 가 한다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다.
 //   zip·latest-mac.yml 은 그 업데이트가 받는 파일이다. 릴리스 때 dmg 와 함께 올린다
 //
@@ -22,6 +24,8 @@ const root = path.join(__dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 // mac 디스크 이미지 — 인자 없으면 Windows 설치 파일
 const MAC = process.argv.includes("--mac");
+// mac 서명 인증서 — 로그인 키체인에 있어야 한다. 자체 서명이라 `security find-identity -v` 의 "유효"에는 없다(신뢰 설정 없이 쓴다)
+const MAC_IDENTITY = "PokeBuddy Code Signing";
 if (MAC && process.platform !== "darwin") throw new Error("mac 설치 파일은 mac 에서만 만든다 — 헬퍼 universal 빌드·ad-hoc 서명에 Xcode 도구가 필요하다");
 // 업데이트 실기 시험 빌드 (scripts/e2e-update.cjs) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
 // 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않고, 대신 update-test.json 표시 파일로 임시 홈을 쓰고 OS 등록(링크·로그인 시 시작)을 건너뛴다
@@ -114,6 +118,16 @@ function stageFiles() {
   return copied;
 }
 
+// mac 앱을 인증서로 서명하고 확인한다 — 안쪽(프레임워크·도우미 앱)부터 --deep 으로 함께
+function signMac(appPath) {
+  const found = execFileSync("security", ["find-identity", "-p", "codesigning"], { encoding: "utf8" });
+  if (!found.includes(`"${MAC_IDENTITY}"`)) throw new Error(`mac 서명 인증서 "${MAC_IDENTITY}" 가 로그인 키체인에 없다 — 인증서를 가져온 뒤 다시 빌드한다`);
+  execFileSync("codesign", ["--force", "--deep", "--sign", MAC_IDENTITY, appPath], { stdio: "inherit" });
+  execFileSync("codesign", ["--verify", "--deep", "--strict", appPath], { stdio: "inherit" });
+  const req = execFileSync("codesign", ["-d", "-r-", appPath], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  if (!/certificate leaf = H"/.test(req)) throw new Error(`서명 요구 사항에 인증서가 없다: ${req.trim()}`);
+}
+
 async function main() {
   const copied = stageFiles();
   process.stdout.write(`모은 파일: ${copied.join(", ")}\n`);
@@ -163,14 +177,16 @@ async function main() {
     mac: {
       icon: logo("logo.icns"),
       category: "public.app-category.entertainment",
-      identity: "-", // ad-hoc 서명 — Apple 개발자 인증서 없음. Apple Silicon 은 서명 없는 앱을 "손상됨"으로 막는다
-      hardenedRuntime: false, // 공증을 하지 않으므로 끈다. 켜면 ad-hoc 서명에서 라이브러리 검증에 걸린다
+      identity: null, // electron-builder 서명은 끈다 — 신뢰 설정 없는 자체 서명 인증서를 찾지 못한다. 아래 afterPack 이 직접 서명한다
+      hardenedRuntime: false, // 공증을 하지 않으므로 끈다. 켜면 자체 서명에서 라이브러리 검증에 걸린다
       gatekeeperAssess: false,
       // 교환·로그인 링크 — mac 은 Info.plist 에 적힌 스킴만 setAsDefaultProtocolClient 가 받는다. Windows 는 실행 중 등록이라 mac 에만 둔다
       protocols: [{ name: "PokeBuddy", schemes: ["pokebuddy"] }],
       artifactName: "${productName}-${version}-${arch}.${ext}",
     },
     dmg: { artifactName: "${productName}-${version}-${arch}.${ext}" },
+    // 묶은 직후, dmg·zip 을 만들기 전에 서명한다
+    afterPack: (ctx) => signMac(path.join(ctx.appOutDir, `${ctx.packager.appInfo.productFilename}.app`)),
     // 업데이트가 받는 zip 도 mac.artifactName 을 따른다 — 확장자만 달라 dmg 와 겹치지 않는다(electron-builder 에 zip 전용 설정은 없다)
   };
   const out = await builder.build({

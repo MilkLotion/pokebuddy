@@ -16,34 +16,45 @@ import type { GameV3 } from "./game";
 
 const sessionFile = (): string => path.join(PATHS.home, "online", "session.bin");
 
-// 키 하나에 값 하나 — supabase-js 는 키 몇 개만 쓴다. 통째로 암호화해 한 파일에 둔다
+// 키 하나에 값 하나 — supabase-js 는 키 몇 개만 쓴다. 통째로 암호화해 한 파일에 둔다.
+// 비동기 safeStorage 만 쓴다 — mac 은 키체인 허용 창이 뜨면 동기 호출이 답할 때까지 메인을 멈춘다.
+// 멈추면 무대·꺼내기 처리가 서서 포켓몬이 안 보인다 (2026-09-28 사용자 "업데이트하니 기존포켓몬들을 꺼내도 안보이는데")
 export function encryptedStorage(file = sessionFile()): SessionStorage {
   const memory = new Map<string, string>();
-  const can = (): boolean => {
-    try { return safeStorage.isEncryptionAvailable(); } catch { return false; }
+  let ready: Promise<boolean> | null = null; // 파일을 한 번 읽었다 — 값은 암호화를 쓸 수 있는가
+  let writing: Promise<void> = Promise.resolve(); // 쓰기를 차례로 — 앞선 쓰기가 뒤의 값을 덮지 않게
+  const can = async (): Promise<boolean> => {
+    try { return await safeStorage.isAsyncEncryptionAvailable(); } catch { return false; }
   };
-  const load = (): void => {
-    if (!can() || memory.size || !fs.existsSync(file)) return;
+  const flushNow = async (): Promise<void> => {
+    if (!(await can())) return;
     try {
-      const obj = JSON.parse(safeStorage.decryptString(fs.readFileSync(file))) as Record<string, string>;
-      for (const [k, v] of Object.entries(obj)) if (typeof v === "string") memory.set(k, v);
-    } catch (e) {
-      console.error("교환 세션 파일을 읽지 못해 새로 시작한다", e);
-    }
-  };
-  const flush = (): void => {
-    if (!can()) return;
-    try {
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, safeStorage.encryptString(JSON.stringify(Object.fromEntries(memory))));
+      const data = await safeStorage.encryptStringAsync(JSON.stringify(Object.fromEntries(memory)));
+      await fs.promises.mkdir(path.dirname(file), { recursive: true });
+      await fs.promises.writeFile(file, data);
     } catch (e) {
       console.error("교환 세션 파일을 쓰지 못했다", e);
     }
   };
+  const flush = (): Promise<void> => (writing = writing.then(flushNow));
+  const load = (): Promise<boolean> =>
+    (ready ??= (async () => {
+      if (!(await can())) return false;
+      if (!fs.existsSync(file)) return true;
+      try {
+        const out = await safeStorage.decryptStringAsync(await fs.promises.readFile(file));
+        const obj = JSON.parse(out.result) as Record<string, string>;
+        for (const [k, v] of Object.entries(obj)) if (typeof v === "string" && !memory.has(k)) memory.set(k, v);
+        if (out.shouldReEncrypt) void flush(); // 키가 바뀌었다 — 새 키로 다시 쓴다
+      } catch (e) {
+        console.error("교환 세션 파일을 읽지 못해 새로 시작한다", e);
+      }
+      return true;
+    })());
   return {
-    getItem: (k) => { load(); return memory.get(k) ?? null; },
-    setItem: (k, v) => { load(); memory.set(k, v); flush(); },
-    removeItem: (k) => { load(); memory.delete(k); flush(); },
+    getItem: async (k) => { await load(); return memory.get(k) ?? null; },
+    setItem: async (k, v) => { await load(); memory.set(k, v); await flush(); },
+    removeItem: async (k) => { await load(); memory.delete(k); await flush(); },
   };
 }
 

@@ -92,7 +92,8 @@ PMD 스프라이트는 **CC BY-NC 4.0** 이다 — [라이선스](#라이선스)
 Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-x64.dmg` 를 연다. Node.js 는 필요 없다.
 
 - `PokeBuddy` 를 `Applications` 로 끌어 넣는다.
-- Apple 서명·공증이 없다. 처음 열면 "Apple 이 확인할 수 없음" 경고가 뜬다. 시스템 설정 → 개인정보 보호 및 보안 → 아래의 `그래도 열기` 를 누른다.
+- 계정·교환 로그인 정보는 키체인 키 `PokeBuddy Safe Storage` 로 암호화한다. 0.9.0 이하에서 올라오면 이 키 허용 창이 한 번 뜬다. 로그인 암호와 `항상 허용` 을 누른다. 그 뒤 업데이트에서는 다시 묻지 않는다. 창이 떠 있는 동안에도 포켓몬은 멈추지 않는다.
+- Apple 공증이 없다. 처음 열면 "Apple 이 확인할 수 없음" 경고가 뜬다. 시스템 설정 → 개인정보 보호 및 보안 → 아래의 `그래도 열기` 를 누른다.
 - 경고 대신 "손상되었기 때문에 열 수 없습니다"가 뜨면 터미널에서 `xattr -dr com.apple.quarantine /Applications/PokeBuddy.app` 을 실행한 뒤 다시 연다.
 - 켜면 Dock 에 남지 않고 메뉴 막대 아이콘으로 있다. 처음이면 첫 포켓몬 선택 창이 뜬다.
 - 떠 있을 때 앱을 다시 열면 설정창을 연다.
@@ -666,7 +667,10 @@ npm run dist:mac    # release/PokeBuddy-<버전>-arm64.dmg · release/PokeBuddy-
 
 - **mac 에서 만든다.** universal 헬퍼(`scripts/build-helper.js`)를 먼저 만든 뒤 `scripts/build-exe.cjs --mac` 으로 묶는다. 모으는 파일은 Windows 실행 파일과 같다.
 - 헬퍼에 arm64·x86_64 가 모두 없으면 멈춘다. Intel 용 dmg 가 창 추적 없이 나가지 않게 하기 위해서다.
-- 서명은 ad-hoc(`identity: "-"`)이다. Apple 개발자 인증서와 공증이 없다. Apple Silicon 은 서명이 전혀 없는 앱을 열지 않는다.
+- 서명은 이 Mac 로그인 키체인의 자체 서명 인증서 `PokeBuddy Code Signing` 으로 한다(`scripts/build-exe.cjs` `signMac`, electron-builder 서명은 끄고 `afterPack` 에서 직접). Apple 개발자 인증서와 공증은 없다.
+  - 인증서로 서명하면 macOS 가 앱을 `identifier + certificate leaf` 로 알아본다. 버전이 바뀌어도 같은 앱이라, 사용자가 키체인 허용을 한 번 하면 업데이트 뒤에도 다시 묻지 않는다. ad-hoc 서명은 빌드마다 해시가 바뀌어 업데이트마다 `PokeBuddy Safe Storage` 허용 창이 떴다.
+  - 인증서가 키체인에 없으면 Mac 빌드는 멈춘다. 개인키는 저장소에 넣지 않는다. 키체인 접근 앱에서 `.p12` 로 내보내 따로 보관한다. 키를 잃으면 새 인증서를 만들어야 하고, 그때 사용자에게 허용 창이 한 번 더 뜬다.
+  - 새 Mac 에 인증서를 가져오면 `security set-key-partition-list -S apple-tool:,apple:,codesign: -s -l "PokeBuddy Code Signing" ~/Library/Keychains/login.keychain-db` 를 한 번 실행한다(로그인 암호). 하지 않으면 서명할 파일마다 키체인 창이 뜬다.
 - zip 두 개(`PokeBuddy-<버전>-arm64.zip`·`-x64.zip`)와 `release/latest-mac.yml` 도 함께 만든다. GitHub Release 에는 dmg·zip 네 개와 `latest-mac.yml` 을 올린다. Mac 앱은 `latest-mac.yml` 로 새 버전을 찾고 zip 으로 바꾼다.
 - Mac 업데이트는 electron-updater 를 쓰지 않는다. electron-updater 의 mac 설치기(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치하기 때문이다. `src/main/mac-updater.ts` 가 같은 이벤트를 내는 자체 엔진이다. 받은 zip 은 sha512 로 검사하고, 앱이 끝난 뒤 도우미 스크립트가 같은 폴더 안에서 앱을 바꾼다. 실패하면 옛 앱을 되돌린다.
 - 업데이트 실기 시험은 `node dist/tools/e2e-update-mac.js` 다. 임시 폴더에 시험 앱(`pokebuddy-update-test.app`)을 두고 로컬 서버의 다음 버전으로 바꾼다. 사용자의 앱·저장·키체인은 건드리지 않는다.
