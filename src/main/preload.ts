@@ -25,6 +25,8 @@ type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
 type AccountReply = import("../shared/manage").AccountReply;
 type AccountScreen = import("../shared/manage").AccountScreen;
+type MailReply = import("../shared/manage").MailReply;
+type MailScreen = import("../shared/manage").MailScreen;
 type UpdateView = import("../shared/manage").UpdateView;
 type PatchNotesView = import("../shared/manage").PatchNotesView;
 type BannerBridge = import("../shared/manage").BannerBridge;
@@ -114,6 +116,8 @@ const MANAGE = {
   screens: "manage:screens",
   identifyScreens: "manage:identify-screens",
   pickScreen: "manage:pick-screen",
+  mail: "manage:mail",
+  mailView: "manage:mail-view",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -145,6 +149,8 @@ const manage: ManageBridge = {
   update: (action) => ipcRenderer.invoke(MANAGE.update, action) as Promise<UpdateView | null>,
   onUpdate: (cb) => ipcRenderer.on(MANAGE.updateView, (_e, view: UpdateView) => cb(view)),
   notes: (action) => ipcRenderer.invoke(MANAGE.notes, action) as Promise<PatchNotesView | null>,
+  mail: (req) => ipcRenderer.invoke(MANAGE.mail, req) as Promise<MailReply | null>,
+  onMail: (cb) => ipcRenderer.on(MANAGE.mailView, (_e, screen: MailScreen) => cb(screen)),
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);

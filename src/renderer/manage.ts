@@ -15,6 +15,9 @@ import type {
   DexEntry,
   EggView,
   FormView,
+  MailGiftView,
+  MailLetterView,
+  MailScreen,
   ManageReply,
   ManageRoute,
   PatchNotesView,
@@ -158,7 +161,9 @@ type Dialog =
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
-  | { kind: "notes-new"; version: string }; // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
+  | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
+  | { kind: "mail" } // 우편함 — 헤더 봉투 단추
+  | { kind: "letter"; id: string }; // 우편함의 편지 한 통
 
 let tab: TabId = "party";
 let view: Snapshot | null = null;
@@ -479,6 +484,7 @@ function petCard(pet: PetView): HTMLElement {
     box.appendChild(badge);
     card.appendChild(box);
   }
+  card.dataset.pet = pet.id; // 진화 튜토리얼이 이 카드를 찾는다
   card.addEventListener("click", () => openPet(pet.id));
   if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
   const state = `${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
@@ -1061,6 +1067,7 @@ function markDexPick(): void {
 
 // 칸을 누르면 도감 기기 창에 그 종을 띄운다. 같은 칸을 다시 누르면 닫는다
 function pickDex(slug: string): void {
+  if (coachId === "dex") void send("tutorial.done", "dex", { steps: 1 }); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
   window.pokebuddyManage.dexOpen(dexPick);
   markDexPick();
@@ -1449,7 +1456,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
 }
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
-// Figma 05 Screens `633:18522` 의 교환 6화면 — Base·Link Created·Offer·Blocked·Done·Error.
+// Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면 — Base·Link Created·Offer·Blocked·Done·Error.
 // 값은 메인이 만든 TradeScreen(src/main/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
 // 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다
 
@@ -1583,6 +1590,7 @@ const leftText = (ms: number): string => {
 // 링크 만들기·참가 두 카드와 규칙 — Base·Link Created·Error
 function drawTradeStart(t: TradeScreen): void {
   const row = el("div", "trade-row");
+  row.dataset.tut = "trade"; // 교환 튜토리얼이 밝히는 곳 — 링크 만들기·링크로 참가
 
   const host = el("div", "trade-card");
   if (t.phase === "hosting" && t.link) {
@@ -2168,6 +2176,201 @@ function kickedBanner(): HTMLElement | null {
   return box;
 }
 
+// ── 우편함 ─────────────────────────────────────────────────────────────────────
+// Figma 05 Screens 섹션 `10 우편함` `932:22859` — 목록 `908:5779` · 편지 로그인 전 `932:22703` · 받기 전 `908:6022` · 받은 뒤(일반 편지) `908:6232`.
+// 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
+// (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/record.md)
+let mailView: MailScreen | null = null;
+const mailBtn = need("open-mail", HTMLButtonElement);
+const mailDotEl = need("mail-dot", HTMLElement);
+
+function setMail(screen: MailScreen): void {
+  mailView = screen;
+  mailBtn.hidden = !screen.available;
+  mailDotEl.hidden = screen.unread === 0;
+  if (dialog?.kind === "mail" || dialog?.kind === "letter") drawDialog();
+}
+
+async function refreshMail(): Promise<void> {
+  try {
+    const r = await window.pokebuddyManage.mail({ action: "refresh" });
+    if (r) setMail(r.screen);
+  } catch (e) {
+    console.error(e); // 메인이 답하지 못했다 — 봉투 단추는 지난 상태 그대로
+  }
+}
+
+const MAIL_ERROR: Record<string, string> = {
+  MAIL_LOGIN_REQUIRED: "로그인하면 받을 수 있어요.",
+  MAIL_EXPIRED: "기간이 지나 받을 수 없어요.",
+  MAIL_NOT_FOUND: "편지를 찾지 못했어요.",
+  MAIL_NO_GIFTS: "받을 선물이 없어요.",
+  NETWORK: "서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.",
+  "bad-gift": "앱을 업데이트하면 받을 수 있어요.",
+};
+
+const monthDay = (at: number): string => {
+  const d = new Date(at);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+// 남은 기간 — 하루 이상이면 날, 아래면 시간
+function mailLeft(endsAt: number): string {
+  const ms = endsAt - Date.now();
+  if (ms <= 0) return "기간 지남";
+  const days = Math.floor(ms / 86_400_000);
+  return days >= 1 ? `${days}일 남음` : `${Math.max(1, Math.ceil(ms / 3_600_000))}시간 남음`;
+}
+const mailExpired = (l: MailLetterView): boolean => l.endsAt != null && l.endsAt <= Date.now();
+// 받을 선물이 남았다 — 기간 안이고 이 저장에 넣지 않았다
+const mailOpen = (l: MailLetterView): boolean => l.gifts.length > 0 && !l.applied && !mailExpired(l);
+// 보낸 이 · 날짜, 받을 선물이 남은 편지는 남은 기간까지 — Figma "PokeBuddy · 9월 28일 · 7일 남음"
+function mailMeta(l: MailLetterView): string {
+  const parts = [l.sender, monthDay(l.startsAt)];
+  if (mailOpen(l) && l.endsAt != null) parts.push(mailLeft(l.endsAt));
+  return parts.join(" · ");
+}
+const giftIcon = (g: MailGiftView, cls: string): HTMLElement => (g.kind === "item" ? iconOf(`item:${g.id}`, cls) : el("span", `${cls} gift-point`, "P"));
+
+// 봉투 — Figma `Icon / Mail` `907:578`. 헤더 단추와 같은 선 그림
+function envelope(cls: string): SVGSVGElement {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 20 20");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", cls);
+  for (const d of ["M3.5 5.5h13v9h-13z", "M3.5 5.5l6.5 5 6.5-5"]) {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", d);
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
+// 모달 머리 — 제목(편지면 ‹ 돌아가기)과 오른쪽 위 닫기
+function mailHead(title: string, back: boolean): void {
+  const head = el("div", "settings-head");
+  const titles = el("div", "titles mail-titles");
+  if (back) {
+    const b = button("back", "‹");
+    b.setAttribute("aria-label", "우편함으로");
+    b.addEventListener("click", () => open({ kind: "mail" }));
+    titles.appendChild(b);
+  }
+  titles.appendChild(el("h2", undefined, title));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  head.append(titles, x);
+  dialogEl.appendChild(head);
+}
+
+function mailRow(l: MailLetterView): HTMLElement {
+  const row = button("mail-row");
+  const dot = el("span", "mail-unread");
+  dot.hidden = l.read && !mailOpen(l); // 안 읽음 점 — 받을 선물이 남아도 둔다
+  const text = el("div", "mail-text");
+  text.append(el("div", "mail-title", l.title), el("div", "mail-meta", mailMeta(l)));
+  row.append(dot, envelope("mail-icon"), text);
+  const first = l.gifts[0];
+  if (l.applied) row.appendChild(el("span", "mail-chip done", "받음"));
+  else if (first) {
+    const chip = el("span", "mail-chip");
+    const more = l.gifts.length > 1 ? ` 외 ${l.gifts.length - 1}` : "";
+    chip.append(giftIcon(first, "mail-chip-icon"), document.createTextNode(`${first.name} ×${first.count.toLocaleString("ko-KR")}${more}`));
+    row.appendChild(chip);
+  }
+  row.appendChild(el("span", "mail-more", "›"));
+  row.addEventListener("click", () => openLetter(l.id));
+  return row;
+}
+
+function openLetter(id: string): void {
+  open({ kind: "letter", id });
+  const l = mailView?.letters.find((x) => x.id === id);
+  if (l && !l.read)
+    void window.pokebuddyManage
+      .mail({ action: "read", id })
+      .then((r) => r && setMail(r.screen))
+      .catch((e: unknown) => console.error(e));
+}
+
+function drawMail(): void {
+  mailHead("우편함", false);
+  const scroll = el("div", "scroll mail-list");
+  const letters = mailView?.letters ?? [];
+  if (!letters.length) {
+    const word = !mailView || mailView.status === "loading" ? "우편함을 읽는 중입니다." : mailView.status === "offline" ? "우편함을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요." : "받은 편지가 없어요.";
+    scroll.appendChild(el("div", "empty-note", word));
+  } else {
+    for (const l of letters) scroll.appendChild(mailRow(l));
+    scroll.appendChild(el("div", "mail-note", "선물이 든 편지는 열어서 받아요. 기간이 지나면 받을 수 없어요."));
+  }
+  dialogEl.appendChild(scroll);
+}
+
+// 선물 카드 — 받기 전은 `선물 N` 과 `받기`, 받은 뒤는 흐린 `받은 선물` · `받음` 과 받은 날
+function giftCard(l: MailLetterView): HTMLElement {
+  const done = l.applied;
+  const card = el("div", done ? "gift-card done" : "gift-card");
+  const head = el("div", "gift-head");
+  head.append(el("strong", undefined, done ? "받은 선물" : `선물 ${l.gifts.length}`), el("span", "spacer"));
+  const busy = mailView?.busy === l.id;
+  if (done) head.appendChild(el("span", "gift-done", "받음"));
+  else {
+    const blocked = !mailView?.signedIn || mailExpired(l) || l.unsupported || busy;
+    head.appendChild(
+      actionButton(busy ? "받는 중" : "받기", true, blocked, () => {
+        void window.pokebuddyManage
+          .mail({ action: "claim", id: l.id })
+          .then(async (r) => {
+            if (!r) return;
+            setMail(r.screen);
+            if (r.ok) await refresh(); // 가방·포인트가 바뀌었다
+          })
+          .catch((e: unknown) => console.error(e));
+      }),
+    );
+  }
+  card.appendChild(head);
+  for (const g of l.gifts) {
+    const row = el("div", "gift-row");
+    row.append(giftIcon(g, "gift-icon"), el("strong", undefined, g.name), el("span", "gift-count", `×${g.count.toLocaleString("ko-KR")}`));
+    card.appendChild(row);
+  }
+  const foot = el("div", "gift-foot");
+  if (done) {
+    const where = l.gifts.every((g) => g.kind === "points") ? "포인트에 더해졌어요" : l.gifts.some((g) => g.kind === "points") ? "가방과 포인트에 들어갔어요" : "가방에 들어갔어요";
+    foot.textContent = `${l.claimedAt ? `${monthDay(l.claimedAt)}에 받았어요 · ` : ""}${where}`;
+  } else if (l.unsupported) foot.textContent = MAIL_ERROR["bad-gift"] ?? "";
+  else if (mailExpired(l)) foot.textContent = MAIL_ERROR.MAIL_EXPIRED ?? "";
+  else if (!mailView?.signedIn) {
+    foot.append(el("span", undefined, "로그인하면 받을 수 있어요."), actionButton("로그인", false, false, () => open({ kind: "user", tab: "account" })));
+    foot.classList.add("login");
+  } else if (mailView.error && !busy) foot.textContent = MAIL_ERROR[mailView.error] ?? `받지 못했어요 (${mailView.error})`;
+  if (foot.childNodes.length) card.appendChild(foot);
+  return card;
+}
+
+function drawLetter(id: string): void {
+  const l = mailView?.letters.find((x) => x.id === id);
+  if (!l) {
+    open({ kind: "mail" });
+    return;
+  }
+  mailHead(l.title, true);
+  const scroll = el("div", "scroll mail-letter");
+  scroll.append(el("div", "mail-meta", mailMeta(l)), el("div", "mail-body", l.body));
+  if (l.gifts.length || l.unsupported) scroll.appendChild(giftCard(l));
+  dialogEl.appendChild(scroll);
+}
+
+mailBtn.addEventListener("click", () => {
+  open({ kind: "mail" });
+  void refreshMail();
+});
+window.pokebuddyManage.onMail(setMail);
+void refreshMail();
+
 window.pokebuddyManage.onAccount((screen) => {
   const wasKicked = acct?.kicked;
   acct = screen;
@@ -2261,6 +2464,126 @@ const TUTORIAL_TEXT: Record<string, TutorialText> = {
 // 업적 튜토리얼 — 헤더의 업적 아이콘을 밝힌다 (Figma 시안 G `514:2444`). 어느 탭에서든 보인다
 const ACHIEVEMENT_GUIDE = { title: "보상을 받으면 파티 칸이 하나 열려요", body: "", button: "업적 보기" };
 
+// 새 기능 튜토리얼 — 문구는 Figma 05 Screens 섹션 `13 튜토리얼 · 관리 창` `930:18248` 그대로다
+// (2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", worklog/records/tutorial-overhaul/record.md "새 기능 튜토리얼 8종 — 코드 설계").
+// 파티 1/2 · 진화는 파티 카드를 밝힌다 — 상세는 옆 기기 창이다(Figma `932:17544` · `932:18610`)
+interface GuideStep {
+  title: string;
+  body: string;
+  target: () => HTMLElement | null;
+  also?: () => HTMLElement | null; // 함께 밝힐 요소 — 구멍을 둘을 감싸는 사각형으로 넓힌다
+  tryIt?: boolean; // 대상을 눌러야 넘어간다 — 다음 단추를 두지 않는다
+  interactive?: boolean; // 대상도 눌린다(목표 행동)
+}
+interface Guide {
+  name: string; // 말풍선 머리의 "튜토리얼 · {name}"
+  tab: TabId | null; // 이 탭에서 보인다. null 이면 어느 탭이든
+  go: string; // 다른 탭에 있을 때 탭 단추로 이어 주는 말풍선의 단추
+  steps: GuideStep[];
+  step?: () => number; // 화면 상태로 단계를 정한다(가방 — 사용 판이 열렸는가, 사용자 — 연결 탭인가)
+  onNext?: () => void; // 다음 단추가 할 일 — 없으면 단계만 넘긴다
+}
+const firstPetCard = (): HTMLElement | null => bodyEl.querySelector<HTMLElement>(".grid .slot[data-pet]");
+const tabButton = (id: TabId): HTMLElement | null => (tabsEl.children[TABS.findIndex((t) => t.id === id)] as HTMLElement | undefined) ?? null;
+// 사용자 모달의 첫 블록(계정 · CLI 목록) — 스크롤 영역 전체를 밝히면 말풍선이 탭을 가린다
+const dialogScroll = (): HTMLElement | null => dialogEl.querySelector<HTMLElement>(".scroll > *:first-child") ?? dialogEl.querySelector<HTMLElement>(".scroll");
+// 지금 진화할 수 있는 파티 개체의 카드
+const evolveCard = (): HTMLElement | null => {
+  const pet = partyPets().find((p) => p.evolutions.some((e) => e.ready));
+  return pet ? bodyEl.querySelector<HTMLElement>(`.slot[data-pet="${CSS.escape(pet.id)}"]`) : null;
+};
+const GUIDES: Record<string, Guide> = {
+  growth: {
+    name: "성장", tab: "party", go: "파티로 가기",
+    steps: [
+      { title: "친밀도는 함께한 시간만큼 올라요", body: "밥 주기·놀아주기로 더 올라요. 높을수록 포인트가 빨리 쌓여요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:first-child") ?? null },
+      { title: "배고프면 친밀도가 덜 올라요", body: "만복도는 시간이 지나면 줄어요. 밥을 주면 채워져요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:last-child") ?? null },
+      { title: "레벨은 사탕으로 올려요", body: "경험치는 친밀도와 따로 쌓여요. 가방의 경험사탕을 써요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".top") ?? null },
+    ],
+  },
+  points: {
+    name: "포인트", tab: null, go: "",
+    steps: [{ title: "파티 포켓몬이 포인트를 모아요", body: "상점에서 알과 도구를 살 때 써요.", target: () => document.querySelector<HTMLElement>(".point-chip") }],
+  },
+  party: {
+    name: "파티", tab: "party", go: "파티로 가기",
+    steps: [
+      { title: "볼에 넣으면 바탕화면에서 쉬어요", body: "볼 안에서도 성장은 이어져요.", target: firstPetCard },
+      { title: "박스에 보관하면 성장이 멈춰요", body: "파티 칸이 모자라면 박스에 맡겨요.", target: () => tabButton("box") },
+    ],
+  },
+  bag: {
+    name: "가방", tab: "bag", go: "가방으로 가기",
+    // 도구를 눌러 사용 판이 열리면 2단계, 판을 닫으면 1단계로 돌아간다
+    step: () => (bodyEl.querySelector(".use-panel") ? 1 : 0),
+    steps: [
+      { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 먹이와 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
+      { title: "대상을 고르고 사용을 눌러요", body: "여러 개를 한 번에 쓸 수 있어요.", target: () => bodyEl.querySelector<HTMLElement>(".use-panel"), interactive: true },
+    ],
+  },
+  evolution: {
+    name: "진화", tab: "party", go: "파티로 가기",
+    steps: [{ title: "조건을 채우면 진화할 수 있어요", body: "진화는 직접 눌러야 해요.", target: evolveCard, interactive: true }],
+  },
+  dex: {
+    name: "도감", tab: "dex", go: "",
+    steps: [{ title: "칸을 누르면 입수 방법이 보여요", body: "아직 해금하지 않은 포켓몬은 실루엣으로 보여요.", target: () => bodyEl.querySelector<HTMLElement>(".dex-grid .dex-cell"), interactive: true }],
+  },
+  trade: {
+    name: "교환", tab: "trade", go: "",
+    steps: [{ title: "링크로 친구와 한 마리씩 바꿔요", body: "링크를 만들어 보내거나, 받은 링크로 참가해요.", target: () => bodyEl.querySelector<HTMLElement>('[data-tut="trade"]') }],
+  },
+  user: {
+    name: "사용자", tab: null, go: "",
+    step: () => (dialog?.kind === "user" && dialog.tab === "agents" ? 1 : 0),
+    onNext: () => {
+      if (!agentRows) void loadAgents();
+      open({ kind: "user", tab: "agents" });
+    },
+    steps: [
+      { title: "로그인하면 클라우드에 저장돼요", body: "다른 컴퓨터에서도 이어서 할 수 있어요.", target: dialogScroll },
+      // CLI 목록 전체 — 첫 줄부터 아래 안내 줄까지
+      { title: "CLI 를 연결하면 더 빨리 자라요", body: "에이전트가 일하는 동안 친밀도와 포인트가 두 배로 쌓여요.", target: dialogScroll, also: () => dialogEl.querySelector<HTMLElement>(".scroll .agents-note") },
+    ],
+  },
+};
+let coachId: string | null = null; // 지금 떠 있는 코치마크의 튜토리얼
+let guideId: string | null = null; // 단계를 세는 튜토리얼 — 바뀌면 1단계부터
+let guideStep = 0;
+
+// 새 기능 튜토리얼 한 단계를 그린다. 대상이 없으면 그리지 않는다(다음 그리기에서 다시 본다)
+function drawGuideStep(id: string): void {
+  const guide = GUIDES[id];
+  if (!guide) return;
+  if (guideId !== id) {
+    guideId = id;
+    guideStep = 0;
+  }
+  const index = Math.min(guide.steps.length - 1, guide.step ? guide.step() : guideStep);
+  const step = guide.steps[index];
+  const target = step?.target() ?? null;
+  if (!step || !target) return;
+  const last = index === guide.steps.length - 1;
+  const counter = guide.steps.length > 1 ? ` ${index + 1} / ${guide.steps.length}` : "";
+  coachEl = coachLayer(id, target, {
+    step: `튜토리얼 · ${guide.name}${counter}`,
+    title: step.title,
+    body: step.body,
+    button: step.tryIt ? "" : last ? "확인" : "다음",
+    onGo: () => {
+      if (last) return void send("tutorial.done", id, { steps: guide.steps.length });
+      if (guide.onNext) guide.onNext();
+      else {
+        guideStep = index + 1;
+        drawTutorial();
+      }
+    },
+    interactive: step.tryIt === true || step.interactive === true,
+    also: step.also?.() ?? null,
+  });
+  coachId = id;
+}
+
 interface CoachSpec {
   step: string;
   title: string;
@@ -2275,6 +2598,7 @@ interface CoachSpec {
 const COACH = { pad: 8, gap: 12, width: 280, margin: 8 };
 
 let coachEl: HTMLElement | null = null;
+let coachWatch: ResizeObserver | null = null; // 코치마크 대상의 크기 변화 — 바뀌면 다시 잰다
 // 튜토리얼 중 초점을 둘 수 있는 곳 — 말풍선, 그리고 목표 행동이면 대상. 막 밖으로 Tab 이 나가면 말풍선 단추로 되돌린다
 let coachAllows: ((n: Node) => boolean) | null = null;
 let coachHome: HTMLElement | null = null;
@@ -2319,10 +2643,18 @@ const areaSteps = (v: Snapshot): AreaStep[] => AREA_STEPS.filter((st) => !st.nee
 function drawTutorial(): void {
   coachEl?.remove();
   coachEl = null;
+  coachWatch?.disconnect();
+  coachWatch = null;
   const id = view?.tutorial ?? null;
   coachAllows = null;
   coachHome = null;
-  if (view && dialog?.kind === "settings" && dialog.tab === "display" && view.areaTutorial) {
+  coachId = null;
+  const screenTut = (tid: string): boolean => view?.screenTutorials?.includes(tid) === true;
+  if (view && dialog?.kind === "user" && !dialogEl.querySelector(".acct-overlay") && screenTut("user")) {
+    drawGuideStep("user"); // 사용자 모달을 처음 열 때 — 계정 → 연결
+  } else if (view && !dialog && (tab === "dex" || tab === "trade") && screenTut(tab)) {
+    drawGuideStep(tab); // 도감·교환 탭을 처음 열 때
+  } else if (view && dialog?.kind === "settings" && dialog.tab === "display" && view.areaTutorial) {
     // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다
     // (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아", Figma 99 `Tutorial / Playground · 설정`)
     const steps = areaSteps(view);
@@ -2351,7 +2683,29 @@ function drawTutorial(): void {
     }
   } else if (id && view && !dialog && !detailPet) {
     const text = TUTORIAL_TEXT[id];
-    if (id === "achievement") {
+    const guide = GUIDES[id];
+    if (guide && (guide.tab == null || guide.tab === tab)) {
+      drawGuideStep(id);
+    } else if (guide && guide.tab) {
+      // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다(상점·부화 튜토리얼과 같다)
+      const to = guide.tab;
+      const target = tabButton(to);
+      const first = guide.steps[0];
+      if (target && first) {
+        coachEl = coachLayer(id, target, {
+          step: `튜토리얼 · ${guide.name}`,
+          title: first.title,
+          body: "",
+          button: guide.go,
+          onGo: () => {
+            tab = to;
+            detailPet = null;
+            draw();
+          },
+          interactive: true,
+        });
+      }
+    } else if (id === "achievement") {
       const done = view.achievements.list.find((a) => a.state === "achieved");
       const target = document.getElementById("open-achievements");
       if (done && target) {
@@ -2430,13 +2784,27 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   document.body.appendChild(layer);
   const left = Math.min(Math.max(COACH.margin, r.left), W - COACH.width - COACH.margin);
   const below = hole.b + COACH.gap;
-  const top = below + bubble.offsetHeight > H - COACH.margin ? hole.t - COACH.gap - bubble.offsetHeight : below;
+  const above = hole.t - COACH.gap - bubble.offsetHeight;
+  // 아래 → 위 → (대상이 커서 둘 다 모자라면) 창 아래쪽 안
+  const top = below + bubble.offsetHeight <= H - COACH.margin ? below : above >= COACH.margin ? above : H - COACH.margin - bubble.offsetHeight;
   bubble.style.left = `${Math.round(left)}px`;
   bubble.style.top = `${Math.round(Math.max(COACH.margin, top))}px`;
   coachAllows = (n) => bubble.contains(n) || (spec.interactive === true && target.contains(n));
   coachHome = spec.button ? next : x;
   const active = document.activeElement;
   if (!active || active === document.body || !coachAllows(active)) coachHome.focus({ preventScroll: true });
+  // 대상이 그린 뒤에 크기가 바뀌면 다시 잰다 — 도감 칸은 어림 높이(content-visibility)로 먼저 잡혔다가 다음 프레임에 줄어든다
+  coachWatch?.disconnect(); // 지난 코치마크의 관찰은 버린다 — 하나만 둔다
+  const watch = new ResizeObserver(() => {
+    if (coachEl !== layer) return watch.disconnect();
+    const now = target.getBoundingClientRect();
+    if (Math.abs(now.top - t0.top) > 1 || Math.abs(now.height - t0.height) > 1 || Math.abs(now.width - t0.width) > 1) {
+      watch.disconnect();
+      drawTutorial();
+    }
+  });
+  watch.observe(target);
+  coachWatch = watch;
   return layer;
 }
 
@@ -3269,7 +3637,7 @@ function drawGuide(): void {
 }
 
 // ── 설정 바닥 · 버전과 업데이트 ─────────────────────────────────────────────────
-// Figma `99 · 시안` 업데이트 시안 `789:17471` — 바닥 왼쪽에 버전과 업데이트 상태, 그 옆에 `패치노트` (src/main/updater.ts)
+// Figma 05 Screens 섹션 `930:18246`(설정) 의 설정 바닥 — 바닥 왼쪽에 버전과 업데이트 상태, 그 옆에 `패치노트` (src/main/updater.ts)
 
 let upd: UpdateView | null = null;
 let patch: PatchNotesView | null = null;
@@ -3405,6 +3773,8 @@ const SHAPE: Record<Dialog["kind"], string> = {
   form: "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
+  mail: "dialog settings mail",
+  letter: "dialog settings mail",
 };
 
 // 가림막 — 켜고 끌 때 메인에도 알린다. OS 가 그리는 창 단추 자리는 CSS 가 덮지 못한다
@@ -3450,6 +3820,8 @@ function drawDialog(): void {
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
+  else if (dialog.kind === "mail") drawMail();
+  else if (dialog.kind === "letter") drawLetter(dialog.id);
   else drawGuide();
 
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
@@ -3491,6 +3863,7 @@ function close(): void {
 }
 
 const openPet = (id: string): void => {
+  if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 카드를 눌러 기기 창의 진화 단추를 보는 것이 목표 행동이다
   if (detailPet === id && !dialog) {
     detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
     draw();

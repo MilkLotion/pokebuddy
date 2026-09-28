@@ -53,13 +53,14 @@ Figma 원본: [0.2 · 와이어프레임(구 07)](https://www.figma.com/design/M
 | C-26 | 첫 선택 후보 카드 | `Species Card` 모양 참고 | 신규 |
 | C-27 | 저장 표시 | `Point Balance` 높이 참고 | 신규 |
 | C-28 | 파티 상세 기기 창 | 없음. 도감 기기 창의 틀을 따른다 | 신규 |
+| C-29 | 우편함 | 없음. 설정 모달의 틀을 따른다 | 신규 |
 
 그대로 재사용하는 기초 자산: `Button`, `Type Badge`, `Status Dot`, `Divider`, `Visibility Marker`, `Portrait`, 텍스트 컴포넌트, 아이콘. `Portrait`와 `Visibility Marker`는 작은 크기 변형이 필요하다.
-상세 화면에서 계속 쓰는 자산: `Pokemon Profile`, `Page Header`, `Care Section`, `Care Action`, `Settings Section`, `Growth & Tools Section`, `Party Management Section`, `Traits`, `Debuff Badge`, `Notice`, `Status Banner`, `Action Group`, `Size Step`, `Size Selector`. 이번 와이어프레임에는 쓰이지 않았다. 삭제 대상으로 판정하지 않는다.
-Figma: C-01~C-27은 Figma에 있다. C-28은 `99` 페이지의 시안만 있다. 노드는 각 계약의 `Figma` 줄을 따른다. `Portrait`는 Large·Medium·Small 변형, `Visibility Marker`는 Default·Small 변형이 있다.
+옛 두 열 상세 화면의 자산 `Pokemon Profile`, `Care Section`, `Settings Section`, `Growth & Tools Section`, `Party Management Section`, `Status Banner`, `Detail / Care Success` `222:1228` 은 2026-09-29 Figma 정리에서 지웠다. 상세는 C-28 파티 상세 기기 창이 대신한다. 남은 자산 `Page Header`, `Care Action`, `Traits`, `Debuff Badge`, `Notice`, `Action Group`, `Size Step`, `Size Selector` 는 다른 화면이 쓴다.
+Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따른다. `Portrait`는 Large·Medium·Small 변형, `Visibility Marker`는 Default·Small 변형이 있다.
 진화 전후 비교는 진화 확인 한 화면에서만 쓴다. 그래서 컴포넌트 계약에 넣지 않는다.
 템플릿: `App Shell`은 C-01·C-03을 쓴다. `Party Layout` `196:189`은 파티 칸만 담는다. 박스 탭은 `Box Layout` `340:3665`이다. 도감·상점·가방은 `Dex Layout` `378:1524`, `Shop Layout` `379:1757`, `Bag Layout` `380:2064`이다. 입력칸은 `Field` `377:303`을 쓴다.
-템플릿: `Pokemon Detail Layout` `226:913`은 `Location=Party|Box`로 파티 관리 영역을 바꾼다. 박스 개체에는 `파티에 배치`·`교체` 버튼이 있다. 이 템플릿은 설정창 안의 옛 상세 화면이다. 2026-09-28 부터 코드는 C-28 파티 상세 기기 창을 쓴다.
+템플릿: 옛 상세 화면 템플릿 `Pokemon Detail Layout` `226:913` 은 2026-09-29 Figma 정리에서 지웠다. 개체 상세는 C-28 파티 상세 기기 창이다.
 템플릿: `Shop Layout`의 알 분류에 상품 `태고의돌` `405:2539`이 있다. 화석 전용 알이며 200P다. 진화 분류 `section/진화` `404:2309`는 진화용 도구 24종을 모두 담는다. 도구 분류에는 진화의돌을 두지 않는다.
 
 ## 계약
@@ -311,6 +312,17 @@ Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 
 튜토리얼: 파티 개체이면 개체 상세 튜토리얼을 기기 창 안에서 C-23으로 보여준다. 규칙은 [행동에 따른 단계별 튜토리얼](game.md#행동에-따른-단계별-튜토리얼)을 따른다.
 규칙은 [파티 상세 기기 창](game.md#파티-상세-기기-창)을 따른다. 구현은 `src/main/pet-window.ts`, `src/renderer/pet.html`, `src/renderer/pet.ts` 다.
 Figma: `05 · Screens` 의 `Party / Detail Device` `908:23772`(관리 창 `862:21998` + 기기 `862:22000`)와 박스 개체 기기 `908:23773`. 개체 상세 튜토리얼은 `914:25889` ~ `914:26376`, 박스 보관 확인은 `914:22998`.
+
+### C-29 우편함
+
+역할: 운영자가 보낸 편지를 읽고 선물을 받는 모달이다(2026-09-28 사용자 결정 "a안으로 진행", 편지 + 선물).
+열기: 탭 줄 오른쪽의 봉투 아이콘(`Icon / Mail` `907:578`). 업적창·설정 다음, 사용자 앞이다. 읽지 않은 편지나 받을 선물이 남은 편지가 있으면 아이콘에 점을 둔다. 서버 설정이 없는 앱에서는 아이콘을 숨긴다.
+틀: 설정 모달과 같은 560×500 이다. `✕`·바깥 클릭·Esc 로 닫는다.
+목록: 편지 줄을 최근 순으로 쌓는다. 줄은 중립 1px 경계의 카드다. 왼쪽부터 안 읽음 점, 봉투, 제목과 `보낸 이 · 날짜[ · N일 남음]`, 선물 칩 또는 `받음` 칩, `›` 다. 아래에 `선물이 든 편지는 열어서 받아요. 기간이 지나면 받을 수 없어요.` 를 둔다.
+편지: 머리는 `‹ 제목` 과 `✕` 다. `‹` 는 목록으로 돌아간다. 아래로 `보낸 이 · 날짜`, 본문, 선물 카드다.
+선물 카드: 받기 전은 `선물 N` 과 `받기`, 선물 줄(그림·이름·`×개수`)이다. 받은 뒤는 회색 면에 `받은 선물` · `받음`, 흐린 선물 줄, `M월 D일에 받았어요 · 가방에 들어갔어요` 다. 로그인하지 않았으면 `받기` 를 잠그고 아래에 `로그인하면 받을 수 있어요.` 와 `로그인` 을 둔다.
+규칙은 [우편함](game.md#우편함)을 따른다. 구현은 `src/renderer/manage.ts` `drawMail`·`drawLetter`, `src/renderer/manage.html` `.mail-*`·`.gift-*` 다.
+Figma: `05 · Screens` 섹션 `10 우편함` `932:22859` — `Mail / List` `908:5779`, 편지 로그인 전 `932:22703`, 받기 전 `908:6022`, 받은 뒤 `908:6232`. 헤더 단추는 `Primary Navigation` `208:542` 의 mail-button(`Icon / Mail` `907:578`, `Show Dot`).
 
 ## 남은 일
 

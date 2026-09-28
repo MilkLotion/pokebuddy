@@ -213,7 +213,7 @@ function seed(): SaveV3 {
   assert.equal(s.tutorials["first-care"]?.state, "none", "다른 곳의 밥 주기는 완료가 아니다");
   assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
   assert.ok(done(s, "first-care", 2).ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
-  assert.deepStrictEqual(queueTutorials(s, T0 + 1), []);
+  assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["growth"], "첫 돌봄이 끝나면 성장 튜토리얼이 줄에 든다");
   assert.equal(s.tutorials.playground, undefined, "놀이공간 설명은 설정 › 화면으로 옮겼다(area, 대기열 밖)");
   assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
   // 줄에 들 때 이미 돌본 옛 저장은 바로 완료로 넘긴다
@@ -226,15 +226,48 @@ function seed(): SaveV3 {
   assert.ok(buy(s, "random", T0 + 2, () => 0.5).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);
   assert.equal(s.tutorials.shop?.state, "done", "랜덤알을 샀으니 상점 튜토리얼은 완료");
+  assert.equal(currentTutorial(s)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
+  assert.ok(done(s, "growth", 3).ok);
+  assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["points"], "성장이 끝나면 포인트");
+  assert.equal(s.tutorials.points?.queuedAt, s.tutorials.growth?.queuedAt, "포인트는 성장의 대기 시각을 물려받아 부화보다 앞");
+  assert.equal(currentTutorial(s)?.id, "points");
+  assert.ok(skip(s, "points").ok);
   assert.equal(currentTutorial(s)?.id, "hatch");
 
   const egg = s.eggs[0]!;
   Object.assign(egg, { ready: true, remainMs: 0, actions: { pat: 1, song: 0 }, candidates: ["rattata"] });
   assert.ok(open(s, egg.id, T0 + 3, () => 0.99).ok);
-  assert.deepStrictEqual(queueTutorials(s, T0 + 3), [], "새 개체를 얻어도 대기열 튜토리얼은 없다 — 개체 상세 튜토리얼은 화면이 띄운다");
+  assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"], "둘째 포켓몬을 얻으면 파티와 박스 튜토리얼");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
+  assert.equal(currentTutorial(s)?.id, "party");
+  assert.ok(done(s, "party", 2).ok);
   assert.equal(currentTutorial(s), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
+}
+
+// (11b) 가방·진화 튜토리얼 — 처음 쓸 수 있게 될 때 줄에 든다. 쓸 수 없게 되면 차례를 넘긴다
+{
+  const s = empty(T0);
+  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  for (const id of ["first-care", "shop", "growth", "points"]) s.tutorials[id] = { state: "done", steps: 0 };
+  assert.deepStrictEqual(queueTutorials(s, T0), [], "도구가 없으면 가방 튜토리얼은 없다");
+  s.bag["basic-food"] = 5;
+  assert.deepStrictEqual(queueTutorials(s, T0), [], "기본먹이는 도구로 치지 않는다");
+  s.bag["exp-candy-s"] = 1;
+  assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["bag"]);
+  s.bag["exp-candy-s"] = 0;
+  assert.equal(currentTutorial(s), null, "도구를 다 쓰면 가방 튜토리얼은 차례를 넘긴다");
+  s.bag["exp-candy-s"] = 1;
+  assert.equal(currentTutorial(s)?.id, "bag");
+  assert.ok(skip(s, "bag").ok);
+  // 파이리는 Lv.16 에 진화한다 — 레벨 조건을 채우면 진화 튜토리얼
+  const pet = s.pets[0]!;
+  assert.deepStrictEqual(queueTutorials(s, T0 + 2), [], "진화 조건 전에는 없다");
+  pet.exp = 1_000_000;
+  pet.level = 100;
+  assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["evolution"]);
+  assert.equal(currentTutorial(s)?.id, "evolution");
+  process.stdout.write("(11b) 새 기능 튜토리얼 · 가방과 진화  ok\n");
 }
 
 // (12) 같은 순간에 생긴 조건은 스펙 순서(상점 → 부화), 먼저 생긴 것이 먼저. 이미 다른 개체가 있는 옛 저장은 상점을 넘긴다

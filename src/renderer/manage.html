@@ -254,7 +254,7 @@
         padding: 18px 12px;
         min-height: 160px;
         display: flex;
-        /* 빈 칸·잠긴 칸과 높이를 맞추느라 남는 세로 공간은 위아래로 나눈다 (Figma Party / Approved UI) */
+        /* 빈 칸·잠긴 칸과 높이를 맞추느라 남는 세로 공간은 위아래로 나눈다 (Figma Party / Base) */
         align-items: center;
         gap: 12px;
         text-align: left;
@@ -1307,6 +1307,178 @@
       .dialog.settings .titles h2 {
         margin: 0 0 4px;
       }
+      /* 우편함 — Figma 05 Screens 섹션 `10 우편함` `932:22859`. 편지 줄은 중립 1px 경계, 안 읽음은 왼쪽 점 */
+      .mail-titles {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .mail-titles .back {
+        font-size: 16px;
+        padding: 0 6px 0 0;
+      }
+      .mail-list,
+      .mail-letter {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+        padding-top: 12px;
+      }
+      .mail-row {
+        appearance: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 12px 10px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .mail-row:hover {
+        background: var(--accent-bg);
+      }
+      .mail-unread {
+        flex: none;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary);
+      }
+      .mail-unread[hidden] {
+        display: block;
+        visibility: hidden;
+      }
+      .mail-icon {
+        flex: none;
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 1.4;
+        stroke-linejoin: round;
+      }
+      .mail-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .mail-title {
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .mail-meta {
+        font-family: var(--font-small);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .mail-chip {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--accent-bg);
+        color: var(--primary);
+        font-family: var(--font-small);
+        font-size: 10px;
+      }
+      .mail-chip.done {
+        background: var(--subtle);
+        color: var(--muted);
+      }
+      .mail-chip-icon {
+        width: 14px;
+        height: 14px;
+      }
+      .mail-more {
+        flex: none;
+        color: var(--muted);
+      }
+      .mail-note {
+        font-family: var(--font-small);
+        font-size: 11px;
+        color: var(--muted);
+        padding-top: 4px;
+      }
+      .mail-body {
+        white-space: pre-wrap;
+        line-height: 1.6;
+      }
+      .gift-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 4px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+      .gift-card.done {
+        background: var(--subtle);
+        border-color: transparent;
+      }
+      .gift-card.done .gift-row {
+        opacity: 0.55;
+      }
+      .gift-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .gift-done {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .gift-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .gift-icon {
+        flex: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: var(--canvas);
+      }
+      .gift-point {
+        display: inline-grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--primary);
+        color: var(--inverse);
+        font-size: 9px;
+        font-weight: 700;
+      }
+      .gift-icon.gift-point {
+        border-radius: 50%;
+        background: var(--primary);
+      }
+      .gift-count {
+        color: var(--muted);
+      }
+      .gift-foot {
+        font-family: var(--font-small);
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .gift-foot.login {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
       .dialog-close {
         appearance: none;
         flex: none;
@@ -1353,7 +1525,7 @@
       .dialog.settings .titles .sub {
         margin: 0;
       }
-      /* 설정 바닥 왼쪽 — 버전·업데이트 상태와 작은 단추 (Figma 업데이트 시안 `789:17471`). 닫기 단추는 없다 */
+      /* 설정 바닥 왼쪽 — 버전·업데이트 상태와 작은 단추 (Figma 05 Screens 섹션 `930:18246`(설정)). 닫기 단추는 없다 */
       .version-foot {
         flex: 1;
         min-width: 0;
@@ -2257,7 +2429,7 @@
         margin-top: 0;
       }
 
-      /* 교환 — Figma 05 Screens `633:18522` 교환 6화면. 카드는 중립 테두리 1px, 상태는 점으로 보인다 */
+      /* 교환 — Figma 05 Screens 섹션 `930:18244`(교환) 교환 6화면. 카드는 중립 테두리 1px, 상태는 점으로 보인다 */
       .trade-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -2744,6 +2916,14 @@
             />
             <circle cx="10" cy="10" r="2.5" />
           </svg>
+        </button>
+        <!-- 우편함 — 편지와 선물. 설정과 사용자 사이 (Figma 05 Screens 섹션 `10 우편함` `932:22859`, `Icon / Mail` `907:578`, `Primary Navigation` `208:542`). 서버 설정이 없으면 숨긴다 -->
+        <button type="button" class="icon" id="open-mail" title="우편함" hidden>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M3.5 5.5h13v9h-13z" />
+            <path d="M3.5 5.5l6.5 5 6.5-5" />
+          </svg>
+          <span class="dot" id="mail-dot" hidden></span>
         </button>
         <!-- 사용자 — 계정·연결 모달을 연다. 설정 오른쪽 (2026-09-28 사용자 "설정옆에 유저아이콘 추가") -->
         <button type="button" class="icon" id="open-user" title="사용자">

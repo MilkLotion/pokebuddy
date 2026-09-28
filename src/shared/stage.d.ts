@@ -78,7 +78,7 @@ export interface PointerMsg {
 }
 
 // 바탕화면 튜토리얼 코치마크 — 첫 돌봄(포켓몬 둘레를 비우고 어둡게), 놀이공간(놀이공간 테두리). 모두 한 단계다
-// Figma `Tutorial / First Care` `397:8552`, `Tutorial / Playground` `397:8596`. 문구는 메인이 i18n 에서 채운다
+// Figma `Tutorial / First Care` `397:8552`. 문구는 메인이 i18n 에서 채운다
 export interface CoachView {
   id: string; // 튜토리얼 id — first-care · playground
   kind: "pet" | "area";

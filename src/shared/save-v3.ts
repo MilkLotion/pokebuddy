@@ -163,4 +163,5 @@ export interface SaveV3 {
   legacy: Record<string, unknown>; // 새 화면에서 쓰지 않는 옛 값. 지우지 않고 보존한다
   log: LogEntry[];
   trade?: { pending: TradePendingV3 | null };
+  mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/core.ts)
 }

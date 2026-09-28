@@ -180,6 +180,7 @@ export interface Snapshot {
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/core.ts)
   detailTutorial: boolean; // 개체 상세 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 파티 개체 상세를 처음 열면 화면이 5단계를 보여 준다
   areaTutorial: boolean; // 놀이공간 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 설정 › 화면을 처음 열면 놀이공간 줄을 밝힌다 (2026-09-28 바탕화면에서 옮김)
+  screenTutorials: string[]; // 화면을 처음 열 때 띄우는 튜토리얼 가운데 아직 끝내거나 건너뛰지 않은 것 — area · dex · trade · user (src/tutorial/core.ts SCREEN_TUTORIALS)
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
   display?: DisplayView;
   saveFailing?: boolean; // 저장이 이어서 3번 실패했다 — 모든 탭 위쪽에 안내를 띄운다 (src/main/game.ts)
@@ -240,7 +241,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
@@ -316,9 +317,47 @@ export interface AccountReply {
   screen: AccountScreen;
 }
 
+// ── 우편함 ───────────────────────────────────────────────────────────────────────
+// 헤더 봉투 단추가 여는 모달 (src/main/mail.ts). Figma 05 Screens 섹션 `10 우편함` `932:22859` (A안 편지 + 선물)
+// manage:mail 은 렌더러 → 메인 요청(결과에 screen), manage:mail-view 는 메인 → 렌더러 밀어 보내기다
+export interface MailGiftView {
+  kind: "item" | "points";
+  id: string | null; // 도구 id — 그림(item:<id>)을 찾는다. 포인트는 null
+  name: string; // "경험사탕M" · "포인트"
+  count: number;
+}
+export interface MailLetterView {
+  id: string;
+  title: string;
+  body: string;
+  sender: string;
+  startsAt: number;
+  endsAt: number | null; // 없으면 기한 없음
+  gifts: MailGiftView[]; // 비면 공지 편지
+  claimedAt: number | null; // 서버가 받은 기록을 가진 시각
+  applied: boolean; // 이 저장에 선물을 넣었다
+  read: boolean;
+  unsupported: boolean; // 모르는 선물이 있다 — 앱을 업데이트해야 받는다
+}
+export interface MailScreen {
+  available: boolean; // 서버 설정이 있다
+  status: "idle" | "loading" | "ok" | "offline";
+  signedIn: boolean; // 정식 계정 — 선물은 로그인해야 받는다
+  letters: MailLetterView[]; // 최근 순
+  unread: number; // 읽지 않았거나 받을 선물이 남은 편지 수 — 헤더 점
+  busy: string | null; // 받는 중인 편지 id
+  error: string | null; // 마지막 받기의 실패 코드 — MAIL_* · NETWORK · bad-gift
+}
+export type MailAction = { action: "refresh" } | { action: "read"; id: string } | { action: "claim"; id: string };
+export interface MailReply {
+  ok: boolean;
+  code: string | null;
+  screen: MailScreen;
+}
+
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
 // 교환 탭이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
-// Figma 05 Screens `633:18522` 의 교환 6화면. 명령은 `command` 의 trade.* 로 보낸다. 결과에도 이 값(`screen`)이 온다
+// Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면. 명령은 `command` 의 trade.* 로 보낸다. 결과에도 이 값(`screen`)이 온다
 export interface TradeCardView {
   species: string;
   name: string;
@@ -374,6 +413,8 @@ export interface ManageBridge {
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
+  mail: (req: MailAction) => Promise<MailReply | null>; // 우편함 — 서버 설정이 없으면 null
+  onMail: (cb: (screen: MailScreen) => void) => void; // 목록·받기 상태가 바뀌었다
   onAccount: (cb: (screen: AccountScreen) => void) => void; // 계정·저장 상태가 바뀌었다
   update: (action: UpdateAction) => Promise<UpdateView | null>; // 업데이트가 연결되지 않았으면 null
   onUpdate: (cb: (view: UpdateView) => void) => void; // 버전·업데이트 상태가 바뀌었다

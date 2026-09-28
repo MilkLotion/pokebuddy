@@ -11,6 +11,7 @@ import type {
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
 import { compactSlots } from "../party/slots.js";
+import { normalizeMail } from "../mail/core.js";
 
 type Raw = Record<string, unknown>;
 
@@ -381,6 +382,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     legacy: isObj(raw.legacy) ? { ...raw.legacy } : {},
     log: normalizeLog(raw.log),
     trade: normalizeTrade(raw.trade, seen),
+    mail: normalizeMail(raw.mail),
   };
 }
 

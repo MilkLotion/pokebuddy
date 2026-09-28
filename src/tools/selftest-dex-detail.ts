@@ -1,7 +1,7 @@
 // 도감 상세 자체 확인 — npm run build 뒤 node dist/tools/selftest-dex-detail.js
 //
 // 테스트 프레임워크 없이 assert 만. 한 종의 입수 방법·진화 문구를 본다.
-// 계약은 docs/specs/game.md "도감", 화면은 Figma Dex / Base 와 Dex / Detail / * 다.
+// 계약은 docs/specs/game.md "도감", 화면은 Figma Dex / Base 와 도감 기기 창이다(설정창 안의 옛 Dex / Detail / * 는 2026-09-29 지웠다).
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { empty } from "../save/v3";

@@ -21,9 +21,11 @@ import { createGame, type GameV3 } from "./game";
 import { createMainTrade, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
+import { createMainMail, type MainMail } from "./mail";
+import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
-import { openManage, pushAccount, pushTrade, pushUpdate } from "./manage-window";
+import { openManage, pushAccount, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
@@ -45,7 +47,7 @@ import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
-import type { ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
+import type { MailAction, ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
 import type { Command } from "../shared/types";
 import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/stage";
@@ -174,6 +176,7 @@ let anchor: Anchor | null = null;
 let commands: Commands | null = null;
 let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (worklog/records/trade/record.md)
 let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 값
+let mainMail: MainMail | null = null; // 우편함 — 온라인 기능과 같은 클라이언트를 쓴다 (src/main/mail.ts)
 let mainOnline: MainOnline | null = null; // 공유 Supabase 클라이언트·계정·클라우드 저장 — writer 인 동반자만 가진다
 let onlineFlushed = false; // 끄기 전에 클라우드 저장을 한 번 올렸다
 let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
@@ -489,6 +492,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     },
     display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
     ...(mainOnline ? { account: mainOnline.act } : {}),
+    ...(mailBox() ? { mail: async (req: MailAction) => (await mailBox()?.act(req)) ?? null } : {}),
     ...(updater ? { update: updateAct } : {}),
     ...(patchNotes ? { notes: notesAct } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
@@ -678,6 +682,8 @@ function online(): MainOnline | null {
         mainTrade = null;
         tradeScreen = null;
         tradeSession();
+        mainMail?.userChanged(); // 받은 시각은 계정마다 다르다 — 지난 목록을 버리고 새로 읽는다
+        void mainMail?.refresh();
       },
       onSaveReplaced: () => {
         if (party?.kind === "save") party.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
@@ -686,6 +692,37 @@ function online(): MainOnline | null {
     mainOnline?.onScreen((screen) => pushAccount(screen));
   }
   return mainOnline;
+}
+
+// 우편함 — 온라인 기능이 있을 때 처음 부를 때 만든다. 목록은 관리 창이 열 때와 우편함을 열 때 새로 읽는다
+function mailBox(): MainMail | null {
+  const on = online();
+  if (!on || !game) return null;
+  if (!mainMail) {
+    const g = game;
+    mainMail = createMainMail({
+      rpc: async (fn, args) => {
+        try {
+          const { data, error } = await on.client.rpc(fn, args);
+          if (!error) return { ok: true, data };
+          // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN)
+          return { ok: false, code: /^MAIL_[A-Z_]+$/.exec((error.message ?? "").trim())?.[0] ?? codeOf(error).code };
+        } catch (e) {
+          return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }).code };
+        }
+      },
+      // writer 를 놓은 뒤 끝난 받기는 저장을 쓰지 않는다 — 새 writer 의 저장을 덮어쓰지 않게. 다음에 목록을 읽을 때 복구된다
+      run: (id, name, args) => (party?.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
+      read: () => g.read(),
+      signedIn: () => on.screen().signedIn,
+      onChanged: () => {
+        if (party?.kind === "save") party.refresh(); // 가방·포인트가 바뀌었다 — 설정창과 트레이를 다시 그린다
+        tray?.refresh();
+      },
+    });
+    mainMail.onScreen((screen) => pushMail(screen));
+  }
+  return mainMail;
 }
 
 // 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
@@ -990,6 +1027,7 @@ async function main(): Promise<void> {
       tradeScreen = null;
       mainOnline?.dispose();
       mainOnline = null;
+      mainMail = null;
     }
   });
   commands.setWriter(saveSource.isWriter());
@@ -1090,6 +1128,7 @@ app.on("before-quit", (e) => {
   tradeScreen = null;
   mainOnline?.dispose();
   mainOnline = null;
+  mainMail = null;
   bannerWin?.close();
   screenPicker?.close();
   bannerWin = null;

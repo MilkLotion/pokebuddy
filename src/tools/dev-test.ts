@@ -17,7 +17,7 @@ import { SHOP_V3_RULES } from "../save/rules";
 import * as store from "../save/store";
 import { empty } from "../save/v3";
 import { newEgg } from "../shop/buy";
-import { TUTORIALS } from "../tutorial/core";
+import { SCREEN_TUTORIALS, TUTORIALS } from "../tutorial/core";
 import type { SaveV3 } from "../shared/save-v3";
 
 export const DEV_TEST_RULES = {
@@ -144,7 +144,8 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     note: "튜토리얼을 모두 완료로 — 튜토리얼 없이 다른 화면을 확인할 때",
     apply: (s) => {
       s.tutorials = {};
-      for (const t of TUTORIALS) s.tutorials[t.id] = { state: "done", steps: 0 };
+      // 대기열 밖(개체 상세·화면을 처음 열 때)도 끝낸다
+      for (const id of [...TUTORIALS.map((t) => t.id), "detail", ...SCREEN_TUTORIALS]) s.tutorials[id] = { state: "done", steps: 0 };
     },
   },
   box: {

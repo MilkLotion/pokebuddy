@@ -18,6 +18,7 @@ import { buy } from "../shop/buy.js";
 import { isBoxSortKey, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
 import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
+import { applyGifts, markRead } from "../mail/core.js";
 import type { TxHandler } from "./executor";
 
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
@@ -376,6 +377,21 @@ const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
 HANDLERS["trade.lock"] = tradeLockHandler;
 HANDLERS["trade.unlock"] = tradeUnlockHandler;
 HANDLERS["trade.apply"] = tradeApplyHandler;
+
+// ── 우편함 ─────────────────────────────────────────────────────────────────────
+// 서버 호출은 메인 프로세스가 한다(src/main/mail.ts). 명령 처리기(dispatcher)에는 등록하지 않는다 — 설정 창·CLI 가 선물을 만들어 넣지 못하게
+HANDLERS["mail.apply"] = (draft, args) => {
+  const letterId = strOf(args, "letterId");
+  if (!letterId) return { ok: false, reason: "bad-args" };
+  const res = applyGifts(draft, letterId, isObj(args) ? args.gifts : undefined);
+  if (!res.ok) return { ok: false, reason: res.reason };
+  return { ok: true, result: { letterId, applied: res.applied } };
+};
+HANDLERS["mail.read"] = (draft, args) => {
+  const letterId = strOf(args, "letterId");
+  if (!letterId || !markRead(draft, letterId)) return { ok: false, reason: "bad-args" };
+  return { ok: true, result: { letterId } };
+};
 
 // 교환에 걸린 개체는 값을 바꾸는 명령을 거절한다. 자리만 바꾸는 명령(파티·박스 이동)과 돌봄·숨기기는 막지 않는다
 // — 반영은 그때의 자리를 찾아 들어가므로 자리가 바뀌어도 된다. 값이 바뀌면 친구에게 간 값과 어긋난다

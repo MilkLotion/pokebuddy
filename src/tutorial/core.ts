@@ -14,9 +14,15 @@
 //   밥 주기·놀아주기는 완료로 치지 않는다 (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
 //   바탕화면 놀이공간 튜토리얼은 껐다 — 설정 › 화면을 처음 열 때 설명한다(관리 창의 area, 대기열 밖) (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아")
 //   대기만 한 튜토리얼은 스킵이 아니다. 앱이 꺼져도 queuedAt 이 남아 다시 켜면 같은 순서로 보인다.
-// 문구와 대상은 화면(src/renderer/manage.ts)이 가진다. 첫 돌봄(2단계)을 빼고 한 단계다.
+// 문구와 대상은 화면(src/renderer/manage.ts)이 가진다. 단계 수도 화면이 정한다.
 // 개체 상세 튜토리얼(detail, 5단계)은 대기열 밖이다 — 화면이 상세를 처음 열 때 띄우고 done·skip 만 여기 적는다.
+// 화면을 처음 열 때 띄우는 것(area·dex·trade·user)도 대기열 밖이다 — SCREEN_TUTORIALS
+//
+// 새 기능 튜토리얼(2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", Figma 05 `930:18248`, worklog/records/tutorial-overhaul/record.md)
+//   성장(3단계) → 포인트는 첫 돌봄 뒤에 차례로 선다. 파티와 박스·가방·진화는 그 기능을 처음 쓸 수 있게 될 때 줄에 든다.
+//   목표 행동을 이미 했는지(already)는 보지 않는다 — 설명을 읽거나 닫아야 끝난다
 import type { SaveV3, TutorialState } from "../shared/save-v3";
+import { canEvolve, dayPartOf } from "../dex/evolve.js";
 
 export type TutorialFailure = "bad-id" | "already";
 
@@ -34,7 +40,7 @@ interface TutorialRule {
   id: string;
   surface: TutorialSurface;
   enabled: boolean; // 끄면 줄에 넣지 않는다. 바탕화면 2종은 무대 코치마크(src/renderer/stage.ts)가 생긴 2026-09-26 에 켰다
-  start: (save: SaveV3) => boolean; // 시작 조건
+  start: (save: SaveV3, now: number) => boolean; // 시작 조건
   already: (save: SaveV3) => boolean; // 목표 행동을 이미 했는가
   onlyAtStart?: boolean; // already 를 줄에 들 때만 본다 — 뜬 뒤에는 튜토리얼 안의 행동으로만 끝난다
   after?: string; // 이 튜토리얼의 대기 시각을 물려받는다 — 그 튜토리얼 바로 뒤에 선다
@@ -43,6 +49,13 @@ interface TutorialRule {
 
 const hasRandomEgg = (save: SaveV3): boolean => save.eggs.some((e) => e.kind === "random");
 const noShownPet = (save: SaveV3): boolean => !save.party.slots.some((s) => s.state === "pokemon" && s.hidden !== true);
+const partyPetIds = (save: SaveV3): string[] => save.party.slots.flatMap((s) => (s.state === "pokemon" && s.petId ? [s.petId] : []));
+const noPartyPet = (save: SaveV3): boolean => partyPetIds(save).length === 0;
+const ended = (save: SaveV3, id: string): boolean => DONE.includes(save.tutorials[id]?.state ?? "none");
+const hasTool = (save: SaveV3): boolean => Object.entries(save.bag).some(([id, n]) => id !== "basic-food" && n > 0);
+// 파티 개체 가운데 지금 진화할 수 있는 것이 있다 — 진화 튜토리얼이 그 카드를 밝힌다
+const canEvolveNow = (save: SaveV3, now: number): boolean => partyPetIds(save).some((id) => canEvolve(save, id, dayPartOf(now)));
+const never = (): boolean => false;
 
 // 스펙 표의 순서 그대로. 같은 순간에 생긴 조건은 이 순서로 보여 준다
 export const TUTORIALS: readonly TutorialRule[] = [
@@ -59,7 +72,17 @@ export const TUTORIALS: readonly TutorialRule[] = [
     start: (s) => Object.values(s.achievements).some((a) => a.achievedAt != null),
     already: (s) => Object.values(s.achievements).some((a) => a.claimedAt != null),
   },
+  // 새 기능 튜토리얼 — 설명을 끝내거나 닫아야 끝난다(already 없음)
+  { id: "growth", surface: "manage", enabled: true, start: (s) => ended(s, "first-care"), already: never, blocked: noPartyPet },
+  { id: "points", surface: "manage", enabled: true, after: "growth", start: (s) => ended(s, "growth"), already: never },
+  { id: "party", surface: "manage", enabled: true, start: (s) => s.pets.length >= 2, already: never, blocked: noPartyPet },
+  { id: "bag", surface: "manage", enabled: true, start: hasTool, already: never, blocked: (s) => !hasTool(s) },
+  { id: "evolution", surface: "manage", enabled: true, start: canEvolveNow, already: never, blocked: (s) => !canEvolveNow(s, Date.now()) },
 ];
+
+// 화면을 처음 열 때 띄우는 튜토리얼 — 대기열 밖. 끝내거나 닫기 전까지 그 화면을 열 때마다 1단계부터 보인다
+//   area  설정 › 화면 (6단계)   dex  도감 탭   trade  교환 탭   user  사용자 모달 (2단계)
+export const SCREEN_TUTORIALS = ["area", "dex", "trade", "user"] as const;
 
 const ruleOf = (id: string): TutorialRule | undefined => TUTORIALS.find((t) => t.id === id);
 
@@ -93,7 +116,7 @@ export function queueTutorials(save: SaveV3, now: number): string[] {
     const row = save.tutorials[rule.id];
     if (row && DONE.includes(row.state)) continue;
     if (row?.queuedAt == null) {
-      if (!rule.start(save)) continue;
+      if (!rule.start(save, now)) continue;
       const queuedAt = rule.after ? (save.tutorials[rule.after]?.queuedAt ?? now) : now;
       save.tutorials[rule.id] = { state: row?.state ?? "none", steps: row?.steps ?? 0, queuedAt };
       fresh.push(rule.id);

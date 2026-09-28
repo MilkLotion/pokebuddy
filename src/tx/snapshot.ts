@@ -16,7 +16,7 @@ import { zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
-import { canShow, currentTutorial } from "../tutorial/core.js";
+import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
 import type { DayPart } from "../shared/types";
 import { isEvoItem, nameOfItem, shopList } from "./lists.js";
@@ -197,6 +197,7 @@ export function snapshot(
     tutorial: manageTutorial(save),
     detailTutorial: canShow(save, "detail"),
     areaTutorial: canShow(save, "area"),
+    screenTutorials: SCREEN_TUTORIALS.filter((id) => canShow(save, id)),
   };
 }
 

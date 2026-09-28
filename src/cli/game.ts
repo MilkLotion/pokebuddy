@@ -1,4 +1,4 @@
-// 게임 명령 진입 — 관리 창과 같은 명령을 우편함으로 보낸다. 게임 저장은 writer 만 바꾼다 (docs/guide.md "게임 — 관리 창과 CLI")
+// 게임 명령 진입 — 관리 창과 같은 명령을 명령 통로(mailbox)로 보낸다. 게임 저장은 writer 만 바꾼다 (docs/guide.md "게임 — 관리 창과 CLI")
 import { PATHS } from "../main/paths";
 import { send } from "../save/mailbox";
 import type { Command, CommandName } from "../shared/types";

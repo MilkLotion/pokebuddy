@@ -17,6 +17,8 @@
 // `--pet-shot <파일>` 을 주면 파티 상세 기기 창도 PNG 로 저장한다. `--detail` 이나 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
+// `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
+// `--mail` 을 주면 가짜 서버로 우편함을 띄운다(Figma `우편함 시안` 의 편지 넷). `--mail-signed-in` 이면 로그인한 계정으로 본다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
 const os = require("node:os");
@@ -46,6 +48,8 @@ function loadApp() {
     paths: require(path.join(root, "dist/main/paths.js")),
     store: require(path.join(root, "dist/save/store.js")),
     empty: require(path.join(root, "dist/save/v3.js")).empty,
+    createMainMail: require(path.join(root, "dist/main/mail.js")).createMainMail,
+    pushMail: require(path.join(root, "dist/main/manage-window.js")).pushMail,
   };
 }
 
@@ -141,8 +145,14 @@ function seed(empty, now) {
 
 app.whenReady().then(async () => {
   const file = path.join(dir, "save-v3.json");
-  const { createGame, openManage, paths, store, empty } = loadApp();
-  store.write(file, seed(empty, Date.now()));
+  const { createGame, openManage, paths, store, empty, createMainMail, pushMail } = loadApp();
+  const seeded = seed(empty, Date.now());
+  // --tut <id>=<done|skipped|none> — 튜토리얼 상태를 정해 둔다(여러 번). 새 기능 튜토리얼 화면을 차례로 보려고
+  for (const pair of argsAfter("--tut")) {
+    const [id, state] = pair.split("=");
+    if (id && state) seeded.tutorials[id] = { state, steps: 0 };
+  }
+  store.write(file, seeded);
 
   const route = routeArg ? JSON.parse(routeArg) : undefined;
   const game = createGame({ file });
@@ -180,7 +190,36 @@ app.whenReady().then(async () => {
     }
     return game.send({ cmd: req.cmd, target: req.target, args: req.args }, "settings");
   };
-  const win = openManage({ preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ ...shown }), send: devSend, ...(route ? { route } : {}) });
+  // 가짜 우편함 서버 — 받은 기록은 메모리에만 둔다
+  let mailOpt = {};
+  if (process.argv.includes("--mail")) {
+    const day = 86_400_000;
+    const iso = (ms) => new Date(Date.now() + ms).toISOString();
+    const claims = new Map();
+    const letters = [
+      { id: "10000000-0000-0000-0000-000000000001", title: "추석 맞이 선물이 왔어요", body: "한가위 잘 보내세요! 포켓몬들과 함께할 작은 선물을 보냈어요. 기간 안에 받아 주세요.", sender: "PokeBuddy", gifts: [{ kind: "item", id: "exp-candy-m", count: 3 }, { kind: "item", id: "premium-food", count: 2 }], starts_at: iso(-day / 2), ends_at: iso(7.5 * day) },
+      { id: "10000000-0000-0000-0000-000000000002", title: "0.9.0 업데이트 기념 선물", body: "업데이트해 주셔서 고마워요.", sender: "PokeBuddy", gifts: [{ kind: "item", id: "premium-food", count: 2 }, { kind: "points", count: 300 }], starts_at: iso(-day), ends_at: iso(13.5 * day) },
+      { id: "10000000-0000-0000-0000-000000000003", title: "첫 교환을 축하해요", body: "친구와 첫 교환을 마쳤어요.", sender: "PokeBuddy", gifts: [{ kind: "points", count: 100 }], starts_at: iso(-2 * day), ends_at: null },
+      { id: "10000000-0000-0000-0000-000000000004", title: "놀이공간이 여러 화면을 지원해요", body: "설정 › 화면에서 모든 화면, 한 화면, 영역 지정 중에서 골라요.", sender: "PokeBuddy", gifts: [], starts_at: iso(-2 * day), ends_at: null },
+    ];
+    claims.set(letters[2].id, iso(-day));
+    const box = createMainMail({
+      rpc: async (fn, args) => {
+        if (fn === "list_mail") return { ok: true, data: letters.map((l) => ({ ...l, claimed_at: claims.get(l.id) ?? null })) };
+        const l = letters.find((x) => x.id === args.p_letter);
+        if (!l) return { ok: false, code: "MAIL_NOT_FOUND" };
+        if (!claims.has(l.id)) claims.set(l.id, new Date().toISOString());
+        return { ok: true, data: [{ gifts: l.gifts, claimed_at: claims.get(l.id) }] };
+      },
+      run: (id, name, args) => game.executor.run({ id, name, args }),
+      read: () => game.read(),
+      signedIn: () => process.argv.includes("--mail-signed-in"),
+      onChanged: () => undefined,
+    });
+    box.onScreen((screen) => pushMail(screen));
+    mailOpt = { mail: (req) => box.act(req) };
+  }
+  const win = openManage({ ...mailOpt, preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ ...shown }), send: devSend, ...(route ? { route } : {}) });
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다

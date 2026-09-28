@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -45,6 +45,8 @@ const CH = {
   screens: "manage:screens",
   identifyScreens: "manage:identify-screens",
   pickScreen: "manage:pick-screen",
+  mail: "manage:mail",
+  mailView: "manage:mail-view",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -71,6 +73,7 @@ export interface ManageOptions {
   screens?: () => ScreenView[];
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
+  mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/main/mail.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
 }
 
 let win: BrowserWindow | null = null;
@@ -83,6 +86,7 @@ let notes: ManageOptions["notes"] = undefined;
 let screens: ManageOptions["screens"] = undefined;
 let identifyScreens: ManageOptions["identifyScreens"] = undefined;
 let pickScreen: ManageOptions["pickScreen"] = undefined;
+let mail: ManageOptions["mail"] = undefined;
 let dexWin: DexWindow | null = null;
 let petWin: PetWindow | null = null;
 
@@ -217,6 +221,15 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (req == null || typeof req !== "object" || typeof (req as { action?: unknown }).action !== "string") return null;
     return account(req as AccountAction);
   });
+  // 우편함 — 정한 세 동작만 받는다. 편지 id 는 짧은 글자만. 선물 값은 렌더러에서 받지 않는다
+  ipcMain.handle(CH.mail, async (e, req: unknown): Promise<MailReply | null> => {
+    if (!mine(e) || !mail) return null;
+    const r = req as { action?: unknown; id?: unknown } | null;
+    if (!r || typeof r !== "object") return null;
+    if (r.action === "refresh") return mail({ action: "refresh" });
+    if ((r.action === "read" || r.action === "claim") && typeof r.id === "string" && /^[0-9a-f-]{36}$/i.test(r.id)) return mail({ action: r.action, id: r.id });
+    return null;
+  });
   // 업데이트 — 정한 세 동작만 받는다
   ipcMain.handle(CH.update, async (e, action: unknown): Promise<UpdateView | null> => {
     if (!mine(e) || !update) return null;
@@ -246,6 +259,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.command, async (e, req: unknown): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!isRequest(req)) return { ok: false, reason: "bad-request" };
+    // 우편함 넣기는 메인의 우편함만 부른다 — 명령 처리기를 거치지 않는 길(개발 실행기의 기본 send)에서도 막는다
+    if (req.cmd.startsWith("mail.")) return { ok: false, reason: "unknown-command" };
     game.tick();
     return send(req);
   });
@@ -260,6 +275,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   screens = opts.screens;
   identifyScreens = opts.identifyScreens;
   pickScreen = opts.pickScreen;
+  mail = opts.mail;
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -309,6 +325,10 @@ export function pushAccount(screen: AccountScreen): void {
 }
 
 // 버전·업데이트 상태를 관리 창에 밀어 보낸다 — 창이 없으면 버린다
+export function pushMail(screen: MailScreen): void {
+  toManage(CH.mailView, screen);
+}
+
 export function pushUpdate(view: UpdateView): void {
   toManage(CH.updateView, view);
 }
