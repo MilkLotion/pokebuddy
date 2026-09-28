@@ -2,6 +2,14 @@
   "_comment": "관리 창 패치노트 (src/main/patch-notes.ts). 새 버전이 맨 앞. 릴리스 때 GitHub Release 본문의 '새 기능·바뀐 것·고친 것'을 한 줄씩 짧게 옮긴다. date 는 릴리스 날짜(YYYY-MM-DD)",
   "notes": [
     {
+      "version": "0.9.0",
+      "date": "2026-09-28",
+      "lines": [
+        "화면 선택 기능 추가",
+        "CLI Hook 기능 오류 수정"
+      ]
+    },
+    {
       "version": "0.8.0",
       "date": "2026-09-28",
       "lines": [
