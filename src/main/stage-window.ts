@@ -78,6 +78,9 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     alwaysOnTop: true, // 동반자는 항상 위
     fullscreenable: false,
     focusable: false, // 클릭해도 터미널 포커스를 뺏지 않음
+    // mac 은 focusable:false 만으로는 클릭이 앱을 활성화한다 — 뒤에 열어 둔 설정창이 앞으로 올라오고 터미널 포커스도 빠진다.
+    // panel 은 NSWindowStyleMaskNonactivatingPanel 을 붙여 눌러도 앱을 활성화하지 않는다 (2026-09-28 사용자 "맥에서는 화면에 있는 포켓몬 클릭을 해도 설정창이 열리네")
+    ...(process.platform === "darwin" ? { type: "panel" } : {}),
     icon: windowIcon(), // Windows 작업 표시줄·작업 관리자용 로고 (없으면 undefined — 기본)
     webPreferences: {
       preload: opts.preload,
