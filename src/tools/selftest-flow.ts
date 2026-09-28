@@ -109,37 +109,31 @@ try {
   assert.equal(w.save().eggs.length, 1, "알은 하나뿐");
   process.stdout.write("(3) 중복 요청 · 알이 늘지 않는다  ok\n");
 
-  // ── SC-04 돌보고 시간을 흘려 부화한다 ────────────────────────────────────
-  // 쓰다듬기 세 번 — 인정 간격이 1분이라 사이에 시간을 흘린다
-  for (let i = 0; i < 3; i++) {
-    w.ok(`care${i}`, "egg.care", { eggId, action: "pat" });
-    w.pass(EGG_V3_RULES.careCooldownMs);
-  }
+  // ── SC-04 시간을 흘려 부화한다 — 알 돌봄은 없다(2026-09-28 삭제) ─────────
+  w.pass(3 * MIN);
   const egg = w.save().eggs[0];
-  assert.equal(egg?.actions.pat, 3, "인정 횟수 세 번");
-  // 5분에서 돌봄 90초와 흐른 3분을 뺀다
-  assert.equal(egg?.remainMs, EGG_V3_RULES.readyMs - 3 * EGG_V3_RULES.careShortenMs - 3 * MIN);
-  process.stdout.write("(4) SC-04 · 돌봄이 준비 시간을 줄인다  ok\n");
+  assert.equal(egg?.remainMs, EGG_V3_RULES.readyMs - 3 * MIN, "5분에서 흐른 3분만 줄어든다");
+  process.stdout.write("(4) SC-04 · 준비 시간은 흐른 시간만큼 줄어든다  ok\n");
 
   const events = w.pass(5 * MIN);
   assert.deepStrictEqual(events.hatchReady, [eggId], "준비 완료를 알린다");
   assert.equal(w.save().eggs[0]?.ready, true);
   process.stdout.write("(5) SC-04 · 시간이 지나 준비 완료  ok\n");
 
-  // 열기 — 쓰다듬기 3회는 pat-3 조건이라 그 조건의 종이 나온다.
+  // 열기 — 산 때의 후보에서 나온다.
   // 첫 값은 랜덤알의 다른 알 추첨이다(data/eggs.json random.bonus 합 6%). 0.99 면 나오지 않는다
+  const candidates = w.save().eggs[0]?.candidates ?? [];
   w.setRolls([0.99, 0, 0.5, 0.5]);
   const hatched = w.ok("open1", "egg.open", { eggId });
   const after = w.save();
   assert.equal(after.eggs.length, 0, "알이 사라졌다");
   assert.equal(after.pets.length, 2, "개체가 늘었다");
   const born = String(hatched.petId);
-  assert.equal(hatched.conditionId, "pat-3", "행동 조건으로 정해졌다");
-  assert.ok(after.dex.discovered[String(hatched.species)], "발견한 조건을 적는다");
-  assert.ok(after.dex.unlocked.includes(String(hatched.species)), "조건은 해금을 넘어선다");
+  assert.ok(candidates.includes(String(hatched.species)), "알의 후보에서 나온다");
+  assert.ok(after.dex.obtained.includes(String(hatched.species)), "획득 기록");
   const slot = after.party.slots.find((s) => s.petId === born);
   assert.equal(slot?.hidden, false, "새 개체는 꺼낸 상태로 들어간다");
-  process.stdout.write("(6) SC-04 · 부화와 배치, 조건 발견  ok\n");
+  process.stdout.write("(6) SC-04 · 부화와 배치  ok\n");
 
   // ── SC-05 두 마리가 보인다 — 새 개체는 꺼낸 상태로 들어왔다 ─────────────────
   const shown = w.save().party.slots.filter((s) => s.state === "pokemon" && s.hidden !== true).length;

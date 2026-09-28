@@ -134,7 +134,7 @@ function seed(empty, now) {
   save.achievements = { "show-two": { achievedAt: now, claimedAt: null } };
 
   const seen = ["pikachu", "charmander", "bulbasaur", "squirtle", "eevee", "machop"];
-  save.dex = { unlocked: seen, obtained: seen, shinyObtained: ["eevee"], discovered: { eevee: "pat-3" } };
+  save.dex = { unlocked: seen, obtained: seen, shinyObtained: ["eevee"], discovered: {} };
   return save;
 }
 

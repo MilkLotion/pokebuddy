@@ -1,6 +1,6 @@
 // 도감 상세 자체 확인 — npm run build 뒤 node dist/tools/selftest-dex-detail.js
 //
-// 테스트 프레임워크 없이 assert 만. 한 종의 입수 방법·진화·알 행동 조건 문구를 본다.
+// 테스트 프레임워크 없이 assert 만. 한 종의 입수 방법·진화 문구를 본다.
 // 계약은 docs/specs/game.md "도감", 화면은 Figma Dex / Base 와 Dex / Detail / * 다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
@@ -30,7 +30,6 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(d.types, ["불꽃"]);
   assert.equal(d.methods, "첫 선택 후보 · 랜덤알", "첫 선택 후보이고 해금했으니 랜덤알에서도 나온다");
   assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
-  assert.equal(d.eggCondition, "없음");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
 }
@@ -87,17 +86,16 @@ function seed(): SaveV3 {
   process.stdout.write("(4b) 해금한 화석 · 태고의돌만  ok\n");
 }
 
-// (5) 알 행동 조건 종 — 발견 전은 힌트, 발견 뒤는 조건 문구
+// (5) 알 행동 조건은 없다 — 윈디는 가디에서 진화, 가디는 랜덤알 (2026-09-28 알 행동 조건 삭제)
 {
   const s = seed();
-  const before = dexDetail(s, "arcanine");
-  assert.ok(before);
-  assert.ok(before.methods.includes("알 행동 조건"), before.methods);
-  assert.equal(before.eggCondition, "미발견");
-  s.dex.discovered.arcanine = "pat-3";
-  const after = dexDetail(s, "arcanine");
-  assert.equal(after?.eggCondition, "발견 · 쓰다듬기만 3~7회");
-  process.stdout.write("(5) 알 행동 조건 · 발견 전후  ok\n");
+  s.dex.discovered.arcanine = "pat-3"; // 옛 저장의 발견 기록은 입수 방법에 드러나지 않는다
+  const arcanine = dexDetail(s, "arcanine");
+  assert.ok(arcanine);
+  assert.ok(!arcanine.methods.includes("알 행동 조건"), arcanine.methods);
+  assert.ok(!arcanine.methods.includes("랜덤알"), "진화형은 랜덤알에서 나오지 않는다");
+  assert.ok(dexDetail(s, "growlithe")?.methods.includes("랜덤알"));
+  process.stdout.write("(5) 알 행동 조건 없음 · 진화형은 진화로만  ok\n");
 }
 
 // (6) 전설 종 — 해금 규칙이 없어도 단일 포켓몬 알이 입수 방법이다 (2026-09-26 사용자 결정).

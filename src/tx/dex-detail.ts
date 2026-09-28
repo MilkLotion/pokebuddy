@@ -1,20 +1,18 @@
-// 도감 상세 — 한 종의 입수 방법·진화·알 행동 조건을 화면 문구로 만든다 (Figma `Dex / Base` 의 상세 패널)
+// 도감 상세 — 한 종의 입수 방법·진화를 화면 문구로 만든다 (Figma `Dex / Base` 의 상세 패널)
 //
 // 1000종이 넘는 목록에 상세를 모두 싣지 않는다. 칸을 누를 때 한 종만 만든다.
 // 입수 경로는 코드가 실제로 쓰는 규칙을 따른다
 //   첫 선택 후보   data/unlocks.json 의 starter
 //   랜덤알         해금한 종 가운데 랜덤알에서 나올 수 있는 종이 후보다 (src/shop/catalog.ts inRandomEgg)
-//   알 행동 조건   data/egg-conditions.json — 해금과 무관하게 조건으로 나온다
 //   종 목록 알     data/eggs.json 의 종 목록 — 태고의돌(화석)과 단일 포켓몬 알(전설·준전설·환상·울트라비스트)
 //   진화           data/evo.json 을 거꾸로 — 앞 단계 종에서 진화한다
 //   상점 구매      data/unlocks.json 의 shop (해금한 종만 산다)
 // 미해금 종은 이름·타입과 진화 줄을 숨긴다. 진화 줄은 다음 종 이름을 드러내기 때문이다.
-// 입수 방법과 알 조건 힌트는 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
+// 입수 방법은 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
 import { profile } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf, type EvoStep } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data";
-import { conditionOf, textOf } from "../egg/conditions.js";
 import { getLang, petName, typeName } from "../main/text.js";
 import { loadJson } from "../dex/data.js";
 import { eggName, fixedEggs, inRandomEgg, speciesPrice } from "../shop/catalog.js";
@@ -74,8 +72,6 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (prev) methods.push(`${petName(prev)}에서 진화`);
   if (unlocked && inRandomEgg(slug, opts)) methods.push(eggName("random", opts) ?? "랜덤알");
   for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
-  const condition = conditionOf(slug, opts);
-  if (condition) methods.push("알 행동 조건");
   const price = speciesPrice(slug, opts);
   if (price != null) methods.push(unlocked ? `상점 구매 ${price}P` : `상점 구매 ${price}P(해금 후)`);
 
@@ -90,13 +86,6 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
         ? steps.map((s) => stepText(s, opts)).join(" · ")
         : "더 진화하지 않아요";
 
-  const discovered = save.dex.discovered[slug];
-  const eggCondition = !condition
-    ? "없음"
-    : discovered
-      ? `발견 · ${textOf(discovered, opts) ?? discovered}`
-      : "미발견";
-
   return {
     slug,
     dex: row.dex,
@@ -108,7 +97,6 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     owned: save.pets.filter((p) => p.species === slug).length,
     methods: methods.length ? methods.join(" · ") : lockedEggOnly(slug, opts),
     evolution,
-    eggCondition,
     gimmick: "없음", // 특수 기믹은 아직 없다
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종(899번부터)은 영어로 대신한다
     ...officialText(unlocked ? dexTexts(opts)[String(row.dex)] : undefined),

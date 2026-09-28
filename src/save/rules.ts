@@ -116,9 +116,7 @@ export const MOOD_RULES = {
 
 // 알의 규칙표 — 수치는 docs/specs/balance.md "확률과 알"
 export const EGG_V3_RULES = {
-  readyMs: 5 * 60_000, // 준비 시간 5분
-  careShortenMs: 30_000, // 돌봄 한 번에 30초 단축
-  careCooldownMs: 60_000, // 돌봄 인정 간격 1분
+  readyMs: 5 * 60_000, // 준비 시간 5분. 알 돌봄(단축)은 2026-09-28 삭제했다
   maxEggs: 6, // 돌보미집 칸 수
 };
 

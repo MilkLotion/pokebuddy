@@ -149,11 +149,10 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     events.pointsGained = points;
   }
 
-  // 알 — 준비 시간과 돌봄 쿨타임. 준비가 끝나도 직접 열어야 부화한다
+  // 알 — 준비 시간. 준비가 끝나도 직접 열어야 부화한다
   for (const egg of save.eggs) {
     const was = egg.ready;
     egg.remainMs = countDown(egg.remainMs, elapsed);
-    egg.careCooldownMs = countDown(egg.careCooldownMs, elapsed);
     if (egg.remainMs === 0) egg.ready = true;
     if (!was && egg.ready) events.hatchReady.push(egg.id);
   }

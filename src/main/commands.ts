@@ -73,7 +73,6 @@ const SAVE_COMMANDS: readonly CommandName[] = [
   "party.place",
   "party.swap",
   "party.keep",
-  "egg.care",
   "egg.open",
   "bag.use",
   "shop.buy",

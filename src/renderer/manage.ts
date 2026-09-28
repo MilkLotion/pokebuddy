@@ -96,8 +96,7 @@ const GUIDE: { title: string; lines: string[] }[] = [
     title: "상점과 알",
     lines: [
       "포인트로 알, 포켓몬, 도구, 진화용 도구, 파티 칸을 산다.",
-      "산 알은 돌보미집으로 간다. 쓰다듬기와 노래로 준비 시간을 줄인다.",
-      "돌봄 행동의 종류와 횟수가 나오는 종을 바꾼다. 어떤 조합이 어떤 종을 부르는지는 직접 찾는다.",
+      "산 알은 돌보미집으로 간다. 5분이 지나면 열 수 있다.",
       "준비를 마친 알을 열면 개체가 나온다. 파티가 차 있으면 박스로 간다.",
     ],
   },
@@ -518,9 +517,6 @@ function eggCard(egg: EggView): HTMLElement {
   card.appendChild(eggIcon(egg.kind, "shell"));
   card.appendChild(el("div", undefined, egg.name));
   card.appendChild(el("div", "note", egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`));
-  card.appendChild(el("div", "note", `쓰다듬기 ${egg.actions.pat} · 노래 ${egg.actions.song}`));
-
-  // 열기는 한 줄을 혼자 쓴다. 돌봄 두 개와 나란히 두면 글자가 줄바꿈된다
   if (egg.ready) {
     const row = el("div", "acts");
     const openEgg = button("primary", "열기");
@@ -528,14 +524,6 @@ function eggCard(egg: EggView): HTMLElement {
     row.appendChild(openEgg);
     card.appendChild(row);
   }
-  const acts = el("div", "acts");
-  for (const [action, label] of [["pat", "쓰다듬기"], ["song", "노래"]] as const) {
-    const b = button("", label);
-    b.disabled = !egg.careReady;
-    b.addEventListener("click", () => void send("egg.care", egg.id, { action }));
-    acts.appendChild(b);
-  }
-  card.appendChild(acts);
   return card;
 }
 
@@ -1059,7 +1047,6 @@ function dexCell(row: DexEntry): HTMLElement {
   cell.append(el("div", "no", `#${String(row.dex).padStart(4, "0")}`), portraitOf(row.slug, false, "dot", "", true));
   cell.appendChild(el("div", undefined, row.state === "locked" ? "???" : row.name));
   if (row.state === "obtained") cell.appendChild(el("div", "no", row.shiny ? "이로치 획득" : "획득"));
-  if (row.condition) cell.title = `발견한 조건: ${row.condition}`;
   return cell;
 }
 
@@ -2269,7 +2256,7 @@ const TUTORIAL_TEXT: Record<string, TutorialText> = {
     guideTitle: "시작 포인트로 랜덤알 하나를 살 수 있어요", guideBody: "", guideButton: "상점으로 가기",
   },
   hatch: {
-    name: "부화", tab: "box", title: "알을 돌보면 더 빨리 준비돼요", body: "준비가 끝나면 열기를 눌러야 부화해요.",
+    name: "부화", tab: "box", title: "알은 5분 뒤에 준비돼요", body: "준비가 끝나면 열기를 눌러야 부화해요.", // 알 돌봄 삭제(2026-09-28) — Figma `399:8901` 문구는 튜토리얼 전수 개선 때 맞춘다
     guideTitle: "알은 박스의 돌보미집에 들어갔어요", guideBody: "", guideButton: "박스로 가기",
   },
 };

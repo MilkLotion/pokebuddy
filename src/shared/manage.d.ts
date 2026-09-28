@@ -71,8 +71,6 @@ export interface EggView {
   ready: boolean;
   remainSec: number;
   percent: number;
-  careReady: boolean;
-  actions: { pat: number; song: number };
 }
 
 export interface BoxView {
@@ -122,7 +120,6 @@ export interface DexEntry {
   name: string;
   state: DexState;
   shiny: boolean;
-  condition: string | null; // 발견한 알 행동 조건
 }
 
 // 도감 상세 — 칸을 누를 때 한 종만 따로 읽는다. 문구는 화면이 그대로 쓴다 (Figma Dex / Base 상세 패널)
@@ -137,7 +134,6 @@ export interface DexDetail {
   owned: number; // 가진 개체 수
   methods: string; // 입수 방법 — 경로가 없으면 "획득 방법 준비 중"
   evolution: string; // 다음 단계와 조건 — 미해금이면 "해금하면 보여요"
-  eggCondition: string; // "없음" · "미발견 · …" · "발견 · <조건>"
   gimmick: string;
   genus: string; // 공식 분류 — "쥐포켓몬". 미해금이면 빈 문자열
   flavor: string; // 공식 도감 설명문. 한국어가 없으면 영어. 미해금이면 빈 문자열

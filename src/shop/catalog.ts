@@ -10,6 +10,7 @@
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { SHOP_V3_RULES } from "../save/rules.js";
 import { unlockRules } from "../dex/unlocks.js";
+import { prevOf } from "../dex/evo.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export type ProductKind = "egg" | "tool" | "party-slot" | "species";
@@ -139,16 +140,19 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
   return Object.entries(eggs(opts)[kind]?.bonus ?? {}).filter(([k, p]) => typeof p === "number" && p > 0 && eggs(opts)[k] != null);
 }
 
-// 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "알 행동 조건")
+// 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "부화 준비와 결과")
 //   해금 규칙이 없는 종        뺀다. 전설·환상·울트라비스트는 규칙이 없다 — 입수 경로를 따로 정한다.
 //                              옛 규칙으로 이미 해금된 저장도 여기서 걸러진다
 //   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다
+//   진화 전 종이 있는 종       뺀다. 해금 규칙이 진화가 아니어도 진화형이다(럭키 ← 핑복). 첫 선택 후보는 남는다.
+//                              알은 늘 진화 전 종이다 (2026-09-28 사용자 결정 "알은 항상 진화 전 종")
 //   상점에서 파는 종           뺀다. 값을 치르고 산다(잠만보)
 //   고정 후보 알의 종          뺀다. 화석은 태고의돌로만, 단일 포켓몬은 그 알로만 얻는다
 export function inRandomEgg(slug: string, opts?: DexOptions): boolean {
   const rule = unlockRules(opts)[slug];
   if (!rule) return false;
   if (rule.evolve && !rule.starter) return false;
+  if (prevOf(slug, opts) && !rule.starter) return false;
   if (rule.shop !== undefined) return false;
   return !fixedEggs(opts).some(([, pool]) => pool.includes(slug));
 }

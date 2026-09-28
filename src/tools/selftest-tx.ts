@@ -283,7 +283,7 @@ async function bridgeChecks(): Promise<void> {
   {
     assert.deepStrictEqual(argsOf({ cmd: "party.keep", target: "p1", from: "menu" }), { petId: "p1" });
     assert.deepStrictEqual(argsOf({ cmd: "party.swap", target: "p2", from: "menu", args: { slotIndex: 3 } }), { petId: "p2", slotIndex: 3 });
-    assert.deepStrictEqual(argsOf({ cmd: "egg.care", target: "e1", from: "menu", args: { action: "song" } }), { eggId: "e1", action: "song" });
+    assert.deepStrictEqual(argsOf({ cmd: "egg.open", target: "e1", from: "menu" }), { eggId: "e1" });
     assert.deepStrictEqual(argsOf({ cmd: "bag.use", target: "mint", from: "menu", args: { petId: "p1", nature: "brave" } }), { itemId: "mint", petId: "p1", nature: "brave" });
     assert.deepStrictEqual(argsOf({ cmd: "shop.buy", target: "random", from: "cli" }), { productId: "random" });
     process.stdout.write("(16) 다리 · 인자 모양 바꾸기  ok\n");

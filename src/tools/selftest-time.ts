@@ -143,7 +143,6 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const a = applyTime(s, 2 * MIN, T0 + 2 * MIN);
   assert.deepStrictEqual(a.hatchReady, []);
   assert.equal(s.eggs[0]?.remainMs, 3 * MIN);
-  assert.equal(s.eggs[0]?.careCooldownMs, 0, "돌봄 쿨타임도 준다");
   const b = applyTime(s, 3 * MIN, T0 + 5 * MIN);
   assert.deepStrictEqual(b.hatchReady, ["e1"]);
   assert.equal(s.eggs[0]?.ready, true);

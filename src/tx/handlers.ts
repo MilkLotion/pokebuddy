@@ -6,7 +6,6 @@ import { itemOf, use } from "../bag/use.js";
 import { claim } from "../achievement/core.js";
 import { dayPartOf, evolve } from "../dex/evolve.js";
 import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
-import { care, isCareAction } from "../egg/care.js";
 import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
 import { keep, place, swap } from "../party/placement.js";
@@ -88,18 +87,6 @@ const eggIdOf = (args: unknown): string | null => {
   return typeof id === "string" && id ? id : null;
 };
 
-// 돌봄 — 준비 시간을 줄이고 행동 조건을 쌓는다
-const careHandler: TxHandler = (draft, args) => {
-  const eggId = eggIdOf(args);
-  const action = isObj(args) ? args.action : null;
-  if (!eggId || !isCareAction(action)) return { ok: false, reason: "bad-args" };
-  const egg = draft.eggs.find((e) => e.id === eggId);
-  if (!egg) return { ok: false, reason: "no-egg" };
-  const res = care(egg, action);
-  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { eggId, action, shortenedMs: res.shortenedMs, remainMs: res.remainMs, ready: res.ready } };
-};
-
 // 열기 — 결과 판정, 개체 생성, 배치, 도감 기록을 한 거래로 묶는다
 const openHandler: TxHandler = (draft, args, ctx) => {
   const eggId = eggIdOf(args);
@@ -110,11 +97,10 @@ const openHandler: TxHandler = (draft, args, ctx) => {
     ok: true,
     result: res.egg
       ? { egg: res.egg }
-      : { petId: res.petId, species: res.species, shiny: res.shiny, slotIndex: res.slotIndex, toBox: res.toBox, conditionId: res.conditionId },
+      : { petId: res.petId, species: res.species, shiny: res.shiny, slotIndex: res.slotIndex, toBox: res.toBox },
   };
 };
 
-HANDLERS["egg.care"] = careHandler;
 HANDLERS["egg.open"] = openHandler;
 
 // ── 상점 ───────────────────────────────────────────────────────────────────────

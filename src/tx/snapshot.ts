@@ -137,8 +137,6 @@ export function snapshot(
     ready: e.ready,
     remainSec: sec(e.remainMs),
     percent: eggPercent(e.remainMs, eggReadyMs),
-    careReady: e.careCooldownMs <= 0,
-    actions: { ...e.actions },
   }));
 
   const bag: BagItemView[] = Object.entries(save.bag)

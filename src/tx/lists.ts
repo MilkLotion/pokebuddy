@@ -128,7 +128,6 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
       name: petName(slug),
       state: obtained.has(slug) ? "obtained" : unlocked.has(slug) ? "unlocked" : "locked",
       shiny: shiny.has(slug),
-      condition: save.dex.discovered[slug] ?? null,
     });
   }
   out.sort((a, b) => a.dex - b.dex);

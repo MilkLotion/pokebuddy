@@ -145,7 +145,6 @@ function render(v: DexDeviceView): void {
     ["상태", state],
     ["입수처", d.methods],
     ["진화", d.evolution],
-    ["알 행동 조건", d.eggCondition],
     ["특수 기믹", d.gimmick],
   ] as const) {
     const row = el("div");

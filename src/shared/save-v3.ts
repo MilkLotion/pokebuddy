@@ -71,8 +71,9 @@ export interface EggV3 {
   remainMs: number; // 준비까지 남은 시간
   ready: boolean;
   candidates: string[]; // 구매 당시 후보 종
-  careCooldownMs: number; // 돌봄 남은 쿨타임
-  actions: { pat: number; song: number }; // 인정한 돌봄 횟수. 행동 조건의 입력
+  // 알 돌봄(2026-09-28 삭제)의 옛 칸. 쓰지 않는다. 옛 버전이 클라우드 저장을 읽다 멈추지 않게 기본값만 적는다
+  careCooldownMs: number;
+  actions: { pat: number; song: number };
 }
 
 // ── 그 밖의 영역 ───────────────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ export interface DexV3 {
   unlocked: string[];
   obtained: string[];
   shinyObtained: string[];
-  discovered: Record<string, string>; // 종 → 발견한 알 행동 조건 식별자
+  discovered: Record<string, string>; // 알 행동 조건(2026-09-28 삭제)의 옛 칸. 쓰지 않는다 — 옛 버전 호환으로 읽은 값을 그대로 둔다
   rulesRev: number; // 해금 정리를 마친 판 — SAVE_V3_RULES.unlockRev. 옛 저장은 0
 }
 

@@ -24,12 +24,12 @@
 | `src/tx` | 거래 실행. 명령 검사 순서, 상태 반영, 저장 쓰기, 요청 ID 기록, 실패 시 이전 상태 유지 | 게임 규칙 계산 | SC-01~11 |
 | `src/party` | 파티 칸 수와 잠금, 칸 배치·교체, 표시·숨김, 박스 보관 | 개체 육성 수치 | SC-05, 07, 09 |
 | `src/box` | 박스 여러 개와 30칸, 자동 추가, 검색 대상 목록 | 파티 배치 | SC-07, 09 |
-| `src/egg` | 알별 타이머, 돌봄에 따른 단축, 부화 가능 상태, 직접 열기 결과 판정 | 개체 생성 후 배치 | SC-03, 04 |
+| `src/egg` | 알별 타이머, 부화 가능 상태, 직접 열기 결과 판정 | 개체 생성 후 배치 | SC-03, 04 |
 | `src/bag` | 도구 재고, 사용 대상과 조건 검사, 사용 결과 계산 | 상점 가격 | SC-02, 06 |
 | `src/achievement` | 업적 조건 달성 판정, 미수령·수령 완료 상태, 보상 내용 | 보상 지급 실행 | SC-05, 09 |
 | `src/tutorial` | 튜토리얼 시작 계기, 진행·스킵·완료 상태, 동시 조건의 순서 | 화면 그리기 | SC-01, 03, 04, 05, 10 |
 | `src/state` | 시간에 따른 친밀도·만복도·포인트 적립, 밥 주기 쿨타임, 버프 잔여 시간, 실행 상태별 정지 | 파티 배치, 재고 | SC-02, 07, 10 |
-| `src/dex` | 도감 해금·획득·발견 기록, 종 데이터, 진화 조건 판정, 이로치 기록 | 개체 보유 | SC-04, 06, 09 |
+| `src/dex` | 도감 해금·획득 기록, 종 데이터, 진화 조건 판정, 이로치 기록 | 개체 보유 | SC-04, 06, 09 |
 | `src/shop` | 상품 목록, 가격, 구매 가능 여부 | 포인트 차감 실행 | SC-03, 06, 09 |
 | `src/save` | 저장 파일 읽기·쓰기, 정규화, 백업, 손상 격리, 버전 변환 | 게임 규칙 | SC-10 |
 | `src/follow` | 놀이공간 표시 위치, 창 추적, 영역 | 게임 규칙 | SC-02, 08 |
@@ -75,10 +75,10 @@
 | `pets` | 개체별 식별자, 종, 이로치, 성격, 레벨, 누적 경험치, 친밀도, 만복도, 남은 버프, 밥 주기 쿨타임 |
 | `party` | 칸 수, 칸별 개체 식별자 또는 빈 칸, 숨김 여부, 잠긴 칸의 해제 출처 |
 | `boxes` | 박스 목록, 박스별 30칸의 개체 식별자 |
-| `eggs` | 알별 식별자, 후보 종 범위, 준비 시간, 누적 행동 조건, 부화 가능 여부 |
+| `eggs` | 알별 식별자, 후보 종 범위, 준비 시간, 부화 가능 여부 |
 | `bag` | 도구별 보유 수량 |
 | `points` | 보유 포인트와 적립 부분 진행 |
-| `dex` | 종별 해금·획득·이로치 획득, 발견한 알 행동 조건 |
+| `dex` | 종별 해금·획득·이로치 획득 |
 | `achievements` | 업적별 달성·미수령·수령 완료 |
 | `tutorials` | 튜토리얼별 미시작·진행 중·스킵·완료 |
 | `settings` | 표시, 동작, 언어, 시작, 놀이공간 영역, 알림 소리 |
@@ -108,10 +108,10 @@
 | `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily` |
 | `party` | `slots[6]`. 칸마다 `state`(`pokemon`·`empty`·`locked`), `petId`, `hidden`, `unlockBy`(`shop`·`achievement`). `unlockBy` 는 경로별로 더 열 수 있는 칸 수만 센다. 칸은 앞에서부터 연다(`src/party/slots.ts`) |
 | `boxes[]` | `id`, `name`, `slots[30]`(개체 식별자 또는 빈 칸) |
-| `eggs[]` | `id`, `boughtAt`, `remainMs`(준비 남은 시간), `ready`, `candidates[]`(구매 당시 후보 종), `actions`(누적한 행동 조건) |
+| `eggs[]` | `id`, `boughtAt`, `remainMs`(준비 남은 시간), `ready`, `candidates[]`(구매 당시 후보 종). `actions`·`careCooldownMs`는 옛 판 호환용이며 쓰지 않는다 |
 | `bag` | 도구 식별자별 보유 수량 |
 | `points` | `balance`, `progressMs`(다음 1포인트까지의 부분 진행) |
-| `dex` | `unlocked[]`, `obtained[]`, `shinyObtained[]`, `discovered`(종별 발견한 알 행동 조건) |
+| `dex` | `unlocked[]`, `obtained[]`, `shinyObtained[]`, `discovered`(옛 판 호환용. 쓰지 않으며 읽은 값을 그대로 둔다) |
 | `achievements` | 업적 식별자별 `achievedAt`, `claimedAt` |
 | `tutorials` | 튜토리얼 식별자별 `state`(`none`·`active`·`skipped`·`done`)와 `steps`(단계별 완료 여부) |
 | `settings` | `language`, `startOnLogin`, `sound`, `sleepAfterMin`, `playArea`(`mode`, `rect`), `display` |
@@ -163,7 +163,6 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `party.swap` | 파티 개체와 박스 개체를 한 번에 맞바꿈 | `src/party`, `src/box` |
 | `party.keep` | 파티 개체를 박스에 보관 | `src/party`, `src/box` |
 | `party.show` / `party.hide` | 표시와 숨김 | `src/party` |
-| `egg.care` | 쓰다듬기·노래 들려주기로 준비 시간 단축 | `src/egg` |
 | `egg.open` | 직접 열기. 결과 종과 이로치 판정, 개체 생성과 배치 | `src/egg`, `src/dex`, `src/party` |
 | `bag.use` | 도구와 대상 검사, 적용과 차감 | `src/bag` |
 | `shop.buy` | 구매 검사, 포인트 차감, 알·개체·도구·칸 반영 | `src/shop` |

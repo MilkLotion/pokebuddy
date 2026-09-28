@@ -119,8 +119,6 @@ function seed(): SaveV3 {
   assert.equal(egg?.name, "랜덤알");
   assert.equal(egg?.remainSec, 120);
   assert.equal(egg?.percent, 60, "5분 중 3분이 지났다");
-  assert.equal(egg?.careReady, false, "돌봄 쿨타임이 남았다");
-  assert.deepStrictEqual(egg?.actions, { pat: 2, song: 0 });
   assert.equal(v.eggs.used, 1);
   assert.equal(v.eggs.size, EGG_V3_RULES.maxEggs);
   process.stdout.write("(7) 알 남은 시간과 진행  ok\n");
