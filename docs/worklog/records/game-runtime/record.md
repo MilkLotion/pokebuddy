@@ -44,3 +44,7 @@
    - 조치: `app.ts` 가 `상세 보기`(`menu.detail`, 새 i18n 키: ko `상세 보기`, en `View details`)를 붙이고 `openManageWindow({ to: "pet", petId: id })` 를 부른다. 진화 배너가 쓰는 경로와 같다.
    - 문서: `docs/specs/game.md`(두 곳), `docs/specs/ui-components.md` C-21, `docs/guide.md`(머리·우클릭 메뉴 구성)
    - 시험: `npm run build`, 전체 `npm run selftest` 통과(종료 코드 0). 이 항목은 `app.ts` 에서 붙어 자체 시험에서 누르지 않는다. 실기 우클릭 확인은 하지 않았다.
+
+## Figma
+
+- `Context Menu` `338:738` 시안은 아직 옛 구성이다. 반영 할 일은 `worklog/records/user-modal/record.md` "Figma 반영 — 남은 일" 6번에 모았다(Mac 의 Figma 계정 권한 문제, 2026-09-28).
