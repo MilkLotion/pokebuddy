@@ -47,8 +47,8 @@ export function nextEggId(save: SaveV3): string {
 const boughtSlots = (save: SaveV3): number =>
   SAVE_V3_RULES.party.shopUnlock - save.party.slots.filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
 
-// 새 개체를 파티나 박스에 넣는다
-function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } {
+// 새 개체를 파티나 박스에 넣는다 — 업적의 포켓몬 보상도 쓴다 (src/achievement/core.ts claim)
+export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } {
   const i = save.party.slots.findIndex((s) => s.state === "empty");
   if (i >= 0) {
     save.party.slots[i] = { state: "pokemon", petId, hidden: false };

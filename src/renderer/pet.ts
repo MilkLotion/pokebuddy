@@ -182,8 +182,10 @@ async function playCry(): Promise<void> {
   void audio.play().catch(() => undefined);
 }
 
-function bar(label: string, value: number, shown: string, cls = ""): HTMLElement {
+// live — 시간으로만 바뀌는 값이면 그 필드. 새 보기가 모양은 같고 이 값만 다르면 막대만 고친다 (applyLive)
+function bar(label: string, value: number, shown: string, cls = "", live?: "affinity" | "fullness" | "mood"): HTMLElement {
   const box = el("div", "bar");
+  if (live) box.dataset.live = live;
   const head = el("div", "head");
   head.append(el("span", undefined, label), el("strong", undefined, shown));
   const track = el("div", "track");
@@ -206,7 +208,59 @@ function line(title: string, desc: string | null, right: HTMLElement[], run?: ()
   return row;
 }
 
+// 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
+function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "mood"): string {
+  if (field === "affinity") return `${pet.affinity}`;
+  if (field === "fullness") return `${pet.fullness} · ${ZONE_WORD[pet.zone] ?? pet.zone}`;
+  return `${pet.mood} · ${pet.moodWord}`;
+}
+const feedText = (pet: PetDeviceView["pet"]): string =>
+  pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`;
+
+// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage.ts structureOf)과 같은 목록이다
+// 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
+const structureOf = (v: PetDeviceView): string =>
+  JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
+let renderedStructure = "";
+
+function applyLive(v: PetDeviceView): void {
+  const pet = v.pet;
+  for (const box of device.querySelectorAll<HTMLElement>(".bar[data-live]")) {
+    const field = box.dataset.live as "affinity" | "fullness" | "mood";
+    const shown = box.querySelector<HTMLElement>(".head strong");
+    if (shown) shown.textContent = liveShown(pet, field);
+    const fill = box.querySelector<HTMLElement>(".fill");
+    if (fill) fill.style.width = `${Math.max(0, Math.min(100, pet[field]))}%`;
+  }
+  const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
+  if (feed) feed.textContent = feedText(pet);
+  lastView = v;
+}
+
+// 다시 그린 뒤 포커스를 같은 자리로 — 기기 창 안의 자식 번호 길과 태그·클래스가 같은 요소
+function focusPath(): { path: number[]; sign: string } | null {
+  const a = document.activeElement;
+  if (!(a instanceof HTMLElement) || !device.contains(a) || a === device) return null;
+  const path: number[] = [];
+  for (let n: Element = a; n !== device; n = n.parentElement as Element) path.unshift([...(n.parentElement?.children ?? [])].indexOf(n));
+  return { path, sign: `${a.tagName}.${a.className}` };
+}
+function restoreFocus(kept: { path: number[]; sign: string } | null): void {
+  if (!kept || (document.activeElement && document.activeElement !== document.body)) return;
+  let n: Element | undefined = device;
+  for (const i of kept.path) n = n?.children[i];
+  if (n instanceof HTMLElement && `${n.tagName}.${n.className}` === kept.sign) n.focus({ preventScroll: true });
+}
+
 function render(v: PetDeviceView): void {
+  const kept = focusPath();
+  renderedStructure = structureOf(v);
+  renderBody(v);
+  restoreFocus(kept);
+}
+
+function renderBody(v: PetDeviceView): void {
   const pet = v.pet;
   shownPetId = pet.id;
   volume = v.volume;
@@ -263,9 +317,9 @@ function render(v: PetDeviceView): void {
   const records = el("div", "records");
   records.append(
     bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
-    bar("친밀도", pet.affinity, `${pet.affinity}`),
-    bar("만복도", pet.fullness, `${pet.fullness} · ${ZONE_WORD[pet.zone] ?? pet.zone}`, pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : ""),
-    bar("기분", pet.mood, `${pet.mood} · ${pet.moodWord}`, "mood"),
+    bar("친밀도", pet.affinity, liveShown(pet, "affinity"), "", "affinity"),
+    bar("만복도", pet.fullness, liveShown(pet, "fullness"), pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : "", "fullness"),
+    bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
   );
   if (v.inParty && pet.longPlay) records.appendChild(el("span", "chip-note", "오래 놀아주기"));
   device.appendChild(records);
@@ -276,8 +330,10 @@ function render(v: PetDeviceView): void {
     const full = pet.fullness >= 100;
     const care = el("div", "row");
     care.dataset.tut = "detail-care";
+    const feed = button("act primary", feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), !pet.feedReady || full);
+    feed.dataset.live = "feed";
     care.append(
-      button("act primary", full ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`, () => act({ kind: "cmd", cmd: "feed" }), !pet.feedReady || full),
+      feed,
       button("act", pet.playReady ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), !pet.playReady),
     );
     actions.appendChild(care);
@@ -348,7 +404,28 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "Escape") api.close();
 });
 
-api.onShow((view) => {
+// 관리 창은 1초 시계마다 값이 바뀌면 다시 보낸다(쿨타임·만복도). 누르는 중(눌렀다 떼기 사이)에 다시 그리면 단추 누름이 사라진다 —
+// 그동안 온 보기는 들고 있다가 뗀 뒤에 그린다
+let pointerDown = false;
+let pending: PetDeviceView | null = null;
+const show = (view: PetDeviceView): void => {
   // 글꼴을 읽은 뒤에 재야 높이가 맞는다
   void document.fonts.ready.then(() => render(view));
+};
+const release = (): void => {
+  pointerDown = false;
+  const next = pending;
+  pending = null;
+  if (next) setTimeout(() => show(next), 0); // 누른 단추의 click 이 먼저 돌게 한 틱 미룬다
+};
+document.addEventListener("pointerdown", () => (pointerDown = true), true);
+document.addEventListener("pointerup", release, true);
+document.addEventListener("pointercancel", release, true);
+window.addEventListener("blur", release);
+
+api.onShow((view) => {
+  // 모양이 같으면 표시만 고친다 — 누르는 중에도 된다(요소를 바꾸지 않는다)
+  if (renderedStructure && structureOf(view) === renderedStructure) return applyLive(view);
+  if (pointerDown) pending = view;
+  else show(view);
 });

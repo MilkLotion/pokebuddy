@@ -21,6 +21,13 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   assert.equal(parseGifts([{ kind: "item", id: "toy", count: 1000 }]), null, "개수는 999 이하");
   assert.equal(parseGifts([{ kind: "points", count: 1.5 }]), null, "정수만");
   assert.equal(parseGifts({}), null, "배열이 아니다");
+  // 옛 민트 식별자는 민트 한 종류로 바꿔 받는다 — 편지를 버리지 않는다 (2026-09-29 민트 통일)
+  assert.deepStrictEqual(parseGifts([{ kind: "item", id: "adamant-mint", count: 2 }, { kind: "item", id: "mint", count: 1 }]), [{ kind: "item", id: "mint", count: 2 }, { kind: "item", id: "mint", count: 1 }]);
+  {
+    const s = empty(0);
+    assert.deepStrictEqual(applyGifts(s, "old-mint", [{ kind: "item", id: "serious-mint", count: 3 }]), { ok: true, applied: true });
+    assert.deepStrictEqual(s.bag, { mint: 3 }, "옛 성실민트 선물은 민트 3개");
+  }
   process.stdout.write("(1) 선물 검사  ok\n");
 }
 

@@ -23,7 +23,8 @@ export interface HatchResult {
   shiny: boolean;
 }
 
-const rankOf = (slug: string, opts?: DexOptions): number => {
+// 수집 난이도 1~5 — data/species.defaults.json 의 rank. 표에 없으면 1. 상점의 종 가격도 이 값을 쓴다 (src/shop/catalog.ts speciesPrice)
+export const rankOf = (slug: string, opts?: DexOptions): number => {
   const table = loadJson<Record<string, SpeciesRank>>("species.defaults.json", opts);
   return table[slug]?.rank ?? 1;
 };

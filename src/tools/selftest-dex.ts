@@ -20,7 +20,6 @@ const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
 };
 const T0 = new Date(2026, 8, 17, 10, 0, 0).getTime(); // 2026-09-17 10:00 로컬
-const HOUR = 3600_000;
 const DATA_DIR = path.join(__dirname, "..", "..", "data");
 
 // 있어야 하는 값 — 없으면 여기서 실패한다 (없는 값에 점을 찍어 TypeError 로 죽는 대신)
@@ -244,23 +243,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.evolvers(umbreon, world({ now: NIGHT }, { party: [pet("eevee", 100), pet("eevee", 600), pet("eevee", 700)] })).map((p) => p.affinity), [600, 700], "진화할 마리 — 임계 이상인 마리 모두");
   assert.deepStrictEqual(dex.evolvers(umbreon, world({ now: DAY }, { party: [pet("eevee", 600)] })), [], "조건이 거짓이면 아무도");
 
-  // shop — 가격, 문턱 아님
-  assert.strictEqual(dex.check({ shop: 800 }, world({}, { points: 0 })), true, "포인트가 없어도 해금(상점에 보인다)");
-  assert.strictEqual(dex.priceOf({ shop: 800 }), 800);
-  assert.strictEqual(dex.priceOf({ starter: true }), null);
-
-  // party
-  assert.strictEqual(dex.check({ party: { count: 3 } }, world({}, { party: [pet("a", 0), pet("b", 0), pet("c", 0)] })), true);
-  assert.strictEqual(dex.check({ party: { count: 3 } }, world({}, { party: [pet("a", 0), pet("b", 0)] })), false);
-
-  // work
-  const totals = (workMs: number) => ({ workMs, presenceMs: 0, tokens: 0, turns: 0, days: 0, fed: 0, played: 0 });
-  assert.strictEqual(dex.check({ work: { hours: 100 } }, world({}, { totals: totals(100 * HOUR) })), true);
-  assert.strictEqual(dex.check({ work: { hours: 100 } }, world({}, { totals: totals(100 * HOUR - 1) })), false);
-
-  // streak
-  assert.strictEqual(dex.check({ streak: { days: 14 } }, world({}, { daily: { date: "2026-09-17", streak: 14, interacted: true } })), true);
-  assert.strictEqual(dex.check({ streak: { days: 14 } }, world({}, { daily: { date: "2026-09-17", streak: 13, interacted: true } })), false);
+  // party · work · streak 조건은 2026-09-29 뺐다 — 메타몽·라프라스는 업적 보상, 럭키는 핑복 진화 (selftest-achievement · selftest-unlocks)
 
   // bond — 종과 친밀도
   const bond = { bond: { of: "pikachu", affinity: 1500 } };
@@ -280,11 +263,10 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(dex.check({ event: { date: "09-17" } }, world({ now: T0 })), true);
 
   // 여러 조건 — 전부 만족
-  const alola = { bond: { of: "pikachu", affinity: 1500 }, shop: 300 };
-  assert.strictEqual(dex.check(alola, world({}, { party: [pet("pikachu", 1500)] })), true);
-  assert.strictEqual(dex.check(alola, world({}, { party: [pet("pikachu", 10)] })), false, "bond 가 거짓이면 shop 이 있어도 거짓");
-  assert.strictEqual(dex.check({ time: "night", party: { count: 1 } }, world({ now: NIGHT }, { party: [pet("a", 0)] })), true);
-  assert.strictEqual(dex.check({ time: "night", party: { count: 1 } }, world({ now: NIGHT }, { party: [] })), false);
+  const alola = { bond: { of: "pikachu", affinity: 1500 }, time: "night" as const };
+  assert.strictEqual(dex.check(alola, world({ now: NIGHT }, { party: [pet("pikachu", 1500)] })), true);
+  assert.strictEqual(dex.check(alola, world({ now: NIGHT }, { party: [pet("pikachu", 10)] })), false, "bond 가 거짓이면 time 이 참이어도 거짓");
+  assert.strictEqual(dex.check(alola, world({ now: DAY }, { party: [pet("pikachu", 1500)] })), false, "time 이 거짓이면 bond 가 참이어도 거짓");
   assert.strictEqual(dex.check({}, world()), false, "빈 규칙은 거짓");
   out("해금 조건 ok");
 }
@@ -294,8 +276,8 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const rules: UnlockRules = {
     _comment: { starter: true },
     a: { starter: true },
-    b: { party: { count: 3 } },
-    c: { shop: 800 },
+    b: { bond: { of: "zz", affinity: 1 } },
+    c: { base: true },
     d: { time: "night" },
   };
   assert.deepStrictEqual(dex.evaluate(rules, world({ now: DAY })), ["a", "c"], "만족하는 것만, 표 순서, 메모 키 제외");
@@ -313,15 +295,15 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(table.raichu, { evolve: { from: "pikachu", affinity: 500 } }, "아기 포켓몬은 단계에 안 센다");
   assert.deepStrictEqual(table.umbreon, { evolve: { from: "eevee", affinity: 500, when: "night" } });
   assert.deepStrictEqual(table.charizard, { evolve: { from: "charmeleon", affinity: 1500 } });
-  assert.deepStrictEqual(table.snorlax, { shop: 800 });
-  assert.deepStrictEqual(table.ditto, { party: { count: 3 } });
-  assert.deepStrictEqual(table.lapras, { work: { hours: 100 } });
-  assert.deepStrictEqual(table.chansey, { streak: { days: 14 } });
+  assert.deepStrictEqual(table.snorlax, { evolve: { from: "munchlax", affinity: 500 } }, "잠만보는 먹고자 진화로 해금 (2026-09-29 사용자 결정)");
+  assert.strictEqual(table.ditto, undefined, "메타몽은 업적 보상 — 규칙표에 없다 (2026-09-29 사용자 결정)");
+  assert.strictEqual(table.lapras, undefined, "라프라스는 업적 보상 — 규칙표에 없다");
+  assert.deepStrictEqual(table.chansey, { evolve: { from: "happiny", affinity: 500, when: "day" } }, "럭키는 핑복 진화(낮)로 해금 (2026-09-29 사용자 결정)");
   assert.strictEqual(table.mewtwo, undefined, "전설·환상은 기본형 규칙을 받지 않는다 — 해금 길 없는 종은 표에 없다");
   assert.deepStrictEqual(table.cleffa, { base: true }, "아기 포켓몬도 진화 전 첫 단계라 기본형"); // 피츄는 2026-09-27 스타터가 됐다
   assert.deepStrictEqual(table.rattata, { base: true }, "기본형은 처음부터 해금 (2026-09-25 사용자 결정)");
   // 표의 모든 규칙이 아는 조건만 쓰고, evolve 의 from·to 가 evo.json 과 맞는다
-  const known = ["starter", "base", "evolve", "shop", "party", "work", "streak", "bond", "time", "event"];
+  const known = ["starter", "base", "evolve", "bond", "time", "event"];
   for (const [slug, rule] of Object.entries(table)) {
     for (const k of Object.keys(rule)) assert.ok(known.includes(k), `${slug} 모르는 조건 ${k}`);
     if (rule.evolve) {
@@ -330,12 +312,12 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
       assert.ok(dex.hasProfile(slug) && dex.hasProfile(rule.evolve.from), `${slug} 프로필`);
     }
   }
-  // 첫 실행 세상 — 스타터·기본형·상점 종은 해금, 진화·조건 종은 아직
+  // 첫 실행 세상 — 스타터·기본형은 해금, 진화·조건 종은 아직
   const fresh = dex.evaluate(table, world());
-  assert.ok(fresh.includes("bulbasaur") && fresh.includes("snorlax") && fresh.includes("rattata"), "첫 실행에 스타터·상점·기본형 종");
-  assert.ok(!fresh.includes("umbreon") && !fresh.includes("ditto") && !fresh.includes("lapras") && !fresh.includes("chansey"));
+  assert.ok(fresh.includes("bulbasaur") && fresh.includes("munchlax") && fresh.includes("rattata"), "첫 실행에 스타터·기본형 종");
+  assert.ok(!fresh.includes("snorlax") && !fresh.includes("umbreon") && !fresh.includes("ditto") && !fresh.includes("lapras") && !fresh.includes("chansey"));
   const baseCount = Object.values(table).filter((r) => r.base).length;
-  assert.strictEqual(fresh.length, 30 + baseCount, "스타터 29 + 잠만보 + 기본형");
+  assert.strictEqual(fresh.length, 29 + baseCount, "스타터 29 + 기본형");
   // 이브이 500 · 밤 — 진화 규칙이 살아난다
   const night = dex.evaluate(table, world({ now: NIGHT }, { party: [pet("eevee", 500)], unlocked: fresh }));
   assert.ok(night.includes("umbreon") && night.includes("vaporeon") && !night.includes("espeon"), "밤에는 블래키, 에브이는 아니다");

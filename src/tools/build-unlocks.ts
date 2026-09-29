@@ -12,18 +12,21 @@
 //   2. evo.json 의 진화 대상마다                       { "evolve": { "from", "affinity", "when"? } }
 //      affinity 는 부모의 단계로 — 첫 진화 500, 둘째 진화 1500 (셋째 이상도 1500)
 //      단계는 뿌리부터의 거리인데 **아기 포켓몬(is_baby)은 세지 않는다** — 피츄→피카츄→라이츄에서 피카츄는 0단계, 라이츄는 500
-//   3. 손으로 적은 것 MANUAL — 같은 슬러그의 생성 규칙을 **대체**한다 (합치면 AND 가 되기 때문)
-//      예: 잠만보는 먹심으로의 진화가 아니라 상점 800, 럭키는 핑복 진화가 아니라 14일 스트릭
+//   3. 손으로 적은 것 MANUAL — 같은 슬러그의 생성 규칙을 **대체**한다 (합치면 AND 가 되기 때문). 지금은 없다
+//      2026-09-29 사용자 결정으로 모두 뺐다 — 잠만보(상점 800)는 먹고자 진화, 럭키(연속 14일)는 핑복 진화로 되돌렸다.
+//      메타몽(파티 3마리)·라프라스(작업 100시간)는 업적 보상으로 옮겼다 (data/achievements.json)
 //   4. 진화 전 첫 단계 종(evolves_from 없음) 가운데 위에서 규칙을 받지 않은 종   { "base": true } — 처음부터 해금 (2026-09-25 사용자 결정)
 //      전설·환상(is_legendary · is_mythical)과 울트라비스트(ULTRA_BEASTS)는 넣지 않는다 — 입수 경로를 따로 정한다.
 //      울트라비스트는 PokeAPI 에 표시가 없어 목록으로 둔다. 알에서 얻을 수 없는 종이다 (docs/specs/game.md "알")
 //      종 목록 알(data/eggs.json pool)의 종도 넣지 않는다 — 화석은 태고의돌, 패러독스는 랜덤패러독스알에서 나와야 해금 (2026-09-27 사용자 결정)
+//      업적 보상 종(data/achievements.json 의 reward.pokemon)도 넣지 않는다 — 업적으로만 얻는다. 규칙이 없으니 랜덤알·상점에서도 빠진다 (2026-09-29)
 //   그 밖의 종은 넣지 않는다 (아직 해금 길 없음)
 // 순서: 스타터 → 진화 대상(슬러그순) → 손으로 적은 것(스타터·진화 대상이 아닌 것만 뒤에)
 import fs from "node:fs";
 import path from "node:path";
 import { starters, unlockRules } from "../dex/unlocks";
 import { fixedEggs } from "../shop/catalog";
+import { rewardSpecies } from "../achievement/core";
 import type { UnlockRule } from "../shared/types";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
@@ -36,12 +39,7 @@ export const RULES = {
 };
 
 // 손으로 적은 규칙 — 생성 규칙을 대체
-export const MANUAL: Readonly<Record<string, UnlockRule>> = {
-  snorlax: { shop: 800 },
-  ditto: { party: { count: 3 } },
-  lapras: { work: { hours: 100 } },
-  chansey: { streak: { days: 14 } },
-};
+export const MANUAL: Readonly<Record<string, UnlockRule>> = {};
 
 // 울트라비스트 — 진화 전 첫 단계만. 베베놈의 진화형 아고용은 진화 규칙이 남지만 베베놈을 얻을 길이 없어 함께 막힌다
 export const ULTRA_BEASTS: readonly string[] = ["nihilego", "buzzwole", "pheromosa", "xurkitree", "celesteela", "kartana", "guzzlord", "poipole", "stakataka", "blacephalon"];
@@ -107,7 +105,8 @@ export function build(evo: EvoTable, babies: Set<string>, starterSlugs: string[]
     out[slug] = rule;
   }
   const fixed = new Set(fixedEggs({ dataDir: DATA_DIR }).flatMap(([, pool]) => pool));
-  for (const slug of bases) if (!out[slug] && !fixed.has(slug)) out[slug] = { base: true };
+  const rewards = new Set(rewardSpecies({ dataDir: DATA_DIR }));
+  for (const slug of bases) if (!out[slug] && !fixed.has(slug) && !rewards.has(slug)) out[slug] = { base: true };
   return { out, skipped, replaced };
 }
 
@@ -127,7 +126,7 @@ async function main(): Promise<void> {
   }
   process.stdout.write(`해금 규칙: ${OUT} — ${Object.keys(out).length}종 (스타터 ${counts.starter} · 진화 ${counts.evolve} · 기본형 ${counts.base} · 손으로 ${counts.manual} · 대체 ${replaced} · 스타터라 건너뜀 ${skipped})\n`);
   process.stdout.write(`아기 포켓몬 ${babies.size}종은 단계에 세지 않음\n`);
-  for (const k of ["raichu", "pikachu", "charizard", "umbreon", "snorlax", "chansey"]) if (out[k]) process.stdout.write(`  ${k} ${JSON.stringify(out[k])}\n`);
+  for (const k of ["raichu", "pikachu", "charizard", "umbreon", "snorlax", "chansey", "ditto", "lapras"]) if (out[k]) process.stdout.write(`  ${k} ${JSON.stringify(out[k])}\n`);
 }
 
 if (require.main === module) runBuild(main);

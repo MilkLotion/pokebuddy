@@ -6,8 +6,9 @@
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { PetDeviceAction, PetDeviceChannel, PetDeviceOpen, PetDeviceView } from "../shared/manage";
-import { dockAt } from "./dex-window.js";
+import { bringUp, dockAt } from "./dex-window.js";
 import { windowIcon } from "./paths.js";
+import { createGenGate } from "./device-gen.js";
 
 const CH = {
   show: "petdev:show",
@@ -21,6 +22,7 @@ const CH = {
 // Figma `A안 · 파티 상세 기기` 폭. 높이는 첫 그림 전 어림값이다
 export const PET_WINDOW = { width: 380, height: 682 };
 
+
 export interface PetWindowOptions {
   preload: string;
   html: string;
@@ -29,12 +31,13 @@ export interface PetWindowOptions {
   volume: () => number; // 울음소리 음량 0~1
   onStep: (delta: -1 | 1) => void; // 이전·다음 — 순서는 관리 창이 정한다
   onAct: (action: PetDeviceAction) => void; // 누른 단추 — 관리 창이 처리한다
-  onClosed: () => void;
+  onClosed: (gen: number) => void; // 닫혔다 — 새 세대 번호를 관리 창에 준다
 }
 
 export interface PetWindow {
-  show: (parent: BrowserWindow, open: PetDeviceOpen) => Promise<void>;
+  show: (parent: BrowserWindow, open: PetDeviceOpen, gen: unknown) => Promise<void>; // gen 이 지금 세대 번호가 아니면 버린다
   close: () => void;
+  resetGen: () => void; // 관리 창 문서를 새로 읽었다 — 세대 번호를 0 으로
 }
 
 export function createPetWindow(opts: PetWindowOptions): PetWindow {
@@ -42,8 +45,11 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
   const closing = new WeakSet<BrowserWindow>(); // 닫히는 중인 창 — 다시 쓰지 않고 새로 만든다
   let owner: BrowserWindow | null = null;
   let current: PetDeviceOpen | null = null;
+  let focusNext = false; // 사용자가 연 개체를 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = PET_WINDOW.height;
   let side: "right" | "left" = "right";
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  const gate = createGenGate();
 
   const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() && !closing.has(win) ? win : null);
   const mine = (e: IpcMainEvent | IpcMainInvokeEvent): boolean => !!alive() && e.sender === win?.webContents;
@@ -65,7 +71,9 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
     if (side !== was) void send();
   };
   const hideWithOwner = (): void => alive()?.hide();
+  // 관리 창을 따라 다시 보일 때는 초점을 빼앗지 않는다
   const showWithOwner = (): void => {
+    focusNext = false;
     if (current) alive()?.showInactive();
   };
 
@@ -112,9 +120,10 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
       if (win !== w) return; // 닫히는 동안 새 창을 만들었다 — 그 창의 상태는 두고 간다
       win = null;
       current = null;
+      focusNext = false;
       detach();
       owner = null;
-      opts.onClosed();
+      opts.onClosed(gate.bump());
     });
     void w.loadFile(opts.html);
     return w;
@@ -136,7 +145,11 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
     height = Math.max(200, Math.min(1200, Math.ceil(h)));
     place();
     // 관리 창이 최소화돼 있으면 따라 숨어 있는다 — 기기 창만 혼자 뜨지 않게
-    if (!alive()?.isVisible() && owner && !owner.isDestroyed() && !owner.isMinimized()) alive()?.showInactive();
+    const w = alive();
+    if (!w || w.isVisible() || !owner || owner.isDestroyed() || owner.isMinimized()) return;
+    if (focusNext) bringUp(w);
+    else w.showInactive();
+    focusNext = false;
   });
   ipcMain.on(CH.step, (e, delta: unknown) => {
     if (mine(e) && (delta === 1 || delta === -1)) opts.onStep(delta);
@@ -151,16 +164,25 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
   });
 
   return {
-    async show(parent, next) {
+    // 다른 개체를 열 때만 초점을 준다 — 같은 개체를 다시 보내는 것은 새로 읽기·명령 뒤 갱신이다(관리 창 syncPetDevice)
+    async show(parent, next, gen) {
+      if (!gate.accepts(gen)) return; // 닫힘을 알기 전에 보낸 요청이다 — 닫은 창을 다시 띄우지 않는다
+      const opened = !alive() || next.pet.id !== current?.pet.id;
       current = next;
       attach(parent);
       if (!alive()) win = create(parent);
       place();
+      const w = alive();
+      if (w?.isVisible()) {
+        if (opened) bringUp(w);
+        focusNext = false;
+      } else if (opened) focusNext = true; // 첫 표시 — 렌더러가 높이를 보낸 뒤(size) 보이며 초점을 준다
       await send();
     },
     close() {
       alive()?.close();
     },
+    resetGen: () => gate.reset(),
   };
 }
 

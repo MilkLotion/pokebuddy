@@ -209,13 +209,13 @@ const idOf = (args: unknown): string | null => {
   return typeof id === "string" && id ? id : null;
 };
 
-// 업적 보상 수령 — 업적당 한 번. 파티 칸 하나를 연다
+// 업적 보상 수령 — 업적당 한 번. 파티 칸 하나를 열거나 포켓몬 한 마리를 준다
 const claimHandler: TxHandler = (draft, args, ctx) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };
-  const res = claim(draft, id, ctx.now);
+  const res = claim(draft, id, ctx.now, undefined, ctx.rand);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { id, slotIndex: res.slotIndex } };
+  return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox } };
 };
 
 const tutorialHandler = (kind: "skip" | "done"): TxHandler => (draft, args) => {

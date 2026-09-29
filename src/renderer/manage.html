@@ -818,80 +818,64 @@
         text-align: center;
         max-width: 72px;
       }
-      /* 셀렉트 — Figma Select. 열면 목록이 아래에 겹쳐 뜬다 */
-      .select {
-        position: relative;
+      /* 바꾼 후 카드에서 고른 성격 — 보조 글씨가 아니라 본문 글씨로 */
+      /* 고른 성격 이름(12px)과 안내(10px)의 줄 높이를 같게 — 고를 때 창 높이가 튀지 않게 */
+      .nat-card .note {
+        line-height: 18px;
       }
-      .select-btn {
+      .nat-card .note.picked {
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      /* 성격표 — 원작 성격표처럼 5×5 격자. 25개를 스크롤 없이 한 번에 보인다 (2026-09-29 민트 통일) */
+      .nature-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        margin-top: 12px;
+      }
+      .nature-cell {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
+        justify-content: center;
+        gap: 2px;
+        height: 40px;
+        padding: 4px 2px;
         border: 1px solid var(--line);
-        border-radius: 8px;
+        border-radius: 6px;
         background: var(--surface);
         font: inherit;
-        font-size: 12px;
+        font-size: 11px;
+        line-height: 14px;
         color: inherit;
-        cursor: pointer;
-      }
-      .select-btn[aria-expanded="true"] {
-        border-color: var(--primary);
-      }
-      .select-btn .chev {
-        font-size: 10px;
-        font-family: var(--font-small);
-        color: var(--muted);
-      }
-      /* 목록이 열린 동안은 대화상자가 목록을 자르지 않는다 — 목록은 대화상자 밖으로 겹쳐 뜬다 */
-      #dialog:has(.select-list) {
-        overflow: visible;
-      }
-      .select-list {
-        position: absolute;
-        top: calc(100% + 4px);
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 5;
-        width: 184px;
-        max-height: 220px;
-        overflow-y: auto;
-        padding: 4px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--surface);
-        box-shadow: 0 4px 12px rgba(26, 51, 48, 0.12);
-      }
-      .select-opt {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        width: 100%;
-        padding: 8px 12px;
-        border: none;
-        border-radius: 4px;
-        background: none;
-        font: inherit;
-        font-size: 12px;
-        color: inherit;
-        text-align: left;
         white-space: nowrap;
         cursor: pointer;
       }
-      .select-opt .hint {
-        font-size: 10px;
+      .nature-cell .hint {
+        min-height: 12px;
+        font-size: 9px;
+        line-height: 12px;
         font-family: var(--font-small);
         color: var(--muted);
       }
-      .select-opt:disabled,
-      .select-opt:disabled .hint {
+      .nature-cell:hover:not(:disabled) {
+        background: var(--canvas);
+      }
+      .nature-cell:disabled,
+      .nature-cell:disabled .hint {
         color: var(--disabled);
         cursor: default;
       }
-      .select-opt[aria-pressed="true"] {
+      .nature-cell[aria-pressed="true"] {
         background: var(--accent-bg);
+        font-weight: 600;
+      }
+      .nature-cell:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
       }
       .info-box {
         margin-top: 12px;
@@ -899,6 +883,10 @@
         border-radius: 10px;
         background: var(--canvas);
         font-size: 12px;
+      }
+      /* 고르기 전에 자리만 잡아 둔 안내 상자 — 창 높이가 튀지 않게 */
+      .info-box.reserve {
+        visibility: hidden;
       }
       .info-box .note {
         font-size: 10px;
@@ -1190,11 +1178,45 @@
         margin-left: auto;
         width: 170px;
       }
+      /* 검색 칸 + `검색` 단추 — 누를 때만 거른다 (2026-09-29 사용자 결정). 단추 높이는 칸과 같다 */
+      .search-field {
+        display: flex;
+        gap: 6px;
+        min-width: 0;
+      }
+      .search-field .search {
+        flex: 1;
+        min-width: 0;
+      }
+      .search-field .search-go {
+        appearance: none;
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        font: inherit;
+        font-size: 12px;
+        color: inherit;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .search-field .search-go:hover {
+        background: var(--accent-bg);
+      }
+      .pager .search-field {
+        margin-left: auto;
+      }
+      .pager .search-field .search {
+        margin-left: 0;
+        width: 124px;
+        flex: none;
+      }
       .search-row {
         display: flex;
         margin-bottom: 12px;
       }
-      .search-row .search {
+      .search-row .search-field {
         flex: 1;
       }
       /* 박스 검색으로 찾아간 칸 — 옅은 배경 */
@@ -1293,6 +1315,17 @@
         border-radius: 50%;
         background: var(--accent-bg);
         margin: 4px auto;
+      }
+      /* 도감·상점 포켓몬 격자의 넘김 줄 — 박스 넘김 줄과 같은 단추, 가운데 정렬 */
+      .grid-pager {
+        justify-content: center;
+      }
+      /* 상점 포켓몬 칸 — 도감 칸에 가격 한 줄 (2026-09-29 사용자 결정 "도감처럼 격자 칸"). 값은 상품 줄의 가격과 같다 */
+      .shop-cell .price {
+        margin-top: 2px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
       }
 
       /* ── 모달 ─────────────────────────────────────────────────────────────── */

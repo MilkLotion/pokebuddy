@@ -1,4 +1,4 @@
-// 가상 도구 도트 그림 — `node scripts/build-item-art.cjs` 로 assets/items/<도구 id>.png 를 만든다
+// 가상 도구 도트 그림 — `node scripts/build-item-art.cjs` 로 assets/items/<도구 id>.png 를 만든다. 무대 말풍선 아이콘(고기·금화)도 여기서 그린다
 //
 // 원작에 그림이 없는 이 게임만의 도구를 원작 도구 아이콘 규칙으로 그린다(30×30, 1px 외곽선, 4~5단계 명암, 왼쪽 위 빛, 흰 반짝임).
 // 우리가 새로 그린 그림이라 저장소와 설치본에 넣는다. 원작 그림(PokeAPI·pokesprite)은 넣지 않고 실행 때 받는다.
@@ -268,16 +268,98 @@ function bondCord() {
   return save("bond-cord", img);
 }
 
+// ── 무대 말풍선 아이콘 — 도구가 아니라 말풍선에 넣는 그림이다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어") ──
+
+// 만화 고기 — 뼈 달린 고깃덩이. 오른쪽 위로 기운 붉은 갈색 살, 양끝에 두 알 뼈 머리
+function meat() {
+  const img = blank();
+  const FLESH = ["#ffc49a", "#f08650", "#cc5428", "#983418", "#66200e"].map(hex);
+  const BONE = ["#ffffff", "#f6eedc", "#dfd0ae", "#b8a27a"].map(hex);
+  const cx = 15, cy = 15.5, ang = -0.62; // 기운 각도(라디안) — 오른쪽 위로
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  const local = (x, y) => { const dx = x + 0.5 - cx, dy = y + 0.5 - cy; return [dx * ca + dy * sa, -dx * sa + dy * ca]; }; // 긴 축 u, 짧은 축 v
+  // 뼈 — 긴 축을 따라 가는 막대와 양끝의 두 알 머리. 살 뒤에 먼저 그린다
+  const boneAt = (x, y) => {
+    const [u, v] = local(x, y);
+    const stick = Math.abs(v) <= 1.3 && Math.abs(u) <= 9.6;
+    const knob = [-10.4, 10.4].some((ku) => [-1.7, 1.7].some((kv) => Math.hypot(u - ku, v - kv) <= 1.9));
+    return stick || knob ? [u, v] : null;
+  };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const b = boneAt(x, y); if (!b) continue;
+    const [u, v] = b;
+    const k = v < -0.9 ? 0 : v < 0.3 ? 1 : v < 1.4 ? 2 : 3;
+    put(img, x, y, BONE[Math.abs(u) > 9.5 && v < 0 ? Math.max(0, k - 1) : k], "bone");
+  }
+  // 살 — 긴 축 9, 짧은 축 6.8 의 통통한 타원
+  const RU = 7.6, RV = 6.2;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const [u, v] = local(x, y);
+    const nu = u / RU, nv = v / RV;
+    if (nu * nu + nv * nv > 1) continue;
+    // 빛은 화면 왼쪽 위 — 화면 좌표로 명암을 정한다
+    const nx = (x + 0.5 - cx) / RU, ny = (y + 0.5 - cy) / RU;
+    put(img, x, y, lumpTone(Math.max(-1, Math.min(1, nx)), Math.max(-1, Math.min(1, ny)), FLESH), "flesh");
+  }
+  // 살결 — 짙은 줄 둘, 광택 흰 점
+  for (const [x, y] of [[17, 17], [18, 16], [19, 15], [14, 19], [15, 18], [16, 18]]) if (at(img, x, y) && at(img, x, y).m === "flesh") put(img, x, y, FLESH[3], "flesh");
+  for (const [x, y] of [[11, 14], [12, 13], [12, 14], [13, 13]]) if (at(img, x, y)) put(img, x, y, hex("#ffffff"), "flesh");
+  const mats = { flesh: { line: hex("#4a1406"), rim: FLESH[2] }, bone: { line: hex("#6e5a36"), rim: BONE[2] } };
+  rimLight(img, mats, cx, cy);
+  outline(img, mats, cx, cy);
+  return save("meat", img);
+}
+
+// 금화 — 두툼한 금빛 동전, 테두리 홈과 가운데 돋을새김 P (포인트)
+function coin() {
+  const img = blank();
+  const G = ["#fffbd4", "#ffe68a", "#f8c838", "#d89a18", "#a0680a"].map(hex);
+  const cx = 15, cy = 15, r = 10.5;
+  // 앞면 — 바깥 테는 오른쪽 아래가 짙다
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const nx = (x + 0.5 - cx) / r, ny = (y + 0.5 - cy) / r, d = nx * nx + ny * ny;
+    if (d > 1) continue;
+    const ring = d > 0.58 && d < 0.72; // 테두리 홈 — 왼쪽 위는 그늘, 오른쪽 아래는 빛을 받는다
+    const edgeBand = d >= 0.8; // 바깥 테
+    put(img, x, y, ring ? (nx + ny < 0 ? G[3] : G[1]) : edgeBand ? (nx + ny > 0.2 ? G[3] : G[2]) : lumpTone(nx * 0.8, ny * 0.8, G), "coin");
+  }
+  // 돋을새김 P — 짙은 글자 + 왼쪽 위 밝은 턱
+  const P = [
+    "####.",
+    "#...#",
+    "#...#",
+    "####.",
+    "#....",
+    "#....",
+    "#....",
+  ];
+  const ox = 13, oy = 12;
+  for (let j = 0; j < P.length; j++) for (let i = 0; i < 5; i++) if (P[j][i] === "#") {
+    put(img, ox + i - 1, oy + j - 1, G[0], "coin");
+  }
+  for (let j = 0; j < P.length; j++) for (let i = 0; i < 5; i++) if (P[j][i] === "#") put(img, ox + i, oy + j, G[4], "coin");
+  // 광
+  for (const [x, y] of [[9, 8], [10, 7], [8, 9]]) if (at(img, x, y)) put(img, x, y, hex("#ffffff"), "coin");
+  const mats = { coin: { line: hex("#6a4006"), rim: G[3] } };
+  rimLight(img, mats, cx, cy);
+  outline(img, mats, cx, cy);
+  return save("coin", img);
+}
 
 fs.mkdirSync(OUT, { recursive: true });
-const made = {
-  "shiny-potion": shinyPotion(),
-  "normal-potion": shinyPotion("normal-potion", ["#ffffff", "#e4ecf2", "#bccad6", "#8c9cac", "#667688"], "#3e4a58", false),
-  "ancient-stone": ancientStone(),
-  "basic-food": basicFood(),
-  "premium-food": premiumFood(),
-  "toy": toy(),
-  "bond-cord": bondCord(),
+// 인자로 이름을 주면 그 그림만 다시 만든다 — node scripts/build-item-art.cjs meat coin
+const ALL = {
+  "shiny-potion": () => shinyPotion(),
+  "normal-potion": () => shinyPotion("normal-potion", ["#ffffff", "#e4ecf2", "#bccad6", "#8c9cac", "#667688"], "#3e4a58", false),
+  "ancient-stone": ancientStone,
+  "basic-food": basicFood,
+  "premium-food": premiumFood,
+  "toy": toy,
+  "bond-cord": bondCord,
+  "meat": meat,
+  "coin": coin,
 };
-process.stdout.write(`그림 ${Object.keys(made).length}개: ${Object.keys(made).join(", ")} → ${path.relative(process.cwd(), OUT)}
+const want = process.argv.slice(2);
+const made = (want.length ? want : Object.keys(ALL)).filter((n) => ALL[n]).map((n) => (ALL[n](), n));
+process.stdout.write(`그림 ${made.length}개: ${made.join(", ")} → ${path.relative(process.cwd(), OUT)}
 `);

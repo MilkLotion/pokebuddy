@@ -4,7 +4,9 @@
 // 계약은 docs/specs/game.md "파티 칸과 업적", "튜토리얼" 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { claim, defs, evaluate, isAchieved } from "../achievement/core";
+import { claim, defs, evaluate, isAchieved, rewardPokemon, rewardSpecies } from "../achievement/core";
+import { SAVE_V3_RULES } from "../save/rules";
+import { snapshot } from "../tx/snapshot";
 import { empty } from "../save/v3";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { begin } from "../party/starter";
@@ -36,16 +38,18 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 두 개가 이름과 보상을 가진다
+// (1) 업적 네 개가 이름과 보상을 가진다. 파티 칸 둘, 포켓몬 둘 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = defs();
-  assert.equal(list.length, 2);
-  assert.deepStrictEqual(list.map(([id]) => id).sort(), ["show-two", "starter-final"]);
+  assert.equal(list.length, 4);
+  assert.deepStrictEqual(list.map(([id]) => id).sort(), ["party-three", "show-two", "starter-final", "work-100h"]);
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
-    assert.equal(def.reward, "party-slot");
   }
+  const reward = Object.fromEntries(list.map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
+  assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
+  assert.deepStrictEqual(rewardSpecies().sort(), ["ditto", "lapras"]);
   process.stdout.write("(1) 업적 목록과 보상  ok\n");
 }
 
@@ -174,6 +178,71 @@ function seed(): SaveV3 {
   }
   assert.equal(claim(s, "show-two", T0).reason, "no-locked-slot");
   process.stdout.write("(9) 열 칸이 없으면 거절  ok\n");
+}
+
+// (9-1) 함께 100시간 일하기 — 일한 누적 시간 100시간이면 달성. 시간 흐름에서도 판정한다(옛 저장은 다음 판정에 달성)
+//       수령하면 라프라스 한 마리 — 빈 파티 칸에 꺼낸 상태로, 성격 무작위, 이로치 아님, 도감 해금·획득
+{
+  const s = seed();
+  s.totals.workMs = 100 * 3600_000 - 1;
+  assert.equal(isAchieved(s, "work-100h"), false, "100시간 미만이면 아니다");
+  s.totals.workMs = 100 * 3600_000;
+  assert.equal(isAchieved(s, "work-100h"), true);
+  assert.ok(evaluate(s, T0).includes("work-100h"), "거래 전 저장 없이도(시간 흐름) 달성");
+  s.party.slots[1] = { state: "empty" }; // 빈 파티 칸 하나
+  const res = claim(s, "work-100h", T0, undefined, () => 0);
+  assert.equal(res.ok, true);
+  const got = s.pets.find((p) => p.id === res.petId);
+  assert.equal(got?.species, "lapras");
+  assert.equal(got?.shiny, false);
+  assert.equal(got?.level, SAVE_V3_RULES.pet.level, "새 개체의 시작 값");
+  assert.equal(res.slotIndex, 1);
+  assert.equal(res.toBox, false);
+  assert.deepStrictEqual(s.party.slots[1], { state: "pokemon", petId: res.petId, hidden: false }, "꺼낸 상태로 파티에");
+  assert.ok(s.dex.unlocked.includes("lapras") && s.dex.obtained.includes("lapras"), "도감 해금·획득");
+  assert.equal(s.achievements["work-100h"]?.claimedAt, T0);
+  assert.equal(claim(s, "work-100h", T0).reason, "already-claimed", "한 번만");
+  const lapras = snapshot(s).achievements.list.find((a) => a.id === "work-100h");
+  assert.equal(lapras?.reward, "라프라스", "업적창에는 포켓몬 이름으로");
+  assert.equal(lapras?.name, "함께 100시간 일하기");
+  process.stdout.write("(9-1) 함께 100시간 일하기 · 라프라스  ok\n");
+}
+
+// (9-2) 파티 세 마리 모으기 — 파티 칸에 든 포켓몬 3마리면 달성. 숨긴 개체도 센다
+//       빈 파티 칸이 없으면 메타몽은 박스로 간다. 박스가 가득 차면 새 박스를 더한다 — 둘 곳이 없어 막히는 경우는 없다
+{
+  const s = seed();
+  assert.equal(isAchieved(s, "party-three"), false, "두 마리로는 아니다");
+  s.pets.push(pet({ id: "p3", species: "bulbasaur" }));
+  s.party.slots[2] = { state: "pokemon", petId: "p3", hidden: true };
+  assert.equal(isAchieved(s, "party-three"), true, "숨긴 세 마리도 센다");
+  evaluate(s, T0);
+  assert.equal(s.party.slots.some((x) => x.state === "empty"), false, "빈 파티 칸 없음");
+  const box = s.boxes[0];
+  if (box) box.slots.fill("filler");
+  const boxes = s.boxes.length;
+  const res = claim(s, "party-three", T0, undefined, () => 0.5);
+  assert.equal(res.ok, true);
+  assert.equal(res.toBox, true, "박스로");
+  assert.equal(s.boxes.length, boxes + 1, "가득 찬 박스 뒤에 새 박스");
+  assert.equal(s.boxes[boxes]?.slots[0], res.petId);
+  assert.equal(s.pets.find((p) => p.id === res.petId)?.species, "ditto");
+  assert.ok(s.dex.obtained.includes("ditto"));
+  assert.equal(snapshot(s).achievements.list.find((a) => a.id === "party-three")?.reward, "메타몽");
+  process.stdout.write("(9-2) 파티 세 마리 모으기 · 메타몽 · 박스로  ok\n");
+}
+
+// (9-3) 수령 거래 — 실행기의 무작위로 성격을 정하고 결과에 개체를 돌려준다
+{
+  let disk: SaveV3 = seed();
+  disk.totals.workMs = 100 * 3600_000;
+  evaluate(disk, T0);
+  const tx = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0 }, HANDLERS);
+  const res = tx.run({ id: "c1", name: "achievement.claim", args: { id: "work-100h" } });
+  assert.equal(res.ok, true);
+  const petId = res.ok ? (res.result as { petId?: string }).petId : undefined;
+  assert.equal(disk.pets.find((p) => p.id === petId)?.species, "lapras");
+  process.stdout.write("(9-3) 포켓몬 보상 수령 거래  ok\n");
 }
 
 // (10) 튜토리얼 — 건너뛰거나 마치면 다시 띄우지 않는다

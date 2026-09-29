@@ -32,7 +32,7 @@ export interface StageOptions {
 
 interface PetState {
   evolvingUntil?: number;
-  bubble?: { text: string; until: number };
+  bubble?: { icons: string[]; until: number }; // 아이콘 열쇠 — 그림은 icons 에 모아 두고 렌더러에 보낸다
   quirkKey?: string;
   care: { action: "feed" | "play"; target: Spot; until: number; eatingAt: number | null; last: number } | null;
   pet: PartyPet;
@@ -65,8 +65,11 @@ export interface Stage {
   poke(id: string): boolean;
   care(id: string, action: CareAction): void;
   celebrate(id: string): void;
-  say(id: string, text: string, ms: number): void; // 말풍선을 ms 동안 — 배고픔 구간 진입 (docs/specs/game.md "배고픔 말풍선")
+  // 아이콘 말풍선을 ms 동안 — 배고픔(고기)·줍기(주운 것). keys 는 그릴 순서, uris 는 열쇠별 그림. 그림이 빠진 열쇠가 있으면 띄우지 않는다
+  // (docs/specs/game.md "배고픔 상태 표시"·"줍기", 2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
+  say(id: string, keys: string[], uris: Record<string, string>, ms: number): void;
   petIds(): string[];
+  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/core.ts). 움직임이 꺼져 있으면 모두 깨어 있다
   petOf(id: string): PartyPet | null;
   bodyOf(id: string): Size | null; // 몸 크기 (DIP) — 다른 화면에 놓을 때 자리를 잡는다 (src/main/stage-group.ts)
   heldId(): string | null;
@@ -89,6 +92,7 @@ export function createStage(opts: StageOptions): Stage {
   let pinned: string | null = null;
   let generation = 0; // setParty 가 겹쳐 불렸을 때 옛 호출이 결과를 덮지 않게
   const sentLooks = new Set<string>();
+  const icons = new Map<string, string>(); // 렌더러에 보낸 말풍선 아이콘 — 렌더러가 다시 뜨면 다시 보낸다
   let last: StageFrame | null = null;
 
   const shiftOf = (body: Size): number => stackShift(body);
@@ -278,7 +282,7 @@ export function createStage(opts: StageOptions): Stage {
         state: agent,
         pets: drawOrder().map((p) => ({ id: p.pet.id, look: p.look.look, zoom: p.zoom, x: p.pos.x, y: p.pos.y, play: p.play, held: p.held,
           ...(p.evolvingUntil && t < p.evolvingUntil ? { evolution: (p.evolvingUntil - t) / 1200 } : {}),
-          ...(p.bubble && t < p.bubble.until ? { bubble: p.bubble.text } : {}),
+          ...(p.bubble && t < p.bubble.until ? { bubble: p.bubble.icons } : {}),
           ...(p.care?.action === "feed" ? { berry: { x: p.care.target.x + p.body.w / 2, y: p.care.target.y + p.body.h - 4 } } : {}) })),
       };
       last = frame;
@@ -357,6 +361,7 @@ export function createStage(opts: StageOptions): Stage {
         if (cached) win.sendSheets(cached.sheets);
       }
       win.sendClickThrough(opts.ghost());
+      if (icons.size) win.sendIcons(Object.fromEntries(icons));
       if (last) win.sendFrame(last);
     },
 
@@ -376,15 +381,26 @@ export function createStage(opts: StageOptions): Stage {
       p.care = { action, target: clampInStage(p.pos.x + (p.pos.x > size.w / 2 ? -1 : 1) * STAGE_RULES.care.foodOffsetPx, p.pos.y, p.body, size), until: t + STAGE_RULES.care.durationMs, eatingAt: null, last: t };
     },
 
-    say(id, text, ms) {
+    say(id, keys, uris, ms) {
       const p = pets.get(id);
-      if (p) p.bubble = { text, until: now() + ms };
+      if (!p || !keys.length || keys.some((k) => !uris[k] && !icons.has(k))) return; // 그림이 없으면 띄우지 않는다 — 글자로 되돌리지 않는다
+      const fresh: Record<string, string> = {};
+      for (const k of keys) {
+        const uri = uris[k];
+        if (uri && icons.get(k) !== uri) {
+          icons.set(k, uri);
+          fresh[k] = uri;
+        }
+      }
+      if (Object.keys(fresh).length) win.sendIcons(fresh); // 프레임보다 먼저 보낸다
+      p.bubble = { icons: [...keys], until: now() + ms };
     },
     celebrate(id) {
       const p = pets.get(id);
       if (p) { p.evolvingUntil = now() + 1200; p.motion?.click(now()); }
     },
     petIds: () => order.filter((id) => pets.has(id)),
+    awakeIds: () => order.filter((id) => { const p = pets.get(id); return !!p && p.phase !== "sleep"; }),
     petOf: (id) => pets.get(id)?.pet ?? null,
     bodyOf: (id) => {
       const p = pets.get(id);

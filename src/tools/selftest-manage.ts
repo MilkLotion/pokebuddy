@@ -8,6 +8,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createGenGate } from "../main/device-gen";
 import { createGame } from "../main/game";
 import { SAVE_V3_RULES } from "../save/rules";
 import * as store from "../save/store";
@@ -228,7 +229,8 @@ try {
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
     const list = game.view()?.achievements.list ?? [];
-    assert.equal(list.length, 2, "업적 2개");
+    assert.equal(list.length, 4, "업적 4개");
+    assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");
     assert.equal(two?.name, "두 마리 함께 꺼내기");
     assert.equal(two?.reward, "파티 칸 +1", "보상은 화면 문구로");
@@ -240,6 +242,20 @@ try {
     assert.equal(claim.ok, false);
     assert.equal(claim.reason, "not-achieved");
     process.stdout.write("(13) 업적 목록  ok\n");
+  }
+
+  // (14) 기기 창 세대 번호 — 닫힌 뒤 낡은 번호의 여는 요청은 버리고, 닫힘을 받은 뒤의 요청은 바로 연다 (src/main/device-gen.ts)
+  {
+    const gate = createGenGate();
+    assert.equal(gate.accepts(0), true, "처음 — 관리 창도 0 에서 센다");
+    const closed = gate.bump(); // 기기 창 ✕ — 관리 창에 1 을 알린다
+    assert.equal(closed, 1);
+    assert.equal(gate.accepts(0), false, "닫힘을 알기 전의 1초 새로 고침(0)은 버린다 — 닫은 창이 다시 뜨지 않는다");
+    assert.equal(gate.accepts(1), true, "닫힘을 받은 뒤 같은 개체를 다시 누르면 바로 연다");
+    for (const bad of [1.5, "1", null, undefined, Number.NaN, 2 ** 60]) assert.equal(gate.accepts(bad), false, `정수가 아니거나 지금 번호가 아니면 버린다: ${String(bad)}`);
+    gate.reset();
+    assert.equal(gate.accepts(0), true, "관리 창 문서를 새로 읽으면 0 부터");
+    process.stdout.write("(14) 기기 창 세대 번호  ok\n");
   }
 
   process.stdout.write("selftest-manage: 통과 (스냅샷·명령·틱·실패·목록·설정·업적)\n");

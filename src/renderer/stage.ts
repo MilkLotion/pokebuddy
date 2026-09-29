@@ -146,20 +146,67 @@ function paint() {
   if (debugOn) renderDebug();
 }
 
-// 말풍선 글꼴 — stage.html 의 @font-face. 캔버스는 글꼴이 오기 전에 그리면 기본 글꼴로 그리고 폭도 틀리게 잰다.
-// 그래서 미리 불러 두고, 도착하면 한 번 다시 그린다
-const BUBBLE_FONT = '12px "Galmuri11", "Malgun Gothic", sans-serif';
-void document.fonts.load(BUBBLE_FONT).then(() => {
-  dirty = true;
-});
+// 말풍선 아이콘 — 열쇠별 그림과 불투명한 부분의 사각형. 그림의 빈 여백을 잘라 말풍선 칸에 맞춘다
+// 글자는 그리지 않는다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
+interface BubbleIcon {
+  img: HTMLImageElement;
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+}
+const bubbleIcons = new Map<string, BubbleIcon>();
 
-// 말풍선 — Figma `Speech Bubble` `338:733`: 흰 바탕, 1px 테두리, 반경 12, 좌우 10·위아래 6, 12px 글, 아래 왼쪽 꼬리.
-// 몸 가운데 위에 두고, 무대 밖으로 나가지 않게 가둔다
-function drawBubble(text: string, r: { x: number; y: number; w: number; h: number }) {
+// 불투명한 픽셀을 모두 덮는 사각형 — 읽지 못하면 그림 전체
+function opaqueBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const all = { sx: 0, sy: 0, sw: w, sh: h };
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d");
+  if (!g) return all;
+  g.drawImage(img, 0, 0);
+  const px = g.getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if ((px[(y * w + x) * 4 + 3] ?? 0) < 16) continue;
+    if (x < x0) x0 = x;
+    if (y < y0) y0 = y;
+    if (x > x1) x1 = x;
+    if (y > y1) y1 = y;
+  }
+  return x1 < 0 ? all : { sx: x0, sy: y0, sw: x1 - x0 + 1, sh: y1 - y0 + 1 };
+}
+
+async function putIcons(icons: Record<string, string>): Promise<void> {
+  await Promise.all(
+    Object.entries(icons).map(async ([key, uri]) => {
+      const img = new Image();
+      img.src = uri;
+      try {
+        await img.decode();
+      } catch {
+        diag({ kind: "icon", key, ok: false });
+        return; // 깨진 그림 — 그 열쇠의 말풍선은 그리지 않는다
+      }
+      bubbleIcons.set(key, { img, ...opaqueBox(img) });
+    }),
+  );
+  dirty = true;
+}
+
+// 말풍선 — Figma `Speech Bubble` `338:733`: 흰 바탕, 1px 테두리, 반경 12, 높이 28, 아래 왼쪽 꼬리. 모양은 글자 말풍선 때와 같다.
+// 안에는 아이콘을 나란히 둔다 — 칸 22 × 22, 칸 사이 2, 좌우 여백 8. 도트가 뭉개지지 않게 보간 없이 그린다.
+// 몸 가운데 위에 두고, 무대 밖으로 나가지 않게 가둔다. 그림이 아직 없는 열쇠가 있으면 그리지 않는다
+const ICON_BOX = 22;
+const ICON_GAP = 2;
+function drawBubble(keys: string[], r: { x: number; y: number; w: number; h: number }) {
+  const icons = keys.map((k) => bubbleIcons.get(k));
+  if (!icons.length || icons.some((i) => !i)) return;
   ctx.save();
   ctx.scale(dpr, dpr);
-  ctx.font = BUBBLE_FONT;
-  const w = Math.ceil(ctx.measureText(text).width) + 20;
+  const w = icons.length * ICON_BOX + (icons.length - 1) * ICON_GAP + 16;
   const h = 28;
   const tailX = 13;
   const stageW = canvas.width / dpr;
@@ -185,10 +232,17 @@ function drawBubble(text: string, r: { x: number; y: number; w: number; h: numbe
   ctx.lineTo(x + tailX + 6.5, y + h + 7.5);
   ctx.lineTo(x + tailX + 12.5, y + h + 0.5);
   ctx.stroke();
-  ctx.fillStyle = "#1a3330";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, x + 10, y + h / 2);
   ctx.restore();
+  // 아이콘 — 장치 픽셀 좌표로 반올림해 그린다. 빈 여백을 자른 뒤 긴 변을 칸에 맞춘다
+  ctx.imageSmoothingEnabled = false;
+  icons.forEach((icon, i) => {
+    if (!icon) return;
+    const k = ICON_BOX / Math.max(icon.sw, icon.sh);
+    const dw = icon.sw * k, dh = icon.sh * k;
+    const bx = x + 8 + i * (ICON_BOX + ICON_GAP) + (ICON_BOX - dw) / 2;
+    const by = y + (h - ICON_BOX) / 2 + (ICON_BOX - dh) / 2;
+    ctx.drawImage(icon.img, icon.sx, icon.sy, icon.sw, icon.sh, Math.round(bx * dpr), Math.round(by * dpr), Math.round(dw * dpr), Math.round(dh * dpr));
+  });
 }
 
 function renderDebug() {
@@ -254,6 +308,7 @@ bridge.onSheets((sheets) => {
 });
 
 bridge.onFrame((f) => syncFrame(f, performance.now()));
+bridge.onIcons((icons) => void putIcons(icons));
 
 // 메인이 묻는 커서 자리가 어느 마리 위인지 답한다. 누르고 있는 동안은 늘 그 마리로 답한다 —
 // 도중에 통과로 바뀌면 떼기가 아래 창으로 가서 마리가 들린 채 남는다
@@ -510,7 +565,7 @@ function mockBridge(): StageBridge {
         x: p.x,
         y: p.y,
         held: held === p.id,
-        ...(p.id === "a" ? { bubble: "배고파…" } : {}), // 말풍선 모양 확인용 — 가짜 모드에서만
+        ...(p.id === "a" ? { bubble: ["mock-meat", "mock-meat", "mock-meat"] } : {}), // 말풍선 모양 확인용 — 가짜 모드에서만
         play: held === p.id ? { anim: "Idle", row: 4, mode: "hold", rate: 1 } : p.walk ? { anim: "Walk", row: dir, mode: "loop", rate: 1.5 } : p.id === "c" && Math.floor(sec) % 6 < 2 ? { anim: "Attack", row: 0, mode: "loop", rate: 1 } : null,
       })),
     };
@@ -555,6 +610,18 @@ function mockBridge(): StageBridge {
     onHover: (cb) => void cbs.hover.push(cb),
     onClickThrough: (cb) => void cbs.ct.push(cb),
     onCry: () => {},
+    // 말풍선 아이콘 흉내 — 색 사각형 하나를 mock-meat 로 준다
+    onIcons: (cb) => {
+      const c = document.createElement("canvas");
+      c.width = 30;
+      c.height = 30;
+      const g = c.getContext("2d");
+      if (g) {
+        g.fillStyle = "#cc5428";
+        g.fillRect(6, 8, 18, 14);
+      }
+      setTimeout(() => cb({ "mock-meat": c.toDataURL("image/png") }), 0);
+    },
     // ?coach=pet · area — 튜토리얼 말풍선 흉내. 버튼을 누르면 지운다
     onCoach: (cb) => {
       coachCb = cb;

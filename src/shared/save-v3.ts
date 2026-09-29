@@ -134,6 +134,26 @@ export interface TradePendingV3 {
   received: unknown; // 완료 뒤 받은 개체 값. 반영 전에 앱이 꺼져도 다시 받아 오므로 비어 있을 수 있다
 }
 
+// 줍기 — 무대의 포켓몬이 주워 온 것 (src/find/core.ts). 저장 형식 번호는 올리지 않는다. 없으면 빈 값으로 읽는다
+export type FindKind = "points" | "item" | "evo" | "pokemon";
+
+export interface FindRecordV3 {
+  id: string; // f<순번> — 알림 배너 키가 된다 (src/notify/queue.ts)
+  at: number;
+  petId: string; // 주운 마리
+  species: string; // 주운 마리의 그때 종 — 개체가 사라져도 문구를 만든다
+  kind: FindKind;
+  ref: string; // 도구 식별자 · 종. 포인트면 빈 값
+  amount: number; // 포인트 양. 그 밖은 1
+  newPetId?: string; // 데려온 개체
+}
+
+// 쌓인 활동 시간은 저장하지 않는다 — 판정이 무기억이다. 옛 판의 activeMs 는 읽을 때 버린다 (2026-09-29 마리별 1초 판정)
+export interface FindV3 {
+  seq: number; // 지금까지 만든 줍기 기록 수 — 기록 식별자를 다시 쓰지 않는다
+  log: FindRecordV3[]; // 최근 기록 (FIND_RULES.keep)
+}
+
 export interface TxRecordV3 {
   id: string; // 요청 식별자
   at: number;
@@ -164,4 +184,5 @@ export interface SaveV3 {
   log: LogEntry[];
   trade?: { pending: TradePendingV3 | null };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/core.ts)
+  find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/core.ts)
 }

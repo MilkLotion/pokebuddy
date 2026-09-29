@@ -7,8 +7,11 @@ import { reach } from "../dex/reach";
 import { starters, unlockByRules, unlockRules } from "../dex/unlocks";
 import { begin } from "../party/starter";
 import { randomPool } from "../shop/buy";
+import { inRandomEgg, speciesPrice } from "../shop/catalog";
 import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
+import { evolve } from "../dex/evolve";
+import { newPet } from "../party/create";
 
 const r = reach();
 const rules = unlockRules();
@@ -34,13 +37,13 @@ process.stdout.write("(3) 첫 선택 후보의 진화 사슬  ok\n");
 const save = empty(0);
 assert.ok(begin(save, "charmander", 0, () => 0.5).ok);
 const fresh = unlockByRules(save, 0);
-for (const s of ["bulbasaur", "pichu", "rattata", "snorlax"]) assert.ok(save.dex.unlocked.includes(s), `해금 ${s}`);
-for (const s of ["pikachu", "charmeleon", "ditto", "lapras", "chansey", "mewtwo"]) assert.ok(!save.dex.unlocked.includes(s), `아직 ${s}`);
+for (const s of ["bulbasaur", "pichu", "rattata", "munchlax"]) assert.ok(save.dex.unlocked.includes(s), `해금 ${s}`);
+for (const s of ["pikachu", "charmeleon", "snorlax", "ditto", "lapras", "chansey", "mewtwo"]) assert.ok(!save.dex.unlocked.includes(s), `아직 ${s}`);
 assert.ok(fresh.length > 400 && !fresh.includes("charmander"), "고른 종은 이미 해금돼 있어 새 목록에 없다");
 assert.deepStrictEqual(unlockByRules(save, 0), [], "두 번 불러도 더하지 않는다");
 process.stdout.write(`(4) 첫 선택 직후 해금 ${save.dex.unlocked.length}종  ok\n`);
 
-// (5) 랜덤알 후보 — 상점 종(잠만보)·진화 전용 종·화석·울트라비스트는 빠진다
+// (5) 랜덤알 후보 — 진화형(잠만보)·진화 전용 종·화석·울트라비스트는 빠진다
 // 울트라비스트는 규칙이 없어 해금되지 않는다. 옛 규칙으로 이미 해금된 저장이어도 후보에서 빠진다
 // 화석·패러독스는 알에서 나와야 해금된다 (2026-09-27 사용자 결정)
 for (const s of ["nihilego", "omanyte", "aerodactyl", "great-tusk", "iron-crown"]) assert.ok(!save.dex.unlocked.includes(s), `미해금 ${s}`);
@@ -63,14 +66,42 @@ unlockByRules(old, 0);
 assert.ok(old.dex.unlocked.includes("omanyte"), "정리는 한 번만");
 process.stdout.write("(5b) 옛 저장 해금 정리  ok\n");
 
-// (6) 조건 규칙 — 파티 3마리면 메타몽, 작업 100시간이면 라프라스, 연속 14일이면 럭키
+// (6) 옛 조건 규칙은 없다 (2026-09-29 사용자 결정) — 메타몽·라프라스는 업적 보상, 럭키는 핑복 진화
+//     파티 3마리 · 작업 100시간 · 연속 14일을 채워도 규칙으로는 해금되지 않는다
 save.party.slots.forEach((slot, i) => {
   if (i < 3) Object.assign(slot, { state: "pokemon", petId: `p${i}` });
 });
 save.totals.workMs = 100 * 3600_000;
 save.daily.streak = 14;
 const later = unlockByRules(save, 0);
-for (const s of ["ditto", "lapras", "chansey"]) assert.ok(later.includes(s), `조건 해금 ${s}`);
-process.stdout.write("(6) 파티·작업·연속 교감 조건  ok\n");
+for (const s of ["ditto", "lapras", "chansey"]) assert.ok(!later.includes(s), `규칙으로 해금하지 않는다 ${s}`);
+assert.equal(rules.ditto, undefined);
+assert.equal(rules.lapras, undefined);
+assert.deepStrictEqual(rules.chansey, { evolve: { from: "happiny", affinity: 500, when: "day" } });
+assert.ok(r.obtainable.has("chansey") && pool.includes("happiny"), "핑복은 랜덤알, 럭키는 진화");
+// 업적 보상 종은 랜덤알·상점에서 빠진다 — 옛 규칙으로 해금된 저장이어도 (Claude 판단: 업적 전용)
+for (const s of ["ditto", "lapras"]) {
+  assert.equal(inRandomEgg(s), false, `랜덤알 밖 ${s}`);
+  assert.equal(speciesPrice(s), null, `상점 밖 ${s}`);
+}
+assert.ok(r.obtainable.has("ditto") && r.obtainable.has("lapras"), "업적 보상으로 얻는다");
+const oldPool = randomPool({ ...save, dex: { ...save.dex, unlocked: [...save.dex.unlocked, "ditto", "lapras"] } });
+assert.ok(!oldPool.includes("ditto") && !oldPool.includes("lapras"), "옛 해금이 남아도 랜덤알 후보가 아니다");
+process.stdout.write("(6) 옛 조건 규칙 없음 · 럭키 진화 · 메타몽·라프라스 알·상점 제외  ok\n");
 
-process.stdout.write(`selftest-unlocks: 통과 (첫 선택 후보·규칙 이름·진화 사슬·첫 선택 직후 해금·랜덤알 후보·해금 정리·조건 규칙) — 참고: 얻을 수 있는 종 ${[...dexSlugs].filter((s) => r.obtainable.has(s)).length}/${dexSlugs.size}\n`);
+// (7) 잠만보는 먹고자에서 진화해 얻는다 — 상점 전용 규칙은 없다 (2026-09-29 사용자 결정)
+assert.deepStrictEqual(rules.snorlax, { evolve: { from: "munchlax", affinity: 500 } });
+assert.ok(r.obtainable.has("snorlax") && pool.includes("munchlax") && !pool.includes("snorlax"), "먹고자는 랜덤알, 잠만보는 진화");
+{
+  const s = empty(0);
+  s.dex.unlocked = ["munchlax"];
+  const pet = newPet({ id: "m1", species: "munchlax", shiny: false, nature: "hardy", now: 0 });
+  pet.affinity = 100;
+  s.pets.push(pet);
+  assert.ok(evolve(s, "m1", "day").ok, "친밀도로 진화");
+  assert.equal(pet.species, "snorlax");
+  assert.ok(s.dex.unlocked.includes("snorlax") && s.dex.obtained.includes("snorlax"), "진화하면 잠만보 해금·획득");
+}
+process.stdout.write("(7) 잠만보 · 먹고자 진화로 해금  ok\n");
+
+process.stdout.write(`selftest-unlocks: 통과 (첫 선택 후보·규칙 이름·진화 사슬·첫 선택 직후 해금·랜덤알 후보·해금 정리·옛 조건 규칙 없음·잠만보 진화) — 참고: 얻을 수 있는 종 ${[...dexSlugs].filter((s) => r.obtainable.has(s)).length}/${dexSlugs.size}\n`);

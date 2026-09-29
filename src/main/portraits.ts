@@ -1,7 +1,7 @@
 // 포켓몬 초상 — PokeAPI sprites 의 기본 그림(96 × 96 PNG)을 받아 캐시하고 화면에 data URI 로 준다
 //
 // 출처는 https://github.com/PokeAPI/sprites 다(저장소 CC0, 그림 저작권은 The Pokémon Company). 2026-09-25 사용자 지시로 PMD 초상에서 바꿨다.
-// 저장소에는 넣지 않고 받는 사람 컴퓨터에 캐시한다 (docs/guide.md "관리 창의 초상").
+// 저장소에는 넣지 않고 받는 사람 컴퓨터에 캐시한다 (docs/specs/companion.md "설정창의 초상").
 // 경로: sprites/pokemon/<도감>.png, 이로치는 sprites/pokemon/shiny/<도감>.png. 이로치 그림이 없으면 보통 그림을 쓴다.
 // 캐시: ~/.claude/pokebuddy/sprites/<4자리>.png · <4자리>-shiny.png. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
 // 도구·알 그림(icons)도 같은 저장소에서 받는다: sprites/items/<식별자>.png, sprites/pokemon/egg.png. 없으면(404) 빈 칸이다.
@@ -61,25 +61,18 @@ export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shi
 export const portraitUrl = (dex: number, shiny: boolean): string => (shiny ? `${BASE}/shiny/${dex}.png` : `${BASE}/${dex}.png`);
 
 // PokeAPI 에 없는 도구 그림 — msikma/pokesprite (코드 MIT, 그림 © Nintendo·Creatures·GAME FREAK). 32×32 로 PokeAPI 30×30 과 모양이 같다.
-// 2026-09-26 폰트 세션이 조사해 넘겼다(사용자 결정). 민트는 원작처럼 올려 주는 능력치별 그림 6장을 성격에 나눠 쓴다
+// 2026-09-26 폰트 세션이 조사해 넘겼다(사용자 결정).
+// 민트는 한 종류라 초록 민트 한 장만 쓴다 (2026-09-29 사용자 결정 "초록색민트 이미지만 사용").
+// pokesprite mint 6장의 픽셀을 받아 본 결과 초록(주색 #65c65d)은 speed.png 다. attack 빨강·defense 파랑·special-attack 하늘·special-defense 분홍·neutral 노랑
 const POKESPRITE = "https://raw.githubusercontent.com/msikma/pokesprite/master/items";
-const MINT_STAT: Readonly<Record<string, string>> = {
-  lonely: "attack", brave: "attack", adamant: "attack", naughty: "attack",
-  bold: "defense", relaxed: "defense", impish: "defense", lax: "defense",
-  modest: "special-attack", mild: "special-attack", quiet: "special-attack", rash: "special-attack",
-  calm: "special-defense", gentle: "special-defense", sassy: "special-defense", careful: "special-defense",
-  timid: "speed", hasty: "speed", jolly: "speed", naive: "speed",
-  serious: "neutral",
-};
+const MINT_URL = `${POKESPRITE}/mint/speed.png`;
 const POKESPRITE_EVO = new Set(["galarica-wreath", "sweet-apple", "tart-apple", "cracked-pot"]);
 
 // 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구는 pokesprite, 나머지는 PokeAPI
 export function itemUrl(id: string): string {
   const candy = /^exp-candy-(xs|s|m|l|xl)$/.exec(id);
   if (candy) return `${POKESPRITE}/exp-candy/${candy[1]}.png`;
-  const mint = /^([a-z]+)-mint$/.exec(id);
-  const stat = mint ? MINT_STAT[mint[1] ?? ""] : undefined;
-  if (stat) return `${POKESPRITE}/mint/${stat}.png`;
+  if (id === "mint") return MINT_URL;
   if (POKESPRITE_EVO.has(id)) return `${POKESPRITE}/evo-item/${id}.png`;
   // 빈 기술머신(기술 진화를 대신하는 도구, id 는 옛 이름 blank-cd)은 원작 기술머신 그림을 쓴다 — 2026-09-26 사용자 결정 "빈기술머신으로 사용할게 그냥"
   if (id === "blank-cd") return `${SPRITES}/items/tm-normal.png`;

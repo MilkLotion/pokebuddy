@@ -291,7 +291,8 @@ async function stageRuntimeTests(): Promise<void> {
     },
     cached: (look) => looks.get(look) ?? null,
   };
-  const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;
+  const iconsSent: Record<string, string>[] = [];
+  const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendIcons: (i: Record<string, string>) => iconsSent.push(i), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;
   const stage = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, cursor: () => ({ x: 100, y: 100 }), onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
   const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, screen: null, shown: true, nick: null };
   stage.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
@@ -322,12 +323,21 @@ async function stageRuntimeTests(): Promise<void> {
   for (let n = 0; n < 150; n++) { now += 40; stage.tick(); }
   const after = stage.lastFrame()!.pets[0]!;
   ok(Math.hypot(after.x - 100, after.y - 100) > Math.hypot(before.x - 100, before.y - 100) - STAGE_RULES.care.foodOffsetPx - 1, "반응이 끝나도 커서 밑으로 오지 않음");
-  // 배고픔 말풍선 — 정한 시간 동안만 프레임에 실린다
-  stage.say("p1", "배고파…", 1000);
+  // 아이콘 말풍선 — 그림을 먼저 보내고, 정한 시간 동안만 프레임에 열쇠가 실린다. 글자는 싣지 않는다 (2026-09-29 사용자 결정)
+  stage.say("p1", ["item:meat", "item:meat", "item:meat"], { "item:meat": "data:image/png;base64,AAAA" }, 1000);
   now += 40; stage.tick();
-  eq(stage.lastFrame()?.pets[0]?.bubble, "배고파…", "말풍선이 프레임에 실린다");
+  eq(stage.lastFrame()?.pets[0]?.bubble, ["item:meat", "item:meat", "item:meat"], "매우 배고픔 — 고기 세 개가 프레임에 실린다");
+  eq(iconsSent, [{ "item:meat": "data:image/png;base64,AAAA" }], "그림은 한 번만 보낸다");
   now += 1000; stage.tick();
   eq(stage.lastFrame()?.pets[0]?.bubble, undefined, "시간이 지나면 말풍선이 사라진다");
+  stage.say("p1", ["item:meat"], {}, 1000);
+  eq(iconsSent.length, 1, "이미 보낸 그림은 다시 보내지 않는다");
+  now += 40; stage.tick();
+  eq(stage.lastFrame()?.pets[0]?.bubble, ["item:meat"], "배고픔 — 고기 하나");
+  now += 1000; stage.tick();
+  stage.say("p1", ["item:coin"], {}, 1000);
+  now += 40; stage.tick();
+  eq(stage.lastFrame()?.pets[0]?.bubble, undefined, "그림이 없는 열쇠면 말풍선을 띄우지 않는다 — 글자로 되돌리지 않는다");
   // 첫 돌봄 — 세운 마리는 오래 지나도 제자리에 서 있고, 풀어도 그 자리에서 이어 간다
   stage.pin("p1");
   now += 40; stage.tick();

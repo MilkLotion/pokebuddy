@@ -5,13 +5,15 @@
 // 여기서 시계를 부르지 않는다. 지금 시각이 필요하면 받는다.
 import { localDate } from "../shared/clock.js";
 import type {
-  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, PartySlotV3, PetV3,
+  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PartySlotV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
-import { SAVE_RULES, SAVE_V3_RULES, isNatureId, snapSize } from "./rules.js";
+import { SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, isNatureId, snapSize } from "./rules.js";
+import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
 import { normalizeMail } from "../mail/core.js";
+import { FIND_RULES } from "../find/rules.js";
 
 type Raw = Record<string, unknown>;
 
@@ -233,16 +235,20 @@ function normalizeEggs(raw: unknown): EggV3[] {
   return out;
 }
 
-// 옛 도구 id → 지금 id. 2026-09-25 에 민트 키를 공식 식별자로 바꿨다(mint-adamant → adamant-mint)
-const itemIdOf = (id: string): string => id.replace(/^mint-([a-z]+)$/, "$1-mint");
-
+// 가방 — 옛 민트 21종(<성격>-mint, 그 전의 mint-<성격>)은 민트 한 종류(mint)로 합친다 (2026-09-29 사용자 결정).
+// 합친 민트는 가방 상한(SHOP_V3_RULES.bagMax)으로 자른다. 다른 도구의 개수는 건드리지 않는다
 function normalizeBag(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {};
   if (!isObj(raw)) return out;
+  let merged = false;
   for (const [k, v] of Object.entries(raw)) {
     const n = nonNeg(v);
-    if (n > 0) out[itemIdOf(k)] = (out[itemIdOf(k)] ?? 0) + n;
+    if (n <= 0) continue;
+    if (isOldMint(k)) merged = true;
+    const id = currentItemId(k);
+    out[id] = (out[id] ?? 0) + n;
   }
+  if (merged && (out[MINT_ID] ?? 0) > SHOP_V3_RULES.bagMax) out[MINT_ID] = SHOP_V3_RULES.bagMax;
   return out;
 }
 
@@ -383,7 +389,32 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     log: normalizeLog(raw.log),
     trade: normalizeTrade(raw.trade, seen),
     mail: normalizeMail(raw.mail),
+    find: normalizeFind(raw.find),
   };
+}
+
+const FIND_KINDS: readonly FindKind[] = ["points", "item", "evo", "pokemon"];
+
+// 줍기 — 모양이 깨진 기록은 버린다. 없으면 빈 값 (src/find/core.ts)
+function normalizeFind(raw: unknown): FindV3 {
+  const r = isObj(raw) ? raw : {};
+  const log: FindRecordV3[] = [];
+  for (const e of Array.isArray(r.log) ? r.log : []) {
+    if (!isObj(e) || typeof e.id !== "string" || !e.id || typeof e.petId !== "string" || !FIND_KINDS.includes(e.kind as FindKind)) continue;
+    if (log.some((x) => x.id === e.id)) continue;
+    log.push({
+      id: e.id,
+      at: nonNeg(e.at),
+      petId: e.petId,
+      species: str(e.species),
+      kind: e.kind as FindKind,
+      ref: str(e.ref),
+      amount: nonNeg(e.amount, 1),
+      ...(typeof e.newPetId === "string" && e.newPetId ? { newPetId: e.newPetId } : {}),
+    });
+  }
+  const maxNo = log.reduce((m, e) => Math.max(m, Number(/^f(\d+)$/.exec(e.id)?.[1] ?? 0)), 0);
+  return { seq: Math.max(nonNeg(r.seq), maxNo), log: log.slice(-FIND_RULES.keep) }; // 옛 activeMs 는 버린다 — 판정이 무기억이다
 }
 
 // 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/record.md "로컬 저장과 복구")

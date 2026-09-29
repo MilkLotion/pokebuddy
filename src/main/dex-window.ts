@@ -6,6 +6,7 @@
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { DexDetail, DexDeviceChannel, DexDeviceView } from "../shared/manage";
 import { windowIcon } from "./paths.js";
+import { createGenGate } from "./device-gen.js";
 
 const CH = {
   show: "dexdev:show",
@@ -26,12 +27,13 @@ export interface DexWindowOptions {
   cry: (slug: string) => Promise<string | null>;
   volume: () => number; // 울음소리 음량 0~1
   onStep: (delta: -1 | 1) => void; // 이전·다음 — 순서는 관리 창 목록이 정한다
-  onClosed: () => void;
+  onClosed: (gen: number) => void; // 닫혔다 — 새 세대 번호를 관리 창에 준다
 }
 
 export interface DexWindow {
-  show: (parent: BrowserWindow, slug: string) => Promise<void>;
+  show: (parent: BrowserWindow, slug: string, gen: unknown) => Promise<void>; // gen 이 지금 세대 번호가 아니면 버린다
   close: () => void;
+  resetGen: () => void; // 관리 창 문서를 새로 읽었다 — 세대 번호를 0 으로
 }
 
 // 붙일 자리 — 관리 창 내용 영역 옆. 화면 오른쪽 끝을 넘으면 왼쪽에 붙인다
@@ -43,10 +45,23 @@ export function dockAt(parent: { x: number; y: number; width: number; height: nu
   return { x, y, side };
 }
 
+// 사용자가 연 기기 창에 키보드 초점을 준다 — 옆 창을 한 번 더 누르지 않아도 방향키·Esc 가 먹게
+// - show(): 숨은 창을 보이고 앞으로. mac 은 key 창, Windows 는 활성 창이 된다
+// - focus(): 이미 보이는 창도 key·활성 창으로. 관리 창을 누른 직후라 앱이 앞에 있어 OS 가 막지 않는다
+// - webContents.focus(): 문서 안 초점까지. keydown 을 document 에서 받는다
+export function bringUp(w: BrowserWindow): void {
+  if (!w.isVisible()) w.show();
+  w.focus();
+  w.webContents.focus();
+}
+
 export function createDexWindow(opts: DexWindowOptions): DexWindow {
   let win: BrowserWindow | null = null;
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  const gate = createGenGate();
   let owner: BrowserWindow | null = null;
   let slug: string | null = null;
+  let focusNext = false; // 사용자가 연 종을 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = DEX_WINDOW.height;
   let side: "right" | "left" = "right";
 
@@ -70,7 +85,9 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (side !== was) void send();
   };
   const hideWithOwner = (): void => alive()?.hide();
+  // 관리 창을 따라 다시 보일 때는 초점을 빼앗지 않는다
   const showWithOwner = (): void => {
+    focusNext = false;
     if (slug) alive()?.showInactive();
   };
 
@@ -115,9 +132,10 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     w.on("closed", () => {
       win = null;
       slug = null;
+      focusNext = false;
       detach();
       owner = null;
-      opts.onClosed();
+      opts.onClosed(gate.bump());
     });
     void w.loadFile(opts.html);
     return w;
@@ -138,7 +156,11 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (!mine(e) || typeof h !== "number" || !Number.isFinite(h)) return;
     height = Math.max(200, Math.min(1200, Math.ceil(h)));
     place();
-    if (!alive()?.isVisible()) alive()?.showInactive();
+    const w = alive();
+    if (!w || w.isVisible()) return;
+    if (focusNext) bringUp(w);
+    else w.showInactive();
+    focusNext = false;
   });
   ipcMain.on(CH.step, (e, delta: unknown) => {
     if (mine(e) && (delta === 1 || delta === -1)) opts.onStep(delta);
@@ -149,15 +171,24 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   });
 
   return {
-    async show(parent, next) {
+    // 다른 종을 열 때만 초점을 준다 — 같은 종을 다시 보내는 것은 부화·해금 뒤 새로 읽기다(관리 창 loadDex)
+    async show(parent, next, gen) {
+      if (!gate.accepts(gen)) return; // 닫힘을 알기 전에 보낸 요청(새로 읽기의 다시 보내기)이다 — 닫은 창을 다시 띄우지 않는다
+      const opened = !alive() || next !== slug;
       slug = next;
       attach(parent);
       if (!alive()) win = create(parent);
       place();
+      const w = alive();
+      if (w?.isVisible()) {
+        if (opened) bringUp(w);
+        focusNext = false;
+      } else if (opened) focusNext = true; // 첫 표시 — 렌더러가 높이를 보낸 뒤(size) 보이며 초점을 준다
       await send();
     },
     close() {
       alive()?.close();
     },
+    resetGen: () => gate.reset(),
   };
 }

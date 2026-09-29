@@ -69,9 +69,10 @@ export interface StageGroup {
   poke(id: string): boolean;
   care(id: string, action: CareAction): void;
   celebrate(id: string): void;
-  say(id: string, text: string, ms: number): void;
+  say(id: string, keys: string[], uris: Record<string, string>, ms: number): void; // 아이콘 말풍선 — src/main/stage.ts say
   pin(id: string | null): void;
   petIds(): string[]; // 파티 순서
+  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/core.ts)
   petOf(id: string): PartyPet | null;
   heldId(): string | null;
   stageRectOf(id: string): Rect | null; // 그 마리가 있는 무대 창 사각형(화면 좌표)
@@ -327,7 +328,7 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
     poke: (id) => laneWith(id)?.stage.poke(id) ?? false,
     care: (id, action) => laneWith(id)?.stage.care(id, action),
     celebrate: (id) => laneWith(id)?.stage.celebrate(id),
-    say: (id, text, ms) => laneWith(id)?.stage.say(id, text, ms),
+    say: (id, keys, uris, ms) => laneWith(id)?.stage.say(id, keys, uris, ms),
     pin(id) {
       pinned = id;
       for (const l of lanes) l.stage.pin(id && l.stage.petOf(id) ? id : null);
@@ -336,6 +337,7 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
       const on = new Set(lanes.flatMap((l) => l.stage.petIds()));
       return party.map((p) => p.id).filter((id) => on.has(id));
     },
+    awakeIds: () => lanes.flatMap((l) => l.stage.awakeIds()),
     petOf: (id) => laneWith(id)?.stage.petOf(id) ?? null,
     heldId: () => lanes.map((l) => l.stage.heldId()).find((id) => id != null) ?? null,
     stageRectOf: (id) => laneWith(id)?.win.stage() ?? null,

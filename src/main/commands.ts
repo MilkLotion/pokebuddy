@@ -92,7 +92,8 @@ export function createCommands(ctx: CommandContext): Commands {
 
   const target = (c: Command): string | null => (typeof c.target === "string" && c.target ? c.target : null);
 
-  const currentSave = (): SaveV3 | null => ctx.party.save();
+  // 쓰는 프로세스는 메모리 값(1초 틱 진행 포함)을 본다 — 파일은 15초마다 쓴다 (src/main/game.ts). 못 읽으면 저장 감시의 값
+  const currentSave = (): SaveV3 | null => (ctx.party.isWriter() ? ctx.game.read() : null) ?? ctx.party.save();
 
   // 저장을 바꾸는 명령 하나 — writer 면 실행기로, reader 면 mailbox 로.
   // mailbox 를 잇고 있는 쪽(server)이 reader 일 수는 없다. 그때는 받아 줄 writer 가 없다는 뜻이다

@@ -18,6 +18,7 @@ const CH = {
   hover: "stage:hover",
   clickThrough: "stage:click-through",
   cry: "stage:cry",
+  icons: "stage:icons",
   coach: "stage:coach",
   coachAction: "stage:coach-action",
   ready: "stage:ready",
@@ -56,6 +57,7 @@ export interface StageWindow {
   sendFrame(frame: StageFrame): void;
   sendClickThrough(on: boolean): void;
   sendCry(uri: string, volume: number): void; // 울음소리 한 번 — 음량 0~1
+  sendIcons(icons: Record<string, string>): void; // 말풍선 아이콘 그림 — 열쇠별 data URI
   sendCoach(coach: CoachView | null): void; // 바탕화면 튜토리얼 — 같은 값이면 보내지 않는다. 렌더러가 다시 뜨면 resendCoach
   resendCoach(): void;
   popup(template: MenuItemConstructorOptions[]): void;
@@ -240,6 +242,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     sendFrame: (frame) => send(CH.frame, frame),
     sendClickThrough: (on) => send(CH.clickThrough, on),
     sendCry: (uri, volume) => send(CH.cry, { uri, volume }),
+    sendIcons: (icons) => send(CH.icons, icons),
     sendCoach(next) {
       const key = JSON.stringify(next);
       if (key === coachKey) return;

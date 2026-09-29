@@ -1,5 +1,5 @@
 {
-  "_comment": "업적 — 규칙은 docs/specs/game.md '파티 칸과 업적'. 조건 판정은 코드(src/achievement/core.ts)가 하고 여기는 이름(ko·en)과 보상만 둔다. reward 가 party-slot 이면 업적으로 여는 파티 칸 하나를 연다",
+  "_comment": "업적 — 규칙은 docs/specs/game.md '파티 칸과 업적'. 조건 판정은 코드(src/achievement/core.ts)가 하고 여기는 이름(ko·en)과 보상만 둔다. reward 가 party-slot 이면 업적으로 여는 파티 칸 하나를 연다. {\"pokemon\": 종} 이면 그 종의 새 개체 하나를 준다 (2026-09-29 사용자 결정)",
   "show-two": {
     "ko": "두 마리 함께 꺼내기",
     "en": "Two Out Together",
@@ -12,5 +12,19 @@
     "desc": "교환으로 받은 포켓몬은 레벨업해야 센다",
     "reward": "party-slot",
     "level": 50
+  },
+  "work-100h": {
+    "_comment": "옛 라프라스 해금 조건(일한 누적 시간 100시간)을 업적으로 옮겼다 (2026-09-29 사용자 결정)",
+    "ko": "함께 100시간 일하기",
+    "en": "100 Hours Together",
+    "reward": { "pokemon": "lapras" },
+    "hours": 100
+  },
+  "party-three": {
+    "_comment": "옛 메타몽 해금 조건(파티 칸에 든 포켓몬 3마리)을 업적으로 옮겼다 (2026-09-29 사용자 결정)",
+    "ko": "파티 세 마리 모으기",
+    "en": "Party of Three",
+    "reward": { "pokemon": "ditto" },
+    "count": 3
   }
 }

@@ -4,10 +4,11 @@
 // 여기서는 변환과 검사만 한다. 파일을 옮기는 것은 부르는 쪽(src/save/store.ts)이 한다.
 // 보존 대상: 개체 식별자, 친밀도, 성격, 포인트, 파티 순서, 표시 상태, 도감 기록, 구매 권리.
 // v2 에는 레벨과 경험치가 없다. 새 값으로 시작한다.
+import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
 import { localDate } from "../shared/clock.js";
 import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { Pet, SaveV2 } from "../shared/types";
-import { SAVE_V3_RULES } from "./rules.js";
+import { SAVE_V3_RULES, SHOP_V3_RULES } from "./rules.js";
 import { empty, emptySlots, putStrays } from "./v3.js";
 
 export interface MigrateResult {
@@ -85,16 +86,19 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
   for (const s of slots) if (s.state === "pokemon" && s.petId) placed.add(s.petId);
   putStrays(out.pets, placed, out.boxes);
 
-  // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다
+  // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다. 옛 민트를 합친 개수는 가방 상한에서 자른다 (src/save/v3.ts normalizeBag 과 같다)
+  let mergedMint = false;
   for (const [k, v] of Object.entries(v2.inventory)) {
     if (k.startsWith(SHINY_RIGHT)) {
       out.legacy[k] = v;
       continue;
     }
     if (typeof v !== "number" || v <= 0) continue;
-    const id = ITEM_RENAME[k] ?? k;
+    if (isOldMint(k)) mergedMint = true;
+    const id = currentItemId(ITEM_RENAME[k] ?? k); // 옛 민트는 민트 한 종류로 (src/bag/mint.ts)
     out.bag[id] = (out.bag[id] ?? 0) + Math.round(v);
   }
+  if (mergedMint && (out.bag[MINT_ID] ?? 0) > SHOP_V3_RULES.bagMax) out.bag[MINT_ID] = SHOP_V3_RULES.bagMax;
 
   out.points.balance = Math.max(0, Math.round(v2.points));
   const acc = v2.acc as Record<string, unknown>;

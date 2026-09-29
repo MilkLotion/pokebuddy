@@ -18,18 +18,19 @@ import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./li
 import { lockExcept, petMenu, trayMenu } from "./menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
-import { createMainTrade, type MainTrade } from "./trade";
+import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
 import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
-import { openManage, pushAccount, pushMail, pushTrade, pushUpdate } from "./manage-window";
+import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
-import { createPortraits } from "./portraits";
+import { createPortraits, type Portraits } from "./portraits";
+import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
 import { PATHS, PROJECT, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
@@ -46,6 +47,8 @@ import { createHungerBubbles } from "./hunger-bubble";
 import { SOUND_RULES, gainOf } from "../state/settings";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
+import { rollHits } from "../find/core";
+import type { FindRecordV3 } from "../shared/save-v3";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction, ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
 import type { Command } from "../shared/types";
@@ -53,10 +56,12 @@ import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/stage";
 import { currentTutorial } from "../tutorial/core";
 
-let lastTick = 0;
-// 에이전트 작업 시간 — 상태를 볼 때마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
+// 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
 let workMs = 0;
-let lastPollAt = 0;
+// 전역 시계 — 1초마다 틱을 낸다 (src/main/clock.ts)
+const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
+// 그림 캐시 — 관리 창·선택 창과 무대 말풍선 아이콘이 함께 쓴다 (src/main/portraits.ts). main() 에서 만든다
+let portraits: Portraits | null = null;
 let lastMenuPoints = -1;
 // 화면이 잠겨 있다 — 잠긴 동안은 게임 틱을 돌리지 않는다. 풀리면 다음 틱이 그 틈을 버린다(game.tick 은 틈을 TIME_V3_RULES.maxTickMs 로 자른다).
 // 절전은 폴링이 멈춰 저절로 같은 결과가 된다. 잠금만 하고 절전하지 않으면 폴링이 계속 돌아 따로 막는다 (2026-09-27)
@@ -282,7 +287,7 @@ let firstCareWait: string | null = null;
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
 function syncJump(): void {
-  const save = saveParty()?.save();
+  const save = game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
   if (!save) return;
   const pets = save.party.slots
     .map((slot) => (slot.state === "pokemon" ? save.pets.find((p) => p.id === slot.petId) : undefined))
@@ -580,7 +585,7 @@ function showPetMenu(id: string): void {
   const p = stages?.petOf(id);
   if (!p) return;
   const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null };
-  const pet = saveParty()?.save()?.pets.find((row) => row.id === id) ?? null;
+  const pet = game?.read()?.pets.find((row) => row.id === id) ?? null; // 메모리 값 — 파일은 15초마다 쓴다
   const care = pet ? { status: petStatus(pet), feed: careItem(pet, "feed"), play: careItem(pet, "play") } : {};
   // 첫 돌봄 튜토리얼 중이면 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
   const save = game?.read();
@@ -773,65 +778,134 @@ async function refreshParty(): Promise<void> {
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
 // (worklog/records/game-runtime/record.md "배고픔 말풍선 되풀이")
 const BUBBLE_MS = 5000;
+// 줍기 확률 배율 — 개발 실행에서만 POKEBUDDY_FIND_RATE(양의 정수). 100 이면 초당 100/2000. 마리마다 독립은 그대로다. 실기 확인용 (src/find/rules.ts perSecond)
+let findRateMemo: number | null | undefined;
+const findRate = (): number | null => {
+  if (findRateMemo === undefined) {
+    const v = process.env.POKEBUDDY_FIND_RATE;
+    findRateMemo = v && /^\d+$/.test(v) && Number(v) > 0 && isDevRun() ? Number(v) : null;
+  }
+  return findRateMemo;
+};
 const hungerBubbles = createHungerBubbles();
 
-// 게임 시간 — 흐른 만큼 한 번에 적용한다. 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 부른다.
-// 주기는 저장 주기와 같다. 주기보다 크게 벌어진 틈(앱 종료·절전)은 `game.tick` 이 버린다
-// (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다")
-// 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스")
+// 말풍선 아이콘 열쇠 — 글자 대신 그림을 넣는다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
+//   배고픔 고기 1개 · 매우 배고픔 고기 3개 · 포인트 금화 — 우리가 그린 assets/items/meat.png · coin.png
+//   도구·진화용 도구 — 관리 창과 같은 도구 그림(item:<식별자>) · 포켓몬 — 데려온 종의 초상(pokemon:<종>[:shiny])
+const MEAT = "item:meat";
+const COIN = "item:coin";
+const foundIcon = (rec: FindRecordV3, save: SaveV3 | null): string => {
+  if (rec.kind === "points") return COIN;
+  if (rec.kind !== "pokemon") return `item:${rec.ref}`;
+  const shiny = save?.pets.find((p) => p.id === rec.newPetId)?.shiny === true;
+  return `pokemon:${rec.ref}${shiny ? ":shiny" : ""}`;
+};
+
+// 열쇠별 그림(data URI). 하나라도 못 구하면 null — 말풍선을 띄우지 않는다. 글자로 되돌리지 않는다
+async function iconUris(keys: string[]): Promise<Record<string, string> | null> {
+  const art = portraits;
+  if (!art) return null;
+  const out: Record<string, string> = {};
+  for (const key of new Set(keys)) {
+    const mon = /^pokemon:([a-z0-9-]+)(:shiny)?$/.exec(key);
+    const got = mon ? Object.values(await art.get([{ slug: mon[1] ?? "", shiny: !!mon[2] }]))[0] : (await art.icons([key]))[key];
+    if (!got) return null;
+    out[key] = got;
+  }
+  return out;
+}
+
+// 아이콘 말풍선 — 그림을 구한 뒤 그 마리 위에 BUBBLE_MS 동안. 그 사이 무대에서 빠졌거나 직접 숨겼으면 띄우지 않는다
+function sayIcons(petId: string, keys: string[]): void {
+  void iconUris(keys).then((uris) => {
+    if (uris && stages && !userHidden && stages.petOf(petId)) stages.say(petId, keys, uris, BUBBLE_MS);
+  });
+}
+
+// 에이전트 상태 폴링 — 500ms(STAGE_RULES.statePollMs). 화면·입력용이라 전역 시계를 쓰지 않는다 — 상태가 바뀐 것을 반 초 안에 무대에 보인다.
+// 게임 값은 바꾸지 않는다. 게임 시간·줍기·작업 시간은 전역 시계의 1초 틱(clockTick)이 한다
 function stateTick(): void {
   if (!anchor || !stages) return;
   const { state, promptAt } = anchor.currentInfo();
   stages.setState(state, promptAt);
-
-  const worker = saveParty();
-  if (worker?.isWriter() && game && !screenLocked) {
-    const now = Date.now();
-    // 폴링 사이가 크게 벌어졌으면(절전·writer 가 아니던 동안) 그 틈은 작업으로 세지 않는다
-    const gap = lastPollAt > 0 ? now - lastPollAt : 0;
-    if (state === "running" && gap <= STATE_RULES.maxTickMs) workMs += gap;
-    lastPollAt = now;
-    if (now - lastTick >= STATE_RULES.saveMs) {
-      lastTick = now;
-      const events = game.tick({ workMs });
-      if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
-      worker.refresh();
-      // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
-      // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
-      if (!userHidden) {
-        const st = stages;
-        const shown = (worker.save()?.pets ?? []).filter((p) => st.petOf(p.id));
-        for (const b of hungerBubbles.due(shown, now)) st.say(b.id, t(b.zone === "starving" ? "bubble.starving" : "bubble.hungry"), BUBBLE_MS);
-      }
-      notifier?.tick(); // 부화 준비·진화 가능·업적 미수령을 배너 줄에 세운다 (src/notify)
-      hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
-      syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
-      syncCoach();
-      syncJump();
-      const points = Math.floor(worker.save()?.points.balance ?? 0);
-      if (points !== lastMenuPoints) {
-        lastMenuPoints = points;
-        tray?.refresh();
-      }
-    }
-  } else {
-    // writer 가 아니거나 화면이 잠겼으면 쌓지 않는다. 다시 돌면 새로 센다
-    workMs = 0;
-    lastPollAt = 0;
-  }
   if (state !== lastState) {
     lastState = state;
     log?.({ state });
   }
 }
 
+// 전역 시계의 1초 틱 — 게임 시간 적용·줍기·작업 시간·배고픔 말풍선·배너를 이 틱의 now·gap 으로 한다 (2026-09-29 사용자 결정 "전역 타이머 1초").
+// 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 돈다. 틈이 STATE_RULES.maxTickMs 를 넘는 틱(절전 복귀·멈춤)은 작업·줍기로 세지 않는다.
+// 게임 시간의 큰 틈은 `game.tick` 이 TIME_V3_RULES.maxTickMs 로 자른다 (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다").
+// 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스").
+// 무거운 일(놀이공간·점프 목록·트레이 다시 읽기, 남은 안내)은 SLOW_EVERY 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
+const SLOW_EVERY = Math.max(1, Math.round(STATE_RULES.saveMs / CLOCK_RULES.periodMs));
+function clockTick({ now, gap, seq }: ClockTick): void {
+  pushClock(now); // 관리 창·기기 창이 이 틱에 스냅샷을 다시 읽는다 (manage:clock)
+  if (!anchor || !stages) return;
+  const worker = saveParty();
+  if (!worker?.isWriter() || !game || screenLocked) {
+    workMs = 0; // writer 가 아니거나 화면이 잠겼으면 쌓지 않는다. 다시 돌면 새로 센다
+    return;
+  }
+  const counted = gap > 0 && gap <= STATE_RULES.maxTickMs;
+  if (counted && anchor.currentInfo().state === "running") workMs += gap;
+
+  // 줍기 — 깨어 있는 마리 각각을 이 틱의 간격으로 따로 굴린다. 주우면 그 틱에 저장하고 말풍선·배너를 띄운다.
+  // 직접 숨긴 동안은 무대에 아무도 없는 것으로 본다 (src/find/core.ts rollHits)
+  if (counted && !userHidden) {
+    const hits = rollHits(Object.fromEntries(stages.awakeIds().map((id) => [id, gap])), Math.random, findRate() ?? 1);
+    const found = hits.length ? game.find(hits) : null; // 쓰지 못하면 null — 그 건은 버린다
+    if (found?.length) {
+      worker.refresh();
+      const save = game.read();
+      for (const rec of found) sayIcons(rec.petId, [foundIcon(rec, save)]);
+    }
+  }
+
+  // 게임 시간 — 1초마다 메모리에 적용하고 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
+  const events = game.tick({ workMs });
+  if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
+
+  // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
+  // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
+  if (!userHidden) {
+    const st = stages;
+    const shown = (game.read()?.pets ?? []).filter((p) => st.petOf(p.id));
+    for (const b of hungerBubbles.due(shown, now)) sayIcons(b.id, b.zone === "starving" ? [MEAT, MEAT, MEAT] : [MEAT]); // 배고픔 고기 1개, 매우 배고픔 고기 3개
+  }
+  notifier?.tick(); // 부화 준비·진화 가능·업적 미수령·줍기를 배너 줄에 세운다 — 1초 안에 뜬다 (src/notify)
+  syncCoach();
+
+  if (seq % SLOW_EVERY !== 0) return;
+  worker.refresh();
+  hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
+  syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
+  syncJump();
+  const points = Math.floor(game.read()?.points.balance ?? 0);
+  if (points !== lastMenuPoints) {
+    lastMenuPoints = points;
+    tray?.refresh();
+  }
+}
+
 async function main(): Promise<void> {
   if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
   powerMonitor.on("lock-screen", () => {
+    if (saveParty()?.isWriter()) game?.flush(); // 잠그기 직전 — 메모리에만 있는 1초 틱 진행을 쓴다
     void mainOnline?.flush(); // 잠그기 직전 — 온라인이고 바뀌었으면 클라우드에 올린다
     screenLocked = true;
     log?.({ screen: "locked" });
   });
+  powerMonitor.on("suspend", () => {
+    if (saveParty()?.isWriter()) game?.flush(); // 절전 직전 — 메모리에만 있는 1초 틱 진행을 쓴다
+  });
+  // Windows 로그오프·종료 — before-quit 이 오지 않을 수 있다. session-end 는 창의 이벤트라 만들어지는 창마다 건다. mac 의 끄기는 powerMonitor shutdown
+  const flushOnEnd = (): void => {
+    if (saveParty()?.isWriter()) game?.flush();
+  };
+  app.on("browser-window-created", (_e, w) => w.on("session-end", flushOnEnd));
+  powerMonitor.on("shutdown", flushOnEnd);
   powerMonitor.on("unlock-screen", () => {
     screenLocked = false;
     log?.({ screen: "unlocked" });
@@ -844,7 +918,9 @@ async function main(): Promise<void> {
   }
 
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다
-  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false, onWrite: () => mainOnline?.noteSaved() });
+  // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
+  // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
+  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false, onWrite: () => mainOnline?.noteSaved(), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
   game = reader;
   bannerWin = createBannerWindow({
     preload: preloadFile(),
@@ -856,7 +932,7 @@ async function main(): Promise<void> {
     onGo: (route) => openManageWindow(route),
     onDone: () => notifier?.done(),
   });
-  notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, show: (b) => bannerWin?.show(b) });
+  notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => bannerWin?.show(b) }); // 시각은 전역 시계의 틱 시각
   const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
   party = saveSource;
 
@@ -872,10 +948,11 @@ async function main(): Promise<void> {
   // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/portraits.ts).
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
-  const portraits = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
+  const pics = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
+  portraits = pics;
   const starterList = saveSource.needsStarter() ? starters(unlockRules()) : [];
   const prefetchAt = Date.now();
-  void portraits
+  void pics
     .prefetch(undefined, starterList)
     .then((r) => log?.({ prefetch: "done", ms: Date.now() - prefetchAt, ...r }))
     .catch((e) => log?.({ prefetch: "failed", message: String(e) }));
@@ -889,7 +966,7 @@ async function main(): Promise<void> {
         preload: preloadFile(),
         html: rendererFile("picker.html"),
         starters: list,
-        portraits,
+        portraits: pics,
         onPicking: (on) => {
           picking = on;
         },
@@ -1082,6 +1159,8 @@ async function main(): Promise<void> {
   lifetime.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
 
   intervals.push(setInterval(stateTick, STAGE_RULES.statePollMs));
+  clock.on(clockTick);
+  clock.start();
   intervals.push(setInterval(() => stages?.tick(), STAGE_RULES.tickMs));
   // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
   const relayout = (): void => anchor?.poll();
@@ -1108,6 +1187,8 @@ process.on("SIGINT", () => app.quit());
 // 창을 닫기 전에 온다 — 주기 작업·감시·헬퍼를 먼저 멈춘다 (quitting 설명 참고).
 // 창이 따로 닫혀 끝나는 경로(window-all-closed → app.quit)도 이곳을 지난다
 app.on("before-quit", (e) => {
+  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/main/game.ts flush)
+  if (saveParty()?.isWriter()) game?.flush();
   // 끄기 전에 클라우드 저장을 한 번 올린다 — 최대 3초. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다)
   if (mainOnline && !onlineFlushed && mainOnline.cloud.unsaved() === "dirty") {
     e.preventDefault();
@@ -1117,6 +1198,7 @@ app.on("before-quit", (e) => {
   }
   quitting = true;
   for (const id of intervals) clearInterval(id);
+  clock.stop();
   anchor?.stop(); // 헬퍼도 멈춘다
   lifetime?.stop();
   tray?.destroy();

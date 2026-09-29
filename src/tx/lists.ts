@@ -1,6 +1,6 @@
 // 화면이 읽는 목록 — 상점 상품과 도감 항목. 스냅샷과 같은 태도로 화면이 바로 그릴 값만 준다.
 //
-// 상점은 작아서 스냅샷에 함께 담는다. 도감은 1089종이라 탭을 열 때만 따로 부른다.
+// 상점은 스냅샷에 함께 담는다(포켓몬 상품은 해금한 알 종이라 수백 줄이다). 도감은 1089종이라 탭을 열 때만 따로 부른다.
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
@@ -65,12 +65,13 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     });
   }
 
-  // 포켓몬 — 해금한 종만
-  for (const slug of save.dex.unlocked) {
-    const price = speciesPrice(slug, opts);
-    if (price === null) continue;
-    add({ id: slug, name: petName(slug), note: "", price, category: "pokemon", affordable: false });
-  }
+  // 포켓몬 — 해금한 종 가운데 상점에서 파는 종(알에서 얻을 수 있는 종). 도감 번호 순 (2026-09-29 사용자 결정)
+  const dexNo = (slug: string): number => species(opts)[slug]?.dex ?? Number.MAX_SAFE_INTEGER;
+  const sold = save.dex.unlocked
+    .map((slug) => ({ slug, price: speciesPrice(slug, opts) }))
+    .filter((row): row is { slug: string; price: number } => row.price !== null)
+    .sort((a, b) => dexNo(a.slug) - dexNo(b.slug) || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  for (const { slug, price } of sold) add({ id: slug, name: petName(slug), note: "", price, category: "pokemon", affordable: false, dex: species(opts)[slug]?.dex });
 
   // 도구 — 상점에 파는 것만
   for (const [id, item] of Object.entries(items(opts))) {

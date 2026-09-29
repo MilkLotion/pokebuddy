@@ -55,6 +55,7 @@ const CH = {
   hover: "stage:hover",
   clickThrough: "stage:click-through",
   cry: "stage:cry",
+  icons: "stage:icons",
   coach: "stage:coach",
   coachAction: "stage:coach-action",
   ready: "stage:ready",
@@ -74,6 +75,7 @@ const bridge: StageBridge = {
   onHover: (cb) => ipcRenderer.on(CH.hover, (_e, q: HoverQuery) => cb(q)),
   onClickThrough: (cb) => ipcRenderer.on(CH.clickThrough, (_e, on: boolean) => cb(on)),
   onCry: (cb) => ipcRenderer.on(CH.cry, (_e, cry: { uri: string; volume: number }) => cb(cry.uri, cry.volume)),
+  onIcons: (cb) => ipcRenderer.on(CH.icons, (_e, icons: Record<string, string>) => cb(icons)),
   onCoach: (cb) => ipcRenderer.on(CH.coach, (_e, coach: CoachView | null) => cb(coach)),
   coachAction: (action) => ipcRenderer.send(CH.coachAction, action),
   hit: (id) => ipcRenderer.send(CH.hit, id),
@@ -118,6 +120,7 @@ const MANAGE = {
   pickScreen: "manage:pick-screen",
   mail: "manage:mail",
   mailView: "manage:mail-view",
+  clock: "manage:clock",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -135,13 +138,13 @@ const manage: ManageBridge = {
   portraits: (asks) => ipcRenderer.invoke(MANAGE.portraits, asks) as Promise<Record<string, string | null>>,
   icons: (keys) => ipcRenderer.invoke(MANAGE.icons, keys) as Promise<Record<string, string | null>>,
   art: () => ipcRenderer.invoke(MANAGE.art) as Promise<Record<string, string>>,
-  dexOpen: (slug) => ipcRenderer.send(MANAGE.dexOpen, slug),
+  dexOpen: (slug, gen) => ipcRenderer.send(MANAGE.dexOpen, slug, gen),
   onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
-  onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, () => cb()),
-  petOpen: (open) => ipcRenderer.send(MANAGE.petOpen, open),
+  onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, (_e, gen: number) => cb(gen)),
+  petOpen: (open, gen) => ipcRenderer.send(MANAGE.petOpen, open, gen),
   onPetStep: (cb) => ipcRenderer.on(MANAGE.petStep, (_e, delta: -1 | 1) => cb(delta)),
   onPetAct: (cb) => ipcRenderer.on(MANAGE.petAct, (_e, action: PetDeviceAction) => cb(action)),
-  onPetClosed: (cb) => ipcRenderer.on(MANAGE.petClosed, () => cb()),
+  onPetClosed: (cb) => ipcRenderer.on(MANAGE.petClosed, (_e, gen: number) => cb(gen)),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
@@ -151,6 +154,7 @@ const manage: ManageBridge = {
   notes: (action) => ipcRenderer.invoke(MANAGE.notes, action) as Promise<PatchNotesView | null>,
   mail: (req) => ipcRenderer.invoke(MANAGE.mail, req) as Promise<MailReply | null>,
   onMail: (cb) => ipcRenderer.on(MANAGE.mailView, (_e, screen: MailScreen) => cb(screen)),
+  onClock: (cb) => ipcRenderer.on(MANAGE.clock, (_e, tick: { now: number }) => cb(tick)), // 앱 전역 1초 시계 (src/main/clock.ts)
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);

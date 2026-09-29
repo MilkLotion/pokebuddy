@@ -6,6 +6,7 @@
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import type { SaveV3 } from "../shared/save-v3";
+import { currentItemId } from "../bag/mint.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number };
 
@@ -36,7 +37,9 @@ export function parseGifts(raw: unknown, opts?: DexOptions): Gift[] | null {
   const out: Gift[] = [];
   for (const g of raw) {
     if (!isObj(g)) return null;
-    if (g.kind === "item" && typeof g.id === "string" && giftItemName(g.id, opts) && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "item", id: g.id, count: g.count });
+    // 옛 민트 식별자(<성격>-mint)는 민트 한 종류로 바꿔 받는다 — 편지를 버리지 않는다 (2026-09-29 민트 통일)
+    const id = typeof g.id === "string" ? currentItemId(g.id) : null;
+    if (g.kind === "item" && id && giftItemName(id, opts) && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "item", id, count: g.count });
     else if (g.kind === "points" && intIn(g.count, MAIL_RULES.pointsMax)) out.push({ kind: "points", count: g.count });
     else return null;
   }

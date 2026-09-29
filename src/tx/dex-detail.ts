@@ -6,7 +6,8 @@
 //   랜덤알         해금한 종 가운데 랜덤알에서 나올 수 있는 종이 후보다 (src/shop/catalog.ts inRandomEgg)
 //   종 목록 알     data/eggs.json 의 종 목록 — 태고의돌(화석)과 단일 포켓몬 알(전설·준전설·환상·울트라비스트)
 //   진화           data/evo.json 을 거꾸로 — 앞 단계 종에서 진화한다
-//   상점 구매      data/unlocks.json 의 shop (해금한 종만 산다)
+//   상점 구매      알에서 얻을 수 있는 종 — 수집 난이도별 가격 (src/shop/catalog.ts speciesPrice). 해금한 종만 산다
+//   업적 보상      data/achievements.json 의 reward.pokemon — 메타몽·라프라스 (2026-09-29 사용자 결정)
 // 미해금 종은 이름·타입과 진화 줄을 숨긴다. 진화 줄은 다음 종 이름을 드러내기 때문이다.
 // 입수 방법은 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
 import { profile } from "../dex/species.js";
@@ -20,6 +21,7 @@ import type { DexDetail } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
 import { nameOfItem } from "./lists.js";
 import { josa } from "../shared/josa.js";
+import { defs as achievementDefs, rewardPokemon } from "../achievement/core.js";
 
 // 진화 한 단계의 문구 — "Lv.16에서 리자드", "불꽃의돌로 부스터", "밤에 친밀도 65로 블래키"
 // 조사는 앞 낱말 받침에 맞춘다 (src/shared/josa.ts)
@@ -70,10 +72,12 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (unlockRules(opts)[slug]?.starter) methods.push("첫 선택 후보");
   const prev = prevOf(slug, opts);
   if (prev) methods.push(`${petName(prev)}에서 진화`);
-  if (unlocked && inRandomEgg(slug, opts)) methods.push(eggName("random", opts) ?? "랜덤알");
+  const random = eggName("random", opts) ?? "랜덤알";
+  if (inRandomEgg(slug, opts)) methods.push(unlocked ? random : `${random}(해금 후)`);
   for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
   const price = speciesPrice(slug, opts);
   if (price != null) methods.push(unlocked ? `상점 구매 ${price}P` : `상점 구매 ${price}P(해금 후)`);
+  for (const [, def] of achievementDefs(opts)) if (rewardPokemon(def) === slug) methods.push(`업적 보상(${def.ko})`);
 
   const steps = nextOf(slug, opts);
   // 한 단계면 "Lv.16에서 리자드로 진화", 여러 갈래면 단계 문구만 잇는다
@@ -95,7 +99,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     typeIds: unlocked ? [...row.types] : [],
     shiny: save.dex.shinyObtained.includes(slug),
     owned: save.pets.filter((p) => p.species === slug).length,
-    methods: methods.length ? methods.join(" · ") : lockedEggOnly(slug, opts),
+    methods: methods.length ? methods.join(" · ") : NO_METHOD,
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종(899번부터)은 영어로 대신한다
@@ -104,12 +108,8 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   };
 }
 
-// 입수 경로가 하나도 없을 때 — 미해금이라 랜덤알 후보에서 빠진 종이면 해금 뒤 랜덤알로 나온다
-// 랜덤알 후보도 아닌 종은 경로가 없다
-function lockedEggOnly(slug: string, opts?: DexOptions): string {
-  if (inRandomEgg(slug, opts)) return `${eggName("random", opts) ?? "랜덤알"}(해금 후)`;
-  return "획득 방법 준비 중";
-}
+// 입수 경로가 하나도 없을 때 — 첫 선택·진화·알·상점 어디에도 없는 종
+const NO_METHOD = "획득 방법 준비 중";
 
 // 키·몸무게 — 공식 도감처럼 소수 한 자리. 미해금 종과 값이 없는 종은 빈 문자열
 function bodySize(t: DexText | undefined): { height: string; weight: string } {

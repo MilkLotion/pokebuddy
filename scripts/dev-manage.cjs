@@ -133,7 +133,7 @@ function seed(empty, now) {
     actions: { pat: 0, song: 2 },
   });
 
-  save.bag = { "premium-food": 3, toy: 2, "rare-candy": 1, "fire-stone": 1, "adamant-mint": 1, "serious-mint": 1 };
+  save.bag = { "premium-food": 3, toy: 2, "rare-candy": 1, "fire-stone": 1, mint: 2 };
 
   // 업적 — 하나는 받지 않은 보상으로 둔다. 헤더 점과 `보상 받기` 를 같이 본다
   save.achievements = { "show-two": { achievedAt: now, claimedAt: null } };

@@ -86,7 +86,6 @@ export interface BagItemView {
   name: string;
   count: number;
   evolution: boolean; // 진화용 도구 — 누르면 진화할 개체를 고른다
-  natures?: string[]; // 민트 — 바꿀 수 있는 성격 id. 성실민트는 보정 없는 성격 5개
   effect?: string; // 효과 종류 (src/bag/use.ts ItemEffect) — 가방 분류 칩과 사용 패널의 미리보기가 쓴다. 진화용 도구는 없다
   amount?: number; // 효과의 양 — 경험사탕은 경험치, 기본먹이는 만복도
 }
@@ -94,9 +93,7 @@ export interface BagItemView {
 // 성격 변경 창의 선택지 하나. 자료 순서다
 export interface NatureOption {
   id: string;
-  name: string; // 화면 이름
-  mint: string; // 그 성격으로 바꾸는 민트 id
-  mintName: string;
+  name: string; // 화면 이름. 어느 성격이든 민트(mint) 한 개로 바꾼다
 }
 
 export type ShopCategory = "egg" | "pokemon" | "tool" | "evolution" | "slot";
@@ -110,6 +107,7 @@ export interface ShopItemView {
   affordable: boolean; // 지금 포인트로 살 수 있다
   blocked?: string; // 살 수 없는 다른 이유 — 화면이 그대로 보여 준다
   room?: number; // 도구 — 가방에 더 담을 수 있는 개수 (최대 999 − 가진 개수). 구매 수량의 상한
+  dex?: number; // 포켓몬 — 전국도감 번호. 상점 격자의 번호 줄·검색·지방에 쓴다
 }
 
 export type DexState = "obtained" | "unlocked" | "locked";
@@ -241,11 +239,11 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
-export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" };
+export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" } | { to: "bag" } | { to: "shop" };
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
 // 설정 모달 바닥 왼쪽이 그린다 (src/main/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
@@ -403,13 +401,13 @@ export interface ManageBridge {
   portraits: (asks: PortraitAsk[]) => Promise<Record<string, string | null>>;
   icons: (keys: string[]) => Promise<Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
   art: () => Promise<Record<string, string>>; // 초상(slug · slug:shiny)과 도구·알(egg · item:<식별자>) 열쇠별 data URI
-  dexOpen: (slug: string | null) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다
+  dexOpen: (slug: string | null, gen?: number) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다
   onDexStep: (cb: (delta: -1 | 1) => void) => void; // 기기 창의 이전·다음
-  onDexClosed: (cb: () => void) => void; // 기기 창이 닫혔다
-  petOpen: (open: PetDeviceOpen | null) => void; // 파티 상세 기기 창에 이 개체를 띄운다. null 이면 닫는다
+  onDexClosed: (cb: (gen: number) => void) => void; // 기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts)
+  petOpen: (open: PetDeviceOpen | null, gen?: number) => void; // 파티 상세 기기 창에 이 개체를 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다
   onPetStep: (cb: (delta: -1 | 1) => void) => void; // 파티 상세 기기 창의 이전·다음
   onPetAct: (cb: (action: PetDeviceAction) => void) => void; // 파티 상세 기기 창에서 누른 단추 — 관리 창이 처리한다
-  onPetClosed: (cb: () => void) => void; // 파티 상세 기기 창이 닫혔다
+  onPetClosed: (cb: (gen: number) => void) => void; // 파티 상세 기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts)
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
@@ -419,6 +417,9 @@ export interface ManageBridge {
   update: (action: UpdateAction) => Promise<UpdateView | null>; // 업데이트가 연결되지 않았으면 null
   onUpdate: (cb: (view: UpdateView) => void) => void; // 버전·업데이트 상태가 바뀌었다
   notes: (action: "list" | "seen") => Promise<PatchNotesView | null>; // seen 은 안 본 노트를 띄웠다고 알린다
+  // 앱 전역 1초 시계 `manage:clock` — 메인이 1초마다 보낸다. 받을 때마다 스냅샷을 다시 읽는다 (2026-09-29 사용자 결정 "전역 타이머 1초").
+  // preload 가 아직 내주지 않으면 없다 — 관리 창이 임시로 자기 1초 타이머를 쓴다
+  onClock?: (cb: (tick: { now: number }) => void) => void;
 }
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
@@ -529,13 +530,13 @@ export interface ScreensBridge {
 }
 
 // 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/notify/banner.ts 가 만든다
-export type BannerKind = "hatch" | "evolve" | "achievement" | "notice"; // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts)
+export type BannerKind = "hatch" | "evolve" | "achievement" | "notice" | "find"; // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). find — 줍기, 대상 그림 없이 문구 두 줄 (src/find/core.ts)
 
 export interface BannerView {
   key: string;
   kind: BannerKind;
-  title: string; // 부화 준비 완료 · 진화 가능 · 업적 달성
-  target: string; // 돌보미집 알 N · <이름> Lv.N · 업적 이름
+  title: string; // 부화 준비 완료 · 진화 가능 · 업적 달성 · 줍기
+  target: string; // 돌보미집 알 N · <이름> Lv.N · 업적 이름 · <이름>이 <것>을 주웠어요
   go: string; // 바로가기
   route: ManageRoute;
   chime?: number; // 알림음 음량 0~1. 0 이면 소리를 내지 않는다 (src/state/settings.ts gainOf)

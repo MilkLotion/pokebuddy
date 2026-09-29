@@ -124,6 +124,8 @@ export const EGG_V3_RULES = {
 export const SHOP_V3_RULES = {
   evoItemPrice: 150, // 진화용 도구는 종류와 무관하게 같은 값이다
   slotPrices: [300, 600] as const, // 상점에서 여는 파티 칸 두 개. 첫 칸과 둘째 칸의 값이 다르다
+  // 종 지정 구매 — 수집 난이도(rank)별 가격. 알에서 얻을 수 있는 종만 판다 (2026-09-29 사용자 결정, src/shop/catalog.ts speciesPrice)
+  speciesPrices: { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 } as Readonly<Record<number, number>>,
   startPoints: 120, // 첫 선택을 마치면 한 번 지급한다
   bagMax: 999, // 도구 한 종류를 가방에 둘 수 있는 최대 개수 — 넘게는 살 수 없다 (2026-09-27 사용자 결정). 업적 보상 등 사지 않고 받는 것은 막지 않는다
 };

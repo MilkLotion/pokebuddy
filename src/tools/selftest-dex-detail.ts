@@ -28,7 +28,7 @@ function seed(): SaveV3 {
   assert.equal(d.name, "파이리");
   assert.equal(d.state, "obtained");
   assert.deepStrictEqual(d.types, ["불꽃"]);
-  assert.equal(d.methods, "첫 선택 후보 · 랜덤알", "첫 선택 후보이고 해금했으니 랜덤알에서도 나온다");
+  assert.equal(d.methods, "첫 선택 후보 · 랜덤알 · 상점 구매 200P", "첫 선택 후보이고 해금했으니 랜덤알에서 나오고 상점에서도 판다");
   assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
@@ -73,17 +73,18 @@ function seed(): SaveV3 {
   assert.equal(d.state, "locked");
   assert.equal(d.name, "???");
   assert.deepStrictEqual(d.types, []);
-  assert.equal(d.methods, "태고의돌", "해금 전이라 랜덤알은 붙지 않는다");
+  assert.equal(d.methods, "태고의돌 · 상점 구매 200P(해금 후)", "화석은 랜덤알이 붙지 않는다. 상점은 해금 뒤 판다");
   assert.equal(d.evolution, "???");
   process.stdout.write("(4) 미해금 · 태고의돌  ok\n");
 }
 
-// (4b) 해금한 화석 종도 랜덤알은 붙지 않는다 — 화석은 태고의돌로만 얻는다
+// (4b) 해금한 화석 종도 랜덤알은 붙지 않는다 — 화석은 태고의돌과 상점으로 얻는다 (2026-09-29 사용자 결정)
 {
   const s = seed();
-  s.dex.unlocked.push("omanyte");
-  assert.equal(dexDetail(s, "omanyte")?.methods, "태고의돌");
-  process.stdout.write("(4b) 해금한 화석 · 태고의돌만  ok\n");
+  s.dex.unlocked.push("omanyte", "aerodactyl");
+  assert.equal(dexDetail(s, "omanyte")?.methods, "태고의돌 · 상점 구매 200P");
+  assert.equal(dexDetail(s, "aerodactyl")?.methods, "태고의돌 · 상점 구매 400P", "3등급 400P");
+  process.stdout.write("(4b) 해금한 화석 · 태고의돌과 상점  ok\n");
 }
 
 // (5) 알 행동 조건은 없다 — 윈디는 가디에서 진화, 가디는 랜덤알 (2026-09-28 알 행동 조건 삭제)
@@ -99,7 +100,7 @@ function seed(): SaveV3 {
 }
 
 // (6) 전설 종 — 해금 규칙이 없어도 단일 포켓몬 알이 입수 방법이다 (2026-09-26 사용자 결정).
-// 경로가 없으면 미해금 랜덤알 후보는 "랜덤알(해금 후)", 그 밖은 "획득 방법 준비 중" 이다(src/tx/dex-detail.ts)
+// 미해금 랜덤알 후보는 "랜덤알(해금 후)", 경로가 없으면 "획득 방법 준비 중" 이다(src/tx/dex-detail.ts)
 {
   const d = dexDetail(seed(), "cosmog");
   assert.ok(d);
@@ -108,18 +109,21 @@ function seed(): SaveV3 {
   process.stdout.write("(6) 전설 종 · 랜덤전설알  ok\n");
 }
 
-// (6b) 미해금 랜덤알 후보 — 경로가 랜덤알뿐이면 "해금 후"를 붙여 보인다
+// (6b) 미해금 랜덤알 후보 — 랜덤알과 상점 줄에 "해금 후"를 붙여 보인다
 {
-  assert.equal(dexDetail(seed(), "abra")?.methods, "랜덤알(해금 후)");
+  assert.equal(dexDetail(seed(), "abra")?.methods, "랜덤알(해금 후) · 상점 구매 200P(해금 후)");
   process.stdout.write("(6b) 미해금 랜덤알 후보  ok\n");
 }
 
-// (7) 상점 종 — 해금 전에는 "해금 후"를 붙인다. 모르는 종은 null
+// (7) 잠만보는 먹고자 진화로만 얻는다 — 상점 줄이 없다 (2026-09-29 사용자 결정). 모르는 종은 null
 {
-  const d = dexDetail(seed(), "snorlax");
-  assert.ok(d?.methods.includes("상점 구매 800P(해금 후)"), d?.methods);
+  assert.equal(dexDetail(seed(), "snorlax")?.methods, "먹고자에서 진화");
+  assert.equal(dexDetail(seed(), "cosmog")?.methods.includes("상점"), false, "단일 포켓몬 알의 종은 팔지 않는다");
+  assert.equal(dexDetail(seed(), "lapras")?.methods, "업적 보상(함께 100시간 일하기)", "라프라스는 업적 보상 (2026-09-29 사용자 결정)");
+  assert.equal(dexDetail(seed(), "ditto")?.methods, "업적 보상(파티 세 마리 모으기)");
+  assert.equal(dexDetail(seed(), "chansey")?.methods, "핑복에서 진화", "럭키는 핑복 진화");
   assert.equal(dexDetail(seed(), "없는종"), null);
-  process.stdout.write("(7) 상점 종과 모르는 종  ok\n");
+  process.stdout.write("(7) 잠만보 · 진화만, 모르는 종  ok\n");
 }
 
 // (8) 타입 키와 초상 경로 — 배지 색은 타입 키로, 초상은 4자리 도감 번호 경로로 고른다

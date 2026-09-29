@@ -210,7 +210,8 @@ function seedPet(): SaveV3 {
     // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic)
     const block = `${file}.${process.pid}.tmp`;
     fs.mkdirSync(block);
-    assert.equal(game.tick(), null, "1번째 실패");
+    game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/main/game.ts)
+    assert.equal(game.saveFailing(), false, "한 번 실패로는 안내하지 않는다");
     assert.equal(game.send({ cmd: "shop.buy", target: "exp-candy-xs" }, "settings").reason, "save-failed", "2번째 실패");
     assert.equal(game.view()?.saveFailing, undefined, "두 번까지는 안내하지 않는다");
     game.tick();

@@ -5,11 +5,11 @@
 // 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { defs } from "../achievement/core.js";
+import { defs, rewardPokemon, type AchievementDef } from "../achievement/core.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
 import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
-import { itemOf, mintFor } from "../bag/use.js";
+import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { eggName, eggPalettes } from "../shop/catalog.js";
 import { zoneOf } from "../state/time.js";
@@ -24,6 +24,13 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 보상 종류 → 화면 문구. 종류가 하나뿐이라 표로 둔다
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
+
+// 업적 보상 문구 — 포켓몬 보상은 종 이름 (라프라스)
+const rewardWord = (def: AchievementDef): string => {
+  const species = rewardPokemon(def);
+  if (species) return petName(species);
+  return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
+};
 
 const sec = (ms: number): number => Math.round(ms / 1000);
 const min = (ms: number): number => Math.round(ms / 60_000);
@@ -142,11 +149,9 @@ export function snapshot(
   const bag: BagItemView[] = Object.entries(save.bag)
     .filter(([, n]) => n > 0)
     .map(([id, count]) => {
-      const natures = itemOf(id)?.natures;
       const item = itemOf(id);
       return {
         id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
-        ...(natures ? { natures: [...natures] } : {}),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
       };
     })
@@ -158,7 +163,7 @@ export function snapshot(
       id,
       name: def.ko,
       desc: def.desc ?? "",
-      reward: REWARD_WORD[def.reward] ?? def.reward,
+      reward: rewardWord(def),
       state: row?.claimedAt != null ? "claimed" : row?.achievedAt != null ? "achieved" : "locked",
     };
   });
@@ -207,10 +212,7 @@ function manageTutorial(save: SaveV3): string | null {
   return now && now.surface === "manage" ? now.id : null;
 }
 
-// 성격 변경 창의 선택지 — 성격마다 바꾸는 민트를 붙인다. 보정 없는 성격은 모두 성실민트다
+// 성격 변경 창의 선택지 — 원작 25 성격을 data/natures.json 순서로. 어느 성격이든 민트 한 개로 바꾼다 (2026-09-29 사용자 결정)
 function natureOptions(): NatureOption[] {
-  return natureTable().map((n) => {
-    const mint = mintFor(n.id) ?? "";
-    return { id: n.id, name: natureName(n.id), mint, mintName: itemOf(mint)?.ko ?? mint };
-  });
+  return natureTable().map((n) => ({ id: n.id, name: natureName(n.id) }));
 }

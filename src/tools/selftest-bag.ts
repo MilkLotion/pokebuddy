@@ -4,7 +4,7 @@
 // 곡선은 원작 경험치 타입 6종의 100레벨 누적값으로 맞춘다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { mintFor, use } from "../bag/use";
+import { use } from "../bag/use";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL, progressTo } from "../dex/growth";
 import { BAG_V3_RULES, SAVE_V3_RULES } from "../save/rules";
 import { empty, normalize } from "../save/v3";
@@ -157,36 +157,39 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(11) 최대 레벨 거절  ok\n");
 }
 
-// (12) 민트는 성격별이다 — 그 민트의 성격으로만 바꾼다. 같은 성격이면 거절하고 쓰지 않는다
+// (12) 민트는 한 종류다 — 원작 25 성격 가운데 아무 성격으로나 바꾼다. 지금 성격이면 거절하고 쓰지 않는다 (2026-09-29 사용자 결정)
 {
-  const s = seed({ nature: "hardy" }, { "adamant-mint": 1, "brave-mint": 1 });
-  assert.equal(use(s, "adamant-mint", "p1", { nature: "brave" }).reason, "bad-nature", "다른 성격으로는 못 바꾼다");
-  const res = use(s, "adamant-mint", "p1");
-  assert.equal(res.ok, true, "성격별 민트는 성격을 고르지 않아도 된다");
+  const s = seed({ nature: "hardy" }, { mint: 3 });
+  assert.equal(use(s, "mint", "p1").reason, "bad-nature", "성격을 골라야 한다");
+  assert.equal(use(s, "mint", "p1", { nature: "없는성격" }).reason, "bad-nature", "모르는 성격은 안 된다");
+  assert.equal(s.bag.mint, 3, "거절하면 쓰지 않는다");
+  const res = use(s, "mint", "p1", { nature: "adamant" });
+  assert.equal(res.ok, true);
+  assert.equal(res.nature, "adamant");
   assert.equal(s.pets[0]?.nature, "adamant");
-  assert.equal(s.bag["adamant-mint"], undefined, "1개를 썼다");
-  const again = seed({ nature: "brave" }, { "brave-mint": 1 });
-  assert.equal(use(again, "brave-mint", "p1").reason, "already");
-  assert.equal(again.bag["brave-mint"], 1, "거절하면 쓰지 않는다");
-  process.stdout.write("(12) 민트 · 성격별로 바꾼다  ok\n");
+  assert.equal(s.bag.mint, 2, "1개를 썼다");
+  assert.equal(use(s, "mint", "p1", { nature: "quirky" }).ok, true, "보정 없는 성격도 같은 민트로");
+  assert.equal(use(s, "mint", "p1", { nature: "quirky" }).reason, "already", "지금 성격으로는 못 바꾼다");
+  assert.equal(s.bag.mint, 1, "거절하면 쓰지 않는다");
+  process.stdout.write("(12) 민트 · 아무 성격으로, 같은 성격은 거절  ok\n");
 }
 
-// (12b) 성실민트는 보정 없는 성격 5개 중 하나를 고른다. 고르지 않으면 거절한다
+// (12b) 옛 민트 21종(<성격>-mint, 그 전의 mint-<성격>)은 저장을 읽을 때 민트 하나로 합친다. 합친 개수는 999 에서 자른다
 {
-  const s = seed({ nature: "adamant" }, { "serious-mint": 2 });
-  assert.equal(use(s, "serious-mint", "p1").reason, "bad-nature", "5개 중 고른 성격이 있어야 한다");
-  assert.equal(use(s, "serious-mint", "p1", { nature: "brave" }).reason, "bad-nature", "보정 있는 성격은 안 된다");
-  assert.equal(use(s, "serious-mint", "p1", { nature: "quirky" }).ok, true);
-  assert.equal(s.pets[0]?.nature, "quirky");
-  assert.equal(s.bag["serious-mint"], 1);
-  assert.equal(mintFor("docile"), "serious-mint", "보정 없는 성격은 성실민트");
-  assert.equal(mintFor("adamant"), "adamant-mint");
-  // 옛 저장의 민트 키(mint-adamant)는 읽을 때 공식 식별자로 옮긴다. 같은 민트가 둘 다 있으면 더한다
   const old = empty(0);
-  (old.bag as Record<string, number>)["mint-adamant"] = 2;
-  old.bag["adamant-mint"] = 1;
-  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(old)) as unknown, 0)?.bag, { "adamant-mint": 3 });
-  process.stdout.write("(12b) 성실민트 · 5개 중 고른다  ok\n");
+  const bag = old.bag as Record<string, number>;
+  bag["mint-adamant"] = 2;
+  bag["adamant-mint"] = 1;
+  bag["serious-mint"] = 4;
+  bag["exp-candy-s"] = 5;
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(old)) as unknown, 0)?.bag, { mint: 7, "exp-candy-s": 5 });
+  const many = empty(0);
+  (many.bag as Record<string, number>)["brave-mint"] = 700;
+  (many.bag as Record<string, number>)["calm-mint"] = 700;
+  many.bag["exp-candy-s"] = 1200;
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(many)) as unknown, 0)?.bag, { mint: 999, "exp-candy-s": 1200 }, "민트는 999 에서 자르고 다른 도구는 그대로");
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify({ ...empty(0), bag: { mint: 2 } })) as unknown, 0)?.bag, { mint: 2 }, "지금 민트는 그대로");
+  process.stdout.write("(12b) 옛 민트 합치기  ok\n");
 }
 
 // (13) 약 두 개는 이로치를 오간다. 도감 기록은 남는다
@@ -204,9 +207,10 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 
 // (14) 없는 도구와 없는 개체
 {
-  const s = seed({}, { "brave-mint": 1 });
+  const s = seed({}, { mint: 1 });
   assert.equal(use(s, "없는도구", "p1").reason, "no-item");
-  assert.equal(use(s, "brave-mint", "없는개체").reason, "no-pet");
+  assert.equal(use(s, "mint", "없는개체").reason, "no-pet");
+  assert.equal(use(s, "adamant-mint", "p1").reason, "no-item", "옛 민트 식별자는 도구가 아니다");
   assert.equal(use(s, "_comment", "p1").reason, "no-item", "메모 키는 도구가 아니다");
   process.stdout.write("(14) 없는 도구와 개체  ok\n");
 }

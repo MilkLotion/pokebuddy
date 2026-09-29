@@ -53,8 +53,8 @@ const DEBUFF: Record<string, { label: string; tone: "warning" | "danger"; note: 
   starving: { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" },
 };
 
+// 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
 const SHOP_TABS = [
-  { id: "all", label: "전체" },
   { id: "egg", label: "알" },
   { id: "pokemon", label: "포켓몬" },
   { id: "tool", label: "도구" },
@@ -148,7 +148,7 @@ type Dialog =
   | { kind: "pet"; petId: string }
   | { kind: "evolve"; petId: string; to?: string; itemId?: string } // 진화 확인 — to 는 고른 후보, itemId 는 가방의 돌로 왔을 때
   | { kind: "evo-target"; itemId: string } // 가방의 진화용 도구 — 진화할 개체를 고른다
-  | { kind: "nature"; petId: string; pick?: string; itemId?: string; listOpen?: boolean } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
+  | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
   | { kind: "buy"; productId: string; qty: number }
   | { kind: "pick-box"; slotIndex: number } // 칸이 정해졌고 넣을 박스 개체를 고른다
@@ -171,6 +171,7 @@ let detailPet: string | null = null; // 개체 상세 페이지에 띄운 개체
 let dexRows: DexEntry[] | null = null;
 // 도감에서 고른 칸 — 상세는 관리 창 옆 도감 기기 창이 보인다 (src/main/dex-window.ts)
 let dexPick: string | null = null;
+let dexGen = 0; // 도감 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다 (src/main/device-gen.ts)
 let agentRows: AgentRow[] | null = null;
 let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
 let boxPage = 0;
@@ -197,7 +198,16 @@ const BOX_NAME_MAX = 10; // src/box/slots.ts BOX_RULES.nameMax 와 같다
 const boxSortedBy = new Map<string, string>();
 // 다시 그린 뒤 되돌릴 검색 칸 — 입력 중에 화면을 새로 그려도 포커스와 커서가 남게
 let searchFocus: { key: string; caret: number } | null = null;
-let shopFilter = "all";
+let shopFilter = "egg";
+// 상점 포켓몬 격자 — 도감과 같은 지방·검색 (2026-09-29 사용자 결정 "도감처럼 격자 칸")
+let shopQuery = "";
+let shopRegion = "all";
+let shopRegionOpen = false;
+// 도감·상점 포켓몬 격자의 쪽 — 한 쪽에 GRID_PAGE 칸. 지방·검색·분류가 바뀌면 첫 쪽으로 (2026-09-29 사용자 결정 "페이지 넘김 추가")
+// 5열 × 3줄 — 기본 창 높이(682)에서 스크롤 없이 들어간다
+const GRID_PAGE = 15;
+let dexPageNo = 0;
+let shopPageNo = 0;
 let dexFilter = "all";
 // 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
 // 지방 폼은 도감 자료에 따로 없어 번호 구간만으로 나눈다. 폼 항목이 생기면 번호로만 판정하지 않는다(스펙)
@@ -246,8 +256,13 @@ const button = (cls: string, text?: string): HTMLButtonElement => {
 const point = (n: number): string => `${n.toLocaleString("ko-KR")}P`;
 
 // 값 막대 하나 — 이름, 현재/최대, 채움
-function meter(label: string, value: number, zone?: string): HTMLElement {
+// live — 시간으로만 바뀌는 값이면 그 개체와 필드. 1초 시계가 이 막대만 고친다 (applyLive)
+function meter(label: string, value: number, zone?: string, live?: { pet: string; field: "affinity" | "fullness" }): HTMLElement {
   const box = el("div", "meter");
+  if (live) {
+    box.dataset.livePet = live.pet;
+    box.dataset.liveField = live.field;
+  }
   const row = el("div", "row");
   row.append(el("span", undefined, label), el("span", undefined, `${value}/100`));
   const track = el("div", "track");
@@ -471,7 +486,7 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(tags);
 
   const meters = el("div", "meters");
-  meters.append(meter("친밀도", pet.affinity), meter("만복도", pet.fullness, pet.zone));
+  meters.append(meter("친밀도", pet.affinity, undefined, { pet: pet.id, field: "affinity" }), meter("만복도", pet.fullness, pet.zone, { pet: pet.id, field: "fullness" }));
   info.appendChild(meters);
 
   card.appendChild(info);
@@ -531,11 +546,15 @@ function drawParty(v: Snapshot): void {
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────
 
+const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`);
+
 function eggCard(egg: EggView): HTMLElement {
   const card = el("div", "egg");
   card.appendChild(eggIcon(egg.kind, "shell"));
   card.appendChild(el("div", undefined, egg.name));
-  card.appendChild(el("div", "note", egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`));
+  const note = el("div", "note", eggNote(egg));
+  note.dataset.liveEgg = egg.id; // 1초 시계가 이 글자만 고친다 (applyLive)
+  card.appendChild(note);
   if (egg.ready) {
     const row = el("div", "acts");
     const openEgg = button("primary", "열기");
@@ -586,9 +605,95 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
 }
 
 // ── 검색 ───────────────────────────────────────────────────────────────────────
-// 한글은 조합 중인 글자가 있다. 조합 중에는 다시 그리지 않고, 조합이 끝나면 그린다
+// 검색 칸은 입력 중에 결과를 바꾸지 않는다. Enter 나 `검색` 단추를 누를 때 그 값으로 한 번 거른다 (2026-09-29 사용자 결정)
+//   한글 조합을 확정하는 Enter(isComposing)는 검색하지 않는다 — 조합 확정에만 쓴다
+//   지우기(×)로 칸을 비우면 바로 전체로 돌린다 — 빈 칸은 걸러 볼 것이 없다
+// 입력 중인 글자는 초안(searchDraft)으로 들고 있다 — 검색 전에 다른 일로 다시 그려도 사라지지 않는다.
+// 검색 칸에 입력하는 동안 들어온 다시 그리기는 미뤘다가 칸을 떠날 때 그린다 — 칸을 갈아 끼우면 한글 조합이 끊긴다
+// (2026-09-29 사용자 "어래곤 검색했는데 … 어곤 이렇게 래 씹힌다")
+const searchDraft = new Map<string, string>();
+let searchSubmitting = false; // 검색을 누른 그 다시 그리기는 미루지 않는다
+let bodyHeld = false; // 입력 중이라 미룬 본문 다시 그리기
+let dialogHeld = false; // 입력 중이라 미룬 대화상자 다시 그리기
 
-function searchBox(key: string, value: string, placeholder: string, onChange: (q: string) => void): HTMLInputElement {
+// 지금 이 영역의 검색 칸(또는 박스 이름 칸)에 입력하고 있는가 — 창이 앞에 있을 때만. 뒤에 있으면(배너 바로가기 등) 미루지 않는다
+function typingSearch(root: HTMLElement): boolean {
+  if (searchSubmitting || !document.hasFocus()) return false;
+  const a = document.activeElement;
+  // 검색 칸과 박스 이름 입력칸 — 둘 다 한글을 친다. 계정·교환 입력칸(liveInput)은 다시 그려도 커서를 되돌린다
+  return a instanceof HTMLInputElement && (a.dataset.search != null || a.classList.contains("box-name-input")) && root.contains(a);
+}
+
+// 검색 칸을 떠났다 — 미룬 다시 그리기를 한다. 누른 단추의 click 이 먼저 돌게 한 틱 미룬다
+function releaseHeld(): void {
+  setTimeout(() => {
+    if (bodyHeld) {
+      bodyHeld = false;
+      draw();
+    }
+    if (dialogHeld) {
+      dialogHeld = false;
+      drawDialog();
+    }
+  }, 0);
+}
+
+function searchBox(key: string, value: string, placeholder: string, onSearch: (q: string) => void): HTMLElement {
+  const box = el("span", "search-field");
+  const input = document.createElement("input");
+  input.type = "search";
+  input.className = "search";
+  input.id = `search-${key}`;
+  input.dataset.search = key;
+  input.placeholder = placeholder;
+  input.value = searchDraft.get(key) ?? value;
+  input.setAttribute("aria-label", placeholder);
+  const go = button("search-go", "검색");
+  go.setAttribute("aria-label", `${placeholder} 실행`);
+  const submit = (): void => {
+    if (!input.isConnected) return;
+    searchDraft.delete(key);
+    // 다시 그리면 옛 칸이 빠지며 blur 가 먼저 온다(Chromium) — 기억은 그린 뒤에 넣고 되돌린다
+    const saved = document.activeElement === input ? { key, caret: input.selectionStart ?? input.value.length } : null;
+    searchSubmitting = true;
+    try {
+      onSearch(input.value);
+    } finally {
+      searchSubmitting = false;
+    }
+    searchFocus = saved;
+    restoreSearchFocus();
+  };
+  input.addEventListener("input", () => searchDraft.set(key, input.value));
+  // 조합 중 Enter 는 검색을 예약만 한다 — 칸을 갈아 끼우면 조합이 끊긴다. 확정(compositionend) 직후 그 값으로 한 번 거른다.
+  // 그래서 사용자는 Enter 를 한 번만 누른다 (2026-09-29 검수 반영)
+  let pending = false;
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (e.isComposing || e.keyCode === 229) pending = true; // 229 — 조합 중 키 (IME)
+    else submit();
+  });
+  input.addEventListener("compositionend", () => {
+    if (!pending) return;
+    pending = false;
+    setTimeout(submit, 0); // 확정한 글자가 값에 들어간 뒤
+  });
+  // type="search" 의 지우기(×) — 빈 칸이 되면 search 이벤트가 온다. Enter 도 이 이벤트를 내지만 위에서 이미 처리했다
+  input.addEventListener("search", () => {
+    if (input.value === "") submit();
+  });
+  go.addEventListener("click", submit);
+  input.addEventListener("blur", () => {
+    if (searchFocus?.key === key) searchFocus = null;
+    releaseHeld();
+  });
+  box.append(input, go);
+  return box;
+}
+
+// 글자를 칠 때마다 값을 넘기는 입력 칸 — 계정·교환 링크. 다시 그리기는 하지 않는다. 포커스 복원은 searchFocus 를 쓴다
+function liveInput(key: string, value: string, placeholder: string, onChange: (q: string) => void): HTMLInputElement {
   const input = document.createElement("input");
   input.type = "search";
   input.className = "search";
@@ -716,12 +821,14 @@ function showFormTip(cell: HTMLElement, pet: PetView, status?: string): void {
 
 // 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
 // 숫자로 끝나면 한국어로 읽은 소리 기준 (0·1·3·6·7·8 받침 있음, 1·7·8 은 ㄹ 받침)
+// 라틴 글자로 끝나면 이름을 읽은 소리 기준 (L·R 은 ㄹ 받침 — 엘·알, M·N 은 받침 있음 — 엠·엔)
 type JosaPair = "은/는" | "이/가" | "을/를" | "으로/로" | "과/와";
 function josa(word: string, pair: JosaPair): string {
   const [withBatchim, without] = pair.split("/") as [string, string];
   const last = word.trim().slice(-1);
   let b: "none" | "rieul" | "other" = "none";
   if (/[0-9]/.test(last)) b = "178".includes(last) ? "rieul" : "036".includes(last) ? "other" : "none";
+  else if (/[a-z]/i.test(last)) b = "lr".includes(last.toLowerCase()) ? "rieul" : "mn".includes(last.toLowerCase()) ? "other" : "none";
   else {
     const code = last.charCodeAt(0) - 0xac00;
     if (code >= 0 && code <= 11171 && code % 28 !== 0) b = code % 28 === 8 ? "rieul" : "other";
@@ -836,6 +943,7 @@ function drawBox(v: Snapshot): void {
       // 결과를 누르면 그 개체가 있는 박스로 간다
       const cell = boxCell(pet, () => {
         boxQuery = "";
+        searchDraft.delete("box");
         searchFocus = null;
         boxPage = bi;
         boxMarked = pet.id;
@@ -1050,9 +1158,10 @@ document.addEventListener("click", () => {
     settingSelectOpen = null;
     drawDialog();
   }
-  if (!boxSortOpen && !dexRegionOpen) return;
+  if (!boxSortOpen && !dexRegionOpen && !shopRegionOpen) return;
   boxSortOpen = false;
   dexRegionOpen = false;
+  shopRegionOpen = false;
   draw();
 });
 
@@ -1079,7 +1188,7 @@ function markDexPick(): void {
 function pickDex(slug: string): void {
   if (coachId === "dex") void send("tutorial.done", "dex", { steps: 1 }); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
-  window.pokebuddyManage.dexOpen(dexPick);
+  window.pokebuddyManage.dexOpen(dexPick, dexGen);
   markDexPick();
 }
 
@@ -1092,29 +1201,57 @@ function dexShown(): DexEntry[] {
   return dexRows.filter((r) => inRegion(r.dex) && (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
 }
 
-// 지방 고르기 — 박스 정렬과 같은 모양의 목록. 바깥을 누르면 닫힌다
-function dexRegionEl(): HTMLElement {
+const dexRegionEl = (): HTMLElement =>
+  regionEl(dexRegion, dexRegionOpen, (open) => (dexRegionOpen = open), (id) => {
+    dexRegion = id;
+    dexPageNo = 0;
+  });
+
+// 격자 넘김 줄 — 박스 넘김 줄(.pager)과 같은 ◀ ▶. 가운데에 `쪽 / 전체`
+function gridPager(page: number, pages: number, go: (page: number) => void): HTMLElement {
+  const pager = el("div", "pager grid-pager");
+  const prev = button("", "◀");
+  prev.setAttribute("aria-label", "이전 쪽");
+  prev.disabled = page <= 0;
+  prev.addEventListener("click", () => go(page - 1));
+  const next = button("", "▶");
+  next.setAttribute("aria-label", "다음 쪽");
+  next.disabled = page >= pages - 1;
+  next.addEventListener("click", () => go(page + 1));
+  pager.append(prev, el("span", "used", `${page + 1} / ${pages}`), next);
+  return pager;
+}
+
+// 한 쪽 — 쪽 번호를 범위 안으로 맞춘 뒤 그 쪽의 칸과 쪽 수를 돌려준다
+function pageOf<T>(rows: T[], page: number): { page: number; pages: number; items: T[] } {
+  const pages = Math.max(1, Math.ceil(rows.length / GRID_PAGE));
+  const at = Math.max(0, Math.min(pages - 1, page));
+  return { page: at, pages, items: rows.slice(at * GRID_PAGE, (at + 1) * GRID_PAGE) };
+}
+
+// 지방 고르기 — 박스 정렬과 같은 모양의 목록. 바깥을 누르면 닫힌다. 도감과 상점 포켓몬 격자가 함께 쓴다
+function regionEl(value: string, open: boolean, setOpen: (open: boolean) => void, pick: (id: string) => void): HTMLElement {
   const wrap = el("div", "box-sort left");
-  const current = DEX_REGIONS.find((r) => r.id === dexRegion) ?? DEX_REGIONS[0];
+  const current = DEX_REGIONS.find((r) => r.id === value) ?? DEX_REGIONS[0];
   const toggle = button("sort-toggle", `지방: ${current?.label ?? "전체"} ▾`);
-  toggle.setAttribute("aria-expanded", String(dexRegionOpen));
+  toggle.setAttribute("aria-expanded", String(open));
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
-    dexRegionOpen = !dexRegionOpen;
+    setOpen(!open);
     draw();
   });
   wrap.appendChild(toggle);
-  if (dexRegionOpen) {
+  if (open) {
     const menu = el("div", "sort-menu");
     menu.setAttribute("role", "menu");
     for (const r of DEX_REGIONS) {
-      const item = button(r.id === dexRegion ? "sort-item on" : "sort-item", r.label);
+      const item = button(r.id === value ? "sort-item on" : "sort-item", r.label);
       item.setAttribute("role", "menuitemradio");
-      item.setAttribute("aria-checked", String(r.id === dexRegion));
+      item.setAttribute("aria-checked", String(r.id === value));
       item.addEventListener("click", (e) => {
         e.stopPropagation();
-        dexRegion = r.id;
-        dexRegionOpen = false;
+        pick(r.id);
+        setOpen(false);
         draw();
       });
       menu.appendChild(item);
@@ -1131,9 +1268,14 @@ function stepDex(delta: -1 | 1): void {
   const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
   if (!next || next.slug === dexPick) return;
   dexPick = next.slug;
-  window.pokebuddyManage.dexOpen(dexPick);
+  window.pokebuddyManage.dexOpen(dexPick, dexGen);
+  // 다음 종이 다른 쪽이면 그 쪽으로 넘긴다
+  const page = Math.floor(rows.indexOf(next) / GRID_PAGE);
+  if (page !== dexPageNo && tab === "dex") {
+    dexPageNo = page;
+    draw();
+  }
   markDexPick();
-  bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(dexPick)}"]`)?.scrollIntoView({ block: "nearest" });
 }
 
 function drawDex(v: Snapshot): void {
@@ -1144,6 +1286,7 @@ function drawDex(v: Snapshot): void {
   bar.appendChild(
     searchBox("dex", dexQuery, "이름 또는 번호 검색", (q) => {
       dexQuery = q;
+      dexPageNo = 0;
       draw();
     }),
   );
@@ -1151,6 +1294,7 @@ function drawDex(v: Snapshot): void {
   bodyEl.appendChild(
     chips(DEX_TABS, dexFilter, (id) => {
       dexFilter = id;
+      dexPageNo = 0;
       draw();
     }),
   );
@@ -1164,17 +1308,26 @@ function drawDex(v: Snapshot): void {
     bodyEl.appendChild(el("div", "empty-note", q ? "검색 결과 없음" : "해당하는 종이 없습니다."));
     return;
   }
-  // 전부 그린다(2026-09-25 사용자 요청). 화면 밖 칸은 CSS content-visibility 로 그리기를 미루고, 초상은 보이는 칸만 받는다
+  // 한 쪽씩 — 2026-09-29 사용자 결정 "페이지 넘김 추가"로 전부 그리기(2026-09-25)를 바꿨다
+  const shown = pageOf(rows, dexPageNo);
+  dexPageNo = shown.page;
+  bodyEl.appendChild(
+    gridPager(shown.page, shown.pages, (page) => {
+      dexPageNo = page;
+      draw();
+    }),
+  );
   const grid = el("div", "dex-grid");
-  for (const row of rows) grid.appendChild(dexCell(row));
+  for (const row of shown.items) grid.appendChild(dexCell(row));
   bodyEl.appendChild(grid);
 }
 
 // ── 상점 ───────────────────────────────────────────────────────────────────────
 
 // 상점 줄의 그림 — 포켓몬 상품은 초상, 랜덤알은 알, 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸
+// 포켓몬 상품은 보통 격자 칸(shopCell)으로 그린다. 줄로 그릴 때도 초상은 보이는 것만 청한다(lazy)
 function shopThumb(item: ShopItemView): HTMLElement {
-  if (item.category === "pokemon") return portraitOf(item.id, false, "thumb round");
+  if (item.category === "pokemon") return portraitOf(item.id, false, "thumb round", "", true);
   if (item.category === "egg") return eggIcon(item.id, "thumb");
   if (item.category === "slot") return iconOf(null, "thumb");
   return iconOf(`item:${item.id}`, "thumb");
@@ -1195,19 +1348,88 @@ function shopRow(item: ShopItemView): HTMLElement {
   return card;
 }
 
+// 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 구매 창이 열린다. 살 수 없는 이유는 가격 아래 한 줄로
+function shopCell(item: ShopItemView): HTMLElement {
+  const cell = button("dex-cell shop-cell");
+  cell.dataset.slug = item.id;
+  cell.append(el("div", "no", item.dex ? `#${String(item.dex).padStart(4, "0")}` : ""), portraitOf(item.id, false, "dot", "", true));
+  cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
+  if (item.blocked) cell.appendChild(el("div", "no", item.blocked));
+  cell.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
+  return cell;
+}
+
+// 포켓몬 상품 — 도감과 같은 지방·검색. 번호로 찾거나 이름으로 찾는다
+function shopPokemonShown(items: ShopItemView[]): ShopItemView[] {
+  const q = normQuery(shopQuery);
+  const region = DEX_REGIONS.find((r) => r.id === shopRegion) ?? DEX_REGIONS[0];
+  return items.filter((i) => {
+    const dex = i.dex ?? 0;
+    if (region && (dex < region.from || dex > region.to)) return false;
+    if (!q) return true;
+    return /^\d+$/.test(q) ? String(dex).startsWith(String(Number(q))) : matchesName(i.name, q);
+  });
+}
+
+function shopGrid(items: ShopItemView[]): HTMLElement {
+  const grid = el("div", "dex-grid");
+  for (const item of items) grid.appendChild(shopCell(item));
+  return grid;
+}
+
 function drawShop(v: Snapshot): void {
   bodyEl.appendChild(head("상점"));
   bodyEl.appendChild(
     chips(SHOP_TABS, shopFilter, (id) => {
       shopFilter = id;
+      shopPageNo = 0;
       draw();
     }),
   );
-  const rows = v.shop.filter((i) => shopFilter === "all" || i.category === shopFilter);
+  if (!SHOP_TABS.some((t) => t.id === shopFilter)) shopFilter = SHOP_TABS[0]?.id ?? "egg"; // 모르는 분류(옛 `all` 등)는 첫 탭으로
+  // 상점 튜토리얼은 알 탭의 랜덤알 카드(data-tut="shop")를 가리킨다 — 그동안은 알 탭을 연다. 코치마크가 막아 다른 칩은 누를 수 없다
+  if (v.tutorial === "shop") shopFilter = "egg";
+  const rows = v.shop.filter((i) => i.category === shopFilter);
   if (!rows.length) {
-    bodyEl.appendChild(el("div", "empty-note", "파는 것이 없습니다."));
+    bodyEl.appendChild(el("div", "empty-note", shopFilter === "pokemon" ? "아직 파는 포켓몬이 없습니다." : "파는 것이 없습니다."));
     return;
   }
+
+  // 포켓몬 탭 — 도감 같은 격자. 지방·검색으로 좁힌다
+  if (shopFilter === "pokemon") {
+    const bar = el("div", "search-row");
+    bar.appendChild(
+      regionEl(shopRegion, shopRegionOpen, (open) => (shopRegionOpen = open), (id) => {
+        shopRegion = id;
+        shopPageNo = 0;
+      }),
+    );
+    bar.appendChild(
+      searchBox("shop", shopQuery, "이름 또는 번호 검색", (q) => {
+        shopQuery = q;
+        shopPageNo = 0;
+        draw();
+      }),
+    );
+    bodyEl.appendChild(bar);
+    const found = shopPokemonShown(rows);
+    if (!found.length) {
+      bodyEl.appendChild(el("div", "empty-note", normQuery(shopQuery) ? "검색 결과 없음" : "해당하는 포켓몬이 없습니다."));
+      return;
+    }
+    const shown = pageOf(found, shopPageNo);
+    shopPageNo = shown.page;
+    bodyEl.appendChild(
+      gridPager(shown.page, shown.pages, (page) => {
+        shopPageNo = page;
+        draw();
+      }),
+    );
+    bodyEl.appendChild(shopGrid(shown.items));
+    return;
+  }
+
+  // 그 밖의 탭 — 상품 줄
   const list = el("div", "rows");
   for (const item of rows) list.appendChild(shopRow(item));
   bodyEl.appendChild(list);
@@ -1235,7 +1457,7 @@ let bagQty = 1;
 
 function bagCategory(item: BagItemView): string {
   if (item.evolution) return "evolution";
-  if (item.natures) return "mint";
+  if (item.effect === "nature") return "mint";
   if (item.effect === "exp" || item.effect === "level") return "candy";
   if (item.effect === "fullness" || item.effect === "fullness-full-buff") return "food";
   if (item.effect === "play-buff") return "toy";
@@ -1251,7 +1473,7 @@ function bagCard(item: BagItemView): HTMLElement {
   card.append(iconOf(`item:${item.id}`, "thumb"), info);
   card.addEventListener("click", () => {
     if (item.evolution) return open({ kind: "evo-target", itemId: item.id });
-    if (item.natures) return open({ kind: "nature-target", itemId: item.id });
+    if (item.effect === "nature") return open({ kind: "nature-target", itemId: item.id });
     bagPick = bagPick === item.id ? null : item.id;
     bagQty = 1;
     notice = "";
@@ -1637,7 +1859,7 @@ function drawTradeStart(t: TradeScreen): void {
   const join = el("div", "trade-card");
   join.appendChild(tradeCardHead("링크로 참가"));
   const acts = el("div", "trade-acts");
-  const input = searchBox("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
+  const input = liveInput("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
     tradeInput = q;
   });
   input.type = "text";
@@ -1796,7 +2018,7 @@ window.pokebuddyManage.onTrade((screen) => {
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────
 // Figma 05 Screens `633:19206`(로그인)·`633:19302`(가입)·`633:19425`(로그인 뒤)·`633:19529`(저장 필요)·`633:19631`(삭제 확인)·
 // `633:19744`(막힘)·`633:19841`(밀려남 배너)·`633:19895`(로그아웃 확인)·`633:20029`(로그인 때 고르기). 헤더 저장 표시는 C-27.
-// 값은 메인이 준다(src/main/online.ts). 입력한 글자는 여기 들고 있다 — 5초마다 다시 그려도 사라지지 않게
+// 값은 메인이 준다(src/main/online.ts). 입력한 글자는 여기 들고 있다 — 1초 시계로 다시 그려도 사라지지 않게
 
 let acct: AccountScreen | null = null;
 let acctLoading = false;
@@ -1892,9 +2114,9 @@ async function acctSend(req: AccountAction): Promise<AccountReply | null> {
   return reply;
 }
 
-// 입력칸 — searchBox 의 포커스 복원을 쓴다. 다시 그려도 커서가 그대로다
+// 입력칸 — liveInput 의 포커스 복원을 쓴다. 다시 그려도 커서가 그대로다
 function acctInput(key: string, value: string, placeholder: string, type: "text" | "password", onChange: (v: string) => void): HTMLInputElement {
-  const input = searchBox(key, value, placeholder, onChange);
+  const input = liveInput(key, value, placeholder, onChange);
   input.type = type;
   input.classList.add("acct-input");
   input.autocomplete = "off";
@@ -2423,6 +2645,17 @@ function drawTabs(): void {
 }
 
 function draw(): void {
+  if (typingSearch(bodyEl)) {
+    bodyHeld = true; // 검색 칸을 떠나면 그린다 (releaseHeld)
+    return;
+  }
+  bodyHeld = false;
+  const kept = focusPath();
+  drawBody();
+  restoreFocusPath(kept);
+}
+
+function drawBody(): void {
   drawTabs();
   bodyEl.replaceChildren();
   if (!view) {
@@ -2912,7 +3145,9 @@ const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots
 // 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
 
 let petDeviceOpen = false;
-let petDeviceSent = ""; // 마지막으로 보낸 내용 — 같으면 다시 보내지 않는다(5초 새로 읽기마다 기기 창을 다시 그리지 않게)
+// 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다. 닫힘을 알기 전에 보낸 요청은 메인이 버린다 (src/main/device-gen.ts)
+let petGen = 0;
+let petDeviceSent = ""; // 마지막으로 보낸 내용 — 같으면 다시 보내지 않는다(1초 새로 읽기마다 기기 창을 다시 그리지 않게)
 
 function syncPetDevice(): void {
   const pet = detailPet ? petOf(detailPet) : null;
@@ -2929,7 +3164,7 @@ function syncPetDevice(): void {
   const open = { pet, where, inParty, slotIndex: slot, emptySlot: inParty ? null : emptySlot(), sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial };
   const key = JSON.stringify(open);
   if (petDeviceOpen && key === petDeviceSent) return;
-  window.pokebuddyManage.petOpen(open);
+  window.pokebuddyManage.petOpen(open, petGen);
   petDeviceOpen = true;
   petDeviceSent = key;
 }
@@ -3052,89 +3287,79 @@ function drawEvoTarget(itemId: string): void {
 }
 
 // ── 모달 · 성격 변경 ───────────────────────────────────────────────────────────
-// 왼쪽은 지금, 오른쪽은 바꾼 후다. 오른쪽에서 성격을 고르면 필요한 민트가 가운데에 보인다 (Figma Detail / Nature Change).
-// 보정 없는 성격은 모두 성실민트다. 가방의 민트로 왔으면 그 민트가 바꿀 수 있는 성격만 고른다.
+// 왼쪽은 지금, 오른쪽은 바꾼 후다. 가운데에 민트 그림을 둔다 (Figma Detail / Nature Change).
+// 민트는 한 종류다. 원작 25 성격 가운데 아무 성격이나 고른다. 지금 성격은 고를 수 없다 (2026-09-29 사용자 결정).
+// 성격은 원작 성격표처럼 5×5 격자로 한 번에 보인다 — 스크롤 목록을 두지 않는다. 순서는 data/natures.json(원작 성격 번호 순)이다.
 // `취소` 는 아무것도 바꾸지 않는다
+const MINT = "mint";
 
-function drawNature(petId: string, pick: string | undefined, itemId: string | undefined, listOpen: boolean): void {
+function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
   const pet = petOf(petId);
   if (!pet || !view) {
     close();
     return;
   }
-  const item = itemId ? view.bag.find((b) => b.id === itemId) : undefined;
-  const options = view.natures.filter((n) => !item?.natures || item.natures.includes(n.id));
-  // 민트 하나로 성격이 정해지면 고른 채로 연다
-  const only = options.length === 1 ? options[0] : undefined;
-  const chosen = pick ?? (only && only.id !== pet.natureId ? only.id : undefined);
-  const picked = options.find((n) => n.id === chosen && n.id !== pet.natureId);
+  const picked = view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
   const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "nature-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
   const slot = slotOfPet(petId);
   dialogEl.append(...dialogHead("성격을 바꿀까요?", `${pet.name} Lv.${pet.level} · ${slot != null ? `파티 ${slot + 1}번` : "박스"}`, back));
-  const redraw = (next: { pick?: string; listOpen?: boolean }): void => open({ kind: "nature", petId, ...(itemId ? { itemId } : {}), ...(chosen ? { pick: chosen } : {}), listOpen: false, ...next });
+  const redraw = (next: string): void => open({ kind: "nature", petId, ...(itemId ? { itemId } : {}), pick: next });
 
   const before = el("div", "nat-card");
   before.append(portraitOf(pet.species, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", "note", pet.nature), el("div", "note", "지금"));
 
   const mid = el("div", "mint-mid");
-  mid.append(el("div", undefined, picked ? picked.mintName : "민트"), el("div", undefined, "→"));
+  mid.append(iconOf(`item:${MINT}`, "thumb"), el("div", undefined, "→"));
 
-  const select = el("div", "select");
-  const trigger = button("select-btn");
-  trigger.append(el("span", undefined, picked ? picked.name : "성격 고르기"), el("span", "chev", listOpen ? "▴" : "▾"));
-  trigger.setAttribute("aria-expanded", String(listOpen));
-  trigger.addEventListener("click", () => redraw({ listOpen: !listOpen }));
-  select.appendChild(trigger);
-  if (listOpen) {
-    const list = el("div", "select-list");
-    for (const n of options) {
-      const opt = button("select-opt");
-      const current = n.id === pet.natureId;
-      opt.append(el("span", undefined, n.name), el("span", "hint", current ? "지금" : n.mintName));
-      opt.disabled = current;
-      opt.setAttribute("aria-pressed", String(n.id === picked?.id));
-      opt.addEventListener("click", () => redraw({ pick: n.id }));
-      list.appendChild(opt);
-    }
-    select.appendChild(list);
-  }
   const after = el("div", "nat-card");
-  after.append(portraitOf(pet.species, pet.shiny, "portrait"), el("div", "name", pet.name), select, el("div", "note", "바꾼 후"));
+  after.append(portraitOf(pet.species, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", picked ? "note picked" : "note", picked ? picked.name : "성격 고르기"), el("div", "note", "바꾼 후"));
 
   const row = el("div", "compare");
   row.append(before, mid, after);
   dialogEl.appendChild(row);
 
-  const have = picked ? (view.bag.find((b) => b.id === picked.mint)?.count ?? 0) : 0;
-  if (picked) {
-    const info = el("div", "info-box");
-    if (have > 0) info.append(el("div", undefined, `${picked.mintName} 1개를 씁니다`), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
-    else {
-      const price = view.shop.find((p) => p.id === picked.mint)?.price;
-      info.append(el("div", undefined, `${picked.mintName}가 없어요`), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
-    }
-    dialogEl.appendChild(info);
+  // 성격표 — 5×5. 지금 성격 칸은 눌리지 않고 `지금` 을 붙인다. 고른 칸은 톤 배경
+  const grid = el("div", "nature-grid");
+  grid.setAttribute("role", "group");
+  grid.setAttribute("aria-label", "바꿀 성격");
+  for (const n of view.natures) {
+    const cell = button("nature-cell");
+    const current = n.id === pet.natureId;
+    cell.appendChild(el("span", undefined, n.name));
+    if (current) cell.appendChild(el("span", "hint", "지금")); // 빈 줄을 두지 않는다 — 이름이 칸 가운데에 온다
+    cell.disabled = current;
+    cell.setAttribute("aria-pressed", String(n.id === picked?.id));
+    cell.addEventListener("click", () => redraw(n.id));
+    grid.appendChild(cell);
   }
+  dialogEl.appendChild(grid);
+
+  const have = view.bag.find((b) => b.id === MINT)?.count ?? 0;
+  // 안내 상자 자리는 고르기 전에도 잡아 둔다(보이지 않게) — 고를 때 창 높이가 늘어 위로 튀지 않게
+  const info = el("div", picked ? "info-box" : "info-box reserve");
+  if (!picked) info.setAttribute("aria-hidden", "true");
+  if (have > 0 || !picked) info.append(el("div", undefined, "민트 1개를 씁니다"), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
+  else {
+    const price = view.shop.find((p) => p.id === MINT)?.price;
+    info.append(el("div", undefined, "민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
+  }
+  dialogEl.appendChild(info);
 
   const change = actionButton("바꾸기", true, !picked || have === 0, () => {
     if (!picked) return;
-    void send("bag.use", picked.mint, { petId, nature: picked.id }).then((ok) => {
+    void send("bag.use", MINT, { petId, nature: picked.id }).then((ok) => {
       if (ok) open({ kind: "pet", petId });
     });
   });
   dialogEl.appendChild(actions(change, actionButton("취소", false, false, () => open(back.to))));
 }
 
-// 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 이미 그 성격이면 고를 수 없다
+// 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 성격은 다음 창에서 고른다
 function drawNatureTarget(itemId: string): void {
   const item = view?.bag.find((b) => b.id === itemId);
-  const allowed = item?.natures ?? [];
   const pets = [...partyPets(), ...boxPets()];
   dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
-  const acts = pets.map((p) => {
-    const same = allowed.length === 1 && allowed[0] === p.natureId;
-    return actionButton(`${p.name} (${p.nature})`, false, same, () => open({ kind: "nature", petId: p.id, itemId }));
-  });
+  const acts = pets.map((p) => actionButton(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
   dialogEl.appendChild(actions(...acts, closeButton()));
 }
 
@@ -3810,11 +4035,16 @@ function setScrim(on: boolean): void {
 }
 
 // 다시 그린 대화상자의 스크롤 — 같은 대화상자·같은 탭이면 스크롤 위치를 되돌린다.
-// 버튼을 누르거나 5초 새로 그리기 때 대화상자를 통째로 다시 만들어 맨 위로 튀던 것을 막는다 (2026-09-27 사용자 "설정에서 스크롤 내리고, 버튼 누르면 스크롤이 올라가짐")
+// 버튼을 누르거나 1초 새로 그리기 때 대화상자를 통째로 다시 만들어 맨 위로 튀던 것을 막는다 (2026-09-27 사용자 "설정에서 스크롤 내리고, 버튼 누르면 스크롤이 올라가짐")
 let dialogScrollKey = "";
 const dialogKeyOf = (d: Dialog): string => `${d.kind}:${"tab" in d ? String(d.tab) : ""}`;
 
 function drawDialog(): void {
+  if (dialog && typingSearch(dialogEl)) {
+    dialogHeld = true;
+    return;
+  }
+  dialogHeld = false;
   if (!dialog) {
     setScrim(false);
     dialogScrollKey = "";
@@ -3830,7 +4060,7 @@ function drawDialog(): void {
 
   if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to, dialog.itemId);
   else if (dialog.kind === "evo-target") drawEvoTarget(dialog.itemId);
-  else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId, dialog.listOpen === true);
+  else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
   else if (dialog.kind === "buy") drawBuy(dialog.productId, dialog.qty);
   else if (dialog.kind === "pick-box") drawPickBox(dialog.slotIndex);
@@ -4037,7 +4267,7 @@ async function agent(name: string, action: "connect" | "disconnect" | "check"): 
 
 async function loadDex(): Promise<void> {
   dexRows = await window.pokebuddyManage.dex();
-  if (dexPick) window.pokebuddyManage.dexOpen(dexPick); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
+  if (dexPick) window.pokebuddyManage.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
   if (tab === "dex") draw();
 }
 
@@ -4050,7 +4280,111 @@ async function loadAgents(): Promise<void> {
 
 async function refresh(): Promise<void> {
   view = await window.pokebuddyManage.snapshot();
+  drawnStructure = structureOf(view);
   draw();
+}
+
+// ── 1초 시계 ──────────────────────────────────────────────────────────────────
+// 시계가 울릴 때마다 스냅샷을 다시 읽는다 (2026-09-29 사용자 지시 — 앱 전역 타이머가 1초마다 갱신)
+//   시간으로만 바뀌는 값(LIVE_KEYS)만 달라졌다   표시만 고친다(applyLive). 탭 포커스·title 툴팁·글자 선택이 남는다
+//   그 밖의 모양이 바뀌었다                       전체를 다시 그린다. 포커스는 같은 자리 요소로 되돌린다(focusPath)
+// 전체 다시 그리기는 끊기는 조작 중에는 미루고 다음 시계에 한다 — 끌기·박스 이름 입력·누르는 중·한글 조합 중·글자 입력 칸 포커스.
+// 표시 고치기는 입력 요소를 건드리지 않으므로 그동안에도 한다.
+// view 는 화면에 그린 모양의 값이다 — 처리기(단추)는 이것을 읽는다. 미루는 동안에는 새 값의 시간 표시만 먼저 보인다
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
+// 만복도는 100 에 닿았는지만 모양이다(밥 주기 · 배부름) — 그 밖의 값은 표시만 고친다
+const structureOf = (v: Snapshot | null): string =>
+  JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
+let drawnStructure = ""; // 마지막으로 그린 모양
+let clockBusy = false;
+let pointerDown = false;
+let composing = false;
+document.addEventListener("pointerdown", () => (pointerDown = true), true);
+document.addEventListener("pointerup", () => (pointerDown = false), true);
+document.addEventListener("pointercancel", () => (pointerDown = false), true);
+window.addEventListener("blur", () => (pointerDown = false));
+document.addEventListener("compositionstart", () => (composing = true), true);
+document.addEventListener("compositionend", () => (composing = false), true);
+
+// 글자를 치는 칸에 포커스가 있는가 — 슬라이더·체크 칸은 누르는 중에만 막는다(pointerDown). 창이 뒤에 있으면 입력 중으로 보지 않는다
+const TEXT_TYPES = new Set(["text", "search", "password", "email", "number", "url", "tel"]);
+const typingText = (): boolean => {
+  if (!document.hasFocus()) return false;
+  const a = document.activeElement;
+  return (a instanceof HTMLInputElement && TEXT_TYPES.has(a.type)) || a instanceof HTMLTextAreaElement || (a instanceof HTMLElement && a.isContentEditable);
+};
+const holdFullDraw = (): boolean => dragFrom != null || boxRenaming || pointerDown || composing || typingText();
+
+// 시간 표시만 고친다 — 개체 막대(data-live-pet)와 알 글자(data-live-egg)
+function applyLive(v: Snapshot | null = view): void {
+  if (!v) return;
+  const pets = new Map<string, PetView>();
+  for (const s of v.party.slots) if (s.pet) pets.set(s.pet.id, s.pet);
+  for (const b of v.boxes) for (const p of b.slots) if (p) pets.set(p.id, p);
+  for (const box of document.querySelectorAll<HTMLElement>("[data-live-pet]")) {
+    const pet = pets.get(box.dataset.livePet ?? "");
+    const field = box.dataset.liveField;
+    if (!pet || (field !== "affinity" && field !== "fullness")) continue;
+    const value = pet[field];
+    const shown = box.querySelector<HTMLElement>(".row span:last-child");
+    if (shown && shown.textContent !== `${value}/100`) shown.textContent = `${value}/100`;
+    const fill = box.querySelector<HTMLElement>(".fill");
+    if (fill) fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  }
+  const eggs = new Map(v.eggs.list.map((e) => [e.id, e]));
+  for (const node of document.querySelectorAll<HTMLElement>("[data-live-egg]")) {
+    const egg = eggs.get(node.dataset.liveEgg ?? "");
+    if (egg && node.textContent !== eggNote(egg)) node.textContent = eggNote(egg);
+  }
+}
+
+async function clockTick(): Promise<void> {
+  if (clockBusy) return;
+  clockBusy = true;
+  try {
+    const next = await window.pokebuddyManage.snapshot();
+    const structure = structureOf(next);
+    if (structure === drawnStructure) {
+      view = next; // 모양이 같다 — 시간 값만 새것으로
+      applyLive();
+      syncPetDevice(); // 기기 창도 새 시간 값을 받는다. 기기 창이 표시만 고친다
+      return;
+    }
+    if (holdFullDraw()) {
+      applyLive(next); // 모양은 다음 시계에 — 시간 표시만 먼저
+      return;
+    }
+    view = next;
+    drawnStructure = structure;
+    draw();
+    drawDialog();
+  } finally {
+    clockBusy = false;
+  }
+}
+
+// 전체 다시 그리기 뒤 포커스를 같은 자리로 — 탭 줄·본문 안에서 자식 번호 길과 모양(태그·클래스)이 같은 요소
+// 다시 그리면 요소가 새로 생겨 키보드 포커스가 사라진다 (2026-09-29 검수 C2)
+interface FocusPath {
+  root: HTMLElement;
+  path: number[];
+  sign: string;
+}
+const signOf = (e: Element): string => `${e.tagName}.${e.className}`;
+function focusPath(): FocusPath | null {
+  const a = document.activeElement;
+  if (!(a instanceof HTMLElement) || a === document.body || a.dataset.search != null) return null; // 검색 칸은 searchFocus 가 맡는다
+  const root = [tabsEl, bodyEl].find((r) => r.contains(a) && r !== a);
+  if (!root) return null;
+  const path: number[] = [];
+  for (let n: Element = a; n !== root; n = n.parentElement as Element) path.unshift([...(n.parentElement?.children ?? [])].indexOf(n));
+  return { root, path, sign: signOf(a) };
+}
+function restoreFocusPath(kept: FocusPath | null): void {
+  if (!kept || (document.activeElement && document.activeElement !== document.body)) return;
+  let n: Element | undefined = kept.root;
+  for (const i of kept.path) n = n?.children[i];
+  if (n instanceof HTMLElement && signOf(n) === kept.sign) n.focus({ preventScroll: true });
 }
 
 need("open-achievements", HTMLButtonElement).addEventListener("click", () => open({ kind: "achievements" }));
@@ -4088,6 +4422,12 @@ function goTo(route: ManageRoute): void {
     detailPet = null;
     open({ kind: "user", tab: "agents" });
     void loadAgents();
+  } else if (route.to === "bag" || route.to === "shop") {
+    // 줍기 배너 — 도구·진화용 도구는 가방, 포인트는 상점 (docs/specs/game.md "줍기")
+    close();
+    tab = route.to;
+    detailPet = null;
+    draw();
   } else {
     open({ kind: "achievements" });
     dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });
@@ -4118,13 +4458,15 @@ const firstDraw = loadArt().then(refresh);
 // 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
 void firstDraw.then(loadUpdate).then(showUnseenNotes);
 window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
-window.pokebuddyManage.onDexClosed(() => {
+window.pokebuddyManage.onDexClosed((gen) => {
+  dexGen = gen;
   dexPick = null;
   markDexPick();
 });
 window.pokebuddyManage.onPetStep((delta) => stepPet(delta));
 window.pokebuddyManage.onPetAct((action) => onPetAction(action));
-window.pokebuddyManage.onPetClosed(() => {
+window.pokebuddyManage.onPetClosed((gen) => {
+  petGen = gen;
   petDeviceOpen = false;
   petDeviceSent = "";
   if (!detailPet) return;
@@ -4132,9 +4474,5 @@ window.pokebuddyManage.onPetClosed(() => {
   draw();
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
-// 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 창이 떠 있는 동안 주기적으로 다시 읽는다
-// 박스 칸을 끄는 중이거나 박스 이름을 입력하는 중에는 쉰다 — 다시 그리면 끌기와 입력이 끊긴다
-setInterval(() => {
-  if (dragFrom || boxRenaming) return;
-  void refresh().then(drawDialog);
-}, 5000);
+// 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 앱 전역 1초 시계(`manage:clock`)마다 다시 읽는다 (clockTick)
+window.pokebuddyManage.onClock?.(() => void clockTick());

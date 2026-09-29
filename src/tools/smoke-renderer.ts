@@ -17,6 +17,7 @@ window.pokebuddy = {
   onFrame(cb) { callbacks.frame = cb; }, onHover(cb) { callbacks.hover = cb; },
   onClickThrough(cb) { callbacks.ct = cb; },
   onCoach(cb) { callbacks.coach = cb; }, coachAction(a) { window.stageTest.messages.push(a); }, onCry() {},
+  onIcons(cb) { callbacks.icons = cb; },
   hit(id) { window.stageTest.hit = id; },
   pointer(msg) { window.stageTest.messages.push(msg); }
 };
@@ -110,6 +111,31 @@ void app.whenReady().then(async () => {
     assert.equal(coach.clear, true, "열린 메뉴 자리를 덮지 않는다");
     assert.equal(coach.hidden, true, "null 이면 지운다");
     process.stdout.write("튜토리얼 말풍선 통과: 히트·버튼·지우기\n");
+    // 아이콘 말풍선 — 글자 없이 고기 세 개. 그림이 오기 전에는 그리지 않는다 (2026-09-29 사용자 결정)
+    const meat = `data:image/png;base64,${fs.readFileSync(path.resolve(__dirname, "../../assets/items/meat.png")).toString("base64")}`;
+    const bubble = await win.webContents.executeJavaScript(`(async () => {
+      const cb = window.stageTest.callbacks;
+      const canvas = document.getElementById('stage'); const ctx = canvas.getContext('2d');
+      const white = () => { const d = ctx.getImageData(0, 0, canvas.width, Math.round(100 * devicePixelRatio)).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] === 255 && d[i + 1] === 255 && d[i + 2] === 255 && d[i + 3] === 255) n++; return n; };
+      const frame = { at: 3, state: 'idle', pets: [{ id: 'last', look: 'blue', zoom: 2, x: 100, y: 100, play: null, held: false, bubble: ['item:meat', 'item:meat', 'item:meat'] }] };
+      cb.frame(frame);
+      await new Promise((r) => setTimeout(r, 100));
+      const before = white();
+      cb.icons({ 'item:meat': '${meat}' });
+      await new Promise((r) => setTimeout(r, 200));
+      cb.frame({ ...frame, at: 4 });
+      await new Promise((r) => setTimeout(r, 100));
+      const d = ctx.getImageData(0, 0, canvas.width, Math.round(100 * devicePixelRatio)).data;
+      let flesh = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] > 150 && d[i + 1] > 50 && d[i + 1] < 160 && d[i + 2] < 110 && d[i + 3] === 255) flesh++;
+      return { before, after: white(), flesh };
+    })()`) as { before: number; after: number; flesh: number };
+    assert.equal(bubble.before, 0, "그림이 오기 전에는 말풍선을 그리지 않는다");
+    assert.ok(bubble.after > 200, "말풍선 흰 바탕이 그려진다");
+    assert.ok(bubble.flesh > 30, "말풍선 안에 고기 그림이 그려진다");
+    const bubbleShot = path.join(dir, "bubble.png");
+    fs.writeFileSync(bubbleShot, (await win.webContents.capturePage()).toPNG());
+    process.stdout.write(`아이콘 말풍선 통과: ${bubble.flesh} 고기 픽셀 · ${bubbleShot}\n`);
     if (process.env.POKEBUDDY_SMOKE_ART) {
       const artDir = process.env.POKEBUDDY_SMOKE_ART;
       const sheets = ["eevee", "eevee-shiny", "umbreon"].map((name) => JSON.parse(fs.readFileSync(path.join(artDir, `${name}.json`), "utf8")));

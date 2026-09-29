@@ -47,6 +47,7 @@ const CH = {
   pickScreen: "manage:pick-screen",
   mail: "manage:mail",
   mailView: "manage:mail-view",
+  clock: "manage:clock",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -170,7 +171,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     },
     onStep: (delta) => toManage(CH.dexStep, delta),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
-    onClosed: () => toManage(CH.dexClosed),
+    onClosed: (gen) => toManage(CH.dexClosed, gen),
   });
   // 파티 상세 기기 창 — 관리 창이 개체를 정해 보낸다. 누른 단추·이전·다음은 관리 창으로 돌려보낸다
   petWin = createPetWindow({
@@ -187,17 +188,18 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     },
     onStep: (delta) => toManage(CH.petStep, delta),
     onAct: (action) => toManage(CH.petAct, action),
-    onClosed: () => toManage(CH.petClosed),
+    onClosed: (gen) => toManage(CH.petClosed, gen),
   });
-  ipcMain.on(CH.petOpen, (e, open: unknown) => {
+  // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/device-gen.ts)
+  ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
-    if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen);
+    if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen, gen);
     else petWin?.close();
   });
-  ipcMain.on(CH.dexOpen, (e, slug: unknown) => {
+  ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
-    if (typeof slug === "string") void dexWin?.show(win, slug);
+    if (typeof slug === "string") void dexWin?.show(win, slug, gen);
     else dexWin?.close();
   });
   ipcMain.on(CH.dim, (e, on: unknown) => {
@@ -307,6 +309,11 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     win = null;
     identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
   });
+  // 문서를 (다시) 읽기 시작한다 — 렌더러의 세대 번호가 0 에서 다시 시작하므로 기기 창 번호도 맞춘다
+  win.webContents.on("did-start-loading", () => {
+    petWin?.resetGen();
+    dexWin?.resetGen();
+  });
   const route = opts.route;
   // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다
   if (route) win.webContents.once("did-finish-load", () => win?.webContents.send(CH.route, route));
@@ -331,5 +338,11 @@ export function pushMail(screen: MailScreen): void {
 
 export function pushUpdate(view: UpdateView): void {
   toManage(CH.updateView, view);
+}
+
+// 앱 전역 1초 시계 — 관리 창에 `manage:clock` 을 보낸다. 창이 없으면 버린다 (src/main/clock.ts).
+// 기기 창에는 보내지 않는다 — 파티 상세는 관리 창이 새로 읽은 값을 다시 보내고, 도감 항목은 시간과 관계없다
+export function pushClock(now: number): void {
+  toManage(CH.clock, { now });
 }
 

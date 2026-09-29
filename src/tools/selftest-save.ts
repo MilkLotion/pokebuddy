@@ -104,6 +104,11 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   assert.equal(save.bag["premium-food"], 3, "berry 는 프리미엄먹이의 옛 이름이다");
   assert.equal(save.bag["shiny:p1"], undefined, "이로치 권리는 도구가 아니다");
   assert.equal(save.legacy["shiny:p1"], 1, "legacy 에 보존한다");
+  // 옛 민트 식별자는 민트 한 종류로 옮긴다 (2026-09-29 민트 통일, src/bag/mint.ts)
+  const minted = migrate(v2Save({ inventory: { "mint-adamant": 1, "brave-mint": 2 } }), T0).save;
+  assert.deepStrictEqual(minted?.bag, { mint: 3 }, "v2 의 옛 민트도 mint 로 합친다");
+  const many = migrate(v2Save({ inventory: { "brave-mint": 700, "calm-mint": 700, berry: 1200 } }), T0).save;
+  assert.deepStrictEqual(many?.bag, { mint: 999, "premium-food": 1200 }, "합친 민트는 999 에서 자르고 다른 도구는 그대로 (검수 A4)");
   process.stdout.write("(3) 이전 · 이로치 권리 보존  ok\n");
 }
 

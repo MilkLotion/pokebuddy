@@ -7,7 +7,10 @@ import assert from "node:assert";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules";
 import { empty } from "../save/v3";
 import { buy, nextEggId } from "../shop/buy";
-import { eggPool, eggPrice, find, slotPrice, speciesPrice, toolPrice } from "../shop/catalog";
+import { eggPool, eggPrice, find, inRandomEgg, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../shop/catalog";
+import { rankOf } from "../egg/hatch";
+import { shopList } from "../tx/lists";
+import { unlockRules } from "../dex/unlocks";
 import type { SaveV3 } from "../shared/save-v3";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -127,24 +130,62 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(8) 파티 칸 · 300P 뒤 600P  ok\n");
 }
 
-// (9) 종 지정 구매는 해금한 종만
+// (9) 종 지정 구매 — 알에서 얻을 수 있는 종을 수집 난이도별 가격에 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 {
-  // 지금 상점에서 파는 종은 잠만보 하나다 (data/unlocks.json 의 shop)
-  const slug = "snorlax";
-  assert.equal(speciesPrice(slug), 800);
+  assert.deepStrictEqual({ ...SHOP_V3_RULES.speciesPrices }, { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 });
+  // 판매 대상 — 랜덤알 후보 + 태고의돌 화석
+  const fossils = eggPool("ancient-stone") ?? [];
+  const sold = [...new Set([...Object.keys(unlockRules()).filter((slug) => inRandomEgg(slug)), ...fossils])];
+  assert.ok(sold.length > 400, `판매 대상 ${sold.length}종`);
+  // 등급별 가격 — 판매 대상 전부가 자기 등급의 값이다
+  for (const slug of sold) {
+    assert.ok(sellsSpecies(slug), `${slug} 판매`);
+    assert.equal(speciesPrice(slug), SHOP_V3_RULES.speciesPrices[rankOf(slug)], `${slug} 가격`);
+  }
+  assert.equal(rankOf("rattata"), 1);
+  assert.equal(speciesPrice("rattata"), 200, "1등급 200P");
+  assert.equal(rankOf("scyther"), 2);
+  assert.equal(speciesPrice("scyther"), 300, "2등급 300P");
+  assert.equal(rankOf("heracross"), 3);
+  assert.equal(speciesPrice("heracross"), 400, "3등급 400P");
+  for (const slug of ["ditto", "lapras"]) assert.equal(speciesPrice(slug), null, `업적 보상 종 ${slug} 미판매`);
+  // 화석 — 랜덤알 후보가 아니어도 판다
+  assert.equal(fossils.length, 15);
+  for (const slug of fossils) assert.ok(!inRandomEgg(slug) && sellsSpecies(slug), `화석 ${slug} 판매`);
+  assert.equal(speciesPrice("aerodactyl"), 400, "프테라 3등급 400P");
+  // 단일 포켓몬 알의 종 · 진화형은 팔지 않는다
+  for (const kind of ["sub-legendary", "ultra-beast", "paradox", "mythical", "legendary"])
+    for (const slug of eggPool(kind) ?? []) assert.equal(speciesPrice(slug), null, `${kind} ${slug} 미판매`);
+  for (const slug of ["charmeleon", "snorlax", "chansey", "pikachu"]) assert.equal(speciesPrice(slug), null, `진화형 ${slug} 미판매`);
+
+  // 해금 전에는 못 산다 — 화석은 태고의돌에서 나와 해금된 뒤 산다
   const locked = seed(1000);
-  assert.equal(buy(locked, slug, T0, rand).reason, "not-unlocked", "해금 전에는 못 산다");
+  assert.equal(buy(locked, "omanyte", T0, rand).reason, "not-unlocked", "해금 전에는 못 산다");
   assert.equal(locked.points.balance, 1000, "포인트도 그대로");
   const s = seed(1000);
-  s.dex.unlocked = [slug];
-  const res = buy(s, slug, T0, rand);
+  s.dex.unlocked = ["omanyte"];
+  const res = buy(s, "omanyte", T0, rand);
   assert.equal(res.ok, true);
-  assert.equal(res.spent, 800);
+  assert.equal(res.spent, 200);
   assert.equal(s.pets.length, 1);
-  assert.equal(s.pets[0]?.species, slug);
+  assert.equal(s.pets[0]?.species, "omanyte");
   assert.equal(s.party.slots[res.slotIndex ?? -1]?.hidden, false, "꺼낸 상태로 들어간다");
-  assert.ok(s.dex.obtained.includes(slug));
-  process.stdout.write("(9) 종 지정 구매 · 해금한 종만  ok\n");
+  assert.ok(s.dex.obtained.includes("omanyte"));
+  // 해금했어도 팔지 않는 종은 상품이 없다
+  const no = seed(10_000);
+  no.dex.unlocked = ["mewtwo", "snorlax"];
+  assert.equal(buy(no, "mewtwo", T0, rand).reason, "no-product", "전설은 팔지 않는다");
+  assert.equal(buy(no, "snorlax", T0, rand).reason, "no-product", "잠만보는 먹고자에서 진화해 얻는다");
+  assert.equal(no.points.balance, 10_000, "포인트도 그대로");
+
+  // 상점 목록 — 해금한 판매 대상만, 도감 번호 순
+  const list = seed(0);
+  list.dex.unlocked = ["omanyte", "snorlax", "rattata", "mewtwo", "bulbasaur", "charmeleon"];
+  assert.deepStrictEqual(
+    shopList(list).filter((p) => p.category === "pokemon").map((p) => [p.id, p.price]),
+    [["bulbasaur", 200], ["rattata", 200], ["omanyte", 200]],
+  );
+  process.stdout.write(`(9) 종 지정 구매 · 알 종 ${sold.length}종 · 등급별 가격 · 해금한 종만  ok\n`);
 }
 
 // (10) 알 식별자는 이어서 붙고, 연 알의 식별자를 다시 쓰지 않는다 — 다시 쓰면 부화 배너 기록이 겹친다

@@ -47,7 +47,7 @@ export interface Play {
 export interface StagePet {
   evolution?: number; // 진화 연출의 남은 비율 0~1
   berry?: { x: number; y: number };
-  bubble?: string; // 머리 위 말풍선 글 — 배고픔 구간에 들어갈 때 잠깐 (Figma `Speech Bubble` `338:733`)
+  bubble?: string[]; // 머리 위 말풍선에 나란히 그릴 아이콘 열쇠 — 그림은 stage:icons 로 먼저 온다. 글자는 넣지 않는다 (2026-09-29 사용자 결정, Figma `Speech Bubble` `338:733`)
   id: string;
   look: string;
   zoom: number; // 도트 배율 (Pet.size 를 그림 크기로 가둔 값)
@@ -118,6 +118,7 @@ export type StageChannel =
   | "stage:hover" // M→R  HoverQuery
   | "stage:click-through" // M→R  boolean
   | "stage:cry" // M→R  울음소리 { uri: data URI, volume: 0~1 }
+  | "stage:icons" // M→R  말풍선 아이콘 { 열쇠: data URI } — 렌더러가 열쇠로 캐시한다
   | "stage:coach" // M→R  CoachView | null
   | "stage:coach-action" // R→M  CoachAction
   | "stage:ready" // R→M  없음
@@ -137,6 +138,7 @@ export interface StageBridge {
   onHover(cb: (q: HoverQuery) => void): void;
   onClickThrough(cb: (on: boolean) => void): void;
   onCry(cb: (uri: string, volume: number) => void): void; // 울음소리 한 번 — 놀아주기가 성공했을 때
+  onIcons(cb: (icons: Record<string, string>) => void): void; // 말풍선 아이콘 그림 — 열쇠별 data URI
   onCoach(cb: (coach: CoachView | null) => void): void; // 바탕화면 튜토리얼 — null 이면 지운다
   coachAction(action: CoachAction): void;
   hit(id: HitReply): void;

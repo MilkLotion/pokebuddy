@@ -4,13 +4,15 @@
 //   진화용 도구  data/evo-items.json 의 종류 공통 가격 (SHOP_V3_RULES.evoItemPrice)
 //   그 밖 도구   data/items.json 의 price. null 이면 팔지 않는다
 //   파티 칸     SHOP_V3_RULES.slotPrices — 첫 칸과 둘째 칸의 값이 다르다
-//   종 지정     data/unlocks.json 의 shop 가격. 해금한 종만 산다
+//   종 지정     SHOP_V3_RULES.speciesPrices — 수집 난이도(data/species.defaults.json 의 rank)별 가격.
+//               알에서 얻을 수 있는 종만 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 // 값을 두 곳에 적지 않는다. 그래야 가격이 어긋나지 않는다.
 // 기존 S4 의 src/shop/catalog.ts 와 별개다. 그쪽은 v2 경로가 계속 쓴다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { SHOP_V3_RULES } from "../save/rules.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { prevOf } from "../dex/evo.js";
+import { rankOf } from "../egg/hatch.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export type ProductKind = "egg" | "tool" | "party-slot" | "species";
@@ -42,14 +44,9 @@ interface EvoItemEntry {
   ko: string;
 }
 
-interface UnlockEntry {
-  shop?: number;
-}
-
 const eggs = (opts?: DexOptions): Record<string, EggEntry> => loadJson<Record<string, EggEntry>>("eggs.json", opts);
 const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<string, ItemEntry>>("items.json", opts);
 const evoItems = (opts?: DexOptions): Record<string, EvoItemEntry> => loadJson<Record<string, EvoItemEntry>>("evo-items.json", opts);
-const unlocks = (opts?: DexOptions): Record<string, UnlockEntry> => loadJson<Record<string, UnlockEntry>>("unlocks.json", opts);
 
 // 도구 하나의 가격. 팔지 않으면 null
 export function toolPrice(id: string, opts?: DexOptions): number | null {
@@ -69,9 +66,20 @@ export function slotPrice(bought: number): number | null {
   return SHOP_V3_RULES.slotPrices[bought] ?? null;
 }
 
-// 종 지정 구매 가격. 상점에서 팔지 않는 종이면 null
+// 종 지정 구매 가격 — 수집 난이도별 값. 상점에서 팔지 않는 종이면 null. 해금 여부는 부르는 쪽이 본다
 export function speciesPrice(slug: string, opts?: DexOptions): number | null {
-  return unlocks(opts)[slug]?.shop ?? null;
+  if (!sellsSpecies(slug, opts)) return null;
+  return SHOP_V3_RULES.speciesPrices[rankOf(slug, opts)] ?? null;
+}
+
+// 상점에서 파는 종인가 — 알에서 얻을 수 있는 종이다 (2026-09-29 사용자 결정)
+//   랜덤알 후보            inRandomEgg
+//   화석                   단일 포켓몬 알이 아닌 종 목록 알(태고의돌)의 종
+//   단일 포켓몬 알의 종    팔지 않는다 — 준전설·전설·환상·울트라비스트·패러독스
+export function sellsSpecies(slug: string, opts?: DexOptions): boolean {
+  if (isMetaKey(slug)) return false;
+  if (inRandomEgg(slug, opts)) return true;
+  return fixedEggs(opts).some(([kind, pool]) => !isSingleEgg(kind, opts) && pool.includes(slug));
 }
 
 export function eggPrice(kind: string, opts?: DexOptions): number | null {
@@ -142,18 +150,17 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
 
 // 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "부화 준비와 결과")
 //   해금 규칙이 없는 종        뺀다. 전설·환상·울트라비스트는 규칙이 없다 — 입수 경로를 따로 정한다.
+//                              업적 보상 종(메타몽·라프라스)도 규칙이 없다 — 업적으로만 얻는다 (2026-09-29)
 //                              옛 규칙으로 이미 해금된 저장도 여기서 걸러진다
 //   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다
-//   진화 전 종이 있는 종       뺀다. 해금 규칙이 진화가 아니어도 진화형이다(럭키 ← 핑복). 첫 선택 후보는 남는다.
+//   진화 전 종이 있는 종       뺀다. 해금 규칙이 진화가 아니어도 진화형이면 뺀다. 첫 선택 후보는 남는다.
 //                              알은 늘 진화 전 종이다 (2026-09-28 사용자 결정 "알은 항상 진화 전 종")
-//   상점에서 파는 종           뺀다. 값을 치르고 산다(잠만보)
-//   고정 후보 알의 종          뺀다. 화석은 태고의돌로만, 단일 포켓몬은 그 알로만 얻는다
+//   고정 후보 알의 종          뺀다. 화석은 태고의돌(해금 뒤에는 상점에서도), 단일 포켓몬은 그 알로만 얻는다
 export function inRandomEgg(slug: string, opts?: DexOptions): boolean {
   const rule = unlockRules(opts)[slug];
   if (!rule) return false;
   if (rule.evolve && !rule.starter) return false;
   if (prevOf(slug, opts) && !rule.starter) return false;
-  if (rule.shop !== undefined) return false;
   return !fixedEggs(opts).some(([, pool]) => pool.includes(slug));
 }
 
