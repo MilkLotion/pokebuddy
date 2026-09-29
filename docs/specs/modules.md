@@ -48,7 +48,7 @@
 | `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/mailbox.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
-친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 탭 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
+친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
 우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
 앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다.
@@ -196,7 +196,8 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `party.show` / `party.hide` | 표시와 숨김 | `src/party` |
 | `egg.open` | 직접 열기. 결과 종과 이로치 판정, 개체 생성과 배치 | `src/egg`, `src/dex`, `src/party` |
 | `bag.use` | 도구와 대상 검사, 적용과 차감 | `src/bag` |
-| `shop.buy` | 구매 검사, 포인트 차감, 알·개체·도구·칸 반영 | `src/shop` |
+| `bag.sell` | 도구 판매. 판매가 검사, 보유 차감, 포인트 더하기. `count` 개를 한 거래로 | `src/shop` |
+| `shop.buy` | 구매 검사, 포인트 차감, 알·개체·도구·칸 반영. 도구와 알은 `count` 개를 한 거래로 | `src/shop` |
 | `achievement.claim` | 보상 수령. 업적당 1회 | `src/achievement` |
 | `tutorial.skip` / `tutorial.done` | 튜토리얼 상태 기록 | `src/tutorial` |
 | `feed` / `play` | 돌봄. 쿨타임과 버프 | `src/state` |

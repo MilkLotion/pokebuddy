@@ -1,8 +1,8 @@
 // 알림 배너 창 — 주 화면 작업 영역 오른쪽 아래에 배너 하나를 띄운다. 문서는 src/renderer/banner.html
 //
 // 테두리 없음 · 배경 투명 · 항상 위 · 포커스를 뺏지 않음 · 작업 표시줄에 없음. 배너가 없을 때는 숨긴다.
-// 배너는 BANNER_RULES.showMs 동안 보인다. 커서가 배너 위에 있는 동안은 시간이 멈춘다.
-// 닫기 단추는 없다 — 누르지 않으면 사라진다 (docs/specs/ui-components.md C-19)
+// 배너는 BANNER_RULES.showMs 동안 보인다. 커서가 배너 위에 있는 동안은 시간이 멈추고, 떼면 남은 시간(최소 resumeMs)으로 다시 센다.
+// 제목 줄 오른쪽 `✕` 로 바로 닫는다. 누르지 않아도 시간이 지나면 사라진다 (docs/specs/ui-components.md C-19)
 import { BrowserWindow, ipcMain, screen } from "electron";
 import type { BannerChannel, BannerView, ManageRoute } from "../shared/manage";
 import { windowIcon } from "./paths.js";
@@ -11,11 +11,13 @@ const CH = {
   show: "banner:show",
   go: "banner:go",
   hover: "banner:hover",
+  close: "banner:close",
 } satisfies Record<string, BannerChannel>;
 
-// 표시 시간 8초 — 2026-09-25 구현에서 정하고 2026-09-27 사용자가 확정했다 (docs/specs/game.md 알 절, worklog/records/game-runtime/record.md "알림 배너의 설계").
+// 표시 시간 2초 — 2026-09-30 사용자 결정 "알림에서 꺼지는 시간은 2초. 닫기버튼 추가." (옛 8초, worklog/records/features-0930/record.md).
+// resumeMs 는 커서를 뗀 뒤 다시 셀 최소 시간 — 구현 판단(제안)
 // 창 크기는 배너 280 × 82 에 그림자 자리 8 을 둘렀다. margin 은 작업 영역 가장자리와의 거리다
-export const BANNER_RULES = { showMs: 8000, width: 296, height: 98, margin: 8 } as const;
+export const BANNER_RULES = { showMs: 2000, resumeMs: 1000, width: 296, height: 98, margin: 8 } as const;
 
 export interface BannerWindowOptions {
   preload: string;
@@ -66,6 +68,11 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
     finish();
     opts.onGo(route);
   };
+  // `✕` — 그 배너만 닫는다. 다음 배너는 onDone 에서 나온다
+  const onClose = (e: Electron.IpcMainEvent, key: unknown): void => {
+    if (!mine(e.sender) || !current || key !== current.key) return;
+    finish();
+  };
   const onHover = (e: Electron.IpcMainEvent, on: unknown): void => {
     if (!mine(e.sender) || !current) return;
     if (on === true) {
@@ -73,11 +80,12 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
       if (timer) left = Math.max(0, left - (Date.now() - startedAt));
       stopTimer();
     } else if (!timer) {
-      startTimer(Math.max(left, 1500));
+      startTimer(Math.max(left, BANNER_RULES.resumeMs));
     }
   };
   ipcMain.on(CH.go, onGo);
   ipcMain.on(CH.hover, onHover);
+  ipcMain.on(CH.close, onClose);
 
   function ensure(): Promise<void> {
     if (win && !win.isDestroyed() && loaded) return loaded;
@@ -137,6 +145,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
       current = null;
       ipcMain.removeListener(CH.go, onGo);
       ipcMain.removeListener(CH.hover, onHover);
+      ipcMain.removeListener(CH.close, onClose);
       if (win && !win.isDestroyed()) win.destroy();
       win = null;
     },

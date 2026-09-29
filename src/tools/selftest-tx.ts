@@ -286,6 +286,7 @@ async function bridgeChecks(): Promise<void> {
     assert.deepStrictEqual(argsOf({ cmd: "egg.open", target: "e1", from: "menu" }), { eggId: "e1" });
     assert.deepStrictEqual(argsOf({ cmd: "bag.use", target: "mint", from: "menu", args: { petId: "p1", nature: "brave" } }), { itemId: "mint", petId: "p1", nature: "brave" });
     assert.deepStrictEqual(argsOf({ cmd: "shop.buy", target: "random", from: "cli" }), { productId: "random" });
+    assert.deepStrictEqual(argsOf({ cmd: "bag.sell", target: "fire-stone", from: "menu", args: { count: 2 } }), { itemId: "fire-stone", count: 2 });
     process.stdout.write("(16) 다리 · 인자 모양 바꾸기  ok\n");
   }
 

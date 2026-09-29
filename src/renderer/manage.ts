@@ -35,7 +35,7 @@ import type {
 } from "../shared/manage.js";
 import { genderIcon } from "./gender.js";
 
-type TabId = "party" | "box" | "dex" | "shop" | "bag" | "trade";
+type TabId = "party" | "box" | "dex" | "shop" | "bag";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "party", label: "파티" },
@@ -43,8 +43,9 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "dex", label: "도감" },
   { id: "shop", label: "상점" },
   { id: "bag", label: "가방" },
-  { id: "trade", label: "교환" }, // 친구 교환 — 가방 옆 (worklog/records/trade/record.md, 2026-09-26 사용자 결정)
 ];
+// 친구 교환은 탭이 아니다 — 박스 머리의 `교환` 단추가 모달로 연다
+// (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
 
 // 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
@@ -80,8 +81,8 @@ const SLEEP_CHOICES = [
 ];
 
 
-// 여러 개 살 수 있는 상품 — 알·포켓몬·파티 칸은 하나씩만 산다
-const MULTI_BUY = new Set(["tool", "evolution"]);
+// 여러 개 살 수 있는 상품 — 포켓몬·파티 칸은 하나씩만 산다. 알은 돌보미집 빈 칸까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
+const MULTI_BUY = new Set(["tool", "evolution", "egg"]);
 
 // 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
 
@@ -165,7 +166,8 @@ type Dialog =
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
   | { kind: "mail" } // 우편함 — 헤더 봉투 단추
-  | { kind: "letter"; id: string }; // 우편함의 편지 한 통
+  | { kind: "letter"; id: string } // 우편함의 편지 한 통
+  | { kind: "trade" }; // 친구 교환 — 박스 머리의 `교환` 단추
 
 let tab: TabId = "party";
 let view: Snapshot | null = null;
@@ -912,7 +914,9 @@ function drawForm(petId: string, to: string): void {
 
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
-  bodyEl.appendChild(head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`));
+  const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`);
+  top.appendChild(tradeOpenButton()); // 친구 교환 — 모달로 연다 (Figma 05 `Box / Trade Button` `1016:1891`)
+  bodyEl.appendChild(top);
 
   const daycare = el("div", "daycare");
   daycare.dataset.tut = "hatch"; // 부화 튜토리얼이 밝히는 곳
@@ -1576,6 +1580,17 @@ let bagPick: string | null = null; // 사용 패널에 연 도구
 let bagScope: "party" | "box" = "party";
 let bagTarget: string | null = null;
 let bagQty = 1;
+// 판 머리의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다 (2026-09-30 사용자 결정, Figma 05 `Bag / Sell` `1006:20684`)
+let bagMode: "use" | "sell" = "use";
+let sellQty = 1;
+// 대상 목록(.use-list)의 스크롤 — 판을 다시 그려도 같은 도구·같은 범위면 되돌린다. 범위를 바꾸면 맨 위 (8번 버그,
+// 사용자 "스크롤 아래로 하고, 클릭하잖아. 스크롤이 제일 위로 가져.")
+let bagListScroll = { key: "", top: 0 };
+// 고른 줄을 목록 안에 보이게 맞출 차례 — 사용자가 줄·범위·도구를 새로 고를 때만 켠다. 그 밖의 다시 그리기(1초 시계 등)는 기억한 위치 그대로
+let bagListReveal = false;
+
+// 사용 갈래가 따로 창을 여는 도구 — 진화용 도구는 진화할 개체, 성격민트는 성격을 고른다
+const bagDialogUse = (item: BagItemView): boolean => item.evolution || item.effect === "nature";
 
 function bagCategory(item: BagItemView): string {
   if (item.evolution) return "evolution";
@@ -1594,10 +1609,14 @@ function bagCard(item: BagItemView): HTMLElement {
   info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
   card.append(iconOf(`item:${item.id}`, "thumb"), info);
   card.addEventListener("click", () => {
-    if (item.evolution) return open({ kind: "evo-target", itemId: item.id });
-    if (item.effect === "nature") return open({ kind: "nature-target", itemId: item.id });
+    // 팔 수 없는 진화용 도구·성격민트는 판 없이 고르는 창을 연다. 팔 수 있으면 판을 판매 갈래로 연다 — `사용` 을 누르면 고르는 창이다.
+    // 가방 튜토리얼이 떠 있으면 예전처럼 고르는 창으로 간다 — 2단계 "대상을 고르고 사용을 눌러요" 와 판매 갈래 판이 어긋나지 않게
+    if (bagDialogUse(item) && (item.sellPrice === undefined || coachId === "bag")) return openBagDialog(item);
     bagPick = bagPick === item.id ? null : item.id;
+    bagMode = bagDialogUse(item) ? "sell" : "use";
+    bagListReveal = true;
     bagQty = 1;
+    sellQty = 1;
     notice = "";
     draw();
   });
@@ -1629,6 +1648,24 @@ function drawBag(v: Snapshot): void {
     return;
   }
   bodyEl.appendChild(bagPanel(v, picked));
+  restoreBagList();
+}
+
+// 대상 목록 스크롤 되돌리기 — 문서에 붙은 뒤에만 scrollTop 이 먹는다.
+// 새로 고른 직후(bagListReveal)에만 고른 줄이 목록 밖이면 목록 안에서 맞춘다(창 전체는 움직이지 않는다)
+function restoreBagList(): void {
+  const rows = bodyEl.querySelector<HTMLElement>(".use-list");
+  if (!rows) return;
+  const key = rows.dataset.key ?? "";
+  rows.scrollTop = bagListScroll.key === key ? bagListScroll.top : 0;
+  const on = bagListReveal ? rows.querySelector<HTMLElement>('.use-target[aria-pressed="true"]') : null;
+  bagListReveal = false;
+  if (on) {
+    const top = on.getBoundingClientRect().top - rows.getBoundingClientRect().top + rows.scrollTop;
+    if (top < rows.scrollTop) rows.scrollTop = top;
+    else if (top + on.offsetHeight > rows.scrollTop + rows.clientHeight) rows.scrollTop = top + on.offsetHeight - rows.clientHeight;
+  }
+  bagListScroll = { key, top: rows.scrollTop };
 }
 
 // 사탕을 qty 개 쓰면 — 경험치 곡선으로 새 레벨과 넘쳐 사라지는 경험치를 셈한다 (src/bag/use.ts 와 같은 규칙)
@@ -1697,6 +1734,86 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
   }
 }
 
+function openBagDialog(item: BagItemView): void {
+  open(item.evolution ? { kind: "evo-target", itemId: item.id } : { kind: "nature-target", itemId: item.id });
+}
+
+// 판 머리 아래 `사용 | 판매` — 고른 쪽만 톤 배경 (Figma 05 `Bag / Sell` `1006:20684`). 판매가가 없는 도구는 두지 않는다
+function bagModes(item: BagItemView): HTMLElement {
+  const modes = segmented(
+    [
+      { id: "use", label: "사용" },
+      { id: "sell", label: "판매" },
+    ] as const,
+    bagMode,
+    (id) => {
+      notice = "";
+      if (id === "use" && bagDialogUse(item)) return openBagDialog(item);
+      bagMode = id;
+      sellQty = 1;
+      draw();
+    },
+  );
+  modes.classList.add("use-mode");
+  return modes;
+}
+
+// 판매 갈래 — 수량 줄, 받는 포인트 상자, `취소`·`N P에 팔기`. 한 거래로 판다 (src/shop/sell.ts)
+function sellDetail(v: Snapshot, item: BagItemView, each: number): HTMLElement {
+  const box = el("div", "use-detail sell-detail");
+  const cap = Math.max(1, item.count);
+  sellQty = Math.max(1, Math.min(sellQty, cap));
+  const q = el("div", "qty square");
+  const minus = button("", "−");
+  minus.disabled = sellQty <= 1;
+  minus.addEventListener("click", () => {
+    sellQty -= 1;
+    draw();
+  });
+  const plus = button("", "+");
+  plus.disabled = sellQty >= cap;
+  plus.addEventListener("click", () => {
+    sellQty += 1;
+    draw();
+  });
+  const max = button("max", "최대");
+  max.disabled = sellQty >= cap;
+  max.addEventListener("click", () => {
+    sellQty = cap;
+    draw();
+  });
+  q.append(minus, el("span", "count", sellQty.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `최대 ${cap.toLocaleString("ko-KR")} · 보유 수`));
+  box.appendChild(q);
+
+  const earned = each * sellQty;
+  const percent = Math.round((item.sellRate ?? 0) * 100);
+  const summary = el("div", "use-preview");
+  summary.append(
+    el("strong", undefined, `받는 포인트 ${point(earned)}`),
+    el("div", undefined, `1개 ${point(each)} (구매가 ${point(item.buyPrice ?? 0)}의 ${percent}%) · 판매 후 보유 ${point(v.points + earned)}`),
+  );
+  box.appendChild(summary);
+  if (notice) box.appendChild(el("div", "notice bad", notice));
+  box.appendChild(
+    actions(
+      actionButton("취소", false, false, () => {
+        bagPick = null;
+        notice = "";
+        draw();
+      }),
+      actionButton(`${point(earned)}에 팔기`, true, false, () => {
+        void send("bag.sell", item.id, sellQty > 1 ? { count: sellQty } : {}).then((ok) => {
+          if (!ok) return draw();
+          sellQty = 1;
+          if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 팔았다
+          draw();
+        });
+      }),
+    ),
+  );
+  return box;
+}
+
 function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
   const panel = el("div", "use-panel");
   const top = el("div", "use-head");
@@ -1708,6 +1825,15 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
     draw();
   });
   top.append(el("strong", undefined, item.name), el("span", "stock", `보유 ×${item.count.toLocaleString("ko-KR")}`), el("span", "spacer"), x);
+
+  // 판매가가 있으면 머리 아래 `사용 | 판매`. 없으면(기본먹이·돌아오는 약) 지금처럼 사용 판만
+  const each = item.sellPrice;
+  if (each === undefined) bagMode = "use";
+  else if (bagMode === "use" && bagDialogUse(item)) bagMode = "sell";
+  if (each !== undefined && bagMode === "sell") {
+    panel.append(top, bagModes(item), sellDetail(v, item, each));
+    return panel;
+  }
 
   const party = partyPets();
   const box = boxPets();
@@ -1726,6 +1852,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
       (id) => {
         bagScope = id;
         bagTarget = null;
+        bagListReveal = true;
         bagQty = 1;
         notice = "";
         draw();
@@ -1733,12 +1860,18 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
     ),
   );
   const rows = el("div", "use-list");
+  const listKey = `${item.id}|${bagScope}`;
+  rows.dataset.key = listKey;
+  rows.addEventListener("scroll", () => {
+    bagListScroll = { key: listKey, top: rows.scrollTop };
+  });
   for (const p of list) {
     const row = button("use-target");
     row.setAttribute("aria-pressed", String(p.id === bagTarget));
     row.append(portraitOf(p.species, p.shiny, "use-portrait"), el("strong", undefined, p.name), el("span", "lv", `Lv.${p.level}`));
     row.addEventListener("click", () => {
       bagTarget = p.id;
+      bagListReveal = true;
       bagQty = 1;
       notice = "";
       draw();
@@ -1806,14 +1939,17 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
   }
   const cols = el("div", "use-columns");
   cols.append(left, right);
-  panel.append(top, cols);
+  if (each !== undefined) panel.append(top, bagModes(item), cols);
+  else panel.append(top, cols);
   return panel;
 }
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
-// Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면 — Base·Link Created·Offer·Blocked·Done·Error.
+// Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 모달 6화면 — Base `1036:23257`·Link Created `1036:22965`·Offer `1036:22673`·Blocked `1036:22381`·Done `1036:22089`·Error `1036:21797`.
 // 값은 메인이 만든 TradeScreen(src/main/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
-// 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다
+// 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다.
+// 그리는 곳은 교환 모달이다 — 박스 머리의 `교환` 단추가 연다(2026-09-30 사용자 결정).
+// 모달을 닫아도 교환은 이어진다. 진행 중이면 `교환` 단추에 점을 둔다
 
 let trade: TradeScreen | null = null;
 let tradeLoading = false;
@@ -1856,7 +1992,36 @@ async function loadTrade(): Promise<void> {
   } finally {
     tradeLoading = false;
   }
-  if (tab === "trade") draw();
+  syncTradeDot();
+  redrawTrade();
+}
+
+// 교환 모달이 떠 있으면 다시 그린다. 본문(박스 탭)은 건드리지 않는다
+function redrawTrade(): void {
+  if (dialog?.kind === "trade") drawDialog();
+}
+
+// 진행 중 — 링크를 만들었거나, 친구와 고르는 중이거나, 완료 화면의 `확인` 을 아직 누르지 않았다
+const tradeActive = (t: TradeScreen | null): boolean => !!t?.available && (t.phase === "hosting" || t.phase === "trading" || t.phase === "done");
+
+// 박스 머리 `교환` 단추의 진행 중 점 — 본문을 다시 그리지 않고 점만 켜고 끈다
+function syncTradeDot(): void {
+  const dot = bodyEl.querySelector<HTMLElement>(".trade-open .dot");
+  if (dot) dot.hidden = !tradeActive(trade);
+}
+
+// 박스 머리 오른쪽의 `교환` 단추 — Figma 05 `Box / Trade Button` `1016:1891`
+function tradeOpenButton(): HTMLButtonElement {
+  const b = button("act trade-open", "교환");
+  const dot = el("span", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  dot.hidden = !tradeActive(trade);
+  b.appendChild(dot);
+  b.addEventListener("click", () => {
+    open({ kind: "trade" });
+    void loadTrade();
+  });
+  return b;
 }
 
 // 결과의 screen 을 꺼낸다. 교환 세션이 없을 때(trade-off·sandbox)만 쓸 수 없다고 보인다.
@@ -1879,7 +2044,7 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   const before = trade?.received?.petId ?? null;
   if (trade) {
     trade = { ...trade, busy: true };
-    draw();
+    redrawTrade();
   }
   let reply: ManageReply;
   try {
@@ -1891,8 +2056,12 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   trade = tradeOf(reply);
   // 거절(진행 중인 교환 등)은 보기에 남지 않는다 — 배너로 보인다
   if (!reply.ok && !trade.error && trade.available) trade = { ...trade, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };
-  if (trade.received && trade.received.petId !== before) view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
-  draw();
+  if (trade.received && trade.received.petId !== before) {
+    view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
+    draw();
+  }
+  syncTradeDot();
+  redrawTrade();
   return reply;
 }
 
@@ -1943,7 +2112,7 @@ const leftText = (ms: number): string => {
 };
 
 // 링크 만들기·참가 두 카드와 규칙 — Base·Link Created·Error
-function drawTradeStart(t: TradeScreen): void {
+function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
   const row = el("div", "trade-row");
   row.dataset.tut = "trade"; // 교환 튜토리얼이 밝히는 곳 — 링크 만들기·링크로 참가
 
@@ -1963,10 +2132,10 @@ function drawTradeStart(t: TradeScreen): void {
     const copy = actionButton(tradeCopied ? "복사됨" : "링크 복사", true, false, () => {
       window.pokebuddyManage.copyText(t.link ?? "");
       tradeCopied = true;
-      draw();
+      redrawTrade();
       setTimeout(() => {
         tradeCopied = false;
-        if (tab === "trade") draw();
+        redrawTrade();
       }, 1500);
     });
     acts.append(link, copy, actionButton("취소", false, t.busy, () => void tradeSend("trade.leave")));
@@ -1992,7 +2161,7 @@ function drawTradeStart(t: TradeScreen): void {
     void tradeSend("trade.join", undefined, { link }).then((reply) => {
       if (reply.ok) {
         tradeInput = "";
-        draw();
+        redrawTrade();
       }
     });
   });
@@ -2003,12 +2172,12 @@ function drawTradeStart(t: TradeScreen): void {
   join.appendChild(acts);
 
   row.append(host, join);
-  bodyEl.appendChild(row);
+  out.appendChild(row);
 
   const rules = el("div", "trade-card");
   rules.appendChild(tradeCardHead("교환 규칙"));
   for (const line of ["한 번에 한 마리씩 맞바꿔요", "받은 포켓몬은 보낸 포켓몬이 있던 자리로 가요", "단일 포켓몬은 교환할 수 없어요"]) rules.appendChild(el("div", "trade-desc", line));
-  bodyEl.appendChild(rules);
+  out.appendChild(rules);
 }
 
 // 보낼 포켓몬 고르기 — 파티와 박스. 단일 포켓몬 칸은 흐리게 막는다
@@ -2045,7 +2214,7 @@ function tradePicker(t: TradeScreen): HTMLElement {
 }
 
 // 두 사람이 제안하고 확정하는 화면 — Offer·Blocked
-function drawTradeOffer(t: TradeScreen): void {
+function drawTradeOffer(t: TradeScreen, out: HTMLElement): void {
   const row = el("div", "trade-row");
   const mine = el("div", "trade-card");
   mine.append(tradeCardHead("내 포켓몬", t.myReady ? tradeState("확정함", "ok") : tradeState("확정 전", "idle")), tradePetLine(t.mine, "아래에서 보낼 포켓몬을 골라요"));
@@ -2054,12 +2223,12 @@ function drawTradeOffer(t: TradeScreen): void {
   const friendState = t.friendBlocked ? tradeState("받을 수 없음", "bad") : t.friendReady ? tradeState("확정함", "ok") : t.friend ? tradeState("확정 전", "idle") : tradeState("고르는 중", "wait");
   friend.append(tradeCardHead(friendTitle, friendState), tradePetLine(t.friend, ""));
   row.append(mine, friend);
-  bodyEl.appendChild(row);
+  out.appendChild(row);
 
   if (t.friendBlocked) {
     const name = t.friend?.name ?? "이 포켓몬";
     const why = t.friendBlocked === "single" ? `${name}${josa(name, "은/는")} 단일 포켓몬이라 교환할 수 없어요.` : `${name}의 정보가 올바르지 않아요.`;
-    bodyEl.appendChild(tradeBanner("받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`, "bad"));
+    out.appendChild(tradeBanner("받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`, "bad"));
   }
 
   const bar = el("div", "trade-bar");
@@ -2069,13 +2238,13 @@ function drawTradeOffer(t: TradeScreen): void {
     actionButton("나가기", false, t.busy, () => void tradeSend("trade.leave")),
     t.myReady ? actionButton("확정 취소", false, t.busy, () => void tradeSend("trade.unready")) : actionButton("확정", true, !canReady, () => void tradeSend("trade.ready")),
   );
-  bodyEl.appendChild(bar);
-  bodyEl.appendChild(tradePicker(t));
+  out.appendChild(bar);
+  out.appendChild(tradePicker(t));
 }
 
 // 교환 완료 — Done
-function drawTradeDone(t: TradeScreen): void {
-  bodyEl.appendChild(tradeBanner("교환 완료", "", "ok"));
+function drawTradeDone(t: TradeScreen, out: HTMLElement): void {
+  out.appendChild(tradeBanner("교환 완료", "", "ok"));
   const r = t.received;
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("받은 포켓몬"));
@@ -2092,33 +2261,42 @@ function drawTradeDone(t: TradeScreen): void {
   const acts = el("div", "trade-acts end");
   acts.appendChild(actionButton("확인", true, t.busy, () => void tradeSend("trade.leave")));
   card.appendChild(acts);
-  bodyEl.appendChild(card);
+  out.appendChild(card);
 }
 
-function drawTrade(): void {
-  bodyEl.appendChild(head("교환"));
+// 교환 모달 — 머리 "친구 교환" 과 오른쪽 위 ✕, 스크롤 본문. ✕·Esc·바깥 누르기로 닫는다(모달 공통)
+function drawTradeDialog(): void {
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.appendChild(el("h2", undefined, "친구 교환"));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  top.append(titles, x);
+  const out = el("div", "scroll");
+  dialogEl.append(top, out);
   const t = trade;
   if (!t) {
-    bodyEl.appendChild(el("div", "empty-note", "교환 상태를 읽는 중이에요."));
+    out.appendChild(el("div", "empty-note", "교환 상태를 읽는 중이에요."));
     void loadTrade();
     return;
   }
   if (!t.available) {
-    bodyEl.appendChild(el("div", "empty-note", "교환을 쓸 수 없어요."));
+    out.appendChild(el("div", "empty-note", "교환을 쓸 수 없어요."));
     return;
   }
   // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다
   const err = t.error;
   if (err) {
     const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
-    bodyEl.appendChild(tradeBanner(text[0] ?? "", text[1] ?? "", "bad"));
+    out.appendChild(tradeBanner(text[0] ?? "", text[1] ?? "", "bad"));
   } else if (t.phase === "closed") {
     const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
-    bodyEl.appendChild(tradeBanner(text[0], text[1], "bad"));
+    out.appendChild(tradeBanner(text[0], text[1], "bad"));
   }
-  if (t.phase === "trading") drawTradeOffer(t);
-  else if (t.phase === "done") drawTradeDone(t);
-  else drawTradeStart(t);
+  if (t.phase === "trading") drawTradeOffer(t, out);
+  else if (t.phase === "done") drawTradeDone(t, out);
+  else drawTradeStart(t, out);
 }
 
 // 참가 전 남은 시간 — 글자만 1초마다 바꾼다. 본문을 다시 그리지 않는다
@@ -2132,9 +2310,10 @@ setInterval(() => {
 window.pokebuddyManage.onTrade((screen) => {
   const got = screen.received?.petId !== trade?.received?.petId && screen.received != null;
   trade = screen;
+  syncTradeDot();
   // 교환이 끝나 개체가 바뀌었다 — 스냅샷도 다시 받는다. 받지 않으면 보낸 개체가 파티·박스에 남아 보인다(2026-09-27 화면 E2E 에서 발견)
-  if (got) void refresh();
-  else if (tab === "trade" && !detailPet) draw();
+  if (got) void refresh().then(redrawTrade);
+  else redrawTrade();
 });
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────
@@ -2754,7 +2933,6 @@ const TAB_ICON: Record<TabId, string> = {
   dex: '<path d="M4 3.25h7.25c.97 0 1.75.78 1.75 1.75v6.25c0 .97-.78 1.75-1.75 1.75h-6.5C3.78 13 3 12.22 3 11.25V5c0-.97.78-1.75 1.75-1.75H4Z" stroke-width="1.35" stroke-linejoin="round"/><path d="M4.1 3.2 5 1.9m.6 3.7h3.9M5.6 8h4.8m-4.8 2.4h3.1" stroke-width="1.35" stroke-linecap="round"/><circle cx="4.9" cy="5.6" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="8" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="10.4" r=".55" fill="currentColor" stroke="none"/>',
   shop: '<path d="M3.2 6.4h9.6v6.2H3.2V6.4Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M2.5 6.4 3.7 3.2h8.6l1.2 3.2h-11Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.55 12.6V9.2h2.9v3.4" stroke-width="1.25" stroke-linejoin="round"/><circle cx="8" cy="4.8" r="1.1" stroke-width="1.05"/><path d="M6.9 4.8h.55m1.1 0h.55" stroke-width="1.05" stroke-linecap="round"/>',
   bag: '<path d="M12.5 5.5h-9C2.67 5.5 2 6.17 2 7v6c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V7c0-.83-.67-1.5-1.5-1.5Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.75 2.75 0 0 1 5.5 0v1.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
-  trade: '<path d="M2 5h11m-3 3 3-3-3-3m4 9H3m3 3-3-3 3-3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 function drawTabs(): void {
@@ -2768,7 +2946,6 @@ function drawTabs(): void {
       tab = t.id;
       detailPet = null;
       if (t.id === "dex" && !dexRows) void loadDex();
-      if (t.id === "trade") void loadTrade();
       draw();
     });
     tabsEl.appendChild(b);
@@ -2804,7 +2981,6 @@ function drawBody(): void {
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
   else if (tab === "shop") drawShop(view);
-  else if (tab === "trade") drawTrade();
   else drawBag(view);
   drawSaveFailing();
   restoreSearchFocus();
@@ -2916,9 +3092,10 @@ const GUIDES: Record<string, Guide> = {
     name: "도감", tab: "dex", go: "",
     steps: [{ title: "칸을 누르면 입수 방법이 보여요", body: "아직 해금하지 않은 포켓몬은 실루엣으로 보여요.", target: () => bodyEl.querySelector<HTMLElement>(".dex-grid .dex-cell"), interactive: true }],
   },
+  // 교환 모달을 처음 열 때 — 모달 안의 링크 만들기·링크로 참가 줄을 밝힌다 (Figma 05 `Tutorial / Trade` `1036:24561`)
   trade: {
-    name: "교환", tab: "trade", go: "",
-    steps: [{ title: "링크로 친구와 한 마리씩 바꿔요", body: "링크를 만들어 보내거나, 받은 링크로 참가해요.", target: () => bodyEl.querySelector<HTMLElement>('[data-tut="trade"]') }],
+    name: "교환", tab: null, go: "",
+    steps: [{ title: "링크로 친구와 한 마리씩 바꿔요", body: "링크를 만들어 보내거나, 받은 링크로 참가해요.", target: () => dialogEl.querySelector<HTMLElement>('[data-tut="trade"]') }],
   },
   user: {
     name: "사용자", tab: null, go: "",
@@ -3039,8 +3216,10 @@ function drawTutorial(): void {
   const screenTut = (tid: string): boolean => view?.screenTutorials?.includes(tid) === true;
   if (view && dialog?.kind === "user" && !dialogEl.querySelector(".acct-overlay") && screenTut("user")) {
     drawGuideStep("user"); // 사용자 모달을 처음 열 때 — 계정 → 연결
-  } else if (view && !dialog && (tab === "dex" || tab === "trade") && screenTut(tab)) {
-    drawGuideStep(tab); // 도감·교환 탭을 처음 열 때
+  } else if (view && dialog?.kind === "trade" && screenTut("trade")) {
+    drawGuideStep("trade"); // 교환 모달을 처음 열 때
+  } else if (view && !dialog && tab === "dex" && screenTut("dex")) {
+    drawGuideStep("dex"); // 도감 탭을 처음 열 때
   } else if (view && dialog?.kind === "settings" && dialog.tab === "display" && view.areaTutorial) {
     // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다
     // (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아", Figma 99 `Tutorial / Playground · 설정`)
@@ -3502,13 +3681,22 @@ function drawBuy(productId: string, qty: number): void {
     close();
     return;
   }
-  // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다
+  // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
+  // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/tx/lists.ts)
   const afford = item.price > 0 ? Math.floor(view.points / item.price) : 1;
   const cap = Math.max(1, Math.min(afford, item.room ?? afford));
   const many = MULTI_BUY.has(item.category) && !item.blocked;
   const count = many ? Math.max(1, Math.min(qty, cap)) : 1;
   const total = item.price * count;
   const short = total > view.points;
+  const egg = item.category === "egg";
+  const eggFree = Math.max(0, view.eggs.size - view.eggs.used);
+  // 알 수량의 상한 까닭 — 가장 작은 상한 하나 (Figma 05 `Shop / Buy Egg · 여러 개` `1006:20399` "최대 3 · 돌보미집 빈 칸 3")
+  const eggWhy = (): string => {
+    if (afford < (item.room ?? afford)) return "포인트";
+    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${(item.room ?? 0).toLocaleString("ko-KR")}`;
+    return `돌보미집 빈 칸 ${eggFree.toLocaleString("ko-KR")}`;
+  };
 
   // 머리 — 제목·보유 포인트와 오른쪽 위 ✕ (시안 `Shop / Buy` 의 head)
   const head = el("div", "buy-head");
@@ -3532,7 +3720,8 @@ function drawBuy(productId: string, qty: number): void {
     const max = button("max", "최대");
     max.disabled = count >= cap;
     max.addEventListener("click", () => open({ kind: "buy", productId, qty: cap }));
-    box.append(minus, el("span", "count", count.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `최대 ${cap.toLocaleString("ko-KR")}`));
+    const hint = `최대 ${cap.toLocaleString("ko-KR")}${egg ? ` · ${eggWhy()}` : ""}`;
+    box.append(minus, el("span", "count", count.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", hint));
     dialogEl.appendChild(box);
   }
 
@@ -3545,7 +3734,8 @@ function drawBuy(productId: string, qty: number): void {
   } else if (short) {
     summary.append(el("strong", undefined, "포인트가 모자라요"), el("div", undefined, `합계 ${point(total)} · 보유 ${point(view.points)}`));
   } else {
-    summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}`));
+    const after = egg ? ` · 돌보미집 ${view.eggs.used + count} / ${view.eggs.size}` : "";
+    summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}${after}`));
   }
   dialogEl.appendChild(summary);
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
@@ -4174,6 +4364,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   "notes-new": "dialog settings notes-new",
   mail: "dialog settings mail",
   letter: "dialog settings mail",
+  trade: "dialog trade",
 };
 
 // 가림막 — 켜고 끌 때 메인에도 알린다. OS 가 그리는 창 단추 자리는 CSS 가 덮지 못한다
@@ -4226,6 +4417,7 @@ function drawDialog(): void {
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
   else if (dialog.kind === "mail") drawMail();
   else if (dialog.kind === "letter") drawLetter(dialog.id);
+  else if (dialog.kind === "trade") drawTradeDialog();
   else drawGuide();
 
   if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
@@ -4252,6 +4444,12 @@ function open(next: Dialog): void {
     detailPet = next.petId;
     tab = slotOfPet(next.petId) != null ? "party" : "box";
     draw();
+    // 미룬 교환 링크 — 대화상자가 닫혔으므로 지금 연다. 기기 창의 개체는 그대로 두고 보던 탭 위에 띄운다
+    if (tradePending) {
+      tradePending = false;
+      open({ kind: "trade" });
+      void loadTrade();
+    }
     return;
   }
   dialog = next;
@@ -4264,6 +4462,21 @@ function close(): void {
   notice = "";
   setScrim(false);
   syncIdentify();
+  // 다른 대화상자가 떠 있는 동안 온 교환 링크 — 그 대화상자가 닫힌 뒤 교환 모달을 연다
+  if (tradePending) showTrade();
+}
+
+// 교환 링크를 기다리는 중 — 떠 있던 대화상자(입력 중 글자·처음 뜬 패치노트)를 덮지 않으려고 미룬 1건
+let tradePending = false;
+
+// 박스 탭을 열고 교환 모달을 띄운다 — 교환 링크(딥링크)로 왔을 때
+function showTrade(): void {
+  tradePending = false;
+  tab = "box";
+  detailPet = null;
+  draw();
+  open({ kind: "trade" });
+  void loadTrade();
 }
 
 const openPet = (id: string): void => {
@@ -4309,6 +4522,9 @@ const REASON: Record<string, string> = {
   "no-step": "더 진화하지 않아요.",
   "none-left": "가방에 남은 것이 없어요.",
   "no-item": "가방에 없어요.",
+  "not-sellable": "팔 수 없는 도구예요.",
+  "not-enough-items": "가진 개수보다 많이 팔 수 없어요.",
+  "bad-count": "고를 수 없는 수량이에요.",
   "unknown-item": "모르는 도구예요.",
   "bad-nature": "쓸 수 없는 성격이에요.",
   "bad-value": "고를 수 없는 값이에요.",
@@ -4324,7 +4540,7 @@ const REASON: Record<string, string> = {
 };
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
-const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "shop.buy"]);
+const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "shop.buy"]);
 
 // 도감이 함께 바뀌는 조작 — 다음에 도감을 열 때 다시 읽게 비운다
 const TOUCHES_DEX = new Set(["egg.open", "shop.buy", "evolve", "bag.use"]);
@@ -4383,6 +4599,7 @@ function busyLater(): () => void {
 async function send(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
   if (busy) return false;
   busy = true;
+  const unbusy = busyLater();
   let reply: ManageReply;
   try {
     const reqId = reqIdFor(cmd, target, extra);
@@ -4392,6 +4609,7 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
     await refresh();
   } finally {
     busy = false;
+    unbusy();
   }
 
   if (!reply.ok) {
@@ -4425,14 +4643,12 @@ async function screenPick(): Promise<void> {
 async function regionDraw(): Promise<void> {
   if (busy) return;
   busy = true;
-  const unbusy = busyLater();
   let reply: ManageReply;
   try {
     reply = await window.pokebuddyManage.drawRegion();
     await refresh();
   } finally {
     busy = false;
-    unbusy();
   }
   notice = reply.ok || reply.reason === "cancelled" ? "" : REASON[reply.reason] ?? reply.reason;
   drawDialog();
@@ -4581,6 +4797,7 @@ document.addEventListener("keydown", (e) => {
 
 // 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")
 function goTo(route: ManageRoute): void {
+  if (route.to !== "trade") tradePending = false; // 나중에 온 목적지가 앞선다
   if (route.to === "daycare") {
     close();
     tab = "box";
@@ -4593,11 +4810,13 @@ function goTo(route: ManageRoute): void {
     open({ kind: "user", tab: "account" });
     void loadAccount();
   } else if (route.to === "trade") {
-    close();
-    tab = "trade";
-    detailPet = null;
-    void loadTrade();
-    draw();
+    // 교환 링크(딥링크)로 왔다 — 박스 탭을 열고 교환 모달을 띄운다.
+    // 교환 모달이 이미 떠 있으면 그대로, 다른 대화상자가 떠 있으면 그것이 닫힌 뒤에 연다
+    if (dialog?.kind === "trade") void loadTrade();
+    else if (dialog) {
+      tradePending = true;
+      void loadTrade();
+    } else showTrade();
   } else if (route.to === "agents") {
     // Codex 창 깜빡임 알림 — 사용자 모달의 연결 탭 (src/agents/notice.ts)
     detailPet = null;
@@ -4638,6 +4857,8 @@ async function loadArt(): Promise<void> {
 const firstDraw = loadArt().then(refresh);
 // 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
 void firstDraw.then(loadUpdate).then(showUnseenNotes);
+// 교환 상태 — 박스 머리 `교환` 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
+void firstDraw.then(loadTrade);
 window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
 window.pokebuddyManage.onDexClosed((gen) => {
   dexGen = gen;

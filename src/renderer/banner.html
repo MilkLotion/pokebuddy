@@ -77,7 +77,19 @@
       .banner[hidden] {
         display: none;
       }
+      /* 제목 줄 — 제목과 오른쪽 `✕`. 높이 18 그대로라 배너 280 × 82 가 바뀌지 않는다 (Figma `Notification Banner` `338:732` 각 변형의 `title-row`) */
+      .title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
       .title {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
         font-size: 12px;
         line-height: 18px;
         font-weight: 600;
@@ -147,6 +159,33 @@
         -webkit-box-orient: vertical;
         word-break: keep-all;
       }
+      /* 닫기 — 16px 선 아이콘, 흐린 색 */
+      .close {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .close:hover {
+        color: var(--ink);
+      }
+      .close:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
+      }
+      .close svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
       .go {
         flex: none;
         height: 32px;
@@ -172,7 +211,14 @@
   </head>
   <body>
     <div class="banner" id="banner" role="status" aria-live="polite" hidden>
-      <div class="title" id="title"></div>
+      <div class="title-row">
+        <div class="title" id="title"></div>
+        <button class="close" id="close" type="button" aria-label="닫기" title="닫기">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
       <div class="line">
         <div class="target" id="target" aria-hidden="true"></div>
         <div class="name" id="name"></div>

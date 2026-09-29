@@ -7,11 +7,12 @@
 //   (3) running → work 리듬, 잠 안 듦, Walk 만 있으면 걷기만     (4) pickup → held · drag 누적 6px → heldRow · drop → roam 0 + 반응
 //   (5) 신호 상태(waiting) → yield, act null                     (6) paceScale 2 → 같은 거리 walk.dur 절반 · sleepScale 0.5 → 150초에 잔다
 //   (7) 두 인스턴스(씨앗 다름)가 다른 자리로 간다
+//   (8) 설정 잠들기 기준 — 0 이면 400초 넘게 유휴여도 안 잠, 10분이면 300초에 안 자고 600초에 잠, 잠든 뒤 0 으로 바꾸면 깬다
 //   + NEUTRAL_PARAMS 면 규칙표 숫자가 옛 것과 같다 · rowOf 방향 · body.js 의 활동 bump 규칙 · 숨어 있으면 걷지 않는다 · capsOf
 // 끝에 "통과 (N건)". 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { createBrain } from "../motion/brain";
-import { NEUTRAL_PARAMS, applyParams } from "../motion/params";
+import { NEUTRAL_PARAMS, applyParams, withSleepAfter } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import { MOTION_RULES } from "../motion/rules";
 import type { MotionRules } from "../motion/rules";
@@ -508,6 +509,59 @@ check("씨앗이 다른 두 마리는 다른 때 다른 곳으로 걷는다 · �
   assert.ok(a.every((t) => inBox(t.out.roam, BOX)) && b.every((t) => inBox(t.out.roam, BOX)));
   // 같은 씨앗·같은 입력이면 결정적 — 시험이 재현된다
   assert.strictEqual(path(run(pet({ seed: 51 }), 0, 90_000, "idle")), path(a));
+});
+
+// ── (8) 설정 잠들기 기준 ──────────────────────────────────────────────────────
+// 설정 sleepAfterMin(분) × 성격·종 배율. 0 은 잠들지 않음 (docs/specs/game.md "설정과 연결")
+out("(8) 잠들기 기준 설정");
+check("withSleepAfter — 없으면 규칙표 그대로, 분 × 60초, quiet 는 0.9 비율, 0 은 Infinity", () => {
+  assert.strictEqual(withSleepAfter(null), MOTION_RULES);
+  assert.strictEqual(withSleepAfter(undefined), MOTION_RULES);
+  assert.deepStrictEqual(withSleepAfter(3).TIMES, { quiet: 162_000, sleep: 180_000, reactMin: 1_200 });
+  assert.deepStrictEqual(withSleepAfter(5).TIMES, MOTION_RULES.TIMES);
+  assert.deepStrictEqual(withSleepAfter(10).TIMES, { quiet: 540_000, sleep: 600_000, reactMin: 1_200 });
+  const never = withSleepAfter(0).TIMES;
+  assert.strictEqual(never.sleep, Infinity);
+  assert.strictEqual(never.quiet, Infinity);
+  // 성격 배율은 그 위에 곱한다
+  assert.deepStrictEqual(applyParams({ ...NEUTRAL_PARAMS, sleepScale: 0.5 }, withSleepAfter(10)).TIMES, { quiet: 270_000, sleep: 300_000, reactMin: 1_200 });
+  assert.strictEqual(applyParams({ ...NEUTRAL_PARAMS, sleepScale: 0.5 }, withSleepAfter(0)).TIMES.sleep, Infinity);
+});
+
+check("잠들지 않음(0) — 400초 넘게 유휴여도 잠들지 않고, 조용 구간 없이 계속 걷는다", () => {
+  const m = pet({ seed: 2, sleepAfterMin: 0 });
+  const tr = run(m, 0, 420_000, "idle");
+  assert.ok(!phases(tr).has("sleep"), "잠들지 않음인데 잤다");
+  assert.ok(entries(tr, "walk").some((w) => w.now > 300_000), "300초 뒤에 걷기가 없다 — 조용 구간에 들어갔다");
+  // 성격 배율을 다시 넣어도(tune — 변덕 성격) 설정은 그대로다
+  m.tune({ ...NEUTRAL_PARAMS, sleepScale: 0.8 });
+  assert.ok(!phases(run(m, 420_040, 900_000, "idle")).has("sleep"), "tune 뒤에 잠들지 않음이 풀렸다");
+});
+
+check("10분 — 300초에는 안 자고 600초에 잔다 (조용 540초)", () => {
+  const m = pet({ seed: 2, sleepAfterMin: 10 });
+  const tr = run(m, 0, 599_960, "idle");
+  assert.ok(!phases(tr).has("sleep"), "10분인데 600초 전에 잤다");
+  for (const w of entries(tr, "walk")) assert.ok(w.now < 540_000, `조용 540초 뒤 ${w.now}ms 에 걷기를 시작했다`);
+  assert.strictEqual(last(run(m, 600_000, 600_000, "idle")).out.phase, "sleep");
+});
+
+check("기본 5분으로 잠든 뒤 0 으로 바꾸면 깬다(Wake) → 쉬고 다시 잠들지 않는다", () => {
+  const m = pet({ seed: 2 });
+  assert.strictEqual(last(run(m, 0, 300_000, "idle")).out.phase, "sleep");
+  m.sleepAfter(0);
+  const waking = last(run(m, 300_040, 300_040, "idle"));
+  assert.strictEqual(waking.out.phase, "wake");
+  assert.deepStrictEqual(waking.out.act, { anim: "Wake", row: 0, mode: "hold", rate: 1 });
+  const after = run(m, 300_080, 700_000, "idle");
+  assert.ok(!phases(after).has("sleep"), "0 으로 바꾼 뒤 다시 잤다");
+  assert.ok(phases(after).has("walk"), "깬 뒤 걷지 않았다");
+  // 다시 5분으로 — 유휴가 이미 5분을 넘었으니 곧 잠든다
+  m.sleepAfter(5);
+  assert.ok(phases(run(m, 700_040, 720_000, "idle")).has("sleep"), "5분으로 되돌렸는데 잠들지 않았다");
+  // null 은 규칙표 기본값 — 5분과 같다
+  m.sleepAfter(null);
+  assert.strictEqual(last(run(m, 720_040, 720_040, "idle")).out.phase, "sleep");
 });
 
 out(`통과 (${passed}건)`);

@@ -5,7 +5,7 @@
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
-import { canGiveEgg, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
+import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry, ShopItemView } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
 
@@ -48,8 +48,15 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     return room > 0 ? { room } : { room, blocked: `${SHOP_V3_RULES.bagMax}개까지만 살 수 있어요` };
   };
 
-  // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다
+  // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다.
+  // room 은 한 번에 살 수 있는 개수 — 빈 칸 수, 단일 포켓몬 알이면 (남은 종 수 − 기다리는 같은 알 수)까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const daycareFull = save.eggs.length >= EGG_V3_RULES.maxEggs;
+  const daycareRoom = Math.max(0, EGG_V3_RULES.maxEggs - save.eggs.length);
+  const eggRoom = (kind: string): number => {
+    if (!isSingleEgg(kind, opts)) return daycareRoom;
+    const waiting = save.eggs.filter((e) => e.kind === kind).length;
+    return Math.max(0, Math.min(daycareRoom, singleLeft(save, kind, opts).length - waiting));
+  };
   for (const kind of Object.keys(eggs(opts))) {
     if (isMetaKey(kind)) continue;
     const price = eggPrice(kind, opts);
@@ -61,6 +68,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       price,
       category: "egg",
       affordable: false,
+      room: eggRoom(kind),
       blocked: !canGiveEgg(save, kind, opts) ? "모두 모았어요" : daycareFull ? "돌보미집이 가득 찼어요" : undefined,
     });
   }

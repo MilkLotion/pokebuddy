@@ -32,6 +32,18 @@ export const NEUTRAL_PARAMS: MotionParams = {
   cursorPull: 0, // S3 에서 — 커서를 쫓음/피함
 };
 
+// 설정 `잠들기 기준`(save.settings.sleepAfterMin, 분)을 규칙표의 수면 시각에 넣는다 (docs/specs/game.md "설정과 연결")
+//   null·undefined  설정을 모른다 — 규칙표 기본값(TIMES.sleep 5분) 그대로
+//   0               잠들지 않음 — sleep·quiet 를 Infinity 로. 입력 유휴로 잠들지 않고, 이미 잠든 마리는 brain 의 깨기 경로로 깬다
+//   그 밖           분 × 60초. quiet 는 규칙표의 quiet/sleep 비율(270/300)을 유지한다
+// 성격·종 배율(sleepScale)은 이 결과 위에 applyParams 가 곱한다
+export function withSleepAfter(min: number | null | undefined, rules: MotionRules = MOTION_RULES): MotionRules {
+  if (min == null || !Number.isFinite(min) || min < 0) return rules;
+  const sleep = min > 0 ? min * 60_000 : Infinity;
+  const quiet = sleep * (rules.TIMES.quiet / rules.TIMES.sleep);
+  return { ...rules, TIMES: { ...rules.TIMES, quiet, sleep } };
+}
+
 const scaleRange = ([lo, hi]: Range, k: number): Range => [lo * k, hi * k];
 
 // 배율이 곱해지는 자리

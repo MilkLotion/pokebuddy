@@ -8,6 +8,29 @@ if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 �
 const device: HTMLElement = root;
 const api = window.pokebuddyDex;
 
+// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
+// - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
+// - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
+// - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
+let sentHeight = -1;
+function sendSize(force: boolean): void {
+  const h = Math.ceil(device.getBoundingClientRect().height);
+  if (!force && h === sentHeight) return;
+  sentHeight = h;
+  api.size(h);
+}
+// 첫 render() 전(sentHeight < 0)에는 보내지 않는다 — 빈 #device 높이로 숨은 새 창이 먼저 보이면 안 된다
+new ResizeObserver(() => {
+  if (sentHeight >= 0) sendSize(false);
+}).observe(device);
+
+// 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
+// - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (dex.html @font-face)
+// - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
+const fontsReady: Promise<unknown> = Promise.allSettled(
+  ['400 12px "Galmuri11"', '700 12px "Galmuri11"', '400 10px "Galmuri9"'].map((f) => document.fonts.load(f)),
+).then(() => document.fonts.ready);
+
 const UNKNOWN = "???";
 const STATE_WORD: Record<string, string> = { obtained: "획득", unlocked: "해금", locked: "미해금" };
 
@@ -164,7 +187,8 @@ function render(v: DexDeviceView): void {
   );
   device.appendChild(controls);
 
-  api.size(device.getBoundingClientRect().height);
+  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
+  sendSize(true);
 }
 
 // 방향키로도 넘긴다. Esc 는 닫는다
@@ -176,5 +200,5 @@ document.addEventListener("keydown", (e) => {
 
 api.onShow((view) => {
   // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void document.fonts.ready.then(() => render(view));
+  void fontsReady.then(() => render(view));
 });

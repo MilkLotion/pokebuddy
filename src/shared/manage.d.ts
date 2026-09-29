@@ -90,6 +90,9 @@ export interface BagItemView {
   evolution: boolean; // 진화용 도구 — 누르면 진화할 개체를 고른다
   effect?: string; // 효과 종류 (src/bag/use.ts ItemEffect) — 가방 분류 칩과 사용 패널의 미리보기가 쓴다. 진화용 도구는 없다
   amount?: number; // 효과의 양 — 경험사탕은 경험치, 기본먹이는 만복도
+  sellPrice?: number; // 하나의 판매가 (src/shop/sell.ts sellPrice). 없으면 팔 수 없다 — 가격이 없거나 0P 인 도구
+  buyPrice?: number; // 판매가의 바탕인 구매가 — 판매 안내 "구매가 Y P의 60%" 가 쓴다. sellPrice 가 있을 때만
+  sellRate?: number; // 판매 비율 (SHOP_V3_RULES.sellRate) — 판매 안내의 백분율. sellPrice 가 있을 때만
 }
 
 // 성격 변경 창의 선택지 하나. 자료 순서다
@@ -108,7 +111,7 @@ export interface ShopItemView {
   category: ShopCategory;
   affordable: boolean; // 지금 포인트로 살 수 있다
   blocked?: string; // 살 수 없는 다른 이유 — 화면이 그대로 보여 준다
-  room?: number; // 도구 — 가방에 더 담을 수 있는 개수 (최대 999 − 가진 개수). 구매 수량의 상한
+  room?: number; // 구매 수량의 상한. 도구 — 가방에 더 담을 수 있는 개수 (최대 999 − 가진 개수). 알 — 돌보미집 빈 칸, 단일 포켓몬 알이면 남은 종 수 − 기다리는 같은 알 수까지
   dex?: number; // 포켓몬 — 전국도감 번호. 상점 격자의 번호 줄·검색·지방에 쓴다
 }
 
@@ -226,7 +229,7 @@ export interface ManageRequest {
 export interface ManageReply {
   ok: boolean;
   reason: string;
-  screen?: TradeScreen; // trade.* 명령의 결과 — 교환 탭이 그리는 값
+  screen?: TradeScreen; // trade.* 명령의 결과 — 교환 모달이 그리는 값
   [key: string]: unknown;
 }
 
@@ -244,7 +247,7 @@ export interface ManageReply {
 export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
-// 교환은 교환 링크(딥링크)로 앱을 열었을 때 교환 탭으로 간다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
+// 교환은 교환 링크(딥링크)로 앱을 열었을 때 박스 탭을 열고 교환 모달을 띄운다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
 export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" } | { to: "bag" } | { to: "shop" };
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
@@ -356,7 +359,7 @@ export interface MailReply {
 }
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
-// 교환 탭이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
+// 교환 모달이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면. 명령은 `command` 의 trade.* 로 보낸다. 결과에도 이 값(`screen`)이 온다
 export interface TradeCardView {
   species: string;
@@ -369,7 +372,7 @@ export interface TradeCardView {
 }
 
 export interface TradeScreen {
-  available: boolean; // 교환을 쓸 수 없다(동반자 아님·reader·서버 설정 없음) — 탭은 안내만 보인다
+  available: boolean; // 교환을 쓸 수 없다(동반자 아님·reader·서버 설정 없음) — 모달은 안내만 보인다
   phase: "idle" | "hosting" | "trading" | "done" | "closed";
   link: string | null; // 내가 만든 링크 (hosting)
   expiresAt: number | null; // 참가 전 만료 시각 ms (hosting)
@@ -545,12 +548,13 @@ export interface BannerView {
 }
 
 // banner:show 는 메인 → 렌더러, 나머지는 렌더러 → 메인
-export type BannerChannel = "banner:show" | "banner:go" | "banner:hover";
+export type BannerChannel = "banner:show" | "banner:go" | "banner:hover" | "banner:close";
 
 export interface BannerBridge {
   onShow: (cb: (banner: BannerView) => void) => void;
   go: (key: string) => void; // `바로가기` 를 눌렀다
   hover: (on: boolean) => void; // 커서가 배너 위에 있는 동안 사라지지 않는다
+  close: (key: string) => void; // 제목 줄 `✕` 를 눌렀다 — 그 배너를 닫고 다음 배너로 간다
 }
 
 // 앱이 그리는 메뉴 창 — Figma `Context Menu` `338:738`. 메인이 메뉴 모델을 이 모양으로 바꿔 보낸다

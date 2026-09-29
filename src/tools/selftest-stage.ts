@@ -359,6 +359,25 @@ async function stageRuntimeTests(): Promise<void> {
   stage.tick();
   eq(stage.petIds(), [], "빈 파티에서 무대 제거");
 
+  // 설정 잠들기 기준 — 무대 옵션 sleepAfterMin 을 틱마다 읽어 모든 마리에 바로 넣는다. 0 은 잠들지 않음 (docs/specs/game.md "설정과 연결")
+  // 그림에 Sleep·Wake 가 없어 판정은 awakeIds(자는 단계가 아닌 마리)로 본다
+  let sleepMin: number | null = 0;
+  const sleeper = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, sleepAfterMin: () => sleepMin,
+    onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
+  sleeper.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
+  sleeper.setVisible(true);
+  await sleeper.setParty([pet]);
+  for (let n = 0; n < 11_000; n++) { now += 40; sleeper.tick(); } // 440초
+  eq(sleeper.awakeIds(), ["p1"], "잠들지 않음(0) — 440초 유휴여도 깨어 있음");
+  sleepMin = 3; // 설정을 바꿨다 — 재시작 없이 다음 틱부터 3분 × 성격·종 배율. 유휴가 이미 넘었으니 곧 잔다
+  // 무대의 움직임은 Math.random 이라 바꾼 순간 걷는 중일 수 있다. 걷기(최대 7초)·돌아보기를 마친 뒤 잠든다 — 잠들 때까지 최대 30초 돌린다
+  for (let n = 0; n < 750 && sleeper.awakeIds().length; n++) { now += 40; sleeper.tick(); }
+  eq(sleeper.awakeIds(), [], "3분으로 바꾸면 무대의 마리가 30초 안에 잠듦");
+  sleepMin = 0;
+  for (let n = 0; n < 5; n++) { now += 40; sleeper.tick(); }
+  eq(sleeper.awakeIds(), ["p1"], "잠든 뒤 0 으로 바꾸면 깨어남");
+  await sleeper.setParty([]);
+
   const overlap = createStage({ buddyMode: "off", timeScale: 1, window: win, art, ghost: () => false,
     onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
   overlap.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);

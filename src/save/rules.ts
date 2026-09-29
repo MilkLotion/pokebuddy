@@ -129,6 +129,7 @@ export const SHOP_V3_RULES = {
   // 종 지정 구매 — 수집 난이도(rank)별 가격. 알에서 얻을 수 있는 종만 판다 (2026-09-29 사용자 결정, src/shop/catalog.ts speciesPrice)
   speciesPrices: { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 } as Readonly<Record<number, number>>,
   startPoints: 120, // 첫 선택을 마치면 한 번 지급한다
+  sellRate: 0.6, // 가방 판매가 = 구매가 × 0.6, 내림 (2026-09-30 사용자 결정 "판매가는 구매가의 60%". 내림은 제안). src/shop/sell.ts
   bagMax: 999, // 도구 한 종류를 가방에 둘 수 있는 최대 개수 — 넘게는 살 수 없다 (2026-09-27 사용자 결정). 업적 보상 등 사지 않고 받는 것은 막지 않는다
 };
 

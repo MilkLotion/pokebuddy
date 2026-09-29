@@ -49,6 +49,8 @@ export interface MotionOut {
 
 export interface PetMotion {
   tune(params: MotionParams): void;
+  // 설정 `잠들기 기준`(분)이 바뀌었다 — 0 이면 잠들지 않음, null 이면 규칙표 기본값 (params.ts withSleepAfter)
+  sleepAfter(min: number | null): void;
   tick(input: MotionInput): MotionOut;
   // 옛 body.js state — 활동 bump 규칙 포함. promptAt 은 초 단위. now 를 안 주면 마지막 tick 의 now 로 친다
   state(agent: StageState, promptAt: number | null, now?: number): void;
@@ -63,6 +65,7 @@ export interface PetMotion {
 export interface PetMotionOptions {
   caps: MotionCaps;
   params?: MotionParams;
+  sleepAfterMin?: number | null; // 설정 `잠들기 기준`(분). 0 이면 잠들지 않음. 없으면 규칙표 기본값
   mode?: "on" | "calm";
   timeScale?: number;
   rng?: () => number;

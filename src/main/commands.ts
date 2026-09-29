@@ -37,7 +37,7 @@ export interface CommandContext {
   onChanged?(evolvedId?: string): Promise<void>;
   log?: ((o: Record<string, unknown>) => void) | null;
   trade?: () => TradeSession | null; // 친구 교환 — 앱이 준비된 뒤 생기므로 부를 때 가져온다 (src/main/trade.ts)
-  tradeScreen?: () => unknown; // 교환 탭이 그리는 값 (src/main/trade-screen.ts) — 결과의 screen 에 싣는다
+  tradeScreen?: () => unknown; // 교환 모달이 그리는 값 (src/main/trade-screen.ts) — 결과의 screen 에 싣는다
 }
 
 export interface Commands {
@@ -75,6 +75,7 @@ const SAVE_COMMANDS: readonly CommandName[] = [
   "party.keep",
   "egg.open",
   "bag.use",
+  "bag.sell",
   "shop.buy",
   "achievement.claim",
   "tutorial.skip",

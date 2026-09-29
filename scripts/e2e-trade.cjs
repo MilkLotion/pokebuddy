@@ -144,7 +144,7 @@ async function run() {
   await ui(server);
 }
 
-// ── 화면 — 관리 창의 교환 탭을 실제 앱에서 눌러 본다 ─────────────────────────────
+// ── 화면 — 관리 창의 교환 모달(박스 머리 `교환` 단추)을 실제 앱에서 눌러 본다 ─────────────────────────────
 // 찍은 화면은 worklog/records/trade/evidence/ 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
 async function ui(server) {
   const shots = path.join(root, 'worklog/records/trade/evidence');
@@ -159,13 +159,14 @@ async function ui(server) {
   const UB = makeApp('ub', server, [{ id: 'p1', species: 'eevee', where: 'party' }]);
   await UA.start(); await UB.start();
 
-  // U1 교환 탭 — 두 카드와 규칙
+  // U1 교환 모달 — 박스 탭 머리의 `교환` 단추로 연다. 두 카드와 규칙
   await UA.ui('open');
   await opened(UA);
-  assert.equal(await UA.press('교환'), true, '교환 탭');
-  await until(() => has(UA, ['공유 채널 만들기', '링크로 참가', '교환 규칙']), 'U1 교환 탭 첫 화면');
+  assert.equal(await UA.press('박스'), true, '박스 탭');
+  assert.equal(await UA.press('교환'), true, '교환 단추');
+  await until(() => has(UA, ['친구 교환', '공유 채널 만들기', '링크로 참가', '교환 규칙']), 'U1 교환 모달 첫 화면');
   await shot(UA, 'trade-base.png');
-  checks.push('U1 교환 탭 첫 화면(공유 채널 만들기·링크로 참가·규칙)');
+  checks.push('U1 박스 `교환` 단추 → 교환 모달 첫 화면(공유 채널 만들기·링크로 참가·규칙)');
 
   // U2 링크 만들기 — 남은 시간과 링크 복사
   assert.equal(await UA.press('링크 만들기'), true);
@@ -178,10 +179,10 @@ async function ui(server) {
   // U3 딥링크로 참가 — B 는 링크로 앱을 연 것처럼 second-instance 를 받는다. A 는 실시간 신호로 바뀐다
   await UB.ui('link', { url: `pokebuddy://trade/${link.split('#')[1]}` });
   await opened(UB);
-  await until(() => has(UB, ['내 포켓몬', '친구 포켓몬', '보낼 포켓몬']), 'U3 B 교환 화면');
+  await until(() => has(UB, ['친구 교환', '내 포켓몬', '친구 포켓몬', '보낼 포켓몬']), 'U3 B 교환 모달');
   await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U3 A 가 참가를 본다');
   assert.equal(await UA.dom(`[...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠')?.disabled === true`), true, 'U3 단일 포켓몬 칸은 막힌다');
-  checks.push('U3 딥링크(second-instance)로 참가 → 양쪽 교환 화면, 단일 포켓몬 칸 막힘');
+  checks.push('U3 딥링크(second-instance)로 참가 → B 는 박스 탭 + 교환 모달, 양쪽 교환 화면, 단일 포켓몬 칸 막힘');
 
   // U4 두 사람이 화면에서 고른다
   assert.equal(await pick(UA, '파이리'), true);
@@ -236,10 +237,10 @@ async function ui(server) {
   await UC.start();
   await until(async () => (await UC.status())?.phase === 'trading', 'U8 C 가 참가한다', 60_000);
   await opened(UC);
-  await until(() => has(UC, ['내 포켓몬', '보낼 포켓몬']), 'U8 C 의 교환 탭이 열린다');
+  await until(() => has(UC, ['내 포켓몬', '보낼 포켓몬']), 'U8 C 의 교환 모달이 열린다');
   await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U8 A 가 참가를 본다');
   assert.equal(await UA.press('나가기'), true);
-  checks.push('U8 링크로 처음 켜기(인자) → 시작 확인 뒤 참가, 교환 탭 열림');
+  checks.push('U8 링크로 처음 켜기(인자) → 시작 확인 뒤 참가, 교환 모달 열림');
 }
 
 async function main() {

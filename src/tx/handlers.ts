@@ -15,6 +15,7 @@ import { isSettingKey, setSetting } from "../state/settings.js";
 import { setHome, setSize } from "../party/home.js";
 import { begin } from "../party/starter.js";
 import { buy } from "../shop/buy.js";
+import { sell } from "../shop/sell.js";
 import { isBoxSortKey, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
 import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
@@ -111,23 +112,29 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
   if (!isObj(args)) return { ok: false, reason: "bad-args" };
   const productId = typeof args.productId === "string" ? args.productId : "";
   if (!productId) return { ok: false, reason: "bad-args" };
-  // 수량 — 없으면 1. 여러 개는 값이 있는 도구만 된다(알·포켓몬·파티 칸·0P 상품은 하나씩). 상한은 포인트다
+  // 수량 — 없으면 1. 여러 개는 값이 있는 도구와 알만 된다(포켓몬·파티 칸·0P 상품은 하나씩). 상한은 포인트다.
+  // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수도 상한이다 — 매번 buy 가 검사한다 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const count = args.count === undefined ? 1 : args.count;
   if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
   let res = buy(draft, productId, ctx.now, ctx.rand);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
   let spent = res.spent ?? 0;
+  const eggIds: string[] = res.eggId ? [res.eggId] : [];
   if (count > 1) {
-    if (!spent || res.eggId || res.petId || res.slotIndex !== undefined) return { ok: false, reason: "bad-args" };
+    if (!spent || res.petId || res.slotIndex !== undefined) return { ok: false, reason: "bad-args" };
     for (let i = 1; i < count; i += 1) {
       res = buy(draft, productId, ctx.now, ctx.rand);
       if (!res.ok) return { ok: false, reason: res.reason ?? "failed" }; // 실행기가 사본을 버린다 — 앞서 산 것도 반영하지 않는다
       spent += res.spent ?? 0;
+      if (res.eggId) eggIds.push(res.eggId);
     }
   }
   return {
     ok: true,
-    result: { productId, count, spent, balance: res.balance, eggId: res.eggId, petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox },
+    result: {
+      productId, count, spent, balance: res.balance, eggId: eggIds[0], ...(eggIds.length ? { eggIds } : {}),
+      petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox,
+    },
   };
 };
 
@@ -160,6 +167,21 @@ const useHandler: TxHandler = (draft, args) => {
 };
 
 HANDLERS["bag.use"] = useHandler;
+
+// 도구 판매 — 가방에서 count 개를 빼고 판매가만큼 포인트를 더한다 (2026-09-30 사용자 결정, src/shop/sell.ts)
+const sellHandler: TxHandler = (draft, args) => {
+  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  const itemId = typeof args.itemId === "string" ? args.itemId : "";
+  if (!itemId) return { ok: false, reason: "bad-args" };
+  // 수량 — 없으면 1. 1 이상의 정수가 아니면 bad-count
+  const count = args.count === undefined ? 1 : args.count;
+  if (typeof count !== "number") return { ok: false, reason: "bad-count" };
+  const res = sell(draft, itemId, count);
+  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  return { ok: true, result: { itemId, count, earned: res.earned, left: res.left, balance: res.balance } };
+};
+
+HANDLERS["bag.sell"] = sellHandler;
 
 // ── 진화 ───────────────────────────────────────────────────────────────────────
 

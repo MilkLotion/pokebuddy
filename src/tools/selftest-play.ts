@@ -12,12 +12,14 @@ import { createGame } from "../main/game";
 import { playAreaRect } from "../main/layout";
 import * as store from "../save/store";
 import { setSize } from "../party/home";
-import { DEFAULT_SIZE_LEVEL, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules";
+import { DEFAULT_SIZE_LEVEL, EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules";
 import { zoomOf } from "../main/art";
 import { empty, normalize } from "../save/v3";
 import { REGION_MIN, setSetting } from "../state/settings";
 import { createExecutor } from "../tx/executor";
 import { HANDLERS } from "../tx/handlers";
+import { shopList } from "../tx/lists";
+import { eggPool, eggPrice } from "../shop/catalog";
 import type { SaveV3 } from "../shared/save-v3";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
@@ -163,7 +165,8 @@ function seedPet(): SaveV3 {
   process.stdout.write("(6) 배고픔 말풍선 되풀이  ok\n");
 }
 
-// (7) 여러 개 구매 — 명령 하나(count)로 한 거래. 모자라면 하나도 사지 않는다. 알·0개 이하·소수는 거절
+// (7) 여러 개 구매 — 명령 하나(count)로 한 거래. 모자라면 하나도 사지 않는다. 0개 이하·소수는 거절.
+// 알도 여러 개 산다 — 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지. 넘치면 전부 되돌린다 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
 {
   let state: SaveV3 | null = seedPet();
   state.points.balance = 100;
@@ -180,11 +183,33 @@ function seedPet(): SaveV3 {
     const bad = ex.run({ id: `buy-bad-${String(count)}`, name: "shop.buy", args: { productId: "exp-candy-xs", count } });
     assert.equal(bad.ok, false, `수량 ${String(count)} 거절`);
   }
-  state.points.balance = 1000;
-  const eggs = ex.run({ id: "buy-egg", name: "shop.buy", args: { productId: "random", count: 2 } });
-  assert.equal(eggs.ok, false, "알은 하나씩만");
-  assert.equal(state?.eggs.length, 0);
-  assert.equal(state?.points.balance, 1000);
+  state.points.balance = 100_000;
+  // 빈 칸 3 — 알 셋을 먼저 넣어 둔다
+  assert.ok(ex.run({ id: "egg-pre", name: "shop.buy", args: { productId: "random", count: EGG_V3_RULES.maxEggs - 3 } }).ok);
+  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs - 3);
+  const before = state.points.balance;
+  const egg4 = ex.run({ id: "buy-egg-4", name: "shop.buy", args: { productId: "random", count: 4 } });
+  assert.equal(egg4.ok ? "ok" : egg4.reason, "daycare-full", "빈 칸 3 에 넷은 못 산다");
+  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs - 3, "넘치면 하나도 넣지 않는다");
+  assert.equal(state?.points.balance, before, "포인트도 그대로");
+  const egg3 = ex.run({ id: "buy-egg-3", name: "shop.buy", args: { productId: "random", count: 3 } });
+  assert.ok(egg3.ok, JSON.stringify(egg3));
+  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs, "빈 칸 3 에 셋");
+  assert.equal(state?.points.balance, before - 3 * (eggPrice("random") ?? 0), "세 개 값을 한 번에 쓴다");
+  assert.deepStrictEqual(egg3.ok && (egg3.result as { eggIds?: string[] }).eggIds, state?.eggs.slice(-3).map((e) => e.id), "결과에 새 알 식별자 셋");
+  // 단일 포켓몬 알 — 남은 종 2, 기다리는 같은 알 1 이면 하나만 더 산다
+  state.eggs = [];
+  const pool = eggPool("legendary") ?? [];
+  state.dex.obtained = pool.slice(2);
+  assert.ok(ex.run({ id: "single-1", name: "shop.buy", args: { productId: "legendary" } }).ok);
+  const single2 = ex.run({ id: "single-2", name: "shop.buy", args: { productId: "legendary", count: 2 } });
+  assert.equal(single2.ok ? "ok" : single2.reason, "sold-out", "남은 종보다 많이는 못 산다");
+  assert.equal(state?.eggs.length, 1, "하나도 더 넣지 않는다");
+  assert.ok(ex.run({ id: "single-3", name: "shop.buy", args: { productId: "legendary", count: 1 } }).ok, "하나는 산다");
+  const room = shopList(state).find((p) => p.id === "legendary");
+  assert.equal(room?.room, 0, "상점 목록의 상한도 0");
+  state.eggs = [];
+  state.dex.obtained = [];
   // 가방 최대 999 — 가진 개수를 넘겨 사지 못한다. 넘치는 묶음은 하나도 사지 않는다
   state.points.balance = 100_000;
   state.bag["exp-candy-xs"] = 997;
@@ -196,7 +221,7 @@ function seedPet(): SaveV3 {
   assert.equal(state?.bag["exp-candy-xs"], 999, "999 까지는 산다");
   const full = ex.run({ id: "buy-full", name: "shop.buy", args: { productId: "exp-candy-xs" } });
   assert.equal(full.ok ? "ok" : full.reason, "bag-full", "가득 차면 bag-full");
-  process.stdout.write("(7) 여러 개 구매 · 가방 최대 999  ok\n");
+  process.stdout.write("(7) 여러 개 구매 · 알 여러 개 · 가방 최대 999  ok\n");
 }
 
 // (8) 이어진 저장 실패 — 3번 이어서 못 쓰면 보기에 saveFailing. 한 번 쓰면 사라진다. 명령과 주기 저장을 함께 센다

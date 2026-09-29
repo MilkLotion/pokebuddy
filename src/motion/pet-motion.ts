@@ -15,7 +15,7 @@
 //   PMD 검사(art.kind)·mode "off" 처리는 무대 쪽 — 여기는 caps 만 받는다
 import type { StageState } from "../shared/stage";
 import { createBrain } from "./brain";
-import { NEUTRAL_PARAMS, applyParams } from "./params";
+import { NEUTRAL_PARAMS, applyParams, withSleepAfter } from "./params";
 import { MOTION_RULES } from "./rules";
 import type { MotionCaps, MotionInput, MotionOut, PetMotion, PetMotionOptions } from "./types";
 
@@ -37,6 +37,7 @@ export function capsOf(art: PmdArtLike): MotionCaps {
 export function createPetMotion({
   caps,
   params = NEUTRAL_PARAMS,
+  sleepAfterMin = null,
   mode = "on",
   timeScale = 1,
   rng = Math.random,
@@ -44,7 +45,10 @@ export function createPetMotion({
   log = null,
   now: bornAt,
 }: PetMotionOptions): PetMotion {
-  const rules = applyParams(params, MOTION_RULES);
+  // 규칙표 = 설정의 잠들기 기준을 넣은 표(base) × 성격 배율(current). 어느 쪽이 바뀌어도 둘을 다시 곱해 brain 에 넘긴다
+  let base = withSleepAfter(sleepAfterMin, MOTION_RULES);
+  let current = params;
+  const rules = applyParams(current, base);
   const brain = createBrain({
     have: caps.have,
     durOf: caps.durOf,
@@ -133,7 +137,14 @@ export function createPetMotion({
 
   return {
     state,
-    tune: (next) => brain.tune(applyParams(next, MOTION_RULES), next),
+    tune(next) {
+      current = next;
+      brain.tune(applyParams(current, base), current);
+    },
+    sleepAfter(min) {
+      base = withSleepAfter(min, MOTION_RULES);
+      brain.tune(applyParams(current, base), current);
+    },
     focus,
     tick,
     pickup(now) {

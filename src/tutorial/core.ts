@@ -81,7 +81,7 @@ export const TUTORIALS: readonly TutorialRule[] = [
 ];
 
 // 화면을 처음 열 때 띄우는 튜토리얼 — 대기열 밖. 끝내거나 닫기 전까지 그 화면을 열 때마다 1단계부터 보인다
-//   area  설정 › 화면 (6단계)   dex  도감 탭   trade  교환 탭   user  사용자 모달 (2단계)
+//   area  설정 › 화면 (6단계)   dex  도감 탭   trade  교환 모달   user  사용자 모달 (2단계)
 export const SCREEN_TUTORIALS = ["area", "dex", "trade", "user"] as const;
 
 const ruleOf = (id: string): TutorialRule | undefined => TUTORIALS.find((t) => t.id === id);

@@ -201,6 +201,9 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(day.party.slots[1]?.pet?.evolutions, [], "최종 단계는 후보가 없다");
   assert.equal(day.bag.find((b) => b.id === "fire-stone")?.evolution, true, "진화용 도구 표시");
   assert.equal(day.bag.find((b) => b.id === "premium-food")?.evolution, false);
+  // 판매가 — 구매가 × 60% 내림 (src/shop/sell.ts). 가격이 있으면 구매가·비율도 함께 준다
+  assert.deepStrictEqual([day.bag.find((b) => b.id === "fire-stone")?.sellPrice, day.bag.find((b) => b.id === "fire-stone")?.buyPrice, day.bag.find((b) => b.id === "fire-stone")?.sellRate], [90, 150, 0.6], "진화용 도구 판매가");
+  assert.equal(day.bag.find((b) => b.id === "premium-food")?.sellPrice, 36, "60P → 36P");
   process.stdout.write("(11) 진화 후보와 조건 문구  ok\n");
 }
 

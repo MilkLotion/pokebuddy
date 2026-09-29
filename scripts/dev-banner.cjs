@@ -3,6 +3,8 @@
 // 저장을 읽지 않는다. 보기용 배너 하나를 바로 창에 넣고 찍은 뒤 끝낸다. 소리는 내지 않는다.
 // 찍은 그림은 Figma `Notification Banner` `338:732` 와 비교한다.
 // `--go` 를 주면 찍은 뒤 `바로가기` 를 눌러 목적지(go:)와 사라짐(done)이 출력되는지 본다
+// `--close` 를 주면 찍은 뒤 제목 줄 `✕` 를 눌러 목적지 없이 사라짐(done)만 출력되는지 본다
+// `--wait` 를 주면 아무것도 누르지 않는다. 창이 보인 때부터 1.5초에는 보이고 2.5초에는 숨었는지 두 번 본다(표시 2초 판정)
 const fs = require("node:fs");
 const path = require("node:path");
 const { app, BrowserWindow } = require("electron");
@@ -30,9 +32,30 @@ app.whenReady().then(() => {
     html: rendererFile("banner.html"),
     chime: () => 0,
     onGo: (route) => process.stdout.write(`go: ${JSON.stringify(route)}\n`),
-    onDone: () => process.stdout.write("done\n"),
+    onDone: () => process.stdout.write(`done${shownAt ? ` ${Date.now() - shownAt}ms` : ""}\n`),
   });
+  // 표시 시간은 창이 실제로 보인 때(showInactive)부터 센다 — 찍기 대기 1200 과는 무관하다
+  let shownAt = 0;
+  app.on("browser-window-created", (_e, win) => win.once("show", () => (shownAt = Date.now())));
   banner.show(SAMPLES[kind] ?? SAMPLES.hatch);
+  if (process.argv.includes("--wait")) {
+    const look = (at) =>
+      new Promise((r) => {
+        const poll = setInterval(() => {
+          if (!shownAt || Date.now() - shownAt < at) return;
+          clearInterval(poll);
+          const win = BrowserWindow.getAllWindows()[0];
+          r(!!win && win.isVisible());
+        }, 20);
+      });
+    void look(1500).then((early) =>
+      look(2500).then((late) => {
+        process.stdout.write(`visible at 1500ms: ${early}, at 2500ms: ${late}\n`);
+        app.exit(early && !late ? 0 : 1);
+      }),
+    );
+    return;
+  }
   if (!shotFile) return;
   setTimeout(() => {
     const win = BrowserWindow.getAllWindows()[0];
@@ -41,12 +64,13 @@ app.whenReady().then(() => {
       .then((img) => {
         fs.writeFileSync(shotFile, img.toPNG());
         process.stdout.write(`shot: ${shotFile} bounds: ${JSON.stringify(win.getBounds())}\n`);
-        if (!process.argv.includes("--go")) return app.exit(0);
+        const press = process.argv.includes("--go") ? "go" : process.argv.includes("--close") ? "close" : null;
+        if (!press) return app.exit(0);
         return win.webContents
-          .executeJavaScript("document.getElementById('go').click(); true")
+          .executeJavaScript(`document.getElementById('${press}').click(); true`)
           .then(() => new Promise((r) => setTimeout(r, 500)))
           .then(() => {
-            process.stdout.write(`visible after go: ${win.isVisible()}\n`);
+            process.stdout.write(`visible after ${press}: ${win.isVisible()}\n`);
             app.exit(0);
           });
       })

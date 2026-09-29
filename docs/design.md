@@ -70,7 +70,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | 표시 구조 | 투명 창 하나에 최대 여섯 마리를 그린다. 마리별 크기·성격·표시 상태를 유지한다. | [표시 창](../src/main/stage-window.ts), [무대](../src/main/stage.ts) |
 | 정식 로고 | 원본은 `assets/logo/src/logo.svg`다. 산출물은 `assets/logo/out/`에 둔다. | [원본](../assets/logo/src/logo.svg) |
 | 구현 기술 | `src/`에 TypeScript를 작성한다. 메인과 렌더러를 `tsc`로 각각 빌드한다. | [패키지 설정](../package.json) |
-| S5 설정창 | 바닐라 HTML·CSS와 컴파일한 TypeScript를 사용한다. 탭은 파티·박스·도감·상점·가방·교환이다. | [게임 규칙](specs/game.md) |
+| S5 설정창 | 바닐라 HTML·CSS와 컴파일한 TypeScript를 사용한다. 탭은 파티·박스·도감·상점·가방이다. 교환은 박스 탭 머리의 `교환` 단추로 여는 모달이다. | [게임 규칙](specs/game.md) |
 | 문구 | 사용자 문구는 언어 파일에서 관리한다. 한국어와 영어를 제공한다. 명칭은 용어사전을 따른다. | [언어 파일](../lib/i18n/ko.json), [용어사전](terms.md) |
 
 ## 놀이공간과 직접 돌봄
@@ -350,7 +350,7 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 ## 커맨드 처리기
 
 명령 계약은 [공유 타입](../src/shared/types.ts)과 [등록 처리기](../src/main/commands.ts)를 따른다. 메뉴·CLI·mailbox는 같은 명령 처리 경로를 사용한다.
-명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
+명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
 설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.keep`이 맡는다.
 
 `companion`은 포켓몬 인자를 받지 않는다. 빈 파티이면 선택창을 연다. 선택 취소와 저장 실패를 구분한다.
@@ -375,7 +375,7 @@ S5는 도감 등록, 개체별 육성 기록, 파티 배치, 도구 재고, 알 
 | 계층 | Foundations → Atoms → Molecules → Organisms → Templates → Screens. Screen은 Template 인스턴스로 구성한다. |
 | 변수와 글꼴 | `PB / Primitive`, `PB / Color`, `PB / Dimension` 변수를 사용한다. 배경막은 45% 알파를 가진 `neutral/900-a45`를 쓴다. 꺼진 토글은 `bg/control-off`, 빈 칸·비활성은 `bg/subtle`과 `text/disabled`를 쓴다. `PB/Type/*` 스타일은 9개다. 글꼴은 Galmuri다. 크기는 24·15·12·10px 네 단계만 쓴다. |
 | 색상 | 헤더와 카드는 `#FFFFFF`다. 본문은 `bg/canvas` `#F1F2EE`다. 강조는 `action/primary` `#0F766E`다. |
-| 탭 | 파티 / 박스 / 도감 / 상점 / 가방. `Primary Navigation` `208:542`에 있다. 교환 탭은 `가방` 탭 옆에 둔다. |
+| 탭 | 파티 / 박스 / 도감 / 상점 / 가방. `Primary Navigation` `208:542`에 있다. 교환은 탭이 아니다. 박스 탭 머리 오른쪽의 `교환` 단추가 교환 모달을 연다. |
 | 내비게이션 | `114:967`을 따른다. 하단 테두리 1px와 선택 밑줄 60×2px를 구분한다. 10px padding·radius와 밑줄 x=10, y=31.5를 유지한다. |
 | 화면 크기 | 설정창 Screen의 폭은 640이다. 기본 세로는 682다. 682는 파티 탭이 스크롤 없이 딱 맞는 높이다(`src/save/rules.ts`). 헤더 40, 탭 줄 40, 본문 폭 600이다. 헤더 오른쪽 138은 창 조작 단추 자리다. Page Header `157:971`은 제목과 설명을 한 줄로 두고 높이는 36이다. Party Layout의 제목 아래 간격은 14, 칸 사이 간격은 12다. 레이아웃 템플릿 8종의 최소 높이는 682다. 창보다 짧은 화면도 최소 높이 682로 그린다. 스크롤하는 화면과 모달은 내용 끝까지 펼쳐 그린다. 창 끝(682)이나 대화상자 끝에 점선을 긋는다. 바탕화면 화면은 1280×720이며 창 끝 점선 규칙을 쓰지 않는다. |
 | 창 크기 조절 | 설정창의 폭은 고정이다. 사용자는 세로만 조절한다. 세로는 본문을 스크롤한다. Figma px를 DIP로 그대로 쓴다. 값은 [화면 구조](specs/game.md#2-화면-구조)를 따른다. |
@@ -409,7 +409,7 @@ S5는 도감 등록, 개체별 육성 기록, 파티 배치, 도구 재고, 알 
 교환에는 로그인이 필요 없다. 단일 포켓몬은 교환할 수 없다. 첫 선택 포켓몬은 제한 없이 교환할 수 있다.
 교환해도 진화하지 않는다. 교환 진화 종은 `연결의끈` 도구로 진화한다.
 교환으로 받은 개체는 두 번째 파티 칸 업적에 인정하지 않는다. 규칙은 [파티 칸 확장과 박스 수용](specs/game.md#파티-칸-확장과-박스-수용)을 따른다.
-교환 화면은 설정창의 `가방` 탭 옆에 둔다.
+교환 화면은 설정창 박스 탭의 `교환` 단추로 여는 모달이다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게."). 교환 링크로 앱을 열면 박스 탭과 이 모달을 띄운다.
 배틀은 설계에서 제외한다.
 로그인은 선택 기능이다. 방법은 아이디+비밀번호(중복검사)와 GitHub다. 이메일 로그인과 Google 로그인은 없다.
 아이디는 영어만 받는다. 가입할 때 이름도 받는다. 본인인증은 하지 않는다. 로그인하지 않아도 교환은 된다.

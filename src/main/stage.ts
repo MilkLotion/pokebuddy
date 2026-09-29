@@ -22,6 +22,8 @@ export interface StageOptions {
   art: ArtLoader;
   ghost(): boolean; // 클릭 통과(고스트) 설정 — 켜져 있으면 히트 판정을 하지 않는다
   cursor?(): Spot | null;
+  // 설정 `잠들기 기준`(분) — 틱마다 읽어 바뀌었으면 모든 마리에 바로 넣는다. 0 이면 잠들지 않음, null·없음이면 규칙표 기본값 (src/motion/params.ts withSleepAfter)
+  sleepAfterMin?(): number | null;
   onDrop(id: string, home: Home): void; // 놓았다 — 부르는 쪽이 저장한다 (가짜 창 위에서는 부르지 않는다)
   onClick(id: string): void;
   onMenu(id: string): void;
@@ -94,6 +96,8 @@ export function createStage(opts: StageOptions): Stage {
   const sentLooks = new Set<string>();
   const icons = new Map<string, string>(); // 렌더러에 보낸 말풍선 아이콘 — 렌더러가 다시 뜨면 다시 보낸다
   let last: StageFrame | null = null;
+  const sleepSetting = (): number | null => opts.sleepAfterMin?.() ?? null;
+  let sleepMin = sleepSetting(); // 마리들에 넣은 잠들기 기준 — 설정과 다르면 틱이 다시 넣는다
 
   const shiftOf = (body: Size): number => stackShift(body);
   const spotOf = (p: PetState): Spot => homeSpot(p.pet.home, p.body, anchor, size, shiftOf(p.body));
@@ -116,6 +120,7 @@ export function createStage(opts: StageOptions): Stage {
       // 여러 마리가 같은 신호에 같은 틱에 움직이면 똑같아 보인다 — 마리마다 반응 시점을 어긋낸다
       reactMs: REACT_SPREAD_MS,
       params,
+      sleepAfterMin: sleepSetting(),
       now: now(),
       log: log ? (o) => log({ pet: pet.id, ...o }) : null,
     });
@@ -223,6 +228,11 @@ export function createStage(opts: StageOptions): Stage {
       win.hoverTick(held != null, opts.ghost());
       if (size.w <= 0 || size.h <= 0) return; // 아직 따라갈 창이 없다
       const cursor = opts.cursor?.() ?? null;
+      const nextSleep = sleepSetting();
+      if (nextSleep !== sleepMin) {
+        sleepMin = nextSleep;
+        for (const p of pets.values()) p.motion?.sleepAfter(sleepMin);
+      }
       const positions = drawOrder().map((p) => ({ id: p.pet.id, x: p.pos.x + p.body.w / 2, y: p.pos.y + p.body.h / 2 }));
       for (const id of order) {
         const p = pets.get(id);

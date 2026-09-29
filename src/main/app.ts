@@ -119,7 +119,7 @@ if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.gi
 const duplicate = !app.requestSingleInstanceLock();
 if (duplicate) app.quit();
 // 떠 있는 동반자를 다시 실행했다(설치한 앱의 바로가기를 한 번 더 누름 등) — 새로 띄우지 않고 관리 창을 연다.
-// 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 탭을 연다
+// 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 모달을 연다
 else {
   app.on("second-instance", (_e, argv) => {
     // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/jump-list.ts)
@@ -181,7 +181,7 @@ let stages: StageGroup | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
 let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반자만 가진다 (worklog/records/trade/record.md)
-let tradeScreen: TradeScreenBuilder | null = null; // 교환 탭이 그리는 값
+let tradeScreen: TradeScreenBuilder | null = null; // 교환 모달이 그리는 값
 let mainMail: MainMail | null = null; // 우편함 — 온라인 기능과 같은 클라이언트를 쓴다 (src/main/mail.ts)
 let mainOnline: MainOnline | null = null; // 공유 Supabase 클라이언트·계정·클라우드 저장 — writer 인 동반자만 가진다
 let onlineFlushed = false; // 끄기 전에 클라우드 저장을 한 번 올렸다
@@ -254,6 +254,14 @@ function syncPlayArea(): void {
   if (!next || JSON.stringify(next) === JSON.stringify(playArea)) return;
   playArea = JSON.parse(JSON.stringify(next)) as SaveV3["settings"]["playArea"];
   anchor?.poll(); // 무대 사각형을 바로 다시 정한다
+}
+
+// 설정 `잠들기 기준`(분) — 무대가 틱마다 이 값을 보고 모든 마리에 넣는다 (src/main/stage.ts sleepAfterMin). 0 은 잠들지 않음, null 은 규칙표 기본값.
+// 놀이공간과 같이 저장을 매 폴링마다 읽지 않는다. 관리 창의 설정 변경·저장 변경 알림·게임 틱(느린 주기) 뒤에 다시 읽는다
+let sleepAfterMin: number | null = null;
+function syncSleep(): void {
+  const next = game?.read()?.settings.sleepAfterMin;
+  if (typeof next === "number") sleepAfterMin = next; // 저장을 못 읽었으면 지난 값을 그대로 쓴다
 }
 
 const lanesNow = (): PlayLane[] => playLanes(playArea, currentScreens());
@@ -492,6 +500,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       if (req.cmd === "settings.set") {
         syncLoginItem();
         syncPlayArea();
+        syncSleep();
       }
       syncCoach();
       return reply;
@@ -746,7 +755,7 @@ function flushTradeLink(): void {
   void tradeStarted
     .then(() => session.join(link))
     .then((r) => {
-      // 거절(진행 중인 교환·다른 조작)은 보기에 남지 않는다 — 교환 탭 배너로 알린다
+      // 거절(진행 중인 교환·다른 조작)은 보기에 남지 않는다 — 교환 모달 배너로 알린다
       if (!r.ok && mainTrade && tradeScreen) pushTrade({ ...tradeScreen.build(mainTrade.session.view()), error: { code: r.reason, ...(r.detail ? { detail: r.detail } : {}) } });
     });
   openManageWindow({ to: "trade" });
@@ -762,7 +771,7 @@ function tradeLinkOf(argv: readonly string[]): string | null {
   return argv.find((a) => a.startsWith("pokebuddy://trade/")) ?? null;
 }
 
-// 교환 링크로 참가하고 교환 탭을 연다. 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
+// 교환 링크로 참가하고 교환 모달을 연다. 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
 function openTradeLink(link: string): void {
   tradeLink = { link, at: Date.now() };
   flushTradeLink();
@@ -882,6 +891,7 @@ function clockTick({ now, gap, seq }: ClockTick): void {
   worker.refresh();
   hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
   syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
+  syncSleep(); // 잠들기 기준도 같다
   syncJump();
   const points = Math.floor(game.read()?.points.balance ?? 0);
   if (points !== lastMenuPoints) {
@@ -1016,6 +1026,7 @@ async function main(): Promise<void> {
         art,
         ghost: () => !!config.clickThrough,
         cursor: hooks.cursor,
+        sleepAfterMin: () => sleepAfterMin,
         onDrop: hooks.onDrop,
         // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
         onClick: (id) => {
@@ -1045,6 +1056,7 @@ async function main(): Promise<void> {
   });
   // 첫 배치 — 마리를 싣기 전에 무대 창이 있어야 한다(아래 "그림을 하나도 못 받음" 판정이 무대를 본다)
   syncPlayArea();
+  syncSleep(); // 첫 마리부터 설정의 잠들기 기준으로 만든다
   stages.layout(lanesNow(), playArea.mode === "all");
   staged = true;
 
@@ -1115,6 +1127,7 @@ async function main(): Promise<void> {
   });
   commands.setWriter(saveSource.isWriter());
   saveSource.onChange(() => {
+    syncSleep(); // 밖에서 바뀐 저장(다른 프로세스·클라우드 받기)의 잠들기 기준을 바로 따른다
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 

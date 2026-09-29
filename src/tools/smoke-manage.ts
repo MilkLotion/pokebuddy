@@ -7,6 +7,7 @@
 //   1초 시계   시간 값만 바뀌면 표시만 고친다 — 탭 포커스·title 요소가 남는다. 모양이 바뀌어 다시 그려도 포커스를 되돌린다
 //   격자 넘김  도감·상점 포켓몬 탭은 한 쪽 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 긴 세로 스크롤이 없다
 //   성격 창    고르기 전후로 창 높이가 같다
+//   가방 대상  판 안 대상 목록을 아래로 내려 줄을 눌러도 스크롤이 남는다. 1초 시계 다시 그리기에도 남고, 범위를 바꾸면 맨 위 (8번 버그)
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
 //              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
 // 실제 IME 는 흉내 낼 수 없어서 요소가 같은 객체로 남는지, 조합 이벤트 사이에 다시 그리지 않는지로 본다
@@ -17,6 +18,8 @@ import os from "node:os";
 import path from "node:path";
 import { unlockByRules } from "../dex/unlocks";
 import { begin } from "../party/starter";
+import { newPet, nextPetId } from "../party/create";
+import { putPet } from "../box/slots";
 import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
 import { snapshot } from "../tx/snapshot";
@@ -30,6 +33,13 @@ begin(save, "charmander", 0, () => 0.5);
 unlockByRules(save, 0);
 save.dex.unlocked.push("omanyte");
 save.points.balance = 500;
+// 가방 대상 목록이 스크롤되게 박스에 8마리와 사탕을 둔다
+for (let i = 0; i < 8; i += 1) {
+  const id = nextPetId(save);
+  save.pets.push(newPet({ id, species: "rattata", shiny: false, nature: "hardy", gender: "male", now: 0 }));
+  putPet(save.boxes, id);
+}
+save.bag["exp-candy-s"] = 3;
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
 
@@ -316,7 +326,63 @@ void app.whenReady().then(async () => {
     await wait(200);
     assert.equal(await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 그림 ${shots}\n`);
+    // (10) 가방 대상 목록 스크롤 — 아래로 내려 아래 줄을 눌러도 남는다. 1초 시계 다시 그리기에도 남는다. 범위를 바꾸면 맨 위.
+    //      누르지 않고 내린 뒤 다시 그려도, 가운데 줄을 눌러도 남는다
+    await reload();
+    await js(`${tabBtn("가방")}.click()`);
+    await wait(300);
+    await js(`document.querySelector('#body .bag-card').click()`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .use-targets .segmented button')][1].click()`); // 박스
+    await wait(200);
+    const list = `document.querySelector('#body .use-list')`;
+    const room = await js<number>(`${list}.scrollHeight - ${list}.clientHeight`);
+    assert.ok(room > 40, `박스 대상 목록이 스크롤된다 (${room})`);
+    await js(`${list}.scrollTop = ${list}.scrollHeight; 0`);
+    await wait(100);
+    const down = await js<number>(`${list}.scrollTop`);
+    await js(`[...document.querySelectorAll('#body .use-target')].at(-1).click()`);
+    await wait(200);
+    const picked = await js<{ top: number; last: boolean }>(`({ top: ${list}.scrollTop, last: [...document.querySelectorAll('#body .use-target')].at(-1).getAttribute('aria-pressed') === 'true' })`);
+    assert.equal(picked.last, true, "아래 줄을 골랐다");
+    assert.equal(picked.top, down, `줄을 눌러도 스크롤이 남는다 (${down} → ${picked.top})`);
+    await js(`window.__bump = 33; 0`);
+    await wait(1400);
+    assert.equal(await js<number>(`${list}.scrollTop`), down, "1초 시계 다시 그리기에도 남는다");
+    await shot("bag-list-scroll.png");
+    await js(`[...document.querySelectorAll('#body .use-targets .segmented button')][0].click()`); // 파티
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .use-targets .segmented button')][1].click()`); // 다시 박스
+    await wait(200);
+    assert.equal(await js<number>(`${list}.scrollTop`), 0, "범위를 바꾸면 맨 위");
+    // 첫 줄이 기본으로 골라진 채 누르지 않고 내린다 → 전체 다시 그리기에도 남는다(고른 줄로 당기지 않는다, 재검수 R8-1)
+    assert.equal(await js<string>(`document.querySelector('#body .use-target[aria-pressed="true"]') === document.querySelector('#body .use-target') ? 'first' : 'other'`), "first");
+    await js(`${list}.scrollTop = ${list}.scrollHeight; 0`);
+    await wait(100);
+    const bottom = await js<number>(`${list}.scrollTop`);
+    await js(`window.__bump = 34; 0`);
+    await wait(1400);
+    assert.equal(await js<number>(`${list}.scrollTop`), bottom, "누르지 않고 내린 뒤 다시 그려도 남는다");
+    // 가운데로 내리고 보이는 가운데 줄을 누른다 → 그 위치 그대로
+    const mid = Math.floor(room / 2);
+    await js(`${list}.scrollTop = ${mid}; 0`);
+    await wait(100);
+    const midTop = await js<number>(`${list}.scrollTop`);
+    const midRow = await js<number>(`(() => {
+      const box = ${list}.getBoundingClientRect();
+      const rows = [...document.querySelectorAll('#body .use-target')];
+      const i = rows.findIndex((r, n) => n > 0 && n < rows.length - 1 && r.getBoundingClientRect().top >= box.top && r.getBoundingClientRect().bottom <= box.bottom);
+      rows[i].click();
+      return i;
+    })()`);
+    await wait(200);
+    assert.ok(midRow > 0, "가운데 줄을 눌렀다");
+    assert.equal(await js<number>(`${list}.scrollTop`), midTop, `가운데 줄을 눌러도 남는다 (${midTop})`);
+    await js(`window.__bump = 35; 0`);
+    await wait(1400);
+    assert.equal(await js<number>(`${list}.scrollTop`), midTop, "가운데 줄을 고른 뒤 다시 그려도 남는다");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

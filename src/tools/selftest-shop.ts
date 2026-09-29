@@ -10,6 +10,9 @@ import { buy, nextEggId } from "../shop/buy";
 import { eggPool, eggPrice, find, inRandomEgg, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../shop/catalog";
 import { rankOf } from "../egg/hatch";
 import { shopList } from "../tx/lists";
+import { sell, sellPrice } from "../shop/sell";
+import { createExecutor } from "../tx/executor";
+import { HANDLERS } from "../tx/handlers";
 import { unlockRules } from "../dex/unlocks";
 import type { SaveV3 } from "../shared/save-v3";
 
@@ -199,6 +202,51 @@ function seed(points: number): SaveV3 {
   assert.equal(s.eggs[0]?.id, "e2", "비어도 e1 을 다시 쓰지 않는다");
   assert.equal(s.eggSeq, 2);
   process.stdout.write("(10) 알 식별자 이어 붙이기 · 다시 쓰지 않음  ok\n");
+}
+
+// (11) 가방 판매 — 판매가 = 구매가 × 60%, 내림. 가격이 없거나 0P 인 도구는 팔지 않는다. 한 거래로 판다
+// (2026-09-30 사용자 결정 "아이템 판매 기능 추가 (가방에서) 판매가는 구매가의 60%.")
+{
+  assert.equal(SHOP_V3_RULES.sellRate, 0.6);
+  assert.equal(sellPrice("fire-stone"), 90, "진화용 도구 150P → 90P");
+  assert.equal(sellPrice("exp-candy-xs"), 12, "20P → 12P");
+  assert.equal(sellPrice("basic-food"), null, "가격 없는 기본먹이는 팔지 않는다");
+  assert.equal(sellPrice("normal-potion"), null, "0P 돌아오는 약은 팔지 않는다");
+  assert.equal(sellPrice("없는도구"), null);
+
+  // 명령 — 150P 도구 2개를 팔면 180P 가 는다
+  let state: SaveV3 | null = seed(1000);
+  state.bag["fire-stone"] = 3;
+  state.bag["basic-food"] = 5;
+  state.bag["normal-potion"] = 1;
+  const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
+  const two = ex.run({ id: "sell-2", name: "bag.sell", args: { itemId: "fire-stone", count: 2 } });
+  assert.ok(two.ok, JSON.stringify(two));
+  assert.equal(state?.points.balance, 1180, "180P 증가");
+  assert.equal(state?.bag["fire-stone"], 1, "하나 남는다");
+  assert.deepStrictEqual(two.ok && two.result, { itemId: "fire-stone", count: 2, earned: 180, left: 1, balance: 1180 });
+
+  const reason = (id: string, args: Record<string, unknown>): string => {
+    const res = ex.run({ id, name: "bag.sell", args });
+    return res.ok ? "ok" : res.reason;
+  };
+  assert.equal(reason("sell-food", { itemId: "basic-food" }), "not-sellable", "기본먹이 거절");
+  assert.equal(reason("sell-potion", { itemId: "normal-potion" }), "not-sellable", "돌아오는 약 거절");
+  assert.equal(reason("sell-over", { itemId: "fire-stone", count: 2 }), "not-enough-items", "가진 것보다 많이는 못 판다");
+  assert.equal(reason("sell-none", { itemId: "thunder-stone" }), "not-enough-items", "없는 도구");
+  for (const count of [0, -1, 1.5, "2"]) assert.equal(reason(`sell-bad-${String(count)}`, { itemId: "fire-stone", count }), "bad-count", `수량 ${String(count)} 거절`);
+  assert.equal(state?.points.balance, 1180, "거절은 포인트를 바꾸지 않는다");
+  assert.equal(state?.bag["fire-stone"], 1, "거절은 가방을 바꾸지 않는다");
+  assert.equal(state?.bag["basic-food"], 5);
+
+  // 원자성 — 순수 함수가 거절하면 사본도 그대로다. 다 팔면 가방에서 지운다
+  const pure = seed(0);
+  pure.bag["toy"] = 2;
+  assert.equal(sell(pure, "toy", 3).reason, "not-enough-items");
+  assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [2, 0], "거절하면 하나도 팔지 않는다");
+  assert.ok(sell(pure, "toy", 2).ok);
+  assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [undefined, 48], "다 팔면 칸이 사라진다 (40P × 60% × 2)");
+  process.stdout.write("(11) 가방 판매 · 60% 내림 · 판매 불가 · 보유 부족 · 원자성  ok\n");
 }
 
 process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종)\n");

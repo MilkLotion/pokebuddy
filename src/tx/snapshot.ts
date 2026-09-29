@@ -6,12 +6,13 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { defs, rewardPokemon, type AchievementDef } from "../achievement/core.js";
-import { EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
+import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
 import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
 import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
-import { eggName, eggPalettes } from "../shop/catalog.js";
+import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
+import { sellPrice } from "../shop/sell.js";
 import { zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
@@ -156,9 +157,11 @@ export function snapshot(
     .filter(([, n]) => n > 0)
     .map(([id, count]) => {
       const item = itemOf(id);
+      const sale = sellPrice(id);
       return {
         id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
+        ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_V3_RULES.sellRate } : {}),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

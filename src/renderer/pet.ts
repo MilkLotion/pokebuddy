@@ -9,6 +9,31 @@ if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 �
 const device: HTMLElement = root;
 const api = window.pokebuddyPet;
 
+// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
+// - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
+// - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
+// - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
+// - 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
+let sentHeight = -1;
+function sendSize(force: boolean): boolean {
+  const h = Math.ceil(device.getBoundingClientRect().height);
+  if (!force && h === sentHeight) return false;
+  sentHeight = h;
+  api.size(h);
+  return true;
+}
+// 첫 render() 전(sentHeight < 0)에는 보내지 않는다 — 빈 #device 높이로 숨은 새 창이 먼저 보이면 안 된다
+new ResizeObserver(() => {
+  if (sentHeight >= 0 && sendSize(false) && coachEl) drawCoach();
+}).observe(device);
+
+// 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
+// - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (pet.html @font-face)
+// - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
+const fontsReady: Promise<unknown> = Promise.allSettled(
+  ['400 12px "Galmuri11"', '700 12px "Galmuri11"', '400 10px "Galmuri9"'].map((f) => document.fonts.load(f)),
+).then(() => document.fonts.ready);
+
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
 
 // 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
@@ -410,7 +435,8 @@ function renderBody(v: PetDeviceView): void {
   controls.append(button("prev", "◀ 이전", () => api.step(-1)), cry, button("next", "다음 ▶", () => api.step(1)));
   device.appendChild(controls);
 
-  api.size(device.getBoundingClientRect().height);
+  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
+  sendSize(true);
   if (detailPetId !== pet.id) {
     detailPetId = pet.id;
     detailStep = 0; // 다른 개체를 열면 튜토리얼은 1단계부터
@@ -433,7 +459,7 @@ let pointerDown = false;
 let pending: PetDeviceView | null = null;
 const show = (view: PetDeviceView): void => {
   // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void document.fonts.ready.then(() => render(view));
+  void fontsReady.then(() => render(view));
 };
 const release = (): void => {
   pointerDown = false;
