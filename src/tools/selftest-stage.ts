@@ -290,6 +290,7 @@ async function stageRuntimeTests(): Promise<void> {
       return looks.get(look)!;
     },
     cached: (look) => looks.get(look) ?? null,
+    prefetch() {},
   };
   const iconsSent: Record<string, string>[] = [];
   const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendIcons: (i: Record<string, string>) => iconsSent.push(i), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;

@@ -1,4 +1,5 @@
 // PMD 자산을 받아 캐시하고 클립으로 만든다.
+const fs = require("fs");
 const path = require("path");
 const dex = require("../lib/dex.js");
 const { cached, get, saveAtomic, readCache } = require("./fetch.js");
@@ -30,9 +31,22 @@ function parseCredits(text) {
     .map((f) => ({ author: f[1].trim(), license: (f[3] || "").trim() || "Unspecified" }));
 }
 
+// 저작자 파일을 받아 캐시에 둔다. 못 받으면 null
+async function fetchCredits(d, credFile) {
+  const got = await get(CREDITS_URL(d), { timeout: 4000 });
+  if (got) saveAtomic(credFile, got);
+  return got;
+}
+
 async function loadPmd(config, PATHS) {
   const d = config.spritePath || dex.dexPath(config.slug);
   if (!d) return null; // 모르는 이름
+
+  // 저작자 표시 — 받아두되 실패해도 그림은 보여준다.
+  // zip 과 동시에 받는다 — 차례로 받으면 처음 나오는 종이 0.2~0.3초 더 늦게 뜬다 (worklog/records/response-latency/record.md)
+  const credFile = path.join(PATHS.pmd, `${d}.credits.txt`);
+  let credText = readCache(credFile);
+  const credJob = credText ? null : fetchCredits(d, credFile);
 
   const zipFile = path.join(PATHS.pmd, `${d}.zip`);
   const hit = await cached(zipFile, ZIP_URL(d), looksLikeSprites);
@@ -42,16 +56,7 @@ async function loadPmd(config, PATHS) {
   const built = readZipClips(hit.buf, { work: config.buddy !== "off" });
   if (!built) return null;
 
-  // 저작자 표시 — 받아두되 실패해도 그림은 보여준다
-  const credFile = path.join(PATHS.pmd, `${d}.credits.txt`);
-  let credText = readCache(credFile);
-  if (!credText) {
-    const got = await get(CREDITS_URL(d), { timeout: 4000 });
-    if (got) {
-      saveAtomic(credFile, got);
-      credText = got;
-    }
-  }
+  if (credJob) credText = await credJob;
 
   // PMD 프레임은 gen5 GIF 보다 작아서 같은 dotSize 면 작아 보인다 — 3~4 를 권한다.
   // 상한은 몸 칸으로 잰다 — 작업 동작이 칸을 키웠다고 펫이 작아지지 않게 (창은 몸의 최대 2배까지 커진다)
@@ -72,4 +77,17 @@ async function loadPmd(config, PATHS) {
   };
 }
 
-module.exports = { loadPmd, looksLikeSprites, parseCredits };
+// 디스크에 받아 두기만 한다 — 해석하지 않고 메모리에도 올리지 않는다. 무대에 처음 나올 때 받느라 기다리지 않게 하려는 것이다.
+// 이미 zip 이 있으면 검사 없이 넘어간다(오염된 캐시는 loadPmd 가 읽을 때 고친다). 받았거나 이미 있으면 true.
+// 서두를 일이 아니라 저작자 파일은 zip 이 있을 때만 받는다 — 그림이 없는 종의 저작자 파일이 캐시에 쌓이지 않게
+async function prefetchPmd(config, PATHS) {
+  const d = config.spritePath || dex.dexPath(config.slug);
+  if (!d) return false;
+  const zipFile = path.join(PATHS.pmd, `${d}.zip`);
+  const ok = fs.existsSync(zipFile) || !!(await cached(zipFile, ZIP_URL(d), looksLikeSprites));
+  const credFile = path.join(PATHS.pmd, `${d}.credits.txt`);
+  if (ok && !fs.existsSync(credFile)) await fetchCredits(d, credFile);
+  return ok;
+}
+
+module.exports = { loadPmd, prefetchPmd, looksLikeSprites, parseCredits };

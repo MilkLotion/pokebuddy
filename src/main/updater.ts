@@ -111,7 +111,7 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
     await o.beforeInstall().catch((e) => {
       console.error("업데이트 전 정리에 실패했다 — 그대로 다시 시작한다", e);
     });
-    updater.quitAndInstall(true, true); // 조용히 설치하고 다시 켠다
+    updater.quitAndInstall(false, true); // 설치 프로그램의 진행 창을 보이며 설치하고 다시 켠다 — 앱이 꺼진 동안 빈 화면이 되지 않게 (2026-09-30 사용자 결정)
     return true;
   };
 

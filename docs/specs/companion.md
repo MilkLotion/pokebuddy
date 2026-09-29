@@ -264,7 +264,8 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 - `https://spriteserver.pmdcollab.org/assets/<도감4자리>/sprites.zip` 을 받는다. `~/.claude/pokebuddy/pmd/` 에 캐시한다.
   풀지 않고 메모리에서 읽는다(`art/pmd-load.js` · `art/pmd.js`, 무대 쪽 감싸기는 `src/main/art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
-- 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
+- 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
+- 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
 - 칸 크기가 동작마다 달라도 기준점은 `(칸너비/2, 칸높이/2+4)` 로 같다. 그래서 몸 칸 가운데에 맞춰 그리면 발 위치가 맞는다
 - 캔버스 크기를 바꾸면 2D 컨텍스트가 기본값으로 돌아간다. 그러면 보간이 다시 켜진다. 정수 배율에서도 도트가 번진다(인접한 검정·흰색 픽셀이
   `[0,0,32,96,159,223,255,255]` 처럼 그라데이션이 된다). CSS `image-rendering: pixelated` 로는 못 막는다. 그래서 크기를 바꿀 때마다 보간을 다시 끈다(`src/renderer/stage.ts`)

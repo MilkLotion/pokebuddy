@@ -4021,15 +4021,35 @@ function versionWord(u: UpdateView): string {
   return `pokebuddy ${u.version}`; // 꺼 둠(개발 실행·npm 설치본)·확인 전·확인 중
 }
 
+// `다시 시작`을 눌렀다 — 앱이 꺼질 때까지 "다시 시작하는 중"과 처리 중 단추를 둔다. 클라우드 저장을 올리느라 몇 초 걸릴 수 있다
+// (Figma `Settings / Version · 다시 시작하는 중`). 앱이 꺼진 뒤에는 설치 프로그램의 진행 창이 보인다 (src/main/updater.ts)
+let restarting = false;
+
 async function updateSend(action: "check" | "install"): Promise<void> {
-  const next = await window.pokebuddyManage.update(action);
+  const restart = action === "install" && upd?.status === "ready";
+  if (restart) {
+    restarting = true;
+    if (dialog?.kind === "settings") drawDialog();
+  }
+  let next: UpdateView | null = null;
+  try {
+    next = await window.pokebuddyManage.update(action);
+  } catch (e) {
+    console.error("업데이트 요청 실패", e);
+  }
   if (next) upd = next;
+  if (restart && !next) restarting = false; // 요청이 닿지 않았다 — 다시 누를 수 있게 되돌린다
   if (dialog?.kind === "settings") drawDialog();
 }
 
 function versionFoot(): HTMLElement {
   const box = el("div", "version-foot");
-  if (upd) {
+  if (upd && restarting) {
+    box.appendChild(el("span", "version-word", "다시 시작하는 중"));
+    const b = smallButton("다시 시작", true, () => {});
+    setBusy(b, true);
+    box.appendChild(b);
+  } else if (upd) {
     box.appendChild(el("span", "version-word", versionWord(upd)));
     if (upd.status === "ready") box.appendChild(smallButton("다시 시작", true, () => void updateSend("install")));
     // mac 에서 앱을 그 자리에서 바꿀 수 없다(dmg 안·쓰기 불가) — 이 Mac 용 dmg 를 연다 (src/main/mac-updater.ts)
@@ -4322,6 +4342,34 @@ function rememberReply(cmd: string, target: string, extra: Record<string, unknow
 let busy = false;
 let lastReply: ManageReply | null = null; // 마지막으로 성공한 조작의 답 — 결과 창이 읽는다
 
+// 처리 중 표시 — 답이 늦으면 누른 단추·칸에 점 세 개를 띄운다 (Figma `Button` · `Box Slot` 의 `State=Busy`).
+// 빠른 답에서 깜빡이지 않게 BUSY_AFTER_MS 가 지나서야 단다 (worklog/records/response-latency/record.md "B안")
+const BUSY_AFTER_MS = 300;
+const PRESS_FRESH_MS = 1000; // 이보다 오래된 누름은 이번 조작의 단추가 아니다 — 튜토리얼 등 누름 없이 보낸 조작
+let pressed: { button: HTMLButtonElement; at: number } | null = null;
+// 조작 처리기보다 먼저 누른 단추를 기억한다 (캡처 단계). 키보드 Enter·Space 도 click 으로 온다
+document.addEventListener("click", (e) => {
+  const button = e.target instanceof Element ? e.target.closest("button") : null;
+  pressed = button ? { button, at: Date.now() } : null;
+}, true);
+
+function setBusy(target: HTMLButtonElement, on: boolean): void {
+  target.classList.toggle("is-busy", on);
+  if (on) target.setAttribute("aria-busy", "true");
+  else target.removeAttribute("aria-busy");
+}
+
+// 방금 누른 단추에 처리 중을 예약한다. 돌려주는 함수를 부르면 예약을 거두고 표시를 뗀다
+function busyLater(): () => void {
+  const target = pressed && Date.now() - pressed.at < PRESS_FRESH_MS ? pressed.button : null;
+  if (!target) return () => {};
+  const timer = setTimeout(() => setBusy(target, true), BUSY_AFTER_MS);
+  return () => {
+    clearTimeout(timer);
+    setBusy(target, false);
+  };
+}
+
 // 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
 async function send(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
   if (busy) return false;
@@ -4368,12 +4416,14 @@ async function screenPick(): Promise<void> {
 async function regionDraw(): Promise<void> {
   if (busy) return;
   busy = true;
+  const unbusy = busyLater();
   let reply: ManageReply;
   try {
     reply = await window.pokebuddyManage.drawRegion();
     await refresh();
   } finally {
     busy = false;
+    unbusy();
   }
   notice = reply.ok || reply.reason === "cancelled" ? "" : REASON[reply.reason] ?? reply.reason;
   drawDialog();

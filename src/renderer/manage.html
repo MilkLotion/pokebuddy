@@ -680,6 +680,72 @@
         color: var(--inverse);
         opacity: 0.45;
       }
+      /* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage.ts busyLater).
+         폭과 색은 그대로 두고 글자 자리에 점 세 개가 차례로 밝아진다. 답이 올 때까지 다른 조작은 받지 않는다 */
+      button.is-busy {
+        position: relative;
+        pointer-events: none;
+        cursor: progress;
+      }
+      button.is-busy:not(.cell) {
+        color: transparent !important;
+      }
+      button.is-busy.primary {
+        --busy-dot: var(--inverse);
+      }
+      button.is-busy:not(.cell)::after,
+      .cell.is-busy > :first-child::after {
+        --on: var(--busy-dot, var(--ink));
+        --off: color-mix(in srgb, var(--busy-dot, var(--ink)) 35%, transparent);
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 4px;
+        height: 4px;
+        margin: -2px 0 0 -2px;
+        background: var(--on);
+        box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+        animation: busy-dots 0.9s step-end infinite;
+      }
+      /* 칸은 내용을 옅게 덮고 초상 가운데에 점을 둔다 */
+      .cell.is-busy {
+        isolation: isolate;
+      }
+      .cell.is-busy::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: color-mix(in srgb, var(--surface) 70%, transparent); /* 60% 는 흐린 점이 초상 그림에 묻혔다 */
+        z-index: 1;
+      }
+      .cell.is-busy > :first-child {
+        position: relative;
+      }
+      .cell.is-busy > :first-child::after {
+        z-index: 2;
+      }
+      @keyframes busy-dots {
+        0% {
+          background: var(--off);
+          box-shadow: -7px 0 0 var(--on), 7px 0 0 var(--off);
+        }
+        33.333% {
+          background: var(--on);
+          box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+        }
+        66.667% {
+          background: var(--off);
+          box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--on);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        button.is-busy:not(.cell)::after,
+        .cell.is-busy > :first-child::after {
+          animation: none;
+        }
+      }
       /* 알림 — 할 말이 없으면 자리도 차지하지 않는다 */
       .notice {
         margin-top: 14px;

@@ -35,10 +35,11 @@ async function main(): Promise<void> {
   let artOk = false;
   let beforeArt: (() => void) | undefined;
   let changes = 0;
+  let stageHold: Promise<void> | null = null; // 있으면 무대 갱신이 이것을 기다린다 — 처음 나오는 종의 그림을 받는 중인 무대
   const commands = createCommands({ mailboxDir: paths.mailbox, party, game,
     stage: { poke: () => true, petIds: () => [], size: () => ({ w: 1, h: 1 }), visible: () => true },
     settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} },
-    quit() {}, prepareLook: async () => { beforeArt?.(); return artOk; }, onChanged: async () => { changes++; },
+    quit() {}, prepareLook: async () => { beforeArt?.(); return artOk; }, onChanged: async () => { changes++; if (stageHold) await stageHold; },
   });
   const evolveCmd: Command = { cmd: "evolve", target: "p1", from: "cli" };
   try {
@@ -57,6 +58,19 @@ async function main(): Promise<void> {
     assert.ok(renamed.ok, `box.rename 이 앱 명령 경로에서 동작 (${renamed.reason})`);
     assert.equal(store.read(paths.save, { repair: false }).state!.boxes[0]!.name, "내 박스");
     assert.ok((await commands.dispatcher.dispatch({ cmd: "box.sort", target: "b1", args: { by: "dex" }, from: "settings" })).ok, "box.sort 가 앱 명령 경로에서 동작");
+
+    // 저장 명령은 무대 갱신을 기다리지 않고 답한다 — 그림을 받는 동안 관리 창이 멈춰 보이지 않게 (worklog/records/response-latency/record.md)
+    let release = (): void => {};
+    stageHold = new Promise<void>((r) => { release = r; });
+    const heldChanges = changes;
+    const quick = await Promise.race([
+      commands.dispatcher.dispatch({ cmd: "box.rename", target: "b1", args: { name: "빠른 답" }, from: "settings" }),
+      new Promise<null>((r) => setTimeout(() => r(null), 1000)),
+    ]);
+    assert.ok(quick?.ok, "무대가 그림을 받는 중이어도 저장 명령이 바로 답한다");
+    assert.equal(changes, heldChanges + 1, "답을 먼저 해도 무대 갱신은 한 번 시작한다");
+    release();
+    stageHold = null;
 
     // mailbox 왕복 — CLI·확장의 요청이 writer 에 닿는다
     commands.setWriter(true);

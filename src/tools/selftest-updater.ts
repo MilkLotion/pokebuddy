@@ -74,7 +74,7 @@ async function main(): Promise<void> {
   // (4) 다시 시작 — 먼저 정리(클라우드 저장)하고 조용히 설치해 다시 켠다. 두 번 눌러도 한 번
   assert.equal(await up.install(), true);
   assert.equal(flushed, 1);
-  assert.deepEqual(fake.installed, [true, true]);
+  assert.deepEqual(fake.installed, [false, true], "진행 창을 보이며 설치하고 다시 켠다");
   assert.equal(await up.install(), false, "두 번째는 무시");
   process.stdout.write("(4) 다시 시작 — 정리 뒤 조용히 설치  ok\n");
 

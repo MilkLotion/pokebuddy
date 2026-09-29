@@ -19,6 +19,8 @@
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
 // `--mail` 을 주면 가짜 서버로 우편함을 띄운다(Figma `우편함 시안` 의 편지 넷). `--mail-signed-in` 이면 로그인한 계정으로 본다
+// `--slow <ms>` 를 주면 명령의 답을 그만큼 늦춘다 — 처리 중 표시(단추·칸의 점 세 개) 확인용
+// `--update-ready` 를 주면 설정 바닥을 "새 버전 준비됨" 으로 연다. `다시 시작` 은 답하지 않고 기다린다 — "다시 시작하는 중" 확인용
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
 const os = require("node:os");
@@ -185,7 +187,10 @@ app.whenReady().then(async () => {
   app.on("will-quit", () => picker.close());
   // 포켓몬 표시·고스트 모드 — 앱은 저장 밖에서 처리한다(src/main/commands.ts). 여기서는 값만 바꿔 화면 탭 튜토리얼을 확인할 수 있게 한다
   const shown = { hidden: false, clickThrough: false };
+  const slowAt = process.argv.indexOf("--slow");
+  const slowMs = slowAt >= 0 ? Number(process.argv[slowAt + 1]) || 0 : 0;
   const devSend = async (req) => {
+    if (slowMs) await new Promise((r) => setTimeout(r, slowMs));
     if (req.cmd === "settings.set" && (req.target === "hidden" || req.target === "clickThrough")) {
       shown[req.target] = !!req.args?.value;
       return { ok: true, result: { key: req.target, value: shown[req.target] } };
@@ -221,7 +226,11 @@ app.whenReady().then(async () => {
     box.onScreen((screen) => pushMail(screen));
     mailOpt = { mail: (req) => box.act(req) };
   }
-  const win = openManage({ ...mailOpt, preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ ...shown }), send: devSend, ...(route ? { route } : {}) });
+  // 가짜 업데이트 — 준비됨. 설치는 앱이 꺼지는 것을 흉내 내어 답하지 않는다
+  const updateOpt = process.argv.includes("--update-ready")
+    ? { update: (action) => (action === "install" ? new Promise(() => {}) : Promise.resolve({ version: "0.12.0", status: "ready", next: "0.13.0", percent: 100, error: null })) }
+    : {};
+  const win = openManage({ ...mailOpt, ...updateOpt, preload: paths.preloadFile(), html: paths.rendererFile("manage.html"), game, drawRegion, screens, identifyScreens: (on) => picker.identify(on), pickScreen, display: () => ({ ...shown }), send: devSend, ...(route ? { route } : {}) });
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다

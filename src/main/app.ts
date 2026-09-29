@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { app, nativeImage, powerMonitor, screen, shell, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
+import { appearanceOf } from "../dex/appearance";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { pidAlive } from "../save/writer";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
@@ -985,6 +986,11 @@ async function main(): Promise<void> {
   }
 
   const art = createArtLoader(PATHS);
+  // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
+  // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/record.md)
+  const prefetchOwned = (): void => art.prefetch((saveSource.save()?.pets ?? []).map(appearanceOf));
+  saveSource.onChange(prefetchOwned);
+  prefetchOwned();
   // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage-group.ts)
   stages = createStageGroup({
     createWindow: (hooks) =>

@@ -38,9 +38,10 @@ export interface Look {
 
 interface PmdLoadModule {
   loadPmd(config: { slug: string; dotSize: number; buddy: string; spritePath?: string }, paths: Paths): Promise<PmdArt | null>;
+  prefetchPmd(config: { slug: string; spritePath?: string }, paths: Paths): Promise<boolean>;
 }
 
-const { loadPmd } = require("../../art/pmd-load.js") as PmdLoadModule;
+const { loadPmd, prefetchPmd } = require("../../art/pmd-load.js") as PmdLoadModule;
 
 // 도트 배율 — Pet.size 를 크기 단계(SIZE_STEPS) 가운데 몸이 상한을 넘지 않는 가장 큰 배율로 가둔 값. 가장 작은 단계보다 작아지지 않는다
 export function zoomOf(size: number, body: StageSize): number {
@@ -67,20 +68,44 @@ export const normalizeLook = (look: string): string => String(look ?? "").trim()
 export interface ArtLoader {
   loadLook(look: string): Promise<Look | null>; // 없는 종·못 받음 → null. 같은 look 은 한 번만 받는다 (실패도 기억)
   cached(look: string): Look | null;
+  // 무대에 아직 없는 모습의 묶음을 뒤에서 하나씩 디스크에 받아 둔다. 기다리지 않는다. 한 모습은 세션마다 한 번만 시도한다
+  prefetch(looks: string[]): void;
+}
+
+// look → PMD 묶음을 찾는 값. 이로치는 도감 번호 아래 이로치 경로다. 도감 번호를 모르는 이로치는 null
+function pmdSource(look: string): { slug: string; spritePath?: string } | null {
+  const shiny = look.endsWith(":shiny");
+  const slug = shiny ? look.slice(0, -6) : look;
+  if (!shiny) return { slug };
+  const dex = profile(slug).dex;
+  return dex ? { slug, spritePath: `${String(dex).padStart(4, "0")}/0000/0001` } : null;
 }
 
 export function createArtLoader(paths: Paths): ArtLoader {
   const pending = new Map<string, Promise<Look | null>>();
   const done = new Map<string, Look | null>();
+  const tried = new Set<string>(); // 미리 받기를 시도한 모습
+  const queue: string[] = [];
+  let prefetching: { look: string; job: Promise<unknown> } | null = null; // 지금 미리 받는 모습 — 무대가 같은 모습을 겹쳐 받지 않게 기다린다
+
+  async function drain(): Promise<void> {
+    if (prefetching) return;
+    for (let look = queue.shift(); look !== undefined; look = queue.shift()) {
+      const src = pmdSource(look);
+      if (!src || done.has(look) || pending.has(look)) continue;
+      const job = prefetchPmd(src, paths).catch(() => false);
+      prefetching = { look, job };
+      await job;
+      prefetching = null;
+    }
+  }
 
   async function fetchLook(look: string): Promise<Look | null> {
+    const src = pmdSource(look);
+    if (!src) return null;
+    if (prefetching?.look === look) await prefetching.job;
     // dotSize 는 loadPmd 의 zoom 계산에만 쓰이고 무대는 그 값을 쓰지 않는다. buddy=on — 작업 동작까지 담아야 작업 리듬이 나온다
-    const shiny = look.endsWith(":shiny");
-    const slug = shiny ? look.slice(0, -6) : look;
-    const dex = profile(slug).dex;
-    if (shiny && !dex) return null;
-    const art = await loadPmd({ slug, dotSize: ART_RULES.defaultZoom, buddy: "on",
-      ...(shiny ? { spritePath: `${String(dex).padStart(4, "0")}/0000/0001` } : {}) }, paths);
+    const art = await loadPmd({ ...src, dotSize: ART_RULES.defaultZoom, buddy: "on" }, paths);
     const result = art && art.kind === "pmd" && art.anims && art.clips ? { look, art, sheets: sheetsOf(look, art) } : null;
     if (result) done.set(look, result);
     return result;
@@ -98,5 +123,14 @@ export function createArtLoader(paths: Paths): ArtLoader {
       return p;
     },
     cached: (look) => done.get(normalizeLook(look)) ?? null,
+    prefetch(looks) {
+      for (const raw of looks) {
+        const key = normalizeLook(raw);
+        if (!key || tried.has(key) || done.has(key) || pending.has(key)) continue;
+        tried.add(key);
+        queue.push(key);
+      }
+      void drain();
+    },
   };
 }

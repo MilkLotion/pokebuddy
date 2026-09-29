@@ -213,10 +213,12 @@ export function createCommands(ctx: CommandContext): Commands {
   // 옛 값은 legacy 에 남아 있다. 명령은 CLI 호환으로 남기고 제거됐다고 답한다
   dispatcher.register("pet.look", () => ({ ok: false, reason: "removed" }));
 
-  // 나머지 저장 명령 — 인자를 풀고 실행기에 넣는 일만 한다
+  // 나머지 저장 명령 — 인자를 풀고 실행기에 넣는 일만 한다.
+  // 무대 다시 그리기는 기다리지 않고 답한다. 처음 나오는 종은 그림을 인터넷에서 받느라 1~2초 걸린다 — 관리 창이 그동안 멈춰 보였다
+  // (worklog/records/response-latency/record.md)
   for (const cmd of SAVE_COMMANDS) dispatcher.register(cmd, async (c) => {
     const result = await runSave(c);
-    if (result.ok) await refreshAfter();
+    if (result.ok) void refreshAfter();
     return result;
   });
 
