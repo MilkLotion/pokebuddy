@@ -4,7 +4,7 @@
 //
 // 출처: PokeAPI 저장소의 CSV (https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv)
 //   pokemon.csv             포켓몬 번호 → 종 번호 · 키 · 몸무게(hg) · 기본 폼 여부
-//   pokemon_species.csv     종 번호 → 전설(is_legendary) · 환상(is_mythical) · 성장 속도 · 진화 부모
+//   pokemon_species.csv     종 번호 → 전설(is_legendary) · 환상(is_mythical) · 성장 속도 · 진화 부모 · 성비(gender_rate)
 //   growth_rates.csv        성장 속도 번호 → 식별자 (원작 경험치 타입 6종)
 //   pokemon_stats.csv       포켓몬 번호 → 종족값 (speed 와 여섯 값의 합)
 //   pokemon_types.csv       포켓몬 번호 → 타입 (types.csv 로 이름)
@@ -33,6 +33,7 @@
 // | bst           | 종족값 여섯 값의 합                                                       |
 // | stage         | 진화 사슬 뿌리부터의 거리 + 1 (1 이 진화 전)                              |
 // | rank          | 수집 난이도 1~5. 종족값 구간으로 1~4, 전설·환상은 5, 더 진화하는 종은 한 등급 낮춘다 |
+// | genderRate    | 원작 성비 그대로. 암컷 비율을 8 분의 몇으로 적는다(0 수컷만 · 8 암컷만). -1 은 무성 |
 import path from "node:path";
 import type { GrowthRate, Like } from "../shared/types";
 import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
@@ -80,14 +81,15 @@ interface StoredProfile {
   bst: number;
   stage: number;
   rank: number;
+  genderRate: number;
   sleepiness: number;
   moodBase: number;
   moodSwing: number;
   likes: Like[];
 }
 
-// 못 이은 슬러그의 값
-export const DEFAULT: Readonly<Omit<StoredProfile, "dex">> = { growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, sleepiness: 1.0, moodBase: 60, moodSwing: 1.0, likes: ["play"], types: [] };
+// 못 이은 슬러그의 값 — 성비는 반반
+export const DEFAULT: Readonly<Omit<StoredProfile, "dex">> = { growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, genderRate: 4, sleepiness: 1.0, moodBase: 60, moodSwing: 1.0, likes: ["play"], types: [] };
 
 // 1차에 모은 원자료 — 못 이은 슬러그는 null
 interface RawProfile {
@@ -99,6 +101,7 @@ interface RawProfile {
   bst: number;
   stage: number;
   evolvesFurther: boolean;
+  genderRate: number;
 }
 
 // 수집 난이도 — 종족값 구간으로 나누고 전설·환상은 가장 귀하게, 더 진화하는 종은 한 등급 낮춘다
@@ -143,7 +146,7 @@ export async function build(): Promise<void> {
   const dex = readDex();
   const [pokemonRows, speciesRows, statRows, statNames, typeRows, typeNames, formRows, formTypeRows, growthRows] = await Promise.all([
     csv("pokemon.csv", ["id", "identifier", "species_id", "weight", "is_default"]),
-    csv("pokemon_species.csv", ["id", "identifier", "is_legendary", "is_mythical", "growth_rate_id", "evolves_from_species_id"]),
+    csv("pokemon_species.csv", ["id", "identifier", "is_legendary", "is_mythical", "growth_rate_id", "evolves_from_species_id", "gender_rate"]),
     csv("pokemon_stats.csv", ["pokemon_id", "stat_id", "base_stat"]),
     csv("stats.csv", ["id", "identifier"]),
     csv("pokemon_types.csv", ["pokemon_id", "type_id", "slot"]),
@@ -244,6 +247,7 @@ export async function build(): Promise<void> {
       bst: bstOf.get(pokemon.id) ?? 0,
       stage: sp ? stageOf(sp.id) : 1,
       evolvesFurther: sp ? hasChild.has(sp.id) : false,
+      genderRate: sp ? Number(sp.gender_rate) : DEFAULT.genderRate,
     });
   }
 
@@ -271,6 +275,7 @@ export async function build(): Promise<void> {
       bst: r.bst,
       stage: r.stage,
       rank: rankOf(r),
+      genderRate: r.genderRate,
       sleepiness: round2(RULES.sleepiness.min + RULES.sleepiness.span * w),
       moodBase: moodOf(r.types),
       moodSwing: s >= RULES.swing.fast ? RULES.swing.high : s < RULES.swing.slow ? RULES.swing.low : RULES.swing.mid,

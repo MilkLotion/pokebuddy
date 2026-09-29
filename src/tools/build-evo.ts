@@ -4,7 +4,7 @@
 //
 // 출처: PokeAPI 저장소의 CSV (https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv)
 //   pokemon_species.csv     종 번호 · 식별자 · evolves_from_species_id
-//   pokemon_evolution.csv   진화 조건 — 시간대와 트리거·도구·레벨·친밀도·장소·기술
+//   pokemon_evolution.csv   진화 조건 — 시간대와 트리거·도구·레벨·친밀도·장소·기술·성별
 //   pokemon.csv             종의 기본 폼 식별자 (종 식별자가 도감에 없을 때 대신)
 //   items.csv               도구 번호 → 식별자
 //
@@ -13,6 +13,8 @@
 //   - 슬러그는 lib/dex.json 에 있는 것만. 종 식별자(deoxys)가 도감에 있으면 그것, 없으면 기본 폼 식별자(deoxys-normal)
 //   - when 은 그 종으로의 진화 조건 행들이 전부 같은 시간대일 때만 적는다 (루가루암처럼 폼마다 다르면 생략).
 //     dusk · full-moon 같은 다른 값은 시간대 없음으로 본다
+//   - gender 는 그 종으로의 진화 조건 행들이 전부 같은 성별일 때만 적는다 (염뉴트는 암컷, 엘레이드는 수컷).
+//     냐오닉스처럼 두 성별 행이 다 있으면 생략한다 (2026-09-30 사용자 결정 "염뉴트의 경우 암컷만 진화가능")
 //   - 부모가 도감에 없으면 그 간선은 버린다 (사슬이 끊긴 채 남지 않게 개수를 출력)
 //
 // need 의 우선순위 — 한 종에 원작 조건이 여럿이면 위에서부터 고른다 (docs/specs/game.md "진화 계약")
@@ -24,7 +26,7 @@
 //   6 장소      우리에 장소가 없다 → 그 장소를 대표하는 원작 돌 (LOCATION_STONE)
 //   7 그 밖의 특수  배틀·걸음·수집 조건 → 친밀도 100
 import path from "node:path";
-import type { DayPart, EvoNeed } from "../shared/types";
+import type { DayPart, EvoNeed, Gender } from "../shared/types";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 
 const OUT = path.join(DATA_DIR, "evo.json");
@@ -58,6 +60,7 @@ export const affinityOf = (happiness: number): number =>
 export interface EvoEdge {
   to: string;
   when?: DayPart;
+  gender?: Exclude<Gender, "none">;
   need: EvoNeed;
 }
 
@@ -77,6 +80,7 @@ export async function build(): Promise<void> {
       "location_id",
       "known_move_id",
       "known_move_type_id",
+      "gender_id",
     ]),
     csv("pokemon.csv", ["species_id", "identifier", "is_default"]),
     csv("items.csv", ["id", "identifier"]),
@@ -105,6 +109,14 @@ export async function build(): Promise<void> {
     const uniq = [...new Set(whenOf.get(speciesId) ?? [])];
     const only = uniq[0];
     return uniq.length === 1 && only && DAY_PARTS.has(only) ? (only as DayPart) : undefined;
+  };
+
+  // 진화 대상 종 번호 → 성별 조건 (행들이 전부 같은 성별일 때만). PokeAPI genders.csv — 1 female · 2 male
+  const GENDER_ID: Readonly<Record<string, Exclude<Gender, "none">>> = { "1": "female", "2": "male" };
+  const pickGender = (speciesId: string): Exclude<Gender, "none"> | undefined => {
+    const uniq = [...new Set((rowsOf.get(speciesId) ?? []).map((r) => r.gender_id))];
+    const only = uniq[0];
+    return uniq.length === 1 && only ? GENDER_ID[only] : undefined;
   };
 
   // 진화 대상 종 번호 → 조건 하나. 여러 행(버전마다 다름)을 우선순위로 합친다
@@ -153,6 +165,8 @@ export async function build(): Promise<void> {
     const step: EvoEdge = { to, need: needOf(sp.id, to) };
     const when = WHEN_BY_DECISION[to] ?? pickWhen(sp.id);
     if (when) step.when = when;
+    const gender = pickGender(sp.id);
+    if (gender) step.gender = gender;
     (out[from] ??= []).push(step);
     edges += 1;
   }
@@ -162,6 +176,9 @@ export async function build(): Promise<void> {
   process.stdout.write(`진화 사슬: ${OUT} — 부모 ${Object.keys(sorted).length}종 · 간선 ${edges}\n`);
   process.stdout.write(`도감에 없어 버린 간선 ${dropped.length}${dropped.length ? `: ${dropped.slice(0, 20).join(", ")}${dropped.length > 20 ? " …" : ""}` : ""}\n`);
   const timed = Object.values(sorted).flat().filter((s) => s.when);
+  const gendered = Object.values(sorted).flat().filter((s) => s.gender);
+  process.stdout.write(`성별 있는 간선 ${gendered.length}: ${gendered.map((s) => `${s.to}(${s.gender})`).join(" · ")}
+`);
   process.stdout.write(`시간대 있는 간선 ${timed.length}: ${timed.map((s) => `${s.to}(${s.when})`).join(" · ")}\n`);
   const all = Object.values(sorted).flat();
   const byKind = new Map<string, number>();

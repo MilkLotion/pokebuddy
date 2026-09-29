@@ -18,10 +18,10 @@ const T0 = new Date(2026, 8, 27, 12, 0, 0).getTime();
 // p1 은 파티 첫 칸(숨김), p2 는 박스 1 의 세 번째 칸, p3 은 전설(mewtwo)
 function seed(): SaveV3 {
   const s = empty(T0);
-  const p1 = newPet({ id: "p1", species: "charmander", shiny: false, nature: "hardy", now: T0 });
+  const p1 = newPet({ id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", now: T0 });
   p1.level = 30; p1.affinity = 70;
-  const p2 = newPet({ id: "p2", species: "squirtle", shiny: true, nature: "bold", now: T0 });
-  const p3 = newPet({ id: "p3", species: "mewtwo", shiny: false, nature: "hardy", now: T0 });
+  const p2 = newPet({ id: "p2", species: "squirtle", shiny: true, nature: "bold", gender: "male", now: T0 });
+  const p3 = newPet({ id: "p3", species: "mewtwo", shiny: false, nature: "hardy", gender: "male", now: T0 });
   s.pets.push(p1, p2, p3);
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
   s.boxes[0]!.slots[2] = "p2";
@@ -63,6 +63,13 @@ const eevee: TradePet = {
   assert.deepStrictEqual(validateReceived({ ...eevee, size: "x" }), { ok: false, reason: "bad-value" });
   assert.deepStrictEqual(validateReceived({ ...eevee, affinity: 150 }), { ok: false, reason: "bad-value" });
   assert.deepStrictEqual(validateReceived("x"), { ok: false, reason: "not-object" });
+  // 성별 — 보낸 값을 옮긴다. 옛 판 앱은 보내지 않는다. 한 성별 종은 그 성별로 맞춘다 (2026-09-30)
+  const she = validateReceived({ ...eevee, gender: "female" });
+  assert.equal(she.ok && she.pet.gender, "female");
+  const oldApp = validateReceived(eevee);
+  assert.equal(oldApp.ok && oldApp.pet.gender, undefined, "옛 판 앱의 카드에는 성별이 없다");
+  const wrong = validateReceived({ ...eevee, species: "chansey", evolved: [], gender: "male" });
+  assert.equal(wrong.ok && wrong.pet.gender, "female", "럭키는 암컷만");
   process.stdout.write("(2) 받은 값 검사  ok\n");
 }
 

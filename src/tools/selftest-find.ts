@@ -42,10 +42,10 @@ function seq(...vals: number[]): () => number {
 // 파티에 피카츄(p1, 꺼냄) · 이상해씨(p2, 숨김) · 꼬부기(p4, 꺼냄) · 빈 칸 하나, 박스에 파이리(p3). 해금은 이브이·피카츄
 function seed(): SaveV3 {
   const s = empty(T0);
-  s.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", now: T0 }));
-  s.pets.push(newPet({ id: "p2", species: "bulbasaur", shiny: false, nature: "hardy", now: T0 }));
-  s.pets.push(newPet({ id: "p3", species: "charmander", shiny: false, nature: "hardy", now: T0 }));
-  s.pets.push(newPet({ id: "p4", species: "squirtle", shiny: false, nature: "hardy", now: T0 }));
+  s.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", gender: "male", now: T0 }));
+  s.pets.push(newPet({ id: "p2", species: "bulbasaur", shiny: false, nature: "hardy", gender: "male", now: T0 }));
+  s.pets.push(newPet({ id: "p3", species: "charmander", shiny: false, nature: "hardy", gender: "male", now: T0 }));
+  s.pets.push(newPet({ id: "p4", species: "squirtle", shiny: false, nature: "hardy", gender: "male", now: T0 }));
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: true };
   s.party.slots[2] = { state: "pokemon", petId: "p4", hidden: false };

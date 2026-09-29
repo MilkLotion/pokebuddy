@@ -44,6 +44,7 @@ export interface SpeciesProfile {
   bst: number; // 종족값 합계 — 수집 난이도 계산에 쓴다
   stage: number; // 사슬 뿌리부터의 거리 + 1 (1 이 진화 전)
   rank: number; // 수집 난이도 1~5 — 1 이 흔하고 5 가 귀하다
+  genderRate: number; // 원작 성비 — 암컷 비율 8 분의 몇(0 수컷만 · 8 암컷만), -1 은 무성 (src/dex/gender.ts)
   sleepiness: number; // 잠이 드는 빠름 배율 — 1 이 기준
   moodBase: number; // 기분 기준값 0~100
   moodSwing: number; // 기분 변동 폭 배율 — 1 이 기준
@@ -56,6 +57,10 @@ export interface SpeciesProfile {
 // ── 해금 조건 ──────────────────────────────────────────────────────────────────
 // data/unlocks.json — 종 하나에 규칙 하나. 적힌 조건은 전부 만족해야 한다 (design.md "도감 · 해금")
 export type DayPart = "day" | "night";
+
+// ── 성별 ───────────────────────────────────────────────────────────────────────
+// 개체의 성별. none 은 무성 종(코일·전설 등) — 원작 성비를 따른다 (src/dex/gender.ts, 2026-09-30 사용자 결정)
+export type Gender = "male" | "female" | "none";
 
 // ── 진화 조건 ──────────────────────────────────────────────────────────────────
 // data/evo.json 의 간선마다 하나. 원작 조건을 우리 게임의 조건으로 바꾼 결과다 (docs/specs/game.md "진화 계약")

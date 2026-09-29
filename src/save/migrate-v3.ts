@@ -9,6 +9,7 @@ import { localDate } from "../shared/clock.js";
 import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { Pet, SaveV2 } from "../shared/types";
 import { SAVE_V3_RULES, SHOP_V3_RULES } from "./rules.js";
+import { legacyGender } from "../dex/gender.js";
 import { empty, emptySlots, putStrays } from "./v3.js";
 
 export interface MigrateResult {
@@ -41,6 +42,7 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
     species: pet.species,
     shiny: pet.shiny === true,
     nature: pet.nature,
+    gender: legacyGender(pet), // v2 에는 성별이 없다 — 반반 (2026-09-30 사용자 결정)
     size: pet.size,
     level: SAVE_V3_RULES.pet.level,
     exp: SAVE_V3_RULES.pet.exp,

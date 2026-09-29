@@ -5,6 +5,7 @@
 // 진화해도 같은 개체다. 식별자·친밀도·성격·레벨·경험치·만복도·버프를 그대로 둔다. 종만 바뀐다.
 // 도구 진화는 도구 하나를 쓴다. 진화와 소비는 한 거래로 묶인다.
 // 공유 sid 계열(src/dex/forms.ts)은 이미 가진 종으로 가는 진화를 후보에서 뺀다 — 그 종은 모습 바꾸기로 고른다.
+// 성별 조건(data/evo.json 의 gender)이 있으면 그 성별만 진화한다. 다른 성별에게도 후보로 보여 이유를 알린다 (2026-09-30 사용자 결정)
 import { gameDayPart } from "../shared/clock";
 import type { DayPart, EvoNeed } from "../shared/types";
 import type { SaveV3 } from "../shared/save-v3";
@@ -46,6 +47,7 @@ export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 export function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): { ready: boolean; missing?: string } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ready: false, missing: "no-pet" };
+  if (step.gender && pet.gender !== step.gender) return { ready: false, missing: `gender:${step.gender}` }; // 바뀌지 않는 이유라 먼저 본다
   if (step.when && step.when !== dayPart) return { ready: false, missing: `time:${step.when}` };
 
   const need = step.need;

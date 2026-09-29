@@ -8,6 +8,7 @@
 // 그래서 마리마다 따로, 주운 순간에 말풍선과 배너가 뜬다. 무기억 과정이라 쌓인 시간을 저장에 남기지 않는다.
 // 순수 함수다. 파일을 읽지 않고(데이터 표 제외) 시각과 무작위를 받는다. 저장은 부르는 쪽(src/main/game.ts find)이 한 번에 쓴다
 import { loadJson, type DexOptions } from "../dex/data.js";
+import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { decide, type Rand } from "../egg/hatch.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
@@ -115,7 +116,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
     const result = decide(pokemonCandidates(save, opts), rand, opts);
     if (!result) return null; // 후보 없음 — 이번 판정은 없음
     newPetId = nextPetId(save);
-    save.pets.push(newPet({ id: newPetId, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, now }));
+    save.pets.push(newPet({ id: newPetId, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
     recordDex(save, result.species, result.shiny);
     placeNew(save, newPetId);
     ref = result.species;

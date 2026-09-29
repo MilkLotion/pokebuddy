@@ -12,7 +12,7 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
 const pet = (over: Partial<PetV3> = {}): PetV3 => ({
-  id: "p1", species: "charmander", shiny: false, nature: "hardy", size: 2,
+  id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
   level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
   mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
   daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
@@ -197,4 +197,18 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(14) 공유 sid · 일반 개체와 옛 저장  ok\n");
 }
 
-process.stdout.write("selftest-evolve: 통과 (레벨·도구·시간대·분기·이로치·공유 sid)\n");
+// (15) 성별 조건 — 야도뉴는 암컷만 염뉴트로, 킬리아는 수컷만 엘레이드로 (2026-09-30 사용자 결정)
+{
+  const male = seed({ species: "salandit", gender: "male", level: 40 });
+  assert.deepEqual(candidates(male, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["salazzle", false, "gender:female"]], "수컷 야도뉴는 진화하지 못한다");
+  assert.equal(evolve(male, "p1", "day").reason, "not-ready");
+  const female = seed({ species: "salandit", gender: "female", level: 40 });
+  assert.equal(evolve(female, "p1", "day").to, "salazzle");
+  assert.equal(female.pets[0]?.gender, "female", "진화해도 성별은 그대로");
+  const kirlia = seed({ species: "kirlia", gender: "female", level: 30 }, { "dawn-stone": 1 });
+  assert.deepEqual(candidates(kirlia, "p1", "day").map((c) => [c.to, c.ready]), [["gardevoir", true], ["gallade", false]], "암컷 킬리아는 가디안만");
+  assert.equal(evolve(kirlia, "p1", "day").to, "gardevoir", "후보가 하나면 고르지 않는다");
+  process.stdout.write("(15) 성별 조건  ok\n");
+}
+
+process.stdout.write("selftest-evolve: 통과 (레벨·도구·시간대·분기·이로치·공유 sid·성별)\n");

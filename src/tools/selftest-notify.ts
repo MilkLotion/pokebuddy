@@ -27,6 +27,7 @@ function pet(id: string, species: string, level: number): PetV3 {
     species,
     shiny: false,
     nature: "hardy",
+    gender: "male",
     size: 2,
     level,
     exp: 0,

@@ -32,6 +32,7 @@ export interface PetView {
   types: string[]; // 화면에 보이는 타입 이름
   typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등) — 타입 배지 색을 고른다
   nature: string; // 화면에 보이는 성격 이름
+  gender: "male" | "female" | "none"; // 성별 — 무성은 아이콘을 두지 않는다 (src/dex/gender.ts)
   size: number; // 그림 크기 단계 번호 1~sizeLevels
   natureId: string; // 성격 id — 성격 변경 창이 지금 성격을 막을 때 쓴다
   affinity: number;

@@ -9,6 +9,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { rollGender } from "../dex/gender";
 import { randomNature } from "../dex/natures";
 import { putPet } from "../box/slots";
 import { newPet, nextPetId, recordDex } from "../party/create";
@@ -75,7 +76,7 @@ function addHiddenPet(save: SaveV3, now: number): void {
   }
   const id = nextPetId(save);
   const species = save.dex.unlocked.find((s) => !save.pets.some((p) => p.species === s)) ?? DEV_TEST_RULES.extra;
-  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(Math.random).id, now }));
+  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now }));
   save.party.slots[slot] = { state: "pokemon", petId: id, hidden: true }; // 숨긴 채로 — 파티 튜토리얼(지금 꺼짐, src/tutorial/core.ts)을 다시 켤 때 확인용
   recordDex(save, species, false);
 }
@@ -154,7 +155,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       ensureStarter(s, now);
       const rows: [string, number, number][] = [["bulbasaur", 9, 20], ["squirtle", 14, 60], ["eevee", 7, 80], ["machop", 21, 10], ["pichu", 3, 40], ["totodile", 18, 5], ["mudkip", 11, 90], ["riolu", 25, 30]];
       rows.forEach(([species, level, affinity], i) => {
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, now: now - (rows.length - i) * 60_000 });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now: now - (rows.length - i) * 60_000 });
         pet.level = level;
         pet.affinity = affinity;
         s.pets.push(pet);
@@ -173,7 +174,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       const kinds = ["bulbasaur", "charmander", "squirtle", "pikachu", "eevee", "machop", "pichu", "totodile", "mudkip", "riolu"];
       for (let i = 0; i < 33; i++) {
         const species = kinds[i % kinds.length] ?? "pikachu";
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, now: now - (33 - i) * 60_000 });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now: now - (33 - i) * 60_000 });
         pet.level = 1 + ((i * 7) % 40);
         s.pets.push(pet);
         putPet(s.boxes, pet.id);

@@ -8,6 +8,7 @@
 // 받은 개체는 보낸 개체가 있던 자리(파티 칸 또는 박스 칸)에 들어간다. 그래서 개체 수와 칸 수가 바뀌지 않는다.
 import { isShared } from "../dex/forms.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
+import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { findPet } from "../box/slots.js";
@@ -15,7 +16,7 @@ import { fixedEggs, isSingleEgg } from "../shop/catalog.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { snapSize } from "../save/rules.js";
 import type { DexOptions } from "../dex/data";
-import type { NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/types";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
 
 // 교환으로 옮기는 값. 나머지(쿨타임·버프·위치·하루 기록)는 받는 쪽에서 처음 값으로 둔다
@@ -23,6 +24,7 @@ export interface TradePet {
   species: string;
   shiny: boolean;
   nature: NatureId;
+  gender?: Gender; // 2026-09-30 에 더했다. 옛 판 앱은 보내지 않는다 — 받는 쪽이 정한다 (apply)
   size: number;
   level: number;
   exp: number;
@@ -76,6 +78,7 @@ export function snapshot(pet: PetV3): TradePet {
     species: pet.species,
     shiny: pet.shiny,
     nature: pet.nature,
+    gender: pet.gender,
     size: pet.size,
     level: pet.level,
     exp: pet.exp,
@@ -102,13 +105,15 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
       || !intIn(raw.stage, 0, 10) || !intIn(raw.exp, 0, Number.MAX_SAFE_INTEGER)) {
     return { ok: false, reason: "bad-value" };
   }
+  // 성별 — 한 성별 종이면 그 성별로 맞춘다. 모르는 값이면 두지 않는다
+  const gender = fixedGender(species, opts) ?? (isGender(raw.gender) && raw.gender !== "none" ? raw.gender : undefined);
   // 레벨과 경험치가 어긋나면 레벨을 믿고 경험치를 그 레벨의 시작으로 맞춘다
   const rate = growthOf(species, opts);
   const exp = levelFor(rate, raw.exp) === raw.level ? raw.exp : expForLevel(rate, raw.level);
   return {
     ok: true,
     pet: {
-      species, shiny: raw.shiny, nature: raw.nature as NatureId, size: snapSize(raw.size), level: raw.level, exp, // 크기는 도트 배율 — 가장 가까운 단계로 맞춘다
+      species, shiny: raw.shiny, nature: raw.nature as NatureId, ...(gender ? { gender } : {}), size: snapSize(raw.size), level: raw.level, exp, // 크기는 도트 배율 — 가장 가까운 단계로 맞춘다
       affinity: raw.affinity, fullness: raw.fullness, mood: raw.mood, stage: raw.stage, evolved: [...(evolved as string[])],
     },
   };
@@ -149,7 +154,7 @@ export function apply(save: SaveV3, channelId: string, received: unknown, now: n
   const got = check.pet;
   const id = nextPetId(save); // 보낸 개체를 빼기 전에 정한다 — 같은 번호를 다시 쓰지 않는다
   const pet: PetV3 = {
-    ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, now }),
+    ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, gender: got.gender ?? legacyGender({ id, species: got.species, since: now }, opts), now }),
     size: got.size, level: got.level, exp: got.exp, affinity: got.affinity,
     fullness: got.fullness, mood: got.mood, stage: got.stage, evolved: [...got.evolved],
   };

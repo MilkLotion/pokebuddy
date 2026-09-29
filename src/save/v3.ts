@@ -14,6 +14,7 @@ import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
 import { normalizeMail } from "../mail/core.js";
 import { FIND_RULES } from "../find/rules.js";
+import { isGender, legacyGender } from "../dex/gender.js";
 
 type Raw = Record<string, unknown>;
 
@@ -140,11 +141,13 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
   if (!id || !species) return null;
   const nature: NatureId = isNatureId(raw.nature) ? raw.nature : SAVE_RULES.pet.nature;
   const home = isObj(raw.home) ? raw.home : {};
+  const since = nonNeg(raw.since);
   return {
     id,
     species,
     shiny: bool(raw.shiny),
     nature,
+    gender: isGender(raw.gender) ? raw.gender : legacyGender({ id, species, since }), // 옛 저장은 반반 (2026-09-30 사용자 결정)
     size: snapSize(num(raw.size, SAVE_V3_RULES.pet.size)), // 단계 배율로 맞춘다 — 옛 4~6 은 가장 큰 단계로 (src/save/rules.ts SIZE_STEPS)
     level: clamp(int(raw.level, SAVE_V3_RULES.pet.level), 1, 100),
     exp: nonNeg(raw.exp, SAVE_V3_RULES.pet.exp),
@@ -161,7 +164,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     buffs: normalizeBuffs(raw.buffs),
     home: { dx: int(home.dx, SAVE_RULES.pet.home.dx), dy: int(home.dy, SAVE_RULES.pet.home.dy) },
     ...(screenRefOf(raw.screen) ? { screen: screenRefOf(raw.screen)! } : {}), // 2026-09-28 에 더했다. 모든 화면 방식에서 끌어다 놓은 개체만 가진다
-    since: nonNeg(raw.since),
+    since,
     stage: nonNeg(raw.stage),
     evolved: strings(raw.evolved),
     ...(Array.isArray(raw.forms) ? { forms: strings(raw.forms) } : {}), // 2026-09-26 에 더했다. 공유 sid 계열만 가진다

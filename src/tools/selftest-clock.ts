@@ -20,7 +20,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-clock-"))
 
 function seed(): SaveV3 {
   const s = empty(T0);
-  s.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", now: T0 }));
+  s.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", gender: "male", now: T0 }));
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   s.dex.unlocked = ["pikachu"];
   s.dex.obtained = ["pikachu"];

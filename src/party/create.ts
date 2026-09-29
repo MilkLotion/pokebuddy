@@ -1,10 +1,10 @@
 // 새 개체 하나 만들기 — 알에서 나오든 첫 선택으로 오든 시작 값은 같다 (docs/specs/game.md "개체")
 //
 // 시작 값을 두 곳에 적지 않는다. 레벨·친밀도·만복도는 규칙표 하나에서 온다.
-// 종과 이로치와 성격만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
+// 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
 import { SAVE_V3_RULES } from "../save/rules.js";
 import { localDate } from "../shared/clock.js";
-import type { NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/types";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 다음 개체 식별자 — 기존 `p숫자` 중 가장 큰 수 다음
@@ -22,15 +22,17 @@ export interface NewPetOptions {
   species: string;
   shiny: boolean;
   nature: NatureId;
+  gender: Gender; // 얻을 때 성비대로 정한다 (src/dex/gender.ts rollGender)
   now: number;
 }
 
-export function newPet({ id, species, shiny, nature, now }: NewPetOptions): PetV3 {
+export function newPet({ id, species, shiny, nature, gender, now }: NewPetOptions): PetV3 {
   return {
     id,
     species,
     shiny,
     nature,
+    gender,
     size: SAVE_V3_RULES.pet.size,
     level: SAVE_V3_RULES.pet.level,
     exp: SAVE_V3_RULES.pet.exp,

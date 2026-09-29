@@ -95,7 +95,7 @@ assert.ok(r.obtainable.has("snorlax") && pool.includes("munchlax") && !pool.incl
 {
   const s = empty(0);
   s.dex.unlocked = ["munchlax"];
-  const pet = newPet({ id: "m1", species: "munchlax", shiny: false, nature: "hardy", now: 0 });
+  const pet = newPet({ id: "m1", species: "munchlax", shiny: false, nature: "hardy", gender: "male", now: 0 });
   pet.affinity = 100;
   s.pets.push(pet);
   assert.ok(evolve(s, "m1", "day").ok, "친밀도로 진화");

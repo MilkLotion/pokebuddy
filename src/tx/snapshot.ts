@@ -50,6 +50,7 @@ function needText(missing: string | undefined): string | undefined {
   if (kind === "affinity") return `친밀도 ${value} 필요`;
   if (kind === "item") return `${nameOfItem(value)} 필요`;
   if (kind === "time") return value === "night" ? "밤에만" : "낮에만";
+  if (kind === "gender") return value === "female" ? "암컷만" : "수컷만";
   return missing;
 }
 
@@ -93,6 +94,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     typeIds: [...profile(pet.species).types],
     nature: natureName(pet.nature),
     natureId: pet.nature,
+    gender: pet.gender,
     size: sizeLevelOf(pet.size), // 단계 번호 — 저장은 배율이다
     affinity: pet.affinity,
     fullness: pet.fullness,

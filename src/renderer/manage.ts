@@ -33,6 +33,7 @@ import type {
   TradeScreen,
   UpdateView,
 } from "../shared/manage.js";
+import { genderIcon } from "./gender.js";
 
 type TabId = "party" | "box" | "dex" | "shop" | "bag" | "trade";
 
@@ -501,16 +502,18 @@ function petCard(pet: PetView): HTMLElement {
   }
   card.appendChild(portrait);
 
-  // 레벨과 이름을 한 줄에 — Figma `Party Slot Card` 123:149. 다음 레벨까지는 칸의 title 로 옮겼다
+  // 레벨 · 이름 · 성별 · 성격을 한 줄에 — Figma `Party Slot Card` 123:149 의 `identity-copy`. 다음 레벨까지는 칸의 title 로 옮겼다
+  // 성격은 타입 줄에서 이름 옆으로 옮겼다 (2026-09-30 사용자 결정 "성격은 … 이름 옆에")
   const info = el("div", "info");
   const top = el("div", "top");
   top.append(el("span", undefined, `Lv.${pet.level}`), el("div", "name", pet.name));
+  const sex = genderIcon(pet.gender, 16);
+  if (sex) top.appendChild(sex);
+  top.appendChild(el("span", "nature", pet.nature));
   info.appendChild(top);
 
   const tags = el("div", "tags");
   pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
-  tags.appendChild(el("span", "tag nature", pet.nature));
-  for (const name of pet.buffNames ?? []) tags.appendChild(el("span", "tag", name)); // 켜진 버프 — 든든함·신남·들뜸 (2026-09-29 사용자 결정)
   info.appendChild(tags);
 
   const meters = el("div", "meters");
@@ -518,13 +521,19 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(meters);
 
   card.appendChild(info);
-  // 디버프 배지 — 배고픔 −30%, 매우 배고픔 −60% (docs/specs/balance.md). 디버프가 없으면 두지 않는다
+  // 상태 배지 — 디버프(배고픔 −30%, 매우 배고픔 −60%, docs/specs/balance.md) 뒤에 켜진 버프(든든함·신남·들뜸).
+  // 버프도 배고픔처럼 칸 오른쪽 위에 둔다 (2026-09-30 사용자 결정 "들뜸, 신남 도 배고픔처럼"). 하나도 없으면 두지 않는다
+  const badges: HTMLElement[] = [];
   const debuff = DEBUFF[pet.zone];
   if (debuff) {
-    const box = el("div", "debuffs");
     const badge = el("span", `debuff ${debuff.tone}`, debuff.label);
     badge.title = debuff.note;
-    box.appendChild(badge);
+    badges.push(badge);
+  }
+  for (const name of pet.buffNames ?? []) badges.push(el("span", "debuff success", name));
+  if (badges.length) {
+    const box = el("div", "debuffs");
+    box.append(...badges);
     card.appendChild(box);
   }
   card.dataset.pet = pet.id; // 진화 튜토리얼이 이 카드를 찾는다

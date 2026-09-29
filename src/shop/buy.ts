@@ -8,6 +8,7 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
+import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { openSlot } from "../party/slots.js";
@@ -118,7 +119,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
 
   // 종 지정 구매 — 새 개체를 만든다
   const id = nextPetId(save);
-  const pet = newPet({ id, species: product?.ref ?? productId, shiny: false, nature: randomNature(rand, opts).id, now });
+  const pet = newPet({ id, species: product?.ref ?? productId, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(product?.ref ?? productId, rand, opts), now });
   save.pets.push(pet);
   recordDex(save, pet.species, pet.shiny);
   const where = placeNew(save, id);

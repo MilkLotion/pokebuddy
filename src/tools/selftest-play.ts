@@ -120,6 +120,7 @@ function seedPet(): SaveV3 {
     species: "pikachu",
     shiny: false,
     nature: "hardy",
+    gender: "male",
     size: 2,
     level: 5,
     exp: 0,

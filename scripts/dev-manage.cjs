@@ -92,8 +92,10 @@ function seed(empty, now) {
     daily: { date: "", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
     ...over,
   });
-  save.pets.push(pet("p1", "pikachu", { level: 12, affinity: 85, fullness: 72 }));
-  save.pets.push(pet("p2", "charmander", { level: 5, nature: "brave", affinity: 40, fullness: 33, feedCooldownMs: 90_000 }));
+  save.pets.push(pet("p1", "pikachu", { level: 12, affinity: 85, fullness: 72, gender: "male" }));
+  // 2번 칸 — 배고픔과 버프 둘(든든함·신남)이 함께 보이게. 상태 배지 줄 확인용 (2026-09-30)
+  const buffs = [{ kind: "premium-food", remainMs: 3_600_000 }, { kind: "long-play", remainMs: 600_000 }];
+  save.pets.push(pet("p2", "charmander", { level: 5, nature: "brave", affinity: 40, fullness: 33, feedCooldownMs: 90_000, gender: "female", buffs }));
   save.starterPetId = "p1";
   save.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   save.party.slots[1] = { state: "pokemon", petId: "p2", hidden: true };

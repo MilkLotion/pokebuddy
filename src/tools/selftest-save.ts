@@ -217,7 +217,30 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   process.stdout.write("(9) 파티 칸 · 앞에서부터 칸 +1  ok\n");
 }
 
-process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규화)\n");
+// (10) 성별 — 옛 개체는 열 때 정하고 다시 열어도 같다. 무성·한 성별 종은 그 성별. 저장된 값은 그대로 (2026-09-30 사용자 결정)
+{
+  const base = normalize(empty(T0), T0);
+  assert.ok(base);
+  const raw = JSON.parse(JSON.stringify(base)) as Record<string, unknown>;
+  raw.pets = [
+    { id: "p1", species: "pikachu", since: T0 },
+    { id: "p2", species: "magnemite", since: T0 },
+    { id: "p3", species: "salazzle", since: T0 },
+    { id: "p4", species: "pikachu", since: T0, gender: "female" },
+    { id: "p5", species: "pikachu", since: T0, gender: "girl" },
+  ];
+  const first = normalize(raw, T0);
+  const again = normalize(raw, T0);
+  assert.ok(first && again);
+  const genders = first.pets.map((p) => p.gender);
+  assert.ok(genders[0] === "male" || genders[0] === "female", "옛 피카츄는 수컷 또는 암컷");
+  assert.deepStrictEqual(genders.slice(1, 4), ["none", "female", "female"], "코일 무성 · 염뉴트 암컷 · 저장된 값 유지");
+  assert.ok(genders[4] === "male" || genders[4] === "female", "모르는 값은 옛 개체처럼 정한다");
+  assert.deepStrictEqual(again.pets.map((p) => p.gender), genders, "다시 열어도 같은 성별");
+  process.stdout.write("(10) 성별 · 옛 개체  ok\n");
+}
+
+process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규화·성별)\n");
 
 // ── 파일 통로 ──────────────────────────────────────────────────────────────────
 // 여기부터는 임시 폴더에서 실제 파일로 확인한다. 끝나면 지운다

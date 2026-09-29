@@ -6,6 +6,7 @@
 // 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import { putPet } from "../box/slots.js";
+import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
@@ -61,7 +62,7 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
   if (!result) return { ok: false, reason: "no-candidate" };
 
   const id = nextPetId(save);
-  save.pets.push(newPet({ id, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, now }));
+  save.pets.push(newPet({ id, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
 
   // 배치 — 빈 파티 칸에 꺼낸 상태로. 없으면 박스로
   const slotIndex = save.party.slots.findIndex((s) => s.state === "empty");

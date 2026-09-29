@@ -26,7 +26,7 @@ function seed(): SaveV3 {
   ];
   const at = [0, 1, 3, 4, 6];
   rows.forEach(([id, species, level, affinity, order], i) => {
-    const pet = newPet({ id, species, shiny: false, nature: "hardy", now: T0 + order * 1000 });
+    const pet = newPet({ id, species, shiny: false, nature: "hardy", gender: "male", now: T0 + order * 1000 });
     pet.level = level;
     pet.affinity = affinity;
     s.pets.push(pet);

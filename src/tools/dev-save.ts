@@ -3,6 +3,7 @@
 // 앞에서부터 파티 칸에 꺼내 놓는다. 잠긴 칸도 연다. 파티 칸 수(6)를 넘는 마리는 자른다. 진짜 ~/.claude/pokebuddy/ 는 건드리지 않는다 — HOME 을 꼭 준다
 import fs from "node:fs";
 import path from "node:path";
+import { rollGender } from "../dex/gender";
 import { randomNature } from "../dex/natures";
 import { newPet, recordDex } from "../party/create";
 import { SAVE_V3_RULES } from "../save/rules";
@@ -30,7 +31,7 @@ export function devSaveState(speciesList: string[], opts: DevSaveOptions = {}): 
   const save = empty(now);
   list.forEach((species, i) => {
     const id = `p${i + 1}`;
-    const pet = newPet({ id, species, shiny: false, nature: randomNature(rng).id, now });
+    const pet = newPet({ id, species, shiny: false, nature: randomNature(rng).id, gender: rollGender(species, rng), now });
     if (!opts.sameHome) pet.home = { dx: SAVE_V3_RULES.pet.home.dx - spread * i, dy: SAVE_V3_RULES.pet.home.dy };
     save.pets.push(pet);
     save.party.slots[i] = { state: "pokemon", petId: id, hidden: false };

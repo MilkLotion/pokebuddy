@@ -34,7 +34,7 @@ const memory = (): SessionStorage => {
 function player(species: string, url: string, key: string) {
   const T0 = Date.now();
   let disk: SaveV3 = empty(T0);
-  disk.pets.push(newPet({ id: "p1", species, shiny: false, nature: "hardy", now: T0 }));
+  disk.pets.push(newPet({ id: "p1", species, shiny: false, nature: "hardy", gender: "male", now: T0 }));
   disk.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   const exec = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => Date.now() }, HANDLERS);
   const views: TradeViewModel[] = [];

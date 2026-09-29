@@ -13,7 +13,7 @@ const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const MIN = 60_000;
 
 const pet = (over: Partial<PetV3> = {}): PetV3 => ({
-  id: "p1", species: "charmander", shiny: false, nature: "hardy", size: 2,
+  id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
   level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
   mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
   daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },

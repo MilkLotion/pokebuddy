@@ -6,7 +6,7 @@
 //   - 배고픔(hunger) 대신 만복도(fullness) 를 쓴다. 용어사전의 사용자 용어와 맞춘다. fullness = 100 − hunger
 //   - 멈추는 값은 시각이 아니라 남은 시간으로 저장한다. PC 잠금·절전 중에는 시간이 흐르지 않기 때문이다.
 //   - 시간 값은 전부 ms 정수다. 화면 표기만 초·분으로 반올림한다.
-import type { AgentStats, LogEntry, NatureId, PetDaily, Totals } from "./types";
+import type { AgentStats, Gender, LogEntry, NatureId, PetDaily, Totals } from "./types";
 
 // ── 개체 ───────────────────────────────────────────────────────────────────────
 // 장난감은 놀아주기 3중첩과 같은 버프(신남)를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")
@@ -24,6 +24,7 @@ export interface PetV3 {
   species: string;
   shiny: boolean;
   nature: NatureId;
+  gender: Gender; // 2026-09-30 에 더했다. 옛 저장은 열 때 정한다 (src/dex/gender.ts legacyGender)
   size: number; // 도트 배율
   level: number; // 1~100
   exp: number; // 누적 경험치. 레벨은 종의 성장 곡선으로 읽는다

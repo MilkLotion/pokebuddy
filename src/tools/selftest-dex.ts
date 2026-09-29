@@ -7,6 +7,7 @@ import assert from "node:assert";
 import path from "node:path";
 import * as data from "../dex/data";
 import * as evo from "../dex/evo";
+import * as gender from "../dex/gender";
 import * as natures from "../dex/natures";
 import * as species from "../dex/species";
 import * as unlocks from "../dex/unlocks";
@@ -140,7 +141,27 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(dex.profile("rowlet").moodBase, 60 + 2 + 2, "override 에 없는 필드는 defaults (grass+flying)");
 
   const unknown = dex.profile("not-a-mon");
-  assert.deepStrictEqual(unknown, { slug: "not-a-mon", dex: 0, growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, sleepiness: 1, moodBase: 60, moodSwing: 1, likes: ["play"], types: [] }, "모르는 슬러그는 기본 프로필");
+  assert.deepStrictEqual(unknown, { slug: "not-a-mon", dex: 0, growthRate: "medium-fast", bst: 0, stage: 1, rank: 1, genderRate: 4, sleepiness: 1, moodBase: 60, moodSwing: 1, likes: ["play"], types: [] }, "모르는 슬러그는 기본 프로필");
+
+  // 성별 — 원작 성비 (2026-09-30 사용자 결정). 무성·한 성별 종은 그 성별, 옛 개체는 반반이고 열 때마다 같다
+  assert.strictEqual(dex.profile("salandit").genderRate, 1, "야도뉴 암컷 1/8");
+  assert.strictEqual(gender.fixedGender("magnemite"), "none", "코일은 무성");
+  assert.strictEqual(gender.fixedGender("chansey"), "female", "럭키는 암컷만");
+  assert.strictEqual(gender.fixedGender("gallade"), "male", "엘레이드는 수컷만");
+  assert.strictEqual(gender.fixedGender("pikachu"), null);
+  assert.strictEqual(gender.rollGender("salandit", () => 0.1), "female", "0.1 × 8 < 1 → 암컷");
+  assert.strictEqual(gender.rollGender("salandit", () => 0.2), "male");
+  assert.strictEqual(gender.rollGender("magnemite", () => 0.1), "none");
+  let draws = 0;
+  gender.rollGender("chansey", () => (draws++, 0.5));
+  assert.strictEqual(draws, 1, "한 성별 종도 난수를 하나 쓴다");
+  const old = { id: "p1", species: "pikachu", since: 1_700_000_000_000 };
+  assert.strictEqual(gender.legacyGender(old), gender.legacyGender({ ...old }), "옛 개체 성별은 열 때마다 같다");
+  assert.strictEqual(gender.legacyGender({ ...old, species: "salazzle" }), "female", "염뉴트로 진화한 옛 개체는 암컷");
+  assert.strictEqual(gender.legacyGender({ ...old, species: "voltorb" }), "none");
+  const halves = { male: 0, female: 0, none: 0 };
+  for (let i = 0; i < 1000; i++) halves[gender.legacyGender({ id: `p${i}`, species: "pikachu", since: i * 7919 })]++;
+  assert.ok(halves.male > 400 && halves.female > 400, `옛 개체는 반반 — ${halves.male}:${halves.female}`);
   assert.strictEqual(dex.hasProfile("pikachu"), true);
   assert.strictEqual(dex.hasProfile("pikachu-3d"), true);
   assert.strictEqual(dex.hasProfile("not-a-mon"), false);

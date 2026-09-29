@@ -50,6 +50,7 @@
         --primary-hover: #0a5f56;
         --warning: #f59e0b;
         --danger: #dc2626;
+        --success: #10b981;
         --scrim: rgba(26, 51, 48, 0.45);
         --radius: 12px;
       }
@@ -302,7 +303,7 @@
         top: 12px;
         right: 12px;
         display: flex;
-        gap: 4px;
+        gap: 8px;
       }
       .debuff {
         display: inline-flex;
@@ -327,6 +328,10 @@
       .debuff.danger::before {
         background: var(--danger);
       }
+      /* 버프 — 든든함·신남·들뜸. 디버프 뒤에 초록 점 (Figma `Debuff Badge` Tone=Success `970:20369`, 2026-09-30) */
+      .debuff.success::before {
+        background: var(--success);
+      }
       /* 파티 칸 초상 — Figma 초상 96 */
       .slot > .portrait {
         width: 96px;
@@ -338,6 +343,15 @@
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* 이름 뒤 성별 16 · 성격 — 이름만 줄어들고 이 둘은 줄지 않는다 (2026-09-30, Figma `identity-copy` `126:1075`) */
+      .slot .top .gender {
+        flex: none;
+        align-self: center;
+      }
+      .slot .top .nature {
+        flex: none;
         white-space: nowrap;
       }
       /* 빈 칸·잠긴 칸 — Figma `Party Slot` state/empty·state/locked. 48 옅은 네모 안의 +·자물쇠, 제목, (빈 칸만) 설명 */
@@ -464,6 +478,10 @@
         font-family: var(--font-small);
         white-space: nowrap;
       }
+      /* 색 있는 타입 배지 글자는 모두 흰색 (2026-09-30 사용자 결정 "타입 버튼들 폰트 색 다 흰거로"). 모르는 타입(회색)은 --ink */
+      .type[data-type] {
+        color: var(--inverse);
+      }
       .value.types {
         display: inline-flex;
         gap: 6px;
@@ -530,11 +548,6 @@
       .type[data-type="water"] {
         background: #2675db;
         color: var(--inverse);
-      }
-      .tag.nature {
-        background: none;
-        color: var(--muted);
-        padding-left: 0;
       }
       .meters {
         display: flex;

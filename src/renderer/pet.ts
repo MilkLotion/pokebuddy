@@ -2,6 +2,7 @@
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
 import type { PetDeviceAction, PetDeviceView } from "../shared/manage.js";
+import { genderIcon } from "./gender.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -9,6 +10,21 @@ const device: HTMLElement = root;
 const api = window.pokebuddyPet;
 
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
+
+// 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
+const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
+
+// 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
+function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
+  const list: HTMLElement[] = [];
+  const tone = DEBUFF_TONE[pet.zone];
+  if (tone) list.push(el("span", `badge ${tone}`, ZONE_WORD[pet.zone] ?? pet.zone));
+  for (const name of pet.buffNames ?? []) list.push(el("span", "badge success", name));
+  if (!list.length) return null;
+  const box = el("div", "status");
+  box.append(...list);
+  return box;
+}
 
 function el(tag: string, cls?: string, text?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -290,7 +306,12 @@ function renderBody(v: PetDeviceView): void {
   if (v.portrait) stage.appendChild(sprite(v.portrait));
   entry.appendChild(stage);
   const info = el("div", "info");
-  info.appendChild(el("div", "name", pet.name));
+  // 이름 줄 — 이름 · 성별 24 (Figma `862:22000` 의 `gender`, 2026-09-30 사용자 결정)
+  const nameRow = el("div", "name-row");
+  nameRow.appendChild(el("div", "name", pet.name));
+  const sex = genderIcon(pet.gender, 24);
+  if (sex) nameRow.appendChild(sex);
+  info.appendChild(nameRow);
   info.appendChild(el("div", "sub", `Lv.${pet.level} · ${pet.nature}`));
   const types = el("div", "types");
   pet.types.forEach((name, i) => {
@@ -309,6 +330,9 @@ function renderBody(v: PetDeviceView): void {
     ball.title = action;
     ball.setAttribute("aria-label", action);
     screen.appendChild(ball);
+    // 상태 배지 — 화면 오른쪽 아래. 화면 높이가 정해져 있어 배지가 생겨도 아래 칸이 밀리지 않는다 (2026-09-30 사용자 결정, Figma `862:22000` 의 `status`)
+    const badges = statusBadges(pet);
+    if (badges) screen.appendChild(badges);
   }
   bezel.appendChild(screen);
   device.appendChild(bezel);
@@ -321,7 +345,6 @@ function renderBody(v: PetDeviceView): void {
     bar("만복도", pet.fullness, liveShown(pet, "fullness"), pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : "", "fullness"),
     bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
   );
-  if (v.inParty) for (const name of pet.buffNames ?? []) records.appendChild(el("span", "chip-note", name)); // 켜진 버프 — 든든함·신남·들뜸 (2026-09-29 사용자 결정)
   device.appendChild(records);
 
   // 흰 판 — 돌봄 · 성장 · 크기 · 관리

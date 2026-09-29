@@ -126,7 +126,7 @@
 | 영역 | 필드 |
 |---|---|
 | `meta` | `v: 3`, `savedAt`, `lastTickAt` |
-| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily` |
+| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `gender`(`male`·`female`·`none`, 2026-09-30 추가. 옛 저장은 열 때 정한다), `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily` |
 | `party` | `slots[6]`. 칸마다 `state`(`pokemon`·`empty`·`locked`), `petId`, `hidden`, `unlockBy`(`shop`·`achievement`). `unlockBy` 는 경로별로 더 열 수 있는 칸 수만 센다. 칸은 앞에서부터 연다(`src/party/slots.ts`) |
 | `boxes[]` | `id`, `name`, `slots[30]`(개체 식별자 또는 빈 칸) |
 | `eggs[]` | `id`, `boughtAt`, `remainMs`(준비 남은 시간), `ready`, `candidates[]`(구매 당시 후보 종). `actions`·`careCooldownMs`는 옛 판 호환용이며 쓰지 않는다 |

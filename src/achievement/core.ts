@@ -16,6 +16,7 @@
 import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { openSlot } from "../party/slots.js";
+import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { placeNew } from "../shop/buy.js";
@@ -113,7 +114,7 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
   const species = rewardPokemon(def);
   if (species) {
     const petId = nextPetId(save);
-    const pet = newPet({ id: petId, species, shiny: false, nature: randomNature(rand, opts).id, now });
+    const pet = newPet({ id: petId, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now });
     save.pets.push(pet);
     recordDex(save, species, false);
     const where = placeNew(save, petId);

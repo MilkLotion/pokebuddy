@@ -292,7 +292,8 @@
         background: #8a6a70;
         cursor: default;
       }
-      /* 타입 색 — 관리 창 `.type[data-type]` 과 같은 Scarlet·Violet 팔레트 */
+      /* 타입 색 — 관리 창 `.type[data-type]` 과 같은 Scarlet·Violet 팔레트. 색 있는 배지 글자는 모두 흰색 (2026-09-30 사용자 결정) */
+      .type[data-type] { color: var(--inverse); }
       .type[data-type="electric"] { background: #fac000; }
       .type[data-type="fire"] { background: #e52829; color: var(--inverse); }
       .type[data-type="flying"] { background: #81b9ef; }

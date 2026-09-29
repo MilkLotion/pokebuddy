@@ -93,7 +93,7 @@ function makeHome(): Home {
   const { empty } = require(path.join(root, "dist/save/v3.js")) as { empty: (now: number) => Record<string, unknown> & { pets: unknown[]; party: { slots: unknown[] }; points: { balance: number } } };
   const { newPet } = require(path.join(root, "dist/party/create.js")) as { newPet: (o: Record<string, unknown>) => unknown };
   const save = empty(Date.now());
-  save.pets.push(newPet({ id: "u1", species: "pichu", shiny: false, nature: "hardy", now: Date.now() }));
+  save.pets.push(newPet({ id: "u1", species: "pichu", shiny: false, nature: "hardy", gender: "male", now: Date.now() }));
   save.party.slots[0] = { state: "pokemon", petId: "u1", hidden: false };
   save.starterPetId = "u1";
   save.points.balance = 1234;
