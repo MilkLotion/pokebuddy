@@ -1,0 +1,138 @@
+# mac 앱 파일 릴리스 첨부 — GitHub Release 가 게시되면 mac 러너에서 dist:mac 을 돌려 zip·dmg(arm64·x64)·latest-mac.yml 을 같은 릴리스에 올린다
+#   Windows PC 에서 릴리스를 올려도 mac 앱이 업데이트를 받게 하기 위함이다. 수동 실행(workflow_dispatch)은 기존 태그에 다시 올릴 때 쓴다
+#   필요한 Secrets — MAC_SIGNING_P12: "PokeBuddy Code Signing" 인증서·개인키 p12 의 base64, MAC_SIGNING_PASSWORD: 그 p12 의 암호
+#   Windows 쪽 릴리스에는 latest-mac.yml 을 올리지 않는다 — 이 워크플로가 --clobber 로 올리는 파일이 기준이다
+#   액션은 커밋 SHA 로 고정한다(pages.yml 규칙). setup-node 만 예외 — 아래 주석 참고
+name: release-mac
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "mac 파일을 올릴 릴리스 태그 (예 v0.11.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-mac-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    env:
+      # 태그는 run 스크립트에 식으로 끼워 넣지 않고 env 로만 넘긴다
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      # 임시 키체인 파일 이름 — 경로는 각 단계에서 $RUNNER_TEMP 아래로 만든다(job env 에는 runner 컨텍스트가 없다)
+      KEYCHAIN_NAME: pokebuddy-signing.keychain-db
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: refs/tags/${{ inputs.tag || github.event.release.tag_name }}
+
+      # [임시] 커밋 SHA 로 고정할 것 — SHA 를 확인하지 못해 태그로 둔다(pages.yml 규칙의 예외)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 버전 확인
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          if [ "$version" != "${TAG#v}" ]; then
+            echo "::error::package.json version($version) 이 태그($TAG) 와 다르다"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 서명 인증서 가져오기
+        env:
+          MAC_SIGNING_P12: ${{ secrets.MAC_SIGNING_P12 }}
+          MAC_SIGNING_PASSWORD: ${{ secrets.MAC_SIGNING_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MAC_SIGNING_P12:-}" ] || [ -z "${MAC_SIGNING_PASSWORD:-}" ]; then
+            echo "::error::Secrets MAC_SIGNING_P12 · MAC_SIGNING_PASSWORD 가 비었다 — 저장소 설정에서 두 값을 넣은 뒤 다시 실행한다"
+            exit 1
+          fi
+          p12_path="$RUNNER_TEMP/pokebuddy-signing.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/$KEYCHAIN_NAME"
+          # 임시 키체인 암호 — 실행마다 무작위, 이 단계 밖으로 내보내지 않는다
+          keychain_password="$(openssl rand -base64 32)"
+          echo "::add-mask::$keychain_password"
+          printf '%s' "$MAC_SIGNING_P12" | base64 --decode > "$p12_path"
+          security create-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+          # 6시간 동안 잠기지 않게 한다 — 빌드 도중 잠기면 codesign 이 멈춘다
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+          security import "$p12_path" -k "$KEYCHAIN_PATH" -f pkcs12 -P "$MAC_SIGNING_PASSWORD" -T /usr/bin/codesign
+          rm -f "$p12_path"
+          # codesign 이 허용 창 없이 개인키를 쓰게 한다
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$KEYCHAIN_PATH" > /dev/null
+          # 검색 목록에 임시 키체인을 앞에 두고 기존 목록을 뒤에 유지한다
+          existing=()
+          while IFS= read -r line; do
+            line="${line#"${line%%[![:space:]]*}"}"
+            line="${line#\"}"
+            line="${line%\"}"
+            [ -n "$line" ] && existing+=("$line")
+          done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$KEYCHAIN_PATH" ${existing[@]+"${existing[@]}"}
+          if ! security find-identity -p codesigning | grep -q '"PokeBuddy Code Signing"'; then
+            echo "::error::가져온 p12 에 \"PokeBuddy Code Signing\" 서명 신원이 없다"
+            exit 1
+          fi
+
+      - name: mac 앱 빌드
+        run: npm run dist:mac
+
+      - name: 올리기 전 확인
+        run: |
+          set -euo pipefail
+          yml_version="$(sed -n 's/^version:[[:space:]]*//p' release/latest-mac.yml | tr -d "'\"")"
+          if [ "$yml_version" != "$VERSION" ]; then
+            echo "::error::release/latest-mac.yml 의 version($yml_version) 이 $VERSION 과 다르다"
+            exit 1
+          fi
+          for arch in arm64 x64; do
+            for ext in zip dmg; do
+              file="release/PokeBuddy-$VERSION-$arch.$ext"
+              if [ ! -f "$file" ]; then
+                echo "::error::$file 이 없다"
+                exit 1
+              fi
+            done
+          done
+
+      # blockmap 은 올리지 않는다 — mac 업데이터(src/main/mac-updater.ts)가 쓰지 않는다
+      - name: 릴리스에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" \
+            "release/PokeBuddy-$VERSION-arm64.zip" \
+            "release/PokeBuddy-$VERSION-x64.zip" \
+            "release/PokeBuddy-$VERSION-arm64.dmg" \
+            "release/PokeBuddy-$VERSION-x64.dmg" \
+            release/latest-mac.yml \
+            --clobber --repo "$REPO"
+
+      - name: 임시 키체인 삭제
+        if: always()
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/$KEYCHAIN_NAME"
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+          rm -f "$RUNNER_TEMP/pokebuddy-signing.p12"
