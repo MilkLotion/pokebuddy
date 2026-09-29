@@ -1567,7 +1567,7 @@ const BAG_TABS = [
   { id: "candy", label: "사탕" },
   { id: "food", label: "먹이" },
   { id: "evolution", label: "진화의돌" },
-  { id: "mint", label: "민트" },
+  { id: "mint", label: "성격민트" }, // 이름 성격민트 (2026-09-30 사용자 결정)
   { id: "toy", label: "장난감" },
   { id: "potion", label: "약" },
 ];
@@ -3460,10 +3460,10 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   // 안내 상자 자리는 고르기 전에도 잡아 둔다(보이지 않게) — 고를 때 창 높이가 늘어 위로 튀지 않게
   const info = el("div", picked ? "info-box" : "info-box reserve");
   if (!picked) info.setAttribute("aria-hidden", "true");
-  if (have > 0 || !picked) info.append(el("div", undefined, "민트 1개를 씁니다"), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
+  if (have > 0 || !picked) info.append(el("div", undefined, "성격민트 1개를 씁니다"), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
   else {
     const price = view.shop.find((p) => p.id === MINT)?.price;
-    info.append(el("div", undefined, "민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
+    info.append(el("div", undefined, "성격민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
   }
   dialogEl.appendChild(info);
 

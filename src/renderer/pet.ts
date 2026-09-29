@@ -53,7 +53,7 @@ const act = (action: ActBody): void => api.act({ ...action, petId: shownPetId } 
 const DETAIL_STEPS = [
   { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
   { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
-  { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격은 민트로 바꿔요." },
+  { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격민트로 성격을 바꿔요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
   { tut: "detail-manage", title: "교체와 박스 보관", body: "박스에 보관하면 성장이 멈춰요." },
 ] as const;

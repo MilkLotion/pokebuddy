@@ -9,7 +9,7 @@
   "exp-candy-l": { "ko": "경험사탕L", "en": "Exp. Candy L", "price": 160, "effect": "exp", "amount": 10000 },
   "exp-candy-xl": { "ko": "경험사탕XL", "en": "Exp. Candy XL", "price": 320, "effect": "exp", "amount": 30000 },
   "rare-candy": { "ko": "이상한사탕", "en": "Rare Candy", "price": 200, "effect": "level", "amount": 1 },
-  "mint": { "ko": "민트", "en": "Mint", "price": 100, "effect": "nature", "amount": 0 },
+  "mint": { "ko": "성격민트", "en": "Mint", "price": 100, "effect": "nature", "amount": 0 },
   "shiny-potion": { "ko": "모습이 바뀌는 약", "en": "Shiny Potion", "price": 1200, "effect": "shiny-on", "amount": 0 },
   "normal-potion": { "ko": "돌아오는 약", "en": "Normal Potion", "price": 0, "effect": "shiny-off", "amount": 0 }
 }
