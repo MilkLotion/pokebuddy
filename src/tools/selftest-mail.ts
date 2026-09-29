@@ -54,6 +54,34 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   process.stdout.write("(2) 저장에 넣기 · 중복 방지 · 정규화  ok\n");
 }
 
+// (2b) 포켓몬 선물 — 레벨 1 새 개체를 박스에 넣는다. 파티가 비어 있어도 박스. 도감에 입수로 남긴다
+{
+  assert.deepStrictEqual(parseGifts([{ kind: "pokemon", species: "dratini", count: 1 }]), [{ kind: "pokemon", species: "dratini", count: 1 }]);
+  assert.equal(parseGifts([{ kind: "pokemon", species: "no-such-mon", count: 1 }]), null, "모르는 종");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "dratini", count: 7 }]), null, "한 편지에 같은 종 6마리까지");
+  assert.equal(parseGifts([{ kind: "pokemon", count: 1 }]), null, "종이 없다");
+  const s = empty(T0);
+  const petsBefore = s.pets.length;
+  const partyBefore = JSON.stringify(s.party.slots);
+  assert.deepStrictEqual(applyGifts(s, "P1", [{ kind: "pokemon", species: "haunter", count: 2 }, { kind: "points", count: 10 }], undefined, { now: T0, rand: () => 0.3 }), { ok: true, applied: true });
+  const got = s.pets.slice(petsBefore);
+  assert.equal(got.length, 2, "두 마리");
+  for (const p of got) {
+    assert.equal(p.species, "haunter");
+    assert.equal(p.level, 1);
+    assert.equal(p.shiny, false, "이로치가 아니다");
+    assert.equal(p.since, T0);
+    assert.ok(s.boxes.some((b) => b.slots.includes(p.id)), "박스에 들어간다");
+  }
+  assert.notEqual(got[0]!.id, got[1]!.id, "개체 id 가 겹치지 않는다");
+  assert.equal(JSON.stringify(s.party.slots), partyBefore, "파티는 그대로다");
+  assert.ok(s.dex.obtained.includes("haunter"), "도감에 입수로 남는다");
+  assert.equal(s.points.balance, empty(T0).points.balance + 10, "함께 담긴 포인트도 넣는다");
+  assert.deepStrictEqual(applyGifts(s, "P1", [{ kind: "pokemon", species: "haunter", count: 2 }]), { ok: true, applied: false }, "같은 편지로 다시 만들지 않는다");
+  assert.equal(s.pets.length, petsBefore + 2);
+  process.stdout.write("(2b) 포켓몬 선물  ok\n");
+}
+
 // (3) 실행기 — mail.apply 는 실행기에만 있다. 같은 요청 id 는 다시 돌리지 않는다
 {
   let save: SaveV3 = empty(T0);

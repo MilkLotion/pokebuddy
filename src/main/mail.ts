@@ -5,10 +5,11 @@
 // 렌더러는 편지 id 만 보낸다. 저장에 넣는 선물은 서버가 돌려준 값만 쓴다.
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
-import { giftItemName, isApplied, isRead, parseGifts } from "../mail/core.js";
+import { giftItemName, isApplied, isRead, parseGifts, type Gift } from "../mail/core.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/manage";
 import type { TxResult } from "../tx/executor";
+import { petName } from "./text.js";
 
 export interface ServerLetter {
   id: string;
@@ -51,9 +52,15 @@ const isLetter = (v: unknown): v is ServerLetter => {
   return !!l && typeof l.id === "string" && typeof l.title === "string" && typeof l.starts_at === "string";
 };
 
+function giftView(g: Gift): MailGiftView {
+  if (g.kind === "item") return { kind: "item", id: g.id, name: giftItemName(g.id) ?? g.id, count: g.count };
+  if (g.kind === "pokemon") return { kind: "pokemon", id: g.species, name: petName(g.species), count: g.count };
+  return { kind: "points", id: null, name: "포인트", count: g.count };
+}
+
 function giftViews(raw: unknown): { gifts: MailGiftView[]; unsupported: boolean } {
   const gifts = parseGifts(raw);
-  if (gifts) return { gifts: gifts.map((g) => (g.kind === "item" ? { kind: "item", id: g.id, name: giftItemName(g.id) ?? g.id, count: g.count } : { kind: "points", id: null, name: "포인트", count: g.count })), unsupported: false };
+  if (gifts) return { gifts: gifts.map(giftView), unsupported: false };
   // 모르는 선물 — 아는 것만 보이고 받기를 막는다
   const list = Array.isArray(raw) ? raw : [];
   return { gifts: [], unsupported: list.length > 0 };

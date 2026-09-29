@@ -321,9 +321,9 @@ export interface AccountReply {
 // 헤더 봉투 단추가 여는 모달 (src/main/mail.ts). Figma 05 Screens 섹션 `10 우편함` `932:22859` (A안 편지 + 선물)
 // manage:mail 은 렌더러 → 메인 요청(결과에 screen), manage:mail-view 는 메인 → 렌더러 밀어 보내기다
 export interface MailGiftView {
-  kind: "item" | "points";
-  id: string | null; // 도구 id — 그림(item:<id>)을 찾는다. 포인트는 null
-  name: string; // "경험사탕M" · "포인트"
+  kind: "item" | "points" | "pokemon";
+  id: string | null; // 도구 id — 그림(item:<id>)을 찾는다. 포켓몬은 종 slug(초상). 포인트는 null
+  name: string; // "경험사탕M" · "포인트" · "미뇽"
   count: number;
 }
 export interface MailLetterView {

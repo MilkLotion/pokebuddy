@@ -2584,7 +2584,16 @@ function mailMeta(l: MailLetterView): string {
   if (mailOpen(l) && l.endsAt != null) parts.push(mailLeft(l.endsAt));
   return parts.join(" · ");
 }
-const giftIcon = (g: MailGiftView, cls: string): HTMLElement => (g.kind === "item" ? iconOf(`item:${g.id}`, cls) : el("span", `${cls} gift-point`, "P"));
+const giftIcon = (g: MailGiftView, cls: string): HTMLElement =>
+  g.kind === "item" ? iconOf(`item:${g.id}`, cls) : g.kind === "pokemon" && g.id ? portraitOf(g.id, false, cls) : el("span", `${cls} gift-point`, "P");
+// 받은 선물이 들어간 곳 — 가방(도구)·박스(포켓몬)·포인트
+function giftWhere(gifts: readonly MailGiftView[]): string {
+  const places = [gifts.some((g) => g.kind === "item") && "가방", gifts.some((g) => g.kind === "pokemon") && "박스", gifts.some((g) => g.kind === "points") && "포인트"].filter((p): p is string => !!p);
+  if (places.length === 1 && places[0] === "포인트") return "포인트에 더해졌어요";
+  // 앞 단어에 받침이 있으면 "과"(가방과), 없으면 "와"(박스와)
+  const and = (w: string): string => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? `${w}과` : `${w}와`);
+  return `${places.map((p, i) => (i < places.length - 1 ? and(p) : p)).join(" ")}에 들어갔어요`;
+}
 
 // 봉투 — Figma `Icon / Mail` `907:578`. 헤더 단추와 같은 선 그림
 function envelope(cls: string): SVGSVGElement {
@@ -2694,7 +2703,7 @@ function giftCard(l: MailLetterView): HTMLElement {
   }
   const foot = el("div", "gift-foot");
   if (done) {
-    const where = l.gifts.every((g) => g.kind === "points") ? "포인트에 더해졌어요" : l.gifts.some((g) => g.kind === "points") ? "가방과 포인트에 들어갔어요" : "가방에 들어갔어요";
+    const where = giftWhere(l.gifts);
     foot.textContent = `${l.claimedAt ? `${monthDay(l.claimedAt)}에 받았어요 · ` : ""}${where}`;
   } else if (l.unsupported) foot.textContent = MAIL_ERROR["bad-gift"] ?? "";
   else if (mailExpired(l)) foot.textContent = MAIL_ERROR.MAIL_EXPIRED ?? "";
