@@ -7,7 +7,8 @@
 - 구현·검수·수정 완료(커밋 전): 상세 창 포커스와 세대 번호, 상점 포켓몬·해금 정리·쪽 넘김, 민트 통일, 줍기, 아이콘 말풍선, 전역 1초 시계·검색 방식.
 - 검사: `npm run check`, `npm run selftest`(2차 통과, 1차 selftest-stage 간헐 실패), smoke-manage 통과, `git diff --check` 통과. smoke-renderer 튜토리얼 단언 실패는 이전부터 있다.
 - 앱 실기: 전부 하지 않았다. 항목은 각 기록의 "실기 확인 항목"에 있다.
-- 커밋: 하지 않았다. 병렬 세션(`terminal-pkmon-0c`)의 변경이 섞여 있어 범위를 사용자에게 확인한다.
+- 커밋: `78d710d`(2026-09-29 사용자 지시 "너가 먼저 다 커밋하고, 그 세션에 메시지 날려서 알려"). 병렬 세션(`terminal-pkmon-0c`)의 파일 9개는 뺐다. 섞인 파일(`docs/guide.md`, `docs/terms.md`, `docs/specs/ui-components.md`, `src/main/portraits.ts`)은 그쪽 변경까지 들어갔다. 그 세션에 메시지로 알렸다. 푸시는 하지 않았다.
+- 커밋 뒤 정정: `records/review-0929/record.md`에 영문 미완성 태그 단어가 들어가 있어 고쳤다. 이 정정과 이 파일 갱신은 커밋 전이다.
 
 ## 다음 행동
 

@@ -29,7 +29,7 @@
 
 ### C: 화면·문서 의미 (완료)
 
-- 명령: `check-docs` exit 1(`docs/worklog-mac` 한 줄). `git diff --check` 통과. diff에 TODO·FIXME·XXX·HACK 0건, `console.log/warn/debug/info` 0건.
+- 명령: `check-docs` exit 1(`docs/worklog-mac` 한 줄). `git diff --check` 통과. diff에 영문 미완성 태그 0건, `console.log/warn/debug/info` 0건.
 - 임시 Electron 스모크(임시 HOME, 1초마다 `game.tick()` + `pushClock`): 상점 칩·격자 406칸·지방·검색, 도감 지방(`regionEl`), 성격 변경 창(25칸 순서, 지금 성격 막기, 가장 긴 글자 55px < 칸 63px, 682 높이 안 617px). 스크린샷은 scratchpad `review-c/`.
 - 문서 의미 검수: writing.md 체크리스트를 변경 문단에 적용했다. 발견은 아래 C 행.
 - 문제없음: 상점 탭 구성, 지방 목록·스크롤·검색 칸 값이 시계 틱에도 유지, 도감 지방, 성격표, 줍기 배너 대체 처리와 바로가기, 호칭 없는 문구, 줍기 수치, 민트·잠만보·럭키·라프라스·메타몽 문서 일치, 공개 문서의 worklog 링크 없음.
