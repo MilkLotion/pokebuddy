@@ -23,9 +23,10 @@ import { HANDLERS } from "../tx/handlers.js";
 import { argsOf, requestIdOf, toCommandResult } from "../tx/bridge.js";
 import { dexList } from "../tx/lists.js";
 import { dexDetail } from "../tx/dex-detail.js";
+import { shopDetail } from "../tx/shop-detail.js";
 import { snapshot } from "../tx/snapshot.js";
 import { agentInfo, connect, disconnect, status } from "../agents/registry.js";
-import type { AgentAction, AgentReply, AgentRow, DexDetail, DexEntry, ManageReply, ManageRequest, Snapshot } from "../shared/manage";
+import type { AgentAction, AgentReply, AgentRow, DexDetail, DexEntry, ManageReply, ManageRequest, ShopDetail, Snapshot } from "../shared/manage";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import type { AgentName, Command, CommandName, CommandSource } from "../shared/types";
 
@@ -41,6 +42,7 @@ export interface GameV3 {
   view: () => Snapshot | null;
   dex: () => DexEntry[];
   dexDetail: (slug: string) => DexDetail | null; // 도감 칸 하나의 상세
+  shopDetail: (productId: string) => ShopDetail | null; // 상점 구매 창의 상세 (src/tx/shop-detail.ts)
   agents: (req?: { name: string; action: AgentAction }) => AgentReply;
   send: (req: ManageRequest, from: CommandSource) => ManageReply;
   executor: Executor;
@@ -199,5 +201,10 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return save ? dexDetail(save, slug) : null;
   };
 
-  return { file, read, tick, flush, find, view, dex, dexDetail: detail, agents, send, executor, saveFailing: () => failStreak >= SAVE_V3_RULES.saveFailNotifyAfter };
+  const shop = (productId: string): ShopDetail | null => {
+    const save = read();
+    return save ? shopDetail(save, productId) : null;
+  };
+
+  return { file, read, tick, flush, find, view, dex, dexDetail: detail, shopDetail: shop, agents, send, executor, saveFailing: () => failStreak >= SAVE_V3_RULES.saveFailNotifyAfter };
 }

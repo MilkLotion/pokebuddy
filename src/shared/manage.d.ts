@@ -144,6 +144,27 @@ export interface DexDetail {
   weight: string; // "19.0kg". 미해금이면 빈 문자열
 }
 
+// 상점 상세 — 구매 창을 열 때 상품 하나만 만든다 (src/tx/shop-detail.ts, 2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가")
+// 진화 사슬의 한 종. 미해금이면 name 이 "???" 이고 화면은 그림 대신 빈 원을 그린다(실루엣 없음). 조건 문구는 미해금이어도 준다
+export interface EvoNodeView {
+  slug: string;
+  name: string;
+  locked: boolean;
+  current: boolean; // 지금 보는(사려는) 종
+  need?: string; // 이 종으로 오는 조건 — "Lv.16" · "천둥의돌" · "친밀도 65 · 밤" · "각성의돌 · 수컷". 뿌리는 없다
+  children: EvoNodeView[];
+}
+
+export interface EvoPairView {
+  from: { slug: string; name: string; locked: boolean };
+  to: { slug: string; name: string; locked: boolean };
+  note?: string; // 도구 밖의 조건 — "수컷" · "밤". 도구 이름은 제목에 있으니 뺀다
+}
+
+export type ShopDetail =
+  | { kind: "pokemon"; slug: string; dex: number; name: string; genus: string; types: string[]; typeIds: string[]; tree: EvoNodeView }
+  | { kind: "evolution"; pairs: EvoPairView[] }; // 진화용 도구 — 이 도구로 진화하는 쌍, 도감 번호순
+
 // 달성 전 · 달성했고 보상이 남음 · 보상까지 받음
 export type AchievementState = "locked" | "achieved" | "claimed";
 
@@ -244,7 +265,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 박스 탭을 열고 교환 모달을 띄운다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
@@ -396,6 +417,7 @@ export interface ManageBridge {
   command: (req: ManageRequest) => Promise<ManageReply>;
   dex: () => Promise<DexEntry[]>;
   dexDetail: (slug: string) => Promise<DexDetail | null>; // 도감 칸 하나의 상세
+  shopDetail: (productId: string) => Promise<ShopDetail | null>; // 상점 구매 창의 상세 — 포켓몬 진화 트리, 진화용 도구의 대상
   agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>; // 인자가 없으면 읽기만 한다
   onRoute: (cb: (route: ManageRoute) => void) => void; // 배너의 `바로가기` 로 옮겨 갈 곳
   drawRegion: () => Promise<ManageReply>; // 적용하면 ok, 취소하면 reason "cancelled"

@@ -53,13 +53,13 @@ function onlyStepText(step: EvoStep, opts?: DexOptions): string {
 }
 
 // 공식 분류와 설명문 — data/dex-text.json (src/tools/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
-interface DexText {
+export interface DexText {
   genus: { ko?: string; en?: string };
   flavor: { ko?: string; en?: string };
   height?: number; // 데시미터
   weight?: number; // 헥토그램
 }
-const dexTexts = (opts?: DexOptions): Record<string, DexText> => loadJson<Record<string, DexText>>("dex-text.json", opts);
+export const dexTexts = (opts?: DexOptions): Record<string, DexText> => loadJson<Record<string, DexText>>("dex-text.json", opts);
 
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
   const row = profile(slug, opts);
@@ -119,7 +119,7 @@ function bodySize(t: DexText | undefined): { height: string; weight: string } {
   };
 }
 
-function officialText(t: DexText | undefined): { genus: string; flavor: string } {
+export function officialText(t: DexText | undefined): { genus: string; flavor: string } {
   if (!t) return { genus: "", flavor: "" };
   const lang = getLang();
   const other = lang === "ko" ? "en" : "ko";

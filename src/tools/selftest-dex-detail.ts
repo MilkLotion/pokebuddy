@@ -7,6 +7,7 @@ import assert from "node:assert";
 import { empty } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
 import { dexDetail } from "../tx/dex-detail";
+import { evoItemNote, shopDetail } from "../tx/shop-detail";
 import { josa } from "../shared/josa";
 import { iconUrl, portraitKey, portraitUrl } from "../main/portraits";
 import { cryUrl } from "../main/cries";
@@ -176,6 +177,53 @@ function seed(): SaveV3 {
   s.dex.unlocked.push("pikachu");
   assert.equal(dexDetail(s, "pikachu")?.evolution, "천둥의돌을 쓰면 라이츄로 진화");
   process.stdout.write("(11) 도구 한 단계 진화 문구  ok\n");
+}
+
+// (12) 상점 상세 — 포켓몬 진화 트리, 진화용 도구의 대상, 진화 탭 줄 문구 (2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가")
+{
+  const s = seed();
+  const d = shopDetail(s, "charmander");
+  assert.ok(d && d.kind === "pokemon");
+  assert.equal(d.name, "파이리");
+  assert.equal(d.genus, "도롱뇽포켓몬");
+  const t = d.tree;
+  assert.deepStrictEqual([t.slug, t.current, t.need], ["charmander", true, undefined], "뿌리는 파이리이고 지금 보는 종");
+  assert.deepStrictEqual(t.children.map((c) => [c.name, c.need, c.current]), [["리자드", "Lv.16", false]]);
+  assert.deepStrictEqual(t.children[0]?.children.map((c) => [c.name, c.need]), [["리자몽", "Lv.36"]], "일직선 3단");
+  // 갈래·미해금 — 랄토스만 해금. 이름은 ??? 로 숨기고 조건은 보인다 (사용자 결정 "다 보여줘")
+  s.dex.unlocked.push("ralts");
+  const r = shopDetail(s, "ralts");
+  assert.ok(r && r.kind === "pokemon");
+  const kirlia = r.tree.children[0];
+  assert.deepStrictEqual([kirlia?.name, kirlia?.locked, kirlia?.need], ["???", true, "Lv.20"]);
+  assert.deepStrictEqual(kirlia?.children.map((c) => [c.name, c.need]), [["???", "Lv.30"], ["???", "각성의돌 · 수컷"]], "킬리아 갈래 — 엘레이드는 수컷만");
+  // 이브이 8갈래 — 친밀도·시간대 조건
+  s.dex.unlocked.push("eevee", "espeon");
+  const e = shopDetail(s, "eevee");
+  assert.ok(e && e.kind === "pokemon");
+  assert.equal(e.tree.children.length, 8);
+  assert.deepStrictEqual(e.tree.children.find((c) => c.slug === "espeon")?.need, "친밀도 65 · 낮");
+  assert.equal(e.tree.children.find((c) => c.slug === "espeon")?.name, "에브이", "해금한 갈래는 이름을 보인다");
+  // 사려는 종이 사슬 가운데여도 뿌리부터 그린다
+  const mid = shopDetail(s, "charmeleon");
+  assert.ok(mid && mid.kind === "pokemon");
+  assert.deepStrictEqual([mid.tree.slug, mid.tree.current, mid.tree.children[0]?.current], ["charmander", false, true]);
+  // 진화용 도구 — 천둥의돌 7쌍, 진화 전 도감 번호순
+  s.dex.unlocked.push("pikachu", "raichu", "magneton");
+  const th = shopDetail(s, "thunder-stone");
+  assert.ok(th && th.kind === "evolution");
+  assert.equal(th.pairs.length, 7);
+  assert.deepStrictEqual(th.pairs.slice(0, 2).map((p) => [p.from.name, p.to.name]), [["피카츄", "라이츄"], ["레어코일", "???"]], "자포코일은 미해금");
+  const dawn = shopDetail(s, "dawn-stone");
+  assert.ok(dawn && dawn.kind === "evolution");
+  assert.deepStrictEqual(dawn.pairs.map((p) => p.note), ["수컷", "암컷"], "도구 밖 조건은 note 로");
+  // 진화 탭 줄 문구 — 해금한 진화 전 종만 이름으로
+  assert.equal(evoItemNote(s, "thunder-stone"), "피카츄·레어코일 외 5종");
+  assert.equal(evoItemNote(s, "dawn-stone"), "대상 2종", "해금한 진화 전 종이 없으면 수만");
+  s.dex.unlocked.push("slowpoke");
+  assert.equal(evoItemNote(s, "galarica-wreath"), "야돈 → ???", "한 쌍이면 진화 전 → 진화 후");
+  assert.equal(shopDetail(s, "not-a-thing"), null);
+  process.stdout.write("(12) 상점 상세 · 진화 트리·대상·줄 문구  ok\n");
 }
 
 process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명·키 몸무게·기기 창 자리)\n");

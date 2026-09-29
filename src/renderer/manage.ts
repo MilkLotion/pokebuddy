@@ -14,6 +14,8 @@ import type {
   BoxView,
   DexEntry,
   EggView,
+  EvoNodeView,
+  EvoPairView,
   FormView,
   MailGiftView,
   MailLetterView,
@@ -25,6 +27,7 @@ import type {
   PetView,
   PortraitAsk,
   ScreenView,
+  ShopDetail,
   ShopItemView,
   SlotView,
   SaveSummaryView,
@@ -3725,6 +3728,8 @@ function drawBuy(productId: string, qty: number): void {
     dialogEl.appendChild(box);
   }
 
+  dialogEl.append(...shopDetailBlock(item)); // 포켓몬 — 정보 줄·진화 트리, 진화용 도구 — 진화 대상 (2026-09-30)
+
   // 합계 상자 — 살 수 있으면 합계와 구매 후 보유, 막혔으면 까닭과 한 줄 안내 (시안 `Shop / Buy Blocked`)
   const summary = el("div", "buy-total");
   if (item.blocked) {
@@ -3757,6 +3762,158 @@ function drawBuy(productId: string, qty: number): void {
 // 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
 async function buy(productId: string, count: number): Promise<void> {
   await send("shop.buy", productId, count > 1 ? { count } : {});
+}
+
+// ── 상점 상세 — 포켓몬 진화 트리, 진화용 도구의 대상 ─────────────────────────────
+// 구매 창에 합친다 (2026-09-30 사용자 결정 "합쳐도될듯"). Figma 05 `Shop / Buy Pokemon` · `… · Branch` · `… · Eevee` ·
+// `Shop / Buy Evolution Item` · `… · Long`. 상품마다 한 번 받는다. 도감 해금 수가 바뀌면 다시 받는다(??? 가 풀릴 수 있다)
+const shopDetails = new Map<string, ShopDetail | null>();
+const shopDetailKey = (id: string): string => `${id}@${view?.dex.unlocked ?? 0}:${view?.dex.obtained ?? 0}`;
+
+function shopDetailBlock(item: ShopItemView): HTMLElement[] {
+  if (item.category !== "pokemon" && item.category !== "evolution") return [];
+  const key = shopDetailKey(item.id);
+  if (!shopDetails.has(key)) {
+    shopDetails.set(key, null); // 받는 중 — 다시 그려도 두 번 청하지 않는다
+    window.pokebuddyManage
+      .shopDetail(item.id)
+      .then((detail) => {
+        shopDetails.set(key, detail);
+        if (dialog?.kind === "buy" && dialog.productId === item.id) drawDialog();
+      })
+      .catch(() => shopDetails.delete(key)); // 다음에 그릴 때 다시 청한다
+    return [];
+  }
+  const detail = shopDetails.get(key);
+  if (!detail) return [];
+  return detail.kind === "pokemon" ? pokemonDetail(detail) : [evoTargets(detail.pairs)];
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// 화살표 — 오른쪽을 가리킨다. 폭은 부르는 쪽이 정한다
+function evoArrow(width: number): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "evo-arrow");
+  svg.setAttribute("viewBox", `0 0 ${width} 8`);
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", "8");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", `M0 4H${width}M${width - 4} 0l4 4-4 4`);
+  svg.appendChild(path);
+  return svg;
+}
+
+// 초상 자리 — 미해금 종은 실루엣 대신 빈 원 (2026-09-30 사용자 결정 "실루엣은 안보이게")
+const evoPortrait = (slug: string, locked: boolean, cls: string): HTMLElement => (locked ? el("span", `${cls} empty`) : portraitOf(slug, false, cls));
+
+function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
+  const box = el("div", node.current ? "evo-node current" : "evo-node");
+  box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", node.name));
+  if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));
+  return box;
+}
+
+// 일직선·갈래 — 한 종 뒤에 자식 가지를 세로로 쌓는다. 가지마다 조건과 화살표, 그 뒤에 하위 트리
+function evoTree(node: EvoNodeView): HTMLElement {
+  const branch = el("div", "evo-branch");
+  branch.appendChild(evoNodeEl(node, false));
+  if (node.children.length) {
+    const kids = el("div", "evo-kids");
+    for (const child of node.children) {
+      const step = el("div", "evo-step");
+      step.append(el("div", "evo-need", child.need ?? ""), evoArrow(22));
+      const row = el("div", "evo-row");
+      row.append(step, evoTree(child));
+      kids.appendChild(row);
+    }
+    branch.appendChild(kids);
+  }
+  return branch;
+}
+
+// 이브이처럼 갈래가 많으면 방사형 — 가운데 뿌리, 둘레에 갈래 (2026-09-30 사용자 결정 "이브이는 예외라서 방사형으로 하는게 국룰")
+// 순서는 사용자가 준 참고 그림을 따른다 — 위부터 시계 방향. 표에 없는 종은 자료 순서로 뒤에 둔다
+const RADIAL_MIN = 5;
+const RADIAL_ORDER = ["jolteon", "flareon", "umbreon", "leafeon", "sylveon", "glaceon", "espeon", "vaporeon"];
+// 창(682) 안에 구매 창이 다 들어가게 Figma(300·114)보다 조금 줄였다 — 검수에서 넘침을 찾았다 (2026-09-30)
+const RADIAL = { width: 390, height: 256, radius: 98, arrowFrom: 40, arrowTo: 58, head: 6 };
+
+function evoRadial(root: EvoNodeView): HTMLElement {
+  const box = el("div", "evo-radial");
+  const rank = (n: EvoNodeView): number => {
+    const i = RADIAL_ORDER.indexOf(n.slug);
+    return i < 0 ? RADIAL_ORDER.length + root.children.indexOf(n) : i;
+  };
+  const kids = [...root.children].sort((a, b) => rank(a) - rank(b));
+  const cx = RADIAL.width / 2;
+  const cy = RADIAL.height / 2;
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "evo-radial-arrows");
+  svg.setAttribute("viewBox", `0 0 ${RADIAL.width} ${RADIAL.height}`);
+  svg.setAttribute("aria-hidden", "true");
+  // 노드는 가운데 기준으로 놓는다 — CSS 가 translate(-50%, -50%) 로 맞춘다
+  const place = (node: HTMLElement, x: number, y: number): void => {
+    node.style.left = `${Math.round(x)}px`;
+    node.style.top = `${Math.round(y)}px`;
+  };
+  kids.forEach((kid, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / kids.length;
+    const hx = Math.cos(a);
+    const hy = Math.sin(a);
+    const x1 = cx + hx * RADIAL.arrowFrom;
+    const y1 = cy + hy * RADIAL.arrowFrom;
+    const x2 = cx + hx * RADIAL.arrowTo;
+    const y2 = cy + hy * RADIAL.arrowTo;
+    const h = RADIAL.head;
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", `M${x1} ${y1}L${x2} ${y2}M${x2 - hx * h - hy * h} ${y2 - hy * h + hx * h}L${x2} ${y2}L${x2 - hx * h + hy * h} ${y2 - hy * h - hx * h}`);
+    svg.appendChild(path);
+    const node = evoNodeEl(kid, true);
+    place(node, cx + hx * RADIAL.radius, cy + hy * RADIAL.radius);
+    box.appendChild(node);
+  });
+  const center = evoNodeEl(root, false);
+  place(center, cx, cy);
+  box.append(svg, center);
+  return box;
+}
+
+// 포켓몬 상세 — 정보 줄(초상·번호·이름·분류·타입)과 진화
+function pokemonDetail(detail: Extract<ShopDetail, { kind: "pokemon" }>): HTMLElement[] {
+  const info = el("div", "shop-info");
+  const text = el("div", "text");
+  const types = el("div", "types");
+  detail.types.forEach((name, i) => types.appendChild(typeBadge(name, detail.typeIds[i])));
+  text.append(el("div", "title", `No.${String(detail.dex).padStart(4, "0")}  ${detail.name}`), el("div", "genus", detail.genus), types);
+  info.append(portraitOf(detail.slug, false, "portrait"), text);
+  const evo = el("div", "evo-block");
+  evo.appendChild(el("div", "evo-label", "진화"));
+  const tree = detail.tree;
+  if (!tree.children.length) evo.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));
+  else evo.appendChild(tree.children.length >= RADIAL_MIN ? evoRadial(tree) : evoTree(tree));
+  return [info, evo];
+}
+
+// 진화용 도구의 대상 — 진화 전 → 진화 후 한 열. 길면 목록 안에서만 스크롤한다 (2026-09-30 사용자 결정 "추천대로 진행")
+function evoTargets(pairs: EvoPairView[]): HTMLElement {
+  const box = el("div", "evo-block");
+  box.appendChild(el("div", "evo-label", `진화 대상 ${pairs.length}종`));
+  const list = el("div", "evo-pairs");
+  const side = (s: EvoPairView["from"]): HTMLElement => {
+    const mon = el("span", "evo-mon");
+    mon.append(evoPortrait(s.slug, s.locked, "thumb round"), el("span", undefined, s.name));
+    return mon;
+  };
+  for (const pair of pairs) {
+    const row = el("div", "evo-pair");
+    row.append(side(pair.from), evoArrow(14), side(pair.to));
+    if (pair.note) row.appendChild(el("span", "evo-need", pair.note));
+    list.appendChild(row);
+  }
+  box.appendChild(list);
+  return box;
 }
 
 // ── 모달 · 개체와 칸 고르기 ────────────────────────────────────────────────────

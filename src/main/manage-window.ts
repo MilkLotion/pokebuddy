@@ -21,6 +21,7 @@ const CH = {
   command: "manage:command",
   dex: "manage:dex",
   dexDetail: "manage:dex-detail",
+  shopDetail: "manage:shop-detail",
   agents: "manage:agents",
   route: "manage:route",
   drawRegion: "manage:draw-region",
@@ -123,6 +124,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.handle(CH.dex, (e) => (mine(e) ? game.dex() : []));
   ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? game.dexDetail(slug) : null));
+  ipcMain.handle(CH.shopDetail, (e, id: unknown) => (mine(e) && typeof id === "string" ? game.shopDetail(id) : null));
   ipcMain.handle(CH.agents, (e, req: unknown) => {
     if (!mine(e)) return { ...DENIED, list: [], platform: process.platform };
     return game.agents(isAgentRequest(req) ? req : undefined);

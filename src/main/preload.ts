@@ -16,6 +16,7 @@ type ManageReply = import("../shared/manage").ManageReply;
 type Snapshot = import("../shared/manage").Snapshot;
 type DexEntry = import("../shared/manage").DexEntry;
 type DexDetail = import("../shared/manage").DexDetail;
+type ShopDetail = import("../shared/manage").ShopDetail;
 type PetDeviceAction = import("../shared/manage").PetDeviceAction;
 type PetDeviceChannel = import("../shared/manage").PetDeviceChannel;
 type PetDeviceView = import("../shared/manage").PetDeviceView;
@@ -94,6 +95,7 @@ const MANAGE = {
   command: "manage:command",
   dex: "manage:dex",
   dexDetail: "manage:dex-detail",
+  shopDetail: "manage:shop-detail",
   agents: "manage:agents",
   route: "manage:route",
   drawRegion: "manage:draw-region",
@@ -128,6 +130,7 @@ const manage: ManageBridge = {
   command: (req: ManageRequest) => ipcRenderer.invoke(MANAGE.command, req) as Promise<ManageReply>,
   dex: () => ipcRenderer.invoke(MANAGE.dex) as Promise<DexEntry[]>,
   dexDetail: (slug: string) => ipcRenderer.invoke(MANAGE.dexDetail, slug) as Promise<DexDetail | null>,
+  shopDetail: (productId: string) => ipcRenderer.invoke(MANAGE.shopDetail, productId) as Promise<ShopDetail | null>,
   agents: (req) => ipcRenderer.invoke(MANAGE.agents, req) as Promise<AgentReply>,
   onRoute: (cb) => ipcRenderer.on(MANAGE.route, (_e, route: ManageRoute) => cb(route)),
   drawRegion: () => ipcRenderer.invoke(MANAGE.drawRegion) as Promise<ManageReply>,

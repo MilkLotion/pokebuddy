@@ -22,6 +22,7 @@ import { newPet, nextPetId } from "../party/create";
 import { putPet } from "../box/slots";
 import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
+import { shopDetail } from "../tx/shop-detail";
 import { snapshot } from "../tx/snapshot";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-manage-"));
@@ -42,6 +43,8 @@ for (let i = 0; i < 8; i += 1) {
 save.bag["exp-candy-s"] = 3;
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
+// 상점 상세 — 검사 (11) 이 여는 상품만 미리 만든다
+const shopDetails = Object.fromEntries(["charmander", "eevee", "bond-cord"].map((id) => [id, shopDetail(save, id)]));
 
 // 가짜 preload — snapshot·dex 만 값을 준다. 구독(on*)은 콜백만 받아 둔다(window.__cb). 시계(onClock)는 1초마다 울린다
 // 파티 개체의 만복도는 1초마다 1 줄어든다(시간 값). window.__bump 를 올리면 포인트가 바뀌어 모양이 바뀐다(전체 다시 그리기)
@@ -51,6 +54,7 @@ fs.writeFileSync(
   `
 const snap = ${JSON.stringify(snap)};
 const dex = ${JSON.stringify(dex)};
+const shopDetails = ${JSON.stringify(shopDetails)};
 const t0 = Date.now();
 window.__bump = 0;
 window.__cb = {};
@@ -64,6 +68,7 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
+    if (name === "shopDetail") return async (id) => shopDetails[id] ?? null;
     if (name === "dexOpen") return (slug) => { window.__dexOpen = slug; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
@@ -382,7 +387,61 @@ void app.whenReady().then(async () => {
     await wait(1400);
     assert.equal(await js<number>(`${list}.scrollTop`), midTop, "가운데 줄을 고른 뒤 다시 그려도 남는다");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 그림 ${shots}\n`);
+    // (11) 상점 상세 — 포켓몬 칸을 누르면 구매 창에 진화 트리, 이브이는 방사형, 진화용 도구는 진화 대상 목록(길면 목록만 스크롤)
+    //      (2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가", Figma 05 `Shop / Buy Pokemon` 등)
+    await reload();
+    await js(`${tabBtn("상점")}.click()`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+    await wait(200);
+    const openBuy = async (slug: string): Promise<{ names: string[]; current: string | null; title: string | null; radial: boolean }> => {
+      await js(`document.querySelector('#body .shop-cell[data-slug="${slug}"]').click()`);
+      await wait(500);
+      return js(`({
+        names: [...document.querySelectorAll('#dialog .evo-node .evo-name')].map((n) => n.textContent),
+        current: document.querySelector('#dialog .evo-node.current .evo-name')?.textContent ?? null,
+        title: document.querySelector('#dialog .shop-info .title')?.textContent ?? null,
+        radial: !!document.querySelector('#dialog .evo-radial'),
+      })`);
+    };
+    const closeBuy = async (): Promise<void> => {
+      await js(`[...document.querySelectorAll('#dialog button')].find((b) => b.textContent === '취소').click()`);
+      await wait(200);
+    };
+    const fire = await openBuy("charmander");
+    assert.equal(fire.title, "No.0004  파이리", "정보 줄");
+    assert.equal(fire.names.length, 3, `파이리 사슬 3단 (${fire.names.join(",")})`);
+    assert.equal(fire.current, "파이리", "지금 보는 종");
+    assert.ok(fire.names.slice(1).every((n) => n === "???" || n.length > 0), "미해금은 ???");
+    assert.equal(await js<number>(`document.querySelectorAll('#dialog .evo-node .empty').length`), fire.names.filter((n) => n === "???").length, "미해금은 빈 원 — 실루엣 그림 없음");
+    await shot("shop-detail-pokemon.png");
+    await closeBuy();
+    if (await js<boolean>(`!!document.querySelector('#body .shop-cell[data-slug="eevee"]')`)) {
+      const eevee = await openBuy("eevee");
+      assert.equal(eevee.radial, true, "이브이는 방사형");
+      assert.equal(eevee.names.length, 9, "가운데 이브이와 여덟 갈래");
+      const fit = await js<{ top: number; bottom: number; over: number }>(`(() => { const d = document.getElementById('dialog'); const r = d.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, over: d.scrollHeight - d.clientHeight }; })()`);
+      assert.ok(fit.top >= 0 && fit.bottom <= 682 && fit.over <= 0, `이브이 구매 창도 창 안에 스크롤 없이 들어간다 (${JSON.stringify(fit)})`);
+      await shot("shop-detail-eevee.png");
+      await closeBuy();
+    }
+    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '진화').click()`);
+    await wait(200);
+    assert.ok((await js<string>(`document.getElementById('body').textContent`)).includes("외 "), "진화 탭 줄 문구 — 진화 전 종 이름 · 외 N종");
+    await js(`[...document.querySelectorAll('#body .row-card')].find((r) => r.textContent.includes('연결의끈')).click()`);
+    await wait(500);
+    const cord = await js<{ pairs: number; scroll: number; fits: boolean }>(`(() => {
+      const list = document.querySelector('#dialog .evo-pairs');
+      const box = document.getElementById('dialog').getBoundingClientRect();
+      return { pairs: document.querySelectorAll('#dialog .evo-pair').length, scroll: list.scrollHeight - list.clientHeight, fits: box.bottom <= window.innerHeight && box.top >= 0 };
+    })()`);
+    assert.equal(cord.pairs, 25, "연결의끈 진화 대상 25쌍");
+    assert.ok(cord.scroll > 0, "긴 목록은 목록 안에서만 스크롤");
+    assert.equal(cord.fits, true, "구매 창은 창 안에 들어간다");
+    await shot("shop-detail-cord.png");
+    await closeBuy();
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

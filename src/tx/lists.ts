@@ -7,6 +7,7 @@ import { petName } from "../main/text.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry, ShopItemView } from "../shared/manage";
+import { evoItemNote } from "./shop-detail.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
@@ -92,7 +93,8 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     if (isMetaKey(id)) continue;
     const price = toolPrice(id, opts);
     if (price === null) continue;
-    add({ id, name: item.ko, note: `대상 ${item.targets.length}종`, price, category: "evolution", affordable: false, ...bagRoom(id) });
+    // 설명은 진화 전 종 이름 — "피카츄·레어코일 외 5종" (2026-09-30 사용자 결정, src/tx/shop-detail.ts evoItemNote)
+    add({ id, name: item.ko, note: evoItemNote(save, id, opts), price, category: "evolution", affordable: false, ...bagRoom(id) });
   }
 
   // 파티 칸 — 순서마다 값이 다르다
