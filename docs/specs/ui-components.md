@@ -20,6 +20,7 @@ Figma 원본: [0.2 · 와이어프레임(구 07)](https://www.figma.com/design/M
 | 처리 중 | 조작의 답이 0.3초 안에 오지 않으면 누른 버튼이나 칸만 처리 중으로 바꾼다. 버튼은 폭과 색을 그대로 두고 글자 자리에 점 세 개가 차례로 밝아진다. 칸은 내용을 옅게 덮고 초상 가운데에 점 세 개를 둔다. 답이 올 때까지 다른 조작은 받지 않는다. Figma: `Button` `113:313`·`Box Slot` `333:231` 의 `State=Busy`. |
 | 글꼴 | 모든 글자는 Galmuri다. 크기는 24·15·12·10px 네 단계만 쓴다. 카드의 이름·설명이 칸보다 길면 한 줄로 두고 끝을 말줄임한다. |
 | 빈 상태 | 빈 상태는 한 줄 문구만 둔다. 설명 문구를 덧붙이지 않는다. |
+| 경고·안내 | 오류·주의·완료·안내는 `Alert` 로 보인다. 종류는 바탕 톤과 16px 픽셀 아이콘(`!`·`✓`·`i`)으로 구분한다. 테두리는 없고 모서리는 8px 이다. 내용 카드(흰 바탕, 중립 테두리, 12px)와 모양을 나눈다. 제목이 있으면 제목과 설명 두 줄(Banner)이다. 폼·대화상자의 짧은 실패는 제목 없는 한 줄(Inline)이다. 사용자가 닫는 배너에만 오른쪽 `✕` 를 둔다. 대화상자 안에서는 본문 바로 아래에 둔다. Figma: `Alert` `1040:279`(Tone=Error·Warning·Success·Info, Type=Banner·Inline). 구현: `src/renderer/manage.ts` `alertBox`, `manage.html` `.alert`. (2026-09-30 사용자 결정 "시안 괜찮네") |
 | 모달 | 업적창·설정·개체 선택·구매 창은 어두운 배경 위 대화상자다. 닫으면 보던 탭으로 돌아간다. |
 
 ## 판정 요약
@@ -58,7 +59,7 @@ Figma 원본: [0.2 · 와이어프레임(구 07)](https://www.figma.com/design/M
 
 그대로 재사용하는 기초 자산: `Button`, `Type Badge`, `Status Dot`, `Divider`, `Visibility Marker`, `Portrait`, 텍스트 컴포넌트, 아이콘. `Portrait`와 `Visibility Marker`는 작은 크기 변형이 필요하다.
 `Type Badge` `118:134` 의 글자는 18종 모두 흰색(`text/on-color`)이다(2026-09-30 사용자 결정). 성별 아이콘 `Gender Icon` `995:333`(Sex=Male·Female)은 2026-09-30 더했다. 원작 ♂(파랑)·♀(빨강)을 2px 도트로 그린 벡터다. Galmuri 에 ♂♀ 글리프가 없어 글자 대신 쓴다. 무성 개체에는 두지 않는다. 코드는 `src/renderer/gender.ts` 가 같은 도트 판을 SVG 로 그린다.
-옛 두 열 상세 화면의 자산 `Pokemon Profile`, `Care Section`, `Settings Section`, `Growth & Tools Section`, `Party Management Section`, `Status Banner`, `Detail / Care Success` `222:1228` 은 2026-09-29 Figma 정리에서 지웠다. 상세는 C-28 파티 상세 기기 창이 대신한다. 남은 자산 `Page Header`, `Care Action`, `Traits`, `Debuff Badge`, `Notice`, `Action Group`, `Size Step`, `Size Selector` 는 다른 화면이 쓴다.
+옛 두 열 상세 화면의 자산 `Pokemon Profile`, `Care Section`, `Settings Section`, `Growth & Tools Section`, `Party Management Section`, `Status Banner`, `Detail / Care Success` `222:1228` 은 2026-09-29 Figma 정리에서 지웠다. 상세는 C-28 파티 상세 기기 창이 대신한다. 남은 자산 `Page Header`, `Care Action`, `Traits`, `Debuff Badge`, `Action Group`, `Size Step`, `Size Selector` 는 다른 화면이 쓴다. `Notice` `133:1017` 은 2026-09-30 `Alert` `1040:279` 로 바꾸고 지웠다.
 Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따른다. `Portrait`는 Large·Medium·Small 변형, `Visibility Marker`는 Default·Small 변형이 있다.
 진화 전후 비교는 진화 확인 한 화면에서만 쓴다. 그래서 컴포넌트 계약에 넣지 않는다.
 템플릿: `App Shell`은 C-01·C-03을 쓴다. `Party Layout` `196:189`은 파티 칸만 담는다. 박스 탭은 `Box Layout` `340:3665`이다. 도감·상점·가방은 `Dex Layout` `378:1524`, `Shop Layout` `379:1757`, `Bag Layout` `380:2064`이다. 입력칸은 `Field` `377:303`을 쓴다.
@@ -189,7 +190,7 @@ Figma: `Achievement Row` `336:341`(`Claimable|InProgress|Claimed`). `받기` 버
 사용: 업적창, 설정, 박스 개체 고르기, 파티 칸 고르기, 구매 창, 교환 모달, 기존 확인 창.
 교환 모달: 폭 600, 머리 `친구 교환` 과 오른쪽 위 `✕`, 본문만 세로로 스크롤한다. 본문은 교환 상태에 따라 시작 전(공유 채널 만들기·링크로 참가·교환 규칙), 링크 대기, 제안·확정, 막힘, 완료, 오류·닫힘 배너를 그린다. 시작 전 두 카드는 내용 높이다. 닫아도 교환은 이어진다. 구현은 `src/renderer/manage.ts` `drawTradeDialog`, `manage.html` `.dialog.trade` 다. Figma 05 `08 교환` `930:18244` — `Trade / Base · 교환 모달` `1036:23257`, `Link Created` `1036:22965`, `Offer` `1036:22673`, `Blocked` `1036:22381`, `Done` `1036:22089`, `Error` `1036:21797`.
 판정: `Confirm Dialog`를 공통 틀로 수정한다. 배경은 `Modal Scrim`을 재사용한다.
-Figma: `Confirm Dialog`를 `Dialog` `299:3575`의 `Size=Compact`로 바꾸고 `Size=Wide`를 더했다. 구성은 `head`, 본문 slot `Body`, `error-notice`, `footer`다. slot 안의 레이어는 컴포넌트 속성과 연결할 수 없다. 그래서 실패 알림 `error-notice`는 본문 밖에 두고 `Show Error`로 켠다. Compact는 높이가 내용에 맞춰진다. Wide는 600×620이며 본문만 세로로 스크롤한다. 닫기는 `Header Icon Button`과 `Icon / Close` `299:166`이다.
+Figma: `Confirm Dialog`를 `Dialog` `299:3575`의 `Size=Compact`로 바꾸고 `Size=Wide`를 더했다. 구성은 `head`, 본문 slot `Body`, `error-notice`, `footer`다. slot 안의 레이어는 컴포넌트 속성과 연결할 수 없다. 그래서 실패 알림 `error-notice`는 본문 밖에 두고 `Show Error`로 켠다. `error-notice` 는 `Alert` 의 `Tone=Error, Type=Inline` 이다. Compact는 높이가 내용에 맞춰진다. Wide는 600×620이며 본문만 세로로 스크롤한다. 닫기는 `Header Icon Button`과 `Icon / Close` `299:166`이다.
 Esc를 누르면 모달을 닫는다. 모달 바깥의 `Modal Scrim`을 눌러도 닫는다(`src/renderer/manage.ts`).
 
 ### C-14 수량 조절

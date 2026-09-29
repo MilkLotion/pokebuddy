@@ -287,7 +287,27 @@ const button = (cls: string, text?: string): HTMLButtonElement => {
   return b;
 };
 
-const point = (n: number): string => `${n.toLocaleString("ko-KR")}P`;
+// 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
+// - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
+// - 제목이 있으면 Banner(제목 + 설명), 빈 제목이면 Inline 한 줄(폼·대화상자의 짧은 실패)
+// - onClose 가 있을 때만 오른쪽 ✕
+type AlertTone = "bad" | "warn" | "ok" | "info";
+function alertBox(tone: AlertTone, title: string, desc = "", onClose?: () => void): HTMLElement {
+  const box = el("div", `alert ${tone}${title ? "" : " inline"}`);
+  const text = el("div", "alert-text");
+  if (title) text.appendChild(el("strong", undefined, title));
+  if (desc) text.appendChild(el("span", undefined, desc));
+  box.append(el("i", "alert-icon"), text);
+  if (onClose) {
+    const x = button("dialog-close", "✕");
+    x.setAttribute("aria-label", "닫기");
+    x.addEventListener("click", onClose);
+    box.appendChild(x);
+  }
+  return box;
+}
+
+const point =(n: number): string => `${n.toLocaleString("ko-KR")}P`;
 
 // 값 막대 하나 — 이름, 현재/최대, 채움
 // live — 시간으로만 바뀌는 값이면 그 개체와 필드. 1초 시계가 이 막대만 고친다 (applyLive)
@@ -1796,7 +1816,7 @@ function sellDetail(v: Snapshot, item: BagItemView, each: number): HTMLElement {
     el("div", undefined, `1개 ${point(each)} (구매가 ${point(item.buyPrice ?? 0)}의 ${percent}%) · 판매 후 보유 ${point(v.points + earned)}`),
   );
   box.appendChild(summary);
-  if (notice) box.appendChild(el("div", "notice bad", notice));
+  if (notice) box.appendChild(alertBox("bad", "", notice));
   box.appendChild(
     actions(
       actionButton("취소", false, false, () => {
@@ -1919,7 +1939,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
     preview.appendChild(el("strong", undefined, lead ?? ""));
     for (const line of lines) preview.appendChild(el("div", undefined, line));
     right.appendChild(preview);
-    if (notice) right.appendChild(el("div", "notice bad", notice));
+    if (notice) right.appendChild(alertBox("bad", "", notice));
     const label = many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용";
     right.appendChild(
       actions(
@@ -2092,16 +2112,6 @@ function tradeState(text: string, tone: "ok" | "wait" | "bad" | "idle"): HTMLEle
   return box;
 }
 
-// 설명이 없으면 제목 줄만 그린다
-function tradeBanner(title: string, desc: string, tone: "ok" | "bad"): HTMLElement {
-  const box = el("div", "trade-card trade-banner");
-  const head = el("div", "trade-banner-title");
-  head.append(el("i", tone), document.createTextNode(title));
-  box.appendChild(head);
-  if (desc) box.appendChild(el("div", "trade-desc", desc));
-  return box;
-}
-
 function tradeCardHead(title: string, right?: HTMLElement): HTMLElement {
   const row = el("div", "trade-card-head");
   row.appendChild(el("strong", undefined, title));
@@ -2231,7 +2241,7 @@ function drawTradeOffer(t: TradeScreen, out: HTMLElement): void {
   if (t.friendBlocked) {
     const name = t.friend?.name ?? "이 포켓몬";
     const why = t.friendBlocked === "single" ? `${name}${josa(name, "은/는")} 단일 포켓몬이라 교환할 수 없어요.` : `${name}의 정보가 올바르지 않아요.`;
-    out.appendChild(tradeBanner("받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`, "bad"));
+    out.appendChild(alertBox("bad", "받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`));
   }
 
   const bar = el("div", "trade-bar");
@@ -2247,7 +2257,7 @@ function drawTradeOffer(t: TradeScreen, out: HTMLElement): void {
 
 // 교환 완료 — Done
 function drawTradeDone(t: TradeScreen, out: HTMLElement): void {
-  out.appendChild(tradeBanner("교환 완료", "", "ok"));
+  out.appendChild(alertBox("ok", "교환 완료"));
   const r = t.received;
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("받은 포켓몬"));
@@ -2292,10 +2302,10 @@ function drawTradeDialog(): void {
   const err = t.error;
   if (err) {
     const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
-    out.appendChild(tradeBanner(text[0] ?? "", text[1] ?? "", "bad"));
+    out.appendChild(alertBox("bad", text[0] ?? "", text[1] ?? ""));
   } else if (t.phase === "closed") {
     const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
-    out.appendChild(tradeBanner(text[0], text[1], "bad"));
+    out.appendChild(alertBox("bad", text[0], text[1]));
   }
   if (t.phase === "trading") drawTradeOffer(t, out);
   else if (t.phase === "done") drawTradeDone(t, out);
@@ -2440,10 +2450,8 @@ function acctField(label: string, input: HTMLElement, note?: { text: string; ton
 }
 
 function acctNotice(title: string, desc: string, tone: "warn" | "bad"): HTMLElement {
-  const box = el("div", "trade-card trade-banner acct-notice");
-  const head = el("div", "trade-banner-title");
-  head.append(el("i", tone === "warn" ? "warn" : "bad"), document.createTextNode(title));
-  box.append(head, el("div", "trade-desc", desc));
+  const box = alertBox(tone, title, desc);
+  box.classList.add("acct-notice");
   return box;
 }
 
@@ -2613,9 +2621,7 @@ function acctOverlay(): HTMLElement | null {
     head.append(el("h3", undefined, "어느 저장을 쓸까요?"), x);
     card.append(head, el("p", "acct-confirm-body", "이 계정에 이미 저장이 있어요. 고르지 않은 쪽은 백업 파일로 남아요."));
     if (a.cloud.error) {
-      const err = el("div", "acct-note bad");
-      err.append(el("i"), document.createTextNode(a.cloud.error === "CLOUD_BAD_SAVE" ? "계정 저장을 읽을 수 없어요. 이 PC 저장을 골라 주세요" : acctErrorText(a.cloud.error)));
-      card.appendChild(err);
+      card.appendChild(alertBox("bad", "", a.cloud.error === "CLOUD_BAD_SAVE" ? "계정 저장을 읽을 수 없어요. 이 PC 저장을 골라 주세요" : acctErrorText(a.cloud.error)));
     }
     // "오늘 09:12 저장"·"어제 21:40 저장"·"9월 25일 18:03 저장" (Figma `633:20029`)
     const when = (at: number | null): string => {
@@ -2703,14 +2709,7 @@ function accountActions(): HTMLElement | null {
 // 밀려남 배너 — 탭 본문 맨 위. 닫을 때까지 남는다
 function kickedBanner(): HTMLElement | null {
   if (!acct?.kicked) return null;
-  const box = el("div", "trade-card trade-banner kicked-banner");
-  const head = el("div", "trade-banner-title");
-  head.append(el("i", "warn"), document.createTextNode("다른 PC에서 로그인해 로그아웃됐어요"));
-  const x = button("dialog-close", "✕");
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", () => void acctSend({ action: "dismiss-kicked" }));
-  box.append(head, el("div", "trade-desc", "이 PC의 진행은 계정에 저장되지 않아요"), x);
-  return box;
+  return alertBox("warn", "다른 PC에서 로그인해 로그아웃됐어요", "이 PC의 진행은 계정에 저장되지 않아요", () => void acctSend({ action: "dismiss-kicked" }));
 }
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
@@ -2991,10 +2990,10 @@ function drawBody(): void {
 }
 
 // 이어진 저장 실패 안내 — 제목 줄 바로 아래. 한 번 저장하면 다음 새로 읽기에서 사라진다. 조작은 막지 않는다
-// Figma 99 `Party / Save Failing` `716:17993` (Status Banner Tone=Error). 2026-09-27 사용자 "그렇게해"
+// Figma 05 `Party / Save Failing` `716:17993` (Alert Tone=Error). 2026-09-27 사용자 "그렇게해"
 function drawSaveFailing(): void {
   if (!view?.saveFailing) return;
-  const banner = tradeBanner("저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.", "bad");
+  const banner = alertBox("bad", "저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.");
   banner.classList.add("save-failing");
   const first = bodyEl.firstElementChild;
   if (first?.classList.contains("head")) first.after(banner);
@@ -3743,7 +3742,7 @@ function drawBuy(productId: string, qty: number): void {
     summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}${after}`));
   }
   dialogEl.appendChild(summary);
-  if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
+  if (notice) dialogEl.appendChild(alertBox("bad", "", notice));
 
   // 바닥 — 왼쪽 `돌보미집 보기`(돌보미집이 찼을 때), 오른쪽 `취소`·`구매`
   const foot = el("div", "buy-foot");
@@ -4577,7 +4576,7 @@ function drawDialog(): void {
   else if (dialog.kind === "trade") drawTradeDialog();
   else drawGuide();
 
-  if (notice) dialogEl.appendChild(el("div", "notice bad", notice));
+  if (notice) dialogEl.appendChild(alertBox("bad", "", notice));
   const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
   if (scroll && keep) scroll.scrollTop = keep;
   restoreSearchFocus();

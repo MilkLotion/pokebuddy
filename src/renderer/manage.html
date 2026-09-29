@@ -51,6 +51,13 @@
         --warning: #f59e0b;
         --danger: #dc2626;
         --success: #10b981;
+        /* 경고·안내 배너 톤 — Figma status/*-bg · status/*-text */
+        --danger-bg: #fdecec;
+        --danger-ink: #b91c1c;
+        --warning-bg: #fdf3e1;
+        --warning-ink: #92400e;
+        --success-bg: #e6f6ef;
+        --success-ink: #047857;
         --scrim: rgba(26, 51, 48, 0.45);
         --radius: 12px;
       }
@@ -748,20 +755,80 @@
           animation: none;
         }
       }
-      /* 알림 — 할 말이 없으면 자리도 차지하지 않는다 */
-      .notice {
-        margin-top: 14px;
+      /* 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
+         - 종류는 바탕 톤 + 16px 픽셀 아이콘으로 가른다. 테두리 없음, radius 8 (카드 12 와 구분)
+         - 제목이 있으면 Banner(제목 + 설명), 없으면 Inline(한 줄, 톤 글자색) */
+      .alert {
+        --alert-bg: var(--accent-bg);
+        --alert-dot: var(--primary);
+        --alert-ink: var(--ink);
+        --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='7' y='3' width='2' height='2'/%3E%3Crect x='7' y='6' width='2' height='7'/%3E%3C/svg%3E");
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 16px;
         padding: 10px 12px;
         border-radius: 8px;
-        background: var(--accent-bg);
+        background: var(--alert-bg);
         font-size: 12px;
+        word-break: keep-all; /* 한국어 낱말 가운데서 줄을 끊지 않는다 */
       }
-      .notice:empty {
-        display: none;
+      .alert.bad {
+        --alert-bg: var(--danger-bg);
+        --alert-dot: var(--danger);
+        --alert-ink: var(--danger-ink);
+        --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='7' y='3' width='2' height='7'/%3E%3Crect x='7' y='11' width='2' height='2'/%3E%3C/svg%3E");
       }
-      .notice.bad {
-        background: #fdecec;
-        color: var(--danger);
+      .alert.warn {
+        --alert-bg: var(--warning-bg);
+        --alert-dot: var(--warning);
+        --alert-ink: var(--warning-ink);
+        --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%231a3330'%3E%3Crect x='7' y='3' width='2' height='7'/%3E%3Crect x='7' y='11' width='2' height='2'/%3E%3C/svg%3E");
+      }
+      .alert.ok {
+        --alert-bg: var(--success-bg);
+        --alert-dot: var(--success);
+        --alert-ink: var(--success-ink);
+        --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='3' y='8' width='2' height='2'/%3E%3Crect x='5' y='10' width='2' height='2'/%3E%3Crect x='7' y='8' width='2' height='2'/%3E%3Crect x='9' y='6' width='2' height='2'/%3E%3Crect x='11' y='4' width='2' height='2'/%3E%3C/svg%3E");
+      }
+      .alert-icon {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        margin-top: 1px; /* 제목 줄(18px) 가운데 */
+        border-radius: 50%;
+        background: var(--alert-glyph) center / 16px no-repeat, var(--alert-dot);
+      }
+      .alert-text {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .alert-text strong {
+        color: var(--alert-ink);
+        font-weight: 700;
+      }
+      .alert-text span {
+        color: var(--muted);
+      }
+      .alert.inline {
+        align-items: center;
+        margin: 14px 0 0;
+        padding: 8px 12px;
+      }
+      .alert.inline .alert-icon {
+        margin-top: 0;
+      }
+      .alert.inline .alert-text span {
+        color: var(--alert-ink);
+      }
+      .alert .dialog-close {
+        width: 20px;
+        height: 20px;
+        margin-left: 4px;
+        border-radius: 4px;
       }
       .empty-note {
         color: var(--muted);
@@ -2303,7 +2370,7 @@
       .use-preview strong {
         color: var(--ink);
       }
-      .use-detail .notice {
+      .use-detail .alert {
         margin-top: 0;
       }
       .use-detail .actions {
@@ -2524,7 +2591,7 @@
         gap: 6px;
         white-space: nowrap;
       }
-      .dialog.buy .notice {
+      .dialog.buy .alert {
         margin-top: 0;
       }
       .buy-foot {
@@ -2848,22 +2915,19 @@
         color: var(--muted);
         white-space: nowrap;
       }
-      .trade-state i,
-      .trade-banner-title i {
+      .trade-state i {
         width: 6px;
         height: 6px;
         border-radius: 50%;
         background: var(--muted);
       }
-      .trade-state.ok i,
-      .trade-banner-title i.ok {
+      .trade-state.ok i {
         background: #10b981;
       }
       .trade-state.wait i {
         background: var(--warning);
       }
-      .trade-state.bad i,
-      .trade-banner-title i.bad {
+      .trade-state.bad i {
         background: var(--danger);
       }
       .trade-acts {
@@ -2903,20 +2967,9 @@
         width: 116px;
         color: var(--muted);
       }
-      .trade-banner {
-        gap: 2px;
-        padding: 12px 16px;
-      }
-      /* 이어진 저장 실패 안내 — 교환 배너와 같은 Status Banner. 제목 줄과 본문 사이에 둔다 */
-      .trade-card.save-failing {
+      /* 이어진 저장 실패 안내 — Alert Banner. 제목 줄과 본문 사이에 둔다 */
+      .alert.save-failing {
         margin: 0 0 14px;
-        word-break: keep-all; /* 한국어 낱말 가운데서 줄을 끊지 않는다 */
-      }
-      .trade-banner-title {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-weight: 700;
       }
       .trade-pet {
         display: flex;
@@ -3153,9 +3206,6 @@
       .acct-note.warn i {
         background: var(--warning);
       }
-      .trade-banner-title i.warn {
-        background: var(--warning);
-      }
       .acct-notice {
         margin-bottom: 12px;
       }
@@ -3256,16 +3306,6 @@
       .acct-option:disabled {
         cursor: default;
         opacity: 0.5;
-      }
-      .kicked-banner {
-        position: relative;
-        padding-right: 48px;
-      }
-      .kicked-banner .dialog-close {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
       }
 
       /* 보낼 포켓몬 칸 — Figma `Trade / Offer` 의 86×66, 초상 26 */

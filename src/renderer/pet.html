@@ -435,11 +435,23 @@
         background: var(--primary);
         color: var(--inverse);
       }
-      .notice {
-        padding: 8px 10px;
+      /* 실패 문구 — 관리 창 `.alert.bad.inline` 과 같은 값 (Figma `Alert` `1040:216`) */
+      .alert {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
         border-radius: 8px;
         background: #fdecec;
-        color: var(--danger);
+        color: #b91c1c;
+        word-break: keep-all;
+      }
+      .alert-icon {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='7' y='3' width='2' height='7'/%3E%3Crect x='7' y='11' width='2' height='2'/%3E%3C/svg%3E") center / 16px no-repeat, var(--danger);
       }
       .controls {
         display: flex;

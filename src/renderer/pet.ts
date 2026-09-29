@@ -427,7 +427,12 @@ function renderBody(v: PetDeviceView): void {
     manage.appendChild(button("act primary", "교체", () => act({ kind: "dialog", dialog: "pick-slot" })));
   }
   actions.appendChild(manage);
-  if (v.notice) actions.appendChild(el("div", "notice", v.notice));
+  // 실패 문구 — 관리 창 Alert Inline(오류)과 같은 모양 (Figma `Alert` `1040:216`)
+  if (v.notice) {
+    const box = el("div", "alert bad inline");
+    box.append(el("i", "alert-icon"), el("span", undefined, v.notice));
+    actions.appendChild(box);
+  }
   device.appendChild(actions);
 
   const controls = el("div", "controls");
