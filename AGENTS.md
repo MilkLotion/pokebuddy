@@ -5,11 +5,12 @@
 Public documentation lives in `docs/` and describes current behavior and rules. Work records live in `worklog/`, which is git-ignored and never published (decided 2026-09-27).
 
 Public (`docs/`, committed):
-- `docs/guide.md`: how to install and use the app.
+- `docs/guide.md`: how to install and use the app (installer users).
 - `docs/design.md`: product structure and design principles.
-- `docs/specs/<feature>.md`: current feature contracts (`game.md`, `scenarios.md`, `balance.md`, `modules.md`, `ui-components.md`).
+- `docs/specs/<feature>.md`: current feature contracts (`game.md`, `scenarios.md`, `balance.md`, `modules.md`, `companion.md`, `ui-components.md`).
 - `docs/terms.md`: canonical name and meaning for each user-facing term.
-- `docs/contributing/`: workflow, writing rules, Figma notes.
+- `docs/contributing/`: development and release, workflow, writing rules, Figma notes.
+- `docs/images/`: README and guide screenshots. `docs/images/README.md` lists the pending captures.
 
 Local only (`worklog/`, git-ignored):
 - `worklog/progress.md`: current stage, next action, and validation status.
@@ -17,7 +18,7 @@ Local only (`worklog/`, git-ignored):
 - `worklog/records/<task>/evidence/`: observations, JSON, and screenshots for that task.
 - `worklog/history/YYYY-MM.md`: concise dated record of completed work cycles.
 
-Keep only README, design, terms, and guide at the docs root. Public docs must not link into `worklog/`; `scripts/check-docs.cjs` fails on such links. Code comments may name a worklog path as a private pointer. Reuse an existing task record for follow-up work. Do not create separate plan/review/feedback files for each small edit. Keep existing split records in their task folder. Follow [the workflow](docs/contributing/workflow.md).
+Keep only README, design, terms, and guide files at the docs root. Allowed folders are `specs/`, `contributing/`, and `images/`. Public docs must not link into `worklog/`; `scripts/check-docs.cjs` fails on such links. Code comments may name a worklog path as a private pointer. Reuse an existing task record for follow-up work. Do not create separate plan/review/feedback files for each small edit. Keep existing split records in their task folder. Follow [the workflow](docs/contributing/workflow.md).
 
 Link source files, data, commands, and review evidence. Resolve conflicts with `design.md` for decisions and `worklog/progress.md` for status. Code proves current behavior, not user approval. Preserve reasons, corrections, constraints, and context beside the relevant task. Link them from the affected specification. Record the source and whether a claim is confirmed or proposed. Never infer missing intent.
 

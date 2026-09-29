@@ -7,7 +7,7 @@ const docs = path.join(root, 'docs');
 // 작업 기록 — 저장소 밖(.gitignore). 있으면 링크를 검사하고, 공개 문서가 이곳을 가리키지 않는지 본다 (2026-09-27 문서 구조 개편)
 const worklog = path.join(root, 'worklog');
 const allowedRootFiles = new Set(['README.md', 'design.md', 'terms.md', 'guide.md']);
-const allowedRootDirectories = new Set(['specs', 'contributing']);
+const allowedRootDirectories = new Set(['specs', 'contributing', 'images']);
 const failures = [];
 
 function walk(directory) {

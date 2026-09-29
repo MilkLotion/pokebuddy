@@ -4,7 +4,7 @@
 //   node dist/tools/dev-test.js scene <장면>        저장을 그 장면으로 고친다 — 앱이 꺼져 있어야 한다(저장은 앱 하나만 쓴다)
 //   node dist/tools/dev-test.js show                저장 요약
 // 시험용 HOME 은 POKEBUDDY_TEST_HOME, 없으면 <임시 폴더>/pokebuddy-test-home. 앱은 이 파일이 든 저장소(dist 빌드)를 띄운다.
-// 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(src/main/app.ts syncLoginItem). 절차는 docs/guide.md "시험용 HOME 에서 실기 확인"
+// 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(src/main/app.ts syncLoginItem). 절차는 docs/contributing/development.md "시험용 HOME 에서 실기 확인"
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
