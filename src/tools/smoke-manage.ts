@@ -288,15 +288,16 @@ void app.whenReady().then(async () => {
     assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 15, "상점은 따로 기억 — 아직 격자");
     await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
     await wait(150);
-    const shopRows = await js<number>(`document.querySelectorAll('#body .rows .row-card').length`);
-    assert.ok(shopRows > 100, `상점 스크롤 방식은 작업 전 상품 줄 카드를 전부 보인다 (${shopRows}줄)`);
-    assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 0, "격자 칸(가격 줄)은 쓰지 않는다");
-    assert.equal(await js<boolean>(`!!document.querySelector('#body .grid-pager')`), false, "상점 목록에도 넘김 줄이 없다");
-    assert.ok((await js<number>(overflow)) > 0, "상점 목록은 세로 스크롤");
+    // 상점 스크롤 방식도 쪽 방식과 같은 칸 격자다 — 넘김 줄 없이 전부 (2026-09-30 사용자 결정 "< > 로 옮기냐 스크롤하냐")
+    const shopRows = await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`);
+    assert.ok(shopRows > 100, `상점 스크롤 방식은 격자 칸을 전부 보인다 (${shopRows}칸)`);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .rows .row-card').length`), 0, "상품 줄 카드는 쓰지 않는다");
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .grid-pager')`), false, "상점 스크롤에도 넘김 줄이 없다");
+    assert.ok((await js<number>(overflow)) > 0, "상점 스크롤 방식은 세로 스크롤");
     await shot("shop-list.png");
-    await js(`document.querySelector('#body .rows .row-card').click()`);
+    await js(`document.querySelector('#body .shop-cell').click()`);
     await wait(200);
-    assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "줄을 누르면 구매 창");
+    assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "칸을 누르면 구매 창");
 
     // 다시 읽어도 각자 남는다 — 도감 목록, 상점 목록. 도감만 격자로 되돌리면 상점은 목록 그대로
     await reload();
@@ -313,7 +314,7 @@ void app.whenReady().then(async () => {
     await wait(200);
     await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
     await wait(200);
-    assert.equal(await js<number>(`document.querySelectorAll('#body .rows .row-card').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
 
     process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 그림 ${shots}\n`);
     app.exit(0);

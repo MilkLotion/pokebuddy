@@ -1268,9 +1268,11 @@ function pageOf<T>(rows: T[], page: number, size: number = GRID_PAGE): { page: n
 
 // 보는 방식 토글 — 검색 줄 오른쪽 끝의 아이콘 두 개. 고른 쪽은 톤 배경(색 테두리로 강조하지 않는다). 높이는 검색 칸과 같다
 // 바꾸면 지금 쪽의 첫 항목이 들어 있는 쪽으로 간다
+// 아이콘은 모양(격자·목록)이 아니라 넘기는 방식이다 — ‹ › 는 쪽 넘김, 위아래 꺾쇠는 스크롤 (2026-09-30 사용자 결정 "< > 로 옮기냐 스크롤하냐",
+// Figma `Icon / Page` `1009:1237` · `Icon / Scroll` `1009:1239`). 두 방식 모두 같은 칸 격자다
 const VIEW_ICON: Record<ViewMode, string> = {
-  grid: '<path d="M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z" stroke-width="1.25" stroke-linejoin="round"/>',
-  list: '<path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-width="1.25" stroke-linecap="round"/>',
+  grid: '<path d="M6.5 4 2.5 8l4 4M9.5 4l4 4-4 4" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>',
+  list: '<path d="M4.5 6 8 2.5 11.5 6M4.5 10 8 13.5 11.5 10" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 function viewToggle(current: ViewMode, pick: (mode: ViewMode) => void): HTMLElement {
   const box = el("span", "view-toggle");
@@ -1301,7 +1303,7 @@ function switchView(where: "dex" | "shop", from: ViewMode, to: ViewMode, page: n
     return page;
   }
   const top = bodyEl.getBoundingClientRect().top;
-  const rows = [...bodyEl.querySelectorAll<HTMLElement>(where === "dex" ? ".dex-grid .dex-cell" : ".rows .row-card")];
+  const rows = [...bodyEl.querySelectorAll<HTMLElement>(".dex-grid .dex-cell")]; // 도감 칸과 상점 칸(.dex-cell.shop-cell) 모두
   const first = rows.findIndex((r) => r.getBoundingClientRect().bottom > top + 1);
   return Math.floor(Math.max(0, first) / GRID_PAGE);
 }
@@ -1429,10 +1431,9 @@ function drawDex(v: Snapshot): void {
 
 // ── 상점 ───────────────────────────────────────────────────────────────────────
 
-// 상점 줄의 그림 — 포켓몬 상품은 초상, 랜덤알은 알, 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸
-// 포켓몬 상품은 쪽 방식에서는 격자 칸(shopCell), 스크롤 방식에서는 이 줄이다. 수백 줄이라 초상은 보이는 것만 청한다(lazy)
+// 상점 줄의 그림 — 랜덤알은 알, 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸
+// 포켓몬 상품은 두 방식 모두 격자 칸(shopCell)이라 줄로 그리지 않는다 (2026-09-30)
 function shopThumb(item: ShopItemView): HTMLElement {
-  if (item.category === "pokemon") return portraitOf(item.id, false, "thumb round", "", true);
   if (item.category === "egg") return eggIcon(item.id, "thumb");
   if (item.category === "slot") return iconOf(null, "thumb");
   return iconOf(`item:${item.id}`, "thumb");
@@ -1530,12 +1531,12 @@ function drawShop(v: Snapshot): void {
       bodyEl.appendChild(el("div", "empty-note", normQuery(shopQuery) ? "검색 결과 없음" : "해당하는 포켓몬이 없습니다."));
       return;
     }
-    // 스크롤 방식 — 작업 전 화면 그대로 상품 줄 카드(알·도구 탭과 같은 두 열)를 전부
+    // 스크롤 방식 — 쪽 방식과 같은 칸 격자를 넘김 줄 없이 전부. 도감 스크롤과 같다 (2026-09-30 사용자 결정, Figma 05 `967:22565`).
+    // 화면 밖 칸은 CSS content-visibility 로 그리기를 미루고, 초상은 보이는 칸만 받는다
     if (shopView === "list") {
-      const list = el("div", "rows");
-      for (const item of found) list.appendChild(shopRow(item));
-      bodyEl.appendChild(list);
-      scrollListAfterSwitch("shop", list);
+      const grid = shopGrid(found);
+      bodyEl.appendChild(grid);
+      scrollListAfterSwitch("shop", grid);
       return;
     }
     const shown = pageOf(found, shopPageNo);
