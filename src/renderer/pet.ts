@@ -321,7 +321,7 @@ function renderBody(v: PetDeviceView): void {
     bar("만복도", pet.fullness, liveShown(pet, "fullness"), pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : "", "fullness"),
     bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
   );
-  if (v.inParty && pet.longPlay) records.appendChild(el("span", "chip-note", "오래 놀아주기"));
+  if (v.inParty) for (const name of pet.buffNames ?? []) records.appendChild(el("span", "chip-note", name)); // 켜진 버프 — 든든함·신남·들뜸 (2026-09-29 사용자 결정)
   device.appendChild(records);
 
   // 흰 판 — 돌봄 · 성장 · 크기 · 관리

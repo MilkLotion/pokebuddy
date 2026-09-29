@@ -16,6 +16,8 @@
 | `records/icon-bubble/record.md` | `worklog/records/icon-bubble/record.md` | 새 작업. 배고픔 말풍선 기존 기록이 있으면 그쪽에 합친다 |
 | `records/timer-tick/record.md` | `worklog/records/timer-tick/record.md` | 새 작업 |
 | `records/docs-readme/record.md` | `worklog/records/docs-readme/record.md` | 새 작업 |
+| `records/view-mode/record.md` | `worklog/records/view-mode/record.md` | 새 작업 |
+| `records/buff-names/record.md` | `worklog/records/buff-names/record.md` | 새 작업. 돌봄·버프 기존 기록이 있으면 그쪽에 합친다 |
 | `records/review-0929/record.md` | 각 작업 기록의 검수·피드백 절 또는 `worklog/records/review-0929/record.md` | 통합 검수 |
 | `history.md` | `worklog/history/2026-09.md` | 항목만 옮긴다 |
 | `progress.md` | `worklog/progress.md` | 해당 줄만 반영한다 |

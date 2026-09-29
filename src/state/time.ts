@@ -45,12 +45,14 @@ export const zoneOf = (fullness: number): FullnessZone => {
 // 말풍선은 배고픔과 매우 배고픔에 들어갈 때만 한 번 띄운다
 const NOTIFY_ZONES: readonly FullnessZone[] = ["hungry", "starving"];
 
-// 버프의 추가 배율을 더한다. 기준 100 에 프리미엄 +100, 오래 놀아주기 +50
+// 버프의 추가 배율을 더한다. 기준 100 에 든든함 +100, 신남 +50, 들뜸 +20.
+// 신남과 들뜸은 곱하지도 더하지도 않는다 — 신남이 있으면 들뜸은 세지 않는다 (제안, 사용자 확인 전)
 export function buffPercent(buffs: BuffV3[]): number {
   let sum = 100;
   const seen = new Set<string>();
+  const excited = buffs.some((b) => b.kind === "long-play" && b.remainMs > 0);
   for (const b of buffs) {
-    if (b.remainMs <= 0 || seen.has(b.kind)) continue;
+    if (b.remainMs <= 0 || seen.has(b.kind) || (excited && b.kind === "short-play")) continue;
     seen.add(b.kind);
     sum += TIME_V3_RULES.buffBonusPercent[b.kind] ?? 0;
   }

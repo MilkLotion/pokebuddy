@@ -82,7 +82,8 @@ export const SAVE_V3_RULES = {
   feedCooldownMs: 10 * 60_000, // 밥 주기 쿨타임 10분. 기본먹이와 프리미엄먹이가 함께 쓴다
   playCooldownMs: 10 * 60_000, // 놀아주기 쿨타임 10분
   playWindowMs: 20 * 60_000, // 놀아주기 상태가 남아 있는 시간 20분. 이 안에 또 놀아주면 중첩이 오른다
-  longPlayAt: 3, // 이만큼 이어서 놀아주면 오래 놀아주기 상태가 된다
+  shortPlayAt: 2, // 이만큼 이어서 놀아주면 버프 들뜸이 붙는다 (2026-09-29 사용자 결정)
+  longPlayAt: 3, // 이만큼 이어서 놀아주면 버프 신남이 붙는다. 들뜸은 신남으로 바뀐다 (2026-09-29 사용자 결정 — 이름. 교체 규칙은 제안)
   eggCareCooldownMs: 60_000, // 알 돌봄 인정 간격 1분
   tx: { keep: 200, ttlMs: 24 * 60 * 60_000 }, // 최근 200건 또는 24시간 중 큰 쪽을 남긴다
   saveEveryMs: 30_000, // 시간에 따른 값의 주기 저장
@@ -101,8 +102,9 @@ export const TIME_V3_RULES = {
   zone: { full: 60, normal: 40, hungry: 15 },
   // 구간별 친밀도 증가 배율(백분율). 배고픔 −30%, 매우 배고픔 −60%
   zonePercent: { full: 100, normal: 100, hungry: 70, starving: 40 },
-  // 버프의 추가 배율(백분율). 기준 100 에 더한다. 둘 다 있으면 250 이 된다
-  buffBonusPercent: { "premium-food": 100, "long-play": 50 },
+  // 버프의 추가 배율(백분율). 기준 100 에 더한다. 든든함 +100(×2) · 신남 +50(×1.5) · 들뜸 +20(×1.2). 든든함과 신남이 함께면 250 이 된다.
+  // 식별자는 저장 호환으로 그대로 둔다 — premium-food 는 든든함, long-play 는 신남(옛 이름 오래 놀아주기), short-play 는 들뜸 (2026-09-29 사용자 결정)
+  buffBonusPercent: { "premium-food": 100, "long-play": 50, "short-play": 20 },
 };
 
 // 기분 — 보이기만 하고 다른 수치를 바꾸지 않는다 (docs/specs/balance.md "기분")
@@ -132,7 +134,7 @@ export const SHOP_V3_RULES = {
 
 // 가방 도구의 규칙표 — 수치는 docs/specs/balance.md "버프와 친밀도"
 export const BAG_V3_RULES = {
-  buffMs: { "premium-food": 2 * 60 * 60_000, "long-play": 30 * 60_000 }, // 프리미엄 2시간, 오래 놀아주기 30분
+  buffMs: { "premium-food": 2 * 60 * 60_000, "long-play": 30 * 60_000, "short-play": 30 * 60_000 }, // 든든함 2시간, 신남 30분, 들뜸 30분 (2026-09-29 사용자 결정)
   feedAffinity: 2, // 밥 주기로 오르는 친밀도
   playAffinity: 3, // 놀아주기로 오르는 친밀도
 };

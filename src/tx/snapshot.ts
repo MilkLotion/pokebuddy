@@ -13,7 +13,7 @@ import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { eggName, eggPalettes } from "../shop/catalog.js";
 import { zoneOf } from "../state/time.js";
-import { moodWord, natureName, petName, typeName } from "../main/text.js";
+import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
@@ -31,6 +31,9 @@ const rewardWord = (def: AchievementDef): string => {
   if (species) return petName(species);
   return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
 };
+
+// 버프를 보이는 순서 — 든든함 · 신남 · 들뜸. 이름은 lib/i18n 의 buff.<식별자> (2026-09-29 사용자 결정)
+const BUFF_ORDER = ["premium-food", "long-play", "short-play"] as const;
 
 const sec = (ms: number): number => Math.round(ms / 1000);
 const min = (ms: number): number => Math.round(ms / 60_000);
@@ -103,6 +106,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     buffs: pet.buffs.map((b) => ({ kind: b.kind, remainMin: min(b.remainMs) })),
+    buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(pet),
   };

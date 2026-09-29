@@ -7,6 +7,8 @@
 //   1초 시계   시간 값만 바뀌면 표시만 고친다 — 탭 포커스·title 요소가 남는다. 모양이 바뀌어 다시 그려도 포커스를 되돌린다
 //   격자 넘김  도감·상점 포켓몬 탭은 한 쪽 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 긴 세로 스크롤이 없다
 //   성격 창    고르기 전후로 창 높이가 같다
+//   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
+//              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
 // 실제 IME 는 흉내 낼 수 없어서 요소가 같은 객체로 남는지, 조합 이벤트 사이에 다시 그리지 않는지로 본다
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
@@ -52,6 +54,7 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
+    if (name === "dexOpen") return (slug) => { window.__dexOpen = slug; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
@@ -225,7 +228,94 @@ void app.whenReady().then(async () => {
     const hints = await js<number>(`document.querySelectorAll('#dialog .nature-cell .hint').length`);
     assert.equal(hints, 1, "빈 설명 줄은 두지 않는다 — 지금 성격 칸에만");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 그림 ${shots}\n`);
+    // (9) 보는 방식 — 문서를 다시 읽어 대화상자를 치우고 시작한다
+    const reload = async (): Promise<void> => {
+      await win.webContents.executeJavaScript("location.reload(); 0");
+      await wait(900);
+      await js(`document.hasFocus = () => true; 0`);
+    };
+    await reload();
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(400);
+    await js(`document.querySelector('#body .grid-pager button:last-child').click()`); // 격자 2쪽 — 16번부터
+    await wait(100);
+    await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
+    await wait(150);
+    // 목록은 쪽 넘김 없이 전부 · 세로 스크롤 · 격자에서 보던 첫 항목(16번) 줄이 맨 위 (2026-09-29 사용자 결정 "스크롤을 기존처럼")
+    const topNo = `(() => { const top = document.getElementById('body').getBoundingClientRect().top; return [...document.querySelectorAll('#body .dex-grid .dex-cell')].find((r) => r.getBoundingClientRect().bottom > top + 1)?.querySelector('.no')?.textContent ?? null; })()`;
+    const dexListView = await js<{ rows: number; pager: boolean; top: string | null; pressed: string | null; overflow: number }>(`({
+      rows: document.querySelectorAll('#body .dex-cell').length,
+      pager: !!document.querySelector('#body .grid-pager'),
+      top: ${topNo},
+      pressed: document.querySelector('#body .view-toggle [aria-pressed="true"]')?.dataset.view ?? null,
+      overflow: ${overflow},
+    })`);
+    assert.equal(dexListView.rows, dex.length, "스크롤 방식은 작업 전 화면처럼 칸 격자를 전부 보인다");
+    assert.equal(dexListView.pager, false, "목록에는 넘김 줄이 없다");
+    assert.equal(dexListView.pressed, "list");
+    assert.ok(dexListView.overflow > 0, "목록은 세로 스크롤");
+    assert.equal(dexListView.top, "#0016", "쪽에서 보던 첫 항목으로 스크롤");
+    // 1초 시계와 전체 다시 그리기에도 스크롤이 남는다
+    await js(`document.getElementById('body').scrollTop = 1234; 0`);
+    await js(`window.__bump = 21; 0`);
+    await wait(1400);
+    const scrollKept = await js<{ top: number; same: boolean }>(`({ top: document.getElementById('body').scrollTop, same: true })`);
+    assert.equal(scrollKept.top, 1234, "다시 그려도 스크롤 위치가 남는다");
+    // 목록 → 격자 — 맨 위에 보이던 줄이 든 쪽
+    const topNow = await js<string | null>(topNo);
+    const topIndex = dex.findIndex((d) => `#${String(d.dex).padStart(4, "0")}` === topNow);
+    await js(`document.querySelector('#body .view-toggle [data-view="grid"]').click()`);
+    await wait(150);
+    assert.equal(await js<string>(label), `${Math.floor(topIndex / 15) + 1} / ${pages}`, `목록 맨 위(${topNow})가 든 쪽으로`);
+    await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
+    await wait(150);
+    await shot("dex-list.png");
+    await js(`document.getElementById('body').scrollTop = 0; 0`); // 검색 줄이 화면 안에 있어야 잘라 찍는다
+    await wait(100);
+    const toggleBox = await js<{ x: number; y: number; width: number; height: number }>(`(() => { const r = document.querySelector('#body .search-row').getBoundingClientRect(); return { x: Math.floor(r.x), y: Math.floor(r.y), width: Math.ceil(r.width), height: Math.ceil(r.height) }; })()`);
+    fs.writeFileSync(path.join(shots, "view-toggle.png"), (await win.webContents.capturePage(toggleBox)).toPNG());
+    // 미해금 종은 ??? · 줄을 누르면 도감 기기 창
+    const lockedName = await js<string | null>(`document.querySelector('#body .dex-cell.locked')?.textContent ?? null`);
+    assert.ok(lockedName?.includes("???"), "미해금 종은 스크롤 방식에서도 ???");
+    const opened = await js<string>(`(() => { const r = document.querySelector('#body .dex-cell'); r.click(); return window.__dexOpen + '|' + r.dataset.slug; })()`);
+    const [openedSlug, rowSlug] = opened.split("|");
+    assert.equal(openedSlug, rowSlug, "칸을 누르면 그 종을 기기 창에");
+
+    await js(`${tabBtn("상점")}.click()`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+    await wait(200);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 15, "상점은 따로 기억 — 아직 격자");
+    await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
+    await wait(150);
+    const shopRows = await js<number>(`document.querySelectorAll('#body .rows .row-card').length`);
+    assert.ok(shopRows > 100, `상점 스크롤 방식은 작업 전 상품 줄 카드를 전부 보인다 (${shopRows}줄)`);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 0, "격자 칸(가격 줄)은 쓰지 않는다");
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .grid-pager')`), false, "상점 목록에도 넘김 줄이 없다");
+    assert.ok((await js<number>(overflow)) > 0, "상점 목록은 세로 스크롤");
+    await shot("shop-list.png");
+    await js(`document.querySelector('#body .rows .row-card').click()`);
+    await wait(200);
+    assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "줄을 누르면 구매 창");
+
+    // 다시 읽어도 각자 남는다 — 도감 목록, 상점 목록. 도감만 격자로 되돌리면 상점은 목록 그대로
+    await reload();
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(400);
+    assert.equal(await js<number>(cells), dex.length, "다시 읽어도 도감은 스크롤 방식");
+    await js(`document.querySelector('#body .view-toggle [data-view="grid"]').click()`);
+    await wait(150);
+    await reload();
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(400);
+    assert.equal(await js<number>(cells), 15, "도감은 격자로 기억");
+    await js(`${tabBtn("상점")}.click()`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+    await wait(200);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .rows .row-card').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

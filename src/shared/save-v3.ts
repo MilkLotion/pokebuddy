@@ -9,8 +9,10 @@
 import type { AgentStats, LogEntry, NatureId, PetDaily, Totals } from "./types";
 
 // ── 개체 ───────────────────────────────────────────────────────────────────────
-// 장난감은 오래 놀아주기와 같은 버프를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")
-export type BuffKind = "premium-food" | "long-play";
+// 장난감은 놀아주기 3중첩과 같은 버프(신남)를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")
+// 이름 — premium-food 든든함 · long-play 신남(옛 이름 오래 놀아주기) · short-play 들뜸 (2026-09-29 사용자 결정).
+// 식별자는 바꾸지 않았다 — 옛 저장과 옛 판 앱(클라우드로 같은 저장을 읽는)이 신남 버프를 그대로 읽는다
+export type BuffKind = "premium-food" | "long-play" | "short-play";
 
 export interface BuffV3 {
   kind: BuffKind;
@@ -34,7 +36,7 @@ export interface PetV3 {
   feedCooldownMs: number; // 밥 주기 남은 쿨타임
   playCooldownMs: number; // 놀아주기 남은 쿨타임
   playWindowMs: number; // 놀아주기 상태의 남은 시간. 이 안에 또 놀아주면 중첩이 오른다
-  playStreak: number; // 이어서 놀아준 횟수. 정해진 수에 닿으면 오래 놀아주기 버프가 붙는다
+  playStreak: number; // 이어서 놀아준 횟수. 2 면 들뜸, 3 이면 신남 버프가 붙는다
   buffs: BuffV3[];
   home: { dx: number; dy: number };
   screen?: ScreenRefV3; // 모든 화면 놀이공간에서 사는 화면 — 끌어다 놓을 때 정한다. 없으면 개체가 가장 적은 화면 (2026-09-28 여러 화면)

@@ -39,7 +39,7 @@ const str = (v: unknown, d = ""): string => (typeof v === "string" ? v : d);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : []);
 const unique = <T>(list: T[]): T[] => [...new Set(list)];
 
-const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play"];
+const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play", "short-play"];
 const SLOT_STATES: readonly SlotState[] = ["pokemon", "empty", "locked"];
 const TUTORIAL_STATES: readonly TutorialState[] = ["none", "active", "skipped", "done"];
 
@@ -128,7 +128,8 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
     if (remainMs <= 0) continue;
     out.push({ kind: kind as BuffKind, remainMs });
   }
-  return out;
+  // 신남이 있으면 들뜸은 두지 않는다 — 들뜸은 신남으로 바뀌는 아랫단계다
+  return out.some((b) => b.kind === "long-play") ? out.filter((b) => b.kind !== "short-play") : out;
 }
 
 // 개체 하나 — 종이 없으면 null (뼈대 아님)

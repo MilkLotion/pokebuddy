@@ -66,6 +66,7 @@ function seed(): SaveV3 {
   assert.equal(second?.feedReady, false);
   assert.equal(second?.feedInSec, 90, "ms 를 초로");
   assert.deepStrictEqual(second?.buffs, [{ kind: "premium-food", remainMin: 45 }], "ms 를 분으로");
+  assert.deepStrictEqual(second?.buffNames, ["든든함"], "프리미엄먹이 버프의 화면 이름은 든든함 (2026-09-29 사용자 결정)");
   assert.equal(v.party.slots[0]?.pet?.feedReady, true);
   process.stdout.write("(3) 쿨타임과 버프 단위  ok\n");
 }

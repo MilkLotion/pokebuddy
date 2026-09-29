@@ -44,8 +44,9 @@ export interface PetView {
   feedInSec: number;
   playReady: boolean;
   playStreak: number;
-  longPlay: boolean;
+  longPlay: boolean; // 신남 버프가 켜져 있다
   buffs: ViewBuff[];
+  buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 · 들뜸 순서 (2026-09-29 사용자 결정)
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
 }

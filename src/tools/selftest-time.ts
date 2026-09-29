@@ -93,13 +93,16 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(6) 숨김 · 적립은 이어진다  ok\n");
 }
 
-// (7) 버프는 더한다. 프리미엄과 오래 놀아주기가 함께면 2.5배
+// (7) 버프는 더한다. 든든함과 신남이 함께면 2.5배. 들뜸은 ×1.2, 신남이 있으면 들뜸은 세지 않는다 (2026-09-29 사용자 결정 — 수치, 교체는 제안)
 {
   assert.equal(buffPercent([]), 100);
   assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }]), 200);
   assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }]), 150);
   assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 250);
   assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 150, "같은 버프는 겹치지 않는다");
+  assert.equal(buffPercent([{ kind: "short-play", remainMs: MIN }]), 120, "들뜸 ×1.2");
+  assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }, { kind: "short-play", remainMs: MIN }]), 220, "든든함 + 들뜸");
+  assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }, { kind: "short-play", remainMs: MIN }]), 150, "신남이 있으면 들뜸은 세지 않는다");
   const s = seed({ buffs: [{ kind: "premium-food", remainMs: HOUR }] });
   applyTime(s, 30 * MIN, T0 + 30 * MIN);
   assert.equal(s.pets[0]?.affinity, 6, "두 배로 쌓인다");

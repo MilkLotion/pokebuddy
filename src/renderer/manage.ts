@@ -92,7 +92,8 @@ const GUIDE: { title: string; lines: string[] }[] = [
     lines: [
       "밥을 주면 만복도가 오른다. 쿨타임이 지나야 다시 줄 수 있다.",
       "놀아주면 친밀도가 오른다. 쿨타임이 지난 뒤 남은 시간 안에 이어서 놀아주면 중첩이 오른다.",
-      "세 번 이어서 놀아주면 오래 놀아주기가 되고 친밀도 증가량이 늘어난다.",
+      "두 번 이어서 놀아주면 들뜸, 세 번이면 신남이 되고 친밀도 증가량이 늘어난다.",
+      "프리미엄먹이를 먹으면 든든함이 되고 친밀도 증가량이 늘어난다.",
       "PC 잠금·절전·앱 종료 중에는 시간이 흐르지 않는다.",
     ],
   },
@@ -208,6 +209,33 @@ let shopRegionOpen = false;
 const GRID_PAGE = 15;
 let dexPageNo = 0;
 let shopPageNo = 0;
+// 보는 방식 — 쪽(grid)과 스크롤(list). 도감과 상점 포켓몬 탭이 따로 기억한다 (2026-09-29 사용자 결정)
+//   grid  한 쪽 15칸 격자와 ◀ ▶ 넘김
+//   list  오늘 작업 전(9662a46) 화면 그대로 — 도감은 칸 격자 전부, 상점은 상품 줄 카드 전부를 세로 스크롤로
+//         (2026-09-29 사용자 결정 "리스트형태는 작업하기 이전의 그 스크롤되는거로")
+// 게임 저장이 아니라 이 컴퓨터의 화면 선호다 — 관리 창의 localStorage 에 둔다. 앱 데이터 폴더(userData)에 남아 다시 켜도 유지된다.
+// 저장 위치와 기본값(격자)은 제안이다 (worklog view-mode 기록)
+type ViewMode = "grid" | "list";
+const VIEW_KEY = { dex: "pokebuddy.view.dex", shop: "pokebuddy.view.shop" } as const;
+function loadView(where: keyof typeof VIEW_KEY): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY[where]) === "list" ? "list" : "grid";
+  } catch {
+    return "grid"; // 읽지 못하면 기본값
+  }
+}
+function saveView(where: keyof typeof VIEW_KEY, mode: ViewMode): void {
+  try {
+    localStorage.setItem(VIEW_KEY[where], mode);
+  } catch {
+    // 저장하지 못해도 이번 실행에는 고른 방식을 쓴다
+  }
+}
+let dexView: ViewMode = loadView("dex");
+let shopView: ViewMode = loadView("shop");
+// 스크롤 방식은 쪽 넘김 없이 전부 보인다. 쪽 방식만 한 쪽 GRID_PAGE 칸이다.
+// 방식을 바꾼 직후 스크롤할 항목 — 쪽 방식에서 보던 첫 항목 (drawDex·drawShop 이 스크롤 방식을 그린 뒤 한 번 쓴다)
+let listScrollTo: { where: "dex" | "shop"; index: number } | null = null;
 let dexFilter = "all";
 // 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
 // 지방 폼은 도감 자료에 따로 없어 번호 구간만으로 나눈다. 폼 항목이 생기면 번호로만 판정하지 않는다(스펙)
@@ -482,7 +510,7 @@ function petCard(pet: PetView): HTMLElement {
   const tags = el("div", "tags");
   pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
   tags.appendChild(el("span", "tag nature", pet.nature));
-  if (pet.longPlay) tags.appendChild(el("span", "tag", "오래 놀아주기"));
+  for (const name of pet.buffNames ?? []) tags.appendChild(el("span", "tag", name)); // 켜진 버프 — 든든함·신남·들뜸 (2026-09-29 사용자 결정)
   info.appendChild(tags);
 
   const meters = el("div", "meters");
@@ -1223,10 +1251,60 @@ function gridPager(page: number, pages: number, go: (page: number) => void): HTM
 }
 
 // 한 쪽 — 쪽 번호를 범위 안으로 맞춘 뒤 그 쪽의 칸과 쪽 수를 돌려준다
-function pageOf<T>(rows: T[], page: number): { page: number; pages: number; items: T[] } {
-  const pages = Math.max(1, Math.ceil(rows.length / GRID_PAGE));
+function pageOf<T>(rows: T[], page: number, size: number = GRID_PAGE): { page: number; pages: number; items: T[] } {
+  const pages = Math.max(1, Math.ceil(rows.length / size));
   const at = Math.max(0, Math.min(pages - 1, page));
-  return { page: at, pages, items: rows.slice(at * GRID_PAGE, (at + 1) * GRID_PAGE) };
+  return { page: at, pages, items: rows.slice(at * size, (at + 1) * size) };
+}
+
+// 보는 방식 토글 — 검색 줄 오른쪽 끝의 아이콘 두 개. 고른 쪽은 톤 배경(색 테두리로 강조하지 않는다). 높이는 검색 칸과 같다
+// 바꾸면 지금 쪽의 첫 항목이 들어 있는 쪽으로 간다
+const VIEW_ICON: Record<ViewMode, string> = {
+  grid: '<path d="M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z" stroke-width="1.25" stroke-linejoin="round"/>',
+  list: '<path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke-width="1.25" stroke-linecap="round"/>',
+};
+function viewToggle(current: ViewMode, pick: (mode: ViewMode) => void): HTMLElement {
+  const box = el("span", "view-toggle");
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", "보는 방식");
+  for (const [mode, label] of [["grid", "쪽으로 보기"], ["list", "스크롤로 보기"]] as const) {
+    const b = button("view-opt");
+    b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${VIEW_ICON[mode]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.setAttribute("aria-pressed", String(mode === current));
+    b.dataset.view = mode;
+    b.addEventListener("click", () => {
+      if (mode !== current) pick(mode);
+    });
+    box.appendChild(b);
+  }
+  return box;
+}
+
+// 방식을 바꿀 때 — 지금 보던 첫 항목을 잇는다
+//   쪽 → 스크롤  쪽의 첫 항목으로 스크롤한다
+//   스크롤 → 쪽  본문 맨 위에 보이던 항목이 든 쪽으로 간다
+// 돌려주는 값은 쪽 방식의 새 쪽 번호(스크롤로 갈 때는 지금 쪽 그대로)
+function switchView(where: "dex" | "shop", from: ViewMode, to: ViewMode, page: number): number {
+  if (from === "grid" && to === "list") {
+    listScrollTo = { where, index: page * GRID_PAGE };
+    return page;
+  }
+  const top = bodyEl.getBoundingClientRect().top;
+  const rows = [...bodyEl.querySelectorAll<HTMLElement>(where === "dex" ? ".dex-grid .dex-cell" : ".rows .row-card")];
+  const first = rows.findIndex((r) => r.getBoundingClientRect().bottom > top + 1);
+  return Math.floor(Math.max(0, first) / GRID_PAGE);
+}
+
+// 스크롤 방식을 그린 뒤 — 방식을 바꾼 직후면 그 항목으로 스크롤한다
+function scrollListAfterSwitch(where: "dex" | "shop", list: HTMLElement): void {
+  if (listScrollTo?.where !== where) return;
+  const row = list.children[listScrollTo.index] as HTMLElement | undefined;
+  listScrollTo = null;
+  row?.scrollIntoView({ block: "start" });
+  // 화면 밖 칸은 어림 높이로 먼저 잡혔다가(content-visibility) 그려지며 줄어든다 — 다음 프레임에 한 번 더 맞춘다
+  requestAnimationFrame(() => row?.scrollIntoView({ block: "start" }));
 }
 
 // 지방 고르기 — 박스 정렬과 같은 모양의 목록. 바깥을 누르면 닫힌다. 도감과 상점 포켓몬 격자가 함께 쓴다
@@ -1269,13 +1347,14 @@ function stepDex(delta: -1 | 1): void {
   if (!next || next.slug === dexPick) return;
   dexPick = next.slug;
   window.pokebuddyManage.dexOpen(dexPick, dexGen);
-  // 다음 종이 다른 쪽이면 그 쪽으로 넘긴다
+  // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
   const page = Math.floor(rows.indexOf(next) / GRID_PAGE);
-  if (page !== dexPageNo && tab === "dex") {
+  if (dexView === "grid" && page !== dexPageNo && tab === "dex") {
     dexPageNo = page;
     draw();
   }
   markDexPick();
+  if (dexView === "list") bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(next.slug)}"]`)?.scrollIntoView({ block: "nearest" });
 }
 
 function drawDex(v: Snapshot): void {
@@ -1287,6 +1366,14 @@ function drawDex(v: Snapshot): void {
     searchBox("dex", dexQuery, "이름 또는 번호 검색", (q) => {
       dexQuery = q;
       dexPageNo = 0;
+      draw();
+    }),
+  );
+  bar.appendChild(
+    viewToggle(dexView, (mode) => {
+      dexPageNo = switchView("dex", dexView, mode, dexPageNo);
+      dexView = mode;
+      saveView("dex", mode);
       draw();
     }),
   );
@@ -1308,7 +1395,16 @@ function drawDex(v: Snapshot): void {
     bodyEl.appendChild(el("div", "empty-note", q ? "검색 결과 없음" : "해당하는 종이 없습니다."));
     return;
   }
-  // 한 쪽씩 — 2026-09-29 사용자 결정 "페이지 넘김 추가"로 전부 그리기(2026-09-25)를 바꿨다
+  // 스크롤 방식 — 작업 전 화면 그대로 칸 격자를 전부 그린다(2026-09-25 사용자 요청). 화면 밖 칸은 CSS content-visibility 로
+  // 그리기를 미루고, 초상은 보이는 칸만 받는다
+  if (dexView === "list") {
+    const all = el("div", "dex-grid");
+    for (const row of rows) all.appendChild(dexCell(row));
+    bodyEl.appendChild(all);
+    scrollListAfterSwitch("dex", all);
+    return;
+  }
+  // 격자 — 한 쪽씩. 2026-09-29 사용자 결정 "페이지 넘김 추가"로 전부 그리기(2026-09-25)를 바꿨다
   const shown = pageOf(rows, dexPageNo);
   dexPageNo = shown.page;
   bodyEl.appendChild(
@@ -1325,7 +1421,7 @@ function drawDex(v: Snapshot): void {
 // ── 상점 ───────────────────────────────────────────────────────────────────────
 
 // 상점 줄의 그림 — 포켓몬 상품은 초상, 랜덤알은 알, 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸
-// 포켓몬 상품은 보통 격자 칸(shopCell)으로 그린다. 줄로 그릴 때도 초상은 보이는 것만 청한다(lazy)
+// 포켓몬 상품은 쪽 방식에서는 격자 칸(shopCell), 스크롤 방식에서는 이 줄이다. 수백 줄이라 초상은 보이는 것만 청한다(lazy)
 function shopThumb(item: ShopItemView): HTMLElement {
   if (item.category === "pokemon") return portraitOf(item.id, false, "thumb round", "", true);
   if (item.category === "egg") return eggIcon(item.id, "thumb");
@@ -1411,10 +1507,26 @@ function drawShop(v: Snapshot): void {
         draw();
       }),
     );
+    bar.appendChild(
+      viewToggle(shopView, (mode) => {
+        shopPageNo = switchView("shop", shopView, mode, shopPageNo);
+        shopView = mode;
+        saveView("shop", mode);
+        draw();
+      }),
+    );
     bodyEl.appendChild(bar);
     const found = shopPokemonShown(rows);
     if (!found.length) {
       bodyEl.appendChild(el("div", "empty-note", normQuery(shopQuery) ? "검색 결과 없음" : "해당하는 포켓몬이 없습니다."));
+      return;
+    }
+    // 스크롤 방식 — 작업 전 화면 그대로 상품 줄 카드(알·도구 탭과 같은 두 열)를 전부
+    if (shopView === "list") {
+      const list = el("div", "rows");
+      for (const item of found) list.appendChild(shopRow(item));
+      bodyEl.appendChild(list);
+      scrollListAfterSwitch("shop", list);
       return;
     }
     const shown = pageOf(found, shopPageNo);
@@ -1563,9 +1675,9 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, "친밀도 증가량 ×2 · 2시간"];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간"];
     case "play-buff":
-      return ["오래 놀아주기", "친밀도 증가량 ×1.5 · 30분"];
+      return ["신남", "친밀도 증가량 ×1.5 · 30분"];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
