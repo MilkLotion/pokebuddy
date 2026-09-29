@@ -2163,8 +2163,8 @@
         text-align: left;
         cursor: pointer;
       }
+      /* 고른 카드 — 옅은 배경 + 평소 회색 테두리 유지. 배경이 창 바탕과 가까워 테두리가 없으면 묻힘 */
       .bag-card[aria-pressed="true"] {
-        border-color: var(--accent-bg);
         background: var(--accent-bg);
       }
       .bag-card .thumb {
@@ -2260,8 +2260,8 @@
         text-align: left;
         cursor: pointer;
       }
+      /* 고른 대상 — 옅은 배경 + 평소 회색 테두리 유지 */
       .use-target[aria-pressed="true"] {
-        border-color: var(--accent-bg);
         background: var(--accent-bg);
       }
       .use-target .lv {

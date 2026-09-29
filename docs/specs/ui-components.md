@@ -145,7 +145,7 @@ Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), `Daycare Strip` `
 ### C-09 가방 아이템 카드
 
 역할: 가방의 도구 하나와 보유 수량을 보여준다.
-상태: 기본, 선택(옅은 배경).
+상태: 기본, 선택(옅은 배경). 선택해도 기본 상태의 회색 테두리를 유지한다. 선택 배경이 창 바탕색과 가까워 테두리가 없으면 카드 윤곽이 사라진다.
 내용: 아이콘, 이름, `×수량`.
 보유 0개가 된 도구는 목록에서 뺀다(`src/tx/snapshot.ts`).
 Figma: `Bag Item Card` `335:257`(`Default|Selected`).
@@ -216,7 +216,7 @@ Figma: `Filter Chip` `331:130`(`Default|Selected`). 두 상태 모두 높이 28�
 
 역할: 사용 대상 한 마리를 고른다.
 내용: 작은 초상과 숨김 마커, 이름, 레벨.
-상태: 기본, 선택(옅은 배경).
+상태: 기본, 선택(옅은 배경). 선택해도 기본 상태의 회색 테두리를 유지한다.
 사용: 가방 사용 패널.
 Figma: `Target Row` `333:290`(`Default|Selected|Disabled`). `Show Visibility Marker`를 둔다. Disabled는 `reason`에 이유를 쓴다.
 
