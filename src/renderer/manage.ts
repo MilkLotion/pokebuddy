@@ -1612,7 +1612,7 @@ let bagListScroll = { key: "", top: 0 };
 // 고른 줄을 목록 안에 보이게 맞출 차례 — 사용자가 줄·범위·도구를 새로 고를 때만 켠다. 그 밖의 다시 그리기(1초 시계 등)는 기억한 위치 그대로
 let bagListReveal = false;
 
-// 사용 갈래가 따로 창을 여는 도구 — 진화용 도구는 진화할 개체, 성격민트는 성격을 고른다
+// `사용` 쪽 단추가 따로 창을 여는 도구 — 진화용 도구는 진화할 개체, 성격민트는 성격을 바꿀 개체를 고른다
 const bagDialogUse = (item: BagItemView): boolean => item.evolution || item.effect === "nature";
 
 function bagCategory(item: BagItemView): string {
@@ -1632,11 +1632,9 @@ function bagCard(item: BagItemView): HTMLElement {
   info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
   card.append(iconOf(`item:${item.id}`, "thumb"), info);
   card.addEventListener("click", () => {
-    // 팔 수 없는 진화용 도구·성격민트는 판 없이 고르는 창을 연다. 팔 수 있으면 판을 판매 갈래로 연다 — `사용` 을 누르면 고르는 창이다.
-    // 가방 튜토리얼이 떠 있으면 예전처럼 고르는 창으로 간다 — 2단계 "대상을 고르고 사용을 눌러요" 와 판매 갈래 판이 어긋나지 않게
-    if (bagDialogUse(item) && (item.sellPrice === undefined || coachId === "bag")) return openBagDialog(item);
+    // 어떤 도구든 판을 `사용` 쪽으로 연다 (2026-09-30 사용자 결정 "다 사용이 먼저 뜨게하면 되는거아니야?")
     bagPick = bagPick === item.id ? null : item.id;
-    bagMode = bagDialogUse(item) ? "sell" : "use";
+    bagMode = "use";
     bagListReveal = true;
     bagQty = 1;
     sellQty = 1;
@@ -1761,6 +1759,33 @@ function openBagDialog(item: BagItemView): void {
   open(item.evolution ? { kind: "evo-target", itemId: item.id } : { kind: "nature-target", itemId: item.id });
 }
 
+// 가방 튜토리얼 2단계 문구 — 진화용 도구·성격민트의 `사용` 쪽이면 주 단추를 가리킨다. 그 밖은 null(기본 문구)
+function bagGuideWords(): { title: string; body: string } | null {
+  const item = view?.bag.find((i) => i.id === bagPick);
+  if (!item || bagMode !== "use" || !bagDialogUse(item)) return null;
+  return item.evolution
+    ? { title: "진화할 포켓몬 고르기를 눌러요", body: "창에서 진화시킬 포켓몬을 골라요." }
+    : { title: "성격 바꿀 포켓몬 고르기를 눌러요", body: "창에서 성격을 바꿀 포켓몬을 골라요." };
+}
+
+// 진화용 도구·성격민트의 `사용` 쪽 — 설명 한 줄, `취소`(판 닫기)·고르는 창 열기 단추. 단추 줄은 판매 쪽과 같은 모양
+function pickDetail(item: BagItemView): HTMLElement {
+  const box = el("div", "use-detail pick-detail");
+  const evo = item.evolution;
+  box.appendChild(el("div", "use-note", evo ? `${item.name}${toParticle(item.name)} 진화할 수 있는 포켓몬을 골라요` : "성격을 바꿀 포켓몬을 골라요"));
+  box.appendChild(
+    actions(
+      actionButton("취소", false, false, () => {
+        bagPick = null;
+        notice = "";
+        draw();
+      }),
+      actionButton(evo ? "진화할 포켓몬 고르기" : "성격 바꿀 포켓몬 고르기", true, false, () => openBagDialog(item)),
+    ),
+  );
+  return box;
+}
+
 // 판 머리 아래 `사용 | 판매` — 고른 쪽만 톤 배경 (Figma 05 `Bag / Sell` `1006:20684`). 판매가가 없는 도구는 두지 않는다
 function bagModes(item: BagItemView): HTMLElement {
   const modes = segmented(
@@ -1771,7 +1796,6 @@ function bagModes(item: BagItemView): HTMLElement {
     bagMode,
     (id) => {
       notice = "";
-      if (id === "use" && bagDialogUse(item)) return openBagDialog(item);
       bagMode = id;
       sellQty = 1;
       draw();
@@ -1852,9 +1876,14 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
   // 판매가가 있으면 머리 아래 `사용 | 판매`. 없으면(기본먹이·돌아오는 약) 지금처럼 사용 판만
   const each = item.sellPrice;
   if (each === undefined) bagMode = "use";
-  else if (bagMode === "use" && bagDialogUse(item)) bagMode = "sell";
   if (each !== undefined && bagMode === "sell") {
     panel.append(top, bagModes(item), sellDetail(v, item, each));
+    return panel;
+  }
+  // 진화용 도구·성격민트의 `사용` 쪽 — 판 안에는 설명 한 줄과 고르는 창을 여는 단추만 (Figma 05 `Bag / Use · 진화용 도구` `1043:22483`)
+  if (bagDialogUse(item)) {
+    if (each !== undefined) panel.append(top, bagModes(item), pickDetail(item));
+    else panel.append(top, pickDetail(item));
     return panel;
   }
 
@@ -2945,13 +2974,25 @@ function drawTabs(): void {
     b.appendChild(el("span", undefined, t.label));
     b.setAttribute("aria-selected", String(t.id === tab));
     b.addEventListener("click", () => {
-      tab = t.id;
-      detailPet = null;
-      if (t.id === "dex" && !dexRows) void loadDex();
+      setTab(t.id);
       draw();
     });
     tabsEl.appendChild(b);
   }
+}
+
+// 탭 옮기기 — 탭을 바꾸는 곳은 모두 여기를 거친다. 그리기는 부르는 쪽이 한다
+// - 나가는 탭의 상세 기기 창을 닫는다: 파티·박스는 개체 상세, 도감은 도감 기기 창 (2026-09-30 사용자 결정 "그냥 해당 탭을 나가면 상세 닫게해.")
+// - 같은 탭이면 아무것도 닫지 않는다. 다시 그 탭에 와도 상세를 다시 열지 않는다
+function setTab(next: TabId): void {
+  if (next === tab) return;
+  detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
+  if (tab === "dex" && dexPick) {
+    dexPick = null;
+    window.pokebuddyManage.dexOpen(null, dexGen);
+  }
+  tab = next;
+  if (next === "dex" && !dexRows) void loadDex();
 }
 
 function draw(): void {
@@ -3039,6 +3080,7 @@ interface GuideStep {
   also?: () => HTMLElement | null; // 함께 밝힐 요소 — 구멍을 둘을 감싸는 사각형으로 넓힌다
   tryIt?: boolean; // 대상을 눌러야 넘어간다 — 다음 단추를 두지 않는다
   interactive?: boolean; // 대상도 눌린다(목표 행동)
+  words?: () => { title: string; body: string } | null; // 화면 상태에 따라 바꿀 문구 — null 이면 title·body 그대로
 }
 interface Guide {
   name: string; // 말풍선 머리의 "튜토리얼 · {name}"
@@ -3083,7 +3125,13 @@ const GUIDES: Record<string, Guide> = {
     step: () => (bodyEl.querySelector(".use-panel") ? 1 : 0),
     steps: [
       { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 먹이와 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
-      { title: "대상을 고르고 사용을 눌러요", body: "여러 개를 한 번에 쓸 수 있어요.", target: () => bodyEl.querySelector<HTMLElement>(".use-panel"), interactive: true },
+      {
+        title: "대상을 고르고 사용을 눌러요",
+        body: "여러 개를 한 번에 쓸 수 있어요.",
+        target: () => bodyEl.querySelector<HTMLElement>(".use-panel"),
+        interactive: true,
+        words: bagGuideWords, // 진화용 도구·성격민트 판에는 대상 목록·사용 단추가 없다 — 그 판의 단추를 가리키는 문구(제안, 검수 R9-1)
+      },
     ],
   },
   evolution: {
@@ -3131,10 +3179,11 @@ function drawGuideStep(id: string): void {
   if (!step || !target) return;
   const last = index === guide.steps.length - 1;
   const counter = guide.steps.length > 1 ? ` ${index + 1} / ${guide.steps.length}` : "";
+  const words = step.words?.() ?? step;
   coachEl = coachLayer(id, target, {
     step: `튜토리얼 · ${guide.name}${counter}`,
-    title: step.title,
-    body: step.body,
+    title: words.title,
+    body: words.body,
     button: step.tryIt ? "" : last ? "확인" : "다음",
     onGo: () => {
       if (last) return void send("tutorial.done", id, { steps: guide.steps.length });
@@ -3266,8 +3315,7 @@ function drawTutorial(): void {
           body: "",
           button: guide.go,
           onGo: () => {
-            tab = to;
-            detailPet = null;
+            setTab(to);
             draw();
           },
           interactive: true,
@@ -3294,8 +3342,7 @@ function drawTutorial(): void {
           body: text.guideBody,
           button: text.guideButton,
           onGo: () => {
-            tab = text.tab;
-            detailPet = null;
+            setTab(text.tab);
             draw();
           },
           interactive: true,
@@ -3749,7 +3796,7 @@ function drawBuy(productId: string, qty: number): void {
   if (item.blocked && item.category === "egg") {
     foot.appendChild(
       actionButton("돌보미집 보기", false, false, () => {
-        tab = "box";
+        setTab("box");
         close();
       }),
     );
@@ -4597,15 +4644,9 @@ function open(next: Dialog): void {
     dialog = null;
     notice = "";
     setScrim(false);
+    setTab(slotOfPet(next.petId) != null ? "party" : "box");
     detailPet = next.petId;
-    tab = slotOfPet(next.petId) != null ? "party" : "box";
     draw();
-    // 미룬 교환 링크 — 대화상자가 닫혔으므로 지금 연다. 기기 창의 개체는 그대로 두고 보던 탭 위에 띄운다
-    if (tradePending) {
-      tradePending = false;
-      open({ kind: "trade" });
-      void loadTrade();
-    }
     return;
   }
   dialog = next;
@@ -4618,18 +4659,12 @@ function close(): void {
   notice = "";
   setScrim(false);
   syncIdentify();
-  // 다른 대화상자가 떠 있는 동안 온 교환 링크 — 그 대화상자가 닫힌 뒤 교환 모달을 연다
-  if (tradePending) showTrade();
 }
-
-// 교환 링크를 기다리는 중 — 떠 있던 대화상자(입력 중 글자·처음 뜬 패치노트)를 덮지 않으려고 미룬 1건
-let tradePending = false;
 
 // 박스 탭을 열고 교환 모달을 띄운다 — 교환 링크(딥링크)로 왔을 때
 function showTrade(): void {
-  tradePending = false;
-  tab = "box";
-  detailPet = null;
+  setTab("box");
+  detailPet = null; // 박스 탭에 있었어도 개체 상세는 닫고 교환 모달만 띄운다
   draw();
   open({ kind: "trade" });
   void loadTrade();
@@ -4953,10 +4988,9 @@ document.addEventListener("keydown", (e) => {
 
 // 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")
 function goTo(route: ManageRoute): void {
-  if (route.to !== "trade") tradePending = false; // 나중에 온 목적지가 앞선다
   if (route.to === "daycare") {
     close();
-    tab = "box";
+    setTab("box");
     draw();
     bodyEl.querySelector(".daycare")?.scrollIntoView({ block: "start" });
   } else if (route.to === "pet") {
@@ -4967,12 +5001,13 @@ function goTo(route: ManageRoute): void {
     void loadAccount();
   } else if (route.to === "trade") {
     // 교환 링크(딥링크)로 왔다 — 박스 탭을 열고 교환 모달을 띄운다.
-    // 교환 모달이 이미 떠 있으면 그대로, 다른 대화상자가 떠 있으면 그것이 닫힌 뒤에 연다
+    // 교환 모달이 이미 떠 있으면 그대로 두고 상태만 다시 읽는다. 다른 대화상자가 떠 있으면 닫고 연다
+    // (2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로.")
     if (dialog?.kind === "trade") void loadTrade();
-    else if (dialog) {
-      tradePending = true;
-      void loadTrade();
-    } else showTrade();
+    else {
+      if (dialog) close();
+      showTrade();
+    }
   } else if (route.to === "agents") {
     // Codex 창 깜빡임 알림 — 사용자 모달의 연결 탭 (src/agents/notice.ts)
     detailPet = null;
@@ -4981,7 +5016,7 @@ function goTo(route: ManageRoute): void {
   } else if (route.to === "bag" || route.to === "shop") {
     // 줍기 배너 — 도구·진화용 도구는 가방, 포인트는 상점 (docs/specs/game.md "줍기")
     close();
-    tab = route.to;
+    setTab(route.to);
     detailPet = null;
     draw();
   } else {

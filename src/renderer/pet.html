@@ -230,16 +230,16 @@
         font-size: 10px;
         white-space: nowrap;
       }
-      /* 볼 토글 — 화면 오른쪽 위. 열린 볼 = 바탕화면에 나와 있음, 닫힌 볼 = 볼 안. 틀 40 · 아이콘 36 (2026-09-30 사용자 결정 "36으로", Figma `862:22339`) */
+      /* 볼 토글 — 화면 오른쪽 위. 열린 볼 = 바탕화면에 나와 있음, 닫힌 볼 = 볼 안. 틀 36 · 열린 볼 32 · 닫힌 볼 28 (2026-09-30 사용자 결정 "한단계 작게", Figma `862:22339`) */
       .ball-toggle {
         position: absolute;
         top: 6px;
         right: 6px;
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         padding: 0;
         border: 0;
-        border-radius: 20px;
+        border-radius: 18px;
         background: transparent;
         cursor: pointer;
       }
@@ -247,10 +247,10 @@
         background: var(--accent-bg);
       }
       .ball-toggle.open {
-        background: var(--ball-open) center / 36px 36px no-repeat;
+        background: var(--ball-open) center / 32px 32px no-repeat;
       }
       .ball-toggle.closed {
-        background: var(--ball-closed) center / 32px 32px no-repeat;
+        background: var(--ball-closed) center / 28px 28px no-repeat;
       }
       /* 상태 배지 — 화면 오른쪽 아래(오른쪽 14, 아래 12, 사이 4). 점 6px + 10px 글자, 점은 왼쪽 정렬.
          Figma `Debuff Badge` `126:1065` — 배고픔 주황·매우 배고픔 빨강·버프 초록 */

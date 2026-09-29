@@ -8,6 +8,9 @@
 //   격자 넘김  도감·상점 포켓몬 탭은 한 쪽 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 긴 세로 스크롤이 없다
 //   성격 창    고르기 전후로 창 높이가 같다
 //   가방 대상  판 안 대상 목록을 아래로 내려 줄을 눌러도 스크롤이 남는다. 1초 시계 다시 그리기에도 남고, 범위를 바꾸면 맨 위 (8번 버그)
+//   가방 판    어떤 도구든 `사용` 쪽으로 연다. 진화용 도구·성격민트는 설명 한 줄 + 고르는 창 단추
+//   교환 링크  다른 대화상자가 떠 있으면 닫고 박스 탭 + 교환 모달
+//   탭 나가기  나가는 탭의 상세 기기 창(개체 상세·도감)을 닫는다. 같은 탭은 그대로
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
 //              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
 // 실제 IME 는 흉내 낼 수 없어서 요소가 같은 객체로 남는지, 조합 이벤트 사이에 다시 그리지 않는지로 본다
@@ -45,6 +48,11 @@ const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; 
 const dex = dexList(save);
 // 상점 상세 — 검사 (11) 이 여는 상품만 미리 만든다
 const shopDetails = Object.fromEntries(["charmander", "eevee", "bond-cord"].map((id) => [id, shopDetail(save, id)]));
+// 가방 판 검사 (12) 에만 더하는 도구 — 불꽃의돌·성격민트. 앞 검사의 가방 순서를 바꾸지 않게 따로 만들어 둔다
+const bagSave = structuredClone(save);
+bagSave.bag["fire-stone"] = 3;
+bagSave.bag.mint = 1;
+const bagExtra = snapshot(bagSave).bag.filter((i) => i.id === "fire-stone" || i.id === "mint");
 
 // 가짜 preload — snapshot·dex 만 값을 준다. 구독(on*)은 콜백만 받아 둔다(window.__cb). 시계(onClock)는 1초마다 울린다
 // 파티 개체의 만복도는 1초마다 1 줄어든다(시간 값). window.__bump 를 올리면 포인트가 바뀌어 모양이 바뀐다(전체 다시 그리기)
@@ -55,8 +63,10 @@ fs.writeFileSync(
 const snap = ${JSON.stringify(snap)};
 const dex = ${JSON.stringify(dex)};
 const shopDetails = ${JSON.stringify(shopDetails)};
+const bagExtra = ${JSON.stringify(bagExtra)};
 const t0 = Date.now();
 window.__bump = 0;
+window.__bagExtra = false;
 window.__cb = {};
 window.pokebuddyManage = new Proxy({}, {
   get(_t, name) {
@@ -65,11 +75,13 @@ window.pokebuddyManage = new Proxy({}, {
       const sec = Math.floor((Date.now() - t0) / 1000);
       for (const slot of s.party.slots) if (slot.pet) slot.pet.fullness = Math.max(1, 90 - sec);
       s.points += window.__bump;
+      if (window.__bagExtra) s.bag = [...bagExtra, ...s.bag];
       return s;
     };
     if (name === "dex") return async () => dex;
     if (name === "shopDetail") return async (id) => shopDetails[id] ?? null;
     if (name === "dexOpen") return (slug) => { window.__dexOpen = slug; };
+    if (name === "petOpen") return (open) => { window.__petOpen = open; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
@@ -441,7 +453,114 @@ void app.whenReady().then(async () => {
     await shot("shop-detail-cord.png");
     await closeBuy();
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 그림 ${shots}\n`);
+    // (12) 가방 판은 어떤 도구든 `사용` 쪽으로 연다 (2026-09-30 사용자 결정 "다 사용이 먼저 뜨게하면 되는거아니야?").
+    //      진화용 도구·성격민트의 `사용` 쪽은 설명 한 줄 + 고르는 창 단추, `판매` 로 바꾸면 판매 쪽
+    assert.equal(bagExtra.length, 2, "불꽃의돌·성격민트 가방 값");
+    await reload();
+    await js(`window.__bagExtra = true; window.__bump = 41; 0`);
+    await wait(1400);
+    await js(`${tabBtn("가방")}.click()`);
+    await wait(300);
+    type BagPanel = { panel: boolean; mode: string | null; note: string | null; buttons: string[]; sell: boolean; dialog: string | null };
+    const bagPanel = `({
+      panel: !!document.querySelector('#body .use-panel'),
+      mode: document.querySelector('#body .use-mode [aria-pressed="true"]')?.textContent ?? null,
+      note: document.querySelector('#body .use-note')?.textContent ?? null,
+      buttons: [...document.querySelectorAll('#body .use-panel .actions button')].map((b) => b.textContent),
+      sell: !!document.querySelector('#body .sell-detail'),
+      dialog: !document.getElementById('scrim').classList.contains('open') ? null : document.querySelector('#dialog h2')?.textContent ?? '',
+    })`;
+    const cardOf = (name: string): string => `[...document.querySelectorAll('#body .bag-card')].find((c) => c.querySelector('.name').textContent === '${name}')`;
+    await js(`${cardOf("불꽃의돌")}.click()`);
+    await wait(200);
+    const stone = await js<BagPanel>(bagPanel);
+    assert.equal(stone.panel, true, "불꽃의돌을 누르면 판이 열린다 — 고르는 창으로 바로 가지 않는다");
+    assert.equal(stone.dialog, null, "대화상자는 아직 없다");
+    assert.equal(stone.mode, "사용", "판은 `사용` 쪽으로 연다");
+    assert.equal(stone.note, "불꽃의돌로 진화할 수 있는 포켓몬을 골라요");
+    assert.deepEqual(stone.buttons, ["취소", "진화할 포켓몬 고르기"]);
+    await shot("bag-use-stone.png");
+    await js(`[...document.querySelectorAll('#body .use-mode button')].find((b) => b.textContent === '판매').click()`);
+    await wait(200);
+    const stoneSell = await js<BagPanel>(bagPanel);
+    assert.equal(stoneSell.mode, "판매");
+    assert.equal(stoneSell.sell, true, "`판매` 를 누르면 판매 쪽");
+    await js(`[...document.querySelectorAll('#body .use-mode button')].find((b) => b.textContent === '사용').click()`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '진화할 포켓몬 고르기').click()`);
+    await wait(300);
+    const dialogText = `document.getElementById('scrim').classList.contains('open') ? document.getElementById('dialog').textContent : ''`;
+    const evoText = await js<string>(dialogText);
+    assert.ok(evoText.includes("불꽃의돌") && /진화시킬까요|진화할 수 있는 포켓몬이 없어요/.test(evoText), `단추를 누르면 진화 대상 창(evo-target) (${evoText})`);
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); 0`);
+    await wait(200);
+    await js(`${cardOf("성격민트")}.click()`);
+    await wait(200);
+    const mint = await js<BagPanel>(bagPanel);
+    assert.equal(mint.mode, "사용", "성격민트도 `사용` 쪽");
+    assert.equal(mint.note, "성격을 바꿀 포켓몬을 골라요");
+    assert.deepEqual(mint.buttons, ["취소", "성격 바꿀 포켓몬 고르기"]);
+    await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '성격 바꿀 포켓몬 고르기').click()`);
+    await wait(300);
+    const natureText = await js<string>(dialogText);
+    assert.ok(natureText.includes("성격민트") && /성격을 바꿀까요|성격을 바꿀 포켓몬이 없어요/.test(natureText), `단추를 누르면 성격 대상 창(nature-target) (${natureText})`);
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); 0`);
+    await wait(200);
+    await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '취소').click()`);
+    await wait(200);
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .use-panel')`), false, "`취소` 는 판을 닫는다");
+
+    // (13) 교환 링크 — 다른 대화상자가 떠 있으면 닫고 박스 탭 + 교환 모달 (2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로.")
+    await js(`document.getElementById('open-settings').click(); 0`);
+    await wait(300);
+    const settingsTitle = await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`);
+    assert.notEqual(settingsTitle, "친구 교환", "설정 창이 떠 있다");
+    await js(`window.__cb.onRoute({ to: 'trade' }); 0`);
+    await wait(600);
+    const routed = await js<{ title: string | null; open: boolean; tab: string | null }>(`({
+      title: document.querySelector('#dialog h2')?.textContent ?? null,
+      open: document.getElementById('scrim').classList.contains('open'),
+      tab: document.querySelector('#tabs button[aria-selected="true"]')?.textContent ?? null,
+    })`);
+    assert.equal(routed.open, true, "교환 모달이 떠 있다");
+    assert.equal(routed.title, "친구 교환", `떠 있던 설정 창을 닫고 교환 모달 (${routed.title})`);
+    assert.ok(routed.tab?.includes("박스"), `박스 탭 (${routed.tab})`);
+    await shot("trade-route.png");
+    // 교환 모달이 이미 떠 있으면 그대로 둔다
+    await js(`window.__cb.onRoute({ to: 'trade' }); 0`);
+    await wait(600);
+    assert.equal(await js<string | null>(`document.querySelector('#dialog h2')?.textContent ?? null`), "친구 교환", "이미 교환 모달이면 그대로");
+
+    // (14) 탭을 나가면 그 탭의 상세 기기 창을 닫는다 (2026-09-30 사용자 결정 "그냥 해당 탭을 나가면 상세 닫게해.")
+    await reload();
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(400);
+    const dexSlug = await js<string>(`(() => { const c = document.querySelector('#body .dex-cell'); c.click(); return c.dataset.slug; })()`);
+    await wait(100);
+    assert.equal(await js<string | null>(`window.__dexOpen`), dexSlug, "도감 칸을 누르면 도감 기기 창");
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(100);
+    assert.equal(await js<string | null>(`window.__dexOpen`), dexSlug, "같은 탭을 다시 누르면 닫지 않는다");
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(200);
+    assert.equal(await js<string | null>(`window.__dexOpen`), null, "도감 탭을 나가면 도감 기기 창을 닫는다");
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(300);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell[aria-pressed="true"]').length`), 0, "돌아와도 고른 칸이 없다 — 다시 열지 않는다");
+    assert.equal(await js<string | null>(`window.__dexOpen`), null, "돌아와도 도감 기기 창을 다시 열지 않는다");
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(200);
+    await js(`document.querySelector('#body .slot[data-pet]').click()`);
+    await wait(300);
+    assert.equal(await js<boolean>(`!!window.__petOpen?.pet`), true, "파티 칸을 누르면 개체 상세 기기 창");
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(200);
+    assert.equal(await js<boolean>(`!!window.__petOpen?.pet`), true, "같은 탭을 다시 누르면 개체 상세를 닫지 않는다");
+    await js(`${tabBtn("도감")}.click()`);
+    await wait(300);
+    assert.equal(await js<unknown>(`window.__petOpen`), null, "파티 탭을 나가면 개체 상세 기기 창을 닫는다");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
