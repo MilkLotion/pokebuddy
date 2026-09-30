@@ -109,7 +109,9 @@ function makeHome() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'pbu-'));
   const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'ELECTRON_RUN_AS_NODE' || key === 'NODE_OPTIONS') delete env[key];
-  env.POKEBUDDY_SAVE_CRYPT = 'off'; // 업데이트 뒤 저장을 직접 읽는다 — 평문(시험 빌드만 받는다, src/main/app.ts). 지우는 반복문 뒤에 둔다
+  // 옛 판(암호화 전, 0.13.0 까지)처럼 평문으로 돈다 — 첫 실행만. 업데이트 설치 파일이 다시 켠 앱은 환경 변수를 물려받지 않으므로
+  // 그때 새 판처럼 저장 키를 만들고 평문 저장을 암호화한다(P3 업데이트 첫 실행 이전). 시험 빌드만 이 값을 받는다(src/main/app.ts). 지우는 반복문 뒤에 둔다
+  env.POKEBUDDY_SAVE_CRYPT = 'off';
   return { home, data, env };
 }
 
@@ -273,16 +275,23 @@ async function main() {
     await shot('2-notes-new.png');
     await until(() => fs.existsSync(path.join(home.data, 'notes-seen.json')), 'notes-seen.json');
     assert.equal(JSON.parse(fs.readFileSync(path.join(home.data, 'notes-seen.json'), 'utf8')).seen, NEW);
-    const save = JSON.parse(fs.readFileSync(path.join(home.data, 'save.json'), 'utf8'));
-    assert.equal(save.points.balance, 1234, '저장 유지');
-    assert.ok(save.pets.some((p) => p.id === 'u1'), '포켓몬 유지');
+    // 업데이트 뒤 첫 실행이 평문 저장을 암호화했다(P3) — 백업을 남기고, 진행은 그대로
+    const sealedHead = fs.readFileSync(path.join(home.data, 'save.json')).subarray(0, 4).toString('latin1');
+    assert.equal(sealedHead, 'PBS1', '업데이트 뒤 저장은 암호화');
+    assert.ok(fs.existsSync(path.join(home.data, 'save.key')), '저장 키');
+    const plainBak = fs.readdirSync(home.data).filter((f) => f.startsWith('save.json.plain-'));
+    assert.equal(plainBak.length, 1, '암호화 전 평문 백업');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(home.data, plainBak[0]), 'utf8')).points.balance, 1234, '백업은 옛 평문 저장');
+    const snap = await dom('window.pokebuddyManage.snapshot().then((s) => ({ points: s.points, pets: s.party.slots.filter((x) => x.pet).map((x) => x.pet.id) }))');
+    assert.equal(snap.points, 1234, '저장 유지(암호화 뒤 앱이 읽은 값)');
+    assert.ok(snap.pets.includes('u1'), '포켓몬 유지');
     await dom("document.querySelector('.dialog-close').click()");
     await dom("document.getElementById('open-settings').click()");
     await until(async () => (await foot()).includes(`pokebuddy ${NEW}`), '새 버전 글자');
     await shot('3-settings-new.png');
     assert.equal(userLockMark(), userLockBefore, '사용자의 동반자 lock 이 그대로다 — 시험 앱이 사용자의 홈을 쓰지 않았다');
     checks.push(`(5) 사용자의 홈(~/.claude/pokebuddy)의 companion.lock 그대로`);
-    checks.push(`(6) 업데이트 뒤 패치노트 "${title}" 한 번, notes-seen.json ${NEW}, 저장 유지(1234P·u1), 설정 바닥 "${(await foot()).split('\n')[0]}"`);
+    checks.push(`(6) 업데이트 뒤 패치노트 "${title}" 한 번, notes-seen.json ${NEW}, 저장 암호화(PBS1·save.key·평문 백업) 뒤 유지(1234P·u1), 설정 바닥 "${(await foot()).split('\n')[0]}"`);
   } finally {
     // 끄고 지운다 — 시험 앱이 남으면 다음 실행이 막힌다
     await stopApp(home).catch(() => undefined);

@@ -236,7 +236,19 @@ async function ui(server) {
   await opened(UB);
   await until(() => has(UB, ['친구 교환', '내 포켓몬', '의 포켓몬', '보낼 포켓몬']), 'U3 B 교환 모달'); // 친구가 로그인했으면 제목은 `<이름>의 포켓몬`
   await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U3 A 가 참가를 본다');
-  assert.equal(await UA.dom(`[...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠')?.disabled === true`), true, 'U3 단일 포켓몬 칸은 막힌다');
+  // 보낼 포켓몬은 ◀ ▶ 로 파티 → 박스 판을 넘긴다(9ec7581). 뮤츠는 박스에 있다 — 판을 넘겨 찾고, 본 뒤 파티 판으로 돌아온다
+  const singleBlocked = await UA.dom(`(() => {
+    for (let i = 0; i < 10; i++) {
+      const c = [...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠');
+      if (c) return c.disabled === true;
+      const n = document.querySelector('.trade-pager button[aria-label="다음 판"]');
+      if (!n || n.disabled) return 'none';
+      n.click();
+    }
+    return 'none';
+  })()`);
+  await UA.dom(`(() => { for (let i = 0; i < 10; i++) { const p = document.querySelector('.trade-pager button[aria-label="앞 판"]'); if (!p || p.disabled) return true; p.click(); } return true; })()`);
+  assert.equal(singleBlocked, true, 'U3 단일 포켓몬 칸은 막힌다');
   checks.push('U3 딥링크(second-instance)로 참가 → B 는 박스 탭 + 교환 모달, 양쪽 교환 화면, 단일 포켓몬 칸 막힘');
 
   // U4 두 사람이 화면에서 고른다
