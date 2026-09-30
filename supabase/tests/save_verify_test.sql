@@ -75,6 +75,23 @@ select throws_ok($$ select public.accept_save('00000000-0000-0000-0000-000000000
 select is((select rev from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'), 2::bigint, '거부하면 rev 그대로');
 select is(public.reject_save('00000000-0000-0000-0000-0000000000e1', '[{"rule":"new-pets","value":9,"limit":0},{"rule":"shiny","value":2,"limit":0}]', '0.13.0'), 2, '거부 기록 둘');
 select is((select count(*)::int from cloud_private.save_violations where user_id = '00000000-0000-0000-0000-0000000000e1' and rejected and rev is null), 2, '거부 기록은 rev 없음');
+-- 이용 정지(P4c, D35) — 거부하면 정지된다. 계정·교환·편지 호출이 CLOUD_ACCOUNT_HELD, 관리자가 푼다
+select ok(cloud_private.is_held('00000000-0000-0000-0000-0000000000e1'), '거부하면 정지');
+select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'held', 'true', '문맥에 정지');
+select is((select reason from public.admin_holds() where user_id = '00000000-0000-0000-0000-0000000000e1'), 'save-rejected', '관리자 목록에 정지');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000e1","role":"authenticated","is_anonymous":true}', true);
+select throws_ok($$ select public.account_seed() $$, 'P0001', 'CLOUD_ACCOUNT_HELD', '정지된 계정은 시드를 못 받는다');
+select throws_ok($$ select * from public.claim_device('11111111-1111-1111-1111-1111111111e1', 'PC', '0.13.0', 'boot', false) $$, 'P0001', 'CLOUD_ACCOUNT_HELD', '정지된 계정은 기기 연결을 못 한다');
+select throws_ok($$ select * from public.download_save('11111111-1111-1111-1111-1111111111e1') $$, 'P0001', 'CLOUD_ACCOUNT_HELD', '정지된 계정은 받기를 못 한다');
+select throws_ok($$ select * from public.get_channel('00000000-0000-0000-0000-000000000000') $$, 'P0001', 'CLOUD_ACCOUNT_HELD', '정지된 계정은 교환을 못 한다');
+reset role;
+select ok(not has_function_privilege('authenticated', 'public.admin_hold_set(uuid, boolean, text)', 'execute'), 'authenticated 는 정지를 못 푼다');
+select is(public.admin_hold_set('00000000-0000-0000-0000-0000000000e1', false, '확인함')->>'held', 'false', '관리자가 푼다');
+select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'held', 'false', '풀면 문맥에서도');
+select is(public.reject_save('00000000-0000-0000-0000-0000000000e1', '[{"rule":"points","value":1,"limit":0}]', '0.13.0'), 1, '다시 거부');
+select ok(cloud_private.is_held('00000000-0000-0000-0000-0000000000e1'), '풀린 뒤 다시 거부하면 다시 정지');
+select is(public.admin_hold_set('00000000-0000-0000-0000-0000000000e1', false, null)->>'held', 'false', '다시 푼다');
 select is(public.accept_save('00000000-0000-0000-0000-0000000000e1', '11111111-1111-1111-1111-1111111111e1', 2, 2,
   '{"v":3,"pets":[{"id":"p1","since":1}]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000005', '[]'), 3::bigint, '위반 없는 저장은 거부 모드에서도 받는다');
 select is((select trust from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'), 'unverified', '한 번 unverified 면 남는다');

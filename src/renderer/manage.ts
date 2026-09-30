@@ -2485,6 +2485,7 @@ const ACCT_ERROR: Record<string, string> = {
   CLOUD_BAD_SAVE: "계정 저장을 읽지 못해 올리지 않아요",
   CLOUD_TOO_LARGE: "저장이 너무 커서 올리지 못했어요",
   CLOUD_PET_TRADED_OUT: "교환으로 보낸 포켓몬이 남아 있어 올리지 않아요",
+  CLOUD_ACCOUNT_HELD: "이 계정은 이용이 정지됐어요",
   CLOUD_HANDOFF_INVALID: "이 PC 진행을 계정으로 옮기지 못했어요",
   SAVE_BACKUP_FAILED: "이 PC 저장을 백업하지 못해 새로 시작하지 않았어요",
 };
@@ -2509,9 +2510,10 @@ const CLOUD_TEXT: Record<Exclude<CloudStatusView, "off" | "online">, { text: str
   confirm: { text: "확인 대기", dot: "warn" },
   blocked: { text: "넘겨받지 못함", dot: "warn" },
   superseded: { text: "다른 PC 에서 시작", dot: "warn" },
+  held: { text: "이용 정지", dot: "warn" }, // 이용 정지(P4c) — 앱은 정지 창을 띄우고 끝난다
 };
 // 상태 글자가 이미 말하는 오류 — 계정 탭에서 오류 글자를 겹쳐 붙이지 않는다
-const CLOUD_SAID: Partial<Record<CloudStatusView, string>> = { "update-required": "CLOUD_UPDATE_REQUIRED" };
+const CLOUD_SAID: Partial<Record<CloudStatusView, string>> = { "update-required": "CLOUD_UPDATE_REQUIRED", held: "CLOUD_ACCOUNT_HELD" };
 
 function cloudText(c: AccountScreen["cloud"]): { text: string; dot: "ok" | "idle" | "warn" } | null {
   if (c.status === "off") return null;

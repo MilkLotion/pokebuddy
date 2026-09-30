@@ -400,7 +400,7 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
   // (26) reset — 로그아웃·삭제 뒤. 기기 ID 만 남기고 새 설치처럼
   const device = U.state()?.deviceId;
   cloudU.reset();
-  assert.deepEqual(U.state(), { deviceId: device, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null, seed: null, seedOwner: null });
+  assert.deepEqual(U.state(), { deviceId: device, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null, seed: null, seedOwner: null, accountHeld: false });
   assert.equal(cloudU.owner(), null);
   assert.equal(cloudU.view().status, "off");
   process.stdout.write("(26) reset — 새 설치 상태, 기기 ID 유지  ok\n");
@@ -489,15 +489,71 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
     cloudO.stop();
   }
   process.stdout.write("(30) 계정 시드 — 받기·보관·계정마다 다름  ok\n");
+
+  // (31) 이용 정지(P4c, D35) — 관리자가 정지하면 멈추고, 오프라인으로 켜도 멈춘다. 풀면 다시 온라인. 거부 모드의 거부도 정지다
+  {
+    const H = make("시험 PC H", 10, [pet]);
+    const anonH = await H.anon();
+    const cloudH = H.make();
+    await cloudH.start(anonH, "boot", "anonymous");
+    cloudH.noteSaved("event");
+    await until(async () => (await saveRow(anonH))?.rev === 1, "첫 올리기");
+    cloudH.stop();
+    const hold = await admin.rpc("admin_hold_set", { p_user: anonH, p_hold: true, p_note: "시험" });
+    assert.equal((hold.data as { held: boolean }).held, true, "관리자가 정지");
+    const cloudH2 = H.make();
+    await cloudH2.start(anonH, "boot", "anonymous");
+    await until(() => cloudH2.view().status === "held", "정지 — 멈춘다");
+    assert.equal(H.lastHalt()?.reason, "held", "앱에 정지로 알린다");
+    assert.equal(H.state()?.accountHeld, true, "cloud.json 에 정지");
+    cloudH2.stop();
+    H.setNet("down");
+    const cloudH3 = H.make();
+    await cloudH3.start(anonH, "boot", "anonymous");
+    await until(() => cloudH3.view().status === "held", "오프라인으로 켜도 멈춘다");
+    cloudH3.stop();
+    H.setNet("up");
+    await admin.rpc("admin_hold_set", { p_user: anonH, p_hold: false, p_note: "확인함" });
+    const cloudH4 = H.make();
+    await cloudH4.start(anonH, "boot", "anonymous");
+    await until(() => cloudH4.view().status === "online", "풀면 다시 온라인");
+    assert.equal(H.state()?.accountHeld, false, "정지 표시를 지웠다");
+    // 거부 모드 — 조작 저장이 거부되면 그 계정이 정지된다
+    await admin.rpc("admin_verify_settings", { p_mode: "enforce" });
+    try {
+      H.bump(99_999);
+      cloudH4.noteSaved("event");
+      await until(() => cloudH4.view().status === "held", "거부 → 정지");
+      assert.notEqual((await saveRow(anonH))?.save?.points?.balance, 99_999, "거부된 저장은 서버에 없다");
+      const { data: holds } = await admin.rpc("admin_holds", {});
+      assert.ok((holds as { user_id: string; reason: string }[]).some((x) => x.user_id === anonH && x.reason === "save-rejected"), "거부로 정지");
+      // 풀면 거부된 로컬 진행을 다시 올리지 않고 서버 저장(마지막 정상 저장)을 받는다(검수 P4c H1)
+      cloudH4.stop();
+      await admin.rpc("admin_hold_set", { p_user: anonH, p_hold: false, p_note: "확인함" });
+      const cloudH5 = H.make();
+      await cloudH5.start(anonH, "boot", "anonymous");
+      await until(() => cloudH5.view().status === "online", "풀린 뒤 온라인");
+      assert.notEqual(H.points(), 99_999, "서버 저장을 받았다 — 거부된 진행은 버렸다");
+      await sleep(400);
+      assert.equal(cloudH5.view().status, "online", "다시 정지되지 않는다");
+      const { data: still } = await admin.rpc("admin_holds", {});
+      assert.ok(!(still as { user_id: string }[]).some((x) => x.user_id === anonH), "정지 없음");
+      cloudH5.stop();
+    } finally {
+      await admin.rpc("admin_verify_settings", { p_mode: "observe" });
+    }
+    cloudH4.stop();
+  }
+  process.stdout.write("(31) 이용 정지 — 관리자 정지·오프라인·풀기·거부 모드 정지  ok\n");
 }
 
 async function main(): Promise<void> {
   // 옛 cloud.json — owner 는 올리던 계정, 새 칸은 기본값
   assert.deepEqual(readCloudState({ deviceId: "d", userId: "u", syncedRev: 3, dirty: true, offlineDirty: true, lastSavedAt: 7 }), {
-    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null, seed: null, seedOwner: null,
+    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null, seed: null, seedOwner: null, accountHeld: false,
   });
   // P2 형식 — ownerKind·handoff 를 그대로 읽는다. 모양이 틀린 handoff 는 버린다
-  const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 }, seed: "s", seedOwner: "a" };
+  const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 }, seed: "s", seedOwner: "a", accountHeld: false };
   assert.deepEqual(readCloudState(p2State), p2State);
   assert.equal(readCloudState({ ...p2State, handoff: { ticket: 1 } })?.handoff, null);
   assert.equal(readCloudState({ ...p2State, owner: null })?.ownerKind, null, "주인이 없으면 종류도 없다");
@@ -827,7 +883,7 @@ async function main(): Promise<void> {
     process.stdout.write("(18) claim 응답 전에 넘겨받혔으면 밀려남  ok\n");
 
     await p2(cfg.url, cfg.key, admin, extra);
-    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~30, 13 은 selftest-session)\n");
+    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~31, 13 은 selftest-session)\n");
   } finally {
     for (const p of [A, B, ...extra]) {
       for (const c of p.clouds) c.stop();

@@ -38,6 +38,8 @@ export interface CloudSyncState {
   // seedOwner 가 owner 와 같을 때만 쓴다 — 계정이 바뀌면 온라인이 될 때 새로 받는다
   seed: string | null;
   seedOwner: string | null;
+  // 이용 정지(P4c, D35) — 서버가 CLOUD_ACCOUNT_HELD 를 줬다. 오프라인으로 켜도 멈추게 적어 둔다. 기기 연결이 되면(정지가 풀림) 지운다
+  accountHeld: boolean;
 }
 
 //   off              로그인하지 않았거나 멈췄다
@@ -48,13 +50,13 @@ export interface CloudSyncState {
 //   blocked          교환이 걸려 넘겨받지 못한다 — 게임 멈춤
 //   update-required  서버가 이 앱 버전을 받지 않는다 — 게임은 계속, 올리기만 멈춤(10절 Q6)
 //   superseded       다른 PC 에 밀려났다 — 끝 상태, 앱은 안내 뒤 종료
-export type CloudStatus = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded";
+export type CloudStatus = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded" | "held";
 
 // boot: 앱을 켤 때·로그인할 때. late: 오프라인으로 켠 뒤 처음 서버에 닿을 때(F3)
 export type CloudMode = "boot" | "late";
 // tick: 주기 저장(2분 스로틀). event: 교환·부화 등 사건(약 1초 모아 바로)
 export type SaveKind = "tick" | "event";
-export type HaltReason = "superseded" | "confirm" | "blocked";
+export type HaltReason = "superseded" | "confirm" | "blocked" | "held";
 
 // 넘겨받거나 확인·양보할 상대 PC
 export interface OtherDevice {
@@ -129,6 +131,7 @@ export interface Cloud {
   synced: () => number;
   pendingHandoff: () => PendingHandoff | null; // 다시 시도할 이관 티켓
   seed: () => string | null; // 지금 저장 주인의 계정 시드(P4b). 아직 받지 못했거나 주인이 바뀌었으면 null
+  held: () => boolean; // 이용 정지를 적어 두었다(P4c) — 서버에 닿기 전 부팅 판단용
   // 멈춘 상태에서 저장 주인을 from → to 로 바꾼다. to 의 첫 저장으로 다시 맞춘다(syncedRev 0). 주인이 from 이 아니거나 돌고 있으면 false
   rebind: (from: string, to: string, kind?: OwnerKind) => boolean;
   // 세션 교체 뒤 이관 결과를 적는다 — 정식 계정 start 전에 부른다
@@ -178,12 +181,13 @@ export function readCloudState(raw: unknown): CloudSyncState | null {
     handoff: handoffOf(s.handoff),
     seed: typeof s.seed === "string" ? s.seed : null,
     seedOwner: typeof s.seedOwner === "string" ? s.seedOwner : null,
+    accountHeld: s.accountHeld === true,
   };
 }
 
 const fresh = (deviceId: string): CloudSyncState => ({
   deviceId, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null,
-  seed: null, seedOwner: null,
+  seed: null, seedOwner: null, accountHeld: false,
 });
 
 // 부팅 판단 — 익명 세션이 저장 주인과 다른 계정이면 그 세션으로는 올릴 수 없다(검수 H1)
@@ -355,6 +359,10 @@ export function createCloud(o: CloudOptions): Cloud {
   };
 
   const goOffline = (code: string): void => {
+    if (state.accountHeld) {
+      accountHeld(); // 정지된 계정 — 서버에 닿지 못해도 풀렸는지 모르므로 멈춘다
+      return;
+    }
     clearUpload();
     clearBeat();
     busy = false;
@@ -372,9 +380,25 @@ export function createCloud(o: CloudOptions): Cloud {
     o.onLost?.(kind);
   };
 
+  // 이용 정지(P4c, D35) — 타이머를 멈추고 적어 둔 뒤 앱에 알린다. 앱은 게임을 멈추고 정지 창을 띄운 뒤 끝낸다
+  //   거부 모드의 CLOUD_SAVE_REJECTED 도 같다 — 서버가 거부하면서 계정을 정지했다
+  const accountHeld = (): void => {
+    if (status === "held") return;
+    generation += 1;
+    clearTimers();
+    unwatch();
+    busy = false;
+    // 맞춘 rev 를 잊는다 — 풀린 뒤 첫 맞추기가 서버 저장(마지막 정상 저장)을 받는다. 거부된 로컬 진행을 다시 올리지 않게(검수 P4c H1)
+    state = { ...state, accountHeld: true, pendingOp: null, syncedRev: -1 };
+    persist();
+    set("held", "CLOUD_ACCOUNT_HELD");
+    o.onHalt("held", { other: null, code: "CLOUD_ACCOUNT_HELD" });
+  };
+
   // 공통 실패 처리 — 처리했으면 true
   const failed = (code: string): boolean => {
-    if (code === "NETWORK") goOffline(code);
+    if (code === "CLOUD_ACCOUNT_HELD" || code === "CLOUD_SAVE_REJECTED") accountHeld();
+    else if (code === "NETWORK") goOffline(code);
     else if (code === "CLOUD_UPDATE_REQUIRED") updateRequired();
     else if (code === "CLOUD_NOT_ACTIVE") supersede(null);
     else if (code === "CLOUD_TRADE_ACTIVE" || code === "CLOUD_TRADE_UNSYNCED") block(code);
@@ -704,6 +728,10 @@ export function createCloud(o: CloudOptions): Cloud {
       lose();
       return false;
     }
+    if (r.code === "CLOUD_ACCOUNT_HELD") {
+      accountHeld(); // 검수 P4c M2
+      return false;
+    }
     // 망 오류·익명 계정의 열린 교환 — 티켓을 두고 다시 연결할 때 다시 시도한다
     if (r.code === "NETWORK" || r.code === "UNKNOWN") mode = "late";
     goOffline(r.code);
@@ -738,6 +766,10 @@ export function createCloud(o: CloudOptions): Cloud {
     if (!row) {
       goOffline("UNKNOWN");
       return;
+    }
+    if (state.accountHeld) {
+      state = { ...state, accountHeld: false }; // claim 이 계정 확인(정지 확인)을 통과했다 — 정지가 풀렸다. 양보·확인이어도 같다(검수 P4c L4)
+      persist();
     }
     other = otherOf(row.other_label, row.other_seen);
     if (row.outcome === "yield") {
@@ -989,5 +1021,6 @@ export function createCloud(o: CloudOptions): Cloud {
     view, start, noteSaved, confirm, sleep, wake, release, announceRelease, released: () => releasedFlag, unsaved, flush, stop,
     owner, synced: () => state.syncedRev, pendingHandoff: () => state.handoff, rebind, applyHandoff, reset,
     seed: () => (state.seed && state.owner && state.seedOwner === state.owner ? state.seed : null),
+    held: () => state.accountHeld,
   };
 }

@@ -6,7 +6,8 @@
 //   3. 같은 rev 위의 요청이면 규칙(../_shared/save-rules.ts)으로 비교한다. 틈은 72시간(verify_max_gap_hours)으로 자른다.
 //      rev 가 다르면 비교하지 않는다 — 멱등 재전송(op 가 마지막 op)만 DB 로 넘기고, 나머지는 CLOUD_REV_CONFLICT.
 //      DB 는 비교에 쓴 rev(p_checked_rev)가 지금 rev 와 같을 때만 쓴다 — 비교를 건너뛴 요청은 쓰지 못한다(검수 P4a C1)
-//   4. 거부 모드(enforce)이고 위반이 있으면 적고 CLOUD_SAVE_REJECTED. 아니면 accept_save — rev CAS·활성 기기·교환 원장은 DB 가 본다
+//   4. 거부 모드(enforce)이고 위반이 있으면 적고 계정을 정지한 뒤(reject_save, D35) CLOUD_SAVE_REJECTED. 아니면 accept_save — rev CAS·활성 기기·교환 원장은 DB 가 본다
+//   정지된 계정(문맥 held)은 비교하기 전에 CLOUD_ACCOUNT_HELD(403)
 // 오류는 { error } 와 HTTP 상태로 돌려준다
 //   CLOUD_*        DB·검증이 낸 코드 그대로. 앱이 코드별로 처리한다
 //   AUTH_TOKEN     401 — 토큰이 무효·만료. 앱은 계정 분실로 보지 않는다(검수 P4a H3). 계정이 없을 때만 CLOUD_LOGIN_REQUIRED
@@ -24,7 +25,7 @@ const json = (body: Record<string, unknown>, status = 200): Response =>
 
 const codeOf = (message: string): string | null => /(CLOUD_[A-Z_]+)/.exec(message)?.[1] ?? null;
 const statusOf = (code: string): number =>
-  code === "CLOUD_LOGIN_REQUIRED" ? 401 : code === "CLOUD_REV_CONFLICT" || code === "CLOUD_NOT_ACTIVE" || code === "CLOUD_SAVE_REJECTED" ? 409 : 400;
+  code === "CLOUD_LOGIN_REQUIRED" ? 401 : code === "CLOUD_ACCOUNT_HELD" ? 403 : code === "CLOUD_REV_CONFLICT" || code === "CLOUD_NOT_ACTIVE" || code === "CLOUD_SAVE_REJECTED" ? 409 : 400;
 const fail = (code: string): Response => json({ error: code }, statusOf(code));
 const serverError = (detail: string): Response => json({ error: "SERVER_ERROR", detail }, 500);
 
@@ -50,6 +51,7 @@ interface Context {
   trades: number | null;
   trades_before: string[] | null;
   seed: string | null; // 계정 시드(P4b) — 있으면 열린 알의 결과를 다시 계산해 대조한다
+  held: boolean | null; // 이용 정지(P4c) — 정지된 계정은 올리지 못한다
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -86,6 +88,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const ctxRes = await admin.rpc("save_verify_context", { p_user: user.id });
   if (ctxRes.error) return json({ error: "SERVER_BUSY", detail: ctxRes.error.message }, 503);
   const ctx = ctxRes.data as Context;
+  if (ctx.held) return fail("CLOUD_ACCOUNT_HELD");
 
   // 비교 — 같은 rev 위의 요청만. 비교에 쓴 rev 를 DB 에 넘긴다
   let violations: Violation[] = [];
@@ -107,7 +110,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   if (violations.length > 0 && ctx.mode === "enforce") {
-    await admin.rpc("reject_save", { p_user: user.id, p_violations: violations, p_app_version: appVersion });
+    const rejected = await admin.rpc("reject_save", { p_user: user.id, p_violations: violations, p_app_version: appVersion });
+    // 기록·정지를 못 했으면 거부로 끝내지 않는다 — 앱이 정지로 멈췄는데 서버에 정지가 없게 되지 않게(검수 P4c L1)
+    if (rejected.error) return json({ error: "SERVER_BUSY", detail: rejected.error.message }, 503);
     return fail("CLOUD_SAVE_REJECTED");
   }
 

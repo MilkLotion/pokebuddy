@@ -19,7 +19,7 @@ export interface PendingHandoff {
 //   empty      익명 계정에 서버 저장이 없었다
 export type HandoffOutcome = "moved" | "discarded" | "empty";
 
-export type HandoffCode = "NETWORK" | "CLOUD_HANDOFF_INVALID" | "CLOUD_TRADE_ACTIVE" | "CLOUD_LOGIN_REQUIRED" | "UNKNOWN";
+export type HandoffCode = "NETWORK" | "CLOUD_HANDOFF_INVALID" | "CLOUD_TRADE_ACTIVE" | "CLOUD_LOGIN_REQUIRED" | "CLOUD_ACCOUNT_HELD" | "UNKNOWN";
 
 export type BeginResult = { ok: true; handoff: PendingHandoff } | { ok: false; code: HandoffCode };
 export type AdoptResult = { ok: true; outcome: HandoffOutcome; rev: number } | { ok: false; code: HandoffCode };
@@ -43,7 +43,7 @@ export interface SwitchHooks {
 
 const TICKET_MS = 10 * 60_000; // 서버 만료와 같다(begin_handoff)
 const NETWORK = /fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i;
-const KNOWN = new Set<HandoffCode>(["CLOUD_HANDOFF_INVALID", "CLOUD_TRADE_ACTIVE", "CLOUD_LOGIN_REQUIRED"]);
+const KNOWN = new Set<HandoffCode>(["CLOUD_HANDOFF_INVALID", "CLOUD_TRADE_ACTIVE", "CLOUD_LOGIN_REQUIRED", "CLOUD_ACCOUNT_HELD"]);
 
 // RPC 오류 → 이관 코드. 서버 코드 밖은 망 오류면 NETWORK, 나머지는 UNKNOWN
 export function handoffCodeOf(error: { message?: string } | null | undefined): HandoffCode {

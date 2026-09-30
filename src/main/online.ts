@@ -250,6 +250,12 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
       push();
       return;
     }
+    // 이용 정지를 적어 두었다(P4c) — 서버에 닿아 풀렸는지 확인할 수 없으면 멈춘다. 세션을 지워(분실) 새 익명 계정으로 조작 저장을
+    // 첫 저장으로 올리는 길도 막는다(검수 P4c H2). 세션이 있고 서버에 닿으면 cloud.start 의 claim 이 풀림·정지를 가른다
+    if (cloud.held()) {
+      o.onHalt("held", { other: null, code: "CLOUD_ACCOUNT_HELD" });
+      return;
+    }
     if (probe.state === "unknown") {
       // 저장소의 세션은 남아 있다 — 분실로 보지 않고 익명 계정도 만들지 않는다. 게임은 로컬로 계속
       showOffline(probe.code);

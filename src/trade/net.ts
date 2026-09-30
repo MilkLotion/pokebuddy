@@ -18,7 +18,7 @@ export type TradeErrorCode =
   | "TRADE_LINK_INVALID" | "TRADE_LINK_EXPIRED" | "TRADE_LINK_USED" | "TRADE_OWN_LINK" | "TRADE_NOT_FOUND"
   | "TRADE_CLOSED" | "TRADE_OFFER_INVALID" | "TRADE_OFFER_MISSING" | "TRADE_OFFER_CHANGED" | "TRADE_ALREADY_DONE"
   | "TRADE_NOT_DONE" | "TRADE_LOGIN_REQUIRED" | "TRADE_PET_TRADED" | "TRADE_PET_NOT_SYNCED"
-  | "TRADE_PET_BUSY" | "NETWORK" | "UNKNOWN";
+  | "TRADE_PET_BUSY" | "CLOUD_ACCOUNT_HELD" | "NETWORK" | "UNKNOWN"; // CLOUD_ACCOUNT_HELD — 이용 정지(P4c). 앱은 멈춘다
 
 export type NetResult<T> = { ok: true; data: T } | { ok: false; code: TradeErrorCode; detail?: string };
 
@@ -65,7 +65,7 @@ export interface TradeNet {
   subscribe: (channelId: string, onChange: () => void) => Promise<() => void>;
 }
 
-const CODE = /^(TRADE_[A-Z_]+)$/;
+const CODE = /^(TRADE_[A-Z_]+|CLOUD_ACCOUNT_HELD)$/;
 
 // supabase-js 오류를 코드로. 서버 코드가 아니면 연결 문제로 본다
 export function codeOf(error: { message?: string; details?: string | null; code?: string } | null | undefined): { code: TradeErrorCode; detail?: string } {

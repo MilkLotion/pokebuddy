@@ -25,7 +25,7 @@ import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askBlocked, askConfirm, askLost, askSaveLocked, showKicked } from "./halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, showHeld, showKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
 import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
@@ -846,6 +846,10 @@ function onHalt(reason: HaltReason, info: HaltInfo): void {
     supersede(info);
     return;
   }
+  if (reason === "held") {
+    holdAccount();
+    return;
+  }
   // 멈추기 전에 1초 틱 진행을 쓴다 — 멈춘 동안은 쓰지 않는다. 쓴 진행은 넘겨받은 뒤 올린다
   if (!halted && saveParty()?.isWriter()) game?.flush();
   halted = reason;
@@ -860,7 +864,7 @@ function onHalt(reason: HaltReason, info: HaltInfo): void {
 // [취소]·[종료] 면 클라우드를 멈추고 앱을 끝낸다(D22). 창이 떠 있는 동안 게임은 멈춰 있다
 async function askHalt(): Promise<void> {
   // 창을 기다리는 사이 onHalt 가 halted 를 바꾼다 — 좁혀진 타입을 믿지 않게 함수로 다시 읽는다
-  const kicked = (): boolean => halted === "superseded";
+  const kicked = (): boolean => halted === "superseded" || halted === "held"; // 정지도 끝내는 흐름이다(검수 P4c M1)
   haltAsking = true;
   try {
     while (haltNext && !quitting && !kicked()) {
@@ -957,6 +961,22 @@ function supersede(info: HaltInfo): void {
   mainOnline = null;
   log?.({ cloud: "superseded", other: info.other?.label ?? null });
   void showKicked(info).finally(() => app.quit());
+}
+
+// 이용 정지(P4c, D35) — 게임을 멈추고 온라인을 끈 뒤 정지 창을 띄우고 끝낸다. 다시 켜도 cloud.json 의 정지로 같은 창이 뜬다
+function holdAccount(): void {
+  if (halted === "held") return;
+  halted = "held";
+  haltNext = null;
+  haltAbort?.abort();
+  haltAbort = null;
+  workMs = 0;
+  pauseOnlineWork();
+  if (mainOnline) pushAccount(mainOnline.screen());
+  mainOnline?.dispose();
+  mainOnline = null;
+  log?.({ cloud: "held" });
+  void showHeld().finally(() => app.quit());
 }
 
 // 세션 종료 직전 — 올리고 released 를 알린다(최대 3초). 클라우드를 멈추지 않는다.

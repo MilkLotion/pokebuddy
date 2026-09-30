@@ -387,6 +387,26 @@ async function run() {
   await until(() => sql(`select count(*) from public.cloud_saves s cross join lateral jsonb_array_elements(s.save->'eggs') e where s.user_id = '${anonE}' and e->>'id' in ('egg-a', 'egg-b')`) === '0', 'AC10 서버 저장에 반영', 30_000);
   assert.equal(sql(`select count(*) from cloud_private.save_violations where user_id = '${anonE}'`), '0', 'AC10 위반 없음');
   checks.push('AC10 계정 시드 — 알 두 개를 앱이 연 결과가 서버 재계산(rollEgg)과 같고, 올린 뒤 위반 0');
+
+  // AC11 이용 정지(P4c, D35) — 관리자가 정지하면 앱이 정지 창을 띄우고 끝난다. 풀면 다시 이어서 한다
+  await E.stop();
+  assert.equal(sql(`select public.admin_hold_set('${anonE}', true, 'e2e')->>'held'`), 'true', 'AC11 정지');
+  const heldSeen = E.dialogs().length;
+  const heldRun = E.cli(['companion']);
+  await until(() => E.dialogs().length > heldSeen, 'AC11 정지 창', 60_000);
+  const heldDialog = E.dialogs().at(-1);
+  assert.equal(heldDialog.title, '이용이 정지됐어요', 'AC11 정지 창 제목');
+  assert.deepEqual(heldDialog.buttons, ['종료'], 'AC11 단추');
+  await E.answer('종료');
+  await heldRun;
+  await until(() => !E.alive(), 'AC11 앱이 끝난다', 30_000);
+  assert.equal(E.cloud()?.accountHeld, true, 'AC11 cloud.json 에 정지');
+  assert.equal(sql(`select public.admin_hold_set('${anonE}', false, 'e2e 확인')->>'held'`), 'false', 'AC11 풀기');
+  await E.start();
+  await until(() => E.cloud()?.accountHeld === false, 'AC11 풀면 정지 표시가 지워진다', 30_000);
+  await until(() => E.ui('open').then(() => true, () => false), 'AC11 관리 창');
+  await until(async () => { try { return (await E.indicator()).includes('저장됨'); } catch { return false; } }, 'AC11 다시 저장됨', 30_000);
+  checks.push('AC11 이용 정지 — 관리자 정지 → 정지 창 [종료] → 앱 종료, cloud.json 정지, 풀면 다시 저장됨');
   proxy.close();
 }
 

@@ -1,6 +1,7 @@
 // 두 PC 규칙의 멈춤 창 — 밀려남 안내·넘겨받기 확인·넘겨받기 막힘 (worklog-mac/records/cloud-authority/design-p1.md 3·5절)
 // 저장 계정 분실 창(D29) — 게임은 멈추지 않는다 (worklog-mac/records/cloud-authority/design-p2.md 5절·15절 G-a·G-c)
 // 저장 잠김 창 — 저장 키를 쓰지 못해 암호화 저장을 열 수 없다 (worklog/records/cloud-authority/record.md "P3 로컬 암호화")
+// 이용 정지 창 — 서버가 계정을 정지했다 (같은 기록 "P4c")
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
 // Electron 네이티브 대화상자를 쓴다. 작은 투명 부모 창을 하나 만들어 붙인다
@@ -143,6 +144,18 @@ export function showKicked(info: HaltInfo): Promise<HaltAnswer> {
     go: null,
     stop: t("cloud.kicked.ok"),
     timeoutMs: KICKED_CLOSE_MS,
+  });
+}
+
+// 이용 정지 안내(P4c, D35) — 단추 하나. 답과 무관하게 앱은 종료한다. 저절로 닫히지 않는다 — 사용자가 읽고 닫는다
+export function showHeld(): Promise<HaltAnswer> {
+  return ask({
+    type: "warning",
+    title: t("cloud.held.title"),
+    message: t("cloud.held.message"),
+    detail: t("cloud.held.detail"),
+    go: null,
+    stop: t("cloud.held.ok"),
   });
 }
 

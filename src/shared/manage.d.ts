@@ -326,7 +326,7 @@ export interface PatchNotesView {
 // manage:account 는 렌더러 → 메인 요청(결과에 screen), manage:account-view 는 메인 → 렌더러 밀어 보내기다
 // 클라우드 상태 — src/online/cloud.ts CloudStatus 와 같다 (worklog-mac/records/cloud-authority/design-p1.md 2절)
 //   confirm·blocked·superseded 는 게임이 멈춘 상태다. 안내·확인 창은 메인 창이 띄운다
-export type CloudStatusView = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded";
+export type CloudStatusView = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded" | "held";
 // 클라우드 오류 코드 — cloud.error·AccountReply.code 에 온다
 //   CLOUD_UPDATE_REQUIRED  서버가 이 앱 버전을 받지 않는다 — 게임은 계속, 저장은 올리지 않는다
 //   CLOUD_TRADE_ACTIVE     다른 PC 가 교환 중이라 넘겨받지 못한다
