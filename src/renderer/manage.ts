@@ -2288,7 +2288,11 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
   out.appendChild(rules);
 }
 
-// 보낼 포켓몬 고르기 — 파티와 박스. 단일 포켓몬 칸은 흐리게 막는다
+// 보낼 포켓몬 넘김 — 0 은 파티, 1 부터 박스 1, 박스 2 …
+let tradePage = 0;
+
+// 보낼 포켓몬 고르기 — 박스처럼 `◀ ▶` 로 파티 → 박스 1 → 박스 2 … 를 넘긴다 (2026-10-01 사용자 결정 "파티+박스 를 < > 로 옮기면서").
+// 파티는 파티 칸 수(6칸)만, 박스는 30칸. 칸 영역은 박스 5줄 높이로 고정해 넘겨도 창 높이가 그대로다. 단일 포켓몬 칸은 흐리게 막는다
 function tradePicker(t: TradeScreen): HTMLElement {
   const box = el("div", "trade-card");
   box.appendChild(tradeCardHead("보낼 포켓몬", el("span", "trade-hint", "흐린 칸: 단일 포켓몬, 교환 불가")));
@@ -2303,21 +2307,32 @@ function tradePicker(t: TradeScreen): HTMLElement {
     b.addEventListener("click", () => void tradeSend("trade.offer", pet.id));
     return b;
   };
-  const party = partyPets();
-  if (party.length) {
-    box.appendChild(el("div", "trade-group", "파티"));
-    const grid = el("div", "trade-grid");
-    for (const pet of party) grid.appendChild(cell(pet));
-    box.appendChild(grid);
-  }
-  for (const b of view?.boxes ?? []) {
-    const pets = b.slots.filter((p): p is PetView => p != null);
-    if (!pets.length) continue;
-    box.appendChild(el("div", "trade-group", b.name));
-    const grid = el("div", "trade-grid");
-    for (const pet of pets) grid.appendChild(cell(pet));
-    box.appendChild(grid);
-  }
+  const boxes = view?.boxes ?? [];
+  if (tradePage > boxes.length) tradePage = 0;
+  const shown = tradePage === 0 ? null : boxes[tradePage - 1];
+  // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다
+  const slots: (PetView | null)[] = shown ? shown.slots : (view?.party.slots ?? []).map((s) => s.pet ?? null);
+  const pager = el("div", "pager trade-pager");
+  const prev = button("", "◀");
+  prev.disabled = tradePage === 0;
+  prev.setAttribute("aria-label", "앞 판");
+  prev.addEventListener("click", () => {
+    tradePage -= 1;
+    drawDialog();
+  });
+  const next = button("", "▶");
+  next.disabled = tradePage >= boxes.length;
+  next.setAttribute("aria-label", "다음 판");
+  next.addEventListener("click", () => {
+    tradePage += 1;
+    drawDialog();
+  });
+  const used = slots.filter((p) => p != null).length;
+  pager.append(prev, el("span", "label", shown ? shown.name : "파티"), el("span", "used", `${used} / ${slots.length}`), next);
+  box.appendChild(pager);
+  const grid = el("div", "trade-grid");
+  for (const pet of slots) grid.appendChild(pet ? cell(pet) : el("div", "cell blank trade-cell"));
+  box.appendChild(grid);
   return box;
 }
 
