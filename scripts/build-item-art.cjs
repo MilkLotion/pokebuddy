@@ -346,6 +346,47 @@ function coin() {
   return save("coin", img);
 }
 
+// ── 지도 — 세 쪽으로 접힌 종이 지도, 초록 땅·파란 바다·빨간 점선 길·빨간 핀 ──
+// Figma 99 `region-map · 지도 시안 1판` 과 같은 화소 표다(2026-09-30 사용자 확인 "아이콘 괜찮네"). 한 글자가 한 화소, `.` 은 빈칸
+function regionMap() {
+  const PAL = ["#313131", "#f6e6b8", "#c49e58", "#efdca6", "#dcc07c", "#fff8e0", "#ffffff", "#4f9a38", "#a8dc78", "#78c050", "#6cb8e0", "#9ad6f0", "#e04838", "#ff8a70", "#8a6430", "#b02a20", "#e8cf8e"].map(hex);
+  const ROWS = [
+    "..............................",
+    "..............................",
+    "..............................",
+    "..............................",
+    ".........0000...........00....",
+    "......00011230000....000110...",
+    "....00111112333340000111110...",
+    "...055111112333344426111110...",
+    "...056111772333344425111110...",
+    "...055177882773344425111110...",
+    "...055788882997aaaa2bb11110...",
+    "...0579999929997aaa2bbb1110...",
+    "...0579999929997aaa2bccc110...",
+    "...0579999929997aaa2c6dcc10...",
+    "...05b7c9992997aaaa2cdccc10...",
+    "...05bb77c9277aaaaa2ccccc1e...",
+    "...05bbbb772aaaaaaa2bcccb1e...",
+    "...05bbbbbb2acacaaa277f7b1e...",
+    "...05bbbbbb2aaaaaca299f9b1e...",
+    "...05bbbbbb2aaaaaa72999971e...",
+    "...05bbbbbb2aaaaaaa29999b1e...",
+    "...05bbbbbb2aaaaaaa27777b1e...",
+    "...05bbbbbb2aaaaaaa2bbbb11e...",
+    "...055bb1gg243aaaaa2bbb1gge...",
+    "...055ggggg2444424a25ggggge...",
+    "...011ggg0eee44422221gggee....",
+    "...01100e....eeee2221eee......",
+    "....00...........eeee.........",
+    "..............................",
+    "..............................",
+  ];
+  const img = blank();
+  ROWS.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== ".") put(img, x, y, PAL[parseInt(ch, 36)], "map"); }));
+  return save("region-map", img);
+}
+
 fs.mkdirSync(OUT, { recursive: true });
 // 인자로 이름을 주면 그 그림만 다시 만든다 — node scripts/build-item-art.cjs meat coin
 const ALL = {
@@ -356,6 +397,7 @@ const ALL = {
   "premium-food": premiumFood,
   "toy": toy,
   "bond-cord": bondCord,
+  "region-map": regionMap,
   "meat": meat,
   "coin": coin,
 };

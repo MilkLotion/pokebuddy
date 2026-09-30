@@ -86,8 +86,6 @@ export function itemUrl(id: string): string {
   if (POKESPRITE_EVO.has(id)) return `${POKESPRITE}/evo-item/${id}.png`;
   // 빈 기술머신(기술 진화를 대신하는 도구, id 는 옛 이름 blank-cd)은 원작 기술머신 그림을 쓴다 — 2026-09-26 사용자 결정 "빈기술머신으로 사용할게 그냥"
   if (id === "blank-cd") return `${SPRITES}/items/tm-normal.png`;
-  // 지도(원작에 없는 우리 도구)는 사용자 그림(assets/items/region-map.png)이 생기기 전까지 원작 타운맵 그림을 임시로 쓴다 — ownItem 이 먼저 잡는다
-  if (id === "region-map") return `${SPRITES}/items/town-map.png`;
   return `${SPRITES}/items/${id}.png`;
 }
 
