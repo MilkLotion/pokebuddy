@@ -308,7 +308,7 @@ Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성�
 규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
 사용: C-01 앱 헤더의 보유 포인트 왼쪽.
 Figma: `Save Indicator` `633:18434`(`State=Online|Offline|Warn`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline 과 Warn 의 글자는 인스턴스에서 바꾼다. 컴포넌트의 기본 글자는 `오프라인`·`업데이트 필요` 다. 폭은 글자에 맞춘다. 2026-09-30 옛 `SaveNeeded`(저장 필요)를 `Warn` 으로 바꿨다.
-화면은 05 `12 사용자·저장` 섹션이다. 익명 `User / Account · Sign In · 익명` `633:19206`, 분실 `User / Account · Lost` `1050:22603`, 업데이트 필요 `User / Account · Signed In · 업데이트 필요` `633:19529`, 로그아웃 확인 `User / Account · Logout Confirm` `633:19895` 다. 옛 로그인 선택 창과 밀려남 배너는 지웠다. 두 PC 멈춤 창은 OS 대화상자라 화면 대신 주석 `1050:22786` 을 둔다. 저장 잠김 창(`저장을 열지 못했어요`)도 OS 대화상자라 그 아래 주석 `1075:21434` 를 둔다. 이용 정지 창(`이용이 정지됐어요`)도 같아서 그 아래 주석 `1141:20158` 을 둔다. 업데이트 필요 창(`새 버전으로 바꿔야 해요`)도 OS 대화상자라 그 아래 주석 `1148:20888` 을 둔다.
+화면은 05 `12 사용자·저장` 섹션이다. 익명 `User / Account · Sign In · 익명` `633:19206`, 분실 `User / Account · Lost` `1050:22603`, 업데이트 필요 `User / Account · Signed In · 업데이트 필요` `633:19529`, 로그아웃 확인 `User / Account · Logout Confirm` `633:19895` 다. 옛 로그인 선택 창과 밀려남 배너는 지웠다. 앱 밖에 뜨는 알림 창 9종은 같은 섹션 둘째 줄이다: `Alert / Lost · Member` `1152:20448`, `Alert / Lost · Anonymous` `1152:20474`, `Alert / Kicked` `1152:20500`, `Alert / Confirm` `1152:20526`, `Alert / Blocked · Trade Active` `1152:20552`, `Alert / Blocked · Trade Unsynced` `1152:20578`, `Alert / Save Locked` `1152:20604`, `Alert / Held` `1152:20630`, `Alert / Update Required` `1152:20656`. 바탕은 Dialog Compact(440)이고 닫기 ✕ 와 오류 줄은 숨긴다. 본문은 강조 줄(Label/Semibold)과 설명(Caption/Regular), 간격 4다. 단추는 왼쪽 보조(테두리)·오른쪽 주 단추(채움)다. 코드는 `src/renderer/alert.html`·`src/main/alert-window.ts` 다.
 
 ### C-28 파티 상세 기기 창
 

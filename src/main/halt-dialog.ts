@@ -2,13 +2,19 @@
 // 저장 계정 분실 창(D29) — 게임은 멈추지 않는다 (worklog-mac/records/cloud-authority/design-p2.md 5절·15절 G-a·G-c)
 // 저장 잠김 창 — 저장 키를 쓰지 못해 암호화 저장을 열 수 없다 (worklog/records/cloud-authority/record.md "P3 로컬 암호화")
 // 이용 정지 창 — 서버가 계정을 정지했다 (같은 기록 "P4c")
+// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다 (worklog/records/app-update/record.md)
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
-// Electron 네이티브 대화상자를 쓴다. 작은 투명 부모 창을 하나 만들어 붙인다
+// 게임 디자인의 알림 창(src/main/alert-window.ts)으로 먼저 띄운다 — 2026-10-01 사용자 "그것들은 디자인 못바꿔?" → "진행"
+// (worklog/records/alert-window/record.md). 알림 창을 띄우지 못하면 아래 Electron 네이티브 대화상자로 띄운다.
+// 네이티브는 작은 투명 부모 창을 하나 만들어 붙인다
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/region-window.ts 와 같은 층)
 import { app, BrowserWindow, dialog, screen } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud.js";
+import type { AlertView } from "../shared/alert";
+import { showAlert } from "./alert-window";
+import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
@@ -76,14 +82,44 @@ interface PickOptions {
   title: string;
   message: string;
   detail: string;
-  buttons: string[]; // 0 번이 기본 단추
+  buttons: string[]; // 0 번이 네이티브 창의 기본 단추
+  primary?: number; // 알림 창에서 오른쪽 채움 단추로 보일 번호 — 없으면 0
   cancelId: number; // Esc·창 닫기가 고르는 단추
   timeoutMs?: number; // 지나면 closed
   signal?: AbortSignal; // 밖에서 닫는다 — closed
 }
 
+// 알림 창에 보낼 내용 — 단추는 왼쪽 보조 → 오른쪽 주 단추 순서
+export function alertViewOf(o: { title: string; message: string; detail: string; buttons: string[]; primary?: number }): AlertView {
+  const primary = o.primary ?? 0;
+  const order = [...o.buttons.keys()].filter((i) => i !== primary).concat(primary);
+  return {
+    title: o.title,
+    lead: o.message,
+    detail: o.detail,
+    buttons: order.map((i) => ({ label: o.buttons[i] ?? "", index: i, primary: i === primary })),
+  };
+}
+
 // 단추를 고르게 한다 — 고른 단추 번호. 밖에서 닫았으면 closed, 띄우지 못했으면 cancelId
 async function pick(o: PickOptions): Promise<number | "closed"> {
+  const started = Date.now();
+  const viaAlert = await showAlert({
+    preload: preloadFile(),
+    html: rendererFile("alert.html"),
+    view: alertViewOf(o),
+    cancelId: o.cancelId,
+    ...(o.timeoutMs ? { timeoutMs: o.timeoutMs } : {}),
+    ...(o.signal ? { signal: o.signal } : {}),
+  });
+  if (viaAlert !== null) return viaAlert;
+  // 알림 창을 띄우지 못했다 — 남은 시간만큼 네이티브 창으로
+  const left = o.timeoutMs ? Math.max(1, o.timeoutMs - (Date.now() - started)) : 0;
+  return pickNative({ ...o, ...(o.timeoutMs ? { timeoutMs: left } : {}) });
+}
+
+// 네이티브 대화상자 — 알림 창의 대비책
+async function pickNative(o: PickOptions): Promise<number | "closed"> {
   const abort = new AbortController();
   let closed = false;
   const close = (): void => {
@@ -162,7 +198,7 @@ export function showHeld(): Promise<HaltAnswer> {
 // 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다(worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
 //   ready   [나중에] [지금 다시 시작]
 //   manual  [나중에] [받기] — mac 이 앱을 그 자리에서 바꿀 수 없다(dmg 를 연다)
-//   Esc·Enter 는 나중에 — 게임은 멈추지 않고, 설정의 다시 시작·끌 때 적용이 남는다
+//   Esc 는 나중에 — 게임은 멈추지 않고, 설정의 다시 시작·끌 때 적용이 남는다. 알림 창은 단추에 처음 포커스를 두지 않는다
 export async function askUpdateRequired(version: string, manual: boolean): Promise<boolean> {
   const r = await pick({
     type: "info",
@@ -170,6 +206,7 @@ export async function askUpdateRequired(version: string, manual: boolean): Promi
     message: manual ? t("update.required.manual", { version }) : t("update.required.ready", { version }),
     detail: manual ? "" : t("update.required.ready.detail"),
     buttons: [t("update.required.later"), manual ? t("update.required.get") : t("update.required.restart")],
+    primary: 1,
     cancelId: 0,
   });
   return r === 1;

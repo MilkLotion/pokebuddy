@@ -1,4 +1,4 @@
-// 샌드박스 preload — 렌더러에 window.pokebuddy(StageBridge)·pokebuddyManage·pokebuddyBanner 를 노출한다. 모든 창이 같은 preload 를 쓴다.
+// 샌드박스 preload — 렌더러에 window.pokebuddy(StageBridge)·pokebuddyManage·pokebuddyBanner·pokebuddyAlert 등을 노출한다. 모든 창이 같은 preload 를 쓴다.
 // 샌드박스라 electron 만 require 할 수 있다 — 우리 모듈은 끌어오지 않고 타입만 import() 식으로 본다 (이 파일은 모듈이 아닌 스크립트).
 // 채널 이름은 shared/stage.d.ts StageChannel 과 같은 문자열인지 satisfies 로 검사한다 — 메인(stage-window.ts)도 같은 검사를 한다
 type StageBridge = import("../shared/stage").StageBridge;
@@ -41,6 +41,9 @@ type PatchNotesView = import("../shared/manage").PatchNotesView;
 type BannerBridge = import("../shared/manage").BannerBridge;
 type BannerChannel = import("../shared/manage").BannerChannel;
 type BannerView = import("../shared/manage").BannerView;
+type AlertBridge = import("../shared/alert").AlertBridge;
+type AlertChannel = import("../shared/alert").AlertChannel;
+type AlertView = import("../shared/alert").AlertView;
 type RegionBridge = import("../shared/manage").RegionBridge;
 type RegionChannel = import("../shared/manage").RegionChannel;
 type RegionInit = import("../shared/manage").RegionInit;
@@ -200,6 +203,21 @@ const banner: BannerBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyBanner", banner);
+
+// 알림 창 — 내용을 받고, 그린 크기와 누른 단추를 알린다 (src/main/alert-window.ts)
+const ALERT = {
+  show: "alert:show",
+  size: "alert:size",
+  pick: "alert:pick",
+} satisfies Record<string, AlertChannel>;
+
+const alertBridge: AlertBridge = {
+  onShow: (cb) => ipcRenderer.on(ALERT.show, (_e, view: AlertView) => cb(view)),
+  size: (height) => ipcRenderer.send(ALERT.size, height),
+  pick: (index) => ipcRenderer.send(ALERT.pick, index),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyAlert", alertBridge);
 
 // 놀이공간 영역 그리기 창 — 지금 영역을 받고, 적용한 사각형(취소면 null)을 돌려준다
 const REGION = {
