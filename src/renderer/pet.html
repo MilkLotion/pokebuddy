@@ -372,6 +372,7 @@
         border: 1px solid var(--line);
         border-radius: 10px;
         background: var(--paper);
+        overflow: hidden; /* 줄 배경(누름·열림)이 카드 둥근 모서리를 따라 잘린다 */
       }
       .line {
         display: flex;
@@ -386,7 +387,8 @@
       button.line {
         cursor: pointer;
       }
-      button.line:hover {
+      button.line:hover,
+      button.line.on {
         background: var(--accent-bg);
       }
       .line + .line {

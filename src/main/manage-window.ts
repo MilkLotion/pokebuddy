@@ -11,7 +11,7 @@ import { PATHS, windowIcon } from "./paths.js";
 import { createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
-import { createPetWindow, type PetWindow } from "./pet-window.js";
+import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
 import { createShopWindow, type ShopWindow } from "./shop-window.js";
 import { createBagWindow, type BagWindow } from "./bag-window.js";
 import { SOUND_RULES, gainOf } from "../state/settings.js";
@@ -253,9 +253,10 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (typeof id === "string") bagWin?.show(win, open as BagDeviceOpen, gen);
     else bagWin?.close();
   });
-  ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown) => {
+  ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown, beside: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
-    if (typeof slug === "string") void dexWin?.show(win, slug, gen);
+    // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
+    if (typeof slug === "string") void dexWin?.show(win, slug, gen, beside === true ? PET_WINDOW.width : 0);
     else dexWin?.close();
   });
   ipcMain.on(CH.dim, (e, on: unknown) => {

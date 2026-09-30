@@ -3,6 +3,7 @@
 // 관리 창의 도감 칸을 누르면 뜬다. 관리 창 격자 아래에 상세를 끼우던 방식은 격자를 다시 그려 스크롤이 튀었다 (worklog/records/play-bugs/record.md).
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창 내용 영역의 오른쪽 위에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다.
 // 관리 창을 옮기면 따라간다. 관리 창이 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
+// 파티 상세의 `도감 보기` 로 열면 파티 상세 기기 창 옆에 붙는다 — 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆(2026-10-01 사용자 결정 "옆에 그 포켓몬 상세도감기기를 띄울까")
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { DexDetail, DexDeviceChannel, DexDeviceView, EvoNodeView } from "../shared/manage";
 import { windowIcon } from "./paths.js";
@@ -33,7 +34,7 @@ export interface DexWindowOptions {
 }
 
 export interface DexWindow {
-  show: (parent: BrowserWindow, slug: string, gen: unknown) => Promise<void>; // gen 이 지금 세대 번호가 아니면 버린다
+  show: (parent: BrowserWindow, slug: string, gen: unknown, beside?: number) => Promise<void>; // gen 이 지금 세대 번호가 아니면 버린다. beside 는 관리 창 옆에 먼저 붙은 창의 폭(파티 상세 기기 창) — 0 이면 관리 창 옆
   close: () => void;
   resetGen: () => void; // 관리 창 문서를 새로 읽었다 — 세대 번호를 0 으로
 }
@@ -66,6 +67,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   let focusNext = false; // 사용자가 연 종을 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = DEX_WINDOW.height;
   let side: "right" | "left" = "right";
+  let beside = 0; // 관리 창 옆에 먼저 붙은 창의 폭 — 0 이면 관리 창에 바로 붙는다
 
   const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() ? win : null);
   const mine = (e: IpcMainEvent | IpcMainInvokeEvent): boolean => !!alive() && e.sender === win?.webContents;
@@ -75,7 +77,11 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (!w || !owner || owner.isDestroyed()) return;
     const b = owner.getContentBounds();
     const area = screen.getDisplayMatching(b).workArea;
-    const at = dockAt(b, area, { width: DEX_WINDOW.width, height });
+    // 파티 상세 옆 — 파티 상세 기기 창 자리를 같은 규칙(dockAt)으로 셈해 관리 창과 합친 덩어리 옆에 붙인다.
+    // 파티 상세 창의 지금 위치를 읽지 않는다 — 관리 창을 옮길 때 두 창이 따라가는 순서와 상관없이 같은 자리가 나온다
+    const pet = beside ? dockAt(b, area, { width: beside, height }) : null;
+    const base = pet ? { x: Math.min(b.x, pet.x), y: b.y, width: b.width + beside, height: b.height } : b;
+    const at = dockAt(base, area, { width: DEX_WINDOW.width, height });
     side = at.side;
     w.setBounds({ x: at.x, y: at.y, width: DEX_WINDOW.width, height });
   }
@@ -157,7 +163,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     };
     if (tree) walk(tree);
     const [portrait, treePortraits] = await Promise.all([opts.portrait(slug), shown.length ? opts.portraits(shown) : Promise.resolve({})]);
-    const view: DexDeviceView = { detail, portrait, side, volume: opts.volume(), tree, treePortraits };
+    const view: DexDeviceView = { detail, portrait, side, volume: opts.volume(), tree, treePortraits, beside: beside > 0 };
     if (w.webContents.isLoading()) w.webContents.once("did-finish-load", () => alive()?.webContents.send(CH.show, view));
     else w.webContents.send(CH.show, view);
   }
@@ -183,10 +189,11 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
 
   return {
     // 다른 종을 열 때만 초점을 준다 — 같은 종을 다시 보내는 것은 부화·해금 뒤 새로 읽기다(관리 창 loadDex)
-    async show(parent, next, gen) {
+    async show(parent, next, gen, nextBeside = 0) {
       if (!gate.accepts(gen)) return; // 닫힘을 알기 전에 보낸 요청(새로 읽기의 다시 보내기)이다 — 닫은 창을 다시 띄우지 않는다
       const opened = !alive() || next !== slug;
       slug = next;
+      beside = nextBeside;
       attach(parent);
       if (!alive()) win = create(parent);
       place();

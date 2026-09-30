@@ -78,7 +78,7 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
-    if (name === "dexOpen") return (slug) => { window.__dexOpen = slug; };
+    if (name === "dexOpen") return (slug, gen, beside) => { window.__dexOpen = slug; window.__dexBeside = beside === true; };
     if (name === "petOpen") return (open) => { window.__petOpen = open; };
     if (name === "shopOpen") return (open) => { window.__shopOpen = open; };
     if (name === "bagOpen") return (open) => { window.__bagOpen = open; };
@@ -544,7 +544,7 @@ void app.whenReady().then(async () => {
     await wait(300);
     assert.equal(await js<unknown>(`window.__petOpen`), null, "파티 탭을 나가면 개체 상세 기기 창을 닫는다");
 
-    // (15) 도감 보기 — 파티 상세 기기 창의 줄을 누르면 기기 창을 닫고 도감 탭에서 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정)
+    // (15) 도감 보기 — 파티 상세 기기 창 옆에 그 종의 도감 기기 창. 관리 창 탭과 파티 상세는 그대로. 다시 누르면 닫는다 (2026-10-01 사용자 결정)
     await js(`${tabBtn("파티")}.click()`);
     await wait(200);
     await js(`document.querySelector('#body .slot[data-pet]').click()`);
@@ -553,9 +553,28 @@ void app.whenReady().then(async () => {
     assert.ok(shown, "파티 칸을 누르면 개체 상세 기기 창");
     await js(`window.__cb.onPetAct({ petId: '${shown!.id}', kind: 'dex' })`);
     await wait(500);
-    assert.equal(await js<unknown>(`window.__petOpen`), null, "도감 보기 — 개체 상세 기기 창을 닫는다");
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), shown!.id, "도감 보기 — 개체 상세 기기 창은 그대로");
+    assert.equal(await js<boolean>(`window.__petOpen.dexOpen`), true, "도감 보기 — 줄이 열린 표시");
     assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 보기 — 그 종의 도감 기기 창");
-    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`) > 0, true, "도감 탭으로 옮겼다");
+    assert.equal(await js<boolean>(`window.__dexBeside`), true, "도감 보기 — 파티 상세 옆에 붙인다");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`), 0, "관리 창은 파티 탭 그대로");
+    const partyPetIds = await js<string[]>(`[...document.querySelectorAll('#body .slot[data-pet]')].map((s) => s.dataset.pet)`);
+    if (partyPetIds.length > 1) {
+      await js(`window.__cb.onPetStep(1)`);
+      await wait(300);
+      const stepped = await js<{ id: string; species: string }>(`({ id: window.__petOpen.pet.id, species: window.__petOpen.pet.species })`);
+      assert.notEqual(stepped.id, shown!.id, "개체 넘기기");
+      assert.equal(await js<string | null>(`window.__dexOpen`), stepped.species, "개체를 넘기면 옆 도감 기기 창도 그 종으로");
+    }
+    await js(`window.__cb.onPetAct({ petId: window.__petOpen.pet.id, kind: 'dex' })`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__dexOpen`), null, "도감 보기를 다시 누르면 옆 도감 기기 창을 닫는다");
+    assert.equal(await js<boolean>(`window.__petOpen.dexOpen`), false, "줄 열린 표시를 끈다");
+    await js(`window.__cb.onPetAct({ petId: window.__petOpen.pet.id, kind: 'dex' })`);
+    await wait(300);
+    await js(`window.__cb.onPetClosed(99)`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__dexOpen`), null, "파티 상세를 닫으면 옆 도감 기기 창도 닫는다");
 
     // (16) 실패는 새 줄을 끼우지 않는다 (2026-09-30 사용자 결정 "레이아웃 왔다갔다하는건데? 나 이런거 싫어한다니까?").
     //      가짜 명령은 늘 실패한다(`mock`). 가방 사용 실패는 (10) 이 기기 창 미리보기 상자로 본다. 관리 창 본문 높이는 그대로다.

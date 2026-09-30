@@ -3811,6 +3811,10 @@ let petDeviceOpen = false;
 // 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다. 닫힘을 알기 전에 보낸 요청은 메인이 버린다 (src/main/device-gen.ts)
 let petGen = 0;
 let petDeviceSent = ""; // 마지막으로 보낸 내용 — 같으면 다시 보내지 않는다(1초 새로 읽기마다 기기 창을 다시 그리지 않게)
+// 파티 상세 옆 도감 기기 창 — `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
+let dexBeside = false;
+let dexBesideSent: string | null = null; // 마지막으로 보낸 종
+let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
 function syncPetDevice(): void {
   const pet = detailPet ? petOf(detailPet) : null;
@@ -3819,17 +3823,30 @@ function syncPetDevice(): void {
     if (petDeviceOpen || petDeviceSent) window.pokebuddyManage.petOpen(null);
     petDeviceOpen = false;
     petDeviceSent = "";
+    closeDexBeside(); // 파티 상세를 닫으면 옆 도감 기기 창도 닫는다
     return;
   }
   const slot = slotOfPet(pet.id);
   const inParty = slot != null;
   const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${boxNameOf(pet.id) ?? "박스"} · 보관 중`;
-  const open = { pet, where, inParty, slotIndex: slot, sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial };
+  const open = { pet, where, inParty, slotIndex: slot, sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial, dexOpen: dexBeside };
+  if (dexBeside && dexBesideSent !== pet.species) {
+    window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
+    dexBesideSent = pet.species;
+  }
   const key = JSON.stringify(open);
   if (petDeviceOpen && key === petDeviceSent) return;
   window.pokebuddyManage.petOpen(open, petGen);
   petDeviceOpen = true;
   petDeviceSent = key;
+}
+
+function closeDexBeside(): void {
+  if (!dexBeside) return;
+  if (dexBesideSent) dexBesideClosing = true;
+  dexBeside = false;
+  dexBesideSent = null;
+  window.pokebuddyManage.dexOpen(null, dexGen);
 }
 
 // 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
@@ -3844,16 +3861,13 @@ function stepPet(delta: -1 | 1): void {
   draw();
 }
 
-// 도감 보기 — 파티 상세 기기 창을 닫고 도감 탭으로 가서 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정 "누르면 이 파티상세가 꺼지고 도감상세가 되게")
-// setTab 이 개체 상세를 닫는다(detailPet = null → draw 의 syncPetDevice). 도감 목록이 아직 없으면 loadDex 끝에서 dexPick 을 다시 보낸다
-function showDexOf(slug: string | null): void {
-  if (!slug) return;
-  setTab("dex");
-  dexPick = slug;
-  window.pokebuddyManage.dexOpen(dexPick, dexGen);
-  draw();
-  markDexPick();
-  bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(slug)}"]`)?.scrollIntoView({ block: "center" });
+// 도감 보기 — 파티 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 떠 있으면 닫는다. 관리 창 탭은 그대로다
+// (2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까", Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`).
+// 창을 보내는 일은 syncPetDevice 가 한다 — 개체를 넘기면 그 종으로 바뀐다
+function toggleDexBeside(): void {
+  if (dexBeside) closeDexBeside();
+  else dexBeside = true;
+  syncPetDevice();
 }
 
 // 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
@@ -3869,7 +3883,7 @@ function onPetAction(action: PetDeviceAction): void {
     return;
   }
   if (action.kind === "dex") {
-    showDexOf(petOf(id)?.species ?? null);
+    toggleDexBeside();
     return;
   }
   if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
@@ -5099,6 +5113,7 @@ async function agent(name: string, action: AgentAction): Promise<void> {
 async function loadDex(): Promise<void> {
   dexRows = await window.pokebuddyManage.dex();
   if (dexPick) window.pokebuddyManage.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
+  else if (dexBeside && dexBesideSent) window.pokebuddyManage.dexOpen(dexBesideSent, dexGen, true);
   if (tab === "dex") draw();
 }
 
@@ -5305,6 +5320,20 @@ window.pokebuddyManage.onDexClosed((gen) => {
   dexGen = gen;
   dexPick = null;
   markDexPick();
+  // 우리가 닫은 창이다. 그사이 다시 켰으면 새 세대 번호로 다시 연다 — 닫히기 전에 보낸 여는 요청은 메인이 버렸다
+  if (dexBesideClosing) {
+    dexBesideClosing = false;
+    if (dexBeside) {
+      dexBesideSent = null;
+      syncPetDevice();
+    }
+    return;
+  }
+  // 옆 도감 기기 창을 ✕·Esc 로 닫았다 — 파티 상세의 `도감 보기` 줄 톤을 끈다
+  if (!dexBeside) return;
+  dexBeside = false;
+  dexBesideSent = null;
+  syncPetDevice();
 });
 window.pokebuddyManage.onPetStep((delta) => stepPet(delta));
 window.pokebuddyManage.onPetAct((action) => onPetAction(action));

@@ -177,6 +177,12 @@ function render(v: DexDeviceView): void {
   device.appendChild(records);
   if (v.tree) device.appendChild(evolutionCard(v));
 
+  besideNow = v.beside;
+  // 파티 상세 옆에 붙은 창은 바닥 단추 줄을 두지 않는다 — 울음소리는 파티 상세에 있고, 넘기기는 파티 상세가 한다 (2026-10-01 사용자 "이 도감상세에는 울음소리 없어도 될듯")
+  if (v.beside) {
+    sendSize(true);
+    return;
+  }
   const controls = el("div", "controls");
   const cry = button("cry", "울음소리", () => void playCry());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
@@ -217,8 +223,10 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
   return card;
 }
 
-// 방향키로도 넘긴다. Esc 는 닫는다
+// 방향키로도 넘긴다. Esc 는 닫는다. 파티 상세 옆에 붙은 창은 넘기지 않는다
+let besideNow = false;
 document.addEventListener("keydown", (e) => {
+  if (besideNow && (e.key === "ArrowLeft" || e.key === "ArrowRight")) return;
   if (e.key === "ArrowLeft") api.step(-1);
   else if (e.key === "ArrowRight") api.step(1);
   else if (e.key === "Escape") api.close();

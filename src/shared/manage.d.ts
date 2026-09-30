@@ -478,7 +478,7 @@ export interface ManageBridge {
   portraits: (asks: PortraitAsk[]) => Promise<Record<string, string | null>>;
   icons: (keys: string[]) => Promise<Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
   art: () => Promise<Record<string, string>>; // 초상(slug · slug:shiny)과 도구·알(egg · item:<식별자>) 열쇠별 data URI
-  dexOpen: (slug: string | null, gen?: number) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다
+  dexOpen: (slug: string | null, gen?: number, beside?: boolean) => void; // 도감 기기 창에 이 종을 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다. beside 면 파티 상세 기기 창 옆에 붙인다
   onDexStep: (cb: (delta: -1 | 1) => void) => void; // 기기 창의 이전·다음
   onDexClosed: (cb: (gen: number) => void) => void; // 기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts)
   petOpen: (open: PetDeviceOpen | null, gen?: number) => void; // 파티 상세 기기 창에 이 개체를 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다
@@ -517,6 +517,7 @@ export interface DexDeviceView {
   // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 빈 원으로 그린다. 사슬이 없으면 null
   tree: EvoNodeView | null;
   treePortraits: Record<string, string>; // 트리의 해금 종 그림 — slug → data URI
+  beside: boolean; // 파티 상세 기기 창 옆에 붙었다 — 바닥 단추 줄(이전·울음소리·다음)을 두지 않는다
 }
 
 // dexdev:show 는 메인 → 렌더러. 나머지는 렌더러 → 메인이다
@@ -535,6 +536,7 @@ export interface PetDeviceOpen {
   sizeLevels: number;
   notice: string; // 마지막 실패 문구
   tutorial: boolean; // 개체 상세 튜토리얼을 보일 차례 — 파티 개체이고 아직 끝내거나 건너뛰지 않았다
+  dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다 — `도감 보기` 줄을 톤 배경으로
 }
 export interface PetDeviceView extends PetDeviceOpen {
   portrait: string | null; // data URI

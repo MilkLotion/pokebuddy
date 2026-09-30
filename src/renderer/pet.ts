@@ -417,10 +417,15 @@ function renderBody(v: PetDeviceView): void {
       : line(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
   const growth = el("div", "card");
   growth.dataset.tut = "detail-growth";
-  // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정, Figma 05 `862:22384`)
+  // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.
+  // 떠 있는 동안 줄은 톤 배경 (2026-10-01 사용자 결정, Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
   const second = NATURE_UI
     ? line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" }))
     : line("도감 보기", null, [], () => act({ kind: "dex" }));
+  if (!NATURE_UI) {
+    second.classList.toggle("on", v.dexOpen);
+    second.setAttribute("aria-pressed", String(v.dexOpen));
+  }
   growth.append(evoLine, second);
   actions.appendChild(growth);
   {

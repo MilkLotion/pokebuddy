@@ -157,7 +157,7 @@ const manage: ManageBridge = {
   portraits: (asks) => ipcRenderer.invoke(MANAGE.portraits, asks) as Promise<Record<string, string | null>>,
   icons: (keys) => ipcRenderer.invoke(MANAGE.icons, keys) as Promise<Record<string, string | null>>,
   art: () => ipcRenderer.invoke(MANAGE.art) as Promise<Record<string, string>>,
-  dexOpen: (slug, gen) => ipcRenderer.send(MANAGE.dexOpen, slug, gen),
+  dexOpen: (slug, gen, beside) => ipcRenderer.send(MANAGE.dexOpen, slug, gen, beside === true),
   onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
   onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, (_e, gen: number) => cb(gen)),
   petOpen: (open, gen) => ipcRenderer.send(MANAGE.petOpen, open, gen),
