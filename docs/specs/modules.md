@@ -49,6 +49,7 @@
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
+교환 제안의 값은 서버가 만든다(`set_offer`). 앱이 보낸 개체 값은 서버 저장에 올렸는지 확인하는 데만 쓴다 — 종·이로치·성격이 다르거나 레벨·경험치가 서버보다 크면 `TRADE_PET_NOT_SYNCED`다. 채널에는 지문(`id`·`since`)으로 찾은 서버 저장 개체의 값을 넣는다. 서버 저장이 검증받지 않은 계정(`trust = unverified` — 첫 저장 분류·관찰 모드 위반)은 `TRADE_SAVE_UNVERIFIED`로 제안하지 못한다. 교환이 끝나는 순간 두 사람이 받은 제안을 `cloud_private.trade_receipts`에 남긴다 — 두 사람이 반영하면 채널의 제안 값은 지워진다.
 우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
 클라우드 저장 올리기는 Edge Function `supabase/functions/upload-save`를 거친다(`src/online/cloud.ts`). 앱이 `upload_save` RPC 를 직접 부르면 `CLOUD_UPDATE_REQUIRED`다. 검증은 아래 [서버 저장 검증](#서버-저장-검증)을 따른다.
@@ -154,7 +155,7 @@
 
 | 항목 | 규칙 |
 |---|---|
-| 순서 | 토큰으로 사용자 확인 → `save_verify_context`(직전 저장·rev·틈·받은 편지·끝난 교환·설정) → 규칙 비교 → `accept_save`. rev CAS·활성 기기·교환 원장은 `accept_save` 안에서 본다 |
+| 순서 | 토큰으로 사용자 확인 → `save_verify_context`(직전 저장·rev·틈·받은 편지·받은 교환 제안·시드·정지·설정) → 규칙 비교 → `accept_save`. rev CAS·활성 기기·교환 원장은 `accept_save` 안에서 본다 |
 | 틈 | 서버 시각 기준. `cloud_saves.last_accepted_at`부터 지금까지, 72시간(`verify_max_gap_hours`)에서 자른다 |
 | 비교 대상 | 같은 rev 위의 요청만 비교한다. rev 가 다르면 멱등 재전송(마지막 op)만 받고 나머지는 `CLOUD_REV_CONFLICT`다. `accept_save` 는 비교에 쓴 rev(`p_checked_rev`)가 지금 rev 와 같을 때만 기존 행에 쓴다. 첫 저장은 `trust`(fresh·legacy·unverified) 분류만 한다 |
 | 오류 | `CLOUD_*` 코드, 토큰 무효 401 `AUTH_TOKEN`, 잠깐 답 없음 503 `SERVER_BUSY`, 그 밖 500 `SERVER_ERROR`. 앱은 502·503·504·전송 실패만 오프라인으로 본다 |

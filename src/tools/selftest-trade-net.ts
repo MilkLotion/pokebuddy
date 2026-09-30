@@ -201,7 +201,9 @@ async function main(): Promise<void> {
     assert.deepEqual(await a.net.setOffer(channel, snapshot(aPet), { id: aPet.id, since: aPet.since + 1 }), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "since 가 다르다");
     assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), shiny: true }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "이로치가 다르다");
     assert.deepEqual(await a.net.setOffer(channel, snapshot(aPet), { id: aPet.id, since: 1.5 }), { ok: false, code: "TRADE_OFFER_INVALID" }, "since 가 정수가 아니다");
-    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), level: aPet.level + 5 }, refOf(aPet)).then((r) => r.ok), true, "레벨은 대조하지 않는다 (Q7)");
+    // P5 — 앱 레벨이 서버보다 크면 아직 올리지 않은 진행이다. 제안 값은 서버 저장으로 만든다(앱이 보낸 다른 값은 쓰지 않는다)
+    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), level: aPet.level + 5 }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "앱 레벨이 서버보다 크다 (P5)");
+    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), affinity: 100 }, refOf(aPet)).then((r) => r.ok), true, "레벨이 서버 이하면 받는다 — 다른 값은 서버 저장으로 (P5)");
 
     // 제안 도중 익명으로 바뀌면 먼저 거절한다
     a.flags.anonymous = true;

@@ -50,7 +50,8 @@ async function badMember(server) {
   assert.ifError(up.error);
   return { bad, ref: { id: pet.id, since: pet.since } };
 }
-const MEWTWO = { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 70, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] };
+// 서버 저장의 뮤츠(레벨 1)와 같은 값 — P5 부터 앱이 서버보다 큰 레벨을 보내면 TRADE_PET_NOT_SYNCED 다. 제안 값은 서버 저장으로 만든다
+const MEWTWO = { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 1, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] };
 
 // ── 시나리오 ──────────────────────────────────────────────────────────────────
 async function run() {

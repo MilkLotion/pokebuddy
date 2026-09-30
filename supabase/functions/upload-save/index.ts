@@ -2,7 +2,7 @@
 //
 // 앱은 upload_save RPC 대신 이 함수를 부른다(src/online/cloud.ts). 순서:
 //   1. Authorization 의 사용자 토큰으로 본인을 확인한다. 익명 계정도 올린다(P2)
-//   2. save_verify_context 로 직전 서버 저장·rev·서버 시각 기준 틈·받은 편지·끝난 교환·검증 설정을 읽는다
+//   2. save_verify_context 로 직전 서버 저장·rev·서버 시각 기준 틈·받은 편지·받은 교환 제안·계정 시드·정지 여부·검증 설정을 읽는다
 //   3. 같은 rev 위의 요청이면 규칙(../_shared/save-rules.ts)으로 비교한다. 틈은 72시간(verify_max_gap_hours)으로 자른다.
 //      rev 가 다르면 비교하지 않는다 — 멱등 재전송(op 가 마지막 op)만 DB 로 넘기고, 나머지는 CLOUD_REV_CONFLICT.
 //      DB 는 비교에 쓴 rev(p_checked_rev)가 지금 rev 와 같을 때만 쓴다 — 비교를 건너뛴 요청은 쓰지 못한다(검수 P4a C1)
@@ -48,8 +48,8 @@ interface Context {
   margin: number;
   max_gap_ms: number;
   letters: Record<string, unknown[]> | null;
-  trades: number | null;
-  trades_before: string[] | null;
+  received: unknown[] | null; // 받은 제안(P5) — 직전 저장 뒤 끝난 교환
+  received_before: Record<string, unknown> | null; // 직전 저장 전에 끝난 교환 채널 → 받은 제안
   seed: string | null; // 계정 시드(P4b) — 있으면 열린 알의 결과를 다시 계산해 대조한다
   held: boolean | null; // 이용 정지(P4c) — 정지된 계정은 올리지 못한다
 }
@@ -100,8 +100,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         gapMs: Math.min(ctx.gap_ms ?? 0, ctx.max_gap_ms),
         margin: ctx.margin,
         letters: ctx.letters ?? {},
-        trades: ctx.trades ?? 0,
-        tradesBefore: ctx.trades_before ?? [],
+        received: ctx.received ?? [],
+        receivedBefore: ctx.received_before ?? {},
         seed: ctx.seed ?? null,
       }, data);
     } else if (body.op !== ctx.last_op) {

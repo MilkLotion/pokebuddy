@@ -187,12 +187,25 @@ select is(public.test_upload('d5000000-0000-0000-0000-000000000005', 0,
   '{"v":3,"pets":[{"id":"p1","since":4001,"species":"mudkip","shiny":false,"nature":"brave","level":7}]}',
   3, '0.13.0', 'b4000000-0000-0000-0000-000000000001'), 1::bigint, 'b4 올리기');
 select lives_ok($$ select public.join_channel(pg_temp.v('tok'), 2, 'dv1') $$, 'b4 참가');
-select is(public.set_offer(pg_temp.v('ch')::uuid, '{"species":"mudkip","level":7,"shiny":false,"nature":"brave"}', '{"id":"p1","since":4001}'), 1, 'b4 제안');
+-- P5: 앱이 보낸 레벨이 서버 값보다 크면 아직 올리지 않은 진행 — 옛 서버 값으로 제안하지 않는다
+select throws_ok($$ select public.set_offer(pg_temp.v('ch')::uuid, '{"species":"mudkip","level":100,"shiny":false,"nature":"brave"}', '{"id":"p1","since":4001}') $$,
+  'P0001', 'TRADE_PET_NOT_SYNCED', 'P5 앱 레벨이 서버보다 크면 NOT_SYNCED');
+-- 채널의 제안은 서버 저장 값으로 만든다 — 앱이 보낸 다른 칸(affinity 등)은 쓰지 않는다
+select is(public.set_offer(pg_temp.v('ch')::uuid, '{"species":"mudkip","level":7,"affinity":100,"shiny":false,"nature":"brave"}', '{"id":"p1","since":4001}'), 1, 'b4 제안');
+reset role;
+select is((select (guest_offer ->> 'level')::int from public.trade_channels where id = pg_temp.v('ch')::uuid), 7, 'P5 제안 레벨은 서버 저장 값');
+select is((select guest_offer ->> 'affinity' from public.trade_channels where id = pg_temp.v('ch')::uuid), null, 'P5 앱이 보낸 값은 제안에 쓰지 않는다');
 select pg_temp.act('b3');
 select is(public.set_offer(pg_temp.v('ch')::uuid, '{"species":"pikachu","level":9,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":3001}'), 2, 'b3 제안');
 select is(public.set_ready(pg_temp.v('ch')::uuid, 2)::text, 'joined', 'b3 확정');
 select pg_temp.act('b4');
 select is(public.set_ready(pg_temp.v('ch')::uuid, 2)::text, 'done', 'b4 확정 → done');
+-- P5: 끝나는 순간 받은 제안을 남긴다 — 반영(ack_applied) 뒤 채널 제안이 지워져도 검증이 대조한다
+reset role;
+select is((select count(*)::int from cloud_private.trade_receipts where channel_id = pg_temp.v('ch')::uuid), 2, 'P5 두 사람의 받은 제안');
+select is((select (offer ->> 'level')::int from cloud_private.trade_receipts r join public.trade_channels c on c.id = r.channel_id
+  where r.channel_id = pg_temp.v('ch')::uuid and r.user_id = c.host), 7, 'P5 호스트가 받은 제안은 게스트의 서버 저장 값');
+select pg_temp.act('b4');
 select is(public.set_ready(pg_temp.v('ch')::uuid, 2)::text, 'done', '같은 확정을 다시 보내도 원장이 겹치지 않는다');
 reset role;
 select is((select count(*)::int from cloud_private.pet_ledger where channel_id = pg_temp.v('ch')::uuid), 2, 'done 은 원장 2행');

@@ -2088,6 +2088,8 @@ const TRADE_ERROR: Record<string, [string, string]> = {
   // 서버 교환 중 예약 — 같은 개체가 다른 교환에 올라가 있다 (design-p2.md 17절 D31)
   TRADE_PET_BUSY: ["다른 교환에 올라가 있는 포켓몬이에요", "그 교환이 닫힌 뒤 다시 올리거나 다른 포켓몬을 골라 주세요"],
   TRADE_OFFER_INVALID: ["올릴 수 없는 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
+  // 서버 검증을 받지 못한 저장(P5) — 계정 저장을 확인하는 동안 교환을 막는다
+  TRADE_SAVE_UNVERIFIED: ["지금은 교환할 수 없어요", "계정 저장을 확인하는 중이에요"],
 };
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
 const TRADE_CLOSED: Record<string, [string, string]> = {

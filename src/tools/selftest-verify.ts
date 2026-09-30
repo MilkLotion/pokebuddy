@@ -20,7 +20,7 @@ const HOUR = 3_600_000;
 const out = (line: string): void => void process.stdout.write(`${line}\n`);
 
 const data = JSON.parse(fs.readFileSync(path.join(ROOT, "supabase/functions/_shared/verify-data.json"), "utf8")) as VerifyData;
-const ctx = (gapMs: number, extra: Partial<VerifyContext> = {}): VerifyContext => ({ gapMs, margin: 1.1, letters: {}, trades: 0, tradesBefore: [], seed: null, ...extra });
+const ctx = (gapMs: number, extra: Partial<VerifyContext> = {}): VerifyContext => ({ gapMs, margin: 1.1, letters: {}, received: [], receivedBefore: {}, seed: null, ...extra });
 const pet = (id: string, species: string, over: Partial<PetV3> = {}): PetV3 => ({
   ...newPet({ id, species, shiny: false, nature: "hardy", gender: "male", now: T0 }),
   ...over,
@@ -173,15 +173,38 @@ out("0 supabase/functions/_shared 가 최신");
   strong.eggs = [];
   strong.pets.push(pet("p2", "mewtwo", { level: 100, exp: expForLevel("slow", 100), affinity: 100 }));
   assert.deepEqual(rules(eggPrev, strong, ctx(60_000)), ["affinity", "exp"], "알에서 레벨 100·친밀도 100");
-  // 교환 — 받은 개체는 상대 값 그대로. 서버가 센 끝난 교환
+  // 교환 — 받은 개체는 서버 제안(P5: 서버 저장에서 만든 값)과 같아야 한다
+  const offer = { species: "pikachu", shiny: true, nature: "hardy", gender: "male", size: 1.5, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80, fullness: 100, mood: 60, stage: 0, evolved: [] };
   const tradedNext = clone(prev);
   tradedNext.pets = [pet("p2", "pikachu", { shiny: true, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80 })];
   assert.deepEqual(rules(prev, tradedNext, ctx(60_000)), ["affinity", "exp", "new-pets", "shiny"], "교환 기록 없이는 위반");
-  assert.deepEqual(rules(prev, tradedNext, ctx(60_000, { trades: 1 })), [], "끝난 교환 하나");
-  // 걸려 있던 교환이 풀렸다 — 서버가 아는 끝난 채널이어야 한다
+  assert.deepEqual(rules(prev, tradedNext, ctx(60_000, { received: [offer] })), [], "받은 제안과 같은 개체");
+  // 받은 개체를 부풀렸다 — 제안보다 경험치·친밀도가 큰 몫은 사탕·장난감 예산으로 센다
+  const inflated = clone(prev);
+  inflated.pets = [pet("p2", "pikachu", { shiny: true, level: 100, exp: expForLevel("medium-fast", 100), affinity: 100 })];
+  assert.deepEqual(rules(prev, inflated, ctx(60_000, { received: [offer] })), ["affinity", "exp"], "받은 개체의 경험치·친밀도를 부풀림");
+  // 다른 종으로 바꿨다 — 제안과 맞지 않는다
+  const swapped = clone(prev);
+  swapped.pets = [pet("p2", "mewtwo", { shiny: true, level: 40, exp: expForLevel("slow", 40), affinity: 80 })];
+  assert.ok(rules(prev, swapped, ctx(60_000, { received: [offer] })).includes("new-pets"), "받은 제안과 다른 종");
+  // 받은 개체에 같은 틈에 이로치 약 — 약을 썼으면 통과, 약이 없으면 shiny(검수 P5 M1)
+  const plainOffer = { ...offer, shiny: false };
+  const potioned = clone(prev);
+  potioned.bag["shiny-potion"] = 1;
+  const potionedNext = clone(potioned);
+  potionedNext.bag["shiny-potion"] = 0;
+  potionedNext.pets = [pet("p2", "pikachu", { shiny: true, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80 })];
+  assert.deepEqual(rules(potioned, potionedNext, ctx(60_000, { received: [plainOffer] })), [], "받은 개체에 이로치 약");
+  assert.ok(rules(prev, potionedNext, ctx(60_000, { received: [plainOffer] })).includes("shiny"), "약 없이 이로치");
+  // 같은 종·성격 교환 둘(레벨 40·50) — 엇갈려 맞추지 않는다(검수 P5 M2)
+  const two = clone(prev);
+  two.pets = [pet("p2", "pikachu", { shiny: true, level: 50, exp: expForLevel("medium-fast", 50), affinity: 80 }), pet("p3", "pikachu", { shiny: true, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80 })];
+  const offer50 = { ...offer, level: 50, exp: expForLevel("medium-fast", 50) };
+  assert.deepEqual(rules(prev, two, ctx(60_000, { received: [offer, offer50] })), [], "같은 종 교환 둘");
+  // 걸려 있던 교환이 풀렸다 — 서버가 아는 끝난 채널의 제안이어야 한다
   const held = clone(prev);
   held.trade = { pending: { channelId: "c1", petId: "p1", offerRev: 1, received: null } };
-  assert.deepEqual(rules(held, tradedNext, ctx(60_000, { tradesBefore: ["c1"] })), [], "직전 저장 전에 끝난 교환");
+  assert.deepEqual(rules(held, tradedNext, ctx(60_000, { receivedBefore: { c1: offer } })), [], "직전 저장 전에 끝난 교환");
   assert.ok(rules(held, tradedNext, ctx(60_000)).includes("new-pets"), "끝나지 않은 채널로는 인정하지 않는다");
   out("7 새 개체 — 출처·시작값·교환");
 }
@@ -233,7 +256,7 @@ out("0 supabase/functions/_shared 가 최신");
   const reused = clone(prev);
   reused.pets = reused.pets.filter((p) => p.id !== "p2");
   reused.pets.push(pet("p2", "pikachu", { since: T0 + 5 }));
-  assert.ok(rules(prev, reused, ctx(HOUR, { trades: 1 })).includes("pet-id"), "같은 번호 다른 since");
+  assert.ok(rules(prev, reused, ctx(HOUR, { received: [{ species: "pikachu", shiny: false, nature: "hardy", level: 1, exp: 0, affinity: 0 }] })).includes("pet-id"), "같은 번호 다른 since");
   const aff = base();
   aff.pets[0]!.affinity = 50;
   const down = clone(aff);

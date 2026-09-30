@@ -76,8 +76,9 @@ export interface VerifyContext {
   gapMs: number; // 서버 시각 기준 직전 저장 뒤 흐른 시간 — 부르는 쪽이 72시간(D25)으로 자른다
   margin: number; // D32 1.1
   letters: Record<string, unknown[]>; // 이 사용자가 서버에서 받은 편지 → 선물 (mail_claims). 새로 넣은 편지 id 를 여기서 찾는다
-  trades: number; // 직전 저장 뒤 끝난 교환 수 (trade_channels)
-  tradesBefore: string[]; // 직전 저장 전에 끝난 교환 채널 — 걸려 있던 교환(trade.pending)이 풀렸을 때 출처로 본다
+  // 교환으로 받은 개체 — 서버가 남긴 상대 제안(P5: 제안 값은 서버가 서버 저장에서 만든다). 받은 개체는 종·성격이 같고 레벨이 제안 이상이어야 한다
+  received: unknown[]; // 직전 저장 뒤 끝난 교환에서 받은 제안
+  receivedBefore: Record<string, unknown>; // 직전 저장 전(30일 안)에 끝난 교환 채널 → 받은 제안 — 걸려 있던 교환(trade.pending)이 풀렸을 때
   seed: string | null; // 계정 시드 (P4b) — 없으면 알 결과를 대조하지 않는다
 }
 
@@ -306,9 +307,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     }
   }
 
-  // 교환 — 그사이 끝난 교환 + 직전 저장에 걸려 있다 풀린 교환(직전 저장 전에 끝났다)
+  // 교환 — 그사이 끝난 교환에서 받은 제안 + 직전 저장에 걸려 있다 풀린 교환의 제안(직전 저장 전에 끝났다)
   const heldBefore = pendingChannel(prev);
-  const traded = ctx.trades + (heldBefore && !pendingChannel(next) && ctx.tradesBefore.includes(heldBefore) ? 1 : 0);
+  const offers = [...ctx.received];
+  if (heldBefore && !pendingChannel(next) && ctx.receivedBefore[heldBefore] != null) offers.push(ctx.receivedBefore[heldBefore]);
 
   // work
   add("work", workOf(next) - workOf(prev), hours * HOUR * m);
@@ -381,8 +383,23 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const prevById = new Map(prevPets.map((p) => [p.id, p]));
   const same = nextPets.map((p) => ({ p, q: prevById.get(p.id) })).filter((x): x is { p: Pet; q: Pet } => x.q != null && x.q.since === x.p.since);
   const fresh = nextPets.filter((p) => prevById.get(p.id)?.since !== p.since);
-  // 교환으로 받은 개체는 상대 개체 값 그대로다 — 경험치가 큰 것부터 교환 수만큼 뺀다. 나머지는 새로 얻어 키운 개체다
-  const grown = [...fresh].sort((a, b) => b.exp - a.exp).slice(traded);
+  // 교환으로 받은 개체 — 서버 제안과 종(같은 틈의 진화 포함)·성격이 같고 레벨이 제안 이상이어야 한다(P5).
+  // 이로치는 같은 틈에 약으로 켜거나 껐을 수 있다 — 켠 수는 아래 약 예산으로 센다(검수 P5 M1).
+  // 맞은 개체는 제안 값에서 늘어난 경험치·친밀도만 예산으로 센다. 나머지 새 개체는 새로 얻어 키운 개체다.
+  // 레벨이 높은 제안부터, 레벨·경험치가 가장 가까운 개체와 맞춘다 — 같은 종·성격의 교환 둘을 엇갈려 맞추지 않게(검수 P5 M2)
+  const tradedFrom = new Map<string, Pet>(); // 받은 개체 id → 그 제안
+  const offerPets = offers.map((raw) => petOf({ id: "offer", ...(isObj(raw) ? raw : {}) })).filter((o): o is Pet => o != null).sort((a, b) => b.level - a.level);
+  for (const o of offerPets) {
+    const fits = fresh.filter((p) => !tradedFrom.has(p.id) && (p.species === o.species || reachable(data.evo, o.species, p.species))
+      && p.nature === o.nature && p.level >= o.level);
+    fits.sort((a, b) => (a.level - o.level) - (b.level - o.level) || Math.abs(a.exp - o.exp) - Math.abs(b.exp - o.exp));
+    const hit = fits[0];
+    if (hit) tradedFrom.set(hit.id, o);
+  }
+  let tradedTurnedShiny = 0;
+  for (const [id, o] of tradedFrom) if (fresh.find((p) => p.id === id)?.shiny && !o.shiny) tradedTurnedShiny += 1;
+  const traded = tradedFrom.size;
+  const grown = fresh.filter((p) => !tradedFrom.has(p.id));
 
   // exp — 쓴 사탕 + 남은 포인트로 살 수 있었던 사탕
   let candy = 0;
@@ -393,7 +410,8 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     candy += pos(had(id) - (nextBag[id] ?? 0)) * value;
     if (it.price) expPerPoint = Math.max(expPerPoint, value / it.price);
   }
-  const expGain = same.reduce((s, x) => s + pos(x.p.exp - x.q.exp), 0) + grown.reduce((s, p) => s + pos(p.exp), 0);
+  const expGain = same.reduce((s, x) => s + pos(x.p.exp - x.q.exp), 0) + grown.reduce((s, p) => s + pos(p.exp), 0)
+    + fresh.reduce((s, p) => s + pos(p.exp - (tradedFrom.get(p.id)?.exp ?? p.exp)), 0);
   add("exp", expGain, (candy + leftover * expPerPoint) * m);
 
   // affinity — 시간·돌봄 상한을 넘는 몫은 장난감으로 올렸어야 한다. 장난감은 모든 개체가 함께 쓴다
@@ -409,6 +427,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     toyNeed += Math.ceil(pos(p.affinity - q.affinity - affinityCap) / r.toyAffinity);
   }
   for (const p of grown) toyNeed += Math.ceil(pos(p.affinity - affinityCap) / r.toyAffinity);
+  for (const [id, o] of tradedFrom) {
+    const p = fresh.find((x) => x.id === id);
+    if (p) toyNeed += Math.ceil(pos(p.affinity - o.affinity - affinityCap) / r.toyAffinity);
+  }
   add("affinity", toyNeed, toyBudget);
 
   // identity · species · shiny(기존 개체)
@@ -427,7 +449,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     }
     if (p.shiny && !q.shiny) turnedShiny += 1;
   }
-  add("shiny", turnedShiny, potionBudget);
+  add("shiny", turnedShiny + tradedTurnedShiny, potionBudget);
 
   // new-pets · pet-id · shiny(새 개체)
   const prevIds = new Set(prevPets.map((p) => p.id));
@@ -489,7 +511,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
           else misses += 1;
           continue;
         }
-        const hit = fresh.find((p) => !usedPets.has(p.id) && petFits(p, roll.species, roll.shiny));
+        const hit = grown.find((p) => !usedPets.has(p.id) && petFits(p, roll.species, roll.shiny));
         if (hit) {
           usedPets.add(hit.id);
           if (!obtained.includes(roll.species)) obtained.push(roll.species);

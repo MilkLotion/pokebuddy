@@ -20,16 +20,16 @@ insert into auth.users (id, email, raw_user_meta_data, is_anonymous, aud, role, 
   ('00000000-0000-0000-0000-00000000000d', 'trade_d@example.com', '{}', false, 'authenticated', 'authenticated', now()),
   ('00000000-0000-0000-0000-00000000000e', null, '{}', true, 'authenticated', 'authenticated', now());
 
--- 제안하려면 그 개체가 서버 저장에 있어야 한다(set_offer 3인자). 개체 지문은 {id, since}
+-- 제안하려면 그 개체가 서버 저장에 있어야 한다(set_offer 3인자). 개체 지문은 {id, since}. 제안 값은 이 서버 저장 값으로 만든다(P5)
 insert into public.cloud_saves (user_id, save, save_v, rev, trust) values
   ('00000000-0000-0000-0000-00000000000a', '{"v":3,"pets":[
-     {"id":"p1","since":1000,"species":"pikachu","shiny":false,"nature":"hardy"},
-     {"id":"p2","since":2000,"species":"pikachu","shiny":false,"nature":"hardy"},
-     {"id":"p3","since":3000,"species":"pikachu","shiny":true,"nature":"bold"}]}', 3, 1, 'legacy'),
+     {"id":"p1","since":1000,"species":"pikachu","shiny":false,"nature":"hardy","level":99},
+     {"id":"p2","since":2000,"species":"pikachu","shiny":false,"nature":"hardy","level":99},
+     {"id":"p3","since":3000,"species":"pikachu","shiny":true,"nature":"bold","level":99}]}', 3, 1, 'legacy'),
   ('00000000-0000-0000-0000-00000000000b', '{"v":3,"pets":[
-     {"id":"p1","since":1001,"species":"eevee","shiny":false,"nature":"calm"}]}', 3, 1, 'legacy'),
+     {"id":"p1","since":1001,"species":"eevee","shiny":false,"nature":"calm","level":99}]}', 3, 1, 'legacy'),
   ('00000000-0000-0000-0000-00000000000c', '{"v":3,"pets":[
-     {"id":"p1","since":1002,"species":"eevee","shiny":false,"nature":"calm"}]}', 3, 1, 'legacy');
+     {"id":"p1","since":1002,"species":"eevee","shiny":false,"nature":"calm","level":99}]}', 3, 1, 'legacy');
 
 create temp table kv (k text primary key, v text);
 grant all on kv to authenticated;
@@ -82,7 +82,17 @@ select throws_ok($$ select public.set_offer(pg_temp.v('ch1')::uuid, '{"species":
 select throws_ok($$ select public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"eevee","level":12,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":1000}') $$, 'P0001', 'TRADE_PET_NOT_SYNCED', '종이 서버 저장과 다르면 거절');
 select throws_ok($$ select public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"pikachu","level":12,"shiny":true,"nature":"hardy"}', '{"id":"p1","since":1000}') $$, 'P0001', 'TRADE_PET_NOT_SYNCED', '이로치가 서버 저장과 다르면 거절');
 select throws_ok($$ select public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"pikachu","level":12,"shiny":false,"nature":"bold"}', '{"id":"p1","since":1000}') $$, 'P0001', 'TRADE_PET_NOT_SYNCED', '성격이 서버 저장과 다르면 거절');
-select is(public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"pikachu","level":12,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":1000}'), 1, 'A 제안 → 판 1 (레벨은 대조하지 않는다)');
+-- P5 H1: 검증받지 않은 저장(unverified)은 제안의 근거가 되지 못한다
+reset role;
+update public.cloud_saves set trust = 'unverified' where user_id = '00000000-0000-0000-0000-00000000000a';
+set local role authenticated;
+select pg_temp.act('a');
+select throws_ok($$ select public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"pikachu","level":12,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":1000}') $$, 'P0001', 'TRADE_SAVE_UNVERIFIED', 'P5 unverified 저장은 제안하지 못한다');
+reset role;
+update public.cloud_saves set trust = 'legacy' where user_id = '00000000-0000-0000-0000-00000000000a';
+set local role authenticated;
+select pg_temp.act('a');
+select is(public.set_offer(pg_temp.v('ch1')::uuid, '{"species":"pikachu","level":12,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":1000}'), 1, 'A 제안 → 판 1 (앱 레벨이 서버 이하면 받는다)');
 select throws_ok($$ select public.set_ready(pg_temp.v('ch1')::uuid, 1) $$, 'P0001', 'TRADE_OFFER_MISSING', '친구 제안이 없으면 확정하지 못한다');
 
 select pg_temp.act('b');
@@ -223,12 +233,12 @@ insert into auth.users (id, email, raw_user_meta_data, is_anonymous, aud, role, 
   ('00000000-0000-0000-0000-000000000003', 'trade_3@example.com', '{}', false, 'authenticated', 'authenticated', now()),
   ('00000000-0000-0000-0000-000000000004', 'trade_4@example.com', '{}', false, 'authenticated', 'authenticated', now());
 insert into public.cloud_saves (user_id, save, save_v, rev, trust) values
-  ('00000000-0000-0000-0000-000000000001', '{"v":3,"pets":[{"id":"p7","since":7000,"species":"mew","shiny":true,"nature":"timid"},
-     {"id":"p8","since":7001,"species":"ditto","shiny":false,"nature":"calm"}]}', 3, 1, 'legacy'),
-  ('00000000-0000-0000-0000-000000000002', '{"v":3,"pets":[{"id":"p7","since":7000,"species":"mew","shiny":true,"nature":"timid"}]}', 3, 1, 'legacy'),
-  ('00000000-0000-0000-0000-000000000003', '{"v":3,"pets":[{"id":"p1","since":7003,"species":"eevee","shiny":false,"nature":"calm"},
-     {"id":"p8","since":7001,"species":"ditto","shiny":false,"nature":"calm"}]}', 3, 1, 'legacy'),
-  ('00000000-0000-0000-0000-000000000004', '{"v":3,"pets":[{"id":"p1","since":7004,"species":"eevee","shiny":false,"nature":"calm"}]}', 3, 1, 'legacy');
+  ('00000000-0000-0000-0000-000000000001', '{"v":3,"pets":[{"id":"p7","since":7000,"species":"mew","shiny":true,"nature":"timid","level":99},
+     {"id":"p8","since":7001,"species":"ditto","shiny":false,"nature":"calm","level":99}]}', 3, 1, 'legacy'),
+  ('00000000-0000-0000-0000-000000000002', '{"v":3,"pets":[{"id":"p7","since":7000,"species":"mew","shiny":true,"nature":"timid","level":99}]}', 3, 1, 'legacy'),
+  ('00000000-0000-0000-0000-000000000003', '{"v":3,"pets":[{"id":"p1","since":7003,"species":"eevee","shiny":false,"nature":"calm","level":99},
+     {"id":"p8","since":7001,"species":"ditto","shiny":false,"nature":"calm","level":99}]}', 3, 1, 'legacy'),
+  ('00000000-0000-0000-0000-000000000004', '{"v":3,"pets":[{"id":"p1","since":7004,"species":"eevee","shiny":false,"nature":"calm","level":99}]}', 3, 1, 'legacy');
 create function pg_temp.held(since bigint, id text) returns text language sql as $$
   select coalesce((select channel_id::text from trade_private.pet_offers o where o.pet_since = since and o.pet_id = id), 'none')
 $$;
