@@ -40,6 +40,19 @@ export interface AppUpdater {
   stop: () => void;
 }
 
+// 업데이트 필요(서버가 이 앱 버전을 거절)를 받은 뒤 할 일 — 설계는 worklog/records/app-update/record.md "업데이트 필요 때 바로 받기"
+//   ask    준비됐다(ready)·수동(manual) — 창을 띄운다. 실행마다 한 번(asked)
+//   check  대기·최신·실패 상태다 — 주기를 기다리지 않고 바로 확인한다. 실행마다 한 번(checked) —
+//          클라우드 표시는 자주 바뀌므로 매번 GitHub 를 부르지 않는다. 그 뒤는 6시간 주기가 맡는다
+//   none   확인·받는 중(끝나면 다시 판단), 꺼짐(개발 실행·npm 설치본), 이미 창을 띄웠거나 확인했다
+export type UrgentStep = "ask" | "check" | "none";
+
+export function urgentStep(status: UpdateView["status"], asked: boolean, checked: boolean): UrgentStep {
+  if (status === "ready" || status === "manual") return asked ? "none" : "ask";
+  if (status === "idle" || status === "latest" || status === "error") return checked ? "none" : "check";
+  return "none";
+}
+
 const versionOf = (p: unknown): string | null => {
   const v = (p as { version?: unknown } | null)?.version;
   return typeof v === "string" ? v : null;

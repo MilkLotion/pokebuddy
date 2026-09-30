@@ -3,7 +3,7 @@
 // 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/record.md "검사 계획")이 본다
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { createAppUpdater, type UpdaterLike } from "../main/updater";
+import { createAppUpdater, urgentStep, type UpdaterLike } from "../main/updater";
 import type { UpdateView } from "../shared/manage";
 
 class FakeUpdater extends EventEmitter implements UpdaterLike {
@@ -103,7 +103,23 @@ async function main(): Promise<void> {
   assert.equal(flushed3, 0, "끄지 않으니 정리도 하지 않는다");
   process.stdout.write("(6) mac 수동 — 새 버전 알림·받기  ok\n");
 
-  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동)\n");
+  // (7) 업데이트 필요 — 준비·수동이면 창 한 번, 대기·최신·실패면 바로 확인 한 번, 확인·받는 중·꺼짐은 기다린다
+  const steps = (asked: boolean, checked: boolean): Record<UpdateView["status"], string> => ({
+    off: urgentStep("off", asked, checked),
+    idle: urgentStep("idle", asked, checked),
+    checking: urgentStep("checking", asked, checked),
+    latest: urgentStep("latest", asked, checked),
+    downloading: urgentStep("downloading", asked, checked),
+    ready: urgentStep("ready", asked, checked),
+    manual: urgentStep("manual", asked, checked),
+    error: urgentStep("error", asked, checked),
+  });
+  assert.deepEqual(steps(false, false), { off: "none", idle: "check", checking: "none", latest: "check", downloading: "none", ready: "ask", manual: "ask", error: "check" });
+  assert.deepEqual(steps(false, true), { off: "none", idle: "none", checking: "none", latest: "none", downloading: "none", ready: "ask", manual: "ask", error: "none" }, "확인은 실행마다 한 번");
+  assert.deepEqual(steps(true, true), { off: "none", idle: "none", checking: "none", latest: "none", downloading: "none", ready: "none", manual: "none", error: "none" }, "창은 실행마다 한 번");
+  process.stdout.write("(7) 업데이트 필요 — 바로 확인·창 한 번  ok\n");
+
+  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동·업데이트 필요)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

@@ -159,6 +159,22 @@ export function showHeld(): Promise<HaltAnswer> {
   });
 }
 
+// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다(worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
+//   ready   [나중에] [지금 다시 시작]
+//   manual  [나중에] [받기] — mac 이 앱을 그 자리에서 바꿀 수 없다(dmg 를 연다)
+//   Esc·Enter 는 나중에 — 게임은 멈추지 않고, 설정의 다시 시작·끌 때 적용이 남는다
+export async function askUpdateRequired(version: string, manual: boolean): Promise<boolean> {
+  const r = await pick({
+    type: "info",
+    title: t("update.required.title"),
+    message: manual ? t("update.required.manual", { version }) : t("update.required.ready", { version }),
+    detail: manual ? "" : t("update.required.ready.detail"),
+    buttons: [t("update.required.later"), manual ? t("update.required.get") : t("update.required.restart")],
+    cancelId: 0,
+  });
+  return r === 1;
+}
+
 // 연결 끊긴 다른 PC 를 넘겨받을지 묻는다(G2) — go 면 여기서 시작, stop 이면 종료(D22)
 export function askConfirm(info: HaltInfo, signal?: AbortSignal): Promise<HaltAnswer> {
   return ask({

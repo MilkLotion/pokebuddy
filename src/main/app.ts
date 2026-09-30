@@ -25,14 +25,14 @@ import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askBlocked, askConfirm, askLost, askSaveLocked, showHeld, showKicked } from "./halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
 import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
-import { createAppUpdater, type AppUpdater } from "./updater";
+import { createAppUpdater, urgentStep, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
@@ -221,6 +221,10 @@ let tray: TrayHandle | null = null;
 // 패치노트 — 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다. 그래서 첫 선택 창이 저장을 만들기 전에 만든다
 const hadSave = fs.existsSync(PATHS.save);
 let patchNotes: PatchNotes | null = null;
+// 업데이트 필요 — 서버가 이 앱 버전을 거절한 실행. 바로 확인하고, 받으면 창을 한 번 띄운다 (src/main/updater.ts urgentStep)
+let updateUrgent = false;
+let updateChecked = false;
+let updateAsked = false;
 let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe·mac 앱)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/updater.ts)
 let lastState: string | null = null;
 
@@ -485,7 +489,10 @@ function startUpdater(): void {
           }),
         }
       : {}),
-    onView: (view) => pushUpdate(view),
+    onView: (view) => {
+      pushUpdate(view);
+      if (updateUrgent) urgentUpdate();
+    },
     // 다시 시작 전 — 메모리 진행을 쓰고 클라우드에 올린 뒤 released 를 알린다(최대 3초). 클라우드는 멈추지 않는다 —
     // 설치가 실패해 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 이어지는 before-quit 은 기다리지 않는다
     beforeInstall: async () => {
@@ -493,6 +500,23 @@ function startUpdater(): void {
       await announceOnline();
     },
   });
+}
+
+// 업데이트 필요를 받았거나 그 뒤 업데이트 상태가 바뀌었다 — 확인·창 띄우기 (worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
+//   창은 게임을 멈추지 않는다. 나중에를 고르면 설정의 다시 시작·끌 때 적용이 남는다
+function urgentUpdate(): void {
+  if (!updater) return;
+  const view = updater.view();
+  const step = urgentStep(view.status, updateAsked, updateChecked);
+  if (step === "check") {
+    updateChecked = true;
+    void updater.check();
+  } else if (step === "ask") {
+    updateAsked = true;
+    void askUpdateRequired(view.next ?? "", view.status === "manual").then((go) => {
+      if (go) void updater?.install();
+    });
+  }
 }
 
 // 패치노트 요청 — 목록 읽기, 안 본 노트를 띄웠다는 알림
@@ -785,6 +809,10 @@ function online(): MainOnline | null {
       onHalt,
       onLost: (kind, synced) => void askLostFlow(kind, synced),
       onNotice: (text) => notifyGame(text),
+      onUpdateRequired: () => {
+        updateUrgent = true;
+        urgentUpdate();
+      },
       freeze: freezeForRestart,
       thaw: thawRestart,
       onRestart: relaunchFresh,

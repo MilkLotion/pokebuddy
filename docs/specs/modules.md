@@ -56,7 +56,7 @@
 부팅하면 `src/main/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
 로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
 세션 저장 `encryptedStorage`는 `~/.claude/pokebuddy/online/session.bin`을 Electron `safeStorage`로 암호화한다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
-앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다.
+앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다. 서버가 이 앱 버전을 거절하면(`CLOUD_UPDATE_REQUIRED`) 앱은 주기를 기다리지 않고 실행마다 한 번 바로 확인한다(`urgentStep`). 새 버전이 준비되면(`ready`·`manual`) `새 버전으로 바꿔야 해요` OS 대화상자를 실행마다 한 번 띄운다(`src/main/halt-dialog.ts` `askUpdateRequired`). `지금 다시 시작`(mac 수동은 `받기`)은 설정의 `다시 시작`과 같다. `나중에`(Esc)는 닫기만 하고 게임을 멈추지 않는다.
 패치노트는 `src/main/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
 
 알림 배너의 상태 판정은 도메인 모듈이 한다. `src/notify`는 줄 세우기와 표시만 맡는다.

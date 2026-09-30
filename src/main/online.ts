@@ -43,6 +43,7 @@ export interface MainOnlineOptions {
   //   synced — 익명 계정이 서버에 한 번이라도 올렸다(되찾을 수 없는 서버 저장이 있다, G-c)
   onLost: (kind: OwnerKind, synced: boolean) => void;
   onNotice: (text: string) => void; // 알림 한 줄 — 이관으로 이 PC 진행을 백업했다 등
+  onUpdateRequired: () => void; // 서버가 이 앱 버전을 거절했다(CLOUD_UPDATE_REQUIRED) — 앱이 바로 업데이트를 확인한다
   // 저장을 비우고 새로 시작하기 직전 — 앱은 메모리 진행을 쓰고 저장 쓰기·교환·우편을 멈춘다
   freeze: () => void;
   thaw: () => void; // 서버 처리가 실패해 새로 시작하지 않는다 — 앱은 멈춘 것을 되돌린다
@@ -184,6 +185,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
       cloudView = v;
       push();
       if (v.error === "CLOUD_OWNER_OTHER") void unstick();
+      if (v.status === "update-required" || v.error === "CLOUD_UPDATE_REQUIRED") o.onUpdateRequired();
     },
     // 밀려나도 로그아웃하지 않는다 — 다시 켜면 같은 세션으로 넘겨받는다(D19, F1)
     onHalt: (reason, info) => {
