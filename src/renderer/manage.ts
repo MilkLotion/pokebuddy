@@ -3994,7 +3994,8 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
       if (ok) open({ kind: "pet", petId });
     });
   });
-  dialogEl.appendChild(actions(go, actionButton("취소", false, false, () => open(back.to))));
+  // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `914:22682`, 2026-09-30 점검)
+  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
 }
 
 // 가방의 진화용 도구 — 그 도구로 지금 진화할 수 있는 개체를 고른다. 박스 개체에게도 쓸 수 있다
