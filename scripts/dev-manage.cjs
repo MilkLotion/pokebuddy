@@ -10,12 +10,14 @@
 // `--input <선택자>=<글자>` 를 주면 누른 뒤에 그 입력칸에 한 글자씩 넣는다. 다 넣은 뒤 포커스가 있는 요소의 id 를 출력한다.
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
 // `--pet-click-text <글자>` 를 주면 파티 상세 기기 창에서 그 글자로 시작하는 첫 단추를 누른다(예: 진화). `--detail` 뒤에 쓴다.
+// `--shop-click-text <글자>` 를 주면 상점 기기 창에서 그 글자인 첫 단추를 누른다(예: +, 최대, 구매). 상품 줄을 누른 뒤에 쓴다.
 // `--drag <출발 선택자> <도착 선택자>` 를 주면 창 안에 마우스 누름·움직임·뗌을 넣어 끌어 놓는다(박스 칸 옮기기). OS 마우스는 쓰지 않는다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
 // `--close` 를 주면 찍은 뒤 관리 창을 닫고 처리되지 않은 오류가 있었는지 알린다.
 // `--dex-shot <파일>` 을 주면 도감 기기 창도 PNG 로 저장한다. 도감 칸을 누른 뒤에 쓴다.
 // `--pet-shot <파일>` 을 주면 파티 상세 기기 창도 PNG 로 저장한다. `--detail` 이나 칸을 누른 뒤에 쓴다.
+// `--shop-shot <파일>` 을 주면 상점 기기 창도 PNG 로 저장한다. 상품 줄을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
@@ -290,6 +292,15 @@ app.whenReady().then(async () => {
               .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim().startsWith(${JSON.stringify(value)})); if (b) b.click(); return !!b; })()`)
               .then(() => new Promise((r) => setTimeout(r, 800)));
           });
+        // --shop-click-text 는 상점 기기 창에서 그 글자인 첫 단추를 누른다 — 수량(+·최대)·구매를 확인할 때
+        if (flag === "--shop-click-text" && value)
+          step = step.then(() => {
+            const shop = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("shop.html"));
+            if (!shop) return undefined;
+            return shop.webContents
+              .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === ${JSON.stringify(value)}); if (b) b.click(); return !!b; })()`)
+              .then(() => new Promise((r) => setTimeout(r, 800)));
+          });
         // --drag 는 두 요소의 가운데를 잇는 마우스 입력을 창에 넣는다 — 포인터 이벤트로 끄는 박스 칸용
         if (flag === "--drag" && value && process.argv[at + 2]) {
           const to = process.argv[at + 2];
@@ -338,11 +349,22 @@ app.whenReady().then(async () => {
               : Promise.resolve();
           const dexShot = argAfter("--dex-shot");
           const dex = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("dex.html"));
-          if (!dexShot || !dex) return petDone;
-          return petDone.then(() =>
-            dex.webContents.capturePage().then((d) => {
-              fs.writeFileSync(dexShot, d.toPNG());
-              process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+          const dexDone =
+            dexShot && dex
+              ? petDone.then(() =>
+                  dex.webContents.capturePage().then((d) => {
+                    fs.writeFileSync(dexShot, d.toPNG());
+                    process.stdout.write(`dex shot: ${dexShot} ${JSON.stringify(dex.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+                  }),
+                )
+              : petDone;
+          const shopShot = argAfter("--shop-shot");
+          const shop = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("shop.html"));
+          if (!shopShot || !shop) return dexDone;
+          return dexDone.then(() =>
+            shop.webContents.capturePage().then((d) => {
+              fs.writeFileSync(shopShot, d.toPNG());
+              process.stdout.write(`shop shot: ${shopShot} ${JSON.stringify(shop.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
             }),
           );
         })

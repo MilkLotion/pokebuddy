@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
+    <title>pokebuddy</title>
+    <style>
+      /* 글꼴 — Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
+         Galmuri11 은 12·24px, Galmuri14 는 15px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md) */
+      @font-face {
+        font-family: "Galmuri11";
+        src: url("../../assets/fonts/Galmuri11.woff2") format("woff2");
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: "Galmuri11";
+        src: url("../../assets/fonts/Galmuri11-Bold.woff2") format("woff2");
+        font-weight: 700;
+      }
+      @font-face {
+        font-family: "Galmuri9";
+        src: url("../../assets/fonts/Galmuri9.woff2") format("woff2");
+      }
+      :root {
+        --font-body: "Galmuri11", "Malgun Gothic", sans-serif;
+        --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
+        font-synthesis: none;
+      }
+      /* 상점 기기 — Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution` (worklog/records/shop-device/record.md). 도감 기기 창(dex.html)과 같은 틀이다.
+         기기의 호박색·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)와 가른다 */
+      :root {
+        --body: #c9822e;
+        --hinge: #98591a;
+        --joint: #6f3f0e;
+        --bezel: #3b2c31;
+        --screen: #f5f3ea;
+        --bar: #dc9540;
+        --stage: #e6e3d5;
+        --paper: #ffffff;
+        --records: #fbfaf6;
+        --ink: #3b2c31;
+        --muted: #8a8378;
+        --soft: #5a534c;
+        --unknown: #d5d2c6;
+        --inverse: #ffffff;
+        --line: #dde1db;
+        --canvas: #f1f2ee;
+        --primary: #0f766e;
+        --primary-hover: #0a5f56;
+        --disabled: #9ca3af;
+        --danger-bg: #fdecec;
+        --danger-ink: #b91c1c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: transparent;
+        overflow: hidden;
+        font-family: var(--font-body);
+        font-size: 12px;
+        line-height: 18px;
+        color: var(--ink);
+        user-select: none;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      .device {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 380px;
+        padding: 14px 16px 16px 26px;
+        background: var(--body);
+        border-radius: 6px 18px 18px 6px;
+        box-shadow:
+          inset -4px -6px 0 rgba(111, 63, 14, 0.55),
+          inset 3px 3px 0 rgba(255, 214, 153, 0.45);
+        overflow: hidden;
+      }
+      /* 관리 창 왼쪽에 붙으면 경첩 면을 오른쪽에 그린다 */
+      .device.left {
+        padding: 14px 26px 16px 16px;
+        border-radius: 18px 6px 6px 18px;
+      }
+      .hinge {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 12px;
+        background: var(--hinge);
+      }
+      .device.left .hinge {
+        left: auto;
+        right: 0;
+      }
+      .hinge::before,
+      .hinge::after {
+        content: "";
+        position: absolute;
+        left: 2px;
+        width: 8px;
+        height: 24px;
+        border-radius: 3px;
+        background: var(--joint);
+      }
+      .hinge::before {
+        top: 60px;
+      }
+      .hinge::after {
+        bottom: 60px;
+      }
+      /* 윗줄 — 창을 끄는 손잡이. 단추는 끌기에서 뺀다 */
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        -webkit-app-region: drag;
+      }
+      .light {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #8fe0d6;
+        box-shadow: 0 0 0 3px #ffffff;
+      }
+      .led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .top .title {
+        margin-left: auto;
+        font-weight: 700;
+        color: var(--inverse);
+      }
+      .close {
+        -webkit-app-region: no-drag;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--inverse);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .close:hover {
+        background: rgba(0, 0, 0, 0.15);
+      }
+      .bezel {
+        padding: 8px;
+        border-radius: 12px;
+        background: var(--bezel);
+      }
+      .screen {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-bottom: 10px;
+        border-radius: 6px;
+        background: var(--screen);
+        overflow: hidden;
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: var(--bar);
+        color: var(--inverse);
+        font-weight: 700;
+      }
+      .bar .state {
+        margin-left: auto;
+        font-family: var(--font-small);
+        font-size: 10px;
+        font-weight: 400;
+        color: #fff1dc;
+      }
+      .entry {
+        display: flex;
+        gap: 10px;
+        padding: 0 10px;
+      }
+      .stage {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 150px;
+        height: 124px;
+        border-radius: 6px;
+        background: var(--stage);
+      }
+      .stage {
+        overflow: hidden;
+      }
+      .info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        min-width: 0;
+      }
+      .measure {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: var(--paper);
+      }
+      .measure div {
+        display: flex;
+        justify-content: space-between;
+      }
+      .measure .key {
+        color: var(--muted);
+      }
+      .flavor {
+        margin: 0 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: var(--paper);
+      }
+      .records {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--records);
+      }
+      .records div {
+        display: flex;
+        gap: 10px;
+      }
+      .records .key {
+        flex: none;
+        width: 84px;
+        font-weight: 700;
+      }
+      .records .value {
+        color: var(--soft);
+        min-width: 0;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+      .controls button {
+        height: 30px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 15px;
+        background: var(--bezel);
+        color: var(--inverse);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .controls .cry {
+        flex: 1;
+      }
+      .controls button:hover:not(:disabled) {
+        background: #56424a;
+      }
+      .controls button:disabled {
+        background: #8a6a70;
+        cursor: default;
+      }
+      .controls .buy {
+        flex: 1;
+        background: var(--primary);
+      }
+      .controls .buy:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+      .controls .buy:disabled {
+        background: var(--disabled);
+      }
+      /* 처리 중 — 글자 대신 점 세 개, 폭 그대로 (docs/specs/ui-components.md 처리 중) */
+      .controls .buy.is-busy {
+        color: transparent;
+        position: relative;
+      }
+      .controls .buy.is-busy::after {
+        content: "···";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--inverse);
+      }
+      /* 그림 — 빈 테두리를 잘라 정수 배로 키운 캔버스 (shop.ts sprite) */
+      .stage canvas {
+        image-rendering: pixelated;
+      }
+      /* 구매 칸 — 기록 칸과 같은 판. 수량 줄과 합계 상자 (Figma `buy`) */
+      .buy-card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--records);
+      }
+      .buy-label {
+        font-weight: 700;
+      }
+      .qty {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .qty button {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        cursor: pointer;
+      }
+      .qty button.max {
+        width: auto;
+        padding: 0 12px;
+        font-weight: 700;
+      }
+      .qty button:disabled {
+        color: var(--disabled);
+        cursor: default;
+      }
+      .qty .count {
+        min-width: 32px;
+        text-align: center;
+      }
+      .qty .hint {
+        min-width: 0;
+        color: var(--soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .total {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--canvas);
+        color: var(--soft);
+      }
+      .total strong {
+        color: var(--ink);
+      }
+      /* 실패·막힘 — 새 줄 대신 같은 상자의 색 (2026-09-30 레이아웃 흔들림 금지) */
+      .total.bad {
+        background: var(--danger-bg);
+        color: var(--danger-ink);
+      }
+      .total.bad strong {
+        color: inherit;
+      }
+      .daycare {
+        align-self: flex-start;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--soft);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="device" class="device"></div>
+    <script type="module" src="../../dist/renderer/shop.js"></script>
+  </body>
+</html>

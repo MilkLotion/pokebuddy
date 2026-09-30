@@ -6,7 +6,7 @@ import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
-import type { DexEntry, ShopItemView } from "../shared/manage";
+import type { DexEntry, ShopAbout, ShopItemView } from "../shared/manage";
 import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
@@ -14,11 +14,15 @@ import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
   ko: string;
+  bonus?: Record<string, number>; // 포켓몬 대신 다른 알이 나올 확률
 }
 
 interface ItemEntry {
   ko: string;
   price: number | null;
+  group?: string; // 상점 기기 창의 분류·설명·효과 (data/items.json)
+  desc?: string;
+  effectText?: string;
 }
 
 interface EvoItemEntry {
@@ -51,6 +55,21 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     return room > 0 ? { room } : { room, blocked: `${SHOP_V3_RULES.bagMax}개까지만 살 수 있어요` };
   };
 
+  // 상점 기기 창 설명 — 정보 줄은 효과·쓰는 곳 두 줄 (2026-10-01 사용자 결정 "records에는 효과,쓰는곳 만 적어")
+  const owned = (id: string): [string, string] => ["보유", `${(save.bag[id] ?? 0).toLocaleString("ko-KR")}개`];
+  const readyMin = Math.round(EGG_V3_RULES.readyMs / 60_000);
+  const eggAbout = (kind: string): ShopAbout => {
+    const bonus = Object.values(eggs(opts)[kind]?.bonus ?? {}).reduce((a, b) => a + b, 0);
+    const pct = Math.round(bonus * 1000) / 10;
+    return {
+      group: "알",
+      spec: ["준비", `${readyMin}분`],
+      desc: `${eggNote(kind, opts) ?? "포켓몬이 나온다"}. 돌보미집에 두면 ${readyMin}분 뒤 열 수 있다.`,
+      effect: pct > 0 ? `포켓몬 1마리 · ${pct}% 특별한 알` : "포켓몬 1마리",
+      where: `돌보미집 · ${readyMin}분 뒤 열기`,
+    };
+  };
+
   // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다.
   // room 은 한 번에 살 수 있는 개수 — 빈 칸 수, 단일 포켓몬 알이면 (남은 종 수 − 기다리는 같은 알 수)까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const daycareFull = save.eggs.length >= EGG_V3_RULES.maxEggs;
@@ -72,6 +91,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       category: "egg",
       affordable: false,
       room: eggRoom(kind),
+      about: eggAbout(kind),
       blocked: !canGiveEgg(save, kind, opts) ? "모두 모았어요" : daycareFull ? "돌보미집이 가득 찼어요" : undefined,
     });
   }
@@ -90,7 +110,14 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const [id, item] of Object.entries(items(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
-    add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, ...bagRoom(id) });
+    const about: ShopAbout = {
+      group: item.group ?? "도구",
+      spec: owned(id),
+      desc: item.desc ?? "",
+      effect: item.effectText ?? "",
+      where: "가방 › 사용 · 파티·박스 포켓몬",
+    };
+    add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
   }
 
   // 진화용 도구 — 종류와 무관하게 같은 값이다
@@ -99,7 +126,16 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     const price = toolPrice(id, opts);
     if (price === null) continue;
     // 설명은 진화 전 종 이름 — "피카츄·레어코일 외 5종" (2026-09-30 사용자 결정, src/tx/shop-detail.ts evoItemNote)
-    add({ id, name: item.ko, note: evoItemNote(save, id, opts), price, category: "evolution", affordable: false, ...bagRoom(id) });
+    // 기기 창의 `쓰는 곳` 도 같은 문구다 (2026-10-01 사용자 Figma 수정 "쓰는곳에 \"피카츄·레어코일 외 5종\" 이걸 적어야겠네")
+    const note = evoItemNote(save, id, opts);
+    const about: ShopAbout = {
+      group: "진화용 도구",
+      spec: owned(id),
+      desc: "정해진 포켓몬에게 쓰면 바로 진화한다. 진화할 수 있는 포켓몬이 있어야 쓸 수 있다.",
+      effect: "바로 진화 · 1개 소모",
+      where: note,
+    };
+    add({ id, name: item.ko, note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
 
   // 파티 칸 — 순서마다 값이 다르다
@@ -112,6 +148,13 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     price: price ?? 0,
     category: "slot",
     affordable: false,
+    about: {
+      group: "파티 칸",
+      spec: ["구매", `${bought} / ${SAVE_V3_RULES.party.shopUnlock}`],
+      desc: "파티 칸이 하나 늘어난다. 늘어난 칸에 포켓몬을 하나 더 꺼내 둘 수 있다.",
+      effect: "파티 칸 +1",
+      where: "파티 탭 · 사면 바로 열림",
+    },
     blocked: price === null ? "더 살 수 있는 칸이 없어요" : undefined,
   });
 

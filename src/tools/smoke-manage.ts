@@ -10,6 +10,7 @@
 //   가방 대상  판 안 대상 목록을 아래로 내려 줄을 눌러도 스크롤이 남는다. 1초 시계 다시 그리기에도 남고, 범위를 바꾸면 맨 위 (8번 버그)
 //   가방 판    어떤 도구든 `사용` 쪽으로 연다. 진화용 도구·성격민트는 설명 한 줄 + 고르는 창 단추
 //   교환 링크  다른 대화상자가 떠 있으면 닫고 박스 탭 + 교환 모달
+//   상점 기기  상품 줄을 누르면 옆 기기 창(설명·구매). 정보 줄 효과·쓰는 곳, 진화용 도구 쓰는 곳 = 목록 줄. 수량·구매 실패(빨강)·이전·다음·다시 누르면 닫기·탭 나가면 닫기
 //   탭 나가기  나가는 탭의 상세 기기 창(개체 상세·도감)을 닫는다. 같은 탭은 그대로
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
 //              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
@@ -25,7 +26,6 @@ import { newPet, nextPetId } from "../party/create";
 import { putPet } from "../box/slots";
 import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
-import { shopDetail } from "../tx/shop-detail";
 import { MINT_RETIRED } from "../bag/mint";
 import { snapshot } from "../tx/snapshot";
 
@@ -48,8 +48,6 @@ save.bag["exp-candy-s"] = 3;
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
 const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
-// 상점 상세 — 검사 (11) 이 여는 상품만 미리 만든다
-const shopDetails = Object.fromEntries(["charmander", "eevee", "bond-cord"].map((id) => [id, shopDetail(save, id)]));
 // 가방 판 검사 (12) 에만 더하는 도구 — 불꽃의돌·성격민트. 앞 검사의 가방 순서를 바꾸지 않게 따로 만들어 둔다
 const bagSave = structuredClone(save);
 bagSave.bag["fire-stone"] = 3;
@@ -64,7 +62,6 @@ fs.writeFileSync(
   `
 const snap = ${JSON.stringify(snap)};
 const dex = ${JSON.stringify(dex)};
-const shopDetails = ${JSON.stringify(shopDetails)};
 const bagExtra = ${JSON.stringify(bagExtra)};
 const t0 = Date.now();
 window.__bump = 0;
@@ -81,9 +78,9 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
-    if (name === "shopDetail") return async (id) => shopDetails[id] ?? null;
     if (name === "dexOpen") return (slug) => { window.__dexOpen = slug; };
     if (name === "petOpen") return (open) => { window.__petOpen = open; };
+    if (name === "shopOpen") return (open) => { window.__shopOpen = open; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
@@ -337,7 +334,7 @@ void app.whenReady().then(async () => {
       await shot("shop-list.png");
       await js(`document.querySelector('#body .shop-cell').click()`);
       await wait(200);
-      assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "칸을 누르면 구매 창");
+      assert.ok(await js<boolean>(`!!window.__shopOpen`), "칸을 누르면 상점 기기 창");
     }
 
     // 다시 읽어도 각자 남는다 — 도감 목록, 상점 목록. 도감만 격자로 되돌리면 상점은 목록 그대로
@@ -415,62 +412,60 @@ void app.whenReady().then(async () => {
     await wait(1400);
     assert.equal(await js<number>(`${list}.scrollTop`), midTop, "가운데 줄을 고른 뒤 다시 그려도 남는다");
 
-    // (11) 상점 상세 — 포켓몬 칸을 누르면 구매 창에 진화 트리, 이브이는 방사형, 진화용 도구는 진화 대상 목록(길면 목록만 스크롤)
-    //      (2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가", Figma 05 `Shop / Buy Pokemon` 등)
+    // (11) 상점 기기 창 — 상품 줄을 누르면 옆 기기 창에 설명·구매. 구매 창(모달)은 없다 (2026-10-01 사용자 결정 A안, Figma 05 `Shop / Device / …`)
+    //      정보 줄은 효과·쓰는 곳 두 줄. 진화용 도구의 쓰는 곳은 목록 줄 문구 그대로. 수량·구매·이전·다음은 관리 창이 처리한다
     await reload();
     await js(`${tabBtn("상점")}.click()`);
     await wait(200);
-    if (pokemonTab) await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
-    await wait(200);
-    const openBuy = async (slug: string): Promise<{ names: string[]; current: string | null; title: string | null; radial: boolean }> => {
-      await js(`document.querySelector('#body .shop-cell[data-slug="${slug}"]').click()`);
-      await wait(500);
-      return js(`({
-        names: [...document.querySelectorAll('#dialog .evo-node .evo-name')].map((n) => n.textContent),
-        current: document.querySelector('#dialog .evo-node.current .evo-name')?.textContent ?? null,
-        title: document.querySelector('#dialog .shop-info .title')?.textContent ?? null,
-        radial: !!document.querySelector('#dialog .evo-radial'),
-      })`);
-    };
-    const closeBuy = async (): Promise<void> => {
-      await js(`[...document.querySelectorAll('#dialog button')].find((b) => b.textContent === '취소').click()`);
-      await wait(200);
-    };
-    if (!pokemonTab) process.stdout.write("(11) 상점 포켓몬 상세  건너뜀 — 포켓몬 탭 숨김\n");
-    else {
-      const fire = await openBuy("charmander");
-      assert.equal(fire.title, "No.0004  파이리", "정보 줄");
-      assert.equal(fire.names.length, 3, `파이리 사슬 3단 (${fire.names.join(",")})`);
-      assert.equal(fire.current, "파이리", "지금 보는 종");
-      assert.ok(fire.names.slice(1).every((n) => n === "???" || n.length > 0), "미해금은 ???");
-      assert.equal(await js<number>(`document.querySelectorAll('#dialog .evo-node .empty').length`), fire.names.filter((n) => n === "???").length, "미해금은 빈 원 — 실루엣 그림 없음");
-      await shot("shop-detail-pokemon.png");
-      await closeBuy();
-      if (await js<boolean>(`!!document.querySelector('#body .shop-cell[data-slug="eevee"]')`)) {
-        const eevee = await openBuy("eevee");
-        assert.equal(eevee.radial, true, "이브이는 방사형");
-        assert.equal(eevee.names.length, 9, "가운데 이브이와 여덟 갈래");
-        const fit = await js<{ top: number; bottom: number; over: number }>(`(() => { const d = document.getElementById('dialog'); const r = d.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, over: d.scrollHeight - d.clientHeight }; })()`);
-        assert.ok(fit.top >= 0 && fit.bottom <= 682 && fit.over <= 0, `이브이 구매 창도 창 안에 스크롤 없이 들어간다 (${JSON.stringify(fit)})`);
-        await shot("shop-detail-eevee.png");
-        await closeBuy();
-      }
-    }
     await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '진화').click()`);
     await wait(200);
     assert.ok((await js<string>(`document.getElementById('body').textContent`)).includes("외 "), "진화 탭 줄 문구 — 진화 전 종 이름 · 외 N종");
-    await js(`[...document.querySelectorAll('#body .row-card')].find((r) => r.textContent.includes('연결의끈')).click()`);
-    await wait(500);
-    const cord = await js<{ pairs: number; scroll: number; fits: boolean }>(`(() => {
-      const list = document.querySelector('#dialog .evo-pairs');
-      const box = document.getElementById('dialog').getBoundingClientRect();
-      return { pairs: document.querySelectorAll('#dialog .evo-pair').length, scroll: list.scrollHeight - list.clientHeight, fits: box.bottom <= window.innerHeight && box.top >= 0 };
-    })()`);
-    assert.equal(cord.pairs, 27, "연결의끈 진화 대상 27쌍 — 2026-09-30 리전폼 도입으로 알로라 데구리·야돈 간선이 늘었다");
-    assert.ok(cord.scroll > 0, "긴 목록은 목록 안에서만 스크롤");
-    assert.equal(cord.fits, true, "구매 창은 창 안에 들어간다");
-    await shot("shop-detail-cord.png");
-    await closeBuy();
+    type ShopOpen = { productId: string; kind: string; rows: [string, string][]; qty: { count: number; cap: number } | null; total: { lead: string; tone: string }; buy: { disabled: boolean } } | null;
+    const shopOpen = `window.__shopOpen ?? null`;
+    const cordRow = `[...document.querySelectorAll('#body .row-card')].find((r) => r.textContent.includes('연결의끈'))`;
+    const cordNote = await js<string>(`${cordRow}.querySelector('.note').textContent`);
+    await js(`${cordRow}.click()`);
+    await wait(200);
+    const cord = await js<ShopOpen>(shopOpen);
+    assert.equal(cord?.productId, "bond-cord", "누른 상품이 기기 창에 뜬다");
+    assert.equal(cord?.kind, "진화");
+    assert.deepEqual(cord?.rows.map((r) => r[0]), ["효과", "쓰는 곳"], "정보 줄은 효과·쓰는 곳 두 줄");
+    assert.equal(cord?.rows[1]?.[1], cordNote, "진화용 도구의 쓰는 곳은 목록 줄 문구 그대로");
+    assert.equal(await js<boolean>(`document.getElementById('scrim').classList.contains('open')`), false, "구매 창(모달)은 뜨지 않는다");
+    assert.equal(await js<string | null>(`${cordRow}.getAttribute('aria-pressed')`), "true", "고른 줄은 톤 배경");
+    // 수량 — 기기 창의 + 는 관리 창으로 돌아와 다시 보낸다. 500P 에 150P 라 최대 3
+    await js(`window.__cb.onShopAct({ productId: 'bond-cord', kind: 'qty', qty: 3 })`);
+    await wait(100);
+    assert.deepEqual(await js<{ count: number; cap: number; hint: string } | null>(`window.__shopOpen.qty`), { count: 3, cap: 3, hint: "최대 3 · 포인트" }, "수량 3 · 상한 3 · 까닭 포인트");
+    // 다른 상품에서 온 단추는 버린다
+    await js(`window.__cb.onShopAct({ productId: 'fire-stone', kind: 'qty', qty: 1 })`);
+    await wait(100);
+    assert.equal(await js<number>(`window.__shopOpen.qty.count`), 3, "다른 상품의 단추는 버린다");
+    // 구매 — 가짜 명령은 늘 실패한다(mock). 합계 상자가 빨강 `사지 못했어요`, 관리 창에는 모달·경고 줄이 없다
+    await js(`window.__cb.onShopAct({ productId: 'bond-cord', kind: 'buy' })`);
+    await wait(400);
+    const failed = await js<ShopOpen>(shopOpen);
+    assert.equal(failed?.total.tone, "bad", "구매 실패는 합계 상자가 빨강");
+    assert.equal(failed?.total.lead, "사지 못했어요");
+    assert.equal(await js<boolean>(`document.getElementById('scrim').classList.contains('open')`), false, "실패해도 모달을 띄우지 않는다");
+    await shot("shop-device-row.png");
+    // 이전·다음 — 지금 탭의 상품 순서. 넘기면 수량·실패 표시는 처음으로
+    const order = await js<string[]>(`[...document.querySelectorAll('#body .row-card .title')].map((t) => t.textContent)`);
+    await js(`window.__cb.onShopStep(1)`);
+    await wait(200);
+    const next = await js<ShopOpen>(shopOpen);
+    assert.notEqual(next?.productId, "bond-cord", "다음 상품");
+    assert.equal(next?.total.tone, "", "넘기면 실패 표시는 지운다");
+    assert.equal(await js<string>(`document.querySelector('#body .row-card[aria-pressed="true"] .title').textContent`), order[order.indexOf("연결의끈") + 1], "목록 순서의 다음 줄");
+    // 같은 줄을 다시 누르면 닫는다. 탭을 나가도 닫는다
+    await js(`document.querySelector('#body .row-card[aria-pressed="true"]').click()`);
+    await wait(200);
+    assert.equal(await js<unknown>(shopOpen), null, "같은 줄을 다시 누르면 기기 창을 닫는다");
+    await js(`${cordRow}.click()`);
+    await wait(200);
+    await js(`${tabBtn("가방")}.click()`);
+    await wait(200);
+    assert.equal(await js<unknown>(shopOpen), null, "상점 탭을 나가면 기기 창을 닫는다");
 
     // (12) 가방 판은 어떤 도구든 `사용` 쪽으로 연다 (2026-09-30 사용자 결정 "다 사용이 먼저 뜨게하면 되는거아니야?").
     //      진화용 도구·성격민트의 `사용` 쪽은 설명 한 줄 + 고르는 창 단추, `판매` 로 바꾸면 판매 쪽
@@ -639,7 +634,7 @@ void app.whenReady().then(async () => {
     assert.equal(setAfter.buttons, buttonsBefore, "대화상자 실패 — 바닥 단추 자리가 그대로");
     assert.equal(setAfter.height, setBefore, `대화상자 실패에도 창 높이가 같다 (${setBefore} → ${setAfter.height})`);
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 그림 ${shots}\n`);
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 기기 창 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

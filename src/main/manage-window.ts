@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -12,6 +12,7 @@ import { createPortraits, portraitKey, type PortraitAsk, type Portraits } from "
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
 import { createPetWindow, type PetWindow } from "./pet-window.js";
+import { createShopWindow, type ShopWindow } from "./shop-window.js";
 import { SOUND_RULES, gainOf } from "../state/settings.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -36,6 +37,10 @@ const CH = {
   petStep: "manage:pet-step",
   petAct: "manage:pet-act",
   petClosed: "manage:pet-closed",
+  shopOpen: "manage:shop-open",
+  shopStep: "manage:shop-step",
+  shopAct: "manage:shop-act",
+  shopClosed: "manage:shop-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -91,6 +96,7 @@ let pickScreen: ManageOptions["pickScreen"] = undefined;
 let mail: ManageOptions["mail"] = undefined;
 let dexWin: DexWindow | null = null;
 let petWin: PetWindow | null = null;
+let shopWin: ShopWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -206,12 +212,26 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     onAct: (action) => toManage(CH.petAct, action),
     onClosed: (gen) => toManage(CH.petClosed, gen),
   });
+  // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
+  shopWin = createShopWindow({
+    preload,
+    html: path.join(path.dirname(html), "shop.html"),
+    onStep: (delta) => toManage(CH.shopStep, delta),
+    onAct: (action) => toManage(CH.shopAct, action),
+    onClosed: (gen) => toManage(CH.shopClosed, gen),
+  });
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/device-gen.ts)
   ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
     if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen, gen);
     else petWin?.close();
+  });
+  ipcMain.on(CH.shopOpen, (e, open: unknown, gen: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    const id = open && typeof open === "object" ? (open as { productId?: unknown }).productId : undefined;
+    if (typeof id === "string") shopWin?.show(win, open as ShopDeviceOpen, gen);
+    else shopWin?.close();
   });
   ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
@@ -329,6 +349,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   win.webContents.on("did-start-loading", () => {
     petWin?.resetGen();
     dexWin?.resetGen();
+    shopWin?.resetGen();
   });
   const route = opts.route;
   // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다

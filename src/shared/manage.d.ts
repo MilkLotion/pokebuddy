@@ -117,6 +117,16 @@ export interface ShopItemView {
   dex?: number; // 포켓몬 — 전국도감 번호. 상점 격자의 번호 줄·검색·지방에 쓴다
   form?: number; // 리전폼의 폼 순번 — 번호 줄이 `#0026-1` 이 된다 (src/dex/regional.ts)
   region?: string; // 리전폼의 지방 — 지방 필터가 번호 구간 대신 이것으로 거른다
+  about?: ShopAbout; // 상점 기기 창의 설명 — 포켓몬 상품은 없다
+}
+
+// 상점 기기 창이 보일 상품 설명 (src/tx/lists.ts, Figma 05 `Shop / Device / …`). 문구는 화면이 그대로 쓴다
+export interface ShopAbout {
+  group: string; // 분류 줄 — "경험치 도구" · "알" · "진화용 도구"
+  spec: [string, string]; // 가격 아래 둘째 줄 — ["보유", "3개"] · ["준비", "5분"]
+  desc: string; // 설명
+  effect: string; // 정보 줄 `효과`
+  where: string; // 정보 줄 `쓰는 곳`. 진화용 도구는 진화 전 종 이름("피카츄·레어코일 외 5종")
 }
 
 export type DexState = "obtained" | "unlocked" | "locked";
@@ -275,7 +285,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 박스 탭을 열고 교환 모달을 띄운다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
@@ -470,6 +480,10 @@ export interface ManageBridge {
   onPetStep: (cb: (delta: -1 | 1) => void) => void; // 파티 상세 기기 창의 이전·다음
   onPetAct: (cb: (action: PetDeviceAction) => void) => void; // 파티 상세 기기 창에서 누른 단추 — 관리 창이 처리한다
   onPetClosed: (cb: (gen: number) => void) => void; // 파티 상세 기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts)
+  shopOpen: (open: ShopDeviceOpen | null, gen?: number) => void; // 상점 기기 창에 이 상품을 띄운다. null 이면 닫는다
+  onShopStep: (cb: (delta: -1 | 1) => void) => void; // 상점 기기 창의 이전·다음
+  onShopAct: (cb: (action: ShopDeviceAction) => void) => void; // 상점 기기 창에서 누른 단추 — 관리 창이 처리한다
+  onShopClosed: (cb: (gen: number) => void) => void; // 상점 기기 창이 닫혔다 — 새 세대 번호
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
@@ -534,6 +548,37 @@ export interface PetDeviceBridge {
   cry: () => Promise<string | null>;
   close: () => void;
   act: (action: PetDeviceAction) => void;
+}
+
+// 상점 기기 창 — 관리 창이 정해 보내는 것(ShopDeviceOpen)에 메인이 붙은 쪽을 더한다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`)
+// 구매도 이 창에서 한다(2026-10-01 사용자 결정 A안). 수량·구매 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
+export interface ShopDeviceOpen {
+  productId: string;
+  kind: string; // 머리 줄 첫 글자 — 도구 · 알 · 진화 · 파티 칸 · 포켓몬
+  name: string;
+  state: string; // 머리 줄 오른쪽 — "살 수 있음" · 살 수 없는 이유
+  group: string;
+  art: string | null; // 상품 그림 data URI. 없으면 빈 칸
+  spec: [string, string][]; // 가격·보유 두 줄
+  desc: string;
+  rows: [string, string][]; // 효과·쓰는 곳
+  qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만
+  total: { lead: string; line: string; tone: "" | "bad" }; // 합계 상자 — 실패·막힘은 빨강
+  buy: { label: string; disabled: boolean; busy: boolean };
+  daycare: boolean; // 돌보미집이 가득 차 알을 못 산다 — `돌보미집 보기` 줄을 둔다
+}
+export interface ShopDeviceView extends ShopDeviceOpen {
+  side: "right" | "left";
+}
+// 기기 창에서 누른 단추 — productId 가 관리 창의 지금 상품과 다르면 버린다
+export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" } | { kind: "daycare" });
+export type ShopDeviceChannel = "shopdev:show" | "shopdev:size" | "shopdev:step" | "shopdev:close" | "shopdev:act";
+export interface ShopDeviceBridge {
+  onShow: (cb: (view: ShopDeviceView) => void) => void;
+  size: (height: number) => void;
+  step: (delta: -1 | 1) => void;
+  close: () => void;
+  act: (action: ShopDeviceAction) => void;
 }
 
 export interface DexDeviceBridge {

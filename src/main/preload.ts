@@ -21,6 +21,10 @@ type PetDeviceAction = import("../shared/manage").PetDeviceAction;
 type PetDeviceChannel = import("../shared/manage").PetDeviceChannel;
 type PetDeviceView = import("../shared/manage").PetDeviceView;
 type PetDeviceBridge = import("../shared/manage").PetDeviceBridge;
+type ShopDeviceAction = import("../shared/manage").ShopDeviceAction;
+type ShopDeviceChannel = import("../shared/manage").ShopDeviceChannel;
+type ShopDeviceView = import("../shared/manage").ShopDeviceView;
+type ShopDeviceBridge = import("../shared/manage").ShopDeviceBridge;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
@@ -110,6 +114,10 @@ const MANAGE = {
   petStep: "manage:pet-step",
   petAct: "manage:pet-act",
   petClosed: "manage:pet-closed",
+  shopOpen: "manage:shop-open",
+  shopStep: "manage:shop-step",
+  shopAct: "manage:shop-act",
+  shopClosed: "manage:shop-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -148,6 +156,10 @@ const manage: ManageBridge = {
   onPetStep: (cb) => ipcRenderer.on(MANAGE.petStep, (_e, delta: -1 | 1) => cb(delta)),
   onPetAct: (cb) => ipcRenderer.on(MANAGE.petAct, (_e, action: PetDeviceAction) => cb(action)),
   onPetClosed: (cb) => ipcRenderer.on(MANAGE.petClosed, (_e, gen: number) => cb(gen)),
+  shopOpen: (open, gen) => ipcRenderer.send(MANAGE.shopOpen, open, gen),
+  onShopStep: (cb) => ipcRenderer.on(MANAGE.shopStep, (_e, delta: -1 | 1) => cb(delta)),
+  onShopAct: (cb) => ipcRenderer.on(MANAGE.shopAct, (_e, action: ShopDeviceAction) => cb(action)),
+  onShopClosed: (cb) => ipcRenderer.on(MANAGE.shopClosed, (_e, gen: number) => cb(gen)),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
@@ -259,3 +271,22 @@ const pet: PetDeviceBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyPet", pet);
+
+// 상점 기기 창 — 상품 하나를 받고, 그린 높이와 이전·다음·닫기·누른 단추(수량·구매)를 보낸다
+const SHOP = {
+  show: "shopdev:show",
+  size: "shopdev:size",
+  step: "shopdev:step",
+  close: "shopdev:close",
+  act: "shopdev:act",
+} satisfies Record<string, ShopDeviceChannel>;
+
+const shop: ShopDeviceBridge = {
+  onShow: (cb) => ipcRenderer.on(SHOP.show, (_e, view: ShopDeviceView) => cb(view)),
+  size: (h) => ipcRenderer.send(SHOP.size, h),
+  step: (delta) => ipcRenderer.send(SHOP.step, delta),
+  close: () => ipcRenderer.send(SHOP.close),
+  act: (action) => ipcRenderer.send(SHOP.act, action),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyShop", shop);

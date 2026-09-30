@@ -17,8 +17,6 @@ import type {
   CloudStatusView,
   DexEntry,
   EggView,
-  EvoNodeView,
-  EvoPairView,
   FormView,
   MailGiftView,
   MailLetterView,
@@ -30,7 +28,8 @@ import type {
   PetView,
   PortraitAsk,
   ScreenView,
-  ShopDetail,
+  ShopDeviceAction,
+  ShopDeviceOpen,
   ShopItemView,
   SlotView,
   Snapshot,
@@ -38,7 +37,6 @@ import type {
   TradeScreen,
   UpdateView,
 } from "../shared/manage.js";
-import { RADIAL_MIN, evoDrawer } from "./evo-tree.js";
 import { genderIcon } from "./gender.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
@@ -164,7 +162,6 @@ type Dialog =
   | { kind: "evo-target"; itemId: string } // 가방의 진화용 도구 — 진화할 개체를 고른다
   | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
-  | { kind: "buy"; productId: string; qty: number }
   | { kind: "swap" } // 파티 교체 — 박스와 파티 사이를 끌어 놓아 옮긴다
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
@@ -1555,22 +1552,24 @@ function shopRow(item: ShopItemView): HTMLElement {
   body.appendChild(el("div", "title", item.name));
   const note = item.blocked ?? item.note;
   if (note) body.appendChild(el("div", "note", note)); // 설명이 없는 상품은 이름 한 줄만
-  // 줄 끝 › — 누르면 구매 창이 열린다 (Figma `Shop Layout` product 의 chevron)
+  // 줄 끝 › — 누르면 옆에 상점 기기 창이 뜬다 (Figma `Shop Layout` product 의 chevron)
   card.append(body, el("div", "price", point(item.price)), el("span", "chevron", "›"));
-  // 살 수 없어도 누를 수 있다. 이유는 구매 창이 보여 준다
-  card.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
+  // 살 수 없어도 누를 수 있다. 이유는 기기 창이 보여 준다. 고른 줄은 톤 배경
+  card.setAttribute("aria-pressed", String(item.id === shopPick));
+  card.addEventListener("click", () => pickShop(item.id));
   if (item.id === "random") card.dataset.tut = "shop"; // 상점 튜토리얼이 밝히는 곳
   return card;
 }
 
-// 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 구매 창이 열린다. 살 수 없는 이유는 가격 아래 한 줄로
+// 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 상점 기기 창이 뜬다. 살 수 없는 이유는 가격 아래 한 줄로
 function shopCell(item: ShopItemView): HTMLElement {
   const cell = button("dex-cell shop-cell");
   cell.dataset.slug = item.id;
   cell.append(el("div", "no", item.dex ? `#${dexNoText(item.dex, item.form, 4)}` : ""), portraitOf(item.id, false, "dot", "", true));
   cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
   if (item.blocked) cell.appendChild(el("div", "no", item.blocked));
-  cell.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
+  cell.setAttribute("aria-pressed", String(item.id === shopPick));
+  cell.addEventListener("click", () => pickShop(item.id));
   return cell;
 }
 
@@ -3172,6 +3171,7 @@ function setTab(next: TabId): void {
     dexPick = null;
     window.pokebuddyManage.dexOpen(null, dexGen);
   }
+  if (tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
   tab = next;
   bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
   if (next === "dex" && !dexRows) void loadDex();
@@ -3200,6 +3200,8 @@ function drawBody(): void {
   // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
   if (detailPet && !petOf(detailPet)) detailPet = null;
   syncPetDevice();
+  if (shopPick && !view.shop.some((i) => i.id === shopPick)) shopPick = null;
+  syncShopDevice();
   if (tab === "party") drawParty(view);
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
@@ -3678,6 +3680,190 @@ function switchButton(on: boolean, label: string, run: () => void): HTMLButtonEl
 
 const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots.some((p) => p?.id === id))?.name ?? null;
 
+// ── 상점 기기 창 ──────────────────────────────────────────────────────────────
+// 상품 줄·칸을 누르면 관리 창 옆에 상점 기기 창이 뜬다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
+// 설명과 구매를 한 창에 둔다 — 구매 창(모달)은 없앴다 (2026-10-01 사용자 결정 A안, worklog/records/shop-device/record.md).
+// 무엇을 보일지는 여기서 정해 보낸다. 수량·구매 단추는 여기로 돌아와 명령으로 처리한다
+
+let shopPick: string | null = null; // 기기 창에 띄운 상품
+let shopQty = 1;
+let shopNotice = ""; // 마지막 구매 실패 — 기기 창의 합계 상자가 빨강으로 보인다
+let shopSending = false; // 구매 명령을 보내는 중 — 두 번 누르기를 막는다
+let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
+// 기기 창 세대 번호·마지막으로 보낸 내용 — 파티 상세 기기 창과 같다 (syncPetDevice)
+let shopGen = 0;
+let shopDeviceOpen = false;
+let shopDeviceSent = "";
+
+const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티 칸", pokemon: "포켓몬" };
+
+// 누른 상품 — 같은 상품을 다시 누르면 닫는다(도감 칸과 같다)
+function pickShop(id: string): void {
+  shopPick = shopPick === id ? null : id;
+  shopQty = 1;
+  shopNotice = "";
+  draw();
+}
+
+// 아이콘 data URI — 아직 없으면 받아 온 뒤 기기 창을 다시 보낸다. 받아도 없으면 null 로 남긴다(다시 청하지 않는다)
+function iconNow(key: string): string | null {
+  const uri = iconCache.get(key);
+  if (uri !== undefined) return uri;
+  void window.pokebuddyManage.icons([key]).then((got) => {
+    iconCache.set(key, got[key] ?? null);
+    syncShopDevice();
+  });
+  return null;
+}
+
+// 상품 그림 — 알은 색을 바꾼 알 그림, 도구·진화용 도구는 도구 그림, 파티 칸은 빈 칸
+function shopArt(item: ShopItemView): string | null {
+  if (item.category === "slot") return null;
+  if (item.category === "pokemon") {
+    const uri = portraitCache.get(item.id);
+    if (uri === undefined) wantPortrait(item.id);
+    return uri ?? null;
+  }
+  if (item.category === "egg" && item.id !== "ancient-stone") {
+    const palette = view?.eggPalettes[item.id];
+    if (!palette || palette.length !== EGG_SOURCE.length) return iconNow("egg");
+    const done = eggTinted.get(item.id);
+    if (done === undefined) void tintEgg(item.id, palette).then(() => syncShopDevice());
+    return done ?? null;
+  }
+  return iconNow(`item:${item.id}`);
+}
+
+// 기기 창에 보낼 내용 — 수량·합계는 옛 구매 창과 같은 규칙이다.
+// 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
+// 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/tx/lists.ts)
+function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
+  const afford = item.price > 0 ? Math.floor(v.points / item.price) : 1;
+  const cap = Math.max(1, Math.min(afford, item.room ?? afford));
+  const many = MULTI_BUY.has(item.category) && !item.blocked;
+  const count = many ? Math.max(1, Math.min(shopQty, cap)) : 1;
+  const total = item.price * count;
+  const short = total > v.points;
+  const egg = item.category === "egg";
+  const eggFree = Math.max(0, v.eggs.size - v.eggs.used);
+  const daycareFull = egg && v.eggs.used >= v.eggs.size;
+  // 수량 상한의 까닭 — 가장 작은 상한 하나 (Figma 05 `Shop / Device / Tool` "최대 311 · 포인트", `… / Egg` "최대 3 · 빈 칸 3")
+  const why = (): string => {
+    if (afford < (item.room ?? afford)) return "포인트";
+    if (!egg) return "가방 자리";
+    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${(item.room ?? 0).toLocaleString("ko-KR")}`;
+    return `빈 칸 ${eggFree.toLocaleString("ko-KR")}`;
+  };
+
+  // 합계 상자 — 실패는 빨강 `사지 못했어요`(새 줄을 끼우지 않는다, 2026-09-30). 막혔으면 까닭, 모자라면 합계와 보유
+  let lead: string;
+  let line = "";
+  if (shopNotice) {
+    lead = "사지 못했어요";
+    line = shopNotice;
+  } else if (item.blocked) {
+    lead = daycareFull ? `${item.blocked}. (${v.eggs.used} / ${v.eggs.size})` : item.blocked;
+    if (daycareFull) line = "부화한 뒤 다시 살 수 있어요";
+  } else if (short) {
+    lead = "포인트가 모자라요";
+    line = `합계 ${point(total)} · 보유 ${point(v.points)}`;
+  } else {
+    lead = `합계 ${point(total)}`;
+    line = `구매 후 보유 ${point(v.points - total)}${egg ? ` · 돌보미집 ${v.eggs.used + count} / ${v.eggs.size}` : ""}`;
+  }
+
+  // 포켓몬 상품은 설명 데이터가 없다(포켓몬 탭은 숨김, SHOP_TABS) — 효과·쓰는 곳만 둔다
+  const about = item.about;
+  return {
+    productId: item.id,
+    kind: SHOP_KIND[item.category] ?? "",
+    name: item.name,
+    state: item.blocked ?? (short ? "포인트 부족" : "살 수 있음"),
+    group: about?.group ?? "",
+    art: shopArt(item),
+    spec: about ? [["가격", point(item.price)], about.spec] : [["가격", point(item.price)]],
+    desc: about?.desc ?? item.note,
+    rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
+    qty: many ? { count, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · ${why()}` } : null,
+    total: { lead, line, tone: shopNotice ? "bad" : "" },
+    buy: { label: item.price === 0 ? "받기" : "구매", disabled: !!item.blocked || short, busy: shopBusy },
+    daycare: daycareFull && !!item.blocked,
+  };
+}
+
+function syncShopDevice(): void {
+  const item = shopPick && view ? view.shop.find((i) => i.id === shopPick) : undefined;
+  if (!item || !view) {
+    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
+    if (shopDeviceOpen || shopDeviceSent) window.pokebuddyManage.shopOpen(null);
+    shopDeviceOpen = false;
+    shopDeviceSent = "";
+    return;
+  }
+  const open = shopDeviceModel(item, view);
+  const key = JSON.stringify(open);
+  if (shopDeviceOpen && key === shopDeviceSent) return;
+  window.pokebuddyManage.shopOpen(open, shopGen);
+  shopDeviceOpen = true;
+  shopDeviceSent = key;
+}
+
+// 이전·다음 — 지금 탭(분류)의 상품 순서로 돈다. 포켓몬 탭은 지방·검색으로 좁힌 순서
+function stepShop(delta: -1 | 1): void {
+  if (!shopPick || !view) return;
+  const rows = view.shop.filter((i) => i.category === shopFilter);
+  const list = shopFilter === "pokemon" ? shopPokemonShown(rows) : rows;
+  if (list.length < 2) return;
+  const at = list.findIndex((i) => i.id === shopPick);
+  const next = list[(at + delta + list.length) % list.length];
+  if (!next) return;
+  shopPick = next.id;
+  shopQty = 1;
+  shopNotice = "";
+  draw();
+  bodyEl.querySelector<HTMLElement>('#body [aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
+}
+
+// 기기 창에서 누른 단추 — 기기 창이 다른 상품을 보이던 때 누른 것은 버린다
+function onShopAction(action: ShopDeviceAction): void {
+  if (!shopPick || action.productId !== shopPick) return;
+  if (action.kind === "qty") {
+    shopQty = action.qty;
+    shopNotice = "";
+    syncShopDevice();
+    return;
+  }
+  if (action.kind === "daycare") {
+    setTab("box"); // 상점 기기 창도 닫힌다
+    draw();
+    open({ kind: "daycare" }); // 돌보미집은 박스 머리 단추로 여는 모달이다 (2026-09-30)
+    return;
+  }
+  void buyShop(shopPick);
+}
+
+// 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
+async function buyShop(id: string): Promise<void> {
+  const item = view?.shop.find((i) => i.id === id);
+  if (!item || !view || shopSending) return;
+  const model = shopDeviceModel(item, view);
+  if (model.buy.disabled) return;
+  const count = model.qty?.count ?? 1;
+  shopSending = true;
+  const slow = setTimeout(() => {
+    shopBusy = true;
+    syncShopDevice();
+  }, 300);
+  const ok = await send("shop.buy", id, count > 1 ? { count } : {}, { keepOpen: true });
+  clearTimeout(slow);
+  shopSending = false;
+  shopBusy = false;
+  shopNotice = ok ? "" : notice;
+  notice = ""; // 실패 문구는 기기 창의 합계 상자에만 보인다
+  if (ok) shopQty = 1;
+  syncShopDevice();
+}
+
 // ── 파티 상세 기기 창 ─────────────────────────────────────────────────────────────
 // 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)).
 // 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
@@ -3896,162 +4082,6 @@ function drawNatureTarget(itemId: string): void {
   dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
   const acts = pets.map((p) => actionButton(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
   dialogEl.appendChild(actions(...acts, closeButton()));
-}
-
-// ── 모달 · 구매 창 ─────────────────────────────────────────────────────────────
-
-function drawBuy(productId: string, qty: number): void {
-  const item = view?.shop.find((i) => i.id === productId);
-  if (!item || !view) {
-    close();
-    return;
-  }
-  // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
-  // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/tx/lists.ts)
-  const afford = item.price > 0 ? Math.floor(view.points / item.price) : 1;
-  const cap = Math.max(1, Math.min(afford, item.room ?? afford));
-  const many = MULTI_BUY.has(item.category) && !item.blocked;
-  const count = many ? Math.max(1, Math.min(qty, cap)) : 1;
-  const total = item.price * count;
-  const short = total > view.points;
-  const egg = item.category === "egg";
-  const eggFree = Math.max(0, view.eggs.size - view.eggs.used);
-  // 알 수량의 상한 까닭 — 가장 작은 상한 하나 (Figma 05 `Shop / Buy Egg · 여러 개` `1006:20399` "최대 3 · 돌보미집 빈 칸 3")
-  const eggWhy = (): string => {
-    if (afford < (item.room ?? afford)) return "포인트";
-    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${(item.room ?? 0).toLocaleString("ko-KR")}`;
-    return `돌보미집 빈 칸 ${eggFree.toLocaleString("ko-KR")}`;
-  };
-
-  // 머리 — 제목·보유 포인트와 오른쪽 위 ✕ (시안 `Shop / Buy` 의 head)
-  const head = el("div", "buy-head");
-  const titles = el("div", "titles");
-  titles.append(el("h2", undefined, `${item.name} ${item.price === 0 ? "받기" : "구매"}`), el("div", "sub", `보유 ${point(view.points)}`));
-  const x = button("close", "✕");
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
-  head.append(titles, x);
-  dialogEl.appendChild(head);
-
-  // 수량 — − · 수량 · + · 최대 · 최대 N (05 `Shop / Buy` 의 Quantity Stepper Show Max). 막혔으면 두지 않는다
-  if (many) {
-    const box = el("div", "qty square");
-    const minus = button("", "−");
-    minus.disabled = count <= 1;
-    minus.addEventListener("click", () => open({ kind: "buy", productId, qty: count - 1 }));
-    const plus = button("", "+");
-    plus.disabled = count >= cap;
-    plus.addEventListener("click", () => open({ kind: "buy", productId, qty: count + 1 }));
-    const max = button("max", "최대");
-    max.disabled = count >= cap;
-    max.addEventListener("click", () => open({ kind: "buy", productId, qty: cap }));
-    const hint = `최대 ${cap.toLocaleString("ko-KR")}${egg ? ` · ${eggWhy()}` : ""}`;
-    box.append(minus, el("span", "count", count.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", hint));
-    dialogEl.appendChild(box);
-  }
-
-  dialogEl.append(...shopDetailBlock(item)); // 포켓몬 — 정보 줄·진화 트리, 진화용 도구 — 진화 대상 (2026-09-30)
-
-  // 합계 상자 — 살 수 있으면 합계와 구매 후 보유, 막혔으면 까닭과 한 줄 안내 (시안 `Shop / Buy Blocked`)
-  // 실패(명령 거절)는 합계 상자가 빨강으로 바뀌어 보인다 — 줄을 끼우지 않는다 (2026-09-30). 대화상자 공통 오류 줄은 건너뛴다
-  const summary = el("div", notice ? "buy-total bad" : "buy-total");
-  if (notice) {
-    summary.append(el("strong", undefined, "사지 못했어요"), el("div", undefined, notice));
-    noticeInline = true;
-  } else if (item.blocked) {
-    const daycare = item.category === "egg" && view.eggs.used >= view.eggs.size;
-    summary.appendChild(el("strong", undefined, daycare ? `${item.blocked}. (${view.eggs.used} / ${view.eggs.size})` : item.blocked));
-    if (daycare) summary.appendChild(el("div", undefined, "부화한 뒤 다시 살 수 있어요"));
-  } else if (short) {
-    summary.append(el("strong", undefined, "포인트가 모자라요"), el("div", undefined, `합계 ${point(total)} · 보유 ${point(view.points)}`));
-  } else {
-    const after = egg ? ` · 돌보미집 ${view.eggs.used + count} / ${view.eggs.size}` : "";
-    summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}${after}`));
-  }
-  dialogEl.appendChild(summary);
-
-  // 바닥 — 왼쪽 `돌보미집 보기`(돌보미집이 찼을 때), 오른쪽 `취소`·`구매`
-  const foot = el("div", "buy-foot");
-  if (item.blocked && item.category === "egg") {
-    foot.appendChild(
-      actionButton("돌보미집 보기", false, false, () => {
-        setTab("box");
-        draw();
-        open({ kind: "daycare" }); // 돌보미집은 박스 머리 단추로 여는 모달이다 (2026-09-30)
-      }),
-    );
-  }
-  foot.append(el("span", "spacer"), actionButton("취소", false, false, close), actionButton(item.price === 0 ? "받기" : "구매", true, !!item.blocked || short, () => void buy(productId, count)));
-  dialogEl.appendChild(foot);
-}
-
-// 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
-async function buy(productId: string, count: number): Promise<void> {
-  await send("shop.buy", productId, count > 1 ? { count } : {});
-}
-
-// ── 상점 상세 — 포켓몬 진화 트리, 진화용 도구의 대상 ─────────────────────────────
-// 구매 창에 합친다 (2026-09-30 사용자 결정 "합쳐도될듯"). Figma 05 `Shop / Buy Pokemon` · `… · Branch` · `… · Eevee` ·
-// `Shop / Buy Evolution Item` · `… · Long`. 상품마다 한 번 받는다. 도감 해금 수가 바뀌면 다시 받는다(??? 가 풀릴 수 있다)
-const shopDetails = new Map<string, ShopDetail | null>();
-const shopDetailKey = (id: string): string => `${id}@${view?.dex.unlocked ?? 0}:${view?.dex.obtained ?? 0}`;
-
-function shopDetailBlock(item: ShopItemView): HTMLElement[] {
-  if (item.category !== "pokemon" && item.category !== "evolution") return [];
-  const key = shopDetailKey(item.id);
-  if (!shopDetails.has(key)) {
-    shopDetails.set(key, null); // 받는 중 — 다시 그려도 두 번 청하지 않는다
-    window.pokebuddyManage
-      .shopDetail(item.id)
-      .then((detail) => {
-        shopDetails.set(key, detail);
-        if (dialog?.kind === "buy" && dialog.productId === item.id) drawDialog();
-      })
-      .catch(() => shopDetails.delete(key)); // 다음에 그릴 때 다시 청한다
-    return [];
-  }
-  const detail = shopDetails.get(key);
-  if (!detail) return [];
-  return detail.kind === "pokemon" ? pokemonDetail(detail) : [evoTargets(detail.pairs)];
-}
-
-// 진화 트리 그리기 — 도감 기기 창과 같이 쓴다 (src/renderer/evo-tree.ts). 초상만 이 창의 것을 넘긴다
-const { evoArrow, evoPortrait, evoTree, evoRadial } = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
-
-// 포켓몬 상세 — 정보 줄(초상·번호·이름·분류·타입)과 진화
-function pokemonDetail(detail: Extract<ShopDetail, { kind: "pokemon" }>): HTMLElement[] {
-  const info = el("div", "shop-info");
-  const text = el("div", "text");
-  const types = el("div", "types");
-  detail.types.forEach((name, i) => types.appendChild(typeBadge(name, detail.typeIds[i])));
-  text.append(el("div", "title", `No.${dexNoText(detail.dex, detail.form, 4)}  ${detail.name}`), el("div", "genus", detail.genus), types);
-  info.append(portraitOf(detail.slug, false, "portrait"), text);
-  const evo = el("div", "evo-block");
-  evo.appendChild(el("div", "evo-label", "진화"));
-  const tree = detail.tree;
-  if (!tree.children.length) evo.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));
-  else evo.appendChild(tree.children.length >= RADIAL_MIN ? evoRadial(tree) : evoTree(tree));
-  return [info, evo];
-}
-
-// 진화용 도구의 대상 — 진화 전 → 진화 후 한 열. 길면 목록 안에서만 스크롤한다 (2026-09-30 사용자 결정 "추천대로 진행")
-function evoTargets(pairs: EvoPairView[]): HTMLElement {
-  const box = el("div", "evo-block");
-  box.appendChild(el("div", "evo-label", `진화 대상 ${pairs.length}종`));
-  const list = el("div", "evo-pairs");
-  const side = (s: EvoPairView["from"]): HTMLElement => {
-    const mon = el("span", "evo-mon");
-    mon.append(evoPortrait(s.slug, s.locked, "thumb round"), el("span", undefined, s.name));
-    return mon;
-  };
-  for (const pair of pairs) {
-    const row = el("div", "evo-pair");
-    row.append(side(pair.from), evoArrow(14), side(pair.to));
-    if (pair.note) row.appendChild(el("span", "evo-need", pair.note));
-    list.appendChild(row);
-  }
-  box.appendChild(list);
-  return box;
 }
 
 // ── 모달 · 파티 교체 ───────────────────────────────────────────────────────────
@@ -4742,7 +4772,6 @@ const SHAPE: Record<Dialog["kind"], string> = {
   "evo-target": "dialog",
   nature: "dialog",
   "nature-target": "dialog",
-  buy: "dialog buy",
   swap: "dialog swap",
   achievements: "dialog tall",
   settings: "dialog settings",
@@ -4807,7 +4836,6 @@ function drawDialog(): void {
   else if (dialog.kind === "evo-target") drawEvoTarget(dialog.itemId);
   else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
-  else if (dialog.kind === "buy") drawBuy(dialog.productId, dialog.qty);
   else if (dialog.kind === "swap") drawSwap();
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
@@ -5173,6 +5201,7 @@ async function clockTick(): Promise<void> {
       view = next; // 모양이 같다 — 시간 값만 새것으로
       applyLive();
       syncPetDevice(); // 기기 창도 새 시간 값을 받는다. 기기 창이 표시만 고친다
+      syncShopDevice();
       return;
     }
     if (holdFullDraw()) {
@@ -5300,6 +5329,16 @@ window.pokebuddyManage.onPetClosed((gen) => {
   petDeviceSent = "";
   if (!detailPet) return;
   detailPet = null;
+  draw();
+});
+window.pokebuddyManage.onShopStep((delta) => stepShop(delta));
+window.pokebuddyManage.onShopAct((action) => onShopAction(action));
+window.pokebuddyManage.onShopClosed((gen) => {
+  shopGen = gen;
+  shopDeviceOpen = false;
+  shopDeviceSent = "";
+  if (!shopPick) return;
+  shopPick = null;
   draw();
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
