@@ -4,7 +4,7 @@
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창 내용 영역의 오른쪽 위에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다.
 // 관리 창을 옮기면 따라간다. 관리 창이 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import type { DexDetail, DexDeviceChannel, DexDeviceView } from "../shared/manage";
+import type { DexDetail, DexDeviceChannel, DexDeviceView, EvoNodeView } from "../shared/manage";
 import { windowIcon } from "./paths.js";
 import { createGenGate } from "./device-gen.js";
 
@@ -24,6 +24,8 @@ export interface DexWindowOptions {
   html: string;
   detail: (slug: string) => DexDetail | null;
   portrait: (slug: string) => Promise<string | null>;
+  tree: (slug: string) => EvoNodeView | null; // 진화 트리 — 상점 구매 창과 같다 (2026-09-30 사용자 결정 도감 상세 A안)
+  portraits: (slugs: string[]) => Promise<Record<string, string>>; // 트리 종들의 그림을 한 번에
   cry: (slug: string) => Promise<string | null>;
   volume: () => number; // 울음소리 음량 0~1
   onStep: (delta: -1 | 1) => void; // 이전·다음 — 순서는 관리 창 목록이 정한다
@@ -146,7 +148,16 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (!w || !slug) return;
     const detail = opts.detail(slug);
     if (!detail) return;
-    const view: DexDeviceView = { detail, portrait: await opts.portrait(slug), side, volume: opts.volume() };
+    // 미해금 종은 트리를 보이지 않는다 — 진화 줄의 "해금하면 보여요" 를 그대로 둔다
+    const tree = detail.state === "locked" ? null : opts.tree(slug);
+    const shown: string[] = [];
+    const walk = (n: EvoNodeView): void => {
+      if (!n.locked) shown.push(n.slug);
+      n.children.forEach(walk);
+    };
+    if (tree) walk(tree);
+    const [portrait, treePortraits] = await Promise.all([opts.portrait(slug), shown.length ? opts.portraits(shown) : Promise.resolve({})]);
+    const view: DexDeviceView = { detail, portrait, side, volume: opts.volume(), tree, treePortraits };
     if (w.webContents.isLoading()) w.webContents.once("did-finish-load", () => alive()?.webContents.send(CH.show, view));
     else w.webContents.send(CH.show, view);
   }

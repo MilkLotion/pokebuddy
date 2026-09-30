@@ -10,7 +10,7 @@ import type {
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, isNatureId, snapSize } from "./rules.js";
-import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
+import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
 import { normalizeMail } from "../mail/core.js";
 import { FIND_RULES } from "../find/rules.js";
@@ -367,6 +367,9 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
   const d = isObj(raw.daily) ? raw.daily : {};
   const dailyDate = str(d.date, date);
   const eggs = normalizeEggs(raw.eggs);
+  const bag = normalizeBag(raw.bag);
+  const points = normalizePoints(raw.points);
+  refundRetiredMint(bag, points); // 성격민트 은퇴 — 가진 민트를 지우고 개당 구매가를 포인트로 (src/bag/mint.ts)
   return {
     v: 3,
     savedAt: nonNeg(raw.savedAt, now),
@@ -377,8 +380,8 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     boxes,
     eggs,
     eggSeq: Math.max(nonNeg(raw.eggSeq), maxEggNo(eggs)), // 2026-09-26 에 더했다. 옛 저장은 지금 있는 알의 가장 큰 번호에서 시작한다
-    bag: normalizeBag(raw.bag),
-    points: normalizePoints(raw.points),
+    bag,
+    points,
     dex: normalizeDex(raw.dex),
     achievements: normalizeAchievements(raw.achievements),
     tutorials: normalizeTutorials(raw.tutorials),

@@ -14,6 +14,7 @@ import { decide, type Rand } from "../egg/hatch.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { SHOP_V3_RULES } from "../save/rules.js";
 import { FIND_RULES } from "./rules.js";
+import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { inRandomEgg } from "../shop/catalog.js";
 import { placeNew } from "../shop/buy.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·부화와 같다
 import type { FindKind, FindRecordV3, FindV3, SaveV3 } from "../shared/save-v3";
@@ -47,12 +48,13 @@ export interface ItemCandidate {
   weight: number;
 }
 
-// 도구 후보 — data/items.json 에서 상점가가 0 초과 FIND_RULES.itemMaxPrice 이하. 가중치는 1/가격. 민트(mint)도 후보 하나다
+// 도구 후보 — data/items.json 에서 상점가가 0 초과 FIND_RULES.itemMaxPrice 이하. 가중치는 1/가격. 성격민트는 은퇴해 빠진다 (src/bag/mint.ts)
 export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
   const table = loadJson<Record<string, ItemEntry>>("items.json", opts);
   const out: ItemCandidate[] = [];
   for (const [id, e] of Object.entries(table)) {
     if (id.startsWith("_") || e == null || typeof e !== "object") continue;
+    if (MINT_RETIRED && id === MINT_ID) continue;
     const price = e.price;
     if (typeof price !== "number" || price <= 0 || price > FIND_RULES.itemMaxPrice) continue;
     out.push({ id, weight: 1 / price });

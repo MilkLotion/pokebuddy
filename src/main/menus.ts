@@ -4,6 +4,7 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import type { MenuView } from "../shared/manage";
+import { NATURE_SHOWN } from "../dex/natures";
 import { t } from "./text";
 
 export interface PetMenuModel {
@@ -30,9 +31,9 @@ export interface PetMenuActions {
   ball?(): void; // 이 포켓몬만 볼에 넣는다 — 파티 개체일 때만
 }
 
-// 첫 줄 — "이브이 · 용감". 성격이 없으면 이름만
+// 첫 줄 — "이브이 · 용감". 성격이 없거나 성격을 화면에서 끈 동안(NATURE_SHOWN)은 이름만
 export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
-  model.nature ? t("menu.pet", { name: model.name, nature: model.nature }) : model.name;
+  NATURE_SHOWN && model.nature ? t("menu.pet", { name: model.name, nature: model.nature }) : model.name;
 
 // 우클릭한 포켓몬 관련 항목만 둔다 — 잠시 숨기기(전체)·종료는 트레이에만 (2026-09-28 사용자 결정). 숨긴 동안에는 우클릭할 포켓몬도 없다
 // 상세 보기(그 포켓몬의 개체 상세)는 부르는 쪽(app.ts)이 파티 개체일 때 끝에 붙인다

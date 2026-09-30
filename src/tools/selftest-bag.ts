@@ -4,6 +4,7 @@
 // 곡선은 원작 경험치 타입 6종의 100레벨 누적값으로 맞춘다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import { MINT_REFUND_EACH, MINT_RETIRED } from "../bag/mint";
 import { use } from "../bag/use";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL, progressTo } from "../dex/growth";
 import { BAG_V3_RULES, SAVE_V3_RULES } from "../save/rules";
@@ -161,7 +162,14 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 }
 
 // (12) 민트는 한 종류다 — 원작 25 성격 가운데 아무 성격으로나 바꾼다. 지금 성격이면 거절하고 쓰지 않는다 (2026-09-29 사용자 결정)
-{
+// 2026-09-30 성격민트 은퇴(src/bag/mint.ts MINT_RETIRED) — 켜 두면 사용을 거절하고 쓰지 않는다. 옛 사용 규칙은 스위치를 끄면 다시 본다
+if (MINT_RETIRED) {
+  const s = seed({ nature: "hardy" }, { mint: 3 });
+  assert.equal(use(s, "mint", "p1", { nature: "adamant" }).reason, "no-item", "은퇴한 민트는 쓰지 않는다");
+  assert.equal(s.pets[0]?.nature, "hardy", "성격은 그대로");
+  assert.equal(s.bag.mint, 3, "거절하면 가방도 그대로");
+  process.stdout.write("(12) 민트 · 은퇴라 사용 거절  ok\n");
+} else {
   const s = seed({ nature: "hardy" }, { mint: 3 });
   assert.equal(use(s, "mint", "p1").reason, "bad-nature", "성격을 골라야 한다");
   assert.equal(use(s, "mint", "p1", { nature: "없는성격" }).reason, "bad-nature", "모르는 성격은 안 된다");
@@ -178,7 +186,8 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 }
 
 // (12b) 옛 민트 21종(<성격>-mint, 그 전의 mint-<성격>)은 저장을 읽을 때 민트 하나로 합친다. 합친 개수는 999 에서 자른다
-{
+// 은퇴한 동안은 합친 민트를 지우고 개당 구매가를 포인트로 돌려준다 — (12c)
+if (!MINT_RETIRED) {
   const old = empty(0);
   const bag = old.bag as Record<string, number>;
   bag["mint-adamant"] = 2;
@@ -193,6 +202,28 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(many)) as unknown, 0)?.bag, { mint: 999, "exp-candy-s": 1200 }, "민트는 999 에서 자르고 다른 도구는 그대로");
   assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify({ ...empty(0), bag: { mint: 2 } })) as unknown, 0)?.bag, { mint: 2 }, "지금 민트는 그대로");
   process.stdout.write("(12b) 옛 민트 합치기  ok\n");
+}
+
+// (12c) 성격민트 은퇴 — 가진 민트(옛 식별자를 합친 것 포함)를 지우고 개당 100P 를 돌려준다. 다시 읽어도 두 번 돌려주지 않는다
+// 2026-09-30 사용자 결정 "이미 가진 민트는 사용자데이터에 있으면 다 삭제하고 그 금액만큼 포인트 보내게 할거야"
+if (MINT_RETIRED) {
+  const old = empty(0);
+  const bag = old.bag as Record<string, number>;
+  bag["mint-adamant"] = 2;
+  bag["adamant-mint"] = 1;
+  bag.mint = 4;
+  bag["exp-candy-s"] = 5;
+  old.points.balance = 50;
+  const once = normalize(JSON.parse(JSON.stringify(old)) as unknown, 0);
+  assert.deepStrictEqual(once?.bag, { "exp-candy-s": 5 }, "민트는 모두 지운다");
+  assert.equal(once?.points.balance, 50 + 7 * MINT_REFUND_EACH, "7개 × 100P");
+  const twice = normalize(JSON.parse(JSON.stringify(once)) as unknown, 0);
+  assert.equal(twice?.points.balance, once?.points.balance, "다시 읽어도 그대로");
+  const many = empty(0);
+  (many.bag as Record<string, number>)["brave-mint"] = 700;
+  (many.bag as Record<string, number>)["calm-mint"] = 700;
+  assert.equal(normalize(JSON.parse(JSON.stringify(many)) as unknown, 0)?.points.balance, 999 * MINT_REFUND_EACH, "합친 민트는 999 에서 자른 뒤 돌려준다");
+  process.stdout.write("(12c) 민트 은퇴 · 지우고 포인트로  ok\n");
 }
 
 // (13) 약 두 개는 이로치를 오간다. 도감 기록은 남는다
@@ -212,7 +243,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 {
   const s = seed({}, { mint: 1 });
   assert.equal(use(s, "없는도구", "p1").reason, "no-item");
-  assert.equal(use(s, "mint", "없는개체").reason, "no-pet");
+  assert.equal(use(s, "toy", "없는개체").reason, "no-pet");
   assert.equal(use(s, "adamant-mint", "p1").reason, "no-item", "옛 민트 식별자는 도구가 아니다");
   assert.equal(use(s, "_comment", "p1").reason, "no-item", "메모 키는 도구가 아니다");
   process.stdout.write("(14) 없는 도구와 개체  ok\n");

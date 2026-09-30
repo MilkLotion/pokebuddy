@@ -12,6 +12,7 @@ import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../main/anchor";
 import { ART_RULES, zoomOf } from "../main/art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, isDefaultHome, petSpot, roamBox, stackShift, stageOf, toLocal } from "../main/layout";
 import { lockExcept, menuView, petLine, petMenu, trayMenu } from "../main/menus";
+import { NATURE_SHOWN } from "../dex/natures";
 import { t } from "../main/text";
 import { SAVE_RULES, SAVE_V3_RULES } from "../save/rules";
 import * as legacy from "../save/legacy";
@@ -136,7 +137,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   let ghost = 0;
   const act = { toggleHidden: () => void (hid += 1), quit: () => void (quit += 1), toggleGhost: () => void (ghost += 1) };
   const menu = petMenu({ name: "이브이", nature: "용감" }, {});
-  eq(menu.map((m) => m.label ?? m.type), [t("menu.pet", { name: "이브이", nature: "용감" }), "separator"], "petMenu 순서·라벨");
+  const EEVEE_LINE = NATURE_SHOWN ? t("menu.pet", { name: "이브이", nature: "용감" }) : "이브이"; // 성격을 화면에서 끈 동안은 이름만 (2026-09-30)
+  eq(menu.map((m) => m.label ?? m.type), [EEVEE_LINE, "separator"], "petMenu 순서·라벨");
   ok(menu[0]?.enabled === false, "petMenu 첫 줄은 비활성");
   // 포켓몬 우클릭은 그 포켓몬 관련 항목만 — 잠시 숨기기·종료는 트레이에만 (2026-09-28 사용자 결정)
   const whole = [t("menu.hide"), t("menu.show"), t("menu.quit")];
@@ -152,7 +154,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(menu.some((m) => m.label === t("menu.ball")), false, "ball 동작이 없으면 볼에 넣기가 없다");
   // 앱이 그리는 모양 — 이름·상태 두 줄, 못 하는 돌봄은 흐리게 이유를 오른쪽에, 겹친 구분선은 하나로
   const cared = menuView(petMenu({ name: "이브이", nature: "용감", status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, {}), "켜짐");
-  eq(cared[0], { kind: "status", title: t("menu.pet", { name: "이브이", nature: "용감" }), caption: "배부름 · 기분 좋음" }, "menuView 상태 줄");
+  eq(cared[0], { kind: "status", title: EEVEE_LINE, caption: "배부름 · 기분 좋음" }, "menuView 상태 줄");
   const feedView = cared.find((v) => v.kind === "item" && v.label === t("menu.feed"));
   eq(feedView?.kind === "item" ? [feedView.disabled, feedView.hint] : null, [true, "0:40"], "menuView 밥 주기 흐림과 남은 시간");
   eq(menuView([...menu, { type: "separator" }, { type: "separator" }, { label: "x", click: () => undefined }], "켜짐").filter((v) => v.kind === "separator").length, 1, "menuView 겹친 구분선은 하나");

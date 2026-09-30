@@ -1,6 +1,7 @@
 // 우편함 자체 검사 — 선물 검사·저장에 넣기·중복 방지·끊김 복구·명령 통로 차단
 // 설계: worklog/records/post-box/record.md "구현 설계". 서버 SQL 검사는 supabase/tests/mail_test.sql
 import assert from "node:assert";
+import { MINT_REFUND_EACH, MINT_RETIRED } from "../bag/mint";
 import { applyGifts, markRead, normalizeMail, parseGifts } from "../mail/core";
 import { createMainMail, type RpcResult } from "../main/mail";
 import { empty, normalize } from "../save/v3";
@@ -22,11 +23,20 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   assert.equal(parseGifts([{ kind: "points", count: 1.5 }]), null, "정수만");
   assert.equal(parseGifts({}), null, "배열이 아니다");
   // 옛 민트 식별자는 민트 한 종류로 바꿔 받는다 — 편지를 버리지 않는다 (2026-09-29 민트 통일)
-  assert.deepStrictEqual(parseGifts([{ kind: "item", id: "adamant-mint", count: 2 }, { kind: "item", id: "mint", count: 1 }]), [{ kind: "item", id: "mint", count: 2 }, { kind: "item", id: "mint", count: 1 }]);
+  // 성격민트 은퇴(2026-09-30) 동안은 민트 선물을 개당 구매가만큼 포인트로 받는다 (src/bag/mint.ts)
+  assert.deepStrictEqual(
+    parseGifts([{ kind: "item", id: "adamant-mint", count: 2 }, { kind: "item", id: "mint", count: 1 }]),
+    MINT_RETIRED
+      ? [{ kind: "points", count: 2 * MINT_REFUND_EACH }, { kind: "points", count: MINT_REFUND_EACH }]
+      : [{ kind: "item", id: "mint", count: 2 }, { kind: "item", id: "mint", count: 1 }],
+  );
   {
     const s = empty(0);
     assert.deepStrictEqual(applyGifts(s, "old-mint", [{ kind: "item", id: "serious-mint", count: 3 }]), { ok: true, applied: true });
-    assert.deepStrictEqual(s.bag, { mint: 3 }, "옛 성실민트 선물은 민트 3개");
+    if (MINT_RETIRED) {
+      assert.deepStrictEqual(s.bag, {}, "은퇴한 민트는 가방에 넣지 않는다");
+      assert.equal(s.points.balance, 3 * MINT_REFUND_EACH, "옛 성실민트 3개 선물은 300P");
+    } else assert.deepStrictEqual(s.bag, { mint: 3 }, "옛 성실민트 선물은 민트 3개");
   }
   process.stdout.write("(1) 선물 검사  ok\n");
 }

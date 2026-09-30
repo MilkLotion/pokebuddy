@@ -26,6 +26,7 @@ import { putPet } from "../box/slots";
 import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
 import { shopDetail } from "../tx/shop-detail";
+import { MINT_RETIRED } from "../bag/mint";
 import { snapshot } from "../tx/snapshot";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-manage-"));
@@ -225,35 +226,43 @@ void app.whenReady().then(async () => {
     // (7) 상점 포켓몬 격자 넘김
     await js(`${tabBtn("상점")}.click()`);
     await wait(200);
-    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
-    await wait(200);
-    const shopCells = await js<number>(`document.querySelectorAll('#body .shop-cell').length`);
-    const shopLabel = await js<string>(label);
-    assert.equal(shopCells, 15, "상점 한 쪽 15칸");
-    assert.match(shopLabel, /^1 \/ \d+$/);
-    assert.ok((await js<number>(overflow)) <= 0, `상점 쪽은 스크롤 없이 들어간다 (${await js<number>(overflow)}px 넘침)`);
-    await js(`document.querySelector('#body .grid-pager button:last-child').click()`);
-    await wait(1300);
-    assert.match(await js<string>(label), /^2 \/ \d+$/, "1초 시계에도 쪽이 남는다");
-    await shot("shop-page.png");
+    // 상점 포켓몬 탭은 잠시 숨김이다(src/renderer/manage.ts SHOP_TABS, 2026-09-30) — 탭이 없으면 (7)·(11)의 포켓몬 부분을 건너뛴다
+    const pokemonTab = await js<boolean>(`[...document.querySelectorAll('#body .chip')].some((c) => c.textContent === '포켓몬')`);
+    if (pokemonTab) {
+      await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+      await wait(200);
+      const shopCells = await js<number>(`document.querySelectorAll('#body .shop-cell').length`);
+      const shopLabel = await js<string>(label);
+      assert.equal(shopCells, 15, "상점 한 쪽 15칸");
+      assert.match(shopLabel, /^1 \/ \d+$/);
+      assert.ok((await js<number>(overflow)) <= 0, `상점 쪽은 스크롤 없이 들어간다 (${await js<number>(overflow)}px 넘침)`);
+      await js(`document.querySelector('#body .grid-pager button:last-child').click()`);
+      await wait(1300);
+      assert.match(await js<string>(label), /^2 \/ \d+$/, "1초 시계에도 쪽이 남는다");
+      await shot("shop-page.png");
+    } else process.stdout.write("(7) 상점 포켓몬 격자  건너뜀 — 포켓몬 탭 숨김\n");
 
     // (8) 성격 창 — 고르기 전후 창 높이가 같다. 칸 이름은 가운데
-    await js(`${tabBtn("파티")}.click()`);
-    await wait(200);
-    await js(`document.querySelector('#body .slot[data-pet]').click()`);
-    await wait(200);
-    const petId = snap.party.slots.find((s) => s.pet)?.pet?.id ?? "";
-    await js(`window.__cb.onPetAct({ petId: '${petId}', kind: 'dialog', dialog: 'nature' })`);
-    await wait(300);
-    const before = await js<number>(`document.getElementById('dialog').getBoundingClientRect().height`);
-    await shot("nature-before.png");
-    await js(`[...document.querySelectorAll('#dialog .nature-cell')].find((c) => !c.disabled).click()`);
-    await wait(300);
-    const after = await js<number>(`document.getElementById('dialog').getBoundingClientRect().height`);
-    await shot("nature-after.png");
-    assert.equal(after, before, `성격을 골라도 창 높이가 같다 (${before} → ${after})`);
-    const hints = await js<number>(`document.querySelectorAll('#dialog .nature-cell .hint').length`);
-    assert.equal(hints, 1, "빈 설명 줄은 두지 않는다 — 지금 성격 칸에만");
+    // 성격민트 은퇴(src/bag/mint.ts MINT_RETIRED) 동안은 성격 변경 창에 닿을 수 없고 민트도 없다 — 건너뛴다 (2026-09-30)
+    if (MINT_RETIRED) process.stdout.write("(8) 성격 창  건너뜀 — 성격민트 은퇴\n");
+    else {
+      await js(`${tabBtn("파티")}.click()`);
+      await wait(200);
+      await js(`document.querySelector('#body .slot[data-pet]').click()`);
+      await wait(200);
+      const petId = snap.party.slots.find((s) => s.pet)?.pet?.id ?? "";
+      await js(`window.__cb.onPetAct({ petId: '${petId}', kind: 'dialog', dialog: 'nature' })`);
+      await wait(300);
+      const before = await js<number>(`document.getElementById('dialog').getBoundingClientRect().height`);
+      await shot("nature-before.png");
+      await js(`[...document.querySelectorAll('#dialog .nature-cell')].find((c) => !c.disabled).click()`);
+      await wait(300);
+      const after = await js<number>(`document.getElementById('dialog').getBoundingClientRect().height`);
+      await shot("nature-after.png");
+      assert.equal(after, before, `성격을 골라도 창 높이가 같다 (${before} → ${after})`);
+      const hints = await js<number>(`document.querySelectorAll('#dialog .nature-cell .hint').length`);
+      assert.equal(hints, 1, "빈 설명 줄은 두지 않는다 — 지금 성격 칸에만");
+    }
 
     // (9) 보는 방식 — 문서를 다시 읽어 대화상자를 치우고 시작한다
     const reload = async (): Promise<void> => {
@@ -308,23 +317,26 @@ void app.whenReady().then(async () => {
     const [openedSlug, rowSlug] = opened.split("|");
     assert.equal(openedSlug, rowSlug, "칸을 누르면 그 종을 기기 창에");
 
-    await js(`${tabBtn("상점")}.click()`);
-    await wait(200);
-    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
-    await wait(200);
-    assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 15, "상점은 따로 기억 — 아직 격자");
-    await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
-    await wait(150);
-    // 상점 스크롤 방식도 쪽 방식과 같은 칸 격자다 — 넘김 줄 없이 전부 (2026-09-30 사용자 결정 "< > 로 옮기냐 스크롤하냐")
-    const shopRows = await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`);
-    assert.ok(shopRows > 100, `상점 스크롤 방식은 격자 칸을 전부 보인다 (${shopRows}칸)`);
-    assert.equal(await js<number>(`document.querySelectorAll('#body .rows .row-card').length`), 0, "상품 줄 카드는 쓰지 않는다");
-    assert.equal(await js<boolean>(`!!document.querySelector('#body .grid-pager')`), false, "상점 스크롤에도 넘김 줄이 없다");
-    assert.ok((await js<number>(overflow)) > 0, "상점 스크롤 방식은 세로 스크롤");
-    await shot("shop-list.png");
-    await js(`document.querySelector('#body .shop-cell').click()`);
-    await wait(200);
-    assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "칸을 누르면 구매 창");
+    let shopRows = 0; // 상점 스크롤 방식의 칸 수 — 포켓몬 탭이 있을 때만 잰다
+    if (pokemonTab) {
+      await js(`${tabBtn("상점")}.click()`);
+      await wait(200);
+      await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+      await wait(200);
+      assert.equal(await js<number>(`document.querySelectorAll('#body .shop-cell').length`), 15, "상점은 따로 기억 — 아직 격자");
+      await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
+      await wait(150);
+      // 상점 스크롤 방식도 쪽 방식과 같은 칸 격자다 — 넘김 줄 없이 전부 (2026-09-30 사용자 결정 "< > 로 옮기냐 스크롤하냐")
+      shopRows = await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`);
+      assert.ok(shopRows > 100, `상점 스크롤 방식은 격자 칸을 전부 보인다 (${shopRows}칸)`);
+      assert.equal(await js<number>(`document.querySelectorAll('#body .rows .row-card').length`), 0, "상품 줄 카드는 쓰지 않는다");
+      assert.equal(await js<boolean>(`!!document.querySelector('#body .grid-pager')`), false, "상점 스크롤에도 넘김 줄이 없다");
+      assert.ok((await js<number>(overflow)) > 0, "상점 스크롤 방식은 세로 스크롤");
+      await shot("shop-list.png");
+      await js(`document.querySelector('#body .shop-cell').click()`);
+      await wait(200);
+      assert.ok((await js<string>(`document.getElementById('dialog').textContent`)).includes("구매"), "칸을 누르면 구매 창");
+    }
 
     // 다시 읽어도 각자 남는다 — 도감 목록, 상점 목록. 도감만 격자로 되돌리면 상점은 목록 그대로
     await reload();
@@ -337,11 +349,13 @@ void app.whenReady().then(async () => {
     await js(`${tabBtn("도감")}.click()`);
     await wait(400);
     assert.equal(await js<number>(cells), 15, "도감은 격자로 기억");
-    await js(`${tabBtn("상점")}.click()`);
-    await wait(200);
-    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
-    await wait(200);
-    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
+    if (pokemonTab) {
+      await js(`${tabBtn("상점")}.click()`);
+      await wait(200);
+      await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+      await wait(200);
+      assert.equal(await js<number>(`document.querySelectorAll('#body .dex-grid .shop-cell').length`), shopRows, "상점은 스크롤 방식으로 따로 기억");
+    }
 
     // (10) 가방 대상 목록 스크롤 — 아래로 내려 아래 줄을 눌러도 남는다. 1초 시계 다시 그리기에도 남는다. 범위를 바꾸면 맨 위.
     //      누르지 않고 내린 뒤 다시 그려도, 가운데 줄을 눌러도 남는다
@@ -404,7 +418,7 @@ void app.whenReady().then(async () => {
     await reload();
     await js(`${tabBtn("상점")}.click()`);
     await wait(200);
-    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
+    if (pokemonTab) await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
     await wait(200);
     const openBuy = async (slug: string): Promise<{ names: string[]; current: string | null; title: string | null; radial: boolean }> => {
       await js(`document.querySelector('#body .shop-cell[data-slug="${slug}"]').click()`);
@@ -420,22 +434,25 @@ void app.whenReady().then(async () => {
       await js(`[...document.querySelectorAll('#dialog button')].find((b) => b.textContent === '취소').click()`);
       await wait(200);
     };
-    const fire = await openBuy("charmander");
-    assert.equal(fire.title, "No.0004  파이리", "정보 줄");
-    assert.equal(fire.names.length, 3, `파이리 사슬 3단 (${fire.names.join(",")})`);
-    assert.equal(fire.current, "파이리", "지금 보는 종");
-    assert.ok(fire.names.slice(1).every((n) => n === "???" || n.length > 0), "미해금은 ???");
-    assert.equal(await js<number>(`document.querySelectorAll('#dialog .evo-node .empty').length`), fire.names.filter((n) => n === "???").length, "미해금은 빈 원 — 실루엣 그림 없음");
-    await shot("shop-detail-pokemon.png");
-    await closeBuy();
-    if (await js<boolean>(`!!document.querySelector('#body .shop-cell[data-slug="eevee"]')`)) {
-      const eevee = await openBuy("eevee");
-      assert.equal(eevee.radial, true, "이브이는 방사형");
-      assert.equal(eevee.names.length, 9, "가운데 이브이와 여덟 갈래");
-      const fit = await js<{ top: number; bottom: number; over: number }>(`(() => { const d = document.getElementById('dialog'); const r = d.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, over: d.scrollHeight - d.clientHeight }; })()`);
-      assert.ok(fit.top >= 0 && fit.bottom <= 682 && fit.over <= 0, `이브이 구매 창도 창 안에 스크롤 없이 들어간다 (${JSON.stringify(fit)})`);
-      await shot("shop-detail-eevee.png");
+    if (!pokemonTab) process.stdout.write("(11) 상점 포켓몬 상세  건너뜀 — 포켓몬 탭 숨김\n");
+    else {
+      const fire = await openBuy("charmander");
+      assert.equal(fire.title, "No.0004  파이리", "정보 줄");
+      assert.equal(fire.names.length, 3, `파이리 사슬 3단 (${fire.names.join(",")})`);
+      assert.equal(fire.current, "파이리", "지금 보는 종");
+      assert.ok(fire.names.slice(1).every((n) => n === "???" || n.length > 0), "미해금은 ???");
+      assert.equal(await js<number>(`document.querySelectorAll('#dialog .evo-node .empty').length`), fire.names.filter((n) => n === "???").length, "미해금은 빈 원 — 실루엣 그림 없음");
+      await shot("shop-detail-pokemon.png");
       await closeBuy();
+      if (await js<boolean>(`!!document.querySelector('#body .shop-cell[data-slug="eevee"]')`)) {
+        const eevee = await openBuy("eevee");
+        assert.equal(eevee.radial, true, "이브이는 방사형");
+        assert.equal(eevee.names.length, 9, "가운데 이브이와 여덟 갈래");
+        const fit = await js<{ top: number; bottom: number; over: number }>(`(() => { const d = document.getElementById('dialog'); const r = d.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, over: d.scrollHeight - d.clientHeight }; })()`);
+        assert.ok(fit.top >= 0 && fit.bottom <= 682 && fit.over <= 0, `이브이 구매 창도 창 안에 스크롤 없이 들어간다 (${JSON.stringify(fit)})`);
+        await shot("shop-detail-eevee.png");
+        await closeBuy();
+      }
     }
     await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '진화').click()`);
     await wait(200);
@@ -447,7 +464,7 @@ void app.whenReady().then(async () => {
       const box = document.getElementById('dialog').getBoundingClientRect();
       return { pairs: document.querySelectorAll('#dialog .evo-pair').length, scroll: list.scrollHeight - list.clientHeight, fits: box.bottom <= window.innerHeight && box.top >= 0 };
     })()`);
-    assert.equal(cord.pairs, 25, "연결의끈 진화 대상 25쌍");
+    assert.equal(cord.pairs, 27, "연결의끈 진화 대상 27쌍 — 2026-09-30 리전폼 도입으로 알로라 데구리·야돈 간선이 늘었다");
     assert.ok(cord.scroll > 0, "긴 목록은 목록 안에서만 스크롤");
     assert.equal(cord.fits, true, "구매 창은 창 안에 들어간다");
     await shot("shop-detail-cord.png");
@@ -471,6 +488,9 @@ void app.whenReady().then(async () => {
       dialog: !document.getElementById('scrim').classList.contains('open') ? null : document.querySelector('#dialog h2')?.textContent ?? '',
     })`;
     const cardOf = (name: string): string => `[...document.querySelectorAll('#body .bag-card')].find((c) => c.querySelector('.name').textContent === '${name}')`;
+    // 불꽃의돌은 `진화` 탭에 있다 — 가방 분류가 상점과 같은 도구·진화 두 탭이다 (2026-09-30 `6a8f1b5`)
+    await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '진화').click()`);
+    await wait(200);
     await js(`${cardOf("불꽃의돌")}.click()`);
     await wait(200);
     const stone = await js<BagPanel>(bagPanel);
@@ -494,18 +514,21 @@ void app.whenReady().then(async () => {
     assert.ok(evoText.includes("불꽃의돌") && /진화시킬까요|진화할 수 있는 포켓몬이 없어요/.test(evoText), `단추를 누르면 진화 대상 창(evo-target) (${evoText})`);
     await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); 0`);
     await wait(200);
-    await js(`${cardOf("성격민트")}.click()`);
-    await wait(200);
-    const mint = await js<BagPanel>(bagPanel);
-    assert.equal(mint.mode, "사용", "성격민트도 `사용` 쪽");
-    assert.equal(mint.note, "성격을 바꿀 포켓몬을 골라요");
-    assert.deepEqual(mint.buttons, ["취소", "성격 바꿀 포켓몬 고르기"]);
-    await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '성격 바꿀 포켓몬 고르기').click()`);
-    await wait(300);
-    const natureText = await js<string>(dialogText);
-    assert.ok(natureText.includes("성격민트") && /성격을 바꿀까요|성격을 바꿀 포켓몬이 없어요/.test(natureText), `단추를 누르면 성격 대상 창(nature-target) (${natureText})`);
-    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); 0`);
-    await wait(200);
+    // 성격민트 은퇴 동안은 가방에 민트가 없다 (src/bag/mint.ts MINT_RETIRED, 2026-09-30)
+    if (!MINT_RETIRED) {
+      await js(`${cardOf("성격민트")}.click()`);
+      await wait(200);
+      const mint = await js<BagPanel>(bagPanel);
+      assert.equal(mint.mode, "사용", "성격민트도 `사용` 쪽");
+      assert.equal(mint.note, "성격을 바꿀 포켓몬을 골라요");
+      assert.deepEqual(mint.buttons, ["취소", "성격 바꿀 포켓몬 고르기"]);
+      await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '성격 바꿀 포켓몬 고르기').click()`);
+      await wait(300);
+      const natureText = await js<string>(dialogText);
+      assert.ok(natureText.includes("성격민트") && /성격을 바꿀까요|성격을 바꿀 포켓몬이 없어요/.test(natureText), `단추를 누르면 성격 대상 창(nature-target) (${natureText})`);
+      await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); 0`);
+      await wait(200);
+    }
     await js(`[...document.querySelectorAll('#body .use-panel .actions button')].find((b) => b.textContent === '취소').click()`);
     await wait(200);
     assert.equal(await js<boolean>(`!!document.querySelector('#body .use-panel')`), false, "`취소` 는 판을 닫는다");
@@ -560,7 +583,20 @@ void app.whenReady().then(async () => {
     await wait(300);
     assert.equal(await js<unknown>(`window.__petOpen`), null, "파티 탭을 나가면 개체 상세 기기 창을 닫는다");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 그림 ${shots}\n`);
+    // (15) 도감 보기 — 파티 상세 기기 창의 줄을 누르면 기기 창을 닫고 도감 탭에서 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정)
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(200);
+    await js(`document.querySelector('#body .slot[data-pet]').click()`);
+    await wait(300);
+    const shown = await js<{ id: string; species: string } | null>(`window.__petOpen?.pet ? { id: window.__petOpen.pet.id, species: window.__petOpen.pet.species } : null`);
+    assert.ok(shown, "파티 칸을 누르면 개체 상세 기기 창");
+    await js(`window.__cb.onPetAct({ petId: '${shown!.id}', kind: 'dex' })`);
+    await wait(500);
+    assert.equal(await js<unknown>(`window.__petOpen`), null, "도감 보기 — 개체 상세 기기 창을 닫는다");
+    assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 보기 — 그 종의 도감 기기 창");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`) > 0, true, "도감 탭으로 옮겼다");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

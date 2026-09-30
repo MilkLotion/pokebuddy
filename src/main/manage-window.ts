@@ -166,6 +166,20 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
     },
+    tree: (slug) => {
+      const detail = game.shopDetail(slug); // 상점 구매 창의 포켓몬 상세와 같은 사슬 (src/tx/shop-detail.ts)
+      return detail?.kind === "pokemon" ? detail.tree : null;
+    },
+    portraits: async (slugs) => {
+      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
+      const got = await portraits.get(slugs.map((slug) => ({ slug, shiny: false })));
+      const out: Record<string, string> = {};
+      for (const slug of slugs) {
+        const uri = got[slug];
+        if (uri) out[slug] = uri;
+      }
+      return out;
+    },
     cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
     volume: () => {
       const s = game.read()?.settings;

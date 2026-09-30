@@ -8,6 +8,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { MINT_RETIRED } from "../bag/mint";
 import { FIND_RULES, applyFind, chanceFor, eligible, findOne, itemCandidates, rollHits, shareOf } from "../find/core";
 import { createGame } from "../main/game";
 import { setLang } from "../main/text";
@@ -78,8 +79,10 @@ try {
     assert.ok(near(perDay * shareOf("points"), 8.42, 0.01) && near(perDay * shareOf("item"), 4.21, 0.01) && near(perDay * shareOf("evo"), 1.68, 0.01));
     assert.ok(near(1 / (perDay * shareOf("pokemon")), 11.9, 0.1), "1마리 포켓몬 약 12일에 1번");
     const ids = itemCandidates().map((c) => c.id);
-    assert.deepEqual(ids, ["premium-food", "toy", "exp-candy-xs", "exp-candy-s", "exp-candy-m", "exp-candy-l", "rare-candy", "mint"], "상점가 0 초과 200 이하. 민트는 한 종류");
-    assert.ok(near(itemCandidates().find((c) => c.id === "mint")?.weight ?? 0, 1 / 100, 1e-12), "민트 가중치 1/100");
+    // 성격민트는 2026-09-30 은퇴해 후보에서 빠진다 (src/bag/mint.ts MINT_RETIRED)
+    const base = ["premium-food", "toy", "exp-candy-xs", "exp-candy-s", "exp-candy-m", "exp-candy-l", "rare-candy"];
+    assert.deepEqual(ids, MINT_RETIRED ? base : [...base, "mint"], "상점가 0 초과 200 이하. 민트는 한 종류");
+    if (!MINT_RETIRED) assert.ok(near(itemCandidates().find((c) => c.id === "mint")?.weight ?? 0, 1 / 100, 1e-12), "민트 가중치 1/100");
     process.stdout.write("(1) 수치와 도구 후보  ok\n");
   }
 
@@ -106,7 +109,7 @@ try {
     assert.equal(rec?.kind, "item");
     assert.equal(rec?.ref, "premium-food");
     assert.equal(s.bag["premium-food"], 1);
-    assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0.99999))?.ref, "mint", "마지막 후보는 민트");
+    assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0.99999))?.ref, MINT_RETIRED ? "rare-candy" : "mint", "마지막 후보");
     s.bag["premium-food"] = SHOP_V3_RULES.bagMax;
     const before = JSON.stringify(s);
     assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0)), null, "가방 상한이면 이번 판정은 없음");
@@ -267,7 +270,8 @@ try {
     assert.deepEqual(later.queue.map((q) => q.key), ["find:f4"], "새로 주운 것만 줄에 선다");
 
     // 라틴 글자로 끝나는 이름의 조사 — M·N 은 받침 있음, L·R 은 ㄹ 받침 (검수 C7)
-    const candyM = findOne(s, "p1", T0, seq(K_ITEM, 0.8))!;
+    // 경험사탕M 자리 — 민트가 은퇴해 후보에서 빠지면 누적 가중치가 바뀐다(M 구간 약 0.83~0.92)
+    const candyM = findOne(s, "p1", T0, seq(K_ITEM, MINT_RETIRED ? 0.87 : 0.8))!;
     assert.equal(candyM.ref, "exp-candy-m");
     assert.equal(bannerOf(s, `find:${candyM.id}`)?.target, "피카츄가 경험사탕M을 주웠어요");
     assert.deepEqual(["경험사탕M", "경험사탕S", "경험사탕XL", "경험사탕L", "N", "r"].map((w) => josa(w, "을/를")), ["을", "를", "을", "을", "을", "을"]);

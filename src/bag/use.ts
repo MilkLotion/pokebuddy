@@ -6,6 +6,7 @@
 import { loadJson, type DexOptions } from "../dex/data.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
+import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_V3_RULES, MOOD_RULES, SAVE_V3_RULES } from "../save/rules.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 
@@ -60,7 +61,7 @@ const addAffinity = (pet: PetV3, gain: number): void => {
 
 export function use(save: SaveV3, itemId: string, petId: string, args: { nature?: string } = {}, opts?: DexOptions): UseResult {
   const item = itemOf(itemId, opts);
-  if (!item) return { ok: false, reason: "no-item" };
+  if (!item || (MINT_RETIRED && itemId === MINT_ID)) return { ok: false, reason: "no-item" }; // 성격민트 은퇴 — 쓰지 않는다 (src/bag/mint.ts)
 
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };

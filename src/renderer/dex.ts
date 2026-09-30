@@ -2,6 +2,7 @@
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
 import type { DexDeviceView } from "../shared/manage.js";
+import { RADIAL, RADIAL_MIN, evoDrawer } from "./evo-tree.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
@@ -164,17 +165,17 @@ function render(v: DexDeviceView): void {
 
   const records = el("div", "records");
   const state = locked ? "미해금" : `이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
-  for (const [key, value] of [
-    ["상태", state],
-    ["입수처", d.methods],
-    ["진화", d.evolution],
-    ["특수 기믹", d.gimmick],
-  ] as const) {
+  // 진화 트리가 있으면 진화 줄 대신 아래 카드로 보인다. 미해금 종은 트리가 없어 진화 줄("해금하면 보여요")을 둔다
+  const rows: (readonly [string, string])[] = [["상태", state], ["입수처", d.methods]];
+  if (!v.tree) rows.push(["진화", d.evolution]);
+  rows.push(["특수 기믹", d.gimmick]);
+  for (const [key, value] of rows) {
     const row = el("div");
     row.append(el("span", "key", key), el("span", "value", value));
     records.appendChild(row);
   }
   device.appendChild(records);
+  if (v.tree) device.appendChild(evolutionCard(v));
 
   const controls = el("div", "controls");
   const cry = button("cry", "울음소리", () => void playCry());
@@ -189,6 +190,30 @@ function render(v: DexDeviceView): void {
 
   // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
   sendSize(true);
+}
+
+// 진화 카드 — 기록 칸 아래. 상점 구매 창과 같은 트리를 기기 폭에 맞춰 그린다 (2026-09-30 사용자 결정 "도감상세는 a.", Figma 05 `Dex / Device / Unlocked` `628:13047`)
+// 지금 종은 톤 바탕과 굵은 이름. 진화하지 않는 종은 한 줄 안내
+const DEX_RADIAL = { ...RADIAL, width: 314 };
+function evolutionCard(v: DexDeviceView): HTMLElement {
+  const card = el("div", "evo-card");
+  card.appendChild(el("div", "evo-label", "진화"));
+  const tree = v.tree!;
+  const draw = evoDrawer((slug, cls) => {
+    const box = el("span", cls);
+    const uri = v.treePortraits[slug];
+    if (uri) {
+      const img = document.createElement("img");
+      img.className = "art";
+      img.alt = "";
+      img.src = uri;
+      box.appendChild(img);
+    }
+    return box;
+  });
+  if (!tree.children.length) card.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));
+  else card.appendChild(tree.children.length >= RADIAL_MIN ? draw.evoRadial(tree, DEX_RADIAL) : draw.evoTree(tree));
+  return card;
 }
 
 // 방향키로도 넘긴다. Esc 는 닫는다

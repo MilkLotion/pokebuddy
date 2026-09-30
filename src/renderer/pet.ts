@@ -82,12 +82,18 @@ type ActBody = PetDeviceAction extends infer A ? (A extends PetDeviceAction ? Om
 let shownPetId = "";
 const act = (action: ActBody): void => api.act({ ...action, petId: shownPetId } as PetDeviceAction);
 
+// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 성격 부여·저장은 그대로다.
+// 관리 창 src/renderer/manage.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+const NATURE_UI = false;
+
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).
 // 입력 규칙은 관리 창과 같다 — 막·구멍을 누르면 말풍선만 흔든다. 다음·확인·✕ 만 받는다 (worklog/records/tutorial-overhaul/record.md)
 const DETAIL_STEPS = [
   { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
   { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
-  { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격민트로 성격을 바꿔요." },
+  NATURE_UI
+    ? { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격민트로 성격을 바꿔요." }
+    : { tut: "detail-growth", title: "진화", body: "조건을 채우면 진화를 눌러 직접 진화해요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
   { tut: "detail-manage", title: "교체와 박스 보관", body: "박스에 보관하면 성장이 멈춰요." },
 ] as const;
@@ -246,7 +252,7 @@ function bar(label: string, value: number, shown: string, cls = "", live?: "affi
   return box;
 }
 
-// 카드 한 줄 — 누를 수 있으면 단추다(진화·성격)
+// 카드 한 줄 — 누를 수 있으면 단추다(진화·도감 보기)
 function line(title: string, desc: string | null, right: HTMLElement[], run?: () => void): HTMLElement {
   const row = run ? button("line", "", run) : el("div", "line");
   row.replaceChildren();
@@ -350,7 +356,7 @@ function renderBody(v: PetDeviceView): void {
   const sex = genderIcon(pet.gender, 24);
   if (sex) nameRow.appendChild(sex);
   info.appendChild(nameRow);
-  info.appendChild(el("div", "sub", `Lv.${pet.level} · ${pet.nature}`));
+  info.appendChild(el("div", "sub", NATURE_UI ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
   const types = el("div", "types");
   pet.types.forEach((name, i) => {
     const badge = el("span", "type", name);
@@ -408,7 +414,11 @@ function renderBody(v: PetDeviceView): void {
       : line(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
   const growth = el("div", "card");
   growth.dataset.tut = "detail-growth";
-  growth.append(evoLine, line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" })));
+  // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정, Figma 05 `862:22384`)
+  const second = NATURE_UI
+    ? line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" }))
+    : line("도감 보기", null, [], () => act({ kind: "dex" }));
+  growth.append(evoLine, second);
   actions.appendChild(growth);
   if (v.inParty) {
     const sizes = el("div", "sizes");

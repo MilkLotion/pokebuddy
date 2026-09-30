@@ -195,6 +195,7 @@ function isAction(v: unknown): v is PetDeviceAction {
   if (typeof a.petId !== "string" || !a.petId) return false; // 누른 개체 — 관리 창이 지금 개체와 같은지 본다
   if (a.kind === "dialog") return typeof a.dialog === "string" && DIALOGS.has(a.dialog);
   if (a.kind === "tutorial") return a.action === "done" || a.action === "skip";
+  if (a.kind === "dex") return true;
   if (a.kind === "cmd") return typeof a.cmd === "string" && CMDS.has(a.cmd) && (a.args === undefined || (typeof a.args === "object" && a.args !== null));
   return false;
 }

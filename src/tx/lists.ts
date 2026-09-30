@@ -9,6 +9,7 @@ import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPr
 import type { DexEntry, ShopItemView } from "../shared/manage";
 import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
+import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
@@ -88,6 +89,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   // 도구 — 상점에 파는 것만
   for (const [id, item] of Object.entries(items(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
+    if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
     add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, ...bagRoom(id) });
   }
 

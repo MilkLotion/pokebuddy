@@ -4,6 +4,7 @@
 // 계약은 docs/specs/modules.md 의 `settings:snapshot`, 화면은 Figma `05 · Screens` 다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import { MINT_RETIRED } from "../bag/mint";
 import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules";
 import { empty } from "../save/v3";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
@@ -155,7 +156,7 @@ function seed(): SaveV3 {
   assert.equal(v.bag.find((i) => i.id === "mint")?.effect, "nature", "가방의 민트 — 효과로 분류한다");
   assert.equal(v.party.slots[0]?.pet?.natureId, "hardy", "개체의 성격 id");
   const mints = v.shop.filter((p) => p.id === "mint" || p.id.endsWith("-mint"));
-  assert.deepStrictEqual(mints.map((p) => [p.id, p.name, p.category, p.price]), [["mint", "성격민트", "tool", 100]], "상점에 성격민트는 하나, 도구 분류 100P");
+  assert.deepStrictEqual(mints.map((p) => [p.id, p.name, p.category, p.price]), MINT_RETIRED ? [] : [["mint", "성격민트", "tool", 100]], "상점에 성격민트는 하나, 도구 분류 100P — 은퇴한 동안은 없다");
   process.stdout.write("(8b) 성격 선택지와 민트  ok\n");
 }
 

@@ -13,6 +13,7 @@ import { SHOP_V3_RULES } from "../save/rules.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { prevOf } from "../dex/evo.js";
 import { rankOf } from "../egg/hatch.js";
+import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export type ProductKind = "egg" | "tool" | "party-slot" | "species";
@@ -51,6 +52,7 @@ const evoItems = (opts?: DexOptions): Record<string, EvoItemEntry> => loadJson<R
 // 도구 하나의 가격. 팔지 않으면 null
 export function toolPrice(id: string, opts?: DexOptions): number | null {
   if (isMetaKey(id)) return null;
+  if (MINT_RETIRED && id === MINT_ID) return null; // 성격민트 은퇴 — 사지도 팔지도 않는다 (src/bag/mint.ts)
   const item = items(opts)[id];
   if (item) return item.price;
   return evoItems(opts)[id] ? SHOP_V3_RULES.evoItemPrice : null;

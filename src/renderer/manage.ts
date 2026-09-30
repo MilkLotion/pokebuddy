@@ -36,7 +36,13 @@ import type {
   TradeScreen,
   UpdateView,
 } from "../shared/manage.js";
+import { RADIAL_MIN, evoDrawer } from "./evo-tree.js";
 import { genderIcon } from "./gender.js";
+
+// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
+// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+const NATURE_UI = false;
+const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
 type TabId = "party" | "box" | "dex" | "shop" | "bag";
 
@@ -123,7 +129,7 @@ const GUIDE: { title: string; lines: string[] }[] = [
     lines: [
       "조건을 채운 개체는 상세에서 직접 진화시킨다. 저절로 진화하지 않는다.",
       "조건은 종마다 다르다. 레벨, 친밀도, 도구, 시간대를 본다.",
-      "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다.",
+      NATURE_UI ? "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다." : "진화해도 같은 개체다. 이로치는 그대로 남는다.",
     ],
   },
   {
@@ -550,7 +556,7 @@ function petCard(pet: PetView): HTMLElement {
   top.append(el("span", undefined, `Lv.${pet.level}`), el("div", "name", pet.name));
   const sex = genderIcon(pet.gender, 16);
   if (sex) top.appendChild(sex);
-  top.appendChild(el("span", "nature", pet.nature));
+  if (NATURE_UI) top.appendChild(el("span", "nature", pet.nature));
   info.appendChild(top);
 
   const tags = el("div", "tags");
@@ -676,7 +682,7 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
     dialogEl.append(...dialogHead("알이 부화했어요", ""));
     const tags = el("div", "tags");
     pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
-    tags.appendChild(el("span", "note", `Lv.${pet.level} · ${pet.nature}`));
+    tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
     if (slotIndex != null) info.append(el("div", undefined, `파티 ${slotIndex + 1}번 칸에 들어갔어요.`));
     else info.append(el("div", undefined, "파티가 가득 차 박스에 보관했어요."));
@@ -938,7 +944,7 @@ function drawForm(petId: string, to: string): void {
   const card = el("div", "nat-card");
   const tags = el("div", "tags");
   form.types.forEach((name, i) => tags.appendChild(typeBadge(name, form.typeIds[i])));
-  tags.appendChild(el("span", "note", `Lv.${pet.level} · ${pet.nature}`));
+  tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
   card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
   const row = el("div", "compare");
   row.appendChild(card);
@@ -946,8 +952,8 @@ function drawForm(petId: string, to: string): void {
   const info = el("div", "info-box");
   info.append(
     el("div", undefined, `지금 ${pet.name} · ${slot != null ? `파티 ${slot + 1}번 칸` : "박스"}`),
-    el("div", "note", "레벨·친밀도·성격은 그대로예요"),
-    el("div", "note", `스탯은 ${form.name} 기준이에요. 같은 칸에서 바뀌어요`),
+    el("div", "note", NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
+    el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
   );
   const go = actionButton("바꾸기", true, false, () => {
     void send("pet.form", pet.id, { species: to }).then((ok) => {
@@ -2207,7 +2213,7 @@ function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
     return line;
   }
   const info = el("div", "trade-info");
-  info.append(el("strong", undefined, card.name), el("div", "trade-meta", card.shiny ? `Lv.${card.level} · ${card.nature} · 이로치` : `Lv.${card.level} · ${card.nature}`));
+  info.append(el("strong", undefined, card.name), el("div", "trade-meta", card.shiny ? `${lvNature(card.level, card.nature)} · 이로치` : lvNature(card.level, card.nature)));
   const tags = el("div", "tags");
   card.types.forEach((name, i) => tags.appendChild(typeBadge(name, card.typeIds[i])));
   info.appendChild(tags);
@@ -3654,6 +3660,18 @@ function stepPet(delta: -1 | 1): void {
   draw();
 }
 
+// 도감 보기 — 파티 상세 기기 창을 닫고 도감 탭으로 가서 그 종의 도감 기기 창을 연다 (2026-09-30 사용자 결정 "누르면 이 파티상세가 꺼지고 도감상세가 되게")
+// setTab 이 개체 상세를 닫는다(detailPet = null → draw 의 syncPetDevice). 도감 목록이 아직 없으면 loadDex 끝에서 dexPick 을 다시 보낸다
+function showDexOf(slug: string | null): void {
+  if (!slug) return;
+  setTab("dex");
+  dexPick = slug;
+  window.pokebuddyManage.dexOpen(dexPick, dexGen);
+  draw();
+  markDexPick();
+  bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(slug)}"]`)?.scrollIntoView({ block: "center" });
+}
+
 // 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
 function onPetAction(action: PetDeviceAction): void {
   const id = detailPet;
@@ -3664,6 +3682,10 @@ function onPetAction(action: PetDeviceAction): void {
   }
   if (action.kind === "tutorial") {
     void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail", action.action === "done" ? { steps: 5 } : undefined);
+    return;
+  }
+  if (action.kind === "dex") {
+    showDexOf(petOf(id)?.species ?? null);
     return;
   }
   if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
@@ -3720,7 +3742,8 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
     const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
     const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
-    info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. 레벨·친밀도·성격은 그대로입니다.` : "레벨·친밀도·성격은 그대로입니다."));
+    const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
+    info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. ${kept}` : kept));
     // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/scenarios.md 진화 흐름)
     info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));
     dialogEl.appendChild(info);
@@ -3960,96 +3983,8 @@ function shopDetailBlock(item: ShopItemView): HTMLElement[] {
   return detail.kind === "pokemon" ? pokemonDetail(detail) : [evoTargets(detail.pairs)];
 }
 
-const SVG_NS = "http://www.w3.org/2000/svg";
-
-// 화살표 — 오른쪽을 가리킨다. 폭은 부르는 쪽이 정한다
-function evoArrow(width: number): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("class", "evo-arrow");
-  svg.setAttribute("viewBox", `0 0 ${width} 8`);
-  svg.setAttribute("width", String(width));
-  svg.setAttribute("height", "8");
-  svg.setAttribute("aria-hidden", "true");
-  const path = document.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", `M0 4H${width}M${width - 4} 0l4 4-4 4`);
-  svg.appendChild(path);
-  return svg;
-}
-
-// 초상 자리 — 미해금 종은 실루엣 대신 빈 원 (2026-09-30 사용자 결정 "실루엣은 안보이게")
-const evoPortrait = (slug: string, locked: boolean, cls: string): HTMLElement => (locked ? el("span", `${cls} empty`) : portraitOf(slug, false, cls));
-
-function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
-  const box = el("div", node.current ? "evo-node current" : "evo-node");
-  box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", node.name));
-  if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));
-  return box;
-}
-
-// 일직선·갈래 — 한 종 뒤에 자식 가지를 세로로 쌓는다. 가지마다 조건과 화살표, 그 뒤에 하위 트리
-function evoTree(node: EvoNodeView): HTMLElement {
-  const branch = el("div", "evo-branch");
-  branch.appendChild(evoNodeEl(node, false));
-  if (node.children.length) {
-    const kids = el("div", "evo-kids");
-    for (const child of node.children) {
-      const step = el("div", "evo-step");
-      step.append(el("div", "evo-need", child.need ?? ""), evoArrow(22));
-      const row = el("div", "evo-row");
-      row.append(step, evoTree(child));
-      kids.appendChild(row);
-    }
-    branch.appendChild(kids);
-  }
-  return branch;
-}
-
-// 이브이처럼 갈래가 많으면 방사형 — 가운데 뿌리, 둘레에 갈래 (2026-09-30 사용자 결정 "이브이는 예외라서 방사형으로 하는게 국룰")
-// 순서는 사용자가 준 참고 그림을 따른다 — 위부터 시계 방향. 표에 없는 종은 자료 순서로 뒤에 둔다
-const RADIAL_MIN = 5;
-const RADIAL_ORDER = ["jolteon", "flareon", "umbreon", "leafeon", "sylveon", "glaceon", "espeon", "vaporeon"];
-// 창(682) 안에 구매 창이 다 들어가게 Figma(300·114)보다 조금 줄였다 — 검수에서 넘침을 찾았다 (2026-09-30)
-const RADIAL = { width: 390, height: 256, radius: 98, arrowFrom: 40, arrowTo: 58, head: 6 };
-
-function evoRadial(root: EvoNodeView): HTMLElement {
-  const box = el("div", "evo-radial");
-  const rank = (n: EvoNodeView): number => {
-    const i = RADIAL_ORDER.indexOf(n.slug);
-    return i < 0 ? RADIAL_ORDER.length + root.children.indexOf(n) : i;
-  };
-  const kids = [...root.children].sort((a, b) => rank(a) - rank(b));
-  const cx = RADIAL.width / 2;
-  const cy = RADIAL.height / 2;
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("class", "evo-radial-arrows");
-  svg.setAttribute("viewBox", `0 0 ${RADIAL.width} ${RADIAL.height}`);
-  svg.setAttribute("aria-hidden", "true");
-  // 노드는 가운데 기준으로 놓는다 — CSS 가 translate(-50%, -50%) 로 맞춘다
-  const place = (node: HTMLElement, x: number, y: number): void => {
-    node.style.left = `${Math.round(x)}px`;
-    node.style.top = `${Math.round(y)}px`;
-  };
-  kids.forEach((kid, i) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / kids.length;
-    const hx = Math.cos(a);
-    const hy = Math.sin(a);
-    const x1 = cx + hx * RADIAL.arrowFrom;
-    const y1 = cy + hy * RADIAL.arrowFrom;
-    const x2 = cx + hx * RADIAL.arrowTo;
-    const y2 = cy + hy * RADIAL.arrowTo;
-    const h = RADIAL.head;
-    const path = document.createElementNS(SVG_NS, "path");
-    path.setAttribute("d", `M${x1} ${y1}L${x2} ${y2}M${x2 - hx * h - hy * h} ${y2 - hy * h + hx * h}L${x2} ${y2}L${x2 - hx * h + hy * h} ${y2 - hy * h - hx * h}`);
-    svg.appendChild(path);
-    const node = evoNodeEl(kid, true);
-    place(node, cx + hx * RADIAL.radius, cy + hy * RADIAL.radius);
-    box.appendChild(node);
-  });
-  const center = evoNodeEl(root, false);
-  place(center, cx, cy);
-  box.append(svg, center);
-  return box;
-}
+// 진화 트리 그리기 — 도감 기기 창과 같이 쓴다 (src/renderer/evo-tree.ts). 초상만 이 창의 것을 넘긴다
+const { evoArrow, evoPortrait, evoTree, evoRadial } = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 
 // 포켓몬 상세 — 정보 줄(초상·번호·이름·분류·타입)과 진화
 function pokemonDetail(detail: Extract<ShopDetail, { kind: "pokemon" }>): HTMLElement[] {

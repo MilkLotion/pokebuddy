@@ -12,7 +12,7 @@ import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { currentItemId } from "../bag/mint.js";
+import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number };
 
@@ -46,7 +46,9 @@ export function parseGifts(raw: unknown, opts?: DexOptions): Gift[] | null {
     if (!isObj(g)) return null;
     // 옛 민트 식별자(<성격>-mint)는 민트 한 종류로 바꿔 받는다 — 편지를 버리지 않는다 (2026-09-29 민트 통일)
     const id = typeof g.id === "string" ? currentItemId(g.id) : null;
-    if (g.kind === "item" && id && giftItemName(id, opts) && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "item", id, count: g.count });
+    // 성격민트 은퇴 — 민트 선물은 개당 구매가만큼 포인트로 받는다. 편지는 버리지 않는다 (src/bag/mint.ts)
+    if (MINT_RETIRED && g.kind === "item" && id === MINT_ID && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "points", count: g.count * MINT_REFUND_EACH });
+    else if (g.kind === "item" && id && giftItemName(id, opts) && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "item", id, count: g.count });
     else if (g.kind === "points" && intIn(g.count, MAIL_RULES.pointsMax)) out.push({ kind: "points", count: g.count });
     else if (g.kind === "pokemon" && typeof g.species === "string" && hasProfile(g.species, opts) && intIn(g.count, MAIL_RULES.pokemonMax)) out.push({ kind: "pokemon", species: g.species, count: g.count });
     else return null;

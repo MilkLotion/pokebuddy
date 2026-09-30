@@ -3,6 +3,10 @@
 import type { Axis, AxisValue, Nature, NatureId } from "../shared/types";
 import { loadJson, type DexOptions } from "./data";
 
+// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 부여·저장·교환 검증·움직임 배율은 그대로다.
+// 끄면 우클릭 메뉴 첫 줄과 CLI 상태 줄에서 성격을 뺀다. 관리 창 src/renderer/manage.ts·pet.ts 의 NATURE_UI 와 같이 바꾼다
+export const NATURE_SHOWN = false;
+
 export const AXES: readonly Axis[] = ["activity", "boldness", "steadiness", "sociability", "patience"];
 
 // 모르는 성격의 축 — 전부 0 (중립)

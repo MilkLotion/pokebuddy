@@ -488,6 +488,9 @@ export interface DexDeviceView {
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
+  // 진화 트리 — 해금·획득한 종만. 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종이면 null 이고 기록 칸의 진화 줄이 "해금하면 보여요" 를 보인다
+  tree: EvoNodeView | null;
+  treePortraits: Record<string, string>; // 트리의 해금 종 그림 — slug → data URI
 }
 
 // dexdev:show 는 메인 → 렌더러. 나머지는 렌더러 → 메인이다
@@ -519,6 +522,7 @@ export type PetDeviceAction = { petId: string } & (
   | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "party.place" | "pet.set"; args?: Record<string, unknown> }
   | { kind: "dialog"; dialog: "evolve" | "nature" | "pick-box" | "pick-slot" | "keep" }
   | { kind: "tutorial"; action: "done" | "skip" } // 개체 상세 튜토리얼을 끝냈다·닫았다
+  | { kind: "dex" } // 도감 보기 — 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30)
 );
 export type PetDeviceChannel = "petdev:show" | "petdev:size" | "petdev:step" | "petdev:cry" | "petdev:close" | "petdev:act";
 export interface PetDeviceBridge {
