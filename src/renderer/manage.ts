@@ -3923,7 +3923,8 @@ const EVOLVE_RADIAL = { ...RADIAL, width: 340 };
 const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 
 // 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
-// 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다
+// 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
+// 도감에서 해금 안 된 후보는 도감 기기 창과 같이 빈 원과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
 function drawEvolve(petId: string, to?: string): void {
   const pet = petOf(petId);
   if (!pet) {
@@ -3944,10 +3945,6 @@ function drawEvolve(petId: string, to?: string): void {
     for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
       const c = list.find((x) => x.to === node.dataset.slug);
       if (!c) continue;
-      // 사슬은 도감에서 해금 안 된 종을 ??? 와 빈 원으로 준다 — 진화 후보는 이름과 그림을 보인다(후보 줄 때와 같다)
-      const nameEl = node.querySelector(".evo-name");
-      if (nameEl) nameEl.textContent = c.name;
-      node.querySelector(".portrait.empty")?.replaceWith(portraitOf(c.to, false, "portrait"));
       if (!c.ready) {
         node.classList.add("dim");
         node.title = c.need ?? "조건이 모자라요";

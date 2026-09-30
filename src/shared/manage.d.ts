@@ -15,7 +15,8 @@ export interface ViewBuff {
 // 진화 후보 하나 — 화면이 그대로 보인다. 낮·밤은 스냅샷을 만든 시각으로 정했다
 export interface EvolutionView {
   to: string; // 결과 종 슬러그 — evolve 명령의 args.to 로 보낸다
-  name: string; // 결과 종의 화면 이름
+  name: string; // 결과 종의 화면 이름. 도감에서 해금 안 된 종이면 "???"
+  known: boolean; // 도감에서 해금(또는 획득)한 종 — 아니면 이름·그림을 가린다 (2026-10-01 사용자 결정)
   ready: boolean;
   need?: string; // 모자란 조건의 화면 문구 — "Lv.16 필요", "물의돌 필요", "밤에만"
   item?: string; // 진화용 도구가 조건이면 그 도구 id. 가방의 돌로 대상을 고를 때 쓴다

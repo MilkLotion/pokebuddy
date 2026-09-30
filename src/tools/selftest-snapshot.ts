@@ -186,6 +186,7 @@ function seed(): SaveV3 {
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
   s.bag = { "fire-stone": 1, "premium-food": 1 };
+  s.dex.unlocked.push("flareon", "vaporeon", "espeon", "umbreon"); // 이름 검사용 — 도감 미해금은 아래 (11b)
   const day = snapshot(s, undefined, undefined, undefined, T0); // 10시 0분 — 낮
   const evo = day.party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(evo.filter((c) => c.ready).map((c) => c.to), ["flareon"], "불꽃의돌이 있으면 부스터만 가능");
@@ -217,10 +218,14 @@ function seed(): SaveV3 {
   s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
   const v = snapshot(s, undefined, undefined, undefined, T0);
   const pika = v.party.slots[0]?.pet?.evolutions ?? [];
-  assert.deepStrictEqual(pika.map((c) => [c.to, c.name, c.need, c.item, c.map]), [
-    ["raichu", "라이츄", "천둥의돌 필요", "thunder-stone", undefined],
-    ["raichu-alola", "알로라 라이츄", "지도 필요", "region-map", true],
+  // 도감 미해금 결과 종은 이름을 ??? 로 가린다. 조건은 보인다 (2026-10-01 사용자 결정)
+  assert.deepStrictEqual(pika.map((c) => [c.to, c.name, c.known, c.need, c.item, c.map]), [
+    ["raichu", "???", false, "천둥의돌 필요", "thunder-stone", undefined],
+    ["raichu-alola", "???", false, "지도 필요", "region-map", true],
   ]);
+  s.dex.unlocked.push("raichu");
+  const known = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  assert.deepStrictEqual(known.map((c) => [c.name, c.known]), [["라이츄", true], ["???", false]], "해금한 종만 이름을 보인다");
   assert.equal(v.party.slots[1]?.pet?.evolutions.find((c) => c.map)?.need, "Lv.36·지도 필요");
   s.bag = { "thunder-stone": 1 };
   const onlyStone = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];

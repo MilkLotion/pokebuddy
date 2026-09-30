@@ -251,6 +251,9 @@ function bar(label: string, value: number, shown: string, cls = "", live?: "affi
   return box;
 }
 
+// 진화 줄의 결과 종 이름 — 도감 미해금 종은 "???"(src/tx/snapshot.ts evolutionsOf). 같은 "???" 는 한 번만 적는다
+const evoNames = (list: PetDeviceView["pet"]["evolutions"]): string => [...new Set(list.map((e) => e.name))].join(" · ");
+
 // 카드 한 줄 — 누를 수 있으면 단추다(진화·도감 보기)
 function line(title: string, desc: string | null, right: HTMLElement[], run?: () => void): HTMLElement {
   const row = run ? button("line", "", run) : el("div", "line");
@@ -413,8 +416,8 @@ function renderBody(v: PetDeviceView): void {
   const evoLine = !pet.evolutions.length
     ? line("진화", "더 진화하지 않아요", [])
     : ready.length
-      ? line(`진화 · ${ready.map((e) => e.name).join(" · ")}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
-      : line(`진화 · ${pet.evolutions.map((e) => e.name).join(" · ")}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
+      ? line(`진화 · ${evoNames(ready)}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
+      : line(`진화 · ${evoNames(pet.evolutions)}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
   const growth = el("div", "card");
   growth.dataset.tut = "detail-growth";
   // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.
