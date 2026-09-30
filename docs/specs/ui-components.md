@@ -151,7 +151,7 @@ Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), `Daycare Strip` `
 상태: 기본, 선택(옅은 배경). 선택해도 기본 상태의 회색 테두리를 유지한다. 선택 배경이 창 바탕색과 가까워 테두리가 없으면 카드 윤곽이 사라진다.
 내용: 아이콘, 이름, `×수량`.
 보유 0개가 된 도구는 목록에서 뺀다(`src/tx/snapshot.ts`).
-가방 분류 칩은 `도구 / 진화` 다. 상점의 도구·진화 분류와 같다(2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애."). `전체` 칩은 없다. 구현은 `src/renderer/manage.ts` `BAG_TABS`·`bagCategory` 다.
+가방 분류 칩은 `도구 / 진화` 다. 상점의 도구·진화 분류와 같다(2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애."). `전체` 칩은 없다. 구현은 `src/renderer/manage.ts` `BAG_TABS`·`bagCategory` 다. Figma 는 템플릿 `Bag Layout` `380:2064` 의 칩 두 개다(2026-09-30 반영).
 Figma: `Bag Item Card` `335:257`(`Default|Selected`).
 
 ### C-10 상점 상품 카드
@@ -190,7 +190,7 @@ Figma: `Achievement Row` `336:341`(`Claimable|InProgress|Claimed`). `받기` 버
 내용: 머리(제목, 부제, `✕`), 본문, 바닥(보조 버튼, `취소`, 주 버튼).
 변형: 폭 440(구매 창), 폭 600(업적창·설정·개체 선택). 본문 스크롤 여부.
 사용: 업적창, 설정, 박스 개체 고르기, 파티 칸 고르기, 구매 창, 교환 모달, 기존 확인 창.
-교환 모달: 폭 600, 머리 `친구 교환` 과 오른쪽 위 `✕`, 본문만 세로로 스크롤한다. 본문은 교환 상태에 따라 시작 전(공유 채널 만들기·링크로 참가·교환 규칙), 링크 대기, 제안·확정, 막힘, 완료, 오류·닫힘 배너를 그린다. 시작 전 두 카드는 내용 높이다. 닫아도 교환은 이어진다. 교환 링크(딥링크)가 오면 박스 탭을 열고 이 모달을 띄운다. 다른 대화상자가 떠 있으면 그것을 닫고 띄운다(2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로."). 이 모달이 이미 떠 있으면 그대로 두고 교환 상태만 다시 읽는다. 구현은 `src/renderer/manage.ts` `drawTradeDialog`·`goTo`·`showTrade`, `manage.html` `.dialog.trade` 다. Figma 05 `08 교환` `930:18244` — `Trade / Base · 교환 모달` `1036:23257`, `Link Created` `1036:22965`, `Offer` `1036:22673`, `Blocked` `1036:22381`, `Done` `1036:22089`, `Error` `1036:21797`.
+교환 모달: 폭 600, 머리 `친구 교환` 과 오른쪽 위 `✕`, 본문만 세로로 스크롤한다. 본문은 교환 상태에 따라 시작 전(공유 채널 만들기·링크로 참가·교환 규칙), 링크 대기, 제안·확정, 막힘, 완료, 오류·닫힘 배너를 그린다. 시작 전 두 카드는 내용 높이다. 닫아도 교환은 이어진다. 교환 링크(딥링크)가 오면 박스 탭을 열고 이 모달을 띄운다. 다른 대화상자가 떠 있으면 그것을 닫고 띄운다(2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로."). 이 모달이 이미 떠 있으면 그대로 두고 교환 상태만 다시 읽는다. 구현은 `src/renderer/manage.ts` `drawTradeDialog`·`goTo`·`showTrade`, `manage.html` `.dialog.trade` 다. Figma 05 `08 교환` `930:18244` — `Trade / Base · 교환 모달` `1036:23257`, `Link Created` `1036:22965`, `Offer` `1036:22673`, `Blocked` `1036:22381`, `Done` `1036:22089`, `Error` `1036:21797`. 익명 계정의 로그인 필요 카드는 `Login Required` `1050:23153` 이다(2026-09-30 추가).
 판정: `Confirm Dialog`를 공통 틀로 수정한다. 배경은 `Modal Scrim`을 재사용한다.
 Figma: `Confirm Dialog`를 `Dialog` `299:3575`의 `Size=Compact`로 바꾸고 `Size=Wide`를 더했다. 구성은 `head`, 본문 slot `Body`, `error-notice`, `footer`다. slot 안의 레이어는 컴포넌트 속성과 연결할 수 없다. 그래서 실패 알림 `error-notice`는 본문 밖에 두고 `Show Error`로 켠다. `error-notice` 는 `Alert` 의 `Tone=Error, Type=Inline` 이다. Compact는 높이가 내용에 맞춰진다. Wide는 600×620이며 본문만 세로로 스크롤한다. 닫기는 `Header Icon Button`과 `Icon / Close` `299:166`이다.
 Esc를 누르면 모달을 닫는다. 모달 바깥의 `Modal Scrim`을 눌러도 닫는다(`src/renderer/manage.ts`).
@@ -224,7 +224,7 @@ Figma: `Filter Chip` `331:130`(`Default|Selected`). 두 상태 모두 높이 28�
 내용: 작은 초상과 숨김 마커, 이름, 레벨.
 상태: 기본, 선택(옅은 배경). 선택해도 기본 상태의 회색 테두리를 유지한다.
 사용: 가방 사용 패널.
-가방 사용 패널은 도구를 쓴 뒤 미리보기 아래에 결과 한 줄을 둔다. 모양은 `Alert` 의 `Tone=Success, Type=Inline` 이다. 문구와 지우는 때는 [가방 도구 사용 결과](game.md#가방-도구-사용-결과)를 따른다(2026-09-30 사용자 결정 "추천대로 진행해").
+가방 사용 패널은 도구를 쓴 뒤 미리보기 아래에 결과 한 줄을 둔다. 모양은 `Alert` 의 `Tone=Success, Type=Inline` 이다. 문구와 지우는 때는 [가방 도구 사용 결과](game.md#가방-도구-사용-결과)를 따른다(2026-09-30 사용자 결정 "추천대로 진행해"). Figma 05 `Bag / Used · 결과 한 줄` `1050:23459` 다.
 Figma: `Target Row` `333:290`(`Default|Selected|Disabled`). `Show Visibility Marker`를 둔다. Disabled는 `reason`에 이유를 쓴다.
 
 ### C-18 설정 행과 토글
@@ -306,7 +306,8 @@ Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성�
 `계정` 탭의 `저장` 줄도 같은 글자를 쓴다. 익명 계정이면 줄 이름이 `익명으로 저장 중` 이다. 단추는 없다. 상태 글자가 말하지 않는 오류(`CLOUD_OWNER_OTHER`·`CLOUD_BAD_SAVE` 등)만 뒤에 붙인다.
 규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
 사용: C-01 앱 헤더의 보유 포인트 왼쪽.
-Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline("오프라인")은 고정 문구다. 폭은 글자에 맞춘다. 강조 상태는 `SaveNeeded` 의 모양을 쓴다. Figma 의 "저장 필요" 글자는 옛 문구다. 새 글자로 Figma 를 고치지 않았다. `[스펙 미확정]`
+Figma: `Save Indicator` `633:18434`(`State=Online|Offline|Warn`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline 과 Warn 의 글자는 인스턴스에서 바꾼다. 컴포넌트의 기본 글자는 `오프라인`·`업데이트 필요` 다. 폭은 글자에 맞춘다. 2026-09-30 옛 `SaveNeeded`(저장 필요)를 `Warn` 으로 바꿨다.
+화면은 05 `12 사용자·저장` 섹션이다. 익명 `User / Account · Sign In · 익명` `633:19206`, 분실 `User / Account · Lost` `1050:22603`, 업데이트 필요 `User / Account · Signed In · 업데이트 필요` `633:19529`, 로그아웃 확인 `User / Account · Logout Confirm` `633:19895` 다. 옛 로그인 선택 창과 밀려남 배너는 지웠다. 두 PC 멈춤 창은 OS 대화상자라 화면 대신 주석 `1050:22786` 을 둔다.
 
 ### C-28 파티 상세 기기 창
 
