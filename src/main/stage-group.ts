@@ -9,6 +9,7 @@
 // (2026-09-28 사용자 보고 "드래그하면 화면에서 안움직이고 드랍하면 다른화면으로 옮겨짐", worklog/records/multi-display/record.md).
 // 입력은 잡은 창으로 계속 온다(포인터 캡처). 묶음이 좌표를 바꿔 마리를 든 무대로 보내고, 잡은 창은 끝날 때까지 통과시키지 않는다
 // 창·무대를 만드는 일은 부르는 쪽이 준다 — 이 모듈은 Electron 을 부르지 않아 자체 시험에서 가짜로 돌린다
+import type { BrowserWindow } from "electron";
 import type { CoachView, HitReply, PointerMsg, StageState } from "../shared/stage";
 import type { CareAction } from "../state/types";
 import { assignScreens, clampInStage, homeOf, screenRefOfInfo, stackShift, toLocal, type Home, type PlayLane, type Rect, type ScreenRef, type Size, type Spot } from "./layout";
@@ -62,6 +63,8 @@ export interface StageGroup {
   layout(lanes: PlayLane[], all: boolean): void; // 폴링마다 부른다 — 화면 구성이 바뀔 때만 창을 만들고 닫는다
   setParty(list: PartyPet[]): Promise<void>;
   setVisible(on: boolean): void;
+  raise(): void; // 보이는 무대 창 전부 "항상 위"를 다시 건다 (src/main/keep-on-top.ts)
+  owns(w: BrowserWindow): boolean; // 무대 창인가
   setState(state: StageState, promptAt: number | null): void;
   focus(key: string | null): void;
   tick(): void;
@@ -312,6 +315,10 @@ export function createStageGroup(opts: StageGroupOptions): StageGroup {
       visible = on;
       applyVisible();
     },
+    raise() {
+      for (const l of lanes) l.win.raise();
+    },
+    owns: (w) => lanes.some((l) => l.win.owns(w)),
     setState(state, promptAt) {
       for (const l of lanes) l.stage.setState(state, promptAt);
     },

@@ -35,7 +35,8 @@ import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } f
 import { createAppUpdater, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
-import { createPortraits, type Portraits } from "./portraits";
+import { createPortraits, portraitKey, type Portraits } from "./portraits";
+import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
 import { drawRegion } from "./region-window";
 import { createBannerWindow, type BannerWindow } from "./banner-window";
@@ -1311,7 +1312,12 @@ async function main(): Promise<void> {
     }
   }
 
-  const art = createArtLoader(PATHS);
+  // PMD 그림이 없는 종은 초상으로 무대에 세운다 (src/main/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
+  const art = createArtLoader(PATHS, async (look) => {
+    const ask = look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false };
+    const uri = (await pics.get([ask]))[portraitKey(ask)];
+    return uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : null;
+  });
   // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
   // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/record.md)
   const prefetchOwned = (): void => art.prefetch((saveSource.save()?.pets ?? []).map(appearanceOf));
@@ -1505,6 +1511,9 @@ async function main(): Promise<void> {
   clock.on(clockTick);
   clock.start();
   intervals.push(setInterval(() => stages?.tick(), STAGE_RULES.tickMs));
+  // Windows 는 무대 창의 "항상 위"가 풀리거나 다른 항상 위 창에 밀린다 — 1초마다 다시 건다 (src/main/keep-on-top.ts)
+  const keepTop = startKeepOnTop(() => stages);
+  if (keepTop) intervals.push(keepTop);
   // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
   const relayout = (): void => anchor?.poll();
   screen.on("display-added", relayout);

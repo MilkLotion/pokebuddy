@@ -49,6 +49,8 @@ export interface StageWindow {
   size(): Size; // 무대 크기 — 아직 없으면 0×0
   setStage(rect: Rect): boolean; // 바뀔 때만 setBounds. 바뀌었으면 true (렌더러에 stage:init 도 보낸다)
   setVisible(on: boolean): void;
+  raise(): void; // "항상 위"를 다시 걸어 항상 위 창들 맨 앞으로 — 보일 때만 (src/main/keep-on-top.ts)
+  owns(w: BrowserWindow): boolean; // 이 무대의 창인가
   isVisible(): boolean;
   setPassing(on: boolean): void;
   hoverTick(held: boolean, ghost: boolean): void;
@@ -206,6 +208,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       if (!alive()) return;
       if (on && !win!.isVisible()) {
         win!.showInactive(); // 포커스를 빼앗지 않고 표시
+        win!.setAlwaysOnTop(true); // 숨었다 나오는 동안 "항상 위"가 풀렸어도 다시 건다
         win!.webContents.invalidate(); // 숨어 있는 동안 멈춘 화면 갱신을 되살림
       }
       if (!on && win!.isVisible()) {
@@ -214,6 +217,14 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       }
     },
     isVisible: () => alive() && win!.isVisible(),
+
+    // Chromium 은 "항상 위" 값을 기억만 하고 창의 실제 상태를 다시 읽지 않는다 — 풀려도 isAlwaysOnTop() 은 true 다.
+    // setAlwaysOnTop(true) 는 부를 때마다 SetWindowPos(HWND_TOPMOST) 를 다시 보내 풀린 것을 되살리고 항상 위 창들 맨 앞으로 올린다.
+    // 수준은 만들 때와 같은 기본값(floating)이다 — Windows 에서는 작업 표시줄 바로 아래 자리다
+    raise() {
+      if (alive() && win!.isVisible()) win!.setAlwaysOnTop(true);
+    },
+    owns: (w) => alive() && w === win,
 
     setPassing,
 

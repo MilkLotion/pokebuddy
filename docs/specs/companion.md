@@ -7,6 +7,7 @@
 ## 기본 구조
 
 동반자는 기기당 하나다. **항상 위**에 뜬다. 어느 터미널을 보든 그 창에서 도는 CLI LLM 의 상태를 따른다.
+Windows 에서는 무대 창이 1초마다 "항상 위"를 다시 건다(`src/main/keep-on-top.ts`). 풀린 "항상 위"를 되살리고, 다른 항상 위 창 밑에 깔린 무대를 다시 앞으로 올린다. 포커스는 옮기지 않는다. 앱의 다른 항상 위 창(트레이 메뉴·알림 띠 등)은 무대 다음에 다시 올려 무대에 가려지지 않는다.
 포켓몬은 놀이공간 안에서만 움직인다. 놀이공간은 설정 → `화면` 탭에서 `모든 화면`·`한 화면`·`영역 지정` 으로 고른다.
 `한 화면` 은 고른 모니터의 작업 영역이다(기본은 주 모니터). 목록에서 고르거나 `화면에서 고르기` 로 모니터를 눌러 고른다. `모든 화면` 은 모니터마다 포켓몬이 나뉘어 논다. 다른 모니터로 끌어다 놓으면 그 모니터로 옮겨 가고, 놓은 자리가 새 집이다(`save.json` 의 마리 `screen`). 끄는 동안 그림은 원래 모니터 가장자리에서 잘리고 놓는 순간 옮겨 간다. `영역 지정` 은 드래그로 그린 사각형이다.
 저장(`save.json`)의 파티 중 보이게 둔 마리(최대 6마리)를 [무대 창 하나](#화면-구조--무대-창-하나)에 함께 그린다.
@@ -236,7 +237,7 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 | 폴더 | 하는 일 |
 |---|---|
-| `src/main/` | 메인 프로세스 — `app.ts`(기동 · 종료 배선) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `art.ts`(PMD 그림) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `menus.ts` · `menu-window.ts` · `tray.ts` · `picker-window.ts`(첫 실행 선택 창) · `manage-window.ts`(설정창) · `region-window.ts`(놀이공간 영역 그리기) · `paths.ts` · `text.ts` · `preload.ts` 등 |
+| `src/main/` | 메인 프로세스 — `app.ts`(기동 · 종료 배선) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `art.ts`(PMD 그림) · `portrait-art.ts`(초상 대체 그림) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `menus.ts` · `menu-window.ts` · `tray.ts` · `picker-window.ts`(첫 실행 선택 창) · `manage-window.ts`(설정창) · `region-window.ts`(놀이공간 영역 그리기) · `paths.ts` · `text.ts` · `preload.ts` 등 |
 | `src/follow/` | 어느 창 · 어느 세션을 따를지 — `state.ts`(훅 상태 기록 · 판정) · `front.ts`(맨 앞 창 · 터미널 호스트) · `winbounds.ts` · `line-helper.ts`(창 추적 헬퍼). `pokebuddy status` 가 같은 코드를 부른다 |
 | `src/motion/` | 마리 하나의 움직임 — `brain.ts` · `pet-motion.ts` · `rules.ts` · `params.ts` |
 | `src/renderer/` | 무대 `stage.html` · `stage.ts` · `sprites.ts` · `hit.ts` · `pointer.ts`, 선택 창 `picker.html` · `picker.ts`, 설정창 `manage.html` · `manage.ts`, 메뉴 `menu.html` · `menu.ts`, 놀이공간 영역 `region.html` · `region.ts` 등 |
@@ -266,6 +267,8 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
 - 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
+- PMD 그림을 못 받은 종은 초상 대체 그림으로 무대에 나온다(`src/main/portrait-art.ts`). 관찰(2026-10-01): 등장 종 944종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
+  대체 그림은 PokeAPI 초상을 절반으로 줄여 PMD 크기에 맞춘다. 동작은 `Idle`·`Walk` 두 개다. 1도트씩 들썩이고, 오른쪽으로 걸을 때는 좌우를 뒤집는다. 네트워크 문제로 PMD 를 못 받은 종도 그 실행 동안은 대체 그림이다
 - 칸 크기가 동작마다 달라도 기준점은 `(칸너비/2, 칸높이/2+4)` 로 같다. 그래서 몸 칸 가운데에 맞춰 그리면 발 위치가 맞는다
 - 캔버스 크기를 바꾸면 2D 컨텍스트가 기본값으로 돌아간다. 그러면 보간이 다시 켜진다. 정수 배율에서도 도트가 번진다(인접한 검정·흰색 픽셀이
   `[0,0,32,96,159,223,255,255]` 처럼 그라데이션이 된다). CSS `image-rendering: pixelated` 로는 못 막는다. 그래서 크기를 바꿀 때마다 보간을 다시 끈다(`src/renderer/stage.ts`)

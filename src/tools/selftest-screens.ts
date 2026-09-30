@@ -143,6 +143,8 @@ function fakeWin(hooks: LaneHooks | null = null): FakeWin {
     },
     setVisible: (on: boolean) => void (w.shown = on),
     isVisible: () => w.shown,
+    raise() {},
+    owns: () => false,
     setPassing() {},
     hoverTick: (held: boolean) => void w.held.push(held),
     sendInit() {},
