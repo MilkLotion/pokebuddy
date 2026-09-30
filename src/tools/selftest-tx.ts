@@ -258,6 +258,20 @@ function seedBox(): SaveV3 {
   process.stdout.write("(10d) 보관 · 고른 박스 빈 칸으로  ok\n");
 }
 
+// (10e) 박스 개체는 돌보지 않는다 — 밥 주기·놀아주기 거절, 값은 그대로 (2026-09-30 사용자 "박스에선 막고")
+{
+  const f = fake(seedBox());
+  const tx = createExecutor(f.ports, HANDLERS);
+  const before = structuredClone(f.state.pets.find((p) => p.id === "p2"));
+  const fed = tx.run({ id: "r1", name: "feed", args: { petId: "p2" } });
+  assert.equal(fed.ok === false && fed.reason, "not-in-party");
+  const played = tx.run({ id: "r2", name: "play", args: { petId: "p2" } });
+  assert.equal(played.ok === false && played.reason, "not-in-party");
+  assert.deepStrictEqual(f.state.pets.find((p) => p.id === "p2"), before, "박스 개체 값은 그대로");
+  assert.equal(f.writes, 0);
+  process.stdout.write("(10e) 박스 개체 돌봄 거절  ok\n");
+}
+
 // (11) 보관 — 파티 칸이 비고 개체는 박스로
 {
   const f = fake(seedBox());

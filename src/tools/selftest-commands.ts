@@ -28,6 +28,9 @@ async function main(): Promise<void> {
   begin(seed, "charmander", T, () => 0);
   seed.pets[0]!.level = 16; // 레벨 조건을 채워 진화할 수 있게
   seed.points.balance = 5000;
+  // 박스 개체 하나 — 박스 개체도 크기는 정한다 (2026-09-30 박스 개체 상세 = 파티 상세)
+  seed.pets.push({ ...structuredClone(seed.pets[0]!), id: "b-pet" });
+  seed.boxes[0]!.slots[0] = "b-pet";
   store.write(paths.save, seed);
 
   const game = createGame({ file: paths.save, rand: () => 0 });
@@ -59,6 +62,13 @@ async function main(): Promise<void> {
     assert.equal(store.read(paths.save, { repair: false }).state!.boxes[0]!.name, "내 박스");
     assert.ok((await commands.dispatcher.dispatch({ cmd: "box.sort", target: "b1", args: { by: "dex" }, from: "settings" })).ok, "box.sort 가 앱 명령 경로에서 동작");
 
+    // 박스 개체 — 크기는 바뀌고 자리(home)는 거절한다
+    const boxSize = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "b-pet", args: { size: 3 }, from: "settings" });
+    assert.ok(boxSize.ok, `박스 개체 크기 (${boxSize.reason})`);
+    assert.equal(store.read(paths.save, { repair: false }).state!.pets.find((p) => p.id === "b-pet")!.size, 2, "크기 3단계 = 배율 2");
+    const boxHome = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "b-pet", args: { home: { dx: 1, dy: 1 } }, from: "settings" });
+    assert.equal(boxHome.ok, false, "박스 개체의 자리는 정하지 않는다");
+
     // 저장 명령은 무대 갱신을 기다리지 않고 답한다 — 그림을 받는 동안 관리 창이 멈춰 보이지 않게 (worklog/records/response-latency/record.md)
     let release = (): void => {};
     stageHold = new Promise<void>((r) => { release = r; });
@@ -83,7 +93,7 @@ async function main(): Promise<void> {
       windowsHide: true, env: { ...process.env, HOME: dir, USERPROFILE: dir },
     });
     const snapshot = JSON.parse(child.stdout);
-    assert.equal(snapshot.pets.length, 1, "실제 CLI 가 저장 v3 스냅샷을 받는다");
+    assert.equal(snapshot.pets.length, 2, "실제 CLI 가 저장 v3 스냅샷을 받는다 — 파티 1 + 박스 1");
     assert.equal(snapshot.points, party.save()!.points.balance);
 
     // 같은 요청 식별자는 한 번만 반영한다

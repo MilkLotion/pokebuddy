@@ -390,18 +390,22 @@ function renderBody(v: PetDeviceView): void {
   );
   device.appendChild(records);
 
-  // 흰 판 — 돌봄 · 성장 · 크기 · 관리
+  // 흰 판 — 돌봄 · 성장 · 크기. 박스 개체도 파티 개체와 같은 상세를 쓴다 (2026-09-30 사용자 "똑같은 파티상세를 써야지").
+  // 볼 토글은 파티 개체 전용이다 — 박스 개체는 바탕화면에 꺼낼 수 없다.
+  // 돌봄 단추는 박스 개체에게는 막는다 — 박스에서는 값이 줄지 않는다 (2026-09-30 사용자 "박스에선 막고")
   const actions = el("div", "actions");
-  if (v.inParty) {
+  {
     const full = pet.fullness >= 100;
     const care = el("div", "row");
     care.dataset.tut = "detail-care";
-    const feed = button("act primary", feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), !pet.feedReady || full);
-    feed.dataset.live = "feed";
+    const boxed = !v.inParty;
+    const feed = button("act primary", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     care.append(
       feed,
-      button("act", pet.playReady ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), !pet.playReady),
+      button("act", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
     );
+    if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     actions.appendChild(care);
   }
   const ready = pet.evolutions.filter((e) => e.ready);
@@ -419,7 +423,7 @@ function renderBody(v: PetDeviceView): void {
     : line("도감 보기", null, [], () => act({ kind: "dex" }));
   growth.append(evoLine, second);
   actions.appendChild(growth);
-  if (v.inParty) {
+  {
     const sizes = el("div", "sizes");
     sizes.setAttribute("role", "group");
     sizes.setAttribute("aria-label", "크기");

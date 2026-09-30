@@ -51,6 +51,7 @@ export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = 
 
   function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
     const box = el("div", node.current ? "evo-node current" : "evo-node");
+    box.dataset.slug = node.slug; // 진화 창이 후보 노드를 찾아 누를 수 있게 한다 (src/renderer/manage.ts drawEvolve)
     const name = node.locked && opts.lockedName ? opts.lockedName : node.name;
     box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", name));
     if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));

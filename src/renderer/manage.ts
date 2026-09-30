@@ -17,6 +17,7 @@ import type {
   CloudStatusView,
   DexEntry,
   EggView,
+  EvoNodeView,
   FormView,
   MailGiftView,
   MailLetterView,
@@ -38,6 +39,7 @@ import type {
   UpdateView,
 } from "../shared/manage.js";
 import { genderIcon } from "./gender.js";
+import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -3947,21 +3949,80 @@ const REGION_MAP = "region-map";
 // 가방의 도구로 왔을 때 보일 후보 — 지도면 지도 간선만. 돌이면 그 돌이 조건인 후보 — 돌 대신 지도인 리전폼 후보는 조건이 지도라 빠진다
 const evoByItem = (c: PetView["evolutions"][number], itemId: string): boolean => (itemId === REGION_MAP ? !!c.map : c.item === itemId);
 
+// 진화 사슬 — 도감·상점과 같은 트리(src/tx/shop-detail.ts). 종마다 한 번 받는다. 받기 전·못 받으면 후보 줄로 그린다
+const evoTrees = new Map<string, EvoNodeView | null>();
+const evoTreeAsked = new Set<string>();
+function evoTreeOf(species: string): EvoNodeView | null {
+  if (evoTrees.has(species)) return evoTrees.get(species) ?? null;
+  if (!evoTreeAsked.has(species)) {
+    evoTreeAsked.add(species);
+    void window.pokebuddyManage
+      .shopDetail(species)
+      .then((d) => {
+        evoTrees.set(species, d?.kind === "pokemon" ? d.tree : null);
+        if (dialog?.kind === "evolve") drawDialog();
+      })
+      .catch((e) => {
+        console.error(e); // 사슬을 못 받았다 — 후보 줄로 그린다
+        evoTrees.set(species, null);
+      });
+  }
+  return null;
+}
+const EVOLVE_RADIAL = { ...RADIAL, width: 340 };
+const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
+
+// 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
+// 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다
 function drawEvolve(petId: string, to?: string, itemId?: string): void {
   const pet = petOf(petId);
   if (!pet) {
     close();
     return;
   }
-  // 가방의 도구로 왔으면 그 도구를 쓰는 후보만 보인다. 상세에서 오면 전부 — 조건을 못 채운 후보(지도 간선 포함)는 이유와 함께 누를 수 없게 둔다
+  // 가방의 도구로 왔으면 그 도구를 쓰는 후보만 고를 수 있다. 상세에서 오면 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다
   const list = itemId ? pet.evolutions.filter((c) => evoByItem(c, itemId)) : pet.evolutions;
   const ready = list.filter((c) => c.ready);
-  const picked = list.find((c) => c.to === to && c.ready) ?? (ready.length === 1 ? ready[0] : undefined);
+  const picked = list.find((c) => c.to === to && c.ready) ?? ready[0];
   const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "evo-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...dialogHead("진화", ready.length > 1 ? "진화할 모습을 고르세요." : `${pet.name} · Lv.${pet.level}`, back));
+  dialogEl.append(...dialogHead("진화", `${pet.name} · Lv.${pet.level}`, back));
 
+  const tree = evoTreeOf(pet.species);
+  if (tree) {
+    const card = el("div", "evo-card");
+    card.appendChild(tree.children.length >= RADIAL_MIN ? evolveDrawer.evoRadial(tree, EVOLVE_RADIAL) : evolveDrawer.evoTree(tree));
+    for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
+      const c = list.find((x) => x.to === node.dataset.slug);
+      if (!c) continue;
+      // 사슬은 도감에서 해금 안 된 종을 ??? 와 빈 원으로 준다 — 진화 후보는 이름과 그림을 보인다(후보 줄 때와 같다)
+      const nameEl = node.querySelector(".evo-name");
+      if (nameEl) nameEl.textContent = c.name;
+      node.querySelector(".portrait.empty")?.replaceWith(portraitOf(c.to, false, "portrait"));
+      if (!c.ready) {
+        node.classList.add("dim");
+        node.title = c.need ?? "조건이 모자라요";
+        continue;
+      }
+      node.classList.add("pick");
+      if (picked?.to === c.to) node.classList.add("picked");
+      node.setAttribute("role", "button");
+      node.tabIndex = 0;
+      node.setAttribute("aria-pressed", String(picked?.to === c.to));
+      const choose = (): void => open({ kind: "evolve", petId, to: c.to, ...(itemId ? { itemId } : {}) });
+      node.addEventListener("click", choose);
+      node.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          choose();
+        }
+      });
+    }
+    dialogEl.appendChild(card);
+  }
+
+  // 트리를 아직 못 받았으면 후보 줄로 고른다
   const rows = el("div", "rows");
-  for (const c of list) {
+  for (const c of tree ? [] : list) {
     const row = button("row-card");
     const body = el("div", "body");
     // 지도 간선은 준비됐을 때도 지도를 쓴다고 적는다 — 옆의 기본형 결과와 가른다
@@ -3973,7 +4034,7 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     row.addEventListener("click", () => open({ kind: "evolve", petId, to: c.to, ...(itemId ? { itemId } : {}) }));
     rows.appendChild(row);
   }
-  dialogEl.appendChild(rows);
+  if (!tree) dialogEl.appendChild(rows);
 
   if (picked) {
     const info = el("div", "info-box");
@@ -3994,7 +4055,7 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
       if (ok) open({ kind: "pet", petId });
     });
   });
-  // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `914:22682`, 2026-09-30 점검)
+  // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
   dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
 }
 
@@ -4851,7 +4912,7 @@ function drawDialog(): void {
   else if (dialog.kind === "trade") drawTradeDialog();
   else drawGuide();
 
-  // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 99 `1087:21739`).
+  // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 05 `Dialog · 실패 (바닥 단추 줄 빈자리)` `1126:24745`).
   // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
   if (notice && !noticeInline) {
     const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions"); // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다

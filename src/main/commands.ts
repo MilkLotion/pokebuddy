@@ -145,13 +145,17 @@ export function createCommands(ctx: CommandContext): Commands {
   // pet.set — 자리 또는 그림 크기
   dispatcher.register("pet.set", async (c) => {
     const id = target(c);
-    if (!id || !ctx.party.all().some((p) => p.id === id)) return { ok: false, reason: "no-pet", id: String(id) };
+    // 크기는 박스 개체도 정한다 — 파티에 나오면 그 크기로 보인다 (2026-09-30). 자리(home)는 파티 개체만
+    const inParty = !!id && ctx.party.all().some((p) => p.id === id);
+    const owned = inParty || (!!id && !!currentSave()?.pets.some((p) => p.id === id));
+    if (!id || !owned) return { ok: false, reason: "no-pet", id: String(id) };
     const size = isObj(c.args) ? c.args.size : undefined;
     if (size !== undefined) {
       if (typeof size !== "number") return { ok: false, reason: "bad-value", id };
       return ctx.party.setSize(id, size);
     }
     const home = isObj(c.args) ? c.args.home : undefined;
+    if (!inParty) return { ok: false, reason: "no-pet", id };
     if (!isObj(home)) return { ok: false, reason: "not-yet", id };
     const { dx, dy } = home;
     if (typeof dx !== "number" || typeof dy !== "number" || !Number.isFinite(dx) || !Number.isFinite(dy)) return { ok: false, reason: "bad-value", id };
