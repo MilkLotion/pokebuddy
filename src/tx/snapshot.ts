@@ -44,8 +44,11 @@ const eggPercent = (remainMs: number, readyMs: number): number =>
   readyMs <= 0 ? 100 : Math.min(100, Math.max(0, Math.round(((readyMs - remainMs) / readyMs) * 100)));
 
 // 모자란 조건 → 화면 문구. 판정의 이유 코드는 src/dex/evolve.ts 의 checkNeed 다
+// 이유가 `|` 로 둘 이상이면(레벨·친밀도 지도 간선) 이름을 `·` 로 잇는다 — "Lv.36·지도 필요". 돌 대신 지도인 간선은 "지도 필요"
 function needText(missing: string | undefined): string | undefined {
   if (!missing) return undefined;
+  const parts = missing.split("|");
+  if (parts.length > 1) return `${parts.map((m) => (needText(m) ?? m).replace(/ 필요$/, "")).join("·")} 필요`;
   const [kind, value = ""] = missing.split(":");
   if (kind === "level") return `Lv.${value} 필요`;
   if (kind === "affinity") return `친밀도 ${value} 필요`;
@@ -63,6 +66,7 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
     ready: c.ready,
     ...(c.ready ? {} : { need: needText(c.missing) }),
     ...(c.need.kind === "item" ? { item: c.need.item } : {}),
+    ...(c.map ? { map: true as const } : {}),
   }));
 }
 

@@ -10,8 +10,11 @@
 // 결과: { "<도감 번호>": { "genus": { "ko", "en" }, "flavor": { "ko"?, "en"? }, "height"?, "weight"? } }
 //   - 한국어 설명문은 898번까지만 있다(2026-09-25 확인). 없으면 ko 칸을 두지 않는다 — 화면이 영어로 대신한다
 //   - 설명문의 줄바꿈·쪽바꿈 문자는 빈칸 하나로 바꾼다
+//   - 리전폼(data/regional.json)은 슬러그 키로 키·몸무게만 둔다 — "raichu-alola": { genus: {}, flavor: {}, height, weight }.
+//     분류·설명문은 PokeAPI 에 폼 단위가 없어 도감 번호 항목(기본형)을 쓴다 (src/tx/dex-detail.ts textOf)
 import path from "node:path";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
+import { regionalTable } from "../dex/regional";
 
 const OUT = path.join(DATA_DIR, "dex-text.json");
 const LANG = { ko: "3", en: "9" } as const;
@@ -30,7 +33,7 @@ export async function build(): Promise<void> {
   const [nameRows, flavorRows, bodyRows] = await Promise.all([
     csv("pokemon_species_names.csv", ["pokemon_species_id", "local_language_id", "genus"]),
     csv("pokemon_species_flavor_text.csv", ["species_id", "version_id", "language_id", "flavor_text"]),
-    csv("pokemon.csv", ["species_id", "height", "weight", "is_default"]),
+    csv("pokemon.csv", ["id", "species_id", "height", "weight", "is_default"]),
   ]);
   const wanted = new Set(Object.values(readDex()));
   const out: Record<string, DexText> = {};
@@ -61,7 +64,22 @@ export async function build(): Promise<void> {
     if (r.weight) e.weight = Number(r.weight);
   }
 
-  const sorted = Object.fromEntries(Object.keys(out).sort((a, b) => Number(a) - Number(b)).map((k) => [k, out[k]]));
+  // 리전폼 — 포켓몬 번호 행의 키·몸무게
+  const bodyById = new Map(bodyRows.map((r) => [r.id, r]));
+  const forms: Record<string, DexText> = {};
+  for (const [slug, f] of Object.entries(regionalTable().forms)) {
+    const r = bodyById.get(String(f.pokemonId));
+    if (!r) throw new Error(`리전폼의 포켓몬 번호가 pokemon.csv 에 없다: ${slug} ${f.pokemonId}`);
+    const e: DexText = { genus: {}, flavor: {} };
+    if (r.height) e.height = Number(r.height);
+    if (r.weight) e.weight = Number(r.weight);
+    forms[slug] = e;
+  }
+
+  const sorted = {
+    ...Object.fromEntries(Object.keys(out).sort((a, b) => Number(a) - Number(b)).map((k) => [k, out[k]])),
+    ...Object.fromEntries(Object.keys(forms).sort().map((k) => [k, forms[k]])),
+  };
   writeLineJson(OUT, sorted);
   const all = Object.values(out);
   const count = (f: (t: DexText) => unknown): number => all.filter(f).length;
@@ -69,6 +87,7 @@ export async function build(): Promise<void> {
   process.stdout.write(`분류 한국어 ${count((t) => t.genus.ko)} · 영어 ${count((t) => t.genus.en)} / 설명 한국어 ${count((t) => t.flavor.ko)} · 영어 ${count((t) => t.flavor.en)}\n`);
   process.stdout.write(`키 ${count((t) => t.height)} · 몸무게 ${count((t) => t.weight)}
 `);
+  process.stdout.write(`리전폼 키·몸무게 ${Object.keys(forms).length}\n`);
   process.stdout.write(`  25 ${JSON.stringify(out["25"])}\n`);
 }
 

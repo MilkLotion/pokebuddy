@@ -104,4 +104,24 @@ assert.ok(r.obtainable.has("snorlax") && pool.includes("munchlax") && !pool.incl
 }
 process.stdout.write("(7) 잠만보 · 먹고자 진화로 해금  ok\n");
 
-process.stdout.write(`selftest-unlocks: 통과 (첫 선택 후보·규칙 이름·진화 사슬·첫 선택 직후 해금·랜덤알 후보·해금 정리·옛 조건 규칙 없음·잠만보 진화) — 참고: 얻을 수 있는 종 ${[...dexSlugs].filter((s) => r.obtainable.has(s)).length}/${dexSlugs.size}\n`);
+// (8) 리전폼 (data/regional.json) — 진화 전 종은 다른 종처럼 처음부터 해금돼 랜덤알·상점 후보다. 진화 결과는 진화로만,
+// 가라르 새 3종은 전설 규칙대로 랜덤준전설알에서만 얻는다 (2026-09-30 사용자 결정)
+{
+  for (const s of ["vulpix-alola", "meowth-galar", "tauros-paldea-aqua-breed", "stunfisk-galar"]) {
+    assert.deepStrictEqual(rules[s], { base: true }, `기본형 규칙 ${s}`);
+    assert.ok(save.dex.unlocked.includes(s), `첫 선택 직후 해금 ${s}`);
+    assert.ok(inRandomEgg(s), `랜덤알 후보 ${s}`);
+  }
+  for (const s of ["raichu-alola", "ninetales-alola", "articuno-galar"]) {
+    assert.ok(!save.dex.unlocked.includes(s), `아직 ${s}`);
+    assert.ok(!inRandomEgg(s), `랜덤알 후보 밖 ${s}`);
+  }
+  assert.deepStrictEqual(rules["raichu-alola"], { evolve: { from: "pikachu", affinity: 500 } }, "지도 진화 결과는 진화 규칙");
+  assert.deepStrictEqual(rules["ninetales-alola"], { evolve: { from: "vulpix-alola", affinity: 500 } }, "리전폼 경로");
+  assert.deepStrictEqual(rules["perrserker"], { evolve: { from: "meowth", affinity: 500 } }, "같은 결과면 기본형 출발 규칙");
+  assert.equal(rules["articuno-galar"], undefined, "전설 리전폼은 규칙이 없다");
+  for (const s of dexSlugs) if (s.includes("-alola") || s.includes("-galar") || s.includes("-hisui") || s.includes("-paldea")) assert.ok(r.obtainable.has(s), `얻을 수 있다 ${s}`);
+}
+process.stdout.write("(8) 리전폼 해금·랜덤알 후보  ok\n");
+
+process.stdout.write(`selftest-unlocks: 통과 (첫 선택 후보·규칙 이름·진화 사슬·첫 선택 직후 해금·랜덤알 후보·해금 정리·옛 조건 규칙 없음·잠만보 진화·리전폼) — 참고: 얻을 수 있는 종 ${[...dexSlugs].filter((s) => r.obtainable.has(s)).length}/${dexSlugs.size}\n`);

@@ -193,7 +193,7 @@ const evolveHandler: TxHandler = (draft, args, ctx) => {
   const part = dayPartOf(ctx.now);
   const res = evolve(draft, petId, part, choice);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed", ...(res.choices ? { choices: res.choices } : {}) };
-  return { ok: true, result: { petId, from: res.from, to: res.to, usedItem: res.usedItem } };
+  return { ok: true, result: { petId, from: res.from, to: res.to, usedItem: res.usedItem, ...(res.usedItems ? { usedItems: res.usedItems } : {}) } }; // 돌 + 지도면 usedItems 가 둘
 };
 
 HANDLERS["evolve"] = evolveHandler;

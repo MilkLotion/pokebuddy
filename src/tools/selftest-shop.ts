@@ -249,4 +249,16 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(11) 가방 판매 · 60% 내림 · 판매 불가 · 보유 부족 · 원자성  ok\n");
 }
 
-process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종)\n");
+// (12) 리전폼 (data/regional.json) — 지도는 진화용 도구 공통 가격. 리전폼 진화 전 종은 알에서 얻는 종이라 파는 종, 진화 결과·전설은 팔지 않는다
+{
+  assert.equal(toolPrice("region-map"), SHOP_V3_RULES.evoItemPrice, "지도 150P");
+  assert.equal(toolPrice("galarica-cuff"), SHOP_V3_RULES.evoItemPrice, "가라두구팔찌");
+  assert.equal(sellsSpecies("vulpix-alola"), true);
+  assert.equal(sellsSpecies("tauros-paldea-blaze-breed"), true);
+  assert.equal(sellsSpecies("raichu-alola"), false, "진화 결과");
+  assert.equal(sellsSpecies("articuno-galar"), false, "단일 포켓몬 알의 종");
+  assert.ok(eggPool("sub-legendary")?.includes("articuno-galar"), "가라르 프리져는 랜덤준전설알");
+  process.stdout.write("(12) 리전폼 · 지도 가격 · 파는 종  ok\n");
+}
+
+process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼)\n");

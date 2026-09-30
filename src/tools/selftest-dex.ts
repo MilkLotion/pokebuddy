@@ -11,6 +11,7 @@ import * as gender from "../dex/gender";
 import * as natures from "../dex/natures";
 import * as species from "../dex/species";
 import * as unlocks from "../dex/unlocks";
+import * as regional from "../dex/regional";
 import type { UnlockRules } from "../dex/unlocks";
 import type { Pet, SaveV2, World } from "../shared/types";
 
@@ -170,7 +171,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profile("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.slugs().length, 1110, "표의 종 수 — PokeAPI 종 1025 + 폼 85");
+  assert.strictEqual(dex.slugs().length, 1167, "표의 종 수 — PokeAPI 종 1025 + 폼 85 + 리전폼 57");
   assert.ok(!dex.slugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.slugs()) {
@@ -235,6 +236,62 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   some(eevee[0]).to = "mutated";
   assert.notStrictEqual(some(dex.nextOf("eevee")[0]).to, "mutated");
   out("진화 사슬 ok");
+}
+
+// ── 리전폼 (data/regional.json) ───────────────────────────────────────────────
+// 도감 번호가 같아도 다른 종이다. 기본 종으로 풀지 않고, 같은 결과로 가면 부모는 기본형이다
+{
+  const table = regional.regionalTable();
+  const forms = Object.entries(table.forms);
+  const edges = Object.entries(table.edges).flatMap(([from, steps]) => steps.map((st) => ({ from, ...st })));
+  assert.strictEqual(forms.length, 57, "리전폼 57종");
+  assert.strictEqual(edges.length, 38, "리전폼 간선 38개");
+  const count = (get: string): number => forms.filter(([, f]) => f.get === get).length;
+  assert.deepStrictEqual([count("map"), count("base"), count("path")], [12, 28, 17]);
+  const names = require(path.join(__dirname, "..", "..", "lib", "names.json")) as Record<string, { ko: string; en: string }>;
+  for (const [slug, f] of forms) {
+    const p = dex.profile(slug);
+    assert.ok(dex.hasProfile(slug), `${slug} 프로필`);
+    assert.strictEqual(p.dex, dex.profile(f.base).dex, `${slug} 도감 번호는 기본 종과 같다`);
+    assert.ok(p.types.length >= 1, `${slug} 타입`);
+    assert.strictEqual(names[slug]?.ko, f.ko, `${slug} 이름표`);
+    assert.match(regional.dexLabel(slug, p.dex), /^\d+-\d+$/, `${slug} 표시 번호`);
+    if (f.pmd) assert.match(f.pmd, /^\d{4}\/\d{4}$/, `${slug} PMD 경로`);
+    assert.strictEqual(dex.stageOf(slug) === 0, f.get === "base", `${slug} 진화 전 종은 base 뿐`);
+  }
+  for (const e of edges) {
+    assert.ok(dex.hasProfile(e.from) && dex.hasProfile(e.to), `${e.from}→${e.to} 도감표`);
+    assert.strictEqual(Boolean(e.map), table.forms[e.to]?.get === "map", `${e.from}→${e.to} 지도 간선은 map 결과로만`);
+    assert.ok(dex.nextOf(e.from).some((st) => st.to === e.to && Boolean(st.map) === Boolean(e.map)), `${e.from}→${e.to} 가 evo.json 에 있다`);
+  }
+  assert.strictEqual(regional.dexLabel("raichu-alola", 26, 4), "0026-1");
+  assert.strictEqual(regional.dexLabel("tauros-paldea-aqua-breed", 128), "128-3");
+  assert.strictEqual(regional.dexLabel("raichu", 26), "26");
+  assert.strictEqual(dex.profile("raichu-alola").types.join("/"), "electric/psychic");
+  // 부모는 기본형 — 지방 전용 진화는 기본형에서도 리전폼에서도 간다
+  assert.strictEqual(dex.prevOf("perrserker"), "meowth");
+  assert.strictEqual(dex.prevOf("sirfetchd"), "farfetchd");
+  assert.strictEqual(dex.prevOf("obstagoon"), "linoone");
+  assert.strictEqual(dex.prevOf("raichu-alola"), "pikachu");
+  assert.strictEqual(dex.prevOf("meowth-galar"), null, "리전폼 진화 전 종은 뿌리");
+  assert.strictEqual(dex.rootOf("ninetales-alola"), "vulpix-alola");
+  assert.strictEqual(dex.rootOf("raichu-alola"), "pichu");
+  assert.strictEqual(dex.stageOf("golem-alola"), 2);
+  // 리전폼은 자기 자신으로 풀린다 — 기본형 간선을 받지 않는다
+  assert.deepStrictEqual(dex.nextOf("meowth-galar").map((st) => st.to), ["perrserker"]);
+  assert.deepStrictEqual(dex.nextOf("meowth").map((st) => st.to), ["persian", "perrserker"]);
+  assert.deepStrictEqual(dex.nextOf("stunfisk-galar"), [], "간선 없는 리전폼");
+  assert.deepStrictEqual(dex.nextOf("articuno-galar"), []);
+  assert.deepStrictEqual(dex.nextOf("tauros-paldea-blaze-breed"), []);
+  assert.deepStrictEqual(dex.nextOf("pikachu").map((st) => [st.to, st.map ?? false]), [["raichu", false], ["raichu-alola", true]]);
+  assert.deepStrictEqual(dex.nextOf("vulpix-alola").map((st) => [st.to, st.map ?? false]), [["ninetales-alola", false]], "리전폼의 다음 진화는 지도 없음");
+  assert.ok(!dex.lineOf("rattata").includes("rattata-alola"), "리전폼은 사슬의 모습이 아니다");
+  // 기본 야돈 → 야도킹은 교환(연결의끈). 가라두구머리장식은 가라르 야도킹 전용 (2026-09-30 사용자 결정)
+  assert.deepStrictEqual(dex.nextOf("slowpoke").find((st) => st.to === "slowking")?.need, { kind: "item", item: "bond-cord" });
+  assert.deepStrictEqual(dex.nextOf("slowpoke-galar").find((st) => st.to === "slowking-galar")?.need, { kind: "item", item: "galarica-wreath" });
+  // 표가 없는 dataDir — 빈 표로 본다
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {} });
+  out("리전폼 ok");
 }
 
 // ── 해금 조건 ──────────────────────────────────────────────────────────────────

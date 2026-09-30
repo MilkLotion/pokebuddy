@@ -244,7 +244,7 @@ let shopView: ViewMode = loadView("shop");
 let listScrollTo: { where: "dex" | "shop"; index: number } | null = null;
 let dexFilter = "all";
 // 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
-// 지방 폼은 도감 자료에 따로 없어 번호 구간만으로 나눈다. 폼 항목이 생기면 번호로만 판정하지 않는다(스펙)
+// 리전폼 항목(알로라 라이츄 등)은 번호가 아니라 항목의 지방(region)으로 나눈다(스펙) — inDexRegion
 let dexRegion = "all";
 let dexRegionOpen = false;
 const DEX_REGIONS: readonly { id: string; label: string; from: number; to: number }[] = [
@@ -260,6 +260,17 @@ const DEX_REGIONS: readonly { id: string; label: string; from: number; to: numbe
   { id: "hisui", label: "히스이", from: 899, to: 905 }, // 최초 등장 지방 기준 (docs/specs/game.md "전체 도감과 지방") — 레전드 아르세우스에서 처음 나온 종
   { id: "paldea", label: "팔데아", from: 906, to: 1025 },
 ];
+// 지방 하나에 드는 항목인가 — 리전폼은 자기 지방, 나머지는 번호 구간
+function inDexRegion(regionId: string, dex: number, formRegion?: string): boolean {
+  const region = DEX_REGIONS.find((r) => r.id === regionId) ?? DEX_REGIONS[0];
+  if (!region || region.id === "all") return true;
+  if (formRegion) return formRegion === region.id;
+  return dex >= region.from && dex <= region.to;
+}
+
+// 도감 표시 번호 — `#0026`, 리전폼이면 `#0026-1` (src/dex/regional.ts dexLabel 과 같은 모양)
+const dexNoText = (dex: number, form: number | undefined, pad: number): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}`;
+
 let dialog: Dialog | null = null;
 let notice = ""; // 마지막 실패 문구. 모달을 다시 그려도 남는다
 
@@ -800,12 +811,14 @@ function restoreSearchFocus(): void {
 
 const normQuery = (q: string): string => q.trim().toLowerCase();
 
-// 이름은 부분 일치, 숫자만 넣으면 도감 번호 앞자리 일치("025" 와 "25" 가 같다)
+// 이름은 부분 일치, 숫자만 넣으면 도감 번호 앞자리 일치("025" 와 "25" 가 같다). `26-1` 처럼 하이픈이 있으면 표시 번호와 정확히 비교한다
 function matchesName(name: string, q: string): boolean {
   return name.toLowerCase().includes(q);
 }
 function matchesDex(row: DexEntry, q: string): boolean {
   if (/^\d+$/.test(q)) return String(row.dex).startsWith(String(Number(q)));
+  const m = /^(\d+)-(\d+)$/.exec(q);
+  if (m) return row.dex === Number(m[1]) && row.form === Number(m[2]);
   // 미해금 종은 이름이 숨겨져 있다 — 이름으로 찾으면 무엇인지 드러나므로 번호로만 찾는다
   return row.state !== "locked" && matchesName(row.name, q);
 }
@@ -1246,7 +1259,7 @@ function dexCell(row: DexEntry): HTMLElement {
   cell.setAttribute("aria-pressed", String(row.slug === dexPick));
   cell.addEventListener("click", () => pickDex(row.slug));
   // 미해금 종은 그림을 검은 실루엣으로 보인다 — CSS .dex-cell.locked .art (2026-09-27 사용자 결정 "모든 미해금에 다 하자")
-  cell.append(el("div", "no", `#${String(row.dex).padStart(4, "0")}`), portraitOf(row.slug, false, "dot", "", true));
+  cell.append(el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`), portraitOf(row.slug, false, "dot", "", true));
   cell.appendChild(el("div", undefined, row.state === "locked" ? "???" : row.name));
   if (row.state === "obtained") cell.appendChild(el("div", "no", row.shiny ? "이로치 획득" : "획득"));
   return cell;
@@ -1269,9 +1282,7 @@ function pickDex(slug: string): void {
 function dexShown(): DexEntry[] {
   if (!dexRows) return [];
   const q = normQuery(dexQuery);
-  const region = DEX_REGIONS.find((r) => r.id === dexRegion) ?? DEX_REGIONS[0];
-  const inRegion = (dex: number): boolean => !region || (dex >= region.from && dex <= region.to);
-  return dexRows.filter((r) => inRegion(r.dex) && (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
+  return dexRows.filter((r) => inDexRegion(dexRegion, r.dex, r.region) && (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
 }
 
 const dexRegionEl = (): HTMLElement =>
@@ -1494,7 +1505,7 @@ function shopRow(item: ShopItemView): HTMLElement {
 function shopCell(item: ShopItemView): HTMLElement {
   const cell = button("dex-cell shop-cell");
   cell.dataset.slug = item.id;
-  cell.append(el("div", "no", item.dex ? `#${String(item.dex).padStart(4, "0")}` : ""), portraitOf(item.id, false, "dot", "", true));
+  cell.append(el("div", "no", item.dex ? `#${dexNoText(item.dex, item.form, 4)}` : ""), portraitOf(item.id, false, "dot", "", true));
   cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
   if (item.blocked) cell.appendChild(el("div", "no", item.blocked));
   cell.addEventListener("click", () => open({ kind: "buy", productId: item.id, qty: 1 }));
@@ -1504,11 +1515,12 @@ function shopCell(item: ShopItemView): HTMLElement {
 // 포켓몬 상품 — 도감과 같은 지방·검색. 번호로 찾거나 이름으로 찾는다
 function shopPokemonShown(items: ShopItemView[]): ShopItemView[] {
   const q = normQuery(shopQuery);
-  const region = DEX_REGIONS.find((r) => r.id === shopRegion) ?? DEX_REGIONS[0];
   return items.filter((i) => {
     const dex = i.dex ?? 0;
-    if (region && (dex < region.from || dex > region.to)) return false;
+    if (!inDexRegion(shopRegion, dex, i.region)) return false;
     if (!q) return true;
+    const m = /^(\d+)-(\d+)$/.exec(q);
+    if (m) return dex === Number(m[1]) && i.form === Number(m[2]);
     return /^\d+$/.test(q) ? String(dex).startsWith(String(Number(q))) : matchesName(i.name, q);
   });
 }
@@ -3598,14 +3610,20 @@ function onPetAction(action: PetDeviceAction): void {
 // 후보마다 결과 종과 상태를 보인다. 가능한 후보가 하나면 그것을 고른 채로 연다.
 // `취소` 는 아무것도 바꾸지 않는다 (docs/specs/game.md "진화 확인 화면에서 취소한 개체는 진화 가능 상태를 유지한다")
 
+// 지도 — 기본형 → 리전폼 진화(지도 간선)에 쓴다. 돌 간선은 돌 대신, 레벨·친밀도 간선은 조건과 함께 (src/dex/evolve.ts, worklog-mac/records/region-map/record.md)
+const REGION_MAP = "region-map";
+
+// 가방의 도구로 왔을 때 보일 후보 — 지도면 지도 간선만. 돌이면 그 돌이 조건인 후보 — 돌 대신 지도인 리전폼 후보는 조건이 지도라 빠진다
+const evoByItem = (c: PetView["evolutions"][number], itemId: string): boolean => (itemId === REGION_MAP ? !!c.map : c.item === itemId);
+
 function drawEvolve(petId: string, to?: string, itemId?: string): void {
   const pet = petOf(petId);
   if (!pet) {
     close();
     return;
   }
-  // 가방의 돌로 왔으면 그 돌이 조건인 후보만 보인다
-  const list = itemId ? pet.evolutions.filter((c) => c.item === itemId) : pet.evolutions;
+  // 가방의 도구로 왔으면 그 도구를 쓰는 후보만 보인다. 상세에서 오면 전부 — 조건을 못 채운 후보(지도 간선 포함)는 이유와 함께 누를 수 없게 둔다
+  const list = itemId ? pet.evolutions.filter((c) => evoByItem(c, itemId)) : pet.evolutions;
   const ready = list.filter((c) => c.ready);
   const picked = list.find((c) => c.to === to && c.ready) ?? (ready.length === 1 ? ready[0] : undefined);
   const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "evo-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
@@ -3615,7 +3633,9 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
   for (const c of list) {
     const row = button("row-card");
     const body = el("div", "body");
-    body.append(el("div", "title", c.name), el("div", "note", c.ready ? "진화할 수 있어요" : (c.need ?? "조건이 모자라요")));
+    // 지도 간선은 준비됐을 때도 지도를 쓴다고 적는다 — 옆의 기본형 결과와 가른다
+    const readyNote = c.map ? "지도를 쓰면 진화할 수 있어요" : "진화할 수 있어요";
+    body.append(el("div", "title", c.name), el("div", "note", c.ready ? readyNote : (c.need ?? "조건이 모자라요")));
     row.appendChild(body);
     row.disabled = !c.ready;
     row.setAttribute("aria-pressed", String(picked?.to === c.to));
@@ -3627,8 +3647,10 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
   if (picked) {
     const info = el("div", "info-box");
     info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
-    const item = picked.item ? view?.bag.find((b) => b.id === picked.item) : undefined;
-    info.appendChild(el("div", "note", item ? `${item.name} 1개를 씁니다. 레벨·친밀도·성격은 그대로입니다.` : "레벨·친밀도·성격은 그대로입니다."));
+    // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
+    const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
+    const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
+    info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. 레벨·친밀도·성격은 그대로입니다.` : "레벨·친밀도·성격은 그대로입니다."));
     // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/scenarios.md 진화 흐름)
     info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));
     dialogEl.appendChild(info);
@@ -3671,8 +3693,9 @@ function drawKeep(petId: string): void {
 // 가방의 진화용 도구 — 그 도구로 지금 진화할 수 있는 개체를 고른다. 박스 개체에게도 쓸 수 있다
 function drawEvoTarget(itemId: string): void {
   const item = view?.bag.find((b) => b.id === itemId);
-  const pets = [...partyPets(), ...boxPets()].filter((p) => p.evolutions.some((c) => c.item === itemId && c.ready));
-  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구를 진화시킬까요?" : "이 도구로 지금 진화할 수 있는 포켓몬이 없어요."));
+  const pets = [...partyPets(), ...boxPets()].filter((p) => p.evolutions.some((c) => evoByItem(c, itemId) && c.ready));
+  const empty = itemId === REGION_MAP ? "지도를 쓸 수 있는 포켓몬이 없어요." : "이 도구로 지금 진화할 수 있는 포켓몬이 없어요.";
+  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구를 진화시킬까요?" : empty));
   const acts = pets.map((p) => actionButton(`${p.name} (Lv.${p.level})`, false, false, () => open({ kind: "evolve", petId: p.id, itemId })));
   dialogEl.appendChild(actions(...acts, closeButton()));
 }
@@ -3964,7 +3987,7 @@ function pokemonDetail(detail: Extract<ShopDetail, { kind: "pokemon" }>): HTMLEl
   const text = el("div", "text");
   const types = el("div", "types");
   detail.types.forEach((name, i) => types.appendChild(typeBadge(name, detail.typeIds[i])));
-  text.append(el("div", "title", `No.${String(detail.dex).padStart(4, "0")}  ${detail.name}`), el("div", "genus", detail.genus), types);
+  text.append(el("div", "title", `No.${dexNoText(detail.dex, detail.form, 4)}  ${detail.name}`), el("div", "genus", detail.genus), types);
   info.append(portraitOf(detail.slug, false, "portrait"), text);
   const evo = el("div", "evo-block");
   evo.appendChild(el("div", "evo-label", "진화"));
@@ -4745,6 +4768,7 @@ const REASON: Record<string, string> = {
   "no-step": "더 진화하지 않아요.",
   "none-left": "가방에 남은 것이 없어요.",
   "no-item": "가방에 없어요.",
+  "no-map": "지도가 있어야 이 모습으로 진화해요.",
   "not-sellable": "팔 수 없는 도구예요.",
   "not-enough-items": "가진 개수보다 많이 팔 수 없어요.",
   "bad-count": "고를 수 없는 수량이에요.",

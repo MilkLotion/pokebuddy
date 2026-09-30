@@ -4,6 +4,11 @@
 // 계약은 docs/specs/game.md "진화 계약"이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { DEFAULT_DATA_DIR } from "../dex/data";
+import { unlockByRules } from "../dex/unlocks";
 import { candidates, canEvolve, dayPartOf, evolve } from "../dex/evolve";
 import { formsOf, setForm } from "../dex/forms";
 import { empty } from "../save/v3";
@@ -211,4 +216,103 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(15) 성별 조건  ok\n");
 }
 
-process.stdout.write("selftest-evolve: 통과 (레벨·도구·시간대·분기·이로치·공유 sid·성별)\n");
+// (16) 리전폼 (data/regional.json) — 지도 간선은 지도 하나를 쓴다. 돌 간선은 지도가 돌을 대신한다 (worklog-mac/records/region-map/record.md 2차 결정, "지도 1개 소비로 변경")
+{
+  // 피카츄 + 천둥의돌 + 지도 → 라이츄와 알로라 라이츄 둘 다 후보. 고르지 않으면 need-choice
+  const pika = seed({ species: "pikachu" }, { "thunder-stone": 1, "region-map": 1 });
+  assert.deepStrictEqual(candidates(pika, "p1", "day").map((c) => [c.to, c.ready, c.map]), [["raichu", true, undefined], ["raichu-alola", true, true]]);
+  assert.deepStrictEqual(candidates(pika, "p1", "day").find((c) => c.map)?.need, { kind: "item", item: "region-map" }, "알로라 라이츄의 조건은 지도");
+  assert.equal(evolve(pika, "p1", "day").reason, "need-choice");
+  assert.deepStrictEqual([pika.bag["thunder-stone"], pika.bag["region-map"]], [1, 1], "고르기 전에는 가방 그대로");
+  // 알로라 라이츄를 고르면 지도만 쓴다 — 천둥의돌은 남는다
+  const alola = evolve(pika, "p1", "day", "raichu-alola");
+  assert.deepStrictEqual([alola.ok, alola.to, alola.usedItem, alola.usedItems], [true, "raichu-alola", "region-map", ["region-map"]]);
+  assert.deepStrictEqual([pika.bag["thunder-stone"], pika.bag["region-map"]], [1, undefined], "지도 하나만 썼다");
+  assert.deepStrictEqual([pika.pets[0]?.species, pika.pets[0]?.stage, pika.pets[0]?.evolved], ["raichu-alola", 1, ["pikachu"]]);
+  assert.ok(pika.dex.obtained.includes("raichu-alola") && pika.dex.unlocked.includes("raichu-alola"), "진화로 얻을 때 해금한다");
+  // 돌 없이 지도만 — 알로라 라이츄 하나가 준비된다. 라이츄는 천둥의돌이 모자라다
+  const mapOnly = seed({ species: "pikachu" }, { "region-map": 1 });
+  assert.deepStrictEqual(candidates(mapOnly, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["raichu", false, "item:thunder-stone"], ["raichu-alola", true, undefined]]);
+  assert.equal(canEvolve(mapOnly, "p1", "day"), true, "지도만 있어도 진화할 수 있다고 알린다");
+  const mo = evolve(mapOnly, "p1", "day");
+  assert.deepStrictEqual([mo.ok, mo.to, mo.usedItems, mapOnly.bag["region-map"]], [true, "raichu-alola", ["region-map"], undefined], "준비된 후보가 하나면 고르지 않는다");
+  // 기본형 결과는 지도가 있어도 지도를 쓰지 않는다
+  const plain = seed({ species: "pikachu" }, { "thunder-stone": 1, "region-map": 2 });
+  const r = evolve(plain, "p1", "day", "raichu");
+  assert.deepStrictEqual([r.to, r.usedItems, plain.bag["thunder-stone"], plain.bag["region-map"]], ["raichu", ["thunder-stone"], undefined, 2]);
+  // 지도가 없으면 알로라 라이츄는 조건 모자람 — 이유는 지도. 명령으로 골라도 no-map 이고 가방은 그대로
+  const noMap = seed({ species: "pikachu" }, { "thunder-stone": 1 });
+  assert.deepStrictEqual(candidates(noMap, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["raichu", true, undefined], ["raichu-alola", false, "item:region-map"]]);
+  const nm = evolve(noMap, "p1", "day", "raichu-alola");
+  assert.deepStrictEqual([nm.ok, nm.reason, nm.choices], [false, "no-map", ["raichu"]]);
+  assert.deepStrictEqual([noMap.pets[0]?.species, noMap.bag["thunder-stone"]], ["pikachu", 1], "실패하면 아무것도 바꾸지 않는다");
+  assert.equal(evolve(noMap, "p1", "day").to, "raichu", "준비된 후보가 하나면 기본형으로 간다");
+  // 둘 다 없으면 각자 자기 도구 하나가 모자라다 — 알로라 라이츄는 돌을 보지 않는다
+  const bare = seed({ species: "pikachu" });
+  assert.deepStrictEqual(candidates(bare, "p1", "day").map((c) => c.missing), ["item:thunder-stone", "item:region-map"]);
+  assert.equal(evolve(bare, "p1", "day", "raichu-alola").reason, "not-ready", "준비된 후보가 없으면 not-ready");
+  // 다른 돌 간선 3개도 같다 — 아라리·흉내내·치릴리
+  for (const [from, to] of [["exeggcute", "exeggutor-alola"], ["mime-jr", "mr-mime-galar"], ["petilil", "lilligant-hisui"]] as const) {
+    const s = seed({ species: from }, { "region-map": 1 });
+    const res = evolve(s, "p1", "day", to);
+    assert.deepStrictEqual([res.ok, res.to, res.usedItems], [true, to, ["region-map"]], `${from} → ${to} 지도만`);
+  }
+  // 레벨 지도 간선 — Lv.36 마그케인 + 지도 → 히스이 블레이범. 지도만 쓴다
+  const quilava = seed({ species: "quilava", level: 36 }, { "region-map": 1 });
+  const q = evolve(quilava, "p1", "day", "typhlosion-hisui");
+  assert.deepStrictEqual([q.ok, q.to, q.usedItem, q.usedItems, quilava.bag["region-map"]], [true, "typhlosion-hisui", "region-map", ["region-map"], undefined]);
+  const lowQuilava = seed({ species: "quilava", level: 35 }, { "region-map": 1 });
+  assert.equal(candidates(lowQuilava, "p1", "day").find((c) => c.map)?.missing, "level:36");
+  assert.equal(evolve(lowQuilava, "p1", "day", "typhlosion-hisui").reason, "not-ready", "Lv.35 + 지도는 준비 안 됨");
+  assert.equal(lowQuilava.bag["region-map"], 1);
+  const quilavaNoMap = seed({ species: "quilava", level: 36 });
+  assert.equal(candidates(quilavaNoMap, "p1", "day").find((c) => c.map)?.missing, "item:region-map", "레벨 간선은 조건과 지도를 함께 본다");
+  // 리전폼 진화 전 종은 자기 간선만 받는다 — 가라르 나옹 Lv.28 은 나이킹 하나. 지도가 필요 없다
+  const galar = seed({ species: "meowth-galar", level: 28 });
+  assert.deepStrictEqual(candidates(galar, "p1", "day").map((c) => c.to), ["perrserker"]);
+  assert.equal(evolve(galar, "p1", "day").to, "perrserker");
+  // 리전폼의 다음 진화에는 지도가 필요 없다
+  const vulpix = seed({ species: "vulpix-alola" }, { "ice-stone": 1, "region-map": 1 });
+  const v = evolve(vulpix, "p1", "day");
+  assert.deepStrictEqual([v.ok, v.to, v.usedItems, vulpix.bag["region-map"]], [true, "ninetales-alola", ["ice-stone"], 1]);
+  assert.ok(vulpix.dex.obtained.includes("ninetales-alola"));
+  // 간선이 없는 리전폼 — 기본형 간선을 받지 않는다
+  assert.deepStrictEqual(candidates(seed({ species: "stunfisk-galar", level: 100 }), "p1", "day"), []);
+  // 기본 야돈 → 야도킹은 연결의끈
+  const slow = seed({ species: "slowpoke" }, { "bond-cord": 1 });
+  assert.equal(evolve(slow, "p1", "day").to, "slowking");
+  const slowWreath = seed({ species: "slowpoke" }, { "galarica-wreath": 1 });
+  assert.equal(canEvolve(slowWreath, "p1", "day"), false, "가라두구머리장식은 가라르 야돈 전용");
+  process.stdout.write("(16) 리전폼 · 지도 간선 확인·소비  ok\n");
+}
+
+// (17) 배너 판정 — canEvolve 는 기본형 간선만 본다. 지도 간선만 남은 표를 꽂아 가른다
+{
+  const dir = mkdtempSync(path.join(os.tmpdir(), "pkmon-evolve-"));
+  try {
+    cpSync(DEFAULT_DATA_DIR, dir, { recursive: true });
+    const evo = JSON.parse(readFileSync(path.join(dir, "evo.json"), "utf8")) as Record<string, { to: string; map?: true }[]>;
+    evo.cubone = (evo.cubone ?? []).filter((st) => st.map);
+    writeFileSync(path.join(dir, "evo.json"), JSON.stringify(evo));
+    const opts = { dataDir: dir };
+    const s = seed({ species: "cubone", level: 28 }, { "region-map": 1 });
+    assert.deepStrictEqual(candidates(s, "p1", "day", opts).map((c) => [c.to, c.ready]), [["marowak-alola", true]]);
+    assert.equal(canEvolve(s, "p1", "day", opts), false, "지도 간선만 준비되면 배너를 띄우지 않는다");
+    assert.equal(canEvolve(s, "p1", "day"), true, "실제 표 — 짝인 기본형 간선(Lv.28 텅구리)으로 알린다");
+    assert.equal(evolve(s, "p1", "day", undefined, opts).to, "marowak-alola", "진화 자체는 된다");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  process.stdout.write("(17) 배너 판정 · 지도 간선 제외  ok\n");
+}
+
+// (18) 해금 — 지도 결과(알로라 라이츄)는 규칙표에 진화 규칙이 있어도 틱 해금으로 열리지 않는다. 실제로 진화해 얻을 때 연다 (src/dex/unlocks.ts unlockByRules)
+{
+  const s = seed({ species: "pikachu", affinity: 999 });
+  unlockByRules(s, T0);
+  assert.equal(s.dex.unlocked.includes("raichu-alola"), false, "지도 없이 해금되지 않는다");
+  assert.equal(s.dex.unlocked.includes("raichu"), false, "기본형 결과도 진화로 연다 — 같은 규칙");
+  process.stdout.write("(18) 해금 · 지도 결과는 진화로만  ok\n");
+}
+
+process.stdout.write("selftest-evolve: 통과 (레벨·도구·시간대·분기·이로치·공유 sid·성별·리전폼·지도·배너 판정)\n");

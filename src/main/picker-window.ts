@@ -21,11 +21,12 @@ export interface PickerOptions {
 }
 
 // 진화 줄 — 한 갈래면 끝까지 "리자드 → 리자몽", 갈래가 여럿이면 그 단계의 이름을 모두 적고 멈춘다 ("샤미드 · 쥬피썬더 · …")
+// 지도 간선(기본형 → 리전폼)은 적지 않는다 — 첫 선택에서는 기본 사슬만 보인다 ("피카츄 → 라이츄", "나로테 → 모크나이퍼")
 export function evolutionLine(slug: string): string {
   const names: string[] = [];
   let at = slug;
   for (let guard = 0; guard < 5; guard++) {
-    const next = [...new Set(nextOf(at).map((s) => s.to))];
+    const next = [...new Set(nextOf(at).filter((s) => !s.map).map((s) => s.to))];
     if (!next.length) break;
     if (next.length > 1) {
       names.push(next.map((to) => petName(to)).join(" · "));

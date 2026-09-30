@@ -11,12 +11,16 @@
 //   - data/evo.json 의 `need.kind === "item"` 에 실제로 쓰인 도구만 담는다
 //   - bond-cord(연결의끈)·blank-cd(빈 기술머신)는 우리 도구라 이름을 여기서 준다. 빈 기술머신은 2026-09-26 "빈 CD"에서,
 //     연결의끈(원작 레전드 아르세우스의 Linking Cord)은 2026-09-27 "유대의끈"에서 바꿨다(사용자 결정). id 는 저장 호환을 위해 그대로다
+//   - region-map(지도)은 원작에 없는 우리 도구다. `map: true` 간선(기본형 → 리전폼 진화)이 요구한다. targets 는 그 간선의 결과다
+//     돌 간선은 need 자체가 지도라 돌의 targets 에 리전폼이 들어가지 않는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
+//     (2026-09-30 사용자 결정 "지도 라는 아이템 추가해서 리전폼 진화할 수 있게 추가하자")
 //   - 상점의 진화 탭이 이 목록을 그대로 보여준다 (docs/specs/game.md "진화 계약")
 import fs from "node:fs";
 import path from "node:path";
 import type { EvoNeed } from "../shared/types";
 import { BLANK_CD, BOND_CORD } from "./build-evo";
 import { DATA_DIR, csv, runBuild, writeLineJson } from "./pokeapi-csv";
+import { REGION_MAP } from "../dex/regional";
 
 const IN = path.join(DATA_DIR, "evo.json");
 const OUT = path.join(DATA_DIR, "evo-items.json");
@@ -26,6 +30,7 @@ const LANG = { ko: "3", en: "9" } as const;
 export const OWN_ITEMS: Readonly<Record<string, { ko: string; en: string }>> = {
   [BOND_CORD]: { ko: "연결의끈", en: "Linking Cord" },
   [BLANK_CD]: { ko: "빈 기술머신", en: "Blank TM" },
+  [REGION_MAP]: { ko: "지도", en: "Map" },
 };
 
 interface EvoItem {
@@ -34,7 +39,7 @@ interface EvoItem {
   targets: string[];
 }
 
-type EvoTable = Record<string, { to: string; need?: EvoNeed }[]>;
+type EvoTable = Record<string, { to: string; need?: EvoNeed; map?: true }[]>;
 
 export async function build(): Promise<void> {
   const evo = JSON.parse(fs.readFileSync(IN, "utf8")) as EvoTable;
@@ -42,7 +47,9 @@ export async function build(): Promise<void> {
   for (const [from, steps] of Object.entries(evo)) {
     if (from.startsWith("_")) continue;
     for (const s of steps) {
+      if (s.map) targets.set(REGION_MAP, [...(targets.get(REGION_MAP) ?? []), s.to]);
       if (!s.need || s.need.kind !== "item") continue;
+      if (s.map && s.need.item === REGION_MAP) continue; // 위에서 이미 담았다
       const list = targets.get(s.need.item) ?? [];
       list.push(s.to);
       targets.set(s.need.item, list);
@@ -68,7 +75,7 @@ export async function build(): Promise<void> {
     const own = OWN_ITEMS[item];
     const hit = own ?? names.get(idOf.get(item) ?? "") ?? {};
     if (!hit.ko || !hit.en) missing.push(item);
-    out[item] = { ko: hit.ko ?? item, en: hit.en ?? item, targets: (targets.get(item) ?? []).sort() };
+    out[item] = { ko: hit.ko ?? item, en: hit.en ?? item, targets: [...new Set(targets.get(item) ?? [])].sort() }; // 같은 결과가 두 출발에서 오면(어둠의돌 데스니칸) 한 번만
   }
 
   writeLineJson(OUT, out);

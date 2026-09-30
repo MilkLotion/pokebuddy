@@ -3,15 +3,20 @@
 //
 // stageOf 는 사슬의 뿌리부터의 거리(도감 사실)다. 저장의 Pet.stage(그 마리가 몇 번 진화했나)와는 다른 수 —
 // 피츄→피카츄→라이츄에서 스타터 피카츄는 stageOf 1, Pet.stage 0
+//
+// 리전폼(raichu-alola · meowth-galar, src/dex/regional.ts)은 도감 번호가 같아도 다른 종이다 — 기본 종으로 풀지 않는다.
+// 기본형과 리전폼이 같은 종으로 진화하면(나옹·가라르 나옹 → 페르시온) 부모는 기본형이다
 
 import type { DayPart, EvoNeed, Gender } from "../shared/types";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
+import { isRegional } from "./regional.js";
 
 export interface EvoStep {
   to: string;
   when?: DayPart;
   need?: EvoNeed; // 진화 조건 — 옛 data/evo.json 에는 없다 (src/tools/build-evo.ts)
   gender?: Exclude<Gender, "none">; // 이 성별만 진화한다 — 염뉴트 암컷, 엘레이드 수컷 (2026-09-30 사용자 결정)
+  map?: true; // 지도(region-map)도 필요한 간선 — 기본형 → 리전폼 진화 (data/regional.json)
 }
 
 type EvoTable = Record<string, EvoStep[]>;
@@ -40,7 +45,9 @@ function indexOf(opts?: DexOptions): Index {
     members.add(from);
     for (const s of steps) {
       members.add(s.to);
-      parentOf.set(s.to, from);
+      // 부모가 이미 있으면 리전폼 부모로 덮어쓰지 않는다 — 페르시온의 부모는 나옹이다
+      const kept = parentOf.get(s.to);
+      if (kept === undefined || (isRegional(kept, opts) && !isRegional(from, opts))) parentOf.set(s.to, from);
     }
   }
   const species = loadJson<SpeciesDex>("species.defaults.json", opts);
@@ -56,8 +63,10 @@ function indexOf(opts?: DexOptions): Index {
   }
   for (const [dex, list] of formsOfDex) {
     list.sort();
-    const member = list.find((s) => members.has(s));
-    const shortest = [...list].sort((a, b) => a.length - b.length || (a < b ? -1 : 1))[0];
+    // 기본 종 후보에서 리전폼은 뺀다 — 리전폼은 자기 자신으로 풀리므로 기본 종이 될 일이 없다
+    const plain = list.filter((s) => !isRegional(s, opts));
+    const member = plain.find((s) => members.has(s));
+    const shortest = [...plain].sort((a, b) => a.length - b.length || (a < b ? -1 : 1))[0];
     const base = member ?? shortest;
     if (base) baseOfDex.set(dex, base);
   }
@@ -66,11 +75,12 @@ function indexOf(opts?: DexOptions): Index {
   return built;
 }
 
-// 슬러그 → 대신 볼 기본 종. 사슬 멤버면 그대로, 폼이면 같은 도감번호의 기본 종(rotom-wash → rotom), 모르는 슬러그는 자기 자신
+// 슬러그 → 대신 볼 기본 종. 사슬 멤버면 그대로, 폼이면 같은 도감번호의 기본 종(rotom-wash → rotom), 모르는 슬러그는 자기 자신.
+// 리전폼은 늘 자기 자신 — 가라르 메더처럼 간선이 없는 리전폼도 기본형 간선을 받지 않는다
 function resolve(slug: string, opts?: DexOptions): string {
   const key = normalizeSlug(slug);
   const ix = indexOf(opts);
-  if (ix.members.has(key)) return key;
+  if (ix.members.has(key) || isRegional(key, opts)) return key;
   const dex = ix.dexOf.get(key);
   const base = dex === undefined ? undefined : ix.baseOfDex.get(dex);
   return base ?? key;
@@ -119,7 +129,7 @@ export function lineOf(slug: string, opts?: DexOptions): string[] {
     out.push(s);
     const dex = ix.dexOf.get(s);
     for (const form of dex === undefined ? [] : (ix.formsOfDex.get(dex) ?? [])) {
-      if (seen.has(form)) continue;
+      if (seen.has(form) || isRegional(form, opts)) continue; // 리전폼은 모습이 아니라 다른 종이다
       seen.add(form);
       out.push(form);
     }

@@ -4,6 +4,8 @@
 // 저장소에는 넣지 않고 받는 사람 컴퓨터에 캐시한다 (docs/specs/companion.md "설정창의 초상").
 // 경로: sprites/pokemon/<도감>.png, 이로치는 sprites/pokemon/shiny/<도감>.png. 이로치 그림이 없으면 보통 그림을 쓴다.
 // 캐시: ~/.claude/pokebuddy/sprites/<4자리>.png · <4자리>-shiny.png. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
+// 리전폼(src/dex/regional.ts)은 도감 번호 대신 PokeAPI 포켓몬 번호(10100 — 알로라 라이츄)로 받는다. 파일은 10100.png 라 4자리 파일과 겹치지 않는다.
+// 리전폼 그림을 못 받으면 기본형 번호 그림을 쓴다.
 // 도구·알 그림(icons)도 같은 저장소에서 받는다: sprites/items/<식별자>.png, sprites/pokemon/egg.png. 없으면(404) 빈 칸이다.
 // 설치 파일에는 그림을 넣지 않는다 — 그림 저작권은 The Pokémon Company 에 있어 공개 릴리스로 재배포하지 않는다(2026-09-26 사용자 결정).
 // 대신 동반자가 켜질 때 빠진 그림을 뒤에서 모두 받아 캐시에 둔다(prefetch). 첫 실행이면 첫 포켓몬을 고르는 동안 받는다.
@@ -12,6 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { profile, slugs } from "../dex/species.js";
+import { regionalOf } from "../dex/regional.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
 
@@ -57,6 +60,13 @@ export interface PortraitAsk {
 // 초상 한 장의 이름 — 화면이 결과를 찾는 열쇠다
 export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shiny` : a.slug);
 
+// 초상 그림 번호 — 리전폼이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0
+export function portraitIds(slug: string): number[] {
+  const dex = profile(slug).dex;
+  const form = regionalOf(slug)?.pokemonId;
+  return [form, dex].filter((n): n is number => typeof n === "number" && n > 0);
+}
+
 // 받을 주소 — 도감 번호 그대로(앞의 0 없음)
 export const portraitUrl = (dex: number, shiny: boolean): string => (shiny ? `${BASE}/shiny/${dex}.png` : `${BASE}/${dex}.png`);
 
@@ -66,7 +76,7 @@ export const portraitUrl = (dex: number, shiny: boolean): string => (shiny ? `${
 // pokesprite mint 6장의 픽셀을 받아 본 결과 초록(주색 #65c65d)은 speed.png 다. attack 빨강·defense 파랑·special-attack 하늘·special-defense 분홍·neutral 노랑
 const POKESPRITE = "https://raw.githubusercontent.com/msikma/pokesprite/master/items";
 const MINT_URL = `${POKESPRITE}/mint/speed.png`;
-const POKESPRITE_EVO = new Set(["galarica-wreath", "sweet-apple", "tart-apple", "cracked-pot"]);
+const POKESPRITE_EVO = new Set(["galarica-wreath", "galarica-cuff", "sweet-apple", "tart-apple", "cracked-pot"]);
 
 // 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구는 pokesprite, 나머지는 PokeAPI
 export function itemUrl(id: string): string {
@@ -76,6 +86,8 @@ export function itemUrl(id: string): string {
   if (POKESPRITE_EVO.has(id)) return `${POKESPRITE}/evo-item/${id}.png`;
   // 빈 기술머신(기술 진화를 대신하는 도구, id 는 옛 이름 blank-cd)은 원작 기술머신 그림을 쓴다 — 2026-09-26 사용자 결정 "빈기술머신으로 사용할게 그냥"
   if (id === "blank-cd") return `${SPRITES}/items/tm-normal.png`;
+  // 지도(원작에 없는 우리 도구)는 사용자 그림(assets/items/region-map.png)이 생기기 전까지 원작 타운맵 그림을 임시로 쓴다 — ownItem 이 먼저 잡는다
+  if (id === "region-map") return `${SPRITES}/items/town-map.png`;
   return `${SPRITES}/items/${id}.png`;
 }
 
@@ -211,12 +223,13 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       const out: Record<string, string | null> = {};
       await Promise.all(
         asks.map(async (a) => {
-          const dex = profile(a.slug).dex;
-          if (!dex) {
-            out[portraitKey(a)] = null;
-            return;
+          // 리전폼 그림 → 기본형 그림 순서. 한 번호 안에서는 이로치 → 보통 순서다
+          let uri: string | null = null;
+          for (const id of portraitIds(a.slug)) {
+            uri = (a.shiny ? await one(id, true) : null) ?? (await one(id, false));
+            if (uri) break;
           }
-          out[portraitKey(a)] = (a.shiny ? await one(dex, true) : null) ?? (await one(dex, false));
+          out[portraitKey(a)] = uri;
         }),
       );
       return out;
@@ -238,9 +251,10 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     },
     async prefetch(onProgress, first = []) {
       const jobs: { rel: string; url: string }[] = [];
-      const firstDex = first.map((slug) => profile(slug).dex).filter((d) => d > 0);
+      const firstDex = first.map((slug) => portraitIds(slug)[0] ?? 0).filter((d) => d > 0);
       for (const dex of firstDex) jobs.push({ rel: `${String(dex).padStart(4, "0")}.png`, url: portraitUrl(dex, false) });
-      const dexes = [...new Set(slugs().map((slug) => profile(slug).dex).filter((d) => d > 0))].sort((a, b) => a - b);
+      // 도감 번호 그림과 리전폼 그림(포켓몬 번호) 전부
+      const dexes = [...new Set(slugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => a - b);
       for (const dex of dexes) {
         const d = String(dex).padStart(4, "0");
         jobs.push({ rel: `${d}.png`, url: portraitUrl(dex, false) }, { rel: `${d}-shiny.png`, url: portraitUrl(dex, true) });
@@ -301,9 +315,10 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       const read = (rel: string): Promise<string | null> => (files.has(rel) ? diskUri(rel) : Promise.resolve(null));
       await Promise.all(
         slugs().map(async (slug) => {
-          const dex = profile(slug).dex;
-          if (!dex) return;
-          const d = String(dex).padStart(4, "0");
+          // 첫 번호(리전폼이면 포켓몬 번호)만 본다 — 리전폼 그림이 아직 없으면 비워 두어 화면이 get 으로 받게 한다(기본형 대신 그림은 get 이 정한다)
+          const id = portraitIds(slug)[0];
+          if (!id) return;
+          const d = String(id).padStart(4, "0");
           const plain = await read(`${d}.png`);
           if (!plain) return;
           out[slug] = plain;

@@ -19,6 +19,7 @@ export interface EvolutionView {
   ready: boolean;
   need?: string; // 모자란 조건의 화면 문구 — "Lv.16 필요", "물의돌 필요", "밤에만"
   item?: string; // 진화용 도구가 조건이면 그 도구 id. 가방의 돌로 대상을 고를 때 쓴다
+  map?: true; // 지도 간선(기본형 → 리전폼) — 지도도 쓴다. 가방의 지도로 대상을 고를 때 쓴다
 }
 
 export interface PetView {
@@ -114,6 +115,8 @@ export interface ShopItemView {
   blocked?: string; // 살 수 없는 다른 이유 — 화면이 그대로 보여 준다
   room?: number; // 구매 수량의 상한. 도구 — 가방에 더 담을 수 있는 개수 (최대 999 − 가진 개수). 알 — 돌보미집 빈 칸, 단일 포켓몬 알이면 남은 종 수 − 기다리는 같은 알 수까지
   dex?: number; // 포켓몬 — 전국도감 번호. 상점 격자의 번호 줄·검색·지방에 쓴다
+  form?: number; // 리전폼의 폼 순번 — 번호 줄이 `#0026-1` 이 된다 (src/dex/regional.ts)
+  region?: string; // 리전폼의 지방 — 지방 필터가 번호 구간 대신 이것으로 거른다
 }
 
 export type DexState = "obtained" | "unlocked" | "locked";
@@ -121,6 +124,8 @@ export type DexState = "obtained" | "unlocked" | "locked";
 export interface DexEntry {
   slug: string;
   dex: number;
+  form?: number; // 리전폼의 폼 순번 — `#0026-1`. 정렬은 번호, 그다음 폼 순번 (src/dex/regional.ts)
+  region?: string; // 리전폼의 지방 — 지방 필터가 번호 구간 대신 이것으로 거른다
   name: string;
   state: DexState;
   shiny: boolean;
@@ -130,6 +135,7 @@ export interface DexEntry {
 export interface DexDetail {
   slug: string;
   dex: number;
+  form?: number; // 리전폼의 폼 순번 — `No.026-1`
   name: string; // 미해금이면 "???"
   state: DexState;
   types: string[]; // 미해금이면 비어 있다
@@ -163,7 +169,7 @@ export interface EvoPairView {
 }
 
 export type ShopDetail =
-  | { kind: "pokemon"; slug: string; dex: number; name: string; genus: string; types: string[]; typeIds: string[]; tree: EvoNodeView }
+  | { kind: "pokemon"; slug: string; dex: number; form?: number; name: string; genus: string; types: string[]; typeIds: string[]; tree: EvoNodeView }
   | { kind: "evolution"; pairs: EvoPairView[] }; // 진화용 도구 — 이 도구로 진화하는 쌍, 도감 번호순
 
 // 달성 전 · 달성했고 보상이 남음 · 보상까지 받음

@@ -9,11 +9,13 @@
 // 우리 도감표(lib/dex.json, build-dex 가 만든다)의 슬러그를 전부 잇는다. 폼 슬러그는 폼 이름표를, 나머지는 종 이름표를 쓴다.
 // 폼 이름표는 언어마다 "폼 이름"과 "포켓몬 이름" 두 칸인데 어느 칸이 온전한 이름인지 폼마다 다르다
 // (히트로토무 는 폼 이름 칸, 알로라 라이츄 는 포켓몬 이름 칸) — 종 이름을 품은 칸을 고르고, 둘 다 아니면 "종 이름 + 폼 이름" 으로 잇는다.
-// 그래도 어긋나는 것은 OVERRIDES 에 손으로 적는다
+// 그래도 어긋나는 것은 OVERRIDES 에 손으로 적는다.
+// 리전폼은 data/regional.json 의 ko·en 을 가장 먼저 쓴다 — 화면 이름은 `알로라 라이츄` 형식이다 (2026-09-30 사용자 결정)
 import fs from "node:fs";
 import path from "node:path";
 import type { Lang } from "../shared/types";
 import { LIB_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
+import { regionalOf } from "../dex/regional";
 
 const LANG: Record<Lang, string> = { ko: "3", en: "9" };
 const LANGS = Object.keys(LANG) as Lang[];
@@ -72,7 +74,8 @@ export async function build(): Promise<void> {
     const sp = species[dex[slug] ?? -1];
     const fid = key.includes("-") ? formId[key] : undefined;
     const fn = fid ? formNames[fid] : undefined;
-    const entry = OVERRIDES[key] ?? { ko: pick("ko", sp, fn), en: pick("en", sp, fn) };
+    const form = regionalOf(key);
+    const entry = (form ? { ko: form.ko, en: form.en } : undefined) ?? OVERRIDES[key] ?? { ko: pick("ko", sp, fn), en: pick("en", sp, fn) };
     if (!entry.ko || !entry.en) missing.push(key);
     if (entry.ko || entry.en) out[key] = entry;
   }

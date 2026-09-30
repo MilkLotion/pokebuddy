@@ -171,11 +171,36 @@ function seed(): SaveV3 {
   process.stdout.write("(10) 키·몸무게 · 기기 창 자리  ok\n");
 }
 
+// (10b) 리전폼 — 폼 순번, 폼 타입·키·몸무게, 설명문은 기본형 것 (data/regional.json · data/dex-text.json)
+{
+  const s = seed();
+  s.dex.unlocked.push("raichu", "raichu-alola", "meowth-galar");
+  const a = dexDetail(s, "raichu-alola");
+  const base = dexDetail(s, "raichu");
+  assert.deepStrictEqual([a?.dex, a?.form, a?.name], [26, 1, "알로라 라이츄"]);
+  assert.deepStrictEqual(a?.typeIds, ["electric", "psychic"]);
+  assert.deepStrictEqual([a?.height, a?.weight], ["0.7m", "21.0kg"], "키·몸무게는 폼 값");
+  assert.equal(a?.flavor, base?.flavor, "설명문은 기본형 것");
+  assert.equal(base?.form, undefined, "기본형에는 폼 순번이 없다");
+  assert.equal(a?.methods, "피카츄에서 진화 (지도)", "지도 간선 결과는 얻는 방법에 지도를 적는다");
+  assert.equal(base?.methods, "피카츄에서 진화", "기본형 결과는 지도 없이");
+  assert.equal(dexDetail(s, "perrserker")?.methods, "나옹에서 진화", "지방 전용 진화는 지도 간선이 아니다");
+  // 가라르 나옹 — 진화는 나이킹 하나. 기본형 간선(페르시온)을 받지 않는다
+  assert.equal(dexDetail(s, "meowth-galar")?.evolution, "Lv.28에서 나이킹으로 진화");
+  process.stdout.write("(10b) 리전폼 상세  ok\n");
+}
+
 // (11) 도구로 한 단계 진화 — 조건 뒤에 '로'가 겹치지 않는다
 {
   const s = seed();
   s.dex.unlocked.push("pikachu");
-  assert.equal(dexDetail(s, "pikachu")?.evolution, "천둥의돌을 쓰면 라이츄로 진화");
+  s.dex.unlocked.push("magneton");
+  assert.equal(dexDetail(s, "magneton")?.evolution, "천둥의돌을 쓰면 자포코일로 진화");
+  // 피카츄는 지도 간선(알로라 라이츄)이 함께 있어 갈래 문구가 된다. 알로라 라이츄는 돌 대신 지도 (data/regional.json, "지도 1개 소비로 변경")
+  assert.equal(dexDetail(s, "pikachu")?.evolution, "천둥의돌로 라이츄 · 지도로 알로라 라이츄");
+  // 레벨 지도 간선은 조건 뒤에 지도 표시를 붙인다
+  s.dex.unlocked.push("quilava");
+  assert.equal(dexDetail(s, "quilava")?.evolution, "Lv.36에서 블레이범 · Lv.36에서 히스이 블레이범 (지도)");
   process.stdout.write("(11) 도구 한 단계 진화 문구  ok\n");
 }
 
@@ -208,20 +233,37 @@ function seed(): SaveV3 {
   const mid = shopDetail(s, "charmeleon");
   assert.ok(mid && mid.kind === "pokemon");
   assert.deepStrictEqual([mid.tree.slug, mid.tree.current, mid.tree.children[0]?.current], ["charmander", false, true]);
-  // 진화용 도구 — 천둥의돌 7쌍, 진화 전 도감 번호순
+  // 진화용 도구 — 천둥의돌 7쌍(알로라 라이츄는 지도 쌍이라 빠진다), 진화 전 도감 번호순
   s.dex.unlocked.push("pikachu", "raichu", "magneton");
   const th = shopDetail(s, "thunder-stone");
   assert.ok(th && th.kind === "evolution");
   assert.equal(th.pairs.length, 7);
   assert.deepStrictEqual(th.pairs.slice(0, 2).map((p) => [p.from.name, p.to.name]), [["피카츄", "라이츄"], ["레어코일", "???"]], "자포코일은 미해금");
+  assert.ok(!th.pairs.some((p) => p.to.slug === "raichu-alola"), "천둥의돌로는 알로라 라이츄로 가지 않는다");
   const dawn = shopDetail(s, "dawn-stone");
   assert.ok(dawn && dawn.kind === "evolution");
   assert.deepStrictEqual(dawn.pairs.map((p) => p.note), ["수컷", "암컷"], "도구 밖 조건은 note 로");
   // 진화 탭 줄 문구 — 해금한 진화 전 종만 이름으로
   assert.equal(evoItemNote(s, "thunder-stone"), "피카츄·레어코일 외 5종");
   assert.equal(evoItemNote(s, "dawn-stone"), "대상 2종", "해금한 진화 전 종이 없으면 수만");
+  // 가라두구머리장식은 가라르 야돈 → 가라르 야도킹 한 쌍이다. 기본 야돈 → 야도킹은 연결의끈 (2026-09-30 사용자 결정)
   s.dex.unlocked.push("slowpoke");
-  assert.equal(evoItemNote(s, "galarica-wreath"), "야돈 → ???", "한 쌍이면 진화 전 → 진화 후");
+  assert.equal(evoItemNote(s, "galarica-wreath"), "??? → ???", "한 쌍이면 진화 전 → 진화 후");
+  s.dex.unlocked.push("slowpoke-galar");
+  assert.equal(evoItemNote(s, "galarica-wreath"), "가라르 야돈 → ???");
+  // 지도 — map 간선 12쌍. 트리의 지금 칸은 슬러그로 가린다(라이츄와 알로라 라이츄는 번호가 같다)
+  const map = shopDetail(s, "region-map");
+  assert.ok(map && map.kind === "evolution");
+  assert.equal(map.pairs.length, 12);
+  assert.deepStrictEqual([map.pairs[0]?.from.slug, map.pairs[0]?.to.slug, map.pairs[0]?.note], ["pikachu", "raichu-alola", undefined], "돌 대신 지도인 쌍은 설명 없음");
+  assert.equal(map.pairs.find((p) => p.to.slug === "typhlosion-hisui")?.note, "Lv.36", "레벨 지도 쌍은 레벨");
+  const rai = shopDetail(s, "raichu");
+  assert.ok(rai && rai.kind === "pokemon");
+  const raichus = rai.tree.children[0]?.children ?? [];
+  assert.deepStrictEqual(raichus.map((c) => [c.slug, c.current, c.need]), [["raichu", true, "천둥의돌"], ["raichu-alola", false, "지도"]], "트리 화살표는 지도 하나");
+  const qui = shopDetail(s, "quilava");
+  assert.ok(qui && qui.kind === "pokemon");
+  assert.equal(qui.tree.children[0]?.children.find((c) => c.slug === "typhlosion-hisui")?.need, "Lv.36 · 지도", "레벨 지도 간선은 레벨 뒤에 지도");
   assert.equal(shopDetail(s, "not-a-thing"), null);
   process.stdout.write("(12) 상점 상세 · 진화 트리·대상·줄 문구  ok\n");
 }

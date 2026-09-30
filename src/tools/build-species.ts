@@ -34,9 +34,12 @@
 // | stage         | 진화 사슬 뿌리부터의 거리 + 1 (1 이 진화 전)                              |
 // | rank          | 수집 난이도 1~5. 종족값 구간으로 1~4, 전설·환상은 5, 더 진화하는 종은 한 등급 낮춘다 |
 // | genderRate    | 원작 성비 그대로. 암컷 비율을 8 분의 몇으로 적는다(0 수컷만 · 8 암컷만). -1 은 무성 |
+// 리전폼(data/regional.json)은 타입·종족값·체중이 폼 값이다. 성장 속도·성비·전설 여부·단계는 종 값이다.
+// 백분위는 리전폼을 뺀 종들로 정한다 — 리전폼을 넣어도 기존 종의 값이 바뀌지 않게. 리전폼은 그 분포 안의 자리로 잰다
 import path from "node:path";
 import type { GrowthRate, Like } from "../shared/types";
 import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
+import { isRegional } from "../dex/regional";
 
 const OUT = path.join(DATA_DIR, "species.defaults.json");
 
@@ -126,6 +129,16 @@ export function percentiles(values: number[]): Map<number, number> {
     i = j + 1;
   }
   return map;
+}
+
+// 분포(values) 밖의 값 하나의 백분위 — 같은 값이 있으면 그 백분위, 없으면 더 작은 값의 수로 사이 자리를 잡는다
+export function percentileIn(values: number[], table: Map<number, number>, v: number): number {
+  const hit = table.get(v);
+  if (hit !== undefined) return hit;
+  const n = values.length;
+  if (n <= 1) return 0.5;
+  const below = values.filter((x) => x < v).length;
+  return Math.min(1, Math.max(0, (below - 0.5) / (n - 1)));
 }
 
 function likesOf(types: string[]): Like[] {
@@ -252,9 +265,11 @@ export async function build(): Promise<void> {
   }
 
   // 2차: 백분위
-  const matched = [...raw.values()].filter((r): r is RawProfile => r !== null);
-  const weightPct = percentiles(matched.map((r) => r.weightKg));
-  const speedPct = percentiles(matched.map((r) => r.baseSpeed));
+  const matched = [...raw.entries()].filter((e): e is [string, RawProfile] => e[1] !== null && !isRegional(e[0])).map((e) => e[1]);
+  const weights = matched.map((r) => r.weightKg);
+  const speeds = matched.map((r) => r.baseSpeed);
+  const weightPct = percentiles(weights);
+  const speedPct = percentiles(speeds);
 
   // 3차: 프로필
   const out: Record<string, StoredProfile> = {};
@@ -264,8 +279,8 @@ export async function build(): Promise<void> {
       out[key] = { dex: dexNo, ...DEFAULT };
       continue;
     }
-    const w = must(weightPct.get(r.weightKg), `체중 백분위 ${key}`);
-    const s = must(speedPct.get(r.baseSpeed), `스피드 백분위 ${key}`);
+    const w = isRegional(key) ? percentileIn(weights, weightPct, r.weightKg) : must(weightPct.get(r.weightKg), `체중 백분위 ${key}`);
+    const s = isRegional(key) ? percentileIn(speeds, speedPct, r.baseSpeed) : must(speedPct.get(r.baseSpeed), `스피드 백분위 ${key}`);
     out[key] = {
       dex: dexNo,
       types: r.types,

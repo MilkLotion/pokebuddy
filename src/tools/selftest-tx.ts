@@ -250,6 +250,32 @@ function seedBox(): SaveV3 {
   process.stdout.write("(13) 교체 실패 · 양쪽 모두 그대로  ok\n");
 }
 
+// (13b) 리전폼 진화 — 지도 하나를 쓴다. 돌은 남는다. 지도가 없으면 no-map 이고 저장을 쓰지 않는다 (worklog-mac/records/region-map/record.md)
+{
+  const pika = (bag: Record<string, number>): SaveV3 => {
+    const s = seed();
+    s.pets[0]!.species = "pikachu";
+    s.bag = { ...bag };
+    return s;
+  };
+  const f = fake(pika({ "thunder-stone": 1 }));
+  const tx = createExecutor(f.ports, HANDLERS);
+  const miss = tx.run({ id: "r1", name: "evolve", args: { petId: "p1", to: "raichu-alola" } });
+  assert.equal(miss.ok === false && miss.reason, "no-map", "지도가 없으면 거절");
+  assert.deepStrictEqual([f.writes, f.state.pets[0]?.species, f.state.bag["thunder-stone"]], [0, "pikachu", 1], "저장도 가방도 그대로");
+  const g = fake(pika({ "thunder-stone": 1, "region-map": 1 }));
+  const res = createExecutor(g.ports, HANDLERS).run({ id: "r2", name: "evolve", args: { petId: "p1", to: "raichu-alola" } });
+  assert.ok(res.ok);
+  assert.deepStrictEqual((res.result as { usedItem?: string; usedItems?: string[] }).usedItems, ["region-map"]);
+  assert.deepStrictEqual([g.writes, g.state.pets[0]?.species, g.state.bag["thunder-stone"], g.state.bag["region-map"]], [1, "raichu-alola", 1, undefined], "한 번 쓰고 지도만 줄었다");
+  // 돌 없이 지도만 — 알로라 라이츄 하나라 고르지 않아도 간다
+  const h = fake(pika({ "region-map": 1 }));
+  const only = createExecutor(h.ports, HANDLERS).run({ id: "r3", name: "evolve", args: { petId: "p1" } });
+  assert.ok(only.ok);
+  assert.deepStrictEqual([h.writes, h.state.pets[0]?.species, h.state.bag["region-map"]], [1, "raichu-alola", undefined], "지도 하나로 진화");
+  process.stdout.write("(13b) 리전폼 진화 · 지도 하나  ok\n");
+}
+
 process.stdout.write("selftest-tx: 배치·교체·보관 통과\n");
 
 

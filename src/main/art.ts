@@ -7,6 +7,7 @@ import { SIZE_STEPS, snapSize } from "../save/rules.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/stage";
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";
+import { regionalOf } from "../dex/regional";
 
 export const ART_RULES = {
   // 배율 상한 — 몸 칸으로 잰다 (art/pmd-load.js 와 같은 수). 작업 동작이 칸을 키웠다고 펫이 작아지지 않게.
@@ -72,13 +73,24 @@ export interface ArtLoader {
   prefetch(looks: string[]): void;
 }
 
-// look → PMD 묶음을 찾는 값. 이로치는 도감 번호 아래 이로치 경로다. 도감 번호를 모르는 이로치는 null
-function pmdSource(look: string): { slug: string; spritePath?: string } | null {
+type PmdSource = { slug: string; spritePath?: string };
+
+// look → PMD 묶음을 찾는 값들 — 앞에서부터 받아 보고 되는 것을 쓴다. 이로치는 도감 번호 아래 이로치 경로다. 도감 번호를 모르는 이로치는 빈 목록.
+// 리전폼(src/dex/regional.ts)은 폼 폴더(`0026/0001`)가 먼저다. 이로치는 `<폼>/0001` → 폼 보통 → 기본형 이로치, 보통은 폼 → 기본형 순서다.
+// 폼 그림이 없는 리전폼(가라르 메더)은 기본형 그림으로 무대에 나온다 (worklog-mac/records/region-map/design.md B.3)
+export function pmdSources(look: string): PmdSource[] {
   const shiny = look.endsWith(":shiny");
   const slug = shiny ? look.slice(0, -6) : look;
-  if (!shiny) return { slug };
   const dex = profile(slug).dex;
-  return dex ? { slug, spritePath: `${String(dex).padStart(4, "0")}/0000/0001` } : null;
+  const base = dex ? String(dex).padStart(4, "0") : null;
+  const form = regionalOf(slug)?.pmd;
+  const out: PmdSource[] = [];
+  if (form) out.push({ slug, spritePath: shiny ? `${form}/0001` : form });
+  if (form && shiny) out.push({ slug, spritePath: form });
+  if (shiny) {
+    if (base) out.push({ slug, spritePath: `${base}/0000/0001` });
+  } else out.push(regionalOf(slug) && base ? { slug, spritePath: base } : { slug });
+  return out;
 }
 
 export function createArtLoader(paths: Paths): ArtLoader {
@@ -91,9 +103,12 @@ export function createArtLoader(paths: Paths): ArtLoader {
   async function drain(): Promise<void> {
     if (prefetching) return;
     for (let look = queue.shift(); look !== undefined; look = queue.shift()) {
-      const src = pmdSource(look);
-      if (!src || done.has(look) || pending.has(look)) continue;
-      const job = prefetchPmd(src, paths).catch(() => false);
+      const srcs = pmdSources(look);
+      if (!srcs.length || done.has(look) || pending.has(look)) continue;
+      const job = (async () => {
+        for (const src of srcs) if (await prefetchPmd(src, paths).catch(() => false)) return true;
+        return false;
+      })();
       prefetching = { look, job };
       await job;
       prefetching = null;
@@ -101,14 +116,19 @@ export function createArtLoader(paths: Paths): ArtLoader {
   }
 
   async function fetchLook(look: string): Promise<Look | null> {
-    const src = pmdSource(look);
-    if (!src) return null;
+    const srcs = pmdSources(look);
+    if (!srcs.length) return null;
     if (prefetching?.look === look) await prefetching.job;
-    // dotSize 는 loadPmd 의 zoom 계산에만 쓰이고 무대는 그 값을 쓰지 않는다. buddy=on — 작업 동작까지 담아야 작업 리듬이 나온다
-    const art = await loadPmd({ ...src, dotSize: ART_RULES.defaultZoom, buddy: "on" }, paths);
-    const result = art && art.kind === "pmd" && art.anims && art.clips ? { look, art, sheets: sheetsOf(look, art) } : null;
-    if (result) done.set(look, result);
-    return result;
+    for (const src of srcs) {
+      // dotSize 는 loadPmd 의 zoom 계산에만 쓰이고 무대는 그 값을 쓰지 않는다. buddy=on — 작업 동작까지 담아야 작업 리듬이 나온다
+      const art = await loadPmd({ ...src, dotSize: ART_RULES.defaultZoom, buddy: "on" }, paths);
+      const result = art && art.kind === "pmd" && art.anims && art.clips ? { look, art, sheets: sheetsOf(look, art) } : null;
+      if (result) {
+        done.set(look, result);
+        return result;
+      }
+    }
+    return null;
   }
 
   return {

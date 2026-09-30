@@ -8,6 +8,7 @@ import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry, ShopItemView } from "../shared/manage";
 import { evoItemNote } from "./shop-detail.js";
+import { isRegional, regionalOf } from "../dex/regional.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
@@ -75,12 +76,14 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   }
 
   // 포켓몬 — 해금한 종 가운데 상점에서 파는 종(알에서 얻을 수 있는 종). 도감 번호 순 (2026-09-29 사용자 결정)
+  // 같은 번호면 기본형, 리전폼 순번 순이다
   const dexNo = (slug: string): number => species(opts)[slug]?.dex ?? Number.MAX_SAFE_INTEGER;
+  const formNo = (slug: string): number => regionalOf(slug, opts)?.no ?? 0;
   const sold = save.dex.unlocked
     .map((slug) => ({ slug, price: speciesPrice(slug, opts) }))
     .filter((row): row is { slug: string; price: number } => row.price !== null)
-    .sort((a, b) => dexNo(a.slug) - dexNo(b.slug) || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
-  for (const { slug, price } of sold) add({ id: slug, name: petName(slug), note: "", price, category: "pokemon", affordable: false, dex: species(opts)[slug]?.dex });
+    .sort((a, b) => dexNo(a.slug) - dexNo(b.slug) || formNo(a.slug) - formNo(b.slug) || (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
+  for (const { slug, price } of sold) add({ id: slug, name: petName(slug), note: "", price, category: "pokemon", affordable: false, dex: species(opts)[slug]?.dex, ...formFields(slug, opts) });
 
   // 도구 — 상점에 파는 것만
   for (const [id, item] of Object.entries(items(opts))) {
@@ -113,17 +116,28 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   return out;
 }
 
-// 도감 번호 하나에 슬러그가 여럿이면 기본형만 남긴다.
+// 리전폼 항목의 폼 순번·지방 — 리전폼이 아니면 빈 객체
+function formFields(slug: string, opts?: DexOptions): { form?: number; region?: string } {
+  const form = regionalOf(slug, opts);
+  return form ? { form: form.no, region: form.region } : {};
+}
+
+// 도감 번호 하나에 슬러그가 여럿이면 기본형만 남긴다. 리전폼(src/dex/regional.ts)은 다른 종이라 따로 남긴다.
 // 폼 슬러그는 `arceus-bug` 처럼 기본형 뒤에 접미사가 붙으므로 가장 짧은 것이 기본형이다.
 // 슬러그에 하이픈이 있는지로는 가릴 수 없다 — `ho-oh` `porygon-z` 처럼 기본형에도 하이픈이 있다.
-function baseForms(rows: Record<string, SpeciesEntry>): { slug: string; dex: number }[] {
+function baseForms(rows: Record<string, SpeciesEntry>, opts?: DexOptions): { slug: string; dex: number }[] {
   const byDex = new Map<number, string>();
+  const regional: { slug: string; dex: number }[] = [];
   for (const [slug, row] of Object.entries(rows)) {
     if (isMetaKey(slug) || !row.dex) continue;
+    if (isRegional(slug, opts)) {
+      regional.push({ slug, dex: row.dex });
+      continue;
+    }
     const kept = byDex.get(row.dex);
     if (kept == null || slug.length < kept.length || (slug.length === kept.length && slug < kept)) byDex.set(row.dex, slug);
   }
-  return [...byDex.entries()].map(([dex, slug]) => ({ slug, dex }));
+  return [...[...byDex.entries()].map(([dex, slug]) => ({ slug, dex })), ...regional];
 }
 
 // 도감 항목 — 도감 번호 순. 상태는 획득 · 해금 · 미해금 셋이다
@@ -132,16 +146,17 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
   const unlocked = new Set(save.dex.unlocked);
   const shiny = new Set(save.dex.shinyObtained);
   const out: DexEntry[] = [];
-  for (const { slug, dex } of baseForms(species(opts))) {
+  for (const { slug, dex } of baseForms(species(opts), opts)) {
     out.push({
       slug,
       dex,
+      ...formFields(slug, opts),
       name: petName(slug),
       state: obtained.has(slug) ? "obtained" : unlocked.has(slug) ? "unlocked" : "locked",
       shiny: shiny.has(slug),
     });
   }
-  out.sort((a, b) => a.dex - b.dex);
+  out.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0));
   return out;
 }
 

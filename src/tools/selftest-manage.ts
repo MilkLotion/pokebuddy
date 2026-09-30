@@ -185,13 +185,18 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = game.dex();
-    assert.equal(rows.length, 1025, "폼을 뺀 기본 종 수 — 공식 전국도감 1025");
+    assert.equal(rows.length, 1082, "폼을 뺀 기본 종 1025 + 리전폼 57 — 리전폼은 다른 종이라 따로 보인다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
     let prev = 0;
+    let prevForm = 0;
     for (const row of rows) {
-      assert.ok(row.dex > prev, `도감 번호가 늘어난다 (${row.slug})`);
+      const form = row.form ?? 0;
+      assert.ok(row.dex > prev || (row.dex === prev && form > prevForm), `도감 번호, 그다음 폼 순번으로 늘어난다 (${row.slug})`);
       prev = row.dex;
+      prevForm = form;
     }
+    const meowths = rows.filter((r) => r.dex === 52).map((r) => [r.slug, r.form, r.region]);
+    assert.deepStrictEqual(meowths, [["meowth", undefined, undefined], ["meowth-alola", 1, "alola"], ["meowth-galar", 2, "galar"]], "같은 번호는 기본형 → 폼 순번");
     const pika = rows.find((r) => r.slug === "pikachu");
     assert.equal(pika?.name, "피카츄");
     assert.equal(pika?.state, "obtained", "가지고 있는 종");

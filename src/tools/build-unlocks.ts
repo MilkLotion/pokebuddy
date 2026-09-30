@@ -20,7 +20,10 @@
 //      울트라비스트는 PokeAPI 에 표시가 없어 목록으로 둔다. 알에서 얻을 수 없는 종이다 (docs/specs/game.md "알")
 //      종 목록 알(data/eggs.json pool)의 종도 넣지 않는다 — 화석은 태고의돌, 패러독스는 랜덤패러독스알에서 나와야 해금 (2026-09-27 사용자 결정)
 //      업적 보상 종(data/achievements.json 의 reward.pokemon)도 넣지 않는다 — 업적으로만 얻는다. 규칙이 없으니 랜덤알·상점에서도 빠진다 (2026-09-29)
+//      리전폼 가운데 진화 전 종(data/regional.json 의 get "base" — 알로라 식스테일 · 켄타로스 품종)도 같은 규칙으로 넣는다.
+//      기본 종이 전설·환상이면(가라르 프리져·썬더·파이어) 넣지 않는다 — 전설 규칙대로 단일 포켓몬 알에서 나온다 (2026-09-30 사용자 결정)
 //   그 밖의 종은 넣지 않는다 (아직 해금 길 없음)
+//   진화 규칙은 리전폼 간선에서도 만든다. 기본형과 리전폼이 같은 종으로 가면(나옹·가라르 나옹 → 페르시온) 기본형 규칙을 쓴다
 // 순서: 스타터 → 진화 대상(슬러그순) → 손으로 적은 것(스타터·진화 대상이 아닌 것만 뒤에)
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +33,7 @@ import { rewardSpecies } from "../achievement/core";
 import type { UnlockRule } from "../shared/types";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
+import { isRegional, regionalTable } from "../dex/regional";
 
 const EVO = path.join(DATA_DIR, "evo.json");
 const OUT = path.join(DATA_DIR, "unlocks.json");
@@ -49,16 +53,28 @@ type EvolveRule = NonNullable<UnlockRule["evolve"]>;
 // 아기 포켓몬 슬러그 집합과 기본형(진화 전 첫 단계, 전설·환상·울트라비스트 제외) 목록 (종 식별자 = 도감 슬러그)
 async function fetchSpecies(): Promise<{ babies: Set<string>; bases: string[] }> {
   const rows = await csv("pokemon_species.csv", ["identifier", "is_baby", "evolves_from_species_id", "is_legendary", "is_mythical"]);
+  const rare = new Set(rows.filter((r) => r.is_legendary === "1" || r.is_mythical === "1").map((r) => r.identifier));
+  const regionalBases = Object.entries(regionalTable().forms)
+    .filter(([, f]) => f.get === "base" && !rare.has(f.base))
+    .map(([slug]) => slug);
   return {
     babies: new Set(rows.filter((r) => r.is_baby === "1").map((r) => r.identifier)),
-    bases: rows.filter((r) => !r.evolves_from_species_id && r.is_legendary !== "1" && r.is_mythical !== "1" && !ULTRA_BEASTS.includes(r.identifier)).map((r) => r.identifier),
+    bases: [
+      ...rows.filter((r) => !r.evolves_from_species_id && r.is_legendary !== "1" && r.is_mythical !== "1" && !ULTRA_BEASTS.includes(r.identifier)).map((r) => r.identifier),
+      ...regionalBases,
+    ],
   };
 }
 
 // 부모 → 자식 목록에서 각 슬러그의 단계 — 아기가 아닌 조상의 수
 function stageFn(evo: EvoTable, babies: Set<string>): (slug: string) => number {
   const parentOf = new Map<string, string>();
-  for (const [from, steps] of Object.entries(evo)) for (const s of steps) parentOf.set(s.to, from);
+  for (const [from, steps] of Object.entries(evo)) {
+    for (const s of steps) {
+      const kept = parentOf.get(s.to);
+      if (kept === undefined || (isRegional(kept) && !isRegional(from))) parentOf.set(s.to, from); // 부모는 기본형이 먼저 (src/dex/evo.ts 와 같은 규칙)
+    }
+  }
   return (slug) => {
     let n = 0;
     let cur = slug;
@@ -90,7 +106,9 @@ export function build(evo: EvoTable, babies: Set<string>, starterSlugs: string[]
       evolves.push([s.to, rule]);
     }
   }
-  evolves.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  // 같은 결과면 기본형 출발이 먼저 — 먼저 온 규칙을 쓴다
+  const regionalLast = (r: EvolveRule): number => (isRegional(r.from) ? 1 : 0);
+  evolves.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : regionalLast(a[1]) - regionalLast(b[1])));
   let skipped = 0;
   for (const [to, rule] of evolves) {
     if (out[to]) {

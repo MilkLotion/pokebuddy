@@ -207,6 +207,29 @@ function seed(): SaveV3 {
   process.stdout.write("(11) 진화 후보와 조건 문구  ok\n");
 }
 
+// (11b) 지도 간선 — 리전폼 후보는 map 표시를 싣는다. 돌 대신 지도인 후보는 "지도 필요", 레벨 간선은 모자란 조건을 `·` 로 잇는다 (src/dex/evolve.ts checkNeed)
+{
+  const s = empty(T0);
+  s.pets.push(pet({ id: "p1", species: "pikachu" }));
+  s.pets.push(pet({ id: "p2", species: "quilava", level: 30 }));
+  s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
+  const v = snapshot(s, undefined, undefined, undefined, T0);
+  const pika = v.party.slots[0]?.pet?.evolutions ?? [];
+  assert.deepStrictEqual(pika.map((c) => [c.to, c.name, c.need, c.item, c.map]), [
+    ["raichu", "라이츄", "천둥의돌 필요", "thunder-stone", undefined],
+    ["raichu-alola", "알로라 라이츄", "지도 필요", "region-map", true],
+  ]);
+  assert.equal(v.party.slots[1]?.pet?.evolutions.find((c) => c.map)?.need, "Lv.36·지도 필요");
+  s.bag = { "thunder-stone": 1 };
+  const onlyStone = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  assert.deepStrictEqual(onlyStone.map((c) => [c.ready, c.need]), [[true, undefined], [false, "지도 필요"]]);
+  s.bag = { "region-map": 1 };
+  const onlyMap = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  assert.deepStrictEqual(onlyMap.map((c) => [c.ready, c.need]), [[false, "천둥의돌 필요"], [true, undefined]], "지도만 있으면 알로라 라이츄가 준비된다");
+  process.stdout.write("(11b) 지도 간선 후보와 조건 문구  ok\n");
+}
+
 // (12) 공유 sid 계열 — 박스 칸의 단체사진·툴팁이 쓰는 모습 목록. 일반 개체에는 없다
 {
   const s = empty(T0);

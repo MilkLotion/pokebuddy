@@ -10,7 +10,8 @@ import { profile } from "../dex/species.js";
 import { petName, typeName } from "../main/text.js";
 import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
-import { dexTexts, officialText } from "./dex-detail.js";
+import { officialText, textOf } from "./dex-detail.js";
+import { REGION_MAP, needIsMap, regionalOf } from "../dex/regional.js";
 import { nameOfItem } from "./lists.js";
 
 const LOCKED_NAME = "???";
@@ -18,9 +19,10 @@ const LOCKED_NAME = "???";
 // 도감에서 해금했거나 얻은 종인가 — 아니면 이름을 숨긴다
 const known = (save: SaveV3, slug: string): boolean => save.dex.unlocked.includes(slug) || save.dex.obtained.includes(slug);
 
-// 시간대·성별 — 도구·레벨 뒤에 붙는 조건
+// 시간대·성별·지도 — 도구·레벨 뒤에 붙는 조건. 레벨·친밀도 지도 간선은 "Lv.36 · 지도". 돌 대신 지도인 간선은 조건이 지도라 "지도" 하나
 function extras(step: EvoStep): string[] {
   const out: string[] = [];
+  if (step.map && !needIsMap(step.need)) out.push("지도");
   if (step.when) out.push(step.when === "night" ? "밤" : "낮");
   if (step.gender) out.push(step.gender === "female" ? "암컷" : "수컷");
   return out;
@@ -39,24 +41,29 @@ export function needLabel(step: EvoStep, opts?: DexOptions): string {
   return [head, ...extras(step)].join(" · ");
 }
 
+// 트리의 한 종이 지금 상품인가 — 도감 번호로 가린다(폼 상품도 기본 종 칸이 켜진다).
+// 리전폼은 번호가 같아도 다른 종이라 슬러그로 가린다 — 라이츄와 알로라 라이츄
+const isCurrent = (slug: string, current: string, opts?: DexOptions): boolean =>
+  slug === current || (!regionalOf(slug, opts) && !regionalOf(current, opts) && profile(slug, opts).dex === profile(current, opts).dex);
+
 // 사슬의 한 종과 그 아래 — 같은 종이 두 번 나오면 멈춘다(자료가 잘못돼도 끝나게)
-function node(save: SaveV3, slug: string, currentDex: number, need: string | undefined, seen: Set<string>, opts?: DexOptions): EvoNodeView {
+function node(save: SaveV3, slug: string, current: string, need: string | undefined, seen: Set<string>, opts?: DexOptions): EvoNodeView {
   seen.add(slug);
   const locked = !known(save, slug);
   const children = nextOf(slug, opts)
     .filter((step) => !seen.has(step.to))
-    .map((step) => node(save, step.to, currentDex, needLabel(step, opts), seen, opts));
+    .map((step) => node(save, step.to, current, needLabel(step, opts), seen, opts));
   return {
     slug,
     name: locked ? LOCKED_NAME : petName(slug),
     locked,
-    current: profile(slug, opts).dex === currentDex,
+    current: isCurrent(slug, current, opts),
     ...(need ? { need } : {}),
     children,
   };
 }
 
-// 진화용 도구로 진화하는 쌍 — 진화 전 도감 번호, 같으면 진화 후 번호순
+// 진화용 도구로 진화하는 쌍 — 진화 전 도감 번호, 같으면 진화 후 번호순. 지도는 map 간선(기본형 → 리전폼)의 쌍이다
 export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPairView[] {
   const table = loadJson<Record<string, EvoStep[]>>("evo.json", opts);
   const dexOf = (slug: string): number => profile(slug, opts).dex || Number.MAX_SAFE_INTEGER;
@@ -65,8 +72,11 @@ export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPa
   for (const [from, steps] of Object.entries(table)) {
     if (isMetaKey(from)) continue;
     for (const step of steps) {
-      if (step.need?.kind !== "item" || step.need.item !== itemId) continue;
-      const note = extras(step).join(" · ");
+      const byItem = step.need?.kind === "item" && step.need.item === itemId;
+      if (!byItem && !(itemId === REGION_MAP && step.map)) continue;
+      // 쌍의 설명은 그 도구 밖의 조건이다 — 돌 쌍의 "수컷"처럼. 지도 쌍이면 레벨 간선은 "Lv.36", 돌 대신 지도인 간선은 설명 없음
+      //   돌 쌍에는 지도 간선이 없다 — 돌 대신 지도라 조건이 지도다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
+      const note = itemId === REGION_MAP && !needIsMap(step.need) ? needLabel({ ...step, map: undefined }, opts) : extras(step).join(" · ");
       pairs.push({ from: side(from), to: side(step.to), ...(note ? { note } : {}) });
     }
   }
@@ -90,14 +100,16 @@ export function shopDetail(save: SaveV3, productId: string, opts?: DexOptions): 
   if (evoItem && !isMetaKey(productId)) return { kind: "evolution", pairs: evoPairs(save, productId, opts) };
   const row = profile(productId, opts);
   if (!row.dex) return null;
+  const form = regionalOf(productId, opts);
   return {
     kind: "pokemon",
     slug: productId,
     dex: row.dex,
+    ...(form ? { form: form.no } : {}),
     name: petName(productId),
-    genus: officialText(dexTexts(opts)[String(row.dex)]).genus,
+    genus: officialText(textOf(productId, row.dex, opts)).genus,
     types: row.types.map((t) => typeName(t)),
     typeIds: [...row.types],
-    tree: node(save, rootOf(productId, opts), row.dex, undefined, new Set(), opts),
+    tree: node(save, rootOf(productId, opts), productId, undefined, new Set(), opts),
   };
 }

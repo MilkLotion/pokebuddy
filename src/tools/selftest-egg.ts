@@ -139,7 +139,7 @@ const fixed = (...values: number[]): (() => number) => {
 // (14) 랜덤알에서 단일 포켓몬 알이 나온다 — 누적 확률 준전설 1.5 · 울트라비스트 2 · 패러독스 2 · 환상 2 · 전설 0.5 (%)
 {
   const cases: [number, string, number][] = [
-    [0.01, "sub-legendary", 42],
+    [0.01, "sub-legendary", 45], // 가라르 프리져·썬더·파이어 포함 (data/regional.json, 2026-09-30)
     [0.02, "ultra-beast", 10],
     [0.04, "paradox", 20],
     [0.06, "mythical", 22],

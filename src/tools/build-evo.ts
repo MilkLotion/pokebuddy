@@ -7,9 +7,14 @@
 //   pokemon_evolution.csv   진화 조건 — 시간대와 트리거·도구·레벨·친밀도·장소·기술·성별
 //   pokemon.csv             종의 기본 폼 식별자 (종 식별자가 도감에 없을 때 대신)
 //   items.csv               도구 번호 → 식별자
+//   pokemon_forms.csv       폼 번호 → 식별자 (진화 행의 evolved_pokemon_form_id 가 리전폼인지 가린다)
 //
-// 결과: { "<slug>": [{ "to": "<slug>", "when"?: "day" | "night", "need": {…} }] }
-//   - 종 단위. 폼 슬러그(raichu-alola · rotom-wash)는 사슬에 넣지 않는다 — 기본 종만
+// 결과: { "<slug>": [{ "to": "<slug>", "when"?: "day" | "night", "need": {…}, "map"?: true }] }
+//   - 종 단위. 폼 슬러그(rotom-wash)는 사슬에 넣지 않는다 — 기본 종만
+//   - 리전폼(raichu-alola)은 PokeAPI 에서 뽑지 않고 data/regional.json 의 edges 를 덧붙인다. 같은 출발이면 기본형 간선 뒤에 붙는다.
+//     지도 간선(map)의 원래 조건이 도구면 need 를 지도(region-map)로 바꿔 적는다 — 돌 없이 지도 하나로 진화한다 (2026-09-30 사용자 결정)
+//     기본형 조건을 고를 때 결과가 리전폼인 행(evolved_pokemon_form_id)은 뺀다 — 가라르 야도킹 행이 기본 야도킹 조건에 섞이지 않게.
+//     그래서 기본 야돈 → 야도킹은 교환(연결의끈)이다 (2026-09-30 사용자 결정)
 //   - 슬러그는 lib/dex.json 에 있는 것만. 종 식별자(deoxys)가 도감에 있으면 그것, 없으면 기본 폼 식별자(deoxys-normal)
 //   - when 은 그 종으로의 진화 조건 행들이 전부 같은 시간대일 때만 적는다 (루가루암처럼 폼마다 다르면 생략).
 //     dusk · full-moon 같은 다른 값은 시간대 없음으로 본다
@@ -28,6 +33,7 @@
 import path from "node:path";
 import type { DayPart, EvoNeed, Gender } from "../shared/types";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
+import { REGION_MAP, isRegional, regionalTable } from "../dex/regional";
 
 const OUT = path.join(DATA_DIR, "evo.json");
 
@@ -62,6 +68,7 @@ export interface EvoEdge {
   when?: DayPart;
   gender?: Exclude<Gender, "none">;
   need: EvoNeed;
+  map?: true; // 지도(region-map)도 필요하다 — data/regional.json 에서만 온다
 }
 
 export type EvoTable = Record<string, EvoEdge[]>;
@@ -81,10 +88,19 @@ export async function build(): Promise<void> {
       "known_move_id",
       "known_move_type_id",
       "gender_id",
+      "evolved_pokemon_form_id",
     ]),
     csv("pokemon.csv", ["species_id", "identifier", "is_default"]),
     csv("items.csv", ["id", "identifier"]),
   ]);
+  const formRows = await csv("pokemon_forms.csv", ["id", "identifier"]);
+  const formName = new Map(formRows.map((r) => [r.id, r.identifier]));
+  // 결과가 리전폼인 행 — 기본형 조건에서 뺀다
+  const toRegional = (r: { evolved_pokemon_form_id: string }): boolean => {
+    const name = r.evolved_pokemon_form_id ? formName.get(r.evolved_pokemon_form_id) : undefined;
+    return name !== undefined && isRegional(name);
+  };
+  const baseRows = evoRows.filter((r) => !toRegional(r));
   type SpeciesRow = (typeof speciesRows)[number];
 
   const defaultOfSpecies = new Map<string, string>();
@@ -100,7 +116,7 @@ export async function build(): Promise<void> {
 
   // 진화 대상 종 번호 → 시간대 (행마다 모아 하나로 합칠 수 있을 때만)
   const whenOf = new Map<string, string[]>();
-  for (const r of evoRows) {
+  for (const r of baseRows) {
     const list = whenOf.get(r.evolved_species_id) ?? [];
     list.push(DAY_PARTS.has(r.time_of_day) ? r.time_of_day : "");
     whenOf.set(r.evolved_species_id, list);
@@ -124,7 +140,7 @@ export async function build(): Promise<void> {
   const TRADE = "2";
   const USE_MOVE = "14";
   const rowsOf = new Map<string, (typeof evoRows)[number][]>();
-  for (const r of evoRows) {
+  for (const r of baseRows) {
     const list = rowsOf.get(r.evolved_species_id) ?? [];
     list.push(r);
     rowsOf.set(r.evolved_species_id, list);
@@ -171,9 +187,33 @@ export async function build(): Promise<void> {
     edges += 1;
   }
 
+  // 리전폼 간선 — 손으로 관리하는 표를 그대로 붙인다. 슬러그가 도감표에 없으면 멈춘다
+  let regionalEdges = 0;
+  let mapEdges = 0;
+  for (const [from, steps] of Object.entries(regionalTable().edges)) {
+    if (from.startsWith("_")) continue;
+    for (const s of steps) {
+      if (dex[from] == null || dex[s.to] == null) throw new Error(`리전폼 간선의 슬러그가 도감표에 없다: ${from}→${s.to}`);
+      if (!s.need) throw new Error(`리전폼 간선에 need 가 없다: ${from}→${s.to}`);
+      if ((out[from] ?? []).some((e) => e.to === s.to)) throw new Error(`리전폼 간선이 기본형 간선과 겹친다: ${from}→${s.to}`);
+      // 지도 간선의 원래 조건이 도구(돌 등)면 지도가 그 도구를 대신한다 — 표는 원작 조건을 두고, 여기서 need 를 지도로 바꾼다
+      //   (2026-09-30 사용자 결정 "천둥의돌이면 라이츄, 지도면 알로라라이츄로 진화하게 하자. 아이템1개만쓰는게 나을거같네")
+      //   레벨·친밀도 간선은 원래 조건을 그대로 두고 map 표시로 지도를 더 요구한다
+      const need: EvoNeed = s.map && s.need.kind === "item" ? { kind: "item", item: REGION_MAP } : s.need;
+      const step: EvoEdge = { to: s.to, need };
+      if (s.when) step.when = s.when;
+      if (s.gender) step.gender = s.gender;
+      if (s.map) step.map = true;
+      (out[from] ??= []).push(step);
+      edges += 1;
+      regionalEdges += 1;
+      if (s.map) mapEdges += 1;
+    }
+  }
+
   const sorted: EvoTable = Object.fromEntries(Object.keys(out).sort().map((k) => [k, out[k] ?? []]));
   writeLineJson(OUT, sorted);
-  process.stdout.write(`진화 사슬: ${OUT} — 부모 ${Object.keys(sorted).length}종 · 간선 ${edges}\n`);
+  process.stdout.write(`진화 사슬: ${OUT} — 부모 ${Object.keys(sorted).length}종 · 간선 ${edges} (리전폼 ${regionalEdges} · 지도 ${mapEdges})\n`);
   process.stdout.write(`도감에 없어 버린 간선 ${dropped.length}${dropped.length ? `: ${dropped.slice(0, 20).join(", ")}${dropped.length > 20 ? " …" : ""}` : ""}\n`);
   const timed = Object.values(sorted).flat().filter((s) => s.when);
   const gendered = Object.values(sorted).flat().filter((s) => s.gender);
