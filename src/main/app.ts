@@ -22,6 +22,8 @@ import { createGame, type GameV3 } from "./game";
 import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
+import { askBlocked, askConfirm, showKicked } from "./halt-dialog";
+import type { HaltInfo, HaltReason } from "../online/cloud.js";
 import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
@@ -184,7 +186,22 @@ let mainTrade: MainTrade | null = null; // 친구 교환 — writer 인 동반�
 let tradeScreen: TradeScreenBuilder | null = null; // 교환 모달이 그리는 값
 let mainMail: MainMail | null = null; // 우편함 — 온라인 기능과 같은 클라이언트를 쓴다 (src/main/mail.ts)
 let mainOnline: MainOnline | null = null; // 공유 Supabase 클라이언트·계정·클라우드 저장 — writer 인 동반자만 가진다
-let onlineFlushed = false; // 끄기 전에 클라우드 저장을 한 번 올렸다
+// 끄기 전 클라우드 정리 — 올리고 released 를 알린 뒤 클라우드를 멈춘다. 사용자가 끄는 일반 종료(before-quit)만 부른다
+let onlineReleased: Promise<void> | null = null;
+// 세션 종료(Windows 로그오프·mac 끄기·업데이트 설치) 직전의 알림 — 올리고 released 만 알린다. 클라우드는 멈추지 않는다.
+// 끄기가 취소되어 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 진행 중인 약속만 들고 있다 — 다음 세션 종료는 다시 알린다
+let onlineAnnounce: Promise<void> | null = null;
+// 두 PC 규칙으로 게임을 멈췄다 (worklog-mac/records/cloud-authority/design-p1.md 3절)
+//   superseded  다른 PC 에 밀려났다 — 안내 뒤 종료. 로그아웃하지 않는다(D19)
+//   confirm     연결 끊긴 다른 PC 를 넘겨받을지 묻는 중(G2) — 창이 떠 있는 동안 진행을 멈춘다(D22)
+//   blocked     교환이 걸려 넘겨받지 못했다 — 다시 시도하거나 종료
+// 멈춘 동안 저장을 쓰지 않고(canWrite), 시계 틱·교환·우편·mailbox 명령을 돌리지 않는다
+let halted: HaltReason | null = null;
+let haltNext: { reason: "confirm" | "blocked"; info: HaltInfo } | null = null; // 다음에 물을 확인·막힘
+let haltAsking = false; // 확인·막힘 창을 묻는 흐름이 돌고 있다
+let haltAbort: AbortController | null = null; // 떠 있는 확인·막힘 창 — 밀려나면 닫는다
+// 멈춘 동안에도 받는 명령 — 저장을 바꾸지 않는다(읽기·무대 반응·끄기)
+const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "poke", "quit"]);
 let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
 // 아직 참가하지 않은 교환 링크와 받은 시각. 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const TRADE_LINK_TTL_MS = 10 * 60_000;
@@ -459,12 +476,11 @@ function startUpdater(): void {
         }
       : {}),
     onView: (view) => pushUpdate(view),
-    // 다시 시작 전 — 바뀐 저장을 클라우드에 올린다. 끄기 경로(before-quit)가 같은 일을 다시 하지 않게 표시한다
+    // 다시 시작 전 — 메모리 진행을 쓰고 클라우드에 올린 뒤 released 를 알린다(최대 3초). 클라우드는 멈추지 않는다 —
+    // 설치가 실패해 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 이어지는 before-quit 은 기다리지 않는다
     beforeInstall: async () => {
-      if (mainOnline && !onlineFlushed && mainOnline.cloud.unsaved() === "dirty") {
-        onlineFlushed = true;
-        await mainOnline.flush();
-      }
+      if (!halted && saveParty()?.isWriter()) game?.flush();
+      await announceOnline();
     },
   });
 }
@@ -652,10 +668,12 @@ function showPetMenu(id: string): void {
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
 // 친구 교환 세션 — 저장을 쓰는 동반자(writer)일 때 처음 부를 때 만들고 한 번 시작한다(로그인 확보·반영하지 않은 교환 복구).
 // 교환이 끝나 개체가 바뀌면 무대를 다시 그린다
+// 게임을 멈춘 동안(halted)은 만들지 않는다
 function tradeSession(): MainTrade["session"] | null {
-  if (quitting || !game || !party || !party.isWriter()) return null;
+  if (quitting || halted || !game || !party || !party.isWriter()) return null;
   if (!mainTrade) {
-    mainTrade = createMainTrade(game, online()?.client);
+    // 교환 반영을 서버에 알린 뒤 저장을 바로 올린다 — 서버가 그 교환을 저장된 것으로 보게 (design-p1.md 6절)
+    mainTrade = createMainTrade(game, online() ?? undefined, () => mainOnline?.noteSaved("event"), cloudHold);
     if (!mainTrade) return null;
     const screen = createTradeScreen(() => game?.read() ?? null);
     tradeScreen = screen;
@@ -684,9 +702,48 @@ function tradeBlocked(): boolean {
   return !!(save && pendingOf(save));
 }
 
-// 온라인 기능 — writer 인 동반자에서 처음 부를 때 만든다. 서버 설정이 없으면 null
+// 로그인 계정의 새 교환(만들기·참가)·선물 받기를 막아야 하는가 (worklog-mac/records/cloud-authority 검수 1)
+//   클라우드 저장이 online 이고 올리기가 막히지 않았을 때(CLOUD_OWNER_OTHER·CLOUD_BAD_SAVE 없음)만 연다.
+//   그 밖의 상태에서 교환·선물을 받으면 나중에 서버 저장을 받을 때 결과가 덮여 복제·유실된다
+//   익명·로그아웃 상태는 막지 않는다(P2 에서 정한다). 클라우드가 멈춰(off) 있으면 계정을 직접 읽어 판정한다 — 켜는 중에도 막게
+async function cloudHold(): Promise<boolean> {
+  const on = mainOnline;
+  if (!on) return false;
+  const v = on.cloud.view();
+  if (v.status === "online") return v.error === "CLOUD_OWNER_OTHER" || v.error === "CLOUD_BAD_SAVE";
+  if (v.status !== "off") return true;
+  try {
+    return (await on.account.view()).signedIn;
+  } catch (e) {
+    console.error("계정 상태를 읽지 못했다 — 교환·선물 받기를 막는다", e);
+    return true;
+  }
+}
+
+// 클라우드 저장의 연결 시도가 끝나기를 기다린다(최대 ms) — connecting 이거나, 로그인했는데 아직 시작 전(off)이면 기다린다
+async function cloudSettled(ms: number): Promise<void> {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    const on = mainOnline;
+    const status = on?.cloud.view().status;
+    if (!on || status === "online") return;
+    if (status !== "connecting") {
+      if (status !== "off") return;
+      try {
+        if (!(await on.account.view()).signedIn) return;
+      } catch (e) {
+        console.error("계정 상태를 읽지 못했다 — 기다리지 않는다", e);
+        return;
+      }
+    }
+    await new Promise<void>((r) => setTimeout(r, 200));
+  }
+}
+
+// 온라인 기능 — writer 인 동반자에서 처음 부를 때 만든다. 서버 설정이 없거나 게임을 멈춘 동안(halted)은 null.
+// 멈춘 동안의 확인·다시 시도는 이미 만든 mainOnline 을 직접 쓴다
 function online(): MainOnline | null {
-  if (quitting || !game || !party || !party.isWriter()) return null;
+  if (quitting || halted || !game || !party || !party.isWriter()) return null;
   if (!mainOnline) {
     mainOnline = createMainOnline({
       saveFile: PATHS.save,
@@ -703,6 +760,8 @@ function online(): MainOnline | null {
       onSaveReplaced: () => {
         if (party?.kind === "save") party.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
       },
+      // 밀려남·넘겨받기 확인·교환 막힘 — 게임을 멈추고 창을 띄운다. 로그아웃하지 않는다(D19)
+      onHalt,
     });
     mainOnline?.onScreen((screen) => pushAccount(screen));
   }
@@ -730,6 +789,7 @@ function mailBox(): MainMail | null {
       run: (id, name, args) => (party?.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
       read: () => g.read(),
       signedIn: () => on.screen().signedIn,
+      hold: cloudHold,
       onChanged: () => {
         if (party?.kind === "save") party.refresh(); // 가방·포인트가 바뀌었다 — 설정창과 트레이를 다시 그린다
         tray?.refresh();
@@ -738,6 +798,130 @@ function mailBox(): MainMail | null {
     mainMail.onScreen((screen) => pushMail(screen));
   }
   return mainMail;
+}
+
+// ── 두 PC 규칙 멈춤 (worklog-mac/records/cloud-authority/design-p1.md 3절) ──
+
+// 교환·우편·mailbox 명령을 멈춘다. 온라인(mainOnline)은 남긴다 — 확인·다시 시도에 쓴다
+function pauseOnlineWork(): void {
+  commands?.setWriter(false);
+  mainTrade?.session.stop();
+  mainTrade = null;
+  tradeScreen = null;
+  mainMail = null;
+}
+
+// 클라우드 저장이 게임을 멈추라고 알렸다 (src/online/cloud.ts onHalt)
+//   superseded        밀려남 — 안내 창 뒤 종료
+//   confirm · blocked 메모리 진행을 쓰고 멈춘 뒤 창으로 묻는다. 답을 받아 다시 넘겨받으면 또 올 수 있다
+function onHalt(reason: HaltReason, info: HaltInfo): void {
+  if (quitting || halted === "superseded") return;
+  if (reason === "superseded") {
+    supersede(info);
+    return;
+  }
+  // 멈추기 전에 1초 틱 진행을 쓴다 — 멈춘 동안은 쓰지 않는다. 쓴 진행은 넘겨받은 뒤 올린다
+  if (!halted && saveParty()?.isWriter()) game?.flush();
+  halted = reason;
+  workMs = 0;
+  pauseOnlineWork();
+  haltNext = { reason, info };
+  log?.({ cloud: "halt", reason, code: info.code });
+  if (!haltAsking) void askHalt();
+}
+
+// 확인·막힘 창을 차례로 묻는다. [여기서 시작]·[다시 시도] 면 다시 넘겨받고, 그 결과로 또 멈추면 다시 묻는다.
+// [취소]·[종료] 면 클라우드를 멈추고 앱을 끝낸다(D22). 창이 떠 있는 동안 게임은 멈춰 있다
+async function askHalt(): Promise<void> {
+  // 창을 기다리는 사이 onHalt 가 halted 를 바꾼다 — 좁혀진 타입을 믿지 않게 함수로 다시 읽는다
+  const kicked = (): boolean => halted === "superseded";
+  haltAsking = true;
+  try {
+    while (haltNext && !quitting && !kicked()) {
+      const { reason, info } = haltNext;
+      haltNext = null;
+      const abort = new AbortController();
+      haltAbort = abort;
+      const answer = reason === "confirm" ? await askConfirm(info, abort.signal) : await askBlocked(info, abort.signal);
+      if (haltAbort === abort) haltAbort = null;
+      if (quitting || kicked()) return; // 창을 띄운 사이 밀려났다 — 밀려남 흐름이 종료한다
+      const on = mainOnline;
+      if (answer !== "go" || !on) {
+        await on?.confirm(false);
+        app.quit();
+        return;
+      }
+      await on.confirm(true); // 또 멈추면 onHalt 가 haltNext 를 채운다
+      if (haltNext || kicked() || quitting) continue;
+      resumeFromHalt();
+    }
+  } finally {
+    haltAsking = false;
+  }
+}
+
+// 넘겨받았다(또는 오프라인으로 이어 간다) — 게임·명령·교환을 다시 돌린다. 우편함은 다음에 부를 때 만든다
+function resumeFromHalt(): void {
+  halted = null;
+  log?.({ cloud: "resume" });
+  if (quitting || !saveParty()?.isWriter()) return;
+  commands?.setWriter(true);
+  tradeSession();
+  flushTradeLink();
+  if (mainOnline) pushAccount(mainOnline.screen());
+}
+
+// 다른 PC 에 밀려났다 — 게임을 멈추고 교환·우편·온라인을 닫은 뒤 안내하고 끝낸다.
+// 로그아웃하지 않는다 — 다시 켜면 같은 세션으로 서버 저장을 받아 넘겨받는다(D19). 끄기 경로는 올리기·released 를 건너뛴다
+function supersede(info: HaltInfo): void {
+  halted = "superseded";
+  haltNext = null;
+  haltAbort?.abort(); // 떠 있는 확인·막힘 창을 닫는다
+  haltAbort = null;
+  workMs = 0;
+  pauseOnlineWork();
+  if (mainOnline) pushAccount(mainOnline.screen());
+  mainOnline?.dispose();
+  mainOnline = null;
+  log?.({ cloud: "superseded", other: info.other?.label ?? null });
+  void showKicked(info).finally(() => app.quit());
+}
+
+// 세션 종료 직전 — 올리고 released 를 알린다(최대 3초). 클라우드를 멈추지 않는다.
+// 멈춘 동안(halted)이나 클라우드를 쓰지 않으면 하지 않는다. 겹쳐 부르면 진행 중인 약속을 돌려준다
+function announceOnline(): Promise<void> {
+  if (!onlineAnnounce) {
+    const on = mainOnline;
+    const run = !halted && on && on.cloud.view().status !== "off"
+      ? on.cloud.announceRelease(3_000).catch((e) => {
+          console.error("세션 종료 전 클라우드 알림에 실패했다 — 다음 실행에서 올린다", e);
+        })
+      : Promise.resolve();
+    onlineAnnounce = run.finally(() => {
+      onlineAnnounce = null;
+    });
+  }
+  return onlineAnnounce;
+}
+
+// 세션 종료가 진행 중이다 — 알리는 중이거나 released 를 알린 뒤 아직 active 로 되돌리지 않았다.
+// 그때 오는 before-quit 은 시스템 종료를 늦추지 않게 기다리지 않는다
+function sessionEnding(): boolean {
+  return onlineAnnounce != null || (mainOnline?.cloud.released() ?? false);
+}
+
+// 일반 종료 전 클라우드 정리 — 올리고 released 를 알린 뒤 클라우드를 멈춘다(최대 3초). 한 번만 한다.
+// 멈춘 동안(halted)이나 클라우드를 쓰지 않으면 하지 않는다
+function releaseOnline(): Promise<void> {
+  if (!onlineReleased) {
+    const on = mainOnline;
+    onlineReleased = !halted && on && on.cloud.view().status !== "off"
+      ? on.release(3_000).catch((e) => {
+          console.error("끄기 전 클라우드 정리에 실패했다 — 다음 실행에서 올린다", e);
+        })
+      : Promise.resolve();
+  }
+  return onlineReleased;
 }
 
 // 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
@@ -753,6 +937,7 @@ function flushTradeLink(): void {
   const { link } = tradeLink;
   tradeLink = null;
   void tradeStarted
+    .then(() => cloudSettled(10_000)) // 링크로 켰으면 클라우드가 연결 중이다 — 끝나기 전에 참가하면 cloud-wait 로 거절된다
     .then(() => session.join(link))
     .then((r) => {
       // 거절(진행 중인 교환·다른 조작)은 보기에 남지 않는다 — 교환 모달 배너로 알린다
@@ -852,6 +1037,11 @@ function stateTick(): void {
 const SLOW_EVERY = Math.max(1, Math.round(STATE_RULES.saveMs / CLOCK_RULES.periodMs));
 function clockTick({ now, gap, seq }: ClockTick): void {
   pushClock(now); // 관리 창·기기 창이 이 틱에 스냅샷을 다시 읽는다 (manage:clock)
+  // 두 PC 규칙으로 멈췄다 — 시간·줍기·작업 시간을 쌓지 않는다. 다시 돌면 game.tick 이 그 틈을 자른다
+  if (halted) {
+    workMs = 0;
+    return;
+  }
   if (!anchor || !stages) return;
   const worker = saveParty();
   if (!worker?.isWriter() || !game || screenLocked) {
@@ -902,25 +1092,45 @@ function clockTick({ now, gap, seq }: ClockTick): void {
 
 async function main(): Promise<void> {
   if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
+  // 메모리에만 있는 1초 틱 진행을 쓴다 — 잠금·절전·끄기 직전. 멈춘 동안(halted)은 쓰지 않는다
+  const flushLocal = (): void => {
+    if (!halted && saveParty()?.isWriter()) game?.flush();
+  };
+  // 잠금·절전은 연결 끊김이 아니다 — 올리고 잠듦을 서버에 알린다. 그동안 다른 PC 는 경고 없이 넘겨받는다(D21)
   powerMonitor.on("lock-screen", () => {
-    if (saveParty()?.isWriter()) game?.flush(); // 잠그기 직전 — 메모리에만 있는 1초 틱 진행을 쓴다
-    void mainOnline?.flush(); // 잠그기 직전 — 온라인이고 바뀌었으면 클라우드에 올린다
+    flushLocal();
+    void mainOnline?.sleep();
     screenLocked = true;
     log?.({ screen: "locked" });
   });
-  powerMonitor.on("suspend", () => {
-    if (saveParty()?.isWriter()) game?.flush(); // 절전 직전 — 메모리에만 있는 1초 틱 진행을 쓴다
-  });
-  // Windows 로그오프·종료 — before-quit 이 오지 않을 수 있다. session-end 는 창의 이벤트라 만들어지는 창마다 건다. mac 의 끄기는 powerMonitor shutdown
-  const flushOnEnd = (): void => {
-    if (saveParty()?.isWriter()) game?.flush();
-  };
-  app.on("browser-window-created", (_e, w) => w.on("session-end", flushOnEnd));
-  powerMonitor.on("shutdown", flushOnEnd);
   powerMonitor.on("unlock-screen", () => {
     screenLocked = false;
+    void mainOnline?.wake(); // 아직 활성인지 본다 — 넘겨받혔으면 밀려남 안내 뒤 종료
     log?.({ screen: "unlocked" });
   });
+  // 절전은 기다리지 않는다 — 알림이 못 가면 다른 PC 가 연결 끊김 경고를 한 번 본다(허용 오탐, design-p1.md 3절 한계)
+  powerMonitor.on("suspend", () => {
+    flushLocal();
+    void mainOnline?.sleep();
+  });
+  // 잠긴 채 깨어났으면 잠금 해제 때 깨운다
+  powerMonitor.on("resume", () => {
+    if (!screenLocked) void mainOnline?.wake();
+  });
+  // Windows 로그오프·종료 — before-quit 이 오지 않을 수 있다. 창의 이벤트라 만들어지는 창마다 건다.
+  //   query-session-end  끝내기 직전 — 로컬을 쓰고 올린 뒤 released 를 보낸다. 기다리지 않고 막지도 않는다(preventDefault 없음)
+  //   session-end        끝난다 — 로컬만 쓴다
+  // mac 의 끄기는 powerMonitor shutdown — 같은 일을 한다. 이어서 오는 before-quit 은 기다리지 않는다
+  // 클라우드는 멈추지 않는다 — 끄기가 취소되어 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다
+  const endSession = (): void => {
+    flushLocal();
+    void announceOnline();
+  };
+  app.on("browser-window-created", (_e, w) => {
+    w.on("query-session-end", endSession);
+    w.on("session-end", flushLocal);
+  });
+  powerMonitor.on("shutdown", endSession);
   if (process.platform === "darwin") {
     // Dock 을 숨기기 전에 로고를 한 번 — 숨기지 않는 구간(선택 창 등)이 생겨도 기본 Electron 아이콘이 아니게. 로고가 아직 없으면 건너뛴다
     const logo = logoFile(512);
@@ -928,10 +1138,11 @@ async function main(): Promise<void> {
     app.dock?.hide();
   }
 
-  // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다
+  // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다. 두 PC 규칙으로 멈춘 동안(halted)도 쓰지 않는다
+  // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/main/game.ts EVENT_WRITES)은 바로, 나머지는 2분 스로틀
   // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
   // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
-  const reader = createGame({ file: PATHS.save, canWrite: () => saveParty()?.isWriter() ?? false, onWrite: () => mainOnline?.noteSaved(), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
+  const reader = createGame({ file: PATHS.save, canWrite: () => !halted && (saveParty()?.isWriter() ?? false), onWrite: (kind) => mainOnline?.noteSaved(kind), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
   game = reader;
   bannerWin = createBannerWindow({
     preload: preloadFile(),
@@ -1109,11 +1320,17 @@ async function main(): Promise<void> {
     trade: tradeSession,
     tradeScreen: () => (mainTrade && tradeScreen ? tradeScreen.build(mainTrade.session.view()) : null),
   });
+  // 두 PC 규칙으로 멈춘 동안(halted) — 저장을 바꾸는 명령은 실행기로 보내지 않고 멈춤 사유로 거절한다.
+  // 무대 클릭(commands.click)·메뉴·관리 창·mailbox 가 모두 이 dispatch 를 지난다. 읽기·무대 반응·끄기만 연다
+  const dispatchNow = commands.dispatcher.dispatch.bind(commands.dispatcher);
+  commands.dispatcher.dispatch = (command) =>
+    halted && !HALT_OPEN.has(command.cmd) ? Promise.resolve({ ok: false, reason: "halted" }) : dispatchNow(command);
   saveSource.onRole((w) => {
-    commands?.setWriter(w);
+    commands?.setWriter(w && !halted);
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
     if (w) {
-      void online()?.start();
+      // 이어받기는 late — 앞 프로세스가 이 PC 를 쥐던 대로 잇는다. 그사이 다른 PC 가 온라인으로 넘겨받았으면 이쪽이 밀려난다(D20, 핑퐁 없음)
+      void online()?.start("late");
       tradeSession();
       flushTradeLink();
     } else {
@@ -1147,7 +1364,9 @@ async function main(): Promise<void> {
     app.quit();
     return;
   }
-  void online()?.start(); // 로그인한 채 켰으면 클라우드 저장을 시작한다 — 교환보다 먼저 만들어 같은 클라이언트를 나눠 쓴다
+  // 로그인한 채 켰으면 클라우드 저장을 시작한다 — 교환보다 먼저 만들어 같은 클라이언트를 나눠 쓴다.
+  // 켤 때는 boot — 사용자가 이 PC 에 있다. 다른 PC 가 온라인·잠듦이면 바로 넘겨받고, 연결 끊겼으면 확인 창을 띄운다(D17·G2)
+  void online()?.start("boot");
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
@@ -1205,14 +1424,17 @@ process.on("SIGINT", () => app.quit());
 
 // 창을 닫기 전에 온다 — 주기 작업·감시·헬퍼를 먼저 멈춘다 (quitting 설명 참고).
 // 창이 따로 닫혀 끝나는 경로(window-all-closed → app.quit)도 이곳을 지난다
+let quitWaited = false; // 끄기 전 클라우드 정리를 한 번 기다렸다
 app.on("before-quit", (e) => {
-  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/main/game.ts flush)
-  if (saveParty()?.isWriter()) game?.flush();
-  // 끄기 전에 클라우드 저장을 한 번 올린다 — 최대 3초. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다)
-  if (mainOnline && !onlineFlushed && mainOnline.cloud.unsaved() === "dirty") {
+  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/main/game.ts flush). 멈춘 동안(halted)은 쓰지 않는다
+  if (!halted && saveParty()?.isWriter()) game?.flush();
+  // 끄기 전에 올리고 released 를 알린다 — 최대 3초. 다른 PC 가 경고 없이 넘겨받는다. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다).
+  // 밀려났거나 확인·막힘으로 멈췄으면 건너뛴다. 세션 종료(Windows 로그오프·mac 끄기·업데이트)가 진행 중이면 이미 알렸다 —
+  // 시스템 종료를 늦추지 않게 기다리지 않고 끝낸다
+  if (!quitWaited && !halted && !sessionEnding() && (onlineReleased || (mainOnline && mainOnline.cloud.view().status !== "off"))) {
     e.preventDefault();
-    onlineFlushed = true;
-    void mainOnline.flush().finally(() => app.quit());
+    quitWaited = true;
+    void releaseOnline().finally(() => app.quit());
     return;
   }
   quitting = true;

@@ -2939,9 +2939,12 @@
       .trade-acts.end {
         justify-content: flex-end;
       }
+      /* 카드 안 한 줄 — 단추는 줄지 않고(flex: none) 남는 폭은 입력칸이 받는다. 카드 안쪽 240 에 링크칸 + `링크 복사` + `취소` 가 들어가야 한다.
+         좌우 12 — 14 면 링크칸 글자 자리 63 < `…#PVGY_N` 68 이라 잘린다(2026-09-30 취소 단추가 카드 밖으로 나간 결함) */
       .trade-acts button.act {
+        flex: none;
         height: 32px;
-        padding: 0 14px;
+        padding: 0 12px;
         white-space: nowrap;
         font-weight: 700;
       }
@@ -2962,9 +2965,11 @@
         outline: none;
         border-color: var(--primary);
       }
+      /* 링크칸 — 고정 폭 116 을 두면 단추 둘과 합이 카드 안쪽을 넘는다. 남는 폭을 받고 모자라면 말줄임 */
       .trade-link {
-        flex: none;
-        width: 116px;
+        flex: 1 1 0;
+        min-width: 0;
+        text-overflow: ellipsis;
         color: var(--muted);
       }
       /* 이어진 저장 실패 안내 — Alert Banner. 제목 줄과 본문 사이에 둔다 */
@@ -3013,8 +3018,10 @@
         flex: 1;
       }
       .trade-bar button.act {
+        flex: none;
         height: 32px;
         padding: 0 14px;
+        white-space: nowrap;
         font-weight: 700;
       }
       .trade-group {
@@ -3116,13 +3123,14 @@
       .save-chip[data-state="ok"] i {
         background: #10b981;
       }
-      .save-chip[data-state="need"] {
+      /* 업데이트 필요·확인 대기·넘겨받지 못함·다른 PC 에서 시작 — 사용자 손이 필요하거나 게임이 멈춘 상태 */
+      .save-chip[data-state="warn"] {
         border-color: transparent;
         background: var(--accent-bg);
         color: var(--ink);
         font-weight: 700;
       }
-      .save-chip[data-state="need"] i {
+      .save-chip[data-state="warn"] i {
         background: var(--warning);
       }
 
@@ -3235,17 +3243,6 @@
       }
       .acct-inline .search.acct-input {
         width: 140px;
-      }
-      button.act.acct-save.need {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      button.act.acct-save.need i {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--warning);
       }
       .acct-overlay {
         position: absolute;

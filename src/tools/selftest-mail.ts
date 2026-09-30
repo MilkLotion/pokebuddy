@@ -108,6 +108,7 @@ void (async () => {
     { id: "D", title: "새 선물", body: "", sender: "PokeBuddy", gifts: [{ kind: "egg", id: "random", count: 1 }], starts_at: iso(-4000), ends_at: null, claimed_at: null as string | null },
   ];
   let signedIn = false;
+  let hold = false; // 클라우드 저장이 올릴 수 있는 상태가 아니다
   let changed = 0;
   let claims = 0;
   const box = createMainMail({
@@ -122,6 +123,7 @@ void (async () => {
     run: (id, name, args) => tx.run({ id, name, args }),
     read: () => save,
     signedIn: () => signedIn,
+    hold: async () => hold,
     onChanged: () => (changed += 1),
     now: () => T0,
   });
@@ -137,6 +139,12 @@ void (async () => {
   signedIn = true;
   await box.refresh();
   assert.equal(save.bag.toy, 2, "서버에 받은 기록이 있는데 저장에 없으면 넣는다(끊김 복구)");
+  hold = true;
+  const held = await box.act({ action: "claim", id: "A" });
+  assert.equal(held.code, "cloud-wait", "클라우드 저장이 올릴 수 없으면 받지 않는다");
+  assert.equal(held.screen.error, "cloud-wait", "거절 사유를 편지 아래에 보인다");
+  assert.equal(claims, 0, "막히면 서버를 부르지 않는다");
+  hold = false;
   const r = await box.act({ action: "claim", id: "A" });
   assert.equal(r.ok, true);
   assert.equal(save.points.balance, 100);

@@ -10,6 +10,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authCodeOf, viewOf, type AccountResult } from "./account.js";
+import type { SessionGate } from "./session.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다
 export const GITHUB_PORTS = [54380, 54381, 54382] as const;
@@ -17,6 +18,8 @@ export const callbackUrl = (port: number): string => `http://127.0.0.1:${port}/a
 
 export interface GithubLoginOptions {
   client: SupabaseClient;
+  // 세션 관문 — 코드를 세션으로 바꾸는 단계만 exclusive 안에서 돌린다. 브라우저를 기다리는 동안은 잠그지 않는다
+  gate: SessionGate;
   openExternal: (url: string) => void | Promise<void>;
   blocked: () => boolean; // 걸린 교환이 있으면 세션을 바꾸지 않는다
   ports?: readonly number[];
@@ -92,7 +95,7 @@ async function listen(server: http.Server, ports: readonly number[]): Promise<nu
 // 로그인 결과 — 성공이면 로그인한 계정 보기. 취소·시간 초과는 AUTH_CANCELLED(화면은 조용히 로그인 화면으로)
 export type GithubResult = AccountResult | { ok: false; code: "AUTH_CANCELLED" | "AUTH_PORT_BUSY" };
 
-export async function githubLogin({ client, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal }: GithubLoginOptions): Promise<GithubResult> {
+export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal }: GithubLoginOptions): Promise<GithubResult> {
   if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" };
   let settle: (code: string | null) => void = () => undefined;
   const got = new Promise<string | null>((resolve) => { settle = resolve; });
@@ -133,11 +136,14 @@ export async function githubLogin({ client, openExternal, blocked, ports = GITHU
     await openExternal(data.url);
     const code = await got;
     if (!code) return { ok: false, code: "AUTH_CANCELLED" };
-    if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" }; // 기다리는 동안 교환을 시작했다
-    const exchanged = await client.auth.exchangeCodeForSession(code);
-    if (exchanged.error) return { ok: false, ...authCodeOf(exchanged.error) };
-    answer(true);
-    return { ok: true, view: viewOf(exchanged.data.user) };
+    const result = await gate.exclusive(async (): Promise<GithubResult> => {
+      if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" }; // 기다리는 동안 교환을 시작했다
+      const exchanged = await client.auth.exchangeCodeForSession(code);
+      if (exchanged.error) return { ok: false, ...authCodeOf(exchanged.error) };
+      return { ok: true, view: viewOf(exchanged.data.user) };
+    });
+    if (result.ok) answer(true);
+    return result;
   } catch (e) {
     return { ok: false, ...authCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
   } finally {

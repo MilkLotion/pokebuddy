@@ -33,6 +33,26 @@ import type { AgentName, Command, CommandName, CommandSource } from "../shared/t
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/store.ts)
 export const saveFile = (): string => PATHS.save;
 
+// 줍기로 포켓몬을 데려온 쓰기 — 거래가 아니라 이름이 없어 여기서 붙인다
+export const FIND_POKEMON = "find.pokemon";
+
+// 클라우드에 바로 올리는 쓰기 — 잃으면 되돌리기 어려운 사건 (design-p1.md 6절, record.md D27).
+// 이름은 src/tx/handlers.ts 의 거래 이름이다. 나머지 쓰기(시간 진행·돌봄·설정 등)는 2분 스로틀로 모아 올린다.
+// 교환 ack 뒤 올리기는 교환 세션이 따로 알린다 (src/trade/session.ts onSettled)
+export const EVENT_WRITES: ReadonlySet<string> = new Set([
+  "trade.lock",
+  "trade.unlock",
+  "trade.apply",
+  "mail.apply",
+  "egg.open",
+  "evolve",
+  "starter.pick",
+  FIND_POKEMON,
+]);
+
+// 쓰기 종류 — event 는 바로, tick 은 스로틀 (src/online/cloud.ts noteSaved)
+export type WriteKind = "tick" | "event";
+
 export interface GameV3 {
   file: string;
   read: () => SaveV3 | null;
@@ -54,7 +74,7 @@ export interface GameV3Options {
   now?: () => number;
   rand?: () => number;
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
-  onWrite?: () => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다 (src/online/cloud.ts noteSaved)
+  onWrite?: (kind: WriteKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. EVENT_WRITES 면 event (src/online/cloud.ts noteSaved)
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
 }
@@ -104,7 +124,8 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   };
   // 이어서 실패한 횟수 — 명령과 주기 저장(tick)을 함께 센다. writer 가 아니어서 쓰지 않은 것은 세지 않는다
   let failStreak = 0;
-  const write = (s: SaveV3): boolean => {
+  // name — 거래 이름·FIND_POKEMON. 시간 진행 쓰기는 이름이 없다
+  const write = (s: SaveV3, name?: string): boolean => {
     if (canWrite && !canWrite()) {
       dropPending(); // 쓰는 프로세스가 아니다 — 메모리 진행도 들고 있지 않는다
       return false;
@@ -115,7 +136,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
       pending = null; // 파일이 가장 새 저장이다
       pendingWorkMs = 0;
       diskKey = statKey();
-      onWrite?.();
+      onWrite?.(name && EVENT_WRITES.has(name) ? "event" : "tick");
     }
     return ok;
   };
@@ -164,7 +185,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const found = applyHits(save, petIds, at, rand);
     if (!found.length) return [];
     save.savedAt = at;
-    return write(save) ? found : null;
+    return write(save, found.some((f) => f.kind === "pokemon") ? FIND_POKEMON : undefined) ? found : null;
   };
 
   const view = (): Snapshot | null => {

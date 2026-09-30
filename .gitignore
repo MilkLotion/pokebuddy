@@ -13,6 +13,8 @@ release/
 .supabase
 # 작업 기록 — 저장소 밖에 둔다 (2026-09-27 사용자 결정). 설계·작업·검수 기록, 월간 이력, 진행 현황
 /worklog/
+# Mac 쪽 작업 기록 — worklog/ 는 Windows PC 에 있다 (2026-09-30 사용자 결정)
+/worklog-mac/
 
 # 관리자 CLI — 이 프로젝트 Supabase 운영용. 게임과 저장소 밖 (2026-09-27 사용자 "게임에선 아예 모르게")
 admin/

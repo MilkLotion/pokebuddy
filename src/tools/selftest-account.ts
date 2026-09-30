@@ -8,6 +8,7 @@ import { randomBytes } from "node:crypto";
 import { createOnlineClient, memoryStorage } from "../online/client";
 import { authCodeOf, createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Account } from "../online/account";
 import { createTradeNet } from "../trade/net";
+import { createSessionGate } from "../online/session";
 import { dataVersion } from "../trade/config";
 
 function local(): { url: string; key: string } | null {
@@ -46,7 +47,7 @@ async function server(url: string, key: string): Promise<void> {
   const changes: string[] = [];
   const make = (): { account: Account; client: ReturnType<typeof createOnlineClient> } => {
     const client = createOnlineClient({ url, key, storage: memoryStorage() });
-    const account = createAccount({ client, blocked: () => tradeBlocked, onUserChanged: (v) => void changes.push(v.signedIn ? `in:${v.username ?? v.displayName}` : "out") });
+    const account = createAccount({ client, gate: createSessionGate(client), blocked: () => tradeBlocked, onUserChanged: (v) => void changes.push(v.signedIn ? `in:${v.username ?? v.displayName}` : "out") });
     return { account, client };
   };
   const a = make(), b = make(), c = make();

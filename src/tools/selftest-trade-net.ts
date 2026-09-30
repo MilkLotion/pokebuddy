@@ -31,7 +31,7 @@ const memory = (): SessionStorage => {
   return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v), removeItem: (k) => void m.delete(k) };
 };
 
-function player(species: string, url: string, key: string) {
+function player(species: string, url: string, key: string, hold?: () => boolean) {
   const T0 = Date.now();
   let disk: SaveV3 = empty(T0);
   disk.pets.push(newPet({ id: "p1", species, shiny: false, nature: "hardy", gender: "male", now: T0 }));
@@ -47,6 +47,7 @@ function player(species: string, url: string, key: string) {
     linkOf: (t) => `https://example.invalid/trade#${t}`,
     onView: (v) => views.push(v),
     pollMs: 3_600_000,
+    ...(hold ? { hold } : {}),
   });
   return { session, views, save: () => disk };
 }
@@ -126,6 +127,16 @@ async function main(): Promise<void> {
     c.session.stop();
     assert.deepEqual(await c.session.create(), { ok: false, reason: "stopped" });
     await b.session.leave();
+    // 로그인 계정의 클라우드 저장이 올릴 수 없는 상태면 새 교환을 시작·참가하지 않는다
+    let held = true;
+    const d = player("bulbasaur", cfg.url, cfg.key, () => held);
+    assert.deepEqual(await d.session.create(), { ok: false, reason: "cloud-wait" });
+    assert.deepEqual(await d.session.join(open), { ok: false, reason: "cloud-wait" });
+    assert.equal(d.session.view().phase, "idle", "막히면 채널을 열지 않는다");
+    held = false;
+    assert.equal((await d.session.create()).ok, true, "풀리면 만든다");
+    await d.session.leave();
+    d.session.stop();
     process.stdout.write("(8) 조작 거절 이유  ok\n");
   } finally {
     a.session.stop();

@@ -4,8 +4,10 @@
 //   아이디는 메일이 갈 수 없는 내부 주소 <아이디>@id.pokebuddy.invalid 로 바꿔 Supabase 비밀번호 로그인을 쓴다
 //   익명 계정은 바꾸지 않는다. 로그인하면 정식 계정으로 세션을 바꾼다. 로그아웃하면 다음 교환 때 새 익명 계정을 만든다
 //   걸린 교환이 있으면 세션을 바꾸지 않는다(blocked) — 교환 채널은 사용자 ID 에 묶여 있다
+//   익명 세션 확보와 세션 교체는 세션 관문(src/online/session.ts)을 거친다 — 가입·로그인·로그아웃·삭제는 gate.exclusive 안에서
 //   이름 규칙과 예약 아이디는 서버 트리거(supabase/migrations/20260927100100_username.sql)도 다시 본다
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { SessionGate } from "./session.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
 const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
@@ -77,6 +79,8 @@ export function authCodeOf(error: { message?: string; code?: string; status?: nu
 
 export interface AccountOptions {
   client: SupabaseClient;
+  // 세션 관문 — 교환·클라우드 저장과 같은 것을 쓴다. 익명 세션 확보와 세션 교체를 여기서만 한다
+  gate: SessionGate;
   // 세션을 바꿀 수 없는가 — 걸린 교환(열린 채널·반영하지 않은 교환)이 있으면 true
   blocked: () => boolean;
   // 로그인·로그아웃으로 사용자가 바뀌었다 — 앱은 교환 세션을 새로 만들고 클라우드 저장을 시작·멈춘다
@@ -94,16 +98,8 @@ export interface Account {
   userId: () => Promise<string | null>; // 로그인한 정식 계정의 ID — 익명이면 null
 }
 
-export function createAccount({ client, blocked, onUserChanged }: AccountOptions): Account {
-  const user = async (): Promise<User | null> => {
-    try {
-      const { data } = await client.auth.getSession();
-      return data.session?.user ?? null;
-    } catch (e) {
-      console.error("계정 세션을 읽지 못했다", e);
-      return null;
-    }
-  };
+export function createAccount({ client, gate, blocked, onUserChanged }: AccountOptions): Account {
+  const user = gate.current;
   // 서버에서 최신 사용자를 읽는다 — 다른 PC 에서 바꾼 이름이 보이게. 닿지 못하면 세션에 든 값을 쓴다
   const view: Account["view"] = async () => {
     const local = await user();
@@ -123,22 +119,12 @@ export function createAccount({ client, blocked, onUserChanged }: AccountOptions
     return { ok: true, view: v };
   };
 
-  // 중복검사 함수는 로그인한 세션(익명 포함)만 부른다 — 세션이 없으면 익명 계정을 먼저 만든다
-  const ensureSession = async (): Promise<boolean> => {
-    if (await user()) return true;
-    try {
-      const { error } = await client.auth.signInAnonymously();
-      return !error;
-    } catch (e) {
-      console.error("익명 세션을 만들지 못했다", e);
-      return false;
-    }
-  };
-
-  const checkUsername: Account["checkUsername"] = async (input) => {
+  // 중복검사 함수는 로그인한 세션(익명 포함)만 부른다 — 세션이 없으면 관문이 익명 계정을 먼저 만든다
+  // ensure — 잠금 밖에서는 gate.ensure, exclusive 안에서는 scope.ensure (교착 방지)
+  const checkWith = async (input: string, ensure: () => Promise<{ ok: boolean }>): Promise<UsernameCheck> => {
     const name = normalizeUsername(input);
     if (!name) return "invalid";
-    if (!(await ensureSession())) return "NETWORK";
+    if (!(await ensure()).ok) return "NETWORK";
     try {
       const { data, error } = await client.rpc("is_username_available", { username: name });
       if (error) return authCodeOf(error).code === "AUTH_USERNAME_INVALID" ? "invalid" : "NETWORK";
@@ -147,6 +133,7 @@ export function createAccount({ client, blocked, onUserChanged }: AccountOptions
       return "NETWORK";
     }
   };
+  const checkUsername: Account["checkUsername"] = (input) => checkWith(input, gate.ensure);
 
   const signUp: Account["signUp"] = async (username, displayName, password) => {
     const name = normalizeUsername(username);
@@ -155,49 +142,57 @@ export function createAccount({ client, blocked, onUserChanged }: AccountOptions
     if (!shown) return fail("AUTH_NAME_INVALID");
     if (password.length < PASSWORD_MIN) return fail("AUTH_PASSWORD_WEAK");
     if (blocked()) return fail("AUTH_TRADE_ACTIVE");
-    // 예약 아이디는 서버 트리거가 막지만 그 오류는 "Database error" 로만 온다 — 먼저 물어 이미 쓰는 아이디로 보인다
-    const check = await checkUsername(name);
-    if (check === "taken") return fail("AUTH_USERNAME_TAKEN");
-    if (check === "NETWORK") return fail("NETWORK");
-    try {
-      const { data, error } = await client.auth.signUp({ email: internalEmail(name), password, options: { data: { display_name: shown } } });
-      if (error) {
-        const code = authCodeOf(error);
-        // 동시에 가입하면 진 쪽은 DB 고유 제약 오류("Database error …")로 온다 — 다시 물어 이미 쓰는 아이디로 보인다(2026-09-27 자체 검사)
-        if (code.code === "UNKNOWN" && (await checkUsername(name)) === "taken") return fail("AUTH_USERNAME_TAKEN");
-        return { ok: false, ...code };
+    // 세션 교체만 잠금 안에서 — 사용자 변경 알림(changed)은 잠금을 푼 뒤에 부른다
+    const done = await gate.exclusive(async (scope): Promise<AccountResult | null> => {
+      // 예약 아이디는 서버 트리거가 막지만 그 오류는 "Database error" 로만 온다 — 먼저 물어 이미 쓰는 아이디로 보인다
+      const check = await checkWith(name, scope.ensure);
+      if (check === "taken") return fail("AUTH_USERNAME_TAKEN");
+      if (check === "NETWORK") return fail("NETWORK");
+      try {
+        const { data, error } = await client.auth.signUp({ email: internalEmail(name), password, options: { data: { display_name: shown } } });
+        if (error) {
+          const code = authCodeOf(error);
+          // 동시에 가입하면 진 쪽은 DB 고유 제약 오류("Database error …")로 온다 — 다시 물어 이미 쓰는 아이디로 보인다(2026-09-27 자체 검사)
+          if (code.code === "UNKNOWN" && (await checkWith(name, scope.ensure)) === "taken") return fail("AUTH_USERNAME_TAKEN");
+          return { ok: false, ...code };
+        }
+        // 이메일 확인을 끈 프로젝트는 가입하면 바로 세션이 온다. 오지 않으면 설정 문제다
+        if (!data.session) return fail("UNKNOWN", "no-session");
+        return null;
+      } catch (e) {
+        return catchAll(e);
       }
-      // 이메일 확인을 끈 프로젝트는 가입하면 바로 세션이 온다. 오지 않으면 설정 문제다
-      if (!data.session) return fail("UNKNOWN", "no-session");
-      return changed();
-    } catch (e) {
-      return catchAll(e);
-    }
+    });
+    return done ?? changed();
   };
 
   const signIn: Account["signIn"] = async (username, password) => {
     const name = normalizeUsername(username);
     if (!name || !password) return fail("AUTH_INVALID_LOGIN"); // 어느 쪽이 틀렸는지 나누지 않는다
     if (blocked()) return fail("AUTH_TRADE_ACTIVE");
-    try {
-      const { error } = await client.auth.signInWithPassword({ email: internalEmail(name), password });
-      if (error) return { ok: false, ...authCodeOf(error) };
-      return changed();
-    } catch (e) {
-      return catchAll(e);
-    }
+    const done = await gate.exclusive(async (): Promise<AccountResult | null> => {
+      try {
+        const { error } = await client.auth.signInWithPassword({ email: internalEmail(name), password });
+        return error ? { ok: false, ...authCodeOf(error) } : null;
+      } catch (e) {
+        return catchAll(e);
+      }
+    });
+    return done ?? changed();
   };
 
   // 이 PC 의 세션만 지운다 — JS 의 기본 범위는 모든 세션(global)이다
   const signOut: Account["signOut"] = async () => {
     if (blocked()) return fail("AUTH_TRADE_ACTIVE");
-    try {
-      const { error } = await client.auth.signOut({ scope: "local" });
-      if (error) return { ok: false, ...authCodeOf(error) };
-      return changed();
-    } catch (e) {
-      return catchAll(e);
-    }
+    const done = await gate.exclusive(async (): Promise<AccountResult | null> => {
+      try {
+        const { error } = await client.auth.signOut({ scope: "local" });
+        return error ? { ok: false, ...authCodeOf(error) } : null;
+      } catch (e) {
+        return catchAll(e);
+      }
+    });
+    return done ?? changed();
   };
 
   const rename: Account["rename"] = async (displayName) => {
@@ -216,21 +211,24 @@ export function createAccount({ client, blocked, onUserChanged }: AccountOptions
   const deleteAccount: Account["deleteAccount"] = async () => {
     if (!(await view()).signedIn) return fail("AUTH_INVALID_LOGIN");
     if (blocked()) return fail("AUTH_TRADE_ACTIVE");
-    try {
-      const { error } = await client.functions.invoke("delete-account", { method: "POST" });
-      if (error) {
-        // 함수가 돌려준 오류 코드 — FunctionsHttpError 의 응답 본문에 있다
-        const ctx = (error as { context?: Response }).context;
-        const body = ctx && typeof ctx.json === "function" ? ((await ctx.json().catch(() => null)) as { error?: string } | null) : null;
-        if (body?.error === "AUTH_TRADE_ACTIVE") return fail("AUTH_TRADE_ACTIVE");
-        return { ok: false, ...authCodeOf({ message: body?.error ?? error.message }) };
+    const done = await gate.exclusive(async (): Promise<AccountResult | null> => {
+      try {
+        const { error } = await client.functions.invoke("delete-account", { method: "POST" });
+        if (error) {
+          // 함수가 돌려준 오류 코드 — FunctionsHttpError 의 응답 본문에 있다
+          const ctx = (error as { context?: Response }).context;
+          const body = ctx && typeof ctx.json === "function" ? ((await ctx.json().catch(() => null)) as { error?: string } | null) : null;
+          if (body?.error === "AUTH_TRADE_ACTIVE") return fail("AUTH_TRADE_ACTIVE");
+          return { ok: false, ...authCodeOf({ message: body?.error ?? error.message }) };
+        }
+        // 사용자가 지워져 세션은 쓸 수 없다 — 이 PC 의 세션만 지운다
+        await client.auth.signOut({ scope: "local" }).catch(() => undefined);
+        return null;
+      } catch (e) {
+        return catchAll(e);
       }
-      // 사용자가 지워져 세션은 쓸 수 없다 — 이 PC 의 세션만 지운다
-      await client.auth.signOut({ scope: "local" }).catch(() => undefined);
-      return changed();
-    } catch (e) {
-      return catchAll(e);
-    }
+    });
+    return done ?? changed();
   };
 
   const userId: Account["userId"] = async () => {

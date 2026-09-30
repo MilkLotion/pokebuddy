@@ -40,7 +40,7 @@ export type TxFailure = "no-save" | "unknown-command" | "save-failed" | string;
 
 export interface TxPorts {
   read: () => SaveV3 | null;
-  write: (save: SaveV3) => boolean;
+  write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/main/game.ts EVENT_WRITES)
   now: () => number;
   rand?: () => number; // 없으면 Math.random
 }
@@ -85,7 +85,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     const result = out.result ?? null;
     draft.tx = trimTx([...draft.tx, { id: req.id, at: now, result }], now);
     draft.savedAt = now;
-    if (!ports.write(draft)) {
+    if (!ports.write(draft, req.name)) {
       failStreak += 1;
       return { ok: false, reason: "save-failed" };
     }

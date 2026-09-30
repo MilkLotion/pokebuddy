@@ -297,13 +297,30 @@ export interface PatchNotesView {
 }
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────────
-// 설정의 계정 탭·헤더 저장 표시·밀려남 배너가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
+// 설정의 계정 탭·헤더 저장 표시가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
 // manage:account 는 렌더러 → 메인 요청(결과에 screen), manage:account-view 는 메인 → 렌더러 밀어 보내기다
-export type CloudStatusView = "off" | "connecting" | "choose" | "online" | "offline" | "save-needed";
-export interface SaveSummaryView {
-  pets: number;
-  points: number;
-  savedAt: number | null;
+// 클라우드 상태 — src/online/cloud.ts CloudStatus 와 같다 (worklog-mac/records/cloud-authority/design-p1.md 2절)
+//   confirm·blocked·superseded 는 게임이 멈춘 상태다. 안내·확인 창은 메인 창이 띄운다
+export type CloudStatusView = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded";
+// 클라우드 오류 코드 — cloud.error·AccountReply.code 에 온다
+//   CLOUD_UPDATE_REQUIRED  서버가 이 앱 버전을 받지 않는다 — 게임은 계속, 저장은 올리지 않는다
+//   CLOUD_TRADE_ACTIVE     다른 PC 가 교환 중이라 넘겨받지 못한다
+//   CLOUD_TRADE_UNSYNCED   다른 PC 에서 끝낸 교환이 계정 저장에 아직 반영되지 않았다(7일 이내)
+//   CLOUD_OWNER_OTHER      이 PC 저장이 다른 계정 것이고 이 계정 저장이 없다 — 올리지 않는다
+//   CLOUD_BAD_SAVE         계정 저장을 읽지 못했다 — 올리지 않는다
+export type CloudErrorCode =
+  | "NETWORK"
+  | "CLOUD_LOGIN_REQUIRED"
+  | "CLOUD_UPDATE_REQUIRED"
+  | "CLOUD_TRADE_ACTIVE"
+  | "CLOUD_TRADE_UNSYNCED"
+  | "CLOUD_OWNER_OTHER"
+  | "CLOUD_BAD_SAVE"
+  | "CLOUD_TOO_LARGE";
+// 넘겨받거나 확인·양보할 상대 PC
+export interface CloudOtherView {
+  label: string | null; // "Mac" · "Windows PC"
+  seen: number | null; // 상대가 마지막으로 서버에 닿은 시각(ms)
 }
 export interface AccountScreen {
   available: boolean; // 서버 설정이 있고 이 앱이 저장을 쓴다
@@ -312,13 +329,12 @@ export interface AccountScreen {
   username: string | null;
   displayName: string | null;
   blocked: boolean; // 걸린 교환이 있어 로그인·로그아웃·삭제를 할 수 없다
-  kicked: boolean; // 다른 PC 에서 로그인해 이 PC 가 로그아웃됐다 — 배너를 닫을 때까지
   cloud: {
     status: CloudStatusView;
     lastSavedAt: number | null;
     busy: boolean;
-    error: string | null;
-    choice: { server: SaveSummaryView; local: SaveSummaryView | null } | null;
+    error: string | null; // CloudErrorCode 또는 그 밖의 실패 코드
+    other: CloudOtherView | null; // confirm·blocked·superseded 일 때 상대 PC
   };
 }
 export type AccountAction =
@@ -328,12 +344,9 @@ export type AccountAction =
   | { action: "sign-in"; username: string; password: string }
   | { action: "github" }
   | { action: "github-cancel" } // 브라우저 로그인을 기다리다 취소
-  | { action: "sign-out"; save?: boolean } // save — 저장 필요 상태에서 "저장하고 로그아웃"
+  | { action: "sign-out" } // 올리고 released 를 알린 뒤 로그아웃한다
   | { action: "rename"; displayName: string }
-  | { action: "delete" }
-  | { action: "save-now" }
-  | { action: "choose"; which: "server" | "local" }
-  | { action: "dismiss-kicked" };
+  | { action: "delete" };
 export interface AccountReply {
   ok: boolean;
   code: string | null; // 실패 코드 — AUTH_* · CLOUD_* · NETWORK

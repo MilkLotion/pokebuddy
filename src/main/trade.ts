@@ -10,6 +10,7 @@ import { app, safeStorage } from "electron";
 import { PATHS } from "./paths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTradeNet, type SessionStorage } from "../trade/net.js";
+import type { SessionGate } from "../online/session.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
 import { dataVersion, devRunAt, linkOf, onlineConfig } from "../trade/config.js";
 import type { GameV3 } from "./game";
@@ -96,20 +97,29 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun())
 }
 
 // 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
-// client — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트(src/main/online.ts). 없으면 따로 만든다
-export function createMainTrade(game: GameV3, client?: SupabaseClient): MainTrade | null {
+// shared — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트와 세션 관문(src/main/online.ts). 없으면 따로 만든다
+// onSettled — 교환 반영을 서버에 알린 뒤. 앱이 클라우드 저장을 바로 올린다 (src/trade/session.ts)
+// hold — 새 교환(만들기·참가)을 막아야 하는가. 로그인 계정의 클라우드 저장이 올릴 수 있는 상태가 아니다
+export function createMainTrade(
+  game: GameV3,
+  shared?: { client: SupabaseClient; gate: SessionGate },
+  onSettled?: () => void,
+  hold?: () => boolean | Promise<boolean>,
+): MainTrade | null {
   const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
   const dev = devHooks();
   const listeners = new Set<(view: TradeViewModel) => void>();
   const session = createTradeSession({
-    net: createTradeNet(client ? { client } : { url: config.url, key: config.publishableKey, storage: encryptedStorage() }),
+    net: createTradeNet(shared ? { client: shared.client, gate: shared.gate } : { url: config.url, key: config.publishableKey, storage: encryptedStorage() }),
     run: (id, name, args) => game.executor.run({ id, name, args }),
     read: game.read,
     protocol: config.protocol,
     dataVersion: dev.dataVersion ?? dataVersion(),
     linkOf: (token) => linkOf(config, token),
     onView: (view) => { for (const fn of listeners) fn(view); },
+    ...(onSettled ? { onSettled } : {}),
+    ...(hold ? { hold } : {}),
     ...(dev.pollMs ? { pollMs: dev.pollMs } : {}),
     ...(dev.retryMs ? { retryMs: dev.retryMs } : {}),
     // 반영을 건너뛰고 바로 끝낸다. process.exit 는 Electron 에서 창을 정리하며 끝나 그 사이 반영이 돌 수 있다(2026-09-27 E2E 에서 발견)

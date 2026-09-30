@@ -44,6 +44,12 @@ export interface TradeSessionOptions {
   clearTimer?: (t: unknown) => void;
   beforeApply?: () => boolean | void; // 개발용 시험 장치 — 서버 완료 뒤 로컬 반영 직전에 부른다. true 면 반영하지 않고 멈춘다(앱을 끝내 재시작 복구를 재현한다)
   now?: () => number;
+  // 서버에 반영을 알렸다(ack_applied) — 앱은 이 뒤에 저장을 한 번 더 바로 올린다.
+  // 서버는 반영 시각보다 늦게 올라온 저장이 있어야 이 교환을 저장된 것으로 본다 (design-p1.md 1절 trade_unsynced)
+  onSettled?: () => void;
+  // 새 교환(만들기·참가)을 막아야 하는가 — 로그인 계정의 클라우드 저장이 서버와 맞춰지지 않았다.
+  // 나중에 서버 저장을 받으면 그 사이의 교환 결과가 덮인다 (worklog-mac/records/cloud-authority 검수 1)
+  hold?: () => boolean | Promise<boolean>;
 }
 
 // 조작 결과 — 거절 이유를 돌려준다. 보기의 error 는 서버·로컬 실패만 담는다
@@ -52,7 +58,8 @@ export interface TradeSessionOptions {
 //   not-ready   확정할 수 없다 (내 제안·검사를 통과한 친구 제안이 없다)
 //   in-trade    진행 중인 교환이 있다 — 나가기 뒤에 새로 만든다
 //   stopped     세션이 멈췄다
-export type TradeRefusal = "busy" | "no-channel" | "not-ready" | "in-trade" | "stopped";
+//   cloud-wait  로그인 계정의 클라우드 저장이 연결되어 올릴 수 있는 상태가 아니다 — 새 교환을 시작하지 않는다
+export type TradeRefusal = "busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait";
 export type TradeActionResult = { ok: true } | { ok: false; reason: TradeErrorCode | "LOCAL" | TradeRefusal; detail?: string };
 
 export interface TradeSession {
@@ -136,6 +143,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
       if (!res.ok) { fail("LOCAL", String(res.reason)); return; }
       const result = res.result as { applied: boolean; petId?: string };
       const ack = await o.net.ackApplied(view.id);
+      if (ack.ok) o.onSettled?.();
       stopWatching();
       emit({ phase: "done", channel: view, received: result.petId ? { petId: result.petId } : state.received, busy: false, error: ack.ok ? null : state.error });
       return;
@@ -233,6 +241,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
 
   const create: TradeSession["create"] = async () => {
     if (channelId && !closedPhase()) return refuse("in-trade");
+    if (await o.hold?.()) return refuse("cloud-wait");
     const no = begin();
     if (no) return no;
     const s = await o.net.ensureSession();
@@ -248,6 +257,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
 
   const join: TradeSession["join"] = async (link) => {
     if (channelId && !closedPhase()) return refuse("in-trade");
+    if (await o.hold?.()) return refuse("cloud-wait");
     const no = begin();
     if (no) return no;
     const token = tokenOf(link);

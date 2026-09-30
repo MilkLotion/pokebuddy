@@ -12,6 +12,7 @@ import type {
   AgentRow,
   BagItemView,
   BoxView,
+  CloudStatusView,
   DexEntry,
   EggView,
   EvoNodeView,
@@ -30,7 +31,6 @@ import type {
   ShopDetail,
   ShopItemView,
   SlotView,
-  SaveSummaryView,
   Snapshot,
   TradeCardView,
   TradeScreen,
@@ -2016,6 +2016,7 @@ const TRADE_ERROR: Record<string, [string, string]> = {
   busy: ["잠시 뒤에 다시 해 주세요", "앞의 조작을 처리하는 중이에요"],
   "not-ready": ["아직 확정할 수 없어요", "두 사람 모두 포켓몬을 올려야 확정할 수 있어요"],
   timeout: ["응답이 늦어요", "잠시 뒤에 다시 해 주세요"],
+  "cloud-wait": ["클라우드 저장이 연결되지 않았어요", "연결되면 다시 해 주세요. 계정 탭에서 저장 상태를 볼 수 있어요"],
 };
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
 const TRADE_CLOSED: Record<string, [string, string]> = {
@@ -2353,9 +2354,10 @@ window.pokebuddyManage.onTrade((screen) => {
 });
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────
-// Figma 05 Screens `633:19206`(로그인)·`633:19302`(가입)·`633:19425`(로그인 뒤)·`633:19529`(저장 필요)·`633:19631`(삭제 확인)·
-// `633:19744`(막힘)·`633:19841`(밀려남 배너)·`633:19895`(로그아웃 확인)·`633:20029`(로그인 때 고르기). 헤더 저장 표시는 C-27.
+// Figma 05 Screens `633:19206`(로그인)·`633:19302`(가입)·`633:19425`(로그인 뒤)·`633:19631`(삭제 확인)·`633:19744`(막힘). 헤더 저장 표시는 C-27.
 // 값은 메인이 준다(src/main/online.ts). 입력한 글자는 여기 들고 있다 — 1초 시계로 다시 그려도 사라지지 않게
+// 두 PC 규칙(P1): 저장은 자동으로만 올린다. 저장 단추·로그인 때 고르기·밀려남 배너는 없다.
+//   다른 PC 확인(confirm)·넘겨받기 막힘(blocked)·다른 PC 에서 시작(superseded)은 앱이 네이티브 창으로 묻는다 — 여기서는 상태 글자만
 
 let acct: AccountScreen | null = null;
 let acctLoading = false;
@@ -2363,8 +2365,7 @@ let acctBusy = false;
 let acctGithub = false; // 브라우저에서 GitHub 로그인을 기다리는 중
 const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | "available" | "taken" | "invalid" | "NETWORK" };
 let acctRename: string | null = null; // 이름 바꾸는 중이면 입력한 이름
-let acctConfirm: "delete" | "logout" | null = null;
-let acctPick: "server" | "local" = "server"; // 로그인 때 고르기 — 기본은 계정 저장
+let acctConfirm: "delete" | null = null;
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
 const saveIndicatorEl = need("save-indicator", HTMLElement);
@@ -2379,7 +2380,13 @@ const ACCT_ERROR: Record<string, string> = {
   AUTH_RATE_LIMITED: "잠시 뒤에 다시 해 주세요",
   AUTH_PORT_BUSY: "로그인 창을 열 수 없어요. 잠시 뒤에 다시 해 주세요",
   NETWORK: "서버에 연결할 수 없어요",
+  CLOUD_LOGIN_REQUIRED: "다시 로그인해 주세요",
+  CLOUD_UPDATE_REQUIRED: "업데이트해야 계정에 저장돼요",
   CLOUD_TRADE_ACTIVE: "다른 PC 에서 교환 중이라 넘겨받을 수 없어요",
+  CLOUD_TRADE_UNSYNCED: "다른 PC 에서 끝낸 교환이 아직 저장되지 않았어요",
+  CLOUD_OWNER_OTHER: "이 PC 진행은 다른 계정 것이라 올리지 않아요",
+  CLOUD_BAD_SAVE: "계정 저장을 읽지 못해 올리지 않아요",
+  CLOUD_TOO_LARGE: "저장이 너무 커서 올리지 못했어요",
 };
 const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : ACCT_ERROR[code] ?? `계정 작업을 하지 못했어요 (${code})`);
 
@@ -2393,16 +2400,33 @@ function ago(at: number | null): string {
   return hour < 24 ? `${hour}시간 전` : `${Math.floor(hour / 24)}일 전`;
 }
 
+// 저장 상태 글자 — 헤더 저장 표시와 계정 탭 저장 줄이 같이 쓴다. online 은 마지막 저장 시각을 붙인다
+//   dot: ok 초록 · idle 회색 · warn 강조(사용자 손이 필요하거나 게임이 멈춘 상태)
+const CLOUD_TEXT: Record<Exclude<CloudStatusView, "off" | "online">, { text: string; dot: "idle" | "warn" }> = {
+  connecting: { text: "연결 중", dot: "idle" },
+  offline: { text: "오프라인", dot: "idle" },
+  "update-required": { text: "업데이트 필요", dot: "warn" },
+  confirm: { text: "확인 대기", dot: "warn" },
+  blocked: { text: "넘겨받지 못함", dot: "warn" },
+  superseded: { text: "다른 PC 에서 시작", dot: "warn" },
+};
+// 상태 글자가 이미 말하는 오류 — 계정 탭에서 오류 글자를 겹쳐 붙이지 않는다
+const CLOUD_SAID: Partial<Record<CloudStatusView, string>> = { "update-required": "CLOUD_UPDATE_REQUIRED" };
+
+function cloudText(c: AccountScreen["cloud"]): { text: string; dot: "ok" | "idle" | "warn" } | null {
+  if (c.status === "off") return null;
+  if (c.status === "online") return { text: c.lastSavedAt ? `저장됨 · ${ago(c.lastSavedAt)}` : "저장됨", dot: "ok" };
+  return CLOUD_TEXT[c.status];
+}
+
 // 헤더 저장 표시 — 로그인하지 않았으면 숨긴다. 누르면 사용자 모달의 계정 탭을 연다
 function drawSaveIndicator(): void {
   const c = acct?.signedIn ? acct.cloud : null;
-  // 고르기를 기다리는 동안은 "저장 고르기"를 강조해 보인다 — 끄고 다시 켜도 기다리는 것을 알게(R3-07). 누르면 계정 탭
-  const state = !c || c.status === "off" ? null : c.status === "choose" ? "need" : c.status === "save-needed" ? "need" : c.status === "online" ? "ok" : "offline";
-  saveIndicatorEl.hidden = !state;
-  if (!state || !c) return;
-  saveIndicatorEl.dataset.state = state;
-  const text = state === "need" ? (c.status === "choose" ? "저장 고르기" : "저장 필요") : state === "ok" ? (c.lastSavedAt ? `저장됨 · ${ago(c.lastSavedAt)}` : "저장됨") : c.status === "connecting" ? "연결 중" : "오프라인";
-  saveIndicatorEl.replaceChildren(el("i"), document.createTextNode(text));
+  const shown = c ? cloudText(c) : null;
+  saveIndicatorEl.hidden = !shown;
+  if (!shown) return;
+  saveIndicatorEl.dataset.state = shown.dot;
+  saveIndicatorEl.replaceChildren(el("i"), document.createTextNode(shown.text));
 }
 saveIndicatorEl.addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
@@ -2423,8 +2447,8 @@ async function loadAccount(): Promise<void> {
 }
 
 const ACCOUNT_OFF: AccountScreen = {
-  available: false, signedIn: false, method: null, username: null, displayName: null, blocked: false, kicked: false,
-  cloud: { status: "off", lastSavedAt: null, busy: false, error: null, choice: null },
+  available: false, signedIn: false, method: null, username: null, displayName: null, blocked: false,
+  cloud: { status: "off", lastSavedAt: null, busy: false, error: null, other: null },
 };
 
 // 계정 탭이 열려 있으면 다시 그린다
@@ -2570,11 +2594,13 @@ function drawSignUp(scroll: HTMLElement): void {
   }
 }
 
-function acctRow(title: string, hint: string, control: HTMLElement): HTMLElement {
+// 계정 탭 한 줄 — 단추가 없으면 글자만 둔다(저장 줄)
+function acctRow(title: string, hint: string, control?: HTMLElement): HTMLElement {
   const row = el("div", "setting acct-row");
   const body = el("div", "body");
   body.append(el("div", "label", title), el("div", "hint", hint));
-  row.append(body, control);
+  row.appendChild(body);
+  if (control) row.appendChild(control);
   return row;
 }
 
@@ -2603,29 +2629,19 @@ function drawSignedIn(scroll: HTMLElement): void {
   } else {
     scroll.appendChild(acctRow(a.displayName ?? "", who, actionButton("이름 바꾸기", false, acctBusy, () => { acctRename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
   }
-  // 저장
+  // 저장 — 자동으로만 올린다. 상태 글자와, 상태가 말하지 않는 오류만
   const c = a.cloud;
-  const need = c.status === "save-needed";
-  const saveHint = need ? "저장하지 않은 진행이 있어요"
-    : c.status === "online" ? (c.lastSavedAt ? `계정에 저장됨 · ${ago(c.lastSavedAt)}` : "계정에 저장됨")
-    : c.status === "offline" ? "오프라인이에요 · 게임은 그대로 할 수 있어요"
-    : "연결하는 중이에요";
-  const save = button(need ? "act primary acct-save need" : "act", need ? "" : "지금 저장");
-  if (need) save.append(el("i"), document.createTextNode("저장"));
-  save.disabled = acctBusy || c.busy || !(c.status === "online" || need);
-  save.addEventListener("click", () => void acctSend({ action: "save-now" }));
-  scroll.appendChild(acctRow("저장", c.error && c.status !== "online" ? `${saveHint} · ${acctErrorText(c.error)}` : saveHint, save));
+  const saveHint = cloudText(c)?.text ?? "";
+  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error) : "";
+  scroll.appendChild(acctRow("저장", err ? `${saveHint} · ${err}` : saveHint));
   // 로그아웃·삭제
   scroll.appendChild(acctRow("로그아웃", "게임 진행은 그대로예요", actionButton("로그아웃", false, acctBusy || a.blocked, () => {
-    if (a.cloud.status === "save-needed") {
-      acctConfirm = "logout";
-      redrawAccount();
-    } else void acctSend({ action: "sign-out" });
+    void acctSend({ action: "sign-out" });
   })));
   scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; redrawAccount(); })));
 }
 
-// 사용자 모달 위의 작은 확인 창 — 계정 삭제·로그아웃·로그인 때 고르기
+// 사용자 모달 위의 작은 확인 창 — 계정 삭제
 function acctOverlay(): HTMLElement | null {
   const a = acct;
   if (!a) return null;
@@ -2636,48 +2652,13 @@ function acctOverlay(): HTMLElement | null {
   x.setAttribute("aria-label", "닫기");
   const shut = (): void => { acctConfirm = null; redrawAccount(); };
   x.addEventListener("click", shut);
-  if (a.cloud.status === "choose" && a.cloud.choice) {
-    const choice = a.cloud.choice;
-    // 고르지 않고 닫으면 로그인하지 않은 것으로 — 로그아웃한다
-    const cancel = (): void => void acctSend({ action: "sign-out" });
-    x.onclick = cancel;
-    head.append(el("h3", undefined, "어느 저장을 쓸까요?"), x);
-    card.append(head, el("p", "acct-confirm-body", "이 계정에 이미 저장이 있어요. 고르지 않은 쪽은 백업 파일로 남아요."));
-    if (a.cloud.error) {
-      card.appendChild(alertBox("bad", "", a.cloud.error === "CLOUD_BAD_SAVE" ? "계정 저장을 읽을 수 없어요. 이 PC 저장을 골라 주세요" : acctErrorText(a.cloud.error)));
-    }
-    // "오늘 09:12 저장"·"어제 21:40 저장"·"9월 25일 18:03 저장" (Figma `633:20029`)
-    const when = (at: number | null): string => {
-      if (!at) return "";
-      const d = new Date(at);
-      const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-      const day = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-      const diff = Math.round((day(new Date()) - day(d)) / 86_400_000);
-      return `${diff === 0 ? "오늘" : diff === 1 ? "어제" : `${d.getMonth() + 1}월 ${d.getDate()}일`} ${hm} 저장`;
-    };
-    const option = (id: "server" | "local", title: string, s: SaveSummaryView | null): HTMLElement => {
-      const b = button("acct-option", "");
-      b.setAttribute("aria-pressed", String(acctPick === id));
-      b.append(el("strong", undefined, title), el("span", undefined, s ? [`포켓몬 ${s.pets}마리`, point(s.points), when(s.savedAt)].filter(Boolean).join(" · ") : "저장 없음"));
-      b.disabled = acctBusy || (id === "local" && !s);
-      b.addEventListener("click", () => { acctPick = id; redrawAccount(); });
-      return b;
-    };
-    card.append(option("server", "계정 저장", choice.server), option("local", "이 PC 저장", choice.local));
-    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, cancel), actionButton("이 저장으로 계속", true, acctBusy, () => void acctSend({ action: "choose", which: acctPick }))));
-  } else if (acctConfirm === "delete") {
+  if (acctConfirm === "delete") {
     head.append(el("h3", undefined, "계정을 삭제할까요?"), x);
     const who = a.method === "github" ? `GitHub 계정 ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
     card.append(head, el("p", "acct-confirm-body", `${who}${josa(who, "을/를")} 지워요. 게임 진행은 그대로예요.\n교환이 끝나지 않은 친구의 포켓몬은 그대로 받아요.`));
     card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => {
       void acctSend({ action: "delete" }).then(() => { acctConfirm = null; redrawAccount(); });
     })));
-  } else if (acctConfirm === "logout") {
-    head.append(el("h3", undefined, "저장하지 않은 진행이 있어요"), x);
-    card.append(head, el("p", "acct-confirm-body", "그냥 로그아웃하면 오프라인 진행은 이 PC에만 남아요."));
-    card.appendChild(actions(el("div", "spacer"),
-      actionButton("그냥 로그아웃", false, acctBusy, () => void acctSend({ action: "sign-out" }).then(() => { acctConfirm = null; redrawAccount(); })),
-      actionButton("저장하고 로그아웃", true, acctBusy, () => void acctSend({ action: "sign-out", save: true }).then(() => { acctConfirm = null; redrawAccount(); }))));
   } else return null;
   box.appendChild(card);
   return box;
@@ -2729,12 +2710,6 @@ function accountActions(): HTMLElement | null {
   return actions(left, actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
 }
 
-// 밀려남 배너 — 탭 본문 맨 위. 닫을 때까지 남는다
-function kickedBanner(): HTMLElement | null {
-  if (!acct?.kicked) return null;
-  return alertBox("warn", "다른 PC에서 로그인해 로그아웃됐어요", "이 PC의 진행은 계정에 저장되지 않아요", () => void acctSend({ action: "dismiss-kicked" }));
-}
-
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
 // Figma 05 Screens 섹션 `10 우편함` `932:22859` — 목록 `908:5779` · 편지 로그인 전 `932:22703` · 받기 전 `908:6022` · 받은 뒤(일반 편지) `908:6232`.
 // 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
@@ -2766,6 +2741,7 @@ const MAIL_ERROR: Record<string, string> = {
   MAIL_NO_GIFTS: "받을 선물이 없어요.",
   NETWORK: "서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.",
   "bad-gift": "앱을 업데이트하면 받을 수 있어요.",
+  "cloud-wait": "클라우드 저장이 연결되면 받을 수 있어요. 계정 탭에서 저장 상태를 확인해 주세요.",
 };
 
 const monthDay = (at: number): string => {
@@ -2940,11 +2916,9 @@ window.pokebuddyManage.onMail(setMail);
 void refreshMail();
 
 window.pokebuddyManage.onAccount((screen) => {
-  const wasKicked = acct?.kicked;
   acct = screen;
   drawSaveIndicator();
   redrawAccount();
-  if (screen.kicked !== wasKicked) draw();
 });
 void loadAccount();
 setInterval(drawSaveIndicator, 30_000); // "3분 전" 글자만 바꾼다
@@ -3012,8 +2986,6 @@ function drawBody(): void {
   // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
   if (detailPet && !petOf(detailPet)) detailPet = null;
   syncPetDevice();
-  const kicked = kickedBanner();
-  if (kicked) bodyEl.appendChild(kicked);
   if (tab === "party") drawParty(view);
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
@@ -4719,6 +4691,7 @@ const REASON: Record<string, string> = {
   "save-failed": "저장하지 못했어요. 잠시 뒤 다시 해 주세요.",
   "art-missing": "바뀔 모습의 그림을 받지 못했어요. 잠시 뒤 다시 해 주세요.",
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
+  halted: "다른 PC 확인이 끝날 때까지 게임이 멈춰 있어요.",
   "box-full": "그 박스는 가득 찼어요.",
   "no-box": "그 박스를 찾지 못했어요.",
   timeout: "응답이 없어요. 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",

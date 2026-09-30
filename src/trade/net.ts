@@ -5,6 +5,7 @@
 // 서버에 닿지 못하면 NETWORK 다. 앱은 연결 실패 안내를 보인다.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "../online/client.js";
+import { createSessionGate, type SessionGate } from "../online/session.js";
 
 export type { SessionStorage };
 
@@ -42,7 +43,8 @@ export interface CreatedChannel {
 }
 
 // 클라이언트를 받거나(앱 — 계정·클라우드 저장과 같은 세션) 만든다(자체 검사)
-export type TradeNetOptions = { client: SupabaseClient } | OnlineClientOptions;
+// gate — 앱은 계정·클라우드 저장과 같은 세션 관문을 넘긴다. 없으면 이 클라이언트로 새로 만든다(자체 검사)
+export type TradeNetOptions = ({ client: SupabaseClient } | OnlineClientOptions) & { gate?: SessionGate };
 
 export interface TradeNet {
   client: SupabaseClient;
@@ -70,6 +72,7 @@ export function codeOf(error: { message?: string; details?: string | null; code?
 
 export function createTradeNet(opts: TradeNetOptions): TradeNet {
   const client = "client" in opts ? opts.client : createOnlineClient(opts);
+  const gate = opts.gate ?? createSessionGate(client);
 
   const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => {
     try {
@@ -82,26 +85,14 @@ export function createTradeNet(opts: TradeNetOptions): TradeNet {
   };
 
   // 로그인하지 않았으면 익명 계정을 만든다. 교환에는 로그인이 필요 없다(2026-09-26 사용자 결정)
-  // 동시에 불려도 익명 계정을 두 개 만들지 않게 진행 중인 확인을 나눠 쓴다
-  let ensuring: ReturnType<TradeNet["ensureSession"]> | null = null;
-  const ensureSession: TradeNet["ensureSession"] = () => {
-    ensuring ??= ensureOnce().finally(() => { ensuring = null; });
-    return ensuring;
-  };
-  const ensureOnce: TradeNet["ensureSession"] = async () => {
-    try {
-      const { data } = await client.auth.getSession();
-      let user = data.session?.user ?? null;
-      if (!user) {
-        const res = await client.auth.signInAnonymously();
-        if (res.error) return { ok: false, ...codeOf(res.error) };
-        user = res.data.user;
-      }
-      if (!user) return { ok: false, code: "UNKNOWN" };
-      return { ok: true, data: { userId: user.id, anonymous: user.is_anonymous === true } };
-    } catch (e) {
-      return { ok: false, ...codeOf({ message: e instanceof Error ? e.message : String(e) }) };
-    }
+  // 익명 발급·동시 호출 나눠 쓰기는 세션 관문이 맡는다 — 계정·클라우드 저장과 발급 경로를 하나로 (검수 F2)
+  // 인증 요청 한도(AUTH_RATE_LIMITED)는 링크 한도(TRADE_RATE_LIMITED)와 뜻이 달라 UNKNOWN 으로 보낸다
+  const ensureSession: TradeNet["ensureSession"] = async () => {
+    const res = await gate.ensure();
+    if (res.ok) return { ok: true, data: { userId: res.user.id, anonymous: res.user.is_anonymous === true } };
+    if (res.code === "NETWORK") return { ok: false, code: "NETWORK" };
+    const detail = res.code === "AUTH_RATE_LIMITED" ? res.code : res.detail;
+    return { ok: false, code: "UNKNOWN", ...(detail ? { detail } : {}) };
   };
 
   const createChannel: TradeNet["createChannel"] = async (protocol, dataVersion) => {

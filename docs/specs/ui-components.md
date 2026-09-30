@@ -299,11 +299,12 @@ Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성�
 
 ### C-27 저장 표시
 
-역할: 클라우드 저장 상태를 보여주고 저장 버튼 역할을 한다.
-상태: `Online`(초록 dot, 마지막 저장 시각, 누르면 바로 저장), `Offline`(회색 dot, 누를 수 없음), `SaveNeeded`(주 색 바탕, 노란 dot, 눌러야 오프라인 진행이 올라감). 로그인하지 않으면 표시하지 않는다.
+역할: 클라우드 저장 상태를 글자로 보여준다. 누르면 사용자 모달의 `계정` 탭을 연다. 저장 단추가 아니다(두 PC 규칙, 자동 저장만).
+상태: `Online`(초록 dot, `저장됨 · <시각>`), `Offline`(회색 dot, `연결 중`·`오프라인`), 강조(주 색 바탕, 노란 dot, `업데이트 필요`·`확인 대기`·`넘겨받지 못함`·`다른 PC 에서 시작`). 강조는 사용자 손이 필요하거나 게임이 멈춘 상태다. 로그인하지 않으면 표시하지 않는다. 구현은 `src/renderer/manage.ts` `CLOUD_TEXT`·`drawSaveIndicator` 다.
+`계정` 탭의 `저장` 줄도 같은 글자를 쓴다. 단추는 없다. 상태 글자가 말하지 않는 오류(`CLOUD_OWNER_OTHER`·`CLOUD_BAD_SAVE` 등)만 뒤에 붙인다.
 규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
 사용: C-01 앱 헤더의 보유 포인트 왼쪽.
-Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline("오프라인")·SaveNeeded("저장 필요")는 고정 문구다. 폭은 글자에 맞춘다.
+Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline("오프라인")은 고정 문구다. 폭은 글자에 맞춘다. 강조 상태는 `SaveNeeded` 의 모양을 쓴다. Figma 의 "저장 필요" 글자는 옛 문구다. 새 글자로 Figma 를 고치지 않았다. `[스펙 미확정]`
 
 ### C-28 파티 상세 기기 창
 

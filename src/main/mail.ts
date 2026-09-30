@@ -29,6 +29,8 @@ export interface MainMailOptions {
   run: (id: string, name: string, args: unknown) => TxResult;
   read: () => SaveV3 | null;
   signedIn: () => boolean; // 정식 계정 — 익명·로그아웃이면 받지 못한다
+  // 선물 받기를 막아야 하는가 — 클라우드 저장이 올릴 수 있는 상태가 아니다. 나중에 서버 저장을 받으면 받은 선물이 덮인다
+  hold?: () => boolean | Promise<boolean>;
   onChanged: () => void; // 저장에 선물을 넣었다 — 앱은 파티·트레이를 다시 읽는다
   now?: () => number;
 }
@@ -153,6 +155,12 @@ export function createMainMail(o: MainMailOptions): MainMail {
     if (busy) return reply(false, "busy");
     if (!o.signedIn()) return reply(false, "MAIL_LOGIN_REQUIRED");
     if (!parseGifts(letter.gifts)) return reply(false, "bad-gift"); // 모르는 선물 — 서버에 받은 기록을 남기지 않는다
+    if (await o.hold?.()) {
+      error = "cloud-wait"; // 편지 아래에 거절 사유를 보인다
+      push();
+      return reply(false, "cloud-wait");
+    }
+    if (busy) return reply(false, "busy"); // 확인을 기다리는 사이 다른 받기가 시작됐다
     busy = letter.id;
     error = null;
     push();
