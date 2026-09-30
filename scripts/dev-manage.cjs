@@ -9,6 +9,7 @@
 // `--scroll <선택자>` 를 주면 그 요소가 보이게 스크롤한다.
 // `--input <선택자>=<글자>` 를 주면 누른 뒤에 그 입력칸에 한 글자씩 넣는다. 다 넣은 뒤 포커스가 있는 요소의 id 를 출력한다.
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
+// `--pet-click-text <글자>` 를 주면 파티 상세 기기 창에서 그 글자로 시작하는 첫 단추를 누른다(예: 진화). `--detail` 뒤에 쓴다.
 // `--drag <출발 선택자> <도착 선택자>` 를 주면 창 안에 마우스 누름·움직임·뗌을 넣어 끌어 놓는다(박스 칸 옮기기). OS 마우스는 쓰지 않는다.
 // `--wait <ms>` 를 주면 찍기 전에 그만큼 더 기다린다.
 // `--linger <ms>` 를 주면 찍은 뒤 창을 그만큼 열어 둔다.
@@ -280,6 +281,15 @@ app.whenReady().then(async () => {
         if (flag === "--scroll" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).scrollIntoView({ block: "center" }); true`));
         // --click-text 는 그 글자인 첫 단추를 누른다 — 선택자로 가르기 어려운 설정 단추용. 제목(.title)이 그 글자인 줄 단추(상점 줄 등)도 된다
         if (flag === "--click-text" && value) step = step.then(() => click(`[...document.querySelectorAll("button")].find((b) => b.textContent.trim() === ${JSON.stringify(value)} || b.querySelector(".title")?.textContent.trim() === ${JSON.stringify(value)}).click(); true`));
+        // --pet-click-text 는 파티 상세 기기 창에서 그 글자로 시작하는 첫 단추를 누른다 — 진화 줄(`진화 · …`)처럼 기기 창에서 여는 대화상자를 찍을 때
+        if (flag === "--pet-click-text" && value)
+          step = step.then(() => {
+            const pet = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("pet.html"));
+            if (!pet) return undefined;
+            return pet.webContents
+              .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim().startsWith(${JSON.stringify(value)})); if (b) b.click(); return !!b; })()`)
+              .then(() => new Promise((r) => setTimeout(r, 800)));
+          });
         // --drag 는 두 요소의 가운데를 잇는 마우스 입력을 창에 넣는다 — 포인터 이벤트로 끄는 박스 칸용
         if (flag === "--drag" && value && process.argv[at + 2]) {
           const to = process.argv[at + 2];

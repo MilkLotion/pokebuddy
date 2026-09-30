@@ -62,7 +62,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 2. 시작 포인트를 한 번 받는다.
 3. 고른 포켓몬이 놀이공간에 나온다. 첫 돌봄 튜토리얼이 밥 주기와 놀아주기를 짚어 준다.
 
-<!-- 이미지 [starter]: 첫 포켓몬 선택 창 — images/README.md -->
+![첫 포켓몬 선택 창](images/starter.png)
 
 기능을 처음 쓸 때마다 튜토리얼이 그 자리를 짚어 준다.
 
@@ -100,7 +100,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 
 고스트 모드를 켜면 포켓몬 위를 눌러도 뒤의 창이 눌린다. 그동안 포켓몬을 옮기거나 만지지 못하고 우클릭도 안 된다. 끌 때는 트레이 메뉴나 설정을 쓴다.
 
-<!-- 이미지 [care-menu]: 포켓몬 우클릭 메뉴 — images/README.md -->
+![포켓몬 우클릭 메뉴](images/care-menu.png)
 
 ## 돌봄
 
@@ -148,7 +148,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 파티나 박스의 포켓몬을 누르면 설정창 옆에 파티 상세 기기 창이 붙어 열린다. 돌봄·진화·크기·교체를 여기서 한다. `도감 보기` 를 누르면 이 창이 닫히고 그 포켓몬의 도감이 열린다.
 `◀ 이전`·`다음 ▶` 이나 방향키로 다음 포켓몬으로 넘긴다. 같은 포켓몬을 다시 누르거나, 탭을 바꾸거나, Esc 를 누르면 닫힌다.
 
-<!-- 이미지 [evolve]: 파티 상세 기기 창에서 진화를 고르는 화면 — images/README.md -->
+![파티 상세 기기 창에서 연 진화 대상 창](images/evolve.png)
 
 ## 파티와 박스
 

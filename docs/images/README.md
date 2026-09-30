@@ -43,11 +43,11 @@
 | `install-windows-run` | `install-windows-run.png` | 설명서 설치 — Windows | `추가 정보` 를 누른 뒤 `실행` 단추가 보이는 화면 | 대기 |
 | `install-mac-open-anyway` | `install-mac-open-anyway.png` | 설명서 설치 — Mac | 시스템 설정 → 개인정보 보호 및 보안의 `그래도 열기` | 대기 |
 | `install-mac-keychain` | `install-mac-keychain.png` | 설명서 설치 — Mac | `PokeBuddy Safe Storage` 키체인 허용 창 | 대기 |
-| `starter` | `starter.png` | 설명서 처음 시작하기 | 첫 포켓몬 선택 창 | 대기 |
+| `starter` | `starter.png` | 설명서 처음 시작하기 | 첫 포켓몬 선택 창 | 넣음 (2026-09-30) |
 | `playground` | `playground.png` | 설명서 놀이공간과 포켓몬 | 설정 모달 `화면` 탭의 놀이공간 전환 단추 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. 밥 주기 쿨타임 중이면 남은 시간이 보여 더 좋다 | 대기 |
+| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. 밥 주기 쿨타임 중이면 남은 시간이 보여 더 좋다 | 넣음 (2026-09-30) |
 | `hatch` | `hatch.png` | 설명서 알과 부화 | 부화 결과 창 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `evolve` | `evolve.png` | 설명서 성장과 진화 | 파티 상세 기기 창에서 진화 대상을 고르는 화면 | 대기 |
+| `evolve` | `evolve.png` | 설명서 성장과 진화 | 파티 상세 기기 창에서 진화 대상을 고르는 화면 | 넣음 (2026-09-30) |
 | `dex` | `dex.png` | 설명서 도감과 업적 | 도감 탭 목록. 해금한 종과 해금하지 않은 종이 섞여 보이게 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
 | `trade` | `trade.png` | 설명서 친구 교환 | 교환 모달(박스 탭 `교환` 단추)의 `공유 채널 만들기`·`링크로 참가` | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
 | `connect` | `connect.png` | 설명서 AI 코딩 도구 연결 | 사용자 모달 `연결` 탭. CLI 하나 이상이 `연결됨` | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
@@ -64,7 +64,7 @@
 | 포인트가 많은 상점 (`shop`) | 앱을 끈 뒤 `node dist/tools/dev-test.js scene shop` |
 | 준비된 알 (`hatch`) | 앱을 끈 뒤 `node dist/tools/dev-test.js scene hatch` |
 | 튜토리얼 없이 깨끗한 화면 | 앱을 끈 뒤 `node dist/tools/dev-test.js scene done-all,rich` |
-| 관리 창 화면을 앱 없이 (`settings-party`·`shop`·`dex`·`trade`·`playground`·`connect`·`hatch`) | `npm run build` 뒤 `npx electron scripts/dev-manage.cjs --docs --scene done-all --shot <파일>` 에 `--tab`·`--click`·`--click-text`·`--detail --pet-shot` 을 더한다. 연결 탭은 `--agents-connected` |
+| 관리 창 화면을 앱 없이 (`settings-party`·`shop`·`dex`·`trade`·`playground`·`connect`·`hatch`·`evolve`) | `npm run build` 뒤 `npx electron scripts/dev-manage.cjs --docs --scene done-all --shot <파일>` 에 `--tab`·`--click`·`--click-text`·`--detail --pet-shot` 을 더한다. 연결 탭은 `--agents-connected`, 진화는 `--detail --pet-click-text 진화 --pet-shot <파일>` |
 
 - 장면을 바꾼 뒤 `node dist/tools/dev-test.js start` 로 다시 띄운다.
 - 튜토리얼 코치마크가 화면을 가리면 `done-all` 장면을 먼저 쓴다.

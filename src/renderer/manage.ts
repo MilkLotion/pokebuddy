@@ -4662,7 +4662,14 @@ function setScrim(on: boolean): void {
 let dialogScrollKey = "";
 const dialogKeyOf = (d: Dialog): string => `${d.kind}:${"tab" in d ? String(d.tab) : ""}`;
 
+// 헤더 아이콘의 열림 표시 — 그 아이콘이 여는 모달이 떠 있는 동안 진한 배경 (docs/specs/ui-components.md C-02, Figma `Header Icon Button` `State=Open`)
+const HEADER_OPEN: Record<string, string> = { achievements: "open-achievements", settings: "open-settings", user: "open-user", mail: "open-mail" };
+function markHeaderOpen(): void {
+  for (const [kind, id] of Object.entries(HEADER_OPEN)) document.getElementById(id)?.classList.toggle("open", dialog?.kind === kind);
+}
+
 function drawDialog(): void {
+  markHeaderOpen();
   if (dialog && typingSearch(dialogEl)) {
     dialogHeld = true;
     return;
