@@ -187,9 +187,7 @@ let agentRows: AgentRow[] | null = null;
 let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
 let boxPage = 0;
 // 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
-let boxQuery = "";
 let dexQuery = "";
-let boxMarked: string | null = null; // 박스 검색 결과로 찾아간 개체 — 그 칸을 고른 칸으로 보인다
 // 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
 let boxSortOpen = false;
 let boxRenaming = false;
@@ -218,6 +216,9 @@ let shopRegionOpen = false;
 // 도감·상점 포켓몬 격자의 쪽 — 한 쪽에 GRID_PAGE 칸. 지방·검색·분류가 바뀌면 첫 쪽으로 (2026-09-29 사용자 결정 "페이지 넘김 추가")
 // 5열 × 3줄 — 기본 창 높이(682)에서 스크롤 없이 들어간다
 const GRID_PAGE = 15;
+// 도감은 박스처럼 한 쪽 30칸(6열 × 5줄) — Figma 99 `Dex / Base · 박스형` `1085:3` (2026-09-30 사용자 결정 "도감페이지도 박스처럼")
+const DEX_PAGE = 30;
+const pageSizeOf = (where: "dex" | "shop"): number => (where === "dex" ? DEX_PAGE : GRID_PAGE);
 let dexPageNo = 0;
 let shopPageNo = 0;
 // 보는 방식 — 쪽(grid)과 스크롤(list). 도감과 상점 포켓몬 탭이 따로 기억한다 (2026-09-29 사용자 결정)
@@ -1009,7 +1010,6 @@ function drawBox(v: Snapshot): void {
   prev.disabled = boxPage === 0;
   prev.addEventListener("click", () => {
     boxPage -= 1;
-    boxMarked = null;
     boxNote = "";
     draw();
   });
@@ -1017,7 +1017,6 @@ function drawBox(v: Snapshot): void {
   next.disabled = boxPage >= v.boxes.length - 1;
   next.addEventListener("click", () => {
     boxPage += 1;
-    boxMarked = null;
     boxNote = "";
     draw();
   });
@@ -1032,42 +1031,10 @@ function drawBox(v: Snapshot): void {
   if (!prev.disabled) dropToBox(prev, boxPage - 1);
   if (!next.disabled) dropToBox(next, boxPage + 1);
   pager.append(prev, boxNameEl(box), el("span", "used", `${box.used} / ${box.size}`), next);
-  // 이름 검색 — 모든 박스를 대상으로 한다 (docs/specs/ui-components.md C-07)
-  pager.appendChild(
-    searchBox("box", boxQuery, "이름 검색", (q) => {
-      boxQuery = q;
-      draw();
-    }),
-  );
+  // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   pager.appendChild(boxSortEl(box));
   bodyEl.appendChild(pager);
   if (boxNote) bodyEl.appendChild(el("div", "box-note", boxNote));
-
-  const q = normQuery(boxQuery);
-  if (q) {
-    const found = v.boxes.flatMap((b, bi) => b.slots.filter((p): p is PetView => p != null && matchesName(p.name, q)).map((p) => ({ pet: p, bi, box: b.name })));
-    if (!found.length) {
-      bodyEl.appendChild(el("div", "empty-note", "검색 결과 없음"));
-      return;
-    }
-    const results = el("div", "box-grid");
-    for (const { pet, bi, box: boxName } of found) {
-      // 결과를 누르면 그 개체가 있는 박스로 간다
-      const cell = boxCell(pet, () => {
-        boxQuery = "";
-        searchDraft.delete("box");
-        searchFocus = null;
-        boxPage = bi;
-        boxMarked = pet.id;
-        draw();
-      });
-      cell.appendChild(el("div", "note", boxName));
-      cell.title = `${pet.name} · ${boxName}${josa(boxName, "으로/로")} 가기`;
-      results.appendChild(cell);
-    }
-    bodyEl.appendChild(results);
-    return;
-  }
 
   const grid = el("div", "box-grid");
   box.slots.forEach((pet, slot) => {
@@ -1084,7 +1051,6 @@ function drawBox(v: Snapshot): void {
       return;
     }
     const cell = boxCell(pet, () => openPet(pet.id));
-    cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
     if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { boxId: box.id, slot }));
@@ -1279,15 +1245,20 @@ document.addEventListener("click", () => {
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
+// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 좌상단 점 하나 (Figma 99 `Dex / Base · 박스형` `1085:3`)
 function dexCell(row: DexEntry): HTMLElement {
-  const cell = button(row.state === "locked" ? "dex-cell locked" : "dex-cell");
+  const cell = button(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
   cell.dataset.slug = row.slug;
   cell.setAttribute("aria-pressed", String(row.slug === dexPick));
   cell.addEventListener("click", () => pickDex(row.slug));
   // 미해금 종은 그림을 검은 실루엣으로 보인다 — CSS .dex-cell.locked .art (2026-09-27 사용자 결정 "모든 미해금에 다 하자")
-  cell.append(el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`), portraitOf(row.slug, false, "dot", "", true));
-  cell.appendChild(el("div", undefined, row.state === "locked" ? "???" : row.name));
-  if (row.state === "obtained") cell.appendChild(el("div", "no", row.shiny ? "이로치 획득" : "획득"));
+  cell.append(portraitOf(row.slug, false, "dot", "", true), el("div", "who", row.state === "locked" ? "???" : row.name), el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`));
+  if (row.state === "obtained") {
+    const got = el("span", "got");
+    got.title = row.shiny ? "이로치 획득" : "획득";
+    got.setAttribute("aria-label", got.title);
+    cell.appendChild(got);
+  }
   return cell;
 }
 
@@ -1372,13 +1343,13 @@ function viewToggle(current: ViewMode, pick: (mode: ViewMode) => void): HTMLElem
 // 돌려주는 값은 쪽 방식의 새 쪽 번호(스크롤로 갈 때는 지금 쪽 그대로)
 function switchView(where: "dex" | "shop", from: ViewMode, to: ViewMode, page: number): number {
   if (from === "grid" && to === "list") {
-    listScrollTo = { where, index: page * GRID_PAGE };
+    listScrollTo = { where, index: page * pageSizeOf(where) };
     return page;
   }
   const top = bodyEl.getBoundingClientRect().top;
   const rows = [...bodyEl.querySelectorAll<HTMLElement>(".dex-grid .dex-cell")]; // 도감 칸과 상점 칸(.dex-cell.shop-cell) 모두
   const first = rows.findIndex((r) => r.getBoundingClientRect().bottom > top + 1);
-  return Math.floor(Math.max(0, first) / GRID_PAGE);
+  return Math.floor(Math.max(0, first) / pageSizeOf(where));
 }
 
 // 스크롤 방식을 그린 뒤 — 방식을 바꾼 직후면 그 항목으로 스크롤한다
@@ -1432,7 +1403,7 @@ function stepDex(delta: -1 | 1): void {
   dexPick = next.slug;
   window.pokebuddyManage.dexOpen(dexPick, dexGen);
   // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
-  const page = Math.floor(rows.indexOf(next) / GRID_PAGE);
+  const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
   if (dexView === "grid" && page !== dexPageNo && tab === "dex") {
     dexPageNo = page;
     draw();
@@ -1462,13 +1433,15 @@ function drawDex(v: Snapshot): void {
     }),
   );
   bodyEl.appendChild(bar);
-  bodyEl.appendChild(
-    chips(DEX_TABS, dexFilter, (id) => {
-      dexFilter = id;
-      dexPageNo = 0;
-      draw();
-    }),
-  );
+  // 넘김·필터 줄 — 박스 넘김 줄처럼 넘김은 왼쪽, 등록 상태 칩은 오른쪽 (2026-09-30 사용자 "grid-pager 는 좌측, filters 는 우측에")
+  const toolbar = el("div", "dex-toolbar");
+  const filters = chips(DEX_TABS, dexFilter, (id) => {
+    dexFilter = id;
+    dexPageNo = 0;
+    draw();
+  });
+  toolbar.appendChild(filters);
+  bodyEl.appendChild(toolbar);
   if (!dexRows) {
     bodyEl.appendChild(el("div", "empty-note", "도감을 읽는 중입니다."));
     return;
@@ -1482,22 +1455,23 @@ function drawDex(v: Snapshot): void {
   // 스크롤 방식 — 작업 전 화면 그대로 칸 격자를 전부 그린다(2026-09-25 사용자 요청). 화면 밖 칸은 CSS content-visibility 로
   // 그리기를 미루고, 초상은 보이는 칸만 받는다
   if (dexView === "list") {
-    const all = el("div", "dex-grid");
+    const all = el("div", "dex-grid dex-box-grid");
     for (const row of rows) all.appendChild(dexCell(row));
     bodyEl.appendChild(all);
     scrollListAfterSwitch("dex", all);
     return;
   }
   // 격자 — 한 쪽씩. 2026-09-29 사용자 결정 "페이지 넘김 추가"로 전부 그리기(2026-09-25)를 바꿨다
-  const shown = pageOf(rows, dexPageNo);
+  const shown = pageOf(rows, dexPageNo, DEX_PAGE);
   dexPageNo = shown.page;
-  bodyEl.appendChild(
+  toolbar.insertBefore(
     gridPager(shown.page, shown.pages, (page) => {
       dexPageNo = page;
       draw();
     }),
+    filters,
   );
-  const grid = el("div", "dex-grid");
+  const grid = el("div", "dex-grid dex-box-grid");
   for (const row of shown.items) grid.appendChild(dexCell(row));
   bodyEl.appendChild(grid);
 }

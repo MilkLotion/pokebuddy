@@ -1217,6 +1217,10 @@
       .box-sort {
         position: relative;
       }
+      /* 박스 줄에 검색이 없어 정렬을 오른쪽 끝에 붙인다 */
+      .pager .box-sort {
+        margin-left: auto;
+      }
       .pager .sort-toggle,
       .search-row .sort-toggle {
         height: 32px;
@@ -1514,6 +1518,58 @@
       /* 도감·상점 포켓몬 격자의 넘김 줄 — 박스 넘김 줄과 같은 단추, 가운데 정렬 */
       .grid-pager {
         justify-content: center;
+      }
+      /* 도감 넘김·필터 줄 — 넘김은 왼쪽, 칩은 오른쪽 (Figma 99 `Dex / Base · 박스형` `1085:3` 의 list-toolbar) */
+      .dex-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .dex-toolbar .grid-pager {
+        justify-content: flex-start;
+        margin-bottom: 0;
+      }
+      .dex-toolbar .chips {
+        margin: 0 0 0 auto;
+      }
+      /* 도감 칸 — 박스 칸처럼 6열, 초상 40 → 이름 → 번호. 획득은 좌상단 점 (Figma `Status Dot` Success) */
+      .dex-box-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .dex-cell.dex-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 0;
+        aspect-ratio: 1 / 1;
+        padding: 2px;
+        border-radius: 8px;
+        /* 어림 높이는 안쪽(여백·테두리 뺀) 높이다 — 칸 95 = 89 + 여백 4 + 테두리 2 */
+        contain-intrinsic-block-size: auto 89px;
+      }
+      .dex-cell.dex-box .dot {
+        width: 40px;
+        height: 40px;
+        margin: 0;
+      }
+      .dex-cell.dex-box .who {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dex-cell .got {
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--success);
       }
       /* 상점 포켓몬 칸 — 도감 칸에 가격 한 줄 (2026-09-29 사용자 결정 "도감처럼 격자 칸"). 값은 상품 줄의 가격과 같다 */
       .shop-cell .price {

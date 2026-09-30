@@ -5,7 +5,7 @@
 //   검색 칸    입력 중에는 거르지 않고 Enter·`검색` 단추에서만 거른다 (2026-09-29 사용자 결정). 입력 중에는 칸 요소를 갈아 끼우지 않는다 —
 //              갈아 끼우면 한글 조합이 끊긴다("어래곤" → "어곤"). 조합 중 Enter 는 확정 직후 한 번 거른다(Enter 한 번)
 //   1초 시계   시간 값만 바뀌면 표시만 고친다 — 탭 포커스·title 요소가 남는다. 모양이 바뀌어 다시 그려도 포커스를 되돌린다
-//   격자 넘김  도감·상점 포켓몬 탭은 한 쪽 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 긴 세로 스크롤이 없다
+//   격자 넘김  도감은 한 쪽 30칸(박스처럼 6×5), 상점 포켓몬 탭은 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 도감 쪽은 한 줄 안쪽만 넘친다
 //   성격 창    고르기 전후로 창 높이가 같다
 //   가방 대상  판 안 대상 목록을 아래로 내려 줄을 눌러도 스크롤이 남는다. 1초 시계 다시 그리기에도 남고, 범위를 바꾸면 맨 위 (8번 버그)
 //   가방 판    어떤 도구든 `사용` 쪽으로 연다. 진화용 도구·성격민트는 설명 한 줄 + 고르는 창 단추
@@ -47,6 +47,7 @@ for (let i = 0; i < 8; i += 1) {
 save.bag["exp-candy-s"] = 3;
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
+const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
 // 상점 상세 — 검사 (11) 이 여는 상품만 미리 만든다
 const shopDetails = Object.fromEntries(["charmander", "eevee", "bond-cord"].map((id) => [id, shopDetail(save, id)]));
 // 가방 판 검사 (12) 에만 더하는 도구 — 불꽃의돌·성격민트. 앞 검사의 가방 순서를 바꾸지 않게 따로 만들어 둔다
@@ -139,20 +140,21 @@ void app.whenReady().then(async () => {
     assert.equal(full.newTab, true, "포인트가 바뀌면 다시 그린다");
     assert.equal(full.focusedTab, true, "다시 그려도 탭 포커스를 되돌린다");
 
-    // (3) 도감 격자 넘김 — 한 쪽 15칸 · ◀ ▶ · 1초 시계와 다시 그리기에도 쪽이 남는다 · 세로 스크롤 없음
+    // (3) 도감 격자 넘김 — 한 쪽 30칸 · ◀ ▶ · 1초 시계와 다시 그리기에도 쪽이 남는다 · 넘쳐도 한 줄 안쪽(Figma 99 `Dex / Base · 박스형` 724)
     await js(`${tabBtn("도감")}.click()`);
     await wait(400);
     const cells = `document.querySelectorAll('#body .dex-cell').length`;
     const label = `document.querySelector('#body .grid-pager .used')?.textContent`;
     const overflow = `(() => { const b = document.getElementById('body'); return b.scrollHeight - b.clientHeight; })()`;
-    assert.equal(await js<number>(cells), 15, "도감 한 쪽 15칸");
-    const pages = Math.ceil(dex.length / 15);
+    assert.equal(await js<number>(cells), DEX_PAGE, "도감 한 쪽 30칸");
+    const pages = Math.ceil(dex.length / DEX_PAGE);
+    const secondFirst = `#${String(dex[DEX_PAGE]?.dex ?? 0).padStart(4, "0")}`; // 둘째 쪽 첫 칸 — 모습 칸(#0019-1 등)이 섞여 번호로 셀 수 없다
     assert.equal(await js<string>(label), `1 / ${pages}`);
-    assert.ok((await js<number>(overflow)) <= 0, `도감 쪽은 스크롤 없이 들어간다 (${await js<number>(overflow)}px 넘침)`);
+    assert.ok((await js<number>(overflow)) < 95, `도감 쪽은 한 줄(95) 안쪽만 넘친다 (${await js<number>(overflow)}px 넘침)`);
     await js(`document.querySelector('#body .grid-pager button:last-child').click()`);
     await wait(100);
     assert.equal(await js<string>(label), `2 / ${pages}`, "▶ 로 다음 쪽");
-    assert.ok((await js<string>(`document.querySelector('#body .dex-cell .no').textContent`)).includes("#0016"), "둘째 쪽은 16번부터");
+    assert.ok((await js<string>(`document.querySelector('#body .dex-cell .no').textContent`)).includes(secondFirst), `둘째 쪽은 ${secondFirst}부터`);
     await js(`window.__bump = 9`);
     await wait(1400);
     assert.equal(await js<string>(label), `2 / ${pages}`, "다시 그려도 쪽이 남는다");
@@ -168,7 +170,7 @@ void app.whenReady().then(async () => {
       window.__bump = 11; // 입력 중 모양이 바뀌어도 다시 그리기를 미룬다
       return { cells: ${cells} };
     })()`);
-    assert.equal(typed.cells, 15, "입력만으로는 거르지 않는다");
+    assert.equal(typed.cells, DEX_PAGE, "입력만으로는 거르지 않는다");
     await wait(2300);
     const kept = await js<{ same: boolean; focused: boolean; value: string }>(`({ same: document.getElementById('search-dex') === window.__input, focused: document.activeElement === window.__input, value: window.__input.value })`);
     assert.equal(kept.same, true, "1초 시계가 돌아도 입력 칸을 갈아 끼우지 않는다");
@@ -189,7 +191,7 @@ void app.whenReady().then(async () => {
       return { sameAtEnter, cellsAtEnter, cells: ${cells}, label: ${label} };
     })()`);
     assert.equal(composing.sameAtEnter, true, "조합 중 Enter 에는 칸을 갈아 끼우지 않는다");
-    assert.equal(composing.cellsAtEnter, 15, "조합 중 Enter 순간에는 거르지 않는다");
+    assert.equal(composing.cellsAtEnter, DEX_PAGE, "조합 중 Enter 순간에는 거르지 않는다");
     assert.equal(composing.cells, 1, "확정 직후 한 번 거른다");
     assert.equal(composing.label, "1 / 1", "검색하면 첫 쪽");
 
@@ -212,7 +214,7 @@ void app.whenReady().then(async () => {
       await new Promise((r) => setTimeout(r, 100));
       return ${cells};
     })()`);
-    assert.equal(clicked, 15, "검색 단추로 거른다 — 1로 시작하는 번호가 한 쪽을 넘는다");
+    assert.equal(clicked, DEX_PAGE, "검색 단추로 거른다 — 1로 시작하는 번호가 한 쪽을 넘는다");
     const cleared = await js<string>(`(async () => {
       const input = document.getElementById('search-dex');
       input.value = '';
@@ -290,7 +292,7 @@ void app.whenReady().then(async () => {
     assert.equal(dexListView.pager, false, "목록에는 넘김 줄이 없다");
     assert.equal(dexListView.pressed, "list");
     assert.ok(dexListView.overflow > 0, "목록은 세로 스크롤");
-    assert.equal(dexListView.top, "#0016", "쪽에서 보던 첫 항목으로 스크롤");
+    assert.ok(dexListView.top?.startsWith(secondFirst), `쪽에서 보던 첫 항목으로 스크롤 (${dexListView.top})`);
     // 1초 시계와 전체 다시 그리기에도 스크롤이 남는다
     await js(`document.getElementById('body').scrollTop = 1234; 0`);
     await js(`window.__bump = 21; 0`);
@@ -302,7 +304,7 @@ void app.whenReady().then(async () => {
     const topIndex = dex.findIndex((d) => `#${String(d.dex).padStart(4, "0")}` === topNow);
     await js(`document.querySelector('#body .view-toggle [data-view="grid"]').click()`);
     await wait(150);
-    assert.equal(await js<string>(label), `${Math.floor(topIndex / 15) + 1} / ${pages}`, `목록 맨 위(${topNow})가 든 쪽으로`);
+    assert.equal(await js<string>(label), `${Math.floor(topIndex / DEX_PAGE) + 1} / ${pages}`, `목록 맨 위(${topNow})가 든 쪽으로`);
     await js(`document.querySelector('#body .view-toggle [data-view="list"]').click()`);
     await wait(150);
     await shot("dex-list.png");
@@ -348,7 +350,7 @@ void app.whenReady().then(async () => {
     await reload();
     await js(`${tabBtn("도감")}.click()`);
     await wait(400);
-    assert.equal(await js<number>(cells), 15, "도감은 격자로 기억");
+    assert.equal(await js<number>(cells), DEX_PAGE, "도감은 격자로 기억");
     if (pokemonTab) {
       await js(`${tabBtn("상점")}.click()`);
       await wait(200);
