@@ -598,7 +598,48 @@ void app.whenReady().then(async () => {
     assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 보기 — 그 종의 도감 기기 창");
     assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`) > 0, true, "도감 탭으로 옮겼다");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 그림 ${shots}\n`);
+    // (16) 실패는 새 줄을 끼우지 않는다 (2026-09-30 사용자 결정 "레이아웃 왔다갔다하는건데? 나 이런거 싫어한다니까?").
+    //      가짜 명령은 늘 실패한다(`mock`). 가방 판은 미리보기 상자가 빨강으로 바뀌고 판 높이가 같다.
+    //      대화상자는 바닥 단추 줄 왼쪽에 오류를 두고 창 높이가 같다
+    await reload();
+    await js(`${tabBtn("가방")}.click()`);
+    await wait(300);
+    await js(`[...document.querySelectorAll('#body .bag-card')].find((c) => c.querySelector('.name').textContent === '경험사탕S').click()`);
+    await wait(200);
+    const panelHeight = `document.querySelector('#body .use-panel').getBoundingClientRect().height`;
+    const usedBefore = await js<number>(panelHeight);
+    await js(`[...document.querySelectorAll('#body .use-panel .actions button')].at(-1).click()`);
+    await wait(300);
+    const usedAfter = await js<{ height: number; bad: boolean; alerts: number }>(`({
+      height: ${panelHeight},
+      bad: document.querySelector('#body .use-preview').classList.contains('bad'),
+      alerts: document.querySelectorAll('#body .use-panel .alert').length,
+    })`);
+    await shot("use-failed.png");
+    assert.equal(usedAfter.bad, true, "사용 실패 — 미리보기 상자가 빨강");
+    assert.equal(usedAfter.alerts, 0, "사용 실패 — 경고 줄을 끼우지 않는다");
+    assert.equal(usedAfter.height, usedBefore, `사용 실패에도 판 높이가 같다 (${usedBefore} → ${usedAfter.height})`);
+    await js(`document.getElementById('open-settings').click()`);
+    await wait(300);
+    const dialogHeight = `document.getElementById('dialog').getBoundingClientRect().height`;
+    const setBefore = await js<number>(dialogHeight);
+    const footButtons = `[...document.querySelectorAll('#dialog > .actions button')].map((b) => Math.round(b.getBoundingClientRect().left)).join(',')`;
+    const buttonsBefore = await js<string>(footButtons);
+    await js(`document.querySelector('#dialog .switch').click()`);
+    await wait(300);
+    const setAfter = await js<{ height: number; footer: string | null; alerts: number; buttons: string }>(`({
+      height: ${dialogHeight},
+      buttons: ${footButtons},
+      footer: document.querySelector('#dialog > .actions .footer-error')?.textContent ?? null,
+      alerts: document.querySelectorAll('#dialog > .alert').length,
+    })`);
+    await shot("dialog-failed.png");
+    assert.ok(setAfter.footer, "대화상자 실패 — 바닥 단추 줄에 오류");
+    assert.equal(setAfter.alerts, 0, "대화상자 실패 — 끝에 경고 줄을 끼우지 않는다");
+    assert.equal(setAfter.buttons, buttonsBefore, "대화상자 실패 — 바닥 단추 자리가 그대로");
+    assert.equal(setAfter.height, setBefore, `대화상자 실패에도 창 높이가 같다 (${setBefore} → ${setAfter.height})`);
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 대상 스크롤 · 상점 상세 · 가방 사용 먼저 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

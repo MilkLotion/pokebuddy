@@ -66,6 +66,8 @@ interface SetupModule {
   disconnectCli(cli: string, opts?: { dryRun?: boolean }): DisconnectResult;
   hookInstalled(): { file: boolean; current: boolean; source: boolean; clis: Array<{ name: string; used: boolean; error?: string; registered?: number; total?: number; stale?: string[] }> };
   tidyInstalled(opts?: { dryRun?: boolean }): TidyResult;
+  hookCommandFor(cli: string): string | null;
+  hookFile(): string;
   TARGET_CLIS: Array<{ cli: string; name: string }>;
 }
 
@@ -84,6 +86,12 @@ export function connect(name: AgentName, { dryRun = false } = {}): ConnectResult
 export function disconnect(name: AgentName, { dryRun = false } = {}): DisconnectResult {
   if (!agentInfo(name)) return { ok: false, reason: "unknown-cli" };
   return setup().disconnectCli(name, { dryRun });
+}
+
+// 연결 점검 — 그 CLI 에 등록하는 것과 같은 훅 명령과 훅 파일 자리 (src/agents/check.ts)
+export function hookCommandOf(name: AgentName): { command: string; file: string } | null {
+  const command = setup().hookCommandFor(name);
+  return command ? { command, file: setup().hookFile() } : null;
 }
 
 // 켤 때 정리 — 새로 등록하지 않는다. 연결된 CLI 의 옛 이벤트(목록에 없는 우리 등록)만 걷고, 있는 훅 파일만 새 버전으로 바꾼다.

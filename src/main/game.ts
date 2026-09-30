@@ -25,7 +25,8 @@ import { dexList } from "../tx/lists.js";
 import { dexDetail } from "../tx/dex-detail.js";
 import { shopDetail } from "../tx/shop-detail.js";
 import { snapshot } from "../tx/snapshot.js";
-import { agentInfo, connect, disconnect, status } from "../agents/registry.js";
+import { agentInfo, connect, disconnect, hookCommandOf, status } from "../agents/registry.js";
+import { findNode, lastSignals, probe } from "../agents/check.js";
 import type { AgentAction, AgentReply, AgentRow, DexDetail, DexEntry, ManageReply, ManageRequest, ShopDetail, Snapshot } from "../shared/manage";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import type { AgentName, Command, CommandName, CommandSource } from "../shared/types";
@@ -63,7 +64,7 @@ export interface GameV3 {
   dex: () => DexEntry[];
   dexDetail: (slug: string) => DexDetail | null; // 도감 칸 하나의 상세
   shopDetail: (productId: string) => ShopDetail | null; // 상점 구매 창의 상세 (src/tx/shop-detail.ts)
-  agents: (req?: { name: string; action: AgentAction }) => AgentReply;
+  agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>;
   send: (req: ManageRequest, from: CommandSource) => ManageReply;
   executor: Executor;
   saveFailing: () => boolean; // 저장이 이어서 SAVE_V3_RULES.saveFailNotifyAfter 번 실패했다 — 설정창이 안내를 띄운다
@@ -213,13 +214,25 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   };
 
   // CLI 연결 — 저장이 아니라 각 CLI 의 설정 파일을 본다. 읽기만 하는 호출과 바꾸는 호출을 한 입구로 받는다
-  const agents = (req?: { name: string; action: AgentAction }): AgentReply => {
-    const list = (): AgentRow[] => status().map((a) => ({ ...a }));
+  // 연결 점검(2026-09-30): 읽을 때마다 Node.js 와 CLI 별 마지막 신호를 붙인다. Node.js 가 없으면 연결을 막는다. probe 는 훅을 한 번 돌려 본다
+  const agents = async (req?: { name: string; action: AgentAction }): Promise<AgentReply> => {
+    const node = await findNode(req?.action === "check");
+    const list = (): AgentRow[] => {
+      const signals = lastSignals(PATHS.state);
+      return status().map((a) => ({ ...a, lastSignalAt: signals[a.name] ?? null }));
+    };
     const platform = process.platform;
-    if (!req || req.action === "check") return { ok: true, reason: "ok", list: list(), platform };
-    if (!agentInfo(req.name)) return { ok: false, reason: "unknown-cli", list: list(), platform };
+    if (!req || req.action === "check") return { ok: true, reason: "ok", list: list(), platform, node };
+    if (!agentInfo(req.name)) return { ok: false, reason: "unknown-cli", list: list(), platform, node };
+    if (req.action === "probe") {
+      const hook = hookCommandOf(req.name as AgentName);
+      if (!hook) return { ok: false, reason: "unknown-cli", list: list(), platform, node };
+      const r = await probe(req.name, hook.command, hook.file, node, PATHS.state);
+      return { ok: r.ok, reason: r.reason, ...(r.detail ? { detail: r.detail } : {}), list: list(), platform, node };
+    }
+    if (req.action === "connect" && !node) return { ok: false, reason: "node-missing", list: list(), platform, node };
     const res = req.action === "connect" ? connect(req.name as AgentName) : disconnect(req.name as AgentName);
-    return { ok: res.ok, reason: res.reason, list: list(), platform };
+    return { ok: res.ok, reason: res.reason, list: list(), platform, node };
   };
 
   const detail = (slug: string): DexDetail | null => {

@@ -775,4 +775,10 @@ function tidyInstalled({ dryRun = false } = {}) {
   }
 }
 
-module.exports = { setup, uninstall, hookInstalled, connectCli, disconnectCli, tidyInstalled, TARGET_CLIS: TARGETS.map((t) => ({ cli: t.cli, name: t.name })) };
+// 연결 점검(src/agents/check.ts) — 그 CLI 에 등록하는 것과 같은 명령과 훅 파일 자리
+const hookCommandFor = (cli) => {
+  const t = targetOf(cli);
+  return t ? hookCommand(t) : null;
+};
+
+module.exports = { setup, uninstall, hookInstalled, connectCli, disconnectCli, tidyInstalled, hookCommandFor, hookFile: hookTarget, TARGET_CLIS: TARGETS.map((t) => ({ cli: t.cli, name: t.name })) };

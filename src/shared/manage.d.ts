@@ -224,7 +224,7 @@ export interface DisplayView {
 
 // ── CLI 연결 ───────────────────────────────────────────────────────────────────
 // 설정 모달의 연결 탭. 저장이 아니라 각 CLI 의 설정 파일을 본다. 그래서 스냅샷이 아니라 따로 읽는다
-export type AgentAction = "connect" | "disconnect" | "check";
+export type AgentAction = "connect" | "disconnect" | "check" | "probe"; // probe — 연결 점검(훅을 한 번 실제로 돌려 본다)
 
 export interface AgentRow {
   name: string;
@@ -235,6 +235,7 @@ export interface AgentRow {
   registered: number;
   total: number;
   usage: string; // transcript 이면 토큰을 읽는다. none 이면 작업 시간으로 적립한다
+  lastSignalAt: number | null; // 마지막 신호 시각(ms) — 훅이 쓴 state 기록 가운데 가장 늦은 것. 없으면 null
   error?: string;
 }
 
@@ -243,6 +244,8 @@ export interface AgentReply {
   reason: string;
   list: AgentRow[]; // 처리 뒤 다시 읽은 상태
   platform: string; // process.platform — Windows 에서만 붙이는 안내(codex --no-daemon)를 가른다
+  node: { path: string; version: string } | null; // 훅을 돌릴 Node.js — 없으면 연결을 막는다 (src/agents/check.ts)
+  detail?: string; // probe 실패 — exit 의 종료 코드
 }
 
 // 화면이 보내는 요청 — 이름과 인자는 src/tx/bridge.ts 가 푼다.
@@ -488,7 +491,7 @@ export interface DexDeviceView {
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
-  // 진화 트리 — 해금·획득한 종만. 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종이면 null 이고 기록 칸의 진화 줄이 "해금하면 보여요" 를 보인다
+  // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 빈 원으로 그린다. 사슬이 없으면 null
   tree: EvoNodeView | null;
   treePortraits: Record<string, string>; // 트리의 해금 종 그림 — slug → data URI
 }

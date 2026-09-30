@@ -2040,6 +2040,9 @@
       .agent-dot.warn {
         background: var(--warning);
       }
+      .agent-dot.bad {
+        background: var(--danger);
+      }
       .agent-tip {
         margin-top: 2px;
       }
@@ -2430,6 +2433,50 @@
       }
       .use-preview strong {
         color: var(--ink);
+      }
+      /* 결과·실패 — 새 줄 대신 같은 상자의 색 (2026-09-30 레이아웃 흔들림 금지) */
+      .use-preview.ok,
+      .buy-total.ok {
+        background: var(--success-bg);
+        color: var(--success-ink);
+      }
+      .use-preview.bad,
+      .buy-total.bad {
+        background: var(--danger-bg);
+        color: var(--danger-ink);
+      }
+      .use-preview.ok strong,
+      .use-preview.bad strong,
+      .buy-total.ok strong,
+      .buy-total.bad strong {
+        color: inherit;
+      }
+      /* 대화상자 실패 — 바닥 단추 줄의 빈자리. 길면 말줄임(전체는 title) */
+      .footer-error {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 1 0; /* 남는 폭만 쓴다 — 단추를 밀거나 줄을 바꾸지 않는다 */
+        min-width: 0;
+        font-size: 12px;
+        color: var(--danger-ink);
+      }
+      .actions > .spacer:has(> .footer-error) {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+      .footer-error i {
+        flex: none;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--danger);
+      }
+      .footer-error span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .use-detail .alert {
         margin-top: 0;

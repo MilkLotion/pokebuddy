@@ -98,7 +98,7 @@ const isRequest = (v: unknown): v is ManageRequest =>
 const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } => {
   if (v == null || typeof v !== "object") return false;
   const r = v as { name?: unknown; action?: unknown };
-  return typeof r.name === "string" && (r.action === "connect" || r.action === "disconnect" || r.action === "check");
+  return typeof r.name === "string" && (r.action === "connect" || r.action === "disconnect" || r.action === "check" || r.action === "probe");
 };
 
 // 관리 창이 보낸 요청인가. 무대 창·선택 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
@@ -126,7 +126,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? game.dexDetail(slug) : null));
   ipcMain.handle(CH.shopDetail, (e, id: unknown) => (mine(e) && typeof id === "string" ? game.shopDetail(id) : null));
   ipcMain.handle(CH.agents, (e, req: unknown) => {
-    if (!mine(e)) return { ...DENIED, list: [], platform: process.platform };
+    if (!mine(e)) return { ...DENIED, list: [], platform: process.platform, node: null };
     return game.agents(isAgentRequest(req) ? req : undefined);
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)

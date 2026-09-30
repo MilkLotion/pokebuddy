@@ -9,6 +9,8 @@ import type {
   AccountReply,
   AccountScreen,
   AchievementView,
+  AgentAction,
+  AgentReply,
   AgentRow,
   BagItemView,
   BoxView,
@@ -185,6 +187,11 @@ let dexPick: string | null = null;
 let dexGen = 0; // 도감 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다 (src/main/device-gen.ts)
 let agentRows: AgentRow[] | null = null;
 let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
+// 연결 점검 (worklog/records/hook-check/record.md) — Node.js(undefined 면 아직 모름), CLI 별 점검 결과, 점검 중인 CLI
+let agentNode: AgentReply["node"] | undefined;
+const agentChecks = new Map<string, { ok: boolean; text: string; at: number }>();
+const agentFails = new Map<string, string>(); // 연결·해제·다시 확인 실패 — 그 줄의 상태 글자로 보인다(경고 줄을 끼우지 않는다)
+let agentProbing: string | null = null;
 let boxPage = 0;
 // 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
 let dexQuery = "";
@@ -1623,6 +1630,7 @@ let bagTarget: string | null = null;
 let bagQty = 1;
 // 방금 쓴 결과 한 줄 — 성공 톤 알림으로 판에 둔다. 도구·대상·범위·갈래·분류·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
 let bagResult = "";
+let bagResultNote = ""; // 결과 둘째 줄 — "이상한사탕 1개를 썼어요" (미리보기 상자가 결과를 보일 때)
 // 판 머리의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다 (2026-09-30 사용자 결정, Figma 05 `Bag / Sell` `1006:20684`)
 let bagMode: "use" | "sell" = "use";
 let sellQty = 1;
@@ -1685,7 +1693,7 @@ function drawBag(v: Snapshot): void {
   const picked = v.bag.find((i) => i.id === bagPick);
   if (!picked) {
     bagPick = null;
-    if (bagResult) bodyEl.appendChild(alertBox("ok", "", bagResult)); // 다 써서 판이 닫혔다 — 결과는 목록 아래에 남긴다
+    bagResult = ""; // 다 써서 판이 닫혔다 — 가방 칸이 사라진 것이 결과다. 목록 아래에 줄을 끼우지 않는다 (2026-09-30 레이아웃 흔들림 금지)
     return;
   }
   bodyEl.appendChild(bagPanel(v, picked));
@@ -1896,13 +1904,15 @@ function sellDetail(v: Snapshot, item: BagItemView, each: number): HTMLElement {
 
   const earned = each * sellQty;
   const percent = Math.round((item.sellRate ?? 0) * 100);
-  const summary = el("div", "use-preview");
-  summary.append(
-    el("strong", undefined, `받는 포인트 ${point(earned)}`),
-    el("div", undefined, `1개 ${point(each)} (구매가 ${point(item.buyPrice ?? 0)}의 ${percent}%) · 판매 후 보유 ${point(v.points + earned)}`),
-  );
+  // 실패는 요약 상자가 빨강으로 바뀌어 보인다 — 줄을 끼우지 않는다 (2026-09-30)
+  const summary = el("div", notice ? "use-preview bad" : "use-preview");
+  if (notice) summary.append(el("strong", undefined, "팔지 못했어요"), el("div", undefined, notice));
+  else
+    summary.append(
+      el("strong", undefined, `받는 포인트 ${point(earned)}`),
+      el("div", undefined, `1개 ${point(each)} (구매가 ${point(item.buyPrice ?? 0)}의 ${percent}%) · 판매 후 보유 ${point(v.points + earned)}`),
+    );
   box.appendChild(summary);
-  if (notice) box.appendChild(alertBox("bad", "", notice));
   box.appendChild(
     actions(
       actionButton("취소", false, false, () => {
@@ -2029,13 +2039,12 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
       q.append(minus, el("span", "count", bagQty.toLocaleString("ko-KR")), plus, max);
       right.appendChild(q);
     }
-    const preview = el("div", "use-preview");
-    const [lead, ...lines] = blocked ? [blocked] : bagPreview(v, pet, item, bagQty);
+    // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정, Figma 99 `1087:21349`·`1087:21544`)
+    const preview = el("div", bagResult ? "use-preview ok" : notice ? "use-preview bad" : "use-preview");
+    const [lead, ...lines] = bagResult ? [bagResult, bagResultNote] : notice ? ["쓰지 못했어요", notice] : blocked ? [blocked] : bagPreview(v, pet, item, bagQty);
     preview.appendChild(el("strong", undefined, lead ?? ""));
-    for (const line of lines) preview.appendChild(el("div", undefined, line));
+    for (const line of lines) if (line) preview.appendChild(el("div", undefined, line));
     right.appendChild(preview);
-    if (bagResult) right.appendChild(alertBox("ok", "", bagResult));
-    if (notice) right.appendChild(alertBox("bad", "", notice));
     const label = many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용";
     right.appendChild(
       actions(
@@ -2049,9 +2058,11 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
           const target = pet.id;
           const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
           bagResult = "";
+          const usedCount = many && bagQty > 1 ? bagQty : 1;
           void send("bag.use", item.id, { petId: target, ...(many && bagQty > 1 ? { count: bagQty } : {}) }).then((ok) => {
             if (!ok) return draw();
             bagResult = bagResultText(item, before, petOf(target));
+            bagResultNote = `${item.name} ${usedCount.toLocaleString("ko-KR")}개를 썼어요`;
             bagQty = 1;
             if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 썼다
             draw();
@@ -3887,8 +3898,12 @@ function drawBuy(productId: string, qty: number): void {
   dialogEl.append(...shopDetailBlock(item)); // 포켓몬 — 정보 줄·진화 트리, 진화용 도구 — 진화 대상 (2026-09-30)
 
   // 합계 상자 — 살 수 있으면 합계와 구매 후 보유, 막혔으면 까닭과 한 줄 안내 (시안 `Shop / Buy Blocked`)
-  const summary = el("div", "buy-total");
-  if (item.blocked) {
+  // 실패(명령 거절)는 합계 상자가 빨강으로 바뀌어 보인다 — 줄을 끼우지 않는다 (2026-09-30). 대화상자 공통 오류 줄은 건너뛴다
+  const summary = el("div", notice ? "buy-total bad" : "buy-total");
+  if (notice) {
+    summary.append(el("strong", undefined, "사지 못했어요"), el("div", undefined, notice));
+    noticeInline = true;
+  } else if (item.blocked) {
     const daycare = item.category === "egg" && view.eggs.used >= view.eggs.size;
     summary.appendChild(el("strong", undefined, daycare ? `${item.blocked}. (${view.eggs.used} / ${view.eggs.size})` : item.blocked));
     if (daycare) summary.appendChild(el("div", undefined, "부화한 뒤 다시 살 수 있어요"));
@@ -3899,7 +3914,6 @@ function drawBuy(productId: string, qty: number): void {
     summary.append(el("strong", undefined, `합계 ${point(total)}`), el("div", undefined, `구매 후 보유 ${point(view.points - total)}${after}`));
   }
   dialogEl.appendChild(summary);
-  if (notice) dialogEl.appendChild(alertBox("bad", "", notice));
 
   // 바닥 — 왼쪽 `돌보미집 보기`(돌보미집이 찼을 때), 오른쪽 `취소`·`구매`
   const foot = el("div", "buy-foot");
@@ -4143,7 +4157,7 @@ function drawAchievements(): void {
 
 // 설정 모달 탭 — 일반·화면 두 칸. 사용자 모달 탭 — 계정·연결 두 칸 (2026-09-28 사용자 "설정모달에서 계정은 빼고, 설정옆에 유저아이콘 추가 후 해당 메뉴에서 계정,연결 설정").
 // 두 모달은 같은 틀이다. 탭을 바꿔도 모달 크기(560×500)가 같다.
-// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `Settings / Connect` `633:19096` (worklog/records/trade/record.md "계정 탭 구조로 수정").
+// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `User / Connect` `1079:1891` (worklog/records/trade/record.md "계정 탭 구조로 수정").
 // 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
 type SettingsTab = "general" | "display";
 const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
@@ -4387,32 +4401,67 @@ function syncIdentify(): void {
 
 // 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
 
-// CLI 한 줄 — 상태를 다섯 가지로 나눈다 (docs/specs/game.md "설정과 연결").
-// 갱신 필요 — 연결됐지만 등록 목록·훅 파일이 지금과 다르다(옛 codex PreToolUse 등). "갱신" 이 connect 를 다시 불러 맞춘다
+// 점검 실패 이유 — 상태 글자에 붙인다 (src/agents/check.ts ProbeReason)
+const PROBE_TEXT: Record<string, string> = {
+  "node-missing": "Node.js 없음",
+  "hook-missing": "훅 파일 없음",
+  "no-record": "기록이 생기지 않음",
+  timeout: "5초 안에 끝나지 않음",
+  "spawn-failed": "실행하지 못함",
+};
+
+// CLI 한 줄 — 상태를 글자와 점으로 보인다 (docs/specs/game.md "설정과 연결", Figma 05 `User / Connect` `1079:1891`).
+// 결과는 새 줄을 끼우지 않고 이 줄의 상태 글자·점 색만 바꾼다 — 레이아웃이 흔들리지 않게 (2026-09-30 사용자 결정)
+//   연결됨        마지막 신호(훅이 쓴 state 기록) · 없으면 아직 신호 없음
+//   점검 뒤       점검 정상 · 방금 / 점검 실패 · 이유 (빨강)
+//   명령 실패     연결하지 못했어요 · 이유 (빨강) — 연결 탭은 바닥 단추 줄이 없어 줄의 상태 글자로 보인다
+//   Node.js 없음  연결된 줄은 확인 필요(주황), 연결 안 된 줄의 `연결` 은 막는다
+//   갱신 필요     연결됐지만 등록 목록·훅 파일이 지금과 다르다(옛 codex PreToolUse 등). "갱신" 이 connect 를 다시 불러 맞춘다
 function agentRow(row: AgentRow): HTMLElement {
-  const usage = row.usage === "transcript" ? "토큰으로 적립" : "작업 시간으로 적립";
-  // 상태 글자는 시안처럼 짧게 — 연결됨만 적립 방식을 붙이고, 확인이 필요하면 이유를 붙인다
-  const hint = row.error
-    ? `확인 필요 · ${row.error}`
-    : !row.installed
-      ? "미설치"
-      : row.connected && row.outdated
-        ? "연결됨 · 갱신 필요"
-        : row.connected
-          ? `연결됨 · ${usage}`
-          : "연결 안 됨";
+  const noNode = agentNode === null;
+  const check = agentChecks.get(row.name);
+  let hint: string;
+  let dot = "agent-dot";
+  const fail = agentFails.get(row.name);
+  if (fail) {
+    hint = fail;
+    dot = "agent-dot bad";
+  } else if (row.error) hint = `확인 필요 · ${row.error}`;
+  else if (!row.installed) hint = "미설치";
+  else if (!row.connected) hint = "연결 안 됨";
+  else if (noNode) {
+    hint = "확인 필요 · Node.js 없음";
+    dot = "agent-dot warn";
+  } else if (row.outdated) {
+    hint = "연결됨 · 갱신 필요";
+    dot = "agent-dot warn";
+  } else if (check && !check.ok) {
+    hint = `점검 실패 · ${check.text}`;
+    dot = "agent-dot bad";
+  } else if (check) {
+    hint = `연결됨 · 점검 정상 · ${ago(check.at)}`;
+    dot = "agent-dot on";
+  } else {
+    hint = row.lastSignalAt ? `연결됨 · 마지막 신호 ${ago(row.lastSignalAt)}` : "연결됨 · 아직 신호 없음";
+    dot = "agent-dot on";
+  }
 
   const control = el("div", "actions");
   control.style.margin = "0";
   if (!row.installed) control.appendChild(actionButton("다시 확인", false, false, () => void agent(row.name, "check")));
-  else if (row.connected && row.outdated) control.appendChild(actionButton("갱신", true, false, () => void agent(row.name, "connect")));
-  else if (row.connected) control.appendChild(actionButton("해제", false, false, () => void agent(row.name, "disconnect")));
-  else control.appendChild(actionButton("연결", true, false, () => void agent(row.name, "connect")));
+  else if (row.connected && row.outdated && !noNode) control.appendChild(actionButton("갱신", true, false, () => void agent(row.name, "connect")));
+  else if (row.connected) {
+    if (!noNode) {
+      const probing = agentProbing === row.name;
+      const probe = actionButton("점검", false, agentProbing != null, () => void agent(row.name, "probe"));
+      probe.classList.toggle("is-busy", probing); // 점검 중 — 글자 대신 점 세 개(폭 그대로)
+      control.appendChild(probe);
+    }
+    control.appendChild(actionButton("해제", false, agentProbing != null, () => void agent(row.name, "disconnect")));
+  } else control.appendChild(actionButton("연결", true, noNode, () => void agent(row.name, "connect")));
 
-  // 상태는 dot(분류)과 글자로 — 연결됨은 초록, 갱신 필요는 주황 (Figma `Settings / Connect` `633:19096`)
   const line = settingRow(row.label, hint, control);
   const hintEl = line.querySelector<HTMLElement>(".hint");
-  const dot = row.error || !row.connected ? "agent-dot" : row.outdated ? "agent-dot warn" : "agent-dot on";
   if (hintEl) hintEl.prepend(el("span", dot));
   // Windows codex 데몬은 훅마다 콘솔 창을 띄운다(openai/codex#44768) — 알려진 우회를 줄 아래에 둔다
   if (row.name === "codex" && row.installed && agentPlatform === "win32") {
@@ -4426,6 +4475,8 @@ function drawAgents(scroll: HTMLElement): void {
     scroll.appendChild(el("div", "empty-note", "연결 상태를 읽는 중입니다."));
     return;
   }
+  // Node.js 가 없는 동안 늘 보이는 경고 — 누를 때마다 생겼다 사라지는 것이 아니다 (Figma 05 `User / Connect · Node.js 없음` `1079:2477`)
+  if (agentNode === null) scroll.appendChild(alertBox("warn", "Node.js 가 없어요", "연결하려면 Node.js 를 설치한 뒤 다시 확인을 눌러 주세요"));
   for (const row of agentRows) scroll.appendChild(agentRow(row));
   scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
 }
@@ -4670,8 +4721,12 @@ function markHeaderOpen(): void {
   for (const [kind, id] of Object.entries(HEADER_OPEN)) document.getElementById(id)?.classList.toggle("open", dialog?.kind === kind);
 }
 
+// 이번 그리기에서 대화상자 안의 상자가 오류를 이미 보였나 — 그러면 바닥 줄에 또 보이지 않는다
+let noticeInline = false;
+
 function drawDialog(): void {
   markHeaderOpen();
+  noticeInline = false;
   if (dialog && typingSearch(dialogEl)) {
     dialogHeld = true;
     return;
@@ -4708,7 +4763,20 @@ function drawDialog(): void {
   else if (dialog.kind === "trade") drawTradeDialog();
   else drawGuide();
 
-  if (notice) dialogEl.appendChild(alertBox("bad", "", notice));
+  // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 99 `1087:21739`).
+  // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
+  if (notice && !noticeInline) {
+    const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions"); // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다
+    const row = rows[rows.length - 1];
+    if (row) {
+      const err = el("div", "footer-error");
+      err.append(el("i"), el("span", undefined, notice));
+      err.title = notice;
+      // 남는 폭에만 선다 — spacer 가 있으면 그 안(보조 단추 뒤, Figma `Dialog` `footer › spacer › error-notice`), 없으면 줄 끝. 단추 자리는 그대로
+      const spacer = row.querySelector(":scope > .spacer");
+      (spacer ?? row).appendChild(err);
+    } else dialogEl.appendChild(alertBox("bad", "", notice));
+  }
   const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
   if (scroll && keep) scroll.scrollTop = keep;
   restoreSearchFocus();
@@ -4934,11 +5002,26 @@ async function regionDraw(): Promise<void> {
   drawDialog();
 }
 
-async function agent(name: string, action: "connect" | "disconnect" | "check"): Promise<void> {
+async function agent(name: string, action: AgentAction): Promise<void> {
+  // 점검 — 결과는 그 줄의 상태 글자로만 보인다(오류 줄을 끼우지 않는다). 점검 중에는 단추가 점 세 개
+  if (action === "probe") {
+    agentProbing = name;
+    drawDialog();
+  }
   const reply = await window.pokebuddyManage.agents({ name, action });
   agentRows = reply.list;
   agentPlatform = reply.platform;
-  notice = reply.ok ? "" : (REASON[reply.reason] ?? reply.reason);
+  agentNode = reply.node;
+  if (action === "probe") {
+    agentProbing = null;
+    agentFails.delete(name);
+    agentChecks.set(name, { ok: reply.ok, text: reply.reason === "exit" ? `종료 코드 ${reply.detail ?? "?"}` : (PROBE_TEXT[reply.reason] ?? reply.reason), at: Date.now() });
+  } else {
+    agentChecks.delete(name); // 연결·해제·다시 확인 뒤에는 옛 점검 결과를 지운다
+    const verb = action === "connect" ? "연결하지 못했어요" : action === "disconnect" ? "해제하지 못했어요" : "확인하지 못했어요";
+    if (reply.ok) agentFails.delete(name);
+    else agentFails.set(name, `${verb} · ${REASON[reply.reason] ?? reply.reason}`);
+  }
   drawDialog();
 }
 
@@ -4952,6 +5035,7 @@ async function loadAgents(): Promise<void> {
   const reply = await window.pokebuddyManage.agents();
   agentRows = reply.list;
   agentPlatform = reply.platform;
+  agentNode = reply.node;
   if (dialog?.kind === "user" && dialog.tab === "agents") drawDialog();
 }
 
