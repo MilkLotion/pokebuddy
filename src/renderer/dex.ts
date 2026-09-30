@@ -165,7 +165,7 @@ function render(v: DexDeviceView): void {
 
   const records = el("div", "records");
   const state = locked ? "미해금" : `이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
-  // 진화 트리가 있으면 진화 줄 대신 아래 카드로 보인다. 미해금 종은 트리가 없어 진화 줄("해금하면 보여요")을 둔다
+  // 진화 트리가 있으면 진화 줄 대신 아래 카드로 보인다. 미해금 종도 카드다 — 트리가 없는 종만 진화 줄을 둔다
   const rows: (readonly [string, string])[] = [["상태", state], ["입수처", d.methods]];
   if (!v.tree) rows.push(["진화", d.evolution]);
   rows.push(["특수 기믹", d.gimmick]);
@@ -192,13 +192,14 @@ function render(v: DexDeviceView): void {
   sendSize(true);
 }
 
-// 진화 카드 — 기록 칸 아래. 상점 구매 창과 같은 트리를 기기 폭에 맞춰 그린다 (2026-09-30 사용자 결정 "도감상세는 a.", Figma 05 `Dex / Device / Unlocked` `628:13047`)
+// 진화 카드 — 기록 칸 아래. 상점 구매 창과 같은 트리를 기기 폭에 맞춰 그린다 (2026-09-30 사용자 결정 "도감상세는 a.", Figma 05 `Dex / Device / Unlocked` `1091:23559`)
 // 지금 종은 톤 바탕과 굵은 이름. 진화하지 않는 종은 한 줄 안내
 const DEX_RADIAL = { ...RADIAL, width: 314 };
 function evolutionCard(v: DexDeviceView): HTMLElement {
   const card = el("div", "evo-card");
   card.appendChild(el("div", "evo-label", "진화"));
   const tree = v.tree!;
+  // 해금한 종만 이름·그림을 보인다. 미해금 종은 빈 원과 ??? — 진화 조건은 보인다 (2026-09-30 사용자 "해금된것만 보여주고")
   const draw = evoDrawer((slug, cls) => {
     const box = el("span", cls);
     const uri = v.treePortraits[slug];
@@ -210,7 +211,7 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
       box.appendChild(img);
     }
     return box;
-  });
+  }, { lockedName: "???" });
   if (!tree.children.length) card.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));
   else card.appendChild(tree.children.length >= RADIAL_MIN ? draw.evoRadial(tree, DEX_RADIAL) : draw.evoTree(tree));
   return card;

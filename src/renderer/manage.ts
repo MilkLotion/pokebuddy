@@ -170,7 +170,8 @@ type Dialog =
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
   | { kind: "guide" }
-  | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
+  | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare" } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다
+  | { kind: "daycare" } // 돌보미집 — 박스 머리 `돌보미집` 단추
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
@@ -223,7 +224,7 @@ let shopRegionOpen = false;
 // 도감·상점 포켓몬 격자의 쪽 — 한 쪽에 GRID_PAGE 칸. 지방·검색·분류가 바뀌면 첫 쪽으로 (2026-09-29 사용자 결정 "페이지 넘김 추가")
 // 5열 × 3줄 — 기본 창 높이(682)에서 스크롤 없이 들어간다
 const GRID_PAGE = 15;
-// 도감은 박스처럼 한 쪽 30칸(6열 × 5줄) — Figma 99 `Dex / Base · 박스형` `1085:3` (2026-09-30 사용자 결정 "도감페이지도 박스처럼")
+// 도감은 박스처럼 한 쪽 30칸(6열 × 5줄) — Figma 04 템플릿 `Dex Layout` `378:1524` (2026-09-30 사용자 결정 "도감페이지도 박스처럼")
 const DEX_PAGE = 30;
 const pageSizeOf = (where: "dex" | "shop"): number => (where === "dex" ? DEX_PAGE : GRID_PAGE);
 let dexPageNo = 0;
@@ -664,36 +665,77 @@ function drawParty(v: Snapshot): void {
 
 const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`);
 
-function eggCard(egg: EggView): HTMLElement {
-  const card = el("div", "egg");
-  card.appendChild(eggIcon(egg.kind, "shell"));
-  card.appendChild(el("div", undefined, egg.name));
-  const note = el("div", "note", eggNote(egg));
-  note.dataset.liveEgg = egg.id; // 1초 시계가 이 글자만 고친다 (applyLive)
-  card.appendChild(note);
-  if (egg.ready) {
-    const row = el("div", "acts");
-    const openEgg = button("primary", "열기");
-    openEgg.addEventListener("click", () => void openEggAndShow(egg.id));
-    row.appendChild(openEgg);
-    card.appendChild(row);
-  }
-  return card;
+// 박스 머리의 `돌보미집` — 부화할 수 있는 알이 있으면 오른쪽 위 점 (교환 단추의 점과 같은 모양)
+function daycareOpenButton(v: Snapshot): HTMLButtonElement {
+  const b = button("act trade-open daycare-open", "돌보미집");
+  b.dataset.tut = "hatch"; // 부화 튜토리얼이 밝히는 곳
+  const dot = el("span", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  dot.hidden = !v.eggs.list.some((e) => e.ready);
+  b.appendChild(dot);
+  b.addEventListener("click", () => open({ kind: "daycare" }));
+  return b;
 }
 
-// 알 열기 — 끝나면 부화 결과 창을 연다 (docs/specs/game.md "부화 결과 창은 태어난 개체와 들어간 자리를 보여주고 `확인`만 둔다")
-async function openEggAndShow(eggId: string): Promise<void> {
-  if (!(await send("egg.open", eggId))) return;
+// 돌보미집 칸 — 알 그림과 `열기`(준비됨) 또는 남은 시간. 준비된 칸은 톤 바탕 (Figma 05 `Box / Daycare Modal` `1093:23698`)
+function daycareCell(egg: EggView, live: boolean): HTMLElement {
+  const cell = el("div", egg.ready ? "egg ready" : "egg");
+  cell.title = egg.name;
+  cell.appendChild(eggIcon(egg.kind, "shell"));
+  if (egg.ready) {
+    const openEgg = button("primary", "열기");
+    openEgg.disabled = !live;
+    openEgg.addEventListener("click", () => void openEggAndShow(egg.id, "daycare"));
+    cell.appendChild(openEgg);
+  } else {
+    const note = el("div", "note", eggNote(egg));
+    note.dataset.liveEgg = egg.id; // 1초 시계가 이 글자만 고친다 (applyLive)
+    cell.appendChild(note);
+  }
+  return cell;
+}
+
+// 돌보미집 모달 — 제목·부제(알 수, 준비 수)·✕, 3×2 칸. live 가 아니면 부화 결과 창 뒤에 깔린 모습이다(누를 수 없다)
+function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
+  const v = view;
+  if (!v) {
+    if (live) close();
+    return;
+  }
+  const ready = v.eggs.list.filter((e) => e.ready).length;
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.append(el("h2", undefined, "돌보미집"), el("div", "sub", `알 ${v.eggs.used} / ${v.eggs.size}${ready ? ` · 부화 준비 ${ready}` : ""}`));
+  top.appendChild(titles);
+  if (live) {
+    const x = button("dialog-close", "✕");
+    x.setAttribute("aria-label", "닫기");
+    x.addEventListener("click", close);
+    top.appendChild(x);
+  }
+  const grid = el("div", "daycare-grid");
+  for (let i = 0; i < v.eggs.size; i++) {
+    const egg = v.eggs.list[i];
+    grid.appendChild(egg ? daycareCell(egg, live) : el("div", "egg empty"));
+  }
+  root.append(top, grid);
+}
+
+// 알 열기 — 끝나면 부화 결과 창을 연다. 돌보미집 모달에서 열면 그 모달 위에 겹친다 (2026-09-30 사용자 "열기를 누르면 모달열린채로 부화결과창")
+async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
+  if (!(await send("egg.open", eggId, {}, { keepOpen: true }))) return;
   const r = lastReply;
   if (!r) return;
+  const at = over ? { over } : {};
   const egg = r.egg as { id?: unknown } | undefined;
-  if (egg && typeof egg.id === "string") open({ kind: "hatched", eggId: egg.id });
-  else if (typeof r.petId === "string") open({ kind: "hatched", petId: r.petId, ...(typeof r.slotIndex === "number" ? { slotIndex: r.slotIndex } : {}) });
+  if (egg && typeof egg.id === "string") open({ kind: "hatched", eggId: egg.id, ...at });
+  else if (typeof r.petId === "string") open({ kind: "hatched", petId: r.petId, ...(typeof r.slotIndex === "number" ? { slotIndex: r.slotIndex } : {}), ...at });
 }
 
-// 부화 결과 — Figma `Box / Hatch Result` `389:9488`. 태어난 개체는 종·타입·레벨·성격과 들어간 자리.
-// 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/game.md 단일 포켓몬 알)
-function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
+// 부화 결과 — Figma 05 `Box / Daycare Modal · Hatch Result` `1096:22424`. 제목, 초상·이름·타입·레벨, `확인` 만 둔 작은 창.
+// 들어간 자리 안내 줄은 뺐다 — 파티·박스 화면에서 본다 (2026-09-30 사용자 "info 는 삭제해서 부화결과창 ui를 작게")
+// 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/game.md 단일 포켓몬 알). 이때는 알이 어디 갔는지 안내가 필요해 두 줄을 남긴다
+function drawHatched(petId?: string, eggId?: string, over?: "daycare"): void {
   const card = el("div", "nat-card");
   const info = el("div", "info-box");
   if (eggId) {
@@ -712,12 +754,33 @@ function drawHatched(petId?: string, slotIndex?: number, eggId?: string): void {
     pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
-    if (slotIndex != null) info.append(el("div", undefined, `파티 ${slotIndex + 1}번 칸에 들어갔어요.`));
-    else info.append(el("div", undefined, "파티가 가득 차 박스에 보관했어요."));
   }
-  const row = el("div", "compare");
-  row.appendChild(card);
-  dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("확인", true, false, close))); // Figma 처럼 오른쪽
+  const done = actionButton("확인", true, false, () => (over ? open({ kind: "daycare" }) : close()));
+  dialogEl.append(card);
+  if (info.childElementCount) dialogEl.appendChild(info);
+  dialogEl.appendChild(actions(done));
+}
+
+// 모달 닫기 — 돌보미집 위에 겹친 부화 결과는 닫으면 돌보미집으로 돌아간다(✕·Esc·바깥 누르기 모두)
+function dismiss(): void {
+  if (dialog?.kind === "hatched" && dialog.over) open({ kind: dialog.over });
+  else close();
+}
+
+// 겹친 모달의 뒤 — 돌보미집 모달 모습과 한 겹 더 어두운 막 (Figma 05 `1096:22424`)
+const underEl = el("div", "dialog daycare under");
+const underScrimEl = el("div", "scrim-under");
+underEl.hidden = true;
+underScrimEl.hidden = true;
+scrimEl.insertBefore(underScrimEl, dialogEl);
+scrimEl.insertBefore(underEl, underScrimEl);
+underScrimEl.addEventListener("click", dismiss);
+function drawUnder(): void {
+  const stacked = dialog?.kind === "hatched" && dialog.over === "daycare";
+  underEl.hidden = !stacked;
+  underScrimEl.hidden = !stacked;
+  underEl.replaceChildren();
+  if (stacked) drawDaycare(underEl, false);
 }
 
 // ── 검색 ───────────────────────────────────────────────────────────────────────
@@ -994,19 +1057,11 @@ function drawForm(petId: string, to: string): void {
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
   const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`);
-  top.appendChild(tradeOpenButton()); // 친구 교환 — 모달로 연다 (Figma 05 `Box / Trade Button` `1016:1891`)
+  // 머리 오른쪽 — 돌보미집·교환 단추. 돌보미집은 화면에 두지 않고 모달로 연다 (2026-09-30 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665`)
+  const acts = el("div", "head-acts");
+  acts.append(daycareOpenButton(v), tradeOpenButton()); // 친구 교환 — 모달로 연다 (Figma 04 템플릿 `Box Layout` `340:3665` 머리)
+  top.appendChild(acts);
   bodyEl.appendChild(top);
-
-  const daycare = el("div", "daycare");
-  daycare.dataset.tut = "hatch"; // 부화 튜토리얼이 밝히는 곳
-  const title = el("div", "title");
-  title.append(el("strong", undefined, "돌보미집"), el("span", undefined, `알 ${v.eggs.used} / ${v.eggs.size}`));
-  daycare.appendChild(title);
-  const eggs = el("div", "eggs");
-  if (v.eggs.list.length) for (const egg of v.eggs.list) eggs.appendChild(eggCard(egg));
-  else eggs.appendChild(el("div", "note", "알이 없습니다."));
-  daycare.appendChild(eggs);
-  bodyEl.appendChild(daycare);
 
   if (boxPage >= v.boxes.length) boxPage = 0;
   const box = v.boxes[boxPage];
@@ -1252,7 +1307,7 @@ document.addEventListener("click", () => {
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
-// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 좌상단 점 하나 (Figma 99 `Dex / Base · 박스형` `1085:3`)
+// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 좌상단 점 하나 (Figma 04 템플릿 `Dex Layout` `378:1524`)
 function dexCell(row: DexEntry): HTMLElement {
   const cell = button(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
   cell.dataset.slug = row.slug;
@@ -2154,7 +2209,7 @@ function syncTradeDot(): void {
   if (dot) dot.hidden = !tradeActive(trade);
 }
 
-// 박스 머리 오른쪽의 `교환` 단추 — Figma 05 `Box / Trade Button` `1016:1891`
+// 박스 머리 오른쪽의 `교환` 단추 — Figma 04 템플릿 `Box Layout` `340:3665` 머리
 function tradeOpenButton(): HTMLButtonElement {
   const b = button("act trade-open", "교환");
   const dot = el("span", "dot");
@@ -3921,7 +3976,8 @@ function drawBuy(productId: string, qty: number): void {
     foot.appendChild(
       actionButton("돌보미집 보기", false, false, () => {
         setTab("box");
-        close();
+        draw();
+        open({ kind: "daycare" }); // 돌보미집은 박스 머리 단추로 여는 모달이다 (2026-09-30)
       }),
     );
   }
@@ -4692,7 +4748,8 @@ const SHAPE: Record<Dialog["kind"], string> = {
   settings: "dialog settings",
   user: "dialog settings",
   guide: "dialog tall",
-  hatched: "dialog",
+  hatched: "dialog hatched",
+  daycare: "dialog daycare",
   form: "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
@@ -4744,6 +4801,7 @@ function drawDialog(): void {
   dialogScrollKey = key;
   dialogEl.className = SHAPE[dialog.kind];
   dialogEl.replaceChildren();
+  drawUnder();
 
   if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to, dialog.itemId);
   else if (dialog.kind === "evo-target") drawEvoTarget(dialog.itemId);
@@ -4754,7 +4812,8 @@ function drawDialog(): void {
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "user") drawUser(dialog.tab);
-  else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.slotIndex, dialog.eggId);
+  else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over);
+  else if (dialog.kind === "daycare") drawDaycare();
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
@@ -5158,19 +5217,18 @@ need("open-settings", HTMLButtonElement).addEventListener("click", () => open({ 
 need("open-user", HTMLButtonElement).addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
 scrimEl.addEventListener("click", (e) => {
-  if (e.target === scrimEl) close();
+  if (e.target === scrimEl) dismiss();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && dialog) close();
+  if (e.key === "Escape" && dialog) dismiss();
 });
 
 // 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")
 function goTo(route: ManageRoute): void {
   if (route.to === "daycare") {
-    close();
     setTab("box");
     draw();
-    bodyEl.querySelector(".daycare")?.scrollIntoView({ block: "start" });
+    open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
     if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 우클릭 상세 보기·진화 배너
   } else if (route.to === "account") {

@@ -30,7 +30,8 @@ function el(tag: string, cls?: string, text?: string): HTMLElement {
 // 초상 하나를 그리는 방법 — 창마다 다르다(관리 창은 그림 목록, 도감 기기 창은 메인이 보낸 data URI)
 export type PortraitFn = (slug: string, cls: string) => HTMLElement;
 
-export function evoDrawer(portrait: PortraitFn) {
+// lockedName — 미해금 종의 이름 대신 쓸 글자. 도감 기기 창은 "???" (2026-09-30 사용자 "해금안되어있으면 ??? 로"). 없으면 이름 그대로
+export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = {}) {
   // 화살표 — 오른쪽을 가리킨다. 폭은 부르는 쪽이 정한다
   function evoArrow(width: number): SVGSVGElement {
     const svg = document.createElementNS(SVG_NS, "svg");
@@ -50,7 +51,8 @@ export function evoDrawer(portrait: PortraitFn) {
 
   function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
     const box = el("div", node.current ? "evo-node current" : "evo-node");
-    box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", node.name));
+    const name = node.locked && opts.lockedName ? opts.lockedName : node.name;
+    box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", name));
     if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));
     return box;
   }

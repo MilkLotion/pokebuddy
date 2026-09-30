@@ -35,7 +35,7 @@ Figma 원본: [0.2 · 와이어프레임(구 07)](https://www.figma.com/design/M
 | C-05 | 수치 막대 | `Friendship`, `Progress / Track`, `Progress / Fill` | 수정 |
 | C-06 | 박스 칸 | 없음 | 신규 |
 | C-07 | 박스 넘김 줄 | 없음 | 신규 |
-| C-08 | 알 칸과 돌보미집 띠 | 없음 | 신규 |
+| C-08 | 알 칸과 돌보미집 모달 | 없음 | 신규 |
 | C-09 | 가방 아이템 카드 | 없음 | 신규 |
 | C-10 | 상점 상품 카드 | 없음 | 신규 |
 | C-11 | 도감 종 카드 | 없음 | 신규 |
@@ -90,7 +90,7 @@ Figma: `Header Icon Button` `295:3083`. 상태는 `Default`·`Hover`·`Open`·`F
 ### C-03 메인 탭
 
 역할: 파티 / 박스 / 도감 / 상점 / 가방 사이를 이동한다.
-교환은 탭이 아니다. 박스 탭 머리 오른쪽의 `교환` 보조 단추가 교환 모달을 연다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게."). 교환이 진행 중이면 단추 오른쪽 위에 dot 를 둔다(`Status Dot` 관례, 컬러 테두리 없음). 구현은 `src/renderer/manage.ts` `tradeOpenButton`·`syncTradeDot`, `manage.html` `.trade-open` 이다. Figma 05 `04 박스` `Box / Trade Button` `1016:1891`. 탭 줄 `Primary Navigation` `208:542` 의 모든 변형에 교환 탭이 없다.
+교환은 탭이 아니다. 박스 탭 머리 오른쪽의 `교환` 보조 단추(`돌보미집` 단추 옆)가 교환 모달을 연다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게."). 교환이 진행 중이면 단추 오른쪽 위에 dot 를 둔다(`Status Dot` 관례, 컬러 테두리 없음). 구현은 `src/renderer/manage.ts` `tradeOpenButton`·`syncTradeDot`, `manage.html` `.trade-open` 이다. Figma 04 템플릿 `Box Layout` `340:3665` 머리의 `actions`(돌보미집·교환). 옛 `Box / Trade Button` `1016:1891` 은 템플릿에 합쳐 지웠다(2026-09-30). 탭 줄 `Primary Navigation` `208:542` 의 모든 변형에 교환 탭이 없다.
 상태: 탭별 선택(옅은 배경과 밑줄), 기본. 업적·설정·사용자 모달이 열려도 탭 선택은 그대로다.
 판정: `Primary Navigation`의 `Active` 변형을 `Party|Box|Pokédex|Shop|Bag`로 바꾼다. `Settings`를 뺀다. 박스 아이콘이 새로 필요하다. 선택 밑줄은 내비게이션 `114:967`의 규칙을 따른다.
 구현: 탭은 72×32 알약(반지름 10)에 16px 아이콘과 글자다. 아이콘과 글자는 탭 가운데에 둔다(좌우 여백이 같다. 두 글자면 12). 고른 탭은 옅은 배경, 굵은 글자, 가운데 60×2 밑줄(x 6, y 31.5)이다. `src/renderer/manage.ts` `TAB_ICON`·`drawTabs`, `manage.html` `nav .tabs` 다(2026-09-29 코드를 Figma 에 맞춤. 2026-09-30 좌우 정렬 수정, Figma `Navigation Item` `114:137`(`State=Selected` `114:129`)·탭 줄 `Primary Navigation` `208:542`, 사용자 요청 "실제메뉴에서는 좌우정렬 안맞음").
@@ -138,13 +138,13 @@ Figma: `Box Slot` `333:231`. `State=Pokemon|Empty|Selected|InParty|Busy`와 `Siz
 목록 폭: 정렬 목록과 도감 지방 목록은 누르는 칸과 폭이 같다. 누르는 칸은 가장 긴 선택지가 들어가는 고정 폭이다. 정렬 124, 도감 지방 112다. 목록 글자는 앱 글꼴(Galmuri)을 쓴다.
 Figma: `Box Toolbar` `337:284`. 버튼과 입력칸은 높이 32다. 정렬 칸은 124다. `Show Sort`로 정렬 칸을 끈다. 도감 지방 칸은 `Dex Layout` `378:1524` 의 `region`(112)이다. 열린 목록은 05 `Box / Sort Open` `633:17372`·`Dex / Region Open` `659:16723`. `검색` 단추는 `Box Toolbar` 의 `search-go` `967:27824`, `Dex Layout` 의 `search-go` `965:21148` 이다(2026-09-30).
 
-### C-08 알 칸과 돌보미집 띠
+### C-08 알 칸과 돌보미집 모달
 
-역할: 박스 메뉴 안에서 알 6칸의 상태를 한 줄로 보여준다.
-알 칸 상태: `준비 중`(남은 시간 `3:12 남음`), `부화 가능`(`열기` 버튼), `빈 칸`(옅은 회색 면).
-띠 내용: `돌보미집`, `알 N / 6`, 알 칸 6개.
+역할: 박스 머리의 `돌보미집` 단추로 여는 모달에서 알 6칸의 상태를 보여준다(2026-09-30, 띠를 모달로 바꿨다).
+알 칸 상태: `준비 중`(흰 칸, 남은 시간), `부화 가능`(톤 바탕, `열기` 버튼), `빈 칸`(옅은 회색 면).
+모달 내용: 제목 `돌보미집`, 부제 `알 N / 6 · 부화 준비 N`, ✕, 알 칸 3 × 2. 폭 322. `열기` 뒤의 부화 결과 창은 이 모달 위에 겹친다.
 규칙: 알 칸은 준비 진행과 남은 시간을 보여준다. 준비가 끝나도 `열기`를 눌러야 부화한다. 빈 칸은 누를 수 없다. 알 돌봄 조작은 없다(2026-09-28 삭제).
-Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), `Daycare Strip` `334:239`. `Box Layout` `340:3665`의 알 돌봄 패널은 2026-09-28 삭제했다.
+Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), 모달 `Box / Daycare Modal` `1093:23698`. 옛 `Daycare Strip` `334:239` 은 화면에서 쓰지 않는다. `Box Layout` `340:3665`의 알 돌봄 패널은 2026-09-28 삭제했다.
 
 ### C-09 가방 아이템 카드
 
