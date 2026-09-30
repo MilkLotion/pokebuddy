@@ -29,7 +29,7 @@ function seed(): SaveV3 {
   assert.equal(d.name, "파이리");
   assert.equal(d.state, "obtained");
   assert.deepStrictEqual(d.types, ["불꽃"]);
-  assert.equal(d.methods, "첫 선택 후보 · 랜덤알 · 상점 구매 200P", "첫 선택 후보이고 해금했으니 랜덤알에서 나오고 상점에서도 판다");
+  assert.equal(d.methods, "첫 선택 후보 · 랜덤알", "첫 선택 후보이고 해금했으니 랜덤알에서 나온다. 상점 줄은 잠시 숨김");
   assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
@@ -74,7 +74,7 @@ function seed(): SaveV3 {
   assert.equal(d.state, "locked");
   assert.equal(d.name, "???");
   assert.deepStrictEqual(d.types, []);
-  assert.equal(d.methods, "태고의돌 · 상점 구매 200P(해금 후)", "화석은 랜덤알이 붙지 않는다. 상점은 해금 뒤 판다");
+  assert.equal(d.methods, "태고의돌", "화석은 랜덤알이 붙지 않는다. 상점 줄은 잠시 숨김");
   assert.equal(d.evolution, "???");
   process.stdout.write("(4) 미해금 · 태고의돌  ok\n");
 }
@@ -83,8 +83,8 @@ function seed(): SaveV3 {
 {
   const s = seed();
   s.dex.unlocked.push("omanyte", "aerodactyl");
-  assert.equal(dexDetail(s, "omanyte")?.methods, "태고의돌 · 상점 구매 200P");
-  assert.equal(dexDetail(s, "aerodactyl")?.methods, "태고의돌 · 상점 구매 400P", "3등급 400P");
+  assert.equal(dexDetail(s, "omanyte")?.methods, "태고의돌");
+  assert.equal(dexDetail(s, "aerodactyl")?.methods, "태고의돌", "상점 줄은 잠시 숨김");
   process.stdout.write("(4b) 해금한 화석 · 태고의돌과 상점  ok\n");
 }
 
@@ -112,7 +112,7 @@ function seed(): SaveV3 {
 
 // (6b) 미해금 랜덤알 후보 — 랜덤알과 상점 줄에 "해금 후"를 붙여 보인다
 {
-  assert.equal(dexDetail(seed(), "abra")?.methods, "랜덤알(해금 후) · 상점 구매 200P(해금 후)");
+  assert.equal(dexDetail(seed(), "abra")?.methods, "랜덤알(해금 후)");
   process.stdout.write("(6b) 미해금 랜덤알 후보  ok\n");
 }
 

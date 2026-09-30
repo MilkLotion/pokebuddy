@@ -23,6 +23,9 @@ import { nameOfItem } from "./lists.js";
 import { josa } from "../shared/josa.js";
 import { defs as achievementDefs, rewardPokemon } from "../achievement/core.js";
 
+// 도감 상세의 상점 구매 줄 — 상점 포켓몬 탭을 숨긴 동안 끈다 (docs/specs/game.md "상점 포켓몬")
+const SHOP_SPECIES_LINE = false;
+
 // 진화 한 단계의 문구 — "Lv.16에서 리자드", "불꽃의돌로 부스터", "밤에 친밀도 65로 블래키"
 // 조사는 앞 낱말 받침에 맞춘다 (src/shared/josa.ts)
 export function stepText(step: EvoStep, opts?: DexOptions): string {
@@ -75,7 +78,8 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   const random = eggName("random", opts) ?? "랜덤알";
   if (inRandomEgg(slug, opts)) methods.push(unlocked ? random : `${random}(해금 후)`);
   for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
-  const price = speciesPrice(slug, opts);
+  // 상점 구매 줄은 잠시 숨긴다 — 상점의 포켓몬 탭을 숨긴 동안 (2026-09-30 사용자 결정 "그 줄도 숨기자"). 탭을 다시 열면 SHOP_SPECIES_LINE 을 true 로
+  const price = SHOP_SPECIES_LINE ? speciesPrice(slug, opts) : null;
   if (price != null) methods.push(unlocked ? `상점 구매 ${price}P` : `상점 구매 ${price}P(해금 후)`);
   for (const [, def] of achievementDefs(opts)) if (rewardPokemon(def) === slug) methods.push(`업적 보상(${def.ko})`);
 

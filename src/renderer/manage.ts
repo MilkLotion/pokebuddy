@@ -61,7 +61,7 @@ const DEBUFF: Record<string, { label: string; tone: "warning" | "danger"; note: 
 // 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
 const SHOP_TABS = [
   { id: "egg", label: "알" },
-  { id: "pokemon", label: "포켓몬" },
+  // 포켓몬 탭은 잠시 숨긴다 (2026-09-30 사용자 결정 "상점의 포켓몬 탭을 지금은 없애놔"). 다시 열려면 { id: "pokemon", label: "포켓몬" } 를 이 자리에 되돌린다
   { id: "tool", label: "도구" },
   { id: "evolution", label: "진화" },
   { id: "slot", label: "파티 칸" },
