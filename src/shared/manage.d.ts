@@ -570,12 +570,11 @@ export interface BannerView {
 }
 
 // banner:show 는 메인 → 렌더러, 나머지는 렌더러 → 메인
-export type BannerChannel = "banner:show" | "banner:go" | "banner:hover" | "banner:close";
+export type BannerChannel = "banner:show" | "banner:go" | "banner:close";
 
 export interface BannerBridge {
   onShow: (cb: (banner: BannerView) => void) => void;
   go: (key: string) => void; // `바로가기` 를 눌렀다
-  hover: (on: boolean) => void; // 커서가 배너 위에 있는 동안 사라지지 않는다
   close: (key: string) => void; // 제목 줄 `✕` 를 눌렀다 — 그 배너를 닫고 다음 배너로 간다
 }
 

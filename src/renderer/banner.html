@@ -159,11 +159,12 @@
         -webkit-box-orient: vertical;
         word-break: keep-all;
       }
-      /* 닫기 — 16px 선 아이콘, 흐린 색 */
+      /* 닫기 — 아이콘 16px, 누르는 범위 20px(음수 여백으로 자리는 16 그대로) — 2026-09-30 사용자 요청 */
       .close {
         flex: none;
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
+        margin: -2px;
         padding: 0;
         border: 0;
         border-radius: 4px;

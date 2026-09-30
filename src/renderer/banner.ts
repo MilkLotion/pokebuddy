@@ -60,15 +60,15 @@ api.onShow((view: BannerView) => {
   nameEl.classList.toggle("wrap", view.kind === "notice" || view.kind === "find");
   goEl.textContent = view.go;
   bannerEl.hidden = false;
-  // 앞 배너 때 올려 둔 커서가 그대로면 mouseenter 가 다시 오지 않는다. 새 배너도 멈춰 둔다
-  if (bannerEl.matches(":hover")) api.hover(true);
 });
 
 goEl.addEventListener("click", () => {
   if (key) api.go(key);
 });
-closeEl.addEventListener("click", () => {
+// 닫기는 그 알림만 닫는다 — 다른 동작으로 번지지 않게 (2026-09-30 사용자 요청)
+closeEl.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
   if (key) api.close(key);
 });
-bannerEl.addEventListener("mouseenter", () => api.hover(true));
-bannerEl.addEventListener("mouseleave", () => api.hover(false));
+closeEl.addEventListener("pointerdown", (e) => e.stopPropagation());

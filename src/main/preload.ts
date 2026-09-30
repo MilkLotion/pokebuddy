@@ -162,18 +162,16 @@ const manage: ManageBridge = {
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);
 
-// 알림 배너 창 — 배너 하나를 받고, `바로가기`·`✕` 닫기와 커서 올림을 알린다
+// 알림 배너 창 — 배너 하나를 받고, `바로가기`·`✕` 닫기를 알린다
 const BANNER = {
   show: "banner:show",
   go: "banner:go",
-  hover: "banner:hover",
   close: "banner:close",
 } satisfies Record<string, BannerChannel>;
 
 const banner: BannerBridge = {
   onShow: (cb) => ipcRenderer.on(BANNER.show, (_e, view: BannerView) => cb(view)),
   go: (key) => ipcRenderer.send(BANNER.go, key),
-  hover: (on) => ipcRenderer.send(BANNER.hover, on),
   close: (key) => ipcRenderer.send(BANNER.close, key),
 };
 
