@@ -108,7 +108,11 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     playReady: pet.playCooldownMs <= 0,
     playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
-    buffs: pet.buffs.map((b) => ({ kind: b.kind, remainMin: min(b.remainMs) })),
+    // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")
+    buffs: BUFF_ORDER.flatMap((kind) => {
+      const hit = pet.buffs.find((b) => b.kind === kind && b.remainMs > 0);
+      return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: min(hit.remainMs) }] : [];
+    }),
     buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(pet),

@@ -16,6 +16,8 @@ import { send } from "../save/mailbox";
 import { candidates, dayPartOf } from "../dex/evolve";
 import { appearanceOf } from "../dex/appearance";
 import { unlockRules } from "../dex/unlocks";
+import { itemOf } from "../bag/use";
+import { argsOf } from "../tx/bridge";
 import type { SaveV3 } from "../shared/save-v3";
 import type { TradeActionResult, TradeSession } from "../trade/session";
 
@@ -219,9 +221,23 @@ export function createCommands(ctx: CommandContext): Commands {
   // (worklog/records/response-latency/record.md)
   for (const cmd of SAVE_COMMANDS) dispatcher.register(cmd, async (c) => {
     const result = await runSave(c);
-    if (result.ok) void refreshAfter();
+    if (result.ok) {
+      if (cmd === "bag.use") bagReaction(c);
+      void refreshAfter();
+    }
     return result;
   });
+
+  // 가방 도구를 쓴 뒤 무대 반응 — 먹이는 메뉴의 밥 주기, 장난감은 놀아주기와 같은 반응(울음소리 포함)이다.
+  // 무대에 없는 개체(박스·숨김)는 stage.care 가 그냥 넘어간다. 그 밖의 도구는 새 반응이 없다(약은 그림이 바뀐다).
+  // 파티클은 보류다 (docs/specs/game.md, 2026-09-30 사용자 결정 추천안 "파티클은 뒤로")
+  function bagReaction(c: Command): void {
+    const { petId, itemId } = argsOf(c); // 실행기와 같은 풀이 — 도구는 target, 개체는 args.petId
+    if (typeof petId !== "string" || !petId || typeof itemId !== "string" || !itemId) return;
+    const effect = itemOf(itemId)?.effect;
+    if (effect === "fullness" || effect === "fullness-full-buff") ctx.stage.care?.(petId, "feed");
+    else if (effect === "play-buff") ctx.stage.care?.(petId, "play");
+  }
 
 
   // 친구 교환 — 서버를 타므로 결과를 기다려 교환 보기를 돌려준다. writer 만 교환 세션을 가진다.

@@ -8,7 +8,8 @@ export type ViewSlotState = "pokemon" | "empty" | "locked";
 
 export interface ViewBuff {
   kind: string;
-  remainMin: number;
+  name: string; // 화면 이름 — 든든함 · 신남 · 들뜸
+  remainMin: number; // 남은 분(반올림). 시간으로만 바뀌는 값이라 1초 시계가 표시만 고친다
 }
 
 // 진화 후보 하나 — 화면이 그대로 보인다. 낮·밤은 스냅샷을 만든 시각으로 정했다
@@ -46,7 +47,7 @@ export interface PetView {
   playReady: boolean;
   playStreak: number;
   longPlay: boolean; // 신남 버프가 켜져 있다
-  buffs: ViewBuff[];
+  buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서
   buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 · 들뜸 순서 (2026-09-29 사용자 결정)
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)

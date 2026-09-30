@@ -39,12 +39,21 @@ const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통",
 // 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
 const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
 
+// 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림).
+// 관리 창(src/renderer/manage.ts buffBadge)과 같은 규칙이다 — 고칠 때 함께 고친다
+const buffBadge = (b: PetDeviceView["pet"]["buffs"][number]): string =>
+  `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
+
 // 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
   const tone = DEBUFF_TONE[pet.zone];
   if (tone) list.push(el("span", `badge ${tone}`, ZONE_WORD[pet.zone] ?? pet.zone));
-  for (const name of pet.buffNames ?? []) list.push(el("span", "badge success", name));
+  for (const buff of pet.buffs ?? []) {
+    const badge = el("span", "badge success", buffBadge(buff));
+    badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)
+    list.push(badge);
+  }
   if (!list.length) return null;
   const box = el("div", "status");
   box.append(...list);
@@ -276,6 +285,10 @@ function applyLive(v: PetDeviceView): void {
   }
   const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
   if (feed) feed.textContent = feedText(pet);
+  for (const node of device.querySelectorAll<HTMLElement>("[data-live-buff]")) {
+    const buff = pet.buffs.find((b) => b.kind === node.dataset.liveBuff);
+    if (buff && node.textContent !== buffBadge(buff)) node.textContent = buffBadge(buff);
+  }
   lastView = v;
 }
 

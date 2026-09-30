@@ -472,12 +472,15 @@ async function stageRuntimeTests(): Promise<void> {
   const seed = emptyV3(T0);
   begin(seed, "eevee", T0, () => 0);
   seed.pets[0]!.fullness = 40;
+  seed.bag.toy = 1; // 가방 도구 사용의 무대 반응 확인용 (아래 bag.use)
+  seed.bag["rare-candy"] = 1;
   store.write(commandPaths.save, seed);
   const game = createGame({ file: commandPaths.save, rand: () => 0 });
   const source = createSaveParty({ game, paths: commandPaths });
   let animations = 0;
+  let lastCare = "";
   const commands = createCommands({ mailboxDir: commandPaths.mailbox, party: source, game,
-    stage: { poke: () => true, care: () => void animations++, petIds: () => ["p1"], size: () => ({ w: 800, h: 600 }), visible: () => true },
+    stage: { poke: () => true, care: (_id, action) => { animations++; lastCare = action; }, petIds: () => ["p1"], size: () => ({ w: 800, h: 600 }), visible: () => true },
     settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} }, quit() {},
   });
   try {
@@ -499,6 +502,12 @@ async function stageRuntimeTests(): Promise<void> {
     eq((await commands.click("p1")).reason, "cooldown", "쿨타임의 클릭은 놀아주지 않는다");
     eq(animations, 2, "쿨타임이면 놀이 연출이 없다");
 
+    // 가방 도구 — 장난감은 놀아주기와 같은 반응, 그 밖의 도구(이상한사탕)는 새 반응이 없다 (docs/specs/game.md "가방 도구 사용 결과")
+    ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "toy", args: { petId: "p1" }, from: "menu" })).ok, "쿨타임이어도 장난감은 쓴다");
+    eq([animations, lastCare], [3, "play"], "장난감은 놀아주기 연출");
+    ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" }, from: "menu" })).ok, "이상한사탕 사용");
+    eq(animations, 3, "이상한사탕은 무대 연출이 없다");
+
     // 모습 선택은 제거된 기능이다
     eq((await commands.dispatcher.dispatch({ cmd: "pet.look", target: "p1", args: { look: "eevee" }, from: "cli" })).reason, "removed", "pet.look 은 제거됐다고 답한다");
 
@@ -509,7 +518,7 @@ async function stageRuntimeTests(): Promise<void> {
     // 놀아주기는 위의 클릭으로 쿨타임이다. 규칙에 걸리지 않는 명령으로 저장 실패만 본다
     const failed = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "sound", args: { value: false }, from: "menu" });
     ok(!failed.ok, "저장에 닿지 못하면 성공으로 응답하지 않음");
-    eq(animations, 2, "저장 실패 시 연출하지 않음");
+    eq(animations, 3, "저장 실패 시 연출하지 않음");
     const moved = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "p1", args: { home: { dx: -123, dy: -45 } }, from: "cli" });
     ok(!moved.ok, "위치 저장 실패를 성공으로 응답하지 않음");
     eq(source.save(), old, "저장 실패는 메모리 상태를 바꾸지 않는다");

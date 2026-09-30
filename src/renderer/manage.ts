@@ -281,6 +281,11 @@ function waitWord(sec: number): string {
   return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
+// 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림). 파티 칸 오른쪽 위 한 줄 폭에 맞춘 짧은 꼴이다.
+// 기기 창(src/renderer/pet.ts buffBadge)과 같은 규칙 (2026-09-30 사용자 결정 "추천대로 진행해")
+const buffBadge = (b: PetView["buffs"][number]): string =>
+  `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
+
 const button = (cls: string, text?: string): HTMLButtonElement => {
   const b = el("button", cls || undefined, text);
   b.type = "button";
@@ -555,7 +560,11 @@ function petCard(pet: PetView): HTMLElement {
     badge.title = debuff.note;
     badges.push(badge);
   }
-  for (const name of pet.buffNames ?? []) badges.push(el("span", "debuff success", name));
+  for (const buff of pet.buffs ?? []) {
+    const badge = el("span", "debuff success", buffBadge(buff));
+    badge.dataset.liveBuff = `${pet.id}|${buff.kind}`; // 남은 분은 1초 시계가 고친다 (applyLive)
+    badges.push(badge);
+  }
   if (badges.length) {
     const box = el("div", "debuffs");
     box.append(...badges);
@@ -1600,6 +1609,8 @@ let bagPick: string | null = null; // 사용 패널에 연 도구
 let bagScope: "party" | "box" = "party";
 let bagTarget: string | null = null;
 let bagQty = 1;
+// 방금 쓴 결과 한 줄 — 성공 톤 알림으로 판에 둔다. 도구·대상·범위·갈래·분류·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
+let bagResult = "";
 // 판 머리의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다 (2026-09-30 사용자 결정, Figma 05 `Bag / Sell` `1006:20684`)
 let bagMode: "use" | "sell" = "use";
 let sellQty = 1;
@@ -1632,6 +1643,7 @@ function bagCard(item: BagItemView): HTMLElement {
     bagQty = 1;
     sellQty = 1;
     notice = "";
+    bagResult = "";
     draw();
   });
   return card;
@@ -1647,6 +1659,7 @@ function drawBag(v: Snapshot): void {
   bodyEl.appendChild(
     chips(BAG_TABS, bagFilter, (id) => {
       bagFilter = id;
+      bagResult = "";
       draw();
     }),
   );
@@ -1660,6 +1673,7 @@ function drawBag(v: Snapshot): void {
   const picked = v.bag.find((i) => i.id === bagPick);
   if (!picked) {
     bagPick = null;
+    if (bagResult) bodyEl.appendChild(alertBox("ok", "", bagResult)); // 다 써서 판이 닫혔다 — 결과는 목록 아래에 남긴다
     return;
   }
   bodyEl.appendChild(bagPanel(v, picked));
@@ -1726,6 +1740,46 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
   }
 }
 
+// 쓴 뒤 결과 한 줄 — 쓰기 전 값(before)과 새 스냅샷 값(after)을 견준다.
+// 진화용 도구·성격민트는 따로 창 흐름이 있어 여기 오지 않는다(민트는 바꾼 뒤 개체 상세로 간다)
+function bagResultText(item: BagItemView, before: PetView, after: PetView | null): string {
+  const name = before.name;
+  const used = `${name}에게 ${item.name}${josa(item.name, "을/를")} 썼어요`;
+  if (!after) return used;
+  const buffWord = (kind: string): string => {
+    const hit = after.buffs.find((b) => b.kind === kind);
+    return hit ? ` · ${hit.name} ${waitWord(hit.remainMin * 60)}` : "";
+  };
+  const fullness = `${name} 만복도 ${Math.round(before.fullness)} → ${Math.round(after.fullness)}`;
+  switch (item.effect) {
+    case "exp":
+    case "level":
+      return after.level !== before.level
+        ? `${name} Lv.${before.level} → Lv.${after.level}`
+        : `${name} 경험치 +${Math.max(0, after.exp - before.exp).toLocaleString("ko-KR")}`;
+    case "fullness":
+      return fullness;
+    case "fullness-full-buff":
+      return `${fullness}${buffWord("premium-food")}`;
+    case "play-buff":
+      return `${name}에게 ${item.name}${josa(item.name, "을/를")} 줬어요${buffWord("long-play")}`;
+    case "shiny-on":
+    case "shiny-off":
+      return `${name}의 모습이 바뀌었어요`;
+    default:
+      return used;
+  }
+}
+
+// 이미 걸린 버프를 다시 걸 때 — 남은 시간을 기본 지속시간으로 바꾼다. 더하지 않는다 (src/bag/use.ts setBuff).
+// 쓰기는 막지 않는다 (2026-09-30 사용자 결정 "신남일때, 쓰면 시간갱신으로"). 박스 개체는 버프 시간이 멈춰 있다는 것도 적는다
+function buffRefresh(pet: PetView, kind: string, full: string): string[] {
+  const hit = pet.buffs.find((b) => b.kind === kind);
+  const lines = hit ? [`이미 ${hit.name} · 남은 ${waitWord(hit.remainMin * 60)} → ${full}${toParticle(full)} 갱신`] : [];
+  if (!partyPets().some((p) => p.id === pet.id)) lines.push("버프 시간은 파티에 있을 때만 흘러요");
+  return lines;
+}
+
 function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): string[] {
   switch (item.effect) {
     case "exp":
@@ -1737,9 +1791,9 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간"];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간", ...buffRefresh(pet, "premium-food", "2시간")];
     case "play-buff":
-      return ["신남", "친밀도 증가량 ×1.5 · 30분"];
+      return ["신남", "친밀도 증가량 ×1.5 · 30분", ...buffRefresh(pet, "long-play", "30분")];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
@@ -1772,6 +1826,7 @@ function pickDetail(item: BagItemView): HTMLElement {
       actionButton("취소", false, false, () => {
         bagPick = null;
         notice = "";
+        bagResult = "";
         draw();
       }),
       actionButton(evo ? "진화할 포켓몬 고르기" : "성격 바꿀 포켓몬 고르기", true, false, () => openBagDialog(item)),
@@ -1790,6 +1845,7 @@ function bagModes(item: BagItemView): HTMLElement {
     bagMode,
     (id) => {
       notice = "";
+      bagResult = "";
       bagMode = id;
       sellQty = 1;
       draw();
@@ -1840,6 +1896,7 @@ function sellDetail(v: Snapshot, item: BagItemView, each: number): HTMLElement {
       actionButton("취소", false, false, () => {
         bagPick = null;
         notice = "";
+        bagResult = "";
         draw();
       }),
       actionButton(`${point(earned)}에 팔기`, true, false, () => {
@@ -1863,6 +1920,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
   x.addEventListener("click", () => {
     bagPick = null;
     notice = "";
+    bagResult = "";
     draw();
   });
   top.append(el("strong", undefined, item.name), el("span", "stock", `보유 ×${item.count.toLocaleString("ko-KR")}`), el("span", "spacer"), x);
@@ -1901,6 +1959,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
         bagListReveal = true;
         bagQty = 1;
         notice = "";
+        bagResult = "";
         draw();
       },
     ),
@@ -1920,6 +1979,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
       bagListReveal = true;
       bagQty = 1;
       notice = "";
+      bagResult = "";
       draw();
     });
     rows.appendChild(row);
@@ -1962,6 +2022,7 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
     preview.appendChild(el("strong", undefined, lead ?? ""));
     for (const line of lines) preview.appendChild(el("div", undefined, line));
     right.appendChild(preview);
+    if (bagResult) right.appendChild(alertBox("ok", "", bagResult));
     if (notice) right.appendChild(alertBox("bad", "", notice));
     const label = many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용";
     right.appendChild(
@@ -1969,12 +2030,16 @@ function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
         actionButton("취소", false, false, () => {
           bagPick = null;
           notice = "";
+          bagResult = "";
           draw();
         }),
         actionButton(label, true, !!blocked, () => {
           const target = pet.id;
+          const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
+          bagResult = "";
           void send("bag.use", item.id, { petId: target, ...(many && bagQty > 1 ? { count: bagQty } : {}) }).then((ok) => {
             if (!ok) return draw();
+            bagResult = bagResultText(item, before, petOf(target));
             bagQty = 1;
             if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 썼다
             draw();
@@ -2960,6 +3025,7 @@ function setTab(next: TabId): void {
     window.pokebuddyManage.dexOpen(null, dexGen);
   }
   tab = next;
+  bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
   if (next === "dex" && !dexRows) void loadDex();
 }
 
@@ -4694,6 +4760,8 @@ const REASON: Record<string, string> = {
   halted: "다른 PC 확인이 끝날 때까지 게임이 멈춰 있어요.",
   "box-full": "그 박스는 가득 찼어요.",
   "no-box": "그 박스를 찾지 못했어요.",
+  // 교환에 올려 둔 개체 — 도구 사용·진화·모습 바꾸기를 막는다 (src/tx/handlers.ts, src/trade/core.ts isLocked)
+  "trade-locked": "교환에 올린 포켓몬이에요. 교환을 끝내거나 나간 뒤 다시 해 주세요.",
   timeout: "응답이 없어요. 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",
 };
 
@@ -4885,6 +4953,11 @@ function applyLive(v: Snapshot | null = view): void {
     if (shown && shown.textContent !== `${value}/100`) shown.textContent = `${value}/100`;
     const fill = box.querySelector<HTMLElement>(".fill");
     if (fill) fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
+  }
+  for (const node of document.querySelectorAll<HTMLElement>("[data-live-buff]")) {
+    const [petId, kind] = (node.dataset.liveBuff ?? "").split("|");
+    const buff = pets.get(petId ?? "")?.buffs.find((b) => b.kind === kind);
+    if (buff && node.textContent !== buffBadge(buff)) node.textContent = buffBadge(buff);
   }
   const eggs = new Map(v.eggs.list.map((e) => [e.id, e]));
   for (const node of document.querySelectorAll<HTMLElement>("[data-live-egg]")) {
