@@ -63,6 +63,23 @@ export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementR
   return { ok: true, slotIndex, movedOut: out };
 }
 
+// 파티 개체를 다른 파티 칸으로 옮긴다. 빈 칸이면 옮기고, 개체 칸이면 두 칸을 맞바꾼다.
+// 칸째 옮기므로 숨김 상태도 개체를 따라간다. 박스는 건드리지 않는다
+export function move(save: SaveV3, petId: string, toSlot: number): PlacementResult {
+  if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
+  const from = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
+  if (from < 0) return { ok: false, reason: "not-in-party" };
+  const target = save.party.slots[toSlot];
+  if (!target) return { ok: false, reason: "no-slot" };
+  if (target.state === "locked") return { ok: false, reason: "slot-locked" };
+  if (from === toSlot) return { ok: true, slotIndex: toSlot };
+
+  const source = save.party.slots[from]!;
+  save.party.slots[from] = target;
+  save.party.slots[toSlot] = source;
+  return { ok: true, slotIndex: toSlot };
+}
+
 // 파티 개체를 박스에 보관한다. 칸은 빈 칸이 된다
 export function keep(save: SaveV3, petId: string): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };

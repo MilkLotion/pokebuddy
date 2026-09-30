@@ -348,8 +348,8 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 ## 커맨드 처리기
 
 명령 계약은 [공유 타입](../src/shared/types.ts)과 [등록 처리기](../src/main/commands.ts)를 따른다. 메뉴·CLI·mailbox는 같은 명령 처리 경로를 사용한다.
-명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
-설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.keep`이 맡는다.
+명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
+설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.move`·`party.keep`이 맡는다.
 
 `companion`은 포켓몬 인자를 받지 않는다. 빈 파티이면 선택창을 연다. 선택 취소와 저장 실패를 구분한다.
 `pet.set`의 위치 변경은 저장에 성공한 뒤 성공으로 응답한다. 마우스 위치 변경도 같은 명령을 사용한다.

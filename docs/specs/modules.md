@@ -200,6 +200,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `settings:snapshot` | 파티·박스·알·가방·도감·업적·설정 조회 | `src/tx` |
 | `party.place` | 빈 파티 칸에 박스 개체를 숨김 상태로 배치 | `src/party`, `src/box` |
 | `party.swap` | 파티 개체와 박스 개체를 한 번에 맞바꿈 | `src/party`, `src/box` |
+| `party.move` | 파티 개체를 다른 파티 칸으로 옮김. 개체 칸이면 맞바꿈 | `src/party` |
 | `party.keep` | 파티 개체를 박스에 보관 | `src/party`, `src/box` |
 | `party.show` / `party.hide` | 표시와 숨김 | `src/party` |
 | `egg.open` | 직접 열기. 결과 종과 이로치 판정, 개체 생성과 배치 | `src/egg`, `src/dex`, `src/party` |

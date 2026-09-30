@@ -74,6 +74,7 @@ const EVOLVE_EXPIRE_MS = 40_000;
 const SAVE_COMMANDS: readonly CommandName[] = [
   "party.place",
   "party.swap",
+  "party.move",
   "party.keep",
   "egg.open",
   "bag.use",

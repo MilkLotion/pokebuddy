@@ -163,7 +163,7 @@ export interface SaveV2 {
 export type CommandName =
   | "feed" | "play" | "poke" | "evolve"
   | "party.show" | "party.hide" | "party.remove"
-  | "party.place" | "party.swap" | "party.keep"
+  | "party.place" | "party.swap" | "party.move" | "party.keep"
   | "box.sort" | "box.move" | "box.rename"
   | "egg.open"
   | "bag.use" | "bag.sell"

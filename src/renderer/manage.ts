@@ -197,7 +197,9 @@ let boxMarked: string | null = null; // 박스 검색 결과로 찾아간 개체
 let boxSortOpen = false;
 let boxRenaming = false;
 let boxNote = ""; // 박스 명령이 실패했을 때 박스 줄 아래 한 줄
-let dragFrom: { boxId: string; slot: number } | null = null; // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다
+// 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
+type DragFrom = { boxId: string; slot: number } | { partyPet: string };
+let dragFrom: DragFrom | null = null;
 const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "dex", label: "도감 번호" },
   { by: "level", label: "레벨 높은 순" },
@@ -625,10 +627,26 @@ function blankCard(slot: SlotView): HTMLElement {
   return card;
 }
 
+// 파티 칸 옮기기 — 개체 칸을 끌어 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다. 잠긴 칸에는 놓지 않는다.
+// 끌기는 박스 칸과 같은 포인터 끌기(startDrag)를 쓴다. 놓을 칸은 옅은 바탕으로만 보인다
 function drawParty(v: Snapshot): void {
   bodyEl.appendChild(head("파티", `${v.party.shown}마리 표시 중 · ${v.party.usable} / ${v.party.slots.length}칸 사용 가능`));
   const grid = el("div", "grid");
-  for (const slot of v.party.slots) grid.appendChild(slot.pet ? petCard(slot.pet) : blankCard(slot));
+  for (const slot of v.party.slots) {
+    const card = slot.pet ? petCard(slot.pet) : blankCard(slot);
+    if (slot.state !== "locked") {
+      dropZone(card, () => {
+        const from = dragFrom;
+        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void send("party.move", from.partyPet, { toSlot: slot.index });
+      });
+    }
+    if (slot.pet) {
+      const petId = slot.pet.id;
+      card.addEventListener("pointerdown", (e) => startDrag(e, card, { partyPet: petId }));
+      card.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
+    }
+    grid.appendChild(card);
+  }
   bodyEl.appendChild(grid);
 }
 
@@ -1006,7 +1024,7 @@ function drawBox(v: Snapshot): void {
     dropZone(target, () => {
       const to = v.boxes[toIndex];
       const from = dragFrom;
-      if (from && to) void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: to.id }, () => unsorted(from.boxId, to.id));
+      if (from && "boxId" in from && to) void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: to.id }, () => unsorted(from.boxId, to.id));
     });
   };
   if (!prev.disabled) dropToBox(prev, boxPage - 1);
@@ -1054,7 +1072,7 @@ function drawBox(v: Snapshot): void {
     // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
     const onDrop = (): void => {
       const from = dragFrom;
-      if (!from || (from.boxId === box.id && from.slot === slot)) return;
+      if (!from || !("boxId" in from) || (from.boxId === box.id && from.slot === slot)) return;
       void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id));
     };
     if (!pet) {
@@ -1067,7 +1085,7 @@ function drawBox(v: Snapshot): void {
     cell.setAttribute("aria-pressed", String(pet.id === boxMarked));
     if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     cell.title = `${pet.name} · 끌어서 옮기기`;
-    cell.addEventListener("pointerdown", (e) => startBoxDrag(e, cell, { boxId: box.id, slot }));
+    cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { boxId: box.id, slot }));
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
     dropZone(cell, onDrop);
     grid.appendChild(cell);
@@ -1084,9 +1102,9 @@ function dropZone(target: HTMLElement, onDrop: () => void): void {
   dropTargets.set(target, onDrop);
 }
 
-const BOX_DRAG_START_PX = 5; // 이만큼 움직여야 끌기로 본다 — 그보다 작으면 누르기(상세 보기)
+const DRAG_START_PX = 5; // 이만큼 움직여야 끌기로 본다 — 그보다 작으면 누르기(상세 보기)
 
-function startBoxDrag(down: PointerEvent, cell: HTMLElement, from: { boxId: string; slot: number }): void {
+function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void {
   if (down.button !== 0) return;
   const x0 = down.clientX;
   const y0 = down.clientY;
@@ -1105,7 +1123,7 @@ function startBoxDrag(down: PointerEvent, cell: HTMLElement, from: { boxId: stri
   };
   const move = (e: PointerEvent): void => {
     if (!ghost) {
-      if (Math.hypot(e.clientX - x0, e.clientY - y0) < BOX_DRAG_START_PX) return;
+      if (Math.hypot(e.clientX - x0, e.clientY - y0) < DRAG_START_PX) return;
       dragFrom = from;
       boxSortOpen = false;
       hideFormTipSoon();

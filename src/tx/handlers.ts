@@ -8,7 +8,7 @@ import { dayPartOf, evolve } from "../dex/evolve.js";
 import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
 import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
-import { keep, place, swap } from "../party/placement.js";
+import { keep, move, place, swap } from "../party/placement.js";
 import { setHidden, shownCount } from "../party/visibility.js";
 import { feed, play } from "../state/care.js";
 import { isSettingKey, setSetting } from "../state/settings.js";
@@ -64,6 +64,16 @@ const swapHandler: TxHandler = (draft, args) => {
   return { ok: true, result: { petId, slotIndex: res.slotIndex, movedOut: res.movedOut, hidden: false } };
 };
 
+// 파티 개체의 칸을 옮긴다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다
+const moveHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  const toSlot = isObj(args) && typeof args.toSlot === "number" && Number.isInteger(args.toSlot) ? args.toSlot : null;
+  if (!petId || toSlot == null) return { ok: false, reason: "bad-args" };
+  const res = move(draft, petId, toSlot);
+  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  return { ok: true, result: { petId, slotIndex: res.slotIndex } };
+};
+
 // 파티 개체를 박스에 보관한다
 const keepHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
@@ -78,6 +88,7 @@ export const HANDLERS: Record<string, TxHandler> = {
   "party.hide": visibility(true),
   "party.place": placeHandler,
   "party.swap": swapHandler,
+  "party.move": moveHandler,
   "party.keep": keepHandler,
 };
 

@@ -1283,7 +1283,8 @@
         color: var(--muted);
       }
       /* 끌기 — 원래 자리는 빈 칸처럼 흐리고, 놓을 칸은 옅은 바탕. 테두리로 강조하지 않는다 (Figma 05 `Box / Dragging` `633:17375`) */
-      .cell.dragging {
+      .cell.dragging,
+      .slot.dragging {
         opacity: 0.35;
       }
       /* 커서를 따라가는 칸 — 그림자로 들린 느낌만 준다 */
@@ -1294,11 +1295,13 @@
         opacity: 0.95;
         box-shadow: 0 6px 14px rgba(26, 51, 48, 0.22);
       }
-      .box-grid .cell {
+      .box-grid .cell,
+      .grid .slot:not(.blank) {
         touch-action: none;
         -webkit-user-drag: none;
       }
       .cell.drop-on,
+      .slot.drop-on,
       .pager button.drop-on {
         background: var(--accent-bg);
       }

@@ -213,6 +213,27 @@ function seedBox(): SaveV3 {
   process.stdout.write("(10) 교체 · 한 번에 맞바꾸고 숨김  ok\n");
 }
 
+// (10b) 파티 칸 옮기기 — 빈 칸이면 옮기고, 개체 칸이면 맞바꾼다. 숨김 상태는 개체를 따라간다. 잠긴 칸은 거절
+{
+  const s = seedBox();
+  s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
+  const f = fake(s);
+  const tx = createExecutor(f.ports, HANDLERS);
+  assert.equal(tx.run({ id: "r1", name: "party.move", args: { petId: "p1", toSlot: 1 } }).ok, true);
+  assert.equal(f.state.party.slots[0]?.state, "empty", "옛 칸이 빈다");
+  assert.deepStrictEqual(f.state.party.slots[1], { state: "pokemon", petId: "p1", hidden: true }, "숨김 상태가 따라간다");
+  assert.equal(tx.run({ id: "r2", name: "party.place", args: { petId: "p2", slotIndex: 0 } }).ok, true);
+  assert.equal(tx.run({ id: "r3", name: "party.move", args: { petId: "p2", toSlot: 1 } }).ok, true);
+  assert.equal(f.state.party.slots[0]?.petId, "p1", "개체 칸이면 맞바꾼다");
+  assert.equal(f.state.party.slots[1]?.petId, "p2");
+  const locked = tx.run({ id: "r4", name: "party.move", args: { petId: "p2", toSlot: 5 } });
+  assert.equal(locked.ok === false && locked.reason, "slot-locked");
+  const boxed = tx.run({ id: "r5", name: "party.move", args: { petId: "p3", toSlot: 1 } });
+  assert.equal(boxed.ok === false && boxed.reason, "not-in-party", "박스 개체는 옮기지 않는다");
+  assert.equal(f.state.boxes[0]?.slots[1], "p3", "박스는 그대로");
+  process.stdout.write("(10b) 파티 칸 옮기기 · 옮김·맞바꿈·잠김 거절  ok\n");
+}
+
 // (11) 보관 — 파티 칸이 비고 개체는 박스로
 {
   const f = fake(seedBox());
