@@ -234,6 +234,30 @@ function seedBox(): SaveV3 {
   process.stdout.write("(10b) 파티 칸 옮기기 · 옮김·맞바꿈·잠김 거절  ok\n");
 }
 
+// (10c) 교체는 두 자리를 맞바꾼다 — 나간 개체는 들어온 개체가 있던 박스 칸으로
+{
+  const f = fake(seedBox());
+  const tx = createExecutor(f.ports, HANDLERS);
+  assert.equal(tx.run({ id: "r1", name: "party.swap", args: { slotIndex: 0, petId: "p3" } }).ok, true);
+  assert.equal(f.state.boxes[0]?.slots[1], "p1", "p3 가 있던 칸에 p1");
+  assert.equal(f.state.boxes[0]?.slots[0], "p2", "다른 칸은 그대로");
+  process.stdout.write("(10c) 교체 · 나간 개체는 들어온 개체의 박스 칸으로  ok\n");
+}
+
+// (10d) 박스 칸을 정해 보관 — 빈 칸만 받는다
+{
+  const f = fake(seedBox());
+  const tx = createExecutor(f.ports, HANDLERS);
+  const taken = tx.run({ id: "r1", name: "party.keep", args: { petId: "p1", toBoxId: f.state.boxes[0]!.id, toSlot: 0 } });
+  assert.equal(taken.ok === false && taken.reason, "slot-not-empty");
+  const bad = tx.run({ id: "r2", name: "party.keep", args: { petId: "p1", toBoxId: "nope", toSlot: 5 } });
+  assert.equal(bad.ok === false && bad.reason, "no-slot");
+  assert.equal(tx.run({ id: "r3", name: "party.keep", args: { petId: "p1", toBoxId: f.state.boxes[0]!.id, toSlot: 7 } }).ok, true);
+  assert.equal(f.state.boxes[0]?.slots[7], "p1", "고른 칸에 들어간다");
+  assert.equal(f.state.party.slots[0]?.state, "empty");
+  process.stdout.write("(10d) 보관 · 고른 박스 빈 칸으로  ok\n");
+}
+
 // (11) 보관 — 파티 칸이 비고 개체는 박스로
 {
   const f = fake(seedBox());

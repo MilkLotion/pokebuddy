@@ -95,7 +95,6 @@ const DETAIL_STEPS = [
     ? { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격민트로 성격을 바꿔요." }
     : { tut: "detail-growth", title: "진화", body: "조건을 채우면 진화를 눌러 직접 진화해요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
-  { tut: "detail-manage", title: "교체와 박스 보관", body: "박스에 보관하면 성장이 멈춰요." },
 ] as const;
 const COACH = { pad: 6, gap: 10, width: 280, margin: 8 };
 let detailStep = 0;
@@ -436,20 +435,7 @@ function renderBody(v: PetDeviceView): void {
     size.appendChild(line("크기", null, [sizes]));
     actions.appendChild(size);
   }
-  const manage = el("div", "row");
-  manage.dataset.tut = "detail-manage";
-  if (v.inParty) {
-    manage.append(
-      button("act", "교체", () => act({ kind: "dialog", dialog: "pick-box" })),
-      button("act", "박스에 보관", () => act({ kind: "dialog", dialog: "keep" })), // 관리 창에서 확인한 뒤 보낸다
-    );
-  } else if (v.emptySlot != null) {
-    const slotIndex = v.emptySlot;
-    manage.appendChild(button("act primary", "파티에 배치", () => act({ kind: "cmd", cmd: "party.place", args: { slotIndex } })));
-  } else {
-    manage.appendChild(button("act primary", "교체", () => act({ kind: "dialog", dialog: "pick-slot" })));
-  }
-  actions.appendChild(manage);
+  // 교체·박스에 보관·파티에 배치 단추는 두지 않는다 — 파티 탭 `교체` 모달에서 끌어 놓아 옮긴다 (2026-09-30 사용자 결정)
   // 실패 문구 — 관리 창 Alert Inline(오류)과 같은 모양 (Figma `Alert` `1040:216`)
   if (v.notice) {
     const box = el("div", "alert bad inline");

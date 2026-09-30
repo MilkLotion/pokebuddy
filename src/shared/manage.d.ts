@@ -506,7 +506,6 @@ export interface PetDeviceOpen {
   where: string; // "파티 1번 · 나와 있음" · "박스 1 · 보관 중"
   inParty: boolean;
   slotIndex: number | null; // 파티 칸 — 교체 대화상자가 쓴다
-  emptySlot: number | null; // 박스 개체 — 비어 있는 파티 칸이 있으면 바로 배치한다
   sizeLevels: number;
   notice: string; // 마지막 실패 문구
   tutorial: boolean; // 개체 상세 튜토리얼을 보일 차례 — 파티 개체이고 아직 끝내거나 건너뛰지 않았다
@@ -519,8 +518,8 @@ export interface PetDeviceView extends PetDeviceOpen {
 // 기기 창에서 누른 단추. 명령은 관리 창의 명령 경로로, 대화상자는 관리 창에서 연다
 // petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)
 export type PetDeviceAction = { petId: string } & (
-  | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "party.place" | "pet.set"; args?: Record<string, unknown> }
-  | { kind: "dialog"; dialog: "evolve" | "nature" | "pick-box" | "pick-slot" | "keep" }
+  | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "pet.set"; args?: Record<string, unknown> }
+  | { kind: "dialog"; dialog: "evolve" | "nature" }
   | { kind: "tutorial"; action: "done" | "skip" } // 개체 상세 튜토리얼을 끝냈다·닫았다
   | { kind: "dex" } // 도감 보기 — 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30)
 );

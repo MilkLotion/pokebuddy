@@ -163,13 +163,11 @@ type Dialog =
   | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
   | { kind: "buy"; productId: string; qty: number }
-  | { kind: "pick-box"; slotIndex: number } // 칸이 정해졌고 넣을 박스 개체를 고른다
-  | { kind: "pick-slot"; petId: string } // 개체가 정해졌고 넣을 파티 칸을 고른다
+  | { kind: "swap" } // 파티 교체 — 박스와 파티 사이를 끌어 놓아 옮긴다
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
   | { kind: "guide" }
-  | { kind: "keep"; petId: string } // 박스에 보관 확인 — 파티 상세 기기 창의 `박스에 보관`
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
@@ -191,7 +189,6 @@ let boxPage = 0;
 // 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
 let boxQuery = "";
 let dexQuery = "";
-let pickQuery = "";
 let boxMarked: string | null = null; // 박스 검색 결과로 찾아간 개체 — 그 칸을 고른 칸으로 보인다
 // 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
 let boxSortOpen = false;
@@ -623,14 +620,19 @@ function blankCard(slot: SlotView): HTMLElement {
   }
   // 문구는 Figma `Party Slot` state/empty 의 "박스에서 배치"
   card.append(blankIcon(false), el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
-  card.addEventListener("click", () => open({ kind: "pick-box", slotIndex: slot.index }));
+  card.addEventListener("click", () => open({ kind: "swap" }));
   return card;
 }
 
 // 파티 칸 옮기기 — 개체 칸을 끌어 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다. 잠긴 칸에는 놓지 않는다.
 // 끌기는 박스 칸과 같은 포인터 끌기(startDrag)를 쓴다. 놓을 칸은 옅은 바탕으로만 보인다
 function drawParty(v: Snapshot): void {
-  bodyEl.appendChild(head("파티", `${v.party.shown}마리 표시 중 · ${v.party.usable} / ${v.party.slots.length}칸 사용 가능`));
+  const top = head("파티", `${v.party.shown}마리 표시 중 · ${v.party.usable} / ${v.party.slots.length}칸 사용 가능`);
+  // 머리 오른쪽 `교체` — 교체 모달을 연다 (Figma 05 `Party / Base` `217:1705` 머리 action)
+  const swap = button("act swap-open", "교체");
+  swap.addEventListener("click", () => open({ kind: "swap" }));
+  top.appendChild(swap);
+  bodyEl.appendChild(top);
   const grid = el("div", "grid");
   for (const slot of v.party.slots) {
     const card = slot.pet ? petCard(slot.pet) : blankCard(slot);
@@ -3596,7 +3598,6 @@ const petOf = (id: string): PetView | null => [...partyPets(), ...boxPets()].fin
 
 const slotOfPet = (id: string): number | null => view?.party.slots.find((s) => s.pet?.id === id)?.index ?? null;
 
-const emptySlot = (): number | null => view?.party.slots.find((s) => s.state === "empty")?.index ?? null;
 
 function actionButton(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
   const b = button(primary ? "act primary" : "act", label);
@@ -3658,7 +3659,7 @@ function syncPetDevice(): void {
   const slot = slotOfPet(pet.id);
   const inParty = slot != null;
   const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${boxNameOf(pet.id) ?? "박스"} · 보관 중`;
-  const open = { pet, where, inParty, slotIndex: slot, emptySlot: inParty ? null : emptySlot(), sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial };
+  const open = { pet, where, inParty, slotIndex: slot, sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial };
   const key = JSON.stringify(open);
   if (petDeviceOpen && key === petDeviceSent) return;
   window.pokebuddyManage.petOpen(open, petGen);
@@ -3699,7 +3700,7 @@ function onPetAction(action: PetDeviceAction): void {
     return;
   }
   if (action.kind === "tutorial") {
-    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail", action.action === "done" ? { steps: 5 } : undefined);
+    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail", action.action === "done" ? { steps: 4 } : undefined);
     return;
   }
   if (action.kind === "dex") {
@@ -3707,13 +3708,7 @@ function onPetAction(action: PetDeviceAction): void {
     return;
   }
   if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
-  else if (action.dialog === "keep") open({ kind: "keep", petId: id });
-  else if (action.dialog === "nature") open({ kind: "nature", petId: id });
-  else if (action.dialog === "pick-slot") open({ kind: "pick-slot", petId: id });
-  else {
-    const slot = slotOfPet(id);
-    if (slot != null) open({ kind: "pick-box", slotIndex: slot });
-  }
+  else open({ kind: "nature", petId: id });
 }
 
 // ── 모달 · 진화 확인 ───────────────────────────────────────────────────────────
@@ -3774,31 +3769,6 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     });
   });
   dialogEl.appendChild(actions(go, actionButton("취소", false, false, () => open(back.to))));
-}
-
-// 박스에 보관 확인 — 명세대로 확인한 뒤에 보낸다 (docs/specs/game.md "파티 개체의 상세에는 `교체`와 나란히 `박스에 보관`",
-// 2026-09-28 사용자 "제안대로 하자"). 문구는 Figma `Detail / Box Keep Confirm` `914:22998`. 저장에 실패하면 창에 실패 문구가 남고 파티는 그대로다
-function drawKeep(petId: string): void {
-  const pet = petOf(petId);
-  const slot = slotOfPet(petId);
-  if (!pet || slot == null) {
-    close();
-    return;
-  }
-  dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 박스에 보관할까요?`, ""));
-  const info = el("div", "info-box");
-  info.append(
-    el("div", undefined, `파티 ${slot + 1}번 칸이 비워져요.`),
-    el("div", "note", "박스에서는 친밀도·만복도·적립이 멈추고 값은 보존돼요."),
-    el("div", "note", "박스 개체 상세의 [파티에 배치]로 다시 데려올 수 있어요."),
-  );
-  dialogEl.appendChild(info);
-  const keep = actionButton("박스에 보관", true, false, () => {
-    void send("party.keep", petId).then((ok) => {
-      if (ok) close();
-    });
-  });
-  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, close), keep));
 }
 
 // 가방의 진화용 도구 — 그 도구로 지금 진화할 수 있는 개체를 고른다. 박스 개체에게도 쓸 수 있다
@@ -4040,66 +4010,126 @@ function evoTargets(pairs: EvoPairView[]): HTMLElement {
   return box;
 }
 
-// ── 모달 · 개체와 칸 고르기 ────────────────────────────────────────────────────
+// ── 모달 · 파티 교체 ───────────────────────────────────────────────────────────
+// 파티 머리의 `교체`와 빈 파티 칸이 연다 (Figma 05 `Party / Swap Modal` `1072:1752`·`Party / Swap Modal · Dragging` `1072:2290`, 2026-09-30 사용자 결정).
+// 왼쪽은 박스 탭의 박스 한 개(넘기기와 6×5 칸 — 검색·정렬·돌보미집 없음), 오른쪽은 파티 칸(초상·이름·레벨).
+// 조작은 끌어 놓기뿐이다. 누르기로 하는 조작은 없다
+//   박스 → 파티 개체 칸    맞바꾸기(party.swap). 나간 개체는 들어온 개체가 있던 박스 칸으로
+//   박스 → 파티 빈 칸      배치(party.place)
+//   파티 → 파티            칸 옮기기(party.move)
+//   파티 → 박스 빈 칸      보관(party.keep, 그 칸에)
+//   파티 → 박스 개체 칸    맞바꾸기(party.swap)
+//   박스 → 박스            칸 옮기기(box.move)
+let swapPage = 0;
 
-function drawPickBox(slotIndex: number): void {
-  const all = boxPets();
-  const q = normQuery(pickQuery);
-  const pets = q ? all.filter((p) => matchesName(p.name, q)) : all;
-  const filled = view?.party.slots[slotIndex]?.state === "pokemon";
-  dialogEl.append(...dialogHead("박스에서 고르기", filled ? `${slotIndex + 1}번 칸의 개체와 맞바꿉니다.` : `${slotIndex + 1}번 칸에 넣습니다.`));
-  // 박스 탭과 같은 검색 줄 (worklog/records/s5-design-system-v2/plan.md "원작식 박스 구조와 검색")
-  if (all.length) {
-    const bar = el("div", "search-row");
-    bar.appendChild(
-      searchBox("pick", pickQuery, "이름 검색", (value) => {
-        pickQuery = value;
-        drawDialog();
-      }),
-    );
-    dialogEl.appendChild(bar);
-  }
-  if (all.length && !pets.length) {
-    dialogEl.appendChild(el("div", "empty-note", "검색 결과 없음"));
-    dialogEl.appendChild(actions(closeButton()));
-    return;
-  }
-  if (!pets.length) {
-    dialogEl.appendChild(el("div", "empty-note", "박스가 비었습니다."));
-    dialogEl.appendChild(actions(closeButton()));
-    return;
-  }
-  const grid = el("div", "pick-grid");
-  for (const pet of pets) {
-    grid.appendChild(boxCell(pet, () => void send(filled ? "party.swap" : "party.place", pet.id, { slotIndex })));
-  }
-  dialogEl.appendChild(grid);
-  dialogEl.appendChild(actions(closeButton()));
+// 모달을 연 채로 보낸다 — 실패하면 모달 아래에 이유가 남는다
+const swapSend = (cmd: string, target: string, extra: Record<string, unknown>): Promise<boolean> => send(cmd, target, extra, { keepOpen: true });
+
+function swapCell(pet: PetView, from: DragFrom, onDrop: () => void): HTMLButtonElement {
+  const cell = boxCell(pet, () => undefined);
+  cell.title = `${pet.name} · 끌어서 옮기기`;
+  cell.addEventListener("pointerdown", (e) => startDrag(e, cell, from));
+  cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
+  dropZone(cell, onDrop);
+  return cell;
 }
 
-function drawPickSlot(petId: string): void {
-  const pet = petOf(petId);
-  if (!pet || !view) {
+function drawSwap(): void {
+  const v = view;
+  const box = v?.boxes[Math.min(Math.max(swapPage, 0), (v?.boxes.length ?? 1) - 1)];
+  if (!v || !box) {
     close();
     return;
   }
-  dialogEl.append(...dialogHead("파티 칸 고르기", `${pet.name}${josa(pet.name, "을/를")} 어느 칸에 넣을까요?`));
-  const grid = el("div", "pick-grid");
-  for (const slot of view.party.slots) {
+  swapPage = v.boxes.indexOf(box);
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.appendChild(el("h2", undefined, "파티 교체"));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  top.append(titles, x);
+
+  // 박스 — 박스 탭과 같은 넘기기 줄과 칸
+  const side = el("div", "swap-box");
+  const pager = el("div", "pager");
+  const prev = button("", "◀");
+  prev.disabled = swapPage <= 0;
+  prev.addEventListener("click", () => {
+    swapPage -= 1;
+    drawDialog();
+  });
+  const next = button("", "▶");
+  next.disabled = swapPage >= v.boxes.length - 1;
+  next.addEventListener("click", () => {
+    swapPage += 1;
+    drawDialog();
+  });
+  pager.append(prev, el("span", "label", box.name), el("span", "used", `${box.used} / ${box.size}`), next);
+  const grid = el("div", "box-grid");
+  box.slots.forEach((pet, slot) => {
+    const onDrop = (): void => {
+      const from = dragFrom;
+      if (!from) return;
+      if ("partyPet" in from) {
+        const at = slotOfPet(from.partyPet);
+        if (pet && at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
+        else if (!pet) void swapSend("party.keep", from.partyPet, { toBoxId: box.id, toSlot: slot });
+        return;
+      }
+      if (from.boxId === box.id && from.slot === slot) return;
+      void swapSend("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }).then((ok) => {
+        if (ok) unsorted(from.boxId, box.id);
+      });
+    };
+    if (!pet) {
+      const blank = el("div", "cell blank");
+      dropZone(blank, onDrop);
+      grid.appendChild(blank);
+      return;
+    }
+    grid.appendChild(swapCell(pet, { boxId: box.id, slot }, onDrop));
+  });
+  side.append(pager, grid);
+
+  // 파티 — 초상·이름·레벨만. 빈 칸은 +, 잠긴 칸은 자물쇠이고 잠긴 칸에는 놓지 않는다
+  const party = el("div", "swap-party");
+  const cells = el("div", "swap-party-grid");
+  for (const slot of v.party.slots) {
     if (slot.state === "locked") {
-      const locked = el("div", "cell blank");
-      locked.appendChild(el("div", "note", "잠김"));
-      grid.appendChild(locked);
+      const locked = el("div", "cell locked");
+      locked.title = "잠긴 칸";
+      locked.appendChild(blankIcon(true));
+      cells.appendChild(locked);
       continue;
     }
-    const cell = button("cell");
-    cell.append(slot.pet ? portraitOf(slot.pet.species, slot.pet.shiny, "dot") : el("div", "dot"), el("div", "who", slot.pet ? slot.pet.name : "빈 칸"), el("div", "note", `${slot.index + 1}번`));
-    cell.addEventListener("click", () => void send(slot.pet ? "party.swap" : "party.place", petId, { slotIndex: slot.index }));
-    grid.appendChild(cell);
+    const onDrop = (): void => {
+      const from = dragFrom;
+      if (!from) return;
+      if ("partyPet" in from) {
+        if (from.partyPet !== slot.pet?.id) void swapSend("party.move", from.partyPet, { toSlot: slot.index });
+        return;
+      }
+      const pet = view?.boxes.find((b) => b.id === from.boxId)?.slots[from.slot];
+      if (pet) void swapSend(slot.pet ? "party.swap" : "party.place", pet.id, { slotIndex: slot.index });
+    };
+    if (!slot.pet) {
+      const blank = el("div", "cell blank");
+      blank.title = `${slot.index + 1}번 빈 칸`;
+      blank.appendChild(blankIcon(false));
+      dropZone(blank, onDrop);
+      cells.appendChild(blank);
+      continue;
+    }
+    cells.appendChild(swapCell(slot.pet, { partyPet: slot.pet.id }, onDrop));
   }
-  dialogEl.appendChild(grid);
-  dialogEl.appendChild(actions(closeButton()));
+  party.append(el("div", "swap-label", "파티"), cells);
+
+  const body = el("div", "swap-body");
+  body.append(side, party);
+  dialogEl.append(top, body);
 }
+
 
 // ── 모달 · 업적창 ──────────────────────────────────────────────────────────────
 
@@ -4632,14 +4662,12 @@ const SHAPE: Record<Dialog["kind"], string> = {
   nature: "dialog",
   "nature-target": "dialog",
   buy: "dialog buy",
-  "pick-box": "dialog wide",
-  "pick-slot": "dialog wide",
+  swap: "dialog swap",
   achievements: "dialog tall",
   settings: "dialog settings",
   user: "dialog settings",
   guide: "dialog tall",
   hatched: "dialog",
-  keep: "dialog",
   form: "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
@@ -4693,13 +4721,11 @@ function drawDialog(): void {
   else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
   else if (dialog.kind === "buy") drawBuy(dialog.productId, dialog.qty);
-  else if (dialog.kind === "pick-box") drawPickBox(dialog.slotIndex);
-  else if (dialog.kind === "pick-slot") drawPickSlot(dialog.petId);
+  else if (dialog.kind === "swap") drawSwap();
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "user") drawUser(dialog.tab);
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.slotIndex, dialog.eggId);
-  else if (dialog.kind === "keep") drawKeep(dialog.petId);
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);

@@ -74,11 +74,16 @@ const moveHandler: TxHandler = (draft, args) => {
   return { ok: true, result: { petId, slotIndex: res.slotIndex } };
 };
 
-// 파티 개체를 박스에 보관한다
+// 파티 개체를 박스에 보관한다 — toBoxId·toSlot 을 주면 그 박스 빈 칸에
 const keepHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  const res = keep(draft, petId);
+  let to: { boxId: string; slot: number } | undefined;
+  if (isObj(args) && (args.toBoxId !== undefined || args.toSlot !== undefined)) {
+    if (typeof args.toBoxId !== "string" || typeof args.toSlot !== "number" || !Number.isInteger(args.toSlot)) return { ok: false, reason: "bad-args" };
+    to = { boxId: args.toBoxId, slot: args.toSlot };
+  }
+  const res = keep(draft, petId, to);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
   return { ok: true, result: { petId, slotIndex: res.slotIndex } };
 };

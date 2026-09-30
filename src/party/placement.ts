@@ -46,10 +46,12 @@ export function place(save: SaveV3, petId: string, slotIndex?: number): Placemen
   return { ok: true, slotIndex: i };
 }
 
-// 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다. 들어온 개체는 꺼낸 상태로 시작한다
+// 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다. 들어온 개체는 꺼낸 상태로 시작한다.
+// 나간 개체는 들어온 개체가 있던 박스 칸에 들어간다 — 두 자리를 그대로 맞바꾼다
 export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
-  if (!findPet(save.boxes, petId)) return { ok: false, reason: "not-in-box" };
+  const spot = findPet(save.boxes, petId);
+  if (!spot) return { ok: false, reason: "not-in-box" };
 
   const slot = save.party.slots[slotIndex];
   if (!slot) return { ok: false, reason: "no-slot" };
@@ -57,8 +59,7 @@ export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementR
   if (slot.state !== "pokemon" || !slot.petId) return { ok: false, reason: "not-in-party" };
 
   const out = slot.petId;
-  takePet(save.boxes, petId);
-  putPet(save.boxes, out);
+  save.boxes[spot.boxIndex]!.slots[spot.slotIndex] = out;
   save.party.slots[slotIndex] = { state: "pokemon", petId, hidden: false };
   return { ok: true, slotIndex, movedOut: out };
 }
@@ -80,13 +81,21 @@ export function move(save: SaveV3, petId: string, toSlot: number): PlacementResu
   return { ok: true, slotIndex: toSlot };
 }
 
-// 파티 개체를 박스에 보관한다. 칸은 빈 칸이 된다
-export function keep(save: SaveV3, petId: string): PlacementResult {
+// 파티 개체를 박스에 보관한다. 칸은 빈 칸이 된다.
+// 박스 칸을 주면 그 빈 칸에 넣는다. 주지 않으면 앞 박스의 첫 빈 칸이다
+export function keep(save: SaveV3, petId: string, to?: { boxId: string; slot: number }): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   const i = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
   if (i < 0) return { ok: false, reason: "not-in-party" };
 
-  putPet(save.boxes, petId);
+  if (to) {
+    const box = save.boxes.find((b) => b.id === to.boxId);
+    if (!box || to.slot < 0 || to.slot >= box.slots.length) return { ok: false, reason: "no-slot" };
+    if (box.slots[to.slot] != null) return { ok: false, reason: "slot-not-empty" };
+    box.slots[to.slot] = petId;
+  } else {
+    putPet(save.boxes, petId);
+  }
   save.party.slots[i] = { state: "empty" };
   return { ok: true, slotIndex: i };
 }

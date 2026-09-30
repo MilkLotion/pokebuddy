@@ -55,8 +55,9 @@ export function argsOf(command: Command): Record<string, unknown> {
   switch (command.cmd) {
     case "party.show":
     case "party.hide":
-    case "party.keep":
       return { petId: target ?? str(a.petId) };
+    case "party.keep":
+      return { petId: target ?? str(a.petId), ...(a.toBoxId !== undefined ? { toBoxId: str(a.toBoxId) } : {}), ...(a.toSlot !== undefined ? { toSlot: int(a.toSlot) } : {}) };
     case "party.place":
     case "party.swap":
       return { petId: target ?? str(a.petId), slotIndex: int(a.slotIndex) };

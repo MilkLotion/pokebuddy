@@ -1524,10 +1524,6 @@
       }
 
       /* ── 모달 ─────────────────────────────────────────────────────────────── */
-      /* 넓은 모달 — 개체 고르기의 격자가 들어간다 */
-      .dialog.wide {
-        width: 560px;
-      }
       /* 긴 모달 — 업적창·설정·가이드북. 안에서 스크롤한다 */
       .dialog.tall {
         width: 460px;
@@ -2663,20 +2659,104 @@
         font-weight: 600;
       }
 
-      /* 개체 고르기 — 박스 개체와 파티 칸을 같은 격자로 본다 */
-      .pick-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
+      /* 파티 교체 모달 — Figma 05 `Party / Swap Modal` `1072:1752`. 폭 628, 머리 "파티 교체" + ✕, 아래 단추 없음.
+         박스 판은 canvas, 파티 판은 accent 바탕으로 가른다(테두리 강조 없음). 파티 판은 내용 높이 */
+      .scrim:has(.dialog.swap) {
+        padding: 6px;
+      }
+      .dialog.swap {
+        width: 628px;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .dialog.swap .settings-head {
+        display: flex;
+        align-items: center;
         gap: 8px;
-        margin-top: 4px;
       }
-      .pick-grid .cell {
-        aspect-ratio: auto;
-        min-height: 78px;
+      .dialog.swap .titles {
+        flex: 1;
+        min-width: 0;
       }
-      .pick-grid .cell.on {
-        border-color: var(--primary);
+      .dialog.swap .titles h2 {
+        margin: 0;
+      }
+      .swap-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 152px;
+        gap: 12px;
+        align-items: start;
+      }
+      .swap-box,
+      .swap-party {
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .swap-box {
+        background: var(--canvas);
+      }
+      .swap-party {
         background: var(--accent-bg);
+      }
+      /* 파티 판 머리 — 박스 넘기기 줄과 같은 높이라 두 판의 칸이 같은 줄에서 시작한다 */
+      .swap-box .pager {
+        min-height: 32px;
+        margin-bottom: 12px;
+      }
+      .swap-label {
+        display: flex;
+        align-items: center;
+        min-height: 32px;
+        margin-bottom: 12px;
+        font-weight: 600;
+      }
+      .swap-party-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      /* 칸은 Figma `Box Slot` Compact 처럼 초상 28 · 높이 66. 정사각 비율을 두면 내용 높이가 최소 폭이 되어 격자가 파티 판으로 넘친다 */
+      .swap-body .box-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+      .swap-body .cell {
+        aspect-ratio: auto;
+        min-width: 0;
+        min-height: 66px;
+        cursor: grab;
+        touch-action: none;
+        -webkit-user-drag: none;
+      }
+      .swap-body .cell .dot,
+      .swap-body .cell .group-photo {
+        width: 28px;
+        height: 28px;
+      }
+      .swap-body .cell.blank {
+        cursor: default;
+      }
+      .swap-party .cell.blank {
+        background: var(--surface);
+        border-style: solid;
+      }
+      .swap-body .cell.locked {
+        background: var(--subtle);
+        border-color: transparent;
+        cursor: default;
+      }
+      .swap-body .blank-icon svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: var(--ink);
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
 
       /* 가이드북 한 꼭지 */
@@ -3043,6 +3123,7 @@
         gap: 6px;
       }
       /* 박스 머리의 `교환` 단추 — 보조 단추. 진행 중이면 오른쪽 위 점(Status Dot, 컬러 테두리 없음). Figma 05 `Box / Trade Button` `1016:1891` */
+      .head button.swap-open,
       .head button.trade-open {
         position: relative;
         align-self: center;

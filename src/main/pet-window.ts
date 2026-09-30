@@ -187,8 +187,8 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
 }
 
 // 렌더러가 보낸 값은 믿지 않는다 — 정해진 모양만 넘긴다
-const DIALOGS = new Set(["evolve", "nature", "pick-box", "pick-slot", "keep"]);
-const CMDS = new Set(["feed", "play", "party.show", "party.hide", "party.place", "pet.set"]);
+const DIALOGS = new Set(["evolve", "nature"]);
+const CMDS = new Set(["feed", "play", "party.show", "party.hide", "pet.set"]);
 function isAction(v: unknown): v is PetDeviceAction {
   if (!v || typeof v !== "object") return false;
   const a = v as Record<string, unknown>;
