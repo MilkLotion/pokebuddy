@@ -4,6 +4,8 @@
 //   last_seen 조작·교환 채널 넣기는 서비스 키로 한다(로컬 전용)
 // 설계는 worklog-mac/records/cloud-authority/design-p1.md 2절(전이표), 7절(시험 1~14), 11절(서버 계약)
 //   13번(동시 ensure 익명 하나)은 selftest-session 이 본다
+//   19~27 은 P2 익명 계정 저장 — design-p2.md 2절·8절·13절 (익명 새 설치·PET_TRADED_OUT·이관 세 결과·재시도·분실·reset·업데이트 필요 재확인)
+//   (0) 부팅 판단·(20) PET_TRADED_OUT·(27) 은 P2 코드 검수(H1·M1·W5) 뒤 더했다
 import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -11,7 +13,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { memoryStorage } from "../online/client";
 import { createAccount } from "../online/account";
 import { createSessionGate } from "../online/session";
-import { createCloud, readCloudState, type Cloud, type CloudSyncState, type HaltInfo, type HaltReason } from "../online/cloud";
+import { handoffHooks } from "../online/handoff";
+import { createCloud, readCloudState, strayAnonymous, type Cloud, type CloudSyncState, type HaltInfo, type HaltReason, type OwnerKind } from "../online/cloud";
 
 const APP_VERSION = "0.13.0"; // 서버 최소 버전(cloud_private.settings) 이상
 
@@ -44,8 +47,13 @@ async function until(test: () => boolean | Promise<boolean>, label: string, ms =
 type Net = "up" | "down" | "drop-upload" | "fail-download";
 
 // 한 PC — 흉내 망 클라이언트, 메모리 저장, cloud.json
-function pc(url: string, key: string, label: string, points: number) {
+//   계정은 이관 훅(handoffHooks)을 단다 — 세션이 익명일 때만 이관하므로 P1 시험(1~18)에는 영향이 없다
+function pc(url: string, key: string, label: string, points: number, pets: unknown[] = [{ id: "p1" }]) {
   let net: Net = "up";
+  let rejectUploads = 0; // 서버에 보내지 않고 CLOUD_PET_TRADED_OUT 으로 거절할 올리기 수
+  let rejectDelay = 0; // 그 거절을 돌려주기 전에 기다리는 시간(ms) — 보내는 사이 로컬이 바뀌는 경우(검수 M1)
+  let versionBlock = 0; // 서버에 보내지 않고 CLOUD_UPDATE_REQUIRED 로 거절할 claim·touch 수
+  let failAdopt = 0; // 망 오류로 실패시킬 adopt_anonymous 수
   // claim_device 붙잡기 — before: 서버에 보내기 전에, after: 서버가 처리한 뒤 응답을 돌려주기 전에 기다린다
   let claimHold: { at: "before" | "after"; gate: Promise<void> } | null = null;
   const uploads: { op: string; rev: number | null }[] = []; // upload_save 요청의 멱등 키와 받은 rev(응답을 잃으면 null)
@@ -55,6 +63,22 @@ function pc(url: string, key: string, label: string, points: number) {
       fetch: async (input, init) => {
         if (net === "down") throw new TypeError("fetch failed");
         const target = String(input instanceof Request ? input.url : input);
+        if (versionBlock > 0 && (target.includes("/rpc/claim_device") || target.includes("/rpc/touch_device"))) {
+          versionBlock -= 1;
+          const body = JSON.stringify({ code: "P0001", message: "CLOUD_UPDATE_REQUIRED", details: null, hint: null });
+          return new Response(body, { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+        if (rejectUploads > 0 && target.includes("/rpc/upload_save")) {
+          rejectUploads -= 1;
+          uploads.push({ op: "rejected", rev: null });
+          if (rejectDelay > 0) await sleep(rejectDelay);
+          const body = JSON.stringify({ code: "P0001", message: "CLOUD_PET_TRADED_OUT", details: null, hint: null });
+          return new Response(body, { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+        if (failAdopt > 0 && target.includes("/rpc/adopt_anonymous")) {
+          failAdopt -= 1;
+          throw new TypeError("fetch failed");
+        }
         if (net === "fail-download" && target.includes("/rpc/download_save")) {
           net = "up";
           throw new TypeError("fetch failed");
@@ -82,10 +106,12 @@ function pc(url: string, key: string, label: string, points: number) {
       },
     },
   });
-  let save: Record<string, unknown> = { v: 3, savedAt: Date.now(), pets: [{ id: "p1" }], points: { balance: points } };
+  let save: Record<string, unknown> = { v: 3, savedAt: Date.now(), pets, points: { balance: points } };
   let stored: CloudSyncState | null = null;
   const backups: Record<string, unknown>[] = [];
   const halts: { reason: HaltReason; info: HaltInfo }[] = [];
+  const lost: OwnerKind[] = [];
+  const handoffs: string[] = []; // start 가 늦게 옮긴 이관 결과(onHandoff)
   const clouds: Cloud[] = [];
   const make = (appVersion = APP_VERSION): Cloud => {
     const c = createCloud({
@@ -100,6 +126,8 @@ function pc(url: string, key: string, label: string, points: number) {
       deviceLabel: label,
       onView: () => undefined,
       onHalt: (reason, info) => void halts.push({ reason, info }),
+      onLost: (kind) => void lost.push(kind),
+      onHandoff: (outcome) => void handoffs.push(outcome),
       heartbeatMs: 500,
       throttleMs: 1_500,
       eventDelayMs: 150,
@@ -108,10 +136,21 @@ function pc(url: string, key: string, label: string, points: number) {
     clouds.push(c);
     return c;
   };
+  const gate = createSessionGate(client);
   return {
-    client, make, uploads, backups, halts, clouds,
-    account: createAccount({ client, gate: createSessionGate(client), blocked: () => false }),
+    client, gate, make, uploads, backups, halts, lost, handoffs, clouds,
+    account: createAccount({ client, gate, blocked: () => false, switchHooks: handoffHooks(client) }),
     setNet: (v: Net) => { net = v; },
+    rejectUploads: (n: number, delayMs = 0) => { rejectUploads = n; rejectDelay = delayMs; },
+    versionBlock: (n: number) => { versionBlock = n; },
+    failAdopt: (n: number) => { failAdopt = n; },
+    setPets: (next: unknown[]) => { save = { ...save, pets: next }; },
+    // 익명 세션을 만든다(부팅 때 gate.ensure 와 같다)
+    anon: async (): Promise<string> => {
+      const r = await gate.ensure();
+      if (!r.ok || !r.user.is_anonymous) throw new Error(`익명 세션을 만들지 못했다: ${JSON.stringify(r)}`);
+      return r.user.id;
+    },
     // 다음 claim_device 를 붙잡는다. 돌려준 함수로 놓는다
     holdClaim: (at: "before" | "after"): (() => void) => {
       let open = (): void => undefined;
@@ -125,13 +164,282 @@ function pc(url: string, key: string, label: string, points: number) {
   };
 }
 
+type PC = ReturnType<typeof pc>;
+
+// P2 익명 계정 저장 (design-p2.md 2절·8절) — 새 PC 들만 쓴다. 앞 시험의 계정과 엇갈리지 않게
+async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]): Promise<void> {
+  const make = (label: string, points: number, pets?: unknown[]): PC => {
+    const p = pc(url, key, label, points, pets);
+    extra.push(p);
+    return p;
+  };
+  const saveRow = async (userId: string): Promise<{ rev: number; save: { points?: { balance: number } } | null; active_device: string | null } | null> => {
+    const { data, error } = await admin.from("cloud_saves").select("rev, save, active_device").eq("user_id", userId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? ({ ...data, rev: Number(data.rev) } as never) : null;
+  };
+  const userExists = async (id: string): Promise<boolean> => {
+    const { data, error } = await admin.auth.admin.getUserById(id);
+    return !error && !!data.user;
+  };
+  const pw = "correct-horse-8";
+  const newName = (): string => `h${randomBytes(5).toString("hex")}`;
+  const pet = { id: "p1", since: 1_700_000_000_000 };
+
+  // (19) 익명 새 설치 — 스타터 고르기 전(개체 0)에는 올리지 않고 서버 행도 없다. 고른 뒤 첫 올리기가 행을 만든다(base_rev 0)
+  const X = make("시험 PC X", 30, []);
+  const anonX = await X.anon();
+  const cloudX = X.make();
+  await cloudX.start(anonX, "boot", "anonymous");
+  assert.equal(cloudX.view().status, "online", "익명도 온라인");
+  cloudX.noteSaved("event");
+  await sleep(400);
+  assert.equal(X.uploads.length, 0, "개체 0 이면 올리지 않는다");
+  assert.equal(await saveRow(anonX), null, "고르기 전에는 서버 행이 없다");
+  assert.equal(cloudX.unsaved(), "dirty", "올리지 못한 진행은 dirty 로 남는다");
+  X.setPets([pet]);
+  cloudX.noteSaved("event");
+  await until(async () => (await saveRow(anonX))?.rev === 1, "스타터를 고른 뒤 첫 올리기");
+  assert.equal(X.state()?.syncedRev, 1);
+  assert.deepEqual(cloudX.owner(), { id: anonX, kind: "anonymous" }, "주인은 익명 계정");
+  assert.equal((await saveRow(anonX))?.active_device, X.state()?.deviceId, "첫 올리기 PC 가 활성");
+  process.stdout.write("(19) 익명 새 설치 — 고르기 전 올리지 않음, 고른 뒤 행 생성(rev 1)  ok\n");
+
+  // (20) CLOUD_PET_TRADED_OUT (검수 M1)
+  //   a. 서버 저장이 받아지면 그 저장으로 바꾼다(로컬 백업) — 덮기 전에 서버 저장을 다시 올려 본다
+  X.bump(31);
+  cloudX.noteSaved("event");
+  await until(async () => (await saveRow(anonX))?.save?.points?.balance === 31, "익명 올리기");
+  const rev31 = (await saveRow(anonX))!.rev;
+  X.rejectUploads(1);
+  X.bump(32);
+  let backupsBefore = X.backups.length;
+  cloudX.noteSaved("event");
+  await until(() => X.backups.length === backupsBefore + 1, "거부 → 서버 저장을 다시 올려 본 뒤 받기");
+  assert.equal(X.points(), 31, "서버 저장(31)을 받았다 — 거부된 로컬(32)은 백업");
+  assert.equal((X.backups.at(-1)?.points as { balance: number }).balance, 32);
+  assert.equal((await saveRow(anonX))?.rev, rev31 + 1, "다시 올려 본 서버 저장은 내용 같고 rev 만 오른다");
+  assert.equal(X.state()?.syncedRev, rev31 + 1);
+  assert.equal(cloudX.view().error, null);
+  //   b. 서버 저장도 거부되면 로컬을 덮지 않고 막는다(held). 로컬이 바뀌면 한 번 다시 올리고, 또 거부되면 다시 막는다
+  X.bump(33);
+  backupsBefore = X.backups.length;
+  X.rejectUploads(3);
+  cloudX.noteSaved("event");
+  await until(() => cloudX.view().error === "CLOUD_PET_TRADED_OUT", "서버 저장도 거부되면 held");
+  assert.equal(X.points(), 33, "옛 서버 저장으로 덮지 않는다 — 받은 포켓몬을 잃지 않게");
+  assert.equal(X.backups.length, backupsBefore, "덮지 않았으니 백업도 없다");
+  assert.equal(cloudX.unsaved(), "none", "held 는 끄기 확인에서 dirty 로 묻지 않는다");
+  let sentHeld = X.uploads.length;
+  await sleep(400);
+  assert.equal(X.uploads.length, sentHeld, "held 면 저장이 바뀌기 전에는 더 올리지 않는다");
+  X.bump(34);
+  cloudX.noteSaved("event");
+  await until(() => X.uploads.length === sentHeld + 1, "저장이 바뀌면 한 번 다시 올린다");
+  await until(() => cloudX.view().error === "CLOUD_PET_TRADED_OUT", "또 거부되면 다시 held");
+  sentHeld = X.uploads.length;
+  await sleep(400);
+  assert.equal(X.uploads.length, sentHeld, "받지 않고 다시 막는다(서버 저장 다시 받기 없음)");
+  assert.equal(cloudX.view().status, "online", "게임·하트비트는 계속");
+  X.bump(35);
+  cloudX.noteSaved("event");
+  await until(async () => (await saveRow(anonX))?.save?.points?.balance === 35, "거부가 풀리면 다음 변경이 올라간다");
+  assert.equal(cloudX.view().error, null);
+  //   c. 보내는 사이 로컬이 바뀌었다(교환 반영) — 받지 않고 지금 저장으로 다시 올린다
+  backupsBefore = X.backups.length;
+  X.rejectUploads(1, 300);
+  X.bump(36);
+  cloudX.noteSaved("event");
+  await until(() => X.uploads.at(-1)?.op === "rejected", "옛 사본 올리기가 거부를 기다린다");
+  X.bump(37);
+  cloudX.noteSaved("event");
+  await until(async () => (await saveRow(anonX))?.save?.points?.balance === 37, "지금 저장으로 다시 올린다");
+  assert.equal(X.backups.length, backupsBefore, "서버 저장을 받지 않았다");
+  assert.equal(X.points(), 37);
+  // 다시 켜도 그대로 이어 쓴다
+  const cloudX2 = X.make();
+  await cloudX2.start(anonX, "boot", "anonymous");
+  X.bump(38);
+  cloudX2.noteSaved("event");
+  await until(async () => (await saveRow(anonX))?.save?.points?.balance === 38, "다시 켜면 이어 올린다");
+  process.stdout.write("(20) PET_TRADED_OUT — 다시 올려 보고 받기, 또 거부면 덮지 않고 held, 바뀌면 한 번 다시, 옛 사본 거부는 다시 올림  ok\n");
+
+  // (21) 가입 이관 moved — 익명 저장이 새 계정으로 옮겨지고 익명 계정은 지워진다
+  await cloudX2.flush();
+  cloudX2.stop();
+  const up = await X.account.signUp(newName(), "이관", pw);
+  assert.ok(up.ok, JSON.stringify(up));
+  assert.equal(up.ok && up.handoff?.kind, "adopted");
+  assert.equal(up.ok && up.handoff?.kind === "adopted" && up.handoff.outcome, "moved");
+  assert.equal(up.ok && up.view.anonymous, false);
+  const memberX = (await X.account.userId())!;
+  assert.notEqual(memberX, anonX);
+  assert.equal(await userExists(anonX), false, "익명 계정은 지워졌다");
+  assert.equal((await saveRow(memberX))?.save?.points?.balance, 38, "서버에서 옮겨졌다");
+  if (up.ok && up.handoff) cloudX2.applyHandoff(up.handoff, memberX);
+  const cloudX3 = X.make();
+  await cloudX3.start(memberX, "boot", "member");
+  assert.equal(cloudX3.view().status, "online");
+  assert.deepEqual(cloudX3.owner(), { id: memberX, kind: "member" }, "주인은 정식 계정");
+  assert.equal(X.points(), 38, "옮겨진 서버 저장을 받았다");
+  X.bump(35);
+  cloudX3.noteSaved("event");
+  await until(async () => (await saveRow(memberX))?.save?.points?.balance === 35, "정식 계정으로 이어 올린다");
+  process.stdout.write("(21) 이관 moved — 서버에서 옮김, 익명 삭제, 정식 계정으로 이어 쓰기  ok\n");
+
+  // (22) 로그인 이관 discarded — 로그인 계정에 저장이 있으면 익명 저장을 버리고 서버 저장을 받는다(D7, 로컬 백업)
+  const Z = make("시험 PC Z", 42);
+  const nameZ = newName();
+  assert.ok((await Z.account.signUp(nameZ, "제트", pw)).ok);
+  const memberZ = (await Z.account.userId())!;
+  const cloudZ = Z.make();
+  await cloudZ.start(memberZ, "boot");
+  assert.equal((await saveRow(memberZ))?.save?.points?.balance, 42);
+  await cloudZ.release(3_000);
+  const Y = make("시험 PC Y", 7, [pet]);
+  const anonY = await Y.anon();
+  const cloudY = Y.make();
+  await cloudY.start(anonY, "boot", "anonymous");
+  await until(async () => (await saveRow(anonY))?.rev === 1, "Y 익명 첫 올리기");
+  cloudY.stop();
+  const inY = await Y.account.signIn(nameZ, pw);
+  assert.ok(inY.ok && inY.handoff?.kind === "adopted" && inY.handoff.outcome === "discarded", JSON.stringify(inY));
+  assert.equal(await userExists(anonY), false, "버려도 익명 계정은 지운다");
+  if (inY.ok && inY.handoff) cloudY.applyHandoff(inY.handoff, memberZ);
+  assert.deepEqual(cloudY.owner(), { id: anonY, kind: "anonymous" }, "discarded 는 주인을 바꾸지 않는다");
+  const cloudY2 = Y.make();
+  await cloudY2.start(memberZ, "boot", "member");
+  assert.equal(cloudY2.view().status, "online");
+  assert.equal(Y.points(), 42, "로그인 계정 저장을 받았다");
+  assert.equal((Y.backups.at(-1)?.points as { balance: number }).balance, 7, "익명 진행은 백업");
+  assert.deepEqual(cloudY2.owner(), { id: memberZ, kind: "member" });
+  cloudY2.stop();
+  process.stdout.write("(22) 이관 discarded — 로그인 계정 저장 받기, 익명 진행 백업  ok\n");
+
+  // (23) 이관 empty + rebind — 서버에 익명 저장이 없으면(고르기 전 가입) 이 PC 저장을 새 계정 첫 저장으로
+  const W = make("시험 PC W", 11, []);
+  const anonW = await W.anon();
+  const cloudW = W.make();
+  await cloudW.start(anonW, "boot", "anonymous");
+  assert.equal(cloudW.rebind(anonW, "x"), false, "돌고 있으면 rebind 하지 않는다");
+  cloudW.stop();
+  assert.equal(cloudW.rebind("someone-else", "x"), false, "주인이 from 이 아니면 rebind 하지 않는다");
+  W.setPets([pet]); // 오프라인에서 고른 셈 — 서버에는 아직 없다
+  const upW = await W.account.signUp(newName(), "더블유", pw);
+  assert.ok(upW.ok && upW.handoff?.kind === "adopted" && upW.handoff.outcome === "empty", JSON.stringify(upW));
+  const memberW = (await W.account.userId())!;
+  if (upW.ok && upW.handoff) cloudW.applyHandoff(upW.handoff, memberW);
+  assert.deepEqual(cloudW.owner(), { id: memberW, kind: "member" }, "empty 는 새 계정으로 rebind");
+  assert.equal(W.state()?.syncedRev, 0);
+  const cloudW2 = W.make();
+  await cloudW2.start(memberW, "boot", "member");
+  await until(async () => (await saveRow(memberW))?.save?.points?.balance === 11, "이 PC 저장을 첫 저장으로");
+  assert.equal(W.backups.length, 0, "받지 않았다");
+  cloudW2.stop();
+  process.stdout.write("(23) 이관 empty — rebind 뒤 이 PC 저장을 첫 저장으로  ok\n");
+
+  // (24) 이관 실패 보관·재시도 — 교체 직후 adopt 가 망 오류면 티켓을 cloud.json 에 남기고, start 가 claim 전에 다시 옮긴다
+  const V = make("시험 PC V", 55, [pet]);
+  const anonV = await V.anon();
+  const cloudV = V.make();
+  await cloudV.start(anonV, "boot", "anonymous");
+  await until(async () => (await saveRow(anonV))?.rev === 1, "V 익명 첫 올리기");
+  cloudV.stop();
+  V.failAdopt(2); // 교체 직후 한 번, start 첫 시도 한 번
+  const upV = await V.account.signUp(newName(), "브이", pw);
+  assert.ok(upV.ok && upV.handoff?.kind === "pending" && upV.handoff.code === "NETWORK", JSON.stringify(upV));
+  const memberV = (await V.account.userId())!;
+  if (upV.ok && upV.handoff) cloudV.applyHandoff(upV.handoff, memberV);
+  assert.equal(cloudV.pendingHandoff()?.anon, anonV, "티켓 보관");
+  assert.equal(V.state()?.handoff?.anon, anonV, "cloud.json 에 남는다");
+  assert.equal(await userExists(anonV), true, "아직 옮기지 않았다");
+  const cloudV2 = V.make();
+  await cloudV2.start(memberV, "boot", "member");
+  assert.equal(cloudV2.view().status, "offline", "다시 시도도 실패하면 오프라인");
+  assert.ok(V.state()?.handoff, "티켓은 그대로");
+  await until(() => cloudV2.view().status === "online", "재시도로 옮기고 연결");
+  assert.equal(V.state()?.handoff, null, "옮긴 뒤 티켓을 지운다");
+  assert.equal(await userExists(anonV), false);
+  assert.equal((await saveRow(memberV))?.save?.points?.balance, 55);
+  assert.deepEqual(V.handoffs, ["moved"], "늦게 옮긴 결과를 앱에 알린다 — discarded 면 앱이 알림을 띄운다");
+  assert.deepEqual(cloudV2.owner(), { id: memberV, kind: "member" });
+  cloudV2.stop();
+  // 만료된 티켓은 부르지 않고 버린다
+  cloudV2.applyHandoff({ kind: "pending", handoff: { ticket: "old", anon: "gone", expiresAt: Date.now() - 1 }, code: "NETWORK" }, memberV);
+  const cloudV3 = V.make();
+  await cloudV3.start(memberV, "boot", "member");
+  assert.equal(cloudV3.view().status, "online");
+  assert.equal(V.state()?.handoff, null, "만료 티켓은 버린다");
+  cloudV3.stop();
+  process.stdout.write("(24) 이관 실패 — 티켓 보관, start 가 다시 옮김, 만료는 버림  ok\n");
+
+  // (25) 분실 — 익명 계정이 서버에서 지워지면(정리) onLost("anonymous"), 클라우드는 off. 주인은 남는다(부팅 판단용)
+  const U = make("시험 PC U", 9, [pet]);
+  const anonU = await U.anon();
+  const cloudU = U.make();
+  await cloudU.start(anonU, "boot", "anonymous");
+  await until(async () => (await saveRow(anonU))?.rev === 1, "U 익명 첫 올리기");
+  {
+    const { error } = await admin.auth.admin.deleteUser(anonU);
+    if (error) throw new Error(error.message);
+  }
+  await until(() => U.lost.length > 0, "하트비트가 분실을 안다");
+  assert.deepEqual(U.lost, ["anonymous"]);
+  assert.equal(cloudU.view().status, "off");
+  assert.equal(cloudU.view().error, "CLOUD_LOGIN_REQUIRED");
+  assert.equal(U.halts.length, 0, "게임은 멈추지 않는다(onHalt 없음)");
+  // 다시 켠 앱 — 세션이 없고 주인이 있다 → 앱이 분실 창(D29)을 띄운다. 판단 재료는 probe·owner
+  const fresh = createClient(url, key, { auth: { storage: memoryStorage(), persistSession: true, autoRefreshToken: false, detectSessionInUrl: false } });
+  assert.deepEqual(await createSessionGate(fresh).probe(), { state: "none" }, "세션 없음");
+  assert.deepEqual(U.make().owner(), { id: anonU, kind: "anonymous" }, "cloud.json 의 주인");
+  process.stdout.write("(25) 익명 분실 — onLost, off, 주인 유지  ok\n");
+
+  // (26) reset — 로그아웃·삭제 뒤. 기기 ID 만 남기고 새 설치처럼
+  const device = U.state()?.deviceId;
+  cloudU.reset();
+  assert.deepEqual(U.state(), { deviceId: device, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null });
+  assert.equal(cloudU.owner(), null);
+  assert.equal(cloudU.view().status, "off");
+  process.stdout.write("(26) reset — 새 설치 상태, 기기 ID 유지  ok\n");
+
+  // (27) 업데이트 필요는 다시 연결 간격마다 다시 확인한다 — 서버가 받게 되면 풀린다
+  {
+    const W = make("시험 PC W", 12, [pet]);
+    const anonW = await W.anon();
+    const cloudW = W.make();
+    W.versionBlock(2);
+    await cloudW.start(anonW, "boot", "anonymous");
+    assert.equal(cloudW.view().status, "update-required");
+    await until(() => cloudW.view().status === "online", "다시 확인해 풀린다", 5_000);
+    await until(async () => (await saveRow(anonW))?.rev === 1, "풀린 뒤 올린다");
+    cloudW.stop();
+  }
+  process.stdout.write("(27) 업데이트 필요 — 재시도 때 다시 확인해 풀림  ok\n");
+}
+
 async function main(): Promise<void> {
   // 옛 cloud.json — owner 는 올리던 계정, 새 칸은 기본값
   assert.deepEqual(readCloudState({ deviceId: "d", userId: "u", syncedRev: 3, dirty: true, offlineDirty: true, lastSavedAt: 7 }), {
-    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null,
+    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null,
   });
+  // P2 형식 — ownerKind·handoff 를 그대로 읽는다. 모양이 틀린 handoff 는 버린다
+  const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 } };
+  assert.deepEqual(readCloudState(p2State), p2State);
+  assert.equal(readCloudState({ ...p2State, handoff: { ticket: 1 } })?.handoff, null);
+  assert.equal(readCloudState({ ...p2State, owner: null })?.ownerKind, null, "주인이 없으면 종류도 없다");
   assert.equal(readCloudState({ deviceId: "d", userId: null, syncedRev: 0, dirty: false, offlineDirty: false, lastSavedAt: null })?.owner, null);
   assert.equal(readCloudState({ deviceId: 1 }), null);
+
+  // 부팅 판단(검수 H1) — 익명 세션인데 저장 주인이 다른 계정이고 이관 티켓이 없으면 분실. 잃은 계정의 종류를 돌려준다
+  const anonUser = { id: "n", is_anonymous: true };
+  assert.equal(strayAnonymous(anonUser, { id: "o", kind: "anonymous" }, null), "anonymous", "분실 부팅 때 새로 생긴 익명");
+  assert.equal(strayAnonymous(anonUser, { id: "o", kind: "member" }, null), "member", "P1 로그아웃 뒤 교환 탭이 만든 익명");
+  assert.equal(strayAnonymous(anonUser, { id: "o", kind: null }, null), "member", "종류 모름은 정식 계정으로");
+  assert.equal(strayAnonymous(anonUser, { id: "n", kind: "anonymous" }, null), null, "주인과 같은 익명");
+  assert.equal(strayAnonymous(anonUser, null, null), null, "주인 없음(새 설치)");
+  assert.equal(strayAnonymous(anonUser, { id: "o", kind: "anonymous" }, { ticket: "t", anon: "o", expiresAt: 9 }), null, "남은 이관 티켓이 있으면 분실로 보지 않는다");
+  assert.equal(strayAnonymous({ id: "m", is_anonymous: false }, { id: "o", kind: "anonymous" }, null), null, "정식 계정은 G-b 가 푼다");
+  process.stdout.write("(0) 부팅 판단 — 주인과 다른 익명 세션은 분실  ok\n");
 
   const cfg = local();
   if (!cfg) {
@@ -156,6 +464,7 @@ async function main(): Promise<void> {
   const pw = "correct-horse-8";
   const A = pc(cfg.url, cfg.key, "시험 PC A", 100);
   const B = pc(cfg.url, cfg.key, "시험 PC B", 5);
+  const extra: PC[] = []; // P2 시험 PC — 끝나면 함께 멈춘다
 
   try {
     // (1) 첫 로그인 — 서버 저장이 없으면 이 PC 저장을 첫 저장으로 올리고 owner 를 적는다
@@ -298,19 +607,19 @@ async function main(): Promise<void> {
     process.stdout.write("(9) 잠듦이면 확인 없음, 깨어나면 밀려남  ok\n");
 
     // (10) 최소 버전보다 낮은 앱 — 업데이트 필요. 옛 함수 시그니처도 업데이트 필요만 낸다
-    const cloudV = A.make("0.12.9");
-    await cloudV.start(uid, "boot");
-    assert.equal(cloudV.view().status, "update-required");
-    assert.equal(cloudV.view().error, "CLOUD_UPDATE_REQUIRED");
-    cloudV.noteSaved("event");
+    const cloudW = A.make("0.12.9");
+    await cloudW.start(uid, "boot");
+    assert.equal(cloudW.view().status, "update-required");
+    assert.equal(cloudW.view().error, "CLOUD_UPDATE_REQUIRED");
+    cloudW.noteSaved("event");
     await sleep(300);
-    assert.equal(cloudV.view().status, "update-required", "올리지 않고 그대로");
+    assert.equal(cloudW.view().status, "update-required", "올리지 않고 그대로");
     const oldClaim = await A.client.rpc("claim_device", { p_device: A.state()?.deviceId, p_label: "옛 앱" });
     assert.match(oldClaim.error?.message ?? "", /CLOUD_UPDATE_REQUIRED/, "옛 2인자 claim_device");
     const oldUpload = await A.client.rpc("upload_save", { p_device: A.state()?.deviceId, p_base_rev: 0, p_save: {}, p_save_v: 3, p_app_version: "0.4.0" });
     assert.match(oldUpload.error?.message ?? "", /CLOUD_UPDATE_REQUIRED/, "옛 5인자 upload_save");
     assert.equal((await row(uid)).active_device, B.state()?.deviceId, "버전 거부는 넘겨받지 않는다");
-    cloudV.stop();
+    cloudW.stop();
     process.stdout.write("(10) 버전 거부·옛 시그니처 — 업데이트 필요  ok\n");
 
     // (11) 서버 저장에 반영되지 않은 교환 — 넘겨받지 않고 blocked. 풀린 뒤 다시 시도하면 넘겨받는다
@@ -443,11 +752,13 @@ async function main(): Promise<void> {
     void C.client.removeAllChannels();
     process.stdout.write("(18) claim 응답 전에 넘겨받혔으면 밀려남  ok\n");
 
-    process.stdout.write("selftest-cloud: 통과 (1~12·14~18, 13 은 selftest-session)\n");
+    await p2(cfg.url, cfg.key, admin, extra);
+    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~27, 13 은 selftest-session)\n");
   } finally {
-    for (const c of [...A.clouds, ...B.clouds]) c.stop();
-    void A.client.removeAllChannels();
-    void B.client.removeAllChannels();
+    for (const p of [A, B, ...extra]) {
+      for (const c of p.clouds) c.stop();
+      void p.client.removeAllChannels();
+    }
   }
 }
 

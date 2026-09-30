@@ -5,12 +5,15 @@
 //   2. signInWithOAuth(skipBrowserRedirect)로 로그인 주소를 받아 기본 브라우저로 연다
 //   3. 브라우저가 http://127.0.0.1:<포트>/auth/callback?code=… 로 돌아오면 코드를 세션으로 바꾼다
 //   4. 서버를 닫는다. 5분 안에 돌아오지 않으면 취소로 본다
+//   익명 저장 이관(P2) — switchHooks 를 받으면 코드 교환 직전 before(익명이면 티켓), 직후 after(이관)를 같은 exclusive 안에서 부른다.
+//     교환이 공유 클라이언트의 익명 세션을 덮어쓰므로 티켓은 교환 전에 받는다 (design-p2.md 0절·2절)
 // 세 주소는 Supabase 의 Redirect URLs 에 넣어 둬야 한다(사용자 설정). pokebuddy:// 딥링크는 쓰지 않는다 — 가로채기에 강하고 개발 실행에서도 된다
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authCodeOf, viewOf, type AccountResult } from "./account.js";
 import type { SessionGate } from "./session.js";
+import type { HandoffReport, SwitchHooks } from "./handoff.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다
 export const GITHUB_PORTS = [54380, 54381, 54382] as const;
@@ -25,6 +28,7 @@ export interface GithubLoginOptions {
   ports?: readonly number[];
   timeoutMs?: number;
   signal?: AbortSignal; // 사용자가 기다리다 취소했다
+  switchHooks?: SwitchHooks; // 세션 교체 앞뒤 훅 — 익명 저장 이관. 결과는 GithubResult.handoff
 }
 
 // 앱으로 돌아가는 딥링크 — 설치본이 pokebuddy:// 를 등록한다. 앱은 관리 창의 계정 탭을 연다 (src/main/app.ts)
@@ -95,7 +99,7 @@ async function listen(server: http.Server, ports: readonly number[]): Promise<nu
 // 로그인 결과 — 성공이면 로그인한 계정 보기. 취소·시간 초과는 AUTH_CANCELLED(화면은 조용히 로그인 화면으로)
 export type GithubResult = AccountResult | { ok: false; code: "AUTH_CANCELLED" | "AUTH_PORT_BUSY" };
 
-export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal }: GithubLoginOptions): Promise<GithubResult> {
+export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal, switchHooks }: GithubLoginOptions): Promise<GithubResult> {
   if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" };
   let settle: (code: string | null) => void = () => undefined;
   const got = new Promise<string | null>((resolve) => { settle = resolve; });
@@ -138,9 +142,23 @@ export async function githubLogin({ client, gate, openExternal, blocked, ports =
     if (!code) return { ok: false, code: "AUTH_CANCELLED" };
     const result = await gate.exclusive(async (): Promise<GithubResult> => {
       if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" }; // 기다리는 동안 교환을 시작했다
+      // 교환 전 — 익명이면 이관 티켓. 실패하면 교환하지 않는다(코드는 버려진다. 다시 로그인하면 된다)
+      //   훅이 던지면 교환하지 않고 실패로 돌려준다 — 앱이 멈춘 클라우드를 원래 세션으로 다시 시작한다(account.ts before 와 같다, 검수 L5)
+      let prep: Awaited<ReturnType<SwitchHooks["before"]>>;
+      try {
+        prep = switchHooks ? await switchHooks.before(await gate.current()) : { ok: true as const, handoff: null };
+      } catch (e) {
+        return { ok: false, ...authCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
+      }
+      if (!prep.ok) return { ok: false, code: prep.code };
       const exchanged = await client.auth.exchangeCodeForSession(code);
       if (exchanged.error) return { ok: false, ...authCodeOf(exchanged.error) };
-      return { ok: true, view: viewOf(exchanged.data.user) };
+      if (!switchHooks) return { ok: true, view: viewOf(exchanged.data.user) };
+      const handoff = await switchHooks.after(prep.handoff, exchanged.data.user).catch((e: unknown): HandoffReport => {
+        console.error("익명 저장 이관 훅이 실패했다", e);
+        return prep.handoff ? { kind: "pending", handoff: prep.handoff, code: "UNKNOWN" } : { kind: "none" };
+      });
+      return { ok: true, view: viewOf(exchanged.data.user), handoff };
     });
     if (result.ok) answer(true);
     return result;

@@ -32,7 +32,7 @@ function sql(query) {
 
 // ── 앱 하나 ───────────────────────────────────────────────────────────────────
 // pets: [{ id, species, where: 'party'|'box' }]
-//   opts.prefix — 임시 폴더 이름 앞부분, opts.points — 시작 포인트
+//   opts.prefix — 임시 폴더 이름 앞부분, opts.points — 시작 포인트, opts.fresh — 저장 없이 새 설치로 시작(첫 포켓몬 선택 창)
 function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${opts.prefix ?? 'pokebuddy-trade-e2e'}-${name}-`));
   const temp = path.join(dir, 'tmp');
@@ -41,7 +41,7 @@ function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'NODE_OPTIONS' || key === 'ELECTRON_RUN_AS_NODE') delete env[key];
   env.PB_E2E_DIR = dir;
   const observer = (file) => `--require "${path.join(__dirname, file).split(path.sep).join('/')}"`;
-  env.NODE_OPTIONS = `${observer('companion-observer.cjs')} ${observer('manage-observer.cjs')}`;
+  env.NODE_OPTIONS = `${observer('mock-keychain.cjs')} ${observer('companion-observer.cjs')} ${observer('manage-observer.cjs')}`; // mock-keychain — 임시 HOME 앱이 사용자 키체인에 닿지 않게
   env.POKEBUDDY_SUPABASE_URL = server.url;
   env.POKEBUDDY_SUPABASE_KEY = server.key;
   env.POKEBUDDY_TRADE_POLL_MS = '600000'; // 주기 새로 고침을 사실상 끈다 — 보기가 바뀌면 실시간 신호 때문이다
@@ -50,18 +50,20 @@ function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
 
   const data = path.join(dir, '.claude', 'pokebuddy');
   fs.mkdirSync(data, { recursive: true });
-  const { empty } = require(path.join(root, 'dist/save/v3.js'));
-  const { newPet } = require(path.join(root, 'dist/party/create.js'));
-  const save = empty(Date.now());
-  for (const p of pets) {
-    save.pets.push(newPet({ id: p.id, species: p.species, shiny: false, nature: 'hardy', now: Date.now() }));
-    if (p.where === 'party') save.party.slots[save.party.slots.findIndex((s) => s.state === 'empty')] = { state: 'pokemon', petId: p.id, hidden: false };
-    else save.boxes[0].slots[save.boxes[0].slots.indexOf(null)] = p.id;
+  if (!opts.fresh) {
+    const { empty } = require(path.join(root, 'dist/save/v3.js'));
+    const { newPet } = require(path.join(root, 'dist/party/create.js'));
+    const save = empty(Date.now());
+    for (const p of pets) {
+      save.pets.push(newPet({ id: p.id, species: p.species, shiny: false, nature: 'hardy', now: Date.now() }));
+      if (p.where === 'party') save.party.slots[save.party.slots.findIndex((s) => s.state === 'empty')] = { state: 'pokemon', petId: p.id, hidden: false };
+      else save.boxes[0].slots[save.boxes[0].slots.indexOf(null)] = p.id;
+    }
+    save.starterPetId = pets[0].id;
+    if (typeof opts.points === 'number') save.points.balance = opts.points;
+    save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party', 'achievement'].map((k) => [k, { state: 'skipped', steps: 0 }]));
+    fs.writeFileSync(path.join(data, 'save.json'), JSON.stringify(save));
   }
-  save.starterPetId = pets[0].id;
-  if (typeof opts.points === 'number') save.points.balance = opts.points;
-  save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party', 'achievement'].map((k) => [k, { state: 'skipped', steps: 0 }]));
-  fs.writeFileSync(path.join(data, 'save.json'), JSON.stringify(save));
 
   const app = { name, dir, env, data, lock: path.join(data, 'companion.lock') };
   app.cli = (args) => new Promise((resolve, reject) => {
@@ -119,6 +121,53 @@ function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
   // 글자가 같은 단추를 누른다. 막힌 단추면 false
   app.press = (label) => app.dom(`(() => { const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)}); if (!b || b.disabled) return false; b.click(); return true; })()`);
   app.shot = (file) => app.ui('shot', { file });
+  app.has = async (words) => { const t = await app.text(); return words.every((w) => t.includes(w)); };
+  app.fill = (id, value) => app.dom(`(() => { const i = document.getElementById(${JSON.stringify(id)}); if (!i) return false; i.value = ${JSON.stringify(value)}; i.dispatchEvent(new Event('input')); return true; })()`);
+  app.indicator = () => app.dom(`(() => { const e = document.getElementById('save-indicator'); return e && !e.hidden ? e.textContent : ''; })()`);
+  app.cloud = () => { try { return JSON.parse(fs.readFileSync(path.join(data, 'cloud.json'), 'utf8')); } catch { return null; } };
+  // 동반자 관측기(e2e/companion-observer.cjs)의 사건 — boot·window·picker-ready·picked·quit
+  app.events = () => { const f = path.join(dir, 'events.jsonl'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []; };
+  // 관리 창 관측기(e2e/manage-observer.cjs)가 가로챈 네이티브 메시지 창 — 뜬 순서대로. answer 는 글자가 같은 단추를 고른다
+  app.dialogs = () => { const f = path.join(dir, 'dialogs.jsonl'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []; };
+  app.answer = (button) => app.ui('dialog', { button });
+  // 첫 포켓몬 선택 창이 새로 뜨면 이브이를 고른다. 창 수를 세어 이번 창만 본다
+  app.pickEevee = async (seen) => {
+    await until(() => app.events().filter((e) => e.event === 'picker-ready').length > seen, `[${name}] 선택 창`, 60_000);
+    fs.writeFileSync(path.join(dir, 'action.json'), JSON.stringify({ kind: 'pick-eevee' }));
+    await until(() => app.events().some((e) => e.event === 'picked' && e.selected), `[${name}] 이브이 고르기`);
+  };
+  // 새 설치 — 저장이 없어 선택 창이 뜬다. 고를 때까지 CLI 가 끝나지 않는다
+  app.startFresh = async () => {
+    const run = app.cli(['companion']);
+    await app.pickEevee(app.events().filter((e) => e.event === 'picker-ready').length);
+    const r = await run;
+    assert.equal(r.code, 0, `[${name}] 동반자 시작 실패: ${r.stderr}`);
+  };
+  // 관리 창 → 사용자 모달 → 계정 탭
+  app.accountTab = async () => {
+    await app.ui('open');
+    await until(async () => { try { return await app.dom('!!document.querySelector("nav .tabs button")'); } catch { return false; } }, `[${name}] 관리 창`);
+    await app.dom(`document.getElementById('open-user').click()`);
+    await until(() => app.press('계정'), `[${name}] 계정 탭`);
+  };
+  app.closeDialog = async () => {
+    await app.dom(`document.querySelector('#dialog .dialog-close')?.click()`);
+    await until(async () => !(await app.dom('document.getElementById("scrim").classList.contains("open")')), `[${name}] 모달 닫힘`);
+  };
+  // 계정 탭에서 아이디로 가입한다 — 익명 저장이 새 계정으로 옮겨진다(진행 옮기기). 가입 뒤 모달을 닫는다
+  app.signUp = async (username, password, displayName = username.slice(0, 12)) => {
+    await app.accountTab();
+    await until(() => app.press('가입'), `[${name}] 가입 화면으로`);
+    await until(() => app.dom(`!!document.getElementById('search-acct-new-user')`), `[${name}] 가입 화면`);
+    await app.fill('search-acct-new-user', username);
+    await until(() => app.has(['사용할 수 있는 아이디']), `[${name}] 아이디 확인`);
+    await app.fill('search-acct-new-name', displayName);
+    await app.fill('search-acct-new-pass', password);
+    await app.fill('search-acct-new-pass2', password);
+    assert.equal(await app.press('가입'), true, `[${name}] 가입 단추`);
+    await until(() => app.has([`아이디 ${username}`]), `[${name}] 가입 뒤 화면`, 30_000);
+    await app.closeDialog();
+  };
   apps.push(app);
   return app;
 }

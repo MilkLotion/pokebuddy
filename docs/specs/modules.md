@@ -44,13 +44,16 @@
 | `src/hooks` | CLI 훅 이벤트를 세션별 상태 파일로 남긴다 | 게임 규칙 | SC-11 |
 | `src/shared` | 모듈 사이의 공유 타입과 시계 | 규칙 | 전체 |
 | `src/tools` | 데이터 빌드와 자체 검사(`selftest-*`) | 앱 실행 | — |
-| `src/online` | 온라인 공통과 계정. `client`는 교환·계정·클라우드 저장이 함께 쓰는 Supabase 클라이언트, `account`는 아이디 가입·로그인·로그아웃·이름·삭제 요청, `github`는 GitHub 로그인(`127.0.0.1` 임시 서버 PKCE), `cloud`는 클라우드 저장(활성 기기·자동 저장·오프라인·다른 PC 에서 시작·연결 끊김 확인·잠듦·업데이트 필요), `session`은 익명·로그인 세션을 한 곳에서 만든다 | 저장 파일 쓰기(메인이 받은 저장을 검사·백업 뒤 바꾼다), 창 | — |
+| `src/online` | 온라인 공통과 계정. `client`는 교환·계정·클라우드 저장이 함께 쓰는 Supabase 클라이언트, `account`는 아이디 가입·로그인·로그아웃·이름·삭제 요청, `github`는 GitHub 로그인(`127.0.0.1` 임시 서버 PKCE), `cloud`는 클라우드 저장(활성 기기·자동 저장·오프라인·다른 PC 에서 시작·연결 끊김 확인·잠듦·업데이트 필요·저장 정보 분실), `session`은 익명·로그인 세션을 한 곳에서 만들고 부팅 때 세션 유무를 확인한다(`probe`), `handoff`는 로그인 직전 익명 저장 이관 티켓을 받고 로그인 뒤 익명 저장을 옮긴다(`begin_handoff`·`adopt_anonymous`) | 저장 파일 쓰기(메인이 받은 저장을 검사·백업 뒤 바꾼다), 창 | — |
 | `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/mailbox.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
-친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 암호화 저장, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
+친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
 우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
+부팅하면 `src/main/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
+로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
+세션 저장 `encryptedStorage`는 `~/.claude/pokebuddy/online/session.bin`을 Electron `safeStorage`로 암호화한다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
 앱 업데이트는 `src/main/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다.
 패치노트는 `src/main/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
 
@@ -113,14 +116,16 @@
 |---|---|
 | `deviceId` | 설치마다 한 번 만드는 무작위 ID. 서버의 활성 기기와 견준다 |
 | `userId` | 이 저장을 올리는 계정. 로그아웃하면 `null`. 다른 PC 에서 시작해도 남긴다 |
-| `owner` | 로컬 저장이 속한 계정. 로그아웃해도 남긴다. 다른 계정으로 로그인했고 그 계정의 서버 저장이 없으면 이 PC 저장을 올리지 않는다(`CLOUD_OWNER_OTHER`) |
+| `owner` | 로컬 저장이 속한 계정. 로그아웃하면 새로 시작하며 비운다. 다른 계정으로 로그인했고 그 계정의 서버 저장이 없으면 이 PC 저장을 올리지 않는다(`CLOUD_OWNER_OTHER`). 주인이 익명 계정이면 로그인 계정 첫 저장으로 다시 묶는다 |
+| `ownerKind` | `owner`의 종류. `anonymous` 또는 `member`. 저장 정보 분실 창의 단추를 가른다 |
+| `handoff` | 옮기지 못한 익명 저장 이관 티켓(`ticket`·`anon`·`expiresAt`). 로그인 계정으로 켤 때 다시 옮긴다 |
 | `syncedRev` | 마지막으로 서버와 맞춘 판 번호. 서버 판 번호가 다르면 서버 저장을 받는다 |
 | `dirty` | 마지막 올리기 뒤 저장이 바뀌었다. 연결되면 자동으로 올린다 |
 | `superseded` | 다른 PC 에서 시작했다. 다음 실행은 판 번호와 관계없이 서버 저장을 받는다 |
 | `pendingOp` | 보냈지만 결과를 모르는 올리기의 멱등 키. 다시 보낼 때 같은 키를 쓴다 |
 | `lastSavedAt` | 마지막으로 올린 시각 |
 
-옛 `cloud.json` 의 `offlineDirty` 는 읽지 않는다. 옛 파일에 `owner` 가 없으면 `userId` 를 `owner` 로 본다.
+옛 `cloud.json` 의 `offlineDirty` 는 읽지 않는다. 옛 파일에 `owner` 가 없으면 `userId` 를 `owner` 로 본다. 옛 파일에 `ownerKind` 가 없으면 `member` 로 본다.
 받은 서버 저장으로 로컬 저장을 바꾸기 전 `save.json.cloud-<시각>.bak`을 남긴다.
 
 ### 영역별 필드

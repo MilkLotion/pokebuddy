@@ -1,11 +1,13 @@
 // GitHub 로그인 확인 — 실제 GitHub 없이 가짜 클라이언트로 임시 서버·포트 고르기·코드 교환·취소·막힘을 본다
 //   npm run build && node dist/tools/selftest-github.js
 // 실제 GitHub 화면과 Supabase 리디렉션 허용 목록은 사용자 실기로 본다 (worklog/records/trade/record.md "로그인·클라우드 저장 구현 계획")
+// P2(design-p2.md 2절): 세션 교체 훅 — 익명이면 교환 전에 티켓, 교환 뒤 이관. before 실패면 교환하지 않는다
 import assert from "node:assert";
 import http from "node:http";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_LINK, callbackPage, callbackUrl, githubLogin, type GithubLoginOptions } from "../online/github";
 import { createSessionGate } from "../online/session";
+import type { SwitchHooks } from "../online/handoff";
 
 // 시험마다 그 클라이언트의 세션 관문을 붙인다
 const login = (o: Omit<GithubLoginOptions, "gate">): ReturnType<typeof githubLogin> => githubLogin({ ...o, gate: createSessionGate(o.client) });
@@ -13,13 +15,18 @@ const login = (o: Omit<GithubLoginOptions, "gate">): ReturnType<typeof githubLog
 const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // 가짜 인증 — 로그인 주소에 redirectTo 를 담아 돌려주고, 코드 교환을 기록한다
-function fakeClient(exchanged: string[]): SupabaseClient {
+//   anon 을 주면 교환 전 세션이 그 익명 사용자다(교환하면 정식 계정으로 바뀐다)
+function fakeClient(exchanged: string[], anon?: string): SupabaseClient {
+  let session: { user: { id: string; is_anonymous: boolean } } | null = anon ? { user: { id: anon, is_anonymous: true } } : null;
   return {
     auth: {
+      getSession: async () => ({ data: { session }, error: null }),
       signInWithOAuth: async ({ options }: { options: { redirectTo: string } }) => ({ data: { url: `https://github.invalid/login?redirect=${encodeURIComponent(options.redirectTo)}` }, error: null }),
       exchangeCodeForSession: async (code: string) => {
         exchanged.push(code);
-        return { data: { user: { id: "u1", is_anonymous: false, email: "someone@users.noreply.github.com", user_metadata: { user_name: "octo", full_name: "옥토" } } }, error: null };
+        const user = { id: "u1", is_anonymous: false, email: "someone@users.noreply.github.com", user_metadata: { user_name: "octo", full_name: "옥토" } };
+        session = { user };
+        return { data: { user }, error: null };
       },
     },
   } as unknown as SupabaseClient;
@@ -36,7 +43,7 @@ async function main(): Promise<void> {
   // (1) 돌아온 코드를 세션으로 바꾼다
   const exchanged: string[] = [];
   const ok = await login({ client: fakeClient(exchanged), openExternal: browser("?code=abc123"), blocked: () => false, ports });
-  assert.deepEqual(ok, { ok: true, view: { signedIn: true, method: "github", username: null, displayName: "옥토" } });
+  assert.deepEqual(ok, { ok: true, view: { signedIn: true, anonymous: false, method: "github", username: null, displayName: "옥토" } });
   assert.deepEqual(exchanged, ["abc123"]);
   process.stdout.write("(1) 브라우저에서 돌아온 코드로 로그인  ok\n");
 
@@ -121,12 +128,41 @@ async function main(): Promise<void> {
   assert.ok(seen.includes("로그인하지 못했어요"), "코드를 받았어도 세션으로 못 바꾸면 실패 쪽을 보인다");
   process.stdout.write("(5-3) 브라우저 쪽 — 결과를 보고 답하고, 성공이면 앱 링크를 연다  ok\n");
 
+  // (5-4) 세션 교체 훅 — 익명이면 교환 전에 before(티켓), 교환 뒤 after(이관). 결과는 handoff 로 돌려준다
+  {
+    const order: string[] = [];
+    const hooks = (failBefore: boolean): SwitchHooks => ({
+      before: async (cur) => {
+        order.push(`before:${cur?.id ?? "none"}:${cur?.is_anonymous ? "anon" : "-"}`);
+        return failBefore ? { ok: false, code: "NETWORK" } : { ok: true, handoff: cur?.is_anonymous ? { ticket: "tk", anon: cur.id, expiresAt: Date.now() + 60_000 } : null };
+      },
+      after: async (h, next) => {
+        order.push(`after:${h?.ticket ?? "-"}:${next?.id}`);
+        return h ? { kind: "adopted", anon: h.anon, outcome: "moved", rev: 3 } : { kind: "none" };
+      },
+    });
+    const ex: string[] = [];
+    const client = fakeClient(ex, "anon-9");
+    const moved = await githubLogin({ client, gate: createSessionGate(client), openExternal: browser("?code=h1"), blocked: () => false, ports, switchHooks: hooks(false) });
+    assert.deepEqual(moved, { ok: true, view: { signedIn: true, anonymous: false, method: "github", username: null, displayName: "옥토" }, handoff: { kind: "adopted", anon: "anon-9", outcome: "moved", rev: 3 } });
+    assert.deepEqual(order, ["before:anon-9:anon", "after:tk:u1"], "티켓은 교환 전, 이관은 교환 뒤");
+    assert.deepEqual(ex, ["h1"]);
+    order.length = 0;
+    const ex2: string[] = [];
+    const c2 = fakeClient(ex2, "anon-10");
+    const stopped = await githubLogin({ client: c2, gate: createSessionGate(c2), openExternal: browser("?code=h2"), blocked: () => false, ports, switchHooks: hooks(true) });
+    assert.deepEqual(stopped, { ok: false, code: "NETWORK" }, "before 실패면 로그인 중단");
+    assert.deepEqual(ex2, [], "교환하지 않았다 — 익명 세션 그대로");
+    assert.deepEqual(order, ["before:anon-10:anon"]);
+    process.stdout.write("(5-4) 교환 전 티켓·교환 뒤 이관, before 실패면 교환 안 함  ok\n");
+  }
+
   // (6) 끝나면 포트를 닫는다 — 같은 포트로 다시 열 수 있다
   const again = http.createServer();
   await new Promise<void>((resolve, reject) => { again.once("error", reject); again.listen(ports[0], "127.0.0.1", () => resolve()); });
   again.close();
   process.stdout.write("(6) 끝나면 임시 서버를 닫는다  ok\n");
-  process.stdout.write("selftest-github: 통과 (코드 교환·포트 고르기·포트 없음·취소·막힘·닫기)\n");
+  process.stdout.write("selftest-github: 통과 (코드 교환·포트 고르기·포트 없음·취소·막힘·교체 훅·닫기)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

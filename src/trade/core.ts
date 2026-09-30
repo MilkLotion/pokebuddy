@@ -1,7 +1,7 @@
 // 친구 교환의 규칙 — 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 //
 // 순수 함수다. 저장 사본을 고치고 결과만 돌려준다. 서버와 파일은 모른다.
-//   올리기    내 개체의 값을 TradePet 으로 만든다. 단일 포켓몬은 올리지 못한다
+//   올리기    내 개체의 값을 TradePet 으로 만든다. 단일 포켓몬은 올리지 못한다. 지문(refOf)을 함께 보낸다
 //   받기 검사 친구가 올린 값을 검사한다. 규칙 밖이면 확정할 수 없다
 //   잠그기    확정할 때 pending 을 남긴다. 걸린 개체는 값을 바꾸는 명령(진화·가방 사용·모습)을 거절한다
 //   반영      서버가 완료를 알리면 한 번의 저장으로 맞바꾸고 pending 을 지운다. pending 이 없으면 아무것도 하지 않는다
@@ -89,6 +89,15 @@ export function snapshot(pet: PetV3): TradePet {
     evolved: [...pet.evolved],
   };
 }
+
+// 제안한 개체의 지문 — 서버가 내 서버 저장에서 그 개체를 찾고 교환 원장과 대조한다 (worklog-mac/records/cloud-authority/design-p2.md 4절)
+//   개체 ID 는 저장마다 따로 매기므로 만든 시각(since, 정수 ms)을 함께 보낸다. 진화해도 둘 다 바뀌지 않는다
+export interface PetRef {
+  id: string;
+  since: number;
+}
+
+export const refOf = (pet: Pick<PetV3, "id" | "since">): PetRef => ({ id: pet.id, since: pet.since });
 
 // 친구가 올린 값 검사. 친구 사이라 조작을 완전히 막지는 않는다. 깨진 값과 규칙 밖 개체를 거른다
 export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; pet: TradePet } | { ok: false; reason: ReceiveFailure } {

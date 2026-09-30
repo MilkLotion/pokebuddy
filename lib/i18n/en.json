@@ -166,5 +166,16 @@
   "cloud.blocked.tradeUnsynced": "A trade finished on {other} is not saved to the account yet.",
   "cloud.blocked.tradeUnsynced.detail": "Turn on that PC and connect it to the internet to save it.\nThen try again.\nQuit closes the app.",
   "cloud.blocked.retry": "Try again",
-  "cloud.blocked.quit": "Quit"
+  "cloud.blocked.quit": "Quit",
+  "cloud.lost.title": "Save info not found",
+  "cloud.lost.member.message": "Sign-in info for this PC was not found.",
+  "cloud.lost.member.detail": "Sign in again to continue with your account save.\nContinue with this PC's save to keep playing without signing in.",
+  "cloud.lost.anonymous.message": "Anonymous save info for this PC was not found.",
+  "cloud.lost.anonymous.gone": "The anonymous save on the server cannot be recovered.",
+  "cloud.lost.anonymous.fresh": "Start over backs up this PC's progress and restarts the app.",
+  "cloud.lost.anonymous.tip": "Sign in with GitHub so you don't lose it next time.",
+  "cloud.lost.login": "Sign in",
+  "cloud.lost.local": "Continue with this PC's save",
+  "cloud.lost.fresh": "Start over",
+  "cloud.handoff.discarded": "Switched to your account save. This PC's progress was backed up."
 }

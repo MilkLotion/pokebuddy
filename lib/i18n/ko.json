@@ -166,5 +166,16 @@
   "cloud.blocked.tradeUnsynced": "{other} 에서 끝낸 교환이 아직 계정에 저장되지 않았어요.",
   "cloud.blocked.tradeUnsynced.detail": "그 PC 를 켜고 인터넷에 연결하면 저장돼요.\n저장된 뒤 다시 시도해 주세요.\n종료를 누르면 앱을 종료해요.",
   "cloud.blocked.retry": "다시 시도",
-  "cloud.blocked.quit": "종료"
+  "cloud.blocked.quit": "종료",
+  "cloud.lost.title": "저장 정보를 찾지 못했어요",
+  "cloud.lost.member.message": "이 PC 의 로그인 정보를 찾지 못했어요.",
+  "cloud.lost.member.detail": "다시 로그인하면 계정 저장으로 이어서 해요.\n이 PC 저장으로 계속하면 로그인 없이 이 PC 진행을 이어서 해요.",
+  "cloud.lost.anonymous.message": "이 PC 의 익명 저장 정보를 찾지 못했어요.",
+  "cloud.lost.anonymous.gone": "서버에 둔 익명 저장은 되찾을 수 없어요.",
+  "cloud.lost.anonymous.fresh": "처음부터를 누르면 이 PC 진행을 백업하고 앱을 다시 켜요.",
+  "cloud.lost.anonymous.tip": "GitHub 로 로그인해 두면 다음에는 잃지 않아요.",
+  "cloud.lost.login": "로그인",
+  "cloud.lost.local": "이 PC 저장으로 계속",
+  "cloud.lost.fresh": "처음부터",
+  "cloud.handoff.discarded": "계정 저장으로 바꿨어요. 이 PC 진행은 백업해 뒀어요."
 }

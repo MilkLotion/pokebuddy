@@ -12,7 +12,11 @@ insert into auth.users (id, email, raw_user_meta_data, is_anonymous, aud, role, 
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated","is_anonymous":true}', true);
-select throws_ok($$ select * from public.claim_device('11111111-1111-1111-1111-111111111111', 'PC', '0.13.0', 'boot', false) $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '익명 계정은 서버에 저장하지 않는다');
+-- P2(2026-10-02): 익명 계정도 저장한다. 행은 첫 실제 올리기에서 만든다(anonymous_save_test.sql)
+select is((select has_save from public.claim_device('11111111-1111-1111-1111-111111111111', 'PC', '0.13.0', 'boot', false)), false, '익명 계정의 첫 claim 은 저장 없음');
+select throws_ok($$ select public.upload_save('11111111-1111-1111-1111-111111111111', 0, '{"v":3,"pets":[]}', 3, '0.13.0', '0a000000-0000-0000-0000-000000000001') $$, 'P0001', 'CLOUD_EMPTY_SAVE', '익명 계정은 개체 없는 저장을 올리지 않는다');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f2","role":"authenticated","is_anonymous":true}', true);
+select throws_ok($$ select * from public.claim_device('11111111-1111-1111-1111-111111111111', 'PC', '0.13.0', 'boot', false) $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '계정 행이 없는 토큰은 거절');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b2","role":"authenticated","is_anonymous":false}', true);
 select throws_ok($$ select * from public.cloud_saves $$, '42501', null, '앱 역할은 테이블을 직접 읽지 못한다');

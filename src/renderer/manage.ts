@@ -2094,6 +2094,15 @@ const TRADE_ERROR: Record<string, [string, string]> = {
   "not-ready": ["아직 확정할 수 없어요", "두 사람 모두 포켓몬을 올려야 확정할 수 있어요"],
   timeout: ["응답이 늦어요", "잠시 뒤에 다시 해 주세요"],
   "cloud-wait": ["클라우드 저장이 연결되지 않았어요", "연결되면 다시 해 주세요. 계정 탭에서 저장 상태를 볼 수 있어요"],
+  // 교환 규약 2 — 익명 계정 거절·원장 (design-p2.md 14절)
+  "login-required": ["로그인해야 교환할 수 있어요", "계정 탭에서 로그인해 주세요"],
+  TRADE_LOGIN_REQUIRED: ["로그인해야 교환할 수 있어요", "계정 탭에서 로그인해 주세요"],
+  "save-wait": ["아직 저장되지 않은 포켓몬이에요", "저장이 끝나면 다시 올려 주세요"],
+  TRADE_PET_NOT_SYNCED: ["아직 저장되지 않은 포켓몬이에요", "저장이 끝나면 다시 올려 주세요"],
+  TRADE_PET_TRADED: ["이미 교환으로 보낸 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
+  // 서버 교환 중 예약 — 같은 개체가 다른 교환에 올라가 있다 (design-p2.md 17절 D31)
+  TRADE_PET_BUSY: ["다른 교환에 올라가 있는 포켓몬이에요", "그 교환이 닫힌 뒤 다시 올리거나 다른 포켓몬을 골라 주세요"],
+  TRADE_OFFER_INVALID: ["올릴 수 없는 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
 };
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
 const TRADE_CLOSED: Record<string, [string, string]> = {
@@ -2410,7 +2419,18 @@ function drawTradeDialog(): void {
   }
   if (t.phase === "trading") drawTradeOffer(t, out);
   else if (t.phase === "done") drawTradeDone(t, out);
+  else if (acct?.available && !acct.signedIn) drawTradeLogin(out);
   else drawTradeStart(t, out);
+}
+
+// 로그인 전(익명·분실) — 만들기·참가 대신 로그인 안내. 진행 중인 교환은 끝까지 보인다 (design-p2.md 5절)
+function drawTradeLogin(out: HTMLElement): void {
+  const card = el("div", "trade-card");
+  card.appendChild(tradeCardHead("교환은 로그인해야 할 수 있어요"));
+  const acts = el("div", "trade-acts");
+  acts.appendChild(actionButton("로그인", true, false, () => open({ kind: "user", tab: "account" })));
+  card.appendChild(acts);
+  out.appendChild(card);
 }
 
 // 참가 전 남은 시간 — 글자만 1초마다 바꾼다. 본문을 다시 그리지 않는다
@@ -2442,7 +2462,7 @@ let acctBusy = false;
 let acctGithub = false; // 브라우저에서 GitHub 로그인을 기다리는 중
 const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | "available" | "taken" | "invalid" | "NETWORK" };
 let acctRename: string | null = null; // 이름 바꾸는 중이면 입력한 이름
-let acctConfirm: "delete" | null = null;
+let acctConfirm: "delete" | "sign-out" | null = null;
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
 const saveIndicatorEl = need("save-indicator", HTMLElement);
@@ -2464,6 +2484,9 @@ const ACCT_ERROR: Record<string, string> = {
   CLOUD_OWNER_OTHER: "이 PC 진행은 다른 계정 것이라 올리지 않아요",
   CLOUD_BAD_SAVE: "계정 저장을 읽지 못해 올리지 않아요",
   CLOUD_TOO_LARGE: "저장이 너무 커서 올리지 못했어요",
+  CLOUD_PET_TRADED_OUT: "교환으로 보낸 포켓몬이 남아 있어 올리지 않아요",
+  CLOUD_HANDOFF_INVALID: "이 PC 진행을 계정으로 옮기지 못했어요",
+  SAVE_BACKUP_FAILED: "이 PC 저장을 백업하지 못해 새로 시작하지 않았어요",
 };
 const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : ACCT_ERROR[code] ?? `계정 작업을 하지 못했어요 (${code})`);
 
@@ -2496,9 +2519,22 @@ function cloudText(c: AccountScreen["cloud"]): { text: string; dot: "ok" | "idle
   return CLOUD_TEXT[c.status];
 }
 
-// 헤더 저장 표시 — 로그인하지 않았으면 숨긴다. 누르면 사용자 모달의 계정 탭을 연다
+// 저장 줄 글자 — 상태 글자와, 상태가 말하지 않는 오류. 로그인 뒤·익명 계정 탭이 같이 쓴다
+function saveLine(c: AccountScreen["cloud"]): string {
+  const text = cloudText(c)?.text ?? "";
+  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error) : "";
+  return err ? (text ? `${text} · ${err}` : err) : text;
+}
+
+// 헤더 저장 표시 — 로그인·익명 계정이면 보인다. 저장 계정을 잃었으면(D29) 저장 꺼짐. 누르면 사용자 모달의 계정 탭을 연다
 function drawSaveIndicator(): void {
-  const c = acct?.signedIn ? acct.cloud : null;
+  if (acct?.lost) {
+    saveIndicatorEl.hidden = false;
+    saveIndicatorEl.dataset.state = "warn";
+    saveIndicatorEl.replaceChildren(el("i"), document.createTextNode("저장 꺼짐"));
+    return;
+  }
+  const c = acct?.signedIn || acct?.anonymous ? acct.cloud : null;
   const shown = c ? cloudText(c) : null;
   saveIndicatorEl.hidden = !shown;
   if (!shown) return;
@@ -2521,6 +2557,7 @@ async function loadAccount(): Promise<void> {
   }
   drawSaveIndicator();
   redrawAccount();
+  redrawTrade();
 }
 
 const ACCOUNT_OFF: AccountScreen = {
@@ -2608,10 +2645,18 @@ function scheduleUsernameCheck(): void {
   }, 500);
 }
 
+// 로그인 전 — 익명 저장 줄(또는 분실 안내), 로그인 권유 한 줄, GitHub·로그인 폼 (design-p2.md 5절)
 function drawSignIn(scroll: HTMLElement): void {
-  const blocked = !!acct?.blocked;
+  const a = acct;
+  const blocked = !!a?.blocked;
   if (blocked) scroll.appendChild(acctNotice("교환 중에는 계정을 바꿀 수 없어요", "교환을 끝내거나 나간 뒤 다시 시도해 주세요", "warn"));
-  else scroll.appendChild(el("div", "acct-lead", "로그인하지 않아도 교환할 수 있어요"));
+  // 분실(D29) — 창은 메인이 띄운다. 여기서는 짧은 상태만
+  if (a?.lost) scroll.appendChild(acctNotice("저장 정보를 찾지 못했어요", a.lost === "member" ? "다시 로그인하면 계정 저장으로 이어서 해요" : "로그인하면 다시 계정에 저장해요", "warn"));
+  else if (a) {
+    const line = saveLine(a.cloud);
+    if (a.anonymous || line) scroll.appendChild(acctRow(a.anonymous ? "익명으로 저장 중" : "저장", line));
+  }
+  if (!blocked && !a?.lost) scroll.appendChild(el("div", "acct-lead", "로그인하면 다른 PC 에서도 이어서 하고 교환할 수 있어요"));
   if (acctGithub) {
     // 기다리는 동안 다른 단추는 막히고 취소만 된다(R3-08)
     const wait = el("div", "acct-inline acct-github-wait");
@@ -2707,18 +2752,13 @@ function drawSignedIn(scroll: HTMLElement): void {
     scroll.appendChild(acctRow(a.displayName ?? "", who, actionButton("이름 바꾸기", false, acctBusy, () => { acctRename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
   }
   // 저장 — 자동으로만 올린다. 상태 글자와, 상태가 말하지 않는 오류만
-  const c = a.cloud;
-  const saveHint = cloudText(c)?.text ?? "";
-  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error) : "";
-  scroll.appendChild(acctRow("저장", err ? `${saveHint} · ${err}` : saveHint));
-  // 로그아웃·삭제
-  scroll.appendChild(acctRow("로그아웃", "게임 진행은 그대로예요", actionButton("로그아웃", false, acctBusy || a.blocked, () => {
-    void acctSend({ action: "sign-out" });
-  })));
-  scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; redrawAccount(); })));
+  scroll.appendChild(acctRow("저장", saveLine(a.cloud)));
+  // 로그아웃·삭제 — 둘 다 확인 창을 거친다. 이 PC 는 처음부터 새로 시작한다(D12)
+  scroll.appendChild(acctRow("로그아웃", "이 PC 는 처음부터 새로 시작해요", actionButton("로그아웃", false, acctBusy || a.blocked, () => { acctConfirm = "sign-out"; acctForm.error = ""; redrawAccount(); })));
+  scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; acctForm.error = ""; redrawAccount(); })));
 }
 
-// 사용자 모달 위의 작은 확인 창 — 계정 삭제
+// 사용자 모달 위의 작은 확인 창 — 로그아웃·계정 삭제
 function acctOverlay(): HTMLElement | null {
   const a = acct;
   if (!a) return null;
@@ -2729,13 +2769,42 @@ function acctOverlay(): HTMLElement | null {
   x.setAttribute("aria-label", "닫기");
   const shut = (): void => { acctConfirm = null; redrawAccount(); };
   x.addEventListener("click", shut);
+  // 성공하면 앱이 다시 켜진다. 실패하면 창을 두고 이유를 보인다
+  const run = (action: "delete" | "sign-out"): void => {
+    void acctSend({ action }).then((r) => {
+      if (r?.ok) acctConfirm = null;
+      redrawAccount();
+    });
+  };
+  // 서버에 올리지 못한 진행이 있을 수 있다 — 막지는 않고 알린다(검수 M3)
+  const unsyncedNote = (): HTMLElement | null => {
+    if (!a.unsynced) return null;
+    const line = el("div", "acct-note warn");
+    line.append(el("i"), document.createTextNode("올리지 못한 진행은 이 PC 백업에만 남아요"));
+    return line;
+  };
+  const failed = (): HTMLElement | null => {
+    if (!acctForm.error) return null;
+    const line = el("div", "acct-note bad");
+    line.append(el("i"), document.createTextNode(acctForm.error));
+    return line;
+  };
   if (acctConfirm === "delete") {
     head.append(el("h3", undefined, "계정을 삭제할까요?"), x);
-    const who = a.method === "github" ? `GitHub 계정 ${a.displayName ?? ""}` : `아이디 ${a.username ?? ""}`;
-    card.append(head, el("p", "acct-confirm-body", `${who}${josa(who, "을/를")} 지워요. 게임 진행은 그대로예요.\n교환이 끝나지 않은 친구의 포켓몬은 그대로 받아요.`));
-    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => {
-      void acctSend({ action: "delete" }).then(() => { acctConfirm = null; redrawAccount(); });
-    })));
+    card.append(head, el("p", "acct-confirm-body", "계정과 저장을 지우고 이 PC 는 처음부터 새로 시작해요. 되돌릴 수 없어요."));
+    const risk = unsyncedNote();
+    if (risk) card.appendChild(risk);
+    const err = failed();
+    if (err) card.appendChild(err);
+    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => run("delete"))));
+  } else if (acctConfirm === "sign-out") {
+    head.append(el("h3", undefined, "로그아웃할까요?"), x);
+    card.append(head, el("p", "acct-confirm-body", "로그아웃하면 이 PC 는 처음부터 새로 시작해요. 계정 저장은 그대로라 다시 로그인하면 이어서 할 수 있어요."));
+    const risk = unsyncedNote();
+    if (risk) card.appendChild(risk);
+    const err = failed();
+    if (err) card.appendChild(err);
+    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("로그아웃하고 새로 시작", true, acctBusy, () => run("sign-out"))));
   } else return null;
   box.appendChild(card);
   return box;
@@ -2996,6 +3065,7 @@ window.pokebuddyManage.onAccount((screen) => {
   acct = screen;
   drawSaveIndicator();
   redrawAccount();
+  redrawTrade(); // 익명·로그인이 바뀌면 교환 모달의 로그인 안내도 바뀐다
 });
 void loadAccount();
 setInterval(drawSaveIndicator, 30_000); // "3분 전" 글자만 바꾼다
@@ -3199,7 +3269,7 @@ const GUIDES: Record<string, Guide> = {
       open({ kind: "user", tab: "agents" });
     },
     steps: [
-      { title: "로그인하면 클라우드에 저장돼요", body: "다른 컴퓨터에서도 이어서 할 수 있어요.", target: dialogScroll },
+      { title: "로그인하면 다른 컴퓨터에서도 이어서 해요", body: "지금 진행도 익명 저장으로 서버에 올라가요.", target: dialogScroll },
       // CLI 목록 전체 — 첫 줄부터 아래 안내 줄까지
       { title: "CLI 를 연결하면 더 빨리 자라요", body: "에이전트가 일하는 동안 친밀도와 포인트가 두 배로 쌓여요.", target: dialogScroll, also: () => dialogEl.querySelector<HTMLElement>(".scroll .agents-note") },
     ],

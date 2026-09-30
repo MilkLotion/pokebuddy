@@ -6,7 +6,10 @@
 //   완료    서버가 done 이면 친구 제안으로 trade.apply → ack_applied. 반영은 pending 이 있을 때만 된다
 //   닫힘    cancelled·expired 면 trade.unlock
 //   복구    앱을 켜면 pending 의 채널을 다시 읽는다. 연결 실패면 걸어 둔 채 5분마다 다시 본다
-import { offerable, pendingOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
+//   로그인  익명 계정은 만들기·참가·제안을 먼저 거절한다(login-required). 판정을 넘기지 않으면 서버 오류(TRADE_LOGIN_REQUIRED)로 같은 거절이 된다
+//   제안    올리기 직전 클라우드 저장을 올린다(beforeOffer). 서버 저장에 그 개체가 아직 없으면 save-wait 로 거절한다
+//           (worklog-mac/records/cloud-authority/design-p2.md 4절 원장, 13절 서버 계약)
+import { offerable, pendingOf, refOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
 import { tokenOf, type ChannelView, type TradeErrorCode, type TradeNet } from "./net.js";
 import type { TxResult } from "../tx/executor";
 import type { SaveV3 } from "../shared/save-v3";
@@ -50,6 +53,15 @@ export interface TradeSessionOptions {
   // 새 교환(만들기·참가)을 막아야 하는가 — 로그인 계정의 클라우드 저장이 서버와 맞춰지지 않았다.
   // 나중에 서버 저장을 받으면 그 사이의 교환 결과가 덮인다 (worklog-mac/records/cloud-authority 검수 1)
   hold?: () => boolean | Promise<boolean>;
+  // 지금 세션이 익명 계정인가 — 참이면 만들기·참가·제안을 서버에 보내지 않고 login-required 로 거절한다.
+  // 넘기지 않으면 서버가 거절한다(TRADE_LOGIN_REQUIRED → 같은 login-required)
+  isAnonymous?: () => boolean | Promise<boolean>;
+  // 제안 직전 — 앱은 클라우드 저장을 바로 올린다(cloud.flush). 서버는 서버 저장에 있는 개체만 제안으로 받는다.
+  // 실패해도 제안은 보낸다. 서버 저장에 없으면 서버가 TRADE_PET_NOT_SYNCED 로 거절한다
+  beforeOffer?: () => Promise<void>;
+  // 세션이 없을 때 새 익명 계정을 만들어도 되는가 — 거짓이면 있는 세션만 쓴다(검수 H1). 넘기지 않으면 참.
+  //   앱은 저장 계정을 잃었거나(D29) 저장 주인이 있는데 세션이 없을 때 거짓을 준다. 익명 발급은 앱(src/main/online.ts)이 맡는다
+  mayIssue?: () => boolean | Promise<boolean>;
 }
 
 // 조작 결과 — 거절 이유를 돌려준다. 보기의 error 는 서버·로컬 실패만 담는다
@@ -59,7 +71,9 @@ export interface TradeSessionOptions {
 //   in-trade    진행 중인 교환이 있다 — 나가기 뒤에 새로 만든다
 //   stopped     세션이 멈췄다
 //   cloud-wait  로그인 계정의 클라우드 저장이 연결되어 올릴 수 있는 상태가 아니다 — 새 교환을 시작하지 않는다
-export type TradeRefusal = "busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait";
+//   login-required  익명 계정이다 — 교환은 로그인해야 한다 (클라이언트 판정 또는 서버 TRADE_LOGIN_REQUIRED)
+//   save-wait   올린 개체가 아직 서버 저장에 없다 — 저장이 끝나면 다시 올린다 (서버 TRADE_PET_NOT_SYNCED)
+export type TradeRefusal = "busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait";
 export type TradeActionResult = { ok: true } | { ok: false; reason: TradeErrorCode | "LOCAL" | TradeRefusal; detail?: string };
 
 export interface TradeSession {
@@ -81,6 +95,13 @@ const EMPTY: TradeViewModel = {
 };
 
 const OK: TradeActionResult = { ok: true };
+
+// 서버 오류 가운데 사용자가 할 일이 정해진 것 — 보기 오류가 아니라 거절 이유로 돌려준다
+//   TRADE_PET_TRADED·TRADE_PET_BUSY(다른 활성 교환에 올라가 있음, D31)는 보기 오류로 둔다. 제안 전이라 로컬 잠금은 없다
+const REFUSAL_OF: Partial<Record<TradeErrorCode, TradeRefusal>> = {
+  TRADE_LOGIN_REQUIRED: "login-required",
+  TRADE_PET_NOT_SYNCED: "save-wait",
+};
 
 export function createTradeSession(o: TradeSessionOptions): TradeSession {
   let state: TradeViewModel = { ...EMPTY };
@@ -104,7 +125,32 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     return { ok: false, reason: code, ...(detail ? { detail } : {}) };
   };
   const refuse = (reason: TradeRefusal): TradeActionResult => ({ ok: false, reason });
+  // 조작 도중의 거절 — begin 이 켠 busy 를 끈다
+  const release = (reason: TradeRefusal): TradeActionResult => { emit({ busy: false }); return refuse(reason); };
+  // 서버 실패 — 거절 이유로 옮길 수 있으면 옮기고, 아니면 보기 오류로 둔다
+  const failNet = (code: TradeErrorCode, detail?: string): TradeActionResult => {
+    const reason = REFUSAL_OF[code];
+    return reason ? release(reason) : fail(code, detail);
+  };
+  const anonymous = async (): Promise<boolean> => {
+    try {
+      return (await o.isAnonymous?.()) === true;
+    } catch (e) {
+      console.error("교환 전 계정 확인에 실패해 서버 판정에 맡긴다", e);
+      return false;
+    }
+  };
   const tx = (name: string, args: Record<string, unknown>): TxResult => o.run(newId(), name, args);
+  const session = async (): ReturnType<TradeNet["ensureSession"]> => {
+    let issue = true;
+    try {
+      issue = (await o.mayIssue?.()) !== false;
+    } catch (e) {
+      console.error("익명 발급 여부를 읽지 못해 있는 세션만 쓴다", e);
+      issue = false;
+    }
+    return o.net.ensureSession(issue);
+  };
   const closedPhase = (): boolean => state.phase === "done" || state.phase === "closed";
 
   const stopWatching = (): void => {
@@ -207,11 +253,17 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (stopped) return;
     if (state.busy) { scheduleRetry(); return; } // 조작 중 — 다음 재시도에 본다
     emit({ busy: true });
-    const s = await o.net.ensureSession();
+    const s = await session();
     if (stopped) return;
-    if (!s.ok) { fail(s.code, s.detail); scheduleRetry(); return; }
     const save = o.read();
     const pending = save ? pendingOf(save) : null;
+    if (!s.ok) {
+      // 세션이 없고 만들지 않는다 — 복구할 교환이 없으면 기다릴 것이 없다. 계정이 바뀌면 앱이 세션을 새로 만든다
+      if (s.code === "TRADE_LOGIN_REQUIRED" && !pending) { emit({ busy: false }); return; }
+      fail(s.code, s.detail);
+      scheduleRetry();
+      return;
+    }
     if (!pending) { emit({ busy: false }); return; }
     // 반영하지 않은 교환을 이어 간다
     const res = await o.net.getChannel(pending.channelId);
@@ -244,10 +296,11 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (await o.hold?.()) return refuse("cloud-wait");
     const no = begin();
     if (no) return no;
-    const s = await o.net.ensureSession();
-    if (!s.ok) return fail(s.code, s.detail);
+    const s = await session();
+    if (!s.ok) return failNet(s.code, s.detail);
+    if (await anonymous()) return release("login-required");
     const res = await o.net.createChannel(o.protocol, o.dataVersion);
-    if (!res.ok) return fail(res.code, res.detail);
+    if (!res.ok) return failNet(res.code, res.detail);
     stopWatching();
     channelId = res.data.channelId;
     emit({ ...EMPTY, phase: "hosting", link: o.linkOf(res.data.token), busy: false });
@@ -262,10 +315,11 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (no) return no;
     const token = tokenOf(link);
     if (!token) return fail("TRADE_LINK_INVALID");
-    const s = await o.net.ensureSession();
-    if (!s.ok) return fail(s.code, s.detail);
+    const s = await session();
+    if (!s.ok) return failNet(s.code, s.detail);
+    if (await anonymous()) return release("login-required");
     const res = await o.net.joinChannel(token, o.protocol, o.dataVersion);
-    if (!res.ok) return fail(res.code, res.detail);
+    if (!res.ok) return failNet(res.code, res.detail);
     stopWatching();
     channelId = res.data;
     emit({ ...EMPTY, phase: "trading", busy: false });
@@ -277,12 +331,25 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (!channelId || closedPhase()) return refuse("no-channel");
     const no = begin();
     if (no) return no;
+    const first = o.read();
+    if (!first) return fail("LOCAL", "no-save");
+    const check = offerable(first, petId);
+    if (!check.ok) return fail("LOCAL", check.reason);
+    if (await anonymous()) return release("login-required");
+    // 서버 저장을 먼저 맞춘다. 실패해도 보낸다 — 서버 저장에 없으면 서버가 save-wait 로 돌려준다
+    try {
+      await o.beforeOffer?.();
+    } catch (e) {
+      console.error("제안 전 클라우드 저장 올리기에 실패했다", e);
+    }
+    if (stopped) return release("stopped");
+    // 올리는 동안 바뀌었을 수 있다 — 다시 읽어 보낸다
     const save = o.read();
     if (!save) return fail("LOCAL", "no-save");
     const ok = offerable(save, petId);
     if (!ok.ok) return fail("LOCAL", ok.reason);
-    const res = await o.net.setOffer(channelId, snapshot(ok.pet));
-    if (!res.ok) return fail(res.code, res.detail);
+    const res = await o.net.setOffer(channelId, snapshot(ok.pet), refOf(ok.pet));
+    if (!res.ok) return failNet(res.code, res.detail);
     emit({ myPetId: petId, busy: false });
     await refresh();
     return OK;
@@ -304,7 +371,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
         await refresh();
         return { ok: false, reason: res.code };
       }
-      return fail(res.code, res.detail);
+      return failNet(res.code, res.detail);
     }
     emit({ busy: false });
     await refresh();

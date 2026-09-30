@@ -6,12 +6,20 @@
 //   exclusive: 가입·로그인·GitHub 교환·로그아웃·삭제를 차례로 돌린다. 먼저 시작한 ensure 가 끝난 뒤에 시작한다
 //   교착 방지 — exclusive 안에서는 gate.ensure 대신 넘겨받은 scope.ensure 를 쓴다(잠금을 기다리지 않는다).
 //   exclusive 안에서 사용자 변경 알림(onUserChanged 등)을 부르지 않는다 — 알림을 받은 쪽이 gate.ensure 를 부르면 서로 기다린다
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+//   토큰 갱신이 망 오류로 실패하면 getSession 은 세션 없음을 돌려주지만 저장소의 세션은 그대로다(auth-js __loadSession).
+//     그때 ensure 는 익명 계정을 만들지 않고 NETWORK, probe 는 unknown — 로그인 세션을 익명으로 덮거나 분실(D29)로 잘못 보지 않게
+import { isAuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { authCodeOf } from "./account.js";
 
 export type SessionErrorCode = "NETWORK" | "AUTH_RATE_LIMITED" | "UNKNOWN";
 
 export type SessionResult = { ok: true; user: User } | { ok: false; code: SessionErrorCode; detail?: string };
+
+// 부팅 판단용 세션 확인 (design-p2.md 2절)
+//   present  세션이 있다(익명·로그인)
+//   none     세션이 없다 — 저장소가 비었거나 갱신 토큰이 거절돼 지워졌다
+//   unknown  망 오류로 확인하지 못했다 — 저장소의 세션은 남아 있다. 분실로 보지 않는다
+export type SessionProbe = { state: "present"; user: User } | { state: "none" } | { state: "unknown"; code: SessionErrorCode };
 
 // exclusive 안에서만 쓰는 도구 — 잠금을 이미 쥐고 있으므로 기다리지 않는다
 export interface SessionScope {
@@ -21,6 +29,8 @@ export interface SessionScope {
 export interface SessionGate {
   // 지금 세션의 사용자 — 없거나 읽지 못하면 null. 만들지 않는다
   current: () => Promise<User | null>;
+  // 세션이 있는지 없는지 모르는지 — 만들지 않는다
+  probe: () => Promise<SessionProbe>;
   // 세션을 확보한다 — 없으면 익명 계정을 만든다
   ensure: () => Promise<SessionResult>;
   // 세션을 바꾸는 작업을 차례로 돌린다
@@ -50,12 +60,28 @@ export function createSessionGate(client: SupabaseClient): SessionGate {
     }
   };
 
+  // 망 오류로 갱신하지 못했다 — 저장소에 세션이 남아 있다
+  const retryable = (error: unknown): boolean =>
+    !!error && (isAuthRetryableFetchError(error) || sessionCodeOf(error as { message?: string }).code === "NETWORK");
+
+  const probe: SessionGate["probe"] = async () => {
+    try {
+      const { data, error } = await client.auth.getSession();
+      if (data.session?.user) return { state: "present", user: data.session.user };
+      if (retryable(error)) return { state: "unknown", code: "NETWORK" };
+      return { state: "none" };
+    } catch (e) {
+      return { state: "unknown", ...sessionCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
+    }
+  };
+
   // 세션이 없을 때만 익명 계정을 만든다
   const ensureNow = async (): Promise<SessionResult> => {
     try {
-      const { data } = await client.auth.getSession();
+      const { data, error } = await client.auth.getSession();
       const user = data.session?.user ?? null;
       if (user) return { ok: true, user };
+      if (retryable(error)) return { ok: false, code: "NETWORK" };
       const res = await client.auth.signInAnonymously();
       if (res.error) return { ok: false, ...sessionCodeOf(res.error) };
       if (!res.data.user) return { ok: false, code: "UNKNOWN", detail: "no-user" };
@@ -99,5 +125,5 @@ export function createSessionGate(client: SupabaseClient): SessionGate {
     })();
   };
 
-  return { current, ensure, exclusive };
+  return { current, probe, ensure, exclusive };
 }

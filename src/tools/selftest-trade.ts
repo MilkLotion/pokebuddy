@@ -5,8 +5,8 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import path from "node:path";
-import { devRunAt } from "../trade/config";
-import { apply, isLocked, isSinglePet, lock, offerable, snapshot, unlock, validateReceived, type TradePet } from "../trade/core";
+import { devRunAt, onlineConfig } from "../trade/config";
+import { apply, isLocked, isSinglePet, lock, offerable, refOf, snapshot, unlock, validateReceived, type TradePet } from "../trade/core";
 import { newPet } from "../party/create";
 import { empty, normalize } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
@@ -173,4 +173,23 @@ const eevee: TradePet = {
   process.stdout.write("(8) 개발 실행 판정  ok\n");
 }
 
-process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령·개발 실행 판정)\n");
+// (9) 개체 지문과 규약 — 제안은 {id, since(정수 ms)} 를 함께 보낸다. 받은 개체는 새 지문이다 (design-p2.md 0절·13절)
+{
+  const s = seed();
+  const p2 = s.pets.find((p) => p.id === "p2")!;
+  assert.deepStrictEqual(refOf(p2), { id: "p2", since: T0 }, "지문은 id 와 만든 시각");
+  assert.ok(Number.isInteger(refOf(p2).since), "since 는 정수 ms");
+  assert.deepStrictEqual(Object.keys(refOf(p2)).sort(), ["id", "since"], "지문에 다른 값을 싣지 않는다");
+  assert.equal("id" in snapshot(p2) || "since" in snapshot(p2), false, "올릴 값(친구가 보는 값)에는 지문이 없다");
+  p2.species = "wartortle"; p2.level = 20; p2.evolved = ["squirtle"];
+  assert.deepStrictEqual(refOf(p2), { id: "p2", since: T0 }, "진화·성장해도 지문은 그대로");
+  assert.equal(lock(s, "ch9", "p1", 1).ok, true);
+  const res = apply(s, "ch9", snapshot(p2), T0 + 5_000);
+  assert.equal(res.ok && res.applied, true);
+  const got = res.ok && res.applied ? s.pets.find((p) => p.id === res.newPetId)! : null;
+  assert.ok(got && got.id !== "p1" && got.since === T0 + 5_000, "받은 개체는 새 id·새 since");
+  assert.equal(onlineConfig(undefined, {}).protocol, 2, "앱 교환 규약은 2");
+  process.stdout.write("(9) 개체 지문·규약  ok\n");
+}
+
+process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령·개발 실행 판정·개체 지문)\n");

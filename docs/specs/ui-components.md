@@ -77,7 +77,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 사용 화면: 설정창 모든 탭, WF-01~WF-05, WF-01b.
 판정: `App Header`에 업적·설정 아이콘 자리를 더한다. 기존 설정 탭 진입은 아이콘으로 옮긴다.
 Figma: `App Header` `154:1017`의 브랜드 `App Brand` `150:145`는 로고 `Brand Mark` 20×20과 `PokeBuddy` 글자다. 업적·설정·유저 버튼은 탭 줄 `Primary Navigation` `208:542`의 `header-icons`에 있다. 코드도 탭 줄(`nav`)에 둔다. 버튼은 노출한 인스턴스다. 인스턴스에서 dot와 열림 상태를 바꾼다. 상태 예시는 `295:3297`이다.
-보유 포인트 왼쪽에 C-27 저장 표시(`save-indicator`)를 두었다. `Show Save Indicator` 속성(기본 꺼짐)으로 켠다. 로그인했을 때만 켠다. 상태는 노출한 `save-indicator` 인스턴스의 `State`로 고른다.
+보유 포인트 왼쪽에 C-27 저장 표시(`save-indicator`)를 두었다. `Show Save Indicator` 속성(기본 꺼짐)으로 켠다. 로그인한 계정과 익명 계정에서 켠다. 상태는 노출한 `save-indicator` 인스턴스의 `State`로 고른다.
 
 ### C-02 헤더 아이콘 버튼
 
@@ -302,8 +302,8 @@ Figma: `Candidate Card` `401:315`(`Default|Selected`). 이름은 `Name` 속성�
 ### C-27 저장 표시
 
 역할: 클라우드 저장 상태를 글자로 보여준다. 누르면 사용자 모달의 `계정` 탭을 연다. 저장 단추가 아니다(두 PC 규칙, 자동 저장만).
-상태: `Online`(초록 dot, `저장됨 · <시각>`), `Offline`(회색 dot, `연결 중`·`오프라인`), 강조(주 색 바탕, 노란 dot, `업데이트 필요`·`확인 대기`·`넘겨받지 못함`·`다른 PC 에서 시작`). 강조는 사용자 손이 필요하거나 게임이 멈춘 상태다. 로그인하지 않으면 표시하지 않는다. 구현은 `src/renderer/manage.ts` `CLOUD_TEXT`·`drawSaveIndicator` 다.
-`계정` 탭의 `저장` 줄도 같은 글자를 쓴다. 단추는 없다. 상태 글자가 말하지 않는 오류(`CLOUD_OWNER_OTHER`·`CLOUD_BAD_SAVE` 등)만 뒤에 붙인다.
+상태: `Online`(초록 dot, `저장됨 · <시각>`), `Offline`(회색 dot, `연결 중`·`오프라인`), 강조(주 색 바탕, 노란 dot, `업데이트 필요`·`확인 대기`·`넘겨받지 못함`·`다른 PC 에서 시작`). 강조는 사용자 손이 필요하거나 게임이 멈춘 상태다. 저장 정보 분실이면 강조 `저장 꺼짐` 을 보인다. 로그인한 계정과 익명 계정에서 보인다. 둘 다 아니면 표시하지 않는다. 구현은 `src/renderer/manage.ts` `CLOUD_TEXT`·`drawSaveIndicator` 다.
+`계정` 탭의 `저장` 줄도 같은 글자를 쓴다. 익명 계정이면 줄 이름이 `익명으로 저장 중` 이다. 단추는 없다. 상태 글자가 말하지 않는 오류(`CLOUD_OWNER_OTHER`·`CLOUD_BAD_SAVE` 등)만 뒤에 붙인다.
 규칙: 높이 24로 보유 포인트 표시와 같다. `Online`의 1px 중립 테두리는 크기 계산에서 뺀다.
 사용: C-01 앱 헤더의 보유 포인트 왼쪽.
 Figma: `Save Indicator` `633:18434`(`State=Online|Offline|SaveNeeded`). `Label` 속성은 Online 의 마지막 저장 시각 글자에만 묶는다. Offline("오프라인")은 고정 문구다. 폭은 글자에 맞춘다. 강조 상태는 `SaveNeeded` 의 모양을 쓴다. Figma 의 "저장 필요" 글자는 옛 문구다. 새 글자로 Figma 를 고치지 않았다. `[스펙 미확정]`

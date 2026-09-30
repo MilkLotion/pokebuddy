@@ -3,13 +3,53 @@
 //   준비: Docker Desktop 과 `npx supabase start`. 빌드: `npm run build`
 //   실행: node scripts/e2e-trade.cjs [--ui]   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다. --ui 면 화면 시나리오만)
 //   조작은 `pokebuddy game trade.*` CLI 의 JSON 결과로 판정한다. 창은 관측기가 숨긴다
+//   교환 규약 2(worklog-mac/records/cloud-authority/design-p2.md 13·14절): 익명 계정은 교환하지 못한다.
+//     앱마다 계정 탭에서 가입해 익명 저장을 새 계정으로 옮기고, 계정 저장이 올라간 뒤 교환한다
+//     제안은 개체 지문(ref)이 서버 저장에 있어야 한다 — 조작한 클라이언트도 가입하고 저장을 올린 뒤 제안한다
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
 
 const { root, apps, localServer, sql, makeApp, until, ok, online } = require('./e2e/apps.cjs');
 const checks = [];
+const PASSWORD = 'correct-horse-8';
+const stamp = Date.now().toString(36);
+const emailOf = (username) => `${username}@id.pokebuddy.invalid`;
+const accountRev = (username) => Number(sql(`select coalesce((select s.rev from public.cloud_saves s join auth.users u on u.id = s.user_id where u.email = '${emailOf(username)}' and s.save is not null), -1)`));
+
+// 가입하고 계정 저장이 올라갈 때까지 기다린다 — 교환은 로그인 계정만, 제안은 서버 저장에 있는 개체만
+async function member(X) {
+  const username = `t${stamp}${X.name}`;
+  await X.signUp(username, PASSWORD);
+  await until(() => accountRev(username) >= 1, `[${X.name}] 계정 저장`, 30_000);
+  return username;
+}
+
+// 조작한 클라이언트 — 가입하고 단일 포켓몬(뮤츠)을 담은 저장을 올린다. 앱이 막는 개체를 서버에 곧바로 제안하려고 쓴다
+async function badMember(server) {
+  const { createClient } = require(path.join(root, 'node_modules/@supabase/supabase-js'));
+  const { empty } = require(path.join(root, 'dist/save/v3.js'));
+  const { newPet } = require(path.join(root, 'dist/party/create.js'));
+  const bad = createClient(server.url, server.key, { auth: { persistSession: false } });
+  const signed = await bad.auth.signUp({ email: emailOf(`bad${Date.now().toString(36)}`), password: PASSWORD, options: { data: { display_name: 'bad' } } });
+  assert.ifError(signed.error);
+  const version = require(path.join(root, 'package.json')).version;
+  const device = crypto.randomUUID();
+  const claim = await bad.rpc('claim_device', { p_device: device, p_label: 'bad', p_app_version: version, p_mode: 'boot', p_force: false });
+  assert.ifError(claim.error);
+  const now = Date.now();
+  const save = empty(now);
+  const pet = newPet({ id: 'p1', species: 'mewtwo', shiny: false, nature: 'hardy', now });
+  save.pets.push(pet);
+  save.party.slots[0] = { state: 'pokemon', petId: pet.id, hidden: false };
+  save.starterPetId = pet.id;
+  const up = await bad.rpc('upload_save', { p_device: device, p_base_rev: claim.data?.[0]?.rev ?? 0, p_save: save, p_save_v: 3, p_app_version: version, p_op: crypto.randomUUID() });
+  assert.ifError(up.error);
+  return { bad, ref: { id: pet.id, since: pet.since } };
+}
+const MEWTWO = { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 70, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] };
 
 // ── 시나리오 ──────────────────────────────────────────────────────────────────
 async function run() {
@@ -22,6 +62,11 @@ async function run() {
   const B = makeApp('b', server, [{ id: 'p1', species: 'eevee', where: 'party' }]);
   const C = makeApp('c', server, [{ id: 'p1', species: 'pikachu', where: 'party' }]);
   await A.start(); await B.start(); await C.start();
+
+  // E0 익명 계정은 교환하지 못한다 — 가입해 익명 저장을 계정으로 옮긴 뒤 교환한다
+  assert.equal((await A.game('trade.create')).reason, 'login-required', 'E0 익명 만들기 거절');
+  await member(A); await member(B); await member(C);
+  checks.push('E0 익명 만들기 login-required → 세 앱 가입, 계정 저장 올라감');
 
   // E1 링크 만들기·참가, 세 번째 사람은 사용됨
   const created = await A.game('trade.create');
@@ -66,13 +111,12 @@ async function run() {
   const single = await A.game('trade.offer', 'p2');
   assert.equal(single.reason, 'LOCAL', '앱이 올리기 전에 막는다');
   assert.equal(single.detail, 'single', '뮤츠는 올리지 못한다');
-  const { createClient } = require(path.join(root, 'node_modules/@supabase/supabase-js'));
-  const bad = createClient(server.url, server.key, { auth: { persistSession: false } });
-  await bad.auth.signInAnonymously();
+  const { bad, ref } = await badMember(server);
   const token = c6.trade.link.split('#')[1];
   const { data: badChannel } = await bad.rpc('join_channel', { p_token: token, p_protocol: online().onlineConfig().protocol, p_data_version: online().dataVersion() });
   assert.ok(badChannel, '조작한 클라이언트 참가');
-  await bad.rpc('set_offer', { p_channel: badChannel, p_pet: { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 70, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] } });
+  const offered = await bad.rpc('set_offer', { p_channel: badChannel, p_pet: MEWTWO, p_ref: ref });
+  assert.ifError(offered.error);
   await until(async () => (await A.status()).friendBlocked === 'single', 'A 가 조작한 제안을 막는다');
   ok(await A.game('trade.offer', A.partyPet().id), 'E6 A 제안');
   assert.equal((await A.game('trade.ready')).reason, 'not-ready', '막힌 제안에는 확정하지 않는다');
@@ -103,7 +147,9 @@ async function run() {
   A.env.POKEBUDDY_TRADE_FAULT = 'before-apply';
   await A.start();
   const before = { a: A.partyPet().species, b: B.partyPet().species };
-  const c5 = await A.game('trade.create');
+  // 다시 켠 직후에는 클라우드 저장이 연결 중일 수 있다(cloud-wait) — 만들어질 때까지 다시 시도한다
+  let c5 = null;
+  await until(async () => (c5 = await A.game('trade.create')).ok, `E5 A 만들기: ${JSON.stringify(c5)}`, 30_000);
   ok(await B.game('trade.join', '-', `link=${c5.trade.link}`), 'E5 B 참가');
   ok(await A.game('trade.offer', A.partyPet().id), 'E5 A 제안');
   ok(await B.game('trade.offer', B.partyPet().id), 'E5 B 제안');
@@ -129,7 +175,8 @@ async function run() {
   await B.stop();
   B.env.POKEBUDDY_TRADE_DATA_VERSION = 'zzzzzzzzzzzz';
   await B.start();
-  const c8 = await A.game('trade.create');
+  let c8 = null;
+  await until(async () => (c8 = await A.game('trade.create')).ok, 'E8 A 만들기', 30_000);
   assert.equal((await B.game('trade.join', '-', `link=${c8.trade.link}`)).reason, 'TRADE_VERSION_MISMATCH');
   await A.game('trade.leave');
   checks.push('E8 데이터 버전이 다르면 TRADE_VERSION_MISMATCH');
@@ -145,9 +192,11 @@ async function run() {
 }
 
 // ── 화면 — 관리 창의 교환 모달(박스 머리 `교환` 단추)을 실제 앱에서 눌러 본다 ─────────────────────────────
-// 찍은 화면은 worklog/records/trade/evidence/ 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
+// 찍은 화면은 worklog/records/trade/evidence/(Mac 은 worklog-mac/) 에 남긴다. Figma 05 Screens `633:18522` 와 견준다
 async function ui(server) {
-  const shots = path.join(root, 'worklog/records/trade/evidence');
+  // Mac 은 작업 기록을 worklog-mac/ 에 둔다 — 있는 쪽에 찍는다
+  const logRoot = fs.existsSync(path.join(root, 'worklog')) ? 'worklog' : 'worklog-mac';
+  const shots = path.join(root, logRoot, 'records/trade/evidence');
   fs.mkdirSync(shots, { recursive: true });
   const shot = (X, name) => X.shot(path.join(shots, name));
   const has = async (X, words) => { const t = await X.text(); return words.every((w) => t.includes(w)); };
@@ -158,6 +207,7 @@ async function ui(server) {
   const UA = makeApp('ua', server, [{ id: 'p1', species: 'charmander', where: 'party' }, { id: 'p2', species: 'pikachu', where: 'party' }, { id: 'p3', species: 'mewtwo', where: 'box' }]);
   const UB = makeApp('ub', server, [{ id: 'p1', species: 'eevee', where: 'party' }]);
   await UA.start(); await UB.start();
+  await member(UA); await member(UB);
 
   // U1 교환 모달 — 박스 탭 머리의 `교환` 단추로 연다. 두 카드와 규칙
   await UA.ui('open');
@@ -179,7 +229,7 @@ async function ui(server) {
   // U3 딥링크로 참가 — B 는 링크로 앱을 연 것처럼 second-instance 를 받는다. A 는 실시간 신호로 바뀐다
   await UB.ui('link', { url: `pokebuddy://trade/${link.split('#')[1]}` });
   await opened(UB);
-  await until(() => has(UB, ['친구 교환', '내 포켓몬', '친구 포켓몬', '보낼 포켓몬']), 'U3 B 교환 모달');
+  await until(() => has(UB, ['친구 교환', '내 포켓몬', '의 포켓몬', '보낼 포켓몬']), 'U3 B 교환 모달'); // 친구가 로그인했으면 제목은 `<이름>의 포켓몬`
   await until(() => has(UA, ['내 포켓몬', '보낼 포켓몬']), 'U3 A 가 참가를 본다');
   assert.equal(await UA.dom(`[...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠')?.disabled === true`), true, 'U3 단일 포켓몬 칸은 막힌다');
   checks.push('U3 딥링크(second-instance)로 참가 → B 는 박스 탭 + 교환 모달, 양쪽 교환 화면, 단일 포켓몬 칸 막힘');
@@ -215,11 +265,10 @@ async function ui(server) {
   assert.equal(await UA.press('링크 만들기'), true);
   await until(() => has(UA, ['링크 복사']), 'U7 링크');
   const token = (await UA.status()).link.split('#')[1];
-  const { createClient } = require(path.join(root, 'node_modules/@supabase/supabase-js'));
-  const bad = createClient(server.url, server.key, { auth: { persistSession: false } });
-  await bad.auth.signInAnonymously();
+  const { bad, ref } = await badMember(server);
   const { data: ch } = await bad.rpc('join_channel', { p_token: token, p_protocol: online().onlineConfig().protocol, p_data_version: online().dataVersion() });
-  await bad.rpc('set_offer', { p_channel: ch, p_pet: { species: 'mewtwo', shiny: false, nature: 'hardy', size: 1.5, level: 70, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] } });
+  const offered = await bad.rpc('set_offer', { p_channel: ch, p_pet: MEWTWO, p_ref: ref });
+  assert.ifError(offered.error);
   await until(() => has(UA, ['받을 수 없음', '받을 수 없는 포켓몬이에요']), 'U7 막힘 화면');
   assert.equal(await pick(UA, '이브이'), true, `U7 이브이 칸: ${JSON.stringify(await UA.dom("[...document.querySelectorAll('.trade-cell')].map((c) => [c.querySelector('.who')?.textContent, c.disabled])"))}`);
   await until(() => has(UA, ['받을 수 없는 포켓몬이에요', 'Lv.']), 'U7 내 제안');
@@ -233,7 +282,12 @@ async function ui(server) {
   assert.equal(await UA.press('링크 만들기'), true);
   await until(() => has(UA, ['링크 복사']), 'U8 링크');
   const first = (await UA.status()).link.split('#')[1];
-  const UC = makeApp('uc', server, [{ id: 'p1', species: 'bulbasaur', where: 'party' }], { PB_E2E_ARGV_LINK: `pokebuddy://trade/${first}` });
+  // C 는 먼저 가입해 두고 끈 뒤 링크 인자로 다시 켠다 — 익명으로 켜면 참가하지 못한다(login-required)
+  const UC = makeApp('uc', server, [{ id: 'p1', species: 'bulbasaur', where: 'party' }]);
+  await UC.start();
+  await member(UC);
+  await UC.stop();
+  UC.env.PB_E2E_ARGV_LINK = `pokebuddy://trade/${first}`;
   await UC.start();
   await until(async () => (await UC.status())?.phase === 'trading', 'U8 C 가 참가한다', 60_000);
   await opened(UC);

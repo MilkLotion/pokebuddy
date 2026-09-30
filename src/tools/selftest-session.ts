@@ -1,8 +1,8 @@
 // 세션 관문 확인 — 가짜 클라이언트로 익명 발급 한 번·세션 교체 직렬화·교착 없음·오류 코드를 본다 (네트워크 없음)
 //   npm run build && node dist/tools/selftest-session.js
-// 설계는 worklog-mac/records/cloud-authority/design-p1.md 4절, 7절 시험 13번
+// 설계는 worklog-mac/records/cloud-authority/design-p1.md 4절, 7절 시험 13번 · design-p2.md 2절(부팅 판단 probe)
 import assert from "node:assert";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { AuthApiError, AuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { createSessionGate, sessionCodeOf } from "../online/session";
 import { createTradeNet } from "../trade/net";
 
@@ -13,16 +13,18 @@ interface Fake {
   anonCount: () => number;
   log: string[];
   setUser: (user: User | null) => void;
+  setSessionError: (error: unknown) => void; // 세션 없음과 함께 돌려줄 getSession 오류(갱신 실패 흉내)
 }
 
 // 가짜 인증 — 익명 발급은 지연을 두고 세션을 채운다. 몇 번 발급했는지 센다
 function fakeClient(opts: { delayMs?: number; failWith?: { message: string; status?: number } } = {}): Fake {
   let session: { user: User } | null = null;
+  let sessionError: unknown = null;
   let anon = 0;
   const log: string[] = [];
   const client = {
     auth: {
-      getSession: async () => ({ data: { session }, error: null }),
+      getSession: async () => (session ? { data: { session }, error: null } : { data: { session: null }, error: sessionError }),
       signInAnonymously: async () => {
         anon += 1;
         log.push("anon");
@@ -34,7 +36,7 @@ function fakeClient(opts: { delayMs?: number; failWith?: { message: string; stat
       },
     },
   } as unknown as SupabaseClient;
-  return { client, anonCount: () => anon, log, setUser: (user) => { session = user ? { user } : null; } };
+  return { client, anonCount: () => anon, log, setUser: (user) => { session = user ? { user } : null; }, setSessionError: (e) => { sessionError = e; } };
 }
 
 // 시간 안에 끝나지 않으면 교착으로 본다
@@ -134,6 +136,24 @@ async function main(): Promise<void> {
     assert.deepEqual(sessionCodeOf({ message: "anonymous sign-ins are disabled" }), { code: "UNKNOWN", detail: "anonymous sign-ins are disabled" });
     assert.deepEqual(sessionCodeOf({ code: "invalid_credentials", message: "x" }), { code: "UNKNOWN", detail: "AUTH_INVALID_LOGIN" });
     process.stdout.write("(6) 오류 코드 NETWORK·AUTH_RATE_LIMITED·UNKNOWN  ok\n");
+  }
+
+  // (7) probe — 세션 있음·없음·모름. 갱신이 망 오류로 실패하면(저장소 세션은 남음) 모름이고, ensure 는 익명을 만들지 않는다
+  {
+    const f = fakeClient();
+    const gate = createSessionGate(f.client);
+    assert.deepEqual(await gate.probe(), { state: "none" }, "빈 저장소");
+    f.setSessionError(new AuthApiError("Invalid Refresh Token: Refresh Token Not Found", 400, "refresh_token_not_found"));
+    assert.deepEqual(await gate.probe(), { state: "none" }, "갱신 토큰 거절 — 세션이 지워졌다");
+    f.setSessionError(new AuthRetryableFetchError("fetch failed", 0));
+    assert.deepEqual(await gate.probe(), { state: "unknown", code: "NETWORK" }, "망 오류 — 모름");
+    assert.deepEqual(await gate.ensure(), { ok: false, code: "NETWORK" }, "로그인 세션을 익명으로 덮지 않는다");
+    assert.equal(f.anonCount(), 0);
+    f.setSessionError(null);
+    f.setUser({ id: "member", is_anonymous: false } as User);
+    const p = await gate.probe();
+    assert.ok(p.state === "present" && p.user.id === "member");
+    process.stdout.write("(7) probe 있음·없음·모름, 망 오류면 ensure 가 익명을 만들지 않는다  ok\n");
   }
 
   process.stdout.write("selftest-session 모두 통과\n");

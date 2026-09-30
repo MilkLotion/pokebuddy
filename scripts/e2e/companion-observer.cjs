@@ -1,5 +1,18 @@
 // 실제 CLI가 실행한 Electron의 UI 관측. 앱 로직·저장·IPC·그림 로더는 교체하지 않음.
 if (process.versions.electron && process.type === 'browser' && process.env.PB_E2E_DIR) {
+  // 메인 프로세스의 fetch 주소(호스트만)를 적는다 — 시험이 외부 서버에 닿지 않았는지 본다. 요청은 그대로 보낸다
+  const realFetch = globalThis.fetch;
+  if (typeof realFetch === 'function') {
+    globalThis.fetch = (input, init) => {
+      try {
+        const url = new URL(typeof input === 'string' ? input : input?.url ?? String(input));
+        require('node:fs').appendFileSync(require('node:path').join(process.env.PB_E2E_DIR, 'events.jsonl'), `${JSON.stringify({ pid: process.pid, event: 'fetch', host: url.host })}\n`);
+      } catch (error) {
+        console.error('fetch 주소를 적지 못했다', error);
+      }
+      return realFetch(input, init);
+    };
+  }
   // NODE_OPTIONS 로드 시점에는 Electron API 초기화가 끝나지 않았을 수 있음.
   setImmediate(() => {
     const fs = require('node:fs');

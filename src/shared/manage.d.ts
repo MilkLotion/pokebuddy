@@ -315,6 +315,9 @@ export type CloudStatusView = "off" | "connecting" | "online" | "offline" | "con
 //   CLOUD_TRADE_UNSYNCED   다른 PC 에서 끝낸 교환이 계정 저장에 아직 반영되지 않았다(7일 이내)
 //   CLOUD_OWNER_OTHER      이 PC 저장이 다른 계정 것이고 이 계정 저장이 없다 — 올리지 않는다
 //   CLOUD_BAD_SAVE         계정 저장을 읽지 못했다 — 올리지 않는다
+//   CLOUD_PET_TRADED_OUT   계정 저장을 받은 뒤에도 교환으로 내보낸 개체가 남아 거부됐다 — 올리지 않는다
+//   AUTH_RATE_LIMITED      익명 계정을 만들지 못했다(가입 제한) — 게임은 로컬로 계속, 60초 뒤 다시
+//   SAVE_BACKUP_FAILED     로그아웃·삭제 뒤 이 PC 저장을 백업하지 못해 새로 시작하지 않았다(AccountReply.code)
 export type CloudErrorCode =
   | "NETWORK"
   | "CLOUD_LOGIN_REQUIRED"
@@ -323,7 +326,9 @@ export type CloudErrorCode =
   | "CLOUD_TRADE_UNSYNCED"
   | "CLOUD_OWNER_OTHER"
   | "CLOUD_BAD_SAVE"
-  | "CLOUD_TOO_LARGE";
+  | "CLOUD_TOO_LARGE"
+  | "CLOUD_PET_TRADED_OUT"
+  | "AUTH_RATE_LIMITED";
 // 넘겨받거나 확인·양보할 상대 PC
 export interface CloudOtherView {
   label: string | null; // "Mac" · "Windows PC"
@@ -332,10 +337,17 @@ export interface CloudOtherView {
 export interface AccountScreen {
   available: boolean; // 서버 설정이 있고 이 앱이 저장을 쓴다
   signedIn: boolean;
+  // 아래 두 값은 메인(src/main/online.ts)이 늘 채운다. 렌더러의 기본값(서버 설정 없음)이 빼도 되게 선택으로 둔다
+  anonymous?: boolean; // 익명 계정으로 저장 중이다 — signedIn 은 거짓 (design-p2.md 5절)
+  // 저장 계정을 잃었다(D29) — 클라우드 저장은 꺼져 있고 게임은 계속. 분실 창은 메인이 띄운다.
+  //   member 는 다시 로그인하면 풀린다. anonymous 는 되찾을 수 없다. null 이면 분실 아님
+  lost?: "member" | "anonymous" | null;
   method: "password" | "github" | null;
   username: string | null;
   displayName: string | null;
   blocked: boolean; // 걸린 교환이 있어 로그인·로그아웃·삭제를 할 수 없다
+  // 서버에 올리지 못한 진행이 있을 수 있다 — 올리지 않은 진행, 온라인 아님, 올리기 막힘. 로그아웃·삭제 확인 창의 경고 줄. 없으면 거짓
+  unsynced?: boolean;
   cloud: {
     status: CloudStatusView;
     lastSavedAt: number | null;
@@ -351,9 +363,9 @@ export type AccountAction =
   | { action: "sign-in"; username: string; password: string }
   | { action: "github" }
   | { action: "github-cancel" } // 브라우저 로그인을 기다리다 취소
-  | { action: "sign-out" } // 올리고 released 를 알린 뒤 로그아웃한다
+  | { action: "sign-out" } // 올리고 released 를 알린 뒤 로그아웃한다. 성공하면 저장을 백업하고 앱을 다시 켠다(D12)
   | { action: "rename"; displayName: string }
-  | { action: "delete" };
+  | { action: "delete" }; // 성공하면 저장을 백업하고 앱을 다시 켠다(D12)
 export interface AccountReply {
   ok: boolean;
   code: string | null; // 실패 코드 — AUTH_* · CLOUD_* · NETWORK

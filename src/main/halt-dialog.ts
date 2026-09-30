@@ -1,11 +1,12 @@
 // 두 PC 규칙의 멈춤 창 — 밀려남 안내·넘겨받기 확인·넘겨받기 막힘 (worklog-mac/records/cloud-authority/design-p1.md 3·5절)
+// 저장 계정 분실 창(D29) — 게임은 멈추지 않는다 (worklog-mac/records/cloud-authority/design-p2.md 5절·15절 G-a·G-c)
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
 // Electron 네이티브 대화상자를 쓴다. 작은 투명 부모 창을 하나 만들어 붙인다
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/region-window.ts 와 같은 층)
 import { app, BrowserWindow, dialog, screen } from "electron";
-import type { HaltInfo } from "../online/cloud.js";
+import type { HaltInfo, OwnerKind } from "../online/cloud.js";
 import { t } from "./text";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
@@ -68,7 +69,19 @@ interface AskOptions {
   signal?: AbortSignal; // 밖에서 닫는다 — closed
 }
 
-async function ask(o: AskOptions): Promise<HaltAnswer> {
+interface PickOptions {
+  type: "info" | "warning" | "question";
+  title: string;
+  message: string;
+  detail: string;
+  buttons: string[]; // 0 번이 기본 단추
+  cancelId: number; // Esc·창 닫기가 고르는 단추
+  timeoutMs?: number; // 지나면 closed
+  signal?: AbortSignal; // 밖에서 닫는다 — closed
+}
+
+// 단추를 고르게 한다 — 고른 단추 번호. 밖에서 닫았으면 closed, 띄우지 못했으면 cancelId
+async function pick(o: PickOptions): Promise<number | "closed"> {
   const abort = new AbortController();
   let closed = false;
   const close = (): void => {
@@ -78,8 +91,6 @@ async function ask(o: AskOptions): Promise<HaltAnswer> {
   if (o.signal?.aborted) return "closed";
   o.signal?.addEventListener("abort", close, { once: true });
   const timer = o.timeoutMs ? setTimeout(close, o.timeoutMs) : null;
-  const buttons = o.go ? [o.go, o.stop] : [o.stop];
-  const stopId = buttons.length - 1;
   let parent: BrowserWindow | null = null;
   try {
     parent = parentWindow();
@@ -88,22 +99,37 @@ async function ask(o: AskOptions): Promise<HaltAnswer> {
       title: o.title,
       message: o.message,
       detail: o.detail,
-      buttons,
+      buttons: o.buttons,
       defaultId: 0,
-      cancelId: stopId,
+      cancelId: o.cancelId,
       noLink: true,
       signal: abort.signal,
     });
-    if (closed) return "closed";
-    return o.go && r.response === 0 ? "go" : "stop";
+    return closed ? "closed" : r.response;
   } catch (e) {
-    console.error("멈춤 창을 띄우지 못했다 — 멈춤으로 본다", e);
-    return closed ? "closed" : "stop";
+    console.error("멈춤 창을 띄우지 못했다 — 취소로 본다", e);
+    return closed ? "closed" : o.cancelId;
   } finally {
     if (timer) clearTimeout(timer);
     o.signal?.removeEventListener("abort", close);
     if (parent && !parent.isDestroyed()) parent.destroy();
   }
+}
+
+async function ask(o: AskOptions): Promise<HaltAnswer> {
+  const buttons = o.go ? [o.go, o.stop] : [o.stop];
+  const r = await pick({
+    type: o.type,
+    title: o.title,
+    message: o.message,
+    detail: o.detail,
+    buttons,
+    cancelId: buttons.length - 1,
+    ...(o.timeoutMs ? { timeoutMs: o.timeoutMs } : {}),
+    ...(o.signal ? { signal: o.signal } : {}),
+  });
+  if (r === "closed") return "closed";
+  return o.go && r === 0 ? "go" : "stop";
 }
 
 // 밀려남 안내 — 단추 하나. KICKED_CLOSE_MS 뒤 저절로 닫힌다. 답과 무관하게 앱은 종료한다
@@ -146,4 +172,37 @@ export function askBlocked(info: HaltInfo, signal?: AbortSignal): Promise<HaltAn
     stop: t("cloud.blocked.quit"),
     ...(signal ? { signal } : {}),
   });
+}
+
+// 분실 창의 답 — login 은 관리 창 계정 탭, local 은 이 PC 저장으로 계속, fresh 는 처음부터, closed 는 밖에서 닫았다
+export type LostAnswer = "login" | "local" | "fresh" | "closed";
+
+// 저장 계정을 잃었다(D29) — 게임은 계속, 클라우드 저장만 꺼져 있다
+//   member     [로그인] [이 PC 저장으로 계속]. Esc 는 로그인(관리 창만 연다 — 되돌릴 수 있다)
+//   anonymous  [이 PC 저장으로 계속] [처음부터]. Esc 는 이 PC 저장으로 계속 — 처음부터는 Esc 로 고르지 않는다.
+//              synced(서버에 한 번이라도 올렸다)일 때만 "서버에 둔 익명 저장은 되찾을 수 없어요" 줄을 넣는다(G-c)
+export async function askLost(kind: OwnerKind, synced: boolean, signal?: AbortSignal): Promise<LostAnswer> {
+  if (kind === "member") {
+    const r = await pick({
+      type: "warning",
+      title: t("cloud.lost.title"),
+      message: t("cloud.lost.member.message"),
+      detail: t("cloud.lost.member.detail"),
+      buttons: [t("cloud.lost.login"), t("cloud.lost.local")],
+      cancelId: 0,
+      ...(signal ? { signal } : {}),
+    });
+    return r === "closed" ? "closed" : r === 1 ? "local" : "login";
+  }
+  const detail = [synced ? t("cloud.lost.anonymous.gone") : null, t("cloud.lost.anonymous.fresh"), t("cloud.lost.anonymous.tip")].filter((v): v is string => !!v).join("\n");
+  const r = await pick({
+    type: "warning",
+    title: t("cloud.lost.title"),
+    message: t("cloud.lost.anonymous.message"),
+    detail,
+    buttons: [t("cloud.lost.local"), t("cloud.lost.fresh")],
+    cancelId: 0,
+    ...(signal ? { signal } : {}),
+  });
+  return r === "closed" ? "closed" : r === 1 ? "fresh" : "local";
 }

@@ -70,7 +70,9 @@ select throws_ok($$ select public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa
 
 -- ── claim 기본 ──
 select pg_temp.act('e3');
-select throws_ok($$ select * from public.claim_device('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'PC A', '0.13.0', 'boot', false) $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '익명 계정은 claim 하지 못한다');
+-- P2(2026-10-02): 익명 계정도 claim 한다. 행이 없으면 만들지 않고 빈 결과만 준다(anonymous_save_test.sql)
+select results_eq($$ select outcome, rev, updated_at, has_save, other_label, other_seen from public.claim_device('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'PC A', '0.13.0', 'boot', false) $$,
+  $$ values ('claimed'::text, 0::bigint, null::timestamptz, false, null::text, null::timestamptz) $$, '익명 계정의 첫 claim 은 행 없이 claimed');
 select pg_temp.act('e1');
 select throws_ok($$ select * from public.claim_device('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'PC A', '0.12.0', 'boot', false) $$, 'P0001', 'CLOUD_UPDATE_REQUIRED', '낮은 버전은 claim 하지 못한다');
 select throws_ok($$ select * from public.claim_device('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'PC A', '0.13.0', 'wake', false) $$, 'P0001', 'CLOUD_BAD_ARGS', 'mode 는 boot·late 만');
