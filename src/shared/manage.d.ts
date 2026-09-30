@@ -95,6 +95,15 @@ export interface BagItemView {
   sellPrice?: number; // 하나의 판매가 (src/shop/sell.ts sellPrice). 없으면 팔 수 없다 — 가격이 없거나 0P 인 도구
   buyPrice?: number; // 판매가의 바탕인 구매가 — 판매 안내 "구매가 Y P의 60%" 가 쓴다. sellPrice 가 있을 때만
   sellRate?: number; // 판매 비율 (SHOP_V3_RULES.sellRate) — 판매 안내의 백분율. sellPrice 가 있을 때만
+  about?: ItemAbout; // 가방 기기 창의 설명 (src/tx/lists.ts itemAbout)
+}
+
+// 도구 설명 — 상점·가방 기기 창이 같이 쓴다 (src/tx/lists.ts itemAbout, data/items.json group·desc·effectText)
+export interface ItemAbout {
+  group: string; // 분류 줄 — "경험치 도구" · "진화용 도구"
+  desc: string; // 설명
+  effect: string; // 정보 줄 `효과`
+  where: string; // 정보 줄 `쓰는 곳`. 진화용 도구는 진화 전 종 이름("피카츄·레어코일 외 5종")
 }
 
 // 성격 변경 창의 선택지 하나. 자료 순서다
@@ -121,12 +130,8 @@ export interface ShopItemView {
 }
 
 // 상점 기기 창이 보일 상품 설명 (src/tx/lists.ts, Figma 05 `Shop / Device / …`). 문구는 화면이 그대로 쓴다
-export interface ShopAbout {
-  group: string; // 분류 줄 — "경험치 도구" · "알" · "진화용 도구"
+export interface ShopAbout extends ItemAbout {
   spec: [string, string]; // 가격 아래 둘째 줄 — ["보유", "3개"] · ["준비", "5분"]
-  desc: string; // 설명
-  effect: string; // 정보 줄 `효과`
-  where: string; // 정보 줄 `쓰는 곳`. 진화용 도구는 진화 전 종 이름("피카츄·레어코일 외 5종")
 }
 
 export type DexState = "obtained" | "unlocked" | "locked";
@@ -285,7 +290,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 박스 탭을 열고 교환 모달을 띄운다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
@@ -484,6 +489,10 @@ export interface ManageBridge {
   onShopStep: (cb: (delta: -1 | 1) => void) => void; // 상점 기기 창의 이전·다음
   onShopAct: (cb: (action: ShopDeviceAction) => void) => void; // 상점 기기 창에서 누른 단추 — 관리 창이 처리한다
   onShopClosed: (cb: (gen: number) => void) => void; // 상점 기기 창이 닫혔다 — 새 세대 번호
+  bagOpen: (open: BagDeviceOpen | null, gen?: number) => void; // 가방 기기 창에 이 도구를 띄운다. null 이면 닫는다
+  onBagStep: (cb: (delta: -1 | 1) => void) => void;
+  onBagAct: (cb: (action: BagDeviceAction) => void) => void;
+  onBagClosed: (cb: (gen: number) => void) => void;
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
@@ -579,6 +588,39 @@ export interface ShopDeviceBridge {
   step: (delta: -1 | 1) => void;
   close: () => void;
   act: (action: ShopDeviceAction) => void;
+}
+
+// 가방 기기 창 — 상점 기기 창과 같은 틀 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`, 2026-10-01 사용자 결정 C안).
+// 도구는 파티 개체에게만 쓴다. 진화용 도구는 가방에서 쓰지 않는다(판매만). 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
+export interface BagDeviceOpen {
+  itemId: string;
+  kind: string; // 머리 줄 첫 글자 — 도구 · 진화
+  name: string;
+  state: string; // 머리 줄 오른쪽 — "보유 ×3"
+  group: string;
+  art: string | null;
+  spec: [string, string][]; // 판매가·구매가
+  desc: string;
+  rows: [string, string][]; // 효과·쓰는 곳
+  title: string; // 조작 칸 머리 — "파티에게 쓰기" · "판매하기"
+  mode: "use" | "sell";
+  modes: boolean; // 사용·판매 전환을 둔다 — 사용도 판매도 되는 도구만
+  party: { petId: string; name: string; level: string; art: string | null; picked: boolean }[] | null; // 사용 쪽 파티 줄
+  qty: { count: number; cap: number; hint: string } | null;
+  preview: { lead: string; line: string; tone: "" | "ok" | "bad" };
+  go: { label: string; disabled: boolean; busy: boolean }; // 바닥 가운데 주 단추 — `N개 사용` · `NP에 팔기`
+}
+export interface BagDeviceView extends BagDeviceOpen {
+  side: "right" | "left";
+}
+export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" | "sell" } | { kind: "target"; petId: string } | { kind: "qty"; qty: number } | { kind: "go" });
+export type BagDeviceChannel = "bagdev:show" | "bagdev:size" | "bagdev:step" | "bagdev:close" | "bagdev:act";
+export interface BagDeviceBridge {
+  onShow: (cb: (view: BagDeviceView) => void) => void;
+  size: (height: number) => void;
+  step: (delta: -1 | 1) => void;
+  close: () => void;
+  act: (action: BagDeviceAction) => void;
 }
 
 export interface DexDeviceBridge {

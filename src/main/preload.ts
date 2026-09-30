@@ -25,6 +25,10 @@ type ShopDeviceAction = import("../shared/manage").ShopDeviceAction;
 type ShopDeviceChannel = import("../shared/manage").ShopDeviceChannel;
 type ShopDeviceView = import("../shared/manage").ShopDeviceView;
 type ShopDeviceBridge = import("../shared/manage").ShopDeviceBridge;
+type BagDeviceAction = import("../shared/manage").BagDeviceAction;
+type BagDeviceChannel = import("../shared/manage").BagDeviceChannel;
+type BagDeviceView = import("../shared/manage").BagDeviceView;
+type BagDeviceBridge = import("../shared/manage").BagDeviceBridge;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
@@ -118,6 +122,10 @@ const MANAGE = {
   shopStep: "manage:shop-step",
   shopAct: "manage:shop-act",
   shopClosed: "manage:shop-closed",
+  bagOpen: "manage:bag-open",
+  bagStep: "manage:bag-step",
+  bagAct: "manage:bag-act",
+  bagClosed: "manage:bag-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -160,6 +168,10 @@ const manage: ManageBridge = {
   onShopStep: (cb) => ipcRenderer.on(MANAGE.shopStep, (_e, delta: -1 | 1) => cb(delta)),
   onShopAct: (cb) => ipcRenderer.on(MANAGE.shopAct, (_e, action: ShopDeviceAction) => cb(action)),
   onShopClosed: (cb) => ipcRenderer.on(MANAGE.shopClosed, (_e, gen: number) => cb(gen)),
+  bagOpen: (open, gen) => ipcRenderer.send(MANAGE.bagOpen, open, gen),
+  onBagStep: (cb) => ipcRenderer.on(MANAGE.bagStep, (_e, delta: -1 | 1) => cb(delta)),
+  onBagAct: (cb) => ipcRenderer.on(MANAGE.bagAct, (_e, action: BagDeviceAction) => cb(action)),
+  onBagClosed: (cb) => ipcRenderer.on(MANAGE.bagClosed, (_e, gen: number) => cb(gen)),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
@@ -290,3 +302,22 @@ const shop: ShopDeviceBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyShop", shop);
+
+// 가방 기기 창 — 도구 하나를 받고, 그린 높이와 이전·다음·닫기·누른 단추(사용·판매 전환, 파티 고르기, 수량, 사용·팔기)를 보낸다
+const BAG = {
+  show: "bagdev:show",
+  size: "bagdev:size",
+  step: "bagdev:step",
+  close: "bagdev:close",
+  act: "bagdev:act",
+} satisfies Record<string, BagDeviceChannel>;
+
+const bag: BagDeviceBridge = {
+  onShow: (cb) => ipcRenderer.on(BAG.show, (_e, view: BagDeviceView) => cb(view)),
+  size: (h) => ipcRenderer.send(BAG.size, h),
+  step: (delta) => ipcRenderer.send(BAG.step, delta),
+  close: () => ipcRenderer.send(BAG.close),
+  act: (action) => ipcRenderer.send(BAG.act, action),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyBag", bag);

@@ -29,6 +29,8 @@ import type {
   PetView,
   PortraitAsk,
   ScreenView,
+  BagDeviceAction,
+  BagDeviceOpen,
   ShopDeviceAction,
   ShopDeviceOpen,
   ShopItemView,
@@ -160,8 +162,7 @@ const achDotEl = need("achievements-dot", HTMLElement);
 // 모달 하나. 어느 것인지와 그 모달만 쓰는 값을 함께 담는다
 type Dialog =
   | { kind: "pet"; petId: string }
-  | { kind: "evolve"; petId: string; to?: string; itemId?: string } // 진화 확인 — to 는 고른 후보, itemId 는 가방의 돌로 왔을 때
-  | { kind: "evo-target"; itemId: string } // 가방의 진화용 도구 — 진화할 개체를 고른다
+  | { kind: "evolve"; petId: string; to?: string } // 진화 확인 — to 는 고른 후보
   | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
   | { kind: "swap" } // 파티 교체 — 박스와 파티 사이를 끌어 놓아 옮긴다
@@ -1669,9 +1670,8 @@ function drawShop(v: Snapshot): void {
 }
 
 // ── 가방 ───────────────────────────────────────────────────────────────────────
-// Figma 05 `Bag / Base` `381:6555` — 분류 칩, 4열 도구 칸, 고른 도구의 사용 패널(파티·박스 대상, 수량과 최대, 미리보기).
-// 진화용 도구와 민트는 대상과 결과를 고르는 창이 따로 있어 그 창을 연다. 여러 개 쓰기는 경험사탕·이상한사탕만 되고 한 거래다
-// (2026-09-27 사용자 결정 "수량 선택 + 최대", src/tx/handlers.ts useHandler)
+// Figma 05 `Bag / Base` `381:6555` — 분류 칩, 4열 도구 칸. 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다(아래 `가방 기기 창`).
+// 여러 개 쓰기는 경험사탕·이상한사탕만 되고 한 거래다 (2026-09-27 사용자 결정 "수량 선택 + 최대", src/tx/handlers.ts useHandler)
 
 // 가방 분류 — 상점(SHOP_TABS)의 도구 분류와 같다. data/items.json 의 도구는 `도구`, data/evo-items.json 의 진화용 도구는 `진화`.
 // `전체` 는 두지 않고 첫 탭 `도구` 를 연다 (2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애.")
@@ -1680,30 +1680,35 @@ const BAG_TABS = [
   { id: "evolution", label: "진화" },
 ];
 let bagFilter = "tool";
-let bagPick: string | null = null; // 사용 패널에 연 도구
-let bagScope: "party" | "box" = "party";
-let bagTarget: string | null = null;
+let bagPick: string | null = null; // 가방 기기 창에 띄운 도구
+let bagTarget: string | null = null; // 사용 쪽에서 고른 파티 개체
 let bagQty = 1;
-// 방금 쓴 결과 한 줄 — 성공 톤 알림으로 판에 둔다. 도구·대상·범위·갈래·분류·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
+// 방금 쓴 결과 — 미리보기 상자가 초록으로 보인다. 도구·대상·갈래·수량·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
 let bagResult = "";
-let bagResultNote = ""; // 결과 둘째 줄 — "이상한사탕 1개를 썼어요" (미리보기 상자가 결과를 보일 때)
-// 판 머리의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다 (2026-09-30 사용자 결정, Figma 05 `Bag / Sell` `1006:20684`)
+let bagResultNote = ""; // 결과 둘째 줄 — "이상한사탕 1개를 썼어요"
+let bagNotice = ""; // 마지막 사용·판매 실패 — 미리보기 상자가 빨강으로 보인다
+// 조작 칸의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다. 진화용 도구는 판매만 (2026-10-01 사용자 결정 "진화아이템에는 사용을 없애자")
 let bagMode: "use" | "sell" = "use";
 let sellQty = 1;
-// 대상 목록(.use-list)의 스크롤 — 판을 다시 그려도 같은 도구·같은 범위면 되돌린다. 범위를 바꾸면 맨 위 (8번 버그,
-// 사용자 "스크롤 아래로 하고, 클릭하잖아. 스크롤이 제일 위로 가져.")
-let bagListScroll = { key: "", top: 0 };
-// 고른 줄을 목록 안에 보이게 맞출 차례 — 사용자가 줄·범위·도구를 새로 고를 때만 켠다. 그 밖의 다시 그리기(1초 시계 등)는 기억한 위치 그대로
-let bagListReveal = false;
-
-// `사용` 쪽 단추가 따로 창을 여는 도구 — 진화용 도구는 진화할 개체, 성격민트는 성격을 바꿀 개체를 고른다
-const bagDialogUse = (item: BagItemView): boolean => item.evolution || item.effect === "nature";
 
 // 도구의 분류 — 상점과 같은 기준. evolution 은 data/evo-items.json 에 있는 도구 (src/tx/lists.ts isEvoItem)
 function bagCategory(item: BagItemView): string {
   return item.evolution ? "evolution" : "tool";
 }
 const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";
+// 가방에서 쓸 수 있는 도구 — 효과가 있는 도구. 진화용 도구는 파티 상세의 진화 줄에서 쓴다. 성격민트는 은퇴했다 (src/bag/mint.ts)
+const bagUsable = (item: BagItemView): boolean => !item.evolution && item.effect !== undefined && item.effect !== "nature";
+
+// 누른 도구 — 같은 도구를 다시 누르면 닫는다(상점 상품·도감 칸과 같다)
+function pickBag(id: string): void {
+  bagPick = bagPick === id ? null : id;
+  bagMode = "use";
+  bagQty = 1;
+  sellQty = 1;
+  bagNotice = "";
+  bagResult = "";
+  draw();
+}
 
 function bagCard(item: BagItemView): HTMLElement {
   const card = button("bag-card");
@@ -1711,17 +1716,7 @@ function bagCard(item: BagItemView): HTMLElement {
   const info = el("div", "info");
   info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
   card.append(iconOf(`item:${item.id}`, "thumb"), info);
-  card.addEventListener("click", () => {
-    // 어떤 도구든 판을 `사용` 쪽으로 연다 (2026-09-30 사용자 결정 "다 사용이 먼저 뜨게하면 되는거아니야?")
-    bagPick = bagPick === item.id ? null : item.id;
-    bagMode = "use";
-    bagListReveal = true;
-    bagQty = 1;
-    sellQty = 1;
-    notice = "";
-    bagResult = "";
-    draw();
-  });
+  card.addEventListener("click", () => pickBag(item.id));
   return card;
 }
 
@@ -1746,31 +1741,6 @@ function drawBag(v: Snapshot): void {
     for (const item of items) grid.appendChild(bagCard(item));
     bodyEl.appendChild(grid);
   }
-  const picked = v.bag.find((i) => i.id === bagPick);
-  if (!picked) {
-    bagPick = null;
-    bagResult = ""; // 다 써서 판이 닫혔다 — 가방 칸이 사라진 것이 결과다. 목록 아래에 줄을 끼우지 않는다 (2026-09-30 레이아웃 흔들림 금지)
-    return;
-  }
-  bodyEl.appendChild(bagPanel(v, picked));
-  restoreBagList();
-}
-
-// 대상 목록 스크롤 되돌리기 — 문서에 붙은 뒤에만 scrollTop 이 먹는다.
-// 새로 고른 직후(bagListReveal)에만 고른 줄이 목록 밖이면 목록 안에서 맞춘다(창 전체는 움직이지 않는다)
-function restoreBagList(): void {
-  const rows = bodyEl.querySelector<HTMLElement>(".use-list");
-  if (!rows) return;
-  const key = rows.dataset.key ?? "";
-  rows.scrollTop = bagListScroll.key === key ? bagListScroll.top : 0;
-  const on = bagListReveal ? rows.querySelector<HTMLElement>('.use-target[aria-pressed="true"]') : null;
-  bagListReveal = false;
-  if (on) {
-    const top = on.getBoundingClientRect().top - rows.getBoundingClientRect().top + rows.scrollTop;
-    if (top < rows.scrollTop) rows.scrollTop = top;
-    else if (top + on.offsetHeight > rows.scrollTop + rows.clientHeight) rows.scrollTop = top + on.offsetHeight - rows.clientHeight;
-  }
-  bagListScroll = { key, top: rows.scrollTop };
 }
 
 // 사탕을 qty 개 쓰면 — 경험치 곡선으로 새 레벨과 넘쳐 사라지는 경험치를 셈한다 (src/bag/use.ts 와 같은 규칙)
@@ -1879,259 +1849,207 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
   }
 }
 
-function openBagDialog(item: BagItemView): void {
-  open(item.evolution ? { kind: "evo-target", itemId: item.id } : { kind: "nature-target", itemId: item.id });
-}
+// ── 가방 기기 창 ──────────────────────────────────────────────────────────────
+// 가방 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
+// 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/record.md).
+// 도구는 파티 개체에게만 쓴다 ("파티를 기준으로만 사용할 수 있게 하자"). 무엇을 보일지는 여기서 정해 보낸다. 단추는 여기로 돌아와 명령으로 처리한다
 
-// 가방 튜토리얼 2단계 문구 — 진화용 도구·성격민트의 `사용` 쪽이면 주 단추를 가리킨다. 그 밖은 null(기본 문구)
-function bagGuideWords(): { title: string; body: string } | null {
-  const item = view?.bag.find((i) => i.id === bagPick);
-  if (!item || bagMode !== "use" || !bagDialogUse(item)) return null;
-  return item.evolution
-    ? { title: "진화할 포켓몬 고르기를 눌러요", body: "창에서 진화시킬 포켓몬을 골라요." }
-    : { title: "성격 바꿀 포켓몬 고르기를 눌러요", body: "창에서 성격을 바꿀 포켓몬을 골라요." };
-}
+let bagSending = false; // 사용·판매 명령을 보내는 중 — 두 번 누르기를 막는다
+let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
+let bagGen = 0;
+let bagDeviceOpen = false;
+let bagDeviceSent = "";
+const portraitAsked = new Set<string>(); // 기기 창에 쓸 초상을 청한 키 — 두 번 청하지 않는다
 
-// 진화용 도구·성격민트의 `사용` 쪽 — 설명 한 줄, `취소`(판 닫기)·고르는 창 열기 단추. 단추 줄은 판매 쪽과 같은 모양
-function pickDetail(item: BagItemView): HTMLElement {
-  const box = el("div", "use-detail pick-detail");
-  const evo = item.evolution;
-  box.appendChild(el("div", "use-note", evo ? `${item.name}${toParticle(item.name)} 진화할 수 있는 포켓몬을 골라요` : "성격을 바꿀 포켓몬을 골라요"));
-  box.appendChild(
-    actions(
-      actionButton("취소", false, false, () => {
-        bagPick = null;
-        notice = "";
-        bagResult = "";
-        draw();
-      }),
-      actionButton(evo ? "진화할 포켓몬 고르기" : "성격 바꿀 포켓몬 고르기", true, false, () => openBagDialog(item)),
-    ),
-  );
-  return box;
-}
-
-// 판 머리 아래 `사용 | 판매` — 고른 쪽만 톤 배경 (Figma 05 `Bag / Sell` `1006:20684`). 판매가가 없는 도구는 두지 않는다
-function bagModes(item: BagItemView): HTMLElement {
-  const modes = segmented(
-    [
-      { id: "use", label: "사용" },
-      { id: "sell", label: "판매" },
-    ] as const,
-    bagMode,
-    (id) => {
-      notice = "";
-      bagResult = "";
-      bagMode = id;
-      sellQty = 1;
-      draw();
-    },
-  );
-  modes.classList.add("use-mode");
-  return modes;
-}
-
-// 판매 갈래 — 수량 줄, 받는 포인트 상자, `취소`·`N P에 팔기`. 한 거래로 판다 (src/shop/sell.ts)
-function sellDetail(v: Snapshot, item: BagItemView, each: number): HTMLElement {
-  const box = el("div", "use-detail sell-detail");
-  const cap = Math.max(1, item.count);
-  sellQty = Math.max(1, Math.min(sellQty, cap));
-  const q = el("div", "qty square");
-  const minus = button("", "−");
-  minus.disabled = sellQty <= 1;
-  minus.addEventListener("click", () => {
-    sellQty -= 1;
-    draw();
-  });
-  const plus = button("", "+");
-  plus.disabled = sellQty >= cap;
-  plus.addEventListener("click", () => {
-    sellQty += 1;
-    draw();
-  });
-  const max = button("max", "최대");
-  max.disabled = sellQty >= cap;
-  max.addEventListener("click", () => {
-    sellQty = cap;
-    draw();
-  });
-  q.append(minus, el("span", "count", sellQty.toLocaleString("ko-KR")), plus, max, el("span", "qty-hint", `최대 ${cap.toLocaleString("ko-KR")} · 보유 수`));
-  box.appendChild(q);
-
-  const earned = each * sellQty;
-  const percent = Math.round((item.sellRate ?? 0) * 100);
-  // 실패는 요약 상자가 빨강으로 바뀌어 보인다 — 줄을 끼우지 않는다 (2026-09-30)
-  const summary = el("div", notice ? "use-preview bad" : "use-preview");
-  if (notice) summary.append(el("strong", undefined, "팔지 못했어요"), el("div", undefined, notice));
-  else
-    summary.append(
-      el("strong", undefined, `받는 포인트 ${point(earned)}`),
-      el("div", undefined, `1개 ${point(each)} (구매가 ${point(item.buyPrice ?? 0)}의 ${percent}%) · 판매 후 보유 ${point(v.points + earned)}`),
-    );
-  box.appendChild(summary);
-  box.appendChild(
-    actions(
-      actionButton("취소", false, false, () => {
-        bagPick = null;
-        notice = "";
-        bagResult = "";
-        draw();
-      }),
-      actionButton(`${point(earned)}에 팔기`, true, false, () => {
-        void send("bag.sell", item.id, sellQty > 1 ? { count: sellQty } : {}).then((ok) => {
-          if (!ok) return draw();
-          sellQty = 1;
-          if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 팔았다
-          draw();
-        });
-      }),
-    ),
-  );
-  return box;
-}
-
-function bagPanel(v: Snapshot, item: BagItemView): HTMLElement {
-  const panel = el("div", "use-panel");
-  const top = el("div", "use-head");
-  const x = button("close", "✕");
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", () => {
-    bagPick = null;
-    notice = "";
-    bagResult = "";
-    draw();
-  });
-  top.append(el("strong", undefined, item.name), el("span", "stock", `보유 ×${item.count.toLocaleString("ko-KR")}`), el("span", "spacer"), x);
-
-  // 판매가가 있으면 머리 아래 `사용 | 판매`. 없으면(기본먹이·돌아오는 약) 지금처럼 사용 판만
-  const each = item.sellPrice;
-  if (each === undefined) bagMode = "use";
-  if (each !== undefined && bagMode === "sell") {
-    panel.append(top, bagModes(item), sellDetail(v, item, each));
-    return panel;
-  }
-  // 진화용 도구·성격민트의 `사용` 쪽 — 판 안에는 설명 한 줄과 고르는 창을 여는 단추만 (Figma 05 `Bag / Use · 진화용 도구` `1043:22483`)
-  if (bagDialogUse(item)) {
-    if (each !== undefined) panel.append(top, bagModes(item), pickDetail(item));
-    else panel.append(top, pickDetail(item));
-    return panel;
-  }
-
-  const party = partyPets();
-  const box = boxPets();
-  const list = bagScope === "box" ? box : party;
-  if (!list.some((p) => p.id === bagTarget)) bagTarget = list[0]?.id ?? null;
-  const pet = list.find((p) => p.id === bagTarget) ?? null;
-
-  const left = el("div", "use-targets");
-  left.appendChild(
-    segmented(
-      [
-        { id: "party", label: `파티 ${party.length}` },
-        { id: "box", label: `박스 ${box.length}` },
-      ] as const,
-      bagScope,
-      (id) => {
-        bagScope = id;
-        bagTarget = null;
-        bagListReveal = true;
-        bagQty = 1;
-        notice = "";
-        bagResult = "";
-        draw();
-      },
-    ),
-  );
-  const rows = el("div", "use-list");
-  const listKey = `${item.id}|${bagScope}`;
-  rows.dataset.key = listKey;
-  rows.addEventListener("scroll", () => {
-    bagListScroll = { key: listKey, top: rows.scrollTop };
-  });
-  for (const p of list) {
-    const row = button("use-target");
-    row.setAttribute("aria-pressed", String(p.id === bagTarget));
-    row.append(portraitOf(p.species, p.shiny, "use-portrait"), el("strong", undefined, p.name), el("span", "lv", `Lv.${p.level}`));
-    row.addEventListener("click", () => {
-      bagTarget = p.id;
-      bagListReveal = true;
-      bagQty = 1;
-      notice = "";
-      bagResult = "";
-      draw();
+// 초상 data URI — 아직 없으면 받아 온 뒤 기기 창을 다시 보낸다
+function portraitNow(slug: string, shiny: boolean): string | null {
+  const key = shiny ? `${slug}:shiny` : slug;
+  const uri = portraitCache.get(key);
+  if (uri !== undefined) return uri;
+  if (!portraitAsked.has(key)) {
+    portraitAsked.add(key);
+    void window.pokebuddyManage.portraits([{ slug, shiny }]).then((got) => {
+      for (const [k, u] of Object.entries(got)) portraitCache.set(k, u);
+      if (!portraitCache.has(key)) portraitCache.set(key, null);
+      syncBagDevice();
     });
-    rows.appendChild(row);
   }
-  if (!list.length) rows.appendChild(el("div", "empty-note", bagScope === "box" ? "박스가 비었습니다." : "파티에 포켓몬이 없습니다."));
-  left.appendChild(rows);
+  return null;
+}
 
-  const right = el("div", "use-detail");
-  if (pet) {
-    const blocked = bagBlocked(pet, item);
-    const many = bagMany(item);
-    const cap = many ? Math.max(1, candyMax(v, pet, item)) : 1;
-    bagQty = Math.max(1, Math.min(bagQty, cap));
-    right.appendChild(el("div", "use-current", many ? `${pet.name} Lv.${pet.level} · 다음 레벨까지 ${pet.percentToNext}%` : `${pet.name} Lv.${pet.level}`));
-    if (many) {
-      const q = el("div", "qty square");
-      const minus = button("", "−");
-      minus.disabled = bagQty <= 1 || !!blocked;
-      minus.addEventListener("click", () => {
-        bagQty -= 1;
-        draw();
-      });
-      const plus = button("", "+");
-      plus.disabled = bagQty >= cap || !!blocked;
-      plus.addEventListener("click", () => {
-        bagQty += 1;
-        draw();
-      });
-      const max = button("max", "최대");
-      max.disabled = bagQty >= cap || !!blocked;
-      max.addEventListener("click", () => {
-        bagQty = cap;
-        draw();
-      });
-      q.append(minus, el("span", "count", bagQty.toLocaleString("ko-KR")), plus, max);
-      right.appendChild(q);
+function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
+  const usable = bagUsable(item);
+  const each = item.sellPrice;
+  if (!usable) bagMode = "sell";
+  else if (each === undefined) bagMode = "use";
+  const about = item.about;
+  const face = {
+    itemId: item.id,
+    kind: item.evolution ? "진화" : "도구",
+    name: item.name,
+    state: `보유 ×${item.count.toLocaleString("ko-KR")}`,
+    group: about?.group ?? "",
+    art: iconNow(`item:${item.id}`),
+    spec: (each !== undefined
+      ? [
+          ["판매가", point(each)],
+          ["구매가", point(item.buyPrice ?? 0)],
+        ]
+      : [["판매가", "팔 수 없음"]]) as [string, string][],
+    desc: about?.desc ?? "",
+    rows: [
+      ["효과", about?.effect ?? ""],
+      ["쓰는 곳", about?.where ?? ""],
+    ] as [string, string][],
+    modes: usable && each !== undefined,
+    mode: bagMode,
+  };
+
+  // 판매 쪽 — 수량, 받는 포인트. 한 거래로 판다 (src/shop/sell.ts)
+  if (bagMode === "sell") {
+    if (each === undefined) {
+      return { ...face, title: "판매하기", party: null, qty: null, preview: { lead: "팔 수 없는 도구예요", line: "", tone: "" }, go: { label: "팔기", disabled: true, busy: false } };
     }
-    // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정, Figma 99 `1087:21349`·`1087:21544`)
-    const preview = el("div", bagResult ? "use-preview ok" : notice ? "use-preview bad" : "use-preview");
-    const [lead, ...lines] = bagResult ? [bagResult, bagResultNote] : notice ? ["쓰지 못했어요", notice] : blocked ? [blocked] : bagPreview(v, pet, item, bagQty);
-    preview.appendChild(el("strong", undefined, lead ?? ""));
-    for (const line of lines) if (line) preview.appendChild(el("div", undefined, line));
-    right.appendChild(preview);
-    const label = many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용";
-    right.appendChild(
-      actions(
-        actionButton("취소", false, false, () => {
-          bagPick = null;
-          notice = "";
-          bagResult = "";
-          draw();
-        }),
-        actionButton(label, true, !!blocked, () => {
-          const target = pet.id;
-          const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
-          bagResult = "";
-          const usedCount = many && bagQty > 1 ? bagQty : 1;
-          void send("bag.use", item.id, { petId: target, ...(many && bagQty > 1 ? { count: bagQty } : {}) }).then((ok) => {
-            if (!ok) return draw();
-            bagResult = bagResultText(item, before, petOf(target));
-            bagResultNote = `${item.name} ${usedCount.toLocaleString("ko-KR")}개를 썼어요`;
-            bagQty = 1;
-            if (!view?.bag.some((i) => i.id === item.id)) bagPick = null; // 다 썼다
-            draw();
-          });
-        }),
-      ),
-    );
+    const cap = Math.max(1, item.count);
+    sellQty = Math.max(1, Math.min(sellQty, cap));
+    const earned = each * sellQty;
+    const percent = Math.round((item.sellRate ?? 0) * 100);
+    const preview = bagNotice
+      ? { lead: "팔지 못했어요", line: bagNotice, tone: "bad" as const }
+      : { lead: `받는 포인트 ${point(earned)}`, line: `1개 ${point(each)} (구매가의 ${percent}%) · 판매 후 ${point(v.points + earned)}`, tone: "" as const };
+    return {
+      ...face,
+      title: "판매하기",
+      party: null,
+      qty: { count: sellQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` },
+      preview,
+      go: { label: `${point(earned)}에 팔기`, disabled: false, busy: bagBusy },
+    };
   }
-  const cols = el("div", "use-columns");
-  cols.append(left, right);
-  if (each !== undefined) panel.append(top, bagModes(item), cols);
-  else panel.append(top, cols);
-  return panel;
+
+  // 사용 쪽 — 파티 줄, 수량(사탕만), 미리보기
+  const party = partyPets();
+  if (!party.some((p) => p.id === bagTarget)) bagTarget = party[0]?.id ?? null;
+  const pet = party.find((p) => p.id === bagTarget) ?? null;
+  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitNow(p.species, p.shiny), picked: p.id === bagTarget }));
+  if (!pet) return { ...face, title: "파티에게 쓰기", party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } };
+  const blocked = bagBlocked(pet, item);
+  const many = bagMany(item);
+  const cap = many ? Math.max(1, candyMax(v, pet, item)) : 1;
+  bagQty = Math.max(1, Math.min(bagQty, cap));
+  // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정)
+  let preview: BagDeviceOpen["preview"];
+  if (bagResult) preview = { lead: bagResult, line: bagResultNote, tone: "ok" };
+  else if (bagNotice) preview = { lead: "쓰지 못했어요", line: bagNotice, tone: "bad" };
+  else if (blocked) preview = { lead: `${pet.name} · ${blocked}`, line: "", tone: "" };
+  else {
+    const [lead, ...lines] = bagPreview(v, pet, item, bagQty);
+    preview = { lead: `${pet.name} ${lead ?? ""}`, line: lines.join(" · "), tone: "" };
+  }
+  return {
+    ...face,
+    title: "파티에게 쓰기",
+    party: strip,
+    qty: many ? { count: bagQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` } : null,
+    preview,
+    go: { label: many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용", disabled: !!blocked, busy: bagBusy },
+  };
+}
+
+function syncBagDevice(): void {
+  const item = bagPick && view ? view.bag.find((i) => i.id === bagPick) : undefined;
+  if (!item || !view) {
+    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
+    if (bagDeviceOpen || bagDeviceSent) window.pokebuddyManage.bagOpen(null);
+    bagDeviceOpen = false;
+    bagDeviceSent = "";
+    return;
+  }
+  const open = bagDeviceModel(view, item);
+  const key = JSON.stringify(open);
+  if (bagDeviceOpen && key === bagDeviceSent) return;
+  window.pokebuddyManage.bagOpen(open, bagGen);
+  bagDeviceOpen = true;
+  bagDeviceSent = key;
+}
+
+// 이전·다음 — 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래·수량·결과는 처음으로
+function stepBag(delta: -1 | 1): void {
+  if (!bagPick || !view) return;
+  const list = view.bag.filter((i) => bagCategory(i) === bagFilter);
+  if (list.length < 2) return;
+  const at = list.findIndex((i) => i.id === bagPick);
+  const next = list[(at + delta + list.length) % list.length];
+  if (!next) return;
+  pickBag(next.id);
+}
+
+// 기기 창에서 누른 단추 — 기기 창이 다른 도구를 보이던 때 누른 것은 버린다
+function onBagAction(action: BagDeviceAction): void {
+  if (!bagPick || action.itemId !== bagPick) return;
+  if (action.kind === "go") {
+    void (bagMode === "sell" ? sellBag(bagPick) : useBag(bagPick));
+    return;
+  }
+  bagNotice = "";
+  bagResult = "";
+  if (action.kind === "mode") {
+    bagMode = action.mode;
+    sellQty = 1;
+  } else if (action.kind === "target") {
+    bagTarget = action.petId;
+    bagQty = 1;
+  } else if (bagMode === "sell") sellQty = action.qty;
+  else bagQty = action.qty;
+  syncBagDevice();
+}
+
+// 명령 보내기 — 0.3초 넘게 답이 없으면 주 단추가 점 세 개. 실패 문구는 기기 창의 미리보기 상자에만 보인다
+async function bagSend(cmd: string, id: string, extra: Record<string, unknown>): Promise<boolean> {
+  bagSending = true;
+  const slow = setTimeout(() => {
+    bagBusy = true;
+    syncBagDevice();
+  }, 300);
+  const ok = await send(cmd, id, extra, { keepOpen: true });
+  clearTimeout(slow);
+  bagSending = false;
+  bagBusy = false;
+  bagNotice = ok ? "" : notice;
+  notice = "";
+  return ok;
+}
+
+async function useBag(id: string): Promise<void> {
+  const item = view?.bag.find((i) => i.id === id);
+  const pet = bagTarget ? petOf(bagTarget) : null;
+  if (!item || !pet || !view || bagSending) return;
+  const model = bagDeviceModel(view, item);
+  if (model.go.disabled) return;
+  const many = bagMany(item);
+  const count = many ? bagQty : 1;
+  const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
+  bagResult = "";
+  const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
+  if (ok) {
+    bagResult = bagResultText(item, before, petOf(pet.id));
+    bagResultNote = `${item.name} ${count.toLocaleString("ko-KR")}개를 썼어요`;
+    bagQty = 1;
+    if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
+  }
+  draw();
+}
+
+async function sellBag(id: string): Promise<void> {
+  const item = view?.bag.find((i) => i.id === id);
+  if (!item || item.sellPrice === undefined || bagSending) return;
+  const count = Math.max(1, Math.min(sellQty, item.count));
+  const ok = await bagSend("bag.sell", id, count > 1 ? { count } : {});
+  if (ok) {
+    sellQty = 1;
+    if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
+  }
+  draw();
 }
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
@@ -3174,6 +3092,7 @@ function setTab(next: TabId): void {
     window.pokebuddyManage.dexOpen(null, dexGen);
   }
   if (tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
+  if (tab === "bag") bagPick = null; // 가방 기기 창 — 다음 draw 의 syncBagDevice 가 닫는다
   tab = next;
   bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
   if (next === "dex" && !dexRows) void loadDex();
@@ -3204,6 +3123,8 @@ function drawBody(): void {
   syncPetDevice();
   if (shopPick && !view.shop.some((i) => i.id === shopPick)) shopPick = null;
   syncShopDevice();
+  if (bagPick && !view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
+  syncBagDevice();
   if (tab === "party") drawParty(view);
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
@@ -3305,16 +3226,15 @@ const GUIDES: Record<string, Guide> = {
   },
   bag: {
     name: "가방", tab: "bag", go: "가방으로 가기",
-    // 도구를 눌러 사용 판이 열리면 2단계, 판을 닫으면 1단계로 돌아간다
-    step: () => (bodyEl.querySelector(".use-panel") ? 1 : 0),
+    // 도구를 눌러 가방 기기 창이 뜨면 2단계, 닫으면 1단계로 돌아간다 (2026-10-01 가방 기기 창)
+    step: () => (bagPick ? 1 : 0),
     steps: [
       { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 먹이와 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
       {
-        title: "대상을 고르고 사용을 눌러요",
-        body: "여러 개를 한 번에 쓸 수 있어요.",
-        target: () => bodyEl.querySelector<HTMLElement>(".use-panel"),
+        title: "옆 창에서 파티 포켓몬을 고르고 사용을 눌러요",
+        body: "여러 개를 한 번에 쓸 수 있어요. 진화용 도구는 파티 상세의 진화 줄에서 써요.",
+        target: () => bodyEl.querySelector<HTMLElement>('.bag-card[aria-pressed="true"]'),
         interactive: true,
-        words: bagGuideWords, // 진화용 도구·성격민트 판에는 대상 목록·사용 단추가 없다 — 그 판의 단추를 가리키는 문구(제안, 검수 R9-1)
       },
     ],
   },
@@ -3946,9 +3866,6 @@ function onPetAction(action: PetDeviceAction): void {
 // 지도 — 기본형 → 리전폼 진화(지도 간선)에 쓴다. 돌 간선은 돌 대신, 레벨·친밀도 간선은 조건과 함께 (src/dex/evolve.ts, worklog-mac/records/region-map/record.md)
 const REGION_MAP = "region-map";
 
-// 가방의 도구로 왔을 때 보일 후보 — 지도면 지도 간선만. 돌이면 그 돌이 조건인 후보 — 돌 대신 지도인 리전폼 후보는 조건이 지도라 빠진다
-const evoByItem = (c: PetView["evolutions"][number], itemId: string): boolean => (itemId === REGION_MAP ? !!c.map : c.item === itemId);
-
 // 진화 사슬 — 도감·상점과 같은 트리(src/tx/shop-detail.ts). 종마다 한 번 받는다. 받기 전·못 받으면 후보 줄로 그린다
 const evoTrees = new Map<string, EvoNodeView | null>();
 const evoTreeAsked = new Set<string>();
@@ -3974,17 +3891,17 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 
 // 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
 // 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다
-function drawEvolve(petId: string, to?: string, itemId?: string): void {
+function drawEvolve(petId: string, to?: string): void {
   const pet = petOf(petId);
   if (!pet) {
     close();
     return;
   }
-  // 가방의 도구로 왔으면 그 도구를 쓰는 후보만 고를 수 있다. 상세에서 오면 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다
-  const list = itemId ? pet.evolutions.filter((c) => evoByItem(c, itemId)) : pet.evolutions;
+  // 후보는 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다. 가방에서 오는 길은 없앴다(2026-10-01 진화용 도구 사용 없음)
+  const list = pet.evolutions;
   const ready = list.filter((c) => c.ready);
   const picked = list.find((c) => c.to === to && c.ready) ?? ready[0];
-  const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "evo-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
+  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
   dialogEl.append(...dialogHead("진화", `${pet.name} · Lv.${pet.level}`, back));
 
   const tree = evoTreeOf(pet.species);
@@ -4008,7 +3925,7 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
       node.setAttribute("role", "button");
       node.tabIndex = 0;
       node.setAttribute("aria-pressed", String(picked?.to === c.to));
-      const choose = (): void => open({ kind: "evolve", petId, to: c.to, ...(itemId ? { itemId } : {}) });
+      const choose = (): void => open({ kind: "evolve", petId, to: c.to });
       node.addEventListener("click", choose);
       node.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -4031,7 +3948,7 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
     row.appendChild(body);
     row.disabled = !c.ready;
     row.setAttribute("aria-pressed", String(picked?.to === c.to));
-    row.addEventListener("click", () => open({ kind: "evolve", petId, to: c.to, ...(itemId ? { itemId } : {}) }));
+    row.addEventListener("click", () => open({ kind: "evolve", petId, to: c.to }));
     rows.appendChild(row);
   }
   if (!tree) dialogEl.appendChild(rows);
@@ -4057,16 +3974,6 @@ function drawEvolve(petId: string, to?: string, itemId?: string): void {
   });
   // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
   dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
-}
-
-// 가방의 진화용 도구 — 그 도구로 지금 진화할 수 있는 개체를 고른다. 박스 개체에게도 쓸 수 있다
-function drawEvoTarget(itemId: string): void {
-  const item = view?.bag.find((b) => b.id === itemId);
-  const pets = [...partyPets(), ...boxPets()].filter((p) => p.evolutions.some((c) => evoByItem(c, itemId) && c.ready));
-  const empty = itemId === REGION_MAP ? "지도를 쓸 수 있는 포켓몬이 없어요." : "이 도구로 지금 진화할 수 있는 포켓몬이 없어요.";
-  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구를 진화시킬까요?" : empty));
-  const acts = pets.map((p) => actionButton(`${p.name} (Lv.${p.level})`, false, false, () => open({ kind: "evolve", petId: p.id, itemId })));
-  dialogEl.appendChild(actions(...acts, closeButton()));
 }
 
 // ── 모달 · 성격 변경 ───────────────────────────────────────────────────────────
@@ -4831,7 +4738,6 @@ function drawNotesNew(version: string): void {
 const SHAPE: Record<Dialog["kind"], string> = {
   pet: "dialog",
   evolve: "dialog",
-  "evo-target": "dialog",
   nature: "dialog",
   "nature-target": "dialog",
   swap: "dialog swap",
@@ -4894,8 +4800,7 @@ function drawDialog(): void {
   dialogEl.replaceChildren();
   drawUnder();
 
-  if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to, dialog.itemId);
-  else if (dialog.kind === "evo-target") drawEvoTarget(dialog.itemId);
+  if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to);
   else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
   else if (dialog.kind === "swap") drawSwap();
@@ -5264,6 +5169,7 @@ async function clockTick(): Promise<void> {
       applyLive();
       syncPetDevice(); // 기기 창도 새 시간 값을 받는다. 기기 창이 표시만 고친다
       syncShopDevice();
+      syncBagDevice();
       return;
     }
     if (holdFullDraw()) {
@@ -5401,6 +5307,16 @@ window.pokebuddyManage.onShopClosed((gen) => {
   shopDeviceSent = "";
   if (!shopPick) return;
   shopPick = null;
+  draw();
+});
+window.pokebuddyManage.onBagStep((delta) => stepBag(delta));
+window.pokebuddyManage.onBagAct((action) => onBagAction(action));
+window.pokebuddyManage.onBagClosed((gen) => {
+  bagGen = gen;
+  bagDeviceOpen = false;
+  bagDeviceSent = "";
+  if (!bagPick) return;
+  bagPick = null;
   draw();
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));

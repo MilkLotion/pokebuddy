@@ -20,7 +20,7 @@ import { formsOf } from "../dex/forms.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
 import type { DayPart } from "../shared/types";
-import { isEvoItem, nameOfItem, shopList } from "./lists.js";
+import { isEvoItem, itemAbout, nameOfItem, shopList } from "./lists.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 보상 종류 → 화면 문구. 종류가 하나뿐이라 표로 둔다
@@ -166,10 +166,12 @@ export function snapshot(
     .map(([id, count]) => {
       const item = itemOf(id);
       const sale = sellPrice(id);
+      const about = itemAbout(save, id);
       return {
         id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_V3_RULES.sellRate } : {}),
+        ...(about ? { about } : {}),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

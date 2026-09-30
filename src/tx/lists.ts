@@ -6,7 +6,7 @@ import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
-import type { DexEntry, ShopAbout, ShopItemView } from "../shared/manage";
+import type { DexEntry, ItemAbout, ShopAbout, ShopItemView } from "../shared/manage";
 import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
@@ -110,13 +110,8 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const [id, item] of Object.entries(items(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
-    const about: ShopAbout = {
-      group: item.group ?? "도구",
-      spec: owned(id),
-      desc: item.desc ?? "",
-      effect: item.effectText ?? "",
-      where: "가방 › 사용 · 파티·박스 포켓몬",
-    };
+    // 상점의 쓰는 곳은 어디서 쓰는지까지 — 가방은 파티 개체에게만 쓴다 (2026-10-01 사용자 결정 "파티를 기준으로만 사용할 수 있게 하자")
+    const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id), where: "가방 › 사용 · 파티 포켓몬" };
     add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
   }
 
@@ -128,13 +123,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     // 설명은 진화 전 종 이름 — "피카츄·레어코일 외 5종" (2026-09-30 사용자 결정, src/tx/shop-detail.ts evoItemNote)
     // 기기 창의 `쓰는 곳` 도 같은 문구다 (2026-10-01 사용자 Figma 수정 "쓰는곳에 \"피카츄·레어코일 외 5종\" 이걸 적어야겠네")
     const note = evoItemNote(save, id, opts);
-    const about: ShopAbout = {
-      group: "진화용 도구",
-      spec: owned(id),
-      desc: "정해진 포켓몬에게 쓰면 바로 진화한다. 진화할 수 있는 포켓몬이 있어야 쓸 수 있다.",
-      effect: "바로 진화 · 1개 소모",
-      where: note,
-    };
+    const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id) };
     add({ id, name: item.ko, note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
 
@@ -210,3 +199,19 @@ export const nameOfItem = (id: string, opts?: DexOptions): string => toolName(id
 
 // 진화용 도구인가 — data/evo-items.json 에 있으면 그렇다
 export const isEvoItem = (id: string, opts?: DexOptions): boolean => evoItems(opts)[id] != null;
+
+// 도구 설명 — 상점·가방 기기 창이 같이 쓴다. 모르는 도구면 undefined
+// 진화용 도구는 가방에서 쓰지 않는다 — 진화는 파티 상세의 진화 줄에서 한다 (2026-10-01 사용자 결정 "진화아이템에는 사용을 없애자").
+// 쓰는 곳은 진화 탭 상품 줄과 같은 진화 전 종 이름이다 (2026-10-01 사용자 Figma 수정)
+export function itemAbout(save: SaveV3, id: string, opts?: DexOptions): ItemAbout | undefined {
+  if (isEvoItem(id, opts))
+    return {
+      group: "진화용 도구",
+      desc: "정해진 포켓몬을 진화시키는 도구다. 진화는 파티 상세의 진화 줄에서 한다.",
+      effect: "바로 진화 · 1개 소모",
+      where: evoItemNote(save, id, opts),
+    };
+  const item = items(opts)[id];
+  if (!item) return undefined;
+  return { group: item.group ?? "도구", desc: item.desc ?? "", effect: item.effectText ?? "", where: "파티 포켓몬" };
+}

@@ -26,15 +26,15 @@
         --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
         font-synthesis: none;
       }
-      /* 상점 기기 — Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution` (worklog/records/shop-device/record.md). 도감 기기 창(dex.html)과 같은 틀이다.
-         기기의 호박색·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)와 가른다 */
+      /* 가방 기기 — Figma 05 `Bag / Device / Use`·`Sell`·`Evolution` (worklog/records/bag-device/record.md). 상점 기기 창(shop.html)과 같은 틀이다.
+         기기의 파랑·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)·상점(호박색)과 가른다 */
       :root {
-        --body: #c9822e;
-        --hinge: #98591a;
-        --joint: #6f3f0e;
+        --body: #4f78b8;
+        --hinge: #34578f;
+        --joint: #243f6b;
         --bezel: #3b2c31;
         --screen: #f5f3ea;
-        --bar: #dc9540;
+        --bar: #6a93d0;
         --stage: #e6e3d5;
         --paper: #ffffff;
         --records: #fbfaf6;
@@ -50,6 +50,10 @@
         --disabled: #9ca3af;
         --danger-bg: #fdecec;
         --danger-ink: #b91c1c;
+        --success-bg: #e6f6ef;
+        --success-ink: #047857;
+        --accent: #ebf4f1;
+        --picked: #dcebe5;
       }
       * {
         box-sizing: border-box;
@@ -79,8 +83,8 @@
         background: var(--body);
         border-radius: 6px 18px 18px 6px;
         box-shadow:
-          inset -4px -6px 0 rgba(111, 63, 14, 0.55),
-          inset 3px 3px 0 rgba(255, 214, 153, 0.45);
+          inset -4px -6px 0 rgba(36, 63, 107, 0.55),
+          inset 3px 3px 0 rgba(170, 200, 245, 0.45);
         overflow: hidden;
       }
       /* 관리 창 왼쪽에 붙으면 경첩 면을 오른쪽에 그린다 */
@@ -183,7 +187,7 @@
         font-family: var(--font-small);
         font-size: 10px;
         font-weight: 400;
-        color: #fff1dc;
+        color: #e6efff;
       }
       .entry {
         display: flex;
@@ -302,8 +306,8 @@
       .stage canvas {
         image-rendering: pixelated;
       }
-      /* 구매 칸 — 기록 칸과 같은 판. 수량 줄과 합계 상자 (Figma `buy`) */
-      .buy-card {
+      /* 조작 칸 — 기록 칸과 같은 판. 머리 줄(제목·사용|판매), 파티 줄, 수량, 미리보기 상자 (Figma `use`) */
+      .use-card {
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -311,8 +315,79 @@
         border-radius: 10px;
         background: var(--records);
       }
-      .buy-label {
+      .use-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 28px;
+      }
+      .use-head .title {
+        margin-right: auto;
         font-weight: 700;
+      }
+      /* 사용 | 판매 — 고른 쪽만 톤 배경 (관리 창 segmented 와 같은 모양) */
+      .seg {
+        display: flex;
+        padding: 2px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+      }
+      .seg button {
+        height: 24px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--soft);
+        cursor: pointer;
+      }
+      .seg button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--ink);
+        font-weight: 700;
+      }
+      /* 파티 줄 — 초상 40 + 레벨. 고른 칸만 옅은 배경, 테두리 없음 (Figma `party-strip`) */
+      .party {
+        display: flex;
+        gap: 4px;
+      }
+      .party button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        width: 50px;
+        padding: 6px 4px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--soft);
+        cursor: pointer;
+      }
+      .party button[aria-pressed="true"] {
+        background: var(--picked);
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .party .face {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--accent);
+        overflow: hidden;
+      }
+      .party .face img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-view-box: inset(14%);
+        image-rendering: pixelated;
+      }
+      .party-empty {
+        color: var(--soft);
       }
       .qty {
         display: flex;
@@ -365,22 +440,18 @@
         background: var(--danger-bg);
         color: var(--danger-ink);
       }
-      .total.bad strong {
+      .total.bad strong,
+      .total.ok strong {
         color: inherit;
       }
-      .daycare {
-        align-self: flex-start;
-        padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--soft);
-        text-decoration: underline;
-        cursor: pointer;
+      .total.ok {
+        background: var(--success-bg);
+        color: var(--success-ink);
       }
     </style>
   </head>
   <body>
     <div id="device" class="device"></div>
-    <script type="module" src="../../dist/renderer/shop.js"></script>
+    <script type="module" src="../../dist/renderer/bag.js"></script>
   </body>
 </html>
