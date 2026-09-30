@@ -133,8 +133,11 @@ async function server(url: string, key: string): Promise<void> {
   await hooks(url, key);
 
   // 계정 삭제 — Edge Function delete-account. 로컬에서 `npx supabase functions serve` 가 떠 있을 때만 본다
-  const probe = await fetch(`${url}/functions/v1/delete-account`, { method: "POST" }).then((r) => r.status, () => 0);
-  if (probe === 404 || probe === 0) {
+  // 게이트웨이는 함수 런타임이 꺼져 있어도 인증 헤더가 없으면 401 을 준다 — 키를 붙여 함수 자신의 답(AUTH_REQUIRED)이 오는지 본다 (2026-09-30)
+  const probe = await fetch(`${url}/functions/v1/delete-account`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}` } })
+    .then((r) => r.json() as Promise<{ error?: unknown }>)
+    .then((j) => j?.error === "AUTH_REQUIRED", () => false);
+  if (!probe) {
     process.stdout.write("(10) 계정 삭제  건너뜀 — 로컬 함수 서버가 없다(npx supabase functions serve)\n");
     return;
   }

@@ -184,7 +184,10 @@ async function run() {
   // E7 서버에 닿지 못해도 게임은 된다
   const D = makeApp('d', { url: 'http://127.0.0.1:1', key: server.key }, [{ id: 'p1', species: 'bulbasaur', where: 'party' }]);
   await D.start();
-  assert.equal((await D.game('trade.create')).reason, 'NETWORK');
+  // 켜진 직후에는 교환 세션의 시작 확인이 끝나기 전이라 busy 로 거절할 수 있다 — 풀릴 때까지 기다린 뒤 NETWORK 를 본다 (2026-09-30 간헐 실패)
+  let e7;
+  await until(async () => (e7 = await D.game('trade.create')).reason !== 'busy', 'E7 시작 확인 끝', 30_000);
+  assert.equal(e7.reason, 'NETWORK');
   ok(await D.game('play', 'p1'), 'E7 오프라인에서 놀아주기');
   checks.push('E7 연결 실패 → NETWORK, 게임 명령은 된다');
 

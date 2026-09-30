@@ -89,7 +89,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 | `한 화면` | 고른 모니터 하나에서 논다. 기본은 주 모니터다 |
 | `영역 지정` | 드래그로 그린 사각형 안에서 논다 |
 
-<!-- 이미지 [playground]: 설정 모달 `화면` 탭의 놀이공간 전환 단추 — images/README.md -->
+![설정 화면 탭의 놀이공간](images/playground.png)
 
 ### 메뉴
 
@@ -124,7 +124,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 - 쓰지 않을 도구는 가방에서 판다. 도구를 고르고 `판매`를 누른다. 구매가의 60%를 포인트로 받는다. 기본먹이와 돌아오는 약은 팔 수 없다.
 - 바탕화면에 나와 있는 포켓몬은 가끔 포인트·도구·진화용 도구·포켓몬을 주워 온다. 주우면 `줍기` 알림 배너가 뜬다. 규칙은 [줍기](specs/game.md#줍기)에 있다.
 
-<!-- 이미지 [shop]: 상점 탭 알 분류 — images/README.md -->
+![상점 탭 알 분류](images/shop.png)
 
 ## 알과 부화
 
@@ -135,7 +135,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 
 알에서 나오는 종과 확률은 상점에서 구매 전에 확인한다.
 
-<!-- 이미지 [hatch]: 부화 결과 창 — images/README.md -->
+![부화 결과 창](images/hatch.png)
 
 ## 성장과 진화
 
@@ -165,7 +165,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 - 알로라 라이츄 같은 리전폼은 기본형과 따로 한 칸을 차지한다. 번호는 `026-1` 처럼 도감 번호 뒤에 폼 순번을 붙인다. 검색 칸에 `26-1` 을 넣으면 그 칸만 찾는다.
 - 업적을 달성하면 알림 배너가 뜬다. 배너의 `바로가기` 나 헤더의 업적창에서 보상을 받는다. 보상은 파티 칸이나 포켓몬 한 마리다.
 
-<!-- 이미지 [dex]: 도감 탭 목록 — images/README.md -->
+![도감 탭 목록](images/dex.png)
 
 ## 친구 교환
 
@@ -184,7 +184,7 @@ Apple Silicon 은 `PokeBuddy-<버전>-arm64.dmg`, Intel 은 `PokeBuddy-<버전>-
 - 교환 모달을 닫아도 교환은 이어진다. 교환 중이면 `교환` 단추에 점이 보인다.
 - 교환해도 진화하지 않는다. 교환 진화 종은 `연결의끈` 으로 진화한다.
 
-<!-- 이미지 [trade]: 교환 모달 — images/README.md -->
+![친구 교환 모달](images/trade.png)
 
 ## 계정과 우편함
 
@@ -293,7 +293,7 @@ Claude Code, Codex CLI, Gemini CLI 를 쓰면 포켓몬이 AI 의 작업 상태�
 
 CLI 별 이벤트와 판정 방법은 [동반자 동작](specs/companion.md#cli-llm-상태-연동)에 있다.
 
-<!-- 이미지 [connect]: 사용자 모달 `연결` 탭 — images/README.md -->
+![사용자 모달 연결 탭](images/connect.png)
 
 ## 문제 해결
 

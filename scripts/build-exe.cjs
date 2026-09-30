@@ -38,7 +38,8 @@ const name = TEST ? `${pkg.name}-update-test` : pkg.name;
 // 앱 이름 — mac 은 앱 번들 이름(PokeBuddy.app)이 된다. Windows 는 설치 폴더·실행 파일 이름이라 pkg.name 그대로.
 // 업데이트 시험 빌드는 mac 도 pkg.name 계열 이름(pokebuddy-update-test.app)이라 사용자의 앱과 섞이지 않는다
 const productName = MAC && !TEST ? "PokeBuddy" : name;
-const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : path.join(root, "release");
+// PB_RELEASE_OUT — 설치 파일만 확인하는 빌드를 다른 폴더에 만든다. release/ 의 공개한 파일을 덮지 않게 (2026-09-30)
+const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : process.env.PB_RELEASE_OUT || path.join(root, "release");
 const stage = path.join(release, "app");
 
 // 설치 파일에 넣지 않는 것 — npm 설치 뒤 스크립트는 npm 판에만 쓴다
@@ -167,6 +168,8 @@ async function main() {
       createDesktopShortcut: !TEST,
       createStartMenuShortcut: !TEST,
       deleteAppDataOnUninstall: false, // 저장(~/.claude/pokebuddy)은 지우지 않는다
+      // 제거할 때 CLI 훅 등록을 걷는다(업데이트 때는 건너뜀). 업데이트 시험 빌드에는 넣지 않는다 — 시험 앱을 지울 때 사용자의 실제 훅을 걷으면 안 된다
+      ...(TEST ? {} : { include: path.join(root, "scripts", "installer.nsh") }),
       artifactName: "${productName}-Setup-${version}.${ext}",
     },
   };

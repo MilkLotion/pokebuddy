@@ -21,6 +21,9 @@
 // `--mail` 을 주면 가짜 서버로 우편함을 띄운다(Figma `우편함 시안` 의 편지 넷). `--mail-signed-in` 이면 로그인한 계정으로 본다
 // `--slow <ms>` 를 주면 명령의 답을 그만큼 늦춘다 — 처리 중 표시(단추·칸의 점 세 개) 확인용
 // `--update-ready` 를 주면 설정 바닥을 "새 버전 준비됨" 으로 연다. `다시 시작` 은 답하지 않고 기다린다 — "다시 시작하는 중" 확인용
+// `--scene <이름>` 을 주면 dev-test 의 장면을 저장에 입힌다(여러 번). 예: done-all(튜토리얼 모두 끝남), rich(포인트 넉넉)
+// `--docs` 를 주면 문서 캡처용 저장으로 연다 — 파티 4마리를 모두 꺼내 두고 숨긴 마리가 없다. 교환 모달은 서버 없이 첫 화면을 보인다 (docs/images/README.md)
+// `--agents-connected` 를 주면 임시 HOME 의 Claude Code 에 우리 훅을 등록해 연결 탭의 `연결됨` 을 보인다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
 const os = require("node:os");
@@ -38,6 +41,11 @@ function loadApp() {
   // CLI 설정 폴더도 임시 HOME 안으로 — 사용자 환경 변수가 연결 탭을 진짜 ~/.codex·~/.claude 로 돌리지 않게
   process.env.CODEX_HOME = path.join(dir, ".codex");
   delete process.env.CLAUDE_CONFIG_DIR;
+  // --agents-connected — 임시 HOME 에 Claude Code 연결을 만들어 연결 탭에 `연결됨` 을 보인다(문서 캡처 connect)
+  if (process.argv.includes("--agents-connected")) {
+    fs.mkdirSync(path.join(dir, ".claude"), { recursive: true });
+    require(path.join(root, "cli/setup.js")).connectCli("claude");
+  }
   if (process.argv.includes("--agents-outdated")) {
     const hook = `node "${path.join(dir, ".claude", "scripts", "hooks", "pokebuddy-state.cjs")}" --cli codex`;
     const events = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PermissionRequest", "PostToolUse", "Stop", "Interrupt", "SessionEnd"];
@@ -156,6 +164,20 @@ app.whenReady().then(async () => {
     const [id, state] = pair.split("=");
     if (id && state) seeded.tutorials[id] = { state, steps: 0 };
   }
+  // --docs — 문서 캡처용: 파티 네 칸을 열어 꺼낸 마리 넷(박스의 이상해씨·꼬부기를 파티로)
+  if (process.argv.includes("--docs")) {
+    seeded.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
+    seeded.party.slots[2] = { state: "pokemon", petId: "p3", hidden: false };
+    seeded.party.slots[3] = { state: "pokemon", petId: "p4", hidden: false };
+    seeded.boxes[0].slots = seeded.boxes[0].slots.map((id) => (id === "p3" || id === "p4" ? null : id));
+    seeded.points.balance = 12450;
+  }
+  // --scene <이름> — dev-test 장면(src/tools/dev-test.ts SCENES)을 입힌다
+  const scenes = argsAfter("--scene");
+  if (scenes.length) {
+    const { applyScene } = require(path.join(root, "dist/tools/dev-test.js"));
+    for (const name of scenes) for (const one of name.split(",")) applyScene(seeded, one, Date.now());
+  }
   store.write(file, seeded);
 
   const route = routeArg ? JSON.parse(routeArg) : undefined;
@@ -191,6 +213,11 @@ app.whenReady().then(async () => {
   const slowMs = slowAt >= 0 ? Number(process.argv[slowAt + 1]) || 0 : 0;
   const devSend = async (req) => {
     if (slowMs) await new Promise((r) => setTimeout(r, slowMs));
+    // --docs — 교환 서버 없이 교환 모달의 첫 화면(공유 채널 만들기·링크로 참가)을 보인다
+    if (req.cmd === "trade.status" && process.argv.includes("--docs")) {
+      const idle = { available: true, phase: "idle", link: null, expiresAt: null, busy: false, error: null, closedReason: null, friendJoined: false, friendName: null, mine: null, myPetId: null, myReady: false, friend: null, friendReady: false, friendBlocked: null, singles: [], received: null };
+      return { ok: true, reason: "ok", screen: idle };
+    }
     if (req.cmd === "settings.set" && (req.target === "hidden" || req.target === "clickThrough")) {
       shown[req.target] = !!req.args?.value;
       return { ok: true, result: { key: req.target, value: shown[req.target] } };

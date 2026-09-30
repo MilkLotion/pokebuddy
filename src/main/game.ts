@@ -196,9 +196,14 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   };
 
   // 화면이 보낸 요청을 명령으로 바꿔 실행기에 넘긴다. 다리와 같은 규칙을 쓴다
+  // 보낸 쪽이 reqId 를 주지 않으면 순번을 붙인다 — now() 는 마지막 1초 틱 시각이라, 같은 틱 안의 같은 명령 두 번이 같은 식별자가 돼
+  // 두 번째가 replayed(앞 결과 재사용)로 처리됐다(2026-09-30 e2e-companion `game play` 두 번). 다시 보내 한 번만 반영할 조작은 reqId 를 준다
+  let sendSeq = 0;
   const send = (req: ManageRequest, from: CommandSource): ManageReply => {
     const command: Command = { cmd: req.cmd as CommandName, target: req.target, args: req.args, from, at: now() };
-    const res: TxResult = executor.run({ id: requestIdOf(command), name: command.cmd, args: argsOf(command) });
+    const given = typeof req.args?.reqId === "string" && req.args.reqId !== "";
+    const id = given ? requestIdOf(command) : `${requestIdOf(command)}:${++sendSeq}`;
+    const res: TxResult = executor.run({ id, name: command.cmd, args: argsOf(command) });
     return toCommandResult(res) as ManageReply;
   };
 
