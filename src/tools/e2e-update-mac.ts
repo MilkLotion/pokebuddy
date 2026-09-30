@@ -103,6 +103,7 @@ function makeHome(): Home {
   // 앱의 임시 홈은 빌드에 박힌 update-test.json 이 준다(config.js updateTestHome). CLI(companion stop)만 HOME 으로 임시 홈을 가리킨다
   const appEnv: NodeJS.ProcessEnv = { ...process.env, PB_E2E_DIR: HOME };
   for (const key of Object.keys(appEnv)) if (key.startsWith("POKEBUDDY_") || key === "ELECTRON_RUN_AS_NODE" || key === "NODE_OPTIONS") delete appEnv[key];
+  appEnv.POKEBUDDY_SAVE_CRYPT = "off"; // 업데이트 뒤 저장을 직접 읽는다 — 평문(시험 빌드만 받는다, src/main/app.ts)
   return { home: HOME, data, env: appEnv, cliEnv: { ...appEnv, HOME } };
 }
 

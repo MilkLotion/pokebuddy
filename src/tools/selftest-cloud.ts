@@ -160,6 +160,8 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
     points: () => (save.points as { balance: number }).balance,
     bump: (n: number) => { save = { ...save, points: { balance: n } }; },
     state: () => stored,
+    // 로컬 저장을 격리했다 — src/main/online.ts loadState 가 격리 표시를 보고 맞춘 rev 를 잊는 것과 같다
+    forget: () => { if (stored) stored = { ...stored, syncedRev: -1, pendingOp: null }; },
     lastHalt: () => halts.at(-1),
   };
 }
@@ -415,6 +417,30 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
     cloudW.stop();
   }
   process.stdout.write("(27) 업데이트 필요 — 재시도 때 다시 확인해 풀림  ok\n");
+
+  // (28) 로컬 저장 격리(P3) — 맞춘 rev 를 잊고 켜면 rev 가 같아도 서버 저장을 받는다. 격리 뒤 새로 고른 스타터가 서버 저장을 덮지 않는다
+  {
+    const V = make("시험 PC V", 40, [pet]);
+    const anonV = await V.anon();
+    const cloudV = V.make();
+    await cloudV.start(anonV, "boot", "anonymous");
+    cloudV.noteSaved("event");
+    await until(async () => (await saveRow(anonV))?.save?.points?.balance === 40, "첫 올리기");
+    const rev = (await saveRow(anonV))?.rev;
+    cloudV.stop();
+    V.forget();
+    V.bump(1); // 격리 뒤 새로 고른 스타터 저장
+    const cloudV2 = V.make();
+    await cloudV2.start(anonV, "boot", "anonymous");
+    assert.equal(cloudV2.view().status, "online");
+    assert.equal(V.points(), 40, "서버 저장을 받았다");
+    assert.equal(V.backups.length, 1, "새 저장은 백업");
+    await sleep(400);
+    assert.equal((await saveRow(anonV))?.save?.points?.balance, 40, "서버 저장을 덮지 않았다");
+    assert.equal(V.state()?.syncedRev, rev, "맞춘 rev 를 되찾았다");
+    cloudV2.stop();
+  }
+  process.stdout.write("(28) 로컬 저장 격리 — 맞춘 rev 를 잊으면 서버 저장을 받는다  ok\n");
 }
 
 async function main(): Promise<void> {
@@ -753,7 +779,7 @@ async function main(): Promise<void> {
     process.stdout.write("(18) claim 응답 전에 넘겨받혔으면 밀려남  ok\n");
 
     await p2(cfg.url, cfg.key, admin, extra);
-    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~27, 13 은 selftest-session)\n");
+    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~28, 13 은 selftest-session)\n");
   } finally {
     for (const p of [A, B, ...extra]) {
       for (const c of p.clouds) c.stop();

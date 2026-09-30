@@ -5,11 +5,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { app, nativeImage, powerMonitor, screen, shell, Notification } from "electron";
+import { app, nativeImage, powerMonitor, safeStorage, screen, shell, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/appearance";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { pidAlive } from "../save/writer";
+import { prepareSaveKey, setAsideSave, type PrepareSaveKeyOptions } from "../save/key";
+import { sealedOnDisk } from "../save/store";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader } from "./art";
 import { createCommands, type Commands } from "./commands";
@@ -22,7 +24,7 @@ import { createGame, type GameV3 } from "./game";
 import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { createMainOnline, type MainOnline } from "./online";
-import { askBlocked, askConfirm, askLost, showKicked } from "./halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, showKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
 import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
@@ -1204,6 +1206,34 @@ async function main(): Promise<void> {
     const logo = logoFile(512);
     if (logo) app.dock?.setIcon(nativeImage.createFromPath(logo));
     app.dock?.hide();
+  }
+
+  // 저장 키를 먼저 푼다 — 저장 읽기·쓰기가 이 키로 암호화한다 (src/save/key.ts). 기존 평문 저장은 여기서 한 번 옮긴다.
+  // 비동기 safeStorage 만 쓴다 — mac 은 키체인 허용 창이 뜨면 동기 호출이 메인을 멈춘다(src/main/trade.ts 와 같은 이유)
+  // 개발 실행·업데이트 시험 빌드만 POKEBUDDY_SAVE_CRYPT=off 로 새 키를 만들지 않는다 — 저장을 직접 읽는 E2E 용. 이미 키가 있으면 그대로 쓴다
+  const keyOptions: PrepareSaveKeyOptions = {
+    saveFile: PATHS.save,
+    vault: {
+      available: () => safeStorage.isAsyncEncryptionAvailable(),
+      encrypt: (text) => safeStorage.encryptStringAsync(text),
+      decrypt: (data) => safeStorage.decryptStringAsync(data),
+    },
+    create: !((isDevRun() || updateTestBuild) && process.env.POKEBUDDY_SAVE_CRYPT === "off"),
+  };
+  let saveKey = await prepareSaveKey(keyOptions);
+  log?.({ boot: "save-key", ...saveKey });
+  // 키 없이 도는데 암호화 저장이 있다(키체인 거부·키 파일 잠김·키 저장소 없음) — 저장을 옮기지 않고 묻는다.
+  // 종료면 저장을 그대로 두고 끝낸다. 새로 시작이면 키와 저장을 백업(.unreadable-<시각>)하고 다시 준비한다 — 계정 저장은 클라우드가 받는다
+  if (saveKey.status !== "ok" && saveKey.status !== "reset" && sealedOnDisk(PATHS.save)) {
+    const answer = await askSaveLocked();
+    if (answer === "fresh" && setAsideSave(PATHS.save)) {
+      saveKey = await prepareSaveKey(keyOptions);
+      log?.({ boot: "save-key", after: "fresh", ...saveKey });
+    } else {
+      reportFailure(PATHS, config.slug, t("save.locked.message"), "save-locked");
+      app.quit();
+      return;
+    }
   }
 
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다.

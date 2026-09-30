@@ -19,6 +19,8 @@ env.NODE_OPTIONS = ['e2e/mock-keychain.cjs', 'e2e/companion-observer.cjs'].map((
 // 서버가 필요 없는 시험이다 — 온라인 기능을 꺼 운영 서버(data/online.json)에 닿지 않게. 개발 실행만 이 값을 받는다(src/trade/config.ts)
 // 닿지 않았는지는 관측기(e2e/companion-observer.cjs)가 적은 fetch 주소로 끝에서 본다
 env.POKEBUDDY_ONLINE = 'off';
+// 저장을 직접 읽는다 — 평문으로 둔다. 개발 실행만 받는다(src/main/app.ts)
+env.POKEBUDDY_SAVE_CRYPT = 'off';
 // 세션용 환경이 남아 있어도 첫 선택창을 생략하면 안 됨.
 env.POKEBUDDY_SLUG = 'pikachu';
 const data = path.join(dir, '.claude', 'pokebuddy');

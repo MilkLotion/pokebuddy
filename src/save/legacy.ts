@@ -56,8 +56,9 @@ export function sleepSync(ms: number): void {
 }
 
 // 파일 하나를 원자적으로 쓴다 — tmp + rename, 실패하면 잠깐 뒤 다시. 끝내 실패하면 false (조용히)
+// 문자열·Buffer(암호화한 저장, src/save/crypt.ts)는 그대로, 그 밖은 JSON 으로 쓴다
 export function writeAtomic(file: string, data: unknown): boolean {
-  const text = typeof data === "string" ? data : `${JSON.stringify(data, null, 2)}\n`;
+  const text = typeof data === "string" || Buffer.isBuffer(data) ? data : `${JSON.stringify(data, null, 2)}\n`;
   const tmp = `${file}.${process.pid}.tmp`;
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });

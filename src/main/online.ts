@@ -27,6 +27,7 @@ import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
 import { writeAtomic } from "../save/legacy.js";
 import { normalize as normalizeV3 } from "../save/v3.js";
 import * as store from "../save/store.js";
+import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";
 import type { AccountAction, AccountReply, AccountScreen } from "../shared/manage";
 
@@ -144,13 +145,8 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     ...(devMs("POKEBUDDY_CLOUD_RETRY_MS") ? { retryMs: devMs("POKEBUDDY_CLOUD_RETRY_MS") } : {}),
     ...(devMs("POKEBUDDY_CLOUD_HEARTBEAT_MS") ? { heartbeatMs: devMs("POKEBUDDY_CLOUD_HEARTBEAT_MS") } : {}),
     io: {
-      loadState: () => {
-        try {
-          return JSON.parse(fs.readFileSync(cloudFile, "utf8")) as unknown; // 형식 검사·옛 형식 변환은 cloud.ts readCloudState
-        } catch {
-          return null; // 처음이거나 파손 — 새 기기 ID 로 시작한다
-        }
-      },
+      // 로컬 저장을 격리했으면(풀지 못함·손으로 고친 평문·키 분실) 맞춘 rev 를 잊는다 — 다음 맞추기가 서버 저장을 받는다 (src/online/lost.ts)
+      loadState: () => loadCloudState(cloudFile, o.saveFile),
       saveState: (s) => {
         try {
           if (!writeAtomic(cloudFile, s)) throw new Error(cloudFile);
@@ -158,13 +154,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
           console.error("cloud.json 을 쓰지 못했다", e);
         }
       },
-      readSave: () => {
-        try {
-          return JSON.parse(fs.readFileSync(o.saveFile, "utf8")) as Record<string, unknown>;
-        } catch {
-          return null;
-        }
-      },
+      readSave: () => store.readRaw(o.saveFile), // 암호화 저장을 풀어 JSON 으로 (src/save/store.ts)
       // 받은 저장을 v3 검사로 읽은 뒤 바꾼다. 바꾸기 전 로컬 저장을 백업한다
       replaceSave: (save) => {
         const v3 = normalizeV3(save, Date.now());

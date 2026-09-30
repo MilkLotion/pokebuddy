@@ -177,5 +177,10 @@
   "cloud.lost.login": "로그인",
   "cloud.lost.local": "이 PC 저장으로 계속",
   "cloud.lost.fresh": "처음부터",
+  "save.locked.title": "저장을 열지 못했어요",
+  "save.locked.message": "이 PC 의 저장 파일을 풀 키를 쓰지 못했어요.",
+  "save.locked.detail": "키체인 접근을 허용하거나 잠시 뒤 다시 켜 주세요. 저장은 그대로 남아 있어요.\n새로 시작을 누르면 지금 저장을 백업하고 처음부터 시작해요. 계정에 저장이 있으면 포켓몬을 고른 뒤 계정 저장으로 돌아와요.",
+  "save.locked.quit": "종료",
+  "save.locked.fresh": "새로 시작",
   "cloud.handoff.discarded": "계정 저장으로 바꿨어요. 이 PC 진행은 백업해 뒀어요."
 }

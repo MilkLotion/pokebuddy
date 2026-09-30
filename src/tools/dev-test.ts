@@ -202,7 +202,7 @@ function start(home: string, fresh: boolean): void {
     cwd: PROJECT,
     detached: true,
     stdio: "ignore",
-    env: { ...process.env, HOME: home, USERPROFILE: home },
+    env: { ...process.env, HOME: home, USERPROFILE: home, POKEBUDDY_SAVE_CRYPT: "off" }, // scene·show 가 저장을 직접 고치고 읽는다 — 평문
   });
   child.unref();
   process.stdout.write(`시작 pid=${child.pid} HOME=${home}\n`);

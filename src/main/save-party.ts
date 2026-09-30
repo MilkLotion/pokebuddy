@@ -135,9 +135,9 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     }
     // 읽기 전용은 파손 파일을 옮기지 않는다 — writer 의 일이다
     const r = store.read(paths.save, { repair: amWriter });
-    if (r.reason === "unreadable") return; // 잠깐 잠겼다 — 지난 값을 그대로 쓴다
+    if (r.reason === "unreadable" || r.reason === "locked") return; // 잠깐 잠겼다·키 없이 암호화 파일 — 지난 값을 그대로 쓴다
     if (r.migrated) log?.({ party: "migrated-v3", backup: store.backupName(paths.save) });
-    if (r.corrupted) log?.({ party: "save-corrupted", movedTo: `${paths.save}.bak` });
+    if (r.corrupted) log?.({ party: "save-corrupted", movedTo: r.movedTo ?? null });
     cacheKey = key;
     state = r.state;
     emitChange();

@@ -1,5 +1,6 @@
 // 두 PC 규칙의 멈춤 창 — 밀려남 안내·넘겨받기 확인·넘겨받기 막힘 (worklog-mac/records/cloud-authority/design-p1.md 3·5절)
 // 저장 계정 분실 창(D29) — 게임은 멈추지 않는다 (worklog-mac/records/cloud-authority/design-p2.md 5절·15절 G-a·G-c)
+// 저장 잠김 창 — 저장 키를 쓰지 못해 암호화 저장을 열 수 없다 (worklog/records/cloud-authority/record.md "P3 로컬 암호화")
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
 // Electron 네이티브 대화상자를 쓴다. 작은 투명 부모 창을 하나 만들어 붙인다
@@ -172,6 +173,23 @@ export function askBlocked(info: HaltInfo, signal?: AbortSignal): Promise<HaltAn
     stop: t("cloud.blocked.quit"),
     ...(signal ? { signal } : {}),
   });
+}
+
+// 저장 잠김 창의 답 — quit 종료(저장은 그대로), fresh 저장을 백업하고 새로 시작
+export type SaveLockedAnswer = "quit" | "fresh";
+
+// 저장 키를 쓰지 못했다(키체인 거부·키 파일 잠김·키 저장소 없음)인데 암호화된 저장이 있다 — 켤 때 게임을 만들기 전에 묻는다.
+// 저장을 옮기지 않고 먼저 묻는다(검수 P3-3, 2026-09-30 사용자 결정 "안내 창으로 묻기"). Esc 는 종료 — 새로 시작은 Esc 로 고르지 않는다
+export async function askSaveLocked(): Promise<SaveLockedAnswer> {
+  const r = await pick({
+    type: "warning",
+    title: t("save.locked.title"),
+    message: t("save.locked.message"),
+    detail: t("save.locked.detail"),
+    buttons: [t("save.locked.quit"), t("save.locked.fresh")],
+    cancelId: 0,
+  });
+  return r === 1 ? "fresh" : "quit";
 }
 
 // 분실 창의 답 — login 은 관리 창 계정 탭, local 은 이 PC 저장으로 계속, fresh 는 처음부터, closed 는 밖에서 닫았다

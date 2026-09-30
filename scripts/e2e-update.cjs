@@ -109,6 +109,7 @@ function makeHome() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'pbu-'));
   const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'ELECTRON_RUN_AS_NODE' || key === 'NODE_OPTIONS') delete env[key];
+  env.POKEBUDDY_SAVE_CRYPT = 'off'; // 업데이트 뒤 저장을 직접 읽는다 — 평문(시험 빌드만 받는다, src/main/app.ts). 지우는 반복문 뒤에 둔다
   return { home, data, env };
 }
 

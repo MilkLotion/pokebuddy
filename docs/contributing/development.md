@@ -104,7 +104,8 @@ pokebuddy trade <교환 링크>
 | `pokebuddy` (인자 없음) · `--help` | 사용법을 보여 준다 |
 | `pokebuddy <모르는 단어>` | `알 수 없는 명령: … — 펫은 동반자 하나다. 띄우기: pokebuddy companion` 을 출력한다. 종료 코드는 2다 |
 
-`pokebuddy companion` 은 동반자 창이 뜰 때까지 기다린다. 그 뒤 `동반자를 띄움: <이름>` 한 줄을 남기고 돌아온다.
+`pokebuddy companion` 은 동반자 창이 뜰 때까지 기다린다. 그 뒤 `동반자를 띄움` 한 줄을 남기고 돌아온다.
+CLI 는 저장 내용을 읽지 않는다. 저장은 앱이 암호화한다. 첫 실행 여부는 `save.json` 이 있는지로 본다.
 처음 받는 포켓몬은 그림을 내려받느라 몇 초 걸린다.
 그림을 못 받는 등 뜨지 못하면 그 자리에서 이유를 알려 준다.
 동반자는 포켓몬 이름을 받지 않는다. 포켓몬은 첫 실행 선택창과 설정창에서 고른다.
@@ -217,9 +218,9 @@ pokebuddy status
 - 세션 상태 기록(최신 10건 — 어느 CLI 기록인지, 마지막 프롬프트, 조상 수)
 - PMD 캐시·저작자
 - 동반자 pid
-- 게임 요약(파티 칸 · 포인트 · 마리 수 · 알 수, 파티 마리별 상태)
+- 저장 파일이 있는지(`저장 있음` · `저장 없음`). 저장 내용은 암호화되어 있어 보이지 않는다
 
-`pokebuddy status eevee` 처럼 포켓몬 이름을 주면 그 포켓몬의 PMD 저작자를 보여 준다. 이름이 없으면 파티 첫 마리를 본다.
+`pokebuddy status eevee` 처럼 포켓몬 이름을 주면 그 포켓몬의 PMD 저작자를 보여 준다. 이름이 없으면 설정 파일의 `slug` 를 본다.
 판정 로직은 동반자와 **같은 코드**(`src/follow/state.ts` · `src/follow/front.ts` — 빌드 산출물 `dist/follow/`)를 쓴다. 그래서 실제 동작과 어긋나지 않는다.
 동반자의 폴링마다 판정을 보려면 디버그 모드로 띄운다.
 
@@ -259,6 +260,8 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 `<임시 폴더>/pokebuddy-test-home` 이다.
 - 저장·잠금·단일 실행 잠금이 모두 이 HOME 아래에 생긴다. 그래서 진짜 저장을 건드리지 않고, 쓰던 동반자와 나란히 뜬다.
 - 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(`src/main/app.ts` `syncLoginItem`).
+- 도구는 `POKEBUDDY_SAVE_CRYPT=off` 로 동반자를 띄운다. 그래서 새 HOME 의 저장은 평문으로 남고 `scene`·`show` 가 직접 읽고 고친다.
+  이 값은 개발 실행과 업데이트 시험 빌드만 받는다. 이미 `save.key` 가 있는 HOME 에서는 그 키로 계속 암호화한다.
 - 작업 트리의 미커밋 변경을 빼고 시험하려면 HEAD 를 `git worktree add --detach <폴더> HEAD` 로 따로 꺼낸다.
   그 폴더의 `node_modules` 는 저장소의 것을 링크(Windows 는 junction)하고, 그 폴더에서 `npm run build` 한 뒤 도구를 부른다.
 

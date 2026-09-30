@@ -40,6 +40,8 @@ function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
   const env = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, 'appdata'), LOCALAPPDATA: path.join(dir, 'localappdata'), TEMP: temp, TMP: temp };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'NODE_OPTIONS' || key === 'ELECTRON_RUN_AS_NODE') delete env[key];
   env.PB_E2E_DIR = dir;
+  // 저장을 직접 읽고 고친다(app.save·시드) — 평문으로 둔다. 개발 실행만 받는다(src/main/app.ts). 암호화 사례는 extraEnv 로 'on' 을 준다
+  env.POKEBUDDY_SAVE_CRYPT = 'off';
   const observer = (file) => `--require "${path.join(__dirname, file).split(path.sep).join('/')}"`;
   env.NODE_OPTIONS = `${observer('mock-keychain.cjs')} ${observer('companion-observer.cjs')} ${observer('manage-observer.cjs')}`; // mock-keychain — 임시 HOME 앱이 사용자 키체인에 닿지 않게
   env.POKEBUDDY_SUPABASE_URL = server.url;

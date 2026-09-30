@@ -177,5 +177,10 @@
   "cloud.lost.login": "Sign in",
   "cloud.lost.local": "Continue with this PC's save",
   "cloud.lost.fresh": "Start over",
+  "save.locked.title": "Couldn't open your save",
+  "save.locked.message": "The key for this PC's save file couldn't be used.",
+  "save.locked.detail": "Allow keychain access or try again later. Your save is still here.\nStart over backs up the current save and starts from the beginning. If your account has a save, pick a Pokémon and your account save comes back.",
+  "save.locked.quit": "Quit",
+  "save.locked.fresh": "Start over",
   "cloud.handoff.discarded": "Switched to your account save. This PC's progress was backed up."
 }

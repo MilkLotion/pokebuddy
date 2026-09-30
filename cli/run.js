@@ -7,8 +7,6 @@ const path = require("path");
 const settings = require("../config.js");
 const state = require("../dist/follow/state.js");
 const { electronPath } = require("../lib/electron.js");
-const i18n = require("../lib/i18n.js");
-const { petName } = require("../lib/names.js");
 const { optionEnv } = require("./args.js");
 
 const PROJECT = path.join(__dirname, "..");
@@ -128,14 +126,12 @@ async function companion(opts = {}) {
     return;
   }
 
-  const config = settings.load();
   fs.mkdirSync(PATHS.home, { recursive: true });
   const env = { ...process.env, ...optionEnv(opts) };
   // 셸에 남은 POKEBUDDY_SLUG 가 첫 실행 선택창을 건너뛰게 하지 않는다 — 스타터를 환경변수로 주는 것은 개발 실행(npm start)만
   delete env.POKEBUDDY_SLUG;
-  // 저장은 v3 이다. 옛 v2 파일이면 읽는 값만 v3 로 옮겨 본다 — 파일을 옮기는 것은 동반자(writer)의 일 (repair:false)
-  const { state: saved } = require("../dist/save/store.js").read(PATHS.save, { repair: false });
-  const firstRun = !saved || saved.pets.length === 0;
+  // 저장 내용은 읽지 않는다 — 저장은 앱이 암호화한다(src/save/crypt.ts). 첫 실행은 저장 파일이 없을 때다 (cloud-authority D18)
+  const firstRun = !fs.existsSync(PATHS.save);
   if (firstRun) say("첫 실행 — 포켓몬 선택 창에서 고르면 뜬다 (닫으면 시작하지 않는다)");
   if (debug) {
     env.POKEBUDDY_LOG = path.join(PATHS.home, "debug-companion.log");
@@ -155,9 +151,9 @@ async function companion(opts = {}) {
   // 선택 창을 고르는 동안은 오래 기다린다 — 고르지 않고 닫으면 동반자가 끝나 exited 로 돌아온다
   await waitReady(pet, { timeoutMs: firstRun ? PICK_TIMEOUT_MS : READY_TIMEOUT_MS });
 
-  const shown = displayName(savedSpecies() || config.slug, config);
-  if (pet.ready) say(`동반자를 띄움: ${shown} — 맨 앞 터미널 창을 따른다. 내리기: 트레이 메뉴 또는 pokebuddy companion stop`);
-  else if (!pet.exited) say(`아직 뜨는 중: ${shown} — 한참 안 보이면 pokebuddy status`);
+  // 포켓몬 이름은 보이지 않는다 — 저장 내용을 읽지 않는다(D18)
+  if (pet.ready) say(`동반자를 띄움 — 맨 앞 터미널 창을 따른다. 내리기: 트레이 메뉴 또는 pokebuddy companion stop`);
+  else if (!pet.exited) say(`아직 뜨는 중 — 한참 안 보이면 pokebuddy status`);
   else {
     const why = lastError(startedAt);
     if (why?.reason === "starter-cancelled") {
@@ -168,25 +164,6 @@ async function companion(opts = {}) {
     fs.rmSync(pet.file, { force: true });
     process.exitCode = 1;
   }
-}
-
-// 파티에서 꺼내 놓은 첫 마리의 종 — 동반자가 저장을 쓰는 중이라 읽기 전용으로 본다 (저장 v3).
-// repair:false — 파손 파일을 .bak 으로 옮기는 것은 writer 의 일. 저장이 없거나 꺼낸 마리가 없으면 null
-function savedSpecies() {
-  try {
-    const { state: save } = require("../dist/save/store.js").read(PATHS.save, { repair: false });
-    const slot = save ? save.party.slots.find((s) => s.state === "pokemon" && s.petId && !s.hidden) : null;
-    const pet = slot ? save.pets.find((p) => p.id === slot.petId) : null;
-    return pet ? pet.species : null;
-  } catch {
-    return null;
-  }
-}
-
-// 화면 이름과 슬러그를 함께 — "이브이 (eevee)". 이름표에 없으면 슬러그만
-function displayName(slug, config) {
-  const name = petName(slug, i18n.langOf(config));
-  return name === slug ? slug : `${name} (${slug})`;
 }
 
 // pokebuddy companion stop — 동반자를 내린다. lock 파일을 지우면 동반자가 스스로 끝난다

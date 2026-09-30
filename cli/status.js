@@ -10,8 +10,6 @@ const dex = require("../lib/dex.js");
 const { parseCredits } = require("../art/pmd-load.js");
 const { companionPid } = require("./run.js");
 const { hookInstalled } = require("./setup.js");
-const i18n = require("../lib/i18n.js");
-const { petName } = require("../lib/names.js");
 
 const PROJECT = path.join(__dirname, "..");
 const { PATHS, USER_DEFAULTS } = settings;
@@ -75,7 +73,7 @@ function status(petArg) {
   }
 
   // PMD 그림 — CC BY-NC 4.0 이라 저작자 표시가 조건이다. 포켓몬마다 그린 사람이 다르다
-  const slug = petArg || savedSpecies() || config.slug;
+  const slug = petArg || config.slug; // 저장 내용은 읽지 않는다(cloud-authority D18) — 종은 인자나 설정으로
   const d = dex.dexPath(slug);
   say(`\nPMD 그림 (${slug}${d ? ` · 도감 ${d}` : ""}) — ${PATHS.pmd}`);
   if (!d) {
@@ -97,44 +95,8 @@ function status(petArg) {
   const companion = companionPid();
   say(`\n동반자: ${companion ? `떠 있음 (pid ${companion}) — 내리기: pokebuddy companion stop` : "없음 — 띄우기: pokebuddy companion"}`);
 
-  // 게임 진행 — 저장 v3 를 읽기 전용으로 본다 (쓰는 쪽은 떠 있는 동반자). repair:false — 파손 파일을 옮기는 것은 writer 의 일.
-  // 옛 v2 파일이면 읽는 값만 v3 로 옮겨 보인다
-  try {
-    const { state: save, corrupted, reason } = require("../dist/save/store.js").read(PATHS.save, { repair: false });
-    const { nature } = require("../dist/dex/natures.js");
-    const lang = i18n.langOf(config);
-    if (corrupted) say(`\n게임: 저장이 깨짐 — 동반자가 다음에 열 때 save.json.bak 으로 옮기고 새로 시작한다 (${PATHS.save})`);
-    else if (reason === "unreadable") say(`\n게임: 저장을 읽지 못함 — 잠김·권한. 잠시 뒤 다시 (${PATHS.save})`);
-    else if (!save) say(`\n게임: 저장 없음 — 처음 띄울 때 스타터를 고른다 (${PATHS.save})`);
-    else {
-      const open = save.party.slots.filter((s) => s.state !== "locked").length;
-      const inParty = save.party.slots.filter((s) => s.state === "pokemon" && s.petId);
-      say(`\n게임: 파티 칸 ${open} · 포인트 ${save.points.balance} · 파티 ${inParty.length}마리 · 전체 ${save.pets.length}마리 · 알 ${save.eggs.length}개 (${PATHS.save})`);
-      // 파티의 마리마다 종 이름 · 성격(표의 이름, 모르면 id) · 보임 · 레벨 · 친밀도 · 만복도 · 기분
-      const pets = inParty.map((slot) => {
-        const p = save.pets.find((x) => x.id === slot.petId);
-        if (!p) return null;
-        const n = nature(p.nature);
-        const natureLabel = (n && (n.name[lang] || n.name.ko)) || p.nature;
-        return `${petName(p.species, lang)}(${natureLabel} · ${slot.hidden ? "숨김" : "보임"} · Lv.${p.level} · 친밀도 ${Math.floor(p.affinity)} · 만복도 ${Math.round(p.fullness)} · ${i18n.t("state.mood", { mood: i18n.moodWord(p.mood) })})`;
-      }).filter(Boolean);
-      if (pets.length) say(`  ${pets.join(", ")}`);
-    }
-  } catch (e) {
-    say(`\n게임: 읽지 못함 — ${e.message}`);
-  }
-}
-
-// 파티에서 꺼내 놓은 첫 마리의 종 — 없으면 null
-function savedSpecies() {
-  try {
-    const { state: save } = require("../dist/save/store.js").read(PATHS.save, { repair: false });
-    const slot = save ? save.party.slots.find((s) => s.state === "pokemon" && s.petId && !s.hidden) : null;
-    const pet = slot ? save.pets.find((p) => p.id === slot.petId) : null;
-    return pet ? pet.species : null;
-  } catch {
-    return null;
-  }
+  // 게임 진행 — 저장 내용은 읽지 않는다. 앱이 암호화한다(src/save/crypt.ts, cloud-authority D18). 있는지만 본다
+  say(`\n게임: ${fs.existsSync(PATHS.save) ? "저장 있음" : "저장 없음 — 처음 띄울 때 스타터를 고른다"} (${PATHS.save})`);
 }
 
 module.exports = { status };

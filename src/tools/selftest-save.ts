@@ -288,14 +288,16 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       process.stdout.write("(11) v2 이전 · 백업 후 교체  ok\n");
     }
 
-    // (12) 파손 파일은 .bak 으로 옮긴다
+    // (12) 파손 파일은 <파일>.broken-<시각>.bak 으로 옮기고 격리 표시를 남긴다
     {
       const file = path.join(root, "broken.json");
       fs.writeFileSync(file, "{ 이건 JSON 이 아니다");
       const res = store.read(file);
       assert.equal(res.state, null);
       assert.equal(res.corrupted, true);
-      assert.ok(fs.existsSync(`${file}.bak`), "파손 파일을 격리한다");
+      assert.ok(res.movedTo && fs.existsSync(res.movedTo) && path.basename(res.movedTo).startsWith("broken.json.broken-"), `파손 파일을 격리한다: ${res.movedTo}`);
+      assert.ok(!fs.existsSync(file), "원본 자리는 비었다");
+      assert.ok(fs.existsSync(store.lostMarker(file)), "격리 표시");
       process.stdout.write("(12) 파손 격리  ok\n");
     }
 
@@ -306,7 +308,8 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       const res = store.read(file, { repair: false });
       assert.equal(res.corrupted, true);
       assert.ok(fs.existsSync(file), "원본이 남아 있다");
-      assert.equal(fs.existsSync(`${file}.bak`), false);
+      assert.equal(res.movedTo, undefined);
+      assert.equal(fs.existsSync(store.lostMarker(file)), false);
       process.stdout.write("(13) 읽기 전용은 격리하지 않는다  ok\n");
     }
 

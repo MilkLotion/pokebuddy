@@ -5,7 +5,7 @@
 //   익명 계정(P2): 로그인하지 않은 설치도 익명 계정으로 저장한다. 교환은 로그인해야 한다. 로그아웃·삭제는 앱을 다시 켜 처음부터 시작한다
 //   준비: Docker Desktop 과 `npx supabase start`. 계정 삭제까지 보려면 `npx supabase functions serve` 도 띄운다. 빌드: `npm run build`
 //   실행: node scripts/e2e-account.cjs   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
-//   익명 계정을 6개 만든다(계정 삭제를 건너뛰면 5개) — 로컬 auth 의 익명 가입 제한(GOTRUE_RATE_LIMIT_ANONYMOUS_USERS, 시간당·IP당)이 그보다 작으면 실패한다
+//   익명 계정을 7개 만든다(계정 삭제를 건너뛰면 6개) — 로컬 auth 의 익명 가입 제한(GOTRUE_RATE_LIMIT_ANONYMOUS_USERS, 시간당·IP당)이 그보다 작으면 실패한다
 //   앱은 로컬 서버를 직접 보지 않고 이 스크립트의 TCP 중계를 거친다 — 중계를 끊어 오프라인을 재현한다
 //   GitHub 로그인은 실제 GitHub 가 필요해 여기서 보지 않는다(selftest-github 와 사용자 실기)
 //   분실 창(D29)은 네이티브 대화상자라 누르지 않는다 — 계정 탭·헤더의 분실 표시까지 본다
@@ -294,6 +294,69 @@ async function run() {
     await until(async () => { try { return (await B.indicator()).includes('저장됨'); } catch { return false; } }, 'AC7 새 익명 헤더 저장됨');
     checks.push('AC7 계정 삭제 — 확인 창 문구, 서버 계정·클라우드 저장 삭제, delete 백업, 앱 다시 켜기 → 선택 창 → 새 익명 첫 저장(OWNER_OTHER 없음)');
   }
+
+  // AC9 로컬 저장 암호화(P3, worklog/records/cloud-authority/record.md "P3 로컬 암호화") — 이 사례만 암호화를 켠다
+  //   기존 평문 저장은 첫 실행에 백업 뒤 암호화한다. 올리기는 푼 저장을 보낸다.
+  //   손으로 고친 평문을 넣으면 받지 않고 격리한다 — 선택 창에서 새로 고른 저장은 서버 저장으로 바뀌고, 서버 저장은 덮이지 않는다
+  const K = makeApp('k', server, [{ id: 'k1', species: 'pichu', where: 'party' }], { ...env, POKEBUDDY_SAVE_CRYPT: 'on' }, { ...opts, points: 321 });
+  const sealed = () => { try { return fs.readFileSync(path.join(K.data, 'save.json')).subarray(0, 4).toString('latin1') === 'PBS1'; } catch { return false; } };
+  const kFiles = (prefix) => fs.readdirSync(K.data).filter((f) => f.startsWith(prefix));
+  await K.start();
+  await until(sealed, 'AC9 저장을 암호화했다');
+  assert.ok(fs.existsSync(path.join(K.data, 'save.key')), 'AC9 save.key');
+  assert.equal(kFiles('save.json.plain-').length, 1, 'AC9 평문 백업');
+  const anonK = await anonOf(K, 'AC9');
+  assert.equal(sql(`select s.save->'points'->>'balance' from public.cloud_saves s where s.user_id = '${anonK}'`), '321', 'AC9 올린 저장은 푼 값');
+  const revK = K.cloud().syncedRev;
+  await K.stop();
+  const { empty } = require(path.join(root, 'dist/save/v3.js'));
+  const forged = empty(Date.now());
+  forged.points.balance = 99999;
+  fs.writeFileSync(path.join(K.data, 'save.json'), JSON.stringify(forged));
+  await K.startFresh(); // 격리했으니 저장이 없다 — 선택 창
+  await until(() => kFiles('save.json.cloud-').length === 1, 'AC9 새로 고른 저장을 백업하고 서버 저장을 받는다', 30_000);
+  await until(sealed, 'AC9 받은 저장도 암호화');
+  assert.equal(kFiles('save.json.broken-').length, 1, 'AC9 고친 평문은 격리');
+  assert.equal(fs.existsSync(path.join(K.data, 'save.json.lost')), false, 'AC9 격리 표시는 클라우드가 지웠다');
+  await sleep(3000);
+  assert.equal(sql(`select s.save->'points'->>'balance' from public.cloud_saves s where s.user_id = '${anonK}'`), '321', 'AC9 서버 저장은 덮이지 않았다');
+  assert.equal(K.cloud().owner, anonK, 'AC9 같은 익명 계정');
+  assert.ok(K.cloud().syncedRev >= revK, 'AC9 맞춘 rev 를 되찾았다');
+  checks.push('AC9 암호화 — 평문 저장 백업 뒤 암호화(save.key), 올린 값 321, 고친 평문(99999) 격리 → 선택 창 → 서버 저장 받기, 서버 321 유지');
+
+  // AC9-1 저장 잠김 창 — 키를 쓰지 못하는데 암호화 저장이 있으면 옮기지 않고 묻는다(검수 P3-3, 사용자 결정 "안내 창으로 묻기")
+  //   키 파일 자리를 폴더로 바꿔 읽기 오류를 낸다(키체인 거부는 시험에서 만들 수 없다 — 같은 창으로 간다)
+  await K.stop();
+  const keyPath = path.join(K.data, 'save.key');
+  const savePath = path.join(K.data, 'save.json');
+  const saveBefore = fs.readFileSync(savePath);
+  fs.rmSync(keyPath);
+  fs.mkdirSync(keyPath);
+  const lockedDialog = async (label) => {
+    const seen = K.dialogs().length;
+    const run = K.cli(['companion']);
+    await until(() => K.dialogs().length > seen, `${label} 저장 잠김 창`, 60_000);
+    const d = K.dialogs().at(-1);
+    assert.equal(d.title, '저장을 열지 못했어요', `${label} 창 제목`);
+    assert.deepEqual(d.buttons, ['종료', '새로 시작'], `${label} 단추`);
+    return { run }; // 감싼다 — async 가 CLI 약속을 그대로 돌려주면 끝날 때까지 기다리게 된다
+  };
+  const quit = await lockedDialog('AC9-1 종료');
+  await K.answer('종료');
+  await quit.run;
+  assert.ok(fs.readFileSync(savePath).equals(saveBefore), 'AC9-1 종료면 저장 그대로');
+  assert.equal(kFiles('save.json.unreadable-').length, 0, 'AC9-1 옮기지 않았다');
+  const fresh = await lockedDialog('AC9-1 새로 시작');
+  const seenPick = K.events().filter((e) => e.event === 'picker-ready').length;
+  await K.answer('새로 시작');
+  await until(() => kFiles('save.json.unreadable-').length === 1, 'AC9-1 새로 시작이면 저장을 백업한다');
+  await K.pickEevee(seenPick);
+  await fresh.run;
+  await until(() => kFiles('save.json.cloud-').length === 2, 'AC9-1 새로 고른 저장을 백업하고 서버 저장을 받는다', 30_000);
+  await until(sealed, 'AC9-1 새 키로 암호화');
+  assert.equal(sql(`select s.save->'points'->>'balance' from public.cloud_saves s where s.user_id = '${anonK}'`), '321', 'AC9-1 서버 저장은 덮이지 않았다');
+  assert.equal(kFiles('save.key.unreadable-').length, 1, 'AC9-1 옛 키 자리도 옮겼다');
+  checks.push('AC9-1 저장 잠김 창 — [종료][새로 시작], 종료면 저장 그대로, 새로 시작이면 키·저장 백업 → 선택 창 → 서버 저장 받기');
   proxy.close();
 }
 
