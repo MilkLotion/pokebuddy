@@ -1,0 +1,3523 @@
+{
+ "items": {
+  "basic-food": {
+   "price": null,
+   "effect": "fullness",
+   "amount": 20
+  },
+  "premium-food": {
+   "price": 60,
+   "effect": "fullness-full-buff",
+   "amount": 100
+  },
+  "toy": {
+   "price": 40,
+   "effect": "play-buff",
+   "amount": 0
+  },
+  "exp-candy-xs": {
+   "price": 20,
+   "effect": "exp",
+   "amount": 100
+  },
+  "exp-candy-s": {
+   "price": 40,
+   "effect": "exp",
+   "amount": 800
+  },
+  "exp-candy-m": {
+   "price": 80,
+   "effect": "exp",
+   "amount": 3000
+  },
+  "exp-candy-l": {
+   "price": 160,
+   "effect": "exp",
+   "amount": 10000
+  },
+  "exp-candy-xl": {
+   "price": 320,
+   "effect": "exp",
+   "amount": 30000
+  },
+  "rare-candy": {
+   "price": 200,
+   "effect": "level",
+   "amount": 1
+  },
+  "mint": {
+   "price": 100,
+   "effect": "nature",
+   "amount": 0
+  },
+  "shiny-potion": {
+   "price": 1200,
+   "effect": "shiny-on",
+   "amount": 0
+  },
+  "normal-potion": {
+   "price": 0,
+   "effect": "shiny-off",
+   "amount": 0
+  },
+  "auspicious-armor": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "black-augurite": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "blank-cd": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "bond-cord": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "cracked-pot": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "dawn-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "dusk-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "fire-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "galarica-cuff": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "galarica-wreath": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "ice-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "leaf-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "malicious-armor": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "metal-alloy": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "moon-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "peat-block": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "region-map": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "scroll-of-darkness": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "shiny-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "sun-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "sweet-apple": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "syrupy-apple": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "tart-apple": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "thunder-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "unremarkable-teacup": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  },
+  "water-stone": {
+   "price": 150,
+   "effect": "evolve",
+   "amount": 0
+  }
+ },
+ "eggs": {
+  "random": 120,
+  "ancient-stone": 200,
+  "sub-legendary": 2000,
+  "ultra-beast": 2000,
+  "paradox": 2000,
+  "mythical": 3000,
+  "legendary": 5000
+ },
+ "achievements": {
+  "show-two": "party-slot",
+  "starter-final": "party-slot",
+  "work-100h": "pokemon",
+  "party-three": "pokemon"
+ },
+ "evo": {
+  "abra": [
+   "kadabra"
+  ],
+  "aipom": [
+   "ambipom"
+  ],
+  "amaura": [
+   "aurorus"
+  ],
+  "anorith": [
+   "armaldo"
+  ],
+  "applin": [
+   "flapple",
+   "appletun",
+   "dipplin"
+  ],
+  "archen": [
+   "archeops"
+  ],
+  "arctibax": [
+   "baxcalibur"
+  ],
+  "aron": [
+   "lairon"
+  ],
+  "arrokuda": [
+   "barraskewda"
+  ],
+  "axew": [
+   "fraxure"
+  ],
+  "azurill": [
+   "marill"
+  ],
+  "bagon": [
+   "shelgon"
+  ],
+  "baltoy": [
+   "claydol"
+  ],
+  "barboach": [
+   "whiscash"
+  ],
+  "basculin": [
+   "basculegion"
+  ],
+  "basculin-blue-striped": [
+   "basculegion"
+  ],
+  "bayleef": [
+   "meganium"
+  ],
+  "beldum": [
+   "metang"
+  ],
+  "bellsprout": [
+   "weepinbell"
+  ],
+  "bergmite": [
+   "avalugg",
+   "avalugg-hisui"
+  ],
+  "bidoof": [
+   "bibarel"
+  ],
+  "binacle": [
+   "barbaracle"
+  ],
+  "bisharp": [
+   "kingambit"
+  ],
+  "blipbug": [
+   "dottler"
+  ],
+  "blitzle": [
+   "zebstrika"
+  ],
+  "boldore": [
+   "gigalith"
+  ],
+  "bonsly": [
+   "sudowoodo"
+  ],
+  "bounsweet": [
+   "steenee"
+  ],
+  "braixen": [
+   "delphox"
+  ],
+  "bramblin": [
+   "brambleghast"
+  ],
+  "brionne": [
+   "primarina"
+  ],
+  "bronzor": [
+   "bronzong"
+  ],
+  "budew": [
+   "roselia"
+  ],
+  "buizel": [
+   "floatzel"
+  ],
+  "bulbasaur": [
+   "ivysaur"
+  ],
+  "buneary": [
+   "lopunny"
+  ],
+  "bunnelby": [
+   "diggersby"
+  ],
+  "burmy": [
+   "wormadam",
+   "mothim"
+  ],
+  "burmy-sandy": [
+   "wormadam",
+   "mothim"
+  ],
+  "burmy-trash": [
+   "wormadam",
+   "mothim"
+  ],
+  "cacnea": [
+   "cacturne"
+  ],
+  "capsakid": [
+   "scovillain"
+  ],
+  "carkol": [
+   "coalossal"
+  ],
+  "carvanha": [
+   "sharpedo"
+  ],
+  "cascoon": [
+   "dustox"
+  ],
+  "caterpie": [
+   "metapod"
+  ],
+  "cetoddle": [
+   "cetitan"
+  ],
+  "chansey": [
+   "blissey"
+  ],
+  "charcadet": [
+   "armarouge",
+   "ceruledge"
+  ],
+  "charjabug": [
+   "vikavolt"
+  ],
+  "charmander": [
+   "charmeleon"
+  ],
+  "charmeleon": [
+   "charizard"
+  ],
+  "cherubi": [
+   "cherrim"
+  ],
+  "chespin": [
+   "quilladin"
+  ],
+  "chewtle": [
+   "drednaw"
+  ],
+  "chikorita": [
+   "bayleef"
+  ],
+  "chimchar": [
+   "monferno"
+  ],
+  "chinchou": [
+   "lanturn"
+  ],
+  "chingling": [
+   "chimecho"
+  ],
+  "clamperl": [
+   "huntail",
+   "gorebyss"
+  ],
+  "clauncher": [
+   "clawitzer"
+  ],
+  "clefairy": [
+   "clefable"
+  ],
+  "cleffa": [
+   "clefairy"
+  ],
+  "clobbopus": [
+   "grapploct"
+  ],
+  "combee": [
+   "vespiquen"
+  ],
+  "combusken": [
+   "blaziken"
+  ],
+  "corphish": [
+   "crawdaunt"
+  ],
+  "corsola": [
+   "cursola"
+  ],
+  "corsola-galar": [
+   "cursola"
+  ],
+  "corvisquire": [
+   "corviknight"
+  ],
+  "cosmoem": [
+   "solgaleo",
+   "lunala"
+  ],
+  "cosmog": [
+   "cosmoem"
+  ],
+  "cottonee": [
+   "whimsicott"
+  ],
+  "crabrawler": [
+   "crabominable"
+  ],
+  "cranidos": [
+   "rampardos"
+  ],
+  "croagunk": [
+   "toxicroak"
+  ],
+  "crocalor": [
+   "skeledirge"
+  ],
+  "croconaw": [
+   "feraligatr"
+  ],
+  "cubchoo": [
+   "beartic"
+  ],
+  "cubone": [
+   "marowak",
+   "marowak-alola"
+  ],
+  "cufant": [
+   "copperajah"
+  ],
+  "cutiefly": [
+   "ribombee"
+  ],
+  "cyndaquil": [
+   "quilava"
+  ],
+  "dartrix": [
+   "decidueye",
+   "decidueye-hisui"
+  ],
+  "darumaka": [
+   "darmanitan"
+  ],
+  "darumaka-galar": [
+   "darmanitan-galar-standard"
+  ],
+  "deerling": [
+   "sawsbuck"
+  ],
+  "deerling-autumn": [
+   "sawsbuck"
+  ],
+  "deerling-spring": [
+   "sawsbuck"
+  ],
+  "deerling-summer": [
+   "sawsbuck"
+  ],
+  "deerling-winter": [
+   "sawsbuck"
+  ],
+  "deino": [
+   "zweilous"
+  ],
+  "dewott": [
+   "samurott",
+   "samurott-hisui"
+  ],
+  "dewpider": [
+   "araquanid"
+  ],
+  "diglett": [
+   "dugtrio"
+  ],
+  "diglett-alola": [
+   "dugtrio-alola"
+  ],
+  "dipplin": [
+   "hydrapple"
+  ],
+  "doduo": [
+   "dodrio"
+  ],
+  "dolliv": [
+   "arboliva"
+  ],
+  "dottler": [
+   "orbeetle"
+  ],
+  "doublade": [
+   "aegislash"
+  ],
+  "dragonair": [
+   "dragonite"
+  ],
+  "drakloak": [
+   "dragapult"
+  ],
+  "dratini": [
+   "dragonair"
+  ],
+  "dreepy": [
+   "drakloak"
+  ],
+  "drifloon": [
+   "drifblim"
+  ],
+  "drilbur": [
+   "excadrill"
+  ],
+  "drizzile": [
+   "inteleon"
+  ],
+  "drowzee": [
+   "hypno"
+  ],
+  "ducklett": [
+   "swanna"
+  ],
+  "dunsparce": [
+   "dudunsparce"
+  ],
+  "duosion": [
+   "reuniclus"
+  ],
+  "duraludon": [
+   "archaludon"
+  ],
+  "dusclops": [
+   "dusknoir"
+  ],
+  "duskull": [
+   "dusclops"
+  ],
+  "dwebble": [
+   "crustle"
+  ],
+  "eelektrik": [
+   "eelektross"
+  ],
+  "eevee": [
+   "vaporeon",
+   "jolteon",
+   "flareon",
+   "espeon",
+   "umbreon",
+   "leafeon",
+   "glaceon",
+   "sylveon"
+  ],
+  "ekans": [
+   "arbok"
+  ],
+  "electabuzz": [
+   "electivire"
+  ],
+  "electrike": [
+   "manectric"
+  ],
+  "elekid": [
+   "electabuzz"
+  ],
+  "elgyem": [
+   "beheeyem"
+  ],
+  "espurr": [
+   "meowstic"
+  ],
+  "exeggcute": [
+   "exeggutor",
+   "exeggutor-alola"
+  ],
+  "farfetchd": [
+   "sirfetchd"
+  ],
+  "farfetchd-galar": [
+   "sirfetchd"
+  ],
+  "feebas": [
+   "milotic"
+  ],
+  "fennekin": [
+   "braixen"
+  ],
+  "ferroseed": [
+   "ferrothorn"
+  ],
+  "fidough": [
+   "dachsbun"
+  ],
+  "finizen": [
+   "palafin"
+  ],
+  "finneon": [
+   "lumineon"
+  ],
+  "flaaffy": [
+   "ampharos"
+  ],
+  "flabebe": [
+   "floette"
+  ],
+  "fletchinder": [
+   "talonflame"
+  ],
+  "fletchling": [
+   "fletchinder"
+  ],
+  "flittle": [
+   "espathra"
+  ],
+  "floette": [
+   "florges"
+  ],
+  "floragato": [
+   "meowscarada"
+  ],
+  "fomantis": [
+   "lurantis"
+  ],
+  "foongus": [
+   "amoonguss"
+  ],
+  "fraxure": [
+   "haxorus"
+  ],
+  "frigibax": [
+   "arctibax"
+  ],
+  "frillish": [
+   "jellicent"
+  ],
+  "froakie": [
+   "frogadier"
+  ],
+  "frogadier": [
+   "greninja"
+  ],
+  "fuecoco": [
+   "crocalor"
+  ],
+  "gabite": [
+   "garchomp"
+  ],
+  "gastly": [
+   "haunter"
+  ],
+  "geodude": [
+   "graveler"
+  ],
+  "geodude-alola": [
+   "graveler-alola"
+  ],
+  "gible": [
+   "gabite"
+  ],
+  "gimmighoul": [
+   "gholdengo"
+  ],
+  "girafarig": [
+   "farigiraf"
+  ],
+  "glameow": [
+   "purugly"
+  ],
+  "gligar": [
+   "gliscor"
+  ],
+  "glimmet": [
+   "glimmora"
+  ],
+  "gloom": [
+   "vileplume",
+   "bellossom"
+  ],
+  "golbat": [
+   "crobat"
+  ],
+  "goldeen": [
+   "seaking"
+  ],
+  "golett": [
+   "golurk"
+  ],
+  "goomy": [
+   "sliggoo",
+   "sliggoo-hisui"
+  ],
+  "gossifleur": [
+   "eldegoss"
+  ],
+  "gothita": [
+   "gothorita"
+  ],
+  "gothorita": [
+   "gothitelle"
+  ],
+  "graveler": [
+   "golem"
+  ],
+  "graveler-alola": [
+   "golem-alola"
+  ],
+  "greavard": [
+   "houndstone"
+  ],
+  "grimer": [
+   "muk"
+  ],
+  "grimer-alola": [
+   "muk-alola"
+  ],
+  "grookey": [
+   "thwackey"
+  ],
+  "grotle": [
+   "torterra"
+  ],
+  "grovyle": [
+   "sceptile"
+  ],
+  "growlithe": [
+   "arcanine"
+  ],
+  "growlithe-hisui": [
+   "arcanine-hisui"
+  ],
+  "grubbin": [
+   "charjabug"
+  ],
+  "gulpin": [
+   "swalot"
+  ],
+  "gurdurr": [
+   "conkeldurr"
+  ],
+  "hakamo-o": [
+   "kommo-o"
+  ],
+  "happiny": [
+   "chansey"
+  ],
+  "hatenna": [
+   "hattrem"
+  ],
+  "hattrem": [
+   "hatterene"
+  ],
+  "haunter": [
+   "gengar"
+  ],
+  "helioptile": [
+   "heliolisk"
+  ],
+  "herdier": [
+   "stoutland"
+  ],
+  "hippopotas": [
+   "hippowdon"
+  ],
+  "honedge": [
+   "doublade"
+  ],
+  "hoothoot": [
+   "noctowl"
+  ],
+  "hoppip": [
+   "skiploom"
+  ],
+  "horsea": [
+   "seadra"
+  ],
+  "houndour": [
+   "houndoom"
+  ],
+  "igglybuff": [
+   "jigglypuff"
+  ],
+  "impidimp": [
+   "morgrem"
+  ],
+  "inkay": [
+   "malamar"
+  ],
+  "ivysaur": [
+   "venusaur"
+  ],
+  "jangmo-o": [
+   "hakamo-o"
+  ],
+  "jigglypuff": [
+   "wigglytuff"
+  ],
+  "joltik": [
+   "galvantula"
+  ],
+  "kabuto": [
+   "kabutops"
+  ],
+  "kadabra": [
+   "alakazam"
+  ],
+  "kakuna": [
+   "beedrill"
+  ],
+  "karrablast": [
+   "escavalier"
+  ],
+  "kirlia": [
+   "gardevoir",
+   "gallade"
+  ],
+  "klang": [
+   "klinklang"
+  ],
+  "klink": [
+   "klang"
+  ],
+  "koffing": [
+   "weezing",
+   "weezing-galar"
+  ],
+  "krabby": [
+   "kingler"
+  ],
+  "kricketot": [
+   "kricketune"
+  ],
+  "krokorok": [
+   "krookodile"
+  ],
+  "kubfu": [
+   "urshifu"
+  ],
+  "lairon": [
+   "aggron"
+  ],
+  "lampent": [
+   "chandelure"
+  ],
+  "larvesta": [
+   "volcarona"
+  ],
+  "larvitar": [
+   "pupitar"
+  ],
+  "lechonk": [
+   "oinkologne"
+  ],
+  "ledyba": [
+   "ledian"
+  ],
+  "lickitung": [
+   "lickilicky"
+  ],
+  "lileep": [
+   "cradily"
+  ],
+  "lillipup": [
+   "herdier"
+  ],
+  "linoone": [
+   "obstagoon"
+  ],
+  "linoone-galar": [
+   "obstagoon"
+  ],
+  "litleo": [
+   "pyroar"
+  ],
+  "litten": [
+   "torracat"
+  ],
+  "litwick": [
+   "lampent"
+  ],
+  "lombre": [
+   "ludicolo"
+  ],
+  "lotad": [
+   "lombre"
+  ],
+  "loudred": [
+   "exploud"
+  ],
+  "luxio": [
+   "luxray"
+  ],
+  "machoke": [
+   "machamp"
+  ],
+  "machop": [
+   "machoke"
+  ],
+  "magby": [
+   "magmar"
+  ],
+  "magikarp": [
+   "gyarados"
+  ],
+  "magmar": [
+   "magmortar"
+  ],
+  "magnemite": [
+   "magneton"
+  ],
+  "magneton": [
+   "magnezone"
+  ],
+  "makuhita": [
+   "hariyama"
+  ],
+  "mankey": [
+   "primeape"
+  ],
+  "mantyke": [
+   "mantine"
+  ],
+  "mareanie": [
+   "toxapex"
+  ],
+  "mareep": [
+   "flaaffy"
+  ],
+  "marill": [
+   "azumarill"
+  ],
+  "marshtomp": [
+   "swampert"
+  ],
+  "maschiff": [
+   "mabosstiff"
+  ],
+  "meditite": [
+   "medicham"
+  ],
+  "meltan": [
+   "melmetal"
+  ],
+  "meowth": [
+   "persian",
+   "perrserker"
+  ],
+  "meowth-alola": [
+   "persian-alola"
+  ],
+  "meowth-galar": [
+   "perrserker"
+  ],
+  "metang": [
+   "metagross"
+  ],
+  "metapod": [
+   "butterfree"
+  ],
+  "mienfoo": [
+   "mienshao"
+  ],
+  "milcery": [
+   "alcremie"
+  ],
+  "mime-jr": [
+   "mr-mime",
+   "mr-mime-galar"
+  ],
+  "minccino": [
+   "cinccino"
+  ],
+  "misdreavus": [
+   "mismagius"
+  ],
+  "monferno": [
+   "infernape"
+  ],
+  "morelull": [
+   "shiinotic"
+  ],
+  "morgrem": [
+   "grimmsnarl"
+  ],
+  "mr-mime": [
+   "mr-rime"
+  ],
+  "mr-mime-galar": [
+   "mr-rime"
+  ],
+  "mudbray": [
+   "mudsdale"
+  ],
+  "mudkip": [
+   "marshtomp"
+  ],
+  "munchlax": [
+   "snorlax"
+  ],
+  "munna": [
+   "musharna"
+  ],
+  "murkrow": [
+   "honchkrow"
+  ],
+  "nacli": [
+   "naclstack"
+  ],
+  "naclstack": [
+   "garganacl"
+  ],
+  "natu": [
+   "xatu"
+  ],
+  "nickit": [
+   "thievul"
+  ],
+  "nidoran-f": [
+   "nidorina"
+  ],
+  "nidoran-m": [
+   "nidorino"
+  ],
+  "nidorina": [
+   "nidoqueen"
+  ],
+  "nidorino": [
+   "nidoking"
+  ],
+  "nincada": [
+   "ninjask",
+   "shedinja"
+  ],
+  "noibat": [
+   "noivern"
+  ],
+  "nosepass": [
+   "probopass"
+  ],
+  "numel": [
+   "camerupt"
+  ],
+  "nuzleaf": [
+   "shiftry"
+  ],
+  "nymble": [
+   "lokix"
+  ],
+  "oddish": [
+   "gloom"
+  ],
+  "omanyte": [
+   "omastar"
+  ],
+  "onix": [
+   "steelix"
+  ],
+  "oshawott": [
+   "dewott"
+  ],
+  "palpitoad": [
+   "seismitoad"
+  ],
+  "pancham": [
+   "pangoro"
+  ],
+  "panpour": [
+   "simipour"
+  ],
+  "pansage": [
+   "simisage"
+  ],
+  "pansear": [
+   "simisear"
+  ],
+  "paras": [
+   "parasect"
+  ],
+  "patrat": [
+   "watchog"
+  ],
+  "pawmi": [
+   "pawmo"
+  ],
+  "pawmo": [
+   "pawmot"
+  ],
+  "pawniard": [
+   "bisharp"
+  ],
+  "petilil": [
+   "lilligant",
+   "lilligant-hisui"
+  ],
+  "phanpy": [
+   "donphan"
+  ],
+  "phantump": [
+   "trevenant"
+  ],
+  "pichu": [
+   "pikachu"
+  ],
+  "pidgeotto": [
+   "pidgeot"
+  ],
+  "pidgey": [
+   "pidgeotto"
+  ],
+  "pidove": [
+   "tranquill"
+  ],
+  "pignite": [
+   "emboar"
+  ],
+  "pikachu": [
+   "raichu",
+   "raichu-alola"
+  ],
+  "pikipek": [
+   "trumbeak"
+  ],
+  "piloswine": [
+   "mamoswine"
+  ],
+  "pineco": [
+   "forretress"
+  ],
+  "piplup": [
+   "prinplup"
+  ],
+  "poipole": [
+   "naganadel"
+  ],
+  "poliwag": [
+   "poliwhirl"
+  ],
+  "poliwhirl": [
+   "poliwrath",
+   "politoed"
+  ],
+  "poltchageist": [
+   "sinistcha"
+  ],
+  "ponyta": [
+   "rapidash"
+  ],
+  "ponyta-galar": [
+   "rapidash-galar"
+  ],
+  "poochyena": [
+   "mightyena"
+  ],
+  "popplio": [
+   "brionne"
+  ],
+  "porygon": [
+   "porygon2"
+  ],
+  "porygon2": [
+   "porygon-z"
+  ],
+  "primeape": [
+   "annihilape"
+  ],
+  "prinplup": [
+   "empoleon"
+  ],
+  "psyduck": [
+   "golduck"
+  ],
+  "pumpkaboo": [
+   "gourgeist"
+  ],
+  "pupitar": [
+   "tyranitar"
+  ],
+  "purrloin": [
+   "liepard"
+  ],
+  "quaxly": [
+   "quaxwell"
+  ],
+  "quaxwell": [
+   "quaquaval"
+  ],
+  "quilava": [
+   "typhlosion",
+   "typhlosion-hisui"
+  ],
+  "quilladin": [
+   "chesnaught"
+  ],
+  "qwilfish": [
+   "overqwil"
+  ],
+  "qwilfish-hisui": [
+   "overqwil"
+  ],
+  "raboot": [
+   "cinderace"
+  ],
+  "ralts": [
+   "kirlia"
+  ],
+  "rattata": [
+   "raticate"
+  ],
+  "rattata-alola": [
+   "raticate-alola"
+  ],
+  "rellor": [
+   "rabsca"
+  ],
+  "remoraid": [
+   "octillery"
+  ],
+  "rhydon": [
+   "rhyperior"
+  ],
+  "rhyhorn": [
+   "rhydon"
+  ],
+  "riolu": [
+   "lucario"
+  ],
+  "rockruff": [
+   "lycanroc"
+  ],
+  "roggenrola": [
+   "boldore"
+  ],
+  "rolycoly": [
+   "carkol"
+  ],
+  "rookidee": [
+   "corvisquire"
+  ],
+  "roselia": [
+   "roserade"
+  ],
+  "rowlet": [
+   "dartrix"
+  ],
+  "rufflet": [
+   "braviary",
+   "braviary-hisui"
+  ],
+  "salandit": [
+   "salazzle"
+  ],
+  "sandile": [
+   "krokorok"
+  ],
+  "sandshrew": [
+   "sandslash"
+  ],
+  "sandshrew-alola": [
+   "sandslash-alola"
+  ],
+  "sandygast": [
+   "palossand"
+  ],
+  "scatterbug": [
+   "spewpa"
+  ],
+  "scorbunny": [
+   "raboot"
+  ],
+  "scraggy": [
+   "scrafty"
+  ],
+  "scyther": [
+   "scizor",
+   "kleavor"
+  ],
+  "seadra": [
+   "kingdra"
+  ],
+  "sealeo": [
+   "walrein"
+  ],
+  "seedot": [
+   "nuzleaf"
+  ],
+  "seel": [
+   "dewgong"
+  ],
+  "sentret": [
+   "furret"
+  ],
+  "servine": [
+   "serperior"
+  ],
+  "sewaddle": [
+   "swadloon"
+  ],
+  "shelgon": [
+   "salamence"
+  ],
+  "shellder": [
+   "cloyster"
+  ],
+  "shellos": [
+   "gastrodon"
+  ],
+  "shellos-east": [
+   "gastrodon"
+  ],
+  "shelmet": [
+   "accelgor"
+  ],
+  "shieldon": [
+   "bastiodon"
+  ],
+  "shinx": [
+   "luxio"
+  ],
+  "shroodle": [
+   "grafaiai"
+  ],
+  "shroomish": [
+   "breloom"
+  ],
+  "shuppet": [
+   "banette"
+  ],
+  "silcoon": [
+   "beautifly"
+  ],
+  "silicobra": [
+   "sandaconda"
+  ],
+  "sinistea": [
+   "polteageist"
+  ],
+  "sizzlipede": [
+   "centiskorch"
+  ],
+  "skiddo": [
+   "gogoat"
+  ],
+  "skiploom": [
+   "jumpluff"
+  ],
+  "skitty": [
+   "delcatty"
+  ],
+  "skorupi": [
+   "drapion"
+  ],
+  "skrelp": [
+   "dragalge"
+  ],
+  "skwovet": [
+   "greedent"
+  ],
+  "slakoth": [
+   "vigoroth"
+  ],
+  "sliggoo": [
+   "goodra"
+  ],
+  "sliggoo-hisui": [
+   "goodra-hisui"
+  ],
+  "slowpoke": [
+   "slowbro",
+   "slowking"
+  ],
+  "slowpoke-galar": [
+   "slowbro-galar",
+   "slowking-galar"
+  ],
+  "slugma": [
+   "magcargo"
+  ],
+  "smoliv": [
+   "dolliv"
+  ],
+  "smoochum": [
+   "jynx"
+  ],
+  "sneasel": [
+   "weavile",
+   "sneasler"
+  ],
+  "sneasel-hisui": [
+   "sneasler"
+  ],
+  "snivy": [
+   "servine"
+  ],
+  "snom": [
+   "frosmoth"
+  ],
+  "snorunt": [
+   "glalie",
+   "froslass"
+  ],
+  "snover": [
+   "abomasnow"
+  ],
+  "snubbull": [
+   "granbull"
+  ],
+  "sobble": [
+   "drizzile"
+  ],
+  "solosis": [
+   "duosion"
+  ],
+  "spearow": [
+   "fearow"
+  ],
+  "spewpa": [
+   "vivillon"
+  ],
+  "spheal": [
+   "sealeo"
+  ],
+  "spinarak": [
+   "ariados"
+  ],
+  "spoink": [
+   "grumpig"
+  ],
+  "sprigatito": [
+   "floragato"
+  ],
+  "spritzee": [
+   "aromatisse"
+  ],
+  "squirtle": [
+   "wartortle"
+  ],
+  "stantler": [
+   "wyrdeer"
+  ],
+  "staravia": [
+   "staraptor"
+  ],
+  "starly": [
+   "staravia"
+  ],
+  "staryu": [
+   "starmie"
+  ],
+  "steenee": [
+   "tsareena"
+  ],
+  "stufful": [
+   "bewear"
+  ],
+  "stunky": [
+   "skuntank"
+  ],
+  "sunkern": [
+   "sunflora"
+  ],
+  "surskit": [
+   "masquerain"
+  ],
+  "swablu": [
+   "altaria"
+  ],
+  "swadloon": [
+   "leavanny"
+  ],
+  "swinub": [
+   "piloswine"
+  ],
+  "swirlix": [
+   "slurpuff"
+  ],
+  "tadbulb": [
+   "bellibolt"
+  ],
+  "taillow": [
+   "swellow"
+  ],
+  "tandemaus": [
+   "maushold"
+  ],
+  "tangela": [
+   "tangrowth"
+  ],
+  "tarountula": [
+   "spidops"
+  ],
+  "teddiursa": [
+   "ursaring"
+  ],
+  "tentacool": [
+   "tentacruel"
+  ],
+  "tepig": [
+   "pignite"
+  ],
+  "thwackey": [
+   "rillaboom"
+  ],
+  "timburr": [
+   "gurdurr"
+  ],
+  "tinkatink": [
+   "tinkatuff"
+  ],
+  "tinkatuff": [
+   "tinkaton"
+  ],
+  "tirtouga": [
+   "carracosta"
+  ],
+  "toedscool": [
+   "toedscruel"
+  ],
+  "togepi": [
+   "togetic"
+  ],
+  "togetic": [
+   "togekiss"
+  ],
+  "torchic": [
+   "combusken"
+  ],
+  "torracat": [
+   "incineroar"
+  ],
+  "totodile": [
+   "croconaw"
+  ],
+  "toxel": [
+   "toxtricity"
+  ],
+  "tranquill": [
+   "unfezant"
+  ],
+  "trapinch": [
+   "vibrava"
+  ],
+  "treecko": [
+   "grovyle"
+  ],
+  "trubbish": [
+   "garbodor"
+  ],
+  "trumbeak": [
+   "toucannon"
+  ],
+  "turtwig": [
+   "grotle"
+  ],
+  "tympole": [
+   "palpitoad"
+  ],
+  "tynamo": [
+   "eelektrik"
+  ],
+  "type-null": [
+   "silvally"
+  ],
+  "tyrogue": [
+   "hitmonlee",
+   "hitmonchan",
+   "hitmontop"
+  ],
+  "tyrunt": [
+   "tyrantrum"
+  ],
+  "ursaring": [
+   "ursaluna"
+  ],
+  "vanillish": [
+   "vanilluxe"
+  ],
+  "vanillite": [
+   "vanillish"
+  ],
+  "varoom": [
+   "revavroom"
+  ],
+  "venipede": [
+   "whirlipede"
+  ],
+  "venonat": [
+   "venomoth"
+  ],
+  "vibrava": [
+   "flygon"
+  ],
+  "vigoroth": [
+   "slaking"
+  ],
+  "voltorb": [
+   "electrode"
+  ],
+  "voltorb-hisui": [
+   "electrode-hisui"
+  ],
+  "vullaby": [
+   "mandibuzz"
+  ],
+  "vulpix": [
+   "ninetales"
+  ],
+  "vulpix-alola": [
+   "ninetales-alola"
+  ],
+  "wailmer": [
+   "wailord"
+  ],
+  "wartortle": [
+   "blastoise"
+  ],
+  "wattrel": [
+   "kilowattrel"
+  ],
+  "weedle": [
+   "kakuna"
+  ],
+  "weepinbell": [
+   "victreebel"
+  ],
+  "whirlipede": [
+   "scolipede"
+  ],
+  "whismur": [
+   "loudred"
+  ],
+  "wiglett": [
+   "wugtrio"
+  ],
+  "wimpod": [
+   "golisopod"
+  ],
+  "wingull": [
+   "pelipper"
+  ],
+  "woobat": [
+   "swoobat"
+  ],
+  "wooloo": [
+   "dubwool"
+  ],
+  "wooper": [
+   "quagsire",
+   "clodsire"
+  ],
+  "wooper-paldea": [
+   "clodsire"
+  ],
+  "wurmple": [
+   "silcoon",
+   "cascoon"
+  ],
+  "wynaut": [
+   "wobbuffet"
+  ],
+  "yamask": [
+   "cofagrigus",
+   "runerigus"
+  ],
+  "yamask-galar": [
+   "runerigus"
+  ],
+  "yamper": [
+   "boltund"
+  ],
+  "yanma": [
+   "yanmega"
+  ],
+  "yungoos": [
+   "gumshoos"
+  ],
+  "zigzagoon": [
+   "linoone"
+  ],
+  "zigzagoon-galar": [
+   "linoone-galar"
+  ],
+  "zorua": [
+   "zoroark"
+  ],
+  "zorua-hisui": [
+   "zoroark-hisui"
+  ],
+  "zubat": [
+   "golbat"
+  ],
+  "zweilous": [
+   "hydreigon"
+  ]
+ },
+ "growth": {
+  "abomasnow": "slow",
+  "abra": "medium-slow",
+  "absol": "medium-slow",
+  "accelgor": "medium-fast",
+  "aegislash": "medium-fast",
+  "aerodactyl": "slow",
+  "aggron": "slow",
+  "aipom": "fast",
+  "alakazam": "medium-slow",
+  "alcremie": "medium-fast",
+  "alomomola": "fast",
+  "altaria": "erratic",
+  "amaura": "medium-fast",
+  "ambipom": "fast",
+  "amoonguss": "medium-fast",
+  "ampharos": "medium-slow",
+  "annihilape": "medium-fast",
+  "anorith": "erratic",
+  "appletun": "erratic",
+  "applin": "erratic",
+  "araquanid": "medium-fast",
+  "arbok": "medium-fast",
+  "arboliva": "medium-slow",
+  "arcanine": "slow",
+  "arcanine-hisui": "slow",
+  "arceus": "slow",
+  "arceus-bug": "slow",
+  "arceus-dark": "slow",
+  "arceus-dragon": "slow",
+  "arceus-electric": "slow",
+  "arceus-fairy": "slow",
+  "arceus-fighting": "slow",
+  "arceus-fire": "slow",
+  "arceus-flying": "slow",
+  "arceus-ghost": "slow",
+  "arceus-grass": "slow",
+  "arceus-ground": "slow",
+  "arceus-ice": "slow",
+  "arceus-poison": "slow",
+  "arceus-psychic": "slow",
+  "arceus-rock": "slow",
+  "arceus-steel": "slow",
+  "arceus-water": "slow",
+  "archaludon": "medium-fast",
+  "archen": "medium-fast",
+  "archeops": "medium-fast",
+  "arctibax": "slow",
+  "arctovish": "slow",
+  "arctozolt": "slow",
+  "ariados": "fast",
+  "armaldo": "erratic",
+  "armarouge": "slow",
+  "aromatisse": "medium-fast",
+  "aron": "slow",
+  "arrokuda": "slow",
+  "articuno": "slow",
+  "articuno-galar": "slow",
+  "audino": "fast",
+  "aurorus": "medium-fast",
+  "avalugg": "medium-fast",
+  "avalugg-hisui": "medium-fast",
+  "axew": "slow",
+  "azelf": "slow",
+  "azumarill": "fast",
+  "azurill": "fast",
+  "bagon": "slow",
+  "baltoy": "medium-fast",
+  "banette": "fast",
+  "barbaracle": "medium-fast",
+  "barboach": "medium-fast",
+  "barraskewda": "slow",
+  "basculegion": "medium-fast",
+  "basculin": "medium-fast",
+  "basculin-blue-striped": "medium-fast",
+  "bastiodon": "erratic",
+  "baxcalibur": "slow",
+  "bayleef": "medium-slow",
+  "beartic": "medium-fast",
+  "beautifly": "medium-fast",
+  "beedrill": "medium-fast",
+  "beheeyem": "medium-fast",
+  "beldum": "slow",
+  "bellibolt": "medium-fast",
+  "bellossom": "medium-slow",
+  "bellsprout": "medium-slow",
+  "bergmite": "medium-fast",
+  "bewear": "medium-fast",
+  "bibarel": "medium-fast",
+  "bidoof": "medium-fast",
+  "binacle": "medium-fast",
+  "bisharp": "medium-fast",
+  "blacephalon": "slow",
+  "blastoise": "medium-slow",
+  "blaziken": "medium-slow",
+  "blipbug": "medium-fast",
+  "blissey": "fast",
+  "blitzle": "medium-fast",
+  "boldore": "medium-slow",
+  "boltund": "fast",
+  "bombirdier": "slow",
+  "bonsly": "medium-fast",
+  "bouffalant": "medium-fast",
+  "bounsweet": "medium-slow",
+  "braixen": "medium-slow",
+  "brambleghast": "medium-fast",
+  "bramblin": "medium-fast",
+  "braviary": "slow",
+  "braviary-hisui": "slow",
+  "breloom": "fluctuating",
+  "brionne": "medium-slow",
+  "bronzong": "medium-fast",
+  "bronzor": "medium-fast",
+  "brute-bonnet": "slow",
+  "bruxish": "medium-fast",
+  "budew": "medium-slow",
+  "buizel": "medium-fast",
+  "bulbasaur": "medium-slow",
+  "buneary": "medium-fast",
+  "bunnelby": "medium-fast",
+  "burmy": "medium-fast",
+  "burmy-sandy": "medium-fast",
+  "burmy-trash": "medium-fast",
+  "butterfree": "medium-fast",
+  "buzzwole": "slow",
+  "cacnea": "medium-slow",
+  "cacturne": "medium-slow",
+  "calyrex": "slow",
+  "camerupt": "medium-fast",
+  "capsakid": "medium-fast",
+  "carbink": "slow",
+  "carkol": "medium-slow",
+  "carnivine": "slow",
+  "carracosta": "medium-fast",
+  "carvanha": "slow",
+  "cascoon": "medium-fast",
+  "castform": "medium-fast",
+  "castform-rainy": "medium-fast",
+  "castform-snowy": "medium-fast",
+  "castform-sunny": "medium-fast",
+  "caterpie": "medium-fast",
+  "celebi": "medium-slow",
+  "celesteela": "slow",
+  "centiskorch": "medium-fast",
+  "ceruledge": "slow",
+  "cetitan": "medium-slow",
+  "cetoddle": "medium-slow",
+  "chandelure": "medium-slow",
+  "chansey": "fast",
+  "charcadet": "slow",
+  "charizard": "medium-slow",
+  "charjabug": "medium-fast",
+  "charmander": "medium-slow",
+  "charmeleon": "medium-slow",
+  "chatot": "medium-slow",
+  "cherrim": "medium-fast",
+  "cherrim-sunshine": "medium-fast",
+  "cherubi": "medium-fast",
+  "chesnaught": "medium-slow",
+  "chespin": "medium-slow",
+  "chewtle": "medium-fast",
+  "chi-yu": "slow",
+  "chien-pao": "slow",
+  "chikorita": "medium-slow",
+  "chimchar": "medium-slow",
+  "chimecho": "fast",
+  "chinchou": "slow",
+  "chingling": "fast",
+  "cinccino": "fast",
+  "cinderace": "medium-slow",
+  "clamperl": "erratic",
+  "clauncher": "slow",
+  "clawitzer": "slow",
+  "claydol": "medium-fast",
+  "clefable": "fast",
+  "clefairy": "fast",
+  "cleffa": "fast",
+  "clobbopus": "medium-slow",
+  "clodsire": "medium-fast",
+  "cloyster": "slow",
+  "coalossal": "medium-slow",
+  "cobalion": "slow",
+  "cofagrigus": "medium-fast",
+  "combee": "medium-slow",
+  "combusken": "medium-slow",
+  "comfey": "fast",
+  "conkeldurr": "medium-slow",
+  "copperajah": "medium-fast",
+  "corphish": "fluctuating",
+  "corsola": "fast",
+  "corsola-galar": "fast",
+  "corviknight": "medium-slow",
+  "corvisquire": "medium-slow",
+  "cosmoem": "slow",
+  "cosmog": "slow",
+  "cottonee": "medium-fast",
+  "crabominable": "medium-fast",
+  "crabrawler": "medium-fast",
+  "cradily": "erratic",
+  "cramorant": "medium-fast",
+  "cranidos": "erratic",
+  "crawdaunt": "fluctuating",
+  "cresselia": "slow",
+  "croagunk": "medium-fast",
+  "crobat": "medium-fast",
+  "crocalor": "medium-slow",
+  "croconaw": "medium-slow",
+  "crustle": "medium-fast",
+  "cryogonal": "medium-fast",
+  "cubchoo": "medium-fast",
+  "cubone": "medium-fast",
+  "cufant": "medium-fast",
+  "cursola": "fast",
+  "cutiefly": "medium-fast",
+  "cyclizar": "medium-slow",
+  "cyndaquil": "medium-slow",
+  "dachsbun": "medium-slow",
+  "darkrai": "slow",
+  "darmanitan": "medium-slow",
+  "darmanitan-galar-standard": "medium-slow",
+  "darmanitan-zen": "medium-slow",
+  "dartrix": "medium-slow",
+  "darumaka": "medium-slow",
+  "darumaka-galar": "medium-slow",
+  "decidueye": "medium-slow",
+  "decidueye-hisui": "medium-slow",
+  "dedenne": "medium-fast",
+  "deerling": "medium-fast",
+  "deerling-autumn": "medium-fast",
+  "deerling-spring": "medium-fast",
+  "deerling-summer": "medium-fast",
+  "deerling-winter": "medium-fast",
+  "deino": "slow",
+  "delcatty": "fast",
+  "delibird": "fast",
+  "delphox": "medium-slow",
+  "deoxys": "slow",
+  "deoxys-attack": "slow",
+  "deoxys-defense": "slow",
+  "deoxys-speed": "slow",
+  "dewgong": "medium-fast",
+  "dewott": "medium-slow",
+  "dewpider": "medium-fast",
+  "dhelmise": "medium-fast",
+  "dialga": "slow",
+  "diancie": "slow",
+  "diggersby": "medium-fast",
+  "diglett": "medium-fast",
+  "diglett-alola": "medium-fast",
+  "dipplin": "slow",
+  "ditto": "medium-fast",
+  "dodrio": "medium-fast",
+  "doduo": "medium-fast",
+  "dolliv": "medium-slow",
+  "dondozo": "slow",
+  "donphan": "medium-fast",
+  "dottler": "medium-fast",
+  "doublade": "medium-fast",
+  "dracovish": "slow",
+  "dracozolt": "slow",
+  "dragalge": "medium-fast",
+  "dragapult": "slow",
+  "dragonair": "slow",
+  "dragonite": "slow",
+  "drakloak": "slow",
+  "drampa": "medium-fast",
+  "drapion": "slow",
+  "dratini": "slow",
+  "drednaw": "medium-fast",
+  "dreepy": "slow",
+  "drifblim": "fluctuating",
+  "drifloon": "fluctuating",
+  "drilbur": "medium-fast",
+  "drizzile": "medium-slow",
+  "drowzee": "medium-fast",
+  "druddigon": "medium-fast",
+  "dubwool": "medium-fast",
+  "ducklett": "medium-fast",
+  "dudunsparce": "medium-fast",
+  "dugtrio": "medium-fast",
+  "dugtrio-alola": "medium-fast",
+  "dunsparce": "medium-fast",
+  "duosion": "medium-slow",
+  "duraludon": "medium-fast",
+  "durant": "medium-fast",
+  "dusclops": "fast",
+  "dusknoir": "fast",
+  "duskull": "fast",
+  "dustox": "medium-fast",
+  "dwebble": "medium-fast",
+  "eelektrik": "slow",
+  "eelektross": "slow",
+  "eevee": "medium-fast",
+  "eiscue": "slow",
+  "ekans": "medium-fast",
+  "eldegoss": "medium-fast",
+  "electabuzz": "medium-fast",
+  "electivire": "medium-fast",
+  "electrike": "slow",
+  "electrode": "medium-fast",
+  "electrode-hisui": "medium-fast",
+  "elekid": "medium-fast",
+  "elgyem": "medium-fast",
+  "emboar": "medium-slow",
+  "emolga": "medium-fast",
+  "empoleon": "medium-slow",
+  "enamorus": "slow",
+  "entei": "slow",
+  "escavalier": "medium-fast",
+  "espathra": "medium-slow",
+  "espeon": "medium-fast",
+  "espurr": "medium-fast",
+  "eternatus": "slow",
+  "excadrill": "medium-fast",
+  "exeggcute": "slow",
+  "exeggutor": "slow",
+  "exeggutor-alola": "slow",
+  "exploud": "medium-slow",
+  "falinks": "medium-fast",
+  "farfetchd": "medium-fast",
+  "farfetchd-galar": "medium-fast",
+  "farigiraf": "medium-fast",
+  "fearow": "medium-fast",
+  "feebas": "erratic",
+  "fennekin": "medium-slow",
+  "feraligatr": "medium-slow",
+  "ferroseed": "medium-fast",
+  "ferrothorn": "medium-fast",
+  "fezandipiti": "slow",
+  "fidough": "medium-slow",
+  "finizen": "slow",
+  "finneon": "erratic",
+  "flaaffy": "medium-slow",
+  "flabebe": "medium-fast",
+  "flamigo": "medium-slow",
+  "flapple": "erratic",
+  "flareon": "medium-fast",
+  "fletchinder": "medium-slow",
+  "fletchling": "medium-slow",
+  "flittle": "medium-slow",
+  "floatzel": "medium-fast",
+  "floette": "medium-fast",
+  "floragato": "medium-slow",
+  "florges": "medium-fast",
+  "flutter-mane": "slow",
+  "flygon": "medium-slow",
+  "fomantis": "medium-fast",
+  "foongus": "medium-fast",
+  "forretress": "medium-fast",
+  "fraxure": "slow",
+  "frigibax": "slow",
+  "frillish": "medium-fast",
+  "froakie": "medium-slow",
+  "frogadier": "medium-slow",
+  "froslass": "medium-fast",
+  "frosmoth": "medium-fast",
+  "fuecoco": "medium-slow",
+  "furfrou": "medium-fast",
+  "furret": "medium-fast",
+  "gabite": "slow",
+  "gallade": "slow",
+  "galvantula": "medium-fast",
+  "garbodor": "medium-fast",
+  "garchomp": "slow",
+  "gardevoir": "slow",
+  "garganacl": "medium-slow",
+  "gastly": "medium-slow",
+  "gastrodon": "medium-fast",
+  "gastrodon-east": "medium-fast",
+  "genesect": "slow",
+  "genesect-burn": "slow",
+  "genesect-chill": "slow",
+  "genesect-douse": "slow",
+  "genesect-shock": "slow",
+  "gengar": "medium-slow",
+  "geodude": "medium-slow",
+  "geodude-alola": "medium-slow",
+  "gholdengo": "slow",
+  "gible": "slow",
+  "gigalith": "medium-slow",
+  "gimmighoul": "slow",
+  "girafarig": "medium-fast",
+  "giratina": "slow",
+  "giratina-origin": "slow",
+  "glaceon": "medium-fast",
+  "glalie": "medium-fast",
+  "glameow": "fast",
+  "glastrier": "slow",
+  "gligar": "medium-slow",
+  "glimmet": "medium-slow",
+  "glimmora": "medium-slow",
+  "gliscor": "medium-slow",
+  "gloom": "medium-slow",
+  "gogoat": "medium-fast",
+  "golbat": "medium-fast",
+  "goldeen": "medium-fast",
+  "golduck": "medium-fast",
+  "golem": "medium-slow",
+  "golem-alola": "medium-slow",
+  "golett": "medium-fast",
+  "golisopod": "medium-fast",
+  "golurk": "medium-fast",
+  "goodra": "slow",
+  "goodra-hisui": "slow",
+  "goomy": "slow",
+  "gorebyss": "erratic",
+  "gossifleur": "medium-fast",
+  "gothita": "medium-slow",
+  "gothitelle": "medium-slow",
+  "gothorita": "medium-slow",
+  "gouging-fire": "slow",
+  "gourgeist": "medium-fast",
+  "grafaiai": "medium-slow",
+  "granbull": "fast",
+  "grapploct": "medium-slow",
+  "graveler": "medium-slow",
+  "graveler-alola": "medium-slow",
+  "great-tusk": "slow",
+  "greavard": "medium-slow",
+  "greedent": "medium-fast",
+  "greninja": "medium-slow",
+  "grimer": "medium-fast",
+  "grimer-alola": "medium-fast",
+  "grimmsnarl": "medium-fast",
+  "grookey": "medium-slow",
+  "grotle": "medium-slow",
+  "groudon": "slow",
+  "grovyle": "medium-slow",
+  "growlithe": "slow",
+  "growlithe-hisui": "slow",
+  "grubbin": "medium-fast",
+  "grumpig": "fast",
+  "gulpin": "fluctuating",
+  "gumshoos": "medium-fast",
+  "gurdurr": "medium-slow",
+  "guzzlord": "slow",
+  "gyarados": "slow",
+  "hakamo-o": "slow",
+  "happiny": "fast",
+  "hariyama": "fluctuating",
+  "hatenna": "slow",
+  "hatterene": "slow",
+  "hattrem": "slow",
+  "haunter": "medium-slow",
+  "hawlucha": "medium-fast",
+  "haxorus": "slow",
+  "heatmor": "medium-fast",
+  "heatran": "slow",
+  "heliolisk": "medium-fast",
+  "helioptile": "medium-fast",
+  "heracross": "slow",
+  "herdier": "medium-slow",
+  "hippopotas": "slow",
+  "hippowdon": "slow",
+  "hitmonchan": "medium-fast",
+  "hitmonlee": "medium-fast",
+  "hitmontop": "medium-fast",
+  "ho-oh": "slow",
+  "honchkrow": "medium-slow",
+  "honedge": "medium-fast",
+  "hoopa": "slow",
+  "hoothoot": "medium-fast",
+  "hoppip": "medium-slow",
+  "horsea": "medium-fast",
+  "houndoom": "slow",
+  "houndour": "slow",
+  "houndstone": "medium-slow",
+  "huntail": "erratic",
+  "hydrapple": "erratic",
+  "hydreigon": "slow",
+  "hypno": "medium-fast",
+  "igglybuff": "fast",
+  "illumise": "fluctuating",
+  "impidimp": "medium-fast",
+  "incineroar": "medium-slow",
+  "indeedee": "fast",
+  "infernape": "medium-slow",
+  "inkay": "medium-fast",
+  "inteleon": "medium-slow",
+  "iron-boulder": "slow",
+  "iron-bundle": "slow",
+  "iron-crown": "slow",
+  "iron-hands": "slow",
+  "iron-jugulis": "slow",
+  "iron-leaves": "slow",
+  "iron-moth": "slow",
+  "iron-thorns": "slow",
+  "iron-treads": "slow",
+  "iron-valiant": "slow",
+  "ivysaur": "medium-slow",
+  "jangmo-o": "slow",
+  "jellicent": "medium-fast",
+  "jigglypuff": "fast",
+  "jirachi": "slow",
+  "jolteon": "medium-fast",
+  "joltik": "medium-fast",
+  "jumpluff": "medium-slow",
+  "jynx": "medium-fast",
+  "kabuto": "medium-fast",
+  "kabutops": "medium-fast",
+  "kadabra": "medium-slow",
+  "kakuna": "medium-fast",
+  "kangaskhan": "medium-fast",
+  "karrablast": "medium-fast",
+  "kartana": "slow",
+  "kecleon": "medium-slow",
+  "keldeo": "slow",
+  "keldeo-resolute": "slow",
+  "kilowattrel": "medium-slow",
+  "kingambit": "medium-fast",
+  "kingdra": "medium-fast",
+  "kingler": "medium-fast",
+  "kirlia": "slow",
+  "klang": "medium-slow",
+  "klawf": "medium-fast",
+  "kleavor": "medium-fast",
+  "klefki": "fast",
+  "klink": "medium-slow",
+  "klinklang": "medium-slow",
+  "koffing": "medium-fast",
+  "komala": "slow",
+  "kommo-o": "slow",
+  "koraidon": "slow",
+  "krabby": "medium-fast",
+  "kricketot": "medium-slow",
+  "kricketune": "medium-slow",
+  "krokorok": "medium-slow",
+  "krookodile": "medium-slow",
+  "kubfu": "slow",
+  "kyogre": "slow",
+  "kyurem": "slow",
+  "kyurem-black": "slow",
+  "kyurem-white": "slow",
+  "lairon": "slow",
+  "lampent": "medium-slow",
+  "landorus": "slow",
+  "landorus-therian": "slow",
+  "lanturn": "slow",
+  "lapras": "slow",
+  "larvesta": "slow",
+  "larvitar": "slow",
+  "latias": "slow",
+  "latios": "slow",
+  "leafeon": "medium-fast",
+  "leavanny": "medium-slow",
+  "lechonk": "medium-fast",
+  "ledian": "fast",
+  "ledyba": "fast",
+  "lickilicky": "medium-fast",
+  "lickitung": "medium-fast",
+  "liepard": "medium-fast",
+  "lileep": "erratic",
+  "lilligant": "medium-fast",
+  "lilligant-hisui": "medium-fast",
+  "lillipup": "medium-slow",
+  "linoone": "medium-fast",
+  "linoone-galar": "medium-fast",
+  "litleo": "medium-slow",
+  "litten": "medium-slow",
+  "litwick": "medium-slow",
+  "lokix": "medium-fast",
+  "lombre": "medium-slow",
+  "lopunny": "medium-fast",
+  "lotad": "medium-slow",
+  "loudred": "medium-slow",
+  "lucario": "medium-slow",
+  "ludicolo": "medium-slow",
+  "lugia": "slow",
+  "lumineon": "erratic",
+  "lunala": "slow",
+  "lunatone": "fast",
+  "lurantis": "medium-fast",
+  "luvdisc": "fast",
+  "luxio": "medium-slow",
+  "luxray": "medium-slow",
+  "lycanroc": "medium-fast",
+  "mabosstiff": "medium-slow",
+  "machamp": "medium-slow",
+  "machoke": "medium-slow",
+  "machop": "medium-slow",
+  "magby": "medium-fast",
+  "magcargo": "medium-fast",
+  "magearna": "slow",
+  "magikarp": "slow",
+  "magmar": "medium-fast",
+  "magmortar": "medium-fast",
+  "magnemite": "medium-fast",
+  "magneton": "medium-fast",
+  "magnezone": "medium-fast",
+  "makuhita": "fluctuating",
+  "malamar": "medium-fast",
+  "mamoswine": "slow",
+  "manaphy": "slow",
+  "mandibuzz": "slow",
+  "manectric": "slow",
+  "mankey": "medium-fast",
+  "mantine": "slow",
+  "mantyke": "slow",
+  "maractus": "medium-fast",
+  "mareanie": "medium-fast",
+  "mareep": "medium-slow",
+  "marill": "fast",
+  "marowak": "medium-fast",
+  "marowak-alola": "medium-fast",
+  "marshadow": "slow",
+  "marshtomp": "medium-slow",
+  "maschiff": "medium-slow",
+  "masquerain": "medium-fast",
+  "maushold": "fast",
+  "mawile": "fast",
+  "medicham": "medium-fast",
+  "meditite": "medium-fast",
+  "meganium": "medium-slow",
+  "melmetal": "slow",
+  "meloetta": "slow",
+  "meloetta-pirouette": "slow",
+  "meltan": "slow",
+  "meowscarada": "medium-slow",
+  "meowstic": "medium-fast",
+  "meowth": "medium-fast",
+  "meowth-alola": "medium-fast",
+  "meowth-galar": "medium-fast",
+  "mesprit": "slow",
+  "metagross": "slow",
+  "metang": "slow",
+  "metapod": "medium-fast",
+  "mew": "medium-slow",
+  "mewtwo": "slow",
+  "mienfoo": "medium-slow",
+  "mienshao": "medium-slow",
+  "mightyena": "medium-fast",
+  "milcery": "medium-fast",
+  "milotic": "erratic",
+  "miltank": "slow",
+  "mime-jr": "medium-fast",
+  "mimikyu": "medium-fast",
+  "minccino": "fast",
+  "minior": "medium-slow",
+  "minun": "medium-fast",
+  "miraidon": "slow",
+  "misdreavus": "fast",
+  "mismagius": "fast",
+  "moltres": "slow",
+  "moltres-galar": "slow",
+  "monferno": "medium-slow",
+  "morelull": "medium-fast",
+  "morgrem": "medium-fast",
+  "morpeko": "medium-fast",
+  "mothim": "medium-fast",
+  "mr-mime": "medium-fast",
+  "mr-mime-galar": "medium-fast",
+  "mr-rime": "medium-fast",
+  "mudbray": "medium-fast",
+  "mudkip": "medium-slow",
+  "mudsdale": "medium-fast",
+  "muk": "medium-fast",
+  "muk-alola": "medium-fast",
+  "munchlax": "slow",
+  "munkidori": "slow",
+  "munna": "fast",
+  "murkrow": "medium-slow",
+  "musharna": "fast",
+  "nacli": "medium-slow",
+  "naclstack": "medium-slow",
+  "naganadel": "slow",
+  "natu": "medium-fast",
+  "necrozma": "slow",
+  "nickit": "fast",
+  "nidoking": "medium-slow",
+  "nidoqueen": "medium-slow",
+  "nidoran-f": "medium-slow",
+  "nidoran-m": "medium-slow",
+  "nidorina": "medium-slow",
+  "nidorino": "medium-slow",
+  "nihilego": "slow",
+  "nincada": "erratic",
+  "ninetales": "medium-fast",
+  "ninetales-alola": "medium-fast",
+  "ninjask": "erratic",
+  "noctowl": "medium-fast",
+  "noibat": "medium-fast",
+  "noivern": "medium-fast",
+  "nosepass": "medium-fast",
+  "numel": "medium-fast",
+  "nuzleaf": "medium-slow",
+  "nymble": "medium-fast",
+  "obstagoon": "medium-fast",
+  "octillery": "medium-fast",
+  "oddish": "medium-slow",
+  "ogerpon": "slow",
+  "oinkologne": "medium-fast",
+  "okidogi": "slow",
+  "omanyte": "medium-fast",
+  "omastar": "medium-fast",
+  "onix": "medium-fast",
+  "oranguru": "slow",
+  "orbeetle": "medium-fast",
+  "oricorio": "medium-fast",
+  "orthworm": "slow",
+  "oshawott": "medium-slow",
+  "overqwil": "medium-fast",
+  "pachirisu": "medium-fast",
+  "palafin": "slow",
+  "palkia": "slow",
+  "palossand": "medium-fast",
+  "palpitoad": "medium-slow",
+  "pancham": "medium-fast",
+  "pangoro": "medium-fast",
+  "panpour": "medium-fast",
+  "pansage": "medium-fast",
+  "pansear": "medium-fast",
+  "paras": "medium-fast",
+  "parasect": "medium-fast",
+  "passimian": "slow",
+  "patrat": "medium-fast",
+  "pawmi": "medium-fast",
+  "pawmo": "medium-fast",
+  "pawmot": "medium-fast",
+  "pawniard": "medium-fast",
+  "pecharunt": "slow",
+  "pelipper": "medium-fast",
+  "perrserker": "medium-fast",
+  "persian": "medium-fast",
+  "persian-alola": "medium-fast",
+  "petilil": "medium-fast",
+  "phanpy": "medium-fast",
+  "phantump": "medium-fast",
+  "pheromosa": "slow",
+  "phione": "slow",
+  "pichu": "medium-fast",
+  "pidgeot": "medium-slow",
+  "pidgeotto": "medium-slow",
+  "pidgey": "medium-slow",
+  "pidove": "medium-slow",
+  "pignite": "medium-slow",
+  "pikachu": "medium-fast",
+  "pikipek": "medium-fast",
+  "piloswine": "slow",
+  "pincurchin": "medium-fast",
+  "pineco": "medium-fast",
+  "pinsir": "slow",
+  "piplup": "medium-slow",
+  "plusle": "medium-fast",
+  "poipole": "slow",
+  "politoed": "medium-slow",
+  "poliwag": "medium-slow",
+  "poliwhirl": "medium-slow",
+  "poliwrath": "medium-slow",
+  "poltchageist": "slow",
+  "polteageist": "medium-fast",
+  "ponyta": "medium-fast",
+  "ponyta-galar": "medium-fast",
+  "poochyena": "medium-fast",
+  "popplio": "medium-slow",
+  "porygon": "medium-fast",
+  "porygon-z": "medium-fast",
+  "porygon2": "medium-fast",
+  "primarina": "medium-slow",
+  "primeape": "medium-fast",
+  "prinplup": "medium-slow",
+  "probopass": "medium-fast",
+  "psyduck": "medium-fast",
+  "pumpkaboo": "medium-fast",
+  "pupitar": "slow",
+  "purrloin": "medium-fast",
+  "purugly": "fast",
+  "pyroar": "medium-slow",
+  "pyukumuku": "fast",
+  "quagsire": "medium-fast",
+  "quaquaval": "medium-slow",
+  "quaxly": "medium-slow",
+  "quaxwell": "medium-slow",
+  "quilava": "medium-slow",
+  "quilladin": "medium-slow",
+  "qwilfish": "medium-fast",
+  "qwilfish-hisui": "medium-fast",
+  "raboot": "medium-slow",
+  "rabsca": "fast",
+  "raging-bolt": "slow",
+  "raichu": "medium-fast",
+  "raichu-alola": "medium-fast",
+  "raikou": "slow",
+  "ralts": "slow",
+  "rampardos": "erratic",
+  "rapidash": "medium-fast",
+  "rapidash-galar": "medium-fast",
+  "raticate": "medium-fast",
+  "raticate-alola": "medium-fast",
+  "rattata": "medium-fast",
+  "rattata-alola": "medium-fast",
+  "rayquaza": "slow",
+  "regice": "slow",
+  "regidrago": "slow",
+  "regieleki": "slow",
+  "regigigas": "slow",
+  "regirock": "slow",
+  "registeel": "slow",
+  "relicanth": "slow",
+  "rellor": "fast",
+  "remoraid": "medium-fast",
+  "reshiram": "slow",
+  "reuniclus": "medium-slow",
+  "revavroom": "medium-fast",
+  "rhydon": "slow",
+  "rhyhorn": "slow",
+  "rhyperior": "slow",
+  "ribombee": "medium-fast",
+  "rillaboom": "medium-slow",
+  "riolu": "medium-slow",
+  "roaring-moon": "slow",
+  "rockruff": "medium-fast",
+  "roggenrola": "medium-slow",
+  "rolycoly": "medium-slow",
+  "rookidee": "medium-slow",
+  "roselia": "medium-slow",
+  "roserade": "medium-slow",
+  "rotom": "medium-fast",
+  "rotom-fan": "medium-fast",
+  "rotom-frost": "medium-fast",
+  "rotom-heat": "medium-fast",
+  "rotom-mow": "medium-fast",
+  "rotom-wash": "medium-fast",
+  "rowlet": "medium-slow",
+  "rufflet": "slow",
+  "runerigus": "medium-fast",
+  "sableye": "medium-slow",
+  "salamence": "slow",
+  "salandit": "medium-fast",
+  "salazzle": "medium-fast",
+  "samurott": "medium-slow",
+  "samurott-hisui": "medium-slow",
+  "sandaconda": "medium-fast",
+  "sandile": "medium-slow",
+  "sandshrew": "medium-fast",
+  "sandshrew-alola": "medium-fast",
+  "sandslash": "medium-fast",
+  "sandslash-alola": "medium-fast",
+  "sandy-shocks": "slow",
+  "sandygast": "medium-fast",
+  "sawk": "medium-fast",
+  "sawsbuck": "medium-fast",
+  "sawsbuck-autumn": "medium-fast",
+  "sawsbuck-spring": "medium-fast",
+  "sawsbuck-summer": "medium-fast",
+  "sawsbuck-winter": "medium-fast",
+  "scatterbug": "medium-fast",
+  "sceptile": "medium-slow",
+  "scizor": "medium-fast",
+  "scolipede": "medium-slow",
+  "scorbunny": "medium-slow",
+  "scovillain": "medium-fast",
+  "scrafty": "medium-fast",
+  "scraggy": "medium-fast",
+  "scream-tail": "slow",
+  "scyther": "medium-fast",
+  "seadra": "medium-fast",
+  "seaking": "medium-fast",
+  "sealeo": "medium-slow",
+  "seedot": "medium-slow",
+  "seel": "medium-fast",
+  "seismitoad": "medium-slow",
+  "sentret": "medium-fast",
+  "serperior": "medium-slow",
+  "servine": "medium-slow",
+  "seviper": "fluctuating",
+  "sewaddle": "medium-slow",
+  "sharpedo": "slow",
+  "shaymin": "medium-slow",
+  "shaymin-sky": "medium-slow",
+  "shedinja": "erratic",
+  "shelgon": "slow",
+  "shellder": "slow",
+  "shellos": "medium-fast",
+  "shellos-east": "medium-fast",
+  "shelmet": "medium-fast",
+  "shieldon": "erratic",
+  "shiftry": "medium-slow",
+  "shiinotic": "medium-fast",
+  "shinx": "medium-slow",
+  "shroodle": "medium-slow",
+  "shroomish": "fluctuating",
+  "shuckle": "medium-slow",
+  "shuppet": "fast",
+  "sigilyph": "medium-fast",
+  "silcoon": "medium-fast",
+  "silicobra": "medium-fast",
+  "silvally": "slow",
+  "simipour": "medium-fast",
+  "simisage": "medium-fast",
+  "simisear": "medium-fast",
+  "sinistcha": "slow",
+  "sinistea": "medium-fast",
+  "sirfetchd": "medium-fast",
+  "sizzlipede": "medium-fast",
+  "skarmory": "slow",
+  "skeledirge": "medium-slow",
+  "skiddo": "medium-fast",
+  "skiploom": "medium-slow",
+  "skitty": "fast",
+  "skorupi": "slow",
+  "skrelp": "medium-fast",
+  "skuntank": "medium-fast",
+  "skwovet": "medium-fast",
+  "slaking": "slow",
+  "slakoth": "slow",
+  "sliggoo": "slow",
+  "sliggoo-hisui": "slow",
+  "slither-wing": "slow",
+  "slowbro": "medium-fast",
+  "slowbro-galar": "medium-fast",
+  "slowking": "medium-fast",
+  "slowking-galar": "medium-fast",
+  "slowpoke": "medium-fast",
+  "slowpoke-galar": "medium-fast",
+  "slugma": "medium-fast",
+  "slurpuff": "medium-fast",
+  "smeargle": "fast",
+  "smoliv": "medium-slow",
+  "smoochum": "medium-fast",
+  "sneasel": "medium-slow",
+  "sneasel-hisui": "medium-slow",
+  "sneasler": "medium-slow",
+  "snivy": "medium-slow",
+  "snom": "medium-fast",
+  "snorlax": "slow",
+  "snorunt": "medium-fast",
+  "snover": "slow",
+  "snubbull": "fast",
+  "sobble": "medium-slow",
+  "solgaleo": "slow",
+  "solosis": "medium-slow",
+  "solrock": "fast",
+  "spearow": "medium-fast",
+  "spectrier": "slow",
+  "spewpa": "medium-fast",
+  "spheal": "medium-slow",
+  "spidops": "erratic",
+  "spinarak": "fast",
+  "spinda": "fast",
+  "spiritomb": "medium-fast",
+  "spoink": "fast",
+  "sprigatito": "medium-slow",
+  "spritzee": "medium-fast",
+  "squawkabilly": "erratic",
+  "squirtle": "medium-slow",
+  "stakataka": "slow",
+  "stantler": "slow",
+  "staraptor": "medium-slow",
+  "staravia": "medium-slow",
+  "starly": "medium-slow",
+  "starmie": "slow",
+  "staryu": "slow",
+  "steelix": "medium-fast",
+  "steenee": "medium-slow",
+  "stonjourner": "slow",
+  "stoutland": "medium-slow",
+  "stufful": "medium-fast",
+  "stunfisk": "medium-fast",
+  "stunfisk-galar": "medium-fast",
+  "stunky": "medium-fast",
+  "sudowoodo": "medium-fast",
+  "suicune": "slow",
+  "sunflora": "medium-slow",
+  "sunkern": "medium-slow",
+  "surskit": "medium-fast",
+  "swablu": "erratic",
+  "swadloon": "medium-slow",
+  "swalot": "fluctuating",
+  "swampert": "medium-slow",
+  "swanna": "medium-fast",
+  "swellow": "medium-slow",
+  "swinub": "slow",
+  "swirlix": "medium-fast",
+  "swoobat": "medium-fast",
+  "sylveon": "medium-fast",
+  "tadbulb": "medium-fast",
+  "taillow": "medium-slow",
+  "talonflame": "medium-slow",
+  "tandemaus": "fast",
+  "tangela": "medium-fast",
+  "tangrowth": "medium-fast",
+  "tapu-bulu": "slow",
+  "tapu-fini": "slow",
+  "tapu-koko": "slow",
+  "tapu-lele": "slow",
+  "tarountula": "erratic",
+  "tatsugiri": "medium-slow",
+  "tauros": "slow",
+  "tauros-paldea-aqua-breed": "slow",
+  "tauros-paldea-blaze-breed": "slow",
+  "tauros-paldea-combat-breed": "slow",
+  "teddiursa": "medium-fast",
+  "tentacool": "slow",
+  "tentacruel": "slow",
+  "tepig": "medium-slow",
+  "terapagos": "slow",
+  "terrakion": "slow",
+  "thievul": "fast",
+  "throh": "medium-fast",
+  "thundurus": "slow",
+  "thundurus-therian": "slow",
+  "thwackey": "medium-slow",
+  "timburr": "medium-slow",
+  "ting-lu": "slow",
+  "tinkatink": "medium-slow",
+  "tinkaton": "medium-slow",
+  "tinkatuff": "medium-slow",
+  "tirtouga": "medium-fast",
+  "toedscool": "medium-slow",
+  "toedscruel": "medium-slow",
+  "togedemaru": "medium-fast",
+  "togekiss": "fast",
+  "togepi": "fast",
+  "togetic": "fast",
+  "torchic": "medium-slow",
+  "torkoal": "medium-fast",
+  "tornadus": "slow",
+  "tornadus-therian": "slow",
+  "torracat": "medium-slow",
+  "torterra": "medium-slow",
+  "totodile": "medium-slow",
+  "toucannon": "medium-fast",
+  "toxapex": "medium-fast",
+  "toxel": "medium-slow",
+  "toxicroak": "medium-fast",
+  "toxtricity": "medium-slow",
+  "tranquill": "medium-slow",
+  "trapinch": "medium-slow",
+  "treecko": "medium-slow",
+  "trevenant": "medium-fast",
+  "tropius": "slow",
+  "trubbish": "medium-fast",
+  "trumbeak": "medium-fast",
+  "tsareena": "medium-slow",
+  "turtonator": "medium-fast",
+  "turtwig": "medium-slow",
+  "tympole": "medium-slow",
+  "tynamo": "slow",
+  "type-null": "slow",
+  "typhlosion": "medium-slow",
+  "typhlosion-hisui": "medium-slow",
+  "tyranitar": "slow",
+  "tyrantrum": "medium-fast",
+  "tyrogue": "medium-fast",
+  "tyrunt": "medium-fast",
+  "umbreon": "medium-fast",
+  "unfezant": "medium-slow",
+  "unown": "medium-fast",
+  "unown-b": "medium-fast",
+  "unown-c": "medium-fast",
+  "unown-d": "medium-fast",
+  "unown-e": "medium-fast",
+  "unown-exclamation": "medium-fast",
+  "unown-f": "medium-fast",
+  "unown-g": "medium-fast",
+  "unown-h": "medium-fast",
+  "unown-i": "medium-fast",
+  "unown-j": "medium-fast",
+  "unown-k": "medium-fast",
+  "unown-l": "medium-fast",
+  "unown-m": "medium-fast",
+  "unown-n": "medium-fast",
+  "unown-o": "medium-fast",
+  "unown-p": "medium-fast",
+  "unown-q": "medium-fast",
+  "unown-question": "medium-fast",
+  "unown-r": "medium-fast",
+  "unown-s": "medium-fast",
+  "unown-t": "medium-fast",
+  "unown-u": "medium-fast",
+  "unown-v": "medium-fast",
+  "unown-w": "medium-fast",
+  "unown-x": "medium-fast",
+  "unown-y": "medium-fast",
+  "unown-z": "medium-fast",
+  "ursaluna": "medium-fast",
+  "ursaring": "medium-fast",
+  "urshifu": "slow",
+  "uxie": "slow",
+  "vanillish": "slow",
+  "vanillite": "slow",
+  "vanilluxe": "slow",
+  "vaporeon": "medium-fast",
+  "varoom": "medium-fast",
+  "veluza": "fast",
+  "venipede": "medium-slow",
+  "venomoth": "medium-fast",
+  "venonat": "medium-fast",
+  "venusaur": "medium-slow",
+  "vespiquen": "medium-slow",
+  "vibrava": "medium-slow",
+  "victini": "slow",
+  "victreebel": "medium-slow",
+  "vigoroth": "slow",
+  "vikavolt": "medium-fast",
+  "vileplume": "medium-slow",
+  "virizion": "slow",
+  "vivillon": "medium-fast",
+  "volbeat": "erratic",
+  "volcanion": "slow",
+  "volcarona": "slow",
+  "voltorb": "medium-fast",
+  "voltorb-hisui": "medium-fast",
+  "vullaby": "slow",
+  "vulpix": "medium-fast",
+  "vulpix-alola": "medium-fast",
+  "wailmer": "fluctuating",
+  "wailord": "fluctuating",
+  "walking-wake": "slow",
+  "walrein": "medium-slow",
+  "wartortle": "medium-slow",
+  "watchog": "medium-fast",
+  "wattrel": "medium-slow",
+  "weavile": "medium-slow",
+  "weedle": "medium-fast",
+  "weepinbell": "medium-slow",
+  "weezing": "medium-fast",
+  "weezing-galar": "medium-fast",
+  "whimsicott": "medium-fast",
+  "whirlipede": "medium-slow",
+  "whiscash": "medium-fast",
+  "whismur": "medium-slow",
+  "wigglytuff": "fast",
+  "wiglett": "medium-fast",
+  "wimpod": "medium-fast",
+  "wingull": "medium-fast",
+  "wishiwashi": "fast",
+  "wo-chien": "slow",
+  "wobbuffet": "medium-fast",
+  "woobat": "medium-fast",
+  "wooloo": "medium-fast",
+  "wooper": "medium-fast",
+  "wooper-paldea": "medium-fast",
+  "wormadam": "medium-fast",
+  "wormadam-sandy": "medium-fast",
+  "wormadam-trash": "medium-fast",
+  "wugtrio": "medium-fast",
+  "wurmple": "medium-fast",
+  "wynaut": "medium-fast",
+  "wyrdeer": "slow",
+  "xatu": "medium-fast",
+  "xerneas": "slow",
+  "xurkitree": "slow",
+  "yamask": "medium-fast",
+  "yamask-galar": "medium-fast",
+  "yamper": "fast",
+  "yanma": "medium-fast",
+  "yanmega": "medium-fast",
+  "yungoos": "medium-fast",
+  "yveltal": "slow",
+  "zacian": "slow",
+  "zamazenta": "slow",
+  "zangoose": "erratic",
+  "zapdos": "slow",
+  "zapdos-galar": "slow",
+  "zarude": "slow",
+  "zebstrika": "medium-fast",
+  "zekrom": "slow",
+  "zeraora": "slow",
+  "zigzagoon": "medium-fast",
+  "zigzagoon-galar": "medium-fast",
+  "zoroark": "medium-slow",
+  "zoroark-hisui": "medium-slow",
+  "zorua": "medium-slow",
+  "zorua-hisui": "medium-slow",
+  "zubat": "medium-fast",
+  "zweilous": "slow",
+  "zygarde": "slow"
+ },
+ "expTable": {
+  "fast": [
+   0,
+   6,
+   21,
+   51,
+   100,
+   172,
+   274,
+   409,
+   583,
+   800,
+   1064,
+   1382,
+   1757,
+   2195,
+   2700,
+   3276,
+   3930,
+   4665,
+   5487,
+   6400,
+   7408,
+   8518,
+   9733,
+   11059,
+   12500,
+   14060,
+   15746,
+   17561,
+   19511,
+   21600,
+   23832,
+   26214,
+   28749,
+   31443,
+   34300,
+   37324,
+   40522,
+   43897,
+   47455,
+   51200,
+   55136,
+   59270,
+   63605,
+   68147,
+   72900,
+   77868,
+   83058,
+   88473,
+   94119,
+   100000,
+   106120,
+   112486,
+   119101,
+   125971,
+   133100,
+   140492,
+   148154,
+   156089,
+   164303,
+   172800,
+   181584,
+   190662,
+   200037,
+   209715,
+   219700,
+   229996,
+   240610,
+   251545,
+   262807,
+   274400,
+   286328,
+   298598,
+   311213,
+   324179,
+   337500,
+   351180,
+   365226,
+   379641,
+   394431,
+   409600,
+   425152,
+   441094,
+   457429,
+   474163,
+   491300,
+   508844,
+   526802,
+   545177,
+   563975,
+   583200,
+   602856,
+   622950,
+   643485,
+   664467,
+   685900,
+   707788,
+   730138,
+   752953,
+   776239,
+   800000
+  ],
+  "medium-fast": [
+   0,
+   8,
+   27,
+   64,
+   125,
+   216,
+   343,
+   512,
+   729,
+   1000,
+   1331,
+   1728,
+   2197,
+   2744,
+   3375,
+   4096,
+   4913,
+   5832,
+   6859,
+   8000,
+   9261,
+   10648,
+   12167,
+   13824,
+   15625,
+   17576,
+   19683,
+   21952,
+   24389,
+   27000,
+   29791,
+   32768,
+   35937,
+   39304,
+   42875,
+   46656,
+   50653,
+   54872,
+   59319,
+   64000,
+   68921,
+   74088,
+   79507,
+   85184,
+   91125,
+   97336,
+   103823,
+   110592,
+   117649,
+   125000,
+   132651,
+   140608,
+   148877,
+   157464,
+   166375,
+   175616,
+   185193,
+   195112,
+   205379,
+   216000,
+   226981,
+   238328,
+   250047,
+   262144,
+   274625,
+   287496,
+   300763,
+   314432,
+   328509,
+   343000,
+   357911,
+   373248,
+   389017,
+   405224,
+   421875,
+   438976,
+   456533,
+   474552,
+   493039,
+   512000,
+   531441,
+   551368,
+   571787,
+   592704,
+   614125,
+   636056,
+   658503,
+   681472,
+   704969,
+   729000,
+   753571,
+   778688,
+   804357,
+   830584,
+   857375,
+   884736,
+   912673,
+   941192,
+   970299,
+   1000000
+  ],
+  "medium-slow": [
+   0,
+   9,
+   57,
+   96,
+   135,
+   179,
+   236,
+   314,
+   419,
+   560,
+   742,
+   973,
+   1261,
+   1612,
+   2035,
+   2535,
+   3120,
+   3798,
+   4575,
+   5460,
+   6458,
+   7577,
+   8825,
+   10208,
+   11735,
+   13411,
+   15244,
+   17242,
+   19411,
+   21760,
+   24294,
+   27021,
+   29949,
+   33084,
+   36435,
+   40007,
+   43808,
+   47846,
+   52127,
+   56660,
+   61450,
+   66505,
+   71833,
+   77440,
+   83335,
+   89523,
+   96012,
+   102810,
+   109923,
+   117360,
+   125126,
+   133229,
+   141677,
+   150476,
+   159635,
+   169159,
+   179056,
+   189334,
+   199999,
+   211060,
+   222522,
+   234393,
+   246681,
+   259392,
+   272535,
+   286115,
+   300140,
+   314618,
+   329555,
+   344960,
+   360838,
+   377197,
+   394045,
+   411388,
+   429235,
+   447591,
+   466464,
+   485862,
+   505791,
+   526260,
+   547274,
+   568841,
+   590969,
+   613664,
+   636935,
+   660787,
+   685228,
+   710266,
+   735907,
+   762160,
+   789030,
+   816525,
+   844653,
+   873420,
+   902835,
+   932903,
+   963632,
+   995030,
+   1027103,
+   1059860
+  ],
+  "slow": [
+   0,
+   10,
+   33,
+   80,
+   156,
+   270,
+   428,
+   640,
+   911,
+   1250,
+   1663,
+   2160,
+   2746,
+   3430,
+   4218,
+   5120,
+   6141,
+   7290,
+   8573,
+   10000,
+   11576,
+   13310,
+   15208,
+   17280,
+   19531,
+   21970,
+   24603,
+   27440,
+   30486,
+   33750,
+   37238,
+   40960,
+   44921,
+   49130,
+   53593,
+   58320,
+   63316,
+   68590,
+   74148,
+   80000,
+   86151,
+   92610,
+   99383,
+   106480,
+   113906,
+   121670,
+   129778,
+   138240,
+   147061,
+   156250,
+   165813,
+   175760,
+   186096,
+   196830,
+   207968,
+   219520,
+   231491,
+   243890,
+   256723,
+   270000,
+   283726,
+   297910,
+   312558,
+   327680,
+   343281,
+   359370,
+   375953,
+   393040,
+   410636,
+   428750,
+   447388,
+   466560,
+   486271,
+   506530,
+   527343,
+   548720,
+   570666,
+   593190,
+   616298,
+   640000,
+   664301,
+   689210,
+   714733,
+   740880,
+   767656,
+   795070,
+   823128,
+   851840,
+   881211,
+   911250,
+   941963,
+   973360,
+   1005446,
+   1038230,
+   1071718,
+   1105920,
+   1140841,
+   1176490,
+   1212873,
+   1250000
+  ],
+  "erratic": [
+   0,
+   15,
+   52,
+   122,
+   237,
+   406,
+   637,
+   942,
+   1326,
+   1800,
+   2369,
+   3041,
+   3822,
+   4719,
+   5737,
+   6881,
+   8155,
+   9564,
+   11111,
+   12800,
+   14632,
+   16610,
+   18737,
+   21012,
+   23437,
+   26012,
+   28737,
+   31610,
+   34632,
+   37800,
+   41111,
+   44564,
+   48155,
+   51881,
+   55737,
+   59719,
+   63822,
+   68041,
+   72369,
+   76800,
+   81326,
+   85942,
+   90637,
+   95406,
+   100237,
+   105122,
+   110052,
+   115015,
+   120001,
+   125000,
+   131324,
+   137795,
+   144410,
+   151165,
+   158056,
+   165079,
+   172229,
+   179503,
+   186894,
+   194400,
+   202013,
+   209728,
+   217540,
+   225443,
+   233431,
+   241496,
+   249633,
+   257834,
+   267406,
+   276458,
+   286328,
+   296358,
+   305767,
+   316074,
+   326531,
+   336255,
+   346965,
+   357812,
+   367807,
+   378880,
+   390077,
+   400293,
+   411686,
+   423190,
+   433572,
+   445239,
+   457001,
+   467489,
+   479378,
+   491346,
+   501878,
+   513934,
+   526049,
+   536557,
+   548720,
+   560922,
+   571333,
+   583539,
+   591882,
+   600000
+  ],
+  "fluctuating": [
+   0,
+   4,
+   13,
+   32,
+   65,
+   112,
+   178,
+   276,
+   393,
+   540,
+   745,
+   967,
+   1230,
+   1591,
+   1957,
+   2457,
+   3046,
+   3732,
+   4526,
+   5440,
+   6482,
+   7666,
+   9003,
+   10506,
+   12187,
+   14060,
+   16140,
+   18439,
+   20974,
+   23760,
+   26811,
+   30146,
+   33780,
+   37731,
+   42017,
+   46656,
+   50653,
+   55969,
+   60505,
+   66560,
+   71677,
+   78533,
+   84277,
+   91998,
+   98415,
+   107069,
+   114205,
+   123863,
+   131766,
+   142500,
+   151222,
+   163105,
+   172697,
+   185807,
+   196322,
+   210739,
+   222231,
+   238036,
+   250562,
+   267840,
+   281456,
+   300293,
+   315059,
+   335544,
+   351520,
+   373744,
+   390991,
+   415050,
+   433631,
+   459620,
+   479600,
+   507617,
+   529063,
+   559209,
+   582187,
+   614566,
+   639146,
+   673863,
+   700115,
+   737280,
+   765275,
+   804997,
+   834809,
+   877201,
+   908905,
+   954084,
+   987754,
+   1035837,
+   1071552,
+   1122660,
+   1160499,
+   1214753,
+   1254796,
+   1312322,
+   1354652,
+   1415577,
+   1460276,
+   1524731,
+   1571884,
+   1640000
+  ]
+ },
+ "maxExp": 1640000,
+ "rareCandyExp": 68116,
+ "rules": {
+  "pointMs": 120000,
+  "maxPartySlots": 6,
+  "maxEarnFactor": 4,
+  "findPointsMax": 10,
+  "mintRefund": 100,
+  "sellRatio": 0.6,
+  "speciesMinPrice": 200,
+  "affinityPerHour": 30,
+  "carePerHour": 30,
+  "careOnce": 5,
+  "toyAffinity": 3,
+  "maxEggs": 6,
+  "slackMs": 60000
+ }
+}

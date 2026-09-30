@@ -284,6 +284,31 @@ export function createCloud(o: CloudOptions): Cloud {
       return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }) };
     }
   };
+  // 올리기 — Edge Function upload-save 를 거친다(서버 검증 P4a, worklog/records/cloud-authority/record.md "P4 서버 검증").
+  // 답은 RPC 와 같은 모양으로 바꾼다. 오류 본문 { error: "CLOUD_…" } 의 코드를 쓴다.
+  // 502·503·504·전송 실패는 NETWORK(오프라인, 같은 키로 다시 시도). 그 밖(토큰 무효 AUTH_TOKEN·SERVER_ERROR)은 UNKNOWN — 계정 분실로도 오프라인으로도 보지 않는다
+  const sendSave = async (a: { device: string; baseRev: number; save: Record<string, unknown>; op: string }): Promise<{ ok: true; data: number } | { ok: false; code: string }> => {
+    try {
+      const { data, error: e } = await o.client.functions.invoke("upload-save", {
+        body: { device: a.device, baseRev: a.baseRev, save: a.save, saveV: typeof a.save.v === "number" ? a.save.v : 3, appVersion: o.appVersion, op: a.op },
+      });
+      if (e) {
+        const context = (e as { context?: unknown }).context;
+        if (context instanceof Response) {
+          const body = (await context.clone().json().catch(() => null)) as { error?: unknown } | null;
+          const code = typeof body?.error === "string" ? body.error : "";
+          if (code.startsWith("CLOUD_")) return { ok: false, code };
+          return { ok: false, code: context.status === 502 || context.status === 503 || context.status === 504 ? "NETWORK" : "UNKNOWN" };
+        }
+        const name = (e as { name?: unknown }).name;
+        return { ok: false, code: name === "FunctionsFetchError" || name === "FunctionsRelayError" ? "NETWORK" : codeOf(e) };
+      }
+      const rev = (data as { rev?: unknown } | null)?.rev;
+      return typeof rev === "number" ? { ok: true, data: rev } : { ok: false, code: "UNKNOWN" };
+    } catch (e) {
+      return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }) };
+    }
+  };
   const otherOf = (label: string | null | undefined, seen: string | null | undefined): OtherDevice | null =>
     label || seen ? { label: label ?? null, seen: seen ? Date.parse(seen) || null : null } : null;
 
@@ -410,10 +435,7 @@ export function createCloud(o: CloudOptions): Cloud {
     }
     busy = true;
     emit();
-    const res = await rpc<number | string>("upload_save", {
-      p_device: state.deviceId, p_base_rev: state.syncedRev, p_save: save,
-      p_save_v: typeof save.v === "number" ? save.v : 3, p_app_version: o.appVersion, p_op: op,
-    });
+    const res = await sendSave({ device: state.deviceId, baseRev: state.syncedRev, save, op });
     if (gen !== generation) return false;
     busy = false;
     lastUploadAt = now();
@@ -482,10 +504,7 @@ export function createCloud(o: CloudOptions): Cloud {
       holdTradedOut(); // 받을 서버 저장이 없다
       return;
     }
-    const probe = await rpc<number | string>("upload_save", {
-      p_device: state.deviceId, p_base_rev: g.rev, p_save: g.save,
-      p_save_v: typeof g.save.v === "number" ? g.save.v : 3, p_app_version: o.appVersion, p_op: randomUUID(),
-    });
+    const probe = await sendSave({ device: state.deviceId, baseRev: g.rev, save: g.save, op: randomUUID() });
     if (gen !== generation) return;
     if (probe.ok) {
       if (seq !== mark) {

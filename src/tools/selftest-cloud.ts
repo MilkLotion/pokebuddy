@@ -8,7 +8,7 @@
 //   (0) 부팅 판단·(20) PET_TRADED_OUT·(27) 은 P2 코드 검수(H1·M1·W5) 뒤 더했다
 import assert from "node:assert";
 import { execSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { memoryStorage } from "../online/client";
 import { createAccount } from "../online/account";
@@ -56,7 +56,7 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
   let failAdopt = 0; // 망 오류로 실패시킬 adopt_anonymous 수
   // claim_device 붙잡기 — before: 서버에 보내기 전에, after: 서버가 처리한 뒤 응답을 돌려주기 전에 기다린다
   let claimHold: { at: "before" | "after"; gate: Promise<void> } | null = null;
-  const uploads: { op: string; rev: number | null }[] = []; // upload_save 요청의 멱등 키와 받은 rev(응답을 잃으면 null)
+  const uploads: { op: string; rev: number | null }[] = []; // 올리기(Edge Function upload-save) 요청의 멱등 키와 받은 rev(응답을 잃으면 null)
   const client: SupabaseClient = createClient(url, key, {
     auth: { storage: memoryStorage(), persistSession: true, autoRefreshToken: false, detectSessionInUrl: false },
     global: {
@@ -68,11 +68,11 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
           const body = JSON.stringify({ code: "P0001", message: "CLOUD_UPDATE_REQUIRED", details: null, hint: null });
           return new Response(body, { status: 400, headers: { "Content-Type": "application/json" } });
         }
-        if (rejectUploads > 0 && target.includes("/rpc/upload_save")) {
+        if (rejectUploads > 0 && target.includes("/functions/v1/upload-save")) {
           rejectUploads -= 1;
           uploads.push({ op: "rejected", rev: null });
           if (rejectDelay > 0) await sleep(rejectDelay);
-          const body = JSON.stringify({ code: "P0001", message: "CLOUD_PET_TRADED_OUT", details: null, hint: null });
+          const body = JSON.stringify({ error: "CLOUD_PET_TRADED_OUT" });
           return new Response(body, { status: 400, headers: { "Content-Type": "application/json" } });
         }
         if (failAdopt > 0 && target.includes("/rpc/adopt_anonymous")) {
@@ -91,9 +91,9 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
           if (hold.at === "after") await hold.gate;
           return res;
         }
-        const isUpload = target.includes("/rpc/upload_save");
+        const isUpload = target.includes("/functions/v1/upload-save");
         if (!isUpload) return fetch(input, init);
-        const op = (JSON.parse(String(init?.body ?? "{}")) as { p_op?: string }).p_op ?? "";
+        const op = (JSON.parse(String(init?.body ?? "{}")) as { op?: string }).op ?? "";
         const res = await fetch(input, init);
         if (net === "drop-upload") {
           uploads.push({ op, rev: null });
@@ -101,7 +101,8 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
           throw new TypeError("fetch failed");
         }
         const body = await res.clone().json().catch(() => null) as unknown;
-        uploads.push({ op, rev: typeof body === "number" ? body : null });
+        const got = body && typeof body === "object" ? (body as { rev?: unknown }).rev : null;
+        uploads.push({ op, rev: typeof got === "number" ? got : null });
         return res;
       },
     },
@@ -441,6 +442,26 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
     cloudV2.stop();
   }
   process.stdout.write("(28) 로컬 저장 격리 — 맞춘 rev 를 잊으면 서버 저장을 받는다  ok\n");
+
+  // (29) 서버 검증 P4a — 올리기는 Edge Function 을 거친다. RPC 직접 호출은 닫혔고, 관찰 모드는 조작 저장을 받되 unverified 로 둔다
+  {
+    const Q = make("시험 PC Q", 40, [pet]);
+    const anonQ = await Q.anon();
+    const direct = await Q.client.rpc("upload_save", { p_device: randomUUID(), p_base_rev: 0, p_save: { v: 3, pets: [pet] }, p_save_v: 3, p_app_version: APP_VERSION, p_op: randomUUID() });
+    assert.match(direct.error?.message ?? "", /CLOUD_UPDATE_REQUIRED/, "앱이 upload_save 를 직접 부르면 업데이트 안내");
+    const cloudQ = Q.make();
+    await cloudQ.start(anonQ, "boot", "anonymous");
+    cloudQ.noteSaved("event");
+    await until(async () => (await saveRow(anonQ))?.save?.points?.balance === 40, "첫 올리기");
+    Q.bump(99_999);
+    cloudQ.noteSaved("event");
+    await until(async () => (await saveRow(anonQ))?.save?.points?.balance === 99_999, "관찰 모드는 받는다");
+    const { data: trustRow } = await admin.from("cloud_saves").select("trust").eq("user_id", anonQ).single();
+    assert.equal((trustRow as { trust: string }).trust, "unverified", "위반 저장은 unverified");
+    assert.equal(cloudQ.view().status, "online", "앱은 그대로 온라인");
+    cloudQ.stop();
+  }
+  process.stdout.write("(29) 서버 검증 — RPC 직접 호출 닫힘, 관찰 모드는 받고 unverified  ok\n");
 }
 
 async function main(): Promise<void> {
@@ -779,7 +800,7 @@ async function main(): Promise<void> {
     process.stdout.write("(18) claim 응답 전에 넘겨받혔으면 밀려남  ok\n");
 
     await p2(cfg.url, cfg.key, admin, extra);
-    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~28, 13 은 selftest-session)\n");
+    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~29, 13 은 selftest-session)\n");
   } finally {
     for (const p of [A, B, ...extra]) {
       for (const c of p.clouds) c.stop();

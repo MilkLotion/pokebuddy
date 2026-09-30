@@ -5,7 +5,7 @@
 // 설계는 worklog/records/trade/record.md "전체 구조", "로컬 저장과 복구"
 // 규약 2 (worklog-mac/records/cloud-authority/design-p2.md 4절·8절·13절)
 //   교환하는 사용자는 로그인 계정이다 — 아이디로 바로 가입한다(익명 발급을 거치지 않는다. 로컬 익명 가입 한도 5/시간)
-//   제안한 개체는 서버 저장에 먼저 있어야 한다 — 제안 직전 올리기(beforeOffer)가 claim_device·upload_save 를 부른다
+//   제안한 개체는 서버 저장에 먼저 있어야 한다 — 제안 직전 올리기(beforeOffer)가 claim_device·Edge Function upload-save 를 부른다
 //   익명 계정은 한 번만 발급해 서버 거절과 클라이언트 거절을 함께 본다
 import assert from "node:assert";
 import { execSync } from "node:child_process";
@@ -53,9 +53,14 @@ function cloudOf(client: SupabaseClient) {
   };
   const upload = async (save: SaveV3): Promise<Upload> => {
     rev ??= await claim();
-    const { data, error } = await client.rpc("upload_save", { p_device: device, p_base_rev: rev, p_save: save, p_save_v: 3, p_app_version: APP_VERSION, p_op: randomUUID() });
-    if (error) return { ok: false, code: error.message };
-    rev = Number(data);
+    // 앱처럼 Edge Function upload-save 로 올린다(서버 검증 P4a). 오류 본문의 코드를 쓴다
+    const { data, error } = await client.functions.invoke("upload-save", { body: { device, baseRev: rev, save, saveV: 3, appVersion: APP_VERSION, op: randomUUID() } });
+    if (error) {
+      const context = (error as { context?: unknown }).context;
+      const body = context instanceof Response ? ((await context.clone().json().catch(() => null)) as { error?: string } | null) : null;
+      return { ok: false, code: body?.error ?? error.message };
+    }
+    rev = Number((data as { rev: number }).rev);
     return { ok: true, rev };
   };
   return { upload };

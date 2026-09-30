@@ -45,7 +45,8 @@ async function badMember(server) {
   save.pets.push(pet);
   save.party.slots[0] = { state: 'pokemon', petId: pet.id, hidden: false };
   save.starterPetId = pet.id;
-  const up = await bad.rpc('upload_save', { p_device: device, p_base_rev: claim.data?.[0]?.rev ?? 0, p_save: save, p_save_v: 3, p_app_version: version, p_op: crypto.randomUUID() });
+  // 앱처럼 Edge Function upload-save 로 올린다(서버 검증 P4a — 로컬 functions serve 필요)
+  const up = await bad.functions.invoke('upload-save', { body: { device, baseRev: claim.data?.[0]?.rev ?? 0, save, saveV: 3, appVersion: version, op: crypto.randomUUID() } });
   assert.ifError(up.error);
   return { bad, ref: { id: pet.id, since: pet.since } };
 }

@@ -6,6 +6,14 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
 
+-- P4 서버 검증: 앱은 upload_save RPC 대신 Edge Function upload-save 를 거친다(20261003100000_save_verify.sql).
+-- 이 시험은 검증 없이 같은 저장 경로(accept_save, 위반 없음, 비교한 rev = 지금 rev)를 부른다. 트랜잭션 안에서만 있는 도우미다
+create function public.test_upload(p_device uuid, p_base_rev bigint, p_save jsonb, p_save_v int, p_app_version text, p_op uuid)
+returns bigint language sql security definer set search_path = '' as $f$
+  select public.accept_save(auth.uid(), p_device, p_base_rev, (select c.rev from public.cloud_saves c where c.user_id = auth.uid()), p_save, p_save_v, p_app_version, p_op, '[]'::jsonb)
+$f$;
+grant execute on function public.test_upload(uuid, bigint, jsonb, int, text, uuid) to authenticated;
+
 -- 로컬 DB 에 남은 원장·예약 행이 시험 개체 지문과 겹치지 않게 비운다 (트랜잭션 끝에 되돌린다)
 delete from cloud_private.pet_ledger;
 delete from trade_private.pet_offers;
@@ -78,18 +86,18 @@ select results_eq($$ select active, rev from public.touch_device('d1000000-0000-
   $$ values (true, 0::bigint) $$, '익명 touch 는 행이 없으면 (true, 0)');
 select results_eq($$ select save, rev, save_v from public.download_save('d1000000-0000-0000-0000-000000000001') $$,
   $$ values (null::jsonb, 0::bigint, null::int) $$, '익명 받기는 행이 없으면 빈 저장');
-select throws_ok($$ select public.upload_save('d1000000-0000-0000-0000-000000000001', 0, '{"v":3,"pets":[]}', 3, '0.13.0', 'a1000000-0000-0000-0000-000000000001') $$,
+select throws_ok($$ select public.test_upload('d1000000-0000-0000-0000-000000000001', 0, '{"v":3,"pets":[]}', 3, '0.13.0', 'a1000000-0000-0000-0000-000000000001') $$,
   'P0001', 'CLOUD_EMPTY_SAVE', '개체가 없는 첫 올리기는 거절');
-select throws_ok($$ select public.upload_save('d1000000-0000-0000-0000-000000000001', 1, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000002') $$,
+select throws_ok($$ select public.test_upload('d1000000-0000-0000-0000-000000000001', 1, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000002') $$,
   'P0001', 'CLOUD_REV_CONFLICT', '첫 올리기의 base_rev 는 0');
-select throws_ok($$ select public.upload_save('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.12.0', 'a1000000-0000-0000-0000-000000000003') $$,
+select throws_ok($$ select public.test_upload('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.12.0', 'a1000000-0000-0000-0000-000000000003') $$,
   'P0001', 'CLOUD_UPDATE_REQUIRED', '낮은 버전은 첫 올리기도 거절');
 reset role;
 select ok(not exists (select 1 from public.cloud_saves where user_id = pg_temp.uid('a1')), '거절한 동안 익명 행은 만들지 않는다');
 set local role authenticated;
 select pg_temp.act('a1');
-select is(public.upload_save('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000004'), 1::bigint, '첫 실제 올리기가 행을 만든다 → rev 1');
-select is(public.upload_save('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000004'), 1::bigint, '같은 op 재전송은 rev 1');
+select is(public.test_upload('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000004'), 1::bigint, '첫 실제 올리기가 행을 만든다 → rev 1');
+select is(public.test_upload('d1000000-0000-0000-0000-000000000001', 0, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000004'), 1::bigint, '같은 op 재전송은 rev 1');
 reset role;
 select results_eq($$ select active_device, rev, trust, presence, last_op_rev from public.cloud_saves where user_id = pg_temp.uid('a1') $$,
   $$ values ('d1000000-0000-0000-0000-000000000001'::uuid, 1::bigint, 'fresh'::text, 'active'::text, 1::bigint) $$, '첫 올리기: 이 PC 가 활성, 분류 fresh');
@@ -100,7 +108,7 @@ select results_eq($$ select outcome, rev, has_save from public.claim_device('d10
   $$ values ('claimed'::text, 1::bigint, true) $$, '행이 생긴 뒤 claim 은 보통 규칙');
 select results_eq($$ select active, rev from public.touch_device('d2000000-0000-0000-0000-000000000002', '0.13.0', 'active') $$,
   $$ values (false, 1::bigint) $$, '행이 생긴 뒤 다른 PC 의 touch 는 active=false');
-select is(public.upload_save('d1000000-0000-0000-0000-000000000001', 1, pg_temp.fresh_with('{pets,0,level}', '10'), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000005'), 2::bigint, '다음 올리기 → rev 2');
+select is(public.test_upload('d1000000-0000-0000-0000-000000000001', 1, pg_temp.fresh_with('{pets,0,level}', '10'), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000005'), 2::bigint, '다음 올리기 → rev 2');
 reset role;
 select is((select trust from public.cloud_saves where user_id = pg_temp.uid('a1')), 'fresh', '분류는 첫 저장 뒤 바뀌지 않는다');
 
@@ -150,8 +158,8 @@ select is(array_length(string_to_array(cloud_private.setting('starter_species'),
 set local role authenticated;
 select pg_temp.act('b1');
 select lives_ok($$ select * from public.claim_device('d3000000-0000-0000-0000-000000000003', 'PC 3', '0.13.0', 'boot', false) $$, 'b1 claim');
-select is(public.upload_save('d3000000-0000-0000-0000-000000000003', 0, pg_temp.fresh_with('{pets,0,level}', '50'), 3, '0.13.0', 'b1000000-0000-0000-0000-000000000001'), 1::bigint, 'b1 첫 올리기');
-select is(public.upload_save('d3000000-0000-0000-0000-000000000003', 1, pg_temp.fresh(), 3, '0.13.0', 'b1000000-0000-0000-0000-000000000002'), 2::bigint, 'b1 두 번째 올리기');
+select is(public.test_upload('d3000000-0000-0000-0000-000000000003', 0, pg_temp.fresh_with('{pets,0,level}', '50'), 3, '0.13.0', 'b1000000-0000-0000-0000-000000000001'), 1::bigint, 'b1 첫 올리기');
+select is(public.test_upload('d3000000-0000-0000-0000-000000000003', 1, pg_temp.fresh(), 3, '0.13.0', 'b1000000-0000-0000-0000-000000000002'), 2::bigint, 'b1 두 번째 올리기');
 reset role;
 select results_eq($$ select trust, first_saved_at is not null from public.cloud_saves where user_id = pg_temp.uid('b1') $$,
   $$ values ('legacy'::text, true) $$, '로그인 첫 저장도 분류한다. 뒤의 fresh 저장이 분류를 바꾸지 않는다');
@@ -168,14 +176,14 @@ select ok(not cloud_private.has_progress(null), '저장이 없으면 진행 없�
 set local role authenticated;
 select pg_temp.act('b3');
 select lives_ok($$ select * from public.claim_device('d4000000-0000-0000-0000-000000000004', 'PC 4', '0.13.0', 'boot', false) $$, 'b3 claim');
-select is(public.upload_save('d4000000-0000-0000-0000-000000000004', 0,
+select is(public.test_upload('d4000000-0000-0000-0000-000000000004', 0,
   '{"v":3,"pets":[{"id":"p1","since":3001,"species":"pikachu","shiny":false,"nature":"hardy","level":9},{"id":"p2","since":3002,"species":"eevee","shiny":false,"nature":"calm","level":5}]}',
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000001'), 1::bigint, 'b3 올리기');
 with c as (select * from public.create_channel(2, 'dv1'))
 insert into kv values ('ch', (select channel_id::text from c)), ('tok', (select token from c));
 select pg_temp.act('b4');
 select lives_ok($$ select * from public.claim_device('d5000000-0000-0000-0000-000000000005', 'PC 5', '0.13.0', 'boot', false) $$, 'b4 claim');
-select is(public.upload_save('d5000000-0000-0000-0000-000000000005', 0,
+select is(public.test_upload('d5000000-0000-0000-0000-000000000005', 0,
   '{"v":3,"pets":[{"id":"p1","since":4001,"species":"mudkip","shiny":false,"nature":"brave","level":7}]}',
   3, '0.13.0', 'b4000000-0000-0000-0000-000000000001'), 1::bigint, 'b4 올리기');
 select lives_ok($$ select public.join_channel(pg_temp.v('tok'), 2, 'dv1') $$, 'b4 참가');
@@ -192,27 +200,27 @@ select is((select count(*)::int from cloud_private.pet_ledger where channel_id =
 -- 되돌리기: 보낸 개체가 남은 저장(pending 없음)은 거부
 set local role authenticated;
 select pg_temp.act('b3');
-select throws_ok($$ select public.upload_save('d4000000-0000-0000-0000-000000000004', 1,
+select throws_ok($$ select public.test_upload('d4000000-0000-0000-0000-000000000004', 1,
   '{"v":3,"pets":[{"id":"p1","since":3001,"species":"pikachu"},{"id":"p2","since":3002,"species":"eevee"}],"trade":{"pending":null}}',
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000002') $$, 'P0001', 'CLOUD_PET_TRADED_OUT', '교환 뒤 보낸 개체가 남은 저장은 거부(.bak 되돌리기)');
 select throws_ok($$ select public.set_offer(pg_temp.v('ch')::uuid, '{"species":"pikachu","level":9,"shiny":false,"nature":"hardy"}', '{"id":"p1","since":3001}') $$,
   'P0001', 'TRADE_CLOSED', '끝난 채널에는 제안하지 못한다');
 -- 예외: 반영 전 저장(pending 이 그 채널·그 개체, 7일 이내). 반영 알림 여부는 보지 않는다(검수 M1)
-select is(public.upload_save('d4000000-0000-0000-0000-000000000004', 1,
+select is(public.test_upload('d4000000-0000-0000-0000-000000000004', 1,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"},{"id":"p2","since":3002,"species":"eevee"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p1'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000003'), 2::bigint, '반영 전 저장(pending)은 받는다');
-select throws_ok($$ select public.upload_save('d4000000-0000-0000-0000-000000000004', 2,
+select throws_ok($$ select public.test_upload('d4000000-0000-0000-0000-000000000004', 2,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p2'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000004') $$, 'P0001', 'CLOUD_PET_TRADED_OUT', 'pending 의 개체가 다르면 예외가 아니다');
 select lives_ok($$ select public.ack_applied(pg_temp.v('ch')::uuid) $$, 'b3 반영 알림');
-select throws_ok($$ select public.upload_save('d4000000-0000-0000-0000-000000000004', 2,
+select throws_ok($$ select public.test_upload('d4000000-0000-0000-0000-000000000004', 2,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p2'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000005') $$, 'P0001', 'CLOUD_PET_TRADED_OUT', '반영 알림 뒤에도 pending 의 개체가 다르면 거부');
 -- 올리기 전송 중에 반영·알림이 끝난 경우: 알림 뒤에 도착한 pending 저장도 7일 안이면 받는다
-select is(public.upload_save('d4000000-0000-0000-0000-000000000004', 2,
+select is(public.test_upload('d4000000-0000-0000-0000-000000000004', 2,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p1'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000009'), 3::bigint, '반영 알림 뒤에도 pending 저장은 7일 안이면 받는다');
@@ -221,7 +229,7 @@ select ok((select host_applied_at is not null from public.trade_channels where i
 update cloud_private.pet_ledger set done_at = now() - interval '7 days' where channel_id = pg_temp.v('ch')::uuid;
 set local role authenticated;
 select pg_temp.act('b3');
-select throws_ok($$ select public.upload_save('d4000000-0000-0000-0000-000000000004', 3,
+select throws_ok($$ select public.test_upload('d4000000-0000-0000-0000-000000000004', 3,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p1'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000006') $$, 'P0001', 'CLOUD_PET_TRADED_OUT', '7일이 지나면 pending 이 있어도 거부');
@@ -229,21 +237,21 @@ reset role;
 update cloud_private.pet_ledger set done_at = now() - interval '7 days' + interval '1 minute' where channel_id = pg_temp.v('ch')::uuid;
 set local role authenticated;
 select pg_temp.act('b3');
-select is(public.upload_save('d4000000-0000-0000-0000-000000000004', 3,
+select is(public.test_upload('d4000000-0000-0000-0000-000000000004', 3,
   jsonb_build_object('v', 3, 'pets', '[{"id":"p1","since":3001,"species":"pikachu"}]'::jsonb,
     'trade', jsonb_build_object('pending', jsonb_build_object('channelId', pg_temp.v('ch'), 'petId', 'p1'))),
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000007'), 4::bigint, '7일 1분 전 완료는 예외');
-select is(public.upload_save('d4000000-0000-0000-0000-000000000004', 4,
+select is(public.test_upload('d4000000-0000-0000-0000-000000000004', 4,
   '{"v":3,"pets":[{"id":"p2","since":3002,"species":"eevee"},{"id":"p3","since":9999,"species":"mudkip"}],"trade":{"pending":null}}',
   3, '0.13.0', 'b3000000-0000-0000-0000-000000000008'), 5::bigint, '반영한 저장(보낸 개체 없음)은 받는다');
 
 -- 다른 계정으로 복사: 남이 내보낸 지문이 지금 서버 저장에 없으면 거부
 select pg_temp.act('a2');
-select throws_ok($$ select public.upload_save('d6000000-0000-0000-0000-000000000006', 0,
+select throws_ok($$ select public.test_upload('d6000000-0000-0000-0000-000000000006', 0,
   jsonb_set(pg_temp.fresh(), '{pets,1}', '{"id":"p1","since":4001,"species":"mudkip"}'), 3, '0.13.0', 'a2000000-0000-0000-0000-000000000001') $$,
   'P0001', 'CLOUD_PET_TRADED_OUT', '백업을 새 익명 계정 첫 저장으로 — 교환한 개체는 막힌다');
-select is(public.upload_save('d6000000-0000-0000-0000-000000000006', 0, pg_temp.fresh(), 3, '0.13.0', 'a2000000-0000-0000-0000-000000000002'), 1::bigint, '교환한 개체가 없으면 들어간다');
-select throws_ok($$ select public.upload_save('d6000000-0000-0000-0000-000000000006', 1,
+select is(public.test_upload('d6000000-0000-0000-0000-000000000006', 0, pg_temp.fresh(), 3, '0.13.0', 'a2000000-0000-0000-0000-000000000002'), 1::bigint, '교환한 개체가 없으면 들어간다');
+select throws_ok($$ select public.test_upload('d6000000-0000-0000-0000-000000000006', 1,
   jsonb_set(pg_temp.fresh(), '{pets,1}', '{"id":"p1","since":4001,"species":"mudkip"}'), 3, '0.13.0', 'a2000000-0000-0000-0000-000000000003') $$,
   'P0001', 'CLOUD_PET_TRADED_OUT', '행이 있어도 남의 교환 개체를 새로 넣으면 거부');
 reset role;
@@ -251,11 +259,11 @@ reset role;
 update public.cloud_saves set save = jsonb_set(pg_temp.fresh(), '{pets,1}', '{"id":"p1","since":4001,"species":"mudkip"}') where user_id = pg_temp.uid('a2');
 set local role authenticated;
 select pg_temp.act('a2');
-select is(public.upload_save('d6000000-0000-0000-0000-000000000006', 1,
+select is(public.test_upload('d6000000-0000-0000-0000-000000000006', 1,
   jsonb_set(pg_temp.fresh(), '{pets,1}', '{"id":"p1","since":4001,"species":"mudkip","level":3}'), 3, '0.13.0', 'a2000000-0000-0000-0000-000000000004'), 2::bigint,
   '남의 교환 지문이 이미 서버 저장에 있었으면 받는다');
 select pg_temp.act('b4');
-select throws_ok($$ select public.upload_save('d5000000-0000-0000-0000-000000000005', 1,
+select throws_ok($$ select public.test_upload('d5000000-0000-0000-0000-000000000005', 1,
   '{"v":3,"pets":[{"id":"p1","since":4001,"species":"mudkip"}]}', 3, '0.13.0', 'b4000000-0000-0000-0000-000000000002') $$,
   'P0001', 'CLOUD_PET_TRADED_OUT', '보낸 쪽(b4)도 pending 없이 보낸 개체를 남기면 거부');
 
@@ -292,7 +300,7 @@ select results_eq($$ select anon_id, member_id, outcome, anon_rev, trust from cl
 set local role authenticated;
 select pg_temp.act('a1');
 select throws_ok($$ select * from public.claim_device('d1000000-0000-0000-0000-000000000001', 'PC 1', '0.13.0', 'boot', false) $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '이관 뒤 옛 익명 토큰은 LOGIN_REQUIRED(F3)');
-select throws_ok($$ select public.upload_save('d1000000-0000-0000-0000-000000000001', 2, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000009') $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '옛 익명 토큰은 올리지 못한다');
+select throws_ok($$ select public.test_upload('d1000000-0000-0000-0000-000000000001', 2, pg_temp.fresh(), 3, '0.13.0', 'a1000000-0000-0000-0000-000000000009') $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '옛 익명 토큰은 올리지 못한다');
 select throws_ok($$ select public.begin_handoff() $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '옛 익명 토큰은 티켓을 만들지 못한다');
 select pg_temp.act('b5');
 select results_eq($$ select outcome, rev, has_save from public.claim_device('d1000000-0000-0000-0000-000000000001', 'PC 1', '0.13.0', 'boot', false) $$,
@@ -302,7 +310,7 @@ select results_eq($$ select outcome, rev, has_save from public.claim_device('d10
 select pg_temp.act('b6');
 select lives_ok($$ select * from public.claim_device('d7000000-0000-0000-0000-000000000007', 'PC 7', '0.13.0', 'boot', false) $$, 'b6 claim(저장 없음)');
 select pg_temp.act('a4');
-select is(public.upload_save('d8000000-0000-0000-0000-000000000008', 0, pg_temp.fresh(), 3, '0.13.0', 'a4000000-0000-0000-0000-000000000001'), 1::bigint, 'a4 첫 올리기');
+select is(public.test_upload('d8000000-0000-0000-0000-000000000008', 0, pg_temp.fresh(), 3, '0.13.0', 'a4000000-0000-0000-0000-000000000001'), 1::bigint, 'a4 첫 올리기');
 insert into kv values ('t_a4', public.begin_handoff());
 select pg_temp.act('b6');
 select results_eq($$ select outcome, rev from public.adopt_anonymous(pg_temp.v('t_a4')) $$,
@@ -314,7 +322,7 @@ select results_eq($$ select active_device, trust, save is not null from public.c
 -- discarded: 로그인 계정에 저장이 있다(D7)
 set local role authenticated;
 select pg_temp.act('a5');
-select is(public.upload_save('d9000000-0000-0000-0000-000000000009', 0, pg_temp.fresh(), 3, '0.13.0', 'a5000000-0000-0000-0000-000000000001'), 1::bigint, 'a5 첫 올리기');
+select is(public.test_upload('d9000000-0000-0000-0000-000000000009', 0, pg_temp.fresh(), 3, '0.13.0', 'a5000000-0000-0000-0000-000000000001'), 1::bigint, 'a5 첫 올리기');
 insert into kv values ('t_a5', public.begin_handoff());
 select pg_temp.act('b1');
 select results_eq($$ select outcome, rev from public.adopt_anonymous(pg_temp.v('t_a5')) $$,

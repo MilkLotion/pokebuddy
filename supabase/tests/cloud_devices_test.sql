@@ -5,6 +5,14 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
 
+-- P4 서버 검증: 앱은 upload_save RPC 대신 Edge Function upload-save 를 거친다(20261003100000_save_verify.sql).
+-- 이 시험은 검증 없이 같은 저장 경로(accept_save, 위반 없음, 비교한 rev = 지금 rev)를 부른다. 트랜잭션 안에서만 있는 도우미다
+create function public.test_upload(p_device uuid, p_base_rev bigint, p_save jsonb, p_save_v int, p_app_version text, p_op uuid)
+returns bigint language sql security definer set search_path = '' as $f$
+  select public.accept_save(auth.uid(), p_device, p_base_rev, (select c.rev from public.cloud_saves c where c.user_id = auth.uid()), p_save, p_save_v, p_app_version, p_op, '[]'::jsonb)
+$f$;
+grant execute on function public.test_upload(uuid, bigint, jsonb, int, text, uuid) to authenticated;
+
 -- 사용자: e1·e2 는 아이디 계정, e3 은 익명
 insert into auth.users (id, email, raw_user_meta_data, is_anonymous, aud, role, created_at) values
   ('00000000-0000-0000-0000-0000000000e1', 'jiwoo_03@id.pokebuddy.invalid', '{"display_name":"지우"}', false, 'authenticated', 'authenticated', now()),
@@ -80,11 +88,11 @@ select results_eq($$ select outcome, has_save, other_label from public.claim_dev
   $$ values ('claimed'::text, false, null::text) $$, '처음 claim 은 claimed, 저장 없음, 상대 없음');
 
 -- ── 멱등 올리기 ──
-select is(public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3,"pets":[]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000001'), 1::bigint, 'PC A 가 올린다 → rev 1');
-select is(public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3,"pets":[]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000001'), 1::bigint, '같은 op 를 다시 보내면 쓰지 않고 rev 1');
-select throws_ok($$ select public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000002') $$, 'P0001', 'CLOUD_REV_CONFLICT', '다른 op 는 옛 rev 로 올리지 못한다');
-select throws_ok($$ select public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.13.0', null) $$, 'P0001', 'CLOUD_BAD_ARGS', 'op 는 비울 수 없다');
-select throws_ok($$ select public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.12.0', '0e000000-0000-0000-0000-000000000003') $$, 'P0001', 'CLOUD_UPDATE_REQUIRED', '낮은 버전은 올리지 못한다');
+select is(public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3,"pets":[]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000001'), 1::bigint, 'PC A 가 올린다 → rev 1');
+select is(public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3,"pets":[]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000001'), 1::bigint, '같은 op 를 다시 보내면 쓰지 않고 rev 1');
+select throws_ok($$ select public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0, '{"v":3}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000002') $$, 'P0001', 'CLOUD_REV_CONFLICT', '다른 op 는 옛 rev 로 올리지 못한다');
+select throws_ok($$ select public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.13.0', null) $$, 'P0001', 'CLOUD_BAD_ARGS', 'op 는 비울 수 없다');
+select throws_ok($$ select public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.12.0', '0e000000-0000-0000-0000-000000000003') $$, 'P0001', 'CLOUD_UPDATE_REQUIRED', '낮은 버전은 올리지 못한다');
 reset role;
 select results_eq($$ select rev, last_op, last_op_rev, presence from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1' $$,
   $$ values (1::bigint, '0e000000-0000-0000-0000-000000000001'::uuid, 1::bigint, 'active'::text) $$, '멱등 키와 그 rev 를 남긴다');
@@ -106,7 +114,7 @@ select results_eq($$ select outcome, rev, has_save, other_label from public.clai
   $$ values ('claimed'::text, 1::bigint, true, 'PC A'::text) $$, 'boot 는 잠든 PC A 를 바로 넘겨받는다');
 select results_eq($$ select active, rev from public.touch_device('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '0.13.0', 'active') $$,
   $$ values (false, 1::bigint) $$, '밀려난 PC A 의 touch 는 active=false');
-select throws_ok($$ select public.upload_save('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000004') $$, 'P0001', 'CLOUD_NOT_ACTIVE', '밀려난 PC A 는 올리지 못한다');
+select throws_ok($$ select public.test_upload('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, '{"v":3}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000004') $$, 'P0001', 'CLOUD_NOT_ACTIVE', '밀려난 PC A 는 올리지 못한다');
 reset role;
 select ok(exists (select 1 from realtime.messages where topic = 'account:00000000-0000-0000-0000-0000000000e1' and event = 'kicked'
   and payload ->> 'label' = 'PC B' and payload ->> 'device' = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'), 'kicked 신호에 새 PC 의 이름이 있다');

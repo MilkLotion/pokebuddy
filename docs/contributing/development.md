@@ -245,6 +245,9 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 무대·선택 창 문서에는 CSP 가 있다. 스크립트는 자기 파일에서만 부른다. 그림은 data URL 만 쓴다(`default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:`)
 - 창 아이콘은 다음과 같다 — Windows 는 `assets/logo/out/logo-256.png` 를 쓴다. mac 은 Dock 아이콘을 `logo-512.png` 로 정한다. 그 뒤 Dock 에서 숨긴다. 트레이 아이콘은 첫 마리 그림을 쓴다
 - 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `package.json` 의 `selftest` 스크립트에 있다
+  - 클라우드·교환·계정 검사는 로컬 Supabase(`npx supabase start`)와 로컬 함수 서버(`npx supabase functions serve`)가 있어야 한다. 올리기가 Edge Function `upload-save` 를 거친다
+  - 함수 서버가 "No such container" 로 바로 끝나면 한 번 더 띄운다
+- 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node scripts/build-verify.cjs` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `scripts/e2e-companion.cjs` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다
 - 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 아래 `.claude/pokebuddy/save.json` 을 저장 v3 로 만든다.

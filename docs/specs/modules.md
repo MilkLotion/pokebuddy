@@ -51,6 +51,7 @@
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
 우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
+클라우드 저장 올리기는 Edge Function `supabase/functions/upload-save`를 거친다(`src/online/cloud.ts`). 앱이 `upload_save` RPC 를 직접 부르면 `CLOUD_UPDATE_REQUIRED`다. 검증은 아래 [서버 저장 검증](#서버-저장-검증)을 따른다.
 부팅하면 `src/main/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
 로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
 세션 저장 `encryptedStorage`는 `~/.claude/pokebuddy/online/session.bin`을 Electron `safeStorage`로 암호화한다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
@@ -146,6 +147,22 @@
 | 저장 잠김 창 | 키 없이 도는데(`denied`·`busy`·`unavailable`) 암호화 저장이 있으면 게임을 만들기 전에 `저장을 열지 못했어요` 창을 띄운다. `종료`(Esc)는 저장을 그대로 두고 끝낸다. `새로 시작`은 키와 저장을 `.unreadable-<시각>`으로 옮기고 표시를 남긴 뒤 키를 다시 준비한다(`src/main/app.ts`, `src/main/halt-dialog.ts` `askSaveLocked`) |
 | 키 저장소 없음 | 평문으로 돈다. 이미 암호화된 저장은 읽지 않고 덮어쓰지도 않는다(`locked`) |
 | `save.json.lost` | 클라우드가 `cloud.json`을 읽을 때 처리한다(`src/online/lost.ts`). `syncedRev`를 `-1`로 바꾼 상태를 `cloud.json`에 먼저 쓰고 표시를 지운다. 서버 저장이 있으면 다음 맞추기에서 받는다. 격리 뒤에 올린 적이 있으면(`lastSavedAt` > 격리 시각) 표시만 지운다. 격리 뒤 새로 고른 첫 포켓몬 저장은 `save.json.cloud-<시각>.bak`으로 남는다 |
+
+### 서버 저장 검증
+
+올린 저장은 Edge Function `upload-save`가 직전 서버 저장과 비교한다. 규칙은 `src/verify/save-rules.ts`이고, 상한 수치는 [밸런스 수치](balance.md#서버-검증-상한)에 있다.
+
+| 항목 | 규칙 |
+|---|---|
+| 순서 | 토큰으로 사용자 확인 → `save_verify_context`(직전 저장·rev·틈·받은 편지·끝난 교환·설정) → 규칙 비교 → `accept_save`. rev CAS·활성 기기·교환 원장은 `accept_save` 안에서 본다 |
+| 틈 | 서버 시각 기준. `cloud_saves.last_accepted_at`부터 지금까지, 72시간(`verify_max_gap_hours`)에서 자른다 |
+| 비교 대상 | 같은 rev 위의 요청만 비교한다. rev 가 다르면 멱등 재전송(마지막 op)만 받고 나머지는 `CLOUD_REV_CONFLICT`다. `accept_save` 는 비교에 쓴 rev(`p_checked_rev`)가 지금 rev 와 같을 때만 기존 행에 쓴다. 첫 저장은 `trust`(fresh·legacy·unverified) 분류만 한다 |
+| 오류 | `CLOUD_*` 코드, 토큰 무효 401 `AUTH_TOKEN`, 잠깐 답 없음 503 `SERVER_BUSY`, 그 밖 500 `SERVER_ERROR`. 앱은 502·503·504·전송 실패만 오프라인으로 본다 |
+| 관찰 모드 | `verify_mode = observe`(기본). 위반이 있어도 받는다. `cloud_private.save_violations`에 적고 `trust`를 `unverified`로 둔다 |
+| 거부 모드 | `verify_mode = enforce`. 위반을 적고 `CLOUD_SAVE_REJECTED`(409)를 돌려준다. 앱의 거부 처리는 아직 없다 |
+| 권한 | `accept_save`·`save_verify_context`·`reject_save`·`admin_*`는 service_role 전용이다 |
+| 규칙 복사본 | Edge Function(Deno)은 `supabase/functions/_shared/save-rules.ts`·`verify-data.json`을 쓴다. `node scripts/build-verify.cjs`(빌드 뒤)가 `src/verify/save-rules.ts`와 `data/`·규칙표에서 만든다. `selftest-verify`가 최신인지 본다 |
+| 관리 | `admin/admin.cjs violations`(위반 목록), `verify [--mode] [--margin] [--yes]`(설정) |
 
 백업 파일은 `save.json`을 복사하거나 옮겨 만든다. 그래서 키를 쓴 뒤의 백업도 암호화되어 있다. 암호화 전에 만든 평문 백업은 앱이 읽지 않으므로 그대로 둔다.
 CLI(`pokebuddy status`·`companion`)는 저장 내용을 읽지 않는다. 첫 실행 여부는 `save.json`이 있는지로 본다.
