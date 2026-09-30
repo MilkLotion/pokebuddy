@@ -1589,16 +1589,13 @@ function drawShop(v: Snapshot): void {
 // 진화용 도구와 민트는 대상과 결과를 고르는 창이 따로 있어 그 창을 연다. 여러 개 쓰기는 경험사탕·이상한사탕만 되고 한 거래다
 // (2026-09-27 사용자 결정 "수량 선택 + 최대", src/tx/handlers.ts useHandler)
 
+// 가방 분류 — 상점(SHOP_TABS)의 도구 분류와 같다. data/items.json 의 도구는 `도구`, data/evo-items.json 의 진화용 도구는 `진화`.
+// `전체` 는 두지 않고 첫 탭 `도구` 를 연다 (2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애.")
 const BAG_TABS = [
-  { id: "all", label: "전체" },
-  { id: "candy", label: "사탕" },
-  { id: "food", label: "먹이" },
-  { id: "evolution", label: "진화의돌" },
-  { id: "mint", label: "성격민트" }, // 이름 성격민트 (2026-09-30 사용자 결정)
-  { id: "toy", label: "장난감" },
-  { id: "potion", label: "약" },
+  { id: "tool", label: "도구" },
+  { id: "evolution", label: "진화" },
 ];
-let bagFilter = "all";
+let bagFilter = "tool";
 let bagPick: string | null = null; // 사용 패널에 연 도구
 let bagScope: "party" | "box" = "party";
 let bagTarget: string | null = null;
@@ -1615,13 +1612,9 @@ let bagListReveal = false;
 // `사용` 쪽 단추가 따로 창을 여는 도구 — 진화용 도구는 진화할 개체, 성격민트는 성격을 바꿀 개체를 고른다
 const bagDialogUse = (item: BagItemView): boolean => item.evolution || item.effect === "nature";
 
+// 도구의 분류 — 상점과 같은 기준. evolution 은 data/evo-items.json 에 있는 도구 (src/tx/lists.ts isEvoItem)
 function bagCategory(item: BagItemView): string {
-  if (item.evolution) return "evolution";
-  if (item.effect === "nature") return "mint";
-  if (item.effect === "exp" || item.effect === "level") return "candy";
-  if (item.effect === "fullness" || item.effect === "fullness-full-buff") return "food";
-  if (item.effect === "play-buff") return "toy";
-  return "potion";
+  return item.evolution ? "evolution" : "tool";
 }
 const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";
 
@@ -1650,13 +1643,14 @@ function drawBag(v: Snapshot): void {
     bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다."));
     return;
   }
+  if (!BAG_TABS.some((t) => t.id === bagFilter)) bagFilter = BAG_TABS[0]?.id ?? "tool"; // 모르는 분류(옛 `all` 등)는 첫 탭으로
   bodyEl.appendChild(
     chips(BAG_TABS, bagFilter, (id) => {
       bagFilter = id;
       draw();
     }),
   );
-  const items = v.bag.filter((i) => bagFilter === "all" || bagCategory(i) === bagFilter);
+  const items = v.bag.filter((i) => bagCategory(i) === bagFilter);
   if (!items.length) bodyEl.appendChild(el("div", "empty-note", "이 분류의 도구가 없습니다."));
   else {
     const grid = el("div", "bag-grid");
