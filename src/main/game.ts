@@ -74,13 +74,14 @@ export interface GameV3Options {
   file?: string;
   now?: () => number;
   rand?: () => number;
+  eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b 계정 시드). 없거나 null 이면 rand
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
   onWrite?: (kind: WriteKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. EVENT_WRITES 면 event (src/online/cloud.ts noteSaved)
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
 }
 
-export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, canWrite, onWrite, flushMs = 0, mono = () => performance.now() }: GameV3Options = {}): GameV3 {
+export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, eggRand, canWrite, onWrite, flushMs = 0, mono = () => performance.now() }: GameV3Options = {}): GameV3 {
   // 메모리에만 있는 시간 진행 — 파일보다 새 저장. diskKey 는 그 저장의 바탕이 된 파일의 수정 시각·크기다
   let pending: SaveV3 | null = null;
   let diskKey: string | null = null;
@@ -142,7 +143,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return ok;
   };
 
-  const executor = createExecutor({ read, write, now, rand }, HANDLERS);
+  const executor = createExecutor({ read, write, now, rand, ...(eggRand ? { eggRand } : {}) }, HANDLERS);
 
   // 마지막 틱 뒤로 흐른 시간을 적용한다. 앱이 꺼져 있던 틈은 세지 않는다 — 상한을 넘는 몫은 버린다
   // input.workMs — 지난 틱 뒤로 에이전트가 작업한 시간. 흐른 시간을 넘는 몫은 applyTime 이 버린다

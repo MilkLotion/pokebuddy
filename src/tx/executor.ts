@@ -27,6 +27,8 @@ export type TxOutcome = { ok: true; result?: unknown } | { ok: false; reason: st
 export interface TxContext {
   now: number;
   rand: () => number; // 0 이상 1 미만. 자체 검사가 결과를 정할 수 있게 받아서 쓴다
+  // 알 하나의 결정적 난수(P4b, 계정 시드 — src/verify/save-rules.ts seededRand). 시드가 없으면 null — 그때는 rand 를 쓴다
+  eggRand?: (eggId: string) => (() => number) | null;
 }
 
 export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutcome;
@@ -43,6 +45,7 @@ export interface TxPorts {
   write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/main/game.ts EVENT_WRITES)
   now: () => number;
   rand?: () => number; // 없으면 Math.random
+  eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
 }
 
 export interface Executor {
@@ -74,7 +77,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
 
     const now = ports.now();
     const draft = structuredClone(save);
-    const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random });
+    const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}) });
     if (!out.ok) return { ok: false, reason: out.reason };
 
     // 상태가 바뀌었으니 해금 규칙과 업적을 다시 본다. 첫 선택 한 번으로 다른 후보·기본형이 해금되고, 꺼내기 한 번으로도 달성이 생긴다

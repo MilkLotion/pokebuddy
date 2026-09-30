@@ -34,6 +34,10 @@ export interface CloudSyncState {
   pendingOp: string | null; // 보냈지만 결과를 모르는 올리기의 멱등 키 — 다시 보낼 때 같은 키
   ownerKind: OwnerKind | null; // owner 의 종류. owner 가 null 이면 null
   handoff: PendingHandoff | null; // 옮기지 못한 익명 저장 이관 티켓 — 정식 계정 start 때 다시 시도
+  // 계정 시드(P4b, D24) — 알 결과를 정한다(src/verify/save-rules.ts seededRand). 오프라인에서도 쓰려고 적어 둔다.
+  // seedOwner 가 owner 와 같을 때만 쓴다 — 계정이 바뀌면 온라인이 될 때 새로 받는다
+  seed: string | null;
+  seedOwner: string | null;
 }
 
 //   off              로그인하지 않았거나 멈췄다
@@ -124,6 +128,7 @@ export interface Cloud {
   // 마지막으로 서버와 맞춘 rev — 0 이면 지금 주인 계정으로 한 번도 올리거나 받지 않았다(D29 문구, design-p2.md 15절 G-c)
   synced: () => number;
   pendingHandoff: () => PendingHandoff | null; // 다시 시도할 이관 티켓
+  seed: () => string | null; // 지금 저장 주인의 계정 시드(P4b). 아직 받지 못했거나 주인이 바뀌었으면 null
   // 멈춘 상태에서 저장 주인을 from → to 로 바꾼다. to 의 첫 저장으로 다시 맞춘다(syncedRev 0). 주인이 from 이 아니거나 돌고 있으면 false
   rebind: (from: string, to: string, kind?: OwnerKind) => boolean;
   // 세션 교체 뒤 이관 결과를 적는다 — 정식 계정 start 전에 부른다
@@ -171,11 +176,14 @@ export function readCloudState(raw: unknown): CloudSyncState | null {
     pendingOp: typeof s.pendingOp === "string" ? s.pendingOp : null,
     ownerKind: owner == null ? null : s.ownerKind === "anonymous" || s.ownerKind === "member" ? s.ownerKind : "member",
     handoff: handoffOf(s.handoff),
+    seed: typeof s.seed === "string" ? s.seed : null,
+    seedOwner: typeof s.seedOwner === "string" ? s.seedOwner : null,
   };
 }
 
 const fresh = (deviceId: string): CloudSyncState => ({
   deviceId, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null,
+  seed: null, seedOwner: null,
 });
 
 // 부팅 판단 — 익명 세션이 저장 주인과 다른 계정이면 그 세션으로는 올릴 수 없다(검수 H1)
@@ -424,6 +432,8 @@ export function createCloud(o: CloudOptions): Cloud {
     if (!canUpload()) return false;
     const save = o.io.readSave();
     if (!save || !hasPets(save)) return false; // 스타터 고르기 전 — dirty 는 남긴다
+    // 시드를 아직 못 받았으면 올리기 전에 다시 받는다 — 첫 응답을 잃었을 때 계속 보통 난수로 알을 열지 않게(검수 P4b H2)
+    if (state.userId && state.seedOwner !== state.userId) await fetchSeed();
     const gen = generation;
     const mark = seq;
     // 결과를 모르는 올리기가 있으면 그 키로 다시 보낸다 — 서버가 이미 썼으면 그때의 rev 를 돌려준다
@@ -619,6 +629,18 @@ export function createCloud(o: CloudOptions): Cloud {
     set("online", null);
     if (asleep) void touch("asleep"); // 연결하는 사이 잠들었다 — 잠듦으로 알린다
     else startBeat();
+    void fetchSeed();
+  };
+
+  // 계정 시드 받기(P4b) — 지금 계정의 시드가 없으면 한 번. 실패하면 다음에 온라인이 될 때 다시
+  const fetchSeed = async (): Promise<void> => {
+    const uid = state.userId;
+    if (!uid || state.seedOwner === uid) return;
+    const gen = generation;
+    const r = await rpc<string>("account_seed", {});
+    if (gen !== generation || state.userId !== uid || !r.ok || typeof r.data !== "string" || !r.data) return;
+    state = { ...state, seed: r.data, seedOwner: uid };
+    persist();
   };
 
   // ── 연결 ──
@@ -966,5 +988,6 @@ export function createCloud(o: CloudOptions): Cloud {
   return {
     view, start, noteSaved, confirm, sleep, wake, release, announceRelease, released: () => releasedFlag, unsaved, flush, stop,
     owner, synced: () => state.syncedRev, pendingHandoff: () => state.handoff, rebind, applyHandoff, reset,
+    seed: () => (state.seed && state.owner && state.seedOwner === state.owner ? state.seed : null),
   };
 }

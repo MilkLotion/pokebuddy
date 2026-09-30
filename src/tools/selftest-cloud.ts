@@ -400,7 +400,7 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
   // (26) reset — 로그아웃·삭제 뒤. 기기 ID 만 남기고 새 설치처럼
   const device = U.state()?.deviceId;
   cloudU.reset();
-  assert.deepEqual(U.state(), { deviceId: device, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null });
+  assert.deepEqual(U.state(), { deviceId: device, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null, seed: null, seedOwner: null });
   assert.equal(cloudU.owner(), null);
   assert.equal(cloudU.view().status, "off");
   process.stdout.write("(26) reset — 새 설치 상태, 기기 ID 유지  ok\n");
@@ -462,15 +462,42 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
     cloudQ.stop();
   }
   process.stdout.write("(29) 서버 검증 — RPC 직접 호출 닫힘, 관찰 모드는 받고 unverified  ok\n");
+
+  // (30) 계정 시드(P4b) — 온라인이 되면 받아 cloud.json 에 둔다. 계정마다 다르고, 주인이 바뀌면 쓰지 않는다
+  {
+    const R = make("시험 PC R", 10, [pet]);
+    const anonR = await R.anon();
+    const cloudR = R.make();
+    assert.equal(cloudR.seed(), null, "받기 전");
+    await cloudR.start(anonR, "boot", "anonymous");
+    await until(() => cloudR.seed() != null, "시드 받기");
+    const seedR = cloudR.seed();
+    assert.equal(R.state()?.seed, seedR, "cloud.json 에 적었다");
+    assert.equal(R.state()?.seedOwner, anonR, "시드 주인");
+    const { data: ctxRow } = await admin.rpc("save_verify_context", { p_user: anonR });
+    assert.equal((ctxRow as { seed: string }).seed, seedR, "서버 문맥의 시드와 같다");
+    cloudR.stop();
+    const cloudR2 = R.make();
+    assert.equal(cloudR2.seed(), seedR, "다시 켜면 cloud.json 에서 — 오프라인에서도 쓴다");
+    cloudR2.stop();
+    const O = make("시험 PC O", 10, [pet]);
+    const anonO = await O.anon();
+    const cloudO = O.make();
+    await cloudO.start(anonO, "boot", "anonymous");
+    await until(() => cloudO.seed() != null, "다른 계정 시드");
+    assert.notEqual(cloudO.seed(), seedR, "계정마다 다르다");
+    cloudO.stop();
+  }
+  process.stdout.write("(30) 계정 시드 — 받기·보관·계정마다 다름  ok\n");
 }
 
 async function main(): Promise<void> {
   // 옛 cloud.json — owner 는 올리던 계정, 새 칸은 기본값
   assert.deepEqual(readCloudState({ deviceId: "d", userId: "u", syncedRev: 3, dirty: true, offlineDirty: true, lastSavedAt: 7 }), {
-    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null,
+    deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null, seed: null, seedOwner: null,
   });
   // P2 형식 — ownerKind·handoff 를 그대로 읽는다. 모양이 틀린 handoff 는 버린다
-  const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 } };
+  const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 }, seed: "s", seedOwner: "a" };
   assert.deepEqual(readCloudState(p2State), p2State);
   assert.equal(readCloudState({ ...p2State, handoff: { ticket: 1 } })?.handoff, null);
   assert.equal(readCloudState({ ...p2State, owner: null })?.ownerKind, null, "주인이 없으면 종류도 없다");
@@ -800,7 +827,7 @@ async function main(): Promise<void> {
     process.stdout.write("(18) claim 응답 전에 넘겨받혔으면 밀려남  ok\n");
 
     await p2(cfg.url, cfg.key, admin, extra);
-    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~29, 13 은 selftest-session)\n");
+    process.stdout.write("selftest-cloud: 통과 (0·1~12·14~30, 13 은 selftest-session)\n");
   } finally {
     for (const p of [A, B, ...extra]) {
       for (const c of p.clouds) c.stop();

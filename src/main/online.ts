@@ -18,7 +18,7 @@ import { app, shell } from "electron";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient } from "../online/client.js";
 import { createAccount, viewOf, type Account, type AccountView } from "../online/account.js";
-import { createCloud, strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../online/cloud.js";
+import { createCloud, readCloudState, strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../online/cloud.js";
 import { githubLogin } from "../online/github.js";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../online/handoff.js";
 import { createSessionGate, type SessionGate } from "../online/session.js";
@@ -92,6 +92,16 @@ const stamp = (): string => new Date().toISOString().replace(/[:.]/g, "-");
 
 // 익명 계정 발급·세션 확인을 다시 시도하는 간격 — 클라우드 다시 연결과 같다
 const SESSION_RETRY_MS = 60_000;
+
+// 계정 시드(P4b) — 클라우드가 아직 돌지 않을 때 cloud.json 에서 읽는다. 저장 주인의 시드일 때만
+export function cloudSeedOf(saveFile: string): string | null {
+  try {
+    const s = readCloudState(JSON.parse(fs.readFileSync(path.join(path.dirname(saveFile), "cloud.json"), "utf8")));
+    return s?.seed && s.owner && s.seedOwner === s.owner ? s.seed : null;
+  } catch {
+    return null;
+  }
+}
 
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const config = onlineConfig(undefined, devEnv());

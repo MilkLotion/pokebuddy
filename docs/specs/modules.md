@@ -163,6 +163,7 @@
 | 권한 | `accept_save`·`save_verify_context`·`reject_save`·`admin_*`는 service_role 전용이다 |
 | 규칙 복사본 | Edge Function(Deno)은 `supabase/functions/_shared/save-rules.ts`·`verify-data.json`을 쓴다. `node scripts/build-verify.cjs`(빌드 뒤)가 `src/verify/save-rules.ts`와 `data/`·규칙표에서 만든다. `selftest-verify`가 최신인지 본다 |
 | 관리 | `admin/admin.cjs violations`(위반 목록), `verify [--mode] [--margin] [--yes]`(설정) |
+| 계정 시드 | 서버 `cloud_private.account_seeds`에 계정마다 시드가 있다. 앱은 온라인이 되면 `account_seed()`로 받아 `cloud.json`의 `seed`·`seedOwner`에 둔다. 알 열기 난수는 `seededRand(seed, "egg:<알 id>")`다(`src/verify/save-rules.ts`). 검증은 열린 알마다 `rollEgg`로 다시 계산해 새 저장과 대조한다(`egg-roll`). 직전에 받은 저장보다 나중에 만든 시드는 문맥에 싣지 않는다 — 시드를 받기 전에 연 알은 대조하지 않는다. 시드는 사용자 PC 에 있어 다음 결과를 미리 계산할 수 있다. 알의 id·종류·후보를 고치면 `egg` 위반이다 |
 
 백업 파일은 `save.json`을 복사하거나 옮겨 만든다. 그래서 키를 쓴 뒤의 백업도 암호화되어 있다. 암호화 전에 만든 평문 백업은 앱이 읽지 않으므로 그대로 둔다.
 CLI(`pokebuddy status`·`companion`)는 저장 내용을 읽지 않는다. 첫 실행 여부는 `save.json`이 있는지로 본다.

@@ -109,7 +109,8 @@ const eggIdOf = (args: unknown): string | null => {
 const openHandler: TxHandler = (draft, args, ctx) => {
   const eggId = eggIdOf(args);
   if (!eggId) return { ok: false, reason: "bad-args" };
-  const res = open(draft, eggId, ctx.now, ctx.rand);
+  // 계정 시드가 있으면 알마다 정해진 난수 — 되돌려 다시 열어도 같은 결과다. 서버 검증이 같은 계산으로 대조한다(P4b)
+  const res = open(draft, eggId, ctx.now, ctx.eggRand?.(eggId) ?? ctx.rand);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
   return {
     ok: true,

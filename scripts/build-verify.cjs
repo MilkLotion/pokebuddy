@@ -36,6 +36,20 @@ function build() {
   for (const [kind, egg] of Object.entries(load('eggs.json'))) {
     if (!kind.startsWith('_') && typeof egg.price === 'number') eggs[kind] = egg.price;
   }
+  // 알 결과 재계산(P4b) — src/shop/catalog.ts eggBonus·isSingleEgg 와 같은 거르기, src/egg/hatch.ts 가중치
+  const { RANK_WEIGHT, SHINY_ONE_IN } = require(path.join(root, 'dist/egg/hatch.js'));
+  const { inRandomEgg } = require(path.join(root, 'dist/shop/catalog.js'));
+  const eggData = load('eggs.json');
+  const eggKinds = {};
+  for (const [kind, egg] of Object.entries(eggData)) {
+    if (kind.startsWith('_')) continue;
+    const bonus = Object.entries(egg.bonus ?? {}).filter(([k, p]) => typeof p === 'number' && p > 0 && eggData[k] != null);
+    eggKinds[kind] = { bonus, single: egg.single === true, pool: Array.isArray(egg.pool) ? egg.pool : [] };
+  }
+  const ranks = {};
+  for (const [slug, sp] of Object.entries(load('species.defaults.json'))) {
+    if (!slug.startsWith('_') && typeof sp.rank === 'number' && sp.rank !== 1) ranks[slug] = sp.rank;
+  }
   const achievements = {};
   for (const [id, a] of Object.entries(load('achievements.json'))) {
     if (!id.startsWith('_')) achievements[id] = a.reward && typeof a.reward === 'object' && a.reward.pokemon ? 'pokemon' : 'party-slot';
@@ -70,6 +84,12 @@ function build() {
     expTable,
     maxExp,
     rareCandyExp,
+    eggKinds,
+    ranks,
+    rankWeight: RANK_WEIGHT,
+    shinyOneIn: SHINY_ONE_IN,
+    // 랜덤알 후보가 될 수 있는 종 — 새 알 후보가 이 범위 밖이면 고친 알이다(검수 P4b H3). 해금 여부는 저장 쪽 값이라 보지 않는다
+    randomPool: [...species].filter((slug) => inRandomEgg(slug)).sort(),
     rules: {
       pointMs: TIME_V3_RULES.pointGainMs,
       maxPartySlots: SAVE_RULES.slots.max,

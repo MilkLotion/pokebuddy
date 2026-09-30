@@ -49,6 +49,7 @@ interface Context {
   letters: Record<string, unknown[]> | null;
   trades: number | null;
   trades_before: string[] | null;
+  seed: string | null; // 계정 시드(P4b) — 있으면 열린 알의 결과를 다시 계산해 대조한다
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -98,6 +99,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         letters: ctx.letters ?? {},
         trades: ctx.trades ?? 0,
         tradesBefore: ctx.trades_before ?? [],
+        seed: ctx.seed ?? null,
       }, data);
     } else if (body.op !== ctx.last_op) {
       return fail("CLOUD_REV_CONFLICT");

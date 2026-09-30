@@ -23,7 +23,8 @@ import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
-import { createMainOnline, type MainOnline } from "./online";
+import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
+import { seededRand } from "../verify/save-rules";
 import { askBlocked, askConfirm, askLost, askSaveLocked, showKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
 import { createMainMail, type MainMail } from "./mail";
@@ -1241,7 +1242,12 @@ async function main(): Promise<void> {
   // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/main/game.ts EVENT_WRITES)은 바로, 나머지는 2분 스로틀
   // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
   // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
-  const reader = createGame({ file: PATHS.save, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => mainOnline?.noteSaved(kind), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
+  // 알 결과는 계정 시드로 정한다(P4b, D24) — 되돌려 다시 열어도 같다. 시드가 없으면(첫 올리기 전) 평소 난수
+  const eggRand = (eggId: string): (() => number) | null => {
+    const seed = mainOnline ? mainOnline.cloud.seed() : cloudSeedOf(PATHS.save);
+    return seed ? seededRand(seed, `egg:${eggId}`) : null;
+  };
+  const reader = createGame({ file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => mainOnline?.noteSaved(kind), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
   game = reader;
   bannerWin = createBannerWindow({
     preload: preloadFile(),

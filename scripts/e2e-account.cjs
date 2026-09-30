@@ -5,7 +5,7 @@
 //   익명 계정(P2): 로그인하지 않은 설치도 익명 계정으로 저장한다. 교환은 로그인해야 한다. 로그아웃·삭제는 앱을 다시 켜 처음부터 시작한다
 //   준비: Docker Desktop 과 `npx supabase start`. 계정 삭제까지 보려면 `npx supabase functions serve` 도 띄운다. 빌드: `npm run build`
 //   실행: node scripts/e2e-account.cjs   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
-//   익명 계정을 7개 만든다(계정 삭제를 건너뛰면 6개) — 로컬 auth 의 익명 가입 제한(GOTRUE_RATE_LIMIT_ANONYMOUS_USERS, 시간당·IP당)이 그보다 작으면 실패한다
+//   익명 계정을 8개 만든다(계정 삭제를 건너뛰면 7개) — 로컬 auth 의 익명 가입 제한(GOTRUE_RATE_LIMIT_ANONYMOUS_USERS, 시간당·IP당)이 그보다 작으면 실패한다
 //   앱은 로컬 서버를 직접 보지 않고 이 스크립트의 TCP 중계를 거친다 — 중계를 끊어 오프라인을 재현한다
 //   GitHub 로그인은 실제 GitHub 가 필요해 여기서 보지 않는다(selftest-github 와 사용자 실기)
 //   분실 창(D29)은 네이티브 대화상자라 누르지 않는다 — 계정 탭·헤더의 분실 표시까지 본다
@@ -357,6 +357,36 @@ async function run() {
   assert.equal(sql(`select s.save->'points'->>'balance' from public.cloud_saves s where s.user_id = '${anonK}'`), '321', 'AC9-1 서버 저장은 덮이지 않았다');
   assert.equal(kFiles('save.key.unreadable-').length, 1, 'AC9-1 옛 키 자리도 옮겼다');
   checks.push('AC9-1 저장 잠김 창 — [종료][새로 시작], 종료면 저장 그대로, 새로 시작이면 키·저장 백업 → 선택 창 → 서버 저장 받기');
+
+  // AC10 계정 시드(P4b) — 알 결과는 계정 시드로 정한다. 앱이 연 결과가 서버 재계산과 같고, 올려도 위반이 없다
+  const E = makeApp('egg', server, [{ id: 'p1', species: 'pichu', where: 'party' }], env, opts);
+  const eSaveFile = path.join(E.data, 'save.json');
+  const eSave = JSON.parse(fs.readFileSync(eSaveFile, 'utf8'));
+  const eggOf = (id) => ({ id, kind: 'random', boughtAt: Date.now(), remainMs: 0, ready: true, candidates: ['bulbasaur', 'charmander', 'squirtle', 'dratini'], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+  eSave.eggs = [eggOf('egg-a'), eggOf('egg-b')];
+  eSave.eggSeq = 2;
+  fs.writeFileSync(eSaveFile, JSON.stringify(eSave));
+  await E.start();
+  const anonE = await anonOf(E, 'AC10');
+  await until(() => E.cloud()?.seed && E.cloud()?.seedOwner === anonE, 'AC10 계정 시드 받기', 30_000);
+  await E.ui('open'); // 관리 창
+  const { rollEgg, seededRand } = require(path.join(root, 'dist/verify/save-rules.js'));
+  const verifyData = JSON.parse(fs.readFileSync(path.join(root, 'supabase/functions/_shared/verify-data.json'), 'utf8'));
+  for (const id of ['egg-a', 'egg-b']) {
+    const before = E.save();
+    const egg = before.eggs.find((x) => x.id === id);
+    const expected = rollEgg(egg, before.eggs, before.dex.obtained, seededRand(E.cloud().seed, `egg:${id}`), verifyData);
+    // 알 열기는 CLI 명령이 아니다 — 관리 창이 부르는 길(window.pokebuddyManage.command)로 연다
+    const r = await E.dom(`window.pokebuddyManage.command({ cmd: 'egg.open', target: '${id}', args: { reqId: 'e2e-open-${id}' } })`);
+    assert.equal(r.ok, true, `AC10 ${id} 열기: ${JSON.stringify(r)}`);
+    const got = r.result && typeof r.result === 'object' ? r.result : r;
+    assert.deepEqual(got.egg ? { egg: got.egg.kind } : { species: got.species, shiny: got.shiny }, expected, `AC10 ${id} 결과가 서버 계산과 같다: ${JSON.stringify(r)}`);
+  }
+  const revE = E.cloud().syncedRev;
+  await until(() => E.cloud()?.syncedRev > revE && !E.cloud()?.dirty, 'AC10 연 결과를 올린다', 30_000);
+  await until(() => sql(`select count(*) from public.cloud_saves s cross join lateral jsonb_array_elements(s.save->'eggs') e where s.user_id = '${anonE}' and e->>'id' in ('egg-a', 'egg-b')`) === '0', 'AC10 서버 저장에 반영', 30_000);
+  assert.equal(sql(`select count(*) from cloud_private.save_violations where user_id = '${anonE}'`), '0', 'AC10 위반 없음');
+  checks.push('AC10 계정 시드 — 알 두 개를 앱이 연 결과가 서버 재계산(rollEgg)과 같고, 올린 뒤 위반 0');
   proxy.close();
 }
 

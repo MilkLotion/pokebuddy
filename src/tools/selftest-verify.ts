@@ -8,10 +8,11 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { expForLevel } from "../dex/growth";
+import { open } from "../egg/open";
 import { newPet } from "../party/create";
 import { empty } from "../save/v3";
 import type { EggV3, PetV3, SaveV3 } from "../shared/save-v3";
-import { verifySave, type VerifyContext, type VerifyData } from "../verify/save-rules";
+import { rollEgg, seededRand, verifySave, type VerifyContext, type VerifyData } from "../verify/save-rules";
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const T0 = new Date(2026, 8, 30, 10, 0, 0).getTime();
@@ -19,12 +20,12 @@ const HOUR = 3_600_000;
 const out = (line: string): void => void process.stdout.write(`${line}\n`);
 
 const data = JSON.parse(fs.readFileSync(path.join(ROOT, "supabase/functions/_shared/verify-data.json"), "utf8")) as VerifyData;
-const ctx = (gapMs: number, extra: Partial<VerifyContext> = {}): VerifyContext => ({ gapMs, margin: 1.1, letters: {}, trades: 0, tradesBefore: [], ...extra });
+const ctx = (gapMs: number, extra: Partial<VerifyContext> = {}): VerifyContext => ({ gapMs, margin: 1.1, letters: {}, trades: 0, tradesBefore: [], seed: null, ...extra });
 const pet = (id: string, species: string, over: Partial<PetV3> = {}): PetV3 => ({
   ...newPet({ id, species, shiny: false, nature: "hardy", gender: "male", now: T0 }),
   ...over,
 });
-const egg = (id: string, over: Partial<EggV3> = {}): EggV3 => ({ id, kind: "random", boughtAt: T0, remainMs: 0, ready: true, candidates: ["pikachu"], careCooldownMs: 0, actions: { pat: 0, song: 0 }, ...over });
+const egg = (id: string, over: Partial<EggV3> = {}): EggV3 => ({ id, kind: "random", boughtAt: T0, remainMs: 0, ready: true, candidates: ["pichu"], careCooldownMs: 0, actions: { pat: 0, song: 0 }, ...over });
 const base = (): SaveV3 => {
   const s = empty(T0);
   s.pets.push(pet("p1", "bulbasaur"));
@@ -190,8 +191,30 @@ out("0 supabase/functions/_shared 가 최신");
   const prev = base();
   prev.points.balance = 0;
   const eggs = clone(prev);
-  for (let i = 0; i < 6; i++) eggs.eggs.push(egg(`e${i}`, { candidates: ["mewtwo"] }));
+  for (let i = 1; i <= 6; i++) eggs.eggs.push(egg(`e${i}`));
+  eggs.eggSeq = 6;
   assert.deepEqual(rules(prev, eggs, ctx(60_000)), ["spend"], "살 포인트 없이 알 6개");
+  // 알 고치기(검수 P4b H3) — 랜덤알 후보에 뮤츠, 이미 있는 알의 종류를 전설알로, 이전 번호의 알, eggSeq 되돌리기
+  const bad = clone(prev);
+  bad.points.balance = 1000;
+  const badPrev = clone(bad);
+  badPrev.eggs.push(egg("e1"));
+  badPrev.eggSeq = 1;
+  const mew = clone(badPrev);
+  mew.eggs.push(egg("e2", { candidates: ["mewtwo"] }));
+  mew.eggSeq = 2;
+  mew.points.balance -= 120;
+  assert.deepEqual(rules(badPrev, mew, ctx(60_000)), ["egg"], "랜덤알 후보에 뮤츠");
+  const relabel = clone(badPrev);
+  relabel.eggs[0] = { ...relabel.eggs[0]!, kind: "legendary", candidates: ["mewtwo"] };
+  assert.deepEqual(rules(badPrev, relabel, ctx(60_000)), ["egg"], "이미 있는 알을 전설알로");
+  const old = clone(badPrev);
+  old.eggs.push(egg("e1x"));
+  old.points.balance -= 120;
+  assert.ok(rules(badPrev, old, ctx(60_000)).includes("egg"), "번호 규칙 밖의 알 id");
+  const back = clone(badPrev);
+  back.eggSeq = 0;
+  assert.ok(rules(badPrev, back, ctx(60_000)).includes("egg"), "eggSeq 되돌리기");
   const fake = clone(prev);
   fake.achievements["fake-1"] = { achievedAt: T0, claimedAt: T0 };
   fake.pets.push(pet("p2", "mew"));
@@ -230,10 +253,133 @@ out("0 supabase/functions/_shared 가 최신");
   const many = base();
   many.points.balance = 10_000;
   const seven = clone(many);
-  for (let i = 0; i < 7; i++) seven.eggs.push(egg(`e${i}`, { ready: false }));
+  for (let i = 1; i <= 7; i++) seven.eggs.push(egg(`e${i}`, { ready: false }));
+  seven.eggSeq = 7;
   seven.points.balance -= 7 * 120;
   assert.ok(rules(many, seven, ctx(HOUR)).includes("eggs"), "알 7개");
   out("9 id·친밀도·작업 시간·알 수");
+}
+
+// 10. 계정 시드(P4b) — 앱의 알 열기(open)와 서버의 재계산(rollEgg)이 같은 결과를 낸다
+{
+  const kinds: [string, string[]][] = [
+    ["random", ["bulbasaur", "charmander", "squirtle", "dratini", "larvitar", "eevee", "pikachu"]],
+    ["ancient-stone", ["omanyte", "kabuto", "aerodactyl"]],
+    ["legendary", ["mewtwo", "lugia", "ho-oh"]],
+  ];
+  let checked = 0;
+  let bonus = 0;
+  for (let n = 0; n < 400; n++) {
+    const seed = `seed-${n}`;
+    const s = empty(T0);
+    s.pets.push(pet("p1", "bulbasaur"));
+    const [kind, candidates] = kinds[n % kinds.length]!;
+    s.eggs.push(egg("e1", { kind, candidates }));
+    if (n % 5 === 0) s.dex.obtained.push("mewtwo", "sub-legendary-dummy");
+    const expected = rollEgg({ id: "e1", kind, candidates }, s.eggs, [...s.dex.obtained], seededRand(seed, "egg:e1"), data);
+    const got = open(s, "e1", T0, seededRand(seed, "egg:e1"));
+    assert.ok(got.ok && expected, `열기 ${n}`);
+    if (got.egg) {
+      bonus += 1;
+      assert.deepEqual(expected, { egg: got.egg.kind }, `보너스 알 ${n}`);
+    } else {
+      assert.deepEqual(expected, { species: got.species, shiny: got.shiny }, `종·이로치 ${n}`);
+    }
+    checked += 1;
+  }
+  assert.ok(bonus > 0, "보너스 알도 대조했다");
+  // 같은 알은 몇 번 열어도 같다
+  const a = seededRand("s", "egg:e9");
+  const b = seededRand("s", "egg:e9");
+  assert.deepEqual([a(), a(), a()], [b(), b(), b()], "같은 시드·키는 같은 수");
+  assert.notEqual(seededRand("s", "egg:e1")(), seededRand("s", "egg:e2")(), "알마다 다른 수");
+  out(`10 계정 시드 — 앱과 서버 계산 일치 ${checked}건(보너스 알 ${bonus})`);
+}
+
+// 11. egg-roll — 시드로 연 결과는 통과, 종·이로치를 바꾸면 위반
+{
+  const prev = base();
+  prev.points.balance = 0;
+  prev.eggs.push(egg("e1", { candidates: ["bulbasaur", "charmander", "squirtle", "dratini"] }));
+  // 개체가 나오는 시드를 고른다 — 랜덤알은 낮은 확률로 보너스 알을 준다
+  let seed = "x";
+  let next = clone(prev);
+  let res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  for (let n = 0; n < 50 && !res.petId; n++) {
+    seed = `acct-${n}`;
+    next = clone(prev);
+    res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  }
+  assert.ok(res.ok && res.petId, "개체가 나오는 시드");
+  assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], "시드로 연 결과");
+  const swapped = clone(next);
+  const hatched = swapped.pets.find((p) => p.id === res.petId);
+  if (hatched) hatched.species = hatched.species === "dratini" ? "squirtle" : "dratini";
+  assert.deepEqual(rules(prev, swapped, ctx(60_000, { seed })), ["egg-roll"], "다른 종으로 바꿈");
+  const shiny = clone(next);
+  const s2 = shiny.pets.find((p) => p.id === res.petId);
+  if (s2) s2.shiny = !s2.shiny;
+  assert.deepEqual(rules(prev, shiny, ctx(60_000, { seed })), ["egg-roll"], "이로치 바꿈");
+  assert.deepEqual(rules(prev, swapped, ctx(60_000)), [], "시드가 없으면 대조하지 않는다");
+  out("11 egg-roll — 시드 결과 통과, 종·이로치 바꾸면 위반");
+}
+
+// 12. 한 틈에 여러 일(검수 P4b H1) — 앱이 차례로 연 결과는 순서를 몰라도 통과한다
+{
+  const openAll = (prev: SaveV3, seed: string, ids: string[]): SaveV3 => {
+    const next = clone(prev);
+    for (const id of ids) assert.ok(open(next, id, T0, seededRand(seed, `egg:${id}`)).ok, `열기 ${id}`);
+    return next;
+  };
+  // (b) 같은 종류의 단일 포켓몬 알 둘
+  let bad = 0;
+  for (let n = 0; n < 200; n++) {
+    const prev = base();
+    prev.points.balance = 0;
+    const pool = ["mewtwo", "lugia", "ho-oh", "kyogre"];
+    prev.eggs.push(egg("e1", { kind: "legendary", candidates: pool }), egg("e2", { kind: "legendary", candidates: pool }));
+    prev.eggSeq = 2;
+    const next = openAll(prev, `m-${n}`, n % 2 ? ["e1", "e2"] : ["e2", "e1"]);
+    if (rules(prev, next, ctx(60_000, { seed: `m-${n}` })).length) bad += 1;
+  }
+  assert.equal(bad, 0, "단일 알 둘을 한 틈에");
+  // (a) 보너스 알을 받고 같은 틈에 그 알까지 열기
+  let tried = 0;
+  for (let n = 0; n < 2000 && tried < 20; n++) {
+    const seed = `b-${n}`;
+    const prev = base();
+    prev.points.balance = 0;
+    prev.eggs.push(egg("e1", { candidates: ["bulbasaur", "charmander", "squirtle"] }));
+    prev.eggSeq = 1;
+    const next = clone(prev);
+    const first = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+    if (!first.egg) continue;
+    tried += 1;
+    const bonusEgg = next.eggs.find((e) => e.id === first.egg!.id)!;
+    bonusEgg.ready = true;
+    assert.ok(open(next, bonusEgg.id, T0, seededRand(seed, `egg:${bonusEgg.id}`)).ok);
+    assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], `보너스 알까지 연 틈 ${seed}`);
+  }
+  assert.ok(tried > 0, "보너스 알 사례를 찾았다");
+  // (c) 부화한 개체를 같은 틈에 진화
+  const prev = base();
+  prev.points.balance = 0;
+  prev.eggs.push(egg("e1", { candidates: ["bulbasaur"] }));
+  prev.eggSeq = 1;
+  let seed = "c-0";
+  let next = clone(prev);
+  let res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  for (let n = 1; n < 50 && !res.petId; n++) {
+    seed = `c-${n}`;
+    next = clone(prev);
+    res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  }
+  const hatched = next.pets.find((p) => p.id === res.petId)!;
+  hatched.species = "ivysaur";
+  hatched.evolved = ["bulbasaur"];
+  hatched.stage = 1;
+  assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], "부화 뒤 바로 진화");
+  out(`12 한 틈에 여러 일 — 단일 알 둘·보너스 알 연쇄(${tried})·부화 뒤 진화`);
 }
 
 out("selftest-verify: 통과");

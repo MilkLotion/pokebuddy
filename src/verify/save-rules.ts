@@ -21,6 +21,11 @@
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
 //   eggs        알은 6개 이하
+//   egg         알을 고쳤다 — 같은 id 알의 종류·후보가 바뀜, 새 알 id 가 이전 번호 이하, eggSeq 감소, 후보가 그 알의 범위 밖
+//   egg-roll    계정 시드로 다시 계산한 알 결과(보너스 알·종·이로치)와 새 저장이 다르다 (P4b, D24)
+//
+// 결정적 난수(seededRand)와 알 결과 계산(rollEgg)도 여기 둔다 — 앱의 알 열기(src/egg/open.ts)가 같은 난수를 쓰고,
+// 자체 검사가 앱의 open() 과 rollEgg() 의 결과가 같은지 대조한다
 
 export interface VerifyItem {
   price: number | null;
@@ -38,6 +43,11 @@ export interface VerifyData {
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
   maxExp: number; // 모든 성장 곡선의 100레벨 누적 경험치 중 최대
   rareCandyExp: number; // 이상한사탕 하나가 올릴 수 있는 경험치 최대(한 레벨 간격 최대)
+  eggKinds: Record<string, EggKind>;
+  ranks: Record<string, number>; // 종 → 수집 난이도(1 이 아닌 것만). 없으면 1
+  rankWeight: Record<string, number>; // 난이도 → 추첨 가중치 (src/egg/hatch.ts RANK_WEIGHT)
+  shinyOneIn: number;
+  randomPool: string[]; // 랜덤알 후보가 될 수 있는 종 전체(src/shop/catalog.ts inRandomEgg). 해금 여부는 보지 않는다
   rules: {
     pointMs: number; // 가중 시간 이만큼에 1P
     maxPartySlots: number;
@@ -55,12 +65,78 @@ export interface VerifyData {
   };
 }
 
+// 알 종류 — 보너스 알 표(데이터 순서 그대로), 단일 포켓몬 알 여부와 그 후보 전체
+export interface EggKind {
+  bonus: [string, number][];
+  single: boolean;
+  pool: string[];
+}
+
 export interface VerifyContext {
   gapMs: number; // 서버 시각 기준 직전 저장 뒤 흐른 시간 — 부르는 쪽이 72시간(D25)으로 자른다
   margin: number; // D32 1.1
   letters: Record<string, unknown[]>; // 이 사용자가 서버에서 받은 편지 → 선물 (mail_claims). 새로 넣은 편지 id 를 여기서 찾는다
   trades: number; // 직전 저장 뒤 끝난 교환 수 (trade_channels)
   tradesBefore: string[]; // 직전 저장 전에 끝난 교환 채널 — 걸려 있던 교환(trade.pending)이 풀렸을 때 출처로 본다
+  seed: string | null; // 계정 시드 (P4b) — 없으면 알 결과를 대조하지 않는다
+}
+
+// ── 결정적 난수 (P4b) ──────────────────────────────────────────────────────────
+// FNV-1a 로 32비트 씨앗을 만들고 mulberry32 로 수를 낸다. 순수 JS 라 앱(node)과 Edge Function(Deno)이 같은 수를 낸다
+export function seededRand(seed: string, key: string): () => number {
+  const text = `${seed}:${key}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// 알 하나를 열면 무엇이 나오는가 — src/egg/open.ts 와 같은 순서로 수를 쓴다
+//   보너스 알 표가 있으면 1회 → (보너스가 아니면) 종 가중 추첨 1회 → 이로치 1회
+//   waiting 은 그 알을 열 때 돌보미집에 있던 알(연 알 포함), obtained 는 그때 얻은 종 — 앱은 열기 직전 저장, 규칙은 여는 순서를 대입한 모의 상태
+export type EggRoll = { egg: string } | { species: string; shiny: boolean } | null;
+export function rollEgg(egg: { id: string; kind: string; candidates: string[] }, waiting: { kind: string }[], obtained: string[], rand: () => number, data: VerifyData): EggRoll {
+  const kind = data.eggKinds[egg.kind];
+  const table = kind?.bonus ?? [];
+  if (table.length) {
+    const roll = rand();
+    let acc = 0;
+    for (const [next, p] of table) {
+      acc += p;
+      if (roll < acc) {
+        const single = data.eggKinds[next];
+        const give = !single?.single || single.pool.filter((s) => !obtained.includes(s)).length > waiting.filter((e) => e.kind === next).length;
+        if (give) return { egg: next };
+        break;
+      }
+    }
+  }
+  const candidates = kind?.single ? egg.candidates.filter((s) => !obtained.includes(s)) : egg.candidates;
+  if (!candidates.length) return null;
+  const weights = candidates.map((s) => data.rankWeight[String(data.ranks[s] ?? 1)] ?? 1);
+  const total = weights.reduce((a, w) => a + w, 0);
+  let species = candidates[candidates.length - 1] as string;
+  if (total <= 0) species = candidates[0] as string;
+  else {
+    let roll = rand() * total;
+    for (let i = 0; i < candidates.length; i++) {
+      roll -= weights[i] ?? 0;
+      if (roll < 0) {
+        species = candidates[i] as string;
+        break;
+      }
+    }
+  }
+  return { species, shiny: rand() < 1 / data.shinyOneIn };
 }
 
 export interface Violation {
@@ -131,7 +207,15 @@ const findOf = (save: Raw): { seq: number; log: Raw[] } => {
   const f = isObj(save.find) ? save.find : {};
   return { seq: num(f.seq), log: list(f.log).filter(isObj) };
 };
-const eggsOf = (save: Raw): { id: string; kind: string }[] => list(save.eggs).filter(isObj).map((e) => ({ id: str(e.id), kind: str(e.kind) }));
+const eggsOf = (save: Raw): { id: string; kind: string; candidates: string[] }[] =>
+  list(save.eggs).filter(isObj).map((e) => ({ id: str(e.id), kind: str(e.kind), candidates: list(e.candidates).map(str) }));
+const obtainedOf = (save: Raw): string[] => (isObj(save.dex) ? list(save.dex.obtained).map(str) : []);
+const eggNo = (id: string): number => {
+  const m = /^e(\d+)$/.exec(id);
+  return m ? Number(m[1]) : 0;
+};
+// 다음 알 번호의 바탕 — src/shop/buy.ts nextEggId 와 같다
+const eggSeqOf = (save: Raw): number => Math.max(num(save.eggSeq), maxOf(eggsOf(save).map((e) => eggNo(e.id))));
 const claimed = (save: Raw): Set<string> => {
   const out = new Set<string>();
   if (isObj(save.achievements)) for (const [k, v] of Object.entries(save.achievements)) if (isObj(v) && v.claimedAt != null) out.add(k);
@@ -264,6 +348,11 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const opened = prevEggs.filter((e) => !nextEggIds.has(e.id)).length;
   const newEggs = nextEggs.filter((e) => !prevEggIds.has(e.id)).map((e) => data.eggs[e.kind] ?? 0).sort((a, b) => a - b);
   for (const price of newEggs.slice(0, pos(newEggs.length - opened))) cost += price;
+  // 같은 틈에 만들어 연 알 — 번호만 늘고 두 저장 어디에도 없다. 연 알 수만큼은 보너스 알일 수 있고 나머지는 산 것이다
+  const minEgg = Math.min(...Object.values(data.eggs).filter((p) => p > 0));
+  const created = pos(eggSeqOf(next) - eggSeqOf(prev));
+  const vanished = pos(created - newEggs.length);
+  cost += pos(vanished - opened) * minEgg;
   add("spend", cost, spendable * m + 1);
   // 산 것을 빼고 남은 포인트 — 그사이 사서 바로 쓴 사탕·약·장난감, 사서 연 알, 종 지정 구매의 상한
   const leftover = pos(spendable - cost);
@@ -347,11 +436,80 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (prevIds.has(p.id) || idNo(p.id) <= prevMax) add("pet-id", 1, 0, p.id);
   }
   const boughtAndOpened = Math.floor(leftover / minBuy); // 사서 연 알·종 지정 구매 — 두 저장 어디에도 흔적이 없다
-  add("new-pets", fresh.length, opened + findPets + achievedPets + mailPets + traded + boughtAndOpened);
-  add("shiny", fresh.filter((p) => p.shiny).length, opened + findPets + traded + boughtAndOpened);
+  add("new-pets", fresh.length, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened);
+  add("shiny", fresh.filter((p) => p.shiny).length, opened + vanished + findPets + traded + boughtAndOpened);
 
   // eggs
   add("eggs", nextEggs.length, r.maxEggs);
+
+  // egg — 알을 고쳐 결과를 고르지 못하게 한다(검수 P4b H3). 결과는 알 id·종류·후보로 정해진다
+  const prevEggById = new Map(prevEggs.map((e) => [e.id, e]));
+  const prevSeq = eggSeqOf(prev);
+  if (num(next.eggSeq) < num(prev.eggSeq)) add("egg", 1, 0);
+  for (const e of nextEggs) {
+    const q = prevEggById.get(e.id);
+    if (q) {
+      if (q.kind !== e.kind || q.candidates.join("|") !== e.candidates.join("|")) add("egg", 1, 0);
+      continue;
+    }
+    const kind = data.eggKinds[e.kind];
+    const range = kind ? (kind.pool.length ? kind.pool : data.randomPool) : [];
+    if (!kind || eggNo(e.id) <= prevSeq || e.candidates.some((c) => !range.includes(c))) add("egg", 1, 0);
+  }
+
+  // egg-roll — 열린 알마다 계정 시드로 결과를 다시 계산한다. 한 틈에 여러 알을 열면 순서를 모른다 —
+  // 여는 순서를 모두 대입해(알은 6개 이하) 돌보미집·얻은 종을 차례로 바꾸며 계산하고, 하나라도 맞으면 인정한다(검수 P4b H1)
+  //   보너스 알 — 새 저장에 그 종류의 새 알이 있으면 그것, 없으면 같은 틈에 열린 알(vanished)로 본다. 그 결과는 대조할 수 없다
+  //   부화한 개체 — 같은 틈에 진화·모습 바꾸기·이로치 약을 썼을 수 있다. 종은 진화 간선·forms 로, 이로치는 어느 쪽이든 인정한다
+  if (ctx.seed) {
+    const seed = ctx.seed;
+    const toOpen = prevEggs.filter((x) => !nextEggIds.has(x.id));
+    const freshEggs = nextEggs.filter((e) => !prevEggIds.has(e.id));
+    const petFits = (p: Pet, species: string, shiny: boolean): boolean =>
+      (p.species === species || reachable(data.evo, species, p.species) || p.forms.includes(species)) && (p.shiny === shiny || potionBudget > 0 || p.shiny === false);
+    // 한 순서의 결과 — 대조하지 못한 알 수
+    const tryOrder = (order: typeof toOpen): number => {
+      const waiting = [...prevEggs];
+      const obtained = [...obtainedOf(prev)];
+      const usedPets = new Set<string>();
+      const usedEggs = new Set<string>();
+      let vanishedLeft = vanished;
+      let misses = 0;
+      for (const e of order) {
+        const roll = rollEgg(e, waiting, obtained, seededRand(seed, `egg:${e.id}`), data);
+        const at = waiting.findIndex((w) => w.id === e.id);
+        if (at >= 0) waiting.splice(at, 1);
+        if (!roll) continue;
+        if ("egg" in roll) {
+          const hit = freshEggs.find((x) => x.kind === roll.egg && !usedEggs.has(x.id));
+          if (hit) {
+            usedEggs.add(hit.id);
+            waiting.push(hit);
+          } else if (vanishedLeft > 0) vanishedLeft -= 1;
+          else misses += 1;
+          continue;
+        }
+        const hit = fresh.find((p) => !usedPets.has(p.id) && petFits(p, roll.species, roll.shiny));
+        if (hit) {
+          usedPets.add(hit.id);
+          if (!obtained.includes(roll.species)) obtained.push(roll.species);
+        } else misses += 1;
+      }
+      return misses;
+    };
+    let best = toOpen.length;
+    const walk = (left: typeof toOpen, order: typeof toOpen): void => {
+      if (best === 0) return;
+      if (!left.length) {
+        best = Math.min(best, tryOrder(order));
+        return;
+      }
+      for (let i = 0; i < left.length; i++) walk([...left.slice(0, i), ...left.slice(i + 1)], [...order, left[i] as (typeof toOpen)[number]]);
+    };
+    if (toOpen.length <= 6) walk(toOpen, []);
+    else best = tryOrder(toOpen); // 알은 6개가 상한이다 — 넘으면 eggs 규칙이 이미 걸었다
+    add("egg-roll", best, 0);
+  }
 
   return out;
 }

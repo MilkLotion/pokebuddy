@@ -79,5 +79,28 @@ select is(public.accept_save('00000000-0000-0000-0000-0000000000e1', '11111111-1
   '{"v":3,"pets":[{"id":"p1","since":1}]}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000005', '[]'), 3::bigint, '위반 없는 저장은 거부 모드에서도 받는다');
 select is((select trust from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'), 'unverified', '한 번 unverified 면 남는다');
 
+-- 계정 시드(P4b) — 자기 시드만, 한 번 만들면 그대로, 문맥에 실린다
+select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'seed', null, '받기 전에는 시드 없음');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000e1","role":"authenticated","is_anonymous":true}', true);
+select ok(length(public.account_seed()) = 64, '시드는 64자');
+reset role;
+select is((select seed from cloud_private.account_seeds where user_id = '00000000-0000-0000-0000-0000000000e1'),
+  (select public.account_seed() from (select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000e1","role":"authenticated","is_anonymous":true}', true)) x),
+  '다시 불러도 저장된 시드 그대로');
+-- 직전 저장보다 나중에 만든 시드는 싣지 않는다(검수 P4b H2) — 앱이 그 시드를 받기 전에 연 알은 대조하지 않는다
+update cloud_private.account_seeds set created_at = (select last_accepted_at from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1') + interval '1 minute'
+  where user_id = '00000000-0000-0000-0000-0000000000e1';
+select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'seed', null, '직전 저장 뒤에 만든 시드는 싣지 않는다');
+update cloud_private.account_seeds set created_at = (select last_accepted_at from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1') - interval '1 minute'
+  where user_id = '00000000-0000-0000-0000-0000000000e1';
+select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'seed',
+  (select seed from cloud_private.account_seeds where user_id = '00000000-0000-0000-0000-0000000000e1'), '직전 저장 전에 만든 시드는 문맥에');
+select ok(not has_function_privilege('anon', 'public.account_seed()', 'execute'), 'anon 은 시드를 못 받는다');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000ff","role":"authenticated","is_anonymous":true}', true);
+select throws_ok($$ select public.account_seed() $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '없는 계정은 시드를 못 받는다');
+reset role;
+
 select * from finish();
 rollback;
