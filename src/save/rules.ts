@@ -67,7 +67,8 @@ export const SAVE_V3_RULES = {
   party: {
     total: 6, // 파티 칸은 항상 여섯이다. 열림·빈 칸·잠김으로 상태를 나눈다
     openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다
-    shopUnlock: 2, // 상점에서 살 수 있는 칸 수
+    shopUnlock: 2, // 상점에서 살 수 있는 칸 수 — 첫 프리셋. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
+    presets: { start: 2, max: 5 }, // 파티 프리셋 — 두 개로 시작하고 상점에서 셋을 더 산다 (2026-10-02 사용자 결정)
   },
   // 박스 수 — start 개로 시작하고, 모든 박스에 한 마리 이상 있으면 step 개를 더한다 (원작 방식, 2026-10-01 사용자 결정). src/save/v3.ts growBoxes
   box: { size: 30, firstName: "박스 1", start: 8, step: 8 },

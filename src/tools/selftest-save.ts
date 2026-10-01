@@ -11,8 +11,9 @@ import { migrate, verify } from "../save/migrate-v3";
 import * as legacy from "../save/legacy";
 import * as store from "../save/store";
 import { SAVE_V3_RULES } from "../save/rules";
-import { empty, emptySlots, normalize } from "../save/v3";
+import { empty, emptySlots, normalize, presetSlots } from "../save/v3";
 import { openSlot } from "../party/slots";
+import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../party/presets";
 import type { Pet, SaveV2 } from "../shared/types";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime(); // 2026-09-24 10:00 로컬
@@ -240,7 +241,83 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   process.stdout.write("(10) 성별 · 옛 개체  ok\n");
 }
 
-process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규화·성별)\n");
+// (11) 파티 프리셋 — 옛 저장은 지금 파티가 첫 프리셋이다. 개체는 한 자리에만 있다. 적용은 칸을 잠금·숨김째 맞바꾼다
+{
+  // 빈 저장 — 프리셋 둘, 첫 프리셋을 적용, 열린 칸은 넷
+  const fresh = empty(T0);
+  assert.equal(presetCount(fresh), SAVE_V3_RULES.party.presets.start);
+  assert.equal(activePreset(fresh), 0);
+  assert.equal(fresh.party.slotCount, SAVE_V3_RULES.party.openAtStart * SAVE_V3_RULES.party.presets.start);
+  assert.deepStrictEqual(fresh.party.presets?.[0], null, "적용한 번호의 자리는 비운다");
+  const second = slotsOfPreset(fresh, 1);
+  assert.ok(second);
+  assert.equal(second.filter((x) => x.state === "locked" && x.unlockBy === "shop").length, SAVE_V3_RULES.party.total - SAVE_V3_RULES.party.openAtStart, "둘째 프리셋의 잠긴 칸은 모두 상점");
+  assert.equal(slotsOfPreset(fresh, 2), null, "가지지 않은 프리셋");
+
+  // 프리셋이 없는 옛 저장 — 지금 파티가 첫 프리셋, 둘째는 빈 프리셋
+  const old = normalize({ ...empty(T0), pets: [{ id: "p1", species: "pikachu" }], party: { slots: [{ state: "pokemon", petId: "p1" }, { state: "empty" }] } }, T0);
+  assert.ok(old);
+  assert.equal(presetCount(old), 2);
+  assert.equal(activePreset(old), 0);
+  assert.equal(old.party.slots[0]?.petId, "p1");
+  assert.deepStrictEqual(slotsOfPreset(old, 1), presetSlots(1));
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(old)), T0)?.party, old.party, "다시 읽어도 같다");
+
+  // 프리셋 칸의 개체는 박스로 가지 않는다. 두 곳에 있으면 먼저 읽은 쪽(적용한 프리셋 → 번호 순 → 박스)이 남는다
+  const base = empty(T0);
+  const raw = {
+    ...base,
+    pets: [{ id: "p1", species: "pikachu" }, { id: "p2", species: "eevee" }, { id: "p3", species: "mew" }, { id: "p4", species: "ditto" }],
+    party: {
+      active: 1,
+      presetCount: 3,
+      slots: [{ state: "pokemon", petId: "p1", hidden: true }, { state: "empty" }, { state: "empty" }],
+      presets: [
+        [{ state: "pokemon", petId: "p2" }, { state: "pokemon", petId: "p1" }, { state: "locked", unlockBy: "achievement" }],
+        [{ state: "pokemon", petId: "p4" }], // 적용한 번호의 자리는 읽지 않는다
+        [{ state: "pokemon", petId: "p3" }, { state: "locked", unlockBy: "achievement" }],
+        [{ state: "pokemon", petId: "p4" }], // 가진 수를 넘는 번호
+      ],
+    },
+    boxes: [{ id: "b1", name: "박스 1", slots: ["p2", "p3"] }],
+  };
+  const s = normalize(raw, T0);
+  assert.ok(s);
+  assert.equal(presetCount(s), 3);
+  assert.equal(activePreset(s), 1);
+  assert.deepStrictEqual(s.party.slots.slice(0, 3).map((x) => x.state), ["pokemon", "empty", "empty"], "적용한 프리셋의 칸");
+  assert.deepStrictEqual(s.party.presets?.[1], null);
+  assert.deepStrictEqual(locatePet(s, "p1"), { kind: "preset", preset: 1, slot: 0, active: true });
+  assert.deepStrictEqual(locatePet(s, "p2"), { kind: "preset", preset: 0, slot: 0, active: false });
+  assert.equal(slotsOfPreset(s, 0)?.[1]?.state, "empty", "다른 프리셋에 이미 있는 개체는 빈 칸");
+  assert.deepStrictEqual(locatePet(s, "p3"), { kind: "preset", preset: 2, slot: 0, active: false });
+  assert.equal(slotsOfPreset(s, 2)?.some((x) => x.unlockBy === "achievement"), false, "업적으로 여는 칸은 첫 프리셋에만");
+  assert.equal(slotsOfPreset(s, 0)?.some((x) => x.unlockBy === "achievement"), true);
+  assert.equal(locatePet(s, "p4")?.kind, "box", "자리 없는 개체는 박스로");
+  assert.deepStrictEqual([...presetPetIds(s)].sort(), ["p1", "p2", "p3"]);
+  assert.equal(s.boxes.flatMap((b) => b.slots).filter((x) => x === "p2" || x === "p3").length, 0, "프리셋 개체는 박스에 없다");
+  const open = [s.party.slots, ...(s.party.presets ?? []).filter((x): x is NonNullable<typeof x> => x !== null)]
+    .reduce((n, slots) => n + slots.filter((x) => x.state !== "locked").length, 0);
+  assert.equal(s.party.slotCount, open, "열린 칸 수");
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(s)), T0), s, "다시 읽어도 같다");
+
+  // 적용 — 칸을 통째로 맞바꾼다. 박스는 그대로다. 왕복하면 처음과 같다
+  const before = JSON.parse(JSON.stringify(s)) as typeof s;
+  assert.deepStrictEqual(applyPreset(s, 1), { ok: false, reason: "already-active" });
+  assert.deepStrictEqual(applyPreset(s, 3), { ok: false, reason: "no-preset" });
+  assert.deepStrictEqual(applyPreset(s, 0), { ok: true });
+  assert.equal(activePreset(s), 0);
+  assert.equal(s.party.slots[0]?.petId, "p2");
+  assert.deepStrictEqual(s.party.presets?.[0], null);
+  assert.deepStrictEqual(slotsOfPreset(s, 1), before.party.slots, "나간 프리셋의 칸은 숨김째 남는다");
+  assert.deepStrictEqual(s.boxes, before.boxes, "박스는 그대로");
+  assert.deepStrictEqual(locatePet(s, "p1"), { kind: "preset", preset: 1, slot: 0, active: false });
+  assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
+  assert.deepStrictEqual(s.party, before.party, "왕복하면 처음과 같다");
+  process.stdout.write("(11) 파티 프리셋 · 읽기·자리 찾기·적용  ok\n");
+}
+
+process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규화·성별·프리셋)\n");
 
 // ── 파일 통로 ──────────────────────────────────────────────────────────────────
 // 여기부터는 임시 폴더에서 실제 파일로 확인한다. 끝나면 지운다

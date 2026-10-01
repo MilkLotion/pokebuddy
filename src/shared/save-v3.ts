@@ -59,6 +59,18 @@ export interface PartySlotV3 {
   unlockBy?: SlotUnlockBy; // state 가 locked 일 때 어떻게 여는가
 }
 
+// 파티 프리셋 (2026-10-02) — 규칙은 worklog/records/party-preset/record.md "확정 설계".
+// 저장 형식 번호는 올리지 않는다. 새 칸은 없으면 읽을 때 채운다 (src/save/v3.ts normalize)
+//   - 개체는 한 프리셋에만 든다. 프리셋에 든 개체는 박스에 없다
+//   - 칸의 잠금은 프리셋마다 따로다. 적용은 칸을 잠금째 맞바꾼다 (src/party/presets.ts applyPreset)
+export interface PartyV3 {
+  slots: PartySlotV3[]; // 적용한 프리셋의 칸 — 바탕화면에 나오고 시간이 흐른다
+  active?: number; // 적용한 프리셋 번호. 0 부터
+  presets?: (PartySlotV3[] | null)[]; // 번호 순. 적용한 번호의 자리는 null — 그 칸은 slots 에 있다
+  presetCount?: number; // 가진 프리셋 수
+  slotCount?: number; // 모든 프리셋의 열린 칸 수 — 다음 프리셋 구매 조건에 쓴다
+}
+
 // ── 박스 ───────────────────────────────────────────────────────────────────────
 export interface BoxV3 {
   id: string;
@@ -169,7 +181,7 @@ export interface SaveV3 {
   lastTickAt: number;
   pets: PetV3[];
   starterPetId: string | null; // 첫 선택으로 만난 개체. 업적 판정에 쓴다
-  party: { slots: PartySlotV3[] };
+  party: PartyV3;
   boxes: BoxV3[];
   eggs: EggV3[];
   petSeq: number; // 지금까지 쓴 개체 번호의 최댓값 — 판 개체의 식별자를 새 개체에 다시 쓰지 않게 한다 (src/shop/sell-pet.ts, src/party/create.ts nextPetId). 2026-10-02 에 더했다

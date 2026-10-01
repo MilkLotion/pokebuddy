@@ -5,13 +5,14 @@
 // 여기서 시계를 부르지 않는다. 지금 시각이 필요하면 받는다.
 import { localDate } from "../shared/clock.js";
 import type {
-  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PartySlotV3, PetV3,
+  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PartySlotV3, PartyV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
 import { SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, isNatureId, snapSize } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
+import { countParty } from "../party/presets.js";
 import { normalizeMail } from "../mail/core.js";
 import { FIND_RULES } from "../find/rules.js";
 import { isGender, legacyGender } from "../dex/gender.js";
@@ -58,7 +59,7 @@ export function empty(now: number): SaveV3 {
     lastTickAt: now,
     pets: [],
     starterPetId: null,
-    party: { slots: emptySlots() },
+    party: emptyParty(),
     boxes: growBoxes([newBox("b1", SAVE_V3_RULES.box.firstName)]),
     petSeq: 0,
     eggs: [],
@@ -85,6 +86,25 @@ export function emptySlots(): PartySlotV3[] {
     const bought = i - openAtStart < shopUnlock;
     return { state: "locked" as SlotState, unlockBy: bought ? ("shop" as const) : ("achievement" as const) };
   });
+}
+
+// 프리셋 하나의 새 칸 — 첫 프리셋은 상점 2칸·업적 2칸이다. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
+export function presetSlots(index: number): PartySlotV3[] {
+  if (index === 0) return emptySlots();
+  const { total, openAtStart } = SAVE_V3_RULES.party;
+  return Array.from({ length: total }, (_, i) =>
+    i < openAtStart ? { state: "empty" as SlotState } : { state: "locked" as SlotState, unlockBy: "shop" as const });
+}
+
+// 새 저장의 파티 — 첫 프리셋을 적용한 채 프리셋 start 개로 시작한다
+function emptyParty(): PartyV3 {
+  const party: PartyV3 = {
+    slots: presetSlots(0),
+    active: 0,
+    presets: Array.from({ length: SAVE_V3_RULES.party.presets.start }, (_, i) => (i === 0 ? null : presetSlots(i))),
+  };
+  countParty({ party });
+  return party;
 }
 
 export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: SAVE_V3_RULES.box.size }, () => null) });
@@ -186,9 +206,10 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
   };
 }
 
-function normalizeSlots(raw: unknown, petIds: Set<string>): PartySlotV3[] {
+// 프리셋 하나의 칸. `placed` 는 이미 자리가 있는 개체다 — 놓은 개체를 여기에 더한다
+function normalizeSlots(raw: unknown, petIds: Set<string>, placed: Set<string>, preset: number): PartySlotV3[] {
   const list = Array.isArray(raw) ? raw : [];
-  const out = emptySlots();
+  const out = presetSlots(preset);
   for (let i = 0; i < out.length; i++) {
     const r = list[i];
     if (!isObj(r)) continue;
@@ -196,18 +217,41 @@ function normalizeSlots(raw: unknown, petIds: Set<string>): PartySlotV3[] {
     if (!(SLOT_STATES as readonly string[]).includes(state)) continue;
     if (state === "pokemon") {
       const petId = str(r.petId);
-      // 없는 개체를 가리키는 칸은 빈 칸으로 본다 — 사라진 개체를 화면이 그리지 못하게
-      out[i] = petIds.has(petId) ? { state: "pokemon", petId, hidden: bool(r.hidden) } : { state: "empty" };
+      // 없는 개체를 가리키는 칸은 빈 칸으로 본다 — 사라진 개체를 화면이 그리지 못하게.
+      // 다른 칸에 이미 놓인 개체도 빈 칸으로 본다 — 개체는 한 자리에만 있다
+      if (petIds.has(petId) && !placed.has(petId)) {
+        out[i] = { state: "pokemon", petId, hidden: bool(r.hidden) };
+        placed.add(petId);
+      } else {
+        out[i] = { state: "empty" };
+      }
       continue;
     }
     if (state === "empty") {
       out[i] = { state: "empty" };
       continue;
     }
-    const by = str(r.unlockBy) === "achievement" ? "achievement" : "shop";
+    // 업적으로 여는 칸은 첫 프리셋에만 있다
+    const by = preset === 0 && str(r.unlockBy) === "achievement" ? "achievement" : "shop";
     out[i] = { state: "locked", unlockBy: by };
   }
   return compactSlots(out); // 열린 칸은 앞에서부터 — 옛 저장의 1·2·5번 열림도 1·2·3번으로
+}
+
+// 파티와 프리셋 — 프리셋이 없는 옛 저장은 지금 파티를 첫 프리셋으로 보고 나머지를 빈 프리셋으로 채운다.
+// 읽는 순서는 적용한 프리셋 → 나머지 프리셋 번호 순이다. 한 개체가 두 곳에 있으면 먼저 읽은 쪽이 남는다.
+// 가진 수를 넘는 번호의 칸은 버린다 — 그 개체는 자리 없는 개체로 박스에 간다 (putStrays)
+function normalizeParty(raw: unknown, petIds: Set<string>, placed: Set<string>): PartyV3 {
+  const r = isObj(raw) ? raw : {};
+  const { start, max } = SAVE_V3_RULES.party.presets;
+  const rawPresets = Array.isArray(r.presets) ? r.presets : [];
+  const count = clamp(nonNeg(r.presetCount, rawPresets.length), start, max);
+  const active = clamp(nonNeg(r.active), 0, count - 1);
+  const slots = normalizeSlots(r.slots, petIds, placed, active);
+  const presets = Array.from({ length: count }, (_, i) => (i === active ? null : normalizeSlots(rawPresets[i], petIds, placed, i)));
+  const party: PartyV3 = { slots, active, presets, presetCount: count };
+  countParty({ party });
+  return party;
 }
 
 function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<string>): BoxV3[] {
@@ -371,10 +415,8 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     seen.add(pet.id);
     pets.push(pet);
   }
-  const party = isObj(raw.party) ? raw.party : {};
-  const slots = normalizeSlots(party.slots, seen);
   const placed = new Set<string>();
-  for (const s of slots) if (s.state === "pokemon" && s.petId) placed.add(s.petId);
+  const party = normalizeParty(raw.party, seen, placed);
   const boxes = normalizeBoxes(raw.boxes, seen, placed);
   putStrays(pets, placed, boxes);
   growBoxes(boxes); // 옛 저장(박스 1개부터)도 읽을 때 지금 규칙으로 맞춘다
@@ -391,7 +433,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     lastTickAt: nonNeg(raw.lastTickAt, now),
     pets,
     starterPetId: seen.has(str(raw.starterPetId)) ? str(raw.starterPetId) : null,
-    party: { slots },
+    party,
     boxes,
     eggs,
     petSeq: Math.max(nonNeg(raw.petSeq), maxPetNo(pets)), // 2026-10-02 에 더했다. 옛 저장은 지금 있는 개체의 가장 큰 번호에서 시작한다
