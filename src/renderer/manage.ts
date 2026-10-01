@@ -601,7 +601,12 @@ function petCard(pet: PetView): HTMLElement {
     card.appendChild(box);
   }
   card.dataset.pet = pet.id; // 진화 튜토리얼이 이 카드를 찾는다
-  card.addEventListener("click", () => askPetMenu(pet.id)); // 누르면 포켓몬 메뉴 — 상세 보기·모습 바꾸기는 메뉴 안에 있다
+  // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴 (2026-10-02 사용자 결정 "좌클릭에 메뉴생기는게 생각보다 어색하네 … 우클릭으로 바꾸고 … 좌클릭으로 상세 열게")
+  card.addEventListener("click", () => openPet(pet.id));
+  card.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    askPetMenu(pet.id);
+  });
   if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
   card.title = `${pet.name} · ${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
   return card;
@@ -943,16 +948,12 @@ function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
 }
 
 // ── 포켓몬 메뉴 ────────────────────────────────────────────────────────────────
-// 파티 카드·박스 칸을 누르면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/main/menus.ts petMenu, 2026-10-02 사용자 결정).
-// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.ts). `상세 보기` 와 고른 모습은 경로(goTo)로 돌아온다.
-// 메뉴를 띄울 길이 없으면(개발용 실행기) 바로 개체 상세를 연다
+// 파티 카드·박스 칸을 우클릭하면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/main/menus.ts petMenu, 2026-10-02 사용자 결정).
+// 좌클릭은 개체 상세를 연다. 그래서 이 메뉴에는 `상세 보기` 가 없다 (같은 날 사용자 결정 — 좌클릭 메뉴가 어색했다).
+// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.ts). 고른 모습·옮기기·팔기는 경로(goTo)로 돌아온다.
+// 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
 function askPetMenu(petId: string): void {
-  void window.pokebuddyManage.petMenu(petId).then(
-    (shown) => {
-      if (!shown) openPet(petId);
-    },
-    () => openPet(petId),
-  );
+  void window.pokebuddyManage.petMenu(petId).catch(() => undefined);
 }
 
 // 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
@@ -1122,8 +1123,12 @@ function drawBox(v: Snapshot): void {
       grid.appendChild(blank);
       return;
     }
-    // 누르면 포켓몬 메뉴. 든 개체가 있으면 이 칸과 맞바꾼다
-    const cell = boxSlot(pet, () => (boxHold ? dropHold(slot) : askPetMenu(pet.id)));
+    // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다)
+    const cell = boxSlot(pet, () => (boxHold ? dropHold(slot) : openPet(pet.id)));
+    cell.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (!boxHold) askPetMenu(pet.id);
+    });
     cell.dataset.hold = "";
     if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     if (hold && hold.boxId === box.id && hold.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
@@ -1243,7 +1248,7 @@ function dropZone(target: HTMLElement, onDrop: () => void): void {
   dropTargets.set(target, onDrop);
 }
 
-const DRAG_START_PX = 5; // 이만큼 움직여야 끌기로 본다 — 그보다 작으면 누르기(상세 보기)
+const DRAG_START_PX = 5; // 이만큼 움직여야 끌기로 본다 — 그보다 작으면 누르기(개체 상세)
 
 function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void {
   if (down.button !== 0) return;
@@ -4993,7 +4998,7 @@ function open(next: Dialog): void {
   // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
   // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
-    if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드 메뉴의 `상세 보기` 로 온다
+    if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
     dialog = null;
     notice = "";
     setScrim(false);
@@ -5023,7 +5028,7 @@ function showTrade(): void {
   void loadTrade();
 }
 
-// 포켓몬 메뉴를 띄울 길이 없을 때만 쓴다 (askPetMenu) — 카드를 누르면 바로 개체 상세
+// 파티 카드·박스 칸의 좌클릭 — 개체 상세를 연다
 const openPet = (id: string): void => {
   if (detailPet === id && !dialog) {
     detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
@@ -5376,7 +5381,7 @@ function goTo(route: ManageRoute): void {
     draw();
     open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
-    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 포켓몬 메뉴의 상세 보기·진화 배너
+    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
   } else if (route.to === "form") {
     // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
     if (petOf(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });

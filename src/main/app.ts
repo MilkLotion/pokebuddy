@@ -644,7 +644,8 @@ function runGameCommand(command: Command, then?: () => Command): void {
 }
 
 // 포켓몬 메뉴 — 이름·상태 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기·옮기기 / 팔기. 앱 전체 조작은 트레이가 맡는다
-// origin: stage 는 무대의 포켓몬 위 우클릭, manage 는 관리 창의 파티 카드·박스 칸 누르기 (2026-10-02 사용자 결정 — 같은 메뉴를 쓴다)
+// origin: stage 는 무대의 포켓몬 위 우클릭, manage 는 관리 창의 파티 카드·박스 칸 우클릭 (2026-10-02 사용자 결정 — 같은 메뉴를 쓴다).
+// 관리 창의 메뉴에는 상세 보기가 없다 — 카드·칸을 좌클릭하면 바로 상세가 열린다 (2026-10-02 사용자 결정 "좌클릭으로 상세 열게")
 // 박스 개체와 볼 안의 개체는 무대에 없다 — 저장의 값으로 메뉴를 만든다. 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다
 // 공유 sid 계열이면 모습 말풍선에 넣을 초상을 먼저 받는다. 캐시에 없어 오래 걸리면 초상 없이 띄운다
 const FORM_ICON_WAIT_MS = 400;
@@ -701,8 +702,8 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
     ...(pet
       ? {
           ball: () => runGameCommand({ cmd: slot?.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
-          // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
-          detail: () => openManageWindow({ to: "pet", petId: id }),
+          // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정). 무대 우클릭 메뉴에만 있다
+          ...(origin === "stage" ? { detail: () => openManageWindow({ to: "pet", petId: id }) } : {}),
           // 옮기기·팔기 — 고른 뒤의 화면(든 상태, 팔기 확인 창)은 관리 창이 그린다
           move: () => openManageWindow({ to: "move", petId: id }),
           sell: () => {

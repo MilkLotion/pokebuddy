@@ -620,7 +620,8 @@ void app.whenReady().then(async () => {
     assert.equal(setAfter.buttons, buttonsBefore, "대화상자 실패 — 바닥 단추 자리가 그대로");
     assert.equal(setAfter.height, setBefore, `대화상자 실패에도 창 높이가 같다 (${setBefore} → ${setAfter.height})`);
 
-    // (17) 포켓몬 메뉴 — 파티 카드·박스 칸을 누르면 메뉴를 청한다. 마우스를 올려서는 아무것도 뜨지 않는다.
+    // (17) 포켓몬 메뉴 — 파티 카드·박스 칸을 우클릭하면 메뉴를 청한다. 좌클릭은 개체 상세다. 마우스를 올려서는 아무것도 뜨지 않는다.
+    //      (2026-10-02 사용자 "좌클릭에 메뉴생기는게 생각보다 어색하네 … 우클릭으로 바꾸고 … 좌클릭으로 상세 열게")
     //      메뉴와 모습 말풍선은 메뉴 창이 그린다(smoke-menu). 말풍선에서 고른 모습은 경로 form 으로 와서 바꾸기 확인 창을 띄운다
     //      (2026-10-02 사용자 "마우스만 갔다대도 바로 떠버려서 … 다른 메뉴로 가면 사라지지도 않고")
     await reload();
@@ -633,29 +634,34 @@ void app.whenReady().then(async () => {
     await js(`${sharedCell}.dispatchEvent(new MouseEvent('mouseenter')); ${sharedCell}.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); 0`);
     await wait(700);
     assert.equal(await js<number>(floating), before, "마우스를 올려서는 아무것도 뜨지 않는다");
-    await js(`${sharedCell}.click()`);
+    const rightClick = (target: string): string => `${target}.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))`;
+    await js(`window.__petMenu = null; ${rightClick(sharedCell)}; 0`);
     await wait(300);
-    assert.equal(await js<string>(`window.__petMenu`), sharedId, "박스 칸을 누르면 그 개체의 포켓몬 메뉴를 청한다");
-    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "메뉴가 뜨면 개체 상세를 바로 열지 않는다");
+    assert.equal(await js<string>(`window.__petMenu`), sharedId, "박스 칸을 우클릭하면 그 개체의 포켓몬 메뉴를 청한다");
+    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "우클릭은 개체 상세를 열지 않는다");
+    await js(`window.__petMenu = null; ${sharedCell}.click()`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), sharedId, "박스 칸을 좌클릭하면 개체 상세");
+    assert.equal(await js<unknown>(`window.__petMenu ?? null`), null, "좌클릭은 메뉴를 청하지 않는다");
     await js(`${tabBtn("파티")}.click()`);
     await wait(300);
-    await js(`window.__petMenu = null; document.querySelector('#body .slot[data-pet]').click()`);
+    const partyCard = `document.querySelector('#body .slot[data-pet]')`;
+    const partyId = await js<string>(`${partyCard}.dataset.pet`);
+    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "탭을 나가면 개체 상세를 닫는다");
+    await js(`window.__petMenu = null; ${rightClick(partyCard)}; 0`);
     await wait(300);
-    assert.equal(await js<string>(`window.__petMenu`), await js<string>(`document.querySelector('#body .slot[data-pet]').dataset.pet`), "파티 카드를 누르면 그 개체의 포켓몬 메뉴를 청한다");
-    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "파티 카드도 개체 상세를 바로 열지 않는다");
+    assert.equal(await js<string>(`window.__petMenu`), partyId, "파티 카드를 우클릭하면 그 개체의 포켓몬 메뉴를 청한다");
+    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "파티 카드 우클릭도 개체 상세를 열지 않는다");
+    await js(`window.__petMenu = null; ${partyCard}.click()`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), partyId, "파티 카드를 좌클릭하면 개체 상세");
+    assert.equal(await js<unknown>(`window.__petMenu ?? null`), null, "파티 카드 좌클릭은 메뉴를 청하지 않는다");
     await js(`window.__cb.onRoute({ to: 'form', petId: '${sharedId}', species: 'cosmog' }); 0`);
     await wait(600);
     const picked = await js<string>(`document.getElementById('dialog').textContent.slice(0, 40)`);
     await shot("form-confirm.png");
     assert.ok(picked.includes("코스모그") && picked.includes("바꿀까요"), `고른 모습 — 바꾸기 확인 창 (${picked})`);
     assert.equal(await js<number>(floating), before, "설정창에는 말풍선을 띄우지 않는다");
-    // 메뉴를 띄울 길이 없으면(개발용 실행기) 칸을 누르면 바로 개체 상세
-    await reload();
-    await js(`window.__menuOn = false; window.__petOpen = null; ${tabBtn("박스")}.click()`);
-    await wait(300);
-    await js(`${sharedCell}.click()`);
-    await wait(300);
-    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), sharedId, "메뉴를 띄울 길이 없으면 바로 개체 상세");
 
     // (18) 박스 — 칸 95×86 으로 6×5 가 스크롤 없이 맞는다. 넘김 줄의 ◀·▶·칸 수·정렬은 이름 길이와 이름 고치는 중에도 같은 자리다
     //      (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 레이아웃은 바뀌면 안된다", 2026-10-02 칸 B안)
@@ -731,10 +737,18 @@ void app.whenReady().then(async () => {
       await wait(200);
       assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, holding: document.querySelector('#body .box-grid').classList.contains('holding'), cmds: window.__cmds.length })`), { ghost: 0, holding: false, cmds: 0 }, "취소 — 내려놓고 명령은 없다");
     }
-    // 든 개체가 없으면 칸을 누르면 포켓몬 메뉴
-    await js(`window.__petMenu = null; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    // 든 동안 우클릭은 메뉴를 청하지 않는다. 든 개체가 없으면 우클릭은 포켓몬 메뉴, 좌클릭은 개체 상세
+    const firstCell = `document.querySelectorAll('#body .box-grid > .cell')[0]`;
+    await js(`window.__petMenu = null; window.__cb.onRoute({ to: 'move', petId: 'p3' }); 0`);
+    await wait(300);
+    await js(`${firstCell}.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); 0`);
     await wait(200);
-    assert.equal(await js<string>(`window.__petMenu`), "p2", "든 개체가 없으면 포켓몬 메뉴");
+    assert.equal(await js<unknown>(`window.__petMenu ?? null`), null, "든 동안 우클릭은 메뉴를 청하지 않는다");
+    await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); 0`);
+    await wait(200);
+    await js(`${firstCell}.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); 0`);
+    await wait(200);
+    assert.equal(await js<string>(`window.__petMenu`), "p2", "든 개체가 없으면 우클릭은 포켓몬 메뉴");
 
     // 팔기 — 확인 창. `팔기` 를 누르면 pet.sell
     await js(`window.__cmds = []; window.__cb.onRoute({ to: 'sell', petId: 'p3', price: 30 }); 0`);
