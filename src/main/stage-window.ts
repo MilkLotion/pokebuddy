@@ -107,6 +107,17 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
   // Space(데스크탑)를 옮겨도 따라온다 — 늘 보이는 펫이 만들어진 Space 에 남으면 사라진 것처럼 보인다
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
+  // "항상 위"를 건다 — 부를 때마다 SetWindowPos(HWND_TOPMOST) 를 다시 보내 풀린 것을 되살리고 항상 위 창들 맨 앞으로 올린다.
+  // Windows 는 수준을 pop-up-menu 로 준다. 기본 수준(floating)이면 Electron 이 부를 때마다 창을 주 화면 작업 표시줄 바로 뒤에 끼운다.
+  // 주 화면에 전체 화면 창이 앞에 오면 Windows 가 작업 표시줄의 "항상 위"를 풀고, 그 뒤에 끼운 무대도 "항상 위"를 잃어 거의 모든 창 밑으로 간다
+  // (2026-10-02 실험, worklog/records/stage-visibility/record.md). 전체 화면 창 위에도 무대가 보인다 — 2026-10-02 사용자 결정 "그렇게 보이게 둬".
+  // mac 은 창 수준이 층을 제대로 나눠 기본 수준 그대로 둔다
+  const pinTop = (): void => {
+    if (process.platform === "win32") win!.setAlwaysOnTop(true, "pop-up-menu");
+    else win!.setAlwaysOnTop(true);
+  };
+  pinTop();
+
   const mine = (sender: unknown): boolean => !!win && !win.isDestroyed() && sender === win.webContents;
   const onReady = (e: Electron.IpcMainEvent): void => {
     if (!mine(e.sender)) return;
@@ -208,7 +219,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       if (!alive()) return;
       if (on && !win!.isVisible()) {
         win!.showInactive(); // 포커스를 빼앗지 않고 표시
-        win!.setAlwaysOnTop(true); // 숨었다 나오는 동안 "항상 위"가 풀렸어도 다시 건다
+        pinTop(); // 숨었다 나오는 동안 "항상 위"가 풀렸어도 다시 건다
         win!.webContents.invalidate(); // 숨어 있는 동안 멈춘 화면 갱신을 되살림
       }
       if (!on && win!.isVisible()) {
@@ -219,10 +230,9 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     isVisible: () => alive() && win!.isVisible(),
 
     // Chromium 은 "항상 위" 값을 기억만 하고 창의 실제 상태를 다시 읽지 않는다 — 풀려도 isAlwaysOnTop() 은 true 다.
-    // setAlwaysOnTop(true) 는 부를 때마다 SetWindowPos(HWND_TOPMOST) 를 다시 보내 풀린 것을 되살리고 항상 위 창들 맨 앞으로 올린다.
-    // 수준은 만들 때와 같은 기본값(floating)이다 — Windows 에서는 작업 표시줄 바로 아래 자리다
+    // 그래서 주기마다 다시 건다(pinTop). 수준은 만들 때와 같다
     raise() {
-      if (alive() && win!.isVisible()) win!.setAlwaysOnTop(true);
+      if (alive() && win!.isVisible()) pinTop();
     },
     owns: (w) => alive() && w === win,
 
