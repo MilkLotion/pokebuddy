@@ -685,7 +685,7 @@ void app.whenReady().then(async () => {
     assert.equal(boxLook.w, 95, "칸 폭 95");
     assert.ok(boxLook.bottom <= boxLook.inner, `6×5 가 창 높이 안에 든다 (${boxLook.bottom} ≤ ${boxLook.inner})`);
     assert.ok(boxLook.lvRight >= 6 && boxLook.lvRight <= 9, `레벨은 칸 오른쪽 위 구석 (오른쪽 여백 ${boxLook.lvRight})`);
-    assert.ok(boxLook.boxes.includes("박스 8개"), `박스는 8개로 시작한다 (${boxLook.boxes})`);
+    assert.ok(/^보관 \d+마리$/.test(boxLook.boxes), `부제는 보관 마릿수만 적는다 (${boxLook.boxes})`); // 박스 수 규칙은 selftest-box 가 본다
     await shot("box-base.png");
     const pagerAt = `(() => {
       const p = document.querySelector('#body .pager');

@@ -1082,6 +1082,9 @@ function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
 
 // 박스 넘김 줄의 이름 칸 — 이름 길이와 고치는 중인지에 따라 ◀·▶·칸 수·정렬이 움직이지 않게 12글자 폭으로 고정한다
 // (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 최대12글자로 가정하고 구성해야해", Figma 05 `Box / Rename`)
+// 넘김 줄의 쪽 번호 — 끝을 넘으면 반대쪽 끝으로 돈다
+const wrapPage = (page: number, count: number): number => (count <= 0 ? 0 : ((page % count) + count) % count);
+
 function boxNameCell(inner: HTMLElement): HTMLElement {
   const cell = el("div", "box-name-cell");
   cell.appendChild(inner);
@@ -1090,7 +1093,7 @@ function boxNameCell(inner: HTMLElement): HTMLElement {
 
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
-  const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`);
+  const top = head("박스", `보관 ${kept}마리`); // 박스 수는 적지 않는다 (2026-10-02 사용자 결정)
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
   if (boxNote && sub) {
@@ -1115,21 +1118,24 @@ function drawBox(v: Snapshot): void {
   }
   const hold = boxHold;
 
-  // 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸과 칸 수는 고정 폭이다
+  // 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸과 칸 수는 고정 폭이다.
+  // 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다 (2026-10-02 사용자 결정)
   const pager = el("div", "pager box-pager");
+  const prevPage = wrapPage(boxPage - 1, v.boxes.length);
+  const nextPage = wrapPage(boxPage + 1, v.boxes.length);
   const prev = button("", "◀");
-  prev.disabled = boxPage === 0;
+  prev.disabled = v.boxes.length <= 1;
   prev.dataset.hold = ""; // 든 채로 박스를 넘긴다 — 든 것을 내려놓지 않는다
   prev.addEventListener("click", () => {
-    boxPage -= 1;
+    boxPage = prevPage;
     boxNote = "";
     draw();
   });
   const next = button("", "▶");
-  next.disabled = boxPage >= v.boxes.length - 1;
+  next.disabled = v.boxes.length <= 1;
   next.dataset.hold = "";
   next.addEventListener("click", () => {
-    boxPage += 1;
+    boxPage = nextPage;
     boxNote = "";
     draw();
   });
@@ -1141,8 +1147,8 @@ function drawBox(v: Snapshot): void {
       if (from && "boxId" in from && to) void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: to.id }, () => unsorted(from.boxId, to.id));
     });
   };
-  if (!prev.disabled) dropToBox(prev, boxPage - 1);
-  if (!next.disabled) dropToBox(next, boxPage + 1);
+  if (!prev.disabled) dropToBox(prev, prevPage);
+  if (!next.disabled) dropToBox(next, nextPage);
   pager.append(prev, boxNameCell(boxNameEl(box)), next, el("span", "used", `${box.used} / ${box.size}`));
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   pager.appendChild(boxSortEl(box));
@@ -2489,18 +2495,17 @@ function tradePicker(t: TradeScreen): HTMLElement {
   // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다
   const slots: (PetView | null)[] = shown ? shown.slots : (view?.party.slots ?? []).map((s) => s.pet ?? null);
   const pager = el("div", "pager trade-pager");
+  const pages = boxes.length + 1; // 파티 판 + 박스. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
   const prev = button("", "◀");
-  prev.disabled = tradePage === 0;
   prev.setAttribute("aria-label", "앞 판");
   prev.addEventListener("click", () => {
-    tradePage -= 1;
+    tradePage = wrapPage(tradePage - 1, pages);
     drawDialog();
   });
   const next = button("", "▶");
-  next.disabled = tradePage >= boxes.length;
   next.setAttribute("aria-label", "다음 판");
   next.addEventListener("click", () => {
-    tradePage += 1;
+    tradePage = wrapPage(tradePage + 1, pages);
     drawDialog();
   });
   const used = slots.filter((p) => p != null).length;
@@ -4302,15 +4307,15 @@ function drawSwap(): void {
   const side = el("div", "swap-box");
   const pager = el("div", "pager");
   const prev = button("", "◀");
-  prev.disabled = swapPage <= 0;
+  prev.disabled = v.boxes.length <= 1;
   prev.addEventListener("click", () => {
-    swapPage -= 1;
+    swapPage = wrapPage(swapPage - 1, v.boxes.length);
     drawDialog();
   });
   const next = button("", "▶");
-  next.disabled = swapPage >= v.boxes.length - 1;
+  next.disabled = v.boxes.length <= 1;
   next.addEventListener("click", () => {
-    swapPage += 1;
+    swapPage = wrapPage(swapPage + 1, v.boxes.length);
     drawDialog();
   });
   pager.className = "pager box-pager"; // 박스 탭과 같은 줄 — 이름 칸과 칸 수는 고정 폭
