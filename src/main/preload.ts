@@ -142,6 +142,7 @@ const MANAGE = {
   mail: "manage:mail",
   mailView: "manage:mail-view",
   clock: "manage:clock",
+  petMenu: "manage:pet-menu",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -152,6 +153,7 @@ const manage: ManageBridge = {
   shopDetail: (productId: string) => ipcRenderer.invoke(MANAGE.shopDetail, productId) as Promise<ShopDetail | null>,
   agents: (req) => ipcRenderer.invoke(MANAGE.agents, req) as Promise<AgentReply>,
   onRoute: (cb) => ipcRenderer.on(MANAGE.route, (_e, route: ManageRoute) => cb(route)),
+  petMenu: (petId) => ipcRenderer.invoke(MANAGE.petMenu, petId) as Promise<boolean>,
   drawRegion: () => ipcRenderer.invoke(MANAGE.drawRegion) as Promise<ManageReply>,
   screens: () => ipcRenderer.invoke(MANAGE.screens) as Promise<ScreenView[]>,
   identifyScreens: (on) => ipcRenderer.send(MANAGE.identifyScreens, on),
@@ -252,11 +254,15 @@ const MENU = {
   show: "menu:show",
   size: "menu:size",
   pick: "menu:pick",
+  side: "menu:side",
+  placed: "menu:placed",
 } satisfies Record<string, MenuChannel>;
 
 const menu: MenuBridge = {
   onShow: (cb) => ipcRenderer.on(MENU.show, (_e, items: MenuView[]) => cb(items)),
-  size: (w, h) => ipcRenderer.send(MENU.size, w, h),
+  size: (w, h, sub) => ipcRenderer.send(MENU.size, w, h, sub),
+  onSide: (cb) => ipcRenderer.on(MENU.side, (_e, side: "left" | "right") => cb(side)),
+  placed: () => ipcRenderer.send(MENU.placed),
   pick: (id) => ipcRenderer.send(MENU.pick, id),
 };
 

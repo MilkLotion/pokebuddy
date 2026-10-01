@@ -11,7 +11,7 @@ import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../main/anchor";
 import { ART_RULES, zoomOf } from "../main/art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, isDefaultHome, petSpot, roamBox, stackShift, stageOf, toLocal } from "../main/layout";
-import { lockExcept, menuView, petLine, petMenu, trayMenu } from "../main/menus";
+import { lockExcept, menuView, petLine, petMenu, pickOf, subId, trayMenu } from "../main/menus";
 import { NATURE_SHOWN } from "../dex/natures";
 import { t } from "../main/text";
 import { SAVE_RULES, SAVE_V3_RULES } from "../save/rules";
@@ -152,11 +152,57 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   (withBall[ballAt]!.click as () => void)();
   eq(balled, 1, "볼에 넣기 클릭이 동작을 부른다");
   eq(menu.some((m) => m.label === t("menu.ball")), false, "ball 동작이 없으면 볼에 넣기가 없다");
-  // 앱이 그리는 모양 — 이름·상태 두 줄, 못 하는 돌봄은 흐리게 이유를 오른쪽에, 겹친 구분선은 하나로
+  // 앱이 그리는 모양 — 이름·상태 두 줄, 못 하는 돌봄은 흐리게만(이유는 적지 않는다 — 2026-10-02 사용자 결정), 겹친 구분선은 하나로
   const cared = menuView(petMenu({ name: "이브이", nature: "용감", status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, {}), "켜짐");
   eq(cared[0], { kind: "status", title: EEVEE_LINE, caption: "배부름 · 기분 좋음" }, "menuView 상태 줄");
   const feedView = cared.find((v) => v.kind === "item" && v.label === t("menu.feed"));
-  eq(feedView?.kind === "item" ? [feedView.disabled, feedView.hint] : null, [true, "0:40"], "menuView 밥 주기 흐림과 남은 시간");
+  eq(feedView?.kind === "item" ? [feedView.disabled, feedView.hint] : null, [true, undefined], "menuView 밥 주기는 흐리게만 — 이유를 붙이지 않는다");
+  // 관리 창의 파티 카드·박스 칸도 같은 메뉴다 — 묶음: 돌봄·볼 / 상세 보기·모습 바꾸기·옮기기 / 팔기 (Figma `Context Menu` `338:738`)
+  // 박스 개체는 돌봄·볼이 흐리다. 옮기기·팔기는 동작을 꽂기 전에는 흐리다(기능 개발 예정)
+  const off = { enabled: false };
+  const forms = [
+    { species: "cosmog", name: "코스모그", current: false, portrait: "data:image/png;base64,AA" },
+    { species: "cosmoem", name: "코스모움", current: true },
+  ];
+  let formed = "";
+  const boxed = petMenu(
+    { name: "코스모그", nature: null, status: "보통", feed: off, play: off, ball: { enabled: false, hidden: false }, forms, move: { enabled: true }, sell: { enabled: false } },
+    { ball: () => undefined, detail: () => undefined, form: (species) => void (formed = species) },
+  );
+  const boxedView = menuView(boxed, "켜짐");
+  eq(
+    boxedView.map((v) => (v.kind === "item" ? `${v.label}${v.disabled ? " (흐림)" : ""}` : v.kind)),
+    ["status", "separator", `${t("menu.feed")} (흐림)`, `${t("menu.play")} (흐림)`, `${t("menu.ball")} (흐림)`, t("menu.detail"), t("menu.form"), `${t("menu.move")} (흐림)`, "separator", `${t("menu.sell")} (흐림)`],
+    "박스 공유 계열 메뉴 — 돌봄·볼·옮기기·팔기는 흐리고 상세 보기·모습 바꾸기는 누른다. 볼에 넣기와 상세 보기 사이에 구분선이 없다",
+  );
+  // 모습 바꾸기 — 누르는 동작 없이 말풍선(sub)을 단다. 지금 모습 줄은 누를 수 없다
+  const formAt = boxed.findIndex((m) => m.label === t("menu.form"));
+  const formView = boxedView.find((v) => v.kind === "item" && v.label === t("menu.form"));
+  const sub = formView?.kind === "item" ? formView.sub : undefined;
+  eq(sub?.title, t("menu.form.title"), "모습 말풍선의 머리 줄");
+  eq(
+    sub?.rows,
+    [
+      { id: subId(formAt, 0), label: "코스모그", note: t("menu.form.go"), current: false, icon: "data:image/png;base64,AA" },
+      { id: subId(formAt, 1), label: "코스모움", note: t("menu.form.now"), current: true },
+    ],
+    "모습 말풍선의 줄 — 이름·바꾸기/지금·초상",
+  );
+  ok(!boxed[formAt]?.click, "모습 바꾸기 항목은 누르는 동작이 없다 — 메뉴가 닫히지 않는다");
+  (pickOf(boxed, subId(formAt, 0))!.click as () => void)();
+  eq(formed, "cosmog", "모습 줄의 번호로 그 모습의 동작을 찾는다");
+  eq(pickOf(boxed, subId(formAt, 1))?.enabled, false, "지금 모습 줄은 비활성");
+  eq(pickOf(boxed, formAt)?.label, t("menu.form"), "pickOf — 하위 줄이 아니면 모델의 자리");
+  // 옮기기·팔기 — 동작을 꽂으면 켜진다. 옮기기는 모델에 있을 때만(박스 개체) 나온다
+  const wired = petMenu({ name: "꼬렛", nature: null, move: { enabled: true }, sell: { enabled: true } }, { detail: () => undefined, move: () => undefined, sell: () => undefined });
+  eq(wired.filter((m) => m.label === t("menu.move") || m.label === t("menu.sell")).map((m) => m.enabled), [true, true], "옮기기·팔기 — 동작이 있으면 누를 수 있다");
+  const party = petMenu({ name: "이브이", nature: null, ball: { enabled: true, hidden: true }, sell: { enabled: true } }, { ball: () => undefined, detail: () => undefined });
+  eq(party.some((m) => m.label === t("menu.form") || m.label === t("menu.move")), false, "파티 일반 개체 — 모습 바꾸기·옮기기가 없다");
+  eq(party.find((m) => m.label === t("menu.sell"))?.enabled, false, "팔기 — 동작이 없으면 흐리다");
+  eq(party.some((m) => m.label === t("menu.unball")), true, "볼 안의 개체는 꺼내기");
+  // 첫 돌봄 잠금은 모습 바꾸기(하위 줄만 있는 항목)도 잠근다
+  const lockedForm = menuView(lockExcept(boxed, [t("menu.feed")]), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
+  eq(lockedForm?.kind === "item" ? lockedForm.disabled : null, true, "lockExcept 모습 바꾸기도 흐리다");
   eq(menuView([...menu, { type: "separator" }, { type: "separator" }, { label: "x", click: () => undefined }], "켜짐").filter((v) => v.kind === "separator").length, 1, "menuView 겹친 구분선은 하나");
   eq(menuView(menu, "켜짐").filter((v) => v.kind === "separator").length, 0, "menuView 끝 구분선은 뺀다");
   // 첫 돌봄 2/2 — 밥 주기만 누를 수 있고 나머지 누르는 항목은 흐리다. 이름·상태 줄은 그대로 상태 줄이다

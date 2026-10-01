@@ -291,11 +291,12 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock" | "manage:pet-menu";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
+// form 은 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
 // 교환은 교환 링크(딥링크)로 앱을 열었을 때 박스 탭을 열고 교환 모달을 띄운다. 계정은 GitHub 로그인 뒤 브라우저에서 돌아왔을 때 설정의 계정 탭으로 간다
-export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" } | { to: "bag" } | { to: "shop" };
+export type ManageRoute = { to: "daycare" } | { to: "pet"; petId: string } | { to: "achievements"; id: string } | { to: "trade" } | { to: "account" } | { to: "agents" } | { to: "bag" } | { to: "shop" } | { to: "form"; petId: string; species: string };
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
 // 설정 모달 바닥 왼쪽이 그린다 (src/main/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
@@ -471,6 +472,7 @@ export interface ManageBridge {
   shopDetail: (productId: string) => Promise<ShopDetail | null>; // 상점 구매 창의 상세 — 포켓몬 진화 트리, 진화용 도구의 대상
   agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>; // 인자가 없으면 읽기만 한다
   onRoute: (cb: (route: ManageRoute) => void) => void; // 배너의 `바로가기` 로 옮겨 갈 곳
+  petMenu: (petId: string) => Promise<boolean>; // 파티 카드·박스 칸을 눌렀다 — 메인이 커서 자리에 포켓몬 메뉴를 띄운다. 띄울 길이 없으면 false
   drawRegion: () => Promise<ManageReply>; // 적용하면 ok, 취소하면 reason "cancelled"
   screens: () => Promise<ScreenView[]>; // 지금 화면 목록 — 번호 순. 화면을 모르면(개발 실행기 등) 빈 목록
   identifyScreens: (on: boolean) => void; // 모든 화면에 번호 덮개를 띄운다·치운다 — 한 화면 목록이 열린 동안
@@ -710,14 +712,23 @@ export interface BannerBridge {
 export type MenuView =
   | { kind: "separator" }
   | { kind: "status"; title: string; caption?: string } // 맨 위 이름·상태 두 줄 — 누를 수 없다
-  | { kind: "item"; id: number; label: string; disabled: boolean; hint?: string }; // hint 는 오른쪽의 짧은 글 — 체크 항목의 `켜짐`
+  | { kind: "item"; id: number; label: string; disabled: boolean; hint?: string; sub?: MenuSubView }; // hint 는 오른쪽의 짧은 글 — 체크 항목의 `켜짐`
 
-// menu:show 는 메인 → 렌더러, 나머지는 렌더러 → 메인. menu:pick 이 null 이면 닫기만 한다
-export type MenuChannel = "menu:show" | "menu:size" | "menu:pick";
+// 항목 옆에 붙어 뜨는 말풍선 — 항목을 눌러도 메뉴는 닫히지 않는다 (포켓몬 메뉴의 `모습 바꾸기`, Figma 05 `501:14010`)
+// 줄의 id 는 menu:pick 으로 돌려보내는 번호다. icon 은 그림의 data URI
+export interface MenuSubView {
+  title: string;
+  rows: { id: number; label: string; note: string; current: boolean; icon?: string }[];
+}
+
+// menu:show·menu:side 는 메인 → 렌더러, 나머지는 렌더러 → 메인. menu:pick 이 null 이면 닫기만 한다
+export type MenuChannel = "menu:show" | "menu:size" | "menu:pick" | "menu:side" | "menu:placed";
 
 export interface MenuBridge {
   onShow: (cb: (items: MenuView[]) => void) => void;
-  size: (w: number, h: number) => void; // 그린 뒤의 크기 — 메인이 창 크기와 자리를 정한다
+  size: (w: number, h: number, sub?: { w: number; h: number; top: number }) => void; // 그린 뒤의 메뉴 크기 — 메인이 창 크기와 자리를 정한다. sub 는 말풍선의 크기와 메뉴 위 끝에서 잰 자리
+  onSide: (cb: (side: "left" | "right") => void) => void; // 말풍선이 뜰 쪽 — 화면 오른쪽에 자리가 없으면 왼쪽
+  placed: () => void; // 말풍선 자리를 잡았다 — 메인이 창을 보인다
   pick: (id: number | null) => void;
 }
 

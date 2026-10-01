@@ -45,7 +45,7 @@
 | `install-mac-keychain` | `install-mac-keychain.png` | 설명서 설치 — Mac | `PokeBuddy Safe Storage` 키체인 허용 창 | 대기 |
 | `starter` | `starter.png` | 설명서 처음 시작하기 | 첫 포켓몬 선택 창 | 넣음 (2026-09-30) |
 | `playground` | `playground.png` | 설명서 놀이공간과 포켓몬 | 설정 모달 `화면` 탭의 놀이공간 전환 단추 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. 밥 주기 쿨타임 중이면 남은 시간이 보여 더 좋다 | 넣음 (2026-09-30) |
+| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. `팔기` 줄까지 보이게 | 다시 찍기 대기 — 2026-09-30 그림은 옛 메뉴다(남은 시간 글이 있고 `팔기` 줄이 없다) |
 | `hatch` | `hatch.png` | 설명서 알과 부화 | 돌보미집 모달 위에 뜬 부화 결과 창 | 넣음 (2026-09-30 다시 찍음, `scripts/dev-manage.cjs --docs --scene done-all --scene hatch --tab 박스 --click-text 돌보미집 --click-text 열기`) |
 | `evolve` | `evolve.png` | 설명서 성장과 진화 | 파티 상세 기기 창에서 진화 대상을 고르는 화면 | 넣음 (2026-09-30) |
 | `dex` | `dex.png` | 설명서 도감과 업적 | 도감 탭 목록. 해금한 종과 해금하지 않은 종이 섞여 보이게 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |

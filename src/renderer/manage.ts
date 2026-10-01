@@ -596,17 +596,9 @@ function petCard(pet: PetView): HTMLElement {
     card.appendChild(box);
   }
   card.dataset.pet = pet.id; // 진화 튜토리얼이 이 카드를 찾는다
-  card.addEventListener("click", () => openPet(pet.id));
+  card.addEventListener("click", () => askPetMenu(pet.id)); // 누르면 포켓몬 메뉴 — 상세 보기·모습 바꾸기는 메뉴 안에 있다
   if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
-  const state = `${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
-  if (pet.forms && pet.forms.length > 1) {
-    // 공유 sid 계열 — 마우스를 올리면 박스와 같은 모습 툴팁. 두 툴팁이 겹치지 않게 title 대신 툴팁 머리 줄에 상태를 적는다
-    // (Figma `Party / Shared Form Tip` `501:14010`, 2026-09-26 사용자 결정 "제안대로 진행")
-    card.addEventListener("mouseenter", () => showFormTip(card, pet, `${pet.name} · ${state}`));
-    card.addEventListener("mouseleave", () => hideFormTipSoon());
-  } else {
-    card.title = `${pet.name} · ${state}`;
-  }
+  card.title = `${pet.name} · ${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
   return card;
 }
 
@@ -927,8 +919,6 @@ function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
     // 공유 sid 계열 — 모습들을 한 장의 단체사진으로, 이름은 계열, 아래 줄은 지금 종 (Figma `Box / Shared Profile` `481:1227`)
     const level = pet.shiny ? `Lv.${pet.level} · 이로치` : `Lv.${pet.level}`;
     cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note", `${level} · ${pet.name}`));
-    cell.addEventListener("mouseenter", () => showFormTip(cell, pet));
-    cell.addEventListener("mouseleave", () => hideFormTipSoon());
   } else {
     cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", pet.shiny ? `Lv.${pet.level} · 이로치` : `Lv.${pet.level}`));
   }
@@ -937,9 +927,9 @@ function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
 }
 
 // ── 공유 sid 계열 ───────────────────────────────────────────────────────────────
-// 박스 칸의 2×2 단체사진과 마우스를 올리면 뜨는 툴팁. 툴팁의 줄을 누르면 바꾸기 확인 창이 뜬다.
-// 파티 카드와 개체 상세는 지금 종 하나만 보인다 (2026-09-26 사용자 결정 "너 제안대로 하자").
-// 파티에 나간 개체는 박스 칸이 없어 파티 카드에도 같은 툴팁을 단다 (2026-09-26 "제안대로 진행")
+// 박스 칸은 2×2 단체사진이다. 파티 카드와 개체 상세는 지금 종 하나만 보인다 (2026-09-26 사용자 결정 "너 제안대로 하자").
+// 모습은 포켓몬 메뉴의 `모습 바꾸기` 로 바꾼다. 메뉴 옆의 말풍선에서 모습을 고르면 바꾸기 확인 창(drawForm)이 뜬다.
+// 마우스를 올려 띄우던 툴팁은 없앴다 (2026-10-02 사용자 "마우스만 갔다대도 바로 떠버려서 … 클릭해야 나오게 하자")
 
 function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
   const photo = el("div", "group-photo");
@@ -947,57 +937,17 @@ function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
   return photo;
 }
 
-let formTip: HTMLElement | null = null;
-let formTipTimer: ReturnType<typeof setTimeout> | null = null;
-
-function hideFormTip(): void {
-  if (formTipTimer) clearTimeout(formTipTimer);
-  formTipTimer = null;
-  formTip?.remove();
-  formTip = null;
-}
-// 칸에서 툴팁으로 커서를 옮기는 사이에 닫히지 않게 잠깐 기다린다
-function hideFormTipSoon(): void {
-  if (formTipTimer) clearTimeout(formTipTimer);
-  formTipTimer = setTimeout(hideFormTip, 150);
-}
-
-// status 는 파티 카드가 title 대신 머리 줄에 두는 상태 문구다
-function showFormTip(cell: HTMLElement, pet: PetView, status?: string): void {
-  hideFormTip();
-  const tip = el("div", "form-tip");
-  tip.setAttribute("role", "menu");
-  if (status) tip.appendChild(el("div", "tip-head", status));
-  tip.appendChild(el("div", "tip-head", "모습 바꾸기"));
-  for (const f of pet.forms ?? []) {
-    const now = f.species === pet.species;
-    const row = button("form-row");
-    row.setAttribute("role", "menuitem");
-    if (now) row.setAttribute("aria-current", "true");
-    row.append(portraitOf(f.species, pet.shiny, "gp-face"), el("span", "name", f.name), el("span", "note", now ? "지금" : "바꾸기"));
-    row.disabled = now;
-    row.addEventListener("click", (e) => {
-      e.stopPropagation();
-      hideFormTip();
-      open({ kind: "form", petId: pet.id, to: f.species });
-    });
-    tip.appendChild(row);
-  }
-  tip.addEventListener("mouseenter", () => {
-    if (formTipTimer) clearTimeout(formTipTimer);
-    formTipTimer = null;
-  });
-  tip.addEventListener("mouseleave", hideFormTipSoon);
-  document.body.appendChild(tip);
-  // 칸 바로 아래 가운데. 창 아래로 넘치면 칸 위에 둔다
-  const r = cell.getBoundingClientRect();
-  const w = tip.offsetWidth;
-  const h = tip.offsetHeight;
-  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
-  const top = r.bottom + 6 + h > window.innerHeight ? r.top - 6 - h : r.bottom + 6;
-  tip.style.left = `${Math.round(left)}px`;
-  tip.style.top = `${Math.round(top)}px`;
-  formTip = tip;
+// ── 포켓몬 메뉴 ────────────────────────────────────────────────────────────────
+// 파티 카드·박스 칸을 누르면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/main/menus.ts petMenu, 2026-10-02 사용자 결정).
+// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.ts). `상세 보기` 와 고른 모습은 경로(goTo)로 돌아온다.
+// 메뉴를 띄울 길이 없으면(개발용 실행기) 바로 개체 상세를 연다
+function askPetMenu(petId: string): void {
+  void window.pokebuddyManage.petMenu(petId).then(
+    (shown) => {
+      if (!shown) openPet(petId);
+    },
+    () => openPet(petId),
+  );
 }
 
 // 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
@@ -1112,7 +1062,7 @@ function drawBox(v: Snapshot): void {
       grid.appendChild(blank);
       return;
     }
-    const cell = boxCell(pet, () => openPet(pet.id));
+    const cell = boxCell(pet, () => askPetMenu(pet.id)); // 누르면 포켓몬 메뉴
     if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { boxId: box.id, slot }));
@@ -1156,7 +1106,6 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
       if (Math.hypot(e.clientX - x0, e.clientY - y0) < DRAG_START_PX) return;
       dragFrom = from;
       boxSortOpen = false;
-      hideFormTipSoon();
       const rect = cell.getBoundingClientRect();
       ghost = cell.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
@@ -4878,6 +4827,7 @@ function open(next: Dialog): void {
   // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
   // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
+    if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드 메뉴의 `상세 보기` 로 온다
     dialog = null;
     notice = "";
     setScrim(false);
@@ -4907,8 +4857,8 @@ function showTrade(): void {
   void loadTrade();
 }
 
+// 포켓몬 메뉴를 띄울 길이 없을 때만 쓴다 (askPetMenu) — 카드를 누르면 바로 개체 상세
 const openPet = (id: string): void => {
-  if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 카드를 눌러 기기 창의 진화 단추를 보는 것이 목표 행동이다
   if (detailPet === id && !dialog) {
     detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
     draw();
@@ -5258,7 +5208,10 @@ function goTo(route: ManageRoute): void {
     draw();
     open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
-    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 우클릭 상세 보기·진화 배너
+    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 포켓몬 메뉴의 상세 보기·진화 배너
+  } else if (route.to === "form") {
+    // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
+    if (petOf(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
   } else if (route.to === "account") {
     detailPet = null;
     open({ kind: "user", tab: "account" });

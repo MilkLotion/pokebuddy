@@ -45,6 +45,10 @@ for (let i = 0; i < 8; i += 1) {
   putPet(save.boxes, id);
 }
 save.bag["exp-candy-s"] = 3;
+// 공유 sid 계열 한 마리 — 코스모그에서 진화한 코스모움. 박스 칸이 단체사진이고 모습이 둘이다 (검사 17)
+const sharedId = nextPetId(save);
+save.pets.push({ ...newPet({ id: sharedId, species: "cosmoem", shiny: false, nature: "hardy", gender: "male", now: 0 }), evolved: ["cosmog"] });
+putPet(save.boxes, sharedId);
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
 const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
@@ -80,6 +84,7 @@ window.pokebuddyManage = new Proxy({}, {
     if (name === "dex") return async () => dex;
     if (name === "dexOpen") return (slug, gen, beside) => { window.__dexOpen = slug; window.__dexBeside = beside === true; };
     if (name === "petOpen") return (open) => { window.__petOpen = open; };
+    if (name === "petMenu") return async (id) => { window.__petMenu = id; return window.__menuOn === true; }; // 메뉴를 띄운 것으로 칠지는 window.__menuOn
     if (name === "shopOpen") return (open) => { window.__shopOpen = open; };
     if (name === "bagOpen") return (open) => { window.__bagOpen = open; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
@@ -612,7 +617,44 @@ void app.whenReady().then(async () => {
     assert.equal(setAfter.buttons, buttonsBefore, "대화상자 실패 — 바닥 단추 자리가 그대로");
     assert.equal(setAfter.height, setBefore, `대화상자 실패에도 창 높이가 같다 (${setBefore} → ${setAfter.height})`);
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 그림 ${shots}\n`);
+    // (17) 포켓몬 메뉴 — 파티 카드·박스 칸을 누르면 메뉴를 청한다. 마우스를 올려서는 아무것도 뜨지 않는다.
+    //      메뉴와 모습 말풍선은 메뉴 창이 그린다(smoke-menu). 말풍선에서 고른 모습은 경로 form 으로 와서 바꾸기 확인 창을 띄운다
+    //      (2026-10-02 사용자 "마우스만 갔다대도 바로 떠버려서 … 다른 메뉴로 가면 사라지지도 않고")
+    await reload();
+    await js(`window.__menuOn = true; window.__petOpen = null; ${tabBtn("박스")}.click()`);
+    await wait(300);
+    const sharedCell = `[...document.querySelectorAll('#body .cell')].find((c) => c.querySelector('.group-photo'))`;
+    assert.equal(await js<boolean>(`!!${sharedCell}`), true, "공유 계열 박스 칸은 단체사진");
+    const floating = `document.body.children.length`;
+    const before = await js<number>(floating);
+    await js(`${sharedCell}.dispatchEvent(new MouseEvent('mouseenter')); ${sharedCell}.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); 0`);
+    await wait(700);
+    assert.equal(await js<number>(floating), before, "마우스를 올려서는 아무것도 뜨지 않는다");
+    await js(`${sharedCell}.click()`);
+    await wait(300);
+    assert.equal(await js<string>(`window.__petMenu`), sharedId, "박스 칸을 누르면 그 개체의 포켓몬 메뉴를 청한다");
+    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "메뉴가 뜨면 개체 상세를 바로 열지 않는다");
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(300);
+    await js(`window.__petMenu = null; document.querySelector('#body .slot[data-pet]').click()`);
+    await wait(300);
+    assert.equal(await js<string>(`window.__petMenu`), await js<string>(`document.querySelector('#body .slot[data-pet]').dataset.pet`), "파티 카드를 누르면 그 개체의 포켓몬 메뉴를 청한다");
+    assert.equal(await js<unknown>(`window.__petOpen ?? null`), null, "파티 카드도 개체 상세를 바로 열지 않는다");
+    await js(`window.__cb.onRoute({ to: 'form', petId: '${sharedId}', species: 'cosmog' }); 0`);
+    await wait(600);
+    const picked = await js<string>(`document.getElementById('dialog').textContent.slice(0, 40)`);
+    await shot("form-confirm.png");
+    assert.ok(picked.includes("코스모그") && picked.includes("바꿀까요"), `고른 모습 — 바꾸기 확인 창 (${picked})`);
+    assert.equal(await js<number>(floating), before, "설정창에는 말풍선을 띄우지 않는다");
+    // 메뉴를 띄울 길이 없으면(개발용 실행기) 칸을 누르면 바로 개체 상세
+    await reload();
+    await js(`window.__menuOn = false; window.__petOpen = null; ${tabBtn("박스")}.click()`);
+    await wait(300);
+    await js(`${sharedCell}.click()`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), sharedId, "메뉴를 띄울 길이 없으면 바로 개체 상세");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

@@ -2608,8 +2608,8 @@
         margin: 0 0 4px;
         color: var(--muted);
       }
-      /* 공유 sid — 단체사진과 툴팁 (Figma `10 · 공유 sid 시안` 시안 C `481:1227`).
-         박스 칸의 초상 자리에 모습 넷을 2×2 로 담는다. 툴팁의 지금 줄은 옅은 배경만 쓴다 — 선택 막대는 쓰지 않는다 */
+      /* 공유 sid — 단체사진 (Figma `10 · 공유 sid 시안` 시안 C `481:1227`).
+         박스 칸의 초상 자리에 모습 넷을 2×2 로 담는다. 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.html) */
       .group-photo {
         width: 40px;
         height: 40px;
@@ -2631,66 +2631,6 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-      }
-      .form-tip {
-        position: fixed;
-        z-index: 50;
-        min-width: 180px;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: 8px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-      }
-      .form-tip .tip-head {
-        padding: 0 4px 4px;
-        font-size: 10px;
-        font-family: var(--font-small);
-        color: var(--muted);
-      }
-      .form-row {
-        appearance: none;
-        font: inherit;
-        font-size: 12px;
-        color: inherit;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 8px;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        text-align: left;
-        cursor: pointer;
-      }
-      .form-row:hover:not(:disabled),
-      .form-row[aria-current="true"] {
-        background: var(--accent-bg);
-      }
-      .form-row:disabled {
-        cursor: default;
-      }
-      .form-row .gp-face {
-        width: 24px;
-        height: 24px;
-        flex: none;
-        background: var(--accent-bg);
-      }
-      .form-row .name {
-        flex: 1;
-        font-size: 12px; /* 카드 이름(.name 15px)을 물려받지 않게 */
-        font-family: inherit;
-      }
-      .form-row .note {
-        font-size: 10px;
-        font-family: var(--font-small);
-        color: var(--muted);
-      }
-      .form-row[aria-current="true"] .note {
-        color: var(--primary);
       }
       /* 튜토리얼 코치마크 (Figma `Tutorial / Shop` `399:8590` 등). 대상 둘레를 비운 배경막 네 장과 말풍선.
          대상에는 강조 테두리를 두르지 않는다 (docs/specs/game.md "코치마크") */

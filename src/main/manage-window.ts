@@ -59,6 +59,7 @@ const CH = {
   mail: "manage:mail",
   mailView: "manage:mail-view",
   clock: "manage:clock",
+  petMenu: "manage:pet-menu",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -86,6 +87,7 @@ export interface ManageOptions {
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
   mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/main/mail.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
+  petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/main/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
 }
 
 let win: BrowserWindow | null = null;
@@ -99,6 +101,7 @@ let screens: ManageOptions["screens"] = undefined;
 let identifyScreens: ManageOptions["identifyScreens"] = undefined;
 let pickScreen: ManageOptions["pickScreen"] = undefined;
 let mail: ManageOptions["mail"] = undefined;
+let petMenu: ManageOptions["petMenu"] = undefined;
 let dexWin: DexWindow | null = null;
 let petWin: PetWindow | null = null;
 let shopWin: ShopWindow | null = null;
@@ -300,6 +303,12 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (action !== "list" && action !== "seen") return null;
     return notes(action);
   });
+  // 포켓몬 메뉴 — 개체 식별자만 받는다. 띄웠으면 true, 띄울 길이 없으면 false
+  ipcMain.handle(CH.petMenu, (e, petId: unknown): boolean => {
+    if (!mine(e) || !petMenu || typeof petId !== "string" || petId.length > 64) return false;
+    petMenu(petId);
+    return true;
+  });
   ipcMain.handle(CH.screens, (e): ScreenView[] => (mine(e) && screens ? screens() : []));
   ipcMain.on(CH.identifyScreens, (e, on: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
@@ -335,6 +344,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   identifyScreens = opts.identifyScreens;
   pickScreen = opts.pickScreen;
   mail = opts.mail;
+  petMenu = opts.petMenu;
   if (win && !win.isDestroyed()) {
     if (win.isMinimized()) win.restore();
     win.show();

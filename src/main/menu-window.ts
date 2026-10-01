@@ -6,19 +6,25 @@
 // inactive 메뉴(Windows 트레이)는 포커스를 가져오지 않는다 — 가져오면 Windows 가 숨겨진 아이콘 창을 닫는다.
 //   그래서 바깥 클릭·Esc 는 부르는 쪽이 헬퍼의 입력 감시로 알아채 closeMenu 를 부른다 (helpers/winbounds.ps1).
 // 메뉴는 한 번에 하나다. 새로 띄우면 앞의 메뉴를 닫는다
+// 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
+//   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
 import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
 import type { MenuChannel } from "../shared/manage";
-import { menuView } from "./menus.js";
+import { menuView, pickOf } from "./menus.js";
 import { windowIcon } from "./paths.js";
 
 const CH = {
   show: "menu:show",
   size: "menu:size",
   pick: "menu:pick",
+  side: "menu:side",
+  placed: "menu:placed",
 } satisfies Record<string, MenuChannel>;
 
 // 그림자 자리 — menu.html 의 body 여백과 같다
 const SHADOW = 8;
+// 메뉴와 말풍선 사이 — src/renderer/menu.ts SUB_GAP 과 같다 (Figma 05 `Party / Shared Form Tip` `501:14010`)
+const SUB_GAP = 8;
 
 export interface MenuWindowOptions {
   preload: string;
@@ -56,8 +62,8 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
   const win = new BrowserWindow({
     x: at.x,
     y: at.y,
-    width: 400, // 재기 전 자리 — 메뉴가 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
-    height: 400,
+    width: 640, // 재기 전 자리 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
+    height: 480,
     show: false,
     frame: false,
     transparent: true,
@@ -83,6 +89,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     done = true;
     ipcMain.removeListener(CH.size, onSize);
     ipcMain.removeListener(CH.pick, onPick);
+    ipcMain.removeListener(CH.placed, onPlaced);
     if (current === win) current = null;
     closedAt = Date.now();
     if (!win.isDestroyed()) win.close();
@@ -90,19 +97,8 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
   };
   const mine = (e: Electron.IpcMainEvent): boolean => !win.isDestroyed() && e.sender === win.webContents;
 
-  // 그린 크기를 받으면 자리를 정한다 — 오른쪽·아래가 모자라면 커서의 왼쪽·위로 뒤집는다
-  const onSize = (e: Electron.IpcMainEvent, w: unknown, h: unknown): void => {
-    if (!mine(e) || typeof w !== "number" || typeof h !== "number") return;
-    const width = Math.ceil(w) + SHADOW * 2;
-    const height = Math.ceil(h) + SHADOW * 2;
-    let x = at.x - SHADOW;
-    let y = at.y - SHADOW;
-    if (x + width > area.x + area.width) x = at.x - width + SHADOW;
-    if (y + height > area.y + area.height) y = at.y - height + SHADOW;
-    x = Math.max(area.x, x);
-    y = Math.max(area.y, y);
-    win.setBounds({ x, y, width, height });
-    opts.onPlaced?.({ x: x + SHADOW, y: y + SHADOW, w: width - SHADOW * 2, h: height - SHADOW * 2 });
+  const reveal = (): void => {
+    if (win.isDestroyed()) return;
     if (opts.inactive) {
       win.showInactive();
       return;
@@ -110,14 +106,47 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     win.show();
     win.focus(); // 방향키·Enter·Esc 를 받고, 바깥을 누르면 blur 로 닫는다
   };
+  // 그린 크기를 받으면 자리를 정한다 — 오른쪽·아래가 모자라면 커서의 왼쪽·위로 뒤집는다
+  // sub — 말풍선의 크기와 메뉴 위 끝에서 잰 자리. 있으면 창을 말풍선 쪽으로 넓히고, 렌더러가 자리를 잡은 뒤에 보인다
+  const onSize = (e: Electron.IpcMainEvent, w: unknown, h: unknown, sub: unknown): void => {
+    if (!mine(e) || typeof w !== "number" || typeof h !== "number") return;
+    const menuW = Math.ceil(w);
+    const menuH = Math.ceil(h);
+    const s = sub && typeof sub === "object" ? (sub as { w?: unknown; h?: unknown; top?: unknown }) : null;
+    const bubble = s && typeof s.w === "number" && typeof s.h === "number" && typeof s.top === "number" ? { w: Math.ceil(s.w), h: Math.ceil(s.h), top: Math.max(0, Math.floor(s.top)) } : null;
+    const height = Math.max(menuH, bubble ? bubble.top + bubble.h : 0) + SHADOW * 2;
+    // 메뉴(그림자 제외)의 자리
+    let mx = at.x;
+    let my = at.y;
+    if (mx + menuW + SHADOW > area.x + area.width) mx = at.x - menuW;
+    if (my - SHADOW + height > area.y + area.height) my = at.y - (height - SHADOW * 2);
+    mx = Math.max(area.x + SHADOW, mx);
+    my = Math.max(area.y + SHADOW, my);
+    opts.onPlaced?.({ x: mx, y: my, w: menuW, h: menuH });
+    if (!bubble) {
+      win.setBounds({ x: mx - SHADOW, y: my - SHADOW, width: menuW + SHADOW * 2, height });
+      reveal();
+      return;
+    }
+    const extra = SUB_GAP + bubble.w;
+    const fitsRight = mx + menuW + extra + SHADOW <= area.x + area.width;
+    const fitsLeft = mx - extra - SHADOW >= area.x;
+    const side = fitsRight || !fitsLeft ? "right" : "left";
+    win.setBounds({ x: (side === "right" ? mx : mx - extra) - SHADOW, y: my - SHADOW, width: menuW + extra + SHADOW * 2, height });
+    win.webContents.send(CH.side, side);
+  };
+  const onPlaced = (e: Electron.IpcMainEvent): void => {
+    if (mine(e)) reveal();
+  };
   const onPick = (e: Electron.IpcMainEvent, id: unknown): void => {
     if (!mine(e)) return;
     close();
-    const item = typeof id === "number" ? template[id] : undefined;
+    const item = typeof id === "number" ? pickOf(template, id) : undefined;
     if (item?.click && item.enabled !== false) (item.click as () => void)();
   };
   ipcMain.on(CH.size, onSize);
   ipcMain.on(CH.pick, onPick);
+  ipcMain.on(CH.placed, onPlaced);
   win.on("blur", close);
   win.on("closed", close);
   win.webContents.once("did-finish-load", () => {

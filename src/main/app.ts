@@ -18,7 +18,7 @@ import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES, playLanes, type PlayLane } from "./layout";
 import { createScreenPicker, currentScreens, screenViews, type ScreenPicker } from "./screen-picker";
 import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
-import { lockExcept, petMenu, trayMenu } from "./menus";
+import { lockExcept, petMenu, trayMenu, type PetMenuModel } from "./menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { createMainTrade, isDevRun, type MainTrade } from "./trade";
@@ -31,6 +31,7 @@ import { createMainMail, type MainMail } from "./mail";
 import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
+import { formsOf } from "../dex/forms";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, urgentStep, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
@@ -556,6 +557,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       return reply;
     },
     display: () => ({ hidden: userHidden, clickThrough: !!config.clickThrough }),
+    petMenu: (petId) => showPetMenu(petId, "manage"),
     ...(mainOnline ? { account: mainOnline.act } : {}),
     ...(mailBox() ? { mail: async (req: MailAction) => (await mailBox()?.act(req)) ?? null } : {}),
     ...(updater ? { update: updateAct } : {}),
@@ -640,16 +642,53 @@ function runGameCommand(command: Command, then?: () => Command): void {
   });
 }
 
-// 포켓몬 위 우클릭 — 이름·상태 / 밥 주기·놀아주기 / 상세 보기. 앱 전체 조작은 트레이가 맡는다
-function showPetMenu(id: string): void {
-  const p = stages?.petOf(id);
-  if (!p) return;
-  const model = { name: petLabel(p), nature: p.nature ? natureName(p.nature) : null };
-  const pet = game?.read()?.pets.find((row) => row.id === id) ?? null; // 메모리 값 — 파일은 15초마다 쓴다
-  const care = pet ? { status: petStatus(pet), feed: careItem(pet, "feed"), play: careItem(pet, "play") } : {};
-  // 첫 돌봄 튜토리얼 중이면 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
-  const save = game?.read();
-  const firstCare = save ? currentTutorial(save)?.id === "first-care" : false;
+// 포켓몬 메뉴 — 이름·상태 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기·옮기기 / 팔기. 앱 전체 조작은 트레이가 맡는다
+// origin: stage 는 무대의 포켓몬 위 우클릭, manage 는 관리 창의 파티 카드·박스 칸 누르기 (2026-10-02 사용자 결정 — 같은 메뉴를 쓴다)
+// 박스 개체와 볼 안의 개체는 무대에 없다 — 저장의 값으로 메뉴를 만든다. 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다
+// 공유 sid 계열이면 모습 말풍선에 넣을 초상을 먼저 받는다. 캐시에 없어 오래 걸리면 초상 없이 띄운다
+const FORM_ICON_WAIT_MS = 400;
+function showPetMenu(id: string, origin: "stage" | "manage" = "stage"): void {
+  const pet = game?.read()?.pets.find((row) => row.id === id) ?? null;
+  const forms = pet ? formsOf(pet) : [];
+  const art = portraits;
+  if (!pet || forms.length < 2 || !art) {
+    popPetMenu(id, origin, {});
+    return;
+  }
+  const asks = forms.map((slug) => ({ slug, shiny: pet.shiny }));
+  const none: Record<string, string> = {};
+  const got = art.get(asks).then(
+    (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
+    () => none,
+  );
+  const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), FORM_ICON_WAIT_MS));
+  void Promise.race([got, late]).then((icons) => popPetMenu(id, origin, icons));
+}
+
+function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<string, string>): void {
+  const p = stages?.petOf(id) ?? null;
+  const save = game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
+  const pet = save?.pets.find((row) => row.id === id) ?? null;
+  if (!p && !(origin === "manage" && pet)) return;
+  const nature = p?.nature ?? pet?.nature ?? null;
+  const model = { name: p ? petLabel(p) : petName(pet?.species ?? ""), nature: nature ? natureName(nature) : null };
+  const slot = save?.party.slots.find((s) => s.petId === id) ?? null;
+  const off: { enabled: boolean; reason?: string } = { enabled: false };
+  const care: Partial<PetMenuModel> = pet
+    ? {
+        status: petStatus(pet),
+        feed: slot ? careItem(pet, "feed") : off,
+        play: slot ? careItem(pet, "play") : off,
+        ball: { enabled: slot != null, hidden: slot?.hidden === true },
+        forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(formIcons[slug] ? { portrait: formIcons[slug] } : {}) })),
+        // [임시] 옮기기·팔기는 기능 개발 예정 — 동작을 꽂기 전에는 줄이 흐리다 (worklog/records/box-improve/record.md)
+        // 옮기기는 박스 개체에만 있다. 공유 sid 계열(단일 포켓몬)은 팔 수 없다
+        ...(slot ? {} : { move: { enabled: true } }),
+        sell: { enabled: formsOf(pet).length < 2 },
+      }
+    : {};
+  // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
+  const firstCare = origin === "stage" && save ? currentTutorial(save)?.id === "first-care" : false;
   const careCmd = (cmd: "feed" | "play") => (): void => {
     if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", args: { steps: 2 }, from: "pet" }));
     else runGameCommand({ cmd, target: id, from: "menu" });
@@ -657,13 +696,16 @@ function showPetMenu(id: string): void {
   const built = petMenu({ ...model, ...care }, {
     feed: careCmd("feed"),
     play: careCmd("play"),
-    ...(pet ? { ball: () => runGameCommand({ cmd: "party.hide", target: id, from: "menu" }) } : {}),
+    ...(pet
+      ? {
+          ball: () => runGameCommand({ cmd: slot?.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
+          // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
+          detail: () => openManageWindow({ to: "pet", petId: id }),
+        }
+      : {}),
+    // 모습 말풍선에서 고른 모습 — 관리 창이 바꾸기 확인 창을 띄운다
+    form: (species) => openManageWindow({ to: "form", petId: id, species }),
   });
-  if (pet) built.push(
-    { type: "separator" as const },
-    // 그 포켓몬의 개체 상세를 연다 — 우클릭 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
-    { label: t("menu.detail"), click: () => openManageWindow({ to: "pet", petId: id }) },
-  );
   // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다.
   // 둘 다 쉬는 중이면 모두 잠그고, 말풍선은 놀아주기까지 남은 시간을 보인다
   let items = built;
