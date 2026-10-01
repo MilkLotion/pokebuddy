@@ -293,10 +293,34 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 | `boxes` | 박스를 비우고 첫 박스 30칸을 채운 뒤 둘째 박스에 3마리를 넣는다(`◀`·`▶` 로 보내기·가득 참 확인) |
 | `done-all` | 튜토리얼을 모두 완료로 둔다(개체 상세·화면·도감·교환·사용자 포함) |
 | `rich` | 포인트를 10000 이상으로 둔다 |
+| `showcase` | 시험 계정용이다. 튜토리얼을 모두 완료로 두고, 파티 4칸과 박스에 여러 종을 넣는다. 대체 그림 종·리전폼·이로치가 들어 있다. 도구는 종류마다 20개, 포인트는 50000 이상, 준비된 랜덤알 하나를 둔다 |
 
 - 앱이 떠 있으면 `scene` 은 저장을 고치지 않고 멈춘다. 앱이 메모리의 저장으로 파일을 덮어쓰기 때문이다.
 - `stop` 이 10초 안에 끝내지 못하면 트레이에서 끝낸다. 프로세스를 죽이지 않는다.
 - 확인이 끝나면 시험용 HOME 폴더를 지워도 된다.
+- Windows 에서 `start` 는 시험용 HOME 아래에 `AppData/Local` 을 만든다. 이 폴더가 없으면 창 추적 헬퍼의 PowerShell 캐시가 저장소에 `Microsoft/` 로 생긴다.
+
+### 시험 계정
+
+온라인 기능(클라우드 저장·우편·교환)을 실기로 볼 때는 시험 계정을 쓴다. 자기 계정을 쓰지 않는다.
+
+- 시험 계정은 운영 서버의 익명 계정 하나다. 세션은 시험 계정 HOME 인 `~/.claude/pokebuddy-dev-account` 에 있다. 이 폴더를 지우면 그 계정으로 다시 들어갈 수 없다.
+- `npm run dev:account` 가 빌드한 뒤 이 계정으로 동반자를 띄운다. 이미 떠 있으면 내렸다가 다시 띄운다.
+- `dev-test` 의 다른 명령은 끝에 `--account` 를 붙이면 이 HOME 을 쓴다. `--fresh` 는 받지 않는다.
+- 임시 폴더 HOME 으로 `start` 하면 띄울 때마다 운영 서버에 익명 계정이 하나 생긴다. 서버가 필요 없는 확인은 `POKEBUDDY_ONLINE=off` 를 주고 띄운다.
+
+```powershell
+npm run dev:account                               # 시험 계정으로 띄운다
+node dist/tools/dev-test.js show --account        # 계정·포인트·개체
+node dist/tools/dev-test.js stop --account        # 내린다
+```
+
+시험 계정의 저장을 고칠 때는 서버 저장도 같이 바꾼다. 서버는 올라온 저장을 직전 서버 저장과 비교한다(`src/verify/save-rules.ts`). 로컬 저장만 고치면 위반으로 기록한다.
+
+1. `stop --account` 로 앱을 내린다.
+2. `scene <장면> --account` 로 저장을 고친다. 개체의 레벨을 올리면 경험치도 그 레벨에 맞춘다.
+3. 관리자 CLI 의 `save put --home <시험 계정 HOME>` 으로 바꿀 내용을 본다. `--yes` 를 붙여 서버 저장에 쓴다. 이 명령은 익명 계정만 받는다. 관리자 키(`admin/.env.local`)가 필요하다.
+4. `npm run dev:account` 로 띄운다. 앱은 서버 저장을 받아 잇는다.
 
 ## 배포
 
