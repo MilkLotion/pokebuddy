@@ -324,6 +324,14 @@ function seed(): SaveV3 {
   assert.equal(currentTutorial(s)?.id, "party");
   assert.ok(done(s, "party", 2).ok);
   assert.equal(currentTutorial(s), null);
+  // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤 개체가 3마리가 되면 줄에 든다
+  assert.deepStrictEqual(queueTutorials(s, T0 + 4), [], "두 마리면 프리셋 튜토리얼은 없다");
+  s.pets.push({ ...s.pets[1]!, id: "p-third" });
+  assert.deepStrictEqual(queueTutorials(s, T0 + 5), ["preset"], "셋째 포켓몬을 얻으면 프리셋 튜토리얼");
+  assert.equal(s.tutorials.preset?.queuedAt, s.tutorials.party?.queuedAt, "프리셋은 파티의 대기 시각을 물려받는다");
+  assert.equal(currentTutorial(s)?.id, "preset");
+  assert.ok(done(s, "preset", 3).ok);
+  assert.equal(currentTutorial(s), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
 }
 

@@ -16,10 +16,11 @@
 //   대기만 한 튜토리얼은 스킵이 아니다. 앱이 꺼져도 queuedAt 이 남아 다시 켜면 같은 순서로 보인다.
 // 문구와 대상은 화면(src/renderer/manage.ts)이 가진다. 단계 수도 화면이 정한다.
 // 개체 상세 튜토리얼(detail, 4단계)은 대기열 밖이다 — 화면이 상세를 처음 열 때 띄우고 done·skip 만 여기 적는다.
-// 화면을 처음 열 때 띄우는 것(area·dex·trade·user)도 대기열 밖이다 — SCREEN_TUTORIALS
+// 화면을 처음 열 때 띄우는 것(area·dex·trade·user·box)도 대기열 밖이다 — SCREEN_TUTORIALS
 //
 // 새 기능 튜토리얼(2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", Figma 05 `930:18248`, worklog/records/tutorial-overhaul/record.md)
 //   성장(3단계) → 포인트는 첫 돌봄 뒤에 차례로 선다. 파티와 박스·가방·진화는 그 기능을 처음 쓸 수 있게 될 때 줄에 든다.
+//   파티 프리셋(3단계)은 파티 튜토리얼을 끝낸 뒤 개체가 3마리 이상이면 줄에 든다 (2026-10-02).
 //   목표 행동을 이미 했는지(already)는 보지 않는다 — 설명을 읽거나 닫아야 끝난다
 import type { SaveV3, TutorialState } from "../shared/save-v3";
 import { canEvolve, dayPartOf } from "../dex/evolve.js";
@@ -76,13 +77,16 @@ export const TUTORIALS: readonly TutorialRule[] = [
   { id: "growth", surface: "manage", enabled: true, start: (s) => ended(s, "first-care"), already: never, blocked: noPartyPet },
   { id: "points", surface: "manage", enabled: true, after: "growth", start: (s) => ended(s, "growth"), already: never },
   { id: "party", surface: "manage", enabled: true, start: (s) => s.pets.length >= 2, already: never, blocked: noPartyPet },
+  // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤, 다른 프리셋에 넣을 개체가 생길 때(3마리). 파티 튜토리얼 바로 뒤에 선다 (2026-10-02 사용자 확인)
+  { id: "preset", surface: "manage", enabled: true, after: "party", start: (s) => ended(s, "party") && s.pets.length >= 3, already: never, blocked: noPartyPet },
   { id: "bag", surface: "manage", enabled: true, start: hasTool, already: never, blocked: (s) => !hasTool(s) },
   { id: "evolution", surface: "manage", enabled: true, start: canEvolveNow, already: never, blocked: (s) => !canEvolveNow(s, Date.now()) },
 ];
 
 // 화면을 처음 열 때 띄우는 튜토리얼 — 대기열 밖. 끝내거나 닫기 전까지 그 화면을 열 때마다 1단계부터 보인다
 //   area  설정 › 화면 (6단계)   dex  도감 탭   trade  교환 모달   user  사용자 모달 (2단계)
-export const SCREEN_TUTORIALS = ["area", "dex", "trade", "user"] as const;
+//   box   박스 탭 (3단계) — 우클릭 메뉴 · 옮기기 · 끌어서 자리 바꾸기. 지금 박스에 개체가 있을 때만 보인다 (2026-10-02)
+export const SCREEN_TUTORIALS = ["area", "dex", "trade", "user", "box"] as const;
 
 const ruleOf = (id: string): TutorialRule | undefined => TUTORIALS.find((t) => t.id === id);
 

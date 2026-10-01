@@ -86,6 +86,8 @@ window.pokebuddyManage = new Proxy({}, {
       s.points += window.__bump;
       if (window.__bagExtra) s.bag = [...bagExtra, ...s.bag];
       if (window.__boxName) s.boxes[0].name = window.__boxName;
+      if (window.__screenTut) s.screenTutorials = window.__screenTut;
+      if (window.__tut) s.tutorial = window.__tut;
       if (window.__eggs) { s.eggs.list = window.__eggs; s.eggs.used = window.__eggs.length; }
       return s;
     };
@@ -689,6 +691,74 @@ void app.whenReady().then(async () => {
     assert.ok(boxLook.lvRight >= 6 && boxLook.lvRight <= 9, `레벨은 칸 오른쪽 위 구석 (오른쪽 여백 ${boxLook.lvRight})`);
     assert.ok(/^보관 \d+마리$/.test(boxLook.boxes), `부제는 보관 마릿수만 적는다 (${boxLook.boxes})`); // 박스 수 규칙은 selftest-box 가 본다
     await shot("box-base.png");
+    // 박스 튜토리얼 — 박스 탭을 처음 열 때 3단계(우클릭 메뉴 → 옮기기 → 끌기). 대상은 막고 다음·확인으로만 넘어간다
+    const coach = `(() => {
+      const b = document.querySelector('.coach .coach-bubble');
+      if (!b) return null;
+      const hole = document.querySelector('.coach .coach-block')?.getBoundingClientRect();
+      return { step: b.querySelector('.step').textContent, title: b.querySelector('.title').textContent, go: b.querySelector('button:not(.x)')?.textContent ?? '', hole: hole ? [Math.round(hole.left), Math.round(hole.top), Math.round(hole.width), Math.round(hole.height)] : null, top: Math.round(b.getBoundingClientRect().top) };
+    })()`;
+    assert.equal(await js<unknown>(coach), null, "끝낸 화면 튜토리얼은 뜨지 않는다");
+    await js(`window.__screenTut = ['box']; window.__cmds = []; window.__bump = 31; 0`);
+    await wait(1400);
+    const cellBox = await js<number[]>(`(() => { const r = document.querySelector('#body .box-grid > .cell:not(.blank)').getBoundingClientRect(); return [Math.round(r.left) - 8, Math.round(r.top) - 8, Math.round(r.width) + 16, Math.round(r.height) + 16]; })()`);
+    const step1 = await js<{ step: string; title: string; go: string; hole: number[]; top: number }>(coach);
+    assert.deepEqual({ step: step1.step, title: step1.title, go: step1.go }, { step: "튜토리얼 · 박스 1 / 3", title: "우클릭하면 메뉴가 열려요", go: "다음" });
+    assert.deepEqual(step1.hole, cellBox, "1단계는 첫 개체 칸을 밝힌다");
+    await shot("box-tutorial-1.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const pagerBox = await js<number[]>(`(() => { const b = document.querySelectorAll('#body .box-pager > button'); const a = b[0].getBoundingClientRect(); const z = b[1].getBoundingClientRect(); return [Math.round(a.left) - 8, Math.round(a.top) - 8, Math.round(z.right - a.left) + 16, Math.round(a.height) + 16]; })()`);
+    const step2 = await js<{ step: string; title: string; go: string; hole: number[]; top: number }>(coach);
+    assert.deepEqual({ step: step2.step, title: step2.title, go: step2.go }, { step: "튜토리얼 · 박스 2 / 3", title: "옮기기로 다른 박스에 보내요", go: "다음" });
+    assert.deepEqual(step2.hole, pagerBox, "2단계는 ◀ 부터 ▶ 까지 밝힌다");
+    await shot("box-tutorial-2.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const step3 = await js<{ step: string; title: string; go: string; hole: number[]; top: number }>(coach);
+    assert.deepEqual({ step: step3.step, title: step3.title, go: step3.go }, { step: "튜토리얼 · 박스 3 / 3", title: "끌면 박스 안에서 자리를 바꿔요", go: "확인" });
+    assert.ok(step3.top < (step3.hole[1] ?? 0), `3단계 말풍선은 격자 위에 뜬다 (${step3.top} < ${step3.hole[1]})`);
+    await shot("box-tutorial-3.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const tutDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
+    assert.deepEqual(tutDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "box", 3]], "확인은 tutorial.done box");
+    await js(`window.__screenTut = null; window.__cmds = []; window.__bump = 32; 0`);
+    await wait(1400);
+    assert.equal(await js<unknown>(coach), null, "끝내면 다시 뜨지 않는다");
+    // 파티 프리셋 튜토리얼 — 파티 탭 3단계(머리 줄의 넘김 → 첫 줄의 두 칸 → 교체 단추). 박스 탭에 있으면 파티 탭 단추로 이어 준다
+    const holeOf = (first: string, last: string): string =>
+      `(() => { const a = ${first}.getBoundingClientRect(); const z = ${last}.getBoundingClientRect(); return [Math.round(a.left) - 8, Math.round(Math.min(a.top, z.top)) - 8, Math.round(z.right - a.left) + 16, Math.round(Math.max(a.bottom, z.bottom) - Math.min(a.top, z.top)) + 16]; })()`;
+    type CoachView = { step: string; title: string; go: string; hole: number[]; top: number };
+    await js(`window.__tut = 'preset'; window.__cmds = []; window.__bump = 33; 0`);
+    await wait(1400);
+    const lead = await js<CoachView>(coach);
+    assert.deepEqual({ step: lead.step, title: lead.title, go: lead.go }, { step: "튜토리얼 · 프리셋", title: "프리셋으로 파티를 바꿔요", go: "파티로 가기" }, "다른 탭에서는 파티 탭 단추로 이어 준다");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(300);
+    const preset1 = await js<CoachView>(coach);
+    assert.deepEqual({ step: preset1.step, title: preset1.title, go: preset1.go }, { step: "튜토리얼 · 프리셋 1 / 3", title: "프리셋으로 파티를 바꿔요", go: "다음" });
+    assert.deepEqual(preset1.hole, await js<number[]>(holeOf(`document.querySelector('#body .head .preset-pager')`, `document.querySelector('#body .head .preset-pager')`)), "1단계는 머리 줄의 ◀ 이름 ▶ 를 밝힌다");
+    await shot("preset-tutorial-1.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const preset2 = await js<CoachView>(coach);
+    assert.deepEqual({ step: preset2.step, title: preset2.title, go: preset2.go }, { step: "튜토리얼 · 프리셋 2 / 3", title: "지금 프리셋의 포켓몬만 자라요", go: "다음" });
+    assert.deepEqual(preset2.hole, await js<number[]>(holeOf(`document.querySelectorAll('#body .grid .slot')[0]`, `document.querySelectorAll('#body .grid .slot')[1]`)), "2단계는 첫 줄의 두 칸을 밝힌다");
+    await shot("preset-tutorial-2.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const preset3 = await js<CoachView>(coach);
+    assert.deepEqual({ step: preset3.step, title: preset3.title, go: preset3.go }, { step: "튜토리얼 · 프리셋 3 / 3", title: "교체로 포켓몬을 넣고 빼요", go: "확인" });
+    assert.deepEqual(preset3.hole, await js<number[]>(holeOf(`document.querySelector('#body .head .swap-open')`, `document.querySelector('#body .head .swap-open')`)), "3단계는 교체 단추를 밝힌다");
+    await shot("preset-tutorial-3.png");
+    await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
+    await wait(200);
+    const presetDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
+    assert.deepEqual(presetDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "preset", 3]], "확인은 tutorial.done preset");
+    await js(`window.__tut = null; window.__cmds = []; window.__bump = 34; ${tabBtn("박스")}.click(); 0`);
+    await wait(1400);
+    assert.equal(await js<unknown>(coach), null, "프리셋 튜토리얼을 끝내면 뜨지 않는다");
     const pagerAt = `(() => {
       const p = document.querySelector('#body .pager');
       const x = (el) => Math.round(el.getBoundingClientRect().left);
