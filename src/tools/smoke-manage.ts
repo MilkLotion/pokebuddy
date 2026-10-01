@@ -691,13 +691,14 @@ void app.whenReady().then(async () => {
       const p = document.querySelector('#body .pager');
       const x = (el) => Math.round(el.getBoundingClientRect().left);
       const b = p.querySelectorAll(':scope > button');
-      return [x(b[0]), x(b[1]), x(p.querySelector('.used')), x(p.querySelector('.box-sort')), Math.round(document.querySelector('#body .box-grid').getBoundingClientRect().top)].join(',');
+      return [x(b[0]), x(b[1]), x(p.querySelector('.box-sort')), Math.round(document.querySelector('#body .box-grid').getBoundingClientRect().top)].join(',');
     })()`;
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .pager .used')`), false, "넘김 줄에 칸 수(12 / 30)를 두지 않는다");
     const pagerShort = await js<string>(pagerAt);
     await js(`window.__boxName = '전설의포켓몬보관함입니다'; window.__bump = 11; 0`);
     await wait(1400);
     assert.equal(await js<string>(`document.querySelector('#body .box-name').textContent`), "전설의포켓몬보관함입니다", "12글자 이름");
-    assert.equal(await js<string>(pagerAt), pagerShort, "12글자 이름에도 ◀·▶·칸 수·정렬·격자 자리가 같다");
+    assert.equal(await js<string>(pagerAt), pagerShort, "12글자 이름에도 ◀·▶·정렬·격자 자리가 같다");
     await js(`document.querySelector('#body .box-name').click(); 0`);
     await wait(200);
     assert.equal(await js<boolean>(`!!document.querySelector('#body .box-name-input')`), true, "이름을 누르면 입력칸");

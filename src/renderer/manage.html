@@ -1255,8 +1255,8 @@
         font-weight: 600;
         text-align: center;
       }
-      /* 박스 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸은 12글자 폭 고정, 칸 수도 고정 폭이라
-         이름 길이·이름 고치는 중·칸 수 자릿수에 따라 ◀·▶·정렬이 움직이지 않는다 (2026-10-01 사용자 결정, Figma 05 `Box / Rename`) */
+      /* 박스 넘김 줄 — ◀ [이름] ▶ … 정렬. 이름 칸은 12글자 폭 고정이라
+         이름 길이·이름 고치는 중에 따라 ◀·▶·정렬이 움직이지 않는다 (2026-10-01 사용자 결정, Figma 05 `Box / Rename`). 칸 수는 두지 않는다 (2026-10-02) */
       .pager.box-pager {
         gap: 8px;
       }
@@ -1272,10 +1272,6 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-      }
-      .pager.box-pager .used {
-        flex: none;
-        width: 52px;
       }
       .pager .used {
         white-space: nowrap;

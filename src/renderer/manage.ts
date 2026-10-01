@@ -1080,7 +1080,7 @@ function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
   return cell;
 }
 
-// 박스 넘김 줄의 이름 칸 — 이름 길이와 고치는 중인지에 따라 ◀·▶·칸 수·정렬이 움직이지 않게 12글자 폭으로 고정한다
+// 박스 넘김 줄의 이름 칸 — 이름 길이와 고치는 중인지에 따라 ◀·▶·정렬이 움직이지 않게 12글자 폭으로 고정한다
 // (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 최대12글자로 가정하고 구성해야해", Figma 05 `Box / Rename`)
 // 넘김 줄의 쪽 번호 — 끝을 넘으면 반대쪽 끝으로 돈다
 const wrapPage = (page: number, count: number): number => (count <= 0 ? 0 : ((page % count) + count) % count);
@@ -1118,7 +1118,7 @@ function drawBox(v: Snapshot): void {
   }
   const hold = boxHold;
 
-  // 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸과 칸 수는 고정 폭이다.
+  // 넘김 줄 — ◀ [이름] ▶ … 정렬. 이름 칸은 고정 폭이다. 칸 수(12 / 30)는 두지 않는다 — 보관 수는 머리 부제에 있다 (2026-10-02 사용자 결정, Figma `Box Toolbar` Show Count 끔)
   // 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다 (2026-10-02 사용자 결정)
   const pager = el("div", "pager box-pager");
   const prevPage = wrapPage(boxPage - 1, v.boxes.length);
@@ -1149,7 +1149,7 @@ function drawBox(v: Snapshot): void {
   };
   if (!prev.disabled) dropToBox(prev, prevPage);
   if (!next.disabled) dropToBox(next, nextPage);
-  pager.append(prev, boxNameCell(boxNameEl(box)), next, el("span", "used", `${box.used} / ${box.size}`));
+  pager.append(prev, boxNameCell(boxNameEl(box)), next);
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   pager.appendChild(boxSortEl(box));
   bodyEl.appendChild(pager);
@@ -4318,8 +4318,8 @@ function drawSwap(): void {
     swapPage = wrapPage(swapPage + 1, v.boxes.length);
     drawDialog();
   });
-  pager.className = "pager box-pager"; // 박스 탭과 같은 줄 — 이름 칸과 칸 수는 고정 폭
-  pager.append(prev, boxNameCell(el("span", "label", box.name)), next, el("span", "used", `${box.used} / ${box.size}`));
+  pager.className = "pager box-pager"; // 박스 탭과 같은 줄 — 이름 칸은 고정 폭, 칸 수는 두지 않는다
+  pager.append(prev, boxNameCell(el("span", "label", box.name)), next);
   const grid = el("div", "box-grid");
   box.slots.forEach((pet, slot) => {
     const onDrop = (): void => {
