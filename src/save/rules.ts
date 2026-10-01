@@ -69,7 +69,8 @@ export const SAVE_V3_RULES = {
     openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다
     shopUnlock: 2, // 상점에서 살 수 있는 칸 수
   },
-  box: { size: 30, firstName: "박스 1" },
+  // 박스 수 — start 개로 시작하고, 모든 박스에 한 마리 이상 있으면 step 개를 더한다 (원작 방식, 2026-10-01 사용자 결정). src/save/v3.ts growBoxes
+  box: { size: 30, firstName: "박스 1", start: 8, step: 8 },
   pet: {
     level: 1,
     exp: 0,
@@ -130,7 +131,10 @@ export const SHOP_V3_RULES = {
   speciesPrices: { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 } as Readonly<Record<number, number>>,
   startPoints: 120, // 첫 선택을 마치면 한 번 지급한다
   sellRate: 0.6, // 가방 판매가 = 구매가 × 0.6, 내림 (2026-09-30 사용자 결정 "판매가는 구매가의 60%". 내림은 제안). src/shop/sell.ts
-  bagMax: 999, // 도구 한 종류를 가방에 둘 수 있는 최대 개수 — 넘게는 살 수 없다 (2026-09-27 사용자 결정). 업적 보상 등 사지 않고 받는 것은 막지 않는다
+  // 포켓몬 판매가 = 그 종이 나오는 알의 값 × petSellRate, petSellUnit 단위로 내림 (2026-10-01 사용자 결정 "가격은 알 1/4 가격으로. 대충 10단위로 떨어지게"). src/shop/sell-pet.ts
+  petSellRate: 0.25,
+  petSellUnit: 10,
+  bagMax: 999,// 도구 한 종류를 가방에 둘 수 있는 최대 개수 — 넘게는 살 수 없다 (2026-09-27 사용자 결정). 업적 보상 등 사지 않고 받는 것은 막지 않는다
 };
 
 // 가방 도구의 규칙표 — 수치는 docs/specs/balance.md "버프와 친밀도"

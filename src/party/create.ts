@@ -7,14 +7,19 @@ import { localDate } from "../shared/clock.js";
 import type { Gender, NatureId } from "../shared/types";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
-// 다음 개체 식별자 — 기존 `p숫자` 중 가장 큰 수 다음
-export function nextPetId(save: SaveV3): string {
+// 지금 있는 개체의 `p숫자` 중 가장 큰 수. 없으면 0
+export function maxPetNo(pets: readonly { id: string }[]): number {
   let max = 0;
-  for (const p of save.pets) {
+  for (const p of pets) {
     const m = /^p(\d+)$/.exec(p.id);
     if (m) max = Math.max(max, Number(m[1]));
   }
-  return `p${max + 1}`;
+  return max;
+}
+
+// 다음 개체 식별자 — 기존 `p숫자` 와 지금까지 쓴 번호(petSeq) 중 가장 큰 수 다음. 판 개체의 번호를 다시 쓰지 않는다
+export function nextPetId(save: SaveV3): string {
+  return `p${Math.max(maxPetNo(save.pets), save.petSeq ?? 0) + 1}`;
 }
 
 export interface NewPetOptions {

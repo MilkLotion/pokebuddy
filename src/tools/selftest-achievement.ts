@@ -209,7 +209,7 @@ function seed(): SaveV3 {
 }
 
 // (9-2) 파티 세 마리 모으기 — 파티 칸에 든 포켓몬 3마리면 달성. 숨긴 개체도 센다
-//       빈 파티 칸이 없으면 메타몽은 박스로 간다. 박스가 가득 차면 새 박스를 더한다 — 둘 곳이 없어 막히는 경우는 없다
+//       빈 파티 칸이 없으면 메타몽은 박스로 간다. 앞 박스가 가득 차면 다음 박스로 간다 — 빈 박스가 늘 있어 둘 곳이 없어 막히는 경우는 없다
 {
   const s = seed();
   assert.equal(isAchieved(s, "party-three"), false, "두 마리로는 아니다");
@@ -220,12 +220,10 @@ function seed(): SaveV3 {
   assert.equal(s.party.slots.some((x) => x.state === "empty"), false, "빈 파티 칸 없음");
   const box = s.boxes[0];
   if (box) box.slots.fill("filler");
-  const boxes = s.boxes.length;
   const res = claim(s, "party-three", T0, undefined, () => 0.5);
   assert.equal(res.ok, true);
   assert.equal(res.toBox, true, "박스로");
-  assert.equal(s.boxes.length, boxes + 1, "가득 찬 박스 뒤에 새 박스");
-  assert.equal(s.boxes[boxes]?.slots[0], res.petId);
+  assert.equal(s.boxes[1]?.slots[0], res.petId, "가득 찬 박스 다음 박스의 첫 칸");
   assert.equal(s.pets.find((p) => p.id === res.petId)?.species, "ditto");
   assert.ok(s.dex.obtained.includes("ditto"));
   assert.equal(snapshot(s).achievements.list.find((a) => a.id === "party-three")?.reward, "메타몽");

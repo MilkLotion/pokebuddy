@@ -285,16 +285,18 @@ function seedBox(): SaveV3 {
   process.stdout.write("(11) 보관 · 칸이 비고 박스로  ok\n");
 }
 
-// (12) 박스가 가득 차면 새 박스를 만든다
+// (12) 앞 박스가 가득 차면 다음 박스로 간다. 모든 박스에 한 마리 이상 있으면 박스 8개를 더한다 (2026-10-01 사용자 결정)
 {
   const s = seedBox();
   const box = s.boxes[0];
   if (box) for (let i = 0; i < box.slots.length; i++) box.slots[i] = box.slots[i] ?? `x${i}`;
+  const start = s.boxes.length;
+  for (let b = 2; b < start; b++) s.boxes[b]!.slots[0] = `y${b}`; // 박스 2 만 비어 있다
   const f = fake(s);
   const tx = createExecutor(f.ports, HANDLERS);
   assert.equal(tx.run({ id: "r1", name: "party.keep", args: { petId: "p1" } }).ok, true);
-  assert.equal(f.state.boxes.length, 2, "박스를 새로 만든다");
-  assert.equal(f.state.boxes[1]?.slots[0], "p1");
+  assert.equal(f.state.boxes[1]?.slots[0], "p1", "다음 박스의 첫 빈 칸");
+  assert.equal(f.state.boxes.length, start + 8, "빈 박스가 없어지면 8개를 더한다");
   process.stdout.write("(12) 박스 자동 추가  ok\n");
 }
 

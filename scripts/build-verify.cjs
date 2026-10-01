@@ -97,6 +97,9 @@ function build() {
       findPointsMax: FIND_RULES.points.max,
       mintRefund: MINT_REFUND_EACH,
       sellRatio: SHOP_V3_RULES.sellRate,
+      // 포켓몬 판매가의 최대 — 단일 포켓몬 알이 아닌 알의 값 × 비율, 단위 내림 (src/shop/sell-pet.ts petSellPrice)
+      petSellMax: Math.max(0, ...Object.entries(eggKinds).filter(([, k]) => !k.single)
+        .map(([kind]) => Math.floor(((eggs[kind] ?? 0) * SHOP_V3_RULES.petSellRate) / SHOP_V3_RULES.petSellUnit) * SHOP_V3_RULES.petSellUnit)),
       speciesMinPrice: Math.min(...Object.values(SHOP_V3_RULES.speciesPrices)),
       affinityPerHour,
       carePerHour,

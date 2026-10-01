@@ -257,6 +257,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `evolve` | 진화. 실행 시점 조건으로 결과 판정 | `src/dex` |
 | `pet.set` | 놓아 둔 자리와 크기 단계 | `src/party` |
 | `pet.form` | 공유 sid 계열의 모습 바꾸기 | `src/dex`, `src/party` |
+| `pet.sell` | 포켓몬 판매. 판매 가능 검사, 개체와 칸 비우기, 포인트 더하기 | `src/shop` |
 | `starter.pick` | 첫 선택 | `src/party` |
 | `box.sort` / `box.move` / `box.rename` | 박스 정렬·칸 옮기기·이름 바꾸기 | `src/box` |
 | `agent.connect` / `agent.disconnect` | 개별 연결 | `src/agents` |

@@ -3,9 +3,10 @@
 // 순수 함수(src/box/slots.ts)와 거래 명령(box.sort · box.move · box.rename)을 본다. 파일을 만들지 않는다.
 // 설계는 worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
 import assert from "node:assert";
-import { BOX_RULES, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots";
+import { BOX_RULES, moveSlot, moveToBox, putPet, renameBox, sortBox } from "../box/slots";
 import { newPet } from "../party/create";
-import { empty, newBox } from "../save/v3";
+import { SAVE_V3_RULES } from "../save/rules";
+import { empty, growBoxes, newBox, normalize } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
 import { argsOf } from "../tx/bridge";
 import { createExecutor, type TxPorts } from "../tx/executor";
@@ -33,8 +34,7 @@ function seed(): SaveV3 {
     const box = s.boxes[0]!;
     box.slots[at[i]!] = id;
   });
-  s.boxes.push(newBox("b2", "박스 2"));
-  return s;
+  return s; // 박스는 8개로 시작한다 — b1 ~ b8
 }
 
 const ids = (s: SaveV3, b = 0): (string | null)[] => s.boxes[b]!.slots.slice(0, 8);
@@ -103,10 +103,11 @@ check(() => {
   assert.strictEqual(s.boxes[0]!.slots[0], "p1", "실패하면 그대로");
 });
 
-// ── 이름 — 공백을 지우고 10자로 자른다. 비우면 기본 이름 ──
+// ── 이름 — 공백을 지우고 12자로 자른다. 비우면 기본 이름 ──
 check(() => {
   const s = seed();
   assert.strictEqual(renameBox(s.boxes[0]!, "  내 박스  ", 0), "내 박스");
+  assert.strictEqual(BOX_RULES.nameMax, 12, "이름은 12자까지 (2026-10-01 사용자 결정)");
   assert.strictEqual(renameBox(s.boxes[0]!, "가".repeat(BOX_RULES.nameMax + 3), 0), "가".repeat(BOX_RULES.nameMax));
   assert.strictEqual(renameBox(s.boxes[1]!, "   ", 1), "박스 2", "비우면 기본 이름");
 });
@@ -131,6 +132,45 @@ check(() => {
   assert.strictEqual(saved.boxes[1]!.name, "전설", "box.rename 저장");
   assert.strictEqual(run("box.rename", "b9", { name: "x" }, "t7").ok, false, "없는 박스는 거절");
   assert.deepStrictEqual(saved.party, seed().party, "파티는 그대로");
+});
+
+// ── 박스 수 — 8개로 시작하고, 모든 박스에 한 마리 이상 있으면 8개를 더한다 (2026-10-01 사용자 결정) ──
+check(() => {
+  const { start, step } = SAVE_V3_RULES.box;
+  const s = empty(T0);
+  assert.strictEqual(s.boxes.length, start, "새 저장은 8개");
+  assert.deepStrictEqual(s.boxes.map((b) => b.id), ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8"]);
+  assert.strictEqual(s.boxes[7]!.name, "박스 8");
+  // 일곱 박스에 한 마리씩 — 빈 박스가 남아 있어 늘지 않는다
+  for (let b = 0; b < start - 1; b += 1) s.boxes[b]!.slots[0] = `x${b}`;
+  assert.strictEqual(growBoxes(s.boxes).length, start, "빈 박스가 하나라도 있으면 그대로");
+  // 마지막 빈 박스에 옮기면 8개가 더 생긴다
+  s.boxes[0]!.slots[1] = "y";
+  assert.deepStrictEqual(moveSlot(s.boxes, { boxIndex: 0, slotIndex: 1 }, { boxIndex: start - 1, slotIndex: 5 }), { ok: true });
+  assert.strictEqual(s.boxes.length, start + step, "모든 박스에 한 마리 이상 → 8개 더");
+  assert.strictEqual(s.boxes[start]!.id, "b9");
+  assert.ok(s.boxes.slice(start).every((b) => b.slots.every((x) => x === null)), "새 박스는 비어 있다");
+  // 다시 비워도 줄지 않는다
+  s.boxes[start - 1]!.slots[5] = null;
+  assert.strictEqual(growBoxes(s.boxes).length, start + step, "줄이지 않는다");
+});
+check(() => {
+  // 새 개체는 앞 박스의 첫 빈 칸 — 빈 박스로 건너뛰지 않는다
+  const s = seed();
+  assert.deepStrictEqual(putPet(s.boxes, "p9"), { boxIndex: 0, slotIndex: 2 });
+  assert.strictEqual(s.boxes.length, SAVE_V3_RULES.box.start);
+});
+check(() => {
+  // 옛 저장(박스 1개)은 읽을 때 8개가 된다. 박스 이름과 칸은 그대로다
+  const old = seed();
+  old.boxes = [old.boxes[0]!];
+  old.boxes[0]!.name = "내 박스";
+  const read = normalize(JSON.parse(JSON.stringify(old)), T0);
+  assert.ok(read, "읽힌다");
+  assert.strictEqual(read!.boxes.length, SAVE_V3_RULES.box.start);
+  assert.strictEqual(read!.boxes[0]!.name, "내 박스");
+  assert.deepStrictEqual(read!.boxes[0]!.slots.slice(0, 2), ["p1", "p2"]);
+  assert.strictEqual(newBox("b9", "박스 9").slots.length, SAVE_V3_RULES.box.size);
 });
 
 process.stdout.write(`통과 (${n}건)\n`);

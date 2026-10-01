@@ -252,7 +252,7 @@ S5 설정창은 `src/main/manage-window.ts` 와 `src/renderer/manage.ts` 다. `a
 상세 계약은 [개체 획득과 파티 교체](specs/game.md#개체-획득과-파티-교체)를 따른다.
 새 게임의 파티는 2칸으로 시작한다. 상점에서 포인트로 2칸을 추가 구매한다. 업적으로 나머지 2칸을 해금한다. 최대 파티는 6칸이다.
 구매와 업적에 공통된 필수 해금 순서를 두지 않는다. 칸 가격은 [가격](specs/balance.md#가격)을 따른다.
-박스에는 게임 규칙상 보유 개체 수 제한을 두지 않는다. 박스는 원작처럼 30칸(6열×5행) 박스 여러 개로 나누고 넘겨 본다. 박스가 모두 차면 새 박스를 자동으로 추가한다. 검색은 모든 박스를 대상으로 한다.
+박스에는 게임 규칙상 보유 개체 수 제한을 두지 않는다. 박스는 원작처럼 30칸(6열×5행) 박스 여러 개로 나누고 넘겨 본다. 박스는 8개로 시작한다. 모든 박스에 한 마리 이상 있으면 8개를 더한다. 검색은 모든 박스를 대상으로 한다.
 첫 번째 칸 업적은 파티의 두 마리를 실제로 화면에 꺼내면 달성한다. 숨긴 채 두 칸에 배치한 것만으로는 달성하지 않는다. 달성 후 다시 숨겨도 달성을 유지한다. 업적창에서 보상을 받으면 한 칸을 추가한다.
 같은 종의 서로 다른 두 개체도 첫 번째 칸 업적에서 인정한다. 파이리 두 마리를 꺼내도 달성한다.
 두 번째 칸 업적의 조건은 "최초로 포켓몬 50레벨 달성"이다. 교환으로 받은 개체는 인정하지 않는다. 이 저장에서 개체가 레벨업으로 50레벨에 도달해야 달성한다.
@@ -348,7 +348,7 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 ## 커맨드 처리기
 
 명령 계약은 [공유 타입](../src/shared/types.ts)과 [등록 처리기](../src/main/commands.ts)를 따른다. 메뉴·CLI·mailbox는 같은 명령 처리 경로를 사용한다.
-명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
+명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `pet.sell`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
 설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.move`·`party.keep`이 맡는다.
 
 `companion`은 포켓몬 인자를 받지 않는다. 빈 파티이면 선택창을 연다. 선택 취소와 저장 실패를 구분한다.

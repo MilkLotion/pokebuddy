@@ -32,6 +32,7 @@ import { codeOf } from "../trade/net.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
+import { sellablePet } from "../shop/sell-pet";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createAppUpdater, urgentStep, type AppUpdater } from "./updater";
 import { createMacUpdater } from "./mac-updater";
@@ -674,6 +675,8 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
   const model = { name: p ? petLabel(p) : petName(pet?.species ?? ""), nature: nature ? natureName(nature) : null };
   const slot = save?.party.slots.find((s) => s.petId === id) ?? null;
   const off: { enabled: boolean; reason?: string } = { enabled: false };
+  // 팔 수 있는가 — 단일 포켓몬·알에 없는 종·교환에 올린 개체·마지막 한 마리는 못 판다 (src/shop/sell-pet.ts)
+  const sale = save && pet ? sellablePet(save, id) : null;
   const care: Partial<PetMenuModel> = pet
     ? {
         status: petStatus(pet),
@@ -681,10 +684,9 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
         play: slot ? careItem(pet, "play") : off,
         ball: { enabled: slot != null, hidden: slot?.hidden === true },
         forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(formIcons[slug] ? { portrait: formIcons[slug] } : {}) })),
-        // [임시] 옮기기·팔기는 기능 개발 예정 — 동작을 꽂기 전에는 줄이 흐리다 (worklog/records/box-improve/record.md)
-        // 옮기기는 박스 개체에만 있다. 공유 sid 계열(단일 포켓몬)은 팔 수 없다
+        // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
         ...(slot ? {} : { move: { enabled: true } }),
-        sell: { enabled: formsOf(pet).length < 2 },
+        sell: { enabled: sale?.ok === true },
       }
     : {};
   // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
@@ -701,6 +703,11 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
           ball: () => runGameCommand({ cmd: slot?.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
           // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정)
           detail: () => openManageWindow({ to: "pet", petId: id }),
+          // 옮기기·팔기 — 고른 뒤의 화면(든 상태, 팔기 확인 창)은 관리 창이 그린다
+          move: () => openManageWindow({ to: "move", petId: id }),
+          sell: () => {
+            if (sale?.ok) openManageWindow({ to: "sell", petId: id, price: sale.price });
+          },
         }
       : {}),
     // 모습 말풍선에서 고른 모습 — 관리 창이 바꾸기 확인 창을 띄운다

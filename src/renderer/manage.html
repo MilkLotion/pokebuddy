@@ -1243,9 +1243,32 @@
       }
       /* 검색 칸 규칙(.pager .search 폭 170·왼쪽 자동 여백)보다 앞서야 한다 — 이름 입력칸이 넓어져 사용 칸 수가 두 줄로 밀렸다 */
       .pager .search.box-name-input {
-        width: 92px;
+        width: 100%;
         margin-left: 0;
         font-weight: 600;
+        text-align: center;
+      }
+      /* 박스 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸은 12글자 폭 고정, 칸 수도 고정 폭이라
+         이름 길이·이름 고치는 중·칸 수 자릿수에 따라 ◀·▶·정렬이 움직이지 않는다 (2026-10-01 사용자 결정, Figma 05 `Box / Rename`) */
+      .pager.box-pager {
+        gap: 8px;
+      }
+      .pager .box-name-cell {
+        flex: none;
+        width: 168px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .pager .box-name-cell .label {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pager.box-pager .used {
+        flex: none;
+        width: 52px;
       }
       .pager .used {
         white-space: nowrap;
@@ -1324,10 +1347,25 @@
         color: inherit;
         cursor: pointer;
       }
-      .box-note {
-        margin: -4px 0 10px;
-        font-size: 12px;
-        color: var(--muted);
+      /* 박스 명령 실패 — 머리 부제 자리의 글자만 바꾼다(빨간 점 + 이유). 줄을 끼우지 않는다 */
+      .head .sub.fail {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        color: var(--danger-ink);
+      }
+      .head .sub.fail i {
+        flex: none;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--danger);
+      }
+      .head .sub.fail span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       /* 끌기 — 원래 자리는 빈 칸처럼 흐리고, 놓을 칸은 옅은 바탕. 테두리로 강조하지 않는다 (Figma 05 `Box / Dragging` `633:17375`) */
       .cell.dragging,
@@ -1465,6 +1503,41 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      /* 박스 탭의 칸 — 95×86. 6×5 가 기본 창 높이(682)에서 스크롤 없이 맞는다. 초상과 이름만 가운데, 레벨은 오른쪽 위·이로치는 왼쪽 위 구석
+         (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`). 커서를 따라가는 사본(.drag-ghost)도 같은 모양이라 칸 자신에 건다 */
+      .cell.tall {
+        aspect-ratio: auto;
+        height: 86px;
+        gap: 6px;
+        padding: 0 2px;
+      }
+      /* 구석 글자의 기준 — 커서를 따라가는 사본은 position: fixed 라 그대로 기준이 된다 */
+      .cell.tall:not(.drag-ghost) {
+        position: relative;
+      }
+      .cell.tall .lv,
+      .cell.tall .tag {
+        position: absolute;
+        top: 6px;
+        line-height: 14px;
+      }
+      .cell.tall .lv {
+        right: 7px;
+      }
+      .cell.tall .tag {
+        left: 7px;
+      }
+      /* 공유 sid 계열 — 계열 이름 아래에 지금 종 한 줄이 더 있다 */
+      .cell.tall.family {
+        gap: 2px;
+      }
+      /* 옮기기로 든 동안 — 놓을 칸은 옅은 바탕 (끌기의 .drop-on 과 같다) */
+      .box-grid.holding .cell {
+        cursor: pointer;
+      }
+      .box-grid.holding .cell:not(.dragging):hover {
+        background: var(--accent-bg);
       }
 
       /* 도감 */

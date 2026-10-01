@@ -173,6 +173,7 @@ type Dialog =
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare" } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다
   | { kind: "daycare" } // 돌보미집 — 박스 머리 `돌보미집` 단추
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
+  | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
   | { kind: "mail" } // 우편함 — 헤더 봉투 단추
@@ -199,7 +200,11 @@ let dexQuery = "";
 // 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
 let boxSortOpen = false;
 let boxRenaming = false;
-let boxNote = ""; // 박스 명령이 실패했을 때 박스 줄 아래 한 줄
+let boxNote = ""; // 박스 명령이 실패한 이유 — 머리 부제 자리에 보인다. 줄을 끼우지 않는다 (2026-10-01 사용자 "레이아웃은 바뀌면 안된다")
+// 옮기기로 든 개체 — 포켓몬 메뉴의 `옮기기`. 든 동안 커서를 따라가는 칸(holdGhost)과 마지막 커서 자리(holdAt)
+let boxHold: { petId: string; boxId: string; slot: number } | null = null;
+let holdGhost: HTMLElement | null = null;
+let holdAt: { x: number; y: number } | null = null;
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
 type DragFrom = { boxId: string; slot: number } | { partyPet: string };
 let dragFrom: DragFrom | null = null;
@@ -210,7 +215,7 @@ const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "recent", label: "최근 얻은 순" },
   { by: "name", label: "이름순" },
 ];
-const BOX_NAME_MAX = 10; // src/box/slots.ts BOX_RULES.nameMax 와 같다
+const BOX_NAME_MAX = 12; // src/box/slots.ts BOX_RULES.nameMax 와 같다 — 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수에 맞춘다
 // 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
 // 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
 const boxSortedBy = new Map<string, string>();
@@ -1004,9 +1009,42 @@ function drawForm(petId: string, to: string): void {
   dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
 }
 
+// 박스 탭의 칸 — 95×86. 초상과 이름만 가운데에 두고 레벨은 오른쪽 위, 이로치는 왼쪽 위 구석이다.
+// 6×5 가 기본 창 높이에서 스크롤 없이 맞는다 (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`).
+// 공유 sid 계열은 단체사진·계열 이름 아래에 지금 종을 한 줄 더 둔다. 교체 모달의 작은 칸은 boxCell 을 그대로 쓴다
+function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
+  const cell = button("cell tall");
+  const forms = pet.forms;
+  if (forms && forms.length > 1) {
+    cell.classList.add("family");
+    cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note now", pet.name));
+  } else {
+    cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name));
+  }
+  cell.appendChild(el("div", "note lv", `Lv.${pet.level}`));
+  if (pet.shiny) cell.appendChild(el("div", "note tag", "이로치"));
+  cell.addEventListener("click", onPick);
+  return cell;
+}
+
+// 박스 넘김 줄의 이름 칸 — 이름 길이와 고치는 중인지에 따라 ◀·▶·칸 수·정렬이 움직이지 않게 12글자 폭으로 고정한다
+// (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 최대12글자로 가정하고 구성해야해", Figma 05 `Box / Rename`)
+function boxNameCell(inner: HTMLElement): HTMLElement {
+  const cell = el("div", "box-name-cell");
+  cell.appendChild(inner);
+  return cell;
+}
+
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
   const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`);
+  // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
+  const sub = top.querySelector(".sub");
+  if (boxNote && sub) {
+    sub.className = "sub fail";
+    sub.replaceChildren(el("i"), el("span", undefined, boxNote));
+    (sub as HTMLElement).title = boxNote;
+  }
   // 머리 오른쪽 — 돌보미집·교환 단추. 돌보미집은 화면에 두지 않고 모달로 연다 (2026-09-30 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665`)
   const acts = el("div", "head-acts");
   acts.append(daycareOpenButton(v), tradeOpenButton()); // 친구 교환 — 모달로 연다 (Figma 04 템플릿 `Box Layout` `340:3665` 머리)
@@ -1017,9 +1055,18 @@ function drawBox(v: Snapshot): void {
   const box = v.boxes[boxPage];
   if (!box) return;
 
-  const pager = el("div", "pager");
+  // 든 개체가 그 칸에 없으면(다른 곳에서 옮겼거나 사라졌다) 내려놓는다
+  if (boxHold) {
+    const at = boxHold;
+    if (v.boxes.find((b) => b.id === at.boxId)?.slots[at.slot]?.id !== at.petId) endHold();
+  }
+  const hold = boxHold;
+
+  // 넘김 줄 — ◀ [이름] ▶ 칸 수 … 정렬. 이름 칸과 칸 수는 고정 폭이다
+  const pager = el("div", "pager box-pager");
   const prev = button("", "◀");
   prev.disabled = boxPage === 0;
+  prev.dataset.hold = ""; // 든 채로 박스를 넘긴다 — 든 것을 내려놓지 않는다
   prev.addEventListener("click", () => {
     boxPage -= 1;
     boxNote = "";
@@ -1027,6 +1074,7 @@ function drawBox(v: Snapshot): void {
   });
   const next = button("", "▶");
   next.disabled = boxPage >= v.boxes.length - 1;
+  next.dataset.hold = "";
   next.addEventListener("click", () => {
     boxPage += 1;
     boxNote = "";
@@ -1042,13 +1090,23 @@ function drawBox(v: Snapshot): void {
   };
   if (!prev.disabled) dropToBox(prev, boxPage - 1);
   if (!next.disabled) dropToBox(next, boxPage + 1);
-  pager.append(prev, boxNameEl(box), el("span", "used", `${box.used} / ${box.size}`), next);
+  pager.append(prev, boxNameCell(boxNameEl(box)), next, el("span", "used", `${box.used} / ${box.size}`));
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   pager.appendChild(boxSortEl(box));
   bodyEl.appendChild(pager);
-  if (boxNote) bodyEl.appendChild(el("div", "box-note", boxNote));
 
-  const grid = el("div", "box-grid");
+  const grid = el("div", hold ? "box-grid holding" : "box-grid");
+  // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
+  const dropHold = (toSlot: number): void => {
+    const h = boxHold;
+    if (!h) return;
+    endHold();
+    if (h.boxId === box.id && h.slot === toSlot) {
+      draw();
+      return;
+    }
+    void boxCommand("box.move", h.boxId, { slot: h.slot, toBoxId: box.id, toSlot }, () => unsorted(h.boxId, box.id));
+  };
   box.slots.forEach((pet, slot) => {
     // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
     const onDrop = (): void => {
@@ -1057,20 +1115,123 @@ function drawBox(v: Snapshot): void {
       void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id));
     };
     if (!pet) {
-      const blank = el("div", "cell blank");
+      const blank = el("div", "cell tall blank");
+      blank.dataset.hold = "";
+      blank.addEventListener("click", () => dropHold(slot));
       dropZone(blank, onDrop);
       grid.appendChild(blank);
       return;
     }
-    const cell = boxCell(pet, () => askPetMenu(pet.id)); // 누르면 포켓몬 메뉴
+    // 누르면 포켓몬 메뉴. 든 개체가 있으면 이 칸과 맞바꾼다
+    const cell = boxSlot(pet, () => (boxHold ? dropHold(slot) : askPetMenu(pet.id)));
+    cell.dataset.hold = "";
     if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
+    if (hold && hold.boxId === box.id && hold.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
     cell.title = `${pet.name} · 끌어서 옮기기`;
-    cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { boxId: box.id, slot }));
+    cell.addEventListener("pointerdown", (e) => {
+      if (!boxHold) startDrag(e, cell, { boxId: box.id, slot });
+    });
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
     dropZone(cell, onDrop);
     grid.appendChild(cell);
   });
   bodyEl.appendChild(grid);
+  if (hold) showHoldGhost(grid, hold.petId);
+}
+
+// ── 옮기기 — 포켓몬 메뉴의 `옮기기` 로 박스 개체를 든다 ──────────────────────────────
+// 든 개체는 커서를 따라간다. 다른 개체 칸을 누르면 맞바꾸고, 빈 칸을 누르면 거기 놓는다. ◀·▶ 를 누르면 든 채로 박스를 넘긴다.
+// 그 밖의 곳을 누르거나 Esc 를 누르면 취소한다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고 …"). 끌어 놓기는 그대로 따로 있다.
+// 명령은 끌어 놓기와 같은 box.move 다
+
+function startHold(petId: string): void {
+  const v = view;
+  if (!v) return;
+  for (let b = 0; b < v.boxes.length; b += 1) {
+    const box = v.boxes[b];
+    const slot = box ? box.slots.findIndex((p) => p?.id === petId) : -1;
+    if (!box || slot < 0) continue;
+    if (dialog) close();
+    endHold();
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); // 입력 중인 칸이 있으면 다시 그리기가 미뤄진다 (typingSearch)
+    setTab("box");
+    detailPet = null;
+    boxPage = b;
+    boxSortOpen = false;
+    boxRenaming = false;
+    boxNote = "";
+    boxHold = { petId, boxId: box.id, slot };
+    draw();
+    return;
+  }
+}
+
+// 든 것을 내려놓는다 — 다시 그리지는 않는다
+function endHold(): void {
+  boxHold = null;
+  holdAt = null;
+  holdGhost?.remove();
+  holdGhost = null;
+}
+
+function cancelHold(): void {
+  if (!boxHold) return;
+  endHold();
+  draw();
+}
+
+// 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다
+function showHoldGhost(grid: HTMLElement, petId: string): void {
+  const pet = petOf(petId);
+  const any = grid.querySelector<HTMLElement>(".cell");
+  if (!pet || !any) return;
+  if (!holdGhost) {
+    holdGhost = boxSlot(pet, () => undefined);
+    holdGhost.classList.add("drag-ghost");
+    document.body.appendChild(holdGhost);
+  }
+  const rect = any.getBoundingClientRect();
+  holdGhost.style.width = `${rect.width}px`;
+  holdGhost.style.height = `${rect.height}px`;
+  if (!holdAt) {
+    const from = grid.querySelector<HTMLElement>(".cell.dragging")?.getBoundingClientRect() ?? rect;
+    holdAt = { x: from.left + from.width / 2, y: from.top + from.height / 2 };
+  }
+  placeHoldGhost();
+}
+
+function placeHoldGhost(): void {
+  if (!holdGhost || !holdAt) return;
+  holdGhost.style.left = `${holdAt.x - holdGhost.offsetWidth / 2 + 12}px`;
+  holdGhost.style.top = `${holdAt.y - holdGhost.offsetHeight / 2 + 12}px`;
+}
+
+window.addEventListener("pointermove", (e) => {
+  if (!boxHold) return;
+  holdAt = { x: e.clientX, y: e.clientY };
+  placeHoldGhost();
+});
+// 칸과 ◀·▶ 밖을 누르면 취소한다 — 칸과 ◀·▶ 는 제 처리기가 먼저 돈다
+document.addEventListener("click", (e) => {
+  if (!boxHold) return;
+  if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
+  cancelHold();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && boxHold) cancelHold();
+});
+
+// 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
+function drawSellPet(petId: string, price: number): void {
+  const pet = petOf(petId);
+  if (!pet) {
+    close();
+    return;
+  }
+  dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 팔까요?`, ""));
+  const body = el("p", "acct-confirm-body", `${point(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
+  const go = actionButton("팔기", true, false, () => void send("pet.sell", pet.id));
+  dialogEl.append(body, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
 }
 
 // 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)
@@ -1167,6 +1328,7 @@ function boxNameEl(box: BoxView): HTMLElement {
     done = true;
     boxRenaming = false;
     const name = input.value;
+    if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
     if (save && name.trim() !== box.name) void boxCommand("box.rename", box.id, { name });
     else draw();
   };
@@ -3055,6 +3217,7 @@ function drawTabs(): void {
 function setTab(next: TabId): void {
   if (next === tab) return;
   detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
+  if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
   if (tab === "dex" && dexPick) {
     dexPick = null;
     window.pokebuddyManage.dexOpen(null, dexGen);
@@ -4087,7 +4250,8 @@ function drawSwap(): void {
     swapPage += 1;
     drawDialog();
   });
-  pager.append(prev, el("span", "label", box.name), el("span", "used", `${box.used} / ${box.size}`), next);
+  pager.className = "pager box-pager"; // 박스 탭과 같은 줄 — 이름 칸과 칸 수는 고정 폭
+  pager.append(prev, boxNameCell(el("span", "label", box.name)), next, el("span", "used", `${box.used} / ${box.size}`));
   const grid = el("div", "box-grid");
   box.slots.forEach((pet, slot) => {
     const onDrop = (): void => {
@@ -4727,6 +4891,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   hatched: "dialog hatched",
   daycare: "dialog daycare",
   form: "dialog",
+  "sell-pet": "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
   mail: "dialog settings mail",
@@ -4789,6 +4954,7 @@ function drawDialog(): void {
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over);
   else if (dialog.kind === "daycare") drawDaycare();
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
+  else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
   else if (dialog.kind === "mail") drawMail();
@@ -4915,6 +5081,8 @@ const REASON: Record<string, string> = {
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
   halted: "다른 PC 확인이 끝날 때까지 게임이 멈춰 있어요.",
   "box-full": "그 박스는 가득 찼어요.",
+  "pet-not-sellable": "팔 수 없는 포켓몬이에요.",
+  "last-pet": "마지막 한 마리는 팔 수 없어요.",
   "no-box": "그 박스를 찾지 못했어요.",
   // 교환에 올려 둔 개체 — 도구 사용·진화·모습 바꾸기를 막는다 (src/tx/handlers.ts, src/trade/core.ts isLocked)
   "trade-locked": "교환에 올린 포켓몬이에요. 교환을 끝내거나 나간 뒤 다시 해 주세요.",
@@ -4922,7 +5090,7 @@ const REASON: Record<string, string> = {
 };
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
-const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "shop.buy"]);
+const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "pet.sell", "shop.buy"]);
 
 // 도감이 함께 바뀌는 조작 — 다음에 도감을 열 때 다시 읽게 비운다
 const TOUCHES_DEX = new Set(["egg.open", "shop.buy", "evolve", "bag.use"]);
@@ -5212,6 +5380,10 @@ function goTo(route: ManageRoute): void {
   } else if (route.to === "form") {
     // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
     if (petOf(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
+  } else if (route.to === "move") {
+    startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
+  } else if (route.to === "sell") {
+    if (petOf(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {
     detailPet = null;
     open({ kind: "user", tab: "account" });

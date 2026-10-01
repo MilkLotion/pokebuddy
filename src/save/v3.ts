@@ -15,6 +15,7 @@ import { compactSlots } from "../party/slots.js";
 import { normalizeMail } from "../mail/core.js";
 import { FIND_RULES } from "../find/rules.js";
 import { isGender, legacyGender } from "../dex/gender.js";
+import { maxPetNo } from "../party/create.js";
 
 type Raw = Record<string, unknown>;
 
@@ -58,7 +59,8 @@ export function empty(now: number): SaveV3 {
     pets: [],
     starterPetId: null,
     party: { slots: emptySlots() },
-    boxes: [newBox("b1", SAVE_V3_RULES.box.firstName)],
+    boxes: growBoxes([newBox("b1", SAVE_V3_RULES.box.firstName)]),
+    petSeq: 0,
     eggs: [],
     eggSeq: 0,
     bag: {},
@@ -86,6 +88,18 @@ export function emptySlots(): PartySlotV3[] {
 }
 
 export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: SAVE_V3_RULES.box.size }, () => null) });
+
+// 박스 수를 규칙에 맞춘다 — start 개보다 적으면 채우고, 모든 박스에 한 마리 이상 있으면 step 개를 더한다.
+// 그래서 빈 박스가 늘 하나 이상 있다. 줄이지는 않는다. 박스에 개체가 들어가는 조작 뒤에 부른다
+export function growBoxes(boxes: BoxV3[]): BoxV3[] {
+  const { start, step } = SAVE_V3_RULES.box;
+  const add = (count: number): void => {
+    for (let i = 0; i < count; i += 1) boxes.push(newBox(`b${boxes.length + 1}`, `박스 ${boxes.length + 1}`));
+  };
+  if (boxes.length < start) add(start - boxes.length);
+  if (boxes.every((b) => b.slots.some((s) => s !== null))) add(step);
+  return boxes;
+}
 
 // 소리 크기 기본값 — src/state/settings.ts SOUND_RULES.defaultVolume 과 같다 (저장 모듈이 상태 모듈을 부르지 않게 값만 둔다)
 const SOUND_DEFAULT_VOLUME = 30;
@@ -363,6 +377,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
   for (const s of slots) if (s.state === "pokemon" && s.petId) placed.add(s.petId);
   const boxes = normalizeBoxes(raw.boxes, seen, placed);
   putStrays(pets, placed, boxes);
+  growBoxes(boxes); // 옛 저장(박스 1개부터)도 읽을 때 지금 규칙으로 맞춘다
 
   const d = isObj(raw.daily) ? raw.daily : {};
   const dailyDate = str(d.date, date);
@@ -379,6 +394,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     party: { slots },
     boxes,
     eggs,
+    petSeq: Math.max(nonNeg(raw.petSeq), maxPetNo(pets)), // 2026-10-02 에 더했다. 옛 저장은 지금 있는 개체의 가장 큰 번호에서 시작한다
     eggSeq: Math.max(nonNeg(raw.eggSeq), maxEggNo(eggs)), // 2026-09-26 에 더했다. 옛 저장은 지금 있는 알의 가장 큰 번호에서 시작한다
     bag,
     points,

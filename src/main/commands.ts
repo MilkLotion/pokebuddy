@@ -79,6 +79,7 @@ const SAVE_COMMANDS: readonly CommandName[] = [
   "egg.open",
   "bag.use",
   "bag.sell",
+  "pet.sell",
   "shop.buy",
   "achievement.claim",
   "tutorial.skip",

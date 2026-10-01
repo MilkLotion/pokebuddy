@@ -11,6 +11,8 @@ import { eggPool, eggPrice, find, inRandomEgg, sellsSpecies, slotPrice, speciesP
 import { rankOf } from "../egg/hatch";
 import { shopList } from "../tx/lists";
 import { sell, sellPrice } from "../shop/sell";
+import { petSellPrice, sellPet, sellablePet } from "../shop/sell-pet";
+import { newPet, nextPetId } from "../party/create";
 import { createExecutor } from "../tx/executor";
 import { HANDLERS } from "../tx/handlers";
 import { unlockRules } from "../dex/unlocks";
@@ -261,4 +263,68 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(12) 리전폼 · 지도 가격 · 파는 종  ok\n");
 }
 
-process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼)\n");
+// (13) 포켓몬 판매 — 판매가 = 그 종이 나오는 알 값의 1/4, 10P 단위 내림. 단일 포켓몬과 알에 없는 종은 팔지 않는다
+// (2026-10-01 사용자 결정 "가격은 알 1/4 가격으로. 대충 10단위로 떨어지게", 2026-10-02 "단일 포켓몬은 판매불가", "어느 알에도 없는 종은 판매불가")
+{
+  const of = (species: string, evolved: string[] = []) => petSellPrice({ species, evolved });
+  assert.equal(of("bulbasaur"), 30, "랜덤알 120P → 30P");
+  assert.equal(of("venusaur", ["bulbasaur", "ivysaur"]), 30, "진화형은 진화 전 종의 알로 본다");
+  assert.equal(of("venusaur"), 30, "진화 이력이 없는 진화형(우편·교환)도 계열 맨 앞 종으로");
+  assert.equal(of("omanyte"), 50, "태고의돌 200P → 50P");
+  assert.equal(of("mewtwo"), null, "단일 포켓몬");
+  assert.equal(of("solgaleo", ["cosmog", "cosmoem"]), null, "공유 계열도 단일 포켓몬");
+  assert.equal(of("ditto"), null, "어느 알에도 없는 종 — 업적 보상");
+  assert.equal(of("lapras"), null, "어느 알에도 없는 종 — 업적 보상");
+
+  const mk = (id: string, species: string) => newPet({ id, species, shiny: false, nature: "hardy", gender: "male", now: T0 });
+  let state: SaveV3 | null = seed(100);
+  state.pets.push(mk("p1", "bulbasaur"), mk("p2", "omanyte"), mk("p3", "mewtwo"), mk("p4", "pikachu"));
+  state.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  state.boxes[0]!.slots[0] = "p2";
+  state.boxes[0]!.slots[1] = "p3";
+  state.boxes[2]!.slots[4] = "p4";
+  state.starterPetId = "p1";
+  const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
+  const run = (id: string, petId: unknown) => ex.run({ id, name: "pet.sell", args: { petId } });
+  const reason = (id: string, petId: unknown): string => {
+    const r = run(id, petId);
+    return r.ok ? "ok" : r.reason;
+  };
+
+  assert.equal(reason("ps-single", "p3"), "pet-not-sellable", "단일 포켓몬 거절");
+  assert.equal(reason("ps-none", "p9"), "no-pet");
+  assert.equal(reason("ps-bad", 3), "bad-args");
+  state.trade = { pending: { channelId: "c1", petId: "p2", offerRev: 0, received: null } };
+  assert.equal(reason("ps-locked", "p2"), "trade-locked", "교환에 올린 개체 거절");
+  state.trade = { pending: null };
+  assert.equal(state.points.balance, 100, "거절은 포인트를 바꾸지 않는다");
+  assert.equal(state.pets.length, 4, "거절은 개체를 지우지 않는다");
+
+  // 박스 개체 — 칸이 비고 포인트가 는다
+  const box = run("ps-box", "p4");
+  assert.deepStrictEqual(box.ok && box.result, { petId: "p4", species: "pikachu", earned: 30, balance: 130 });
+  assert.equal(state?.boxes[2]!.slots[4], null, "박스 칸이 빈다");
+  assert.equal(state?.pets.some((p) => p.id === "p4"), false);
+  assert.equal(state?.petSeq, 4, "판 개체의 번호를 기억한다");
+  assert.equal(nextPetId(state!), "p5", "판 번호를 다시 쓰지 않는다");
+  assert.equal(run("ps-box", "p4").ok, true, "같은 요청은 한 번만 반영한다");
+  assert.equal(state?.points.balance, 130);
+
+  // 파티 개체 — 칸이 빈 칸이 된다. 첫 선택 개체 표시도 지운다
+  const party = run("ps-party", "p1");
+  assert.deepStrictEqual(party.ok && party.result, { petId: "p1", species: "bulbasaur", earned: 30, balance: 160, slotIndex: 0 });
+  assert.deepStrictEqual(state?.party.slots[0], { state: "empty" });
+  assert.equal(state?.starterPetId, null);
+  assert.equal(state?.dex.obtained.length, 0, "도감 기록은 건드리지 않는다");
+
+  // 마지막 한 마리는 팔지 않는다
+  const one = seed(0);
+  one.pets.push(mk("p1", "bulbasaur"));
+  one.boxes[0]!.slots[0] = "p1";
+  assert.deepStrictEqual(sellablePet(one, "p1"), { ok: false, reason: "last-pet" });
+  assert.equal(sellPet(one, "p1").reason, "last-pet");
+  assert.equal(one.pets.length, 1);
+  process.stdout.write("(13) 포켓몬 판매 · 알 값의 1/4 · 단일·알 없는 종 거절 · 교환 잠금 · 마지막 한 마리 · 번호 재사용 없음  ok\n");
+}
+
+process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼·포켓몬 판매)\n");

@@ -169,7 +169,7 @@ export type CommandName =
   | "bag.use" | "bag.sell"
   | "achievement.claim"
   | "tutorial.skip" | "tutorial.done"
-  | "pet.set" | "pet.look" | "pet.form"
+  | "pet.set" | "pet.look" | "pet.form" | "pet.sell"
   | "starter.pick"
   | "agent.connect" | "agent.disconnect"
   | "settings.set"

@@ -16,6 +16,7 @@ import { setHome, setSize } from "../party/home.js";
 import { begin } from "../party/starter.js";
 import { buy } from "../shop/buy.js";
 import { sell } from "../shop/sell.js";
+import { sellPet } from "../shop/sell-pet.js";
 import { isBoxSortKey, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
 import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
@@ -199,6 +200,17 @@ const sellHandler: TxHandler = (draft, args) => {
 };
 
 HANDLERS["bag.sell"] = sellHandler;
+
+// 포켓몬 판매 — 개체를 지우고 판매가만큼 포인트를 더한다. 파티 개체였으면 칸이 빈다 (2026-10-01 사용자 결정, src/shop/sell-pet.ts)
+const sellPetHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  if (!petId) return { ok: false, reason: "bad-args" };
+  const res = sellPet(draft, petId);
+  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  return { ok: true, result: { petId, species: res.species, earned: res.earned, balance: res.balance, ...(res.slotIndex !== undefined ? { slotIndex: res.slotIndex } : {}) } };
+};
+
+HANDLERS["pet.sell"] = sellPetHandler;
 
 // ── 진화 ───────────────────────────────────────────────────────────────────────
 

@@ -34,6 +34,7 @@ export const V3_COMMANDS: readonly CommandName[] = [
   "starter.pick",
   "pet.set",
   "pet.form",
+  "pet.sell",
   "box.sort",
   "box.move",
   "box.rename",
@@ -75,6 +76,7 @@ export function argsOf(command: Command): Record<string, unknown> {
       return { petId: target ?? str(a.petId), to: str(a.to) };
     case "feed":
     case "play":
+    case "pet.sell":
       return { petId: target ?? str(a.petId) };
     case "achievement.claim":
       return { id: target ?? str(a.id) };

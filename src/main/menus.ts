@@ -41,8 +41,8 @@ export interface PetMenuActions {
   ball?(): void; // 이 포켓몬만 볼에 넣는다·꺼낸다 — 저장에 있는 개체일 때만
   detail?(): void; // 그 포켓몬의 개체 상세를 연다
   form?(species: string): void; // 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
-  move?(): void; // [임시] 기능 개발 예정 — 동작이 없으면 줄이 흐리다 (worklog/records/box-improve/record.md)
-  sell?(): void; // [임시] 기능 개발 예정 — 동작이 없으면 줄이 흐리다
+  move?(): void; // 옮기기 — 관리 창의 박스 탭에서 그 개체를 든다. 동작이 없으면 줄이 흐리다
+  sell?(): void; // 팔기 — 관리 창이 확인 창을 띄운다. 동작이 없으면 줄이 흐리다
 }
 
 // 첫 줄 — "이브이 · 용감". 성격이 없거나 성격을 화면에서 끈 동안(NATURE_SHOWN)은 이름만

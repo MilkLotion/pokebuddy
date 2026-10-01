@@ -12,6 +12,8 @@
 //   교환 링크  다른 대화상자가 떠 있으면 닫고 박스 탭 + 교환 모달
 //   상점 기기  상품 줄을 누르면 옆 기기 창(설명·구매). 정보 줄 효과·쓰는 곳, 진화용 도구 쓰는 곳 = 목록 줄. 수량·구매 실패(빨강)·이전·다음·다시 누르면 닫기·탭 나가면 닫기
 //   탭 나가기  나가는 탭의 상세 기기 창(개체 상세·도감)을 닫는다. 같은 탭은 그대로
+//   박스       6×5 칸(95×86)이 창 높이 682 에 스크롤 없이 맞는다. 넘김 줄은 이름 길이·이름 고치는 중에도 ◀·▶·칸 수·정렬 자리가 같다.
+//              실패는 머리 부제 자리의 글자로(줄을 끼우지 않는다). 옮기기는 든 채로 박스를 넘기고 칸을 누르면 놓는다 · 밖·Esc 는 취소. 팔기는 확인 창
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
 //              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
 // 실제 IME 는 흉내 낼 수 없어서 요소가 같은 객체로 남는지, 조합 이벤트 사이에 다시 그리지 않는지로 본다
@@ -79,6 +81,7 @@ window.pokebuddyManage = new Proxy({}, {
       for (const slot of s.party.slots) if (slot.pet) slot.pet.fullness = Math.max(1, 90 - sec);
       s.points += window.__bump;
       if (window.__bagExtra) s.bag = [...bagExtra, ...s.bag];
+      if (window.__boxName) s.boxes[0].name = window.__boxName;
       return s;
     };
     if (name === "dex") return async () => dex;
@@ -90,7 +93,7 @@ window.pokebuddyManage = new Proxy({}, {
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
-    if (name === "command") return async () => ({ ok: false, reason: "mock" });
+    if (name === "command") return async (req) => { (window.__cmds ??= []).push(req); return { ok: false, reason: "mock" }; }; // 늘 실패한다 — 보낸 명령은 window.__cmds
     if (name === "screens") return async () => [];
     return async () => null;
   },
@@ -654,7 +657,97 @@ void app.whenReady().then(async () => {
     await wait(300);
     assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), sharedId, "메뉴를 띄울 길이 없으면 바로 개체 상세");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 그림 ${shots}\n`);
+    // (18) 박스 — 칸 95×86 으로 6×5 가 스크롤 없이 맞는다. 넘김 줄의 ◀·▶·칸 수·정렬은 이름 길이와 이름 고치는 중에도 같은 자리다
+    //      (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 레이아웃은 바뀌면 안된다", 2026-10-02 칸 B안)
+    await reload();
+    await js(`window.__menuOn = true; window.__cmds = []; ${tabBtn("박스")}.click()`);
+    await wait(300);
+    const boxLook = await js<{ cells: number; h: number; w: number; bottom: number; inner: number; lvRight: number; boxes: string }>(`(() => {
+      const cells = [...document.querySelectorAll('#body .box-grid > .cell')];
+      const first = cells[0].getBoundingClientRect();
+      const last = cells[cells.length - 1].getBoundingClientRect();
+      const lv = cells[0].querySelector('.lv').getBoundingClientRect();
+      return { cells: cells.length, h: first.height, w: Math.round(first.width), bottom: last.bottom, inner: window.innerHeight, lvRight: Math.round(first.right - lv.right), boxes: document.querySelector('#body .head .sub').textContent };
+    })()`);
+    assert.equal(boxLook.cells, 30, "한 박스 30칸");
+    assert.equal(boxLook.h, 86, "칸 높이 86");
+    assert.equal(boxLook.w, 95, "칸 폭 95");
+    assert.ok(boxLook.bottom <= boxLook.inner, `6×5 가 창 높이 안에 든다 (${boxLook.bottom} ≤ ${boxLook.inner})`);
+    assert.ok(boxLook.lvRight >= 6 && boxLook.lvRight <= 9, `레벨은 칸 오른쪽 위 구석 (오른쪽 여백 ${boxLook.lvRight})`);
+    assert.ok(boxLook.boxes.includes("박스 8개"), `박스는 8개로 시작한다 (${boxLook.boxes})`);
+    await shot("box-base.png");
+    const pagerAt = `(() => {
+      const p = document.querySelector('#body .pager');
+      const x = (el) => Math.round(el.getBoundingClientRect().left);
+      const b = p.querySelectorAll(':scope > button');
+      return [x(b[0]), x(b[1]), x(p.querySelector('.used')), x(p.querySelector('.box-sort')), Math.round(document.querySelector('#body .box-grid').getBoundingClientRect().top)].join(',');
+    })()`;
+    const pagerShort = await js<string>(pagerAt);
+    await js(`window.__boxName = '전설의포켓몬보관함입니다'; window.__bump = 11; 0`);
+    await wait(1400);
+    assert.equal(await js<string>(`document.querySelector('#body .box-name').textContent`), "전설의포켓몬보관함입니다", "12글자 이름");
+    assert.equal(await js<string>(pagerAt), pagerShort, "12글자 이름에도 ◀·▶·칸 수·정렬·격자 자리가 같다");
+    await js(`document.querySelector('#body .box-name').click(); 0`);
+    await wait(200);
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .box-name-input')`), true, "이름을 누르면 입력칸");
+    assert.equal(await js<number>(`document.querySelector('#body .box-name-input').maxLength`), 12, "이름은 12자까지");
+    assert.equal(await js<string>(pagerAt), pagerShort, "이름을 고치는 중에도 자리가 같다");
+    await shot("box-rename.png");
+    await js(`document.querySelector('#body .box-name-input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); document.activeElement.blur(); 0`);
+    await wait(300);
+    assert.equal(await js<boolean>(`!!document.querySelector('#body .box-name')`), true, "Esc 로 이름 고치기를 그만둔다");
+
+    // 옮기기 — 든 채로 ▶ 를 눌러 박스를 넘기고 빈 칸을 누르면 그 칸으로 box.move. 든 동안 커서를 따라가는 칸이 있다
+    const holding = `({ grid: document.querySelector('#body .box-grid').classList.contains('holding'), ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length, name: document.querySelector('#body .box-name')?.textContent ?? '' })`;
+    await js(`window.__cb.onRoute({ to: 'move', petId: 'p3' }); 0`);
+    await wait(300);
+    assert.deepEqual(await js<unknown>(holding), { grid: true, ghost: 1, from: 1, name: "전설의포켓몬보관함입니다" }, "옮기기 — 든 상태");
+    await shot("box-hold.png");
+    await js(`document.querySelectorAll('#body .pager > button')[1].click(); 0`);
+    await wait(200);
+    assert.deepEqual(await js<unknown>(holding), { grid: true, ghost: 1, from: 0, name: "박스 2" }, "▶ 를 눌러도 든 채로 박스를 넘긴다");
+    await js(`document.querySelectorAll('#body .box-grid > .cell')[4].click(); 0`);
+    await wait(400);
+    const moved = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
+    assert.equal(moved.length, 1, "빈 칸을 누르면 명령 하나");
+    assert.equal(moved[0]?.cmd, "box.move");
+    assert.equal(moved[0]?.target, "b1");
+    assert.deepEqual([moved[0]?.args.slot, moved[0]?.args.toBoxId, moved[0]?.args.toSlot], [1, "b2", 4], "든 칸에서 누른 칸으로");
+    assert.equal(await js<number>(`document.querySelectorAll('.drag-ghost').length`), 0, "놓으면 따라가던 칸이 사라진다");
+    // 실패 — 머리 부제 자리의 글자만 바뀐다. 줄을 끼우지 않아 격자가 그대로다
+    const failLook = await js<{ fail: string; note: number; at: string }>(`({ fail: document.querySelector('#body .head .sub.fail')?.textContent ?? '', note: document.querySelectorAll('#body .box-note').length, at: ${pagerAt} })`);
+    assert.ok(failLook.fail.length > 0, "실패 이유가 머리 부제 자리에 보인다");
+    assert.equal(failLook.note, 0, "실패 줄을 끼우지 않는다");
+    assert.equal(failLook.at, pagerShort, "실패해도 넘김 줄과 격자 자리가 같다");
+    await shot("box-move-failed.png");
+    // 밖을 누르거나 Esc 를 누르면 취소 — 명령을 보내지 않는다
+    await js(`document.querySelectorAll('#body .pager > button')[0].click(); 0`);
+    await wait(200);
+    for (const cancel of [`document.querySelector('#body .head h1').click()`, `document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`]) {
+      await js(`window.__cmds = []; window.__cb.onRoute({ to: 'move', petId: 'p3' }); 0`);
+      await wait(300);
+      assert.equal(await js<number>(`document.querySelectorAll('.drag-ghost').length`), 1);
+      await js(`${cancel}; 0`);
+      await wait(200);
+      assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, holding: document.querySelector('#body .box-grid').classList.contains('holding'), cmds: window.__cmds.length })`), { ghost: 0, holding: false, cmds: 0 }, "취소 — 내려놓고 명령은 없다");
+    }
+    // 든 개체가 없으면 칸을 누르면 포켓몬 메뉴
+    await js(`window.__petMenu = null; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    await wait(200);
+    assert.equal(await js<string>(`window.__petMenu`), "p2", "든 개체가 없으면 포켓몬 메뉴");
+
+    // 팔기 — 확인 창. `팔기` 를 누르면 pet.sell
+    await js(`window.__cmds = []; window.__cb.onRoute({ to: 'sell', petId: 'p3', price: 30 }); 0`);
+    await wait(400);
+    const sellText = await js<string>(`document.getElementById('dialog').textContent`);
+    assert.ok(sellText.includes("팔까요") && sellText.includes("30P") && sellText.includes("되돌릴 수 없어요"), `팔기 확인 창 (${sellText})`);
+    await shot("box-sell-confirm.png");
+    await js(`[...document.querySelectorAll('#dialog .actions button')].find((b) => b.textContent === '팔기').click(); 0`);
+    await wait(400);
+    const sold = await js<{ cmd: string; target: string }[]>(`window.__cmds`);
+    assert.deepEqual([sold.length, sold[0]?.cmd, sold[0]?.target], [1, "pet.sell", "p3"], "팔기 — pet.sell");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

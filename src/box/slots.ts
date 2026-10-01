@@ -1,9 +1,9 @@
 // 박스 칸 다루기 — 규칙은 docs/specs/game.md "박스". 순수 함수이며 저장을 쓰지 않는다.
 //
-// 한 박스는 30칸이다. 모두 차면 새 박스를 자동으로 추가한다.
+// 한 박스는 30칸이다. 박스는 8개로 시작하고, 모든 박스에 한 마리 이상 있으면 8개를 더한다(src/save/v3.ts growBoxes).
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
 import { profile } from "../dex/species.js";
-import { newBox } from "../save/v3.js";
+import { growBoxes, newBox } from "../save/v3.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
 
 export interface BoxSpot {
@@ -32,7 +32,7 @@ export function takePet(boxes: BoxV3[], petId: string): boolean {
   return true;
 }
 
-// 개체를 앞 박스의 첫 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다
+// 개체를 앞 박스의 첫 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다. 넣은 뒤 박스 수를 규칙에 맞춘다
 export function putPet(boxes: BoxV3[], petId: string): BoxSpot {
   for (let b = 0; b < boxes.length; b++) {
     const box = boxes[b];
@@ -40,12 +40,15 @@ export function putPet(boxes: BoxV3[], petId: string): BoxSpot {
     const i = box.slots.indexOf(null);
     if (i < 0) continue;
     box.slots[i] = petId;
+    growBoxes(boxes);
     return { boxIndex: b, slotIndex: i };
   }
   const box = newBox(`b${boxes.length + 1}`, `박스 ${boxes.length + 1}`);
   box.slots[0] = petId;
   boxes.push(box);
-  return { boxIndex: boxes.length - 1, slotIndex: 0 };
+  const spot = { boxIndex: boxes.length - 1, slotIndex: 0 };
+  growBoxes(boxes);
+  return spot;
 }
 
 export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== null).length;
@@ -53,7 +56,7 @@ export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== n
 // ── 정렬·이동·이름 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
 export const BOX_RULES = {
-  nameMax: 10, // 박스 이름 최대 글자 수
+  nameMax: 12, // 박스 이름 최대 글자 수 — 넘김 줄의 이름 칸은 이 글자 수에 맞춘 고정 폭이다 (2026-10-01 사용자 결정 "최대12글자로 가정하고 구성")
 };
 
 export type BoxSortKey = "dex" | "level" | "affinity" | "recent" | "name";
@@ -96,6 +99,7 @@ export function moveSlot(boxes: BoxV3[], from: BoxSpot, to: BoxSpot): { ok: true
   if (!moving) return { ok: false, reason: "empty-slot" };
   a.slots[from.slotIndex] = b.slots[to.slotIndex] ?? null;
   b.slots[to.slotIndex] = moving;
+  growBoxes(boxes); // 빈 박스에 처음 넣었으면 박스가 늘 수 있다
   return { ok: true };
 }
 

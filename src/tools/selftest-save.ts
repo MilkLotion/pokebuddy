@@ -65,7 +65,7 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   assert.equal(open, SAVE_V3_RULES.party.openAtStart, "시작은 두 칸");
   assert.equal(shop, SAVE_V3_RULES.party.shopUnlock, "상점으로 여는 칸");
   assert.equal(ach, SAVE_V3_RULES.party.total - SAVE_V3_RULES.party.openAtStart - SAVE_V3_RULES.party.shopUnlock, "업적으로 여는 칸");
-  assert.equal(s.boxes.length, 1);
+  assert.equal(s.boxes.length, SAVE_V3_RULES.box.start, "박스는 8개로 시작한다");
   assert.equal(s.boxes[0]?.slots.length, SAVE_V3_RULES.box.size);
   process.stdout.write("(1) 빈 저장 · 파티 칸 구성  ok\n");
 }

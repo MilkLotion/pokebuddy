@@ -4798,6 +4798,7 @@
   "findPointsMax": 10,
   "mintRefund": 100,
   "sellRatio": 0.6,
+  "petSellMax": 50,
   "speciesMinPrice": 200,
   "affinityPerHour": 30,
   "carePerHour": 30,

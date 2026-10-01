@@ -405,4 +405,41 @@ out("0 supabase/functions/_shared 가 최신");
   out(`12 한 틈에 여러 일 — 단일 알 둘·보너스 알 연쇄(${tried})·부화 뒤 진화`);
 }
 
+// 13. 포켓몬 판매 — 사라진 개체만큼 포인트, 같은 틈에 부화해서 판 개체, 판 번호를 다시 쓰지 않는다
+{
+  assert.equal(data.rules.petSellMax, 50, "가장 비싼 판매가는 태고의돌 종 50P");
+  const prev = base();
+  prev.pets.push(pet("p2", "pikachu"), pet("p3", "omanyte"));
+  prev.petSeq = 3;
+  prev.points.balance = 0;
+  const sold = clone(prev);
+  sold.pets = sold.pets.filter((p) => p.id !== "p2" && p.id !== "p3");
+  sold.points.balance = 80; // 30P + 50P
+  assert.deepEqual(rules(prev, sold, ctx(1_000)), [], "두 마리 판 포인트");
+  const over = clone(sold);
+  over.points.balance = 500;
+  assert.deepEqual(rules(prev, over, ctx(1_000)), ["points"], "판 값보다 많이 늘면 위반");
+  // 판 뒤 새 개체 — 번호는 p4 부터다. p3 을 다시 쓰면 위반
+  const reused = clone(sold);
+  reused.pets.push(pet("p3", "bulbasaur", { since: T0 + 5 }));
+  assert.ok(rules(prev, reused, ctx(1_000)).includes("pet-id"), "판 번호를 다시 썼다");
+  // 같은 틈에 알을 열어 나온 개체를 팔았다 — 번호만 늘고 개체는 없다
+  const hatchPrev = base();
+  hatchPrev.eggs.push(egg("e1"));
+  hatchPrev.eggSeq = 1;
+  hatchPrev.petSeq = 1;
+  hatchPrev.points.balance = 0;
+  const hatchSold = clone(hatchPrev);
+  hatchSold.eggs = [];
+  hatchSold.petSeq = 2;
+  hatchSold.points.balance = 30;
+  assert.deepEqual(rules(hatchPrev, hatchSold, ctx(1_000)), [], "부화해서 바로 판 개체");
+  // 출처 없이 번호만 올려 판매 포인트를 만들 수 없다
+  const fake = clone(prev);
+  fake.petSeq = 103;
+  fake.points.balance = 100 * 50;
+  assert.ok(rules(prev, fake, ctx(1_000)).includes("new-pets"), "출처 없는 개체 100마리를 판 것처럼");
+  out("13 포켓몬 판매 — 사라진 개체·부화 뒤 판매·번호 재사용·번호 부풀리기");
+}
+
 out("selftest-verify: 통과");

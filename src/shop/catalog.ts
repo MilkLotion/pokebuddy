@@ -166,6 +166,16 @@ export function inRandomEgg(slug: string, opts?: DexOptions): boolean {
   return !fixedEggs(opts).some(([, pool]) => pool.includes(slug));
 }
 
+// 이 종이 나오는 알 — 종 목록 알(태고의돌)을 먼저 보고, 없으면 해금한 종에서 뽑는 알(랜덤알)이다.
+// 단일 포켓몬 알은 빼고 본다. 어느 알에도 없으면 null (업적 보상 종 등)
+export function eggOfSpecies(slug: string, opts?: DexOptions): string | null {
+  if (isMetaKey(slug)) return null;
+  const fixed = fixedEggs(opts).find(([kind, pool]) => !isSingleEgg(kind, opts) && pool.includes(slug));
+  if (fixed) return fixed[0];
+  if (!inRandomEgg(slug, opts)) return null;
+  return Object.keys(eggs(opts)).find((kind) => !isMetaKey(kind) && eggs(opts)[kind]?.pool === "unlocked") ?? null;
+}
+
 // 상품 하나를 찾는다. 알 · 도구 · 종 순서로 본다
 export function find(id: string, opts?: DexOptions): Product | null {
   const price = eggPrice(id, opts);

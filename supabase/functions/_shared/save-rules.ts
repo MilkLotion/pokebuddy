@@ -8,7 +8,7 @@
 //
 // 규칙 (상한에는 여유 비율 margin 을 곱한다 — D32 1.1. 틈에는 파일 쓰기·틱 지연 slackMs 를 더한다)
 //   work        작업 시간 증가 ≤ 틈
-//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 판매 + 민트 환불
+//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 판매(도구·포켓몬) + 민트 환불
 //   spend       늘어난 도구·새 알의 값 ≤ 그사이 쓸 수 있었던 포인트
 //   bag         팔지 않는 도구가 출처 없이 늘었다
 //   mail        서버에서 받지 않은 편지를 넣었다
@@ -16,8 +16,8 @@
 //   level       레벨 1~100, 경험치 0~최대, 레벨 ≤ 경험치가 허락하는 레벨
 //   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕
 //   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감
-//   new-pets    새 개체 수 ≤ 출처 수
-//   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 최대 번호 이하
+//   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수
+//   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
@@ -56,6 +56,7 @@ export interface VerifyData {
     findPointsMax: number; // 줍기 한 번 최대 포인트
     mintRefund: number;
     sellRatio: number;
+    petSellMax: number; // 포켓몬 한 마리 판매가의 최대 (src/shop/sell-pet.ts)
     speciesMinPrice: number; // 종 지정 구매 최저가
     affinityPerHour: number; // 시간 적립 최대(버프·작업 반영)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
@@ -232,6 +233,8 @@ const idNo = (id: string): number => {
   const m = /^p(\d+)$/.exec(id);
   return m ? Number(m[1]) : 0;
 };
+// 지금까지 쓴 개체 번호 — src/party/create.ts nextPetId 와 같다. petSeq 가 없는 옛 저장은 지금 있는 개체의 가장 큰 번호
+const petSeqOf = (save: Raw): number => Math.max(num(save.petSeq), maxOf(petsOf(save).map((p) => idNo(p.id))));
 const maxOf = (values: number[]): number => {
   let m = 0;
   for (const v of values) if (v > m) m = v;
@@ -327,8 +330,15 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     else sell += pos(had(id) - (nextBag[id] ?? 0)) * sellOf(id);
   }
   sell += unseen * maxSell;
+  // 포켓몬 판매 — 사라진 개체와, 같은 틈에 얻어서 판 개체(번호만 늘고 두 저장 어디에도 없다)를 가장 비싼 값에 판 것으로 넉넉히 본다.
+  // 교환으로 보낸 개체도 사라진 개체로 센다
+  const prevPetSeq = petSeqOf(prev);
+  const keptIds = new Set(petsOf(next).map((p) => p.id));
+  const gonePets = petsOf(prev).filter((p) => !keptIds.has(p.id)).length;
+  const vanishedPets = pos(petSeqOf(next) - prevPetSeq - petsOf(next).filter((p) => idNo(p.id) > prevPetSeq).length);
+  const petSell = (gonePets + vanishedPets) * num(r.petSellMax);
   const earnPerHour = (HOUR / r.pointMs) * r.maxPartySlots * r.maxEarnFactor;
-  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + sell + mint;
+  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + sell + petSell + mint;
   add("points", balanceOf(next) - balanceOf(prev), pointAllowance);
   // 그사이 쓴 포인트의 상한 — 산 도구·알·개체의 값은 이 안이어야 한다
   const spendable = pos(balanceOf(prev) + pointAllowance - balanceOf(next));
@@ -454,12 +464,11 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
 
   // new-pets · pet-id · shiny(새 개체)
   const prevIds = new Set(prevPets.map((p) => p.id));
-  const prevMax = maxOf(prevPets.map((p) => idNo(p.id)));
   for (const p of fresh) {
-    if (prevIds.has(p.id) || idNo(p.id) <= prevMax) add("pet-id", 1, 0, p.id);
+    if (prevIds.has(p.id) || idNo(p.id) <= prevPetSeq) add("pet-id", 1, 0, p.id);
   }
   const boughtAndOpened = Math.floor(leftover / minBuy); // 사서 연 알·종 지정 구매 — 두 저장 어디에도 흔적이 없다
-  add("new-pets", fresh.length, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened);
+  add("new-pets", fresh.length + vanishedPets, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened);
   add("shiny", fresh.filter((p) => p.shiny).length, opened + vanished + findPets + traded + boughtAndOpened);
 
   // eggs
