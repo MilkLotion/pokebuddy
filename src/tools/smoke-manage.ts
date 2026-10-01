@@ -790,7 +790,7 @@ void app.whenReady().then(async () => {
     const holding = `({ grid: document.querySelector('#body .box-grid').classList.contains('holding'), ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length, name: document.querySelector('#body .box-name')?.textContent ?? '' })`;
     await js(`window.__cb.onRoute({ to: 'move', petId: 'p3' }); 0`);
     await wait(300);
-    assert.deepEqual(await js<unknown>(holding), { grid: true, ghost: 1, from: 1, name: "전설의포켓몬보관함입니다" }, "옮기기 — 든 상태");
+    assert.deepEqual(await js<unknown>(holding), { grid: true, ghost: 1, from: 1, name: "전설의포켓몬보관함입니다" }, "옮기기 — 든 상태. 커서를 따라가는 칸이 있다");
     await shot("box-hold.png");
     await js(`document.querySelectorAll('#body .pager > button')[1].click(); 0`);
     await wait(200);
@@ -957,14 +957,14 @@ void app.whenReady().then(async () => {
     // 박스 칸을 누르면 상세 대신 그 개체를 든다. 빈 파티 칸이 놓을 칸이 된다
     await js(`window.__petOpen = null; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
     await wait(300);
-    assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length, pet: window.__petOpen ?? null })`), { ghost: 1, from: 1, pet: null }, "교체 화면 — 박스 칸을 누르면 든다. 상세는 뜨지 않는다");
+    assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length, pet: window.__petOpen ?? null })`), { ghost: 0, from: 1, pet: null }, "교체 화면 — 박스 칸을 누르면 든다. 원래 칸만 흐리고 따라가는 칸은 없다. 상세는 뜨지 않는다");
     assert.deepEqual((await partyOpen())?.slots.map((s) => s.target), [false, true, false, false, false, false], "든 동안 빈 파티 칸이 놓을 칸");
     await shot("party-swap-hold.png");
     // 파티 기기 창의 빈 칸 — 배치. 개체 칸 — 맞바꾸기
     await js(`window.__cb.onPartyAct({ kind: 'slot', index: 1 }); 0`);
     await wait(400);
     assert.deepEqual((await cmds()).map((c) => [c.cmd, c.target, c.args.slotIndex]), [["party.place", "p2", 1]], "든 박스 개체를 빈 파티 칸에 — party.place");
-    assert.equal(await js<number>(`document.querySelectorAll('.drag-ghost').length`), 0, "놓으면 따라가던 칸이 사라진다");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .cell.dragging').length`), 0, "놓으면 흐리던 칸이 돌아온다");
     assert.ok(((await partyOpen())?.notice ?? "").length > 0, "실패 이유는 파티 기기 창의 머리 줄에 보인다");
     await js(`window.__cmds = []; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
     await wait(300);

@@ -205,8 +205,10 @@ let dexQuery = "";
 let boxSortOpen = false;
 let boxRenaming = false;
 let boxNote = ""; // 박스 명령이 실패한 이유 — 머리 부제 자리에 보인다. 줄을 끼우지 않는다 (2026-10-01 사용자 "레이아웃은 바뀌면 안된다")
-// 옮기기로 든 개체 — 포켓몬 메뉴의 `옮기기`. 든 동안 커서를 따라가는 칸(holdGhost)과 마지막 커서 자리(holdAt)
-let boxHold: { petId: string; boxId: string; slot: number } | null = null;
+// 옮기기로 든 개체 — 든 동안 원래 칸은 흐리다. ghost 가 참이면 커서를 따라가는 칸(holdGhost)도 띄운다. holdAt 은 마지막 커서 자리.
+//   포켓몬 메뉴의 `옮기기`   커서를 따라간다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고")
+//   교체 화면               따라가지 않는다 — 파티 기기 창에서 든 것처럼 원래 칸만 흐리다 (2026-10-02 사용자 결정 "교체일때는 지금처럼유지")
+let boxHold: { petId: string; boxId: string; slot: number; ghost: boolean } | null = null;
 let holdGhost: HTMLElement | null = null;
 let holdAt: { x: number; y: number } | null = null;
 // 교체 화면 — 박스 탭 + 파티 기기 창. 파티 탭의 `교체` 와 빈 파티 칸이 연다. 박스 탭을 나가거나 기기 창을 닫으면 끝난다.
@@ -1282,11 +1284,11 @@ function drawBox(v: Snapshot): void {
     grid.appendChild(cell);
   });
   bodyEl.appendChild(grid);
-  if (hold) showHoldGhost(grid, hold.petId);
+  if (hold?.ghost) showHoldGhost(grid, hold.petId);
 }
 
 // ── 옮기기 — 포켓몬 메뉴의 `옮기기` 로 박스 개체를 든다 ──────────────────────────────
-// 든 개체는 커서를 따라간다. 다른 개체 칸을 누르면 맞바꾸고, 빈 칸을 누르면 거기 놓는다. ◀·▶ 를 누르면 든 채로 박스를 넘긴다.
+// 든 개체는 커서를 따라간다(교체 화면에서는 원래 칸만 흐리다). 다른 개체 칸을 누르면 맞바꾸고, 빈 칸을 누르면 거기 놓는다. ◀·▶ 를 누르면 든 채로 박스를 넘긴다.
 // 그 밖의 곳을 누르거나 Esc 를 누르면 취소한다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고 …"). 끌어 놓기는 그대로 따로 있다.
 // 명령은 끌어 놓기와 같은 box.move 다
 
@@ -1306,7 +1308,7 @@ function startHold(petId: string): void {
     boxSortOpen = false;
     boxRenaming = false;
     boxNote = "";
-    boxHold = { petId, boxId: box.id, slot };
+    boxHold = { petId, boxId: box.id, slot, ghost: !swapMode };
     draw();
     return;
   }
@@ -1438,7 +1440,8 @@ function onPartyAction(action: PartyDeviceAction): void {
   }
 }
 
-// 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다
+// 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다.
+// 포켓몬 메뉴의 `옮기기` 로 든 때만 띄운다 (boxHold.ghost)
 function showHoldGhost(grid: HTMLElement, petId: string): void {
   const pet = petOf(petId);
   const any = grid.querySelector<HTMLElement>(".cell");
@@ -1465,7 +1468,7 @@ function placeHoldGhost(): void {
 }
 
 window.addEventListener("pointermove", (e) => {
-  if (!boxHold) return;
+  if (!boxHold?.ghost) return;
   holdAt = { x: e.clientX, y: e.clientY };
   placeHoldGhost();
 });

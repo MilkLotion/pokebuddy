@@ -241,6 +241,15 @@
         background: var(--subtle);
         cursor: default;
       }
+      /* 가리킨 칸 — 박스에서 가리킨 칸과 같은 옅은 바탕. 초상 원·아이콘 상자는 흰 바탕으로 바꿔 묻히지 않게 한다. 잠긴 칸은 그대로다 */
+      .slot:not(.locked):hover {
+        background: var(--accent);
+      }
+      .slot:not(.locked):hover .face,
+      .slot:not(.locked):hover .icon,
+      .slot.target .icon {
+        background: var(--paper);
+      }
       /* 든 개체의 원래 칸 — 흐리게. 놓을 칸 — 옅은 바탕 (테두리 강조는 쓰지 않는다) */
       .slot.held > * {
         opacity: 0.35;

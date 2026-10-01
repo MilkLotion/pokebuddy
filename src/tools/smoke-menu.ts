@@ -154,7 +154,7 @@ void app.whenReady().then(async () => {
     await js(`window.__picks = []; document.getElementById('wrap').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); 0`);
     assert.deepEqual(await js<unknown[]>(`window.__picks`), [null], "메뉴와 말풍선 밖의 빈 곳을 누르면 닫는다");
 
-    // (6) 박스 공유 계열 — 옮기기·팔기가 모습 바꾸기 아래에 붙어도 꼬리는 그 항목을 가리킨다
+    // (6) 박스 공유 계열 — 옮기기가 맨 위에, 팔기가 모습 바꾸기 아래에 붙어도 꼬리는 그 항목을 가리킨다
     await show(boxModel, "right");
     await js(`${formItem}.click()`);
     await wait(150);
@@ -166,7 +166,7 @@ void app.whenReady().then(async () => {
     const boxLabels = await js<string[]>(`[...document.querySelectorAll('#menu .item')].map((b) => b.querySelector('.label').textContent + (b.disabled ? ' (흐림)' : ''))`);
     assert.deepEqual(
       boxLabels,
-      [`${t("menu.feed")} (흐림)`, `${t("menu.play")} (흐림)`, `${t("menu.ball")} (흐림)`, t("menu.detail"), t("menu.form"), `${t("menu.move")} (흐림)`, `${t("menu.sell")} (흐림)`],
+      [`${t("menu.move")} (흐림)`, `${t("menu.feed")} (흐림)`, `${t("menu.play")} (흐림)`, `${t("menu.ball")} (흐림)`, t("menu.detail"), t("menu.form"), `${t("menu.sell")} (흐림)`],
       "박스 공유 계열 — 돌봄·볼·옮기기·팔기 흐림",
     );
     await shot("menu-box-open.png");

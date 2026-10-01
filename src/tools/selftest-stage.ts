@@ -157,7 +157,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(cared[0], { kind: "status", title: EEVEE_LINE, caption: "배부름 · 기분 좋음" }, "menuView 상태 줄");
   const feedView = cared.find((v) => v.kind === "item" && v.label === t("menu.feed"));
   eq(feedView?.kind === "item" ? [feedView.disabled, feedView.hint] : null, [true, undefined], "menuView 밥 주기는 흐리게만 — 이유를 붙이지 않는다");
-  // 관리 창의 파티 카드·박스 칸도 같은 메뉴다 — 묶음: 돌봄·볼 / 상세 보기·모습 바꾸기·옮기기 / 팔기 (Figma `Context Menu` `338:738`)
+  // 관리 창의 파티 카드·박스 칸도 같은 메뉴다 — 묶음: 옮기기 / 돌봄·볼·상세 보기·모습 바꾸기 / 팔기 (Figma `Context Menu` `338:738`)
   // 박스 개체는 돌봄·볼이 흐리다. 옮기기·팔기는 동작을 꽂기 전에는 흐리다(기능 개발 예정)
   const off = { enabled: false };
   const forms = [
@@ -172,8 +172,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   const boxedView = menuView(boxed, "켜짐");
   eq(
     boxedView.map((v) => (v.kind === "item" ? `${v.label}${v.disabled ? " (흐림)" : ""}` : v.kind)),
-    ["status", "separator", `${t("menu.feed")} (흐림)`, `${t("menu.play")} (흐림)`, `${t("menu.ball")} (흐림)`, t("menu.detail"), t("menu.form"), `${t("menu.move")} (흐림)`, "separator", `${t("menu.sell")} (흐림)`],
-    "박스 공유 계열 메뉴 — 돌봄·볼·옮기기·팔기는 흐리고 상세 보기·모습 바꾸기는 누른다. 볼에 넣기와 상세 보기 사이에 구분선이 없다",
+    ["status", "separator", `${t("menu.move")} (흐림)`, "separator", `${t("menu.feed")} (흐림)`, `${t("menu.play")} (흐림)`, `${t("menu.ball")} (흐림)`, t("menu.detail"), t("menu.form"), "separator", `${t("menu.sell")} (흐림)`],
+    "박스 공유 계열 메뉴 — 돌봄·볼·옮기기·팔기는 흐리고 상세 보기·모습 바꾸기는 누른다. 옮기기는 이름·상태 바로 아래에 있고 그 아래에 구분선이 있다. 볼에 넣기와 상세 보기 사이에 구분선이 없다",
   );
   // 모습 바꾸기 — 누르는 동작 없이 말풍선(sub)을 단다. 지금 모습 줄은 누를 수 없다
   const formAt = boxed.findIndex((m) => m.label === t("menu.form"));
