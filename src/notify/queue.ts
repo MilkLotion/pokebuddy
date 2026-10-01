@@ -91,6 +91,14 @@ export function refresh(state: NotifyState | null, save: SaveV3, now: number): N
   return { v: 1, shown, queue };
 }
 
+// 저장을 통째로 바꿔 받았다(서버 저장 받기) — 받은 저장에 이미 있는 미처리 상태는 표시한 것으로 두고 줄을 비운다.
+// 표시 기록은 PC 마다 따로라, 그냥 두면 다른 PC 에서 쌓인 줍기 기록 20건·부화·진화·업적이 전부 새 배너로 줄을 선다
+// (2026-10-02 사용자 보고 "다른pc에서 켜놓고왓다가 이 pc에서 켜니까 갑자기 알림이 미친듯이", 결정 "그럼 다 넘기자")
+export function settle(state: NotifyState | null, save: SaveV3, now: number): NotifyState {
+  const kept = (state?.shown ?? []).filter((key) => alive(save, key));
+  return { v: 1, shown: [...new Set([...kept, ...pendingOf(save, now).map((p) => p.key)])], queue: [] };
+}
+
 // 줄 맨 앞 하나를 꺼낸다. 꺼내는 순간 표시한 것으로 둔다 — 표시 중에 앱이 끝나도 다시 뜨지 않는다
 export function take(state: NotifyState): { state: NotifyState; key: string } | null {
   const [first, ...rest] = state.queue;

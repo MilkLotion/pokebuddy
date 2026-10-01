@@ -8,7 +8,7 @@ import { writeAtomic } from "../save/legacy.js";
 import type { BannerView } from "../shared/manage";
 import type { SaveV3 } from "../shared/save-v3";
 import { bannerOf } from "./banner.js";
-import { isNotifyState, refresh, sameState, take, type NotifyState } from "./queue.js";
+import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";
 
 export interface NotifierOptions {
   file: string; // notify.json — 저장과 같은 폴더
@@ -21,6 +21,7 @@ export interface Notifier {
   tick(): void; // 저장을 훑어 줄을 고치고, 비어 있으면 다음 배너를 내보낸다
   done(): void; // 보이던 배너가 사라졌다
   showing(): string | null; // 지금 보이는 배너의 키
+  settle(): void; // 저장을 통째로 바꿔 받았다 — 받은 저장의 미처리 상태는 표시한 것으로 두고 줄을 비운다. 보이던 배너는 그대로 끝난다
   showOnce(banner: BannerView): boolean; // 줄 밖의 배너(안내) — 보이는 배너가 없을 때만 보이고 true. 보이는 동안 틱이 덮지 않는다
 }
 
@@ -77,6 +78,12 @@ export function createNotifier({ file, read, now = Date.now, show }: NotifierOpt
       scan();
     },
     showing: () => current,
+    settle() {
+      const save = read();
+      if (!save) return;
+      update(settle(state, save, now()));
+      flush();
+    },
     showOnce(banner) {
       if (current) return false;
       current = banner.key; // done 이 올 때까지 줄의 다음 배너를 내보내지 않는다

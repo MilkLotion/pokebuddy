@@ -221,4 +221,48 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   process.stdout.write("(9) 줄 밖의 안내 배너  ok\n");
 }
 
-process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작·안내)\n");
+// (10) 서버 저장 받기(settle) — 받은 저장에 이미 있는 미처리 상태는 배너로 서지 않고, 그 뒤에 생긴 것만 선다
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-notify-"));
+  const file = path.join(dir, "notify.json");
+  try {
+    const rec = (n: number) => ({ id: `f${n}`, at: T0, petId: "p1", species: "charmander", kind: "points" as const, ref: "points", amount: 5 });
+    const local = seed();
+    local.eggs = [];
+    local.achievements = {};
+    local.find = { seq: 2, log: [rec(1), rec(2)] };
+    let s: SaveV3 = local;
+    const shown: BannerView[] = [];
+    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b) });
+    n.tick(); // 처음 켠 때 — 전부 표시한 것으로
+    n.tick();
+    assert.equal(shown.length, 0);
+
+    // 다른 PC 가 올린 저장을 받았다 — 그사이 주운 20건과 준비된 알 둘
+    const cloud = seed();
+    cloud.achievements = {};
+    cloud.find = { seq: 22, log: Array.from({ length: 20 }, (_, i) => rec(i + 3)) };
+    const pendingCloud = pendingOf(cloud, T0).map((p) => p.key);
+    assert.ok(pendingCloud.length >= 22, "받은 저장에 미처리 상태가 쌓여 있다");
+    // 넘기지 않으면 알 둘과 줍기 20건이 줄을 선다 (진화는 이 PC 에서 이미 표시한 키와 같다)
+    assert.equal(refresh(JSON.parse(fs.readFileSync(file, "utf8")) as NotifyState, cloud, T0).queue.length, 22);
+    s = cloud;
+    n.settle();
+    n.tick();
+    n.done();
+    assert.equal(shown.length, 0, "받은 저장의 미처리 상태는 배너로 서지 않는다");
+    const saved = JSON.parse(fs.readFileSync(file, "utf8")) as NotifyState;
+    assert.deepStrictEqual(saved.queue, []);
+    assert.deepStrictEqual([...saved.shown].sort(), [...pendingCloud].sort(), "받은 저장의 미처리 키를 표시한 것으로 둔다");
+
+    // 받은 뒤 이 PC 에서 새로 주운 것은 선다
+    cloud.find = { seq: 23, log: [...cloud.find.log.slice(1), rec(23)] };
+    n.tick();
+    assert.deepStrictEqual(shown.map((b) => b.key), ["find:f23"], "받은 뒤 생긴 것만 배너로 선다");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  process.stdout.write("(10) 서버 저장 받기  ok\n");
+}
+
+process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작·안내·서버 저장 받기)\n");
