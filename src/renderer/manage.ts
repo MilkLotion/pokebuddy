@@ -170,7 +170,9 @@ type Dialog =
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
   | { kind: "guide" }
-  | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare" } // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다
+  // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다.
+  // 모두 열기면 queue 에 결과 전부, at 은 지금 보이는 차례(0 부터) — `다음 (1 / N)` 으로 하나씩 넘긴다
+  | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }
   | { kind: "daycare" } // 돌보미집 — 박스 머리 `돌보미집` 단추
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
@@ -665,6 +667,10 @@ function drawParty(v: Snapshot): void {
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────
 
+// 알 하나를 연 결과 — 태어난 개체, 또는 포켓몬 대신 나온 알
+type Hatched = { petId: string; slotIndex?: number } | { eggId: string };
+let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
+
 const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`);
 
 // 박스 머리의 `돌보미집` — 부화할 수 있는 알이 있으면 오른쪽 위 점 (교환 단추의 점과 같은 모양)
@@ -709,12 +715,16 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   const titles = el("div", "titles");
   titles.append(el("h2", undefined, "돌보미집"), el("div", "sub", `알 ${v.eggs.used} / ${v.eggs.size}${ready ? ` · 부화 준비 ${ready}` : ""}`));
   top.appendChild(titles);
-  if (live) {
-    const x = button("dialog-close", "✕");
-    x.setAttribute("aria-label", "닫기");
-    x.addEventListener("click", close);
-    top.appendChild(x);
-  }
+  // 모두 열기 — 준비된 알을 칸 순서대로 모두 열고 결과를 하나씩 보인다. 준비된 알이 없으면 흐리다. 자리는 늘 있다
+  // (2026-10-02 사용자 결정, Figma 05 `Box / Daycare Modal`). 부화 결과 창 뒤에 깔린 모습(live 아님)에도 같은 자리에 그린다
+  const all = button("act open-all", "모두 열기");
+  all.disabled = !live || ready === 0 || openingAll;
+  all.addEventListener("click", () => void openAllEggs());
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.disabled = !live;
+  x.addEventListener("click", close);
+  top.append(all, x);
   const grid = el("div", "daycare-grid");
   for (let i = 0; i < v.eggs.size; i++) {
     const egg = v.eggs.list[i];
@@ -723,21 +733,49 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   root.append(top, grid);
 }
 
+// 알 하나를 연다 — 결과를 돌려준다. 실패하면 null (실패 문구는 send 가 띄운다)
+async function openEgg(eggId: string): Promise<Hatched | null> {
+  if (!(await send("egg.open", eggId, {}, { keepOpen: true }))) return null;
+  const r = lastReply;
+  if (!r) return null;
+  const egg = r.egg as { id?: unknown } | undefined;
+  if (egg && typeof egg.id === "string") return { eggId: egg.id };
+  if (typeof r.petId === "string") return { petId: r.petId, ...(typeof r.slotIndex === "number" ? { slotIndex: r.slotIndex } : {}) };
+  return null;
+}
+
 // 알 열기 — 끝나면 부화 결과 창을 연다. 돌보미집 모달에서 열면 그 모달 위에 겹친다 (2026-09-30 사용자 "열기를 누르면 모달열린채로 부화결과창")
 async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
-  if (!(await send("egg.open", eggId, {}, { keepOpen: true }))) return;
-  const r = lastReply;
-  if (!r) return;
-  const at = over ? { over } : {};
-  const egg = r.egg as { id?: unknown } | undefined;
-  if (egg && typeof egg.id === "string") open({ kind: "hatched", eggId: egg.id, ...at });
-  else if (typeof r.petId === "string") open({ kind: "hatched", petId: r.petId, ...(typeof r.slotIndex === "number" ? { slotIndex: r.slotIndex } : {}), ...at });
+  const got = await openEgg(eggId);
+  if (got) open({ kind: "hatched", ...got, ...(over ? { over } : {}) });
+}
+
+// 모두 열기 — 준비된 알을 칸 순서대로 하나씩 연다(알마다 egg.open 하나). 다 연 뒤 결과를 하나씩 보인다.
+// 여는 중에 실패하면 거기서 멈추고 그때까지 연 결과만 보인다. 하나도 못 열면 실패 문구가 돌보미집 모달에 남는다
+async function openAllEggs(): Promise<void> {
+  if (openingAll || !view) return;
+  const ids = view.eggs.list.filter((e) => e.ready).map((e) => e.id);
+  if (!ids.length) return;
+  openingAll = true;
+  const queue: Hatched[] = [];
+  try {
+    for (const id of ids) {
+      const got = await openEgg(id);
+      if (!got) break;
+      queue.push(got);
+    }
+  } finally {
+    openingAll = false;
+  }
+  const first = queue[0];
+  if (first) open({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
+  else drawDialog(); // 단추의 흐림을 되돌린다
 }
 
 // 부화 결과 — Figma 05 `Box / Daycare Modal · Hatch Result` `1096:22424`. 제목, 초상·이름·타입·레벨, `확인` 만 둔 작은 창.
 // 들어간 자리 안내 줄은 뺐다 — 파티·박스 화면에서 본다 (2026-09-30 사용자 "info 는 삭제해서 부화결과창 ui를 작게")
 // 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/game.md 단일 포켓몬 알). 이때는 알이 어디 갔는지 안내가 필요해 두 줄을 남긴다
-function drawHatched(petId?: string, eggId?: string, over?: "daycare"): void {
+function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: Hatched[], at = 0): void {
   const card = el("div", "nat-card");
   const info = el("div", "info-box");
   if (eggId) {
@@ -757,7 +795,15 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare"): void {
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
   }
-  const done = actionButton("확인", true, false, () => (over ? open({ kind: "daycare" }) : close()));
+  // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. ✕·Esc·바깥 누르기는 남은 결과를 건너뛴다(dismiss)
+  const next = queue?.[at + 1];
+  const count = queue ? ` (${at + 1} / ${queue.length})` : "";
+  const done = actionButton(`${next ? "다음" : "확인"}${count}`, true, false, () => {
+    if (next && queue) open({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
+    else if (over) open({ kind: "daycare" });
+    else close();
+  });
+  done.dataset.confirm = ""; // Space·Enter 가 누르는 단추 (아래 keydown)
   dialogEl.append(card);
   if (info.childElementCount) dialogEl.appendChild(info);
   dialogEl.appendChild(actions(done));
@@ -4956,7 +5002,7 @@ function drawDialog(): void {
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "user") drawUser(dialog.tab);
-  else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over);
+  else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over, dialog.queue, dialog.at);
   else if (dialog.kind === "daycare") drawDaycare();
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);
@@ -5372,6 +5418,12 @@ scrimEl.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && dialog) dismiss();
+  // 부화 결과 창 — Space·Enter 는 `확인` 을 누른 것과 같다 (2026-10-02 사용자 결정). 누르고 있는 동안의 반복은 받지 않는다.
+  // 단추에 포커스가 있을 때 브라우저가 한 번 더 누르지 않게 기본 동작을 막는다
+  if (dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {
+    e.preventDefault();
+    if (!e.repeat) dialogEl.querySelector<HTMLButtonElement>("button[data-confirm]:not(:disabled)")?.click();
+  }
 });
 
 // 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")

@@ -12,6 +12,7 @@
 //   교환 링크  다른 대화상자가 떠 있으면 닫고 박스 탭 + 교환 모달
 //   상점 기기  상품 줄을 누르면 옆 기기 창(설명·구매). 정보 줄 효과·쓰는 곳, 진화용 도구 쓰는 곳 = 목록 줄. 수량·구매 실패(빨강)·이전·다음·다시 누르면 닫기·탭 나가면 닫기
 //   탭 나가기  나가는 탭의 상세 기기 창(개체 상세·도감)을 닫는다. 같은 탭은 그대로
+//   돌보미집   모두 열기 — 준비된 알을 칸 순서대로 열고 결과를 `다음 (1 / N)` 으로 넘긴다. 부화 결과 창은 Space·Enter 가 `확인`
 //   박스       6×5 칸(95×86)이 창 높이 682 에 스크롤 없이 맞는다. 넘김 줄은 이름 길이·이름 고치는 중에도 ◀·▶·칸 수·정렬 자리가 같다.
 //              실패는 머리 부제 자리의 글자로(줄을 끼우지 않는다). 옮기기는 든 채로 박스를 넘기고 칸을 누르면 놓는다 · 밖·Esc 는 취소. 팔기는 확인 창
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
@@ -82,6 +83,7 @@ window.pokebuddyManage = new Proxy({}, {
       s.points += window.__bump;
       if (window.__bagExtra) s.bag = [...bagExtra, ...s.bag];
       if (window.__boxName) s.boxes[0].name = window.__boxName;
+      if (window.__eggs) { s.eggs.list = window.__eggs; s.eggs.used = window.__eggs.length; }
       return s;
     };
     if (name === "dex") return async () => dex;
@@ -93,7 +95,7 @@ window.pokebuddyManage = new Proxy({}, {
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
-    if (name === "command") return async (req) => { (window.__cmds ??= []).push(req); return { ok: false, reason: "mock" }; }; // 늘 실패한다 — 보낸 명령은 window.__cmds
+    if (name === "command") return async (req) => { (window.__cmds ??= []).push(req); return window.__reply ? window.__reply(req) : { ok: false, reason: "mock" }; }; // 기본은 실패 — window.__reply 가 있으면 그 답. 보낸 명령은 window.__cmds
     if (name === "screens") return async () => [];
     return async () => null;
   },
@@ -761,7 +763,52 @@ void app.whenReady().then(async () => {
     const sold = await js<{ cmd: string; target: string }[]>(`window.__cmds`);
     assert.deepEqual([sold.length, sold[0]?.cmd, sold[0]?.target], [1, "pet.sell", "p3"], "팔기 — pet.sell");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 그림 ${shots}\n`);
+    // (19) 돌보미집 모두 열기 — 준비된 알 둘을 칸 순서대로 열고 결과를 하나씩 보인다. Space·Enter 는 `확인`·`다음` 을 누른 것과 같다
+    //      (2026-10-02 사용자 "모두열기 기능이 있었음 좋겠고 … 스페이스바 or 엔터를 누르면 확인 누른거로 해줘")
+    await reload();
+    const dialogLook = `({ title: document.querySelector('#dialog h2')?.textContent ?? '', button: document.querySelector('#dialog button[data-confirm]')?.textContent ?? '', all: (() => { const b = document.querySelector('#dialog .open-all'); return b ? (b.disabled ? 'off' : 'on') : 'none'; })() })`;
+    const key = (k: string): string => `document.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true, cancelable: true }))`;
+    await js(`window.__cb.onRoute({ to: 'daycare' }); 0`);
+    await wait(500);
+    assert.deepEqual(await js<unknown>(dialogLook), { title: "돌보미집", button: "", all: "off" }, "준비된 알이 없으면 모두 열기가 흐리다");
+    await js(`window.__eggs = [
+      { id: 'e1', kind: 'random', name: '랜덤알', ready: true, remainSec: 0, percent: 100 },
+      { id: 'e2', kind: 'random', name: '랜덤알', ready: false, remainSec: 120, percent: 40 },
+      { id: 'e3', kind: 'random', name: '랜덤알', ready: true, remainSec: 0, percent: 100 },
+    ]; window.__bump = 13; 0`);
+    await wait(1500);
+    assert.deepEqual(await js<unknown>(dialogLook), { title: "돌보미집", button: "", all: "on" }, "준비된 알이 있으면 모두 열기가 켜진다");
+    const headAt = `[...document.querySelectorAll('#dialog .settings-head > *')].map((n) => Math.round(n.getBoundingClientRect().left)).join(',')`;
+    const headBefore = await js<string>(headAt);
+    await shot("daycare-open-all.png");
+    await js(`window.__cmds = []; window.__n = 0; window.__reply = (req) => req.cmd === 'egg.open' ? { ok: true, reason: 'ok', petId: ['p2', 'p3'][window.__n++] } : { ok: false, reason: 'mock' }; document.querySelector('#dialog .open-all').click(); 0`);
+    await wait(1200);
+    const eggCmds = await js<{ cmd: string; target: string }[]>(`window.__cmds`);
+    assert.deepEqual(eggCmds.map((c) => `${c.cmd}:${c.target}`), ["egg.open:e1", "egg.open:e3"], "준비된 알만 칸 순서대로 연다");
+    assert.deepEqual(await js<unknown>(dialogLook), { title: "알이 부화했어요", button: "다음 (1 / 2)", all: "none" }, "첫 결과 — 다음 (1 / 2)");
+    assert.equal(await js<string>(`[...document.querySelectorAll('.dialog.daycare.under .settings-head > *')].map((n) => Math.round(n.getBoundingClientRect().left)).join(',')`), headBefore, "뒤에 깔린 돌보미집 모달의 머리 자리가 같다");
+    await shot("daycare-open-all-result.png");
+    await js(`${key("Enter")}; 0`);
+    await wait(300);
+    assert.deepEqual(await js<unknown>(dialogLook), { title: "알이 부화했어요", button: "확인 (2 / 2)", all: "none" }, "Enter — 다음 결과, 마지막은 확인 (2 / 2)");
+    await js(`${key(" ")}; 0`);
+    await wait(300);
+    assert.equal(await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`), "돌보미집", "Space — 마지막 확인 뒤 돌보미집으로");
+    // 하나만 열면 차례 표시 없이 `확인`. Esc 는 남은 결과를 건너뛰고 돌보미집으로
+    await js(`window.__n = 0; document.querySelector('#dialog .egg.ready button').click(); 0`);
+    await wait(600);
+    assert.deepEqual(await js<unknown>(dialogLook), { title: "알이 부화했어요", button: "확인", all: "none" }, "하나만 열면 확인");
+    await js(`${key("Enter")}; 0`);
+    await wait(300);
+    assert.equal(await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`), "돌보미집");
+    await js(`window.__n = 0; document.querySelector('#dialog .open-all').click(); 0`);
+    await wait(1200);
+    await js(`${key("Escape")}; 0`);
+    await wait(300);
+    assert.equal(await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`), "돌보미집", "Esc — 남은 결과를 건너뛰고 돌보미집으로");
+    await js(`window.__reply = null; window.__eggs = null; 0`);
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
