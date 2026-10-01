@@ -10,6 +10,7 @@ import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
 import { keep, move, place, swap } from "../party/placement.js";
 import { setHidden, shownCount } from "../party/visibility.js";
+import { applyPreset, presetName, renamePreset } from "../party/presets.js";
 import { feed, play } from "../state/care.js";
 import { isSettingKey, setSetting } from "../state/settings.js";
 import { setHome, setSize } from "../party/home.js";
@@ -89,6 +90,31 @@ const keepHandler: TxHandler = (draft, args) => {
   return { ok: true, result: { petId, slotIndex: res.slotIndex } };
 };
 
+// 파티 프리셋 — 번호로 적용하거나 이름을 바꾼다 (src/party/presets.ts)
+const presetOf = (args: unknown): number | null => {
+  const i = isObj(args) ? args.preset : undefined;
+  return typeof i === "number" && Number.isInteger(i) && i >= 0 ? i : null;
+};
+
+// 적용 — party.slots 와 그 프리셋의 칸을 통째로 맞바꾼다. 박스는 건드리지 않는다
+const presetApplyHandler: TxHandler = (draft, args) => {
+  const preset = presetOf(args);
+  if (preset == null) return { ok: false, reason: "bad-args" };
+  const res = applyPreset(draft, preset);
+  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  return { ok: true, result: { preset, name: presetName(draft, preset), shown: shownCount(draft.party.slots) } };
+};
+
+// 이름 바꾸기 — 비우면 기본 이름으로 돌아간다
+const presetRenameHandler: TxHandler = (draft, args) => {
+  const preset = presetOf(args);
+  const name = isObj(args) ? args.name : undefined;
+  if (preset == null || typeof name !== "string") return { ok: false, reason: "bad-args" };
+  const res = renamePreset(draft, preset, name);
+  if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  return { ok: true, result: { preset, name: res.name } };
+};
+
 export const HANDLERS: Record<string, TxHandler> = {
   "party.show": visibility(false),
   "party.hide": visibility(true),
@@ -96,6 +122,8 @@ export const HANDLERS: Record<string, TxHandler> = {
   "party.swap": swapHandler,
   "party.move": moveHandler,
   "party.keep": keepHandler,
+  "party.preset": presetApplyHandler,
+  "party.preset.rename": presetRenameHandler,
 };
 
 // ── 알 ─────────────────────────────────────────────────────────────────────────
@@ -139,7 +167,7 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
   let spent = res.spent ?? 0;
   const eggIds: string[] = res.eggId ? [res.eggId] : [];
   if (count > 1) {
-    if (!spent || res.petId || res.slotIndex !== undefined) return { ok: false, reason: "bad-args" };
+    if (!spent || res.petId || res.slotIndex !== undefined || res.preset !== undefined) return { ok: false, reason: "bad-args" };
     for (let i = 1; i < count; i += 1) {
       res = buy(draft, productId, ctx.now, ctx.rand);
       if (!res.ok) return { ok: false, reason: res.reason ?? "failed" }; // 실행기가 사본을 버린다 — 앞서 산 것도 반영하지 않는다
@@ -151,7 +179,7 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
     ok: true,
     result: {
       productId, count, spent, balance: res.balance, eggId: eggIds[0], ...(eggIds.length ? { eggIds } : {}),
-      petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox,
+      petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox, ...(res.preset !== undefined ? { preset: res.preset } : {}),
     },
   };
 };
@@ -201,13 +229,13 @@ const sellHandler: TxHandler = (draft, args) => {
 
 HANDLERS["bag.sell"] = sellHandler;
 
-// 포켓몬 판매 — 개체를 지우고 판매가만큼 포인트를 더한다. 파티 개체였으면 칸이 빈다 (2026-10-01 사용자 결정, src/shop/sell-pet.ts)
+// 포켓몬 판매 — 박스 개체를 지우고 판매가만큼 포인트를 더한다. 프리셋에 든 개체는 팔지 않는다 (2026-10-01·10-02 사용자 결정, src/shop/sell-pet.ts)
 const sellPetHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
   const res = sellPet(draft, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { petId, species: res.species, earned: res.earned, balance: res.balance, ...(res.slotIndex !== undefined ? { slotIndex: res.slotIndex } : {}) } };
+  return { ok: true, result: { petId, species: res.species, earned: res.earned, balance: res.balance } };
 };
 
 HANDLERS["pet.sell"] = sellPetHandler;

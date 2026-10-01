@@ -102,6 +102,7 @@ function emptyParty(): PartyV3 {
     slots: presetSlots(0),
     active: 0,
     presets: Array.from({ length: SAVE_V3_RULES.party.presets.start }, (_, i) => (i === 0 ? null : presetSlots(i))),
+    presetNames: Array.from({ length: SAVE_V3_RULES.party.presets.start }, () => ""),
   };
   countParty({ party });
   return party;
@@ -243,13 +244,15 @@ function normalizeSlots(raw: unknown, petIds: Set<string>, placed: Set<string>, 
 // 가진 수를 넘는 번호의 칸은 버린다 — 그 개체는 자리 없는 개체로 박스에 간다 (putStrays)
 function normalizeParty(raw: unknown, petIds: Set<string>, placed: Set<string>): PartyV3 {
   const r = isObj(raw) ? raw : {};
-  const { start, max } = SAVE_V3_RULES.party.presets;
+  const { start, max, nameMax } = SAVE_V3_RULES.party.presets;
   const rawPresets = Array.isArray(r.presets) ? r.presets : [];
+  const rawNames = Array.isArray(r.presetNames) ? r.presetNames : [];
   const count = clamp(nonNeg(r.presetCount, rawPresets.length), start, max);
   const active = clamp(nonNeg(r.active), 0, count - 1);
   const slots = normalizeSlots(r.slots, petIds, placed, active);
   const presets = Array.from({ length: count }, (_, i) => (i === active ? null : normalizeSlots(rawPresets[i], petIds, placed, i)));
-  const party: PartyV3 = { slots, active, presets, presetCount: count };
+  const presetNames = Array.from({ length: count }, (_, i) => [...str(rawNames[i]).trim()].slice(0, nameMax).join(""));
+  const party: PartyV3 = { slots, active, presets, presetNames, presetCount: count };
   countParty({ party });
   return party;
 }

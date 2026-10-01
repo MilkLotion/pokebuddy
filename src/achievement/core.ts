@@ -16,6 +16,7 @@
 import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { openSlot } from "../party/slots.js";
+import { countParty, slotsOfPreset } from "../party/presets.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
@@ -122,8 +123,10 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
     return { ok: true, id, petId, ...where };
   }
 
-  const i = openSlot(save.party.slots, "achievement");
+  // 업적으로 여는 칸은 첫 프리셋에만 있다 — 다른 프리셋을 적용한 중에도 첫 프리셋의 칸을 연다 (2026-10-02 사용자 결정)
+  const i = openSlot(slotsOfPreset(save, 0) ?? save.party.slots, "achievement");
   if (i < 0) return { ok: false, reason: "no-locked-slot" };
+  countParty(save);
   save.achievements[id] = { achievedAt: row.achievedAt, claimedAt: now };
   return { ok: true, id, slotIndex: i };
 }

@@ -75,7 +75,7 @@ const SHOP_TABS = [
   // 포켓몬 탭은 잠시 숨긴다 (2026-09-30 사용자 결정 "상점의 포켓몬 탭을 지금은 없애놔"). 다시 열려면 { id: "pokemon", label: "포켓몬" } 를 이 자리에 되돌린다
   { id: "tool", label: "도구" },
   { id: "evolution", label: "진화" },
-  { id: "slot", label: "파티 칸" },
+  { id: "slot", label: "파티" }, // 파티 칸과 파티 프리셋 (2026-10-02 사용자 결정 "\"파티\" 로 상점 탭 이름 변경")
 ];
 
 const DEX_TABS = [
@@ -1139,16 +1139,7 @@ function drawBox(v: Snapshot): void {
     boxNote = "";
     draw();
   });
-  // ◀·▶ 에 개체를 놓으면 앞·뒤 박스의 첫 빈 칸으로 보낸다. 지금 박스에 머문다
-  const dropToBox = (target: HTMLButtonElement, toIndex: number): void => {
-    dropZone(target, () => {
-      const to = v.boxes[toIndex];
-      const from = dragFrom;
-      if (from && "boxId" in from && to) void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: to.id }, () => unsorted(from.boxId, to.id));
-    });
-  };
-  if (!prev.disabled) dropToBox(prev, prevPage);
-  if (!next.disabled) dropToBox(next, nextPage);
+  // ◀·▶ 는 놓을 곳이 아니다 — 끌어 놓기는 지금 박스 안의 자리만 바꾼다. 다른 박스로는 포켓몬 메뉴의 `옮기기` 로만 보낸다 (2026-10-02 사용자 결정)
   pager.append(prev, boxNameCell(boxNameEl(box)), next);
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   pager.appendChild(boxSortEl(box));
@@ -5151,6 +5142,10 @@ const REASON: Record<string, string> = {
   "box-full": "그 박스는 가득 찼어요.",
   "pet-not-sellable": "팔 수 없는 포켓몬이에요.",
   "last-pet": "마지막 한 마리는 팔 수 없어요.",
+  "in-preset": "파티에 든 포켓몬은 팔 수 없어요. 박스로 옮긴 뒤 팔아 주세요.",
+  "preset-max": "더 살 수 있는 프리셋이 없어요.",
+  "slots-not-full": "가진 프리셋의 파티 칸을 모두 열어야 해요.",
+  "no-preset": "그 프리셋이 없어요.",
   "no-box": "그 박스를 찾지 못했어요.",
   // 교환에 올려 둔 개체 — 도구 사용·진화·모습 바꾸기를 막는다 (src/tx/handlers.ts, src/trade/core.ts isLocked)
   "trade-locked": "교환에 올린 포켓몬이에요. 교환을 끝내거나 나간 뒤 다시 해 주세요.",

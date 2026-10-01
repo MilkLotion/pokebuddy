@@ -2,13 +2,14 @@
 //
 // 판매가 = 그 종이 나오는 알의 값 × SHOP_V3_RULES.petSellRate, petSellUnit 단위로 내림.
 // 종은 그 개체의 진화 계열 맨 앞 종으로 본다. 레벨·이로치·성별은 값에 넣지 않는다.
-// 팔지 않는 개체: 단일 포켓몬(공유 sid 계열 포함), 어느 알에도 없는 종, 교환에 올린 개체, 마지막 한 마리.
-// 파티 개체도 박스 개체도 판다. 판 파티 칸은 빈 칸이 된다. 도감 기록은 지우지 않는다.
+// 팔지 않는 개체: 단일 포켓몬(공유 sid 계열 포함), 어느 알에도 없는 종, 교환에 올린 개체, 마지막 한 마리, 파티 프리셋에 든 개체.
+// 박스 개체만 판다 (2026-10-02 사용자 결정 — 그 전에는 파티 개체도 팔았다). 도감 기록은 지우지 않는다.
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다
 import { takePet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
 import { maxPetNo } from "../party/create.js";
+import { locatePet } from "../party/presets.js";
 import { SHOP_V3_RULES } from "../save/rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isLocked, isSinglePet } from "../trade/core.js";
@@ -18,7 +19,8 @@ export type SellPetFailure =
   | "no-pet" // 그런 개체가 없다
   | "pet-not-sellable" // 단일 포켓몬이거나 어느 알에도 없는 종이다
   | "trade-locked" // 교환에 올린 개체다
-  | "last-pet"; // 가진 개체가 한 마리뿐이다
+  | "last-pet" // 가진 개체가 한 마리뿐이다
+  | "in-preset"; // 파티 프리셋에 든 개체다
 
 export interface SellPetResult {
   ok: boolean;
@@ -27,7 +29,6 @@ export interface SellPetResult {
   species?: string;
   earned?: number; // 받은 포인트
   balance?: number;
-  slotIndex?: number; // 파티 개체였으면 비운 칸 번호
 }
 
 const CHAIN_MAX = 8; // 진화 계열을 거슬러 오르는 횟수의 상한 — 데이터가 돌아도 멈춘다
@@ -62,6 +63,8 @@ export function sellablePet(save: SaveV3, petId: string, opts?: DexOptions): { o
   if (price === null) return { ok: false, reason: "pet-not-sellable" };
   if (isLocked(save, petId)) return { ok: false, reason: "trade-locked" };
   if (save.pets.length <= 1) return { ok: false, reason: "last-pet" };
+  // 프리셋에 든 개체는 팔지 않는다 — 적용한 프리셋(지금 파티)도 같다. 박스로 뺀 뒤 판다 (2026-10-02 사용자 결정)
+  if (locatePet(save, petId)?.kind === "preset") return { ok: false, reason: "in-preset" };
   return { ok: true, pet, price };
 }
 
@@ -69,12 +72,10 @@ export function sellPet(save: SaveV3, petId: string, opts?: DexOptions): SellPet
   const res = sellablePet(save, petId, opts);
   if (!res.ok) return { ok: false, reason: res.reason };
 
-  const slotIndex = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
-  if (slotIndex >= 0) save.party.slots[slotIndex] = { state: "empty" };
-  else takePet(save.boxes, petId);
+  takePet(save.boxes, petId); // 팔 수 있는 개체는 박스에만 있다
   save.petSeq = Math.max(save.petSeq ?? 0, maxPetNo(save.pets)); // 판 개체의 번호를 새 개체가 다시 쓰지 않게 — 서버 검증의 pet-id 규칙
   save.pets.splice(save.pets.indexOf(res.pet), 1);
   if (save.starterPetId === petId) save.starterPetId = null;
   save.points.balance += res.price;
-  return { ok: true, petId, species: res.pet.species, earned: res.price, balance: save.points.balance, ...(slotIndex >= 0 ? { slotIndex } : {}) };
+  return { ok: true, petId, species: res.pet.species, earned: res.price, balance: save.points.balance };
 }

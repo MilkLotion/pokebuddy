@@ -13,6 +13,7 @@ import { shopList } from "../tx/lists";
 import { sell, sellPrice } from "../shop/sell";
 import { petSellPrice, sellPet, sellablePet } from "../shop/sell-pet";
 import { newPet, nextPetId } from "../party/create";
+import { activePreset, applyPreset, presetBuyable, presetCount, presetName, shopSlots, slotsOfPreset } from "../party/presets";
 import { createExecutor } from "../tx/executor";
 import { HANDLERS } from "../tx/handlers";
 import { unlockRules } from "../dex/unlocks";
@@ -36,9 +37,10 @@ function seed(points: number): SaveV3 {
   assert.equal(toolPrice("basic-food"), null, "기본먹이는 팔지 않는다");
   assert.equal(toolPrice("thunder-stone"), SHOP_V3_RULES.evoItemPrice, "진화용 도구는 공통 가격");
   assert.equal(toolPrice("bond-cord"), SHOP_V3_RULES.evoItemPrice, "연결의끈도 같다");
-  assert.equal(slotPrice(0), 300);
-  assert.equal(slotPrice(1), 600);
-  assert.equal(slotPrice(2), null, "두 칸까지만 판다");
+  assert.equal(slotPrice(2), 500, "파티 칸은 늘 500P");
+  assert.equal(slotPrice(1), 500);
+  assert.equal(slotPrice(0), null, "상점으로 열 칸이 남지 않으면 팔지 않는다");
+  assert.equal(SHOP_V3_RULES.presetPrice, 1000, "파티 프리셋은 늘 1000P");
   assert.equal(find("없는상품"), null);
   assert.equal(eggPool("ancient-stone")?.length, 15, "태고의돌은 화석 15종");
   assert.equal(eggPool("random"), null, "랜덤알은 해금한 종에서 뽑는다");
@@ -119,20 +121,113 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(7) 도구 · 가방에 쌓인다  ok\n");
 }
 
-// (8) 파티 칸은 값이 순서마다 다르고 두 칸까지다
+// (8) 파티 칸은 늘 500P 이고 프리셋마다 따로 산다. 첫 프리셋은 두 칸, 나머지 프리셋은 네 칸까지다 (2026-10-02 사용자 결정)
 {
-  const s = seed(1000);
+  const s = seed(10_000);
   const first = buy(s, "party-slot", T0, rand);
-  assert.equal(first.spent, 300);
+  assert.equal(first.spent, 500);
   const second = buy(s, "party-slot", T0, rand);
-  assert.equal(second.spent, 600);
+  assert.equal(second.spent, 500);
   const third = buy(s, "party-slot", T0, rand);
   assert.equal(third.reason, "no-locked-slot");
   const open = s.party.slots.filter((x) => x.state === "empty").length;
   assert.equal(open, SAVE_V3_RULES.party.openAtStart + SAVE_V3_RULES.party.shopUnlock);
   const left = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
   assert.equal(left, 2, "업적으로 여는 칸은 남는다");
-  process.stdout.write("(8) 파티 칸 · 300P 뒤 600P  ok\n");
+  assert.equal(s.party.slotCount, 4 + 2, "열린 칸 수 — 첫 프리셋 4 + 둘째 프리셋 2");
+  assert.deepStrictEqual(shopSlots(s), { left: 0, total: 2, bought: 2 });
+
+  // 둘째 프리셋을 적용하면 그 프리셋의 칸을 산다 — 첫 프리셋에서 산 칸은 따라오지 않는다
+  assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
+  assert.deepStrictEqual(shopSlots(s), { left: 4, total: 4, bought: 0 });
+  for (let i = 0; i < 4; i += 1) assert.equal(buy(s, "party-slot", T0, rand).spent, 500);
+  assert.equal(buy(s, "party-slot", T0, rand).reason, "no-locked-slot");
+  assert.ok(s.party.slots.every((x) => x.state === "empty"), "둘째 프리셋은 여섯 칸 모두 상점으로 연다");
+  assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked").length, 2, "첫 프리셋의 잠금은 그대로");
+  assert.equal(s.party.slotCount, 4 + 6);
+  process.stdout.write("(8) 파티 칸 · 500P 고정 · 프리셋마다 따로  ok\n");
+}
+
+// (8b) 파티 프리셋 — 1000P 고정. 가진 프리셋의 칸을 모두 열어야 산다. 다섯 개까지다 (2026-10-02 사용자 결정)
+{
+  const s = seed(10_000);
+  assert.equal(buy(s, "party-preset", T0, rand).reason, "slots-not-full", "2개일 때 12칸이어야 한다");
+  assert.equal(s.points.balance, 10_000, "거절은 포인트를 바꾸지 않는다");
+  const openAll = (): void => {
+    for (let i = 0; i < presetCount(s); i += 1) for (const slot of slotsOfPreset(s, i) ?? []) if (slot.state === "locked") { slot.state = "empty"; delete slot.unlockBy; }
+  };
+  openAll();
+  assert.deepStrictEqual(presetBuyable(s), { ok: true, open: 12, need: 12 });
+  const third = buy(s, "party-preset", T0, rand);
+  assert.deepStrictEqual({ ok: third.ok, spent: third.spent, preset: third.preset }, { ok: true, spent: 1000, preset: 2 });
+  assert.equal(presetCount(s), 3);
+  assert.equal(slotsOfPreset(s, 2)?.filter((x) => x.state === "empty").length, 2, "새 프리셋은 두 칸이 열려 있다");
+  assert.equal(s.party.slotCount, 14);
+  assert.equal(buy(s, "party-preset", T0, rand).reason, "slots-not-full", "3개일 때 18칸이어야 한다");
+  openAll();
+  assert.equal(buy(s, "party-preset", T0, rand).ok, true);
+  openAll();
+  assert.equal(buy(s, "party-preset", T0, rand).ok, true);
+  assert.equal(presetCount(s), SAVE_V3_RULES.party.presets.max);
+  openAll();
+  assert.equal(buy(s, "party-preset", T0, rand).reason, "preset-max");
+  assert.equal(s.points.balance, 10_000 - 3000);
+
+  // 포인트가 모자라면 사지 않는다. 여러 개를 한 번에 사지 않는다
+  const poor = seed(999);
+  for (const slot of [...poor.party.slots, ...(slotsOfPreset(poor, 1) ?? [])]) if (slot.state === "locked") { slot.state = "empty"; delete slot.unlockBy; }
+  assert.equal(buy(poor, "party-preset", T0, rand).reason, "not-enough");
+  let state: SaveV3 | null = seed(5000);
+  const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
+  const two = ex.run({ id: "pp-2", name: "shop.buy", args: { productId: "party-slot", count: 2 } });
+  assert.equal(two.ok ? "ok" : two.reason, "bad-args", "파티 칸은 하나씩 산다");
+
+  // 상점 목록 — 파티 칸은 적용한 프리셋 이름과 구매 수, 프리셋은 구매 수와 칸 조건
+  const list = shopList(seed(0));
+  const slot = list.find((i) => i.id === "party-slot");
+  const preset = list.find((i) => i.id === "party-preset");
+  assert.deepStrictEqual({ note: slot?.note, price: slot?.price, blocked: slot?.blocked }, { note: "프리셋 1 · 구매 0 / 2", price: 500, blocked: undefined });
+  assert.deepStrictEqual({ note: preset?.note, price: preset?.price, category: preset?.category }, { note: "구매 0 / 3 · 칸 4 / 12", price: 1000, category: "slot" });
+  assert.ok(preset?.blocked?.includes("파티 칸을 모두 열어야"), "칸 조건을 못 채우면 막는다");
+  process.stdout.write("(8b) 파티 프리셋 · 1000P 고정 · 칸 조건 · 다섯 개까지  ok\n");
+}
+
+// (8c) 프리셋 명령 — 적용과 이름 바꾸기. 이름은 12자까지, 비우면 기본 이름
+{
+  let state: SaveV3 | null = seed(0);
+  state.pets.push(newPet({ id: "p1", species: "bulbasaur", shiny: false, nature: "hardy", gender: "male", now: T0 }));
+  state.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
+  const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
+  const run = (id: string, name: string, args: unknown) => ex.run({ id, name, args });
+  const reason = (id: string, name: string, args: unknown): string => {
+    const r = run(id, name, args);
+    return r.ok ? "ok" : r.reason;
+  };
+
+  assert.equal(reason("pr-1", "party.preset", { preset: 0 }), "already-active");
+  assert.equal(reason("pr-2", "party.preset", { preset: 2 }), "no-preset", "가지지 않은 프리셋");
+  assert.equal(reason("pr-3", "party.preset", {}), "bad-args");
+  const to2 = run("pr-4", "party.preset", { preset: 1 });
+  assert.deepStrictEqual(to2.ok && to2.result, { preset: 1, name: "프리셋 2", shown: 0 });
+  assert.equal(activePreset(state!), 1);
+  assert.equal(state!.party.slots.some((x) => x.state === "pokemon"), false, "둘째 프리셋은 비어 있다");
+  assert.deepStrictEqual(slotsOfPreset(state!, 0)?.[0], { state: "pokemon", petId: "p1", hidden: true }, "나간 프리셋의 칸은 숨김째 남는다");
+  assert.equal(reason("pr-5", "feed", { petId: "p1" }), "not-in-party", "적용하지 않은 프리셋의 개체는 돌보지 않는다");
+  assert.equal(reason("pr-6", "party.preset", { preset: 0 }), "ok");
+  assert.equal(state!.party.slots[0]?.petId, "p1");
+
+  const named = run("pn-1", "party.preset.rename", { preset: 1, name: "  탐험용  " });
+  assert.deepStrictEqual(named.ok && named.result, { preset: 1, name: "탐험용" });
+  assert.equal(presetName(state!, 1), "탐험용");
+  assert.equal(presetName(state!, 0), "프리셋 1", "다른 프리셋의 이름은 그대로");
+  run("pn-2", "party.preset.rename", { preset: 0, name: "가나다라마바사아자차카타파하" });
+  assert.equal(presetName(state!, 0), "가나다라마바사아자차카타", "12자까지");
+  run("pn-3", "party.preset.rename", { preset: 0, name: "   " });
+  assert.equal(presetName(state!, 0), "프리셋 1", "비우면 기본 이름");
+  assert.equal(reason("pn-4", "party.preset.rename", { preset: 4, name: "x" }), "no-preset");
+  assert.equal(reason("pn-5", "party.preset.rename", { preset: 0 }), "bad-args");
+  assert.equal(shopList(state!).find((i) => i.id === "party-slot")?.note, "프리셋 1 · 구매 0 / 2");
+  process.stdout.write("(8c) 프리셋 명령 · 적용·이름  ok\n");
 }
 
 // (9) 종 지정 구매 — 알에서 얻을 수 있는 종을 수집 난이도별 가격에 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
@@ -310,10 +405,20 @@ function seed(points: number): SaveV3 {
   assert.equal(run("ps-box", "p4").ok, true, "같은 요청은 한 번만 반영한다");
   assert.equal(state?.points.balance, 130);
 
-  // 파티 개체 — 칸이 빈 칸이 된다. 첫 선택 개체 표시도 지운다
-  const party = run("ps-party", "p1");
-  assert.deepStrictEqual(party.ok && party.result, { petId: "p1", species: "bulbasaur", earned: 30, balance: 160, slotIndex: 0 });
-  assert.deepStrictEqual(state?.party.slots[0], { state: "empty" });
+  // 프리셋에 든 개체는 팔지 않는다 — 적용한 프리셋(지금 파티)도, 다른 프리셋도 (2026-10-02 사용자 결정)
+  assert.equal(reason("ps-party", "p1"), "in-preset", "파티 개체 거절");
+  assert.equal(state?.party.slots[0]?.petId, "p1", "거절은 칸을 비우지 않는다");
+  state!.boxes[0]!.slots[0] = null;
+  slotsOfPreset(state!, 1)![0] = { state: "pokemon", petId: "p2", hidden: false };
+  assert.equal(reason("ps-preset", "p2"), "in-preset", "적용하지 않은 프리셋의 개체 거절");
+  assert.equal(state?.points.balance, 130);
+
+  // 박스로 뺀 뒤에는 판다. 첫 선택 개체 표시도 지운다
+  state!.party.slots[0] = { state: "empty" };
+  state!.boxes[1]!.slots[0] = "p1";
+  const boxed = run("ps-boxed", "p1");
+  assert.deepStrictEqual(boxed.ok && boxed.result, { petId: "p1", species: "bulbasaur", earned: 30, balance: 160 });
+  assert.equal(state?.boxes[1]!.slots[0], null);
   assert.equal(state?.starterPetId, null);
   assert.equal(state?.dex.obtained.length, 0, "도감 기록은 건드리지 않는다");
 
@@ -324,7 +429,7 @@ function seed(points: number): SaveV3 {
   assert.deepStrictEqual(sellablePet(one, "p1"), { ok: false, reason: "last-pet" });
   assert.equal(sellPet(one, "p1").reason, "last-pet");
   assert.equal(one.pets.length, 1);
-  process.stdout.write("(13) 포켓몬 판매 · 알 값의 1/4 · 단일·알 없는 종 거절 · 교환 잠금 · 마지막 한 마리 · 번호 재사용 없음  ok\n");
+  process.stdout.write("(13) 포켓몬 판매 · 알 값의 1/4 · 단일·알 없는 종 거절 · 교환 잠금 · 프리셋 개체 거절 · 마지막 한 마리 · 번호 재사용 없음  ok\n");
 }
 
 process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼·포켓몬 판매)\n");

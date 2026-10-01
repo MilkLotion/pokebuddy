@@ -164,6 +164,7 @@ export type CommandName =
   | "feed" | "play" | "poke" | "evolve"
   | "party.show" | "party.hide" | "party.remove"
   | "party.place" | "party.swap" | "party.move" | "party.keep"
+  | "party.preset" | "party.preset.rename"
   | "box.sort" | "box.move" | "box.rename"
   | "egg.open"
   | "bag.use" | "bag.sell"

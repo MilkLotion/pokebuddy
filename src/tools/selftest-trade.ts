@@ -8,6 +8,7 @@ import path from "node:path";
 import { devRunAt, onlineConfig } from "../trade/config";
 import { apply, isLocked, isSinglePet, lock, offerable, refOf, snapshot, unlock, validateReceived, type TradePet } from "../trade/core";
 import { newPet } from "../party/create";
+import { applyPreset, slotsOfPreset } from "../party/presets";
 import { empty, normalize } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
 import { createExecutor } from "../tx/executor";
@@ -109,6 +110,21 @@ const eevee: TradePet = {
   assert.equal(s.trade?.pending, null, "pending 을 지운다");
   assert.deepStrictEqual(apply(s, "ch1", eevee, T0 + 6000), { ok: true, applied: false }, "같은 완료를 두 번 받아도 한 번만 반영한다");
   process.stdout.write("(4) 파티 칸 반영  ok\n");
+}
+
+// (4b) 반영 — 적용하지 않은 프리셋의 칸: 다른 프리셋으로 바꾼 뒤 완료가 와도 받은 개체가 그 칸에 들어간다 (2026-10-02 파티 프리셋)
+{
+  const s = seed();
+  lock(s, "ch1", "p1", 3);
+  assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
+  const res = apply(s, "ch1", eevee, T0 + 5000);
+  if (!res.ok || !res.applied) throw new Error("반영 실패");
+  assert.deepStrictEqual(res.where, { preset: 0, slot: 0 });
+  assert.deepStrictEqual(slotsOfPreset(s, 0)?.[0], { state: "pokemon", petId: res.newPetId, hidden: true }, "받은 개체가 그 프리셋의 같은 칸에, 숨김 그대로");
+  assert.equal(s.party.slots.some((x) => x.state === "pokemon"), false, "적용한 프리셋에는 들어오지 않는다");
+  assert.equal(s.boxes.some((b) => b.slots.includes(res.newPetId)), false, "박스에도 들어가지 않는다");
+  assert.deepStrictEqual(normalize(JSON.parse(JSON.stringify(s)), T0)?.party, s.party, "다시 읽어도 자리가 같다");
+  process.stdout.write("(4b) 다른 프리셋의 칸 반영  ok\n");
 }
 
 // (5) 반영 — 박스 칸, 이로치 기록

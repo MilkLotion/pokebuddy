@@ -11,7 +11,7 @@ import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
-import { findPet } from "../box/slots.js";
+import { locatePet, slotsOfPreset } from "../party/presets.js";
 import { fixedEggs, isSingleEgg } from "../shop/catalog.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { snapSize } from "../save/rules.js";
@@ -146,9 +146,12 @@ export function unlock(save: SaveV3, channelId: string): boolean {
   return true;
 }
 
+// 받은 개체가 들어간 자리 — party 는 적용한 프리셋의 칸, preset 은 그 밖의 프리셋의 칸
+export type TradeWhere = { party: number } | { preset: number; slot: number } | { box: number; slot: number };
+
 export type ApplyResult =
   | { ok: true; applied: false }
-  | { ok: true; applied: true; newPetId: string; where: { party: number } | { box: number; slot: number } }
+  | { ok: true; applied: true; newPetId: string; where: TradeWhere }
   | { ok: false; reason: "bad-received" | "no-pet" };
 
 // 서버가 완료를 알렸다. 보낸 개체를 빼고 받은 개체를 그 자리에 넣는다. 도감에 기록한다
@@ -168,18 +171,20 @@ export function apply(save: SaveV3, channelId: string, received: unknown, now: n
     fullness: got.fullness, mood: got.mood, stage: got.stage, evolved: [...got.evolved],
   };
 
-  let where: { party: number } | { box: number; slot: number } | null = null;
-  const partyIndex = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === pending.petId);
-  if (partyIndex >= 0) {
-    const slot = save.party.slots[partyIndex];
-    if (slot) slot.petId = id; // 숨김 상태는 그대로 둔다
-    where = { party: partyIndex };
-  } else {
-    const spot = findPet(save.boxes, pending.petId);
-    const box = spot ? save.boxes[spot.boxIndex] : undefined;
-    if (spot && box) {
-      box.slots[spot.slotIndex] = id;
-      where = { box: spot.boxIndex, slot: spot.slotIndex };
+  // 받은 개체는 보낸 개체의 자리를 물려받는다 — 적용한 프리셋(파티), 다른 프리셋, 박스 (src/party/presets.ts locatePet)
+  let where: TradeWhere | null = null;
+  const place = locatePet(save, pending.petId);
+  if (place?.kind === "preset") {
+    const slot = slotsOfPreset(save, place.preset)?.[place.slot];
+    if (slot) {
+      slot.petId = id; // 숨김 상태는 그대로 둔다
+      where = place.active ? { party: place.slot } : { preset: place.preset, slot: place.slot };
+    }
+  } else if (place?.kind === "box") {
+    const box = save.boxes[place.box];
+    if (box) {
+      box.slots[place.slot] = id;
+      where = { box: place.box, slot: place.slot };
     }
   }
   if (!where) return { ok: false, reason: "no-pet" };

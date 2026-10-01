@@ -3,7 +3,8 @@
 //   알          data/eggs.json 의 price
 //   진화용 도구  data/evo-items.json 의 종류 공통 가격 (SHOP_V3_RULES.evoItemPrice)
 //   그 밖 도구   data/items.json 의 price. null 이면 팔지 않는다
-//   파티 칸     SHOP_V3_RULES.slotPrices — 첫 칸과 둘째 칸의 값이 다르다
+//   파티 칸     SHOP_V3_RULES.slotPrice — 늘 같은 값. 적용한 프리셋의 칸을 연다
+//   파티 프리셋 SHOP_V3_RULES.presetPrice — 늘 같은 값 (조건은 src/party/presets.ts presetBuyable)
 //   종 지정     SHOP_V3_RULES.speciesPrices — 수집 난이도(data/species.defaults.json 의 rank)별 가격.
 //               알에서 얻을 수 있는 종만 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 // 값을 두 곳에 적지 않는다. 그래야 가격이 어긋나지 않는다.
@@ -63,9 +64,9 @@ export function toolName(id: string, opts?: DexOptions): string | null {
   return items(opts)[id]?.ko ?? evoItems(opts)[id]?.ko ?? null;
 }
 
-// 파티 칸 하나의 가격. 이미 산 칸 수로 값이 달라진다. 더 살 수 없으면 null
-export function slotPrice(bought: number): number | null {
-  return SHOP_V3_RULES.slotPrices[bought] ?? null;
+// 파티 칸 하나의 가격 — 늘 같은 값이다. 상점으로 열 칸이 남지 않았으면 null. `left` 는 적용한 프리셋에 남은 상점 칸 수다
+export function slotPrice(left: number): number | null {
+  return left > 0 ? SHOP_V3_RULES.slotPrice : null;
 }
 
 // 종 지정 구매 가격 — 수집 난이도별 값. 상점에서 팔지 않는 종이면 null. 해금 여부는 부르는 쪽이 본다

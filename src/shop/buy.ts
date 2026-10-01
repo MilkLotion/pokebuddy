@@ -3,7 +3,8 @@
 // 한 거래로 검사와 반영을 묶는다. 하나라도 걸리면 아무것도 바꾸지 않는다.
 //   알      돌보미집에 빈 칸이 있어야 한다. 사면 바로 들어가고 준비 시간이 시작된다
 //   도구    가방에 쌓는다. 칸 수 제한은 없다
-//   파티 칸 상점으로 여는 칸이 남아 있어야 한다. 값은 순서마다 다르다
+//   파티 칸 적용한 프리셋에 상점으로 여는 칸이 남아 있어야 한다. 값은 늘 같다
+//   파티 프리셋 가진 프리셋의 칸을 모두 열어야 한다. 값은 늘 같다
 //   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 꺼낸 상태로, 없으면 박스로
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { putPet } from "../box/slots.js";
@@ -12,9 +13,10 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { openSlot } from "../party/slots.js";
+import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";
 import type { Rand } from "../egg/hatch";
-import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
-import { maxEggNo } from "../save/v3.js";
+import { EGG_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
+import { maxEggNo, presetSlots } from "../save/v3.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 import { canGiveEgg, eggPool, find, inRandomEgg, isSingleEgg, singleLeft, slotPrice } from "./catalog.js";
 
@@ -24,6 +26,8 @@ export type BuyFailure =
   | "daycare-full" // 돌보미집이 가득 찼다
   | "bag-full" // 그 도구가 가방에 이미 최대 개수(SHOP_V3_RULES.bagMax)만큼 있다
   | "no-locked-slot" // 상점으로 열 칸이 남지 않았다
+  | "preset-max" // 프리셋을 더 가질 수 없다
+  | "slots-not-full" // 가진 프리셋의 칸을 모두 열지 않았다
   | "not-unlocked" // 해금하지 않은 종이다
   | "sold-out"; // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
 
@@ -36,6 +40,7 @@ export interface BuyResult {
   petId?: string;
   slotIndex?: number;
   toBox?: boolean;
+  preset?: number; // 새로 산 프리셋 번호
 }
 
 // 다음 알 식별자 — 지금까지 만든 알 수(eggSeq)와 지금 있는 알의 가장 큰 번호 중 큰 것의 다음.
@@ -43,10 +48,6 @@ export interface BuyResult {
 export function nextEggId(save: SaveV3): string {
   return `e${Math.max(save.eggSeq, maxEggNo(save.eggs)) + 1}`;
 }
-
-// 상점으로 이미 연 칸 수 — 남은 잠긴 칸으로 센다
-const boughtSlots = (save: SaveV3): number =>
-  SAVE_V3_RULES.party.shopUnlock - save.party.slots.filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
 
 // 새 개체를 파티나 박스에 넣는다 — 업적의 포켓몬 보상도 쓴다 (src/achievement/core.ts claim)
 export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } {
@@ -84,10 +85,22 @@ export function randomPool(save: SaveV3, opts?: DexOptions): string[] {
   return pool.length ? pool : [...save.dex.unlocked];
 }
 
+// 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다. 새 프리셋은 두 칸이 열린 채 비어 있다
+function buyPreset(save: SaveV3): BuyResult {
+  const can = presetBuyable(save);
+  if (!can.ok) return { ok: false, reason: can.reason === "preset-max" ? "preset-max" : "slots-not-full" };
+  const price = SHOP_V3_RULES.presetPrice;
+  if (save.points.balance < price) return { ok: false, reason: "not-enough" };
+  save.points.balance -= price;
+  const preset = addPreset(save, presetSlots(presetCount(save)));
+  return { ok: true, spent: price, balance: save.points.balance, preset };
+}
+
 export function buy(save: SaveV3, productId: string, now: number, rand: Rand, opts?: DexOptions): BuyResult {
+  if (productId === "party-preset") return buyPreset(save);
   const slot = productId === "party-slot";
   const product = slot ? null : find(productId, opts);
-  const price = slot ? slotPrice(boughtSlots(save)) : product?.price ?? null;
+  const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
 
   if (price === null) return { ok: false, reason: slot ? "no-locked-slot" : "no-product" };
   if (save.points.balance < price) return { ok: false, reason: "not-enough" };
@@ -103,6 +116,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
 
   if (slot) {
     const i = openSlot(save.party.slots, "shop"); // 칸 +1 — 첫 잠긴 칸을 연다
+    countParty(save);
     return { ...done, slotIndex: i };
   }
 

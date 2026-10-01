@@ -21,6 +21,8 @@ export const V3_COMMANDS: readonly CommandName[] = [
   "party.swap",
   "party.move",
   "party.keep",
+  "party.preset",
+  "party.preset.rename",
   "egg.open",
   "bag.use",
   "bag.sell",
@@ -64,6 +66,10 @@ export function argsOf(command: Command): Record<string, unknown> {
       return { petId: target ?? str(a.petId), slotIndex: int(a.slotIndex) };
     case "party.move":
       return { petId: target ?? str(a.petId), toSlot: int(a.toSlot) };
+    case "party.preset":
+      return { preset: int(a.preset) };
+    case "party.preset.rename":
+      return { preset: int(a.preset), name: typeof a.name === "string" ? a.name : undefined };
     case "egg.open":
       return { eggId: target ?? str(a.eggId) };
     case "bag.use":

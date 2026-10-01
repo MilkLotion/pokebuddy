@@ -10,6 +10,7 @@ import { snapshot } from "../tx/snapshot";
 import { empty } from "../save/v3";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { begin } from "../party/starter";
+import { applyPreset, slotsOfPreset } from "../party/presets";
 import { buy } from "../shop/buy";
 import { open } from "../egg/open";
 import { HANDLERS } from "../tx/handlers";
@@ -178,6 +179,20 @@ function seed(): SaveV3 {
   }
   assert.equal(claim(s, "show-two", T0).reason, "no-locked-slot");
   process.stdout.write("(9) 열 칸이 없으면 거절  ok\n");
+}
+
+// (9-0) 업적으로 여는 칸은 첫 프리셋의 칸이다 — 다른 프리셋을 적용한 중에 받아도 첫 프리셋의 칸이 열린다 (2026-10-02 사용자 결정)
+{
+  const s = seed();
+  for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
+  evaluate(s, T0);
+  assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
+  const before = s.party.slots.filter((x) => x.state === "locked").length;
+  const res = claim(s, "show-two", T0);
+  assert.equal(res.ok, true);
+  assert.equal(s.party.slots.filter((x) => x.state === "locked").length, before, "적용한 프리셋의 칸은 그대로");
+  assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length, 1, "첫 프리셋의 업적 칸 하나가 열렸다");
+  process.stdout.write("(9-0) 업적 칸은 첫 프리셋에  ok\n");
 }
 
 // (9-1) 함께 100시간 일하기 — 일한 누적 시간 100시간이면 달성. 시간 흐름에서도 판정한다(옛 저장은 다음 판정에 달성)

@@ -5,6 +5,7 @@
 import { profile } from "../dex/species.js";
 import { natureName, petName, typeName } from "./text.js";
 import { isSinglePet, type TradePet } from "../trade/core.js";
+import { locatePet, presetName } from "../party/presets.js";
 import type { TradeViewModel } from "../trade/session.js";
 import type { TradeCardView, TradeScreen } from "../shared/manage";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
@@ -58,12 +59,15 @@ export function createTradeScreen(read: () => SaveV3 | null): TradeScreenBuilder
         const party = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === got.id);
         const slot = party >= 0 ? save.party.slots[party] : undefined;
         const box = party < 0 ? save.boxes.find((b) => b.slots.includes(got.id)) : undefined;
+        // 적용하지 않은 프리셋의 칸에 들어갔으면 그 프리셋 이름을 준다 — 화면은 박스 이름 자리에 적는다
+        const place = party < 0 && !box ? locatePet(save, got.id) : null;
+        const preset = place?.kind === "preset" ? presetName(save, place.preset) : null;
         const card = cardOf(got);
         if (card) {
           received = {
             petId: got.id, card,
             party: party >= 0 ? party : null,
-            box: box ? box.name : null,
+            box: box ? box.name : preset,
             hidden: slot?.state === "pokemon" && slot.hidden === true,
             sent,
           };

@@ -68,7 +68,7 @@ export const SAVE_V3_RULES = {
     total: 6, // 파티 칸은 항상 여섯이다. 열림·빈 칸·잠김으로 상태를 나눈다
     openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다
     shopUnlock: 2, // 상점에서 살 수 있는 칸 수 — 첫 프리셋. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
-    presets: { start: 2, max: 5 }, // 파티 프리셋 — 두 개로 시작하고 상점에서 셋을 더 산다 (2026-10-02 사용자 결정)
+    presets: { start: 2, max: 5, nameMax: 12 }, // 파티 프리셋 — 두 개로 시작하고 상점에서 셋을 더 산다. 이름은 박스처럼 12자까지 (2026-10-02 사용자 결정)
   },
   // 박스 수 — start 개로 시작하고, 모든 박스에 한 마리 이상 있으면 step 개를 더한다 (원작 방식, 2026-10-01 사용자 결정). src/save/v3.ts growBoxes
   box: { size: 30, firstName: "박스 1", start: 8, step: 8 },
@@ -127,7 +127,8 @@ export const EGG_V3_RULES = {
 // 상점의 규칙표 — 가격은 docs/specs/balance.md 가격표
 export const SHOP_V3_RULES = {
   evoItemPrice: 150, // 진화용 도구는 종류와 무관하게 같은 값이다
-  slotPrices: [300, 600] as const, // 상점에서 여는 파티 칸 두 개. 첫 칸과 둘째 칸의 값이 다르다
+  slotPrice: 500, // 파티 칸 하나 — 순서와 프리셋에 관계없이 같은 값이다 (2026-10-02 사용자 결정 "파티칸 가격은 500포인트 고정하자")
+  presetPrice: 1000, // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정 "프리셋 가격은 1000포인트 고정하자")
   // 종 지정 구매 — 수집 난이도(rank)별 가격. 알에서 얻을 수 있는 종만 판다 (2026-09-29 사용자 결정, src/shop/catalog.ts speciesPrice)
   speciesPrices: { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 } as Readonly<Record<number, number>>,
   startPoints: 120, // 첫 선택을 마치면 한 번 지급한다

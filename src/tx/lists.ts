@@ -10,6 +10,7 @@ import type { DexEntry, ItemAbout, ShopAbout, ShopItemView } from "../shared/man
 import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
+import { activePreset, presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
@@ -38,10 +39,6 @@ const eggs = (opts?: DexOptions): Record<string, EggEntry> => loadJson<Record<st
 const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<string, ItemEntry>>("items.json", opts);
 const evoItems = (opts?: DexOptions): Record<string, EvoItemEntry> => loadJson<Record<string, EvoItemEntry>>("evo-items.json", opts);
 const species = (opts?: DexOptions): Record<string, SpeciesEntry> => loadJson<Record<string, SpeciesEntry>>("species.defaults.json", opts);
-
-// 상점으로 이미 연 칸 수 — 남은 잠긴 칸으로 센다
-const boughtSlots = (save: SaveV3): number =>
-  SAVE_V3_RULES.party.shopUnlock - save.party.slots.filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
 
 // 상점에 늘어놓을 상품. 살 수 없으면 이유를 함께 준다 — 화면이 비활성으로 그린다
 export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
@@ -127,24 +124,46 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     add({ id, name: item.ko, note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
 
-  // 파티 칸 — 순서마다 값이 다르다
-  const bought = boughtSlots(save);
-  const price = slotPrice(bought);
+  // 파티 칸 — 늘 같은 값. 적용한 프리셋의 칸을 연다. 프리셋마다 따로 산다 (2026-10-02 사용자 결정)
+  const slots = shopSlots(save);
+  const price = slotPrice(slots.left);
+  const here = presetName(save, activePreset(save));
   add({
     id: "party-slot",
     name: "파티 칸 +1",
-    note: `구매 ${bought} / ${SAVE_V3_RULES.party.shopUnlock}`,
-    price: price ?? 0,
+    note: `${here} · 구매 ${slots.bought} / ${slots.total}`,
+    price: price ?? SHOP_V3_RULES.slotPrice,
     category: "slot",
     affordable: false,
     about: {
       group: "파티 칸",
-      spec: ["구매", `${bought} / ${SAVE_V3_RULES.party.shopUnlock}`],
-      desc: "파티 칸이 하나 늘어난다. 늘어난 칸에 포켓몬을 하나 더 꺼내 둘 수 있다.",
+      spec: ["구매", `${slots.bought} / ${slots.total}`],
+      desc: `${here}의 파티 칸이 하나 늘어난다. 늘어난 칸에 포켓몬을 하나 더 꺼내 둘 수 있다.`,
       effect: "파티 칸 +1",
-      where: "파티 탭 · 사면 바로 열림",
+      where: `파티 탭 · ${here} · 사면 바로 열림`,
     },
     blocked: price === null ? "더 살 수 있는 칸이 없어요" : undefined,
+  });
+
+  // 파티 프리셋 — 늘 같은 값. 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정)
+  const { start, max } = SAVE_V3_RULES.party.presets;
+  const count = presetCount(save);
+  const can = presetBuyable(save);
+  add({
+    id: "party-preset",
+    name: "파티 프리셋 +1",
+    note: `구매 ${count - start} / ${max - start} · 칸 ${can.open} / ${can.need}`,
+    price: SHOP_V3_RULES.presetPrice,
+    category: "slot",
+    affordable: false,
+    about: {
+      group: "파티 프리셋",
+      spec: ["구매", `${count - start} / ${max - start}`],
+      desc: "파티 프리셋이 하나 늘어난다. 프리셋마다 다른 포켓몬을 넣어 두고 바꿔 가며 꺼낸다.",
+      effect: "파티 프리셋 +1 · 파티 칸 2칸",
+      where: "파티 탭 · ◀ ▶ 로 바꾸기",
+    },
+    blocked: can.reason === "preset-max" ? "더 살 수 있는 프리셋이 없어요" : can.reason === "slots-not-full" ? `파티 칸을 모두 열어야 해요 (${can.open} / ${can.need})` : undefined,
   });
 
   return out;

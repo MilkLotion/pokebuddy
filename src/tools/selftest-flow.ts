@@ -189,7 +189,7 @@ try {
   rich.points.balance = 1000;
   assert.equal(store.write(file, rich), true);
   const slotBuy = w.ok("buy3", "shop.buy", { productId: "party-slot" });
-  assert.equal(slotBuy.spent, 300, "첫 칸은 300P");
+  assert.equal(slotBuy.spent, 500, "파티 칸은 500P");
   const open = w.save().party.slots.filter((s) => s.state === "empty").length;
   assert.equal(open, 1, "빈 칸이 하나 늘었다");
   process.stdout.write("(12) SC-09 · 파티 칸 구매  ok\n");

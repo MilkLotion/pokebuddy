@@ -67,6 +67,7 @@ export interface PartyV3 {
   slots: PartySlotV3[]; // 적용한 프리셋의 칸 — 바탕화면에 나오고 시간이 흐른다
   active?: number; // 적용한 프리셋 번호. 0 부터
   presets?: (PartySlotV3[] | null)[]; // 번호 순. 적용한 번호의 자리는 null — 그 칸은 slots 에 있다
+  presetNames?: string[]; // 번호 순 이름. 빈 글자면 기본 이름 "프리셋 N" 이다
   presetCount?: number; // 가진 프리셋 수
   slotCount?: number; // 모든 프리셋의 열린 칸 수 — 다음 프리셋 구매 조건에 쓴다
 }
