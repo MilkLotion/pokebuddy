@@ -14,6 +14,7 @@ export interface Paths {
   home: string;
   state: string; // 훅이 세션 상태를 적는 곳
   pmd: string; // PMD 스프라이트 묶음 캐시
+  overworld: string; // 걷기 대체 그림 캐시 (src/main/overworld-art.ts)
   companionLock: string; // 동반자 — 기기당 하나
   legacyCli: string; // 옛 VS Code 확장의 실행 경로 기록 — setup 이 지운다
   legacyWindows: string; // 옛 VS Code 확장의 창 기록 폴더 — setup 이 지운다

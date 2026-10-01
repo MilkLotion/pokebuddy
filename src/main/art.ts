@@ -1,7 +1,8 @@
 // 그림의 facade — art/pmd-load.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다)의 loadPmd 를 감싸 무대가 쓰는 모양(LookSheets)으로 낸다. 움직임용 보유 동작은 motion/pet-motion capsOf 가 뽑는다.
 //
 // 무대 캔버스는 시트를 미리 디코드해 그리므로 PMD 전용이다 — showdown(GIF img 태그) · sheet(codex 팩)는 얹을 수 없다.
-// PMD 를 못 받은 마리는 초상 대체 그림(src/main/portrait-art.ts)으로 나온다 — PMD 에 그림이 없는 종(탄동·모으령 등)이 무대에서 사라지지 않게.
+// PMD 를 못 받은 마리는 대체 그림으로 나온다 — PMD 에 그림이 없는 종(탄동·모으령 등)이 무대에서 사라지지 않게.
+//   먼저 걷기 대체 그림(src/main/overworld-art.ts), 그것도 못 받으면 초상 대체 그림(src/main/portrait-art.ts)이다.
 // 초상도 못 받으면 무대에 나오지 않는다 — 부르는 쪽이 stderr 한 줄 + last-error.json 을 남긴다.
 // look(모습) 하나는 한 번만 받는다 — 같은 종 여러 마리가 시트를 공유한다. 배율(zoom)은 마리별(Pet.size)이라 여기서 정하지 않고 zoomOf 로 뽑는다
 import { SIZE_STEPS, snapSize } from "../save/rules.js";
@@ -9,6 +10,7 @@ import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/sta
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";
 import { regionalOf } from "../dex/regional";
+import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
 
 export const ART_RULES = {
@@ -18,9 +20,9 @@ export const ART_RULES = {
   defaultZoom: 2, // 크기를 모를 때 — config.js dotSize 기본 · SAVE_RULES.pet.size 와 같다
 };
 
-// art/pmd-load.js loadPmd 의 결과 모양. 초상 대체 그림(portrait-art.ts)도 같은 모양이다
+// art/pmd-load.js loadPmd 의 결과 모양. 대체 그림(overworld-art.ts · portrait-art.ts)도 같은 모양이다
 export interface PmdArt {
-  kind: "pmd" | "portrait";
+  kind: "pmd" | "overworld" | "portrait";
   cell: StageSize; // 담긴 동작 전부를 덮는 칸 (도트)
   body: StageSize; // 작업 동작을 뺀 몸 칸 — 자리 계산의 기준
   work: Record<string, "once" | "loop">;
@@ -98,7 +100,13 @@ export function pmdSources(look: string): PmdSource[] {
 // look → 초상 PNG. 없거나 못 받으면 null (src/main/portraits.ts)
 export type PortraitSource = (look: string) => Promise<Buffer | null>;
 
-export function createArtLoader(paths: Paths, portrait?: PortraitSource): ArtLoader {
+// PMD 를 못 받았을 때 쓸 그림의 공급자 — 걷기 대체 그림이 먼저, 초상이 다음이다. 시험은 가짜를 넣는다
+export interface FallbackSources {
+  overworld?: OverworldSource;
+  portrait?: PortraitSource;
+}
+
+export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackSources = {}): ArtLoader {
   const pending = new Map<string, Promise<Look | null>>();
   const done = new Map<string, Look | null>();
   const tried = new Set<string>(); // 미리 받기를 시도한 모습
@@ -112,7 +120,8 @@ export function createArtLoader(paths: Paths, portrait?: PortraitSource): ArtLoa
       if (!srcs.length || done.has(look) || pending.has(look)) continue;
       const job = (async () => {
         for (const src of srcs) if (await prefetchPmd(src, paths).catch(() => false)) return true;
-        return false;
+        // PMD 에 그림이 없는 종 — 걷기 대체 그림을 받아 둔다
+        return overworld ? overworld.prefetch(look).catch(() => false) : false;
       })();
       prefetching = { look, job };
       await job;
@@ -133,7 +142,14 @@ export function createArtLoader(paths: Paths, portrait?: PortraitSource): ArtLoa
         return result;
       }
     }
-    // PMD 에 그림이 없는 종 — 초상으로 세운다. 네트워크가 끊겨 PMD 를 못 받은 경우도 이 세션 동안은 초상이다
+    // PMD 에 그림이 없는 종 — 걷기 대체 그림으로 세운다. 네트워크가 끊겨 PMD 를 못 받은 경우도 이 세션 동안은 대체 그림이다
+    const walk = overworld ? await overworld.load(look).catch(() => null) : null;
+    if (walk) {
+      const result = { look, art: walk, sheets: sheetsOf(look, walk) };
+      done.set(look, result);
+      return result;
+    }
+    // 걷기 대체 그림도 못 받았다 — 초상으로 세운다
     const png = portrait ? await portrait(look).catch(() => null) : null;
     const art = png ? portraitArt(png, String(profile(look.replace(/:shiny$/, "")).dex ?? "").padStart(4, "0")) : null;
     if (!art) return null;

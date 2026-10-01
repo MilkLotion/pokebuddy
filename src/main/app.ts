@@ -14,6 +14,7 @@ import { prepareSaveKey, setAsideSave, type PrepareSaveKeyOptions } from "../sav
 import { sealedOnDisk } from "../save/store";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader } from "./art";
+import { createOverworldSource } from "./overworld-art";
 import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES, playLanes, type PlayLane } from "./layout";
 import { createScreenPicker, currentScreens, screenViews, type ScreenPicker } from "./screen-picker";
@@ -1411,11 +1412,14 @@ async function main(): Promise<void> {
     }
   }
 
-  // PMD 그림이 없는 종은 초상으로 무대에 세운다 (src/main/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
-  const art = createArtLoader(PATHS, async (look) => {
-    const ask = look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false };
-    const uri = (await pics.get([ask]))[portraitKey(ask)];
-    return uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : null;
+  // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
+  const art = createArtLoader(PATHS, {
+    overworld: createOverworldSource(PATHS.overworld),
+    portrait: async (look) => {
+      const ask = look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false };
+      const uri = (await pics.get([ask]))[portraitKey(ask)];
+      return uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : null;
+    },
   });
   // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
   // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/record.md)

@@ -237,7 +237,7 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 | 폴더 | 하는 일 |
 |---|---|
-| `src/main/` | 메인 프로세스 — `app.ts`(기동 · 종료 배선) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `art.ts`(PMD 그림) · `portrait-art.ts`(초상 대체 그림) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `menus.ts` · `menu-window.ts` · `tray.ts` · `picker-window.ts`(첫 실행 선택 창) · `manage-window.ts`(설정창) · `region-window.ts`(놀이공간 영역 그리기) · `paths.ts` · `text.ts` · `preload.ts` 등 |
+| `src/main/` | 메인 프로세스 — `app.ts`(기동 · 종료 배선) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `art.ts`(PMD 그림) · `overworld-art.ts`(걷기 대체 그림) · `portrait-art.ts`(초상 대체 그림) · `png.ts`(PNG 해석) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `menus.ts` · `menu-window.ts` · `tray.ts` · `picker-window.ts`(첫 실행 선택 창) · `manage-window.ts`(설정창) · `region-window.ts`(놀이공간 영역 그리기) · `paths.ts` · `text.ts` · `preload.ts` 등 |
 | `src/follow/` | 어느 창 · 어느 세션을 따를지 — `state.ts`(훅 상태 기록 · 판정) · `front.ts`(맨 앞 창 · 터미널 호스트) · `winbounds.ts` · `line-helper.ts`(창 추적 헬퍼). `pokebuddy status` 가 같은 코드를 부른다 |
 | `src/motion/` | 마리 하나의 움직임 — `brain.ts` · `pet-motion.ts` · `rules.ts` · `params.ts` |
 | `src/renderer/` | 무대 `stage.html` · `stage.ts` · `sprites.ts` · `hit.ts` · `pointer.ts`, 선택 창 `picker.html` · `picker.ts`, 설정창 `manage.html` · `manage.ts`, 메뉴 `menu.html` · `menu.ts`, 놀이공간 영역 `region.html` · `region.ts` 등 |
@@ -267,8 +267,14 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
 - 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
-- PMD 그림을 못 받은 종은 초상 대체 그림으로 무대에 나온다(`src/main/portrait-art.ts`). 관찰(2026-10-01): 등장 종 944종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
-  대체 그림은 PokeAPI 초상을 절반으로 줄여 PMD 크기에 맞춘다. 동작은 `Idle`·`Walk` 두 개다. 1도트씩 들썩이고, 오른쪽으로 걸을 때는 좌우를 뒤집는다. 네트워크 문제로 PMD 를 못 받은 종도 그 실행 동안은 대체 그림이다
+- PMD 그림을 못 받은 종은 대체 그림으로 무대에 나온다. 관찰(2026-10-02): 리전폼을 뺀 등장 종 890종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
+  - 먼저 걷기 대체 그림을 쓴다(`src/main/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_RULES.ref`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
+  - 걷기 시트는 정사각 칸 6개다. 정면·뒤·왼쪽이 2칸씩이다. 오른쪽은 왼쪽 칸을 좌우로 뒤집는다. 칸이 8개인 시트는 오른쪽 전용 칸을 쓴다. 팔레트 0번 색이 배경이라 지운다.
+  - 색은 `overworld_normal.pal` 의 같은 번호 색으로 칠한다. 이로치는 `overworld_shiny.pal` 이다. 팔레트 파일을 못 받으면 PNG 에 든 색이다.
+  - 동작은 `Idle`·`Walk` 두 개다. `Walk` 는 두 칸을 0.2초씩 돈다. `Idle` 은 첫 칸을 1도트 들썩인다.
+  - 걷기 대체 그림도 못 받으면 초상 대체 그림을 쓴다(`src/main/portrait-art.ts`). PokeAPI 초상을 절반으로 줄여 PMD 크기에 맞춘다. 1도트씩 들썩이고, 오른쪽으로 걸을 때는 좌우를 뒤집는다.
+  - 네트워크 문제로 PMD 를 못 받은 종도 그 실행 동안은 대체 그림이다. 대체 그림에는 잠자기·반응 동작이 없다.
+  - `src/tools/check-overworld.ts` 가 35종의 걷기 그림을 실제 주소에서 받아 본다. 태그를 올릴 때 다시 돌린다.
 - 칸 크기가 동작마다 달라도 기준점은 `(칸너비/2, 칸높이/2+4)` 로 같다. 그래서 몸 칸 가운데에 맞춰 그리면 발 위치가 맞는다
 - 캔버스 크기를 바꾸면 2D 컨텍스트가 기본값으로 돌아간다. 그러면 보간이 다시 켜진다. 정수 배율에서도 도트가 번진다(인접한 검정·흰색 픽셀이
   `[0,0,32,96,159,223,255,255]` 처럼 그라데이션이 된다). CSS `image-rendering: pixelated` 로는 못 막는다. 그래서 크기를 바꿀 때마다 보간을 다시 끈다(`src/renderer/stage.ts`)

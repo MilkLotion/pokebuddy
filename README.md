@@ -98,5 +98,6 @@ AI 가 일하는 동안에는 친밀도와 포인트가 두 배로 쌓인다. �
 포켓몬 그림은 저장소와 설치 파일에 없다. 처음 실행할 때 받아서 내 컴퓨터에만 캐시한다.
 
 - 움직이는 그림: [PMDCollab/SpriteCollab](https://github.com/PMDCollab/SpriteCollab) 기여자들의 작품, CC BY-NC 4.0
+- PMDCollab 에 그림이 없는 종의 걷는 그림: [rh-hideout/pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion)(RHH)의 따라다니기 그림. 9세대 그림은 [DarkusShadow 의 묶음](https://www.deviantart.com/darkusshadow/art/Gen-9-Paldea-Pokemon-Overworld-Sprites-967776690)에서 왔고 제작자는 Darkus_Shadow · Princess-Phoenix · shaderr31 · Molfang62 · CarmaNekko · EduarPokeN · Larryturbo · TyranitarDark · Anarlaurendil 이다. 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
 - 초상·도구·알 그림: [PokeAPI sprites](https://github.com/PokeAPI/sprites)(저장소 CC0). PokeAPI 에 없는 경험사탕·민트·일부 진화 도구는 [msikma/pokesprite](https://github.com/msikma/pokesprite)(코드 MIT). 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
 - 글꼴: [Galmuri](https://github.com/quiple/galmuri)(© Lee Minseo), SIL Open Font License 1.1. 전문은 [assets/fonts/OFL.txt](assets/fonts/OFL.txt).

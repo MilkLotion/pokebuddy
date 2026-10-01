@@ -339,4 +339,5 @@ CLI 별 이벤트와 판정 방법은 [동반자 동작](specs/companion.md#cli-
 포켓몬 그림은 이 저장소와 설치 파일에 들어 있지 않다. 처음 실행할 때 받아서 `~/.claude/pokebuddy/` 아래에 캐시한다.
 
 - 바탕화면의 움직이는 그림은 [PMDCollab/SpriteCollab](https://github.com/PMDCollab/SpriteCollab) 기여자들의 작품이다. 라이선스는 CC BY-NC 4.0(저작자 표시·비상업)이다. 이 앱으로 만든 화면을 공유할 때는 저작자와 출처를 함께 밝힌다.
+- PMDCollab 에 그림이 없는 종은 [rh-hideout/pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion) 의 따라다니기 그림으로 걷는다. 제작자 목록은 [README 의 라이선스 절](../README.md#라이선스)에 있다.
 - 설정창의 초상·도구·알 그림, 도감 설명, 울음소리는 [PokeAPI](https://github.com/PokeAPI) 에서 받는다. 받는 곳의 상세는 [동반자 동작](specs/companion.md#그림에-대한-메모)에 있다.

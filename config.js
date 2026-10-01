@@ -32,6 +32,7 @@ const PATHS = {
   home: POKEBUDDY_HOME,
   state: path.join(POKEBUDDY_HOME, "state"), // 훅이 세션 상태를 적는 곳
   pmd: path.join(POKEBUDDY_HOME, "pmd"), // PMD 스프라이트 묶음 캐시 (CC BY-NC — 저장소엔 넣지 않는다)
+  overworld: path.join(POKEBUDDY_HOME, "overworld"), // 걷기 대체 그림 캐시 — PMD 에 없는 종 (pokeemerald-expansion, 저장소엔 넣지 않는다)
   // 동반자(pokebuddy companion) — 기기당 하나. 내용은 `pid\nready`. 지우면 동반자가 스스로 끝난다.
   // CLI 는 이 파일의 pid 가 살아 있는지로 "동반자가 떠 있나"를 판정한다 (파일 존재가 아니라 pid 생존)
   companionLock: path.join(POKEBUDDY_HOME, "companion.lock"),
