@@ -95,6 +95,7 @@ window.pokebuddyManage = new Proxy({}, {
     if (name === "petMenu") return async (id) => { window.__petMenu = id; return window.__menuOn === true; }; // 메뉴를 띄운 것으로 칠지는 window.__menuOn
     if (name === "shopOpen") return (open) => { window.__shopOpen = open; };
     if (name === "bagOpen") return (open) => { window.__bagOpen = open; };
+    if (name === "partyOpen") return (open) => { window.__partyOpen = open; };
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
@@ -376,7 +377,7 @@ void app.whenReady().then(async () => {
     await js(`${tabBtn("가방")}.click()`);
     await wait(300);
     type BagOpen = {
-      itemId: string; kind: string; title: string; mode: string; modes: boolean; rows: [string, string][];
+      itemId: string; kind: string; title: string; pager: boolean; mode: string; modes: boolean; rows: [string, string][];
       party: { petId: string; picked: boolean }[] | null; qty: { count: number; cap: number } | null;
       preview: { lead: string; line: string; tone: string }; go: { label: string; disabled: boolean };
     } | null;
@@ -387,7 +388,8 @@ void app.whenReady().then(async () => {
     const use = await js<BagOpen>(bagOpen);
     const partyIds = snap.party.slots.filter((x) => x.pet).map((x) => x.pet!.id);
     assert.equal(use?.itemId, "exp-candy-s", "누른 도구가 기기 창에 뜬다");
-    assert.equal(use?.title, "파티에게 쓰기");
+    assert.equal(use?.title, "프리셋 1", "사용 쪽 머리 제목은 지금 프리셋 이름");
+    assert.equal(use?.pager, true, "프리셋이 둘 이상이면 파티 줄 양끝에 ◀ ▶");
     assert.equal(use?.mode, "use", "사용 쪽으로 연다");
     assert.equal(use?.modes, true, "판매가가 있으면 사용·판매 전환");
     assert.deepEqual(use?.rows.map((r) => r[0]), ["효과", "쓰는 곳"], "정보 줄은 효과·쓰는 곳 두 줄");
@@ -843,7 +845,110 @@ void app.whenReady().then(async () => {
     assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell .shiny').length`), 1, "이로치를 얻은 종에만 있다");
     await shot("shiny-dex.png");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 이로치 아이콘 · 그림 ${shots}\n`);
+    // (21) 파티 프리셋 — 머리 줄의 ◀ [이름] ▶, 이름 고치기, 교체 화면(박스 탭 + 파티 기기 창), 가방의 프리셋 넘김
+    //      (2026-10-02 사용자 결정, Figma 05 `Party / Base` `217:1705` · `Party / Swap · Open` `1248:2567`)
+    await reload();
+    type Cmd = { cmd: string; target: string; args: Record<string, unknown> };
+    const cmds = (): Promise<Cmd[]> => js<Cmd[]>(`window.__cmds ?? []`);
+    await js(`window.__cmds = []; window.__menuOn = false; ${tabBtn("파티")}.click()`);
+    await wait(300);
+    const presetHead = `({ name: document.querySelector('#body .head .box-name')?.textContent ?? '', arrows: document.querySelectorAll('#body .head .preset-pager > button').length, sub: !!document.querySelector('#body .head .sub'), swap: !!document.querySelector('#body .head .swap-open') })`;
+    assert.deepEqual(await js<unknown>(presetHead), { name: "프리셋 1", arrows: 2, sub: false, swap: true }, "파티 머리 줄 — ◀ 프리셋 이름 ▶ 와 교체. 부제는 없다");
+    await shot("party-preset.png");
+    const presetAt = `[...document.querySelectorAll('#body .head .preset-pager > button'), document.querySelector('#body .head .swap-open')].map((b) => Math.round(b.getBoundingClientRect().left)).join(',')`;
+    const presetShort = await js<string>(presetAt);
+    await js(`document.querySelectorAll('#body .head .preset-pager > button')[1].click(); 0`);
+    await wait(300);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "▶ — 다음 프리셋을 적용한다");
+    await js(`window.__cmds = []; document.querySelectorAll('#body .head .preset-pager > button')[0].click(); 0`);
+    await wait(300);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "◀ — 첫 프리셋에서는 마지막 프리셋으로 돈다");
+    // 이름 고치기 — 누르면 입력칸. 12자까지. ◀·▶·교체 자리는 그대로다
+    await js(`document.querySelector('#body .head .box-name').click(); 0`);
+    await wait(200);
+    assert.equal(await js<number>(`document.querySelector('#body .head .box-name-input')?.maxLength ?? 0`), 12, "프리셋 이름을 누르면 입력칸 — 12자까지");
+    assert.equal(await js<string>(presetAt), presetShort, "이름을 고치는 중에도 ◀·▶·교체 자리가 같다");
+    await shot("party-preset-rename.png");
+    await js(`window.__cmds = []; (() => { const i = document.querySelector('#body .head .box-name-input'); i.value = '탐험용'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })(); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset, c.args.name]), [["party.preset.rename", 0, "탐험용"]], "Enter — 이름을 저장한다");
+
+    // 교체 — 박스 탭으로 가고 파티 기기 창을 띄운다. 대화상자는 없다
+    type PartyOpen = { name: string; notice: string; slots: { index: number; state: string; name: string; held: boolean; target: boolean }[]; presets: { index: number; owned: boolean; active: boolean }[] } | null;
+    const partyOpen = (): Promise<PartyOpen> => js<PartyOpen>(`window.__partyOpen ?? null`);
+    await js(`window.__cmds = []; document.querySelector('#body .head .swap-open').click(); 0`);
+    await wait(400);
+    const swapOpened = await partyOpen();
+    assert.equal(await js<string>(`document.querySelector('#body .head h1').textContent`), "박스", "교체 — 박스 탭으로 간다");
+    assert.equal(await js<boolean>(`document.getElementById('scrim').classList.contains('open')`), false, "교체 모달은 없다");
+    assert.equal(swapOpened?.name, "프리셋 1");
+    assert.deepEqual(swapOpened?.slots.map((s) => s.state), ["pokemon", "empty", "locked", "locked", "locked", "locked"], "파티 기기 창 — 지금 프리셋의 여섯 칸");
+    assert.deepEqual(swapOpened?.presets.map((p) => [p.owned, p.active]), [[true, true], [true, false], [false, false], [false, false], [false, false]], "프리셋 칩 — 가진 둘, 사지 않은 셋");
+    // 박스 칸을 누르면 상세 대신 그 개체를 든다. 빈 파티 칸이 놓을 칸이 된다
+    await js(`window.__petOpen = null; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    await wait(300);
+    assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length, pet: window.__petOpen ?? null })`), { ghost: 1, from: 1, pet: null }, "교체 화면 — 박스 칸을 누르면 든다. 상세는 뜨지 않는다");
+    assert.deepEqual((await partyOpen())?.slots.map((s) => s.target), [false, true, false, false, false, false], "든 동안 빈 파티 칸이 놓을 칸");
+    await shot("party-swap-hold.png");
+    // 파티 기기 창의 빈 칸 — 배치. 개체 칸 — 맞바꾸기
+    await js(`window.__cb.onPartyAct({ kind: 'slot', index: 1 }); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.target, c.args.slotIndex]), [["party.place", "p2", 1]], "든 박스 개체를 빈 파티 칸에 — party.place");
+    assert.equal(await js<number>(`document.querySelectorAll('.drag-ghost').length`), 0, "놓으면 따라가던 칸이 사라진다");
+    assert.ok(((await partyOpen())?.notice ?? "").length > 0, "실패 이유는 파티 기기 창의 머리 줄에 보인다");
+    await js(`window.__cmds = []; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    await wait(300);
+    await js(`window.__cb.onPartyAct({ kind: 'slot', index: 0 }); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.target, c.args.slotIndex]), [["party.swap", "p2", 0]], "든 박스 개체를 파티 개체 칸에 — party.swap");
+    // 파티 칸을 먼저 눌러 든다 → 박스 빈 칸은 보관, 박스 개체 칸은 맞바꾸기, 잠긴 칸은 받지 않는다
+    await js(`window.__cmds = []; window.__cb.onPartyAct({ kind: 'slot', index: 3 }); window.__cb.onPartyAct({ kind: 'slot', index: 0 }); 0`);
+    await wait(300);
+    assert.deepEqual((await partyOpen())?.slots.map((s) => s.held), [true, false, false, false, false, false], "파티 칸을 누르면 그 개체를 든다");
+    await js(`document.querySelectorAll('#body .box-grid > .cell.blank')[0].click(); 0`);
+    await wait(400);
+    const keptCmd = (await cmds())[0];
+    assert.deepEqual([(await cmds()).length, keptCmd?.cmd, keptCmd?.target, keptCmd?.args.toBoxId, typeof keptCmd?.args.toSlot], [1, "party.keep", "p1", "b1", "number"], "든 파티 개체를 박스 빈 칸에 — party.keep");
+    await js(`window.__cmds = []; window.__cb.onPartyAct({ kind: 'slot', index: 0 }); 0`);
+    await wait(200);
+    await js(`document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.target, c.args.slotIndex]), [["party.swap", "p2", 0]], "든 파티 개체를 박스 개체 칸에 — party.swap");
+    // 든 채 밖을 누르면 취소
+    await js(`window.__cmds = []; window.__cb.onPartyAct({ kind: 'slot', index: 0 }); 0`);
+    await wait(200);
+    await js(`document.querySelector('#body .head h1').click(); 0`);
+    await wait(200);
+    assert.deepEqual([(await partyOpen())?.slots[0]?.held, (await cmds()).length], [false, 0], "밖을 누르면 내려놓는다 — 명령은 없다");
+    // 프리셋 칩 — 가진 프리셋만 적용한다
+    await js(`window.__cb.onPartyAct({ kind: 'preset', index: 3 }); window.__cb.onPartyAct({ kind: 'preset', index: 0 }); window.__cb.onPartyAct({ kind: 'preset', index: 1 }); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "칩 — 사지 않은 프리셋과 지금 프리셋은 보내지 않는다");
+    // 박스 탭을 나가면 교체 화면이 끝난다. 다시 박스 탭에 오면 칸 좌클릭은 개체 상세다
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(300);
+    assert.equal(await partyOpen(), null, "박스 탭을 나가면 파티 기기 창을 닫는다");
+    await js(`${tabBtn("박스")}.click()`);
+    await wait(300);
+    await js(`window.__petOpen = null; document.querySelectorAll('#body .box-grid > .cell')[0].click(); 0`);
+    await wait(300);
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), "p2", "교체 화면이 아니면 박스 칸 좌클릭은 개체 상세");
+    // 빈 파티 칸을 눌러도 교체 화면이 열린다
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(300);
+    await js(`document.querySelector('#body .grid .slot.blank:not(.locked)').click(); 0`);
+    await wait(400);
+    assert.ok((await partyOpen()) !== null, "빈 파티 칸 — 교체 화면");
+    // 가방 — 파티 줄 양끝의 ◀ ▶ 는 앞·뒤 프리셋을 적용한다
+    await js(`${tabBtn("가방")}.click()`);
+    await wait(300);
+    await js(`[...document.querySelectorAll('#body .bag-card')].find((c) => c.querySelector('.name').textContent === '경험사탕S').click(); 0`);
+    await wait(200);
+    await js(`window.__cmds = []; window.__cb.onBagAct({ itemId: 'exp-candy-s', kind: 'preset', delta: 1 }); 0`);
+    await wait(400);
+    assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "가방의 ▶ — 다음 프리셋을 적용한다");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 이로치 아이콘 · 파티 프리셋(머리 줄·이름·교체 화면·가방 넘김) · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

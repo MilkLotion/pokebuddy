@@ -4,7 +4,7 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, BagDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
@@ -14,6 +14,7 @@ import { createDexWindow, type DexWindow } from "./dex-window.js";
 import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
 import { createShopWindow, type ShopWindow } from "./shop-window.js";
 import { createBagWindow, type BagWindow } from "./bag-window.js";
+import { createPartyWindow, type PartyWindow } from "./party-window.js";
 import { SOUND_RULES, gainOf } from "../state/settings.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -46,6 +47,10 @@ const CH = {
   bagStep: "manage:bag-step",
   bagAct: "manage:bag-act",
   bagClosed: "manage:bag-closed",
+  partyOpen: "manage:party-open",
+  partyAct: "manage:party-act",
+  partyStep: "manage:party-step",
+  partyClosed: "manage:party-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -106,6 +111,7 @@ let dexWin: DexWindow | null = null;
 let petWin: PetWindow | null = null;
 let shopWin: ShopWindow | null = null;
 let bagWin: BagWindow | null = null;
+let partyWin: PartyWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -236,6 +242,20 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     onStep: (delta) => toManage(CH.bagStep, delta),
     onAct: (action) => toManage(CH.bagAct, action),
     onClosed: (gen) => toManage(CH.bagClosed, gen),
+  });
+  // 파티 기기 창(교체 화면) — 관리 창이 지금 프리셋의 칸을 정해 보낸다. 누른 칸·칩은 관리 창으로 돌려보낸다
+  partyWin = createPartyWindow({
+    preload,
+    html: path.join(path.dirname(html), "party.html"),
+    onStep: (delta) => toManage(CH.partyStep, delta),
+    onAct: (action) => toManage(CH.partyAct, action),
+    onClosed: (gen) => toManage(CH.partyClosed, gen),
+  });
+  ipcMain.on(CH.partyOpen, (e, open: unknown, gen: unknown) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    const slots = open && typeof open === "object" ? (open as { slots?: unknown }).slots : undefined;
+    if (Array.isArray(slots)) partyWin?.show(win, open as PartyDeviceOpen, gen);
+    else partyWin?.close();
   });
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/device-gen.ts)
   ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
@@ -382,6 +402,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     dexWin?.resetGen();
     shopWin?.resetGen();
     bagWin?.resetGen();
+    partyWin?.resetGen();
   });
   const route = opts.route;
   // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다

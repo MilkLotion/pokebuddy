@@ -28,11 +28,23 @@ function render(v: BagDeviceView): void {
   }
   card.appendChild(head);
 
-  // 파티 줄 — 초상과 레벨. 이름은 title 과 미리보기 첫 줄이 보인다
+  // 파티 줄 — 초상과 레벨. 이름은 title 과 미리보기 첫 줄이 보인다.
+  // 프리셋이 둘 이상이면 양끝에 ◀ ▶ — 누르면 앞·뒤 프리셋을 적용한다 (Figma 05 `Bag / Device / Use` `1242:1896`)
   if (v.party) {
-    if (!v.party.length) card.appendChild(el("div", "party-empty", "파티에 포켓몬이 없어요"));
+    const row = el("div", "party-row");
+    const arrow = (label: string, delta: -1 | 1, name: string): HTMLButtonElement => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset-step";
+      b.textContent = label;
+      b.setAttribute("aria-label", name);
+      b.addEventListener("click", () => act({ itemId: v.itemId, kind: "preset", delta }));
+      return b;
+    };
+    if (v.pager) row.appendChild(arrow("◀", -1, "앞 프리셋"));
+    if (!v.party.length) row.appendChild(el("div", "party-empty", "파티에 포켓몬이 없어요"));
     else {
-      const strip = el("div", "party");
+      const strip = el("div", v.pager ? "party tight" : "party");
       for (const p of v.party) {
         const b = document.createElement("button");
         b.type = "button";
@@ -49,8 +61,10 @@ function render(v: BagDeviceView): void {
         b.addEventListener("click", () => act({ itemId: v.itemId, kind: "target", petId: p.petId }));
         strip.appendChild(b);
       }
-      card.appendChild(strip);
+      row.appendChild(strip);
     }
+    if (v.pager) row.appendChild(arrow("▶", 1, "다음 프리셋"));
+    card.appendChild(row);
   }
   if (v.qty) card.appendChild(qtyRow(v.qty, (qty) => act({ itemId: v.itemId, kind: "qty", qty })));
 

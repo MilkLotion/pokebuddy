@@ -39,5 +39,6 @@ function isAction(v: unknown): v is BagDeviceAction {
   if (a.kind === "mode") return a.mode === "use" || a.mode === "sell";
   if (a.kind === "target") return typeof a.petId === "string" && a.petId.length > 0 && a.petId.length <= 80;
   if (a.kind === "qty") return typeof a.qty === "number" && Number.isInteger(a.qty) && a.qty >= 1 && a.qty <= 999;
+  if (a.kind === "preset") return a.delta === 1 || a.delta === -1;
   return a.kind === "go";
 }

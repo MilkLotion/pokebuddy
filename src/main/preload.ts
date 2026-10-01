@@ -29,6 +29,10 @@ type BagDeviceAction = import("../shared/manage").BagDeviceAction;
 type BagDeviceChannel = import("../shared/manage").BagDeviceChannel;
 type BagDeviceView = import("../shared/manage").BagDeviceView;
 type BagDeviceBridge = import("../shared/manage").BagDeviceBridge;
+type PartyDeviceAction = import("../shared/manage").PartyDeviceAction;
+type PartyDeviceChannel = import("../shared/manage").PartyDeviceChannel;
+type PartyDeviceView = import("../shared/manage").PartyDeviceView;
+type PartyDeviceBridge = import("../shared/manage").PartyDeviceBridge;
 type AgentReply = import("../shared/manage").AgentReply;
 type ManageRoute = import("../shared/manage").ManageRoute;
 type TradeScreen = import("../shared/manage").TradeScreen;
@@ -129,6 +133,10 @@ const MANAGE = {
   bagStep: "manage:bag-step",
   bagAct: "manage:bag-act",
   bagClosed: "manage:bag-closed",
+  partyOpen: "manage:party-open",
+  partyAct: "manage:party-act",
+  partyStep: "manage:party-step",
+  partyClosed: "manage:party-closed",
   trade: "manage:trade",
   copy: "manage:copy",
   account: "manage:account",
@@ -177,6 +185,10 @@ const manage: ManageBridge = {
   onBagStep: (cb) => ipcRenderer.on(MANAGE.bagStep, (_e, delta: -1 | 1) => cb(delta)),
   onBagAct: (cb) => ipcRenderer.on(MANAGE.bagAct, (_e, action: BagDeviceAction) => cb(action)),
   onBagClosed: (cb) => ipcRenderer.on(MANAGE.bagClosed, (_e, gen: number) => cb(gen)),
+  partyOpen: (open, gen) => ipcRenderer.send(MANAGE.partyOpen, open, gen),
+  onPartyAct: (cb) => ipcRenderer.on(MANAGE.partyAct, (_e, action: PartyDeviceAction) => cb(action)),
+  onPartyStep: (cb) => ipcRenderer.on(MANAGE.partyStep, (_e, delta: -1 | 1) => cb(delta)),
+  onPartyClosed: (cb) => ipcRenderer.on(MANAGE.partyClosed, (_e, gen: number) => cb(gen)),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
@@ -345,3 +357,22 @@ const bag: BagDeviceBridge = {
 };
 
 contextBridge.exposeInMainWorld("pokebuddyBag", bag);
+
+// 파티 기기 창(교체 화면) — 지금 프리셋의 파티 칸과 프리셋 칩을 받고, 그린 높이와 닫기·누른 칸·칩을 보낸다
+const PARTY = {
+  show: "partydev:show",
+  size: "partydev:size",
+  step: "partydev:step",
+  close: "partydev:close",
+  act: "partydev:act",
+} satisfies Record<string, PartyDeviceChannel>;
+
+const partyDevice: PartyDeviceBridge = {
+  onShow: (cb) => ipcRenderer.on(PARTY.show, (_e, view: PartyDeviceView) => cb(view)),
+  size: (h) => ipcRenderer.send(PARTY.size, h),
+  step: (delta) => ipcRenderer.send(PARTY.step, delta),
+  close: () => ipcRenderer.send(PARTY.close),
+  act: (action) => ipcRenderer.send(PARTY.act, action),
+};
+
+contextBridge.exposeInMainWorld("pokebuddyParty", partyDevice);

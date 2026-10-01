@@ -389,6 +389,40 @@
       .party-empty {
         color: var(--soft);
       }
+      /* 파티 줄과 양끝의 ◀ ▶ — 프리셋이 둘 이상일 때만. 화살표 폭 22, 파티 6칸이 그 사이에 들어가게 칸 폭 42·간격 3
+         (Figma 05 `Bag / Device / Use` `1242:1896`, 2026-10-02 사용자 결정). 줄 높이는 파티 칸 높이로 고정한다 */
+      .party-row {
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        min-height: 72px;
+      }
+      .party-row .party-empty {
+        flex: 1;
+        align-self: center;
+        padding: 0 8px;
+      }
+      .preset-step {
+        flex: none;
+        width: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: var(--line);
+        cursor: pointer;
+      }
+      .preset-step:hover {
+        background: var(--picked);
+      }
+      .party.tight {
+        flex: 1;
+        gap: 3px;
+        margin: 0 1px; /* 6칸(267) + 좌우 1 = 269 ≤ 314 − 화살표 44 */
+      }
+      .party.tight button {
+        width: 42px;
+        padding: 6px 1px;
+      }
       .qty {
         display: flex;
         align-items: center;

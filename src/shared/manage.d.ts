@@ -212,7 +212,8 @@ export interface SettingsView {
 
 export interface Snapshot {
   points: number;
-  party: { slots: SlotView[]; shown: number; usable: number };
+  // preset 은 지금 적용한 파티 프리셋 — 번호(0 부터), 가진 수, 최대 수, 이름 (src/party/presets.ts)
+  party: { slots: SlotView[]; shown: number; usable: number; preset: { index: number; count: number; max: number; name: string } };
   boxes: BoxView[];
   eggs: { list: EggView[]; used: number; size: number };
   bag: BagItemView[];
@@ -291,7 +292,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock" | "manage:pet-menu";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:party-open" | "manage:party-act" | "manage:party-step" | "manage:party-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock" | "manage:pet-menu";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // form 은 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
@@ -496,6 +497,10 @@ export interface ManageBridge {
   onBagStep: (cb: (delta: -1 | 1) => void) => void;
   onBagAct: (cb: (action: BagDeviceAction) => void) => void;
   onBagClosed: (cb: (gen: number) => void) => void;
+  partyOpen: (open: PartyDeviceOpen | null, gen?: number) => void; // 파티 기기 창(교체 화면)을 띄운다. null 이면 닫는다
+  onPartyAct: (cb: (action: PartyDeviceAction) => void) => void; // 파티 기기 창에서 누른 칸·칩 — 관리 창이 처리한다
+  onPartyStep: (cb: (delta: -1 | 1) => void) => void; // 방향키 — 앞·뒤 프리셋
+  onPartyClosed: (cb: (gen: number) => void) => void;
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   account: (req: AccountAction) => Promise<AccountReply>;
@@ -607,7 +612,8 @@ export interface BagDeviceOpen {
   spec: [string, string][]; // 판매가·구매가
   desc: string;
   rows: [string, string][]; // 효과·쓰는 곳
-  title: string; // 조작 칸 머리 — "파티에게 쓰기" · "판매하기"
+  title: string; // 조작 칸 머리 — 사용 쪽은 지금 프리셋 이름, 판매 쪽은 "판매하기"
+  pager: boolean; // 사용 쪽 파티 줄 양끝에 ◀ ▶ 를 둔다 — 프리셋이 둘 이상일 때. 누르면 앞·뒤 프리셋을 적용한다 (2026-10-02 사용자 결정)
   mode: "use" | "sell";
   modes: boolean; // 사용·판매 전환을 둔다 — 사용도 판매도 되는 도구만
   party: { petId: string; name: string; level: string; art: string | null; picked: boolean }[] | null; // 사용 쪽 파티 줄
@@ -618,7 +624,7 @@ export interface BagDeviceOpen {
 export interface BagDeviceView extends BagDeviceOpen {
   side: "right" | "left";
 }
-export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" | "sell" } | { kind: "target"; petId: string } | { kind: "qty"; qty: number } | { kind: "go" });
+export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" | "sell" } | { kind: "target"; petId: string } | { kind: "qty"; qty: number } | { kind: "go" } | { kind: "preset"; delta: -1 | 1 });
 export type BagDeviceChannel = "bagdev:show" | "bagdev:size" | "bagdev:step" | "bagdev:close" | "bagdev:act";
 export interface BagDeviceBridge {
   onShow: (cb: (view: BagDeviceView) => void) => void;
@@ -626,6 +632,37 @@ export interface BagDeviceBridge {
   step: (delta: -1 | 1) => void;
   close: () => void;
   act: (action: BagDeviceAction) => void;
+}
+
+// 파티 기기 창 — 교체 화면. 박스 탭 옆에 붙어 지금 프리셋의 파티 칸과 프리셋 칩을 보인다
+// (src/main/party-window.ts, Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
+// 칸과 칩을 누르면 관리 창으로 돌아가 관리 창이 명령을 보낸다. 눌러서 들고 눌러서 놓는다 — 포켓몬 메뉴의 `옮기기` 와 같다
+export interface PartyDeviceSlot {
+  index: number;
+  state: "pokemon" | "empty" | "locked";
+  name: string; // 개체 이름. 개체가 없으면 빈 글자
+  level: string; // "Lv.12". 개체가 없으면 빈 글자
+  art: string | null; // 초상 data URI
+  held: boolean; // 이 칸의 개체를 들었다 — 흐리게
+  target: boolean; // 든 것을 놓을 수 있는 칸 — 옅은 바탕
+}
+export interface PartyDeviceOpen {
+  name: string; // 프리셋 이름
+  slots: PartyDeviceSlot[];
+  presets: { index: number; owned: boolean; active: boolean }[]; // 늘 max 개. 사지 않은 프리셋은 자물쇠 칩
+  notice: string; // 마지막 실패 문구. 머리 줄의 이름 옆 자리에 보인다 — 줄을 끼우지 않는다
+}
+export interface PartyDeviceView extends PartyDeviceOpen {
+  side: "right" | "left";
+}
+export type PartyDeviceAction = { kind: "slot"; index: number } | { kind: "preset"; index: number };
+export type PartyDeviceChannel = "partydev:show" | "partydev:size" | "partydev:step" | "partydev:close" | "partydev:act";
+export interface PartyDeviceBridge {
+  onShow: (cb: (view: PartyDeviceView) => void) => void;
+  size: (height: number) => void;
+  step: (delta: -1 | 1) => void;
+  close: () => void;
+  act: (action: PartyDeviceAction) => void;
 }
 
 export interface DexDeviceBridge {

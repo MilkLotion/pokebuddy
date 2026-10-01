@@ -17,6 +17,7 @@ import { zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
+import { activePreset, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
 import type { DayPart } from "../shared/types";
@@ -198,6 +199,7 @@ export function snapshot(
       slots,
       shown: slots.filter((s) => s.pet && !s.pet.hidden).length,
       usable: slots.filter((s) => s.state !== "locked").length,
+      preset: { index: activePreset(save), count: presetCount(save), max: SAVE_V3_RULES.party.presets.max, name: presetName(save, activePreset(save)) },
     },
     boxes,
     eggs: { list: eggs, used: eggs.length, size: maxEggs },

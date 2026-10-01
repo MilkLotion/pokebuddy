@@ -1,6 +1,6 @@
 // window.pokebuddy — preload 가 contextBridge 로 내놓는 다리. 무대(stage.ts)와 선택 창(picker.ts)이 같은 preload 를 쓴다
 // 타입만 — 계약은 src/shared/stage.d.ts 한 곳. 이 파일은 emit 되지 않는다
-import type { BannerBridge, DexDeviceBridge, ManageBridge, PetDeviceBridge, MenuBridge, RegionBridge, ScreensBridge, ShopDeviceBridge, BagDeviceBridge } from "../shared/manage.js";
+import type { BannerBridge, DexDeviceBridge, ManageBridge, PetDeviceBridge, MenuBridge, RegionBridge, ScreensBridge, ShopDeviceBridge, BagDeviceBridge, PartyDeviceBridge } from "../shared/manage.js";
 import type { AlertBridge } from "../shared/alert.js";
 import type { StageBridge } from "../shared/stage.js";
 
@@ -16,6 +16,7 @@ declare global {
     pokebuddyPet: PetDeviceBridge; // 파티 상세 기기 창만 쓴다 (pet.ts)
     pokebuddyShop: ShopDeviceBridge; // 상점 기기 창만 쓴다 (shop.ts)
     pokebuddyBag: BagDeviceBridge; // 가방 기기 창만 쓴다 (bag.ts)
+    pokebuddyParty: PartyDeviceBridge; // 파티 기기 창(교체 화면)만 쓴다 (party.ts)
     pokebuddyAlert: AlertBridge; // 알림 창만 쓴다 (alert.ts)
   }
 }

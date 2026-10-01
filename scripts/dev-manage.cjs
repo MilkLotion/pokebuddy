@@ -20,6 +20,7 @@
 // `--pet-shot <파일>` 을 주면 파티 상세 기기 창도 PNG 로 저장한다. `--detail` 이나 칸을 누른 뒤에 쓴다.
 // `--shop-shot <파일>` 을 주면 상점 기기 창도 PNG 로 저장한다. 상품 줄을 누른 뒤에 쓴다.
 // `--bag-shot <파일>` 을 주면 가방 기기 창도 PNG 로 저장한다. 가방 칸을 누른 뒤에 쓴다.
+// `--party-shot <파일>` 을 주면 파티 기기 창(교체 화면)도 PNG 로 저장한다. 파티 탭의 `교체` 를 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
@@ -374,11 +375,22 @@ app.whenReady().then(async () => {
               : dexDone;
           const bagShot = argAfter("--bag-shot");
           const bag = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("bag.html"));
-          if (!bagShot || !bag) return shopDone;
-          return shopDone.then(() =>
-            bag.webContents.capturePage().then((d) => {
-              fs.writeFileSync(bagShot, d.toPNG());
-              process.stdout.write(`bag shot: ${bagShot} ${JSON.stringify(bag.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+          const bagDone =
+            bagShot && bag
+              ? shopDone.then(() =>
+                  bag.webContents.capturePage().then((d) => {
+                    fs.writeFileSync(bagShot, d.toPNG());
+                    process.stdout.write(`bag shot: ${bagShot} ${JSON.stringify(bag.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
+                  }),
+                )
+              : shopDone;
+          const partyShot = argAfter("--party-shot");
+          const party = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("party.html"));
+          if (!partyShot || !party) return bagDone;
+          return bagDone.then(() =>
+            party.webContents.capturePage().then((d) => {
+              fs.writeFileSync(partyShot, d.toPNG());
+              process.stdout.write(`party shot: ${partyShot} ${JSON.stringify(party.getBounds())} manage ${JSON.stringify(win.getContentBounds())}\n`);
             }),
           );
         })

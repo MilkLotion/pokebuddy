@@ -31,6 +31,8 @@ import type {
   ScreenView,
   BagDeviceAction,
   BagDeviceOpen,
+  PartyDeviceAction,
+  PartyDeviceOpen,
   ShopDeviceAction,
   ShopDeviceOpen,
   ShopItemView,
@@ -166,7 +168,6 @@ type Dialog =
   | { kind: "evolve"; petId: string; to?: string } // 진화 확인 — to 는 고른 후보
   | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
-  | { kind: "swap" } // 파티 교체 — 박스와 파티 사이를 끌어 놓아 옮긴다
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
@@ -208,6 +209,15 @@ let boxNote = ""; // 박스 명령이 실패한 이유 — 머리 부제 자리�
 let boxHold: { petId: string; boxId: string; slot: number } | null = null;
 let holdGhost: HTMLElement | null = null;
 let holdAt: { x: number; y: number } | null = null;
+// 교체 화면 — 박스 탭 + 파티 기기 창. 파티 탭의 `교체` 와 빈 파티 칸이 연다. 박스 탭을 나가거나 기기 창을 닫으면 끝난다.
+// 이 동안 박스 칸을 누르면 상세 대신 그 개체를 든다. 파티 기기 창의 칸을 누르면 그 칸에 놓는다 (2026-10-02 사용자 결정)
+let swapMode = false;
+let partyHold: string | null = null; // 파티 기기 창에서 든 파티 개체 — 박스 칸이나 다른 파티 칸을 누르면 거기 놓는다
+let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창의 머리 줄에 보인다
+let partyDeviceOpen = false;
+let partyDeviceSent = "";
+let partyGen = 0; // 파티 기기 창이 닫힐 때마다 받는 세대 번호 (src/main/device-gen.ts)
+let presetRenaming = false;
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
 type DragFrom = { boxId: string; slot: number } | { partyPet: string };
 let dragFrom: DragFrom | null = null;
@@ -636,17 +646,83 @@ function blankCard(slot: SlotView): HTMLElement {
   }
   // 문구는 Figma `Party Slot` state/empty 의 "박스에서 배치"
   card.append(blankIcon(false), el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
-  card.addEventListener("click", () => open({ kind: "swap" }));
+  card.addEventListener("click", openSwap);
   return card;
+}
+
+// 프리셋 이름 — 박스 이름과 같은 규칙이다. 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(프리셋 N)
+function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
+  if (!presetRenaming) {
+    const name = button("label box-name", preset.name);
+    name.title = "눌러서 이름 바꾸기";
+    name.addEventListener("click", () => {
+      presetRenaming = true;
+      draw();
+    });
+    return name;
+  }
+  const input = document.createElement("input");
+  input.className = "search box-name-input";
+  input.value = preset.name;
+  input.maxLength = BOX_NAME_MAX; // 프리셋 이름도 12자다 (src/save/rules.ts SAVE_V3_RULES.party.presets.nameMax)
+  input.setAttribute("aria-label", "프리셋 이름");
+  let done = false;
+  const finish = (save: boolean): void => {
+    if (done) return;
+    done = true;
+    presetRenaming = false;
+    const name = input.value;
+    if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
+    if (save && name.trim() !== preset.name) void send("party.preset.rename", "", { preset: preset.index, name });
+    else draw();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.isComposing) return;
+    if (e.key === "Enter") finish(true);
+    else if (e.key === "Escape") {
+      e.stopPropagation(); // 관리 창의 Esc(대화상자 닫기)로 번지지 않게
+      finish(false);
+    }
+  });
+  // 다시 그려서 빠진 칸의 blur 는 저장으로 치지 않는다
+  input.addEventListener("blur", () => setTimeout(() => input.isConnected && finish(true), 0));
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 0);
+  return input;
+}
+
+// 앞·뒤 프리셋을 적용한다 — 가진 프리셋 안에서 끝과 끝이 이어져 돈다. 바탕화면의 파티도 바뀐다.
+// 파티 탭 머리 줄, 가방 기기 창의 파티 줄, 파티 기기 창의 방향키가 같이 쓴다 (2026-10-02 사용자 결정)
+function stepPreset(delta: -1 | 1): void {
+  const p = view?.party.preset;
+  if (!p || p.count < 2) return;
+  partyHold = null;
+  void send("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
 }
 
 // 파티 칸 옮기기 — 개체 칸을 끌어 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다. 잠긴 칸에는 놓지 않는다.
 // 끌기는 박스 칸과 같은 포인터 끌기(startDrag)를 쓴다. 놓을 칸은 옅은 바탕으로만 보인다
 function drawParty(v: Snapshot): void {
-  const top = head("파티", `${v.party.shown}마리 표시 중 · ${v.party.usable} / ${v.party.slots.length}칸 사용 가능`);
-  // 머리 오른쪽 `교체` — 교체 모달을 연다 (Figma 05 `Party / Base` `217:1705` 머리 action)
+  // 머리 줄 — 파티 ◀ [프리셋 이름] ▶ … 교체. 넘김은 박스 넘김 줄과 같은 부품이다. 누르면 바로 그 프리셋을 적용한다.
+  // 마릿수·칸 수 부제는 두지 않는다 (2026-10-02 사용자 결정 "프리셋이름만 보여줘도 될거같아", Figma 05 `Party / Base` `217:1705`)
+  const top = head("파티");
+  const preset = v.party.preset;
+  const pager = el("div", "pager box-pager preset-pager");
+  const prev = button("", "◀");
+  prev.disabled = preset.count < 2;
+  prev.setAttribute("aria-label", "앞 프리셋");
+  prev.addEventListener("click", () => stepPreset(-1));
+  const next = button("", "▶");
+  next.disabled = preset.count < 2;
+  next.setAttribute("aria-label", "다음 프리셋");
+  next.addEventListener("click", () => stepPreset(1));
+  pager.append(prev, boxNameCell(presetNameEl(preset)), next);
+  top.appendChild(pager);
+  // 머리 오른쪽 `교체` — 박스 탭으로 가고 파티 기기 창을 띄운다 (Figma 05 `Party / Swap · Open` `1248:2567`)
   const swap = button("act swap-open", "교체");
-  swap.addEventListener("click", () => open({ kind: "swap" }));
+  swap.addEventListener("click", openSwap);
   top.appendChild(swap);
   bodyEl.appendChild(top);
   const grid = el("div", "grid");
@@ -1145,7 +1221,17 @@ function drawBox(v: Snapshot): void {
   pager.appendChild(boxSortEl(box));
   bodyEl.appendChild(pager);
 
-  const grid = el("div", hold ? "box-grid holding" : "box-grid");
+  const grid = el("div", hold || partyHold ? "box-grid holding" : "box-grid");
+  // 교체 화면에서 파티 기기 창의 개체를 든 채 박스 칸을 눌렀다 — 빈 칸이면 그 칸에 보관하고, 개체 칸이면 맞바꾼다
+  const dropParty = (slot: number, pet: PetView | null): void => {
+    const held = partyHold;
+    if (!held) return;
+    partyHold = null;
+    const at = slotOfPet(held);
+    if (!pet) void swapSend("party.keep", held, { toBoxId: box.id, toSlot: slot });
+    else if (at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
+    else draw();
+  };
   // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
   const dropHold = (toSlot: number): void => {
     const h = boxHold;
@@ -1167,13 +1253,19 @@ function drawBox(v: Snapshot): void {
     if (!pet) {
       const blank = el("div", "cell tall blank");
       blank.dataset.hold = "";
-      blank.addEventListener("click", () => dropHold(slot));
+      blank.addEventListener("click", () => (boxHold ? dropHold(slot) : dropParty(slot, null)));
       dropZone(blank, onDrop);
       grid.appendChild(blank);
       return;
     }
-    // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다)
-    const cell = boxSlot(pet, () => (boxHold ? dropHold(slot) : openPet(pet.id)));
+    // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다).
+    // 교체 화면에서는 좌클릭이 상세 대신 그 개체를 든다 (2026-10-02 사용자 결정 "박스칸을 누르면 바로 옮기기 한것처럼")
+    const cell = boxSlot(pet, () => {
+      if (boxHold) dropHold(slot);
+      else if (partyHold) dropParty(slot, pet);
+      else if (swapMode) startHold(pet.id);
+      else openPet(pet.id);
+    });
     cell.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       if (!boxHold) askPetMenu(pet.id);
@@ -1229,9 +1321,121 @@ function endHold(): void {
 }
 
 function cancelHold(): void {
-  if (!boxHold) return;
+  if (!boxHold && !partyHold) return;
   endHold();
+  partyHold = null;
   draw();
+}
+
+// ── 교체 화면 — 박스 탭 + 파티 기기 창 ──────────────────────────────────────────
+// 파티 탭의 `교체` 와 빈 파티 칸이 연다 (Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정 — 옛 교체 모달을 대신한다).
+// 조작은 포켓몬 메뉴의 `옮기기` 와 같다. 눌러서 들고 눌러서 놓는다
+//   박스 칸 → 파티 개체 칸    맞바꾸기(party.swap). 나간 개체는 들어온 개체가 있던 박스 칸으로
+//   박스 칸 → 파티 빈 칸      배치(party.place)
+//   파티 칸 → 다른 파티 칸    칸 옮기기(party.move)
+//   파티 칸 → 박스 빈 칸      보관(party.keep, 그 칸에)
+//   파티 칸 → 박스 개체 칸    맞바꾸기(party.swap)
+//   박스 칸 → 박스 칸         칸 옮기기(box.move) — 박스 탭의 옮기기 그대로
+// 프리셋 칩을 누르면 그 프리셋을 적용한다(party.preset)
+
+function openSwap(): void {
+  if (dialog) close();
+  endHold();
+  setTab("box");
+  swapMode = true;
+  partyHold = null;
+  partyNote = "";
+  draw();
+}
+
+function closeSwap(): void {
+  swapMode = false;
+  partyHold = null;
+  partyNote = "";
+}
+
+// 교체 명령 — 실패 이유는 파티 기기 창의 머리 줄에 보인다
+async function swapSend(cmd: string, target: string, extra: Record<string, unknown>): Promise<void> {
+  const ok = await send(cmd, target, extra, { keepOpen: true });
+  partyNote = ok ? "" : notice;
+  notice = "";
+  draw();
+}
+
+function partyDeviceModel(v: Snapshot): PartyDeviceOpen {
+  const holding = !!boxHold || !!partyHold;
+  const slots = v.party.slots.map((s) => {
+    const pet = s.pet ?? null;
+    return {
+      index: s.index,
+      state: pet ? ("pokemon" as const) : s.state === "locked" ? ("locked" as const) : ("empty" as const),
+      name: pet?.name ?? "",
+      level: pet ? `Lv.${pet.level}` : "",
+      art: pet ? portraitNow(pet.species, pet.shiny) : null,
+      held: !!pet && pet.id === partyHold,
+      target: holding && !pet && s.state !== "locked", // 놓을 칸 — 든 것이 있을 때의 빈 칸. 개체 칸은 눌러서 맞바꾼다
+    };
+  });
+  const p = v.party.preset;
+  return {
+    name: p.name,
+    slots,
+    presets: Array.from({ length: p.max }, (_, i) => ({ index: i, owned: i < p.count, active: i === p.index })),
+    notice: partyNote,
+  };
+}
+
+function syncPartyDevice(): void {
+  if (!swapMode || tab !== "box" || !view) {
+    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
+    if (partyDeviceOpen || partyDeviceSent) window.pokebuddyManage.partyOpen(null);
+    partyDeviceOpen = false;
+    partyDeviceSent = "";
+    return;
+  }
+  if (partyHold && slotOfPet(partyHold) == null) partyHold = null; // 든 개체가 파티에서 빠졌다
+  const open = partyDeviceModel(view);
+  const key = JSON.stringify(open);
+  if (partyDeviceOpen && key === partyDeviceSent) return;
+  window.pokebuddyManage.partyOpen(open, partyGen);
+  partyDeviceOpen = true;
+  partyDeviceSent = key;
+}
+
+// 파티 기기 창에서 누른 칸·칩
+function onPartyAction(action: PartyDeviceAction): void {
+  const v = view;
+  if (!swapMode || !v) return;
+  partyNote = "";
+  if (action.kind === "preset") {
+    const p = v.party.preset;
+    endHold();
+    partyHold = null;
+    if (action.index !== p.index && action.index < p.count) void swapSend("party.preset", "", { preset: action.index });
+    else draw();
+    return;
+  }
+  const slot = v.party.slots[action.index];
+  if (!slot || slot.state === "locked") return;
+  const h = boxHold;
+  if (h) {
+    // 박스 개체를 든 채 파티 칸을 눌렀다
+    endHold();
+    void swapSend(slot.pet ? "party.swap" : "party.place", h.petId, { slotIndex: slot.index });
+    return;
+  }
+  if (partyHold) {
+    // 파티 개체를 든 채 다른 파티 칸을 눌렀다. 제자리면 내려놓는다
+    const held = partyHold;
+    partyHold = null;
+    if (slot.pet?.id === held) draw();
+    else void swapSend("party.move", held, { toSlot: slot.index });
+    return;
+  }
+  if (slot.pet) {
+    partyHold = slot.pet.id;
+    draw();
+  }
 }
 
 // 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다
@@ -1267,12 +1471,12 @@ window.addEventListener("pointermove", (e) => {
 });
 // 칸과 ◀·▶ 밖을 누르면 취소한다 — 칸과 ◀·▶ 는 제 처리기가 먼저 돈다
 document.addEventListener("click", (e) => {
-  if (!boxHold) return;
+  if (!boxHold && !partyHold) return;
   if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
   cancelHold();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && boxHold) cancelHold();
+  if (e.key === "Escape" && (boxHold || partyHold)) cancelHold();
 });
 
 // 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
@@ -2040,6 +2244,7 @@ function portraitNow(slug: string, shiny: boolean): string | null {
       for (const [k, u] of Object.entries(got)) portraitCache.set(k, u);
       if (!portraitCache.has(key)) portraitCache.set(key, null);
       syncBagDevice();
+      syncPartyDevice();
     });
   }
   return null;
@@ -2076,7 +2281,7 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
   // 판매 쪽 — 수량, 받는 포인트. 한 거래로 판다 (src/shop/sell.ts)
   if (bagMode === "sell") {
     if (each === undefined) {
-      return { ...face, title: "판매하기", party: null, qty: null, preview: { lead: "팔 수 없는 도구예요", line: "", tone: "" }, go: { label: "팔기", disabled: true, busy: false } };
+      return { ...face, title: "판매하기", pager: false, party: null, qty: null, preview: { lead: "팔 수 없는 도구예요", line: "", tone: "" }, go: { label: "팔기", disabled: true, busy: false } };
     }
     const cap = Math.max(1, item.count);
     sellQty = Math.max(1, Math.min(sellQty, cap));
@@ -2088,6 +2293,7 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
     return {
       ...face,
       title: "판매하기",
+      pager: false,
       party: null,
       qty: { count: sellQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` },
       preview,
@@ -2100,7 +2306,7 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
   if (!party.some((p) => p.id === bagTarget)) bagTarget = party[0]?.id ?? null;
   const pet = party.find((p) => p.id === bagTarget) ?? null;
   const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitNow(p.species, p.shiny), picked: p.id === bagTarget }));
-  if (!pet) return { ...face, title: "파티에게 쓰기", party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } };
+  if (!pet) return { ...face, title: v.party.preset.name, pager: v.party.preset.count > 1, party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } };
   const blocked = bagBlocked(pet, item);
   const many = bagMany(item);
   const cap = many ? Math.max(1, candyMax(v, pet, item)) : 1;
@@ -2116,7 +2322,8 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
   }
   return {
     ...face,
-    title: "파티에게 쓰기",
+    title: v.party.preset.name, // 사용 쪽 머리 제목은 지금 프리셋 이름이다 (2026-10-02 사용자 결정)
+    pager: v.party.preset.count > 1,
     party: strip,
     qty: many ? { count: bagQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` } : null,
     preview,
@@ -2157,6 +2364,15 @@ function onBagAction(action: BagDeviceAction): void {
   if (!bagPick || action.itemId !== bagPick) return;
   if (action.kind === "go") {
     void (bagMode === "sell" ? sellBag(bagPick) : useBag(bagPick));
+    return;
+  }
+  if (action.kind === "preset") {
+    // 파티 줄 양끝의 ◀ ▶ — 앞·뒤 프리셋을 적용한다. 대상·수량·결과는 처음으로
+    bagNotice = "";
+    bagResult = "";
+    bagTarget = null;
+    bagQty = 1;
+    stepPreset(action.delta);
     return;
   }
   bagNotice = "";
@@ -3277,6 +3493,8 @@ function setTab(next: TabId): void {
   if (next === tab) return;
   detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
   if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
+  if (tab === "box") closeSwap(); // 교체 화면은 박스 탭을 나가면 끝난다 — 다음 draw 의 syncPartyDevice 가 파티 기기 창을 닫는다
+  presetRenaming = false;
   if (tab === "dex" && dexPick) {
     dexPick = null;
     window.pokebuddyManage.dexOpen(null, dexGen);
@@ -3315,6 +3533,7 @@ function drawBody(): void {
   syncShopDevice();
   if (bagPick && !view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
   syncBagDevice();
+  syncPartyDevice();
   if (tab === "party") drawParty(view);
   else if (tab === "box") drawBox(view);
   else if (tab === "dex") drawDex(view);
@@ -4254,128 +4473,6 @@ function drawNatureTarget(itemId: string): void {
   dialogEl.appendChild(actions(...acts, closeButton()));
 }
 
-// ── 모달 · 파티 교체 ───────────────────────────────────────────────────────────
-// 파티 머리의 `교체`와 빈 파티 칸이 연다 (Figma 05 `Party / Swap Modal` `1072:1752`·`Party / Swap Modal · Dragging` `1072:2290`, 2026-09-30 사용자 결정).
-// 왼쪽은 박스 탭의 박스 한 개(넘기기와 6×5 칸 — 검색·정렬·돌보미집 없음), 오른쪽은 파티 칸(초상·이름·레벨).
-// 조작은 끌어 놓기뿐이다. 누르기로 하는 조작은 없다
-//   박스 → 파티 개체 칸    맞바꾸기(party.swap). 나간 개체는 들어온 개체가 있던 박스 칸으로
-//   박스 → 파티 빈 칸      배치(party.place)
-//   파티 → 파티            칸 옮기기(party.move)
-//   파티 → 박스 빈 칸      보관(party.keep, 그 칸에)
-//   파티 → 박스 개체 칸    맞바꾸기(party.swap)
-//   박스 → 박스            칸 옮기기(box.move)
-let swapPage = 0;
-
-// 모달을 연 채로 보낸다 — 실패하면 모달 아래에 이유가 남는다
-const swapSend = (cmd: string, target: string, extra: Record<string, unknown>): Promise<boolean> => send(cmd, target, extra, { keepOpen: true });
-
-function swapCell(pet: PetView, from: DragFrom, onDrop: () => void): HTMLButtonElement {
-  const cell = boxCell(pet, () => undefined);
-  cell.title = `${pet.name} · 끌어서 옮기기`;
-  cell.addEventListener("pointerdown", (e) => startDrag(e, cell, from));
-  cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
-  dropZone(cell, onDrop);
-  return cell;
-}
-
-function drawSwap(): void {
-  const v = view;
-  const box = v?.boxes[Math.min(Math.max(swapPage, 0), (v?.boxes.length ?? 1) - 1)];
-  if (!v || !box) {
-    close();
-    return;
-  }
-  swapPage = v.boxes.indexOf(box);
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "파티 교체"));
-  const x = button("dialog-close", "✕");
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
-  top.append(titles, x);
-
-  // 박스 — 박스 탭과 같은 넘기기 줄과 칸
-  const side = el("div", "swap-box");
-  const pager = el("div", "pager");
-  const prev = button("", "◀");
-  prev.disabled = v.boxes.length <= 1;
-  prev.addEventListener("click", () => {
-    swapPage = wrapPage(swapPage - 1, v.boxes.length);
-    drawDialog();
-  });
-  const next = button("", "▶");
-  next.disabled = v.boxes.length <= 1;
-  next.addEventListener("click", () => {
-    swapPage = wrapPage(swapPage + 1, v.boxes.length);
-    drawDialog();
-  });
-  pager.className = "pager box-pager"; // 박스 탭과 같은 줄 — 이름 칸은 고정 폭, 칸 수는 두지 않는다
-  pager.append(prev, boxNameCell(el("span", "label", box.name)), next);
-  const grid = el("div", "box-grid");
-  box.slots.forEach((pet, slot) => {
-    const onDrop = (): void => {
-      const from = dragFrom;
-      if (!from) return;
-      if ("partyPet" in from) {
-        const at = slotOfPet(from.partyPet);
-        if (pet && at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
-        else if (!pet) void swapSend("party.keep", from.partyPet, { toBoxId: box.id, toSlot: slot });
-        return;
-      }
-      if (from.boxId === box.id && from.slot === slot) return;
-      void swapSend("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }).then((ok) => {
-        if (ok) unsorted(from.boxId, box.id);
-      });
-    };
-    if (!pet) {
-      const blank = el("div", "cell blank");
-      dropZone(blank, onDrop);
-      grid.appendChild(blank);
-      return;
-    }
-    grid.appendChild(swapCell(pet, { boxId: box.id, slot }, onDrop));
-  });
-  side.append(pager, grid);
-
-  // 파티 — 초상·이름·레벨만. 빈 칸은 +, 잠긴 칸은 자물쇠이고 잠긴 칸에는 놓지 않는다
-  const party = el("div", "swap-party");
-  const cells = el("div", "swap-party-grid");
-  for (const slot of v.party.slots) {
-    if (slot.state === "locked") {
-      const locked = el("div", "cell locked");
-      locked.title = "잠긴 칸";
-      locked.appendChild(blankIcon(true));
-      cells.appendChild(locked);
-      continue;
-    }
-    const onDrop = (): void => {
-      const from = dragFrom;
-      if (!from) return;
-      if ("partyPet" in from) {
-        if (from.partyPet !== slot.pet?.id) void swapSend("party.move", from.partyPet, { toSlot: slot.index });
-        return;
-      }
-      const pet = view?.boxes.find((b) => b.id === from.boxId)?.slots[from.slot];
-      if (pet) void swapSend(slot.pet ? "party.swap" : "party.place", pet.id, { slotIndex: slot.index });
-    };
-    if (!slot.pet) {
-      const blank = el("div", "cell blank");
-      blank.title = `${slot.index + 1}번 빈 칸`;
-      blank.appendChild(blankIcon(false));
-      dropZone(blank, onDrop);
-      cells.appendChild(blank);
-      continue;
-    }
-    cells.appendChild(swapCell(slot.pet, { partyPet: slot.pet.id }, onDrop));
-  }
-  party.append(el("div", "swap-label", "파티"), cells);
-
-  const body = el("div", "swap-body");
-  body.append(side, party);
-  dialogEl.append(top, body);
-}
-
-
 // ── 모달 · 업적창 ──────────────────────────────────────────────────────────────
 
 function achievementRow(a: AchievementView): HTMLElement {
@@ -4942,7 +5039,6 @@ const SHAPE: Record<Dialog["kind"], string> = {
   evolve: "dialog",
   nature: "dialog",
   "nature-target": "dialog",
-  swap: "dialog swap",
   achievements: "dialog tall",
   settings: "dialog settings",
   user: "dialog settings",
@@ -5006,7 +5102,6 @@ function drawDialog(): void {
   if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to);
   else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
   else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
-  else if (dialog.kind === "swap") drawSwap();
   else if (dialog.kind === "achievements") drawAchievements();
   else if (dialog.kind === "settings") drawSettings(dialog.tab);
   else if (dialog.kind === "user") drawUser(dialog.tab);
@@ -5556,6 +5651,17 @@ window.pokebuddyManage.onBagClosed((gen) => {
   bagDeviceSent = "";
   if (!bagPick) return;
   bagPick = null;
+  draw();
+});
+window.pokebuddyManage.onPartyAct((action) => onPartyAction(action));
+window.pokebuddyManage.onPartyStep((delta) => stepPreset(delta));
+window.pokebuddyManage.onPartyClosed((gen) => {
+  partyGen = gen;
+  partyDeviceOpen = false;
+  partyDeviceSent = "";
+  if (!swapMode) return;
+  closeSwap();
+  endHold();
   draw();
 });
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
