@@ -362,7 +362,8 @@
         white-space: nowrap;
       }
       /* 이름 뒤 성별 16 · 성격 — 이름만 줄어들고 이 둘은 줄지 않는다 (2026-09-30, Figma `identity-copy` `126:1075`) */
-      .slot .top .gender {
+      .slot .top .gender,
+      .slot .top .shiny {
         flex: none;
         align-self: center;
       }
@@ -1510,7 +1511,7 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      /* 박스 탭의 칸 — 95×86. 6×5 가 기본 창 높이(682)에서 스크롤 없이 맞는다. 초상과 이름만 가운데, 레벨은 오른쪽 위·이로치는 왼쪽 위 구석
+      /* 박스 탭의 칸 — 95×86. 6×5 가 기본 창 높이(682)에서 스크롤 없이 맞는다. 초상과 이름만 가운데, 레벨은 오른쪽 위·이로치 아이콘은 왼쪽 위 구석
          (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`). 커서를 따라가는 사본(.drag-ghost)도 같은 모양이라 칸 자신에 건다 */
       .cell.tall {
         aspect-ratio: auto;
@@ -1518,21 +1519,25 @@
         gap: 6px;
         padding: 0 2px;
       }
-      /* 구석 글자의 기준 — 커서를 따라가는 사본은 position: fixed 라 그대로 기준이 된다 */
-      .cell.tall:not(.drag-ghost) {
+      /* 구석 표시의 기준 — 커서를 따라가는 사본은 position: fixed 라 그대로 기준이 된다 */
+      .cell:not(.drag-ghost) {
         position: relative;
       }
-      .cell.tall .lv,
-      .cell.tall .tag {
+      .cell.tall .lv {
         position: absolute;
         top: 6px;
+        right: 7px;
         line-height: 14px;
       }
-      .cell.tall .lv {
-        right: 7px;
+      /* 이로치 아이콘 — 칸 왼쪽 위 구석 10 (Figma `Box Slot` 의 `shiny`, 박스 칸 7·8 / 교체 모달 칸 6·6) */
+      .cell .shiny {
+        position: absolute;
+        left: 6px;
+        top: 6px;
       }
-      .cell.tall .tag {
+      .cell.tall .shiny {
         left: 7px;
+        top: 8px;
       }
       /* 공유 sid 계열 — 계열 이름 아래에 지금 종 한 줄이 더 있다 */
       .cell.tall.family {
@@ -1679,14 +1684,20 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      /* 획득 표시 — 닫힌 몬스터볼 10 을 12 틀에 (Figma `acquired-mark`, `Visibility Marker` Small). 그림 예외라 색을 변수에 묶지 않는다 */
       .dex-cell .got {
         position: absolute;
-        left: 8px;
-        top: 8px;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--success);
+        left: 5px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        background: var(--ball-closed) center / 10px 10px no-repeat;
+      }
+      /* 이로치 획득 — 몬스터볼 옆 이로치 아이콘 10 */
+      .dex-cell .shiny {
+        position: absolute;
+        left: 20px;
+        top: 6px;
       }
       /* 상점 포켓몬 칸 — 도감 칸에 가격 한 줄 (2026-09-29 사용자 결정 "도감처럼 격자 칸"). 값은 상품 줄의 가격과 같다 */
       .shop-cell .price {
@@ -2938,6 +2949,16 @@
         font-size: 15px;
         font-family: var(--font-large);
         font-weight: 400;
+      }
+      /* 이름 옆 이로치 아이콘 — 교환 카드 10(큰 카드 16), 부화 결과 16 */
+      .trade-info strong .shiny,
+      .dialog.hatched .name .shiny {
+        margin-left: 4px;
+        vertical-align: middle;
+      }
+      .trade-pet.big .trade-info strong .shiny {
+        width: 16px;
+        height: 16px;
       }
       .trade-info {
         display: flex;

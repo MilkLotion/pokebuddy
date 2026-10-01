@@ -3,6 +3,7 @@
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
 import type { PetDeviceAction, PetDeviceView } from "../shared/manage.js";
 import { genderIcon } from "./gender.js";
+import { shinyIcon } from "./shiny.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -352,11 +353,12 @@ function renderBody(v: PetDeviceView): void {
   if (v.portrait) stage.appendChild(sprite(v.portrait));
   entry.appendChild(stage);
   const info = el("div", "info");
-  // 이름 줄 — 이름 · 성별 24 (Figma `862:22000` 의 `gender`, 2026-09-30 사용자 결정)
+  // 이름 줄 — 이름 · 성별 24 · 이로치 24 (Figma `862:22000` 의 `gender`·`shiny`, 2026-09-30·2026-10-02 사용자 결정)
   const nameRow = el("div", "name-row");
   nameRow.appendChild(el("div", "name", pet.name));
   const sex = genderIcon(pet.gender, 24);
   if (sex) nameRow.appendChild(sex);
+  if (pet.shiny) nameRow.appendChild(shinyIcon(24));
   info.appendChild(nameRow);
   info.appendChild(el("div", "sub", NATURE_UI ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
   const types = el("div", "types");

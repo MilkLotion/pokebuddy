@@ -52,6 +52,9 @@ save.bag["exp-candy-s"] = 3;
 const sharedId = nextPetId(save);
 save.pets.push({ ...newPet({ id: sharedId, species: "cosmoem", shiny: false, nature: "hardy", gender: "male", now: 0 }), evolved: ["cosmog"] });
 putPet(save.boxes, sharedId);
+// 이로치 표시 검사 (마지막) — 파티의 첫 개체와 박스의 공유 계열 개체를 이로치로, 파이리는 도감에 이로치 획득으로 둔다
+for (const pet of save.pets) if (pet.id === sharedId || pet.species === "charmander") pet.shiny = true;
+save.dex.shinyObtained.push("charmander");
 const snap = { ...snapshot(save), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
 const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
@@ -808,7 +811,33 @@ void app.whenReady().then(async () => {
     assert.equal(await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`), "돌보미집", "Esc — 남은 결과를 건너뛰고 돌보미집으로");
     await js(`window.__reply = null; window.__eggs = null; 0`);
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 그림 ${shots}\n`);
+    // 이로치 표시 — 글자 `이로치` 대신 아이콘. 파티 카드는 성별 아이콘 옆, 박스 칸은 왼쪽 위 구석, 도감 칸은 몬스터볼 옆 (2026-10-02 사용자 결정)
+    await js(`${key("Escape")}; 0`);
+    await wait(300);
+    const at = (sel: string): string => `(() => { const n = document.querySelector('${sel}'); if (!n) return null; const r = n.getBoundingClientRect(); const c = n.closest('.cell, .dex-cell, .slot').getBoundingClientRect(); return { x: Math.round(r.left - c.left), y: Math.round(r.top - c.top), w: Math.round(r.width), label: n.getAttribute('aria-label') }; })()`;
+    // 아이콘의 <title> 은 뺀다 — 화면에 보이는 글자만 본다
+    const noText = `(() => { const c = document.querySelector('#body').cloneNode(true); c.querySelectorAll('svg').forEach((n) => n.remove()); return !/이로치/.test(c.textContent); })()`;
+    await js(`${tabBtn("파티")}.click(); 0`);
+    await wait(400);
+    const partyMark = await js<{ w: number; label: string } | null>(at("#body .slot .top .gender + .shiny"));
+    assert.equal(partyMark?.w, 16, "파티 카드 — 성별 아이콘 옆 이로치 아이콘 16");
+    assert.equal(partyMark?.label, "이로치");
+    assert.equal(await js<boolean>(noText), true, "파티 탭에 글자 이로치가 없다");
+    await shot("shiny-party.png");
+    await js(`${tabBtn("박스")}.click(); 0`);
+    await wait(400);
+    assert.deepEqual(await js<unknown>(at("#body .cell.tall .shiny")), { x: 8, y: 9, w: 10, label: "이로치" }, "박스 칸 — 왼쪽 위 구석(테두리 안쪽 7·8) 이로치 아이콘 10");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .cell.tall .shiny').length`), 1, "이로치 개체 칸에만 있다");
+    assert.equal(await js<boolean>(noText), true, "박스 탭에 글자 이로치가 없다");
+    await shot("shiny-box.png");
+    await js(`${tabBtn("도감")}.click(); 0`);
+    await wait(600);
+    assert.deepEqual(await js<unknown>(at('#body .dex-cell[data-slug="charmander"] .got')), { x: 6, y: 6, w: 12, label: "획득" }, "도감 칸 — 획득은 왼쪽 위 몬스터볼");
+    assert.deepEqual(await js<unknown>(at('#body .dex-cell[data-slug="charmander"] .shiny')), { x: 21, y: 7, w: 10, label: "이로치 획득" }, "도감 칸 — 몬스터볼 옆 이로치 아이콘");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell .shiny').length`), 1, "이로치를 얻은 종에만 있다");
+    await shot("shiny-dex.png");
+
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 이로치 아이콘 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

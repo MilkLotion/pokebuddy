@@ -41,6 +41,7 @@ import type {
   UpdateView,
 } from "../shared/manage.js";
 import { genderIcon } from "./gender.js";
+import { shinyIcon } from "./shiny.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
@@ -397,7 +398,7 @@ let portraitTimer: ReturnType<typeof setTimeout> | null = null;
 
 function paintPortrait(host: HTMLElement, uri: string, cls = "art"): void {
   if (host.classList.contains("has-art")) return;
-  for (const n of [...host.childNodes]) if (n.nodeType === Node.TEXT_NODE) n.remove(); // "이로치" 같은 자리 글자는 그림이 대신한다
+  for (const n of [...host.childNodes]) if (n.nodeType === Node.TEXT_NODE) n.remove(); // 자리 글자는 그림이 대신한다
   const img = document.createElement("img");
   img.className = cls;
   img.alt = "";
@@ -556,7 +557,7 @@ function typeBadge(name: string, id: string | undefined): HTMLElement {
 function petCard(pet: PetView): HTMLElement {
   const card = button("slot");
 
-  const portrait = portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : "");
+  const portrait = portraitOf(pet.species, pet.shiny, "portrait");
   if (pet.hidden) {
     const mark = el("span", "mark");
     mark.title = "숨긴 상태";
@@ -571,6 +572,8 @@ function petCard(pet: PetView): HTMLElement {
   top.append(el("span", undefined, `Lv.${pet.level}`), el("div", "name", pet.name));
   const sex = genderIcon(pet.gender, 16);
   if (sex) top.appendChild(sex);
+  // 이로치 아이콘 — 성별 아이콘 옆 16 (Figma `Party Slot Card` 의 `Show Shiny`, 2026-10-02 사용자 결정)
+  if (pet.shiny) top.appendChild(shinyIcon(16));
   if (NATURE_UI) top.appendChild(el("span", "nature", pet.nature));
   info.appendChild(top);
 
@@ -793,7 +796,9 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
     const tags = el("div", "tags");
     pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
-    card.append(portraitOf(pet.species, pet.shiny, "portrait", pet.shiny ? "이로치" : ""), el("div", "name", pet.shiny ? `${pet.name} · 이로치` : pet.name), tags);
+    const name = el("div", "name", pet.name);
+    if (pet.shiny) name.appendChild(shinyIcon(16));
+    card.append(portraitOf(pet.species, pet.shiny, "portrait"), name, tags);
   }
   // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. ✕·Esc·바깥 누르기는 남은 결과를 건너뛴다(dismiss)
   const next = queue?.[at + 1];
@@ -973,11 +978,12 @@ function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
   const forms = pet.forms;
   if (forms && forms.length > 1) {
     // 공유 sid 계열 — 모습들을 한 장의 단체사진으로, 이름은 계열, 아래 줄은 지금 종 (Figma `Box / Shared Profile` `481:1227`)
-    const level = pet.shiny ? `Lv.${pet.level} · 이로치` : `Lv.${pet.level}`;
-    cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note", `${level} · ${pet.name}`));
+    cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note", `Lv.${pet.level} · ${pet.name}`));
   } else {
-    cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", pet.shiny ? `Lv.${pet.level} · 이로치` : `Lv.${pet.level}`));
+    cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
   }
+  // 이로치 아이콘 — 칸 왼쪽 위 구석 10 (Figma `Box Slot` 의 `Show Shiny`)
+  if (pet.shiny) cell.appendChild(shinyIcon(10));
   cell.addEventListener("click", onPick);
   return cell;
 }
@@ -1056,7 +1062,7 @@ function drawForm(petId: string, to: string): void {
   dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
 }
 
-// 박스 탭의 칸 — 95×86. 초상과 이름만 가운데에 두고 레벨은 오른쪽 위, 이로치는 왼쪽 위 구석이다.
+// 박스 탭의 칸 — 95×86. 초상과 이름만 가운데에 두고 레벨은 오른쪽 위, 이로치 아이콘은 왼쪽 위 구석이다.
 // 6×5 가 기본 창 높이에서 스크롤 없이 맞는다 (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`).
 // 공유 sid 계열은 단체사진·계열 이름 아래에 지금 종을 한 줄 더 둔다. 교체 모달의 작은 칸은 boxCell 을 그대로 쓴다
 function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
@@ -1069,7 +1075,7 @@ function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
     cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name));
   }
   cell.appendChild(el("div", "note lv", `Lv.${pet.level}`));
-  if (pet.shiny) cell.appendChild(el("div", "note tag", "이로치"));
+  if (pet.shiny) cell.appendChild(shinyIcon(10));
   cell.addEventListener("click", onPick);
   return cell;
 }
@@ -1469,7 +1475,8 @@ document.addEventListener("click", () => {
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
-// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 좌상단 점 하나 (Figma 04 템플릿 `Dex Layout` `378:1524`)
+// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 왼쪽 위 몬스터볼, 이로치 획득은 그 옆 이로치 아이콘
+// (Figma 04 템플릿 `Dex Layout` `378:1524`, 2026-10-02 사용자 결정 "초록점말고 몬스터볼아이콘으로 … 안2로")
 function dexCell(row: DexEntry): HTMLElement {
   const cell = button(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
   cell.dataset.slug = row.slug;
@@ -1479,9 +1486,11 @@ function dexCell(row: DexEntry): HTMLElement {
   cell.append(portraitOf(row.slug, false, "dot", "", true), el("div", "who", row.state === "locked" ? "???" : row.name), el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`));
   if (row.state === "obtained") {
     const got = el("span", "got");
-    got.title = row.shiny ? "이로치 획득" : "획득";
+    got.title = "획득";
+    got.setAttribute("role", "img");
     got.setAttribute("aria-label", got.title);
     cell.appendChild(got);
+    if (row.shiny) cell.appendChild(shinyIcon(10, "이로치 획득"));
   }
   return cell;
 }
@@ -2356,7 +2365,9 @@ function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
     return line;
   }
   const info = el("div", "trade-info");
-  info.append(el("strong", undefined, card.name), el("div", "trade-meta", card.shiny ? `${lvNature(card.level, card.nature)} · 이로치` : lvNature(card.level, card.nature)));
+  const name = el("strong", undefined, card.name);
+  if (card.shiny) name.appendChild(shinyIcon(10));
+  info.append(name, el("div", "trade-meta", lvNature(card.level, card.nature)));
   const tags = el("div", "tags");
   card.types.forEach((name, i) => tags.appendChild(typeBadge(name, card.typeIds[i])));
   info.appendChild(tags);
@@ -2464,6 +2475,7 @@ function tradePicker(t: TradeScreen): HTMLElement {
   const cell = (pet: PetView): HTMLElement => {
     const b = button("cell trade-cell");
     b.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
+    if (pet.shiny) b.appendChild(shinyIcon(10));
     const single = singles.has(pet.id);
     b.disabled = single || t.myReady || t.busy;
     if (single) b.classList.add("off");
