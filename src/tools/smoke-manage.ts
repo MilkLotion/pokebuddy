@@ -694,6 +694,11 @@ void app.whenReady().then(async () => {
       return [x(b[0]), x(b[1]), x(p.querySelector('.box-sort')), Math.round(document.querySelector('#body .box-grid').getBoundingClientRect().top)].join(',');
     })()`;
     assert.equal(await js<boolean>(`!!document.querySelector('#body .pager .used')`), false, "넘김 줄에 칸 수(12 / 30)를 두지 않는다");
+    assert.deepEqual(
+      await js<unknown>(`({ pager: document.querySelectorAll('#body .pager [data-drop]').length, cells: document.querySelectorAll('#body .box-grid > [data-drop]').length })`),
+      { pager: 0, cells: 30 },
+      "끌어 놓을 곳은 지금 박스의 칸 30개뿐이다 — ◀·▶ 에는 놓지 못한다",
+    );
     const pagerShort = await js<string>(pagerAt);
     await js(`window.__boxName = '전설의포켓몬보관함입니다'; window.__bump = 11; 0`);
     await wait(1400);
