@@ -57,20 +57,23 @@ out("0 supabase/functions/_shared 가 최신");
   out("1 정상 진행 — 위반 없음");
 }
 
-// 2. 포인트 — 한 시간 720P, 짧은 틈의 지연 여유, 99999, 우편, 72시간
+// 2. 포인트 — 한 시간 2,016P(6마리 × 친밀도 2 × 작업 2 × 돌봄 보너스 2.8), 짧은 틈의 지연 여유, 99999, 우편, 72시간
 {
   const prev = base();
   const ok = clone(prev);
-  ok.points.balance += 800;
-  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 800P 는 상한 안(지연 여유 포함)");
+  ok.points.balance += 2200;
+  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 2,200P 는 상한 안(지연 여유 포함)");
+  const tooFast = clone(prev);
+  tooFast.points.balance += 2400;
+  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 2,400P 는 위반");
   const quick = clone(prev);
-  quick.points.balance += 12; // 파일 쓰기 지연 — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
+  quick.points.balance += 30; // 파일 쓰기 지연 — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
   assert.deepEqual(rules(prev, quick, ctx(1_000)), [], "짧은 틈의 지연 여유");
   const over = clone(prev);
   over.points.balance = 99_999;
   assert.deepEqual(rules(prev, over, ctx(HOUR)), ["points"], "99999 는 위반");
   const long = clone(prev);
-  long.points.balance += 720 * 72;
+  long.points.balance += 2016 * 72;
   assert.deepEqual(rules(prev, long, ctx(72 * HOUR)), [], "72시간 진행");
   out("2 포인트 — 상한·지연 여유·99999·72시간");
 }
@@ -177,16 +180,17 @@ out("0 supabase/functions/_shared 가 최신");
   const offer = { species: "pikachu", shiny: true, nature: "hardy", gender: "male", size: 1.5, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80, fullness: 100, mood: 60, stage: 0, evolved: [] };
   const tradedNext = clone(prev);
   tradedNext.pets = [pet("p2", "pikachu", { shiny: true, level: 40, exp: expForLevel("medium-fast", 40), affinity: 80 })];
-  assert.deepEqual(rules(prev, tradedNext, ctx(60_000)), ["affinity", "exp", "new-pets", "shiny"], "교환 기록 없이는 위반");
+  // 틈 1초 — 사라진 개체의 판매가(50P)와 그사이 적립으로 알(120P)을 살 수 없는 틈이다
+  assert.deepEqual(rules(prev, tradedNext, ctx(1_000)), ["affinity", "exp", "new-pets", "shiny"], "교환 기록 없이는 위반");
   assert.deepEqual(rules(prev, tradedNext, ctx(60_000, { received: [offer] })), [], "받은 제안과 같은 개체");
   // 받은 개체를 부풀렸다 — 제안보다 경험치·친밀도가 큰 몫은 사탕·장난감 예산으로 센다
   const inflated = clone(prev);
   inflated.pets = [pet("p2", "pikachu", { shiny: true, level: 100, exp: expForLevel("medium-fast", 100), affinity: 100 })];
-  assert.deepEqual(rules(prev, inflated, ctx(60_000, { received: [offer] })), ["affinity", "exp"], "받은 개체의 경험치·친밀도를 부풀림");
+  assert.deepEqual(rules(prev, inflated, ctx(1_000, { received: [offer] })), ["affinity", "exp"], "받은 개체의 경험치·친밀도를 부풀림"); // 틈 1초 — 장난감(20P)을 다섯 개 살 수 없는 틈이다
   // 다른 종으로 바꿨다 — 제안과 맞지 않는다
   const swapped = clone(prev);
   swapped.pets = [pet("p2", "mewtwo", { shiny: true, level: 40, exp: expForLevel("slow", 40), affinity: 80 })];
-  assert.ok(rules(prev, swapped, ctx(60_000, { received: [offer] })).includes("new-pets"), "받은 제안과 다른 종");
+  assert.ok(rules(prev, swapped, ctx(1_000, { received: [offer] })).includes("new-pets"), "받은 제안과 다른 종");
   // 받은 개체에 같은 틈에 이로치 약 — 약을 썼으면 통과, 약이 없으면 shiny(검수 P5 M1)
   const plainOffer = { ...offer, shiny: false };
   const potioned = clone(prev);
@@ -205,7 +209,7 @@ out("0 supabase/functions/_shared 가 최신");
   const held = clone(prev);
   held.trade = { pending: { channelId: "c1", petId: "p1", offerRev: 1, received: null } };
   assert.deepEqual(rules(held, tradedNext, ctx(60_000, { receivedBefore: { c1: offer } })), [], "직전 저장 전에 끝난 교환");
-  assert.ok(rules(held, tradedNext, ctx(60_000)).includes("new-pets"), "끝나지 않은 채널로는 인정하지 않는다");
+  assert.ok(rules(held, tradedNext, ctx(1_000)).includes("new-pets"), "끝나지 않은 채널로는 인정하지 않는다");
   out("7 새 개체 — 출처·시작값·교환");
 }
 
@@ -266,9 +270,12 @@ out("0 supabase/functions/_shared 가 최신");
   care.pets[0]!.affinity = 55;
   broke(aff, care, ctx(0));
   assert.deepEqual(rules(aff, care, ctx(1_000)), [], "짧은 틈에 밥·놀기 한 번씩");
-  const fast = clone(aff);
+  // 장난감(20P, 친밀도 +3)을 살 포인트가 없는 틈 — 포인트 0 에서 1분
+  const poor = clone(aff);
+  poor.points.balance = 0;
+  const fast = clone(poor);
   fast.pets[0]!.affinity = 100;
-  assert.deepEqual(rules(aff, fast, ctx(10 * 60_000)), ["affinity"], "10분에 +50");
+  assert.deepEqual(rules(poor, fast, ctx(60_000)), ["affinity"], "1분에 +50");
   const work = base();
   const worked = clone(work);
   worked.totals.workMs += 5 * HOUR;

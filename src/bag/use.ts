@@ -45,13 +45,13 @@ const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<
 
 export const itemOf = (id: string, opts?: DexOptions): ItemEntry | null => (id.startsWith("_") ? null : items(opts)[id] ?? null);
 
-// 버프를 건다. 남아 있으면 기본 지속시간으로 바꾼다. 더하지 않는다.
+// 버프를 건다. 남아 있으면 지속시간으로 바꾼다. 더하지 않는다.
+// 남은 시간이 더 길면 그대로 둔다 — 장난감 신남(2시간)이 남은 동안 3중첩 놀아주기(30분)가 줄이지 않는다.
 // 신남(long-play)을 걸면 들뜸(short-play)은 지운다 — 아랫단계가 윗단계로 바뀐다(곱하지 않는다, 제안). 놀아주기(src/state/care.ts)와 장난감이 함께 쓴다
-export function setBuff(pet: PetV3, kind: BuffKind): void {
+export function setBuff(pet: PetV3, kind: BuffKind, remainMs: number = BAG_V3_RULES.buffMs[kind]): void {
   if (kind === "long-play") pet.buffs = pet.buffs.filter((b) => b.kind !== "short-play");
-  const remainMs = BAG_V3_RULES.buffMs[kind];
   const hit = pet.buffs.find((b) => b.kind === kind);
-  if (hit) hit.remainMs = remainMs;
+  if (hit) hit.remainMs = Math.max(hit.remainMs, remainMs);
   else pet.buffs.push({ kind, remainMs });
 }
 
@@ -96,7 +96,7 @@ export function use(save: SaveV3, itemId: string, petId: string, args: { nature?
       return done({ fullness: pet.fullness });
     }
     case "play-buff": {
-      setBuff(pet, "long-play"); // 장난감은 신남을 준다
+      setBuff(pet, "long-play", BAG_V3_RULES.toyBuffMs); // 장난감은 신남을 준다. 놀아주기로 켠 신남보다 길다
       addAffinity(pet, BAG_V3_RULES.playAffinity);
       pet.mood = Math.min(100, pet.mood + MOOD_RULES.play); // 장난감도 놀아주기다
       pet.daily.plays += 1;

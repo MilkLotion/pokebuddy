@@ -11,7 +11,7 @@
    "amount": 100
   },
   "toy": {
-   "price": 40,
+   "price": 20,
    "effect": "play-buff",
    "amount": 0
   },
@@ -3510,23 +3510,27 @@
    "bonus": [
     [
      "sub-legendary",
-     0.015
+     0.01
     ],
     [
      "ultra-beast",
-     0.02
+     0.005
     ],
     [
      "paradox",
-     0.02
+     0.005
     ],
     [
      "mythical",
-     0.02
+     0.003
     ],
     [
      "legendary",
-     0.005
+     0.002
+    ],
+    [
+     "ancient-stone",
+     0.03
     ]
    ],
    "single": false,
@@ -4794,7 +4798,7 @@
  "rules": {
   "pointMs": 120000,
   "maxPartySlots": 6,
-  "maxEarnFactor": 4,
+  "maxEarnFactor": 11.2,
   "findPointsMax": 10,
   "mintRefund": 100,
   "sellRatio": 0.6,

@@ -37,7 +37,7 @@ function seed(e: Partial<EggV3> = {}): SaveV3 {
   return s;
 }
 
-// 랜덤알을 열 때 처음 뽑는 값 — 이 값이면 다른 알이 나오지 않는다 (data/eggs.json random.bonus 합 6%)
+// 랜덤알을 열 때 처음 뽑는 값 — 이 값이면 다른 알이 나오지 않는다 (data/eggs.json random.bonus 합 5.5%)
 const NO_BONUS = 0.99;
 
 // 정해진 값을 차례로 돌려주는 가짜 무작위
@@ -136,14 +136,16 @@ const fixed = (...values: number[]): (() => number) => {
   process.stdout.write("(13) 개체 식별자 이어 붙이기  ok\n");
 }
 
-// (14) 랜덤알에서 단일 포켓몬 알이 나온다 — 누적 확률 준전설 1.5 · 울트라비스트 2 · 패러독스 2 · 환상 2 · 전설 0.5 (%)
+// (14) 랜덤알에서 다른 알이 나온다 — 준전설 1 · 울트라비스트 0.5 · 패러독스 0.5 · 환상 0.3 · 전설 0.2 · 태고의돌 3 (%), 합 5.5 (2026-10-02 사용자 결정)
 {
   const cases: [number, string, number][] = [
-    [0.01, "sub-legendary", 45], // 가라르 프리져·썬더·파이어 포함 (data/regional.json, 2026-09-30)
-    [0.02, "ultra-beast", 10],
-    [0.04, "paradox", 20],
-    [0.06, "mythical", 22],
-    [0.077, "legendary", 24],
+    [0.005, "sub-legendary", 45], // 가라르 프리져·썬더·파이어 포함 (data/regional.json, 2026-09-30)
+    [0.012, "ultra-beast", 10],
+    [0.017, "paradox", 20],
+    [0.021, "mythical", 22],
+    [0.024, "legendary", 24],
+    [0.026, "ancient-stone", 15], // 화석 15종 — 단일 포켓몬 알이 아니라 늘 줄 수 있다
+    [0.054, "ancient-stone", 15],
   ];
   for (const [roll, kind, count] of cases) {
     const s = seed({ remainMs: 0, ready: true });
@@ -159,6 +161,11 @@ const fixed = (...values: number[]): (() => number) => {
     assert.equal(next?.candidates.length, count);
     assert.equal(s.pets.length, 0);
   }
+  // 합 5.5% 를 넘으면 포켓몬이 나온다
+  const plain = seed({ remainMs: 0, ready: true });
+  const hatched = open(plain, "e1", T0, fixed(0.056, 0, 0.5, 0.5));
+  assert.equal(hatched.egg, undefined);
+  assert.ok(hatched.petId, "5.6% 자리는 포켓몬");
   // 태고의돌은 다른 알을 주지 않는다 — 무작위를 쓰지 않고 바로 뽑는다
   const s = seed({ kind: "ancient-stone", remainMs: 0, ready: true, candidates: ["omanyte"], actions: { pat: 1, song: 0 } });
   assert.equal(open(s, "e1", T0, fixed(0, 0.5)).species, "omanyte");
@@ -190,7 +197,7 @@ const fixed = (...values: number[]): (() => number) => {
   assert.equal(shopList(s).find((p) => p.id === "ultra-beast")?.blocked, "모두 모았어요");
   // 랜덤알 보너스가 울트라비스트를 뽑아도 줄 수 없으면 포켓몬이 나온다
   s.eggs.push(egg({ id: "e9", remainMs: 0, ready: true, actions: { pat: 1, song: 0 } }));
-  const res = open(s, "e9", T0, fixed(0.02, 0, 0.5, 0.5));
+  const res = open(s, "e9", T0, fixed(0.012, 0, 0.5, 0.5));
   assert.equal(res.egg, undefined);
   assert.ok(res.species === "charmander" || res.species === "squirtle");
   process.stdout.write("(16) 단일 포켓몬 알 · 품절  ok\n");

@@ -342,7 +342,7 @@ function seed(points: number): SaveV3 {
   assert.equal(sell(pure, "toy", 3).reason, "not-enough-items");
   assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [2, 0], "거절하면 하나도 팔지 않는다");
   assert.ok(sell(pure, "toy", 2).ok);
-  assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [undefined, 48], "다 팔면 칸이 사라진다 (40P × 60% × 2)");
+  assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [undefined, 24], "다 팔면 칸이 사라진다 (20P × 60% × 2)");
   process.stdout.write("(11) 가방 판매 · 60% 내림 · 판매 불가 · 보유 부족 · 원자성  ok\n");
 }
 

@@ -121,7 +121,7 @@ try {
   process.stdout.write("(5) SC-04 · 시간이 지나 준비 완료  ok\n");
 
   // 열기 — 산 때의 후보에서 나온다.
-  // 첫 값은 랜덤알의 다른 알 추첨이다(data/eggs.json random.bonus 합 6%). 0.99 면 나오지 않는다
+  // 첫 값은 랜덤알의 다른 알 추첨이다(data/eggs.json random.bonus 합 5.5%). 0.99 면 나오지 않는다
   const candidates = w.save().eggs[0]?.candidates ?? [];
   w.setRolls([0.99, 0, 0.5, 0.5]);
   const hatched = w.ok("open1", "egg.open", { eggId });

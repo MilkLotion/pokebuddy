@@ -14,7 +14,7 @@ const load = (f) => JSON.parse(fs.readFileSync(path.join(root, 'data', f), 'utf8
 const lf = (t) => t.replace(/\r\n/g, '\n');
 
 function build() {
-  const { TIME_V3_RULES, SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, EGG_V3_RULES, BAG_V3_RULES } = require(path.join(root, 'dist/save/rules.js'));
+  const { TIME_V3_RULES, SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, EGG_V3_RULES, BAG_V3_RULES, MOOD_RULES } = require(path.join(root, 'dist/save/rules.js'));
   const { FIND_RULES } = require(path.join(root, 'dist/find/rules.js'));
   const { MINT_REFUND_EACH } = require(path.join(root, 'dist/bag/mint.js'));
   const { STATE_RULES } = require(path.join(root, 'dist/state/rules.js'));
@@ -93,7 +93,8 @@ function build() {
     rules: {
       pointMs: TIME_V3_RULES.pointGainMs,
       maxPartySlots: SAVE_RULES.slots.max,
-      maxEarnFactor: 4,
+      // 친밀도 배율(2) × 작업 배율(2) × 돌봄 보너스 최대(든든함 + 신남 + 기분 최고) — src/state/time.ts carePercent
+      maxEarnFactor: (4 * (buffTop + Math.max(0, ...MOOD_RULES.pointBonus.map((b) => b.percent)))) / 100,
       findPointsMax: FIND_RULES.points.max,
       mintRefund: MINT_REFUND_EACH,
       sellRatio: SHOP_V3_RULES.sellRate,

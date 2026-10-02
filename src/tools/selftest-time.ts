@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import { TIME_V3_RULES } from "../save/rules";
 import { empty } from "../save/v3";
-import { affinityPercent, applyTime, buffPercent, zoneOf } from "../state/time";
+import { affinityPercent, applyTime, buffPercent, carePercent, zoneOf } from "../state/time";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -64,7 +64,7 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const s = seed();
   applyTime(s, 20 * MIN, T0 + 20 * MIN);
   assert.equal(s.points.balance, 10, "20분에 10");
-  const fast = seed({ affinity: 100 });
+  const fast = seed({ affinity: 100, mood: 59 }); // 기분 보통 — 돌봄 보너스가 없다
   applyTime(fast, 20 * MIN, T0 + 20 * MIN);
   assert.equal(fast.points.balance, 20, "친밀도 100 이면 두 배");
   process.stdout.write("(4) 포인트 · 친밀도로 빨라진다  ok\n");
@@ -227,4 +227,35 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(16) 기분 · 박스·바닥·틱 나누기  ok\n");
 }
 
-process.stdout.write("selftest-time: 통과 (만복도·친밀도·포인트·버프·구간·알·작업 보너스·기분)\n");
+// (17) 돌봄 보너스 — 친밀도 100 인 개체는 기분 단계와 버프가 포인트 적립을 올린다 (2026-10-02 사용자 결정)
+{
+  const earn = (over: Partial<PetV3>): number => {
+    const s = seed(over);
+    applyTime(s, 20 * MIN, T0 + 20 * MIN);
+    return s.points.balance;
+  };
+  const food = [{ kind: "premium-food" as const, remainMs: 2 * HOUR }];
+  const long = [{ kind: "long-play" as const, remainMs: 2 * HOUR }];
+  const short = [{ kind: "short-play" as const, remainMs: 2 * HOUR }];
+  assert.equal(earn({ affinity: 100, mood: 60 }), 23, "좋음 +15%");
+  assert.equal(earn({ affinity: 100, mood: 79 }), 23, "79 까지 좋음");
+  assert.equal(earn({ affinity: 100, mood: 80 }), 26, "최고 +30%");
+  assert.equal(earn({ affinity: 100, mood: 0, buffs: food }), 40, "든든함 +100%");
+  assert.equal(earn({ affinity: 100, mood: 0, buffs: long }), 30, "신남 +50%");
+  assert.equal(earn({ affinity: 100, mood: 0, buffs: short }), 24, "들뜸 +20%");
+  assert.equal(earn({ affinity: 100, mood: 100, buffs: [...food, ...long] }), 56, "더한다 — 100 + 100 + 50 + 30");
+  assert.equal(carePercent(pet({ affinity: 100, mood: 100, buffs: [...food, ...long, ...short] })), 280, "신남이 있으면 들뜸은 세지 않는다");
+  // 친밀도 100 미만은 지금과 같다 — 기분과 버프가 포인트를 바꾸지 않는다
+  assert.equal(carePercent(pet({ affinity: 99, mood: 100, buffs: food })), 100);
+  assert.equal(earn({ affinity: 0, mood: 100, fullness: 10, buffs: food }), 10, "친밀도 0 은 2분에 1 그대로");
+  // 배고픔은 포인트를 직접 깎지 않는다
+  assert.equal(earn({ affinity: 100, mood: 59, fullness: 10 }), 20, "매우 배고픔이어도 기본 속도");
+  assert.equal(earn({ affinity: 100, mood: 0, fullness: 10, buffs: food }), 40, "배고픔이 버프 보너스를 깎지 않는다");
+  // 작업 보너스와는 곱해진다 — 적립 시간을 두 번 센다
+  const working = seed({ affinity: 100, mood: 80 });
+  applyTime(working, 20 * MIN, T0 + 20 * MIN, { workMs: 20 * MIN });
+  assert.equal(working.points.balance, 52, "작업한 20분은 26 의 두 배");
+  process.stdout.write("(17) 돌봄 보너스 · 기분과 버프  ok\n");
+}
+
+process.stdout.write("selftest-time: 통과 (만복도·친밀도·포인트·버프·구간·알·작업 보너스·기분·돌봄 보너스)\n");

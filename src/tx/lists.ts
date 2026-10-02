@@ -56,13 +56,13 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   const owned = (id: string): [string, string] => ["보유", `${(save.bag[id] ?? 0).toLocaleString("ko-KR")}개`];
   const readyMin = Math.round(EGG_V3_RULES.readyMs / 60_000);
   const eggAbout = (kind: string): ShopAbout => {
-    const bonus = Object.values(eggs(opts)[kind]?.bonus ?? {}).reduce((a, b) => a + b, 0);
-    const pct = Math.round(bonus * 1000) / 10;
+    // 다른 알이 나오는 알 — 확률 숫자는 적지 않는다 (2026-10-02 사용자 결정 "일정확률로 특별한 알")
+    const bonus = Object.values(eggs(opts)[kind]?.bonus ?? {}).some((p) => p > 0);
     return {
       group: "알",
       spec: ["준비", `${readyMin}분`],
       desc: `${eggNote(kind, opts) ?? "포켓몬이 나온다"}. 돌보미집에 두면 ${readyMin}분 뒤 열 수 있다.`,
-      effect: pct > 0 ? `포켓몬 1마리 · ${pct}% 특별한 알` : "포켓몬 1마리",
+      effect: bonus ? "포켓몬 1마리 · 일정 확률로 특별한 알" : "포켓몬 1마리",
       where: `돌보미집 · ${readyMin}분 뒤 열기`,
     };
   };

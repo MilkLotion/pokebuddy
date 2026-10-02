@@ -11,8 +11,8 @@
 //   알                 준비 남은 시간, 돌봄 쿨타임
 //
 // 부분 진행은 ms 정수로 쌓는다. 그래서 짧은 틱을 여러 번 돌려도 긴 틱 한 번과 결과가 같다.
-// 포인트만 예외다. 적립 속도가 친밀도에 달려 있는데 친밀도는 구간 안에서도 오른다.
-// 구간 시작 시점의 친밀도로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
+// 포인트만 예외다. 적립 속도가 친밀도·기분·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
+// 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
 import { evaluate } from "../achievement/core.js";
 import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
@@ -63,6 +63,14 @@ export function buffPercent(buffs: BuffV3[]): number {
 export const affinityPercent = (pet: PetV3): number =>
   Math.round((buffPercent(pet.buffs) * TIME_V3_RULES.zonePercent[zoneOf(pet.fullness)]) / 100);
 
+// 돌봄 보너스 — 포인트 적립 배율(백분율). 친밀도가 100 인 개체만 받는다 (2026-10-02 사용자 결정, docs/specs/balance.md "돌봄 보너스")
+// 기분 단계 보너스와 버프 보너스를 더한다. 배고픔은 포인트를 직접 깎지 않는다 — 기분 감소 배율로만 작용한다
+export function carePercent(pet: PetV3): number {
+  if (pet.affinity < 100) return 100;
+  const mood = MOOD_RULES.pointBonus.find((b) => pet.mood >= b.min)?.percent ?? 0;
+  return buffPercent(pet.buffs) + mood;
+}
+
 // 남은 시간을 줄인다. 0 아래로 내려가지 않는다
 const countDown = (remain: number, elapsed: number): number => Math.max(0, remain - elapsed);
 
@@ -99,8 +107,9 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     if (!inParty.has(pet.id)) continue;
     const before = zoneOf(pet.fullness);
 
-    // 포인트 — 이 구간 동안 가지고 있던 친밀도로 셈한다. 구간 중간에 오른 친밀도를 소급하지 않는다
-    pointWeighted += Math.round((earning * (100 + pet.affinity)) / 100);
+    // 포인트 — 이 구간 동안 가지고 있던 친밀도로 셈한다. 구간 중간에 오른 친밀도를 소급하지 않는다.
+    // 돌봄 보너스도 구간 시작 시점의 기분과 버프로 셈한다
+    pointWeighted += Math.round((earning * (100 + pet.affinity) * carePercent(pet)) / 10_000);
 
     // 만복도 — 부분 진행을 쌓아 1씩 줄인다
     pet.fullnessProgressMs += elapsed;
@@ -124,7 +133,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
       pet.affinity = next;
     }
 
-    // 기분 — 부분 진행을 쌓아 1씩 줄인다. 줄어든 만복도의 구간으로 배율을 정한다. 보이기만 하는 값이다
+    // 기분 — 부분 진행을 쌓아 1씩 줄인다. 줄어든 만복도의 구간으로 배율을 정한다
     pet.moodProgressMs += Math.round((elapsed * MOOD_RULES.zonePercent[zoneOf(pet.fullness)]) / 100);
     const moodDrop = Math.floor(pet.moodProgressMs / MOOD_RULES.dropMs);
     if (moodDrop > 0) {

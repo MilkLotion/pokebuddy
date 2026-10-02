@@ -109,8 +109,10 @@ export const TIME_V3_RULES = {
   buffBonusPercent: { "premium-food": 100, "long-play": 50, "short-play": 20 },
 };
 
-// 기분 — 보이기만 하고 다른 수치를 바꾸지 않는다 (docs/specs/balance.md "기분")
+// 기분 — 친밀도 100 미만에서는 보이기만 한다. 친밀도 100 인 개체는 기분 단계가 포인트 적립을 올린다 (docs/specs/balance.md "기분"·"돌봄 보너스")
 export const MOOD_RULES = {
+  // 기분 단계별 포인트 적립 보너스(백분율). 높은 단계부터 본다. 최고(80 이상) +30, 좋음(60 이상) +15 (2026-10-02 사용자 결정)
+  pointBonus: [{ min: 80, percent: 30 }, { min: 60, percent: 15 }] as readonly { min: number; percent: number }[],
   dropMs: 600_000, // 파티 칸 개체의 기분 1 감소에 걸리는 시간. 10분에 1
   // 만복도 구간별 감소 배율(백분율). 배고픔 2배, 매우 배고픔 3배
   zonePercent: { full: 100, normal: 100, hungry: 200, starving: 300 },
@@ -142,6 +144,7 @@ export const SHOP_V3_RULES = {
 // 가방 도구의 규칙표 — 수치는 docs/specs/balance.md "버프와 친밀도"
 export const BAG_V3_RULES = {
   buffMs: { "premium-food": 2 * 60 * 60_000, "long-play": 30 * 60_000, "short-play": 30 * 60_000 }, // 든든함 2시간, 신남 30분, 들뜸 30분 (2026-09-29 사용자 결정)
+  toyBuffMs: 2 * 60 * 60_000, // 장난감으로 켠 신남 2시간 — 값(20P)보다 많이 벌게 한다 (2026-10-02 사용자 결정)
   feedAffinity: 2, // 밥 주기로 오르는 친밀도
   playAffinity: 3, // 놀아주기로 오르는 친밀도
 };

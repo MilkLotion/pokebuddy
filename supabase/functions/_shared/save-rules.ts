@@ -52,7 +52,7 @@ export interface VerifyData {
   rules: {
     pointMs: number; // 가중 시간 이만큼에 1P
     maxPartySlots: number;
-    maxEarnFactor: number; // 친밀도 배율(2) × 작업 배율(2)
+    maxEarnFactor: number; // 친밀도 배율(2) × 작업 배율(2) × 돌봄 보너스 최대(2.8)
     findPointsMax: number; // 줍기 한 번 최대 포인트
     mintRefund: number;
     sellRatio: number;

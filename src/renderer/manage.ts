@@ -2214,7 +2214,7 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     case "fullness-full-buff":
       return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간", ...buffRefresh(pet, "premium-food", "2시간")];
     case "play-buff":
-      return ["신남", "친밀도 증가량 ×1.5 · 30분", ...buffRefresh(pet, "long-play", "30분")];
+      return ["신남", "친밀도 증가량 ×1.5 · 2시간", ...buffRefresh(pet, "long-play", "2시간")];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
