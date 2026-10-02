@@ -39,9 +39,8 @@ export const petName = (slug: string, lang: Lang = getLang()): string => {
 // 성격의 화면 이름 — 모르는 id 는 그대로 보여 무엇이 빠졌는지 드러나게
 export const natureName = (id: NatureId | string, lang: Lang = getLang()): string => natureOf(id)?.name[lang] ?? String(id);
 
-// 마리의 화면 이름 — 별명이 있으면 별명, 없으면 종 이름
-export const petLabel = (pet: { nick: string | null; species: string }, lang: Lang = getLang()): string =>
-  pet.nick ?? petName(pet.species, lang);
+// 마리의 화면 이름 — 종 이름이다. 별명은 보이지 않는다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다")
+export const petLabel = (pet: { species: string }, lang: Lang = getLang()): string => petName(pet.species, lang);
 
 // 타입의 화면 이름 — 18종 고정이라 표를 여기 둔다. 모르는 값은 그대로 보여 무엇이 빠졌는지 드러나게
 const TYPE_KO: Readonly<Record<string, string>> = {

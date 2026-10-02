@@ -33,7 +33,7 @@ export interface CommandContext {
   mailboxDir: string;
   party: SaveParty;
   game: GameV3;
-  stage: { poke(id: string): boolean; care?(id: string, action: CareAction): void; petIds(): string[]; size(): Size; visible(): boolean };
+  stage: { care?(id: string, action: CareAction): void; petIds(): string[]; size(): Size; visible(): boolean };
   settings: CommandSettings;
   quit(): void;
   prepareLook?(look: string): Promise<boolean>;
