@@ -295,6 +295,56 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       }
     },
   },
+  forms: {
+    note: "특수 폼 — 파티에 진화 직전의 암멍이·치고마·일레즌과 기라티나·플라엣테(영원의 꽃)·대쓰여너 암컷, 박스에 나머지 특수 폼, 배쓰나이만 나오는 알 셋",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      applyScene(s, "done-all", now);
+      // [종, 레벨, 친밀도, 성별(정할 때만)]
+      type Row = [string, number, number, ("male" | "female")?];
+      const add = ([species, level, affinity, gender]: Row): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: gender ?? rollGender(species), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        pet.affinity = affinity;
+        s.pets.push(pet);
+        recordDex(s, species, false);
+        return pet.id;
+      };
+      // 파티 — 암멍이는 Lv.25·친밀도 100 이라 낮밤의 종과 황혼이 함께 후보다. 치고마는 악의 족자, 기라티나는 모습 바꾸기
+      const party: Row[] = [["rockruff", 25, 100], ["kubfu", 30, 60], ["toxel", 30, 60], ["giratina", 50, 80], ["floette-eternal", 60, 100], ["basculegion", 40, 80, "female"]];
+      for (const row of party) {
+        const petId = add(row);
+        const at = s.party.slots.findIndex((slot) => slot.state === "empty");
+        const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
+        if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
+        else putPet(s.boxes, petId);
+      }
+      const box: Row[] = [
+        ["basculin", 20, 100], ["basculin-blue-striped", 20, 100], ["basculin-white-striped", 20, 100], ["basculegion", 40, 80, "male"],
+        ["dialga-origin", 50, 80], ["palkia-origin", 50, 80], ["ursaluna-bloodmoon", 50, 80],
+        ["lycanroc", 30, 60], ["lycanroc-midnight", 30, 60], ["lycanroc-dusk", 30, 60], ["toxtricity", 35, 60], ["toxtricity-low-key", 35, 60],
+        ["magearna-original", 50, 80], ["pichu-spiky-eared", 10, 60],
+      ];
+      for (const row of box) putPet(s.boxes, add(row));
+      // 플라엣테(영원의 꽃)는 메가스톤을 지닌다 — 메가플라엣테는 이 종만 된다
+      const eternal = s.pets.find((p) => p.species === "floette-eternal" && !p.mega?.stone);
+      if (eternal) {
+        eternal.mega = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care, stone: true };
+        if (!(s.dex.megaOpened ??= []).includes("floette-eternal")) s.dex.megaOpened.push("floette-eternal");
+      }
+      s.bag["scroll-of-darkness"] = Math.max(s.bag["scroll-of-darkness"] ?? 0, 2);
+      s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10);
+      // 배쓰나이만 나오는 알 — 열 때마다 적색근 45 · 청색근 45 · 백색근 10 으로 모습이 정해진다
+      for (let i = s.eggs.filter((e) => e.ready).length; i < 3; i++) {
+        const egg = newEgg(s, "random", now);
+        egg.candidates = ["basculin"];
+        egg.remainMs = 0;
+        egg.ready = true;
+        s.eggs.push(egg);
+      }
+    },
+  },
   rich: { note: `포인트를 ${DEV_TEST_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10)) },
 };
 
