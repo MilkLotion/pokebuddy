@@ -4238,7 +4238,7 @@ async function buyShop(id: string): Promise<void> {
 }
 
 // ── 파티 상세 기기 창 ─────────────────────────────────────────────────────────────
-// 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)).
+// 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`)).
 // 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
 
 let petDeviceOpen = false;

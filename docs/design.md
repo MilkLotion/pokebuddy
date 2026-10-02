@@ -370,14 +370,15 @@ S5는 도감 등록, 개체별 육성 기록, 파티 배치, 도구 재고, 알 
 
 | 항목 | 기준 |
 |---|---|
-| 계층 | Foundations → Atoms → Molecules → Organisms → Templates → Screens. Screen은 Template 인스턴스로 구성한다. |
+| 계층 | Foundations → Atoms → Molecules → Organisms → Templates → Screens. Screen은 Template 인스턴스로 구성한다. Screen 안에는 인스턴스만 둔다. 인스턴스를 떼어 내지 않는다. 필요한 모양이 없으면 아래 층에 먼저 만든다. Molecule은 Atom만, Organism은 Atom과 Molecule만, Template은 그 아래 층만 인스턴스로 쓴다. 2026-10-02 에 05 의 화면을 이 규칙으로 다시 조립했다. 층별 컴포넌트는 [UI 컴포넌트 계약](specs/ui-components.md#figma-층-구성)을 따른다. |
 | 변수와 글꼴 | `PB / Primitive`, `PB / Color`, `PB / Dimension` 변수를 사용한다. 배경막은 45% 알파를 가진 `neutral/900-a45`를 쓴다. 꺼진 토글은 `bg/control-off`, 빈 칸·비활성은 `bg/subtle`과 `text/disabled`를 쓴다. `PB/Type/*` 스타일은 9개다. 글꼴은 Galmuri다. 크기는 24·15·12·10px 네 단계만 쓴다. |
 | 색상 | 헤더와 카드는 `#FFFFFF`다. 본문은 `bg/canvas` `#F1F2EE`다. 강조는 `action/primary` `#0F766E`다. |
 | 탭 | 파티 / 박스 / 도감 / 상점 / 가방. `Primary Navigation` `208:542`에 있다. 교환은 탭이 아니다. 박스 탭 머리 오른쪽의 `교환` 단추가 교환 모달을 연다. |
 | 내비게이션 | `114:967`을 따른다. 하단 테두리 1px와 선택 밑줄 60×2px를 구분한다. 10px padding·radius와 밑줄 x=10, y=31.5를 유지한다. |
-| 화면 크기 | 설정창 Screen의 폭은 640이다. 기본 세로는 682다. 682는 파티 탭이 스크롤 없이 딱 맞는 높이다(`src/save/rules.ts`). 헤더 40, 탭 줄 40, 본문 폭 600이다. 헤더 오른쪽 138은 창 조작 단추 자리다. Page Header `157:971`은 제목과 설명을 한 줄로 두고 높이는 36이다. Party Layout의 제목 아래 간격은 14, 칸 사이 간격은 12다. 레이아웃 템플릿 8종의 최소 높이는 682다. 창보다 짧은 화면도 최소 높이 682로 그린다. 스크롤하는 화면과 모달은 내용 끝까지 펼쳐 그린다. 창 끝(682)이나 대화상자 끝에 점선을 긋는다. 바탕화면 화면은 1280×720이며 창 끝 점선 규칙을 쓰지 않는다. |
+| 화면 크기 | 설정창 Screen의 폭은 640이다. 기본 세로는 682다. 682는 파티 탭이 스크롤 없이 딱 맞는 높이다(`src/save/rules.ts`). 헤더 40, 탭 줄 40, 본문 폭 600이다. 헤더 오른쪽 138은 창 조작 단추 자리다. Page Header `157:971`은 제목과 설명을 한 줄로 두고 높이는 36이다. Party Layout의 제목 아래 간격은 14, 칸 사이 간격은 12다. 레이아웃 템플릿은 `Party`·`Box`·`Dex`·`Shop`·`Bag`·`First Run Layout` 6종이다. 설정창 탭 템플릿 5종의 최소 높이는 682다. 창보다 짧은 화면도 최소 높이 682로 그린다. 스크롤하는 화면과 모달은 내용 끝까지 펼쳐 그린다. 창 끝(682)이나 대화상자 끝에 점선을 긋는다. 바탕화면 화면은 1280×720이며 창 끝 점선 규칙을 쓰지 않는다. |
 | 창 크기 조절 | 설정창의 폭은 고정이다. 사용자는 세로만 조절한다. 세로는 본문을 스크롤한다. Figma px를 DIP로 그대로 쓴다. 값은 [화면 구조](specs/game.md#2-화면-구조)를 따른다. |
-| 모달 | Template에서 Modal Scrim `226:464`와 `Dialog` `299:3575`의 `Size=Compact`를 조합한다. Screen에서 배경막과 확인창을 다시 그리지 않는다. |
+| 모달 | Screen은 탭 Template 인스턴스 위에 Modal Scrim `226:464`와 `Dialog` `299:3575` 인스턴스를 둔다. Screen에서 배경막과 확인창을 다시 그리지 않는다. `Dialog` 의 본문 슬롯에는 본문 유기체 인스턴스 하나를 넣는다. |
+| 기기 창 색 | 기기 창의 몸·경첩·머리 줄 색은 `device/{party,dex,shop,bag,swap}/*` 변수다. 화면·기록 칸·글자 색은 `device/screen`, `device/panel`, `device/bezel`, `device/text*` 변수다. |
 | 그림 | `Portrait` `120:121`의 Artwork INSTANCE_SWAP을 사용한다. Figma 의 그림은 자리표시 그림이다. 앱은 실행 때 받은 PokeAPI 그림을 넣는다(`src/main/portraits.ts`). |
 | 선택 표현 | 카드·목록 항목은 옅은 배경만 쓴다. 왼쪽 세로 막대와 테두리를 쓰지 않는다. 메인 탭은 옅은 배경과 밑줄이다. 필터 칩은 진한 채움과 흰 글자다. 두 칸 전환은 회색 틀 안의 흰 칸이다. 헤더 아이콘은 모달이 열린 동안 진한 배경이다. |
 | 상태와 숫자 | 숨김은 이미지 우측 위의 작은 닫힌 몬스터볼로 표시한다. 숫자는 콘텐츠로 다룬다. 친밀도나 크기별 숫자를 variant 축으로 늘리지 않는다. |

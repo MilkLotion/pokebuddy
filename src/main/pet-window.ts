@@ -1,7 +1,7 @@
 // 파티 상세 기기 창 — 관리 창 옆에 붙어 개체 하나의 상세를 보이는 창. 문서는 src/renderer/pet.html
 //
 // 도감 기기 창(src/main/dex-window.ts)과 같은 방식이다. 관리 창에서 포켓몬 칸을 누르면 뜬다(2026-09-28 사용자 "파티상세페이지도 도감상세처럼
-// 옆에 뜨는거로 바꾸자", A안 기기형 — Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`), worklog/records/party-detail-window/record.md).
+// 옆에 뜨는거로 바꾸자", A안 기기형 — Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`), worklog/records/party-detail-window/record.md).
 // 무엇을 보일지는 관리 창이 정해 보낸다(개체·자리·빈 파티 칸). 누른 단추는 관리 창으로 돌려보낸다 — 명령과 대화상자는 관리 창이 처리한다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
