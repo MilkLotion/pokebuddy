@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   let changes = 0;
   let stageHold: Promise<void> | null = null; // 있으면 무대 갱신이 이것을 기다린다 — 처음 나오는 종의 그림을 받는 중인 무대
   const commands = createCommands({ mailboxDir: paths.mailbox, party, game,
-    stage: { poke: () => true, petIds: () => [], size: () => ({ w: 1, h: 1 }), visible: () => true },
+    stage: { petIds: () => [], size: () => ({ w: 1, h: 1 }), visible: () => true },
     settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} },
     quit() {}, prepareLook: async () => { beforeArt?.(); return artOk; }, onChanged: async () => { changes++; if (stageHold) await stageHold; },
   });

@@ -5,7 +5,7 @@
 // move/moved 이벤트 해석이 전부 없다. 창을 바꾸는 유일한 길은 setStage(무대 사각형) 이고, 사각형이 바뀔 때만 setBounds 를 부른다 —
 // 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있다
 import fs from "node:fs";
-import { BrowserWindow, Menu, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
+import { BrowserWindow, ipcMain, screen } from "electron";
 import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../shared/model/stage";
 import type { StageChannel } from "../shared/ipc/stage";
 import { sameRect, type Rect, type Size } from "./layout";
@@ -64,7 +64,6 @@ export interface StageWindow {
   sendIcons(icons: Record<string, string>): void; // 말풍선 아이콘 그림 — 열쇠별 data URI
   sendCoach(coach: CoachView | null): void; // 바탕화면 튜토리얼 — 같은 값이면 보내지 않는다. 렌더러가 다시 뜨면 resendCoach
   resendCoach(): void;
-  popup(template: MenuItemConstructorOptions[]): void;
   close(): void;
 }
 
@@ -273,12 +272,6 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       send(CH.coach, next);
     },
     resendCoach: () => send(CH.coach, coach),
-
-    // 우클릭 — 네이티브 메뉴. 프레임 없는 창이라 렌더러가 그리지 않고 메인이 띄운다
-    popup(template) {
-      if (!alive()) return;
-      Menu.buildFromTemplate(template).popup({ window: win! });
-    },
 
     close() {
       if (alive()) win!.close();

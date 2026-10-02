@@ -1,5 +1,5 @@
 // 앵커 앱의 창 위치를 읽는 헬퍼(helpers/winbounds) 를 고르고 묻고 답을 푼다 — Electron 을 모른다.
-// main.js 의 helperCommand · queryHelper · 출력 JSON 파싱을 옮긴 것. 좌표 변환(toDip — Windows 물리 픽셀 → DIP)과
+// main.js 의 helperCommand · queryHelper · 출력 JSON 파싱을 옮긴 것. 좌표는 헬퍼가 준 그대로 넘긴다.
 // Space 전환 표본 버리기(offScreen)는 Electron 의 screen 이 필요해 메인에 남는다.
 //
 // 헬퍼 출력 (helpers/winbounds.swift · winbounds.ps1 머리 참고):

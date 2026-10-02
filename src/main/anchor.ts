@@ -1,10 +1,10 @@
-// 창 추적 상태기 — 400ms 마다 헬퍼에게 창 목록을 묻고, 동반자가 따를 창(target) · 표시(visible)를 정한다.
-// 맨 앞 창이 터미널 호스트면 그 창을 따르고 그 창의 세션 상태를 본다. 아니면 마지막 창에 그대로 남는다 (follow/front).
+// 호스트·표시 판정기 — 400ms 마다 헬퍼에게 창 목록을 묻고, 어느 세션의 상태를 볼지와 표시(visible)를 정한다.
+// 맨 앞 창이 터미널 호스트면 그 창의 세션 상태를 본다. 아니면 마지막으로 본 세션을 그대로 본다 (follow/front).
 // 판정 로직은 follow/(진단 도구와 같은 것) — 두 벌이 되면 진단이 거짓말을 한다.
-// Electron 이 필요한 부분(toDip · offScreen · 작업 영역 · quit)은 host 로 받아 node 에서도 돌릴 수 있게 한다.
+// Electron 이 필요한 부분(offScreen)은 host 로 받아 node 에서도 돌릴 수 있게 한다.
 //
-// 결과는 onUpdate 로 낸다 — 무대 창이 setStage(무대 사각형) · setVisible 을 한다. 창을 옮기지 않으므로
-// 1판의 petSpot·moveBody 는 여기 없다 (마리 자리는 stage.ts 가 무대 안에서 계산한다)
+// 결과는 onUpdate 로 낸다 — 폴링마다 앱이 무대 사각형을 놀이공간으로 다시 맞추고 표시를 정한다.
+// 따를 창의 좌표는 정하지 않는다 — 무대의 자리는 놀이공간 설정이 정한다 (src/main/layout.ts playLanes)
 import * as follow from "../follow/front";
 import * as pkstate from "../follow/state";
 import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
@@ -21,11 +21,7 @@ export const ANCHOR_RULES = {
 // Electron 이 있어야 하는 일 — 시험에서는 가짜를 준다
 export interface AnchorHost {
   platform: NodeJS.Platform;
-  now(): number;
-  toDip(w: HelperWindow): HelperWindow; // Windows 물리 픽셀 → DIP
-  offScreen(windows: HelperWindow[]): boolean; // mac Space 전환 중 표본인가
-  workArea(): HelperWindow; // 터미널 호스트를 한 번도 못 봤을 때의 가짜 창 (fake:true)
-  quit(): void;
+  offScreen(windows: HelperWindow[]): boolean; // mac Space 전환 중 표본인가 — 헬퍼가 준 좌표 그대로 본다(mac 은 포인트 단위다)
   quitting(): boolean; // 끝내는 중에는 헬퍼에 묻지 않는다 — before-quit 에서 멈춘 헬퍼를 다음 질문이 다시 띄우면 펫보다 오래 남는다
 }
 
@@ -35,7 +31,6 @@ export interface AnchorFlags {
 }
 
 export interface AnchorUpdate {
-  target: HelperWindow | null; // 따라갈 창 (DIP). fake 면 작업 영역
   visible: boolean; // 디바운스를 거친 표시 여부
 }
 
@@ -56,8 +51,6 @@ export interface Anchor {
   stop(): void;
   poll(): void; // 지금 바로 한 번 (메뉴·설정 뒤)
   currentInfo(): StateInfo; // 따를 훅 상태
-  target(): HelperWindow | null;
-  visible(): boolean;
 }
 
 export function createAnchor(opts: AnchorOptions): Anchor {
@@ -65,14 +58,12 @@ export function createAnchor(opts: AnchorOptions): Anchor {
   const env = opts.env ?? process.env;
   const R = ANCHOR_RULES;
 
-  let lastTarget: HelperWindow | null = null; // 마지막으로 따라간 창
   let visible = false;
   let wantLast: boolean | null = null;
   let wantStreak = 0;
   let helperFails = 0;
   let followPids = new Set<number>(); // 이번 폴링이 고른 "따를 세션"의 pid (창 주인)
   let stateRecords: StateRecord[] = []; // 마지막으로 읽은 훅 기록 (최신순) — 폴링마다 한 번 읽어 판정 둘에 같이 쓴다
-  let companionTarget: HelperWindow | null = null; // 마지막으로 따른 터미널 호스트 창. 브라우저를 봐도 여기 남는다
   let timer: NodeJS.Timeout | null = null;
 
   // 훅(pokebuddy-state)이 남긴 세션 상태 중 따를 것 — followPids 를 조상으로 가진 최신 기록 (follow/state stateFor). 비면 대기
@@ -92,30 +83,20 @@ export function createAnchor(opts: AnchorOptions): Anchor {
     visible = next;
   }
 
-  const emit = (): void => opts.onUpdate({ target: lastTarget, visible });
+  const emit = (): void => opts.onUpdate({ visible });
 
-  // 맨 앞 창이 터미널 호스트면 그 창을 따르고 그 창의 세션을 본다. 아니면 마지막 창에 그대로 남는다 (follow/front)
-  function resolve(info: HelperInfo, windows: HelperWindow[]): { target: HelperWindow; debug: Record<string, unknown> } {
+  // 맨 앞 창이 터미널 호스트면 그 창의 세션을 본다. 아니면 마지막으로 본 세션을 그대로 본다 (follow/front)
+  function resolve(info: HelperInfo, windows: HelperWindow[]): Record<string, unknown> {
     const front = follow.frontWindow(info, windows, self);
     const hostInfo = follow.hostOf(front, stateRecords);
     if (hostInfo && front) {
       followPids = new Set(hostInfo.pids);
-      companionTarget = front;
       // 포커스 묶음 — 바뀌었다는 사실만 "사용자가 뭔가 했다"로 쓴다. 터미널 호스트가 앞일 때만 본다.
       // 펫 창 자신은 뺀다 — 레벨을 바꿀 때 맨 앞에 끼면 사용자가 한 일로 오인한다
       const top = windows.find((w) => w.pid !== process.pid);
       opts.onFocus(top ? `front:${top.id}` : null);
     }
-    // 호스트가 아니거나(브라우저가 앞) 그 창이 목록에 없다(다른 Space) — 마지막 창을 번호로 다시 찾아 위치만 갱신한다.
-    // 닫혔으면 마지막 값 그대로 — 펫은 그 자리에 남는다
-    if (companionTarget && !hostInfo) {
-      const seen = windows.find((w) => w.id === companionTarget!.id);
-      if (seen) companionTarget = seen;
-    }
-    return {
-      target: companionTarget ?? host.workArea(),
-      debug: { front: front ? front.id : null, host: hostInfo ? hostInfo.kind : null, pids: [...followPids] },
-    };
+    return { front: front ? front.id : null, host: hostInfo ? hostInfo.kind : null, pids: [...followPids] };
   }
 
   function poll(): void {
@@ -124,8 +105,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
     stateRecords = pkstate.readStateRecords(paths.state);
     const helper = helperCommand(host.platform, paths.project, env);
     if (!helper) {
-      // 추적 수단이 없다 — 자리는 작업 영역(가짜 창)으로 갈음해 무대는 있게 한다. 상태는 대기
-      lastTarget = host.workArea();
+      // 추적 수단이 없다 — 무대는 놀이공간에 그대로 있다. 상태는 대기
       applyVisible(want());
       emit();
       return;
@@ -144,22 +124,18 @@ export function createAnchor(opts: AnchorOptions): Anchor {
       const info = parseInfo(stdout);
       if (!info) return;
       if (info.input) opts.onInput?.(info.input);
-      const windows = info.windows.map((w) => host.toDip(w));
+      const windows = info.windows;
       // Space 전환 중 — mac 에서만 일어난다. Windows 는 다른 가상 데스크톱의 창이 헬퍼에서 걸러져 들어오지 않고,
       // 화면 밖에 걸어 둔 창 하나(떼어 낸 모니터 자리 등) 때문에 표본을 매번 버리면 펫이 영영 자리를 못 잡는다
       if (host.platform === "darwin" && host.offScreen(windows)) return;
 
-      const picked = resolve(info, windows);
+      const debug = resolve(info, windows);
       // 마리를 잡고 있는 동안은 판정을 보류하고 직전 상태를 유지한다
       const next = opts.flags().held ? visible : want();
-      lastTarget = picked.target;
       applyVisible(next);
       emit();
 
-      if (log) {
-        const tgt = { id: lastTarget.id, x: lastTarget.x, y: lastTarget.y, w: lastTarget.w, h: lastTarget.h, fake: !!lastTarget.fake };
-        log({ want: next, visible, ...picked.debug, state: currentInfo().state, target: tgt });
-      }
+      log?.({ want: next, visible, ...debug, state: currentInfo().state });
     });
   }
 
@@ -175,7 +151,5 @@ export function createAnchor(opts: AnchorOptions): Anchor {
     },
     poll,
     currentInfo,
-    target: () => lastTarget,
-    visible: () => visible,
   };
 }
