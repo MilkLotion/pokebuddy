@@ -92,6 +92,17 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 
 2026-10-02 재검수에서 더한 변형: `Stat Meter` `296:190` 의 `Size=Device` `1318:58254`(값 글자 12, 파티 상세 기기 창의 기록 막대), `Product Card` 의 `State=Default|Selected`(세트 `1318:58786`, 기기 창에 뜬 상품의 칸), `Preset Pager` 의 `State=Default|Editing`(`Editing` `1318:57918`, 이름을 고치는 중).
 
+메가진화로 더한 것(2026-10-02, 사용자 확정 "c로 확정", "다 키스톤으로"):
+
+| 층 | 컴포넌트 (노드, 변형) |
+|---|---|
+| 01 Atoms | `Mega Stone Mark` `1325:47026`(키스톤 그림 14×14, 초상 구석 28·박스 칸 14·도감 칸 12 로 크기를 바꿔 쓴다). `Device Button` `1262:74948` 에 `Style=Light` `1338:7263`. |
+| 02 Molecules | `Box Slot` `333:231` 과 `Species Card` `336:299` 에 `Show Mega Stone`. 박스 칸은 표식 줄 `marks`(칸의 7·6)에 메가스톤, 이로치 순서다. 도감 칸은 `marks`(칸의 5·5)에 몬스터볼, 메가스톤, 이로치 순서다(`State=Obtained`·`Selected`). 켜면 이로치 표식이 오른쪽으로 밀린다. |
+| 03 Organisms | `Party Detail Device` `1262:76637` 을 C 배치로 바꿨다(380×593). 화면 안에 자리 줄, 초상과 이름 줄(`name-row`: 이름·성별·이로치), 막대 네 개(`stats`)가 있다. 화면 아래 `care-keys` 는 `Device Button` 두 개(`밥 주기` Light, `놀아주기` Dark, 높이 36)다. 흰 판은 진화 줄, `도감 보기` 줄, 크기 줄을 `Divider` 로 나눈 목록이다. `Show Mega Stone` 은 초상 오른쪽 아래의 표식(틀 36, 표식 28)이고 `Mega Form` 은 그 틀의 옅은 바탕이다. `Notification Banner` `338:732` 에 `Type=Mega` `1318:63010`. |
+| 05 Screens | `Playground / Banner Mega` `1319:51290`, `Party / Detail Device / Mega Stone` `1325:47009`, `Mega Choose` `1325:47012`, `Mega Form` `1325:47017`, `Party / Mega Confirm` `1319:50090`, `Party / Mega Confirm · 다른 메가 있음` `1319:50396`, `Party / Mega Form` `1319:50702`, `Box / Mega Stone` `1325:47020`, `Dex / Mega Stone` `1325:47023`. |
+
+개체 상세 튜토리얼 4장의 배경막 구멍은 C 배치에 맞춰 다시 계산했다(둘레 6, 말풍선 간격 10).
+
 페이지 배치(2026-10-02): 01~04 페이지는 갈래별 섹션으로 묶는다. 새 컴포넌트는 맞는 섹션 안에 둔다.
 
 | 페이지 | 섹션 |
@@ -109,7 +120,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 고른 가방 칸·상품 칸 | 바탕이 `#e3efe9` 에서 `bg/accent`(`#ebf4f1`)로 바뀌었다. 코드의 `--accent` 와 같다. |
 | 파티 상세 기기 창의 기록 막대 | 채움 길이를 `Stat Meter Bar` 의 10% 단위 변형으로 고른다. 그전 길이와 2~7px 다르다. |
 | 크기 단추의 고른 칸 | `Size Step` 의 `State=Selected` 다. 1px 테두리가 생겼다. |
-| `Party / Detail Device / Dex Beside` 의 `도감 보기` 줄 | 톤 배경 폭이 312 에서 280 으로 줄었다. `Link Row` 가 카드 안쪽 폭을 채운다. |
+| 파티 상세 기기 창 | 같은 날 메가진화 작업에서 C 배치로 바꿨다. 재구성 전과 배치가 다르다. |
 | 옛 튜토리얼 화면 | 말풍선을 `Coach Bubble` 로, 뒤 화면을 지금 탭 템플릿·기기 창으로 통일했다. 개체 상세 튜토리얼의 볼 토글은 18 에서 27 이 됐다. 배경막 구멍은 다시 계산했다. |
 | `Party Layout` | 줄 간격은 16 이다. 간격이 14 였던 옛 화면 5장(`Tutorial / Tab Guide`·`Shop After Egg`·`Achievement Guide`, `Party / Save Failing`·`Shared Form Tip`)은 2px 씩 내려갔다. |
 | 파티 카드 폭 | 둘째 줄 카드 폭을 292 에서 294 로 맞췄다. 세 줄의 카드 폭이 같다. |
