@@ -27,9 +27,10 @@ import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "./halt-dialog";
-import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
+import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
 import { createMainMail, type MainMail } from "./mail";
-import { codeOf } from "../trade/net.js";
+import { mailCodeOf } from "../online/codes.js";
+import { callRpc } from "../online/server-call.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
@@ -883,16 +884,8 @@ function mailBox(): MainMail | null {
   if (!mainMail) {
     const g = game;
     mainMail = createMainMail({
-      rpc: async (fn, args) => {
-        try {
-          const { data, error } = await on.client.rpc(fn, args);
-          if (!error) return { ok: true, data };
-          // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN)
-          return { ok: false, code: /^MAIL_[A-Z_]+$/.exec((error.message ?? "").trim())?.[0] ?? codeOf(error).code };
-        } catch (e) {
-          return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }).code };
-        }
-      },
+      // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN) — src/online/codes.ts mailCodeOf
+      rpc: (fn, args) => callRpc(on.client, fn, args, mailCodeOf),
       // writer 를 놓은 뒤 끝난 받기는 저장을 쓰지 않는다 — 새 writer 의 저장을 덮어쓰지 않게. 다음에 목록을 읽을 때 복구된다
       run: (id, name, args) => (party?.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
       read: () => g.read(),
@@ -1342,7 +1335,7 @@ async function main(): Promise<void> {
 
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다.
   // 두 PC 규칙으로 멈춘 동안(halted)과 새로 시작하는 중(restarting — 저장을 백업으로 옮긴다)도 쓰지 않는다
-  // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/main/game.ts EVENT_WRITES)은 바로, 나머지는 2분 스로틀
+  // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/online/save-kind.ts)은 바로, 나머지는 2분 스로틀
   // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
   // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
   // 알 결과는 계정 시드로 정한다(P4b, D24) — 되돌려 다시 열어도 같다. 시드가 없으면(첫 올리기 전) 평소 난수

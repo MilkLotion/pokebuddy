@@ -49,7 +49,7 @@ export const SERVER_TRADE_CODES = [
 
 export const SERVER_MAIL_CODES = ["MAIL_EXPIRED", "MAIL_LOGIN_REQUIRED", "MAIL_NO_GIFTS", "MAIL_NOT_FOUND"] as const;
 
-// AUTH_USERNAME_RESERVED 는 앱이 AUTH_USERNAME_TAKEN 으로 바꿔 보인다 (src/online/account.ts authCodeOf)
+// AUTH_USERNAME_RESERVED 는 앱이 AUTH_USERNAME_TAKEN 으로 바꿔 보인다 (src/online/codes.ts authCodeOf)
 export const SERVER_AUTH_CODES = [
   "AUTH_NAME_INVALID",
   "AUTH_USERNAME_INVALID",

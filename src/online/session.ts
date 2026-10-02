@@ -9,7 +9,10 @@
 //   토큰 갱신이 망 오류로 실패하면 getSession 은 세션 없음을 돌려주지만 저장소의 세션은 그대로다(auth-js __loadSession).
 //     그때 ensure 는 익명 계정을 만들지 않고 NETWORK, probe 는 unknown — 로그인 세션을 익명으로 덮거나 분실(D29)로 잘못 보지 않게
 import { isAuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { authCodeOf } from "./account.js";
+import { sessionCodeOf } from "./codes.js";
+import { messageOf } from "./server-call.js";
+
+export { sessionCodeOf }; // [임시] 옛 자리 — 새 코드는 ./codes.ts 에서 가져온다
 import type { SessionCode } from "../shared/names/online-codes.js";
 
 export type SessionErrorCode = SessionCode; // 목록은 src/shared/names/online-codes.ts
@@ -38,14 +41,6 @@ export interface SessionGate {
   exclusive: <T>(fn: (scope: SessionScope) => Promise<T>) => Promise<T>;
 }
 
-// 인증 오류 → 세션 코드. 계정 쪽 분류(authCodeOf)를 쓰고, 세 코드 밖은 UNKNOWN 으로 모은다
-export function sessionCodeOf(error: { message?: string; code?: string; status?: number } | null | undefined): { code: SessionErrorCode; detail?: string } {
-  const c = authCodeOf(error);
-  if (c.code === "NETWORK" || c.code === "AUTH_RATE_LIMITED") return { code: c.code };
-  const detail = c.detail ?? (c.code === "UNKNOWN" ? undefined : c.code);
-  return { code: "UNKNOWN", ...(detail ? { detail } : {}) };
-}
-
 export function createSessionGate(client: SupabaseClient): SessionGate {
   let lock: Promise<void> = Promise.resolve(); // exclusive 차례 — 마지막으로 줄 선 작업이 끝나면 풀린다
   let ensuring: Promise<SessionResult> | null = null; // 잠금 밖 ensure 의 진행 중 확인
@@ -72,7 +67,7 @@ export function createSessionGate(client: SupabaseClient): SessionGate {
       if (retryable(error)) return { state: "unknown", code: "NETWORK" };
       return { state: "none" };
     } catch (e) {
-      return { state: "unknown", ...sessionCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
+      return { state: "unknown", ...sessionCodeOf({ message: messageOf(e) }) };
     }
   };
 
@@ -88,7 +83,7 @@ export function createSessionGate(client: SupabaseClient): SessionGate {
       if (!res.data.user) return { ok: false, code: "UNKNOWN", detail: "no-user" };
       return { ok: true, user: res.data.user };
     } catch (e) {
-      return { ok: false, ...sessionCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
+      return { ok: false, ...sessionCodeOf({ message: messageOf(e) }) };
     }
   };
 
