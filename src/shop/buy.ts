@@ -12,16 +12,17 @@ import { addBox, boxBuyable, boxRoom, putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
-import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js";
 import { openSlot } from "../party/slots.js";
 import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";
 import type { Rand } from "../egg/hatch";
 import { BAG_RULES } from "../bag/rules.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { SHOP_RULES } from "./rules.js";
-import { maxEggNo, presetSlots } from "../save/v3.js";
-import type { EggV3, SaveV3 } from "../shared/save-v3";
-import { canGiveEgg, eggPool, find, inRandomEgg, isSingleEgg, singleLeft, slotPrice } from "./catalog.js";
+import { presetSlots } from "../save/v3.js";
+import type { SaveV3 } from "../shared/save-v3";
+import { canGiveEgg, newEgg, nextEggId, randomPool } from "../egg/pool.js";
+import { find, slotPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type BuyFailure = ReasonOf<
@@ -51,50 +52,9 @@ export interface BuyResult {
   boxId?: string; // 새로 산 박스
 }
 
-// 다음 알 식별자 — 지금까지 만든 알 수(eggSeq)와 지금 있는 알의 가장 큰 번호 중 큰 것의 다음.
-// 연 알의 식별자를 다시 쓰지 않는다. 다시 쓰면 "부화 준비" 배너의 표시 기록이 새 알에 겹쳐 배너가 뜨지 않는다
-export function nextEggId(save: SaveV3): string {
-  return `e${Math.max(save.eggSeq, maxEggNo(save.eggs)) + 1}`;
-}
-
-// 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
-export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
-
-// 새 개체를 파티나 박스에 넣는다 — 업적의 포켓몬 보상도 쓴다 (src/achievement/core.ts claim).
-// 부르기 전에 hasRoom 으로 둘 곳을 본다. 둘 곳이 없으면 넣지 않고 null
-export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } | null {
-  const i = save.party.slots.findIndex((s) => s.state === "empty");
-  if (i >= 0) {
-    save.party.slots[i] = { state: "pokemon", petId, hidden: false };
-    return { slotIndex: i, toBox: false };
-  }
-  return putPet(save.boxes, petId) ? { toBox: true } : null;
-}
-
-// 새 알 하나 — 후보는 이 순간에 정해 저장한다 (docs/specs/game.md "알 결과 저장"). 저장에 넣는 것은 부르는 쪽이다
-//   단일 포켓몬 알   아직 얻지 않은 종
-//   종 목록 알       그 목록
-//   랜덤알           해금한 종 가운데 랜덤알에서 나올 수 있는 종
-export function newEgg(save: SaveV3, kind: string, now: number, opts?: DexOptions): EggV3 {
-  const id = nextEggId(save);
-  save.eggSeq = Number(id.slice(1)); // 번호는 여기서 쓴 것으로 센다 — 알을 저장에 넣는 것은 부르는 쪽이다
-  return {
-    id,
-    kind,
-    boughtAt: now,
-    remainMs: EGG_RULES.readyMs,
-    ready: false,
-    candidates: isSingleEgg(kind, opts) ? singleLeft(save, kind, opts) : eggPool(kind, opts) ?? randomPool(save, opts),
-    careCooldownMs: 0,
-    actions: { pat: 0, song: 0 },
-  };
-}
-
-// 랜덤알 후보 — 해금한 종 가운데 랜덤알에서 나올 수 있는 종 (규칙은 src/shop/catalog.ts inRandomEgg)
-export function randomPool(save: SaveV3, opts?: DexOptions): string[] {
-  const pool = save.dex.unlocked.filter((slug) => inRandomEgg(slug, opts));
-  return pool.length ? pool : [...save.dex.unlocked];
-}
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리에서 가져오면 지운다
+//   새 알은 src/egg/pool.ts, 새 개체를 둘 곳은 src/party/create.ts 에 있다
+export { hasRoom, newEgg, nextEggId, placeNew, randomPool };
 
 // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다. 새 프리셋은 두 칸이 열린 채 비어 있다
 function buyPreset(save: SaveV3): BuyResult {

@@ -9,14 +9,12 @@
 //               알에서 얻을 수 있는 종만 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 // 값을 두 곳에 적지 않는다. 그래야 가격이 어긋나지 않는다.
 // 기존 S4 의 src/shop/catalog.ts 와 별개다. 그쪽은 v2 경로가 계속 쓴다.
-import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
+import { isMetaKey, type DexOptions } from "../dex/data.js";
+import { fixedEggs, inRandomEgg, isSingleEgg } from "../dex/obtain.js";
+import { rankOf } from "../dex/species.js";
+import { eggTable, evoItemTable, itemTable } from "../dex/tables.js";
 import { SHOP_RULES } from "./rules.js";
-import { unlockRules } from "../dex/unlocks.js";
-import { prevOf } from "../dex/evo.js";
-import { hatchBaseOf, regionalTable, shiftGroupOf } from "../dex/regional.js";
-import { rankOf } from "../egg/hatch.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
-import type { SaveV3 } from "../shared/save-v3";
 
 export type ProductKind = "egg" | "tool" | "party-slot" | "species";
 
@@ -28,41 +26,18 @@ export interface Product {
   ref: string; // 알 종류 · 도구 식별자 · 종 슬러그
 }
 
-interface EggEntry {
-  ko: string;
-  price: number | null; // null 이면 상점에서 팔지 않는다
-  note?: string; // 상점의 설명 줄
-  pool?: unknown; // "unlocked" 또는 종 목록
-  single?: boolean; // 단일 포켓몬 알 — 종별 한 번만 얻는다
-  bonus?: Record<string, number>; // 열 때 포켓몬 대신 다른 알이 나올 확률
-  palette?: string[]; // 알 그림 색표 — 원작 egg.png 의 9색을 같은 순서로 바꾼다
-}
-
-interface ItemEntry {
-  ko: string;
-  price: number | null;
-}
-
-interface EvoItemEntry {
-  ko: string;
-}
-
-const eggs = (opts?: DexOptions): Record<string, EggEntry> => loadJson<Record<string, EggEntry>>("eggs.json", opts);
-const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<string, ItemEntry>>("items.json", opts);
-const evoItems = (opts?: DexOptions): Record<string, EvoItemEntry> => loadJson<Record<string, EvoItemEntry>>("evo-items.json", opts);
-
 // 도구 하나의 가격. 팔지 않으면 null
 export function toolPrice(id: string, opts?: DexOptions): number | null {
   if (isMetaKey(id)) return null;
   if (MINT_RETIRED && id === MINT_ID) return null; // 성격민트 은퇴 — 사지도 팔지도 않는다 (src/bag/mint.ts)
-  const item = items(opts)[id];
+  const item = itemTable(opts)[id];
   if (item) return item.price;
-  return evoItems(opts)[id] ? SHOP_RULES.evoItemPrice : null;
+  return evoItemTable(opts)[id] ? SHOP_RULES.evoItemPrice : null;
 }
 
 export function toolName(id: string, opts?: DexOptions): string | null {
   if (isMetaKey(id)) return null;
-  return items(opts)[id]?.ko ?? evoItems(opts)[id]?.ko ?? null;
+  return itemTable(opts)[id]?.ko ?? evoItemTable(opts)[id]?.ko ?? null;
 }
 
 // 파티 칸 하나의 가격 — 늘 같은 값이다. 상점으로 열 칸이 남지 않았으면 null. `left` 는 적용한 프리셋에 남은 상점 칸 수다
@@ -77,7 +52,7 @@ export function speciesPrice(slug: string, opts?: DexOptions): number | null {
 }
 
 // 상점에서 파는 종인가 — 알에서 얻을 수 있는 종이다 (2026-09-29 사용자 결정)
-//   랜덤알 후보            inRandomEgg
+//   랜덤알 후보            inRandomEgg (src/dex/obtain.ts)
 //   화석                   단일 포켓몬 알이 아닌 종 목록 알(태고의돌)의 종
 //   단일 포켓몬 알의 종    팔지 않는다 — 준전설·전설·환상·울트라비스트·패러독스
 export function sellsSpecies(slug: string, opts?: DexOptions): boolean {
@@ -88,18 +63,18 @@ export function sellsSpecies(slug: string, opts?: DexOptions): boolean {
 
 export function eggPrice(kind: string, opts?: DexOptions): number | null {
   if (isMetaKey(kind)) return null;
-  return eggs(opts)[kind]?.price ?? null;
+  return eggTable(opts)[kind]?.price ?? null;
 }
 
 export function eggName(kind: string, opts?: DexOptions): string | null {
   if (isMetaKey(kind)) return null;
-  return eggs(opts)[kind]?.ko ?? null;
+  return eggTable(opts)[kind]?.ko ?? null;
 }
 
 // 알 종류별 그림 색표 — 색표가 있는 알만. 관리 창이 원작 알 그림의 색을 바꿔 쓴다
 export function eggPalettes(opts?: DexOptions): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  for (const [kind, row] of Object.entries(eggs(opts))) {
+  for (const [kind, row] of Object.entries(eggTable(opts))) {
     if (isMetaKey(kind) || !Array.isArray(row.palette)) continue;
     out[kind] = row.palette.filter((c): c is string => typeof c === "string");
   }
@@ -108,94 +83,13 @@ export function eggPalettes(opts?: DexOptions): Record<string, string[]> {
 
 export function eggNote(kind: string, opts?: DexOptions): string | null {
   if (isMetaKey(kind)) return null;
-  return eggs(opts)[kind]?.note ?? null;
+  return eggTable(opts)[kind]?.note ?? null;
 }
 
-// 알에서 나올 수 있는 종. `unlocked` 이면 해금한 종에서 뽑는다는 뜻이라 여기서는 null
-export function eggPool(kind: string, opts?: DexOptions): string[] | null {
-  const raw = isMetaKey(kind) ? undefined : eggs(opts)[kind]?.pool;
-  return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === "string") : null;
-}
-
-// 종 목록을 가진 알 전부 — [알 종류, 종 목록]. 태고의돌과 단일 포켓몬 알이다
-export function fixedEggs(opts?: DexOptions): [string, string[]][] {
-  const out: [string, string[]][] = [];
-  for (const kind of Object.keys(eggs(opts))) {
-    const pool = eggPool(kind, opts);
-    if (pool) out.push([kind, pool]);
-  }
-  return out;
-}
-
-// ── 단일 포켓몬 알 (data/eggs.json 의 single) ──────────────────────────────────
-// 종별로 저장마다 한 번만 얻는다. 이미 얻은 종은 후보에서 뺀다.
-// 같은 알이 돌보미집에 여럿 기다릴 수 있다. 남은 종 수가 기다리는 알 수보다 많을 때만 새로 준다 —
-// 그래야 알마다 열 때 남은 종이 적어도 하나 있다
-
-export const isSingleEgg = (kind: string, opts?: DexOptions): boolean => !isMetaKey(kind) && eggs(opts)[kind]?.single === true;
-
-// 단일 포켓몬 전부 — 단일 포켓몬 알의 종, 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전의 색) · 피츄(삐쭉귀)),
-// 업적 보상으로 주는 종(data/achievements.json 의 reward.pokemon — 2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
-// 2026-10-03 사용자 결정 "알이나 다른데서 못구하고 이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해."
-export function singleSpecies(opts?: DexOptions): Set<string> {
-  const out = new Set<string>();
-  for (const [kind, pool] of fixedEggs(opts)) if (isSingleEgg(kind, opts)) for (const slug of pool) out.add(slug);
-  for (const [slug, form] of Object.entries(regionalTable(opts).forms)) if (!isMetaKey(slug) && form.get === "gift") out.add(slug);
-  // 업적 보상 종 — 데이터를 바로 읽는다. src/achievement/core.ts 가 이 파일을 불러서 그쪽을 부르면 서로 물린다
-  for (const [id, def] of Object.entries(loadJson<Record<string, { reward?: unknown }>>("achievements.json", opts))) {
-    const reward = isMetaKey(id) ? null : def.reward;
-    if (reward != null && typeof reward === "object" && typeof (reward as { pokemon?: unknown }).pokemon === "string") out.add((reward as { pokemon: string }).pokemon);
-  }
-  // 단일 포켓몬이 모습 바꾸기로 오가는 모습(기라티나(오리진폼))도 같은 개체라 단일 포켓몬이다
-  for (const slug of [...out]) for (const form of shiftGroupOf(slug, opts)) out.add(form);
-  return out;
-}
-
-// 아직 얻지 않은 종
-export function singleLeft(save: SaveV3, kind: string, opts?: DexOptions): string[] {
-  return (eggPool(kind, opts) ?? []).filter((slug) => !save.dex.obtained.includes(slug));
-}
-
-// 이 알을 하나 더 줄 수 있는가 — 단일 포켓몬 알이 아니면 늘 된다
-export function canGiveEgg(save: SaveV3, kind: string, opts?: DexOptions): boolean {
-  if (!isSingleEgg(kind, opts)) return true;
-  const waiting = save.eggs.filter((e) => e.kind === kind).length;
-  return singleLeft(save, kind, opts).length > waiting;
-}
-
-// 이 알을 열 때 다른 알이 나올 확률 — [알 종류, 확률]. 데이터에 적은 순서대로
-export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
-  if (isMetaKey(kind)) return [];
-  return Object.entries(eggs(opts)[kind]?.bonus ?? {}).filter(([k, p]) => typeof p === "number" && p > 0 && eggs(opts)[k] != null);
-}
-
-// 랜덤알에서 나올 수 있는 종인가 — 해금 여부는 부르는 쪽이 본다 (docs/specs/game.md "랜덤알", "부화 준비와 결과")
-//   해금 규칙이 없는 종        뺀다. 전설·환상·울트라비스트는 규칙이 없다 — 입수 경로를 따로 정한다.
-//                              업적 보상 종(메타몽·라프라스)도 규칙이 없다 — 업적으로만 얻는다 (2026-09-29)
-//                              옛 규칙으로 이미 해금된 저장도 여기서 걸러진다
-//   진화 전용 종               뺀다. 해금 규칙이 진화(evolve)인 종이다(리자드·라이츄). 첫 선택 후보(starter)는 남는다
-//   진화 전 종이 있는 종       뺀다. 해금 규칙이 진화가 아니어도 진화형이면 뺀다. 첫 선택 후보는 남는다.
-//                              알은 늘 진화 전 종이다 (2026-09-28 사용자 결정 "알은 항상 진화 전 종")
-//   고정 후보 알의 종          뺀다. 화석은 태고의돌(해금 뒤에는 상점에서도), 단일 포켓몬은 그 알로만 얻는다
-export function inRandomEgg(slug: string, opts?: DexOptions): boolean {
-  const rule = unlockRules(opts)[slug];
-  if (!rule) return false;
-  if (rule.evolve && !rule.starter) return false;
-  if (prevOf(slug, opts) && !rule.starter) return false;
-  return !fixedEggs(opts).some(([, pool]) => pool.includes(slug));
-}
-
-// 이 종이 나오는 알 — 종 목록 알(태고의돌)을 먼저 보고, 없으면 해금한 종에서 뽑는 알(랜덤알)이다.
-// 단일 포켓몬 알은 빼고 본다. 어느 알에도 없으면 null (업적 보상 종 등)
-// 알에서 대신 나오는 모습(배쓰나이(백색근의 모습))은 그 기본 종의 알이다
-export function eggOfSpecies(raw: string, opts?: DexOptions): string | null {
-  if (isMetaKey(raw)) return null;
-  const slug = hatchBaseOf(raw, opts) ?? raw;
-  const fixed = fixedEggs(opts).find(([kind, pool]) => !isSingleEgg(kind, opts) && pool.includes(slug));
-  if (fixed) return fixed[0];
-  if (!inRandomEgg(slug, opts)) return null;
-  return Object.keys(eggs(opts)).find((kind) => !isMetaKey(kind) && eggs(opts)[kind]?.pool === "unlocked") ?? null;
-}
+// [임시] 옛 자리의 다시 내보내기 — src/tools 와 scripts/build-verify.cjs 가 새 자리에서 가져오면 지운다
+//   종을 얻는 길은 src/dex/obtain.ts, 알을 줄 수 있는지는 src/egg/pool.ts 에 있다
+export { eggOfSpecies, eggPool, fixedEggs, inRandomEgg, isSingleEgg, singleSpecies } from "../dex/obtain.js";
+export { canGiveEgg, eggBonus, singleLeft } from "../egg/pool.js";
 
 // 상품 하나를 찾는다. 알 · 도구 · 종 순서로 본다
 export function find(id: string, opts?: DexOptions): Product | null {

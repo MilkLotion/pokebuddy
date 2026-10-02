@@ -11,13 +11,12 @@ import { loadJson, type DexOptions } from "../dex/data.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { decide, type Rand } from "../egg/hatch.js";
-import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
 import { BAG_RULES } from "../bag/rules.js";
 import { TIME_RULES } from "../state/rules.js";
 import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
-import { inRandomEgg } from "../shop/catalog.js";
-import { hasRoom, placeNew } from "../shop/buy.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·부화와 같다
+import { inRandomEgg } from "../dex/obtain.js";
 import type { FindKind, FindRecordV3, FindV3, SaveV3 } from "../shared/save-v3";
 
 export { FIND_RULES };

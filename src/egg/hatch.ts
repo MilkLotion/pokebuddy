@@ -5,7 +5,8 @@
 //   2. 이로치는 따로 같은 확률로 뽑는다
 // 알 행동 조건(쓰다듬기·노래로 결과를 바꾸는 규칙)은 2026-09-28 삭제했다 (worklog/records/game-runtime/record.md "알에서 진화형이 나옴")
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
-import { loadJson, type DexOptions } from "../dex/data.js";
+import type { DexOptions } from "../dex/data.js";
+import { rankOf } from "../dex/species.js";
 import { hatchVariants } from "../dex/regional.js";
 import { EGG_RULES } from "./rules.js";
 
@@ -15,20 +16,13 @@ export const RANK_WEIGHT = EGG_RULES.rankWeight;
 
 export type Rand = () => number; // 0 이상 1 미만
 
-interface SpeciesRank {
-  rank?: number;
-}
-
 export interface HatchResult {
   species: string;
   shiny: boolean;
 }
 
-// 수집 난이도 1~5 — data/species.defaults.json 의 rank. 표에 없으면 1. 상점의 종 가격도 이 값을 쓴다 (src/shop/catalog.ts speciesPrice)
-export const rankOf = (slug: string, opts?: DexOptions): number => {
-  const table = loadJson<Record<string, SpeciesRank>>("species.defaults.json", opts);
-  return table[slug]?.rank ?? 1;
-};
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/species.ts)에서 가져오면 지운다
+export { rankOf };
 
 // 난이도 가중치로 하나 뽑는다. 후보가 없으면 null
 export function pickWeighted(candidates: string[], rand: Rand, opts?: DexOptions): string | null {

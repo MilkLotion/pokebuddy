@@ -20,7 +20,6 @@ import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";
 import { afterEvolve, formsOf } from "./forms.js";
 import { REGION_MAP, needIsMap } from "./regional.js";
-import { countsOf } from "../achievement/core.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type EvolveFailure = ReasonOf<
@@ -136,7 +135,7 @@ export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: s
   pet.evolved.push(from);
   pet.species = picked.to;
   pet.stage += 1;
-  countsOf(save).evolved += 1; // 진화 업적이 센다
+  save.counts.evolved += 1; // 진화 업적이 센다
 
   if (!save.dex.unlocked.includes(picked.to)) save.dex.unlocked.push(picked.to);
   if (!save.dex.obtained.includes(picked.to)) save.dex.obtained.push(picked.to);
