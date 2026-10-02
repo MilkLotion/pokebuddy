@@ -47,6 +47,7 @@ import { genderIcon } from "./gender.js";
 import { shinyIcon } from "./shiny.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";
 import { portraitImg, rememberPortrait } from "./portrait.js";
+import { josa } from "../shared/josa.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -1107,25 +1108,6 @@ function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
 // 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
 function askPetMenu(petId: string): void {
   void window.pokebuddyManage.petMenu(petId).catch(() => undefined);
-}
-
-// 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
-// 숫자로 끝나면 한국어로 읽은 소리 기준 (0·1·3·6·7·8 받침 있음, 1·7·8 은 ㄹ 받침)
-// 라틴 글자로 끝나면 이름을 읽은 소리 기준 (L·R 은 ㄹ 받침 — 엘·알, M·N 은 받침 있음 — 엠·엔)
-// 닫는 괄호로 끝나면 괄호 안의 끝 글자로 본다 — "루가루암(한밤중의 모습)으로"
-type JosaPair = "은/는" | "이/가" | "을/를" | "으로/로" | "과/와";
-function josa(word: string, pair: JosaPair): string {
-  const [withBatchim, without] = pair.split("/") as [string, string];
-  const last = word.trim().replace(/[)\]]+$/, "").slice(-1);
-  let b: "none" | "rieul" | "other" = "none";
-  if (/[0-9]/.test(last)) b = "178".includes(last) ? "rieul" : "036".includes(last) ? "other" : "none";
-  else if (/[a-z]/i.test(last)) b = "lr".includes(last.toLowerCase()) ? "rieul" : "mn".includes(last.toLowerCase()) ? "other" : "none";
-  else {
-    const code = last.charCodeAt(0) - 0xac00;
-    if (code >= 0 && code <= 11171 && code % 28 !== 0) b = code % 28 === 8 ? "rieul" : "other";
-  }
-  if (pair === "으로/로") return b === "other" ? withBatchim : without;
-  return b === "none" ? without : withBatchim;
 }
 
 // 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
