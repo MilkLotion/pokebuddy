@@ -409,13 +409,12 @@
       .slot.locked:disabled {
         opacity: 1;
       }
+      /* 포켓몬 초상 — 원형 바탕 없이 그림만 보인다 (2026-10-03 사용자 결정 "원형 저거 굳이 없어도 될거같아" · "다 빼봐"). 포켓몬이 없는 자리 표시만 원형으로 남긴다 */
       .portrait {
         position: relative;
         flex: none;
         width: 80px;
         height: 80px;
-        border-radius: 50%;
-        background: var(--accent-bg);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -423,12 +422,11 @@
         font-family: var(--font-small);
         color: var(--muted);
       }
-      /* 초상 그림 — PokeAPI 기본 그림(96 × 96). 둘레 여백이 커서 가운데를 잘라 원을 채운다 */
+      /* 초상 그림 — PokeAPI 기본 그림(96 × 96). 둘레 여백이 커서 가운데를 잘라 자리를 채운다 */
       .art {
         display: block;
         width: 100%;
         height: 100%;
-        border-radius: 50%;
         object-fit: cover;
         object-view-box: inset(14%);
       }
@@ -1588,10 +1586,6 @@
         position: relative;
         background: var(--accent-bg);
       }
-      /* 배경과 같은 색이라 초상 자리가 사라지지 않게 */
-      .cell[aria-pressed="true"] .dot {
-        background: var(--surface);
-      }
       .box-grid {
         display: grid;
         grid-template-columns: repeat(6, 1fr);
@@ -1623,8 +1617,6 @@
       .cell .dot {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: var(--accent-bg);
       }
       .cell .who {
         max-width: 100%;
@@ -1738,8 +1730,6 @@
       .dex-cell .dot {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
-        background: var(--accent-bg);
         margin: 4px auto;
       }
       /* 보는 방식 토글 — 격자 · 목록 아이콘 두 개. 고른 쪽은 톤 배경(색 테두리 강조는 쓰지 않는다). 높이는 검색 칸과 같은 32px */
@@ -2668,9 +2658,6 @@
       .evo-node.picked {
         background: var(--accent-bg);
       }
-      .evo-node.picked .portrait {
-        background: var(--surface);
-      }
       .evo-node.dim {
         opacity: 0.45;
       }
@@ -2684,8 +2671,6 @@
       .evo-node .portrait {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: var(--accent-bg);
         overflow: hidden;
       }
       /* 미해금 종 — 그림을 검은 실루엣으로 (2026-10-02 사용자 결정, Figma `Evo Node` `State=Locked` `1379:3`) */
@@ -2783,7 +2768,6 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        border-radius: 50%;
       }
       .gp-face .art {
         width: 100%;
@@ -3004,9 +2988,12 @@
         flex: none;
         width: 36px;
         height: 36px;
+        overflow: hidden;
+      }
+      /* 올린 포켓몬이 없는 빈 자리만 원형으로 보인다 */
+      .trade-portrait:not([data-portrait]) {
         border-radius: 50%;
         background: var(--accent-bg);
-        overflow: hidden;
       }
       .trade-pet.big .trade-portrait {
         width: 80px;
@@ -3151,8 +3138,8 @@
         background: var(--danger-bg);
         border-color: var(--danger-bg);
       }
-      .trade-side.ready .trade-portrait,
-      .trade-side.blocked .trade-portrait {
+      .trade-side.ready .trade-portrait:not([data-portrait]),
+      .trade-side.blocked .trade-portrait:not([data-portrait]) {
         background: var(--surface);
       }
       .trade-side-title {

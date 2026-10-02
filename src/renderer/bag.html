@@ -404,9 +404,12 @@
         place-items: center;
         width: 40px;
         height: 40px;
+        overflow: hidden;
+      }
+      /* 그림이 없을 때만 원형 자리 표시 — 그림이 있으면 바탕 없이 그림만 (2026-10-03 사용자 결정 "원형 저거 굳이 없어도 될거같아" · "다 빼봐") */
+      .party .face:empty {
         border-radius: 50%;
         background: var(--accent);
-        overflow: hidden;
       }
       .party .face img {
         width: 100%;

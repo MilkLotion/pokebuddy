@@ -311,17 +311,13 @@
       .evo-node.current {
         background: var(--evo-current);
       }
+      /* 진화 트리 초상 — 원형 바탕 없이 그림만 (2026-10-03 사용자 결정 "원형 저거 굳이 없어도 될거같아" · "다 빼봐") */
       .evo-node .portrait {
         width: 40px;
         height: 40px;
-        border-radius: 50%;
-        background: var(--stage);
         display: flex;
         align-items: center;
         justify-content: center;
-      }
-      .evo-node.current .portrait {
-        background: var(--paper);
       }
       /* 미해금 종 — 그림을 검은 실루엣으로 (2026-10-02 사용자 결정, Figma `Evo Node` `State=Locked` `1379:3`) */
       .evo-node .portrait.locked .art {
@@ -331,7 +327,6 @@
         display: block;
         width: 100%;
         height: 100%;
-        border-radius: 50%;
         object-fit: cover;
         object-view-box: inset(14%);
         image-rendering: pixelated;
