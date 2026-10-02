@@ -153,3 +153,6 @@ export const MOTION_RULES: MotionRules = {
     return agent !== "idle" && agent !== "running";
   },
 };
+
+// 성격의 축 하나가 움직임 배율을 바꾸는 폭 — params.ts paramsFor 가 읽는다
+export const NATURE_MOTION_RULES = { pace: 0.2, pause: 0.2, fidget: 0.2, sleep: 0.2, react: 0.25, pull: 0.65 };

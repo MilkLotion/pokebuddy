@@ -17,7 +17,8 @@ import { evaluate } from "../achievement/core.js";
 import { grantStones, tickMega } from "../dex/mega.js";
 import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
-import { MOOD_RULES, TIME_V3_RULES } from "../save/rules.js";
+import { MOOD_RULES, TIME_RULES } from "./rules.js";
+import { PET_RULES } from "../party/rules.js";
 import type { BuffV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { FullnessZone } from "../shared/save-v3.js";
 
@@ -36,7 +37,7 @@ export interface TickEvents {
 }
 
 export const zoneOf = (fullness: number): FullnessZone => {
-  const { zone } = TIME_V3_RULES;
+  const { zone } = TIME_RULES;
   if (fullness >= zone.full) return "full";
   if (fullness >= zone.normal) return "normal";
   if (fullness >= zone.hungry) return "hungry";
@@ -55,14 +56,14 @@ export function buffPercent(buffs: BuffV3[]): number {
   for (const b of buffs) {
     if (b.remainMs <= 0 || seen.has(b.kind) || (excited && b.kind === "short-play")) continue;
     seen.add(b.kind);
-    sum += TIME_V3_RULES.buffBonusPercent[b.kind] ?? 0;
+    sum += TIME_RULES.buffBonusPercent[b.kind] ?? 0;
   }
   return sum;
 }
 
 // 친밀도 증가 배율(백분율) — 버프를 더한 값에 만복도 구간의 디버프를 곱한다
 export const affinityPercent = (pet: PetV3): number =>
-  Math.round((buffPercent(pet.buffs) * TIME_V3_RULES.zonePercent[zoneOf(pet.fullness)]) / 100);
+  Math.round((buffPercent(pet.buffs) * TIME_RULES.zonePercent[zoneOf(pet.fullness)]) / 100);
 
 // 돌봄 보너스 — 포인트 적립 배율(백분율). 친밀도가 100 인 개체만 받는다 (2026-10-02 사용자 결정, docs/specs/balance.md "돌봄 보너스")
 // 기분 단계 보너스와 버프 보너스를 더한다. 배고픔은 포인트를 직접 깎지 않는다 — 기분 감소 배율로만 작용한다
@@ -82,7 +83,7 @@ export function careParts(pet: PetV3): { kind: "mood" | BuffV3["kind"]; percent:
   for (const b of pet.buffs) {
     if (b.remainMs <= 0 || seen.has(b.kind) || (excited && b.kind === "short-play")) continue;
     seen.add(b.kind);
-    const percent = TIME_V3_RULES.buffBonusPercent[b.kind] ?? 0;
+    const percent = TIME_RULES.buffBonusPercent[b.kind] ?? 0;
     if (percent > 0) parts.push({ kind: b.kind, percent });
   }
   return parts;
@@ -116,7 +117,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
   const work = Math.min(elapsed, Math.max(0, Math.round(input.workMs ?? 0)));
   const earning = elapsed + work; // 친밀도·포인트를 쌓는 시간. 작업한 시간은 두 번 센다
 
-  const { fullnessDropMs, affinityGainMs, pointGainMs } = TIME_V3_RULES;
+  const { fullnessDropMs, affinityGainMs, pointGainMs } = TIME_RULES;
   const inParty = new Set(partyPetIds(save));
   let pointWeighted = 0;
 
@@ -145,7 +146,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     const gain = Math.floor(pet.affinityProgressMs / affinityGainMs);
     if (gain > 0) {
       pet.affinityProgressMs -= gain * affinityGainMs;
-      const next = Math.min(100, pet.affinity + gain);
+      const next = Math.min(PET_RULES.statMax, pet.affinity + gain);
       if (next !== pet.affinity) events.affinityGained.push({ petId: pet.id, gained: next - pet.affinity });
       pet.affinity = next;
     }

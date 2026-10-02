@@ -2,7 +2,7 @@
 //
 // 사용자가 마리를 끌어다 놓으면 그 자리를 기억한다. 파티 칸이나 박스와는 상관이 없다.
 // 박스에 있는 개체의 자리도 그대로 둔다 — 다시 꺼내면 놓아 둔 자리로 돌아간다.
-import { zoomOfLevel } from "../save/rules.js";
+import { zoomOfLevel } from "./size.js";
 import { screenRefOf } from "../save/v3.js";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -41,7 +41,7 @@ export function setHome(save: SaveV3, petId: string, home: unknown, screen?: unk
 }
 
 // 그림 크기 — 단계 번호(1~SIZE_STEPS 길이)를 받아 그 배율을 저장한다. 무대가 도트 배율로 쓴다 (src/main/art.ts zoomOf).
-// 상세의 크기 단추가 한 번 누를 때 한 번 저장한다. 단계표는 src/save/rules.ts SIZE_STEPS
+// 상세의 크기 단추가 한 번 누를 때 한 번 저장한다. 단계표는 src/party/size.ts SIZE_STEPS
 
 export interface SizeResult {
   ok: boolean;

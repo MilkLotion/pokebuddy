@@ -14,7 +14,7 @@ import { hasProfile } from "../dex/species.js";
 import { locatePet, slotsOfPreset } from "../party/presets.js";
 import { singleSpecies } from "../shop/catalog.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { snapSize } from "../save/rules.js";
+import { snapSize } from "../party/size.js";
 import type { DexOptions } from "../dex/data";
 import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";

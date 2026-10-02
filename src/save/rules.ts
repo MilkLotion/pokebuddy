@@ -1,30 +1,19 @@
 // 저장·통로의 규칙표 — 스키마 기본값과 파일 통로의 시간. "숫자는 모듈마다 규칙표 하나" (design.md 모듈 규칙)
 //
-// 게임 숫자(친밀도·기분·쿨다운)는 여기 없다 — state 모듈의 규칙표에. 여기는 save.json 의 모양을 채우는 기본값과
+// 게임 숫자(친밀도·기분·쿨다운·가격)는 여기 없다 — 주인 모듈의 rules.ts 에 있다. 여기는 save.json 의 판·거래 기록과
 // 파일 IO 의 재시도·TTL 만. 숫자는 전부 자리표시자 — 써 보며 고친다.
 // 성격 검증은 dex가 소유. 에이전트·보낸 이 목록은 src/shared/names/ 에 있다
 import type { NatureId } from "../shared/species.js";
-import { isNatureId as dexNatureId } from "../dex/natures";
-
-// 그림 크기 단계 — 단계 번호(1부터) 순서의 도트 배율. 저장(Pet.size)은 배율을 적고, 화면·명령은 단계 번호를 쓴다.
-// 더 큰 크기가 필요하면 배열 끝에 배율을 더한다(예: 3.5). 단계 수·단추 수는 이 배열 길이를 따른다.
-// 2026-09-27 사용자 결정: 옛 1과 2 사이 단계를 두고, 옛 3을 가장 크게 한다. 옛 저장의 더 큰 배율은 가장 큰 단계로 줄인다
-export const SIZE_STEPS: readonly number[] = [1, 1.5, 2, 2.5, 3];
-// 새 개체의 크기 단계 — 2026-09-27 사용자 결정 "기본크기 2로" (배율 1.5)
-export const DEFAULT_SIZE_LEVEL = 2;
-
-// 배율에서 가장 가까운 단계 번호 — 같은 거리면 작은 쪽
-export function sizeLevelOf(zoom: number): number {
-  let best = 0;
-  for (let i = 1; i < SIZE_STEPS.length; i++) if (Math.abs((SIZE_STEPS[i] ?? 0) - zoom) < Math.abs((SIZE_STEPS[best] ?? 0) - zoom)) best = i;
-  return best + 1;
-}
-
-// 단계 번호의 배율. 없는 단계면 null
-export const zoomOfLevel = (level: number): number | null => (Number.isInteger(level) ? (SIZE_STEPS[level - 1] ?? null) : null);
-
-// 저장 값을 단계 배율로 맞춘다
-export const snapSize = (zoom: number): number => SIZE_STEPS[sizeLevelOf(zoom) - 1] ?? 2;
+import { FALLBACK_NATURE, isNatureId as dexNatureId } from "../dex/natures";
+import { MEGA_RULES, UNLOCK_RULES } from "../dex/rules";
+import { ACHIEVEMENT_RULES } from "../achievement/rules";
+import { BAG_RULES } from "../bag/rules";
+import { BOX_RULES } from "../box/rules";
+import { EGG_RULES } from "../egg/rules";
+import { PARTY_RULES, PET_RULES } from "../party/rules";
+import { SIZE_STEPS, sizeLevelOf, snapSize, zoomOfLevel } from "../party/size";
+import { SHOP_RULES } from "../shop/rules";
+import { CARE_RULES, MOOD_RULES as STATE_MOOD_RULES, TIME_RULES } from "../state/rules";
 
 export const SAVE_RULES = {
   version: 2 as const, // save.json 스키마 버전 (v). 1 은 읽어서 이전한다
@@ -36,7 +25,7 @@ export const SAVE_RULES = {
     mood: 60, // 시작 기분 (1판 RULES.mood.start) [스펙 미확정]
     size: 2, // 도트 배율 — config.js dotSize 기본과 같다
     home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — config.js anchorDx·anchorDy 기본과 같다
-    nature: "hardy" as NatureId, // 성격을 모르는 마리(v1 이전·값 파손)에 붙이는 중립 성격 — 축이 전부 0
+    nature: FALLBACK_NATURE, // 성격을 모르는 마리(v1 이전·값 파손)에 붙이는 중립 성격 — 축이 전부 0 (src/dex/natures.ts)
   },
   range: { min: 0, max: 100 }, // hunger · mood 의 범위
   // 파일 통로의 시간 (1판 economy RULES.io 에서 옮김)
@@ -53,96 +42,48 @@ export const SAVE_RULES = {
 
 export const isNatureId = (v: unknown): v is NatureId => typeof v === "string" && dexNatureId(v);
 
-// 저장 v3 의 기본값 — 계약은 docs/specs/modules.md "저장 구조". 게임 숫자는 docs/specs/balance.md 를 따른다
+// 저장 v3 의 규칙 — 계약은 docs/specs/modules.md "저장 구조"
 export const SAVE_V3_RULES = {
   version: 3 as const,
-  unlockRev: 1, // 해금 정리 판 — src/dex/unlocks.ts pruneUnlocks. 판을 올리면 옛 저장에서 한 번 정리가 돈다
-  achievementRev: 1, // 업적 목록의 판 — 목록을 크게 늘릴 때 올린다. 옛 저장은 다음 판정에서 달성한 업적을 배너 없이 기록한다 (src/achievement/core.ts evaluate)
-  party: {
-    total: 6, // 파티 칸은 항상 여섯이다. 열림·빈 칸·잠김으로 상태를 나눈다
-    openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다
-    shopUnlock: 2, // 상점에서 살 수 있는 칸 수 — 첫 프리셋. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
-    presets: { start: 2, max: 5, nameMax: 12 }, // 파티 프리셋 — 두 개로 시작하고 상점에서 셋을 더 산다. 이름은 박스처럼 12자까지 (2026-10-02 사용자 결정)
-  },
-  // 박스 수 — start 개로 시작한다. 저절로 늘지 않고 상점에서 하나씩 사서 max 개까지 늘린다 (2026-10-02 사용자 결정 "기본8개제공, 박스는 추가구매"·"64"). src/save/v3.ts fillBoxes, src/box/slots.ts addBox
-  box: { size: 30, firstName: "박스 1", start: 8, max: 64 },
-  pet: {
-    level: 1,
-    exp: 0,
-    affinity: 0,
-    fullness: 100, // 새 개체는 배부른 상태로 시작한다
-    mood: 60,
-    size: 1.5, // 도트 배율 — 크기 단계 DEFAULT_SIZE_LEVEL(2) 의 배율 SIZE_STEPS[1]
-    home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — SAVE_RULES.pet.home 과 같은 값이다
-  },
-  feedCooldownMs: 10 * 60_000, // 밥 주기 쿨타임 10분. 기본먹이와 프리미엄먹이가 함께 쓴다
-  playCooldownMs: 10 * 60_000, // 놀아주기 쿨타임 10분
-  playWindowMs: 20 * 60_000, // 놀아주기 상태가 남아 있는 시간 20분. 이 안에 또 놀아주면 중첩이 오른다
-  shortPlayAt: 2, // 이만큼 이어서 놀아주면 버프 들뜸이 붙는다 (2026-09-29 사용자 결정)
-  longPlayAt: 3, // 이만큼 이어서 놀아주면 버프 신남이 붙는다. 들뜸은 신남으로 바뀐다 (2026-09-29 사용자 결정 — 이름. 교체 규칙은 제안)
-  eggCareCooldownMs: 60_000, // 알 돌봄 인정 간격 1분
   tx: { keep: 200, ttlMs: 24 * 60 * 60_000 }, // 최근 200건 또는 24시간 중 큰 쪽을 남긴다
-  saveEveryMs: 30_000, // 시간에 따른 값의 주기 저장
   saveFailNotifyAfter: 3, // 이만큼 이어서 실패하면 관리 창 상태 안내에 남긴다
+  // [임시] 아래는 주인 모듈로 옮긴 값의 옛 이름이다 — src/tools 와 scripts/build-verify.cjs 가 새 자리에서 읽으면 지운다
+  //   (worklog/records/code-structure/lanes/domain.md "옛 자리에 남긴 다시 내보내기")
+  unlockRev: UNLOCK_RULES.rev,
+  achievementRev: ACHIEVEMENT_RULES.rev,
+  party: {
+    total: PARTY_RULES.total,
+    openAtStart: PARTY_RULES.openAtStart,
+    shopUnlock: PARTY_RULES.shopUnlock,
+    presets: { ...PARTY_RULES.presets, nameMax: BOX_RULES.nameMax },
+  },
+  box: { size: BOX_RULES.size, firstName: BOX_RULES.firstName, start: BOX_RULES.start, max: BOX_RULES.max },
+  pet: PET_RULES,
+  feedCooldownMs: BAG_RULES.feedCooldownMs,
+  playCooldownMs: CARE_RULES.playCooldownMs,
+  playWindowMs: CARE_RULES.playWindowMs,
+  shortPlayAt: CARE_RULES.shortPlayAt,
+  longPlayAt: CARE_RULES.longPlayAt,
 };
 
-// 시간에 따른 값의 규칙표 — 수치는 docs/specs/balance.md 를 따른다
+// [임시] 주인 모듈로 옮긴 규칙표의 옛 이름 — 읽는 곳은 src/main, src/tools, scripts/build-verify.cjs 다.
+// 새 코드는 주인 모듈의 rules.ts 를 읽는다. 읽는 곳이 새 자리로 가면 아래를 모두 지운다
+export { MEGA_RULES, SIZE_STEPS, sizeLevelOf, snapSize, zoomOfLevel };
+// 새 개체의 크기 단계 — 2026-09-27 사용자 결정 "기본크기 2로" (배율 1.5). 값의 원본은 src/party/rules.ts PET_RULES.size
+export const DEFAULT_SIZE_LEVEL = sizeLevelOf(PET_RULES.size);
 export const TIME_V3_RULES = {
-  fullnessDropMs: 120_000, // 만복도 1 감소에 걸리는 시간. 시간당 30 이므로 2분에 1
-  affinityGainMs: 600_000, // 친밀도 1 획득에 걸리는 가중 시간. 10분에 1
-  pointGainMs: 120_000, // 포인트 1 획득에 걸리는 가중 시간. 개체 1마리당 2분에 1
-  // 한 번에 흘릴 수 있는 최대 시간. 앱은 15초마다 시간을 적용한다. 그보다 크게 벌어진 틈은 앱 종료·절전·잠금으로 본다.
-  // 틈은 소급하지 않는다 (docs/specs/game.md "PC 잠금·절전·앱 종료 중에는 … 소급 진행하지 않는다")
-  maxTickMs: 30_000,
-  // 만복도 구간 — 아래 경계값 이상이면 그 구간이다
-  zone: { full: 60, normal: 40, hungry: 15 },
-  // 구간별 친밀도 증가 배율(백분율). 배고픔 −30%, 매우 배고픔 −60%
-  zonePercent: { full: 100, normal: 100, hungry: 70, starving: 40 },
-  // 버프의 추가 배율(백분율). 기준 100 에 더한다. 든든함 +100(×2) · 신남 +50(×1.5) · 들뜸 +20(×1.2). 든든함과 신남이 함께면 250 이 된다.
-  // 식별자는 저장 호환으로 그대로 둔다 — premium-food 는 든든함, long-play 는 신남(옛 이름 오래 놀아주기), short-play 는 들뜸 (2026-09-29 사용자 결정)
-  buffBonusPercent: { "premium-food": 100, "long-play": 50, "short-play": 20 },
+  fullnessDropMs: TIME_RULES.fullnessDropMs,
+  affinityGainMs: TIME_RULES.affinityGainMs,
+  pointGainMs: TIME_RULES.pointGainMs,
+  maxTickMs: TIME_RULES.maxElapsedMs, // 새 이름은 maxElapsedMs 다. 5초 틈 상한(maxGapMs)과 이름이 같았다
+  zone: TIME_RULES.zone,
+  zonePercent: TIME_RULES.zonePercent,
+  buffBonusPercent: TIME_RULES.buffBonusPercent,
 };
-
-// 기분 — 친밀도 100 미만에서는 보이기만 한다. 친밀도 100 인 개체는 기분 단계가 포인트 적립을 올린다 (docs/specs/balance.md "기분"·"돌봄 보너스")
-export const MOOD_RULES = {
-  // 기분 단계별 포인트 적립 보너스(백분율). 높은 단계부터 본다. 최고(80 이상) +30, 좋음(60 이상) +15 (2026-10-02 사용자 결정)
-  pointBonus: [{ min: 80, percent: 30 }, { min: 60, percent: 15 }] as readonly { min: number; percent: number }[],
-  dropMs: 600_000, // 파티 칸 개체의 기분 1 감소에 걸리는 시간. 10분에 1
-  // 만복도 구간별 감소 배율(백분율). 배고픔 2배, 매우 배고픔 3배
-  zonePercent: { full: 100, normal: 100, hungry: 200, starving: 300 },
-  feed: 10, // 밥 주기 — 기본먹이·프리미엄먹이
-  play: 15, // 놀아주기 — 클릭 놀아주기와 장난감
-};
-
-// 알의 규칙표 — 수치는 docs/specs/balance.md "확률과 알"
-export const EGG_V3_RULES = {
-  readyMs: 5 * 60_000, // 준비 시간 5분. 알 돌봄(단축)은 2026-09-28 삭제했다
-  maxEggs: 6, // 돌보미집 칸 수
-};
-
-// 상점의 규칙표 — 가격은 docs/specs/balance.md 가격표
-export const SHOP_V3_RULES = {
-  evoItemPrice: 150, // 진화용 도구는 종류와 무관하게 같은 값이다
-  slotPrice: 500, // 파티 칸 하나 — 순서와 프리셋에 관계없이 같은 값이다 (2026-10-02 사용자 결정 "파티칸 가격은 500포인트 고정하자")
-  boxPrice: 300, // 박스 하나 — 늘 같은 값이다 (2026-10-02 사용자 결정 "1개씩 300P")
-  presetPrice: 1000, // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정 "프리셋 가격은 1000포인트 고정하자")
-  // 종 지정 구매 — 수집 난이도(rank)별 가격. 알에서 얻을 수 있는 종만 판다 (2026-09-29 사용자 결정, src/shop/catalog.ts speciesPrice)
-  speciesPrices: { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 } as Readonly<Record<number, number>>,
-  startPoints: 120, // 첫 선택을 마치면 한 번 지급한다
-  sellRate: 0.6, // 가방 판매가 = 구매가 × 0.6, 내림 (2026-09-30 사용자 결정 "판매가는 구매가의 60%". 내림은 제안). src/shop/sell.ts
-  // 포켓몬 판매가 = 그 종이 나오는 알의 값 × petSellRate, petSellUnit 단위로 내림 (2026-10-01 사용자 결정 "가격은 알 1/4 가격으로. 대충 10단위로 떨어지게"). src/shop/sell-pet.ts
-  petSellRate: 0.25,
-  petSellUnit: 10,
-  bagMax: 999,// 도구 한 종류를 가방에 둘 수 있는 최대 개수 — 넘게는 살 수 없다 (2026-09-27 사용자 결정). 업적 보상 등 사지 않고 받는 것은 막지 않는다
-};
-
-// 가방 도구의 규칙표 — 수치는 docs/specs/balance.md "버프와 친밀도"
-export const BAG_V3_RULES = {
-  buffMs: { "premium-food": 2 * 60 * 60_000, "long-play": 30 * 60_000, "short-play": 30 * 60_000 }, // 든든함 2시간, 신남 30분, 들뜸 30분 (2026-09-29 사용자 결정)
-  toyBuffMs: 2 * 60 * 60_000, // 장난감으로 켠 신남 2시간 — 값(20P)보다 많이 벌게 한다 (2026-10-02 사용자 결정)
-  feedAffinity: 2, // 밥 주기로 오르는 친밀도
-  playAffinity: 3, // 놀아주기로 오르는 친밀도
-};
+export const MOOD_RULES = { ...STATE_MOOD_RULES, feed: BAG_RULES.feedMood, play: BAG_RULES.playMood };
+export const EGG_V3_RULES = { readyMs: EGG_RULES.readyMs, maxEggs: EGG_RULES.maxEggs };
+export const SHOP_V3_RULES = { ...SHOP_RULES, startPoints: PARTY_RULES.startPoints, bagMax: BAG_RULES.max };
+export const BAG_V3_RULES = { buffMs: BAG_RULES.buffMs, toyBuffMs: BAG_RULES.toyBuffMs, feedAffinity: BAG_RULES.feedAffinity, playAffinity: BAG_RULES.playAffinity };
 
 // 관리 창의 크기 — docs/specs/game.md "관리 창". Figma 의 640 px 를 DIP 로 그대로 쓴다
 export const WINDOW_V3_RULES = {
@@ -151,13 +92,4 @@ export const WINDOW_V3_RULES = {
   // 헤더 40 + 탭 40 + 본문 위 여백 16 + 파티 머리와 칸 3줄(마지막 칸이 창 위에서 650) + 본문 아래 여백 32. 파티 칸 모양이 바뀌면 다시 잰다
   height: 682,
   minHeight: 560, // 본문이 스크롤이라 이만큼까지 줄일 수 있다
-};
-
-// 메가진화 조건 — 수치는 docs/specs/balance.md "메가진화". 모두 채우면 그 개체에 메가스톤이 생긴다 (src/dex/mega.ts)
-// 항목은 2026-10-02 사용자 결정(친밀도 100, 레벨 60 이상, 파티에서 보낸 시간, 돌봄 누적 횟수). 시간과 횟수의 값은 제안이다
-export const MEGA_RULES = {
-  affinity: 100,
-  level: 60,
-  bondMs: 24 * 60 * 60_000, // 친밀도 100 뒤 파티에서 보낸 시간 24시간
-  care: 100, // 친밀도 100 뒤 밥 주기와 놀아주기 합 100회
 };

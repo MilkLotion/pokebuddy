@@ -42,7 +42,8 @@ import { profile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { hasRoom, newEgg, placeNew } from "../shop/buy.js";
 import { canGiveEgg, singleSpecies } from "../shop/catalog.js";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { ACHIEVEMENT_RULES } from "./rules.js";
+import { EGG_RULES } from "../egg/rules.js";
 import type { Rand } from "../egg/hatch";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -247,7 +248,7 @@ function touchDay(save: SaveV3, now: number): void {
 // 배너를 띄우지 않고 업적 아이콘의 점만 켠다 (src/notify/queue.ts pendingOf)
 export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: SaveV3): string[] {
   touchDay(save, now);
-  const quiet = (save.achRev ?? 0) < SAVE_V3_RULES.achievementRev;
+  const quiet = (save.achRev ?? 0) < ACHIEVEMENT_RULES.rev;
   const fresh: string[] = [];
   for (const [id] of defs(opts)) {
     const row = save.achievements[id];
@@ -256,7 +257,7 @@ export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: Sa
     save.achievements[id] = { achievedAt: now, claimedAt: row?.claimedAt ?? null, ...(quiet ? { quiet: true as const } : {}) };
     fresh.push(id);
   }
-  if (quiet) save.achRev = SAVE_V3_RULES.achievementRev;
+  if (quiet) save.achRev = ACHIEVEMENT_RULES.rev;
   return quiet ? [] : fresh;
 }
 
@@ -302,7 +303,7 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const eggKind = rewardEgg(def);
   if (eggKind) {
-    if (save.eggs.length >= EGG_V3_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
+    if (save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
     if (!canGiveEgg(save, eggKind, opts)) return { ok: false, reason: "egg-none" };
     const egg = newEgg(save, eggKind, now, opts);
     save.eggs.push(egg);

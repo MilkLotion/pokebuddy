@@ -13,7 +13,7 @@
 // 럭키는 핑복 진화로 얻는다 (사용자 결정)
 
 import { gameDayPart, localDate } from "../shared/clock";
-import { SAVE_V3_RULES } from "../save/rules";
+import { UNLOCK_RULES } from "./rules";
 import type { SaveV3 } from "../shared/save-v3";
 import type { DayPart, UnlockRule } from "../shared/species";
 import type { Pet, World } from "../shared/types";
@@ -92,13 +92,13 @@ export const unlockRules = (opts?: DexOptions): UnlockRules => loadJson<UnlockRu
 // ── 해금 정리 (한 번) ──────────────────────────────────────────────────────────
 // 옛 규칙이 처음부터 해금한 종 가운데 이제 알에서만 나오는 종을 되돌린다 (2026-09-27 사용자 결정 "획득하지 않은 것만 한 번 정리")
 //   판 1  화석·패러독스가 기본형에서 빠졌다. 규칙이 없고 얻지 않은 종의 해금을 지운다. 얻은 종은 그대로 둔다
-//   정리는 판(SAVE_V3_RULES.unlockRev)마다 한 번 — 새 저장은 지금 판으로 시작한다
+//   정리는 판(UNLOCK_RULES.rev)마다 한 번 — 새 저장은 지금 판으로 시작한다
 export function pruneUnlocks(save: SaveV3, rules: UnlockRules): string[] {
-  if (save.dex.rulesRev >= SAVE_V3_RULES.unlockRev) return [];
+  if (save.dex.rulesRev >= UNLOCK_RULES.rev) return [];
   const obtained = new Set(save.dex.obtained.map(normalizeSlug));
   const removed = save.dex.unlocked.filter((slug) => !rules[slug] && !obtained.has(normalizeSlug(slug)));
   save.dex.unlocked = save.dex.unlocked.filter((slug) => !removed.includes(slug));
-  save.dex.rulesRev = SAVE_V3_RULES.unlockRev;
+  save.dex.rulesRev = UNLOCK_RULES.rev;
   return removed;
 }
 
