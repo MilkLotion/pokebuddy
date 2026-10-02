@@ -8,15 +8,18 @@
 //   pokemon.csv                       기본 모습(is_default)의 키(데시미터)·몸무게(헥토그램) — 도감 기기 창 (worklog/records/play-bugs/record.md)
 //
 // 결과: { "<도감 번호>": { "genus": { "ko", "en" }, "flavor": { "ko"?, "en"? }, "height"?, "weight"? } }
-//   - 한국어 설명문은 898번까지만 있다(2026-09-25 확인). 없으면 ko 칸을 두지 않는다 — 화면이 영어로 대신한다
+//   - PokeAPI 의 한국어 설명문은 898번까지만 있다(2026-09-25 확인, 2026-10-03 다시 확인). 899~1025번은 data/dex-text.ko.json 으로 채운다
+//     (포켓몬코리아 공식 도감에서 모은 것 — scripts/fetch-dex-ko.cjs). 그래도 없으면 ko 칸을 두지 않는다 — 화면이 영어로 대신한다
 //   - 설명문의 줄바꿈·쪽바꿈 문자는 빈칸 하나로 바꾼다
 //   - 리전폼(data/regional.json)은 슬러그 키로 키·몸무게만 둔다 — "raichu-alola": { genus: {}, flavor: {}, height, weight }.
 //     분류·설명문은 PokeAPI 에 폼 단위가 없어 도감 번호 항목(기본형)을 쓴다 (src/tx/dex-detail.ts textOf)
+import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 import { regionalTable } from "../dex/regional";
 
 const OUT = path.join(DATA_DIR, "dex-text.json");
+const KO_EXTRA = path.join(DATA_DIR, "dex-text.ko.json");
 const LANG = { ko: "3", en: "9" } as const;
 type Lang = keyof typeof LANG;
 
@@ -55,6 +58,13 @@ export async function build(): Promise<void> {
       latest.set(key, version);
       entry(r.species_id).flavor[lang] = clean(r.flavor_text);
     }
+  }
+
+  // 한국어 설명문 보충 — PokeAPI 에 없는 종만 채운다. PokeAPI 에 생기면 그쪽을 쓴다
+  const extra = JSON.parse(fs.readFileSync(KO_EXTRA, "utf8")) as Record<string, string>;
+  for (const [id, text] of Object.entries(extra)) {
+    if (id.startsWith("_") || !out[id] || out[id].flavor.ko) continue;
+    out[id].flavor.ko = clean(text);
   }
 
   for (const r of bodyRows) {

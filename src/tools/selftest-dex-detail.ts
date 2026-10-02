@@ -142,7 +142,7 @@ function seed(): SaveV3 {
   process.stdout.write("(8) 타입 키와 초상 경로  ok\n");
 }
 
-// (9) 공식 분류와 설명 — 해금한 종만. 한국어 설명이 없는 종은 영어로 대신한다
+// (9) 공식 분류와 설명 — 해금한 종만. 899번부터의 한국어 설명은 보충 파일에서 온다
 {
   const d = dexDetail(seed(), "charmander");
   assert.equal(d?.genus, "도롱뇽포켓몬");
@@ -153,7 +153,7 @@ function seed(): SaveV3 {
   late.dex.unlocked.push("pecharunt");
   const p = dexDetail(late, "pecharunt");
   assert.equal(p?.genus, "지배포켓몬");
-  assert.ok(/[A-Za-z]/.test(p?.flavor ?? ""), "899번부터는 영어 설명");
+  assert.ok(/[가-힣]/.test(p?.flavor ?? "") && !/[A-Za-z]{3,}/.test(p?.flavor ?? ""), "899번부터도 한국어 설명 — data/dex-text.ko.json 으로 채운다 (2026-10-03)");
   process.stdout.write("(9) 공식 분류와 설명  ok\n");
 }
 

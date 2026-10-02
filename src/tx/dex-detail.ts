@@ -127,7 +127,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     methods: methods.length ? methods.join(" · ") : NO_METHOD,
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
-    // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종(899번부터)은 영어로 대신한다
+    // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종은 영어로 대신한다(899번부터는 data/dex-text.ko.json 으로 채워 지금은 없다)
     ...officialText(unlocked ? textOf(slug, row.dex, opts) : undefined),
     ...bodySize(unlocked ? textOf(slug, row.dex, opts) : undefined),
   };
