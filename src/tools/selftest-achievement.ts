@@ -60,7 +60,7 @@ function seed(): SaveV3 {
   const old = ["show-two", "starter-final", "work-100h", "party-three"];
   const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
-  // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
+  // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전의 색)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼의 모습)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
   assert.deepStrictEqual(rewardSpecies().sort(), ["ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "togepi"]);
   for (const [id, def] of list) {
     const egg = rewardEgg(def);

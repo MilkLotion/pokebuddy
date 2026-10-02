@@ -5,7 +5,7 @@
   "dex-300": { "ko": "포켓몬 300종 모으기", "en": "Collect 300 Species", "group": "dex", "cond": { "kind": "dex", "count": 300 }, "reward": { "egg": "sub-legendary" } },
   "dex-600": { "ko": "포켓몬 600종 모으기", "en": "Collect 600 Species", "group": "dex", "cond": { "kind": "dex", "count": 600 }, "reward": { "egg": "mythical" } },
   "dex-1000": {
-    "_comment": "마기아나(500년 전)은 원작에서 전국 도감 완성의 보상이다. 이 종은 단일 포켓몬이다 (2026-10-03 사용자 결정 \"업적으로 바꿔\")",
+    "_comment": "마기아나(500년 전의 색)은 원작에서 전국 도감 완성의 보상이다. 이 종은 단일 포켓몬이다 (2026-10-03 사용자 결정 \"업적으로 바꿔\")",
     "ko": "포켓몬 1000종 모으기", "en": "Collect 1000 Species", "group": "dex", "cond": { "kind": "dex", "count": 1000 }, "reward": { "pokemon": "magearna-original" }
   },
   "dex-kanto": {
