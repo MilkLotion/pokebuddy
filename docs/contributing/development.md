@@ -391,6 +391,8 @@ npm install -g ./pokebuddy-<버전>.tgz   # 올리기 전에 이 파일로 설�
   - Windows 실기에서 다음을 확인한다: `pokebuddy setup`, `pokebuddy companion`, claude·codex·gemini 의 상태 반응, 트레이의 종료, `pokebuddy companion stop`
 - Electron 은 시험한 버전으로 고정해 두었다(`dependencies.electron`). 올릴 때는 동반자 실행·드래그·산책을 다시 확인한다
 - PMD 그림은 패키지에 들어가지 않는다(CC BY-NC). 받는 사람 컴퓨터에서 실행할 때 내려받는다
+- 배포물은 [권리와 배포 규칙](../design.md#제품과-실행)을 따른다. 포켓몬 그림 파일, 후원 링크, 유료 기능을 넣지 않는다
+- 새 그림 출처를 더하면 [README 의 그림 출처](../../README.md#그림-출처)에 출처, 제작자, 라이선스를 적는다
 
 ### Windows 실행 파일 만들기
 

@@ -3,7 +3,7 @@
 // 폭은 고정이고 세로만 조절한다. 박스 6열과 도감 5열 격자가 640 폭에 맞춰져 있다 (docs/specs/game.md "관리 창").
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
-import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, clipboard, ipcMain, shell, type IpcMainInvokeEvent } from "electron";
 import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
@@ -65,7 +65,11 @@ const CH = {
   mailView: "manage:mail-view",
   clock: "manage:clock",
   petMenu: "manage:pet-menu",
+  rights: "manage:rights",
 } satisfies Record<string, ManageChannel>;
+
+// 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
+const RIGHTS_URL = `https://github.com/MilkLotion/pokebuddy#${encodeURIComponent("라이선스")}`;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
 // 높이는 헤더(40)보다 1 작다 — 헤더 맨 아래 1px 테두리를 덮지 않아야 단추 아래까지 선이 이어진다
@@ -299,6 +303,11 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.on(CH.copy, (e, text: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     if (typeof text === "string" && text.length <= 2000) clipboard.writeText(text);
+  });
+  // 저작권 안내 — 인자를 받지 않는다. 정해 둔 주소만 기본 브라우저로 연다
+  ipcMain.on(CH.rights, (e) => {
+    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    void shell.openExternal(RIGHTS_URL);
   });
   // 계정 — 요청 모양은 action 문자열만 확인한다. 값의 검사는 src/online/account.ts 가 한다
   ipcMain.handle(CH.account, async (e, req: unknown): Promise<AccountReply | null> => {

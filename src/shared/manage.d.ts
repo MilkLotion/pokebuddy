@@ -329,7 +329,7 @@ export interface ManageReply {
 // manage:dex-step 은 메인 → 렌더러 — 기기 창의 이전·다음. 순서는 관리 창의 지금 목록(검색·칩 적용)이 정한다
 // manage:dex-closed 는 메인 → 렌더러 — 기기 창이 닫혔다. 고른 칸 표시를 지운다
 // manage:trade 는 메인 → 렌더러 — 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과). manage:copy 는 렌더러 → 메인 — 글자를 클립보드에 쓴다
-export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:party-open" | "manage:party-act" | "manage:party-step" | "manage:party-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock" | "manage:pet-menu";
+export type ManageChannel = "manage:snapshot" | "manage:command" | "manage:dex" | "manage:dex-detail" | "manage:shop-detail" | "manage:agents" | "manage:route" | "manage:draw-region" | "manage:dim" | "manage:portraits" | "manage:icons" | "manage:art" | "manage:dex-open" | "manage:dex-step" | "manage:dex-closed" | "manage:pet-open" | "manage:pet-step" | "manage:pet-act" | "manage:pet-closed" | "manage:shop-open" | "manage:shop-step" | "manage:shop-act" | "manage:shop-closed" | "manage:bag-open" | "manage:bag-step" | "manage:bag-act" | "manage:bag-closed" | "manage:party-open" | "manage:party-act" | "manage:party-step" | "manage:party-closed" | "manage:trade" | "manage:copy" | "manage:account" | "manage:account-view" | "manage:update" | "manage:update-view" | "manage:notes" | "manage:screens" | "manage:identify-screens" | "manage:pick-screen" | "manage:mail" | "manage:mail-view" | "manage:clock" | "manage:pet-menu" | "manage:rights";
 
 // 관리 창 안의 목적지. 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창 (docs/specs/game.md "알림 배너의 개별 표시")
 // form 은 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
@@ -540,6 +540,7 @@ export interface ManageBridge {
   onPartyClosed: (cb: (gen: number) => void) => void;
   onTrade: (cb: (screen: TradeScreen) => void) => void; // 교환 보기가 바뀌었다
   copyText: (text: string) => void; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
+  openRights: () => void; // 설정 바닥의 `저작권 안내` — 주소는 메인에 고정돼 있다. 렌더러는 주소를 넘기지 않는다
   account: (req: AccountAction) => Promise<AccountReply>;
   mail: (req: MailAction) => Promise<MailReply | null>; // 우편함 — 서버 설정이 없으면 null
   onMail: (cb: (screen: MailScreen) => void) => void; // 목록·받기 상태가 바뀌었다

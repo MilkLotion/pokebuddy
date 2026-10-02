@@ -151,6 +151,7 @@ const MANAGE = {
   mailView: "manage:mail-view",
   clock: "manage:clock",
   petMenu: "manage:pet-menu",
+  rights: "manage:rights",
 } satisfies Record<string, ManageChannel>;
 
 const manage: ManageBridge = {
@@ -191,6 +192,7 @@ const manage: ManageBridge = {
   onPartyClosed: (cb) => ipcRenderer.on(MANAGE.partyClosed, (_e, gen: number) => cb(gen)),
   onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
   copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
+  openRights: () => ipcRenderer.send(MANAGE.rights),
   account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
   onAccount: (cb) => ipcRenderer.on(MANAGE.accountView, (_e, screen: AccountScreen) => cb(screen)),
   update: (action) => ipcRenderer.invoke(MANAGE.update, action) as Promise<UpdateView | null>,
