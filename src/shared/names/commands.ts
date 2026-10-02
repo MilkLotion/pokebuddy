@@ -24,7 +24,6 @@ export const COMMANDS = {
   // 돌봄·진화
   feed: { via: "tx", cli: true },
   play: { via: "tx", cli: true },
-  poke: { via: "app", haltOpen: true },
   evolve: { via: "tx", cli: true, slow: true },
   // 파티
   "party.show": { via: "tx", cli: true },
@@ -51,7 +50,6 @@ export const COMMANDS = {
   "tutorial.done": { via: "tx" },
   // 개체
   "pet.set": { via: "tx", cli: true },
-  "pet.look": { via: "app", cli: true, slow: true },
   "pet.form": { via: "tx", cli: true },
   "pet.sell": { via: "tx" },
   "starter.pick": { via: "tx" },

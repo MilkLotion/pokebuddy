@@ -208,7 +208,7 @@ let haltNext: { reason: "confirm" | "blocked"; info: HaltInfo } | null = null; /
 let haltAsking = false; // 확인·막힘 창을 묻는 흐름이 돌고 있다
 let haltAbort: AbortController | null = null; // 떠 있는 확인·막힘 창 — 밀려나면 닫는다
 // 멈춘 동안에도 받는 명령 — 저장을 바꾸지 않는다(읽기·무대 반응·끄기)
-const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "poke", "quit"]);
+const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "quit"]);
 // 로그아웃·계정 삭제·분실 창 [처음부터]로 새로 시작하는 중 (worklog-mac/records/cloud-authority/design-p2.md 2절 D12)
 //   저장을 백업으로 옮기기 전에 쓰기·교환·우편·명령을 멈춘다. 서버 처리가 실패하면 풀고, 성공하면 앱을 다시 켠다
 let restarting = false;

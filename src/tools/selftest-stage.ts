@@ -556,9 +556,6 @@ async function stageRuntimeTests(): Promise<void> {
     ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" }, from: "menu" })).ok, "이상한사탕 사용");
     eq(animations, 3, "이상한사탕은 무대 연출이 없다");
 
-    // 모습 선택은 제거된 기능이다
-    eq((await commands.dispatcher.dispatch({ cmd: "pet.look", target: "p1", args: { look: "eevee" }, from: "cli" })).reason, "removed", "pet.look 은 제거됐다고 답한다");
-
     const old = structuredClone(source.save());
     // 저장 경로를 디렉터리로 바꿔 파일에 닿지 못하는 상황 재현 — 임시 폴더 안에서만
     fs.unlinkSync(commandPaths.save);

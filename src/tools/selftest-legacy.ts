@@ -517,7 +517,7 @@ async function testMailbox(): Promise<void> {
     assert.strictEqual(logs.filter((e) => e.mailbox === "handle-error").length, 1);
     const r4 = await save.send(dir, { cmd: "snapshot", from: "cli" }, sendOpts);
     assert.deepStrictEqual(r4, { ok: false, reason: "no-result", cmd: "snapshot" });
-    const r5 = await save.send(dir, { cmd: "poke", from: "pet" }, sendOpts);
+    const r5 = await save.send(dir, { cmd: "box.sort", from: "pet" }, sendOpts);
     assert.strictEqual(r5.ok, true, "죽지 않고 다음 요청을 받는다");
 
     const sameTime = Date.now();
@@ -628,11 +628,11 @@ async function testDispatcher(): Promise<void> {
   assert.deepStrictEqual(await d.dispatch({ cmd: "play", from: "cli" }), { ok: false, reason: "cooldown", nextAt: T0 });
 
   // 던지면 error + message, 처리기는 살아 있다
-  d.register("poke", () => {
+  d.register("box.sort", () => {
     throw new Error("boom");
   });
-  assert.deepStrictEqual(await d.dispatch({ cmd: "poke", from: "pet" }), { ok: false, reason: "error", message: "boom", cmd: "poke" });
-  assert.deepStrictEqual(logs, [{ dispatch: "handler-error", cmd: "poke", message: "boom" }]);
+  assert.deepStrictEqual(await d.dispatch({ cmd: "box.sort", from: "pet" }), { ok: false, reason: "error", message: "boom", cmd: "box.sort" });
+  assert.deepStrictEqual(logs, [{ dispatch: "handler-error", cmd: "box.sort", message: "boom" }]);
   d.register("evolve", async () => Promise.reject(new Error("async boom")));
   assert.strictEqual((await d.dispatch({ cmd: "evolve", from: "menu" })).message, "async boom");
   assert.strictEqual((await d.dispatch({ cmd: "feed", from: "menu" })).ok, true);
@@ -667,7 +667,7 @@ async function testDispatcher(): Promise<void> {
     const sendOpts = { timeoutMs: 3000, pollMs: 20 };
     assert.deepStrictEqual(await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts), { ok: true, reason: "already" });
     assert.deepStrictEqual(await save.send(dir, { cmd: "shop.buy" satisfies CommandName, from: "cli" }, sendOpts), { ok: false, reason: "unknown-cmd", cmd: "shop.buy" });
-    const r = await save.send(dir, { cmd: "poke", from: "vscode" }, sendOpts);
+    const r = await save.send(dir, { cmd: "box.sort", from: "vscode" }, sendOpts);
     assert.strictEqual(r.reason, "error");
     assert.strictEqual(r.message, "boom");
     assert.deepStrictEqual(fs.readdirSync(dir), []);
