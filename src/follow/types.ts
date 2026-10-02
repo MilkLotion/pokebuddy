@@ -1,6 +1,6 @@
 // 창 추적·에이전트 판정 모듈의 타입 — 헬퍼 출력 · 훅 기록의 모양
 import type { AgentState } from "../shared/names/agents";
-import type { Usage } from "../shared/hook-record";
+import type { HookStateRead } from "../shared/hook-record";
 
 // 헬퍼(winbounds)가 주는 창 하나 — 좌표는 헬퍼가 준 그대로다(mac 은 포인트, Windows 는 물리 픽셀). 좌표를 읽는 곳은 mac 의 offScreen 판정뿐이다
 export interface HelperWindow {
@@ -28,18 +28,9 @@ export interface HelperInput {
   esc: number;
 }
 
-// 훅이 세션마다 적는 기록 (state/*.json)
-export interface StateRecord {
-  at?: number;
-  cli?: string;
-  state?: AgentState;
-  hold?: number;
-  then?: AgentState;
-  promptAt?: number;
-  ancestors?: number[];
-  cwd?: string;
-  usage?: Usage;
-}
+// 훅이 세션마다 적는 기록 (state/*.json) — 형식의 원본은 src/shared/hook-record.ts. 읽는 쪽이라 모든 필드를 의심한다
+// [임시] 옛 이름 — 이 폴더를 옮길 때 HookStateRead 로 바꾼다
+export type StateRecord = HookStateRead;
 
 // 펫 자신을 가리는 표식 — 맨 앞 창 판정에서 자기 창·다른 펫 창을 뺀다
 export interface SelfMark {

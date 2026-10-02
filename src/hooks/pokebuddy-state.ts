@@ -5,7 +5,7 @@
 //   gemini 는 stdout(비면 stderr)을 훅 결과로 읽는다
 // - codex·gemini 는 훅이 끝나길 기다린다 — 빨리 끝내야 CLI 가 느려지지 않는다
 //
-// 독립 실행 파일 — 프로젝트의 다른 모듈을 import 하지 않고 node 내장만 쓴다. 컴파일 결과 dist/hooks/pokebuddy-state.js 를
+// 독립 실행 파일 — 프로젝트의 다른 모듈에서는 타입만 본다(import type — 컴파일하면 사라진다). 값은 node 내장만 쓴다. 컴파일 결과 dist/hooks/pokebuddy-state.js 를
 // setup 이 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사하고(내용이 CJS 라 그대로 돈다), CLI 가 node <경로> 로 부른다
 //
 // 등록한 CLI 는 인자로 받는다 (node pokebuddy-state.cjs --cli gemini). 없으면 claude — 예전 등록은 인자가 없다
@@ -18,11 +18,10 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { HookStateRecord, Usage } from "../shared/hook-record";
+import type { AgentState } from "../shared/names/agents";
 
-// ── 타입 — 훅 입력·상태 기록 (shared/types.ts 와 겹치지만 독립 파일이라 여기 둔다) ────────────
-
-// 펫이 아는 동작 상태 (src/follow/state.ts resolveState · shared/types.ts AgentState 와 같은 값)
-type PetState = "idle" | "running" | "waiting" | "waving" | "failed";
+// ── 타입 — 훅 입력. 상태 기록의 형식(HookStateRecord)은 src/shared/hook-record.ts 에 있다 ────────────
 
 // CLI 가 stdin 으로 주는 훅 입력 — 셋이 공통으로 쓰는 필드만. 모르는 필드는 보지 않는다
 interface HookInput {
@@ -39,37 +38,14 @@ interface HookInput {
 
 // 이벤트 → 펫 동작. hold 가 있으면 그 초 동안 보여준 뒤 then 으로 전환. prompt 는 사용자가 뭔가 한 순간
 interface Mapping {
-  state: PetState;
+  state: AgentState;
   hold?: number;
-  then?: PetState;
+  then?: AgentState;
   prompt?: true;
 }
 type EventEntry = Mapping | ((data: HookInput) => Mapping | null);
 
-interface Usage {
-  in: number;
-  out: number;
-  cacheRead: number;
-  cacheWrite: number;
-}
-
-// 세션 상태 파일 한 장 — 펫(src/follow/state.ts)과 사용량 읽기(src/agents/usage.ts)가 읽는다
-interface StateRecord {
-  state: PetState;
-  hold?: number;
-  then?: PetState;
-  cli: string;
-  event: string;
-  at: number; // 초 (Date.now() / 1000)
-  cwd: string;
-  ancestors: number[];
-  promptAt?: number | null; // 마지막 프롬프트 시각 — 이어 간다. 이전 기록이 없으면 null
-  usage: Usage;
-  usageOffset: number; // 대화 기록에서 읽은 바이트 자리
-  usageBase: boolean; // 기준점을 잡았는가
-  usageAt?: number;
-}
-type BaseRecord = Omit<StateRecord, "promptAt" | "usage" | "usageOffset" | "usageBase" | "usageAt">;
+type BaseRecord = Omit<HookStateRecord, "promptAt" | "usage" | "usageOffset" | "usageBase" | "usageAt">;
 
 const POKEBUDDY_DIR = path.join(os.homedir(), ".claude", "pokebuddy");
 const STATE_DIR = path.join(POKEBUDDY_DIR, "state");
@@ -214,10 +190,10 @@ function readUsageDelta(file: string, fromOffset: number): { usage: Usage; offse
 }
 
 // 지난 기록 — 우리가 쓴 파일이라 모양을 믿되, 객체가 아니면 없는 것으로 본다
-function readState(file: string): Partial<StateRecord> | null {
+function readState(file: string): Partial<HookStateRecord> | null {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-    return isObj(parsed) ? (parsed as Partial<StateRecord>) : null;
+    return isObj(parsed) ? (parsed as Partial<HookStateRecord>) : null;
   } catch {
     return null;
   }
@@ -271,7 +247,7 @@ process.stdin.on("end", () => {
 
     // 실패 표시 중에 바로 다음 도구 호출이 와도 실패 동작을 끝까지 보여줌 — 전환 대상만 갱신
     const holding = shown.state === "running" && prev?.state === "failed" && prev.hold !== undefined && prev.hold > 0 && prev.at !== undefined && now - prev.at < prev.hold;
-    const record: StateRecord = {
+    const record: HookStateRecord = {
       ...(holding ? ({ ...prev, then: "running" } as BaseRecord) : base),
       // 마지막 프롬프트 시각은 이어 간다 — 뒤따르는 도구 호출·응답 완료 기록이 덮어쓰면 사라진다.
       // 펫이 "사용자가 마지막으로 뭔가 한 때"를 알아야 5분 뒤에 잠든다

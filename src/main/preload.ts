@@ -1,378 +1,209 @@
 // 샌드박스 preload — 렌더러에 window.pokebuddy(StageBridge)·pokebuddyManage·pokebuddyBanner·pokebuddyAlert 등을 노출한다. 모든 창이 같은 preload 를 쓴다.
 // 샌드박스라 electron 만 require 할 수 있다 — 우리 모듈은 끌어오지 않고 타입만 import() 식으로 본다 (이 파일은 모듈이 아닌 스크립트).
-// 채널 이름은 shared/stage.d.ts StageChannel 과 같은 문자열인지 satisfies 로 검사한다 — 메인(stage-window.ts)도 같은 검사를 한다
+// 채널 글자는 창마다 표 하나에 적는다 — 다리 함수 이름 → [방향, 채널]. 표가 계약(src/shared/ipc/)과 맞는지는 satisfies 가 검사한다:
+// 계약에 있는데 표에 없는 다리, 표에 있는데 계약에 없는 다리, 이름과 방향·채널의 짝이 틀린 것이 컴파일 오류다
+type Contract = import("../shared/ipc/kinds").Contract;
+type WireOf<C extends Contract> = import("../shared/ipc/kinds").WireOf<C>;
+type BridgeOf<C extends Contract> = import("../shared/ipc/kinds").BridgeOf<C>;
+type StageIpc = import("../shared/ipc/stage").StageIpc;
+type PickerIpc = import("../shared/ipc/stage").PickerIpc;
 type StageBridge = import("../shared/ipc/stage").StageBridge;
-type StageChannel = import("../shared/ipc/stage").StageChannel;
-type StageInit = import("../shared/model/stage").StageInit;
-type LookSheets = import("../shared/model/stage").LookSheets;
-type StageFrame = import("../shared/model/stage").StageFrame;
-type HoverQuery = import("../shared/model/stage").HoverQuery;
-type PickerPayload = import("../shared/model/stage").PickerPayload;
-type CoachView = import("../shared/model/stage").CoachView;
+type ManageIpc = import("../shared/ipc/manage").ManageIpc;
 type ManageBridge = import("../shared/ipc/manage").ManageBridge;
-type ManageChannel = import("../shared/ipc/manage").ManageChannel;
-type ManageRequest = import("../shared/ipc/manage").ManageRequest;
-type ManageReply = import("../shared/ipc/manage").ManageReply;
-type Snapshot = import("../shared/model/snapshot").Snapshot;
-type DexEntry = import("../shared/model/detail").DexEntry;
-type DexDetail = import("../shared/model/detail").DexDetail;
-type ShopDetail = import("../shared/model/detail").ShopDetail;
-type PetDeviceAction = import("../shared/model/devices").PetDeviceAction;
-type PetDeviceChannel = import("../shared/ipc/devices").PetDeviceChannel;
-type PetDeviceView = import("../shared/model/devices").PetDeviceView;
-type PetDeviceBridge = import("../shared/ipc/devices").PetDeviceBridge;
-type ShopDeviceAction = import("../shared/model/devices").ShopDeviceAction;
-type ShopDeviceChannel = import("../shared/ipc/devices").ShopDeviceChannel;
-type ShopDeviceView = import("../shared/model/devices").ShopDeviceView;
-type ShopDeviceBridge = import("../shared/ipc/devices").ShopDeviceBridge;
-type BagDeviceAction = import("../shared/model/devices").BagDeviceAction;
-type BagDeviceChannel = import("../shared/ipc/devices").BagDeviceChannel;
-type BagDeviceView = import("../shared/model/devices").BagDeviceView;
-type BagDeviceBridge = import("../shared/ipc/devices").BagDeviceBridge;
-type PartyDeviceAction = import("../shared/model/devices").PartyDeviceAction;
-type PartyDeviceChannel = import("../shared/ipc/devices").PartyDeviceChannel;
-type PartyDeviceView = import("../shared/model/devices").PartyDeviceView;
-type PartyDeviceBridge = import("../shared/ipc/devices").PartyDeviceBridge;
-type AgentReply = import("../shared/model/agents").AgentReply;
-type ManageRoute = import("../shared/model/route").ManageRoute;
-type TradeScreen = import("../shared/model/trade").TradeScreen;
-type AccountReply = import("../shared/model/account").AccountReply;
-type AccountScreen = import("../shared/model/account").AccountScreen;
-type MailReply = import("../shared/model/mail").MailReply;
-type MailScreen = import("../shared/model/mail").MailScreen;
-type UpdateView = import("../shared/model/account").UpdateView;
-type PatchNotesView = import("../shared/model/account").PatchNotesView;
-type BannerBridge = import("../shared/ipc/overlays").BannerBridge;
-type BannerChannel = import("../shared/ipc/overlays").BannerChannel;
-type BannerView = import("../shared/model/overlays").BannerView;
-type AlertBridge = import("../shared/ipc/overlays").AlertBridge;
-type AlertChannel = import("../shared/ipc/overlays").AlertChannel;
-type AlertView = import("../shared/model/overlays").AlertView;
-type RegionBridge = import("../shared/ipc/overlays").RegionBridge;
-type RegionChannel = import("../shared/ipc/overlays").RegionChannel;
-type RegionInit = import("../shared/model/overlays").RegionInit;
-type ScreensBridge = import("../shared/ipc/overlays").ScreensBridge;
-type ScreensChannel = import("../shared/ipc/overlays").ScreensChannel;
-type ScreenOverlayInit = import("../shared/model/overlays").ScreenOverlayInit;
-type ScreenView = import("../shared/model/overlays").ScreenView;
-type MenuBridge = import("../shared/ipc/overlays").MenuBridge;
-type MenuChannel = import("../shared/ipc/overlays").MenuChannel;
-type MenuView = import("../shared/model/overlays").MenuView;
-type DexDeviceBridge = import("../shared/ipc/devices").DexDeviceBridge;
-type DexDeviceChannel = import("../shared/ipc/devices").DexDeviceChannel;
-type DexDeviceView = import("../shared/model/devices").DexDeviceView;
+type BannerIpc = import("../shared/ipc/overlays").BannerIpc;
+type AlertIpc = import("../shared/ipc/overlays").AlertIpc;
+type RegionIpc = import("../shared/ipc/overlays").RegionIpc;
+type ScreensIpc = import("../shared/ipc/overlays").ScreensIpc;
+type MenuIpc = import("../shared/ipc/overlays").MenuIpc;
+type DexDeviceIpc = import("../shared/ipc/devices").DexDeviceIpc;
+type PetDeviceIpc = import("../shared/ipc/devices").PetDeviceIpc;
+type ShopDeviceIpc = import("../shared/ipc/devices").ShopDeviceIpc;
+type BagDeviceIpc = import("../shared/ipc/devices").BagDeviceIpc;
+type PartyDeviceIpc = import("../shared/ipc/devices").PartyDeviceIpc;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
-const CH = {
-  init: "stage:init",
-  sheets: "stage:sheets",
-  frame: "stage:frame",
-  hover: "stage:hover",
-  clickThrough: "stage:click-through",
-  cry: "stage:cry",
-  icons: "stage:icons",
-  coach: "stage:coach",
-  coachAction: "stage:coach-action",
-  ready: "stage:ready",
-  hit: "stage:hit",
-  pointer: "stage:pointer",
-  log: "stage:log",
-  pickerList: "picker:list",
-  pickerStart: "picker:start",
-  pickerPortraits: "picker:portraits",
-} satisfies Record<string, StageChannel>;
+type Wire = Record<string, readonly ["invoke" | "send" | "push", string]>;
 
+// 표에서 다리를 만든다. invoke 는 답을 기다리고, send 는 보내기만 하고, push 는 콜백을 받아 메인이 보낼 때마다 부른다.
+// 인자와 반환의 타입은 계약이 정한다(BridgeOf)
+function bridgeOf<C extends Contract>(wire: WireOf<C>): BridgeOf<C> {
+  const out: Record<string, unknown> = {};
+  for (const [method, [kind, channel]] of Object.entries(wire as Wire)) {
+    if (kind === "invoke") out[method] = (...args: unknown[]) => ipcRenderer.invoke(channel, ...args);
+    else if (kind === "send") out[method] = (...args: unknown[]) => ipcRenderer.send(channel, ...args);
+    else out[method] = (cb: (...args: unknown[]) => void) => ipcRenderer.on(channel, (_e, ...args: unknown[]) => cb(...args));
+  }
+  return out as BridgeOf<C>;
+}
+
+// 무대 창과 선택 창 — 같은 다리(window.pokebuddy)를 쓴다
+const STAGE = {
+  ready: ["send", "stage:ready"],
+  onInit: ["push", "stage:init"],
+  onSheets: ["push", "stage:sheets"],
+  onFrame: ["push", "stage:frame"],
+  onHover: ["push", "stage:hover"],
+  onClickThrough: ["push", "stage:click-through"],
+  onCry: ["push", "stage:cry"],
+  onIcons: ["push", "stage:icons"],
+  onCoach: ["push", "stage:coach"],
+  coachAction: ["send", "stage:coach-action"],
+  hit: ["send", "stage:hit"],
+  pointer: ["send", "stage:pointer"],
+  log: ["send", "stage:log"],
+} as const satisfies WireOf<StageIpc>;
+
+const PICKER = {
+  pickerList: ["invoke", "picker:list"],
+  pickerStart: ["send", "picker:start"],
+  pickerPortraits: ["invoke", "picker:portraits"],
+} as const satisfies WireOf<PickerIpc>;
+
+const stageBridge = bridgeOf<StageIpc>(STAGE);
 const bridge: StageBridge = {
-  ready: () => ipcRenderer.send(CH.ready),
-  onInit: (cb) => ipcRenderer.on(CH.init, (_e, init: StageInit) => cb(init)),
-  onSheets: (cb) => ipcRenderer.on(CH.sheets, (_e, sheets: LookSheets) => cb(sheets)),
-  onFrame: (cb) => ipcRenderer.on(CH.frame, (_e, frame: StageFrame) => cb(frame)),
-  onHover: (cb) => ipcRenderer.on(CH.hover, (_e, q: HoverQuery) => cb(q)),
-  onClickThrough: (cb) => ipcRenderer.on(CH.clickThrough, (_e, on: boolean) => cb(on)),
-  onCry: (cb) => ipcRenderer.on(CH.cry, (_e, cry: { uri: string; volume: number }) => cb(cry.uri, cry.volume)),
-  onIcons: (cb) => ipcRenderer.on(CH.icons, (_e, icons: Record<string, string>) => cb(icons)),
-  onCoach: (cb) => ipcRenderer.on(CH.coach, (_e, coach: CoachView | null) => cb(coach)),
-  coachAction: (action) => ipcRenderer.send(CH.coachAction, action),
-  hit: (id) => ipcRenderer.send(CH.hit, id),
-  pointer: (msg) => ipcRenderer.send(CH.pointer, msg),
-  log: (entry) => ipcRenderer.send(CH.log, entry),
-  pickerList: () => ipcRenderer.invoke(CH.pickerList) as Promise<PickerPayload>,
-  pickerStart: (slug) => ipcRenderer.send(CH.pickerStart, slug),
-  pickerPortraits: (slugs) => ipcRenderer.invoke(CH.pickerPortraits, slugs) as Promise<Record<string, string | null>>,
+  ...stageBridge,
+  ...bridgeOf<PickerIpc>(PICKER),
+  // [임시] 계약과 1:1 이 아닌 다리 — 메인이 보낸 { uri, volume } 을 인자 둘로 푼다. 렌더러가 cry 를 통째로 받게 되면 걷는다
+  onCry: (cb) => stageBridge.onCry((cry) => cb(cry.uri, cry.volume)),
 };
 
 contextBridge.exposeInMainWorld("pokebuddy", bridge);
 
-// 관리 창 — 스냅샷과 명령, 그리고 스냅샷에 담지 않는 도감과 CLI 연결
+// 설정창 — 스냅샷과 명령, 스냅샷에 담지 않는 도감과 CLI 연결, 기기 창 다섯과의 연결
 const MANAGE = {
-  snapshot: "manage:snapshot",
-  command: "manage:command",
-  dex: "manage:dex",
-  dexDetail: "manage:dex-detail",
-  shopDetail: "manage:shop-detail",
-  agents: "manage:agents",
-  route: "manage:route",
-  drawRegion: "manage:draw-region",
-  dim: "manage:dim",
-  portraits: "manage:portraits",
-  icons: "manage:icons",
-  art: "manage:art",
-  dexOpen: "manage:dex-open",
-  dexStep: "manage:dex-step",
-  dexClosed: "manage:dex-closed",
-  petOpen: "manage:pet-open",
-  petStep: "manage:pet-step",
-  petAct: "manage:pet-act",
-  petClosed: "manage:pet-closed",
-  shopOpen: "manage:shop-open",
-  shopStep: "manage:shop-step",
-  shopAct: "manage:shop-act",
-  shopClosed: "manage:shop-closed",
-  bagOpen: "manage:bag-open",
-  bagStep: "manage:bag-step",
-  bagAct: "manage:bag-act",
-  bagClosed: "manage:bag-closed",
-  partyOpen: "manage:party-open",
-  partyAct: "manage:party-act",
-  partyStep: "manage:party-step",
-  partyClosed: "manage:party-closed",
-  trade: "manage:trade",
-  copy: "manage:copy",
-  account: "manage:account",
-  accountView: "manage:account-view",
-  update: "manage:update",
-  updateView: "manage:update-view",
-  notes: "manage:notes",
-  screens: "manage:screens",
-  identifyScreens: "manage:identify-screens",
-  pickScreen: "manage:pick-screen",
-  mail: "manage:mail",
-  mailView: "manage:mail-view",
-  clock: "manage:clock",
-  petMenu: "manage:pet-menu",
-} satisfies Record<string, ManageChannel>;
+  snapshot: ["invoke", "manage:snapshot"],
+  command: ["invoke", "manage:command"],
+  dex: ["invoke", "manage:dex"],
+  dexDetail: ["invoke", "manage:dex-detail"],
+  shopDetail: ["invoke", "manage:shop-detail"],
+  agents: ["invoke", "manage:agents"],
+  onRoute: ["push", "manage:route"],
+  petMenu: ["invoke", "manage:pet-menu"],
+  drawRegion: ["invoke", "manage:draw-region"],
+  screens: ["invoke", "manage:screens"],
+  identifyScreens: ["send", "manage:identify-screens"],
+  pickScreen: ["invoke", "manage:pick-screen"],
+  dim: ["send", "manage:dim"],
+  portraits: ["invoke", "manage:portraits"],
+  icons: ["invoke", "manage:icons"],
+  art: ["invoke", "manage:art"],
+  dexOpen: ["send", "manage:dex-open"],
+  onDexStep: ["push", "manage:dex-step"],
+  onDexClosed: ["push", "manage:dex-closed"],
+  petOpen: ["send", "manage:pet-open"],
+  onPetStep: ["push", "manage:pet-step"],
+  onPetAct: ["push", "manage:pet-act"],
+  onPetClosed: ["push", "manage:pet-closed"],
+  shopOpen: ["send", "manage:shop-open"],
+  onShopStep: ["push", "manage:shop-step"],
+  onShopAct: ["push", "manage:shop-act"],
+  onShopClosed: ["push", "manage:shop-closed"],
+  bagOpen: ["send", "manage:bag-open"],
+  onBagStep: ["push", "manage:bag-step"],
+  onBagAct: ["push", "manage:bag-act"],
+  onBagClosed: ["push", "manage:bag-closed"],
+  partyOpen: ["send", "manage:party-open"],
+  onPartyAct: ["push", "manage:party-act"],
+  onPartyStep: ["push", "manage:party-step"],
+  onPartyClosed: ["push", "manage:party-closed"],
+  onTrade: ["push", "manage:trade"],
+  copyText: ["send", "manage:copy"],
+  account: ["invoke", "manage:account"],
+  onAccount: ["push", "manage:account-view"],
+  update: ["invoke", "manage:update"],
+  onUpdate: ["push", "manage:update-view"],
+  notes: ["invoke", "manage:notes"],
+  mail: ["invoke", "manage:mail"],
+  onMail: ["push", "manage:mail-view"],
+  onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/clock.ts)
+} as const satisfies WireOf<ManageIpc>;
 
+const manageBridge = bridgeOf<ManageIpc>(MANAGE);
 const manage: ManageBridge = {
-  snapshot: () => ipcRenderer.invoke(MANAGE.snapshot) as Promise<Snapshot | null>,
-  command: (req: ManageRequest) => ipcRenderer.invoke(MANAGE.command, req) as Promise<ManageReply>,
-  dex: () => ipcRenderer.invoke(MANAGE.dex) as Promise<DexEntry[]>,
-  dexDetail: (slug: string) => ipcRenderer.invoke(MANAGE.dexDetail, slug) as Promise<DexDetail | null>,
-  shopDetail: (productId: string) => ipcRenderer.invoke(MANAGE.shopDetail, productId) as Promise<ShopDetail | null>,
-  agents: (req) => ipcRenderer.invoke(MANAGE.agents, req) as Promise<AgentReply>,
-  onRoute: (cb) => ipcRenderer.on(MANAGE.route, (_e, route: ManageRoute) => cb(route)),
-  petMenu: (petId) => ipcRenderer.invoke(MANAGE.petMenu, petId) as Promise<boolean>,
-  drawRegion: () => ipcRenderer.invoke(MANAGE.drawRegion) as Promise<ManageReply>,
-  screens: () => ipcRenderer.invoke(MANAGE.screens) as Promise<ScreenView[]>,
-  identifyScreens: (on) => ipcRenderer.send(MANAGE.identifyScreens, on),
-  pickScreen: () => ipcRenderer.invoke(MANAGE.pickScreen) as Promise<ManageReply>,
-  dim: (on) => ipcRenderer.send(MANAGE.dim, on),
-  portraits: (asks) => ipcRenderer.invoke(MANAGE.portraits, asks) as Promise<Record<string, string | null>>,
-  icons: (keys) => ipcRenderer.invoke(MANAGE.icons, keys) as Promise<Record<string, string | null>>,
-  art: () => ipcRenderer.invoke(MANAGE.art) as Promise<Record<string, string>>,
-  dexOpen: (slug, gen, beside) => ipcRenderer.send(MANAGE.dexOpen, slug, gen, beside === true),
-  onDexStep: (cb) => ipcRenderer.on(MANAGE.dexStep, (_e, delta: -1 | 1) => cb(delta)),
-  onDexClosed: (cb) => ipcRenderer.on(MANAGE.dexClosed, (_e, gen: number) => cb(gen)),
-  petOpen: (open, gen) => ipcRenderer.send(MANAGE.petOpen, open, gen),
-  onPetStep: (cb) => ipcRenderer.on(MANAGE.petStep, (_e, delta: -1 | 1) => cb(delta)),
-  onPetAct: (cb) => ipcRenderer.on(MANAGE.petAct, (_e, action: PetDeviceAction) => cb(action)),
-  onPetClosed: (cb) => ipcRenderer.on(MANAGE.petClosed, (_e, gen: number) => cb(gen)),
-  shopOpen: (open, gen) => ipcRenderer.send(MANAGE.shopOpen, open, gen),
-  onShopStep: (cb) => ipcRenderer.on(MANAGE.shopStep, (_e, delta: -1 | 1) => cb(delta)),
-  onShopAct: (cb) => ipcRenderer.on(MANAGE.shopAct, (_e, action: ShopDeviceAction) => cb(action)),
-  onShopClosed: (cb) => ipcRenderer.on(MANAGE.shopClosed, (_e, gen: number) => cb(gen)),
-  bagOpen: (open, gen) => ipcRenderer.send(MANAGE.bagOpen, open, gen),
-  onBagStep: (cb) => ipcRenderer.on(MANAGE.bagStep, (_e, delta: -1 | 1) => cb(delta)),
-  onBagAct: (cb) => ipcRenderer.on(MANAGE.bagAct, (_e, action: BagDeviceAction) => cb(action)),
-  onBagClosed: (cb) => ipcRenderer.on(MANAGE.bagClosed, (_e, gen: number) => cb(gen)),
-  partyOpen: (open, gen) => ipcRenderer.send(MANAGE.partyOpen, open, gen),
-  onPartyAct: (cb) => ipcRenderer.on(MANAGE.partyAct, (_e, action: PartyDeviceAction) => cb(action)),
-  onPartyStep: (cb) => ipcRenderer.on(MANAGE.partyStep, (_e, delta: -1 | 1) => cb(delta)),
-  onPartyClosed: (cb) => ipcRenderer.on(MANAGE.partyClosed, (_e, gen: number) => cb(gen)),
-  onTrade: (cb) => ipcRenderer.on(MANAGE.trade, (_e, screen: TradeScreen) => cb(screen)),
-  copyText: (text) => ipcRenderer.send(MANAGE.copy, text),
-  account: (req) => ipcRenderer.invoke(MANAGE.account, req) as Promise<AccountReply>,
-  onAccount: (cb) => ipcRenderer.on(MANAGE.accountView, (_e, screen: AccountScreen) => cb(screen)),
-  update: (action) => ipcRenderer.invoke(MANAGE.update, action) as Promise<UpdateView | null>,
-  onUpdate: (cb) => ipcRenderer.on(MANAGE.updateView, (_e, view: UpdateView) => cb(view)),
-  notes: (action) => ipcRenderer.invoke(MANAGE.notes, action) as Promise<PatchNotesView | null>,
-  mail: (req) => ipcRenderer.invoke(MANAGE.mail, req) as Promise<MailReply | null>,
-  onMail: (cb) => ipcRenderer.on(MANAGE.mailView, (_e, screen: MailScreen) => cb(screen)),
-  onClock: (cb) => ipcRenderer.on(MANAGE.clock, (_e, tick: { now: number }) => cb(tick)), // 앱 전역 1초 시계 (src/main/clock.ts)
+  ...manageBridge,
+  // [임시] 계약과 1:1 이 아닌 다리 — beside 를 참·거짓으로 고쳐 보낸다. 열기 인자가 { slug, beside } 한 값이 되면 걷는다
+  dexOpen: (slug, gen, beside) => manageBridge.dexOpen(slug, gen, beside === true),
 };
 
 contextBridge.exposeInMainWorld("pokebuddyManage", manage);
 
 // 알림 배너 창 — 배너 하나를 받고, `바로가기`·`✕` 닫기를 알린다
 const BANNER = {
-  show: "banner:show",
-  go: "banner:go",
-  close: "banner:close",
-} satisfies Record<string, BannerChannel>;
+  onShow: ["push", "banner:show"],
+  go: ["send", "banner:go"],
+  close: ["send", "banner:close"],
+} as const satisfies WireOf<BannerIpc>;
 
-const banner: BannerBridge = {
-  onShow: (cb) => ipcRenderer.on(BANNER.show, (_e, view: BannerView) => cb(view)),
-  go: (key) => ipcRenderer.send(BANNER.go, key),
-  close: (key) => ipcRenderer.send(BANNER.close, key),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyBanner", banner);
+contextBridge.exposeInMainWorld("pokebuddyBanner", bridgeOf<BannerIpc>(BANNER));
 
 // 알림 창 — 내용을 받고, 그린 크기와 누른 단추를 알린다 (src/main/alert-window.ts)
 const ALERT = {
-  show: "alert:show",
-  size: "alert:size",
-  pick: "alert:pick",
-} satisfies Record<string, AlertChannel>;
+  onShow: ["push", "alert:show"],
+  size: ["send", "alert:size"],
+  pick: ["send", "alert:pick"],
+} as const satisfies WireOf<AlertIpc>;
 
-const alertBridge: AlertBridge = {
-  onShow: (cb) => ipcRenderer.on(ALERT.show, (_e, view: AlertView) => cb(view)),
-  size: (height) => ipcRenderer.send(ALERT.size, height),
-  pick: (index) => ipcRenderer.send(ALERT.pick, index),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyAlert", alertBridge);
+contextBridge.exposeInMainWorld("pokebuddyAlert", bridgeOf<AlertIpc>(ALERT));
 
 // 놀이공간 영역 그리기 창 — 지금 영역을 받고, 적용한 사각형(취소면 null)을 돌려준다
 const REGION = {
-  init: "region:init",
-  done: "region:done",
-} satisfies Record<string, RegionChannel>;
+  onInit: ["push", "region:init"],
+  done: ["send", "region:done"],
+} as const satisfies WireOf<RegionIpc>;
 
-const region: RegionBridge = {
-  onInit: (cb) => ipcRenderer.on(REGION.init, (_e, init: RegionInit) => cb(init)),
-  done: (rect) => ipcRenderer.send(REGION.done, rect),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyRegion", region);
+contextBridge.exposeInMainWorld("pokebuddyRegion", bridgeOf<RegionIpc>(REGION));
 
 // 놀이공간 화면 번호 덮개 창 — 번호를 받고, 이 화면을 골랐는지·취소했는지 알린다
 const SCREENS = {
-  init: "screens:init",
-  pick: "screens:pick",
-  cancel: "screens:cancel",
-} satisfies Record<string, ScreensChannel>;
+  onInit: ["push", "screens:init"],
+  pick: ["send", "screens:pick"],
+  cancel: ["send", "screens:cancel"],
+} as const satisfies WireOf<ScreensIpc>;
 
-const screensBridge: ScreensBridge = {
-  onInit: (cb) => ipcRenderer.on(SCREENS.init, (_e, init: ScreenOverlayInit) => cb(init)),
-  pick: () => ipcRenderer.send(SCREENS.pick),
-  cancel: () => ipcRenderer.send(SCREENS.cancel),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyScreens", screensBridge);
+contextBridge.exposeInMainWorld("pokebuddyScreens", bridgeOf<ScreensIpc>(SCREENS));
 
 // 앱이 그리는 메뉴 창 — 항목을 받고, 그린 크기와 고른 항목을 돌려준다
 const MENU = {
-  show: "menu:show",
-  size: "menu:size",
-  pick: "menu:pick",
-  side: "menu:side",
-  placed: "menu:placed",
-} satisfies Record<string, MenuChannel>;
+  onShow: ["push", "menu:show"],
+  size: ["send", "menu:size"],
+  onSide: ["push", "menu:side"],
+  placed: ["send", "menu:placed"],
+  pick: ["send", "menu:pick"],
+} as const satisfies WireOf<MenuIpc>;
 
-const menu: MenuBridge = {
-  onShow: (cb) => ipcRenderer.on(MENU.show, (_e, items: MenuView[]) => cb(items)),
-  size: (w, h, sub) => ipcRenderer.send(MENU.size, w, h, sub),
-  onSide: (cb) => ipcRenderer.on(MENU.side, (_e, side: "left" | "right") => cb(side)),
-  placed: () => ipcRenderer.send(MENU.placed),
-  pick: (id) => ipcRenderer.send(MENU.pick, id),
-};
+contextBridge.exposeInMainWorld("pokebuddyMenu", bridgeOf<MenuIpc>(MENU));
 
-contextBridge.exposeInMainWorld("pokebuddyMenu", menu);
+// 기기 창 다섯 — 접두사만 다른 같은 틀이다. 값 하나를 받고, 그린 높이와 이전·다음·닫기를 보낸다
+const deviceWire = <P extends string>(prefix: P) =>
+  ({
+    onShow: ["push", `${prefix}:show`],
+    size: ["send", `${prefix}:size`],
+    step: ["send", `${prefix}:step`],
+    close: ["send", `${prefix}:close`],
+  }) as const;
 
-// 도감 기기 창 — 한 종의 항목을 받고, 그린 높이와 이전·다음·울음소리·닫기를 보낸다
-const DEX = {
-  show: "dexdev:show",
-  size: "dexdev:size",
-  step: "dexdev:step",
-  cry: "dexdev:cry",
-  close: "dexdev:close",
-} satisfies Record<string, DexDeviceChannel>;
+// 도감 기기 창 — 한 종의 항목. 울음소리를 부른다
+const DEX = { ...deviceWire("dexdev"), cry: ["invoke", "dexdev:cry"] } as const satisfies WireOf<DexDeviceIpc>;
 
-const dex: DexDeviceBridge = {
-  onShow: (cb) => ipcRenderer.on(DEX.show, (_e, view: DexDeviceView) => cb(view)),
-  size: (h) => ipcRenderer.send(DEX.size, h),
-  step: (delta) => ipcRenderer.send(DEX.step, delta),
-  cry: () => ipcRenderer.invoke(DEX.cry) as Promise<string | null>,
-  close: () => ipcRenderer.send(DEX.close),
-};
+contextBridge.exposeInMainWorld("pokebuddyDex", bridgeOf<DexDeviceIpc>(DEX));
 
-contextBridge.exposeInMainWorld("pokebuddyDex", dex);
+// 파티 상세 기기 창 — 개체 하나. 울음소리와 누른 단추
+const PET = { ...deviceWire("petdev"), cry: ["invoke", "petdev:cry"], act: ["send", "petdev:act"] } as const satisfies WireOf<PetDeviceIpc>;
 
-// 파티 상세 기기 창 — 개체 하나를 받고, 그린 높이와 이전·다음·울음소리·닫기·누른 단추를 보낸다
-const PET = {
-  show: "petdev:show",
-  size: "petdev:size",
-  step: "petdev:step",
-  cry: "petdev:cry",
-  close: "petdev:close",
-  act: "petdev:act",
-} satisfies Record<string, PetDeviceChannel>;
+contextBridge.exposeInMainWorld("pokebuddyPet", bridgeOf<PetDeviceIpc>(PET));
 
-const pet: PetDeviceBridge = {
-  onShow: (cb) => ipcRenderer.on(PET.show, (_e, view: PetDeviceView) => cb(view)),
-  size: (h) => ipcRenderer.send(PET.size, h),
-  step: (delta) => ipcRenderer.send(PET.step, delta),
-  cry: () => ipcRenderer.invoke(PET.cry) as Promise<string | null>,
-  close: () => ipcRenderer.send(PET.close),
-  act: (action) => ipcRenderer.send(PET.act, action),
-};
+// 상점 기기 창 — 상품 하나. 누른 단추(수량·구매)
+const SHOP = { ...deviceWire("shopdev"), act: ["send", "shopdev:act"] } as const satisfies WireOf<ShopDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyPet", pet);
+contextBridge.exposeInMainWorld("pokebuddyShop", bridgeOf<ShopDeviceIpc>(SHOP));
 
-// 상점 기기 창 — 상품 하나를 받고, 그린 높이와 이전·다음·닫기·누른 단추(수량·구매)를 보낸다
-const SHOP = {
-  show: "shopdev:show",
-  size: "shopdev:size",
-  step: "shopdev:step",
-  close: "shopdev:close",
-  act: "shopdev:act",
-} satisfies Record<string, ShopDeviceChannel>;
+// 가방 기기 창 — 도구 하나. 누른 단추(사용·판매 전환, 파티 고르기, 수량, 사용·팔기)
+const BAG = { ...deviceWire("bagdev"), act: ["send", "bagdev:act"] } as const satisfies WireOf<BagDeviceIpc>;
 
-const shop: ShopDeviceBridge = {
-  onShow: (cb) => ipcRenderer.on(SHOP.show, (_e, view: ShopDeviceView) => cb(view)),
-  size: (h) => ipcRenderer.send(SHOP.size, h),
-  step: (delta) => ipcRenderer.send(SHOP.step, delta),
-  close: () => ipcRenderer.send(SHOP.close),
-  act: (action) => ipcRenderer.send(SHOP.act, action),
-};
+contextBridge.exposeInMainWorld("pokebuddyBag", bridgeOf<BagDeviceIpc>(BAG));
 
-contextBridge.exposeInMainWorld("pokebuddyShop", shop);
+// 파티 기기 창(교체 화면) — 지금 프리셋의 파티 칸과 프리셋 칩. 누른 칸·칩
+const PARTY = { ...deviceWire("partydev"), act: ["send", "partydev:act"] } as const satisfies WireOf<PartyDeviceIpc>;
 
-// 가방 기기 창 — 도구 하나를 받고, 그린 높이와 이전·다음·닫기·누른 단추(사용·판매 전환, 파티 고르기, 수량, 사용·팔기)를 보낸다
-const BAG = {
-  show: "bagdev:show",
-  size: "bagdev:size",
-  step: "bagdev:step",
-  close: "bagdev:close",
-  act: "bagdev:act",
-} satisfies Record<string, BagDeviceChannel>;
-
-const bag: BagDeviceBridge = {
-  onShow: (cb) => ipcRenderer.on(BAG.show, (_e, view: BagDeviceView) => cb(view)),
-  size: (h) => ipcRenderer.send(BAG.size, h),
-  step: (delta) => ipcRenderer.send(BAG.step, delta),
-  close: () => ipcRenderer.send(BAG.close),
-  act: (action) => ipcRenderer.send(BAG.act, action),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyBag", bag);
-
-// 파티 기기 창(교체 화면) — 지금 프리셋의 파티 칸과 프리셋 칩을 받고, 그린 높이와 닫기·누른 칸·칩을 보낸다
-const PARTY = {
-  show: "partydev:show",
-  size: "partydev:size",
-  step: "partydev:step",
-  close: "partydev:close",
-  act: "partydev:act",
-} satisfies Record<string, PartyDeviceChannel>;
-
-const partyDevice: PartyDeviceBridge = {
-  onShow: (cb) => ipcRenderer.on(PARTY.show, (_e, view: PartyDeviceView) => cb(view)),
-  size: (h) => ipcRenderer.send(PARTY.size, h),
-  step: (delta) => ipcRenderer.send(PARTY.step, delta),
-  close: () => ipcRenderer.send(PARTY.close),
-  act: (action) => ipcRenderer.send(PARTY.act, action),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyParty", partyDevice);
+contextBridge.exposeInMainWorld("pokebuddyParty", bridgeOf<PartyDeviceIpc>(PARTY));
