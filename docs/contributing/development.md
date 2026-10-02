@@ -304,7 +304,7 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 
 실기는 작업마다 전용 시험 HOME 에서 한다(2026-10-02 사용자 결정). 다른 작업의 실기와 저장·계정이 겹치지 않는다. 아래 순서를 기본 방식으로 쓴다.
 
-1. 시험 HOME 을 정한다. 이름은 `~/.claude/pokebuddy-test-<작업명>` 이다. 모든 명령에 `POKEBUDDY_TEST_HOME` 으로 준다.
+1. 시험 HOME 을 정한다. 위치는 저장소의 `.claude/test-home/<작업명>` 이다(2026-10-03 사용자 결정). `.claude/` 는 git 이 추적하지 않는다. 사용자 홈의 `~/.claude` 아래에는 만들지 않는다. 모든 명령에 `POKEBUDDY_TEST_HOME` 으로 준다.
 2. 띄울 코드를 정한다. 작업 트리에 다른 작업의 미커밋 변경이 있으면 HEAD 를 worktree 로 꺼내 빌드한다(위 목록의 worktree 항목).
 3. 앱을 띄우기 전에 저장을 만든다. `scene <장면>` 을 쓴다. 장면에 없는 값은 `dist/save/store.js` 의 `read`·`write` 로 고친다.
 4. 서버를 쓸지 정한다.
@@ -316,10 +316,11 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 6. 결과는 저장 파일로 확인한다. `show` 와 평문 `save.json` 을 읽는다.
 7. 실제 창은 아래 "창 확인"으로 본다.
 8. 끝나면 `stop` 으로 내린다. 온라인이었으면 관리자 CLI `violations <uuid>` 로 위반이 없는지 본다. uuid 는 시험 HOME 의 `cloud.json` `userId` 다.
-9. 작업 기록에 시험 HOME, 계정 uuid, 띄운 커밋, 명령, 결과 표를 적는다. 온라인 HOME 을 지우면 그 계정으로 다시 들어갈 수 없다.
+9. 작업 기록에 시험 HOME, 계정 uuid, 띄운 커밋, 명령, 결과 표를 적는다.
+10. 확인이 끝나면 시험 HOME 폴더를 지운다(2026-10-03 사용자 결정). 지우기 전에 앱이 내려갔는지 본다. 온라인 HOME 을 지우면 그 익명 계정으로 다시 들어갈 수 없다. 계정 uuid 는 9번에서 적어 둔다. worktree 를 썼으면 `node_modules` 링크를 먼저 끊고 worktree 를 지운다.
 
 ```powershell
-$env:POKEBUDDY_TEST_HOME = "$HOME.claudepokebuddy-test-<작업명>"
+$env:POKEBUDDY_TEST_HOME = "$PWD/.claude/test-home/<작업명>"
 $env:POKEBUDDY_ONLINE = "off"                      # 서버가 필요 없을 때만
 node dist/tools/dev-test.js scene showcase
 node dist/tools/dev-test.js start
@@ -340,7 +341,8 @@ node dist/tools/dev-test.js stop
 
 온라인 기능(클라우드 저장·우편·교환)을 실기로 볼 때는 시험 계정을 쓴다. 자기 계정을 쓰지 않는다.
 
-- 시험 계정은 운영 서버의 익명 계정 하나다. 세션은 시험 계정 HOME 인 `~/.claude/pokebuddy-dev-account` 에 있다. 이 폴더를 지우면 그 계정으로 다시 들어갈 수 없다.
+- 시험 계정은 운영 서버의 익명 계정 하나다. 세션은 시험 계정 HOME 인 저장소의 `.claude/dev-account` 에 있다(2026-10-03 사용자 결정, 옛 위치는 `~/.claude/pokebuddy-dev-account`). `.claude/` 는 git 이 추적하지 않는다. 이 폴더를 지우면 그 계정으로 다시 들어갈 수 없다. 작업 전용 시험 HOME 과 달리 확인 뒤에도 지우지 않는다.
+- worktree 에서 `dev-test` 를 돌릴 때는 `POKEBUDDY_ACCOUNT_HOME` 에 저장소의 `.claude/dev-account` 경로를 준다. 주지 않으면 그 worktree 아래의 폴더를 본다.
 - `npm run dev:account` 가 빌드한 뒤 이 계정으로 동반자를 띄운다. 이미 떠 있으면 내렸다가 다시 띄운다.
 - `dev-test` 의 다른 명령은 끝에 `--account` 를 붙이면 이 HOME 을 쓴다. `--fresh` 는 받지 않는다.
 - 임시 폴더 HOME 으로 `start` 하면 띄울 때마다 운영 서버에 익명 계정이 하나 생긴다. 서버가 필요 없는 확인은 `POKEBUDDY_ONLINE=off` 를 주고 띄운다.

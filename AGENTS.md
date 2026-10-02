@@ -65,7 +65,7 @@ npm run data:build          # rebuild generated data
 
 Run a focused check, such as `node dist/tools/selftest-shop.js`, after building.
 
-For a real-run check of the app, follow [작업 전용 시험 HOME 실기](docs/contributing/development.md#작업-전용-시험-home-실기). Use a test HOME for the task (`~/.claude/pokebuddy-test-<task>`). Create the save before the first start. Use `POKEBUDDY_ONLINE=off` when the check does not need the server. Do not capture the full screen.
+For a real-run check of the app, follow [작업 전용 시험 HOME 실기](docs/contributing/development.md#작업-전용-시험-home-실기). Use a test HOME for the task in this repository (`.claude/test-home/<task>`). Do not create it in the user home (`~/.claude`). Create the save before the first start. Use `POKEBUDDY_ONLINE=off` when the check does not need the server. Do not capture the full screen. Delete the test HOME when the check is complete.
 
 ## Style and Naming
 

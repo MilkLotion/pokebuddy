@@ -3,7 +3,7 @@
 //   node dist/tools/dev-test.js stop                시험 동반자 종료 — companion.lock 을 지우면 스스로 저장하고 끝난다
 //   node dist/tools/dev-test.js scene <장면>        저장을 그 장면으로 고친다 — 앱이 꺼져 있어야 한다(저장은 앱 하나만 쓴다)
 //   node dist/tools/dev-test.js show                저장 요약
-// 시험 계정 — 명령 끝에 --account 를 붙이면 임시 폴더 대신 시험 계정의 HOME(~/.claude/pokebuddy-dev-account)을 쓴다. `npm run dev:account` 가 이 계정으로 띄운다.
+// 시험 계정 — 명령 끝에 --account 를 붙이면 임시 폴더 대신 시험 계정의 HOME(저장소의 .claude/dev-account)을 쓴다. `npm run dev:account` 가 이 계정으로 띄운다.
 //   운영 서버의 익명 계정 하나를 계속 쓴다. 세션이 이 HOME 에 있어 --fresh 는 받지 않는다. start 는 떠 있으면 내렸다가 다시 띄운다
 //   저장을 고친 뒤에는 서버 저장도 같이 바꾼다 — 로컬만 고치면 서버 검증이 위반으로 적는다(src/verify/save-rules.ts):
 //     node --env-file=admin/.env.local admin/admin.cjs save put --home <시험 계정 HOME> --yes   (admin/README.md)
@@ -38,8 +38,10 @@ export const DEV_TEST_RULES = {
 
 const PROJECT = path.resolve(__dirname, "..", "..");
 export const testHome = (): string => path.resolve(process.env.POKEBUDDY_TEST_HOME || path.join(os.tmpdir(), "pokebuddy-test-home"));
-// 시험 계정의 HOME — 임시 폴더가 비워지면 익명 계정의 세션을 잃으므로 사용자 홈 아래에 둔다
-export const accountHome = (): string => path.join(os.homedir(), ".claude", "pokebuddy-dev-account");
+// 시험 계정의 HOME — 저장소의 .claude/dev-account (2026-10-03 사용자 결정 "여기 .claude에 정리"). .claude/ 는 git 이 추적하지 않는다.
+// 임시 폴더가 비워지면 익명 계정의 세션을 잃으므로 임시 폴더에는 두지 않는다.
+// worktree 에서 돌릴 때는 POKEBUDDY_ACCOUNT_HOME 으로 저장소의 폴더를 준다 — 주지 않으면 그 worktree 아래를 본다
+export const accountHome = (): string => path.resolve(process.env.POKEBUDDY_ACCOUNT_HOME || path.join(PROJECT, ".claude", "dev-account"));
 const dataDir = (home: string): string => path.join(home, ".claude", "pokebuddy");
 const saveFile = (home: string): string => path.join(dataDir(home), "save.json");
 
