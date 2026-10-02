@@ -24,7 +24,7 @@ import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type BuyFailure = ReasonOf<
   | "no-product" // 그런 상품이 없다
-  | "not-enough" // 포인트가 모자라다
+  | "not-enough-points" // 포인트가 모자라다
   | "daycare-full" // 돌보미집이 가득 찼다
   | "bag-full" // 그 도구가 가방에 이미 최대 개수(SHOP_V3_RULES.bagMax)만큼 있다
   | "no-locked-slot" // 상점으로 열 칸이 남지 않았다
@@ -99,7 +99,7 @@ function buyPreset(save: SaveV3): BuyResult {
   const can = presetBuyable(save);
   if (!can.ok) return { ok: false, reason: can.reason === "preset-max" ? "preset-max" : "slots-not-full" };
   const price = SHOP_V3_RULES.presetPrice;
-  if (save.points.balance < price) return { ok: false, reason: "not-enough" };
+  if (save.points.balance < price) return { ok: false, reason: "not-enough-points" };
   save.points.balance -= price;
   const preset = addPreset(save, presetSlots(presetCount(save)));
   return { ok: true, spent: price, balance: save.points.balance, preset };
@@ -109,7 +109,7 @@ function buyPreset(save: SaveV3): BuyResult {
 function buyBox(save: SaveV3): BuyResult {
   if (!boxBuyable(save.boxes).ok) return { ok: false, reason: "box-max" };
   const price = SHOP_V3_RULES.boxPrice;
-  if (save.points.balance < price) return { ok: false, reason: "not-enough" };
+  if (save.points.balance < price) return { ok: false, reason: "not-enough-points" };
   const box = addBox(save.boxes);
   if (!box) return { ok: false, reason: "box-max" };
   save.points.balance -= price;
@@ -124,7 +124,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
 
   if (price === null) return { ok: false, reason: slot ? "no-locked-slot" : "no-product" };
-  if (save.points.balance < price) return { ok: false, reason: "not-enough" };
+  if (save.points.balance < price) return { ok: false, reason: "not-enough-points" };
 
   // 검사 — 값을 바꾸기 전에 모두 본다
   if (product?.kind === "egg" && save.eggs.length >= EGG_V3_RULES.maxEggs) return { ok: false, reason: "daycare-full" };

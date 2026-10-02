@@ -63,7 +63,6 @@ export const REASONS = [
   "no-candidate",
   // 상점·판매
   "no-product",
-  "not-enough", // 구매의 포인트 부족. 화면 문구표에는 not-enough-points 만 있다 (B1)
   "not-enough-points",
   "daycare-full",
   "bag-full",
