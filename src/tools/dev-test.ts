@@ -7,13 +7,12 @@
 //   운영 서버의 익명 계정 하나를 계속 쓴다. 세션이 이 HOME 에 있어 --fresh 는 받지 않는다. start 는 떠 있으면 내렸다가 다시 띄운다
 //   저장을 고친 뒤에는 서버 저장도 같이 바꾼다 — 로컬만 고치면 서버 검증이 위반으로 적는다(src/verify/save-rules.ts):
 //     node --env-file=admin/.env.local admin/admin.cjs save put --home <시험 계정 HOME> --yes   (admin/README.md)
-// 시험용 HOME 은 POKEBUDDY_TEST_HOME, 없으면 <임시 폴더>/pokebuddy-test-home. 앱은 이 파일이 든 저장소(dist 빌드)를 띄운다.
+// 시험용 HOME 은 POKEBUDDY_TEST_HOME, 없으면 저장소의 .claude/test-home/default (2026-10-03 사용자 결정 — 시험 폴더는 저장소의 .claude 아래에 둔다). 앱은 이 파일이 든 저장소(dist 빌드)를 띄운다.
 // 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(src/main/app.ts syncLoginItem). 절차는 docs/contributing/development.md "시험용 HOME 에서 실기 확인"
 import { spawn } from "node:child_process";
 import { MEGA_RULES } from "../save/rules";
 import type { MegaV3 } from "../shared/save-v3";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { rollGender } from "../dex/gender";
 import { expForLevel, growthOf } from "../dex/growth";
@@ -37,7 +36,7 @@ export const DEV_TEST_RULES = {
 };
 
 const PROJECT = path.resolve(__dirname, "..", "..");
-export const testHome = (): string => path.resolve(process.env.POKEBUDDY_TEST_HOME || path.join(os.tmpdir(), "pokebuddy-test-home"));
+export const testHome = (): string => path.resolve(process.env.POKEBUDDY_TEST_HOME || path.join(PROJECT, ".claude", "test-home", "default"));
 // 시험 계정의 HOME — 저장소의 .claude/dev-account (2026-10-03 사용자 결정 "여기 .claude에 정리"). .claude/ 는 git 이 추적하지 않는다.
 // 임시 폴더가 비워지면 익명 계정의 세션을 잃으므로 임시 폴더에는 두지 않는다.
 // worktree 에서 돌릴 때는 POKEBUDDY_ACCOUNT_HOME 으로 저장소의 폴더를 준다 — 주지 않으면 그 worktree 아래를 본다

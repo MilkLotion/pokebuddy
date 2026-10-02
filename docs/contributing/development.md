@@ -260,7 +260,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 튜토리얼처럼 한 번 끝나면 다시 안 뜨는 화면은 진짜 저장으로 다시 볼 수 없다. 시험용 HOME 에서 동반자를 따로 띄운다.
 도구는 `src/tools/dev-test.ts` 다.
 
-- 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 `<임시 폴더>/pokebuddy-test-home` 이다.
+- 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 저장소의 `.claude/test-home/default` 다. `.claude/` 는 git 이 추적하지 않는다.
 - 저장·잠금·단일 실행 잠금이 모두 이 HOME 아래에 생긴다. 그래서 진짜 저장을 건드리지 않고, 쓰던 동반자와 나란히 뜬다.
 - 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(`src/main/app.ts` `syncLoginItem`).
 - 도구는 `POKEBUDDY_SAVE_CRYPT=off` 로 동반자를 띄운다. 그래서 새 HOME 의 저장은 평문으로 남고 `scene`·`show` 가 직접 읽고 고친다.
