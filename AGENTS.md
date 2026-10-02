@@ -65,6 +65,8 @@ npm run data:build          # rebuild generated data
 
 Run a focused check, such as `node dist/tools/selftest-shop.js`, after building.
 
+For a real-run check of the app, follow [작업 전용 시험 HOME 실기](docs/contributing/development.md#작업-전용-시험-home-실기). Use a test HOME for the task (`~/.claude/pokebuddy-test-<task>`). Create the save before the first start. Use `POKEBUDDY_ONLINE=off` when the check does not need the server. Do not capture the full screen.
+
 ## Style and Naming
 
 Use TypeScript. Follow nearby files for two-space indentation, semicolons, and single quotes. Use `camelCase` for values and functions, `PascalCase` for types and classes, and kebab-case for CLI commands and data files. Rebuild after source changes; never edit `dist/` by hand. Keep strings in i18n files.
