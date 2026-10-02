@@ -2,6 +2,7 @@
 // 사슬 자료는 src/tx/shop-detail.ts 의 EvoNodeView. 초상은 창마다 그리는 방법이 달라 부르는 쪽이 넘긴다.
 // 모양 CSS(.evo-*)는 manage.html 과 dex.html 에 같은 이름으로 둔다
 import type { EvoNodeView } from "../../shared/model/detail.js";
+import { el } from "./dom.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -19,13 +20,6 @@ export interface RadialSize {
   head: number;
 }
 export const RADIAL: RadialSize = { width: 390, height: 256, radius: 98, arrowFrom: 40, arrowTo: 58, head: 6 };
-
-function el(tag: string, cls?: string, text?: string): HTMLElement {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 // 초상 하나를 그리는 방법 — 창마다 다르다(관리 창은 그림 목록, 도감 기기 창은 메인이 보낸 data URI)
 export type PortraitFn = (slug: string, cls: string) => HTMLElement;

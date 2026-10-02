@@ -3,6 +3,7 @@
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다(도감 기기 창 dex.ts 와 같다)
 
 import { sprite } from "../ui/portrait.js";
+import { buttonEl, el } from "../ui/dom.js";
 
 export interface DeviceBridge {
   size: (height: number) => void;
@@ -22,22 +23,6 @@ export interface DeviceFace {
   desc: string;
   rows: [string, string][];
   link?: { label: string; value: string } | null; // 정보 줄 아래의 누르는 줄 — 상점 기기 창의 `나오는 포켓몬`
-}
-
-export function el(tag: string, cls?: string, text?: string): HTMLElement {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-export function button(cls: string, text: string, onClick: () => void): HTMLButtonElement {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = cls;
-  b.textContent = text;
-  b.addEventListener("click", onClick);
-  return b;
 }
 
 export function pairs(cls: string, rows: [string, string][], valueCls?: string): HTMLElement {
@@ -96,7 +81,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
       top.appendChild(led);
     }
     top.appendChild(el("div", "title", face.title));
-    const close = button("close", "✕", () => api.close());
+    const close = buttonEl("close", "✕", () => api.close());
     close.title = "닫기";
     top.appendChild(close);
     device.appendChild(top);
@@ -123,7 +108,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
     const records = pairs("records", face.rows, "value");
     // 누르는 줄 — 같은 판 안의 셋째 줄. 글자 끝의 `›` 가 누를 수 있음을 알린다 (Figma 03 `Shop Device` `row/나오는 포켓몬`)
     if (face.link && onLink) {
-      const more = button("more", "", onLink);
+      const more = buttonEl("more", "", onLink);
       more.append(el("span", "key", face.link.label), el("span", "value", `${face.link.value} ›`));
       records.appendChild(more);
     }
@@ -131,7 +116,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
     device.appendChild(middle);
 
     const controls = el("div", "controls");
-    controls.append(button("prev", "◀ 이전", () => api.step(-1)), go, button("next", "다음 ▶", () => api.step(1)));
+    controls.append(buttonEl("prev", "◀ 이전", () => api.step(-1)), go, buttonEl("next", "다음 ▶", () => api.step(1)));
     device.appendChild(controls);
 
     // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
@@ -143,11 +128,11 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
 
 // 수량 줄 — − · 수 · + · 최대 · 안내
 export function qtyRow(q: { count: number; cap: number; hint: string }, set: (qty: number) => void, off = false): HTMLElement {
-  const minus = button("", "−", () => set(q.count - 1));
+  const minus = buttonEl("", "−", () => set(q.count - 1));
   minus.disabled = off || q.count <= 1;
-  const plus = button("", "+", () => set(q.count + 1));
+  const plus = buttonEl("", "+", () => set(q.count + 1));
   plus.disabled = off || q.count >= q.cap;
-  const max = button("max", "최대", () => set(q.cap));
+  const max = buttonEl("max", "최대", () => set(q.cap));
   max.disabled = off || q.count >= q.cap;
   const row = el("div", "qty");
   row.append(minus, el("span", "count", q.count.toLocaleString("ko-KR")), plus, max, el("span", "hint", q.hint));
@@ -156,7 +141,7 @@ export function qtyRow(q: { count: number; cap: number; hint: string }, set: (qt
 
 // 바닥 가운데 주 단추 — 처리 중이면 글자 대신 점 세 개(폭 그대로)
 export function goButton(label: string, disabled: boolean, busy: boolean, onClick: () => void): HTMLButtonElement {
-  const go = button("go", label, onClick);
+  const go = buttonEl("go", label, onClick);
   go.disabled = disabled || busy;
   go.classList.toggle("is-busy", busy);
   return go;
