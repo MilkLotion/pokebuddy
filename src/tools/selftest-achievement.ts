@@ -455,13 +455,13 @@ function seed(): SaveV3 {
   k.dex.obtained = [...byDex.values()];
   assert.equal(isAchieved(k, "dex-kanto"), true);
 
-  // 종 모으기 — 적은 종을 모두 얻으면 달성한다. 아르세우스는 세 종과 그 오리진폼까지 여섯이다
-  // (2026-10-03 사용자 결정 "아르세우스는 디아루가,펄기아,기라티나 구하면", "아르세우스 조건에 오리진폼도 포함하자", "500년전 마이가나는 볼케니온이랑 마기아나 구하면")
+  // 종 모으기 — 적은 종을 모두 얻으면 달성한다. 아르세우스는 세 종이다. 오리진폼은 조건이 아니다
+  // (2026-10-03 사용자 결정 "아르세우스는 디아루가,펄기아,기라티나 구하면", "업적은 그냥 디아루가 펄기아 기라티나 얻기로 다시 변경", "500년전 마이가나는 볼케니온이랑 마기아나 구하면")
   const myth = seed();
-  myth.dex.obtained = ["dialga", "palkia", "giratina", "dialga-origin"];
-  assert.deepStrictEqual(progressOf(myth, "dex-creation"), { now: 4, goal: 6, unit: "" });
-  assert.equal(isAchieved(myth, "dex-creation"), false, "오리진폼이 모자라다");
-  myth.dex.obtained.push("palkia-origin", "giratina-origin");
+  myth.dex.obtained = ["dialga", "palkia", "dialga-origin", "giratina-origin"];
+  assert.deepStrictEqual(progressOf(myth, "dex-creation"), { now: 2, goal: 3, unit: "" }, "오리진폼은 세지 않는다");
+  assert.equal(isAchieved(myth, "dex-creation"), false);
+  myth.dex.obtained.push("giratina");
   assert.equal(isAchieved(myth, "dex-creation"), true);
   assert.equal(isAchieved(myth, "dex-soul-heart"), false);
   myth.dex.obtained.push("volcanion", "magearna");

@@ -22,8 +22,8 @@
   "dex-hisui": { "ko": "히스이 도감 완성", "en": "Complete the Hisui Dex", "group": "dex", "cond": { "kind": "region", "from": 899, "to": 905 }, "reward": { "points": 1000 } },
   "dex-paldea": { "ko": "팔데아 도감 완성", "en": "Complete the Paldea Dex", "group": "dex", "cond": { "kind": "region", "from": 906, "to": 1025 }, "reward": { "points": 1000 } },
   "dex-creation": {
-    "_comment": "아르세우스는 이 업적으로만 얻는다 (2026-10-03 사용자 결정 \"아르세우스는 디아루가,펄기아,기라티나 구하면 얻게 수정\"). 같은 날의 전국 도감 완성 조건과 랜덤전설알을 바꾼다. 오리진폼 세 종도 얻어야 한다 (같은 날 \"아르세우스 조건에 오리진폼도 포함하자\"). 기라티나(오리진폼)은 기라티나의 모습 바꾸기로 얻는다",
-    "ko": "디아루가·펄기아·기라티나 모으기", "en": "Dialga, Palkia and Giratina", "desc": "오리진폼도 얻어야 한다", "group": "dex", "cond": { "kind": "species", "species": ["dialga", "palkia", "giratina", "dialga-origin", "palkia-origin", "giratina-origin"] }, "reward": { "pokemon": "arceus" }
+    "_comment": "아르세우스는 이 업적으로만 얻는다 (2026-10-03 사용자 결정 \"아르세우스는 디아루가,펄기아,기라티나 구하면 얻게 수정\"). 같은 날의 전국 도감 완성 조건과 랜덤전설알을 바꾼다. 오리진폼은 조건이 아니다 (같은 날 \"업적은 그냥 디아루가 펄기아 기라티나 얻기로 다시 변경\")",
+    "ko": "디아루가·펄기아·기라티나 모으기", "en": "Dialga, Palkia and Giratina", "group": "dex", "cond": { "kind": "species", "species": ["dialga", "palkia", "giratina"] }, "reward": { "pokemon": "arceus" }
   },
   "dex-soul-heart": {
     "_comment": "마기아나(500년 전의 색)은 이 업적으로만 얻는다 (2026-10-03 사용자 결정 \"500년전 마이가나는 볼케니온이랑 마기아나 구하면\"). 앞선 배정(포켓몬 1000종 모으기)을 바꾼다",
