@@ -161,7 +161,7 @@ try {
     const before = JSON.stringify(game.read());
     const reply = game.send({ cmd: "없는명령", target: "p1" }, "settings");
     assert.equal(reply.ok, false);
-    assert.equal(reply.reason, "unknown-command");
+    assert.equal(reply.reason, "unknown-cmd");
     assert.equal(JSON.stringify(game.read()), before, "저장이 그대로");
     process.stdout.write("(9) 모르는 명령  ok\n");
   }

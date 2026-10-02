@@ -17,14 +17,12 @@ export const REASONS = [
   "bad-result", // 명령 통로 — 회신 파일의 모양이 틀렸다
   "send-failed", // 명령 통로 — 요청 파일을 쓰지 못했다
   "timeout",
-  "unknown-cmd", // 명령 처리기 — 모르는 명령
-  "unknown-command", // 실행기·설정창 — 모르는 거래, 내부 거래
+  "unknown-cmd", // 모르는 명령·모르는 거래·내부 거래
   "no-result",
   "no-save",
   "save-failed",
   "not-writer",
   "halted", // 다른 PC 확인이 끝날 때까지 게임이 멈춰 있다
-  "removed", // 없앤 명령
   "cancelled", // 사용자가 창을 닫았다 (영역 그리기·화면 고르기)
   "denied", // 설정창 — 보낸 창이 설정창이 아니다
   "bad-request", // 설정창 — 요청의 모양이 틀렸다

@@ -358,7 +358,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (!mine(e)) return DENIED;
     if (!isRequest(req)) return { ok: false, reason: "bad-request" };
     // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
-    if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-command" };
+    if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
     game.tick();
     return send(req);
   });

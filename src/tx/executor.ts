@@ -75,7 +75,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     if (done) return { ok: true, result: done.result, replayed: true };
 
     const handler = handlers[req.name];
-    if (!handler) return { ok: false, reason: "unknown-command" };
+    if (!handler) return { ok: false, reason: "unknown-cmd" };
 
     const now = ports.now();
     const draft = structuredClone(save);
