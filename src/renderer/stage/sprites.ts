@@ -6,7 +6,8 @@
 // 무엇을 재생할지는 두 갈래다 (옛 renderer/pmd.js 와 같다. 이제 마리마다 따로 돈다).
 //   상태  Claude 상태(idle·running…)에 붙은 동작 clips[state]. 기본값
 //   play  움직임 모듈이 고른 동작 — 산책·수면·반응. 있으면 상태보다 앞선다. null 이면 상태로 돌아간다
-import type { LookSheets, Play, PlayMode, SpriteSheet, StagePet, StageState } from "../shared/model/stage.js";
+import type { LookSheets, Play, PlayMode, SpriteSheet, StagePet } from "../../shared/model/stage.js";
+import type { AgentState } from "../../shared/names/agents.js";
 
 export const TICK_MS = 16;
 // 창이 숨었다 돌아오면 밀린 시간이 쌓여 있다. 따라잡지 않고 지금부터 다시 센다
@@ -158,10 +159,10 @@ export class Animator {
   private frame = 0;
   private due = 0;
   private frozen = false; // 한 번 재생이 끝나 마지막 프레임에서 멈춘 상태
-  private state: StageState = "idle";
+  private state: AgentState = "idle";
   // 한 번만 재생하는 상태 동작(waving=Pose once · failed=Faint hold)을 이미 끝까지 보여준 상태.
   // play 가 끼어들었다 null 로 돌아와도 다시 재생하지 않는다 — 또 인사하고, 또 쓰러지면 이상하다. 상태가 바뀌면 지운다
-  private doneState: StageState | null = null;
+  private doneState: AgentState | null = null;
   private onceUntil = 0; // 한 번만 재생하는 상태 동작을 되풀이할 끝 시각 (ONCE_MIN_MS)
 
   constructor(
@@ -170,7 +171,7 @@ export class Animator {
   ) {}
 
   // 메인 프레임을 반영한다 — 그릴 프레임이 바뀌었으면 true. 시트가 아직 없으면 그릴 것이 없다(null)
-  update(pet: StagePet, state: StageState, now: number): boolean {
+  update(pet: StagePet, state: AgentState, now: number): boolean {
     const art = this.store.get(this.look);
     if (!art) {
       const had = this.cur !== null;

@@ -1,6 +1,6 @@
 // 놀이공간 화면 번호 덮개 — 화면마다 창 하나가 뜬다. 보기만 할 때는 번호만, 고를 때는 눌러서 이 화면을 고른다(Esc 취소).
 // 저장은 메인이 한다 (src/main/screen-picker.ts)
-import type { ScreenOverlayInit } from "../shared/model/overlays.js";
+import type { ScreenOverlayInit } from "../../shared/model/overlays.js";
 
 function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
   const el = document.getElementById(id);

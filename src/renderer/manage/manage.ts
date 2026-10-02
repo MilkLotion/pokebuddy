@@ -4,24 +4,24 @@
 // 명령을 보내면 새 스냅샷을 다시 받아 그린다. 화면이 스스로 상태를 들고 있지 않는다.
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
-import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView } from "../shared/model/account.js";
-import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../shared/model/snapshot.js";
-import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents.js";
-import type { DexEntry, EvoNodeView } from "../shared/model/detail.js";
-import type { MailGiftView, MailLetterView, MailScreen } from "../shared/model/mail.js";
-import type { ManageReply } from "../shared/ipc/manage.js";
-import type { ManageRoute } from "../shared/model/route.js";
-import type { PetDeviceAction, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../shared/model/devices.js";
-import type { ScreenView } from "../shared/model/overlays.js";
-import type { TradeCardView, TradeScreen } from "../shared/model/trade.js";
-import { genderIcon } from "./gender.js";
-import { shinyIcon } from "./shiny.js";
-import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";
-import { portraitImg, rememberPortrait } from "./portrait.js";
-import { josa } from "../shared/josa.js";
+import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView } from "../../shared/model/account.js";
+import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
+import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
+import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
+import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
+import type { ManageReply } from "../../shared/ipc/manage.js";
+import type { ManageRoute } from "../../shared/model/route.js";
+import type { PetDeviceAction, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../../shared/model/devices.js";
+import type { ScreenView } from "../../shared/model/overlays.js";
+import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
+import { genderIcon } from "../ui/gender-icon.js";
+import { shinyIcon } from "../ui/shiny-icon.js";
+import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
+import { portraitImg, rememberPortrait } from "../ui/portrait.js";
+import { josa } from "../../shared/josa.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
-// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
 const NATURE_UI = false;
 const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
@@ -308,7 +308,7 @@ function waitWord(sec: number): string {
 }
 
 // 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림). 파티 칸 오른쪽 위 한 줄 폭에 맞춘 짧은 꼴이다.
-// 기기 창(src/renderer/pet.ts buffBadge)과 같은 규칙 (2026-09-30 사용자 결정 "추천대로 진행해")
+// 기기 창(src/renderer/device/pet.ts buffBadge)과 같은 규칙 (2026-09-30 사용자 결정 "추천대로 진행해")
 const buffBadge = (b: PetView["buffs"][number]): string =>
   `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
 
@@ -1075,7 +1075,7 @@ function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
 // ── 포켓몬 메뉴 ────────────────────────────────────────────────────────────────
 // 파티 카드·박스 칸을 우클릭하면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/main/menus.ts petMenu, 2026-10-02 사용자 결정).
 // 좌클릭은 개체 상세를 연다. 그래서 이 메뉴에는 `상세 보기` 가 없다 (같은 날 사용자 결정 — 좌클릭 메뉴가 어색했다).
-// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.ts). 고른 모습·옮기기·팔기는 경로(goTo)로 돌아온다.
+// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/windows/menu.ts). 고른 모습·옮기기·팔기는 경로(goTo)로 돌아온다.
 // 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
 function askPetMenu(petId: string): void {
   void window.pokebuddyManage.petMenu(petId).catch(() => undefined);
@@ -4087,7 +4087,7 @@ let coachWatch: ResizeObserver | null = null; // 코치마크 대상의 크기 �
 let coachAllows: ((n: Node) => boolean) | null = null;
 let coachHome: HTMLElement | null = null;
 
-// 개체 상세 튜토리얼은 파티 상세 기기 창이 그린다(src/renderer/pet.ts) — 끝내거나 닫으면 여기로 알려 와 기록한다
+// 개체 상세 튜토리얼은 파티 상세 기기 창이 그린다(src/renderer/device/pet.ts) — 끝내거나 닫으면 여기로 알려 와 기록한다
 
 // 설정 › 화면 튜토리얼 — 줄마다 무엇인지 알리고 직접 해 보게 한다. 해 보는 단계는 다음 단추가 없고, 그 동작을 하면 넘어간다
 // (2026-09-28 사용자 "화면 튜토리얼도 각각이 뭐가있고, 사용자가 직접해보는거까지 튜토리얼해").

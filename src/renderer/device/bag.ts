@@ -1,9 +1,9 @@
 // 가방 기기 창 — 관리 창이 정해 보낸 도구 하나를 그린다 (src/main/bag-window.ts). Figma 05 `Bag / Device / Use`
 // 틀은 상점 기기 창과 같다(item-device.ts). 가운데 조작 칸은 머리 줄(제목·사용|판매), 사용 쪽 파티 줄, 수량, 미리보기 상자.
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안). 누른 단추는 관리 창으로 돌려보낸다
-import type { BagDeviceView } from "../shared/model/devices.js";
+import type { BagDeviceView } from "../../shared/model/devices.js";
 import { deviceFrame, el, goButton, qtyRow } from "./item-device.js";
-import { portraitImg } from "./portrait.js";
+import { portraitImg } from "../ui/portrait.js";
 
 const api = window.pokebuddyBag;
 const frame = deviceFrame(api, "bag.html");

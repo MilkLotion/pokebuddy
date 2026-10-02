@@ -2,7 +2,7 @@
 // 머리(제목·✕), 화면(머리 줄·그림·분류·둘째 줄·설명), 정보 줄(효과·쓰는 곳), 가운데 조작 칸, 바닥(◀ 이전 · 주 단추 · 다음 ▶).
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다(도감 기기 창 dex.ts 와 같다)
 
-import { sprite } from "./portrait.js";
+import { sprite } from "../ui/portrait.js";
 
 export interface DeviceBridge {
   size: (height: number) => void;

@@ -700,7 +700,7 @@
         color: var(--inverse);
         opacity: 0.45;
       }
-      /* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage.ts busyLater).
+      /* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage/manage.ts busyLater).
          폭과 색은 그대로 두고 글자 자리에 점 세 개가 차례로 밝아진다. 답이 올 때까지 다른 조작은 받지 않는다 */
       button.is-busy {
         position: relative;
@@ -1674,7 +1674,7 @@
         left: 7px;
         top: 8px;
       }
-      /* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage.ts megaMark). 크기는 요소가 정한다.
+      /* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage/manage.ts megaMark). 크기는 요소가 정한다.
          박스 칸은 왼쪽 위(이로치 자리), 이로치 아이콘은 그 오른쪽으로 비킨다. 도감 칸은 얻음 표식(볼) 오른쪽에 볼과 같은 12 다 (2026-10-02 사용자 결정) */
       .mega-mark {
         display: block;
@@ -2685,7 +2685,7 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      /* 진화 창의 진화 트리 — 도감 기기 창과 같은 모양(src/renderer/evo-tree.ts, dex.html .evo-*). Figma 05 `Evolution Confirm` `1126:23890`.
+      /* 진화 창의 진화 트리 — 도감 기기 창과 같은 모양(src/renderer/ui/evo-tree.ts, dex.html .evo-*). Figma 05 `Evolution Confirm` `1126:23890`.
          지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 컬러 테두리 없음 */
       .dialog .evo-card {
         display: flex;
@@ -3655,6 +3655,6 @@
 
     <div class="scrim" id="scrim"><div class="dialog" id="dialog"></div></div>
 
-    <script type="module" src="../../dist/web/renderer/manage.js"></script>
+    <script type="module" src="../../dist/web/renderer/manage/manage.js"></script>
   </body>
 </html>

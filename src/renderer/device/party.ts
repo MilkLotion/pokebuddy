@@ -1,16 +1,16 @@
 // 파티 기기 창 — 교체 화면. 관리 창이 정해 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
 // Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 가방·상점 기기 창과 같다.
-// 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage.ts onPartyAction)
-import type { PartyDeviceSlot, PartyDeviceView } from "../shared/model/devices.js";
+// 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
+import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
 import { button, el } from "./item-device.js";
-import { portraitImg } from "./portrait.js";
+import { portraitImg } from "../ui/portrait.js";
 
 const api = window.pokebuddyParty;
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("party.html 에 #device 가 없다");
 const device: HTMLElement = root;
 
-// 빈 칸·잠긴 칸·자물쇠 칩의 그림 — 관리 창의 파티 칸과 같은 +·자물쇠 (src/renderer/manage.ts blankIcon)
+// 빈 칸·잠긴 칸·자물쇠 칩의 그림 — 관리 창의 파티 칸과 같은 +·자물쇠 (src/renderer/manage/manage.ts blankIcon)
 const LOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 6.86H4c-.63 0-1.14.51-1.14 1.14v5.14c0 .63.51 1.15 1.14 1.15h8c.63 0 1.14-.52 1.14-1.15V8c0-.63-.51-1.14-1.14-1.14Z"/><path d="M5.14 6.86V5.14a2.86 2.86 0 0 1 5.72 0v1.72"/></svg>';
 const PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.64v8.72M3.64 8h8.72"/></svg>';
 

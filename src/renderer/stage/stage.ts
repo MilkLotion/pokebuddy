@@ -3,8 +3,9 @@
 // 위치의 주인은 메인이다. 40ms 마다 오는 StageFrame 을 그대로 그리고, 애니 프레임 진행(어느 프레임인지)만 스스로 한다.
 // 렌더러가 죽고 다시 떠도 ready → 메인의 재송신(init · sheets · 마지막 frame)으로 복구된다.
 // 다시 그리는 때: 프레임이 새로 왔거나 · 어느 마리의 애니 프레임이 바뀌었거나 · 캔버스 크기가 바뀌었을 때만
-import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageFrame, StageInit, StageSize } from "../shared/model/stage.js";
-import type { StageBridge } from "../shared/ipc/stage.js";
+import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageFrame, StageInit } from "../../shared/model/stage.js";
+import type { StageBridge } from "../../shared/ipc/stage.js";
+import type { Size } from "../../shared/geometry.js";
 import { hitAt, rectOf, type HitLookup } from "./hit.js";
 import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";
@@ -57,7 +58,7 @@ function diag(entry: Record<string, unknown>) {
 // canvas.width/height 를 대입하면 2D 컨텍스트가 기본값으로 리셋돼 imageSmoothingEnabled 가 true 로 돌아간다(같은 값을
 // 다시 넣어도 리셋된다). 그러면 정수 배율에서도 도트가 번진다 — 인접한 검정·흰색 픽셀이 [0,0,32,96,159,223,255,255] 처럼
 // 그라데이션이 된다. CSS image-rendering: pixelated 로는 못 막는다. 블러가 이미 비트맵에 구워진 뒤다
-function resize(size: StageSize) {
+function resize(size: Size) {
   const w = Math.max(1, Math.round(size.w));
   const h = Math.max(1, Math.round(size.h));
   canvas.style.width = `${w}px`;
