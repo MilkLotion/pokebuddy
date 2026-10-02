@@ -18,6 +18,7 @@
 //   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수
 //   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만
+//   mega        메가스톤을 지닌 개체는 친밀도·레벨 조건을 채워야 한다. 메가 모습은 메가스톤이 있고 그 종의 모습이어야 한다 (src/dex/mega.ts)
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
 //   eggs        알은 6개 이하
@@ -39,6 +40,7 @@ export interface VerifyData {
   eggs: Record<string, number>; // 알 종류 → 값
   achievements: Record<string, "pokemon" | "party-slot">; // 업적 → 보상 종류
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
+  megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
   maxExp: number; // 모든 성장 곡선의 100레벨 누적 경험치 중 최대
@@ -57,6 +59,8 @@ export interface VerifyData {
     sellRatio: number;
     petSellMax: number; // 포켓몬 한 마리 판매가의 최대 (src/shop/sell-pet.ts)
     speciesMinPrice: number; // 종 지정 구매 최저가
+    megaLevel?: number; // 메가스톤 조건의 레벨 (src/save/rules.ts MEGA_RULES)
+    megaAffinity?: number; // 메가스톤 조건의 친밀도
     affinityPerHour: number; // 시간 적립 최대(버프·작업 반영)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
     careOnce: number; // 밥 한 번 + 놀기 한 번 — 짧은 틈에도 한 번씩은 할 수 있다
@@ -179,6 +183,8 @@ interface Pet {
   exp: number;
   affinity: number;
   forms: string[];
+  megaStone: boolean; // 메가스톤을 지녔다
+  megaOn: string; // 지금 메가 모습. 기본 모습이면 빈 글자
 }
 
 const petOf = (v: unknown): Pet | null => {
@@ -194,6 +200,8 @@ const petOf = (v: unknown): Pet | null => {
     exp: num(v.exp),
     affinity: num(v.affinity),
     forms: list(v.forms).map(str),
+    megaStone: isObj(v.mega) && v.mega.stone === true,
+    megaOn: isObj(v.mega) ? str(v.mega.on) : "",
   };
 };
 
@@ -386,6 +394,14 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (p.exp < 0 || p.exp > data.maxExp) add("level", p.exp, data.maxExp, p.id);
     const table = data.expTable[data.growth[p.species] ?? ""];
     if (table) add("level", p.level, levelFor(table, p.exp), p.id);
+  }
+
+  // mega — 시간·횟수 조건은 보지 않는다(저장에 흔적이 없다). 친밀도·레벨과 모습의 종만 본다
+  if (data.megaForms && r.megaLevel != null && r.megaAffinity != null) {
+    for (const p of nextPets) {
+      if (p.megaStone && (p.level < r.megaLevel || p.affinity < r.megaAffinity)) add("mega", 1, 0, p.id);
+      if (p.megaOn && (!p.megaStone || !(data.megaForms[p.species] ?? []).includes(p.megaOn))) add("mega", 1, 0, p.id);
+    }
   }
 
   // 같은 개체 — id 와 since 가 같다. 새 개체 — 그 밖

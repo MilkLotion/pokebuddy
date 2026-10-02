@@ -16,6 +16,7 @@ import path from "node:path";
 import type { PmdArt } from "./art";
 import type { SpriteSheet } from "../shared/stage";
 import { profile } from "../dex/species";
+import { megaOf } from "../dex/mega";
 import { decodePng, encodePng, type Rgba } from "./png";
 
 export const OVERWORLD_RULES = {
@@ -33,8 +34,9 @@ const SHINY_FILE = "overworld_shiny.pal";
 
 // 종 이름 → expansion 폴더 이름 (mr-rime → mr_rime)
 export const overworldDir = (slug: string): string => slug.replace(/-/g, "_");
+// 메가 모습은 종 폴더 아래의 폼 폴더다 (charizard/mega_x) — data/mega.json 의 overworld. 캐시 파일 이름은 슬러그 그대로다
 export const overworldUrl = (slug: string, file: string): string =>
-  `${OVERWORLD_RULES.repo}/${OVERWORLD_RULES.ref}/graphics/pokemon/${overworldDir(slug)}/${file}`;
+  `${OVERWORLD_RULES.repo}/${OVERWORLD_RULES.ref}/graphics/pokemon/${megaOf(slug)?.overworld ?? overworldDir(slug)}/${file}`;
 
 // JASC-PAL → 번호 순 RGB. 못 읽으면 null
 export function parsePal(text: string): [number, number, number][] | null {
@@ -189,7 +191,7 @@ export function createOverworldSource(dir: string): OverworldSource {
   return {
     async load(look) {
       const got = await fetchBoth(look);
-      return got ? overworldArt(got.png, got.pal, String(profile(got.slug).dex ?? "").padStart(4, "0")) : null;
+      return got ? overworldArt(got.png, got.pal, String(profile(megaOf(got.slug)?.base ?? got.slug).dex ?? "").padStart(4, "0")) : null;
     },
     async prefetch(look) {
       return !!(await fetchBoth(look));

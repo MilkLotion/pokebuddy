@@ -10,6 +10,7 @@ import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/sta
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";
 import { regionalOf } from "../dex/regional";
+import { megaOf } from "../dex/mega";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
 
@@ -87,6 +88,9 @@ export function pmdSources(look: string): PmdSource[] {
   const slug = shiny ? look.slice(0, -6) : look;
   const dex = profile(slug).dex;
   const base = dex ? String(dex).padStart(4, "0") : null;
+  const mega = megaOf(slug);
+  // 메가 모습(src/dex/mega.ts) — 폼 폴더만 본다. 이로치는 `<폼>/0001` → 폼 보통. 폴더가 없으면 빈 목록이라 걷기 대체 그림으로 넘어간다
+  if (mega) return mega.pmd ? (shiny ? [{ slug, spritePath: `${mega.pmd}/0001` }, { slug, spritePath: mega.pmd }] : [{ slug, spritePath: mega.pmd }]) : [];
   const form = regionalOf(slug)?.pmd;
   const out: PmdSource[] = [];
   if (form) out.push({ slug, spritePath: shiny ? `${form}/0001` : form });
@@ -96,6 +100,15 @@ export function pmdSources(look: string): PmdSource[] {
   } else out.push(regionalOf(slug) && base ? { slug, spritePath: base } : { slug });
   return out;
 }
+
+// 그림을 찾을 수 있는 모습인가 — PMD 후보가 있거나 메가 모습이다. 메가 모습은 PMD 폴더가 없어도 걷기 대체 그림·초상으로 선다
+const knownLook = (look: string, srcs: PmdSource[]): boolean => srcs.length > 0 || megaOf(look.replace(/:shiny$/, "")) !== null;
+
+// 그림 묶음에 적는 도감 번호 — 메가 모습은 기본 종의 번호
+export const dexOfLook = (look: string): string => {
+  const slug = look.replace(/:shiny$/, "");
+  return String(profile(megaOf(slug)?.base ?? slug).dex ?? "").padStart(4, "0");
+};
 
 // look → 초상 PNG. 없거나 못 받으면 null (src/main/portraits.ts)
 export type PortraitSource = (look: string) => Promise<Buffer | null>;
@@ -117,7 +130,7 @@ export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackS
     if (prefetching) return;
     for (let look = queue.shift(); look !== undefined; look = queue.shift()) {
       const srcs = pmdSources(look);
-      if (!srcs.length || done.has(look) || pending.has(look)) continue;
+      if (!knownLook(look, srcs) || done.has(look) || pending.has(look)) continue;
       const job = (async () => {
         for (const src of srcs) if (await prefetchPmd(src, paths).catch(() => false)) return true;
         // PMD 에 그림이 없는 종 — 걷기 대체 그림을 받아 둔다
@@ -131,7 +144,7 @@ export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackS
 
   async function fetchLook(look: string): Promise<Look | null> {
     const srcs = pmdSources(look);
-    if (!srcs.length) return null;
+    if (!knownLook(look, srcs)) return null;
     if (prefetching?.look === look) await prefetching.job;
     for (const src of srcs) {
       // dotSize 는 loadPmd 의 zoom 계산에만 쓰이고 무대는 그 값을 쓰지 않는다. buddy=on — 작업 동작까지 담아야 작업 리듬이 나온다
@@ -151,7 +164,7 @@ export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackS
     }
     // 걷기 대체 그림도 못 받았다 — 초상으로 세운다
     const png = portrait ? await portrait(look).catch(() => null) : null;
-    const art = png ? portraitArt(png, String(profile(look.replace(/:shiny$/, "")).dex ?? "").padStart(4, "0")) : null;
+    const art = png ? portraitArt(png, dexOfLook(look)) : null;
     if (!art) return null;
     const result = { look, art, sheets: sheetsOf(look, art) };
     done.set(look, result);

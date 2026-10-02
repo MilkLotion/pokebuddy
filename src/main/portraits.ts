@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { profile, slugs } from "../dex/species.js";
 import { regionalOf } from "../dex/regional.js";
+import { megaOf } from "../dex/mega.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
 
@@ -60,10 +61,12 @@ export interface PortraitAsk {
 // 초상 한 장의 이름 — 화면이 결과를 찾는 열쇠다
 export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shiny` : a.slug);
 
-// 초상 그림 번호 — 리전폼이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0
+// 초상 그림 번호 — 리전폼·메가 모습이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0.
+// 메가 모습의 초상이 없으면(지가르데) 기본 종의 초상이다
 export function portraitIds(slug: string): number[] {
-  const dex = profile(slug).dex;
-  const form = regionalOf(slug)?.pokemonId;
+  const mega = megaOf(slug);
+  const dex = profile(mega?.base ?? slug).dex;
+  const form = mega?.pokemonId ?? regionalOf(slug)?.pokemonId;
   return [form, dex].filter((n): n is number => typeof n === "number" && n > 0);
 }
 
@@ -77,6 +80,10 @@ export const portraitUrl = (dex: number, shiny: boolean): string => (shiny ? `${
 const POKESPRITE = "https://raw.githubusercontent.com/msikma/pokesprite/master/items";
 const MINT_URL = `${POKESPRITE}/mint/speed.png`;
 const POKESPRITE_EVO = new Set(["galarica-wreath", "galarica-cuff", "sweet-apple", "tart-apple", "cracked-pot"]);
+
+// 메가스톤 표식의 그림 — 모든 종이 키스톤 그림을 쓴다 (2026-10-02 사용자 결정 "다 키스톤으로"). 30×30 안의 14×14 다.
+// 화면은 불투명 영역만 잘라 쓴다 (src/renderer/manage.ts megaMark, src/renderer/pet.ts)
+export const MEGA_STONE_ICON = "item:key-stone";
 
 // 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구는 pokesprite, 나머지는 PokeAPI
 export function itemUrl(id: string): string {
@@ -259,6 +266,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       }
       jobs.push({ rel: "egg.png", url: `${BASE}/egg.png` });
       for (const id of itemIds()) if (!ownItem(id)) jobs.push({ rel: `items/${id}.png`, url: itemUrl(id) }); // 우리 그림이 있는 도구는 받지 않는다
+      jobs.push({ rel: `items/${MEGA_STONE_ICON.slice(5)}.png`, url: itemUrl(MEGA_STONE_ICON.slice(5)) }); // 메가스톤 표식 — 도구 목록에 없다
       const count = { got: 0, had: 0, missing: 0, failed: 0 };
       // 그림이 없다고(404) 확인한 주소 — 켤 때마다 다시 묻지 않게 캐시 폴더에 적어 둔다.
       // 파일 이름이 아니라 주소로 적는다 — 받을 곳을 바꾸면(경험사탕·민트 → pokesprite) 새 주소로 다시 묻는다

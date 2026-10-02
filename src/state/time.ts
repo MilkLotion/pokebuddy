@@ -14,6 +14,7 @@
 // 포인트만 예외다. 적립 속도가 친밀도·기분·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
 // 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
 import { evaluate } from "../achievement/core.js";
+import { grantStones, tickMega } from "../dex/mega.js";
 import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
 import { MOOD_RULES, TIME_V3_RULES } from "../save/rules.js";
@@ -146,6 +147,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     pet.playWindowMs = countDown(pet.playWindowMs, elapsed);
     if (pet.playWindowMs === 0) pet.playStreak = 0; // 창이 닫히면 처음부터 다시 센다
     tickBuffs(pet, elapsed);
+    tickMega(pet, elapsed); // 친밀도 100 뒤 파티에서 보낸 시간 — 메가진화 조건 (src/dex/mega.ts)
 
     const after = zoneOf(pet.fullness);
     if (after !== before && NOTIFY_ZONES.includes(after)) events.hungerEnter.push({ petId: pet.id, zone: after });
@@ -167,6 +169,8 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     if (egg.remainMs === 0) egg.ready = true;
     if (!was && egg.ready) events.hatchReady.push(egg.id);
   }
+
+  grantStones(save); // 메가진화 조건을 모두 채운 개체에 메가스톤을 준다. 배너는 저장의 stone 을 보고 뜬다 (src/notify/queue.ts)
 
   // 상태 판정 — 배너 순서는 부화 → 진화 → 업적이다. 진화 판정은 아직 없다
   unlockByRules(save, now);

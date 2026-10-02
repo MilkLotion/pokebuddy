@@ -10,6 +10,7 @@
 // `--input <선택자>=<글자>` 를 주면 누른 뒤에 그 입력칸에 한 글자씩 넣는다. 다 넣은 뒤 포커스가 있는 요소의 id 를 출력한다.
 // `--click-text <글자>` 를 주면 그 글자인 첫 단추를 누른다. `--click` 과 섞어 적은 순서대로 한다.
 // `--pet-click-text <글자>` 를 주면 파티 상세 기기 창에서 그 글자로 시작하는 첫 단추를 누른다(예: 진화). `--detail` 뒤에 쓴다.
+// `--pet-click <선택자>` 를 주면 파티 상세 기기 창에서 그 요소를 누른다(예: .mega-stone). `--detail` 이나 칸을 누른 뒤에 쓴다.
 // `--shop-click-text <글자>` 를 주면 상점 기기 창에서 그 글자인 마지막 단추를 누른다(예: +, 최대, 구매). 상품 줄을 누른 뒤에 쓴다.
 // `--bag-click-text <글자>` 를 주면 가방 기기 창에서 그 글자인 마지막 단추를 누른다(예: 판매, +, 사용 — 같은 글자면 바닥 주 단추). 가방 칸을 누른 뒤에 쓴다.
 // `--drag <출발 선택자> <도착 선택자>` 를 주면 창 안에 마우스 누름·움직임·뗌을 넣어 끌어 놓는다(박스 칸 옮기기). OS 마우스는 쓰지 않는다.
@@ -309,6 +310,18 @@ app.whenReady().then(async () => {
             return pet.webContents
               .executeJavaScript(`(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim().startsWith(${JSON.stringify(value)})); if (b) b.click(); return !!b; })()`)
               .then(() => new Promise((r) => setTimeout(r, 800)));
+          });
+        // --pet-click 은 파티 상세 기기 창에서 그 선택자의 요소를 누른다 — 글자가 없는 단추(초상의 메가스톤 표식)용
+        if (flag === "--pet-click" && value)
+          step = step.then(async () => {
+            // 칸을 누른 직후에는 기기 창이 아직 없거나 그리는 중이다 — 요소가 생길 때까지 잠깐 기다린다
+            for (let n = 0; n < 20; n += 1) {
+              const pet = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().endsWith("pet.html"));
+              const hit = pet ? await pet.webContents.executeJavaScript(`(() => { const b = document.querySelector(${JSON.stringify(value)}); if (b) b.click(); return !!b; })()`).catch(() => false) : false;
+              if (hit) break;
+              await new Promise((r) => setTimeout(r, 250));
+            }
+            await new Promise((r) => setTimeout(r, 800));
           });
         // --shop-click-text·--bag-click-text 는 상점·가방 기기 창에서 그 글자인 마지막 단추를 누른다(바닥 주 단추가 마지막) — 수량(+·최대)·구매·사용·판매를 확인할 때
         if ((flag === "--shop-click-text" || flag === "--bag-click-text") && value)

@@ -179,13 +179,13 @@ CLI(`pokebuddy status`·`companion`)는 저장 내용을 읽지 않는다. 첫 �
 | 영역 | 필드 |
 |---|---|
 | `meta` | `v: 3`, `savedAt`, `lastTickAt` |
-| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `gender`(`male`·`female`·`none`, 2026-09-30 추가. 옛 저장은 열 때 정한다), `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily` |
+| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `gender`(`male`·`female`·`none`, 2026-09-30 추가. 옛 저장은 열 때 정한다), `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily`, `mega`(선택 필드, 2026-10-02 추가: `bondMs` 친밀도 100 뒤 파티에서 보낸 시간, `care` 친밀도 100 뒤 돌봄 횟수, `stone` 메가스톤, `on` 지금 메가 모습의 슬러그) |
 | `party` | `slots[6]`. 칸마다 `state`(`pokemon`·`empty`·`locked`), `petId`, `hidden`, `unlockBy`(`shop`·`achievement`). `unlockBy` 는 경로별로 더 열 수 있는 칸 수만 센다. 칸은 앞에서부터 연다(`src/party/slots.ts`) |
 | `boxes[]` | `id`, `name`, `slots[30]`(개체 식별자 또는 빈 칸) |
 | `eggs[]` | `id`, `boughtAt`, `remainMs`(준비 남은 시간), `ready`, `candidates[]`(구매 당시 후보 종). `actions`·`careCooldownMs`는 옛 판 호환용이며 쓰지 않는다 |
 | `bag` | 도구 식별자별 보유 수량 |
 | `points` | `balance`, `progressMs`(다음 1포인트까지의 부분 진행) |
-| `dex` | `unlocked[]`, `obtained[]`, `shinyObtained[]`, `discovered`(옛 판 호환용. 쓰지 않으며 읽은 값을 그대로 둔다) |
+| `dex` | `unlocked[]`, `obtained[]`, `shinyObtained[]`, `discovered`(옛 판 호환용. 쓰지 않으며 읽은 값을 그대로 둔다), `megaOpened[]`(선택 필드, 2026-10-02 추가: 메가스톤이 생긴 적이 있는 종) |
 | `achievements` | 업적 식별자별 `achievedAt`, `claimedAt` |
 | `tutorials` | 튜토리얼 식별자별 `state`(`none`·`active`·`skipped`·`done`)와 `steps`(단계별 완료 여부) |
 | `settings` | `language`, `startOnLogin`, `sound`, `sleepAfterMin`, `playArea`(`mode`, `rect`), `display` |
@@ -220,7 +220,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 
 ### 시간 처리 순서
 
-멈춰 있던 시간이 있으면 한 번에 처리한다. 순서는 시간 적용 → 값 변경(만복도·친밀도·포인트·쿨타임·버프·알 준비) → 상태 판정(부화 가능·진화 가능·업적 달성·배고픔 구간) → 알림 배너 생성이다. 같은 순간의 배너는 부화 → 진화 → 업적 → 줍기 순서다.
+멈춰 있던 시간이 있으면 한 번에 처리한다. 순서는 시간 적용 → 값 변경(만복도·친밀도·포인트·쿨타임·버프·알 준비) → 상태 판정(부화 가능·진화 가능·업적 달성·배고픔 구간) → 알림 배너 생성이다. 같은 순간의 배너는 부화 → 진화 → 업적 → 줍기 → 메가스톤 순서다. 메가스톤 지급은 값 변경 뒤, 상태 판정 앞에 한다(`src/dex/mega.ts` `grantStones`). 거래 실행기도 명령마다 메가 모습을 정리하고 메가스톤 지급을 본다(`settleMega`·`grantStones`).
 
 ### 저장 시점
 
@@ -256,7 +256,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `feed` / `play` | 돌봄. 쿨타임과 버프 | `src/state` |
 | `evolve` | 진화. 실행 시점 조건으로 결과 판정 | `src/dex` |
 | `pet.set` | 놓아 둔 자리와 크기 단계 | `src/party` |
-| `pet.form` | 공유 sid 계열의 모습 바꾸기 | `src/dex`, `src/party` |
+| `pet.form` | 공유 sid 계열의 모습 바꾸기. 메가진화와 되돌리기([메가진화](game.md#메가진화)) | `src/dex`, `src/party` |
 | `pet.sell` | 포켓몬 판매. 판매 가능 검사, 개체와 칸 비우기, 포인트 더하기 | `src/shop` |
 | `starter.pick` | 첫 선택 | `src/party` |
 | `box.sort` / `box.move` / `box.rename` | 박스 정렬·칸 옮기기·이름 바꾸기 | `src/box` |

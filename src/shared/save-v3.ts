@@ -19,6 +19,14 @@ export interface BuffV3 {
   remainMs: number; // 남은 시간. 0 이면 끝
 }
 
+// 메가진화 (2026-10-02) — 규칙은 src/dex/mega.ts. 저장 형식 번호는 올리지 않는다. 없으면 진행 0 으로 읽는다
+export interface MegaV3 {
+  bondMs: number; // 친밀도 100 이 된 뒤 파티에서 보낸 시간
+  care: number; // 친밀도 100 이 된 뒤 밥 주기·놀아주기 횟수
+  stone?: true; // 조건을 채워 메가스톤을 지녔다
+  on?: string; // 지금 메가 모습의 슬러그 (data/mega.json). 없으면 기본 모습
+}
+
 export interface PetV3 {
   id: string; // 진화해도 그대로
   species: string;
@@ -45,6 +53,7 @@ export interface PetV3 {
   stage: number; // 이 개체가 진화한 횟수
   evolved: string[]; // 거쳐 온 종
   forms?: string[]; // 공유 sid 계열의 고를 수 있는 종 (src/dex/forms.ts). 그 밖의 개체에는 없다
+  mega?: MegaV3; // 메가진화 진행과 모습 (src/dex/mega.ts). 메가 모습이 있는 종이 친밀도 100 이 된 뒤에 생긴다
   daily: PetDaily;
 }
 
@@ -104,6 +113,7 @@ export interface DexV3 {
   shinyObtained: string[];
   discovered: Record<string, string>; // 알 행동 조건(2026-09-28 삭제)의 옛 칸. 쓰지 않는다 — 옛 버전 호환으로 읽은 값을 그대로 둔다
   rulesRev: number; // 해금 정리를 마친 판 — SAVE_V3_RULES.unlockRev. 옛 저장은 0
+  megaOpened?: string[]; // 메가스톤이 생긴 적이 있는 종 — 도감 카드의 메가스톤 표식. 개체를 팔거나 교환해도 남는다 (2026-10-02)
 }
 
 export interface AchievementV3 {

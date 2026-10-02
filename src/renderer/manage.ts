@@ -178,6 +178,7 @@ type Dialog =
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }
   | { kind: "daycare" } // 돌보미집 — 박스 머리 `돌보미집` 단추
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
+  | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
@@ -570,7 +571,7 @@ function typeBadge(name: string, id: string | undefined): HTMLElement {
 function petCard(pet: PetView): HTMLElement {
   const card = button("slot");
 
-  const portrait = portraitOf(pet.species, pet.shiny, "portrait");
+  const portrait = portraitOf(pet.look, pet.shiny, "portrait");
   if (pet.hidden) {
     const mark = el("span", "mark");
     mark.title = "숨긴 상태";
@@ -877,7 +878,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     const name = el("div", "name", pet.name);
     if (pet.shiny) name.appendChild(shinyIcon(16));
-    card.append(portraitOf(pet.species, pet.shiny, "portrait"), name, tags);
+    card.append(portraitOf(pet.look, pet.shiny, "portrait"), name, tags);
   }
   // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. ✕·Esc·바깥 누르기는 남은 결과를 건너뛴다(dismiss)
   const next = queue?.[at + 1];
@@ -1059,10 +1060,11 @@ function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
     // 공유 sid 계열 — 모습들을 한 장의 단체사진으로, 이름은 계열, 아래 줄은 지금 종 (Figma `Box / Shared Profile` `481:1227`)
     cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note", `Lv.${pet.level} · ${pet.name}`));
   } else {
-    cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
+    cell.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
   }
   // 이로치 아이콘 — 칸 왼쪽 위 구석 10 (Figma `Box Slot` 의 `Show Shiny`)
   if (pet.shiny) cell.appendChild(shinyIcon(10));
+  markMega(cell, pet, 12);
   cell.addEventListener("click", onPick);
   return cell;
 }
@@ -1110,6 +1112,144 @@ function toParticle(word: string): string {
   return josa(word, "으로/로");
 }
 
+// ── 메가진화 ────────────────────────────────────────────────────────────────────
+// 규칙은 src/dex/mega.ts. 메가스톤을 지닌 개체는 박스 칸에 메가스톤 표식이 붙고, 파티 상세 기기 창의 초상 표식을 누르면 메가진화한다.
+// 표식 그림은 키스톤이다 (2026-10-02 사용자 결정 "다 키스톤으로"). PokeAPI 그림은 30×30 이고 구슬은 그 안의 14×14(8,9)다 — 구슬만 잘라 보인다
+const MEGA_ICON = "item:key-stone";
+const MEGA_CROP = { x: 8, y: 9, size: 14, sheet: 30 };
+
+function paintMegaMark(mark: HTMLElement, uri: string): void {
+  const k = Number(mark.dataset.megaMark) / MEGA_CROP.size;
+  mark.style.backgroundImage = `url("${uri}")`;
+  mark.style.backgroundSize = `${MEGA_CROP.sheet * k}px ${MEGA_CROP.sheet * k}px`;
+  mark.style.backgroundPosition = `${-MEGA_CROP.x * k}px ${-MEGA_CROP.y * k}px`;
+}
+
+function megaMark(size: number, title = "메가스톤"): HTMLElement {
+  const mark = el("span", "mega-mark");
+  mark.dataset.megaMark = String(size);
+  mark.style.width = `${size}px`;
+  mark.style.height = `${size}px`;
+  mark.title = title;
+  mark.setAttribute("role", "img");
+  mark.setAttribute("aria-label", title);
+  const uri = iconCache.get(MEGA_ICON);
+  if (uri) paintMegaMark(mark, uri);
+  else if (uri === undefined) {
+    iconCache.set(MEGA_ICON, null); // 청하는 중 — 두 번 청하지 않는다
+    void window.pokebuddyManage.icons([MEGA_ICON]).then((got) => {
+      const u = got[MEGA_ICON] ?? null;
+      iconCache.set(MEGA_ICON, u);
+      if (u) for (const m of document.querySelectorAll<HTMLElement>("[data-mega-mark]")) paintMegaMark(m, u);
+    });
+  }
+  return mark;
+}
+
+// 박스 칸의 표식 — 메가스톤을 지닌 개체만 (PetView.mega). 이로치 아이콘은 표식 오른쪽으로 비킨다 (CSS .has-mega)
+function markMega(cell: HTMLElement, pet: PetView, size: number): void {
+  if (!pet.mega) return;
+  cell.classList.add("has-mega");
+  cell.appendChild(megaMark(size));
+}
+
+// 메가진화 창 — 파티 상세 기기 창의 메가스톤 표식을 누르면 뜬다 (Figma 05 `Party / Mega Confirm` `1319:50090`·`Party / Mega Confirm · 다른 메가 있음` `1319:50396`·`Party / Detail Device / Mega Choose` `1325:47012`)
+//   메가 모습이 하나   바꾸기 확인 창과 같은 모양. 단추는 `메가진화`
+//   메가 모습이 둘     진화 창의 틀로 고른다 — 트리는 지금 종과 메가 모습뿐이다. 고르고 `메가진화` 로 바로 바뀐다
+//   지금 메가 모습     원래 모습으로 돌아가는 확인
+// 같은 프리셋에 메가 모습인 다른 개체가 있으면 그 개체가 원래 모습으로 돌아간다고 한 줄로 알린다
+const megaDrawer = (shiny: boolean): ReturnType<typeof evoDrawer> => evoDrawer((slug, cls) => portraitOf(slug, shiny, cls));
+
+function drawMega(petId: string, to?: string): void {
+  const pet = petOf(petId);
+  const mega = pet?.mega;
+  if (!pet || !mega || !mega.canChange) {
+    close();
+    return;
+  }
+  const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
+  const slot = slotOfPet(pet.id);
+  const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
+  const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
+  const change = (species: string): void => {
+    void send("pet.form", pet.id, { species }).then((ok) => {
+      if (ok) close();
+    });
+  };
+  // 확인 창 — 바뀔 모습 카드 + 안내 줄
+  const confirm = (title: string, form: FormView, lines: string[], label: string): void => {
+    dialogEl.append(...dialogHead(title, ""));
+    const card = el("div", "nat-card");
+    const tags = el("div", "tags");
+    form.types.forEach((name, i) => tags.appendChild(typeBadge(name, form.typeIds[i])));
+    tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
+    card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
+    const row = el("div", "compare");
+    row.appendChild(card);
+    const info = el("div", "info-box");
+    info.appendChild(el("div", undefined, `지금 ${pet.name} · ${where}`));
+    for (const text of lines) info.appendChild(el("div", "note", text));
+    dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("취소", false, false, close), actionButton(label, true, false, () => change(form.species))));
+  };
+  const rival = mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
+
+  if (mega.on) {
+    const base: FormView = { species: pet.species, name: mega.baseName, types: mega.baseTypes, typeIds: mega.baseTypeIds };
+    confirm(`${base.name}${toParticle(base.name)} 돌아갈까요?`, base, [kept, "같은 칸에서 바뀌어요"], "돌아가기");
+    return;
+  }
+  const only = mega.forms.length === 1 ? mega.forms[0] : undefined;
+  if (only) {
+    confirm(`${only.name}${toParticle(only.name)} ${word}할까요?`, only, [kept, "같은 칸에서 바뀌어요", ...(rival ? [rival] : [])], word);
+    return;
+  }
+
+  // 고르기 — 진화 창의 틀. 준비된 후보를 미리 고른다
+  const picked = mega.forms.find((f) => f.species === to) ?? mega.forms[0];
+  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
+  dialogEl.append(...dialogHead(word, `${pet.name} · Lv.${pet.level}`, back));
+  const tree: EvoNodeView = {
+    slug: pet.species,
+    name: pet.name,
+    locked: false,
+    current: true,
+    children: mega.forms.map((f) => ({ slug: f.species, name: f.name, locked: false, current: false, need: "메가스톤", children: [] })),
+  };
+  const card = el("div", "evo-card mega");
+  card.appendChild(megaDrawer(pet.shiny).evoTree(tree));
+  for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
+    const f = mega.forms.find((x) => x.species === node.dataset.slug);
+    if (!f) continue;
+    node.classList.add("pick");
+    if (picked?.species === f.species) node.classList.add("picked");
+    node.setAttribute("role", "button");
+    node.tabIndex = 0;
+    node.setAttribute("aria-pressed", String(picked?.species === f.species));
+    const choose = (): void => open({ kind: "mega", petId, to: f.species });
+    node.addEventListener("click", choose);
+    node.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        choose();
+      }
+    });
+  }
+  dialogEl.appendChild(card);
+  if (picked) {
+    const info = el("div", "info-box");
+    info.append(
+      el("div", undefined, `${pet.name} → ${picked.name}`),
+      el("div", "note", `${kept}. 언제든 원래 모습으로 돌아가요.`),
+      el("div", "note", rival ?? `한 프리셋에서 ${word}는 한 마리예요.`),
+    );
+    dialogEl.appendChild(info);
+  }
+  const go = actionButton(word, true, !picked, () => {
+    if (picked) change(picked.species);
+  });
+  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
+}
+
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
 function drawForm(petId: string, to: string): void {
   const pet = petOf(petId);
@@ -1151,10 +1291,11 @@ function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
     cell.classList.add("family");
     cell.append(groupPhoto(forms, pet.shiny), el("div", "who", `${forms[0]?.name ?? pet.name} 계열`), el("div", "note now", pet.name));
   } else {
-    cell.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name));
+    cell.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name));
   }
   cell.appendChild(el("div", "note lv", `Lv.${pet.level}`));
   if (pet.shiny) cell.appendChild(shinyIcon(10));
+  markMega(cell, pet, 14);
   cell.addEventListener("click", onPick);
   return cell;
 }
@@ -1374,7 +1515,7 @@ function partyDeviceModel(v: Snapshot): PartyDeviceOpen {
       state: pet ? ("pokemon" as const) : s.state === "locked" ? ("locked" as const) : ("empty" as const),
       name: pet?.name ?? "",
       level: pet ? `Lv.${pet.level}` : "",
-      art: pet ? portraitNow(pet.species, pet.shiny) : null,
+      art: pet ? portraitNow(pet.look, pet.shiny) : null,
       held: !!pet && pet.id === partyHold,
       target: holding && !pet && s.state !== "locked", // 놓을 칸 — 든 것이 있을 때의 빈 칸. 개체 칸은 눌러서 맞바꾼다
     };
@@ -1695,6 +1836,11 @@ function dexCell(row: DexEntry): HTMLElement {
     got.setAttribute("role", "img");
     got.setAttribute("aria-label", got.title);
     cell.appendChild(got);
+    // 메가스톤 — 내 개체에 메가스톤이 생긴 적이 있는 종만. 얻음 표식(볼) 오른쪽에 같은 크기 12 로 둔다 (2026-10-02 사용자 결정)
+    if (row.mega) {
+      cell.classList.add("has-mega");
+      cell.appendChild(megaMark(12, "메가스톤 획득"));
+    }
     if (row.shiny) cell.appendChild(shinyIcon(10, "이로치 획득"));
   }
   return cell;
@@ -2308,7 +2454,7 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
   const party = partyPets();
   if (!party.some((p) => p.id === bagTarget)) bagTarget = party[0]?.id ?? null;
   const pet = party.find((p) => p.id === bagTarget) ?? null;
-  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitNow(p.species, p.shiny), picked: p.id === bagTarget }));
+  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitNow(p.look, p.shiny), picked: p.id === bagTarget }));
   if (!pet) return { ...face, title: v.party.preset.name, pager: v.party.preset.count > 1, party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } };
   const blocked = bagBlocked(pet, item);
   const many = bagMany(item);
@@ -2690,7 +2836,7 @@ function tradePicker(t: TradeScreen): HTMLElement {
   const singles = new Set(t.singles);
   const cell = (pet: PetView): HTMLElement => {
     const b = button("cell trade-cell");
-    b.append(portraitOf(pet.species, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
+    b.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
     if (pet.shiny) b.appendChild(shinyIcon(10));
     const single = singles.has(pet.id);
     b.disabled = single || t.myReady || t.busy;
@@ -4386,6 +4532,7 @@ function onPetAction(action: PetDeviceAction): void {
     return;
   }
   if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
+  else if (action.dialog === "mega") open({ kind: "mega", petId: id });
   else open({ kind: "nature", petId: id });
 }
 
@@ -4523,13 +4670,13 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   const redraw = (next: string): void => open({ kind: "nature", petId, ...(itemId ? { itemId } : {}), pick: next });
 
   const before = el("div", "nat-card");
-  before.append(portraitOf(pet.species, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", "note", pet.nature), el("div", "note", "지금"));
+  before.append(portraitOf(pet.look, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", "note", pet.nature), el("div", "note", "지금"));
 
   const mid = el("div", "mint-mid");
   mid.append(iconOf(`item:${MINT}`, "thumb"), el("div", undefined, "→"));
 
   const after = el("div", "nat-card");
-  after.append(portraitOf(pet.species, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", picked ? "note picked" : "note", picked ? picked.name : "성격 고르기"), el("div", "note", "바꾼 후"));
+  after.append(portraitOf(pet.look, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", picked ? "note picked" : "note", picked ? picked.name : "성격 고르기"), el("div", "note", "바꾼 후"));
 
   const row = el("div", "compare");
   row.append(before, mid, after);
@@ -5153,6 +5300,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   hatched: "dialog hatched",
   daycare: "dialog daycare",
   form: "dialog",
+  mega: "dialog",
   "sell-pet": "dialog",
   notes: "dialog settings notes",
   "notes-new": "dialog settings notes-new",
@@ -5215,6 +5363,7 @@ function drawDialog(): void {
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over, dialog.queue, dialog.at);
   else if (dialog.kind === "daycare") drawDaycare();
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
+  else if (dialog.kind === "mega") drawMega(dialog.petId, dialog.to);
   else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);
   else if (dialog.kind === "notes") drawNotes(dialog.pick);
   else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);

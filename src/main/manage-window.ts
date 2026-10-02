@@ -8,7 +8,7 @@ import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayVi
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
-import { createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
+import { MEGA_STONE_ICON, createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
 import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
@@ -217,6 +217,10 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     portrait: async (slug, shiny) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.get([{ slug, shiny }]))[portraitKey({ slug, shiny })] ?? null;
+    },
+    megaIcon: async () => {
+      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
+      return (await portraits.icons([MEGA_STONE_ICON]))[MEGA_STONE_ICON] ?? null;
     },
     cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
     volume: () => {

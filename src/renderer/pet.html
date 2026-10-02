@@ -173,9 +173,44 @@
         color: var(--muted);
       }
       .entry {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 16px;
+      }
+      /* 초상과 메가스톤 표식 — 표식은 초상 오른쪽 아래에 걸친다 (2026-10-02 사용자 결정, Figma `Party Detail Device` `1262:76637` 의 `Show Mega Stone`·`Mega Form`, 05 `Party / Detail Device / Mega Stone` `1325:47009`) */
+      .portrait {
+        position: relative;
+        flex: none;
+        width: 88px;
+        height: 88px;
+      }
+      .mega-stone {
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: var(--screen);
+        cursor: pointer;
+      }
+      .mega-stone canvas {
+        image-rendering: pixelated;
+      }
+      .mega-stone:hover:not(:disabled),
+      .mega-stone.on {
+        background: var(--accent-bg);
+      }
+      .mega-stone:disabled {
+        cursor: default;
+      }
+      .mega-stone:disabled canvas {
+        opacity: 0.45;
       }
       .stage {
         display: grid;
@@ -253,12 +288,12 @@
       .ball-toggle.closed {
         background: var(--ball-closed) center / 28px 28px no-repeat;
       }
-      /* 상태 배지 — 화면 오른쪽 아래(오른쪽 14, 아래 12, 사이 4). 점 6px + 10px 글자, 점은 왼쪽 정렬.
+      /* 상태 배지 — 초상·이름 줄의 오른쪽 아래(사이 4). 점 6px + 10px 글자, 점은 왼쪽 정렬.
          Figma `Debuff Badge` `126:1065` — 배고픔 주황·매우 배고픔 빨강·버프 초록 */
       .status {
         position: absolute;
-        right: 14px;
-        bottom: 12px;
+        right: 0;
+        bottom: 0;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -290,13 +325,11 @@
       .badge.success::before {
         background: var(--success);
       }
+      /* 기록 — 화면 안의 네 막대 2×2 (시안 C) */
       .records {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px 10px;
-        padding: 12px;
-        border-radius: 10px;
-        background: var(--records);
       }
       .bar .head {
         display: flex;
@@ -326,14 +359,58 @@
       .bar .fill.starving {
         background: var(--danger);
       }
-      /* 흰 판 — 돌봄 · 성장 · 크기 · 관리 */
+      /* 돌봄 단추 — 기기 몸통의 단추 둘. 아래 이전·울음소리·다음과 같은 모양에 높이 36. 밥 주기는 화면과 같은 밝은 바탕이다
+         (시안 C, Figma `Device Button` `1262:74948` 의 `Style=Light` `1338:7263`) */
+      .keys {
+        display: flex;
+        gap: 8px;
+      }
+      .key {
+        flex: 1;
+        height: 36px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 14px;
+        background: var(--bezel);
+        color: var(--inverse);
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .key.light {
+        background: var(--screen);
+        color: var(--ink);
+      }
+      .key:hover:not(:disabled) {
+        background: #56424a;
+      }
+      .key.light:hover:not(:disabled) {
+        background: var(--paper);
+      }
+      .key:disabled {
+        background: #8a6a70;
+        cursor: default;
+      }
+      .key.light:disabled {
+        background: var(--stage);
+        color: var(--muted);
+      }
+      /* 흰 판 — 진화 · 도감 보기 · 크기 줄의 목록. 테두리 카드 없이 구분선으로 나눈다 (시안 C) */
       .actions {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        padding: 12px;
+        padding: 4px 12px;
         border-radius: 10px;
         background: var(--records);
+      }
+      .group {
+        display: flex;
+        flex-direction: column;
+      }
+      .group + .group {
+        border-top: 1px solid var(--line);
+      }
+      .actions .alert {
+        margin: 4px 0 8px;
       }
       .row {
         display: flex;
@@ -380,7 +457,8 @@
         align-items: center;
         gap: 8px;
         min-height: 52px;
-        padding: 8px 14px;
+        padding: 8px 4px;
+        border-radius: 6px;
         border: 0;
         background: transparent;
         text-align: left;

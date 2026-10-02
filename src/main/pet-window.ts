@@ -27,6 +27,7 @@ export interface PetWindowOptions {
   preload: string;
   html: string;
   portrait: (slug: string, shiny: boolean) => Promise<string | null>;
+  megaIcon: () => Promise<string | null>; // 메가스톤 표식 그림(키스톤)
   cry: (slug: string) => Promise<string | null>;
   volume: () => number; // 울음소리 음량 0~1
   onStep: (delta: -1 | 1) => void; // 이전·다음 — 순서는 관리 창이 정한다
@@ -133,9 +134,10 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
     const w = alive();
     const open = current;
     if (!w || !open) return;
-    const portrait = await opts.portrait(open.pet.species, open.pet.shiny);
+    // 메가 모습이면 그 초상이다 (PetView.look)
+    const [portrait, megaIcon] = await Promise.all([opts.portrait(open.pet.look, open.pet.shiny), open.pet.mega ? opts.megaIcon() : null]);
     if (open !== current || w !== alive()) return; // 그림을 읽는 동안 다른 개체가 왔다 — 늦은 값으로 덮지 않는다
-    const view: PetDeviceView = { ...open, portrait, side, volume: opts.volume() };
+    const view: PetDeviceView = { ...open, portrait, megaIcon, side, volume: opts.volume() };
     if (w.webContents.isLoading()) w.webContents.once("did-finish-load", () => alive()?.webContents.send(CH.show, view));
     else w.webContents.send(CH.show, view);
   }
@@ -187,7 +189,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
 }
 
 // 렌더러가 보낸 값은 믿지 않는다 — 정해진 모양만 넘긴다
-const DIALOGS = new Set(["evolve", "nature"]);
+const DIALOGS = new Set(["evolve", "nature", "mega"]);
 const CMDS = new Set(["feed", "play", "party.show", "party.hide", "pet.set"]);
 function isAction(v: unknown): v is PetDeviceAction {
   if (!v || typeof v !== "object") return false;

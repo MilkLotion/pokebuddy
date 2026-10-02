@@ -1,4 +1,9 @@
 // 파티 상세 기기 창 — 관리 창이 정해 보낸 개체 하나를 그린다 (src/main/pet-window.ts). Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)
+// 배치는 시안 C 다 (2026-10-02 사용자 결정 "c로 확정", Figma `Party Detail Device` `1262:76637` — 변형 셋을 C 배치로 바꿨다)
+//   화면  자리·상태 → 초상·이름·레벨·타입 → 네 막대(경험치·친밀도·만복도·기분)
+//   몸통  돌봄 단추 둘(밥 주기는 밝은 단추)
+//   흰 판 진화 · 도감 보기 · 크기 줄을 구분선으로 나눈 목록
+// 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 누르면 메가진화한다 (같은 날 사용자 결정)
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
 import type { PetDeviceAction, PetDeviceView } from "../shared/manage.js";
@@ -188,8 +193,10 @@ function waitWord(sec: number): string {
 
 // 그림 자리 — 88×88 원. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다
 const STAGE = { w: 88, h: 88, maxScale: 2 };
+// 메가스톤 표식 — 28×28. 키스톤 그림(30×30 안의 14×14)의 빈 테두리를 잘라 두 배로 그린다
+const MEGA_STONE = { w: 28, h: 28, maxScale: 2 };
 
-function sprite(uri: string): HTMLCanvasElement {
+function sprite(uri: string, box: { w: number; h: number; maxScale: number }): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = 0;
   out.height = 0;
@@ -214,9 +221,9 @@ function sprite(uri: string): HTMLCanvasElement {
     if (x1 < 0) return;
     const w = x1 - x0 + 1;
     const h = y1 - y0 + 1;
-    const scale = Math.max(1, Math.min(STAGE.maxScale, Math.floor(STAGE.w / w), Math.floor(STAGE.h / h)));
-    out.width = Math.min(w * scale, STAGE.w);
-    out.height = Math.min(h * scale, STAGE.h);
+    const scale = Math.max(1, Math.min(box.maxScale, Math.floor(box.w / w), Math.floor(box.h / h)));
+    out.width = Math.min(w * scale, box.w);
+    out.height = Math.min(h * scale, box.h);
     const ctx = out.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
@@ -349,9 +356,22 @@ function renderBody(v: PetDeviceView): void {
   const screen = el("div", "screen");
   screen.appendChild(el("div", "where", v.where));
   const entry = el("div", "entry");
+  const portrait = el("div", "portrait");
   const stage = el("div", "stage");
-  if (v.portrait) stage.appendChild(sprite(v.portrait));
-  entry.appendChild(stage);
+  if (v.portrait) stage.appendChild(sprite(v.portrait, STAGE));
+  portrait.appendChild(stage);
+  // 메가스톤 표식 — 초상 오른쪽 아래. 누르면 관리 창이 확인·고르기 창을 띄운다. 메가 모습이면 옅은 바탕이고 누르면 원래 모습으로 돌아간다.
+  // 박스 개체는 누를 수 없다 — 메가진화는 프리셋 칸에서만 한다 (src/dex/mega.ts)
+  if (pet.mega) {
+    const word = pet.mega.kind === "primal" ? "원시회귀" : "메가진화";
+    const label = !pet.mega.canChange ? "박스에 있는 포켓몬은 모습을 바꿀 수 없어요" : pet.mega.on ? "원래 모습으로" : word;
+    const stone = button(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => act({ kind: "dialog", dialog: "mega" }), !pet.mega.canChange);
+    stone.title = label;
+    stone.setAttribute("aria-label", label);
+    if (v.megaIcon) stone.appendChild(sprite(v.megaIcon, MEGA_STONE));
+    portrait.appendChild(stone);
+  }
+  entry.appendChild(portrait);
   const info = el("div", "info");
   // 이름 줄 — 이름 · 성별 24 · 이로치 24 (Figma `862:22000` 의 `gender`·`shiny`, 2026-09-30·2026-10-02 사용자 결정)
   const nameRow = el("div", "name-row");
@@ -378,14 +398,12 @@ function renderBody(v: PetDeviceView): void {
     ball.title = action;
     ball.setAttribute("aria-label", action);
     screen.appendChild(ball);
-    // 상태 배지 — 화면 오른쪽 아래. 화면 높이가 정해져 있어 배지가 생겨도 아래 칸이 밀리지 않는다 (2026-09-30 사용자 결정, Figma `862:22000` 의 `status`)
+    // 상태 배지 — 초상·이름 줄의 오른쪽 아래. 그 줄의 높이가 정해져 있어 배지가 생겨도 아래 막대가 밀리지 않는다 (2026-09-30 사용자 결정, Figma `862:22000` 의 `status`)
     const badges = statusBadges(pet);
-    if (badges) screen.appendChild(badges);
+    if (badges) entry.appendChild(badges);
   }
-  bezel.appendChild(screen);
-  device.appendChild(bezel);
 
-  // 기록 칸 — 네 막대 2×2
+  // 기록 — 네 막대 2×2. 화면 안에 둔다 (시안 C)
   const records = el("div", "records");
   records.append(
     bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
@@ -393,26 +411,29 @@ function renderBody(v: PetDeviceView): void {
     bar("만복도", pet.fullness, liveShown(pet, "fullness"), pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : "", "fullness"),
     bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
   );
-  device.appendChild(records);
+  screen.appendChild(records);
+  bezel.appendChild(screen);
+  device.appendChild(bezel);
 
-  // 흰 판 — 돌봄 · 성장 · 크기. 박스 개체도 파티 개체와 같은 상세를 쓴다 (2026-09-30 사용자 "똑같은 파티상세를 써야지").
+  // 돌봄 단추 — 기기 몸통에 둔다. 밥 주기는 밝은 단추다 (시안 C). 박스 개체도 파티 개체와 같은 상세를 쓴다 (2026-09-30 사용자 "똑같은 파티상세를 써야지").
   // 볼 토글은 파티 개체 전용이다 — 박스 개체는 바탕화면에 꺼낼 수 없다.
   // 돌봄 단추는 박스 개체에게는 막는다 — 박스에서는 값이 줄지 않는다 (2026-09-30 사용자 "박스에선 막고")
-  const actions = el("div", "actions");
   {
     const full = pet.fullness >= 100;
-    const care = el("div", "row");
+    const care = el("div", "keys");
     care.dataset.tut = "detail-care";
     const boxed = !v.inParty;
-    const feed = button("act primary", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    const feed = button("key light", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     care.append(
       feed,
-      button("act", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
+      button("key", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
     );
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
-    actions.appendChild(care);
+    device.appendChild(care);
   }
+  // 흰 판 — 진화 · 도감 보기 · 크기 줄의 목록. 줄 사이는 구분선이다 (시안 C)
+  const actions = el("div", "actions");
   const ready = pet.evolutions.filter((e) => e.ready);
   const evolve = (): void => act({ kind: "dialog", dialog: "evolve" });
   const evoLine = !pet.evolutions.length
@@ -420,7 +441,7 @@ function renderBody(v: PetDeviceView): void {
     : ready.length
       ? line(`진화 · ${evoNames(ready)}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
       : line(`진화 · ${evoNames(pet.evolutions)}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
-  const growth = el("div", "card");
+  const growth = el("div", "group");
   growth.dataset.tut = "detail-growth";
   // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.
   // 떠 있는 동안 줄은 톤 배경 (2026-10-01 사용자 결정, Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
@@ -444,7 +465,7 @@ function renderBody(v: PetDeviceView): void {
       b.setAttribute("aria-pressed", String(n === pet.size));
       sizes.appendChild(b);
     }
-    const size = el("div", "card");
+    const size = el("div", "group");
     size.dataset.tut = "detail-size";
     size.appendChild(line("크기", null, [sizes]));
     actions.appendChild(size);

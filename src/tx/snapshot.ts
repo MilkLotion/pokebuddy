@@ -15,9 +15,10 @@ import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
 import { sellPrice } from "../shop/sell.js";
 import { zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
-import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
+import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
-import { activePreset, presetCount, presetName } from "../party/presets.js";
+import { megaChoices, megaOf, megaRivals, shownSpecies } from "../dex/mega.js";
+import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
 import type { DayPart } from "../shared/types";
@@ -82,6 +83,29 @@ function formsView(pet: PetV3): { forms?: FormView[] } {
   return { forms: list.map((slug) => ({ species: slug, name: petName(slug), types: profile(slug).types.map((t) => typeName(t)), typeIds: [...profile(slug).types] })) };
 }
 
+// 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다
+const typesOf = (slug: string): string[] => megaOf(slug)?.types ?? profile(slug).types;
+const formView = (slug: string): FormView => ({ species: slug, name: petName(slug), types: typesOf(slug).map((x) => typeName(x)), typeIds: [...typesOf(slug)] });
+
+// 메가스톤을 지닌 개체의 메가진화 정보. 메가 모습이 없는 종(진화해 버린 개체)이면 없다
+function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
+  const choices = megaChoices(pet);
+  if (!choices.length) return {};
+  const base = formView(pet.species);
+  return {
+    mega: {
+      kind: megaOf(choices[0] as string)?.kind ?? "mega",
+      on: pet.mega?.on ?? null,
+      baseName: base.name,
+      baseTypes: base.types,
+      baseTypeIds: base.typeIds,
+      forms: choices.map(formView),
+      canChange: locatePet(save, pet.id)?.kind === "preset",
+      rivals: megaRivals(save, pet.id).map((p) => petName(shownSpecies(p))),
+    },
+  };
+}
+
 // 경험치 타입별 누적 경험치 표 — 칸 L 이 레벨 L. 한 번 만들어 둔다
 const GROWTH_RATES = ["fast", "medium-fast", "medium-slow", "slow", "erratic", "fluctuating"] as const;
 const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
@@ -91,17 +115,19 @@ const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
 export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = dayPartOf(Date.now())): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
+  const shown = formView(shownSpecies(pet)); // 메가 모습이면 그 이름·타입·그림이다. species 는 그대로다
   return {
     id: pet.id,
     species: pet.species,
-    name: petName(pet.species),
+    look: shown.species,
+    name: shown.name,
     shiny: pet.shiny,
     level: pet.level,
     percentToNext: percent,
     exp: pet.exp,
     growth: rate,
-    types: profile(pet.species).types.map((t) => typeName(t)),
-    typeIds: [...profile(pet.species).types],
+    types: shown.types,
+    typeIds: shown.typeIds,
     nature: natureName(pet.nature),
     natureId: pet.nature,
     gender: pet.gender,
@@ -125,6 +151,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(pet),
+    ...megaView(save, pet),
   };
 }
 

@@ -53,6 +53,20 @@ export interface PetView {
   buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 · 들뜸 순서 (2026-09-29 사용자 결정)
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
+  look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
+  mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
+}
+
+// 메가진화 — 파티 상세 기기 창의 메가스톤 표식과 확인·고르기 창이 쓴다
+export interface MegaView {
+  kind: "mega" | "primal"; // 원시회귀는 문구만 다르다
+  on: string | null; // 지금 메가 모습의 슬러그. 기본 모습이면 null
+  baseName: string; // 기본 모습의 이름 — 메가 모습일 때 "리자몽으로 돌아가요" 에 쓴다
+  baseTypes: string[];
+  baseTypeIds: string[];
+  forms: FormView[]; // 고를 수 있는 메가 모습 — 리자몽·뮤츠는 둘
+  canChange: boolean; // 프리셋 칸에 든 개체만 메가진화한다. 박스 개체는 false
+  rivals: string[]; // 같은 프리셋에서 지금 메가 모습인 다른 개체의 이름 — 이 개체가 메가진화하면 원래 모습으로 돌아간다
 }
 
 // 공유 sid 계열의 모습 하나 — 박스 칸의 단체사진·툴팁과 바꾸기 확인 창이 쓴다
@@ -145,6 +159,7 @@ export interface DexEntry {
   name: string;
   state: DexState;
   shiny: boolean;
+  mega?: true; // 내 개체에 메가스톤이 생긴 적이 있는 종 — 얻음 표식 옆에 메가스톤 표식 (2026-10-02 사용자 결정)
 }
 
 // 도감 상세 — 칸을 누를 때 한 종만 따로 읽는다. 문구는 화면이 그대로 쓴다 (Figma Dex / Base 상세 패널)
@@ -548,6 +563,7 @@ export interface PetDeviceOpen {
 }
 export interface PetDeviceView extends PetDeviceOpen {
   portrait: string | null; // data URI
+  megaIcon: string | null; // 메가스톤 표식 그림(키스톤) data URI — 메가스톤을 지닌 개체일 때만 받는다
   side: "right" | "left";
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
 }
@@ -555,7 +571,7 @@ export interface PetDeviceView extends PetDeviceOpen {
 // petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)
 export type PetDeviceAction = { petId: string } & (
   | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "pet.set"; args?: Record<string, unknown> }
-  | { kind: "dialog"; dialog: "evolve" | "nature" }
+  | { kind: "dialog"; dialog: "evolve" | "nature" | "mega" } // mega — 초상의 메가스톤 표식을 눌렀다 (src/dex/mega.ts)
   | { kind: "tutorial"; action: "done" | "skip" } // 개체 상세 튜토리얼을 끝냈다·닫았다
   | { kind: "dex" } // 도감 보기 — 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30)
 );
@@ -723,7 +739,7 @@ export interface ScreensBridge {
 }
 
 // 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/notify/banner.ts 가 만든다
-export type BannerKind = "hatch" | "evolve" | "achievement" | "notice" | "find"; // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). find — 줍기, 대상 그림 없이 문구 두 줄 (src/find/core.ts)
+export type BannerKind = "hatch" | "evolve" | "achievement" | "notice" | "find" | "mega"; // mega — 메가스톤이 생겼다 (src/dex/mega.ts) // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). find — 줍기, 대상 그림 없이 문구 두 줄 (src/find/core.ts)
 
 export interface BannerView {
   key: string;

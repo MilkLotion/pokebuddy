@@ -4,6 +4,7 @@
 // 줍기 배너는 제목 `줍기` 와 "<주운 마리>가 <것>을 주웠어요" 문구다 (docs/specs/game.md "줍기")
 import { defOf } from "../achievement/core.js";
 import { loadJson } from "../dex/data.js";
+import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { getLang, petName, t } from "../main/text.js";
 import { josa } from "../shared/josa.js";
 import type { BannerView, ManageRoute } from "../shared/manage";
@@ -64,6 +65,14 @@ export function bannerOf(save: SaveV3, key: string): BannerView | null {
     return { key, kind: "evolve", title: t("banner.evolve"), target: `${petName(pet.species)} Lv.${pet.level}`, go, route: { to: "pet", petId: pet.id } };
   }
   if (k.kind === "find") return findBanner(save, key, k.target);
+  if (k.kind === "mega") {
+    const pet = save.pets.find((p) => p.id === k.target);
+    const form = pet ? megaFormsOf(pet.species)[0] : undefined;
+    if (!pet || !form) return null;
+    // 레쿠쟈는 메가스톤 없이 메가진화한다 (2026-10-02 사용자 결정). 원시회귀는 이름만 다르다
+    const title = megaOf(form)?.kind === "primal" ? "banner.primal" : pet.species === "rayquaza" ? "banner.mega.ready" : "banner.mega";
+    return { key, kind: "mega", title: t(title), target: `${petName(pet.species)} Lv.${pet.level}`, go, route: { to: "pet", petId: pet.id } };
+  }
   const def = defOf(k.target);
   if (!def) return null;
   return { key, kind: "achievement", title: t("banner.achievement"), target: def.ko, go, route: { to: "achievements", id: k.target } };

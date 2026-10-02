@@ -1720,6 +1720,184 @@
    "hydreigon"
   ]
  },
+ "megaForms": {
+  "venusaur": [
+   "venusaur-mega"
+  ],
+  "charizard": [
+   "charizard-mega-x",
+   "charizard-mega-y"
+  ],
+  "blastoise": [
+   "blastoise-mega"
+  ],
+  "beedrill": [
+   "beedrill-mega"
+  ],
+  "pidgeot": [
+   "pidgeot-mega"
+  ],
+  "alakazam": [
+   "alakazam-mega"
+  ],
+  "slowbro": [
+   "slowbro-mega"
+  ],
+  "gengar": [
+   "gengar-mega"
+  ],
+  "kangaskhan": [
+   "kangaskhan-mega"
+  ],
+  "pinsir": [
+   "pinsir-mega"
+  ],
+  "gyarados": [
+   "gyarados-mega"
+  ],
+  "aerodactyl": [
+   "aerodactyl-mega"
+  ],
+  "mewtwo": [
+   "mewtwo-mega-x",
+   "mewtwo-mega-y"
+  ],
+  "ampharos": [
+   "ampharos-mega"
+  ],
+  "steelix": [
+   "steelix-mega"
+  ],
+  "scizor": [
+   "scizor-mega"
+  ],
+  "heracross": [
+   "heracross-mega"
+  ],
+  "skarmory": [
+   "skarmory-mega"
+  ],
+  "houndoom": [
+   "houndoom-mega"
+  ],
+  "tyranitar": [
+   "tyranitar-mega"
+  ],
+  "sceptile": [
+   "sceptile-mega"
+  ],
+  "blaziken": [
+   "blaziken-mega"
+  ],
+  "swampert": [
+   "swampert-mega"
+  ],
+  "gardevoir": [
+   "gardevoir-mega"
+  ],
+  "sableye": [
+   "sableye-mega"
+  ],
+  "mawile": [
+   "mawile-mega"
+  ],
+  "aggron": [
+   "aggron-mega"
+  ],
+  "medicham": [
+   "medicham-mega"
+  ],
+  "manectric": [
+   "manectric-mega"
+  ],
+  "sharpedo": [
+   "sharpedo-mega"
+  ],
+  "camerupt": [
+   "camerupt-mega"
+  ],
+  "altaria": [
+   "altaria-mega"
+  ],
+  "banette": [
+   "banette-mega"
+  ],
+  "absol": [
+   "absol-mega"
+  ],
+  "glalie": [
+   "glalie-mega"
+  ],
+  "salamence": [
+   "salamence-mega"
+  ],
+  "metagross": [
+   "metagross-mega"
+  ],
+  "latias": [
+   "latias-mega"
+  ],
+  "latios": [
+   "latios-mega"
+  ],
+  "kyogre": [
+   "kyogre-primal"
+  ],
+  "groudon": [
+   "groudon-primal"
+  ],
+  "rayquaza": [
+   "rayquaza-mega"
+  ],
+  "lopunny": [
+   "lopunny-mega"
+  ],
+  "garchomp": [
+   "garchomp-mega"
+  ],
+  "lucario": [
+   "lucario-mega"
+  ],
+  "abomasnow": [
+   "abomasnow-mega"
+  ],
+  "gallade": [
+   "gallade-mega"
+  ],
+  "darkrai": [
+   "darkrai-mega"
+  ],
+  "excadrill": [
+   "excadrill-mega"
+  ],
+  "audino": [
+   "audino-mega"
+  ],
+  "eelektross": [
+   "eelektross-mega"
+  ],
+  "floette": [
+   "floette-mega"
+  ],
+  "dragalge": [
+   "dragalge-mega"
+  ],
+  "zygarde": [
+   "zygarde-mega"
+  ],
+  "diancie": [
+   "diancie-mega"
+  ],
+  "drampa": [
+   "drampa-mega"
+  ],
+  "zeraora": [
+   "zeraora-mega"
+  ],
+  "tatsugiri": [
+   "tatsugiri-curly-mega"
+  ]
+ },
  "growth": {
   "abomasnow": "slow",
   "abra": "medium-slow",
@@ -4804,6 +4982,8 @@
   "sellRatio": 0.6,
   "petSellMax": 50,
   "speciesMinPrice": 200,
+  "megaLevel": 60,
+  "megaAffinity": 100,
   "affinityPerHour": 30,
   "carePerHour": 30,
   "careOnce": 5,

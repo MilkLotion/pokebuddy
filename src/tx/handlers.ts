@@ -8,6 +8,7 @@ import { dayPartOf, evolve } from "../dex/evolve.js";
 import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
 import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
+import { countCare, megaOf, setMega } from "../dex/mega.js";
 import { keep, move, place, swap } from "../party/placement.js";
 import { setHidden, shownCount } from "../party/visibility.js";
 import { applyPreset, presetName, renamePreset } from "../party/presets.js";
@@ -268,6 +269,7 @@ const feedHandler: TxHandler = (draft, args) => {
   if (draft.pets.some((p) => p.id === petId) && !inParty(draft, petId)) return { ok: false, reason: "not-in-party" };
   const res = feed(draft, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  countCare(draft.pets.find((p) => p.id === petId)!); // 메가진화 조건의 돌봄 횟수 (src/dex/mega.ts)
   draft.totals.fed += 1; // 누적 기록 — 첫 돌봄 튜토리얼이 "이미 돌봤다"를 본다. 2026-09-26 전에는 v3 에서 늘지 않았다
   return { ok: true, result: { petId, fullness: res.fullness } };
 };
@@ -279,6 +281,7 @@ const playHandler: TxHandler = (draft, args) => {
   if (draft.pets.some((p) => p.id === petId) && !inParty(draft, petId)) return { ok: false, reason: "not-in-party" };
   const res = play(draft, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+  countCare(draft.pets.find((p) => p.id === petId)!);
   draft.totals.played += 1;
   return { ok: true, result: { petId, affinity: res.affinity, streak: res.streak, longPlay: res.longPlay } };
 };
@@ -359,9 +362,18 @@ HANDLERS["starter.pick"] = starterHandler;
 HANDLERS["pet.set"] = homeHandler;
 
 // 공유 sid 계열의 모습 바꾸기 — 고를 수 있는 종으로 지금 종만 바꾼다 (src/dex/forms.ts)
+// 메가진화도 이 명령이다 — species 가 메가 모습이면 켜고, 메가 모습인 개체에 지금 종을 주면 기본 모습으로 돌린다 (src/dex/mega.ts)
 const formHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
+  const want = isObj(args) ? args.species : undefined;
+  const target = draft.pets.find((p) => p.id === petId);
+  const off = target?.mega?.on != null && want === target.species;
+  if (off || (typeof want === "string" && megaOf(want))) {
+    const res = setMega(draft, petId, off ? null : want);
+    if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
+    return { ok: true, result: { petId, mega: res.on, reverted: res.reverted } };
+  }
   const res = setForm(draft, petId, isObj(args) ? args.species : undefined);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
   return { ok: true, result: { petId, from: res.from, to: res.to } };

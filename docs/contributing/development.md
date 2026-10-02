@@ -180,7 +180,7 @@ pokebuddy game --help
 | `gengar` · `gengar-3d` | 같은 그림 — `-3d` 는 옛 codex-pokepets 이름의 그림체 구분이라 떼고 본다 |
 | `rotom-wash` · `deoxys-attack` · `unown-z` | 폼은 PokeAPI 표기 |
 
-메가·거다이맥스 폼은 없다(`charizard-mega-x` 같은 이름은 실패한다). 없는 이름을 넣으면 비슷한 이름을 알려 준다.
+메가·거다이맥스 폼은 종 이름으로 넣을 수 없다(`charizard-mega-x` 같은 이름은 실패한다). 메가 모습은 종이 아니라 개체의 모습이다(`data/mega.json`, [메가진화](../specs/game.md#메가진화)). 없는 이름을 넣으면 비슷한 이름을 알려 준다.
 
 ## 설정 파일
 
@@ -299,6 +299,41 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 - `stop` 이 10초 안에 끝내지 못하면 트레이에서 끝낸다. 프로세스를 죽이지 않는다.
 - 확인이 끝나면 시험용 HOME 폴더를 지워도 된다.
 - Windows 에서 `start` 는 시험용 HOME 아래에 `AppData/Local` 을 만든다. 이 폴더가 없으면 창 추적 헬퍼의 PowerShell 캐시가 저장소에 `Microsoft/` 로 생긴다.
+
+### 작업 전용 시험 HOME 실기
+
+실기는 작업마다 전용 시험 HOME 에서 한다(2026-10-02 사용자 결정). 다른 작업의 실기와 저장·계정이 겹치지 않는다. 아래 순서를 기본 방식으로 쓴다.
+
+1. 시험 HOME 을 정한다. 이름은 `~/.claude/pokebuddy-test-<작업명>` 이다. 모든 명령에 `POKEBUDDY_TEST_HOME` 으로 준다.
+2. 띄울 코드를 정한다. 작업 트리에 다른 작업의 미커밋 변경이 있으면 HEAD 를 worktree 로 꺼내 빌드한다(위 목록의 worktree 항목).
+3. 앱을 띄우기 전에 저장을 만든다. `scene <장면>` 을 쓴다. 장면에 없는 값은 `dist/save/store.js` 의 `read`·`write` 로 고친다.
+4. 서버를 쓸지 정한다.
+   - 서버가 필요 없는 확인은 `POKEBUDDY_ONLINE=off` 로 띄운다. 계정이 생기지 않는다. 서버 검증 위반이 생길 수 없다.
+   - 온라인이 필요한 확인은 그대로 띄운다. 운영 서버에 새 익명 계정이 생긴다. 서버는 첫 올리기를 직전 저장과 견주지 않는다. 그래서 3번에서 만든 저장은 위반이 아니다.
+   - 띄운 뒤에는 온라인 HOME 의 저장 파일을 고치지 않는다. 고쳐야 하면 [시험 계정](#시험-계정)의 `save put` 절차를 따른다.
+   - 배포 전의 규칙(확률표·가격 등)이 운영 서버의 `upload-save` 와 다르면 온라인 실기는 위반을 기록한다. 그런 확인은 오프라인으로 한다. 또는 `upload-save` 를 재배포한 뒤에 한다.
+5. `start` 로 띄운다. 명령은 `node bin/pokebuddy game <명령> …` 으로 보낸다. `HOME` 과 `USERPROFILE` 을 시험 HOME 으로 준다. CLI 가 받지 않는 명령(`egg.open`·`bag.use` 등)은 `dist/save/mailbox.js` 의 `send(PATHS.mailbox, { cmd, target, args, from: "cli" })` 로 보낸다.
+6. 결과는 저장 파일로 확인한다. `show` 와 평문 `save.json` 을 읽는다.
+7. 실제 창은 아래 "창 확인"으로 본다.
+8. 끝나면 `stop` 으로 내린다. 온라인이었으면 관리자 CLI `violations <uuid>` 로 위반이 없는지 본다. uuid 는 시험 HOME 의 `cloud.json` `userId` 다.
+9. 작업 기록에 시험 HOME, 계정 uuid, 띄운 커밋, 명령, 결과 표를 적는다. 온라인 HOME 을 지우면 그 계정으로 다시 들어갈 수 없다.
+
+```powershell
+$env:POKEBUDDY_TEST_HOME = "$HOME.claudepokebuddy-test-<작업명>"
+$env:POKEBUDDY_ONLINE = "off"                      # 서버가 필요 없을 때만
+node dist/tools/dev-test.js scene showcase
+node dist/tools/dev-test.js start
+node dist/tools/dev-test.js show
+node dist/tools/dev-test.js stop
+```
+
+창 확인(Windows):
+
+- 설정창은 같은 HOME 으로 앱을 한 번 더 실행하면 열린다(`src/main/app.ts` second-instance). 두 번째 프로세스는 바로 끝난다.
+- `scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <폴더>` 가 그 앱의 창만 찍는다(`PrintWindow`). pid 는 시험 HOME 의 `.claude/pokebuddy/save.lock` 첫 줄이다. `-List` 는 창 핸들과 사각형만 보인다. `-Restore` 는 최소화된 창을 포커스 없이 되살린다.
+- `scripts/dev-winclick.ps1 -Hwnd <핸들> -X <x> -Y <y>` 가 창에 클릭 메시지를 보낸다(`PostMessage`). 마우스는 움직이지 않는다. 좌표는 찍은 그림에서 읽는다. 설정창은 보이지 않는 왼쪽 테두리 8 px 을 x 에서 뺀다. 화면 배율 100% 기준이다.
+- 화면 전체를 캡처하지 않는다. 사용자의 다른 앱이 찍힌다. 무대의 포켓몬은 작은 사각형만 찍는다.
+- 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림을 준다. 누른 결과는 저장 파일로 확인한다. 화면 변화는 `scripts/dev-manage.cjs` 로 따로 찍는다.
 
 ### 시험 계정
 

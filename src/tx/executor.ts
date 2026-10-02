@@ -10,6 +10,7 @@
 // 전부 동기다. 그래서 거래는 저절로 한 번에 하나이고 들어온 순서대로 처리된다.
 // 파일을 직접 다루지 않는다. 읽기·쓰기·시계를 받아서 쓴다 — 자체 검사가 파일 없이 돈다.
 import { evaluate } from "../achievement/core.js";
+import { grantStones, settleMega } from "../dex/mega.js";
 import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
@@ -79,6 +80,10 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     const draft = structuredClone(save);
     const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}) });
     if (!out.ok) return { ok: false, reason: out.reason };
+
+    // 메가진화 — 프리셋을 떠났거나 종이 바뀐 개체의 메가 모습을 풀고, 조건을 채운 개체에 메가스톤을 준다 (src/dex/mega.ts)
+    settleMega(draft);
+    grantStones(draft);
 
     // 상태가 바뀌었으니 해금 규칙과 업적을 다시 본다. 첫 선택 한 번으로 다른 후보·기본형이 해금되고, 꺼내기 한 번으로도 달성이 생긴다
     unlockByRules(draft, now);

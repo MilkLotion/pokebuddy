@@ -1,6 +1,7 @@
 // 화면 문구·이름의 typed facade — lib/i18n.js · lib/names.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다).
 // 메뉴·트레이는 슬러그가 아니라 "피카츄" 를 보인다. 성격 이름은 data/natures.json 의 name (한국어·영어) — 언어 파일에 따로 두지 않는다
 import { nature as natureOf } from "../dex/natures";
+import { megaOf } from "../dex/mega";
 import type { Lang, NatureId } from "../shared/types";
 
 interface I18nModule {
@@ -29,8 +30,11 @@ export const getLang = (): Lang => i18n.getLang();
 export const moodWord = (mood: number): string => i18n.moodWord(mood);
 export const untilWord = (nextAt: number, now?: number): string => i18n.untilWord(nextAt, now);
 
-// 종의 화면 이름 — 표에 없는 이름은 슬러그 그대로
-export const petName = (slug: string, lang: Lang = getLang()): string => names.petName(slug, lang);
+// 종의 화면 이름 — 표에 없는 이름은 슬러그 그대로. 메가 모습은 data/mega.json 의 이름이다 (src/dex/mega.ts)
+export const petName = (slug: string, lang: Lang = getLang()): string => {
+  const mega = megaOf(slug);
+  return mega ? (lang === "en" ? mega.en : mega.ko) : names.petName(slug, lang);
+};
 
 // 성격의 화면 이름 — 모르는 id 는 그대로 보여 무엇이 빠졌는지 드러나게
 export const natureName = (id: NatureId | string, lang: Lang = getLang()): string => natureOf(id)?.name[lang] ?? String(id);

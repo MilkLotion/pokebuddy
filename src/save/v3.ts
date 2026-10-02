@@ -5,7 +5,7 @@
 // 여기서 시계를 부르지 않는다. 지금 시각이 필요하면 받는다.
 import { localDate } from "../shared/clock.js";
 import type {
-  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PartySlotV3, PartyV3, PetV3,
+  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, MegaV3, PartySlotV3, PartyV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
@@ -168,6 +168,17 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
   return out.some((b) => b.kind === "long-play") ? out.filter((b) => b.kind !== "short-play") : out;
 }
 
+// 메가진화 칸 — 모양이 아니면 null. 규칙에 맞는지는 보지 않는다 (src/dex/mega.ts settleMega 가 푼다)
+function megaOf(raw: unknown): MegaV3 | null {
+  if (!isObj(raw)) return null;
+  return {
+    bondMs: nonNeg(raw.bondMs),
+    care: nonNeg(raw.care),
+    ...(raw.stone === true ? { stone: true as const } : {}),
+    ...(typeof raw.on === "string" && raw.on ? { on: raw.on } : {}),
+  };
+}
+
 // 개체 하나 — 종이 없으면 null (뼈대 아님)
 export function normalizePet(raw: unknown, date: string): PetV3 | null {
   if (!isObj(raw)) return null;
@@ -203,6 +214,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     stage: nonNeg(raw.stage),
     evolved: strings(raw.evolved),
     ...(Array.isArray(raw.forms) ? { forms: strings(raw.forms) } : {}), // 2026-09-26 에 더했다. 공유 sid 계열만 가진다
+    ...(megaOf(raw.mega) ? { mega: megaOf(raw.mega)! } : {}), // 2026-10-02 에 더했다. 메가진화 진행과 모습
     daily: normalizeDaily(raw.daily, date),
   };
 }
@@ -327,6 +339,7 @@ function normalizeDex(raw: unknown): DexV3 {
     shinyObtained: unique(strings(r.shinyObtained)),
     discovered,
     rulesRev: nonNeg(r.rulesRev),
+    ...(Array.isArray(r.megaOpened) ? { megaOpened: unique(strings(r.megaOpened)) } : {}), // 2026-10-02 에 더했다
   };
 }
 

@@ -10,6 +10,7 @@
 //
 // 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다.
 import fs from "node:fs";
+import { appearanceOf } from "../dex/appearance";
 import path from "node:path";
 import * as mailbox from "../save/mailbox.js";
 import * as store from "../save/store.js";
@@ -93,7 +94,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     return {
       id: pet.id,
       species: pet.species,
-      look: `${pet.species}${pet.shiny ? ":shiny" : ""}`,
+      look: appearanceOf(pet), // 메가 모습이 켜져 있으면 그 그림이다 (src/dex/mega.ts)
       size: pet.size,
       nature: pet.nature,
       nick: null,

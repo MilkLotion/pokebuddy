@@ -199,6 +199,7 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
   const obtained = new Set(save.dex.obtained);
   const unlocked = new Set(save.dex.unlocked);
   const shiny = new Set(save.dex.shinyObtained);
+  const mega = new Set(save.dex.megaOpened ?? []);
   const out: DexEntry[] = [];
   for (const { slug, dex } of baseForms(species(opts), opts)) {
     out.push({
@@ -208,6 +209,7 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
       name: petName(slug),
       state: obtained.has(slug) ? "obtained" : unlocked.has(slug) ? "unlocked" : "locked",
       shiny: shiny.has(slug),
+      ...(mega.has(slug) ? { mega: true as const } : {}),
     });
   }
   out.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0));

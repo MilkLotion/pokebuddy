@@ -14,7 +14,8 @@ const load = (f) => JSON.parse(fs.readFileSync(path.join(root, 'data', f), 'utf8
 const lf = (t) => t.replace(/\r\n/g, '\n');
 
 function build() {
-  const { TIME_V3_RULES, SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, EGG_V3_RULES, BAG_V3_RULES, MOOD_RULES } = require(path.join(root, 'dist/save/rules.js'));
+  const { TIME_V3_RULES, SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, EGG_V3_RULES, BAG_V3_RULES, MOOD_RULES, MEGA_RULES } = require(path.join(root, 'dist/save/rules.js'));
+  const { megaSlugs, megaOf } = require(path.join(root, 'dist/dex/mega.js'));
   const { FIND_RULES } = require(path.join(root, 'dist/find/rules.js'));
   const { MINT_REFUND_EACH } = require(path.join(root, 'dist/bag/mint.js'));
   const { STATE_RULES } = require(path.join(root, 'dist/state/rules.js'));
@@ -75,11 +76,15 @@ function build() {
   const affinityPerHour = (3_600_000 / TIME_V3_RULES.affinityGainMs) * (buffTop / 100) * 2;
   // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩
   const carePerHour = (3_600_000 / SAVE_V3_RULES.feedCooldownMs) * BAG_V3_RULES.feedAffinity + (3_600_000 / SAVE_V3_RULES.playCooldownMs) * BAG_V3_RULES.playAffinity;
+  // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
+  const megaForms = {};
+  for (const slug of megaSlugs()) (megaForms[megaOf(slug).base] ??= []).push(slug);
   const data = {
     items,
     eggs,
     achievements,
     evo,
+    megaForms,
     growth,
     expTable,
     maxExp,
@@ -102,6 +107,8 @@ function build() {
       petSellMax: Math.max(0, ...Object.entries(eggKinds).filter(([, k]) => !k.single)
         .map(([kind]) => Math.floor(((eggs[kind] ?? 0) * SHOP_V3_RULES.petSellRate) / SHOP_V3_RULES.petSellUnit) * SHOP_V3_RULES.petSellUnit)),
       speciesMinPrice: Math.min(...Object.values(SHOP_V3_RULES.speciesPrices)),
+      megaLevel: MEGA_RULES.level,
+      megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,
       carePerHour,
       careOnce: BAG_V3_RULES.feedAffinity + BAG_V3_RULES.playAffinity,

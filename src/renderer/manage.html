@@ -1535,6 +1535,29 @@
         left: 7px;
         top: 8px;
       }
+      /* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage.ts megaMark). 크기는 요소가 정한다.
+         박스 칸은 왼쪽 위(이로치 자리), 이로치 아이콘은 그 오른쪽으로 비킨다. 도감 칸은 얻음 표식(볼) 오른쪽에 볼과 같은 12 다 (2026-10-02 사용자 결정) */
+      .mega-mark {
+        display: block;
+        flex: none;
+        background-repeat: no-repeat;
+        image-rendering: pixelated;
+      }
+      .cell .mega-mark {
+        position: absolute;
+        left: 6px;
+        top: 5px;
+      }
+      .cell.tall .mega-mark {
+        left: 7px;
+        top: 6px;
+      }
+      .cell.has-mega .shiny {
+        left: 21px;
+      }
+      .cell.tall.has-mega .shiny {
+        left: 24px;
+      }
       /* 공유 sid 계열 — 계열 이름 아래에 지금 종 한 줄이 더 있다 */
       .cell.tall.family {
         gap: 2px;
@@ -1694,6 +1717,15 @@
         position: absolute;
         left: 20px;
         top: 6px;
+      }
+      /* 메가스톤 — 몬스터볼 오른쪽에 같은 크기 12. 이로치 아이콘은 그 오른쪽으로 비킨다 */
+      .dex-cell .mega-mark {
+        position: absolute;
+        left: 19px;
+        top: 5px;
+      }
+      .dex-cell.has-mega .shiny {
+        left: 34px;
       }
       /* 상점 포켓몬 칸 — 도감 칸에 가격 한 줄 (2026-09-29 사용자 결정 "도감처럼 격자 칸"). 값은 상품 줄의 가격과 같다 */
       .shop-cell .price {
@@ -2516,6 +2548,13 @@
       }
       .evo-node.dim {
         opacity: 0.45;
+      }
+      /* 메가진화 고르기 — 메가 모습의 이름이 길다(메가리자몽X). 칸을 넓혀 고른 칸의 바탕 안에 든다 (Figma 05 `Party / Detail Device / Mega Choose` `1325:47012`) */
+      .evo-card.mega .evo-branch {
+        gap: 8px;
+      }
+      .evo-card.mega .evo-kids .evo-node {
+        width: 104px;
       }
       .evo-node .portrait {
         width: 40px;

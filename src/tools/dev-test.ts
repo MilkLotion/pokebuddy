@@ -10,6 +10,8 @@
 // 시험용 HOME 은 POKEBUDDY_TEST_HOME, 없으면 <임시 폴더>/pokebuddy-test-home. 앱은 이 파일이 든 저장소(dist 빌드)를 띄운다.
 // 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(src/main/app.ts syncLoginItem). 절차는 docs/contributing/development.md "시험용 HOME 에서 실기 확인"
 import { spawn } from "node:child_process";
+import { MEGA_RULES } from "../save/rules";
+import type { MegaV3 } from "../shared/save-v3";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -240,6 +242,35 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         egg.ready = true;
         s.eggs.push(egg);
       }
+    },
+  },
+  mega: {
+    note: "메가진화 — 파티에 메가스톤을 지닌 리자몽(기본 모습)·팬텀(메가 모습)과 조건 직전의 루카리오, 박스에 메가스톤을 지닌 뮤츠·거북왕",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      applyScene(s, "done-all", now);
+      const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
+      const add = (species: string, level: number, mega: MegaV3): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        pet.affinity = 100;
+        pet.mega = mega;
+        s.pets.push(pet);
+        recordDex(s, species, false);
+        if (mega.stone && !(s.dex.megaOpened ??= []).includes(species)) s.dex.megaOpened.push(species);
+        return pet.id;
+      };
+      // 파티 — 빈 칸, 그다음 잠긴 칸에 차례로 넣는다. 루카리오는 돌봄 한 번이면 메가스톤이 생긴다(배너 확인용)
+      const party = [add("charizard", 62, { ...full, stone: true }), add("gengar", 60, { ...full, stone: true, on: "gengar-mega" }), add("lucario", 60, { bondMs: full.bondMs, care: full.care - 1 })];
+      for (const petId of party) {
+        const at = s.party.slots.findIndex((slot) => slot.state === "empty");
+        const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
+        if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
+        else putPet(s.boxes, petId);
+      }
+      putPet(s.boxes, add("mewtwo", 70, { ...full, stone: true }));
+      putPet(s.boxes, add("blastoise", 60, { ...full, stone: true }));
     },
   },
   rich: { note: `포인트를 ${DEV_TEST_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10)) },

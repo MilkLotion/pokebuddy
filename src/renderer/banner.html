@@ -126,13 +126,15 @@
         border: 4px solid var(--subtle);
         border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
       }
-      /* 진화 — 원형 초상 자리 */
-      .target.evolve {
+      /* 진화·메가스톤 — 원형 초상 자리 */
+      .target.evolve,
+      .target.mega {
         background: var(--accent-bg);
         border: 1px solid var(--line);
         border-radius: 999px;
       }
-      .target.evolve::before {
+      .target.evolve::before,
+      .target.mega::before {
         content: "";
         width: 8px;
         height: 8px;

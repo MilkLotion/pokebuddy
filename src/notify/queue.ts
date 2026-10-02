@@ -6,6 +6,7 @@
 //   hatch:<알 id>                 알 하나마다
 //   evolve:<개체 id>:<지금 종>     개체 하나마다. 종을 넣어 다음 단계 진화는 새 배너가 된다
 //   achievement:<업적 id>          업적 하나마다
+//   mega:<개체 id>                 메가스톤이 생긴 개체 하나마다 (src/dex/mega.ts)
 //   find:<줍기 기록 id>            주운 것 하나마다 (src/find/core.ts). 저장의 최근 줍기 기록(find.log)에 있는 동안 산다
 // 순서는 먼저 생긴 것부터. 같은 틱에 생긴 것은 부화 → 진화 → 업적 → 줍기, 같은 종류는 화면 목록 순서다(줍기는 주운 순서).
 // pendingOf 가 그 순서로 목록을 만들고 refresh 가 새 키를 끝에 붙이므로 줄은 늘 그 순서다
@@ -34,7 +35,7 @@ export const keyOf = (p: Omit<Pending, "key">, species?: string): string =>
 export function parseKey(key: string): { kind: BannerKind; target: string; species?: string } | null {
   const [kind, target, species] = key.split(":");
   if (!target) return null;
-  if (kind === "hatch" || kind === "achievement" || kind === "find") return { kind, target };
+  if (kind === "hatch" || kind === "achievement" || kind === "find" || kind === "mega") return { kind, target };
   if (kind === "evolve" && species) return { kind, target, species };
   return null;
 }
@@ -63,6 +64,10 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
     if (row?.achievedAt != null && row.claimedAt == null) list.push({ key: keyOf({ kind: "achievement", target: id }), kind: "achievement", target: id });
   }
   for (const rec of save.find?.log ?? []) list.push({ key: keyOf({ kind: "find", target: rec.id }), kind: "find", target: rec.id });
+  // 메가스톤 — 지닌 개체마다 한 번 (src/dex/mega.ts)
+  for (const id of petOrder(save)) {
+    if (save.pets.find((p) => p.id === id)?.mega?.stone === true) list.push({ key: keyOf({ kind: "mega", target: id }), kind: "mega", target: id });
+  }
   return list;
 }
 
@@ -74,6 +79,7 @@ function alive(save: SaveV3, key: string): boolean {
   if (k.kind === "hatch") return save.eggs.some((e) => e.id === k.target);
   if (k.kind === "evolve") return save.pets.some((p) => p.id === k.target && p.species === k.species);
   if (k.kind === "find") return (save.find?.log ?? []).some((r) => r.id === k.target);
+  if (k.kind === "mega") return save.pets.some((p) => p.id === k.target && p.mega?.stone === true);
   const row = save.achievements[k.target];
   return row != null && row.claimedAt == null;
 }
