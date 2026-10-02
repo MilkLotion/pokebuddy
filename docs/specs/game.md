@@ -378,7 +378,7 @@ PC 잠금·절전·앱 종료 중에는 적립하지 않는다. 적립 중인 �
 - 타일을 누르면 그 박스로 가고 모달이 닫힌다.
 - 박스의 이름과 칸은 박스를 따라간다. 박스 식별자는 바뀌지 않는다. 새 개체가 들어가는 "앞 박스부터 첫 빈 칸"은 바뀐 순서를 따른다.
 
-명령은 `box.order`(`boxId`, `to`)다. 거절 이유는 `no-box`, `bad-slot`, `same-slot`이다. 상점 구매의 거절 이유는 `box-max`, `not-enough`다.
+명령은 `box.order`(`boxId`, `to`)다. 거절 이유는 `no-box`, `bad-slot`, `same-slot`이다. 상점 구매의 거절 이유는 `box-max`, `not-enough-points`다.
 구현은 `src/box/slots.ts` `addBox`·`boxBuyable`·`orderBox`, `src/save/v3.ts` `fillBoxes`·`pushBox`, `src/shop/buy.ts` `buyBox`, `src/renderer/manage.ts` `boxMenuEl`·`drawBoxOrder`다.
 
 #### 둘 곳이 없을 때
@@ -452,7 +452,7 @@ PC 잠금·절전·앱 종료 중에는 적립하지 않는다. 적립 중인 �
 - 교환으로 받은 개체는 보낸 개체가 있던 칸에 들어간다. 그 칸이 적용하지 않은 프리셋의 칸이어도 같다.
 - 옛 저장은 지금 파티를 첫 프리셋으로 읽는다. 둘째 프리셋은 빈 프리셋으로 채운다.
 
-명령은 `party.preset`(적용)과 `party.preset.rename`(이름)이다. 거절 이유는 `no-preset`, `already-active`다. 상점 상품은 `party-preset`이다. 거절 이유는 `slots-not-full`, `preset-max`, `not-enough`다.
+명령은 `party.preset`(적용)과 `party.preset.rename`(이름)이다. 거절 이유는 `no-preset`, `already-active`다. 상점 상품은 `party-preset`이다. 거절 이유는 `slots-not-full`, `preset-max`, `not-enough-points`다.
 구현은 `src/party/presets.ts`, `src/save/v3.ts` `normalizeParty`, `src/shop/buy.ts` `buyPreset`, `src/tx/handlers.ts`다. 저장 칸은 `party.active`·`party.presets`·`party.presetNames`·`party.presetCount`·`party.slotCount`다(`src/shared/save-v3.ts` `PartyV3`).
 화면: 파티 탭 머리 줄은 `파티 ◀ [프리셋 이름] ▶ … 교체`다. 넘김은 박스 넘김 줄과 같은 부품이다. `◀`·`▶`를 누르면 바로 앞·뒤 프리셋을 적용한다. 가진 프리셋 안에서 끝과 끝이 이어져 돈다. 프리셋 이름을 누르면 그 자리가 입력칸이 된다. Enter 나 바깥 클릭으로 저장하고 Esc 로 취소한다. 이름 칸은 12글자 폭으로 고정한다. 이름 길이와 이름을 고치는 중인지에 따라 `◀`·`▶`·`교체`가 움직이지 않는다. 머리 줄에는 마릿수와 칸 수를 적지 않는다(2026-10-02 사용자 결정).
 프리셋은 세 곳에서 바꾼다. 파티 탭 머리 줄의 `◀`·`▶`, 교체 화면의 프리셋 칩, 가방 기기 창 머리 줄의 `◀`·`▶`다. 셋 다 프리셋을 실제로 적용한다. 바탕화면의 파티도 바뀐다.
