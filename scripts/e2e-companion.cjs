@@ -1,12 +1,13 @@
 // 실제 CLI → Electron 선택창 → 저장·mailbox → 종료·복원 흐름 검사.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pokebuddy-companion-e2e-'));
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
+const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
+const dir = makeTmp('companion-e2e');
 const temp = path.join(dir, 'tmp');
 fs.mkdirSync(temp);
 const env = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, 'appdata'), LOCALAPPDATA: path.join(dir, 'localappdata'), TEMP: temp, TMP: temp };

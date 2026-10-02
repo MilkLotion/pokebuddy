@@ -3,11 +3,12 @@
 //   관리 창은 manage-observer.cjs 가 숨긴 채로 열고 누르고 찍는다
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { spawn, execSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..', '..');
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
+const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
 // 로컬 DB 컨테이너 이름 — supabase/config.toml 의 project_id 로 정해진다
 const DB_CONTAINER = `supabase_db_${/^project_id\s*=\s*"([^"]+)"/m.exec(fs.readFileSync(path.join(root, 'supabase/config.toml'), 'utf8'))[1]}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,7 +35,7 @@ function sql(query) {
 // pets: [{ id, species, where: 'party'|'box' }]
 //   opts.prefix — 임시 폴더 이름 앞부분, opts.points — 시작 포인트, opts.fresh — 저장 없이 새 설치로 시작(첫 포켓몬 선택 창)
 function makeApp(name, server, pets, extraEnv = {}, opts = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${opts.prefix ?? 'pokebuddy-trade-e2e'}-${name}-`));
+  const dir = makeTmp(`${(opts.prefix ?? 'trade-e2e').replace(/^pokebuddy-/, '')}-${name}`);
   const temp = path.join(dir, 'tmp');
   fs.mkdirSync(temp);
   const env = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, 'appdata'), LOCALAPPDATA: path.join(dir, 'localappdata'), TEMP: temp, TMP: temp };

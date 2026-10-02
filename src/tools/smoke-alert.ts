@@ -8,14 +8,14 @@
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { ALERT_RULES, showAlert } from "../main/alert-window";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "../main/halt-dialog";
 import { preloadFile, rendererFile } from "../main/paths";
 import { setLang } from "../main/text";
+import { makeTmp } from "./tmp-dir";
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-alert-"));
+const dir = makeTmp("alert");
 const shots = process.argv.slice(2).find((a) => !a.startsWith("-") && !a.endsWith(".js")) ?? null;
 app.setPath("userData", path.join(dir, "user-data"));
 

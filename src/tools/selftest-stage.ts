@@ -6,7 +6,6 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../main/anchor";
 import { ART_RULES, zoomOf } from "../main/art";
@@ -30,6 +29,7 @@ import { begin } from "../party/starter";
 import * as store from "../save/store";
 import { empty as emptyV3 } from "../save/v3";
 import { send } from "../save/mailbox";
+import { makeTmp } from "./tmp-dir";
 
 const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
@@ -59,7 +59,7 @@ function spawnIdle(): { pid: number; kill: () => void } {
 }
 
 const T0 = new Date(2026, 8, 17, 10, 0, 0).getTime();
-const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-stage-"));
+const tmpRoot = makeTmp("selftest-stage");
 const tmpDir = (name: string): string => {
   const dir = path.join(tmpRoot, name);
   fs.mkdirSync(dir, { recursive: true });

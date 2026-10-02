@@ -1,13 +1,14 @@
 // CLI 계약 검사 — 순수 파서와 실제 Node·PowerShell·cmd 입구를 임시 HOME에서 확인.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { parseArgs } = require('../cli/args.js');
 
 const root = path.resolve(__dirname, '..');
-const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pokebuddy-cli-'));
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
+const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
+const home = makeTmp('cli');
 const env = { ...process.env, HOME: home, USERPROFILE: home, TEMP: home, TMP: home };
 for (const key of Object.keys(env)) {
   if (key.startsWith('POKEBUDDY_') || key === 'NODE_OPTIONS' || key === 'ELECTRON_RUN_AS_NODE') delete env[key];

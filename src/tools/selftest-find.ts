@@ -6,7 +6,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { MINT_RETIRED } from "../bag/mint";
 import { FIND_RULES, applyFind, chanceFor, eligible, findOne, itemCandidates, rollHits, shareOf } from "../find/core";
@@ -20,6 +19,7 @@ import * as store from "../save/store";
 import { empty, normalize } from "../save/v3";
 import { josa } from "../shared/josa";
 import type { SaveV3 } from "../shared/save-v3";
+import { makeTmp } from "./tmp-dir";
 
 setLang("ko");
 
@@ -60,7 +60,7 @@ function seed(): SaveV3 {
 
 const near = (a: number, b: number, eps: number): boolean => Math.abs(a - b) < eps;
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-find-"));
+const root = makeTmp("selftest-find");
 
 try {
   // (1) 수치 — 마리마다 1초에 1/2000, 항목 가중치 100·50·20·1, 포인트 5~10P (2026-09-29 사용자 결정)

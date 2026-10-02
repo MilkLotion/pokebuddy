@@ -9,12 +9,12 @@
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { menuView, petMenu, subId } from "../main/menus";
 import { t } from "../main/text";
+import { makeTmp } from "./tmp-dir";
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-menu-"));
+const dir = makeTmp("menu");
 const shots = process.env.POKEBUDDY_SMOKE_SHOTS ?? dir;
 
 // 가짜 preload — 메인이 할 일을 창 안의 값으로 받아 둔다

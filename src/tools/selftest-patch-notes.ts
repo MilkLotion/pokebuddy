@@ -2,11 +2,11 @@
 //   npm run build && node dist/tools/selftest-patch-notes.js
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { createPatchNotes, readNotes } from "../main/patch-notes";
+import { makeTmp } from "./tmp-dir";
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pb-notes-"));
+const dir = makeTmp("notes");
 const notesFile = path.join(dir, "patch-notes.json");
 const seenFile = path.join(dir, "notes-seen.json");
 fs.writeFileSync(notesFile, JSON.stringify({ notes: [

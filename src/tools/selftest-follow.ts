@@ -6,13 +6,13 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import * as front from "../follow/front";
 import { createLineHelper } from "../follow/line-helper";
 import * as state from "../follow/state";
 import type { HelperWindow, StateRecord } from "../follow/types";
 import * as winbounds from "../follow/winbounds";
+import { makeTmp } from "./tmp-dir";
 
 const say = (line: string): void => {
   process.stdout.write(`${line}\n`);
@@ -30,7 +30,7 @@ function some<T>(v: T | null | undefined, what = "값"): T {
   return v;
 }
 
-const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-follow-"));
+const tmpRoot = makeTmp("selftest-follow");
 const tmpDir = (name: string): string => {
   const dir = path.join(tmpRoot, name);
   fs.mkdirSync(dir, { recursive: true });

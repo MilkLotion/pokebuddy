@@ -5,7 +5,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { empty } from "../save/v3";
 import type { BannerView } from "../shared/manage";
@@ -13,6 +12,7 @@ import type { EggV3, PetV3, SaveV3 } from "../shared/save-v3";
 import { bannerOf } from "../notify/banner";
 import { createNotifier } from "../notify/notifier";
 import { pendingOf, refresh, take, type NotifyState } from "../notify/queue";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 const EMPTY: NotifyState = { v: 1, shown: [], queue: [] };
@@ -161,7 +161,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 
 // (8) 진행과 재시작 — 하나씩 보이고, 앱을 다시 켜면 남은 줄을 이어서 보인다
 {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-notify-"));
+  const dir = makeTmp("notify");
   const file = path.join(dir, "notify.json");
   try {
     const s = seed();
@@ -200,7 +200,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 
 // (9) 줄 밖의 안내 배너(showOnce) — 보이는 배너가 없을 때만 보이고, 보이는 동안 틱이 줄의 배너로 덮지 않는다 (src/main/hook-upkeep.ts)
 {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-notify-"));
+  const dir = makeTmp("notify");
   const file = path.join(dir, "notify.json");
   try {
     const s = seed();
@@ -223,7 +223,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 
 // (10) 서버 저장 받기(settle) — 받은 저장에 이미 있는 미처리 상태는 배너로 서지 않고, 그 뒤에 생긴 것만 선다
 {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-notify-"));
+  const dir = makeTmp("notify");
   const file = path.join(dir, "notify.json");
   try {
     const rec = (n: number) => ({ id: `f${n}`, at: T0, petId: "p1", species: "charmander", kind: "points" as const, ref: "points", amount: 5 });

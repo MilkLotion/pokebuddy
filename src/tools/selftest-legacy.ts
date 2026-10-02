@@ -8,7 +8,6 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { bridgeMailbox, createDispatcher } from "../commands/dispatcher";
 import * as mailbox from "../save/mailbox";
@@ -16,6 +15,7 @@ import * as rules from "../save/rules";
 import * as legacy from "../save/legacy";
 import * as writer from "../save/writer";
 import type { Command, CommandName, CommandResult, LogEntry, SaveV2 } from "../shared/types";
+import { makeTmp } from "./tmp-dir";
 
 const save = { ...rules, ...legacy, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접
 
@@ -59,7 +59,7 @@ async function deadPid(): Promise<number> {
   return some(child.pid, "자식 pid");
 }
 
-const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-save-"));
+const tmpRoot = makeTmp("selftest-save");
 const tmpDir = (name: string): string => {
   const dir = path.join(tmpRoot, name);
   fs.mkdirSync(dir, { recursive: true });

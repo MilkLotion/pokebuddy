@@ -337,6 +337,18 @@ node dist/tools/dev-test.js stop
 - 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림이나 검은 그림을 준다. 가려져도 그리게 하려면 앱을 `--disable-features=CalculateNativeWinOcclusion` 으로 띄운다. `dev-test.js start` 대신 저장소에서 `npx electron --disable-features=CalculateNativeWinOcclusion .` 을 실행한다. `HOME`·`USERPROFILE` 을 시험 HOME 으로, `POKEBUDDY_SAVE_CRYPT=off` 를 함께 준다. 설정창을 여는 두 번째 실행에도 같은 값을 준다. 내릴 때는 `dev-test.js stop` 을 쓴다.
 - 이 옵션 없이 띄웠으면 누른 결과는 저장 파일로 확인한다. 화면 변화는 `scripts/dev-manage.cjs` 로 따로 찍는다.
 
+### 임시 폴더
+
+시험과 개발 도구가 쓰고 버리는 폴더는 시스템 임시 폴더의 `pokebuddy/` 아래에 만든다(2026-10-03 사용자 결정). 저장소 안에는 만들지 않는다. 들여다보거나 이어 쓰는 시험 HOME 과 시험 계정만 저장소의 `.claude/` 에 둔다.
+
+- 폴더는 `src/tools/tmp-dir.ts` 의 `makeTmp(<이름>)` 으로 만든다. 경로는 `<임시 폴더>/pokebuddy/<이름>-XXXXXX` 다. `fs.mkdtempSync(path.join(os.tmpdir(), …))` 를 직접 부르지 않는다.
+- 스크립트(`scripts/*.cjs`)는 `dist/tools/tmp-dir.js` 를 불러 쓴다. 그래서 `npm run build` 뒤에 실행한다.
+- 프로세스가 종료 코드 0 으로 끝나면 만든 폴더를 지운다. 실패하면 남긴다. 원인을 볼 수 있다.
+- 남은 폴더는 다음에 `makeTmp` 를 처음 부를 때 치운다. 만든 프로세스가 끝난 폴더는 바로 지운다. 프로세스 번호는 폴더 옆의 `<폴더 이름>.pid` 파일에 있다. 이 파일이 없는 폴더는 하루 뒤에 지운다.
+- Electron 으로 도는 도구(`smoke-*`, `dev-manage`)는 끝날 때 자식 프로세스가 파일을 잡고 있다. 그래서 스스로 다 지우지 못한다. 다음 실행이 치운다.
+- 커밋만 꺼낸 worktree 는 이 폴더에 두지 않는다. worktree 에는 저장소의 `node_modules` 로 가는 링크가 있다. `<임시 폴더>/pokebuddy-worktree/<이름>` 에 두고 끝나면 링크를 먼저 끊은 뒤 지운다.
+- 한꺼번에 정리하려면 `<임시 폴더>/pokebuddy` 폴더를 지운다. 떠 있는 시험이 없을 때 한다.
+
 ### 시험 계정
 
 온라인 기능(클라우드 저장·우편·교환)을 실기로 볼 때는 시험 계정을 쓴다. 자기 계정을 쓰지 않는다.

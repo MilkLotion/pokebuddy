@@ -12,6 +12,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { makeTmp } from "./tmp-dir";
 
 const root = path.join(__dirname, "..", "..");
 const PORT = 48322; // 빌드에 박히는 공급 주소 — 바꾸면 두 빌드를 다시 만든다
@@ -20,7 +21,7 @@ const OLD = "0.7.9";
 const NEW = "0.8.0"; // data/patch-notes.json 에 노트가 있는 버전 — 업데이트 뒤 첫 패치노트를 본다
 const NAME = "pokebuddy-update-test";
 const ARCH_DIR = process.arch === "arm64" ? "mac-arm64" : "mac"; // electron-builder 의 풀린 앱 폴더
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "pb-update-mac-e2e-"));
+const work = makeTmp("update-mac-e2e");
 const HOME = path.join(work, "home");
 const APPS = path.join(work, "Applications");
 const APP = path.join(APPS, `${NAME}.app`);

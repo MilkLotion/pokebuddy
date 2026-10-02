@@ -6,7 +6,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { createGenGate } from "../main/device-gen";
 import { createGame } from "../main/game";
@@ -15,11 +14,12 @@ import * as store from "../save/store";
 import { empty } from "../save/v3";
 import { SOUND_RULES, gainOf } from "../state/settings";
 import type { SaveV3 } from "../shared/save-v3";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-manage-"));
+const root = makeTmp("selftest-manage");
 const file = path.join(root, "save-v3.json");
 
 function seed(): SaveV3 {

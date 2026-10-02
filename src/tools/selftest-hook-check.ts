@@ -5,8 +5,9 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { makeTmp } from "./tmp-dir";
 
-const home = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-hook-check-"));
+const home = makeTmp("selftest-hook-check");
 process.env.HOME = home; // config.js · setup.js 가 require 될 때 os.homedir() 로 읽는다
 process.env.USERPROFILE = home;
 process.env.CODEX_HOME = path.join(home, ".codex");

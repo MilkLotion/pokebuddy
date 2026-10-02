@@ -6,13 +6,13 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { isSealed, newSaveKey, open, saveKey, seal, setSaveKey } from "../save/crypt";
 import { keyFileOf, prepareSaveKey, setAsideSave, type KeyVault } from "../save/key";
 import * as store from "../save/store";
 import { loadCloudState } from "../online/lost";
 import { empty } from "../save/v3";
+import { makeTmp } from "./tmp-dir";
 
 const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
@@ -39,7 +39,7 @@ function fakeVault(o: { available?: boolean; broken?: boolean; reEncrypt?: boole
   return v;
 }
 
-const tmpDir = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-crypt-"));
+const tmpDir = (): string => makeTmp("crypt");
 const saveWithPet = () => {
   const s = empty(T0);
   s.points.balance = 777;

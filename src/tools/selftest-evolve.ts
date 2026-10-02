@@ -4,8 +4,7 @@
 // 계약은 docs/specs/game.md "진화 계약"이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import os from "node:os";
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_DATA_DIR } from "../dex/data";
 import { unlockByRules } from "../dex/unlocks";
@@ -13,6 +12,7 @@ import { candidates, canEvolve, dayPartOf, evolve } from "../dex/evolve";
 import { formsOf, setForm } from "../dex/forms";
 import { empty } from "../save/v3";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -288,7 +288,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 
 // (17) 배너 판정 — canEvolve 는 기본형 간선만 본다. 지도 간선만 남은 표를 꽂아 가른다
 {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "pkmon-evolve-"));
+  const dir = makeTmp("evolve");
   try {
     cpSync(DEFAULT_DATA_DIR, dir, { recursive: true });
     const evo = JSON.parse(readFileSync(path.join(dir, "evo.json"), "utf8")) as Record<string, { to: string; map?: true }[]>;

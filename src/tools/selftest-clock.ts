@@ -6,7 +6,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { CLOCK_RULES, createClock, type ClockTick } from "../main/clock";
 import { createGame } from "../main/game";
@@ -14,9 +13,10 @@ import { newPet } from "../party/create";
 import * as store from "../save/store";
 import { empty } from "../save/v3";
 import type { SaveV3 } from "../shared/save-v3";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 29, 10, 0, 0).getTime();
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-clock-"));
+const root = makeTmp("selftest-clock");
 
 function seed(): SaveV3 {
   const s = empty(T0);

@@ -14,13 +14,15 @@ const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
+const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
 const PORT = 48321; // 빌드에 박히는 공급 주소 — 바꾸면 두 빌드를 다시 만든다
 const FEED = `http://127.0.0.1:${PORT}/`;
 const OLD = '0.6.9';
 const NEW = '0.7.0'; // data/patch-notes.json 에 노트가 있는 버전 — 업데이트 뒤 첫 패치노트를 본다
 const NAME = 'pokebuddy-update-test';
 const INSTALL = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'), 'Programs', NAME);
-const work = fs.mkdtempSync(path.join(os.tmpdir(), 'pokebuddy-update-e2e-'));
+const work = makeTmp('update-e2e');
 // 시험 앱의 홈 — 빌드에 박는다(scripts/build-exe.cjs PB_UPDATE_HOME). 업데이트 설치 파일이 다시 켠 앱은 환경 변수를 물려받지 않는다
 // PB_E2E_UPDATE_BUILDS 를 주면 그 폴더의 설치 파일을 다시 쓴다(없으면 만든다) — 시험을 되풀이할 때 빌드 몇 분을 줄인다.
 // 홈 경로가 빌드에 박히므로 그때는 홈도 그 폴더 안의 고정 경로다
@@ -106,7 +108,7 @@ function makeHome() {
   fs.writeFileSync(path.join(data, 'save.json'), JSON.stringify(save));
   // TEMP 는 짧은 경로로 둔다 — 업데이트 설치 파일이 앱의 TEMP 를 물려받아 옛 파일을 TEMP\ns….tmp\old-install 아래로 옮긴다.
   // 길면 260자를 넘어 "Failed to uninstall old application files: 2" 로 멈춘다(2026-09-28 확인. 사용자 PC 의 TEMP 는 짧다)
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'pbu-'));
+  const temp = makeTmp('pbu');
   const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'ELECTRON_RUN_AS_NODE' || key === 'NODE_OPTIONS') delete env[key];
   // 옛 판(암호화 전, 0.13.0 까지)처럼 평문으로 돈다 — 첫 실행만. 업데이트 설치 파일이 다시 켠 앱은 환경 변수를 물려받지 않으므로

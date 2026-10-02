@@ -7,7 +7,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules";
 import * as store from "../save/store";
@@ -16,12 +15,13 @@ import { applyTime } from "../state/time";
 import type { SaveV3 } from "../shared/save-v3";
 import { createExecutor, type Executor } from "../tx/executor";
 import { HANDLERS } from "../tx/handlers";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const MIN = 60_000;
 const HOUR = 3_600_000;
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-flow-"));
+const root = makeTmp("selftest-flow");
 const file = path.join(root, "save.json");
 
 // 시계와 무작위를 손에 쥔 실행기 — 저장은 실제 파일에 쓴다

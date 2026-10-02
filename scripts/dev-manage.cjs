@@ -35,12 +35,13 @@
 // `--agents-connected` 를 주면 임시 HOME 의 Claude Code 에 우리 훅을 등록해 연결 탭의 `연결됨` 을 보인다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const { app, BrowserWindow } = require("electron");
 
 const root = path.join(__dirname, "..");
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-dev-manage-"));
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
+const { makeTmp } = require(path.join(root, "dist/tools/tmp-dir.js"));
+const dir = makeTmp("dev-manage");
 
 // 앱 모듈은 HOME 을 바꾼 뒤에 읽는다. 경로를 읽을 때 HOME 을 보기 때문이다 (src/tools/selftest-agents.ts 와 같은 방식).
 // Electron 이 준비되기 전에 HOME 을 바꾸면 Electron 이 뜨지 않는다. 그래서 준비된 뒤에 바꾼다

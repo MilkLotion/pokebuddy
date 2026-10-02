@@ -3,10 +3,10 @@
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { makeTmp } from "./tmp-dir";
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-renderer-"));
+const dir = makeTmp("renderer");
 const preload = path.join(dir, "fixture.cjs");
 fs.writeFileSync(preload, `
 const callbacks = {};

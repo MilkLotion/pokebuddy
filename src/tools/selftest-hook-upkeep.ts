@@ -5,8 +5,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { BannerView } from "../shared/manage";
+import { makeTmp } from "./tmp-dir";
 
-const home = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-hook-upkeep-"));
+const home = makeTmp("selftest-hook-upkeep");
 process.env.HOME = home; // config.js · setup.js 가 require 될 때 os.homedir() 로 읽는다 (mac · linux)
 process.env.USERPROFILE = home;
 // 사용자 환경 변수가 설정 폴더를 진짜 자리로 돌리지 않게 임시 HOME 안으로 묶는다

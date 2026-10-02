@@ -6,7 +6,6 @@
 import assert from "node:assert";
 import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../main/hunger-bubble";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { createGame } from "../main/game";
 import { playAreaRect } from "../main/layout";
@@ -21,6 +20,7 @@ import { HANDLERS } from "../tx/handlers";
 import { shopList } from "../tx/lists";
 import { eggPool, eggPrice } from "../shop/catalog";
 import type { SaveV3 } from "../shared/save-v3";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 
@@ -226,7 +226,7 @@ function seedPet(): SaveV3 {
 
 // (8) 이어진 저장 실패 — 3번 이어서 못 쓰면 보기에 saveFailing. 한 번 쓰면 사라진다. 명령과 주기 저장을 함께 센다
 {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-play-"));
+  const dir = makeTmp("selftest-play");
   try {
     const file = path.join(dir, "save.json");
     const seed = seedPet();

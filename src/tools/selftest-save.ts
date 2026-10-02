@@ -5,7 +5,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { migrate, verify } from "../save/migrate-v3";
 import * as legacy from "../save/legacy";
@@ -15,6 +14,7 @@ import { empty, emptySlots, normalize, presetSlots } from "../save/v3";
 import { openSlot } from "../party/slots";
 import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../party/presets";
 import type { Pet, SaveV2 } from "../shared/types";
+import { makeTmp } from "./tmp-dir";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime(); // 2026-09-24 10:00 로컬
 const TODAY = "2026-09-24";
@@ -322,7 +322,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
 // ── 파일 통로 ──────────────────────────────────────────────────────────────────
 // 여기부터는 임시 폴더에서 실제 파일로 확인한다. 끝나면 지운다
 {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-selftest-v3-"));
+  const root = makeTmp("selftest-v3");
   try {
     // (9) 없는 파일
     {

@@ -2,7 +2,6 @@
 // 그림 준비 실패·mailbox·실제 CLI·같은 요청 식별자·저장 실패·잠금 상실을 본다
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -14,12 +13,13 @@ import * as store from "../save/store";
 import { empty as emptyV3 } from "../save/v3";
 import { send } from "../save/mailbox";
 import type { Command } from "../shared/types";
+import { makeTmp } from "./tmp-dir";
 
 const T = new Date(2026, 8, 18, 12).getTime();
 
 async function main(): Promise<void> {
   // ── 실제 앱 경로 (저장 v3) — 명령이 거래 실행기를 거쳐 파일까지 간다 ──
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-v3-"));
+  const dir = makeTmp("v3");
   const gameDir = path.join(dir, ".claude", "pokebuddy");
   const paths = { save: path.join(gameDir, "save.json"), saveLock: path.join(gameDir, "save.lock"), companionLock: path.join(gameDir, "companion.lock"), mailbox: path.join(gameDir, "mailbox") };
   fs.mkdirSync(gameDir, { recursive: true });

@@ -21,7 +21,6 @@
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { unlockByRules } from "../dex/unlocks";
 import { begin } from "../party/starter";
@@ -31,8 +30,9 @@ import { empty } from "../save/v3";
 import { dexList } from "../tx/lists";
 import { MINT_RETIRED } from "../bag/mint";
 import { snapshot } from "../tx/snapshot";
+import { makeTmp } from "./tmp-dir";
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pokebuddy-manage-"));
+const dir = makeTmp("manage");
 const shots = process.env.POKEBUDDY_SMOKE_SHOTS ?? dir;
 
 // 첫 선택을 마친 저장 — 화석 암나이트는 해금해 둔다. 첫 개체는 꺼내 둔다

@@ -6,7 +6,6 @@ import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import {
   INSTALL_SCRIPT,
@@ -20,6 +19,7 @@ import {
   pickFile,
   startInstaller,
 } from "../main/mac-updater";
+import { makeTmp } from "./tmp-dir";
 
 const LATEST = `version: 0.9.0
 files:
@@ -39,7 +39,7 @@ sha512: AAA=
 releaseDate: '2026-09-28T00:00:00.000Z'
 `;
 
-const work = fs.mkdtempSync(path.join(os.tmpdir(), "pb-mac-updater-"));
+const work = makeTmp("mac-updater");
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 async function until(test: () => boolean, label: string, ms = 10_000): Promise<void> {
