@@ -29,6 +29,8 @@
 // `--update-ready` 를 주면 설정 바닥을 "새 버전 준비됨" 으로 연다. `다시 시작` 은 답하지 않고 기다린다 — "다시 시작하는 중" 확인용
 // `--scene <이름>` 을 주면 dev-test 의 장면을 저장에 입힌다(여러 번). 예: done-all(튜토리얼 모두 끝남), rich(포인트 넉넉)
 // `--docs` 를 주면 문서 캡처용 저장으로 연다 — 파티 4마리를 모두 꺼내 두고 숨긴 마리가 없다. 교환 모달은 서버 없이 첫 화면을 보인다 (docs/images/README.md)
+// `--trade <offer|blocked|ready|error|empty>` 를 주면 교환 서버 없이 교환 모달의 제안·확정 화면을 보인다. 박스 탭의 `교환` 단추를 누른 뒤에 쓴다
+// `--eval <js>` 를 주면 찍기 직전에 관리 창에서 그 식을 돌려 결과를 `eval: …` 로 출력한다 — 스크롤 높이 같은 값을 잴 때 쓴다
 // `--agents-connected` 를 주면 임시 HOME 의 Claude Code 에 우리 훅을 등록해 연결 탭의 `연결됨` 을 보인다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 const fs = require("node:fs");
@@ -220,9 +222,22 @@ app.whenReady().then(async () => {
   const devSend = async (req) => {
     if (slowMs) await new Promise((r) => setTimeout(r, slowMs));
     // --docs — 교환 서버 없이 교환 모달의 첫 화면(공유 채널 만들기·링크로 참가)을 보인다
-    if (req.cmd === "trade.status" && process.argv.includes("--docs")) {
+    if (req.cmd === "trade.status" && process.argv.includes("--docs") && !argAfter("--trade")) {
       const idle = { available: true, phase: "idle", link: null, expiresAt: null, busy: false, error: null, closedReason: null, friendJoined: false, friendName: null, mine: null, myPetId: null, myReady: false, friend: null, friendReady: false, friendBlocked: null, singles: [], received: null };
       return { ok: true, reason: "ok", screen: idle };
+    }
+    // --trade <offer|blocked|ready|error|empty> — 교환 서버 없이 제안·확정 화면을 보인다
+    const tradeArg = argAfter("--trade");
+    if (req.cmd === "trade.status" && tradeArg) {
+      const card = (species, name, level, types, typeIds) => ({ species, name, shiny: false, level, nature: "hardy", types, typeIds });
+      const base = { available: true, phase: "trading", link: null, expiresAt: null, busy: false, error: null, closedReason: null, friendJoined: true, friendName: "지우", mine: card("pikachu", "피카츄", 12, ["전기"], ["electric"]), myPetId: "p1", myReady: false, friend: card("eevee", "이브이", 22, ["노말"], ["normal"]), friendReady: true, friendBlocked: null, singles: [], received: null };
+      const by = {
+        blocked: { friend: card("mewtwo", "뮤츠", 70, ["에스퍼"], ["psychic"]), friendReady: false, friendBlocked: "single" },
+        ready: { myReady: true },
+        error: { error: { code: "TRADE_PET_NOT_SYNCED" } },
+        empty: { mine: null, myPetId: null, friend: null, friendReady: false },
+      };
+      return { ok: true, reason: "ok", screen: { ...base, ...(by[tradeArg] ?? {}) } };
     }
     if (req.cmd === "settings.set" && (req.target === "hidden" || req.target === "clickThrough")) {
       shown[req.target] = !!req.args?.value;
@@ -338,6 +353,10 @@ app.whenReady().then(async () => {
       const wait = Number(argAfter("--wait")) || 0;
       step
         .then(() => new Promise((r) => setTimeout(r, wait)))
+        .then(() => {
+          const js = argAfter("--eval");
+          return js ? win.webContents.executeJavaScript(js).then((v) => void process.stdout.write(`eval: ${JSON.stringify(v)}\n`)) : undefined;
+        })
         .then(() => win.webContents.capturePage())
         .then((img) => {
           fs.writeFileSync(shotFile, img.toPNG());

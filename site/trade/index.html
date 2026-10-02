@@ -2,7 +2,7 @@
 <!--
   친구 교환 링크의 정적 페이지 — https://milklotion.github.io/pokebuddy/trade#<토큰>
   설계: worklog/records/trade/record.md "링크". 토큰은 # 뒤에 있어 페이지 서버 기록에 남지 않는다.
-  pokebuddy://trade/<토큰> 으로 설치한 앱을 연다. 앱이 열리지 않으면 링크를 앱에 붙여 넣는 길을 보인다.
+  페이지를 열면 바로 pokebuddy://trade/<토큰> 으로 설치한 앱을 연다. 앱이 열리지 않으면 다시 누르는 단추, 설치 링크, 링크를 앱에 붙여 넣는 길을 보인다.
   외부 스크립트·글꼴·추적을 쓰지 않는다
 -->
 <html lang="ko">
@@ -71,7 +71,9 @@
     font-weight: 700;
     text-decoration: none;
   }
-  .steps { margin: 0; padding-left: 20px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  a:not(.open) { color: var(--primary); }
+  summary { color: var(--muted); cursor: pointer; }
+  .more { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
   .copy { display: flex; gap: 8px; }
   .copy input {
     flex: 1;
@@ -106,17 +108,20 @@
   <h1>친구 교환</h1>
   <section id="ok" hidden>
     <div style="display:flex;flex-direction:column;gap:16px">
-      <p>친구가 pokebuddy 포켓몬 교환에 초대했어요. 링크는 만든 뒤 10분 동안, 한 사람만 쓸 수 있어요.</p>
+      <p>앱을 여는 중이에요. 브라우저가 물으면 <strong>열기</strong>를 눌러 주세요. 링크는 만든 뒤 10분 동안, 한 사람만 쓸 수 있어요.</p>
       <a class="open" id="open" href="#">앱에서 열기</a>
-      <p>앱이 열리지 않으면 아래 링크를 복사해 앱의 <strong>교환</strong> 탭 → <strong>링크로 참가</strong> 칸에 붙여 넣어 주세요.</p>
-      <div class="copy">
-        <input id="link" readonly aria-label="교환 링크">
-        <button id="copy" type="button">복사</button>
-      </div>
-      <ol class="steps">
-        <li>pokebuddy 가 켜져 있어야 해요.</li>
-        <li>터미널에서는 <code id="cli">pokebuddy trade &lt;링크&gt;</code> 로도 참가할 수 있어요.</li>
-      </ol>
+      <p>앱이 없으면 <a href="https://github.com/MilkLotion/pokebuddy/releases/latest">설치</a>한 뒤 이 링크를 다시 눌러 주세요.</p>
+      <details>
+        <summary>앱이 열리지 않아요</summary>
+        <div class="more">
+          <p>아래 링크를 복사해 앱의 박스 탭 → <strong>교환</strong> → <strong>링크로 참가</strong> 칸에 붙여 넣어 주세요.</p>
+          <div class="copy">
+            <input id="link" readonly aria-label="교환 링크">
+            <button id="copy" type="button">복사</button>
+          </div>
+          <p>터미널에서는 <code id="cli">pokebuddy trade &lt;링크&gt;</code> 로도 참가할 수 있어요.</p>
+        </div>
+      </details>
     </div>
   </section>
   <section id="bad" hidden>
@@ -143,6 +148,8 @@
       if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, function () { input.select(); });
       else { input.select(); document.execCommand("copy"); done(); }
     });
+    // 페이지를 열면 바로 앱으로 넘긴다 — 단추는 브라우저가 막았을 때 다시 누르는 길
+    location.href = deep;
   })();
 </script>
 </body>

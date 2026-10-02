@@ -254,13 +254,19 @@ async function ui(server) {
   // U4 두 사람이 화면에서 고른다
   assert.equal(await pick(UA, '파이리'), true);
   assert.equal(await pick(UB, '이브이'), true);
-  await until(() => has(UA, ['파이리', '이브이', '확정 전']), 'U4 A 가 두 제안을 본다');
+  // 상태 글자는 없다 — 카드 바탕(.idle·.ready·.blocked)과 aria-label 로 보인다 (2026-10-02)
+  const sides = (X) => X.dom(`[...document.querySelectorAll('.trade-side')].map((c) => [c.className.split(' ').pop(), c.querySelector('.trade-side-name')?.textContent ?? null, c.getAttribute('aria-label')])`);
+  // 제안·확정 화면은 기본 창 높이에서 스크롤이 없다
+  const fits = (X) => X.dom(`(() => { const s = document.querySelector('.dialog.trade .scroll'); return !!s && s.scrollHeight <= s.clientHeight && s.scrollWidth <= s.clientWidth; })()`);
+  await until(async () => { const s = await sides(UA); return s.length === 2 && s[0][1] === '파이리' && s[1][1] === '이브이' && s.every((c) => c[0] === 'idle'); }, 'U4 A 가 두 제안을 본다');
+  assert.equal(await fits(UA), true, 'U4 스크롤 없음');
   await shot(UA, 'trade-offer.png');
-  checks.push('U4 화면에서 제안 → 양쪽 카드');
+  checks.push('U4 화면에서 제안 → 양쪽 카드, 스크롤 없음');
 
   // U5 둘 다 확정 → 완료 화면
   assert.equal(await UA.press('확정'), true);
-  await until(() => has(UA, ['확정함', '확정 취소']), 'U5 A 확정');
+  await until(async () => (await has(UA, ['확정 취소'])) && (await sides(UA))[0]?.[0] === 'ready', 'U5 A 확정');
+  assert.match((await sides(UA))[0][2], /확정함/, 'U5 확정함 aria-label');
   assert.equal(await UB.press('확정'), true);
   await until(() => has(UA, ['교환 완료', '받은 포켓몬', '파티 1번 칸에 들어갔어요']), 'U5 A 완료 화면');
   await until(() => has(UB, ['교환 완료', '파이리']), 'U5 B 완료 화면');
@@ -286,14 +292,15 @@ async function ui(server) {
   const { data: ch } = await bad.rpc('join_channel', { p_token: token, p_protocol: online().onlineConfig().protocol, p_data_version: online().dataVersion() });
   const offered = await bad.rpc('set_offer', { p_channel: ch, p_pet: MEWTWO, p_ref: ref });
   assert.ifError(offered.error);
-  await until(() => has(UA, ['받을 수 없음', '받을 수 없는 포켓몬이에요']), 'U7 막힘 화면');
+  await until(async () => (await has(UA, ['단일 포켓몬이라 받을 수 없어요'])) && (await sides(UA))[1]?.[0] === 'blocked', 'U7 막힘 화면');
   assert.equal(await pick(UA, '이브이'), true, `U7 이브이 칸: ${JSON.stringify(await UA.dom("[...document.querySelectorAll('.trade-cell')].map((c) => [c.querySelector('.who')?.textContent, c.disabled])"))}`);
-  await until(() => has(UA, ['받을 수 없는 포켓몬이에요', 'Lv.']), 'U7 내 제안');
+  await until(async () => (await has(UA, ['단일 포켓몬이라 받을 수 없어요'])) && (await sides(UA))[0]?.[1] === '이브이', 'U7 내 제안');
   assert.equal(await UA.press('확정'), false, 'U7 확정 막힘');
+  assert.equal(await fits(UA), true, 'U7 스크롤 없음');
   await shot(UA, 'trade-blocked.png');
   assert.equal(await UA.press('나가기'), true);
   await until(() => has(UA, ['공유 채널 만들기']), 'U7 나가기');
-  checks.push('U7 받을 수 없는 제안 → 막힘 배너, 확정 단추 막힘, 나가기');
+  checks.push('U7 받을 수 없는 제안 → 바닥 줄 안내와 빨간 톤 카드, 확정 단추 막힘, 스크롤 없음, 나가기');
 
   // U8 링크로 처음 켜기 — 교환 세션의 시작 확인 중에 참가해도 링크가 사라지지 않는다(2026-09-27 검수 R2-01)
   assert.equal(await UA.press('링크 만들기'), true);

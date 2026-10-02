@@ -2684,10 +2684,10 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
 let tradePage = 0;
 
 // 보낼 포켓몬 고르기 — 박스처럼 `◀ ▶` 로 파티 → 박스 1 → 박스 2 … 를 넘긴다 (2026-10-01 사용자 결정 "파티+박스 를 < > 로 옮기면서").
-// 파티는 파티 칸 수(6칸)만, 박스는 30칸. 칸 영역은 박스 5줄 높이로 고정해 넘겨도 창 높이가 그대로다. 단일 포켓몬 칸은 흐리게 막는다
+// 파티는 파티 칸 수(6칸)만, 박스는 30칸. 칸은 정사각 64, 칸 영역은 5줄 높이로 고정해 넘겨도 창 높이가 그대로다. 단일 포켓몬 칸은 흐리게 막는다
+// 제목과 넘김을 한 줄에 둔다 — 기본 창 높이(682)에서 스크롤이 없다 (2026-10-02 사용자 결정 B안, Figma 03 `Trade Dialog` `State=Offer`)
 function tradePicker(t: TradeScreen): HTMLElement {
-  const box = el("div", "trade-card");
-  box.appendChild(tradeCardHead("보낼 포켓몬", el("span", "trade-hint", "흐린 칸: 단일 포켓몬, 교환 불가")));
+  const box = el("div", "trade-pick");
   const singles = new Set(t.singles);
   const cell = (pet: PetView): HTMLElement => {
     const b = button("cell trade-cell");
@@ -2695,7 +2695,10 @@ function tradePicker(t: TradeScreen): HTMLElement {
     if (pet.shiny) b.appendChild(shinyIcon(10));
     const single = singles.has(pet.id);
     b.disabled = single || t.myReady || t.busy;
-    if (single) b.classList.add("off");
+    if (single) {
+      b.classList.add("off");
+      b.title = "단일 포켓몬은 교환할 수 없어요";
+    }
     b.setAttribute("aria-pressed", String(pet.id === t.myPetId));
     b.addEventListener("click", () => void tradeSend("trade.offer", pet.id));
     return b;
@@ -2720,41 +2723,92 @@ function tradePicker(t: TradeScreen): HTMLElement {
     drawDialog();
   });
   const used = slots.filter((p) => p != null).length;
-  pager.append(prev, el("span", "label", shown ? shown.name : "파티"), el("span", "used", `${used} / ${slots.length}`), next);
-  box.appendChild(pager);
+  pager.append(prev, el("span", "label", shown ? shown.name : "파티"), next, el("span", "used", `${used} / ${slots.length}`));
+  const head = el("div", "trade-pick-head");
+  head.append(el("strong", undefined, "보낼 포켓몬"), pager);
+  box.appendChild(head);
   const grid = el("div", "trade-grid");
   for (const pet of slots) grid.appendChild(pet ? cell(pet) : el("div", "cell blank trade-cell"));
   box.appendChild(grid);
   return box;
 }
 
-// 두 사람이 제안하고 확정하는 화면 — Offer·Blocked
-function drawTradeOffer(t: TradeScreen, out: HTMLElement): void {
-  const row = el("div", "trade-row");
-  const mine = el("div", "trade-card");
-  mine.append(tradeCardHead("내 포켓몬", t.myReady ? tradeState("확정함", "ok") : tradeState("확정 전", "idle")), tradePetLine(t.mine, "아래에서 보낼 포켓몬을 골라요"));
-  const friend = el("div", "trade-card");
-  const friendTitle = t.friendName ? `${t.friendName}의 포켓몬` : "친구 포켓몬";
-  const friendState = t.friendBlocked ? tradeState("받을 수 없음", "bad") : t.friendReady ? tradeState("확정함", "ok") : t.friend ? tradeState("확정 전", "idle") : tradeState("고르는 중", "wait");
-  friend.append(tradeCardHead(friendTitle, friendState), tradePetLine(t.friend, ""));
-  row.append(mine, friend);
-  out.appendChild(row);
-
-  if (t.friendBlocked) {
-    const name = t.friend?.name ?? "이 포켓몬";
-    const why = t.friendBlocked === "single" ? `${name}${josa(name, "은/는")} 단일 포켓몬이라 교환할 수 없어요.` : `${name}의 정보가 올바르지 않아요.`;
-    out.appendChild(alertBox("bad", "받을 수 없는 포켓몬이에요", `${why} 친구가 다른 포켓몬을 올려야 확정할 수 있어요`));
+// 세로 카드 — 제목, 초상, 이름, 레벨·타입 배지 (Figma 02 `Trade Offer Card` `1345:50196`)
+// - 상태 글자는 두지 않는다. 확정함은 톤 바탕, 받을 수 없음은 빨간 톤 바탕 (2026-10-02 사용자 결정 "라벨 없애고 ui스타일로")
+// - 색만으로 가르지 않게 상태를 aria-label·title 로 둔다
+type TradeSideState = "idle" | "ready" | "blocked";
+function tradeSide(title: string, card: TradeCardView | null, state: TradeSideState, stateText: string, empty: string): HTMLElement {
+  const box = el("div", `trade-card trade-side ${state}`);
+  box.setAttribute("aria-label", `${title} · ${stateText}`);
+  box.title = stateText;
+  box.appendChild(el("strong", "trade-side-title", title));
+  const pet = el("div", "trade-side-pet");
+  if (!card) {
+    pet.appendChild(el("div", "trade-portrait"));
+    pet.appendChild(el("div", "trade-empty", empty));
+  } else {
+    const name = el("strong", "trade-side-name", card.name);
+    if (card.shiny) name.appendChild(shinyIcon(10));
+    const meta = el("div", "trade-side-meta");
+    meta.appendChild(el("span", "trade-meta", lvNature(card.level, card.nature)));
+    card.types.forEach((type, i) => meta.appendChild(typeBadge(type, card.typeIds[i])));
+    pet.append(portraitOf(card.species, card.shiny, "trade-portrait"), name, meta);
   }
+  box.appendChild(pet);
+  return box;
+}
+
+// 두 카드 사이의 교환 표시 — 위아래 화살표. 두 사람이 모두 확정하면 주색 바탕 (Figma 02 `Trade Swap Mark` `1347:49286`)
+function tradeSwapMark(on: boolean): HTMLElement {
+  const mark = el("div", on ? "trade-swap on" : "trade-swap");
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of ["M5 13 V3", "M2 6 L5 3 L8 6", "M11 3 V13", "M8 10 L11 13 L14 10"]) {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d);
+    svg.appendChild(p);
+  }
+  mark.appendChild(svg);
+  return mark;
+}
+
+// 두 사람이 제안하고 확정하는 화면 — Offer·Blocked. 왼쪽은 보낼 포켓몬, 오른쪽은 두 카드, 바닥은 안내 한 줄과 단추
+// 막힘·오류는 바닥 줄의 글자만 바꾼다 — 떠도 모달 높이가 그대로다
+function drawTradeOffer(t: TradeScreen, out: HTMLElement, fail: [string, string] | null): void {
+  const body = el("div", "trade-body");
+  const cards = el("div", "trade-sides");
+  const friendTitle = t.friendName ? `${t.friendName}의 포켓몬` : "친구 포켓몬";
+  const friendState: [TradeSideState, string] = t.friendBlocked ? ["blocked", "받을 수 없음"] : t.friendReady ? ["ready", "확정함"] : ["idle", t.friend ? "확정 전" : "고르는 중"];
+  cards.append(
+    tradeSide("내 포켓몬", t.mine, t.myReady ? "ready" : "idle", t.myReady ? "확정함" : "확정 전", "왼쪽에서 골라요"),
+    tradeSide(friendTitle, t.friend, friendState[0], friendState[1], "고르는 중"),
+    tradeSwapMark(t.myReady && t.friendReady),
+  );
+  body.append(tradePicker(t), cards);
+  out.appendChild(body);
 
   const bar = el("div", "trade-bar");
-  bar.appendChild(el("div", "trade-desc", "한쪽이 포켓몬을 바꾸면 양쪽 확정이 풀려요"));
+  let bad: [string, string] | null = fail;
+  if (!bad && t.friendBlocked) {
+    const name = t.friend?.name ?? "이 포켓몬";
+    bad = t.friendBlocked === "single" ? [`${name}${josa(name, "은/는")} 단일 포켓몬이라 받을 수 없어요`, "친구가 다른 포켓몬을 올려야 확정할 수 있어요"] : [`${name}의 정보가 올바르지 않아요`, "친구가 다른 포켓몬을 올려야 확정할 수 있어요"];
+  }
+  if (bad) {
+    const notice = el("div", "trade-notice");
+    notice.title = bad[1] ? `${bad[0]} — ${bad[1]}` : bad[0];
+    notice.append(el("i"), el("span", undefined, bad[0]));
+    bar.appendChild(notice);
+  } else bar.appendChild(el("div", "trade-desc", "한쪽이 포켓몬을 바꾸면 양쪽 확정이 풀려요"));
   const canReady = !!t.mine && !!t.friend && !t.friendBlocked && !t.busy;
   bar.append(
     actionButton("나가기", false, t.busy, () => void tradeSend("trade.leave")),
     t.myReady ? actionButton("확정 취소", false, t.busy, () => void tradeSend("trade.unready")) : actionButton("확정", true, !canReady, () => void tradeSend("trade.ready")),
   );
   out.appendChild(bar);
-  out.appendChild(tradePicker(t));
 }
 
 // 교환 완료 — Done
@@ -2800,16 +2854,19 @@ function drawTradeDialog(): void {
     out.appendChild(el("div", "empty-note", "교환을 쓸 수 없어요."));
     return;
   }
-  // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다
+  // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다. 제안·확정 화면은 배너 대신 바닥 줄에 한 줄로 보인다
   const err = t.error;
-  if (err) {
-    const text = err.code === "LOCAL" ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"] : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
-    out.appendChild(alertBox("bad", text[0] ?? "", text[1] ?? ""));
-  } else if (t.phase === "closed") {
+  const fail: [string, string] | null = !err
+    ? null
+    : err.code === "LOCAL"
+      ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"]
+      : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
+  if (fail && t.phase !== "trading") out.appendChild(alertBox("bad", fail[0], fail[1]));
+  else if (!fail && t.phase === "closed") {
     const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
     out.appendChild(alertBox("bad", text[0], text[1]));
   }
-  if (t.phase === "trading") drawTradeOffer(t, out);
+  if (t.phase === "trading") drawTradeOffer(t, out, fail);
   else if (t.phase === "done") drawTradeDone(t, out);
   else if (acct?.available && !acct.signedIn) drawTradeLogin(out);
   else drawTradeStart(t, out);
