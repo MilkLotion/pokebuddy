@@ -296,7 +296,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     },
   },
   forms: {
-    note: "특수 폼 — 파티에 진화 직전의 암멍이·치고마·일레즌과 기라티나·플라엣테(영원의 꽃)·대쓰여너 암컷, 박스에 나머지 특수 폼, 배쓰나이만 나오는 알 셋",
+    note: "특수 폼 — 파티에 진화 직전의 암멍이·치고마·일레즌과 기라티나·플라엣테(영원의 꽃)·대쓰여너 암컷, 박스에 디아루가·펄기아(모습 바꾸기)와 나머지 특수 폼, 배쓰나이만 나오는 알 셋",
     apply: (s, now) => {
       ensureStarter(s, now);
       applyScene(s, "done-all", now);
@@ -322,7 +322,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       }
       const box: Row[] = [
         ["basculin", 20, 100], ["basculin-blue-striped", 20, 100], ["basculin-white-striped", 20, 100], ["basculegion", 40, 80, "male"],
-        ["dialga-origin", 50, 80], ["palkia-origin", 50, 80], ["ursaluna-bloodmoon", 50, 80],
+        ["dialga", 50, 80], ["palkia", 50, 80], ["ursaluna-bloodmoon", 50, 80],
         ["lycanroc", 30, 60], ["lycanroc-midnight", 30, 60], ["lycanroc-dusk", 30, 60], ["toxtricity", 35, 60], ["toxtricity-low-key", 35, 60],
         ["magearna-original", 50, 80], ["pichu-spiky-eared", 10, 60],
       ];

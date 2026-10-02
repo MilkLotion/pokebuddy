@@ -144,7 +144,7 @@ const fixed = (...values: number[]): (() => number) => {
     [0.012, "ultra-beast", 10],
     [0.017, "paradox", 20],
     [0.021, "mythical", 20], // 아르세우스는 전설알로 옮겼다(2026-10-03 사용자 결정 "그냥 전설알에 넣자"). 뮤는 업적 보상으로만 얻는다(같은 날 "뮤는 1세대 도감완성으로", worklog/records/achievements/record.md)
-    [0.024, "legendary", 26], // 디아루가(오리진폼)·펄기아(오리진폼) 포함 (data/regional.json, 2026-10-03)
+    [0.024, "legendary", 24], // 오리진폼은 알에 없다 — 기본형의 모습 바꾸기다 (2026-10-03)
     [0.026, "ancient-stone", 15], // 화석 15종 — 단일 포켓몬 알이 아니라 늘 줄 수 있다
     [0.054, "ancient-stone", 15],
   ];

@@ -207,7 +207,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(12b) 치고마 두 태세 · 암멍이·일레즌 갈래  ok\n");
 }
 
-// (12c) 기라티나 — 진화 없이 오리진폼과 모습 바꾸기로 오간다. 바꾼 모습은 도감에 남는다. 디아루가는 오가지 않는다
+// (12c) 기라티나·디아루가·펄기아 — 진화 없이 오리진폼과 모습 바꾸기로 오간다. 바꾼 모습은 도감에 남는다
 // (2026-10-03 사용자 결정 "이거는 모습변경으로하자.")
 {
   const s = seed({ species: "giratina", level: 50 });
@@ -220,7 +220,9 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(formsOf(p), ["giratina", "giratina-origin"], "오리진폼에서도 같은 목록");
   assert.equal(setForm(s, "p1", "giratina").ok, true, "돌아간다");
   assert.equal(s.pets.length, 1);
-  assert.deepStrictEqual(formsOf(seed({ species: "dialga", level: 50 }).pets[0] as PetV3), ["dialga"], "디아루가와 디아루가(오리진폼)는 다른 종이라 오가지 않는다");
+  assert.deepStrictEqual(formsOf(seed({ species: "dialga", level: 50 }).pets[0] as PetV3), ["dialga", "dialga-origin"], "디아루가도 오리진폼과 오간다 (셋 다 모습 바꾸기로 통일하자)");
+  assert.deepStrictEqual(formsOf(seed({ species: "palkia", level: 50 }).pets[0] as PetV3), ["palkia", "palkia-origin"]);
+  assert.deepStrictEqual(formsOf(seed({ species: "mewtwo", level: 50 }).pets[0] as PetV3), ["mewtwo"], "모습이 없는 단일 포켓몬은 자기 하나");
   assert.deepStrictEqual(formsOf(seed({ species: "giratina-origin", level: 50 }).pets[0] as PetV3), ["giratina-origin", "giratina"], "오리진폼만 든 저장도 공유 계열이다");
   process.stdout.write("(12c) 기라티나 모습 바꾸기  ok\n");
 }

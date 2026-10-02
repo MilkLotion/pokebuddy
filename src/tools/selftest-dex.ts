@@ -248,7 +248,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "dialga-origin:base", "palkia-origin:base", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
+    ["pichu-spiky-eared:gift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
     "특수 폼 13종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
@@ -338,7 +338,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([regional.dexLabel("basculin-blue-striped", 550), regional.dexLabel("basculin-white-striped", 550)], ["550-1", "550-2"]);
   // 지방 전용 진화의 기본형 간선은 그대로다 — 특수 폼 거르기에 걸리지 않는다
   assert.deepStrictEqual(dex.nextOf("corsola").map((st) => st.to), ["cursola"]);
-  // 디아루가(오리진폼)·펄기아(오리진폼) — 가라르 파이어처럼 전설 규칙을 따르는 다른 종이다 (2026-10-03 사용자 결정). 원시 디아루가(PMD 전용)는 넣지 않는다
+  // 디아루가(오리진폼)·펄기아(오리진폼) — 도감 항목은 따로이고 기본형 개체가 모습 바꾸기로 오간다 (2026-10-03 사용자 결정 "셋 다 모습 바꾸기로 통일하자"). 원시 디아루가(PMD 전용)는 넣지 않는다
   assert.deepStrictEqual([regional.dexLabel("dialga-origin", 483), regional.dexLabel("palkia-origin", 484)], ["483-1", "484-1"]);
   assert.deepStrictEqual([dex.profile("dialga-origin").types.join("/"), dex.profile("palkia-origin").types.join("/")], ["steel/dragon", "water/dragon"]);
   for (const slug of ["dialga-origin", "palkia-origin"]) {
@@ -347,7 +347,8 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   }
   assert.ok(!dex.hasProfile("dialga-primal"), "원시 디아루가는 없다");
   // 기라티나(오리진폼) — 기라티나 개체가 모습 바꾸기로 오간다 (2026-10-03 사용자 결정 "이거는 모습변경으로하자.")
-  assert.deepStrictEqual([regional.shiftGroupOf("giratina"), regional.shiftGroupOf("giratina-origin"), regional.shiftGroupOf("dialga")], [["giratina", "giratina-origin"], ["giratina", "giratina-origin"], []]);
+  assert.deepStrictEqual([regional.shiftGroupOf("giratina"), regional.shiftGroupOf("giratina-origin"), regional.shiftGroupOf("mewtwo")], [["giratina", "giratina-origin"], ["giratina", "giratina-origin"], []]);
+  assert.deepStrictEqual([regional.shiftGroupOf("dialga"), regional.shiftGroupOf("palkia-origin")], [["dialga", "dialga-origin"], ["palkia", "palkia-origin"]]);
   assert.strictEqual(regional.dexLabel("giratina-origin", 487), "487-1");
   assert.deepStrictEqual([dex.nextOf("giratina-origin"), dex.prevOf("giratina-origin")], [[], null]);
   // 성별 그림 — 대쓰여너 암컷은 종은 그대로이고 그림 이름만 다르다 (2026-10-03)
