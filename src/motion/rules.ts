@@ -6,7 +6,7 @@
 //   작업  거의 서 있지 않는다. 빠르게 걷고 공격·기 모으기 같은 작업 동작을 이어 간다. 자지 않는다
 // 작업 동작은 한가할 때 쓰지 않는다 — 보기만 해도 일하는 중인지 갈리게.
 // 승인 대기·턴 끝·실패 같은 신호 상태는 어느 모드도 아니다 — 멈춰서 상태 동작에 맡긴다
-import type { StageState } from "../shared/stage";
+import type { StageState } from "../shared/model/stage";
 
 // [최소, 최대] — 그 사이에서 고르게 뽑는다
 export type Range = readonly [number, number];
@@ -153,3 +153,6 @@ export const MOTION_RULES: MotionRules = {
     return agent !== "idle" && agent !== "running";
   },
 };
+
+// 성격의 축 하나가 움직임 배율을 바꾸는 폭 — params.ts paramsFor 가 읽는다
+export const NATURE_MOTION_RULES = { pace: 0.2, pause: 0.2, fidget: 0.2, sleep: 0.2, react: 0.25, pull: 0.65 };

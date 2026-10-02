@@ -12,18 +12,15 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { singleSpecies } from "../shop/catalog.js";
+import { singleSpecies } from "../dex/obtain.js";
 import type { SaveV3 } from "../shared/save-v3";
+import { MAIL_RULES } from "./rules.js";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number };
 
-export const MAIL_RULES = {
-  itemMax: 999, // 한 편지의 도구 한 종류 개수 상한
-  pointsMax: 100_000,
-  pokemonMax: 6, // 한 편지의 같은 종 마리 수 상한
-  keep: 200, // applied · read 에 남기는 최근 id 수 — 서버 목록은 50개라 넉넉하다
-} as const;
+// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/mail/rules.ts)로 가면 지운다
+export { MAIL_RULES };
 
 interface NamedEntry {
   ko: string;
@@ -75,13 +72,8 @@ export interface ApplyEnv {
   rand?: () => number; // 포켓몬 선물의 성격·성별
 }
 
-// 선물을 저장에 넣는다. 이미 넣은 편지면 아무것도 하지 않는다(applied: false)
-export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: DexOptions, env: ApplyEnv = {}): ApplyResult {
-  if (!letterId) return { ok: false, reason: "bad-args" };
-  const gifts = parseGifts(raw, opts);
-  if (!gifts || !gifts.length) return { ok: false, reason: "bad-gift" };
-  if (isApplied(save, letterId)) return { ok: true, applied: false };
-  // 넣을 포켓몬 — 단일 포켓몬은 저장마다 한 번만 얻는다. 이미 얻었으면 0마리, 아니면 한 편지에서 한 마리다
+// 포켓몬 선물마다 실제로 넣을 마리 수 — 단일 포켓몬은 저장마다 한 번만 얻는다. 이미 얻었으면 0마리, 아니면 한 편지에서 한 마리다
+function pokemonCounts(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions): Map<Gift, number> {
   const singles = singleSpecies(opts);
   const taken = new Set<string>();
   const give = new Map<Gift, number>();
@@ -93,11 +85,26 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
       taken.add(g.species);
     }
   }
+  return give;
+}
+
+// 이 선물을 받는 데 드는 박스 빈 칸 수 — 받기 전 검사(src/main/mail.ts)와 applyGifts 가 같은 셈을 쓴다
+export function neededBoxRoom(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions): number {
+  return [...pokemonCounts(save, gifts, opts).values()].reduce((n, c) => n + c, 0);
+}
+
+// 선물을 저장에 넣는다. 이미 넣은 편지면 아무것도 하지 않는다(applied: false)
+export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: DexOptions, env: ApplyEnv = {}): ApplyResult {
+  if (!letterId) return { ok: false, reason: "bad-args" };
+  const gifts = parseGifts(raw, opts);
+  if (!gifts || !gifts.length) return { ok: false, reason: "bad-gift" };
+  if (isApplied(save, letterId)) return { ok: true, applied: false };
+  const give = pokemonCounts(save, gifts, opts);
   // 포켓몬 선물이 모두 들어갈 박스 빈 칸 — 값을 바꾸기 전에 본다
   const pokemon = [...give.values()].reduce((n, c) => n + c, 0);
   if (pokemon > boxRoom(save.boxes)) return { ok: false, reason: "box-full" };
   for (const g of gifts) {
-    // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/save/rules.ts bagMax)
+    // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/bag/rules.ts BAG_RULES.max)
     if (g.kind === "item") save.bag[g.id] = (save.bag[g.id] ?? 0) + g.count;
     else if (g.kind === "points") save.points.balance += g.count;
     else for (let i = 0; i < (give.get(g) ?? 0); i++) givePokemon(save, g.species, env, opts);

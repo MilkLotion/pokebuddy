@@ -7,7 +7,7 @@
 // 리전폼(raichu-alola · meowth-galar, src/dex/regional.ts)은 도감 번호가 같아도 다른 종이다 — 기본 종으로 풀지 않는다.
 // 기본형과 리전폼이 같은 종으로 진화하면(나옹·가라르 나옹 → 페르시온) 부모는 기본형이다
 
-import type { DayPart, EvoNeed, Gender } from "../shared/types";
+import type { DayPart, EvoNeed, Gender } from "../shared/species";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import { isRegional } from "./regional.js";
 

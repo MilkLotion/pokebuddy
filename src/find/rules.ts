@@ -1,10 +1,11 @@
 // 줍기의 규칙표 — 수치는 docs/specs/balance.md "줍기". 판정 로직은 src/find/core.ts
-// 저장 정규화(src/save/v3.ts)도 기록 수(keep)를 쓴다. 그래서 가져오는 것이 없는 파일로 따로 둔다
+// 저장 정규화(src/save/v3.ts)도 기록 수(keep)를 쓴다. 그래서 규칙표만 가져오는 파일로 따로 둔다
 //
 // 판정은 마리마다 따로 한다. 그 마리가 조건(무대에 나온 꺼낸 파티 개체 · 깨어 있음)을 채운 1초마다 1/2000 확률이다.
 // 마리끼리 독립이다. 2026-09-29 사용자 결정 "모든 포켓몬들이 개별확률로 돌아야해 … 대충 매초 1/2000 의 확률로 주워야해"
 // 주웠을 때 항목은 가중치로 고른다. 포켓몬 수집 난이도 가중치(100·50·20·…·1)를 따른다 (2026-09-29 사용자 결정)
 import type { FindKind } from "../shared/save-v3";
+import { TIME_RULES } from "../state/rules.js";
 
 export const FIND_RULES = {
   perSecond: 1 / 2000, // 마리가 조건을 채운 1초마다 주울 확률. 2026-09-29 사용자 결정
@@ -12,5 +13,6 @@ export const FIND_RULES = {
   points: { min: 5, max: 10 }, // 포인트 양 — 균등. 2026-09-29 사용자 결정
   itemMaxPrice: 200, // 도구 후보 — 상점가가 0 초과 이 값 이하. 가중치는 1/가격. 제안값, 사용자 확인 전
   keep: 20, // 저장에 남기는 최근 줍기 기록 수 — 알림 배너가 이 기록으로 선다. 제안값
-  maxGapMs: 5_000, // 한 번 굴림에 셀 수 있는 최대 시간 — 이보다 긴 틈(절전 복귀·멈춤)은 굴리지 않는다. 메인의 작업 시간 규칙 STATE_RULES.maxTickMs 와 같다. 굴림마다 마리당 최대 1건. 메인은 전역 시계의 1초 틱 간격으로 굴린다. 제안값
+  // [임시] 옛 이름 — src/tools/selftest-find.ts 가 TIME_RULES.maxGapMs 를 읽으면 지운다. 줍기의 굴림은 TIME_RULES.maxGapMs 로 거른다 (src/find/core.ts)
+  maxGapMs: TIME_RULES.maxGapMs,
 };

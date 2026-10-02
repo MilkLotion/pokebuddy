@@ -1,7 +1,8 @@
 // 창 추적·에이전트 판정 모듈의 타입 — 헬퍼 출력 · 훅 기록의 모양
-import type { AgentState, Usage } from "../shared/types";
+import type { AgentState } from "../shared/names/agents";
+import type { Usage } from "../shared/hook-record";
 
-// 헬퍼(winbounds)가 주는 창 하나 — DIP 로 바꾼 뒤의 값 (Windows 물리 좌표 변환은 메인이 한다)
+// 헬퍼(winbounds)가 주는 창 하나 — 좌표는 헬퍼가 준 그대로다(mac 은 포인트, Windows 는 물리 픽셀). 좌표를 읽는 곳은 mac 의 offScreen 판정뿐이다
 export interface HelperWindow {
   app: string;
   pid: number;
@@ -10,7 +11,6 @@ export interface HelperWindow {
   y: number;
   w: number;
   h: number;
-  fake?: boolean; // 화면 작업 영역으로 만든 가짜 target
 }
 export interface HelperInfo {
   frontmost?: string;

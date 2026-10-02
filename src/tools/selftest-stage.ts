@@ -343,8 +343,8 @@ async function stageRuntimeTests(): Promise<void> {
   const iconsSent: Record<string, string>[] = [];
   const win = { sendSheets: (s: LookSheets) => sent.push(s.look), sendIcons: (i: Record<string, string>) => iconsSent.push(i), sendInit() {}, sendFrame() {}, sendClickThrough() {}, hoverTick() {}, setPassing() {} } as unknown as StageWindow;
   const stage = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, cursor: () => ({ x: 100, y: 100 }), onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
-  const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, screen: null, shown: true, nick: null };
-  stage.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
+  const pet: PartyPet = { id: "p1", species: "eevee", look: "eevee", size: 2, nature: "hardy", home: { dx: -24, dy: -60 }, screen: null, shown: true };
+  stage.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 });
   stage.setVisible(true);
   await stage.setParty([pet]);
   stage.tick();
@@ -412,7 +412,7 @@ async function stageRuntimeTests(): Promise<void> {
   let sleepMin: number | null = 0;
   const sleeper = createStage({ buddyMode: "on", timeScale: 1, window: win, art, ghost: () => false, sleepAfterMin: () => sleepMin,
     onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
-  sleeper.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
+  sleeper.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 });
   sleeper.setVisible(true);
   await sleeper.setParty([pet]);
   for (let n = 0; n < 11_000; n++) { now += 40; sleeper.tick(); } // 440초
@@ -428,7 +428,7 @@ async function stageRuntimeTests(): Promise<void> {
 
   const overlap = createStage({ buddyMode: "off", timeScale: 1, window: win, art, ghost: () => false,
     onDrop() {}, onClick() {}, onMenu() {}, onArtMissing() { throw new Error("그림 누락"); }, now: () => now });
-  overlap.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 }, false);
+  overlap.setStage({ x: 0, y: 0, w: 800, h: 600 }, { w: 800, h: 600 });
   overlap.setVisible(true);
   const six = Array.from({ length: 6 }, (_, n) => ({ ...pet, id: `p${n + 1}` }));
   await overlap.setParty(six);
@@ -468,7 +468,7 @@ async function stageRuntimeTests(): Promise<void> {
   await overlap.setParty(six);
   overlap.tick();
   eq(overlap.petIds(), ["p2", "p3", "p4", "p5", "p6", "p1"], "숨긴 마리를 다시 소환하면 맨 앞에 표시");
-  overlap.setStage({ x: 0, y: 0, w: 60, h: 60 }, { w: 60, h: 60 }, false);
+  overlap.setStage({ x: 0, y: 0, w: 60, h: 60 }, { w: 60, h: 60 });
   overlap.tick();
   ok(positions().every(([x, y]) => x! >= 0 && y! >= 0 && x! <= 60 && y! <= 60), "겹침 허용 후에도 화면 경계 유지");
 
@@ -508,7 +508,7 @@ async function stageRuntimeTests(): Promise<void> {
       ok(!migParty.needsStarter(), "이미 개체가 있으면 첫 선택을 묻지 않는다");
       eq(migParty.pets().map((p) => p.id), ["p1", "p2"], "무대에 두 마리");
       // 별명·모습은 쓰지 않는다. 실제 종의 이름과 그림이다 (docs/specs/game.md). 옛 값은 legacy 에 남는다
-      eq(migParty.pets()[0]!.nick, null, "별명을 보이지 않는다");
+      ok(!("nick" in migParty.pets()[0]!), "별명을 보이지 않는다 — 무대가 보는 마리에 별명 칸이 없다");
       eq(migParty.pets()[0]!.look, "eevee", "고른 모습이 아니라 종의 그림");
       eq(moved.legacy["nick:p1"], "뽀야", "별명은 legacy 에 보존");
       eq(moved.legacy["look:p1"], "eevee-starter", "모습도 legacy 에 보존");
@@ -528,7 +528,7 @@ async function stageRuntimeTests(): Promise<void> {
   let animations = 0;
   let lastCare = "";
   const commands = createCommands({ mailboxDir: commandPaths.mailbox, party: source, game,
-    stage: { poke: () => true, care: (_id, action) => { animations++; lastCare = action; }, petIds: () => ["p1"], size: () => ({ w: 800, h: 600 }), visible: () => true },
+    stage: { care: (_id, action) => { animations++; lastCare = action; }, petIds: () => ["p1"], size: () => ({ w: 800, h: 600 }), visible: () => true },
     settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} }, quit() {},
   });
   try {
@@ -556,9 +556,6 @@ async function stageRuntimeTests(): Promise<void> {
     ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" }, from: "menu" })).ok, "이상한사탕 사용");
     eq(animations, 3, "이상한사탕은 무대 연출이 없다");
 
-    // 모습 선택은 제거된 기능이다
-    eq((await commands.dispatcher.dispatch({ cmd: "pet.look", target: "p1", args: { look: "eevee" }, from: "cli" })).reason, "removed", "pet.look 은 제거됐다고 답한다");
-
     const old = structuredClone(source.save());
     // 저장 경로를 디렉터리로 바꿔 파일에 닿지 못하는 상황 재현 — 임시 폴더 안에서만
     fs.unlinkSync(commandPaths.save);
@@ -584,15 +581,13 @@ async function anchorTests(): Promise<void> {
   const win = { app: "Fake", pid: 424242, id: 77, x: 10, y: 20, w: 800, h: 600 };
   fs.writeFileSync(helper, `#!/bin/sh\nprintf '%s\\n' '${JSON.stringify({ frontmost: "Fake", frontPid: 424242, windows: [win] })}'\n`, { mode: 0o755 });
   const env = { ...process.env, POKEBUDDY_WINBOUNDS: helper };
-  const fakeArea = { id: -1, pid: 0, app: "", x: 0, y: 0, w: 1440, h: 900, fake: true as const };
   const make = (flags: { userHidden: boolean; held: boolean }, updates: AnchorUpdate[]) => {
-    let quits = 0;
     const anchor = createAnchor({
       paths: { state: path.join(dir, "state"), project: dir }, self: { pid: process.pid, appNames: new Set(["electron"]) }, env,
-      host: { platform: "darwin", now: Date.now, toDip: (w) => w, offScreen: () => false, workArea: () => fakeArea, quit: () => void (quits += 1), quitting: () => false },
+      host: { platform: "darwin", offScreen: () => false, quitting: () => false },
       flags: () => flags, onUpdate: (u) => updates.push(u), onFocus: () => {}, log: null,
     });
-    return { anchor, quits: () => quits };
+    return { anchor };
   };
   const pollOnce = async (anchor: { poll(): void }, updates: AnchorUpdate[]): Promise<AnchorUpdate> => {
     const n = updates.length;
@@ -600,15 +595,15 @@ async function anchorTests(): Promise<void> {
     ok(await waitFor(() => updates.length > n), "헬퍼 답이 왔다");
     return updates[updates.length - 1]!;
   };
-  // 맨 앞 창이 터미널 호스트가 아니면(모르는 앱) 작업 영역(가짜 창)에 남는다. 표시는 2회 연속 뒤. 직접 숨김·들기 판정
+  // 맨 앞 창이 터미널 호스트가 아니어도(모르는 앱) 보인다. 표시는 2회 연속 뒤. 직접 숨김·들기 판정
   {
     const updates: AnchorUpdate[] = [];
     const flags = { userHidden: false, held: false };
     const { anchor } = make(flags, updates);
     const u1 = await pollOnce(anchor, updates);
-    eq([u1.target?.fake, u1.visible], [true, false], `1회: 표시는 아직 (visibleConfirm=${ANCHOR_RULES.visibleConfirm})`);
+    eq(u1.visible, false, `1회: 표시는 아직 (visibleConfirm=${ANCHOR_RULES.visibleConfirm})`);
     const u2 = await pollOnce(anchor, updates);
-    eq([u2.target?.fake, u2.visible], [true, true], "2회: 호스트 없음 → 가짜 창 · 늘 보임");
+    eq(u2.visible, true, "2회: 호스트 없음 → 늘 보임");
     eq(anchor.currentInfo(), { state: "idle", promptAt: null }, "훅 기록이 없으면 대기");
     flags.userHidden = true;
     await pollOnce(anchor, updates);
@@ -621,7 +616,7 @@ async function anchorTests(): Promise<void> {
     eq(u4.visible, false, "들고 있는 동안은 판정 보류 — 직전 상태 유지");
     anchor.stop();
   }
-  // 훅 기록이 그 창 주인을 조상으로 가지면 호스트 (a) → 그 창을 따른다
+  // 훅 기록이 그 창 주인을 조상으로 가지면 호스트 (a) → 그 창의 세션 상태를 따른다
   {
     const stateDir = tmpDir("anchor/state");
     fs.writeFileSync(path.join(stateDir, "s.json"), JSON.stringify({ at: Date.now() / 1000, state: "running", ancestors: [424242], promptAt: 1 }));
@@ -629,7 +624,7 @@ async function anchorTests(): Promise<void> {
     const { anchor } = make({ userHidden: false, held: false }, updates);
     await pollOnce(anchor, updates);
     const u = await pollOnce(anchor, updates);
-    eq([u.target?.id, u.visible], [77, true], "동반자: 훅 기록으로 호스트를 알아 그 창을 따른다");
+    eq(u.visible, true, "동반자: 훅 기록으로 호스트를 안다 — 보인다");
     eq(anchor.currentInfo().state, "running", "그 창의 세션 상태를 따른다");
     anchor.stop();
     fs.rmSync(path.join(stateDir, "s.json"));

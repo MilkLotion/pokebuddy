@@ -1,12 +1,10 @@
 // 성격 배율 — MotionParams 를 규칙표(rules.ts) 위에 곱해 마리별 규칙표를 만든다.
 // 중립·세션 샌드박스는 NEUTRAL_PARAMS — applyParams 결과는 기존 규칙표와 동치 (selftest-motion).
 // S3 paramsFor가 성격의 다섯 축을 마리별 배율로 변환
-import { MOTION_RULES } from "./rules";
+import { MOTION_RULES, NATURE_MOTION_RULES } from "./rules";
 import type { MotionRules, Range } from "./rules";
 import type { MotionParams } from "./types";
-import type { Axis, AxisValue } from "../shared/types";
-
-export const NATURE_MOTION_RULES = { pace: 0.2, pause: 0.2, fidget: 0.2, sleep: 0.2, react: 0.25, pull: 0.65 };
+import type { Axis, AxisValue } from "../shared/species";
 
 export function paramsFor(axes: Readonly<Record<Axis, AxisValue>>): MotionParams {
   const r = NATURE_MOTION_RULES;

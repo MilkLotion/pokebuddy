@@ -10,8 +10,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { realClock, type Clock } from "../shared/clock.js";
-import type { Command, CommandName, CommandResult } from "../shared/types.js";
-import { SAVE_RULES, isCommandSource } from "./rules.js";
+import type { Command, CommandResult } from "../shared/command.js";
+import type { CommandName } from "../shared/names/commands.js";
+import { hasCommandFlag, isCommandSource } from "../shared/names/commands.js";
+import { SAVE_RULES } from "./rules.js";
 import { writeAtomic } from "./legacy.js";
 
 export type MailLog = (entry: Record<string, unknown>) => void;
@@ -44,10 +46,8 @@ export const isCmdName = (v: unknown): v is CommandName => typeof v === "string"
 export const requestName = (at: number, pid: number, cmd: string): string => `${at}-${pid}-${cmd}.json`;
 export const resultName = (name: string): string => name.replace(/\.json$/, ".result.json");
 
-// 서버를 타는 명령 — 교환의 조작. 상태 보기(trade.status)는 서버를 타지 않는다
-const serverBound = (cmd: string): boolean => cmd.startsWith("trade.") && cmd !== "trade.status";
-// 처리 줄을 막지 않고 따로 도는 명령
-const detached = serverBound;
+// 처리 줄을 막지 않고 따로 도는 명령 — 서버를 타는 교환의 조작. 목록은 src/shared/names/commands.ts 의 detached
+const detached = (cmd: string): boolean => hasCommandFlag(cmd, "detached");
 
 // 같은 밀리초에 같은 명령이 여러 번 와도 요청·회신 파일을 공유하지 않음
 let sequence = 0;
@@ -78,7 +78,7 @@ function toCommand(raw: unknown): Command | null {
 //   at 은 여기서 찍는다 (보낸 시각) — writer 가 오래된 요청을 가르는 기준
 export function send(dir: string, command: Command, opts: SendOptions = {}): Promise<CommandResult> {
   const name = isObj(command) && typeof command.cmd === "string" ? command.cmd : ""; // 옛 형식·파손 요청은 cmd 가 없을 수 있다 — 아래에서 bad-cmd 로 돌려준다
-  const slow = ["shop.buy", "evolve", "pet.look"].includes(name) || serverBound(name); // 교환은 서버를 탄다
+  const slow = hasCommandFlag(name, "slow"); // 그림을 받거나 서버를 타는 명령 — 목록은 src/shared/names/commands.ts 의 slow
   const { timeoutMs = slow ? 45_000 : SAVE_RULES.io.sendTimeoutMs, pollMs = SAVE_RULES.io.sendPollMs, clock = realClock } = opts;
   return new Promise((resolve) => {
     const cmd = isObj(command) ? command.cmd : undefined;

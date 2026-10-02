@@ -11,9 +11,13 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { authCodeOf, viewOf, type AccountResult } from "./account.js";
+import { viewOf, type AccountResult } from "./account.js";
+import { authCodeOf } from "./codes.js";
+import { messageOf } from "./server-call.js";
+import { ONLINE_TIMING } from "./timing.js";
 import type { SessionGate } from "./session.js";
-import type { HandoffReport, SwitchHooks } from "./handoff.js";
+import { finishSwitch, prepareSwitch, type HandoffReport, type SwitchHooks } from "./handoff.js";
+import type { AccountCode, GithubCode } from "../shared/names/online-codes.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다
 export const GITHUB_PORTS = [54380, 54381, 54382] as const;
@@ -97,9 +101,9 @@ async function listen(server: http.Server, ports: readonly number[]): Promise<nu
 }
 
 // 로그인 결과 — 성공이면 로그인한 계정 보기. 취소·시간 초과는 AUTH_CANCELLED(화면은 조용히 로그인 화면으로)
-export type GithubResult = AccountResult | { ok: false; code: "AUTH_CANCELLED" | "AUTH_PORT_BUSY" };
+export type GithubResult = AccountResult | { ok: false; code: Exclude<GithubCode, AccountCode> }; // 취소·시간 초과, 돌아올 포트가 없다
 
-export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal, switchHooks }: GithubLoginOptions): Promise<GithubResult> {
+export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = ONLINE_TIMING.githubWaitMs, signal, switchHooks }: GithubLoginOptions): Promise<GithubResult> {
   if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" };
   let settle: (code: string | null) => void = () => undefined;
   const got = new Promise<string | null>((resolve) => { settle = resolve; });
@@ -143,27 +147,18 @@ export async function githubLogin({ client, gate, openExternal, blocked, ports =
     const result = await gate.exclusive(async (): Promise<GithubResult> => {
       if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" }; // 기다리는 동안 교환을 시작했다
       // 교환 전 — 익명이면 이관 티켓. 실패하면 교환하지 않는다(코드는 버려진다. 다시 로그인하면 된다)
-      //   훅이 던지면 교환하지 않고 실패로 돌려준다 — 앱이 멈춘 클라우드를 원래 세션으로 다시 시작한다(account.ts before 와 같다, 검수 L5)
-      let prep: Awaited<ReturnType<SwitchHooks["before"]>>;
-      try {
-        prep = switchHooks ? await switchHooks.before(await gate.current()) : { ok: true as const, handoff: null };
-      } catch (e) {
-        return { ok: false, ...authCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
-      }
-      if (!prep.ok) return { ok: false, code: prep.code };
+      //   훅이 던지면 교환하지 않고 실패로 돌려준다 (./handoff.ts prepareSwitch)
+      const prep = await prepareSwitch(switchHooks, () => gate.current());
+      if (!prep.ok) return { ok: false, code: prep.code, ...(prep.detail ? { detail: prep.detail } : {}) };
       const exchanged = await client.auth.exchangeCodeForSession(code);
       if (exchanged.error) return { ok: false, ...authCodeOf(exchanged.error) };
-      if (!switchHooks) return { ok: true, view: viewOf(exchanged.data.user) };
-      const handoff = await switchHooks.after(prep.handoff, exchanged.data.user).catch((e: unknown): HandoffReport => {
-        console.error("익명 저장 이관 훅이 실패했다", e);
-        return prep.handoff ? { kind: "pending", handoff: prep.handoff, code: "UNKNOWN" } : { kind: "none" };
-      });
-      return { ok: true, view: viewOf(exchanged.data.user), handoff };
+      const handoff = await finishSwitch(switchHooks, prep.handoff, exchanged.data.user);
+      return { ok: true, view: viewOf(exchanged.data.user), ...(handoff ? { handoff } : {}) };
     });
     if (result.ok) answer(true);
     return result;
   } catch (e) {
-    return { ok: false, ...authCodeOf({ message: e instanceof Error ? e.message : String(e) }) };
+    return { ok: false, ...authCodeOf({ message: messageOf(e) }) };
   } finally {
     answer(false); // 성공으로 답하지 못했으면 실패 쪽을 보인다
     clearTimeout(timer);

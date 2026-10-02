@@ -6,10 +6,12 @@
 // 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
 import { screenRefOf } from "../save/v3.js";
 import type { SaveV3 } from "../shared/save-v3";
+import { REGION_MIN, SOUND_RULES } from "./rules.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
 
-export type SettingFailure = "bad-args" | "bad-value";
+export type SettingFailure = ReasonOf<"bad-args" | "bad-value">;
 
 export interface SetResult {
   ok: boolean;
@@ -27,20 +29,13 @@ export const SETTING_CHOICES = {
 
 const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion", "playScreen"];
 
-// 소리 크기 — 설정 값(0~100)을 소리마다의 최대 음량에 곱한다. 앱 소리는 이 규칙 하나를 따른다 (2026-09-27 사용자 요청 "소리가 너무 커")
-//   defaultVolume  새 저장·옛 저장의 기본값
-//   cryMax         울음소리 최대 음량(0~1) — 무대·도감 기기 창
-//   chimeMax       배너 알림음 최대 음량(0~1) — OS 기본음(shell.beep)은 크기를 못 바꿔서 앱이 직접 낸다
-export const SOUND_RULES = { defaultVolume: 30, cryMax: 0.35, chimeMax: 0.35 } as const;
+// 소리 크기와 놀이공간 최소 크기의 값은 src/state/rules.ts 에 있다
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리에서 가져오면 지운다
+export { REGION_MIN, SOUND_RULES };
 
 // 실제로 낼 음량(0~1). 소리를 끄면 0
 export const gainOf = (settings: { sound: boolean; volume: number }, max: number): number =>
   settings.sound === false ? 0 : Math.round(Math.max(0, Math.min(100, settings.volume)) * max * 10) / 1000;
-
-// 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (worklog/records/game-runtime/record.md "놀이공간·설정의 설계")
-//   area  넓이 — 240 × 160 과 같은 넓이. 폭·높이 비율은 자유다(아래로 길게, 옆으로 길게) — 2026-09-26 사용자 요청
-//   side  한 변 — 기본 크기(2) 포켓몬 한 마리가 들어가는 길이. 이보다 얇으면 움직일 자리가 없다
-export const REGION_MIN = { area: 240 * 160, side: 80 } as const;
 
 // 영역 크기가 최소를 넘는가 — 메인과 영역 그리기 창이 같은 규칙을 쓴다
 export const regionFits = (w: number, h: number, min: { area: number; side: number } = REGION_MIN): boolean => w >= min.side && h >= min.side && w * h >= min.area;

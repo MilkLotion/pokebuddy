@@ -5,6 +5,7 @@
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import { bringUp, dockAt } from "./dex-window.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 import { createGenGate } from "./device-gen.js";
 
 export interface ItemWindowChannels {
@@ -107,7 +108,7 @@ export function createItemWindow<Open extends object, Action>(opts: ItemWindowOp
       skipTaskbar: true,
       title: "pokebuddy",
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     w.removeMenu();
     w.on("close", () => closing.add(w));

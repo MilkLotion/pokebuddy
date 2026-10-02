@@ -3,7 +3,8 @@
 // 관리 창의 상품 줄·칸을 누르면 뜬다 (2026-10-01 사용자 "상품눌렀을때 무슨상품인지 모르겠어서 파티/도감상세처럼 상품정보다 옆에 창뜨게", A안 —
 // Figma 05 `Shop / Device / Tool`, worklog/records/shop-device/record.md). 창의 동작은 공통 틀(src/main/item-window.ts)이다.
 // 수량·구매 단추는 관리 창으로 돌려보낸다 — 명령은 관리 창이 보낸다
-import type { ShopDeviceAction, ShopDeviceChannel, ShopDeviceOpen } from "../shared/manage";
+import type { ShopDeviceAction, ShopDeviceOpen } from "../shared/model/devices";
+import type { ShopDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
 
 const CH = {

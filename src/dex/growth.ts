@@ -9,7 +9,7 @@
 //   fluctuating    구간식                                  100레벨 1,640,000
 // 레벨 1 은 어느 타입이나 0 이다. 최대 레벨은 100 이다.
 import { loadJson, type DexOptions } from "./data.js";
-import type { GrowthRate } from "../shared/types";
+import type { GrowthRate } from "../shared/species";
 
 export const MAX_LEVEL = 100;
 

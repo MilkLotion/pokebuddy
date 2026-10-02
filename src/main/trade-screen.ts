@@ -7,7 +7,7 @@ import { natureName, petName, typeName } from "./text.js";
 import { isSinglePet, type TradePet } from "../trade/core.js";
 import { locatePet, presetName } from "../party/presets.js";
 import type { TradeViewModel } from "../trade/session.js";
-import type { TradeCardView, TradeScreen } from "../shared/manage";
+import type { TradeCardView, TradeScreen } from "../shared/model/trade";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 개체 하나를 카드 값으로 — 모르는 종이면 null (조작한 제안 등)

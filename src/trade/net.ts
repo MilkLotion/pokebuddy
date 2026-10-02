@@ -9,16 +9,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "../online/client.js";
 import { createSessionGate, type SessionGate } from "../online/session.js";
+import { tradeCodeOf } from "../online/codes.js";
+import { callRpc } from "../online/server-call.js";
+import type { TradeCode } from "../shared/names/online-codes.js";
 import type { PetRef } from "./core.js";
 
 export type { SessionStorage };
 
-export type TradeErrorCode =
-  | "TRADE_AUTH_REQUIRED" | "TRADE_BAD_ARGS" | "TRADE_VERSION_MISMATCH" | "TRADE_RATE_LIMITED" | "TRADE_ALREADY_ACTIVE"
-  | "TRADE_LINK_INVALID" | "TRADE_LINK_EXPIRED" | "TRADE_LINK_USED" | "TRADE_OWN_LINK" | "TRADE_NOT_FOUND"
-  | "TRADE_CLOSED" | "TRADE_OFFER_INVALID" | "TRADE_OFFER_MISSING" | "TRADE_OFFER_CHANGED" | "TRADE_ALREADY_DONE"
-  | "TRADE_NOT_DONE" | "TRADE_LOGIN_REQUIRED" | "TRADE_PET_TRADED" | "TRADE_PET_NOT_SYNCED"
-  | "TRADE_PET_BUSY" | "TRADE_SAVE_UNVERIFIED" | "CLOUD_ACCOUNT_HELD" | "NETWORK" | "UNKNOWN"; // CLOUD_ACCOUNT_HELD — 이용 정지(P4c). 앱은 멈춘다
+// 교환 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts. CLOUD_ACCOUNT_HELD 는 이용 정지(P4c). 앱은 멈춘다
+export type TradeErrorCode = TradeCode;
 
 export type NetResult<T> = { ok: true; data: T } | { ok: false; code: TradeErrorCode; detail?: string };
 
@@ -65,30 +64,13 @@ export interface TradeNet {
   subscribe: (channelId: string, onChange: () => void) => Promise<() => void>;
 }
 
-const CODE = /^(TRADE_[A-Z_]+|CLOUD_ACCOUNT_HELD)$/;
-
-// supabase-js 오류를 코드로. 서버 코드가 아니면 연결 문제로 본다
-export function codeOf(error: { message?: string; details?: string | null; code?: string } | null | undefined): { code: TradeErrorCode; detail?: string } {
-  const message = (error?.message ?? "").trim();
-  const m = CODE.exec(message);
-  if (m) return { code: m[1] as TradeErrorCode, ...(error?.details ? { detail: error.details } : {}) };
-  if (/fetch|network|Failed to fetch|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i.test(message) || error?.code === "") return { code: "NETWORK" };
-  return { code: "UNKNOWN", ...(message ? { detail: message } : {}) };
-}
+// supabase-js 오류 → 코드는 src/online/codes.ts tradeCodeOf 다
 
 export function createTradeNet(opts: TradeNetOptions): TradeNet {
   const client = "client" in opts ? opts.client : createOnlineClient(opts);
   const gate = opts.gate ?? createSessionGate(client);
 
-  const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => {
-    try {
-      const { data, error } = await client.rpc(fn, args);
-      if (error) return { ok: false, ...codeOf(error) };
-      return { ok: true, data: data as T };
-    } catch (e) {
-      return { ok: false, ...codeOf({ message: e instanceof Error ? e.message : String(e) }) };
-    }
-  };
+  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => callRpc<T, TradeErrorCode>(client, fn, args, tradeCodeOf);
 
   // 로그인하지 않았으면 익명 계정을 만든다. 익명 계정은 채널을 읽고 닫을 수만 있다 — 만들기·참가·제안·확정은 로그인이 필요하다(P2, design-p2.md 1절)
   // 익명 발급·동시 호출 나눠 쓰기는 세션 관문이 맡는다 — 계정·클라우드 저장과 발급 경로를 하나로 (검수 F2)

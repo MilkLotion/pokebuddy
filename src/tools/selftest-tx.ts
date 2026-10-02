@@ -129,7 +129,7 @@ function fake(state: SaveV3, now = T0): Fake {
   const f = fake(seed());
   const dirty: TxHandler = (draft) => {
     draft.points.balance = 9999;
-    return { ok: false, reason: "규칙실패" };
+    return { ok: false, reason: "bad-args" };
   };
   const tx = createExecutor(f.ports, { dirty });
   const res = tx.run({ id: "r1", name: "dirty" });

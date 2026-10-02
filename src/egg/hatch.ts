@@ -5,35 +5,29 @@
 //   2. 이로치는 따로 같은 확률로 뽑는다
 // 알 행동 조건(쓰다듬기·노래로 결과를 바꾸는 규칙)은 2026-09-28 삭제했다 (worklog/records/game-runtime/record.md "알에서 진화형이 나옴")
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
-import { loadJson, type DexOptions } from "../dex/data.js";
+import type { DexOptions } from "../dex/data.js";
+import { rankOf } from "../dex/species.js";
 import { hatchVariants } from "../dex/regional.js";
+import { EGG_RULES } from "./rules.js";
 
-export const SHINY_ONE_IN = 1000; // 이로치 확률 1/1000. 랜덤알과 태고의돌이 같다
-
-// 수집 난이도별 추첨 가중치. 1등급 100 · 2등급 50 · 3등급 20 · 4등급 5 · 5등급 1
-export const RANK_WEIGHT: Readonly<Record<number, number>> = { 1: 100, 2: 50, 3: 20, 4: 5, 5: 1 };
+// [임시] 옛 이름 — src/tools 와 scripts/build-verify.cjs 가 새 자리(src/egg/rules.ts EGG_RULES)에서 읽으면 지운다
+export const SHINY_ONE_IN = EGG_RULES.shinyOneIn;
+export const RANK_WEIGHT = EGG_RULES.rankWeight;
 
 export type Rand = () => number; // 0 이상 1 미만
-
-interface SpeciesRank {
-  rank?: number;
-}
 
 export interface HatchResult {
   species: string;
   shiny: boolean;
 }
 
-// 수집 난이도 1~5 — data/species.defaults.json 의 rank. 표에 없으면 1. 상점의 종 가격도 이 값을 쓴다 (src/shop/catalog.ts speciesPrice)
-export const rankOf = (slug: string, opts?: DexOptions): number => {
-  const table = loadJson<Record<string, SpeciesRank>>("species.defaults.json", opts);
-  return table[slug]?.rank ?? 1;
-};
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/species.ts)에서 가져오면 지운다
+export { rankOf };
 
 // 난이도 가중치로 하나 뽑는다. 후보가 없으면 null
 export function pickWeighted(candidates: string[], rand: Rand, opts?: DexOptions): string | null {
   if (!candidates.length) return null;
-  const weights = candidates.map((slug) => RANK_WEIGHT[rankOf(slug, opts)] ?? 1);
+  const weights = candidates.map((slug) => EGG_RULES.rankWeight[rankOf(slug, opts)] ?? 1);
   const total = weights.reduce((a, w) => a + w, 0);
   if (total <= 0) return candidates[0] ?? null;
   let roll = rand() * total;
@@ -62,5 +56,5 @@ export function rollVariant(species: string, rand: Rand, opts?: DexOptions): str
 export function decide(candidates: string[], rand: Rand, opts?: DexOptions): HatchResult | null {
   const species = pickWeighted(candidates, rand, opts);
   if (!species) return null;
-  return { species, shiny: rand() < 1 / SHINY_ONE_IN };
+  return { species, shiny: rand() < 1 / EGG_RULES.shinyOneIn };
 }

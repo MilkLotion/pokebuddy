@@ -7,7 +7,7 @@
 // 실패는 기록만 하고 사용자에게 알리지 않는다. 앱 시작을 막지 않는다
 import { status as agentStatus, tidy as tidyHooks, type AgentStatus, type TidyResult } from "../agents/registry.js";
 import { CODEX_FLASH_NOTICE, codexNoticeDue, markNotice, readNotices } from "../agents/notice.js";
-import type { BannerView } from "../shared/manage";
+import type { BannerView } from "../shared/model/overlays";
 import { t } from "./text.js";
 
 export interface HookUpkeepOptions {

@@ -8,7 +8,7 @@
 // 동작은 Idle·Walk 두 개다. 같은 시트를 쓰고 프레임 길이만 다르다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
 // PNG 해석·저장은 src/main/png.ts — 메인 밖(selftest)에서도 돈다. expansion 걷기 그림(overworld-art.ts)이 먼저고 이 그림은 그것도 못 받았을 때 쓴다
 import type { PmdArt } from "./art";
-import type { SpriteSheet } from "../shared/stage";
+import type { SpriteSheet } from "../shared/model/stage";
 import { decodePng, encodePng, type Rgba } from "./png";
 
 const SHRINK = 2; // 초상 → PMD 크기

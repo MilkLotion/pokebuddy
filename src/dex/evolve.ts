@@ -14,22 +14,23 @@
 //   배너·튜토리얼의 "진화할 수 있다" 는 레벨·친밀도 지도 간선을 보지 않는다 — 같은 조건의 기본형 간선과 짝이라 알림이 겹친다
 //   돌 대신 지도인 간선은 본다 — 지도만 있고 돌이 없으면 이 간선만 준비되기 때문이다
 import { gameDayPart } from "../shared/clock";
-import type { DayPart, EvoNeed } from "../shared/types";
+import type { DayPart, EvoNeed } from "../shared/species";
 import type { SaveV3 } from "../shared/save-v3";
 import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";
 import { afterEvolve, formsOf } from "./forms.js";
 import { REGION_MAP, needIsMap } from "./regional.js";
-import { countsOf } from "../achievement/core.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type EvolveFailure =
+export type EvolveFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
   | "no-step" // 진화할 곳이 없다
   | "not-ready" // 조건을 채우지 못했다
   | "need-choice" // 후보가 여럿이라 골라야 한다
   | "bad-choice" // 고른 종이 후보가 아니다
   | "no-item" // 진화용 도구가 가방에 없다
-  | "no-map"; // 고른 리전폼 진화에 쓸 지도가 가방에 없다
+  | "no-map" // 고른 리전폼 진화에 쓸 지도가 가방에 없다
+>;
 
 export interface Candidate {
   to: string;
@@ -134,7 +135,7 @@ export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: s
   pet.evolved.push(from);
   pet.species = picked.to;
   pet.stage += 1;
-  countsOf(save).evolved += 1; // 진화 업적이 센다
+  save.counts.evolved += 1; // 진화 업적이 센다
 
   if (!save.dex.unlocked.includes(picked.to)) save.dex.unlocked.push(picked.to);
   if (!save.dex.obtained.includes(picked.to)) save.dex.obtained.push(picked.to);

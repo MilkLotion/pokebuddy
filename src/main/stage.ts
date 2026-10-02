@@ -4,7 +4,7 @@ import { profile } from "../dex/species";
 import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import type { PetMotion, Phase } from "../motion/types";
-import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/stage";
+import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/model/stage";
 import type { CareAction } from "../state/types";
 import { MOTION_RULES } from "../motion/rules";
 import { zoomOf, type ArtLoader, type Look } from "./art";
@@ -24,7 +24,7 @@ export interface StageOptions {
   cursor?(): Spot | null;
   // 설정 `잠들기 기준`(분) — 틱마다 읽어 바뀌었으면 모든 마리에 바로 넣는다. 0 이면 잠들지 않음, null·없음이면 규칙표 기본값 (src/motion/params.ts withSleepAfter)
   sleepAfterMin?(): number | null;
-  onDrop(id: string, home: Home): void; // 놓았다 — 부르는 쪽이 저장한다 (가짜 창 위에서는 부르지 않는다)
+  onDrop(id: string, home: Home): void; // 놓았다 — 부르는 쪽이 저장한다
   onClick(id: string): void;
   onMenu(id: string): void;
   onArtMissing(pet: PartyPet): void; // PMD 를 못 받았다 — 무대에 나오지 않는다
@@ -53,7 +53,7 @@ interface PetState {
 
 export interface Stage {
   setParty(list: PartyPet[]): Promise<void>; // 목록이 바뀌었다 — 새 마리의 그림을 받고, 빠진 마리를 뺀다
-  setStage(anchor: Rect, size: Size, fake: boolean): void; // 무대가 바뀌었다 — anchor 는 따라가는 창을 무대 안 좌표로 옮긴 것
+  setStage(anchor: Rect, size: Size): void; // 무대가 바뀌었다 — anchor 는 따라가는 창을 무대 안 좌표로 옮긴 것
   setVisible(on: boolean): void;
   setState(state: StageState, promptAt: number | null): void;
   focus(key: string | null): void;
@@ -64,7 +64,6 @@ export interface Stage {
   hit(id: HitReply): void; // 렌더러의 답 — 커서 밑의 마리
   releaseHeld(): void; // 들고 있던 마리를 놓은 것으로 친다 — pointerup 이 영영 안 오는 경로의 탈출구. 저장하지 않는다
   resend(): void; // 렌더러가 새로 떴다 — init · 모든 look 의 sheets · 마지막 frame 을 다시 보낸다
-  poke(id: string): boolean;
   care(id: string, action: CareAction): void;
   celebrate(id: string): void;
   // 아이콘 말풍선을 ms 동안 — 배고픔(고기)·줍기(주운 것). keys 는 그릴 순서, uris 는 열쇠별 그림. 그림이 빠진 열쇠가 있으면 띄우지 않는다
@@ -87,7 +86,6 @@ export function createStage(opts: StageOptions): Stage {
   let order: string[] = []; // 소환 순서. 목록 갱신과 드래그로 변경하지 않음
   let anchor: Rect = { x: 0, y: 0, w: 0, h: 0 };
   let size: Size = { w: 0, h: 0 };
-  let fake = false; // 가짜 창(작업 영역) 위 — 이 기준으로 집을 저장하면 진짜 창이 왔을 때 화면 기준 오프셋이 되어 튄다
   let visible = false;
   let agent: StageState = "idle";
   let held: string | null = null;
@@ -199,10 +197,9 @@ export function createStage(opts: StageOptions): Stage {
 
     },
 
-    setStage(nextAnchor, nextSize, nextFake) {
+    setStage(nextAnchor, nextSize) {
       anchor = { ...nextAnchor };
       size = { ...nextSize };
-      fake = nextFake;
       const h = held ? pets.get(held) : null;
       if (h?.dragPos) h.dragPos = clampInStage(h.dragPos.x, h.dragPos.y, h.body, size);
     },
@@ -330,9 +327,9 @@ export function createStage(opts: StageOptions): Stage {
         const home = homeOf(at, p.body, anchor, shiftOf(p.body));
         p.pet.home = home;
         p.pos = settle(p);
-        if (!fake) opts.onDrop(msg.id, home);
+        opts.onDrop(msg.id, home);
         p.motion?.drop(t);
-        log?.({ stage: "drop", id: msg.id, at, home, saved: !fake });
+        log?.({ stage: "drop", id: msg.id, at, home });
       } else if (msg.type === "click") {
         p.motion?.click(t);
         opts.onClick(msg.id);
@@ -375,18 +372,10 @@ export function createStage(opts: StageOptions): Stage {
       if (last) win.sendFrame(last);
     },
 
-    poke(id) {
-      const p = pets.get(id);
-      if (!p) return false;
-      p.motion?.click(now());
-      return true;
-    },
-
     care(id, action) {
       const p = pets.get(id);
       if (!p) return;
       p.motion?.click(now());
-      if (action === "poke") return;
       const t = now();
       p.care = { action, target: clampInStage(p.pos.x + (p.pos.x > size.w / 2 ? -1 : 1) * STAGE_RULES.care.foodOffsetPx, p.pos.y, p.body, size), until: t + STAGE_RULES.care.durationMs, eatingAt: null, last: t };
     },

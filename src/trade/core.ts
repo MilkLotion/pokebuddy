@@ -12,13 +12,13 @@ import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { locatePet, slotsOfPreset } from "../party/presets.js";
-import { singleSpecies } from "../shop/catalog.js";
+import { singleSpecies } from "../dex/obtain.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { snapSize } from "../save/rules.js";
+import { snapSize } from "../party/size.js";
 import type { DexOptions } from "../dex/data";
-import type { Gender, NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
-import { countsOf } from "../achievement/core.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 // 교환으로 옮기는 값. 나머지(쿨타임·버프·위치·하루 기록)는 받는 쪽에서 처음 값으로 둔다
 export interface TradePet {
@@ -36,7 +36,7 @@ export interface TradePet {
   evolved: string[];
 }
 
-export type OfferFailure = "no-pet" | "single" | "locked";
+export type OfferFailure = ReasonOf<"no-pet" | "single" | "locked">;
 export type ReceiveFailure = "not-object" | "unknown-species" | "single" | "bad-level" | "bad-value" | "bad-nature";
 export type LockFailure = OfferFailure | "busy";
 
@@ -44,7 +44,7 @@ export type LockFailure = OfferFailure | "busy";
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
 
-// 단일 포켓몬인가 — 단일 포켓몬(src/shop/catalog.ts singleSpecies)을 거쳐 왔거나 지금 그 종이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
+// 단일 포켓몬인가 — 단일 포켓몬(src/dex/obtain.ts singleSpecies)을 거쳐 왔거나 지금 그 종이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
 export function isSinglePet(pet: Pick<PetV3, "species" | "evolved">, opts?: DexOptions): boolean {
   const singles = singleSpecies(opts);
   if ([...pet.evolved, pet.species].some((s) => singles.has(s))) return true;
@@ -186,7 +186,7 @@ export function apply(save: SaveV3, channelId: string, received: unknown, now: n
   save.pets.splice(sentIndex, 1, pet);
   if (save.starterPetId === pending.petId) save.starterPetId = null;
   recordDex(save, pet.species, pet.shiny);
-  countsOf(save).traded += 1; // 교환 업적이 센다
+  save.counts.traded += 1; // 교환 업적이 센다
   save.trade = { pending: null };
   return { ok: true, applied: true, newPetId: id, where };
 }

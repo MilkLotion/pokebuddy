@@ -4,11 +4,20 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
+import type { AgentAction } from "../shared/model/agents";
+import type { DisplayView, PortraitAsk } from "../shared/model/snapshot";
+import type { MailAction, MailReply, MailScreen } from "../shared/model/mail";
+import type { ManageChannel, ManageReply, ManageRequest } from "../shared/ipc/manage";
+import type { ManageRoute } from "../shared/model/route";
+import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../shared/model/devices";
+import type { ScreenView } from "../shared/model/overlays";
+import type { TradeScreen } from "../shared/model/trade";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
-import { MEGA_STONE_ICON, createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
+import { webPreferencesOf } from "./window-options.js";
+import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
 import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
@@ -78,8 +87,8 @@ export interface ManageOptions {
   html: string;
   game?: GameV3; // 시험에서 다른 저장을 꽂는다
   // 명령을 보내는 길. 앱은 커맨드 처리기를 준다 — writer 면 실행기로, reader 면 mailbox 로 간다.
-  // 없으면 실행기를 바로 부른다 (개발용 실행기)
-  send?: (req: ManageRequest) => Promise<ManageReply>;
+  // 기본값은 없다 — 실행기를 바로 부르는 길을 창이 스스로 만들지 않는다. 개발용 실행기도 자기 길을 준다
+  send: (req: ManageRequest) => Promise<ManageReply>;
   route?: ManageRoute; // 열면서 옮겨 갈 곳 — 알림 배너의 `바로가기`
   // 설정의 `영역 그리기`. 영역 그리기 창을 열고 적용한 영역을 저장한다. 없으면 이 기능을 쓸 수 없다
   drawRegion?: () => Promise<ManageReply>;
@@ -115,6 +124,11 @@ let partyWin: PartyWindow | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
+
+// 표면이 보내지 못하는 명령 — 거래 실행기에만 있는 이름이다 (src/tx/handlers.ts). 명령 이름 표가 생기면 그 표의 표시로 바꾼다
+// (worklog/records/code-structure/design/40-contracts-save-online.md `internal`)
+const INTERNAL_COMMANDS: ReadonlySet<string> = new Set(["trade.lock", "trade.unlock", "trade.apply"]);
+const isInternalCommand = (cmd: string): boolean => cmd.startsWith("mail.") || INTERNAL_COMMANDS.has(cmd);
 
 const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } => {
   if (v == null || typeof v !== "object") return false;
@@ -351,8 +365,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.command, async (e, req: unknown): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
     if (!isRequest(req)) return { ok: false, reason: "bad-request" };
-    // 우편함 넣기는 메인의 우편함만 부른다 — 명령 처리기를 거치지 않는 길(개발 실행기의 기본 send)에서도 막는다
-    if (req.cmd.startsWith("mail.")) return { ok: false, reason: "unknown-command" };
+    // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
+    if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
     game.tick();
     return send(req);
   });
@@ -377,7 +391,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     return win;
   }
   const game = opts.game ?? createGame();
-  wire(game, opts.send ?? (async (req) => game.send(req, "settings")), opts.preload, opts.html);
+  wire(game, opts.send, opts.preload, opts.html);
   win = new BrowserWindow({
     width: WINDOW_V3_RULES.width,
     height: WINDOW_V3_RULES.height,
@@ -394,7 +408,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
       symbolColor: CHROME.symbolColor,
       height: CHROME.height,
     },
-    webPreferences: { preload: opts.preload },
+    webPreferences: webPreferencesOf(opts.preload),
   });
   win.on("closed", () => {
     win = null;

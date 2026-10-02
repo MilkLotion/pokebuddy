@@ -4,14 +4,17 @@
 //   1. 적용한 프리셋의 칸은 party.slots 다. 나머지 프리셋의 칸은 party.presets 에 번호 순으로 둔다
 //   2. 개체의 자리는 프리셋 칸 하나 또는 박스 칸 하나다. 프리셋에 든 개체는 박스에 없다
 //   3. 적용은 칸을 잠금·숨김째 맞바꾼다. 박스는 건드리지 않는다
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { BOX_RULES } from "../box/rules.js";
+import { PARTY_RULES } from "./rules.js";
 import type { PartySlotV3, PartyV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type PresetFailure =
+export type PresetFailure = ReasonOf<
   | "no-preset" // 그런 프리셋이 없다
   | "already-active" // 이미 적용한 프리셋이다
   | "preset-max" // 프리셋을 더 가질 수 없다
-  | "slots-not-full"; // 가진 프리셋의 칸을 모두 열지 않았다
+  | "slots-not-full" // 가진 프리셋의 칸을 모두 열지 않았다
+>;
 
 // 개체의 자리 — 적용한 프리셋도 preset 이다. active 로 구분한다
 export type PetPlace =
@@ -20,7 +23,7 @@ export type PetPlace =
 
 type Party = { party: PartyV3 };
 
-export const presetCount = (save: Party): number => save.party.presetCount ?? SAVE_V3_RULES.party.presets.start;
+export const presetCount = (save: Party): number => save.party.presetCount ?? PARTY_RULES.presets.start;
 export const activePreset = (save: Party): number => save.party.active ?? 0;
 
 // 번호로 프리셋의 칸을 얻는다. 적용한 번호면 party.slots 다. 없는 번호면 null
@@ -77,7 +80,7 @@ export const presetName = (save: Party, index: number): string => save.party.pre
 // 이름 바꾸기 — 앞뒤 공백을 떼고 nameMax 자로 자른다. 비우면 기본 이름으로 돌아간다. 박스 이름과 같은 규칙이다
 export function renamePreset(save: Party, index: number, name: string): { ok: boolean; reason?: PresetFailure; name?: string } {
   if (!slotsOfPreset(save, index)) return { ok: false, reason: "no-preset" };
-  const next = [...name.trim()].slice(0, SAVE_V3_RULES.party.presets.nameMax).join("");
+  const next = [...name.trim()].slice(0, BOX_RULES.nameMax).join("");
   const names = Array.from({ length: presetCount(save) }, (_, i) => save.party.presetNames?.[i] ?? "");
   names[index] = next === defaultPresetName(index) ? "" : next;
   save.party.presetNames = names;
@@ -86,7 +89,7 @@ export function renamePreset(save: Party, index: number, name: string): { ok: bo
 
 // 적용한 프리셋에서 상점으로 여는 칸 — 남은 수와 전체 수. 첫 프리셋은 shopUnlock 칸, 나머지는 잠긴 칸 전부다
 export function shopSlots(save: Party): { left: number; total: number; bought: number } {
-  const { total: all, openAtStart, shopUnlock } = SAVE_V3_RULES.party;
+  const { total: all, openAtStart, shopUnlock } = PARTY_RULES;
   const total = activePreset(save) === 0 ? shopUnlock : all - openAtStart;
   const left = save.party.slots.filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
   return { left, total, bought: Math.max(0, total - left) };
@@ -95,9 +98,9 @@ export function shopSlots(save: Party): { left: number; total: number; bought: n
 // 프리셋을 하나 더 살 수 있는가 — 가진 프리셋의 칸을 모두 열어야 한다 (2개면 12칸, 3개면 18칸)
 export function presetBuyable(save: Party): { ok: boolean; reason?: PresetFailure; open: number; need: number } {
   const count = presetCount(save);
-  const need = count * SAVE_V3_RULES.party.total;
+  const need = count * PARTY_RULES.total;
   const open = allPresets(save).reduce((n, p) => n + p.slots.filter((s) => s.state !== "locked").length, 0);
-  if (count >= SAVE_V3_RULES.party.presets.max) return { ok: false, reason: "preset-max", open, need };
+  if (count >= PARTY_RULES.presets.max) return { ok: false, reason: "preset-max", open, need };
   if (open < need) return { ok: false, reason: "slots-not-full", open, need };
   return { ok: true, open, need };
 }

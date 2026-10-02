@@ -93,7 +93,7 @@ function seed(points: number): SaveV3 {
   const s = seed(100);
   const res = buy(s, "random", T0, rand);
   assert.equal(res.ok, false);
-  assert.equal(res.reason, "not-enough");
+  assert.equal(res.reason, "not-enough-points");
   assert.equal(s.points.balance, 100);
   assert.equal(s.eggs.length, 0);
   process.stdout.write("(5) 포인트 부족 · 그대로  ok\n");
@@ -176,7 +176,7 @@ function seed(points: number): SaveV3 {
   // 포인트가 모자라면 사지 않는다. 여러 개를 한 번에 사지 않는다
   const poor = seed(999);
   for (const slot of [...poor.party.slots, ...(slotsOfPreset(poor, 1) ?? [])]) if (slot.state === "locked") { slot.state = "empty"; delete slot.unlockBy; }
-  assert.equal(buy(poor, "party-preset", T0, rand).reason, "not-enough");
+  assert.equal(buy(poor, "party-preset", T0, rand).reason, "not-enough-points");
   let state: SaveV3 | null = seed(5000);
   const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
   const two = ex.run({ id: "pp-2", name: "shop.buy", args: { productId: "party-slot", count: 2 } });

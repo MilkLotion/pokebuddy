@@ -3,7 +3,8 @@
 // 가방 카드를 누르면 뜬다 (2026-10-01 사용자 "가방도 상점참고해서 개선하자", C안 — Figma 05 `Bag / Device / Use`,
 // worklog/records/bag-device/record.md). 창의 동작은 공통 틀(src/main/item-window.ts)이다.
 // 파티 고르기·수량·사용·판매 단추는 관리 창으로 돌려보낸다 — 명령은 관리 창이 보낸다
-import type { BagDeviceAction, BagDeviceChannel, BagDeviceOpen } from "../shared/manage";
+import type { BagDeviceAction, BagDeviceOpen } from "../shared/model/devices";
+import type { BagDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
 
 const CH = {

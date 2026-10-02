@@ -155,7 +155,6 @@ function fakeWin(hooks: LaneHooks | null = null): FakeWin {
     sendIcons() {},
     sendCoach: (c: CoachView | null) => void (w.coach = c),
     resendCoach() {},
-    popup() {},
     close: () => void (w.closed = true),
   };
   return w as FakeWin;
@@ -190,7 +189,6 @@ function fakeStage(hooks: LaneStageHooks): FakeStage {
     hit() {},
     releaseHeld: () => void s.releases++,
     resend() {},
-    poke: () => true,
     care() {},
     celebrate() {},
     say() {},
@@ -205,7 +203,7 @@ function fakeStage(hooks: LaneStageHooks): FakeStage {
   return s as FakeStage;
 }
 
-const pet = (id: string, screen: PartyPet["screen"] = null): PartyPet => ({ id, species: "eevee", look: "eevee", size: 2, nature: null, nick: null, home: { dx: -24, dy: -60 }, screen, shown: true });
+const pet = (id: string, screen: PartyPet["screen"] = null): PartyPet => ({ id, species: "eevee", look: "eevee", size: 2, nature: null, home: { dx: -24, dy: -60 }, screen, shown: true });
 const lanes = (area: Parameters<typeof playLanes>[0], screens: ScreenInfo[]): PlayLane[] => playLanes(area, screens);
 
 async function groupChecks(): Promise<void> {

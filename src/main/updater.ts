@@ -8,7 +8,7 @@
 //           누르지 않고 끄면 끌 때 적용한다
 // mac 은 앱을 그 자리에서 바꿀 수 없으면(dmg 안·쓰기 불가) 받지 않고 새 버전만 알린다(manual) — `받기` 가 dmg 주소를 연다
 // 설치본(Windows exe·mac 앱)에서만 켠다. 개발 실행·npm 설치본은 버전만 보인다
-import type { UpdateView } from "../shared/manage";
+import type { UpdateView } from "../shared/model/account";
 
 // electron-updater 의 autoUpdater 에서 쓰는 부분만 — 자체 검사는 가짜를 넘긴다
 export interface UpdaterLike {

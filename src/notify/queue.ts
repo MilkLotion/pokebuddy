@@ -12,7 +12,7 @@
 // pendingOf 가 그 순서로 목록을 만들고 refresh 가 새 키를 끝에 붙이므로 줄은 늘 그 순서다
 import { defs } from "../achievement/core.js";
 import { canEvolve, dayPartOf } from "../dex/evolve.js";
-import type { BannerKind } from "../shared/manage";
+import type { BannerKind } from "../shared/names/banners";
 import type { SaveV3 } from "../shared/save-v3";
 
 export interface Pending {

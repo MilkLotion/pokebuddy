@@ -1,6 +1,6 @@
 // 포켓몬 판매 — 규칙은 docs/specs/game.md "포켓몬 판매", 판매가는 docs/specs/balance.md "가격표"
 //
-// 판매가 = 그 종이 나오는 알의 값 × SHOP_V3_RULES.petSellRate, petSellUnit 단위로 내림.
+// 판매가 = 그 종이 나오는 알의 값 × SHOP_RULES.petSellRate, petSellUnit 단위로 내림.
 // 종은 그 개체의 진화 계열 맨 앞 종으로 본다. 레벨·이로치·성별은 값에 넣지 않는다.
 // 팔지 않는 개체: 단일 포켓몬(공유 sid 계열 포함), 어느 알에도 없는 종, 교환에 올린 개체, 마지막 한 마리, 파티 프리셋에 든 개체.
 // 박스 개체만 판다 (2026-10-02 사용자 결정 — 그 전에는 파티 개체도 팔았다). 도감 기록은 지우지 않는다.
@@ -10,17 +10,19 @@ import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
 import { maxPetNo } from "../party/create.js";
 import { locatePet } from "../party/presets.js";
-import { SHOP_V3_RULES } from "../save/rules.js";
+import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isLocked, isSinglePet } from "../trade/core.js";
 import { eggOfSpecies, eggPrice } from "./catalog.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type SellPetFailure =
+export type SellPetFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
   | "pet-not-sellable" // 단일 포켓몬이거나 어느 알에도 없는 종이다
   | "trade-locked" // 교환에 올린 개체다
   | "last-pet" // 가진 개체가 한 마리뿐이다
-  | "in-preset"; // 파티 프리셋에 든 개체다
+  | "in-preset" // 파티 프리셋에 든 개체다
+>;
 
 export interface SellPetResult {
   ok: boolean;
@@ -50,7 +52,7 @@ export function petSellPrice(pet: Pick<PetV3, "species" | "evolved">, opts?: Dex
   const kind = eggOfSpecies(rootSpecies(pet, opts), opts);
   const price = kind ? eggPrice(kind, opts) : null;
   if (price === null || price <= 0) return null;
-  const { petSellRate, petSellUnit } = SHOP_V3_RULES;
+  const { petSellRate, petSellUnit } = SHOP_RULES;
   const each = Math.floor((price * petSellRate) / petSellUnit) * petSellUnit;
   return each > 0 ? each : null;
 }

@@ -7,8 +7,10 @@ import { loadJson, type DexOptions } from "../dex/data.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
-import { BAG_V3_RULES, MOOD_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { BAG_RULES } from "./rules.js";
+import { PET_RULES } from "../party/rules.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off";
 
@@ -19,7 +21,7 @@ export interface ItemEntry {
   amount: number;
 }
 
-export type UseFailure =
+export type UseFailure = ReasonOf<
   | "no-item" // 그런 도구가 없다
   | "none-left" // 가방에 없다
   | "no-pet" // 그런 개체가 없다
@@ -27,7 +29,8 @@ export type UseFailure =
   | "cooldown" // 밥 주기 쿨타임이다
   | "max-level" // 이미 최대 레벨이다
   | "already" // 이미 그 상태다
-  | "bad-nature"; // 바꿀 성격을 고르지 않았거나 모르는 성격이다
+  | "bad-nature" // 바꿀 성격을 고르지 않았거나 모르는 성격이다
+>;
 
 export interface UseResult {
   ok: boolean;
@@ -48,7 +51,7 @@ export const itemOf = (id: string, opts?: DexOptions): ItemEntry | null => (id.s
 // 버프를 건다. 남아 있으면 지속시간으로 바꾼다. 더하지 않는다.
 // 남은 시간이 더 길면 그대로 둔다 — 장난감 신남(2시간)이 남은 동안 3중첩 놀아주기(30분)가 줄이지 않는다.
 // 신남(long-play)을 걸면 들뜸(short-play)은 지운다 — 아랫단계가 윗단계로 바뀐다(곱하지 않는다, 제안). 놀아주기(src/state/care.ts)와 장난감이 함께 쓴다
-export function setBuff(pet: PetV3, kind: BuffKind, remainMs: number = BAG_V3_RULES.buffMs[kind]): void {
+export function setBuff(pet: PetV3, kind: BuffKind, remainMs: number = BAG_RULES.buffMs[kind]): void {
   if (kind === "long-play") pet.buffs = pet.buffs.filter((b) => b.kind !== "short-play");
   const hit = pet.buffs.find((b) => b.kind === kind);
   if (hit) hit.remainMs = Math.max(hit.remainMs, remainMs);
@@ -56,7 +59,7 @@ export function setBuff(pet: PetV3, kind: BuffKind, remainMs: number = BAG_V3_RU
 }
 
 const addAffinity = (pet: PetV3, gain: number): void => {
-  pet.affinity = Math.min(100, pet.affinity + gain);
+  pet.affinity = Math.min(PET_RULES.statMax, pet.affinity + gain);
 };
 
 export function use(save: SaveV3, itemId: string, petId: string, args: { nature?: string } = {}, opts?: DexOptions): UseResult {
@@ -86,19 +89,19 @@ export function use(save: SaveV3, itemId: string, petId: string, args: { nature?
     case "fullness-full-buff": {
       if (pet.fullness >= 100) return { ok: false, reason: "full" };
       if (pet.feedCooldownMs > 0) return { ok: false, reason: "cooldown" };
-      pet.fullness = item.effect === "fullness-full-buff" ? 100 : Math.min(100, pet.fullness + item.amount);
+      pet.fullness = item.effect === "fullness-full-buff" ? PET_RULES.statMax : Math.min(PET_RULES.statMax, pet.fullness + item.amount);
       pet.fullnessProgressMs = 0;
-      pet.feedCooldownMs = SAVE_V3_RULES.feedCooldownMs;
+      pet.feedCooldownMs = BAG_RULES.feedCooldownMs;
       if (item.effect === "fullness-full-buff") setBuff(pet, "premium-food");
-      addAffinity(pet, BAG_V3_RULES.feedAffinity);
-      pet.mood = Math.min(100, pet.mood + MOOD_RULES.feed);
+      addAffinity(pet, BAG_RULES.feedAffinity);
+      pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.feedMood);
       pet.daily.feeds += 1;
       return done({ fullness: pet.fullness });
     }
     case "play-buff": {
-      setBuff(pet, "long-play", BAG_V3_RULES.toyBuffMs); // 장난감은 신남을 준다. 놀아주기로 켠 신남보다 길다
-      addAffinity(pet, BAG_V3_RULES.playAffinity);
-      pet.mood = Math.min(100, pet.mood + MOOD_RULES.play); // 장난감도 놀아주기다
+      setBuff(pet, "long-play", BAG_RULES.toyBuffMs); // 장난감은 신남을 준다. 놀아주기로 켠 신남보다 길다
+      addAffinity(pet, BAG_RULES.playAffinity);
+      pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.playMood); // 장난감도 놀아주기다
       pet.daily.plays += 1;
       return done({});
     }

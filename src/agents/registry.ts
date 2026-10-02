@@ -3,7 +3,7 @@
 //
 // 훅 등록·해제의 실제 일은 아직 JS 인 cli/setup.js 가 한다(connectCli · disconnectCli · hookInstalled) — [리팩토링 대상] 이 모듈로 옮긴다.
 // 토큰 사용량 읽기는 ./usage 에 (배럴 없이 직접 import). CLI 마다 "읽을 수 있나" 가 다르다 — 못 읽는 CLI 는 상태 모듈이 일한 시간으로 대신한다
-import type { AgentName } from "../shared/types";
+import { AGENTS as AGENT_LIST, type AgentName } from "../shared/names/agents";
 
 // 사용량을 어디서 읽나 — transcript: 훅이 대화 기록에서 읽어 적는다 · none: 아직 모른다 [스펙 미확정 — codex·gemini]
 export type UsageSource = "transcript" | "none";
@@ -14,11 +14,10 @@ export interface AgentInfo {
   usage: UsageSource;
 }
 
-export const AGENTS: readonly AgentInfo[] = [
-  { name: "claude", label: "Claude Code", usage: "transcript" },
-  { name: "codex", label: "Codex CLI", usage: "none" },
-  { name: "gemini", label: "Gemini CLI", usage: "none" },
-];
+// 이름과 표시 이름의 원본은 src/shared/names/agents.ts 다. 여기서는 사용량 읽기 방식만 붙인다
+const USAGE: Readonly<Record<AgentName, UsageSource>> = { claude: "transcript", codex: "none", gemini: "none" };
+
+export const AGENTS: readonly AgentInfo[] = AGENT_LIST.map((a) => ({ name: a.name, label: a.label, usage: USAGE[a.name] }));
 
 export const agentInfo = (name: string): AgentInfo | null => AGENTS.find((a) => a.name === name) ?? null;
 

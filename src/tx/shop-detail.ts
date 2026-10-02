@@ -8,7 +8,7 @@ import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
 import { nextOf, rootOf, type EvoStep } from "../dex/evo.js";
 import { profile } from "../dex/species.js";
 import { petName, typeName } from "../main/text.js";
-import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/manage";
+import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { officialText, textOf } from "./dex-detail.js";
 import { REGION_MAP, needIsMap, regionalOf } from "../dex/regional.js";

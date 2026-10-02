@@ -5,9 +5,11 @@
 // 무엇을 보일지는 관리 창이 정해 보낸다(개체·자리·빈 파티 칸). 누른 단추는 관리 창으로 돌려보낸다 — 명령과 대화상자는 관리 창이 처리한다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import type { PetDeviceAction, PetDeviceChannel, PetDeviceOpen, PetDeviceView } from "../shared/manage";
+import type { PetDeviceAction, PetDeviceOpen, PetDeviceView } from "../shared/model/devices";
+import type { PetDeviceChannel } from "../shared/ipc/devices";
 import { bringUp, dockAt } from "./dex-window.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 import { createGenGate } from "./device-gen.js";
 
 const CH = {
@@ -113,7 +115,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
       skipTaskbar: true,
       title: "pokebuddy",
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     w.removeMenu();
     w.on("close", () => closing.add(w));

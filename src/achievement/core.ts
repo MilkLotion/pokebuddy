@@ -11,7 +11,7 @@
 //   evolve    진화 횟수 counts.evolved ≥ count
 //   mega      메가스톤이 생긴 종 수 dex.megaOpened ≥ count
 //   hatch     알에서 포켓몬이 나온 횟수 counts.hatched ≥ count
-//   single    얻은 단일 포켓몬 종 수 ≥ count (src/shop/catalog.ts singleSpecies)
+//   single    얻은 단일 포켓몬 종 수 ≥ count (src/dex/obtain.ts singleSpecies)
 //   find      줍기 횟수 find.seq ≥ count
 //   work      에이전트와 함께 일한 누적 시간 totals.workMs ≥ hours
 //   streak    이어서 앱이 돈 날 수 counts.streak ≥ days. 하루를 거르면 1 로 돌아간다
@@ -39,46 +39,21 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { regionalOf } from "../dex/regional.js";
 import { profile } from "../dex/species.js";
-import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { hasRoom, newEgg, placeNew } from "../shop/buy.js";
-import { canGiveEgg, singleSpecies } from "../shop/catalog.js";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
+import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js";
+import { rewardSpecies, singleSpecies } from "../dex/obtain.js";
+import { achievementTable, type AchievementCond, type AchievementDef, type AchievementGroup } from "../dex/tables.js";
+import { canGiveEgg, newEgg } from "../egg/pool.js";
+import { ACHIEVEMENT_RULES } from "./rules.js";
+import { EGG_RULES } from "../egg/rules.js";
 import type { Rand } from "../egg/hatch";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type AchievementReward = "party-slot" | { pokemon: string } | { points: number } | { egg: string } | { item: string; count?: number };
-
+// 업적 표의 타입은 src/dex/tables.ts 에 있다 — 도감(src/dex/obtain.ts)도 같은 표를 읽는다
+export type { AchievementCond, AchievementDef, AchievementGroup, AchievementReward } from "../dex/tables.js";
 // 업적창의 분류 칩 — 순서는 GROUPS
-export type AchievementGroup = "dex" | "grow" | "egg" | "find" | "together";
 export const GROUPS: readonly AchievementGroup[] = ["dex", "grow", "egg", "find", "together"];
 
-export type AchievementCond =
-  | { kind: "dex"; count: number }
-  | { kind: "region"; from: number; to: number }
-  | { kind: "species"; species: string[] }
-  | { kind: "shiny"; count: number }
-  | { kind: "level"; level: number }
-  | { kind: "affinity"; value: number }
-  | { kind: "evolve"; count: number }
-  | { kind: "mega"; count: number }
-  | { kind: "hatch"; count: number }
-  | { kind: "single"; count: number }
-  | { kind: "find"; count: number }
-  | { kind: "work"; hours: number }
-  | { kind: "streak"; days: number }
-  | { kind: "trade"; count: number }
-  | { kind: "shown"; count: number }
-  | { kind: "party"; count: number };
-
-export interface AchievementDef {
-  ko: string;
-  en?: string; // 영어 이름 — 다른 데이터(도구·알)처럼 함께 둔다. 화면은 지금 한국어만 쓴다
-  desc?: string; // 이름만으로 조건이 드러나면 두지 않는다 — 업적창에 설명 줄이 그려지지 않는다
-  group: AchievementGroup;
-  cond: AchievementCond;
-  reward: AchievementReward;
-}
-
-export type ClaimFailure = "no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none";
+export type ClaimFailure = ReasonOf<"no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none">;
 
 export interface ClaimResult {
   ok: boolean;
@@ -116,21 +91,15 @@ export const rewardItem = (def: AchievementDef): { id: string; count: number } |
   return { id: r.item, count: typeof r.count === "number" && r.count > 0 ? r.count : 1 };
 };
 
-const table = (opts?: DexOptions): Record<string, AchievementDef> => loadJson<Record<string, AchievementDef>>("achievements.json", opts);
+const table = achievementTable;
 
 export const defs = (opts?: DexOptions): [string, AchievementDef][] =>
   Object.entries(table(opts)).filter(([id]) => !isMetaKey(id));
 
 export const defOf = (id: string, opts?: DexOptions): AchievementDef | null => (isMetaKey(id) ? null : table(opts)[id] ?? null);
 
-// 업적 보상으로 주는 종 전부 — 해금 규칙 생성기가 이 종들을 기본형에서 뺀다 (src/tools/build-unlocks.ts)
-export const rewardSpecies = (opts?: DexOptions): string[] =>
-  defs(opts)
-    .map(([, def]) => rewardPokemon(def))
-    .filter((slug): slug is string => slug !== null);
-
-// 업적이 세는 누적 값 — 옛 저장은 정규화가 시작 값을 넣는다 (src/save/v3.ts normalizeCounts)
-export const countsOf = (save: SaveV3): CountsV3 => (save.counts ??= { hatched: 0, evolved: 0, traded: 0, day: "", streak: 0 });
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/obtain.ts)에서 가져오면 지운다
+export { rewardSpecies };
 
 // 지금 꺼내 놓은 개체 수 — 숨긴 개체는 세지 않는다
 const shownCount = (save: SaveV3): number =>
@@ -177,17 +146,17 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
     }
     case "species": return cond.species.filter((s) => save.dex.obtained.includes(s)).length;
     case "shiny": return save.dex.shinyObtained.length;
-    case "evolve": return countsOf(save).evolved;
+    case "evolve": return save.counts.evolved;
     case "mega": return save.dex.megaOpened?.length ?? 0;
-    case "hatch": return countsOf(save).hatched;
+    case "hatch": return save.counts.hatched;
     case "single": {
       const singles = singleSpecies(opts);
       return save.dex.obtained.filter((s) => singles.has(s)).length;
     }
     case "find": return save.find?.seq ?? 0;
     case "work": return Math.floor(save.totals.workMs / 3600_000);
-    case "streak": return countsOf(save).streak;
-    case "trade": return countsOf(save).traded;
+    case "streak": return save.counts.streak;
+    case "trade": return save.counts.traded;
     case "shown": return shownCount(save);
     case "party": return partyCount(save);
     default: return null;
@@ -233,7 +202,7 @@ export function isAchieved(save: SaveV3, id: string, opts?: DexOptions, prev?: S
 
 // 앱이 돈 날을 센다 — 어제도 돌았으면 이어지고, 하루 이상 걸렀으면 1 부터 다시 센다
 function touchDay(save: SaveV3, now: number): void {
-  const counts = countsOf(save);
+  const counts = save.counts;
   const today = localDate(now);
   if (counts.day === today) return;
   counts.streak = counts.day === localDate(now - 24 * 3600_000) ? counts.streak + 1 : 1;
@@ -246,7 +215,7 @@ function touchDay(save: SaveV3, now: number): void {
 // 배너를 띄우지 않고 업적 아이콘의 점만 켠다 (src/notify/queue.ts pendingOf)
 export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: SaveV3): string[] {
   touchDay(save, now);
-  const quiet = (save.achRev ?? 0) < SAVE_V3_RULES.achievementRev;
+  const quiet = (save.achRev ?? 0) < ACHIEVEMENT_RULES.rev;
   const fresh: string[] = [];
   for (const [id] of defs(opts)) {
     const row = save.achievements[id];
@@ -255,7 +224,7 @@ export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: Sa
     save.achievements[id] = { achievedAt: now, claimedAt: row?.claimedAt ?? null, ...(quiet ? { quiet: true as const } : {}) };
     fresh.push(id);
   }
-  if (quiet) save.achRev = SAVE_V3_RULES.achievementRev;
+  if (quiet) save.achRev = ACHIEVEMENT_RULES.rev;
   return quiet ? [] : fresh;
 }
 
@@ -301,7 +270,7 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const eggKind = rewardEgg(def);
   if (eggKind) {
-    if (save.eggs.length >= EGG_V3_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
+    if (save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
     if (!canGiveEgg(save, eggKind, opts)) return { ok: false, reason: "egg-none" };
     const egg = newEgg(save, eggKind, now, opts);
     save.eggs.push(egg);

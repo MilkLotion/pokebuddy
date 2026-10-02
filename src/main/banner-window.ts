@@ -4,8 +4,11 @@
 // 배너는 뜬 뒤 BANNER_RULES.showMs 가 지나면 사라진다. 커서 위치와 무관하다.
 // 제목 줄 오른쪽 `✕` 로 바로 닫는다. 누르지 않아도 시간이 지나면 사라진다 (docs/specs/ui-components.md C-19)
 import { BrowserWindow, ipcMain, screen } from "electron";
-import type { BannerChannel, BannerView, ManageRoute } from "../shared/manage";
+import type { BannerChannel } from "../shared/ipc/overlays";
+import type { BannerView } from "../shared/model/overlays";
+import type { ManageRoute } from "../shared/model/route";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   show: "banner:show",
@@ -91,7 +94,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
       focusable: false, // 누르기는 받지만 쓰던 창의 포커스는 뺏지 않는다
       acceptFirstMouse: true, // mac 에서 첫 클릭을 삼키지 않는다
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     win.setAlwaysOnTop(true, "pop-up-menu");
     win.on("closed", () => {

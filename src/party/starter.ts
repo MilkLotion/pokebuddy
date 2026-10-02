@@ -11,9 +11,10 @@ import type { DexOptions } from "../dex/data";
 import type { Rand } from "../egg/hatch";
 import { newPet, nextPetId, recordDex } from "./create.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { SHOP_V3_RULES } from "../save/rules.js";
+import { PARTY_RULES } from "./rules.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type StarterFailure = "already" | "no-slot";
+export type StarterFailure = ReasonOf<"already" | "no-slot">;
 
 export interface StarterResult {
   ok: boolean;
@@ -32,7 +33,7 @@ export function begin(save: SaveV3, species: string, now: number, rand: Rand, op
   save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now }));
   save.party.slots[slotIndex] = { state: "pokemon", petId: id, hidden: false };
   save.starterPetId = id;
-  save.points.balance += SHOP_V3_RULES.startPoints;
+  save.points.balance += PARTY_RULES.startPoints;
   recordDex(save, species, false);
   return { ok: true, petId: id, species, slotIndex };
 }

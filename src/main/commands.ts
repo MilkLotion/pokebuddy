@@ -7,7 +7,8 @@
 // 결과 문구는 표면이 구성한다 — 여기서는 코드만 돌려준다.
 import { bridgeMailbox, createDispatcher, type Dispatcher } from "../commands/dispatcher";
 import type { MailServer } from "../save/mailbox";
-import type { Command, CommandName, CommandResult } from "../shared/types";
+import type { Command, CommandResult } from "../shared/command";
+import type { CommandName } from "../shared/names/commands";
 import type { Size } from "./layout";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
@@ -32,7 +33,7 @@ export interface CommandContext {
   mailboxDir: string;
   party: SaveParty;
   game: GameV3;
-  stage: { poke(id: string): boolean; care?(id: string, action: CareAction): void; petIds(): string[]; size(): Size; visible(): boolean };
+  stage: { care?(id: string, action: CareAction): void; petIds(): string[]; size(): Size; visible(): boolean };
   settings: CommandSettings;
   quit(): void;
   prepareLook?(look: string): Promise<boolean>;
@@ -177,13 +178,6 @@ export function createCommands(ctx: CommandContext): Commands {
     return result;
   });
 
-  // 찌르기는 무대 반응만 한다. 클릭은 놀아주기이므로(아래 click) 이 명령은 CLI 호환으로만 남는다
-  dispatcher.register("poke", (c) => {
-    const id = target(c);
-    if (!id) return { ok: false, reason: "no-pet" };
-    return ctx.stage.poke(id) ? { ok: true, reason: "ok", id } : { ok: false, reason: "no-pet", id };
-  });
-
   // 진화는 그림이 있어야 한다. 바뀔 모습을 먼저 받아 두고, 못 받으면 저장을 건드리지 않는다
   dispatcher.register("evolve", async (c) => {
     const id = target(c);
@@ -222,8 +216,7 @@ export function createCommands(ctx: CommandContext): Commands {
   });
 
   // 모습 선택은 제거했다 — 실제 종의 이름과 그림을 보인다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다").
-  // 옛 값은 legacy 에 남아 있다. 명령은 CLI 호환으로 남기고 제거됐다고 답한다
-  dispatcher.register("pet.look", () => ({ ok: false, reason: "removed" }));
+  // 옛 값은 legacy 에 남아 있다. 명령 pet.look 은 없앴다 (2026-10-03)
 
   // 나머지 저장 명령 — 인자를 풀고 실행기에 넣는 일만 한다.
   // 무대 다시 그리기는 기다리지 않고 답한다. 처음 나오는 종은 그림을 인터넷에서 받느라 1~2초 걸린다 — 관리 창이 그동안 멈춰 보였다

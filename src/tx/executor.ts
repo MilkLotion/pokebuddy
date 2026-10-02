@@ -15,15 +15,11 @@ import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
 import { SAVE_V3_RULES } from "../save/rules.js";
-
-export interface TxRequest {
-  id: string; // 요청 식별자. 같은 값으로 다시 보내도 한 번만 반영한다
-  name: string;
-  args?: unknown;
-}
+import type { Reason } from "../shared/names/reasons.js";
+import type { TxRequest, TxResult } from "../shared/command.js";
 
 // 도메인 모듈이 돌려주는 것 — 사본을 고치고 성공 여부만 알린다
-export type TxOutcome = { ok: true; result?: unknown } | { ok: false; reason: string };
+export type TxOutcome = { ok: true; result?: unknown } | { ok: false; reason: Reason };
 
 export interface TxContext {
   now: number;
@@ -34,16 +30,9 @@ export interface TxContext {
 
 export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutcome;
 
-export type TxResult =
-  | { ok: true; result: unknown; replayed: boolean; achieved?: string[] }
-  | { ok: false; reason: TxFailure };
-
-// 실패 이유 — 저장 실패와 규칙 실패를 구분한다. 화면이 다른 문구를 쓴다
-export type TxFailure = "no-save" | "unknown-command" | "save-failed" | string;
-
 export interface TxPorts {
   read: () => SaveV3 | null;
-  write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/main/game.ts EVENT_WRITES)
+  write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/online/save-kind.ts)
   now: () => number;
   rand?: () => number; // 없으면 Math.random
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
@@ -74,7 +63,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     if (done) return { ok: true, result: done.result, replayed: true };
 
     const handler = handlers[req.name];
-    if (!handler) return { ok: false, reason: "unknown-command" };
+    if (!handler) return { ok: false, reason: "unknown-cmd" };
 
     const now = ports.now();
     const draft = structuredClone(save);

@@ -9,9 +9,10 @@
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
 //   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
 import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
-import type { MenuChannel } from "../shared/manage";
+import type { MenuChannel } from "../shared/ipc/overlays";
 import { menuView, pickOf } from "./menus.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   show: "menu:show",
@@ -78,7 +79,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     alwaysOnTop: true,
     icon: windowIcon(),
     focusable: !opts.inactive,
-    webPreferences: { preload: opts.preload },
+    webPreferences: webPreferencesOf(opts.preload),
   });
   win.setAlwaysOnTop(true, "pop-up-menu");
   current = win;

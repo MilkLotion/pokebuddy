@@ -3,6 +3,7 @@
 //
 // Electron 을 모른다. 세션 저장소를 받아서 쓴다 — 메인은 safeStorage 파일을, 자체 검사는 메모리를 넘긴다
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { ONLINE_TIMING } from "./timing.js";
 
 // 세션을 두는 곳 — supabase-js 의 저장소 모양과 같다
 export interface SessionStorage {
@@ -17,13 +18,11 @@ export interface OnlineClientOptions {
   storage: SessionStorage;
 }
 
-const FETCH_TIMEOUT_MS = 15_000;
-
 export function createOnlineClient({ url, key, storage }: OnlineClientOptions): SupabaseClient {
   return createClient(url, key, {
     auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: "pkce" },
     // 요청마다 제한 시간을 둔다 — 서버가 답하지 않으면 명령 통로(mailbox)가 그동안 막힌다(2026-09-27 검수)
-    global: { fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS) }) },
+    global: { fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(ONLINE_TIMING.fetchTimeoutMs) }) },
   });
 }
 

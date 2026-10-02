@@ -10,7 +10,10 @@
 //   이름 규칙과 예약 아이디는 서버 트리거(supabase/migrations/20260927100100_username.sql)도 다시 본다
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { SessionGate } from "./session.js";
-import type { HandoffReport, PendingHandoff, SwitchHooks } from "./handoff.js";
+import { finishSwitch, prepareSwitch, type HandoffReport, type PendingHandoff, type SwitchHooks } from "./handoff.js";
+import type { AccountCode } from "../shared/names/online-codes.js";
+import { authCodeOf } from "./codes.js";
+import { messageOf, readFunctionError } from "./server-call.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
 const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
@@ -28,9 +31,8 @@ export interface AccountView {
   displayName: string | null;
 }
 
-export type AccountErrorCode =
-  | "AUTH_USERNAME_INVALID" | "AUTH_USERNAME_TAKEN" | "AUTH_NAME_INVALID" | "AUTH_PASSWORD_WEAK"
-  | "AUTH_INVALID_LOGIN" | "AUTH_TRADE_ACTIVE" | "AUTH_RATE_LIMITED" | "NETWORK" | "UNKNOWN";
+// 계정 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts
+export type AccountErrorCode = AccountCode;
 
 // handoff — switchHooks 를 받은 가입·로그인에서만. 세션을 바꾼 뒤의 익명 저장 이관 결과
 export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffReport } | { ok: false; code: AccountErrorCode; detail?: string };
@@ -69,19 +71,8 @@ export function viewOf(user: User | null | undefined): AccountView {
   };
 }
 
-// supabase-js 인증 오류 → 코드
-export function authCodeOf(error: { message?: string; code?: string; status?: number } | null | undefined): { code: AccountErrorCode; detail?: string } {
-  const message = (error?.message ?? "").trim();
-  const code = error?.code ?? "";
-  if (code === "invalid_credentials" || /invalid login credentials/i.test(message)) return { code: "AUTH_INVALID_LOGIN" };
-  if (code === "user_already_exists" || code === "email_exists" || /already registered/i.test(message)) return { code: "AUTH_USERNAME_TAKEN" };
-  if (code === "weak_password" || /password should be/i.test(message)) return { code: "AUTH_PASSWORD_WEAK" };
-  if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit" || error?.status === 429) return { code: "AUTH_RATE_LIMITED" };
-  const own = /(AUTH_[A-Z_]+)/.exec(message);
-  if (own) return { code: own[1] === "AUTH_USERNAME_RESERVED" ? "AUTH_USERNAME_TAKEN" : (own[1] as AccountErrorCode) };
-  if (/fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i.test(message)) return { code: "NETWORK" };
-  return { code: "UNKNOWN", ...(message ? { detail: message } : {}) };
-}
+// supabase-js 인증 오류 → 코드는 ./codes.ts authCodeOf 다
+export { authCodeOf }; // [임시] 옛 자리 — 새 코드는 ./codes.ts 에서 가져온다
 
 export interface AccountOptions {
   client: SupabaseClient;
@@ -121,7 +112,7 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
     }
   };
   const fail = (code: AccountErrorCode, detail?: string): AccountResult => ({ ok: false, code, ...(detail ? { detail } : {}) });
-  const catchAll = (e: unknown): AccountResult => ({ ok: false, ...authCodeOf({ message: e instanceof Error ? e.message : String(e) }) });
+  const catchAll = (e: unknown): AccountResult => ({ ok: false, ...authCodeOf({ message: messageOf(e) }) });
   const changed = async (handoff?: HandoffReport): Promise<AccountResult> => {
     const v = await view();
     await onUserChanged?.(v, handoff);
@@ -131,24 +122,11 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
   // 세션 교체 앞 — exclusive 안에서. 훅이 없으면 아무것도 하지 않는다. 실패하면 로그인을 멈춘다
   type Prep = { ok: true; handoff: PendingHandoff | null } | { ok: false; result: AccountResult };
   const before = async (): Promise<Prep> => {
-    if (!switchHooks) return { ok: true, handoff: null };
-    try {
-      const r = await switchHooks.before(await gate.current());
-      return r.ok ? r : { ok: false, result: fail(r.code) };
-    } catch (e) {
-      return { ok: false, result: catchAll(e) };
-    }
+    const r = await prepareSwitch(switchHooks, () => gate.current());
+    return r.ok ? r : { ok: false, result: fail(r.code, r.detail) };
   };
   // 세션 교체 뒤 — exclusive 안에서. 훅이 없으면 undefined
-  const after = async (handoff: PendingHandoff | null, next: User | null): Promise<HandoffReport | undefined> => {
-    if (!switchHooks) return undefined;
-    try {
-      return await switchHooks.after(handoff, next);
-    } catch (e) {
-      console.error("익명 저장 이관 훅이 실패했다", e);
-      return handoff ? { kind: "pending", handoff, code: "UNKNOWN" } : { kind: "none" };
-    }
-  };
+  const after = (handoff: PendingHandoff | null, next: User | null): Promise<HandoffReport | undefined> => finishSwitch(switchHooks, handoff, next);
 
   // 중복검사 함수는 로그인한 세션(익명 포함)만 부른다 — 세션이 없으면 관문이 익명 계정을 먼저 만든다
   // ensure — 잠금 밖에서는 gate.ensure, exclusive 안에서는 scope.ensure (교착 방지)
@@ -253,10 +231,9 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
         const { error } = await client.functions.invoke("delete-account", { method: "POST" });
         if (error) {
           // 함수가 돌려준 오류 코드 — FunctionsHttpError 의 응답 본문에 있다
-          const ctx = (error as { context?: Response }).context;
-          const body = ctx && typeof ctx.json === "function" ? ((await ctx.json().catch(() => null)) as { error?: string } | null) : null;
-          if (body?.error === "AUTH_TRADE_ACTIVE") return fail("AUTH_TRADE_ACTIVE");
-          return { ok: false, ...authCodeOf({ message: body?.error ?? error.message }) };
+          const f = await readFunctionError(error);
+          if (f.bodyCode === "AUTH_TRADE_ACTIVE") return fail("AUTH_TRADE_ACTIVE");
+          return { ok: false, ...authCodeOf({ message: f.bodyCode ?? error.message }) };
         }
         // 사용자가 지워져 세션은 쓸 수 없다 — 이 PC 의 세션만 지운다
         await client.auth.signOut({ scope: "local" }).catch(() => undefined);

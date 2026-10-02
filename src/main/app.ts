@@ -27,9 +27,10 @@ import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "./halt-dialog";
-import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud.js";
+import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
 import { createMainMail, type MainMail } from "./mail";
-import { codeOf } from "../trade/net.js";
+import { mailCodeOf } from "../online/codes.js";
+import { callRpc } from "../online/server-call.js";
 import { pendingOf } from "../trade/core";
 import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
@@ -60,10 +61,12 @@ import { createNotifier, type Notifier } from "../notify/notifier";
 import { rollHits } from "../find/core";
 import type { FindRecordV3 } from "../shared/save-v3";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
-import type { MailAction, ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
-import type { Command } from "../shared/types";
+import type { MailAction } from "../shared/model/mail";
+import type { ManageRoute } from "../shared/model/route";
+import type { PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
+import type { Command } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
-import type { CoachView } from "../shared/stage";
+import type { CoachView } from "../shared/model/stage";
 import { currentTutorial } from "../tutorial/core";
 
 // 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
@@ -72,7 +75,6 @@ let workMs = 0;
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
 // 그림 캐시 — 관리 창·선택 창과 무대 말풍선 아이콘이 함께 쓴다 (src/main/portraits.ts). main() 에서 만든다
 let portraits: Portraits | null = null;
-let lastMenuPoints = -1;
 // 화면이 잠겨 있다 — 잠긴 동안은 게임 틱을 돌리지 않는다. 풀리면 다음 틱이 그 틈을 버린다(game.tick 은 틈을 TIME_V3_RULES.maxTickMs 로 자른다).
 // 절전은 폴링이 멈춰 저절로 같은 결과가 된다. 잠금만 하고 절전하지 않으면 폴링이 계속 돌아 따로 막는다 (2026-09-27)
 let screenLocked = false;
@@ -208,7 +210,7 @@ let haltNext: { reason: "confirm" | "blocked"; info: HaltInfo } | null = null; /
 let haltAsking = false; // 확인·막힘 창을 묻는 흐름이 돌고 있다
 let haltAbort: AbortController | null = null; // 떠 있는 확인·막힘 창 — 밀려나면 닫는다
 // 멈춘 동안에도 받는 명령 — 저장을 바꾸지 않는다(읽기·무대 반응·끄기)
-const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "poke", "quit"]);
+const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "quit"]);
 // 로그아웃·계정 삭제·분실 창 [처음부터]로 새로 시작하는 중 (worklog-mac/records/cloud-authority/design-p2.md 2절 D12)
 //   저장을 백업으로 옮기기 전에 쓰기·교환·우편·명령을 멈춘다. 서버 처리가 실패하면 풀고, 성공하면 앱을 다시 켠다
 let restarting = false;
@@ -233,15 +235,6 @@ let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
 
-// 헬퍼 좌표 → Electron 창 좌표. Windows 헬퍼는 물리 픽셀을 주고 Electron 은 DIP 를 쓴다.
-// 배율 125%·150% 에서 그대로 쓰면 펫이 따라갈 창의 오른쪽 아래가 아니라 화면 밖에 놓인다.
-// 모니터마다 배율이 달라도 맞게 변환은 Electron(OS)에 맡긴다. mac 헬퍼는 이미 포인트 단위다
-function toDip(w: HelperWindow): HelperWindow {
-  if (process.platform !== "win32") return w;
-  const r = screen.screenToDipRect(null, { x: w.x, y: w.y, width: w.w, height: w.h });
-  return { ...w, x: r.x, y: r.y, w: r.width, h: r.height };
-}
-
 // Space 전환 애니메이션 중에는 다른 Space 의 창이 가상 스트립 좌표로 섞여 들어온다
 // (보고값 = 실좌표 + Space인덱스 × (디스플레이폭 + 64)). 좌표도 순서도 믿을 수 없으므로 표본을 통째로 버린다
 //
@@ -261,20 +254,6 @@ function offScreen(windows: HelperWindow[]): boolean {
   }
   if (!Number.isFinite(minX)) return false;
   return windows.some((w) => w.x >= maxX || w.x + w.w <= minX || w.y >= maxY || w.y + w.h <= minY);
-}
-
-// 터미널 호스트를 한 번도 못 봤다 — 무대가 있는(없으면 주) 디스플레이의 작업 영역을 창으로 삼는다.
-// fake 표시 — 이 기준으로 집을 저장하면 진짜 창이 왔을 때 화면 기준 오프셋이 되어 튄다 (stage 가 저장을 건너뛴다)
-function workAreaTarget(): HelperWindow {
-  let display: Electron.Display;
-  try {
-    const cur = stages?.firstRect();
-    display = cur ? screen.getDisplayMatching({ x: cur.x, y: cur.y, width: cur.w, height: cur.h }) : screen.getPrimaryDisplay();
-  } catch {
-    display = screen.getPrimaryDisplay();
-  }
-  const a = display.workArea;
-  return { id: -1, pid: 0, app: "", x: a.x, y: a.y, w: a.width, h: a.height, fake: true };
 }
 
 // ── 배선 ─────────────────────────────────────────────────────────────────────
@@ -440,7 +419,6 @@ function applyClickThrough(on: boolean): void {
   // 무대는 늘 통과로 시작해 그림 위에서만 받는다 — 커서 밑은 다음 hoverTick 이 본다
   stages?.setPassing(true);
   stages?.sendClickThrough(on);
-  tray?.refresh();
   syncCoach(); // 고스트 모드 동안 바탕화면 튜토리얼은 기다린다
 }
 
@@ -448,7 +426,6 @@ function applyClickThrough(on: boolean): void {
 function setHidden(on: boolean): void {
   userHidden = on;
   anchor?.poll();
-  tray?.refresh();
   syncCoach(); // 숨긴 동안 바탕화면 튜토리얼은 기다린다
 }
 const toggleHidden = (): void => setHidden(!userHidden);
@@ -639,7 +616,6 @@ function runGameCommand(command: Command, then?: () => Command): void {
         console.error(e); // 튜토리얼 기록이 실패해도 트레이·말풍선은 맞춘다 — 다음 메뉴 선택 때 다시 끝난다
       }
     }
-    tray?.refresh();
     syncCoach(); // 첫 돌봄 튜토리얼이 끝났을 수 있다
   });
 }
@@ -777,7 +753,7 @@ function tradeSession(): MainTrade["session"] | null {
       const got = view.received?.petId ?? null;
       if (got && got !== lastReceived) {
         lastReceived = got;
-        if (party?.kind === "save") party.refresh(); // 저장을 다시 읽으면 onChange 가 무대를 다시 그린다
+        party?.refresh(); // 저장을 다시 읽으면 onChange 가 무대를 다시 그린다
       }
     });
     tradeStarted = mainTrade.session.start().catch((e) => {
@@ -855,7 +831,7 @@ function online(): MainOnline | null {
       },
       onSaveReplaced: () => {
         notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
-        if (party?.kind === "save") party.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
+        party?.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
       },
       // 밀려남·넘겨받기 확인·교환 막힘 — 게임을 멈추고 창을 띄운다. 로그아웃하지 않는다(D19)
       onHalt,
@@ -881,24 +857,15 @@ function mailBox(): MainMail | null {
   if (!mainMail) {
     const g = game;
     mainMail = createMainMail({
-      rpc: async (fn, args) => {
-        try {
-          const { data, error } = await on.client.rpc(fn, args);
-          if (!error) return { ok: true, data };
-          // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN)
-          return { ok: false, code: /^MAIL_[A-Z_]+$/.exec((error.message ?? "").trim())?.[0] ?? codeOf(error).code };
-        } catch (e) {
-          return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }).code };
-        }
-      },
+      // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN) — src/online/codes.ts mailCodeOf
+      rpc: (fn, args) => callRpc(on.client, fn, args, mailCodeOf),
       // writer 를 놓은 뒤 끝난 받기는 저장을 쓰지 않는다 — 새 writer 의 저장을 덮어쓰지 않게. 다음에 목록을 읽을 때 복구된다
       run: (id, name, args) => (party?.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
       read: () => g.read(),
       signedIn: () => on.screen().signedIn,
       hold: cloudHold,
       onChanged: () => {
-        if (party?.kind === "save") party.refresh(); // 가방·포인트가 바뀌었다 — 설정창과 트레이를 다시 그린다
-        tray?.refresh();
+        party?.refresh(); // 가방·포인트가 바뀌었다 — 설정창을 다시 그린다
       },
     });
     mainMail.onScreen((screen) => pushMail(screen));
@@ -1139,7 +1106,6 @@ async function refreshParty(): Promise<void> {
   if (!party || !stages) return;
   await stages.setParty(party.pets());
   tray?.setIcon(logoFile(256));
-  tray?.refresh();
 }
 
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
@@ -1255,11 +1221,6 @@ function clockTick({ now, gap, seq }: ClockTick): void {
   syncPlayArea(); // 다른 프로세스의 관리 창에서 바꾼 놀이공간도 따라간다
   syncSleep(); // 잠들기 기준도 같다
   syncJump();
-  const points = Math.floor(game.read()?.points.balance ?? 0);
-  if (points !== lastMenuPoints) {
-    lastMenuPoints = points;
-    tray?.refresh();
-  }
 }
 
 async function main(): Promise<void> {
@@ -1340,7 +1301,7 @@ async function main(): Promise<void> {
 
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다.
   // 두 PC 규칙으로 멈춘 동안(halted)과 새로 시작하는 중(restarting — 저장을 백업으로 옮긴다)도 쓰지 않는다
-  // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/main/game.ts EVENT_WRITES)은 바로, 나머지는 2분 스로틀
+  // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/online/save-kind.ts)은 바로, 나머지는 2분 스로틀
   // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
   // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
   // 알 결과는 계정 시드로 정한다(P4b, D24) — 되돌려 다시 열어도 같다. 시드가 없으면(첫 올리기 전) 평소 난수
@@ -1490,11 +1451,7 @@ async function main(): Promise<void> {
     self: SELF,
     host: {
       platform: process.platform,
-      now: Date.now,
-      toDip,
       offScreen,
-      workArea: workAreaTarget,
-      quit: () => app.quit(),
       quitting: () => quitting,
     },
     flags: () => ({ userHidden, held: stages?.heldId() != null }),
@@ -1514,7 +1471,6 @@ async function main(): Promise<void> {
       if (evolvedId) stages?.celebrate(evolvedId);
     },
     stage: {
-      poke: (id) => !!stages?.poke(id),
       care: (id, action) => {
         stages?.care(id, action);
         if (action === "play") void playCry(id); // 메뉴·관리 창에서 고른 놀아주기
@@ -1594,7 +1550,6 @@ async function main(): Promise<void> {
   tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
-    template: trayTemplate,
     popup: popupTrayMenu,
     open: () => openManageWindow(),
     menuOpen,

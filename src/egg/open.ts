@@ -11,14 +11,14 @@ import { boxRoom, putPet } from "../box/slots.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
+import { isSingleEgg } from "../dex/obtain.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { canGiveEgg, eggBonus, isSingleEgg } from "../shop/catalog.js";
-import { newEgg } from "../shop/buy.js";
+import { canGiveEgg, eggBonus, newEgg } from "./pool.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { decide, rollVariant, type Rand } from "./hatch.js";
-import { countsOf } from "../achievement/core.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type OpenFailure = "no-egg" | "not-ready" | "no-candidate" | "box-full";
+export type OpenFailure = ReasonOf<"no-egg" | "not-ready" | "no-candidate" | "box-full">;
 
 export interface OpenResult {
   ok: boolean;
@@ -83,7 +83,7 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
 
   // 도감 — 얻음 기록. 해금 기록이 없으면 함께 남긴다
   recordDex(save, result.species, result.shiny);
-  countsOf(save).hatched += 1; // 부화 업적이 센다. 알에서 다른 알이 나온 것은 세지 않는다
+  save.counts.hatched += 1; // 부화 업적이 센다. 알에서 다른 알이 나온 것은 세지 않는다
 
   save.eggs.splice(i, 1);
   return {

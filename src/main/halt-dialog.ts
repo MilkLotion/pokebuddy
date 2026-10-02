@@ -11,11 +11,12 @@
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/region-window.ts 와 같은 층)
 import { app, BrowserWindow, dialog, screen } from "electron";
-import type { HaltInfo, OwnerKind } from "../online/cloud.js";
-import type { AlertView } from "../shared/alert";
+import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
+import type { AlertView } from "../shared/model/overlays";
 import { showAlert } from "./alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
+import { webPreferencesOf } from "./window-options";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
 export const KICKED_CLOSE_MS = 30_000;
@@ -58,6 +59,7 @@ function parentWindow(): BrowserWindow {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    webPreferences: webPreferencesOf(null), // 문서를 읽지 않는 창이다 — 보안 옵션만 다른 창과 같게 둔다
   });
   win.setAlwaysOnTop(true, "screen-saver");
   // Dock 을 숨긴 mac 앱은 앞으로 나오지 않는다 — 창을 보기 전에 앱을 앞으로 가져온다

@@ -16,7 +16,8 @@ import * as mailbox from "../save/mailbox.js";
 import * as store from "../save/store.js";
 import { empty } from "../save/v3.js";
 import * as writer from "../save/writer.js";
-import type { CommandResult, NatureId } from "../shared/types";
+import type { CommandResult } from "../shared/command";
+import type { NatureId } from "../shared/species";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { GameV3 } from "./game";
 import type { Home } from "./layout";
@@ -29,7 +30,6 @@ export interface PartyPet {
   look: string; // 그릴 그림 — 종(이로치면 ":shiny" 를 붙인다)
   size: number; // 도트 배율 (zoomOf 로 가둔다)
   nature: NatureId | null;
-  nick: string | null;
   home: Home;
   screen: ScreenRefV3 | null; // 모든 화면 방식에서 사는 화면 — 없으면 무대 묶음이 개체가 가장 적은 화면에 둔다 (src/main/stage-group.ts)
   shown: boolean;
@@ -48,7 +48,6 @@ export interface SavePartyOptions {
 }
 
 export interface SaveParty {
-  kind: "save";
   pets(): PartyPet[]; // 무대에 나올 마리 — 꺼내 놓은 것만
   all(): PartyPet[]; // 파티 칸에 있는 마리 전부 — 숨긴 것도
   isWriter(): boolean;
@@ -97,7 +96,6 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
       look: appearanceOf(pet), // 메가 모습이 켜져 있으면 그 그림이다 (src/dex/mega.ts)
       size: pet.size,
       nature: pet.nature,
-      nick: null,
       home: { ...pet.home },
       screen: pet.screen ? { ...pet.screen } : null,
       shown: !hidden,
@@ -209,7 +207,6 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
   timer = setInterval(tick, SAVE_PARTY_RULES.reclaimMs);
 
   return {
-    kind: "save",
     pets: () => slotPets(true),
     all: () => slotPets(false),
     isWriter: () => amWriter && writer.isMine(paths.saveLock, pid),

@@ -2,9 +2,10 @@
 //
 // 시작 값을 두 곳에 적지 않는다. 레벨·친밀도·만복도는 규칙표 하나에서 온다.
 // 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { boxRoom, putPet } from "../box/slots.js";
+import { PET_RULES } from "./rules.js";
 import { localDate } from "../shared/clock.js";
-import type { Gender, NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 지금 있는 개체의 `p숫자` 중 가장 큰 수. 없으면 0
@@ -38,21 +39,21 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
     shiny,
     nature,
     gender,
-    size: SAVE_V3_RULES.pet.size,
-    level: SAVE_V3_RULES.pet.level,
-    exp: SAVE_V3_RULES.pet.exp,
-    affinity: SAVE_V3_RULES.pet.affinity,
+    size: PET_RULES.size,
+    level: PET_RULES.level,
+    exp: PET_RULES.exp,
+    affinity: PET_RULES.affinity,
     affinityProgressMs: 0,
-    fullness: SAVE_V3_RULES.pet.fullness,
+    fullness: PET_RULES.fullness,
     fullnessProgressMs: 0,
-    mood: SAVE_V3_RULES.pet.mood,
+    mood: PET_RULES.mood,
     moodProgressMs: 0,
     feedCooldownMs: 0,
     playCooldownMs: 0,
     playWindowMs: 0,
     playStreak: 0,
     buffs: [],
-    home: { ...SAVE_V3_RULES.pet.home },
+    home: { ...PET_RULES.home },
     since: now,
     stage: 0,
     evolved: [],
@@ -65,4 +66,18 @@ export function recordDex(save: SaveV3, species: string, shiny: boolean): void {
   if (!save.dex.unlocked.includes(species)) save.dex.unlocked.push(species);
   if (!save.dex.obtained.includes(species)) save.dex.obtained.push(species);
   if (shiny && !save.dex.shinyObtained.includes(species)) save.dex.shinyObtained.push(species);
+}
+
+// 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
+export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
+
+// 새 개체를 파티나 박스에 넣는다 — 상점 구매, 업적의 포켓몬 보상, 줍기가 쓴다.
+// 부르기 전에 hasRoom 으로 둘 곳을 본다. 둘 곳이 없으면 넣지 않고 null
+export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } | null {
+  const i = save.party.slots.findIndex((s) => s.state === "empty");
+  if (i >= 0) {
+    save.party.slots[i] = { state: "pokemon", petId, hidden: false };
+    return { slotIndex: i, toBox: false };
+  }
+  return putPet(save.boxes, petId) ? { toBox: true } : null;
 }

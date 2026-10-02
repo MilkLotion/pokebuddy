@@ -8,13 +8,23 @@ import type {
   AchievementV3, BoxV3, BuffKind, BuffV3, CountsV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, MegaV3, PartySlotV3, PartyV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
-import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
-import { SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, isNatureId, snapSize } from "./rules.js";
+import type { LogEntry, PetDaily, Totals } from "../shared/save-v3";
+import type { NatureId } from "../shared/species";
+import { ACHIEVEMENT_RULES } from "../achievement/rules.js";
+import { BAG_RULES } from "../bag/rules.js";
+import { BOX_RULES } from "../box/rules.js";
+import { FALLBACK_NATURE } from "../dex/natures.js";
+import { UNLOCK_RULES } from "../dex/rules.js";
+import { PARTY_RULES, PET_RULES } from "../party/rules.js";
+import { snapSize } from "../party/size.js";
+import { isNatureId, SAVE_RULES, SAVE_V3_RULES } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
 import { countParty } from "../party/presets.js";
 import { normalizeMail } from "../mail/core.js";
 import { FIND_RULES } from "../find/rules.js";
+import { MAX_LEVEL } from "../dex/growth.js";
+import { SOUND_RULES } from "../state/rules.js";
 import { isGender, legacyGender } from "../dex/gender.js";
 import { maxPetNo } from "../party/create.js";
 
@@ -60,13 +70,13 @@ export function empty(now: number): SaveV3 {
     pets: [],
     starterPetId: null,
     party: emptyParty(),
-    boxes: fillBoxes([newBox("b1", SAVE_V3_RULES.box.firstName)]),
+    boxes: fillBoxes([newBox("b1", BOX_RULES.firstName)]),
     petSeq: 0,
     eggs: [],
     eggSeq: 0,
     bag: {},
     points: { balance: 0, progressMs: 0 },
-    dex: { unlocked: [], obtained: [], shinyObtained: [], discovered: {}, rulesRev: SAVE_V3_RULES.unlockRev },
+    dex: { unlocked: [], obtained: [], shinyObtained: [], discovered: {}, rulesRev: UNLOCK_RULES.rev },
     achievements: {},
     tutorials: {},
     settings: emptySettings(),
@@ -77,12 +87,12 @@ export function empty(now: number): SaveV3 {
     legacy: {},
     log: [],
     counts: { hatched: 0, evolved: 0, traded: 0, day: "", streak: 0 },
-    achRev: SAVE_V3_RULES.achievementRev,
+    achRev: ACHIEVEMENT_RULES.rev,
   };
 }
 
 export function emptySlots(): PartySlotV3[] {
-  const { total, openAtStart, shopUnlock } = SAVE_V3_RULES.party;
+  const { total, openAtStart, shopUnlock } = PARTY_RULES;
   return Array.from({ length: total }, (_, i) => {
     if (i < openAtStart) return { state: "empty" as SlotState };
     const bought = i - openAtStart < shopUnlock;
@@ -93,7 +103,7 @@ export function emptySlots(): PartySlotV3[] {
 // 프리셋 하나의 새 칸 — 첫 프리셋은 상점 2칸·업적 2칸이다. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
 export function presetSlots(index: number): PartySlotV3[] {
   if (index === 0) return emptySlots();
-  const { total, openAtStart } = SAVE_V3_RULES.party;
+  const { total, openAtStart } = PARTY_RULES;
   return Array.from({ length: total }, (_, i) =>
     i < openAtStart ? { state: "empty" as SlotState } : { state: "locked" as SlotState, unlockBy: "shop" as const });
 }
@@ -103,14 +113,14 @@ function emptyParty(): PartyV3 {
   const party: PartyV3 = {
     slots: presetSlots(0),
     active: 0,
-    presets: Array.from({ length: SAVE_V3_RULES.party.presets.start }, (_, i) => (i === 0 ? null : presetSlots(i))),
-    presetNames: Array.from({ length: SAVE_V3_RULES.party.presets.start }, () => ""),
+    presets: Array.from({ length: PARTY_RULES.presets.start }, (_, i) => (i === 0 ? null : presetSlots(i))),
+    presetNames: Array.from({ length: PARTY_RULES.presets.start }, () => ""),
   };
   countParty({ party });
   return party;
 }
 
-export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: SAVE_V3_RULES.box.size }, () => null) });
+export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: BOX_RULES.size }, () => null) });
 
 // 다음 박스 식별자 — 지금 있는 `b숫자` 의 가장 큰 번호 다음. 순서를 바꾼 뒤에도 겹치지 않는다
 export function nextBoxId(boxes: BoxV3[]): string {
@@ -132,18 +142,15 @@ export function pushBox(boxes: BoxV3[]): BoxV3 {
 // 박스 수를 기본 개수로 맞춘다 — start 개보다 적으면 채운다. 그보다 많은 박스는 그대로 둔다(산 박스, 옛 규칙으로 늘어난 박스).
 // 새 저장과 읽기에서만 부른다. 박스는 저절로 늘지 않는다
 export function fillBoxes(boxes: BoxV3[]): BoxV3[] {
-  while (boxes.length < SAVE_V3_RULES.box.start) pushBox(boxes);
+  while (boxes.length < BOX_RULES.start) pushBox(boxes);
   return boxes;
 }
-
-// 소리 크기 기본값 — src/state/settings.ts SOUND_RULES.defaultVolume 과 같다 (저장 모듈이 상태 모듈을 부르지 않게 값만 둔다)
-const SOUND_DEFAULT_VOLUME = 30;
 
 const emptySettings = (): SettingsV3 => ({
   language: "ko",
   startOnLogin: true, // 계약 기본값 켜짐 (docs/specs/game.md "설정과 연결"). 이미 값이 있는 저장은 그 값을 따른다
   sound: true,
-  volume: SOUND_DEFAULT_VOLUME,
+  volume: SOUND_RULES.defaultVolume,
   sleepAfterMin: 5,
   playArea: { mode: "screen", rect: null, screen: null }, // 새 저장은 주 화면 (2026-09-28 사용자 결정)
   display: {},
@@ -199,7 +206,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
   const id = str(raw.id);
   const species = str(raw.species);
   if (!id || !species) return null;
-  const nature: NatureId = isNatureId(raw.nature) ? raw.nature : SAVE_RULES.pet.nature;
+  const nature: NatureId = isNatureId(raw.nature) ? raw.nature : FALLBACK_NATURE;
   const home = isObj(raw.home) ? raw.home : {};
   const since = nonNeg(raw.since);
   return {
@@ -208,21 +215,21 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     shiny: bool(raw.shiny),
     nature,
     gender: isGender(raw.gender) ? raw.gender : legacyGender({ id, species, since }), // 옛 저장은 반반 (2026-09-30 사용자 결정)
-    size: snapSize(num(raw.size, SAVE_V3_RULES.pet.size)), // 단계 배율로 맞춘다 — 옛 4~6 은 가장 큰 단계로 (src/save/rules.ts SIZE_STEPS)
-    level: clamp(int(raw.level, SAVE_V3_RULES.pet.level), 1, 100),
-    exp: nonNeg(raw.exp, SAVE_V3_RULES.pet.exp),
-    affinity: clamp(int(raw.affinity, SAVE_V3_RULES.pet.affinity), 0, 100),
+    size: snapSize(num(raw.size, PET_RULES.size)), // 단계 배율로 맞춘다 — 옛 4~6 은 가장 큰 단계로 (src/party/size.ts SIZE_STEPS)
+    level: clamp(int(raw.level, PET_RULES.level), 1, MAX_LEVEL),
+    exp: nonNeg(raw.exp, PET_RULES.exp),
+    affinity: clamp(int(raw.affinity, PET_RULES.affinity), 0, PET_RULES.statMax),
     affinityProgressMs: nonNeg(raw.affinityProgressMs),
-    fullness: clamp(int(raw.fullness, SAVE_V3_RULES.pet.fullness), 0, 100),
+    fullness: clamp(int(raw.fullness, PET_RULES.fullness), 0, PET_RULES.statMax),
     fullnessProgressMs: nonNeg(raw.fullnessProgressMs),
-    mood: clamp(int(raw.mood, SAVE_V3_RULES.pet.mood), 0, 100),
+    mood: clamp(int(raw.mood, PET_RULES.mood), 0, PET_RULES.statMax),
     moodProgressMs: nonNeg(raw.moodProgressMs), // 2026-09-25 에 더했다. 옛 저장에는 없어 0 이다
     feedCooldownMs: nonNeg(raw.feedCooldownMs),
     playCooldownMs: nonNeg(raw.playCooldownMs),
     playWindowMs: nonNeg(raw.playWindowMs),
     playStreak: nonNeg(raw.playStreak),
     buffs: normalizeBuffs(raw.buffs),
-    home: { dx: int(home.dx, SAVE_RULES.pet.home.dx), dy: int(home.dy, SAVE_RULES.pet.home.dy) },
+    home: { dx: int(home.dx, PET_RULES.home.dx), dy: int(home.dy, PET_RULES.home.dy) },
     ...(screenRefOf(raw.screen) ? { screen: screenRefOf(raw.screen)! } : {}), // 2026-09-28 에 더했다. 모든 화면 방식에서 끌어다 놓은 개체만 가진다
     since,
     stage: nonNeg(raw.stage),
@@ -270,7 +277,8 @@ function normalizeSlots(raw: unknown, petIds: Set<string>, placed: Set<string>, 
 // 가진 수를 넘는 번호의 칸은 버린다 — 그 개체는 자리 없는 개체로 박스에 간다 (putStrays)
 function normalizeParty(raw: unknown, petIds: Set<string>, placed: Set<string>): PartyV3 {
   const r = isObj(raw) ? raw : {};
-  const { start, max, nameMax } = SAVE_V3_RULES.party.presets;
+  const { start, max } = PARTY_RULES.presets;
+  const { nameMax } = BOX_RULES;
   const rawPresets = Array.isArray(r.presets) ? r.presets : [];
   const rawNames = Array.isArray(r.presetNames) ? r.presetNames : [];
   const count = clamp(nonNeg(r.presetCount, rawPresets.length), start, max);
@@ -300,7 +308,7 @@ function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<string>):
     }
     out.push(box);
   }
-  return out.length ? out : [newBox("b1", SAVE_V3_RULES.box.firstName)];
+  return out.length ? out : [newBox("b1", BOX_RULES.firstName)];
 }
 
 function normalizeEggs(raw: unknown): EggV3[] {
@@ -327,7 +335,7 @@ function normalizeEggs(raw: unknown): EggV3[] {
 }
 
 // 가방 — 옛 민트 21종(<성격>-mint, 그 전의 mint-<성격>)은 민트 한 종류(mint)로 합친다 (2026-09-29 사용자 결정).
-// 합친 민트는 가방 상한(SHOP_V3_RULES.bagMax)으로 자른다. 다른 도구의 개수는 건드리지 않는다
+// 합친 민트는 가방 상한(BAG_RULES.max)으로 자른다. 다른 도구의 개수는 건드리지 않는다
 function normalizeBag(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {};
   if (!isObj(raw)) return out;
@@ -339,7 +347,7 @@ function normalizeBag(raw: unknown): Record<string, number> {
     const id = currentItemId(k);
     out[id] = (out[id] ?? 0) + n;
   }
-  if (merged && (out[MINT_ID] ?? 0) > SHOP_V3_RULES.bagMax) out[MINT_ID] = SHOP_V3_RULES.bagMax;
+  if (merged && (out[MINT_ID] ?? 0) > BAG_RULES.max) out[MINT_ID] = BAG_RULES.max;
   return out;
 }
 

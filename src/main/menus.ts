@@ -3,7 +3,7 @@
 // 우클릭 = 이름·상태 / 밥 주기·놀아주기 / 설정창 열기 세 묶음 (docs/specs/game.md 2026-09-24 전환)
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
-import type { MenuSubView, MenuView } from "../shared/manage";
+import type { MenuSubView, MenuView } from "../shared/model/overlays";
 import { NATURE_SHOWN } from "../dex/natures";
 import { t } from "./text";
 

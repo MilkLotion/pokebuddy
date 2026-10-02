@@ -2,7 +2,7 @@
 // dist/main/paths.js 에서 ../../config.js = 프로젝트 루트의 config.js
 import fs from "node:fs";
 import path from "node:path";
-import type { Lang } from "../shared/types";
+import type { Lang } from "../shared/species";
 
 export interface Paths {
   project: string;
@@ -50,7 +50,7 @@ export const PROJECT: string = PATHS.project;
 
 export const loadConfig = (): UserConfig => settings.load();
 
-// 무대·선택 창 문서 — 컴파일 대상이 아니라 src/renderer 에 그대로 둔다. 스크립트는 그 안에서 ../../dist/renderer 상대 경로
+// 무대·선택 창 문서 — 컴파일 대상이 아니라 src/renderer 에 그대로 둔다. 스크립트는 그 안에서 ../../dist/web/renderer 상대 경로
 export const rendererFile = (name: string): string => path.join(PROJECT, "src", "renderer", name);
 // preload 는 이 파일과 같은 폴더의 산출물 — dist/main/preload.js
 export const preloadFile = (): string => path.join(__dirname, "preload.js");

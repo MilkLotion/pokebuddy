@@ -185,7 +185,7 @@ check(() => {
   const price = SHOP_V3_RULES.boxPrice;
   assert.strictEqual(price, 300);
   s.points.balance = price - 1;
-  assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "not-enough");
+  assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "not-enough-points");
   assert.strictEqual(s.boxes.length, 8, "실패하면 그대로");
   s.points.balance = price * 2 + 5;
   const first = buy(s, "box", T0, () => 0.5);

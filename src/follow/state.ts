@@ -3,7 +3,7 @@
 // cli/*.js 가 dist/follow/state.js 를 이름으로 부른다
 import fs from "node:fs";
 import path from "node:path";
-import type { AgentState } from "../shared/types";
+import type { AgentState } from "../shared/names/agents";
 import type { StateInfo, StateRecord } from "./types";
 
 export const STALE_SEC = 600; // 작업 중·기다림이 이만큼 갱신 없으면 대기로 — Esc 중단 시 Stop 훅이 안 온다

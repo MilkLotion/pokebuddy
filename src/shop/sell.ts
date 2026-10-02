@@ -1,18 +1,20 @@
 // 가방 판매 — 규칙은 docs/specs/game.md "가방", 판매가는 docs/specs/balance.md "가격표"
 //
-// 판매가 = 구매가(src/shop/catalog.ts toolPrice) × SHOP_V3_RULES.sellRate, 내림.
+// 판매가 = 구매가(src/shop/catalog.ts toolPrice) × SHOP_RULES.sellRate, 내림.
 // 가격이 없거나 0P 인 도구(기본먹이, 돌아오는 약)는 팔지 않는다.
 // 한 번에 count 개를 판다. 검사를 모두 마친 뒤에만 가방과 포인트를 바꾼다.
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다
 import type { DexOptions } from "../dex/data";
-import { SHOP_V3_RULES } from "../save/rules.js";
+import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { toolPrice } from "./catalog.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type SellFailure =
+export type SellFailure = ReasonOf<
   | "not-sellable" // 가격이 없거나 0P 인 도구다
   | "not-enough-items" // 가진 개수가 판매 수량보다 적다
-  | "bad-count"; // 수량이 1 이상의 정수가 아니다
+  | "bad-count" // 수량이 1 이상의 정수가 아니다
+>;
 
 export interface SellResult {
   ok: boolean;
@@ -28,7 +30,7 @@ export interface SellResult {
 export function sellPrice(itemId: string, opts?: DexOptions): number | null {
   const price = toolPrice(itemId, opts);
   if (price === null || price <= 0) return null;
-  const each = Math.floor(price * SHOP_V3_RULES.sellRate);
+  const each = Math.floor(price * SHOP_RULES.sellRate);
   return each > 0 ? each : null;
 }
 

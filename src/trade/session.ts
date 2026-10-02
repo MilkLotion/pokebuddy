@@ -11,8 +11,9 @@
 //           (worklog-mac/records/cloud-authority/design-p2.md 4절 원장, 13절 서버 계약)
 import { offerable, pendingOf, refOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
 import { tokenOf, type ChannelView, type TradeErrorCode, type TradeNet } from "./net.js";
-import type { TxResult } from "../tx/executor";
+import type { TxResult } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type TradePhase = "idle" | "hosting" | "trading" | "done" | "closed";
 
@@ -73,7 +74,7 @@ export interface TradeSessionOptions {
 //   cloud-wait  로그인 계정의 클라우드 저장이 연결되어 올릴 수 있는 상태가 아니다 — 새 교환을 시작하지 않는다
 //   login-required  익명 계정이다 — 교환은 로그인해야 한다 (클라이언트 판정 또는 서버 TRADE_LOGIN_REQUIRED)
 //   save-wait   올린 개체가 아직 서버 저장에 없다 — 저장이 끝나면 다시 올린다 (서버 TRADE_PET_NOT_SYNCED)
-export type TradeRefusal = "busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait";
+export type TradeRefusal = ReasonOf<"busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait">;
 export type TradeActionResult = { ok: true } | { ok: false; reason: TradeErrorCode | "LOCAL" | TradeRefusal; detail?: string };
 
 export interface TradeSession {

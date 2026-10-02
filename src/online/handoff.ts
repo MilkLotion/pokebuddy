@@ -6,6 +6,12 @@
 //   GitHub 교환(exchangeCodeForSession)은 공유 클라이언트의 익명 세션을 덮어쓴다 — 티켓은 반드시 교환 전에 받는다
 //   세션 교체 훅(SwitchHooks)은 account.ts·github.ts 가 gate.exclusive 안에서 부른다. 훅 안에서 gate.ensure·사용자 변경 알림 금지
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { AccountCode, HandoffCode } from "../shared/names/online-codes.js";
+import { authCodeOf, handoffCodeOf } from "./codes.js";
+import { callRpc, messageOf } from "./server-call.js";
+import { ONLINE_TIMING } from "./timing.js";
+
+export type { HandoffCode }; // 목록은 src/shared/names/online-codes.ts
 
 // 아직 쓰지 못한 이관 티켓 — cloud.json 에 남겨 다시 시도한다
 export interface PendingHandoff {
@@ -18,8 +24,6 @@ export interface PendingHandoff {
 //   discarded  로그인 계정에 저장이 있어(D7) 또는 교환으로 내보낸 개체가 있어 익명 저장을 버렸다
 //   empty      익명 계정에 서버 저장이 없었다
 export type HandoffOutcome = "moved" | "discarded" | "empty";
-
-export type HandoffCode = "NETWORK" | "CLOUD_HANDOFF_INVALID" | "CLOUD_TRADE_ACTIVE" | "CLOUD_LOGIN_REQUIRED" | "CLOUD_ACCOUNT_HELD" | "UNKNOWN";
 
 export type BeginResult = { ok: true; handoff: PendingHandoff } | { ok: false; code: HandoffCode };
 export type AdoptResult = { ok: true; outcome: HandoffOutcome; rev: number } | { ok: false; code: HandoffCode };
@@ -41,45 +45,51 @@ export interface SwitchHooks {
   after: (handoff: PendingHandoff | null, next: User | null) => Promise<HandoffReport>;
 }
 
-const TICKET_MS = 10 * 60_000; // 서버 만료와 같다(begin_handoff)
-const NETWORK = /fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i;
-const KNOWN = new Set<HandoffCode>(["CLOUD_HANDOFF_INVALID", "CLOUD_TRADE_ACTIVE", "CLOUD_LOGIN_REQUIRED", "CLOUD_ACCOUNT_HELD"]);
-
-// RPC 오류 → 이관 코드. 서버 코드 밖은 망 오류면 NETWORK, 나머지는 UNKNOWN
-export function handoffCodeOf(error: { message?: string } | null | undefined): HandoffCode {
-  const message = (error?.message ?? "").trim();
-  const m = /(CLOUD_[A-Z_]+)/.exec(message);
-  if (m?.[1] && KNOWN.has(m[1] as HandoffCode)) return m[1] as HandoffCode;
-  return NETWORK.test(message) ? "NETWORK" : "UNKNOWN";
+// 세션 교체 앞 — 훅을 던지지 않게 부른다. 훅이 없으면 아무것도 하지 않는다. 실패하면 부르는 쪽이 세션 교체를 멈춘다
+//   훅이 던지면 실패로 돌려준다 — 앱이 멈춘 클라우드를 원래 세션으로 다시 시작한다(검수 L5)
+export type SwitchPrep = { ok: true; handoff: PendingHandoff | null } | { ok: false; code: AccountCode; detail?: string };
+export async function prepareSwitch(hooks: SwitchHooks | undefined, current: () => Promise<User | null>): Promise<SwitchPrep> {
+  if (!hooks) return { ok: true, handoff: null };
+  try {
+    return await hooks.before(await current());
+  } catch (e) {
+    return { ok: false, ...authCodeOf({ message: messageOf(e) }) };
+  }
 }
 
-const thrown = (e: unknown): HandoffCode => handoffCodeOf({ message: e instanceof Error ? e.message : String(e) });
+// 세션 교체 뒤 — 훅이 없으면 undefined. 훅이 던지면 티켓을 남겨 다음에 다시 시도하게 한다
+export async function finishSwitch(hooks: SwitchHooks | undefined, handoff: PendingHandoff | null, next: User | null): Promise<HandoffReport | undefined> {
+  if (!hooks) return undefined;
+  try {
+    return await hooks.after(handoff, next);
+  } catch (e) {
+    console.error("익명 저장 이관 훅이 실패했다", e);
+    return handoff ? { kind: "pending", handoff, code: "UNKNOWN" } : { kind: "none" };
+  }
+}
+
+// RPC 오류 → 이관 코드는 ./codes.ts handoffCodeOf 다
+const classify = (error: Parameters<typeof handoffCodeOf>[0]): { code: HandoffCode } => ({ code: handoffCodeOf(error) });
 
 // 익명 세션으로 티켓을 받는다. anon 은 지금 익명 계정 ID
 export async function beginHandoff(client: SupabaseClient, anon: string, now: () => number = Date.now): Promise<BeginResult> {
-  try {
-    const started = now();
-    const { data, error } = await client.rpc("begin_handoff");
-    if (error) return { ok: false, code: handoffCodeOf(error) };
-    if (typeof data !== "string" || !data) return { ok: false, code: "UNKNOWN" };
-    return { ok: true, handoff: { ticket: data, anon, expiresAt: started + TICKET_MS } };
-  } catch (e) {
-    return { ok: false, code: thrown(e) };
-  }
+  const started = now();
+  const res = await callRpc<unknown, HandoffCode>(client, "begin_handoff", undefined, classify);
+  if (!res.ok) return { ok: false, code: res.code };
+  const data = res.data;
+  if (typeof data !== "string" || !data) return { ok: false, code: "UNKNOWN" };
+  return { ok: true, handoff: { ticket: data, anon, expiresAt: started + ONLINE_TIMING.handoffTicketMs } };
 }
 
 // 로그인 세션으로 티켓의 익명 저장을 옮긴다
 export async function adoptAnonymous(client: SupabaseClient, ticket: string): Promise<AdoptResult> {
-  try {
-    const { data, error } = await client.rpc("adopt_anonymous", { p_ticket: ticket });
-    if (error) return { ok: false, code: handoffCodeOf(error) };
-    const row = (Array.isArray(data) ? data[0] : data) as { outcome?: unknown; rev?: unknown } | null | undefined;
-    const outcome = row?.outcome;
-    if (outcome !== "moved" && outcome !== "discarded" && outcome !== "empty") return { ok: false, code: "UNKNOWN" };
-    return { ok: true, outcome, rev: Number(row?.rev ?? 0) };
-  } catch (e) {
-    return { ok: false, code: thrown(e) };
-  }
+  const res = await callRpc<unknown, HandoffCode>(client, "adopt_anonymous", { p_ticket: ticket }, classify);
+  if (!res.ok) return { ok: false, code: res.code };
+  const data = res.data;
+  const row = (Array.isArray(data) ? data[0] : data) as { outcome?: unknown; rev?: unknown } | null | undefined;
+  const outcome = row?.outcome;
+  if (outcome !== "moved" && outcome !== "discarded" && outcome !== "empty") return { ok: false, code: "UNKNOWN" };
+  return { ok: true, outcome, rev: Number(row?.rev ?? 0) };
 }
 
 // 이관 훅 — 익명 세션이면 교체 전에 티켓을 받고, 교체 뒤에 옮긴다

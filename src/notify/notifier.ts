@@ -5,7 +5,7 @@
 // 파일을 쓰지 못해도 배너는 보인다. 바뀐 줄은 기억해 두었다가 다음 틱에 다시 쓴다
 import fs from "node:fs";
 import { writeAtomic } from "../save/legacy.js";
-import type { BannerView } from "../shared/manage";
+import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
 import { bannerOf } from "./banner.js";
 import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";

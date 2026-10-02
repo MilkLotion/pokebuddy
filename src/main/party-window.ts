@@ -3,7 +3,8 @@
 // 파티 탭의 `교체` 나 빈 파티 칸을 누르면 뜬다 (2026-10-02 사용자 "교체버튼을 누르면 박스화면으로 이동하고 … 창이 뜨면서 파티목록 볼 수 있게",
 // Figma 05 `Party / Swap · Open` `1248:2567`, worklog/records/party-preset/record.md). 창의 동작은 공통 틀(src/main/item-window.ts)이다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 명령은 관리 창이 보낸다
-import type { PartyDeviceAction, PartyDeviceChannel, PartyDeviceOpen } from "../shared/manage";
+import type { PartyDeviceAction, PartyDeviceOpen } from "../shared/model/devices";
+import type { PartyDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
 
 const CH = {

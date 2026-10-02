@@ -6,10 +6,10 @@
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
 import { boxRoom } from "../box/slots.js";
-import { giftItemName, isApplied, isRead, parseGifts, type Gift } from "../mail/core.js";
+import { giftItemName, isApplied, isRead, neededBoxRoom, parseGifts, type Gift } from "../mail/core.js";
 import type { SaveV3 } from "../shared/save-v3";
-import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/manage";
-import type { TxResult } from "../tx/executor";
+import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
+import type { TxResult } from "../shared/command";
 import { petName } from "./text.js";
 
 export interface ServerLetter {
@@ -157,9 +157,9 @@ export function createMainMail(o: MainMailOptions): MainMail {
     if (!o.signedIn()) return reply(false, "MAIL_LOGIN_REQUIRED");
     const gifts = parseGifts(letter.gifts);
     if (!gifts) return reply(false, "bad-gift"); // 모르는 선물 — 서버에 받은 기록을 남기지 않는다
-    // 포켓몬 선물이 들어갈 박스 빈 칸이 모자라다 — 서버에 받은 기록을 남기지 않는다. 자리를 만든 뒤 다시 받는다 (src/mail/core.ts applyGifts)
+    // 포켓몬 선물이 들어갈 박스 빈 칸이 모자라다 — 서버에 받은 기록을 남기지 않는다. 자리를 만든 뒤 다시 받는다. 이미 얻은 단일 포켓몬은 세지 않는다 (src/mail/core.ts neededBoxRoom)
     const mine = o.read();
-    if (mine && gifts.reduce((n, g) => n + (g.kind === "pokemon" ? g.count : 0), 0) > boxRoom(mine.boxes)) {
+    if (mine && neededBoxRoom(mine, gifts) > boxRoom(mine.boxes)) {
       error = "box-full";
       push();
       return reply(false, "box-full");

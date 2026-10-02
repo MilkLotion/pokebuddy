@@ -1,5 +1,5 @@
 // 움직임 모듈의 타입 — 마리별 brain 의 입출력, 성격 배율과 주변 위치
-import type { Play, StageState } from "../shared/stage";
+import type { Play, StageState } from "../shared/model/stage";
 
 // 성격 배율 자리 — S2 는 NEUTRAL_PARAMS (전부 1 · 0). S3 가 natures 축 → 값
 export interface MotionParams {

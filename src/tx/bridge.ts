@@ -7,9 +7,11 @@
 //   보낸 쪽이 `args.reqId` 를 주면 그것을 쓴다. 같은 값으로 다시 보내면 한 번만 반영한다.
 //   주지 않으면 보낸 곳·시각·명령·대상으로 만든다. 같은 순간에 같은 명령을 두 번 보내면 구분하지 못한다.
 //   한 번만 반영해야 하는 조작(구매·부화·보상)은 보낸 쪽이 `reqId` 를 주는 것이 맞다.
-import type { Command, CommandName, CommandResult } from "../shared/types.js";
+import type { Command, CommandResult } from "../shared/command.js";
+import type { CommandName } from "../shared/names/commands.js";
 import type { Dispatcher } from "../commands/dispatcher";
-import type { Executor, TxRequest } from "./executor";
+import type { TxRequest } from "../shared/command";
+import type { Executor } from "./executor";
 
 // 이 다리가 맡을 수 있는 명령 — 인자를 푸는 규칙(`argsOf`)이 여기 있다.
 // 실제 배선은 `src/main/commands.ts` 가 한다. 무대 반응이나 그림 준비가 필요한 명령은 그쪽이 감싸서 등록한다.

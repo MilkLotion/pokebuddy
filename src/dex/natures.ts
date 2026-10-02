@@ -1,13 +1,17 @@
 // 성격 — data/natures.json 의 25개. 이름·다섯 축(+1 · 0 · −1). 앱 안에서 축은 전부 배율 (design.md "성격")
 
-import type { Axis, AxisValue, Nature, NatureId } from "../shared/types";
+import type { Axis, AxisValue, Nature, NatureId } from "../shared/species";
 import { loadJson, type DexOptions } from "./data";
+import { QUIRK_RULES } from "./rules";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 부여·저장·교환 검증·움직임 배율은 그대로다.
 // 끄면 우클릭 메뉴 첫 줄과 CLI 상태 줄에서 성격을 뺀다. 관리 창 src/renderer/manage.ts·pet.ts 의 NATURE_UI 와 같이 바꾼다
 export const NATURE_SHOWN = false;
 
 export const AXES: readonly Axis[] = ["activity", "boldness", "steadiness", "sociability", "patience"];
+
+// 성격을 모르는 개체(옛 저장·값 파손)에 붙이는 중립 성격 — 축이 전부 0
+export const FALLBACK_NATURE: NatureId = "hardy";
 
 // 모르는 성격의 축 — 전부 0 (중립)
 export const NEUTRAL_AXES: Readonly<Record<Axis, AxisValue>> = {
@@ -31,7 +35,8 @@ export const isNatureId = (id: string, opts?: DexOptions): id is NatureId => nat
 // 축 값 — 모르는 id 면 전부 0. 항상 새 객체
 export const axesOf = (id: string, opts?: DexOptions): Record<Axis, AxisValue> => ({ ...(nature(id, opts)?.axes ?? NEUTRAL_AXES) });
 
-export const QUIRK_RULES = { periodMs: 90_000, durationMs: 10_000 };
+// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/dex/rules.ts)로 가면 지운다
+export { QUIRK_RULES };
 
 // 변덕은 마리별로 어긋난 주기에 한 축이 잠깐 바뀜 — 시각 주입, 저장·재시작에도 같은 결과
 export function axesAt(id: string, petId: string, now: number): Record<Axis, AxisValue> {

@@ -6,7 +6,11 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { defs, progressOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon, type AchievementDef } from "../achievement/core.js";
-import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
+import { BOX_RULES } from "../box/rules.js";
+import { EGG_RULES } from "../egg/rules.js";
+import { PARTY_RULES } from "../party/rules.js";
+import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
+import { SHOP_RULES } from "../shop/rules.js";
 import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
 import { itemOf } from "../bag/use.js";
@@ -15,14 +19,14 @@ import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
-import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
+import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaChoices, megaOf, megaRivals, shownSpecies } from "../dex/mega.js";
 import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
-import type { DayPart } from "../shared/types";
+import type { DayPart } from "../shared/species";
 import { isEvoItem, itemAbout, nameOfItem, shopList } from "./lists.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
@@ -177,9 +181,9 @@ function careView(pet: PetV3): CareView | null {
 // 전체 준비 시간과 칸 수는 규칙표에서 온다. 시험에서 다른 값을 꽂을 수 있게 받을 수도 있다
 export function snapshot(
   save: SaveV3,
-  eggReadyMs: number = EGG_V3_RULES.readyMs,
-  boxSize: number = SAVE_V3_RULES.box.size,
-  maxEggs: number = EGG_V3_RULES.maxEggs,
+  eggReadyMs: number = EGG_RULES.readyMs,
+  boxSize: number = BOX_RULES.size,
+  maxEggs: number = EGG_RULES.maxEggs,
   now: number = Date.now(), // 진화 후보의 낮·밤을 정한다
 ): Snapshot {
   const dayPart = dayPartOf(now);
@@ -221,7 +225,7 @@ export function snapshot(
       return {
         id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
-        ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_V3_RULES.sellRate } : {}),
+        ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),
       };
     })
@@ -248,7 +252,7 @@ export function snapshot(
       slots,
       shown: slots.filter((s) => s.pet && !s.pet.hidden).length,
       usable: slots.filter((s) => s.state !== "locked").length,
-      preset: { index: activePreset(save), count: presetCount(save), max: SAVE_V3_RULES.party.presets.max, name: presetName(save, activePreset(save)) },
+      preset: { index: activePreset(save), count: presetCount(save), max: PARTY_RULES.presets.max, name: presetName(save, activePreset(save)) },
     },
     boxes,
     eggs: { list: eggs, used: eggs.length, size: maxEggs },

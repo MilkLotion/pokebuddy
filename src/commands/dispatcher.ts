@@ -7,7 +7,8 @@
 //   핸들러가 결과를 안 줌   { ok:false, reason:"no-result" }
 // 같은 명령을 두 번 register 하면 던진다 — 모듈 배선 실수를 기동 때 바로 드러내기 위해. 바꿔 끼우려면 먼저 해제(register 가 돌려준 함수)
 import { serve, type MailServer, type ServeOptions } from "../save/mailbox.js";
-import type { Command, CommandName, CommandResult } from "../shared/types.js";
+import type { Command, CommandResult } from "../shared/command.js";
+import type { CommandName } from "../shared/names/commands.js";
 
 export type CommandHandler = (command: Command) => CommandResult | Promise<CommandResult>;
 export type DispatchLog = (entry: Record<string, unknown>) => void;

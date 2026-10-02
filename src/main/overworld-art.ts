@@ -14,7 +14,7 @@
 // 잠자기·반응 동작은 없다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
 import path from "node:path";
 import type { PmdArt } from "./art";
-import type { SpriteSheet } from "../shared/stage";
+import type { SpriteSheet } from "../shared/model/stage";
 import { profile } from "../dex/species";
 import { megaOf } from "../dex/mega";
 import { decodePng, encodePng, type Rgba } from "./png";
