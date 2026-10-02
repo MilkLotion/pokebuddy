@@ -333,7 +333,8 @@ node dist/tools/dev-test.js stop
 - `scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <폴더>` 가 그 앱의 창만 찍는다(`PrintWindow`). pid 는 시험 HOME 의 `.claude/pokebuddy/save.lock` 첫 줄이다. `-List` 는 창 핸들과 사각형만 보인다. `-Restore` 는 최소화된 창을 포커스 없이 되살린다.
 - `scripts/dev-winclick.ps1 -Hwnd <핸들> -X <x> -Y <y>` 가 창에 클릭 메시지를 보낸다(`PostMessage`). 마우스는 움직이지 않는다. 좌표는 찍은 그림에서 읽는다. 설정창은 보이지 않는 왼쪽 테두리 8 px 을 x 에서 뺀다. 화면 배율 100% 기준이다.
 - 화면 전체를 캡처하지 않는다. 사용자의 다른 앱이 찍힌다. 무대의 포켓몬은 작은 사각형만 찍는다.
-- 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림을 준다. 누른 결과는 저장 파일로 확인한다. 화면 변화는 `scripts/dev-manage.cjs` 로 따로 찍는다.
+- 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림이나 검은 그림을 준다. 가려져도 그리게 하려면 앱을 `--disable-features=CalculateNativeWinOcclusion` 으로 띄운다. `dev-test.js start` 대신 저장소에서 `npx electron --disable-features=CalculateNativeWinOcclusion .` 을 실행한다. `HOME`·`USERPROFILE` 을 시험 HOME 으로, `POKEBUDDY_SAVE_CRYPT=off` 를 함께 준다. 설정창을 여는 두 번째 실행에도 같은 값을 준다. 내릴 때는 `dev-test.js stop` 을 쓴다.
+- 이 옵션 없이 띄웠으면 누른 결과는 저장 파일로 확인한다. 화면 변화는 `scripts/dev-manage.cjs` 로 따로 찍는다.
 
 ### 시험 계정
 
