@@ -19,6 +19,7 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { portraitImg, rememberPortrait } from "../ui/portrait.js";
 import { josa } from "../../shared/josa.js";
+import { buttonEl, el, needEl } from "../ui/dom.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -125,18 +126,13 @@ const GUIDE: { title: string; lines: string[] }[] = [
   },
 ];
 
-function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof ctor)) throw new Error(`manage.html 에 #${id} 가 없다`);
-  return el;
-}
 
-const pointsEl = need("points", HTMLElement);
-const tabsEl = need("tabs", HTMLElement);
-const bodyEl = need("body", HTMLElement);
-const scrimEl = need("scrim", HTMLElement);
-const dialogEl = need("dialog", HTMLElement);
-const achDotEl = need("achievements-dot", HTMLElement);
+const pointsEl = needEl("points", HTMLElement, "manage");
+const tabsEl = needEl("tabs", HTMLElement, "manage");
+const bodyEl = needEl("body", HTMLElement, "manage");
+const scrimEl = needEl("scrim", HTMLElement, "manage");
+const dialogEl = needEl("dialog", HTMLElement, "manage");
+const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
 
 // 모달 하나. 어느 것인지와 그 모달만 쓰는 값을 함께 담는다
 type Dialog =
@@ -289,13 +285,6 @@ const dexNoText = (dex: number, form: number | undefined, pad: number): string =
 let dialog: Dialog | null = null;
 let notice = ""; // 마지막 실패 문구. 모달을 다시 그려도 남는다
 
-const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text != null) node.textContent = text;
-  return node;
-};
-
 // 남은 시간 — 1분 미만은 초, 1시간 미만은 분(올림), 그 위는 시간과 분. 쿨타임·알 준비가 10분·몇 시간이라 초로 쓰면 읽기 어렵다
 function waitWord(sec: number): string {
   const s = Math.max(0, Math.ceil(sec));
@@ -312,12 +301,6 @@ function waitWord(sec: number): string {
 const buffBadge = (b: PetView["buffs"][number]): string =>
   `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
 
-const button = (cls: string, text?: string): HTMLButtonElement => {
-  const b = el("button", cls || undefined, text);
-  b.type = "button";
-  return b;
-};
-
 // 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
 // - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
 // - 제목이 있으면 Banner(제목 + 설명), 빈 제목이면 Inline 한 줄(폼·대화상자의 짧은 실패)
@@ -330,7 +313,7 @@ function alertBox(tone: AlertTone, title: string, desc = "", onClose?: () => voi
   if (desc) text.appendChild(el("span", undefined, desc));
   box.append(el("i", "alert-icon"), text);
   if (onClose) {
-    const x = button("dialog-close", "✕");
+    const x = buttonEl("dialog-close", "✕");
     x.setAttribute("aria-label", "닫기");
     x.addEventListener("click", onClose);
     box.appendChild(x);
@@ -362,7 +345,7 @@ function meter(label: string, value: number, zone?: string, live?: { pet: string
 function chips(items: { id: string; label: string }[], current: string, pick: (id: string) => void): HTMLElement {
   const row = el("div", "chips");
   for (const it of items) {
-    const b = button("chip", it.label);
+    const b = buttonEl("chip", it.label);
     b.setAttribute("aria-pressed", String(it.id === current));
     b.addEventListener("click", () => pick(it.id));
     row.appendChild(b);
@@ -551,7 +534,7 @@ function typeBadge(name: string, id: string | undefined): HTMLElement {
 }
 
 function petCard(pet: PetView): HTMLElement {
-  const card = button("slot");
+  const card = buttonEl("slot");
 
   const portrait = portraitOf(pet.look, pet.shiny, "portrait");
   if (pet.hidden) {
@@ -623,7 +606,7 @@ function blankIcon(locked: boolean): HTMLElement {
 }
 
 function blankCard(slot: SlotView): HTMLElement {
-  const card = button("slot blank");
+  const card = buttonEl("slot blank");
   if (slot.state === "locked") {
     card.classList.add("locked");
     card.disabled = true;
@@ -639,7 +622,7 @@ function blankCard(slot: SlotView): HTMLElement {
 // 프리셋 이름 — 박스 이름과 같은 규칙이다. 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(프리셋 N)
 function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
   if (!presetRenaming) {
-    const name = button("label box-name", preset.name);
+    const name = buttonEl("label box-name", preset.name);
     name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
       presetRenaming = true;
@@ -696,18 +679,18 @@ function drawParty(v: Snapshot): void {
   const top = head("파티");
   const preset = v.party.preset;
   const pager = el("div", "pager box-pager preset-pager");
-  const prev = button("", "◀");
+  const prev = buttonEl("", "◀");
   prev.disabled = preset.count < 2;
   prev.setAttribute("aria-label", "앞 프리셋");
   prev.addEventListener("click", () => stepPreset(-1));
-  const next = button("", "▶");
+  const next = buttonEl("", "▶");
   next.disabled = preset.count < 2;
   next.setAttribute("aria-label", "다음 프리셋");
   next.addEventListener("click", () => stepPreset(1));
   pager.append(prev, boxNameCell(presetNameEl(preset)), next);
   top.appendChild(pager);
   // 머리 오른쪽 `교체` — 박스 탭으로 가고 파티 기기 창을 띄운다 (Figma 05 `Party / Swap · Open` `1248:2567`)
-  const swap = button("act swap-open", "교체");
+  const swap = buttonEl("act swap-open", "교체");
   swap.addEventListener("click", openSwap);
   top.appendChild(swap);
   bodyEl.appendChild(top);
@@ -747,7 +730,7 @@ const BOX_ICON = {
 // 넘김 줄의 돌보미집 단추 — 집 아이콘, `정렬` 왼쪽. 부화할 수 있는 알이 있으면 오른쪽 위 점
 // (2026-10-02 사용자 결정 "돌보미집은 집아이콘 만들어서 정렬 왼쪽에 버튼으로 두자")
 function daycareOpenButton(v: Snapshot): HTMLButtonElement {
-  const b = button("icon-button daycare-open");
+  const b = buttonEl("icon-button daycare-open");
   b.innerHTML = BOX_ICON.house; // 고정 그림 — 사용자 값이 들어가지 않는다
   b.setAttribute("aria-label", "돌보미집");
   b.title = "돌보미집";
@@ -766,7 +749,7 @@ function daycareCell(egg: EggView, live: boolean): HTMLElement {
   cell.title = egg.name;
   cell.appendChild(eggIcon(egg.kind, "shell"));
   if (egg.ready) {
-    const openEgg = button("primary", "열기");
+    const openEgg = buttonEl("primary", "열기");
     openEgg.disabled = !live;
     openEgg.addEventListener("click", () => void openEggAndShow(egg.id, "daycare"));
     cell.appendChild(openEgg);
@@ -792,10 +775,10 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   top.appendChild(titles);
   // 모두 열기 — 준비된 알을 칸 순서대로 모두 열고 결과를 하나씩 보인다. 준비된 알이 없으면 흐리다. 자리는 늘 있다
   // (2026-10-02 사용자 결정, Figma 05 `Box / Daycare Modal`). 부화 결과 창 뒤에 깔린 모습(live 아님)에도 같은 자리에 그린다
-  const all = button("act open-all", "모두 열기");
+  const all = buttonEl("act open-all", "모두 열기");
   all.disabled = !live || ready === 0 || openingAll;
   all.addEventListener("click", () => void openAllEggs());
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.disabled = !live;
   x.addEventListener("click", close);
@@ -952,7 +935,7 @@ function searchBox(key: string, value: string, placeholder: string, onSearch: (q
   input.placeholder = placeholder;
   input.value = searchDraft.get(key) ?? value;
   input.setAttribute("aria-label", placeholder);
-  const go = button("search-go", "검색");
+  const go = buttonEl("search-go", "검색");
   go.setAttribute("aria-label", `${placeholder} 실행`);
   const submit = (): void => {
     if (!input.isConnected) return;
@@ -1046,7 +1029,7 @@ function matchesDex(row: DexEntry, q: string): boolean {
 }
 
 function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
-  const cell = button("cell");
+  const cell = buttonEl("cell");
   const forms = pet.forms;
   if (forms && forms.length > 1) {
     // 공유 sid 계열 — 모습들을 한 장의 단체사진으로, 이름은 계열, 아래 줄은 지금 종 (Figma `Box / Shared Profile` `481:1227`)
@@ -1259,7 +1242,7 @@ function drawForm(petId: string, to: string): void {
 // 6×5 가 기본 창 높이에서 스크롤 없이 맞는다 (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`).
 // 공유 sid 계열은 단체사진·계열 이름 아래에 지금 종을 한 줄 더 둔다. 교체 모달의 작은 칸은 boxCell 을 그대로 쓴다
 function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
-  const cell = button("cell tall");
+  const cell = buttonEl("cell tall");
   const forms = pet.forms;
   if (forms && forms.length > 1) {
     cell.classList.add("family");
@@ -1317,7 +1300,7 @@ function drawBox(v: Snapshot): void {
   const pager = el("div", "pager box-pager");
   const prevPage = wrapPage(boxPage - 1, v.boxes.length);
   const nextPage = wrapPage(boxPage + 1, v.boxes.length);
-  const prev = button("", "◀");
+  const prev = buttonEl("", "◀");
   prev.disabled = v.boxes.length <= 1;
   prev.dataset.hold = ""; // 든 채로 박스를 넘긴다 — 든 것을 내려놓지 않는다
   prev.addEventListener("click", () => {
@@ -1325,7 +1308,7 @@ function drawBox(v: Snapshot): void {
     boxNote = "";
     draw();
   });
-  const next = button("", "▶");
+  const next = buttonEl("", "▶");
   next.disabled = v.boxes.length <= 1;
   next.dataset.hold = "";
   next.addEventListener("click", () => {
@@ -1688,7 +1671,7 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
 // 박스 이름 — 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(박스 N)
 function boxNameEl(box: BoxView): HTMLElement {
   if (!boxRenaming) {
-    const name = button("label box-name", box.name);
+    const name = buttonEl("label box-name", box.name);
     name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
       boxRenaming = true;
@@ -1734,7 +1717,7 @@ function boxNameEl(box: BoxView): HTMLElement {
 function boxSortEl(box: BoxView): HTMLElement {
   const wrap = el("div", "box-sort");
   const current = BOX_SORTS.find((s) => s.by === boxSortedBy.get(box.id));
-  const toggle = button("sort-toggle", `${current?.label ?? "정렬"} ▾`);
+  const toggle = buttonEl("sort-toggle", `${current?.label ?? "정렬"} ▾`);
   toggle.setAttribute("aria-expanded", String(boxSortOpen));
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -1747,7 +1730,7 @@ function boxSortEl(box: BoxView): HTMLElement {
     const menu = el("div", "sort-menu");
     menu.setAttribute("role", "menu");
     for (const s of BOX_SORTS) {
-      const item = button(s.by === current?.by ? "sort-item on" : "sort-item", s.label);
+      const item = buttonEl(s.by === current?.by ? "sort-item on" : "sort-item", s.label);
       item.setAttribute("role", "menuitemradio");
       item.setAttribute("aria-checked", String(s.by === current?.by));
       item.addEventListener("click", (e) => {
@@ -1766,7 +1749,7 @@ function boxSortEl(box: BoxView): HTMLElement {
 // 교환이 진행 중이면 단추 오른쪽 위에 점을 둔다 (2026-10-02 사용자 결정 "햄버거 버튼 두고, 그거 누르면 메뉴나오게"·"교환도 메뉴로")
 function boxMenuEl(): HTMLElement {
   const wrap = el("div", "box-menu");
-  const toggle = button("icon-button box-menu-toggle");
+  const toggle = buttonEl("icon-button box-menu-toggle");
   toggle.innerHTML = BOX_ICON.menu; // 고정 그림 — 사용자 값이 들어가지 않는다
   toggle.setAttribute("aria-label", "박스 메뉴");
   toggle.setAttribute("aria-expanded", String(boxMenuOpen));
@@ -1785,7 +1768,7 @@ function boxMenuEl(): HTMLElement {
   const menu = el("div", "sort-menu");
   menu.setAttribute("role", "menu");
   const item = (label: string, run: () => void): void => {
-    const b = button("sort-item", label);
+    const b = buttonEl("sort-item", label);
     b.setAttribute("role", "menuitem");
     b.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1816,13 +1799,13 @@ function drawBoxOrder(): void {
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, "박스 순서"));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   top.append(titles, x);
   const grid = el("div", "box-order-grid scroll");
   v.boxes.forEach((box, i) => {
-    const tile = button(i === boxPage ? "box-tile on" : "box-tile");
+    const tile = buttonEl(i === boxPage ? "box-tile on" : "box-tile");
     tile.title = box.name;
     tile.append(el("span", "tile-name", box.name), el("span", "tile-count", `${box.used} / ${box.size}`));
     tile.addEventListener("click", () => {
@@ -1864,7 +1847,7 @@ function drawPool(productId: string, page: number): void {
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, `${item.name}에서 나오는 포켓몬`));
   titles.appendChild(el("p", undefined, `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   top.append(titles, x);
@@ -1941,7 +1924,7 @@ document.addEventListener("click", () => {
 // 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 왼쪽 위 몬스터볼, 이로치 획득은 그 옆 이로치 아이콘
 // (Figma 04 템플릿 `Dex Layout` `378:1524`, 2026-10-02 사용자 결정 "초록점말고 몬스터볼아이콘으로 … 안2로")
 function dexCell(row: DexEntry): HTMLElement {
-  const cell = button(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
+  const cell = buttonEl(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
   cell.dataset.slug = row.slug;
   cell.setAttribute("aria-pressed", String(row.slug === dexPick));
   cell.addEventListener("click", () => pickDex(row.slug));
@@ -1992,11 +1975,11 @@ const dexRegionEl = (): HTMLElement =>
 // 격자 넘김 줄 — 박스 넘김 줄(.pager)과 같은 ◀ ▶. 가운데에 `쪽 / 전체`
 function gridPager(page: number, pages: number, go: (page: number) => void): HTMLElement {
   const pager = el("div", "pager grid-pager");
-  const prev = button("", "◀");
+  const prev = buttonEl("", "◀");
   prev.setAttribute("aria-label", "이전 쪽");
   prev.disabled = page <= 0;
   prev.addEventListener("click", () => go(page - 1));
-  const next = button("", "▶");
+  const next = buttonEl("", "▶");
   next.setAttribute("aria-label", "다음 쪽");
   next.disabled = page >= pages - 1;
   next.addEventListener("click", () => go(page + 1));
@@ -2024,7 +2007,7 @@ function viewToggle(current: ViewMode, pick: (mode: ViewMode) => void): HTMLElem
   box.setAttribute("role", "group");
   box.setAttribute("aria-label", "보는 방식");
   for (const [mode, label] of [["grid", "쪽으로 보기"], ["list", "스크롤로 보기"]] as const) {
-    const b = button("view-opt");
+    const b = buttonEl("view-opt");
     b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${VIEW_ICON[mode]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
     b.title = label;
     b.setAttribute("aria-label", label);
@@ -2067,7 +2050,7 @@ function scrollListAfterSwitch(where: "dex" | "shop", list: HTMLElement): void {
 function regionEl(value: string, open: boolean, setOpen: (open: boolean) => void, pick: (id: string) => void): HTMLElement {
   const wrap = el("div", "box-sort left");
   const current = DEX_REGIONS.find((r) => r.id === value) ?? DEX_REGIONS[0];
-  const toggle = button("sort-toggle", `지방: ${current?.label ?? "전체"} ▾`);
+  const toggle = buttonEl("sort-toggle", `지방: ${current?.label ?? "전체"} ▾`);
   toggle.setAttribute("aria-expanded", String(open));
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -2079,7 +2062,7 @@ function regionEl(value: string, open: boolean, setOpen: (open: boolean) => void
     const menu = el("div", "sort-menu");
     menu.setAttribute("role", "menu");
     for (const r of DEX_REGIONS) {
-      const item = button(r.id === value ? "sort-item on" : "sort-item", r.label);
+      const item = buttonEl(r.id === value ? "sort-item on" : "sort-item", r.label);
       item.setAttribute("role", "menuitemradio");
       item.setAttribute("aria-checked", String(r.id === value));
       item.addEventListener("click", (e) => {
@@ -2188,7 +2171,7 @@ function shopThumb(item: ShopItemView): HTMLElement {
 }
 
 function shopRow(item: ShopItemView): HTMLElement {
-  const card = button("row-card");
+  const card = buttonEl("row-card");
   card.appendChild(shopThumb(item));
   const body = el("div", "body");
   body.appendChild(el("div", "title", item.name));
@@ -2205,7 +2188,7 @@ function shopRow(item: ShopItemView): HTMLElement {
 
 // 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 상점 기기 창이 뜬다. 살 수 없는 이유는 기기 창이 보인다
 function shopCell(item: ShopItemView): HTMLElement {
-  const cell = button("dex-cell shop-cell");
+  const cell = buttonEl("dex-cell shop-cell");
   cell.dataset.slug = item.id;
   cell.append(el("div", "no", item.dex ? `#${dexNoText(item.dex, item.form, 4)}` : ""), portraitOf(item.id, false, "dot", "", true));
   cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
@@ -2349,7 +2332,7 @@ function pickBag(id: string): void {
 }
 
 function bagCard(item: BagItemView): HTMLElement {
-  const card = button("bag-card");
+  const card = buttonEl("bag-card");
   card.setAttribute("aria-pressed", String(item.id === bagPick));
   const info = el("div", "info");
   info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
@@ -2938,7 +2921,7 @@ function tradePicker(t: TradeScreen): HTMLElement {
   const box = el("div", "trade-pick");
   const singles = new Set(t.singles);
   const cell = (pet: PetView): HTMLElement => {
-    const b = button("cell trade-cell");
+    const b = buttonEl("cell trade-cell");
     b.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
     if (pet.shiny) b.appendChild(shinyIcon(10));
     const single = singles.has(pet.id);
@@ -2958,13 +2941,13 @@ function tradePicker(t: TradeScreen): HTMLElement {
   const slots: (PetView | null)[] = shown ? shown.slots : (view?.party.slots ?? []).map((s) => s.pet ?? null);
   const pager = el("div", "pager trade-pager");
   const pages = boxes.length + 1; // 파티 판 + 박스. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
-  const prev = button("", "◀");
+  const prev = buttonEl("", "◀");
   prev.setAttribute("aria-label", "앞 판");
   prev.addEventListener("click", () => {
     tradePage = wrapPage(tradePage - 1, pages);
     drawDialog();
   });
-  const next = button("", "▶");
+  const next = buttonEl("", "▶");
   next.setAttribute("aria-label", "다음 판");
   next.addEventListener("click", () => {
     tradePage = wrapPage(tradePage + 1, pages);
@@ -3086,7 +3069,7 @@ function drawTradeDialog(): void {
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, "친구 교환"));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   top.append(titles, x);
@@ -3162,7 +3145,7 @@ let acctRename: string | null = null; // 이름 바꾸는 중이면 입력한 �
 let acctConfirm: "delete" | "sign-out" | null = null;
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
-const saveIndicatorEl = need("save-indicator", HTMLElement);
+const saveIndicatorEl = needEl("save-indicator", HTMLElement, "manage");
 
 const ACCT_ERROR: Record<string, string> = {
   AUTH_INVALID_LOGIN: "아이디 또는 비밀번호가 맞지 않아요",
@@ -3362,7 +3345,7 @@ function drawSignIn(scroll: HTMLElement): void {
     wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButton("취소", false, false, () => void window.pokebuddyManage.account({ action: "github-cancel" })));
     scroll.appendChild(wait);
   } else {
-    const gh = button("act acct-github", "GitHub로 계속");
+    const gh = buttonEl("act acct-github", "GitHub로 계속");
     gh.disabled = blocked || acctBusy;
     gh.addEventListener("click", () => {
       acctGithub = true;
@@ -3383,7 +3366,7 @@ function drawSignIn(scroll: HTMLElement): void {
 
 function drawSignUp(scroll: HTMLElement): void {
   const back = el("div", "acct-lead");
-  const link = button("acct-back", "‹ 로그인");
+  const link = buttonEl("acct-back", "‹ 로그인");
   link.addEventListener("click", () => {
     acctForm.mode = "sign-in";
     acctForm.error = "";
@@ -3464,7 +3447,7 @@ function acctOverlay(): HTMLElement | null {
   const box = el("div", "acct-overlay");
   const card = el("div", "acct-confirm");
   const head = el("div", "acct-confirm-head");
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   const shut = (): void => { acctConfirm = null; redrawAccount(); };
   x.addEventListener("click", shut);
@@ -3560,8 +3543,8 @@ function accountActions(): HTMLElement | null {
 // 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 받기 단추와 상태 글자는 편지 바닥 단추 줄에 둔다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
 // (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/record.md)
 let mailView: MailScreen | null = null;
-const mailBtn = need("open-mail", HTMLButtonElement);
-const mailDotEl = need("mail-dot", HTMLElement);
+const mailBtn = needEl("open-mail", HTMLButtonElement, "manage");
+const mailDotEl = needEl("mail-dot", HTMLElement, "manage");
 
 function setMail(screen: MailScreen): void {
   mailView = screen;
@@ -3641,13 +3624,13 @@ function mailHead(title: string, back: boolean): void {
   const head = el("div", "settings-head");
   const titles = el("div", "titles mail-titles");
   if (back) {
-    const b = button("back", "‹");
+    const b = buttonEl("back", "‹");
     b.setAttribute("aria-label", "우편함으로");
     b.addEventListener("click", () => open({ kind: "mail" }));
     titles.appendChild(b);
   }
   titles.appendChild(el("h2", undefined, title));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   head.append(titles, x);
@@ -3655,7 +3638,7 @@ function mailHead(title: string, back: boolean): void {
 }
 
 function mailRow(l: MailLetterView): HTMLElement {
-  const row = button("mail-row");
+  const row = buttonEl("mail-row");
   const dot = el("span", "mail-unread");
   dot.hidden = l.read && !mailOpen(l); // 안 읽음 점 — 받을 선물이 남아도 둔다
   const text = el("div", "mail-text");
@@ -3795,7 +3778,7 @@ const TAB_ICON: Record<TabId, string> = {
 function drawTabs(): void {
   tabsEl.replaceChildren();
   for (const t of TABS) {
-    const b = button("");
+    const b = buttonEl("");
     b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" style="color: var(--muted)">${TAB_ICON[t.id]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
     b.appendChild(el("span", undefined, t.label));
     b.setAttribute("aria-selected", String(t.id === tab));
@@ -4260,7 +4243,7 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   // 안내만 하는 단계는 구멍도 막는다 — 대상은 보이되 눌리지 않는다(예: 개체 상세의 박스에 보관)
   if (!spec.interactive) block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t);
   const head = el("div", "head");
-  const x = button("x", "✕");
+  const x = buttonEl("x", "✕");
   x.setAttribute("aria-label", "튜토리얼 닫기");
   x.addEventListener("click", () => void send("tutorial.skip", id)); // 닫기는 스킵이다
   head.append(el("span", "step", spec.step), x);
@@ -4333,7 +4316,7 @@ const slotOfPet = (id: string): number | null => view?.party.slots.find((s) => s
 
 
 function actionButton(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
-  const b = button(primary ? "act primary" : "act", label);
+  const b = buttonEl(primary ? "act primary" : "act", label);
   b.disabled = disabled;
   b.addEventListener("click", run);
   return b;
@@ -4343,7 +4326,7 @@ function actionButton(label: string, primary: boolean, disabled: boolean, run: (
 function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
   const row = el("div", "title-row");
   if (back) {
-    const b = button("back", `‹ ${back.label}`);
+    const b = buttonEl("back", `‹ ${back.label}`);
     b.addEventListener("click", () => open(back.to));
     row.appendChild(b);
   }
@@ -4361,7 +4344,7 @@ const closeButton = (label = "닫기"): HTMLButtonElement => actionButton(label,
 
 // 켬·끔 스위치 — Figma `Toggle` `299:3593`
 function switchButton(on: boolean, label: string, run: () => void): HTMLButtonElement {
-  const b = button("switch");
+  const b = buttonEl("switch");
   b.setAttribute("role", "switch");
   b.setAttribute("aria-checked", String(on));
   b.setAttribute("aria-label", label);
@@ -4735,7 +4718,7 @@ function drawEvolve(petId: string, to?: string): void {
   // 트리를 아직 못 받았으면 후보 줄로 고른다
   const rows = el("div", "rows");
   for (const c of tree ? [] : list) {
-    const row = button("row-card");
+    const row = buttonEl("row-card");
     const body = el("div", "body");
     // 지도 간선은 준비됐을 때도 지도를 쓴다고 적는다 — 옆의 기본형 결과와 가른다
     const readyNote = c.map ? "지도를 쓰면 진화할 수 있어요" : "진화할 수 있어요";
@@ -4808,7 +4791,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   grid.setAttribute("role", "group");
   grid.setAttribute("aria-label", "바꿀 성격");
   for (const n of view.natures) {
-    const cell = button("nature-cell");
+    const cell = buttonEl("nature-cell");
     const current = n.id === pet.natureId;
     cell.appendChild(el("span", undefined, n.name));
     if (current) cell.appendChild(el("span", "hint", "지금")); // 빈 줄을 두지 않는다 — 이름이 칸 가운데에 온다
@@ -4873,7 +4856,7 @@ function achievementRow(a: AchievementView): HTMLElement {
   row.appendChild(body);
   row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
   if (a.state === "achieved") {
-    const claim = button("act primary", "보상 받기");
+    const claim = buttonEl("act primary", "보상 받기");
     claim.addEventListener("click", () => void send("achievement.claim", a.id));
     row.appendChild(claim);
   }
@@ -4939,7 +4922,7 @@ function segmented<T extends string>(items: readonly { id: T; label: string }[],
   const box = el("div", "segmented");
   box.setAttribute("role", "tablist");
   for (const item of items) {
-    const b = button("", item.label);
+    const b = buttonEl("", item.label);
     b.setAttribute("aria-pressed", String(item.id === current));
     b.addEventListener("click", () => {
       if (item.id !== current) pick(item.id);
@@ -4954,7 +4937,7 @@ let settingSelectOpen: string | null = null;
 function settingSelect<T extends string>(id: string, options: readonly { value: T; label: string }[], current: T, width: number, pick: (value: T) => void): HTMLElement {
   const wrap = el("div", "box-sort setting-select");
   const now = options.find((o) => o.value === current);
-  const toggle = button("sort-toggle", `${now?.label ?? current} ▾`);
+  const toggle = buttonEl("sort-toggle", `${now?.label ?? current} ▾`);
   toggle.style.width = `${width}px`;
   toggle.setAttribute("aria-expanded", String(settingSelectOpen === id));
   toggle.addEventListener("click", (e) => {
@@ -4967,7 +4950,7 @@ function settingSelect<T extends string>(id: string, options: readonly { value: 
     const menu = el("div", "sort-menu");
     menu.setAttribute("role", "menu");
     for (const o of options) {
-      const item = button(o.value === current ? "sort-item on" : "sort-item", o.label);
+      const item = buttonEl(o.value === current ? "sort-item on" : "sort-item", o.label);
       item.setAttribute("role", "menuitemradio");
       item.setAttribute("aria-checked", String(o.value === current));
       item.addEventListener("click", (e) => {
@@ -5035,7 +5018,7 @@ function volumeControl(volume: number, on: boolean, set: (key: string, value: un
   number.addEventListener("keydown", (e) => {
     if (e.key === "Enter") number.blur();
   });
-  const mute = button("mute", "");
+  const mute = buttonEl("mute", "");
   mute.setAttribute("aria-pressed", String(!on));
   mute.setAttribute("aria-label", on ? "음소거" : "소리 켜기");
   mute.title = on ? "음소거" : "소리 켜기";
@@ -5079,7 +5062,7 @@ function drawGeneral(scroll: HTMLElement): void {
   scroll.appendChild(settingRow("언어", undefined, settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
   scroll.appendChild(settingRow("로그인 시 시작", undefined, switchButton(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
   scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
-  const guide = button("act", "열기 ›");
+  const guide = buttonEl("act", "열기 ›");
   guide.addEventListener("click", () => open({ kind: "guide" }));
   scroll.appendChild(settingRow("가이드북", undefined, guide));
 }
@@ -5250,7 +5233,7 @@ function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T;
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, title));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", close);
   head.append(titles, x);
@@ -5410,7 +5393,7 @@ function notesHead(title: string, sub: string, onClose: () => void): HTMLElement
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.append(el("h2", undefined, title), el("div", "sub", sub));
-  const x = button("dialog-close", "✕");
+  const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", onClose);
   head.append(titles, x);
@@ -5425,7 +5408,7 @@ function drawNotes(pick?: string): void {
   const body = el("div", "notes-body");
   const list = el("div", "notes-list scroll");
   for (const n of notes) {
-    const item = button(n.version === current ? "notes-item on" : "notes-item");
+    const item = buttonEl(n.version === current ? "notes-item on" : "notes-item");
     item.append(el("span", "notes-item-version", n.version), el("span", "notes-date", n.date));
     item.setAttribute("aria-pressed", String(n.version === current));
     item.addEventListener("click", () => {
@@ -5934,9 +5917,9 @@ function restoreFocusPath(kept: FocusPath | null): void {
   if (n instanceof HTMLElement && signOf(n) === kept.sign) n.focus({ preventScroll: true });
 }
 
-need("open-achievements", HTMLButtonElement).addEventListener("click", () => open({ kind: "achievements" }));
-need("open-settings", HTMLButtonElement).addEventListener("click", () => open({ kind: "settings", tab: "general" }));
-need("open-user", HTMLButtonElement).addEventListener("click", () => open({ kind: "user", tab: "account" }));
+needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "achievements" }));
+needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "settings", tab: "general" }));
+needEl("open-user", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
 scrimEl.addEventListener("click", (e) => {
   if (e.target === scrimEl) dismiss();

@@ -2,19 +2,15 @@
 //
 // 배너 본문 클릭 동작은 없다. `바로가기` 와 제목 줄 `✕`(닫기)만 누른다 (docs/specs/game.md "알림 배너의 개별 표시")
 import type { BannerView } from "../../shared/model/overlays.js";
+import { needEl } from "../ui/dom.js";
 
-function need<T extends HTMLElement>(id: string, type: { new (): T }): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof type)) throw new Error(`banner: #${id} 없음`);
-  return el;
-}
 
-const bannerEl = need("banner", HTMLElement);
-const titleEl = need("title", HTMLElement);
-const targetEl = need("target", HTMLElement);
-const nameEl = need("name", HTMLElement);
-const goEl = need("go", HTMLButtonElement);
-const closeEl = need("close", HTMLButtonElement);
+const bannerEl = needEl("banner", HTMLElement, "banner");
+const titleEl = needEl("title", HTMLElement, "banner");
+const targetEl = needEl("target", HTMLElement, "banner");
+const nameEl = needEl("name", HTMLElement, "banner");
+const goEl = needEl("go", HTMLButtonElement, "banner");
+const closeEl = needEl("close", HTMLButtonElement, "banner");
 
 const api = window.pokebuddyBanner;
 let key: string | null = null;

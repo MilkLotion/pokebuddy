@@ -5,15 +5,11 @@
 //   말풍선의 자리는 창을 띄울 때 한 번 잡는다 — 창이 말풍선 자리까지 넓으므로 빈 곳을 누르면 메뉴를 닫는다
 import type { MenuSubView, MenuView } from "../../shared/model/overlays.js";
 import { portraitImg } from "../ui/portrait.js";
+import { needEl } from "../ui/dom.js";
 
-function need(id: string): HTMLElement {
-  const node = document.getElementById(id);
-  if (!(node instanceof HTMLElement)) throw new Error(`menu.html 에 #${id} 가 없다`);
-  return node;
-}
-const wrap = need("wrap");
-const menu = need("menu");
-const bubble = need("bubble");
+const wrap = needEl("wrap", HTMLElement, "menu");
+const menu = needEl("menu", HTMLElement, "menu");
+const bubble = needEl("bubble", HTMLElement, "menu");
 const api = window.pokebuddyMenu;
 
 const SUB_GAP = 8; // 메뉴와 말풍선 사이 — src/main/menu-window.ts SUB_GAP 과 같다

@@ -2,20 +2,16 @@
 // 저장은 메인이 한다. `취소`·Esc 는 아무것도 바꾸지 않는다 (docs/specs/game.md "놀이공간 변경을 취소하면 적용 전 영역을 유지한다")
 import type { Rect } from "../../shared/geometry.js";
 import type { RegionInit } from "../../shared/model/overlays.js";
+import { needEl } from "../ui/dom.js";
 
-function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof ctor)) throw new Error(`region.html 에 #${id} 가 없다`);
-  return el;
-}
-const veil = need("veil", HTMLElement);
-const regionEl = need("region", HTMLElement);
-const sizeEl = need("size", HTMLElement);
-const toolbar = need("toolbar", HTMLElement);
-const message = need("message", HTMLElement);
-const redraw = need("redraw", HTMLButtonElement);
-const cancel = need("cancel", HTMLButtonElement);
-const apply = need("apply", HTMLButtonElement);
+const veil = needEl("veil", HTMLElement, "region");
+const regionEl = needEl("region", HTMLElement, "region");
+const sizeEl = needEl("size", HTMLElement, "region");
+const toolbar = needEl("toolbar", HTMLElement, "region");
+const message = needEl("message", HTMLElement, "region");
+const redraw = needEl("redraw", HTMLButtonElement, "region");
+const cancel = needEl("cancel", HTMLButtonElement, "region");
+const apply = needEl("apply", HTMLButtonElement, "region");
 
 const api = window.pokebuddyRegion;
 let min = { area: 240 * 160, side: 80 }; // 메인이 init 으로 준다 (src/state/settings.ts REGION_MIN)

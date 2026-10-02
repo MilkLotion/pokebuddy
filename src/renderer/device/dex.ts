@@ -4,6 +4,7 @@
 import type { DexDeviceView } from "../../shared/model/devices.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "../ui/evo-tree.js";
 import { portraitImg, sprite } from "../ui/portrait.js";
+import { buttonEl, el } from "../ui/dom.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
@@ -35,22 +36,6 @@ const fontsReady: Promise<unknown> = Promise.allSettled(
 
 const UNKNOWN = "???";
 const STATE_WORD: Record<string, string> = { obtained: "획득", unlocked: "해금", locked: "미해금" };
-
-function el(tag: string, cls?: string, text?: string): HTMLElement {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function button(cls: string, text: string, onClick: () => void): HTMLButtonElement {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = cls;
-  b.textContent = text;
-  b.addEventListener("click", onClick);
-  return b;
-}
 
 // 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (portrait.ts sprite)
 const STAGE = { w: 150, h: 124, maxScale: 2 };
@@ -84,7 +69,7 @@ function render(v: DexDeviceView): void {
     top.appendChild(led);
   }
   top.appendChild(el("div", "title", "도감"));
-  const close = button("close", "✕", () => api.close());
+  const close = buttonEl("close", "✕", () => api.close());
   close.title = "닫기";
   top.appendChild(close);
   device.appendChild(top);
@@ -150,13 +135,13 @@ function render(v: DexDeviceView): void {
     return;
   }
   const controls = el("div", "controls");
-  const cry = button("cry", "울음소리", () => void playCry());
+  const cry = buttonEl("cry", "울음소리", () => void playCry());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
   cry.disabled = locked || v.volume <= 0;
   controls.append(
-    button("prev", "◀ 이전", () => api.step(-1)),
+    buttonEl("prev", "◀ 이전", () => api.step(-1)),
     cry,
-    button("next", "다음 ▶", () => api.step(1)),
+    buttonEl("next", "다음 ▶", () => api.step(1)),
   );
   device.appendChild(controls);
 

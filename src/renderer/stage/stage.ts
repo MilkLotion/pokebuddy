@@ -9,6 +9,7 @@ import type { Size } from "../../shared/geometry.js";
 import { hitAt, rectOf, type HitLookup } from "./hit.js";
 import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";
+import { el, needEl } from "../ui/dom.js";
 
 const params = new URLSearchParams(location.search);
 const opts = {
@@ -17,15 +18,9 @@ const opts = {
   debug: params.get("debug") === "1", // init.debug 와 같다 — 화면 안 텍스트
 };
 
-// 문서 요소 — 없으면 무대를 띄울 수 없으니 바로 던진다. 함수 안에서도 좁혀진 타입을 쓰려고 상수로 받는다
-function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof ctor)) throw new Error(`stage.html 에 #${id} 가 없다`);
-  return el;
-}
-const canvas = need("stage", HTMLCanvasElement);
-const debugBox = need("debug", HTMLPreElement);
-const coachBox = need("coach", HTMLDivElement);
+const canvas = needEl("stage", HTMLCanvasElement, "stage");
+const debugBox = needEl("debug", HTMLPreElement, "stage");
+const coachBox = needEl("coach", HTMLDivElement, "stage");
 // getContext 옵션 없음 — willReadFrequently 를 주면 GPU 가속이 빠진다. 픽셀은 시트별 ImageData(sprites.ts)에서 읽는다
 const ctx = ((): CanvasRenderingContext2D => {
   const c = canvas.getContext("2d");
@@ -354,13 +349,6 @@ let coach: CoachView | null = null;
 let bubbleEl: HTMLElement | null = null;
 const dims: HTMLElement[] = [];
 
-function coachEl<K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text?: string): HTMLElementTagNameMap[K] {
-  const e = document.createElement(tag);
-  e.className = cls;
-  if (text != null) e.textContent = text;
-  return e;
-}
-
 function renderCoach(next: CoachView | null): void {
   coach = next;
   coachBox.replaceChildren();
@@ -369,23 +357,23 @@ function renderCoach(next: CoachView | null): void {
   coachBox.hidden = !next;
   if (!next) return;
   if (next.kind === "pet") {
-    for (let i = 0; i < 4; i++) dims.push(coachBox.appendChild(coachEl("div", "coach-dim")));
+    for (let i = 0; i < 4; i++) dims.push(coachBox.appendChild(el("div", "coach-dim")));
   } else {
-    const frameEl = coachBox.appendChild(coachEl("div", "coach-area"));
-    frameEl.appendChild(coachEl("span", "coach-area-label", next.areaLabel ?? ""));
+    const frameEl = coachBox.appendChild(el("div", "coach-area"));
+    frameEl.appendChild(el("span", "coach-area-label", next.areaLabel ?? ""));
   }
-  const bubble = coachEl("div", "coach-bubble");
-  const head = coachEl("div", "head");
-  const x = coachEl("button", "x", "✕");
+  const bubble = el("div", "coach-bubble");
+  const head = el("div", "head");
+  const x = el("button", "x", "✕");
   x.setAttribute("aria-label", "튜토리얼 닫기");
   x.addEventListener("click", () => act("skip"));
-  head.append(coachEl("span", "step", next.step), x);
-  bubble.append(head, coachEl("div", "title", next.title));
-  if (next.body) bubble.appendChild(coachEl("div", "body", next.body)); // 본문이 없으면 제목만
+  head.append(el("span", "step", next.step), x);
+  bubble.append(head, el("div", "title", next.title));
+  if (next.body) bubble.appendChild(el("div", "body", next.body)); // 본문이 없으면 제목만
   // 버튼 문구가 없는 단계는 행동으로만 넘어간다 — 첫 돌봄은 우클릭·밥 주기 (Figma `579:16959`)
   if (next.button) {
-    const foot = coachEl("div", "foot");
-    const go = coachEl("button", "go", next.button);
+    const foot = el("div", "foot");
+    const go = el("button", "go", next.button);
     go.addEventListener("click", () => act("done"));
     foot.appendChild(go);
     bubble.appendChild(foot);

@@ -3,18 +3,13 @@
 // 카드를 두 번 누르면 바로 시작한다
 import type { PickerItem, PickerPayload } from "../../shared/model/stage.js";
 import { portraitImg } from "../ui/portrait.js";
+import { needEl } from "../ui/dom.js";
 
-// 문서 요소 — 없으면 창을 쓸 수 없으니 바로 던진다
-function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof ctor)) throw new Error(`picker.html 에 #${id} 가 없다`);
-  return el;
-}
-const list = need("list", HTMLElement);
-const title = need("title", HTMLElement);
-const start = need("start", HTMLButtonElement);
-const chosenName = need("chosen-name", HTMLElement);
-const chosenNote = need("chosen-note", HTMLElement);
+const list = needEl("list", HTMLElement, "picker");
+const title = needEl("title", HTMLElement, "picker");
+const start = needEl("start", HTMLButtonElement, "picker");
+const chosenName = needEl("chosen-name", HTMLElement, "picker");
+const chosenNote = needEl("chosen-note", HTMLElement, "picker");
 
 let picked: string | null = null;
 

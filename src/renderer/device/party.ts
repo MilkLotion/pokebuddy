@@ -2,8 +2,8 @@
 // Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 가방·상점 기기 창과 같다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
 import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
-import { button, el } from "./item-device.js";
 import { portraitImg } from "../ui/portrait.js";
+import { buttonEl, el } from "../ui/dom.js";
 
 const api = window.pokebuddyParty;
 const root = document.getElementById("device");
@@ -39,7 +39,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
-  const b = button("slot", "", () => api.act({ kind: "slot", index: s.index }));
+  const b = buttonEl("slot", "", () => api.act({ kind: "slot", index: s.index }));
   if (s.state === "pokemon") {
     const face = el("div", "face");
     if (s.art) {
@@ -75,7 +75,7 @@ function render(v: PartyDeviceView): void {
     top.appendChild(led);
   }
   top.appendChild(el("div", "title", "파티"));
-  const close = button("close", "✕", () => api.close());
+  const close = buttonEl("close", "✕", () => api.close());
   close.title = "닫기";
   top.appendChild(close);
   device.appendChild(top);
@@ -91,7 +91,7 @@ function render(v: PartyDeviceView): void {
 
   const presets = el("div", "presets");
   for (const p of v.presets) {
-    const b = button("", p.owned ? String(p.index + 1) : "", () => api.act({ kind: "preset", index: p.index }));
+    const b = buttonEl("", p.owned ? String(p.index + 1) : "", () => api.act({ kind: "preset", index: p.index }));
     b.setAttribute("aria-pressed", String(p.active));
     b.setAttribute("aria-label", p.owned ? `프리셋 ${p.index + 1}` : `프리셋 ${p.index + 1} · 사지 않음`);
     if (!p.owned) {

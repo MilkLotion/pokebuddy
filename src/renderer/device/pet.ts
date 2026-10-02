@@ -10,6 +10,7 @@ import type { PetDeviceAction, PetDeviceView } from "../../shared/model/devices.
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { sprite } from "../ui/portrait.js";
+import { buttonEl, el } from "../ui/dom.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -65,23 +66,6 @@ function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const box = el("div", "status");
   box.append(...list);
   return box;
-}
-
-function el(tag: string, cls?: string, text?: string): HTMLElement {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function button(cls: string, text: string, onClick: () => void, disabled = false): HTMLButtonElement {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = cls;
-  b.textContent = text;
-  b.disabled = disabled;
-  b.addEventListener("click", onClick);
-  return b;
 }
 
 // 누른 단추 — 지금 그린 개체 id 를 붙여 보낸다
@@ -146,10 +130,10 @@ function drawCoach(): void {
   ] as const) block("coach-dim", x, y, w, h);
   block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t); // 안내만 한다 — 대상은 보이되 눌리지 않는다
   const head = el("div", "head");
-  const x = button("x", "✕", () => act({ kind: "tutorial", action: "skip" }));
+  const x = buttonEl("x", "✕", () => act({ kind: "tutorial", action: "skip" }));
   x.setAttribute("aria-label", "튜토리얼 닫기");
   head.append(el("span", "step", `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`), x);
-  const go = button("act primary", last ? "확인" : "다음", () => {
+  const go = buttonEl("act primary", last ? "확인" : "다음", () => {
     if (last) act({ kind: "tutorial", action: "done" });
     else {
       detailStep += 1;
@@ -228,7 +212,7 @@ const evoNames = (list: PetDeviceView["pet"]["evolutions"]): string => [...new S
 
 // 카드 한 줄 — 누를 수 있으면 단추다(진화·도감 보기)
 function line(title: string, desc: string | null, right: HTMLElement[], run?: () => void): HTMLElement {
-  const row = run ? button("line", "", run) : el("div", "line");
+  const row = run ? buttonEl("line", "", run) : el("div", "line");
   row.replaceChildren();
   const copy = el("div", "copy");
   copy.appendChild(el("strong", undefined, title));
@@ -323,7 +307,7 @@ function renderBody(v: PetDeviceView): void {
     top.appendChild(led);
   }
   top.appendChild(el("div", "title", "파티"));
-  const close = button("close", "✕", () => api.close());
+  const close = buttonEl("close", "✕", () => api.close());
   close.title = "닫기";
   top.appendChild(close);
   device.appendChild(top);
@@ -342,7 +326,7 @@ function renderBody(v: PetDeviceView): void {
   if (pet.mega) {
     const word = pet.mega.kind === "primal" ? "원시회귀" : "메가진화";
     const label = !pet.mega.canChange ? "박스에 있는 포켓몬은 모습을 바꿀 수 없어요" : pet.mega.on ? "원래 모습으로" : word;
-    const stone = button(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => act({ kind: "dialog", dialog: "mega" }), !pet.mega.canChange);
+    const stone = buttonEl(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => act({ kind: "dialog", dialog: "mega" }), !pet.mega.canChange);
     stone.title = label;
     stone.setAttribute("aria-label", label);
     if (v.megaIcon) stone.appendChild(sprite(v.megaIcon, MEGA_STONE));
@@ -370,7 +354,7 @@ function renderBody(v: PetDeviceView): void {
   screen.appendChild(entry);
   if (v.inParty) {
     const action = pet.hidden ? "꺼내기" : "볼에 넣기";
-    const ball = button(`ball-toggle ${pet.hidden ? "closed" : "open"}`, "", () => act({ kind: "cmd", cmd: pet.hidden ? "party.show" : "party.hide" }));
+    const ball = buttonEl(`ball-toggle ${pet.hidden ? "closed" : "open"}`, "", () => act({ kind: "cmd", cmd: pet.hidden ? "party.show" : "party.hide" }));
     ball.dataset.tut = "detail-ball";
     ball.title = action;
     ball.setAttribute("aria-label", action);
@@ -400,11 +384,11 @@ function renderBody(v: PetDeviceView): void {
     const care = el("div", "keys");
     care.dataset.tut = "detail-care";
     const boxed = !v.inParty;
-    const feed = button("key light", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    const feed = buttonEl("key light", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     care.append(
       feed,
-      button("key", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
+      buttonEl("key", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
     );
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     device.appendChild(care);
@@ -436,7 +420,7 @@ function renderBody(v: PetDeviceView): void {
     sizes.setAttribute("role", "group");
     sizes.setAttribute("aria-label", "크기");
     for (let n = 1; n <= v.sizeLevels; n++) {
-      const b = button("size", String(n), () => {
+      const b = buttonEl("size", String(n), () => {
         if (n !== pet.size) act({ kind: "cmd", cmd: "pet.set", args: { size: n } });
       });
       b.setAttribute("aria-pressed", String(n === pet.size));
@@ -457,8 +441,8 @@ function renderBody(v: PetDeviceView): void {
   device.appendChild(actions);
 
   const controls = el("div", "controls");
-  const cry = button("cry", "울음소리", () => void playCry(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
-  controls.append(button("prev", "◀ 이전", () => api.step(-1)), cry, button("next", "다음 ▶", () => api.step(1)));
+  const cry = buttonEl("cry", "울음소리", () => void playCry(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
+  controls.append(buttonEl("prev", "◀ 이전", () => api.step(-1)), cry, buttonEl("next", "다음 ▶", () => api.step(1)));
   device.appendChild(controls);
 
   // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다

@@ -2,18 +2,14 @@
 //
 // 단추에 처음 포커스를 두지 않는다 — Enter 로 뜻하지 않은 답을 고르지 않게. Esc 는 취소 단추(메인이 고른다)
 import type { AlertView } from "../../shared/model/overlays.js";
+import { needEl } from "../ui/dom.js";
 
-function need<T extends HTMLElement>(id: string, type: { new (): T }): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof type)) throw new Error(`alert: #${id} 없음`);
-  return el;
-}
 
-const alertEl = need("alert", HTMLElement);
-const titleEl = need("title", HTMLElement);
-const leadEl = need("lead", HTMLElement);
-const detailEl = need("detail", HTMLElement);
-const actionsEl = need("actions", HTMLElement);
+const alertEl = needEl("alert", HTMLElement, "alert");
+const titleEl = needEl("title", HTMLElement, "alert");
+const leadEl = needEl("lead", HTMLElement, "alert");
+const detailEl = needEl("detail", HTMLElement, "alert");
+const actionsEl = needEl("actions", HTMLElement, "alert");
 
 const FONTS = ["15px Galmuri14", "12px Galmuri11", "700 12px Galmuri11"] as const;
 

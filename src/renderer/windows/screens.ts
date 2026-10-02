@@ -1,15 +1,11 @@
 // 놀이공간 화면 번호 덮개 — 화면마다 창 하나가 뜬다. 보기만 할 때는 번호만, 고를 때는 눌러서 이 화면을 고른다(Esc 취소).
 // 저장은 메인이 한다 (src/main/screen-picker.ts)
 import type { ScreenOverlayInit } from "../../shared/model/overlays.js";
+import { needEl } from "../ui/dom.js";
 
-function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof ctor)) throw new Error(`screens.html 에 #${id} 가 없다`);
-  return el;
-}
-const numberEl = need("number", HTMLElement);
-const labelEl = need("label", HTMLElement);
-const hintEl = need("hint", HTMLElement);
+const numberEl = needEl("number", HTMLElement, "screens");
+const labelEl = needEl("label", HTMLElement, "screens");
+const hintEl = needEl("hint", HTMLElement, "screens");
 
 const api = window.pokebuddyScreens;
 let picking = false;
