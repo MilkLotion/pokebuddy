@@ -1,16 +1,15 @@
 // 화면 모델 — 친구 교환. 타입만 둔다
 
+import type { SpeciesLine } from "./snapshot.js";
+
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
 // 교환 모달이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면. 명령은 `command` 의 trade.* 로 보낸다. 결과에도 이 값(`screen`)이 온다
-export interface TradeCardView {
+export interface TradeCardView extends SpeciesLine {
   species: string;
-  name: string;
   shiny: boolean;
   level: number;
   nature: string;
-  types: string[];
-  typeIds: string[];
 }
 
 export interface TradeScreen {

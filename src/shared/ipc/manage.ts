@@ -1,6 +1,6 @@
 // 설정창 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다 (런타임 값 없음)
 
-import type { FailCode } from "../names/online-codes.js";
+import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
@@ -20,12 +20,9 @@ export interface ManageRequest {
 }
 
 // 결과는 문구가 아니라 코드 — 문구는 화면이 만든다. 코드의 목록은 ../names/reasons.ts 와 ../names/online-codes.ts
-export interface ManageReply {
-  ok: boolean;
-  reason: FailCode;
+export type ManageReply = CommandResult & {
   screen?: TradeScreen; // trade.* 명령의 결과 — 교환 모달이 그리는 값
-  [key: string]: unknown;
-}
+};
 
 // 도감은 종이 1000개를 넘어 스냅샷에 담지 않는다. 탭을 열 때만 따로 부른다.
 // CLI 연결은 저장 밖을 보므로 역시 따로 부른다

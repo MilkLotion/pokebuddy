@@ -2,14 +2,11 @@
 
 import type { ManageRoute } from "./route.js";
 import type { BannerKind } from "../names/banners.js";
+import type { Rect } from "../geometry.js";
+import type { ScreenRefV3 } from "../save-v3.js";
 
 // 놀이공간 영역 그리기 창 — Figma `Playground / Region Draw` `396:8541`. 좌표는 창 안 좌표(DIP)다
-export interface RegionRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+export type RegionRect = Rect; // 원본은 ../geometry.ts
 
 export interface RegionInit {
   current: RegionRect | null; // 지금 영역 (이 화면과 겹칠 때만)
@@ -24,7 +21,7 @@ export interface ScreenView {
   w: number;
   h: number;
   current: boolean; // 한 화면 방식이 지금 쓰는 화면
-  ref: { id: number; x: number; y: number; w: number; h: number };
+  ref: ScreenRefV3;
 }
 
 // 화면 덮개 창 하나 — 번호를 크게 보인다. pick 이면 눌러서 고른다(Esc 취소), 아니면 클릭을 통과시키고 보기만 한다

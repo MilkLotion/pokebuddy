@@ -2,6 +2,7 @@
 
 import type { DexDetail, EvoNodeView } from "./detail.js";
 import type { PetView } from "./snapshot.js";
+import type { SlotState } from "../save-v3.js";
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
 // 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/record.md)
@@ -46,16 +47,20 @@ export type PetDeviceAction = { petId: string } & (
 
 // 상점 기기 창 — 관리 창이 정해 보내는 것(ShopDeviceOpen)에 메인이 붙은 쪽을 더한다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`)
 // 구매도 이 창에서 한다(2026-10-01 사용자 결정 A안). 수량·구매 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
-export interface ShopDeviceOpen {
-  productId: string;
+// 상점·가방 기기 창이 같이 그리는 화면 필드 — 머리 줄, 그림, 기록 칸
+export interface ItemFace {
   kind: string; // 머리 줄 첫 글자 — 도구 · 알 · 진화 · 파티 칸 · 포켓몬
   name: string;
-  state: string; // 머리 줄 오른쪽 — "살 수 있음" · 살 수 없는 짧은 이유(돌보미집 가득 등)
+  state: string; // 머리 줄 오른쪽 — 상점 "살 수 있음" · 살 수 없는 짧은 이유(돌보미집 가득 등), 가방 "보유 ×3"
   group: string;
-  art: string | null; // 상품 그림 data URI. 없으면 빈 칸
-  spec: [string, string][]; // 가격·보유 두 줄
+  art: string | null; // 그림 data URI. 없으면 빈 칸
+  spec: [string, string][]; // 상점 가격·보유 두 줄, 가방 판매가·구매가
   desc: string;
   rows: [string, string][]; // 효과·쓰는 곳
+}
+
+export interface ShopDeviceOpen extends ItemFace {
+  productId: string;
   link: { label: string; value: string } | null; // 정보 줄 아래의 누르는 줄 — 알의 `나오는 포켓몬`. 없으면 null
   qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만. 살 수 없으면 cap 0 — 줄은 그대로 두고 단추만 막는다
   total: { lead: string; line: string; tone: "" | "ok" | "bad" }; // 합계 상자 — 산 직후는 초록 결과, 실패는 빨강
@@ -71,16 +76,8 @@ export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: numb
 
 // 가방 기기 창 — 상점 기기 창과 같은 틀 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`, 2026-10-01 사용자 결정 C안).
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 가방에서 쓰지 않는다(판매만). 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
-export interface BagDeviceOpen {
+export interface BagDeviceOpen extends ItemFace {
   itemId: string;
-  kind: string; // 머리 줄 첫 글자 — 도구 · 진화
-  name: string;
-  state: string; // 머리 줄 오른쪽 — "보유 ×3"
-  group: string;
-  art: string | null;
-  spec: [string, string][]; // 판매가·구매가
-  desc: string;
-  rows: [string, string][]; // 효과·쓰는 곳
   title: string; // 조작 칸 머리 — 사용 쪽은 지금 프리셋 이름, 판매 쪽은 "판매하기"
   pager: boolean; // 사용 쪽 파티 줄 양끝에 ◀ ▶ 를 둔다 — 프리셋이 둘 이상일 때. 누르면 앞·뒤 프리셋을 적용한다 (2026-10-02 사용자 결정)
   mode: "use" | "sell";
@@ -102,7 +99,7 @@ export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" 
 // 칸과 칩을 누르면 관리 창으로 돌아가 관리 창이 명령을 보낸다. 눌러서 들고 눌러서 놓는다 — 포켓몬 메뉴의 `옮기기` 와 같다
 export interface PartyDeviceSlot {
   index: number;
-  state: "pokemon" | "empty" | "locked";
+  state: SlotState;
   name: string; // 개체 이름. 개체가 없으면 빈 글자
   level: string; // "Lv.12". 개체가 없으면 빈 글자
   art: string | null; // 초상 data URI

@@ -95,6 +95,9 @@ export interface PetV3 {
   daily: PetDaily;
 }
 
+// 만복도 구간 — 경계값은 src/state/time.ts zoneOf 가 정한다
+export type FullnessZone = "full" | "normal" | "hungry" | "starving";
+
 // ── 파티 ───────────────────────────────────────────────────────────────────────
 export type SlotState = "pokemon" | "empty" | "locked";
 export type SlotUnlockBy = "shop" | "achievement";

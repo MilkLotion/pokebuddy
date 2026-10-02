@@ -1,14 +1,14 @@
 // 화면 모델 — 무대와 첫 포켓몬 선택 창이 받는 값. 타입만 둔다
-// StageState 는 names/agents.ts 의 AgentState 와 같은 값 — selftest-stage 가 서로 대입해 어긋남을 잡는다
 
-export type StageState = "idle" | "running" | "waiting" | "waving" | "failed";
+import type { Rect, Size } from "../geometry.js";
+import type { AgentState } from "../names/agents.js";
+
+// 무대의 상태는 에이전트 상태 그대로다 — 원본은 ../names/agents.ts
+export type StageState = AgentState;
 
 export type PlayMode = "loop" | "hold" | "once";
 
-export interface StageSize {
-  w: number; // DIP
-  h: number;
-}
+export type StageSize = Size; // DIP. 원본은 ../geometry.ts
 
 export interface StageInit {
   size: StageSize;
@@ -88,7 +88,7 @@ export interface CoachView {
   button: string; // 확인 — 빈 글이면 버튼을 그리지 않는다(행동으로만 넘어가는 단계)
   petId?: string; // kind pet — 밝힐 마리
   areaLabel?: string; // kind area — "지금 · 화면 전체"
-  avoid?: { x: number; y: number; w: number; h: number }; // kind pet — 말풍선이 덮지 않을 사각형(무대 좌표). 첫 돌봄 2/2 의 열린 메뉴
+  avoid?: Rect; // kind pet — 말풍선이 덮지 않을 사각형(무대 좌표). 첫 돌봄 2/2 의 열린 메뉴
   passive?: boolean; // 할 수 있는 행동이 없는 단계(첫 돌봄 쉬는 중) — 창이 클릭을 가로채지 않고 말풍선만 받는다
 }
 

@@ -18,6 +18,7 @@ import { genderLookInfo, regionalOf } from "../dex/regional.js";
 import { megaOf } from "../dex/mega.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
+import type { PortraitAsk } from "../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
 // 네트워크보다 먼저 본다. 만드는 곳은 scripts/build-item-art.cjs, 기록은 worklog/records/item-art/record.md (2026-09-27 폰트 세션)
@@ -53,10 +54,6 @@ const PARALLEL = 4;
 const PREFETCH_PARALLEL = 16;
 const MISSING_RETRY_MS = 15_000; // 못 받은 그림을 다시 청하기까지 — 첫 실행의 네트워크 혼잡·끊김이 영영 빈 칸으로 남지 않게
 
-export interface PortraitAsk {
-  slug: string;
-  shiny: boolean;
-}
 
 // 초상 한 장의 이름 — 화면이 결과를 찾는 열쇠다
 export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shiny` : a.slug);

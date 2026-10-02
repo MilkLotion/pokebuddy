@@ -6,7 +6,7 @@
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
 import type { AgentAction } from "../shared/model/agents";
-import type { DisplayView } from "../shared/model/snapshot";
+import type { DisplayView, PortraitAsk } from "../shared/model/snapshot";
 import type { MailAction, MailReply, MailScreen } from "../shared/model/mail";
 import type { ManageChannel, ManageReply, ManageRequest } from "../shared/ipc/manage";
 import type { ManageRoute } from "../shared/model/route";
@@ -17,7 +17,7 @@ import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";
-import { MEGA_STONE_ICON, createPortraits, portraitKey, type PortraitAsk, type Portraits } from "./portraits.js";
+import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
 import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";

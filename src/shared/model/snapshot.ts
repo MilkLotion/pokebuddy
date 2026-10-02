@@ -1,10 +1,12 @@
 // 화면 모델 — 설정창의 스냅샷과 스냅샷이 가리키는 값. 타입만 둔다 (런타임 값 없음)
 // 화면이 읽는 값은 src/tx/snapshot.ts 가 만든다. 그 파일이 여기 타입을 가져다 쓴다 — 모양의 출처는 한 곳이다.
-// ViewZone 은 src/state/time.ts 의 FullnessZone 과 같은 값이다. 자체 검사가 서로 대입해 어긋남을 잡는다
 
-export type ViewZone = "full" | "normal" | "hungry" | "starving";
+import type { FullnessZone, SlotState } from "../save-v3.js";
 
-export type ViewSlotState = "pokemon" | "empty" | "locked";
+// 만복도 구간과 칸 상태는 저장의 타입과 같다 — 원본은 ../save-v3.ts
+export type ViewZone = FullnessZone;
+
+export type ViewSlotState = SlotState;
 
 export interface ViewBuff {
   kind: string;
@@ -78,11 +80,15 @@ export interface MegaView {
 }
 
 // 공유 sid 계열의 모습 하나 — 박스 칸의 단체사진·툴팁과 바꾸기 확인 창이 쓴다
-export interface FormView {
+export interface FormView extends SpeciesLine {
   species: string;
-  name: string;
-  types: string[];
-  typeIds: string[];
+}
+
+// 종 한 줄 — 화면 이름과 타입. 모습(FormView)과 교환 카드(TradeCardView)가 같이 쓴다
+export interface SpeciesLine {
+  name: string; // 화면에 보이는 종 이름
+  types: string[]; // 화면에 보이는 타입 이름
+  typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등)
 }
 
 export interface SlotView {

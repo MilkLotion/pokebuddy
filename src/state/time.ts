@@ -19,8 +19,8 @@ import { unlockByRules } from "../dex/unlocks.js";
 import { queueTutorials } from "../tutorial/core.js";
 import { MOOD_RULES, TIME_V3_RULES } from "../save/rules.js";
 import type { BuffV3, PetV3, SaveV3 } from "../shared/save-v3";
+import type { FullnessZone } from "../shared/save-v3.js";
 
-export type FullnessZone = "full" | "normal" | "hungry" | "starving";
 
 export interface HungerEnter {
   petId: string;

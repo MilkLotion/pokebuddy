@@ -10,18 +10,10 @@
 //   가두기 전 자리를 집으로 삼으면, 창을 줄여 집이 밖에 걸렸을 때 산책 오프셋이 가두기에 먹혀 걷는 그림만 나오고 제자리인 구간이 생긴다 (옛 main.js homeSpot)
 // 자리는 전부 "몸"(작업 동작을 뺀 칸 × 배율)으로 계산한다 — 작업 동작이 그림 칸을 키워도 펫이 서는 자리는 그대로다 (옛 main.js bodySize)
 import type { RoamBox } from "../motion/types";
+import type { Rect, Size } from "../shared/geometry";
 import { SAVE_RULES } from "../save/rules";
 
-export interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-export interface Size {
-  w: number;
-  h: number;
-}
+export type { Rect, Size }; // 원본은 src/shared/geometry.ts
 export interface Spot {
   x: number;
   y: number;
