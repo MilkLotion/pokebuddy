@@ -5,6 +5,7 @@ import type { PickerPayload, StageChannel } from "../shared/stage";
 import { windowIcon } from "./paths";
 import type { Portraits } from "./portraits";
 import { petName, t } from "./text";
+import { webPreferencesOf } from "./window-options";
 
 const CH = {
   list: "picker:list",
@@ -63,8 +64,10 @@ export function pickStarter(opts: PickerOptions): Promise<string | null> {
       minimizable: false,
       fullscreenable: false,
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
+    // 선택 창이 보낸 요청인가. 무대 창·관리 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
+    const mine = (e: { sender: unknown }): boolean => !picker.isDestroyed() && e.sender === picker.webContents;
     let done = false;
     const finish = (slug: string | null): void => {
       if (done) return;
@@ -76,11 +79,17 @@ export function pickStarter(opts: PickerOptions): Promise<string | null> {
       resolve(slug);
       if (!picker.isDestroyed()) picker.close();
     };
-    const onStart = (_e: unknown, slug: unknown): void => finish(typeof slug === "string" && opts.starters.includes(slug) ? slug : null);
-    ipcMain.handle(CH.list, () => pickerPayload(opts.starters));
+    const onStart = (e: Electron.IpcMainEvent, slug: unknown): void => {
+      if (!mine(e)) return;
+      finish(typeof slug === "string" && opts.starters.includes(slug) ? slug : null);
+    };
+    // 다른 창이 물으면 빈 목록을 준다
+    ipcMain.handle(CH.list, (e) => pickerPayload(mine(e) ? opts.starters : []));
     // 카드의 초상 — 후보 종만 받는다
-    ipcMain.handle(CH.portraits, (_e, slugs: unknown) =>
-      opts.portraits.get((Array.isArray(slugs) ? slugs : []).filter((s): s is string => typeof s === "string" && opts.starters.includes(s)).map((slug) => ({ slug, shiny: false }))),
+    ipcMain.handle(CH.portraits, (e, slugs: unknown) =>
+      mine(e)
+        ? opts.portraits.get((Array.isArray(slugs) ? slugs : []).filter((s): s is string => typeof s === "string" && opts.starters.includes(s)).map((slug) => ({ slug, shiny: false })))
+        : {},
     );
     ipcMain.on(CH.start, onStart);
     picker.removeMenu(); // 기본 File·Edit·View·Window 메뉴를 없앤다

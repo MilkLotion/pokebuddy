@@ -16,6 +16,7 @@ import type { AlertView } from "../shared/alert";
 import { showAlert } from "./alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
+import { webPreferencesOf } from "./window-options";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
 export const KICKED_CLOSE_MS = 30_000;
@@ -58,6 +59,7 @@ function parentWindow(): BrowserWindow {
     fullscreenable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    webPreferences: webPreferencesOf(null), // 문서를 읽지 않는 창이다 — 보안 옵션만 다른 창과 같게 둔다
   });
   win.setAlwaysOnTop(true, "screen-saver");
   // Dock 을 숨긴 mac 앱은 앞으로 나오지 않는다 — 창을 보기 전에 앱을 앞으로 가져온다

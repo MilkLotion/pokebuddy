@@ -8,6 +8,7 @@
 import { app, BrowserWindow, ipcMain, screen } from "electron";
 import type { AlertChannel, AlertView } from "../shared/alert";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   show: "alert:show",
@@ -100,7 +101,7 @@ export function showAlert(o: AlertOptions): Promise<AlertAnswer> {
         alwaysOnTop: true,
         acceptFirstMouse: true, // mac 에서 첫 클릭을 삼키지 않는다
         icon: windowIcon(),
-        webPreferences: { preload: o.preload, contextIsolation: true, sandbox: true },
+        webPreferences: webPreferencesOf(o.preload),
       });
     } catch (e) {
       console.error("알림 창을 만들지 못했다 — OS 대화상자로 띄운다", e);

@@ -8,6 +8,7 @@ import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEv
 import type { PetDeviceAction, PetDeviceChannel, PetDeviceOpen, PetDeviceView } from "../shared/manage";
 import { bringUp, dockAt } from "./dex-window.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 import { createGenGate } from "./device-gen.js";
 
 const CH = {
@@ -113,7 +114,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
       skipTaskbar: true,
       title: "pokebuddy",
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     w.removeMenu();
     w.on("close", () => closing.add(w));

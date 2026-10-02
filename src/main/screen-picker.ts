@@ -8,6 +8,7 @@ import { BrowserWindow, ipcMain, screen } from "electron";
 import type { ScreenOverlayInit, ScreensChannel, ScreenView } from "../shared/manage";
 import { resolveScreen, screenOrder, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "./layout";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   init: "screens:init",
@@ -56,7 +57,7 @@ function overlay(opts: ScreenPickerOptions, s: ScreenInfo, number: number, pick:
     alwaysOnTop: true,
     focusable: pick,
     icon: windowIcon(),
-    webPreferences: { preload: opts.preload },
+    webPreferences: webPreferencesOf(opts.preload),
   });
   win.setAlwaysOnTop(true, "screen-saver");
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });

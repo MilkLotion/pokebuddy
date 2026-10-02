@@ -7,6 +7,7 @@
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { DexDetail, DexDeviceChannel, DexDeviceView, EvoNodeView } from "../shared/manage";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 import { createGenGate } from "./device-gen.js";
 
 const CH = {
@@ -134,7 +135,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
       skipTaskbar: true,
       title: "pokebuddy",
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     w.removeMenu();
     w.on("closed", () => {

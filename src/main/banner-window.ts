@@ -6,6 +6,7 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import type { BannerChannel, BannerView, ManageRoute } from "../shared/manage";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   show: "banner:show",
@@ -91,7 +92,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
       focusable: false, // 누르기는 받지만 쓰던 창의 포커스는 뺏지 않는다
       acceptFirstMouse: true, // mac 에서 첫 클릭을 삼키지 않는다
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     win.setAlwaysOnTop(true, "pop-up-menu");
     win.on("closed", () => {

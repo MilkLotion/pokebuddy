@@ -6,6 +6,7 @@ import { BrowserWindow, ipcMain, screen } from "electron";
 import type { RegionChannel, RegionInit, RegionRect } from "../shared/manage";
 import { REGION_MIN, regionFits } from "../state/settings.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   init: "region:init",
@@ -49,7 +50,7 @@ export function drawRegion(opts: RegionOptions): Promise<RegionRect | null> {
       skipTaskbar: true,
       alwaysOnTop: true,
       icon: windowIcon(),
-      webPreferences: { preload: opts.preload },
+      webPreferences: webPreferencesOf(opts.preload),
     });
     win.setAlwaysOnTop(true, "screen-saver");
 

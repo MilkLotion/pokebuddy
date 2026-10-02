@@ -12,6 +12,7 @@ import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from 
 import type { MenuChannel } from "../shared/manage";
 import { menuView, pickOf } from "./menus.js";
 import { windowIcon } from "./paths.js";
+import { webPreferencesOf } from "./window-options.js";
 
 const CH = {
   show: "menu:show",
@@ -78,7 +79,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     alwaysOnTop: true,
     icon: windowIcon(),
     focusable: !opts.inactive,
-    webPreferences: { preload: opts.preload },
+    webPreferences: webPreferencesOf(opts.preload),
   });
   win.setAlwaysOnTop(true, "pop-up-menu");
   current = win;

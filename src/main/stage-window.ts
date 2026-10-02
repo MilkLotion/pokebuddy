@@ -9,6 +9,7 @@ import { BrowserWindow, Menu, ipcMain, screen, type MenuItemConstructorOptions }
 import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageChannel, StageFrame, StageInit } from "../shared/stage";
 import { sameRect, type Rect, type Size } from "./layout";
 import { windowIcon } from "./paths";
+import { webPreferencesOf } from "./window-options";
 
 // 채널 이름 — preload 와 같은 문자열인지 satisfies 로 검사
 const CH = {
@@ -86,8 +87,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     // panel 은 NSWindowStyleMaskNonactivatingPanel 을 붙여 눌러도 앱을 활성화하지 않는다 (2026-09-28 사용자 "맥에서는 화면에 있는 포켓몬 클릭을 해도 설정창이 열리네")
     ...(process.platform === "darwin" ? { type: "panel" } : {}),
     icon: windowIcon(), // Windows 작업 표시줄·작업 관리자용 로고 (없으면 undefined — 기본)
-    webPreferences: {
-      preload: opts.preload,
+    webPreferences: webPreferencesOf(opts.preload, {
       // 숨었다 보일 때 애니메이션 타이머가 멈추지 않게 스로틀링을 끈다 — 단 Windows 는 켜 둔다.
       // Windows 에서 끄면 렌더러가 숨김 상태로 가지 않아, 창을 숨길 때 내려간 입력용 자식 창
       // (Chrome_RenderWidgetHostHWND)이 다시 보일 때 올라오지 않는다. 그러면 누르기가 부모 창에 떨어지고,
@@ -96,7 +96,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       backgroundThrottling: process.platform === "win32",
       // 울음소리 — 메뉴에서 고른 놀아주기처럼 무대 창에 사용자 동작이 없어도 소리를 낸다 (Chromium 자동 재생 제한)
       autoplayPolicy: "no-user-gesture-required",
-    },
+    }),
   });
   let stageRect: Rect | null = null;
   let passing: boolean | null = null; // 지금 클릭을 아래 창으로 통과시키는 중인가 — setIgnoreMouseEvents 의 마지막 값
