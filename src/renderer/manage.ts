@@ -1929,8 +1929,8 @@ function shopRow(item: ShopItemView): HTMLElement {
   card.appendChild(shopThumb(item));
   const body = el("div", "body");
   body.appendChild(el("div", "title", item.name));
-  const note = item.blocked ?? item.note;
-  if (note) body.appendChild(el("div", "note", note)); // 설명이 없는 상품은 이름 한 줄만
+  // 살 수 없어도 줄은 그대로다 — 문구를 바꾸면 줄 높이가 달라져 목록이 흔들린다 (2026-10-02 사용자 결정)
+  if (item.note) body.appendChild(el("div", "note", item.note)); // 설명이 없는 상품은 이름 한 줄만
   // 줄 끝 › — 누르면 옆에 상점 기기 창이 뜬다 (Figma `Shop Layout` product 의 chevron)
   card.append(body, el("div", "price", point(item.price)), el("span", "chevron", "›"));
   // 살 수 없어도 누를 수 있다. 이유는 기기 창이 보여 준다. 고른 줄은 톤 배경
@@ -1940,13 +1940,12 @@ function shopRow(item: ShopItemView): HTMLElement {
   return card;
 }
 
-// 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 상점 기기 창이 뜬다. 살 수 없는 이유는 가격 아래 한 줄로
+// 포켓몬 상품 칸 — 도감 칸(.dex-cell)에 가격 한 줄을 더한다. 누르면 상점 기기 창이 뜬다. 살 수 없는 이유는 기기 창이 보인다
 function shopCell(item: ShopItemView): HTMLElement {
   const cell = button("dex-cell shop-cell");
   cell.dataset.slug = item.id;
   cell.append(el("div", "no", item.dex ? `#${dexNoText(item.dex, item.form, 4)}` : ""), portraitOf(item.id, false, "dot", "", true));
   cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
-  if (item.blocked) cell.appendChild(el("div", "no", item.blocked));
   cell.setAttribute("aria-pressed", String(item.id === shopPick));
   cell.addEventListener("click", () => pickShop(item.id));
   return cell;
@@ -4119,6 +4118,7 @@ const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots
 let shopPick: string | null = null; // 기기 창에 띄운 상품
 let shopQty = 1;
 let shopNotice = ""; // 마지막 구매 실패 — 기기 창의 합계 상자가 빨강으로 보인다
+let shopDone: { lead: string; line: string } | null = null; // 방금 산 결과 — 합계 상자가 초록으로 보인다. 수량을 바꾸거나 다른 상품으로 가면 지운다
 let shopSending = false; // 구매 명령을 보내는 중 — 두 번 누르기를 막는다
 let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
 // 기기 창 세대 번호·마지막으로 보낸 내용 — 파티 상세 기기 창과 같다 (syncPetDevice)
@@ -4133,6 +4133,7 @@ function pickShop(id: string): void {
   shopPick = shopPick === id ? null : id;
   shopQty = 1;
   shopNotice = "";
+  shopDone = null;
   draw();
 }
 
@@ -4170,14 +4171,14 @@ function shopArt(item: ShopItemView): string | null {
 // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/tx/lists.ts)
 function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
   const afford = item.price > 0 ? Math.floor(v.points / item.price) : 1;
-  const cap = Math.max(1, Math.min(afford, item.room ?? afford));
-  const many = MULTI_BUY.has(item.category) && !item.blocked;
+  // 살 수 없으면 상한 0 — 수량 줄은 그대로 두고 단추만 막는다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 돌보미집 가득`)
+  const cap = item.blocked ? 0 : Math.max(1, Math.min(afford, item.room ?? afford));
+  const many = MULTI_BUY.has(item.category);
   const count = many ? Math.max(1, Math.min(shopQty, cap)) : 1;
   const total = item.price * count;
   const short = total > v.points;
   const egg = item.category === "egg";
   const eggFree = Math.max(0, v.eggs.size - v.eggs.used);
-  const daycareFull = egg && v.eggs.used >= v.eggs.size;
   // 수량 상한의 까닭 — 가장 작은 상한 하나 (Figma 05 `Shop / Device / Tool` "최대 311 · 포인트", `… / Egg` "최대 3 · 빈 칸 3")
   const why = (): string => {
     if (afford < (item.room ?? afford)) return "포인트";
@@ -4186,15 +4187,19 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
     return `빈 칸 ${eggFree.toLocaleString("ko-KR")}`;
   };
 
-  // 합계 상자 — 실패는 빨강 `사지 못했어요`(새 줄을 끼우지 않는다, 2026-09-30). 막혔으면 까닭, 모자라면 합계와 보유
+  // 합계 상자 — 실패는 빨강 `사지 못했어요`, 산 직후는 초록 결과(새 줄을 끼우지 않는다, 2026-09-30).
+  // 막혔으면 문구를 바꾸지 않고 합계와 보유만 보인다 — 까닭은 머리의 상태 글자와 수량 안내에 있다
   let lead: string;
   let line = "";
   if (shopNotice) {
     lead = "사지 못했어요";
     line = shopNotice;
+  } else if (shopDone) {
+    lead = shopDone.lead;
+    line = shopDone.line;
   } else if (item.blocked) {
-    lead = daycareFull ? `${item.blocked}. (${v.eggs.used} / ${v.eggs.size})` : item.blocked;
-    if (daycareFull) line = "부화한 뒤 다시 살 수 있어요";
+    lead = `합계 ${point(item.price)}`;
+    line = `보유 ${point(v.points)}${egg ? ` · 돌보미집 ${v.eggs.used} / ${v.eggs.size}` : ""}`;
   } else if (short) {
     lead = "포인트가 모자라요";
     line = `합계 ${point(total)} · 보유 ${point(v.points)}`;
@@ -4216,9 +4221,8 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
     desc: about?.desc ?? item.note,
     rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
     qty: many ? { count, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · ${why()}` } : null,
-    total: { lead, line, tone: shopNotice ? "bad" : "" },
+    total: { lead, line, tone: shopNotice ? "bad" : shopDone ? "ok" : "" },
     buy: { label: item.price === 0 ? "받기" : "구매", disabled: !!item.blocked || short, busy: shopBusy },
-    daycare: daycareFull && !!item.blocked,
   };
 }
 
@@ -4251,6 +4255,7 @@ function stepShop(delta: -1 | 1): void {
   shopPick = next.id;
   shopQty = 1;
   shopNotice = "";
+  shopDone = null;
   draw();
   bodyEl.querySelector<HTMLElement>('#body [aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
 }
@@ -4261,13 +4266,8 @@ function onShopAction(action: ShopDeviceAction): void {
   if (action.kind === "qty") {
     shopQty = action.qty;
     shopNotice = "";
+    shopDone = null;
     syncShopDevice();
-    return;
-  }
-  if (action.kind === "daycare") {
-    setTab("box"); // 상점 기기 창도 닫힌다
-    draw();
-    open({ kind: "daycare" }); // 돌보미집은 박스 머리 단추로 여는 모달이다 (2026-09-30)
     return;
   }
   void buyShop(shopPick);
@@ -4281,6 +4281,7 @@ async function buyShop(id: string): Promise<void> {
   if (model.buy.disabled) return;
   const count = model.qty?.count ?? 1;
   shopSending = true;
+  shopDone = null;
   const slow = setTimeout(() => {
     shopBusy = true;
     syncShopDevice();
@@ -4291,7 +4292,13 @@ async function buyShop(id: string): Promise<void> {
   shopBusy = false;
   shopNotice = ok ? "" : notice;
   notice = ""; // 실패 문구는 기기 창의 합계 상자에만 보인다
-  if (ok) shopQty = 1;
+  if (ok) {
+    shopQty = 1;
+    // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`)
+    const lead = `${item.name} ${count.toLocaleString("ko-KR")}개를 ${item.price === 0 ? "받았어요" : "샀어요"}`;
+    const line = view ? `보유 ${point(view.points)}${item.category === "egg" ? ` · 돌보미집 ${view.eggs.used} / ${view.eggs.size}` : ""}` : "";
+    shopDone = { lead, line };
+  }
   syncShopDevice();
 }
 

@@ -575,22 +575,21 @@ export interface ShopDeviceOpen {
   productId: string;
   kind: string; // 머리 줄 첫 글자 — 도구 · 알 · 진화 · 파티 칸 · 포켓몬
   name: string;
-  state: string; // 머리 줄 오른쪽 — "살 수 있음" · 살 수 없는 이유
+  state: string; // 머리 줄 오른쪽 — "살 수 있음" · 살 수 없는 짧은 이유(돌보미집 가득 등)
   group: string;
   art: string | null; // 상품 그림 data URI. 없으면 빈 칸
   spec: [string, string][]; // 가격·보유 두 줄
   desc: string;
   rows: [string, string][]; // 효과·쓰는 곳
-  qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만
-  total: { lead: string; line: string; tone: "" | "bad" }; // 합계 상자 — 실패·막힘은 빨강
+  qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만. 살 수 없으면 cap 0 — 줄은 그대로 두고 단추만 막는다
+  total: { lead: string; line: string; tone: "" | "ok" | "bad" }; // 합계 상자 — 산 직후는 초록 결과, 실패는 빨강
   buy: { label: string; disabled: boolean; busy: boolean };
-  daycare: boolean; // 돌보미집이 가득 차 알을 못 산다 — `돌보미집 보기` 줄을 둔다
 }
 export interface ShopDeviceView extends ShopDeviceOpen {
   side: "right" | "left";
 }
 // 기기 창에서 누른 단추 — productId 가 관리 창의 지금 상품과 다르면 버린다
-export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" } | { kind: "daycare" });
+export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" });
 export type ShopDeviceChannel = "shopdev:show" | "shopdev:size" | "shopdev:step" | "shopdev:close" | "shopdev:act";
 export interface ShopDeviceBridge {
   onShow: (cb: (view: ShopDeviceView) => void) => void;

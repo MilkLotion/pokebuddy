@@ -47,9 +47,10 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     out.push({ ...item, affordable: save.points.balance >= item.price });
   };
   // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (SHOP_V3_RULES.bagMax)
+  // blocked 는 상점 기기 창 머리의 짧은 상태 글자다. 목록 줄은 바꾸지 않는다 (2026-10-02 사용자 결정 — 문구가 바뀌면 레이아웃이 깨진다)
   const bagRoom = (id: string): Pick<ShopItemView, "room" | "blocked"> => {
     const room = Math.max(0, SHOP_V3_RULES.bagMax - (save.bag[id] ?? 0));
-    return room > 0 ? { room } : { room, blocked: `${SHOP_V3_RULES.bagMax}개까지만 살 수 있어요` };
+    return room > 0 ? { room } : { room, blocked: "가방 가득" };
   };
 
   // 상점 기기 창 설명 — 정보 줄은 효과·쓰는 곳 두 줄 (2026-10-01 사용자 결정 "records에는 효과,쓰는곳 만 적어")
@@ -89,7 +90,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       affordable: false,
       room: eggRoom(kind),
       about: eggAbout(kind),
-      blocked: !canGiveEgg(save, kind, opts) ? "모두 모았어요" : daycareFull ? "돌보미집이 가득 찼어요" : undefined,
+      blocked: !canGiveEgg(save, kind, opts) ? "모두 모았어요" : daycareFull ? "돌보미집 가득" : undefined,
     });
   }
 

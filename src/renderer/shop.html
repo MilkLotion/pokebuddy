@@ -50,6 +50,8 @@
         --disabled: #9ca3af;
         --danger-bg: #fdecec;
         --danger-ink: #b91c1c;
+        --success-bg: #e6f6ef;
+        --success-ink: #047857;
       }
       * {
         box-sizing: border-box;
@@ -365,17 +367,14 @@
         background: var(--danger-bg);
         color: var(--danger-ink);
       }
-      .total.bad strong {
+      .total.bad strong,
+      .total.ok strong {
         color: inherit;
       }
-      .daycare {
-        align-self: flex-start;
-        padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--soft);
-        text-decoration: underline;
-        cursor: pointer;
+      /* 산 직후 — 같은 상자가 초록 결과로 바뀐다. 가방 기기 창의 사용 결과와 같다 (Figma `Result Box` `Tone=Success`) */
+      .total.ok {
+        background: var(--success-bg);
+        color: var(--success-ink);
       }
     </style>
   </head>
