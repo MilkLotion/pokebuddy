@@ -67,9 +67,25 @@ export const affinityPercent = (pet: PetV3): number =>
 // 돌봄 보너스 — 포인트 적립 배율(백분율). 친밀도가 100 인 개체만 받는다 (2026-10-02 사용자 결정, docs/specs/balance.md "돌봄 보너스")
 // 기분 단계 보너스와 버프 보너스를 더한다. 배고픔은 포인트를 직접 깎지 않는다 — 기분 감소 배율로만 작용한다
 export function carePercent(pet: PetV3): number {
-  if (pet.affinity < 100) return 100;
+  return 100 + careParts(pet).reduce((sum, part) => sum + part.percent, 0);
+}
+
+// 돌봄 보너스의 내역 — 기분 단계, 그다음 켜진 버프. 파티 상세 기기 창의 `포인트 적립` 줄이 보인다 (src/tx/snapshot.ts)
+// 버프는 buffPercent 와 같은 규칙으로 센다 — 같은 버프는 한 번, 신남이 있으면 들뜸은 세지 않는다
+export function careParts(pet: PetV3): { kind: "mood" | BuffV3["kind"]; percent: number }[] {
+  if (pet.affinity < 100) return [];
+  const parts: { kind: "mood" | BuffV3["kind"]; percent: number }[] = [];
   const mood = MOOD_RULES.pointBonus.find((b) => pet.mood >= b.min)?.percent ?? 0;
-  return buffPercent(pet.buffs) + mood;
+  if (mood > 0) parts.push({ kind: "mood", percent: mood });
+  const excited = pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0);
+  const seen = new Set<string>();
+  for (const b of pet.buffs) {
+    if (b.remainMs <= 0 || seen.has(b.kind) || (excited && b.kind === "short-play")) continue;
+    seen.add(b.kind);
+    const percent = TIME_V3_RULES.buffBonusPercent[b.kind] ?? 0;
+    if (percent > 0) parts.push({ kind: b.kind, percent });
+  }
+  return parts;
 }
 
 // 남은 시간을 줄인다. 0 아래로 내려가지 않는다

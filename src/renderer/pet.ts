@@ -2,7 +2,7 @@
 // 배치는 시안 C 다 (2026-10-02 사용자 결정 "c로 확정", Figma `Party Detail Device` `1262:76637` — 변형 셋을 C 배치로 바꿨다)
 //   화면  자리·상태 → 초상·이름·레벨·타입 → 네 막대(경험치·친밀도·만복도·기분)
 //   몸통  돌봄 단추 둘(밥 주기는 밝은 단추)
-//   흰 판 진화 · 도감 보기 · 크기 줄을 구분선으로 나눈 목록
+//   흰 판 포인트 적립 · 진화 · 도감 보기 · 크기 줄을 구분선으로 나눈 목록
 // 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 누르면 메가진화한다 (같은 날 사용자 결정)
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
@@ -274,6 +274,19 @@ function line(title: string, desc: string | null, right: HTMLElement[], run?: ()
   return row;
 }
 
+// 포인트 적립 줄 — 돌봄 보너스를 보인다. 줄은 늘 있고 글자만 바뀐다 (Figma 03 `Party Detail Device` `row/포인트 적립`, 2026-10-02 사용자 결정 A안)
+//   박스 개체          적립하지 않는다
+//   친밀도 100 전      기본 속도. 친밀도가 가득이면 보너스가 붙는다고 알린다
+//   친밀도 100         보너스 합과 내역(기분 단계 · 버프). 보너스가 없으면 기본 속도
+function careLine(v: PetDeviceView): HTMLElement {
+  const care = v.pet.care;
+  if (!v.inParty) return line("포인트 적립 없음", "파티에 있을 때만 포인트가 쌓여요", []);
+  if (!care) return line("포인트 적립 기본", "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요", []);
+  if (care.bonus <= 0) return line("포인트 적립 기본", "기분이 좋거나 버프가 켜지면 더 빨리 쌓여요", []);
+  const parts = care.parts.map((p) => `${p.kind === "mood" ? `기분 ${p.name}` : p.name} +${p.bonus}%`);
+  return line(`포인트 적립 +${care.bonus}%`, parts.join(" · "), []);
+}
+
 // 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
 function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "mood"): string {
   if (field === "affinity") return `${pet.affinity}`;
@@ -452,7 +465,7 @@ function renderBody(v: PetDeviceView): void {
     second.classList.toggle("on", v.dexOpen);
     second.setAttribute("aria-pressed", String(v.dexOpen));
   }
-  growth.append(evoLine, second);
+  growth.append(careLine(v), evoLine, second);
   actions.appendChild(growth);
   {
     const sizes = el("div", "sizes");

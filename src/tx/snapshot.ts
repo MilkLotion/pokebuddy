@@ -13,9 +13,9 @@ import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
 import { sellPrice } from "../shop/sell.js";
-import { zoneOf } from "../state/time.js";
+import { careParts, zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
-import type { AchievementView, BagItemView, BoxView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
+import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
 import { megaChoices, megaOf, megaRivals, shownSpecies } from "../dex/mega.js";
 import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
@@ -152,7 +152,19 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(pet),
     ...megaView(save, pet),
+    care: careView(pet),
   };
+}
+
+// 돌봄 보너스 — 친밀도가 100 미만이면 없다. 내역은 기분, 그다음 버프를 배지와 같은 순서로 둔다
+function careView(pet: PetV3): CareView | null {
+  if (pet.affinity < 100) return null;
+  const found = careParts(pet);
+  const order = ["mood", ...BUFF_ORDER] as string[];
+  const parts = [...found]
+    .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
+    .map((p) => ({ kind: p.kind, name: p.kind === "mood" ? moodWord(pet.mood) : t(`buff.${p.kind}`), bonus: p.percent }));
+  return { bonus: parts.reduce((sum, p) => sum + p.bonus, 0), parts };
 }
 
 // 전체 준비 시간과 칸 수는 규칙표에서 온다. 시험에서 다른 값을 꽂을 수 있게 받을 수도 있다

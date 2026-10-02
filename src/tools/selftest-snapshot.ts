@@ -72,6 +72,23 @@ function seed(): SaveV3 {
   process.stdout.write("(3) 쿨타임과 버프 단위  ok\n");
 }
 
+// (3b) 돌봄 보너스 — 친밀도 100 인 개체만 준다. 내역은 기분, 그다음 버프를 배지 순서로 (2026-10-02 사용자 결정)
+{
+  const s = seed();
+  const [p1, p2] = s.pets;
+  assert.ok(p1 && p2);
+  assert.equal(snapshot(s).party.slots[0]?.pet?.care, null, "친밀도 80 은 보너스가 없다");
+  Object.assign(p1, { affinity: 100, mood: 95, buffs: [{ kind: "short-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }, { kind: "premium-food", remainMs: MIN }] });
+  Object.assign(p2, { affinity: 100, mood: 40, buffs: [] });
+  const v = snapshot(s);
+  assert.deepStrictEqual(v.party.slots[0]?.pet?.care, {
+    bonus: 180,
+    parts: [{ kind: "mood", name: "최고", bonus: 30 }, { kind: "premium-food", name: "든든함", bonus: 100 }, { kind: "long-play", name: "신남", bonus: 50 }],
+  }, "기분 · 든든함 · 신남 순서. 신남이 있으면 들뜸은 세지 않는다");
+  assert.deepStrictEqual(v.party.slots[1]?.pet?.care, { bonus: 0, parts: [] }, "친밀도 100 이어도 기분 보통·버프 없음이면 0");
+  process.stdout.write("(3b) 돌봄 보너스 내역  ok\n");
+}
+
 // (4) 숨김과 표시 수
 {
   const v = snapshot(seed());
