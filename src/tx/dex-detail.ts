@@ -23,6 +23,7 @@ import { nameOfItem } from "./lists.js";
 import { josa } from "../shared/josa.js";
 import { defs as achievementDefs, rewardPokemon } from "../achievement/core.js";
 import { needIsMap, regionalOf } from "../dex/regional.js";
+import { megaFormsOf, megaOf } from "../dex/mega.js";
 
 // 도감 상세의 상점 구매 줄 — 상점 포켓몬 탭을 숨긴 동안 끈다 (docs/specs/game.md "상점 포켓몬")
 const SHOP_SPECIES_LINE = false;
@@ -83,6 +84,14 @@ export function textOf(slug: string, dex: number, opts?: DexOptions): DexText | 
   };
 }
 
+// 메가진화 줄 — 얻은 종에만 보인다 (2026-10-02 사용자 결정). 메가스톤이 있는지는 보지 않는다. 조건은 적지 않는다
+function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
+  const forms = obtained ? megaFormsOf(slug, opts) : [];
+  if (!forms.length) return {};
+  const label = megaOf(forms[0] as string, opts)?.kind === "primal" ? "원시회귀" : "메가진화";
+  return { mega: { label, names: forms.map((f) => petName(f)).join(" · ") } };
+}
+
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
   const row = profile(slug, opts);
   if (!row.dex) return null;
@@ -127,6 +136,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     methods: methods.length ? methods.join(" · ") : NO_METHOD,
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
+    ...megaLine(slug, obtained, opts),
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종은 영어로 대신한다(899번부터는 data/dex-text.ko.json 으로 채워 지금은 없다)
     ...officialText(unlocked ? textOf(slug, row.dex, opts) : undefined),
     ...bodySize(unlocked ? textOf(slug, row.dex, opts) : undefined),

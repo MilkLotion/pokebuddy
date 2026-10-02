@@ -188,10 +188,11 @@ export interface DexDetail {
   flavor: string; // 공식 도감 설명문. 한국어가 없으면 영어. 미해금이면 빈 문자열
   height: string; // "1.1m". 미해금이면 빈 문자열
   weight: string; // "19.0kg". 미해금이면 빈 문자열
+  mega?: { label: string; names: string }; // 얻은 종이 메가진화하는 종일 때만 — 줄 머리(`메가진화`·`원시회귀`)와 메가 모습의 이름(`메가리자몽X · 메가리자몽Y`)
 }
 
 // 상점 상세 — 구매 창을 열 때 상품 하나만 만든다 (src/tx/shop-detail.ts, 2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가")
-// 진화 사슬의 한 종. 미해금이면 name 이 "???" 이고 화면은 그림 대신 빈 원을 그린다(실루엣 없음). 조건 문구는 미해금이어도 준다
+// 진화 사슬의 한 종. 미해금이면 name 이 "???" 이고 화면은 그림을 검은 실루엣으로 그린다(2026-10-02). 조건 문구는 미해금이어도 준다
 export interface EvoNodeView {
   slug: string;
   name: string;
@@ -545,9 +546,9 @@ export interface DexDeviceView {
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
-  // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 빈 원으로 그린다. 사슬이 없으면 null
+  // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 검은 실루엣으로 그린다. 사슬이 없으면 null
   tree: EvoNodeView | null;
-  treePortraits: Record<string, string>; // 트리의 해금 종 그림 — slug → data URI
+  treePortraits: Record<string, string>; // 트리의 종 그림 — slug → data URI. 미해금 종의 그림도 든다(실루엣으로 그린다)
   beside: boolean; // 파티 상세 기기 창 옆에 붙었다 — 바닥 단추 줄(이전·울음소리·다음)을 두지 않는다
 }
 

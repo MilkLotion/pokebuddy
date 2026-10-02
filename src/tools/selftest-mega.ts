@@ -21,6 +21,7 @@ import { empty, normalize } from "../save/v3";
 import { applyTime } from "../state/time";
 import { createExecutor } from "../tx/executor";
 import { HANDLERS } from "../tx/handlers";
+import { dexDetail } from "../tx/dex-detail";
 import { dexList } from "../tx/lists";
 import { snapshot } from "../tx/snapshot";
 import { verifySave, type VerifyData } from "../verify/save-rules";
@@ -245,7 +246,15 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(dex.find((d) => d.slug === "charizard")?.mega, true);
   assert.equal(dex.find((d) => d.slug === "pikachu")?.mega, undefined);
   assert.equal(dex.some((d) => megaOf(d.slug) !== null), false, "메가 모습은 도감 항목이 아니다");
-  process.stdout.write("(9) 화면 모델과 도감 표식  ok\n");
+  // 도감 상세 — 얻은 종에만 메가진화 줄. 메가스톤이 없어도 보인다. 해금만 한 종과 메가진화하지 않는 종에는 없다
+  s.dex.obtained = ["charizard", "pikachu", "groudon"];
+  s.dex.unlocked = ["gengar"];
+  assert.deepStrictEqual(dexDetail(s, "charizard")?.mega, { label: "메가진화", names: "메가리자몽X · 메가리자몽Y" });
+  assert.deepStrictEqual(dexDetail(s, "groudon")?.mega, { label: "원시회귀", names: "원시그란돈" });
+  assert.equal(dexDetail(s, "gengar")?.mega, undefined, "해금만 한 종");
+  assert.equal(dexDetail(s, "pikachu")?.mega, undefined, "메가진화하지 않는 종");
+  assert.equal(dexDetail(s, "mewtwo")?.mega, undefined, "미해금 종");
+  process.stdout.write("(9) 화면 모델과 도감 표식 · 도감 상세의 메가진화 줄  ok\n");
 }
 
 // (10) 배너 — 메가스톤이 생기면 한 번. 레쿠쟈와 원시회귀는 제목이 다르다

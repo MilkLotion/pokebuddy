@@ -323,8 +323,9 @@
       .evo-node.current .portrait {
         background: var(--paper);
       }
-      .evo-node .portrait.empty {
-        background: var(--unknown);
+      /* 미해금 종 — 그림을 검은 실루엣으로 (2026-10-02 사용자 결정, Figma `Evo Node` `State=Locked` `1379:3`) */
+      .evo-node .portrait.locked .art {
+        filter: brightness(0);
       }
       .evo-node .art {
         display: block;

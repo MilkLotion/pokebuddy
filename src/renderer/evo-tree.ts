@@ -46,8 +46,9 @@ export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = 
     return svg;
   }
 
-  // 초상 자리 — 미해금 종은 실루엣 대신 빈 원 (2026-09-30 사용자 결정 "실루엣은 안보이게")
-  const evoPortrait = (slug: string, locked: boolean, cls: string): HTMLElement => (locked ? el("span", `${cls} empty`) : portrait(slug, cls));
+  // 초상 자리 — 미해금 종은 검은 실루엣이다. 이름만 ??? 로 가린다 (2026-10-02 사용자 결정 "진화트리 다 실루엣으로 보이게. 이름만 ???").
+  // 2026-09-30 의 "실루엣은 안보이게"(빈 원)를 이 결정으로 바꿨다. 그림을 검게 하는 것은 CSS `.portrait.locked .art` 다
+  const evoPortrait = (slug: string, locked: boolean, cls: string): HTMLElement => portrait(slug, locked ? `${cls} locked` : cls);
 
   function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
     const box = el("div", node.current ? "evo-node current" : "evo-node");

@@ -169,6 +169,8 @@ function render(v: DexDeviceView): void {
   const rows: (readonly [string, string])[] = [["상태", state], ["입수처", d.methods]];
   if (!v.tree) rows.push(["진화", d.evolution]);
   rows.push(["특수 기믹", d.gimmick]);
+  // 메가진화하는 종 — 얻은 종에만 메가 모습의 이름을 한 줄로 (2026-10-02 사용자 결정 "얻은 종에만", 시안 A, Figma 05 `Dex / Device / Mega` `1380:55226`)
+  if (d.mega) rows.push([d.mega.label, d.mega.names]);
   for (const [key, value] of rows) {
     const row = el("div");
     row.append(el("span", "key", key), el("span", "value", value));
@@ -205,7 +207,7 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
   const card = el("div", "evo-card");
   card.appendChild(el("div", "evo-label", "진화"));
   const tree = v.tree!;
-  // 해금한 종만 이름·그림을 보인다. 미해금 종은 빈 원과 ??? — 진화 조건은 보인다 (2026-09-30 사용자 "해금된것만 보여주고")
+  // 해금한 종만 이름을 보인다. 미해금 종은 검은 실루엣과 ??? — 진화 조건은 보인다 (2026-10-02 사용자 "진화트리 다 실루엣으로 보이게. 이름만 ???")
   const draw = evoDrawer((slug, cls) => {
     const box = el("span", cls);
     const uri = v.treePortraits[slug];

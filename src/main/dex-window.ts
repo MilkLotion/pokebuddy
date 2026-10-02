@@ -154,11 +154,11 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     if (!w || !slug) return;
     const detail = opts.detail(slug);
     if (!detail) return;
-    // 미해금 종도 진화 카드를 보인다. 트리 안의 미해금 종은 기기 창이 빈 원과 ??? 로 그린다 (2026-09-30 사용자 결정, Figma 99 `1091:23558`)
+    // 미해금 종도 진화 카드를 보인다. 트리 안의 미해금 종은 기기 창이 검은 실루엣과 ??? 로 그린다 (2026-10-02 사용자 결정) — 그림은 모든 종을 보낸다
     const tree = opts.tree(slug);
     const shown: string[] = [];
     const walk = (n: EvoNodeView): void => {
-      if (!n.locked) shown.push(n.slug);
+      shown.push(n.slug);
       n.children.forEach(walk);
     };
     if (tree) walk(tree);

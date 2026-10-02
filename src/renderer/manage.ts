@@ -4668,7 +4668,7 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 
 // 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
 // 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
-// 도감에서 해금 안 된 후보는 도감 기기 창과 같이 빈 원과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
+// 도감에서 해금 안 된 후보는 도감 기기 창과 같이 검은 실루엣과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
 function drawEvolve(petId: string, to?: string): void {
   const pet = petOf(petId);
   if (!pet) {
