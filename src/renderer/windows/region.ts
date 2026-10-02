@@ -1,6 +1,7 @@
 // 놀이공간 영역 그리기 — 드래그로 사각형을 그리고 `적용` 하면 메인에 보낸다. 좌표는 창 안 좌표(DIP)다.
 // 저장은 메인이 한다. `취소`·Esc 는 아무것도 바꾸지 않는다 (docs/specs/game.md "놀이공간 변경을 취소하면 적용 전 영역을 유지한다")
-import type { RegionInit, RegionRect } from "../shared/model/overlays.js";
+import type { Rect } from "../../shared/geometry.js";
+import type { RegionInit } from "../../shared/model/overlays.js";
 
 function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
   const el = document.getElementById(id);
@@ -18,7 +19,7 @@ const apply = need("apply", HTMLButtonElement);
 
 const api = window.pokebuddyRegion;
 let min = { area: 240 * 160, side: 80 }; // 메인이 init 으로 준다 (src/state/settings.ts REGION_MIN)
-let rect: RegionRect | null = null;
+let rect: Rect | null = null;
 let from: { x: number; y: number } | null = null; // 드래그를 시작한 점
 
 const MESSAGE = "드래그해서 활동 영역을 그리세요";
@@ -51,7 +52,7 @@ api.onInit((init: RegionInit) => {
 });
 
 // 모서리 네모를 끌면 크기를 바꾼다 — 반대쪽 모서리를 시작점으로 두고 새로 그릴 때와 같은 드래그를 잇는다
-function anchorOf(handle: Element, r: RegionRect): { x: number; y: number } {
+function anchorOf(handle: Element, r: Rect): { x: number; y: number } {
   const left = handle.classList.contains("nw") || handle.classList.contains("sw");
   const top = handle.classList.contains("nw") || handle.classList.contains("ne");
   return { x: left ? r.x + r.w : r.x, y: top ? r.y + r.h : r.y };

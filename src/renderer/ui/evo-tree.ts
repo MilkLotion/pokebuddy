@@ -1,7 +1,7 @@
-// 진화 트리 그리기 — 상점 구매 창(src/renderer/manage.ts)과 도감 기기 창(src/renderer/dex.ts)이 같이 쓴다.
+// 진화 트리 그리기 — 상점 구매 창(src/renderer/manage/manage.ts)과 도감 기기 창(src/renderer/device/dex.ts)이 같이 쓴다.
 // 사슬 자료는 src/tx/shop-detail.ts 의 EvoNodeView. 초상은 창마다 그리는 방법이 달라 부르는 쪽이 넘긴다.
 // 모양 CSS(.evo-*)는 manage.html 과 dex.html 에 같은 이름으로 둔다
-import type { EvoNodeView } from "../shared/model/detail.js";
+import type { EvoNodeView } from "../../shared/model/detail.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -52,7 +52,7 @@ export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = 
 
   function evoNodeEl(node: EvoNodeView, withNeed: boolean): HTMLElement {
     const box = el("div", node.current ? "evo-node current" : "evo-node");
-    box.dataset.slug = node.slug; // 진화 창이 후보 노드를 찾아 누를 수 있게 한다 (src/renderer/manage.ts drawEvolve)
+    box.dataset.slug = node.slug; // 진화 창이 후보 노드를 찾아 누를 수 있게 한다 (src/renderer/manage/manage.ts drawEvolve)
     const name = node.locked && opts.lockedName ? opts.lockedName : node.name;
     box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", name));
     if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));

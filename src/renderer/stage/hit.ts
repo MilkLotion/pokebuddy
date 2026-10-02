@@ -2,13 +2,11 @@
 //
 // 그림 위만 클릭을 받는다. 작업 동작(공격 등)이 칸을 키워 프레임이 몸보다 크다 — 투명한 곳까지 받으면 그만큼 아래 창을 못 누른다.
 // 검사 순서: 배열 뒤(위에 그려진 것)에서 앞으로 → 프레임 사각형(패딩 포함) 안이면 시트 픽셀로 되돌려 알파를 본다
-import type { Rect } from "../shared/geometry.js";
-import type { StageFrame, StagePet, StageSize } from "../shared/model/stage.js";
+import type { Rect, Size } from "../../shared/geometry.js";
+import type { StageFrame, StagePet } from "../../shared/model/stage.js";
 
 // 그림 가장자리에서 이만큼(DIP) 떨어진 곳까지 그림으로 친다 — 도트 사이 틈에서 클릭이 새지 않게 (옛 pointer.js HIT_PAD_PX)
 export const HIT_PAD_PX = 3;
-
-export type { Rect }; // 원본은 src/shared/geometry.ts
 
 // 시트 안 프레임 하나. alpha 는 시트 전체 RGBA (ImageData 와 같은 모양 — width 가 시트 너비)
 export interface HitSprite {
@@ -20,7 +18,7 @@ export interface HitSprite {
 }
 
 export interface HitTarget {
-  body: StageSize; // 몸 칸 (도트) — 자리의 기준
+  body: Size; // 몸 칸 (도트) — 자리의 기준
   sprite: HitSprite;
 }
 
@@ -32,7 +30,7 @@ type Placed = Pick<StagePet, "x" | "y" | "zoom">;
 // 프레임이 놓이는 무대 사각형(DIP) — 몸 칸 가운데에 프레임을 맞춘다 (art/pmd.js · 옛 renderer/pmd.js 의 정렬 규칙).
 // PMD 의 정렬 기준점은 칸 안의 (칸너비/2, 칸높이/2 + 4). 프레임을 몸 칸 가운데에 놓으면 이 점이 몸 칸의 (w/2, h/2+4) 에 떨어진다 —
 // 칸 크기와 무관한 상수라 동작이 바뀌어도 발 위치가 그대로다. 몸 칸 = 작업 동작을 뺀 칸이라 공격 동작은 몸 밖으로 넘친다
-export function rectOf(pet: Placed, body: StageSize, frame: { fw: number; fh: number }): Rect {
+export function rectOf(pet: Placed, body: Size, frame: { fw: number; fh: number }): Rect {
   const dx = Math.round((body.w - frame.fw) / 2);
   const dy = Math.round((body.h - frame.fh) / 2);
   return { x: pet.x + dx * pet.zoom, y: pet.y + dy * pet.zoom, w: frame.fw * pet.zoom, h: frame.fh * pet.zoom };

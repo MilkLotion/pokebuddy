@@ -6,10 +6,10 @@
 // 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 누르면 메가진화한다 (같은 날 사용자 결정)
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
-import type { PetDeviceAction, PetDeviceView } from "../shared/model/devices.js";
-import { genderIcon } from "./gender.js";
-import { shinyIcon } from "./shiny.js";
-import { sprite } from "./portrait.js";
+import type { PetDeviceAction, PetDeviceView } from "../../shared/model/devices.js";
+import { genderIcon } from "../ui/gender-icon.js";
+import { shinyIcon } from "../ui/shiny-icon.js";
+import { sprite } from "../ui/portrait.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -47,7 +47,7 @@ const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통",
 const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
 
 // 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림).
-// 관리 창(src/renderer/manage.ts buffBadge)과 같은 규칙이다 — 고칠 때 함께 고친다
+// 관리 창(src/renderer/manage/manage.ts buffBadge)과 같은 규칙이다 — 고칠 때 함께 고친다
 const buffBadge = (b: PetDeviceView["pet"]["buffs"][number]): string =>
   `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
 
@@ -90,7 +90,7 @@ let shownPetId = "";
 const act = (action: ActBody): void => api.act({ ...action, petId: shownPetId } as PetDeviceAction);
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 성격 부여·저장은 그대로다.
-// 관리 창 src/renderer/manage.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+// 관리 창 src/renderer/manage/manage.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
 const NATURE_UI = false;
 
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).
@@ -260,7 +260,7 @@ function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "
 const feedText = (pet: PetDeviceView["pet"]): string =>
   pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`;
 
-// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage.ts structureOf)과 같은 목록이다
+// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록이다
 // 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
 const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
 const structureOf = (v: PetDeviceView): string =>
