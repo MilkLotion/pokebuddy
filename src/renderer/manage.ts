@@ -4371,7 +4371,8 @@ let shopGen = 0;
 let shopDeviceOpen = false;
 let shopDeviceSent = "";
 
-const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티 칸", pokemon: "포켓몬" };
+// 상점 기기 창 제목 줄의 분류 글자 — 상점 분류 칩(SHOP_TABS)의 이름과 같다. slot 은 파티 칸·파티 프리셋·박스를 담는다 (2026-10-03 사용자 결정)
+const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티", pokemon: "포켓몬" };
 
 // 누른 상품 — 같은 상품을 다시 누르면 닫는다(도감 칸과 같다)
 function pickShop(id: string): void {
