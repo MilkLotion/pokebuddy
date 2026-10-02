@@ -3646,7 +3646,7 @@ function giftWhere(gifts: readonly MailGiftView[]): string {
   const places = [gifts.some((g) => g.kind === "item") && "가방", gifts.some((g) => g.kind === "pokemon") && "박스", gifts.some((g) => g.kind === "points") && "포인트"].filter((p): p is string => !!p);
   if (places.length === 1 && places[0] === "포인트") return "포인트에 더해졌어요";
   // 앞 단어에 받침이 있으면 "과"(가방과), 없으면 "와"(박스와)
-  const and = (w: string): string => ((w.charCodeAt(w.length - 1) - 0xac00) % 28 ? `${w}과` : `${w}와`);
+  const and = (w: string): string => `${w}${josa(w, "과/와")}`;
   return `${places.map((p, i) => (i < places.length - 1 ? and(p) : p)).join(" ")}에 들어갔어요`;
 }
 
