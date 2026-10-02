@@ -1363,6 +1363,24 @@
         width: min(560px, calc(100vw - 40px));
         flex: none;
       }
+      /* 알에서 나오는 포켓몬 — 도감 칸 15개(5열 3줄)와 넘김 줄. 알마다 창 높이가 같다 (Figma 03 `Egg Pool Panel`) */
+      .dialog.daycare.egg-pool {
+        width: min(560px, calc(100vw - 40px));
+        flex: none;
+      }
+      .dialog.egg-pool .titles p {
+        margin: 0;
+        color: var(--soft);
+      }
+      .egg-pool-grid .dex-cell {
+        cursor: default;
+      }
+      .egg-pool-grid .dex-cell.blank {
+        visibility: hidden;
+      }
+      .dialog.egg-pool .grid-pager {
+        margin: 0;
+      }
       .box-order-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));

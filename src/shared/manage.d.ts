@@ -150,6 +150,14 @@ export interface ShopItemView {
   form?: number; // 리전폼의 폼 순번 — 번호 줄이 `#0026-1` 이 된다 (src/dex/regional.ts)
   region?: string; // 리전폼의 지방 — 지방 필터가 번호 구간 대신 이것으로 거른다
   about?: ShopAbout; // 상점 기기 창의 설명 — 포켓몬 상품은 없다
+  pool?: EggPoolView; // 알 — 종 목록이 정해진 알(단일 포켓몬 알·태고의돌)만. 랜덤알에는 없다
+}
+
+// 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄과 목록 창이 쓴다 (2026-10-03 사용자 결정, worklog/records/egg-pool/record.md)
+// 종은 도감 번호 순이다. 얻지 않은 종은 화면이 실루엣과 `???` 로 보인다 — 도감의 미해금 칸과 같다
+export interface EggPoolView {
+  single: boolean; // 단일 포켓몬 알 — 얻은 종은 다시 나오지 않는다. 태고의돌은 false 다
+  entries: { slug: string; dex: number; form?: number; name: string; obtained: boolean }[];
 }
 
 // 상점 기기 창이 보일 상품 설명 (src/tx/lists.ts, Figma 05 `Shop / Device / …`). 문구는 화면이 그대로 쓴다
@@ -606,6 +614,7 @@ export interface ShopDeviceOpen {
   spec: [string, string][]; // 가격·보유 두 줄
   desc: string;
   rows: [string, string][]; // 효과·쓰는 곳
+  link: { label: string; value: string } | null; // 정보 줄 아래의 누르는 줄 — 알의 `나오는 포켓몬`. 없으면 null
   qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만. 살 수 없으면 cap 0 — 줄은 그대로 두고 단추만 막는다
   total: { lead: string; line: string; tone: "" | "ok" | "bad" }; // 합계 상자 — 산 직후는 초록 결과, 실패는 빨강
   buy: { label: string; disabled: boolean; busy: boolean };
@@ -614,7 +623,7 @@ export interface ShopDeviceView extends ShopDeviceOpen {
   side: "right" | "left";
 }
 // 기기 창에서 누른 단추 — productId 가 관리 창의 지금 상품과 다르면 버린다
-export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" });
+export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" } | { kind: "pool" });
 export type ShopDeviceChannel = "shopdev:show" | "shopdev:size" | "shopdev:step" | "shopdev:close" | "shopdev:act";
 export interface ShopDeviceBridge {
   onShow: (cb: (view: ShopDeviceView) => void) => void;

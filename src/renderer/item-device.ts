@@ -19,6 +19,7 @@ export interface DeviceFace {
   spec: [string, string][];
   desc: string;
   rows: [string, string][];
+  link?: { label: string; value: string } | null; // 정보 줄 아래의 누르는 줄 — 상점 기기 창의 `나오는 포켓몬`
 }
 
 export function el(tag: string, cls?: string, text?: string): HTMLElement {
@@ -88,7 +89,7 @@ export function sprite(uri: string, maxSide = STAGE.maxSide): HTMLCanvasElement 
 }
 
 // 기기 창 하나 — #device 를 찾아 높이 알림·글꼴·키보드를 붙이고, render 가 틀을 그린다
-export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTMLElement; fontsReady: Promise<unknown>; render: (face: DeviceFace, middle: HTMLElement, go: HTMLButtonElement) => void } {
+export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTMLElement; fontsReady: Promise<unknown>; render: (face: DeviceFace, middle: HTMLElement, go: HTMLButtonElement, onLink?: () => void) => void } {
   const root = document.getElementById("device");
   if (!(root instanceof HTMLElement)) throw new Error(`${htmlName} 에 #device 가 없다`);
   const device: HTMLElement = root;
@@ -117,7 +118,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
     else if (e.key === "Escape") api.close();
   });
 
-  function render(face: DeviceFace, middle: HTMLElement, go: HTMLButtonElement): void {
+  function render(face: DeviceFace, middle: HTMLElement, go: HTMLButtonElement, onLink?: () => void): void {
     device.className = `device${face.side === "left" ? " left" : ""}`;
     device.replaceChildren();
     device.appendChild(el("div", "hinge"));
@@ -154,7 +155,14 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
     device.appendChild(bezel);
 
     // 정보 줄 — 효과·쓰는 곳 두 줄 (2026-10-01 사용자 결정)
-    device.appendChild(pairs("records", face.rows, "value"));
+    const records = pairs("records", face.rows, "value");
+    // 누르는 줄 — 같은 판 안의 셋째 줄. 글자 끝의 `›` 가 누를 수 있음을 알린다 (Figma 03 `Shop Device` `row/나오는 포켓몬`)
+    if (face.link && onLink) {
+      const more = button("more", "", onLink);
+      more.append(el("span", "key", face.link.label), el("span", "value", `${face.link.value} ›`));
+      records.appendChild(more);
+    }
+    device.appendChild(records);
     device.appendChild(middle);
 
     const controls = el("div", "controls");

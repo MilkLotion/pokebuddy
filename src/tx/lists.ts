@@ -5,8 +5,8 @@
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
-import { canGiveEgg, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
-import type { DexEntry, ItemAbout, ShopAbout, ShopItemView } from "../shared/manage";
+import { canGiveEgg, eggPool, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
+import type { DexEntry, EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/manage";
 import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
@@ -78,6 +78,15 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     const waiting = save.eggs.filter((e) => e.kind === kind).length;
     return Math.max(0, Math.min(daycareRoom, singleLeft(save, kind, opts).length - waiting));
   };
+  // 종 목록이 정해진 알의 후보 — 얻었는지와 함께. 랜덤알은 목록이 없다
+  const got = new Set(save.dex.obtained);
+  const poolOf = (kind: string): { pool?: EggPoolView } => {
+    const list = eggPool(kind, opts);
+    if (!list) return {};
+    const entries = list.map((slug) => ({ slug, dex: species(opts)[slug]?.dex ?? 0, ...(regionalOf(slug, opts) ? { form: regionalOf(slug, opts)?.no } : {}), name: petName(slug), obtained: got.has(slug) }));
+    entries.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0)); // 도감 번호 순 — 도감과 같다
+    return { pool: { single: isSingleEgg(kind, opts), entries } };
+  };
   for (const kind of Object.keys(eggs(opts))) {
     if (isMetaKey(kind)) continue;
     const price = eggPrice(kind, opts);
@@ -91,6 +100,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       affordable: false,
       room: eggRoom(kind),
       about: eggAbout(kind),
+      ...poolOf(kind),
       blocked: !canGiveEgg(save, kind, opts) ? "모두 모았어요" : daycareFull ? "돌보미집 가득" : undefined,
     });
   }

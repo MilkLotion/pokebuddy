@@ -227,4 +227,26 @@ const fixed = (...values: number[]): (() => number) => {
   process.stdout.write("(18) 알에서 진화형이 나오지 않는다  ok\n");
 }
 
+// (19) 나오는 포켓몬 — 종 목록이 정해진 알만 상점 목록에 후보를 싣는다. 도감 번호 순, 얻었는지와 함께 (2026-10-03 사용자 결정)
+{
+  const s = empty(T0);
+  s.dex.obtained.push("mewtwo", "kabuto");
+  const list = shopList(s);
+  const of = (id: string) => list.find((p) => p.id === id)?.pool;
+  assert.equal(of("random"), undefined, "랜덤알은 목록이 없다");
+  const legend = of("legendary");
+  assert.ok(legend);
+  assert.equal(legend.single, true);
+  assert.equal(legend.entries.length, (eggPool("legendary") ?? []).length);
+  assert.deepStrictEqual(legend.entries[0], { slug: "mewtwo", dex: 150, name: "뮤츠", obtained: true }, "도감 번호 순 · 얻은 종 표시");
+  assert.equal(legend.entries.filter((e) => e.obtained).length, 1);
+  assert.ok(legend.entries.every((e, i, a) => i === 0 || (a[i - 1]?.dex ?? 0) <= e.dex), "번호 순");
+  const stone = of("ancient-stone");
+  assert.ok(stone);
+  assert.equal(stone.single, false, "태고의돌은 단일 포켓몬 알이 아니다");
+  assert.deepStrictEqual(stone.entries.filter((e) => e.obtained).map((e) => e.slug), ["kabuto"]);
+  for (const kind of ["sub-legendary", "ultra-beast", "paradox", "mythical"]) assert.ok(of(kind)?.single, kind);
+  process.stdout.write("(19) 나오는 포켓몬 · 후보 목록  ok\n");
+}
+
 process.stdout.write("selftest-egg: 통과 (준비 시간·가중치·부화·단일 포켓몬 알·진화형 없음)\n");

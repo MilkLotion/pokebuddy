@@ -37,5 +37,5 @@ function isAction(v: unknown): v is ShopDeviceAction {
   const a = v as Record<string, unknown>;
   if (typeof a.productId !== "string" || !a.productId || a.productId.length > 80) return false;
   if (a.kind === "qty") return typeof a.qty === "number" && Number.isInteger(a.qty) && a.qty >= 1 && a.qty <= 999;
-  return a.kind === "buy";
+  return a.kind === "buy" || a.kind === "pool";
 }

@@ -16,6 +16,7 @@ import type {
   BoxView,
   CloudStatusView,
   DexEntry,
+  EggPoolView,
   EggView,
   EvoNodeView,
   FormView,
@@ -179,6 +180,7 @@ type Dialog =
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }
   | { kind: "daycare" } // 돌보미집 — 박스 넘김 줄의 집 아이콘 단추
   | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
+  | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
@@ -1880,6 +1882,51 @@ function drawBoxOrder(): void {
     grid.appendChild(tile);
   });
   dialogEl.append(top, grid);
+}
+
+// ── 알에서 나오는 포켓몬 ────────────────────────────────────────────────────────
+// 종 목록이 정해진 알(단일 포켓몬 알·태고의돌)의 후보를 보인다 (2026-10-03 사용자 결정, worklog/records/egg-pool/record.md).
+// 상점 기기 창의 `나오는 포켓몬` 줄이 연다. 칸은 도감 칸과 같다 — 얻은 종은 획득 칸, 못 얻은 종은 실루엣과 `???`(번호는 보인다).
+// 한 쪽 15칸(5열 3줄)이라 알마다 창 높이가 같다 (Figma 03 `Egg Pool Panel`, 05 `Shop / Egg Pool Dialog`)
+// 단일 포켓몬 알은 남은 종 수를, 태고의돌은 얻은 종 수를 센다 — 태고의돌은 얻은 종도 다시 나온다
+function poolCount(pool: EggPoolView): string {
+  const total = pool.entries.length;
+  const got = pool.entries.filter((e) => e.obtained).length;
+  return pool.single ? `${total}종 중 ${total - got}종 남음` : `${total}종 중 ${got}종 얻음`;
+}
+
+function drawPool(productId: string, page: number): void {
+  const item = view?.shop.find((i) => i.id === productId);
+  const pool = item?.pool;
+  if (!item || !pool) {
+    close();
+    return;
+  }
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.appendChild(el("h2", undefined, `${item.name}에서 나오는 포켓몬`));
+  titles.appendChild(el("p", undefined, `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  top.append(titles, x);
+  const shown = pageOf(pool.entries, page, GRID_PAGE);
+  const grid = el("div", "dex-grid egg-pool-grid");
+  for (const e of shown.items) {
+    const cell = el("div", e.obtained ? "dex-cell dex-box" : "dex-cell dex-box locked");
+    cell.append(portraitOf(e.slug, false, "dot", "", true), el("div", "who", e.obtained ? e.name : "???"), el("div", "no", `#${dexNoText(e.dex, e.form, 4)}`));
+    if (e.obtained) {
+      const got = el("span", "got");
+      got.title = "획득";
+      got.setAttribute("role", "img");
+      got.setAttribute("aria-label", got.title);
+      cell.appendChild(got);
+    }
+    grid.appendChild(cell);
+  }
+  // 마지막 쪽이 덜 차도 격자 높이는 세 줄이다 — 쪽을 넘겨도 창 높이가 같다
+  for (let i = shown.items.length; i < GRID_PAGE; i++) grid.appendChild(el("div", "dex-cell dex-box blank"));
+  dialogEl.append(top, grid, gridPager(shown.page, shown.pages, (to) => open({ kind: "pool", productId, page: to })));
 }
 
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
@@ -4466,6 +4513,7 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
     spec: about ? [["가격", point(item.price)], about.spec] : [["가격", point(item.price)]],
     desc: about?.desc ?? item.note,
     rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
+    link: item.pool ? { label: "나오는 포켓몬", value: poolCount(item.pool) } : null,
     qty: many ? { count, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · ${why()}` } : null,
     total: { lead, line, tone: shopNotice ? "bad" : shopDone ? "ok" : "" },
     buy: { label: item.price === 0 ? "받기" : "구매", disabled: !!item.blocked || short, busy: shopBusy },
@@ -4514,6 +4562,10 @@ function onShopAction(action: ShopDeviceAction): void {
     shopNotice = "";
     shopDone = null;
     syncShopDevice();
+    return;
+  }
+  if (action.kind === "pool") {
+    open({ kind: "pool", productId: shopPick, page: 0 });
     return;
   }
   void buyShop(shopPick);
@@ -5400,6 +5452,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   hatched: "dialog hatched",
   daycare: "dialog daycare",
   "box-order": "dialog daycare box-order",
+  pool: "dialog daycare egg-pool",
   form: "dialog",
   mega: "dialog",
   "sell-pet": "dialog",
@@ -5464,6 +5517,7 @@ function drawDialog(): void {
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over, dialog.queue, dialog.at);
   else if (dialog.kind === "daycare") drawDaycare();
   else if (dialog.kind === "box-order") drawBoxOrder();
+  else if (dialog.kind === "pool") drawPool(dialog.productId, dialog.page);
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "mega") drawMega(dialog.petId, dialog.to);
   else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);

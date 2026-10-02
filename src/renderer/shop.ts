@@ -17,7 +17,7 @@ function render(v: ShopDeviceView): void {
   if (v.total.line) total.appendChild(el("div", undefined, v.total.line));
   card.appendChild(total);
   const go = goButton(v.buy.label, v.buy.disabled, v.buy.busy, () => api.act({ productId: v.productId, kind: "buy" }));
-  frame.render({ ...v, title: "상점" }, card, go);
+  frame.render({ ...v, title: "상점" }, card, go, () => api.act({ productId: v.productId, kind: "pool" }));
 }
 
 api.onShow((view) => {
