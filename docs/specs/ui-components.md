@@ -22,7 +22,7 @@ Figma 원본: [0.2 · 와이어프레임(구 07)](https://www.figma.com/design/M
 | 이로치 표시 | 이로치 개체는 이로치 아이콘으로 표시한다. 글자 `이로치`를 쓰지 않는다. 아이콘은 빨간 네 갈래 별 2개의 10×10 도트 그림이다. 이름이 한 줄로 나오는 곳은 이름 옆에 둔다. 칸은 왼쪽 위 구석에 둔다. 툴팁과 접근성 이름은 `이로치`다. Figma: `Shiny Mark` `1225:26525`. 구현: `src/renderer/shiny.ts` `shinyIcon`. (2026-10-02 사용자 결정 "E로 하자") |
 | 빈 상태 | 빈 상태는 한 줄 문구만 둔다. 설명 문구를 덧붙이지 않는다. |
 | 경고·안내 | 오류·주의·완료·안내는 `Alert` 로 보인다. 종류는 바탕 톤과 16px 픽셀 아이콘(`!`·`✓`·`i`)으로 구분한다. 테두리는 없고 모서리는 8px 이다. 내용 카드(흰 바탕, 중립 테두리, 12px)와 모양을 나눈다. 제목이 있으면 제목과 설명 두 줄(Banner)이다. 사용자가 닫는 배너에만 오른쪽 `✕` 를 둔다. `Alert` 는 그 상태가 이어지는 동안 늘 보이는 안내(저장 실패, 계정 분실·막힘, Node.js 없음)에만 쓴다. 누른 결과와 명령 실패는 새 줄을 끼웠다 빼지 않는다. 이미 있는 자리의 글자·색만 바꾼다(아래 `결과·실패 표시`). Figma: `Alert` `1040:279`(Tone=Error·Warning·Success·Info, Type=Banner·Inline). 구현: `src/renderer/manage.ts` `alertBox`, `manage.html` `.alert`. (2026-09-30 사용자 결정 "시안 괜찮네") |
-| 결과·실패 표시 | 누른 결과와 명령 실패는 레이아웃을 바꾸지 않는다. 가방 기기 창은 미리보기 상자가 결과면 초록(`use-preview ok`), 실패면 빨강(`use-preview bad`)으로 바뀐다. 첫 줄은 결과나 `쓰지 못했어요`·`팔지 못했어요`, 둘째 줄은 쓴 수나 이유다. 도구를 다 써서 판이 닫히면 결과를 따로 두지 않는다. 상점 기기 창(C-30)은 합계 상자가 빨강 `사지 못했어요` 로 바뀐다. 그 밖의 대화상자는 바닥 단추 줄의 빈자리(보조 단추와 주 단추 사이의 `spacer` 안, 없으면 줄 끝)에 빨간 점과 한 줄 글자를 둔다(`footer-error`, 길면 말줄임, 전체는 title). 단추 자리는 그대로다. 바닥 단추 줄이 없는 대화상자만 예전처럼 본문 끝에 `Alert` Inline 을 둔다. 연결 탭은 그 CLI 줄의 상태 글자와 점 색으로 보인다. Figma: 05 섹션 `결과·실패 표시`(R1·R2·R3), `Dialog` `299:3575` `error-notice`. 구현: `src/renderer/manage.ts` `bagPanel`·`drawDialog`, `manage.html` `.use-preview.ok`·`.bad`·`.footer-error`. (2026-09-30 사용자 결정 "레이아웃 왔다갔다하는건데? 나 이런거 싫어한다니까?") |
+| 결과·실패 표시 | 누른 결과와 명령 실패는 레이아웃을 바꾸지 않는다. 가방 기기 창은 미리보기 상자가 결과면 초록(`use-preview ok`), 실패면 빨강(`use-preview bad`)으로 바뀐다. 첫 줄은 결과나 `쓰지 못했어요`·`팔지 못했어요`, 둘째 줄은 쓴 수나 이유다. 도구를 다 써서 판이 닫히면 결과를 따로 두지 않는다. 상점 기기 창(C-30)은 합계 상자가 빨강 `사지 못했어요` 로 바뀐다. 그 밖의 대화상자는 바닥 단추 줄의 빈자리(보조 단추와 주 단추 사이의 `spacer` 안, 없으면 줄 끝)에 빨간 점과 한 줄 글자를 둔다(`footer-error`, 길면 말줄임, 전체는 title). 단추 자리는 그대로다. 바닥 단추 줄이 없는 대화상자만 예전처럼 본문 끝에 `Alert` Inline 을 둔다. 연결 탭은 그 CLI 줄의 상태 글자와 점 색으로 보인다. Figma: 결과·실패 상자는 `Result Box` `1315:47502`(`Tone=Success|Error`)다. 기기 창의 미리보기·합계 상자(`Info Box`) 자리를 이 변형으로 교체한다. 화면은 05 `Bag / Device / Use · 결과` `1315:47631`, `Bag / Device / Use · 실패` `1315:47635`, `Bag / Device / Sell · 실패` `1315:47639`, `Shop / Device / Tool · 실패` `1315:47627` 이다. 대화상자는 `Dialog` `299:3575` 의 `error-notice`(`Show Error`)이고 화면은 `Box / Sell Confirm · 실패` `1315:47608` 이다(2026-10-02 추가). 구현: `src/renderer/manage.ts` `bagPanel`·`drawDialog`, `manage.html` `.use-preview.ok`·`.bad`·`.footer-error`. (2026-09-30 사용자 결정 "레이아웃 왔다갔다하는건데? 나 이런거 싫어한다니까?") |
 | 모달 | 업적창·설정·개체 선택은 어두운 배경 위 대화상자다. 닫으면 보던 탭으로 돌아간다. |
 
 ## 판정 요약
@@ -86,9 +86,35 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 층 | 컴포넌트 (노드, 변형) |
 |---|---|
 | 01 Atoms | `Device Button` `1262:74948`(`Style=Dark\|Primary\|Muted`), `Status Chip` `1262:84907`, `Overlay Label` `1262:98967`, `Locked Chip` `1262:99322`. `Status Dot` `126:1055` 에 `Tone=Off` 를 더했다. `Button` `113:313` 은 고정 높이 대신 세로 여백으로 높이 32·36 을 잡는다. |
-| 02 Molecules | 기기 창: `Device Top` `1262:75071`, `Device Controls` `1262:75260`, `Device Title Bar` `1262:75686`(`Theme=Dex\|Shop\|Bag`), `Device Record Row` `1262:75510`, `Device Measure Row` `1262:75587`, `Link Row` `1262:75416`(`Lines=Two Line\|One Line`), `Evo Node` `1262:75749`(`State=Default\|Current`), `Evo Step` `1262:75853`, `Evo Branch Row` `1262:85083`, `Party Device Slot` `1262:99156`(`State=Pokemon\|Pokemon Target\|Empty\|Empty Target\|Locked`). 줄과 입력: `Status Line` `1262:80743`, `Row Actions` `1262:80813`, `Screen Pick Control` `1262:80849`, `Version Footer` `1262:80921`(`Action=On\|Off`), `Form Group` `1262:82290`(`Helper=On\|Off`), `Text Divider` `1262:82258`, `Dropdown Menu` `1262:82096`(`Kind=Sort\|Region`), `Inline Name Input` `1262:99011`, `Preset Pager` `1262:82395`, `Dialog Message` `1262:84875`. 목록: `Version List Item` `1262:82203`(`State=Default\|Selected`), `Mail Row` `1262:84951`(`Kind=Gift\|Claimed\|Plain`), `Mail Gift Row` `1262:82229`, `Trade Channel Card` `1262:83017`(`Kind=Create\|Join\|Created`), `Trade Offer Card` `1262:85008`, `Form Row` `1262:99021`, `Achievement Row` `1294:47355`(`State=Claimable\|Done`). |
-| 03 Organisms | 기기 창: `Party Detail Device` `1262:76637`(`State=Default\|In Ball\|Box Pokemon`), `Dex Device` `1262:77689`(`State=Unlocked\|Locked\|No Method\|Beside`), `Shop Device` `1262:77893`, `Bag Device` `1262:78407`(`State=Use\|Sell\|Evolution`), `Party Swap Device` `1262:99370`. 대화상자 본문: `Settings Panel` `1262:85674`(`Tab=General\|Display`), `Account Panel` `1262:86794`(`State=Signed In\|Signed In · Guide\|Signed In · No Save\|Sign In\|Sign Up\|Recover`), `Connect Panel` `1262:87248`(`State=Default\|No Node`), `Patch Notes Panel` `1262:87524`(`Layout=Single\|List`), `Guidebook Panel` `1294:47275`, `Achievements Panel` `1294:47368`, `Daycare Panel` `1294:47384`, `Hatch Result Panel` `1294:47413`. 대화상자: `Mail Dialog` `1262:89524`(`State=List\|Letter\|Letter Login\|Letter Claimed`), `Trade Dialog` `1262:90033`(`State=Base\|Error\|Done\|Blocked\|Offer\|Login Required`), `Evolution Dialog` `1262:85407`(`State=Confirm\|Failed`). 그 밖: `Page Header / Party` `1262:83118`, `Page Header / Box` `1262:83221`, `Form Bubble` `1262:99054`, `Desktop Mock` `1262:82946`, `Region Toolbar` `1262:98978`, `Screen Picker Card` `1262:99000`(`Kind=Pick\|Number`). |
+| 02 Molecules | 기기 창: `Device Top` `1262:75071`, `Device Controls` `1262:75260`, `Device Title Bar` `1262:75686`(`Theme=Dex\|Shop\|Bag`), `Device Record Row` `1262:75510`, `Device Measure Row` `1262:75587`, `Link Row` `1262:75416`(`Lines=Two Line\|One Line`), `Evo Node` `1262:75749`(`State=Default\|Current`), `Evo Step` `1262:75853`, `Evo Branch Row` `1262:85083`, `Party Device Slot` `1262:99156`(`State=Pokemon\|Pokemon Target\|Empty\|Empty Target\|Locked`). 줄과 입력: `Status Line` `1262:80743`, `Row Actions` `1262:80813`, `Screen Pick Control` `1262:80849`, `Version Footer` `1262:80921`(`Action=On\|Off`), `Form Group` `1262:82290`(`Helper=On\|Off`), `Text Divider` `1262:82258`, `Dropdown Menu` `1262:82096`(`Kind=Sort\|Region`), `Inline Name Input` `1262:99011`, `Preset Pager` `1262:82395`, `Dialog Message` `1262:84875`, `Result Box` `1315:47502`(`Tone=Success\|Error`). 목록: `Version List Item` `1262:82203`(`State=Default\|Selected`), `Mail Row` `1262:84951`(`Kind=Gift\|Claimed\|Plain`), `Mail Gift Row` `1262:82229`, `Trade Channel Card` `1262:83017`(`Kind=Create\|Join\|Created`), `Trade Offer Card` `1262:85008`, `Form Row` `1262:99021`, `Achievement Row` `1294:47355`(`State=Claimable\|Done`). |
+| 03 Organisms | 기기 창: `Party Detail Device` `1262:76637`(`State=Default\|In Ball\|Box Pokemon`), `Dex Device` `1262:77689`(`State=Unlocked\|Locked\|No Method\|Beside`), `Shop Device` `1262:77893`, `Bag Device` `1262:78407`(`State=Use\|Sell\|Evolution`), `Party Swap Device` `1262:99370`. 대화상자 본문: `Settings Panel` `1262:85674`(`Tab=General\|Display`), `Account Panel` `1262:86794`(`State=Signed In\|Signed In · Guide\|Signed In · No Save\|Sign In\|Sign Up\|Recover`), `Connect Panel` `1262:87248`(`State=Default\|No Node`), `Patch Notes Panel` `1262:87524`(`Layout=Single\|List`), `Guidebook Panel` `1294:47275`, `Achievements Panel` `1294:47368`, `Daycare Panel` `1294:47384`, `Hatch Result Panel` `1315:47575`(`Kind=Pokemon\|Egg`), `Form Confirm Panel` `1315:47600`. 대화상자: `Mail Dialog` `1262:89524`(`State=List\|Letter\|Letter Login\|Letter Claimed`), `Trade Dialog` `1262:90033`(`State=Base\|Error\|Done\|Blocked\|Offer\|Login Required`), `Evolution Dialog` `1262:85407`(`State=Confirm\|Failed`). 그 밖: `Page Header / Party` `1262:83118`, `Page Header / Box` `1262:83221`, `Form Bubble` `1262:99054`, `Desktop Mock` `1262:82946`, `Region Toolbar` `1262:98978`, `Screen Picker Card` `1262:99000`(`Kind=Pick\|Number`). |
 | 04 Templates | `First Run Layout` `1262:100530`. `Party`·`Box`·`Shop Layout` 은 변형 묶음이 됐다(위 템플릿 줄). |
+
+2026-10-02 재검수에서 더한 변형: `Stat Meter` `296:190` 의 `Size=Device` `1318:58254`(값 글자 12, 파티 상세 기기 창의 기록 막대), `Product Card` 의 `State=Default|Selected`(세트 `1318:58786`, 기기 창에 뜬 상품의 칸), `Preset Pager` 의 `State=Default|Editing`(`Editing` `1318:57918`, 이름을 고치는 중).
+
+페이지 배치(2026-10-02): 01~04 페이지는 갈래별 섹션으로 묶는다. 새 컴포넌트는 맞는 섹션 안에 둔다.
+
+| 페이지 | 섹션 |
+|---|---|
+| 01 Atoms | `01 글자`, `02 아이콘·표시`, `03 단추·고르기`, `04 배지·상태`, `05 초상·막대·선`, `06 그림 원본·참고` |
+| 02 Molecules | `01 창 머리·탐색`, `02 파티·박스`, `03 도감·상점·가방`, `04 기기 창`, `05 설정·입력`, `06 대화창·알림·목록` |
+| 03 Organisms | `01 창 뼈대`, `02 파티 카드`, `03 대화창·겹치는 것`, `04 기기 창`, `05 대화창 본문`, `06 놀이공간·화면 고르기` |
+| 04 Templates | `01 탭 틀`, `02 첫 실행 틀` |
+| 05 Screens | `01 첫 실행` ~ `14 바탕화면`. 섹션 안은 흐름별로 한 줄씩 둔다. 레이어 순서는 보이는 순서(위에서 아래, 왼쪽에서 오른쪽)와 같다. |
+
+재구성 전과 모양이 다른 곳(2026-10-02 재검수, 재구성 전 사본과 화면별로 대조):
+
+| 곳 | 차이 |
+|---|---|
+| 고른 가방 칸·상품 칸 | 바탕이 `#e3efe9` 에서 `bg/accent`(`#ebf4f1`)로 바뀌었다. 코드의 `--accent` 와 같다. |
+| 파티 상세 기기 창의 기록 막대 | 채움 길이를 `Stat Meter Bar` 의 10% 단위 변형으로 고른다. 그전 길이와 2~7px 다르다. |
+| 크기 단추의 고른 칸 | `Size Step` 의 `State=Selected` 다. 1px 테두리가 생겼다. |
+| `Party / Detail Device / Dex Beside` 의 `도감 보기` 줄 | 톤 배경 폭이 312 에서 280 으로 줄었다. `Link Row` 가 카드 안쪽 폭을 채운다. |
+| 옛 튜토리얼 화면 | 말풍선을 `Coach Bubble` 로, 뒤 화면을 지금 탭 템플릿·기기 창으로 통일했다. 개체 상세 튜토리얼의 볼 토글은 18 에서 27 이 됐다. 배경막 구멍은 다시 계산했다. |
+| `Party Layout` | 줄 간격은 16 이다. 간격이 14 였던 옛 화면 5장(`Tutorial / Tab Guide`·`Shop After Egg`·`Achievement Guide`, `Party / Save Failing`·`Shared Form Tip`)은 2px 씩 내려갔다. |
+| 파티 카드 폭 | 둘째 줄 카드 폭을 292 에서 294 로 맞췄다. 세 줄의 카드 폭이 같다. |
+| 상태 점 | 원 도형이 `Status Dot` 인스턴스가 됐다. 모양은 같다. |
+| 색 | 변수에서 1~3 벗어난 색(`#d9e0de`, `#1c3330`)을 변수 색으로 맞췄다. |
 
 `Mail Dialog`·`Trade Dialog`·`Evolution Dialog` 는 `Dialog` `299:3575` 를 쓰지 않고 따로 그린 대화상자다. 머리 줄 구성이 `Dialog` 와 다르다. `Dialog` 로 합치는 것은 정하지 않았다 `[스펙 미확정]`.
 
@@ -139,7 +165,7 @@ Figma: `Pokemon Card`를 `Party Slot Card` `194:317`의 `State=Pokemon`으로 �
 규칙: 채움 길이는 수치 비율이다. 예상 경험치처럼 현재와 다른 값은 시각 디자인 단계에서 구분 표현을 정한다.
 파티 상세 기기 창(C-28)의 경험치·친밀도·만복도·기분은 기기 창 안의 2×2 막대로 보인다.
 판정: `Friendship`을 이름·수치를 바꿀 수 있는 공통 막대로 수정한다.
-Figma: `Friendship`을 `Stat Meter` `296:190`의 `Size=Wide`로 바꾸고 `Size=Narrow`를 더했다. 이름·수치는 노출한 `label`·`value`로 바꾼다. Figma는 인스턴스 안 레이어의 크기를 바꿀 수 없다. 그래서 채움 길이는 `Stat Meter Bar` `298:155`의 `Fill` 변형에서 10% 단위로 고른다.
+Figma: `Friendship`을 `Stat Meter` `296:190`의 `Size=Wide`로 바꾸고 `Size=Narrow`를 더했다. 이름·수치는 노출한 `label`·`value`로 바꾼다. Figma는 인스턴스 안 레이어의 크기를 바꿀 수 없다. 그래서 채움 길이는 `Stat Meter Bar` `298:155`의 `Fill` 변형에서 10% 단위로 고른다. `Size=Device` `1318:58254` 는 `Narrow` 와 같은 크기에 값 글자가 12 다. 파티 상세 기기 창의 기록 막대가 쓴다(2026-10-02).
 
 ### C-06 박스 칸
 
@@ -172,7 +198,7 @@ Figma: `Box Toolbar` `337:284`. 버튼과 입력칸은 높이 32다. 정렬 칸�
 알 칸 상태: `준비 중`(흰 칸, 남은 시간), `부화 가능`(톤 바탕, `열기` 버튼), `빈 칸`(옅은 회색 면).
 모달 내용: 제목 `돌보미집`, 부제 `알 N / 6 · 부화 준비 N`, `모두 열기`, ✕, 알 칸 3 × 2. 폭 322. `열기` 뒤의 부화 결과 창은 이 모달 위에 겹친다. `모두 열기`는 ✕ 왼쪽에 늘 있다. 부화 준비된 알이 없으면 흐리다. `모두 열기` 뒤의 부화 결과 창은 단추가 `다음 (1 / N)`이고 마지막은 `확인 (N / N)`이다. 부화 결과 창에서 Space·Enter 는 그 단추를 누른다.
 규칙: 알 칸은 준비 진행과 남은 시간을 보여준다. 준비가 끝나도 `열기`를 눌러야 부화한다. 빈 칸은 누를 수 없다. 알 돌봄 조작은 없다(2026-09-28 삭제).
-Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), 모달 `Box / Daycare Modal` `1093:23698`. 모달은 `Dialog` Compact 인스턴스이고 본문은 `Daycare Panel` `1294:47384`, 부화 결과 창의 본문은 `Hatch Result Panel` `1294:47413` 이다. 옛 `Daycare Strip` `334:239` 은 2026-10-02 지웠다. `Box Layout` `340:3665`의 알 돌봄 패널은 2026-09-28 삭제했다.
+Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), 모달 `Box / Daycare Modal` `1093:23698`. 모달은 `Dialog` Compact 인스턴스이고 본문은 `Daycare Panel` `1294:47384`, 부화 결과 창의 본문은 `Hatch Result Panel` `1315:47575`(`Kind=Pokemon|Egg`)이다. 랜덤알에서 단일 포켓몬 알이 나온 창은 `Kind=Egg` 이고 화면은 05 `Box / Daycare Modal · Hatch Result · Egg` `1315:47615` 다(2026-10-02 추가). 옛 `Daycare Strip` `334:239` 은 2026-10-02 지웠다. `Box Layout` `340:3665`의 알 돌봄 패널은 2026-09-28 삭제했다.
 
 ### C-09 가방 아이템 카드
 
@@ -189,7 +215,7 @@ Figma: `Bag Item Card` `335:257`(`Default|Selected`).
 내용: 아이콘, 이름, 한 줄 설명, 가격, `›`. 카드에 `구매` 버튼을 두지 않는다.
 규칙: 구매할 수 없어도 카드는 누를 수 있다. 이유와 비활성 `구매`는 상점 기기 창(C-30)에서 보여준다. 기기 창에 뜬 상품의 카드는 옅은 배경이다.
 진화용 도구 줄의 설명은 진화 전 종 이름이다(`피카츄·레어코일 외 5종`, 한 쌍이면 `야돈 → 야도킹`, 2026-09-30). 계약은 [상점 기기 창](game.md#상점-기기-창)이다.
-Figma: `Product Card` `335:258`.
+Figma: `Product Card`(`State=Default` `335:258`, `State=Selected` `1318:58779`). 상점 기기 창에 뜬 상품의 줄은 `State=Selected` 다. 설명은 두 줄까지 줄바꿈한다.
 포켓몬 상품: 상품 줄 대신 도감 종 카드(C-11)에 가격 한 줄을 더한 격자 칸으로 보인다(2026-09-29 사용자 결정). 칸 내용은 도감 번호, 초상, 이름, 가격이다. 칸을 누르면 같은 상점 기기 창을 연다. 살 수 없는 다른 이유가 있으면 가격 아래 한 줄로 보인다.
 포켓몬 탭은 도감과 같은 지방 고르기와 이름·번호 검색을 둔다. 상점 분류에 `전체` 탭은 없다(2026-09-29 사용자 결정 "상점에 전체는 없애"). 처음 여는 탭을 첫 탭 `알`로 둔 것은 구현 판단이다. 그래서 포켓몬 격자는 포켓몬 탭에서만 보인다.
 Figma: `Shop Layout` `379:1757` 은 `알` 분류다. `전체` 칩은 없다(2026-09-30). 다른 분류는 05 `06 상점` 섹션의 `Shop / Tools` `967:23852`, `Shop / Evolution` `967:24986`, `Shop / Party` `1208:2667` 이다. 상점 탭 이름은 `파티`다(2026-10-02). 포켓몬 탭 화면(`Shop / Pokemon` `967:21263`, `Shop / Pokemon · Scroll` `967:22565`)은 탭을 숨긴 동안 06 보류 페이지 `1112:1548` 에 둔다(2026-10-01). 성격민트는 2026-09-30 부터 팔지 않는다.
@@ -203,7 +229,7 @@ Figma: `Shop Layout` `379:1757` 은 `알` 분류다. `전체` 칩은 없다(2026
 격자 넘김: 도감 탭은 한 쪽 30칸(6열 × 5줄), 상점 포켓몬 탭은 15칸(5열 × 3줄)이다(2026-09-29 "페이지 넘김 추가", 도감 30칸은 2026-09-30 사용자 결정). 넘김 줄에 `◀`, `쪽 / 전체 쪽`, `▶` 를 둔다. 단추는 박스 넘김 줄(C-07)과 같다. 도감은 넘김을 왼쪽, 등록 상태 칩을 오른쪽에 한 줄로 둔다(2026-09-30 사용자 "grid-pager 는 좌측, filters 는 우측에"). 도감 30칸은 기본 창 높이에서 한 줄 안쪽만 넘친다. 상점은 넘김 줄을 가운데 둔다. 지방·검색·분류 칩이 바뀌면 첫 쪽으로 간다. 1초 새로 그리기에도 쪽은 그대로다. 도감 기기 창의 이전·다음이 다른 쪽 종으로 넘어가면 그 쪽으로 넘긴다. 구현은 `src/renderer/manage.ts` `gridPager`·`pageOf`이다.
 보는 방식: 도감 탭과 상점 포켓몬 탭은 `쪽` 방식과 `스크롤` 방식 가운데 고른다(2026-09-29 사용자 결정). `쪽` 방식은 위의 격자 넘김이다(도감 30칸, 상점 15칸, 상점 칸에는 가격 줄). `스크롤` 방식은 오늘 작업 전 화면 그대로다(2026-09-29 사용자 결정 "리스트형태는 작업하기 이전의 그 스크롤되는거로", "상점·도감 둘 다 작업 전 그대로"). 도감은 도감 칸 격자를 쪽 넘김 없이 전부 보인다. 상점도 `쪽` 방식과 같은 가격 줄 칸 격자를 쪽 넘김 없이 전부 보인다(2026-09-30 사용자 결정. 두 열 상품 줄 카드를 대체했다). 두 방식 모두 지방 고르기와 검색을 쓴다. `스크롤` 방식에는 넘김 줄이 없다. 초상은 보이는 것만 받는다. 1초 새로 그리기와 전체 다시 그리기에도 스크롤 위치는 그대로다. 칸이나 줄을 누르면 도감은 기기 창, 상점은 상점 기기 창이다. 고른 방식은 도감과 상점을 따로 기억하고 앱을 다시 켜도 유지한다(2026-09-29 사용자 결정). `쪽` 방식에서는 지방·검색이 바뀌면 첫 쪽이다. 도감 기기 창의 이전·다음은 `쪽` 방식에서는 다른 쪽 종이면 그 쪽으로 넘기고, `스크롤` 방식에서는 그 칸이 보이게 스크롤한다.
 보는 방식 제안(Claude, 사용자 확인 전): 토글은 검색 줄 오른쪽 끝의 아이콘 두 개짜리 세그먼트다. 아이콘은 모양이 아니라 넘기는 방식을 그린다. `‹ ›` 는 쪽, 위아래 꺾쇠는 스크롤이다(2026-09-30 사용자 결정 "< > 로 옮기냐 스크롤하냐", Figma `View Toggle` `965:21147`, `Icon / Page` `1009:1237`, `Icon / Scroll` `1009:1239`). 접근성 이름은 `쪽으로 보기`·`스크롤로 보기` 다. 고른 쪽은 톤 배경이고 컬러 테두리로 강조하지 않는다. 높이는 검색 칸과 같다. `쪽` 에서 `스크롤` 로 바꾸면 쪽에서 보던 첫 항목으로 스크롤한다. `스크롤` 에서 `쪽` 으로 바꾸면 본문 맨 위에 보이던 항목이 든 쪽으로 간다. 기본값은 `쪽` 이다. 고른 방식은 게임 저장이 아니라 관리 창의 앱 데이터(localStorage, `pokebuddy.view.dex`·`pokebuddy.view.shop`)에 둔다. 클라우드 저장과 무관하다. 구현은 `src/renderer/manage.ts` `viewToggle`·`switchView`이다.
-Figma: 도감 칸은 `Species Card` `336:299`(`State=Obtained|Unlocked|Locked|Selected`, 95×95)의 인스턴스 `species/#NNNN` 이다. 순서는 초상 → 이름 → 번호다. 획득 표시는 `acquired-mark`(`Visibility Marker` `Size=Small, State=Closed` `330:136`, 칸의 5·5), 이로치 획득은 `shiny`(`Shiny Mark` 10px, 칸의 20·6, `Show Shiny`)다(2026-10-02). 2026-10-02 재구성에서 `Species Card` 를 이 모양으로 다시 짰다. 그전에는 `Dex Layout` 의 30칸 중 26칸이 번호 → 초상 → 이름 순서였다. `Dex Layout` `378:1524` 은 쪽 방식이다. 검색 줄에 `검색` 단추와 보기 토글, 넘김 줄 `grid-pager` `965:21158` 과 필터 칩을 한 줄(`list-toolbar`)에 두고 격자는 30칸이다(2026-09-30). 보기 토글은 `View Toggle` `965:21147`(`Mode=Page|Scroll`), 아이콘은 `Icon / Page` `1009:1237`·`Icon / Scroll` `1009:1239` 다. 옛 `Icon / Grid`·`Icon / List` 는 2026-09-30 지웠다. 상점 스크롤 화면 `Shop / Pokemon · Scroll` `967:22565` 는 같은 날 두 열 상품 줄을 격자 칸으로 바꿨다.
+Figma: 도감 칸은 `Species Card` `336:299`(`State=Obtained|Unlocked|Locked|Selected`, 95×95)의 인스턴스 `species/#NNNN` 이다. 순서는 초상 → 이름 → 번호다. 획득 표시는 `acquired-mark`(`Visibility Marker` `Size=Small, State=Closed` `330:136`, 칸의 5·5), 이로치 획득은 `shiny`(`Shiny Mark` 10px, 칸의 20·6, `Show Shiny`)다(2026-10-02). 2026-10-02 재구성에서 `Species Card` 를 이 모양으로 다시 짰다. 그전의 `Species Card` 는 124×127 이고 번호 → 초상 → 이름 → 상태 글자 순서였다. `Dex Layout` 의 30칸은 그전에 컴포넌트가 아닌 틀이었고 모양은 지금과 같다. 틀의 예시는 #0001·#0004·#0007·#0025 가 획득이고 #0004 가 이로치 획득이다. `Dex Layout` `378:1524` 은 쪽 방식이다. 검색 줄에 `검색` 단추와 보기 토글, 넘김 줄 `grid-pager` `965:21158` 과 필터 칩을 한 줄(`list-toolbar`)에 두고 격자는 30칸이다(2026-09-30). 보기 토글은 `View Toggle` `965:21147`(`Mode=Page|Scroll`), 아이콘은 `Icon / Page` `1009:1237`·`Icon / Scroll` `1009:1239` 다. 옛 `Icon / Grid`·`Icon / List` 는 2026-09-30 지웠다. 상점 스크롤 화면 `Shop / Pokemon · Scroll` `967:22565` 는 같은 날 두 열 상품 줄을 격자 칸으로 바꿨다.
 
 ### C-12 업적 행
 
@@ -261,7 +287,7 @@ Figma: `Target Row` `333:290`(`Default|Selected|Disabled`). `Show Visibility Mar
 역할: 설정 항목 하나와 그 조작을 보여준다.
 조작: 토글, 선택, 두 칸 전환(C-15), 버튼.
 판정: `Setting Row`의 `Control` 교체 속성을 재사용한다. 토글은 새로 만든다.
-Figma: `Toggle` `299:3593`을 새로 만들었다. 변형은 `Value=On|Off`와 `State=Default|Focus`다. 꺼짐 막대는 새 변수 `bg/control-off`(`neutral/500`)다. `Setting Row` `134:1023`의 배경을 `bg/surface`에 연결했다. `Control`의 기본값은 토글이다. 추천값은 `Toggle`과 `Button`이다. 기존 인스턴스 9곳은 버튼 값을 유지했다. 단추 두 개는 `Row Actions` `1262:80813`, 화면 고르기는 `Screen Pick Control` `1262:80849` 로 `Control` 을 교체한다. 설명 자리의 상태 점 글자는 `Status Line` `1262:80743` 으로 교체한다. `control` 은 세로 크기를 내용에 맞춘다. 그래서 교체한 단추의 높이는 32 다(2026-10-02).
+Figma: `Toggle` `299:3593`을 새로 만들었다. 변형은 `Value=On|Off`와 `State=Default|Focus`다. 꺼짐 막대는 새 변수 `bg/control-off`(`neutral/500`)다. `Setting Row` `134:1023`의 배경을 `bg/surface`에 연결했다. `Control`의 기본값은 토글이다. 추천값은 `Toggle`과 `Button`이다. 기존 인스턴스 9곳은 버튼 값을 유지했다. 단추 두 개는 `Row Actions` `1262:80813`, 화면 고르기는 `Screen Pick Control` `1262:80849` 로 `Control` 을 교체한다. 설명 자리의 상태 점 글자는 `Status Line` `1262:80743` 으로 교체한다. `control` 은 세로 크기를 내용에 맞춘다. 그래서 교체한 단추의 높이는 32 다(2026-10-02). 예외는 설정 일반 탭의 `가이드북` 줄이다. 줄 높이는 32 이고 `열기 ›` 단추는 줄 높이를 채워 20 이다(재구성 전과 같다). 설명 글자는 줄 폭에 맞춰 줄바꿈한다.
 
 ### C-19 업적 배너
 
@@ -290,7 +316,7 @@ Figma: `Speech Bubble` `970:672`(`Icon=Meat|Meat×3|Coin|Item|Pokemon`). 기본 
 규칙: 빈 곳 우클릭은 가로채지 않는다. 그 포켓몬 관련 항목만 둔다. 잠시 숨기기와 종료를 두지 않는다. 상태는 만복도·기분 구간 이름으로 보여준다. 할 수 없는 항목은 흐리게만 보인다. 이유와 남은 시간은 적지 않는다. 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다. 볼 안의 개체는 `볼에 넣기` 자리가 `꺼내기`다.
 형태: OS 기본 메뉴가 아니라 앱이 직접 그리는 메뉴다. 구분선·상태 문구·여백은 설정창과 같은 디자인 규칙을 따른다. Windows와 macOS에서 같은 모양이다.
 구현 조건: 방향키·Enter·Esc 조작을 제공한다. 메뉴 바깥을 누르면 닫는다. 화면 가장자리에서는 뜨는 방향을 뒤집어 잘리지 않게 한다. 다중 화면과 배율을 맞춘다. 투명한 놀이공간 창은 메뉴 영역과 포켓몬 그림만 클릭을 받고 나머지는 계속 통과시킨다.
-Figma: `Context Menu` `338:738`과 항목 `Menu Item` `337:319`(`Default|Hover|Disabled`, `Show Hint`). 항목은 `feed`·`play`·`ball`·`detail`이다(2026-09-28 반영). 밥 주기 불가는 `feed`를 Disabled로 둔다. 남은 시간(`Show Hint`)은 붙이지 않는다(2026-10-02). `모습 바꾸기`(`Show Form`)·`옮기기`(`Show Move`)·`팔기` 항목을 더했다(2026-10-02). 폭은 160 이다. 모습 말풍선은 05 `Party / Shared Form Tip` `501:14010` 에, 박스 개체의 메뉴는 05 `Box / Shared Profile` `481:1227` 에 있다.
+Figma: `Context Menu` `338:738`과 항목 `Menu Item` `337:319`(`Default|Hover|Disabled`, `Show Hint`). 항목은 `feed`·`play`·`ball`·`detail`이다(2026-09-28 반영). 밥 주기 불가는 `feed`를 Disabled로 둔다. 남은 시간(`Show Hint`)은 붙이지 않는다(2026-10-02). `모습 바꾸기`(`Show Form`)·`옮기기`(`Show Move`)·`팔기` 항목을 더했다(2026-10-02). 폭은 160 이다. 모습 말풍선은 05 `Party / Shared Form Tip` `501:14010` 에, 박스 개체의 메뉴는 05 `Box / Shared Profile` `481:1227` 에 있다. 말풍선에서 모습을 고르면 뜨는 바꾸기 확인 창은 05 `Box / Shared Form Confirm` `1315:47601` 이고 본문은 `Form Confirm Panel` `1315:47600` 이다(2026-10-02 추가).
 모습 말풍선: 메뉴 오른쪽 8 에 뜬다. 화면 오른쪽에 자리가 없으면 메뉴 왼쪽에 뜬다. 말풍선 아래 끝은 `모습 바꾸기` 줄 아래 끝보다 5 아래다. 꼬리는 10×10 정사각형을 45도 돌린 것이고 `모습 바꾸기` 줄의 세로 가운데를 가리킨다. 말풍선이 열린 동안 `모습 바꾸기` 줄은 옅은 바탕이다. 방향키 `→`(왼쪽에 뜨면 `←`)로 말풍선에 들어간다. Esc 는 말풍선만 닫는다. 구현은 `src/renderer/menu.ts`, `src/main/menu-window.ts` 다.
 
 ### C-22 빈 상태 줄
@@ -306,7 +332,7 @@ Figma: `Empty State` `332:199`.
 규칙: 화면을 어둡게 하고 대상만 밝게 남긴다. 대상에 강조 테두리를 두르지 않는다. `✕`는 닫기이며 스킵으로 처리한다. 마지막 단계의 `다음`은 `완료`나 `확인`으로 바꾼다. 화면을 강제로 전환하지 않는다.
 입력: 말풍선 단추, 그 단계의 목표 행동, `✕` 만 받는다. 어두운 막을 누르면 말풍선이 한 번 흔들린다(`nudge`). 움직임 줄이기 설정이면 흔들지 않고 둘레 링을 보인다. 안내만 하는 단계는 밝힌 대상도 누를 수 없다. 키보드 초점은 말풍선 안에 둔다. 규칙은 [튜토리얼 입력 규칙](game.md#튜토리얼-입력-규칙)을 따른다.
 사용: WF-15~WF-15e, 설정창, 파티 상세 기기 창(개체 상세 튜토리얼), 놀이공간 창(첫 돌봄 튜토리얼).
-Figma: `Coach Bubble` `338:764`. 설명은 줄바꿈되는 `Text / Caption Block`을 쓴다. 튜토리얼 화면은 대상 화면의 인스턴스, 배경막 사각형 `dim/1~4`, `Coach Bubble` 인스턴스다. 개체 상세 튜토리얼 4장의 배경막은 대상 요소 둘레 6 을 비우고 말풍선은 구멍에서 10 떨어진다(2026-10-02 다시 계산).
+Figma: `Coach Bubble` `338:764`. 설명은 줄바꿈되는 `Text / Caption Block`을 쓴다. 튜토리얼 화면은 대상 화면의 인스턴스, 배경막 사각형 `dim/1~4`, `Coach Bubble` 인스턴스다. 개체 상세 튜토리얼 4장의 배경막은 대상 요소 둘레 6 을 비우고 말풍선은 구멍에서 10 떨어진다(2026-10-02 다시 계산). 가방 튜토리얼 2단계 `Tutorial / Bag 2 of 2 · 사용` `844:3020` 은 고른 가방 칸을 밝히고 옆에 가방 기기 창을 둔다(2026-10-02 가방 기기 창에 맞춰 다시 그림).
 
 ### C-24 돌봄 타일
 
@@ -403,4 +429,4 @@ Figma: 기기는 `Shop Device` `1262:77893` 이다. 도구·알·진화의 차�
 결과·실패: 미리보기 상자가 초록(결과)·빨강(실패)으로 바뀐다. 새 줄을 끼우지 않는다.
 여는 경로: 가방 칸(C-09). 닫는 경로: `✕`, Esc, 같은 칸 다시 누르기, 가방 탭 나가기.
 규칙은 [가방 기기 창](game.md#가방-기기-창)을 따른다. 구현은 `src/main/bag-window.ts`, `src/renderer/bag.html`, `src/renderer/bag.ts` 다.
-Figma: 기기는 `Bag Device` `1262:78407`(`State=Use|Sell|Evolution`)이다. 화면은 05 `07 가방` 의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다. 옛 기기 틀 `1129:24619`·`1129:24693` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
+Figma: 기기는 `Bag Device` `1262:78407`(`State=Use|Sell|Evolution`)이다. 화면은 05 `07 가방` 의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다. 기기 창에 뜬 도구의 가방 칸은 `Bag Item Card` 의 `State=Selected` 다. 미리보기·합계 상자는 `Info Box` 인스턴스다. 미리보기 상자는 세로 여백 8, 합계 상자는 세로 여백 10·반지름 10 으로 덮어쓴다(재구성 전 크기 54·58). 옛 기기 틀 `1129:24619`·`1129:24693` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.

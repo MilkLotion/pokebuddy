@@ -30,7 +30,34 @@
 - 인스턴스를 떼어 내지 않는다. 인스턴스 안 글자는 플러그인의 `edits`(글자 노드 ID)나 `props`(인스턴스 속성)로 바꾼다.
 - 05 의 화면에 틀을 새로 그리지 않는다. 필요한 모양이 없으면 01~04 에 컴포넌트를 먼저 만든다.
 - 새 컴포넌트의 색은 변수에 묶는다. 글자는 `PB/Type/*` 스타일을 쓴다.
-- 시안은 `99` 페이지에서 만든다. 시안도 기존 컴포넌트의 인스턴스로 짠다.
+- 시안은 `99` 페이지에서 만든다. 시안도 기존 컴포넌트의 인스턴스로 짠다(아래 "시안" 절).
+
+### 시안
+
+시안도 화면과 같은 층 규칙을 따른다(2026-10-02 사용자 지시 "시안만들때도 최대한 컴포넌트 쓰게 해야할거같아").
+
+1. 그리기 전에 [Figma 층 구성](../specs/ui-components.md#figma-층-구성)과 01~04 페이지에서 쓸 컴포넌트를 찾는다.
+2. 화면 뼈대는 탭 템플릿 인스턴스로 둔다. 모달은 `Modal Scrim` 과 `Dialog` 인스턴스로 둔다. 기기 창은 기기 창 유기체 인스턴스로 둔다.
+3. 기존 컴포넌트로 되는 부분은 인스턴스에서 글자·보임·변형만 바꾼다. 인스턴스를 떼어 내지 않는다.
+4. 기존 컴포넌트에 없는 모양만 새로 그린다. 새로 그린 부분은 `99` 페이지에서 컴포넌트로 만들고 이름을 `Draft / <이름>` 으로 붙인다. 시안 화면에는 그 인스턴스를 둔다.
+5. 여러 안을 견줄 때도 안마다 같은 방식으로 짠다. 달라지는 부분만 `Draft /` 컴포넌트나 변형으로 나눈다.
+6. 시안을 사용자에게 보이기 전에 시안 화면 안의 날 틀과 떼어 낸 인스턴스를 센다. 0 이 아니면 까닭을 작업 기록에 적는다.
+7. 시안이 확정되면 `Draft /` 컴포넌트를 맞는 층(01~04)으로 옮기고 `Draft /` 를 뗀다. 채택하지 않은 `Draft /` 컴포넌트는 지운다. 그 뒤 화면을 `05` 로 옮긴다.
+
+세는 스크립트(`use_figma`, `SECTION_ID` 는 시안 섹션):
+
+```js
+const sec = await figma.getNodeByIdAsync(SECTION_ID);
+await figma.setCurrentPageAsync(sec.parent);
+const rows = [];
+for (const s of sec.children) {
+  if (!('children' in s)) continue;
+  let raw = 0, det = 0; const st = [...s.children];
+  while (st.length) { const n = st.pop(); if (n.type === 'INSTANCE') continue; if (n.type === 'FRAME') { raw++; if (n.detachedInfo) det++; } if ('children' in n) st.push(...n.children); }
+  rows.push(`${s.name}: 날 틀 ${raw}, 떼어 낸 인스턴스 ${det}`);
+}
+return rows;
+```
 
 ### 슬롯
 
