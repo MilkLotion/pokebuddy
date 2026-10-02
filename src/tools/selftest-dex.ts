@@ -171,7 +171,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profile("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.slugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 83 + 리전폼 57 + 특수 폼 13 (배쓰나이(청색근)와 기라티나(오리진폼)는 폼에서 특수 폼으로 옮겼다)");
+  assert.strictEqual(dex.slugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 83 + 리전폼 57 + 특수 폼 13 (배쓰나이(청색근의 모습)와 기라티나(오리진폼)는 폼에서 특수 폼으로 옮겼다)");
   assert.ok(!dex.slugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.slugs()) {
@@ -310,7 +310,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.nextOf("floette").map((st) => st.to), ["florges"]);
   assert.deepStrictEqual(dex.nextOf("ursaring").map((st) => st.to), ["ursaluna"]);
   assert.ok(!dex.lineOf("floette").includes("floette-eternal"), "특수 폼은 사슬의 모습이 아니다");
-  // 진화로 얻는 특수 폼 — 암멍이는 낮에 루가루암, 밤에 루가루암(한밤중). 루가루암(황혼)은 낮·밤과 관계없이 Lv.25 와 친밀도 100 ("추천대로 하자"). 일레즌은 둘 가운데 고른다.
+  // 진화로 얻는 특수 폼 — 암멍이는 낮에 루가루암, 밤에 루가루암(한밤중의 모습). 루가루암(황혼의 모습)은 낮·밤과 관계없이 Lv.25 와 친밀도 100 ("추천대로 하자"). 일레즌은 둘 가운데 고른다.
   // 치고마의 두 간선은 모두 악의 족자다("족자는 하나만 하자") (2026-10-03 사용자 결정)
   assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => [st.to, st.when ?? "", st.need]), [["lycanroc", "day", { kind: "level", level: 25 }], ["lycanroc-midnight", "night", { kind: "level", level: 25 }], ["lycanroc-dusk", "", { kind: "level", level: 25 }]]);
   assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => st.affinity ?? 0), [0, 0, 100], "황혼만 친밀도 100 을 더 본다");
@@ -355,8 +355,12 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(regional.genderLookInfo("basculegion-female")?.species, "basculegion");
   assert.strictEqual(regional.genderLookInfo("basculegion"), null);
   assert.ok(!dex.hasProfile("basculegion-female"), "성별 그림은 종이 아니다");
-  // 배쓰나이의 이름 — 기본형(적색근)은 배쓰나이, 나머지는 괄호에 모습을 적는다 (2026-10-03 사용자 결정 "배쓰나이(청색근) 이렇게 되게해")
-  assert.deepStrictEqual([names["basculin"]?.ko, names["basculin-blue-striped"]?.ko, names["basculin-white-striped"]?.ko], ["배쓰나이", "배쓰나이(청색근)", "배쓰나이(백색근)"]);
+  // 이름 — 괄호 안에 공식 도감의 모습 이름을 적는다. 기본형도 모습 이름이 있으면 적는다 (2026-10-03 사용자 결정 "다 적고, 괄호로 그 모습을 적자.")
+  assert.deepStrictEqual([names["basculin"]?.ko, names["basculin-blue-striped"]?.ko, names["basculin-white-striped"]?.ko], ["배쓰나이(적색근의 모습)", "배쓰나이(청색근의 모습)", "배쓰나이(백색근의 모습)"]);
+  assert.deepStrictEqual([names["lycanroc"]?.ko, names["lycanroc-midnight"]?.ko, names["lycanroc-dusk"]?.ko], ["루가루암(한낮의 모습)", "루가루암(한밤중의 모습)", "루가루암(황혼의 모습)"]);
+  assert.deepStrictEqual([names["toxtricity"]?.ko, names["toxtricity-low-key"]?.ko], ["스트린더(하이한 모습)", "스트린더(로우한 모습)"]);
+  assert.deepStrictEqual([names["giratina"]?.ko, names["giratina-origin"]?.ko], ["기라티나(어나더폼)", "기라티나(오리진폼)"]);
+  assert.deepStrictEqual([names["dialga"]?.ko, names["magearna"]?.ko, names["magearna-original"]?.ko], ["디아루가", "마기아나", "마기아나(500년 전의 색)"], "공식 도감에 모습 이름이 없는 기본형은 종 이름 그대로");
   assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
   assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, gender: {} });

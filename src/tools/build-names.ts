@@ -25,8 +25,15 @@ type NameEntry = Record<Lang, string>;
 type FormName = { form: string; pokemon: string };
 
 // 자동으로 못 맞춘 것 — 슬러그 → { ko, en }
-// 우라오스의 기본형은 일격의 태세다 — 연격의 태세(data/regional.json)와 나란히 보이게 태세를 적는다 (2026-10-03 사용자 결정 "연격의 태세, 일격의 태세 로 해.")
-const OVERRIDES: Record<string, NameEntry> = { urshifu: { ko: "우라오스(일격의 태세)", en: "Urshifu (Single Strike Style)" } };
+// 특수 폼(data/regional.json)이 있는 종의 기본형 — 공식 도감(포켓몬코리아)이 기본형에도 모습 이름을 붙이는 종은 괄호에 그 이름을 적는다
+// (2026-10-03 사용자 결정 "다 적고, 괄호로 그 모습을 적자."). 공식 도감에 모습 이름이 없는 기본형(디아루가·플라엣테·마기아나·다투곰·피츄)은 종 이름 그대로다
+const OVERRIDES: Record<string, NameEntry> = {
+  giratina: { ko: "기라티나(어나더폼)", en: "Giratina (Altered Forme)" },
+  basculin: { ko: "배쓰나이(적색근의 모습)", en: "Basculin (Red-Striped Form)" },
+  lycanroc: { ko: "루가루암(한낮의 모습)", en: "Lycanroc (Midday Form)" },
+  toxtricity: { ko: "스트린더(하이한 모습)", en: "Toxtricity (Amped Form)" },
+  urshifu: { ko: "우라오스(일격의 태세)", en: "Urshifu (Single Strike Style)" },
+};
 
 export async function build(): Promise<void> {
   const dex = readDex();

@@ -17,7 +17,7 @@ export interface EvoStep {
   need?: EvoNeed; // 진화 조건 — 옛 data/evo.json 에는 없다 (src/tools/build-evo.ts)
   gender?: Exclude<Gender, "none">; // 이 성별만 진화한다 — 염뉴트 암컷, 엘레이드 수컷 (2026-09-30 사용자 결정)
   map?: true; // 지도(region-map)도 필요한 간선 — 기본형 → 리전폼 진화 (data/regional.json)
-  affinity?: number; // 조건에 더해 친밀도도 이만큼 필요한 간선 — 암멍이 → 루가루암(황혼) (Lv.25 와 친밀도 100, data/regional.json)
+  affinity?: number; // 조건에 더해 친밀도도 이만큼 필요한 간선 — 암멍이 → 루가루암(황혼의 모습) (Lv.25 와 친밀도 100, data/regional.json)
 }
 
 type EvoTable = Record<string, EvoStep[]>;

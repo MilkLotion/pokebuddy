@@ -154,7 +154,7 @@ export async function check(): Promise<void> {
         // 리전폼 → 지방 전용 진화 — 결과 종의 PokeAPI 행 (기본형 간선과 같은 값이어야 한다)
         other = (evo[table.forms[from]?.base ?? ""] ?? []).find((e) => e.to === s.to)?.need;
         source = "기본형 간선";
-        // 기본형 간선이 없는 종(대쓰여너 — 배쓰나이(백색근)만 진화한다)은 결과 종의 PokeAPI 행으로 다시 계산한다
+        // 기본형 간선이 없는 종(대쓰여너 — 배쓰나이(백색근의 모습)만 진화한다)은 결과 종의 PokeAPI 행으로 다시 계산한다
         if (other === undefined) {
           const sp = speciesByName.get(s.to);
           other = needOfRows(evoRows.filter((r) => r.evolved_species_id === sp));

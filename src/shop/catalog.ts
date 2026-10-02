@@ -134,7 +134,7 @@ export function fixedEggs(opts?: DexOptions): [string, string[]][] {
 
 export const isSingleEgg = (kind: string, opts?: DexOptions): boolean => !isMetaKey(kind) && eggs(opts)[kind]?.single === true;
 
-// 단일 포켓몬 전부 — 단일 포켓몬 알의 종과 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전) · 피츄(삐쭉귀))
+// 단일 포켓몬 전부 — 단일 포켓몬 알의 종과 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전의 색) · 피츄(삐쭉귀))
 // 2026-10-03 사용자 결정 "알이나 다른데서 못구하고 이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해."
 export function singleSpecies(opts?: DexOptions): Set<string> {
   const out = new Set<string>();
@@ -181,7 +181,7 @@ export function inRandomEgg(slug: string, opts?: DexOptions): boolean {
 
 // 이 종이 나오는 알 — 종 목록 알(태고의돌)을 먼저 보고, 없으면 해금한 종에서 뽑는 알(랜덤알)이다.
 // 단일 포켓몬 알은 빼고 본다. 어느 알에도 없으면 null (업적 보상 종 등)
-// 알에서 대신 나오는 모습(배쓰나이(백색근))은 그 기본 종의 알이다
+// 알에서 대신 나오는 모습(배쓰나이(백색근의 모습))은 그 기본 종의 알이다
 export function eggOfSpecies(raw: string, opts?: DexOptions): string | null {
   if (isMetaKey(raw)) return null;
   const slug = hatchBaseOf(raw, opts) ?? raw;

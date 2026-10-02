@@ -34,7 +34,7 @@ const SHOP_SPECIES_LINE = false;
 // 얻는 방법 줄("피카츄에서 진화 (지도)")·상점 트리 화살표("지도", "Lv.36 · 지도")와 같은 낱말을 쓴다
 export const MAP_MARK = " (지도)";
 export function stepText(step: EvoStep, opts?: DexOptions): string {
-  // 조건에 더해 친밀도도 보는 간선은 결과 뒤에 적는다 — "Lv.25에서 루가루암(황혼) (친밀도 100)"
+  // 조건에 더해 친밀도도 보는 간선은 결과 뒤에 적는다 — "Lv.25에서 루가루암(황혼의 모습) (친밀도 100)"
   const to = `${petName(step.to)}${step.map && !needIsMap(step.need) ? MAP_MARK : ""}${step.affinity ? ` (친밀도 ${step.affinity})` : ""}`;
   const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
   const need = step.need;
@@ -109,7 +109,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼))
   const shiftForm = regionalOf(slug, opts);
   if (shiftForm?.get === "shift") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기`);
-  // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근)) — 기본 종이 나오는 알을 적는다
+  // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);
   for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
@@ -118,7 +118,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (price != null) methods.push(unlocked ? `상점 구매 ${price}P` : `상점 구매 ${price}P(해금 후)`);
   for (const [, def] of achievementDefs(opts)) if (rewardPokemon(def) === slug) methods.push(`업적 보상(${def.ko})`);
   // 우편으로만 받는 특수 폼 (data/regional.json 의 get "gift", 2026-10-03 사용자 결정)
-  // 업적 보상으로 주는 종(마기아나(500년 전) · 피츄(삐쭉귀), 2026-10-03 사용자 결정 "업적으로 바꿔")은 아래의 `업적 보상` 줄만 적는다
+  // 업적 보상으로 주는 종(마기아나(500년 전의 색) · 피츄(삐쭉귀), 2026-10-03 사용자 결정 "업적으로 바꿔")은 아래의 `업적 보상` 줄만 적는다
   if (regionalOf(slug, opts)?.get === "gift" && !rewardSpecies(opts).includes(slug)) methods.push(GIFT_METHOD);
 
   const steps = nextOf(slug, opts);

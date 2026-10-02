@@ -190,8 +190,8 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 
   const r = seed({ species: "rockruff", level: 25 });
   assert.deepStrictEqual(candidates(r, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["lycanroc"], "낮에는 루가루암");
-  assert.deepStrictEqual(candidates(r, "p1", "night").filter((c) => c.ready).map((c) => c.to), ["lycanroc-midnight"], "밤에는 루가루암(한밤중)");
-  // 루가루암(황혼) — Lv.25 와 친밀도 100, 낮·밤 무관 (2026-10-03 사용자 결정 "추천대로 하자")
+  assert.deepStrictEqual(candidates(r, "p1", "night").filter((c) => c.ready).map((c) => c.to), ["lycanroc-midnight"], "밤에는 루가루암(한밤중의 모습)");
+  // 루가루암(황혼의 모습) — Lv.25 와 친밀도 100, 낮·밤 무관 (2026-10-03 사용자 결정 "추천대로 하자")
   assert.equal(candidates(r, "p1", "night").find((c) => c.to === "lycanroc-dusk")?.missing, "affinity:100", "친밀도가 모자라다");
   const low = seed({ species: "rockruff", level: 20 });
   assert.equal(candidates(low, "p1", "day").find((c) => c.to === "lycanroc-dusk")?.missing, "level:25|affinity:100", "둘 다 모자라면 함께 알린다");

@@ -1,5 +1,5 @@
 // 리전폼 — data/regional.json (손으로 관리하는 표, worklog-mac/records/region-map). 도감 번호는 같지만 다른 종으로 본다
-// 특수 폼(플라엣테(영원의 꽃) · 루가루암(한밤중) 등)도 이 표에 special 로 든다 — 지방 모습은 아니지만 같은 규칙의 다른 종이다 (worklog/records/extra-evolution)
+// 특수 폼(플라엣테(영원의 꽃) · 루가루암(한밤중의 모습) 등)도 이 표에 special 로 든다 — 지방 모습은 아니지만 같은 규칙의 다른 종이다 (worklog/records/extra-evolution)
 //
 //   forms  슬러그 → 기본 종 · 지방 · 폼 순번 · PokeAPI 포켓몬 번호(초상) · PMD 폼 경로(무대) · 얻는 방법
 //   edges   진화 간선 — 빌드가 data/evo.json 에 덧붙인다 (src/tools/build-evo.ts). 런타임은 evo.json 만 본다
@@ -9,12 +9,12 @@ import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import type { EvoStep } from "./evo";
 import type { EvoNeed } from "../shared/types";
 
-// 도감의 지방 칸 — johto · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 기라티나(오리진폼) · 배쓰나이(청색근) · 플라엣테(영원의 꽃))만 쓴다
+// 도감의 지방 칸 — johto · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 기라티나(오리진폼) · 배쓰나이(청색근의 모습) · 플라엣테(영원의 꽃))만 쓴다
 export type RegionId = "johto" | "sinnoh" | "unova" | "kalos" | "alola" | "galar" | "hisui" | "paldea";
 
 // 얻는 방법 — map 지도 진화 결과 · base 다른 종과 같은 규칙의 진화 전 종 · path 리전폼이 진화해 얻는 종
-//   branch 기본형 종에서 지도 없이 진화해 얻는 특수 폼(루가루암(한밤중)) · gift 우편으로만 받는 특수 폼(피츄(삐쭉귀)) — 단일 포켓몬이다
-//   variant 알에서 기본형 대신 나오는 특수 폼(배쓰나이(백색근)) — 표의 hatch 가 확률을 정한다
+//   branch 기본형 종에서 지도 없이 진화해 얻는 특수 폼(루가루암(한밤중의 모습)) · gift 우편으로만 받는 특수 폼(피츄(삐쭉귀)) — 단일 포켓몬이다
+//   variant 알에서 기본형 대신 나오는 특수 폼(배쓰나이(백색근의 모습)) — 표의 hatch 가 확률을 정한다
 //   shift 기본형 개체가 모습 바꾸기로 오가는 특수 폼(기라티나(오리진폼)) — 표의 shift 가 짝을 정한다
 export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift";
 
@@ -83,7 +83,7 @@ export function hatchVariants(slug: string, opts?: DexOptions): HatchVariants {
   return (regionalTable(opts).hatch[key] ?? []).filter(([s, w]) => typeof s === "string" && typeof w === "number" && w > 0);
 }
 
-// 이 모습이 알에서 대신 나오는 기본 종 — 그런 모습이 아니면 null (배쓰나이(백색근) → 배쓰나이)
+// 이 모습이 알에서 대신 나오는 기본 종 — 그런 모습이 아니면 null (배쓰나이(백색근의 모습) → 배쓰나이)
 export function hatchBaseOf(slug: string, opts?: DexOptions): string | null {
   const key = normalizeSlug(slug);
   for (const [base, list] of Object.entries(regionalTable(opts).hatch)) {

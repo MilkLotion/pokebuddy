@@ -1112,7 +1112,7 @@ function askPetMenu(petId: string): void {
 // 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
 // 숫자로 끝나면 한국어로 읽은 소리 기준 (0·1·3·6·7·8 받침 있음, 1·7·8 은 ㄹ 받침)
 // 라틴 글자로 끝나면 이름을 읽은 소리 기준 (L·R 은 ㄹ 받침 — 엘·알, M·N 은 받침 있음 — 엠·엔)
-// 닫는 괄호로 끝나면 괄호 안의 끝 글자로 본다 — "루가루암(한밤중)으로"
+// 닫는 괄호로 끝나면 괄호 안의 끝 글자로 본다 — "루가루암(한밤중의 모습)으로"
 type JosaPair = "은/는" | "이/가" | "을/를" | "으로/로" | "과/와";
 function josa(word: string, pair: JosaPair): string {
   const [withBatchim, without] = pair.split("/") as [string, string];

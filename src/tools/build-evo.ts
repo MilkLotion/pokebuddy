@@ -102,7 +102,7 @@ export async function build(): Promise<void> {
     const name = r.evolved_pokemon_form_id ? formName.get(r.evolved_pokemon_form_id) : undefined;
     return name !== undefined && isRegional(name);
   };
-  // 진화 전 모습이 표의 특수 폼으로 정해진 행(배쓰나이(백색근) → 대쓰여너) — 기본형 간선을 만들지 않는다. 표의 edges 가 그 간선을 준다.
+  // 진화 전 모습이 표의 특수 폼으로 정해진 행(배쓰나이(백색근의 모습) → 대쓰여너) — 기본형 간선을 만들지 않는다. 표의 edges 가 그 간선을 준다.
   // 리전폼에서만 진화하는 종(가라르 나옹 → 나이킹)은 여기에 들지 않는다 — 기본형 간선도 그대로 둔다 (2026-09-30 사용자 결정)
   const fromRegional = (r: { required_pokemon_form_id: string }): boolean => {
     const name = r.required_pokemon_form_id ? formName.get(r.required_pokemon_form_id) : undefined;
