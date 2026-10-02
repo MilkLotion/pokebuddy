@@ -1,9 +1,9 @@
 // 박스 칸 다루기 — 규칙은 docs/specs/game.md "박스". 순수 함수이며 저장을 쓰지 않는다.
 //
-// 한 박스는 30칸이다. 박스는 8개로 시작하고 상점에서 하나씩 사서 64개까지 늘린다(SAVE_V3_RULES.box). 저절로 늘지 않는다.
+// 한 박스는 30칸이다. 박스는 8개로 시작하고 상점에서 하나씩 사서 64개까지 늘린다(src/box/rules.ts BOX_RULES). 저절로 늘지 않는다.
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
 import { profile } from "../dex/species.js";
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { BOX_RULES } from "./rules.js";
 import { pushBox } from "../save/v3.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -52,9 +52,9 @@ export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== n
 // 모든 박스의 빈 칸 수
 export const boxRoom = (boxes: BoxV3[]): number => boxes.reduce((n, b) => n + b.slots.filter((s) => s === null).length, 0);
 
-// 박스를 더 살 수 있는가 — 상한은 SAVE_V3_RULES.box.max. bought 는 기본 개수를 넘는 박스 수다(옛 규칙으로 늘어난 박스도 센다)
+// 박스를 더 살 수 있는가 — 상한은 BOX_RULES.max. bought 는 기본 개수를 넘는 박스 수다(옛 규칙으로 늘어난 박스도 센다)
 export function boxBuyable(boxes: BoxV3[]): { ok: boolean; bought: number; total: number } {
-  const { start, max } = SAVE_V3_RULES.box;
+  const { start, max } = BOX_RULES;
   return { ok: boxes.length < max, bought: Math.max(0, boxes.length - start), total: max - start };
 }
 
@@ -76,9 +76,8 @@ export function orderBox(boxes: BoxV3[], from: number, to: number): { ok: true }
 
 // ── 정렬·이동·이름 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
-export const BOX_RULES = {
-  nameMax: 12, // 박스 이름 최대 글자 수 — 넘김 줄의 이름 칸은 이 글자 수에 맞춘 고정 폭이다 (2026-10-01 사용자 결정 "최대12글자로 가정하고 구성")
-};
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/box/rules.ts)에서 가져오면 지운다
+export { BOX_RULES };
 
 export type BoxSortKey = "dex" | "level" | "affinity" | "recent" | "name";
 export const BOX_SORT_KEYS: readonly BoxSortKey[] = ["dex", "level", "affinity", "recent", "name"];

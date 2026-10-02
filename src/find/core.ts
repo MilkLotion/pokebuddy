@@ -12,7 +12,8 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { decide, type Rand } from "../egg/hatch.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { SHOP_V3_RULES } from "../save/rules.js";
+import { BAG_RULES } from "../bag/rules.js";
+import { TIME_RULES } from "../state/rules.js";
 import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { inRandomEgg } from "../shop/catalog.js";
@@ -111,7 +112,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
     const evo = kind === "evo" ? evoCandidates(opts) : [];
     const id = kind === "item" ? pickItem(rand, opts) : evo.length ? evo[pickIndex(evo.length, rand)] : null;
     if (!id) return null;
-    if ((save.bag[id] ?? 0) >= SHOP_V3_RULES.bagMax) return null; // 가방 상한 — 이번 판정은 없음
+    if ((save.bag[id] ?? 0) >= BAG_RULES.max) return null; // 가방 상한 — 이번 판정은 없음
     save.bag[id] = (save.bag[id] ?? 0) + 1;
     ref = id;
   } else {
@@ -138,7 +139,7 @@ export function rollHits(activeMs: Readonly<Record<string, number>>, rand: Rand,
   const hits: string[] = [];
   for (const [petId, raw] of Object.entries(activeMs)) {
     const ms = Math.max(0, raw);
-    if (ms <= 0 || ms > FIND_RULES.maxGapMs) continue; // 긴 틈은 굴리지 않는다 — 절전 복귀 뒤에 몰아서 주지 않는다
+    if (ms <= 0 || ms > TIME_RULES.maxGapMs) continue; // 긴 틈은 굴리지 않는다 — 절전 복귀 뒤에 몰아서 주지 않는다
     if (rand() < chanceFor(ms, rate)) hits.push(petId); // 대부분은 아무것도 줍지 않는다
   }
   return hits;

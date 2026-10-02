@@ -8,7 +8,9 @@ import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
 import { localDate } from "../shared/clock.js";
 import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { Pet, SaveV2 } from "../shared/types";
-import { SAVE_V3_RULES, SHOP_V3_RULES } from "./rules.js";
+import { BAG_RULES } from "../bag/rules.js";
+import { PARTY_RULES, PET_RULES } from "../party/rules.js";
+import { CARE_RULES } from "../state/rules.js";
 import { legacyGender } from "../dex/gender.js";
 import { empty, emptySlots, fillBoxes, putStrays } from "./v3.js";
 
@@ -36,7 +38,7 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
   const left = (at: number | null, span: number): number => (at == null ? 0 : Math.max(0, span - (now - at)));
   const fedAt = typeof pet.fedAt === "number" ? pet.fedAt : null;
   const playedAt = typeof pet.playedAt === "number" ? pet.playedAt : null;
-  const remain = left(fedAt, SAVE_V3_RULES.feedCooldownMs);
+  const remain = left(fedAt, BAG_RULES.feedCooldownMs);
   return {
     id: pet.id,
     species: pet.species,
@@ -44,8 +46,8 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
     nature: pet.nature,
     gender: legacyGender(pet), // v2 에는 성별이 없다 — 반반 (2026-09-30 사용자 결정)
     size: pet.size,
-    level: SAVE_V3_RULES.pet.level,
-    exp: SAVE_V3_RULES.pet.exp,
+    level: PET_RULES.level,
+    exp: PET_RULES.exp,
     affinity: Math.min(100, Math.max(0, Math.round(pet.affinity))),
     affinityProgressMs: 0,
     fullness: Math.min(100, Math.max(0, 100 - Math.round(pet.hunger))),
@@ -53,7 +55,7 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
     mood: Math.min(100, Math.max(0, Math.round(pet.mood))),
     moodProgressMs: 0,
     feedCooldownMs: Math.round(remain),
-    playCooldownMs: Math.round(left(playedAt, SAVE_V3_RULES.playCooldownMs)),
+    playCooldownMs: Math.round(left(playedAt, CARE_RULES.playCooldownMs)),
     playWindowMs: 0,
     playStreak: 0,
     buffs: [],
@@ -75,7 +77,7 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
   // v2 에는 첫 개체 표시가 없다. 파티의 첫 마리를 첫 개체로 본다
   out.starterPetId = out.pets[0]?.id ?? null;
   const slots: PartySlotV3[] = emptySlots();
-  const open = Math.min(slots.length, Math.max(SAVE_V3_RULES.party.openAtStart, Math.round(v2.slots)));
+  const open = Math.min(slots.length, Math.max(PARTY_RULES.openAtStart, Math.round(v2.slots)));
   for (let i = 0; i < slots.length; i++) {
     if (i >= open) continue;
     const pet = v2.party[i];
@@ -101,7 +103,7 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
     const id = currentItemId(ITEM_RENAME[k] ?? k); // 옛 민트는 민트 한 종류로 (src/bag/mint.ts)
     out.bag[id] = (out.bag[id] ?? 0) + Math.round(v);
   }
-  if (mergedMint && (out.bag[MINT_ID] ?? 0) > SHOP_V3_RULES.bagMax) out.bag[MINT_ID] = SHOP_V3_RULES.bagMax;
+  if (mergedMint && (out.bag[MINT_ID] ?? 0) > BAG_RULES.max) out.bag[MINT_ID] = BAG_RULES.max;
 
   out.points.balance = Math.max(0, Math.round(v2.points));
   const acc = v2.acc as Record<string, unknown>;

@@ -14,16 +14,13 @@ import { hasProfile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { singleSpecies } from "../shop/catalog.js";
 import type { SaveV3 } from "../shared/save-v3";
+import { MAIL_RULES } from "./rules.js";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number };
 
-export const MAIL_RULES = {
-  itemMax: 999, // 한 편지의 도구 한 종류 개수 상한
-  pointsMax: 100_000,
-  pokemonMax: 6, // 한 편지의 같은 종 마리 수 상한
-  keep: 200, // applied · read 에 남기는 최근 id 수 — 서버 목록은 50개라 넉넉하다
-} as const;
+// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/mail/rules.ts)로 가면 지운다
+export { MAIL_RULES };
 
 interface NamedEntry {
   ko: string;
@@ -107,7 +104,7 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
   const pokemon = [...give.values()].reduce((n, c) => n + c, 0);
   if (pokemon > boxRoom(save.boxes)) return { ok: false, reason: "box-full" };
   for (const g of gifts) {
-    // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/save/rules.ts bagMax)
+    // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/bag/rules.ts BAG_RULES.max)
     if (g.kind === "item") save.bag[g.id] = (save.bag[g.id] ?? 0) + g.count;
     else if (g.kind === "points") save.points.balance += g.count;
     else for (let i = 0; i < (give.get(g) ?? 0); i++) givePokemon(save, g.species, env, opts);

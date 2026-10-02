@@ -1,16 +1,16 @@
 // 상점 상품 목록 v3 — 가격은 docs/specs/balance.md 가격표. 값은 한 곳에서만 가진다.
 //
 //   알          data/eggs.json 의 price
-//   진화용 도구  data/evo-items.json 의 종류 공통 가격 (SHOP_V3_RULES.evoItemPrice)
+//   진화용 도구  data/evo-items.json 의 종류 공통 가격 (SHOP_RULES.evoItemPrice)
 //   그 밖 도구   data/items.json 의 price. null 이면 팔지 않는다
-//   파티 칸     SHOP_V3_RULES.slotPrice — 늘 같은 값. 적용한 프리셋의 칸을 연다
-//   파티 프리셋 SHOP_V3_RULES.presetPrice — 늘 같은 값 (조건은 src/party/presets.ts presetBuyable)
-//   종 지정     SHOP_V3_RULES.speciesPrices — 수집 난이도(data/species.defaults.json 의 rank)별 가격.
+//   파티 칸     SHOP_RULES.slotPrice — 늘 같은 값. 적용한 프리셋의 칸을 연다
+//   파티 프리셋 SHOP_RULES.presetPrice — 늘 같은 값 (조건은 src/party/presets.ts presetBuyable)
+//   종 지정     SHOP_RULES.speciesPrices — 수집 난이도(data/species.defaults.json 의 rank)별 가격.
 //               알에서 얻을 수 있는 종만 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 // 값을 두 곳에 적지 않는다. 그래야 가격이 어긋나지 않는다.
 // 기존 S4 의 src/shop/catalog.ts 와 별개다. 그쪽은 v2 경로가 계속 쓴다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
-import { SHOP_V3_RULES } from "../save/rules.js";
+import { SHOP_RULES } from "./rules.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { prevOf } from "../dex/evo.js";
 import { hatchBaseOf, regionalTable, shiftGroupOf } from "../dex/regional.js";
@@ -57,7 +57,7 @@ export function toolPrice(id: string, opts?: DexOptions): number | null {
   if (MINT_RETIRED && id === MINT_ID) return null; // 성격민트 은퇴 — 사지도 팔지도 않는다 (src/bag/mint.ts)
   const item = items(opts)[id];
   if (item) return item.price;
-  return evoItems(opts)[id] ? SHOP_V3_RULES.evoItemPrice : null;
+  return evoItems(opts)[id] ? SHOP_RULES.evoItemPrice : null;
 }
 
 export function toolName(id: string, opts?: DexOptions): string | null {
@@ -67,13 +67,13 @@ export function toolName(id: string, opts?: DexOptions): string | null {
 
 // 파티 칸 하나의 가격 — 늘 같은 값이다. 상점으로 열 칸이 남지 않았으면 null. `left` 는 적용한 프리셋에 남은 상점 칸 수다
 export function slotPrice(left: number): number | null {
-  return left > 0 ? SHOP_V3_RULES.slotPrice : null;
+  return left > 0 ? SHOP_RULES.slotPrice : null;
 }
 
 // 종 지정 구매 가격 — 수집 난이도별 값. 상점에서 팔지 않는 종이면 null. 해금 여부는 부르는 쪽이 본다
 export function speciesPrice(slug: string, opts?: DexOptions): number | null {
   if (!sellsSpecies(slug, opts)) return null;
-  return SHOP_V3_RULES.speciesPrices[rankOf(slug, opts)] ?? null;
+  return SHOP_RULES.speciesPrices[rankOf(slug, opts)] ?? null;
 }
 
 // 상점에서 파는 종인가 — 알에서 얻을 수 있는 종이다 (2026-09-29 사용자 결정)

@@ -4,7 +4,11 @@
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
-import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
+import { BAG_RULES } from "../bag/rules.js";
+import { BOX_RULES } from "../box/rules.js";
+import { EGG_RULES } from "../egg/rules.js";
+import { PARTY_RULES } from "../party/rules.js";
+import { SHOP_RULES } from "../shop/rules.js";
 import { canGiveEgg, eggPool, isSingleEgg, singleLeft, eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry } from "../shared/model/detail";
 import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/model/snapshot";
@@ -48,16 +52,16 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   const add = (item: ShopItemView): void => {
     out.push({ ...item, affordable: save.points.balance >= item.price });
   };
-  // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (SHOP_V3_RULES.bagMax)
+  // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (BAG_RULES.max)
   // blocked 는 상점 기기 창 머리의 짧은 상태 글자다. 목록 줄은 바꾸지 않는다 (2026-10-02 사용자 결정 — 문구가 바뀌면 레이아웃이 깨진다)
   const bagRoom = (id: string): Pick<ShopItemView, "room" | "blocked"> => {
-    const room = Math.max(0, SHOP_V3_RULES.bagMax - (save.bag[id] ?? 0));
+    const room = Math.max(0, BAG_RULES.max - (save.bag[id] ?? 0));
     return room > 0 ? { room } : { room, blocked: "가방 가득" };
   };
 
   // 상점 기기 창 설명 — 정보 줄은 효과·쓰는 곳 두 줄 (2026-10-01 사용자 결정 "records에는 효과,쓰는곳 만 적어")
   const owned = (id: string): [string, string] => ["보유", `${(save.bag[id] ?? 0).toLocaleString("ko-KR")}개`];
-  const readyMin = Math.round(EGG_V3_RULES.readyMs / 60_000);
+  const readyMin = Math.round(EGG_RULES.readyMs / 60_000);
   const eggAbout = (kind: string): ShopAbout => {
     // 다른 알이 나오는 알 — 확률 숫자는 적지 않는다 (2026-10-02 사용자 결정 "일정확률로 특별한 알")
     const bonus = Object.values(eggs(opts)[kind]?.bonus ?? {}).some((p) => p > 0);
@@ -72,8 +76,8 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
 
   // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다.
   // room 은 한 번에 살 수 있는 개수 — 빈 칸 수, 단일 포켓몬 알이면 (남은 종 수 − 기다리는 같은 알 수)까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
-  const daycareFull = save.eggs.length >= EGG_V3_RULES.maxEggs;
-  const daycareRoom = Math.max(0, EGG_V3_RULES.maxEggs - save.eggs.length);
+  const daycareFull = save.eggs.length >= EGG_RULES.maxEggs;
+  const daycareRoom = Math.max(0, EGG_RULES.maxEggs - save.eggs.length);
   const eggRoom = (kind: string): number => {
     if (!isSingleEgg(kind, opts)) return daycareRoom;
     const waiting = save.eggs.filter((e) => e.kind === kind).length;
@@ -145,7 +149,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     id: "party-slot",
     name: "파티 칸 +1",
     note: `${here} · 구매 ${slots.bought} / ${slots.total}`,
-    price: price ?? SHOP_V3_RULES.slotPrice,
+    price: price ?? SHOP_RULES.slotPrice,
     category: "slot",
     affordable: false,
     about: {
@@ -159,14 +163,14 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   });
 
   // 파티 프리셋 — 늘 같은 값. 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정)
-  const { start, max } = SAVE_V3_RULES.party.presets;
+  const { start, max } = PARTY_RULES.presets;
   const count = presetCount(save);
   const can = presetBuyable(save);
   add({
     id: "party-preset",
     name: "파티 프리셋 +1",
     note: `구매 ${count - start} / ${max - start} · 칸 ${can.open} / ${can.need}`,
-    price: SHOP_V3_RULES.presetPrice,
+    price: SHOP_RULES.presetPrice,
     category: "slot",
     affordable: false,
     about: {
@@ -185,14 +189,14 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     id: "box",
     name: "박스 +1",
     note: `구매 ${boxes.bought} / ${boxes.total}`,
-    price: SHOP_V3_RULES.boxPrice,
+    price: SHOP_RULES.boxPrice,
     category: "slot",
     affordable: false,
     about: {
       group: "박스",
       spec: ["구매", `${boxes.bought} / ${boxes.total}`],
-      desc: `박스가 하나 늘어난다. 박스 하나에 포켓몬을 ${SAVE_V3_RULES.box.size}마리 보관한다.`,
-      effect: `박스 +1 · ${SAVE_V3_RULES.box.size}칸`,
+      desc: `박스가 하나 늘어난다. 박스 하나에 포켓몬을 ${BOX_RULES.size}마리 보관한다.`,
+      effect: `박스 +1 · ${BOX_RULES.size}칸`,
       where: "박스 탭 · 맨 뒤에 생김",
     },
     blocked: boxes.ok ? undefined : "더 살 수 있는 박스가 없어요",

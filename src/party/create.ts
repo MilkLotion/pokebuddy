@@ -2,7 +2,7 @@
 //
 // 시작 값을 두 곳에 적지 않는다. 레벨·친밀도·만복도는 규칙표 하나에서 온다.
 // 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { PET_RULES } from "./rules.js";
 import { localDate } from "../shared/clock.js";
 import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
@@ -38,21 +38,21 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
     shiny,
     nature,
     gender,
-    size: SAVE_V3_RULES.pet.size,
-    level: SAVE_V3_RULES.pet.level,
-    exp: SAVE_V3_RULES.pet.exp,
-    affinity: SAVE_V3_RULES.pet.affinity,
+    size: PET_RULES.size,
+    level: PET_RULES.level,
+    exp: PET_RULES.exp,
+    affinity: PET_RULES.affinity,
     affinityProgressMs: 0,
-    fullness: SAVE_V3_RULES.pet.fullness,
+    fullness: PET_RULES.fullness,
     fullnessProgressMs: 0,
-    mood: SAVE_V3_RULES.pet.mood,
+    mood: PET_RULES.mood,
     moodProgressMs: 0,
     feedCooldownMs: 0,
     playCooldownMs: 0,
     playWindowMs: 0,
     playStreak: 0,
     buffs: [],
-    home: { ...SAVE_V3_RULES.pet.home },
+    home: { ...PET_RULES.home },
     since: now,
     stage: 0,
     evolved: [],

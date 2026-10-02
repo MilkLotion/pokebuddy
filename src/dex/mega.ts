@@ -12,7 +12,7 @@
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기와 시간 적용이 한다
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
-import { MEGA_RULES } from "../save/rules.js";
+import { MEGA_RULES } from "./rules.js";
 import { allPresets } from "../party/presets.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";

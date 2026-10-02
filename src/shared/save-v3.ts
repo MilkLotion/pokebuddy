@@ -153,7 +153,7 @@ export interface DexV3 {
   obtained: string[];
   shinyObtained: string[];
   discovered: Record<string, string>; // 알 행동 조건(2026-09-28 삭제)의 옛 칸. 쓰지 않는다 — 옛 버전 호환으로 읽은 값을 그대로 둔다
-  rulesRev: number; // 해금 정리를 마친 판 — SAVE_V3_RULES.unlockRev. 옛 저장은 0
+  rulesRev: number; // 해금 정리를 마친 판 — UNLOCK_RULES.rev. 옛 저장은 0
   megaOpened?: string[]; // 메가스톤이 생긴 적이 있는 종 — 도감 카드의 메가스톤 표식. 개체를 팔거나 교환해도 남는다 (2026-10-02)
 }
 
