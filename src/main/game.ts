@@ -18,7 +18,8 @@ import * as store from "../save/store.js";
 import { SAVE_V3_RULES, TIME_V3_RULES } from "../save/rules.js";
 import { applyTime, type TickEvents, type TimeInput } from "../state/time.js";
 import { applyHits } from "../find/core.js";
-import { createExecutor, type Executor, type TxResult } from "../tx/executor.js";
+import { createExecutor, type Executor } from "../tx/executor.js";
+import type { TxResult } from "../shared/command.js";
 import { HANDLERS } from "../tx/handlers.js";
 import { argsOf, requestIdOf, toCommandResult } from "../tx/bridge.js";
 import { dexList } from "../tx/lists.js";
@@ -27,10 +28,15 @@ import { shopDetail } from "../tx/shop-detail.js";
 import { snapshot } from "../tx/snapshot.js";
 import { agentInfo, connect, disconnect, hookCommandOf, status } from "../agents/registry.js";
 import { findNode, lastSignals, probe } from "../agents/check.js";
-import type { AgentAction, AgentReply, AgentRow, DexDetail, DexEntry, ManageReply, ManageRequest, ShopDetail, Snapshot } from "../shared/manage";
+import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents";
+import type { DexDetail, DexEntry, ShopDetail } from "../shared/model/detail";
+import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
+import type { Snapshot } from "../shared/model/snapshot";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { FIND_POKEMON } from "../shared/names/commands.js";
-import type { AgentName, Command, CommandName, CommandSource } from "../shared/types";
+import type { AgentName } from "../shared/names/agents";
+import type { Command } from "../shared/command";
+import type { CommandName, CommandSource } from "../shared/names/commands";
 
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/store.ts)
 export const saveFile = (): string => PATHS.save;

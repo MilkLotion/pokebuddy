@@ -8,7 +8,8 @@ import type {
   AchievementV3, BoxV3, BuffKind, BuffV3, CountsV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, MegaV3, PartySlotV3, PartyV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
-import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
+import type { LogEntry, PetDaily, Totals } from "../shared/save-v3";
+import type { NatureId } from "../shared/species";
 import { SAVE_RULES, SAVE_V3_RULES, SHOP_V3_RULES, isNatureId, snapSize } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";

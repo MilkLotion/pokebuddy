@@ -3,7 +3,7 @@
 // 메뉴는 이름·상태 / 밥 주기·놀아주기 / 설정 세 묶음이다. 상태 줄은 만복도 구간과 기분 구간을 보여 준다.
 // 규칙을 다시 적지 않는다. 쿨타임과 구간은 도메인 모듈이 정한 값을 그대로 읽는다.
 import { zoneOf } from "../state/time.js";
-import type { CommandResult } from "../shared/types";
+import type { CommandResult } from "../shared/command";
 import type { PetV3 } from "../shared/save-v3";
 import { moodWord, t, untilWord } from "./text.js";
 

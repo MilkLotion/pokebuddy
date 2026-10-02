@@ -17,7 +17,7 @@ import type { DexOptions } from "../dex/data";
 import { getLang, petName, typeName } from "../main/text.js";
 import { loadJson } from "../dex/data.js";
 import { eggName, fixedEggs, inRandomEgg, speciesPrice } from "../shop/catalog.js";
-import type { DexDetail } from "../shared/manage";
+import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { nameOfItem } from "./lists.js";
 import { josa } from "../shared/josa.js";

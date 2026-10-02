@@ -5,7 +5,9 @@
 // 관리 창을 옮기면 따라간다. 관리 창이 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 // 파티 상세의 `도감 보기` 로 열면 파티 상세 기기 창 옆에 붙는다 — 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆(2026-10-01 사용자 결정 "옆에 그 포켓몬 상세도감기기를 띄울까")
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import type { DexDetail, DexDeviceChannel, DexDeviceView, EvoNodeView } from "../shared/manage";
+import type { DexDetail, EvoNodeView } from "../shared/model/detail";
+import type { DexDeviceChannel } from "../shared/ipc/devices";
+import type { DexDeviceView } from "../shared/model/devices";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";
 import { createGenGate } from "./device-gen.js";

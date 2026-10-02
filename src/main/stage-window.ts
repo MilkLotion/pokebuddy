@@ -6,7 +6,8 @@
 // 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있다
 import fs from "node:fs";
 import { BrowserWindow, Menu, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
-import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageChannel, StageFrame, StageInit } from "../shared/stage";
+import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../shared/model/stage";
+import type { StageChannel } from "../shared/ipc/stage";
 import { sameRect, type Rect, type Size } from "./layout";
 import { windowIcon } from "./paths";
 import { webPreferencesOf } from "./window-options";

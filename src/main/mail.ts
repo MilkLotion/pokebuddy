@@ -8,8 +8,8 @@
 import { boxRoom } from "../box/slots.js";
 import { giftItemName, isApplied, isRead, parseGifts, type Gift } from "../mail/core.js";
 import type { SaveV3 } from "../shared/save-v3";
-import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/manage";
-import type { TxResult } from "../tx/executor";
+import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
+import type { TxResult } from "../shared/command";
 import { petName } from "./text.js";
 
 export interface ServerLetter {

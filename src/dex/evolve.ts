@@ -14,7 +14,7 @@
 //   배너·튜토리얼의 "진화할 수 있다" 는 레벨·친밀도 지도 간선을 보지 않는다 — 같은 조건의 기본형 간선과 짝이라 알림이 겹친다
 //   돌 대신 지도인 간선은 본다 — 지도만 있고 돌이 없으면 이 간선만 준비되기 때문이다
 import { gameDayPart } from "../shared/clock";
-import type { DayPart, EvoNeed } from "../shared/types";
+import type { DayPart, EvoNeed } from "../shared/species";
 import type { SaveV3 } from "../shared/save-v3";
 import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";

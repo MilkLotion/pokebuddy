@@ -6,7 +6,7 @@
 // 무엇을 재생할지는 두 갈래다 (옛 renderer/pmd.js 와 같다. 이제 마리마다 따로 돈다).
 //   상태  Claude 상태(idle·running…)에 붙은 동작 clips[state]. 기본값
 //   play  움직임 모듈이 고른 동작 — 산책·수면·반응. 있으면 상태보다 앞선다. null 이면 상태로 돌아간다
-import type { LookSheets, Play, PlayMode, SpriteSheet, StagePet, StageState } from "../shared/stage.js";
+import type { LookSheets, Play, PlayMode, SpriteSheet, StagePet, StageState } from "../shared/model/stage.js";
 
 export const TICK_MS = 16;
 // 창이 숨었다 돌아오면 밀린 시간이 쌓여 있다. 따라잡지 않고 지금부터 다시 센다

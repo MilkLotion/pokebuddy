@@ -60,10 +60,12 @@ import { createNotifier, type Notifier } from "../notify/notifier";
 import { rollHits } from "../find/core";
 import type { FindRecordV3 } from "../shared/save-v3";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
-import type { MailAction, ManageRoute, PatchNotesView, UpdateAction, UpdateView } from "../shared/manage";
-import type { Command } from "../shared/types";
+import type { MailAction } from "../shared/model/mail";
+import type { ManageRoute } from "../shared/model/route";
+import type { PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
+import type { Command } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
-import type { CoachView } from "../shared/stage";
+import type { CoachView } from "../shared/model/stage";
 import { currentTutorial } from "../tutorial/core";
 
 // 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다

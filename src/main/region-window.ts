@@ -3,7 +3,8 @@
 // 화면 하나만 덮는다. 여러 화면에 걸친 영역은 두지 않는다 (worklog/records/game-runtime/record.md "놀이공간·설정의 설계").
 // 적용하면 화면 좌표의 사각형을, 취소하거나 창을 닫으면 null 을 돌려준다. 저장은 부른 쪽이 한다 — 여기서는 그리기만 한다
 import { BrowserWindow, ipcMain, screen } from "electron";
-import type { RegionChannel, RegionInit, RegionRect } from "../shared/manage";
+import type { RegionChannel } from "../shared/ipc/overlays";
+import type { RegionInit, RegionRect } from "../shared/model/overlays";
 import { REGION_MIN, regionFits } from "../state/settings.js";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";

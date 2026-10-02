@@ -1,7 +1,7 @@
 // 도감 기기 창 — 메인이 준 한 종의 항목을 그린다 (src/main/dex-window.ts). Figma `99 · 시안` `579:17691`
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
-import type { DexDeviceView } from "../shared/manage.js";
+import type { DexDeviceView } from "../shared/model/devices.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "./evo-tree.js";
 import { portraitImg, sprite } from "./portrait.js";
 

@@ -4,45 +4,16 @@
 // 명령을 보내면 새 스냅샷을 다시 받아 그린다. 화면이 스스로 상태를 들고 있지 않는다.
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
-import type {
-  AccountAction,
-  AccountReply,
-  AccountScreen,
-  AchievementView,
-  AgentAction,
-  AgentReply,
-  AgentRow,
-  BagItemView,
-  BoxView,
-  CloudStatusView,
-  DexEntry,
-  EggPoolView,
-  EggView,
-  EvoNodeView,
-  FormView,
-  MailGiftView,
-  MailLetterView,
-  MailScreen,
-  ManageReply,
-  ManageRoute,
-  PatchNotesView,
-  PetDeviceAction,
-  PetView,
-  PortraitAsk,
-  ScreenView,
-  BagDeviceAction,
-  BagDeviceOpen,
-  PartyDeviceAction,
-  PartyDeviceOpen,
-  ShopDeviceAction,
-  ShopDeviceOpen,
-  ShopItemView,
-  SlotView,
-  Snapshot,
-  TradeCardView,
-  TradeScreen,
-  UpdateView,
-} from "../shared/manage.js";
+import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView } from "../shared/model/account.js";
+import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../shared/model/snapshot.js";
+import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents.js";
+import type { DexEntry, EvoNodeView } from "../shared/model/detail.js";
+import type { MailGiftView, MailLetterView, MailScreen } from "../shared/model/mail.js";
+import type { ManageReply } from "../shared/ipc/manage.js";
+import type { ManageRoute } from "../shared/model/route.js";
+import type { PetDeviceAction, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../shared/model/devices.js";
+import type { ScreenView } from "../shared/model/overlays.js";
+import type { TradeCardView, TradeScreen } from "../shared/model/trade.js";
 import { genderIcon } from "./gender.js";
 import { shinyIcon } from "./shiny.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";

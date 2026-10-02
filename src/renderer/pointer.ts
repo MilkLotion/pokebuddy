@@ -4,7 +4,7 @@
 // mac 에서는 놓는 순간도 알 수 없다(moved 가 move 의 별칭). 그래서 직접 받는다 — 눌렀다 떼면 클릭, 조금이라도 끌면 드래그.
 // 창은 움직이지 않는다. 마리가 무대 안에서 움직인다 — drag 의 x·y 는 몸 좌상단이 놓일 무대 좌표(커서 − 잡은 오프셋).
 // 옮기고 가두고 반응을 고르는 건 메인이 한다
-import type { PointerMsg } from "../shared/stage.js";
+import type { PointerMsg } from "../shared/model/stage.js";
 
 const DRAG_START_PX = 4; // 이만큼 움직여야 드래그 — 손 떨림을 클릭으로 친다
 const CLICK_MAX_MS = 500; // 이보다 오래 누르고 있다 떼면 클릭이 아니다

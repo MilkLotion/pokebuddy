@@ -3,7 +3,7 @@
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)은 눌러도 메뉴가 닫히지 않는다 — 메뉴 옆에 말풍선이 붙어 뜬다.
 //   마우스를 올려서는 뜨지 않는다 (2026-10-02 사용자 "클릭해야 나오게 하자"). 다시 누르거나 Esc·←(→) 로 말풍선만 닫는다
 //   말풍선의 자리는 창을 띄울 때 한 번 잡는다 — 창이 말풍선 자리까지 넓으므로 빈 곳을 누르면 메뉴를 닫는다
-import type { MenuSubView, MenuView } from "../shared/manage.js";
+import type { MenuSubView, MenuView } from "../shared/model/overlays.js";
 import { portraitImg } from "./portrait.js";
 
 function need(id: string): HTMLElement {

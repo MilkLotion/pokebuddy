@@ -7,7 +7,8 @@
 // 결과 문구는 표면이 구성한다 — 여기서는 코드만 돌려준다.
 import { bridgeMailbox, createDispatcher, type Dispatcher } from "../commands/dispatcher";
 import type { MailServer } from "../save/mailbox";
-import type { Command, CommandName, CommandResult } from "../shared/types";
+import type { Command, CommandResult } from "../shared/command";
+import type { CommandName } from "../shared/names/commands";
 import type { Size } from "./layout";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";

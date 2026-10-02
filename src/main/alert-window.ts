@@ -6,7 +6,8 @@
 // 창이 내용을 그려 크기를 알려 오지 못하면(ALERT_RULES.readyMs·문서 못 읽음·렌더러 죽음) 창을 부수고 null — 부른 쪽이 OS 대화상자로 띄운다
 // 보이기 전에 밖에서 닫히면(앱 종료·로그오프) closed — 끄는 중에 OS 대화상자를 새로 띄우지 않는다(검수 3)
 import { app, BrowserWindow, ipcMain, screen } from "electron";
-import type { AlertChannel, AlertView } from "../shared/alert";
+import type { AlertChannel } from "../shared/ipc/overlays";
+import type { AlertView } from "../shared/model/overlays";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";
 

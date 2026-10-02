@@ -2,7 +2,7 @@
 // dist/main/paths.js 에서 ../../config.js = 프로젝트 루트의 config.js
 import fs from "node:fs";
 import path from "node:path";
-import type { Lang } from "../shared/types";
+import type { Lang } from "../shared/species";
 
 export interface Paths {
   project: string;

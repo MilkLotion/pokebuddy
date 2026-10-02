@@ -12,7 +12,7 @@
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/region-window.ts 와 같은 층)
 import { app, BrowserWindow, dialog, screen } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud.js";
-import type { AlertView } from "../shared/alert";
+import type { AlertView } from "../shared/model/overlays";
 import { showAlert } from "./alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";

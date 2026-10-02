@@ -3,7 +3,7 @@
 // 게임 숫자(친밀도·기분·쿨다운)는 여기 없다 — state 모듈의 규칙표에. 여기는 save.json 의 모양을 채우는 기본값과
 // 파일 IO 의 재시도·TTL 만. 숫자는 전부 자리표시자 — 써 보며 고친다.
 // 성격 검증은 dex가 소유. 에이전트·보낸 이 목록은 src/shared/names/ 에 있다
-import type { NatureId } from "../shared/types.js";
+import type { NatureId } from "../shared/species.js";
 import { isNatureId as dexNatureId } from "../dex/natures";
 
 // 그림 크기 단계 — 단계 번호(1부터) 순서의 도트 배율. 저장(Pet.size)은 배율을 적고, 화면·명령은 단계 번호를 쓴다.

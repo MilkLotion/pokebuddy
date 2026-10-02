@@ -6,7 +6,8 @@
 // 파일·시각을 모르는 순수 함수와, 폴더를 읽는 함수 하나(readSessionUsages)로 나뉜다
 import fs from "node:fs";
 import path from "node:path";
-import type { AgentName, Usage } from "../shared/types";
+import type { AgentName } from "../shared/names/agents";
+import type { Usage } from "../shared/hook-record";
 
 export const ZERO_USAGE: Readonly<Usage> = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
 

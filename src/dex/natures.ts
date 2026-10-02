@@ -1,6 +1,6 @@
 // 성격 — data/natures.json 의 25개. 이름·다섯 축(+1 · 0 · −1). 앱 안에서 축은 전부 배율 (design.md "성격")
 
-import type { Axis, AxisValue, Nature, NatureId } from "../shared/types";
+import type { Axis, AxisValue, Nature, NatureId } from "../shared/species";
 import { loadJson, type DexOptions } from "./data";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 부여·저장·교환 검증·움직임 배율은 그대로다.

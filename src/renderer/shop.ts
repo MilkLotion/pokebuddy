@@ -1,6 +1,6 @@
 // 상점 기기 창 — 관리 창이 정해 보낸 상품 하나를 그린다 (src/main/shop-window.ts). Figma 05 `Shop / Device / Tool`
 // 틀은 가방 기기 창과 같다(item-device.ts). 가운데는 구매 칸(수량·합계). 수량·구매는 관리 창으로 돌려보낸다(관리 창이 명령을 보낸다)
-import type { ShopDeviceView } from "../shared/manage.js";
+import type { ShopDeviceView } from "../shared/model/devices.js";
 import { deviceFrame, el, goButton, qtyRow } from "./item-device.js";
 
 const api = window.pokebuddyShop;

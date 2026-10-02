@@ -11,7 +11,7 @@
 //           (worklog-mac/records/cloud-authority/design-p2.md 4절 원장, 13절 서버 계약)
 import { offerable, pendingOf, refOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
 import { tokenOf, type ChannelView, type TradeErrorCode, type TradeNet } from "./net.js";
-import type { TxResult } from "../tx/executor";
+import type { TxResult } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 

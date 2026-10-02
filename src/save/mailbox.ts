@@ -10,7 +10,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { realClock, type Clock } from "../shared/clock.js";
-import type { Command, CommandName, CommandResult } from "../shared/types.js";
+import type { Command, CommandResult } from "../shared/command.js";
+import type { CommandName } from "../shared/names/commands.js";
 import { hasCommandFlag, isCommandSource } from "../shared/names/commands.js";
 import { SAVE_RULES } from "./rules.js";
 import { writeAtomic } from "./legacy.js";

@@ -15,7 +15,8 @@
 import { gameDayPart, localDate } from "../shared/clock";
 import { SAVE_V3_RULES } from "../save/rules";
 import type { SaveV3 } from "../shared/save-v3";
-import type { DayPart, Pet, UnlockRule, World } from "../shared/types";
+import type { DayPart, UnlockRule } from "../shared/species";
+import type { Pet, World } from "../shared/types";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 
 export type UnlockRules = Record<string, UnlockRule>;

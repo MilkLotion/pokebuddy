@@ -16,7 +16,7 @@ import { singleSpecies } from "../shop/catalog.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { snapSize } from "../save/rules.js";
 import type { DexOptions } from "../dex/data";
-import type { Gender, NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
 import { countsOf } from "../achievement/core.js";
 import type { ReasonOf } from "../shared/names/reasons.js";

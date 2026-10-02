@@ -4,7 +4,15 @@
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
-import type { AccountAction, AccountReply, AccountScreen, AgentAction, DisplayView, MailAction, MailReply, MailScreen, ManageChannel, ManageReply, ManageRequest, ManageRoute, PatchNotesView, PetDeviceOpen, ScreenView, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen, TradeScreen, UpdateAction, UpdateView } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
+import type { AgentAction } from "../shared/model/agents";
+import type { DisplayView } from "../shared/model/snapshot";
+import type { MailAction, MailReply, MailScreen } from "../shared/model/mail";
+import type { ManageChannel, ManageReply, ManageRequest } from "../shared/ipc/manage";
+import type { ManageRoute } from "../shared/model/route";
+import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../shared/model/devices";
+import type { ScreenView } from "../shared/model/overlays";
+import type { TradeScreen } from "../shared/model/trade";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";

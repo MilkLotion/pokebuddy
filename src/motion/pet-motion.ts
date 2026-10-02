@@ -13,7 +13,7 @@
 //   없으면 마지막 tick 의 now 로 친다 (틱이 40ms 간격이라 어긋남은 그 안)
 //   활동 시각(activeAt)은 인스턴스 안 — 마리마다 따로 잠든다 (신호는 전원 공통이라 reactMs 지연과 성격 배율로 갈린다)
 //   PMD 검사(art.kind)·mode "off" 처리는 무대 쪽 — 여기는 caps 만 받는다
-import type { StageState } from "../shared/stage";
+import type { StageState } from "../shared/model/stage";
 import { createBrain } from "./brain";
 import { NEUTRAL_PARAMS, applyParams, withSleepAfter } from "./params";
 import { MOTION_RULES } from "./rules";

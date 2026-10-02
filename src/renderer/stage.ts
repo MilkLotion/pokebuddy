@@ -3,7 +3,8 @@
 // 위치의 주인은 메인이다. 40ms 마다 오는 StageFrame 을 그대로 그리고, 애니 프레임 진행(어느 프레임인지)만 스스로 한다.
 // 렌더러가 죽고 다시 떠도 ready → 메인의 재송신(init · sheets · 마지막 frame)으로 복구된다.
 // 다시 그리는 때: 프레임이 새로 왔거나 · 어느 마리의 애니 프레임이 바뀌었거나 · 캔버스 크기가 바뀌었을 때만
-import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageBridge, StageFrame, StageInit, StageSize } from "../shared/stage.js";
+import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageFrame, StageInit, StageSize } from "../shared/model/stage.js";
+import type { StageBridge } from "../shared/ipc/stage.js";
 import { hitAt, rectOf, type HitLookup } from "./hit.js";
 import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";

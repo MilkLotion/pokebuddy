@@ -1,7 +1,7 @@
 // 진화 트리 그리기 — 상점 구매 창(src/renderer/manage.ts)과 도감 기기 창(src/renderer/dex.ts)이 같이 쓴다.
 // 사슬 자료는 src/tx/shop-detail.ts 의 EvoNodeView. 초상은 창마다 그리는 방법이 달라 부르는 쪽이 넘긴다.
 // 모양 CSS(.evo-*)는 manage.html 과 dex.html 에 같은 이름으로 둔다
-import type { EvoNodeView } from "../shared/manage.js";
+import type { EvoNodeView } from "../shared/model/detail.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 

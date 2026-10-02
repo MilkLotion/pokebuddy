@@ -6,7 +6,7 @@
 //              본 버전 파일이 없으면: 저장이 이미 있으면 업데이트로 보고 띄운다. 저장이 없으면 새로 설치한 것이라 띄우지 않고 지금 버전을 본 것으로 적는다
 import fs from "node:fs";
 import path from "node:path";
-import type { PatchNote, PatchNotesView } from "../shared/manage";
+import type { PatchNote, PatchNotesView } from "../shared/model/account";
 
 export interface PatchNotesOptions {
   notesFile: string; // data/patch-notes.json

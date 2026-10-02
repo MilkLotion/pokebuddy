@@ -1,7 +1,7 @@
 // 알림 창 — 메인이 준 제목·강조 줄·설명·단추를 그리고, 누른 단추를 알린다 (src/main/alert-window.ts)
 //
 // 단추에 처음 포커스를 두지 않는다 — Enter 로 뜻하지 않은 답을 고르지 않게. Esc 는 취소 단추(메인이 고른다)
-import type { AlertView } from "../shared/alert.js";
+import type { AlertView } from "../shared/model/overlays.js";
 
 function need<T extends HTMLElement>(id: string, type: { new (): T }): T {
   const el = document.getElementById(id);

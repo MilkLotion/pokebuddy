@@ -7,7 +7,7 @@
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import type { EvoStep } from "./evo";
-import type { EvoNeed } from "../shared/types";
+import type { EvoNeed } from "../shared/species";
 
 // 도감의 지방 칸 — johto · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 기라티나(오리진폼) · 배쓰나이(청색근의 모습) · 플라엣테(영원의 꽃))만 쓴다
 export type RegionId = "johto" | "sinnoh" | "unova" | "kalos" | "alola" | "galar" | "hisui" | "paldea";

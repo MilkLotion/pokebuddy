@@ -13,7 +13,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { localDate } from "../shared/clock.js";
-import type { AgentStats, LogEntry, NatureId, Pet, PetDaily, SaveV2, Totals } from "../shared/types.js";
+import type { AgentStats, LogEntry, PetDaily, Totals } from "../shared/save-v3.js";
+import type { NatureId } from "../shared/species.js";
+import type { Pet, SaveV2 } from "../shared/types.js";
 import { isAgentName } from "../shared/names/agents.js";
 import { SAVE_RULES, isNatureId } from "./rules.js";
 

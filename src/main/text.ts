@@ -2,7 +2,7 @@
 // 메뉴·트레이는 슬러그가 아니라 "피카츄" 를 보인다. 성격 이름은 data/natures.json 의 name (한국어·영어) — 언어 파일에 따로 두지 않는다
 import { nature as natureOf } from "../dex/natures";
 import { megaOf } from "../dex/mega";
-import type { Lang, NatureId } from "../shared/types";
+import type { Lang, NatureId } from "../shared/species";
 
 interface I18nModule {
   t(key: string, vars?: Record<string, unknown>): string;

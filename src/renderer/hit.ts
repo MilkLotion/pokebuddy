@@ -2,7 +2,7 @@
 //
 // 그림 위만 클릭을 받는다. 작업 동작(공격 등)이 칸을 키워 프레임이 몸보다 크다 — 투명한 곳까지 받으면 그만큼 아래 창을 못 누른다.
 // 검사 순서: 배열 뒤(위에 그려진 것)에서 앞으로 → 프레임 사각형(패딩 포함) 안이면 시트 픽셀로 되돌려 알파를 본다
-import type { StageFrame, StagePet, StageSize } from "../shared/stage.js";
+import type { StageFrame, StagePet, StageSize } from "../shared/model/stage.js";
 
 // 그림 가장자리에서 이만큼(DIP) 떨어진 곳까지 그림으로 친다 — 도트 사이 틈에서 클릭이 새지 않게 (옛 pointer.js HIT_PAD_PX)
 export const HIT_PAD_PX = 3;

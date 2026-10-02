@@ -1,7 +1,8 @@
 // 첫 실행 선택 창 — 스타터 29종을 세대별로. 고르면 슬러그, 닫으면 null. 문서는 src/renderer/picker.html (C 단위), 문구·목록은 여기서 준다
 import { BrowserWindow, ipcMain } from "electron";
 import { nextOf } from "../dex/evo";
-import type { PickerPayload, StageChannel } from "../shared/stage";
+import type { PickerPayload } from "../shared/model/stage";
+import type { StageChannel } from "../shared/ipc/stage";
 import { windowIcon } from "./paths";
 import type { Portraits } from "./portraits";
 import { petName, t } from "./text";

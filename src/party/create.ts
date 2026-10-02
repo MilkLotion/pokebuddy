@@ -4,7 +4,7 @@
 // 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
 import { SAVE_V3_RULES } from "../save/rules.js";
 import { localDate } from "../shared/clock.js";
-import type { Gender, NatureId } from "../shared/types";
+import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
 // 지금 있는 개체의 `p숫자` 중 가장 큰 수. 없으면 0

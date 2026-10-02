@@ -6,7 +6,7 @@
 // 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 누르면 메가진화한다 (같은 날 사용자 결정)
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
-import type { PetDeviceAction, PetDeviceView } from "../shared/manage.js";
+import type { PetDeviceAction, PetDeviceView } from "../shared/model/devices.js";
 import { genderIcon } from "./gender.js";
 import { shinyIcon } from "./shiny.js";
 import { sprite } from "./portrait.js";

@@ -9,7 +9,7 @@
 // 옛 brain.js 와 다른 점 (판단 로직은 같다)
 //   규칙표를 밖에서 받는다 — params.ts applyParams 가 성격 배율을 곱한 것. 안 주면 MOTION_RULES(중립)
 //   act 에 rate 를 늘 채운다 (걷기 외에는 1) — 렌더러가 rate 없음을 1 로 봤던 것을 계약(Play.rate)으로 고정
-import type { Play, StageState } from "../shared/stage";
+import type { Play, StageState } from "../shared/model/stage";
 import { MOTION_RULES } from "./rules";
 import type { MotionMode, MotionRules, Range } from "./rules";
 import type { MotionInput, MotionOut, Phase, RoamBox, MotionParams } from "./types";

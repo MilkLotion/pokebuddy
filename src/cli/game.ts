@@ -2,7 +2,8 @@
 import { PATHS } from "../main/paths";
 import { send } from "../save/mailbox";
 import { commandNamesWhere } from "../shared/names/commands";
-import type { Command, CommandName } from "../shared/types";
+import type { Command } from "../shared/command";
+import type { CommandName } from "../shared/names/commands";
 
 // CLI 가 받는 명령 — 목록은 src/shared/names/commands.ts 의 cli
 const allowed: readonly string[] = commandNamesWhere("cli");

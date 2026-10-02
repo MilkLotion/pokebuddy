@@ -4,7 +4,7 @@
 import { MOTION_RULES } from "./rules";
 import type { MotionRules, Range } from "./rules";
 import type { MotionParams } from "./types";
-import type { Axis, AxisValue } from "../shared/types";
+import type { Axis, AxisValue } from "../shared/species";
 
 export const NATURE_MOTION_RULES = { pace: 0.2, pause: 0.2, fidget: 0.2, sleep: 0.2, react: 0.25, pull: 0.65 };
 

@@ -1,7 +1,7 @@
 // 첫 실행 — 첫 포켓몬 선택 창. 목록·문구는 메인이 언어에 맞춰 준다 (picker:list).
 // 고르고 `함께하기` 를 누르면 슬러그를 메인에 보낸다 (picker:start). 창을 그냥 닫으면 메인이 시작하지 않는다.
 // 카드를 두 번 누르면 바로 시작한다
-import type { PickerItem, PickerPayload } from "../shared/stage.js";
+import type { PickerItem, PickerPayload } from "../shared/model/stage.js";
 import { portraitImg } from "./portrait.js";
 
 // 문서 요소 — 없으면 창을 쓸 수 없으니 바로 던진다

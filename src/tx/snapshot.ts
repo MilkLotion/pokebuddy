@@ -15,14 +15,14 @@ import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
-import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
+import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaChoices, megaOf, megaRivals, shownSpecies } from "../dex/mega.js";
 import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
 import { candidates, dayPartOf } from "../dex/evolve.js";
-import type { DayPart } from "../shared/types";
+import type { DayPart } from "../shared/species";
 import { isEvoItem, itemAbout, nameOfItem, shopList } from "./lists.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 

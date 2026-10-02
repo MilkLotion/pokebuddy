@@ -29,7 +29,7 @@ import { normalize as normalizeV3 } from "../save/v3.js";
 import * as store from "../save/store.js";
 import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";
-import type { AccountAction, AccountReply, AccountScreen } from "../shared/manage";
+import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
 
 export interface MainOnlineOptions {
   saveFile: string;

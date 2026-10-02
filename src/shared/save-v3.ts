@@ -6,7 +6,45 @@
 //   - 배고픔(hunger) 대신 만복도(fullness) 를 쓴다. 용어사전의 사용자 용어와 맞춘다. fullness = 100 − hunger
 //   - 멈추는 값은 시각이 아니라 남은 시간으로 저장한다. PC 잠금·절전 중에는 시간이 흐르지 않기 때문이다.
 //   - 시간 값은 전부 ms 정수다. 화면 표기만 초·분으로 반올림한다.
-import type { AgentStats, Gender, LogEntry, NatureId, PetDaily, Totals } from "./types";
+import type { Gender, NatureId } from "./species.js";
+
+// ── 저장이 함께 쓰는 작은 모양 ─────────────────────────────────────────────────
+// 시각은 전부 ms (Date.now())
+// ── 저장 v2 ────────────────────────────────────────────────────────────────────
+// 시각은 전부 ms (Date.now()). 마리에 id 를 두어 종이 바뀌어도(진화) 같은 마리다
+export interface PetDaily {
+  date: string; // YYYY-MM-DD 로컬 — 날짜가 바뀌면 비운다
+  gained: number; // 오늘 오른 친밀도 (하루 상한 대조)
+  feeds: number;
+  plays: number;
+  pokes: number;
+  presence: number; // 오늘 켜 두기로 오른 친밀도
+  work: number; // 오늘 일한 양(토큰·시간)으로 오른 친밀도
+  turns: number; // 오늘 턴 완료 횟수
+}
+
+export interface Totals {
+  workMs: number;
+  presenceMs: number;
+  tokens: number;
+  turns: number;
+  days: number;
+  fed: number;
+  played: number;
+}
+
+export interface AgentStats {
+  connected: boolean;
+  date?: string; // tokensToday 의 날짜
+  tokensToday?: number;
+  tokensTotal?: number;
+}
+
+export interface LogEntry {
+  at: number;
+  kind: string;
+  [key: string]: unknown;
+}
 
 // ── 개체 ───────────────────────────────────────────────────────────────────────
 // 장난감은 놀아주기 3중첩과 같은 버프(신남)를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")

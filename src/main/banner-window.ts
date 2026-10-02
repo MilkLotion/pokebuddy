@@ -4,7 +4,9 @@
 // 배너는 뜬 뒤 BANNER_RULES.showMs 가 지나면 사라진다. 커서 위치와 무관하다.
 // 제목 줄 오른쪽 `✕` 로 바로 닫는다. 누르지 않아도 시간이 지나면 사라진다 (docs/specs/ui-components.md C-19)
 import { BrowserWindow, ipcMain, screen } from "electron";
-import type { BannerChannel, BannerView, ManageRoute } from "../shared/manage";
+import type { BannerChannel } from "../shared/ipc/overlays";
+import type { BannerView } from "../shared/model/overlays";
+import type { ManageRoute } from "../shared/model/route";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";
 

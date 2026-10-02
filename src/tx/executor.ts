@@ -16,12 +16,7 @@ import { queueTutorials } from "../tutorial/core.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
 import { SAVE_V3_RULES } from "../save/rules.js";
 import type { Reason } from "../shared/names/reasons.js";
-
-export interface TxRequest {
-  id: string; // 요청 식별자. 같은 값으로 다시 보내도 한 번만 반영한다
-  name: string;
-  args?: unknown;
-}
+import type { TxRequest, TxResult } from "../shared/command.js";
 
 // 도메인 모듈이 돌려주는 것 — 사본을 고치고 성공 여부만 알린다
 export type TxOutcome = { ok: true; result?: unknown } | { ok: false; reason: Reason };
@@ -34,13 +29,6 @@ export interface TxContext {
 }
 
 export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutcome;
-
-export type TxResult =
-  | { ok: true; result: unknown; replayed: boolean; achieved?: string[] }
-  | { ok: false; reason: TxFailure };
-
-// 실패 이유 — 저장 실패와 규칙 실패를 구분한다. 화면이 다른 문구를 쓴다. 목록은 src/shared/names/reasons.ts
-export type TxFailure = Reason;
 
 export interface TxPorts {
   read: () => SaveV3 | null;

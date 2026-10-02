@@ -5,7 +5,8 @@
 //
 // 번호는 설정 목록과 같다 — 주 화면이 1 (layout.ts screenOrder). 저장은 부른 쪽이 한다
 import { BrowserWindow, ipcMain, screen } from "electron";
-import type { ScreenOverlayInit, ScreensChannel, ScreenView } from "../shared/manage";
+import type { ScreenOverlayInit, ScreenView } from "../shared/model/overlays";
+import type { ScreensChannel } from "../shared/ipc/overlays";
 import { resolveScreen, screenOrder, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "./layout";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";

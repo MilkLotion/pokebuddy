@@ -4,7 +4,7 @@
 //   옛 개체   성별이 없는 저장은 반반으로 정한다. 무성·한 성별 종은 그 성별이다.
 //             성별 조건으로 진화한 종(염뉴트·눈여아·엘레이드 등)은 전부 한 성별 종이라 여기서 함께 맞는다
 //   진화      data/evo.json 의 gender 가 있으면 그 성별만 진화한다 (src/dex/evolve.ts checkNeed)
-import type { Gender } from "../shared/types";
+import type { Gender } from "../shared/species";
 import type { DexOptions } from "./data";
 import { profile } from "./species.js";
 
