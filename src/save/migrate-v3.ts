@@ -10,7 +10,7 @@ import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { Pet, SaveV2 } from "../shared/types";
 import { SAVE_V3_RULES, SHOP_V3_RULES } from "./rules.js";
 import { legacyGender } from "../dex/gender.js";
-import { empty, emptySlots, growBoxes, putStrays } from "./v3.js";
+import { empty, emptySlots, fillBoxes, putStrays } from "./v3.js";
 
 export interface MigrateResult {
   save: SaveV3 | null; // 검사를 통과한 결과. 실패하면 null
@@ -87,7 +87,7 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
   const placed = new Set<string>();
   for (const s of slots) if (s.state === "pokemon" && s.petId) placed.add(s.petId);
   putStrays(out.pets, placed, out.boxes);
-  growBoxes(out.boxes);
+  fillBoxes(out.boxes);
 
   // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다. 옛 민트를 합친 개수는 가방 상한에서 자른다 (src/save/v3.ts normalizeBag 과 같다)
   let mergedMint = false;

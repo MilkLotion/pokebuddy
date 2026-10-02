@@ -1284,6 +1284,131 @@
       .pager .box-sort {
         margin-left: auto;
       }
+      /* 박스 넘김 줄 — 돌보미집 아이콘 단추가 정렬 왼쪽에 선다. 둘이 오른쪽 끝에 붙는다 (Figma 02 `Box Toolbar`) */
+      .pager .daycare-open {
+        margin-left: auto;
+      }
+      .pager .daycare-open + .box-sort {
+        margin-left: 0;
+      }
+      /* 아이콘 단추 — 32×32, 1px 중립 테두리. 옆의 ◀·▶·정렬과 높이가 같다. 점은 오른쪽 위 (Figma 02 `Icon Button`) */
+      button.icon-button,
+      .pager button.icon-button {
+        appearance: none;
+        position: relative;
+        flex: none;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .icon-button svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: var(--muted);
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-button .dot {
+        position: absolute;
+        right: 4px;
+        top: 4px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--primary);
+      }
+      .icon-button .dot[hidden] {
+        display: none;
+      }
+      /* 박스 머리 메뉴 — 햄버거 단추 아래에 뜬다. 오른쪽 끝을 단추에 맞춘다. 줄 모양은 정렬 목록과 같다 (Figma 05 `Box / Menu Open`) */
+      .head .box-menu {
+        position: relative;
+      }
+      .head .box-menu .sort-menu {
+        left: auto;
+        right: 0;
+        width: 124px;
+        box-sizing: border-box;
+      }
+      .head .box-menu .sort-item {
+        appearance: none;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 400;
+        color: inherit;
+        white-space: nowrap;
+        display: block;
+        width: 100%;
+        height: 34px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 4px;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+      }
+      .head .box-menu .sort-item:hover {
+        background: var(--accent-bg);
+      }
+      /* 박스 순서 모달 — 폭 560, 타일 한 줄 4개(간격 6). 타일은 이름과 사용 칸 수. 이름은 한 줄이고 넘치면 끝을 줄인다.
+         지금 보는 박스와 놓을 타일은 옅은 바탕이다. 테두리로 강조하지 않는다 (Figma 05 `Box / Order Modal`) */
+      .dialog.daycare.box-order {
+        width: min(560px, calc(100vw - 40px));
+        flex: none;
+      }
+      .box-order-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+      }
+      .box-tile {
+        appearance: none;
+        font: inherit;
+        color: inherit;
+        text-align: left;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 9px 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+        touch-action: none;
+        -webkit-user-drag: none;
+      }
+      .box-tile .tile-name {
+        font-size: 12px;
+        line-height: 18px;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .box-tile .tile-count {
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--muted);
+      }
+      .box-tile.on,
+      .box-tile.drop-on {
+        background: var(--accent-bg);
+      }
+      .box-tile.dragging {
+        opacity: 0.35;
+      }
       .pager .sort-toggle,
       .search-row .sort-toggle {
         height: 32px;
@@ -3092,8 +3217,7 @@
         stroke-linecap: round;
         stroke-linejoin: round;
       }
-      /* 박스 머리의 `교환` 단추 — 보조 단추. 진행 중이면 오른쪽 위 점(Status Dot, 컬러 테두리 없음). Figma 04 템플릿 `Box Layout` `340:3665` 머리 */
-      /* 박스 머리 단추 묶음 — 돌보미집 · 교환 */
+      /* 박스 머리 단추 묶음 — 햄버거 단추 하나(메뉴: 박스 순서·교환). 교환이 진행 중이면 단추 오른쪽 위 점. Figma 04 템플릿 `Box Layout` `340:3665` 머리 */
       .head .head-acts {
         display: flex;
         gap: 8px;

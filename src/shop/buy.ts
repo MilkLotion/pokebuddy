@@ -5,9 +5,10 @@
 //   도구    가방에 쌓는다. 칸 수 제한은 없다
 //   파티 칸 적용한 프리셋에 상점으로 여는 칸이 남아 있어야 한다. 값은 늘 같다
 //   파티 프리셋 가진 프리셋의 칸을 모두 열어야 한다. 값은 늘 같다
-//   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 꺼낸 상태로, 없으면 박스로
+//   박스    상한(SAVE_V3_RULES.box.max)까지 하나씩 산다. 값은 늘 같다. 빈 박스가 맨 뒤에 생긴다
+//   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳이 없으면 사지 못한다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
-import { putPet } from "../box/slots.js";
+import { addBox, boxBuyable, boxRoom, putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
@@ -28,6 +29,8 @@ export type BuyFailure =
   | "no-locked-slot" // 상점으로 열 칸이 남지 않았다
   | "preset-max" // 프리셋을 더 가질 수 없다
   | "slots-not-full" // 가진 프리셋의 칸을 모두 열지 않았다
+  | "box-max" // 박스를 더 가질 수 없다
+  | "box-full" // 새 개체를 둘 파티 빈 칸도 박스 빈 칸도 없다
   | "not-unlocked" // 해금하지 않은 종이다
   | "sold-out"; // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
 
@@ -41,6 +44,7 @@ export interface BuyResult {
   slotIndex?: number;
   toBox?: boolean;
   preset?: number; // 새로 산 프리셋 번호
+  boxId?: string; // 새로 산 박스
 }
 
 // 다음 알 식별자 — 지금까지 만든 알 수(eggSeq)와 지금 있는 알의 가장 큰 번호 중 큰 것의 다음.
@@ -49,15 +53,18 @@ export function nextEggId(save: SaveV3): string {
   return `e${Math.max(save.eggSeq, maxEggNo(save.eggs)) + 1}`;
 }
 
-// 새 개체를 파티나 박스에 넣는다 — 업적의 포켓몬 보상도 쓴다 (src/achievement/core.ts claim)
-export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } {
+// 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
+export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
+
+// 새 개체를 파티나 박스에 넣는다 — 업적의 포켓몬 보상도 쓴다 (src/achievement/core.ts claim).
+// 부르기 전에 hasRoom 으로 둘 곳을 본다. 둘 곳이 없으면 넣지 않고 null
+export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } | null {
   const i = save.party.slots.findIndex((s) => s.state === "empty");
   if (i >= 0) {
     save.party.slots[i] = { state: "pokemon", petId, hidden: false };
     return { slotIndex: i, toBox: false };
   }
-  putPet(save.boxes, petId);
-  return { toBox: true };
+  return putPet(save.boxes, petId) ? { toBox: true } : null;
 }
 
 // 새 알 하나 — 후보는 이 순간에 정해 저장한다 (docs/specs/game.md "알 결과 저장"). 저장에 넣는 것은 부르는 쪽이다
@@ -96,8 +103,20 @@ function buyPreset(save: SaveV3): BuyResult {
   return { ok: true, spent: price, balance: save.points.balance, preset };
 }
 
+// 박스 하나 — 상한까지 산다. 빈 박스가 맨 뒤에 생긴다
+function buyBox(save: SaveV3): BuyResult {
+  if (!boxBuyable(save.boxes).ok) return { ok: false, reason: "box-max" };
+  const price = SHOP_V3_RULES.boxPrice;
+  if (save.points.balance < price) return { ok: false, reason: "not-enough" };
+  const box = addBox(save.boxes);
+  if (!box) return { ok: false, reason: "box-max" };
+  save.points.balance -= price;
+  return { ok: true, spent: price, balance: save.points.balance, boxId: box.id };
+}
+
 export function buy(save: SaveV3, productId: string, now: number, rand: Rand, opts?: DexOptions): BuyResult {
   if (productId === "party-preset") return buyPreset(save);
+  if (productId === "box") return buyBox(save);
   const slot = productId === "party-slot";
   const product = slot ? null : find(productId, opts);
   const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
@@ -109,6 +128,7 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   if (product?.kind === "egg" && save.eggs.length >= EGG_V3_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
   if (product?.kind === "egg" && !canGiveEgg(save, product.ref, opts)) return { ok: false, reason: "sold-out" };
   if (product?.kind === "species" && !save.dex.unlocked.includes(product.ref)) return { ok: false, reason: "not-unlocked" };
+  if (product?.kind === "species" && !hasRoom(save)) return { ok: false, reason: "box-full" };
   if (product?.kind === "tool" && (save.bag[product.ref] ?? 0) >= SHOP_V3_RULES.bagMax) return { ok: false, reason: "bag-full" };
 
   save.points.balance -= price;
@@ -136,6 +156,6 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   const pet = newPet({ id, species: product?.ref ?? productId, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(product?.ref ?? productId, rand, opts), now });
   save.pets.push(pet);
   recordDex(save, pet.species, pet.shiny);
-  const where = placeNew(save, id);
+  const where = placeNew(save, id) ?? { toBox: true }; // 둘 곳은 위에서 봤다
   return { ...done, petId: id, ...where };
 }

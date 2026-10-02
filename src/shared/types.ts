@@ -165,7 +165,7 @@ export type CommandName =
   | "party.show" | "party.hide" | "party.remove"
   | "party.place" | "party.swap" | "party.move" | "party.keep"
   | "party.preset" | "party.preset.rename"
-  | "box.sort" | "box.move" | "box.rename"
+  | "box.sort" | "box.move" | "box.rename" | "box.order"
   | "egg.open"
   | "bag.use" | "bag.sell"
   | "achievement.claim"

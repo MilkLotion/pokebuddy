@@ -60,7 +60,7 @@ export function empty(now: number): SaveV3 {
     pets: [],
     starterPetId: null,
     party: emptyParty(),
-    boxes: growBoxes([newBox("b1", SAVE_V3_RULES.box.firstName)]),
+    boxes: fillBoxes([newBox("b1", SAVE_V3_RULES.box.firstName)]),
     petSeq: 0,
     eggs: [],
     eggSeq: 0,
@@ -110,15 +110,27 @@ function emptyParty(): PartyV3 {
 
 export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: SAVE_V3_RULES.box.size }, () => null) });
 
-// 박스 수를 규칙에 맞춘다 — start 개보다 적으면 채우고, 모든 박스에 한 마리 이상 있으면 step 개를 더한다.
-// 그래서 빈 박스가 늘 하나 이상 있다. 줄이지는 않는다. 박스에 개체가 들어가는 조작 뒤에 부른다
-export function growBoxes(boxes: BoxV3[]): BoxV3[] {
-  const { start, step } = SAVE_V3_RULES.box;
-  const add = (count: number): void => {
-    for (let i = 0; i < count; i += 1) boxes.push(newBox(`b${boxes.length + 1}`, `박스 ${boxes.length + 1}`));
-  };
-  if (boxes.length < start) add(start - boxes.length);
-  if (boxes.every((b) => b.slots.some((s) => s !== null))) add(step);
+// 다음 박스 식별자 — 지금 있는 `b숫자` 의 가장 큰 번호 다음. 순서를 바꾼 뒤에도 겹치지 않는다
+export function nextBoxId(boxes: BoxV3[]): string {
+  let max = boxes.length;
+  for (const b of boxes) {
+    const m = /^b(\d+)$/.exec(b.id);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `b${max + 1}`;
+}
+
+// 빈 박스 하나를 맨 뒤에 더한다. 상한은 보지 않는다 — 사는 쪽(src/box/slots.ts addBox)이 본다
+export function pushBox(boxes: BoxV3[]): BoxV3 {
+  const box = newBox(nextBoxId(boxes), `박스 ${boxes.length + 1}`);
+  boxes.push(box);
+  return box;
+}
+
+// 박스 수를 기본 개수로 맞춘다 — start 개보다 적으면 채운다. 그보다 많은 박스는 그대로 둔다(산 박스, 옛 규칙으로 늘어난 박스).
+// 새 저장과 읽기에서만 부른다. 박스는 저절로 늘지 않는다
+export function fillBoxes(boxes: BoxV3[]): BoxV3[] {
+  while (boxes.length < SAVE_V3_RULES.box.start) pushBox(boxes);
   return boxes;
 }
 
@@ -435,7 +447,7 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
   const party = normalizeParty(raw.party, seen, placed);
   const boxes = normalizeBoxes(raw.boxes, seen, placed);
   putStrays(pets, placed, boxes);
-  growBoxes(boxes); // 옛 저장(박스 1개부터)도 읽을 때 지금 규칙으로 맞춘다
+  fillBoxes(boxes); // 옛 저장(박스 1개부터)도 읽을 때 기본 개수로 맞춘다
 
   const d = isObj(raw.daily) ? raw.daily : {};
   const dailyDate = str(d.date, date);
@@ -527,7 +539,8 @@ function normalizeTotals(raw: Raw): Totals {
   };
 }
 
-// 파티에도 박스에도 없는 개체를 박스의 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다
+// 파티에도 박스에도 없는 개체를 박스의 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다.
+// 읽기의 복구 경로다 — 개체를 잃지 않으려고 여기서만 박스 상한을 보지 않는다
 export function putStrays(pets: PetV3[], placed: Set<string>, boxes: BoxV3[]): void {
   for (const pet of pets) {
     if (placed.has(pet.id)) continue;
@@ -540,9 +553,7 @@ export function putStrays(pets: PetV3[], placed: Set<string>, boxes: BoxV3[]): v
       break;
     }
     if (!done) {
-      const box = newBox(`b${boxes.length + 1}`, `박스 ${boxes.length + 1}`);
-      box.slots[0] = pet.id;
-      boxes.push(box);
+      pushBox(boxes).slots[0] = pet.id;
     }
     placed.add(pet.id);
   }

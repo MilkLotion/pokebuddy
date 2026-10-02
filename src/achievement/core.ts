@@ -20,7 +20,7 @@ import { countParty, slotsOfPreset } from "../party/presets.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { placeNew } from "../shop/buy.js";
+import { hasRoom, placeNew } from "../shop/buy.js";
 import type { Rand } from "../egg/hatch";
 
 export type AchievementReward = "party-slot" | { pokemon: string };
@@ -35,7 +35,7 @@ export interface AchievementDef {
   count?: number; // party-three 의 기준 마리 수
 }
 
-export type ClaimFailure = "no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot";
+export type ClaimFailure = "no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full";
 
 export interface ClaimResult {
   ok: boolean;
@@ -104,7 +104,7 @@ export function evaluate(save: SaveV3, now: number, opts?: DexOptions, prev?: Sa
 
 // 보상 수령 — 업적당 한 번
 //   파티 칸 보상  칸 +1 — 첫 잠긴 칸을 연다
-//   포켓몬 보상   새 개체를 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 박스는 가득 차면 새 박스를 더해 늘 들어간다 (src/box/slots.ts putPet)
+//   포켓몬 보상   새 개체를 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳이 없으면 받지 못한다(box-full) — 미수령으로 남는다
 export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, rand: Rand = Math.random): ClaimResult {
   const def = defOf(id, opts);
   if (!def) return { ok: false, reason: "no-achievement" };
@@ -114,11 +114,12 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const species = rewardPokemon(def);
   if (species) {
+    if (!hasRoom(save)) return { ok: false, reason: "box-full" };
     const petId = nextPetId(save);
     const pet = newPet({ id: petId, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now });
     save.pets.push(pet);
     recordDex(save, species, false);
-    const where = placeNew(save, petId);
+    const where = placeNew(save, petId) ?? { toBox: true }; // 둘 곳은 위에서 봤다
     save.achievements[id] = { achievedAt: row.achievedAt, claimedAt: now };
     return { ok: true, id, petId, ...where };
   }

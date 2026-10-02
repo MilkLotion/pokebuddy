@@ -90,6 +90,7 @@ const SAVE_COMMANDS: readonly CommandName[] = [
   "box.sort",
   "box.move",
   "box.rename",
+  "box.order",
 ];
 
 export function createCommands(ctx: CommandContext): Commands {

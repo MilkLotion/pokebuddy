@@ -16,7 +16,7 @@ import { SHOP_V3_RULES } from "../save/rules.js";
 import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { inRandomEgg } from "../shop/catalog.js";
-import { placeNew } from "../shop/buy.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·부화와 같다
+import { hasRoom, placeNew } from "../shop/buy.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·부화와 같다
 import type { FindKind, FindRecordV3, FindV3, SaveV3 } from "../shared/save-v3";
 
 export { FIND_RULES };
@@ -117,6 +117,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
   } else {
     const result = decide(pokemonCandidates(save, opts), rand, opts);
     if (!result) return null; // 후보 없음 — 이번 판정은 없음
+    if (!hasRoom(save)) return null; // 둘 곳 없음 — 이번 판정은 없음
     newPetId = nextPetId(save);
     save.pets.push(newPet({ id: newPetId, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
     recordDex(save, result.species, result.shiny);

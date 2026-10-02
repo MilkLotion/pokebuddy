@@ -19,7 +19,7 @@ import { begin } from "../party/starter.js";
 import { buy } from "../shop/buy.js";
 import { sell } from "../shop/sell.js";
 import { sellPet } from "../shop/sell-pet.js";
-import { isBoxSortKey, moveSlot, moveToBox, renameBox, sortBox } from "../box/slots.js";
+import { isBoxSortKey, moveSlot, moveToBox, orderBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
 import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
 import { applyGifts, markRead } from "../mail/core.js";
@@ -168,7 +168,7 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
   let spent = res.spent ?? 0;
   const eggIds: string[] = res.eggId ? [res.eggId] : [];
   if (count > 1) {
-    if (!spent || res.petId || res.slotIndex !== undefined || res.preset !== undefined) return { ok: false, reason: "bad-args" };
+    if (!spent || res.petId || res.slotIndex !== undefined || res.preset !== undefined || res.boxId !== undefined) return { ok: false, reason: "bad-args" };
     for (let i = 1; i < count; i += 1) {
       res = buy(draft, productId, ctx.now, ctx.rand);
       if (!res.ok) return { ok: false, reason: res.reason ?? "failed" }; // 실행기가 사본을 버린다 — 앞서 산 것도 반영하지 않는다
@@ -180,7 +180,7 @@ const buyHandler: TxHandler = (draft, args, ctx) => {
     ok: true,
     result: {
       productId, count, spent, balance: res.balance, eggId: eggIds[0], ...(eggIds.length ? { eggIds } : {}),
-      petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox, ...(res.preset !== undefined ? { preset: res.preset } : {}),
+      petId: res.petId, slotIndex: res.slotIndex, toBox: res.toBox, ...(res.preset !== undefined ? { preset: res.preset } : {}), ...(res.boxId !== undefined ? { boxId: res.boxId } : {}),
     },
   };
 };
@@ -380,8 +380,8 @@ const formHandler: TxHandler = (draft, args) => {
 };
 HANDLERS["pet.form"] = formHandler;
 
-// ── 박스 정렬·이동·이름 ─────────────────────────────────────────────────────────
-// 박스의 slots 와 name 만 바꾼다. 파티·알·도감은 건드리지 않는다 (src/box/slots.ts)
+// ── 박스 정렬·이동·이름·순서 ────────────────────────────────────────────────────
+// 박스의 slots 와 name, 박스 배열의 순서만 바꾼다. 파티·알·도감은 건드리지 않는다 (src/box/slots.ts)
 
 const boxIndexOf = (draft: Parameters<TxHandler>[0], args: unknown, key: string): number => {
   const id = isObj(args) ? args[key] : undefined;
@@ -432,6 +432,18 @@ const boxRenameHandler: TxHandler = (draft, args) => {
   return { ok: true, result: { boxId: box.id, name: renameBox(box, name, boxIndex) } };
 };
 
+// 박스 순서 바꾸기 — 박스를 to 자리로 옮긴다. 사이의 박스는 한 칸씩 밀린다 (2026-10-02 사용자 결정 "박스끼리 순서변경")
+const boxOrderHandler: TxHandler = (draft, args) => {
+  const from = boxIndexOf(draft, args, "boxId");
+  const to = intOf(args, "to");
+  if (from < 0) return { ok: false, reason: "no-box" };
+  if (to == null) return { ok: false, reason: "bad-args" };
+  const res = orderBox(draft.boxes, from, to);
+  if (!res.ok) return { ok: false, reason: res.reason };
+  return { ok: true, result: { boxId: draft.boxes[to]?.id, to } };
+};
+
+HANDLERS["box.order"] = boxOrderHandler;
 HANDLERS["box.sort"] = boxSortHandler;
 HANDLERS["box.move"] = boxMoveHandler;
 HANDLERS["box.rename"] = boxRenameHandler;

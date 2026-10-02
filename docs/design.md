@@ -71,7 +71,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | 표시 구조 | 투명 창 하나에 최대 여섯 마리를 그린다. 마리별 크기·성격·표시 상태를 유지한다. | [표시 창](../src/main/stage-window.ts), [무대](../src/main/stage.ts) |
 | 정식 로고 | 원본은 `assets/logo/src/logo.svg`다. 산출물은 `assets/logo/out/`에 둔다. | [원본](../assets/logo/src/logo.svg) |
 | 구현 기술 | `src/`에 TypeScript를 작성한다. 메인과 렌더러를 `tsc`로 각각 빌드한다. | [패키지 설정](../package.json) |
-| S5 설정창 | 바닐라 HTML·CSS와 컴파일한 TypeScript를 사용한다. 탭은 파티·박스·도감·상점·가방이다. 교환은 박스 탭 머리의 `교환` 단추로 여는 모달이다. | [게임 규칙](specs/game.md) |
+| S5 설정창 | 바닐라 HTML·CSS와 컴파일한 TypeScript를 사용한다. 탭은 파티·박스·도감·상점·가방이다. 교환은 박스 탭 머리 메뉴의 `교환`으로 여는 모달이다. | [게임 규칙](specs/game.md) |
 | 문구 | 사용자 문구는 언어 파일에서 관리한다. 한국어와 영어를 제공한다. 명칭은 용어사전을 따른다. | [언어 파일](../lib/i18n/ko.json), [용어사전](terms.md) |
 
 ## 놀이공간과 직접 돌봄
@@ -254,7 +254,7 @@ S5 설정창은 `src/main/manage-window.ts` 와 `src/renderer/manage.ts` 다. `a
 상세 계약은 [개체 획득과 파티 교체](specs/game.md#개체-획득과-파티-교체)를 따른다.
 새 게임의 파티는 2칸으로 시작한다. 상점에서 포인트로 2칸을 추가 구매한다. 업적으로 나머지 2칸을 해금한다. 최대 파티는 6칸이다.
 구매와 업적에 공통된 필수 해금 순서를 두지 않는다. 칸 가격은 [가격](specs/balance.md#가격)을 따른다.
-박스에는 게임 규칙상 보유 개체 수 제한을 두지 않는다. 박스는 원작처럼 30칸(6열×5행) 박스 여러 개로 나누고 넘겨 본다. 박스는 8개로 시작한다. 모든 박스에 한 마리 이상 있으면 8개를 더한다. 검색은 모든 박스를 대상으로 한다.
+박스는 원작처럼 30칸(6열×5행) 박스 여러 개로 나누고 넘겨 본다. 박스는 8개로 시작한다. 상점에서 하나씩 사서 64개까지 늘린다(2026-10-02 사용자 결정). 박스 순서는 사용자가 바꾼다. 파티와 박스에 빈 칸이 없으면 새 개체를 얻는 조작을 거절한다. 규칙은 [박스 구매와 순서](specs/game.md#박스-구매와-순서)를 따른다.
 첫 번째 칸 업적은 파티의 두 마리를 실제로 화면에 꺼내면 달성한다. 숨긴 채 두 칸에 배치한 것만으로는 달성하지 않는다. 달성 후 다시 숨겨도 달성을 유지한다. 업적창에서 보상을 받으면 한 칸을 추가한다.
 같은 종의 서로 다른 두 개체도 첫 번째 칸 업적에서 인정한다. 파이리 두 마리를 꺼내도 달성한다.
 두 번째 칸 업적의 조건은 "최초로 포켓몬 50레벨 달성"이다. 교환으로 받은 개체는 인정하지 않는다. 이 저장에서 개체가 레벨업으로 50레벨에 도달해야 달성한다.
@@ -351,7 +351,7 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 ## 커맨드 처리기
 
 명령 계약은 [공유 타입](../src/shared/types.ts)과 [등록 처리기](../src/main/commands.ts)를 따른다. 메뉴·CLI·mailbox는 같은 명령 처리 경로를 사용한다.
-명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `pet.sell`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
+명령 이름은 [공유 타입](../src/shared/types.ts)의 `CommandName`이다. `feed`, `play`, `poke`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `box.order`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.look`, `pet.form`, `pet.sell`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
 설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.move`·`party.keep`이 맡는다.
 
 `companion`은 포켓몬 인자를 받지 않는다. 빈 파티이면 선택창을 연다. 선택 취소와 저장 실패를 구분한다.
@@ -376,7 +376,7 @@ S5는 도감 등록, 개체별 육성 기록, 파티 배치, 도구 재고, 알 
 | 계층 | Foundations → Atoms → Molecules → Organisms → Templates → Screens. Screen은 Template 인스턴스로 구성한다. Screen 안에는 인스턴스만 둔다. 인스턴스를 떼어 내지 않는다. 필요한 모양이 없으면 아래 층에 먼저 만든다. Molecule은 Atom만, Organism은 Atom과 Molecule만, Template은 그 아래 층만 인스턴스로 쓴다. 2026-10-02 에 05 의 화면을 이 규칙으로 다시 조립했다. 층별 컴포넌트는 [UI 컴포넌트 계약](specs/ui-components.md#figma-층-구성)을 따른다. |
 | 변수와 글꼴 | `PB / Primitive`, `PB / Color`, `PB / Dimension` 변수를 사용한다. 배경막은 45% 알파를 가진 `neutral/900-a45`를 쓴다. 꺼진 토글은 `bg/control-off`, 빈 칸·비활성은 `bg/subtle`과 `text/disabled`를 쓴다. `PB/Type/*` 스타일은 9개다. 글꼴은 Galmuri다. 크기는 24·15·12·10px 네 단계만 쓴다. |
 | 색상 | 헤더와 카드는 `#FFFFFF`다. 본문은 `bg/canvas` `#F1F2EE`다. 강조는 `action/primary` `#0F766E`다. |
-| 탭 | 파티 / 박스 / 도감 / 상점 / 가방. `Primary Navigation` `208:542`에 있다. 교환은 탭이 아니다. 박스 탭 머리 오른쪽의 `교환` 단추가 교환 모달을 연다. |
+| 탭 | 파티 / 박스 / 도감 / 상점 / 가방. `Primary Navigation` `208:542`에 있다. 교환은 탭이 아니다. 박스 탭 머리 메뉴의 `교환`이 교환 모달을 연다. |
 | 내비게이션 | `114:967`을 따른다. 하단 테두리 1px와 선택 밑줄 60×2px를 구분한다. 10px padding·radius와 밑줄 x=10, y=31.5를 유지한다. |
 | 화면 크기 | 설정창 Screen의 폭은 640이다. 기본 세로는 682다. 682는 파티 탭이 스크롤 없이 딱 맞는 높이다(`src/save/rules.ts`). 헤더 40, 탭 줄 40, 본문 폭 600이다. 헤더 오른쪽 138은 창 조작 단추 자리다. Page Header `157:971`은 제목과 설명을 한 줄로 두고 높이는 36이다. Party Layout의 제목 아래 간격은 14, 칸 사이 간격은 12다. 레이아웃 템플릿은 `Party`·`Box`·`Dex`·`Shop`·`Bag`·`First Run Layout` 6종이다. 설정창 탭 템플릿 5종의 최소 높이는 682다. 창보다 짧은 화면도 최소 높이 682로 그린다. 스크롤하는 화면과 모달은 내용 끝까지 펼쳐 그린다. 창 끝(682)이나 대화상자 끝에 점선을 긋는다. 바탕화면 화면은 1280×720이며 창 끝 점선 규칙을 쓰지 않는다. |
 | 창 크기 조절 | 설정창의 폭은 고정이다. 사용자는 세로만 조절한다. 세로는 본문을 스크롤한다. Figma px를 DIP로 그대로 쓴다. 값은 [화면 구조](specs/game.md#2-화면-구조)를 따른다. |
@@ -411,7 +411,7 @@ S5는 도감 등록, 개체별 육성 기록, 파티 배치, 도구 재고, 알 
 교환은 로그인한 계정만 한다. 익명 계정은 교환하지 못한다. 단일 포켓몬은 교환할 수 없다. 첫 선택 포켓몬은 제한 없이 교환할 수 있다.
 교환해도 진화하지 않는다. 교환 진화 종은 `연결의끈` 도구로 진화한다.
 교환으로 받은 개체는 두 번째 파티 칸 업적에 인정하지 않는다. 규칙은 [파티 칸 확장과 박스 수용](specs/game.md#파티-칸-확장과-박스-수용)을 따른다.
-교환 화면은 설정창 박스 탭의 `교환` 단추로 여는 모달이다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게."). 교환 링크로 앱을 열면 박스 탭과 이 모달을 띄운다.
+교환 화면은 설정창 박스 탭 머리 메뉴의 `교환`으로 여는 모달이다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게.", 2026-10-02 사용자 결정 "교환도 메뉴로"). 교환 링크로 앱을 열면 박스 탭과 이 모달을 띄운다.
 배틀은 설계에서 제외한다.
 로그인은 선택 기능이다. 방법은 아이디+비밀번호(중복검사)와 GitHub다. 이메일 로그인과 Google 로그인은 없다.
 아이디는 영어만 받는다. 가입할 때 이름도 받는다. 본인인증은 하지 않는다.

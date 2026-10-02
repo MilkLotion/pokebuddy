@@ -6,7 +6,6 @@
 //   3. 개체의 값은 그대로 둔다. 칸의 이전 개체 값을 새 개체에 복사하지 않는다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { findPet, putPet, takePet } from "../box/slots.js";
-import { growBoxes } from "../save/v3.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export type PlacementFailure =
@@ -16,6 +15,7 @@ export type PlacementFailure =
   | "slot-not-empty" // 빈 칸이 아니다
   | "slot-locked" // 잠긴 칸이다
   | "no-empty-slot" // 빈 칸이 하나도 없다
+  | "box-full" // 모든 박스가 가득 찼다
   | "not-in-party"; // 파티에 없다
 
 export interface PlacementResult {
@@ -94,9 +94,8 @@ export function keep(save: SaveV3, petId: string, to?: { boxId: string; slot: nu
     if (!box || to.slot < 0 || to.slot >= box.slots.length) return { ok: false, reason: "no-slot" };
     if (box.slots[to.slot] != null) return { ok: false, reason: "slot-not-empty" };
     box.slots[to.slot] = petId;
-    growBoxes(save.boxes);
-  } else {
-    putPet(save.boxes, petId);
+  } else if (!putPet(save.boxes, petId)) {
+    return { ok: false, reason: "box-full" };
   }
   save.party.slots[i] = { state: "empty" };
   return { ok: true, slotIndex: i };

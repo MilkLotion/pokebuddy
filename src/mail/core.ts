@@ -2,11 +2,11 @@
 //
 // 서버 호출은 메인(src/main/mail.ts)이 한다. 여기서는 선물 검사와 저장만 다룬다.
 //   선물은 가방 도구(기본먹이 제외)·진화용 도구·포인트·포켓몬. 모르는 선물이 하나라도 있으면 그 편지는 넣지 않는다 — 앱이 옛 버전이다
-//   포켓몬 선물은 레벨 1 새 개체로 박스에 넣는다. 성격·성별은 상점 종 구매와 같은 규칙, 이로치 아님. 도감에 입수로 남긴다
+//   포켓몬 선물은 레벨 1 새 개체로 박스에 넣는다. 박스 빈 칸이 모자라면 그 편지는 넣지 않는다(box-full) — 자리를 만든 뒤 다시 받는다. 성격·성별은 상점 종 구매와 같은 규칙, 이로치 아님. 도감에 입수로 남긴다
 //   넣은 편지 id 는 save.mail.applied 에 남긴다. 같은 편지는 두 번 넣지 않는다(서버가 끊김 복구로 같은 선물을 다시 돌려줘도)
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
-import { putPet } from "../box/slots.js";
+import { boxRoom, putPet } from "../box/slots.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
@@ -66,7 +66,7 @@ const remember = (list: string[], id: string): void => {
 export const isApplied = (save: SaveV3, letterId: string): boolean => save.mail?.applied.includes(letterId) === true;
 export const isRead = (save: SaveV3, letterId: string): boolean => save.mail?.read.includes(letterId) === true;
 
-export type ApplyResult = { ok: true; applied: boolean } | { ok: false; reason: "bad-args" | "bad-gift" };
+export type ApplyResult = { ok: true; applied: boolean } | { ok: false; reason: "bad-args" | "bad-gift" | "box-full" };
 
 export interface ApplyEnv {
   now?: number; // 포켓몬 선물의 얻은 시각
@@ -79,6 +79,9 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
   const gifts = parseGifts(raw, opts);
   if (!gifts || !gifts.length) return { ok: false, reason: "bad-gift" };
   if (isApplied(save, letterId)) return { ok: true, applied: false };
+  // 포켓몬 선물이 모두 들어갈 박스 빈 칸 — 값을 바꾸기 전에 본다
+  const pokemon = gifts.reduce((n, g) => n + (g.kind === "pokemon" ? g.count : 0), 0);
+  if (pokemon > boxRoom(save.boxes)) return { ok: false, reason: "box-full" };
   for (const g of gifts) {
     // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/save/rules.ts bagMax)
     if (g.kind === "item") save.bag[g.id] = (save.bag[g.id] ?? 0) + g.count;

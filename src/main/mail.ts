@@ -5,6 +5,7 @@
 // 렌더러는 편지 id 만 보낸다. 저장에 넣는 선물은 서버가 돌려준 값만 쓴다.
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
+import { boxRoom } from "../box/slots.js";
 import { giftItemName, isApplied, isRead, parseGifts, type Gift } from "../mail/core.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/manage";
@@ -154,7 +155,15 @@ export function createMainMail(o: MainMailOptions): MainMail {
     // 받기
     if (busy) return reply(false, "busy");
     if (!o.signedIn()) return reply(false, "MAIL_LOGIN_REQUIRED");
-    if (!parseGifts(letter.gifts)) return reply(false, "bad-gift"); // 모르는 선물 — 서버에 받은 기록을 남기지 않는다
+    const gifts = parseGifts(letter.gifts);
+    if (!gifts) return reply(false, "bad-gift"); // 모르는 선물 — 서버에 받은 기록을 남기지 않는다
+    // 포켓몬 선물이 들어갈 박스 빈 칸이 모자라다 — 서버에 받은 기록을 남기지 않는다. 자리를 만든 뒤 다시 받는다 (src/mail/core.ts applyGifts)
+    const mine = o.read();
+    if (mine && gifts.reduce((n, g) => n + (g.kind === "pokemon" ? g.count : 0), 0) > boxRoom(mine.boxes)) {
+      error = "box-full";
+      push();
+      return reply(false, "box-full");
+    }
     if (await o.hold?.()) {
       error = "cloud-wait"; // 편지 아래에 거절 사유를 보인다
       push();

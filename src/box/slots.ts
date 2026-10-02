@@ -1,9 +1,10 @@
 // 박스 칸 다루기 — 규칙은 docs/specs/game.md "박스". 순수 함수이며 저장을 쓰지 않는다.
 //
-// 한 박스는 30칸이다. 박스는 8개로 시작하고, 모든 박스에 한 마리 이상 있으면 8개를 더한다(src/save/v3.ts growBoxes).
+// 한 박스는 30칸이다. 박스는 8개로 시작하고 상점에서 하나씩 사서 64개까지 늘린다(SAVE_V3_RULES.box). 저절로 늘지 않는다.
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
 import { profile } from "../dex/species.js";
-import { growBoxes, newBox } from "../save/v3.js";
+import { SAVE_V3_RULES } from "../save/rules.js";
+import { pushBox } from "../save/v3.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
 
 export interface BoxSpot {
@@ -32,26 +33,45 @@ export function takePet(boxes: BoxV3[], petId: string): boolean {
   return true;
 }
 
-// 개체를 앞 박스의 첫 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다. 넣은 뒤 박스 수를 규칙에 맞춘다
-export function putPet(boxes: BoxV3[], petId: string): BoxSpot {
+// 개체를 앞 박스의 첫 빈 칸에 넣는다. 모든 박스가 가득 찼으면 넣지 않고 null 을 돌려준다 — 박스는 저절로 늘지 않는다
+export function putPet(boxes: BoxV3[], petId: string): BoxSpot | null {
   for (let b = 0; b < boxes.length; b++) {
     const box = boxes[b];
     if (!box) continue;
     const i = box.slots.indexOf(null);
     if (i < 0) continue;
     box.slots[i] = petId;
-    growBoxes(boxes);
     return { boxIndex: b, slotIndex: i };
   }
-  const box = newBox(`b${boxes.length + 1}`, `박스 ${boxes.length + 1}`);
-  box.slots[0] = petId;
-  boxes.push(box);
-  const spot = { boxIndex: boxes.length - 1, slotIndex: 0 };
-  growBoxes(boxes);
-  return spot;
+  return null;
 }
 
 export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== null).length;
+
+// 모든 박스의 빈 칸 수
+export const boxRoom = (boxes: BoxV3[]): number => boxes.reduce((n, b) => n + b.slots.filter((s) => s === null).length, 0);
+
+// 박스를 더 살 수 있는가 — 상한은 SAVE_V3_RULES.box.max. bought 는 기본 개수를 넘는 박스 수다(옛 규칙으로 늘어난 박스도 센다)
+export function boxBuyable(boxes: BoxV3[]): { ok: boolean; bought: number; total: number } {
+  const { start, max } = SAVE_V3_RULES.box;
+  return { ok: boxes.length < max, bought: Math.max(0, boxes.length - start), total: max - start };
+}
+
+// 빈 박스 하나를 맨 뒤에 더한다. 상한이면 더하지 않고 null
+export function addBox(boxes: BoxV3[]): BoxV3 | null {
+  return boxBuyable(boxes).ok ? pushBox(boxes) : null;
+}
+
+// 박스 순서 바꾸기 — from 자리의 박스를 to 자리로 옮긴다. 사이의 박스는 한 칸씩 밀린다. 이름과 칸은 박스를 따라간다
+export function orderBox(boxes: BoxV3[], from: number, to: number): { ok: true } | { ok: false; reason: BoxFailure } {
+  const valid = (i: number): boolean => Number.isInteger(i) && i >= 0 && i < boxes.length;
+  if (!valid(from)) return { ok: false, reason: "no-box" };
+  if (!valid(to)) return { ok: false, reason: "bad-slot" };
+  if (from === to) return { ok: false, reason: "same-slot" };
+  const [box] = boxes.splice(from, 1);
+  if (box) boxes.splice(to, 0, box);
+  return { ok: true };
+}
 
 // ── 정렬·이동·이름 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
@@ -99,7 +119,6 @@ export function moveSlot(boxes: BoxV3[], from: BoxSpot, to: BoxSpot): { ok: true
   if (!moving) return { ok: false, reason: "empty-slot" };
   a.slots[from.slotIndex] = b.slots[to.slotIndex] ?? null;
   b.slots[to.slotIndex] = moving;
-  growBoxes(boxes); // 빈 박스에 처음 넣었으면 박스가 늘 수 있다
   return { ok: true };
 }
 

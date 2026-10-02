@@ -40,6 +40,7 @@ export const V3_COMMANDS: readonly CommandName[] = [
   "box.sort",
   "box.move",
   "box.rename",
+  "box.order",
 ];
 
 const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
@@ -99,6 +100,8 @@ export function argsOf(command: Command): Record<string, unknown> {
       return { boxId: target ?? str(a.boxId), slot: int(a.slot), ...(a.toBoxId !== undefined ? { toBoxId: str(a.toBoxId) } : {}), ...(a.toSlot !== undefined ? { toSlot: int(a.toSlot) } : {}) };
     case "box.rename":
       return { boxId: target ?? str(a.boxId), name: typeof a.name === "string" ? a.name : undefined };
+    case "box.order":
+      return { boxId: target ?? str(a.boxId), to: int(a.to) };
     case "pet.form":
       return { petId: target ?? str(a.petId), species: str(a.species) };
     case "pet.set":

@@ -285,7 +285,7 @@ function seedBox(): SaveV3 {
   process.stdout.write("(11) 보관 · 칸이 비고 박스로  ok\n");
 }
 
-// (12) 앞 박스가 가득 차면 다음 박스로 간다. 모든 박스에 한 마리 이상 있으면 박스 8개를 더한다 (2026-10-01 사용자 결정)
+// (12) 앞 박스가 가득 차면 다음 박스로 간다. 박스는 저절로 늘지 않는다. 모든 박스가 가득 차면 보관을 거절한다 (2026-10-02 사용자 결정)
 {
   const s = seedBox();
   const box = s.boxes[0];
@@ -296,8 +296,16 @@ function seedBox(): SaveV3 {
   const tx = createExecutor(f.ports, HANDLERS);
   assert.equal(tx.run({ id: "r1", name: "party.keep", args: { petId: "p1" } }).ok, true);
   assert.equal(f.state.boxes[1]?.slots[0], "p1", "다음 박스의 첫 빈 칸");
-  assert.equal(f.state.boxes.length, start + 8, "빈 박스가 없어지면 8개를 더한다");
-  process.stdout.write("(12) 박스 자동 추가  ok\n");
+  assert.equal(f.state.boxes.length, start, "모든 박스에 한 마리 이상 있어도 박스는 늘지 않는다");
+  // 모든 칸을 채우면 보관하지 못한다 — 파티 칸은 그대로다
+  const full = seedBox();
+  for (const b of full.boxes) b.slots = b.slots.map((x, i) => x ?? `z${b.id}-${i}`);
+  const g = fake(full);
+  const res = createExecutor(g.ports, HANDLERS).run({ id: "r2", name: "party.keep", args: { petId: "p1" } });
+  assert.deepEqual([res.ok, res.ok ? "" : res.reason], [false, "box-full"], "둘 곳이 없으면 box-full");
+  assert.ok(g.state.party.slots.some((x) => x.state === "pokemon" && x.petId === "p1"), "파티 칸은 그대로");
+  assert.equal(g.state.boxes.length, start);
+  process.stdout.write("(12) 박스는 늘지 않는다 · 가득 차면 보관 거절  ok\n");
 }
 
 // (13) 교체가 실패하면 박스도 파티도 그대로다

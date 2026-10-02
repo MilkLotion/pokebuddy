@@ -4,8 +4,9 @@
 // 랜덤알은 낮은 확률로 포켓몬 대신 다른 알(단일 포켓몬 알·태고의돌)을 준다(data/eggs.json 의 bonus). 그 알은 연 알의 자리에 들어간다.
 // 단일 포켓몬 알은 이미 얻은 종을 빼고 뽑는다.
 // 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
+// 파티 빈 칸도 박스 빈 칸도 없으면 열지 않는다 — 알은 그대로 남는다 (2026-10-02 사용자 결정 "박스에서 둘곳이 없으면 알에서 부화안되게").
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
-import { putPet } from "../box/slots.js";
+import { boxRoom, putPet } from "../box/slots.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
@@ -15,7 +16,7 @@ import { newEgg } from "../shop/buy.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { decide, type Rand } from "./hatch.js";
 
-export type OpenFailure = "no-egg" | "not-ready" | "no-candidate";
+export type OpenFailure = "no-egg" | "not-ready" | "no-candidate" | "box-full";
 
 export interface OpenResult {
   ok: boolean;
@@ -48,6 +49,8 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
   const egg = save.eggs[i];
   if (!egg) return { ok: false, reason: "no-egg" };
   if (!egg.ready) return { ok: false, reason: "not-ready" };
+  // 둘 곳 — 무작위를 쓰기 전에 본다. 다른 알이 나올 차례여도 같다(둘 곳이 생긴 뒤 열어도 결과가 같게)
+  if (!save.party.slots.some((s) => s.state === "empty") && boxRoom(save.boxes) < 1) return { ok: false, reason: "box-full" };
 
   const bonus = bonusEgg(save, egg.kind, rand, opts);
   if (bonus) {

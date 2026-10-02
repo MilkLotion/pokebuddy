@@ -60,7 +60,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "shop", label: "상점" },
   { id: "bag", label: "가방" },
 ];
-// 친구 교환은 탭이 아니다 — 박스 머리의 `교환` 단추가 모달로 연다
+// 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
 // (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
 
 // 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
@@ -130,6 +130,7 @@ const GUIDE: { title: string; lines: string[] }[] = [
       "파티 칸은 처음부터 다 열려 있지 않다. 상점과 업적으로 연다.",
       "파티에 있는 개체만 시간이 흐른다. 박스에 둔 개체는 멈춘다.",
       "꺼낸 개체만 바탕화면에 보인다. 숨겨도 포인트와 친밀도는 쌓인다.",
+      "박스는 상점에서 사서 늘린다. 파티와 박스에 빈 칸이 없으면 알을 열 수 없다.",
     ],
   },
   {
@@ -176,7 +177,8 @@ type Dialog =
   // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다.
   // 모두 열기면 queue 에 결과 전부, at 은 지금 보이는 차례(0 부터) — `다음 (1 / N)` 으로 하나씩 넘긴다
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }
-  | { kind: "daycare" } // 돌보미집 — 박스 머리 `돌보미집` 단추
+  | { kind: "daycare" } // 돌보미집 — 박스 넘김 줄의 집 아이콘 단추
+  | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
@@ -184,7 +186,7 @@ type Dialog =
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
   | { kind: "mail" } // 우편함 — 헤더 봉투 단추
   | { kind: "letter"; id: string } // 우편함의 편지 한 통
-  | { kind: "trade" }; // 친구 교환 — 박스 머리의 `교환` 단추
+  | { kind: "trade" }; // 친구 교환 — 박스 머리 메뉴의 `교환`
 
 let tab: TabId = "party";
 let view: Snapshot | null = null;
@@ -205,6 +207,7 @@ let boxPage = 0;
 let dexQuery = "";
 // 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
 let boxSortOpen = false;
+let boxMenuOpen = false; // 박스 머리의 햄버거 메뉴 — 박스 순서·교환 (2026-10-02 사용자 결정, Figma 05 `Box / Menu Open`)
 let boxRenaming = false;
 let boxNote = ""; // 박스 명령이 실패한 이유 — 머리 부제 자리에 보인다. 줄을 끼우지 않는다 (2026-10-01 사용자 "레이아웃은 바뀌면 안된다")
 // 옮기기로 든 개체 — 든 동안 원래 칸은 흐리다. ghost 가 참이면 커서를 따라가는 칸(holdGhost)도 띄운다. holdAt 은 마지막 커서 자리.
@@ -223,7 +226,8 @@ let partyDeviceSent = "";
 let partyGen = 0; // 파티 기기 창이 닫힐 때마다 받는 세대 번호 (src/main/device-gen.ts)
 let presetRenaming = false;
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
-type DragFrom = { boxId: string; slot: number } | { partyPet: string };
+// 박스 순서 모달의 타일이면 박스 ID
+type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string };
 let dragFrom: DragFrom | null = null;
 const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "dex", label: "도감 번호" },
@@ -756,9 +760,19 @@ let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단�
 
 const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`);
 
-// 박스 머리의 `돌보미집` — 부화할 수 있는 알이 있으면 오른쪽 위 점 (교환 단추의 점과 같은 모양)
+// 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`)
+const BOX_ICON = {
+  menu: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>',
+  house: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8 8 3l5.5 5M4 7v6.5h8V7M7 13.5V10h2v3.5"/></svg>',
+} as const;
+
+// 넘김 줄의 돌보미집 단추 — 집 아이콘, `정렬` 왼쪽. 부화할 수 있는 알이 있으면 오른쪽 위 점
+// (2026-10-02 사용자 결정 "돌보미집은 집아이콘 만들어서 정렬 왼쪽에 버튼으로 두자")
 function daycareOpenButton(v: Snapshot): HTMLButtonElement {
-  const b = button("act trade-open daycare-open", "돌보미집");
+  const b = button("icon-button daycare-open");
+  b.innerHTML = BOX_ICON.house; // 고정 그림 — 사용자 값이 들어가지 않는다
+  b.setAttribute("aria-label", "돌보미집");
+  b.title = "돌보미집";
   b.dataset.tut = "hatch"; // 부화 튜토리얼이 밝히는 곳
   const dot = el("span", "dot");
   dot.setAttribute("aria-hidden", "true");
@@ -1313,7 +1327,7 @@ function boxNameCell(inner: HTMLElement): HTMLElement {
 
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
-  const top = head("박스", `보관 ${kept}마리`); // 박스 수는 적지 않는다 (2026-10-02 사용자 결정)
+  const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
   if (boxNote && sub) {
@@ -1321,9 +1335,9 @@ function drawBox(v: Snapshot): void {
     sub.replaceChildren(el("i"), el("span", undefined, boxNote));
     (sub as HTMLElement).title = boxNote;
   }
-  // 머리 오른쪽 — 돌보미집·교환 단추. 돌보미집은 화면에 두지 않고 모달로 연다 (2026-09-30 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665`)
+  // 머리 오른쪽 — 햄버거 단추 하나. 누르면 메뉴(박스 순서·교환)가 뜬다 (2026-10-02 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665` 머리)
   const acts = el("div", "head-acts");
-  acts.append(daycareOpenButton(v), tradeOpenButton()); // 친구 교환 — 모달로 연다 (Figma 04 템플릿 `Box Layout` `340:3665` 머리)
+  acts.append(boxMenuEl());
   top.appendChild(acts);
   bodyEl.appendChild(top);
 
@@ -1362,7 +1376,8 @@ function drawBox(v: Snapshot): void {
   // ◀·▶ 는 놓을 곳이 아니다 — 끌어 놓기는 지금 박스 안의 자리만 바꾼다. 다른 박스로는 포켓몬 메뉴의 `옮기기` 로만 보낸다 (2026-10-02 사용자 결정)
   pager.append(prev, boxNameCell(boxNameEl(box)), next);
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
-  pager.appendChild(boxSortEl(box));
+  // 오른쪽 끝 — 돌보미집 아이콘 단추, 정렬. 돌보미집은 모달로 연다
+  pager.append(daycareOpenButton(v), boxSortEl(box));
   bodyEl.appendChild(pager);
 
   const grid = el("div", hold || partyHold ? "box-grid holding" : "box-grid");
@@ -1448,6 +1463,7 @@ function startHold(petId: string): void {
     detailPet = null;
     boxPage = b;
     boxSortOpen = false;
+    boxMenuOpen = false;
     boxRenaming = false;
     boxNote = "";
     boxHold = { petId, boxId: box.id, slot, ghost: !swapMode };
@@ -1670,6 +1686,7 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
       if (Math.hypot(e.clientX - x0, e.clientY - y0) < DRAG_START_PX) return;
       dragFrom = from;
       boxSortOpen = false;
+      boxMenuOpen = false;
       const rect = cell.getBoundingClientRect();
       ghost = cell.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
@@ -1716,6 +1733,7 @@ function boxNameEl(box: BoxView): HTMLElement {
     name.addEventListener("click", () => {
       boxRenaming = true;
       boxSortOpen = false;
+      boxMenuOpen = false;
       draw();
     });
     return name;
@@ -1761,6 +1779,7 @@ function boxSortEl(box: BoxView): HTMLElement {
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
     boxSortOpen = !boxSortOpen;
+    boxMenuOpen = false;
     draw();
   });
   wrap.appendChild(toggle);
@@ -1781,6 +1800,98 @@ function boxSortEl(box: BoxView): HTMLElement {
     wrap.appendChild(menu);
   }
   return wrap;
+}
+
+// 박스 머리의 햄버거 단추 — 누르면 메뉴가 단추 아래에 뜬다. 메뉴는 떠 있는 층이라 본문을 밀지 않는다. 바깥을 누르면 닫힌다.
+// 교환이 진행 중이면 단추 오른쪽 위에 점을 둔다 (2026-10-02 사용자 결정 "햄버거 버튼 두고, 그거 누르면 메뉴나오게"·"교환도 메뉴로")
+function boxMenuEl(): HTMLElement {
+  const wrap = el("div", "box-menu");
+  const toggle = button("icon-button box-menu-toggle");
+  toggle.innerHTML = BOX_ICON.menu; // 고정 그림 — 사용자 값이 들어가지 않는다
+  toggle.setAttribute("aria-label", "박스 메뉴");
+  toggle.setAttribute("aria-expanded", String(boxMenuOpen));
+  const dot = el("span", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  dot.hidden = !tradeActive(trade);
+  toggle.appendChild(dot);
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    boxMenuOpen = !boxMenuOpen;
+    boxSortOpen = false;
+    draw();
+  });
+  wrap.appendChild(toggle);
+  if (!boxMenuOpen) return wrap;
+  const menu = el("div", "sort-menu");
+  menu.setAttribute("role", "menu");
+  const item = (label: string, run: () => void): void => {
+    const b = button("sort-item", label);
+    b.setAttribute("role", "menuitem");
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      boxMenuOpen = false;
+      draw();
+      run();
+    });
+    menu.appendChild(b);
+  };
+  item("박스 순서", () => open({ kind: "box-order" }));
+  item("교환", () => {
+    open({ kind: "trade" });
+    void loadTrade();
+  });
+  wrap.appendChild(menu);
+  return wrap;
+}
+
+// 박스 순서 모달 — 박스 타일을 한 줄에 4개씩 보인다. 타일은 이름과 사용 칸 수다. 지금 보는 박스는 옅은 바탕이다.
+// 타일을 끌어 다른 타일에 놓으면 그 자리로 옮긴다(box.order). 사이의 박스는 한 칸씩 밀린다. 타일을 누르면 그 박스로 간다
+// (2026-10-02 사용자 결정 "a로 하자."·"한줄에 4개 들어가게", Figma 05 `Box / Order Modal`)
+function drawBoxOrder(): void {
+  const v = view;
+  if (!v) {
+    close();
+    return;
+  }
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.appendChild(el("h2", undefined, "박스 순서"));
+  const x = button("dialog-close", "✕");
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", close);
+  top.append(titles, x);
+  const grid = el("div", "box-order-grid scroll");
+  v.boxes.forEach((box, i) => {
+    const tile = button(i === boxPage ? "box-tile on" : "box-tile");
+    tile.title = box.name;
+    tile.append(el("span", "tile-name", box.name), el("span", "tile-count", `${box.used} / ${box.size}`));
+    tile.addEventListener("click", () => {
+      boxPage = i;
+      boxNote = "";
+      close();
+      draw();
+    });
+    tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
+    tile.addEventListener("dragstart", (e) => e.preventDefault());
+    dropZone(tile, () => {
+      const from = dragFrom;
+      if (from && "box" in from && from.box !== box.id) void orderBox(from.box, i);
+    });
+    grid.appendChild(tile);
+  });
+  dialogEl.append(top, grid);
+}
+
+// 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
+async function orderBox(boxId: string, to: number): Promise<void> {
+  const shown = view?.boxes[boxPage]?.id;
+  await send("box.order", boxId, { to });
+  const at = view?.boxes.findIndex((b) => b.id === shown) ?? -1;
+  if (at >= 0 && at !== boxPage) {
+    boxPage = at;
+    draw();
+    drawDialog();
+  }
 }
 
 // 칸을 옮겨 순서가 흐트러진 박스는 정렬 표시를 지운다
@@ -1812,8 +1923,9 @@ document.addEventListener("click", () => {
     settingSelectOpen = null;
     drawDialog();
   }
-  if (!boxSortOpen && !dexRegionOpen && !shopRegionOpen) return;
+  if (!boxSortOpen && !boxMenuOpen && !dexRegionOpen && !shopRegionOpen) return;
   boxSortOpen = false;
+  boxMenuOpen = false;
   dexRegionOpen = false;
   shopRegionOpen = false;
   draw();
@@ -2589,8 +2701,8 @@ async function sellBag(id: string): Promise<void> {
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 모달 6화면 — Base `1036:23257`·Link Created `1036:22965`·Offer `1036:22673`·Blocked `1036:22381`·Done `1036:22089`·Error `1036:21797`.
 // 값은 메인이 만든 TradeScreen(src/main/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
 // 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다.
-// 그리는 곳은 교환 모달이다 — 박스 머리의 `교환` 단추가 연다(2026-09-30 사용자 결정).
-// 모달을 닫아도 교환은 이어진다. 진행 중이면 `교환` 단추에 점을 둔다
+// 그리는 곳은 교환 모달이다 — 박스 머리 메뉴의 `교환` 이 연다(2026-09-30·10-02 사용자 결정).
+// 모달을 닫아도 교환은 이어진다. 진행 중이면 머리의 햄버거 단추에 점을 둔다
 
 let trade: TradeScreen | null = null;
 let tradeLoading = false;
@@ -2657,24 +2769,10 @@ function redrawTrade(): void {
 // 진행 중 — 링크를 만들었거나, 친구와 고르는 중이거나, 완료 화면의 `확인` 을 아직 누르지 않았다
 const tradeActive = (t: TradeScreen | null): boolean => !!t?.available && (t.phase === "hosting" || t.phase === "trading" || t.phase === "done");
 
-// 박스 머리 `교환` 단추의 진행 중 점 — 본문을 다시 그리지 않고 점만 켜고 끈다
+// 박스 머리 햄버거 단추의 교환 진행 중 점 — 본문을 다시 그리지 않고 점만 켜고 끈다. 교환은 그 메뉴의 `교환` 이 연다 (boxMenuEl)
 function syncTradeDot(): void {
-  const dot = bodyEl.querySelector<HTMLElement>(".trade-open .dot");
+  const dot = bodyEl.querySelector<HTMLElement>(".box-menu-toggle .dot");
   if (dot) dot.hidden = !tradeActive(trade);
-}
-
-// 박스 머리 오른쪽의 `교환` 단추 — Figma 04 템플릿 `Box Layout` `340:3665` 머리
-function tradeOpenButton(): HTMLButtonElement {
-  const b = button("act trade-open", "교환");
-  const dot = el("span", "dot");
-  dot.setAttribute("aria-hidden", "true");
-  dot.hidden = !tradeActive(trade);
-  b.appendChild(dot);
-  b.addEventListener("click", () => {
-    open({ kind: "trade" });
-    void loadTrade();
-  });
-  return b;
 }
 
 // 결과의 screen 을 꺼낸다. 교환 세션이 없을 때(trade-off·sandbox)만 쓸 수 없다고 보인다.
@@ -3483,6 +3581,7 @@ const MAIL_ERROR: Record<string, string> = {
   MAIL_NO_GIFTS: "받을 선물이 없어요.",
   NETWORK: "서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.",
   "bad-gift": "앱을 업데이트하면 받을 수 있어요.",
+  "box-full": "박스에 빈 칸이 없어요. 자리를 만든 뒤 받아 주세요.",
   "cloud-wait": "클라우드 저장이 연결되면 받을 수 있어요. 계정 탭에서 저장 상태를 확인해 주세요.",
 };
 
@@ -5299,6 +5398,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   guide: "dialog tall",
   hatched: "dialog hatched",
   daycare: "dialog daycare",
+  "box-order": "dialog daycare box-order",
   form: "dialog",
   mega: "dialog",
   "sell-pet": "dialog",
@@ -5362,6 +5462,7 @@ function drawDialog(): void {
   else if (dialog.kind === "user") drawUser(dialog.tab);
   else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over, dialog.queue, dialog.at);
   else if (dialog.kind === "daycare") drawDaycare();
+  else if (dialog.kind === "box-order") drawBoxOrder();
   else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
   else if (dialog.kind === "mega") drawMega(dialog.petId, dialog.to);
   else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);
@@ -5490,7 +5591,8 @@ const REASON: Record<string, string> = {
   "art-missing": "바뀔 모습의 그림을 받지 못했어요. 잠시 뒤 다시 해 주세요.",
   "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
   halted: "다른 PC 확인이 끝날 때까지 게임이 멈춰 있어요.",
-  "box-full": "그 박스는 가득 찼어요.",
+  "box-full": "박스에 빈 칸이 없어요.",
+  "box-max": "더 살 수 있는 박스가 없어요.",
   "pet-not-sellable": "팔 수 없는 포켓몬이에요.",
   "last-pet": "마지막 한 마리는 팔 수 없어요.",
   "in-preset": "파티에 든 포켓몬은 팔 수 없어요. 박스로 옮긴 뒤 팔아 주세요.",
@@ -5857,7 +5959,7 @@ async function loadArt(): Promise<void> {
 const firstDraw = loadArt().then(refresh);
 // 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
 void firstDraw.then(loadUpdate).then(showUnseenNotes);
-// 교환 상태 — 박스 머리 `교환` 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
+// 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
 void firstDraw.then(loadTrade);
 window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
 window.pokebuddyManage.onDexClosed((gen) => {

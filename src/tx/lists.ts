@@ -11,6 +11,7 @@ import { evoItemNote } from "./shop-detail.js";
 import { isRegional, regionalOf } from "../dex/regional.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { activePreset, presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
+import { boxBuyable } from "../box/slots.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 interface EggEntry {
@@ -165,6 +166,25 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       where: "파티 탭 · ◀ ▶ 로 바꾸기",
     },
     blocked: can.reason === "preset-max" ? "더 살 수 있는 프리셋이 없어요" : can.reason === "slots-not-full" ? `파티 칸을 모두 열어야 해요 (${can.open} / ${can.need})` : undefined,
+  });
+
+  // 박스 — 늘 같은 값. 상한까지 하나씩 산다. 파티 분류에 함께 둔다 (2026-10-02 사용자 결정 "파티분류로 ㅇㅇ")
+  const boxes = boxBuyable(save.boxes);
+  add({
+    id: "box",
+    name: "박스 +1",
+    note: `구매 ${boxes.bought} / ${boxes.total}`,
+    price: SHOP_V3_RULES.boxPrice,
+    category: "slot",
+    affordable: false,
+    about: {
+      group: "박스",
+      spec: ["구매", `${boxes.bought} / ${boxes.total}`],
+      desc: `박스가 하나 늘어난다. 박스 하나에 포켓몬을 ${SAVE_V3_RULES.box.size}마리 보관한다.`,
+      effect: `박스 +1 · ${SAVE_V3_RULES.box.size}칸`,
+      where: "박스 탭 · 맨 뒤에 생김",
+    },
+    blocked: boxes.ok ? undefined : "더 살 수 있는 박스가 없어요",
   });
 
   return out;

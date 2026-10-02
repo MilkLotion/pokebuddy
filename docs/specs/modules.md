@@ -23,7 +23,7 @@
 |---|---|---|---|
 | `src/tx` | 거래 실행. 명령 검사 순서, 상태 반영, 저장 쓰기, 요청 ID 기록, 실패 시 이전 상태 유지 | 게임 규칙 계산 | SC-01~11 |
 | `src/party` | 파티 칸 수와 잠금, 칸 배치·교체, 표시·숨김, 박스 보관 | 개체 육성 수치 | SC-05, 07, 09 |
-| `src/box` | 박스 여러 개와 30칸, 자동 추가, 검색 대상 목록 | 파티 배치 | SC-07, 09 |
+| `src/box` | 박스 여러 개와 30칸, 박스 더하기와 순서, 빈 칸 수 | 파티 배치 | SC-07, 09 |
 | `src/egg` | 알별 타이머, 부화 가능 상태, 직접 열기 결과 판정 | 개체 생성 후 배치 | SC-03, 04 |
 | `src/bag` | 도구 재고, 사용 대상과 조건 검사, 사용 결과 계산 | 상점 가격 | SC-02, 06 |
 | `src/achievement` | 업적 조건 달성 판정, 미수령·수령 완료 상태, 보상 내용 | 보상 지급 실행 | SC-05, 09 |
@@ -259,7 +259,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `pet.form` | 공유 sid 계열의 모습 바꾸기. 메가진화와 되돌리기([메가진화](game.md#메가진화)) | `src/dex`, `src/party` |
 | `pet.sell` | 포켓몬 판매. 판매 가능 검사, 개체와 칸 비우기, 포인트 더하기 | `src/shop` |
 | `starter.pick` | 첫 선택 | `src/party` |
-| `box.sort` / `box.move` / `box.rename` | 박스 정렬·칸 옮기기·이름 바꾸기 | `src/box` |
+| `box.sort` / `box.move` / `box.rename` / `box.order` | 박스 정렬·칸 옮기기·이름 바꾸기·박스 순서 바꾸기 | `src/box` |
 | `agent.connect` / `agent.disconnect` | 개별 연결 | `src/agents` |
 | `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/trade/session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 명령 통로 `mailbox` 로 넘긴다 | `src/trade`, `src/main` |
 | `trade.lock` / `trade.unlock` / `trade.apply` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영. 교환 세션만 부른다 | `src/trade`, `src/tx` |

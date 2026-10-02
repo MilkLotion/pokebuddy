@@ -689,7 +689,7 @@ void app.whenReady().then(async () => {
     assert.equal(boxLook.w, 95, "칸 폭 95");
     assert.ok(boxLook.bottom <= boxLook.inner, `6×5 가 창 높이 안에 든다 (${boxLook.bottom} ≤ ${boxLook.inner})`);
     assert.ok(boxLook.lvRight >= 6 && boxLook.lvRight <= 9, `레벨은 칸 오른쪽 위 구석 (오른쪽 여백 ${boxLook.lvRight})`);
-    assert.ok(/^보관 \d+마리$/.test(boxLook.boxes), `부제는 보관 마릿수만 적는다 (${boxLook.boxes})`); // 박스 수 규칙은 selftest-box 가 본다
+    assert.ok(/^보관 \d+마리 · 박스 \d+개$/.test(boxLook.boxes), `부제는 보관 마릿수와 박스 수 (${boxLook.boxes})`); // 박스 수 규칙은 selftest-box 가 본다
     await shot("box-base.png");
     // 박스 튜토리얼 — 박스 탭을 처음 열 때 3단계(우클릭 메뉴 → 옮기기 → 끌기). 대상은 막고 다음·확인으로만 넘어간다
     const coach = `(() => {
@@ -843,6 +843,71 @@ void app.whenReady().then(async () => {
     await wait(400);
     const sold = await js<{ cmd: string; target: string }[]>(`window.__cmds`);
     assert.deepEqual([sold.length, sold[0]?.cmd, sold[0]?.target], [1, "pet.sell", "p3"], "팔기 — pet.sell");
+
+    // (18b) 박스 머리 메뉴·박스 순서 모달·돌보미집 아이콘 단추
+    //       (2026-10-02 사용자 "햄버거 버튼 두고, 그거 누르면 메뉴나오게"·"교환도 메뉴로"·"돌보미집은 집아이콘 … 정렬 왼쪽에"·"한줄에 4개 들어가게")
+    await reload();
+    await js(`window.__menuOn = true; window.__cmds = []; ${tabBtn("박스")}.click()`);
+    await wait(300);
+    const gridTop = `Math.round(document.querySelector('#body .box-grid').getBoundingClientRect().top)`;
+    const gridTop0 = await js<number>(gridTop);
+    const headLook = await js<unknown>(`(() => {
+      const p = document.querySelector('#body .pager');
+      const d = p.querySelector('.daycare-open').getBoundingClientRect();
+      const s = p.querySelector('.box-sort').getBoundingClientRect();
+      return { acts: [...document.querySelectorAll('#body .head .head-acts button')].map((b) => b.getAttribute('aria-label') ?? b.textContent), day: [Math.round(d.width), Math.round(d.height), Math.round(s.left - d.right)], menu: document.querySelectorAll('#body .head .sort-menu').length };
+    })()`);
+    assert.deepEqual(headLook, { acts: ["박스 메뉴"], day: [32, 32, 8], menu: 0 }, "머리에는 햄버거 단추만, 돌보미집 아이콘 단추는 정렬 왼쪽");
+    await js(`document.querySelector('#body .box-menu-toggle').click(); 0`);
+    await wait(200);
+    assert.deepEqual(await js<string[]>(`[...document.querySelectorAll('#body .head .box-menu .sort-item')].map((b) => b.textContent)`), ["박스 순서", "교환"], "메뉴 — 박스 순서·교환");
+    assert.equal(await js<number>(gridTop), gridTop0, "메뉴가 떠도 격자 자리가 같다");
+    await shot("box-menu.png");
+    await js(`document.querySelector('#body .head h1').click(); 0`);
+    await wait(200);
+    assert.equal(await js<number>(`document.querySelectorAll('#body .head .sort-menu').length`), 0, "바깥을 누르면 메뉴가 닫힌다");
+    await js(`document.querySelector('#body .box-menu-toggle').click(); 0`);
+    await wait(200);
+    await js(`document.querySelector('#body .head .box-menu .sort-item').click(); 0`);
+    await wait(300);
+    const orderLook = await js<{ title: string; tiles: number; row: number; on: number[]; widths: number[]; first: string }>(`(() => {
+      const t = [...document.querySelectorAll('#dialog .box-tile')];
+      const top = t[0].getBoundingClientRect().top;
+      return { title: document.querySelector('#dialog h2')?.textContent ?? '', tiles: t.length, row: t.filter((x) => x.getBoundingClientRect().top === top).length, on: t.map((x, i) => x.classList.contains('on') ? i : -1).filter((i) => i >= 0), widths: [...new Set(t.map((x) => Math.round(x.getBoundingClientRect().width)))], first: t[0].textContent };
+    })()`);
+    assert.deepEqual([orderLook.title, orderLook.tiles, orderLook.row, orderLook.on], ["박스 순서", 8, 4, [0]], "박스 순서 모달 — 타일 8개, 한 줄 4개, 지금 박스만 옅은 바탕");
+    assert.equal(orderLook.widths.length, 1, `타일 폭이 모두 같다 (${orderLook.widths})`);
+    assert.ok(/^.+\d+ \/ 30$/.test(orderLook.first), `타일은 이름과 사용 칸 수 (${orderLook.first})`);
+    await shot("box-order.png");
+    // 끌어서 놓기 — 첫 타일을 셋째 타일에 놓으면 box.order(to 2)
+    await js(`(() => {
+      window.__cmds = [];
+      const t = document.querySelectorAll('#dialog .box-tile');
+      const a = t[0].getBoundingClientRect();
+      const z = t[2].getBoundingClientRect();
+      t[0].dispatchEvent(new PointerEvent('pointerdown', { button: 0, clientX: a.left + 10, clientY: a.top + 10, bubbles: true }));
+      document.body.dispatchEvent(new PointerEvent('pointermove', { clientX: z.left + 30, clientY: z.top + 20, bubbles: true }));
+    })(); 0`);
+    await wait(100);
+    assert.deepEqual(
+      await js<unknown>(`(() => { const t = [...document.querySelectorAll('#dialog .box-tile')]; return { ghost: document.querySelectorAll('.drag-ghost').length, from: t.findIndex((x) => x.classList.contains('dragging')), over: t.findIndex((x) => x.classList.contains('drop-on')) }; })()`),
+      { ghost: 1, from: 0, over: 2 },
+      "끄는 중 — 원래 타일은 흐리고 놓을 타일은 옅은 바탕",
+    );
+    await shot("box-order-drag.png");
+    await js(`document.body.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); 0`);
+    await wait(400);
+    const ordered = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
+    assert.deepEqual([ordered.length, ordered[0]?.cmd, ordered[0]?.target, ordered[0]?.args.to], [1, "box.order", "b1", 2], "놓으면 box.order");
+    assert.equal(await js<number>(`document.querySelectorAll('.drag-ghost').length`), 0);
+    // 타일을 누르면 그 박스로 가고 모달이 닫힌다
+    await js(`document.querySelectorAll('#dialog .box-tile')[1].click(); 0`);
+    await wait(300);
+    assert.deepEqual(await js<unknown>(`({ open: document.getElementById('scrim').classList.contains('open'), name: document.querySelector('#body .box-name')?.textContent ?? '' })`), { open: false, name: "박스 2" }, "타일을 누르면 그 박스로 간다");
+    // 돌보미집 아이콘 단추 — 돌보미집 모달
+    await js(`document.querySelector('#body .pager .daycare-open').click(); 0`);
+    await wait(300);
+    assert.equal(await js<string>(`document.querySelector('#dialog h2')?.textContent ?? ''`), "돌보미집", "집 아이콘 단추는 돌보미집 모달을 연다");
 
     // (19) 돌보미집 모두 열기 — 준비된 알 둘을 칸 순서대로 열고 결과를 하나씩 보인다. Space·Enter 는 `확인`·`다음` 을 누른 것과 같다
     //      (2026-10-02 사용자 "모두열기 기능이 있었음 좋겠고 … 스페이스바 or 엔터를 누르면 확인 누른거로 해줘")
@@ -1018,7 +1083,7 @@ void app.whenReady().then(async () => {
     await wait(400);
     assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "가방의 ▶ — 다음 프리셋을 적용한다");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기) · 돌보미집 모두 열기 · 이로치 아이콘 · 파티 프리셋(머리 줄·이름·교체 화면·가방 넘김) · 그림 ${shots}\n`);
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기·머리 메뉴·순서 모달) · 돌보미집 모두 열기 · 이로치 아이콘 · 파티 프리셋(머리 줄·이름·교체 화면·가방 넘김) · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
