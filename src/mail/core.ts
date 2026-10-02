@@ -12,7 +12,7 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
-import { singleSpecies } from "../shop/catalog.js";
+import { singleSpecies } from "../dex/obtain.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { MAIL_RULES } from "./rules.js";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";

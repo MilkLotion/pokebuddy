@@ -263,6 +263,6 @@ export interface SaveV3 {
   trade?: { pending: TradePendingV3 | null };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/core.ts)
   find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/core.ts)
-  counts?: CountsV3; // 업적이 세는 누적 값
+  counts: CountsV3; // 업적이 세는 누적 값 — 새 저장과 정규화가 늘 채운다 (src/save/v3.ts)
   achRev?: number; // 업적 목록의 판 — ACHIEVEMENT_REV 보다 작으면 다음 판정에서 달성한 업적을 조용히 기록한다
 }

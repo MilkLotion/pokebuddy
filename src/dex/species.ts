@@ -25,6 +25,9 @@ export const DEFAULT_PROFILE: Readonly<Omit<Stored, "dex">> = {
 const defaults = (opts?: DexOptions): Defaults => loadJson<Defaults>("species.defaults.json", opts);
 const overrides = (opts?: DexOptions): Overrides => loadJson<Overrides>("species.overrides.json", opts);
 
+// 수집 난이도 1~5 — data/species.defaults.json 의 rank. 표에 없으면 1. 알의 추첨 가중치(src/egg/hatch.ts)와 상점의 종 가격(src/shop/catalog.ts speciesPrice)이 쓴다
+export const rankOf = (slug: string, opts?: DexOptions): number => defaults(opts)[slug]?.rank ?? 1;
+
 // 합친 프로필 — 배열은 새로 만들어 돌려준다 (캐시를 건드리지 못하게)
 export function profile(slug: string, opts?: DexOptions): SpeciesProfile {
   const key = normalizeSlug(slug);

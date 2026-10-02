@@ -11,8 +11,7 @@
 import type { DexOptions } from "./data";
 import { unlockRules } from "./unlocks.js";
 import { prevOf } from "./evo.js";
-import { fixedEggs, inRandomEgg } from "../shop/catalog.js";
-import { rewardSpecies } from "../achievement/core.js";
+import { fixedEggs, inRandomEgg, rewardSpecies } from "./obtain.js";
 
 export interface Reach {
   obtainable: Set<string>; // 얻을 수 있는 종
