@@ -2,6 +2,7 @@
 // 고르고 `함께하기` 를 누르면 슬러그를 메인에 보낸다 (picker:start). 창을 그냥 닫으면 메인이 시작하지 않는다.
 // 카드를 두 번 누르면 바로 시작한다
 import type { PickerItem, PickerPayload } from "../shared/stage.js";
+import { portraitImg } from "./portrait.js";
 
 // 문서 요소 — 없으면 창을 쓸 수 없으니 바로 던진다
 function need<T extends HTMLElement>(id: string, ctor: new () => T): T {
@@ -73,10 +74,7 @@ async function fillPortraits(slugs: string[], tried: number): Promise<void> {
       left.push(slug);
       continue;
     }
-    const img = document.createElement("img");
-    img.alt = "";
-    img.src = uri;
-    host.appendChild(img);
+    host.appendChild(portraitImg(uri));
     host.classList.add("has-art");
   }
   if (!left.length) return;

@@ -46,6 +46,7 @@ import type {
 import { genderIcon } from "./gender.js";
 import { shinyIcon } from "./shiny.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "./evo-tree.js";
+import { portraitImg, rememberPortrait } from "./portrait.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -419,11 +420,14 @@ let portraitTimer: ReturnType<typeof setTimeout> | null = null;
 function paintPortrait(host: HTMLElement, uri: string, cls = "art"): void {
   if (host.classList.contains("has-art")) return;
   for (const n of [...host.childNodes]) if (n.nodeType === Node.TEXT_NODE) n.remove(); // 자리 글자는 그림이 대신한다
-  const img = document.createElement("img");
-  img.className = cls;
-  img.alt = "";
-  img.decoding = "sync"; // 칸과 그림이 한 프레임에 같이 보이게 한다
-  img.src = uri;
+  // 포켓몬 초상은 보는 네모를 그림에 맞춘다(portrait.ts). 도구·알 그림(icon-art)은 그대로 그린다
+  const img = cls === "art" ? portraitImg(uri, cls) : document.createElement("img");
+  if (cls !== "art") {
+    img.className = cls;
+    img.alt = "";
+    img.decoding = "sync"; // 칸과 그림이 한 프레임에 같이 보이게 한다
+    img.src = uri;
+  }
   host.prepend(img);
   host.classList.add("has-art");
 }
@@ -6051,11 +6055,13 @@ async function loadArt(): Promise<void> {
     return; // 그림 없이도 창은 돈다 — 칸을 그린 뒤 하나씩 청하는 길이 남아 있다
   }
   for (const [key, uri] of Object.entries(got)) (key === "egg" || key.startsWith("item:") ? iconCache : portraitCache).set(key, uri);
+  // 초상은 디코딩이 끝나면 보는 네모도 재 둔다 — 몸이 큰 그림이 첫 프레임부터 잘리지 않는다 (portrait.ts)
+  const portraits = new Set(Object.entries(got).filter(([key]) => key !== "egg" && !key.startsWith("item:")).map(([, uri]) => uri));
   for (const uri of new Set(Object.values(got))) {
     const img = new Image();
     img.src = uri;
     warmed.push(img);
-    void img.decode().catch(() => undefined);
+    void img.decode().then(() => { if (portraits.has(uri)) rememberPortrait(img); }).catch(() => undefined);
   }
 }
 

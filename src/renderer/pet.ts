@@ -9,6 +9,7 @@
 import type { PetDeviceAction, PetDeviceView } from "../shared/manage.js";
 import { genderIcon } from "./gender.js";
 import { shinyIcon } from "./shiny.js";
+import { sprite } from "./portrait.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -191,47 +192,10 @@ function waitWord(sec: number): string {
   return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
-// 그림 자리 — 88×88 원. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다
+// 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (portrait.ts sprite)
 const STAGE = { w: 88, h: 88, maxScale: 2 };
 // 메가스톤 표식 — 28×28. 키스톤 그림(30×30 안의 14×14)의 빈 테두리를 잘라 두 배로 그린다
 const MEGA_STONE = { w: 28, h: 28, maxScale: 2 };
-
-function sprite(uri: string, box: { w: number; h: number; maxScale: number }): HTMLCanvasElement {
-  const out = document.createElement("canvas");
-  out.width = 0;
-  out.height = 0;
-  const img = new Image();
-  img.onload = () => {
-    const src = document.createElement("canvas");
-    src.width = img.naturalWidth;
-    src.height = img.naturalHeight;
-    const sctx = src.getContext("2d");
-    if (!sctx) return;
-    sctx.drawImage(img, 0, 0);
-    const { data, width, height } = sctx.getImageData(0, 0, src.width, src.height);
-    let x0 = width, y0 = height, x1 = -1, y1 = -1;
-    for (let y = 0; y < height; y++)
-      for (let x = 0; x < width; x++)
-        if ((data[(y * width + x) * 4 + 3] ?? 0) >= 128) {
-          x0 = Math.min(x0, x);
-          y0 = Math.min(y0, y);
-          x1 = Math.max(x1, x);
-          y1 = Math.max(y1, y);
-        }
-    if (x1 < 0) return;
-    const w = x1 - x0 + 1;
-    const h = y1 - y0 + 1;
-    const scale = Math.max(1, Math.min(box.maxScale, Math.floor(box.w / w), Math.floor(box.h / h)));
-    out.width = Math.min(w * scale, box.w);
-    out.height = Math.min(h * scale, box.h);
-    const ctx = out.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(src, x0, y0, w, h, (out.width - w * scale) / 2, (out.height - h * scale) / 2, w * scale, h * scale);
-  };
-  img.src = uri;
-  return out;
-}
 
 let audio: HTMLAudioElement | null = null;
 let volume = 0;

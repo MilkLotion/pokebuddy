@@ -3,6 +3,7 @@
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안). 누른 단추는 관리 창으로 돌려보낸다
 import type { BagDeviceView } from "../shared/manage.js";
 import { deviceFrame, el, goButton, qtyRow } from "./item-device.js";
+import { portraitImg } from "./portrait.js";
 
 const api = window.pokebuddyBag;
 const frame = deviceFrame(api, "bag.html");
@@ -56,12 +57,7 @@ function render(v: BagDeviceView): void {
         b.title = p.name;
         b.setAttribute("aria-pressed", String(p.picked));
         const face = el("div", "face");
-        if (p.art) {
-          const img = document.createElement("img");
-          img.alt = "";
-          img.src = p.art;
-          face.appendChild(img);
-        }
+        if (p.art) face.appendChild(portraitImg(p.art));
         b.append(face, el("span", undefined, p.level));
         b.addEventListener("click", () => act({ itemId: v.itemId, kind: "target", petId: p.petId }));
         strip.appendChild(b);

@@ -3,6 +3,7 @@
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
 import type { DexDeviceView } from "../shared/manage.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "./evo-tree.js";
+import { portraitImg, sprite } from "./portrait.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
@@ -51,45 +52,8 @@ function button(cls: string, text: string, onClick: () => void): HTMLButtonEleme
   return b;
 }
 
-// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다. 도트가 번지지 않게 정수 배만 쓴다
+// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (portrait.ts sprite)
 const STAGE = { w: 150, h: 124, maxScale: 2 };
-
-function sprite(uri: string): HTMLCanvasElement {
-  const out = document.createElement("canvas");
-  out.width = 0;
-  out.height = 0;
-  const img = new Image();
-  img.onload = () => {
-    const src = document.createElement("canvas");
-    src.width = img.naturalWidth;
-    src.height = img.naturalHeight;
-    const sctx = src.getContext("2d");
-    if (!sctx) return;
-    sctx.drawImage(img, 0, 0);
-    const { data, width, height } = sctx.getImageData(0, 0, src.width, src.height);
-    let x0 = width, y0 = height, x1 = -1, y1 = -1;
-    for (let y = 0; y < height; y++)
-      for (let x = 0; x < width; x++)
-        if ((data[(y * width + x) * 4 + 3] ?? 0) >= 128) {
-          x0 = Math.min(x0, x);
-          y0 = Math.min(y0, y);
-          x1 = Math.max(x1, x);
-          y1 = Math.max(y1, y);
-        }
-    if (x1 < 0) return;
-    const w = x1 - x0 + 1;
-    const h = y1 - y0 + 1;
-    const scale = Math.max(1, Math.min(STAGE.maxScale, Math.floor(STAGE.w / w), Math.floor(STAGE.h / h)));
-    out.width = Math.min(w * scale, STAGE.w);
-    out.height = Math.min(h * scale, STAGE.h);
-    const ctx = out.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(src, x0, y0, w, h, (out.width - w * scale) / 2, (out.height - h * scale) / 2, w * scale, h * scale);
-  };
-  img.src = uri;
-  return out;
-}
 
 let audio: HTMLAudioElement | null = null;
 let volume = 0; // 설정의 소리 크기를 곱한 울음소리 음량 (메인이 준다)
@@ -133,7 +97,7 @@ function render(v: DexDeviceView): void {
 
   const entry = el("div", "entry");
   const stage = el("div", "stage");
-  if (v.portrait) stage.appendChild(sprite(v.portrait));
+  if (v.portrait) stage.appendChild(sprite(v.portrait, STAGE));
   entry.appendChild(stage);
   const info = el("div", "info");
   info.appendChild(el("div", undefined, locked ? UNKNOWN : d.genus || " "));
@@ -211,13 +175,7 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
   const draw = evoDrawer((slug, cls) => {
     const box = el("span", cls);
     const uri = v.treePortraits[slug];
-    if (uri) {
-      const img = document.createElement("img");
-      img.className = "art";
-      img.alt = "";
-      img.src = uri;
-      box.appendChild(img);
-    }
+    if (uri) box.appendChild(portraitImg(uri, "art"));
     return box;
   }, { lockedName: "???" });
   if (!tree.children.length) card.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));

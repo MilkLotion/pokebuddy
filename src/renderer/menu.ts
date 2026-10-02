@@ -4,6 +4,7 @@
 //   마우스를 올려서는 뜨지 않는다 (2026-10-02 사용자 "클릭해야 나오게 하자"). 다시 누르거나 Esc·←(→) 로 말풍선만 닫는다
 //   말풍선의 자리는 창을 띄울 때 한 번 잡는다 — 창이 말풍선 자리까지 넓으므로 빈 곳을 누르면 메뉴를 닫는다
 import type { MenuSubView, MenuView } from "../shared/manage.js";
+import { portraitImg } from "./portrait.js";
 
 function need(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -72,10 +73,7 @@ function drawBubble(sub: MenuSubView): void {
     const face = document.createElement("span");
     face.className = "face";
     if (row.icon) {
-      const img = document.createElement("img");
-      img.src = row.icon;
-      img.alt = "";
-      face.appendChild(img);
+      face.appendChild(portraitImg(row.icon));
     }
     const name = document.createElement("span");
     name.className = "name";

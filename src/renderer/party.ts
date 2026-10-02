@@ -3,6 +3,7 @@
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage.ts onPartyAction)
 import type { PartyDeviceSlot, PartyDeviceView } from "../shared/manage.js";
 import { button, el } from "./item-device.js";
+import { portraitImg } from "./portrait.js";
 
 const api = window.pokebuddyParty;
 const root = document.getElementById("device");
@@ -42,10 +43,7 @@ function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
   if (s.state === "pokemon") {
     const face = el("div", "face");
     if (s.art) {
-      const img = document.createElement("img");
-      img.alt = "";
-      img.src = s.art;
-      face.appendChild(img);
+      face.appendChild(portraitImg(s.art));
     }
     b.append(face, el("div", "who", s.name), el("div", "lv", s.level));
     b.title = s.name;
