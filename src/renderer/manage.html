@@ -2043,26 +2043,27 @@
         border-radius: 10px;
         background: var(--surface);
       }
-      .gift-card.done {
-        background: var(--subtle);
-        border-color: transparent;
-      }
-      .gift-card.done .gift-row {
-        opacity: 0.55;
-      }
-      .gift-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .gift-done {
-        color: var(--muted);
-        font-weight: 700;
+      /* 선물 줄은 2열 — 받기 전과 받은 뒤의 카드 높이가 같다 (Figma `Mail Dialog` `State=Letter`·`Letter Claimed`) */
+      .gift-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 10px;
       }
       .gift-row {
         display: flex;
         align-items: center;
         gap: 8px;
+        min-width: 0;
+      }
+      /* 받은 뒤 — 선물 줄만 흐리게. 카드 면과 높이는 그대로 */
+      .gift-card.done .gift-row {
+        opacity: 0.5;
+      }
+      .gift-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .gift-icon {
         flex: none;
@@ -2085,18 +2086,20 @@
         background: var(--primary);
       }
       .gift-count {
+        flex: none;
         color: var(--muted);
       }
-      .gift-foot {
+      /* 편지 바닥 단추 줄의 상태 글자 — 남는 폭만 쓴다. 길면 말줄임(전체는 title) */
+      .actions > .gift-note {
+        flex: 1 1 0;
+        min-width: 0;
+        align-self: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         font-family: var(--font-small);
         font-size: 11px;
         color: var(--muted);
-      }
-      .gift-foot.login {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
       }
       .dialog-close {
         appearance: none;

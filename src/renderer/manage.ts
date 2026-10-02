@@ -3599,7 +3599,7 @@ function accountActions(): HTMLElement | null {
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
 // Figma 05 Screens 섹션 `10 우편함` `932:22859` — 목록 `908:5779` · 편지 로그인 전 `932:22703` · 받기 전 `908:6022` · 받은 뒤(일반 편지) `908:6232`.
-// 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
+// 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 받기 단추와 상태 글자는 편지 바닥 단추 줄에 둔다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
 // (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/record.md)
 let mailView: MailScreen | null = null;
 const mailBtn = need("open-mail", HTMLButtonElement);
@@ -3740,47 +3740,56 @@ function drawMail(): void {
   dialogEl.appendChild(scroll);
 }
 
-// 선물 카드 — 받기 전은 `선물 N` 과 `받기`, 받은 뒤는 흐린 `받은 선물` · `받음` 과 받은 날
+// 선물 카드 — 제목(`선물 N`, 받은 뒤 `받은 선물`)과 2열 선물 줄. 받기 전과 받은 뒤의 높이가 같다. 받은 뒤는 선물 줄을 흐리게 둔다
+// (2026-10-03 사용자 "이정도면 괜찮은거같은데", "받으면 상품을 disable처럼 흐리게", worklog/records/post-box/record.md)
 function giftCard(l: MailLetterView): HTMLElement {
-  const done = l.applied;
-  const card = el("div", done ? "gift-card done" : "gift-card");
-  const head = el("div", "gift-head");
-  head.append(el("strong", undefined, done ? "받은 선물" : `선물 ${l.gifts.length}`), el("span", "spacer"));
-  const busy = mailView?.busy === l.id;
-  if (done) head.appendChild(el("span", "gift-done", "받음"));
-  else {
-    const blocked = !mailView?.signedIn || mailExpired(l) || l.unsupported || busy;
-    head.appendChild(
-      actionButton(busy ? "받는 중" : "받기", true, blocked, () => {
-        void window.pokebuddyManage
-          .mail({ action: "claim", id: l.id })
-          .then(async (r) => {
-            if (!r) return;
-            setMail(r.screen);
-            if (r.ok) await refresh(); // 가방·포인트가 바뀌었다
-          })
-          .catch((e: unknown) => console.error(e));
-      }),
-    );
+  const card = el("div", l.applied ? "gift-card done" : "gift-card");
+  card.appendChild(el("strong", "gift-head", l.applied ? "받은 선물" : `선물 ${l.gifts.length}`));
+  if (l.gifts.length) {
+    const grid = el("div", "gift-grid");
+    for (const g of l.gifts) {
+      const row = el("div", "gift-row");
+      const name = el("strong", "gift-name", g.name);
+      name.title = g.name; // 칸보다 긴 이름은 말줄임
+      row.append(giftIcon(g, "gift-icon"), name, el("span", "gift-count", `×${g.count.toLocaleString("ko-KR")}`));
+      grid.appendChild(row);
+    }
+    card.appendChild(grid);
   }
-  card.appendChild(head);
-  for (const g of l.gifts) {
-    const row = el("div", "gift-row");
-    row.append(giftIcon(g, "gift-icon"), el("strong", undefined, g.name), el("span", "gift-count", `×${g.count.toLocaleString("ko-KR")}`));
-    card.appendChild(row);
-  }
-  const foot = el("div", "gift-foot");
-  if (done) {
-    const where = giftWhere(l.gifts);
-    foot.textContent = `${l.claimedAt ? `${monthDay(l.claimedAt)}에 받았어요 · ` : ""}${where}`;
-  } else if (l.unsupported) foot.textContent = MAIL_ERROR["bad-gift"] ?? "";
-  else if (mailExpired(l)) foot.textContent = MAIL_ERROR.MAIL_EXPIRED ?? "";
-  else if (!mailView?.signedIn) {
-    foot.append(el("span", undefined, "로그인하면 받을 수 있어요."), actionButton("로그인", false, false, () => open({ kind: "user", tab: "account" })));
-    foot.classList.add("login");
-  } else if (mailView.error && !busy) foot.textContent = MAIL_ERROR[mailView.error] ?? `받지 못했어요 (${mailView.error})`;
-  if (foot.childNodes.length) card.appendChild(foot);
   return card;
+}
+
+// 편지 바닥 단추 줄 — 왼쪽은 상태 글자, 오른쪽은 `받기`(받은 뒤 잠긴 `받음`). 로그인 전은 `로그인` 을 앞에 둔다.
+// 상태가 바뀌어도 글자와 단추의 자리는 그대로다
+function giftFoot(l: MailLetterView): HTMLElement {
+  const done = l.applied;
+  const busy = mailView?.busy === l.id;
+  const signedIn = !!mailView?.signedIn;
+  const needLogin = !done && !l.unsupported && !mailExpired(l) && !signedIn;
+  let note = "";
+  if (done) note = `${l.claimedAt ? `${monthDay(l.claimedAt)}에 받았어요 · ` : ""}${giftWhere(l.gifts)}`;
+  else if (l.unsupported) note = MAIL_ERROR["bad-gift"] ?? "";
+  else if (mailExpired(l)) note = MAIL_ERROR.MAIL_EXPIRED ?? "";
+  else if (needLogin) note = MAIL_ERROR.MAIL_LOGIN_REQUIRED ?? "";
+  else if (mailView?.error && !busy) note = MAIL_ERROR[mailView.error] ?? `받지 못했어요 (${mailView.error})`;
+  const left = el("span", "spacer gift-note", note);
+  left.title = note;
+  const items: HTMLElement[] = [left];
+  if (needLogin) items.push(actionButton("로그인", false, false, () => open({ kind: "user", tab: "account" })));
+  const blocked = done || !signedIn || mailExpired(l) || l.unsupported || busy;
+  items.push(
+    actionButton(done ? "받음" : busy ? "받는 중" : "받기", true, blocked, () => {
+      void window.pokebuddyManage
+        .mail({ action: "claim", id: l.id })
+        .then(async (r) => {
+          if (!r) return;
+          setMail(r.screen);
+          if (r.ok) await refresh(); // 가방·포인트가 바뀌었다
+        })
+        .catch((e: unknown) => console.error(e));
+    }),
+  );
+  return actions(...items);
 }
 
 function drawLetter(id: string): void {
@@ -3792,8 +3801,10 @@ function drawLetter(id: string): void {
   mailHead(l.title, true);
   const scroll = el("div", "scroll mail-letter");
   scroll.append(el("div", "mail-meta", mailMeta(l)), el("div", "mail-body", l.body));
-  if (l.gifts.length || l.unsupported) scroll.appendChild(giftCard(l));
+  const gift = l.gifts.length > 0 || l.unsupported;
+  if (gift) scroll.appendChild(giftCard(l));
   dialogEl.appendChild(scroll);
+  if (gift) dialogEl.appendChild(giftFoot(l)); // 공지 편지는 단추 줄이 없다
 }
 
 mailBtn.addEventListener("click", () => {
