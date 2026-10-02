@@ -6,6 +6,8 @@
 //   메가스톤  조건을 모두 채우면 그 개체가 지닌다(mega.stone). 가방에 들어가지 않는다. 한 번 생기면 없어지지 않는다
 //   도감      메가스톤이 생긴 종을 dex.megaOpened 에 적는다. 개체를 팔거나 교환해도 남는다
 //   켜기      적용한 프리셋의 칸에 든 개체만. 한 프리셋에 메가 모습은 한 마리다 — 새로 켜면 먼저 켠 개체가 기본 모습으로 돌아간다
+//   예외      원시회귀(그란돈·가이오가)와 메가레쿠쟈는 한 마리 제한에서 빠진다(표의 free). 다른 개체를 풀지 않고, 다른 개체 때문에 풀리지도 않는다.
+//             원작에서 원시회귀는 메가진화 횟수에 들지 않는다. 레쿠쟈는 메가스톤 없이 메가진화해 도구 칸이 비는 이점이 있는데 이 게임에는 도구가 없어 같은 이점으로 바꿨다 (2026-10-02 사용자 결정)
 //   풀림      개체가 프리셋을 떠나면(박스) 기본 모습으로 돌아간다. 종이 바뀌어 모습이 맞지 않아도 돌아간다
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기와 시간 적용이 한다
@@ -19,6 +21,7 @@ export type MegaKind = "mega" | "primal";
 export interface MegaForm {
   base: string; // 메가진화하는 종
   kind: MegaKind;
+  free?: true; // 한 프리셋 한 마리 제한에서 빠진다 — 원시회귀와 메가레쿠쟈
   pokemonId: number; // PokeAPI pokemon.csv id — 초상 그림 번호
   pmd?: string; // PMD SpriteCollab 폼 경로(`0006/0001`)
   overworld?: string; // pokeemerald-expansion 의 graphics/pokemon 아래 폴더(`charizard/mega_y`)
@@ -61,6 +64,9 @@ export const megaSlugs = (opts?: DexOptions): string[] => Object.keys(megaTable(
 
 // 그 종의 메가 모습 — 표 순서. 없으면 빈 목록 (리자몽·뮤츠는 둘)
 export const megaFormsOf = (species: string, opts?: DexOptions): string[] => megaSlugs(opts).filter((slug) => megaTable(opts).forms[slug]?.base === species);
+
+// 한 마리 제한에서 빠지는 모습인가
+export const megaFree = (slug: string | undefined, opts?: DexOptions): boolean => slug !== undefined && megaOf(slug, opts)?.free === true;
 
 // 화면에 보이는 종 — 메가 모습이면 그 슬러그, 아니면 종
 export const shownSpecies = (pet: Pick<PetV3, "species" | "mega">): string => pet.mega?.on ?? pet.species;
@@ -152,20 +158,25 @@ export function setMega(save: SaveV3, petId: string, form: unknown, opts?: DexOp
   const place = presetSlotsOf(save, petId);
   if (!place) return { ok: false, reason: "not-in-party" };
   const reverted: string[] = [];
-  for (const other of save.pets) {
-    if (other.id === petId || !other.mega?.on || !place.petIds.includes(other.id)) continue;
-    delete other.mega.on;
-    reverted.push(other.id);
+  // 제한에서 빠지는 모습은 다른 개체를 풀지 않는다. 다른 개체의 제한 밖 모습도 풀지 않는다
+  if (!megaFree(form, opts)) {
+    for (const other of save.pets) {
+      if (other.id === petId || !other.mega?.on || megaFree(other.mega.on, opts) || !place.petIds.includes(other.id)) continue;
+      delete other.mega.on;
+      reverted.push(other.id);
+    }
   }
   pet.mega.on = form;
   return { ok: true, petId, on: form, reverted };
 }
 
 // 같은 프리셋에서 지금 메가 모습인 다른 개체 — 확인 창이 "원래 모습으로 돌아가요" 줄에 쓴다
-export function megaRivals(save: SaveV3, petId: string): PetV3[] {
+export function megaRivals(save: SaveV3, petId: string, opts?: DexOptions): PetV3[] {
   const place = presetSlotsOf(save, petId);
-  if (!place) return [];
-  return save.pets.filter((p) => p.id !== petId && p.mega?.on && place.petIds.includes(p.id));
+  const pet = save.pets.find((p) => p.id === petId);
+  // 이 개체의 모습이 제한 밖이면 아무도 풀리지 않는다. 한 종의 모습은 모두 같은 쪽이다
+  if (!place || !pet || megaFree(megaFormsOf(pet.species, opts)[0], opts)) return [];
+  return save.pets.filter((p) => p.id !== petId && p.mega?.on && !megaFree(p.mega.on, opts) && place.petIds.includes(p.id));
 }
 
 // 규칙에 맞지 않는 메가 모습을 푼다 — 거래 실행기가 명령마다 한 번 부른다

@@ -273,6 +273,27 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       putPet(s.boxes, add("blastoise", 60, { ...full, stone: true }));
     },
   },
+  "mega-free": {
+    note: "한 마리 제한 밖의 모습 — 메가스톤을 지닌 그란돈·레쿠쟈를 파티의 빈 칸이나 잠긴 칸에 넣는다(mega 장면 뒤에 쓴다)",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care, stone: true as const };
+      for (const species of ["groudon", "rayquaza"]) {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now });
+        pet.level = 70;
+        pet.exp = expForLevel(growthOf(species), 70);
+        pet.affinity = 100;
+        pet.mega = { ...full };
+        s.pets.push(pet);
+        recordDex(s, species, false);
+        if (!(s.dex.megaOpened ??= []).includes(species)) s.dex.megaOpened.push(species);
+        const at = s.party.slots.findIndex((slot) => slot.state === "empty");
+        const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
+        if (i >= 0) s.party.slots[i] = { state: "pokemon", petId: pet.id, hidden: false };
+        else putPet(s.boxes, pet.id);
+      }
+    },
+  },
   rich: { note: `포인트를 ${DEV_TEST_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, DEV_TEST_RULES.points * 10)) },
 };
 

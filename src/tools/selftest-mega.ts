@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { appearanceOf } from "../dex/appearance";
 import { hasProfile } from "../dex/species";
-import { countCare, grantStones, megaFormsOf, megaOf, megaSlugs, setMega, settleMega, shownSpecies, tickMega } from "../dex/mega";
+import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaRivals, megaSlugs, setMega, settleMega, shownSpecies, tickMega } from "../dex/mega";
 import { pmdSources } from "../main/art";
 import { overworldUrl } from "../main/overworld-art";
 import { portraitIds } from "../main/portraits";
@@ -157,6 +157,23 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(s.pets[0]?.mega?.stone, true, "메가스톤은 남는다");
   assert.deepStrictEqual(setMega(s, "p2", null), { ok: true, petId: "p2", on: null, reverted: [] });
   process.stdout.write("(6) 켜기 · 끄기 · 프리셋당 한 마리  ok\n");
+}
+
+// (6b) 원시회귀와 메가레쿠쟈는 한 마리 제한에서 빠진다 — 다른 개체를 풀지 않고, 다른 개체 때문에 풀리지도 않는다
+{
+  assert.deepStrictEqual(megaSlugs().filter((s) => megaFree(s)), ["kyogre-primal", "groudon-primal", "rayquaza-mega"]);
+  const stone = { ...full, stone: true as const };
+  const s = seed(pet({ mega: { ...stone } }), pet({ id: "p2", species: "groudon", evolved: [], mega: { ...stone } }), pet({ id: "p3", species: "rayquaza", evolved: [], mega: { ...stone } }), pet({ id: "p4", species: "gengar", evolved: [], mega: { ...stone } }));
+  setMega(s, "p1", "charizard-mega-x");
+  assert.deepStrictEqual(setMega(s, "p2", "groudon-primal").reverted, [], "원시회귀는 메가리자몽X 를 풀지 않는다");
+  assert.deepStrictEqual(setMega(s, "p3", "rayquaza-mega").reverted, [], "메가레쿠쟈도 풀지 않는다");
+  assert.deepStrictEqual(s.pets.map((p) => p.mega?.on ?? null), ["charizard-mega-x", "groudon-primal", "rayquaza-mega", null]);
+  assert.deepStrictEqual(megaRivals(s, "p2"), [], "원시회귀의 확인 창에는 풀리는 개체가 없다");
+  assert.deepStrictEqual(megaRivals(s, "p4").map((p) => p.id), ["p1"], "팬텀이 메가진화하면 리자몽만 풀린다");
+  assert.deepStrictEqual(setMega(s, "p4", "gengar-mega").reverted, ["p1"]);
+  assert.deepStrictEqual(s.pets.map((p) => p.mega?.on ?? null), [null, "groudon-primal", "rayquaza-mega", "gengar-mega"], "원시회귀와 메가레쿠쟈는 그대로다");
+  assert.deepStrictEqual(settleMega(s), []);
+  process.stdout.write("(6b) 원시회귀 · 메가레쿠쟈는 제한 밖  ok\n");
 }
 
 // (7) 박스 개체는 켜지 못한다. 프리셋을 떠나면 풀린다. 종이 바뀌어도 풀린다
