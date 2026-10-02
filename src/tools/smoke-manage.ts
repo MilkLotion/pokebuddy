@@ -391,7 +391,7 @@ void app.whenReady().then(async () => {
     const partyIds = snap.party.slots.filter((x) => x.pet).map((x) => x.pet!.id);
     assert.equal(use?.itemId, "exp-candy-s", "누른 도구가 기기 창에 뜬다");
     assert.equal(use?.title, "프리셋 1", "사용 쪽 머리 제목은 지금 프리셋 이름");
-    assert.equal(use?.pager, true, "프리셋이 둘 이상이면 파티 줄 양끝에 ◀ ▶");
+    assert.equal(use?.pager, true, "프리셋이 둘 이상이면 머리 줄의 프리셋 이름 양옆에 ◀ ▶");
     assert.equal(use?.mode, "use", "사용 쪽으로 연다");
     assert.equal(use?.modes, true, "판매가가 있으면 사용·판매 전환");
     assert.deepEqual(use?.rows.map((r) => r[0]), ["효과", "쓰는 곳"], "정보 줄은 효과·쓰는 곳 두 줄");
@@ -1074,7 +1074,7 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('#body .grid .slot.blank:not(.locked)').click(); 0`);
     await wait(400);
     assert.ok((await partyOpen()) !== null, "빈 파티 칸 — 교체 화면");
-    // 가방 — 파티 줄 양끝의 ◀ ▶ 는 앞·뒤 프리셋을 적용한다
+    // 가방 — 머리 줄의 ◀ ▶ 는 앞·뒤 프리셋을 적용한다
     await js(`${tabBtn("가방")}.click()`);
     await wait(300);
     await js(`[...document.querySelectorAll('#body .bag-card')].find((c) => c.querySelector('.name').textContent === '경험사탕S').click(); 0`);

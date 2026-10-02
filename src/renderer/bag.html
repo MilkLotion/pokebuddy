@@ -325,6 +325,34 @@
         margin-right: auto;
         font-weight: 700;
       }
+      /* 프리셋 넘김 — ◀ 이름 ▶. 프리셋이 둘 이상일 때만. 단추는 22×22 (Figma 03 `Bag Device` `State=Use` 머리 줄, 2026-10-02 사용자 결정 B안) */
+      .preset-nav {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        margin-right: auto;
+      }
+      .preset-nav .title {
+        margin-right: 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .preset-step {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: var(--line);
+        cursor: pointer;
+      }
+      .preset-step:hover {
+        background: var(--picked);
+      }
       /* 사용 | 판매 — 고른 쪽만 톤 배경 (관리 창 segmented 와 같은 모양) */
       .seg {
         display: flex;
@@ -349,8 +377,9 @@
       }
       /* 파티 줄 — 초상 40 + 레벨. 고른 칸만 옅은 배경, 테두리 없음 (Figma `party-strip`) */
       .party {
+        flex: 1;
         display: flex;
-        gap: 4px;
+        gap: calc((100% - 300px) / 5); /* 6칸(50×6)이 폭 전체에 고르게 — 칸이 적어도 간격은 같다 */
       }
       .party button {
         display: flex;
@@ -389,39 +418,16 @@
       .party-empty {
         color: var(--soft);
       }
-      /* 파티 줄과 양끝의 ◀ ▶ — 프리셋이 둘 이상일 때만. 화살표 폭 22, 파티 6칸이 그 사이에 들어가게 칸 폭 42·간격 3
-         (Figma 05 `Bag / Device / Use` `1242:1896`, 2026-10-02 사용자 결정). 줄 높이는 파티 칸 높이로 고정한다 */
+      /* 파티 줄 — 칸 폭 전체. 줄 높이는 파티 칸 높이로 고정한다(빈 파티 안내도 같은 높이) */
       .party-row {
         display: flex;
         align-items: stretch;
-        justify-content: space-between;
         min-height: 72px;
       }
       .party-row .party-empty {
         flex: 1;
         align-self: center;
         padding: 0 8px;
-      }
-      .preset-step {
-        flex: none;
-        width: 22px;
-        padding: 0;
-        border: 0;
-        border-radius: 6px;
-        background: var(--line);
-        cursor: pointer;
-      }
-      .preset-step:hover {
-        background: var(--picked);
-      }
-      .party.tight {
-        flex: 1;
-        gap: 3px;
-        margin: 0 1px; /* 6칸(267) + 좌우 1 = 269 ≤ 314 − 화살표 44 */
-      }
-      .party.tight button {
-        width: 42px;
-        padding: 6px 1px;
       }
       .qty {
         display: flex;

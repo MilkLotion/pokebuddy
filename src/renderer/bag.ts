@@ -12,8 +12,24 @@ function render(v: BagDeviceView): void {
   const card = el("div", "use-card");
 
   // 머리 줄 — 제목, 사용도 판매도 되면 오른쪽에 `사용 | 판매`
+  // 프리셋이 둘 이상이면 제목(프리셋 이름) 양옆에 ◀ ▶ — 누르면 앞·뒤 프리셋을 적용한다.
+  // 파티 줄 양끝에 세로로 길게 두던 것을 머리 줄로 올렸다 (2026-10-02 사용자 결정 B안, Figma 03 `Bag Device` `State=Use`)
   const head = el("div", "use-head");
-  head.appendChild(el("div", "title", v.title));
+  const title = el("div", "title", v.title);
+  if (v.party && v.pager) {
+    const arrow = (label: string, delta: -1 | 1, name: string): HTMLButtonElement => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset-step";
+      b.textContent = label;
+      b.setAttribute("aria-label", name);
+      b.addEventListener("click", () => act({ itemId: v.itemId, kind: "preset", delta }));
+      return b;
+    };
+    const nav = el("div", "preset-nav");
+    nav.append(arrow("◀", -1, "앞 프리셋"), title, arrow("▶", 1, "다음 프리셋"));
+    head.appendChild(nav);
+  } else head.appendChild(title);
   if (v.modes) {
     const seg = el("div", "seg");
     for (const [mode, label] of [["use", "사용"], ["sell", "판매"]] as const) {
@@ -28,23 +44,12 @@ function render(v: BagDeviceView): void {
   }
   card.appendChild(head);
 
-  // 파티 줄 — 초상과 레벨. 이름은 title 과 미리보기 첫 줄이 보인다.
-  // 프리셋이 둘 이상이면 양끝에 ◀ ▶ — 누르면 앞·뒤 프리셋을 적용한다 (Figma 05 `Bag / Device / Use` `1242:1896`)
+  // 파티 줄 — 초상과 레벨. 이름은 title 과 미리보기 첫 줄이 보인다. 줄은 칸 폭 전체를 쓴다 (Figma 05 `Bag / Device / Use` `1242:1896`)
   if (v.party) {
     const row = el("div", "party-row");
-    const arrow = (label: string, delta: -1 | 1, name: string): HTMLButtonElement => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "preset-step";
-      b.textContent = label;
-      b.setAttribute("aria-label", name);
-      b.addEventListener("click", () => act({ itemId: v.itemId, kind: "preset", delta }));
-      return b;
-    };
-    if (v.pager) row.appendChild(arrow("◀", -1, "앞 프리셋"));
     if (!v.party.length) row.appendChild(el("div", "party-empty", "파티에 포켓몬이 없어요"));
     else {
-      const strip = el("div", v.pager ? "party tight" : "party");
+      const strip = el("div", "party");
       for (const p of v.party) {
         const b = document.createElement("button");
         b.type = "button";
@@ -63,7 +68,6 @@ function render(v: BagDeviceView): void {
       }
       row.appendChild(strip);
     }
-    if (v.pager) row.appendChild(arrow("▶", 1, "다음 프리셋"));
     card.appendChild(row);
   }
   if (v.qty) card.appendChild(qtyRow(v.qty, (qty) => act({ itemId: v.itemId, kind: "qty", qty })));
