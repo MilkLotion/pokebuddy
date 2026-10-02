@@ -134,12 +134,18 @@ export function fixedEggs(opts?: DexOptions): [string, string[]][] {
 
 export const isSingleEgg = (kind: string, opts?: DexOptions): boolean => !isMetaKey(kind) && eggs(opts)[kind]?.single === true;
 
-// 단일 포켓몬 전부 — 단일 포켓몬 알의 종과 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전의 색) · 피츄(삐쭉귀))
+// 단일 포켓몬 전부 — 단일 포켓몬 알의 종, 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전의 색) · 피츄(삐쭉귀)),
+// 업적 보상으로 주는 종(data/achievements.json 의 reward.pokemon — 2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
 // 2026-10-03 사용자 결정 "알이나 다른데서 못구하고 이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해."
 export function singleSpecies(opts?: DexOptions): Set<string> {
   const out = new Set<string>();
   for (const [kind, pool] of fixedEggs(opts)) if (isSingleEgg(kind, opts)) for (const slug of pool) out.add(slug);
   for (const [slug, form] of Object.entries(regionalTable(opts).forms)) if (!isMetaKey(slug) && form.get === "gift") out.add(slug);
+  // 업적 보상 종 — 데이터를 바로 읽는다. src/achievement/core.ts 가 이 파일을 불러서 그쪽을 부르면 서로 물린다
+  for (const [id, def] of Object.entries(loadJson<Record<string, { reward?: unknown }>>("achievements.json", opts))) {
+    const reward = isMetaKey(id) ? null : def.reward;
+    if (reward != null && typeof reward === "object" && typeof (reward as { pokemon?: unknown }).pokemon === "string") out.add((reward as { pokemon: string }).pokemon);
+  }
   // 단일 포켓몬이 모습 바꾸기로 오가는 모습(기라티나(오리진폼))도 같은 개체라 단일 포켓몬이다
   for (const slug of [...out]) for (const form of shiftGroupOf(slug, opts)) out.add(form);
   return out;

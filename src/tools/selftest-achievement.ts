@@ -8,7 +8,8 @@ import { GROUPS, claim, defs, evaluate, isAchieved, progressOf, rewardEgg, rewar
 import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules";
 import { regionalOf } from "../dex/regional";
 import { profile, slugs } from "../dex/species";
-import { eggPool } from "../shop/catalog";
+import { eggPool, sellsSpecies, singleSpecies } from "../shop/catalog";
+import { isSinglePet } from "../trade/core";
 import { pendingOf } from "../notify/queue";
 import { snapshot } from "../tx/snapshot";
 import { empty, normalize } from "../save/v3";
@@ -43,10 +44,10 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 36개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
+// (1) 업적 38개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = defs();
-  assert.equal(list.length, 36);
+  assert.equal(list.length, 38);
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
@@ -56,12 +57,19 @@ function seed(): SaveV3 {
     assert.equal(kinds.filter(Boolean).length, 1, `보상은 한 종류 ${id}`);
   }
   const byGroup = Object.fromEntries(GROUPS.map((g) => [g, list.filter(([, d]) => d.group === g).length]));
-  assert.deepStrictEqual(byGroup, { dex: 17, grow: 5, egg: 4, find: 3, together: 7 });
+  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 7 });
   const old = ["show-two", "starter-final", "work-100h", "party-three"];
   const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
   // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전의 색)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼의 모습)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
-  assert.deepStrictEqual(rewardSpecies().sort(), ["ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "togepi"]);
+  assert.deepStrictEqual(rewardSpecies().sort(), ["arceus", "ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "togepi"]);
+  // 업적 보상 종은 모두 단일 포켓몬이다 — 팔거나 교환할 수 없고 상점에서 팔지 않는다 (2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
+  for (const slug of rewardSpecies()) {
+    assert.ok(singleSpecies().has(slug), `단일 포켓몬 ${slug}`);
+    assert.equal(sellsSpecies(slug), false, `상점에서 팔지 않는다 ${slug}`);
+    assert.equal(isSinglePet({ species: slug, evolved: [] }), true, `교환·판매 불가 ${slug}`);
+  }
+  assert.equal(isSinglePet({ species: "togekiss", evolved: ["togepi", "togetic"] }), true, "업적 보상 종에서 진화한 개체도 단일 포켓몬이다");
   for (const [id, def] of list) {
     const egg = rewardEgg(def);
     if (egg) assert.ok((eggPool(egg) ?? []).length > 0, `알 종류 ${id}`);
@@ -447,6 +455,23 @@ function seed(): SaveV3 {
   k.dex.obtained = [...byDex.values()];
   assert.equal(isAchieved(k, "dex-kanto"), true);
 
+  // 종 모으기 — 적은 종을 모두 얻으면 달성한다. 다른 모습(오리진폼)은 세지 않는다 (2026-10-03 사용자 결정 "아르세우스는 디아루가,펄기아,기라티나 구하면", "500년전 마이가나는 볼케니온이랑 마기아나 구하면")
+  const myth = seed();
+  myth.dex.obtained = ["dialga", "palkia", "dialga-origin", "giratina-origin"];
+  assert.deepStrictEqual(progressOf(myth, "dex-creation"), { now: 2, goal: 3, unit: "" });
+  assert.equal(isAchieved(myth, "dex-creation"), false);
+  myth.dex.obtained.push("giratina");
+  assert.equal(isAchieved(myth, "dex-creation"), true);
+  assert.equal(isAchieved(myth, "dex-soul-heart"), false);
+  myth.dex.obtained.push("volcanion", "magearna");
+  assert.equal(isAchieved(myth, "dex-soul-heart"), true);
+  assert.deepStrictEqual(
+    ["dex-creation", "dex-soul-heart", "dex-1000"].map((id) => snapshot(myth).achievements.list.find((x) => x.id === id)?.reward),
+    ["아르세우스", "마기아나(500년 전의 색)", "랜덤전설알"],
+  );
+  // 신오 도감 완성은 493번까지다 — 아르세우스를 얻어야 끝난다
+  assert.deepStrictEqual(progressOf(myth, "dex-sinnoh"), { now: 3, goal: 107, unit: "" });
+
   const g = seed();
   assert.equal(progressOf(g, "level-100"), null, "레벨업은 진행도가 없다");
   assert.equal(progressOf(g, "show-two"), null, "옛 업적은 진행도를 보이지 않는다");
@@ -511,7 +536,10 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(claim(s, "shiny-10", T0 + 1).item, { id: "shiny-potion", count: 1 });
   assert.equal(s.bag["shiny-potion"], 1);
 
-  // 단일 포켓몬 보상 — 이미 얻은 종이면 개체를 주지 않고 수령만 기록한다
+  // 단일 포켓몬 보상 — 이미 얻은 종이면 개체를 주지 않고 수령만 기록한다. 업적 보상 종은 모두 단일 포켓몬이다
+  got(s, "party-three");
+  s.dex.obtained = ["ditto"];
+  assert.deepStrictEqual(claim(s, "party-three", T0 + 1), { ok: true, id: "party-three", skipped: true }, "옛 규칙으로 이미 얻은 메타몽");
   got(s, "dex-johto");
   s.dex.obtained = ["pichu-spiky-eared"];
   const before = s.pets.length;

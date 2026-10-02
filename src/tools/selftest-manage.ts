@@ -242,7 +242,7 @@ try {
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
     const list = game.view()?.achievements.list ?? [];
-    assert.equal(list.length, 36, "업적 36개");
+    assert.equal(list.length, 38, "업적 38개");
     assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");
     assert.equal(two?.name, "두 마리 함께 꺼내기");

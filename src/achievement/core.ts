@@ -3,6 +3,7 @@
 // 조건은 데이터의 cond 로 적는다. 판정과 진행도는 여기서 한다 (2026-10-03 업적 개선, worklog/records/achievements/record.md)
 //   dex       얻은 종 수 dex.obtained ≥ count. 도감 탭 머리의 `획득` 수와 같다(리전폼·특수 폼 포함)
 //   region    도감 번호 from~to 를 모두 얻었다. 번호마다 기본형 하나를 얻으면 된다. 리전폼·특수 폼은 세지 않는다
+//   species   적은 종을 모두 얻었다(dex.obtained). 종마다 그 슬러그 그대로 본다 — 다른 모습은 세지 않는다
 //   shiny     이로치로 얻은 종 수 dex.shinyObtained ≥ count
 //   level     개체 하나를 기준 레벨 이상으로 레벨업했다. 거래 전후 저장을 비교한다 —
 //             교환으로 받은 개체는 거래 전에 없으므로 받는 순간은 세지 않는다 (2026-09-27)
@@ -22,7 +23,8 @@
 // 보상은 다섯 종류다
 //   party-slot        업적으로 여는 파티 칸 하나를 연다
 //   { pokemon }       그 종의 새 개체 하나 — 상점 구매와 같은 경로(성격 무작위, 이로치 아님, 빈 파티 칸 없으면 박스).
-//                     단일 포켓몬이고 이미 얻은 종이면 개체를 주지 않고 수령만 기록한다 (docs/specs/game.md "단일 포켓몬")
+//                     업적 보상 종은 모두 단일 포켓몬이다 (2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로", src/shop/catalog.ts singleSpecies).
+//                     이미 얻은 종이면 개체를 주지 않고 수령만 기록한다 (docs/specs/game.md "단일 포켓몬")
 //   { points }        포인트
 //   { egg }           그 종류의 알 하나를 돌보미집에 넣는다. 빈 칸이 없거나 남은 종이 없으면 받지 못한다
 //   { item, count? }  도구. 가방 상한으로 막지 않는다(우편 선물과 같다)
@@ -52,6 +54,7 @@ export const GROUPS: readonly AchievementGroup[] = ["dex", "grow", "egg", "find"
 export type AchievementCond =
   | { kind: "dex"; count: number }
   | { kind: "region"; from: number; to: number }
+  | { kind: "species"; species: string[] }
   | { kind: "shiny"; count: number }
   | { kind: "level"; level: number }
   | { kind: "affinity"; value: number }
@@ -172,6 +175,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
       for (let d = cond.from; d <= cond.to; d += 1) if (nums.has(d)) n += 1;
       return n;
     }
+    case "species": return cond.species.filter((s) => save.dex.obtained.includes(s)).length;
     case "shiny": return save.dex.shinyObtained.length;
     case "evolve": return countsOf(save).evolved;
     case "mega": return save.dex.megaOpened?.length ?? 0;
@@ -194,6 +198,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
 function goalOf(cond: AchievementCond): number {
   switch (cond.kind) {
     case "region": return cond.to - cond.from + 1;
+    case "species": return cond.species.length;
     case "work": return cond.hours;
     case "streak": return cond.days;
     case "level": return cond.level;
@@ -272,7 +277,7 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const species = rewardPokemon(def);
   if (species) {
-    // 단일 포켓몬은 저장마다 한 번만 얻는다 — 우편으로 먼저 받았으면 개체를 주지 않는다
+    // 단일 포켓몬은 저장마다 한 번만 얻는다 — 옛 규칙의 알이나 우편으로 먼저 얻었으면 개체를 주지 않는다
     if (singleSpecies(opts).has(species) && save.dex.obtained.includes(species)) {
       done();
       return { ok: true, id, skipped: true };
