@@ -16,7 +16,7 @@
   "moon-stone": {"ko":"달의돌","en":"Moon Stone","targets":["clefable","delcatty","musharna","nidoking","nidoqueen","wigglytuff"]},
   "peat-block": {"ko":"피트블록","en":"Peat Block","targets":["ursaluna"]},
   "region-map": {"ko":"지도","en":"Map","targets":["avalugg-hisui","braviary-hisui","decidueye-hisui","exeggutor-alola","lilligant-hisui","marowak-alola","mr-mime-galar","raichu-alola","samurott-hisui","sliggoo-hisui","typhlosion-hisui","weezing-galar"]},
-  "scroll-of-darkness": {"ko":"악의 족자","en":"Scroll of Darkness","targets":["urshifu"]},
+  "scroll-of-darkness": {"ko":"악의 족자","en":"Scroll of Darkness","targets":["urshifu","urshifu-rapid-strike"]},
   "shiny-stone": {"ko":"빛의돌","en":"Shiny Stone","targets":["cinccino","florges","roserade","togekiss"]},
   "sun-stone": {"ko":"태양의돌","en":"Sun Stone","targets":["bellossom","heliolisk","lilligant","sunflora","whimsicott"]},
   "sweet-apple": {"ko":"달콤한사과","en":"Sweet Apple","targets":["appletun"]},

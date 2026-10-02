@@ -25,7 +25,8 @@ type NameEntry = Record<Lang, string>;
 type FormName = { form: string; pokemon: string };
 
 // 자동으로 못 맞춘 것 — 슬러그 → { ko, en }
-const OVERRIDES: Record<string, NameEntry> = {};
+// 우라오스의 기본형은 일격의 태세다 — 연격의 태세(data/regional.json)와 나란히 보이게 태세를 적는다 (2026-10-03 사용자 결정 "연격의 태세, 일격의 태세 로 해.")
+const OVERRIDES: Record<string, NameEntry> = { urshifu: { ko: "우라오스(일격의 태세)", en: "Urshifu (Single Strike Style)" } };
 
 export async function build(): Promise<void> {
   const dex = readDex();

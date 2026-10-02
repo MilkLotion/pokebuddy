@@ -56,7 +56,7 @@
     "excadrill-mega": {"base":"excadrill","kind":"mega","pokemonId":10287,"pmd":"0530/0001","ko":"메가몰드류","en":"Mega Excadrill","types":["ground","steel"]},
     "audino-mega": {"base":"audino","kind":"mega","pokemonId":10069,"overworld":"audino/mega","ko":"메가다부니","en":"Mega Audino","types":["normal","fairy"]},
     "eelektross-mega": {"base":"eelektross","kind":"mega","pokemonId":10290,"pmd":"0604/0001","ko":"메가저리더프","en":"Mega Eelektross","types":["electric"]},
-    "floette-mega": {"base":"floette","kind":"mega","pokemonId":10296,"pmd":"0670/0006","ko":"메가플라엣테","en":"Mega Floette","types":["fairy"]},
+    "floette-mega": {"base":"floette-eternal","kind":"mega","pokemonId":10296,"pmd":"0670/0006","ko":"메가플라엣테","en":"Mega Floette","types":["fairy"]},
     "dragalge-mega": {"base":"dragalge","kind":"mega","pokemonId":10299,"pmd":"0691/0001","ko":"메가드래캄","en":"Mega Dragalge","types":["poison","dragon"]},
     "zygarde-mega": {"base":"zygarde","kind":"mega","pokemonId":10301,"pmd":"0718/0005","ko":"메가지가르데","en":"Mega Zygarde","types":["dragon","ground"]},
     "diancie-mega": {"base":"diancie","kind":"mega","pokemonId":10075,"pmd":"0719/0001","overworld":"diancie/mega","ko":"메가디안시","en":"Mega Diancie","types":["rock","fairy"]},

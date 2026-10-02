@@ -1,6 +1,7 @@
 // 한국어 조사 — 앞 낱말의 받침에 맞는 쪽을 고른다
 // 숫자로 끝나면 한국어로 읽은 소리 기준 (0 영, 1 일, 3 삼, 6 육, 7 칠, 8 팔 은 받침 있음)
 // 라틴 글자로 끝나면 영어 글자 이름으로 읽는다 — L(엘)·R(알)은 ㄹ 받침, M(엠)·N(엔)은 받침 있음, 나머지는 받침 없음 ("경험사탕M을")
+// 닫는 괄호로 끝나면 괄호 안의 끝 글자로 본다 — "루가루암(한밤중)으로", "배쓰나이(백색근)이" (특수 폼의 이름, 2026-10-03)
 // 한글·숫자·라틴 글자가 아닌 글자로 끝나면 받침 없음으로 본다
 // 렌더러(src/renderer/manage.ts)는 빌드 범위가 달라 같은 규칙을 따로 둔다 — 고칠 때 함께 고친다
 
@@ -13,7 +14,7 @@ const LATIN_OTHER = new Set(["m", "n"]);
 
 // 끝 글자의 받침 — none: 없음, rieul: ㄹ, other: ㄹ 밖의 받침
 function batchim(word: string): "none" | "rieul" | "other" {
-  const last = word.trim().slice(-1);
+  const last = word.trim().replace(/[)\]]+$/, "").slice(-1);
   if (!last) return "none";
   if (/[0-9]/.test(last)) {
     if (!DIGIT_BATCHIM.has(last)) return "none";

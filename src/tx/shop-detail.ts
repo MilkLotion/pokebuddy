@@ -23,6 +23,7 @@ const known = (save: SaveV3, slug: string): boolean => save.dex.unlocked.include
 function extras(step: EvoStep): string[] {
   const out: string[] = [];
   if (step.map && !needIsMap(step.need)) out.push("지도");
+  if (step.affinity) out.push(`친밀도 ${step.affinity}`);
   if (step.when) out.push(step.when === "night" ? "밤" : "낮");
   if (step.gender) out.push(step.gender === "female" ? "암컷" : "수컷");
   return out;

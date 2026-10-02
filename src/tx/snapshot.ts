@@ -5,7 +5,7 @@
 // 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { defs, rewardPokemon, type AchievementDef } from "../achievement/core.js";
+import { defs, progressOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon, type AchievementDef } from "../achievement/core.js";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../save/rules.js";
 import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
 import { profile } from "../dex/species.js";
@@ -17,6 +17,7 @@ import { careParts, zoneOf } from "../state/time.js";
 import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/manage";
 import { formsOf } from "../dex/forms.js";
+import { genderLookOf } from "../dex/regional.js";
 import { megaChoices, megaOf, megaRivals, shownSpecies } from "../dex/mega.js";
 import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS, canShow, currentTutorial } from "../tutorial/core.js";
@@ -25,13 +26,19 @@ import type { DayPart } from "../shared/types";
 import { isEvoItem, itemAbout, nameOfItem, shopList } from "./lists.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
-// 보상 종류 → 화면 문구. 종류가 하나뿐이라 표로 둔다
+// 보상 종류 → 화면 문구
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
 
-// 업적 보상 문구 — 포켓몬 보상은 종 이름 (라프라스)
+// 업적 보상 문구 — 포켓몬은 종 이름(라프라스), 포인트는 `1,000P`, 알은 알 이름, 도구는 도구 이름(여러 개면 `×N`)
 const rewardWord = (def: AchievementDef): string => {
   const species = rewardPokemon(def);
   if (species) return petName(species);
+  const points = rewardPoints(def);
+  if (points != null) return `${points.toLocaleString("en-US")}P`;
+  const egg = rewardEgg(def);
+  if (egg) return eggName(egg) ?? egg;
+  const item = rewardItem(def);
+  if (item) return item.count > 1 ? `${nameOfItem(item.id)} ×${item.count}` : nameOfItem(item.id);
   return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
 };
 
@@ -119,7 +126,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
   return {
     id: pet.id,
     species: pet.species,
-    look: shown.species,
+    look: pet.mega?.on ? shown.species : (genderLookOf(pet.species, pet.gender) ?? shown.species), // 초상 그림 — 성별 그림이 있으면 그것 (data/regional.json 의 gender)
     name: shown.name,
     shiny: pet.shiny,
     level: pet.level,
@@ -228,6 +235,9 @@ export function snapshot(
       desc: def.desc ?? "",
       reward: rewardWord(def),
       state: row?.claimedAt != null ? "claimed" : row?.achievedAt != null ? "achieved" : "locked",
+      group: def.group,
+      // 진행도는 미달성일 때만 — 달성한 뒤에는 값이 줄어도(이어진 날이 끊겨도) 보이지 않는다
+      ...(row?.achievedAt == null ? (() => { const p = progressOf(save, id); return p ? { progress: p } : {}; })() : {}),
     };
   });
 

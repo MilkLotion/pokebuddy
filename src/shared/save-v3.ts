@@ -119,6 +119,16 @@ export interface DexV3 {
 export interface AchievementV3 {
   achievedAt: number | null;
   claimedAt: number | null;
+  quiet?: true; // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적 — 배너를 띄우지 않는다 (src/achievement/core.ts evaluate)
+}
+
+// 업적이 세는 누적 값 (src/achievement/core.ts). 2026-10-03 에 더했다
+export interface CountsV3 {
+  hatched: number; // 알에서 포켓몬이 나온 횟수. 옛 저장은 만든 알 수 − 기다리는 알 수에서 시작한다
+  evolved: number; // 진화 횟수. 옛 저장은 가진 개체의 stage 합에서 시작한다
+  traded: number; // 끝난 교환 횟수. 옛 저장은 0 에서 시작한다
+  day: string; // 마지막으로 앱이 돈 날 (로컬 날짜)
+  streak: number; // 이어서 앱이 돈 날 수
 }
 
 export type TutorialState = "none" | "active" | "skipped" | "done";
@@ -212,4 +222,6 @@ export interface SaveV3 {
   trade?: { pending: TradePendingV3 | null };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/core.ts)
   find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/core.ts)
+  counts?: CountsV3; // 업적이 세는 누적 값
+  achRev?: number; // 업적 목록의 판 — ACHIEVEMENT_REV 보다 작으면 다음 판정에서 달성한 업적을 조용히 기록한다
 }

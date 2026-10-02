@@ -171,7 +171,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profile("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.slugs().length, 1167, "표의 종 수 — PokeAPI 종 1025 + 폼 85 + 리전폼 57");
+  assert.strictEqual(dex.slugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 83 + 리전폼 57 + 특수 폼 13 (배쓰나이(청색근)와 기라티나(오리진폼)는 폼에서 특수 폼으로 옮겼다)");
   assert.ok(!dex.slugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.slugs()) {
@@ -244,9 +244,18 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const table = regional.regionalTable();
   const forms = Object.entries(table.forms);
   const edges = Object.entries(table.edges).flatMap(([from, steps]) => steps.map((st) => ({ from, ...st })));
-  assert.strictEqual(forms.length, 57, "리전폼 57종");
-  assert.strictEqual(edges.length, 38, "리전폼 간선 38개");
-  const count = (get: string): number => forms.filter(([, f]) => f.get === get).length;
+  assert.strictEqual(forms.filter(([, f]) => !f.special).length, 57, "리전폼 57종");
+  const specials = forms.filter(([, f]) => f.special);
+  assert.deepStrictEqual(
+    specials.map(([slug, f]) => `${slug}:${f.get}`),
+    ["pichu-spiky-eared:gift", "dialga-origin:base", "palkia-origin:base", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
+    "특수 폼 13종과 얻는 방법",
+  );
+  const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
+  const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);
+  assert.strictEqual(edges.filter((e) => !specialEdge(e)).length, 38, "리전폼 간선 38개");
+  assert.strictEqual(edges.filter(specialEdge).length, 5, "특수 폼 간선 5개");
+  const count = (get: string): number => forms.filter(([, f]) => f.get === get && !f.special).length;
   assert.deepStrictEqual([count("map"), count("base"), count("path")], [12, 28, 17]);
   const names = require(path.join(__dirname, "..", "..", "lib", "names.json")) as Record<string, { ko: string; en: string }>;
   for (const [slug, f] of forms) {
@@ -257,7 +266,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
     assert.strictEqual(names[slug]?.ko, f.ko, `${slug} 이름표`);
     assert.match(regional.dexLabel(slug, p.dex), /^\d+-\d+$/, `${slug} 표시 번호`);
     if (f.pmd) assert.match(f.pmd, /^\d{4}\/\d{4}$/, `${slug} PMD 경로`);
-    assert.strictEqual(dex.stageOf(slug) === 0, f.get === "base", `${slug} 진화 전 종은 base 뿐`);
+    assert.strictEqual(dex.stageOf(slug) === 0, f.get === "base" || f.get === "gift" || f.get === "variant" || f.get === "shift", `${slug} 진화 전 종은 base · gift · variant · shift 뿐`);
   }
   for (const e of edges) {
     assert.ok(dex.hasProfile(e.from) && dex.hasProfile(e.to), `${e.from}→${e.to} 도감표`);
@@ -289,8 +298,68 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 기본 야돈 → 야도킹은 교환(연결의끈). 가라두구머리장식은 가라르 야도킹 전용 (2026-09-30 사용자 결정)
   assert.deepStrictEqual(dex.nextOf("slowpoke").find((st) => st.to === "slowking")?.need, { kind: "item", item: "bond-cord" });
   assert.deepStrictEqual(dex.nextOf("slowpoke-galar").find((st) => st.to === "slowking-galar")?.need, { kind: "item", item: "galarica-wreath" });
+  // 특수 폼 — 리전폼처럼 다른 종이다. 간선이 없고 기본형의 간선도 그대로다. 수집 난이도는 준전설과 같은 5 (worklog/records/extra-evolution 특수 폼 설계)
+  assert.strictEqual(regional.dexLabel("floette-eternal", 670), "670-1");
+  assert.strictEqual(regional.dexLabel("ursaluna-bloodmoon", 901), "901-1");
+  assert.deepStrictEqual([regional.regionalOf("floette-eternal")?.region, regional.regionalOf("ursaluna-bloodmoon")?.region], ["kalos", "paldea"], "도감 지방 칸");
+  for (const slug of ["floette-eternal", "ursaluna-bloodmoon"]) {
+    assert.deepStrictEqual(dex.nextOf(slug), [], `${slug} 는 진화하지 않는다`);
+    assert.strictEqual(dex.prevOf(slug), null, `${slug} 는 진화로 얻지 않는다`);
+    assert.strictEqual(dex.profile(slug).rank, 5, `${slug} 수집 난이도`);
+  }
+  assert.deepStrictEqual(dex.nextOf("floette").map((st) => st.to), ["florges"]);
+  assert.deepStrictEqual(dex.nextOf("ursaring").map((st) => st.to), ["ursaluna"]);
+  assert.ok(!dex.lineOf("floette").includes("floette-eternal"), "특수 폼은 사슬의 모습이 아니다");
+  // 진화로 얻는 특수 폼 — 암멍이는 낮에 루가루암, 밤에 루가루암(한밤중). 루가루암(황혼)은 낮·밤과 관계없이 Lv.25 와 친밀도 100 ("추천대로 하자"). 일레즌은 둘 가운데 고른다.
+  // 치고마의 두 간선은 모두 악의 족자다("족자는 하나만 하자") (2026-10-03 사용자 결정)
+  assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => [st.to, st.when ?? "", st.need]), [["lycanroc", "day", { kind: "level", level: 25 }], ["lycanroc-midnight", "night", { kind: "level", level: 25 }], ["lycanroc-dusk", "", { kind: "level", level: 25 }]]);
+  assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => st.affinity ?? 0), [0, 0, 100], "황혼만 친밀도 100 을 더 본다");
+  assert.deepStrictEqual(dex.nextOf("toxel").map((st) => [st.to, st.when ?? ""]), [["toxtricity", ""], ["toxtricity-low-key", ""]]);
+  assert.deepStrictEqual(dex.nextOf("kubfu").map((st) => [st.to, st.need]), [["urshifu", { kind: "item", item: "scroll-of-darkness" }], ["urshifu-rapid-strike", { kind: "item", item: "scroll-of-darkness" }]]);
+  assert.deepStrictEqual([regional.dexLabel("lycanroc-midnight", 745), regional.dexLabel("lycanroc-dusk", 745)], ["745-1", "745-2"]);
+  assert.strictEqual(dex.prevOf("lycanroc-midnight"), "rockruff");
+  assert.deepStrictEqual([dex.prevOf("lycanroc-dusk"), dex.nextOf("lycanroc-dusk")], ["rockruff", []]);
+  assert.strictEqual(dex.profile("urshifu-rapid-strike").types.join("/"), "fighting/water");
+  assert.deepStrictEqual([dex.profile("lycanroc-midnight").rank, dex.profile("toxtricity-low-key").rank], [2, 3], "진화로 얻는 특수 폼의 수집 난이도는 다른 종과 같은 규칙");
+  // 우편으로만 받는 특수 폼 — 간선이 없고 수집 난이도 5
+  for (const slug of ["magearna-original", "pichu-spiky-eared"]) {
+    assert.deepStrictEqual(dex.nextOf(slug), [], `${slug} 는 진화하지 않는다`);
+    assert.strictEqual(dex.prevOf(slug), null);
+    assert.strictEqual(dex.profile(slug).rank, 5);
+  }
+  assert.deepStrictEqual(dex.nextOf("pichu").map((st) => st.to), ["pikachu"]);
+  // 배쓰나이 — 알에서 적색근 45 · 청색근 45 · 백색근 10, 백색근만 대쓰여너로 진화한다 (2026-10-03 사용자 결정)
+  assert.deepStrictEqual(regional.hatchVariants("basculin"), [["basculin", 45], ["basculin-blue-striped", 45], ["basculin-white-striped", 10]]);
+  assert.deepStrictEqual(regional.hatchVariants("pikachu"), []);
+  assert.deepStrictEqual([regional.hatchBaseOf("basculin-white-striped"), regional.hatchBaseOf("basculin-blue-striped"), regional.hatchBaseOf("basculin"), regional.hatchBaseOf("raichu-alola")], ["basculin", "basculin", null, null]);
+  assert.deepStrictEqual([dex.nextOf("basculin"), dex.nextOf("basculin-blue-striped")], [[], []], "적색근과 청색근은 진화하지 않는다");
+  assert.deepStrictEqual(dex.nextOf("basculin-white-striped"), [{ to: "basculegion", need: { kind: "affinity", value: 100 } }]);
+  assert.strictEqual(dex.prevOf("basculegion"), "basculin-white-striped");
+  assert.deepStrictEqual([regional.dexLabel("basculin-blue-striped", 550), regional.dexLabel("basculin-white-striped", 550)], ["550-1", "550-2"]);
+  // 지방 전용 진화의 기본형 간선은 그대로다 — 특수 폼 거르기에 걸리지 않는다
+  assert.deepStrictEqual(dex.nextOf("corsola").map((st) => st.to), ["cursola"]);
+  // 디아루가(오리진폼)·펄기아(오리진폼) — 가라르 파이어처럼 전설 규칙을 따르는 다른 종이다 (2026-10-03 사용자 결정). 원시 디아루가(PMD 전용)는 넣지 않는다
+  assert.deepStrictEqual([regional.dexLabel("dialga-origin", 483), regional.dexLabel("palkia-origin", 484)], ["483-1", "484-1"]);
+  assert.deepStrictEqual([dex.profile("dialga-origin").types.join("/"), dex.profile("palkia-origin").types.join("/")], ["steel/dragon", "water/dragon"]);
+  for (const slug of ["dialga-origin", "palkia-origin"]) {
+    assert.strictEqual(dex.profile(slug).rank, 5, `${slug} 수집 난이도`);
+    assert.deepStrictEqual([dex.nextOf(slug), dex.prevOf(slug)], [[], null]);
+  }
+  assert.ok(!dex.hasProfile("dialga-primal"), "원시 디아루가는 없다");
+  // 기라티나(오리진폼) — 기라티나 개체가 모습 바꾸기로 오간다 (2026-10-03 사용자 결정 "이거는 모습변경으로하자.")
+  assert.deepStrictEqual([regional.shiftGroupOf("giratina"), regional.shiftGroupOf("giratina-origin"), regional.shiftGroupOf("dialga")], [["giratina", "giratina-origin"], ["giratina", "giratina-origin"], []]);
+  assert.strictEqual(regional.dexLabel("giratina-origin", 487), "487-1");
+  assert.deepStrictEqual([dex.nextOf("giratina-origin"), dex.prevOf("giratina-origin")], [[], null]);
+  // 성별 그림 — 대쓰여너 암컷은 종은 그대로이고 그림 이름만 다르다 (2026-10-03)
+  assert.deepStrictEqual([regional.genderLookOf("basculegion", "female"), regional.genderLookOf("basculegion", "male"), regional.genderLookOf("basculegion", "none"), regional.genderLookOf("pikachu", "female")], ["basculegion-female", null, null, null]);
+  assert.strictEqual(regional.genderLookInfo("basculegion-female")?.species, "basculegion");
+  assert.strictEqual(regional.genderLookInfo("basculegion"), null);
+  assert.ok(!dex.hasProfile("basculegion-female"), "성별 그림은 종이 아니다");
+  // 배쓰나이의 이름 — 기본형(적색근)은 배쓰나이, 나머지는 괄호에 모습을 적는다 (2026-10-03 사용자 결정 "배쓰나이(청색근) 이렇게 되게해")
+  assert.deepStrictEqual([names["basculin"]?.ko, names["basculin-blue-striped"]?.ko, names["basculin-white-striped"]?.ko], ["배쓰나이", "배쓰나이(청색근)", "배쓰나이(백색근)"]);
+  assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
-  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {} });
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, gender: {} });
   out("리전폼 ok");
 }
 

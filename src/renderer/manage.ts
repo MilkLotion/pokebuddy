@@ -286,7 +286,7 @@ let shopView: ViewMode = loadView("shop");
 let listScrollTo: { where: "dex" | "shop"; index: number } | null = null;
 let dexFilter = "all";
 // 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
-// 리전폼 항목(알로라 라이츄 등)은 번호가 아니라 항목의 지방(region)으로 나눈다(스펙) — inDexRegion
+// 리전폼 항목(알로라 라이츄 등)과 특수 폼 항목(다투곰(붉은 달) 등)은 번호가 아니라 항목의 지방(region)으로 나눈다(스펙) — inDexRegion
 let dexRegion = "all";
 let dexRegionOpen = false;
 const DEX_REGIONS: readonly { id: string; label: string; from: number; to: number }[] = [
@@ -1108,10 +1108,11 @@ function askPetMenu(petId: string): void {
 // 조사 — src/shared/josa.ts 와 같은 규칙이다. 렌더러 빌드(tsconfig.renderer.json)는 src/renderer 밖의 실행 코드를 못 불러 따로 둔다
 // 숫자로 끝나면 한국어로 읽은 소리 기준 (0·1·3·6·7·8 받침 있음, 1·7·8 은 ㄹ 받침)
 // 라틴 글자로 끝나면 이름을 읽은 소리 기준 (L·R 은 ㄹ 받침 — 엘·알, M·N 은 받침 있음 — 엠·엔)
+// 닫는 괄호로 끝나면 괄호 안의 끝 글자로 본다 — "루가루암(한밤중)으로"
 type JosaPair = "은/는" | "이/가" | "을/를" | "으로/로" | "과/와";
 function josa(word: string, pair: JosaPair): string {
   const [withBatchim, without] = pair.split("/") as [string, string];
-  const last = word.trim().slice(-1);
+  const last = word.trim().replace(/[)\]]+$/, "").slice(-1);
   let b: "none" | "rieul" | "other" = "none";
   if (/[0-9]/.test(last)) b = "178".includes(last) ? "rieul" : "036".includes(last) ? "other" : "none";
   else if (/[a-z]/i.test(last)) b = "lr".includes(last.toLowerCase()) ? "rieul" : "mn".includes(last.toLowerCase()) ? "other" : "none";
@@ -4892,6 +4893,10 @@ function drawNatureTarget(itemId: string): void {
 
 // ── 모달 · 업적창 ──────────────────────────────────────────────────────────────
 
+// 업적 한 줄 — Figma 05 `Achievements / Base` 의 `Achievement Row` (`State=Claimable|Open|Claimed`, 2026-10-03 업적 개선).
+//   미달성   이름 아래에 진행도 줄(막대 + `현재 / 기준`). 오른쪽에 보상
+//   미수령   보상 글자와 `보상 받기` 단추
+//   받음     `<보상> 받음`
 function achievementRow(a: AchievementView): HTMLElement {
   const row = el("div", `achievement ${a.state}`);
   row.dataset.id = a.id; // 알림 배너의 `바로가기` 가 이 줄로 옮겨 온다
@@ -4899,17 +4904,37 @@ function achievementRow(a: AchievementView): HTMLElement {
   const body = el("div", "body");
   body.appendChild(el("div", "label", a.name));
   if (a.desc) body.appendChild(el("div", "hint", a.desc));
+  if (a.progress) {
+    const line = el("div", "progress");
+    const track = el("span", "track");
+    const fill = el("span", "fill");
+    fill.style.width = `${Math.round((100 * a.progress.now) / a.progress.goal)}%`;
+    track.appendChild(fill);
+    line.append(track, el("span", "count", `${a.progress.now} / ${a.progress.goal}${a.progress.unit}`));
+    body.appendChild(line);
+  }
   row.appendChild(body);
+  row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
   if (a.state === "achieved") {
     const claim = button("act primary", "보상 받기");
-    claim.title = a.reward;
     claim.addEventListener("click", () => void send("achievement.claim", a.id));
     row.appendChild(claim);
-  } else {
-    row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
   }
   return row;
 }
+
+// 업적창의 분류 칩 — `전체` 와 분류 다섯 (2026-10-03 사용자 결정 "전체 + chip으로 볼수 있게"). 탐험·배틀은 그 기능이 생길 때 더한다
+const ACHIEVEMENT_TABS: { id: string; label: string }[] = [
+  { id: "all", label: "전체" },
+  { id: "dex", label: "도감" },
+  { id: "grow", label: "육성" },
+  { id: "egg", label: "알" },
+  { id: "find", label: "탐색" },
+  { id: "together", label: "함께" },
+];
+let achievementTab = "all";
+// 줄 순서 — 미수령 → 미달성 → 수령 완료. 같은 상태는 목록 순서 (docs/specs/ui-components.md C-12)
+const ACHIEVEMENT_ORDER: Record<AchievementView["state"], number> = { achieved: 0, locked: 1, claimed: 2 };
 
 function drawAchievements(): void {
   if (!view) {
@@ -4918,8 +4943,19 @@ function drawAchievements(): void {
   }
   const list = view.achievements.list;
   dialogEl.append(...dialogHead("업적", `달성 ${view.achievements.total} / ${list.length} · 미수령 ${view.achievements.unclaimed}`));
+  dialogEl.appendChild(
+    chips(ACHIEVEMENT_TABS, achievementTab, (id) => {
+      achievementTab = id;
+      dialogScrollKey = ""; // 분류를 바꾸면 목록을 맨 위부터 본다
+      drawDialog();
+    }),
+  );
   const scroll = el("div", "scroll");
-  for (const a of list) scroll.appendChild(achievementRow(a));
+  const rows = list
+    .map((a, i) => ({ a, i }))
+    .filter(({ a }) => achievementTab === "all" || a.group === achievementTab)
+    .sort((x, y) => ACHIEVEMENT_ORDER[x.a.state] - ACHIEVEMENT_ORDER[y.a.state] || x.i - y.i);
+  for (const { a } of rows) scroll.appendChild(achievementRow(a));
   dialogEl.appendChild(scroll);
   dialogEl.appendChild(actions(closeButton()));
 }
@@ -5456,7 +5492,7 @@ const SHAPE: Record<Dialog["kind"], string> = {
   evolve: "dialog",
   nature: "dialog",
   "nature-target": "dialog",
-  achievements: "dialog tall",
+  achievements: "dialog tall steady", // 칩을 바꿔도 창 높이가 그대로다 — 줄 수가 달라도 대화상자가 움직이지 않는다
   settings: "dialog settings",
   user: "dialog settings",
   guide: "dialog tall",
@@ -5629,6 +5665,7 @@ const REASON: Record<string, string> = {
   "not-pokemon": "그 칸에 개체가 없어요.",
   "not-enough-points": "포인트가 모자라요.",
   "daycare-full": "돌보미집이 가득 찼어요.",
+  "egg-none": "이 알에서 나올 포켓몬을 모두 모았어요.",
   "bag-full": "한 종류는 999개까지만 살 수 있어요.",
   "sold-out": "이 알에서 나올 포켓몬을 모두 모았어요.",
   "bad-form": "고를 수 없는 모습이에요.",
@@ -5997,6 +6034,7 @@ function goTo(route: ManageRoute): void {
     detailPet = null;
     draw();
   } else {
+    achievementTab = "all"; // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
     open({ kind: "achievements" });
     dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });
   }

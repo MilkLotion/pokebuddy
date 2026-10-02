@@ -185,7 +185,7 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = game.dex();
-    assert.equal(rows.length, 1082, "폼을 뺀 기본 종 1025 + 리전폼 57 — 리전폼은 다른 종이라 따로 보인다");
+    assert.equal(rows.length, 1095, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 13 — 리전폼과 특수 폼은 다른 종이라 따로 보인다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
     let prev = 0;
     let prevForm = 0;
@@ -197,6 +197,14 @@ try {
     }
     const meowths = rows.filter((r) => r.dex === 52).map((r) => [r.slug, r.form, r.region]);
     assert.deepStrictEqual(meowths, [["meowth", undefined, undefined], ["meowth-alola", 1, "alola"], ["meowth-galar", 2, "galar"]], "같은 번호는 기본형 → 폼 순번");
+    // 특수 폼 — 기본형 다음 칸, 도감 지방 칸은 항목의 지방
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 670).map((r) => [r.slug, r.form, r.region]), [["floette", undefined, undefined], ["floette-eternal", 1, "kalos"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 901).map((r) => [r.slug, r.form, r.region]), [["ursaluna", undefined, undefined], ["ursaluna-bloodmoon", 1, "paldea"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 745).map((r) => [r.slug, r.form, r.region]), [["lycanroc", undefined, undefined], ["lycanroc-midnight", 1, "alola"], ["lycanroc-dusk", 2, "alola"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 172).map((r) => [r.slug, r.form, r.region]), [["pichu", undefined, undefined], ["pichu-spiky-eared", 1, "johto"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 550).map((r) => [r.slug, r.form, r.region]), [["basculin", undefined, undefined], ["basculin-blue-striped", 1, "unova"], ["basculin-white-striped", 2, "hisui"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 483).map((r) => [r.slug, r.form, r.region]), [["dialga", undefined, undefined], ["dialga-origin", 1, "hisui"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 484).map((r) => [r.slug, r.form, r.region]), [["palkia", undefined, undefined], ["palkia-origin", 1, "hisui"]]);
     const pika = rows.find((r) => r.slug === "pikachu");
     assert.equal(pika?.name, "피카츄");
     assert.equal(pika?.state, "obtained", "가지고 있는 종");
@@ -234,7 +242,7 @@ try {
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
     const list = game.view()?.achievements.list ?? [];
-    assert.equal(list.length, 4, "업적 4개");
+    assert.equal(list.length, 36, "업적 36개");
     assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");
     assert.equal(two?.name, "두 마리 함께 꺼내기");

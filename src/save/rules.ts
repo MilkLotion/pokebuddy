@@ -64,6 +64,7 @@ export const isCommandSource = (v: unknown): v is CommandSource =>
 export const SAVE_V3_RULES = {
   version: 3 as const,
   unlockRev: 1, // 해금 정리 판 — src/dex/unlocks.ts pruneUnlocks. 판을 올리면 옛 저장에서 한 번 정리가 돈다
+  achievementRev: 1, // 업적 목록의 판 — 목록을 크게 늘릴 때 올린다. 옛 저장은 다음 판정에서 달성한 업적을 배너 없이 기록한다 (src/achievement/core.ts evaluate)
   party: {
     total: 6, // 파티 칸은 항상 여섯이다. 열림·빈 칸·잠김으로 상태를 나눈다
     openAtStart: 2, // 첫 선택을 마치면 두 칸으로 시작한다

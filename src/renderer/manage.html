@@ -2565,6 +2565,46 @@
         font-family: var(--font-small);
         color: var(--muted);
       }
+      /* 미수령 — 보상 글자를 본문 색으로 (Figma `Achievement Row` `State=Claimable`) */
+      .achievement.achieved .done {
+        color: var(--text);
+      }
+      /* 진행도 줄 — 막대 120×4 와 `현재 / 기준` (Figma `Achievement Row` `State=Open` 의 progress) */
+      .achievement .progress {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 2px;
+      }
+      .achievement .track {
+        flex: none;
+        width: 120px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--subtle);
+        overflow: hidden;
+      }
+      .achievement .fill {
+        display: block;
+        height: 100%;
+        background: var(--primary);
+      }
+      .achievement .count {
+        color: var(--muted);
+        font-size: 10px;
+        font-family: var(--font-small);
+      }
+      /* 높이를 고정한 긴 대화상자 — 업적창. 분류 칩에 따라 줄 수가 달라도 창이 움직이지 않는다 */
+      .dialog.tall.steady {
+        height: 78vh;
+      }
+      .dialog.tall.steady .scroll {
+        flex: 1;
+      }
+      /* 업적창의 분류 칩 — 목록 위. 칩과 목록 사이는 8 */
+      .dialog.tall > .chips {
+        margin-bottom: 8px;
+      }
 
       /* 가방 — Figma 05 Bag / Base 381:6555. 칸은 4열 · 60 높이, 고른 칸은 옅은 바탕만(색 테두리 강조 없음) */
       .bag-grid {

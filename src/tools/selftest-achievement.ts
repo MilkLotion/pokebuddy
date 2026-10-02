@@ -4,10 +4,14 @@
 // 계약은 docs/specs/game.md "파티 칸과 업적", "튜토리얼" 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { claim, defs, evaluate, isAchieved, rewardPokemon, rewardSpecies } from "../achievement/core";
-import { SAVE_V3_RULES } from "../save/rules";
+import { GROUPS, claim, defs, evaluate, isAchieved, progressOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon, rewardSpecies } from "../achievement/core";
+import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules";
+import { regionalOf } from "../dex/regional";
+import { profile, slugs } from "../dex/species";
+import { eggPool } from "../shop/catalog";
+import { pendingOf } from "../notify/queue";
 import { snapshot } from "../tx/snapshot";
-import { empty } from "../save/v3";
+import { empty, normalize } from "../save/v3";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { begin } from "../party/starter";
 import { applyPreset, slotsOfPreset } from "../party/presets";
@@ -39,18 +43,29 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 네 개가 이름과 보상을 가진다. 파티 칸 둘, 포켓몬 둘 (2026-09-29 사용자 결정 — 메타몽·라프라스)
+// (1) 업적 36개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = defs();
-  assert.equal(list.length, 4);
-  assert.deepStrictEqual(list.map(([id]) => id).sort(), ["party-three", "show-two", "starter-final", "work-100h"]);
+  assert.equal(list.length, 36);
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
+    assert.ok(GROUPS.includes(def.group), `분류 ${id}`);
+    assert.ok(typeof def.cond?.kind === "string", `조건 ${id}`);
+    const kinds = [def.reward === "party-slot", rewardPokemon(def) != null, rewardPoints(def) != null, rewardEgg(def) != null, rewardItem(def) != null];
+    assert.equal(kinds.filter(Boolean).length, 1, `보상은 한 종류 ${id}`);
   }
-  const reward = Object.fromEntries(list.map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
+  const byGroup = Object.fromEntries(GROUPS.map((g) => [g, list.filter(([, d]) => d.group === g).length]));
+  assert.deepStrictEqual(byGroup, { dex: 17, grow: 5, egg: 4, find: 3, together: 7 });
+  const old = ["show-two", "starter-final", "work-100h", "party-three"];
+  const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
-  assert.deepStrictEqual(rewardSpecies().sort(), ["ditto", "lapras"]);
+  // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
+  assert.deepStrictEqual(rewardSpecies().sort(), ["ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "togepi"]);
+  for (const [id, def] of list) {
+    const egg = rewardEgg(def);
+    if (egg) assert.ok((eggPool(egg) ?? []).length > 0, `알 종류 ${id}`);
+  }
   process.stdout.write("(1) 업적 목록과 보상  ok\n");
 }
 
@@ -408,4 +423,176 @@ function seed(): SaveV3 {
   process.stdout.write("(13) 돌봄 누적 횟수  ok\n");
 }
 
-process.stdout.write("selftest-achievement: 통과 (업적 조건·수령·튜토리얼·대기열·돌봄 누적)\n");
+// (14) 셀 수 있는 조건과 진행도 — 도감 수, 지방 완성(리전폼은 세지 않는다), 한 번에 채우는 조건은 진행도가 없다
+{
+  const s = seed();
+  s.dex.obtained = Array.from({ length: 50 }, (_, i) => `x${i}`);
+  assert.equal(isAchieved(s, "dex-50"), true);
+  assert.equal(isAchieved(s, "dex-150"), false);
+  assert.deepStrictEqual(progressOf(s, "dex-150"), { now: 50, goal: 150, unit: "" });
+  assert.deepStrictEqual(progressOf(s, "dex-50"), { now: 50, goal: 50, unit: "" }, "현재 값은 기준을 넘지 않는다");
+
+  const k = seed();
+  k.dex.obtained = ["bulbasaur", "rattata-alola", "mew"];
+  assert.deepStrictEqual(progressOf(k, "dex-kanto"), { now: 1, goal: 150, unit: "" }, "리전폼과 뮤는 세지 않는다");
+  const byDex = new Map<number, string>();
+  for (const slug of slugs()) {
+    if (regionalOf(slug)) continue;
+    const d = profile(slug).dex;
+    if (d >= 1 && d <= 150 && !byDex.has(d)) byDex.set(d, slug);
+  }
+  assert.equal(byDex.size, 150);
+  k.dex.obtained = [...byDex.values()].slice(1);
+  assert.equal(isAchieved(k, "dex-kanto"), false, "한 종이 모자라다");
+  k.dex.obtained = [...byDex.values()];
+  assert.equal(isAchieved(k, "dex-kanto"), true);
+
+  const g = seed();
+  assert.equal(progressOf(g, "level-100"), null, "레벨업은 진행도가 없다");
+  assert.equal(progressOf(g, "show-two"), null, "옛 업적은 진행도를 보이지 않는다");
+  assert.equal(progressOf(g, "shiny-1"), null, "기준이 1 이면 진행도가 없다");
+  assert.equal(isAchieved(g, "affinity-100"), false);
+  g.pets[0]!.affinity = 100;
+  assert.equal(isAchieved(g, "affinity-100"), true);
+  g.totals.workMs = 64 * 3600_000 + 5;
+  assert.deepStrictEqual(progressOf(g, "work-500h"), { now: 64, goal: 500, unit: "시간" });
+  g.find = { seq: 212, log: [] };
+  assert.deepStrictEqual(progressOf(g, "find-500"), { now: 212, goal: 500, unit: "" });
+  assert.equal(isAchieved(g, "find-50"), true);
+  g.dex.megaOpened = ["charizard"];
+  assert.equal(isAchieved(g, "mega-1"), true);
+  g.dex.obtained = ["mewtwo"];
+  assert.equal(isAchieved(g, "single-1"), true, "단일 포켓몬 알의 종");
+  // 화면 모델 — 분류와 진행도. 달성한 뒤에는 진행도를 보이지 않는다
+  const view = snapshot(g).achievements.list;
+  assert.equal(view.find((a) => a.id === "find-500")?.group, "find");
+  assert.deepStrictEqual(view.find((a) => a.id === "find-500")?.progress, { now: 212, goal: 500, unit: "" });
+  evaluate(g, T0);
+  assert.equal(snapshot(g).achievements.list.find((a) => a.id === "find-50")?.progress, undefined);
+  assert.deepStrictEqual(
+    ["dex-50", "dex-300", "shiny-10", "dex-kanto", "show-two"].map((id) => view.find((a) => a.id === id)?.reward),
+    ["200P", "랜덤준전설알", "모습이 바뀌는 약", "뮤", "파티 칸 +1"],
+  );
+  assert.equal(view.find((a) => a.id === "find-3000")?.reward, "1,500P");
+  process.stdout.write("(14) 조건·진행도·화면 모델  ok\n");
+}
+
+// (15) 보상 종류 — 포인트·알·도구. 알은 돌보미집이 가득 차거나 남은 종이 없으면 받지 못하고 미수령으로 남는다
+{
+  const got = (s: SaveV3, id: string): void => {
+    s.achievements[id] = { achievedAt: T0, claimedAt: null };
+  };
+  const s = seed();
+  s.points.balance = 10;
+  got(s, "dex-50");
+  assert.deepStrictEqual(claim(s, "dex-50", T0 + 1), { ok: true, id: "dex-50", points: 200 });
+  assert.equal(s.points.balance, 210);
+  assert.equal(claim(s, "dex-50", T0 + 2).reason, "already-claimed");
+
+  got(s, "dex-300");
+  const egg = claim(s, "dex-300", T0 + 1);
+  assert.equal(egg.ok, true);
+  assert.equal(s.eggs.length, 1);
+  assert.equal(s.eggs[0]?.kind, "sub-legendary");
+  assert.equal(s.eggs[0]?.id, egg.eggId);
+  assert.ok((s.eggs[0]?.candidates.length ?? 0) > 0);
+
+  got(s, "hatch-200");
+  while (s.eggs.length < EGG_V3_RULES.maxEggs) s.eggs.push({ ...s.eggs[0]!, id: `e${s.eggs.length + 10}`, kind: "random" });
+  assert.equal(claim(s, "hatch-200", T0 + 1).reason, "daycare-full");
+  assert.equal(s.achievements["hatch-200"]?.claimedAt, null, "미수령으로 남는다");
+  s.eggs.length = 0;
+  s.dex.obtained = [...(eggPool("sub-legendary") ?? [])];
+  assert.equal(claim(s, "hatch-200", T0 + 1).reason, "egg-none");
+  s.dex.obtained = [];
+  assert.equal(claim(s, "hatch-200", T0 + 1).ok, true);
+
+  got(s, "shiny-10");
+  assert.deepStrictEqual(claim(s, "shiny-10", T0 + 1).item, { id: "shiny-potion", count: 1 });
+  assert.equal(s.bag["shiny-potion"], 1);
+
+  // 단일 포켓몬 보상 — 이미 얻은 종이면 개체를 주지 않고 수령만 기록한다
+  got(s, "dex-johto");
+  s.dex.obtained = ["pichu-spiky-eared"];
+  const before = s.pets.length;
+  assert.deepStrictEqual(claim(s, "dex-johto", T0 + 1), { ok: true, id: "dex-johto", skipped: true });
+  assert.equal(s.pets.length, before);
+  assert.equal(s.achievements["dex-johto"]?.claimedAt, T0 + 1);
+  const t = seed();
+  got(t, "dex-johto");
+  const pichu = claim(t, "dex-johto", T0 + 1, undefined, () => 0.5);
+  assert.equal(t.pets.find((p) => p.id === pichu.petId)?.species, "pichu-spiky-eared");
+  // 수령 거래의 결과
+  const u = seed();
+  got(u, "find-50");
+  const res = HANDLERS["achievement.claim"]!(u, { id: "find-50" }, { now: T0, rand: () => 0.5 });
+  assert.equal(res.ok && (res.result as { points?: number }).points, 100);
+  process.stdout.write("(15) 포인트·알·도구 보상 · 단일 포켓몬 보상  ok\n");
+}
+
+// (16) 옛 저장의 첫 판정은 조용하다 — 이미 채운 조건이 한꺼번에 달성돼도 배너 줄에 서지 않는다. 다음 달성부터는 알린다
+{
+  const s = seed();
+  s.achRev = 0;
+  s.dex.obtained = Array.from({ length: 50 }, (_, i) => `x${i}`);
+  assert.deepStrictEqual(evaluate(s, T0), [], "첫 판정은 알리지 않는다");
+  assert.equal(s.achievements["dex-50"]?.quiet, true);
+  assert.equal(s.achRev, SAVE_V3_RULES.achievementRev);
+  assert.equal(pendingOf(s, T0).some((p) => p.kind === "achievement"), false, "배너 줄에 서지 않는다");
+  assert.equal(snapshot(s).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
+  s.dex.obtained = Array.from({ length: 150 }, (_, i) => `x${i}`);
+  assert.deepStrictEqual(evaluate(s, T0 + 1000), ["dex-150"]);
+  assert.equal(s.achievements["dex-150"]?.quiet, undefined);
+  assert.deepStrictEqual(pendingOf(s, T0 + 1000).filter((p) => p.kind === "achievement").map((p) => p.target), ["dex-150"]);
+  // 새 저장은 처음부터 알린다
+  const n = seed();
+  n.party.slots[0]!.hidden = false;
+  n.party.slots[1]!.hidden = false;
+  assert.deepStrictEqual(evaluate(n, T0), ["show-two"]);
+  // 정규화 — quiet 와 판을 지킨다. 누적 값이 없는 옛 저장은 흔적에서 시작한다
+  const raw = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+  const back = normalize(raw, T0 + 2000);
+  assert.equal(back?.achievements["dex-50"]?.quiet, true);
+  assert.equal(back?.achRev, SAVE_V3_RULES.achievementRev);
+  delete raw.counts;
+  delete raw.achRev;
+  raw.eggSeq = 7;
+  (raw.pets as { stage: number }[])[0]!.stage = 2;
+  const legacy = normalize(raw, T0 + 2000);
+  assert.deepStrictEqual(legacy?.counts, { hatched: 7, evolved: 2, traded: 0, day: "", streak: 0 });
+  assert.equal(legacy?.achRev, 0);
+  process.stdout.write("(16) 옛 저장의 조용한 첫 판정 · 정규화  ok\n");
+}
+
+// (17) 이어진 날 — 같은 날은 한 번, 다음 날은 이어지고, 하루를 거르면 1 로 돌아간다. 부화는 알에서 포켓몬이 나올 때 센다
+{
+  const DAY = 24 * 3600_000;
+  const s = seed();
+  evaluate(s, T0);
+  assert.equal(s.counts?.streak, 1);
+  evaluate(s, T0 + 3600_000);
+  assert.equal(s.counts?.streak, 1, "같은 날");
+  evaluate(s, T0 + DAY);
+  assert.equal(s.counts?.streak, 2);
+  evaluate(s, T0 + 3 * DAY);
+  assert.equal(s.counts?.streak, 1, "하루를 걸렀다");
+  for (let d = 4; d <= 9; d += 1) evaluate(s, T0 + d * DAY);
+  assert.equal(s.counts?.streak, 7);
+  assert.ok(s.achievements["streak-7"]?.achievedAt != null);
+  evaluate(s, T0 + 20 * DAY);
+  assert.equal(s.counts?.streak, 1);
+  assert.ok(s.achievements["streak-7"]?.achievedAt != null, "끊겨도 달성은 남는다");
+
+  const e = empty(T0);
+  assert.ok(begin(e, "charmander", T0, () => 0.5).ok);
+  e.points.balance = 1000;
+  assert.ok(buy(e, "random", T0, () => 0.5).ok);
+  const eggId = e.eggs[0]!.id;
+  e.eggs[0]!.ready = true;
+  e.eggs[0]!.remainMs = 0;
+  assert.ok(open(e, eggId, T0, () => 0.99).ok);
+  assert.equal(e.counts?.hatched, 1);
+  process.stdout.write("(17) 이어진 날 · 부화 횟수  ok\n");
+}
+
+process.stdout.write("selftest-achievement: 통과 (업적 목록·조건·진행도·보상 종류·수령·조용한 첫 판정·이어진 날·튜토리얼·대기열·돌봄 누적)\n");

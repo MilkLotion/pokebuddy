@@ -35,11 +35,14 @@
 // | rank          | 수집 난이도 1~5. 종족값 구간으로 1~4, 전설·환상은 5, 더 진화하는 종은 한 등급 낮춘다 |
 // | genderRate    | 원작 성비 그대로. 암컷 비율을 8 분의 몇으로 적는다(0 수컷만 · 8 암컷만). -1 은 무성 |
 // 리전폼(data/regional.json)은 타입·종족값·체중이 폼 값이다. 성장 속도·성비·전설 여부·단계는 종 값이다.
+// 단일 포켓몬인 특수 폼(regional.json 의 special 가운데 단일 포켓몬 알의 종과 우편 전용 종)은 수집 난이도를 전설·환상과 같게 5 로 둔다
+//   — 랜덤준전설알의 다른 종과 같은 가중치로 나온다 (2026-10-03). 진화로 얻는 특수 폼(루가루암(한밤중))은 다른 종과 같은 규칙이다
 // 백분위는 리전폼을 뺀 종들로 정한다 — 리전폼을 넣어도 기존 종의 값이 바뀌지 않게. 리전폼은 그 분포 안의 자리로 잰다
 import path from "node:path";
 import type { GrowthRate, Like } from "../shared/types";
 import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
-import { isRegional } from "../dex/regional";
+import { isRegional, regionalOf } from "../dex/regional";
+import { singleSpecies } from "../shop/catalog";
 
 const OUT = path.join(DATA_DIR, "species.defaults.json");
 
@@ -237,6 +240,7 @@ export async function build(): Promise<void> {
   };
 
   // 1차: 원자료 모으기
+  const singles = singleSpecies({ dataDir: DATA_DIR });
   const raw = new Map<string, RawProfile | null>();
   const missing: string[] = [];
   for (const slug of Object.keys(dex).sort()) {
@@ -255,7 +259,7 @@ export async function build(): Promise<void> {
       weightKg: Number(pokemon.weight) / 10,
       baseSpeed: speedOf.get(pokemon.id) ?? 0,
       types: types.filter((t): t is string => Boolean(t)),
-      rare: sp ? sp.is_legendary === "1" || sp.is_mythical === "1" : false,
+      rare: (sp ? sp.is_legendary === "1" || sp.is_mythical === "1" : false) || (regionalOf(key)?.special === true && singles.has(key)),
       growthRate: growthOf(sp),
       bst: bstOf.get(pokemon.id) ?? 0,
       stage: sp ? stageOf(sp.id) : 1,

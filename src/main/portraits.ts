@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { profile, slugs } from "../dex/species.js";
-import { regionalOf } from "../dex/regional.js";
+import { genderLookInfo, regionalOf } from "../dex/regional.js";
 import { megaOf } from "../dex/mega.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
@@ -62,16 +62,23 @@ export interface PortraitAsk {
 export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shiny` : a.slug);
 
 // 초상 그림 번호 — 리전폼·메가 모습이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0.
+// 포켓몬 번호가 따로 없는 폼(피츄(삐쭉귀))은 표의 portrait 파일 이름(`172-spiky-eared`)이 먼저다.
 // 메가 모습의 초상이 없으면(지가르데) 기본 종의 초상이다
-export function portraitIds(slug: string): number[] {
+export type PortraitId = number | string;
+export function portraitIds(slug: string): PortraitId[] {
+  // 성별 그림(대쓰여너 암컷) — 그 성별의 포켓몬 번호가 먼저, 없으면 종의 초상
+  const byGender = genderLookInfo(slug);
+  if (byGender) return [...new Set<PortraitId>([byGender.pokemonId, ...portraitIds(byGender.species)])];
   const mega = megaOf(slug);
   const dex = profile(mega?.base ?? slug).dex;
-  const form = mega?.pokemonId ?? regionalOf(slug)?.pokemonId;
-  return [form, dex].filter((n): n is number => typeof n === "number" && n > 0);
+  const regional = mega ? null : regionalOf(slug);
+  const form = mega?.pokemonId ?? regional?.pokemonId;
+  const named = regional?.portrait && /^[a-z0-9-]+$/.test(regional.portrait) ? [regional.portrait] : [];
+  return [...new Set<PortraitId>([...named, ...[form, dex].filter((n): n is number => typeof n === "number" && n > 0)])];
 }
 
 // 받을 주소 — 도감 번호 그대로(앞의 0 없음)
-export const portraitUrl = (dex: number, shiny: boolean): string => (shiny ? `${BASE}/shiny/${dex}.png` : `${BASE}/${dex}.png`);
+export const portraitUrl = (dex: PortraitId, shiny: boolean): string => (shiny ? `${BASE}/shiny/${dex}.png` : `${BASE}/${dex}.png`);
 
 // PokeAPI 에 없는 도구 그림 — msikma/pokesprite (코드 MIT, 그림 © Nintendo·Creatures·GAME FREAK). 32×32 로 PokeAPI 30×30 과 모양이 같다.
 // 2026-09-26 폰트 세션이 조사해 넘겼다(사용자 결정).
@@ -218,7 +225,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     }
   }
 
-  const one = (dex: number, shiny: boolean): Promise<string | null> => {
+  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => {
     const d = String(dex).padStart(4, "0");
     return fileUri(shiny ? `${d}-shiny.png` : `${d}.png`, portraitUrl(dex, shiny));
   };
@@ -256,10 +263,11 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     },
     async prefetch(onProgress, first = []) {
       const jobs: { rel: string; url: string }[] = [];
-      const firstDex = first.map((slug) => portraitIds(slug)[0] ?? 0).filter((d) => d > 0);
+      const firstDex = first.map((slug) => portraitIds(slug)[0] ?? 0).filter((d) => d !== 0);
       for (const dex of firstDex) jobs.push({ rel: `${String(dex).padStart(4, "0")}.png`, url: portraitUrl(dex, false) });
       // 도감 번호 그림과 리전폼 그림(포켓몬 번호) 전부
-      const dexes = [...new Set(slugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => a - b);
+      const order = (d: PortraitId): number => (typeof d === "number" ? d : Number.parseInt(d, 10) || 0); // 파일 이름 초상은 앞의 번호로 줄 세운다
+      const dexes = [...new Set(slugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => order(a) - order(b));
       for (const dex of dexes) {
         const d = String(dex).padStart(4, "0");
         jobs.push({ rel: `${d}.png`, url: portraitUrl(dex, false) }, { rel: `${d}-shiny.png`, url: portraitUrl(dex, true) });

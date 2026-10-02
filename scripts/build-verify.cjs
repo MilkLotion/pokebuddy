@@ -53,7 +53,14 @@ function build() {
   }
   const achievements = {};
   for (const [id, a] of Object.entries(load('achievements.json'))) {
-    if (!id.startsWith('_')) achievements[id] = a.reward && typeof a.reward === 'object' && a.reward.pokemon ? 'pokemon' : 'party-slot';
+    if (id.startsWith('_')) continue;
+    // 보상 — pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/achievement/core.ts)
+    const r = a.reward && typeof a.reward === 'object' ? a.reward : {};
+    achievements[id] = r.pokemon ? 'pokemon'
+      : typeof r.points === 'number' ? `points:${r.points}`
+      : r.egg ? `egg:${r.egg}`
+      : r.item ? `item:${r.item}:${r.count > 0 ? r.count : 1}`
+      : 'party-slot';
   }
   // 진화 간선 — 앱과 같은 nextOf 로 뽑는다. 모습 슬러그(burmy-sandy 등)는 기본 종의 간선을 받는다
   const evo = {};
@@ -93,6 +100,8 @@ function build() {
     ranks,
     rankWeight: RANK_WEIGHT,
     shinyOneIn: SHINY_ONE_IN,
+    // 알에서 대신 나오는 모습 — 앱의 rollVariant 와 같은 표 (data/regional.json 의 hatch)
+    hatchVariants: Object.fromEntries(Object.entries(load('regional.json').hatch ?? {}).filter(([k]) => !k.startsWith('_'))),
     // 랜덤알 후보가 될 수 있는 종 — 새 알 후보가 이 범위 밖이면 고친 알이다(검수 P4b H3). 해금 여부는 저장 쪽 값이라 보지 않는다
     randomPool: [...species].filter((slug) => inRandomEgg(slug)).sort(),
     rules: {

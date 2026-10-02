@@ -4,7 +4,8 @@
 // 계약은 docs/specs/game.md "알".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { decide, pickWeighted, RANK_WEIGHT } from "../egg/hatch";
+import { decide, pickWeighted, RANK_WEIGHT, rollVariant } from "../egg/hatch";
+import { eggOfSpecies } from "../shop/catalog";
 import { open } from "../egg/open";
 import { buy } from "../shop/buy";
 import { canGiveEgg, eggPool, fixedEggs, inRandomEgg } from "../shop/catalog";
@@ -139,11 +140,11 @@ const fixed = (...values: number[]): (() => number) => {
 // (14) 랜덤알에서 다른 알이 나온다 — 준전설 1 · 울트라비스트 0.5 · 패러독스 0.5 · 환상 0.3 · 전설 0.2 · 태고의돌 3 (%), 합 5.5 (2026-10-02 사용자 결정)
 {
   const cases: [number, string, number][] = [
-    [0.005, "sub-legendary", 45], // 가라르 프리져·썬더·파이어 포함 (data/regional.json, 2026-09-30)
+    [0.005, "sub-legendary", 47], // 가라르 프리져·썬더·파이어(2026-09-30)와 특수 폼 2종(플라엣테(영원의 꽃)·다투곰(붉은 달), 2026-10-03) 포함 (data/regional.json)
     [0.012, "ultra-beast", 10],
     [0.017, "paradox", 20],
-    [0.021, "mythical", 21], // 아르세우스는 전설알로 옮겼다 (2026-10-03 사용자 결정 "그냥 전설알에 넣자", worklog/records/team-limit/record.md)
-    [0.024, "legendary", 25],
+    [0.021, "mythical", 20], // 아르세우스는 전설알로 옮겼다(2026-10-03 사용자 결정 "그냥 전설알에 넣자"). 뮤는 업적 보상으로만 얻는다(같은 날 "뮤는 1세대 도감완성으로", worklog/records/achievements/record.md)
+    [0.024, "legendary", 27], // 디아루가(오리진폼)·펄기아(오리진폼) 포함 (data/regional.json, 2026-10-03)
     [0.026, "ancient-stone", 15], // 화석 15종 — 단일 포켓몬 알이 아니라 늘 줄 수 있다
     [0.054, "ancient-stone", 15],
   ];
@@ -170,6 +171,34 @@ const fixed = (...values: number[]): (() => number) => {
   const s = seed({ kind: "ancient-stone", remainMs: 0, ready: true, candidates: ["omanyte"], actions: { pat: 1, song: 0 } });
   assert.equal(open(s, "e1", T0, fixed(0, 0.5)).species, "omanyte");
   process.stdout.write("(14) 랜덤알 · 단일 포켓몬 알 확률  ok\n");
+}
+
+// (14b) 배쓰나이 — 알에서 나올 때 적색근 45% · 청색근 45% · 백색근 10% (2026-10-03 사용자 결정)
+// 무작위 순서는 다른 알(랜덤알만) → 종 → 이로치 → 모습이다. 모습이 하나뿐인 종은 모습 값을 쓰지 않는다
+{
+  assert.equal(rollVariant("basculin", () => 0), "basculin");
+  assert.equal(rollVariant("basculin", () => 0.449), "basculin");
+  assert.equal(rollVariant("basculin", () => 0.45), "basculin-blue-striped");
+  assert.equal(rollVariant("basculin", () => 0.899), "basculin-blue-striped");
+  assert.equal(rollVariant("basculin", () => 0.9), "basculin-white-striped");
+  assert.equal(rollVariant("basculin", () => 0.999), "basculin-white-striped");
+  let used = 0;
+  assert.equal(rollVariant("pikachu", () => { used += 1; return 0; }), "pikachu");
+  assert.equal(used, 0, "모습이 하나뿐인 종은 무작위를 쓰지 않는다");
+  const counts: Record<string, number> = {};
+  for (let i = 0; i < 1000; i++) {
+    const got = rollVariant("basculin", () => (i + 0.5) / 1000);
+    counts[got] = (counts[got] ?? 0) + 1;
+  }
+  assert.deepStrictEqual(counts, { basculin: 450, "basculin-blue-striped": 450, "basculin-white-striped": 100 });
+  const s = seed({ kind: "random", candidates: ["basculin"], ready: true });
+  const res = open(s, s.eggs[0]!.id, T0, fixed(NO_BONUS, 0, 0.5, 0.95, 0.5, 0.5));
+  assert.deepStrictEqual([res.ok, res.species, res.shiny], [true, "basculin-white-striped", false]);
+  assert.ok(s.dex.obtained.includes("basculin-white-striped") && !s.dex.obtained.includes("basculin"), "도감에는 나온 모습이 남는다");
+  // 판매가는 배쓰나이와 같은 알로 정한다
+  assert.deepStrictEqual([eggOfSpecies("basculin"), eggOfSpecies("basculin-white-striped"), eggOfSpecies("basculin-blue-striped")], ["random", "random", "random"]);
+  assert.ok(!inRandomEgg("basculin-white-striped"), "모습은 랜덤알 후보가 아니다 — 배쓰나이가 나온 뒤 정해진다");
+  process.stdout.write("(14b) 배쓰나이 모습 45 · 45 · 10  ok\n");
 }
 
 // (15) 단일 포켓몬 알 열기 — 이미 얻은 종은 뺀다

@@ -297,13 +297,13 @@ const idOf = (args: unknown): string | null => {
   return typeof id === "string" && id ? id : null;
 };
 
-// 업적 보상 수령 — 업적당 한 번. 파티 칸 하나를 열거나 포켓몬 한 마리를 준다
+// 업적 보상 수령 — 업적당 한 번. 파티 칸·포켓몬·포인트·알·도구 가운데 그 업적의 보상을 준다 (src/achievement/core.ts claim)
 const claimHandler: TxHandler = (draft, args, ctx) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };
   const res = claim(draft, id, ctx.now, undefined, ctx.rand);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox } };
+  return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox, points: res.points, eggId: res.eggId, item: res.item, skipped: res.skipped } };
 };
 
 const tutorialHandler = (kind: "skip" | "done"): TxHandler => (draft, args) => {

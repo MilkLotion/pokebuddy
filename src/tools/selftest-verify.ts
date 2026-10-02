@@ -250,6 +250,23 @@ out("0 supabase/functions/_shared 가 최신");
   real.achievements["party-three"] = { achievedAt: T0, claimedAt: T0 };
   real.pets.push(pet("p2", "ditto"));
   assert.deepEqual(rules(prev, real, ctx(60_000)), [], "업적 보상 메타몽");
+  // 업적 보상 — 포인트·알·도구 (2026-10-03 업적 개선). 받은 업적이 있으면 그 몫은 출처가 있다. 같은 변화가 업적 없이 생기면 걸린다
+  const paid = clone(prev);
+  paid.points.balance += 1000;
+  assert.ok(rules(prev, paid, ctx(60_000)).includes("points"), "출처 없는 1000P");
+  paid.achievements["dex-hoenn"] = { achievedAt: T0, claimedAt: T0 };
+  assert.deepEqual(rules(prev, paid, ctx(60_000)), [], "업적 보상 1000P");
+  const gift = clone(prev);
+  gift.bag["shiny-potion"] = (gift.bag["shiny-potion"] ?? 0) + 1;
+  assert.ok(rules(prev, gift, ctx(60_000)).length > 0, "출처 없는 모습이 바뀌는 약");
+  gift.achievements["shiny-10"] = { achievedAt: T0, claimedAt: T0 };
+  assert.deepEqual(rules(prev, gift, ctx(60_000)), [], "업적 보상 도구");
+  const egged = clone(prev);
+  egged.eggs.push({ ...egg(`e${(egged.eggSeq ?? 0) + 1}`), kind: "sub-legendary", candidates: ["articuno"] });
+  egged.eggSeq = (egged.eggSeq ?? 0) + 1;
+  assert.ok(rules(prev, egged, ctx(60_000)).includes("spend"), "출처 없는 준전설알");
+  egged.achievements["dex-300"] = { achievedAt: T0, claimedAt: T0 };
+  assert.deepEqual(rules(prev, egged, ctx(60_000)), [], "업적 보상 알");
   out("8 알·업적");
 }
 
@@ -296,7 +313,9 @@ out("0 supabase/functions/_shared 가 최신");
     ["random", ["bulbasaur", "charmander", "squirtle", "dratini", "larvitar", "eevee", "pikachu"]],
     ["ancient-stone", ["omanyte", "kabuto", "aerodactyl"]],
     ["legendary", ["mewtwo", "lugia", "ho-oh"]],
+    ["random", ["basculin"]], // 모습 추첨(적색근·청색근·백색근)도 앱과 서버가 같다
   ];
+  const basculins = new Set<string>();
   let checked = 0;
   let bonus = 0;
   for (let n = 0; n < 400; n++) {
@@ -314,10 +333,12 @@ out("0 supabase/functions/_shared 가 최신");
       assert.deepEqual(expected, { egg: got.egg.kind }, `보너스 알 ${n}`);
     } else {
       assert.deepEqual(expected, { species: got.species, shiny: got.shiny }, `종·이로치 ${n}`);
+      if (got.species?.startsWith("basculin")) basculins.add(got.species);
     }
     checked += 1;
   }
   assert.ok(bonus > 0, "보너스 알도 대조했다");
+  assert.ok(basculins.size >= 2, "배쓰나이의 모습이 둘 이상 나왔다");
   // 같은 알은 몇 번 열어도 같다
   const a = seededRand("s", "egg:e9");
   const b = seededRand("s", "egg:e9");

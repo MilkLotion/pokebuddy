@@ -5,7 +5,7 @@
 // 여기서 시계를 부르지 않는다. 지금 시각이 필요하면 받는다.
 import { localDate } from "../shared/clock.js";
 import type {
-  AchievementV3, BoxV3, BuffKind, BuffV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, MegaV3, PartySlotV3, PartyV3, PetV3,
+  AchievementV3, BoxV3, BuffKind, BuffV3, CountsV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, MegaV3, PartySlotV3, PartyV3, PetV3,
   PointsV3, SaveV3, ScreenRefV3, SettingsV3, SlotState, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, NatureId, PetDaily, Totals } from "../shared/types";
@@ -76,6 +76,8 @@ export function empty(now: number): SaveV3 {
     tx: [],
     legacy: {},
     log: [],
+    counts: { hatched: 0, evolved: 0, traded: 0, day: "", streak: 0 },
+    achRev: SAVE_V3_RULES.achievementRev,
   };
 }
 
@@ -363,7 +365,7 @@ function normalizeAchievements(raw: unknown): Record<string, AchievementV3> {
     const achievedAt = typeof v.achievedAt === "number" ? v.achievedAt : null;
     const claimedAt = typeof v.claimedAt === "number" ? v.claimedAt : null;
     // 받은 적이 있으면 달성한 적도 있다 — 어긋난 기록은 달성으로 맞춘다
-    out[k] = { achievedAt: achievedAt ?? claimedAt, claimedAt };
+    out[k] = { achievedAt: achievedAt ?? claimedAt, claimedAt, ...(v.quiet === true ? { quiet: true as const } : {}) };
   }
   return out;
 }
@@ -483,7 +485,26 @@ export function normalize(raw: unknown, now: number): SaveV3 | null {
     trade: normalizeTrade(raw.trade, seen),
     mail: normalizeMail(raw.mail),
     find: normalizeFind(raw.find),
+    counts: normalizeCounts(raw.counts, pets, eggs, nonNeg(raw.eggSeq)),
+    achRev: nonNeg(raw.achRev),
   };
+}
+
+// 업적이 세는 누적 값 — 없으면 옛 저장이다. 저장에 남은 흔적에서 시작 값을 정한다 (src/achievement/core.ts)
+//   부화   만든 알 수(eggSeq) − 기다리는 알 수. 알에서 다른 알이 나온 경우도 한 번으로 센다
+//   진화   가진 개체의 stage 합. 교환으로 받은 개체의 진화도 든다
+//   교환   0
+function normalizeCounts(raw: unknown, pets: readonly PetV3[], eggs: EggV3[], eggSeq: number): CountsV3 {
+  if (!isObj(raw)) {
+    return {
+      hatched: Math.max(0, Math.max(eggSeq, maxEggNo(eggs)) - eggs.length),
+      evolved: pets.reduce((n, p) => n + p.stage, 0),
+      traded: 0,
+      day: "",
+      streak: 0,
+    };
+  }
+  return { hatched: nonNeg(raw.hatched), evolved: nonNeg(raw.evolved), traded: nonNeg(raw.traded), day: str(raw.day), streak: nonNeg(raw.streak) };
 }
 
 const FIND_KINDS: readonly FindKind[] = ["points", "item", "evo", "pokemon"];

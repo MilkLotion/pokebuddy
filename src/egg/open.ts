@@ -3,6 +3,7 @@
 // 하는 일은 넷이다. 결과 판정, 개체 생성, 배치, 도감 기록.
 // 랜덤알은 낮은 확률로 포켓몬 대신 다른 알(단일 포켓몬 알·태고의돌)을 준다(data/eggs.json 의 bonus). 그 알은 연 알의 자리에 들어간다.
 // 단일 포켓몬 알은 이미 얻은 종을 빼고 뽑는다.
+// 모습이 여럿인 종은 종을 뽑은 뒤 모습을 한 번 더 뽑는다(data/regional.json 의 hatch — 배쓰나이의 적색근·청색근·백색근).
 // 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
 // 파티 빈 칸도 박스 빈 칸도 없으면 열지 않는다 — 알은 그대로 남는다 (2026-10-02 사용자 결정 "박스에서 둘곳이 없으면 알에서 부화안되게").
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
@@ -14,7 +15,8 @@ import { newPet, nextPetId, recordDex } from "../party/create.js";
 import { canGiveEgg, eggBonus, isSingleEgg } from "../shop/catalog.js";
 import { newEgg } from "../shop/buy.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { decide, type Rand } from "./hatch.js";
+import { decide, rollVariant, type Rand } from "./hatch.js";
+import { countsOf } from "../achievement/core.js";
 
 export type OpenFailure = "no-egg" | "not-ready" | "no-candidate" | "box-full";
 
@@ -61,8 +63,10 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
 
   const single = isSingleEgg(egg.kind, opts);
   const candidates = single ? egg.candidates.filter((s) => !save.dex.obtained.includes(s)) : egg.candidates;
-  const result = decide(candidates, rand, opts);
-  if (!result) return { ok: false, reason: "no-candidate" };
+  const picked = decide(candidates, rand, opts);
+  if (!picked) return { ok: false, reason: "no-candidate" };
+  // 모습이 여럿인 종(배쓰나이)은 종·이로치 다음에 모습을 뽑는다 — 서버 재계산(src/verify/save-rules.ts rollEgg)과 같은 순서
+  const result = { species: rollVariant(picked.species, rand, opts), shiny: picked.shiny };
 
   const id = nextPetId(save);
   save.pets.push(newPet({ id, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
@@ -79,6 +83,7 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
 
   // 도감 — 얻음 기록. 해금 기록이 없으면 함께 남긴다
   recordDex(save, result.species, result.shiny);
+  countsOf(save).hatched += 1; // 부화 업적이 센다. 알에서 다른 알이 나온 것은 세지 않는다
 
   save.eggs.splice(i, 1);
   return {

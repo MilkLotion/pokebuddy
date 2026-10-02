@@ -6,6 +6,7 @@
 // 알 행동 조건(쓰다듬기·노래로 결과를 바꾸는 규칙)은 2026-09-28 삭제했다 (worklog/records/game-runtime/record.md "알에서 진화형이 나옴")
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import { loadJson, type DexOptions } from "../dex/data.js";
+import { hatchVariants } from "../dex/regional.js";
 
 export const SHINY_ONE_IN = 1000; // 이로치 확률 1/1000. 랜덤알과 태고의돌이 같다
 
@@ -41,6 +42,20 @@ export function pickWeighted(candidates: string[], rand: Rand, opts?: DexOptions
     if (roll < 0) return candidates[i] ?? null;
   }
   return candidates[candidates.length - 1] ?? null;
+}
+
+// 알에서 나온 종의 모습 — 표(data/regional.json 의 hatch)에 있는 종만 한 번 더 뽑는다. 없으면 무작위를 쓰지 않고 그대로다.
+// 배쓰나이는 적색근 45 · 청색근 45 · 백색근 10 (2026-10-03 사용자 결정). 알 열기만 부른다 — 줍기는 기본형이다
+export function rollVariant(species: string, rand: Rand, opts?: DexOptions): string {
+  const list = hatchVariants(species, opts);
+  const total = list.reduce((a, [, w]) => a + w, 0);
+  if (!list.length || total <= 0) return species;
+  let roll = rand() * total;
+  for (const [slug, w] of list) {
+    roll -= w;
+    if (roll < 0) return slug;
+  }
+  return list[list.length - 1]?.[0] ?? species;
 }
 
 // 알 하나의 결과. 후보가 하나도 없으면 null

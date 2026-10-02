@@ -20,6 +20,7 @@ import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";
 import { afterEvolve, formsOf } from "./forms.js";
 import { REGION_MAP, needIsMap } from "./regional.js";
+import { countsOf } from "../achievement/core.js";
 
 export type EvolveFailure =
   | "no-pet" // 그런 개체가 없다
@@ -61,12 +62,20 @@ export function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: D
   return { ready: false, missing: base.ready ? `item:${REGION_MAP}` : `${base.missing}|item:${REGION_MAP}` };
 }
 
-// 지도를 뺀 원래 조건 — 성별·시간대·레벨·친밀도·도구
+// 지도를 뺀 원래 조건 — 성별·시간대·레벨·친밀도·도구. 간선에 더하는 친밀도(affinity)가 있으면 그 조건 뒤에 본다
 function checkBaseNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): { ready: boolean; missing?: string } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ready: false, missing: "no-pet" };
   if (step.gender && pet.gender !== step.gender) return { ready: false, missing: `gender:${step.gender}` }; // 바뀌지 않는 이유라 먼저 본다
   if (step.when && step.when !== dayPart) return { ready: false, missing: `time:${step.when}` };
+  const main = checkMainNeed(save, pet, step);
+  if (!step.affinity || pet.affinity >= step.affinity) return main;
+  const extra = `affinity:${step.affinity}`;
+  return { ready: false, missing: main.ready ? extra : `${main.missing}|${extra}` };
+}
+
+// 간선의 조건 하나 — 레벨·친밀도·도구
+function checkMainNeed(save: SaveV3, pet: { level: number; affinity: number }, step: EvoStep): { ready: boolean; missing?: string } {
 
   const need = step.need;
   if (!need) return { ready: true }; // 조건이 없는 옛 데이터 — 막지 않는다
@@ -125,6 +134,7 @@ export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: s
   pet.evolved.push(from);
   pet.species = picked.to;
   pet.stage += 1;
+  countsOf(save).evolved += 1; // 진화 업적이 센다
 
   if (!save.dex.unlocked.includes(picked.to)) save.dex.unlocked.push(picked.to);
   if (!save.dex.obtained.includes(picked.to)) save.dex.obtained.push(picked.to);

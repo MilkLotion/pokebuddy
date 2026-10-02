@@ -67,6 +67,9 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.deepStrictEqual(megaFormsOf("charizard"), ["charizard-mega-x", "charizard-mega-y"]);
   assert.deepStrictEqual(megaFormsOf("mewtwo"), ["mewtwo-mega-x", "mewtwo-mega-y"]);
   assert.deepStrictEqual(megaFormsOf("tatsugiri"), ["tatsugiri-curly-mega"], "싸리용은 하나로 합쳤다");
+  // 메가플라엣테는 플라엣테(영원의 꽃)만 (2026-10-03 사용자 결정 "영꽃전용으로.")
+  assert.deepStrictEqual(megaFormsOf("floette-eternal"), ["floette-mega"]);
+  assert.deepStrictEqual(megaFormsOf("floette"), [], "일반 플라엣테는 메가진화하지 않는다");
   assert.deepStrictEqual(megaFormsOf("pikachu"), []);
   assert.equal(megaOf("groudon-primal")?.kind, "primal");
   process.stdout.write("(1) 모습 표 60개 · 기본 종 58종  ok\n");
@@ -86,7 +89,23 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.deepStrictEqual(portraitIds("zygarde-mega"), [10301, 718], "초상이 없으면 기본 종 초상");
   assert.equal(appearanceOf(pet({ mega: { ...full, stone: true, on: "charizard-mega-x" }, shiny: true })), "charizard-mega-x:shiny");
   assert.equal(appearanceOf(pet()), "charizard");
-  process.stdout.write("(2) 이름 · 무대 그림 · 초상  ok\n");
+  // 성별 그림 — 대쓰여너 암컷은 암컷 그림이다. 종·이름은 그대로다 (data/regional.json 의 gender)
+  assert.equal(appearanceOf(pet({ species: "basculegion", gender: "female" })), "basculegion-female");
+  assert.equal(appearanceOf(pet({ species: "basculegion", gender: "female", shiny: true })), "basculegion-female:shiny");
+  assert.equal(appearanceOf(pet({ species: "basculegion", gender: "male" })), "basculegion");
+  assert.deepStrictEqual(pmdSources("basculegion-female").map((s) => s.spritePath), ["0902/0000/0000/0002", undefined], "암컷 폴더 → 종의 기본 그림");
+  assert.deepStrictEqual(pmdSources("basculegion-female:shiny").map((s) => s.spritePath), ["0902/0000/0001/0002", "0902/0000/0000/0002", "0902/0000/0001"]);
+  assert.deepStrictEqual(portraitIds("basculegion-female"), [10248, 902]);
+  {
+    const g = empty(T0);
+    g.pets.push(pet({ id: "g1", species: "basculegion", gender: "female", evolved: ["basculin-white-striped"] }), pet({ id: "g2", species: "basculegion", gender: "male", evolved: ["basculin-white-striped"] }));
+    g.boxes[0]!.slots[0] = "g1";
+    g.boxes[0]!.slots[1] = "g2";
+    const [f, m] = snapshot(g, T0).boxes[0]!.slots;
+    assert.deepStrictEqual([f?.look, f?.name, f?.species], ["basculegion-female", "대쓰여너", "basculegion"], "초상만 암컷 그림");
+    assert.deepStrictEqual([m?.look, m?.name], ["basculegion", "대쓰여너"]);
+  }
+  process.stdout.write("(2) 이름 · 무대 그림 · 초상 · 성별 그림  ok\n");
 }
 
 // (3) 조건 — 친밀도 100 뒤의 시간과 돌봄 횟수를 센다. 메가 모습이 없는 종과 친밀도 100 미만은 세지 않는다

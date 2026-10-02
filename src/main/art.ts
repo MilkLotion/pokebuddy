@@ -9,7 +9,7 @@ import { SIZE_STEPS, snapSize } from "../save/rules.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/stage";
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";
-import { regionalOf } from "../dex/regional";
+import { genderLookInfo, regionalOf } from "../dex/regional";
 import { megaOf } from "../dex/mega";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
@@ -86,6 +86,12 @@ type PmdSource = { slug: string; spritePath?: string };
 export function pmdSources(look: string): PmdSource[] {
   const shiny = look.endsWith(":shiny");
   const slug = shiny ? look.slice(0, -6) : look;
+  // 성별 그림(대쓰여너 암컷) — 그 성별의 폴더가 먼저다. 이로치는 이로치 폴더 → 보통 폴더, 끝은 종의 기본 그림이다
+  const byGender = genderLookInfo(slug);
+  if (byGender) {
+    const own = [...(shiny && byGender.pmdShiny ? [byGender.pmdShiny] : []), ...(byGender.pmd ? [byGender.pmd] : [])].map((spritePath) => ({ slug, spritePath }));
+    return [...own, ...pmdSources(`${byGender.species}${shiny ? ":shiny" : ""}`).map((src) => ({ ...src, slug }))];
+  }
   const dex = profile(slug).dex;
   const base = dex ? String(dex).padStart(4, "0") : null;
   const mega = megaOf(slug);
@@ -107,7 +113,7 @@ const knownLook = (look: string, srcs: PmdSource[]): boolean => srcs.length > 0 
 // 그림 묶음에 적는 도감 번호 — 메가 모습은 기본 종의 번호
 export const dexOfLook = (look: string): string => {
   const slug = look.replace(/:shiny$/, "");
-  return String(profile(megaOf(slug)?.base ?? slug).dex ?? "").padStart(4, "0");
+  return String(profile(megaOf(slug)?.base ?? genderLookInfo(slug)?.species ?? slug).dex ?? "").padStart(4, "0");
 };
 
 // look → 초상 PNG. 없거나 못 받으면 null (src/main/portraits.ts)

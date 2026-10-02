@@ -8,11 +8,11 @@
 //
 // 규칙 (상한에는 여유 비율 margin 을 곱한다 — D32 1.1. 틈에는 파일 쓰기·틱 지연 slackMs 를 더한다)
 //   work        작업 시간 증가 ≤ 틈
-//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 판매(도구·포켓몬) + 민트 환불
+//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 업적 보상 + 판매(도구·포켓몬) + 민트 환불
 //   spend       늘어난 도구·새 알의 값 ≤ 그사이 쓸 수 있었던 포인트
 //   bag         팔지 않는 도구가 출처 없이 늘었다
 //   mail        서버에서 받지 않은 편지를 넣었다
-//   achievement 없는 업적을 받았다
+//   achievement 없는 업적을 받았다. 받은 업적의 보상(포인트·도구·알·포켓몬)은 각 예산에 더한다. 달성 조건은 보지 않는다
 //   level       레벨 1~100, 경험치 0~최대, 레벨 ≤ 경험치가 허락하는 레벨
 //   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕
 //   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감
@@ -39,7 +39,7 @@ export interface VerifyItem {
 export interface VerifyData {
   items: Record<string, VerifyItem>;
   eggs: Record<string, number>; // 알 종류 → 값
-  achievements: Record<string, "pokemon" | "party-slot">; // 업적 → 보상 종류
+  achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (scripts/build-verify.cjs)
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
@@ -50,6 +50,7 @@ export interface VerifyData {
   ranks: Record<string, number>; // 종 → 수집 난이도(1 이 아닌 것만). 없으면 1
   rankWeight: Record<string, number>; // 난이도 → 추첨 가중치 (src/egg/hatch.ts RANK_WEIGHT)
   shinyOneIn: number;
+  hatchVariants?: Record<string, [string, number][]>; // 종 → 알에서 대신 나오는 모습과 가중치 (data/regional.json 의 hatch). 없으면 모습을 뽑지 않는다
   randomPool: string[]; // 랜덤알 후보가 될 수 있는 종 전체(src/shop/catalog.ts inRandomEgg). 해금 여부는 보지 않는다
   rules: {
     pointMs: number; // 가중 시간 이만큼에 1P
@@ -108,7 +109,7 @@ export function seededRand(seed: string, key: string): () => number {
 }
 
 // 알 하나를 열면 무엇이 나오는가 — src/egg/open.ts 와 같은 순서로 수를 쓴다
-//   보너스 알 표가 있으면 1회 → (보너스가 아니면) 종 가중 추첨 1회 → 이로치 1회
+//   보너스 알 표가 있으면 1회 → (보너스가 아니면) 종 가중 추첨 1회 → 이로치 1회 → (모습이 여럿인 종이면) 모습 1회
 //   waiting 은 그 알을 열 때 돌보미집에 있던 알(연 알 포함), obtained 는 그때 얻은 종 — 앱은 열기 직전 저장, 규칙은 여는 순서를 대입한 모의 상태
 export type EggRoll = { egg: string } | { species: string; shiny: boolean } | null;
 export function rollEgg(egg: { id: string; kind: string; candidates: string[] }, waiting: { kind: string }[], obtained: string[], rand: () => number, data: VerifyData): EggRoll {
@@ -143,7 +144,22 @@ export function rollEgg(egg: { id: string; kind: string; candidates: string[] },
       }
     }
   }
-  return { species, shiny: rand() < 1 / data.shinyOneIn };
+  const shiny = rand() < 1 / data.shinyOneIn;
+  const variants = (data.hatchVariants?.[species] ?? []).filter(([, w]) => w > 0);
+  const variantTotal = variants.reduce((a, [, w]) => a + w, 0);
+  if (variants.length && variantTotal > 0) {
+    let roll = rand() * variantTotal;
+    let chosen = variants[variants.length - 1]?.[0] ?? species;
+    for (const [slug, w] of variants) {
+      roll -= w;
+      if (roll < 0) {
+        chosen = slug;
+        break;
+      }
+    }
+    species = chosen;
+  }
+  return { species, shiny };
 }
 
 export interface Violation {
@@ -319,6 +335,25 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     }
   }
 
+  // 업적 — 새로 받은 업적의 보상. 포인트는 포인트 예산에, 도구는 받은 도구에, 알은 값 없이 생긴 알에, 포켓몬은 새 개체 출처에 더한다
+  const prevClaimed = claimed(prev);
+  let achievedPets = 0;
+  let achievedPoints = 0;
+  let achievedEggs = 0;
+  for (const k of claimed(next)) {
+    if (prevClaimed.has(k)) continue;
+    const reward = data.achievements[k];
+    if (!reward) {
+      add("achievement", 1, 0);
+      continue;
+    }
+    const [kind, a, b] = reward.split(":");
+    if (kind === "pokemon") achievedPets += 1;
+    else if (kind === "points") achievedPoints += pos(Number(a) || 0);
+    else if (kind === "egg") achievedEggs += 1;
+    else if (kind === "item" && a) mailItems[a] = (mailItems[a] ?? 0) + (Number(b) || 1);
+  }
+
   // 교환 — 그사이 끝난 교환에서 받은 제안 + 직전 저장에 걸려 있다 풀린 교환의 제안(직전 저장 전에 끝났다)
   const heldBefore = pendingChannel(prev);
   const offers = [...ctx.received];
@@ -346,7 +381,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const vanishedPets = pos(petSeqOf(next) - prevPetSeq - petsOf(next).filter((p) => idNo(p.id) > prevPetSeq).length);
   const petSell = (gonePets + vanishedPets) * num(r.petSellMax);
   const earnPerHour = (HOUR / r.pointMs) * r.maxPartySlots * r.maxEarnFactor;
-  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + sell + petSell + mint;
+  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint;
   add("points", balanceOf(next) - balanceOf(prev), pointAllowance);
   // 그사이 쓴 포인트의 상한 — 산 도구·알·개체의 값은 이 안이어야 한다
   const spendable = pos(balanceOf(prev) + pointAllowance - balanceOf(next));
@@ -361,32 +396,22 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (price == null || price <= 0) add("bag", gain, 0);
     else cost += gain * price;
   }
-  // 새 알 — 연 알만큼은 보너스 알일 수 있다. 나머지는 싼 것부터 산 것으로 본다
+  // 새 알 — 연 알만큼은 보너스 알일 수 있고, 업적 보상 알은 값이 없다. 나머지는 싼 것부터 산 것으로 본다
   const prevEggs = eggsOf(prev);
   const nextEggs = eggsOf(next);
   const nextEggIds = new Set(nextEggs.map((e) => e.id));
   const prevEggIds = new Set(prevEggs.map((e) => e.id));
   const opened = prevEggs.filter((e) => !nextEggIds.has(e.id)).length;
   const newEggs = nextEggs.filter((e) => !prevEggIds.has(e.id)).map((e) => data.eggs[e.kind] ?? 0).sort((a, b) => a - b);
-  for (const price of newEggs.slice(0, pos(newEggs.length - opened))) cost += price;
+  for (const price of newEggs.slice(0, pos(newEggs.length - opened - achievedEggs))) cost += price;
   // 같은 틈에 만들어 연 알 — 번호만 늘고 두 저장 어디에도 없다. 연 알 수만큼은 보너스 알일 수 있고 나머지는 산 것이다
   const minEgg = Math.min(...Object.values(data.eggs).filter((p) => p > 0));
   const created = pos(eggSeqOf(next) - eggSeqOf(prev));
   const vanished = pos(created - newEggs.length);
-  cost += pos(vanished - opened) * minEgg;
+  cost += pos(vanished - opened - achievedEggs) * minEgg;
   add("spend", cost, spendable * m + 1);
   // 산 것을 빼고 남은 포인트 — 그사이 사서 바로 쓴 사탕·약·장난감, 사서 연 알, 종 지정 구매의 상한
   const leftover = pos(spendable - cost);
-
-  // achievement
-  const prevClaimed = claimed(prev);
-  let achievedPets = 0;
-  for (const k of claimed(next)) {
-    if (prevClaimed.has(k)) continue;
-    const reward = data.achievements[k];
-    if (!reward) add("achievement", 1, 0);
-    else if (reward === "pokemon") achievedPets += 1;
-  }
 
   // level — 범위와 레벨·경험치 일치(이상한사탕은 경험치를 그 레벨 시작값으로 맞춘다)
   const nextPets = petsOf(next);

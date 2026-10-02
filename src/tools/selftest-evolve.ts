@@ -173,6 +173,58 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(12) 공유 sid · 코스모움 갈래는 둘 다  ok\n");
 }
 
+// (12b) 공유 sid — 치고마는 악의 족자 하나로 진화하고 두 태세를 함께 받는다. 암멍이는 공유 계열이 아니라 낮·밤의 종 하나가 된다
+// (2026-10-03 사용자 결정 "얘는 단일종이라 모습변화로 해야해", "족자는 하나만 하자", "루가루암은 진화루트 분리하고", "황혼은 업적으로 넘기자")
+{
+  const s = seed({ species: "kubfu", level: 30 });
+  assert.deepStrictEqual(candidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), [], "족자가 없으면 후보가 없다");
+  s.bag["scroll-of-darkness"] = 1;
+  assert.deepStrictEqual(candidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["urshifu", "urshifu-rapid-strike"], "악의 족자 하나로 두 태세가 모두 후보");
+  const res = evolve(s, "p1", "day", "urshifu-rapid-strike");
+  assert.deepStrictEqual([res.ok, res.to, s.bag["scroll-of-darkness"]], [true, "urshifu-rapid-strike", undefined]);
+  const p = s.pets[0] as PetV3;
+  assert.deepStrictEqual([...(p.forms ?? [])].sort(), ["kubfu", "urshifu", "urshifu-rapid-strike"]);
+  for (const slug of ["urshifu", "urshifu-rapid-strike"]) assert.ok(s.dex.obtained.includes(slug), `도감 획득 ${slug}`);
+  assert.equal(setForm(s, "p1", "urshifu").ok, true, "모습 바꾸기로 일격 태세");
+  assert.equal(s.pets.length, 1);
+
+  const r = seed({ species: "rockruff", level: 25 });
+  assert.deepStrictEqual(candidates(r, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["lycanroc"], "낮에는 루가루암");
+  assert.deepStrictEqual(candidates(r, "p1", "night").filter((c) => c.ready).map((c) => c.to), ["lycanroc-midnight"], "밤에는 루가루암(한밤중)");
+  // 루가루암(황혼) — Lv.25 와 친밀도 100, 낮·밤 무관 (2026-10-03 사용자 결정 "추천대로 하자")
+  assert.equal(candidates(r, "p1", "night").find((c) => c.to === "lycanroc-dusk")?.missing, "affinity:100", "친밀도가 모자라다");
+  const low = seed({ species: "rockruff", level: 20 });
+  assert.equal(candidates(low, "p1", "day").find((c) => c.to === "lycanroc-dusk")?.missing, "level:25|affinity:100", "둘 다 모자라면 함께 알린다");
+  assert.equal(evolve(r, "p1", "night", "lycanroc-dusk").ok, false, "친밀도 없이 진화하지 못한다");
+  (r.pets[0] as PetV3).affinity = 100;
+  assert.deepStrictEqual(candidates(r, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["lycanroc", "lycanroc-dusk"], "낮에는 루가루암과 황혼");
+  assert.deepStrictEqual(candidates(r, "p1", "night").filter((c) => c.ready).map((c) => c.to), ["lycanroc-midnight", "lycanroc-dusk"], "밤에는 한밤중과 황혼");
+  assert.equal(evolve(r, "p1", "night").reason, "need-choice", "후보가 둘이면 고른다");
+  assert.equal(evolve(r, "p1", "night", "lycanroc-dusk").ok, true);
+  assert.deepStrictEqual(formsOf(r.pets[0] as PetV3), [], "암멍이 계열은 공유 계열이 아니다");
+  const t = seed({ species: "toxel", level: 30 });
+  assert.deepStrictEqual(candidates(t, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["toxtricity", "toxtricity-low-key"], "일레즌은 둘 가운데 고른다");
+  process.stdout.write("(12b) 치고마 두 태세 · 암멍이·일레즌 갈래  ok\n");
+}
+
+// (12c) 기라티나 — 진화 없이 오리진폼과 모습 바꾸기로 오간다. 바꾼 모습은 도감에 남는다. 디아루가는 오가지 않는다
+// (2026-10-03 사용자 결정 "이거는 모습변경으로하자.")
+{
+  const s = seed({ species: "giratina", level: 50 });
+  const p = s.pets[0] as PetV3;
+  assert.deepStrictEqual(formsOf(p), ["giratina", "giratina-origin"]);
+  assert.ok(!s.dex.obtained.includes("giratina-origin"));
+  assert.deepStrictEqual(setForm(s, "p1", "giratina-origin"), { ok: true, petId: "p1", from: "giratina", to: "giratina-origin" });
+  assert.equal(p.species, "giratina-origin");
+  assert.ok(s.dex.obtained.includes("giratina-origin") && s.dex.unlocked.includes("giratina-origin"), "처음 바꾼 모습은 도감에 남는다");
+  assert.deepStrictEqual(formsOf(p), ["giratina", "giratina-origin"], "오리진폼에서도 같은 목록");
+  assert.equal(setForm(s, "p1", "giratina").ok, true, "돌아간다");
+  assert.equal(s.pets.length, 1);
+  assert.deepStrictEqual(formsOf(seed({ species: "dialga", level: 50 }).pets[0] as PetV3), ["dialga"], "디아루가와 디아루가(오리진폼)는 다른 종이라 오가지 않는다");
+  assert.deepStrictEqual(formsOf(seed({ species: "giratina-origin", level: 50 }).pets[0] as PetV3), ["giratina-origin", "giratina"], "오리진폼만 든 저장도 공유 계열이다");
+  process.stdout.write("(12c) 기라티나 모습 바꾸기  ok\n");
+}
+
 // (13) 모습 바꾸기 — 고를 수 있는 종만, 진행 상태는 그대로. 가진 종으로 가는 진화는 다시 열리지 않는다
 {
   const s = seed({ species: "solgaleo", level: 60, affinity: 70, evolved: ["cosmog", "cosmoem"], stage: 2, forms: ["cosmog", "cosmoem", "solgaleo", "lunala"] });

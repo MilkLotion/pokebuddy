@@ -195,7 +195,7 @@ export function createCommands(ctx: CommandContext): Commands {
       const choice = typeof c.args?.to === "string" ? c.args.to : null;
       const targets = choice ? [choice] : candidates(save, id, dayPartOf(Date.now())).filter((x) => x.ready).map((x) => x.to);
       for (const species of targets) {
-        const look = appearanceOf({ species, shiny: pet.shiny });
+        const look = appearanceOf({ species, shiny: pet.shiny, gender: pet.gender }); // 성별 그림이 있는 종(대쓰여너 암컷)은 그 그림을 받는다
         if (ctx.prepareLook && !(await ctx.prepareLook(look))) return { ok: false, reason: "art-missing", look };
       }
       if (c.at != null && Date.now() - c.at > EVOLVE_EXPIRE_MS) return { ok: false, reason: "expired", id };
@@ -213,7 +213,7 @@ export function createCommands(ctx: CommandContext): Commands {
     const save = ctx.party.isWriter() ? currentSave() : null;
     const pet = save?.pets.find((row) => row.id === id);
     if (pet && species && ctx.prepareLook) {
-      const look = appearanceOf({ species, shiny: pet.shiny });
+      const look = appearanceOf({ species, shiny: pet.shiny, gender: pet.gender });
       if (!(await ctx.prepareLook(look))) return { ok: false, reason: "art-missing", look };
     }
     const result = await runSave(c);

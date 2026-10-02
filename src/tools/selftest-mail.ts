@@ -3,6 +3,8 @@
 import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../bag/mint";
 import { applyGifts, markRead, normalizeMail, parseGifts } from "../mail/core";
+import { singleSpecies } from "../shop/catalog";
+import { isSinglePet } from "../trade/core";
 import { createMainMail, type RpcResult } from "../main/mail";
 import { empty, normalize } from "../save/v3";
 import { createExecutor } from "../tx/executor";
@@ -90,6 +92,26 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   assert.deepStrictEqual(applyGifts(s, "P1", [{ kind: "pokemon", species: "haunter", count: 2 }]), { ok: true, applied: false }, "같은 편지로 다시 만들지 않는다");
   assert.equal(s.pets.length, petsBefore + 2);
   process.stdout.write("(2b) 포켓몬 선물  ok\n");
+}
+
+// (2c) 단일 포켓몬 선물 — 한 마리만 넣는다. 이미 얻은 종이면 넣지 않고 다른 선물은 받는다. 우편 전용 특수 폼도 단일 포켓몬이다
+// (2026-10-03 사용자 결정 "이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해.")
+{
+  for (const slug of ["magearna-original", "pichu-spiky-eared", "floette-eternal", "mewtwo"]) assert.ok(singleSpecies().has(slug), `단일 포켓몬 ${slug}`);
+  for (const slug of ["lycanroc-dusk", "toxtricity-low-key", "pichu", "magearna-mega"]) assert.ok(!singleSpecies().has(slug), `단일 포켓몬이 아니다 ${slug}`);
+  assert.equal(isSinglePet({ species: "pichu-spiky-eared", evolved: [] }), true, "교환할 수 없다");
+  const s = empty(T0);
+  const before = s.pets.length;
+  assert.deepStrictEqual(applyGifts(s, "S1", [{ kind: "pokemon", species: "magearna-original", count: 3 }, { kind: "pokemon", species: "pichu-spiky-eared", count: 1 }], undefined, { now: T0, rand: () => 0.3 }), { ok: true, applied: true });
+  assert.deepStrictEqual(s.pets.slice(before).map((p) => p.species), ["magearna-original", "pichu-spiky-eared"], "단일 포켓몬은 한 마리씩");
+  assert.deepStrictEqual(applyGifts(s, "S2", [{ kind: "pokemon", species: "magearna-original", count: 1 }, { kind: "points", count: 5 }], undefined, { now: T0, rand: () => 0.3 }), { ok: true, applied: true });
+  assert.equal(s.pets.length, before + 2, "이미 얻은 단일 포켓몬은 다시 넣지 않는다");
+  assert.equal(s.points.balance, empty(T0).points.balance + 5, "같은 편지의 다른 선물은 받는다");
+  // 개체를 내보내도 획득 이력으로 막는다
+  s.pets = s.pets.filter((p) => p.species !== "magearna-original");
+  assert.deepStrictEqual(applyGifts(s, "S3", [{ kind: "pokemon", species: "magearna-original", count: 1 }]), { ok: true, applied: true });
+  assert.ok(!s.pets.some((p) => p.species === "magearna-original"), "획득 이력으로 본다");
+  process.stdout.write("(2c) 단일 포켓몬 선물  ok\n");
 }
 
 // (3) 실행기 — mail.apply 는 실행기에만 있다. 같은 요청 id 는 다시 돌리지 않는다

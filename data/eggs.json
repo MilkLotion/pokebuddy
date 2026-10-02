@@ -92,7 +92,9 @@
       "okidogi",
       "munkidori",
       "fezandipiti",
-      "ogerpon"
+      "ogerpon",
+      "floette-eternal",
+      "ursaluna-bloodmoon"
     ],
     "palette": [
       "#4a5468",
@@ -183,7 +185,6 @@
     "note": "아직 없는 환상의 포켓몬이 나온다",
     "single": true,
     "pool": [
-      "mew",
       "celebi",
       "jirachi",
       "deoxys",
@@ -231,7 +232,9 @@
       "groudon",
       "rayquaza",
       "dialga",
+      "dialga-origin",
       "palkia",
+      "palkia-origin",
       "giratina",
       "arceus",
       "reshiram",

@@ -223,12 +223,17 @@ export type ShopDetail =
 // 달성 전 · 달성했고 보상이 남음 · 보상까지 받음
 export type AchievementState = "locked" | "achieved" | "claimed";
 
+// 업적창의 분류 칩 (data/achievements.json 의 group) — dex 도감 · grow 육성 · egg 알 · find 탐색 · together 함께
+export type AchievementGroup = "dex" | "grow" | "egg" | "find" | "together";
+
 export interface AchievementView {
   id: string;
   name: string;
   desc: string; // 빈 문자열이면 설명 줄을 그리지 않는다
   reward: string; // 보상 설명. 화면이 그대로 보여 준다
   state: AchievementState;
+  group: AchievementGroup;
+  progress?: { now: number; goal: number; unit: string }; // 미달성인 셀 수 있는 업적의 진행도 — `131 / 150`, `64 / 100시간`. 없으면 진행도 줄을 그리지 않는다
 }
 
 // 설정 모달이 읽는 값. 저장의 settings 와 같은 뜻이며 화면이 쓰기 좋은 모양이다

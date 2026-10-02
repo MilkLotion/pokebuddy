@@ -355,6 +355,11 @@ function seed(points: number): SaveV3 {
   assert.equal(sellsSpecies("raichu-alola"), false, "진화 결과");
   assert.equal(sellsSpecies("articuno-galar"), false, "단일 포켓몬 알의 종");
   assert.ok(eggPool("sub-legendary")?.includes("articuno-galar"), "가라르 프리져는 랜덤준전설알");
+  // 특수 폼 2종도 랜덤준전설알의 단일 포켓몬이라 팔지 않는다 (2026-10-03 사용자 결정 "준전설알로.")
+  for (const s of ["floette-eternal", "ursaluna-bloodmoon"]) {
+    assert.equal(sellsSpecies(s), false, `단일 포켓몬 알의 종 ${s}`);
+    assert.ok(eggPool("sub-legendary")?.includes(s), `${s} 는 랜덤준전설알`);
+  }
   process.stdout.write("(12) 리전폼 · 지도 가격 · 파는 종  ok\n");
 }
 

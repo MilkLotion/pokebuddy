@@ -112,7 +112,12 @@ process.stdout.write("(7) 잠만보 · 먹고자 진화로 해금  ok\n");
     assert.ok(save.dex.unlocked.includes(s), `첫 선택 직후 해금 ${s}`);
     assert.ok(inRandomEgg(s), `랜덤알 후보 ${s}`);
   }
-  for (const s of ["raichu-alola", "ninetales-alola", "articuno-galar"]) {
+  // 특수 폼 2종도 가라르 새처럼 규칙이 없고 랜덤준전설알에서만 얻는다 (2026-10-03 사용자 결정 "준전설알로.")
+  for (const s of ["floette-eternal", "ursaluna-bloodmoon"]) {
+    assert.equal(rules[s], undefined, `특수 폼은 규칙이 없다 ${s}`);
+    assert.ok(r.obtainable.has(s), `얻을 수 있다 ${s}`);
+  }
+  for (const s of ["raichu-alola", "ninetales-alola", "articuno-galar", "floette-eternal", "ursaluna-bloodmoon"]) {
     assert.ok(!save.dex.unlocked.includes(s), `아직 ${s}`);
     assert.ok(!inRandomEgg(s), `랜덤알 후보 밖 ${s}`);
   }

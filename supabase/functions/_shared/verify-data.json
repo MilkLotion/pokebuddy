@@ -201,10 +201,42 @@
   "legendary": 5000
  },
  "achievements": {
-  "show-two": "party-slot",
+  "dex-50": "points:200",
+  "dex-150": "points:500",
+  "dex-300": "egg:sub-legendary",
+  "dex-600": "egg:mythical",
+  "dex-1000": "pokemon",
+  "dex-kanto": "pokemon",
+  "dex-johto": "pokemon",
+  "dex-hoenn": "points:1000",
+  "dex-sinnoh": "points:1000",
+  "dex-unova": "points:1000",
+  "dex-kalos": "points:1000",
+  "dex-alola": "points:1000",
+  "dex-galar": "points:1000",
+  "dex-hisui": "points:1000",
+  "dex-paldea": "points:1000",
+  "shiny-1": "points:300",
+  "shiny-10": "item:shiny-potion:1",
   "starter-final": "party-slot",
+  "level-100": "points:500",
+  "affinity-100": "points:200",
+  "evolve-1": "points:100",
+  "mega-1": "points:500",
+  "hatch-10": "points:200",
+  "hatch-50": "pokemon",
+  "hatch-200": "egg:sub-legendary",
+  "single-1": "points:300",
+  "find-50": "points:100",
+  "find-500": "points:500",
+  "find-3000": "points:1500",
+  "show-two": "party-slot",
+  "party-three": "pokemon",
   "work-100h": "pokemon",
-  "party-three": "pokemon"
+  "work-500h": "points:1000",
+  "streak-7": "points:200",
+  "streak-30": "points:1000",
+  "trade-1": "points:300"
  },
  "evo": {
   "abra": [
@@ -251,10 +283,7 @@
   "barboach": [
    "whiscash"
   ],
-  "basculin": [
-   "basculegion"
-  ],
-  "basculin-blue-striped": [
+  "basculin-white-striped": [
    "basculegion"
   ],
   "bayleef": [
@@ -862,7 +891,8 @@
    "krookodile"
   ],
   "kubfu": [
-   "urshifu"
+   "urshifu",
+   "urshifu-rapid-strike"
   ],
   "lairon": [
    "aggron"
@@ -1253,7 +1283,9 @@
    "lucario"
   ],
   "rockruff": [
-   "lycanroc"
+   "lycanroc",
+   "lycanroc-midnight",
+   "lycanroc-dusk"
   ],
   "roggenrola": [
    "boldore"
@@ -1559,7 +1591,8 @@
    "croconaw"
   ],
   "toxel": [
-   "toxtricity"
+   "toxtricity",
+   "toxtricity-low-key"
   ],
   "tranquill": [
    "unfezant"
@@ -1876,7 +1909,7 @@
   "eelektross": [
    "eelektross-mega"
   ],
-  "floette": [
+  "floette-eternal": [
    "floette-mega"
   ],
   "dragalge": [
@@ -1973,6 +2006,7 @@
   "basculegion": "medium-fast",
   "basculin": "medium-fast",
   "basculin-blue-striped": "medium-fast",
+  "basculin-white-striped": "medium-fast",
   "bastiodon": "erratic",
   "baxcalibur": "slow",
   "bayleef": "medium-slow",
@@ -2143,6 +2177,7 @@
   "dewpider": "medium-fast",
   "dhelmise": "medium-fast",
   "dialga": "slow",
+  "dialga-origin": "slow",
   "diancie": "slow",
   "diggersby": "medium-fast",
   "diglett": "medium-fast",
@@ -2240,6 +2275,7 @@
   "flittle": "medium-slow",
   "floatzel": "medium-fast",
   "floette": "medium-fast",
+  "floette-eternal": "medium-fast",
   "floragato": "medium-slow",
   "florges": "medium-fast",
   "flutter-mane": "slow",
@@ -2474,6 +2510,8 @@
   "luxio": "medium-slow",
   "luxray": "medium-slow",
   "lycanroc": "medium-fast",
+  "lycanroc-dusk": "medium-fast",
+  "lycanroc-midnight": "medium-fast",
   "mabosstiff": "medium-slow",
   "machamp": "medium-slow",
   "machoke": "medium-slow",
@@ -2481,6 +2519,7 @@
   "magby": "medium-fast",
   "magcargo": "medium-fast",
   "magearna": "slow",
+  "magearna-original": "slow",
   "magikarp": "slow",
   "magmar": "medium-fast",
   "magmortar": "medium-fast",
@@ -2602,6 +2641,7 @@
   "pachirisu": "medium-fast",
   "palafin": "slow",
   "palkia": "slow",
+  "palkia-origin": "slow",
   "palossand": "medium-fast",
   "palpitoad": "medium-slow",
   "pancham": "medium-fast",
@@ -2628,6 +2668,7 @@
   "pheromosa": "slow",
   "phione": "slow",
   "pichu": "medium-fast",
+  "pichu-spiky-eared": "medium-fast",
   "pidgeot": "medium-slow",
   "pidgeotto": "medium-slow",
   "pidgey": "medium-slow",
@@ -2924,6 +2965,7 @@
   "toxel": "medium-slow",
   "toxicroak": "medium-fast",
   "toxtricity": "medium-slow",
+  "toxtricity-low-key": "medium-slow",
   "tranquill": "medium-slow",
   "trapinch": "medium-slow",
   "treecko": "medium-slow",
@@ -2974,8 +3016,10 @@
   "unown-y": "medium-fast",
   "unown-z": "medium-fast",
   "ursaluna": "medium-fast",
+  "ursaluna-bloodmoon": "medium-fast",
   "ursaring": "medium-fast",
   "urshifu": "slow",
+  "urshifu-rapid-strike": "slow",
   "uxie": "slow",
   "vanillish": "slow",
   "vanillite": "slow",
@@ -3783,7 +3827,9 @@
     "okidogi",
     "munkidori",
     "fezandipiti",
-    "ogerpon"
+    "ogerpon",
+    "floette-eternal",
+    "ursaluna-bloodmoon"
    ]
   },
   "ultra-beast": {
@@ -3832,7 +3878,6 @@
    "bonus": [],
    "single": true,
    "pool": [
-    "mew",
     "celebi",
     "jirachi",
     "deoxys",
@@ -3866,7 +3911,9 @@
     "groudon",
     "rayquaza",
     "dialga",
+    "dialga-origin",
     "palkia",
+    "palkia-origin",
     "giratina",
     "arceus",
     "reshiram",
@@ -4036,6 +4083,7 @@
   "dewgong": 2,
   "dhelmise": 3,
   "dialga": 5,
+  "dialga-origin": 5,
   "diancie": 5,
   "diggersby": 2,
   "dodrio": 2,
@@ -4087,6 +4135,7 @@
   "flapple": 2,
   "flareon": 3,
   "floatzel": 2,
+  "floette-eternal": 5,
   "florges": 3,
   "flutter-mane": 4,
   "flygon": 3,
@@ -4229,10 +4278,13 @@
   "lurantis": 2,
   "luxray": 3,
   "lycanroc": 2,
+  "lycanroc-dusk": 2,
+  "lycanroc-midnight": 2,
   "mabosstiff": 3,
   "machamp": 3,
   "magcargo": 2,
   "magearna": 5,
+  "magearna-original": 5,
   "magmortar": 3,
   "magnezone": 3,
   "malamar": 2,
@@ -4302,6 +4354,7 @@
   "pachirisu": 2,
   "palafin": 2,
   "palkia": 5,
+  "palkia-origin": 5,
   "palossand": 2,
   "pangoro": 2,
   "parasect": 2,
@@ -4314,6 +4367,7 @@
   "persian-alola": 2,
   "pheromosa": 4,
   "phione": 5,
+  "pichu-spiky-eared": 5,
   "pidgeot": 2,
   "pincurchin": 2,
   "pinsir": 3,
@@ -4467,6 +4521,7 @@
   "toxapex": 2,
   "toxicroak": 2,
   "toxtricity": 3,
+  "toxtricity-low-key": 3,
   "trevenant": 2,
   "tropius": 2,
   "tsareena": 3,
@@ -4479,8 +4534,10 @@
   "umbreon": 3,
   "unfezant": 2,
   "ursaluna": 3,
+  "ursaluna-bloodmoon": 5,
   "ursaring": 2,
   "urshifu": 5,
+  "urshifu-rapid-strike": 5,
   "uxie": 5,
   "vanilluxe": 3,
   "vaporeon": 3,
@@ -4540,6 +4597,22 @@
   "5": 1
  },
  "shinyOneIn": 1000,
+ "hatchVariants": {
+  "basculin": [
+   [
+    "basculin",
+    45
+   ],
+   [
+    "basculin-blue-striped",
+    45
+   ],
+   [
+    "basculin-white-striped",
+    10
+   ]
+  ]
+ },
  "randomPool": [
   "abra",
   "absol",
@@ -4921,7 +4994,6 @@
   "tinkatink",
   "toedscool",
   "togedemaru",
-  "togepi",
   "torchic",
   "torkoal",
   "totodile",

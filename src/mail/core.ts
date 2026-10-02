@@ -2,6 +2,7 @@
 //
 // 서버 호출은 메인(src/main/mail.ts)이 한다. 여기서는 선물 검사와 저장만 다룬다.
 //   선물은 가방 도구(기본먹이 제외)·진화용 도구·포인트·포켓몬. 모르는 선물이 하나라도 있으면 그 편지는 넣지 않는다 — 앱이 옛 버전이다
+//   단일 포켓몬 선물은 한 마리만 넣는다. 이미 얻은 종이면 넣지 않는다 — 편지의 다른 선물은 그대로 받는다 (docs/specs/game.md "단일 포켓몬")
 //   포켓몬 선물은 레벨 1 새 개체로 박스에 넣는다. 박스 빈 칸이 모자라면 그 편지는 넣지 않는다(box-full) — 자리를 만든 뒤 다시 받는다. 성격·성별은 상점 종 구매와 같은 규칙, 이로치 아님. 도감에 입수로 남긴다
 //   넣은 편지 id 는 save.mail.applied 에 남긴다. 같은 편지는 두 번 넣지 않는다(서버가 끊김 복구로 같은 선물을 다시 돌려줘도)
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
@@ -11,6 +12,7 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { singleSpecies } from "../shop/catalog.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
 
@@ -79,14 +81,26 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
   const gifts = parseGifts(raw, opts);
   if (!gifts || !gifts.length) return { ok: false, reason: "bad-gift" };
   if (isApplied(save, letterId)) return { ok: true, applied: false };
+  // 넣을 포켓몬 — 단일 포켓몬은 저장마다 한 번만 얻는다. 이미 얻었으면 0마리, 아니면 한 편지에서 한 마리다
+  const singles = singleSpecies(opts);
+  const taken = new Set<string>();
+  const give = new Map<Gift, number>();
+  for (const g of gifts) {
+    if (g.kind !== "pokemon") continue;
+    if (!singles.has(g.species)) give.set(g, g.count);
+    else {
+      give.set(g, save.dex.obtained.includes(g.species) || taken.has(g.species) ? 0 : 1);
+      taken.add(g.species);
+    }
+  }
   // 포켓몬 선물이 모두 들어갈 박스 빈 칸 — 값을 바꾸기 전에 본다
-  const pokemon = gifts.reduce((n, g) => n + (g.kind === "pokemon" ? g.count : 0), 0);
+  const pokemon = [...give.values()].reduce((n, c) => n + c, 0);
   if (pokemon > boxRoom(save.boxes)) return { ok: false, reason: "box-full" };
   for (const g of gifts) {
     // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/save/rules.ts bagMax)
     if (g.kind === "item") save.bag[g.id] = (save.bag[g.id] ?? 0) + g.count;
     else if (g.kind === "points") save.points.balance += g.count;
-    else for (let i = 0; i < g.count; i++) givePokemon(save, g.species, env, opts);
+    else for (let i = 0; i < (give.get(g) ?? 0); i++) givePokemon(save, g.species, env, opts);
   }
   const mail = mailOf(save);
   remember(mail.applied, letterId);
