@@ -17,217 +17,30 @@
 //   익명 저장 이관: 실패한 티켓은 cloud.json.handoff 에 남기고 정식 계정 start 때 claim 전에 다시 옮긴다
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { adoptAnonymous, type HandoffReport, type PendingHandoff } from "./handoff.js";
+import { adoptAnonymous } from "./handoff.js";
+import { cloudCodeOf as codeOf } from "./codes.js";
+import { callRpc, messageOf, readFunctionError, withTimeout } from "./server-call.js";
+import { ONLINE_TIMING } from "./timing.js";
+import {
+  freshCloudState, hasPets, normalizeCloudState,
+  type ClaimRow, type Cloud, type CloudMode, type CloudOptions, type CloudStatus, type CloudSyncState, type CloudView, type OtherDevice, type OwnerKind, type TouchRow,
+} from "./cloud-state.js";
 
-// 저장 주인 계정의 종류
-export type OwnerKind = "anonymous" | "member";
+// [임시] 옛 자리 — src/tools 와 메인이 이 경로로 가져다 쓴다. 가져다 쓰는 쪽을 ./cloud-state.ts 로 이은 뒤 걷는다
+export type * from "./cloud-state.js";
+export { strayAnonymous, normalizeCloudState as readCloudState } from "./cloud-state.js";
 
-// cloud.json — save.json 과 같은 폴더. save.json 에는 필드를 더하지 않는다
-export interface CloudSyncState {
-  deviceId: string; // 설치마다 한 번 만드는 무작위 ID
-  userId: string | null; // 이 저장을 올리는 계정. 로그아웃하면 null
-  owner: string | null; // 로컬 저장이 속한 계정. 로그아웃해도 유지. 서버와 맞춘 계정으로 바뀐다
-  syncedRev: number; // 마지막으로 서버와 맞춘 rev
-  dirty: boolean; // 마지막 올리기 뒤 저장이 바뀌었다
-  lastSavedAt: number | null; // 마지막으로 올린 시각
-  superseded: boolean; // 다른 PC 에 밀려났다 — 다음 실행은 rev 와 무관하게 서버 저장을 받는다
-  pendingOp: string | null; // 보냈지만 결과를 모르는 올리기의 멱등 키 — 다시 보낼 때 같은 키
-  ownerKind: OwnerKind | null; // owner 의 종류. owner 가 null 이면 null
-  handoff: PendingHandoff | null; // 옮기지 못한 익명 저장 이관 티켓 — 정식 계정 start 때 다시 시도
-  // 계정 시드(P4b, D24) — 알 결과를 정한다(src/verify/save-rules.ts seededRand). 오프라인에서도 쓰려고 적어 둔다.
-  // seedOwner 가 owner 와 같을 때만 쓴다 — 계정이 바뀌면 온라인이 될 때 새로 받는다
-  seed: string | null;
-  seedOwner: string | null;
-  // 이용 정지(P4c, D35) — 서버가 CLOUD_ACCOUNT_HELD 를 줬다. 오프라인으로 켜도 멈추게 적어 둔다. 기기 연결이 되면(정지가 풀림) 지운다
-  accountHeld: boolean;
-}
-
-//   off              로그인하지 않았거나 멈췄다
-//   connecting       활성 기기로 만드는 중
-//   online           하트비트·자동 저장이 돈다
-//   offline          서버에 닿지 못한다 — 재시도한다. 진행은 다시 연결되면 자동으로 올린다
-//   confirm          연결 끊긴 다른 PC 를 넘겨받을지 사용자 확인을 기다린다(G2) — 게임 멈춤
-//   blocked          교환이 걸려 넘겨받지 못한다 — 게임 멈춤
-//   update-required  서버가 이 앱 버전을 받지 않는다 — 게임은 계속, 올리기만 멈춤(10절 Q6)
-//   superseded       다른 PC 에 밀려났다 — 끝 상태, 앱은 안내 뒤 종료
-export type CloudStatus = "off" | "connecting" | "online" | "offline" | "confirm" | "blocked" | "update-required" | "superseded" | "held";
-
-// boot: 앱을 켤 때·로그인할 때. late: 오프라인으로 켠 뒤 처음 서버에 닿을 때(F3)
-export type CloudMode = "boot" | "late";
-// tick: 주기 저장(2분 스로틀). event: 교환·부화 등 사건(약 1초 모아 바로)
-export type SaveKind = "tick" | "event";
-export type HaltReason = "superseded" | "confirm" | "blocked" | "held";
-
-// 넘겨받거나 확인·양보할 상대 PC
-export interface OtherDevice {
-  label: string | null; // 안내 문구용 PC 이름
-  seen: number | null; // 상대가 마지막으로 서버에 닿은 시각(ms)
-}
-
-export interface HaltInfo {
-  other: OtherDevice | null; // 밀려남 신호·양보·확인이면 상대 PC. 모르면 null
-  code: string | null; // blocked 일 때 CLOUD_TRADE_ACTIVE · CLOUD_TRADE_UNSYNCED
-}
-
-export interface CloudView {
-  status: CloudStatus;
-  lastSavedAt: number | null;
-  busy: boolean;
-  // 마지막 실패 코드 또는 올리기를 막은 이유
-  //   CLOUD_OWNER_OTHER  로컬 저장이 다른 계정 것이고 이 계정 서버 저장이 없다 — 올리지 않는다(10절 Q1)
-  //   CLOUD_BAD_SAVE     받은 서버 저장을 읽지 못했다 — 올리지 않는다
-  //   CLOUD_PET_TRADED_OUT 서버 저장을 받은 뒤에도 교환으로 내보낸 개체가 남아 거부됐다 — 올리지 않는다
-  error: string | null;
-  other: OtherDevice | null; // confirm·blocked·superseded 일 때 상대 PC
-}
-
-export interface CloudIo {
-  loadState: () => unknown; // cloud.json 내용 — 없거나 읽지 못하면 null. 옛 형식도 받는다(readCloudState)
-  saveState: (state: CloudSyncState) => void;
-  readSave: () => Record<string, unknown> | null; // 지금 로컬 저장(JSON 객체)
-  // 받은 저장으로 로컬 저장을 바꾼다. 바꾸기 전 로컬 저장을 백업한다. 검사에 실패하면 false
-  replaceSave: (save: Record<string, unknown>) => boolean;
-}
-
-export interface CloudOptions {
-  client: SupabaseClient;
-  io: CloudIo;
-  appVersion: string;
-  deviceLabel: string; // 안내 문구용 PC 이름
-  onView: (view: CloudView) => void;
-  onHalt: (reason: HaltReason, info: HaltInfo) => void; // 게임을 멈춰야 한다 — 앱이 안내·확인 창을 띄운다
-  // 계정이 서버에서 사라졌다(CLOUD_LOGIN_REQUIRED) — 클라우드는 off. 게임은 멈추지 않는다. kind 는 돌던 계정의 종류(D29)
-  onLost?: (kind: OwnerKind) => void;
-  // 남은 이관 티켓을 start 가 다시 옮겼다 — 앱은 discarded 면 이 PC 진행을 백업했다고 알린다
-  onHandoff?: (outcome: "moved" | "discarded" | "empty") => void;
-  heartbeatMs?: number; // 하트비트 간격 (기본 60초)
-  throttleMs?: number; // 주기 저장 올리기 최소 간격 (기본 2분)
-  eventDelayMs?: number; // 사건 저장을 모으는 시간 (기본 1초)
-  retryMs?: number; // 오프라인일 때 다시 연결을 시도하는 간격 (기본 60초)
-  now?: () => number;
-  setTimer?: (fn: () => void, ms: number) => unknown;
-  clearTimer?: (t: unknown) => void;
-}
-
-export interface Cloud {
-  view: () => CloudView;
-  // 세션(익명·로그인)으로 켠다. kind 는 이 계정의 종류 — 저장 주인(ownerKind)으로 적는다. 기본 member
-  start: (userId: string, mode: CloudMode, kind?: OwnerKind) => Promise<void>;
-  noteSaved: (kind: SaveKind) => void; // 로컬 저장을 썼다
-  confirm: (go: boolean) => Promise<void>; // confirm·blocked 답 — go 면 다시 넘겨받기(confirm 은 force), 아니면 멈춤(앱 종료)
-  sleep: () => Promise<void>; // 잠금·절전 직전 — 올리고 잠듦을 알린 뒤 하트비트를 멈춘다
-  wake: () => Promise<void>; // 잠금 해제·깨어남 — 아직 활성인지 보고 하트비트를 다시 돌린다
-  release: (timeoutMs?: number) => Promise<void>; // 정상 종료 — 올리고 released 를 알린 뒤 멈춘다(최대 timeoutMs)
-  // 세션 종료(OS 끄기·로그오프·업데이트 설치) 직전 — 올리고 released 를 알리되 멈추지 않는다(최대 timeoutMs).
-  // 끄기가 취소되어 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다
-  announceRelease: (timeoutMs?: number) => Promise<void>;
-  released: () => boolean; // announceRelease 로 released 를 알린 뒤 아직 active 로 되돌리지 않았다
-  unsaved: () => "none" | "dirty"; // 끄기·로그아웃 전 확인용 — 온라인이고 올리지 않은 진행이 있다
-  flush: () => Promise<void>; // 온라인이고 바뀌었으면 지금 한 번 올린다
-  stop: (forget?: boolean) => void; // 멈춤. forget 이면 로그아웃 — userId 만 지우고 owner 는 남긴다
-  // 로컬 저장의 주인 — 부팅 판단용(세션 없음 + 주인 있음 → 분실). 없으면 null
-  owner: () => { id: string; kind: OwnerKind | null } | null;
-  // 마지막으로 서버와 맞춘 rev — 0 이면 지금 주인 계정으로 한 번도 올리거나 받지 않았다(D29 문구, design-p2.md 15절 G-c)
-  synced: () => number;
-  pendingHandoff: () => PendingHandoff | null; // 다시 시도할 이관 티켓
-  seed: () => string | null; // 지금 저장 주인의 계정 시드(P4b). 아직 받지 못했거나 주인이 바뀌었으면 null
-  held: () => boolean; // 이용 정지를 적어 두었다(P4c) — 서버에 닿기 전 부팅 판단용
-  // 멈춘 상태에서 저장 주인을 from → to 로 바꾼다. to 의 첫 저장으로 다시 맞춘다(syncedRev 0). 주인이 from 이 아니거나 돌고 있으면 false
-  rebind: (from: string, to: string, kind?: OwnerKind) => boolean;
-  // 세션 교체 뒤 이관 결과를 적는다 — 정식 계정 start 전에 부른다
-  //   adopted empty      rebind(anon, to) — 이 PC 저장을 그 계정 첫 저장으로(그 계정에 저장이 있으면 받는다)
-  //   adopted moved·discarded  주인은 익명 그대로 — start 의 맞추기가 서버 저장을 받는다(로컬 백업)
-  //   pending            티켓을 cloud.json 에 남긴다(CLOUD_HANDOFF_INVALID 는 버린다)
-  applyHandoff: (report: HandoffReport, to: string) => void;
-  // 로그아웃·삭제 뒤 — 멈추고 cloud.json 을 새 설치처럼(기기 ID 만 유지)
-  reset: () => void;
-}
-
-const NETWORK = /fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|socket|abort|timeout/i;
-const codeOf = (error: { message?: string } | null | undefined): string => {
-  const message = (error?.message ?? "").trim();
-  const m = /(CLOUD_[A-Z_]+)/.exec(message);
-  if (m?.[1]) return m[1];
-  return NETWORK.test(message) ? "NETWORK" : "UNKNOWN";
-};
-
-const handoffOf = (v: unknown): PendingHandoff | null => {
-  if (!v || typeof v !== "object") return null;
-  const h = v as Record<string, unknown>;
-  return typeof h.ticket === "string" && typeof h.anon === "string" && typeof h.expiresAt === "number"
-    ? { ticket: h.ticket, anon: h.anon, expiresAt: h.expiresAt }
-    : null;
-};
-
-// cloud.json 읽기 — 옛 형식(owner·superseded·pendingOp 없음, offlineDirty 있음)도 받는다
-//   옛 파일의 owner 는 올리던 계정(userId)으로 본다. 로그아웃 상태였으면 null(10절 Q1 의 작은 구멍 허용)
-//   ownerKind·handoff 가 없는 P1 파일 — P1 클라우드는 정식 계정만 돌았다. owner 가 있으면 member
-export function readCloudState(raw: unknown): CloudSyncState | null {
-  if (!raw || typeof raw !== "object") return null;
-  const s = raw as Record<string, unknown>;
-  if (typeof s.deviceId !== "string" || typeof s.syncedRev !== "number" || typeof s.dirty !== "boolean") return null;
-  const userId = typeof s.userId === "string" ? s.userId : null;
-  const owner = "owner" in s ? (typeof s.owner === "string" ? s.owner : null) : userId;
-  return {
-    deviceId: s.deviceId,
-    userId,
-    owner,
-    syncedRev: s.syncedRev,
-    dirty: s.dirty,
-    lastSavedAt: typeof s.lastSavedAt === "number" ? s.lastSavedAt : null,
-    superseded: s.superseded === true,
-    pendingOp: typeof s.pendingOp === "string" ? s.pendingOp : null,
-    ownerKind: owner == null ? null : s.ownerKind === "anonymous" || s.ownerKind === "member" ? s.ownerKind : "member",
-    handoff: handoffOf(s.handoff),
-    seed: typeof s.seed === "string" ? s.seed : null,
-    seedOwner: typeof s.seedOwner === "string" ? s.seedOwner : null,
-    accountHeld: s.accountHeld === true,
-  };
-}
-
-const fresh = (deviceId: string): CloudSyncState => ({
-  deviceId, userId: null, owner: null, syncedRev: 0, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: null, handoff: null,
-  seed: null, seedOwner: null, accountHeld: false,
-});
-
-// 부팅 판단 — 익명 세션이 저장 주인과 다른 계정이면 그 세션으로는 올릴 수 없다(검수 H1)
-//   분실 부팅 때 다른 경로(P1 로그아웃 뒤 교환 탭 등)가 새 익명 계정을 만든 경우다. 남은 이관 티켓이 없으면 분실로 본다.
-//   분실로 볼 때 잃은 계정의 종류를 돌려준다. 아니면 null
-export function strayAnonymous(
-  user: { id: string; is_anonymous?: boolean | null },
-  owner: { id: string; kind: OwnerKind | null } | null,
-  pending: PendingHandoff | null,
-): OwnerKind | null {
-  if (user.is_anonymous !== true || !owner || owner.id === user.id || pending) return null;
-  return owner.kind ?? "member";
-}
-
-// 올릴 개체가 있는가 — 스타터를 고르기 전(개체 0)은 올리지 않는다
-const hasPets = (save: Record<string, unknown>): boolean => Array.isArray(save.pets) && save.pets.length > 0;
-
-interface ClaimRow {
-  outcome: "claimed" | "yield" | "confirm";
-  rev: number | string | null;
-  updated_at: string | null;
-  has_save: boolean | null;
-  other_label: string | null;
-  other_seen: string | null;
-}
-interface TouchRow {
-  active: boolean;
-  rev: number | string | null;
-}
 
 export function createCloud(o: CloudOptions): Cloud {
   const now = o.now ?? Date.now;
   const setTimer = o.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
   const clearTimer = o.clearTimer ?? ((t) => clearTimeout(t as ReturnType<typeof setTimeout>));
-  const heartbeatMs = o.heartbeatMs ?? 60_000;
-  const throttleMs = o.throttleMs ?? 120_000;
-  const eventDelayMs = o.eventDelayMs ?? 1_000;
-  const retryMs = o.retryMs ?? 60_000;
+  const heartbeatMs = o.heartbeatMs ?? ONLINE_TIMING.heartbeatMs;
+  const throttleMs = o.throttleMs ?? ONLINE_TIMING.uploadThrottleMs;
+  const eventDelayMs = o.eventDelayMs ?? ONLINE_TIMING.eventDelayMs;
+  const retryMs = o.retryMs ?? ONLINE_TIMING.retryMs;
 
-  let state: CloudSyncState = readCloudState(o.io.loadState()) ?? fresh(randomUUID());
+  let state: CloudSyncState = normalizeCloudState(o.io.loadState()) ?? freshCloudState(randomUUID());
   let status: CloudStatus = "off";
   let busy = false;
   let error: string | null = null;
@@ -287,15 +100,8 @@ export function createCloud(o: CloudOptions): Cloud {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
   };
-  const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: string }> => {
-    try {
-      const { data, error: e } = await o.client.rpc(fn, args);
-      if (e) return { ok: false, code: codeOf(e) };
-      return { ok: true, data: data as T };
-    } catch (e) {
-      return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }) };
-    }
-  };
+  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: string }> =>
+    callRpc<T, string>(o.client, fn, args, (e) => ({ code: codeOf(e) }));
   // 올리기 — Edge Function upload-save 를 거친다(서버 검증 P4a, worklog/records/cloud-authority/record.md "P4 서버 검증").
   // 답은 RPC 와 같은 모양으로 바꾼다. 오류 본문 { error: "CLOUD_…" } 의 코드를 쓴다.
   // 502·503·504·전송 실패는 NETWORK(오프라인, 같은 키로 다시 시도). 그 밖(토큰 무효 AUTH_TOKEN·SERVER_ERROR)은 UNKNOWN — 계정 분실로도 오프라인으로도 보지 않는다
@@ -305,12 +111,10 @@ export function createCloud(o: CloudOptions): Cloud {
         body: { device: a.device, baseRev: a.baseRev, save: a.save, saveV: typeof a.save.v === "number" ? a.save.v : 3, appVersion: o.appVersion, op: a.op },
       });
       if (e) {
-        const context = (e as { context?: unknown }).context;
-        if (context instanceof Response) {
-          const body = (await context.clone().json().catch(() => null)) as { error?: unknown } | null;
-          const code = typeof body?.error === "string" ? body.error : "";
-          if (code.startsWith("CLOUD_")) return { ok: false, code };
-          return { ok: false, code: context.status === 502 || context.status === 503 || context.status === 504 ? "NETWORK" : "UNKNOWN" };
+        if ((e as { context?: unknown }).context instanceof Response) {
+          const f = await readFunctionError(e);
+          if (f.bodyCode?.startsWith("CLOUD_")) return { ok: false, code: f.bodyCode };
+          return { ok: false, code: f.status === 502 || f.status === 503 || f.status === 504 ? "NETWORK" : "UNKNOWN" };
         }
         const name = (e as { name?: unknown }).name;
         return { ok: false, code: name === "FunctionsFetchError" || name === "FunctionsRelayError" ? "NETWORK" : codeOf(e) };
@@ -318,7 +122,7 @@ export function createCloud(o: CloudOptions): Cloud {
       const rev = (data as { rev?: unknown } | null)?.rev;
       return typeof rev === "number" ? { ok: true, data: rev } : { ok: false, code: "UNKNOWN" };
     } catch (e) {
-      return { ok: false, code: codeOf({ message: e instanceof Error ? e.message : String(e) }) };
+      return { ok: false, code: codeOf({ message: messageOf(e) }) };
     }
   };
   const otherOf = (label: string | null | undefined, seen: string | null | undefined): OtherDevice | null =>
@@ -427,7 +231,7 @@ export function createCloud(o: CloudOptions): Cloud {
         });
       unsubscribe = () => void o.client.removeChannel(ch);
       await new Promise<void>((resolve) => {
-        const done = setTimer(resolve, 5_000); // 구독이 늦으면 기다리지 않는다 — 하트비트·올리기 실패로도 안다
+        const done = setTimer(resolve, ONLINE_TIMING.subscribeWaitMs); // 구독이 늦으면 기다리지 않는다 — 하트비트·올리기 실패로도 안다
         ch.subscribe((s: string) => {
           if (s === "SUBSCRIBED" || s === "CHANNEL_ERROR" || s === "TIMED_OUT") {
             clearTimer(done);
@@ -923,16 +727,14 @@ export function createCloud(o: CloudOptions): Cloud {
     if (state.dirty) schedule(eventDelayMs);
   };
 
-  const release: Cloud["release"] = async (timeoutMs = 3_000) => {
+  const release: Cloud["release"] = async (timeoutMs = ONLINE_TIMING.releaseWaitMs) => {
     const work = async (): Promise<void> => {
       if (status !== "online") return;
       clearBeat();
       await flush();
       if (status === "online") await touch("released");
     };
-    let timer: unknown = null;
-    await Promise.race([work(), new Promise<void>((r) => { timer = setTimer(r, timeoutMs); })]);
-    if (timer) clearTimer(timer);
+    await withTimeout(work(), timeoutMs, { setTimer, clearTimer });
     if (status === "superseded") {
       clearTimers();
       unwatch();
@@ -941,7 +743,7 @@ export function createCloud(o: CloudOptions): Cloud {
     stop(false);
   };
 
-  const announceRelease: Cloud["announceRelease"] = async (timeoutMs = 3_000) => {
+  const announceRelease: Cloud["announceRelease"] = async (timeoutMs = ONLINE_TIMING.releaseWaitMs) => {
     const work = async (): Promise<void> => {
       if (status !== "online" || asleep) return;
       releasedFlag = true;
@@ -958,9 +760,7 @@ export function createCloud(o: CloudOptions): Cloud {
       }
       startBeat(); // 하트비트를 처음부터 다시 센다 — 끄기가 취소되면 다음 하트비트가 active 로 되돌린다
     };
-    let timer: unknown = null;
-    await Promise.race([work(), new Promise<void>((r) => { timer = setTimer(r, timeoutMs); })]);
-    if (timer) clearTimer(timer);
+    await withTimeout(work(), timeoutMs, { setTimer, clearTimer });
   };
 
   const unsaved: Cloud["unsaved"] = () => (state.dirty && status === "online" && !held ? "dirty" : "none");
@@ -1012,7 +812,7 @@ export function createCloud(o: CloudOptions): Cloud {
     stop(false);
     userId = null;
     error = null;
-    state = fresh(state.deviceId);
+    state = freshCloudState(state.deviceId);
     persist();
     emit();
   };

@@ -37,7 +37,7 @@ function markedAt(marker: string): number {
   }
 }
 
-// cloud.json 내용을 돌려준다(형식 검사는 cloud.ts readCloudState). 격리 표시가 있으면 맞춘 rev 를 잊은 상태로
+// cloud.json 내용을 돌려준다(형식 검사는 cloud-state.ts normalizeCloudState). 격리 표시가 있으면 맞춘 rev 를 잊은 상태로
 export function loadCloudState(cloudFile: string, saveFile: string): unknown {
   const raw = readJson(cloudFile);
   const marker = lostMarker(saveFile);

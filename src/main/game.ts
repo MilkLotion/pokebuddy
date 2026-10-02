@@ -34,6 +34,8 @@ import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
 import type { Snapshot } from "../shared/model/snapshot";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { FIND_POKEMON } from "../shared/names/commands.js";
+import type { SaveKind } from "../online/cloud-state.js";
+import { saveKindOf } from "../online/save-kind.js";
 import type { AgentName } from "../shared/names/agents";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
@@ -43,22 +45,8 @@ export const saveFile = (): string => PATHS.save;
 
 // 줍기로 포켓몬을 데려온 쓰기의 이름(FIND_POKEMON)은 src/shared/names/commands.ts 에 있다
 
-// 클라우드에 바로 올리는 쓰기 — 잃으면 되돌리기 어려운 사건 (design-p1.md 6절, record.md D27).
-// 이름은 src/tx/handlers.ts 의 거래 이름이다. 나머지 쓰기(시간 진행·돌봄·설정 등)는 2분 스로틀로 모아 올린다.
-// 교환 ack 뒤 올리기는 교환 세션이 따로 알린다 (src/trade/session.ts onSettled)
-export const EVENT_WRITES: ReadonlySet<string> = new Set([
-  "trade.lock",
-  "trade.unlock",
-  "trade.apply",
-  "mail.apply",
-  "egg.open",
-  "evolve",
-  "starter.pick",
-  FIND_POKEMON,
-]);
-
-// 쓰기 종류 — event 는 바로, tick 은 스로틀 (src/online/cloud.ts noteSaved)
-export type WriteKind = "tick" | "event";
+// 쓰기 종류 — event 는 바로, tick 은 스로틀. 가르는 표는 src/online/save-kind.ts 다
+export type WriteKind = SaveKind;
 
 export interface GameV3 {
   file: string;
@@ -82,7 +70,7 @@ export interface GameV3Options {
   rand?: () => number;
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b 계정 시드). 없거나 null 이면 rand
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
-  onWrite?: (kind: WriteKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. EVENT_WRITES 면 event (src/online/cloud.ts noteSaved)
+  onWrite?: (kind: WriteKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
 }
@@ -144,7 +132,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
       pending = null; // 파일이 가장 새 저장이다
       pendingWorkMs = 0;
       diskKey = statKey();
-      onWrite?.(name && EVENT_WRITES.has(name) ? "event" : "tick");
+      onWrite?.(saveKindOf(name));
     }
     return ok;
   };

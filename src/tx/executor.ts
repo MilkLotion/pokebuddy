@@ -32,7 +32,7 @@ export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutc
 
 export interface TxPorts {
   read: () => SaveV3 | null;
-  write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/main/game.ts EVENT_WRITES)
+  write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/online/save-kind.ts)
   now: () => number;
   rand?: () => number; // 없으면 Math.random
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
