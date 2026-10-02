@@ -142,8 +142,8 @@ const fixed = (...values: number[]): (() => number) => {
     [0.005, "sub-legendary", 45], // 가라르 프리져·썬더·파이어 포함 (data/regional.json, 2026-09-30)
     [0.012, "ultra-beast", 10],
     [0.017, "paradox", 20],
-    [0.021, "mythical", 22],
-    [0.024, "legendary", 24],
+    [0.021, "mythical", 21], // 아르세우스는 전설알로 옮겼다 (2026-10-03 사용자 결정 "그냥 전설알에 넣자", worklog/records/team-limit/record.md)
+    [0.024, "legendary", 25],
     [0.026, "ancient-stone", 15], // 화석 15종 — 단일 포켓몬 알이 아니라 늘 줄 수 있다
     [0.054, "ancient-stone", 15],
   ];
