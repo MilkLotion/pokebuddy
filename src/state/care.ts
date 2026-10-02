@@ -8,10 +8,11 @@ import { setBuff, use, type UseResult } from "../bag/use.js";
 import type { DexOptions } from "../dex/data";
 import { BAG_V3_RULES, MOOD_RULES, SAVE_V3_RULES } from "../save/rules.js";
 import type { SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export const BASIC_FOOD = "basic-food";
 
-export type PlayFailure = "no-pet" | "cooldown";
+export type PlayFailure = ReasonOf<"no-pet" | "cooldown">;
 
 export interface PlayResult {
   ok: boolean;

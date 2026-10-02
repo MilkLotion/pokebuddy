@@ -10,8 +10,9 @@
 //     그때 ensure 는 익명 계정을 만들지 않고 NETWORK, probe 는 unknown — 로그인 세션을 익명으로 덮거나 분실(D29)로 잘못 보지 않게
 import { isAuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { authCodeOf } from "./account.js";
+import type { SessionCode } from "../shared/names/online-codes.js";
 
-export type SessionErrorCode = "NETWORK" | "AUTH_RATE_LIMITED" | "UNKNOWN";
+export type SessionErrorCode = SessionCode; // 목록은 src/shared/names/online-codes.ts
 
 export type SessionResult = { ok: true; user: User } | { ok: false; code: SessionErrorCode; detail?: string };
 

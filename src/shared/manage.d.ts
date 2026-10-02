@@ -310,10 +310,10 @@ export interface ManageRequest {
   args?: Record<string, unknown>;
 }
 
-// 결과는 문구가 아니라 코드 — 문구는 화면이 만든다
+// 결과는 문구가 아니라 코드 — 문구는 화면이 만든다. 코드의 목록은 ./names/reasons.ts 와 ./names/online-codes.ts
 export interface ManageReply {
   ok: boolean;
-  reason: string;
+  reason: import("./names/online-codes.js").FailCode;
   screen?: TradeScreen; // trade.* 명령의 결과 — 교환 모달이 그리는 값
   [key: string]: unknown;
 }
@@ -762,7 +762,8 @@ export interface ScreensBridge {
 }
 
 // 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/notify/banner.ts 가 만든다
-export type BannerKind = "hatch" | "evolve" | "achievement" | "notice" | "find" | "mega"; // mega — 메가스톤이 생겼다 (src/dex/mega.ts) // notice — 대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). find — 줍기, 대상 그림 없이 문구 두 줄 (src/find/core.ts)
+// 종류의 목록은 ./names/banners.ts 가 원본이다
+type BannerKind = import("./names/banners.js").BannerKind;
 
 export interface BannerView {
   key: string;

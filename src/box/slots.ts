@@ -6,6 +6,7 @@ import { profile } from "../dex/species.js";
 import { SAVE_V3_RULES } from "../save/rules.js";
 import { pushBox } from "../save/v3.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export interface BoxSpot {
   boxIndex: number;
@@ -83,7 +84,7 @@ export type BoxSortKey = "dex" | "level" | "affinity" | "recent" | "name";
 export const BOX_SORT_KEYS: readonly BoxSortKey[] = ["dex", "level", "affinity", "recent", "name"];
 export const isBoxSortKey = (v: unknown): v is BoxSortKey => typeof v === "string" && (BOX_SORT_KEYS as readonly string[]).includes(v);
 
-export type BoxFailure = "no-box" | "bad-slot" | "empty-slot" | "box-full" | "same-slot";
+export type BoxFailure = ReasonOf<"no-box" | "bad-slot" | "empty-slot" | "box-full" | "same-slot">;
 
 // 한 박스만 정렬한다 — 개체를 기준 순서로 앞 칸부터 다시 놓고 빈 칸은 뒤로. 한 번만 정렬한다(뒤에 오는 개체는 빈 칸으로)
 // 같은 값이면 도감 번호, 그다음 얻은 시각 순이다. nameOf 는 화면 이름(이름순에 쓴다)

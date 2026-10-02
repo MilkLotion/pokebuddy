@@ -7,8 +7,9 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { findPet, putPet, takePet } from "../box/slots.js";
 import type { SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type PlacementFailure =
+export type PlacementFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
   | "not-in-box" // 박스에 없다 (이미 파티에 있거나 사라졌다)
   | "no-slot" // 그런 칸이 없다
@@ -16,7 +17,8 @@ export type PlacementFailure =
   | "slot-locked" // 잠긴 칸이다
   | "no-empty-slot" // 빈 칸이 하나도 없다
   | "box-full" // 모든 박스가 가득 찼다
-  | "not-in-party"; // 파티에 없다
+  | "not-in-party" // 파티에 없다
+>;
 
 export interface PlacementResult {
   ok: boolean;

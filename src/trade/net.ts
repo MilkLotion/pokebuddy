@@ -9,16 +9,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "../online/client.js";
 import { createSessionGate, type SessionGate } from "../online/session.js";
+import type { TradeCode } from "../shared/names/online-codes.js";
 import type { PetRef } from "./core.js";
 
 export type { SessionStorage };
 
-export type TradeErrorCode =
-  | "TRADE_AUTH_REQUIRED" | "TRADE_BAD_ARGS" | "TRADE_VERSION_MISMATCH" | "TRADE_RATE_LIMITED" | "TRADE_ALREADY_ACTIVE"
-  | "TRADE_LINK_INVALID" | "TRADE_LINK_EXPIRED" | "TRADE_LINK_USED" | "TRADE_OWN_LINK" | "TRADE_NOT_FOUND"
-  | "TRADE_CLOSED" | "TRADE_OFFER_INVALID" | "TRADE_OFFER_MISSING" | "TRADE_OFFER_CHANGED" | "TRADE_ALREADY_DONE"
-  | "TRADE_NOT_DONE" | "TRADE_LOGIN_REQUIRED" | "TRADE_PET_TRADED" | "TRADE_PET_NOT_SYNCED"
-  | "TRADE_PET_BUSY" | "TRADE_SAVE_UNVERIFIED" | "CLOUD_ACCOUNT_HELD" | "NETWORK" | "UNKNOWN"; // CLOUD_ACCOUNT_HELD — 이용 정지(P4c). 앱은 멈춘다
+// 교환 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts. CLOUD_ACCOUNT_HELD 는 이용 정지(P4c). 앱은 멈춘다
+export type TradeErrorCode = TradeCode;
 
 export type NetResult<T> = { ok: true; data: T } | { ok: false; code: TradeErrorCode; detail?: string };
 

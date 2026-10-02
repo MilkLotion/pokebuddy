@@ -14,7 +14,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { localDate } from "../shared/clock.js";
 import type { AgentStats, LogEntry, NatureId, Pet, PetDaily, SaveV2, Totals } from "../shared/types.js";
-import { SAVE_RULES, isAgentName, isNatureId } from "./rules.js";
+import { isAgentName } from "../shared/names/agents.js";
+import { SAVE_RULES, isNatureId } from "./rules.js";
 
 export interface ReadOptions {
   repair?: boolean; // 파손이면 .bak 으로 옮긴다 — writer 만. 읽기 전용은 false

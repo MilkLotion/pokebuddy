@@ -44,6 +44,7 @@ import { hasRoom, newEgg, placeNew } from "../shop/buy.js";
 import { canGiveEgg, singleSpecies } from "../shop/catalog.js";
 import { EGG_V3_RULES, SAVE_V3_RULES } from "../save/rules.js";
 import type { Rand } from "../egg/hatch";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type AchievementReward = "party-slot" | { pokemon: string } | { points: number } | { egg: string } | { item: string; count?: number };
 
@@ -78,7 +79,7 @@ export interface AchievementDef {
   reward: AchievementReward;
 }
 
-export type ClaimFailure = "no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none";
+export type ClaimFailure = ReasonOf<"no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none">;
 
 export interface ClaimResult {
   ok: boolean;

@@ -8,11 +8,13 @@ import type { DexOptions } from "../dex/data";
 import { SHOP_V3_RULES } from "../save/rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { toolPrice } from "./catalog.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type SellFailure =
+export type SellFailure = ReasonOf<
   | "not-sellable" // 가격이 없거나 0P 인 도구다
   | "not-enough-items" // 가진 개수가 판매 수량보다 적다
-  | "bad-count"; // 수량이 1 이상의 정수가 아니다
+  | "bad-count" // 수량이 1 이상의 정수가 아니다
+>;
 
 export interface SellResult {
   ok: boolean;

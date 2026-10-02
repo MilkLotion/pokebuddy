@@ -20,8 +20,9 @@ import { EGG_V3_RULES, SHOP_V3_RULES } from "../save/rules.js";
 import { maxEggNo, presetSlots } from "../save/v3.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 import { canGiveEgg, eggPool, find, inRandomEgg, isSingleEgg, singleLeft, slotPrice } from "./catalog.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type BuyFailure =
+export type BuyFailure = ReasonOf<
   | "no-product" // 그런 상품이 없다
   | "not-enough" // 포인트가 모자라다
   | "daycare-full" // 돌보미집이 가득 찼다
@@ -32,7 +33,8 @@ export type BuyFailure =
   | "box-max" // 박스를 더 가질 수 없다
   | "box-full" // 새 개체를 둘 파티 빈 칸도 박스 빈 칸도 없다
   | "not-unlocked" // 해금하지 않은 종이다
-  | "sold-out"; // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
+  | "sold-out" // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
+>;
 
 export interface BuyResult {
   ok: boolean;

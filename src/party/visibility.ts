@@ -3,8 +3,9 @@
 // 숨겨도 포인트와 친밀도는 쌓인다. 박스 보관만 멈춘다.
 // 여기서는 칸의 `hidden` 만 바꾼다. 저장은 거래 실행기가 한다 (docs/specs/modules.md "경계 원칙").
 import type { PartySlotV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type VisibilityFailure = "no-slot" | "not-pokemon" | "already";
+export type VisibilityFailure = ReasonOf<"no-slot" | "not-pokemon" | "already">;
 
 export interface VisibilityResult {
   ok: boolean;

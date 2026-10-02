@@ -29,13 +29,13 @@ import { agentInfo, connect, disconnect, hookCommandOf, status } from "../agents
 import { findNode, lastSignals, probe } from "../agents/check.js";
 import type { AgentAction, AgentReply, AgentRow, DexDetail, DexEntry, ManageReply, ManageRequest, ShopDetail, Snapshot } from "../shared/manage";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
+import { FIND_POKEMON } from "../shared/names/commands.js";
 import type { AgentName, Command, CommandName, CommandSource } from "../shared/types";
 
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/store.ts)
 export const saveFile = (): string => PATHS.save;
 
-// 줍기로 포켓몬을 데려온 쓰기 — 거래가 아니라 이름이 없어 여기서 붙인다
-export const FIND_POKEMON = "find.pokemon";
+// 줍기로 포켓몬을 데려온 쓰기의 이름(FIND_POKEMON)은 src/shared/names/commands.ts 에 있다
 
 // 클라우드에 바로 올리는 쓰기 — 잃으면 되돌리기 어려운 사건 (design-p1.md 6절, record.md D27).
 // 이름은 src/tx/handlers.ts 의 거래 이름이다. 나머지 쓰기(시간 진행·돌봄·설정 등)는 2분 스로틀로 모아 올린다.

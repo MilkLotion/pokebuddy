@@ -5,13 +5,14 @@
 import { zoomOfLevel } from "../save/rules.js";
 import { screenRefOf } from "../save/v3.js";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export interface HomePoint {
   dx: number;
   dy: number;
 }
 
-export type HomeFailure = "no-pet" | "bad-value";
+export type HomeFailure = ReasonOf<"no-pet" | "bad-value">;
 
 export interface HomeResult {
   ok: boolean;
