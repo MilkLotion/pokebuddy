@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { AgentName } from "../shared/names/agents";
-import type { Usage } from "../shared/hook-record";
+import type { HookStateRead, Usage } from "../shared/hook-record";
 
 export const ZERO_USAGE: Readonly<Usage> = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -60,7 +60,7 @@ export function readSessionUsages(stateDir: string): SessionUsage[] {
   const out: SessionUsage[] = [];
   for (const name of names) {
     try {
-      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as Record<string, unknown>;
+      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as HookStateRead;
       if (!isUsage(rec.usage)) continue;
       const atSec = Number(rec.usageAt ?? rec.at) || 0;
       out.push({ sessionId: name.slice(0, -5), cli: String(rec.cli || "claude"), usage: rec.usage, at: Math.round(atSec * 1000) });

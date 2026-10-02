@@ -10,6 +10,7 @@ import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { HookStateRead } from "../shared/hook-record";
 
 export interface NodeInfo {
   path: string;
@@ -97,7 +98,7 @@ export function lastSignals(stateDir: string): Record<string, number> {
   }
   for (const name of names) {
     try {
-      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as { cli?: unknown; at?: unknown };
+      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as HookStateRead;
       const cli = typeof rec.cli === "string" ? rec.cli : "claude";
       if (typeof rec.at !== "number") continue;
       const ms = Math.round(rec.at * 1000);
@@ -141,7 +142,7 @@ export async function probe(cli: string, command: string, hookFile: string, node
   });
   let wrote = false;
   try {
-    const rec = JSON.parse(fs.readFileSync(record, "utf8")) as { cli?: unknown };
+    const rec = JSON.parse(fs.readFileSync(record, "utf8")) as HookStateRead;
     wrote = rec.cli === cli;
   } catch {
     wrote = false;
