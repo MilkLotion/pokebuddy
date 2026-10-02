@@ -13,8 +13,9 @@ import { nextOf } from "./evo.js";
 import { shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "../shop/catalog.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type FormFailure = "no-pet" | "not-shared" | "bad-form" | "already";
+export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "already">;
 
 export interface FormResult {
   ok: boolean;

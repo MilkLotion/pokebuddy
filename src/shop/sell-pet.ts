@@ -14,13 +14,15 @@ import { SHOP_V3_RULES } from "../save/rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isLocked, isSinglePet } from "../trade/core.js";
 import { eggOfSpecies, eggPrice } from "./catalog.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type SellPetFailure =
+export type SellPetFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
   | "pet-not-sellable" // 단일 포켓몬이거나 어느 알에도 없는 종이다
   | "trade-locked" // 교환에 올린 개체다
   | "last-pet" // 가진 개체가 한 마리뿐이다
-  | "in-preset"; // 파티 프리셋에 든 개체다
+  | "in-preset" // 파티 프리셋에 든 개체다
+>;
 
 export interface SellPetResult {
   ok: boolean;

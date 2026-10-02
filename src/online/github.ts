@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { authCodeOf, viewOf, type AccountResult } from "./account.js";
 import type { SessionGate } from "./session.js";
 import type { HandoffReport, SwitchHooks } from "./handoff.js";
+import type { AccountCode, GithubCode } from "../shared/names/online-codes.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다
 export const GITHUB_PORTS = [54380, 54381, 54382] as const;
@@ -97,7 +98,7 @@ async function listen(server: http.Server, ports: readonly number[]): Promise<nu
 }
 
 // 로그인 결과 — 성공이면 로그인한 계정 보기. 취소·시간 초과는 AUTH_CANCELLED(화면은 조용히 로그인 화면으로)
-export type GithubResult = AccountResult | { ok: false; code: "AUTH_CANCELLED" | "AUTH_PORT_BUSY" };
+export type GithubResult = AccountResult | { ok: false; code: Exclude<GithubCode, AccountCode> }; // 취소·시간 초과, 돌아올 포트가 없다
 
 export async function githubLogin({ client, gate, openExternal, blocked, ports = GITHUB_PORTS, timeoutMs = 5 * 60_000, signal, switchHooks }: GithubLoginOptions): Promise<GithubResult> {
   if (blocked()) return { ok: false, code: "AUTH_TRADE_ACTIVE" };

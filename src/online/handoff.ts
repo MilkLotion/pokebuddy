@@ -6,6 +6,9 @@
 //   GitHub 교환(exchangeCodeForSession)은 공유 클라이언트의 익명 세션을 덮어쓴다 — 티켓은 반드시 교환 전에 받는다
 //   세션 교체 훅(SwitchHooks)은 account.ts·github.ts 가 gate.exclusive 안에서 부른다. 훅 안에서 gate.ensure·사용자 변경 알림 금지
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { HandoffCode } from "../shared/names/online-codes.js";
+
+export type { HandoffCode }; // 목록은 src/shared/names/online-codes.ts
 
 // 아직 쓰지 못한 이관 티켓 — cloud.json 에 남겨 다시 시도한다
 export interface PendingHandoff {
@@ -18,8 +21,6 @@ export interface PendingHandoff {
 //   discarded  로그인 계정에 저장이 있어(D7) 또는 교환으로 내보낸 개체가 있어 익명 저장을 버렸다
 //   empty      익명 계정에 서버 저장이 없었다
 export type HandoffOutcome = "moved" | "discarded" | "empty";
-
-export type HandoffCode = "NETWORK" | "CLOUD_HANDOFF_INVALID" | "CLOUD_TRADE_ACTIVE" | "CLOUD_LOGIN_REQUIRED" | "CLOUD_ACCOUNT_HELD" | "UNKNOWN";
 
 export type BeginResult = { ok: true; handoff: PendingHandoff } | { ok: false; code: HandoffCode };
 export type AdoptResult = { ok: true; outcome: HandoffOutcome; rev: number } | { ok: false; code: HandoffCode };

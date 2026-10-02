@@ -22,10 +22,12 @@
 //   성장(3단계) → 포인트는 첫 돌봄 뒤에 차례로 선다. 파티와 박스·가방·진화는 그 기능을 처음 쓸 수 있게 될 때 줄에 든다.
 //   파티 프리셋(3단계)은 파티 튜토리얼을 끝낸 뒤 개체가 3마리 이상이면 줄에 든다 (2026-10-02).
 //   목표 행동을 이미 했는지(already)는 보지 않는다 — 설명을 읽거나 닫아야 끝난다
+import { SCREEN_TUTORIAL_IDS, type QueuedTutorialId } from "../shared/names/tutorials.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
 import { canEvolve, dayPartOf } from "../dex/evolve.js";
 
-export type TutorialFailure = "bad-id" | "already";
+export type TutorialFailure = ReasonOf<"bad-id" | "already">;
 
 export interface TutorialResult {
   ok: boolean;
@@ -86,7 +88,7 @@ export const TUTORIALS: readonly TutorialRule[] = [
 // 화면을 처음 열 때 띄우는 튜토리얼 — 대기열 밖. 끝내거나 닫기 전까지 그 화면을 열 때마다 1단계부터 보인다
 //   area  설정 › 화면 (6단계)   dex  도감 탭   trade  교환 모달   user  사용자 모달 (2단계)
 //   box   박스 탭 (3단계) — 우클릭 메뉴 · 옮기기 · 끌어서 자리 바꾸기. 지금 박스에 개체가 있을 때만 보인다 (2026-10-02)
-export const SCREEN_TUTORIALS = ["area", "dex", "trade", "user", "box"] as const;
+export const SCREEN_TUTORIALS = SCREEN_TUTORIAL_IDS; // 목록의 원본은 src/shared/names/tutorials.ts
 
 const ruleOf = (id: string): TutorialRule | undefined => TUTORIALS.find((t) => t.id === id);
 

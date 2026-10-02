@@ -1,12 +1,11 @@
 // 게임 명령 진입 — 관리 창과 같은 명령을 명령 통로(mailbox)로 보낸다. 게임 저장은 writer 만 바꾼다 (docs/contributing/development.md "게임 명령")
 import { PATHS } from "../main/paths";
 import { send } from "../save/mailbox";
+import { commandNamesWhere } from "../shared/names/commands";
 import type { Command, CommandName } from "../shared/types";
 
-const allowed: CommandName[] = [
-  "snapshot", "shop.buy", "evolve", "pet.look", "pet.set", "pet.form", "feed", "play", "party.show", "party.hide",
-  "trade.create", "trade.join", "trade.offer", "trade.ready", "trade.unready", "trade.leave", "trade.status",
-];
+// CLI 가 받는 명령 — 목록은 src/shared/names/commands.ts 의 cli
+const allowed: readonly string[] = commandNamesWhere("cli");
 
 export async function game(argv: string[]): Promise<void> {
   const [name = "snapshot", target, ...fields] = argv;

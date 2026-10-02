@@ -9,6 +9,7 @@ import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_V3_RULES, MOOD_RULES, SAVE_V3_RULES } from "../save/rules.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off";
 
@@ -19,7 +20,7 @@ export interface ItemEntry {
   amount: number;
 }
 
-export type UseFailure =
+export type UseFailure = ReasonOf<
   | "no-item" // 그런 도구가 없다
   | "none-left" // 가방에 없다
   | "no-pet" // 그런 개체가 없다
@@ -27,7 +28,8 @@ export type UseFailure =
   | "cooldown" // 밥 주기 쿨타임이다
   | "max-level" // 이미 최대 레벨이다
   | "already" // 이미 그 상태다
-  | "bad-nature"; // 바꿀 성격을 고르지 않았거나 모르는 성격이다
+  | "bad-nature" // 바꿀 성격을 고르지 않았거나 모르는 성격이다
+>;
 
 export interface UseResult {
   ok: boolean;

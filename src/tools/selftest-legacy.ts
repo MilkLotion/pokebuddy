@@ -650,8 +650,8 @@ async function testDispatcher(): Promise<void> {
   off();
   assert.strictEqual(d.has("feed"), false);
   assert.strictEqual((await d.dispatch({ cmd: "feed", from: "menu" })).reason, "unknown-cmd");
-  d.register("feed", () => ({ ok: true, reason: "again" }));
-  assert.strictEqual((await d.dispatch({ cmd: "feed", from: "menu" })).reason, "again");
+  d.register("feed", () => ({ ok: true, reason: "already" }));
+  assert.strictEqual((await d.dispatch({ cmd: "feed", from: "menu" })).reason, "already");
   off(); // 옛 해제 함수는 새 핸들러를 건드리지 않는다
   assert.strictEqual(d.has("feed"), true);
 
@@ -665,7 +665,7 @@ async function testDispatcher(): Promise<void> {
   const server = bridgeMailbox(d, dir, { pollMs: 50 });
   try {
     const sendOpts = { timeoutMs: 3000, pollMs: 20 };
-    assert.deepStrictEqual(await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts), { ok: true, reason: "again" });
+    assert.deepStrictEqual(await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts), { ok: true, reason: "already" });
     assert.deepStrictEqual(await save.send(dir, { cmd: "shop.buy" satisfies CommandName, from: "cli" }, sendOpts), { ok: false, reason: "unknown-cmd", cmd: "shop.buy" });
     const r = await save.send(dir, { cmd: "poke", from: "vscode" }, sendOpts);
     assert.strictEqual(r.reason, "error");

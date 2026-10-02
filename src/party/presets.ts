@@ -6,12 +6,14 @@
 //   3. 적용은 칸을 잠금·숨김째 맞바꾼다. 박스는 건드리지 않는다
 import { SAVE_V3_RULES } from "../save/rules.js";
 import type { PartySlotV3, PartyV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type PresetFailure =
+export type PresetFailure = ReasonOf<
   | "no-preset" // 그런 프리셋이 없다
   | "already-active" // 이미 적용한 프리셋이다
   | "preset-max" // 프리셋을 더 가질 수 없다
-  | "slots-not-full"; // 가진 프리셋의 칸을 모두 열지 않았다
+  | "slots-not-full" // 가진 프리셋의 칸을 모두 열지 않았다
+>;
 
 // 개체의 자리 — 적용한 프리셋도 preset 이다. active 로 구분한다
 export type PetPlace =

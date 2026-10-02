@@ -19,6 +19,7 @@ import type { DexOptions } from "../dex/data";
 import type { Gender, NatureId } from "../shared/types";
 import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
 import { countsOf } from "../achievement/core.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 // 교환으로 옮기는 값. 나머지(쿨타임·버프·위치·하루 기록)는 받는 쪽에서 처음 값으로 둔다
 export interface TradePet {
@@ -36,7 +37,7 @@ export interface TradePet {
   evolved: string[];
 }
 
-export type OfferFailure = "no-pet" | "single" | "locked";
+export type OfferFailure = ReasonOf<"no-pet" | "single" | "locked">;
 export type ReceiveFailure = "not-object" | "unknown-species" | "single" | "bad-level" | "bad-value" | "bad-nature";
 export type LockFailure = OfferFailure | "busy";
 

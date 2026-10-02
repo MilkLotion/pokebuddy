@@ -1,13 +1,15 @@
 // 모듈이 함께 쓰는 타입 — docs/design.md 2판의 저장 v2 · 성격 · 종 프로필 · 해금 조건 · 커맨드.
 // 데이터를 소유하는 모듈은 각자(save · dex · state …)이고, 여기는 모양만 둔다. 값·규칙 숫자는 각 모듈의 규칙표에.
 
+import type { AgentName } from "./names/agents.js";
+import type { CommandName, CommandSource } from "./names/commands.js";
+import type { FailCode } from "./names/online-codes.js";
+
+// 이름 목록에서 얻는 타입 — 원본은 ./names/ 다. [임시] 이 파일을 주제별로 나눌 때 다시 내보내기를 없앤다
+export type { AgentName, AgentState } from "./names/agents.js";
+export type { CommandName, CommandSource } from "./names/commands.js";
+
 export type Lang = "ko" | "en";
-
-// 훅이 알려 주는 에이전트 상태 (src/follow/state.ts resolveState 가 주는 값 그대로)
-export type AgentState = "idle" | "running" | "waiting" | "waving" | "failed";
-
-// 연결할 수 있는 CLI 에이전트
-export type AgentName = "claude" | "codex" | "gemini";
 
 // ── 성격 ──────────────────────────────────────────────────────────────────────
 // 다섯 축. 값은 +1 · 0 · −1 이고 앱 안에서는 전부 배율로 작동한다 (design.md "성격")
@@ -160,27 +162,7 @@ export interface SaveV2 {
 
 // ── 커맨드 ─────────────────────────────────────────────────────────────────────
 // 우클릭·트레이·설정창·CLI·확장이 같은 모양으로 보내고, 처리기 하나가 모듈에 분배한다 (design.md "커맨드 처리기")
-export type CommandName =
-  | "feed" | "play" | "poke" | "evolve"
-  | "party.show" | "party.hide" | "party.remove"
-  | "party.place" | "party.swap" | "party.move" | "party.keep"
-  | "party.preset" | "party.preset.rename"
-  | "box.sort" | "box.move" | "box.rename" | "box.order"
-  | "egg.open"
-  | "bag.use" | "bag.sell"
-  | "achievement.claim"
-  | "tutorial.skip" | "tutorial.done"
-  | "pet.set" | "pet.look" | "pet.form" | "pet.sell"
-  | "starter.pick"
-  | "agent.connect" | "agent.disconnect"
-  | "settings.set"
-  | "shop.buy"
-  | "snapshot"
-  | "trade.create" | "trade.join" | "trade.offer" | "trade.ready" | "trade.unready" | "trade.leave" | "trade.status"
-  | "quit";
-
-export type CommandSource = "menu" | "tray" | "settings" | "cli" | "vscode" | "pet";
-
+// 명령 이름과 보낸 곳의 원본은 ./names/commands.ts 다
 export interface Command {
   cmd: CommandName;
   target?: string; // 마리 id · CLI 이름 · 설정 키
@@ -192,7 +174,7 @@ export interface Command {
 // 결과는 문구가 아니라 코드 — 문구는 표면이 언어 파일로 만든다
 export interface CommandResult {
   ok: boolean;
-  reason: string; // "ok" · "cooldown" · "daily-cap" · "no-pet" · "unknown-cmd" · "not-writer" · "timeout" …
+  reason: FailCode; // "ok" · "cooldown" · "no-pet" · "unknown-cmd" · "not-writer" · "timeout" … 목록은 ./names/reasons.ts 와 ./names/online-codes.ts
   [key: string]: unknown;
 }
 

@@ -6,10 +6,11 @@
 // 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
 import { screenRefOf } from "../save/v3.js";
 import type { SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
 
-export type SettingFailure = "bad-args" | "bad-value";
+export type SettingFailure = ReasonOf<"bad-args" | "bad-value">;
 
 export interface SetResult {
   ok: boolean;

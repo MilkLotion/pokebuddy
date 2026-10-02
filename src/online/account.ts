@@ -11,6 +11,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { SessionGate } from "./session.js";
 import type { HandoffReport, PendingHandoff, SwitchHooks } from "./handoff.js";
+import type { AccountCode } from "../shared/names/online-codes.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
 const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
@@ -28,9 +29,8 @@ export interface AccountView {
   displayName: string | null;
 }
 
-export type AccountErrorCode =
-  | "AUTH_USERNAME_INVALID" | "AUTH_USERNAME_TAKEN" | "AUTH_NAME_INVALID" | "AUTH_PASSWORD_WEAK"
-  | "AUTH_INVALID_LOGIN" | "AUTH_TRADE_ACTIVE" | "AUTH_RATE_LIMITED" | "NETWORK" | "UNKNOWN";
+// 계정 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts
+export type AccountErrorCode = AccountCode;
 
 // handoff — switchHooks 를 받은 가입·로그인에서만. 세션을 바꾼 뒤의 익명 저장 이관 결과
 export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffReport } | { ok: false; code: AccountErrorCode; detail?: string };

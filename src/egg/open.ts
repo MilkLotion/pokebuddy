@@ -17,8 +17,9 @@ import { newEgg } from "../shop/buy.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { decide, rollVariant, type Rand } from "./hatch.js";
 import { countsOf } from "../achievement/core.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type OpenFailure = "no-egg" | "not-ready" | "no-candidate" | "box-full";
+export type OpenFailure = ReasonOf<"no-egg" | "not-ready" | "no-candidate" | "box-full">;
 
 export interface OpenResult {
   ok: boolean;

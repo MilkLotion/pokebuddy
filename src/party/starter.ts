@@ -12,8 +12,9 @@ import type { Rand } from "../egg/hatch";
 import { newPet, nextPetId, recordDex } from "./create.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { SHOP_V3_RULES } from "../save/rules.js";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
-export type StarterFailure = "already" | "no-slot";
+export type StarterFailure = ReasonOf<"already" | "no-slot">;
 
 export interface StarterResult {
   ok: boolean;

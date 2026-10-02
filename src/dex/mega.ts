@@ -15,6 +15,7 @@ import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import { MEGA_RULES } from "../save/rules.js";
 import { allPresets } from "../party/presets.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
+import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type MegaKind = "mega" | "primal";
 
@@ -133,7 +134,7 @@ function presetSlotsOf(save: SaveV3, petId: string): { preset: number; petIds: s
   return null;
 }
 
-export type MegaFailure = "no-pet" | "no-stone" | "bad-form" | "not-in-party" | "already";
+export type MegaFailure = ReasonOf<"no-pet" | "no-stone" | "bad-form" | "not-in-party" | "already">;
 
 export interface MegaResult {
   ok: boolean;
