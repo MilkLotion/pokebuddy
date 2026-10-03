@@ -22,6 +22,7 @@ import { isFromWindow } from "./windows/ipc.js";
 import { INPUT_LIMITS, isShortId } from "./windows/input.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./art/portraits.js";
 import { createCries, type Cries } from "./art/cries.js";
+import { artServices } from "./art/services.js";
 import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
 import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps, type DexDeviceOpen } from "./windows/devices.js";
 import { bagDeviceModel } from "../view/device-bag.js";
@@ -184,7 +185,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     return game.agents(isAgentRequest(req) ? req : undefined);
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
-  let portraits: Portraits | null = null;
+  // 앱과 같은 인스턴스다 (src/main/art/services.ts) — 아래 ??= 는 늘 이 값을 쓴다
+  let portraits: Portraits | null = artServices().portraits;
   // 앱 안 그림 폴더 — 설치본은 sprites/, 개발 중에는 src/tools/data/fetch-sprites.ts 가 받아 둔 .cache/sprites/
   const bundled = (): string => {
     const packed = path.join(PATHS.project, "sprites");
@@ -211,7 +213,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     return portraits.all();
   });
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
-  let cries: Cries | null = null;
+  let cries: Cries | null = artServices().cries;
   const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
   dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
     detail: (slug) => game.dexDetail(slug),

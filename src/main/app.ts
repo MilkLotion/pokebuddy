@@ -27,7 +27,8 @@ import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
 import { createFreeze } from "./app/freeze";
 import { createHalt } from "./app/halt";
-import { createPortraits, portraitKey, type Portraits } from "./art/portraits";
+import { portraitKey, type Portraits } from "./art/portraits";
+import { artServices } from "./art/services";
 import { startKeepOnTop } from "./keep-on-top";
 import { createClock } from "./clock";
 import { askRegion } from "./windows/region-window";
@@ -357,7 +358,7 @@ const openManageWindow = (route?: ManageRoute): void => {
 
 // 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
 const cry = createCry({
-  dir: path.join(PATHS.home, "cries"),
+  cries: () => artServices().cries,
   read: () => rt.game?.read() ?? null,
   send: (petId, uri, volume) => rt.stages?.sendCry(petId, uri, volume),
 });
@@ -488,8 +489,8 @@ function bootLifetime(): Lifetime {
 function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: string[] } {
   // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/art/portraits.ts).
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
-  // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
-  const pics = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
+  // 첫 실행이면 스타터 초상부터 받는다. 선택 창·설정창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다 (src/main/art/services.ts)
+  const pics = artServices().portraits;
   rt.portraits = pics;
   const starterList = saveSource.needsStarter() ? starters(unlockRules()) : [];
   const prefetchAt = Date.now();
