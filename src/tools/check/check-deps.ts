@@ -6,6 +6,7 @@
 // 규칙의 원본은 worklog 의 code-structure 설계 통합본 2절(층 표)이다. 표가 바뀌면 아래 LAYERS 를 같이 고친다.
 // 보는 것:
 //   layer    폴더가 가져다 쓸 수 없는 폴더를 가져다 쓴다 (타입만 가져와도 센다 — 줄 끝에 type 표시)
+//   main     src/main 의 하위 폴더가 1.2절 표 밖의 메인 폴더·꼭대기 파일·electron 을 가져다 쓴다
 //   electron 메인·도구 밖에서 electron 을 값으로 가져온다
 //   node     shared·renderer 가 node:* 를 가져온다
 //   tools    앱이 src/tools 를 가져다 쓴다
@@ -51,6 +52,47 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
 const ELECTRON_OK = new Set(["src/cli/setup.ts"]);
 // 누구나 읽을 수 있는 폴더
 const OPEN_TO_ALL = new Set(["verify"]);
+
+// src/main 안의 하위 폴더 규칙 — 원본은 worklog 의 code-structure 설계 10-main.md 1.2절(메인 레인이 정함, 2026-10-04)
+// - value: 값으로도 타입으로도 가져다 쓸 수 있는 메인 폴더(이름 끝이 .ts 면 그 파일 하나). type: 타입만. 둘 다 아니면 어긋남
+// - 같은 폴더는 늘 된다. 메인 꼭대기 파일(src/main/*.ts)은 art 말고 어느 폴더든 쓸 수 있다
+// - 하위 폴더가 아닌 파일(꼭대기 파일)이 가져다 쓰는 것은 보지 않는다
+const MAIN_SUB: Readonly<Record<string, { value: readonly string[] | "all"; type?: readonly string[]; top?: false; electron?: false }>> = {
+  app: { value: "all" },
+  services: { value: ["windows", "update", "app/dev-run.ts", "app/freeze.ts"] },
+  menus: { value: ["windows", "art"], type: ["app", "stage"] },
+  stage: { value: ["art", "windows"] },
+  windows: { value: [], type: ["art"] },
+  art: { value: [], top: false, electron: false }, // 경로는 src/platform/paths 를 바로 쓴다
+  update: { value: [], electron: false }, // 엔진은 주입받는다 — electron 은 타입만
+};
+// art 의 electron 예외 — 시스템 프록시·인증서를 따르게 net.fetch 를 조건부 require 한다(Electron 밖에서는 Node fetch)
+const MAIN_ELECTRON_OK = new Set(["src/main/art/fetch.ts"]);
+
+// main 하위 폴더 이름 — src/main/<폴더>/… 가 아니면 null(꼭대기 파일·main 밖)
+const mainSubOf = (file: string): string | null => {
+  const parts = file.split("/");
+  return parts[1] === "main" && parts.length > 3 ? parts[2]! : null;
+};
+
+function mainSubViolation(imp: Import): string | null {
+  const sub = mainSubOf(imp.from);
+  const rule = sub ? MAIN_SUB[sub] : undefined;
+  if (!sub || !rule) return null;
+  const kind = imp.typeOnly ? " (type)" : "";
+  if (imp.spec === "electron") {
+    return rule.electron === false && !imp.typeOnly && !MAIN_ELECTRON_OK.has(imp.from) ? `main: ${imp.from} → electron (${sub}/ 는 electron 을 값으로 쓰지 않는다)` : null;
+  }
+  if (!imp.to || folderOf(imp.to) !== "main") return null;
+  const target = mainSubOf(imp.to);
+  if (target === sub) return null;
+  if (!target) return rule.top === false ? `main: ${imp.from} → ${imp.to}${kind} (${sub}/ 는 메인 꼭대기 파일을 쓰지 않는다)` : null;
+  if (rule.value === "all") return null;
+  const rest = imp.to.slice("src/main/".length);
+  const hit = (list: readonly string[] | undefined): boolean => (list ?? []).some((p) => (p.endsWith(".ts") ? rest === p : target === p));
+  if (hit(rule.value) || (imp.typeOnly && hit(rule.type))) return null;
+  return `main: ${imp.from} → ${imp.to}${kind}`;
+}
 
 interface Import {
   from: string; // 가져오는 파일
@@ -131,6 +173,8 @@ export function findDepViolations(root: string = ROOT): string[] {
     const mine: string[] = [];
     for (const imp of importsOf(file, text, declared)) {
       const kind = imp.typeOnly ? " (type)" : "";
+      const inMain = mainSubViolation(imp);
+      if (inMain) found.push(inMain);
       if (folder !== "tools") {
         if (imp.spec === "electron" && !imp.typeOnly && folder !== "main" && !ELECTRON_OK.has(file)) found.push(`electron: ${file} → electron`);
         if (imp.spec.startsWith("node:") && !imp.typeOnly && (folder === "shared" || folder === "renderer")) found.push(`node: ${file} → ${imp.spec}`);

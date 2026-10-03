@@ -1,4 +1,4 @@
-// 문서 위치·파일 링크·JSON 구문 검사. 문장 의미와 STE 준수는 수동 검수.
+// 문서 위치·파일 링크·백틱 경로·JSON 구문 검사. 문장 의미와 STE 준수는 수동 검수.
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -77,6 +77,30 @@ for (const file of documents) {
   }
 }
 
+// 공개 문서(docs/)의 백틱 안 저장소 경로 — 파일 링크가 아닌 `src/…` 글자도 트리에 있어야 한다 (2026-10-04 코드 구조 정리 뒤 옛 경로 100여 곳이 남았다)
+// - 저장소 꼭대기 폴더로 시작하는 글자만 본다. 글롭(*)·자리표시(<>)·빌드 산출물(dist/)·로컬 전용 폴더는 보지 않는다
+// - `pet.ts` 처럼 앞 경로에 기대는 짧은 이름은 보지 않는다
+// - 옛 꼭대기 폴더 art·lib·cli 는 넣지 않는다. src/main/art/ 를 줄여 쓴 `art/` 와 구별하지 못한다(옛 자리는 2026-10-04 정리에서 모두 고쳤다)
+const PATH_ROOTS = /^(src|scripts|data|bin|helpers|supabase|assets|site|shell)\//;
+const PATH_SKIP = /[*<>{}$]/;
+const LOCAL_ONLY = new Set([
+  'helpers/winbounds', // npm install 이 만드는 mac 헬퍼 실행 파일
+  'shell/termimon.zsh', // 옛 이름 — development.md 가 옮기는 법을 적는다
+  'shell/pkmon.zsh',
+]);
+let checkedPaths = 0;
+for (const file of publicFiles.filter((file) => file.endsWith('.md'))) {
+  const content = read(file).replace(/^```[^\n]*\n[\s\S]*?^```[^\n]*$/gm, '');
+  for (const match of content.matchAll(/`([^`\n]+)`/g)) {
+    for (let token of match[1].split(/[\s,·]+/)) {
+      token = token.replace(/^[("']+|[)"'.;:]+$/g, '').replace(/:\d+(?:-\d+)?$/, '').replace(/#.*$/, '');
+      if (!PATH_ROOTS.test(token) || PATH_SKIP.test(token) || LOCAL_ONLY.has(token)) continue;
+      checkedPaths++;
+      if (!fs.existsSync(path.join(root, token))) failures.push(`백틱 경로 누락: ${display(file)} → ${token}`);
+    }
+  }
+}
+
 const jsonFiles = allFiles.filter((file) => file.endsWith('.json'));
 for (const file of jsonFiles) {
   try {
@@ -98,6 +122,6 @@ if (failures.length > 0) {
   failures.forEach((failure) => process.stderr.write(`${failure}\n`));
   process.exitCode = 1;
 } else {
-  process.stdout.write(`PASS: 문서 ${documents.length}개, 파일 링크 ${checkedLinks}개, JSON ${jsonFiles.length}개.\n`);
+  process.stdout.write(`PASS: 문서 ${documents.length}개, 파일 링크 ${checkedLinks}개, 백틱 경로 ${checkedPaths}개, JSON ${jsonFiles.length}개.\n`);
   process.stdout.write('구조 검사만 통과했습니다. 변경 문장의 의미 검수를 별도로 기록하세요.\n');
 }

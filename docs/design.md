@@ -167,13 +167,14 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | `src/dex/`, `data/` | 성격, 종 프로필, 진화, 해금 규칙 |
 | `src/party/`, `src/box/`, `src/egg/`, `src/bag/`, `src/achievement/`, `src/tutorial/` | 개체·파티 칸·박스·알·가방·업적·튜토리얼 규칙 |
 | `src/shop/` | 상점 목록과 구매 |
-| `src/tx/` | 거래 실행기, 명령 다리, 화면 스냅샷 |
+| `src/tx/` | 거래 실행기, 명령 다리 |
+| `src/view/` | 화면 스냅샷, 기기 창 모델, 목록·상세·결과 줄 문구 |
 | `src/save/` | 저장 v3, 옛 v1·v2 읽기와 이전, 잠금, mailbox |
 | `src/agents/`, `src/hooks/` | CLI 연결과 활동 기록 |
 | `src/shared/` | 저장·명령·표시 계약 |
 | `src/tools/` | 자체 검사와 화면 검사 도구 |
 
-S5 설정창은 `src/main/manage-window.ts` 와 `src/renderer/manage.ts` 다. `art/`, `lib/`, `cli/`는 런타임이 참조하므로 유지한다.
+S5 설정창은 `src/main/manage-window.ts` 와 `src/renderer/manage/manage.ts` 다. 그림 받기는 `src/main/art/` 에 있다. CLI 는 `src/cli/` 에 있다. 이름·도감 번호·언어 자료(JSON)는 `data/` 에 있다.
 
 ## 성격과 육성
 
