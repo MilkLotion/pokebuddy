@@ -53,9 +53,18 @@
   padding: 0;
   border: 0;
   background: transparent;
-  font: inherit;
   color: var(--muted);
   cursor: pointer;
+}
+/* 닫기 아이콘 — Figma `Icon / Close` `299:166`: 16 × 16, 선 둘, 굵기 1.5, 둥근 이음, 선 색은 보조색 */
+.coach-bubble .x svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 /* 제목(Label Semibold 12/18) · 설명(Caption Block 12/16) */
 .coach-bubble .title {
