@@ -79,26 +79,21 @@ export function markSaveLost(file: string, at = Date.now()): void {
   }
 }
 
-// 저장을 옆으로 옮기는 까닭 — 태그가 파일 이름의 꼬리와 옮기는 방법을 정한다
-//   broken      읽기의 파손 격리. <저장>.broken-<시각>.bak, 옮기지 못하면 복사 후 삭제, 격리 표시
-//   unreadable  키 파일이 망가졌거나 저장 잠김 창에서 새로 시작. <저장>.unreadable-<시각>(.bak 없음), 옮기기만, 격리 표시
-//   signout · delete · fresh  새로 시작(로그아웃·계정 삭제·새로 시작). <저장>.<태그>-<시각>.bak, 복사 후 삭제로 다시, 표시 없음
+// 저장을 옆으로 옮기는 까닭 — 이름은 모두 <저장>.<태그>-<시각>.bak 이고, 옮기지 못하면 복사 후 삭제로 다시 한다.
+// 까닭마다 다른 것은 격리 표시뿐이다 — 읽지 못해 옮긴 저장(broken·unreadable)만 표시를 남긴다
+//   broken      읽기의 파손 격리
+//   unreadable  키 파일이 망가졌거나 저장 잠김 창에서 새로 시작
+//   signout · delete · fresh  새로 시작(로그아웃·계정 삭제·새로 시작)
+// (예전에는 unreadable 만 .bak 이 없고 복사 대체가 없었다 — worklog/records/code-structure/design/94-same-feature-diffs.md 5-5)
 export type AsideTag = "broken" | "unreadable" | "signout" | "delete" | "fresh";
-const ASIDE: Readonly<Record<AsideTag, { bak: boolean; copy: boolean; lost: boolean }>> = {
-  broken: { bak: true, copy: true, lost: true },
-  unreadable: { bak: false, copy: false, lost: true },
-  signout: { bak: true, copy: true, lost: false },
-  delete: { bak: true, copy: true, lost: false },
-  fresh: { bak: true, copy: true, lost: false },
-};
+const LOST: Readonly<Record<AsideTag, boolean>> = { broken: true, unreadable: true, signout: false, delete: false, fresh: false };
 
 // 저장을 옮긴다. 옮긴 이름을 돌려준다 — 저장이 없으면 "", 못 옮기면 null(그대로 둔다)
 export function setAsideSave(file: string, tag: AsideTag, at = Date.now()): string | null {
   if (!fs.existsSync(file)) return "";
-  const how = ASIDE[tag];
-  const to = `${file}.${tag}-${stampOf(at)}${how.bak ? ".bak" : ""}`;
-  if (!moveFile(file, to, { copyFallback: how.copy })) return null;
-  if (how.lost) markSaveLost(file, at);
+  const to = `${file}.${tag}-${stampOf(at)}.bak`;
+  if (!moveFile(file, to, { copyFallback: true })) return null;
+  if (LOST[tag]) markSaveLost(file, at);
   return to;
 }
 

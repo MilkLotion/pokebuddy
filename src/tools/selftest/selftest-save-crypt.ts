@@ -185,6 +185,8 @@ async function main(): Promise<void> {
       assert.equal(files(d, "save.key.unreadable-").length, 1, "키를 옮겼다");
       assert.equal(files(d, "save.json.unreadable-").length, 1, "저장을 옮겼다");
       assert.ok(!fs.existsSync(file), "저장 없음 — 새로 시작하거나 서버 저장을 받는다");
+      // 이름은 다른 새로 시작과 같이 .bak 으로 끝난다 (94 항목 5-5)
+      assert.ok([...files(d, "save.key.unreadable-"), ...files(d, "save.json.unreadable-")].every((n) => n.endsWith(".bak")), "옮긴 이름은 .bak");
       assert.ok(fs.existsSync(store.lostMarker(file)), "격리 표시");
       const fresh = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true, now: () => T0 + 4 });
       assert.equal(fresh.status, "ok");

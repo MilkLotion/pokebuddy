@@ -12,7 +12,7 @@
 //   save.key 를 읽지 못함  잠김·권한(백신·동기화 도구) — 이번 실행은 키 없이 돈다. 저장은 locked 로 지킨다. 다음 실행에 다시 본다(검수 P3-2)
 //   save.key 를 풀지 못함  키체인 거부·초기화 — 옮기지 않고 이번만 키 없이 돈다(denied). 앱이 저장 잠김 창으로 묻는다(검수 P3-3,
 //                         2026-09-30 사용자 결정 "안내 창으로 묻기"). 새로 시작을 고르면 setAsideKeyAndSave 뒤 다시 준비한다
-//   save.key 모양이 틀림   키와 저장을 .unreadable-<시각> 으로 옮기고 새 키로 시작한다(reset).
+//   save.key 모양이 틀림   키와 저장을 .unreadable-<시각>.bak 으로 옮기고 새 키로 시작한다(reset).
 //                         격리 표시를 남겨 클라우드가 서버 저장을 받게 한다. 옮기지 못하면 옛 키를 덮지 않고 키 없이 돈다(검수 P3-7)
 //   migrated 가 거짓       기존 평문 저장을 save.json.plain-<시각>.bak 으로 남기고 암호화해 다시 쓴다.
 //                         옮기지 못하면 이번 실행은 키 없이 돈다 — 다음 실행에 다시 옮긴다(평문을 조작으로 격리하지 않게)
@@ -96,14 +96,14 @@ function unwrap(out: { result: string; shouldReEncrypt: boolean }): { sealed: Se
   return { sealed: { key, migrated: o.migrated }, again: out.shouldReEncrypt };
 }
 
-// 옮긴다 — 없으면 true, 옮기지 못하면 false
-const moveAside = (file: string, to: string): boolean => !fs.existsSync(file) || moveFile(file, to);
+// 옮긴다 — 없으면 true, 옮기지 못하면 false. 저장 옮기기(setAsideSave)와 같이 옮기지 못하면 복사 후 삭제로 다시 한다
+const moveAside = (file: string, to: string): boolean => !fs.existsSync(file) || moveFile(file, to, { copyFallback: true });
 
-// 키와 저장을 .unreadable-<시각> 으로 옮기고 격리 표시를 남긴다 — 키 파일이 망가졌을 때와, 저장 잠김 창에서 새로 시작을 골랐을 때.
+// 키와 저장을 .unreadable-<시각>.bak 으로 옮기고 격리 표시를 남긴다 — 키 파일이 망가졌을 때와, 저장 잠김 창에서 새로 시작을 골랐을 때.
 // 키를 먼저 옮긴다. 키를 못 옮기면 저장도 옮기지 않는다 — 남은 옛 키가 새 평문 저장을 조작으로 격리하지 않게. 다 옮겼으면 true
 export function setAsideKeyAndSave(saveFile: string, at = Date.now()): boolean {
   const keyFile = keyFileOf(saveFile);
-  if (!moveAside(keyFile, `${keyFile}.unreadable-${stampOf(at)}`)) return false;
+  if (!moveAside(keyFile, `${keyFile}.unreadable-${stampOf(at)}.bak`)) return false;
   return setAsideSave(saveFile, "unreadable", at) !== null; // 저장이 없으면 "" — 옮길 것이 없다
 }
 

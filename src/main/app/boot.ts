@@ -60,7 +60,7 @@ export async function bootSaveKey(deps: SaveKeyDeps): Promise<boolean> {
   let saveKey = await prepareSaveKey(keyOptions);
   deps.log?.({ boot: "save-key", ...saveKey });
   // 키 없이 도는데 암호화 저장이 있다(키체인 거부·키 파일 잠김·키 저장소 없음) — 저장을 옮기지 않고 묻는다.
-  // 종료면 저장을 그대로 두고 끝낸다. 새로 시작이면 키와 저장을 백업(.unreadable-<시각>)하고 다시 준비한다 — 계정 저장은 클라우드가 받는다
+  // 종료면 저장을 그대로 두고 끝낸다. 새로 시작이면 키와 저장을 백업(.unreadable-<시각>.bak)하고 다시 준비한다 — 계정 저장은 클라우드가 받는다
   if (saveKey.status !== "ok" && saveKey.status !== "reset" && isSealedOnDisk(deps.saveFile)) {
     const answer = await deps.askLocked();
     if (answer === "fresh" && setAsideKeyAndSave(deps.saveFile)) {
