@@ -3,7 +3,6 @@
 // 저장을 쓰는 프로세스(writer) 하나만 부른다. 틱마다 저장을 훑고, 보이는 배너가 없으면 줄 맨 앞을 내보낸다.
 // 배너가 끝나면(done) 다음 것을 내보낸다. 배너를 얼마나 보일지는 배너 창이 정한다.
 // 파일을 쓰지 못해도 배너는 보인다. 바뀐 줄은 기억해 두었다가 다음 틱에 다시 쓴다
-import fs from "node:fs";
 import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
 import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";
@@ -13,8 +12,9 @@ export interface NotifierOptions {
   read: () => SaveV3 | null;
   now?: () => number;
   show: (banner: BannerView) => void;
-  // 줄 파일 쓰기 — 메인이 넘긴다(src/platform/atomic-write.ts writeAtomic). 쓰지 못하면 false 이고 다음 틱에 다시 쓴다.
-  // 도메인은 파일을 직접 쓰지 않는다 (2026-10-03 오케스트레이터 결정)
+  // 줄 파일 읽기·쓰기 — 메인이 넘긴다(src/platform/json-file.ts readJsonFile, src/platform/atomic-write.ts writeAtomic).
+  // 읽기는 없거나 깨졌으면 null, 쓰기는 못 하면 false 이고 다음 틱에 다시 쓴다. 도메인은 파일을 직접 읽고 쓰지 않는다 (2026-10-03 오케스트레이터 결정)
+  readJson: (file: string) => unknown | null;
   write: (file: string, data: unknown) => boolean;
   // 키 하나의 배너 — 문구는 화면 값이 만든다(src/view/banner.ts). 대상이 사라졌으면 null 이고 그 배너를 건너뛴다
   bannerOf: (save: SaveV3, key: string) => BannerView | null;
@@ -29,17 +29,13 @@ export interface Notifier {
 }
 
 // 파일이 없거나 모양이 틀리면 null — 처음 켠 것으로 본다
-function load(file: string): NotifyState | null {
-  try {
-    const v: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-    return isNotifyState(v) ? v : null;
-  } catch {
-    return null;
-  }
+function load(file: string, readJson: NotifierOptions["readJson"]): NotifyState | null {
+  const v = readJson(file);
+  return isNotifyState(v) ? v : null;
 }
 
-export function createNotifier({ file, read, now = Date.now, show, write, bannerOf }: NotifierOptions): Notifier {
-  let state = load(file);
+export function createNotifier({ file, read, now = Date.now, show, readJson, write, bannerOf }: NotifierOptions): Notifier {
+  let state = load(file, readJson);
   let dirty = false; // 쓰지 못한 변경이 있다
   let current: string | null = null;
 
