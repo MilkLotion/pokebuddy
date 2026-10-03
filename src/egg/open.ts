@@ -13,7 +13,7 @@ import { isSingleEgg } from "../dex/obtain.js";
 import { addNewPet } from "../party/create.js";
 import { canGiveEgg, eggBonus, newEgg } from "./pool.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { decide, rollVariant } from "./hatch.js";
+import { pickHatch, rollVariant } from "./hatch.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -43,7 +43,7 @@ function bonusEgg(save: SaveV3, kind: string, rand: Rand, opts?: DexOptions): st
   return null;
 }
 
-export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?: DexOptions): OpenResult {
+export function openEgg(save: SaveV3, eggId: string, now: number, rand: Rand, opts?: DexOptions): OpenResult {
   const i = save.eggs.findIndex((e) => e.id === eggId);
   if (i < 0) return { ok: false, reason: "no-egg" };
   const egg = save.eggs[i];
@@ -61,7 +61,7 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
 
   const single = isSingleEgg(egg.kind, opts);
   const candidates = single ? egg.candidates.filter((s) => !save.dex.obtained.includes(s)) : egg.candidates;
-  const picked = decide(candidates, rand, opts);
+  const picked = pickHatch(candidates, rand, opts);
   if (!picked) return { ok: false, reason: "no-candidate" };
   // 모습이 여럿인 종(배쓰나이)은 종·이로치 다음에 모습을 뽑는다 — 서버 재계산(src/verify/save-rules.ts rollEgg)과 같은 순서
   const result = { species: rollVariant(picked.species, rand, opts), shiny: picked.shiny };

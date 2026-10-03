@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { expForLevel } from "../../dex/growth";
-import { open } from "../../egg/open";
+import { openEgg } from "../../egg/open";
 import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
@@ -326,7 +326,7 @@ out("0 supabase/functions/_shared 가 최신");
     s.eggs.push(egg("e1", { kind, candidates }));
     if (n % 5 === 0) s.dex.obtained.push("mewtwo", "sub-legendary-dummy");
     const expected = rollEgg({ id: "e1", kind, candidates }, s.eggs, [...s.dex.obtained], seededRand(seed, "egg:e1"), data);
-    const got = open(s, "e1", T0, seededRand(seed, "egg:e1"));
+    const got = openEgg(s, "e1", T0, seededRand(seed, "egg:e1"));
     assert.ok(got.ok && expected, `열기 ${n}`);
     if (got.egg) {
       bonus += 1;
@@ -355,11 +355,11 @@ out("0 supabase/functions/_shared 가 최신");
   // 개체가 나오는 시드를 고른다 — 랜덤알은 낮은 확률로 보너스 알을 준다
   let seed = "x";
   let next = clone(prev);
-  let res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  let res = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
   for (let n = 0; n < 50 && !res.petId; n++) {
     seed = `acct-${n}`;
     next = clone(prev);
-    res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+    res = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
   }
   assert.ok(res.ok && res.petId, "개체가 나오는 시드");
   assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], "시드로 연 결과");
@@ -379,7 +379,7 @@ out("0 supabase/functions/_shared 가 최신");
 {
   const openAll = (prev: SaveV3, seed: string, ids: string[]): SaveV3 => {
     const next = clone(prev);
-    for (const id of ids) assert.ok(open(next, id, T0, seededRand(seed, `egg:${id}`)).ok, `열기 ${id}`);
+    for (const id of ids) assert.ok(openEgg(next, id, T0, seededRand(seed, `egg:${id}`)).ok, `열기 ${id}`);
     return next;
   };
   // (b) 같은 종류의 단일 포켓몬 알 둘
@@ -403,12 +403,12 @@ out("0 supabase/functions/_shared 가 최신");
     prev.eggs.push(egg("e1", { candidates: ["bulbasaur", "charmander", "squirtle"] }));
     prev.eggSeq = 1;
     const next = clone(prev);
-    const first = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+    const first = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
     if (!first.egg) continue;
     tried += 1;
     const bonusEgg = next.eggs.find((e) => e.id === first.egg!.id)!;
     bonusEgg.ready = true;
-    assert.ok(open(next, bonusEgg.id, T0, seededRand(seed, `egg:${bonusEgg.id}`)).ok);
+    assert.ok(openEgg(next, bonusEgg.id, T0, seededRand(seed, `egg:${bonusEgg.id}`)).ok);
     assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], `보너스 알까지 연 틈 ${seed}`);
   }
   assert.ok(tried > 0, "보너스 알 사례를 찾았다");
@@ -419,11 +419,11 @@ out("0 supabase/functions/_shared 가 최신");
   prev.eggSeq = 1;
   let seed = "c-0";
   let next = clone(prev);
-  let res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+  let res = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
   for (let n = 1; n < 50 && !res.petId; n++) {
     seed = `c-${n}`;
     next = clone(prev);
-    res = open(next, "e1", T0, seededRand(seed, "egg:e1"));
+    res = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
   }
   const hatched = next.pets.find((p) => p.id === res.petId)!;
   hatched.species = "ivysaur";

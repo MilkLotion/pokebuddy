@@ -5,10 +5,10 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { empty } from "../../save/v3";
-import { buy } from "../../shop/buy";
-import { eggPrice, find, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
+import { buyProduct } from "../../shop/buy";
+import { eggPrice, findProduct, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
 import { shopList } from "../../view/shop-list";
-import { sell, sellPrice } from "../../shop/sell";
+import { sellItem, sellPrice } from "../../shop/sell";
 import { petSellPrice, sellPet, sellablePet } from "../../shop/sell-pet";
 import { newPet, nextPetId } from "../../party/create";
 import { activePreset, applyPreset, presetBuyable, presetCount, presetName, shopSlots, slotsOfPreset } from "../../party/presets";
@@ -45,7 +45,7 @@ function seed(points: number): SaveV3 {
   assert.equal(slotPrice(1), 500);
   assert.equal(slotPrice(0), null, "상점으로 열 칸이 남지 않으면 팔지 않는다");
   assert.equal(SHOP_RULES.presetPrice, 1000, "파티 프리셋은 늘 1000P");
-  assert.equal(find("없는상품"), null);
+  assert.equal(findProduct("없는상품"), null);
   assert.equal(eggPool("ancient-stone")?.length, 15, "태고의돌은 화석 15종");
   assert.equal(eggPool("random"), null, "랜덤알은 해금한 종에서 뽑는다");
   process.stdout.write("(1) 가격표와 상품 찾기  ok\n");
@@ -54,7 +54,7 @@ function seed(points: number): SaveV3 {
 // (2) 알 구매 — 돌보미집에 들어가고 준비 시간이 시작된다
 {
   const s = seed(200);
-  const res = buy(s, "random", T0, rand);
+  const res = buyProduct(s, "random", T0, rand);
   assert.equal(res.ok, true);
   assert.equal(res.spent, 120);
   assert.equal(s.points.balance, 80);
@@ -69,7 +69,7 @@ function seed(points: number): SaveV3 {
 {
   const s = seed(200);
   s.dex.unlocked = ["charmander", "charmeleon", "pichu", "pikachu", "raichu"];
-  buy(s, "random", T0, rand);
+  buyProduct(s, "random", T0, rand);
   assert.deepStrictEqual(s.eggs[0]?.candidates, ["charmander", "pichu"]); // 피카츄는 피츄 진화로만 얻는다 (2026-09-27 스타터 교체)
   process.stdout.write("(2b) 랜덤알 · 진화 전용 종 제외  ok\n");
 }
@@ -77,7 +77,7 @@ function seed(points: number): SaveV3 {
 // (3) 태고의돌은 화석 후보를 담는다
 {
   const s = seed(300);
-  buy(s, "ancient-stone", T0, rand);
+  buyProduct(s, "ancient-stone", T0, rand);
   assert.equal(s.eggs[0]?.candidates.length, 15);
   assert.ok(s.eggs[0]?.candidates.includes("aerodactyl"));
   process.stdout.write("(3) 태고의돌 · 화석 후보  ok\n");
@@ -87,7 +87,7 @@ function seed(points: number): SaveV3 {
 {
   const s = seed(200);
   s.dex.unlocked = ["charmander", "squirtle"];
-  buy(s, "random", T0, rand);
+  buyProduct(s, "random", T0, rand);
   assert.deepStrictEqual(s.eggs[0]?.candidates, ["charmander", "squirtle"]);
   process.stdout.write("(4) 랜덤알 · 해금한 종이 후보  ok\n");
 }
@@ -95,7 +95,7 @@ function seed(points: number): SaveV3 {
 // (5) 포인트가 모자라면 아무것도 바꾸지 않는다
 {
   const s = seed(100);
-  const res = buy(s, "random", T0, rand);
+  const res = buyProduct(s, "random", T0, rand);
   assert.equal(res.ok, false);
   assert.equal(res.reason, "not-enough-points");
   assert.equal(s.points.balance, 100);
@@ -106,8 +106,8 @@ function seed(points: number): SaveV3 {
 // (6) 돌보미집이 가득 차면 거절한다
 {
   const s = seed(10_000);
-  for (let i = 0; i < EGG_RULES.maxEggs; i++) assert.equal(buy(s, "random", T0, rand).ok, true);
-  const res = buy(s, "random", T0, rand);
+  for (let i = 0; i < EGG_RULES.maxEggs; i++) assert.equal(buyProduct(s, "random", T0, rand).ok, true);
+  const res = buyProduct(s, "random", T0, rand);
   assert.equal(res.reason, "daycare-full");
   assert.equal(s.eggs.length, EGG_RULES.maxEggs);
   process.stdout.write("(6) 돌보미집 가득  ok\n");
@@ -116,11 +116,11 @@ function seed(points: number): SaveV3 {
 // (7) 도구는 가방에 쌓인다
 {
   const s = seed(1000);
-  buy(s, "exp-candy-s", T0, rand);
-  buy(s, "exp-candy-s", T0, rand);
+  buyProduct(s, "exp-candy-s", T0, rand);
+  buyProduct(s, "exp-candy-s", T0, rand);
   assert.equal(s.bag["exp-candy-s"], 2);
   assert.equal(s.points.balance, 1000 - 80);
-  buy(s, "thunder-stone", T0, rand);
+  buyProduct(s, "thunder-stone", T0, rand);
   assert.equal(s.bag["thunder-stone"], 1);
   process.stdout.write("(7) 도구 · 가방에 쌓인다  ok\n");
 }
@@ -128,11 +128,11 @@ function seed(points: number): SaveV3 {
 // (8) 파티 칸은 늘 500P 이고 프리셋마다 따로 산다. 첫 프리셋은 두 칸, 나머지 프리셋은 네 칸까지다 (2026-10-02 사용자 결정)
 {
   const s = seed(10_000);
-  const first = buy(s, "party-slot", T0, rand);
+  const first = buyProduct(s, "party-slot", T0, rand);
   assert.equal(first.spent, 500);
-  const second = buy(s, "party-slot", T0, rand);
+  const second = buyProduct(s, "party-slot", T0, rand);
   assert.equal(second.spent, 500);
-  const third = buy(s, "party-slot", T0, rand);
+  const third = buyProduct(s, "party-slot", T0, rand);
   assert.equal(third.reason, "no-locked-slot");
   const open = s.party.slots.filter((x) => x.state === "empty").length;
   assert.equal(open, PARTY_RULES.openAtStart + PARTY_RULES.shopUnlock);
@@ -144,8 +144,8 @@ function seed(points: number): SaveV3 {
   // 둘째 프리셋을 적용하면 그 프리셋의 칸을 산다 — 첫 프리셋에서 산 칸은 따라오지 않는다
   assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
   assert.deepStrictEqual(shopSlots(s), { left: 4, total: 4, bought: 0 });
-  for (let i = 0; i < 4; i += 1) assert.equal(buy(s, "party-slot", T0, rand).spent, 500);
-  assert.equal(buy(s, "party-slot", T0, rand).reason, "no-locked-slot");
+  for (let i = 0; i < 4; i += 1) assert.equal(buyProduct(s, "party-slot", T0, rand).spent, 500);
+  assert.equal(buyProduct(s, "party-slot", T0, rand).reason, "no-locked-slot");
   assert.ok(s.party.slots.every((x) => x.state === "empty"), "둘째 프리셋은 여섯 칸 모두 상점으로 연다");
   assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked").length, 2, "첫 프리셋의 잠금은 그대로");
   assert.equal(s.party.slotCount, 4 + 6);
@@ -155,32 +155,32 @@ function seed(points: number): SaveV3 {
 // (8b) 파티 프리셋 — 1000P 고정. 가진 프리셋의 칸을 모두 열어야 산다. 다섯 개까지다 (2026-10-02 사용자 결정)
 {
   const s = seed(10_000);
-  assert.equal(buy(s, "party-preset", T0, rand).reason, "slots-not-full", "2개일 때 12칸이어야 한다");
+  assert.equal(buyProduct(s, "party-preset", T0, rand).reason, "slots-not-full", "2개일 때 12칸이어야 한다");
   assert.equal(s.points.balance, 10_000, "거절은 포인트를 바꾸지 않는다");
   const openAll = (): void => {
     for (let i = 0; i < presetCount(s); i += 1) for (const slot of slotsOfPreset(s, i) ?? []) if (slot.state === "locked") { slot.state = "empty"; delete slot.unlockBy; }
   };
   openAll();
   assert.deepStrictEqual(presetBuyable(s), { ok: true, open: 12, need: 12 });
-  const third = buy(s, "party-preset", T0, rand);
+  const third = buyProduct(s, "party-preset", T0, rand);
   assert.deepStrictEqual({ ok: third.ok, spent: third.spent, preset: third.preset }, { ok: true, spent: 1000, preset: 2 });
   assert.equal(presetCount(s), 3);
   assert.equal(slotsOfPreset(s, 2)?.filter((x) => x.state === "empty").length, 2, "새 프리셋은 두 칸이 열려 있다");
   assert.equal(s.party.slotCount, 14);
-  assert.equal(buy(s, "party-preset", T0, rand).reason, "slots-not-full", "3개일 때 18칸이어야 한다");
+  assert.equal(buyProduct(s, "party-preset", T0, rand).reason, "slots-not-full", "3개일 때 18칸이어야 한다");
   openAll();
-  assert.equal(buy(s, "party-preset", T0, rand).ok, true);
+  assert.equal(buyProduct(s, "party-preset", T0, rand).ok, true);
   openAll();
-  assert.equal(buy(s, "party-preset", T0, rand).ok, true);
+  assert.equal(buyProduct(s, "party-preset", T0, rand).ok, true);
   assert.equal(presetCount(s), PARTY_RULES.presets.max);
   openAll();
-  assert.equal(buy(s, "party-preset", T0, rand).reason, "preset-max");
+  assert.equal(buyProduct(s, "party-preset", T0, rand).reason, "preset-max");
   assert.equal(s.points.balance, 10_000 - 3000);
 
   // 포인트가 모자라면 사지 않는다. 여러 개를 한 번에 사지 않는다
   const poor = seed(999);
   for (const slot of [...poor.party.slots, ...(slotsOfPreset(poor, 1) ?? [])]) if (slot.state === "locked") { slot.state = "empty"; delete slot.unlockBy; }
-  assert.equal(buy(poor, "party-preset", T0, rand).reason, "not-enough-points");
+  assert.equal(buyProduct(poor, "party-preset", T0, rand).reason, "not-enough-points");
   let state: SaveV3 | null = seed(5000);
   const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
   const two = ex.run({ id: "pp-2", name: "shop.buy", args: { productId: "party-slot", count: 2 } });
@@ -264,11 +264,11 @@ function seed(points: number): SaveV3 {
 
   // 해금 전에는 못 산다 — 화석은 태고의돌에서 나와 해금된 뒤 산다
   const locked = seed(1000);
-  assert.equal(buy(locked, "omanyte", T0, rand).reason, "not-unlocked", "해금 전에는 못 산다");
+  assert.equal(buyProduct(locked, "omanyte", T0, rand).reason, "not-unlocked", "해금 전에는 못 산다");
   assert.equal(locked.points.balance, 1000, "포인트도 그대로");
   const s = seed(1000);
   s.dex.unlocked = ["omanyte"];
-  const res = buy(s, "omanyte", T0, rand);
+  const res = buyProduct(s, "omanyte", T0, rand);
   assert.equal(res.ok, true);
   assert.equal(res.spent, 200);
   assert.equal(s.pets.length, 1);
@@ -278,8 +278,8 @@ function seed(points: number): SaveV3 {
   // 해금했어도 팔지 않는 종은 상품이 없다
   const no = seed(10_000);
   no.dex.unlocked = ["mewtwo", "snorlax"];
-  assert.equal(buy(no, "mewtwo", T0, rand).reason, "no-product", "전설은 팔지 않는다");
-  assert.equal(buy(no, "snorlax", T0, rand).reason, "no-product", "잠만보는 먹고자에서 진화해 얻는다");
+  assert.equal(buyProduct(no, "mewtwo", T0, rand).reason, "no-product", "전설은 팔지 않는다");
+  assert.equal(buyProduct(no, "snorlax", T0, rand).reason, "no-product", "잠만보는 먹고자에서 진화해 얻는다");
   assert.equal(no.points.balance, 10_000, "포인트도 그대로");
 
   // 상점 목록 — 해금한 판매 대상만, 도감 번호 순
@@ -296,10 +296,10 @@ function seed(points: number): SaveV3 {
 {
   const s = seed(1000);
   assert.equal(nextEggId(s), "e1");
-  buy(s, "random", T0, rand);
+  buyProduct(s, "random", T0, rand);
   assert.equal(nextEggId(s), "e2");
   s.eggs = []; // e1 을 열어 돌보미집이 비었다
-  buy(s, "random", T0, rand);
+  buyProduct(s, "random", T0, rand);
   assert.equal(s.eggs[0]?.id, "e2", "비어도 e1 을 다시 쓰지 않는다");
   assert.equal(s.eggSeq, 2);
   process.stdout.write("(10) 알 식별자 이어 붙이기 · 다시 쓰지 않음  ok\n");
@@ -335,7 +335,7 @@ function seed(points: number): SaveV3 {
   assert.equal(reason("sell-potion", { itemId: "normal-potion" }), "not-sellable", "돌아오는 약 거절");
   assert.equal(reason("sell-over", { itemId: "fire-stone", count: 2 }), "not-enough-items", "가진 것보다 많이는 못 판다");
   assert.equal(reason("sell-none", { itemId: "thunder-stone" }), "not-enough-items", "없는 도구");
-  for (const count of [0, -1, 1.5, "2"]) assert.equal(reason(`sell-bad-${String(count)}`, { itemId: "fire-stone", count }), "bad-count", `수량 ${String(count)} 거절`);
+  for (const count of [0, -1, 1.5, "2"]) assert.equal(reason(`sellItem-bad-${String(count)}`, { itemId: "fire-stone", count }), "bad-count", `수량 ${String(count)} 거절`);
   assert.equal(state?.points.balance, 1180, "거절은 포인트를 바꾸지 않는다");
   assert.equal(state?.bag["fire-stone"], 1, "거절은 가방을 바꾸지 않는다");
   assert.equal(state?.bag["basic-food"], 5);
@@ -343,9 +343,9 @@ function seed(points: number): SaveV3 {
   // 원자성 — 순수 함수가 거절하면 사본도 그대로다. 다 팔면 가방에서 지운다
   const pure = seed(0);
   pure.bag["toy"] = 2;
-  assert.equal(sell(pure, "toy", 3).reason, "not-enough-items");
+  assert.equal(sellItem(pure, "toy", 3).reason, "not-enough-items");
   assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [2, 0], "거절하면 하나도 팔지 않는다");
-  assert.ok(sell(pure, "toy", 2).ok);
+  assert.ok(sellItem(pure, "toy", 2).ok);
   assert.deepStrictEqual([pure.bag["toy"], pure.points.balance], [undefined, 24], "다 팔면 칸이 사라진다 (20P × 60% × 2)");
   process.stdout.write("(11) 가방 판매 · 60% 내림 · 판매 불가 · 보유 부족 · 원자성  ok\n");
 }

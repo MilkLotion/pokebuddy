@@ -4,10 +4,10 @@
 // 설계는 worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
 import assert from "node:assert";
 import { addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, addToBox, renameBox, sortBox } from "../../box/slots";
-import { open } from "../../egg/open";
+import { openEgg } from "../../egg/open";
 import { keepInBox } from "../../party/placement";
 import { applyGifts } from "../../mail/core";
-import { buy } from "../../shop/buy";
+import { buyProduct } from "../../shop/buy";
 import { newPet } from "../../party/create";
 import { BOX_RULES } from "../../box/rules";
 import { SHOP_RULES } from "../../shop/rules";
@@ -187,10 +187,10 @@ check(() => {
   const price = SHOP_RULES.boxPrice;
   assert.strictEqual(price, 300);
   s.points.balance = price - 1;
-  assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "not-enough-points");
+  assert.strictEqual(buyProduct(s, "box", T0, () => 0.5).reason, "not-enough-points");
   assert.strictEqual(s.boxes.length, 8, "실패하면 그대로");
   s.points.balance = price * 2 + 5;
-  const first = buy(s, "box", T0, () => 0.5);
+  const first = buyProduct(s, "box", T0, () => 0.5);
   assert.deepStrictEqual([first.ok, first.spent, first.balance, first.boxId], [true, price, price + 5, "b9"]);
   assert.strictEqual(s.boxes.length, 9);
   assert.strictEqual(s.boxes[8]!.name, "박스 9");
@@ -198,7 +198,7 @@ check(() => {
   assert.deepStrictEqual(boxBuyable(s.boxes), { ok: true, bought: 1, total: 56 });
   // 순서를 바꾼 뒤에 사도 식별자가 겹치지 않는다
   orderBox(s.boxes, 8, 0);
-  assert.strictEqual(buy(s, "box", T0, () => 0.5).boxId, "b10");
+  assert.strictEqual(buyProduct(s, "box", T0, () => 0.5).boxId, "b10");
   assert.strictEqual(new Set(s.boxes.map((b) => b.id)).size, s.boxes.length);
 });
 check(() => {
@@ -207,7 +207,7 @@ check(() => {
   while (s.boxes.length < BOX_RULES.max) assert.ok(addBox(s.boxes));
   assert.strictEqual(addBox(s.boxes), null);
   s.points.balance = 10_000;
-  assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "box-max");
+  assert.strictEqual(buyProduct(s, "box", T0, () => 0.5).reason, "box-max");
   assert.strictEqual(s.points.balance, 10_000);
   assert.strictEqual(s.boxes.length, 64);
 });
@@ -230,7 +230,7 @@ check(() => {
   // 부화 — 알은 그대로 남는다
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 0, ready: true, candidates: ["pikachu"], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
   const pets = s.pets.length;
-  assert.deepStrictEqual(open(s, "e1", T0, () => 0.99), { ok: false, reason: "box-full" });
+  assert.deepStrictEqual(openEgg(s, "e1", T0, () => 0.99), { ok: false, reason: "box-full" });
   assert.strictEqual(s.eggs.length, 1, "알은 그대로");
   assert.strictEqual(s.pets.length, pets, "개체를 만들지 않는다");
   // 보관
@@ -241,7 +241,7 @@ check(() => {
   assert.strictEqual(s.points.balance, 0, "포인트도 넣지 않는다");
   // 한 칸을 비우면 부화한다
   s.boxes[3]!.slots[7] = null;
-  const opened = open(s, "e1", T0, () => 0.99);
+  const opened = openEgg(s, "e1", T0, () => 0.99);
   assert.strictEqual(opened.ok, true);
   assert.strictEqual(opened.toBox, true);
   assert.strictEqual(s.boxes[3]!.slots[7], opened.petId);

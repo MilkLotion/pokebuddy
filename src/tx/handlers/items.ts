@@ -1,8 +1,8 @@
 // 알·상점·가방 처리기 — 알 열기, 사기, 도구 쓰기·팔기, 포켓몬 팔기
-import { itemOf, use } from "../../bag/use.js";
-import { open } from "../../egg/open.js";
-import { buy } from "../../shop/buy.js";
-import { sell } from "../../shop/sell.js";
+import { itemOf, useItem } from "../../bag/use.js";
+import { openEgg } from "../../egg/open.js";
+import { buyProduct } from "../../shop/buy.js";
+import { sellItem } from "../../shop/sell.js";
 import { sellPet } from "../../shop/sell-pet.js";
 import type { TxHandler } from "../executor";
 import { isArgsRecord, petIdOf, reasonOf } from "./args.js";
@@ -20,7 +20,7 @@ export const openHandler: TxHandler = (draft, args, ctx) => {
   const eggId = eggIdOf(args);
   if (!eggId) return { ok: false, reason: "bad-args" };
   // 계정 시드가 있으면 알마다 정해진 난수 — 되돌려 다시 열어도 같은 결과다. 서버 검증이 같은 계산으로 대조한다(P4b)
-  const res = open(draft, eggId, ctx.now, ctx.eggRand?.(eggId) ?? ctx.rand);
+  const res = openEgg(draft, eggId, ctx.now, ctx.eggRand?.(eggId) ?? ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return {
     ok: true,
@@ -41,14 +41,14 @@ export const buyHandler: TxHandler = (draft, args, ctx) => {
   // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수도 상한이다 — 매번 buy 가 검사한다 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const count = args.count === undefined ? 1 : args.count;
   if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
-  let res = buy(draft, productId, ctx.now, ctx.rand);
+  let res = buyProduct(draft, productId, ctx.now, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   let spent = res.spent ?? 0;
   const eggIds: string[] = res.eggId ? [res.eggId] : [];
   if (count > 1) {
     if (!spent || res.petId || res.slotIndex !== undefined || res.preset !== undefined || res.boxId !== undefined) return { ok: false, reason: "bad-args" };
     for (let i = 1; i < count; i += 1) {
-      res = buy(draft, productId, ctx.now, ctx.rand);
+      res = buyProduct(draft, productId, ctx.now, ctx.rand);
       if (!res.ok) return { ok: false, reason: reasonOf(res) }; // 실행기가 사본을 버린다 — 앞서 산 것도 반영하지 않는다
       spent += res.spent ?? 0;
       if (res.eggId) eggIds.push(res.eggId);
@@ -77,10 +77,10 @@ export const useHandler: TxHandler = (draft, args) => {
   const count = args.count === undefined ? 1 : args.count;
   if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
   if (count > 1 && !["exp", "level"].includes(itemOf(itemId)?.effect ?? "")) return { ok: false, reason: "bad-args" };
-  let res = use(draft, itemId, petId, { nature });
+  let res = useItem(draft, itemId, petId, { nature });
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   for (let i = 1; i < count; i += 1) {
-    res = use(draft, itemId, petId, { nature });
+    res = useItem(draft, itemId, petId, { nature });
     if (!res.ok) return { ok: false, reason: reasonOf(res) };
   }
   return {
@@ -97,7 +97,7 @@ export const sellHandler: TxHandler = (draft, args) => {
   // 수량 — 없으면 1. 1 이상의 정수가 아니면 bad-count
   const count = args.count === undefined ? 1 : args.count;
   if (typeof count !== "number") return { ok: false, reason: "bad-count" };
-  const res = sell(draft, itemId, count);
+  const res = sellItem(draft, itemId, count);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { itemId, count, earned: res.earned, left: res.left, balance: res.balance } };
 };

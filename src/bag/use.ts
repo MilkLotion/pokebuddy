@@ -62,7 +62,7 @@ const addAffinity = (pet: PetV3, gain: number): void => {
   pet.affinity = Math.min(PET_RULES.statMax, pet.affinity + gain);
 };
 
-export function use(save: SaveV3, itemId: string, petId: string, args: { nature?: string } = {}, opts?: DexOptions): UseResult {
+export function useItem(save: SaveV3, itemId: string, petId: string, args: { nature?: string } = {}, opts?: DexOptions): UseResult {
   const item = itemOf(itemId, opts);
   if (!item || (MINT_RETIRED && itemId === MINT_ID)) return { ok: false, reason: "no-item" }; // 성격민트 은퇴 — 쓰지 않는다 (src/bag/mint.ts)
 

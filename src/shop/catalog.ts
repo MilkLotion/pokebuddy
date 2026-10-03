@@ -87,7 +87,7 @@ export function eggNote(kind: string, opts?: DexOptions): string | null {
 }
 
 // 상품 하나를 찾는다. 알 · 도구 · 종 순서로 본다
-export function find(id: string, opts?: DexOptions): Product | null {
+export function findProduct(id: string, opts?: DexOptions): Product | null {
   const price = eggPrice(id, opts);
   if (price !== null) return { id, ko: eggName(id, opts) ?? id, price, kind: "egg", ref: id };
 

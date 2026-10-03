@@ -4,7 +4,7 @@
 //   밥 주기    기본먹이를 쓰는 것과 같다. 무료이며 무제한이고 쿨타임을 함께 쓴다
 //   놀아주기   쿨타임마다 한 번 친밀도를 올린다. 이어서 놀아주면 버프 들뜸(2중첩)·신남(3중첩)이 붙는다. 장난감은 신남을 준다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
-import { setBuff, use, type UseFailure, type UseResult } from "../bag/use.js";
+import { setBuff, useItem, type UseFailure, type UseResult } from "../bag/use.js";
 import { countCare } from "../dex/mega.js";
 import type { DexOptions } from "../dex/data";
 import { BAG_RULES } from "../bag/rules.js";
@@ -28,7 +28,7 @@ export type PlayResult = Outcome<PlayFailure> & {
 };
 
 // 밥 주기 — 기본먹이 사용과 같은 길로 간다. 검사도 쿨타임도 한 곳에만 둔다
-export const feed = (save: SaveV3, petId: string, opts?: DexOptions): UseResult => use(save, BASIC_FOOD, petId, {}, opts);
+export const applyFeed = (save: SaveV3, petId: string, opts?: DexOptions): UseResult => useItem(save, BASIC_FOOD, petId, {}, opts);
 
 // 놀아주기 — 쿨타임마다 한 번 친밀도를 올린다. 이어서 놀아주면 중첩이 오른다
 //
@@ -37,7 +37,7 @@ export const feed = (save: SaveV3, petId: string, opts?: DexOptions): UseResult 
 // 두 번 이어지면 버프 들뜸(×1.2, 30분), 세 번 이어지면 버프 신남(×1.5, 30분)이 붙는다 (2026-09-29 사용자 결정).
 // 신남이 붙으면 들뜸은 신남으로 바뀐다(곱하지 않는다). 신남이 남아 있으면 들뜸을 새로 걸지 않는다 (제안, 사용자 확인 전).
 // 신남은 장난감이 주는 것과 같은 버프다.
-export function play(save: SaveV3, petId: string): PlayResult {
+export function applyPlay(save: SaveV3, petId: string): PlayResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (pet.playCooldownMs > 0) return { ok: false, reason: "cooldown" };
@@ -82,7 +82,7 @@ export type FeedResult = Outcome<UseFailure | ReasonOf<"not-in-party">> & Omit<U
 export function feedPet(save: SaveV3, petId: string, opts?: DexOptions): FeedResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (pet && !isInParty(save, petId)) return { ok: false, reason: "not-in-party" };
-  const res = feed(save, petId, opts);
+  const res = applyFeed(save, petId, opts);
   if (!res.ok || !pet) return res;
   countCare(pet, opts);
   save.totals.fed += 1;
@@ -95,7 +95,7 @@ export type PlayWithResult = Outcome<PlayFailure | ReasonOf<"not-in-party">> & O
 export function playWithPet(save: SaveV3, petId: string, opts?: DexOptions): PlayWithResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (pet && !isInParty(save, petId)) return { ok: false, reason: "not-in-party" };
-  const res = play(save, petId);
+  const res = applyPlay(save, petId);
   if (!res.ok || !pet) return res;
   countCare(pet, opts);
   save.totals.played += 1;

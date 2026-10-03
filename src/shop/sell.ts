@@ -33,7 +33,7 @@ export function sellPrice(itemId: string, opts?: DexOptions): number | null {
   return each > 0 ? each : null;
 }
 
-export function sell(save: SaveV3, itemId: string, count: number, opts?: DexOptions): SellResult {
+export function sellItem(save: SaveV3, itemId: string, count: number, opts?: DexOptions): SellResult {
   if (!Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-count" };
   const each = sellPrice(itemId, opts);
   if (each === null) return { ok: false, reason: "not-sellable" };
