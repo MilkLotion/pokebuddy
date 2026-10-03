@@ -12,7 +12,7 @@ import { newBox, pushBox } from "../box/boxes.js";
 import { screenRefOf } from "../shared/raw.js";
 import { countParty } from "../party/presets.js";
 import { MAX_LEVEL } from "../dex/growth.js";
-import { isGender, legacyGender } from "../dex/gender.js";
+import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { boolOr as bool, clampNum as clamp, intOr as int, isNatureValue, isRawObject, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
 
 const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play", "short-play"];
@@ -90,7 +90,9 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     species,
     shiny: bool(raw.shiny),
     nature,
-    gender: isGender(raw.gender) ? raw.gender : legacyGender({ id, species, since }), // 옛 저장은 반반 (2026-09-30 사용자 결정)
+    // 성별 — 한 성별 종(무성·수컷만·암컷만)이면 그 성별로 맞춘다. 두 성별 종은 저장된 수컷·암컷을 두고, 없거나 맞지 않으면 옛 저장처럼 반반으로 정한다.
+    // 교환 받기(src/trade/exchange.ts)와 같은 규칙이다 (src/dex/gender.ts 2026-09-30 사용자 결정, 94-same-feature-diffs.md 9-3-9)
+    gender: fixedGender(species) ?? (isGender(raw.gender) && raw.gender !== "none" ? raw.gender : legacyGender({ id, species, since })),
     size: snapSize(num(raw.size, PET_RULES.size)), // 단계 배율로 맞춘다 — 옛 4~6 은 가장 큰 단계로 (src/party/size.ts SIZE_STEPS)
     level: clamp(int(raw.level, PET_RULES.level), 1, MAX_LEVEL),
     exp: nonNeg(raw.exp, PET_RULES.exp),
