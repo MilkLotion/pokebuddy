@@ -27,6 +27,7 @@
     "dist/",
     "data/",
     "src/renderer/*.html",
+    "src/renderer/styles/",
     "assets/logo/out/",
     "assets/fonts/",
     "assets/items/",

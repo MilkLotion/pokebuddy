@@ -2,30 +2,10 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
     <title>pokebuddy</title>
+    <link rel="stylesheet" href="styles/tokens.css" />
     <style>
-      /* 글꼴 — Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
-         Galmuri11 은 12·24px, Galmuri14 는 15px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md) */
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11.woff2") format("woff2");
-        font-weight: 400;
-      }
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11-Bold.woff2") format("woff2");
-        font-weight: 700;
-      }
-      @font-face {
-        font-family: "Galmuri9";
-        src: url("../../assets/fonts/Galmuri9.woff2") format("woff2");
-      }
-      :root {
-        --font-body: "Galmuri11", "Malgun Gothic", sans-serif;
-        --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
-        font-synthesis: none;
-      }
       /* 파티 기기 — 교체 화면. Figma 05 `Party / Swap · Open` `1248:2567` (worklog/records/party-preset/record.md).
          틀은 가방·상점 기기 창과 같다. 기기의 회청색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다.
          도감(빨강)·개체 상세(청록)·상점(호박색)·가방(파랑)과 가른다 */
@@ -33,16 +13,8 @@
         --body: #5f6f85;
         --hinge: #424f61;
         --joint: #2f3947;
-        --paper: #ffffff;
-        --records: #fbfaf6;
         --ink: #3b2c31;
-        --soft: #5a534c;
-        --inverse: #ffffff;
-        --line: #dde1db;
         --subtle: #dde1db;
-        --primary: #0f766e;
-        --accent: #ebf4f1;
-        --danger-ink: #b91c1c;
       }
       * {
         box-sizing: border-box;

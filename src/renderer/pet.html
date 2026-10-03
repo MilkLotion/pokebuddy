@@ -2,30 +2,10 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
     <title>pokebuddy</title>
+    <link rel="stylesheet" href="styles/tokens.css" />
     <style>
-      /* 글꼴 — Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
-         Galmuri11 은 12·24px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md) */
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11.woff2") format("woff2");
-        font-weight: 400;
-      }
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11-Bold.woff2") format("woff2");
-        font-weight: 700;
-      }
-      @font-face {
-        font-family: "Galmuri9";
-        src: url("../../assets/fonts/Galmuri9.woff2") format("woff2");
-      }
-      :root {
-        --font-body: "Galmuri11", "Malgun Gothic", sans-serif;
-        --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
-        font-synthesis: none;
-      }
       /* 파티 상세 기기 — Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`) (2026-09-28 사용자 "a로 하자").
          도감 기기(dex.html)와 같은 틀에 몸 색만 청록이다 — 도감(빨강)과 짝. 기기 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다.
          기록 칸 아래 흰 판의 단추·막대 색은 관리 창과 같은 값이다 */
@@ -33,24 +13,9 @@
         --body: #0f766e;
         --hinge: #0a5750;
         --joint: #074540;
-        --bezel: #3b2c31;
-        --screen: #f5f3ea;
-        --stage: #e6e3d5;
-        --paper: #ffffff;
-        --records: #fbfaf6;
         --ink: #1a3330;
         --muted: #4a6663;
-        --line: #dde1db;
         --subtle: #e7ebe6;
-        --accent-bg: #ebf4f1;
-        --primary: #0f766e;
-        --warning: #f59e0b;
-        --danger: #dc2626;
-        --success: #10b981;
-        --inverse: #ffffff;
-        --unknown: #d5d2c6;
-        --ball-closed: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 13.7755 13.7728%22%3E%3Cg%3E%3Cg%3E%3Cpath d=%22M6.88638 9.14594C5.79835 9.14594 4.89076 8.37569 4.67531 7.3523H1.05571C1.31156 10.3282 3.80811 12.6632 6.84868 12.6632C9.88925 12.6632 12.3885 10.3282 12.6416 7.3523H9.09746C8.88201 8.37839 7.97442 9.14594 6.88638 9.14594Z%22 fill=%22white%22/%3E%3Cpath d=%22M8.21949 6.88638C8.2168 6.88638 8.2168 6.88638 8.21949 6.88638C8.2168 6.7221 8.18717 6.5659 8.13331 6.42047C7.94479 5.91416 7.45733 5.55597 6.88638 5.55597C6.31544 5.55597 5.82798 5.91685 5.63946 6.42047C5.58559 6.5659 5.55597 6.7221 5.55597 6.88638H5.55866C5.55866 7.05067 5.58829 7.20687 5.64215 7.3523C5.83067 7.85861 6.31813 8.2168 6.88908 8.2168C7.46002 8.2168 7.94748 7.85592 8.13601 7.3523C8.18987 7.20956 8.21949 7.05067 8.21949 6.88638Z%22 fill=%22white%22/%3E%3Cpath d=%22M6.88892 4.62952C7.97696 4.62952 8.88455 5.39976 9.1 6.42316H12.7196C12.4637 3.44454 9.96719 1.10958 6.92394 1.10958C3.88068 1.10958 1.38682 3.44454 1.13097 6.42047H4.67785C4.8933 5.39707 5.80089 4.62952 6.88892 4.62952Z%22 fill=%22%23FF1C1C%22/%3E%3C/g%3E%3Cpath d=%22M6.92409 1.10958C9.96735 1.10958 12.4639 3.44454 12.7171 6.42047H9.09746C8.88201 5.39707 7.97442 4.62683 6.88638 4.62683C5.79835 4.62683 4.89076 5.39707 4.67531 6.42047H1.13112C1.38697 3.44454 3.88352 1.10958 6.92409 1.10958ZM8.13331 6.42047C8.18717 6.5659 8.2168 6.7221 8.2168 6.88638H8.21949C8.21949 7.05067 8.18987 7.20687 8.136 7.3523C7.94748 7.85861 7.46002 8.2168 6.88908 8.2168C6.31813 8.2168 5.83067 7.85592 5.64215 7.3523C5.58829 7.20687 5.55866 7.05067 5.55866 6.88638H5.55597C5.55597 6.7221 5.58559 6.5659 5.63945 6.42047C5.82798 5.91416 6.31544 5.55597 6.88638 5.55597C7.45733 5.55597 7.94479 5.91685 8.13331 6.42047ZM6.84868 12.6659C3.80542 12.6659 1.30887 10.3309 1.05571 7.35499H4.67531C4.89076 8.37839 5.79835 9.14863 6.88638 9.14863C7.97442 9.14863 8.88201 8.37839 9.09746 7.35499H12.6443C12.3885 10.3282 9.89194 12.6659 6.84868 12.6659ZM6.88638 0C3.08366 0 0 3.08366 0 6.88638C0 10.6891 3.08366 13.7728 6.88638 13.7728C10.6891 13.7728 13.7755 10.6918 13.7755 6.88638C13.7755 3.08096 10.6918 0 6.88638 0Z%22 fill=%22black%22/%3E%3C/g%3E%3C/svg%3E");
-        --ball-open: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%2096%2096%22%3E%3Cpath%20d=%22M80.7%2058A32.7%2032.7%200%200%201%2015.3%2058H39.49A8.51%208.51%200%200%200%2056.51%2058Z%22%20fill=%22white%22%20stroke=%22black%22%20stroke-width=%226.6%22/%3E%3Cg%20transform=%22rotate(-30%2012%2058)%22%3E%3Cpath%20d=%22M15.3%2058A32.7%2032.7%200%200%201%2080.7%2058Z%22%20fill=%22%23FF1C1C%22%20stroke=%22black%22%20stroke-width=%226.6%22/%3E%3Ccircle%20cx=%2248%22%20cy=%2258%22%20r=%228.4%22%20fill=%22white%22%20stroke=%22black%22%20stroke-width=%226%22/%3E%3C/g%3E%3C/svg%3E");
       }
       * {
         box-sizing: border-box;
