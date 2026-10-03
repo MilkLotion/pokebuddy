@@ -11,9 +11,6 @@
 // 자리는 전부 "몸"(작업 동작을 뺀 칸 × 배율)으로 계산한다 — 작업 동작이 그림 칸을 키워도 펫이 서는 자리는 그대로다 (옛 main.js bodySize)
 import type { RoamBox } from "../motion/types";
 import type { Rect, Size } from "../shared/geometry";
-import { SAVE_RULES } from "../save/rules";
-
-export type { Rect, Size }; // 원본은 src/shared/geometry.ts
 export interface Spot {
   x: number;
   y: number;
@@ -40,20 +37,6 @@ export function stageOf(target: Rect, display: Rect): Rect | null {
   const y2 = Math.min(target.y + target.h, display.y + display.h);
   if (x2 - x1 <= 0 || y2 - y1 <= 0) return null;
   return { x: Math.round(x1), y: Math.round(y1), w: Math.round(x2 - x1), h: Math.round(y2 - y1) };
-}
-
-// 동반자의 놀이공간 사각형 하나 — 영역 지정이면 그려 둔 영역을 가장 많이 겹치는 화면 안으로 자르고, 그 밖의 방식은 주 화면 작업 영역이다.
-// 영역이 어느 화면과도 겹치지 않으면(모니터 변경) 주 화면으로 대신한다. 저장된 영역은 지우지 않는다 (docs/specs/game.md "놀이공간")
-export function playAreaRect(area: { mode: string; rect: Rect | null }, displays: Rect[], primaryWork: Rect): Rect {
-  if (area.mode === "region" && area.rect) {
-    let best: Rect | null = null;
-    for (const d of displays) {
-      const cut = stageOf(area.rect, d);
-      if (cut && (!best || cut.w * cut.h > best.w * best.h)) best = cut;
-    }
-    if (best) return best;
-  }
-  return { ...primaryWork };
 }
 
 // ── 여러 화면 (2026-09-28) ─────────────────────────────────────────────────────
@@ -181,12 +164,6 @@ export function homeSpot(home: Home, body: Size, anchor: Rect, stage: Size, shif
   return clampInStage(anchor.x + anchor.w - body.w + home.dx - shift, anchor.y + anchor.h - body.h + home.dy, body, stage);
 }
 
-// 몸이 놓일 자리 — 집에서 산책 오프셋만큼 옮긴 뒤 무대 안에 가둔다
-export function petSpot(home: Home, roam: Spot, body: Size, anchor: Rect, stage: Size, shift = 0): Spot {
-  const at = homeSpot(home, body, anchor, stage, shift);
-  return clampInStage(at.x + roam.x, at.y + roam.y, body, stage);
-}
-
 // 산책할 수 있는 오프셋 범위 — 몸이 무대 안에 머무는 만큼. 집이 밖이면 0 을 포함하게 넓혀 집에는 늘 돌아올 수 있다.
 // 몸이 무대보다 크면 [0,0] 이 되어 걷지 않는다
 export function roamBox(spot: Spot, body: Size, stage: Size): RoamBox {
@@ -202,9 +179,6 @@ export function roamBox(spot: Spot, body: Size, stage: Size): RoamBox {
 export function homeOf(spot: Spot, body: Size, anchor: Rect, shift = 0): Home {
   return { dx: spot.x - (anchor.x + anchor.w - body.w) + shift, dy: spot.y - (anchor.y + anchor.h - body.h) };
 }
-
-// 저장 규칙표의 기본 집 — 옛 anchorDx/Dy 와 같다
-export const isDefaultHome = (home: Home): boolean => home.dx === SAVE_RULES.pet.home.dx && home.dy === SAVE_RULES.pet.home.dy;
 
 export const sameRect = (a: Rect | null, b: Rect | null): boolean =>
   a === b || (!!a && !!b && a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h);

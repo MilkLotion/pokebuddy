@@ -1,6 +1,6 @@
 // 놀이공간·설정 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-play.js
 //
-// 테스트 프레임워크 없이 assert 만. 로그인 시 시작 기본값, 그림 크기, 놀이공간 영역 저장, 동반자 무대 사각형을 본다.
+// 테스트 프레임워크 없이 assert 만. 로그인 시 시작 기본값, 그림 크기, 놀이공간 영역 저장을 본다. 무대 사각형(옛 (5))은 selftest-screens 의 playLanes 가 본다.
 // 설계는 worklog/records/game-runtime/record.md "놀이공간·설정의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
@@ -8,7 +8,6 @@ import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/hunger-bubb
 import fs from "node:fs";
 import path from "node:path";
 import { createGame } from "../../main/game";
-import { playAreaRect } from "../../main/layout";
 import * as store from "../../save/store";
 import { setSize } from "../../party/home";
 import { DEFAULT_SIZE_LEVEL, EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../../save/rules";
@@ -95,24 +94,6 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
   setSetting(s, "playArea", "screen");
   assert.deepStrictEqual(s.settings.playArea, { mode: "screen", rect: { x: 10, y: 21, w: 800, h: 400 }, screen: null });
   process.stdout.write("(4) 영역 저장과 유지  ok\n");
-}
-
-// (5) 동반자 무대 사각형 — 화면 전체, 영역, 화면 밖으로 나간 영역
-{
-  const primary = { x: 0, y: 0, w: 1920, h: 1080 };
-  const work = { x: 0, y: 0, w: 1920, h: 1032 };
-  const second = { x: 1920, y: 0, w: 2560, h: 1440 };
-  const displays = [primary, second];
-  assert.deepStrictEqual(playAreaRect({ mode: "full", rect: null }, displays, work), work, "화면 전체는 주 화면 작업 영역");
-  assert.deepStrictEqual(playAreaRect({ mode: "full", rect: { x: 100, y: 100, w: 500, h: 300 } }, displays, work), work, "영역이 있어도 방식이 화면 전체면 쓰지 않는다");
-  assert.deepStrictEqual(playAreaRect({ mode: "region", rect: { x: 100, y: 100, w: 500, h: 300 } }, displays, work), { x: 100, y: 100, w: 500, h: 300 });
-  assert.deepStrictEqual(
-    playAreaRect({ mode: "region", rect: { x: 1800, y: 100, w: 600, h: 300 } }, displays, work),
-    { x: 1920, y: 100, w: 480, h: 300 },
-    "두 화면에 걸치면 많이 겹치는 화면 안으로 자른다",
-  );
-  assert.deepStrictEqual(playAreaRect({ mode: "region", rect: { x: 9000, y: 0, w: 500, h: 300 } }, displays, work), work, "모니터가 빠져 화면 밖이면 화면 전체");
-  process.stdout.write("(5) 동반자 무대 사각형  ok\n");
 }
 
 function seedPet(): SaveV3 {
@@ -277,4 +258,4 @@ function seedPet(): SaveV3 {
   process.stdout.write("(9) 사탕 여러 개 쓰기  ok\n");
 }
 
-process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·무대 사각형·배고픔 말풍선·여러 개 구매·저장 실패 안내·사탕 여러 개)\n");
+process.stdout.write("selftest-play: 통과 (로그인 시 시작·크기·pet.set size·영역·배고픔 말풍선·여러 개 구매·저장 실패 안내·사탕 여러 개)\n");

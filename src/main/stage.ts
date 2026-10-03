@@ -8,7 +8,8 @@ import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shar
 import type { CareAction } from "../state/types";
 import { MOTION_RULES } from "../motion/rules";
 import { zoomOf, type ArtLoader, type Look } from "./art";
-import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Rect, type Size, type Spot } from "./layout";
+import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Spot } from "./layout";
+import type { Rect, Size } from "../shared/geometry";
 import type { PartyPet } from "./save-party";
 import type { StageWindow } from "./stage-window";
 

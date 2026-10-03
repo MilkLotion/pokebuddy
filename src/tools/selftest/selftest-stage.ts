@@ -9,11 +9,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
 import { ART_RULES, zoomOf } from "../../main/art";
-import { STAGE_RULES, clampInStage, homeOf, homeSpot, isDefaultHome, petSpot, roamBox, stackShift, stageOf, toLocal } from "../../main/layout";
+import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageOf, toLocal } from "../../main/layout";
 import { lockExcept, menuView, petLine, petMenu, pickOf, subId, trayMenu } from "../../main/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../main/text";
-import { SAVE_RULES, SAVE_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import * as legacy from "../../save/legacy";
 import * as writer from "../../save/writer";
 import type { LookSheets, PointerMsg, StageFrame, StageState } from "../../shared/stage";
@@ -92,7 +92,6 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(homeSpot(home, body, anchor, { w: 30, h: 30 }), { x: 0, y: 0 }, "homeSpot 몸이 무대보다 크면 좌상단");
   eq(roamBox({ x: 0, y: 0 }, body, { w: 30, h: 30 }), { minX: 0, maxX: 0, minY: 0, maxY: 0 }, "roamBox 몸이 크면 [0,0] — 걷지 않는다");
   eq(roamBox({ x: 736, y: 484 }, body, stage), { minX: -736, maxX: 24, minY: -484, maxY: 60 }, "roamBox 집 기준 범위");
-  eq(petSpot(home, { x: 100, y: 100 }, body, anchor, stage), { x: 760, y: 544 }, "petSpot 산책도 무대 안에");
   eq(clampInStage(-5, 999, body, stage), { x: 0, y: 544 }, "clampInStage");
   const spot = homeSpot(home, body, anchor, stage);
   eq(homeOf(spot, body, anchor), home, "homeOf 는 homeSpot 의 역함수 (안에 있을 때)");
@@ -106,7 +105,6 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(stageOf({ x: 100, y: 100, w: 800, h: 600 }, { x: 0, y: 0, w: 500, h: 500 }), { x: 100, y: 100, w: 400, h: 400 }, "stageOf 교집합");
   eq(stageOf({ x: 1000, y: 0, w: 10, h: 10 }, { x: 0, y: 0, w: 500, h: 500 }), null, "stageOf 겹치지 않으면 null");
   eq(toLocal({ x: 100, y: 100, w: 800, h: 600 }, { x: 100, y: 100, w: 400, h: 400 }), { x: 0, y: 0, w: 800, h: 600 }, "toLocal");
-  ok(isDefaultHome({ ...SAVE_RULES.pet.home }) && !isDefaultHome({ dx: 0, dy: 0 }), "isDefaultHome");
 }
 
 // ── art.zoomOf ────────────────────────────────────────────────────────────────

@@ -8,7 +8,8 @@ import fs from "node:fs";
 import { BrowserWindow, ipcMain, screen } from "electron";
 import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../shared/model/stage";
 import type { StageChannel } from "../shared/ipc/stage";
-import { sameRect, type Rect, type Size } from "./layout";
+import { sameRect } from "./layout";
+import type { Rect, Size } from "../shared/geometry";
 import { windowIcon } from "./paths";
 import { webPreferencesOf } from "./window-options";
 
