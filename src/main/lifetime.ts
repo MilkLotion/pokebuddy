@@ -1,9 +1,13 @@
-// 수명 — 동반자 lock 파일 규약(claim · ready · watch) · 실패 기록. 펫을 끝내 줄 부모가 없으므로 스스로 본다
+// 수명 — 동반자 lock 파일 규약(claim · ready · watch). 펫을 끝내 줄 부모가 없으므로 스스로 본다
 //
 // lock 파일 companion.lock — pokebuddy companion 이 만든다. 직접 실행(npm start·설치한 앱)이면 스스로 만든다.
+// 잡기는 저장 잠금과 같은 규약이다(src/platform/pid-lock.ts — 없을 때만 만들기 'wx'). 동시에 뜬 둘 가운데 하나만 이긴다 (2026-10-03 X6)
 // 끝날 조건: lock 파일이 사라짐 (companion stop) · 트레이·메뉴의 종료
 import fs from "node:fs";
 import path from "node:path";
+import { clearLastError, writeLastError } from "../platform/last-error.js";
+import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
+import { watchDir, type DirWatch } from "../platform/watch-dir.js";
 import type { Paths } from "./paths";
 
 export const LIFETIME_RULES = {
@@ -12,7 +16,6 @@ export const LIFETIME_RULES = {
 
 export interface LifetimeOptions {
   lockFile: string;
-  pidAlive: (pid: number) => boolean;
   hasWindow: () => boolean; // 창이 생긴 뒤에만 ready 를 적는다
   quit: () => void;
   pid?: number;
@@ -27,15 +30,13 @@ export interface Lifetime {
   release(): void; // will-quit — 내 것일 때만 지운다
 }
 
-const firstPid = (file: string): number => Number(fs.readFileSync(file, "utf8").split("\n")[0]);
-
 export function createLifetime(opts: LifetimeOptions): Lifetime {
-  const { lockFile: file, pidAlive, hasWindow, quit } = opts;
+  const { lockFile: file, hasWindow, quit } = opts;
   const pid = opts.pid ?? process.pid;
   let seen = false; // 한 번도 못 봤으면 끝내지 않는다 — lock 을 적기 전에 곧바로 끝나지 않게
   let ready = false;
   let timer: NodeJS.Timeout | null = null;
-  let watcher: fs.FSWatcher | null = null;
+  let watcher: DirWatch | null = null;
 
   // 창을 만들었으면 ready 를 적어 pokebuddy companion 이 기다림을 끝내게 하고, 파일이 사라졌으면(companion stop) 스스로 끝난다
   function check(): void {
@@ -63,68 +64,32 @@ export function createLifetime(opts: LifetimeOptions): Lifetime {
     start() {
       check();
       timer = setInterval(check, LIFETIME_RULES.checkMs);
-      // 내리기는 바로 반응한다
-      try {
-        watcher = fs.watch(path.dirname(file), () => check());
-      } catch {
-        // 감시 실패해도 주기 확인이 받쳐 준다
-      }
+      // 내리기는 바로 반응한다. 감시를 못 걸어도 주기 확인이 받쳐 준다 (src/platform/watch-dir.ts)
+      watcher = watchDir(path.dirname(file), () => check());
     },
     stop() {
       if (timer) clearInterval(timer);
       timer = null;
-      try {
-        watcher?.close();
-      } catch {
-        // 이미 닫혔다
-      }
+      watcher?.stop();
       watcher = null;
     },
-    // lock 에 살아 있는 다른 pid 가 적혀 있으면 그쪽이 먼저다 — 단일 인스턴스 잠금이 막지 못한 경우의 마지막 방어
+    // lock 에 살아 있는 다른 pid 가 적혀 있으면 그쪽이 먼저다 — 단일 인스턴스 잠금이 막지 못한 경우의 마지막 방어.
+    // 이미 내 pid 면(pokebuddy companion 이 먼저 적었다) 그대로 잡은 것이다. 죽은 pid 의 lock 은 지우고 다시 잡는다
     claim() {
-      try {
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        if (fs.existsSync(file)) {
-          const other = firstPid(file);
-          if (other > 0 && other !== pid && pidAlive(other)) return false;
-        }
-        fs.writeFileSync(file, `${pid}\n`);
-        return true;
-      } catch {
-        return true; // 못 만들면 파일 감시 없이 산다 — 트레이로만 끝난다
-      }
+      const r = claimLock(file, pid);
+      return r.ok || r.reason === "error"; // 못 만들면 파일 감시 없이 산다 — 트레이로만 끝난다
     },
-    owns() {
-      try {
-        return firstPid(file) === pid;
-      } catch {
-        return false;
-      }
-    },
+    owns: () => ownsLock(file, pid),
     check,
     // lock 은 내 pid 일 때만 지운다 — 새 동반자가 다시 적은 것을 지우면 그쪽이 끝난다
     release() {
-      if (this.owns()) fs.rmSync(file, { force: true });
+      releaseLock(file, pid);
     },
   };
 }
 
-// 펫이 못 뜬 이유를 남긴다 — 펫의 출력은 평소 버려지므로 pokebuddy 명령과 pokebuddy status 가 읽을 수 있게. 실패해도 조용히
-export function reportFailure(paths: Pick<Paths, "home" | "lastError">, slug: string, message: string, reason?: string): void {
-  try {
-    fs.mkdirSync(paths.home, { recursive: true });
-    fs.writeFileSync(paths.lastError, JSON.stringify({ at: Date.now() / 1000, slug, message, reason }));
-  } catch {
-    // 기록 실패는 무시
-  }
-}
-
-// 이 펫이 떴으니 이 펫의 옛 실패 기록은 지운다 — 남겨 두면 status 가 해결된 문제를 계속 보여 준다. 다른 펫의 기록은 건드리지 않는다
-export function clearFailure(paths: Pick<Paths, "lastError">, slug: string): void {
-  try {
-    const e = JSON.parse(fs.readFileSync(paths.lastError, "utf8")) as { slug?: unknown };
-    if (e.slug === slug) fs.rmSync(paths.lastError, { force: true });
-  } catch {
-    // 기록 없음
-  }
-}
+// 펫이 못 뜬 이유의 기록은 src/platform/last-error.ts 다(CLI 와 같이 쓴다).
+// [임시] 옛 이름 — src/main/app.ts 의 부르는 줄 여섯이 이 이름을 쓴다. 메인 레인 M7 이 writeLastError·clearLastError 로 바꾸면 걷는다
+export const reportFailure = (paths: Pick<Paths, "home" | "lastError">, slug: string, message: string, reason?: string): void =>
+  writeLastError(paths, { slug, message, ...(reason !== undefined ? { reason } : {}) });
+export const clearFailure = clearLastError;
