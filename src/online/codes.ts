@@ -1,6 +1,6 @@
 // 서버 오류 → 코드. 호출 길마다 받아들이는 서버 코드와 예외가 다르다 — 그 차이만 여기 둔다.
 // 공통 순서: 그 길의 서버 코드인가 → 망 오류의 글인가(NETWORK) → 그 밖(UNKNOWN). 코드의 목록은 src/shared/names/online-codes.ts
-import type { AccountCode, HandoffCode, SessionCode, TradeCode } from "../shared/names/online-codes.js";
+import type { AccountCode, HandoffCode, MailCode, SessionCode, TradeCode } from "../shared/names/online-codes.js";
 import { isNetworkMessage, type ServerError } from "./server-call.js";
 
 const messageOfError = (error: ServerError): string => (error?.message ?? "").trim();
@@ -57,6 +57,6 @@ export function tradeCodeOf(error: ServerError): { code: TradeCode; detail?: str
 }
 
 // 우편함 — 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN). detail 은 주지 않는다
-export function mailCodeOf(error: ServerError): { code: string } {
-  return { code: /^MAIL_[A-Z_]+$/.exec(messageOfError(error))?.[0] ?? tradeCodeOf(error).code };
+export function mailCodeOf(error: ServerError): { code: MailCode | TradeCode } {
+  return { code: (/^MAIL_[A-Z_]+$/.exec(messageOfError(error))?.[0] as MailCode | undefined) ?? tradeCodeOf(error).code };
 }

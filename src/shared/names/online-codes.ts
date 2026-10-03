@@ -123,3 +123,18 @@ export type OnlineCode =
 
 // 화면에 닿는 실패 값 전부 — 로컬 판정의 까닭(kebab-case)과 온라인 코드(대문자). 글자의 모양이 출처를 알린다
 export type FailCode = Reason | OnlineCode;
+
+// ── 응답 칸마다의 코드 ────────────────────────────────────────────────────────
+// 계정 응답(AccountReply.code) — 계정 호출의 코드와, 새로 시작할 때 저장을 백업하지 못한 것
+export type AccountReplyCode = GithubCode | "SAVE_BACKUP_FAILED";
+
+// 클라우드 표시(CloudView.error) — 클라우드 호출과 세션 확보의 코드.
+// 클라우드 분류(src/online/codes.ts cloudCodeOf)는 목록 밖의 CLOUD_* 도 글자 그대로 넘긴다 — 사용자가 알릴 때 쓸 정보라서다(2026-10-03 결정)
+export type CloudErrorCode = CloudCode | SessionCode;
+
+// 우편 응답(MailReply.code) — 우편 호출의 코드(교환과 같은 분류를 거친다), 받기 전 검사와 넣기의 까닭
+export type MailReplyCode = MailCode | TradeCode | Reason;
+
+// 교환이 닫힌 까닭 — 서버가 trade_channels.closed_reason 에 적는 글자의 사본이다 (supabase/migrations/20260927100000_trade.sql)
+export const TRADE_CLOSE_REASONS = ["host_left", "guest_left", "expired"] as const;
+export type TradeCloseReason = (typeof TRADE_CLOSE_REASONS)[number];

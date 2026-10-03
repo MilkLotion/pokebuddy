@@ -1,4 +1,5 @@
 // 화면 모델 — 계정·클라우드 저장·업데이트·패치노트. 타입만 둔다
+import type { AccountReplyCode } from "../names/online-codes.js";
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
 // 설정 모달 바닥 왼쪽이 그린다 (src/main/update/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
@@ -95,7 +96,7 @@ export type AccountAction =
 
 export interface AccountReply {
   ok: boolean;
-  code: string | null; // 실패 코드 — AUTH_* · CLOUD_* · NETWORK
+  code: AccountReplyCode | null; // 실패 코드 — AUTH_* · SAVE_BACKUP_FAILED · NETWORK
   check?: "available" | "taken" | "invalid" | "NETWORK"; // check-username 의 결과
   screen: AccountScreen;
 }
