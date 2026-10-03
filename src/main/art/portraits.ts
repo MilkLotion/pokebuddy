@@ -17,7 +17,7 @@ import { profileOf, speciesSlugs } from "../../dex/species.js";
 import { genderLookInfo, regionalOf } from "../../dex/regional.js";
 import { megaOf } from "../../dex/mega.js";
 import { loadJson, isMetaKey } from "../../dex/data.js";
-import { PATHS } from "../paths.js";
+import { PATHS } from "../../platform/paths.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";

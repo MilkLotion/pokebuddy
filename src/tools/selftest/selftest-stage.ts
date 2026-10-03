@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
 import { ART_RULES, zoomOf } from "../../main/art/stage-art";
-import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageOf, toLocal } from "../../main/layout";
+import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageRectOf, toLocal } from "../../main/layout";
 import { menuView, pickOf, subId } from "../../main/menus";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
@@ -92,8 +92,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(homeOf(shifted, body, anchor, shift), home, "저장 때 shift 를 더해 상쇄");
   // 무대 ≠ 창 — 창이 왼쪽으로 100 나가 있으면 anchor 가 음수에서 시작한다
   eq(homeSpot(home, body, { x: -100, y: 0, w: 800, h: 600 }, { w: 700, h: 600 }), { x: 636, y: 484 }, "anchor 가 무대 밖에서 시작해도 창 기준");
-  eq(stageOf({ x: 100, y: 100, w: 800, h: 600 }, { x: 0, y: 0, w: 500, h: 500 }), { x: 100, y: 100, w: 400, h: 400 }, "stageOf 교집합");
-  eq(stageOf({ x: 1000, y: 0, w: 10, h: 10 }, { x: 0, y: 0, w: 500, h: 500 }), null, "stageOf 겹치지 않으면 null");
+  eq(stageRectOf({ x: 100, y: 100, w: 800, h: 600 }, { x: 0, y: 0, w: 500, h: 500 }), { x: 100, y: 100, w: 400, h: 400 }, "stageRectOf 교집합");
+  eq(stageRectOf({ x: 1000, y: 0, w: 10, h: 10 }, { x: 0, y: 0, w: 500, h: 500 }), null, "stageRectOf 겹치지 않으면 null");
   eq(toLocal({ x: 100, y: 100, w: 800, h: 600 }, { x: 100, y: 100, w: 400, h: 400 }), { x: 0, y: 0, w: 800, h: 600 }, "toLocal");
 }
 

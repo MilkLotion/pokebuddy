@@ -5,7 +5,7 @@
 // (예전 scripts/dev-menu.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";
 import { app, BrowserWindow, type MenuItemConstructorOptions } from "electron";
-import { popupMenu } from "../../main/menu-window";
+import { openMenu } from "../../main/menus/menu-window";
 import { petMenu, trayMenu } from "../../view/menus";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { argAfter, hasFlag } from "../harness/shot";
@@ -22,7 +22,7 @@ void app.whenReady().then(() => {
   const template: MenuItemConstructorOptions[] = hasFlag("--pet")
     ? pet
     : [{ label: "관리 창 열기", click: say("manage") }, { type: "separator" }, ...trayMenu({ hidden: false, ghost: true }, act)];
-  popupMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, template, "켜짐");
+  openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, template, "켜짐");
   if (!shotFile) return;
   setTimeout(async () => {
     const win = BrowserWindow.getAllWindows()[0];

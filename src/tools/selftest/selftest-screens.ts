@@ -4,7 +4,7 @@
 // 개체 배분, 무대 묶음(가짜 창·가짜 무대)의 배분·다른 화면에 놓기·화면 빠짐을 본다.
 // 설계는 worklog/records/multi-display/record.md. 끝에 "통과" 한 줄. 실패하면 종료 코드 1
 import assert from "node:assert/strict";
-import { assignScreens, playLanes, resolveScreen, screenOrder, type PlayLane, type ScreenInfo } from "../../main/layout";
+import { assignScreens, playLanes, findScreen, screenOrder, type PlayLane, type ScreenInfo } from "../../main/layout";
 import type { Rect, Size } from "../../shared/geometry";
 import type { PartyPet } from "../../main/save-party";
 import type { Stage } from "../../main/stage";
@@ -78,11 +78,11 @@ const refB = { id: 7, x: 1920, y: 0, w: 2560, h: 1440 };
 // (4) 화면 번호와 식별 — 주 화면이 1, 나머지는 왼쪽부터. id 가 없어지면 겹치는 화면, 그것도 없으면 주 화면
 {
   assert.deepEqual(screenOrder([B, C, A]).map((s) => s.id), [1, 9, 7]);
-  assert.equal(resolveScreen(null, [A, B])?.id, 1, "고른 화면이 없으면 주 화면");
-  assert.equal(resolveScreen(refB, [A, B])?.id, 7, "id 가 같은 화면");
-  assert.equal(resolveScreen({ ...refB, id: 70 }, [A, { ...B, id: 71 }])?.id, 71, "id 가 바뀌면 사각형이 겹치는 화면");
-  assert.equal(resolveScreen(refB, [A, C])?.id, 1, "화면이 빠지면 주 화면");
-  assert.equal(resolveScreen(refB, []), null);
+  assert.equal(findScreen(null, [A, B])?.id, 1, "고른 화면이 없으면 주 화면");
+  assert.equal(findScreen(refB, [A, B])?.id, 7, "id 가 같은 화면");
+  assert.equal(findScreen({ ...refB, id: 70 }, [A, { ...B, id: 71 }])?.id, 71, "id 가 바뀌면 사각형이 겹치는 화면");
+  assert.equal(findScreen(refB, [A, C])?.id, 1, "화면이 빠지면 주 화면");
+  assert.equal(findScreen(refB, []), null);
   process.stdout.write("(4) 화면 번호와 식별  ok\n");
 }
 

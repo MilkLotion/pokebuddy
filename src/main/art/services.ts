@@ -6,7 +6,7 @@
 // 처음 부를 때 만든다
 import fs from "node:fs";
 import path from "node:path";
-import { PATHS } from "../paths.js";
+import { PATHS } from "../../platform/paths.js";
 import { createCries, type Cries } from "./cries";
 import { createPortraits, type Portraits } from "./portraits";
 

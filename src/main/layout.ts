@@ -30,7 +30,7 @@ export const STAGE_RULES = {
 };
 
 // 무대 사각형 — 창과 디스플레이의 교집합. 겹치는 곳이 없으면 null (부르는 쪽이 마지막 무대를 유지한다)
-export function stageOf(target: Rect, display: Rect): Rect | null {
+export function stageRectOf(target: Rect, display: Rect): Rect | null {
   const x1 = Math.max(target.x, display.x);
   const y1 = Math.max(target.y, display.y);
   const x2 = Math.min(target.x + target.w, display.x + display.w);
@@ -58,7 +58,7 @@ export interface ScreenRef extends Rect {
 export const screenRefOfInfo = (s: ScreenInfo): ScreenRef => ({ id: s.id, ...s.bounds });
 
 const overlapArea = (a: Rect, b: Rect): number => {
-  const cut = stageOf(a, b);
+  const cut = stageRectOf(a, b);
   return cut ? cut.w * cut.h : 0;
 };
 
@@ -69,7 +69,7 @@ export function screenOrder(screens: readonly ScreenInfo[]): ScreenInfo[] {
 
 // 저장된 화면 → 지금 화면. id 가 같은 화면, 없으면 사각형이 가장 많이 겹치는 화면, 그것도 없으면 주 화면. 화면이 하나도 없으면 null
 // id 가 바뀌는 경우(Windows 모니터 재연결 등)는 사각형으로 되찾는다. 저장된 값은 바꾸지 않는다 — 모니터를 다시 꽂으면 돌아온다
-export function resolveScreen(ref: ScreenRef | null, screens: readonly ScreenInfo[]): ScreenInfo | null {
+export function findScreen(ref: ScreenRef | null, screens: readonly ScreenInfo[]): ScreenInfo | null {
   const primary = screens.find((s) => s.primary) ?? screens[0] ?? null;
   if (!ref) return primary;
   const same = screens.find((s) => s.id === ref.id);
@@ -95,7 +95,7 @@ export interface PlayLane {
 }
 
 const laneOf = (screen: ScreenInfo, target: Rect): PlayLane | null => {
-  const rect = stageOf(target, screen.bounds);
+  const rect = stageRectOf(target, screen.bounds);
   return rect ? { key: String(screen.id), screen, target: { ...target }, rect } : null;
 };
 
@@ -112,12 +112,12 @@ export function playLanes(area: { mode: string; rect: Rect | null; screen: Scree
     // 놀이공간은 그린 영역 그대로다(무대 창만 화면 안으로 자른다) — 여러 화면 전의 계산과 같다
     if (best) return [best];
   }
-  const chosen = area.mode === "screen" ? resolveScreen(area.screen, screens) : resolveScreen(null, screens);
+  const chosen = area.mode === "screen" ? findScreen(area.screen, screens) : findScreen(null, screens);
   const lane = chosen ? laneOf(chosen, chosen.work) : null;
   return lane ? [lane] : [];
 }
 
-// 모든 화면 방식의 개체 배분 — 사는 화면이 있으면 그 화면(없어졌으면 resolveScreen 규칙으로 대신), 없으면 개체가 가장 적은 화면.
+// 모든 화면 방식의 개체 배분 — 사는 화면이 있으면 그 화면(없어졌으면 findScreen 규칙으로 대신), 없으면 개체가 가장 적은 화면.
 // 개수가 같으면 번호가 앞인 화면. 저장하지 않는다 — 같은 파티·같은 화면이면 늘 같은 결과다. 끌어다 놓아야 사는 화면이 저장된다
 export function assignScreens(pets: readonly { id: string; screen: ScreenRef | null }[], screens: readonly ScreenInfo[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -126,7 +126,7 @@ export function assignScreens(pets: readonly { id: string; screen: ScreenRef | n
   const count = new Map<number, number>(order.map((s) => [s.id, 0]));
   for (const p of pets) {
     if (!p.screen) continue;
-    const s = resolveScreen(p.screen, order);
+    const s = findScreen(p.screen, order);
     if (!s) continue;
     out.set(p.id, s.id);
     count.set(s.id, (count.get(s.id) ?? 0) + 1);

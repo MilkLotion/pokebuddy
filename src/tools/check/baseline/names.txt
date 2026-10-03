@@ -1,6 +1,5 @@
 # names 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-names.js --update-baseline)
 banned-head: getLang @ src/view/i18n.ts
-banned-head: resolveScreen @ src/main/layout.ts
 one-word: alive @ src/notify/pending.ts
 one-word: buy @ src/shop/buy.ts
 one-word: claim @ src/achievement/claim.ts
