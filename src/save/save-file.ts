@@ -70,13 +70,9 @@ function backup(file: string): boolean {
 // 격리한 파일 이름 — 시각을 붙인다
 export const brokenName = (file: string, at = Date.now()): string => `${file}.broken-${stampOf(at)}.bak`;
 
-// 격리 표시를 남긴다 — 내용은 격리 시각(ms)
+// 격리 표시를 남긴다 — 내용은 격리 시각(ms). 원자적 쓰기 — 저장과 같이 tmp + rename, Windows 에서 잠깐 막히면 다시 (94-same-feature-diffs.md 5-9)
 export function markSaveLost(file: string, at = Date.now()): void {
-  try {
-    fs.writeFileSync(lostMarkerOf(file), `${at}\n`);
-  } catch {
-    // 표시를 못 남기면 클라우드는 rev 비교로만 맞춘다
-  }
+  writeAtomic(lostMarkerOf(file), `${at}\n`); // 표시를 못 남기면 클라우드는 rev 비교로만 맞춘다
 }
 
 // 저장을 옆으로 옮기는 까닭 — 이름은 모두 <저장>.<태그>-<시각>.bak 이고, 옮기지 못하면 복사 후 삭제로 다시 한다.

@@ -5,7 +5,7 @@
 //   안 본 노트  켤 때 한 번 정한다 — 본 버전이 지금 버전과 다르고 지금 버전의 노트가 있으면 그 버전.
 //              본 버전 파일이 없으면: 저장이 이미 있으면 업데이트로 보고 띄운다. 저장이 없으면 새로 설치한 것이라 띄우지 않고 지금 버전을 본 것으로 적는다
 import fs from "node:fs";
-import path from "node:path";
+import { writeAtomic } from "../platform/atomic-write.js";
 import type { PatchNote, PatchNotesView } from "../shared/model/account";
 
 export interface PatchNotesOptions {
@@ -47,12 +47,10 @@ function readSeen(file: string): string | null {
   }
 }
 
+// 원자적 쓰기 — 저장과 같이 tmp + rename, Windows 에서 잠깐 막히면 다시 (94-same-feature-diffs.md 5-9)
 function writeSeen(file: string, version: string): void {
   try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    const tmp = `${file}.tmp`;
-    fs.writeFileSync(tmp, `${JSON.stringify({ seen: version })}\n`);
-    fs.renameSync(tmp, file);
+    if (!writeAtomic(file, `${JSON.stringify({ seen: version })}\n`)) throw new Error("쓰기 실패");
   } catch (e) {
     console.error("notes-seen.json 을 쓰지 못했다", e);
   }

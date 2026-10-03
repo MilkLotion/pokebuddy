@@ -18,6 +18,7 @@ import { genderLookInfo, regionalOf } from "../../dex/regional.js";
 import { megaOf } from "../../dex/mega.js";
 import { loadJson, isMetaKey } from "../../dex/data.js";
 import { PATHS } from "../../platform/paths.js";
+import { writeAtomic } from "../../platform/atomic-write.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
@@ -282,12 +283,8 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       };
       await Promise.all(Array.from({ length: PREFETCH_PARALLEL }, worker));
       if (absent.size !== before) {
-        try {
-          fs.mkdirSync(dir, { recursive: true });
-          fs.writeFileSync(missingFile, JSON.stringify([...absent].sort()));
-        } catch {
-          // 적지 못해도 다음에 다시 물을 뿐이다
-        }
+        // 적지 못해도 다음에 다시 물을 뿐이다. 원자적 쓰기 — 저장과 같이 tmp + rename, Windows 에서 잠깐 막히면 다시 (94-same-feature-diffs.md 5-9)
+        writeAtomic(missingFile, JSON.stringify([...absent].sort()));
       }
       return count;
     },
