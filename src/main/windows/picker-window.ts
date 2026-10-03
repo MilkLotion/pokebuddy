@@ -75,6 +75,11 @@ export function askStarter(opts: PickerOptions): Promise<string | null> {
     },
     html: opts.html,
     closed: () => null,
+    // 문서를 못 읽으면 빈 창을 남기지 않고 닫은 것과 같이 끝낸다 — 부른 쪽이 첫 실행 취소로 알리고 끝낸다
+    loadFailed(e, ctx) {
+      console.error("선택 창 문서를 읽지 못했다 — 닫은 것으로 본다", e);
+      ctx.finish(null);
+    },
     // 선택 창이 보낸 요청만 받는다(틀의 scope). 무대 창·관리 창도 같은 preload 를 쓴다
     wire(ctx) {
       ctx.onCleanup(() => opts.onPicking(false));
