@@ -8,30 +8,14 @@
 // 동작은 Idle·Walk 두 개다. 같은 시트를 쓰고 프레임 길이만 다르다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
 // PNG 해석·저장은 src/platform/png.ts — 메인 밖(selftest)에서도 돈다. expansion 걷기 그림(overworld-art.ts)이 먼저고 이 그림은 그것도 못 받았을 때 쓴다
 import type { PmdArt } from "./stage-art";
-import type { SpriteSheet } from "../../shared/model/stage";
-import { decodePng, encodePng, type Rgba } from "../../platform/png";
+import { decodePng, encodePng, opaqueRectOf, type Rgba } from "../../platform/png";
+import { FALLBACK_RULES, fallbackAnimOf, fallbackArtOf } from "./fallback-art";
 
 const SHRINK = 2; // 초상 → PMD 크기
-const BOB = 1; // 들썩이는 높이 (도트)
-const IDLE_MS = [600, 400]; // 제자리 → 위
+const BOB = FALLBACK_RULES.bob;
 const WALK_MS = [150, 150];
 const FLIP_ROWS = new Set([1, 2, 3]); // 오른쪽을 보는 행
-const ROWS = 8;
-
-// 불투명한 점을 모두 덮는 사각형. 다 투명하면 null
-function opaqueBox(img: Rgba): { x: number; y: number; w: number; h: number } | null {
-  let x0 = img.w, y0 = img.h, x1 = -1, y1 = -1;
-  for (let y = 0; y < img.h; y++) {
-    for (let x = 0; x < img.w; x++) {
-      if (img.px[(y * img.w + x) * 4 + 3] === 0) continue;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-    }
-  }
-  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
-}
+const ROWS = FALLBACK_RULES.rows;
 
 // 도트 그림을 n 분의 1 로 — n × n 칸마다 절반 이상 불투명하면 그 칸에서 가장 많은 색, 아니면 투명
 function shrink(img: Rgba, n: number): Rgba {
@@ -66,7 +50,7 @@ function shrink(img: Rgba, n: number): Rgba {
 export function portraitArt(png: Buffer, dex: string): PmdArt | null {
   const full = decodePng(png);
   const img = full && shrink(full, SHRINK);
-  const box = img && opaqueBox(img);
+  const box = img && opaqueRectOf(img.w, img.h, (x, y) => img.px[(y * img.w + x) * 4 + 3] !== 0);
   if (!img || !box) return null;
   const fw = box.w;
   const fh = box.h + BOB;
@@ -85,27 +69,6 @@ export function portraitArt(png: Buffer, dex: string): PmdArt | null {
     }
   }
   const dataUrl = `data:image/png;base64,${encodePng(sheet).toString("base64")}`;
-  const anim = (ms: number[]): SpriteSheet => ({ fw, fh, rows: ROWS, frames: ms.map((d, x) => ({ x, ms: d })), dataUrl });
-  const size = { w: fw, h: fh };
-  return {
-    kind: "portrait",
-    cell: size,
-    body: size,
-    work: {},
-    workOnly: [],
-    zoom: 2,
-    anims: { Idle: anim(IDLE_MS), Walk: anim(WALK_MS) },
-    // src/main/art/pmd.ts STATE_ANIMS 와 같은 상태 이름. 걷기만 오른쪽 행이고 나머지는 정면에서 숨 쉰다
-    clips: {
-      idle: { anim: "Idle", mode: "loop", row: 0 },
-      running: { anim: "Walk", mode: "loop", row: 2 },
-      waiting: { anim: "Idle", mode: "loop", row: 0 },
-      waving: { anim: "Idle", mode: "loop", row: 0 },
-      failed: { anim: "Idle", mode: "loop", row: 0 },
-      review: { anim: "Idle", mode: "loop", row: 0 },
-    },
-    credits: [],
-    dex,
-    from: "portrait",
-  };
+  const frame = { w: fw, h: fh };
+  return fallbackArtOf({ kind: "portrait", frame, anims: { Idle: fallbackAnimOf(frame, FALLBACK_RULES.idleMs, dataUrl), Walk: fallbackAnimOf(frame, WALK_MS, dataUrl) }, dex });
 }

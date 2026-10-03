@@ -20,8 +20,7 @@ import { windowIcon } from "./windows/files.js";
 import { webPreferencesOf } from "./windows/options.js";
 import { isFromWindow } from "./windows/ipc.js";
 import { INPUT_LIMITS, isShortId } from "./windows/input.js";
-import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./art/portraits.js";
-import { createCries, type Cries } from "./art/cries.js";
+import { MEGA_STONE_ICON, portraitKey } from "./art/portraits.js";
 import { artServices } from "./art/services.js";
 import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
 import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps, type DexDeviceOpen } from "./windows/devices.js";
@@ -185,40 +184,31 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     return game.agents(isAgentRequest(req) ? req : undefined);
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
-  // 앱과 같은 인스턴스다 (src/main/art/services.ts) — 아래 ??= 는 늘 이 값을 쓴다
-  let portraits: Portraits | null = artServices().portraits;
-  // 앱 안 그림 폴더 — 설치본은 sprites/, 개발 중에는 src/tools/data/fetch-sprites.ts 가 받아 둔 .cache/sprites/
-  const bundled = (): string => {
-    const packed = path.join(PATHS.project, "sprites");
-    return fs.existsSync(packed) ? packed : path.join(PATHS.project, ".cache", "sprites");
-  };
+  // 앱과 같은 인스턴스다 — 앱 안 그림 폴더 규칙도 그곳에 있다 (src/main/art/services.ts)
+  const portraits = artServices().portraits;
   ipcMain.handle(CH.portraits, async (e, asks: unknown) => {
     if (!mine(e) || !Array.isArray(asks)) return {};
     const list = asks
       .filter((a): a is PortraitAsk => a != null && typeof a === "object" && typeof (a as PortraitAsk).slug === "string")
       .slice(0, INPUT_LIMITS.portraitAsks)
       .map((a) => ({ slug: a.slug, shiny: a.shiny === true }));
-    portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
     return portraits.get(list);
   });
   ipcMain.handle(CH.icons, async (e, keys: unknown) => {
     if (!mine(e) || !Array.isArray(keys)) return {};
-    portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
     return portraits.icons(keys.filter((k): k is string => typeof k === "string").slice(0, INPUT_LIMITS.iconKeys));
   });
   // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다
   ipcMain.handle(CH.art, (e) => {
     if (!mine(e)) return {};
-    portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
     return portraits.all();
   });
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
-  let cries: Cries | null = artServices().cries;
+  const cries = artServices().cries;
   const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
   dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
     detail: (slug) => game.dexDetail(slug),
     portrait: async (slug) => {
-      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
     },
     tree: (slug) => {
@@ -226,7 +216,6 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       return detail?.kind === "pokemon" ? detail.tree : null;
     },
     portraits: async (slugs) => {
-      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       const got = await portraits.get(slugs.map((slug) => ({ slug, shiny: false })));
       const out: Record<string, string> = {};
       for (const slug of slugs) {
@@ -235,7 +224,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       }
       return out;
     },
-    cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
+    cry: (slug) => cries.get(slug),
     volume: () => {
       const s = game.read()?.settings;
       return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
@@ -248,14 +237,12 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   // 파티 상세 기기 창 — 관리 창이 개체를 정해 보낸다. 누른 단추·이전·다음은 관리 창으로 돌려보낸다
   petWin = createDeviceWindow(deviceFiles("pet"), petDeviceOf({
     portrait: async (slug, shiny) => {
-      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.get([{ slug, shiny }]))[portraitKey({ slug, shiny })] ?? null;
     },
     megaIcon: async () => {
-      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.icons([MEGA_STONE_ICON]))[MEGA_STONE_ICON] ?? null;
     },
-    cry: (slug) => (cries ??= createCries(path.join(PATHS.home, "cries"))).get(slug),
+    cry: (slug) => cries.get(slug),
     volume: () => {
       const s = game.read()?.settings;
       return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
@@ -272,7 +259,6 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/art/egg-art.ts)
   const deviceArt: DeviceArtDeps = {
     art: async (keys) => {
-      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       const asks = keys
         .filter((k) => k.startsWith("portrait:"))
         .map((k) => {

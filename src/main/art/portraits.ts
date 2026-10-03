@@ -21,6 +21,7 @@ import { PATHS } from "../paths.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
 import { createAssetCache, dataUriOf } from "./asset-cache.js";
+import { isPng } from "../../platform/png.js";
 import type { PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -105,11 +106,12 @@ export function iconUrl(key: string): string | null {
   return m ? itemUrl(m[1] ?? "") : null;
 }
 
-const isPng = (buf: Buffer): boolean => buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
 const pngUri = (buf: Buffer): string => dataUriOf("image/png", buf);
 
 export interface Portraits {
   get(asks: PortraitAsk[]): Promise<Record<string, string | null>>;
+  // 초상 한 장의 PNG — get 과 같은 순서(리전폼 → 기본형, 이로치 → 보통)로 찾는다. 무대의 초상 대체 그림이 쓴다
+  buffer(ask: PortraitAsk): Promise<Buffer | null>;
   icons(keys: string[]): Promise<Record<string, string | null>>; // 도구·알 그림 — iconUrl 의 열쇠와 색을 바꾼 알 egg:<종류>
   // 디스크에 이미 있는 그림 전부 — 초상 열쇠(slug · slug:shiny)와 도구·알 열쇠. 네트워크는 쓰지 않는다
   // 관리 창이 첫 화면 전에 한 번 받아 둔다. 상점·상세에 들어갈 때 그림이 하나씩 차오르지 않게 하려는 것이다
@@ -159,10 +161,12 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     }
   }
 
-  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => {
+  const relOf = (dex: PortraitId, shiny: boolean): string => {
     const d = String(dex).padStart(4, "0");
-    return fileUri(shiny ? `${d}-shiny.png` : `${d}.png`, portraitUrl(dex, shiny));
+    return shiny ? `${d}-shiny.png` : `${d}.png`;
   };
+  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => fileUri(relOf(dex, shiny), portraitUrl(dex, shiny));
+  const oneBuffer = (dex: PortraitId, shiny: boolean): Promise<Buffer | null> => cache.fetchFile(relOf(dex, shiny), portraitUrl(dex, shiny));
 
   return {
     async get(asks) {
@@ -179,6 +183,13 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
         }),
       );
       return out;
+    },
+    async buffer(a) {
+      for (const id of portraitIds(a.slug)) {
+        const buf = (a.shiny ? await oneBuffer(id, true) : null) ?? (await oneBuffer(id, false));
+        if (buf) return buf;
+      }
+      return null;
     },
     async icons(keys) {
       const out: Record<string, string | null> = {};

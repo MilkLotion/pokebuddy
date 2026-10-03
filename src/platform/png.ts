@@ -149,3 +149,27 @@ export function encodePng(img: Pick<Rgba, "w" | "h" | "px">): Buffer {
   ihdr[9] = 6;
   return Buffer.concat([SIGNATURE, pngChunk("IHDR", ihdr), pngChunk("IDAT", zlib.deflateSync(raw)), pngChunk("IEND", Buffer.alloc(0))]);
 }
+
+// 앞 4바이트가 PNG 서명인가 — 받은 그림을 캐시에 둘지 가르는 가벼운 검사(전체를 풀지 않는다)
+export const isPng = (buf: Buffer): boolean => buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+
+// IHDR 머리말 — 너비·높이·색 형식(3 이면 팔레트). 33바이트보다 짧거나 "PNG" 글자가 없으면 null
+export function pngHeaderOf(buf: Buffer): { w: number; h: number; colorType: number } | null {
+  if (buf.length < 33 || buf.toString("ascii", 1, 4) !== "PNG") return null;
+  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20), colorType: buf[25] ?? -1 };
+}
+
+// 불투명한 점을 모두 덮는 사각형. 다 투명하면 null — 판정은 부르는 쪽이 준다(알파 0 아님 · 팔레트 번호 0 아님)
+export function opaqueRectOf(w: number, h: number, isOpaque: (x: number, y: number) => boolean): { x: number; y: number; w: number; h: number } | null {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!isOpaque(x, y)) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
