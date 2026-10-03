@@ -3,9 +3,8 @@
 // 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { app, nativeImage, powerMonitor, safeStorage, screen, shell, Notification } from "electron";
+import { app, nativeImage, powerMonitor, safeStorage, screen, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
@@ -36,9 +35,7 @@ import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
 import { sellablePet } from "../shop/sell-pet";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
-import { createAppUpdater, urgentStep, type AppUpdater } from "./update/updater";
-import { createMacUpdater } from "./update/mac-updater";
-import { createPatchNotes, type PatchNotes } from "./patch-notes";
+import { createUpdateService } from "./services/update";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
@@ -62,7 +59,6 @@ import { rollHits } from "../find/roll";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { ManageRoute } from "../shared/model/route";
-import type { PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
 import type { Command } from "../shared/command";
 import { currentTutorial } from "../tutorial/queue";
 import { createBubbles } from "./stage/bubbles";
@@ -197,14 +193,19 @@ const TRADE_LINK_TTL_MS = 10 * 60_000;
 const firstLink = tradeLinkOf(process.argv);
 let tradeLink: { link: string; at: number } | null = firstLink ? { link: firstLink, at: Date.now() } : null;
 let tray: TrayHandle | null = null;
-// 패치노트 — 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다. 그래서 첫 선택 창이 저장을 만들기 전에 만든다
-const hadSave = fs.existsSync(PATHS.save);
-let patchNotes: PatchNotes | null = null;
-// 업데이트 필요 — 서버가 이 앱 버전을 거절한 실행. 바로 확인하고, 받으면 창을 한 번 띄운다 (src/main/update/updater.ts urgentStep)
-let updateUrgent = false;
-let updateChecked = false;
-let updateAsked = false;
-let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe·mac 앱)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/update/updater.ts)
+// 앱 업데이트·패치노트 (src/main/services/update.ts). 패치노트는 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다 —
+// 그래서 첫 선택 창이 저장을 만들기 전에 잰다. 켜기(start)는 수명 잠금을 쥔 뒤에 한다
+const update = createUpdateService({
+  notesFile: path.join(PROJECT, "data", "patch-notes.json"),
+  seenFile: path.join(path.dirname(PATHS.save), "notes-seen.json"),
+  hadSave: fs.existsSync(PATHS.save),
+  onView: (view) => pushUpdate(view),
+  beforeInstall: async () => {
+    if (!frozen() && saveParty()?.isWriter()) game?.flush();
+    await announceOnline();
+  },
+  askRequired: askUpdateRequired,
+});
 let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
@@ -342,81 +343,6 @@ const displayName = (): string => {
   return p ? petLabel(p) : party?.pets()[0]?.species ?? config.slug;
 };
 
-// 앱 업데이트를 켠다 — 수명 잠금을 쥔 동반자 하나만. 상태가 바뀌면 관리 창에 밀어 보낸다
-function startUpdater(): void {
-  if (updater) return;
-  patchNotes ??= createPatchNotes({
-    notesFile: path.join(PROJECT, "data", "patch-notes.json"),
-    seenFile: path.join(path.dirname(PATHS.save), "notes-seen.json"),
-    version: app.getVersion(),
-    hadSave,
-    autoShow: app.isPackaged, // 개발 실행·E2E 는 띄우지 않는다 — 관리 창 조작을 가린다
-  });
-  const installed = app.isPackaged && (process.platform === "win32" || process.platform === "darwin");
-  updater = createAppUpdater({
-    version: app.getVersion(),
-    enabled: installed,
-    // mac 은 자체 엔진 — Squirrel.Mac 은 정식 서명이 없는 앱을 바꾸지 않는다 (src/main/update/mac-updater.ts). Windows 는 electron-updater
-    ...(installed && process.platform === "darwin"
-      ? {
-          updater: createMacUpdater({
-            version: app.getVersion(),
-            resourcesPath: process.resourcesPath,
-            exePath: app.getPath("exe"),
-            arch: process.arch,
-            home: os.homedir(),
-            pid: process.pid,
-            quit: () => app.quit(),
-            onWillQuit: (fn) => app.on("will-quit", fn),
-            openExternal: (url) => void shell.openExternal(url),
-          }),
-        }
-      : {}),
-    onView: (view) => {
-      pushUpdate(view);
-      if (updateUrgent) urgentUpdate();
-    },
-    // 다시 시작 전 — 메모리 진행을 쓰고 클라우드에 올린 뒤 released 를 알린다(최대 3초). 클라우드는 멈추지 않는다 —
-    // 설치가 실패해 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 이어지는 before-quit 은 기다리지 않는다
-    beforeInstall: async () => {
-      if (!frozen() && saveParty()?.isWriter()) game?.flush();
-      await announceOnline();
-    },
-  });
-}
-
-// 업데이트 필요를 받았거나 그 뒤 업데이트 상태가 바뀌었다 — 확인·창 띄우기 (worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
-//   창은 게임을 멈추지 않는다. 나중에를 고르면 설정의 다시 시작·끌 때 적용이 남는다
-function urgentUpdate(): void {
-  if (!updater) return;
-  const view = updater.view();
-  const step = urgentStep(view.status, updateAsked, updateChecked);
-  if (step === "check") {
-    updateChecked = true;
-    void updater.check();
-  } else if (step === "ask") {
-    updateAsked = true;
-    void askUpdateRequired(view.next ?? "", view.status === "manual").then((go) => {
-      if (go) void updater?.install();
-    });
-  }
-}
-
-// 패치노트 요청 — 목록 읽기, 안 본 노트를 띄웠다는 알림
-function notesAct(action: "list" | "seen"): PatchNotesView {
-  if (!patchNotes) return { notes: [], unseen: null };
-  if (action === "seen") patchNotes.markSeen();
-  return patchNotes.view();
-}
-
-// 설정 바닥의 업데이트 요청 — 읽기·다시 확인·다시 시작
-async function updateAct(action: UpdateAction): Promise<UpdateView> {
-  if (!updater) throw new Error("updater not started");
-  if (action === "check") await updater.check();
-  else if (action === "install") await updater.install();
-  return updater.view();
-}
-
 // 관리 창의 명령도 커맨드 처리기를 거친다. reader 면 mailbox 로 writer 에 보내고,
 // 진화 그림 준비와 무대 반응도 다른 표면과 같은 길로 간다
 // route — 알림 배너의 `바로가기` 가 옮겨 갈 곳
@@ -438,8 +364,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     petMenu: (petId) => showPetMenu(petId, "manage"),
     ...(mainOnline ? { account: mainOnline.act } : {}),
     ...(mailBox() ? { mail: async (req: MailAction) => (await mailBox()?.act(req)) ?? null } : {}),
-    ...(updater ? { update: updateAct } : {}),
-    ...(patchNotes ? { notes: notesAct } : {}),
+    ...(update.isStarted() ? { update: update.act, notes: update.notes } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
@@ -711,10 +636,7 @@ function online(): MainOnline | null {
       onHalt,
       onLost: (kind, synced) => void askLostFlow(kind, synced),
       onNotice: (text) => notifyGame(text),
-      onUpdateRequired: () => {
-        updateUrgent = true;
-        urgentUpdate();
-      },
+      onUpdateRequired: () => update.urgent(),
       freeze: freezeForRestart,
       thaw: thawRestart,
       onRestart: relaunchFresh,
@@ -1361,7 +1283,7 @@ async function main(): Promise<void> {
   tradeSession(); // 동반자 writer 면 교환 세션을 시작한다 — 반영하지 않은 교환이 있으면 이어 간다
   flushTradeLink(); // 링크로 켜졌거나 준비 전에 링크를 받았다
 
-  startUpdater();
+  update.start(); // 수명 잠금을 쥔 동반자 하나만
   // 기존 훅 정리 — 옛 이벤트를 걷고 있는 훅 파일을 새 버전으로. 새로 등록하지 않는다. 시작을 막지 않게 뒤로 미룬다
   if (saveSource.isWriter()) {
     hookUpkeep = createHookUpkeep({ noticesFile: path.join(path.dirname(PATHS.save), "notices.json"), show: (b) => notifier?.showOnce(b) ?? false, log });
@@ -1438,7 +1360,7 @@ app.on("before-quit", (e) => {
   lifetime?.stop();
   tray?.destroy();
   tray = null;
-  updater?.stop();
+  update.stop();
   commands?.stop();
   mainTrade?.session.stop();
   mainTrade = null;
