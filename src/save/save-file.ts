@@ -22,7 +22,7 @@
 //   격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다 — 클라우드가 다음 맞추기에서 서버 저장을 받는다 (src/online/lost.ts)
 import fs from "node:fs";
 import type { SaveV3 } from "../shared/save-v3";
-import { isSealed, saveKey, sealText, unsealText } from "./crypt.js";
+import { currentSaveKey, isSealed, sealText, unsealText } from "./crypt.js";
 import { migrateSaveV2 } from "./v2/migrate.js";
 import { normalizeSaveV2 } from "./v2/normalize.js";
 import { writeAtomic } from "../platform/atomic-write.js";
@@ -103,7 +103,7 @@ function readText(file: string): Text {
   } catch (e) {
     return { text: null, reason: errCode(e) === "ENOENT" ? "missing" : "unreadable" };
   }
-  const key = saveKey();
+  const key = currentSaveKey();
   if (isSealed(buf)) {
     if (!key) return { text: null, reason: "locked" };
     const text = unsealText(key, buf);
@@ -190,7 +190,7 @@ export function isSealedOnDisk(file: string): boolean {
 }
 
 export function writeSave(file: string, state: SaveV3): boolean {
-  const key = saveKey();
+  const key = currentSaveKey();
   if (key) return writeAtomic(file, sealText(key, `${JSON.stringify(state, null, 2)}\n`));
   if (isSealedOnDisk(file)) return false;
   return writeAtomic(file, state);

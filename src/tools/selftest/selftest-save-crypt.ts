@@ -7,10 +7,10 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { isSealed, newSaveKey, saveKey, sealText, setSaveKey, unsealText } from "../../save/crypt";
+import { currentSaveKey, isSealed, newSaveKey, sealText, setSaveKey, unsealText } from "../../save/crypt";
 import { keyFileOf, prepareSaveKey, setAsideKeyAndSave, type KeyVault } from "../../save/key";
 import * as store from "../../save/store";
-import { loadCloudState } from "../../online/lost";
+import { readCloudFile } from "../../online/lost";
 import { empty } from "../../save/v3";
 import { makeTmp } from "../harness/tmp-dir";
 import { printLine as out } from "../harness/report";
@@ -138,7 +138,7 @@ async function main(): Promise<void> {
       const vault = fakeVault();
       const r = await prepareSaveKey({ saveFile: file, vault, create: true, now: () => T0 });
       assert.deepEqual(r, { status: "ok", migrated: true }, "첫 실행 이전");
-      assert.ok(saveKey(), "키를 정했다");
+      assert.ok(currentSaveKey(), "키를 정했다");
       assert.ok(isSealed(fs.readFileSync(file)), "저장을 암호화했다");
       assert.equal(files(d, "save.json.plain-").length, 1, "평문 백업");
       assert.equal(store.read(file).state?.points.balance, 777, "진행이 이어진다");
@@ -147,19 +147,19 @@ async function main(): Promise<void> {
       assert.equal(kf.migrated, undefined, "이전 여부는 파일에 평문으로 두지 않는다");
       const inner = JSON.parse(Buffer.from(kf.key, "base64").toString("utf8").slice(2)) as { migrated: boolean };
       assert.equal(inner.migrated, true, "감싼 값 안에 이전 완료를 적었다");
-      const first = saveKey();
+      const first = currentSaveKey();
 
       // 다음 실행 — 같은 키, 이전 없음
       const again = await prepareSaveKey({ saveFile: file, vault, create: true, now: () => T0 + 1 });
       assert.deepEqual(again, { status: "ok", migrated: false }, "두 번째 실행");
-      assert.ok(saveKey()?.equals(first as Buffer), "같은 키");
+      assert.ok(currentSaveKey()?.equals(first as Buffer), "같은 키");
       assert.equal(files(d, "save.json.plain-").length, 1, "백업을 더 만들지 않는다");
 
       // 키 저장소가 새로 감싸라고 하면 다시 쓴다
       const re = fakeVault({ reEncrypt: true });
       await prepareSaveKey({ saveFile: file, vault: re, create: true, now: () => T0 + 2 });
       assert.equal(re.writes, 1, "다시 감쌌다");
-      assert.ok(saveKey()?.equals(first as Buffer), "키는 그대로");
+      assert.ok(currentSaveKey()?.equals(first as Buffer), "키는 그대로");
       out("4 키 준비 — 평문 이전·같은 키·다시 감싸기");
     }
 
@@ -170,10 +170,10 @@ async function main(): Promise<void> {
       setSaveKey(null);
       store.write(file, saveWithPet());
       await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true, now: () => T0 });
-      const old = saveKey();
+      const old = currentSaveKey();
       const r = await prepareSaveKey({ saveFile: file, vault: fakeVault({ broken: true }), create: true, now: () => T0 + 1 });
       assert.deepEqual(r, { status: "denied", migrated: false }, "denied");
-      assert.equal(saveKey(), null, "키 없이");
+      assert.equal(currentSaveKey(), null, "키 없이");
       assert.equal(files(d, "save.json.unreadable-").length, 0, "저장을 옮기지 않았다");
       assert.ok(store.sealedOnDisk(file), "암호화 저장이 남았다 — 앱이 저장 잠김 창을 띄운다");
       // 거부를 풀면 그대로 이어진다
@@ -190,14 +190,14 @@ async function main(): Promise<void> {
       assert.ok(fs.existsSync(store.lostMarker(file)), "격리 표시");
       const fresh = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true, now: () => T0 + 4 });
       assert.equal(fresh.status, "ok");
-      assert.ok(saveKey() && !saveKey()?.equals(old as Buffer), "새 키");
+      assert.ok(currentSaveKey() && !currentSaveKey()?.equals(old as Buffer), "새 키");
       // 키 파일 모양이 틀림 — reset
       store.write(file, saveWithPet());
       fs.writeFileSync(keyFileOf(file), "{ 깨짐");
       const reset = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true, now: () => T0 + 5 });
       assert.equal(reset.status, "reset", "reset");
       assert.equal(files(d, "save.json.unreadable-").length, 2, "저장을 옮겼다");
-      assert.ok(saveKey(), "새 키");
+      assert.ok(currentSaveKey(), "새 키");
       out("5 키 거부 — denied·새로 시작·모양 틀림 reset");
     }
 
@@ -225,7 +225,7 @@ async function main(): Promise<void> {
       store.write(file, saveWithPet());
       const off = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: false });
       assert.deepEqual(off, { status: "off", migrated: false }, "off — 키를 만들지 않는다");
-      assert.equal(saveKey(), null);
+      assert.equal(currentSaveKey(), null);
       assert.ok(!fs.existsSync(keyFileOf(file)), "키 파일 없음");
       assert.ok(!isSealed(fs.readFileSync(file)), "평문 그대로");
 
@@ -233,11 +233,11 @@ async function main(): Promise<void> {
       await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true });
       const keep = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: false });
       assert.equal(keep.status, "ok", "기존 키는 쓴다");
-      assert.ok(saveKey(), "키 있음");
+      assert.ok(currentSaveKey(), "키 있음");
 
       const none = await prepareSaveKey({ saveFile: file, vault: fakeVault({ available: false }), create: true });
       assert.deepEqual(none, { status: "unavailable", migrated: false }, "키 저장소 없음");
-      assert.equal(saveKey(), null, "평문으로 돈다");
+      assert.equal(currentSaveKey(), null, "평문으로 돈다");
       assert.equal(store.read(file).reason, "locked", "이미 암호화된 저장은 잠김 — 덮지 않는다");
       out("7 off·키 저장소 없음");
     }
@@ -254,7 +254,7 @@ async function main(): Promise<void> {
       fs.mkdirSync(keyFileOf(file)); // 읽으면 EISDIR — 잠김·권한 대신
       const r = await prepareSaveKey({ saveFile: file, vault: fakeVault(), create: true, now: () => T0 + 1 });
       assert.deepEqual(r, { status: "busy", migrated: false }, "busy");
-      assert.equal(saveKey(), null, "키 없이");
+      assert.equal(currentSaveKey(), null, "키 없이");
       assert.equal(files(d, "save.json.unreadable-").length, 0, "저장을 옮기지 않았다");
       assert.equal(store.read(file).reason, "locked", "저장은 잠김");
       fs.rmdirSync(keyFileOf(file));
@@ -273,10 +273,10 @@ async function main(): Promise<void> {
       const base = { deviceId: "d", userId: "u", owner: "u", syncedRev: 7, dirty: false, lastSavedAt: T0, superseded: false, pendingOp: "op", ownerKind: "anonymous", handoff: null };
       // 표시 없음 — 그대로
       fs.writeFileSync(cloudFile, JSON.stringify(base));
-      assert.deepEqual(loadCloudState(cloudFile, file), base, "표시 없으면 그대로");
+      assert.deepEqual(readCloudFile(cloudFile, file), base, "표시 없으면 그대로");
       // 격리 뒤 올린 적 없음 — 잊은 상태를 먼저 쓰고 표시를 지운다(검수 P3-1)
       store.markLost(file, T0 + 10);
-      const got = loadCloudState(cloudFile, file) as { syncedRev: number; pendingOp: unknown };
+      const got = readCloudFile(cloudFile, file) as { syncedRev: number; pendingOp: unknown };
       assert.equal(got.syncedRev, -1, "맞춘 rev 를 잊는다");
       assert.equal(got.pendingOp, null, "보낸 올리기 키도 버린다");
       assert.equal((JSON.parse(fs.readFileSync(cloudFile, "utf8")) as { syncedRev: number }).syncedRev, -1, "cloud.json 에 먼저 썼다");
@@ -284,12 +284,12 @@ async function main(): Promise<void> {
       // 격리 뒤에 올렸다 — 표시만 지운다(검수 P3-8)
       fs.writeFileSync(cloudFile, JSON.stringify(base));
       store.markLost(file, T0 - 10);
-      assert.equal((loadCloudState(cloudFile, file) as { syncedRev: number }).syncedRev, 7, "격리 뒤 올리기가 있으면 잊지 않는다");
+      assert.equal((readCloudFile(cloudFile, file) as { syncedRev: number }).syncedRev, 7, "격리 뒤 올리기가 있으면 잊지 않는다");
       assert.ok(!fs.existsSync(store.lostMarker(file)), "표시를 지웠다");
       // cloud.json 없음 — 표시만 지운다
       fs.rmSync(cloudFile);
       store.markLost(file, T0);
-      assert.equal(loadCloudState(cloudFile, file), null);
+      assert.equal(readCloudFile(cloudFile, file), null);
       assert.ok(!fs.existsSync(store.lostMarker(file)), "표시를 지웠다");
       out("9 격리 표시 — cloud.json 먼저 쓰고 표시 삭제, 격리 뒤 올리기는 그대로");
     }

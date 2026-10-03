@@ -17,7 +17,7 @@ export const SAVE_CRYPT_RULES = {
 let current: Buffer | null = null;
 
 // 지금 저장 키 — 없으면 null(평문)
-export const saveKey = (): Buffer | null => current;
+export const currentSaveKey = (): Buffer | null => current;
 
 // 저장 키를 정한다. null 이면 평문으로 돌아간다(자체 검사)
 export function setSaveKey(key: Buffer | null): void {

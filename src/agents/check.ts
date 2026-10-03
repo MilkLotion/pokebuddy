@@ -63,7 +63,7 @@ function extraDirs(): string[] {
   return dirs;
 }
 
-async function locateNode(): Promise<string | null> {
+async function searchNodeFile(): Promise<string | null> {
   const exe = process.platform === "win32" ? "node.exe" : "node";
   const onPath = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
   for (const dir of [...onPath, ...extraDirs()]) {
@@ -79,9 +79,9 @@ async function locateNode(): Promise<string | null> {
 
 let cached: { at: number; node: NodeInfo | null } | null = null;
 // node 가 있는가 — 찾으면 경로와 버전. 30초 동안 결과를 쓴다(fresh 면 다시 찾는다: `다시 확인`)
-export async function findNode(fresh = false): Promise<NodeInfo | null> {
+export async function locateNode(fresh = false): Promise<NodeInfo | null> {
   if (!fresh && cached && Date.now() - cached.at < CHECK_RULES.nodeCacheMs) return cached.node;
-  const file = await locateNode();
+  const file = await searchNodeFile();
   const version = file ? await run(file, ["--version"], CHECK_RULES.versionMs) : null;
   const node = file && version ? { path: file, version } : null;
   cached = { at: Date.now(), node };

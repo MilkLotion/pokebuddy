@@ -4,11 +4,11 @@
 // (예전 src/main/game.ts agents — 설계 worklog/records/code-structure/design/40-contracts-save-online.md 3.8절)
 import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents";
 import type { AgentName } from "../shared/names/agents";
-import { findNode, lastSignals, probeHook } from "./check";
+import { lastSignals, locateNode, probeHook } from "./check";
 import { agentInfo, agentStatusList, connectAgent, disconnectAgent, hookCommandOf } from "./registry";
 
 export async function runAgentRequest(req: { name: string; action: AgentAction } | undefined, o: { stateDir: string }): Promise<AgentReply> {
-  const node = await findNode(req?.action === "check");
+  const node = await locateNode(req?.action === "check");
   const list = (): AgentRow[] => {
     const signals = lastSignals(o.stateDir);
     return agentStatusList().map((a) => ({ ...a, lastSignalAt: signals[a.name] ?? null }));

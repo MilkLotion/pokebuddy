@@ -30,7 +30,7 @@ import type { SessionStorage } from "../online/client.js";
 import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
-import { loadCloudState } from "../online/lost.js";
+import { readCloudFile } from "../online/lost.js";
 import { t } from "../view/text";
 import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
 import type { AccountReplyCode, CloudErrorCode } from "../shared/names/online-codes.js";
@@ -156,7 +156,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     ...(devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") ? { heartbeatMs: devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") } : {}),
     io: {
       // 로컬 저장을 격리했으면(풀지 못함·손으로 고친 평문·키 분실) 맞춘 rev 를 잊는다 — 다음 맞추기가 서버 저장을 받는다 (src/online/lost.ts)
-      loadState: () => loadCloudState(cloudFile, o.saveFile),
+      loadState: () => readCloudFile(cloudFile, o.saveFile),
       saveState: (s) => {
         try {
           if (!writeAtomic(cloudFile, s)) throw new Error(cloudFile);

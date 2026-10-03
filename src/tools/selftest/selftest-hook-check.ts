@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   fs.mkdirSync(path.join(home, ".codex"), { recursive: true });
 
   // (1) node 찾기 — 이 시험을 돌리는 node 가 있으니 찾아야 한다
-  const node = await check.findNode(true);
+  const node = await check.locateNode(true);
   assert.ok(node && fs.existsSync(node.path) && /^v\d+/.test(node.version), `node 를 찾는다 (${JSON.stringify(node)})`);
   process.stdout.write("(1) node 찾기  ok\n");
 
