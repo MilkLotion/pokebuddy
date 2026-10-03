@@ -2,7 +2,7 @@
 import type { MailReplyCode } from "../names/online-codes.js";
 
 // ── 우편함 ───────────────────────────────────────────────────────────────────────
-// 헤더 봉투 단추가 여는 모달 (src/main/mail.ts). Figma 05 Screens 섹션 `10 우편함` `932:22859` (A안 편지 + 선물)
+// 헤더 봉투 단추가 여는 모달 (받기 흐름 src/online/mail-inbox.ts, 화면 값 src/view/mail.ts). Figma 05 Screens 섹션 `10 우편함` `932:22859` (A안 편지 + 선물)
 // manage:mail 은 렌더러 → 메인 요청(결과에 screen), manage:mail-view 는 메인 → 렌더러 밀어 보내기다
 export interface MailGiftView {
   kind: "item" | "points" | "pokemon";
