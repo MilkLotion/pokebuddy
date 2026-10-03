@@ -50,7 +50,7 @@ export interface PetView {
   feedInSec: number;
   playReady: boolean;
   feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
-  playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 쉬는 중"
+  playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 3분" (밥 주기와 같은 꼴, 94 항목 5-1)
   playStreak: number;
   longPlay: boolean; // 신남 버프가 켜져 있다
   buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서

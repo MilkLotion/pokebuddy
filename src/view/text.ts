@@ -11,7 +11,7 @@ import { getLang, t } from "./i18n";
 import { tableName } from "./name-table";
 
 // 문구 — {이름} 자리에 vars 를 채운다. 없는 키는 한국어 → 키 이름 순으로 떨어져 화면이 비지 않는다
-export { t, langOf, setLang, getLang, moodWord, untilWord } from "./i18n";
+export { t, langOf, setLang, getLang, moodWord } from "./i18n";
 
 // 종의 화면 이름 — 표에 없는 이름은 슬러그 그대로. 메가 모습은 data/mega.json 의 이름이다 (src/dex/mega.ts)
 export const petName = (slug: string, lang: Lang = getLang()): string => {

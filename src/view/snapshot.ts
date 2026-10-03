@@ -174,7 +174,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     feedInSec: sec(pet.feedCooldownMs),
     playReady: pet.playCooldownMs <= 0,
     feedText: pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedCooldownMs <= 0 ? "밥 주기" : `밥 주기 · ${waitText(sec(pet.feedCooldownMs))}`,
-    playText: pet.playCooldownMs <= 0 ? "놀아주기" : "놀아주기 · 쉬는 중",
+    playText: pet.playCooldownMs <= 0 ? "놀아주기" : `놀아주기 · ${waitText(sec(pet.playCooldownMs))}`,
     playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")

@@ -12,7 +12,8 @@ import { checkCare } from "../state/care.js";
 import { zoneOf } from "../state/time.js";
 import { currentTutorial } from "../tutorial/queue.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { moodWord, natureName, petName, t, untilWord } from "./text.js";
+import { getLang, moodWord, natureName, petName, t } from "./text.js";
+import { waitText } from "../shared/count-text.js";
 
 export interface PetMenuModel {
   name: string;
@@ -120,11 +121,11 @@ export function trayMenuOf(model: TrayMenuModel, act: MenuActions & { openManage
 const petStatus = (pet: { fullness: number; mood: number }): string => `${t(`zone.${zoneOf(pet.fullness)}`)} · ${moodWord(pet.mood)}`;
 
 // 메뉴 항목 하나의 모양 — 막혔으면 이유를 준다(메뉴에는 적지 않는다 — 첫 돌봄 말풍선이 쓴다).
-// 판정은 돌봄 규칙(src/state/care.ts checkCare) 그대로다. 쿨타임은 분·시간 단위 남은 시간 ("3분 뒤", 1분 안이면 "곧")
-function careItem(save: SaveV3, petId: string, kind: "feed" | "play", now: number): { enabled: boolean; reason?: string } {
+// 판정은 돌봄 규칙(src/state/care.ts checkCare) 그대로다. 쿨타임은 남은 시간 글자(waitText — "45초", "3분", "1시간 20분")
+function careItem(save: SaveV3, petId: string, kind: "feed" | "play"): { enabled: boolean; reason?: string } {
   const r = checkCare(save, petId, kind);
   if (r.ok) return { enabled: true };
-  if (r.reason === "cooldown") return { enabled: false, reason: untilWord(now + Math.ceil((r.remainMs ?? 0) / 1000) * 1000) };
+  if (r.reason === "cooldown") return { enabled: false, reason: waitText((r.remainMs ?? 0) / 1000, getLang()) };
   if (r.reason === "full") return { enabled: false, reason: t("care.full") };
   return { enabled: false };
 }
@@ -153,8 +154,8 @@ export function petMenuOf(
   const off: { enabled: boolean; reason?: string } = { enabled: false };
   // 팔 수 있는가 — 단일 포켓몬·알에 없는 종·교환에 올린 개체·마지막 한 마리는 못 판다 (src/shop/sell-pet.ts)
   const sale = sellablePet(save, petId);
-  const feed = slot ? careItem(save, petId, "feed", o.now) : off;
-  const play = slot ? careItem(save, petId, "play", o.now) : off;
+  const feed = slot ? careItem(save, petId, "feed") : off;
+  const play = slot ? careItem(save, petId, "play") : off;
   const model: PetMenuModel = {
     ...base,
     status: petStatus(pet),
