@@ -10,8 +10,8 @@ import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/appearance";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { pidAlive } from "../save/writer";
-import { prepareSaveKey, setAsideSave, type PrepareSaveKeyOptions } from "../save/key";
-import { sealedOnDisk } from "../save/store";
+import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../save/key";
+import { isSealedOnDisk } from "../save/save-file";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader } from "./art";
 import { createOverworldSource } from "./overworld-art";
@@ -1287,9 +1287,9 @@ async function main(): Promise<void> {
   log?.({ boot: "save-key", ...saveKey });
   // 키 없이 도는데 암호화 저장이 있다(키체인 거부·키 파일 잠김·키 저장소 없음) — 저장을 옮기지 않고 묻는다.
   // 종료면 저장을 그대로 두고 끝낸다. 새로 시작이면 키와 저장을 백업(.unreadable-<시각>)하고 다시 준비한다 — 계정 저장은 클라우드가 받는다
-  if (saveKey.status !== "ok" && saveKey.status !== "reset" && sealedOnDisk(PATHS.save)) {
+  if (saveKey.status !== "ok" && saveKey.status !== "reset" && isSealedOnDisk(PATHS.save)) {
     const answer = await askSaveLocked();
-    if (answer === "fresh" && setAsideSave(PATHS.save)) {
+    if (answer === "fresh" && setAsideKeyAndSave(PATHS.save)) {
       saveKey = await prepareSaveKey(keyOptions);
       log?.({ boot: "save-key", after: "fresh", ...saveKey });
     } else {

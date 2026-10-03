@@ -8,7 +8,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { isSealed, newSaveKey, open, saveKey, seal, setSaveKey } from "../../save/crypt";
-import { keyFileOf, prepareSaveKey, setAsideSave, type KeyVault } from "../../save/key";
+import { keyFileOf, prepareSaveKey, setAsideKeyAndSave, type KeyVault } from "../../save/key";
 import * as store from "../../save/store";
 import { loadCloudState } from "../../online/lost";
 import { empty } from "../../save/v3";
@@ -183,7 +183,7 @@ async function main(): Promise<void> {
       assert.equal(again.status, "ok");
       assert.equal(store.read(file).state?.points.balance, 777, "진행 그대로");
       // 저장 잠김 창의 새로 시작
-      assert.ok(setAsideSave(file, T0 + 3), "옮겼다");
+      assert.ok(setAsideKeyAndSave(file, T0 + 3), "옮겼다");
       assert.equal(files(d, "save.key.unreadable-").length, 1, "키를 옮겼다");
       assert.equal(files(d, "save.json.unreadable-").length, 1, "저장을 옮겼다");
       assert.ok(!fs.existsSync(file), "저장 없음 — 새로 시작하거나 서버 저장을 받는다");

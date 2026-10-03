@@ -361,7 +361,7 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 
 ## 저장 v2와 S5 전환
 
-저장 계약은 [저장 v3 타입](../src/shared/save-v3.ts)에 있다. 개체(`pets`)와 파티 칸(`party.slots`)이 나뉜다. 저장·복원 규칙은 [저장 모듈](../src/save/store.ts)과 [저장 규칙](../src/save/rules.ts)을 따른다.
+저장 계약은 [저장 v3 타입](../src/shared/save-v3.ts)에 있다. 개체(`pets`)와 파티 칸(`party.slots`)이 나뉜다. 저장·복원 규칙은 [저장 파일](../src/save/save-file.ts)과 [저장 규칙](../src/save/rules.ts)을 따른다.
 옛 `SaveV2`(`party` 가 `Pet[]`)는 [옛 저장 읽기](../src/save/legacy.ts)가 읽어 v3 로 옮긴다. 이식은 `SaveV2`를 `SaveV3`로 한 번 변환한다.
 처음 열 때 v2 를 v3 으로 옮기고 원본을 `save.json.v2.bak` 에 남긴다.
 `species`는 실제 종이다. `look`은 표시 그림이다. 개체 `id`는 진화 후에도 유지한다. writer 잠금과 mailbox를 유지한다.
