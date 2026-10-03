@@ -1,14 +1,12 @@
-// 친구 교환 서버 설정과 버전 값 — worklog/records/trade/record.md "프로젝트 구성", "버전 값"
+// 온라인 서버 설정 — 교환·계정·클라우드 저장·우편이 같이 쓴다. worklog/records/trade/record.md "프로젝트 구성"
 //
 // data/online.json 은 공개해도 되는 값만 둔다(주소, publishable 키, 규약 번호).
 // 개발 중에는 환경 변수로 로컬 Supabase 를 가리킨다: POKEBUDDY_SUPABASE_URL, POKEBUDDY_SUPABASE_KEY
 // POKEBUDDY_ONLINE=off 면 서버 설정을 비운다 — 온라인 기능(계정·클라우드 저장·교환·우편)을 끈다. 서버가 필요 없는 E2E 가 운영 서버에 닿지 않게
 //   빈 POKEBUDDY_SUPABASE_URL 은 끄지 못한다(|| 가 online.json 으로 넘어간다). 개발 실행만 환경 변수를 받는다
 // 설치본은 환경 변수를 넘기지 않는다(src/main/trade.ts) — 다른 서버로 바꿔 세션 토큰을 빼 가지 못하게(2026-09-27 검수)
-// 개발 실행 판정은 devRunAt — app.isPackaged 만으로는 npm 설치본(`electron .` 으로 뜬다)을 가리지 못한다
-import { createHash } from "node:crypto";
+// 개발 실행 판정은 src/platform/dev-run.ts isRepoRun — app.isPackaged 만으로는 npm 설치본(`electron .` 으로 뜬다)을 가리지 못한다
 import { loadJson, type DexOptions } from "../dex/data.js";
-import { slugs } from "../dex/species.js";
 
 export interface OnlineConfig {
   url: string;
@@ -28,18 +26,4 @@ export function onlineConfig(opts?: DexOptions, env: NodeJS.ProcessEnv = process
     protocol: typeof raw.protocol === "number" ? raw.protocol : 1,
     linkBase: raw.linkBase || LINK_BASE,
   };
-}
-
-// 저장소에서 직접 띄웠는가 — 원본은 src/platform/dev-run.ts isRepoRun
-// [임시] 옛 이름 — src/main/trade.ts 와 src/tools 가 읽는다. 메인 레인 M7 이 isRepoRun 으로 바꾸면 걷는다
-export { isRepoRun as devRunAt } from "../platform/dev-run.js";
-
-let cached: string | null = null;
-
-// 종 데이터의 지문 — 종 ID 목록을 정렬해 SHA-256 앞 12자리. 두 앱의 값이 다르면 참가를 거절한다
-export function dataVersion(opts?: DexOptions): string {
-  if (!opts && cached) return cached;
-  const v = createHash("sha256").update(slugs(opts).join("\n")).digest("hex").slice(0, 12);
-  if (!opts) cached = v;
-  return v;
 }

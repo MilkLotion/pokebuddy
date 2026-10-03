@@ -19,7 +19,7 @@ const env = homeEnv(dir, temp);
 env.PB_E2E_DIR = dir;
 // mock-keychain — 임시 HOME 앱이 사용자 키체인에 닿지 않게 (scripts/e2e/mock-keychain.cjs)
 env.NODE_OPTIONS = ["mock-keychain.cjs", "companion-observer.cjs"].map((f) => `--require "${path.join(root, "scripts", "e2e", f).split(path.sep).join("/")}"`).join(" ");
-// 서버가 필요 없는 시험이다 — 온라인 기능을 꺼 운영 서버(data/online.json)에 닿지 않게. 개발 실행만 이 값을 받는다(src/trade/config.ts)
+// 서버가 필요 없는 시험이다 — 온라인 기능을 꺼 운영 서버(data/online.json)에 닿지 않게. 개발 실행만 이 값을 받는다(src/online/config.ts)
 // 닿지 않았는지는 관측기(scripts/e2e/companion-observer.cjs)가 적은 fetch 주소로 끝에서 본다
 env.POKEBUDDY_ONLINE = "off";
 // 저장을 직접 읽는다 — 평문으로 둔다. 개발 실행만 받는다(src/main/app.ts)
