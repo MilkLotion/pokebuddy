@@ -4,7 +4,7 @@
 // 계약은 docs/specs/modules.md "거래 실행기"다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { SAVE_V3_RULES } from "../../save/rules";
+import { SAVE_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import type { CommandResult } from "../../shared/command";
@@ -113,11 +113,11 @@ function fake(state: SaveV3, now = T0): Fake {
   const f = fake(seed());
   f.fail = true;
   const tx = createExecutor(f.ports, HANDLERS);
-  for (let i = 0; i < SAVE_V3_RULES.saveFailNotifyAfter; i++) {
+  for (let i = 0; i < SAVE_RULES.saveFailNotifyAfter; i++) {
     const res = tx.run({ id: `r${i}`, name: "party.hide", args: { petId: "p1" } });
     assert.equal(res.ok === false && res.reason, "save-failed");
   }
-  assert.equal(tx.saveFailStreak(), SAVE_V3_RULES.saveFailNotifyAfter);
+  assert.equal(tx.saveFailStreak(), SAVE_RULES.saveFailNotifyAfter);
   assert.equal(tx.shouldNotifySaveFail(), true);
   f.fail = false;
   assert.equal(tx.run({ id: "ok", name: "party.hide", args: { petId: "p1" } }).ok, true);
@@ -142,8 +142,8 @@ function fake(state: SaveV3, now = T0): Fake {
 // (7) 요청 기록은 최근 건수를 넘지 않는다
 {
   const s = seed();
-  const { keep } = SAVE_V3_RULES.tx;
-  for (let i = 0; i < keep + 20; i++) s.tx.push({ id: `old${i}`, at: T0 - SAVE_V3_RULES.tx.ttlMs - 1000, result: null });
+  const { keep } = SAVE_RULES.tx;
+  for (let i = 0; i < keep + 20; i++) s.tx.push({ id: `old${i}`, at: T0 - SAVE_RULES.tx.ttlMs - 1000, result: null });
   const f = fake(s);
   const tx = createExecutor(f.ports, HANDLERS);
   assert.equal(tx.run({ id: "new", name: "party.hide", args: { petId: "p1" } }).ok, true);

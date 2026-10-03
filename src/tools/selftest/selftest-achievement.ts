@@ -4,7 +4,6 @@
 // 계약은 docs/specs/game.md "파티 칸과 업적", "튜토리얼" 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { SAVE_V3_RULES } from "../../save/rules";
 import { regionalOf } from "../../dex/regional";
 import { profile, slugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";

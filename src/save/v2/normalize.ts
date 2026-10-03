@@ -7,7 +7,8 @@ import { localDate } from "../../shared/clock.js";
 import type { AgentStats, LogEntry, PetDaily, Totals } from "../../shared/save-v3.js";
 import type { NatureId } from "../../shared/species.js";
 import { isAgentName } from "../../shared/names/agents.js";
-import { SAVE_RULES, isNatureId } from "../rules.js";
+import { SAVE_RULES } from "../rules.js";
+import { isNatureValue } from "../raw-values.js";
 import { SAVE_V2_RULES } from "./rules.js";
 import type { Pet, SaveV2 } from "./types.js";
 
@@ -105,7 +106,7 @@ function normalizePet(raw: unknown, id: string): Pet | null {
   const pet: Pet = {
     ...base,
     shiny: raw.shiny === true,
-    nature: isNatureId(raw.nature) ? raw.nature : base.nature,
+    nature: isNatureValue(raw.nature) ? raw.nature : base.nature,
     nick: typeof raw.nick === "string" ? raw.nick : null,
     size: num(raw.size) > 0 ? num(raw.size) : base.size,
     shown: typeof raw.shown === "boolean" ? raw.shown : true,
@@ -197,7 +198,7 @@ function normalizeLog(raw: unknown): LogEntry[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((e): e is LogEntry => isObj(e) && typeof e.at === "number" && typeof e.kind === "string")
-    .slice(-SAVE_RULES.log.keep);
+    .slice(-SAVE_RULES.logKeep);
 }
 
 // v1 → v2 이전 (1판 game/economy.js newState 의 모양)

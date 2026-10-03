@@ -18,7 +18,7 @@ import { MEGA_RULES } from "../../dex/rules";
 import { slugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
-import { SAVE_RULES } from "../../save/rules";
+import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
 import { CARE_RULES, MOOD_RULES, STATE_RULES, TIME_RULES } from "../../state/rules";
 
@@ -113,7 +113,7 @@ export function buildVerifyFiles(): Record<string, string> {
     randomPool: [...species].filter((slug) => inRandomEgg(slug)).sort(),
     rules: {
       pointMs: TIME_RULES.pointGainMs,
-      maxPartySlots: SAVE_RULES.slots.max,
+      maxPartySlots: PARTY_RULES.total,
       // 친밀도 배율(2) × 작업 배율(2) × 돌봄 보너스 최대(든든함 + 신남 + 기분 최고) — src/state/time.ts carePercent
       maxEarnFactor: (4 * (buffTop + Math.max(0, ...MOOD_RULES.pointBonus.map((b) => b.percent)))) / 100,
       findPointsMax: FIND_RULES.points.max,

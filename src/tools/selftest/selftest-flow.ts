@@ -8,7 +8,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작

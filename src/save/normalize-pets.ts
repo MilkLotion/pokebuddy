@@ -10,11 +10,10 @@ import { snapSize } from "../party/size.js";
 import { compactSlots, presetSlots } from "../party/slots.js";
 import { newBox, pushBox } from "../box/boxes.js";
 import { screenRefOf } from "../shared/raw.js";
-import { isNatureId } from "./rules.js";
 import { countParty } from "../party/presets.js";
 import { MAX_LEVEL } from "../dex/growth.js";
 import { isGender, legacyGender } from "../dex/gender.js";
-import { boolOr as bool, clampNum as clamp, intOr as int, isObj, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
+import { boolOr as bool, clampNum as clamp, intOr as int, isNatureValue, isObj, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
 
 const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play", "short-play"];
 const SLOT_STATES: readonly SlotState[] = ["pokemon", "empty", "locked"];
@@ -83,7 +82,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
   const id = str(raw.id);
   const species = str(raw.species);
   if (!id || !species) return null;
-  const nature: NatureId = isNatureId(raw.nature) ? raw.nature : FALLBACK_NATURE;
+  const nature: NatureId = isNatureValue(raw.nature) ? raw.nature : FALLBACK_NATURE;
   const home = isObj(raw.home) ? raw.home : {};
   const since = nonNeg(raw.since);
   return {

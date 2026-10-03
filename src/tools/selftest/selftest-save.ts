@@ -9,7 +9,9 @@ import path from "node:path";
 import { migrate, verify } from "../../save/v2/migrate";
 import * as legacy from "../../save/legacy";
 import * as store from "../../save/store";
-import { SAVE_V3_RULES } from "../../save/rules";
+import { BAG_RULES } from "../../bag/rules";
+import { BOX_RULES } from "../../box/rules";
+import { PARTY_RULES } from "../../party/rules";
 import { empty, normalize } from "../../save/v3";
 import { emptySlots, presetSlots } from "../../party/slots";
 import { openSlot } from "../../party/slots";
@@ -60,15 +62,15 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
 {
   const s = empty(T0);
   assert.equal(s.v, 3);
-  assert.equal(s.party.slots.length, SAVE_V3_RULES.party.total);
+  assert.equal(s.party.slots.length, PARTY_RULES.total);
   const open = s.party.slots.filter((x) => x.state === "empty").length;
   const shop = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "shop").length;
   const ach = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
-  assert.equal(open, SAVE_V3_RULES.party.openAtStart, "시작은 두 칸");
-  assert.equal(shop, SAVE_V3_RULES.party.shopUnlock, "상점으로 여는 칸");
-  assert.equal(ach, SAVE_V3_RULES.party.total - SAVE_V3_RULES.party.openAtStart - SAVE_V3_RULES.party.shopUnlock, "업적으로 여는 칸");
-  assert.equal(s.boxes.length, SAVE_V3_RULES.box.start, "박스는 8개로 시작한다");
-  assert.equal(s.boxes[0]?.slots.length, SAVE_V3_RULES.box.size);
+  assert.equal(open, PARTY_RULES.openAtStart, "시작은 두 칸");
+  assert.equal(shop, PARTY_RULES.shopUnlock, "상점으로 여는 칸");
+  assert.equal(ach, PARTY_RULES.total - PARTY_RULES.openAtStart - PARTY_RULES.shopUnlock, "업적으로 여는 칸");
+  assert.equal(s.boxes.length, BOX_RULES.start, "박스는 8개로 시작한다");
+  assert.equal(s.boxes[0]?.slots.length, BOX_RULES.size);
   process.stdout.write("(1) 빈 저장 · 파티 칸 구성  ok\n");
 }
 
@@ -128,11 +130,11 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
 
 // (5) 이전 — 밥 쿨타임은 남은 시간으로 바뀐다
 {
-  const half = SAVE_V3_RULES.feedCooldownMs / 2;
+  const half = BAG_RULES.feedCooldownMs / 2;
   const { save } = migrate(v2Save({ party: [v2Pet({ fedAt: T0 - half })] }), T0);
   assert.ok(save);
   assert.equal(save.pets[0]?.feedCooldownMs, half, "지난 만큼 뺀 남은 시간");
-  const done = migrate(v2Save({ party: [v2Pet({ fedAt: T0 - SAVE_V3_RULES.feedCooldownMs * 2 })] }), T0);
+  const done = migrate(v2Save({ party: [v2Pet({ fedAt: T0 - BAG_RULES.feedCooldownMs * 2 })] }), T0);
   assert.equal(done.save?.pets[0]?.feedCooldownMs, 0, "다 지났으면 0");
   process.stdout.write("(5) 이전 · 쿨타임을 남은 시간으로  ok\n");
 }
@@ -246,13 +248,13 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
 {
   // 빈 저장 — 프리셋 둘, 첫 프리셋을 적용, 열린 칸은 넷
   const fresh = empty(T0);
-  assert.equal(presetCount(fresh), SAVE_V3_RULES.party.presets.start);
+  assert.equal(presetCount(fresh), PARTY_RULES.presets.start);
   assert.equal(activePreset(fresh), 0);
-  assert.equal(fresh.party.slotCount, SAVE_V3_RULES.party.openAtStart * SAVE_V3_RULES.party.presets.start);
+  assert.equal(fresh.party.slotCount, PARTY_RULES.openAtStart * PARTY_RULES.presets.start);
   assert.deepStrictEqual(fresh.party.presets?.[0], null, "적용한 번호의 자리는 비운다");
   const second = slotsOfPreset(fresh, 1);
   assert.ok(second);
-  assert.equal(second.filter((x) => x.state === "locked" && x.unlockBy === "shop").length, SAVE_V3_RULES.party.total - SAVE_V3_RULES.party.openAtStart, "둘째 프리셋의 잠긴 칸은 모두 상점");
+  assert.equal(second.filter((x) => x.state === "locked" && x.unlockBy === "shop").length, PARTY_RULES.total - PARTY_RULES.openAtStart, "둘째 프리셋의 잠긴 칸은 모두 상점");
   assert.equal(slotsOfPreset(fresh, 2), null, "가지지 않은 프리셋");
 
   // 프리셋이 없는 옛 저장 — 지금 파티가 첫 프리셋, 둘째는 빈 프리셋

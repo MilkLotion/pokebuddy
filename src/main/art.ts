@@ -5,7 +5,7 @@
 //   먼저 걷기 대체 그림(src/main/overworld-art.ts), 그것도 못 받으면 초상 대체 그림(src/main/portrait-art.ts)이다.
 // 초상도 못 받으면 무대에 나오지 않는다 — 부르는 쪽이 stderr 한 줄 + last-error.json 을 남긴다.
 // look(모습) 하나는 한 번만 받는다 — 같은 종 여러 마리가 시트를 공유한다. 배율(zoom)은 마리별(Pet.size)이라 여기서 정하지 않고 zoomOf 로 뽑는다
-import { SIZE_STEPS, snapSize } from "../save/rules.js";
+import { SIZE_STEPS, snapSize } from "../party/size.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/model/stage";
 import type { Paths } from "./paths";
 import { profile } from "../dex/species";

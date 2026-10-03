@@ -12,6 +12,7 @@ import path from "node:path";
 import { bridgeMailbox } from "../../commands/dispatcher";
 import * as mailbox from "../../save/mailbox";
 import * as rules from "../../save/rules";
+import { SAVE_V2_RULES } from "../../save/v2/rules";
 import * as legacy from "../../save/legacy";
 import * as writer from "../../save/writer";
 import type { Command, CommandResult } from "../../shared/command";
@@ -171,12 +172,12 @@ function testEmptyAndNormalize(): void {
   assert.strictEqual(p.id, "p1");
   assert.strictEqual(p.species, "eevee");
   assert.strictEqual("look" in p, false, "look 은 없으면 두지 않는다");
-  assert.strictEqual(p.nature, SAVE_RULES.pet.nature);
-  assert.strictEqual(p.hunger, SAVE_RULES.pet.hunger);
-  assert.strictEqual(p.mood, SAVE_RULES.pet.mood);
-  assert.strictEqual(p.size, SAVE_RULES.pet.size);
+  assert.strictEqual(p.nature, SAVE_V2_RULES.pet.nature);
+  assert.strictEqual(p.hunger, SAVE_V2_RULES.pet.hunger);
+  assert.strictEqual(p.mood, SAVE_V2_RULES.pet.mood);
+  assert.strictEqual(p.size, SAVE_V2_RULES.pet.size);
   assert.strictEqual(p.shown, true);
-  assert.deepStrictEqual(p.home, SAVE_RULES.pet.home);
+  assert.deepStrictEqual(p.home, SAVE_V2_RULES.pet.home);
   assert.deepStrictEqual(p.daily, freshDaily(""));
   assert.deepStrictEqual(p.evolved, []);
   assert.strictEqual(p.nick, null);
@@ -209,18 +210,18 @@ function testEmptyAndNormalize(): void {
   });
   const q = some(r.party[0]);
   assert.strictEqual(r.points, 0);
-  assert.strictEqual(r.slots, SAVE_RULES.slots.max);
-  assert.strictEqual(norm({ v: 2, slots: 0, party: [] }).slots, SAVE_RULES.slots.min);
+  assert.strictEqual(r.slots, SAVE_V2_RULES.slots.max);
+  assert.strictEqual(norm({ v: 2, slots: 0, party: [] }).slots, SAVE_V2_RULES.slots.min);
   assert.strictEqual(q.look, "eevee");
   assert.strictEqual(q.nature, "jolly");
-  assert.strictEqual(some(norm({ v: 2, party: [{ species: "a", nature: "bogus" }] }).party[0]).nature, SAVE_RULES.pet.nature);
+  assert.strictEqual(some(norm({ v: 2, party: [{ species: "a", nature: "bogus" }] }).party[0]).nature, SAVE_V2_RULES.pet.nature);
   assert.strictEqual(q.hunger, 100);
   assert.strictEqual(q.mood, 0);
-  assert.strictEqual(q.size, SAVE_RULES.pet.size);
+  assert.strictEqual(q.size, SAVE_V2_RULES.pet.size);
   assert.strictEqual(q.stage, 1);
   assert.strictEqual(q.affinity, 0);
   assert.strictEqual(q.shown, false);
-  assert.deepStrictEqual(q.home, { dx: 5, dy: SAVE_RULES.pet.home.dy });
+  assert.deepStrictEqual(q.home, { dx: 5, dy: SAVE_V2_RULES.pet.home.dy });
   assert.deepStrictEqual(q.evolved, ["eevee"]);
   assert.strictEqual(q.nick, null);
   assert.deepStrictEqual(r.daily, { date: TODAY, streak: 1, interacted: false });
@@ -235,7 +236,7 @@ function testEmptyAndNormalize(): void {
   for (let i = 0; i < 250; i++) log.push({ at: T0 + i, kind: "poke", i });
   log.push({ kind: "no-at" }, { at: 1 }, "x", null);
   const l = norm({ v: 2, party: [], log }).log;
-  assert.strictEqual(l.length, SAVE_RULES.log.keep);
+  assert.strictEqual(l.length, SAVE_RULES.logKeep);
   assert.strictEqual(some(l[0]).i, 50);
   assert.strictEqual(some(l[l.length - 1]).i, 249);
   assert.deepStrictEqual(norm({ v: 2, party: [], log: "x" }).log, []);
@@ -289,11 +290,11 @@ function testMigrateV1(): void {
   assert.strictEqual(a.playedAt, null);
   assert.strictEqual(a.since, T0);
   assert.deepStrictEqual(a.evolved, ["eevee"]);
-  assert.strictEqual(a.hunger, SAVE_RULES.pet.hunger);
-  assert.strictEqual(a.size, SAVE_RULES.pet.size);
-  assert.strictEqual(a.nature, SAVE_RULES.pet.nature);
+  assert.strictEqual(a.hunger, SAVE_V2_RULES.pet.hunger);
+  assert.strictEqual(a.size, SAVE_V2_RULES.pet.size);
+  assert.strictEqual(a.nature, SAVE_V2_RULES.pet.nature);
   assert.strictEqual(a.shown, true, "active 였던 마리는 보인다");
-  assert.deepStrictEqual(a.home, SAVE_RULES.pet.home);
+  assert.deepStrictEqual(a.home, SAVE_V2_RULES.pet.home);
   assert.deepStrictEqual(a.daily, { ...freshDaily(TODAY), gained: 30, feeds: 1, pokes: 2 }, "활성 마리가 오늘 기록을 이어받는다");
 
   assert.strictEqual(b.id, "p2");
@@ -545,7 +546,7 @@ async function testMailbox(): Promise<void> {
     assert.strictEqual(seen.length, before + 1);
 
     // 오래된 요청은 지우고 부르지 않는다
-    const oldAt = Date.now() - SAVE_RULES.io.requestTtlMs - 60_000;
+    const oldAt = Date.now() - SAVE_RULES.channel.requestTtlMs - 60_000;
     const stale = path.join(dir, save.requestName(oldAt, 1, "feed"));
     save.writeAtomic(stale, { cmd: "feed", from: "cli", at: oldAt });
     await server.scan();
@@ -563,7 +564,7 @@ async function testMailbox(): Promise<void> {
     // 안 가져간 회신 — TTL 지나면 청소, 새것은 둔다
     const oldResult = path.join(dir, save.resultName(save.requestName(Date.now(), 2, "feed")));
     fs.writeFileSync(oldResult, "{}");
-    const past = (Date.now() - SAVE_RULES.io.resultTtlMs - 60_000) / 1000;
+    const past = (Date.now() - SAVE_RULES.channel.resultTtlMs - 60_000) / 1000;
     fs.utimesSync(oldResult, past, past);
     const freshResult = path.join(dir, save.resultName(save.requestName(Date.now(), 3, "feed")));
     fs.writeFileSync(freshResult, "{}");
@@ -596,7 +597,7 @@ async function testMailbox(): Promise<void> {
 
   // 시계 주입 — 서버 시계가 미래면 방금 요청도 오래된 것
   const dir2 = path.join(tmpDir("mailbox-clock"), "box");
-  const late = save.serve(dir2, () => ({ ok: true, reason: "ok" }), { pollMs: 50, clock: () => Date.now() + SAVE_RULES.io.requestTtlMs * 2 });
+  const late = save.serve(dir2, () => ({ ok: true, reason: "ok" }), { pollMs: 50, clock: () => Date.now() + SAVE_RULES.channel.requestTtlMs * 2 });
   try {
     const r7 = await save.send(dir2, { cmd: "feed", from: "cli" }, { timeoutMs: 300, pollMs: 20 });
     assert.strictEqual(r7.reason, "timeout");

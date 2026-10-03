@@ -6,7 +6,6 @@ import path from "node:path";
 import { rollGender } from "../../dex/gender";
 import { randomNature } from "../../dex/natures";
 import { newPet } from "../../party/create";
-import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";

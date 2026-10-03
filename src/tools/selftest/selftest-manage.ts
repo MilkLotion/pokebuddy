@@ -9,7 +9,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { createGenGate } from "../../main/windows/device-gen";
 import { createGame } from "../../main/game";
-import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import { gainOf } from "../../state/settings";

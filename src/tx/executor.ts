@@ -11,7 +11,7 @@
 // 파일을 직접 다루지 않는다. 읽기·쓰기·시계를 받아서 쓴다 — 자체 검사가 파일 없이 돈다.
 import { applySettle } from "./settle.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { SAVE_RULES } from "../save/rules.js";
 import type { Reason } from "../shared/names/reasons.js";
 import type { TxRequest, TxResult } from "../shared/command.js";
 
@@ -43,7 +43,7 @@ export interface Executor {
 
 // 완료한 요청 기록을 최근 건수와 보관 기간 중 큰 쪽으로 자른다
 export function trimTx(list: TxRecordV3[], now: number): TxRecordV3[] {
-  const { keep, ttlMs } = SAVE_V3_RULES.tx;
+  const { keep, ttlMs } = SAVE_RULES.tx;
   const sorted = [...list].sort((a, b) => a.at - b.at);
   const fresh = sorted.filter((t) => now - t.at <= ttlMs);
   return fresh.length >= keep ? fresh : sorted.slice(-keep);
@@ -84,6 +84,6 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
   return {
     run,
     saveFailStreak: () => failStreak,
-    shouldNotifySaveFail: () => failStreak >= SAVE_V3_RULES.saveFailNotifyAfter,
+    shouldNotifySaveFail: () => failStreak >= SAVE_RULES.saveFailNotifyAfter,
   };
 }

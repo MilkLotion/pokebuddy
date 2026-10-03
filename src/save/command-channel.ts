@@ -80,7 +80,8 @@ function toCommand(raw: unknown): Command | null {
 export function sendToWriter(dir: string, command: Command, opts: SendOptions = {}): Promise<CommandResult> {
   const name = isObj(command) && typeof command.cmd === "string" ? command.cmd : ""; // 옛 형식·파손 요청은 cmd 가 없을 수 있다 — 아래에서 bad-cmd 로 돌려준다
   const slow = hasCommandFlag(name, "slow"); // 그림을 받거나 서버를 타는 명령 — 목록은 src/shared/names/commands.ts 의 slow
-  const { timeoutMs = slow ? 45_000 : SAVE_RULES.io.sendTimeoutMs, pollMs = SAVE_RULES.io.sendPollMs, clock = realClock } = opts;
+  const { channel } = SAVE_RULES;
+  const { timeoutMs = slow ? channel.sendSlowTimeoutMs : channel.sendTimeoutMs, pollMs = channel.sendPollMs, clock = realClock } = opts;
   return new Promise((resolve) => {
     const cmd = isObj(command) ? command.cmd : undefined;
     if (!isCmdName(cmd)) return resolve({ ok: false, reason: "bad-cmd", cmd: String(cmd) });
@@ -118,7 +119,7 @@ export function sendToWriter(dir: string, command: Command, opts: SendOptions = 
 // 폴더를 지켜보며 요청을 처리한다 — handler(command) 의 반환(값 또는 Promise)이 회신이 된다.
 // handler 가 던지면 { ok:false, reason:"error", message } 로 회신한다 — 통로가 멈추지 않게
 export function serveCommands(dir: string, handler: CommandHandler, opts: ServeOptions = {}): CommandServer {
-  const { pollMs = SAVE_RULES.io.mailboxPollMs, log = null, clock = realClock } = opts;
+  const { pollMs = SAVE_RULES.channel.pollMs, log = null, clock = realClock } = opts;
   let closed = false;
   let busy = false;
   let again = false;
@@ -141,7 +142,7 @@ export function serveCommands(dir: string, handler: CommandHandler, opts: ServeO
     unlinkQuiet(file); // 먼저 지운다 — 처리 중 다시 스캔돼도 두 번 하지 않게
     const command = toCommand(raw);
     if (!command) return;
-    if (command.at != null && clock() - command.at > SAVE_RULES.io.requestTtlMs) return; // 오래된 요청은 버린다
+    if (command.at != null && clock() - command.at > SAVE_RULES.channel.requestTtlMs) return; // 오래된 요청은 버린다
     const run = async (): Promise<void> => {
       let result: CommandResult;
       try {
@@ -162,7 +163,7 @@ export function serveCommands(dir: string, handler: CommandHandler, opts: ServeO
   function sweepResult(name: string): void {
     const file = path.join(dir, name);
     try {
-      if (clock() - fs.statSync(file).mtimeMs > SAVE_RULES.io.resultTtlMs) fs.unlinkSync(file);
+      if (clock() - fs.statSync(file).mtimeMs > SAVE_RULES.channel.resultTtlMs) fs.unlinkSync(file);
     } catch {
       // 사이에 가져갔다
     }
