@@ -21,7 +21,6 @@ one-word: snapshot @ src/view/snapshot.ts
 one-word: take @ src/notify/queue.ts
 one-word: use @ src/bag/use.ts
 unused-export-const: AGENT_STATES @ src/shared/names/agents.ts
-unused-export-const: APP_ONLINE_CODES @ src/shared/names/online-codes.ts
 unused-export-const: BANNER_KINDS @ src/shared/names/banners.ts
 unused-export-const: BANNER_RULES @ src/main/windows/banner-window.ts
 unused-export-const: BASIC_FOOD @ src/state/care.ts
@@ -47,7 +46,6 @@ unused-export-const: NAME_MAX @ src/online/account.ts
 unused-export-const: NEUTRAL_AXES @ src/dex/natures.ts
 unused-export-const: PASSWORD_MIN @ src/online/account.ts
 unused-export-const: PET_MENU_RULES @ src/main/menus/pet-menu.ts
-unused-export-const: REASONS @ src/shared/names/reasons.ts
 unused-export-const: SAVE_WATCH_RULES @ src/save/save-watch.ts
 unused-export-const: TICK_RULES @ src/main/app/ticks.ts
 unused-export-const: TRADE_CLOSE_REASONS @ src/shared/names/online-codes.ts
