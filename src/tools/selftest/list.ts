@@ -60,6 +60,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("trade-net", "server"),
   tool("session"),
   tool("session-storage"),
+  tool("pid-lock"),
   tool("account", "server"),
   tool("cloud", "server"),
   tool("github"),
