@@ -27,6 +27,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
+import { structureOf } from "../ui/live-draw.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
@@ -4994,10 +4995,7 @@ async function refresh(): Promise<void> {
 // 전체 다시 그리기는 끊기는 조작 중에는 미루고 다음 시계에 한다 — 끌기·박스 이름 입력·누르는 중·한글 조합 중·글자 입력 칸 포커스.
 // 표시 고치기는 입력 요소를 건드리지 않으므로 그동안에도 한다.
 // view 는 화면에 그린 모양의 값이다 — 처리기(단추)는 이것을 읽는다. 미루는 동안에는 새 값의 시간 표시만 먼저 보인다
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText"]);
-// 만복도는 100 에 닿았는지만 모양이다(밥 주기 · 배부름) — 그 밖의 값은 표시만 고친다
-const structureOf = (v: Snapshot | null): string =>
-  JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
+// 모양 비교와 시간 필드 목록은 ui/live-draw.ts · shared/live-keys.ts
 let drawnStructure = ""; // 마지막으로 그린 모양
 let clockBusy = false;
 let pointerDown = false;

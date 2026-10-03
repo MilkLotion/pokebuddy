@@ -15,6 +15,7 @@ import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { createDeviceFrame } from "./device-frame.js";
+import { structureOf } from "../ui/live-draw.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 const api = window.pokebuddyPet;
@@ -155,12 +156,10 @@ function line(title: string, desc: string | null, right: HTMLElement[], run?: ()
 // 포인트 적립 줄 — 제목과 설명은 메인이 정해 보낸다 (src/view/device-pet.ts careLineOf)
 const careLine = (v: PetDeviceView): HTMLElement => line(v.careLine.title, v.careLine.desc, []);
 
-// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록에
-// 이 창만 받는 막대 글자(bars)를 더했다
-// 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText", "bars"]);
-const structureOf = (v: PetDeviceView): string =>
-  JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
+// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 설정창과 같은 목록(shared/live-keys.ts)에
+// 이 창만 받는 막대 글자(bars)를 더한다
+const PET_LIVE: ReadonlySet<string> = new Set(["bars"]);
+const structureOfPet = (v: PetDeviceView): string => structureOf(v, PET_LIVE);
 let renderedStructure = "";
 
 function applyLive(v: PetDeviceView): void {
@@ -198,7 +197,7 @@ function restoreFocus(kept: { path: number[]; sign: string } | null): void {
 
 function render(v: PetDeviceView): void {
   const kept = focusPath();
-  renderedStructure = structureOf(v);
+  renderedStructure = structureOfPet(v);
   renderBody(v);
   restoreFocus(kept);
 }
@@ -365,7 +364,7 @@ window.addEventListener("blur", release);
 
 api.onShow((view) => {
   // 모양이 같으면 표시만 고친다 — 누르는 중에도 된다(요소를 바꾸지 않는다)
-  if (renderedStructure && structureOf(view) === renderedStructure) return applyLive(view);
+  if (renderedStructure && structureOfPet(view) === renderedStructure) return applyLive(view);
   if (pointerDown) pending = view;
   else show(view);
 });
