@@ -22,11 +22,8 @@ import { isFromWindow } from "./windows/ipc.js";
 import { INPUT_LIMITS, isShortId } from "./windows/input.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
-import { createDexWindow, type DexWindow } from "./dex-window.js";
-import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
-import { createShopWindow, type ShopWindow } from "./shop-window.js";
-import { createBagWindow, type BagWindow } from "./bag-window.js";
-import { createPartyWindow, type PartyWindow } from "./party-window.js";
+import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
+import { BAG_DEVICE, DEVICE_SIZES, PARTY_DEVICE, SHOP_DEVICE, dexDeviceOf, petDeviceOf, type DexDeviceOpen } from "./windows/devices.js";
 import { gainOf } from "../state/settings.js";
 import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
@@ -120,11 +117,11 @@ let identifyScreens: ManageOptions["identifyScreens"] = undefined;
 let pickScreen: ManageOptions["pickScreen"] = undefined;
 let mail: ManageOptions["mail"] = undefined;
 let petMenu: ManageOptions["petMenu"] = undefined;
-let dexWin: DexWindow | null = null;
-let petWin: PetWindow | null = null;
-let shopWin: ShopWindow | null = null;
-let bagWin: BagWindow | null = null;
-let partyWin: PartyWindow | null = null;
+let dexWin: DeviceWindow<DexDeviceOpen> | null = null;
+let petWin: DeviceWindow<PetDeviceOpen> | null = null;
+let shopWin: DeviceWindow<ShopDeviceOpen> | null = null;
+let bagWin: DeviceWindow<BagDeviceOpen> | null = null;
+let partyWin: DeviceWindow<PartyDeviceOpen> | null = null;
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -197,9 +194,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
   let cries: Cries | null = null;
-  dexWin = createDexWindow({
-    preload,
-    html: path.join(path.dirname(html), "dex.html"),
+  const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
+  dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
     detail: (slug) => game.dexDetail(slug),
     portrait: async (slug) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
@@ -224,14 +220,13 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       const s = game.read()?.settings;
       return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
     },
+  }), {
     onStep: (delta) => toManage(CH.dexStep, delta),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
     onClosed: (gen) => toManage(CH.dexClosed, gen),
   });
   // 파티 상세 기기 창 — 관리 창이 개체를 정해 보낸다. 누른 단추·이전·다음은 관리 창으로 돌려보낸다
-  petWin = createPetWindow({
-    preload,
-    html: path.join(path.dirname(html), "pet.html"),
+  petWin = createDeviceWindow(deviceFiles("pet"), petDeviceOf({
     portrait: async (slug, shiny) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
       return (await portraits.get([{ slug, shiny }]))[portraitKey({ slug, shiny })] ?? null;
@@ -245,30 +240,25 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       const s = game.read()?.settings;
       return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
     },
+  }), {
     onStep: (delta) => toManage(CH.petStep, delta),
     onAct: (action) => toManage(CH.petAct, action),
     onClosed: (gen) => toManage(CH.petClosed, gen),
   });
   // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
-  shopWin = createShopWindow({
-    preload,
-    html: path.join(path.dirname(html), "shop.html"),
+  shopWin = createDeviceWindow(deviceFiles("shop"), SHOP_DEVICE, {
     onStep: (delta) => toManage(CH.shopStep, delta),
     onAct: (action) => toManage(CH.shopAct, action),
     onClosed: (gen) => toManage(CH.shopClosed, gen),
   });
   // 가방 기기 창 — 관리 창이 도구를 정해 보낸다. 사용·판매·파티 고르기·수량·이전·다음은 관리 창으로 돌려보낸다
-  bagWin = createBagWindow({
-    preload,
-    html: path.join(path.dirname(html), "bag.html"),
+  bagWin = createDeviceWindow(deviceFiles("bag"), BAG_DEVICE, {
     onStep: (delta) => toManage(CH.bagStep, delta),
     onAct: (action) => toManage(CH.bagAct, action),
     onClosed: (gen) => toManage(CH.bagClosed, gen),
   });
   // 파티 기기 창(교체 화면) — 관리 창이 지금 프리셋의 칸을 정해 보낸다. 누른 칸·칩은 관리 창으로 돌려보낸다
-  partyWin = createPartyWindow({
-    preload,
-    html: path.join(path.dirname(html), "party.html"),
+  partyWin = createDeviceWindow(deviceFiles("party"), PARTY_DEVICE, {
     onStep: (delta) => toManage(CH.partyStep, delta),
     onAct: (action) => toManage(CH.partyAct, action),
     onClosed: (gen) => toManage(CH.partyClosed, gen),
@@ -283,7 +273,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
     if (!win || !mine(e)) return;
     const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
-    if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen, gen);
+    if (pet && typeof pet.species === "string" && typeof pet.id === "string") petWin?.show(win, open as PetDeviceOpen, gen);
     else petWin?.close();
   });
   ipcMain.on(CH.shopOpen, (e, open: unknown, gen: unknown) => {
@@ -301,7 +291,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown, beside: unknown) => {
     if (!win || !mine(e)) return;
     // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
-    if (typeof slug === "string") void dexWin?.show(win, slug, gen, beside === true ? PET_WINDOW.width : 0);
+    if (typeof slug === "string") dexWin?.show(win, { slug, beside: beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
     else dexWin?.close();
   });
   ipcMain.on(CH.dim, (e, on: unknown) => {
