@@ -22,7 +22,7 @@ import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { portraitImg, rememberPortrait, rememberPortraitBox } from "../ui/portrait.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
-import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
+import { closeIconEl, lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
@@ -281,6 +281,13 @@ function inDexRegion(regionId: string, dex: number, formRegion?: string): boolea
 // 도감 표시 번호 — `#0026`, 리전폼이면 `#0026-1` (src/dex/regional.ts dexLabel 과 같은 모양)
 const dexNoText = (dex: number, form: number | undefined, pad: number): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}`;
 
+// 닫기 단추 — 대화상자 머리·경고 배너가 같이 쓴다. 글자 ✕ 가 아니라 Figma `Icon / Close` `299:166` 선 아이콘이다
+// (대화상자는 `Header Icon Button` `295:3083` 안의 아이콘, 경고 배너는 `Alert` Type=Banner 의 아이콘)
+function dialogCloseEl(): HTMLButtonElement {
+  const x = buttonEl("dialog-close");
+  x.appendChild(closeIconEl());
+  return x;
+}
 
 // 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
 // - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
@@ -294,7 +301,7 @@ function alertBox(tone: AlertTone, title: string, desc = "", onClose?: () => voi
   if (desc) text.appendChild(el("span", undefined, desc));
   box.append(el("i", "alert-icon"), text);
   if (onClose) {
-    const x = buttonEl("dialog-close", "✕");
+    const x = dialogCloseEl();
     x.setAttribute("aria-label", "닫기");
     x.addEventListener("click", onClose);
     box.appendChild(x);
@@ -689,7 +696,7 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   const all = buttonEl("act open-all", "모두 열기");
   all.disabled = !live || ready === 0 || openingAll;
   all.addEventListener("click", () => void openAllEggs());
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.disabled = !live;
   x.addEventListener("click", closeDialog);
@@ -1670,7 +1677,7 @@ function drawBoxOrder(): void {
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, "박스 순서"));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   top.append(titles, x);
@@ -1718,7 +1725,7 @@ function drawPool(productId: string, page: number): void {
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, `${item.name}에서 나오는 포켓몬`));
   titles.appendChild(el("p", undefined, `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   top.append(titles, x);
@@ -2705,7 +2712,7 @@ function drawTradeDialog(): void {
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, "친구 교환"));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   top.append(titles, x);
@@ -3061,7 +3068,7 @@ function acctOverlay(): HTMLElement | null {
   const box = el("div", "acct-overlay");
   const card = el("div", "acct-confirm");
   const head = el("div", "acct-confirm-head");
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   const shut = (): void => { acctConfirm = null; redrawAccount(); };
   x.addEventListener("click", shut);
@@ -3234,7 +3241,7 @@ function mailHead(title: string, back: boolean): void {
     titles.appendChild(b);
   }
   titles.appendChild(el("h2", undefined, title));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   head.append(titles, x);
@@ -4678,7 +4685,7 @@ function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T;
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, title));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   head.append(titles, x);
@@ -4838,7 +4845,7 @@ function notesHead(title: string, sub: string, onClose: () => void): HTMLElement
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.append(el("h2", undefined, title), el("div", "sub", sub));
-  const x = buttonEl("dialog-close", "✕");
+  const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", onClose);
   head.append(titles, x);

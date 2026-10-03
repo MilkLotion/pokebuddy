@@ -1,6 +1,7 @@
 // 선 아이콘 — 16 × 16 선 그림. 선 색·굵기는 각 창의 CSS 가 정한다
 // - 파티 칸의 빈 칸(+)과 잠긴 칸·자물쇠 칩(자물쇠). Figma `Party Slot` state/empty·state/locked. 설정창의 파티 칸과 파티 기기 창이 같이 쓴다
-// - 닫기(×). Figma `Icon / Close` `299:166`. 코치마크 말풍선의 ✕ 가 쓴다(세 창)
+// - 닫기(×). Figma `Icon / Close` `299:166`. 코치마크 말풍선의 ✕(세 창)와 설정창의 대화상자·경고 배너 닫기가 쓴다.
+//   기기 창 머리 줄의 ✕ 는 Figma `Device Top` 이 글자라 글자 그대로다
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 

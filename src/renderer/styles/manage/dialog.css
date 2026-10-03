@@ -68,9 +68,23 @@
   color: var(--muted);
   font: inherit;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 .dialog-close:hover {
   background: var(--accent-bg);
+}
+/* 닫기 아이콘 — Figma `Icon / Close` `299:166`: 16 × 16, 선 둘, 굵기 1.5, 둥근 이음, 선 색은 보조색 (경고 배너의 닫기도 같다) */
+.dialog-close svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 /* 대화상자 실패 — 바닥 단추 줄의 빈자리. 길면 말줄임(전체는 title) */
 .footer-error {
