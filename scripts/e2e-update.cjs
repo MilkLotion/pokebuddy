@@ -15,7 +15,7 @@ const { spawn, spawnSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
 // 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
-const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
+const { makeTmp } = require(path.join(root, 'dist/tools/harness/tmp-dir.js'));
 const PORT = 48321; // 빌드에 박히는 공급 주소 — 바꾸면 두 빌드를 다시 만든다
 const FEED = `http://127.0.0.1:${PORT}/`;
 const OLD = '0.6.9';

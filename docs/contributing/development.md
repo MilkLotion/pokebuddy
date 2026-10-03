@@ -250,7 +250,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node scripts/build-verify.cjs` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `scripts/e2e-companion.cjs` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다
-- 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 아래 `.claude/pokebuddy/save.json` 을 저장 v3 로 만든다.
+- 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 아래 `.claude/pokebuddy/save.json` 을 저장 v3 로 만든다.
   마리는 60px 씩 벌려 둔다. `--same-home` 이면 전부 기본 집이다(겹침 확인). 진짜 저장은 건드리지 않는다
 - 시험 중 동반자를 끝낼 때는 프로세스를 죽이지 않는다. `~/.claude/pokebuddy/companion.lock` 을 지운다(`pokebuddy companion stop` 과 같다)
 
@@ -270,11 +270,11 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 
 ```powershell
 npm run build
-node dist/tools/dev-test.js start --fresh      # HOME 을 비우고 첫 포켓몬 선택부터
-node dist/tools/dev-test.js show               # 포인트·개체·알·튜토리얼 상태
-node dist/tools/dev-test.js stop               # companion.lock 을 지워 스스로 저장하고 끝나게 한다
-node dist/tools/dev-test.js scene hatch        # 앱이 꺼진 상태에서만 저장을 고친다
-node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄운다
+node dist/tools/dev/dev-test.js start --fresh      # HOME 을 비우고 첫 포켓몬 선택부터
+node dist/tools/dev/dev-test.js show               # 포인트·개체·알·튜토리얼 상태
+node dist/tools/dev/dev-test.js stop               # companion.lock 을 지워 스스로 저장하고 끝나게 한다
+node dist/tools/dev/dev-test.js scene hatch        # 앱이 꺼진 상태에서만 저장을 고친다
+node dist/tools/dev/dev-test.js start              # 고친 저장으로 다시 띄운다
 ```
 
 장면은 쉼표로 이어 줄 수 있다(`scene done-all,rich`). 튜토리얼 장면은 그 튜토리얼 앞의 것을 완료로, 그 튜토리얼과 뒤의 것을 미시작으로 둔다.
@@ -323,10 +323,10 @@ node dist/tools/dev-test.js start              # 고친 저장으로 다시 띄�
 ```powershell
 $env:POKEBUDDY_TEST_HOME = "$PWD/.claude/test-home/<작업명>"
 $env:POKEBUDDY_ONLINE = "off"                      # 서버가 필요 없을 때만
-node dist/tools/dev-test.js scene showcase
-node dist/tools/dev-test.js start
-node dist/tools/dev-test.js show
-node dist/tools/dev-test.js stop
+node dist/tools/dev/dev-test.js scene showcase
+node dist/tools/dev/dev-test.js start
+node dist/tools/dev/dev-test.js show
+node dist/tools/dev/dev-test.js stop
 ```
 
 창 확인(Windows):
@@ -343,7 +343,7 @@ node dist/tools/dev-test.js stop
 시험과 개발 도구가 쓰고 버리는 폴더는 시스템 임시 폴더의 `pokebuddy/` 아래에 만든다(2026-10-03 사용자 결정). 저장소 안에는 만들지 않는다. 들여다보거나 이어 쓰는 시험 HOME 과 시험 계정만 저장소의 `.claude/` 에 둔다.
 
 - 폴더는 `src/tools/tmp-dir.ts` 의 `makeTmp(<이름>)` 으로 만든다. 경로는 `<임시 폴더>/pokebuddy/<이름>-XXXXXX` 다. `fs.mkdtempSync(path.join(os.tmpdir(), …))` 를 직접 부르지 않는다.
-- 스크립트(`scripts/*.cjs`)는 `dist/tools/tmp-dir.js` 를 불러 쓴다. 그래서 `npm run build` 뒤에 실행한다.
+- 스크립트(`scripts/*.cjs`)는 `dist/tools/harness/tmp-dir.js` 를 불러 쓴다. 그래서 `npm run build` 뒤에 실행한다.
 - 프로세스가 종료 코드 0 으로 끝나면 만든 폴더를 지운다. 실패하면 남긴다. 원인을 볼 수 있다.
 - 남은 폴더는 다음에 `makeTmp` 를 처음 부를 때 치운다. 만든 프로세스가 끝난 폴더는 바로 지운다. 프로세스 번호는 폴더 옆의 `<폴더 이름>.pid` 파일에 있다. 이 파일이 없는 폴더는 하루 뒤에 지운다.
 - Electron 으로 도는 도구(`smoke-*`, `dev-manage`)는 끝날 때 자식 프로세스가 파일을 잡고 있다. 그래서 스스로 다 지우지 못한다. 다음 실행이 치운다.
@@ -362,8 +362,8 @@ node dist/tools/dev-test.js stop
 
 ```powershell
 npm run dev:account                               # 시험 계정으로 띄운다
-node dist/tools/dev-test.js show --account        # 계정·포인트·개체
-node dist/tools/dev-test.js stop --account        # 내린다
+node dist/tools/dev/dev-test.js show --account        # 계정·포인트·개체
+node dist/tools/dev/dev-test.js stop --account        # 내린다
 ```
 
 시험 계정의 저장을 고칠 때는 서버 저장도 같이 바꾼다. 서버는 올라온 저장을 직전 서버 저장과 비교한다(`src/verify/save-rules.ts`). 로컬 저장만 고치면 위반으로 기록한다.
@@ -424,7 +424,7 @@ npm run dist:mac    # release/PokeBuddy-<버전>-arm64.dmg · release/PokeBuddy-
   - 서명 인증서는 저장소 Secrets 두 개로 넘긴다. `MAC_SIGNING_P12` 는 `.p12` 의 base64 값이고, `MAC_SIGNING_PASSWORD` 는 그 `.p12` 의 암호다. 두 값이 없으면 워크플로가 멈춘다.
   - 이미 있는 태그에 Mac 파일을 다시 올릴 때는 Actions 에서 `release-mac` 을 수동 실행하고 `tag` 에 태그를 적는다.
 - Mac 업데이트는 electron-updater 를 쓰지 않는다. electron-updater 의 mac 설치기(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치하기 때문이다. `src/main/mac-updater.ts` 가 같은 이벤트를 내는 자체 엔진이다. 받은 zip 은 sha512 로 검사하고, 앱이 끝난 뒤 도우미 스크립트가 같은 폴더 안에서 앱을 바꾼다. 실패하면 옛 앱을 되돌린다.
-- 업데이트 실기 시험은 `node dist/tools/e2e-update-mac.js` 다. 임시 폴더에 시험 앱(`pokebuddy-update-test.app`)을 두고 로컬 서버의 다음 버전으로 바꾼다. 사용자의 앱·저장·키체인은 건드리지 않는다.
+- 업데이트 실기 시험은 `node dist/tools/e2e/e2e-update-mac.js` 다. 임시 폴더에 시험 앱(`pokebuddy-update-test.app`)을 두고 로컬 서버의 다음 버전으로 바꾼다. 사용자의 앱·저장·키체인은 건드리지 않는다.
 - `pokebuddy://` 링크는 앱의 `Info.plist` 에 등록한다. mac 은 여기에 적힌 스킴만 앱에 넘긴다.
 - 확인은 `release/mac-arm64/PokeBuddy.app` 을 먼저 띄워 본 뒤 dmg 로 한다.
 

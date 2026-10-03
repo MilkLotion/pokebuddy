@@ -4,7 +4,7 @@
 //   출처: https://pokemonkorea.co.kr/pokedex/view/<view 번호> — view 번호는 도감 번호가 아니다. 모습마다 한 쪽이고 `다음` 링크로 이어진다
 //   시작 view 번호(기본 1017 = No. 0803)에서 `다음` 으로 넘기며 No. 899~1025 를 모은다. 번호가 줄어들면(끝에서 1번으로 돈다) 멈춘다
 //   종마다 처음 나온 모습의 쪽을 쓴다. 설명이 둘이면 뒤의 것(PokeAPI 의 "가장 최근 버전"과 같은 쪽)을 쓴다. `※` 로 시작하는 사이트 안내는 뺀다
-// 만든 뒤 `npm run build && node dist/tools/build-dex-text.js` 로 data/dex-text.json 에 합친다
+// 만든 뒤 `npm run build && node dist/tools/data/build-dex-text.js` 로 data/dex-text.json 에 합친다
 const fs = require('node:fs');
 const path = require('node:path');
 
