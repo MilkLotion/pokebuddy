@@ -34,9 +34,6 @@ export interface DeviceSpec<Open, View extends { side: DeviceSide }, Action = ne
   baseOf?(owner: Rectangle, area: Rectangle, open: Open, height: number): Rectangle;
   isAction?(v: unknown): v is Action; // act 채널의 값 검사 — 렌더러가 보낸 값은 믿지 않는다
   cry?: { of(open: Open): Promise<string | null>; volume(): number }; // cry 채널 — 음량이 0 이면 내지 않는다
-  // [임시] 도감 기기 창의 옛 동작을 지킨다 — 닫히는 중 표시·설정창 최소화 검사·늦은 값 버리기가 없다.
-  // 다음 커밋(통합본 X5)이 지운다
-  legacyNoGuards?: true;
 }
 
 export interface DeviceHooks<Action> {
@@ -68,7 +65,6 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
 ): DeviceWindow<Open> {
   const CH = spec.channels;
   const width = spec.size.width;
-  const guarded = !spec.legacyNoGuards;
   let win: BrowserWindow | null = null;
   const closing = new WeakSet<BrowserWindow>(); // 닫히는 중인 창 — 다시 쓰지 않고 새로 만든다
   let owner: BrowserWindow | null = null;
@@ -79,7 +75,7 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
   // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
 
-  const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() && !(guarded && closing.has(win)) ? win : null);
+  const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() && !closing.has(win) ? win : null);
   // 채널은 한 번만 건다. 창이 다시 만들어져도 처리기는 하나다
   const scope = createIpcScope((sender) => !!alive() && sender === win?.webContents);
 
@@ -128,9 +124,9 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
   function create(parent: BrowserWindow): BrowserWindow {
     const w = new BrowserWindow({ ...transparentOptionsOf(files.preload), width, height, parent, minimizable: false, maximizable: false, title: "pokebuddy" });
     w.removeMenu();
-    if (guarded) w.on("close", () => closing.add(w));
+    w.on("close", () => closing.add(w));
     w.on("closed", () => {
-      if (guarded && win !== w) return; // 닫히는 동안 새 창을 만들었다 — 그 창의 상태는 두고 간다
+      if (win !== w) return; // 닫히는 동안 새 창을 만들었다 — 그 창의 상태는 두고 간다
       win = null;
       current = null;
       focusNext = false;
@@ -154,7 +150,7 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
 
   function deliver(w: BrowserWindow, open: Open, body: Omit<View, "side"> | null): void {
     if (!body) return;
-    if (guarded && (open !== current || w !== alive())) return; // 그림을 읽는 동안 다른 것이 왔다 — 늦은 값으로 덮지 않는다
+    if (open !== current || w !== alive()) return; // 그림을 읽는 동안 다른 것이 왔다 — 늦은 값으로 덮지 않는다
     const view = { ...body, side } as View;
     if (w.webContents.isLoading()) w.webContents.once("did-finish-load", () => alive()?.webContents.send(CH.show, view));
     else w.webContents.send(CH.show, view);
@@ -168,7 +164,7 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
     const w = alive();
     if (!w || w.isVisible()) return;
     // 설정창이 최소화돼 있으면 따라 숨어 있는다 — 기기 창만 혼자 뜨지 않게
-    if (guarded && (!owner || owner.isDestroyed() || owner.isMinimized())) return;
+    if (!owner || owner.isDestroyed() || owner.isMinimized()) return;
     if (focusNext) bringUp(w);
     else w.showInactive();
     focusNext = false;

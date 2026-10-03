@@ -88,7 +88,6 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
       return { x: Math.min(owner.x, pet.x), y: owner.y, width: owner.width + o.beside, height: owner.height };
     },
     cry: { of: (o) => deps.cry(o.slug), volume: deps.volume },
-    legacyNoGuards: true,
   };
 }
 
