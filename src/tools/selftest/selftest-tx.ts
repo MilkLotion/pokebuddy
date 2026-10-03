@@ -7,7 +7,7 @@ import assert from "node:assert";
 import { SAVE_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
-import type { CommandResult } from "../../shared/command";
+import type { Command, CommandResult } from "../../shared/command";
 import { createExecutor, type TxHandler, type TxPorts } from "../../tx/executor";
 import { argsFromCommand } from "../../tx/args";
 import { HANDLERS } from "../../tx/command-table";
@@ -396,6 +396,22 @@ async function bridgeChecks(): Promise<void> {
     assert.equal(second.replayed, true, "두 번째는 재생");
     assert.equal(f.writes, 1, "쓰기는 한 번뿐");
     process.stdout.write("(17) 다리 · reqId 로 한 번만 반영  ok\n");
+  }
+
+  // (17b) 식별자를 부르는 쪽이 정한다 — 메인 send 처럼 순번을 붙이면 같은 틱의 같은 명령도 두 번 반영한다. internal 명령은 이 입구로 못 들어온다
+  {
+    const f = fake(seedBox());
+    const tx = createExecutor(f.ports, HANDLERS);
+    const hide: Command = { cmd: "party.hide", target: "p1", from: "menu", at: T0 };
+    const show: Command = { cmd: "party.show", target: "p1", from: "menu", at: T0 };
+    assert.equal(runTxCommand(tx, hide, `${requestIdOf(hide)}:1`).ok, true);
+    assert.equal(runTxCommand(tx, show, `${requestIdOf(show)}:2`).ok, true);
+    const again = runTxCommand(tx, hide, `${requestIdOf(hide)}:3`);
+    assert.equal(again.ok && again.replayed, false, "순번이 다르면 재생이 아니다");
+    assert.equal(f.state.party.slots[0]?.hidden, true);
+    assert.equal(f.writes, 3, "세 번 모두 반영");
+    assert.deepStrictEqual(runTxCommand(tx, { cmd: "mail.apply", from: "menu", at: T0 } as unknown as Command, "x"), { ok: false, reason: "unknown-cmd" }, "internal 은 unknown-cmd");
+    process.stdout.write("(17b) 다리 · 부르는 쪽 식별자·internal 막기  ok\n");
   }
 
   // (18) 실패는 이유 그대로 표면에 간다
