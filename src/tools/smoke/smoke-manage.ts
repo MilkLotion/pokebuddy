@@ -722,7 +722,7 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
     await wait(200);
     const tutDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
-    assert.deepEqual(tutDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "box", 3]], "확인은 tutorial.done box");
+    assert.deepEqual(tutDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "box", undefined]], "확인은 tutorial.done box — 단계 수는 싣지 않는다(tutorial/queue 의 done 이 TUTORIAL_STEPS 로 적는다)");
     await js(`window.__screenTut = null; window.__cmds = []; window.__bump = 32; 0`);
     await wait(1400);
     assert.equal(await js<unknown>(coach), null, "끝내면 다시 뜨지 않는다");
@@ -755,7 +755,7 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
     await wait(200);
     const presetDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
-    assert.deepEqual(presetDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "preset", 3]], "확인은 tutorial.done preset");
+    assert.deepEqual(presetDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "preset", undefined]], "확인은 tutorial.done preset — 단계 수는 싣지 않는다");
     await js(`window.__tut = null; window.__cmds = []; window.__bump = 34; ${tabBtn("박스")}.click(); 0`);
     await wait(1400);
     assert.equal(await js<unknown>(coach), null, "프리셋 튜토리얼을 끝내면 뜨지 않는다");
