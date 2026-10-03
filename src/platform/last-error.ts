@@ -1,6 +1,7 @@
 // 동반자가 못 뜬 까닭의 기록 — 동반자의 출력은 평소 버려지므로 파일에 남긴다. pokebuddy 명령(src/cli/run.ts)과 pokebuddy status(src/cli/status.ts)가 읽는다.
 // 모양: { at: 초(Date.now() / 1000), slug, message, reason? }. 지금 src/main/lifetime.ts reportFailure·clearFailure 와 같은 파일·모양이다. 실패해도 조용히
 import fs from "node:fs";
+import { writeAtomic } from "./atomic-write.js";
 import { readJsonFile } from "./json-file.js";
 import type { Paths } from "./paths.js";
 
@@ -11,11 +12,10 @@ export interface LastError {
   reason?: string;
 }
 
-// 까닭을 남긴다 — 덮어쓴다. 시각은 지금
+// 까닭을 남긴다 — 덮어쓴다. 시각은 지금. 원자적 쓰기 — 저장과 같이 tmp + rename, Windows 에서 잠깐 막히면 다시 (94-same-feature-diffs.md 5-9)
 export function writeLastError(paths: Pick<Paths, "home" | "lastError">, error: Omit<LastError, "at">): void {
   try {
-    fs.mkdirSync(paths.home, { recursive: true });
-    fs.writeFileSync(paths.lastError, JSON.stringify({ at: Date.now() / 1000, slug: error.slug, message: error.message, reason: error.reason }));
+    writeAtomic(paths.lastError, JSON.stringify({ at: Date.now() / 1000, slug: error.slug, message: error.message, reason: error.reason }));
   } catch {
     // 기록 실패는 무시
   }

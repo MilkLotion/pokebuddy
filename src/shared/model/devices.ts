@@ -47,7 +47,7 @@ export type PetDeviceAction = { petId: string } & (
   | { kind: "dex" } // 도감 보기 — 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30)
 );
 
-// 상점 기기 창 — 관리 창이 정해 보내는 것(ShopDeviceOpen)에 메인이 붙은 쪽을 더한다 (src/main/windows/devices.ts SHOP_DEVICE, Figma 05 `Shop / Device / Tool`)
+// 상점 기기 창 — 관리 창이 정해 보내는 것(ShopDeviceOpen)에 메인이 붙은 쪽을 더한다 (src/main/windows/devices.ts shopDeviceOf, Figma 05 `Shop / Device / Tool`)
 // 구매도 이 창에서 한다(2026-10-01 사용자 결정 A안). 수량·구매 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
 // 상점·가방 기기 창이 같이 그리는 화면 필드 — 머리 줄, 그림, 기록 칸
 export interface ItemFace {
@@ -76,7 +76,7 @@ export interface ShopDeviceView extends ShopDeviceOpen {
 // 기기 창에서 누른 단추 — productId 가 관리 창의 지금 상품과 다르면 버린다
 export type ShopDeviceAction = { productId: string } & ({ kind: "qty"; qty: number } | { kind: "buy" } | { kind: "pool" });
 
-// 가방 기기 창 — 상점 기기 창과 같은 틀 (src/main/windows/devices.ts BAG_DEVICE, Figma 05 `Bag / Device / Use`, 2026-10-01 사용자 결정 C안).
+// 가방 기기 창 — 상점 기기 창과 같은 틀 (src/main/windows/devices.ts bagDeviceOf, Figma 05 `Bag / Device / Use`, 2026-10-01 사용자 결정 C안).
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 가방에서 쓰지 않는다(판매만). 단추는 관리 창으로 돌아가 관리 창이 명령을 보낸다
 export interface BagDeviceOpen extends ItemFace {
   itemId: string;
@@ -97,7 +97,7 @@ export interface BagDeviceView extends BagDeviceOpen {
 export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" | "sell" } | { kind: "target"; petId: string } | { kind: "qty"; qty: number } | { kind: "go" } | { kind: "preset"; delta: -1 | 1 });
 
 // 파티 기기 창 — 교체 화면. 박스 탭 옆에 붙어 지금 프리셋의 파티 칸과 프리셋 칩을 보인다
-// (src/main/windows/devices.ts PARTY_DEVICE, Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
+// (src/main/windows/devices.ts partyDeviceOf, Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
 // 칸과 칩을 누르면 관리 창으로 돌아가 관리 창이 명령을 보낸다. 눌러서 들고 눌러서 놓는다 — 포켓몬 메뉴의 `옮기기` 와 같다
 export interface PartyDeviceSlot {
   index: number;
