@@ -7,9 +7,10 @@
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { PetDeviceAction, PetDeviceOpen, PetDeviceView } from "../shared/model/devices";
 import type { PetDeviceChannel } from "../shared/ipc/devices";
-import { bringUp, dockAt } from "./dex-window.js";
+import { bringUp } from "./dex-window.js";
+import { dockAt } from "./windows/placement.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 import { createGenGate } from "./device-gen.js";
 
 const CH = {

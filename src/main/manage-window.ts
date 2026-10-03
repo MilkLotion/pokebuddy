@@ -16,7 +16,7 @@ import type { TradeScreen } from "../shared/model/trade";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";

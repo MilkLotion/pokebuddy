@@ -7,7 +7,7 @@ import type { RegionChannel } from "../shared/ipc/overlays";
 import type { RegionInit, RegionRect } from "../shared/model/overlays";
 import { REGION_MIN, regionFits } from "../state/settings.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 
 const CH = {
   init: "region:init",

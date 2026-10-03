@@ -9,7 +9,7 @@ import { app, BrowserWindow, ipcMain, screen } from "electron";
 import type { AlertChannel } from "../shared/ipc/overlays";
 import type { AlertView } from "../shared/model/overlays";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 
 const CH = {
   show: "alert:show",

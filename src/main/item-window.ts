@@ -3,9 +3,10 @@
 // 파티 상세 기기 창(src/main/pet-window.ts)과 같은 방식이다. 무엇을 보일지는 관리 창이 정해 보낸다. 누른 단추는 관리 창으로 돌려보낸다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 종류마다 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import { bringUp, dockAt } from "./dex-window.js";
+import { bringUp } from "./dex-window.js";
+import { dockAt } from "./windows/placement.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 import { createGenGate } from "./device-gen.js";
 
 export interface ItemWindowChannels {

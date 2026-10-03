@@ -6,7 +6,7 @@ import type { StageChannel } from "../shared/ipc/stage";
 import { windowIcon } from "./paths";
 import type { Portraits } from "./portraits";
 import { petName, t } from "./text";
-import { webPreferencesOf } from "./window-options";
+import { webPreferencesOf } from "./windows/options";
 
 const CH = {
   list: "picker:list",

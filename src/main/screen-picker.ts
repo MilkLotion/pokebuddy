@@ -9,7 +9,7 @@ import type { ScreenOverlayInit, ScreenView } from "../shared/model/overlays";
 import type { ScreensChannel } from "../shared/ipc/overlays";
 import { resolveScreen, screenOrder, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "./layout";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 
 const CH = {
   init: "screens:init",

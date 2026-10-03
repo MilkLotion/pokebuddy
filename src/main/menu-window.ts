@@ -12,7 +12,7 @@ import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from 
 import type { MenuChannel } from "../shared/ipc/overlays";
 import { menuView, pickOf } from "./menus.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 
 const CH = {
   show: "menu:show",
