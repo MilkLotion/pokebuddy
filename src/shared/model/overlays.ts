@@ -33,7 +33,7 @@ export interface ScreenOverlayInit {
   pick: boolean;
 }
 
-// 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/notify/banner.ts 가 만든다. 종류의 목록은 ../names/banners.ts
+// 알림 배너 창 — 배너 하나의 문구와 `바로가기` 목적지. 문구는 src/view/banner.ts 가 만든다. 종류의 목록은 ../names/banners.ts
 export interface BannerView {
   key: string;
   kind: BannerKind;

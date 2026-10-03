@@ -5,7 +5,8 @@ import { nature as natureOf } from "../dex/natures";
 import { megaOf } from "../dex/mega";
 import type { Lang, NatureId } from "../shared/species";
 import type { DexOptions } from "../dex/data";
-import { toolName } from "../shop/catalog";
+import { isMetaKey } from "../dex/data";
+import { evoItemTable, itemTable } from "../dex/tables";
 import { getLang } from "./i18n";
 import { tableName } from "./name-table";
 
@@ -22,8 +23,13 @@ export const petName = (slug: string, lang: Lang = getLang()): string => {
 export const natureName = (id: NatureId | string, lang: Lang = getLang()): string => natureOf(id)?.name[lang] ?? String(id);
 
 // 마리의 화면 이름 — 종 이름이다. 별명은 보이지 않는다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다")
-// 도구·진화용 도구의 화면 이름 — 가방이 모르는 식별자를 만나도 화면이 비지 않게 식별자 그대로 둔다 (src/shop/catalog.ts toolName)
-export const itemName = (id: string, opts?: DexOptions): string => toolName(id, opts) ?? id;
+// 도구·진화용 도구의 화면 이름 — 표에 없으면 식별자 그대로 둔다(가방이 모르는 식별자를 만나도 화면이 비지 않게).
+// lang 은 기본이 한국어다 — 가방·상점·진화 글자는 언어와 무관하게 한국어, 알림 배너만 언어 설정을 넘긴다(2026-10-03 오케스트레이터 결정, 언어에 맞출지는 사용자에게 묻는 중)
+export function itemName(id: string, opts?: DexOptions, lang: Lang = "ko"): string {
+  if (isMetaKey(id)) return id;
+  const row = itemTable(opts)[id] ?? evoItemTable(opts)[id];
+  return (lang === "en" ? row?.en : undefined) ?? row?.ko ?? id;
+}
 
 export const petLabel = (pet: { species: string }, lang: Lang = getLang()): string => petName(pet.species, lang);
 

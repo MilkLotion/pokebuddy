@@ -3,32 +3,19 @@
 // 부화 배너는 결과 포켓몬을, 진화 배너는 결과 종을 보이지 않는다 (docs/specs/ui-components.md C-19)
 // 줍기 배너는 제목 `줍기` 와 "<주운 마리>가 <것>을 주웠어요" 문구다 (docs/specs/game.md "줍기")
 import { defOf } from "../achievement/defs.js";
-import { loadJson } from "../dex/data.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
-import { getLang, petName, t } from "../main/text.js";
+import { getLang, itemName, petName, t } from "./text.js";
 import { josa } from "../shared/josa.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { ManageRoute } from "../shared/model/route";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
-import { parseKey } from "./pending.js";
-
-type Named = Record<string, { ko?: string; en?: string } | string>;
-
-// 도구·진화용 도구의 화면 이름. 표에 없으면 식별자 그대로
-function itemName(id: string): string {
-  const lang = getLang();
-  for (const file of ["items.json", "evo-items.json"]) {
-    const e = loadJson<Named>(file)[id];
-    if (e && typeof e === "object") return (lang === "en" ? e.en : e.ko) ?? e.ko ?? id;
-  }
-  return id;
-}
+import { parseKey } from "../notify/pending.js";
 
 // 주운 것의 화면 이름 — 포인트는 "120P", 포켓몬은 종 이름
 export function foundThing(rec: FindRecordV3): string {
   if (rec.kind === "points") return `${rec.amount}P`;
   if (rec.kind === "pokemon") return petName(rec.ref);
-  return itemName(rec.ref);
+  return itemName(rec.ref, undefined, getLang()); // 배너는 언어 설정을 따른다 — 가방·상점은 한국어다
 }
 
 // 줍기 문구 — "피카츄가 경험사탕S를 주웠어요", 포켓몬이면 "피카츄가 이브이를 데려왔어요". 주운 마리는 지금 종 이름

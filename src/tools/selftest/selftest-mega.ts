@@ -12,7 +12,7 @@ import { pmdSources } from "../../main/art/stage-art";
 import { overworldUrl } from "../../main/art/overworld-art";
 import { portraitIds } from "../../main/art/portraits";
 import { petName } from "../../main/text";
-import { bannerOf } from "../../notify/banner";
+import { bannerOf } from "../../view/banner";
 import { refresh } from "../../notify/queue";
 import { keep, place } from "../../party/placement";
 import { empty, normalize } from "../../save/v3";

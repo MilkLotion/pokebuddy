@@ -48,6 +48,7 @@ import { gainOf } from "../state/settings";
 import { SOUND_RULES } from "../state/rules";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
+import { bannerOf } from "../view/banner";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { ManageRoute } from "../shared/model/route";
@@ -461,7 +462,7 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
     onGo: (route) => openManageWindow(route),
     onDone: () => rt.notifier?.done(),
   });
-  rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b) }); // 시각은 전역 시계의 틱 시각
+  rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b), bannerOf }); // 시각은 전역 시계의 틱 시각
   const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
   rt.party = saveSource;
 
