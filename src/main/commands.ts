@@ -19,7 +19,7 @@ import { unlockRules } from "../dex/unlocks";
 import { itemOf } from "../bag/use";
 import { argsFromCommand } from "../tx/args";
 import type { SaveV3 } from "../shared/save-v3";
-import type { TradeActionResult, TradeSession } from "../trade/session";
+import type { TradeActionResult, TradeSession } from "../online/trade-session";
 
 export interface CommandSettings {
   hidden(): boolean;

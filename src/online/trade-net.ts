@@ -7,12 +7,12 @@
 //   제안은 개체 지문(ref)을 함께 보낸다. 서버 저장에 없는 개체는 TRADE_PET_NOT_SYNCED, 이미 교환으로 보낸 개체는 TRADE_PET_TRADED
 //   다른 활성 교환에 올라가 있는 개체는 TRADE_PET_BUSY (design-p2.md 17절 D31, 계정 무관)
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "../online/client.js";
-import { createSessionGate, type SessionGate } from "../online/session.js";
-import { tradeCodeOf } from "../online/codes.js";
-import { callRpc } from "../online/server-call.js";
+import { createOnlineClient, type OnlineClientOptions, type SessionStorage } from "./client.js";
+import { createSessionGate, type SessionGate } from "./session.js";
+import { tradeCodeOf } from "./codes.js";
+import { callRpc } from "./server-call.js";
 import type { TradeCode } from "../shared/names/online-codes.js";
-import type { PetRef } from "./core.js";
+import type { PetRef } from "../trade/exchange.js";
 
 export type { SessionStorage };
 
@@ -127,14 +127,4 @@ export function createTradeNet(opts: TradeNetOptions): TradeNet {
     },
     subscribe,
   };
-}
-
-// 링크에서 토큰을 꺼낸다 — https …/trade#<토큰>, pokebuddy://trade/<토큰>, 토큰만 붙여 넣은 것
-export function tokenOf(input: string): string | null {
-  const text = input.trim();
-  if (!text) return null;
-  const hash = text.indexOf("#");
-  const deep = /^pokebuddy:\/\/trade\/([A-Za-z0-9_-]+)/.exec(text);
-  const raw = deep ? deep[1] : hash >= 0 ? text.slice(hash + 1) : text;
-  return raw && /^[A-Za-z0-9_-]{16,64}$/.test(raw) ? raw : null;
 }

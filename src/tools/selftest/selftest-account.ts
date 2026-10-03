@@ -9,7 +9,7 @@ import { randomBytes } from "node:crypto";
 import { createOnlineClient, memoryStorage } from "../../online/client";
 import { createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Account } from "../../online/account";
 import { authCodeOf } from "../../online/codes";
-import { createTradeNet } from "../../trade/net";
+import { createTradeNet } from "../../online/trade-net";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff";
 import { dataVersion, onlineConfig } from "../../trade/config";

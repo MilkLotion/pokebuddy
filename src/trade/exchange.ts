@@ -1,13 +1,13 @@
-// 친구 교환의 규칙 — 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
+// 친구 교환의 규칙(저장 사본만 고친다) — 서버 호출은 src/online/trade-net.ts, 진행은 src/online/trade-session.ts. 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 //
 // 순수 함수다. 저장 사본을 고치고 결과만 돌려준다. 서버와 파일은 모른다.
-//   올리기    내 개체의 값을 TradePet 으로 만든다. 단일 포켓몬은 올리지 못한다. 지문(refOf)을 함께 보낸다
+//   올리기    내 개체의 값을 TradePet 으로 만든다(checkOffer · offerOf). 단일 포켓몬은 올리지 못한다. 지문(refOf)을 함께 보낸다
 //   받기 검사 친구가 올린 값을 검사한다. 규칙 밖이면 확정할 수 없다
 //   잠그기    확정할 때 pending 을 남긴다. 걸린 개체는 값을 바꾸는 명령(진화·가방 사용·모습)을 거절한다
 //   반영      서버가 완료를 알리면 한 번의 저장으로 맞바꾸고 pending 을 지운다. pending 이 없으면 아무것도 하지 않는다
 // 받은 개체는 보낸 개체가 있던 자리(파티 칸 또는 박스 칸)에 들어간다. 그래서 개체 수와 칸 수가 바뀌지 않는다.
 import { isSinglePet } from "../dex/forms.js";
-import { isTradeLocked, pendingTradeOf } from "../party/pet-actions.js";
+import { pendingTradeOf } from "../party/pet-actions.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
@@ -45,24 +45,18 @@ export type LockFailure = OfferFailure | "busy";
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
 
-// [임시] 옛 이름 — ./session.ts(계약 레인 C7)가 새 자리(src/party/pet-actions.ts pendingTradeOf)에서 가져오면 지운다
-//   교환 잠금은 src/party/pet-actions.ts, 단일 포켓몬 판정은 src/dex/forms.ts 에 있다
-export const pendingOf = pendingTradeOf;
-
-// 교환에 걸려 값을 바꾸면 안 되는 개체인가
-
 // 올릴 수 있는가
-export function offerable(save: SaveV3, petId: string, opts?: DexOptions): { ok: true; pet: PetV3 } | { ok: false; reason: OfferFailure } {
+export function checkOffer(save: SaveV3, petId: string, opts?: DexOptions): { ok: true; pet: PetV3 } | { ok: false; reason: OfferFailure } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (isSinglePet(pet, opts)) return { ok: false, reason: "single" };
-  const pending = pendingOf(save);
+  const pending = pendingTradeOf(save);
   if (pending && pending.petId !== petId) return { ok: false, reason: "locked" };
   return { ok: true, pet };
 }
 
 // 올릴 값
-export function snapshot(pet: PetV3): TradePet {
+export function offerOf(pet: PetV3): TradePet {
   return {
     species: pet.species,
     shiny: pet.shiny,
@@ -118,18 +112,18 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
 }
 
 // 확정할 때 잠근다. 같은 채널·같은 개체면 판 번호만 바꾼다
-export function lock(save: SaveV3, channelId: string, petId: string, offerRev: number, opts?: DexOptions): { ok: true } | { ok: false; reason: LockFailure } {
-  const pending = pendingOf(save);
+export function lockTrade(save: SaveV3, channelId: string, petId: string, offerRev: number, opts?: DexOptions): { ok: true } | { ok: false; reason: LockFailure } {
+  const pending = pendingTradeOf(save);
   if (pending && pending.channelId !== channelId) return { ok: false, reason: "busy" };
-  const res = offerable(save, petId, opts);
+  const res = checkOffer(save, petId, opts);
   if (!res.ok) return res;
   save.trade = { pending: { channelId, petId, offerRev, received: pending?.received ?? null } };
   return { ok: true };
 }
 
 // 취소·만료·확정 풀기. 다른 채널의 pending 은 건드리지 않는다
-export function unlock(save: SaveV3, channelId: string): boolean {
-  const pending = pendingOf(save);
+export function unlockTrade(save: SaveV3, channelId: string): boolean {
+  const pending = pendingTradeOf(save);
   if (!pending || pending.channelId !== channelId) return false;
   save.trade = { pending: null };
   return true;
@@ -144,8 +138,8 @@ export type ApplyResult =
   | { ok: false; reason: "bad-received" | "no-pet" };
 
 // 서버가 완료를 알렸다. 보낸 개체를 빼고 받은 개체를 그 자리에 넣는다. 도감에 기록한다
-export function apply(save: SaveV3, channelId: string, received: unknown, now: number, opts?: DexOptions): ApplyResult {
-  const pending = pendingOf(save);
+export function applyTrade(save: SaveV3, channelId: string, received: unknown, now: number, opts?: DexOptions): ApplyResult {
+  const pending = pendingTradeOf(save);
   if (!pending || pending.channelId !== channelId) return { ok: true, applied: false }; // 이미 반영했다
   const check = validateReceived(received, opts);
   if (!check.ok) return { ok: false, reason: "bad-received" };

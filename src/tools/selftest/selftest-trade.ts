@@ -1,12 +1,12 @@
 // 친구 교환 로컬 규칙 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-trade.js
 //
-// 순수 함수(src/trade/core.ts)와 거래 명령(trade.lock · trade.unlock · trade.apply)을 본다. 서버와 파일은 쓰지 않는다.
+// 순수 함수(src/trade/exchange.ts)와 거래 명령(trade.lock · trade.unlock · trade.apply)을 본다. 서버와 파일은 쓰지 않는다.
 // 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import path from "node:path";
 import { devRunAt, onlineConfig } from "../../trade/config";
-import { apply, lock, offerable, refOf, snapshot, unlock, validateReceived, type TradePet } from "../../trade/core";
+import { applyTrade, checkOffer, lockTrade, offerOf, refOf, unlockTrade, validateReceived, type TradePet } from "../../trade/exchange";
 import { newPet } from "../../party/create";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
 import { empty, normalize } from "../../save/v3";
@@ -41,13 +41,13 @@ const eevee: TradePet = {
 // (1) 올릴 값과 단일 포켓몬
 {
   const s = seed();
-  const snap = snapshot(s.pets[0]!);
+  const snap = offerOf(s.pets[0]!);
   assert.equal(snap.species, "charmander");
   assert.equal(snap.level, 30);
   assert.ok(!("id" in snap) && !("buffs" in snap) && !("home" in snap), "개체 ID·버프·위치는 옮기지 않는다");
-  assert.equal(offerable(s, "p1").ok, true);
-  assert.deepStrictEqual(offerable(s, "p3"), { ok: false, reason: "single" }, "전설은 올리지 못한다");
-  assert.deepStrictEqual(offerable(s, "zz"), { ok: false, reason: "no-pet" });
+  assert.equal(checkOffer(s, "p1").ok, true);
+  assert.deepStrictEqual(checkOffer(s, "p3"), { ok: false, reason: "single" }, "전설은 올리지 못한다");
+  assert.deepStrictEqual(checkOffer(s, "zz"), { ok: false, reason: "no-pet" });
   assert.equal(isSinglePet({ species: "solgaleo", evolved: ["cosmog", "cosmoem"] }), true, "공유 sid 계열도 단일 포켓몬");
   process.stdout.write("(1) 올릴 값·단일 포켓몬  ok\n");
 }
@@ -79,13 +79,13 @@ const eevee: TradePet = {
 // (3) 잠그기·풀기
 {
   const s = seed();
-  assert.deepStrictEqual(lock(s, "ch1", "p1", 3), { ok: true });
+  assert.deepStrictEqual(lockTrade(s, "ch1", "p1", 3), { ok: true });
   assert.equal(isTradeLocked(s, "p1"), true);
-  assert.deepStrictEqual(lock(s, "ch1", "p1", 4), { ok: true }, "같은 채널은 판 번호만 바꾼다");
+  assert.deepStrictEqual(lockTrade(s, "ch1", "p1", 4), { ok: true }, "같은 채널은 판 번호만 바꾼다");
   assert.equal(s.trade?.pending?.offerRev, 4);
-  assert.deepStrictEqual(lock(s, "ch2", "p2", 1), { ok: false, reason: "busy" }, "다른 채널은 잠그지 못한다");
-  assert.equal(unlock(s, "ch2"), false, "다른 채널의 잠금은 풀지 않는다");
-  assert.equal(unlock(s, "ch1"), true);
+  assert.deepStrictEqual(lockTrade(s, "ch2", "p2", 1), { ok: false, reason: "busy" }, "다른 채널은 잠그지 못한다");
+  assert.equal(unlockTrade(s, "ch2"), false, "다른 채널의 잠금은 풀지 않는다");
+  assert.equal(unlockTrade(s, "ch1"), true);
   assert.equal(isTradeLocked(s, "p1"), false);
   process.stdout.write("(3) 잠그기·풀기  ok\n");
 }
@@ -93,8 +93,8 @@ const eevee: TradePet = {
 // (4) 반영 — 파티 칸: 같은 칸, 숨김 유지, 새 ID, 도감 기록, 첫 선택 기록 지움
 {
   const s = seed();
-  lock(s, "ch1", "p1", 3);
-  const res = apply(s, "ch1", eevee, T0 + 5000);
+  lockTrade(s, "ch1", "p1", 3);
+  const res = applyTrade(s, "ch1", eevee, T0 + 5000);
   assert.equal(res.ok && res.applied, true);
   if (!res.ok || !res.applied) throw new Error("반영 실패");
   assert.equal(res.newPetId, "p4", "지금 가장 큰 번호 다음 — 보낸 개체의 번호를 다시 쓰지 않는다");
@@ -110,16 +110,16 @@ const eevee: TradePet = {
   assert.ok(s.dex.obtained.includes("eevee"), "도감에 획득을 기록한다");
   assert.equal(s.starterPetId, null, "첫 선택 개체를 보냈으면 기록을 지운다");
   assert.equal(s.trade?.pending, null, "pending 을 지운다");
-  assert.deepStrictEqual(apply(s, "ch1", eevee, T0 + 6000), { ok: true, applied: false }, "같은 완료를 두 번 받아도 한 번만 반영한다");
+  assert.deepStrictEqual(applyTrade(s, "ch1", eevee, T0 + 6000), { ok: true, applied: false }, "같은 완료를 두 번 받아도 한 번만 반영한다");
   process.stdout.write("(4) 파티 칸 반영  ok\n");
 }
 
 // (4b) 반영 — 적용하지 않은 프리셋의 칸: 다른 프리셋으로 바꾼 뒤 완료가 와도 받은 개체가 그 칸에 들어간다 (2026-10-02 파티 프리셋)
 {
   const s = seed();
-  lock(s, "ch1", "p1", 3);
+  lockTrade(s, "ch1", "p1", 3);
   assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
-  const res = apply(s, "ch1", eevee, T0 + 5000);
+  const res = applyTrade(s, "ch1", eevee, T0 + 5000);
   if (!res.ok || !res.applied) throw new Error("반영 실패");
   assert.deepStrictEqual(res.where, { preset: 0, slot: 0 });
   assert.deepStrictEqual(slotsOfPreset(s, 0)?.[0], { state: "pokemon", petId: res.newPetId, hidden: true }, "받은 개체가 그 프리셋의 같은 칸에, 숨김 그대로");
@@ -132,16 +132,16 @@ const eevee: TradePet = {
 // (5) 반영 — 박스 칸, 이로치 기록
 {
   const s = seed();
-  lock(s, "ch9", "p2", 1);
-  const res = apply(s, "ch9", { ...eevee, shiny: true }, T0);
+  lockTrade(s, "ch9", "p2", 1);
+  const res = applyTrade(s, "ch9", { ...eevee, shiny: true }, T0);
   assert.equal(res.ok && res.applied, true);
   if (res.ok && res.applied) assert.deepStrictEqual(res.where, { box: 0, slot: 2 });
   assert.equal(s.boxes[0]!.slots[2], "p4");
   assert.ok(s.dex.shinyObtained.includes("eevee"));
-  assert.deepStrictEqual(apply(seed(), "ch9", eevee, T0), { ok: true, applied: false }, "pending 이 없으면 아무것도 하지 않는다");
+  assert.deepStrictEqual(applyTrade(seed(), "ch9", eevee, T0), { ok: true, applied: false }, "pending 이 없으면 아무것도 하지 않는다");
   const bad = seed();
-  lock(bad, "ch9", "p2", 1);
-  assert.deepStrictEqual(apply(bad, "ch9", { ...eevee, species: "mewtwo" }, T0), { ok: false, reason: "bad-received" });
+  lockTrade(bad, "ch9", "p2", 1);
+  assert.deepStrictEqual(applyTrade(bad, "ch9", { ...eevee, species: "mewtwo" }, T0), { ok: false, reason: "bad-received" });
   assert.equal(bad.trade?.pending?.channelId, "ch9", "반영하지 못하면 pending 을 남긴다");
   process.stdout.write("(5) 박스 칸 반영  ok\n");
 }
@@ -149,7 +149,7 @@ const eevee: TradePet = {
 // (6) 저장 읽기 — 깨진 pending 은 비운다
 {
   const s = seed();
-  lock(s, "ch1", "p1", 2);
+  lockTrade(s, "ch1", "p1", 2);
   const back = normalize(JSON.parse(JSON.stringify(s)), T0);
   assert.equal(back?.trade?.pending?.petId, "p1", "pending 을 보존한다");
   const broken = JSON.parse(JSON.stringify(s));
@@ -198,11 +198,11 @@ const eevee: TradePet = {
   assert.deepStrictEqual(refOf(p2), { id: "p2", since: T0 }, "지문은 id 와 만든 시각");
   assert.ok(Number.isInteger(refOf(p2).since), "since 는 정수 ms");
   assert.deepStrictEqual(Object.keys(refOf(p2)).sort(), ["id", "since"], "지문에 다른 값을 싣지 않는다");
-  assert.equal("id" in snapshot(p2) || "since" in snapshot(p2), false, "올릴 값(친구가 보는 값)에는 지문이 없다");
+  assert.equal("id" in offerOf(p2) || "since" in offerOf(p2), false, "올릴 값(친구가 보는 값)에는 지문이 없다");
   p2.species = "wartortle"; p2.level = 20; p2.evolved = ["squirtle"];
   assert.deepStrictEqual(refOf(p2), { id: "p2", since: T0 }, "진화·성장해도 지문은 그대로");
-  assert.equal(lock(s, "ch9", "p1", 1).ok, true);
-  const res = apply(s, "ch9", snapshot(p2), T0 + 5_000);
+  assert.equal(lockTrade(s, "ch9", "p1", 1).ok, true);
+  const res = applyTrade(s, "ch9", offerOf(p2), T0 + 5_000);
   assert.equal(res.ok && res.applied, true);
   const got = res.ok && res.applied ? s.pets.find((p) => p.id === res.newPetId)! : null;
   assert.ok(got && got.id !== "p1" && got.since === T0 + 5_000, "받은 개체는 새 id·새 since");

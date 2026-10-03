@@ -202,7 +202,7 @@ export interface SettingsV3 {
   display: Record<string, unknown>;
 }
 
-// 친구 교환에 걸린 개체 — 확정할 때 남기고, 반영·취소·만료 때 지운다 (src/trade/core.ts)
+// 친구 교환에 걸린 개체 — 확정할 때 남기고, 반영·취소·만료 때 지운다 (src/trade/exchange.ts)
 // 저장 형식 번호는 올리지 않는다. 없으면 빈 값으로 읽는다
 export interface TradePendingV3 {
   channelId: string; // 서버의 공유 채널

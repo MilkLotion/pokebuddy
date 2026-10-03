@@ -43,5 +43,3 @@ export function dataVersion(opts?: DexOptions): string {
   if (!opts) cached = v;
   return v;
 }
-
-export const linkOf = (config: OnlineConfig, token: string): string => `${config.linkBase}#${token}`;

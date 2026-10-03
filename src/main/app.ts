@@ -70,6 +70,7 @@ import type { Command } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/model/stage";
 import { currentTutorial } from "../tutorial/queue";
+import { isTradeLink } from "../trade/link.js";
 
 // 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
 let workMs = 0;
@@ -1094,7 +1095,7 @@ function isAccountLink(arg: string): boolean {
 
 // 교환 링크 — 인자 가운데 pokebuddy://trade/ 로 시작하는 것
 function tradeLinkOf(argv: readonly string[]): string | null {
-  return argv.find((a) => a.startsWith("pokebuddy://trade/")) ?? null;
+  return argv.find((a) => isTradeLink(a)) ?? null;
 }
 
 // 교환 링크로 참가하고 교환 모달을 연다. 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다

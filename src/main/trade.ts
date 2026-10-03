@@ -1,4 +1,4 @@
-// 친구 교환의 메인 쪽 입구 — 세션 저장소(safeStorage)와 교환 흐름(src/trade/session.ts)을 잇는다.
+// 친구 교환의 메인 쪽 입구 — 세션 저장소(safeStorage)와 교환 흐름(src/online/trade-session.ts)을 잇는다.
 // 설계는 worklog/records/trade/record.md "앱 구조", "세션 저장", 세션 파일 상태는 worklog-mac/records/cloud-authority/design-p2.md 2절·12절 Q3
 //
 // Supabase 클라이언트는 메인 프로세스에서만 쓴다. 렌더러에는 교환 보기(TradeViewModel)만 넘긴다. 토큰은 넘기지 않는다.
@@ -10,10 +10,11 @@ import path from "node:path";
 import { app, safeStorage } from "electron";
 import { PATHS } from "./paths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createTradeNet, type SessionStorage } from "../trade/net.js";
+import { createTradeNet, type SessionStorage } from "../online/trade-net.js";
 import type { SessionGate } from "../online/session.js";
-import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
-import { dataVersion, devRunAt, linkOf, onlineConfig } from "../trade/config.js";
+import { createTradeSession, type TradeSession, type TradeViewModel } from "../online/trade-session.js";
+import { dataVersion, devRunAt, onlineConfig } from "../trade/config.js";
+import { linkOf } from "../trade/link.js";
 import type { GameV3 } from "./game";
 import { stampOf } from "../platform/move-file.js";
 
@@ -183,7 +184,7 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun())
 
 // 앱이 준비된 뒤(safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
 // shared — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트와 세션 관문(src/main/online.ts). 없으면 따로 만든다
-// onSettled — 교환 반영을 서버에 알린 뒤. 앱이 클라우드 저장을 바로 올린다 (src/trade/session.ts)
+// onSettled — 교환 반영을 서버에 알린 뒤. 앱이 클라우드 저장을 바로 올린다 (src/online/trade-session.ts)
 // hold — 새 교환(만들기·참가)을 막아야 하는가. 로그인 계정의 클라우드 저장이 올릴 수 있는 상태가 아니다
 // account — 익명 계정 교환 거절과 제안 전 클라우드 올리기 (design-p2.md 14절). 없으면 서버가 거절한다
 //   mayIssue 가 거짓이면 교환은 익명 계정을 만들지 않는다 — 분실·주인 있고 세션 없음(검수 H1)
@@ -204,7 +205,7 @@ export function createMainTrade(
     read: game.read,
     protocol: config.protocol,
     dataVersion: dev.dataVersion ?? dataVersion(),
-    linkOf: (token) => linkOf(config, token),
+    linkOf: (token) => linkOf(config.linkBase, token),
     onView: (view) => { for (const fn of listeners) fn(view); },
     ...(onSettled ? { onSettled } : {}),
     ...(hold ? { hold } : {}),
