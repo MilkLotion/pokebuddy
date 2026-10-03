@@ -12,7 +12,8 @@
 import type { BrowserWindow } from "electron";
 import type { CoachView, HitReply, PointerMsg, StageState } from "../shared/model/stage";
 import type { CareAction } from "../state/types";
-import { assignScreens, clampInStage, homeOf, screenRefOfInfo, stackShift, toLocal, type Home, type PlayLane, type Rect, type ScreenRef, type Size, type Spot } from "./layout";
+import { assignScreens, clampInStage, homeOf, screenRefOfInfo, stackShift, toLocal, type Home, type PlayLane, type ScreenRef, type Spot } from "./layout";
+import type { Rect, Size } from "../shared/geometry";
 import type { PartyPet } from "./save-party";
 import type { Stage } from "./stage";
 import type { StageWindow } from "./stage-window";

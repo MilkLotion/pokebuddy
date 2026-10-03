@@ -9,7 +9,7 @@ import { bridgeMailbox, createDispatcher, type Dispatcher } from "../commands/di
 import type { MailServer } from "../save/mailbox";
 import type { Command, CommandResult } from "../shared/command";
 import type { CommandName } from "../shared/names/commands";
-import type { Size } from "./layout";
+import type { Size } from "../shared/geometry";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
