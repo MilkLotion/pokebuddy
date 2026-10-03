@@ -36,8 +36,8 @@ import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
 import { sellablePet } from "../shop/sell-pet";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
-import { createAppUpdater, urgentStep, type AppUpdater } from "./updater";
-import { createMacUpdater } from "./mac-updater";
+import { createAppUpdater, urgentStep, type AppUpdater } from "./update/updater";
+import { createMacUpdater } from "./update/mac-updater";
 import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
@@ -226,11 +226,11 @@ let tray: TrayHandle | null = null;
 // 패치노트 — 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다. 그래서 첫 선택 창이 저장을 만들기 전에 만든다
 const hadSave = fs.existsSync(PATHS.save);
 let patchNotes: PatchNotes | null = null;
-// 업데이트 필요 — 서버가 이 앱 버전을 거절한 실행. 바로 확인하고, 받으면 창을 한 번 띄운다 (src/main/updater.ts urgentStep)
+// 업데이트 필요 — 서버가 이 앱 버전을 거절한 실행. 바로 확인하고, 받으면 창을 한 번 띄운다 (src/main/update/updater.ts urgentStep)
 let updateUrgent = false;
 let updateChecked = false;
 let updateAsked = false;
-let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe·mac 앱)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/updater.ts)
+let updater: AppUpdater | null = null; // 앱 업데이트 — 설치본(Windows exe·mac 앱)만 확인한다. 개발 실행·npm 설치본은 버전만 (src/main/update/updater.ts)
 let lastState: string | null = null;
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────
@@ -453,7 +453,7 @@ function startUpdater(): void {
   updater = createAppUpdater({
     version: app.getVersion(),
     enabled: installed,
-    // mac 은 자체 엔진 — Squirrel.Mac 은 정식 서명이 없는 앱을 바꾸지 않는다 (src/main/mac-updater.ts). Windows 는 electron-updater
+    // mac 은 자체 엔진 — Squirrel.Mac 은 정식 서명이 없는 앱을 바꾸지 않는다 (src/main/update/mac-updater.ts). Windows 는 electron-updater
     ...(installed && process.platform === "darwin"
       ? {
           updater: createMacUpdater({

@@ -7,18 +7,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import {
-  INSTALL_SCRIPT,
-  MacUpdater,
-  bundleOf,
-  compareVersions,
-  feedUrls,
-  manualReason,
-  parseLatestMac,
-  parseUpdateConfig,
-  pickFile,
-  startInstaller,
-} from "../../main/mac-updater";
+import { bundleOf, compareVersions, feedUrls, manualReason, parseLatestMac, parseUpdateConfig, pickFile } from "../../main/update/mac-feed";
+import { INSTALL_SCRIPT, MacUpdater, startInstaller } from "../../main/update/mac-updater";
 import { makeTmp } from "../harness/tmp-dir";
 
 const LATEST = `version: 0.9.0

@@ -107,11 +107,16 @@ export function createStage(opts: StageOptions): Stage {
     p.offset = { x: pos.x - s.x - p.roam.x, y: pos.y - s.y - p.roam.y };
     return pos;
   };
+  // 성격 축 → 움직임 값. 잠드는 빠르기는 종의 졸림으로 나눈다 — 처음 만들 때와 변덕(quirky)의 축이 바뀔 때가 같은 계산이다
+  const paramsOf = (axes: ReturnType<typeof axesAt>, species: string): ReturnType<typeof paramsFor> => {
+    const params = paramsFor(axes);
+    params.sleepScale /= profile(species).sleepiness;
+    return params;
+  };
 
   function makeMotion(pet: PartyPet, look: Look, zoom: number): PetMotion | null {
     if (buddyMode === "off") return null;
-    const params = pet.nature ? paramsFor(axesAt(pet.nature, pet.id, now())) : { ...NEUTRAL_PARAMS };
-    if (pet.nature) params.sleepScale /= profile(pet.species).sleepiness;
+    const params = pet.nature ? paramsOf(axesAt(pet.nature, pet.id, now()), pet.species) : { ...NEUTRAL_PARAMS };
     return createPetMotion({
       caps: capsOf({ anims: look.art.anims, work: look.art.work, workOnly: look.art.workOnly, zoom }),
       mode: buddyMode,
@@ -239,9 +244,7 @@ export function createStage(opts: StageOptions): Stage {
           const axes = axesAt("quirky", id, t);
           const key = Object.values(axes).join(",");
           if (key !== p.quirkKey) {
-            const params = paramsFor(axes);
-            params.sleepScale /= profile(p.pet.species).sleepiness;
-            p.motion.tune(params);
+            p.motion.tune(paramsOf(axes, p.pet.species));
             p.quirkKey = key;
           }
         }
