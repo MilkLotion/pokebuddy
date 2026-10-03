@@ -156,6 +156,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     return o.net.ensureSession(issue);
   };
   const closedPhase = (): boolean => state.phase === "done" || state.phase === "closed";
+  // 저장에 걸린 교환 — 저장이 없으면 없다
+  const pendingNow = (): ReturnType<typeof pendingTradeOf> => { const save = o.read(); return save ? pendingTradeOf(save) : null; };
 
   const stopWatching = (): void => {
     if (unsubscribe) unsubscribe();
@@ -188,7 +190,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   // 서버가 끝났다고 알린 채널을 로컬에 맞춘다
   const settle = async (view: ChannelView): Promise<void> => {
     if (view.status === "done") {
-      if ((o.read() ? pendingTradeOf(o.read()!) : null)?.channelId === view.id && o.beforeApply?.() === true) return;
+      if (pendingNow()?.channelId === view.id && o.beforeApply?.() === true) return;
       const res = tx("trade.apply", { channelId: view.id, received: view.friend_offer });
       if (!res.ok) { fail("LOCAL", String(res.reason)); return; }
       const result = res.result as { applied: boolean; petId?: string };
@@ -233,7 +235,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     const view = res.data;
     // 친구가 제안을 바꿔 판 번호가 달라졌으면 내 확정은 풀렸다. 로컬 잠금도 푼다
     // 판 번호가 같으면 풀지 않는다 — 확정하기 전에 읽은 오래된 보기일 수 있다
-    const pending = (() => { const s = o.read(); return s ? pendingTradeOf(s) : null; })();
+    const pending = pendingNow();
     if (view.status === "joined" && pending?.channelId === id && !view.my_ready && pending.offerRev !== view.offer_rev) tx("trade.unlock", { channelId: id });
     let friendPet: TradePet | null = null;
     let friendBlocked: ReceiveFailure | null = null;
@@ -259,8 +261,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     emit({ busy: true });
     const s = await session();
     if (stopped) return;
-    const save = o.read();
-    const pending = save ? pendingTradeOf(save) : null;
+    const pending = pendingNow();
     if (!s.ok) {
       // 세션이 없고 만들지 않는다 — 복구할 교환이 없으면 기다릴 것이 없다. 계정이 바뀌면 앱이 세션을 새로 만든다
       if (s.code === "TRADE_LOGIN_REQUIRED" && !pending) { emit({ busy: false }); return; }
@@ -295,14 +296,22 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     return null;
   };
 
-  const create: TradeSession["create"] = async () => {
+  // 새 채널(만들기·참가)의 앞 검사 — 진행 중 교환 → 클라우드 대기(hold) → 조작 시작(begin) → midway → 세션 → 익명. 통과하면 null
+  //   midway 는 begin 뒤, 세션 확보 앞에 본다(참가의 링크 검사). 이 차례를 바꾸지 않는다 — 거절 까닭과 보기의 busy·error 가 차례로 정해진다
+  const openChannel = async (midway?: () => TradeActionResult | null): Promise<TradeActionResult | null> => {
     if (channelId && !closedPhase()) return refuse("in-trade");
     if (await o.hold?.()) return refuse("cloud-wait");
-    const no = begin();
+    const no = begin() ?? midway?.() ?? null;
     if (no) return no;
     const s = await session();
     if (!s.ok) return failNet(s.code, s.detail);
     if (await anonymous()) return release("login-required");
+    return null;
+  };
+
+  const create: TradeSession["create"] = async () => {
+    const no = await openChannel();
+    if (no) return no;
     const res = await o.net.createChannel(o.protocol, o.dataVersion);
     if (!res.ok) return failNet(res.code, res.detail);
     stopWatching();
@@ -313,16 +322,10 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   };
 
   const join: TradeSession["join"] = async (link) => {
-    if (channelId && !closedPhase()) return refuse("in-trade");
-    if (await o.hold?.()) return refuse("cloud-wait");
-    const no = begin();
-    if (no) return no;
     const token = tokenOf(link);
-    if (!token) return fail("TRADE_LINK_INVALID");
-    const s = await session();
-    if (!s.ok) return failNet(s.code, s.detail);
-    if (await anonymous()) return release("login-required");
-    const res = await o.net.joinChannel(token, o.protocol, o.dataVersion);
+    const no = await openChannel(() => (token ? null : fail("TRADE_LINK_INVALID")));
+    if (no) return no;
+    const res = await o.net.joinChannel(token!, o.protocol, o.dataVersion); // 토큰이 없으면 midway 가 거절했다
     if (!res.ok) return failNet(res.code, res.detail);
     stopWatching();
     channelId = res.data;
