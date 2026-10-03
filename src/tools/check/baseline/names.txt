@@ -1,43 +1,37 @@
 # names 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-names.js --update-baseline)
 banned-head: getLang @ src/main/text.ts
 banned-head: putPet @ src/box/slots.ts
-banned-head: putStrays @ src/save/v3.ts
 banned-head: resolveScreen @ src/main/layout.ts
 banned-head: resolveState @ src/follow/state.ts
 banned-head: showAlert @ src/main/alert-window.ts
 banned-head: showHeld @ src/main/halt-dialog.ts
 banned-head: showKicked @ src/main/halt-dialog.ts
-duplicate: claim @ src/achievement/core.ts, src/save/writer.ts
+duplicate: claim @ src/achievement/claim.ts, src/save/writer.ts
 duplicate: dayPartOf @ src/dex/evolve.ts, src/dex/unlocks.ts
-duplicate: empty @ src/save/legacy.ts, src/save/v3.ts
-duplicate: evaluate @ src/achievement/core.ts, src/dex/unlocks.ts
+duplicate: evaluate @ src/achievement/evaluate.ts, src/dex/unlocks.ts
 duplicate: isNatureId @ src/dex/natures.ts, src/save/rules.ts
-duplicate: normalize @ src/save/legacy.ts, src/save/v3.ts
+duplicate: isObj @ src/save/raw-values.ts, src/tx/handlers/args.ts
 duplicate: open @ src/egg/open.ts, src/save/crypt.ts
-duplicate: pendingOf @ src/notify/queue.ts, src/trade/core.ts
 duplicate: pidAlive @ src/follow/state.ts, src/save/writer.ts
-duplicate: read @ src/save/legacy.ts, src/save/store.ts
+duplicate: slotOf @ src/party/visibility.ts, src/tx/handlers/args.ts
 duplicate: snapshot @ src/trade/core.ts, src/tx/snapshot.ts
 duplicate: stageOf @ src/dex/evo.ts, src/main/layout.ts
-duplicate: write @ src/save/legacy.ts, src/save/store.ts
+one-word: alive @ src/notify/pending.ts
 one-word: apply @ src/trade/core.ts
 one-word: baseline @ src/agents/usage.ts
 one-word: begin @ src/party/starter.ts
-one-word: button @ src/renderer/device/item-device.ts
 one-word: buy @ src/shop/buy.ts
 one-word: candidates @ src/dex/evolve.ts
 one-word: check @ src/dex/unlocks.ts
-one-word: claim @ src/achievement/core.ts
+one-word: claim @ src/achievement/claim.ts
 one-word: claim @ src/save/writer.ts
 one-word: connect @ src/agents/registry.ts
 one-word: decide @ src/egg/hatch.ts
-one-word: defs @ src/achievement/core.ts
+one-word: defs @ src/achievement/defs.ts
 one-word: disconnect @ src/agents/registry.ts
-one-word: done @ src/tutorial/core.ts
-one-word: eligible @ src/find/core.ts
-one-word: empty @ src/save/legacy.ts
-one-word: empty @ src/save/v3.ts
-one-word: evaluate @ src/achievement/core.ts
+one-word: done @ src/tutorial/queue.ts
+one-word: eligible @ src/find/pickup.ts
+one-word: evaluate @ src/achievement/evaluate.ts
 one-word: evaluate @ src/dex/unlocks.ts
 one-word: evolve @ src/dex/evolve.ts
 one-word: evolvers @ src/dex/unlocks.ts
@@ -46,12 +40,10 @@ one-word: find @ src/shop/catalog.ts
 one-word: game @ src/cli/game.ts
 one-word: keep @ src/party/placement.ts
 one-word: lock @ src/trade/core.ts
-one-word: migrate @ src/save/migrate-v3.ts
+one-word: migrate @ src/save/v2/migrate.ts
 one-word: move @ src/party/placement.ts
 one-word: nature @ src/dex/natures.ts
 one-word: natures @ src/dex/natures.ts
-one-word: normalize @ src/save/legacy.ts
-one-word: normalize @ src/save/v3.ts
 one-word: offerable @ src/trade/core.ts
 one-word: open @ src/egg/open.ts
 one-word: open @ src/save/crypt.ts
@@ -64,19 +56,16 @@ one-word: profile @ src/dex/species.ts
 one-word: quarantine @ src/save/legacy.ts
 one-word: reach @ src/dex/reach.ts
 one-word: read @ src/save/legacy.ts
-one-word: read @ src/save/store.ts
 one-word: refresh @ src/notify/queue.ts
 one-word: release @ src/save/writer.ts
+one-word: remember @ src/mail/letters.ts
 one-word: seal @ src/save/crypt.ts
 one-word: sell @ src/shop/sell.ts
-one-word: send @ src/save/mailbox.ts
-one-word: serve @ src/save/mailbox.ts
 one-word: settle @ src/notify/queue.ts
-one-word: skip @ src/tutorial/core.ts
+one-word: skip @ src/tutorial/queue.ts
 one-word: slugs @ src/dex/species.ts
 one-word: snapshot @ src/trade/core.ts
 one-word: snapshot @ src/tx/snapshot.ts
-one-word: sprite @ src/renderer/ui/portrait.ts
 one-word: starters @ src/dex/unlocks.ts
 one-word: status @ src/agents/registry.ts
 one-word: swap @ src/party/placement.ts
@@ -84,8 +73,8 @@ one-word: take @ src/notify/queue.ts
 one-word: tidy @ src/agents/registry.ts
 one-word: unlock @ src/trade/core.ts
 one-word: use @ src/bag/use.ts
-one-word: verify @ src/save/migrate-v3.ts
+one-word: verify @ src/save/v2/migrate.ts
+one-word: visibility @ src/tx/handlers/party.ts
 one-word: write @ src/save/legacy.ts
-one-word: write @ src/save/store.ts
 word-tail: moodWord @ src/main/text.ts
 word-tail: untilWord @ src/main/text.ts

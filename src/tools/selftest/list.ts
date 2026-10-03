@@ -18,7 +18,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   check("names"),
   check("hook-bundle"),
   check("server-codes"),
-  { name: "cli", file: "scripts/selftest-cli.cjs" },
+  tool("cli"),
   tool("legacy"),
   tool("save"),
   tool("save-crypt"),

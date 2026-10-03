@@ -9,7 +9,7 @@
 //
 // 결과: { "<도감 번호>": { "genus": { "ko", "en" }, "flavor": { "ko"?, "en"? }, "height"?, "weight"? } }
 //   - PokeAPI 의 한국어 설명문은 898번까지만 있다(2026-09-25 확인, 2026-10-03 다시 확인). 899~1025번은 data/dex-text.ko.json 으로 채운다
-//     (포켓몬코리아 공식 도감에서 모은 것 — scripts/fetch-dex-ko.cjs). 그래도 없으면 ko 칸을 두지 않는다 — 화면이 영어로 대신한다
+//     (포켓몬코리아 공식 도감에서 모은 것 — dist/tools/data/fetch-dex-ko.js). 그래도 없으면 ko 칸을 두지 않는다 — 화면이 영어로 대신한다
 //   - 설명문의 줄바꿈·쪽바꿈 문자는 빈칸 하나로 바꾼다
 //   - 리전폼(data/regional.json)은 슬러그 키로 키·몸무게만 둔다 — "raichu-alola": { genus: {}, flavor: {}, height, weight }.
 //     분류·설명문은 PokeAPI 에 폼 단위가 없어 도감 번호 항목(기본형)을 쓴다 (src/tx/dex-detail.ts textOf)

@@ -1,24 +1,17 @@
 # deps 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-deps.js --update-baseline)
-cycle: src/box/slots.ts ⇄ src/mail/core.ts ⇄ src/party/create.ts ⇄ src/save/v3.ts
+cycle: src/dex/mega.ts ⇄ src/party/mega-form.ts
 cycle: src/tx/dex-detail.ts ⇄ src/tx/lists.ts ⇄ src/tx/shop-detail.ts
 layer: src/agents/notice.ts → src/save/legacy.ts
-layer: src/box/slots.ts → src/save/v3.ts
 layer: src/cli/game.ts → src/main/paths.ts
-layer: src/dex/mega.ts → src/party/presets.ts
-layer: src/egg/pool.ts → src/save/v3.ts
+layer: src/dex/mega.ts → src/party/mega-form.ts
 layer: src/notify/banner.ts → src/main/text.ts
 layer: src/notify/notifier.ts → src/save/legacy.ts
-layer: src/party/home.ts → src/save/v3.ts
-layer: src/party/starter.ts → src/egg/hatch.ts (type)
-layer: src/shop/buy.ts → src/save/v3.ts
-layer: src/state/settings.ts → src/save/v3.ts
-layer: src/state/time.ts → src/achievement/core.ts
 layer: src/trade/net.ts → src/online/client.ts
 layer: src/trade/net.ts → src/online/codes.ts
 layer: src/trade/net.ts → src/online/server-call.ts
 layer: src/trade/net.ts → src/online/session.ts
 layer: src/tx/dex-detail.ts → src/main/text.ts
-layer: src/tx/handlers.ts → src/main/text.ts
+layer: src/tx/handlers/box.ts → src/main/text.ts
 layer: src/tx/lists.ts → src/main/text.ts
 layer: src/tx/shop-detail.ts → src/main/text.ts
 layer: src/tx/snapshot.ts → src/main/text.ts
@@ -30,15 +23,3 @@ outside: src/main/paths.ts → config.js
 outside: src/main/portraits.ts → art/fetch.js
 outside: src/main/text.ts → lib/i18n.js
 outside: src/main/text.ts → lib/names.js
-scripts: scripts/build-verify.cjs 가 dist/ 를 10번 require 한다
-scripts: scripts/dev-banner.cjs 가 dist/ 를 2번 require 한다
-scripts: scripts/dev-manage.cjs 가 dist/ 를 11번 require 한다
-scripts: scripts/dev-menu.cjs 가 dist/ 를 3번 require 한다
-scripts: scripts/dev-picker.cjs 가 dist/ 를 4번 require 한다
-scripts: scripts/dev-region.cjs 가 dist/ 를 2번 require 한다
-scripts: scripts/e2e-account.cjs 가 dist/ 를 2번 require 한다
-scripts: scripts/e2e-companion.cjs 가 dist/ 를 1번 require 한다
-scripts: scripts/e2e-trade.cjs 가 dist/ 를 2번 require 한다
-scripts: scripts/e2e-update.cjs 가 dist/ 를 3번 require 한다
-scripts: scripts/e2e/apps.cjs 가 dist/ 를 4번 require 한다
-scripts: scripts/selftest-cli.cjs 가 dist/ 를 1번 require 한다

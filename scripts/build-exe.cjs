@@ -4,7 +4,7 @@
 //   mac 은 이 Mac 로그인 키체인의 자체 서명 인증서 "PokeBuddy Code Signing" 으로 서명한다. Apple 공증은 없다 — 처음 실행 때 Gatekeeper 가 막는다.
 //   인증서로 서명해야 macOS 가 버전이 바뀌어도 같은 앱으로 본다(designated = identifier + certificate leaf). ad-hoc 은 빌드마다 해시가 바뀌어
 //   업데이트마다 키체인 허용 창이 떴다 (2026-09-28 사용자 결정 A). 인증서가 없으면 mac 빌드는 멈춘다 — 개인키는 저장소에 넣지 않는다
-//   mac 업데이트는 electron-updater(Squirrel.Mac)가 아니라 src/main/mac-updater.ts 가 한다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다.
+//   mac 업데이트는 electron-updater(Squirrel.Mac)가 아니라 src/main/update/mac-updater.ts 가 한다 — Squirrel.Mac 은 정식 서명이 있어야 새 번들을 받아들인다.
 //   zip·latest-mac.yml 은 그 업데이트가 받는 파일이다. 릴리스 때 dmg 와 함께 올린다
 //
 // 1. npm run build 로 dist/ 를 만든다 (package.json 의 스크립트가 먼저 부른다)
@@ -27,7 +27,7 @@ const MAC = process.argv.includes("--mac");
 // mac 서명 인증서 — 로그인 키체인에 있어야 한다. 자체 서명이라 `security find-identity -v` 의 "유효"에는 없다(신뢰 설정 없이 쓴다)
 const MAC_IDENTITY = "PokeBuddy Code Signing";
 if (MAC && process.platform !== "darwin") throw new Error("mac 설치 파일은 mac 에서만 만든다 — 헬퍼 universal 빌드·ad-hoc 서명에 Xcode 도구가 필요하다");
-// 업데이트 실기 시험 빌드 (scripts/e2e-update.cjs) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
+// 업데이트 실기 시험 빌드 (dist/tools/e2e/e2e-update-win.js) — 사용자의 설치본과 섞이지 않게 다른 appId·이름으로, 바로 가기 없이 만든다.
 // 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않고, 대신 update-test.json 표시 파일로 임시 홈을 쓰고 OS 등록(링크·로그인 시 시작)을 건너뛴다
 const TEST = process.env.PB_UPDATE_TEST === "1";
 // 시험 빌드의 앱은 이 임시 홈만 쓴다 — 사용자의 저장을 건드리지 않게 반드시 준다
@@ -103,7 +103,7 @@ function stageFiles() {
     copied.push(`node_modules/${name}`);
   }
   // home — 앱이 쓸 임시 홈(config.js updateTestHome). 업데이트 설치 파일이 다시 켠 앱도 사용자의 홈 대신 이 홈을 쓴다
-  if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: `업데이트 실기 시험 빌드 — ${MAC ? "src/tools/e2e-update-mac.ts" : "scripts/e2e-update.cjs"}`, home: testHome })}\n`);
+  if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: `업데이트 실기 시험 빌드 — ${MAC ? "src/tools/e2e/e2e-update-mac.ts" : "dist/tools/e2e/e2e-update-win.js"}`, home: testHome })}\n`);
   const appPkg = {
     name,
     productName,
@@ -146,7 +146,7 @@ async function main() {
     directories: { output: release },
     files: ["**/*"],
   };
-  // 앱 업데이트(src/main/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml(Windows)·latest-mac.yml(mac)이 생긴다.
+  // 앱 업데이트(src/main/update/updater.ts)가 볼 곳 — 설치본에 app-update.yml, 릴리스 폴더에 latest.yml(Windows)·latest-mac.yml(mac)이 생긴다.
   // 업데이트 실기 시험의 빌드만 PB_UPDATE_FEED(로컬 HTTP 주소)로 바꾼다 — 빌드 때만 읽는다. 설치본은 환경 변수를 읽지 않는다
   const publish = process.env.PB_UPDATE_FEED
     ? [{ provider: "generic", url: process.env.PB_UPDATE_FEED }]
@@ -173,7 +173,7 @@ async function main() {
       artifactName: "${productName}-Setup-${version}.${ext}",
     },
   };
-  // mac 업데이트는 src/main/mac-updater.ts 가 app-update.yml 로 공급처를 알고 latest-mac.yml·zip 을 받는다.
+  // mac 업데이트는 src/main/update/mac-updater.ts 가 app-update.yml 로 공급처를 알고 latest-mac.yml·zip 을 받는다.
   // publish 를 적지 않으면 electron-builder 가 git 원격으로 공급처를 짐작한다(2026-09-28 빌드에서 provider: gitlab 로 생김) — Windows 와 같은 값을 적는다
   const mac = {
     publish,

@@ -247,9 +247,9 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `package.json` 의 `selftest` 스크립트에 있다
   - 클라우드·교환·계정 검사는 로컬 Supabase(`npx supabase start`)와 로컬 함수 서버(`npx supabase functions serve`)가 있어야 한다. 올리기가 Edge Function `upload-save` 를 거친다
   - 함수 서버가 "No such container" 로 바로 끝나면 한 번 더 띄운다
-- 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node scripts/build-verify.cjs` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
+- 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
-- 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `scripts/e2e-companion.cjs` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다
+- 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `dist/tools/e2e/e2e-companion.js` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다
 - 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 아래 `.claude/pokebuddy/save.json` 을 저장 v3 로 만든다.
   마리는 60px 씩 벌려 둔다. `--same-home` 이면 전부 기본 집이다(겹침 확인). 진짜 저장은 건드리지 않는다
 - 시험 중 동반자를 끝낼 때는 프로세스를 죽이지 않는다. `~/.claude/pokebuddy/companion.lock` 을 지운다(`pokebuddy companion stop` 과 같다)
@@ -258,7 +258,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 
 
 튜토리얼처럼 한 번 끝나면 다시 안 뜨는 화면은 진짜 저장으로 다시 볼 수 없다. 시험용 HOME 에서 동반자를 따로 띄운다.
-도구는 `src/tools/dev-test.ts` 다.
+도구는 `src/tools/dev/dev-test.ts` 다.
 
 - 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 저장소의 `.claude/test-home/default` 다. `.claude/` 는 git 이 추적하지 않는다.
 - 저장·잠금·단일 실행 잠금이 모두 이 HOME 아래에 생긴다. 그래서 진짜 저장을 건드리지 않고, 쓰던 동반자와 나란히 뜬다.
@@ -336,13 +336,13 @@ node dist/tools/dev/dev-test.js stop
 - `scripts/dev-winclick.ps1 -Hwnd <핸들> -X <x> -Y <y>` 가 창에 클릭 메시지를 보낸다(`PostMessage`). 마우스는 움직이지 않는다. 좌표는 찍은 그림에서 읽는다. 설정창은 보이지 않는 왼쪽 테두리 8 px 을 x 에서 뺀다. 화면 배율 100% 기준이다.
 - 화면 전체를 캡처하지 않는다. 사용자의 다른 앱이 찍힌다. 무대의 포켓몬은 작은 사각형만 찍는다.
 - 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림이나 검은 그림을 준다. 가려져도 그리게 하려면 앱을 `--disable-features=CalculateNativeWinOcclusion` 으로 띄운다. `dev-test.js start` 대신 저장소에서 `npx electron --disable-features=CalculateNativeWinOcclusion .` 을 실행한다. `HOME`·`USERPROFILE` 을 시험 HOME 으로, `POKEBUDDY_SAVE_CRYPT=off` 를 함께 준다. 설정창을 여는 두 번째 실행에도 같은 값을 준다. 내릴 때는 `dev-test.js stop` 을 쓴다.
-- 이 옵션 없이 띄웠으면 누른 결과는 저장 파일로 확인한다. 화면 변화는 `scripts/dev-manage.cjs` 로 따로 찍는다.
+- 이 옵션 없이 띄웠으면 누른 결과는 저장 파일로 확인한다. 화면 변화는 `dist/tools/dev/dev-manage.js` 로 따로 찍는다.
 
 ### 임시 폴더
 
 시험과 개발 도구가 쓰고 버리는 폴더는 시스템 임시 폴더의 `pokebuddy/` 아래에 만든다(2026-10-03 사용자 결정). 저장소 안에는 만들지 않는다. 들여다보거나 이어 쓰는 시험 HOME 과 시험 계정만 저장소의 `.claude/` 에 둔다.
 
-- 폴더는 `src/tools/tmp-dir.ts` 의 `makeTmp(<이름>)` 으로 만든다. 경로는 `<임시 폴더>/pokebuddy/<이름>-XXXXXX` 다. `fs.mkdtempSync(path.join(os.tmpdir(), …))` 를 직접 부르지 않는다.
+- 폴더는 `src/tools/harness/tmp-dir.ts` 의 `makeTmp(<이름>)` 으로 만든다. 경로는 `<임시 폴더>/pokebuddy/<이름>-XXXXXX` 다. `fs.mkdtempSync(path.join(os.tmpdir(), …))` 를 직접 부르지 않는다.
 - 스크립트(`scripts/*.cjs`)는 `dist/tools/harness/tmp-dir.js` 를 불러 쓴다. 그래서 `npm run build` 뒤에 실행한다.
 - 프로세스가 종료 코드 0 으로 끝나면 만든 폴더를 지운다. 실패하면 남긴다. 원인을 볼 수 있다.
 - 남은 폴더는 다음에 `makeTmp` 를 처음 부를 때 치운다. 만든 프로세스가 끝난 폴더는 바로 지운다. 프로세스 번호는 폴더 옆의 `<폴더 이름>.pid` 파일에 있다. 이 파일이 없는 폴더는 하루 뒤에 지운다.
@@ -400,11 +400,11 @@ npm run dist:win    # release/pokebuddy-Setup-<버전>.exe
 
 - `scripts/build-exe.cjs` 가 실행에 필요한 파일(`package.json` 의 `files`)만 `release/app/` 에 모은다. 그다음 `electron-builder` 로 묶는다.
 - 처음 만들 때 Electron 과 NSIS 를 내려받는다. 인터넷이 필요하다.
-- 설치 파일에는 포켓몬 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다. `scripts/fetch-sprites.cjs` 는 저장소 실행용으로 `.cache/sprites/`(git 제외)에 받는다.
+- 설치 파일에는 포켓몬 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다. `dist/tools/data/fetch-sprites.js` 는 저장소 실행용으로 `.cache/sprites/`(git 제외)에 받는다.
 - 코드 서명을 하지 않는다. 설치 확인은 `release/win-unpacked/pokebuddy.exe` 를 먼저 띄워 본 뒤 설치 파일로 한다.
 - 릴리스 전에 `data/patch-notes.json` 맨 앞에 새 버전의 날짜와 바뀐 것을 적는다. `selftest-patch-notes` 는 `package.json` 버전의 노트가 없으면 실패한다.
 - GitHub Release 에는 설치 파일과 함께 `release/latest.yml` 과 `release/pokebuddy-Setup-<버전>.exe.blockmap` 을 올린다. 설치본은 이 `latest.yml` 로 새 버전을 찾는다. 올린 파일 이름은 `latest.yml` 안의 이름과 같아야 한다.
-- 업데이트 실기 시험은 `node scripts/e2e-update.cjs` 다. 시험용 설치본(`pokebuddy-update-test`)을 조용히 설치해 로컬 서버의 다음 버전으로 업데이트한 뒤 제거한다. 사용자의 설치본과 섞이지 않는다.
+- 업데이트 실기 시험은 `node dist/tools/e2e/e2e-update-win.js` 다. 시험용 설치본(`pokebuddy-update-test`)을 조용히 설치해 로컬 서버의 다음 버전으로 업데이트한 뒤 제거한다. 사용자의 설치본과 섞이지 않는다.
 
 ### Mac 앱 만들기
 

@@ -1,4 +1,4 @@
-﻿# 한 프로세스의 창 글자를 모두 적는다 — 업데이트 E2E 가 멈춘 설치 파일의 메시지 창을 읽는다 (scripts/e2e-update.cjs)
+﻿# 한 프로세스의 창 글자를 모두 적는다 — 업데이트 E2E 가 멈춘 설치 파일의 메시지 창을 읽는다 (src/tools/e2e/e2e-update-win.ts)
 #   powershell -NoProfile -File scripts/e2e/window-text.ps1 -ProcessId <pid>
 param([int]$ProcessId)
 Add-Type -AssemblyName UIAutomationClient

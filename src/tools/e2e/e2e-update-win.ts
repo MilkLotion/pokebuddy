@@ -1,21 +1,32 @@
 // 앱 업데이트 E2E — 시험용 설치본 N 을 조용히 설치해 켜고, 로컬 HTTP 서버가 내놓는 N+1 로 업데이트되는지 본다.
 // 설계: worklog/records/app-update/record.md "검사 계획" U-03
 //   준비: `npm run build`. 설치 파일 두 개를 만드느라 몇 분 걸린다
-//   실행: node scripts/e2e-update.cjs
+//   실행: node dist/tools/e2e/e2e-update-win.js
 //   시험 빌드는 다른 appId·이름(pokebuddy-update-test)이라 사용자의 설치본과 섞이지 않는다. 바로 가기를 만들지 않고
 //   링크(pokebuddy://)·로그인 시 시작을 등록하지 않는다(scripts/build-exe.cjs PB_UPDATE_TEST). 저장은 임시 HOME 에 둔다.
 //   끝나면 조용히 제거하고 임시 폴더를 지운다. 관리 창 조작은 --inspect 디버거로 manage-observer 를 실어 한다(launch)
 //   확인: 설정 바닥이 받는 중 → 준비됨, `다시 시작` → 조용히 설치 → N+1 로 다시 켜짐, 저장 유지, 업데이트 뒤 첫 패치노트 한 번
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const http = require('node:http');
-const os = require('node:os');
-const path = require('node:path');
-const { spawn, spawnSync } = require('node:child_process');
+// (예전 scripts/e2e-update.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다. 본문은 줄 그대로다 — 작은따옴표도 그대로 두었다.
+//  Mac 판은 ./e2e-update-mac.ts 다. 두 판의 공통 뼈대(until·uiClient·feedServer·관측기 싣기)는 아직 따로 있다 — 50번 설계 G28-06)
+import assert from "node:assert/strict";
+import { spawn, spawnSync, type SpawnSyncReturns } from "node:child_process";
+import fs from "node:fs";
+import http from "node:http";
+import os from "node:os";
+import path from "node:path";
+import { newPet } from "../../party/create";
+import { empty } from "../../save/v3";
+import { makeTmp } from "../harness/tmp-dir";
 
-const root = path.join(__dirname, '..');
-// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
-const { makeTmp } = require(path.join(root, 'dist/tools/harness/tmp-dir.js'));
+type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — 디버거·관측기의 JSON 을 그대로 읽는다
+interface Home {
+  home: string;
+  data: string;
+  env: NodeJS.ProcessEnv;
+}
+
+const root = path.join(__dirname, "..", "..", "..");
+// 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/harness/tmp-dir.ts)
 const PORT = 48321; // 빌드에 박히는 공급 주소 — 바꾸면 두 빌드를 다시 만든다
 const FEED = `http://127.0.0.1:${PORT}/`;
 const OLD = '0.6.9';
@@ -31,12 +42,12 @@ const HOME = path.join(KEEP ?? work, 'home');
 // 사용자의 동반자 lock — 시험 동안 바뀌면 시험 앱이 사용자의 홈을 쓴 것이다
 const USER_LOCK = path.join(os.homedir(), '.claude', 'pokebuddy', 'companion.lock');
 const userLockMark = () => (fs.existsSync(USER_LOCK) ? `${fs.statSync(USER_LOCK).mtimeMs}:${fs.readFileSync(USER_LOCK, 'utf8')}` : 'none');
-const UPDATER_CACHE = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'), `${'pokebuddy-update-test'}-updater`);
+const UPDATER_CACHE = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'), `${NAME}-updater`);
 const shots = path.join(work, 'shots');
-const checks = [];
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const checks: string[] = [];
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
-async function until(test, label, ms = 60_000) {
+async function until(test: () => unknown, label: string, ms = 60_000): Promise<void> {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (await test()) return;
@@ -46,30 +57,30 @@ async function until(test, label, ms = 60_000) {
 }
 
 // 시험 설치 파일 하나 — 버전과 출력 폴더만 다르다
-function buildInstaller(version) {
+function buildInstaller(version: string): { out: string; exe: string } {
   const out = path.join(KEEP ?? work, `build-${version}`);
   const ready = path.join(out, `${NAME}-Setup-${version}.exe`);
   if (KEEP && fs.existsSync(ready)) return { out, exe: ready };
   process.stdout.write(`설치 파일 만들기 ${version} …\n`);
   // 설치 파일을 쓰는 순간 잠겨 "Can't open output file" 로 가끔 실패한다(백신 검사로 보임) — 세 번까지 다시 한다
-  let r = null;
+  let r: SpawnSyncReturns<string> | null = null;
   for (let i = 0; i < 3 && (r == null || r.status !== 0); i += 1) r = spawnSync(process.execPath, [path.join(root, 'scripts', 'build-exe.cjs')], {
     cwd: root,
     env: { ...process.env, PB_UPDATE_TEST: '1', PB_UPDATE_VERSION: version, PB_UPDATE_OUT: out, PB_UPDATE_FEED: FEED, PB_UPDATE_HOME: HOME },
     stdio: ['ignore', 'pipe', 'pipe'],
     encoding: 'utf8',
   });
-  assert.equal(r.status, 0, `빌드 실패 ${version}: ${r.stderr}`);
+  assert.equal(r!.status, 0, `빌드 실패 ${version}: ${r!.stderr}`);
   const exe = path.join(out, `${NAME}-Setup-${version}.exe`);
   assert.ok(fs.existsSync(exe), `설치 파일 없음: ${exe}`);
   return { out, exe };
 }
 
 // 공급 서버 — N+1 의 latest.yml·설치 파일·블록맵, N 의 블록맵(차분 받기의 기준)
-function feedServer(dirs) {
-  const log = [];
+function feedServer(dirs: string[]): Promise<{ server: http.Server; log: { name: string; range: string | null }[] }> {
+  const log: { name: string; range: string | null }[] = [];
   const server = http.createServer((req, res) => {
-    const name = decodeURIComponent(new URL(req.url, FEED).pathname.slice(1));
+    const name = decodeURIComponent(new URL(req.url ?? '/', FEED).pathname.slice(1));
     log.push({ name, range: req.headers.range ?? null });
     const file = dirs.map((d) => path.join(d, name)).find((f) => !name.includes('..') && fs.existsSync(f) && fs.statSync(f).isFile());
     if (!file) {
@@ -92,24 +103,22 @@ function feedServer(dirs) {
 }
 
 // 임시 HOME 과 저장 — 튜토리얼은 건너뛴 파티 한 마리
-function makeHome() {
+function makeHome(): Home {
   const home = HOME;
   fs.rmSync(home, { recursive: true, force: true });
   const data = path.join(home, '.claude', 'pokebuddy');
   fs.mkdirSync(data, { recursive: true });
-  const { empty } = require(path.join(root, 'dist/save/v3.js'));
-  const { newPet } = require(path.join(root, 'dist/party/create.js'));
   const save = empty(Date.now());
-  save.pets.push(newPet({ id: 'u1', species: 'pichu', shiny: false, nature: 'hardy', now: Date.now() }));
+  save.pets.push(newPet({ id: 'u1', species: 'pichu', shiny: false, nature: 'hardy', now: Date.now() } as Parameters<typeof newPet>[0]));
   save.party.slots[0] = { state: 'pokemon', petId: 'u1', hidden: false };
   save.starterPetId = 'u1';
   save.points.balance = 1234;
-  save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party', 'achievement'].map((k) => [k, { state: 'skipped', steps: 0 }]));
+  save.tutorials = Object.fromEntries(['first-care', 'playground', 'shop', 'hatch', 'party', 'achievement'].map((k) => [k, { state: 'skipped', steps: 0 }])) as typeof save.tutorials;
   fs.writeFileSync(path.join(data, 'save.json'), JSON.stringify(save));
   // TEMP 는 짧은 경로로 둔다 — 업데이트 설치 파일이 앱의 TEMP 를 물려받아 옛 파일을 TEMP\ns….tmp\old-install 아래로 옮긴다.
   // 길면 260자를 넘어 "Failed to uninstall old application files: 2" 로 멈춘다(2026-09-28 확인. 사용자 PC 의 TEMP 는 짧다)
   const temp = makeTmp('pbu');
-  const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
+  const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
   for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'ELECTRON_RUN_AS_NODE' || key === 'NODE_OPTIONS') delete env[key];
   // 옛 판(암호화 전, 0.13.0 까지)처럼 평문으로 돈다 — 첫 실행만. 업데이트 설치 파일이 다시 켠 앱은 환경 변수를 물려받지 않으므로
   // 그때 새 판처럼 저장 키를 만들고 평문 저장을 암호화한다(P3 업데이트 첫 실행 이전). 시험 빌드만 이 값을 받는다(src/main/app.ts). 지우는 반복문 뒤에 둔다
@@ -120,32 +129,32 @@ function makeHome() {
 // 설치본을 켜고 관리 창 관측을 싣는다. 설치본(패키지된 Electron)은 NODE_OPTIONS 를 읽지 않는다 —
 // --inspect 로 켜고 메인 프로세스 디버거로 scripts/e2e/manage-observer.cjs 를 불러온다. 이미 뜬 창(무대)도 숨긴다
 const INSPECT_PORT = 9339;
-async function launch(home) {
+async function launch(home: Home): Promise<void> {
   const lock = path.join(home.data, 'companion.lock');
   const child = spawn(path.join(INSTALL, `${NAME}.exe`), [`--inspect=${INSPECT_PORT}`], { env: home.env, detached: true, stdio: 'ignore' });
   child.unref();
   await until(() => fs.existsSync(lock), '동반자 켜짐', 90_000);
-  let target = null;
+  let target: string | null = null;
   await until(async () => {
     try {
-      const list = await (await fetch(`http://127.0.0.1:${INSPECT_PORT}/json/list`)).json();
+      const list = (await (await fetch(`http://127.0.0.1:${INSPECT_PORT}/json/list`)).json()) as Json[];
       target = list[0]?.webSocketDebuggerUrl ?? null;
     } catch {
       target = null;
     }
     return target != null;
   }, '디버거 주소');
-  const observer = path.join(__dirname, 'e2e', 'manage-observer.cjs');
+  const observer = path.join(root, 'scripts', 'e2e', 'manage-observer.cjs');
   const expression = `(() => {
     const { BrowserWindow } = process.mainModule.require('electron');
     for (const w of BrowserWindow.getAllWindows()) { w.hide(); w.on('show', () => { if (!global.__pbE2eShooting) w.hide(); }); }
     process.mainModule.require(${JSON.stringify(observer)});
     return 'ok';
   })()`;
-  const ws = new WebSocket(target);
+  const ws = new WebSocket(target!);
   await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
-  const reply = await new Promise((resolve) => {
-    ws.onmessage = (m) => resolve(JSON.parse(m.data));
+  const reply = await new Promise<Json>((resolve) => {
+    ws.onmessage = (m) => resolve(JSON.parse(String(m.data)));
     ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression, returnByValue: true } }));
   });
   ws.close();
@@ -153,12 +162,12 @@ async function launch(home) {
 }
 
 // 시험 앱·설치 파일 프로세스 — 진단용 "pid 명령 줄" 줄들
-function processes(filter = `Name LIKE '${NAME}%'`) {
+function processes(filter = `Name LIKE '${NAME}%'`): string {
   return spawnSync('powershell', ['-NoProfile', '-Command', `Get-CimInstance Win32_Process -Filter \"${filter}\" | ForEach-Object { \"$($_.ProcessId) $($_.CommandLine)\" }`], { encoding: 'utf8' }).stdout.trim();
 }
 
 // 동반자를 내린다 — lock 을 지우면 스스로 끝난다(pokebuddy companion stop 과 같다)
-async function stopApp(home) {
+async function stopApp(home: Home): Promise<void> {
   spawnSync(process.execPath, [path.join(root, 'bin', 'pokebuddy'), 'companion', 'stop'], { cwd: root, env: home.env, stdio: 'ignore', timeout: 60_000 });
   await until(() => !fs.existsSync(path.join(home.data, 'companion.lock')), '동반자 내림', 60_000);
   const alive = () => processes(`Name='${NAME}.exe'`);
@@ -166,32 +175,32 @@ async function stopApp(home) {
     await until(() => alive() === '', '프로세스 끝남', 60_000);
   } catch (e) {
     const main = alive().split('\n').find((l) => !l.includes('--type='))?.split(' ')[0];
-    const text = main ? spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'e2e', 'window-text.ps1'), '-ProcessId', main], { encoding: 'utf8' }).stdout.trim() : '';
+    const text = main ? spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'scripts', 'e2e', 'window-text.ps1'), '-ProcessId', main], { encoding: 'utf8' }).stdout.trim() : '';
     process.stderr.write(`남은 프로세스:\n${alive()}\n메인 창:\n${text}\n`);
     throw e;
   }
 }
 
-function uiClient(home) {
+function uiClient(home: string) {
   let seq = 0;
-  const ui = async (kind, extra = {}, ms = 30_000) => {
+  const ui = async (kind: string, extra: Record<string, unknown> = {}, ms = 30_000): Promise<Json> => {
     const id = `u-${++seq}`;
     fs.writeFileSync(path.join(home, 'ui.json'), JSON.stringify({ id, kind, ...extra }));
-    let got = null;
+    let got: Json = null;
     await until(() => {
       const file = path.join(home, 'ui-events.jsonl');
       if (!fs.existsSync(file)) return false;
-      got = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((e) => e.id === id) ?? null;
+      got = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((e: Json) => e.id === id) ?? null;
       return got != null;
     }, `관리 창 ${kind}`, ms);
     if (!got.ok) throw new Error(`관리 창 ${kind} 실패: ${got.message}`);
     return got.value;
   };
-  const dom = (js) => ui('eval', { js });
-  return { ui, dom, shot: (name) => ui('shot', { file: path.join(shots, name) }) };
+  const dom = (js: string) => ui('eval', { js });
+  return { ui, dom, shot: (name: string) => ui('shot', { file: path.join(shots, name) }) };
 }
 
-const installedVersion = () => {
+const installedVersion = (): string | null => {
   try {
     return JSON.parse(fs.readFileSync(path.join(INSTALL, 'resources', 'app', 'package.json'), 'utf8')).version;
   } catch {
@@ -199,7 +208,7 @@ const installedVersion = () => {
   }
 };
 
-async function main() {
+async function main(): Promise<void> {
   assert.ok(fs.existsSync(path.join(root, 'dist', 'main', 'app.js')), 'npm run build 를 먼저 한다');
   fs.mkdirSync(shots, { recursive: true });
   const userLockBefore = userLockMark();
@@ -242,7 +251,7 @@ async function main() {
     checks.push(`(3) 받기 → 준비됨 "${ready.split('\n')[0]}"${sawDownloading ? ' (받는 중 표시 봄)' : ''} · 요청 ${log.length}건 (${[...new Set(log.map((l) => l.name))].join(', ')}), 부분 요청 ${log.filter((l) => l.range).length}건`);
 
     // (3) 다시 시작 — 조용히 설치하고 N+1 로 다시 켠다
-    const lockText = () => { try { return fs.readFileSync(path.join(home.data, 'companion.lock'), 'utf8'); } catch { return ''; } };
+    const lockText = (): string => { try { return fs.readFileSync(path.join(home.data, 'companion.lock'), 'utf8'); } catch { return ''; } };
     const lockPid = () => Number(lockText().split('\n')[0]) || 0;
     const oldPid = lockPid();
     const pressed = await dom("(() => { const b = [...document.querySelectorAll('.version-foot button')].find((x) => x.textContent.trim() === '다시 시작'); if (!b) return false; b.click(); return true; })()");
@@ -250,7 +259,7 @@ async function main() {
     await until(() => installedVersion() === NEW, `설치본이 ${NEW}`, 180_000).catch((e) => {
       const windows = spawnSync('powershell', ['-NoProfile', '-Command', `Get-Process | Where-Object { $_.ProcessName -like '${NAME}*' -or $_.MainWindowTitle -like '*${NAME}*' } | ForEach-Object { \"$($_.Id) $($_.ProcessName) [$($_.MainWindowTitle)]\" }`], { encoding: 'utf8' }).stdout.trim();
       // 멈춘 창의 글자 — 조용한 설치에서도 메시지 창이 뜰 수 있다
-      const texts = windows.split('\n').filter(Boolean).map((l) => spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, 'e2e', 'window-text.ps1'), '-ProcessId', l.split(' ')[0]], { encoding: 'utf8' }).stdout.trim()).join('\n');
+      const texts = windows.split('\n').filter(Boolean).map((l) => spawnSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'scripts', 'e2e', 'window-text.ps1'), '-ProcessId', l.split(' ')[0]!], { encoding: 'utf8' }).stdout.trim()).join('\n');
       // 옛 설치 폴더를 잡은 프로세스 — 이름이 달라도(도우미 PowerShell 등) 명령 줄·실행 파일에 설치 폴더가 있으면 찍는다
       const holders = processes(`CommandLine LIKE '%${NAME}%' OR ExecutablePath LIKE '%${NAME}%'`);
       process.stderr.write(`설치본 ${installedVersion()}, 남은 프로세스:\n${holders}\n창:\n${windows}\n${texts}\n`);
@@ -283,7 +292,7 @@ async function main() {
     assert.ok(fs.existsSync(path.join(home.data, 'save.key')), '저장 키');
     const plainBak = fs.readdirSync(home.data).filter((f) => f.startsWith('save.json.plain-'));
     assert.equal(plainBak.length, 1, '암호화 전 평문 백업');
-    assert.equal(JSON.parse(fs.readFileSync(path.join(home.data, plainBak[0]), 'utf8')).points.balance, 1234, '백업은 옛 평문 저장');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(home.data, plainBak[0]!), 'utf8')).points.balance, 1234, '백업은 옛 평문 저장');
     const snap = await dom('window.pokebuddyManage.snapshot().then((s) => ({ points: s.points, pets: s.party.slots.filter((x) => x.pet).map((x) => x.pet.id) }))');
     assert.equal(snap.points, 1234, '저장 유지(암호화 뒤 앱이 읽은 값)');
     assert.ok(snap.pets.includes('u1'), '포켓몬 유지');
@@ -305,11 +314,11 @@ async function main() {
     await until(() => !fs.existsSync(path.join(INSTALL, `${NAME}.exe`)), '제거', 60_000).catch(() => process.stderr.write(`제거가 끝나지 않았다 — 손으로 지운다: ${INSTALL}\n`));
     server.close();
     // 정리 실패는 알리기만 한다 — 시험의 원래 오류를 가리지 않게
-    for (const d of [UPDATER_CACHE, ...(KEEP ? [] : [oldBuild.out, newBuild.out]), home.home, home.env.TEMP]) {
+    for (const d of [UPDATER_CACHE, ...(KEEP ? [] : [oldBuild.out, newBuild.out]), home.home, home.env.TEMP!]) {
       try {
         fs.rmSync(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
       } catch (e) {
-        process.stderr.write(`지우지 못했다: ${d} — ${e.message}
+        process.stderr.write(`지우지 못했다: ${d} — ${(e as Error).message}
 `);
       }
     }
@@ -321,8 +330,8 @@ main().then(
     process.stdout.write(`${checks.join('\n')}\n화면: ${shots}\ne2e-update: 통과\n`);
     process.exit(0);
   },
-  (e) => {
-    process.stderr.write(`${checks.join('\n')}\n실패: ${e && e.stack ? e.stack : e}\n화면: ${shots}\n`);
+  (e: unknown) => {
+    process.stderr.write(`${checks.join('\n')}\n실패: ${e instanceof Error && e.stack ? e.stack : e}\n화면: ${shots}\n`);
     process.exit(1);
   },
 );
