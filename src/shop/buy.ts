@@ -15,11 +15,9 @@ import { addItem, bagRoomOf } from "../bag/items.js";
 import { openSlot, presetSlots } from "../party/slots.js";
 import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";
 import type { Rand } from "../shared/rand.js";
-import { BAG_RULES } from "../bag/rules.js";
-import { EGG_RULES } from "../egg/rules.js";
 import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { canGiveEgg, newEgg, nextEggId, randomPool } from "../egg/pool.js";
+import { checkGiveEgg, eggRoomOf, newEgg, nextEggId, randomPool } from "../egg/pool.js";
 import { find, slotPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -76,22 +74,59 @@ function buyBox(save: SaveV3): BuyResult {
   return { ok: true, spent: price, balance: save.points.balance, boxId: box.id };
 }
 
+// 상품 하나를 지금 살 수 있는 상태 — 값, 여러 개를 한 번에 살 수 있는지, 살 수 있는 수, 한 개도 못 살 때의 까닭
+//   many    여러 개를 한 번에 살 수 있는 상품이다(알과 도구)
+//   room    지금 살 수 있는 수. 포인트·가방 자리·돌보미집 빈 칸·단일 알의 남은 종 가운데 가장 작은 값
+//   reason  한 개도 못 살 때의 까닭. 보는 순서는 값 → 포인트 → 상품별 자리다
+export interface BuyState {
+  price: number | null;
+  many: boolean;
+  room: number;
+  reason?: BuyFailure;
+}
+
+export function buyStateOf(save: SaveV3, productId: string, opts?: DexOptions): BuyState {
+  if (productId === "party-preset" || productId === "box") {
+    const price = productId === "box" ? SHOP_RULES.boxPrice : SHOP_RULES.presetPrice;
+    const can = productId === "box" ? (boxBuyable(save.boxes).ok ? null : "box-max") : presetBuyable(save).ok ? null : presetBuyable(save).reason === "preset-max" ? "preset-max" : "slots-not-full";
+    const reason: BuyFailure | undefined = can ?? (save.points.balance < price ? "not-enough-points" : undefined);
+    return { price, many: false, room: reason ? 0 : 1, ...(reason ? { reason } : {}) };
+  }
+  const slot = productId === "party-slot";
+  const product = slot ? null : find(productId, opts);
+  const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
+  if (price === null) return { price, many: false, room: 0, reason: slot ? "no-locked-slot" : "no-product" };
+  const many = product?.kind === "egg" || product?.kind === "tool";
+  const byPoints = price > 0 ? Math.floor(save.points.balance / price) : Number.MAX_SAFE_INTEGER;
+  const fail = (reason: BuyFailure): BuyState => ({ price, many, room: 0, reason });
+  if (byPoints < 1) return fail("not-enough-points");
+  if (product?.kind === "egg") {
+    const can = checkGiveEgg(save, product.ref, opts);
+    if (!can.ok) return fail(can.reason);
+    return { price, many, room: Math.min(byPoints, eggRoomOf(save, product.ref, opts)) };
+  }
+  if (product?.kind === "species") {
+    if (!save.dex.unlocked.includes(product.ref)) return fail("not-unlocked");
+    if (!checkNewPetRoom(save, "party-first").ok) return fail("box-full");
+  }
+  if (product?.kind === "tool") {
+    const bag = bagRoomOf(save, product.ref);
+    if (bag < 1) return fail("bag-full");
+    return { price, many, room: Math.min(byPoints, bag) };
+  }
+  return { price, many, room: 1 };
+}
+
 export function buy(save: SaveV3, productId: string, now: number, rand: Rand, opts?: DexOptions): BuyResult {
   if (productId === "party-preset") return buyPreset(save);
   if (productId === "box") return buyBox(save);
   const slot = productId === "party-slot";
   const product = slot ? null : find(productId, opts);
-  const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
-
-  if (price === null) return { ok: false, reason: slot ? "no-locked-slot" : "no-product" };
-  if (save.points.balance < price) return { ok: false, reason: "not-enough-points" };
 
   // 검사 — 값을 바꾸기 전에 모두 본다
-  if (product?.kind === "egg" && save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
-  if (product?.kind === "egg" && !canGiveEgg(save, product.ref, opts)) return { ok: false, reason: "sold-out" };
-  if (product?.kind === "species" && !save.dex.unlocked.includes(product.ref)) return { ok: false, reason: "not-unlocked" };
-  if (product?.kind === "species" && !checkNewPetRoom(save, "party-first").ok) return { ok: false, reason: "box-full" };
-  if (product?.kind === "tool" && bagRoomOf(save, product.ref) < 1) return { ok: false, reason: "bag-full" };
+  const state = buyStateOf(save, productId, opts);
+  if (state.reason) return { ok: false, reason: state.reason };
+  const price = state.price ?? 0;
 
   save.points.balance -= price;
   const done: BuyResult = { ok: true, spent: price, balance: save.points.balance };

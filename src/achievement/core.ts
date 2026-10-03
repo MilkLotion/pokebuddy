@@ -43,9 +43,8 @@ import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { addItem } from "../bag/items.js";
 import { rewardSpecies, singleSpecies } from "../dex/obtain.js";
 import { achievementTable, type AchievementCond, type AchievementDef, type AchievementGroup } from "../dex/tables.js";
-import { canGiveEgg, newEgg } from "../egg/pool.js";
+import { checkGiveEgg, newEgg } from "../egg/pool.js";
 import { ACHIEVEMENT_RULES } from "./rules.js";
-import { EGG_RULES } from "../egg/rules.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -269,8 +268,8 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const eggKind = rewardEgg(def);
   if (eggKind) {
-    if (save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
-    if (!canGiveEgg(save, eggKind, opts)) return { ok: false, reason: "egg-none" };
+    const can = checkGiveEgg(save, eggKind, opts);
+    if (!can.ok) return { ok: false, reason: can.reason === "sold-out" ? "egg-none" : can.reason };
     const egg = newEgg(save, eggKind, now, opts);
     save.eggs.push(egg);
     done();

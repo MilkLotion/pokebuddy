@@ -11,6 +11,7 @@ import type { Paths } from "./paths";
 import { profile } from "../dex/species";
 import { genderLookInfo, regionalOf } from "../dex/regional";
 import { megaOf } from "../dex/mega";
+import { dexFolderOf, lookOf } from "../dex/look";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
 
@@ -112,8 +113,7 @@ const knownLook = (look: string, srcs: PmdSource[]): boolean => srcs.length > 0 
 
 // 그림 묶음에 적는 도감 번호 — 메가 모습은 기본 종의 번호
 export const dexOfLook = (look: string): string => {
-  const slug = look.replace(/:shiny$/, "");
-  return String(profile(megaOf(slug)?.base ?? genderLookInfo(slug)?.species ?? slug).dex ?? "").padStart(4, "0");
+  return dexFolderOf(lookOf(look));
 };
 
 // look → 초상 PNG. 없거나 못 받으면 null (src/main/portraits.ts)
