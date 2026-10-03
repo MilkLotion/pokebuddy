@@ -12,7 +12,7 @@ import { begin } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
-import type { Command } from "../../shared/types";
+import type { Command } from "../../shared/command";
 import { makeTmp } from "../harness/tmp-dir";
 
 const T = new Date(2026, 8, 18, 12).getTime();

@@ -11,7 +11,7 @@ import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../../mai
 import type { StageWindow } from "../../main/stage-window";
 import { setHome } from "../../party/home";
 import { empty, normalize } from "../../save/v3";
-import type { CoachView, PointerMsg } from "../../shared/stage";
+import type { CoachView, PointerMsg } from "../../shared/model/stage";
 import { setSetting } from "../../state/settings";
 
 const T0 = Date.UTC(2026, 8, 28, 3, 0, 0);

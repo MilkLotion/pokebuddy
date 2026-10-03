@@ -13,7 +13,7 @@
 // 리전폼은 data/regional.json 의 ko·en 을 가장 먼저 쓴다 — 화면 이름은 `알로라 라이츄` 형식이다 (2026-09-30 사용자 결정)
 import fs from "node:fs";
 import path from "node:path";
-import type { Lang } from "../../shared/types";
+import type { Lang } from "../../shared/species";
 import { LIB_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
 import { regionalOf } from "../../dex/regional";
 

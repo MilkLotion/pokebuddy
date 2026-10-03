@@ -12,7 +12,7 @@
 // 결과는 출력만 한다. 표를 고치지 않는다. 어긋남이 있으면 종료 코드 1
 import fs from "node:fs";
 import path from "node:path";
-import type { EvoNeed } from "../../shared/types";
+import type { EvoNeed } from "../../shared/species";
 import { regionalTable } from "../../dex/regional";
 import { AFFINITY_MAX, BLANK_CD, BOND_CORD, affinityOf, type EvoTable } from "../data/build-evo";
 import { DATA_DIR, csv, runBuild } from "../data/pokeapi-csv";

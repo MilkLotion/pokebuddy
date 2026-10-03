@@ -4,7 +4,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { AgentName } from "../../shared/types";
+import type { AgentName } from "../../shared/names/agents";
 import { makeTmp } from "../harness/tmp-dir";
 
 const home = makeTmp("selftest-agents");

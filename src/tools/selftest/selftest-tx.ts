@@ -8,7 +8,7 @@ import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createDispatcher } from "../../commands/dispatcher";
-import type { CommandResult } from "../../shared/types";
+import type { CommandResult } from "../../shared/command";
 import { argsOf, registerV3, requestIdOf, V3_COMMANDS } from "../../tx/bridge";
 import { createExecutor, type TxHandler, type TxPorts } from "../../tx/executor";
 import { HANDLERS } from "../../tx/handlers";

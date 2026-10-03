@@ -4,7 +4,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { createAppUpdater, urgentStep, type UpdaterLike } from "../../main/updater";
-import type { UpdateView } from "../../shared/manage";
+import type { UpdateView } from "../../shared/model/account";
 
 class FakeUpdater extends EventEmitter implements UpdaterLike {
   autoDownload = false;

@@ -7,7 +7,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { empty } from "../../save/v3";
-import type { BannerView } from "../../shared/manage";
+import type { BannerView } from "../../shared/model/overlays";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { bannerOf } from "../../notify/banner";
 import { createNotifier } from "../../notify/notifier";

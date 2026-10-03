@@ -4,7 +4,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { BannerView } from "../../shared/manage";
+import type { BannerView } from "../../shared/model/overlays";
 import { makeTmp } from "../harness/tmp-dir";
 
 const home = makeTmp("selftest-hook-upkeep");
