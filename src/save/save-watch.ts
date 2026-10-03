@@ -11,7 +11,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { SaveV3 } from "../shared/save-v3";
 import { backupName, readSave, saveStampOf } from "./save-file.js";
-import * as writer from "./writer.js";
+import { watchDir, type DirWatch } from "../platform/watch-dir.js";
+import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
 
 export const SAVE_WATCH_RULES = {
   reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격
@@ -43,7 +44,7 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
   let amWriter = false;
   let closed = false;
   let cacheKey: string | null = null; // mtime·크기가 같으면 다시 파싱하지 않는다
-  let watcher: fs.FSWatcher | null = null;
+  let watcher: DirWatch | null = null;
   let timer: NodeJS.Timeout | null = null;
   const changeCbs = new Set<() => void>();
   const roleCbs = new Set<(w: boolean) => void>();
@@ -77,35 +78,24 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
     emitChange();
   }
 
-  // 폴더를 본다. 파일을 직접 보면 원자적 쓰기(rename) 뒤에 감시가 끊긴다
+  // 폴더를 본다 — 저장 파일의 이벤트만 (src/platform/watch-dir.ts). 폴더를 못 만들면 감시하지 않는다
   function watch(): void {
     if (watcher) return;
     const dir = path.dirname(paths.save);
-    const base = path.basename(paths.save);
-    let pending = false;
     try {
       fs.mkdirSync(dir, { recursive: true });
-      watcher = fs.watch(dir, (_event, filename) => {
-        if (pending || closed) return;
-        if (filename && filename !== base) return;
-        pending = true;
-        setImmediate(() => {
-          pending = false;
-          if (!closed) reload();
-        });
-      });
-      watcher.on("error", () => {
-        // 폴더가 사라졌다 — 다시 잡아 보기가 받쳐 준다
-      });
     } catch {
-      watcher = null;
+      return;
     }
+    watcher = watchDir(dir, () => {
+      if (!closed) reload();
+    }, { only: path.basename(paths.save) });
   }
 
   function claim(): boolean {
     if (closed) return false;
-    if (amWriter && writer.isMine(paths.saveLock, pid)) return true;
-    const r = writer.claim(paths.saveLock, pid);
+    if (amWriter && ownsLock(paths.saveLock, pid)) return true;
+    const r = claimLock(paths.saveLock, pid);
     if (!r.ok) {
       if (amWriter) resign();
       return false;
@@ -119,7 +109,7 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
   }
 
   function resign(): void {
-    if (amWriter) writer.release(paths.saveLock, pid);
+    if (amWriter) releaseLock(paths.saveLock, pid);
     amWriter = false;
     cacheKey = null;
     log?.({ party: "reader" });
@@ -140,7 +130,7 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
   return {
     save: () => state,
     holdsRole: () => amWriter,
-    isWriter: () => amWriter && writer.isMine(paths.saveLock, pid),
+    isWriter: () => amWriter && ownsLock(paths.saveLock, pid),
     refresh: () => reload(true),
     onChange(cb) {
       changeCbs.add(cb);
@@ -154,13 +144,9 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
       closed = true;
       if (timer) clearInterval(timer);
       timer = null;
-      try {
-        watcher?.close();
-      } catch {
-        // 이미 닫혔다
-      }
+      watcher?.stop();
       watcher = null;
-      if (amWriter) writer.release(paths.saveLock, pid);
+      if (amWriter) releaseLock(paths.saveLock, pid);
       amWriter = false;
     },
   };

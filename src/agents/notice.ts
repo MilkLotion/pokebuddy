@@ -5,7 +5,7 @@
 //
 // 띄운 알림은 save.json 과 같은 폴더의 notices.json { "shown": ["<id>"] } 에 남긴다. 게임 저장에는 필드를 더하지 않는다
 import fs from "node:fs";
-import { writeAtomic } from "../save/legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 
 export const CODEX_FLASH_NOTICE = "codex-windows-flash";
 

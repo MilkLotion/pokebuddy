@@ -15,6 +15,7 @@ import { SIZE_STEPS, sizeLevelOf, snapSize, zoomOfLevel } from "../party/size";
 import { SHOP_RULES } from "../shop/rules";
 import { CARE_RULES, MOOD_RULES as STATE_MOOD_RULES, TIME_RULES } from "../state/rules";
 import { SAVE_V2_RULES } from "./v2/rules";
+import { IO_RULES } from "../platform/atomic-write";
 
 export const SAVE_RULES = {
   // [임시] v2 스키마 값의 옛 이름 — src/tools/selftest/selftest-legacy.ts 와 scripts/build-verify.cjs 가 읽는다. 원본은 ./v2/rules.ts SAVE_V2_RULES
@@ -25,8 +26,9 @@ export const SAVE_RULES = {
   log: { keep: 200 }, // 기록 — 최근 건수만 남긴다. v2·v3 이 같이 쓴다
   // 파일 통로의 시간 (1판 economy RULES.io 에서 옮김)
   io: {
-    writeRetries: 3, // Windows 는 읽는 쪽이 열고 있으면 rename 이 막힌다 — 잠깐 뒤 다시
-    writeRetryMs: 50,
+    // [임시] 원자적 쓰기의 재시도 — 원본은 src/platform/atomic-write.ts IO_RULES. SAVE_RULES 를 다시 짤 때 뺀다
+    writeRetries: IO_RULES.writeRetries,
+    writeRetryMs: IO_RULES.writeRetryMs,
     mailboxPollMs: 5_000, // fs.watch 보강 폴링
     resultTtlMs: 60_000, // 안 가져간 .result.json 청소
     requestTtlMs: 60_000, // 이보다 오래된 요청은 처리하지 않고 지운다 — 죽은 writer 가 남긴 며칠 전 밥을 주지 않게

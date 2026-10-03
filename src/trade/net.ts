@@ -17,9 +17,8 @@ import type { PetRef } from "./core.js";
 export type { SessionStorage };
 
 // 교환 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts. CLOUD_ACCOUNT_HELD 는 이용 정지(P4c). 앱은 멈춘다
-export type TradeErrorCode = TradeCode;
 
-export type NetResult<T> = { ok: true; data: T } | { ok: false; code: TradeErrorCode; detail?: string };
+export type NetResult<T> = { ok: true; data: T } | { ok: false; code: TradeCode; detail?: string };
 
 export type ChannelStatus = "open" | "joined" | "done" | "cancelled" | "expired";
 
@@ -70,7 +69,7 @@ export function createTradeNet(opts: TradeNetOptions): TradeNet {
   const client = "client" in opts ? opts.client : createOnlineClient(opts);
   const gate = opts.gate ?? createSessionGate(client);
 
-  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => callRpc<T, TradeErrorCode>(client, fn, args, tradeCodeOf);
+  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<NetResult<T>> => callRpc<T, TradeCode>(client, fn, args, tradeCodeOf);
 
   // 로그인하지 않았으면 익명 계정을 만든다. 익명 계정은 채널을 읽고 닫을 수만 있다 — 만들기·참가·제안·확정은 로그인이 필요하다(P2, design-p2.md 1절)
   // 익명 발급·동시 호출 나눠 쓰기는 세션 관문이 맡는다 — 계정·클라우드 저장과 발급 경로를 하나로 (검수 F2)

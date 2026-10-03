@@ -10,7 +10,8 @@
 //   제안    올리기 직전 클라우드 저장을 올린다(beforeOffer). 서버 저장에 그 개체가 아직 없으면 save-wait 로 거절한다
 //           (worklog-mac/records/cloud-authority/design-p2.md 4절 원장, 13절 서버 계약)
 import { offerable, pendingOf, refOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
-import { tokenOf, type ChannelView, type TradeErrorCode, type TradeNet } from "./net.js";
+import { tokenOf, type ChannelView, type TradeNet } from "./net.js";
+import type { TradeCode } from "../shared/names/online-codes.js";
 import type { TxResult } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -25,7 +26,7 @@ export interface TradeViewModel {
   friendPet: TradePet | null; // 검사를 통과한 친구 제안
   friendBlocked: ReceiveFailure | null; // 친구 제안이 검사에 걸린 이유
   received: { petId: string } | null; // 완료 뒤 받은 개체
-  error: { code: TradeErrorCode | "LOCAL"; detail?: string } | null;
+  error: { code: TradeCode | "LOCAL"; detail?: string } | null;
   busy: boolean;
   refreshedBy: RefreshReason | null; // 마지막 새로 고침을 부른 것 — 실시간 신호가 도착했는지 확인할 때 본다
   refreshedAt: number | null;
@@ -75,7 +76,7 @@ export interface TradeSessionOptions {
 //   login-required  익명 계정이다 — 교환은 로그인해야 한다 (클라이언트 판정 또는 서버 TRADE_LOGIN_REQUIRED)
 //   save-wait   올린 개체가 아직 서버 저장에 없다 — 저장이 끝나면 다시 올린다 (서버 TRADE_PET_NOT_SYNCED)
 export type TradeRefusal = ReasonOf<"busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait">;
-export type TradeActionResult = { ok: true } | { ok: false; reason: TradeErrorCode | "LOCAL" | TradeRefusal; detail?: string };
+export type TradeActionResult = { ok: true } | { ok: false; reason: TradeCode | "LOCAL" | TradeRefusal; detail?: string };
 
 export interface TradeSession {
   view: () => TradeViewModel;
@@ -99,7 +100,7 @@ const OK: TradeActionResult = { ok: true };
 
 // 서버 오류 가운데 사용자가 할 일이 정해진 것 — 보기 오류가 아니라 거절 이유로 돌려준다
 //   TRADE_PET_TRADED·TRADE_PET_BUSY(다른 활성 교환에 올라가 있음, D31)는 보기 오류로 둔다. 제안 전이라 로컬 잠금은 없다
-const REFUSAL_OF: Partial<Record<TradeErrorCode, TradeRefusal>> = {
+const REFUSAL_OF: Partial<Record<TradeCode, TradeRefusal>> = {
   TRADE_LOGIN_REQUIRED: "login-required",
   TRADE_PET_NOT_SYNCED: "save-wait",
 };
@@ -121,7 +122,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     state = { ...state, ...patch };
     o.onView(state);
   };
-  const fail = (code: TradeErrorCode | "LOCAL", detail?: string): TradeActionResult => {
+  const fail = (code: TradeCode | "LOCAL", detail?: string): TradeActionResult => {
     emit({ error: { code, ...(detail ? { detail } : {}) }, busy: false });
     return { ok: false, reason: code, ...(detail ? { detail } : {}) };
   };
@@ -129,7 +130,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   // 조작 도중의 거절 — begin 이 켠 busy 를 끈다
   const release = (reason: TradeRefusal): TradeActionResult => { emit({ busy: false }); return refuse(reason); };
   // 서버 실패 — 거절 이유로 옮길 수 있으면 옮기고, 아니면 보기 오류로 둔다
-  const failNet = (code: TradeErrorCode, detail?: string): TradeActionResult => {
+  const failNet = (code: TradeCode, detail?: string): TradeActionResult => {
     const reason = REFUSAL_OF[code];
     return reason ? release(reason) : fail(code, detail);
   };
