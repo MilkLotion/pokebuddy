@@ -9,18 +9,14 @@ import { affinityPercent, buffPercent, carePercent, zoneOf } from "../../state/t
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { TIME_RULES } from "../../state/rules";
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
+import { testPet } from "../harness/fixtures";
 
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
 const MIN = 60_000;
 
-const pet = (over: Partial<PetV3> = {}): PetV3 => ({
-  id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
-  level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
-  mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
-  daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
-  ...over,
-});
+// 시험 개체 — newPet 결과에 크기 2 와 over 를 덮는다 (src/tools/harness/fixtures.ts)
+const pet = (over: Partial<PetV3> = {}): PetV3 => testPet({ size: 2, ...over });
 
 // 개체 하나가 파티 첫 칸에 있는 저장
 function seed(over: Partial<PetV3> = {}): SaveV3 {

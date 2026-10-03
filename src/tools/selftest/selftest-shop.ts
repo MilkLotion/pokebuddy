@@ -22,8 +22,8 @@ import { EGG_RULES } from "../../egg/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
 import { HANDLERS } from "../../tx/command-table";
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const rand = () => 0.5;
 
 function seed(points: number): SaveV3 {

@@ -27,17 +27,11 @@ import { pendingOf } from "../../notify/pending";
 import { PET_RULES } from "../../party/rules";
 import { canShow, currentTutorial, done, queueTutorials, skip } from "../../tutorial/queue";
 import { HANDLERS } from "../../tx/command-table";
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
+import { testPet } from "../harness/fixtures";
 
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
-
-const pet = (over: Partial<PetV3> = {}): PetV3 => ({
-  id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
-  level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
-  mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0,
-  buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
-  daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
-  ...over,
-});
+// 시험 개체 — newPet 결과에 크기 2 와 over 를 덮는다 (src/tools/harness/fixtures.ts)
+const pet = (over: Partial<PetV3> = {}): PetV3 => testPet({ size: 2, ...over });
 
 // 첫 개체 하나가 첫 칸에 숨겨져 있다
 function seed(): SaveV3 {
