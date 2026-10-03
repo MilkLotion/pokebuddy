@@ -13,7 +13,7 @@ import { bannerOf } from "../../view/banner";
 import { createNotifier } from "../../notify/notifier";
 import { writeAtomic } from "../../platform/atomic-write";
 import { readJsonFile } from "../../platform/json-file";
-import { refresh, take, type NotifyState } from "../../notify/queue";
+import { refreshQueue, takeFromQueue, type NotifyState } from "../../notify/queue";
 import { makeTmp } from "../harness/tmp-dir";
 import { pendingOf } from "../../notify/pending";
 
@@ -74,7 +74,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
     ["hatch:e1", "hatch:e2", "evolve:p1:charmander", "achievement:show-two"],
     "알마다·개체마다·업적마다 따로, 부화 → 진화 → 업적",
   );
-  const state = refresh(EMPTY, s, T0);
+  const state = refreshQueue(EMPTY, s, T0);
   assert.deepStrictEqual(keys(state), ["hatch:e1", "hatch:e2", "evolve:p1:charmander", "achievement:show-two"]);
   process.stdout.write("(1) 개별 표시와 순서  ok\n");
 }
@@ -84,9 +84,9 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   const s = seed();
   s.eggs = [];
   s.pets = [];
-  const first = refresh(EMPTY, s, T0);
+  const first = refreshQueue(EMPTY, s, T0);
   s.eggs.push(egg("e9", true));
-  const later = refresh(first, s, T0 + 1000);
+  const later = refreshQueue(first, s, T0 + 1000);
   assert.deepStrictEqual(keys(later), ["achievement:show-two", "hatch:e9"]);
   process.stdout.write("(2) 먼저 생긴 배너부터  ok\n");
 }
@@ -94,10 +94,10 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 // (3) 한 번 규칙 — 꺼낸 키는 미처리여도 다시 줄에 서지 않는다
 {
   const s = seed();
-  const taken = take(refresh(EMPTY, s, T0));
+  const taken = takeFromQueue(refreshQueue(EMPTY, s, T0));
   assert.ok(taken);
   assert.equal(taken.key, "hatch:e1");
-  const again = refresh(taken.state, s, T0 + 15_000);
+  const again = refreshQueue(taken.state, s, T0 + 15_000);
   assert.ok(!keys(again).includes("hatch:e1"), "표시한 알은 다시 뜨지 않는다");
   assert.ok(again.shown.includes("hatch:e1"));
   process.stdout.write("(3) 표시한 상태는 반복하지 않음  ok\n");
@@ -106,11 +106,11 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 // (4) 기다리는 동안 풀리면 뺀다. 대상이 사라지면 표시 기록도 지운다
 {
   const s = seed();
-  const taken = take(refresh(EMPTY, s, T0));
+  const taken = takeFromQueue(refreshQueue(EMPTY, s, T0));
   assert.ok(taken);
   s.eggs = s.eggs.filter((e) => e.id !== "e1" && e.id !== "e2"); // 둘 다 열었다
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: T0 + 1 }; // 보상을 받았다
-  const next = refresh(taken.state, s, T0 + 15_000);
+  const next = refreshQueue(taken.state, s, T0 + 15_000);
   assert.deepStrictEqual(keys(next), ["evolve:p1:charmander"]);
   assert.ok(!next.shown.includes("hatch:e1"), "열린 알의 표시 기록은 지운다");
   process.stdout.write("(4) 풀린 상태는 줄에서 제외  ok\n");
@@ -119,13 +119,13 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 // (5) 진화는 종까지 키에 넣는다 — 진화한 뒤 다음 단계가 가능해지면 새 배너
 {
   const s = seed();
-  let state = refresh(EMPTY, s, T0);
+  let state = refreshQueue(EMPTY, s, T0);
   state = { v: 1, shown: [...state.shown, ...keys(state)], queue: [] };
   const p1 = s.pets.find((p) => p.id === "p1");
   assert.ok(p1);
   p1.species = "charmeleon";
   p1.level = 36;
-  const next = refresh(state, s, T0 + 15_000);
+  const next = refreshQueue(state, s, T0 + 15_000);
   assert.deepStrictEqual(keys(next), ["evolve:p1:charmeleon"]);
   assert.ok(!next.shown.includes("evolve:p1:charmander"), "옛 종의 키는 지운다");
   process.stdout.write("(5) 진화 다음 단계는 새 배너  ok\n");
@@ -133,7 +133,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 
 // (6) 처음 켤 때는 이미 미처리인 상태를 표시한 것으로 둔다
 {
-  const first = refresh(null, seed(), T0);
+  const first = refreshQueue(null, seed(), T0);
   assert.deepStrictEqual(first.queue, []);
   assert.equal(first.shown.length, 4);
   process.stdout.write("(6) 처음 켤 때 몰아 띄우지 않음  ok\n");
@@ -248,7 +248,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
     const pendingCloud = pendingOf(cloud, T0).map((p) => p.key);
     assert.ok(pendingCloud.length >= 22, "받은 저장에 미처리 상태가 쌓여 있다");
     // 넘기지 않으면 알 둘과 줍기 20건이 줄을 선다 (진화는 이 PC 에서 이미 표시한 키와 같다)
-    assert.equal(refresh(JSON.parse(fs.readFileSync(file, "utf8")) as NotifyState, cloud, T0).queue.length, 22);
+    assert.equal(refreshQueue(JSON.parse(fs.readFileSync(file, "utf8")) as NotifyState, cloud, T0).queue.length, 22);
     s = cloud;
     n.settle();
     n.tick();

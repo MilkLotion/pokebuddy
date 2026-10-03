@@ -11,7 +11,7 @@ import { MINT_RETIRED } from "../../bag/mint";
 import { createGame } from "../../main/game";
 import { setLang } from "../../view/text";
 import { bannerOf } from "../../view/banner";
-import { refresh } from "../../notify/queue";
+import { refreshQueue } from "../../notify/queue";
 import { newPet } from "../../party/create";
 import * as store from "../../save/store";
 import { empty, normalize } from "../../save/v3";
@@ -19,7 +19,7 @@ import { josa } from "../../shared/josa";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
 import { BAG_RULES } from "../../bag/rules";
-import { applyFind, eligible, findOne, itemCandidates } from "../../find/pickup";
+import { applyFind, eligiblePetIds, findOne, itemCandidates } from "../../find/pickup";
 import { chanceFor, rollHits, shareOf } from "../../find/roll";
 import { FIND_RULES } from "../../find/rules";
 import { pendingOf } from "../../notify/pending";
@@ -159,7 +159,7 @@ try {
   // (6) 마리별 독립 판정 — 조건을 채운 마리마다 따로 굴린다. 잠든 마리(시간을 넘기지 않음)·숨김·박스는 판정하지 않는다
   {
     const s = seed();
-    assert.deepEqual(eligible(s, ["p1", "p2", "p3", "p4", "p9"]), ["p1", "p4"], "꺼낸 파티 개체만");
+    assert.deepEqual(eligiblePetIds(s, ["p1", "p2", "p3", "p4", "p9"]), ["p1", "p4"], "꺼낸 파티 개체만");
 
     // 한 마리만 깨어 있으면 그 마리만 굴린다
     const only = applyFind(s, { activeMs: { p1: 3 * SEC } }, T0, () => 0);
@@ -264,12 +264,12 @@ try {
     assert.deepEqual(b3?.route, { to: "pet", petId: mon.newPetId });
 
     // 한 번 띄운 기록은 다시 줄에 서지 않는다. 처음 켤 때 있던 기록은 띄운 것으로 둔다
-    const first = refresh(null, s, T0);
+    const first = refreshQueue(null, s, T0);
     assert.ok(first.shown.includes("find:f1") && first.queue.length === 0);
-    const next = refresh({ v: 1, shown: first.shown, queue: [] }, s, T0);
+    const next = refreshQueue({ v: 1, shown: first.shown, queue: [] }, s, T0);
     assert.equal(next.queue.length, 0);
     findOne(s, "p1", T0, seq(K_POINTS, 0));
-    const later = refresh(next, s, T0 + 1);
+    const later = refreshQueue(next, s, T0 + 1);
     assert.deepEqual(later.queue.map((q) => q.key), ["find:f4"], "새로 주운 것만 줄에 선다");
 
     // 라틴 글자로 끝나는 이름의 조사 — M·N 은 받침 있음, L·R 은 ㄹ 받침 (검수 C7)

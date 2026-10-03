@@ -7,7 +7,7 @@ import { grantStones } from "../dex/mega.js";
 import { unlockByRules } from "../dex/unlocks.js";
 import { settleMega } from "../party/mega-form.js";
 import { queueTutorials } from "../tutorial/queue.js";
-import { evaluate } from "../achievement/evaluate.js";
+import { evaluateAchievements } from "../achievement/evaluate.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export interface SettleOptions {
@@ -23,5 +23,5 @@ export function applySettle(save: SaveV3, now: number, o: SettleOptions): { achi
   // 첫 선택 한 번으로 다른 후보·기본형이 해금되고, 꺼내기 한 번으로도 달성이 생긴다
   unlockByRules(save, now, o.opts);
   queueTutorials(save, now);
-  return { achieved: evaluate(save, now, o.opts, o.prev) };
+  return { achieved: evaluateAchievements(save, now, o.opts, o.prev) };
 }

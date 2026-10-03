@@ -15,7 +15,7 @@ import { singleSpecies } from "../dex/obtain.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { MAIL_RULES } from "./rules.js";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
-import { isApplied, mailOf, remember } from "./letters.js";
+import { isApplied, mailOf, rememberId } from "./letters.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number };
 
@@ -97,8 +97,8 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts: D
     else for (let i = 0; i < (give.get(g) ?? 0); i++) givePokemon(save, g.species, env, opts);
   }
   const mail = mailOf(save);
-  remember(mail.applied, letterId);
-  remember(mail.read, letterId); // 받았으면 읽은 것이다
+  rememberId(mail.applied, letterId);
+  rememberId(mail.read, letterId); // 받았으면 읽은 것이다
   return { ok: true, applied: true };
 }
 

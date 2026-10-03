@@ -5,7 +5,7 @@
 // 파일을 쓰지 못해도 배너는 보인다. 바뀐 줄은 기억해 두었다가 다음 틱에 다시 쓴다
 import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
-import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";
+import { isNotifyState, refreshQueue, sameState, settleQueue, takeFromQueue, type NotifyState } from "./queue.js";
 
 export interface NotifierOptions {
   file: string; // notify.json — 저장과 같은 폴더
@@ -49,7 +49,7 @@ export function createNotifier({ file, read, now = Date.now, show, readJson, wri
 
   const showNext = (save: SaveV3): void => {
     while (state && !current) {
-      const next = take(state);
+      const next = takeFromQueue(state);
       if (!next) break;
       update(next.state);
       const banner = bannerOf(save, next.key);
@@ -65,7 +65,7 @@ export function createNotifier({ file, read, now = Date.now, show, readJson, wri
   const scan = (): void => {
     const save = read();
     if (!save) return;
-    update(refresh(state, save, now()));
+    update(refreshQueue(state, save, now()));
     if (current) flush();
     else showNext(save);
   };
@@ -80,7 +80,7 @@ export function createNotifier({ file, read, now = Date.now, show, readJson, wri
     settle() {
       const save = read();
       if (!save) return;
-      update(settle(state, save, now()));
+      update(settleQueue(state, save, now()));
       flush();
     },
     showOnce(banner) {

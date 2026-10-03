@@ -62,7 +62,7 @@ export const rewardItem = (def: AchievementDef): { id: string; count: number } |
 };
 
 
-export const defs = (opts?: DexOptions): [string, AchievementDef][] =>
+export const achievementDefs = (opts?: DexOptions): [string, AchievementDef][] =>
   Object.entries(achievementTable(opts)).filter(([id]) => !isMetaKey(id));
 
 export const defOf = (id: string, opts?: DexOptions): AchievementDef | null => (isMetaKey(id) ? null : achievementTable(opts)[id] ?? null);

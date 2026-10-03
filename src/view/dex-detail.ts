@@ -19,7 +19,7 @@ import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
-import { defs as achievementDefs, rewardPokemon } from "../achievement/defs.js";
+import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
 import { hatchBaseOf, regionalOf } from "../dex/regional.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";

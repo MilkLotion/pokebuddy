@@ -58,7 +58,7 @@ const pickIndex = (n: number, rand: Rand): number => Math.min(n - 1, Math.max(0,
 const pickItem = (rand: Rand, opts?: DexOptions): string | null => pickByWeight(itemCandidates(opts), (c) => c.weight, rand)?.id ?? null;
 
 // 무대에 꺼내 둔 파티 개체만 줍는다 — 숨긴 개체·박스 개체·없는 개체는 뺀다
-export function eligible(save: SaveV3, awake: Iterable<string>): string[] {
+export function eligiblePetIds(save: SaveV3, awake: Iterable<string>): string[] {
   const shown = new Set(save.party.slots.filter((s) => s.state === "pokemon" && s.petId && !s.hidden).map((s) => s.petId as string));
   return [...new Set(awake)].filter((id) => shown.has(id) && save.pets.some((p) => p.id === id));
 }
@@ -105,7 +105,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
 // 반영 — 주운 마리마다 한 건씩 저장에 넣는다. 꺼낸 파티 개체가 아니면 건너뛴다. 이번에 주운 기록을 돌려준다
 export function applyHits(save: SaveV3, petIds: readonly string[], now: number, rand: Rand, opts?: DexOptions): FindRecordV3[] {
   const found: FindRecordV3[] = [];
-  for (const petId of eligible(save, petIds)) {
+  for (const petId of eligiblePetIds(save, petIds)) {
     const rec = findOne(save, petId, now, rand, opts);
     if (rec) found.push(rec);
   }
@@ -114,7 +114,7 @@ export function applyHits(save: SaveV3, petIds: readonly string[], now: number, 
 
 // 굴림과 반영을 한 번에 — 꺼낸 파티 개체만 굴린다. 자체 확인과 한 번에 넘기는 호출이 쓴다
 export function applyFind(save: SaveV3, input: FindInput, now: number, rand: Rand, opts?: DexOptions): FindRecordV3[] {
-  const shown = new Set(eligible(save, Object.keys(input.activeMs)));
+  const shown = new Set(eligiblePetIds(save, Object.keys(input.activeMs)));
   const activeMs = Object.fromEntries(Object.entries(input.activeMs).filter(([id]) => shown.has(id)));
   return applyHits(save, rollHits(activeMs, rand, input.rate), now, rand, opts);
 }
