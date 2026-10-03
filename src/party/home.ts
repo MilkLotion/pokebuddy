@@ -3,7 +3,7 @@
 // 사용자가 마리를 끌어다 놓으면 그 자리를 기억한다. 파티 칸이나 박스와는 상관이 없다.
 // 박스에 있는 개체의 자리도 그대로 둔다 — 다시 꺼내면 놓아 둔 자리로 돌아간다.
 import { zoomOfLevel } from "./size.js";
-import { screenRefOf } from "../save/v3.js";
+import { screenRefOf } from "../shared/raw.js";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 

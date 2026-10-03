@@ -73,3 +73,10 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   if (pet.shiny && !save.dex.shinyObtained.includes(species)) save.dex.shinyObtained.push(species);
   return { ok: true, petId, from, to: species };
 }
+
+// 단일 포켓몬인가 — 단일 포켓몬(src/dex/obtain.ts singleSpecies)을 거쳐 왔거나 지금 그 종이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
+export function isSinglePet(pet: Pick<PetV3, "species" | "evolved">, opts?: DexOptions): boolean {
+  const singles = singleSpecies(opts);
+  if ([...pet.evolved, pet.species].some((s) => singles.has(s))) return true;
+  return isShared({ ...(pet as PetV3), evolved: pet.evolved }, opts);
+}

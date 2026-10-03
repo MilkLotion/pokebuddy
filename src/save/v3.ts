@@ -17,6 +17,10 @@ import { FALLBACK_NATURE } from "../dex/natures.js";
 import { UNLOCK_RULES } from "../dex/rules.js";
 import { PARTY_RULES, PET_RULES } from "../party/rules.js";
 import { snapSize } from "../party/size.js";
+import { emptySlots, presetSlots } from "../party/slots.js";
+import { fillBoxes, newBox, nextBoxId, pushBox } from "../box/boxes.js";
+import { maxEggNo } from "../egg/pool.js";
+import { screenRefOf } from "../shared/raw.js";
 import { isNatureId, SAVE_RULES, SAVE_V3_RULES } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { compactSlots } from "../party/slots.js";
@@ -28,21 +32,16 @@ import { SOUND_RULES } from "../state/rules.js";
 import { isGender, legacyGender } from "../dex/gender.js";
 import { maxPetNo } from "../party/create.js";
 
+// [임시] 옛 자리의 다시 내보내기 — src/tools 와 src/main 이 새 자리에서 가져오면 지운다
+//   박스 만들기는 src/box/boxes.ts, 칸 만들기는 src/party/slots.ts, 알 번호는 src/egg/pool.ts, 화면 값은 src/shared/raw.ts
+export { emptySlots, fillBoxes, maxEggNo, newBox, nextBoxId, presetSlots, pushBox, screenRefOf };
+
 type Raw = Record<string, unknown>;
 
 const isObj = (v: unknown): v is Raw => v != null && typeof v === "object" && !Array.isArray(v);
 const num = (v: unknown, d = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const int = (v: unknown, d = 0): number => Math.round(num(v, d));
 const nonNeg = (v: unknown, d = 0): number => Math.max(0, int(v, d));
-
-// 화면 하나를 가리키는 값 — id 와 사각형이 모두 유한한 수이고 크기가 있어야 한다. 아니면 null (설정·개체·명령이 같은 규칙을 쓴다)
-export function screenRefOf(raw: unknown): ScreenRefV3 | null {
-  if (!isObj(raw)) return null;
-  const { id, x, y, w, h } = raw;
-  if (![id, x, y, w, h].every((n) => typeof n === "number" && Number.isFinite(n))) return null;
-  const ref = { id: Math.round(id as number), x: Math.round(x as number), y: Math.round(y as number), w: Math.round(w as number), h: Math.round(h as number) };
-  return ref.w > 0 && ref.h > 0 ? ref : null;
-}
 
 // 놀이공간 방식 — 옛 "full"(주 화면)과 모르는 값은 "screen"(고른 화면 없음 = 주 화면)이다 (2026-09-28 여러 화면)
 const playModeOf = (v: unknown): SettingsV3["playArea"]["mode"] => (v === "region" || v === "all" ? v : "screen");
@@ -91,23 +90,6 @@ export function empty(now: number): SaveV3 {
   };
 }
 
-export function emptySlots(): PartySlotV3[] {
-  const { total, openAtStart, shopUnlock } = PARTY_RULES;
-  return Array.from({ length: total }, (_, i) => {
-    if (i < openAtStart) return { state: "empty" as SlotState };
-    const bought = i - openAtStart < shopUnlock;
-    return { state: "locked" as SlotState, unlockBy: bought ? ("shop" as const) : ("achievement" as const) };
-  });
-}
-
-// 프리셋 하나의 새 칸 — 첫 프리셋은 상점 2칸·업적 2칸이다. 나머지 프리셋은 잠긴 칸을 모두 상점에서 산다 (2026-10-02 사용자 결정)
-export function presetSlots(index: number): PartySlotV3[] {
-  if (index === 0) return emptySlots();
-  const { total, openAtStart } = PARTY_RULES;
-  return Array.from({ length: total }, (_, i) =>
-    i < openAtStart ? { state: "empty" as SlotState } : { state: "locked" as SlotState, unlockBy: "shop" as const });
-}
-
 // 새 저장의 파티 — 첫 프리셋을 적용한 채 프리셋 start 개로 시작한다
 function emptyParty(): PartyV3 {
   const party: PartyV3 = {
@@ -118,32 +100,6 @@ function emptyParty(): PartyV3 {
   };
   countParty({ party });
   return party;
-}
-
-export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: BOX_RULES.size }, () => null) });
-
-// 다음 박스 식별자 — 지금 있는 `b숫자` 의 가장 큰 번호 다음. 순서를 바꾼 뒤에도 겹치지 않는다
-export function nextBoxId(boxes: BoxV3[]): string {
-  let max = boxes.length;
-  for (const b of boxes) {
-    const m = /^b(\d+)$/.exec(b.id);
-    if (m) max = Math.max(max, Number(m[1]));
-  }
-  return `b${max + 1}`;
-}
-
-// 빈 박스 하나를 맨 뒤에 더한다. 상한은 보지 않는다 — 사는 쪽(src/box/slots.ts addBox)이 본다
-export function pushBox(boxes: BoxV3[]): BoxV3 {
-  const box = newBox(nextBoxId(boxes), `박스 ${boxes.length + 1}`);
-  boxes.push(box);
-  return box;
-}
-
-// 박스 수를 기본 개수로 맞춘다 — start 개보다 적으면 채운다. 그보다 많은 박스는 그대로 둔다(산 박스, 옛 규칙으로 늘어난 박스).
-// 새 저장과 읽기에서만 부른다. 박스는 저절로 늘지 않는다
-export function fillBoxes(boxes: BoxV3[]): BoxV3[] {
-  while (boxes.length < BOX_RULES.start) pushBox(boxes);
-  return boxes;
 }
 
 const emptySettings = (): SettingsV3 => ({
@@ -544,16 +500,6 @@ function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePend
   const p = isObj(raw) && isObj(raw.pending) ? raw.pending : null;
   if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };
   return { pending: { channelId: p.channelId, petId: p.petId, offerRev: nonNeg(p.offerRev), received: p.received ?? null } };
-}
-
-// 알 식별자 `e숫자` 의 가장 큰 번호
-export function maxEggNo(eggs: { id: string }[]): number {
-  let max = 0;
-  for (const e of eggs) {
-    const m = /^e(\d+)$/.exec(e.id);
-    if (m) max = Math.max(max, Number(m[1]));
-  }
-  return max;
 }
 
 function normalizeTotals(raw: Raw): Totals {

@@ -6,7 +6,8 @@
 //   잠그기    확정할 때 pending 을 남긴다. 걸린 개체는 값을 바꾸는 명령(진화·가방 사용·모습)을 거절한다
 //   반영      서버가 완료를 알리면 한 번의 저장으로 맞바꾸고 pending 을 지운다. pending 이 없으면 아무것도 하지 않는다
 // 받은 개체는 보낸 개체가 있던 자리(파티 칸 또는 박스 칸)에 들어간다. 그래서 개체 수와 칸 수가 바뀌지 않는다.
-import { isShared } from "../dex/forms.js";
+import { isSinglePet } from "../dex/forms.js";
+import { isTradeLocked, pendingTradeOf } from "../party/pet-actions.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
@@ -44,17 +45,13 @@ export type LockFailure = OfferFailure | "busy";
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
 
-// 단일 포켓몬인가 — 단일 포켓몬(src/dex/obtain.ts singleSpecies)을 거쳐 왔거나 지금 그 종이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
-export function isSinglePet(pet: Pick<PetV3, "species" | "evolved">, opts?: DexOptions): boolean {
-  const singles = singleSpecies(opts);
-  if ([...pet.evolved, pet.species].some((s) => singles.has(s))) return true;
-  return isShared({ ...(pet as PetV3), evolved: pet.evolved }, opts);
-}
-
-export const pendingOf = (save: SaveV3): TradePendingV3 | null => save.trade?.pending ?? null;
+// [임시] 옛 이름 — 가져다 쓰는 쪽(src/main, src/tools, src/tx/handlers.ts, ./session.ts)이 새 자리에서 가져오면 지운다
+//   교환 잠금은 src/party/pet-actions.ts, 단일 포켓몬 판정은 src/dex/forms.ts 에 있다
+export const pendingOf = pendingTradeOf;
 
 // 교환에 걸려 값을 바꾸면 안 되는 개체인가
-export const isLocked = (save: SaveV3, petId: string): boolean => pendingOf(save)?.petId === petId;
+export const isLocked = isTradeLocked;
+export { isSinglePet };
 
 // 올릴 수 있는가
 export function offerable(save: SaveV3, petId: string, opts?: DexOptions): { ok: true; pet: PetV3 } | { ok: false; reason: OfferFailure } {

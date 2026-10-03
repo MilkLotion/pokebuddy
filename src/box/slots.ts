@@ -4,7 +4,7 @@
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
 import { profile } from "../dex/species.js";
 import { BOX_RULES } from "./rules.js";
-import { pushBox } from "../save/v3.js";
+import { pushBox } from "./boxes.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 

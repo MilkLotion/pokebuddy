@@ -12,7 +12,8 @@ import { maxPetNo } from "../party/create.js";
 import { locatePet } from "../party/presets.js";
 import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
-import { isLocked, isSinglePet } from "../trade/core.js";
+import { isSinglePet } from "../dex/forms.js";
+import { checkPetFree } from "../party/pet-actions.js";
 import { eggOfSpecies, eggPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -63,7 +64,8 @@ export function sellablePet(save: SaveV3, petId: string, opts?: DexOptions): { o
   if (!pet) return { ok: false, reason: "no-pet" };
   const price = petSellPrice(pet, opts);
   if (price === null) return { ok: false, reason: "pet-not-sellable" };
-  if (isLocked(save, petId)) return { ok: false, reason: "trade-locked" };
+  const free = checkPetFree(save, petId, "sell");
+  if (!free.ok) return { ok: false, reason: free.reason };
   if (save.pets.length <= 1) return { ok: false, reason: "last-pet" };
   // 프리셋에 든 개체는 팔지 않는다 — 적용한 프리셋(지금 파티)도 같다. 박스로 뺀 뒤 판다 (2026-10-02 사용자 결정)
   if (locatePet(save, petId)?.kind === "preset") return { ok: false, reason: "in-preset" };

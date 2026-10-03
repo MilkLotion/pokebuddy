@@ -4,7 +4,7 @@
 // 화면은 무엇을 보여 줄지만 정하고 값 검사는 하지 않는다. 허용 밖의 값이면 저장을 바꾸지 않는다.
 // 놀이공간 영역(`playRegion`)은 영역 그리기 창이 적용할 때 보낸다. 영역과 `region` 방식을 한 번에 바꾼다.
 // 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
-import { screenRefOf } from "../save/v3.js";
+import { screenRefOf } from "../shared/raw.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { REGION_MIN, SOUND_RULES } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
