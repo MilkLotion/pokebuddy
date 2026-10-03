@@ -3,8 +3,10 @@
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
 import type { DexDeviceView } from "../../shared/model/devices.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "../ui/evo-tree.js";
-import { portraitImg, sprite } from "../ui/portrait.js";
+import { portraitImg, spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
+import { createCryPlayer } from "../ui/cry.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
@@ -30,31 +32,20 @@ new ResizeObserver(() => {
 // 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
 // - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (dex.html @font-face)
 // - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
-const fontsReady: Promise<unknown> = Promise.allSettled(
-  ['400 12px "Galmuri11"', '700 12px "Galmuri11"', '400 10px "Galmuri9"'].map((f) => document.fonts.load(f)),
-).then(() => document.fonts.ready);
+const fontsReady = whenFontsReady(DEVICE_FONTS);
 
 const UNKNOWN = "???";
 const STATE_WORD: Record<string, string> = { obtained: "획득", unlocked: "해금", locked: "미해금" };
 
-// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (portrait.ts sprite)
+// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (ui/portrait.ts spriteCanvas)
 const STAGE = { w: 150, h: 124, maxScale: 2 };
 
-let audio: HTMLAudioElement | null = null;
-let volume = 0; // 설정의 소리 크기를 곱한 울음소리 음량 (메인이 준다)
-
-async function playCry(): Promise<void> {
-  const uri = await api.cry();
-  if (!uri) return;
-  audio?.pause();
-  audio = new Audio(uri);
-  audio.volume = volume;
-  void audio.play().catch(() => undefined);
-}
+// 울음소리 — 음량은 설정의 소리 크기를 곱한 값(메인이 준다)
+const cryPlayer = createCryPlayer(() => api.cry());
 
 function render(v: DexDeviceView): void {
   const d = v.detail;
-  volume = v.volume;
+  cryPlayer.setVolume(v.volume);
   const locked = d.state === "locked";
   device.className = `device${v.side === "left" ? " left" : ""}${locked ? " locked" : ""}`;
   device.replaceChildren();
@@ -82,7 +73,7 @@ function render(v: DexDeviceView): void {
 
   const entry = el("div", "entry");
   const stage = el("div", "stage");
-  if (v.portrait) stage.appendChild(sprite(v.portrait, STAGE));
+  if (v.portrait) stage.appendChild(spriteCanvas(v.portrait, STAGE));
   entry.appendChild(stage);
   const info = el("div", "info");
   info.appendChild(el("div", undefined, locked ? UNKNOWN : d.genus || " "));
@@ -135,7 +126,7 @@ function render(v: DexDeviceView): void {
     return;
   }
   const controls = el("div", "controls");
-  const cry = buttonEl("cry", "울음소리", () => void playCry());
+  const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
   cry.disabled = locked || v.volume <= 0;
   controls.append(

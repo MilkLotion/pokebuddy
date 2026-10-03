@@ -2,8 +2,9 @@
 // 머리(제목·✕), 화면(머리 줄·그림·분류·둘째 줄·설명), 정보 줄(효과·쓰는 곳), 가운데 조작 칸, 바닥(◀ 이전 · 주 단추 · 다음 ▶).
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다(도감 기기 창 dex.ts 와 같다)
 
-import { sprite } from "../ui/portrait.js";
+import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 
 export interface DeviceBridge {
   size: (height: number) => void;
@@ -35,7 +36,7 @@ export function pairs(cls: string, rows: [string, string][], valueCls?: string):
   return box;
 }
 
-// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 4배)로 그린다 (portrait.ts sprite). 도구 그림은 작아서 배율만 크고, 배율은 96 변에 맞춘다
+// 그림 자리 — 150×124. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 4배)로 그린다 (ui/portrait.ts spriteCanvas). 도구 그림은 작아서 배율만 크고, 배율은 96 변에 맞춘다
 const STAGE = { w: 150, h: 124, maxScale: 4, maxSide: 96 };
 
 // 기기 창 하나 — #device 를 찾아 높이 알림·글꼴·키보드를 붙이고, render 가 틀을 그린다
@@ -57,9 +58,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
   }).observe(device);
 
   // 쓰는 글꼴 — 첫 측정 전에 직접 부른다 (dex.ts 와 같다)
-  const fontsReady: Promise<unknown> = Promise.allSettled(
-    ['400 12px "Galmuri11"', '700 12px "Galmuri11"', '400 10px "Galmuri9"'].map((f) => document.fonts.load(f)),
-  ).then(() => document.fonts.ready);
+  const fontsReady = whenFontsReady(DEVICE_FONTS);
 
   // 방향키로도 넘긴다. Esc 는 닫는다
   document.addEventListener("keydown", (e) => {
@@ -94,7 +93,7 @@ export function deviceFrame(api: DeviceBridge, htmlName: string): { device: HTML
     screen.appendChild(bar);
     const entry = el("div", "entry");
     const stage = el("div", "stage");
-    if (face.art) stage.appendChild(sprite(face.art, STAGE));
+    if (face.art) stage.appendChild(spriteCanvas(face.art, STAGE));
     entry.appendChild(stage);
     const info = el("div", "info");
     info.append(el("div", undefined, face.group || " "), pairs("measure", face.spec));

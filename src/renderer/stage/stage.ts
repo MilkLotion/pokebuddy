@@ -10,6 +10,7 @@ import { hitAt, rectOf, type HitLookup } from "./hit.js";
 import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";
 import { el, needEl } from "../ui/dom.js";
+import { decodeImage, opaqueBoxOf, readPixels } from "../ui/image.js";
 
 const params = new URLSearchParams(location.search);
 const opts = {
@@ -156,34 +157,16 @@ const bubbleIcons = new Map<string, BubbleIcon>();
 
 // 불투명한 픽셀을 모두 덮는 사각형 — 읽지 못하면 그림 전체
 function opaqueBox(img: HTMLImageElement): { sx: number; sy: number; sw: number; sh: number } {
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const all = { sx: 0, sy: 0, sw: w, sh: h };
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  const g = c.getContext("2d");
-  if (!g) return all;
-  g.drawImage(img, 0, 0);
-  const px = g.getImageData(0, 0, w, h).data;
-  let x0 = w, y0 = h, x1 = -1, y1 = -1;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    if ((px[(y * w + x) * 4 + 3] ?? 0) < 16) continue;
-    if (x < x0) x0 = x;
-    if (y < y0) y0 = y;
-    if (x > x1) x1 = x;
-    if (y > y1) y1 = y;
-  }
-  return x1 < 0 ? all : { sx: x0, sy: y0, sw: x1 - x0 + 1, sh: y1 - y0 + 1 };
+  const pixels = readPixels(img);
+  const box = pixels && opaqueBoxOf(pixels.data, 16);
+  return box ? { sx: box.x, sy: box.y, sw: box.w, sh: box.h } : { sx: 0, sy: 0, sw: img.naturalWidth, sh: img.naturalHeight };
 }
 
 async function putIcons(icons: Record<string, string>): Promise<void> {
   await Promise.all(
     Object.entries(icons).map(async ([key, uri]) => {
-      const img = new Image();
-      img.src = uri;
-      try {
-        await img.decode();
-      } catch {
+      const img = await decodeImage(uri);
+      if (!img) {
         diag({ kind: "icon", key, ok: false });
         return; // 깨진 그림 — 그 열쇠의 말풍선은 그리지 않는다
       }

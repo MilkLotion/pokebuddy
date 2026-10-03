@@ -9,8 +9,10 @@
 import type { PetDeviceAction, PetDeviceView } from "../../shared/model/devices.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
-import { sprite } from "../ui/portrait.js";
+import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
+import { createCryPlayer } from "../ui/cry.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -38,9 +40,7 @@ new ResizeObserver(() => {
 // 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
 // - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (pet.html @font-face)
 // - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
-const fontsReady: Promise<unknown> = Promise.allSettled(
-  ['400 12px "Galmuri11"', '700 12px "Galmuri11"', '400 10px "Galmuri9"'].map((f) => document.fonts.load(f)),
-).then(() => document.fonts.ready);
+const fontsReady = whenFontsReady(DEVICE_FONTS);
 
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
 
@@ -176,22 +176,13 @@ function waitWord(sec: number): string {
   return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
 
-// 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (portrait.ts sprite)
+// 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (ui/portrait.ts spriteCanvas)
 const STAGE = { w: 88, h: 88, maxScale: 2 };
 // 메가스톤 표식 — 28×28. 키스톤 그림(30×30 안의 14×14)의 빈 테두리를 잘라 두 배로 그린다
 const MEGA_STONE = { w: 28, h: 28, maxScale: 2 };
 
-let audio: HTMLAudioElement | null = null;
-let volume = 0;
-
-async function playCry(): Promise<void> {
-  const uri = await api.cry();
-  if (!uri) return;
-  audio?.pause();
-  audio = new Audio(uri);
-  audio.volume = volume;
-  void audio.play().catch(() => undefined);
-}
+// 울음소리 — 음량은 설정의 소리 크기를 곱한 값(메인이 준다)
+const cryPlayer = createCryPlayer(() => api.cry());
 
 // live — 시간으로만 바뀌는 값이면 그 필드. 새 보기가 모양은 같고 이 값만 다르면 막대만 고친다 (applyLive)
 function bar(label: string, value: number, shown: string, cls = "", live?: "affinity" | "fullness" | "mood"): HTMLElement {
@@ -294,7 +285,7 @@ function render(v: PetDeviceView): void {
 function renderBody(v: PetDeviceView): void {
   const pet = v.pet;
   shownPetId = pet.id;
-  volume = v.volume;
+  cryPlayer.setVolume(v.volume);
   device.className = `device${v.side === "left" ? " left" : ""}`;
   device.replaceChildren();
   device.appendChild(el("div", "hinge"));
@@ -319,7 +310,7 @@ function renderBody(v: PetDeviceView): void {
   const entry = el("div", "entry");
   const portrait = el("div", "portrait");
   const stage = el("div", "stage");
-  if (v.portrait) stage.appendChild(sprite(v.portrait, STAGE));
+  if (v.portrait) stage.appendChild(spriteCanvas(v.portrait, STAGE));
   portrait.appendChild(stage);
   // 메가스톤 표식 — 초상 오른쪽 아래. 누르면 관리 창이 확인·고르기 창을 띄운다. 메가 모습이면 옅은 바탕이고 누르면 원래 모습으로 돌아간다.
   // 박스 개체는 누를 수 없다 — 메가진화는 프리셋 칸에서만 한다 (src/dex/mega.ts)
@@ -329,7 +320,7 @@ function renderBody(v: PetDeviceView): void {
     const stone = buttonEl(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => act({ kind: "dialog", dialog: "mega" }), !pet.mega.canChange);
     stone.title = label;
     stone.setAttribute("aria-label", label);
-    if (v.megaIcon) stone.appendChild(sprite(v.megaIcon, MEGA_STONE));
+    if (v.megaIcon) stone.appendChild(spriteCanvas(v.megaIcon, MEGA_STONE));
     portrait.appendChild(stone);
   }
   entry.appendChild(portrait);
@@ -441,7 +432,7 @@ function renderBody(v: PetDeviceView): void {
   device.appendChild(actions);
 
   const controls = el("div", "controls");
-  const cry = buttonEl("cry", "울음소리", () => void playCry(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
+  const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
   controls.append(buttonEl("prev", "◀ 이전", () => api.step(-1)), cry, buttonEl("next", "다음 ▶", () => api.step(1)));
   device.appendChild(controls);
 

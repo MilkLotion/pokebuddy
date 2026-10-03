@@ -4,6 +4,7 @@
 import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
 import { portraitImg } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 
 const api = window.pokebuddyParty;
 const root = document.getElementById("device");
@@ -27,9 +28,7 @@ new ResizeObserver(() => {
 }).observe(device);
 
 // 쓰는 글꼴 — 첫 측정 전에 직접 부른다
-const fontsReady: Promise<unknown> = Promise.allSettled(
-  ['400 12px "Galmuri11"', '700 12px "Galmuri11"'].map((f) => document.fonts.load(f)),
-).then(() => document.fonts.ready);
+const fontsReady = whenFontsReady(DEVICE_FONTS.slice(0, 2));
 
 // 방향키는 앞·뒤 프리셋. Esc 는 든 것을 내려놓고, 든 것이 없으면 닫는다 — 판정은 관리 창이 한다
 document.addEventListener("keydown", (e) => {
