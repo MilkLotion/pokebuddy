@@ -45,12 +45,12 @@
 | `src/shared` | 모듈 사이의 공유 타입과 시계 | 규칙 | 전체 |
 | `src/tools` | 데이터 빌드와 자체 검사(`selftest-*`) | 앱 실행 | — |
 | `src/online` | 온라인 공통과 계정. `client`는 교환·계정·클라우드 저장이 함께 쓰는 Supabase 클라이언트, `account`는 아이디 가입·로그인·로그아웃·이름·삭제 요청, `github`는 GitHub 로그인(`127.0.0.1` 임시 서버 PKCE), `cloud`는 클라우드 저장(활성 기기·자동 저장·오프라인·다른 PC 에서 시작·연결 끊김 확인·잠듦·업데이트 필요·저장 정보 분실), `session`은 익명·로그인 세션을 한 곳에서 만들고 부팅 때 세션 유무를 확인한다(`probe`), `handoff`는 로그인 직전 익명 저장 이관 티켓을 받고 로그인 뒤 익명 저장을 옮긴다(`begin_handoff`·`adopt_anonymous`) | 저장 파일 쓰기(메인이 받은 저장을 검사·백업 뒤 바꾼다), 창 | — |
-| `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/command-channel.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
+| `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/command-channel.ts` 와 다르다 | 서버 호출(`src/online/mail-inbox.ts` 가 한다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(개발용 시험 장치)이고, 교환 모달 화면 값은 `src/view/trade-screen.ts` 가 만든다. 서버 SQL 은 `supabase/migrations/`에 있다.
 교환 제안의 값은 서버가 만든다(`set_offer`). 앱이 보낸 개체 값은 서버 저장에 올렸는지 확인하는 데만 쓴다 — 종·이로치·성격이 다르거나 레벨·경험치가 서버보다 크면 `TRADE_PET_NOT_SYNCED`다. 채널에는 지문(`id`·`since`)으로 찾은 서버 저장 개체의 값을 넣는다. 서버 저장이 검증받지 않은 계정(`trust = unverified` — 첫 저장 분류·관찰 모드 위반)은 `TRADE_SAVE_UNVERIFIED`로 제안하지 못한다. 교환이 끝나는 순간 두 사람이 받은 제안을 `cloud_private.trade_receipts`에 남긴다 — 두 사람이 반영하면 채널의 제안 값은 지워진다.
-우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
+우편함의 받기 흐름은 `src/online/mail-inbox.ts`(`createMailInbox`)다. 메인이 넘긴 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 우편함 모달의 화면 값은 `src/view/mail.ts` 가 만든다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
 클라우드 저장 올리기는 Edge Function `supabase/functions/upload-save`를 거친다(`src/online/cloud.ts`). 앱이 `upload_save` RPC 를 직접 부르면 `CLOUD_UPDATE_REQUIRED`다. 검증은 아래 [서버 저장 검증](#서버-저장-검증)을 따른다.
 부팅하면 `src/main/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
@@ -262,7 +262,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `box.sort` / `box.move` / `box.rename` / `box.order` | 박스 정렬·칸 옮기기·이름 바꾸기·박스 순서 바꾸기 | `src/box` |
 | `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/online/trade-session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 명령 통로 `mailbox` 로 넘긴다 | `src/trade`, `src/main` |
 | `trade.lock` / `trade.unlock` / `trade.apply` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영. 교환 세션만 부른다 | `src/trade`, `src/tx` |
-| `mail.apply` / `mail.read` | 우편함 선물 넣기·읽음 기록. 우편함(`src/main/mail.ts`)만 부른다. 명령 처리기에 등록하지 않아 설정창·CLI 는 부를 수 없다 | `src/mail`, `src/tx` |
+| `mail.apply` / `mail.read` | 우편함 선물 넣기·읽음 기록. 우편함(`src/online/mail-inbox.ts`)만 부른다. 명령 처리기에 등록하지 않아 설정창·CLI 는 부를 수 없다 | `src/mail`, `src/tx` |
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다 | `src/state`, `src/main` |
 
 모든 명령은 거래 실행기를 지난다. 완료한 요청을 다시 보내도 중복 반영하지 않는다.

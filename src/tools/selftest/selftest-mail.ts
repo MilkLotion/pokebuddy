@@ -2,7 +2,8 @@
 // 설계: worklog/records/post-box/record.md "구현 설계". 서버 SQL 검사는 supabase/tests/mail_test.sql
 import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
-import { createMainMail, type RpcResult } from "../../main/mail";
+import { createMailInbox, type RpcResult } from "../../online/mail-inbox";
+import { mailScreenOf } from "../../view/mail";
 import { empty, normalize } from "../../save/v3";
 import { createExecutor } from "../../tx/executor";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -144,7 +145,7 @@ void (async () => {
   let hold = false; // 클라우드 저장이 올릴 수 있는 상태가 아니다
   let changed = 0;
   let claims = 0;
-  const box = createMainMail({
+  const box = createMailInbox({
     rpc: async <T>(fn: string, args: Record<string, unknown>): Promise<RpcResult<T>> => {
       if (fn === "list_mail") return { ok: true, data: letters.map((l) => ({ ...l })) as T };
       claims += 1;
@@ -158,6 +159,7 @@ void (async () => {
     signedIn: () => signedIn,
     hold: async () => hold,
     onChanged: () => (changed += 1),
+    screen: mailScreenOf,
     now: () => T0,
   });
   await box.refresh();
@@ -201,7 +203,7 @@ void (async () => {
     let release: () => void = () => undefined;
     let slow = true;
     let throwOnChange = false;
-    const box2 = createMainMail({
+    const box2 = createMailInbox({
       rpc: async <T>(fn: string): Promise<RpcResult<T>> => {
         if (fn === "list_mail") {
           if (slow) await new Promise<void>((r) => (release = r));
@@ -215,6 +217,7 @@ void (async () => {
       onChanged: () => {
         if (throwOnChange) throw new Error("다시 그리기 실패");
       },
+      screen: mailScreenOf,
       now: () => T0,
     });
     const pending = box2.refresh();

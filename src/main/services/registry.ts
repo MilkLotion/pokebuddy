@@ -13,9 +13,10 @@ import { callRpc } from "../../online/server-call.js";
 import { createSessionStorage, sessionFile, type SessionFileStorage } from "../../online/session-storage.js";
 import { pendingTradeOf } from "../../party/pet-actions";
 import type { GameV3 } from "../game";
-import { createMainMail, type MainMail } from "../mail";
+import { createMailInbox, type MailInbox } from "../../online/mail-inbox.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "../online";
 import { createMainTrade, type MainTrade } from "../trade";
+import { mailScreenOf } from "../../view/mail.js";
 import { createTradeScreen, type TradeScreenBuilder } from "../../view/trade-screen";
 import { createKeyVault } from "./vault";
 
@@ -45,7 +46,7 @@ export interface Services {
   tradeBlocked(): boolean;
   hold(): Promise<boolean>;
   settled(ms: number): Promise<void>;
-  mail(): MainMail | null; // 없으면 만든다
+  mail(): MailInbox | null; // 없으면 만든다
   openTradeLink(link: string): void; // 링크를 받아 두고 교환 모달을 연다. 세션이 준비되면 참가한다
   flushTradeLink(): void;
   pause(): void; // 교환·우편을 멈춘다. 온라인은 남긴다 — 확인·다시 시도에 쓴다
@@ -56,7 +57,7 @@ export function createServices(deps: ServicesDeps): Services {
   let mainOnline: MainOnline | null = null;
   let mainTrade: MainTrade | null = null;
   let tradeScreen: TradeScreenBuilder | null = null;
-  let mainMail: MainMail | null = null;
+  let mainMail: MailInbox | null = null;
   let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
   let tradeLink: { link: string; at: number } | null = deps.firstLink ? { link: deps.firstLink, at: Date.now() } : null;
   // 세션 파일 저장소 한 벌 — 계정·클라우드(online)와 교환이 같은 메모리로 session.bin 을 본다.
@@ -174,12 +175,12 @@ export function createServices(deps: ServicesDeps): Services {
     return mainOnline;
   }
 
-  function mail(): MainMail | null {
+  function mail(): MailInbox | null {
     const on = online();
     const g = deps.game();
     if (!on || !g) return null;
     if (!mainMail) {
-      mainMail = createMainMail({
+      mainMail = createMailInbox({
         // 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN) — src/online/codes.ts mailCodeOf
         rpc: (fn, args) => callRpc(on.client, fn, args, mailCodeOf),
         // writer 를 놓은 뒤 끝난 받기는 저장을 쓰지 않는다 — 새 writer 의 저장을 덮어쓰지 않게. 다음에 목록을 읽을 때 복구된다
@@ -188,6 +189,7 @@ export function createServices(deps: ServicesDeps): Services {
         signedIn: () => on.screen().signedIn,
         hold,
         onChanged: () => deps.refreshParty(), // 가방·포인트가 바뀌었다 — 설정창을 다시 그린다
+        screen: mailScreenOf,
       });
       mainMail.onScreen((screen) => deps.sendMail(screen));
     }

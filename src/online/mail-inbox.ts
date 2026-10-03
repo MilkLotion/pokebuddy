@@ -1,17 +1,19 @@
-// 우편함의 메인 쪽 입구 — 서버 편지 목록과 받기(supabase/migrations/20260929100000_mail.sql)를 로컬 저장(src/mail/gifts.ts)에 잇는다.
+// 우편함의 받은편지 — 서버 편지 목록과 받기(supabase/migrations/20260929100000_mail.sql)를 로컬 저장(src/mail/gifts.ts)에 잇는다.
 // 설계는 worklog/records/post-box/record.md "구현 설계" (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행")
+// 우편함의 코드 이름은 mail 이다 — CLI 명령 통로 mailbox 와 다르다 (docs/terms.md)
 //
 // Electron 을 모른다 — 서버 호출(rpc)과 실행기(run)를 받는다. 앱은 공유 Supabase 클라이언트를, 자체 검사는 가짜를 넘긴다.
+// 화면 모양은 화면 값이 만든다 — 상태(MailState)를 screen 으로 넘긴다. 앱은 src/view/mail.ts 의 mailScreenOf 를 넘긴다
 // 렌더러는 편지 id 만 보낸다. 저장에 넣는 선물은 서버가 돌려준 값만 쓴다.
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
+// (예전 src/main/mail.ts 의 createMainMail. 메인 레인 M8-6 에서 온라인 층으로 옮겼다)
 import { boxRoom } from "../box/slots.js";
-import { neededBoxRoom, parseGifts, type Gift } from "../mail/gifts.js";
+import { neededBoxRoom, parseGifts } from "../mail/gifts.js";
 import { isApplied, isRead } from "../mail/letters.js";
 import type { SaveV3 } from "../shared/save-v3";
-import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
+import type { MailAction, MailReply, MailScreen } from "../shared/model/mail";
 import type { TxResult } from "../shared/command";
-import { itemName, petName } from "../view/text.js";
 import type { MailCode, MailReplyCode, TradeCode } from "../shared/names/online-codes.js";
 
 export interface ServerLetter {
@@ -27,7 +29,18 @@ export interface ServerLetter {
 
 export type RpcResult<T> = { ok: true; data: T } | { ok: false; code: MailCode | TradeCode };
 
-export interface MainMailOptions {
+// 화면 값에 넘길 상태 — 편지 목록과 이 저장, 지금 시각, 목록 읽기 상태, 받는 중인 편지, 마지막 실패
+export interface MailState {
+  letters: ServerLetter[];
+  save: SaveV3 | null;
+  now: number;
+  status: MailScreen["status"];
+  signedIn: boolean;
+  busy: string | null;
+  error: MailReplyCode | null;
+}
+
+export interface MailInboxOptions {
   rpc: <T>(fn: "list_mail" | "claim_mail", args: Record<string, unknown>) => Promise<RpcResult<T>>;
   run: (id: string, name: string, args: unknown) => TxResult;
   read: () => SaveV3 | null;
@@ -35,10 +48,11 @@ export interface MainMailOptions {
   // 선물 받기를 막아야 하는가 — 클라우드 저장이 올릴 수 있는 상태가 아니다. 나중에 서버 저장을 받으면 받은 선물이 덮인다
   hold?: () => boolean | Promise<boolean>;
   onChanged: () => void; // 저장에 선물을 넣었다 — 앱은 파티·트레이를 다시 읽는다
+  screen: (state: MailState) => MailScreen; // 화면 모양 — 앱은 src/view/mail.ts 의 mailScreenOf
   now?: () => number;
 }
 
-export interface MainMail {
+export interface MailInbox {
   act: (req: MailAction) => Promise<MailReply>;
   screen: () => MailScreen;
   refresh: () => Promise<void>;
@@ -46,32 +60,12 @@ export interface MainMail {
   onScreen: (fn: (screen: MailScreen) => void) => () => void;
 }
 
-const time = (v: string | null): number | null => {
-  if (!v) return null;
-  const t = Date.parse(v);
-  return Number.isFinite(t) ? t : null;
-};
-
 const isLetter = (v: unknown): v is ServerLetter => {
   const l = v as ServerLetter | null;
   return !!l && typeof l.id === "string" && typeof l.title === "string" && typeof l.starts_at === "string";
 };
 
-function giftView(g: Gift): MailGiftView {
-  if (g.kind === "item") return { kind: "item", id: g.id, name: itemName(g.id), count: g.count };
-  if (g.kind === "pokemon") return { kind: "pokemon", id: g.species, name: petName(g.species), count: g.count };
-  return { kind: "points", id: null, name: "포인트", count: g.count };
-}
-
-function giftViews(raw: unknown): { gifts: MailGiftView[]; unsupported: boolean } {
-  const gifts = parseGifts(raw);
-  if (gifts) return { gifts: gifts.map(giftView), unsupported: false };
-  // 모르는 선물 — 아는 것만 보이고 받기를 막는다
-  const list = Array.isArray(raw) ? raw : [];
-  return { gifts: [], unsupported: list.length > 0 };
-}
-
-export function createMainMail(o: MainMailOptions): MainMail {
+export function createMailInbox(o: MailInboxOptions): MailInbox {
   const now = o.now ?? Date.now;
   const listeners = new Set<(screen: MailScreen) => void>();
   let letters: ServerLetter[] = [];
@@ -80,31 +74,7 @@ export function createMainMail(o: MainMailOptions): MainMail {
   let error: MailReplyCode | null = null;
   let gen = 0; // 계정이 바뀔 때마다 올린다 — 바뀌기 전에 보낸 목록 요청의 답은 버린다(받은 시각은 계정마다 다르다)
 
-  const view = (l: ServerLetter, save: SaveV3 | null): MailLetterView => {
-    const { gifts, unsupported } = giftViews(l.gifts);
-    return {
-      id: l.id,
-      title: l.title,
-      body: l.body ?? "",
-      sender: l.sender || "PokeBuddy",
-      startsAt: time(l.starts_at) ?? 0,
-      endsAt: time(l.ends_at),
-      gifts,
-      claimedAt: time(l.claimed_at),
-      applied: save ? isApplied(save, l.id) : false,
-      read: save ? isRead(save, l.id) : false,
-      unsupported,
-    };
-  };
-
-  const screen = (): MailScreen => {
-    const save = o.read();
-    const list = letters.map((l) => view(l, save));
-    const at = now();
-    // 헤더 점 — 읽지 않은 편지, 또는 기간 안에 받을 선물이 남은 편지
-    const open = (l: MailLetterView): boolean => l.gifts.length > 0 && !l.applied && (l.endsAt == null || l.endsAt > at);
-    return { available: true, status, signedIn: o.signedIn(), letters: list, unread: list.filter((l) => !l.read || open(l)).length, busy, error };
-  };
+  const screen = (): MailScreen => o.screen({ letters, save: o.read(), now: now(), status, signedIn: o.signedIn(), busy, error });
 
   const push = (): void => {
     const s = screen();
@@ -141,7 +111,7 @@ export function createMainMail(o: MainMailOptions): MainMail {
 
   const reply = (ok: boolean, code: MailReplyCode | null): MailReply => ({ ok, code, screen: screen() });
 
-  const act: MainMail["act"] = async (req) => {
+  const act: MailInbox["act"] = async (req) => {
     if (req.action === "refresh") {
       await refresh();
       return reply(status === "ok", status === "ok" ? null : "NETWORK");
