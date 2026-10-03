@@ -48,5 +48,17 @@ function sweep(dir) {
   return left === 0;
 }
 
-if (fs.existsSync(dist)) sweep(dist);
+// src/ 에 .ts 가 하나라도 있는가 — 없으면(npm 설치본은 TS 원본을 싣지 않는다) 모든 산출물이 "짝 없음"이 된다.
+// cli/setup.js 가 훅 파일이 없을 때 build 를 부를 수 있어, 그때 dist/ 를 다 지우지 않게 아무것도 지우지 않는다 (교차 검토 93번)
+function hasTs(dir) {
+  let ents = [];
+  try {
+    ents = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  return ents.some((ent) => (ent.isDirectory() ? hasTs(path.join(dir, ent.name)) : ent.name.endsWith(".ts")));
+}
+
+if (fs.existsSync(dist) && hasTs(path.join(root, "src"))) sweep(dist);
 if (removed || failed) process.stdout.write(`dist/ 에서 짝 소스가 없는 산출물 ${removed}개를 지웠다${failed ? `, ${failed}개는 지우지 못했다` : ""}\n`);

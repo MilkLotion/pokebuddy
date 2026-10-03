@@ -454,4 +454,3 @@ void app.whenReady().then(async () => {
     }, 900);
   });
 });
-
