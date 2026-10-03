@@ -5,7 +5,7 @@
 //   writer  잠금을 잡았다. 파손 격리와 v2 이전 파일 교체를 하며 읽는다
 //   reader  못 잡았다. 읽기만 한다. reclaimMs 마다 다시 잡아 본다
 //
-// 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다.
+// 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다. reclaimMs 마다 주기로도 본다.
 // 무대가 읽을 모양으로 바꾸기와 명령 보내기는 부르는 쪽(src/main/save-party.ts)의 일이다
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +15,7 @@ import { watchDir, type DirWatch } from "../platform/watch-dir.js";
 import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
 
 export const SAVE_WATCH_RULES = {
-  reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격
+  reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격. 같은 간격으로 파일도 다시 본다(감시를 받쳐 준다)
 };
 
 export interface SaveWatchOptions {
@@ -116,9 +116,12 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
     emitRole();
   }
 
+  // 파일 감시가 끊겨도(폴더가 지워졌다 다시 생김·네트워크 드라이브) 변경을 놓치지 않게 주기로도 본다 — 명령 통로·동반자 lock 과 같다.
+  // mtime·크기가 같으면 다시 읽지 않는다 (src/platform/watch-dir.ts "부르는 쪽이 주기 확인으로 받쳐 준다", 94-same-feature-diffs.md 5-10)
   function tick(): void {
     if (closed) return;
     if (!amWriter) claim();
+    reload();
   }
 
   // 처음 한 번 — 잡아 보고 파일을 읽는다
