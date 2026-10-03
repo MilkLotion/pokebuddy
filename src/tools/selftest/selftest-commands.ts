@@ -7,7 +7,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createCommands } from "../../main/commands";
 import { createGame } from "../../main/game";
-import { createSaveParty } from "../../main/save-party";
+import { createSaveParty } from "../../save/save-party";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   store.write(paths.save, seed);
 
   const game = createGame({ file: paths.save, rand: () => 0 });
-  const party = createSaveParty({ game, paths });
+  const party = createSaveParty({ send: game.send, paths });
   let artOk = false;
   let beforeArt: (() => void) | undefined;
   let changes = 0;

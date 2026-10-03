@@ -11,7 +11,7 @@ import { STATE_RULES } from "../../state/rules";
 import type { Anchor } from "../anchor";
 import { CLOCK_RULES, type ClockTick } from "../clock";
 import type { GameV3 } from "../game";
-import type { SaveParty } from "../save-party";
+import type { SaveParty } from "../../save/save-party";
 import type { Bubbles } from "../stage/bubbles";
 import type { StageGroup } from "../stage-group";
 import { devNumber } from "./dev-run";

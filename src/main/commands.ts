@@ -11,7 +11,8 @@ import { sendToWriter, type CommandServer } from "../save/command-channel";
 import type { Command, CommandResult } from "../shared/command";
 import type { Reason } from "../shared/names/reasons";
 import type { Size } from "../shared/geometry";
-import type { SaveParty } from "./save-party";
+import type { SaveParty } from "../save/save-party";
+import { partyPetsOf } from "../view/party-pet";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
 import { evolveCandidates } from "../dex/evolve";
@@ -138,7 +139,7 @@ export function createCommands(ctx: CommandContext): Commands {
   dispatcher.register("pet.set", async (c) => {
     const id = petTarget(c);
     // 크기는 박스 개체도 정한다 — 파티에 나오면 그 크기로 보인다 (2026-09-30). 자리(home)는 파티 개체만
-    const inParty = !!id && ctx.party.all().some((p) => p.id === id);
+    const inParty = !!id && partyPetsOf(ctx.party.save(), false).some((p) => p.id === id);
     const owned = inParty || (!!id && !!currentSave()?.pets.some((p) => p.id === id));
     if (!id || !owned) return { ok: false, reason: "no-pet", id: String(id) };
     const size = isObj(c.args) ? c.args.size : undefined;
@@ -209,7 +210,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 무대 다시 그리기는 기다리지 않고 답한다. 처음 나오는 종은 그림을 인터넷에서 받느라 1~2초 걸린다 — 관리 창이 그동안 멈춰 보였다
   // (worklog/records/response-latency/record.md)
   // 위에서 따로 등록한 명령(무대 반응·그림 준비가 필요한 것과 저장 감시가 맡는 것)은 뺀다.
-  // party.show · party.hide · pet.set 은 reader 경로가 달라 `ctx.party` 가 맡는다 (src/main/save-party.ts)
+  // party.show · party.hide · pet.set 은 reader 경로가 달라 `ctx.party` 가 맡는다 (src/save/save-party.ts)
   registerTxCommands(dispatcher, async (c) => {
     const result = await runSave(c);
     if (result.ok) {
@@ -276,7 +277,7 @@ export function createCommands(ctx: CommandContext): Commands {
       log: save?.log ?? [],
       party: save
         ? slots.map((s, index) => ({ index, state: s.state, petId: s.petId ?? null, hidden: s.hidden === true }))
-        : ctx.party.all(),
+        : partyPetsOf(ctx.party.save(), false),
       pets: save?.pets ?? [],
     };
   });

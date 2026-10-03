@@ -18,7 +18,8 @@ import { screensNow as currentScreens } from "./windows/display";
 import { createLifetime, type Lifetime } from "./lifetime";
 import { clearLastError, writeLastError } from "../platform/last-error.js";
 import { jumpListOf } from "../view/menus";
-import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
+import { createSaveParty, type SaveParty } from "../save/save-party.js";
+import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "./game";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
@@ -314,7 +315,7 @@ const firstPet = (): PartyPet | null => {
 };
 const displayName = (): string => {
   const p = firstPet();
-  return p ? petLabel(p) : rt.party?.pets()[0]?.species ?? config.slug;
+  return p ? petLabel(p) : partyPetsOf(rt.party?.save() ?? null, true)[0]?.species ?? config.slug;
 };
 
 // 관리 창의 명령도 커맨드 처리기를 거친다. reader 면 mailbox 로 writer 에 보내고,
@@ -404,7 +405,7 @@ const petMenu = createPetMenu({
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
 async function refreshParty(): Promise<void> {
   if (!rt.party || !rt.stages) return;
-  await rt.stages.setParty(rt.party.pets());
+  await rt.stages.setParty(partyPetsOf(rt.party.save(), true));
   rt.tray?.setIcon(logoFile(256));
 }
 
@@ -472,7 +473,7 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
     onDone: () => rt.notifier?.done(),
   });
   rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b), readJson: readJsonFile, write: writeAtomic, bannerOf }); // 시각은 전역 시계의 틱 시각
-  const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
+  const saveSource = createSaveParty({ send: reader.send, paths: PATHS, log });
   rt.party = saveSource;
 
   return { reader, saveSource };
@@ -688,9 +689,9 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
 async function bootClaim(saveSource: SaveParty, group: StageGroup, life: Lifetime): Promise<boolean> {
   await refreshParty();
   if (quitting()) return false;
-  if (saveSource.pets().length && !group.petIds().length) {
+  if (partyPetsOf(saveSource.save(), true).length && !group.petIds().length) {
     // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
-    process.stderr.write(`펫 그림을 찾을 수 없음: ${saveSource.pets().map((p) => p.look).join(", ")}\n`);
+    process.stderr.write(`펫 그림을 찾을 수 없음: ${partyPetsOf(saveSource.save(), true).map((p) => p.look).join(", ")}\n`);
     app.exit(3);
     return false;
   }

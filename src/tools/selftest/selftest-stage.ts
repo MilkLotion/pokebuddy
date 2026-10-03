@@ -24,7 +24,8 @@ import type { Look, ArtLoader } from "../../main/art/stage-art";
 import type { StageWindow } from "../../main/stage-window";
 import { createCommands } from "../../main/commands";
 import { createGame } from "../../main/game";
-import { createSaveParty, type PartyPet, type SaveParty } from "../../main/save-party";
+import { createSaveParty, type SaveParty } from "../../save/save-party";
+import { partyPetsOf, type PartyPet } from "../../view/party-pet";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
@@ -222,7 +223,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
 function openParty(p: ReturnType<typeof pathsIn>) {
   let party: SaveParty | null = null;
   const game = createGame({ file: p.save, canWrite: () => party?.isWriter() ?? false, rand: () => 0.5 });
-  party = createSaveParty({ game, paths: p });
+  party = createSaveParty({ send: game.send, paths: p });
   return { game, party };
 }
 
@@ -233,8 +234,8 @@ async function partyTests(): Promise<void> {
     store.write(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
     const { party } = openParty(p);
     ok(party.isWriter(), "writer 가 됐다");
-    eq(party.pets().map((x) => x.id), ["p1", "p2"], "writer 가 파티를 읽었다");
-    eq(party.pets()[0]?.nature, "hardy", "성격이 실렸다");
+    eq(partyPetsOf(party.save(), true).map((x) => x.id), ["p1", "p2"], "writer 가 파티를 읽었다");
+    eq(partyPetsOf(party.save(), true)[0]?.nature, "hardy", "성격이 실렸다");
     ok(!party.needsStarter(), "파티가 있으면 첫 실행 아님");
     ok((await party.setHome("p1", { dx: -10, dy: -20 })).ok, "setHome 성공");
     const disk = store.read(p.save, { repair: false }).state!;
@@ -242,8 +243,8 @@ async function partyTests(): Promise<void> {
     eq(disk.pets[1]!.home, devSaveState(["eevee", "pikachu"], { now: T0 }).pets[1]!.home, "다른 마리의 집은 그대로");
     const shown = await party.setShown("p2", false);
     ok(shown.ok && store.read(p.save, { repair: false }).state!.party.slots[1]!.hidden === true, "setShown 이 파일에 내려갔다");
-    eq(party.pets().length, 1, "숨긴 마리는 pets 에서 빠진다");
-    eq(party.all().length, 2, "all 은 숨긴 마리도 준다");
+    eq(partyPetsOf(party.save(), true).length, 1, "숨긴 마리는 pets 에서 빠진다");
+    eq(partyPetsOf(party.save(), false).length, 2, "all 은 숨긴 마리도 준다");
     party.stop();
     eq(writer.readOwner(p.saveLock), null, "stop 이 잠금을 놓는다");
   }
@@ -257,7 +258,7 @@ async function partyTests(): Promise<void> {
     ok(fs.existsSync(bak), "원본 사본 save.json.v2.bak 이 생겼다");
     eq(JSON.parse(fs.readFileSync(bak, "utf8")).v, 1, "사본은 v1 그대로");
     eq(JSON.parse(fs.readFileSync(p.save, "utf8")).v, 3, "원본은 v3 로 다시 썼다");
-    eq(party.pets().map((x) => x.species), ["eevee"], "v1 의 마리가 무대에 나온다");
+    eq(partyPetsOf(party.save(), true).map((x) => x.species), ["eevee"], "v1 의 마리가 무대에 나온다");
     party.stop();
     fs.writeFileSync(bak, "marker");
     fs.writeFileSync(p.save, JSON.stringify(v1));
@@ -275,7 +276,7 @@ async function partyTests(): Promise<void> {
       const before = fs.readFileSync(p.save, "utf8");
       const { game, party } = openParty(p);
       ok(!party.isWriter(), "잠금이 남의 것이면 reader");
-      eq(party.pets().length, 2, "reader 도 파일을 읽는다");
+      eq(partyPetsOf(party.save(), true).length, 2, "reader 도 파일을 읽는다");
       ok(!party.needsStarter(), "reader 는 첫 실행을 맡지 않는다");
       const moved = party.setHome("p1", { dx: -99, dy: -99 }); // 받아 줄 writer 가 없다 — 기다리지 않는다
       ok(fs.readdirSync(p.mailbox).some((name) => name.endsWith(".json")), "reader setHome 은 mailbox 로 보낸다");
@@ -287,7 +288,7 @@ async function partyTests(): Promise<void> {
       party.onChange(() => void (changes += 1));
       await sleep(50);
       store.write(p.save, devSaveState(["eevee", "pikachu", "squirtle"], { now: T0 + 1000, rng: () => 0 }));
-      ok(await waitFor(() => party.pets().length === 3), "reader 가 파일 변화를 감시로 읽었다");
+      ok(await waitFor(() => partyPetsOf(party.save(), true).length === 3), "reader 가 파일 변화를 감시로 읽었다");
       ok(changes >= 1, "onChange 가 불렸다");
       party.stop();
       eq(writer.readOwner(p.saveLock), idle.pid, "reader 는 남의 잠금을 건드리지 않는다");
@@ -301,7 +302,7 @@ async function partyTests(): Promise<void> {
     const p = pathsIn(tmpDir("first"));
     const { party } = openParty(p);
     ok(party.isWriter() && party.needsStarter(), "파일이 없으면 writer 이고 첫 실행");
-    eq(party.pets(), [], "첫 실행 전에는 빈 파티");
+    eq(partyPetsOf(party.save(), true), [], "첫 실행 전에는 빈 파티");
     ok(party.begin("eevee"), "begin 이 첫 선택으로 시작한다");
     ok(!party.needsStarter(), "begin 뒤에는 첫 실행 아님");
     const disk = store.read(p.save, { repair: false }).state!;
@@ -487,17 +488,17 @@ async function stageRuntimeTests(): Promise<void> {
     old.points = 1234;
     writeSaveV2(migPaths.save, old);
     const migGame = createGame({ file: migPaths.save });
-    const migParty = createSaveParty({ game: migGame, paths: migPaths });
+    const migParty = createSaveParty({ send: migGame.send, paths: migPaths });
     try {
       const moved = store.read(migPaths.save, { repair: false }).state!;
       eq(moved.pets.length, 2, "두 마리가 그대로 옮겨진다");
       eq(moved.points.balance, 1234, "포인트가 그대로");
       ok(fs.existsSync(store.backupName(migPaths.save)), "원본을 옆에 남긴다");
       ok(!migParty.needsStarter(), "이미 개체가 있으면 첫 선택을 묻지 않는다");
-      eq(migParty.pets().map((p) => p.id), ["p1", "p2"], "무대에 두 마리");
+      eq(partyPetsOf(migParty.save(), true).map((p) => p.id), ["p1", "p2"], "무대에 두 마리");
       // 별명·모습은 쓰지 않는다. 실제 종의 이름과 그림이다 (docs/specs/game.md). 옛 값은 legacy 에 남는다
-      ok(!("nick" in migParty.pets()[0]!), "별명을 보이지 않는다 — 무대가 보는 마리에 별명 칸이 없다");
-      eq(migParty.pets()[0]!.look, "eevee", "고른 모습이 아니라 종의 그림");
+      ok(!("nick" in partyPetsOf(migParty.save(), true)[0]!), "별명을 보이지 않는다 — 무대가 보는 마리에 별명 칸이 없다");
+      eq(partyPetsOf(migParty.save(), true)[0]!.look, "eevee", "고른 모습이 아니라 종의 그림");
       eq(moved.legacy["nick:p1"], "뽀야", "별명은 legacy 에 보존");
       eq(moved.legacy["look:p1"], "eevee-starter", "모습도 legacy 에 보존");
     } finally { migParty.stop(); }
@@ -512,7 +513,7 @@ async function stageRuntimeTests(): Promise<void> {
   seed.bag["rare-candy"] = 1;
   store.write(commandPaths.save, seed);
   const game = createGame({ file: commandPaths.save, rand: () => 0 });
-  const source = createSaveParty({ game, paths: commandPaths });
+  const source = createSaveParty({ send: game.send, paths: commandPaths });
   let animations = 0;
   let lastCare = "";
   const commands = createCommands({ mailboxDir: commandPaths.mailbox, party: source, game,

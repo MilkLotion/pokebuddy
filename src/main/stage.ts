@@ -10,7 +10,7 @@ import { MOTION_RULES } from "../motion/rules";
 import { zoomOf, type ArtLoader, type Look } from "./art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Spot } from "./layout";
 import type { Rect, Size } from "../shared/geometry";
-import type { PartyPet } from "./save-party";
+import type { PartyPet } from "../view/party-pet";
 import type { StageWindow } from "./stage-window";
 
 // 작업 상태가 바뀐 뒤 마리마다 반응하기까지 최대 지연 — 0~이 값 사이에서 무작위

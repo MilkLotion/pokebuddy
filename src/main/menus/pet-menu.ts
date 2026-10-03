@@ -12,7 +12,7 @@ import type { SaveV3 } from "../../shared/save-v3";
 import { lockExcept, petMenu, petMenuOf } from "../../view/menus";
 import { openMenu } from "./menu-window";
 import { portraitKey, type Portraits } from "../art/portraits";
-import type { PartyPet } from "../save-party";
+import type { PartyPet } from "../../view/party-pet";
 import type { Coach } from "../stage/coach";
 import { t } from "../../view/text";
 import { preloadFile, rendererFile } from "../windows/files";

@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { assignScreens, playLanes, findScreen, screenOrder, type PlayLane, type ScreenInfo } from "../../main/layout";
 import type { Rect, Size } from "../../shared/geometry";
-import type { PartyPet } from "../../main/save-party";
+import type { PartyPet } from "../../view/party-pet";
 import type { Stage } from "../../main/stage";
 import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../../main/stage-group";
 import type { StageWindow } from "../../main/stage-window";
