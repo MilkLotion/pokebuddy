@@ -3838,6 +3838,16 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
 // 튜토리얼 중에는 키보드 초점도 말풍선(과 목표 대상) 안에 둔다 — Tab·Enter 로 막 밖의 단추를 누르지 않게
 guardCoachFocus(() => (coachEl ? coachNow : null));
 
+// 튜토리얼 중에는 Esc 를 받지 않는다 — 받는 입력은 다음·확인·✕ 와 목표 행동뿐이다. 파티 상세 기기 창과 같다
+// (94 1-2, docs/specs/game.md "튜토리얼 입력 규칙"). 잡는 단계에서 막아 모달 닫기·든 개체 내려놓기·입력칸 취소로 번지지 않게 한다
+document.addEventListener(
+  "keydown",
+  (e) => {
+    if (e.key === "Escape" && coachEl) e.stopImmediatePropagation();
+  },
+  true,
+);
+
 // 본문·대화상자가 스크롤되거나 창 크기가 바뀌면 자리를 다시 잰다
 bodyEl.addEventListener("scroll", () => {
   if (coachEl) drawTutorial();
