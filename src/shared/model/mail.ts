@@ -1,4 +1,5 @@
 // 화면 모델 — 우편함. 타입만 둔다
+import type { MailReplyCode } from "../names/online-codes.js";
 
 // ── 우편함 ───────────────────────────────────────────────────────────────────────
 // 헤더 봉투 단추가 여는 모달 (src/main/mail.ts). Figma 05 Screens 섹션 `10 우편함` `932:22859` (A안 편지 + 선물)
@@ -38,6 +39,6 @@ export type MailAction = { action: "refresh" } | { action: "read"; id: string } 
 
 export interface MailReply {
   ok: boolean;
-  code: string | null;
+  code: MailReplyCode | null;
   screen: MailScreen;
 }
