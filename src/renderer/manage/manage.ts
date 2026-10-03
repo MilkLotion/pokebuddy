@@ -25,7 +25,7 @@ import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { buffText, numberText, pointText, waitText } from "../../shared/count-text.js";
+import { numberText, pointText, waitText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
@@ -548,7 +548,7 @@ function petCard(pet: PetView): HTMLElement {
     badges.push(badge);
   }
   for (const buff of pet.buffs ?? []) {
-    const badge = el("span", "debuff success", buffText(buff));
+    const badge = el("span", "debuff success", buff.text);
     badge.dataset.liveBuff = `${pet.id}|${buff.kind}`; // 남은 분은 1초 시계가 고친다 (applyLive)
     badges.push(badge);
   }
@@ -690,8 +690,6 @@ function drawParty(v: Snapshot): void {
 type Hatched = { petId: string; slotIndex?: number } | { eggId: string };
 let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
 
-const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitText(egg.remainSec)}`);
-
 // 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`)
 const BOX_ICON = {
   menu: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>',
@@ -725,7 +723,7 @@ function daycareCell(egg: EggView, live: boolean): HTMLElement {
     openEgg.addEventListener("click", () => void openEggAndShow(egg.id, "daycare"));
     cell.appendChild(openEgg);
   } else {
-    const note = el("div", "note", eggNote(egg));
+    const note = el("div", "note", egg.noteText);
     note.dataset.liveEgg = egg.id; // 1초 시계가 이 글자만 고친다 (applyLive)
     cell.appendChild(note);
   }
@@ -5343,7 +5341,7 @@ async function refresh(): Promise<void> {
 // 전체 다시 그리기는 끊기는 조작 중에는 미루고 다음 시계에 한다 — 끌기·박스 이름 입력·누르는 중·한글 조합 중·글자 입력 칸 포커스.
 // 표시 고치기는 입력 요소를 건드리지 않으므로 그동안에도 한다.
 // view 는 화면에 그린 모양의 값이다 — 처리기(단추)는 이것을 읽는다. 미루는 동안에는 새 값의 시간 표시만 먼저 보인다
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText"]);
 // 만복도는 100 에 닿았는지만 모양이다(밥 주기 · 배부름) — 그 밖의 값은 표시만 고친다
 const structureOf = (v: Snapshot | null): string =>
   JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
@@ -5386,12 +5384,12 @@ function applyLive(v: Snapshot | null = view): void {
   for (const node of document.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const [petId, kind] = (node.dataset.liveBuff ?? "").split("|");
     const buff = pets.get(petId ?? "")?.buffs.find((b) => b.kind === kind);
-    if (buff && node.textContent !== buffText(buff)) node.textContent = buffText(buff);
+    if (buff && node.textContent !== buff.text) node.textContent = buff.text;
   }
   const eggs = new Map(v.eggs.list.map((e) => [e.id, e]));
   for (const node of document.querySelectorAll<HTMLElement>("[data-live-egg]")) {
     const egg = eggs.get(node.dataset.liveEgg ?? "");
-    if (egg && node.textContent !== eggNote(egg)) node.textContent = eggNote(egg);
+    if (egg && node.textContent !== egg.noteText) node.textContent = egg.noteText;
   }
 }
 

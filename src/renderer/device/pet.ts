@@ -14,7 +14,6 @@ import { buttonEl, el } from "../ui/dom.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { buffText, waitText } from "../../shared/count-text.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
@@ -37,7 +36,7 @@ function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   // 배고픔 디버프 — 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuff, docs/specs/balance.md "배고픔 디버프")
   if (pet.debuff) list.push(el("span", `badge ${pet.debuff.tone}`, pet.debuff.label));
   for (const buff of pet.buffs ?? []) {
-    const badge = el("span", "badge success", buffText(buff));
+    const badge = el("span", "badge success", buff.text);
     badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)
     list.push(badge);
   }
@@ -158,12 +157,10 @@ function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "
   if (field === "fullness") return `${pet.fullness} · ${pet.zoneText}`;
   return `${pet.mood} · ${pet.moodWord}`;
 }
-const feedText = (pet: PetDeviceView["pet"]): string =>
-  pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitText(pet.feedInSec)}`;
 
 // 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록이다
 // 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText"]);
 const structureOf = (v: PetDeviceView): string =>
   JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
 let renderedStructure = "";
@@ -178,10 +175,10 @@ function applyLive(v: PetDeviceView): void {
     if (fill) fill.style.width = `${clampPercent(pet[field])}%`;
   }
   const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
-  if (feed) feed.textContent = feedText(pet);
+  if (feed) feed.textContent = pet.feedText;
   for (const node of device.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const buff = pet.buffs.find((b) => b.kind === node.dataset.liveBuff);
-    if (buff && node.textContent !== buffText(buff)) node.textContent = buffText(buff);
+    if (buff && node.textContent !== buff.text) node.textContent = buff.text;
   }
   lastView = v;
 }
@@ -281,11 +278,11 @@ function renderBody(v: PetDeviceView): void {
     const care = el("div", "keys");
     care.dataset.tut = "detail-care";
     const boxed = !v.inParty;
-    const feed = buttonEl("key light", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    const feed = buttonEl("key light", boxed ? "밥 주기" : pet.feedText, () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     care.append(
       feed,
-      buttonEl("key", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
+      buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
     );
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     device.appendChild(care);
