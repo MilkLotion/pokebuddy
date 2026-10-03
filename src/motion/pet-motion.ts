@@ -80,7 +80,7 @@ export function createPetMotion({
     if (activeAt === null || at > activeAt) activeAt = at;
   };
 
-  // 훅이 남긴 상태. promptAt 은 초 단위 (src/follow/state.ts stateFor).
+  // 훅이 남긴 상태. promptAt 은 초 단위 (src/terminal/state.ts stateFor).
   //   쉬다가 일을 시작함  훅 기록에 promptAt 이 없어도(Codex 등) 프롬프트로 친다.
   //                       실패 표시가 끝나 작업으로 돌아가는 것(failed→running)은 자동이라 빼고
   //   일이 끝남          사용자가 결과를 읽는 때다. 안 치면 수면 시계가 프롬프트부터 돌아,

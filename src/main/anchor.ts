@@ -1,15 +1,15 @@
 // 호스트·표시 판정기 — 400ms 마다 헬퍼에게 창 목록을 묻고, 어느 세션의 상태를 볼지와 표시(visible)를 정한다.
-// 맨 앞 창이 터미널 호스트면 그 창의 세션 상태를 본다. 아니면 마지막으로 본 세션을 그대로 본다 (follow/front).
+// 맨 앞 창이 터미널 호스트면 그 창의 세션 상태를 본다. 아니면 마지막으로 본 세션을 그대로 본다 (terminal/front).
 // 판정 로직은 follow/(진단 도구와 같은 것) — 두 벌이 되면 진단이 거짓말을 한다.
 // Electron 이 필요한 부분(offScreen)은 host 로 받아 node 에서도 돌릴 수 있게 한다.
 //
 // 결과는 onUpdate 로 낸다 — 폴링마다 앱이 무대 사각형을 놀이공간으로 다시 맞추고 표시를 정한다.
 // 따를 창의 좌표는 정하지 않는다 — 무대의 자리는 놀이공간 설정이 정한다 (src/main/layout.ts playLanes)
-import * as follow from "../follow/front";
-import * as pkstate from "../follow/state";
+import * as follow from "../terminal/front";
+import * as pkstate from "../terminal/state";
 import { readHookRecords } from "../agents/hook-records";
-import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
-import { helperCommand, parseInfo, queryHelper, stopHelper } from "../follow/winbounds";
+import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../terminal/types";
+import { helperCommand, parseInfo, queryHelper, stopHelper } from "../terminal/winbounds";
 import type { Paths } from "../platform/paths";
 
 export const ANCHOR_RULES = {
@@ -67,7 +67,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
   let stateRecords: StateRecord[] = []; // 마지막으로 읽은 훅 기록 (최신순) — 폴링마다 한 번 읽어 판정 둘에 같이 쓴다
   let timer: NodeJS.Timeout | null = null;
 
-  // 훅(pokebuddy-state)이 남긴 세션 상태 중 따를 것 — followPids 를 조상으로 가진 최신 기록 (follow/state stateFor). 비면 대기
+  // 훅(pokebuddy-state)이 남긴 세션 상태 중 따를 것 — followPids 를 조상으로 가진 최신 기록 (terminal/state stateFor). 비면 대기
   const currentInfo = (): StateInfo => pkstate.stateFor(stateRecords, followPids);
 
   // 동반자는 늘 보인다 — 맨 앞 창이 터미널이 아니어도 마지막 자리에 남는다. 직접 숨긴 것만 예외
@@ -86,7 +86,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
 
   const emit = (): void => opts.onUpdate({ visible });
 
-  // 맨 앞 창이 터미널 호스트면 그 창의 세션을 본다. 아니면 마지막으로 본 세션을 그대로 본다 (follow/front)
+  // 맨 앞 창이 터미널 호스트면 그 창의 세션을 본다. 아니면 마지막으로 본 세션을 그대로 본다 (terminal/front)
   function resolve(info: HelperInfo, windows: HelperWindow[]): Record<string, unknown> {
     const front = follow.frontWindow(info, windows, self);
     const hostInfo = follow.hostOf(front, stateRecords);

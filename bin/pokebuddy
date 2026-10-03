@@ -19,7 +19,7 @@ process.stdout.on("error", (e) => {
   throw e;
 });
 
-// 동반자 실행·내리기·진단은 TS 빌드 산출물(dist/follow — 상태 판정)을 부른다. git clone 뒤 빌드 전이면 여기서 먼저 알린다
+// 동반자 실행·내리기·진단은 TS 빌드 산출물(dist/terminal — 상태 판정)을 부른다. git clone 뒤 빌드 전이면 여기서 먼저 알린다
 // (레지스트리에서 받은 패키지는 dist/ 가 들어 있어 이 줄에 걸리지 않는다)
 function needDist() {
   const path = require("path");

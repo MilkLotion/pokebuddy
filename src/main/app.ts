@@ -1,5 +1,5 @@
 // 펫 오버레이 메인 프로세스 — 기동 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
-// 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (follow/front).
+// 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (terminal/front).
 // 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
 // 설정·경로는 src/platform/paths.ts·user-config.ts 에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
@@ -7,7 +7,7 @@ import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
 import { starterSlugs, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
-import type { HelperWindow, SelfMark } from "../follow/types";
+import type { HelperWindow, SelfMark } from "../terminal/types";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader, type ArtLoader } from "./art/stage-art";
 import { createOverworldSource } from "./art/overworld-art";
@@ -145,7 +145,7 @@ const display = createDisplayState({
   log,
 });
 
-// 펫 자신을 가리는 표 — 개발 실행은 Electron 이라 이름으로 함께 걸러야 맨 앞 창에서 빠진다 (follow/front frontWindow)
+// 펫 자신을 가리는 표 — 개발 실행은 Electron 이라 이름으로 함께 걸러야 맨 앞 창에서 빠진다 (terminal/front frontWindow)
 const SELF: SelfMark = { pid: process.pid, appNames: new Set(["electron", String(app.getName() || "").toLowerCase()]) };
 
 // 실행 단계와 끄기 순서 (src/main/app/quit.ts). 끝내는 중에는 주기 작업·감시·헬퍼가 파괴되는 창을 건드리지 않게 먼저 멈춘다

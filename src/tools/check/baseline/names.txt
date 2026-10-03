@@ -13,8 +13,8 @@ unused-export-const: DETAIL_TUTORIAL_ID @ src/shared/names/tutorials.ts
 unused-export-const: GENDERS @ src/dex/gender.ts
 unused-export-const: GENDER_RATE_MAX @ src/dex/gender.ts
 unused-export-const: GITHUB_PORTS @ src/online/github.ts
-unused-export-const: HELPER_START_TIMEOUT_MS @ src/follow/winbounds.ts
-unused-export-const: HELPER_TIMEOUT_MS @ src/follow/winbounds.ts
+unused-export-const: HELPER_START_TIMEOUT_MS @ src/terminal/winbounds.ts
+unused-export-const: HELPER_TIMEOUT_MS @ src/terminal/winbounds.ts
 unused-export-const: HIT_PAD_PX @ src/renderer/stage/hit.ts
 unused-export-const: ID_DOMAIN @ src/online/account.ts
 unused-export-const: KEEP_ON_TOP_MS @ src/main/keep-on-top.ts
