@@ -18,14 +18,15 @@ import { dataVersion } from "../trade/data-version.js";
 import { devEnv, isDevRun } from "./app/dev-run.js";
 import { linkOf } from "../trade/link.js";
 import type { GameV3 } from "./game";
-import { stampOf } from "../platform/move-file.js";
+import { moveFile, stampOf } from "../platform/move-file.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 
 const sessionFile = (): string => path.join(PATHS.home, "online", "session.bin");
 
 // 세션 파일 상태 — 첫 읽기 뒤에 정해진다
 //   ok           암호화 파일을 읽었다
 //   missing      세션 파일이 없다(처음·로그아웃 뒤)
-//   unreadable   암호화 파일을 풀지 못했다(키가 바뀜·키체인 거부) — 첫 쓰기 전에 session.bin.unreadable-<시각> 으로 옮긴다
+//   unreadable   암호화 파일을 풀지 못했다(키가 바뀜·키체인 거부) — 첫 쓰기 전에 session.bin.unreadable-<시각>.bak 으로 옮긴다(저장 옮기기와 같은 이름·복사 대체)
 //   unavailable  이 환경은 암호화를 쓸 수 없다 — 평문 session.json(0600)을 쓴다
 export type SessionFileStatus = "ok" | "missing" | "unreadable" | "unavailable";
 
@@ -55,12 +56,11 @@ export function encryptedStorage(file = sessionFile()): SessionFileStorage {
     const obj = JSON.parse(text) as Record<string, unknown>;
     for (const [k, v] of Object.entries(obj)) if (typeof v === "string" && !memory.has(k)) memory.set(k, v);
   };
-  // 평문 파일 — 만들 때 0600, 이미 있던 파일도 쓸 때마다 0600 으로 좁힌다.
+  // 평문 파일 — 원자적 쓰기(tmp 를 0600 으로 만들어 rename)라 쓰는 도중에 죽어도 반쪽 파일이 남지 않는다.
   // Windows 는 권한 비트가 거의 뜻이 없다(읽기 전용만 반영) — 대신 사용자 프로필 폴더(~/.claude)라 다른 사용자 계정은 기본 ACL 로 막힌다
+  // (예전에는 저장과 달리 바로 덮어썼다 — worklog/records/code-structure/design/94-same-feature-diffs.md 5-6)
   const writePlain = async (): Promise<void> => {
-    await fs.promises.mkdir(path.dirname(plainFile), { recursive: true });
-    await fs.promises.writeFile(plainFile, JSON.stringify(Object.fromEntries(memory)), { mode: 0o600 });
-    await fs.promises.chmod(plainFile, 0o600).catch(() => undefined);
+    if (!writeAtomic(plainFile, JSON.stringify(Object.fromEntries(memory)), { mode: 0o600 })) throw new Error("세션 평문 파일을 쓰지 못했다");
   };
   const flushNow = async (): Promise<void> => {
     try {
@@ -69,8 +69,8 @@ export function encryptedStorage(file = sessionFile()): SessionFileStorage {
         return;
       }
       if (aside) {
-        // 풀지 못한 파일을 덮지 않게 먼저 옮긴다
-        if (fs.existsSync(file)) await fs.promises.rename(file, `${file}.unreadable-${stampOf()}`);
+        // 풀지 못한 파일을 덮지 않게 먼저 옮긴다 — 못 옮기면 쓰지 않는다
+        if (fs.existsSync(file) && !moveFile(file, `${file}.unreadable-${stampOf()}.bak`, { copyFallback: true })) throw new Error("풀지 못한 세션 파일을 옮기지 못했다");
         aside = false;
       }
       let data: Buffer;
@@ -83,8 +83,7 @@ export function encryptedStorage(file = sessionFile()): SessionFileStorage {
         await writePlain();
         return;
       }
-      await fs.promises.mkdir(path.dirname(file), { recursive: true });
-      await fs.promises.writeFile(file, data);
+      if (!writeAtomic(file, data)) throw new Error("세션 파일을 쓰지 못했다");
       // 암호화를 다시 쓸 수 있게 됐다 — 평문 사본을 남기지 않는다
       if (fs.existsSync(plainFile)) await fs.promises.rm(plainFile, { force: true });
     } catch (e) {
