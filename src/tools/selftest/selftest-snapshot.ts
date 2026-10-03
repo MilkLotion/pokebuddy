@@ -39,7 +39,7 @@ function seed(): SaveV3 {
 
 // (1) 슬러그 대신 한국어 이름이 온다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const first = v.party.slots[0]?.pet;
   assert.equal(first?.species, "pikachu");
   assert.equal(first?.name, "피카츄", "화면 이름으로 바꾼다");
@@ -50,7 +50,7 @@ function seed(): SaveV3 {
 
 // (2) 만복도는 값과 구간 이름을 함께 준다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   assert.equal(v.party.slots[0]?.pet?.fullness, 55);
   assert.equal(v.party.slots[0]?.pet?.zone, "normal", "55 는 보통");
   assert.equal(v.party.slots[1]?.pet?.zone, "hungry", "30 은 배고픔");
@@ -61,7 +61,7 @@ function seed(): SaveV3 {
 
 // (3) 쿨타임과 버프는 사람이 읽는 단위로
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const second = v.party.slots[1]?.pet;
   assert.equal(second?.feedReady, false);
   assert.equal(second?.feedInSec, 90, "ms 를 초로");
@@ -76,10 +76,10 @@ function seed(): SaveV3 {
   const s = seed();
   const [p1, p2] = s.pets;
   assert.ok(p1 && p2);
-  assert.equal(snapshot(s).party.slots[0]?.pet?.care, null, "친밀도 80 은 보너스가 없다");
+  assert.equal(snapshot(s, T0).party.slots[0]?.pet?.care, null, "친밀도 80 은 보너스가 없다");
   Object.assign(p1, { affinity: 100, mood: 95, buffs: [{ kind: "short-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }, { kind: "premium-food", remainMs: MIN }] });
   Object.assign(p2, { affinity: 100, mood: 40, buffs: [] });
-  const v = snapshot(s);
+  const v = snapshot(s, T0);
   assert.deepStrictEqual(v.party.slots[0]?.pet?.care, {
     bonus: 180,
     parts: [{ kind: "mood", name: "최고", bonus: 30 }, { kind: "premium-food", name: "든든함", bonus: 100 }, { kind: "long-play", name: "신남", bonus: 50 }],
@@ -90,7 +90,7 @@ function seed(): SaveV3 {
 
 // (4) 숨김과 표시 수
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   assert.equal(v.party.slots[0]?.pet?.hidden, false);
   assert.equal(v.party.slots[1]?.pet?.hidden, true);
   assert.equal(v.party.shown, 1, "보이는 개체는 하나");
@@ -100,7 +100,7 @@ function seed(): SaveV3 {
 
 // (5) 잠긴 칸은 뒤에 모인다 — 여는 경로는 화면에 보이지 않는다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const locked = v.party.slots.filter((s) => s.state === "locked");
   assert.equal(locked.length, 4);
   assert.equal(v.party.slots.findIndex((s) => s.state === "locked"), 2, "열린 칸이 앞, 잠긴 칸은 뒤");
@@ -111,11 +111,11 @@ function seed(): SaveV3 {
 // (5b) 개체 상세 튜토리얼 — 끝내거나 건너뛰기 전까지 켜져 있다
 {
   const s = seed();
-  assert.equal(snapshot(s).detailTutorial, true, "처음에는 보여 줄 차례");
+  assert.equal(snapshot(s, T0).detailTutorial, true, "처음에는 보여 줄 차례");
   s.tutorials.detail = { state: "done", steps: 5 };
-  assert.equal(snapshot(s).detailTutorial, false, "끝내면 다시 보이지 않는다");
+  assert.equal(snapshot(s, T0).detailTutorial, false, "끝내면 다시 보이지 않는다");
   s.tutorials.detail = { state: "skipped", steps: 0 };
-  assert.equal(snapshot(s).detailTutorial, false, "건너뛰어도 다시 보이지 않는다");
+  assert.equal(snapshot(s, T0).detailTutorial, false, "건너뛰어도 다시 보이지 않는다");
   process.stdout.write("(5b) 개체 상세 튜토리얼 표시 여부  ok\n");
 }
 
@@ -123,15 +123,15 @@ function seed(): SaveV3 {
 {
   const s = seed();
   s.tutorials.playground = { state: "done", steps: 1 };
-  assert.equal(snapshot(s).areaTutorial, true, "옛 바탕화면 놀이공간을 끝냈어도 설정 쪽은 보여 줄 차례");
+  assert.equal(snapshot(s, T0).areaTutorial, true, "옛 바탕화면 놀이공간을 끝냈어도 설정 쪽은 보여 줄 차례");
   s.tutorials.area = { state: "done", steps: 1 };
-  assert.equal(snapshot(s).areaTutorial, false, "끝내면 다시 보이지 않는다");
+  assert.equal(snapshot(s, T0).areaTutorial, false, "끝내면 다시 보이지 않는다");
   process.stdout.write("(5c) 놀이공간 튜토리얼 표시 여부  ok\n");
 }
 
 // (6) 박스는 사용 칸 수와 개체를 준다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const box = v.boxes[0];
   assert.equal(box?.used, 1);
   assert.equal(box?.size, BOX_RULES.size);
@@ -142,7 +142,7 @@ function seed(): SaveV3 {
 
 // (7) 알은 남은 초와 진행 백분율을 준다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const egg = v.eggs.list[0];
   assert.equal(egg?.name, "랜덤알");
   assert.equal(egg?.remainSec, 120);
@@ -154,7 +154,7 @@ function seed(): SaveV3 {
 
 // (8) 가방은 이름을 붙이고 이름순으로 준다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   assert.equal(v.bag.length, 3);
   assert.deepStrictEqual(v.bag.map((i) => i.name), ["경험사탕S", "성격민트", "없는도구"], "이름순");
   assert.equal(v.bag.find((i) => i.id === "mint")?.count, 2);
@@ -164,7 +164,7 @@ function seed(): SaveV3 {
 
 // (8b) 성격 변경 — 선택지 25개(원작 성격 번호 순), 민트는 한 종류, 개체의 성격 id (2026-09-29 민트 통일)
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   assert.equal(v.natures.length, 25, "성격은 25개");
   assert.equal(v.natures[0]?.id, "hardy", "5×5 성격표 순서 — 노력이 맨 앞");
   assert.equal(v.natures[24]?.id, "quirky", "변덕이 맨 끝");
@@ -178,7 +178,7 @@ function seed(): SaveV3 {
 
 // (9) 도감과 업적은 수만 준다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   assert.deepStrictEqual(v.dex, { unlocked: 2, obtained: 1, shiny: 0 });
   assert.equal(v.achievements.total, 2, "달성한 업적");
   assert.equal(v.achievements.unclaimed, 1, "받지 않은 업적");
@@ -189,7 +189,7 @@ function seed(): SaveV3 {
 {
   const s = seed();
   s.party.slots[0] = { state: "pokemon", petId: "없는개체" };
-  const v = snapshot(s);
+  const v = snapshot(s, T0);
   assert.equal(v.party.slots[0]?.state, "empty", "화면이 빈 칸을 그린다");
   process.stdout.write("(10) 어긋난 참조는 빈 칸  ok\n");
 }
@@ -203,7 +203,7 @@ function seed(): SaveV3 {
   s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
   s.bag = { "fire-stone": 1, "premium-food": 1 };
   s.dex.unlocked.push("flareon", "vaporeon", "espeon", "umbreon"); // 이름 검사용 — 도감 미해금은 아래 (11b)
-  const day = snapshot(s, undefined, undefined, undefined, T0); // 10시 0분 — 낮
+  const day = snapshot(s, T0); // 10시 0분 — 낮
   const evo = day.party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(evo.filter((c) => c.ready).map((c) => c.to), ["flareon"], "불꽃의돌이 있으면 부스터만 가능");
   const byTo = (list: typeof evo, to: string) => list.find((c) => c.to === to);
@@ -212,7 +212,7 @@ function seed(): SaveV3 {
   assert.equal(byTo(evo, "vaporeon")?.need, "물의돌 필요", "없는 돌은 모자란 조건");
   assert.equal(byTo(evo, "espeon")?.need, "친밀도 65 필요");
   assert.equal(byTo(evo, "umbreon")?.need, "밤에만", "낮에는 밤 조건을 알린다");
-  const night = snapshot(s, undefined, undefined, undefined, T0 + 30 * MIN); // 30분 — 밤
+  const night = snapshot(s, T0 + 30 * MIN); // 30분 — 밤
   const nightEvo = night.party.slots[0]?.pet?.evolutions ?? [];
   assert.equal(byTo(nightEvo, "umbreon")?.need, "친밀도 65 필요", "밤에는 친밀도가 모자란 것만 남는다");
   assert.equal(byTo(nightEvo, "espeon")?.need, "낮에만");
@@ -232,7 +232,7 @@ function seed(): SaveV3 {
   s.pets.push(pet({ id: "p2", species: "quilava", level: 30 }));
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   s.party.slots[1] = { state: "pokemon", petId: "p2", hidden: false };
-  const v = snapshot(s, undefined, undefined, undefined, T0);
+  const v = snapshot(s, T0);
   const pika = v.party.slots[0]?.pet?.evolutions ?? [];
   // 도감 미해금 결과 종은 이름을 ??? 로 가린다. 조건은 보인다 (2026-10-01 사용자 결정)
   assert.deepStrictEqual(pika.map((c) => [c.to, c.name, c.known, c.need, c.item, c.map]), [
@@ -240,14 +240,14 @@ function seed(): SaveV3 {
     ["raichu-alola", "???", false, "지도 필요", "region-map", true],
   ]);
   s.dex.unlocked.push("raichu");
-  const known = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  const known = snapshot(s, T0).party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(known.map((c) => [c.name, c.known]), [["라이츄", true], ["???", false]], "해금한 종만 이름을 보인다");
   assert.equal(v.party.slots[1]?.pet?.evolutions.find((c) => c.map)?.need, "Lv.36·지도 필요");
   s.bag = { "thunder-stone": 1 };
-  const onlyStone = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  const onlyStone = snapshot(s, T0).party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(onlyStone.map((c) => [c.ready, c.need]), [[true, undefined], [false, "지도 필요"]]);
   s.bag = { "region-map": 1 };
-  const onlyMap = snapshot(s, undefined, undefined, undefined, T0).party.slots[0]?.pet?.evolutions ?? [];
+  const onlyMap = snapshot(s, T0).party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(onlyMap.map((c) => [c.ready, c.need]), [[false, "천둥의돌 필요"], [true, undefined]], "지도만 있으면 알로라 라이츄가 준비된다");
   process.stdout.write("(11b) 지도 간선 후보와 조건 문구  ok\n");
 }
@@ -259,7 +259,7 @@ function seed(): SaveV3 {
   s.pets.push(pet({ id: "p2", species: "charizard", evolved: ["charmander", "charmeleon"], stage: 2 }));
   s.boxes[0]!.slots[0] = "p1";
   s.boxes[0]!.slots[1] = "p2";
-  const v = snapshot(s, undefined, undefined, undefined, T0);
+  const v = snapshot(s, T0);
   const shared = v.boxes[0]?.slots[0];
   assert.deepStrictEqual(shared?.forms?.map((f) => f.name), ["코스모그", "코스모움", "솔가레오", "루나아라"]);
   assert.deepStrictEqual(shared?.forms?.[3]?.typeIds, ["psychic", "ghost"], "바꾸기 확인 창의 타입 배지");
@@ -269,14 +269,14 @@ function seed(): SaveV3 {
 
 // (13) 구간 낱말·배고픔 디버프·이름 상한·잠들기 선택지 — 화면이 표를 따로 두지 않는다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const p1 = v.party.slots[0]?.pet;
   const p2 = v.party.slots[1]?.pet;
   assert.deepEqual([p1?.zone, p1?.zoneText, p1?.debuff], ["normal", "보통", null], "만복도 55 는 보통 — 디버프 없음");
   assert.deepEqual([p2?.zone, p2?.zoneText, p2?.debuff], ["hungry", "배고픔", { label: "배고픔", tone: "warning", note: "친밀도 증가량 −30%" }], "만복도 30 은 배고픔");
   const s = seed();
   s.pets[1]!.fullness = 5;
-  assert.deepEqual(snapshot(s).party.slots[1]?.pet?.debuff, { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" }, "만복도 5 는 매우 배고픔");
+  assert.deepEqual(snapshot(s, T0).party.slots[1]?.pet?.debuff, { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" }, "만복도 5 는 매우 배고픔");
   assert.deepEqual(v.limits, { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax });
   assert.deepEqual(v.settings.sleepChoices.map((c) => c.label), ["3분", "5분", "10분", "15분", "잠들지 않음"]);
   assert.deepEqual(v.settings.sleepChoices.map((c) => c.value), [3, 5, 10, 15, 0]);
@@ -285,7 +285,7 @@ function seed(): SaveV3 {
 
 // (14) 시간으로 바뀌는 글자 — 버프 배지, 돌봄 단추, 알 칸 아래 글자. 화면은 이 글자를 그대로 쓰고 1초 시계가 표시만 고친다
 {
-  const v = snapshot(seed());
+  const v = snapshot(seed(), T0);
   const p1 = v.party.slots[0]?.pet;
   const p2 = v.party.slots[1]?.pet;
   assert.deepEqual([p1?.feedText, p1?.playText], ["밥 주기", "놀아주기"]);
@@ -297,7 +297,7 @@ function seed(): SaveV3 {
   s.pets[0]!.fullness = 100;
   s.pets[0]!.playCooldownMs = 60_000;
   s.eggs[0]!.ready = true;
-  const after = snapshot(s);
+  const after = snapshot(s, T0);
   assert.deepEqual([after.party.slots[0]?.pet?.feedText, after.party.slots[0]?.pet?.playText], ["밥 주기 · 배부름", "놀아주기 · 1분"], "놀아주기도 밥 주기처럼 남은 시간 (94 항목 5-1)");
   assert.equal(after.eggs.list[0]?.noteText, "준비 완료");
   assert.deepEqual([45, 90, 4800, 7200].map((n) => waitText(n, "en")), ["45s", "2m", "1h 20m", "2h"], "영어 남은 시간");

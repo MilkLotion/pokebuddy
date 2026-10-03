@@ -142,7 +142,7 @@ function debuffOf(zone: FullnessZone): PetView["debuff"] {
 // 잠들기 기준 선택지 — 0 은 잠들지 않음
 const sleepChoices = (): SettingsView["sleepChoices"] => SETTING_CHOICES.sleepAfterMin.map((min) => ({ value: min, label: min === 0 ? "잠들지 않음" : `${min}분` }));
 
-export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = gameDayPart(Date.now())): PetView {
+export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
   const shown = formView(shownSpecies(pet)); // 메가 모습이면 그 이름·타입·그림이다. species 는 그대로다
@@ -201,14 +201,12 @@ function careView(pet: PetV3): CareView | null {
   return { bonus: parts.reduce((sum, p) => sum + p.bonus, 0), parts };
 }
 
-// 전체 준비 시간과 칸 수는 규칙표에서 온다. 시험에서 다른 값을 꽂을 수 있게 받을 수도 있다
-export function snapshot(
-  save: SaveV3,
-  eggReadyMs: number = EGG_RULES.readyMs,
-  boxSize: number = BOX_RULES.size,
-  maxEggs: number = EGG_RULES.maxEggs,
-  now: number = Date.now(), // 진화 후보의 낮·밤을 정한다
-): Snapshot {
+// 시각은 부르는 쪽이 준다(메인은 게임 시계, 시험은 고정 시각) — 진화 후보의 낮·밤을 정한다.
+// 전체 준비 시간과 칸 수는 규칙표에서 온다(예전에는 인자로도 받았지만 다른 값을 넘기는 곳이 없었다)
+export function snapshot(save: SaveV3, now: number): Snapshot {
+  const eggReadyMs = EGG_RULES.readyMs;
+  const boxSize = BOX_RULES.size;
+  const maxEggs = EGG_RULES.maxEggs;
   const dayPart = gameDayPart(now);
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 

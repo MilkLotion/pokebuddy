@@ -108,7 +108,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   const view = (): Snapshot | null => {
     const save = read();
     if (!save) return null;
-    const snap = snapshot(save, undefined, undefined, undefined, now());
+    const snap = snapshot(save, now());
     return live.failing() ? { ...snap, saveFailing: true } : snap;
   };
 
