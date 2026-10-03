@@ -21,7 +21,6 @@
     "pokebuddy": "bin/pokebuddy"
   },
   "files": [
-    "config.js",
     "art/",
     "cli/",
     "dist/",

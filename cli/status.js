@@ -3,7 +3,8 @@
 const { execFileSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const settings = require("../config.js");
+const { PATHS } = require("../dist/platform/paths.js"); // 경로 — src/platform/paths.ts (옛 config.js)
+const { USER_DEFAULTS, readConfig } = require("../dist/platform/user-config.js"); // 사용자 설정 — src/platform/user-config.ts
 const state = require("../dist/follow/state.js");
 const front = require("../dist/follow/front.js");
 const dex = require("../lib/dex.js");
@@ -12,13 +13,12 @@ const { companionPid } = require("./run.js");
 const { hookInstalled } = require("./setup.js");
 
 const PROJECT = path.join(__dirname, "..");
-const { PATHS, USER_DEFAULTS } = settings;
 
 const say = (line = "") => process.stdout.write(`${line}\n`);
 const age = (at) => (Date.now() / 1000 - (at || 0)).toFixed(1);
 
 function status(petArg) {
-  const config = settings.load();
+  const config = readConfig();
 
   say(`설정 파일: ${PATHS.config}`);
   say(`  ${Object.keys(USER_DEFAULTS).map((k) => `${k}=${config[k]}`).join(" ")}`);

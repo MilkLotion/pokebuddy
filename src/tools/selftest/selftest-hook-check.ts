@@ -8,7 +8,7 @@ import path from "node:path";
 import { makeTmp } from "../harness/tmp-dir";
 
 const home = makeTmp("selftest-hook-check");
-process.env.HOME = home; // config.js · setup.js 가 require 될 때 os.homedir() 로 읽는다
+process.env.HOME = home; // platform/paths(dist) · setup.js 가 require 될 때 os.homedir() 로 읽는다
 process.env.USERPROFILE = home;
 process.env.CODEX_HOME = path.join(home, ".codex");
 delete process.env.CLAUDE_CONFIG_DIR;

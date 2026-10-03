@@ -30,6 +30,28 @@ function needDist() {
   process.exit(1);
 }
 
+// setup·uninstall 도 경로·설정을 빌드 산출물(dist/platform)에서 읽는다(예전 config.js). git clone 직후 dist/ 가 없으면
+// 개발 의존성(tsc)이 있을 때 npm run build 를 한 번 돌린다 — 프로젝트의 dist/ 만 만들고 사용자 홈에는 닿지 않아 --dry-run 에서도 돌린다.
+// tsc 가 없으면 needDist 와 같이 알리고 끝낸다 (설계 50번 P1. 예전에는 cli/setup.js 가 훅 원본을 만들 때 같은 일을 했다)
+function ensureDist() {
+  const path = require("path");
+  const fs = require("fs");
+  const root = path.join(__dirname, "..");
+  if (fs.existsSync(path.join(root, "dist", "platform", "user-config.js"))) return;
+  const tsc = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
+  if (!fs.existsSync(tsc)) needDist();
+  process.stdout.write("빌드 산출물(dist/)이 없어 npm run build 를 먼저 돌린다…\n");
+  try {
+    // npm 은 셸을 거쳐 찾는다 (Windows 의 npm.cmd). 출력은 버린다 — 실패는 파일 유무로 판정
+    require("child_process").execSync("npm run build", { cwd: root, stdio: "ignore", timeout: 180_000, windowsHide: true });
+  } catch {
+    // 아래에서 파일 유무로 판정
+  }
+  if (fs.existsSync(path.join(root, "dist", "platform", "user-config.js"))) return;
+  process.stderr.write("npm run build 가 실패 — 프로젝트 폴더에서 직접 돌려 오류를 확인한다\n");
+  process.exit(1);
+}
+
 const parsed = process.argv[2] === "game" ? { kind: "game" } : process.argv[2] === "trade" ? { kind: "trade" } : parseArgs(process.argv.slice(2));
 
 switch (parsed.kind) {
@@ -54,9 +76,11 @@ switch (parsed.kind) {
     process.stdout.write(`${require("../package.json").version}\n`);
     break;
   case "setup":
+    ensureDist();
     require("../cli/setup.js").setup({ dryRun: parsed.flags.has("--dry-run"), editor: !parsed.flags.has("--no-editor") });
     break;
   case "uninstall":
+    ensureDist();
     require("../cli/setup.js").uninstall({
       dryRun: parsed.flags.has("--dry-run"),
       purge: parsed.flags.has("--purge"),

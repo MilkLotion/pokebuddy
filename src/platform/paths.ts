@@ -1,8 +1,8 @@
-// 경로·설정의 typed facade — config.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다)를 감싼다. 값·규칙·기본값은 그쪽이 소유하고 여기는 모양만 붙인다
-// dist/platform/paths.js 에서 ../../config.js = 프로젝트 루트의 config.js
+// 경로 — 하드코딩을 한 곳에 모은다. 메인·CLI·도구가 같이 쓴다
+// (예전 config.js 의 PATHS. 도구 레인 T7b-1 에서 옮겼다. 사용자 설정 읽기는 ./user-config.ts)
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import type { Lang } from "../shared/species";
 
 export interface Paths {
   project: string;
@@ -23,33 +23,48 @@ export interface Paths {
   mailbox: string; // 명령 통로 (src/save/command-channel.ts)
 }
 
-// 이번 실행의 맥락 — 설정이 아니다 (config.js runtime)
-export interface RuntimeInfo {
-  debug: boolean;
-  buddyTimeScale: number; // 움직임 시간을 한꺼번에 줄인다 — 시험용
+// 프로젝트 뿌리 — dist/platform 에서 두 칸 위(예전 config.js 의 __dirname 과 같은 폴더)
+const PROJECT_DIR = path.join(__dirname, "..", "..");
+// 업데이트 실기 시험 빌드(scripts/build-exe.cjs PB_UPDATE_TEST)만 표시 파일의 임시 홈을 쓴다.
+// 업데이트 설치 파일이 앱을 다시 켤 때는 시험의 환경 변수를 물려받지 않아 사용자의 홈으로 켜진다(2026-09-28 실기에서 확인)
+function updateTestHome(): string | null {
+  try {
+    const home: unknown = (JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, "update-test.json"), "utf8")) as { home?: unknown }).home;
+    return typeof home === "string" && path.isAbsolute(home) ? home : null;
+  } catch {
+    return null; // 보통 빌드 — 표시 파일이 없다
+  }
 }
+const USER_HOME = updateTestHome() ?? os.homedir();
+const POKEBUDDY_HOME = path.join(USER_HOME, ".claude", "pokebuddy");
 
-export interface UserConfig {
-  slug: string;
-  buddy: "on" | "calm" | "off";
-  clickThrough: boolean;
-  lang: Lang | string;
-  fromEnv: Set<string>; // 환경변수로 덮어쓴 키
-  runtime: RuntimeInfo;
-}
-
-interface ConfigModule {
-  PATHS: Paths;
-  load(): UserConfig;
-}
-
-const settings = require("../../config.js") as ConfigModule;
-
-export const PATHS: Paths = settings.PATHS;
+export const PATHS: Paths = {
+  project: PROJECT_DIR,
+  // 사용자 설정은 홈에 둔다. 프로그램 폴더 안에 두면 npm 으로 업데이트할 때마다 지워지고,
+  // Node 버전 관리자(nvm)로 버전을 바꾸면 설정이 따로 논다
+  config: path.join(POKEBUDDY_HOME, "config.json"),
+  legacyConfig: path.join(PROJECT_DIR, "pkmon.config.json"), // 예전 위치 — 처음 읽을 때 한 번 가져온다
+  // 옛 이름 시절의 데이터 폴더 — 최근 이름부터 (termimon ← pkmon). migrateLegacyHome
+  legacyHomes: ["termimon", "pkmon"].map((name) => path.join(USER_HOME, ".claude", name)),
+  lastError: path.join(POKEBUDDY_HOME, "last-error.json"),
+  electronData: path.join(POKEBUDDY_HOME, "electron"), // Electron 캐시·세션 — uninstall --purge 로 같이 지워지게 홈 아래에
+  home: POKEBUDDY_HOME,
+  state: path.join(POKEBUDDY_HOME, "state"),
+  pmd: path.join(POKEBUDDY_HOME, "pmd"), // CC BY-NC — 저장소엔 넣지 않는다
+  overworld: path.join(POKEBUDDY_HOME, "overworld"), // pokeemerald-expansion, 저장소엔 넣지 않는다
+  // 동반자(pokebuddy companion) — 기기당 하나. 내용은 `pid\nready`. 지우면 동반자가 스스로 끝난다.
+  // CLI 는 이 파일의 pid 가 살아 있는지로 "동반자가 떠 있나"를 판정한다 (파일 존재가 아니라 pid 생존)
+  companionLock: path.join(POKEBUDDY_HOME, "companion.lock"),
+  // 옛 VS Code 확장이 쓰던 실행 경로 기록과 창 기록 폴더 — setup·uninstall 이 남아 있으면 지운다 (2026-09-27 창 모드 삭제)
+  legacyCli: path.join(POKEBUDDY_HOME, "cli.json"),
+  legacyWindows: path.join(POKEBUDDY_HOME, "windows"),
+  // 저장 (src/save/) — 저장은 writer 프로세스 하나만 쓴다. 나머지는 mailbox 로 요청한다
+  save: path.join(POKEBUDDY_HOME, "save.json"),
+  saveLock: path.join(POKEBUDDY_HOME, "save.lock"),
+  mailbox: path.join(POKEBUDDY_HOME, "mailbox"),
+};
 export const PROJECT: string = PATHS.project;
 
-// 사용자 설정 — 파일과 환경변수를 합친 값
-export const readConfig = (): UserConfig => settings.load();
 
 // ── 사용자 홈 아래 캐시 폴더 ───────────────────────────────────────────────────
 // 받아 둔 그림(초상·도구·알)과 울음소리. 지우면 다시 받는다
