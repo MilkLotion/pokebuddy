@@ -13,6 +13,7 @@ import type { ManageRoute } from "../shared/model/route";
 import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../shared/model/devices";
 import type { ScreenView } from "../shared/model/overlays";
 import type { TradeScreen } from "../shared/model/trade";
+import { hasCommandFlag } from "../shared/names/commands.js";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS } from "../platform/paths.js";
@@ -157,12 +158,10 @@ const shownModel = new Map<"pet" | "shop" | "bag" | "party", string>();
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
 
-// 표면이 보내지 못하는 명령 — 거래 실행기에만 있는 이름이다 (src/shared/names/commands.ts 의 internal). 명령 이름 표가 생기면 그 표의 표시로 바꾼다
-// (worklog/records/code-structure/design/40-contracts-save-online.md `internal`)
-const INTERNAL_COMMANDS: ReadonlySet<string> = new Set(["trade.lock", "trade.unlock", "trade.apply"]);
 // 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
 const RESULT_COMMANDS = new Set(["bag.use", "shop.buy"]);
-const isInternalCommand = (cmd: string): boolean => cmd.startsWith("mail.") || INTERNAL_COMMANDS.has(cmd);
+// 표면이 보내지 못하는 명령 — 명령 이름 표의 internal 표시 하나로 가린다(교환 잠금·반영, 우편 받기·읽음). 메인의 서비스만 실행기에 낸다
+const isInternalCommand = (cmd: string): boolean => hasCommandFlag(cmd, "internal");
 
 const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } => {
   if (v == null || typeof v !== "object") return false;
