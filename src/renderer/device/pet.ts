@@ -138,29 +138,13 @@ function line(title: string, desc: string | null, right: HTMLElement[], run?: ()
   return row;
 }
 
-// 포인트 적립 줄 — 돌봄 보너스를 보인다. 줄은 늘 있고 글자만 바뀐다 (Figma 03 `Party Detail Device` `row/포인트 적립`, 2026-10-02 사용자 결정 A안)
-//   박스 개체          적립하지 않는다
-//   친밀도 100 전      기본 속도. 친밀도가 가득이면 보너스가 붙는다고 알린다
-//   친밀도 100         보너스 합과 내역(기분 단계 · 버프). 보너스가 없으면 기본 속도
-function careLine(v: PetDeviceView): HTMLElement {
-  const care = v.pet.care;
-  if (!v.inParty) return line("포인트 적립 없음", "파티에 있을 때만 포인트가 쌓여요", []);
-  if (!care) return line("포인트 적립 기본", "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요", []);
-  if (care.bonus <= 0) return line("포인트 적립 기본", "기분이 좋거나 버프가 켜지면 더 빨리 쌓여요", []);
-  const parts = care.parts.map((p) => `${p.kind === "mood" ? `기분 ${p.name}` : p.name} +${p.bonus}%`);
-  return line(`포인트 적립 +${care.bonus}%`, parts.join(" · "), []);
-}
+// 포인트 적립 줄 — 제목과 설명은 메인이 정해 보낸다 (src/view/device-pet.ts careLineOf)
+const careLine = (v: PetDeviceView): HTMLElement => line(v.careLine.title, v.careLine.desc, []);
 
-// 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
-function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "mood"): string {
-  if (field === "affinity") return `${pet.affinity}`;
-  if (field === "fullness") return `${pet.fullness} · ${pet.zoneText}`;
-  return `${pet.mood} · ${pet.moodWord}`;
-}
-
-// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록이다
+// 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록에
+// 이 창만 받는 막대 글자(bars)를 더했다
 // 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText"]);
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText", "bars"]);
 const structureOf = (v: PetDeviceView): string =>
   JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
 let renderedStructure = "";
@@ -170,7 +154,7 @@ function applyLive(v: PetDeviceView): void {
   for (const box of device.querySelectorAll<HTMLElement>(".bar[data-live]")) {
     const field = box.dataset.live as "affinity" | "fullness" | "mood";
     const shown = box.querySelector<HTMLElement>(".head strong");
-    if (shown) shown.textContent = liveShown(pet, field);
+    if (shown) shown.textContent = v.bars[field];
     const fill = box.querySelector<HTMLElement>(".fill");
     if (fill) fill.style.width = `${clampPercent(pet[field])}%`;
   }
@@ -262,9 +246,9 @@ function renderBody(v: PetDeviceView): void {
   const records = el("div", "records");
   records.append(
     bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
-    bar("친밀도", pet.affinity, liveShown(pet, "affinity"), "", "affinity"),
-    bar("만복도", pet.fullness, liveShown(pet, "fullness"), zoneClassOf(pet.zone), "fullness"),
-    bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
+    bar("친밀도", pet.affinity, v.bars.affinity, "", "affinity"),
+    bar("만복도", pet.fullness, v.bars.fullness, zoneClassOf(pet.zone), "fullness"),
+    bar("기분", pet.mood, v.bars.mood, "mood", "mood"),
   );
   screen.appendChild(records);
   bezel.appendChild(screen);
