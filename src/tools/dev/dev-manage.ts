@@ -448,7 +448,15 @@ void app.whenReady().then(async () => {
         .then(() => new Promise((r) => setTimeout(r, wait)))
         .then(() => {
           const js = argAfter("--eval");
-          return js ? win.webContents.executeJavaScript(js).then((v: unknown) => void process.stdout.write(`eval: ${JSON.stringify(v)}\n`)) : undefined;
+          // 실패하면 받은 식 글자를 같이 알린다 — 셸이 식을 공백에서 나눠 반쪽만 온 경우를 바로 가린다 (2026-10-04 렌더러 레인 탐침)
+          return js
+            ? win.webContents.executeJavaScript(js).then(
+                (v: unknown) => void process.stdout.write(`eval: ${JSON.stringify(v)}\n`),
+                (e: unknown) => {
+                  throw new Error(`eval 실패 — 받은 식: ${JSON.stringify(js)} (${e instanceof Error ? e.message : String(e)})`);
+                },
+              )
+            : undefined;
         })
         .then(() => win.webContents.capturePage())
         .then((img) => {
