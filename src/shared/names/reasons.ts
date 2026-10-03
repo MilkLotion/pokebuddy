@@ -109,3 +109,6 @@ export type Reason = (typeof REASONS)[number];
 
 // 도메인이 자기 거절 까닭을 선언할 때 쓴다 — `export type BuyFailure = ReasonOf<"no-product" | "sold-out">`
 export type ReasonOf<T extends Reason> = T;
+
+// 할 수 있는가의 답 — 되면 ok 와 덧붙인 값, 안 되면 까닭 하나. 도메인의 check… 함수가 돌려준다
+export type Check<R extends Reason = Reason, T = unknown> = ({ ok: true } & T) | { ok: false; reason: R };

@@ -19,6 +19,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";
 import { afterEvolve, formsOf } from "./forms.js";
+import { recordDex } from "./record.js";
 import { REGION_MAP, needIsMap } from "./regional.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -137,9 +138,7 @@ export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: s
   pet.stage += 1;
   save.counts.evolved += 1; // 진화 업적이 센다
 
-  if (!save.dex.unlocked.includes(picked.to)) save.dex.unlocked.push(picked.to);
-  if (!save.dex.obtained.includes(picked.to)) save.dex.obtained.push(picked.to);
-  if (pet.shiny && !save.dex.shinyObtained.includes(picked.to)) save.dex.shinyObtained.push(picked.to);
+  recordDex(save, picked.to, pet.shiny);
   afterEvolve(save, pet, from, opts); // 공유 sid 계열이면 이전 종과 갈래의 다른 결과를 고를 종으로 남긴다
 
   return { ok: true, petId, from, to: picked.to, ...(uses.length ? { usedItem: uses[0], usedItems: uses } : {}) };

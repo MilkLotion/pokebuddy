@@ -3,6 +3,12 @@
 // 시작 값을 두 곳에 적지 않는다. 레벨·친밀도·만복도는 규칙표 하나에서 온다.
 // 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
 import { boxRoom, putPet } from "../box/slots.js";
+import type { DexOptions } from "../dex/data";
+import { rollGender } from "../dex/gender.js";
+import { randomNature } from "../dex/natures.js";
+import { recordDex } from "../dex/record.js";
+import type { Rand } from "../shared/rand.js";
+import type { Check } from "../shared/names/reasons.js";
 import { PET_RULES } from "./rules.js";
 import { localDate } from "../shared/clock.js";
 import type { Gender, NatureId } from "../shared/species";
@@ -61,12 +67,8 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
   };
 }
 
-// 도감 기록 — 만난 종과 이로치를 남긴다. 조건으로 나온 종은 해금 기록이 없을 수 있다
-export function recordDex(save: SaveV3, species: string, shiny: boolean): void {
-  if (!save.dex.unlocked.includes(species)) save.dex.unlocked.push(species);
-  if (!save.dex.obtained.includes(species)) save.dex.obtained.push(species);
-  if (shiny && !save.dex.shinyObtained.includes(species)) save.dex.shinyObtained.push(species);
-}
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/record.ts)에서 가져오면 지운다
+export { recordDex };
 
 // 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
 export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
@@ -80,4 +82,52 @@ export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toB
     return { slotIndex: i, toBox: false };
   }
   return putPet(save.boxes, petId) ? { toBox: true } : null;
+}
+
+// 새 개체를 둘 곳 — 상점·알·줍기·업적은 파티 먼저, 우편은 박스에만, 첫 선택은 파티에만
+//   party-first  적용한 프리셋의 첫 빈 칸에 꺼낸 상태로, 없으면 박스
+//   box-only     박스에만
+//   party-only   파티 빈 칸에만
+export type NewPetPlace = "party-first" | "box-only" | "party-only";
+
+// 새 개체를 둘 곳이 있는가 — 무작위를 쓰기 전에 본다
+export function checkNewPetRoom(save: SaveV3, place: NewPetPlace): Check<"box-full" | "no-slot"> {
+  const party = save.party.slots.some((s) => s.state === "empty");
+  if (place === "party-only") return party ? { ok: true } : { ok: false, reason: "no-slot" };
+  if (place === "box-only") return boxRoom(save.boxes) > 0 ? { ok: true } : { ok: false, reason: "box-full" };
+  return party || boxRoom(save.boxes) > 0 ? { ok: true } : { ok: false, reason: "box-full" };
+}
+
+export interface NewPetSpec {
+  species: string;
+  shiny: boolean;
+  now: number;
+  rand: Rand;
+  place: NewPetPlace;
+  opts?: DexOptions;
+}
+
+export interface NewPetResult {
+  pet: PetV3;
+  slotIndex?: number; // 파티에 넣었으면 칸 번호
+  toBox: boolean;
+}
+
+// 새 개체 하나를 만들어 저장에 넣는다 — 식별자 → 성격 → 성별 → 개체 → 도감 기록 → 배치.
+// 난수는 성격 한 번, 성별 한 번, 이 순서다. 알은 종·이로치·모습을 먼저 뽑은 뒤 부른다 — 서버 재계산(src/verify/save-rules.ts rollEgg)과 같은 순서.
+// 둘 곳이 없으면 난수를 쓰지 않고 저장을 바꾸지 않은 채 null
+export function addNewPet(save: SaveV3, spec: NewPetSpec): NewPetResult | null {
+  if (!checkNewPetRoom(save, spec.place).ok) return null;
+  const { species, shiny, now, rand, opts } = spec;
+  const id = nextPetId(save);
+  const pet = newPet({ id, species, shiny, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now });
+  save.pets.push(pet);
+  recordDex(save, species, shiny);
+  const i = spec.place === "box-only" ? -1 : save.party.slots.findIndex((s) => s.state === "empty");
+  if (i >= 0) {
+    save.party.slots[i] = { state: "pokemon", petId: id, hidden: false };
+    return { pet, slotIndex: i, toBox: false };
+  }
+  putPet(save.boxes, id);
+  return { pet, toBox: true };
 }

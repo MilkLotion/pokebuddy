@@ -11,7 +11,8 @@ import { boxRoom, putPet } from "../box/slots.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
-import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { addNewPet } from "../party/create.js";
+import { addItem } from "../bag/items.js";
 import { singleSpecies } from "../dex/obtain.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { MAIL_RULES } from "./rules.js";
@@ -105,7 +106,7 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
   if (pokemon > boxRoom(save.boxes)) return { ok: false, reason: "box-full" };
   for (const g of gifts) {
     // 업적 보상처럼 사지 않고 받는 것은 가방 상한(999)으로 막지 않는다 (src/bag/rules.ts BAG_RULES.max)
-    if (g.kind === "item") save.bag[g.id] = (save.bag[g.id] ?? 0) + g.count;
+    if (g.kind === "item") addItem(save, g.id, g.count);
     else if (g.kind === "points") save.points.balance += g.count;
     else for (let i = 0; i < (give.get(g) ?? 0); i++) givePokemon(save, g.species, env, opts);
   }
@@ -117,11 +118,7 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
 
 // 포켓몬 선물 한 마리 — 파티가 비어 있어도 박스로 넣는다
 function givePokemon(save: SaveV3, species: string, env: ApplyEnv, opts?: DexOptions): void {
-  const rand = env.rand ?? Math.random;
-  const id = nextPetId(save);
-  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now: env.now ?? Date.now() }));
-  recordDex(save, species, false);
-  putPet(save.boxes, id);
+  addNewPet(save, { species, shiny: false, now: env.now ?? Date.now(), rand: env.rand ?? Math.random, place: "box-only", opts }); // 둘 곳은 applyGifts 가 먼저 봤다
 }
 
 export function markRead(save: SaveV3, letterId: string): boolean {

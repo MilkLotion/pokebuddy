@@ -10,12 +10,11 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { addBox, boxBuyable, boxRoom, putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
-import { rollGender } from "../dex/gender.js";
-import { randomNature } from "../dex/natures.js";
-import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js";
+import { addNewPet, checkNewPetRoom, hasRoom, placeNew } from "../party/create.js";
+import { addItem, bagRoomOf } from "../bag/items.js";
 import { openSlot, presetSlots } from "../party/slots.js";
 import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";
-import type { Rand } from "../egg/hatch";
+import type { Rand } from "../shared/rand.js";
 import { BAG_RULES } from "../bag/rules.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { SHOP_RULES } from "./rules.js";
@@ -91,8 +90,8 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   if (product?.kind === "egg" && save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
   if (product?.kind === "egg" && !canGiveEgg(save, product.ref, opts)) return { ok: false, reason: "sold-out" };
   if (product?.kind === "species" && !save.dex.unlocked.includes(product.ref)) return { ok: false, reason: "not-unlocked" };
-  if (product?.kind === "species" && !hasRoom(save)) return { ok: false, reason: "box-full" };
-  if (product?.kind === "tool" && (save.bag[product.ref] ?? 0) >= BAG_RULES.max) return { ok: false, reason: "bag-full" };
+  if (product?.kind === "species" && !checkNewPetRoom(save, "party-first").ok) return { ok: false, reason: "box-full" };
+  if (product?.kind === "tool" && bagRoomOf(save, product.ref) < 1) return { ok: false, reason: "bag-full" };
 
   save.points.balance -= price;
   const done: BuyResult = { ok: true, spent: price, balance: save.points.balance };
@@ -110,15 +109,11 @@ export function buy(save: SaveV3, productId: string, now: number, rand: Rand, op
   }
 
   if (product?.kind === "tool") {
-    save.bag[product.ref] = (save.bag[product.ref] ?? 0) + 1;
+    addItem(save, product.ref, 1); // 상한은 위에서 봤다
     return done;
   }
 
   // 종 지정 구매 — 새 개체를 만든다
-  const id = nextPetId(save);
-  const pet = newPet({ id, species: product?.ref ?? productId, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(product?.ref ?? productId, rand, opts), now });
-  save.pets.push(pet);
-  recordDex(save, pet.species, pet.shiny);
-  const where = placeNew(save, id) ?? { toBox: true }; // 둘 곳은 위에서 봤다
-  return { ...done, petId: id, ...where };
+  const added = addNewPet(save, { species: product?.ref ?? productId, shiny: false, now, rand, place: "party-first", opts }); // 둘 곳은 위에서 봤다
+  return { ...done, petId: added?.pet.id, ...(added?.slotIndex !== undefined ? { slotIndex: added.slotIndex } : {}), toBox: added?.toBox ?? true };
 }

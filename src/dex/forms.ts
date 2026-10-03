@@ -12,6 +12,7 @@ import type { DexOptions } from "./data";
 import { nextOf } from "./evo.js";
 import { shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
+import { recordDex } from "./record.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -48,11 +49,7 @@ export function afterEvolve(save: SaveV3, pet: PetV3, from: string, opts?: DexOp
     .map((s) => s.to)
     .filter((to) => to !== pet.species);
   pet.forms = [...new Set([...before, from, pet.species, ...siblings])];
-  for (const slug of siblings) {
-    if (!save.dex.unlocked.includes(slug)) save.dex.unlocked.push(slug);
-    if (!save.dex.obtained.includes(slug)) save.dex.obtained.push(slug);
-    if (pet.shiny && !save.dex.shinyObtained.includes(slug)) save.dex.shinyObtained.push(slug);
-  }
+  for (const slug of siblings) recordDex(save, slug, pet.shiny);
   return siblings;
 }
 
@@ -68,9 +65,7 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   pet.forms = forms;
   pet.species = species;
   // 처음 바꾼 모습은 도감에 얻음으로 남긴다 — 진화 없이 드는 모습(기라티나(오리진폼))은 여기서 처음 기록된다
-  if (!save.dex.unlocked.includes(species)) save.dex.unlocked.push(species);
-  if (!save.dex.obtained.includes(species)) save.dex.obtained.push(species);
-  if (pet.shiny && !save.dex.shinyObtained.includes(species)) save.dex.shinyObtained.push(species);
+  recordDex(save, species, pet.shiny);
   return { ok: true, petId, from, to: species };
 }
 

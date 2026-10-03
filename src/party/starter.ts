@@ -8,8 +8,8 @@
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
-import type { Rand } from "../egg/hatch";
-import { newPet, nextPetId, recordDex } from "./create.js";
+import type { Rand } from "../shared/rand.js";
+import { addNewPet } from "./create.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { PARTY_RULES } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -26,14 +26,9 @@ export interface StarterResult {
 
 export function begin(save: SaveV3, species: string, now: number, rand: Rand, opts?: DexOptions): StarterResult {
   if (save.pets.length) return { ok: false, reason: "already" };
-  const slotIndex = save.party.slots.findIndex((s) => s.state === "empty");
-  if (slotIndex < 0) return { ok: false, reason: "no-slot" };
-
-  const id = nextPetId(save);
-  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now }));
-  save.party.slots[slotIndex] = { state: "pokemon", petId: id, hidden: false };
-  save.starterPetId = id;
+  const added = addNewPet(save, { species, shiny: false, now, rand, place: "party-only", opts });
+  if (!added) return { ok: false, reason: "no-slot" };
+  save.starterPetId = added.pet.id;
   save.points.balance += PARTY_RULES.startPoints;
-  recordDex(save, species, false);
-  return { ok: true, petId: id, species, slotIndex };
+  return { ok: true, petId: added.pet.id, species, slotIndex: added.slotIndex };
 }

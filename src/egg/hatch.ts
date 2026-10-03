@@ -7,6 +7,7 @@
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import type { DexOptions } from "../dex/data.js";
 import { rankOf } from "../dex/species.js";
+import { pickByWeight, type Rand } from "../shared/rand.js";
 import { hatchVariants } from "../dex/regional.js";
 import { EGG_RULES } from "./rules.js";
 
@@ -14,7 +15,8 @@ import { EGG_RULES } from "./rules.js";
 export const SHINY_ONE_IN = EGG_RULES.shinyOneIn;
 export const RANK_WEIGHT = EGG_RULES.rankWeight;
 
-export type Rand = () => number; // 0 이상 1 미만
+// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/shared/rand.ts)에서 가져오면 지운다
+export type { Rand };
 
 export interface HatchResult {
   species: string;
@@ -27,29 +29,15 @@ export { rankOf };
 // 난이도 가중치로 하나 뽑는다. 후보가 없으면 null
 export function pickWeighted(candidates: string[], rand: Rand, opts?: DexOptions): string | null {
   if (!candidates.length) return null;
-  const weights = candidates.map((slug) => EGG_RULES.rankWeight[rankOf(slug, opts)] ?? 1);
-  const total = weights.reduce((a, w) => a + w, 0);
-  if (total <= 0) return candidates[0] ?? null;
-  let roll = rand() * total;
-  for (let i = 0; i < candidates.length; i++) {
-    roll -= weights[i] ?? 0;
-    if (roll < 0) return candidates[i] ?? null;
-  }
-  return candidates[candidates.length - 1] ?? null;
+  const weight = (slug: string): number => EGG_RULES.rankWeight[rankOf(slug, opts)] ?? 1;
+  // 가중치 합이 0 이하면 난수를 쓰지 않고 첫 후보 — 공용 추첨은 null 을 준다
+  return pickByWeight(candidates, weight, rand) ?? candidates[0] ?? null;
 }
 
 // 알에서 나온 종의 모습 — 표(data/regional.json 의 hatch)에 있는 종만 한 번 더 뽑는다. 없으면 무작위를 쓰지 않고 그대로다.
 // 배쓰나이는 적색근 45 · 청색근 45 · 백색근 10 (2026-10-03 사용자 결정). 알 열기만 부른다 — 줍기는 기본형이다
 export function rollVariant(species: string, rand: Rand, opts?: DexOptions): string {
-  const list = hatchVariants(species, opts);
-  const total = list.reduce((a, [, w]) => a + w, 0);
-  if (!list.length || total <= 0) return species;
-  let roll = rand() * total;
-  for (const [slug, w] of list) {
-    roll -= w;
-    if (roll < 0) return slug;
-  }
-  return list[list.length - 1]?.[0] ?? species;
+  return pickByWeight(hatchVariants(species, opts), ([, w]) => w, rand)?.[0] ?? species;
 }
 
 // 알 하나의 결과. 후보가 하나도 없으면 null

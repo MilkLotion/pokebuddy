@@ -10,8 +10,10 @@
 import { loadJson, type DexOptions } from "../dex/data.js";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
-import { decide, type Rand } from "../egg/hatch.js";
-import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
+import { decide } from "../egg/hatch.js";
+import { pickByWeight, type Rand } from "../shared/rand.js";
+import { addItem } from "../bag/items.js";
+import { addNewPet } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
 import { BAG_RULES } from "../bag/rules.js";
 import { TIME_RULES } from "../state/rules.js";
 import { FIND_RULES } from "./rules.js";
@@ -71,19 +73,7 @@ export const pokemonCandidates = (save: SaveV3, opts?: DexOptions): string[] => 
 
 const pickIndex = (n: number, rand: Rand): number => Math.min(n - 1, Math.max(0, Math.floor(rand() * n)));
 
-// 가중치로 하나 고른다. 후보가 없으면 null
-function pickWeighted<T>(list: readonly T[], weight: (x: T) => number, rand: Rand): T | null {
-  const total = list.reduce((a, x) => a + weight(x), 0);
-  if (!list.length || total <= 0) return null;
-  let roll = rand() * total;
-  for (const x of list) {
-    roll -= weight(x);
-    if (roll < 0) return x;
-  }
-  return list[list.length - 1] ?? null;
-}
-
-const pickItem = (rand: Rand, opts?: DexOptions): string | null => pickWeighted(itemCandidates(opts), (c) => c.weight, rand)?.id ?? null;
+const pickItem = (rand: Rand, opts?: DexOptions): string | null => pickByWeight(itemCandidates(opts), (c) => c.weight, rand)?.id ?? null;
 
 // 무대에 꺼내 둔 파티 개체만 줍는다 — 숨긴 개체·박스 개체·없는 개체는 뺀다
 export function eligible(save: SaveV3, awake: Iterable<string>): string[] {
@@ -97,7 +87,7 @@ export const emptyFind = (): FindV3 => ({ seq: 0, log: [] });
 export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, opts?: DexOptions): FindRecordV3 | null {
   const finder = save.pets.find((p) => p.id === petId);
   if (!finder) return null;
-  const kind = pickWeighted(KINDS, (k) => FIND_RULES.weights[k], rand);
+  const kind = pickByWeight(KINDS, (k) => FIND_RULES.weights[k], rand);
   if (!kind) return null;
 
   let ref = "";
@@ -111,17 +101,14 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
     const evo = kind === "evo" ? evoCandidates(opts) : [];
     const id = kind === "item" ? pickItem(rand, opts) : evo.length ? evo[pickIndex(evo.length, rand)] : null;
     if (!id) return null;
-    if ((save.bag[id] ?? 0) >= BAG_RULES.max) return null; // 가방 상한 — 이번 판정은 없음
-    save.bag[id] = (save.bag[id] ?? 0) + 1;
+    if (!addItem(save, id, 1, { capped: true }).ok) return null; // 가방 상한 — 이번 판정은 없음
     ref = id;
   } else {
     const result = decide(pokemonCandidates(save, opts), rand, opts);
     if (!result) return null; // 후보 없음 — 이번 판정은 없음
-    if (!hasRoom(save)) return null; // 둘 곳 없음 — 이번 판정은 없음
-    newPetId = nextPetId(save);
-    save.pets.push(newPet({ id: newPetId, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
-    recordDex(save, result.species, result.shiny);
-    placeNew(save, newPetId);
+    const added = addNewPet(save, { species: result.species, shiny: result.shiny, now, rand, place: "party-first", opts });
+    if (!added) return null; // 둘 곳 없음 — 이번 판정은 없음
+    newPetId = added.pet.id;
     ref = result.species;
   }
 

@@ -39,13 +39,14 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import { regionalOf } from "../dex/regional.js";
 import { profile } from "../dex/species.js";
-import { hasRoom, newPet, nextPetId, placeNew, recordDex } from "../party/create.js";
+import { addNewPet, checkNewPetRoom } from "../party/create.js";
+import { addItem } from "../bag/items.js";
 import { rewardSpecies, singleSpecies } from "../dex/obtain.js";
 import { achievementTable, type AchievementCond, type AchievementDef, type AchievementGroup } from "../dex/tables.js";
 import { canGiveEgg, newEgg } from "../egg/pool.js";
 import { ACHIEVEMENT_RULES } from "./rules.js";
 import { EGG_RULES } from "../egg/rules.js";
-import type { Rand } from "../egg/hatch";
+import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 // 업적 표의 타입은 src/dex/tables.ts 에 있다 — 도감(src/dex/obtain.ts)도 같은 표를 읽는다
@@ -253,14 +254,10 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
       done();
       return { ok: true, id, skipped: true };
     }
-    if (!hasRoom(save)) return { ok: false, reason: "box-full" };
-    const petId = nextPetId(save);
-    const pet = newPet({ id: petId, species, shiny: false, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now });
-    save.pets.push(pet);
-    recordDex(save, species, false);
-    const where = placeNew(save, petId) ?? { toBox: true }; // 둘 곳은 위에서 봤다
+    const added = addNewPet(save, { species, shiny: false, now, rand, place: "party-first", opts });
+    if (!added) return { ok: false, reason: "box-full" };
     done();
-    return { ok: true, id, petId, ...where };
+    return { ok: true, id, petId: added.pet.id, ...(added.slotIndex !== undefined ? { slotIndex: added.slotIndex } : {}), toBox: added.toBox };
   }
 
   const points = rewardPoints(def);
@@ -282,7 +279,7 @@ export function claim(save: SaveV3, id: string, now: number, opts?: DexOptions, 
 
   const item = rewardItem(def);
   if (item) {
-    save.bag[item.id] = (save.bag[item.id] ?? 0) + item.count;
+    addItem(save, item.id, item.count); // 사지 않고 받는 것은 가방 상한으로 막지 않는다
     done();
     return { ok: true, id, item };
   }
