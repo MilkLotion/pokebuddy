@@ -71,7 +71,7 @@ export function eggName(kind: string, opts?: DexOptions): string | null {
   return eggTable(opts)[kind]?.ko ?? null;
 }
 
-// 알 종류별 그림 색표 — 색표가 있는 알만. 관리 창이 원작 알 그림의 색을 바꿔 쓴다
+// 알 종류별 그림 색표 — 색표가 있는 알만. 메인의 그림 받기가 원작 알 그림의 색을 바꿔 쓴다 (src/main/egg-art.ts)
 export function eggPalettes(opts?: DexOptions): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const [kind, row] of Object.entries(eggTable(opts))) {

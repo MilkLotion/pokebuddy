@@ -224,12 +224,9 @@ export function isBagInput(v: unknown): v is BagDeviceInput {
   return isShortId(v.itemId) && (v.mode === "use" || v.mode === "sell") && (v.targetPetId === null || isShortId(v.targetPetId)) && isQty(v.qty) && isQty(v.sellQty) && isText(v.notice) && isResultLine(v.result) && isFlag(v.busy);
 }
 
-// [임시] eggArt — 설정창이 색칠한 알 그림. PNG data URI 만 받는다 (렌더러 레인 P11 에서 메인이 색칠하면 없어진다)
-const isEggArt = (v: unknown): boolean => v === null || (typeof v === "string" && v.startsWith("data:image/png;base64,") && v.length <= INPUT_LIMITS.artChars);
-
 export function isShopInput(v: unknown): v is ShopDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy) && isEggArt(v.eggArt);
+  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy);
 }
 
 export function isPartyInput(v: unknown): v is PartyDeviceInput {

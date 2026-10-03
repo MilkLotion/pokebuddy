@@ -3925,7 +3925,7 @@ function pickShop(id: string): void {
 function shopDeviceBuild(): ShopDeviceInput | null {
   const item = shopPick && ui.view ? ui.view.shop.find((i) => i.id === shopPick) : undefined;
   if (!item) return null;
-  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, eggArt: null }; // [임시] eggArt 칸 — 그림은 메인이 icon 열쇠로 붙인다. 칸은 도메인이 지운다
+  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy }; // 그림은 메인이 icon 열쇠로 붙인다
 }
 
 function syncShopDevice(): void {
