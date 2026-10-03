@@ -41,7 +41,7 @@ export interface CommandContext {
   onChanged?(evolvedId?: string): Promise<void>;
   log?: ((o: Record<string, unknown>) => void) | null;
   trade?: () => TradeSession | null; // 친구 교환 — 앱이 준비된 뒤 생기므로 부를 때 가져온다 (src/main/trade.ts)
-  tradeScreen?: () => unknown; // 교환 모달이 그리는 값 (src/main/trade-screen.ts) — 결과의 screen 에 싣는다
+  tradeScreen?: () => unknown; // 교환 모달이 그리는 값 (src/view/trade-screen.ts) — 결과의 screen 에 싣는다
   // 명령을 받기 전에 거른다 — 거절 사유를 주면 처리기로 보내지 않고 { ok: false, reason } 으로 답한다. null 이면 통과.
   // 무대 클릭(click)·메뉴·관리 창·mailbox 가 모두 dispatcher.dispatch 를 지나므로 한 곳에서 막힌다 (앱의 두 PC 규칙 멈춤)
   guard?: (command: Command) => Reason | null;

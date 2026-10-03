@@ -48,7 +48,7 @@
 | `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/command-channel.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
-친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.
+친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)이고, 교환 모달 화면 값은 `src/view/trade-screen.ts` 가 만든다. 서버 SQL 은 `supabase/migrations/`에 있다.
 교환 제안의 값은 서버가 만든다(`set_offer`). 앱이 보낸 개체 값은 서버 저장에 올렸는지 확인하는 데만 쓴다 — 종·이로치·성격이 다르거나 레벨·경험치가 서버보다 크면 `TRADE_PET_NOT_SYNCED`다. 채널에는 지문(`id`·`since`)으로 찾은 서버 저장 개체의 값을 넣는다. 서버 저장이 검증받지 않은 계정(`trust = unverified` — 첫 저장 분류·관찰 모드 위반)은 `TRADE_SAVE_UNVERIFIED`로 제안하지 못한다. 교환이 끝나는 순간 두 사람이 받은 제안을 `cloud_private.trade_receipts`에 남긴다 — 두 사람이 반영하면 채널의 제안 값은 지워진다.
 우편함의 메인 쪽 입구는 `src/main/mail.ts`다. 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
