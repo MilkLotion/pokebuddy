@@ -14,7 +14,7 @@ interface TutorialRule {
   already: (save: SaveV3) => boolean; // 목표 행동을 이미 했는가
   onlyAtStart?: boolean; // already 를 줄에 들 때만 본다 — 뜬 뒤에는 튜토리얼 안의 행동으로만 끝난다
   after?: string; // 이 튜토리얼의 대기 시각을 물려받는다 — 그 튜토리얼 바로 뒤에 선다
-  blocked?: (save: SaveV3) => boolean; // 지금 보여 줄 수 없다 — 차례를 넘긴다(기록은 그대로)
+  blocked?: (save: SaveV3, now: number) => boolean; // 지금 보여 줄 수 없다 — 차례를 넘긴다(기록은 그대로). now 는 진화의 낮·밤을 본다
 }
 
 const hasRandomEgg = (save: SaveV3): boolean => save.eggs.some((e) => e.kind === "random");
@@ -49,7 +49,7 @@ export const TUTORIALS: readonly TutorialRule[] = [
   // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤, 다른 프리셋에 넣을 개체가 생길 때(3마리). 파티 튜토리얼 바로 뒤에 선다 (2026-10-02 사용자 확인)
   { id: "preset", surface: "manage", enabled: true, after: "party", start: (s) => ended(s, "party") && s.pets.length >= 3, already: never, blocked: noPartyPet },
   { id: "bag", surface: "manage", enabled: true, start: hasTool, already: never, blocked: (s) => !hasTool(s) },
-  { id: "evolution", surface: "manage", enabled: true, start: canEvolveNow, already: never, blocked: (s) => !canEvolveNow(s, Date.now()) },
+  { id: "evolution", surface: "manage", enabled: true, start: canEvolveNow, already: never, blocked: (s, now) => !canEvolveNow(s, now) },
 ];
 
 // 화면을 처음 열 때 띄우는 튜토리얼 — 대기열 밖. 끝내거나 닫기 전까지 그 화면을 열 때마다 1단계부터 보인다

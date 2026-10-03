@@ -1,6 +1,6 @@
 // 메뉴 모델 — 포켓몬 메뉴(무대 우클릭·관리 창 우클릭), 트레이, 작업 표시줄 점프 목록 (설계 30번 D9)
 // Electron 을 값으로 가져오지 않는다 — MenuItemConstructorOptions 모양의 객체만 만든다(node 시험 가능). 누르면 할 일(click)은 메인이 넘긴다.
-// 메뉴 창의 표현(번호 매기기·화면 모양)은 메인의 src/main/menus.ts 다.
+// 메뉴 창의 표현(번호 매기기·화면 모양)은 src/view/menu-view.ts 다(메인 레인 M8-3 에서 src/main/menus.ts 를 옮겼다).
 // 문구는 언어 파일(data/i18n)에서. 호칭(펫·동반자)은 쓰지 않고 동사만 (사용자 결정 2026-09-17).
 // 우클릭 = 이름·상태 / 밥 주기·놀아주기 / 설정창 열기 세 묶음 (docs/specs/game.md 2026-09-24 전환)
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
@@ -171,7 +171,7 @@ export function petMenuOf(
   // 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다.
   // 둘 다 못 하면 모두 잠그고, 쉬는 중(쿨타임)일 때만 남은 시간을 말풍선에 붙인다 — 배부름 같은 다른 이유면 "곧"
   let firstCare: PetMenuState["firstCare"] = null;
-  if (o.origin === "stage" && currentTutorial(save)?.id === "first-care") {
+  if (o.origin === "stage" && currentTutorial(save, o.now)?.id === "first-care") {
     const keep = feed.enabled ? t("menu.feed") : play.enabled ? t("menu.play") : null;
     const cooling = (kind: "feed" | "play", item: { reason?: string }): string | null => {
       const r = checkCare(save, petId, kind);

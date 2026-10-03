@@ -304,23 +304,23 @@ function seed(): SaveV3 {
   assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   assert.equal(s.points.balance, 120, "첫 선택 뒤 시작 포인트 120 — 랜덤알 하나 값");
   assert.deepStrictEqual(queueTutorials(s, T0), ["first-care", "shop"], "같은 순간이면 첫 돌봄이 상점보다 먼저");
-  assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" });
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "두 번 불러도 다시 넣지 않는다");
   // 바탕화면에 나온 포켓몬이 없으면 첫 돌봄은 차례를 넘긴다 — 설정창 튜토리얼을 막지 않는다. 다시 꺼내면 돌아온다
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = true;
-  assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄이 막히면 상점이 먼저");
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "shop", surface: "manage" }, "첫 돌봄이 막히면 상점이 먼저");
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
-  assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" }, "꺼내면 첫 돌봄이 다시 앞");
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" }, "꺼내면 첫 돌봄이 다시 앞");
   // 튜토리얼 밖(설정창·점프 목록·CLI)의 밥 주기는 첫 돌봄을 끝내지 않는다 — 튜토리얼 메뉴에서 고른 돌봄으로만 끝난다
   // (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
   s.totals.fed += 1;
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "바탕화면 놀이공간 튜토리얼은 줄에 들지 않는다");
   assert.equal(s.tutorials["first-care"]?.state, "none", "다른 곳의 밥 주기는 완료가 아니다");
-  assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" });
   assert.ok(done(s, "first-care").ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["growth"], "첫 돌봄이 끝나면 성장 튜토리얼이 줄에 든다");
   assert.equal(s.tutorials.playground, undefined, "놀이공간 설명은 설정 › 화면으로 옮겼다(area, 대기열 밖)");
-  assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
   // 줄에 들 때 이미 돌본 옛 저장은 바로 완료로 넘긴다
   const old = empty(T0);
   assert.ok(applyStarter(old, "charmander", T0, () => 0.5).ok);
@@ -331,30 +331,30 @@ function seed(): SaveV3 {
   assert.ok(buy(s, "random", T0 + 2, () => 0.5).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);
   assert.equal(s.tutorials.shop?.state, "done", "랜덤알을 샀으니 상점 튜토리얼은 완료");
-  assert.equal(currentTutorial(s)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
+  assert.equal(currentTutorial(s, T0)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
   assert.ok(done(s, "growth").ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["points"], "성장이 끝나면 포인트");
   assert.equal(s.tutorials.points?.queuedAt, s.tutorials.growth?.queuedAt, "포인트는 성장의 대기 시각을 물려받아 부화보다 앞");
-  assert.equal(currentTutorial(s)?.id, "points");
+  assert.equal(currentTutorial(s, T0)?.id, "points");
   assert.ok(skip(s, "points").ok);
-  assert.equal(currentTutorial(s)?.id, "hatch");
+  assert.equal(currentTutorial(s, T0)?.id, "hatch");
 
   const egg = s.eggs[0]!;
   Object.assign(egg, { ready: true, remainMs: 0, actions: { pat: 1, song: 0 }, candidates: ["rattata"] });
   assert.ok(open(s, egg.id, T0 + 3, () => 0.99).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"], "둘째 포켓몬을 얻으면 파티와 박스 튜토리얼");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
-  assert.equal(currentTutorial(s)?.id, "party");
+  assert.equal(currentTutorial(s, T0)?.id, "party");
   assert.ok(done(s, "party").ok);
-  assert.equal(currentTutorial(s), null);
+  assert.equal(currentTutorial(s, T0), null);
   // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤 개체가 3마리가 되면 줄에 든다
   assert.deepStrictEqual(queueTutorials(s, T0 + 4), [], "두 마리면 프리셋 튜토리얼은 없다");
   s.pets.push({ ...s.pets[1]!, id: "p-third" });
   assert.deepStrictEqual(queueTutorials(s, T0 + 5), ["preset"], "셋째 포켓몬을 얻으면 프리셋 튜토리얼");
   assert.equal(s.tutorials.preset?.queuedAt, s.tutorials.party?.queuedAt, "프리셋은 파티의 대기 시각을 물려받는다");
-  assert.equal(currentTutorial(s)?.id, "preset");
+  assert.equal(currentTutorial(s, T0)?.id, "preset");
   assert.ok(done(s, "preset").ok);
-  assert.equal(currentTutorial(s), null);
+  assert.equal(currentTutorial(s, T0), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
 }
 
@@ -369,9 +369,9 @@ function seed(): SaveV3 {
   s.bag["exp-candy-s"] = 1;
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["bag"]);
   s.bag["exp-candy-s"] = 0;
-  assert.equal(currentTutorial(s), null, "도구를 다 쓰면 가방 튜토리얼은 차례를 넘긴다");
+  assert.equal(currentTutorial(s, T0), null, "도구를 다 쓰면 가방 튜토리얼은 차례를 넘긴다");
   s.bag["exp-candy-s"] = 1;
-  assert.equal(currentTutorial(s)?.id, "bag");
+  assert.equal(currentTutorial(s, T0)?.id, "bag");
   assert.ok(skip(s, "bag").ok);
   // 파이리는 Lv.16 에 진화한다 — 레벨 조건을 채우면 진화 튜토리얼
   const pet = s.pets[0]!;
@@ -379,7 +379,7 @@ function seed(): SaveV3 {
   pet.exp = 1_000_000;
   pet.level = 100;
   assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["evolution"]);
-  assert.equal(currentTutorial(s)?.id, "evolution");
+  assert.equal(currentTutorial(s, T0)?.id, "evolution");
   process.stdout.write("(11b) 새 기능 튜토리얼 · 가방과 진화  ok\n");
 }
 
@@ -392,7 +392,7 @@ function seed(): SaveV3 {
   s.totals.fed = 1; // 첫 돌봄은 이미 했다 — 상점과 부화의 순서만 본다
   s.tutorials.playground = { state: "skipped", steps: 0 }; // 놀이공간도 넘겼다
   queueTutorials(s, T0);
-  assert.equal(currentTutorial(s)?.id, "shop", "같은 순간이면 상점이 부화보다 먼저");
+  assert.equal(currentTutorial(s, T0)?.id, "shop", "같은 순간이면 상점이 부화보다 먼저");
 
   const old = empty(T0);
   assert.ok(applyStarter(old, "charmander", T0, () => 0.5).ok);
@@ -412,7 +412,7 @@ function seed(): SaveV3 {
   s.pets.push({ ...s.pets[0]!, id: "p9" }); // 파티가 가득 차 박스로 간 새 개체 — 파티 칸에 없다
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: null };
   queueTutorials(s, T0);
-  assert.equal(currentTutorial(s)?.id, "achievement");
+  assert.equal(currentTutorial(s, T0)?.id, "achievement");
   s.achievements["show-two"] = { achievedAt: T0, claimedAt: T0 + 1 };
   queueTutorials(s, T0 + 1);
   assert.equal(s.tutorials.achievement?.state, "done", "보상을 받으면 끝");

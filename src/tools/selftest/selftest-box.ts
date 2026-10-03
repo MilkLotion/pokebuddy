@@ -236,7 +236,7 @@ check(() => {
   // 보관
   assert.strictEqual(keepInBox(s, "p1").reason, "box-full");
   // 우편 — 도구와 함께 온 편지도 통째로 넣지 않는다
-  const mail = applyGifts(s, "m1", [{ kind: "points", count: 10 }, { kind: "pokemon", species: "pikachu", count: 1 }]);
+  const mail = applyGifts(s, "m1", [{ kind: "points", count: 10 }, { kind: "pokemon", species: "pikachu", count: 1 }], undefined, { now: T0, rand: () => 0.5 });
   assert.deepStrictEqual(mail, { ok: false, reason: "box-full" });
   assert.strictEqual(s.points.balance, 0, "포인트도 넣지 않는다");
   // 한 칸을 비우면 부화한다

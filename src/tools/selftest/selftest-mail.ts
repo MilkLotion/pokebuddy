@@ -35,7 +35,7 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   );
   {
     const s = empty(0);
-    assert.deepStrictEqual(applyGifts(s, "old-mint", [{ kind: "item", id: "serious-mint", count: 3 }]), { ok: true, applied: true });
+    assert.deepStrictEqual(applyGifts(s, "old-mint", [{ kind: "item", id: "serious-mint", count: 3 }], undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: true });
     if (MINT_RETIRED) {
       assert.deepStrictEqual(s.bag, {}, "은퇴한 민트는 가방에 넣지 않는다");
       assert.equal(s.points.balance, 3 * MINT_REFUND_EACH, "옛 성실민트 3개 선물은 300P");
@@ -50,15 +50,15 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   s.points.balance = 10;
   s.bag.toy = 998;
   const gifts = [{ kind: "item", id: "toy", count: 5 }, { kind: "item", id: "exp-candy-m", count: 3 }, { kind: "points", count: 500 }];
-  assert.deepStrictEqual(applyGifts(s, "L1", gifts), { ok: true, applied: true });
+  assert.deepStrictEqual(applyGifts(s, "L1", gifts, undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: true });
   assert.equal(s.bag.toy, 1003, "받는 선물은 가방 상한(999)으로 막지 않는다");
   assert.equal(s.bag["exp-candy-m"], 3);
   assert.equal(s.points.balance, 510);
-  assert.deepStrictEqual(applyGifts(s, "L1", gifts), { ok: true, applied: false }, "같은 편지는 다시 넣지 않는다");
+  assert.deepStrictEqual(applyGifts(s, "L1", gifts, undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: false }, "같은 편지는 다시 넣지 않는다");
   assert.equal(s.points.balance, 510);
   assert.ok(s.mail?.read.includes("L1"), "받으면 읽은 것이다");
-  assert.deepStrictEqual(applyGifts(s, "L2", [{ kind: "item", id: "nope", count: 1 }]), { ok: false, reason: "bad-gift" });
-  assert.deepStrictEqual(applyGifts(s, "L3", []), { ok: false, reason: "bad-gift" }, "공지 편지는 넣을 것이 없다");
+  assert.deepStrictEqual(applyGifts(s, "L2", [{ kind: "item", id: "nope", count: 1 }], undefined, { now: T0, rand: () => 0.5 }), { ok: false, reason: "bad-gift" });
+  assert.deepStrictEqual(applyGifts(s, "L3", [], undefined, { now: T0, rand: () => 0.5 }), { ok: false, reason: "bad-gift" }, "공지 편지는 넣을 것이 없다");
   assert.ok(markRead(s, "N1"));
   // 저장 정규화 — 문자열 id 만 남는다. 옛 저장에는 mail 이 없다
   const round = normalize(JSON.parse(JSON.stringify({ ...s, mail: { applied: ["L1", 3, ""], read: ["L1", "N1"] } })) as unknown, T0);
@@ -90,7 +90,7 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   assert.equal(JSON.stringify(s.party.slots), partyBefore, "파티는 그대로다");
   assert.ok(s.dex.obtained.includes("haunter"), "도감에 입수로 남는다");
   assert.equal(s.points.balance, empty(T0).points.balance + 10, "함께 담긴 포인트도 넣는다");
-  assert.deepStrictEqual(applyGifts(s, "P1", [{ kind: "pokemon", species: "haunter", count: 2 }]), { ok: true, applied: false }, "같은 편지로 다시 만들지 않는다");
+  assert.deepStrictEqual(applyGifts(s, "P1", [{ kind: "pokemon", species: "haunter", count: 2 }], undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: false }, "같은 편지로 다시 만들지 않는다");
   assert.equal(s.pets.length, petsBefore + 2);
   process.stdout.write("(2b) 포켓몬 선물  ok\n");
 }
@@ -110,7 +110,7 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   assert.equal(s.points.balance, empty(T0).points.balance + 5, "같은 편지의 다른 선물은 받는다");
   // 개체를 내보내도 획득 이력으로 막는다
   s.pets = s.pets.filter((p) => p.species !== "magearna-original");
-  assert.deepStrictEqual(applyGifts(s, "S3", [{ kind: "pokemon", species: "magearna-original", count: 1 }]), { ok: true, applied: true });
+  assert.deepStrictEqual(applyGifts(s, "S3", [{ kind: "pokemon", species: "magearna-original", count: 1 }], undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: true });
   assert.ok(!s.pets.some((p) => p.species === "magearna-original"), "획득 이력으로 본다");
   process.stdout.write("(2c) 단일 포켓몬 선물  ok\n");
 }

@@ -42,10 +42,10 @@ export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
 // 서버 호출은 메인 프로세스가 한다(src/main/mail.ts). 명령 처리기(dispatcher)에는 등록하지 않는다 — 설정 창·CLI 가 선물을 만들어 넣지 못하게
-export const mailApplyHandler: TxHandler = (draft, args) => {
+export const mailApplyHandler: TxHandler = (draft, args, ctx) => {
   const letterId = strOf(args, "letterId");
   if (!letterId) return { ok: false, reason: "bad-args" };
-  const res = applyGifts(draft, letterId, isArgsRecord(args) ? args.gifts : undefined);
+  const res = applyGifts(draft, letterId, isArgsRecord(args) ? args.gifts : undefined, undefined, { now: ctx.now, rand: ctx.rand });
   if (!res.ok) return { ok: false, reason: res.reason };
   return { ok: true, result: { letterId, applied: res.applied } };
 };
