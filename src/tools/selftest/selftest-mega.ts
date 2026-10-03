@@ -216,7 +216,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
 {
   let save: SaveV3 = seed(pet({ mega: { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care - 2 } }));
   let n = 0;
-  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0 }, HANDLERS);
+  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
   const run = (name: string, args: unknown) => ex.run({ id: `t${(n += 1)}`, name, args });
   assert.equal(run("pet.form", { petId: "p1", species: "charizard-mega-x" }).ok, false, "메가스톤이 없으면 거절");
   save.pets[0]!.fullness = 50;

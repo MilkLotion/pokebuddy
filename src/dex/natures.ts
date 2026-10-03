@@ -50,7 +50,7 @@ export function axesAt(id: string, petId: string, now: number): Record<Axis, Axi
 }
 
 // 무작위 하나 — rng 는 [0, 1) 을 돌려주는 함수 (시험에서 고정)
-export function randomNature(rng: () => number = Math.random, opts?: DexOptions): Nature {
+export function randomNature(rng: () => number, opts?: DexOptions): Nature {
   const list = table(opts);
   const idx = Math.min(list.length - 1, Math.max(0, Math.floor(rng() * list.length)));
   const picked = list[idx];
