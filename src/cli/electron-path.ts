@@ -1,4 +1,4 @@
-// Electron 실행 파일 경로 — pokebuddy 명령(cli/run.js)과 setup(cli/setup.js 의 준비 확인)이 같이 쓴다.
+// Electron 실행 파일 경로 — pokebuddy 명령(./run.ts)과 setup(./setup.ts 의 준비 확인)이 같이 쓴다.
 // electron 모듈을 불러오지 않는다(경로만 푼다) — Electron 44 는 실행 파일이 없으면 그 자리에서 100MB 를 받기 시작해
 // 명령이 그만큼 멈추고, 오프라인이면 매번 스택을 찍는다. 받는 일은 설치(postinstall)와 pokebuddy setup 이 맡는다
 // (예전 lib/electron.js. 도구 레인 T7b-2 에서 타입 검사를 받게 옮겼다)

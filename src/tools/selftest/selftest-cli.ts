@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parseArgs as parseCliArgs } from "../../cli/args";
 import { makeTmp } from "../harness/tmp-dir";
 
 interface Parsed {
@@ -13,8 +14,8 @@ interface Parsed {
   stop?: boolean;
 }
 const root = path.resolve(__dirname, "..", "..", "..");
-// cli/ 는 아직 JS 다(src 밖) — 경로로 읽는다
-const { parseArgs } = require(path.join(root, "cli", "args.js")) as { parseArgs(argv: string[]): Parsed };
+// 인자 해석 — src/cli/args.ts (예전 cli/args.js, 도구 레인 T7b-3). 결과 모양은 이 검사가 보는 칸만 적은 Parsed 로 읽는다
+const parseArgs = (argv: string[]): Parsed => parseCliArgs(argv) as Parsed;
 
 // 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/harness/tmp-dir.ts)
 const home = makeTmp("cli");

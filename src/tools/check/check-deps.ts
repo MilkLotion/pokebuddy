@@ -43,9 +43,12 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   main: [...LOW, ...DOMAINS, ...MID, "tx", "commands", "view", "verify"],
   renderer: ["shared"],
   hooks: ["shared"],
-  cli: [...LOW, "save", "agents", "follow", "terminal"],
+  // cli 는 도메인(아래층)도 읽는다 — pokebuddy status 가 도감 번호(dex/dex-number)를 푼다 (도구 레인 T7b-3, 오케스트레이터에 알림)
+  cli: [...LOW, ...DOMAINS, "save", "agents", "follow", "terminal"],
   verify: [],
 };
+// electron 을 값으로 가져와도 되는 main 밖 파일 — pokebuddy setup 이 설치 때 못 받은 Electron 을 그 순간 받는다(늦은 require("electron"))
+const ELECTRON_OK = new Set(["src/cli/setup.ts"]);
 // 누구나 읽을 수 있는 폴더
 const OPEN_TO_ALL = new Set(["verify"]);
 
@@ -129,7 +132,7 @@ export function findDepViolations(root: string = ROOT): string[] {
     for (const imp of importsOf(file, text, declared)) {
       const kind = imp.typeOnly ? " (type)" : "";
       if (folder !== "tools") {
-        if (imp.spec === "electron" && !imp.typeOnly && folder !== "main") found.push(`electron: ${file} → electron`);
+        if (imp.spec === "electron" && !imp.typeOnly && folder !== "main" && !ELECTRON_OK.has(file)) found.push(`electron: ${file} → electron`);
         if (imp.spec.startsWith("node:") && !imp.typeOnly && (folder === "shared" || folder === "renderer")) found.push(`node: ${file} → ${imp.spec}`);
         if (imp.spec.startsWith(".") && !imp.to && !imp.spec.endsWith(".json")) {
           const target = path.posix.normalize(path.posix.join(path.posix.dirname(file), imp.spec));

@@ -2,4 +2,3 @@
 layer: src/notify/banner.ts → src/main/text.ts
 layer: src/notify/notifier.ts → src/platform/atomic-write.ts
 layer: src/trade/config.ts → src/platform/dev-run.ts
-outside: src/agents/registry.ts → cli/setup.js

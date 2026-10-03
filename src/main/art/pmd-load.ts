@@ -1,8 +1,9 @@
 // PMD 자산을 받아 캐시하고 클립으로 만든다.
-// (예전 art/pmd-load.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다. cli/status.js 는 옛 자리의 한 줄 JS 로 이것을 읽는다 — T7b 에서 걷는다)
+// (예전 art/pmd-load.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다. 저작자 풀이(parseCredits)는 T7b-3 에서 src/shared/pmd-credits.ts 로 — pokebuddy status 와 같이 쓴다)
 import fs from "node:fs";
 import path from "node:path";
 import { dexPath } from "../../dex/dex-number";
+import { parseCredits } from "../../shared/pmd-credits";
 import type { PmdArt } from "../art";
 import { fetchBuffer, fetchCached, readCache, saveAtomic } from "./fetch";
 import { readZipClips } from "./pmd";
@@ -33,16 +34,6 @@ function looksLikeSprites(buf: Buffer): boolean {
   } catch {
     return false;
   }
-}
-
-// TSV: 날짜 \t 작성자 \t CUR \t 라이선스 \t 동작목록
-export function parseCredits(text: string | null | undefined): { author: string; license: string }[] {
-  if (!text) return [];
-  return text
-    .split("\n")
-    .map((line) => line.split("\t"))
-    .filter((f) => f.length >= 2 && f[1])
-    .map((f) => ({ author: f[1]!.trim(), license: (f[3] || "").trim() || "Unspecified" }));
 }
 
 // 저작자 파일을 받아 캐시에 둔다. 못 받으면 null

@@ -2,7 +2,7 @@
 //
 //   node dist/tools/check/check-hook-bundle.js   (npm run build 뒤)
 //
-// 훅은 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사되는 단일 파일이다 (cli/setup.js).
+// 훅은 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사되는 단일 파일이다 (src/agents/hooks.ts).
 // Node 내장 말고 다른 것을 require 하면 복사본이 깨진다 — 프로젝트 모듈은 `import type` 으로만 가져와야 한다
 import fs from "node:fs";
 import { builtinModules } from "node:module";

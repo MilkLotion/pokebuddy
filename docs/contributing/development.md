@@ -189,7 +189,7 @@ pokebuddy game --help
 그 밖의 시작 값은 **`~/.claude/pokebuddy/config.json` 한 파일**에 둔다. 앱은 이 파일에 쓰지 않는다. 바꾸려면 사용자가 직접 만든다.
 설정을 프로그램 폴더가 아니라 홈 폴더에 두는 이유가 있다. npm 으로 업데이트해도 설정이 지워지지 않아야 하기 때문이다.
 (예전 버전이 프로그램 폴더에 두던 `pkmon.config.json` 은 처음 실행할 때 이리로 복사해 온다. 형식은 저장소의 `pokebuddy.config.example.json` 을 참고한다)
-경로는 `src/platform/paths.ts`, 기본값과 설정 읽기는 `src/platform/user-config.ts` 한 곳에 있다. 앱(`src/main/`)과 명령(`cli/`, 빌드 산출물 `dist/platform/` 을 읽는다)이 모두 그것을 쓴다.
+경로는 `src/platform/paths.ts`, 기본값과 설정 읽기는 `src/platform/user-config.ts` 한 곳에 있다. 앱(`src/main/`)과 명령(`src/cli/`)이 모두 그것을 쓴다.
 
 | 항목 | 기본 | 설명 |
 |---|---|---|

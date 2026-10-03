@@ -49,7 +49,7 @@ function sweep(dir) {
 }
 
 // src/ 에 .ts 가 하나라도 있는가 — 없으면(npm 설치본은 TS 원본을 싣지 않는다) 모든 산출물이 "짝 없음"이 된다.
-// cli/setup.js 가 훅 파일이 없을 때 build 를 부를 수 있어, 그때 dist/ 를 다 지우지 않게 아무것도 지우지 않는다 (교차 검토 93번)
+// bin/pokebuddy·src/agents/hooks.ts 가 dist/ 가 없을 때 build 를 부를 수 있어, 그때 dist/ 를 다 지우지 않게 아무것도 지우지 않는다 (교차 검토 93번)
 function hasTs(dir) {
   let ents = [];
   try {
