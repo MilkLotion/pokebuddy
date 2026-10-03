@@ -19,7 +19,7 @@ import type { Reason } from "../../shared/names/reasons.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
-import { portraitImg, rememberPortrait } from "../ui/portrait.js";
+import { portraitImg, rememberPortrait, rememberPortraitBox } from "../ui/portrait.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
@@ -2350,7 +2350,7 @@ async function sellBag(id: string): Promise<void> {
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 모달 6화면 — Base `1036:23257`·Link Created `1036:22965`·Offer `1036:22673`·Blocked `1036:22381`·Done `1036:22089`·Error `1036:21797`.
-// 값은 메인이 만든 TradeScreen(src/main/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
+// 값은 메인이 만든 TradeScreen(src/view/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
 // 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다.
 // 그리는 곳은 교환 모달이다 — 박스 머리 메뉴의 `교환` 이 연다(2026-09-30·10-02 사용자 결정).
 // 모달을 닫아도 교환은 이어진다. 진행 중이면 머리의 햄버거 단추에 점을 둔다
@@ -5166,11 +5166,16 @@ async function loadArt(): Promise<void> {
   } catch {
     return; // 그림 없이도 창은 돈다 — 칸을 그린 뒤 하나씩 청하는 길이 남아 있다
   }
-  // [임시] box 는 아직 쓰지 않는다 — 메인이 싣기 시작하면 렌더러 레인이 보는 네모를 box 로 정한다(X15)
   const got: Record<string, string> = Object.fromEntries(Object.entries(art).map(([key, image]) => [key, image.uri]));
   for (const [key, uri] of Object.entries(got)) (key === "egg" || key.startsWith("item:") ? iconCache : portraitCache).set(key, uri);
-  // 초상은 디코딩이 끝나면 보는 네모도 재 둔다 — 몸이 큰 그림이 첫 프레임부터 잘리지 않는다 (portrait.ts)
-  const portraits = new Set(Object.entries(got).filter(([key]) => key !== "egg" && !key.startsWith("item:")).map(([, uri]) => uri));
+  // 초상은 메인이 잰 불투명 네모(box)로 보는 네모를 먼저 정한다 — 몸이 큰 그림이 첫 프레임부터 잘리지 않는다 (portrait.ts, X15).
+  // 네모가 없는 초상만 디코딩이 끝난 뒤에 잰다
+  const portraits = new Set<string>();
+  for (const [key, image] of Object.entries(art)) {
+    if (key === "egg" || key.startsWith("item:")) continue;
+    if (image.box) rememberPortraitBox(image.uri, image.box);
+    else portraits.add(image.uri);
+  }
   for (const uri of new Set(Object.values(got))) {
     const img = new Image();
     img.src = uri;

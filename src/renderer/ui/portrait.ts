@@ -2,16 +2,8 @@
 // - portraitImg: 목록의 초상(<img>). 관리 창·파티 기기 창·가방 기기 창의 파티 줄·도감 기기 창의 진화 트리·포켓몬 메뉴·첫 포켓몬 선택 창이 쓴다
 // - spriteCanvas: 기기 창의 큰 그림(<canvas>). 파티 상세·도감·상점·가방 기기 창이 쓴다
 // 그림은 PokeAPI 기본 그림(96 × 96)이고 data URI 로 온다 (src/main/art/portraits.ts)
+import type { OpaqueBox } from "../../shared/model/snapshot.js";
 import { opaqueBoxOf, readPixels } from "./image.js";
-
-interface OpaqueBox {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  width: number; // 그림 전체
-  height: number;
-}
 
 // 불투명한 영역 — 알파 128 이상인 점을 모두 담는 네모. 빈 그림은 null
 function opaqueBox(img: HTMLImageElement): { box: OpaqueBox; canvas: HTMLCanvasElement } | null {
@@ -54,7 +46,13 @@ function measure(img: HTMLImageElement): string {
   return value;
 }
 
-// 미리 읽어 둔 그림의 보는 네모를 재 둔다 — 칸을 그릴 때 첫 프레임부터 맞는 네모로 보인다 (관리 창 loadArt)
+// 메인이 잰 불투명 네모로 보는 네모를 정해 둔다 — 그림을 읽기 전, 칸을 그리는 첫 프레임부터 맞는 네모로 보인다 (관리 창 loadArt, X15)
+// 기준은 같은 알파 128 이다(src/main/art/portraits.ts). 주소는 data URI 라 img.src 와 글자가 같다
+export function rememberPortraitBox(uri: string, box: OpaqueBox): void {
+  if (!viewBoxes.has(uri)) viewBoxes.set(uri, viewBoxOf(box));
+}
+
+// 미리 읽어 둔 그림의 보는 네모를 재 둔다 — 메인이 네모를 싣지 못한 그림만 (관리 창 loadArt)
 export function rememberPortrait(img: HTMLImageElement): void {
   if (img.naturalWidth) measure(img);
 }
