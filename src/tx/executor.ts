@@ -23,6 +23,7 @@ export interface TxContext {
   rand: () => number; // 0 이상 1 미만. 자체 검사가 결과를 정할 수 있게 받아서 쓴다
   // 알 하나의 결정적 난수(P4b, 계정 시드 — src/verify/save-rules.ts seededRand). 시드가 없으면 null — 그때는 rand 를 쓴다
   eggRand?: (eggId: string) => (() => number) | null;
+  petName?: (slug: string) => string; // 종의 화면 이름 — 박스 이름순 정렬이 쓴다. 없으면 슬러그 그대로. tx 는 화면 글자를 가져오지 않는다 — 조립하는 쪽(src/main/game.ts)이 꽂는다
 }
 
 export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutcome;
@@ -33,6 +34,7 @@ export interface TxPorts {
   now: () => number;
   rand?: () => number; // 없으면 Math.random
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
+  petName?: (slug: string) => string; // 종의 화면 이름. 없으면 슬러그 그대로(자체 검사)
 }
 
 export interface Executor {
@@ -64,7 +66,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
 
     const now = ports.now();
     const draft = structuredClone(save);
-    const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}) });
+    const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}), petName: ports.petName ?? ((slug) => slug) });
     if (!out.ok) return { ok: false, reason: out.reason };
 
     // 상태가 바뀌었으니 메가 모습·메가스톤·해금·튜토리얼·업적을 다시 본다 (./settle.ts). save 는 거래 전 — 레벨업 업적이 비교한다

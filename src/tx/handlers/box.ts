@@ -1,6 +1,5 @@
 // 박스 처리기 — 정렬·이동·이름·순서
 import { isBoxSortKey, moveSlot, moveToBox, orderBox, renameBox, sortBox } from "../../box/slots.js";
-import { petName } from "../../main/text.js";
 import type { TxHandler } from "../executor";
 import { intOf, isObj } from "./args.js";
 
@@ -13,14 +12,14 @@ const boxIndexOf = (draft: Parameters<TxHandler>[0], args: unknown, key: string)
 };
 
 // 지금 보는 박스 하나를 기준대로 한 번 정렬한다
-export const boxSortHandler: TxHandler = (draft, args) => {
+export const boxSortHandler: TxHandler = (draft, args, ctx) => {
   const boxIndex = boxIndexOf(draft, args, "boxId");
   const by = isObj(args) ? args.by : undefined;
   if (boxIndex < 0) return { ok: false, reason: "no-box" };
   if (!isBoxSortKey(by)) return { ok: false, reason: "bad-args" };
   const box = draft.boxes[boxIndex];
   if (!box) return { ok: false, reason: "no-box" };
-  sortBox(box, new Map(draft.pets.map((p) => [p.id, p])), by, (slug) => petName(slug));
+  sortBox(box, new Map(draft.pets.map((p) => [p.id, p])), by, ctx.petName ?? ((slug) => slug));
   return { ok: true, result: { boxId: box.id, by } };
 };
 

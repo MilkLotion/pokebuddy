@@ -34,6 +34,7 @@ import { saveKindOf } from "../online/save-kind.js";
 import type { AgentName } from "../shared/names/agents";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
+import { petName } from "./text.js";
 
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/save-file.ts)
 export const saveFile = (): string => PATHS.save;
@@ -72,7 +73,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   const live = createLiveSave({ file, ...(canWrite ? { canWrite } : {}), flushMs, mono, onWrite: (name) => onWrite?.(saveKindOf(name)) });
   const { read, write } = live;
 
-  const executor = createExecutor({ read, write, now, rand, ...(eggRand ? { eggRand } : {}) }, HANDLERS);
+  const executor = createExecutor({ read, write, now, rand, ...(eggRand ? { eggRand } : {}), petName }, HANDLERS);
 
   // 마지막 틱 뒤로 흐른 시간을 적용한다. 앱이 꺼져 있던 틈은 세지 않는다 — 상한을 넘는 몫은 버린다
   // input.workMs — 지난 틱 뒤로 에이전트가 작업한 시간. 흐른 시간을 넘는 몫은 applyTime 이 버린다

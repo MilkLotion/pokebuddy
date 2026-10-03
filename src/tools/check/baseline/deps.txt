@@ -6,7 +6,6 @@ layer: src/trade/net.ts → src/online/client.ts
 layer: src/trade/net.ts → src/online/codes.ts
 layer: src/trade/net.ts → src/online/server-call.ts
 layer: src/trade/net.ts → src/online/session.ts
-layer: src/tx/handlers/box.ts → src/main/text.ts
 layer: src/view/dex-detail.ts → src/main/text.ts
 layer: src/view/dex-list.ts → src/main/text.ts
 layer: src/view/dex-text.ts → src/main/text.ts
