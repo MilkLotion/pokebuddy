@@ -18,7 +18,7 @@ import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./windows/options.js";
 import { isFromWindow } from "./windows/ipc.js";
-import { INPUT_LIMITS } from "./windows/input.js";
+import { INPUT_LIMITS, isShortId } from "./windows/input.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
@@ -345,7 +345,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   // 포켓몬 메뉴 — 개체 식별자만 받는다. 띄웠으면 true, 띄울 길이 없으면 false
   ipcMain.handle(CH.petMenu, (e, petId: unknown): boolean => {
-    if (!mine(e) || !petMenu || typeof petId !== "string" || petId.length > 64) return false;
+    if (!mine(e) || !petMenu || !isShortId(petId)) return false; // 식별자는 다른 창과 같은 상한(INPUT_LIMITS.idChars)
     petMenu(petId);
     return true;
   });
