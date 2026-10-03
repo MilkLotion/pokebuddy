@@ -54,7 +54,7 @@ async function main() {
   for (let n = FROM; n <= TO; n++) if (!found[n]) missing.push(n);
   if (missing.length) throw new Error(`설명을 못 찾은 번호: ${missing.join(", ")}`);
   const lines = [
-    `"_comment": ${JSON.stringify("한국어 설명문 보충 — PokeAPI 에 한국어가 없는 899~1025번. 출처는 포켓몬코리아 공식 도감(pokemonkorea.co.kr/pokedex). scripts/fetch-dex-ko.cjs 가 만든다. src/tools/build-dex-text.ts 가 data/dex-text.json 에 합친다")}`,
+    `"_comment": ${JSON.stringify("한국어 설명문 보충 — PokeAPI 에 한국어가 없는 899~1025번. 출처는 포켓몬코리아 공식 도감(pokemonkorea.co.kr/pokedex). src/tools/data/fetch-dex-ko.ts 가 만든다. src/tools/data/build-dex-text.ts 가 data/dex-text.json 에 합친다")}`,
     ...Object.keys(found).sort((a, b) => Number(a) - Number(b)).map((n) => `${JSON.stringify(n)}: ${JSON.stringify(found[n])}`),
   ];
   fs.writeFileSync(OUT, `{\n${lines.join(",\n")}\n}\n`);

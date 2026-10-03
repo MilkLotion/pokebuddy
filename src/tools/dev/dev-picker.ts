@@ -2,6 +2,8 @@
 //
 // 저장을 읽지도 쓰지도 않는다. 창을 띄워 찍은 뒤 끝낸다. `--pick 2` 는 둘째 카드를 눌러 놓고 찍는다.
 // `--no-art` 는 초상을 하나도 주지 않아 그림 자리표시(받는 중 깜빡임)를 찍는다.
+// 깜빡임 없이 같은 그림을 얻으려면 Chromium 스위치 `--force-prefers-reduced-motion` 을 함께 준다
+// (picker.html 의 reduced-motion 규칙이 portrait-wait 를 멈춘다. 옛 scripts/dev-picker.cjs 에도 같이 듣는다 — A/B 캡처가 쓴다)
 // 찍은 그림은 Figma `First Run / Starter Selected` `402:9417`, `Starter Empty` `402:9579` 와 비교한다
 // (예전 scripts/dev-picker.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";

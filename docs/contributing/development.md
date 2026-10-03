@@ -244,7 +244,10 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
   `dist/renderer/` 로 만든다(ESM). HTML 은 빌드하지 않는다. `src/renderer/*.html` 에 그대로 둔다. 이 HTML 은 `../../dist/renderer/*.js` 를 부른다
 - 무대·선택 창 문서에는 CSP 가 있다. 스크립트는 자기 파일에서만 부른다. 그림은 data URL 만 쓴다(`default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:`)
 - 창 아이콘은 다음과 같다 — Windows 는 `assets/logo/out/logo-256.png` 를 쓴다. mac 은 Dock 아이콘을 `logo-512.png` 로 정한다. 그 뒤 Dock 에서 숨긴다. 트레이 아이콘은 첫 마리 그림을 쓴다
-- 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `package.json` 의 `selftest` 스크립트에 있다
+- 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `src/tools/selftest/list.ts` 의 `SELFTESTS` 에 있다. 실행기는 `src/tools/selftest/run.ts` 다
+  - 목록에 없는 `selftest-*.ts` 가 하나라도 있으면 검사를 하나도 돌리지 않고 실패한다. 새 검사를 만들면 목록에 더한다
+  - 검사가 하나라도 실패하면 종료 코드는 1 이다. 실패한 검사의 종료 코드를 그대로 내지 않는다
+  - `--keep-going` 은 실패한 뒤에도 나머지를 돌린다. `--reverse` 는 거꾸로 돌린다(순서 의존 확인). `--list` 는 목록만 적는다
   - 클라우드·교환·계정 검사는 로컬 Supabase(`npx supabase start`)와 로컬 함수 서버(`npx supabase functions serve`)가 있어야 한다. 올리기가 Edge Function `upload-save` 를 거친다
   - 함수 서버가 "No such container" 로 바로 끝나면 한 번 더 띄운다
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
@@ -343,7 +346,7 @@ node dist/tools/dev/dev-test.js stop
 시험과 개발 도구가 쓰고 버리는 폴더는 시스템 임시 폴더의 `pokebuddy/` 아래에 만든다(2026-10-03 사용자 결정). 저장소 안에는 만들지 않는다. 들여다보거나 이어 쓰는 시험 HOME 과 시험 계정만 저장소의 `.claude/` 에 둔다.
 
 - 폴더는 `src/tools/harness/tmp-dir.ts` 의 `makeTmp(<이름>)` 으로 만든다. 경로는 `<임시 폴더>/pokebuddy/<이름>-XXXXXX` 다. `fs.mkdtempSync(path.join(os.tmpdir(), …))` 를 직접 부르지 않는다.
-- 스크립트(`scripts/*.cjs`)는 `dist/tools/harness/tmp-dir.js` 를 불러 쓴다. 그래서 `npm run build` 뒤에 실행한다.
+- 임시 폴더를 쓰는 도구는 모두 `src/tools/` 의 TypeScript 다. 그래서 `npm run build` 뒤에 `dist/tools/` 에서 실행한다.
 - 프로세스가 종료 코드 0 으로 끝나면 만든 폴더를 지운다. 실패하면 남긴다. 원인을 볼 수 있다.
 - 남은 폴더는 다음에 `makeTmp` 를 처음 부를 때 치운다. 만든 프로세스가 끝난 폴더는 바로 지운다. 프로세스 번호는 폴더 옆의 `<폴더 이름>.pid` 파일에 있다. 이 파일이 없는 폴더는 하루 뒤에 지운다.
 - Electron 으로 도는 도구(`smoke-*`, `dev-manage`)는 끝날 때 자식 프로세스가 파일을 잡고 있다. 그래서 스스로 다 지우지 못한다. 다음 실행이 치운다.

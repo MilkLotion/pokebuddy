@@ -1,11 +1,10 @@
 # deps 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-deps.js --update-baseline)
 cycle: src/dex/mega.ts ⇄ src/party/mega-form.ts
 cycle: src/tx/dex-detail.ts ⇄ src/tx/lists.ts ⇄ src/tx/shop-detail.ts
-layer: src/agents/notice.ts → src/save/legacy.ts
-layer: src/cli/game.ts → src/main/paths.ts
 layer: src/dex/mega.ts → src/party/mega-form.ts
 layer: src/notify/banner.ts → src/main/text.ts
-layer: src/notify/notifier.ts → src/save/legacy.ts
+layer: src/notify/notifier.ts → src/platform/atomic-write.ts
+layer: src/trade/config.ts → src/platform/dev-run.ts
 layer: src/trade/net.ts → src/online/client.ts
 layer: src/trade/net.ts → src/online/codes.ts
 layer: src/trade/net.ts → src/online/server-call.ts
@@ -19,7 +18,7 @@ outside: src/agents/registry.ts → cli/setup.js
 outside: src/main/art.ts → art/pmd-load.js
 outside: src/main/cries.ts → art/fetch.js
 outside: src/main/overworld-art.ts → art/fetch.js
-outside: src/main/paths.ts → config.js
 outside: src/main/portraits.ts → art/fetch.js
 outside: src/main/text.ts → lib/i18n.js
 outside: src/main/text.ts → lib/names.js
+outside: src/platform/paths.ts → config.js
