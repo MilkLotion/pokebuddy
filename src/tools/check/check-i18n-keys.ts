@@ -5,7 +5,7 @@
 // 까닭: 실패 알림처럼 드물게 지나는 경로의 열쇠는 A/B 화면 비교가 지나지 않아 빠져도 못 잡는다 (2026-10-03 app.ts 의 rt.game.reason.* 가 빠졌다)
 // 보는 것:
 //   번역 함수는 src/view/i18n.ts 의 t 하나다. 렌더러는 문구를 화면 값(snapshot)으로 받아 따로 번역 함수가 없다
-//   t 를 view/i18n·view/text·main/text 에서 가져오는(또는 정의하는) 파일만 본다 — 지역 변수 t 를 세지 않게
+//   t 를 view/i18n·view/text 에서 가져오는(또는 정의하는) 파일만 본다 — 지역 변수 t 를 세지 않게 (main/text 는 M8-1 에서 지웠다)
 //   첫 인자 안의 글자 그대로 열쇠(삼항 안 포함)는 두 언어 파일에 다 있어야 한다
 //   템플릿 `앞.${…}` 은 그 앞부분으로 시작하는 열쇠가 두 언어 파일에 하나 이상 있어야 한다
 //   변수로 넘기는 열쇠(t(title))는 풀지 못한다 — 수만 알린다
@@ -16,7 +16,7 @@ import { ROOT, sourceFiles } from "./baseline";
 
 const LANGS = ["ko", "en"] as const;
 // t 를 가져올 수 있는 모듈 — 원본과 다시 내보내기
-const SOURCES = /["'](?:\.\.?\/)+(?:view|main)\/(?:i18n|text)(?:\.js)?["']|["']\.\/(?:i18n|text)(?:\.js)?["']/;
+const SOURCES = /["'](?:\.\.?\/)+view\/(?:i18n|text)(?:\.js)?["']|["']\.\/(?:i18n|text)(?:\.js)?["']/;
 
 export interface I18nKeyReport {
   missing: string[]; // "ko 없음: <열쇠> @ <파일>:<줄>"
