@@ -45,7 +45,7 @@
 | `src/shared` | 모듈 사이의 공유 타입과 시계 | 규칙 | 전체 |
 | `src/tools` | 데이터 빌드와 자체 검사(`selftest-*`) | 앱 실행 | — |
 | `src/online` | 온라인 공통과 계정. `client`는 교환·계정·클라우드 저장이 함께 쓰는 Supabase 클라이언트, `account`는 아이디 가입·로그인·로그아웃·이름·삭제 요청, `github`는 GitHub 로그인(`127.0.0.1` 임시 서버 PKCE), `cloud`는 클라우드 저장(활성 기기·자동 저장·오프라인·다른 PC 에서 시작·연결 끊김 확인·잠듦·업데이트 필요·저장 정보 분실), `session`은 익명·로그인 세션을 한 곳에서 만들고 부팅 때 세션 유무를 확인한다(`probe`), `handoff`는 로그인 직전 익명 저장 이관 티켓을 받고 로그인 뒤 익명 저장을 옮긴다(`begin_handoff`·`adopt_anonymous`) | 저장 파일 쓰기(메인이 받은 저장을 검사·백업 뒤 바꾼다), 창 | — |
-| `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/mailbox.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
+| `src/mail` | 우편함의 선물 검사와 저장에 넣기·읽음 기록(순수 함수). 명령 통로 `src/save/command-channel.ts` 와 다르다 | 서버 호출(메인 `src/main/mail.ts` 가 한다), 창 | — |
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 친구 교환의 Electron 쪽 입구는 `src/main/trade.ts`(세션 저장 `encryptedStorage`, 개발용 시험 장치)와 `src/main/trade-screen.ts`(교환 모달 화면 값)다. 서버 SQL 은 `supabase/migrations/`에 있다.

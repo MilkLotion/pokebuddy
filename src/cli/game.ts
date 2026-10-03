@@ -1,6 +1,6 @@
 // 게임 명령 진입 — 관리 창과 같은 명령을 명령 통로(mailbox)로 보낸다. 게임 저장은 writer 만 바꾼다 (docs/contributing/development.md "게임 명령")
 import { PATHS } from "../main/paths";
-import { send } from "../save/mailbox";
+import { sendToWriter } from "../save/command-channel";
 import { commandNamesWhere } from "../shared/names/commands";
 import type { Command } from "../shared/command";
 import type { CommandName } from "../shared/names/commands";
@@ -26,7 +26,7 @@ export async function game(argv: string[]): Promise<void> {
     if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error("Use a JSON object for arguments.");
     const command: Command = { cmd: name as CommandName, from: "cli", args: args as Record<string, unknown> };
     if (target && target !== "-") command.target = target;
-    const result = await send(PATHS.mailbox, command);
+    const result = await sendToWriter(PATHS.mailbox, command);
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     if (!result.ok) process.exitCode = 1;
   } catch (e) {
