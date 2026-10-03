@@ -53,7 +53,7 @@
     "prepack": "npm run build && node scripts/build-helper.js",
     "postinstall": "node scripts/postinstall.js",
     "prepare": "npm run build",
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json",
+    "build": "node scripts/clean-dist.js && tsc -p tsconfig.json && tsc -p tsconfig.renderer.json",
     "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "selftest": "npm run build && node dist/tools/selftest/run.js",
     "dev:account": "npm run build && node dist/tools/dev/dev-test.js start --account",
