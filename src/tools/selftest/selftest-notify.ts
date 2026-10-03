@@ -11,6 +11,7 @@ import type { BannerView } from "../../shared/model/overlays";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { bannerOf } from "../../view/banner";
 import { createNotifier } from "../../notify/notifier";
+import { writeAtomic } from "../../platform/atomic-write";
 import { refresh, take, type NotifyState } from "../../notify/queue";
 import { makeTmp } from "../harness/tmp-dir";
 import { pendingOf } from "../../notify/pending";
@@ -172,7 +173,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
     s.achievements = {};
     let at = T0;
     const shown: BannerView[] = [];
-    const a = createNotifier({ file, read: () => s, now: () => at, show: (b) => shown.push(b), bannerOf });
+    const a = createNotifier({ file, read: () => s, now: () => at, show: (b) => shown.push(b), write: writeAtomic, bannerOf });
     a.tick(); // 처음 — 비어 있다
     assert.equal(shown.length, 0);
 
@@ -185,7 +186,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
 
     // 첫 배너를 보이는 중에 앱이 끝났다 — 다시 켜면 둘째부터
     const restarted: BannerView[] = [];
-    const b = createNotifier({ file, read: () => s, now: () => at, show: (v) => restarted.push(v), bannerOf });
+    const b = createNotifier({ file, read: () => s, now: () => at, show: (v) => restarted.push(v), write: writeAtomic, bannerOf });
     b.tick();
     assert.deepStrictEqual(restarted.map((v) => v.key), ["hatch:e2"], "표시 중이던 배너는 표시한 것으로 친다");
     b.done();
@@ -206,7 +207,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   try {
     const s = seed();
     const shown: BannerView[] = [];
-    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b), bannerOf });
+    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b), write: writeAtomic, bannerOf });
     const notice: BannerView = { key: "notice:x", kind: "notice", title: "안내", target: "본문", go: "바로가기", route: { to: "agents" } };
     assert.equal(n.showOnce(notice), true, "비어 있으면 보인다");
     n.tick();
@@ -234,7 +235,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
     local.find = { seq: 2, log: [rec(1), rec(2)] };
     let s: SaveV3 = local;
     const shown: BannerView[] = [];
-    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b), bannerOf });
+    const n = createNotifier({ file, read: () => s, now: () => T0, show: (b) => shown.push(b), write: writeAtomic, bannerOf });
     n.tick(); // 처음 켠 때 — 전부 표시한 것으로
     n.tick();
     assert.equal(shown.length, 0);

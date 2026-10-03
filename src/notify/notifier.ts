@@ -4,7 +4,6 @@
 // 배너가 끝나면(done) 다음 것을 내보낸다. 배너를 얼마나 보일지는 배너 창이 정한다.
 // 파일을 쓰지 못해도 배너는 보인다. 바뀐 줄은 기억해 두었다가 다음 틱에 다시 쓴다
 import fs from "node:fs";
-import { writeAtomic } from "../platform/atomic-write.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
 import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";
@@ -14,6 +13,9 @@ export interface NotifierOptions {
   read: () => SaveV3 | null;
   now?: () => number;
   show: (banner: BannerView) => void;
+  // 줄 파일 쓰기 — 메인이 넘긴다(src/platform/atomic-write.ts writeAtomic). 쓰지 못하면 false 이고 다음 틱에 다시 쓴다.
+  // 도메인은 파일을 직접 쓰지 않는다 (2026-10-03 오케스트레이터 결정)
+  write: (file: string, data: unknown) => boolean;
   // 키 하나의 배너 — 문구는 화면 값이 만든다(src/view/banner.ts). 대상이 사라졌으면 null 이고 그 배너를 건너뛴다
   bannerOf: (save: SaveV3, key: string) => BannerView | null;
 }
@@ -36,7 +38,7 @@ function load(file: string): NotifyState | null {
   }
 }
 
-export function createNotifier({ file, read, now = Date.now, show, bannerOf }: NotifierOptions): Notifier {
+export function createNotifier({ file, read, now = Date.now, show, write, bannerOf }: NotifierOptions): Notifier {
   let state = load(file);
   let dirty = false; // 쓰지 못한 변경이 있다
   let current: string | null = null;
@@ -46,7 +48,7 @@ export function createNotifier({ file, read, now = Date.now, show, bannerOf }: N
     state = next;
   };
   const flush = (): void => {
-    if (dirty && state && writeAtomic(file, state)) dirty = false;
+    if (dirty && state && write(file, state)) dirty = false;
   };
 
   const showNext = (save: SaveV3): void => {
