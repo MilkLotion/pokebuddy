@@ -53,7 +53,7 @@ import { makeTmp } from "../harness/tmp-dir";
 const seedArg = argAfter("--seed");
 if (seedArg != null) Math.random = seededRand(Number(seedArg) || 0);
 
-// POKEBUDDY_DEVICE_DUMP=<파일> — 관리 창이 기기 창에 보내는 모델(manage:<기기>-open 의 인자)을 받은 순서대로 그 파일에 적는다.
+// POKEBUDDY_DEVICE_DUMP=<파일> — 관리 창이 기기 창에 보내는 모델(manage:<기기>-open 의 인자)과 메인이 기기 창에 보내는 값(<기기>dev:show)을 받은 순서대로 그 파일에 적는다.
 // 기기 창 모델 A/B 비교(worklog/records/code-structure/ab/device-dump.cjs)가 쓴다. 그림 data URI 같은 긴 글자는 길이와 앞 32자만 남긴다.
 // 환경변수가 없으면 아무것도 하지 않는다. 관리 창이 처리기를 걸기 전이어야 해서 앱 모듈을 읽기 전에 감싼다
 const deviceDump = process.env.POKEBUDDY_DEVICE_DUMP;
@@ -66,11 +66,14 @@ if (deviceDump) {
     if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shrink(x)]));
     return v;
   };
+  const push = (channel: string, args: unknown[]): void => {
+    records.push({ channel, args: shrink(args) });
+    fs.writeFileSync(deviceDump, JSON.stringify(records, null, 1));
+  };
   const record = <H extends (event: never, ...args: never[]) => unknown>(channel: string, handler: H): H => {
     if (!/^manage:[a-z-]+-open$/.test(channel)) return handler;
     return ((event: never, ...args: never[]) => {
-      records.push({ channel, args: shrink(args) });
-      fs.writeFileSync(deviceDump, JSON.stringify(records, null, 1));
+      push(channel, args);
       return handler(event, ...args);
     }) as H;
   };
@@ -78,6 +81,14 @@ if (deviceDump) {
   const handle = ipcMain.handle.bind(ipcMain);
   ipcMain.on = ((channel: string, listener: Parameters<typeof on>[1]) => on(channel, record(channel, listener))) as typeof ipcMain.on;
   ipcMain.handle = ((channel: string, listener: Parameters<typeof handle>[1]) => handle(channel, record(channel, listener))) as typeof ipcMain.handle;
+  // 메인이 기기 창에 보내는 값(<기기>dev:show)도 적는다 — 그림·붙은 쪽을 더한 뒤의 값이다
+  app.on("web-contents-created", (_event, wc) => {
+    const send = wc.send.bind(wc);
+    wc.send = (channel: string, ...args: unknown[]): void => {
+      if (/^[a-z]+dev:show$/.test(channel)) push(channel, args);
+      send(channel, ...args);
+    };
+  });
   fs.writeFileSync(deviceDump, "[]");
 }
 
