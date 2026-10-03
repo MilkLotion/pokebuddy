@@ -31,7 +31,8 @@
 .pager button.box-name:hover {
   background: var(--accent-bg);
 }
-/* 검색 칸 규칙(.pager .search 폭 170·왼쪽 자동 여백)보다 앞서야 한다 — 이름 입력칸이 넓어져 사용 칸 수가 두 줄로 밀렸다 */
+/* 검색 칸 규칙(widgets.css 의 .pager .search 폭 170·왼쪽 자동 여백)을 이겨야 한다 — 지면 이름 입력칸이 넓어져 사용 칸 수가 두 줄로 밀린다.
+   명시도가 높아(클래스 셋 대 둘) 읽는 순서와 무관하게 이긴다 */
 .pager .search.box-name-input {
   width: 100%;
   margin-left: 0;
