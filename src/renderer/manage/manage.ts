@@ -28,7 +28,7 @@ import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
-import { boxPets, findPartySlot, findPet, partyPets, ui } from "./state.js";
+import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
@@ -730,7 +730,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
     card.append(iconOf(egg?.icon ?? "egg:random", "portrait"), el("div", "name", egg?.name ?? "알"));
     info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "아직 얻지 않은 포켓몬이 나와요."));
   } else {
-    const pet = petId ? findPet(petId) : undefined;
+    const pet = petId ? petInView(petId) : undefined;
     if (!pet) {
       close();
       return;
@@ -1006,7 +1006,7 @@ function markMega(cell: HTMLElement, pet: PetView, size: number): void {
 const megaDrawer = (shiny: boolean): ReturnType<typeof evoDrawer> => evoDrawer((slug, cls) => portraitOf(slug, shiny, cls));
 
 function drawMega(petId: string, to?: string): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   const mega = pet?.mega;
   if (!pet || !mega || !mega.canChange) {
     close();
@@ -1097,7 +1097,7 @@ function drawMega(petId: string, to?: string): void {
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
 function drawForm(petId: string, to: string): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   const form = pet?.forms?.find((f) => f.species === to);
   if (!pet || !form) {
     close();
@@ -1402,7 +1402,7 @@ function onPartyAction(action: PartyDeviceAction): void {
 // 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다.
 // 포켓몬 메뉴의 `옮기기` 로 든 때만 띄운다 (boxHold.ghost)
 function showHoldGhost(grid: HTMLElement, petId: string): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   const any = grid.querySelector<HTMLElement>(".cell");
   if (!pet || !any) return;
   if (!holdGhost) {
@@ -1443,7 +1443,7 @@ document.addEventListener("keydown", (e) => {
 
 // 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
 function drawSellPet(petId: string, price: number): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   if (!pet) {
     close();
     return;
@@ -2310,7 +2310,7 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
 
 async function useBag(id: string): Promise<void> {
   const item = ui.view?.bag.find((i) => i.id === id);
-  const pet = bagTarget ? findPet(bagTarget) : null;
+  const pet = bagTarget ? petInView(bagTarget) : null;
   if (!item || !pet || !ui.view || bagSending) return;
   const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)
   bagResult = "";
@@ -3424,7 +3424,7 @@ function drawBody(): void {
   pointsEl.textContent = numberText(ui.view.points);
   achDotEl.hidden = ui.view.achievements.unclaimed === 0;
   // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
-  if (ui.detailPet && !findPet(ui.detailPet)) ui.detailPet = null;
+  if (ui.detailPet && !petInView(ui.detailPet)) ui.detailPet = null;
   syncPetDevice();
   if (shopPick && !ui.view.shop.some((i) => i.id === shopPick)) shopPick = null;
   syncShopDevice();
@@ -4015,7 +4015,7 @@ let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫
 
 // 파티 상세 기기 창에 보낼 고른 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
 function petDeviceBuild(): PetDeviceInput | null {
-  const pet = ui.detailPet ? findPet(ui.detailPet) : null;
+  const pet = ui.detailPet ? petInView(ui.detailPet) : null;
   if (!pet || !ui.view) return null;
   if (dexBeside && dexBesideSent !== pet.species) {
     window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
@@ -4113,7 +4113,7 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 // 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
 // 도감에서 해금 안 된 후보는 도감 기기 창과 같이 검은 실루엣과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
 function drawEvolve(petId: string, to?: string): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   if (!pet) {
     close();
     return;
@@ -4201,7 +4201,7 @@ function drawEvolve(petId: string, to?: string): void {
 const MINT = "mint";
 
 function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
-  const pet = findPet(petId);
+  const pet = petInView(petId);
   if (!pet || !ui.view) {
     close();
     return;
@@ -5318,14 +5318,14 @@ function goTo(route: ManageRoute): void {
     draw();
     open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
-    if (findPet(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
+    if (petInView(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
   } else if (route.to === "form") {
     // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
-    if (findPet(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
+    if (petInView(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
   } else if (route.to === "move") {
     startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
   } else if (route.to === "sell") {
-    if (findPet(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
+    if (petInView(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {
     ui.detailPet = null;
     open({ kind: "user", tab: "account" });

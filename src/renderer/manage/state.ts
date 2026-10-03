@@ -20,6 +20,6 @@ export const partyPets = (): PetView[] => (ui.view ? ui.view.party.slots.map((s)
 
 export const boxPets = (): PetView[] => (ui.view ? ui.view.boxes.flatMap((b) => b.slots.filter((p): p is PetView => p != null)) : []);
 
-export const findPet = (id: string): PetView | null => [...partyPets(), ...boxPets()].find((p) => p.id === id) ?? null;
+export const petInView = (id: string): PetView | null => [...partyPets(), ...boxPets()].find((p) => p.id === id) ?? null;
 
 export const findPartySlot = (id: string): number | null => ui.view?.party.slots.find((s) => s.pet?.id === id)?.index ?? null;
