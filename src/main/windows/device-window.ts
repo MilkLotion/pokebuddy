@@ -21,6 +21,7 @@ export interface DeviceChannels {
   close: string;
   act?: string; // 누르는 단추가 있는 창만
   cry?: string; // 울음소리를 내는 창만
+  coach?: string; // 튜토리얼 코치마크를 띄우는 창만 — 떴다·사라졌다를 알린다
 }
 
 export interface DeviceSpec<Open, View extends { side: DeviceSide }, Action = never> {
@@ -39,6 +40,7 @@ export interface DeviceSpec<Open, View extends { side: DeviceSide }, Action = ne
 export interface DeviceHooks<Action> {
   onStep(delta: -1 | 1): void; // 이전·다음 — 순서는 설정창이 정한다
   onAct?(action: Action): void; // 누른 단추 — 설정창이 처리한다
+  onCoach?(on: boolean): void; // 코치마크가 떴다·사라졌다. 창이 닫히면 false
   onClosed(gen: number): void; // 닫혔다 — 새 세대 번호를 설정창에 준다
 }
 
@@ -132,6 +134,7 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
       focusNext = false;
       detach();
       owner = null;
+      if (CH.coach) hooks.onCoach?.(false); // 창과 함께 코치마크도 사라졌다
       hooks.onClosed(gate.bump());
     });
     void w.loadFile(files.html);
@@ -180,6 +183,8 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
       if (isAction(action)) hooks.onAct?.(action);
     });
   }
+  const coach = CH.coach;
+  if (coach) scope.on(coach, (_e, on) => hooks.onCoach?.(on === true));
   const cry = CH.cry;
   if (cry && spec.cry) {
     const sound = spec.cry;

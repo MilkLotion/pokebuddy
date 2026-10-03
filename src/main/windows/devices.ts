@@ -120,7 +120,7 @@ function isPetAction(v: unknown): v is PetDeviceAction {
 
 export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen, PetDeviceView, PetDeviceAction> {
   return {
-    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", act: "petdev:act" } satisfies Record<string, PetDeviceChannel>,
+    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", act: "petdev:act", coach: "petdev:coach" } satisfies Record<string, PetDeviceChannel>,
     size: DEVICE_SIZES.pet,
     keyOf: (o) => o.pet.id,
     // 메가 모습이면 그 초상이다 (PetView.look)

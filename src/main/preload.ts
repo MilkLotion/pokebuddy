@@ -188,8 +188,8 @@ const DEX = { ...deviceWire("dexdev"), cry: ["invoke", "dexdev:cry"] } as const 
 
 contextBridge.exposeInMainWorld("pokebuddyDex", bridgeOf<DexDeviceIpc>(DEX));
 
-// 파티 상세 기기 창 — 개체 하나. 울음소리와 누른 단추
-const PET = { ...deviceWire("petdev"), cry: ["invoke", "petdev:cry"], act: ["send", "petdev:act"] } as const satisfies WireOf<PetDeviceIpc>;
+// 파티 상세 기기 창 — 개체 하나. 울음소리와 누른 단추, 튜토리얼 코치마크가 떴는지
+const PET = { ...deviceWire("petdev"), cry: ["invoke", "petdev:cry"], act: ["send", "petdev:act"], coach: ["send", "petdev:coach"] } as const satisfies WireOf<PetDeviceIpc>;
 
 contextBridge.exposeInMainWorld("pokebuddyPet", bridgeOf<PetDeviceIpc>(PET));
 

@@ -71,8 +71,22 @@ let detailPetId: string | null = null; // 다른 개체를 열면 1단계부터
 let coachEl: HTMLElement | null = null;
 let coachNow: CoachLayer | null = null; // coachEl 의 초점 규칙(말풍선만·단추로 되돌림)
 let lastView: PetDeviceView | null = null;
+let coachSent = false; // 메인에 알린 코치마크 상태 — 바뀔 때만 보낸다
 
+// 튜토리얼 동안 설정창의 창 단추 자리도 함께 어둡게 한다 — 메인이 설정창에 칠한다 (94 1-1, worklog/records/game-runtime/record.md 706·1143)
 function drawCoach(): void {
+  try {
+    drawCoachNow();
+  } finally {
+    const on = coachEl != null;
+    if (on !== coachSent) {
+      coachSent = on;
+      api.coach(on);
+    }
+  }
+}
+
+function drawCoachNow(): void {
   coachEl?.remove();
   coachEl = null;
   const v = lastView;

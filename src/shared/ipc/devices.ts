@@ -13,11 +13,13 @@ export type DeviceIpc<P extends string, View> = { [K in `${P}:show`]: Push<"onSh
 } & { [K in `${P}:close`]: Send<"close", []> };
 // 누른 단추 — 설정창이 처리한다
 export type DeviceActIpc<P extends string, Action> = { [K in `${P}:act`]: Send<"act", [action: Action]> };
+// 코치마크(튜토리얼 말풍선)가 떴다·사라졌다 — 메인이 설정창의 창 단추 자리도 함께 어둡게 한다
+export type DeviceCoachIpc<P extends string> = { [K in `${P}:coach`]: Send<"coach", [on: boolean]> };
 // 지금 종의 울음소리 data URI (못 받으면 null)
 export type DeviceCryIpc<P extends string> = { [K in `${P}:cry`]: Invoke<"cry", [], string | null> };
 
 export type DexDeviceIpc = DeviceIpc<"dexdev", DexDeviceView> & DeviceCryIpc<"dexdev">;
-export type PetDeviceIpc = DeviceIpc<"petdev", PetDeviceView> & DeviceCryIpc<"petdev"> & DeviceActIpc<"petdev", PetDeviceAction>;
+export type PetDeviceIpc = DeviceIpc<"petdev", PetDeviceView> & DeviceCryIpc<"petdev"> & DeviceActIpc<"petdev", PetDeviceAction> & DeviceCoachIpc<"petdev">;
 export type ShopDeviceIpc = DeviceIpc<"shopdev", ShopDeviceView> & DeviceActIpc<"shopdev", ShopDeviceAction>;
 export type BagDeviceIpc = DeviceIpc<"bagdev", BagDeviceView> & DeviceActIpc<"bagdev", BagDeviceAction>;
 export type PartyDeviceIpc = DeviceIpc<"partydev", PartyDeviceView> & DeviceActIpc<"partydev", PartyDeviceAction>;

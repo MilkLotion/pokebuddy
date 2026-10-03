@@ -22,7 +22,7 @@ import { createGame, type GameV3 } from "./game";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
-import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
+import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate, setStageCoachDim } from "./manage-window";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
 import { createFreeze } from "./app/freeze";
@@ -272,7 +272,11 @@ const coach = createCoach({
   quiet: () => display.ghost() || display.hidden(),
   areaMode: () => display.playArea().mode,
 });
-const syncCoach = (): void => coach.sync();
+// 바탕화면 튜토리얼이 떠 있는 동안 설정창의 창 단추 자리도 어둡게 한다 (94 1-1)
+const syncCoach = (): void => {
+  coach.sync();
+  setStageCoachDim(coach.isShown());
+};
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
 function syncJump(): void {

@@ -87,6 +87,30 @@ const CH = {
 const CHROME = { color: "#ffffff", symbolColor: "#4a6663", height: 39 };
 // 모달이 열리면 가림막(`--scrim` rgba(26,51,48,0.45))이 헤더를 덮는다. 창 단추 자리도 그 색을 겹친 값으로 바꾼다
 const CHROME_DIM = { color: "#98a3a2", symbolColor: "#344f4c" };
+// 창 단추 자리를 어둡게 하는 원천 — 하나라도 켜져 있으면 어둡다. 어느 창의 튜토리얼이든 떠 있는 동안 함께 어둡게 한다
+// (94 1-1, worklog/records/game-runtime/record.md 706·1143 "창 단추 자리도 함께 어둡게 한다")
+//   modal  설정창의 모달 가림막과 설정창 튜토리얼 (manage:dim)
+//   pet    파티 상세 기기 창의 튜토리얼 (petdev:coach)
+//   stage  바탕화면 튜토리얼 — 첫 돌봄·놀이공간 (setStageCoachDim)
+const dimFrom = { modal: false, pet: false, stage: false };
+function paintChrome(): void {
+  if (!win || win.isDestroyed()) return;
+  const c = dimFrom.modal || dimFrom.pet || dimFrom.stage ? CHROME_DIM : CHROME;
+  try {
+    win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: CHROME.height });
+  } catch {
+    // 창 단추를 OS 가 그리지 않는 곳(mac 등)에서는 할 일이 없다
+  }
+}
+function setDimFrom(from: keyof typeof dimFrom, on: boolean): void {
+  if (dimFrom[from] === on) return;
+  dimFrom[from] = on;
+  paintChrome();
+}
+// 바탕화면 튜토리얼 말풍선이 떴다·사라졌다 — 앱이 무대 코치를 맞출 때마다 알린다 (src/main/stage/coach.ts)
+export function setStageCoachDim(on: boolean): void {
+  setDimFrom("stage", on);
+}
 
 export interface ManageOptions {
   preload: string;
@@ -251,6 +275,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   }), {
     onStep: (delta) => toManage(CH.petStep, delta),
     onAct: (action) => toManage(CH.petAct, action),
+    onCoach: (on) => setDimFrom("pet", on),
     onClosed: (gen) => {
       shownModel.delete("pet");
       toManage(CH.petClosed, gen);
@@ -361,12 +386,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.on(CH.dim, (e, on: unknown) => {
     if (!win || !mine(e)) return;
-    const c = on === true ? CHROME_DIM : CHROME;
-    try {
-      win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: CHROME.height });
-    } catch {
-      // 창 단추를 OS 가 그리지 않는 곳(mac 등)에서는 할 일이 없다
-    }
+    setDimFrom("modal", on === true);
   });
   // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
   ipcMain.on(CH.copy, (e, text: unknown) => {
@@ -474,8 +494,10 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     },
     webPreferences: webPreferencesOf(opts.preload),
   });
+  paintChrome(); // 다른 창의 튜토리얼이 떠 있는 동안 열렸다 — 처음부터 어둡게
   win.on("closed", () => {
     win = null;
+    dimFrom.modal = false; // 설정창의 모달·튜토리얼은 창과 함께 사라졌다
     shownModel.clear();
     identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
   });
