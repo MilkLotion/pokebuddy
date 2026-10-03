@@ -66,10 +66,10 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 
 ### 언어와 이름
 
-- 화면 문구는 `lib/i18n/<언어>.json` 에서 키로 가져온다 (`src/view/i18n.ts` 의 `t()`, 메인과 화면 값은 `src/view/text.ts` 로 감싸 쓴다). 기본 언어는 한국어(`ko`)다. 영어(`en`)도 있다. 언어 우선순위는 `POKEBUDDY_LANG` → `config.json` 의 `lang` → `ko` 순이다. 없는 키는 한국어로 대체된다. 한국어도 없으면 키 이름을 그대로 보여준다. 그래서 화면이 비지 않는다
+- 화면 문구는 `data/i18n/<언어>.json` 에서 키로 가져온다 (`src/view/i18n.ts` 의 `t()`, 메인과 화면 값은 `src/view/text.ts` 로 감싸 쓴다). 기본 언어는 한국어(`ko`)다. 영어(`en`)도 있다. 언어 우선순위는 `POKEBUDDY_LANG` → `config.json` 의 `lang` → `ko` 순이다. 없는 키는 한국어로 대체된다. 한국어도 없으면 키 이름을 그대로 보여준다. 그래서 화면이 비지 않는다
 - 코어(명령 처리 `src/commands/`, `src/state/`)는 문구가 아니라 코드(`reason` · `nextAt`)를 돌려준다. 문구는 UI 가 만든다. 언어를 더할 때 코어를 건드리지 않기 위해서다
 - 성격 이름은 `data/natures.json` 의 `name`(한국어·영어)에 있다. 언어 파일에 따로 두지 않는다
-- 포켓몬 이름은 `lib/names.json` 에 있다. 슬러그(eevee · rotom-wash)를 `{ ko, en }` 로 매핑한다. `npm run data:build`(`dist/tools/data/build-names.js`, 원본 `src/tools/data/build-names.ts`) 가 PokeAPI 의 CSV(종 이름표 + 폼 이름표)에서 한 번 뽑아 동봉한다. 폼 슬러그는 폼 이름표를 따른다(워시로토무 · Wash Rotom). `-3d` 는 같은 종으로 본다. 표에 없는 이름은 슬러그 그대로 쓴다
+- 포켓몬 이름은 `data/names.json` 에 있다. 슬러그(eevee · rotom-wash)를 `{ ko, en }` 로 매핑한다. `npm run data:build`(`dist/tools/data/build-names.js`, 원본 `src/tools/data/build-names.ts`) 가 PokeAPI 의 CSV(종 이름표 + 폼 이름표)에서 한 번 뽑아 동봉한다. 폼 슬러그는 폼 이름표를 따른다(워시로토무 · Wash Rotom). `-3d` 는 같은 종으로 본다. 표에 없는 이름은 슬러그 그대로 쓴다
 - CLI 의 안내문은 아직 한국어 그대로다
 
 ### 제약

@@ -1,4 +1,4 @@
-// 도감표(lib/dex.json — 슬러그 → 전국도감 번호)를 만든다 — 개발용, 네트워크 필요. 배포 패키지에는 결과 JSON 만 들어간다.
+// 도감표(data/dex.json — 슬러그 → 전국도감 번호)를 만든다 — 개발용, 네트워크 필요. 배포 패키지에는 결과 JSON 만 들어간다.
 //
 //   npm run build && node dist/tools/data/build-dex.js   (npm run data:build 가 맨 먼저 돈다 — 다른 빌드가 이 표를 읽는다)
 //
@@ -15,10 +15,10 @@
 // 옛 표는 codex-pokepets 에서 뽑은 것이었다(1021번까지). 2026-09-25 에 PokeAPI 기준으로 바꿨다
 import fs from "node:fs";
 import path from "node:path";
-import { LIB_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
+import { DATA_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
 import { regionalSlugs } from "../../dex/regional";
 
-const OUT = path.join(LIB_DIR, "dex.json");
+const OUT = path.join(DATA_DIR, "dex.json");
 
 export async function build(): Promise<void> {
   const [speciesRows, pokemonRows, formRows] = await Promise.all([

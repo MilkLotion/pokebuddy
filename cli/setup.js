@@ -20,6 +20,7 @@ const path = require("path");
 // 경로·옛 홈 가져오기 — 빌드 산출물(src/platform/paths.ts·user-config.ts). bin/pokebuddy 가 setup·uninstall 앞에서 dist/ 를 먼저 갖춘다
 const { PATHS } = require("../dist/platform/paths.js");
 const { LEGACY_HOME_ITEMS, migrateLegacyHome } = require("../dist/platform/user-config.js");
+const { electronPath } = require("../dist/cli/electron-path.js");
 
 const PROJECT = path.join(__dirname, "..");
 const HOOK_NAME = "pokebuddy-state.cjs";
@@ -458,22 +459,15 @@ function refuseRoot(what) {
 // Electron 실행 파일을 받아 둔다. 설치 때(postinstall) 못 받았으면(오프라인·--ignore-scripts) 여기서 받는다.
 // 펫을 띄울 때는 받지 않으므로(!pokebuddy 가 그만큼 멈춘다) setup 이 유일한 두 번째 기회다
 function ensureElectron(dryRun) {
-  let dir;
   try {
-    dir = path.dirname(require.resolve("electron/package.json"));
+    require.resolve("electron/package.json");
   } catch {
     say("Electron       패키지가 없음 — npm install 을 다시 한다");
     process.exitCode = 1;
     return;
   }
-  const ready = (() => {
-    try {
-      return fs.existsSync(path.join(dir, "dist", fs.readFileSync(path.join(dir, "path.txt"), "utf8").trim()));
-    } catch {
-      return false;
-    }
-  })();
-  if (ready) return say("Electron       준비됨");
+  // 받아 두었는가 — 실행 파일 경로 풀이는 src/cli/electron-path.ts 한 곳(옛 lib/electron.js 와 이 함수가 같은 일을 두 벌로 했다)
+  if (electronPath()) return say("Electron       준비됨");
   if (dryRun) return say("Electron       받을 예정 (약 100MB)");
   say("Electron       받는 중 (약 100MB)…");
   try {

@@ -171,7 +171,7 @@ pokebuddy game --help
 
 
 `pokebuddy status <포켓몬>` 과 `pokebuddy game` 의 종 자리는 PokeAPI 의 종 식별자(`pokemon_species.csv` 의 `identifier`)를 쓴다. 전국도감 1025종 전부와 고른 폼 85개다.
-도감표 `lib/dex.json` 은 `npm run data:build` 의 `build-dex` 가 PokeAPI CSV 로 만든다. PMD 는 같은 이름을 도감 번호로 바꿔 받는다.
+도감표 `data/dex.json` 은 `npm run data:build` 의 `build-dex` 가 PokeAPI CSV 로 만든다. PMD 는 같은 이름을 도감 번호로 바꿔 받는다.
 옛 codex-pokepets 폴더명의 `-3d` 이름도 받는다. `gengar` 와 `gengar-3d` 는 같은 그림이다.
 
 | 입력 | 결과 |

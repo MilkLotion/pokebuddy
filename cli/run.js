@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const { PATHS } = require("../dist/platform/paths.js"); // 경로 — src/platform/paths.ts (옛 config.js)
 const state = require("../dist/follow/state.js");
-const { electronPath } = require("../lib/electron.js");
+const { electronPath } = require("../dist/cli/electron-path.js"); // src/cli/electron-path.ts (옛 lib/electron.js)
 const { optionEnv } = require("./args.js");
 
 const PROJECT = path.join(__dirname, "..");

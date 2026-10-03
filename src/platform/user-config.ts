@@ -24,10 +24,10 @@ export interface UserConfig {
 // 사용자가 손대는 값 — PATHS.config 에서 읽는다. 앱은 이 파일에 쓰지 않는다 (게임 설정은 저장 save.json 에 있다)
 // 여기 없는 키(옛 옵션 art · pos · fps · dotSize · keepVisible · windows 등)는 읽을 때 버린다
 export const USER_DEFAULTS = {
-  slug: "pikachu", // 이름을 모를 때 쓰는 종 슬러그 (lib/dex.json). POKEBUDDY_SLUG 로 첫 실행 스타터를 줄 수 있다
+  slug: "pikachu", // 이름을 모를 때 쓰는 종 슬러그 (data/dex.json). POKEBUDDY_SLUG 로 첫 실행 스타터를 줄 수 있다
   buddy: "on", // 창 안을 돌아다니고 졸고 만지면 반응 — on · calm(덜 돌아다님) · off
   clickThrough: false, // true 면 펫 위 클릭이 아래 창으로 통과한 채 시작한다
-  lang: "ko", // 화면 문구 언어 — ko · en (lib/i18n). POKEBUDDY_LANG 으로 이번 실행만 바꿀 수 있다
+  lang: "ko", // 화면 문구 언어 — ko · en (data/i18n). POKEBUDDY_LANG 으로 이번 실행만 바꿀 수 있다
 };
 
 // 객체가 아니면(null·배열·숫자로 망가진 파일) 없는 것으로 친다 — "slug" in null 같은 데서 죽지 않게

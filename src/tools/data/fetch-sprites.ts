@@ -3,7 +3,7 @@
 // 관리 창은 앱 안 sprites/ 가 없으면 여기서 받은 .cache/sprites/ 를 앱 안 그림으로 쓴다 (src/main/manage-window.ts)
 //
 // 출처: PokeAPI sprites (https://github.com/PokeAPI/sprites — 저장소 CC0, 그림 저작권은 The Pokémon Company)
-//   초상    sprites/pokemon/<도감>.png · sprites/pokemon/shiny/<도감>.png  (lib/dex.json 의 도감 번호 전부)
+//   초상    sprites/pokemon/<도감>.png · sprites/pokemon/shiny/<도감>.png  (data/dex.json 의 도감 번호 전부)
 //   도구    sprites/items/<식별자>.png  (data/items.json · data/evo-items.json 의 키 중 그림이 있는 것)
 //   알      sprites/pokemon/egg.png
 // 결과: .cache/sprites/ — 앱의 캐시(~/.claude/pokebuddy/sprites/)와 같은 이름이다 (src/main/portraits.ts)
@@ -35,7 +35,7 @@ async function get(url: string): Promise<Buffer | null> {
 }
 
 async function main() {
-  const dex = [...new Set(Object.values(JSON.parse(fs.readFileSync(path.join(root, "lib", "dex.json"), "utf8")) as Record<string, number>))].sort((a, b) => a - b);
+  const dex = [...new Set(Object.values(JSON.parse(fs.readFileSync(path.join(root, "data", "dex.json"), "utf8")) as Record<string, number>))].sort((a, b) => a - b);
   const items = [
     ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "items.json"), "utf8")) as Record<string, unknown>),
     ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "evo-items.json"), "utf8")) as Record<string, unknown>),
