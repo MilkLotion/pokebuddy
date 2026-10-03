@@ -4,6 +4,7 @@
 // - 흔들기: 막을 누르면 말풍선을 한 번 흔든다 (2026-09-28 튜토리얼 입력 규칙)
 // 창마다 다른 값(pad·gap·말풍선 자리)은 부르는 쪽이 정한다
 import { buttonEl, el } from "./dom.js";
+import { closeIconEl } from "./line-icons.js";
 
 // 말풍선 폭과 창 가장자리 여백 — 세 곳이 같다
 export const COACH_SIZE = { width: 280, margin: 8 } as const;
@@ -57,7 +58,8 @@ export interface CoachBubbleSpec {
 export function coachBubbleEl(spec: CoachBubbleSpec): { bubble: HTMLElement; skip: HTMLButtonElement; go: HTMLButtonElement | null } {
   const bubble = el("div", "coach-bubble");
   const head = el("div", "head");
-  const skip = buttonEl("x", "✕", spec.onSkip);
+  const skip = buttonEl("x", undefined, spec.onSkip);
+  skip.appendChild(closeIconEl()); // Figma `Icon / Close` `299:166` — 글자 ✕ 가 아니라 선 아이콘이다
   skip.setAttribute("aria-label", "튜토리얼 닫기");
   head.append(el("span", "step", spec.step), skip);
   bubble.append(head, el("div", "title", spec.title));
