@@ -14,7 +14,7 @@ import { appearanceOf } from "../dex/appearance";
 import path from "node:path";
 import * as mailbox from "../save/mailbox.js";
 import * as store from "../save/store.js";
-import { empty } from "../save/v3.js";
+import { emptySave as empty } from "../save/normalize.js";
 import * as writer from "../save/writer.js";
 import type { CommandResult } from "../shared/command";
 import type { NatureId } from "../shared/species";
