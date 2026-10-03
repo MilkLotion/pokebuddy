@@ -20,7 +20,7 @@ import { loadJson, isMetaKey } from "../../dex/data.js";
 import { PATHS } from "../paths.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
-import { createAssetCache, dataUriOf } from "./asset-cache.js";
+import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
 import { isPng } from "../../platform/png.js";
 import type { PortraitAsk } from "../../shared/model/snapshot";
 
@@ -51,7 +51,6 @@ const BASE = `${SPRITES}/pokemon`;
 const PARALLEL = 4;
 // 미리 받기의 동시 요청 수 — 그림이 작아(평균 1KB) 요청 수가 비용이다. 16 이면 2천 장이 이 연결에서 10초 안팎이었다(2026-09-26 측정)
 const PREFETCH_PARALLEL = 16;
-const MISSING_RETRY_MS = 15_000; // 못 받은 그림을 다시 청하기까지 — 첫 실행의 네트워크 혼잡·끊김이 영영 빈 칸으로 남지 않게
 
 
 // 초상 한 장의 이름 — 화면이 결과를 찾는 열쇠다
@@ -123,9 +122,9 @@ export interface Portraits {
 
 // dir 은 사용자 캐시, bundled 는 앱에 들어 있는 그림 폴더(없어도 된다). 두 폴더의 파일 이름은 같다
 export function createPortraits(dir: string, bundled?: string): Portraits {
-  // 받기·캐시·못 받은 것 기억 (./asset-cache.ts) — 못 받은 그림은 MISSING_RETRY_MS 동안 다시 청하지 않는다(네트워크 실패가 영영 남지 않게).
+  // 받기·캐시·못 받은 것 기억 (./asset-cache.ts) — 못 받은 그림은 ASSET_RULES.retryMs 동안 다시 청하지 않는다(네트워크 실패가 영영 남지 않게).
   // get·icons·prefetch 가 같은 파일을 두 번 받지 않는다. rel 은 두 폴더 안의 이름이다
-  const cache = createAssetCache({ dir, ...(bundled ? { bundled } : {}), validate: isPng, mime: () => "image/png", parallel: PARALLEL, retryMs: MISSING_RETRY_MS });
+  const cache = createAssetCache({ dir, ...(bundled ? { bundled } : {}), validate: isPng, mime: () => "image/png", parallel: PARALLEL, retryMs: ASSET_RULES.retryMs });
   const fileUri = cache.fetchUri;
   const diskUri = cache.readUri;
   const names = (sub: string): string[] => cache.names(sub).filter((n) => n.endsWith(".png"));
