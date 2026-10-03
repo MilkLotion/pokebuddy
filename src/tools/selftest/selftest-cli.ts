@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs as parseCliArgs } from "../../cli/args";
 import { makeTmp } from "../harness/tmp-dir";
+import { claimLock, isLockReady } from "../../platform/pid-lock";
 
 interface Parsed {
   kind: string;
@@ -60,5 +61,10 @@ for (const [exe, prefix] of launchers) {
     checks++;
   }
 }
+// CLI 도 앱과 같은 잠금 함수를 쓴다 — 준비 표시는 적힌 pid 의 것만, 살아 있는 다른 동반자의 잠금은 잡지 못한다 (94 항목 5-7)
+assert.equal(isLockReady(lock, process.pid), true, "적힌 pid 의 ready"); checks++;
+assert.equal(isLockReady(lock, process.pid + 1), false, "다른 pid 의 ready 는 보지 않는다"); checks++;
+assert.equal(claimLock(lock, process.pid + 1).reason, "busy", "살아 있는 다른 동반자가 잡고 있다"); checks++;
+assert.equal(fs.readFileSync(lock, "utf8"), content, "잡지 못하면 잠금을 바꾸지 않는다"); checks++;
 fs.rmSync(lock);
 process.stdout.write(`CLI PASS: ${checks}개 검사, 입구 ${launchers.length}종. 임시 데이터: ${home}\n`);

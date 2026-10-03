@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PATHS } from "../platform/paths";
 import { isPidAlive } from "../platform/pid";
+import { claimLock, isLockReady, liveLockOwner, releaseLock } from "../platform/pid-lock";
 import { optionEnv, type CompanionOptions } from "./args";
 import { electronPath } from "./electron-path";
 
@@ -40,16 +41,11 @@ function lastError(since: number): LastError | null {
   }
 }
 
-// 동반자의 pid — lock 파일의 pid 가 살아 있을 때만. 죽은 pid 가 남은 lock(크래시)은 지운다
+// 동반자의 pid — lock 파일의 pid 가 살아 있을 때만. 죽은 pid·파손이 남은 lock(크래시)은 지운다.
+// 읽기·잡기·놓기는 앱(src/main/lifetime.ts)과 같은 함수(src/platform/pid-lock.ts)다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-7)
 export function companionPid(): number | null {
-  let text: string;
-  try {
-    text = fs.readFileSync(PATHS.companionLock, "utf8");
-  } catch {
-    return null;
-  }
-  const pid = Number(String(text).split("\n")[0]);
-  if (pid > 0 && isPidAlive(pid)) return pid;
+  const pid = liveLockOwner(PATHS.companionLock);
+  if (pid != null) return pid;
   fs.rmSync(PATHS.companionLock, { force: true });
   return null;
 }
@@ -112,7 +108,7 @@ async function waitReady(pet: PetLaunch, { timeoutMs = READY_TIMEOUT_MS }: { tim
   const until = Date.now() + timeoutMs;
   for (;;) {
     try {
-      pet.ready = /\bready\b/.test(fs.readFileSync(pet.file, "utf8"));
+      pet.ready = isLockReady(pet.file, pet.pid as number); // 다른 동반자의 ready 는 보지 않는다
     } catch {
       // 쓰는 중 — 다음에 다시 본다
     }
@@ -161,7 +157,13 @@ export async function startCompanion(opts: Partial<CompanionOptions> = {}): Prom
     process.exitCode = 1;
     return;
   }
-  fs.writeFileSync(pet.file, `${pet.pid}\n`);
+  // 띄운 자식의 pid 로 잡는다 — 없을 때만 만들기(앱과 같은 claimLock). 자식이 먼저 잡았으면 그대로 잡은 것이다.
+  // 그사이 다른 동반자가 잡았으면 띄운 자식은 스스로 끝난다(src/main/lifetime.ts claim) — 떠 있는 쪽을 알린다
+  const claim = claimLock(pet.file, pet.pid);
+  if (!claim.ok && claim.reason === "busy" && claim.owner != null) {
+    say(`동반자가 이미 떠 있음 (pid ${claim.owner}) — 내리기: pokebuddy companion stop`);
+    return;
+  }
   // 선택 창을 고르는 동안은 오래 기다린다 — 고르지 않고 닫으면 동반자가 끝나 exited 로 돌아온다
   await waitReady(pet, { timeoutMs: firstRun ? PICK_TIMEOUT_MS : READY_TIMEOUT_MS });
 
@@ -175,7 +177,7 @@ export async function startCompanion(opts: Partial<CompanionOptions> = {}): Prom
       return;
     }
     process.stderr.write(`동반자가 뜨지 못함${why ? ` — ${why.message}` : ""} (자세히: pokebuddy status)\n`);
-    fs.rmSync(pet.file, { force: true });
+    releaseLock(pet.file, pet.pid); // 띄운 자식의 lock 만 지운다 — 다른 동반자가 잡은 lock 은 둔다
     process.exitCode = 1;
   }
 }
