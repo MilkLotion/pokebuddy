@@ -7,7 +7,6 @@ import fs from "node:fs";
 import { writeAtomic } from "../platform/atomic-write.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
-import { bannerOf } from "./banner.js";
 import { isNotifyState, refresh, sameState, settle, take, type NotifyState } from "./queue.js";
 
 export interface NotifierOptions {
@@ -15,6 +14,8 @@ export interface NotifierOptions {
   read: () => SaveV3 | null;
   now?: () => number;
   show: (banner: BannerView) => void;
+  // 키 하나의 배너 — 문구는 화면 값이 만든다(src/view/banner.ts). 대상이 사라졌으면 null 이고 그 배너를 건너뛴다
+  bannerOf: (save: SaveV3, key: string) => BannerView | null;
 }
 
 export interface Notifier {
@@ -35,7 +36,7 @@ function load(file: string): NotifyState | null {
   }
 }
 
-export function createNotifier({ file, read, now = Date.now, show }: NotifierOptions): Notifier {
+export function createNotifier({ file, read, now = Date.now, show, bannerOf }: NotifierOptions): Notifier {
   let state = load(file);
   let dirty = false; // 쓰지 못한 변경이 있다
   let current: string | null = null;

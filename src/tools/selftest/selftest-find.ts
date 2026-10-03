@@ -10,7 +10,7 @@ import path from "node:path";
 import { MINT_RETIRED } from "../../bag/mint";
 import { createGame } from "../../main/game";
 import { setLang } from "../../main/text";
-import { bannerOf } from "../../notify/banner";
+import { bannerOf } from "../../view/banner";
 import { refresh } from "../../notify/queue";
 import { newPet } from "../../party/create";
 import * as store from "../../save/store";
