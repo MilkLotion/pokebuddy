@@ -15,7 +15,7 @@ export interface Usage {
 // 쓰는 쪽의 완전판이 원본이다
 export interface HookStateRecord {
   state: AgentState;
-  hold?: number; // 초. state 를 이만큼 보인 뒤 then 으로 본다 — 훅(전환 대상 갱신)과 읽는 쪽(src/follow/state.ts resolveState)이 같은 뜻으로 쓴다
+  hold?: number; // 초. state 를 이만큼 보인 뒤 then 으로 본다 — 훅(전환 대상 갱신)과 읽는 쪽(src/follow/state.ts agentStateOf)이 같은 뜻으로 쓴다
   then?: AgentState;
   cli: string; // --cli 인자. 인자가 없던 옛 등록은 "claude"
   event: string;

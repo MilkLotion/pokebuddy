@@ -1,11 +1,11 @@
 // 켤 때 훅 정리와 한 번 알림 — 저장을 쓰는 동반자(writer) 하나가 부른다 (2026-09-28 사용자 결정 "기존 훅 사용자 자동 정리").
 //
-//   start  옛 이벤트(지금 목록에 없는 우리 등록, 예: codex PreToolUse)를 걷고, 이미 있는 훅 파일을 새 버전으로 바꾼다(src/agents/registry.ts tidy).
+//   start  옛 이벤트(지금 목록에 없는 우리 등록, 예: codex PreToolUse)를 걷고, 이미 있는 훅 파일을 새 버전으로 바꾼다(src/agents/registry.ts tidyAgentHooks).
 //          새로 등록하지 않는다. 그 뒤 Codex 창 깜빡임 알림을 띄울 때인지 본다
 //   tick   알림이 남았고 다른 배너가 없으면 띄운다. 띄웠으면 notices.json 에 남겨 다시 띄우지 않는다
 //
 // 실패는 기록만 하고 사용자에게 알리지 않는다. 앱 시작을 막지 않는다
-import { status as agentStatus, tidy as tidyHooks, type AgentStatus, type TidyResult } from "../agents/registry.js";
+import { agentStatusList, tidyAgentHooks, type AgentStatus, type TidyResult } from "../agents/registry.js";
 import { CODEX_FLASH_NOTICE, codexNoticeDue, markNotice, readNotices } from "../agents/notice.js";
 import type { BannerView } from "../shared/model/overlays";
 import { t } from "./text.js";
@@ -41,7 +41,7 @@ export function createHookUpkeep(o: HookUpkeepOptions): HookUpkeep {
   return {
     start() {
       try {
-        const r = (o.tidy ?? tidyHooks)();
+        const r = (o.tidy ?? tidyAgentHooks)();
         if (r.clis.length || r.hookFile === "바꿈" || r.hookFile === "실패") {
           o.log?.({ hooks: "tidy", hookFile: r.hookFile, clis: r.clis, ...(r.error ? { error: r.error } : {}) });
         }
@@ -49,7 +49,7 @@ export function createHookUpkeep(o: HookUpkeepOptions): HookUpkeep {
         o.log?.({ hooks: "tidy-failed", message: String(e) });
       }
       try {
-        const codex = (o.status ?? agentStatus)().find((a) => a.name === "codex");
+        const codex = (o.status ?? agentStatusList)().find((a) => a.name === "codex");
         due = codexNoticeDue({ platform, codexConnected: !!codex?.connected, shown: readNotices(o.noticesFile) });
       } catch (e) {
         o.log?.({ hooks: "notice-check-failed", message: String(e) });

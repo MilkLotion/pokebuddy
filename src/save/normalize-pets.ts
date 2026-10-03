@@ -13,7 +13,7 @@ import { screenRefOf } from "../shared/raw.js";
 import { countParty } from "../party/presets.js";
 import { MAX_LEVEL } from "../dex/growth.js";
 import { isGender, legacyGender } from "../dex/gender.js";
-import { boolOr as bool, clampNum as clamp, intOr as int, isNatureValue, isObj, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
+import { boolOr as bool, clampNum as clamp, intOr as int, isNatureValue, isRawObject, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
 
 const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play", "short-play"];
 const SLOT_STATES: readonly SlotState[] = ["pokemon", "empty", "locked"];
@@ -35,7 +35,7 @@ export function emptyParty(): PartyV3 {
 // ── 정규화 ─────────────────────────────────────────────────────────────────────
 
 function normalizeDaily(raw: unknown, date: string): PetDaily {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   const d = str(r.date, date);
   if (d !== date) return emptyDaily(date);
   return {
@@ -54,7 +54,7 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
   if (!Array.isArray(raw)) return [];
   const out: BuffV3[] = [];
   for (const b of raw) {
-    if (!isObj(b)) continue;
+    if (!isRawObject(b)) continue;
     const kind = str(b.kind);
     if (!(BUFF_KINDS as readonly string[]).includes(kind)) continue;
     const remainMs = nonNeg(b.remainMs);
@@ -67,7 +67,7 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
 
 // 메가진화 칸 — 모양이 아니면 null. 규칙에 맞는지는 보지 않는다 (src/dex/mega.ts settleMega 가 푼다)
 function megaOf(raw: unknown): MegaV3 | null {
-  if (!isObj(raw)) return null;
+  if (!isRawObject(raw)) return null;
   return {
     bondMs: nonNeg(raw.bondMs),
     care: nonNeg(raw.care),
@@ -78,12 +78,12 @@ function megaOf(raw: unknown): MegaV3 | null {
 
 // 개체 하나 — 종이 없으면 null (뼈대 아님)
 export function normalizePet(raw: unknown, date: string): PetV3 | null {
-  if (!isObj(raw)) return null;
+  if (!isRawObject(raw)) return null;
   const id = str(raw.id);
   const species = str(raw.species);
   if (!id || !species) return null;
   const nature: NatureId = isNatureValue(raw.nature) ? raw.nature : FALLBACK_NATURE;
-  const home = isObj(raw.home) ? raw.home : {};
+  const home = isRawObject(raw.home) ? raw.home : {};
   const since = nonNeg(raw.since);
   return {
     id,
@@ -122,7 +122,7 @@ function normalizeSlots(raw: unknown, petIds: Set<string>, placed: Set<string>, 
   const out = presetSlots(preset);
   for (let i = 0; i < out.length; i++) {
     const r = list[i];
-    if (!isObj(r)) continue;
+    if (!isRawObject(r)) continue;
     const state = str(r.state);
     if (!(SLOT_STATES as readonly string[]).includes(state)) continue;
     if (state === "pokemon") {
@@ -152,7 +152,7 @@ function normalizeSlots(raw: unknown, petIds: Set<string>, placed: Set<string>, 
 // 읽는 순서는 적용한 프리셋 → 나머지 프리셋 번호 순이다. 한 개체가 두 곳에 있으면 먼저 읽은 쪽이 남는다.
 // 가진 수를 넘는 번호의 칸은 버린다 — 그 개체는 자리 없는 개체로 박스에 간다 (addStraysToBox)
 export function normalizeParty(raw: unknown, petIds: Set<string>, placed: Set<string>): PartyV3 {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   const { start, max } = PARTY_RULES.presets;
   const { nameMax } = BOX_RULES;
   const rawPresets = Array.isArray(r.presets) ? r.presets : [];
@@ -171,7 +171,7 @@ export function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<st
   const list = Array.isArray(raw) ? raw : [];
   const out: BoxV3[] = [];
   for (const b of list) {
-    if (!isObj(b)) continue;
+    if (!isRawObject(b)) continue;
     const id = str(b.id);
     if (!id) continue;
     const box = newBox(id, str(b.name, `박스 ${out.length + 1}`));

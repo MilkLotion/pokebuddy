@@ -11,7 +11,8 @@ import { authCodeOf } from "../../online/codes";
 import { createTradeNet } from "../../online/trade-net";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff";
-import { dataVersion, onlineConfig } from "../../trade/config";
+import { onlineConfig } from "../../online/config";
+import { dataVersion } from "../../trade/data-version";
 import { assertLocalUrl, localServer } from "../harness/fakes";
 
 function rules(): void {

@@ -75,7 +75,7 @@ export function readSessionUsages(stateDir: string): SessionUsage[] {
 export type SeenUsage = Record<string, Usage>;
 
 // 처음 뜰 때의 기준점 — 지금 누적값을 전부 본 것으로 친다 (옛 사용량은 세지 않는다)
-export const baseline = (current: SessionUsage[]): SeenUsage => Object.fromEntries(current.map((s) => [s.sessionId, { ...s.usage }]));
+export const usageBaseline = (current: SessionUsage[]): SeenUsage => Object.fromEntries(current.map((s) => [s.sessionId, { ...s.usage }]));
 
 // 지난번 본 뒤 늘어난 양. 일시적으로 못 읽은 세션도 기준점을 유지 — 다음 읽기에서 전체가 다시 적립되지 않게
 export function deltaSince(current: SessionUsage[], seen: SeenUsage): { delta: Usage; perSession: Record<string, Usage>; seen: SeenUsage } {

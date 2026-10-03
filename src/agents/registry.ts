@@ -53,7 +53,7 @@ export interface TidyResult {
 export interface AgentStatus extends AgentInfo {
   installed: boolean; // 그 CLI 의 설정 폴더가 있나 (CLI 를 쓰고 있나)
   connected: boolean; // 우리 훅이 하나라도 등록돼 있나
-  outdated: boolean; // 연결됐지만 지금 등록 목록·훅 파일과 다르다 — 연결 탭 "갱신"(connect)이 맞춘다. 켤 때 정리(tidy)가 옛 이벤트·옛 파일은 먼저 맞춘다
+  outdated: boolean; // 연결됐지만 지금 등록 목록·훅 파일과 다르다 — 연결 탭 "갱신"(connectAgent)이 맞춘다. 켤 때 정리(tidyAgentHooks)가 옛 이벤트·옛 파일은 먼저 맞춘다
   registered: number;
   total: number;
   error?: string;
@@ -68,12 +68,12 @@ function setup(): HooksModule {
   return hooksModule;
 }
 
-export function connect(name: AgentName, { dryRun = false } = {}): ConnectResult {
+export function connectAgent(name: AgentName, { dryRun = false } = {}): ConnectResult {
   if (!agentInfo(name)) return { ok: false, reason: "unknown-cli" };
   return setup().connectCli(name, { dryRun });
 }
 
-export function disconnect(name: AgentName, { dryRun = false } = {}): DisconnectResult {
+export function disconnectAgent(name: AgentName, { dryRun = false } = {}): DisconnectResult {
   if (!agentInfo(name)) return { ok: false, reason: "unknown-cli" };
   return setup().disconnectCli(name, { dryRun });
 }
@@ -86,15 +86,15 @@ export function hookCommandOf(name: AgentName): { command: string; file: string 
 
 // 켤 때 정리 — 새로 등록하지 않는다. 연결된 CLI 의 옛 이벤트(목록에 없는 우리 등록)만 걷고, 있는 훅 파일만 새 버전으로 바꾼다.
 // 앱 시작 때 writer 하나가 부른다 (src/main/hook-upkeep.ts). 사용자의 설정 파일은 백업을 남기고 우리 항목만 고친다
-export function tidy({ dryRun = false } = {}): TidyResult {
+export function tidyAgentHooks({ dryRun = false } = {}): TidyResult {
   return setup().tidyInstalled({ dryRun });
 }
 
 // 세 CLI 의 연결 상태 — 설정창 "연결" 탭 한 줄씩.
 // 연결됨은 우리 훅이 하나라도 있는 것. 빠진 이벤트·목록에 없는 이벤트(옛 codex PreToolUse)·옛 훅 파일이면 갱신 필요.
 // 훅 파일(~/.claude/scripts/hooks/pokebuddy-state.cjs)은 모든 CLI 가 함께 쓴다 — 옛 버전이면 연결된 줄이 모두 갱신 필요다.
-// 원본(dist/)이 없으면 파일은 판정하지 않는다. 켤 때 정리(tidy)가 이미 있는 파일은 새 버전으로 바꾼다 — 남는 것은 빠진 이벤트 등 "갱신" 이 할 일
-export function status(): AgentStatus[] {
+// 원본(dist/)이 없으면 파일은 판정하지 않는다. 켤 때 정리(tidyAgentHooks)가 이미 있는 파일은 새 버전으로 바꾼다 — 남는 것은 빠진 이벤트 등 "갱신" 이 할 일
+export function agentStatusList(): AgentStatus[] {
   const installed = setup().hookInstalled();
   const { clis } = installed;
   const fileStale = installed.source && !installed.current;

@@ -238,4 +238,5 @@ export async function until(test: () => unknown, label: string, ms = 20_000): Pr
   throw new Error(`대기 실패: ${label}`);
 }
 export const ok = (r: { ok?: unknown }, label: string): void => assert.equal(r.ok, true, `${label}: ${JSON.stringify(r)}`);
-export const online = (): typeof import("../../trade/config") => require("../../trade/config") as typeof import("../../trade/config");
+export const online = (): typeof import("../../online/config") & typeof import("../../trade/data-version") =>
+  ({ ...require("../../online/config"), ...require("../../trade/data-version") }) as typeof import("../../online/config") & typeof import("../../trade/data-version");
