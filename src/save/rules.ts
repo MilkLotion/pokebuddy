@@ -4,7 +4,7 @@
 // 파일 IO 의 재시도·TTL 만. 숫자는 전부 자리표시자 — 써 보며 고친다.
 // 성격 검증은 dex가 소유. 에이전트·보낸 이 목록은 src/shared/names/ 에 있다
 import type { NatureId } from "../shared/species.js";
-import { FALLBACK_NATURE, isNatureId as dexNatureId } from "../dex/natures";
+import { isNatureId as dexNatureId } from "../dex/natures";
 import { MEGA_RULES, UNLOCK_RULES } from "../dex/rules";
 import { ACHIEVEMENT_RULES } from "../achievement/rules";
 import { BAG_RULES } from "../bag/rules";
@@ -14,20 +14,15 @@ import { PARTY_RULES, PET_RULES } from "../party/rules";
 import { SIZE_STEPS, sizeLevelOf, snapSize, zoomOfLevel } from "../party/size";
 import { SHOP_RULES } from "../shop/rules";
 import { CARE_RULES, MOOD_RULES as STATE_MOOD_RULES, TIME_RULES } from "../state/rules";
+import { SAVE_V2_RULES } from "./v2/rules";
 
 export const SAVE_RULES = {
-  version: 2 as const, // save.json 스키마 버전 (v). 1 은 읽어서 이전한다
-  slots: { min: 1, max: 6 }, // 파티 칸 — 처음 1, 최대 6, 원작 파티 여섯 칸 (design.md 상점)
-  log: { keep: 200 }, // 기록 — 최근 건수만 남긴다
-  // 새 마리·빠진 필드의 기본값
-  pet: {
-    hunger: 30, // 0~100, 높으면 배고프다 [스펙 미확정]
-    mood: 60, // 시작 기분 (1판 RULES.mood.start) [스펙 미확정]
-    size: 2, // 도트 배율 — config.js dotSize 기본과 같다
-    home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — config.js anchorDx·anchorDy 기본과 같다
-    nature: FALLBACK_NATURE, // 성격을 모르는 마리(v1 이전·값 파손)에 붙이는 중립 성격 — 축이 전부 0 (src/dex/natures.ts)
-  },
-  range: { min: 0, max: 100 }, // hunger · mood 의 범위
+  // [임시] v2 스키마 값의 옛 이름 — src/tools/selftest/selftest-legacy.ts 와 scripts/build-verify.cjs 가 읽는다. 원본은 ./v2/rules.ts SAVE_V2_RULES
+  version: SAVE_V2_RULES.version,
+  slots: SAVE_V2_RULES.slots,
+  pet: SAVE_V2_RULES.pet,
+  range: SAVE_V2_RULES.range,
+  log: { keep: 200 }, // 기록 — 최근 건수만 남긴다. v2·v3 이 같이 쓴다
   // 파일 통로의 시간 (1판 economy RULES.io 에서 옮김)
   io: {
     writeRetries: 3, // Windows 는 읽는 쪽이 열고 있으면 rename 이 막힌다 — 잠깐 뒤 다시

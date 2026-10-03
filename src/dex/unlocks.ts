@@ -16,38 +16,47 @@ import { gameDayPart, localDate } from "../shared/clock";
 import { UNLOCK_RULES } from "./rules";
 import type { SaveV3 } from "../shared/save-v3";
 import type { DayPart, UnlockRule } from "../shared/species";
-import type { Pet, World } from "../shared/types";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 
 export type UnlockRules = Record<string, UnlockRule>;
 
+// 아래 판정기(check · evaluate · evolvers)가 보는 세상 — 시각과 파티의 종·친밀도, 해금 목록. 저장 v2 의 모양(src/save/v2/types.ts World)이 이 모양을 채운다
+export interface UnlockPet {
+  species: string;
+  affinity: number;
+}
+export interface UnlockWorld<P extends UnlockPet = UnlockPet> {
+  now: number; // ms
+  save: { party: P[]; unlocked: string[] };
+}
+
 export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 
 // 그 종을 가진 마리들 — 슬러그는 정규화해 비교
-const petsOf = (species: string, party: Pet[]): Pet[] => {
+const petsOf = <P extends UnlockPet>(species: string, party: P[]): P[] => {
   const key = normalizeSlug(species);
   return party.filter((p) => normalizeSlug(p.species) === key);
 };
 
 // ── 조건별 판정 ────────────────────────────────────────────────────────────────
-export const checkStarter = (_flag: true, _world: World): boolean => true;
-export const checkBase = (_flag: true, _world: World): boolean => true;
+export const checkStarter = (_flag: true, _world: UnlockWorld): boolean => true;
+export const checkBase = (_flag: true, _world: UnlockWorld): boolean => true;
 
-export function checkEvolve(cond: NonNullable<UnlockRule["evolve"]>, world: World): boolean {
+export function checkEvolve(cond: NonNullable<UnlockRule["evolve"]>, world: UnlockWorld): boolean {
   if (cond.when && dayPartOf(world.now) !== cond.when) return false;
   return petsOf(cond.from, world.save.party).some((p) => p.affinity >= cond.affinity);
 }
 
-export const checkBond = (cond: NonNullable<UnlockRule["bond"]>, world: World): boolean =>
+export const checkBond = (cond: NonNullable<UnlockRule["bond"]>, world: UnlockWorld): boolean =>
   petsOf(cond.of, world.save.party).some((p) => p.affinity >= cond.affinity);
 
-export const checkTime = (part: DayPart, world: World): boolean => dayPartOf(world.now) === part;
+export const checkTime = (part: DayPart, world: UnlockWorld): boolean => dayPartOf(world.now) === part;
 
-export const checkEvent = (cond: NonNullable<UnlockRule["event"]>, world: World): boolean => localDate(world.now).slice(5) === cond.date;
+export const checkEvent = (cond: NonNullable<UnlockRule["event"]>, world: UnlockWorld): boolean => localDate(world.now).slice(5) === cond.date;
 
 // ── 규칙 하나 ──────────────────────────────────────────────────────────────────
 // 적힌 조건 전부 만족. 아는 조건이 하나도 없는 규칙(빈 객체)은 거짓 — 해금 길이 없는 것으로 본다
-export function check(rule: UnlockRule, world: World): boolean {
+export function check(rule: UnlockRule, world: UnlockWorld): boolean {
   let seen = 0;
   const need = (ok: boolean): boolean => {
     seen += 1;
@@ -63,7 +72,7 @@ export function check(rule: UnlockRule, world: World): boolean {
 }
 
 // 새로 해금될 슬러그 — 규칙을 만족하고 아직 save.unlocked 에 없는 것. 규칙 표의 순서대로
-export function evaluate(rules: UnlockRules, world: World): string[] {
+export function evaluate(rules: UnlockRules, world: UnlockWorld): string[] {
   const done = new Set(world.save.unlocked.map(normalizeSlug));
   const out: string[] = [];
   for (const [slug, rule] of Object.entries(rules)) {
@@ -80,7 +89,7 @@ export const starters = (rules: UnlockRules): string[] =>
     .map(([slug]) => slug);
 
 // 그 규칙으로 지금 진화할 마리들 — evolve 조건이 참일 때 커맨드 처리기가 종을 바꿀 대상
-export function evolvers(rule: UnlockRule, world: World): Pet[] {
+export function evolvers<P extends UnlockPet>(rule: UnlockRule, world: UnlockWorld<P>): P[] {
   const cond = rule.evolve;
   if (!cond || !check(rule, world)) return [];
   return petsOf(cond.from, world.save.party).filter((p) => p.affinity >= cond.affinity);
