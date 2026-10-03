@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, must, runBuild } from "./pokeapi-csv";
+import { writeTextIfChanged } from "./write-text";
 
 const FILE = path.join(DATA_DIR, "natures.json");
 const LANG = { ko: "3", en: "9" } as const;
@@ -39,7 +40,7 @@ export async function build(): Promise<void> {
     if (next !== line) changed.push(`${id} → ${ko} / ${en}`);
     return next;
   });
-  fs.writeFileSync(FILE, out);
+  writeTextIfChanged(FILE, out);
   process.stdout.write(`성격 이름: ${FILE} — 바꾼 성격 ${changed.length}${changed.length ? `\n  ${changed.join("\n  ")}` : ""}\n`);
 }
 

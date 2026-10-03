@@ -8,6 +8,7 @@
 // (예전 scripts/fetch-dex-ko.cjs. 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";
 import path from "node:path";
+import { writeTextIfChanged } from "./write-text";
 
 const OUT = path.join(__dirname, "..", "..", "..", "data", "dex-text.ko.json");
 const FROM = 899;
@@ -57,7 +58,7 @@ async function main() {
     `"_comment": ${JSON.stringify("한국어 설명문 보충 — PokeAPI 에 한국어가 없는 899~1025번. 출처는 포켓몬코리아 공식 도감(pokemonkorea.co.kr/pokedex). src/tools/data/fetch-dex-ko.ts 가 만든다. src/tools/data/build-dex-text.ts 가 data/dex-text.json 에 합친다")}`,
     ...Object.keys(found).sort((a, b) => Number(a) - Number(b)).map((n) => `${JSON.stringify(n)}: ${JSON.stringify(found[n])}`),
   ];
-  fs.writeFileSync(OUT, `{\n${lines.join(",\n")}\n}\n`);
+  writeTextIfChanged(OUT, `{\n${lines.join(",\n")}\n}\n`);
   process.stdout.write(`한국어 설명 보충: ${OUT} — ${Object.keys(found).length}종\n`);
 }
 
