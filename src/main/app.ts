@@ -23,12 +23,13 @@ import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "./halt-dialog";
-import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
+import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
 import { formsOf } from "../dex/forms";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
+import { createFreeze } from "./app/freeze";
+import { createHalt } from "./app/halt";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
@@ -153,28 +154,11 @@ let lifetime: Lifetime | null = null;
 let stages: StageGroup | null = null;
 let anchor: Anchor | null = null;
 let commands: Commands | null = null;
-// 끄기 전 클라우드 정리 — 올리고 released 를 알린 뒤 클라우드를 멈춘다. 사용자가 끄는 일반 종료(before-quit)만 부른다
-let onlineReleased: Promise<void> | null = null;
-// 세션 종료(Windows 로그오프·mac 끄기·업데이트 설치) 직전의 알림 — 올리고 released 만 알린다. 클라우드는 멈추지 않는다.
-// 끄기가 취소되어 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 진행 중인 약속만 들고 있다 — 다음 세션 종료는 다시 알린다
-let onlineAnnounce: Promise<void> | null = null;
-// 두 PC 규칙으로 게임을 멈췄다 (worklog-mac/records/cloud-authority/design-p1.md 3절)
-//   superseded  다른 PC 에 밀려났다 — 안내 뒤 종료. 로그아웃하지 않는다(D19)
-//   confirm     연결 끊긴 다른 PC 를 넘겨받을지 묻는 중(G2) — 창이 떠 있는 동안 진행을 멈춘다(D22)
-//   blocked     교환이 걸려 넘겨받지 못했다 — 다시 시도하거나 종료
-// 멈춘 동안 저장을 쓰지 않고(canWrite), 시계 틱·교환·우편·mailbox 명령을 돌리지 않는다
-let halted: HaltReason | null = null;
-let haltNext: { reason: "confirm" | "blocked"; info: HaltInfo } | null = null; // 다음에 물을 확인·막힘
-let haltAsking = false; // 확인·막힘 창을 묻는 흐름이 돌고 있다
-let haltAbort: AbortController | null = null; // 떠 있는 확인·막힘 창 — 밀려나면 닫는다
+// 멈춤 상태 — 두 PC 규칙 멈춤·이용 정지·새로 시작하는 중. 멈춘 동안 저장을 쓰지 않는다 (src/main/app/freeze.ts)
+const freeze = createFreeze();
+const frozen = (): boolean => freeze.frozen();
 // 멈춘 동안에도 받는 명령 — 저장을 바꾸지 않는다(읽기·무대 반응·끄기)
 const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "quit"]);
-// 로그아웃·계정 삭제·분실 창 [처음부터]로 새로 시작하는 중 (worklog-mac/records/cloud-authority/design-p2.md 2절 D12)
-//   저장을 백업으로 옮기기 전에 쓰기·교환·우편·명령을 멈춘다. 서버 처리가 실패하면 풀고, 성공하면 앱을 다시 켠다
-let restarting = false;
-let lostAsking = false; // 분실 창(D29)이 떠 있다 — 겹쳐 띄우지 않는다
-// 게임이 저장을 쓰면 안 되는 때 — 두 PC 규칙 멈춤이나 새로 시작하는 중
-const frozen = (): boolean => halted != null || restarting;
 // 온라인(계정·클라우드 저장)·친구 교환·우편함과 받아 둔 교환 링크 — writer 인 동반자만 가진다 (src/main/services/registry.ts)
 // 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const services = createServices({
@@ -194,14 +178,33 @@ const services = createServices({
       party?.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
     },
     // 밀려남·넘겨받기 확인·교환 막힘 — 게임을 멈추고 창을 띄운다. 로그아웃하지 않는다(D19)
-    onHalt: (reason, info) => onHalt(reason, info),
-    onLost: (kind, synced) => void askLostFlow(kind, synced),
+    onHalt: (reason, info) => halt.onHalt(reason, info),
+    onLost: (kind, synced) => void halt.onLost(kind, synced),
     onNotice: (text) => notifyGame(text),
     onUpdateRequired: () => update.urgent(),
-    freeze: () => freezeForRestart(),
-    thaw: () => thawRestart(),
-    onRestart: () => relaunchFresh(),
+    freeze: () => halt.freezeForRestart(),
+    thaw: () => halt.thawRestart(),
+    onRestart: () => halt.relaunchFresh(),
   },
+});
+
+// 멈추기 절차 — 두 PC 규칙 멈춤·이용 정지·저장 계정 분실·새로 시작과 끄기 전 클라우드 정리 (src/main/app/halt.ts)
+const halt = createHalt({
+  freeze,
+  services,
+  quitting: () => quitting,
+  isWriter: () => saveParty()?.isWriter() ?? false,
+  flush: () => game?.flush(),
+  resetWork: () => {
+    workMs = 0;
+  },
+  setWriter: (on) => commands?.setWriter(on),
+  sendAccount: () => {
+    const on = services.current();
+    if (on) pushAccount(on.screen());
+  },
+  openManage: (route) => openManageWindow(route),
+  log,
 });
 let tray: TrayHandle | null = null;
 // 앱 업데이트·패치노트 (src/main/services/update.ts). 패치노트는 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다 —
@@ -213,7 +216,7 @@ const update = createUpdateService({
   onView: (view) => pushUpdate(view),
   beforeInstall: async () => {
     if (!frozen() && saveParty()?.isWriter()) game?.flush();
-    await announceOnline();
+    await halt.announceRelease();
   },
   askRequired: askUpdateRequired,
 });
@@ -506,194 +509,6 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
   popupMenu({ preload: preloadFile(), html: rendererFile("menu.html"), ...avoid }, items, t("menu.on"));
 }
 
-// ── 두 PC 규칙 멈춤 (worklog-mac/records/cloud-authority/design-p1.md 3절) ──
-
-// 교환·우편·mailbox 명령을 멈춘다. 온라인(services.current())은 남긴다 — 확인·다시 시도에 쓴다
-function pauseOnlineWork(): void {
-  commands?.setWriter(false);
-  services.pause();
-}
-
-// 클라우드 저장이 게임을 멈추라고 알렸다 (src/online/cloud.ts onHalt)
-//   superseded        밀려남 — 안내 창 뒤 종료
-//   confirm · blocked 메모리 진행을 쓰고 멈춘 뒤 창으로 묻는다. 답을 받아 다시 넘겨받으면 또 올 수 있다
-function onHalt(reason: HaltReason, info: HaltInfo): void {
-  if (quitting || halted === "superseded") return;
-  if (reason === "superseded") {
-    supersede(info);
-    return;
-  }
-  if (reason === "held") {
-    holdAccount();
-    return;
-  }
-  // 멈추기 전에 1초 틱 진행을 쓴다 — 멈춘 동안은 쓰지 않는다. 쓴 진행은 넘겨받은 뒤 올린다
-  if (!halted && saveParty()?.isWriter()) game?.flush();
-  halted = reason;
-  workMs = 0;
-  pauseOnlineWork();
-  haltNext = { reason, info };
-  log?.({ cloud: "halt", reason, code: info.code });
-  if (!haltAsking) void askHalt();
-}
-
-// 확인·막힘 창을 차례로 묻는다. [여기서 시작]·[다시 시도] 면 다시 넘겨받고, 그 결과로 또 멈추면 다시 묻는다.
-// [취소]·[종료] 면 클라우드를 멈추고 앱을 끝낸다(D22). 창이 떠 있는 동안 게임은 멈춰 있다
-async function askHalt(): Promise<void> {
-  // 창을 기다리는 사이 onHalt 가 halted 를 바꾼다 — 좁혀진 타입을 믿지 않게 함수로 다시 읽는다
-  const kicked = (): boolean => halted === "superseded" || halted === "held"; // 정지도 끝내는 흐름이다(검수 P4c M1)
-  haltAsking = true;
-  try {
-    while (haltNext && !quitting && !kicked()) {
-      const { reason, info } = haltNext;
-      haltNext = null;
-      const abort = new AbortController();
-      haltAbort = abort;
-      const answer = reason === "confirm" ? await askConfirm(info, abort.signal) : await askBlocked(info, abort.signal);
-      if (haltAbort === abort) haltAbort = null;
-      if (quitting || kicked()) return; // 창을 띄운 사이 밀려났다 — 밀려남 흐름이 종료한다
-      const on = services.current();
-      if (answer !== "go" || !on) {
-        await on?.confirm(false);
-        app.quit();
-        return;
-      }
-      await on.confirm(true); // 또 멈추면 onHalt 가 haltNext 를 채운다
-      if (haltNext || kicked() || quitting) continue;
-      resumeFromHalt();
-    }
-  } finally {
-    haltAsking = false;
-  }
-}
-
-// ── 저장 계정 분실(D29)과 새로 시작(D12) (worklog-mac/records/cloud-authority/design-p2.md 2절·5절·15절) ──
-
-// 저장 계정을 잃었다 — 게임은 계속, 클라우드만 꺼져 있다. 창의 답으로 로그인(계정 탭)·이 PC 저장으로 계속·처음부터
-async function askLostFlow(kind: OwnerKind, synced: boolean): Promise<void> {
-  if (lostAsking || quitting) return;
-  lostAsking = true;
-  try {
-    const answer = await askLost(kind, synced);
-    const on = services.current();
-    if (quitting || restarting || !on) return;
-    if (answer === "login") openManageWindow({ to: "account" });
-    else if (answer === "local") await on.continueLocal();
-    else if (answer === "fresh") await on.fresh();
-  } catch (e) {
-    console.error("분실 창 처리에 실패했다 — 게임은 계속한다", e);
-  } finally {
-    lostAsking = false;
-  }
-}
-
-// 새로 시작하기 직전 — 메모리 진행을 쓰고(백업에 담기게) 저장 쓰기·명령·교환·우편을 멈춘다
-function freezeForRestart(): void {
-  if (!frozen() && saveParty()?.isWriter()) game?.flush();
-  restarting = true;
-  workMs = 0;
-  pauseOnlineWork();
-}
-
-// 서버 처리가 실패해 새로 시작하지 않는다 — 멈춘 것을 되돌린다
-function thawRestart(): void {
-  restarting = false;
-  if (quitting || halted || !saveParty()?.isWriter()) return;
-  commands?.setWriter(true);
-  services.trade();
-}
-
-// 저장을 백업했고 cloud.json 을 비웠다 — 앱을 다시 켠다. 다시 켜면 저장이 없어 선택 창이 뜬다(Q5).
-// 끄기는 일반 종료 경로(before-quit → 저장 잠금 해제, will-quit → 동반자 lock 삭제)를 그대로 지난다. 새 프로세스는 이 프로세스가 끝난 뒤 뜬다.
-// 명령으로 준 스타터(POKEBUDDY_SLUG)와 교환·계정 링크 인자는 넘기지 않는다 — 선택 창을 건너뛰거나 옛 링크로 참가하지 않게
-function relaunchFresh(): void {
-  delete process.env.POKEBUDDY_SLUG;
-  log?.({ cloud: "restart" });
-  app.relaunch({ args: process.argv.slice(1).filter((a) => !a.startsWith("pokebuddy://")) });
-  app.quit();
-}
-
-// 넘겨받았다(또는 오프라인으로 이어 간다) — 게임·명령·교환을 다시 돌린다. 우편함은 다음에 부를 때 만든다
-function resumeFromHalt(): void {
-  halted = null;
-  log?.({ cloud: "resume" });
-  if (quitting || !saveParty()?.isWriter()) return;
-  commands?.setWriter(true);
-  services.trade();
-  services.flushTradeLink();
-  const on = services.current();
-  if (on) pushAccount(on.screen());
-}
-
-// 다른 PC 에 밀려났다 — 게임을 멈추고 교환·우편·온라인을 닫은 뒤 안내하고 끝낸다.
-// 로그아웃하지 않는다 — 다시 켜면 같은 세션으로 서버 저장을 받아 넘겨받는다(D19). 끄기 경로는 올리기·released 를 건너뛴다
-function supersede(info: HaltInfo): void {
-  halted = "superseded";
-  haltNext = null;
-  haltAbort?.abort(); // 떠 있는 확인·막힘 창을 닫는다
-  haltAbort = null;
-  workMs = 0;
-  pauseOnlineWork();
-  const on = services.current();
-  if (on) pushAccount(on.screen());
-  services.dispose();
-  log?.({ cloud: "superseded", other: info.other?.label ?? null });
-  void askKicked(info).finally(() => app.quit());
-}
-
-// 이용 정지(P4c, D35) — 게임을 멈추고 온라인을 끈 뒤 정지 창을 띄우고 끝낸다. 다시 켜도 cloud.json 의 정지로 같은 창이 뜬다
-function holdAccount(): void {
-  if (halted === "held") return;
-  halted = "held";
-  haltNext = null;
-  haltAbort?.abort();
-  haltAbort = null;
-  workMs = 0;
-  pauseOnlineWork();
-  const on = services.current();
-  if (on) pushAccount(on.screen());
-  services.dispose();
-  log?.({ cloud: "held" });
-  void askHeld().finally(() => app.quit());
-}
-
-// 세션 종료 직전 — 올리고 released 를 알린다(최대 3초). 클라우드를 멈추지 않는다.
-// 멈춘 동안(halted)이나 클라우드를 쓰지 않으면 하지 않는다. 겹쳐 부르면 진행 중인 약속을 돌려준다
-function announceOnline(): Promise<void> {
-  if (!onlineAnnounce) {
-    const on = services.current();
-    const run = !halted && on && on.cloud.view().status !== "off"
-      ? on.cloud.announceRelease(3_000).catch((e) => {
-          console.error("세션 종료 전 클라우드 알림에 실패했다 — 다음 실행에서 올린다", e);
-        })
-      : Promise.resolve();
-    onlineAnnounce = run.finally(() => {
-      onlineAnnounce = null;
-    });
-  }
-  return onlineAnnounce;
-}
-
-// 세션 종료가 진행 중이다 — 알리는 중이거나 released 를 알린 뒤 아직 active 로 되돌리지 않았다.
-// 그때 오는 before-quit 은 시스템 종료를 늦추지 않게 기다리지 않는다
-function sessionEnding(): boolean {
-  return onlineAnnounce != null || (services.current()?.cloud.released() ?? false);
-}
-
-// 일반 종료 전 클라우드 정리 — 올리고 released 를 알린 뒤 클라우드를 멈춘다(최대 3초). 한 번만 한다.
-// 멈춘 동안(halted)이나 클라우드를 쓰지 않으면 하지 않는다
-function releaseOnline(): Promise<void> {
-  if (!onlineReleased) {
-    const on = services.current();
-    onlineReleased = !halted && on && on.cloud.view().status !== "off"
-      ? on.release(3_000).catch((e) => {
-          console.error("끄기 전 클라우드 정리에 실패했다 — 다음 실행에서 올린다", e);
-        })
-      : Promise.resolve();
-  }
-  return onlineReleased;
-}
-
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
 async function refreshParty(): Promise<void> {
   if (!party || !stages) return;
@@ -808,7 +623,7 @@ async function main(): Promise<void> {
   // 클라우드는 멈추지 않는다 — 끄기가 취소되어 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다
   const endSession = (): void => {
     flushLocal();
-    void announceOnline();
+    void halt.announceRelease();
   };
   app.on("browser-window-created", (_e, w) => {
     w.on("query-session-end", endSession);
@@ -1150,10 +965,10 @@ app.on("before-quit", (e) => {
   // 끄기 전에 올리고 released 를 알린다 — 최대 3초. 다른 PC 가 경고 없이 넘겨받는다. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다).
   // 밀려났거나 확인·막힘으로 멈췄으면 건너뛴다. 세션 종료(Windows 로그오프·mac 끄기·업데이트)가 진행 중이면 이미 알렸다 —
   // 시스템 종료를 늦추지 않게 기다리지 않고 끝낸다
-  if (!quitWaited && !halted && !sessionEnding() && (onlineReleased || (services.current()?.cloud.view().status ?? "off") !== "off")) {
+  if (!quitWaited && !freeze.reason() && !halt.sessionEnding() && (halt.releaseStarted() || (services.current()?.cloud.view().status ?? "off") !== "off")) {
     e.preventDefault();
     quitWaited = true;
-    void releaseOnline().finally(() => app.quit());
+    void halt.releaseOnce().finally(() => app.quit());
     return;
   }
   quitting = true;
