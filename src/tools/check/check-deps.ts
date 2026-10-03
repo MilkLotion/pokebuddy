@@ -26,7 +26,7 @@ const DOMAIN_TIER: Readonly<Record<string, number>> = {
 };
 const DOMAINS = Object.keys(DOMAIN_TIER);
 const LOW = ["shared", "platform"];
-const MID = ["save", "online", "agents", "follow", "terminal"]; // 3층
+const MID = ["save", "online", "agents", "terminal"]; // 3층
 
 // 폴더 → 가져다 쓸 수 있는 폴더. 여기 없는 폴더는 규칙이 없다(tools). 자기 폴더는 늘 된다
 const LAYERS: Readonly<Record<string, readonly string[]>> = {
@@ -36,7 +36,6 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   save: [...LOW, ...DOMAINS],
   online: [...LOW, ...DOMAINS, "save"],
   agents: LOW,
-  follow: LOW,
   terminal: LOW,
   tx: [...LOW, ...DOMAINS, ...MID, "commands"],
   commands: [...LOW, ...DOMAINS, ...MID, "tx"],
@@ -45,7 +44,7 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   renderer: ["shared"],
   hooks: ["shared"],
   // cli 는 도메인(아래층)도 읽는다 — pokebuddy status 가 도감 번호(dex/dex-number)를 푼다 (도구 레인 T7b-3, 오케스트레이터에 알림)
-  cli: [...LOW, ...DOMAINS, "save", "agents", "follow", "terminal"],
+  cli: [...LOW, ...DOMAINS, "save", "agents", "terminal"],
   verify: [],
 };
 // electron 을 값으로 가져와도 되는 main 밖 파일 — pokebuddy setup 이 설치 때 못 받은 Electron 을 그 순간 받는다(늦은 require("electron"))
