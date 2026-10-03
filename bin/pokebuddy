@@ -50,11 +50,41 @@ function ensureDist() {
   process.exit(1);
 }
 
-// 인자 풀이도 빌드 산출물이다 — setup·uninstall 은 먼저 빌드해 보고, 나머지는 빌드하라고 알린다
-// (빌드 전에는 help 도 이 안내로 끝난다. 레지스트리·설치 파일에는 dist/ 가 들어 있어 걸리지 않는다)
+// 도움말 — 빌드 없이도 답하게 여기 둔다(인자 풀이 src/cli/args.ts 는 빌드 산출물이다)
+const USAGE = `사용:
+  pokebuddy companion [buddy=값] [click=값]                 동반자 띄우기 — 기기당 하나, 항상 위, 맨 앞 터미널 창을 따른다
+  pokebuddy companion stop                                  동반자 내리기
+  pokebuddy setup [--dry-run] [--no-editor]                 CLI LLM 상태 훅 설치 (옛 에디터 확장이 있으면 지운다)
+  pokebuddy uninstall [--dry-run] [--purge] [--no-editor]   설치한 것 되돌리기 (--purge 면 설정·캐시까지)
+  pokebuddy status [포켓몬]                                 지금 판정 상태와 PMD 저작자 보기
+  pokebuddy game --help                                    육성·상점·진화 명령 보기
+  pokebuddy trade <교환 링크>                               친구 교환 링크로 참가 — 떠 있는 동반자에 보낸다
+
+예:
+  pokebuddy companion                 동반자 — 어느 터미널을 보든 그 창의 에이전트 상태를 따른다. 트레이로 끝낸다
+  pokebuddy companion buddy=calm      덜 돌아다니게
+
+옵션 (이름=값 · --이름 값):
+  buddy=on|calm|off   click=on|off    크기는 저장된 포켓몬 크기를 쓴다`;
+
+// help·version 은 빌드 없이 답한다 — 판정은 src/cli/args.ts parseArgs 의 같은 경우와 같다
+// (인자 없음 · 첫 인자 -h · --help → 도움말, help 뒤에 플래그가 없으면 도움말(플래그가 있으면 parseArgs 가 오류로 답한다),
+//  첫 인자 -v · --version → 판 번호. 리팩토링 전처럼 git clone 직후에도 돈다)
+const argv = process.argv.slice(2);
+if (!argv.length || argv[0] === "-h" || argv[0] === "--help" || (argv[0] === "help" && !argv.slice(1).some((a) => a.startsWith("-")))) {
+  process.stdout.write(`${USAGE}\n`);
+  process.exit(0);
+}
+if (argv[0] === "-v" || argv[0] === "--version") {
+  process.stdout.write(`${require("../package.json").version}\n`);
+  process.exit(0);
+}
+
+// 그 밖의 명령은 빌드 산출물이다 — setup·uninstall 은 먼저 빌드해 보고, 나머지는 빌드하라고 알린다
+// (레지스트리·설치 파일에는 dist/ 가 들어 있어 걸리지 않는다)
 if (["setup", "uninstall"].includes(process.argv[2])) ensureDist();
 else needDist();
-const { parseArgs, USAGE } = require("../dist/cli/args.js");
+const { parseArgs } = require("../dist/cli/args.js");
 
 const parsed = process.argv[2] === "game" ? { kind: "game" } : process.argv[2] === "trade" ? { kind: "trade" } : parseArgs(process.argv.slice(2));
 
