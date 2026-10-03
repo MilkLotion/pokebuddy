@@ -13,16 +13,16 @@
 //   Idle  방향의 첫 칸 → 같은 칸을 1도트 위 — 숨 쉬듯 들썩인다 (초상 대체 그림과 같은 값)
 // 잠자기·반응 동작은 없다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
 import path from "node:path";
-import type { PmdArt } from "./art";
-import type { SpriteSheet } from "../shared/model/stage";
-import { megaOf } from "../dex/mega";
-import { dexFolderOf, lookOf } from "../dex/look";
-import { decodePng, encodePng, type Rgba } from "./png";
-import { fetchCached } from "./art/fetch";
+import type { PmdArt } from "./stage-art";
+import type { SpriteSheet } from "../../shared/model/stage";
+import { megaOf } from "../../dex/mega";
+import { dexFolderOf, lookOf } from "../../dex/look";
+import { decodePng, encodePng, type Rgba } from "../../platform/png";
+import { fetchCached } from "./fetch";
 
 export const OVERWORLD_RULES = {
   repo: "https://raw.githubusercontent.com/rh-hideout/pokeemerald-expansion",
-  ref: "expansion/1.17.1", // 릴리스 태그 (2026-09-29). 올릴 때 src/tools/check-overworld.ts 를 다시 돌린다
+  ref: "expansion/1.17.1", // 릴리스 태그 (2026-09-29). 올릴 때 src/tools/check/check-overworld.ts 를 다시 돌린다
   walkMs: [200, 200],
   idleMs: [600, 400], // 제자리 → 위
   bob: 1, // 들썩이는 높이 (도트)
@@ -141,7 +141,7 @@ export function overworldArt(png: Buffer, palFile: Buffer | null, dex: string): 
     workOnly: [],
     zoom: 2,
     anims: { Idle: anim(idle, OVERWORLD_RULES.idleMs), Walk: anim(walk, OVERWORLD_RULES.walkMs) },
-    // art/pmd.js STATE_ANIMS 와 같은 상태 이름. 걷기만 오른쪽 행이고 나머지는 정면에서 숨 쉰다 (portrait-art.ts 와 같다)
+    // src/main/art/pmd.ts STATE_ANIMS 와 같은 상태 이름. 걷기만 오른쪽 행이고 나머지는 정면에서 숨 쉰다 (portrait-art.ts 와 같다)
     clips: {
       idle: { anim: "Idle", mode: "loop", row: 0 },
       running: { anim: "Walk", mode: "loop", row: 2 },
@@ -187,7 +187,7 @@ export function createOverworldSource(dir: string): OverworldSource {
   return {
     async load(look) {
       const got = await fetchBoth(look);
-      return got ? overworldArt(got.png, got.pal, dexFolderOf(lookOf(got.slug))) : null; // 성별 그림이면 그 종의 번호 — 무대 그림(src/main/art.ts dexOfLook)과 같은 풀이
+      return got ? overworldArt(got.png, got.pal, dexFolderOf(lookOf(got.slug))) : null; // 성별 그림이면 그 종의 번호 — 무대 그림(src/main/art/stage-art.ts dexOfLook)과 같은 풀이
     },
     async prefetch(look) {
       return !!(await fetchBoth(look));

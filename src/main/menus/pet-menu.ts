@@ -11,7 +11,7 @@ import type { ManageRoute } from "../../shared/model/route";
 import type { SaveV3 } from "../../shared/save-v3";
 import { lockExcept, petMenu, petMenuOf } from "../../view/menus";
 import { popupMenu } from "../menu-window";
-import { portraitKey, type Portraits } from "../portraits";
+import { portraitKey, type Portraits } from "../art/portraits";
 import type { PartyPet } from "../save-party";
 import type { Coach } from "../stage/coach";
 import { t } from "../text";

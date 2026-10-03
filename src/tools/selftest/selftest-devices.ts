@@ -13,8 +13,8 @@ import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
-import { EGG_SOURCE, tintEgg } from "../../main/egg-art";
-import { decodePng, encodePng } from "../../main/png";
+import { EGG_SOURCE, tintEgg } from "../../main/art/egg-art";
+import { decodePng, encodePng } from "../../platform/png";
 import { snapshot } from "../../view/snapshot";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();

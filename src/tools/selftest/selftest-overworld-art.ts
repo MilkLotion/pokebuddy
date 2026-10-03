@@ -11,10 +11,10 @@
 // 끝에 "통과 (N건)". 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import zlib from "node:zlib";
-import { createArtLoader, type PmdArt } from "../../main/art";
-import { looksLikeOverworld, looksLikePal, overworldArt, overworldDir, overworldUrl, parsePal, OVERWORLD_RULES } from "../../main/overworld-art";
+import { createArtLoader, type PmdArt } from "../../main/art/stage-art";
+import { looksLikeOverworld, looksLikePal, overworldArt, overworldDir, overworldUrl, parsePal, OVERWORLD_RULES } from "../../main/art/overworld-art";
 import type { Paths } from "../../main/paths";
-import { decodePng, encodePng, pngChunk, PNG_SIGNATURE } from "../../main/png";
+import { decodePng, encodePng, pngChunk, PNG_SIGNATURE } from "../../platform/png";
 import { printLine as out } from "../harness/report";
 
 

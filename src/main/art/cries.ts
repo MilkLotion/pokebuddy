@@ -4,8 +4,8 @@
 // 캐시: ~/.claude/pokebuddy/cries/<4자리>.ogg. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
 // 무대 창의 CSP 는 media-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import path from "node:path";
-import { profile } from "../dex/species.js";
-import { fetchCached } from "./art/fetch";
+import { profile } from "../../dex/species.js";
+import { fetchCached } from "./fetch";
 
 const BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
 

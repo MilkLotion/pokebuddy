@@ -10,7 +10,7 @@ import path from "node:path";
 import { createGame } from "../../main/game";
 import * as store from "../../save/store";
 import { setSize } from "../../party/home";
-import { zoomOf } from "../../main/art";
+import { zoomOf } from "../../main/art/stage-art";
 import { empty, normalize } from "../../save/v3";
 import { setSetting } from "../../state/settings";
 import { createExecutor } from "../../tx/executor";

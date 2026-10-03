@@ -20,8 +20,8 @@ import { windowIcon } from "./windows/files.js";
 import { webPreferencesOf } from "./windows/options.js";
 import { isFromWindow } from "./windows/ipc.js";
 import { INPUT_LIMITS, isShortId } from "./windows/input.js";
-import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
-import { createCries, type Cries } from "./cries.js";
+import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./art/portraits.js";
+import { createCries, type Cries } from "./art/cries.js";
 import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
 import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps, type DexDeviceOpen } from "./windows/devices.js";
 import { bagDeviceModel } from "../view/device-bag.js";
@@ -185,7 +185,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
   let portraits: Portraits | null = null;
-  // 앱 안 그림 폴더 — 설치본은 sprites/, 개발 중에는 scripts/fetch-sprites.cjs 가 받아 둔 .cache/sprites/
+  // 앱 안 그림 폴더 — 설치본은 sprites/, 개발 중에는 src/tools/data/fetch-sprites.ts 가 받아 둔 .cache/sprites/
   const bundled = (): string => {
     const packed = path.join(PATHS.project, "sprites");
     return fs.existsSync(packed) ? packed : path.join(PATHS.project, ".cache", "sprites");
@@ -267,7 +267,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     },
   });
   // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
-  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/egg-art.ts)
+  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/art/egg-art.ts)
   const deviceArt: DeviceArtDeps = {
     art: async (keys) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());

@@ -11,7 +11,7 @@ import type { Commands } from "../commands";
 import type { GameV3 } from "../game";
 import type { HookUpkeep } from "../hook-upkeep";
 import type { Lifetime } from "../lifetime";
-import type { Portraits } from "../portraits";
+import type { Portraits } from "../art/portraits";
 import type { SaveParty } from "../save-party";
 import type { StageGroup } from "../stage-group";
 import type { TrayHandle } from "../tray";

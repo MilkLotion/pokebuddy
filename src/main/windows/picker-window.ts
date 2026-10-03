@@ -5,7 +5,7 @@ import { nextOf } from "../../dex/evo";
 import type { PickerPayload } from "../../shared/model/stage";
 import type { StageChannel } from "../../shared/ipc/stage";
 import { windowIcon } from "./files";
-import type { Portraits } from "../portraits";
+import type { Portraits } from "../art/portraits";
 import { petName, t } from "../text";
 import { askWindow } from "./answer-window";
 import { webPreferencesOf } from "./options";

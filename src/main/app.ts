@@ -1,7 +1,7 @@
 // 펫 오버레이 메인 프로세스 — 기동 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
 // 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (follow/front).
 // 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
-// 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
+// 설정·경로는 src/platform/paths.ts·user-config.ts 에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
@@ -9,8 +9,8 @@ import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
-import { createArtLoader, type ArtLoader } from "./art";
-import { createOverworldSource } from "./overworld-art";
+import { createArtLoader, type ArtLoader } from "./art/stage-art";
+import { createOverworldSource } from "./art/overworld-art";
 import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES } from "./layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
@@ -27,7 +27,7 @@ import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
 import { createFreeze } from "./app/freeze";
 import { createHalt } from "./app/halt";
-import { createPortraits, portraitKey, type Portraits } from "./portraits";
+import { createPortraits, portraitKey, type Portraits } from "./art/portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { createClock } from "./clock";
 import { askRegion } from "./windows/region-window";
@@ -483,7 +483,7 @@ function bootLifetime(): Lifetime {
 
 // 그림 미리 받기 — 첫 실행이면 스타터 초상부터
 function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: string[] } {
-  // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/portraits.ts).
+  // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/art/portraits.ts).
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
   const pics = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
@@ -530,7 +530,7 @@ async function bootStarter(saveSource: SaveParty, pics: Portraits, starterList: 
 
 // 무대 — 그림 불러오기·무대 묶음·첫 배치
 function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; group: StageGroup } {
-  // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
+  // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/art/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/art/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
   const art = createArtLoader(PATHS, {
     overworld: createOverworldSource(PATHS.overworld),
     portrait: async (look) => {

@@ -2,25 +2,25 @@
 //
 // 무대 캔버스는 시트를 미리 디코드해 그리므로 PMD 전용이다 — showdown(GIF img 태그) · sheet(codex 팩)는 얹을 수 없다.
 // PMD 를 못 받은 마리는 대체 그림으로 나온다 — PMD 에 그림이 없는 종(탄동·모으령 등)이 무대에서 사라지지 않게.
-//   먼저 걷기 대체 그림(src/main/overworld-art.ts), 그것도 못 받으면 초상 대체 그림(src/main/portrait-art.ts)이다.
+//   먼저 걷기 대체 그림(src/main/art/overworld-art.ts), 그것도 못 받으면 초상 대체 그림(src/main/art/portrait-art.ts)이다.
 // 초상도 못 받으면 무대에 나오지 않는다 — 부르는 쪽이 stderr 한 줄 + last-error.json 을 남긴다.
 // look(모습) 하나는 한 번만 받는다 — 같은 종 여러 마리가 시트를 공유한다. 배율(zoom)은 마리별(Pet.size)이라 여기서 정하지 않고 zoomOf 로 뽑는다
-import { SIZE_STEPS, snapSize } from "../party/size.js";
-import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../shared/model/stage";
-import type { Paths } from "./paths";
-import { profile } from "../dex/species";
-import { genderLookInfo, regionalOf } from "../dex/regional";
-import { megaOf } from "../dex/mega";
-import { dexFolderOf, lookOf } from "../dex/look";
+import { SIZE_STEPS, snapSize } from "../../party/size.js";
+import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../../shared/model/stage";
+import type { Paths } from "../paths";
+import { profile } from "../../dex/species";
+import { genderLookInfo, regionalOf } from "../../dex/regional";
+import { megaOf } from "../../dex/mega";
+import { dexFolderOf, lookOf } from "../../dex/look";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
-import { loadPmd, prefetchPmd } from "./art/pmd-load";
+import { loadPmd, prefetchPmd } from "./pmd-load";
 
 export const ART_RULES = {
   // 배율 상한 — 몸 칸으로 잰다 (./art/pmd-load.ts 와 같은 수). 작업 동작이 칸을 키웠다고 펫이 작아지지 않게.
   // PMD 프레임은 gen5 GIF 보다 작아서 같은 dotSize 면 작아 보인다 — 3~4 를 권한다
   maxBody: { w: 480, h: 420 },
-  defaultZoom: 2, // 크기를 모를 때 — config.js dotSize 기본 · SAVE_RULES.pet.size 와 같다
+  defaultZoom: 2, // 크기를 모를 때 — SAVE_RULES.pet.size 와 같다 (설정의 dotSize 는 없어진 옛 키다 — src/platform/user-config.ts)
 };
 
 // ./art/pmd-load.ts loadPmd 의 결과 모양. 대체 그림(overworld-art.ts · portrait-art.ts)도 같은 모양이다
@@ -30,7 +30,7 @@ export interface PmdArt {
   body: StageSize; // 작업 동작을 뺀 몸 칸 — 자리 계산의 기준
   work: Record<string, "once" | "loop">;
   workOnly: string[];
-  zoom: number; // loadPmd 가 config.dotSize 로 계산한 값 — 무대는 쓰지 않는다 (마리별 zoomOf)
+  zoom: number; // loadPmd 가 dotSize 인자로 계산한 값 — 무대는 쓰지 않는다 (마리별 zoomOf)
   anims: Record<string, SpriteSheet>;
   clips: Record<string, { anim: string; mode: PlayMode; row: number }>;
   credits: { author: string; license: string }[];
@@ -110,7 +110,7 @@ export const dexOfLook = (look: string): string => {
   return dexFolderOf(lookOf(look));
 };
 
-// look → 초상 PNG. 없거나 못 받으면 null (src/main/portraits.ts)
+// look → 초상 PNG. 없거나 못 받으면 null (src/main/art/portraits.ts)
 export type PortraitSource = (look: string) => Promise<Buffer | null>;
 
 // PMD 를 못 받았을 때 쓸 그림의 공급자 — 걷기 대체 그림이 먼저, 초상이 다음이다. 시험은 가짜를 넣는다

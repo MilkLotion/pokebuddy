@@ -248,7 +248,7 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 ### 설정창의 초상
 
-설정창과 첫 포켓몬 선택 창의 원형 초상은 [PokeAPI sprites](https://github.com/PokeAPI/sprites) 의 기본 그림(`sprites/pokemon/<도감>.png`, 96 × 96)이다. 이로치는 `sprites/pokemon/shiny/<도감>.png` 를 쓰고, 없으면 보통 그림을 쓴다. 저장소는 CC0 이고 그림 저작권은 The Pokémon Company 에 있다. 둘레 여백은 잘라 원을 채운다. 설치 파일에는 그림을 넣지 않는다. 저작권 때문에 공개 릴리스로 재배포하지 않는다. 동반자가 켜질 때 빠진 초상(보통·이로치)·도구·알 그림을 뒤에서 모두 받아 `~/.claude/pokebuddy/sprites/` 에 캐시한다. 첫 실행이면 첫 포켓몬을 고르는 동안 받는다. 약 2천 장, 2MB 이고 이 개발 PC 에서 15초 안팎이었다. 그림이 없는 도구(404)는 `missing.json` 에 적어 다시 묻지 않는다. 설정창은 열 때 디스크에 있는 그림을 한 번에 모두 읽은 뒤 첫 화면을 그린다. 그래서 상점·상세에 들어가면 그림이 바로 보인다. 저장소 실행은 `dist/tools/data/fetch-sprites.js` 가 받아 둔 `.cache/sprites/` 도 앱 안 그림으로 쓴다. 받지 못하면 빈 원이 남는다. 미해금 도감 칸은 그림을 보이지 않는다(`src/main/portraits.ts`).
+설정창과 첫 포켓몬 선택 창의 원형 초상은 [PokeAPI sprites](https://github.com/PokeAPI/sprites) 의 기본 그림(`sprites/pokemon/<도감>.png`, 96 × 96)이다. 이로치는 `sprites/pokemon/shiny/<도감>.png` 를 쓰고, 없으면 보통 그림을 쓴다. 저장소는 CC0 이고 그림 저작권은 The Pokémon Company 에 있다. 둘레 여백은 잘라 원을 채운다. 설치 파일에는 그림을 넣지 않는다. 저작권 때문에 공개 릴리스로 재배포하지 않는다. 동반자가 켜질 때 빠진 초상(보통·이로치)·도구·알 그림을 뒤에서 모두 받아 `~/.claude/pokebuddy/sprites/` 에 캐시한다. 첫 실행이면 첫 포켓몬을 고르는 동안 받는다. 약 2천 장, 2MB 이고 이 개발 PC 에서 15초 안팎이었다. 그림이 없는 도구(404)는 `missing.json` 에 적어 다시 묻지 않는다. 설정창은 열 때 디스크에 있는 그림을 한 번에 모두 읽은 뒤 첫 화면을 그린다. 그래서 상점·상세에 들어가면 그림이 바로 보인다. 저장소 실행은 `dist/tools/data/fetch-sprites.js` 가 받아 둔 `.cache/sprites/` 도 앱 안 그림으로 쓴다. 받지 못하면 빈 원이 남는다. 미해금 도감 칸은 그림을 보이지 않는다(`src/main/art/portraits.ts`).
 
 ### 도구·알 그림, 도감 설명, 울음소리
 
@@ -263,17 +263,17 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 무대는 캔버스 하나에 동작마다 시트를 미리 풀어 둔다. 그 시트로 그린다.
 
 - `https://spriteserver.pmdcollab.org/assets/<도감4자리>/sprites.zip` 을 받는다. `~/.claude/pokebuddy/pmd/` 에 캐시한다.
-  풀지 않고 메모리에서 읽는다(`src/main/art/pmd-load.ts` · `src/main/art/pmd.ts`, 무대 쪽 감싸기는 `src/main/art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
+  풀지 않고 메모리에서 읽는다(`src/main/art/pmd-load.ts` · `src/main/art/pmd.ts`, 무대 쪽 감싸기는 `src/main/art/stage-art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
-- 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
+- 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art/stage-art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
 - PMD 그림을 못 받은 종은 대체 그림으로 무대에 나온다. 관찰(2026-10-02): 리전폼을 뺀 등장 종 890종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
-  - 먼저 걷기 대체 그림을 쓴다(`src/main/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_RULES.ref`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
+  - 먼저 걷기 대체 그림을 쓴다(`src/main/art/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_RULES.ref`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
   - 걷기 시트는 정사각 칸 6개다. 정면·뒤·왼쪽이 2칸씩이다. 오른쪽은 왼쪽 칸을 좌우로 뒤집는다. 칸이 8개인 시트는 오른쪽 전용 칸을 쓴다. 팔레트 0번 색이 배경이라 지운다.
   - 색은 `overworld_normal.pal` 의 같은 번호 색으로 칠한다. 이로치는 `overworld_shiny.pal` 이다. 팔레트 파일을 못 받으면 PNG 에 든 색이다.
   - 동작은 `Idle`·`Walk` 두 개다. `Walk` 는 두 칸을 0.2초씩 돈다. `Idle` 은 첫 칸을 1도트 들썩인다.
   - 메가 모습(`data/mega.json`)은 폼 폴더와 폼 그림을 쓴다. 순서는 PMD 폼 폴더(`pmd`) → 걷기 대체 그림의 폼 폴더(`overworld`, 예: `charizard/mega_y`) → 메가 초상의 대체 그림이다. 기본 종의 그림으로 넘어가지 않는다. 이로치는 PMD `<폼>/0001` 이 먼저이고 없으면 폼의 보통 색이다. 관찰(2026-10-02, 앱의 그림 로더로 60개를 받아 확인): 60개 중 PMD 38개, 걷기 대체 그림 22개다. 초상 대체 그림까지 간 모습은 없다. 지가르데 메가는 초상이 없어 기본 종의 초상을 쓴다.
-  - 걷기 대체 그림도 못 받으면 초상 대체 그림을 쓴다(`src/main/portrait-art.ts`). PokeAPI 초상을 절반으로 줄여 PMD 크기에 맞춘다. 1도트씩 들썩이고, 오른쪽으로 걸을 때는 좌우를 뒤집는다.
+  - 걷기 대체 그림도 못 받으면 초상 대체 그림을 쓴다(`src/main/art/portrait-art.ts`). PokeAPI 초상을 절반으로 줄여 PMD 크기에 맞춘다. 1도트씩 들썩이고, 오른쪽으로 걸을 때는 좌우를 뒤집는다.
   - 네트워크 문제로 PMD 를 못 받은 종도 그 실행 동안은 대체 그림이다. 대체 그림에는 잠자기·반응 동작이 없다.
   - `src/tools/check/check-overworld.ts` 가 35종의 걷기 그림을 실제 주소에서 받아 본다. 태그를 올릴 때 다시 돌린다.
 - 칸 크기가 동작마다 달라도 기준점은 `(칸너비/2, 칸높이/2+4)` 로 같다. 그래서 몸 칸 가운데에 맞춰 그리면 발 위치가 맞는다

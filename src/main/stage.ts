@@ -7,7 +7,7 @@ import type { PetMotion, Phase } from "../motion/types";
 import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/model/stage";
 import type { CareAction } from "../state/types";
 import { MOTION_RULES } from "../motion/rules";
-import { zoomOf, type ArtLoader, type Look } from "./art";
+import { zoomOf, type ArtLoader, type Look } from "./art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Spot } from "./layout";
 import type { Rect, Size } from "../shared/geometry";
 import type { PartyPet } from "./save-party";

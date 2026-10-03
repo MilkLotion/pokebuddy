@@ -1,7 +1,7 @@
 // 그림을 받아 캐시하는 공통 부분. pmd(ZIP)·울음소리·걷기 대체 그림·초상이 쓴다.
 //
 // 지금까지 이 프로젝트의 받기 코드에는 타임아웃이 없었다. 응답이 영영 안 오면
-// 그림 로더(src/main/art.ts → loadPmd)의 await 가 막혀 마리가 무대에 영영 안 나온다. 여기서 상한을 건다.
+// 그림 로더(src/main/art/stage-art.ts → loadPmd)의 await 가 막혀 마리가 무대에 영영 안 나온다. 여기서 상한을 건다.
 // (예전 art/fetch.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다. 받기→캐시→없음 기록 한 벌(asset-cache)로 합치는 일은 파트 1 M5 다)
 import fs from "node:fs";
 import path from "node:path";

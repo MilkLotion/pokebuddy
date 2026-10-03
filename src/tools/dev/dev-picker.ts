@@ -13,7 +13,7 @@ import { starters, unlockRules } from "../../dex/unlocks";
 import { PATHS } from "../../main/paths";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { askStarter } from "../../main/windows/picker-window";
-import { createPortraits, type Portraits } from "../../main/portraits";
+import { createPortraits, type Portraits } from "../../main/art/portraits";
 import { argAfter, hasFlag } from "../harness/shot";
 
 const shotFile = argAfter("--shot");

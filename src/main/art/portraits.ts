@@ -13,18 +13,18 @@
 // 관리 창·선택 창의 CSP 는 img-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import fs from "node:fs";
 import path from "node:path";
-import { profile, slugs } from "../dex/species.js";
-import { genderLookInfo, regionalOf } from "../dex/regional.js";
-import { megaOf } from "../dex/mega.js";
-import { loadJson, isMetaKey } from "../dex/data.js";
-import { PATHS } from "./paths.js";
-import { eggPalettes } from "../shop/catalog.js";
+import { profile, slugs } from "../../dex/species.js";
+import { genderLookInfo, regionalOf } from "../../dex/regional.js";
+import { megaOf } from "../../dex/mega.js";
+import { loadJson, isMetaKey } from "../../dex/data.js";
+import { PATHS } from "../paths.js";
+import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
-import { fetchCached } from "./art/fetch.js";
-import type { PortraitAsk } from "../shared/model/snapshot";
+import { fetchCached } from "./fetch.js";
+import type { PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
-// 네트워크보다 먼저 본다. 만드는 곳은 scripts/build-item-art.cjs, 기록은 worklog/records/item-art/record.md (2026-09-27 폰트 세션)
+// 네트워크보다 먼저 본다. 만드는 곳은 src/tools/art/build-item-art.ts, 기록은 worklog/records/item-art/record.md (2026-09-27 폰트 세션)
 const OWN_ITEMS = path.join(PATHS.project, "assets", "items");
 const ownItem = (id: string): string | null => {
   const file = path.join(OWN_ITEMS, `${id}.png`);
@@ -260,7 +260,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       const out: Record<string, string | null> = {};
       await Promise.all(
         keys.map(async (key) => {
-          // egg:<종류> — 기본 알 그림을 그 알의 색표로 칠한다(src/main/egg-art.ts). 색표가 없거나 칠하지 못하면 기본 알 그림
+          // egg:<종류> — 기본 알 그림을 그 알의 색표로 칠한다(src/main/art/egg-art.ts). 색표가 없거나 칠하지 못하면 기본 알 그림
           if (key.startsWith("egg:")) {
             out[key] = await eggUri(key.slice(4));
             return;

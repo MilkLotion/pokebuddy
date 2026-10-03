@@ -1,7 +1,7 @@
 // 메인 프로세스의 출력과 판정 로그 (worklog/records/code-structure/design/10-main.md 1.1절 app/log.ts)
 //
 //   POKEBUDDY_LOG    출력(console·stderr)을 그 파일에 이어 쓴다 — pokebuddy 는 펫에 출력 핸들을 넘기지 않는다
-//                    (Windows 는 Start-Process 로 띄워 넘길 수도 없다. cli/run.js launchPet)
+//                    (Windows 는 Start-Process 로 띄워 넘길 수도 없다. src/cli/run.ts launchPet)
 //   POKEBUDDY_DEBUG  판정 로그를 JSON 한 줄씩 (POKEBUDDY_LOG 가 있으면 그 파일로). console.log 대신 stdout 직접
 import fs from "node:fs";
 

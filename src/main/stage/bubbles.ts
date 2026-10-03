@@ -7,7 +7,7 @@
 // 그림을 하나라도 못 구하면 말풍선을 띄우지 않는다. 글자로 되돌리지 않는다
 import type { FindRecordV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { createHungerBubbles } from "../hunger-bubble";
-import type { Portraits } from "../portraits";
+import type { Portraits } from "../art/portraits";
 import type { StageGroup } from "../stage-group";
 
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다

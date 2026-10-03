@@ -1,4 +1,4 @@
-// 걷기 대체 그림(src/main/overworld-art.ts)을 실제 주소에서 받아 본다 — 개발용, 네트워크 필요. 배포 패키지에는 들어가지 않는다.
+// 걷기 대체 그림(src/main/art/overworld-art.ts)을 실제 주소에서 받아 본다 — 개발용, 네트워크 필요. 배포 패키지에는 들어가지 않는다.
 //
 //   npm run build && node dist/tools/check/check-overworld.js                  PMD 에 그림이 없는 35종 (2026-10-02 조사)
 //   npm run build && node dist/tools/check/check-overworld.js pikachu eevee    고른 종만
@@ -10,8 +10,8 @@
 //   4. 보통·이로치 모두 시트로 만들어진다
 // PNG 에 든 팔레트가 overworld_normal.pal 과 다른 종은 알리기만 한다(어긋남 아님) — 앱은 팔레트 파일의 색을 쓴다
 // 결과는 출력만 한다. 어긋남이 있으면 종료 코드 1
-import { overworldArt, overworldUrl, parsePal } from "../../main/overworld-art";
-import { decodePng } from "../../main/png";
+import { overworldArt, overworldUrl, parsePal } from "../../main/art/overworld-art";
+import { decodePng } from "../../platform/png";
 
 // PMD ZIP 을 앱 로더로 읽지 못한 등장 종 — worklog/records/fallback-art/evidence/fallback-survey.json
 const MISSING = [

@@ -92,7 +92,7 @@ export function runStatus(petArg?: string): void {
     const names = [...new Set(authors.map((a) => a.author))];
     say(`  그린 사람: ${names.length ? names.join(", ") : "목록 없음"}`);
     say("  출처: PMDCollab/SpriteCollab (https://sprites.pmdcollab.org) · CC BY-NC 4.0");
-    // PMD 에 그림이 없는 종은 걷기 대체 그림으로 선다 (src/main/overworld-art.ts) — 받아 둔 것이 있으면 출처를 보여 준다
+    // PMD 에 그림이 없는 종은 걷기 대체 그림으로 선다 (src/main/art/overworld-art.ts) — 받아 둔 것이 있으면 출처를 보여 준다
     const walk = path.join(PATHS.overworld, `${slug.replace(/-/g, "_")}.png`);
     if (!fs.existsSync(zip) && fs.existsSync(walk)) {
       say("  대체 그림: rh-hideout/pokeemerald-expansion 의 걷기 그림 (https://github.com/rh-hideout/pokeemerald-expansion)");
