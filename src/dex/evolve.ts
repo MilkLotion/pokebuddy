@@ -33,14 +33,43 @@ export type EvolveFailure = ReasonOf<
   | "no-map" // 고른 리전폼 진화에 쓸 지도가 가방에 없다
 >;
 
+// 못 채운 조건 하나 — 화면이 조건 글자를 만든다 (src/tx/snapshot.ts)
+export type EvoMissing =
+  | { kind: "level"; level: number }
+  | { kind: "affinity"; value: number }
+  | { kind: "item"; item: string }
+  | { kind: "time"; when: DayPart }
+  | { kind: "gender"; gender: "male" | "female" };
+
 export interface Candidate {
   to: string;
   need: EvoNeed;
   when?: DayPart;
   ready: boolean; // 지금 조건을 채웠다
-  missing?: string; // 못 채운 이유 — 화면이 조건을 보여 준다. 둘 이상이면 `|` 로 잇는다 ("level:36|item:region-map")
+  // 못 채운 조건 — 순서는 성별 하나 / 시간대 하나 / 주 조건 → 더하는 친밀도 → 지도. 채웠으면 빈 목록
+  lacks: EvoMissing[];
+  // [임시] 옛 모양 — lacks 를 `kind:값` 으로 쓰고 `|` 로 잇는다 ("level:36|item:region-map"). src/tools/selftest/selftest-evolve.ts 가 이 글자를 견준다. 견주는 쪽이 lacks 로 가면 지운다
+  missing?: string;
   map?: true; // 지도 간선 — 지도를 쓴다
 }
+
+// 못 채운 조건 하나의 옛 글자 — `level:36`
+export function missingKey(m: EvoMissing): string {
+  if (m.kind === "level") return `level:${m.level}`;
+  if (m.kind === "affinity") return `affinity:${m.value}`;
+  if (m.kind === "item") return `item:${m.item}`;
+  if (m.kind === "time") return `time:${m.when}`;
+  return `gender:${m.gender}`;
+}
+
+// 조건 검사의 답 — 개체가 없으면 noPet
+interface NeedCheck {
+  ready: boolean;
+  lacks: EvoMissing[];
+  noPet?: true;
+}
+const READY: NeedCheck = { ready: true, lacks: [] };
+const lacking = (...lacks: EvoMissing[]): NeedCheck => ({ ready: false, lacks });
 
 export interface EvolveResult {
   ok: boolean;
@@ -57,33 +86,31 @@ export interface EvolveResult {
 export { GAME_DAY } from "../shared/clock";
 export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 
-// 조건 하나를 지금 채웠는가. 못 채웠으면 이유를 돌려준다. 레벨·친밀도 지도 간선이면 원래 조건 뒤에 지도를 본다
-export function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): { ready: boolean; missing?: string } {
+// 조건 하나를 지금 채웠는가. 못 채웠으면 모자란 조건을 돌려준다. 레벨·친밀도 지도 간선이면 원래 조건 뒤에 지도를 본다
+function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): NeedCheck {
   const base = checkBaseNeed(save, petId, step, dayPart);
-  if (!step.map || needIsMap(step.need) || base.missing === "no-pet" || (save.bag[REGION_MAP] ?? 0) > 0) return base;
-  return { ready: false, missing: base.ready ? `item:${REGION_MAP}` : `${base.missing}|item:${REGION_MAP}` };
+  if (!step.map || needIsMap(step.need) || base.noPet || (save.bag[REGION_MAP] ?? 0) > 0) return base;
+  return lacking(...base.lacks, { kind: "item", item: REGION_MAP });
 }
 
 // 지도를 뺀 원래 조건 — 성별·시간대·레벨·친밀도·도구. 간선에 더하는 친밀도(affinity)가 있으면 그 조건 뒤에 본다
-function checkBaseNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): { ready: boolean; missing?: string } {
+function checkBaseNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): NeedCheck {
   const pet = save.pets.find((p) => p.id === petId);
-  if (!pet) return { ready: false, missing: "no-pet" };
-  if (step.gender && pet.gender !== step.gender) return { ready: false, missing: `gender:${step.gender}` }; // 바뀌지 않는 이유라 먼저 본다
-  if (step.when && step.when !== dayPart) return { ready: false, missing: `time:${step.when}` };
+  if (!pet) return { ready: false, lacks: [], noPet: true };
+  if (step.gender && pet.gender !== step.gender) return lacking({ kind: "gender", gender: step.gender }); // 바뀌지 않는 이유라 먼저 본다
+  if (step.when && step.when !== dayPart) return lacking({ kind: "time", when: step.when });
   const main = checkMainNeed(save, pet, step);
   if (!step.affinity || pet.affinity >= step.affinity) return main;
-  const extra = `affinity:${step.affinity}`;
-  return { ready: false, missing: main.ready ? extra : `${main.missing}|${extra}` };
+  return lacking(...main.lacks, { kind: "affinity", value: step.affinity });
 }
 
 // 간선의 조건 하나 — 레벨·친밀도·도구
-function checkMainNeed(save: SaveV3, pet: { level: number; affinity: number }, step: EvoStep): { ready: boolean; missing?: string } {
-
+function checkMainNeed(save: SaveV3, pet: { level: number; affinity: number }, step: EvoStep): NeedCheck {
   const need = step.need;
-  if (!need) return { ready: true }; // 조건이 없는 옛 데이터 — 막지 않는다
-  if (need.kind === "level") return pet.level >= need.level ? { ready: true } : { ready: false, missing: `level:${need.level}` };
-  if (need.kind === "affinity") return pet.affinity >= need.value ? { ready: true } : { ready: false, missing: `affinity:${need.value}` };
-  return (save.bag[need.item] ?? 0) > 0 ? { ready: true } : { ready: false, missing: `item:${need.item}` };
+  if (!need) return READY; // 조건이 없는 옛 데이터 — 막지 않는다
+  if (need.kind === "level") return pet.level >= need.level ? READY : lacking({ kind: "level", level: need.level });
+  if (need.kind === "affinity") return pet.affinity >= need.value ? READY : lacking({ kind: "affinity", value: need.value });
+  return (save.bag[need.item] ?? 0) > 0 ? READY : lacking({ kind: "item", item: need.item });
 }
 
 // 개체가 갈 수 있는 곳 전부. 화면이 조건을 보여 주는 데 쓴다
@@ -92,8 +119,9 @@ export function candidates(save: SaveV3, petId: string, dayPart: DayPart, opts?:
   if (!pet) return [];
   const have = formsOf(pet, opts);
   return nextOf(pet.species, opts).filter((step) => !have.includes(step.to)).map((step) => {
-    const { ready, missing } = checkNeed(save, petId, step, dayPart);
-    return { to: step.to, need: step.need ?? { kind: "affinity", value: 100 }, when: step.when, ready, missing, ...(step.map ? { map: true as const } : {}) };
+    const { ready, lacks } = checkNeed(save, petId, step, dayPart);
+    const missing = ready ? undefined : lacks.map(missingKey).join("|");
+    return { to: step.to, need: step.need ?? { kind: "affinity", value: 100 }, when: step.when, ready, lacks, missing, ...(step.map ? { map: true as const } : {}) };
   });
 }
 
@@ -114,8 +142,8 @@ export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: s
   if (choice) {
     picked = ready.find((c) => c.to === choice) ?? undefined;
     // 지도만 모자란 리전폼 진화는 이유를 따로 알린다 — 화면을 거치지 않은 명령도 여기서 막힌다
-    const lacking = all.find((c) => c.to === choice && !c.ready);
-    if (!picked && lacking?.map && (lacking.missing ?? "").split("|").includes(`item:${REGION_MAP}`)) return { ok: false, reason: "no-map", choices: ready.map((c) => c.to) };
+    const short = all.find((c) => c.to === choice && !c.ready);
+    if (!picked && short?.map && short.lacks.some((m) => m.kind === "item" && m.item === REGION_MAP)) return { ok: false, reason: "no-map", choices: ready.map((c) => c.to) };
     if (!picked) return { ok: false, reason: "bad-choice", choices: ready.map((c) => c.to) };
   } else if (ready.length > 1) {
     return { ok: false, reason: "need-choice", choices: ready.map((c) => c.to) };
