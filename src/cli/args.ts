@@ -4,23 +4,7 @@
 //   pokebuddy setup | uninstall | status | help
 //
 // 세션 펫(pokebuddy <종> · stop)은 2026-09-27 에 지웠다 — 펫은 동반자 하나다 (src/cli/run.ts).
-// (예전 cli/args.js. 도구 레인 T7b-3 에서 TypeScript 로 옮겼다)
-
-export const USAGE = `사용:
-  pokebuddy companion [buddy=값] [click=값]                 동반자 띄우기 — 기기당 하나, 항상 위, 맨 앞 터미널 창을 따른다
-  pokebuddy companion stop                                  동반자 내리기
-  pokebuddy setup [--dry-run] [--no-editor]                 CLI LLM 상태 훅 설치 (옛 에디터 확장이 있으면 지운다)
-  pokebuddy uninstall [--dry-run] [--purge] [--no-editor]   설치한 것 되돌리기 (--purge 면 설정·캐시까지)
-  pokebuddy status [포켓몬]                                 지금 판정 상태와 PMD 저작자 보기
-  pokebuddy game --help                                    육성·상점·진화 명령 보기
-  pokebuddy trade <교환 링크>                               친구 교환 링크로 참가 — 떠 있는 동반자에 보낸다
-
-예:
-  pokebuddy companion                 동반자 — 어느 터미널을 보든 그 창의 에이전트 상태를 따른다. 트레이로 끝낸다
-  pokebuddy companion buddy=calm      덜 돌아다니게
-
-옵션 (이름=값 · --이름 값):
-  buddy=on|calm|off   click=on|off    크기는 저장된 포켓몬 크기를 쓴다`;
+// (예전 cli/args.js. 도구 레인 T7b-3 에서 TypeScript 로 옮겼다. 도움말 글자(USAGE)는 빌드 없이 답하려고 bin/pokebuddy 에 둔다)
 
 // 옵션 이름 → 동반자 환경변수. 값이 비면 넘기지 않는다
 const OPTIONS: Record<string, string | null> = {
