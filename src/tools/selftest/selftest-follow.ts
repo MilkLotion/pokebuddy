@@ -10,6 +10,7 @@ import path from "node:path";
 import * as front from "../../follow/front";
 import { createLineHelper } from "../../follow/line-helper";
 import * as state from "../../follow/state";
+import { readHookRecords } from "../../agents/hook-records";
 import { isPidAlive } from "../../platform/pid";
 import type { HelperWindow, StateRecord } from "../../follow/types";
 import * as winbounds from "../../follow/winbounds";
@@ -91,8 +92,8 @@ async function testStateRecords(): Promise<void> {
     assert.deepStrictEqual(state.stateFor([{ state: "waving", at: now, ancestors: [5] }], [5]), { state: "waving", promptAt: null });
   });
 
-  await ok("readStateRecords: 폴더 없음 → [] · 깨진 파일은 건너뜀 · mtime 최신순", () => {
-    assert.deepStrictEqual(state.readStateRecords(path.join(tmpRoot, "없음")), []);
+  await ok("readHookRecords: 폴더 없음 → [] · 깨진 파일은 건너뜀 · mtime 최신순", () => {
+    assert.deepStrictEqual(readHookRecords(path.join(tmpRoot, "없음")), []);
     const dir = tmpDir("state");
     const now = nowSec();
     const older = writeJson(dir, "old.json", { state: "waiting", at: now, ancestors: [300], tag: "old" });
@@ -103,7 +104,7 @@ async function testStateRecords(): Promise<void> {
     fs.utimesSync(older, t - 300, t - 300);
     fs.utimesSync(loose, t - 200, t - 200);
     fs.utimesSync(newer, t - 100, t - 100);
-    const recs = state.readStateRecords(dir) as (StateRecord & { tag: string })[];
+    const recs = readHookRecords(dir) as (StateRecord & { tag: string })[];
     assert.deepStrictEqual(recs.map((r) => r.tag), ["new", "loose", "old"]);
 
   });

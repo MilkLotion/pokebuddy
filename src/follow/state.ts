@@ -1,8 +1,6 @@
 // 동반자(main)와 진단 도구(pokebuddy status)가 똑같은 판정을 쓰도록 공통 부분만 모은 곳
 // 로직이 두 벌이 되면 진단이 실제와 다른 답을 낸다 — 그래서 여기 한 곳에만 둔다
-// cli/*.js 가 dist/follow/state.js 를 이름으로 부른다
-import fs from "node:fs";
-import path from "node:path";
+// 기록은 읽지 않는다 — 부르는 쪽이 src/agents/hook-records.ts readHookRecords 로 읽어 넘긴다
 import type { AgentState } from "../shared/names/agents";
 import type { StateInfo, StateRecord } from "./types";
 
@@ -15,29 +13,6 @@ export function agentStateOf(record: StateRecord): AgentState {
   if (record.hold != null && age >= record.hold) state = record.then || "idle";
   if ((state === "running" || state === "waiting") && age > STALE_SEC) state = "idle";
   return state;
-}
-
-// 훅이 남긴 세션 상태 기록 전부 — 최신(mtime)순. 폴더가 없으면 []
-// 동반자는 폴링마다 한 번 읽어 호스트 판정(front.ts hostOf)과 상태 판정(stateFor)에 같이 쓴다
-export function readStateRecords(stateDir: string): StateRecord[] {
-  const records: StateRecord[] = [];
-  try {
-    const files = fs
-      .readdirSync(stateDir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => path.join(stateDir, f))
-      .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-    for (const file of files) {
-      try {
-        records.push(JSON.parse(fs.readFileSync(file, "utf8")) as StateRecord);
-      } catch {
-        // 쓰는 중·파손 — 이 파일만 건너뛴다
-      }
-    }
-  } catch {
-    // 폴더 없음 — 기본값
-  }
-  return records;
 }
 
 // 동반자가 따를 상태 — pids(맨 앞 터미널 창 주인 pid) 중 하나를 조상으로 가진 최신 기록.

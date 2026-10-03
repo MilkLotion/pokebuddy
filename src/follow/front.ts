@@ -47,7 +47,7 @@ export function frontWindow(
 
 // 맨 앞 창의 주인이 터미널 호스트인가 — 위 (a)~(c).
 //   front          frontWindow 의 결과
-//   stateRecords   훅이 적은 세션 기록 (state.ts readStateRecords)
+//   stateRecords   훅이 적은 세션 기록 (src/agents/hook-records.ts readHookRecords)
 // 반환: { kind: "hook" | "known", pids } — pids 는 따를 세션의 pid (비면 대기). 호스트가 아니면 null
 export function hostOf(front: HelperWindow | null | undefined, stateRecords: StateRecord[] | null | undefined): HostInfo | null {
   if (!front) return null;
