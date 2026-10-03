@@ -17,8 +17,7 @@ import type { EggV3, SaveV3 } from "../../shared/save-v3";
 import { eggOfSpecies, eggPool, fixedEggs, inRandomEgg } from "../../dex/obtain";
 import { canGiveEgg } from "../../egg/pool";
 import { EGG_RULES } from "../../egg/rules";
-
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 
 const egg = (over: Partial<EggV3> = {}): EggV3 => ({
   id: "e1",

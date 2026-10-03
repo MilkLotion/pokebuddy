@@ -17,8 +17,9 @@ import { makeTmp } from "../harness/tmp-dir";
 import { BAG_RULES } from "../../bag/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SOUND_RULES } from "../../state/rules";
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
+import { testPet } from "../harness/fixtures";
 
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
 
 const root = makeTmp("selftest-manage");
@@ -27,13 +28,7 @@ const file = path.join(root, "save-v3.json");
 function seed(): SaveV3 {
   const s = empty(T0);
   s.points.balance = 340;
-  s.pets.push({
-    id: "p1", species: "pikachu", shiny: false, nature: "hardy", gender: "male", size: 2,
-    level: 12, exp: 2000, affinity: 80, affinityProgressMs: 0, fullness: 55, fullnessProgressMs: 0,
-    mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0,
-    buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
-    daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
-  });
+  s.pets.push(testPet({ species: "pikachu", size: 2, level: 12, exp: 2000, affinity: 80, fullness: 55 }));
   s.starterPetId = "p1";
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
   s.dex.unlocked = ["pikachu"];

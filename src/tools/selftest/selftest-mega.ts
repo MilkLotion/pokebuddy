@@ -28,16 +28,12 @@ import { MEGA_RULES } from "../../dex/rules";
 import { pendingOf } from "../../notify/pending";
 import { megaRivals, setMega, settleMega } from "../../party/mega-form";
 import { HANDLERS } from "../../tx/command-table";
+import { testPet } from "../harness/fixtures";
 
 const T0 = new Date(2026, 9, 2, 10, 0, 0).getTime();
 
-const pet = (over: Partial<PetV3> = {}): PetV3 => ({
-  id: "p1", species: "charizard", shiny: false, nature: "hardy", gender: "male", size: 2,
-  level: 60, exp: 0, affinity: 100, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
-  mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 2, evolved: ["charmander", "charmeleon"],
-  daily: { date: "2026-10-02", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
-  ...over,
-});
+// 시험 개체 — 리자몽 Lv.60·친밀도 100. newPet 결과에 덮는다 (src/tools/harness/fixtures.ts). 기준 시각이 이 파일의 T0 라 since·daily.date 가 그 날이다
+const pet = (over: Partial<PetV3> = {}): PetV3 => testPet({ species: "charizard", size: 2, level: 60, affinity: 100, stage: 2, evolved: ["charmander", "charmeleon"], ...over }, T0);
 
 // 파티 칸에 차례로 넣는다. 칸이 모자라면 박스로 간다
 function seed(...pets: PetV3[]): SaveV3 {

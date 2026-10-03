@@ -18,8 +18,8 @@ import { openSlot } from "../../party/slots";
 import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../../party/presets";
 import type { Pet, SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
+import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 
-const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime(); // 2026-09-24 10:00 로컬
 const TODAY = "2026-09-24";
 
 const v2Pet = (over: Partial<Pet> = {}): Pet => ({
