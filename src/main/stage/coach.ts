@@ -9,7 +9,7 @@ import type { CoachView } from "../../shared/model/stage";
 import type { SaveV3 } from "../../shared/save-v3";
 import { currentTutorial } from "../../tutorial/queue";
 import type { StageGroup } from "../stage-group";
-import { t } from "../text";
+import { t } from "../../view/text";
 
 export interface CoachDeps {
   read(): SaveV3 | null;

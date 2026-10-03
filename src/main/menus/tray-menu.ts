@@ -7,7 +7,7 @@ import { screen } from "electron";
 import { trayMenuOf } from "../../view/menus";
 import type { DisplayState } from "../app/display-state";
 import { closeMenu, menuRectNow, isMenuOpen, openMenu } from "./menu-window";
-import { t } from "../text";
+import { t } from "../../view/text";
 import { preloadFile, rendererFile } from "../windows/files";
 
 // 아이콘을 다시 눌러 메뉴를 닫은 때 — 메뉴가 떠 있는 동안에는 아이콘 클릭 신호가 오지 않아 Windows 가 더블클릭을 만들지 못한다.

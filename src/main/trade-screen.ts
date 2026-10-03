@@ -3,7 +3,7 @@
 //
 // 저장을 읽기만 한다. 완료 화면의 "보낸 포켓몬"은 반영 뒤 저장에 없으므로 교환 중에 본 카드를 기억해 둔다
 import { profileOf } from "../dex/species.js";
-import { natureName, petName, typeName } from "./text.js";
+import { natureName, petName, typeName } from "../view/text.js";
 import type { TradePet } from "../trade/exchange.js";
 import { isSinglePet } from "../dex/forms.js";
 import { locatePet, presetName } from "../party/presets.js";

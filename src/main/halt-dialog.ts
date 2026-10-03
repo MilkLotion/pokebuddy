@@ -15,7 +15,7 @@ import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";
 import { askAlert } from "./windows/alert-window";
 import { preloadFile, rendererFile } from "./windows/files";
-import { t } from "./text";
+import { t } from "../view/text";
 import { primaryWorkArea } from "./windows/display";
 import { createOverlayWindow } from "./windows/options";
 import { centerSpotOf } from "./windows/placement";

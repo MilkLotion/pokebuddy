@@ -16,7 +16,7 @@ import type { NatureId } from "../shared/species";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { GameV3 } from "./game";
 import type { Home } from "./layout";
-import type { Paths } from "./paths";
+import type { Paths } from "../platform/paths";
 
 // 무대가 보는 마리 하나 — 무대에 필요한 것만
 export interface PartyPet {

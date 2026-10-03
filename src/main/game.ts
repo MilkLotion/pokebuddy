@@ -7,7 +7,7 @@
 // 시각(now)은 앱이 전역 시계의 1초 틱 시각을 준다(src/main/app.ts). 명령 처리처럼 틱 밖에서 부르는 경로도 그 마지막 틱 시각을 쓴다 — 1초 안의 차이다
 // 저장은 하나다. 기존 `save.json` 을 그대로 쓴다 — 처음 읽을 때 v2 를 v3 으로 옮기고 원본을 `save.json.v2.bak` 에 남긴다.
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
-import { PATHS } from "./paths.js";
+import { PATHS } from "../platform/paths.js";
 import { createLiveSave } from "../tx/live-save.js";
 import { elapsedSince, type TimeInput } from "../state/time.js";
 import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
@@ -34,7 +34,7 @@ import { saveKindOf } from "../online/save-kind.js";
 import type { AgentName } from "../shared/names/agents";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
-import { petName } from "./text.js";
+import { petName } from "../view/text.js";
 
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/save-file.ts)
 export const saveFile = (): string => PATHS.save;

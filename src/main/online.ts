@@ -31,7 +31,7 @@ import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
 import { loadCloudState } from "../online/lost.js";
-import { t } from "./text";
+import { t } from "../view/text";
 import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
 import type { AccountReplyCode, CloudErrorCode } from "../shared/names/online-codes.js";
 
