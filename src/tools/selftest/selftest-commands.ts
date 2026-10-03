@@ -115,6 +115,13 @@ async function main(): Promise<void> {
     assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
     frozen = false;
 
+    // 숨기기·보이기도 target 이 없으면 args.petId 를 본다 — 다른 개체 명령과 같은 규칙 (94 문서 4-12)
+    const hideByArgs = await commands.dispatcher.dispatch({ cmd: "party.hide", args: { petId: "p1" }, from: "cli" });
+    assert.notEqual(hideByArgs.reason, "no-pet", "party.hide 가 args.petId 를 받는다");
+    const showByArgs = await commands.dispatcher.dispatch({ cmd: "party.show", args: { petId: "p1" }, from: "cli" });
+    assert.notEqual(showByArgs.reason, "no-pet", "party.show 가 args.petId 를 받는다");
+    assert.equal((await commands.dispatcher.dispatch({ cmd: "party.show", from: "cli" })).reason, "no-pet", "대상이 없으면 no-pet");
+
     // 저장에 닿지 못하면 실패로 답한다
     const beforeFailureChanges = changes;
     const diskBefore = fs.readFileSync(paths.save, "utf8");
