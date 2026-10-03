@@ -3,7 +3,7 @@
 //
 // 설정의 "알림 소리" 가 꺼져 있으면 내지 않는다. 받은 소리는 ~/.claude/pokebuddy/cries/ 에 캐시한다 (src/main/art/cries.ts)
 // 같은 포켓몬을 연달아 누르면 겹쳐 울지 않게 잠깐 쉰다
-import { createCries, type Cries } from "../art/cries";
+import type { Cries } from "../art/cries";
 import type { SaveV3 } from "../../shared/save-v3";
 import { gainOf } from "../../state/settings";
 import { SOUND_RULES } from "../../state/rules";
@@ -11,7 +11,7 @@ import { SOUND_RULES } from "../../state/rules";
 export const CRY_RULES = { gapMs: 1500 } as const;
 
 export interface CryDeps {
-  dir: string; // 울음소리 캐시 폴더
+  cries(): Cries; // 울음소리 받기·캐시 — 처음 울 때 부른다 (src/main/art/services.ts 한 벌)
   read(): SaveV3 | null;
   send(petId: string, uri: string, volume: number): void; // 무대에 보낸다
 }
@@ -22,7 +22,6 @@ export interface Cry {
 }
 
 export function createCry(deps: CryDeps): Cry {
-  let cries: Cries | null = null; // 처음 울 때 만든다
   const at = new Map<string, number>();
   const gainIn = (save: SaveV3 | null): number => (save ? gainOf(save.settings, SOUND_RULES.cryMax) : 0);
   return {
@@ -35,8 +34,7 @@ export function createCry(deps: CryDeps): Cry {
       if (!save || volume <= 0) return;
       const pet = save.pets.find((p) => p.id === petId);
       if (!pet) return;
-      cries ??= createCries(deps.dir);
-      const uri = await cries.get(pet.species);
+      const uri = await deps.cries().get(pet.species);
       if (uri) deps.send(petId, uri, volume);
     },
     gain: () => gainIn(deps.read()),
