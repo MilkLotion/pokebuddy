@@ -5,13 +5,13 @@
 // move/moved 이벤트 해석이 전부 없다. 창을 바꾸는 유일한 길은 setStage(무대 사각형) 이고, 사각형이 바뀔 때만 setBounds 를 부른다 —
 // 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있다
 import fs from "node:fs";
-import { BrowserWindow, ipcMain, screen } from "electron";
+import { BrowserWindow, screen } from "electron";
 import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../shared/model/stage";
 import type { StageChannel } from "../shared/ipc/stage";
 import { sameRect } from "./layout";
 import type { Rect, Size } from "../shared/geometry";
-import { windowIcon } from "./paths";
-import { webPreferencesOf } from "./windows/options";
+import { transparentOptionsOf } from "./windows/options";
+import { createIpcScope } from "./windows/ipc";
 
 // 채널 이름 — preload 와 같은 문자열인지 satisfies 로 검사
 const CH = {
@@ -70,25 +70,9 @@ export interface StageWindow {
 
 export function createStageWindow(opts: StageWindowOptions): StageWindow {
   const { debug, log } = opts;
+  // 투명 창 공통 키(처음엔 숨김 — 첫 배치 전 깜빡임 방지, 로고는 Windows 작업 표시줄·작업 관리자용)에 무대만의 키를 더한다
   let win: BrowserWindow | null = new BrowserWindow({
-    width: 1,
-    height: 1,
-    show: false, // 첫 배치 전 깜빡임 방지
-    frame: false,
-    transparent: true,
-    acceptFirstMouse: true, // 포커스 없는 창이라 매번 "첫 클릭"이다 — 삼키지 말고 렌더러로 보낸다 (mac)
-    backgroundColor: "#00000000",
-    hasShadow: false,
-    resizable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true, // 동반자는 항상 위
-    fullscreenable: false,
-    focusable: false, // 클릭해도 터미널 포커스를 뺏지 않음
-    // mac 은 focusable:false 만으로는 클릭이 앱을 활성화한다 — 뒤에 열어 둔 설정창이 앞으로 올라오고 터미널 포커스도 빠진다.
-    // panel 은 NSWindowStyleMaskNonactivatingPanel 을 붙여 눌러도 앱을 활성화하지 않는다 (2026-09-28 사용자 "맥에서는 화면에 있는 포켓몬 클릭을 해도 설정창이 열리네")
-    ...(process.platform === "darwin" ? { type: "panel" } : {}),
-    icon: windowIcon(), // Windows 작업 표시줄·작업 관리자용 로고 (없으면 undefined — 기본)
-    webPreferences: webPreferencesOf(opts.preload, {
+    ...transparentOptionsOf(opts.preload, {
       // 숨었다 보일 때 애니메이션 타이머가 멈추지 않게 스로틀링을 끈다 — 단 Windows 는 켜 둔다.
       // Windows 에서 끄면 렌더러가 숨김 상태로 가지 않아, 창을 숨길 때 내려간 입력용 자식 창
       // (Chrome_RenderWidgetHostHWND)이 다시 보일 때 올라오지 않는다. 그러면 누르기가 부모 창에 떨어지고,
@@ -98,6 +82,14 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
       // 울음소리 — 메뉴에서 고른 놀아주기처럼 무대 창에 사용자 동작이 없어도 소리를 낸다 (Chromium 자동 재생 제한)
       autoplayPolicy: "no-user-gesture-required",
     }),
+    width: 1,
+    height: 1,
+    acceptFirstMouse: true, // 포커스 없는 창이라 매번 "첫 클릭"이다 — 삼키지 말고 렌더러로 보낸다 (mac)
+    alwaysOnTop: true, // 동반자는 항상 위
+    focusable: false, // 클릭해도 터미널 포커스를 뺏지 않음
+    // mac 은 focusable:false 만으로는 클릭이 앱을 활성화한다 — 뒤에 열어 둔 설정창이 앞으로 올라오고 터미널 포커스도 빠진다.
+    // panel 은 NSWindowStyleMaskNonactivatingPanel 을 붙여 눌러도 앱을 활성화하지 않는다 (2026-09-28 사용자 "맥에서는 화면에 있는 포켓몬 클릭을 해도 설정창이 열리네")
+    ...(process.platform === "darwin" ? { type: "panel" } : {}),
   });
   let stageRect: Rect | null = null;
   let passing: boolean | null = null; // 지금 클릭을 아래 창으로 통과시키는 중인가 — setIgnoreMouseEvents 의 마지막 값
@@ -119,18 +111,17 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
   };
   pinTop();
 
-  const mine = (sender: unknown): boolean => !!win && !win.isDestroyed() && sender === win.webContents;
-  const onReady = (e: Electron.IpcMainEvent): void => {
-    if (!mine(e.sender)) return;
+  // 이 무대 창이 보낸 것만 받는다 — 화면마다 무대 창이 하나씩 있고, 모든 창이 같은 preload 를 쓴다
+  const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
+  const onReady = (): void => {
     log?.({ stage: "ready" });
     opts.onReady();
   };
-  const onHit = (e: Electron.IpcMainEvent, id: unknown): void => {
-    if (!mine(e.sender)) return;
+  const onHit = (id: unknown): void => {
     opts.onHit(typeof id === "string" ? id : null);
   };
-  const onPointer = (e: Electron.IpcMainEvent, msg: unknown): void => {
-    if (!mine(e.sender) || !msg || typeof msg !== "object") return;
+  const onPointer = (msg: unknown): void => {
+    if (!msg || typeof msg !== "object") return;
     const m = msg as PointerMsg;
     if (typeof m.type !== "string" || typeof m.id !== "string") return;
     // 디버그 — 렌더러가 넘긴 포인터가 메인까지 오는지 (끄는 동안의 drag 는 너무 잦아 뺀다)
@@ -138,21 +129,21 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
     opts.onPointer({ type: m.type, id: m.id, x: Number(m.x) || 0, y: Number(m.y) || 0 });
   };
   // 렌더러 진단(시트 디코드 실패 등) — POKEBUDDY_DEBUG 로그에 from:"renderer" 로 남긴다
-  const onLog = (e: Electron.IpcMainEvent, entry: unknown): void => {
-    if (!mine(e.sender) || !entry || typeof entry !== "object") return;
+  const onLog = (entry: unknown): void => {
+    if (!entry || typeof entry !== "object") return;
     log?.({ from: "renderer", ...(entry as Record<string, unknown>) });
   };
-  const onCoachAction = (e: Electron.IpcMainEvent, msg: unknown): void => {
-    if (!mine(e.sender) || !msg || typeof msg !== "object") return;
+  const onCoachAction = (msg: unknown): void => {
+    if (!msg || typeof msg !== "object") return;
     const m = msg as CoachAction;
     if (typeof m.id !== "string" || (m.action !== "done" && m.action !== "skip")) return;
     opts.onCoachAction?.({ id: m.id, action: m.action });
   };
-  ipcMain.on(CH.ready, onReady);
-  ipcMain.on(CH.coachAction, onCoachAction);
-  ipcMain.on(CH.hit, onHit);
-  ipcMain.on(CH.pointer, onPointer);
-  ipcMain.on(CH.log, onLog);
+  scope.on(CH.ready, () => onReady());
+  scope.on(CH.coachAction, (_e, msg) => onCoachAction(msg));
+  scope.on(CH.hit, (_e, id) => onHit(id));
+  scope.on(CH.pointer, (_e, msg) => onPointer(msg));
+  scope.on(CH.log, (_e, entry) => onLog(entry));
 
   if (debug) {
     // Electron 44 부터 인자가 객체 하나 — 예전 위치 인자는 경고를 낸다
@@ -163,11 +154,7 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
   // 창이 파괴돼도 win 은 null 이 되지 않는다 — 비워 둬야 곳곳의 alive() 가 파괴된 창을 거른다
   win.on("closed", () => {
     win = null;
-    ipcMain.removeListener(CH.ready, onReady);
-    ipcMain.removeListener(CH.coachAction, onCoachAction);
-    ipcMain.removeListener(CH.hit, onHit);
-    ipcMain.removeListener(CH.pointer, onPointer);
-    ipcMain.removeListener(CH.log, onLog);
+    scope.dispose();
   });
 
   if (fs.existsSync(opts.html)) {

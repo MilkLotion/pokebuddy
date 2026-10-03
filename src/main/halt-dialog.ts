@@ -10,13 +10,15 @@
 // 네이티브는 작은 투명 부모 창을 하나 만들어 붙인다
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/windows/region-window.ts 와 같은 층)
-import { app, BrowserWindow, dialog, screen } from "electron";
+import { app, dialog, type BrowserWindow } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";
 import { showAlert } from "./windows/alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
-import { webPreferencesOf } from "./windows/options";
+import { primaryWorkArea } from "./windows/display";
+import { createOverlayWindow } from "./windows/options";
+import { centerSpotOf } from "./windows/placement";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
 export const KICKED_CLOSE_MS = 30_000;
@@ -39,29 +41,9 @@ export function agoText(seen: number | null, now = Date.now()): string {
 
 // 대화상자를 붙일 부모 창 — 주 화면 가운데, 투명, 작업 표시줄에 없음. 창을 닫으면 부순다
 function parentWindow(): BrowserWindow {
-  const area = screen.getPrimaryDisplay().workArea;
-  const width = 480;
-  const height = 240;
-  const win = new BrowserWindow({
-    width,
-    height,
-    x: Math.round(area.x + (area.width - width) / 2),
-    y: Math.round(area.y + (area.height - height) / 3),
-    show: false,
-    frame: false,
-    transparent: true,
-    backgroundColor: "#00000000",
-    hasShadow: false,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    webPreferences: webPreferencesOf(null), // 문서를 읽지 않는 창이다 — 보안 옵션만 다른 창과 같게 둔다
-  });
-  win.setAlwaysOnTop(true, "screen-saver");
+  const size = { width: 480, height: 240 };
+  // 문서를 읽지 않는 창이다(preload: null) — 보안 옵션만 다른 창과 같게 둔다. 아이콘은 붙이지 않는다
+  const win = createOverlayWindow({ preload: null, layer: "screen-saver", bounds: { ...centerSpotOf(primaryWorkArea(), size), ...size }, icon: false });
   // Dock 을 숨긴 mac 앱은 앞으로 나오지 않는다 — 창을 보기 전에 앱을 앞으로 가져온다
   if (process.platform === "darwin") app.focus({ steal: true });
   win.show();

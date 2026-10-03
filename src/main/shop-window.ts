@@ -6,6 +6,7 @@
 import type { ShopDeviceAction, ShopDeviceOpen } from "../shared/model/devices";
 import type { ShopDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
+import { isQty, isRecord, isShortId } from "./windows/input.js";
 
 const CH = {
   show: "shopdev:show",
@@ -34,9 +35,9 @@ export function createShopWindow(opts: ShopWindowOptions): ShopWindow {
 
 // 렌더러가 보낸 값은 믿지 않는다 — 정해진 모양만 넘긴다
 function isAction(v: unknown): v is ShopDeviceAction {
-  if (!v || typeof v !== "object") return false;
-  const a = v as Record<string, unknown>;
-  if (typeof a.productId !== "string" || !a.productId || a.productId.length > 80) return false;
-  if (a.kind === "qty") return typeof a.qty === "number" && Number.isInteger(a.qty) && a.qty >= 1 && a.qty <= 999;
+  if (!isRecord(v)) return false;
+  const a = v;
+  if (!isShortId(a.productId)) return false;
+  if (a.kind === "qty") return isQty(a.qty);
   return a.kind === "buy" || a.kind === "pool";
 }

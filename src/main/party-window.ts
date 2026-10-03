@@ -6,6 +6,8 @@
 import type { PartyDeviceAction, PartyDeviceOpen } from "../shared/model/devices";
 import type { PartyDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
+import { PARTY_RULES } from "../party/rules.js";
+import { isIndexBelow, isRecord } from "./windows/input.js";
 
 const CH = {
   show: "partydev:show",
@@ -35,8 +37,8 @@ export function createPartyWindow(opts: PartyWindowOptions): PartyWindow {
 
 // 렌더러가 보낸 값은 믿지 않는다 — 정해진 모양만 넘긴다
 function isAction(v: unknown): v is PartyDeviceAction {
-  if (!v || typeof v !== "object") return false;
-  const a = v as Record<string, unknown>;
+  if (!isRecord(v)) return false;
+  const a = v;
   if (a.kind !== "slot" && a.kind !== "preset") return false;
-  return typeof a.index === "number" && Number.isInteger(a.index) && a.index >= 0 && a.index < 6;
+  return isIndexBelow(a.index, PARTY_RULES.total); // 파티 칸은 늘 여섯 (src/party/rules.ts)
 }

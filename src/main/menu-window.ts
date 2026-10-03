@@ -8,11 +8,12 @@
 // 메뉴는 한 번에 하나다. 새로 띄우면 앞의 메뉴를 닫는다
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
 //   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
-import { BrowserWindow, ipcMain, screen, type MenuItemConstructorOptions } from "electron";
+import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import type { MenuChannel } from "../shared/ipc/overlays";
 import { menuView, pickOf } from "./menus.js";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./windows/options.js";
+import { cursorScreen } from "./windows/display.js";
+import { afterLoad, createIpcScope } from "./windows/ipc.js";
+import { createOverlayWindow } from "./windows/options.js";
 
 const CH = {
   show: "menu:show",
@@ -58,46 +59,22 @@ export function menuBounds(): Electron.Rectangle | null {
 
 export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructorOptions[], on: string): void {
   if (current && !current.isDestroyed()) current.close();
-  const at = screen.getCursorScreenPoint();
-  const area = screen.getDisplayNearestPoint(at).workArea;
-  const win = new BrowserWindow({
-    x: at.x,
-    y: at.y,
-    width: 640, // 재기 전 자리 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
-    height: 480,
-    show: false,
-    frame: false,
-    transparent: true,
-    backgroundColor: "#00000000",
-    hasShadow: false,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    icon: windowIcon(),
-    focusable: !opts.inactive,
-    webPreferences: webPreferencesOf(opts.preload),
-  });
-  win.setAlwaysOnTop(true, "pop-up-menu");
+  const { point: at, workArea: area } = cursorScreen();
+  // 재기 전 자리 640 × 480 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
+  const win = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { x: at.x, y: at.y, width: 640, height: 480 }, focusable: !opts.inactive });
   current = win;
+  const scope = createIpcScope((sender) => !win.isDestroyed() && sender === win.webContents);
 
   let done = false;
   const close = (): void => {
     if (done) return;
     done = true;
-    ipcMain.removeListener(CH.size, onSize);
-    ipcMain.removeListener(CH.pick, onPick);
-    ipcMain.removeListener(CH.placed, onPlaced);
+    scope.dispose();
     if (current === win) current = null;
     closedAt = Date.now();
     if (!win.isDestroyed()) win.close();
     opts.onClosed?.();
   };
-  const mine = (e: Electron.IpcMainEvent): boolean => !win.isDestroyed() && e.sender === win.webContents;
-
   const reveal = (): void => {
     if (win.isDestroyed()) return;
     if (opts.inactive) {
@@ -109,8 +86,8 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
   };
   // 그린 크기를 받으면 자리를 정한다 — 오른쪽·아래가 모자라면 커서의 왼쪽·위로 뒤집는다
   // sub — 말풍선의 크기와 메뉴 위 끝에서 잰 자리. 있으면 창을 말풍선 쪽으로 넓히고, 렌더러가 자리를 잡은 뒤에 보인다
-  const onSize = (e: Electron.IpcMainEvent, w: unknown, h: unknown, sub: unknown): void => {
-    if (!mine(e) || typeof w !== "number" || typeof h !== "number") return;
+  const onSize = (w: unknown, h: unknown, sub: unknown): void => {
+    if (typeof w !== "number" || typeof h !== "number") return;
     const menuW = Math.ceil(w);
     const menuH = Math.ceil(h);
     const s = sub && typeof sub === "object" ? (sub as { w?: unknown; h?: unknown; top?: unknown }) : null;
@@ -136,22 +113,16 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
     win.setBounds({ x: (side === "right" ? mx : mx - extra) - SHADOW, y: my - SHADOW, width: menuW + extra + SHADOW * 2, height });
     win.webContents.send(CH.side, side);
   };
-  const onPlaced = (e: Electron.IpcMainEvent): void => {
-    if (mine(e)) reveal();
-  };
-  const onPick = (e: Electron.IpcMainEvent, id: unknown): void => {
-    if (!mine(e)) return;
+  const onPick = (id: unknown): void => {
     close();
     const item = typeof id === "number" ? pickOf(template, id) : undefined;
     if (item?.click && item.enabled !== false) (item.click as () => void)();
   };
-  ipcMain.on(CH.size, onSize);
-  ipcMain.on(CH.pick, onPick);
-  ipcMain.on(CH.placed, onPlaced);
+  scope.on(CH.size, (_e, w, h, sub) => onSize(w, h, sub));
+  scope.on(CH.pick, (_e, id) => onPick(id));
+  scope.on(CH.placed, () => reveal());
   win.on("blur", close);
   win.on("closed", close);
-  win.webContents.once("did-finish-load", () => {
-    if (!win.isDestroyed()) win.webContents.send(CH.show, menuView(template, on));
-  });
+  afterLoad(win, () => win.webContents.send(CH.show, menuView(template, on)));
   void win.loadFile(opts.html).catch(close);
 }
