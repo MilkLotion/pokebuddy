@@ -1,8 +1,8 @@
-// 메가 모습 켜기·끄기와 풀기 — 프리셋에 든 개체만 켠다. 한 프리셋에 메가 모습은 한 마리다 (규칙은 src/dex/mega.ts 머리말)
+// 메가 모습 켜기·끄기와 풀기 — 적용한 프리셋에 든 개체만 켠다. 한 프리셋에 메가 모습은 한 마리다 (규칙은 src/dex/mega.ts 머리말, docs/specs/game.md "메가진화는 적용한 프리셋의 칸에 든 개체만 한다")
 // 모습 표와 메가스톤 조건은 도감(src/dex/mega.ts)이 가진다. 여기는 개체가 어느 프리셋에 있는지를 본다
 import type { DexOptions } from "../dex/data";
 import { megaChoices, megaFormsOf, megaFree, megaOf } from "../dex/mega.js";
-import { allPresets, presetPetIds } from "./presets.js";
+import { activePreset, allPresets, presetPetIds } from "./presets.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -37,7 +37,8 @@ export function setMega(save: SaveV3, petId: string, form: unknown, opts?: DexOp
   if (typeof form !== "string" || !megaChoices(pet, opts).includes(form)) return { ok: false, reason: "bad-form" };
   if (pet.mega.on === form) return { ok: false, reason: "already" };
   const place = presetMatesOf(save, petId);
-  if (!place) return { ok: false, reason: "not-in-party" };
+  // 적용하지 않은 프리셋의 개체는 켜지 못한다 — 박스 개체와 같은 거절이다 (94 항목 9-2-1)
+  if (!place || place.preset !== activePreset(save)) return { ok: false, reason: "not-in-party" };
   const reverted: string[] = [];
   // 제한에서 빠지는 모습은 다른 개체를 풀지 않는다. 다른 개체의 제한 밖 모습도 풀지 않는다
   if (!megaFree(form, opts)) {
