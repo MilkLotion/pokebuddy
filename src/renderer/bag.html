@@ -2,57 +2,19 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
     <title>pokebuddy</title>
+    <link rel="stylesheet" href="styles/tokens.css" />
     <style>
-      /* 글꼴 — Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
-         Galmuri11 은 12·24px, Galmuri14 는 15px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md) */
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11.woff2") format("woff2");
-        font-weight: 400;
-      }
-      @font-face {
-        font-family: "Galmuri11";
-        src: url("../../assets/fonts/Galmuri11-Bold.woff2") format("woff2");
-        font-weight: 700;
-      }
-      @font-face {
-        font-family: "Galmuri9";
-        src: url("../../assets/fonts/Galmuri9.woff2") format("woff2");
-      }
-      :root {
-        --font-body: "Galmuri11", "Malgun Gothic", sans-serif;
-        --font-small: "Galmuri9", "Galmuri11", "Malgun Gothic", sans-serif;
-        font-synthesis: none;
-      }
       /* 가방 기기 — Figma 05 `Bag / Device / Use`·`Sell`·`Evolution` (worklog/records/bag-device/record.md). 상점 기기 창(shop.html)과 같은 틀이다.
          기기의 파랑·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)·상점(호박색)과 가른다 */
       :root {
         --body: #4f78b8;
         --hinge: #34578f;
         --joint: #243f6b;
-        --bezel: #3b2c31;
-        --screen: #f5f3ea;
         --bar: #6a93d0;
-        --stage: #e6e3d5;
-        --paper: #ffffff;
-        --records: #fbfaf6;
         --ink: #3b2c31;
         --muted: #8a8378;
-        --soft: #5a534c;
-        --unknown: #d5d2c6;
-        --inverse: #ffffff;
-        --line: #dde1db;
-        --canvas: #f1f2ee;
-        --primary: #0f766e;
-        --primary-hover: #0a5f56;
-        --disabled: #9ca3af;
-        --danger-bg: #fdecec;
-        --danger-ink: #b91c1c;
-        --success-bg: #e6f6ef;
-        --success-ink: #047857;
-        --accent: #ebf4f1;
         --picked: #dcebe5;
       }
       * {
@@ -302,7 +264,7 @@
         place-items: center;
         color: var(--inverse);
       }
-      /* 그림 — 빈 테두리를 잘라 정수 배로 키운 캔버스 (shop.ts sprite) */
+      /* 그림 — 빈 테두리를 잘라 정수 배로 키운 캔버스 (ui/portrait.ts spriteCanvas) */
       .stage canvas {
         image-rendering: pixelated;
       }
