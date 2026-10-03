@@ -131,7 +131,7 @@ export interface ManageOptions {
   screens?: () => ScreenView[];
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
-  mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/main/mail.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
+  mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/online/mail-inbox.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
   petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/view/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
 }
 

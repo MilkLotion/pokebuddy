@@ -121,7 +121,8 @@ function loadApp() {
     paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
     store: require("../../save/store") as typeof import("../../save/store"),
     empty: (require("../../save/v3") as typeof import("../../save/v3")).empty,
-    createMainMail: (require("../../main/mail") as typeof import("../../main/mail")).createMainMail,
+    createMailInbox: (require("../../online/mail-inbox") as typeof import("../../online/mail-inbox")).createMailInbox,
+    mailScreenOf: (require("../../view/mail") as typeof import("../../view/mail")).mailScreenOf,
     pushMail: manageWindow.pushMail,
   };
 }
@@ -235,7 +236,7 @@ const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
 
 void app.whenReady().then(async () => {
   const file = path.join(dir, "save-v3.json");
-  const { createGame, openManage, paths, store, empty, createMainMail, pushMail } = loadApp();
+  const { createGame, openManage, paths, store, empty, createMailInbox, mailScreenOf, pushMail } = loadApp();
   const seeded = seed(empty, Date.now());
   // --tut <id>=<done|skipped|none> — 튜토리얼 상태를 정해 둔다(여러 번). 새 기능 튜토리얼 화면을 차례로 보려고
   for (const pair of argsAfter("--tut")) {
@@ -333,7 +334,7 @@ void app.whenReady().then(async () => {
     ];
     claims.set(letters[2]!.id, iso(-day));
     const mailFail = argAfter("--mail-fail");
-    const box = createMainMail({
+    const box = createMailInbox({
       rpc: (async (fn: string, args: Record<string, unknown>) => {
         if (fn === "list_mail") return { ok: true, data: letters.map((l) => ({ ...l, claimed_at: claims.get(l.id) ?? null })) };
         if (mailFail) return { ok: false, code: mailFail };
@@ -346,6 +347,7 @@ void app.whenReady().then(async () => {
       read: () => game.read(),
       signedIn: () => hasFlag("--mail-signed-in"),
       onChanged: () => undefined,
+      screen: mailScreenOf,
     });
     box.onScreen((screen) => pushMail(screen));
     mailOpt = { mail: (req: never) => box.act(req) };

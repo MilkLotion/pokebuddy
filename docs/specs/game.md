@@ -1387,7 +1387,7 @@ CLI별 친밀도를 추정하지 않는다. 오늘 날짜의 파티 전체 작�
 - 목록을 읽는 사이 계정이 바뀌면 그 답은 버린다.
 - 목록은 설정창을 열 때와 우편함을 열 때 새로 읽는다. 읽지 못하면 지난 목록을 그대로 보인다.
 
-서버 표와 함수는 `supabase/migrations/20260929100000_mail.sql` 이다. 앱은 `list_mail`·`claim_mail` 만 부른다. 편지는 운영자가 service role 키로 넣는다. 저장에 넣는 명령 `mail.apply` 는 실행기에만 있다. 명령 처리기에는 등록하지 않는다. 설정창과 CLI 는 선물을 만들어 넣지 못한다(`src/main/mail.ts`, `src/mail/gifts.ts`).
+서버 표와 함수는 `supabase/migrations/20260929100000_mail.sql` 이다. 앱은 `list_mail`·`claim_mail` 만 부른다. 편지는 운영자가 service role 키로 넣는다. 저장에 넣는 명령 `mail.apply` 는 실행기에만 있다. 명령 처리기에는 등록하지 않는다. 설정창과 CLI 는 선물을 만들어 넣지 못한다(`src/online/mail-inbox.ts`, `src/mail/gifts.ts`).
 
 ## 8. 저장과 명령
 

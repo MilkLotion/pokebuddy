@@ -3154,7 +3154,7 @@ function accountActions(): HTMLElement | null {
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
 // Figma 05 Screens 섹션 `10 우편함` `932:22859` — 목록 `908:5779` · 편지 로그인 전 `932:22703` · 받기 전 `908:6022` · 받은 뒤(일반 편지) `908:6232`.
-// 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 받기 단추와 상태 글자는 편지 바닥 단추 줄에 둔다. 서버 호출과 저장은 메인이 한다(src/main/mail.ts) — 여기서는 편지 id 만 보낸다
+// 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 받기 단추와 상태 글자는 편지 바닥 단추 줄에 둔다. 서버 호출과 저장은 메인이 한다(src/online/mail-inbox.ts) — 여기서는 편지 id 만 보낸다
 // (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/record.md)
 let mailView: MailScreen | null = null;
 const mailBtn = needEl("open-mail", HTMLButtonElement, "manage");
