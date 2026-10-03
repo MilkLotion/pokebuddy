@@ -42,7 +42,7 @@ import { createStageWindow } from "./stage-window";
 import { langOf, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { syncJumpList } from "./jump-list";
-import { closeMenu, closedWithin, menuOpen } from "./menu-window";
+import { closeMenu, closedWithin, isMenuOpen } from "./menus/menu-window";
 import { createPetMenu } from "./menus/pet-menu";
 import { createTrayMenu } from "./menus/tray-menu";
 import { gainOf } from "../state/settings";
@@ -722,7 +722,7 @@ function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, lif
     tooltip: t("tray.title", { name: displayName() }),
     popup: () => trayMenu.open(),
     open: () => openManageWindow(),
-    menuOpen,
+    isMenuOpen,
     closeMenu,
     closedWithin,
   });

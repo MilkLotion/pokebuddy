@@ -6,7 +6,7 @@
 import { screen } from "electron";
 import { trayMenuOf } from "../../view/menus";
 import type { DisplayState } from "../app/display-state";
-import { closeMenu, menuBounds, menuOpen, popupMenu } from "../menu-window";
+import { closeMenu, menuRectNow, isMenuOpen, openMenu } from "./menu-window";
 import { t } from "../text";
 import { preloadFile, rendererFile } from "../windows/files";
 
@@ -64,7 +64,7 @@ export function createTrayMenu(deps: TrayMenuDeps): TrayMenu {
     open() {
       const inactive = process.platform === "win32";
       inputBase = null;
-      popupMenu(
+      openMenu(
         {
           preload: preloadFile(),
           html: rendererFile("menu.html"),
@@ -94,7 +94,7 @@ export function createTrayMenu(deps: TrayMenuDeps): TrayMenu {
         } else if (late) stopInput();
         return;
       }
-      if (!menuOpen()) return;
+      if (!isMenuOpen()) return;
       if (!inputBase) {
         inputBase = { click: input.click, esc: input.esc };
         return;
@@ -108,8 +108,8 @@ export function createTrayMenu(deps: TrayMenuDeps): TrayMenu {
         return closeMenu();
       }
       // 메뉴 안을 누른 것은 메뉴가 처리한다(항목 고르기). 바깥이면 닫는다 — 테두리에 걸친 점(메뉴가 붙은 아이콘 자리)은 바깥이다
-      const b = menuBounds();
-      if (b && at.x > b.x && at.x < b.x + b.width - 1 && at.y > b.y && at.y < b.y + b.height - 1) return;
+      const b = menuRectNow();
+      if (b && at.x > b.x && at.x < b.x + b.w - 1 && at.y > b.y && at.y < b.y + b.h - 1) return;
       closeMenu();
     },
   };

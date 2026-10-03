@@ -4,10 +4,10 @@ import { Tray, nativeImage, type NativeImage } from "electron";
 export interface TrayOptions {
   icon: string | null; // 공식 앱 로고 PNG 경로
   tooltip: string;
-  // 앱이 그리는 메뉴를 띄운다 (src/main/menu-window.ts). OS 기본 메뉴는 쓰지 않는다 — Windows 기본 메뉴는 왼쪽을 크게 비운다
+  // 앱이 그리는 메뉴를 띄운다 (src/main/menus/menu-window.ts). OS 기본 메뉴는 쓰지 않는다 — Windows 기본 메뉴는 왼쪽을 크게 비운다
   popup: () => void;
   open?: () => void; // 아이콘 더블클릭 — 설정창
-  menuOpen?: () => boolean; // 앱이 그리는 메뉴가 떠 있는가
+  isMenuOpen?: () => boolean; // 앱이 그리는 메뉴가 떠 있는가
   closeMenu?: () => void;
   closedWithin?: (ms: number) => boolean; // 메뉴가 방금 닫혔는가
 }
@@ -47,14 +47,14 @@ export function createTray(opts: TrayOptions): TrayHandle | null {
     // Windows 기본 트레이 아이콘처럼 — 우클릭은 메뉴, 왼쪽 클릭(한 번·더블)은 설정창
     // (2026-09-28 사용자 "윈도우기본앱은 아이콘 좌클릭이 그냥 바로 켜기구나"). 떠 있는 메뉴는 아이콘을 다시 누르면 닫히기만 한다
     const toggledOff = (): boolean => {
-      if (opts.menuOpen?.()) {
+      if (opts.isMenuOpen?.()) {
         opts.closeMenu?.();
         return true;
       }
       return opts.closedWithin?.(REOPEN_BLOCK_MS) ?? false;
     };
     tray.on("click", () => {
-      if (opts.menuOpen?.()) return opts.closeMenu?.();
+      if (opts.isMenuOpen?.()) return opts.closeMenu?.();
       // 메뉴를 닫은 그 클릭의 신호가 뒤늦게(0.1~0.2초) 온다 — 그 신호로는 설정창을 열지 않는다
       if (Date.now() < holdUntil || opts.closedWithin?.(SAME_CLICK_MS)) return;
       opts.open?.();

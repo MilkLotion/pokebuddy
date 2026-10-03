@@ -9,11 +9,12 @@
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
 //   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
-import type { MenuChannel } from "../shared/ipc/overlays";
-import { menuView, pickOf } from "./menus.js";
-import { cursorScreen } from "./windows/display.js";
-import { afterLoad, createIpcScope } from "./windows/ipc.js";
-import { createOverlayWindow } from "./windows/options.js";
+import type { Rect } from "../../shared/geometry";
+import type { MenuChannel } from "../../shared/ipc/overlays";
+import { menuView, pickOf } from "../menus.js";
+import { cursorScreen } from "../windows/display.js";
+import { afterLoad, createIpcScope } from "../windows/ipc.js";
+import { createOverlayWindow } from "../windows/options.js";
 
 const CH = {
   show: "menu:show",
@@ -39,7 +40,7 @@ export interface MenuWindowOptions {
 let current: BrowserWindow | null = null;
 let closedAt = 0; // 마지막으로 닫힌 시각 — 아이콘을 다시 눌러 닫은 것인지 가른다
 
-export const menuOpen = (): boolean => current != null && !current.isDestroyed();
+export const isMenuOpen = (): boolean => current != null && !current.isDestroyed();
 
 // 떠 있는 메뉴를 닫는다 — inactive 메뉴의 바깥 클릭·Esc·아이콘 다시 누르기
 export function closeMenu(): void {
@@ -51,13 +52,13 @@ export const closedWithin = (ms: number): boolean => Date.now() - closedAt < ms;
 
 // 떠 있는 메뉴가 보이는 자리(화면 DIP) — 창에서 그림자 여백을 뺀다. 메뉴는 모서리가 커서(트레이 아이콘)에 붙어 뜨므로
 // 여백까지 넣으면 아이콘을 다시 누른 클릭이 메뉴 안으로 잡힌다
-export function menuBounds(): Electron.Rectangle | null {
-  if (!menuOpen()) return null;
+export function menuRectNow(): Rect | null {
+  if (!isMenuOpen()) return null;
   const b = current!.getBounds();
-  return { x: b.x + SHADOW, y: b.y + SHADOW, width: b.width - SHADOW * 2, height: b.height - SHADOW * 2 };
+  return { x: b.x + SHADOW, y: b.y + SHADOW, w: b.width - SHADOW * 2, h: b.height - SHADOW * 2 };
 }
 
-export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructorOptions[], on: string): void {
+export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorOptions[], on: string): void {
   if (current && !current.isDestroyed()) current.close();
   const { point: at, workArea: area } = cursorScreen();
   // 재기 전 자리 640 × 480 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다

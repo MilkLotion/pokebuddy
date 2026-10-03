@@ -8,7 +8,7 @@
 import type { BrowserWindow } from "electron";
 import type { ScreenOverlayInit, ScreenView } from "../../shared/model/overlays";
 import type { ScreensChannel } from "../../shared/ipc/overlays";
-import { resolveScreen, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "../layout";
+import { findScreen, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "../layout";
 import { askWindow, singleFlight } from "./answer-window";
 import { afterLoad } from "./ipc";
 import { createOverlayWindow } from "./options";
@@ -21,7 +21,7 @@ const CH = {
 
 // 설정의 한 화면 목록 — chosen 은 저장된 고른 화면(없으면 주 화면)
 export function screenViews(screens: readonly ScreenInfo[], chosen: ScreenRef | null): ScreenView[] {
-  const now = resolveScreen(chosen, screens);
+  const now = findScreen(chosen, screens);
   return screens.map((s, i) => ({ number: i + 1, primary: s.primary, w: s.bounds.w, h: s.bounds.h, current: s.id === now?.id, ref: screenRefOfInfo(s) }));
 }
 

@@ -57,7 +57,7 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 - 트레이 아이콘은 Windows 기본 앱처럼 동작한다. 왼쪽 클릭(한 번·더블)은 설정창을 열고, 오른쪽 클릭은 메뉴를 연다. 메뉴가 떠 있을 때 아이콘을 누르면 메뉴만 닫힌다. 메뉴 밖을 누르거나 Esc 를 눌러도 닫힌다.
 - Windows 작업 표시줄 아이콘을 우클릭하면 점프 목록에 파티 포켓몬마다 `이름 · Lv.N` 묶음과 밥 주기·놀아주기가 보인다(아이콘은 `assets/items/jump-feed.ico`·`jump-play.ico`). 누르면 앱이 `--pokebuddy-care=feed:<개체>` 인자로 다시 실행되고, 떠 있는 동반자가 그 명령을 돌린다(`src/main/jump-list.ts`). 파티·레벨이 바뀌면 목록을 다시 만든다. 앱 이름·작업 표시줄에 고정·창 닫기 줄은 Windows 가 붙인다.
 - Windows 에서 트레이 메뉴는 포커스를 가져오지 않는다. 가져오면 숨겨진 아이콘 창이 닫히기 때문이다. 바깥 클릭·Esc 는 창 추적 헬퍼(`helpers/winbounds.ps1` `-Serve`)가 15ms 마다 보는 마우스 버튼·Esc 상태로 알아챈다(`src/main/app.ts` `onTrayInput`).
-- 메뉴는 OS 기본 메뉴가 아니라 앱이 그린다(`src/main/menu-window.ts`). 방향키·Enter·Esc 로 조작하고 바깥을 누르면 닫힌다.
+- 메뉴는 OS 기본 메뉴가 아니라 앱이 그린다(`src/main/menus/menu-window.ts`). 방향키·Enter·Esc 로 조작하고 바깥을 누르면 닫힌다.
 - 마리마다 우클릭 메뉴가 있다. 트레이와 같은 앱이 그리는 메뉴다. 그림 위에서만 열린다.
 - 우클릭 메뉴 구성은 다음과 같다 — 이름(성격을 끈 동안은 이름만, `src/view/menus.ts` `petLine`)과 그 아래 상태(누를 수 없는 두 줄), 밥 주기·놀아주기(못 하면 흐리게만 보인다. 이유는 적지 않는다), 볼에 넣기(그 포켓몬만), 상세 보기(설정창을 열고 그 포켓몬을 파티 상세 기기 창에 띄운다), 모습 바꾸기(공유 계열 개체만. 누르면 메뉴 옆에 모습 말풍선이 붙어 뜬다), 팔기(설정창에 확인 창을 띄운다. 팔 수 없는 개체는 흐리다). 설정창의 파티 카드와 박스 칸을 우클릭해도 같은 메뉴가 뜬다. 설정창의 메뉴에는 상세 보기가 없다. 카드와 칸을 좌클릭하면 파티 상세 기기 창이 열린다(2026-10-02 사용자 결정). 박스 개체의 메뉴에는 옮기기(설정창의 박스 탭에서 그 개체를 든다)가 더 있다. 옮기기는 이름·상태 바로 아래에 있고 그 아래에 구분선이 있다.
 - 우클릭 메뉴에는 그 포켓몬 관련 기능만 둔다. 앱 전체 조작인 `잠시 숨기기` 와 `종료` 는 트레이 메뉴에만 있다. 숨긴 동안에는 우클릭할 포켓몬도 보이지 않는다.
@@ -238,7 +238,7 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 | 폴더 | 하는 일 |
 |---|---|
-| `src/main/` | 메인 프로세스 — `app.ts`(기동 · 종료 배선) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `art.ts`(PMD 그림) · `overworld-art.ts`(걷기 대체 그림) · `portrait-art.ts`(초상 대체 그림) · `png.ts`(PNG 해석) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `menus.ts` · `menu-window.ts` · `tray.ts` · `picker-window.ts`(첫 실행 선택 창) · `manage-window.ts`(설정창) · `region-window.ts`(놀이공간 영역 그리기) · `paths.ts` · `text.ts` · `preload.ts` 등 |
+| `src/main/` | 메인 프로세스 — `app.ts`(진입점 · 배선) · `app/`(기동 단계 · 끄기 순서 · 멈춤 · 표시 상태 · 틱 · 전원 · 단일 인스턴스) · `windows/`(창 도우미 · 알림 · 배너 · 영역 그리기 · 화면 고르기 · 첫 실행 선택 · 기기 창 틀) · `menus/`(포켓몬 메뉴 · 트레이 메뉴 · 앱이 그리는 메뉴 창) · `stage/`(울음소리 · 아이콘 말풍선 · 바탕화면 코치) · `art/`(초상 · 울음소리 · PMD 그림 · 걷기·초상 대체 그림 · 받기 캐시) · `services/`(온라인 · 교환 · 우편 · 업데이트 연결) · `update/`(업데이트 엔진) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `tray.ts` · `manage-window.ts`(설정창) · `preload.ts` 등. PNG 해석은 `src/platform/png.ts` |
 | `src/follow/` | 어느 창 · 어느 세션을 따를지 — `state.ts`(훅 상태 기록 · 판정) · `front.ts`(맨 앞 창 · 터미널 호스트) · `winbounds.ts` · `line-helper.ts`(창 추적 헬퍼). `pokebuddy status` 가 같은 코드를 부른다 |
 | `src/motion/` | 마리 하나의 움직임 — `brain.ts` · `pet-motion.ts` · `rules.ts` · `params.ts` |
 | `src/renderer/` | 무대 `stage.html` · `stage.ts` · `sprites.ts` · `hit.ts` · `pointer.ts`, 선택 창 `picker.html` · `picker.ts`, 설정창 `manage.html` · `manage.ts`, 메뉴 `menu.html` · `menu.ts`, 놀이공간 영역 `region.html` · `region.ts` 등 |

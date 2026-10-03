@@ -1,4 +1,4 @@
-// 앱이 그리는 메뉴 — 메인이 준 항목을 그리고 고른 항목의 번호를 돌려준다 (src/main/menu-window.ts).
+// 앱이 그리는 메뉴 — 메인이 준 항목을 그리고 고른 항목의 번호를 돌려준다 (src/main/menus/menu-window.ts).
 // 방향키로 가리키고 Enter 로 고른다. Esc 는 닫기만 한다. 가리킨 항목은 옅은 배경이다 (Figma `Menu Item` Hover)
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)은 눌러도 메뉴가 닫히지 않는다 — 메뉴 옆에 말풍선이 붙어 뜬다.
 //   마우스를 올려서는 뜨지 않는다 (2026-10-02 사용자 "클릭해야 나오게 하자"). 다시 누르거나 Esc·←(→) 로 말풍선만 닫는다
@@ -12,7 +12,7 @@ const menu = needEl("menu", HTMLElement, "menu");
 const bubble = needEl("bubble", HTMLElement, "menu");
 const api = window.pokebuddyMenu;
 
-const SUB_GAP = 8; // 메뉴와 말풍선 사이 — src/main/menu-window.ts SUB_GAP 과 같다
+const SUB_GAP = 8; // 메뉴와 말풍선 사이 — src/main/menus/menu-window.ts SUB_GAP 과 같다
 const SUB_DROP = 5; // 말풍선 아래 끝은 그 항목 아래 끝보다 이만큼 아래 — 메뉴 안쪽 여백 4 + 테두리 1
 const TAIL = 10; // 꼬리 한 변 — menu.html `.tail`
 
