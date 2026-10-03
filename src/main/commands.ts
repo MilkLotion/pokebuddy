@@ -11,7 +11,7 @@ import { sendToWriter, type CommandServer } from "../save/command-channel";
 import type { Command, CommandResult } from "../shared/command";
 import type { Reason } from "../shared/names/reasons";
 import type { Size } from "../shared/geometry";
-import type { SaveParty } from "../save/save-party";
+import type { PartyRequest, SaveParty } from "../save/save-party";
 import { partyPetsOf } from "../view/party-pet";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
@@ -126,11 +126,14 @@ export function createCommands(ctx: CommandContext): Commands {
     return { ok: true, reason: "ok", key, value };
   });
 
+  // 받은 요청의 식별자와 보낸 곳 — 파티 저장이 그대로 넘긴다. 설정창이 다시 보낸 요청이 같은 reqId 로 한 번만 실행된다 (94 문서 9-2-3)
+  const partyRequest = (c: Command): PartyRequest => ({ ...(isObj(c.args) && typeof c.args.reqId === "string" && c.args.reqId ? { reqId: c.args.reqId } : {}), from: c.from });
+
   // 숨기기·보이기도 다른 개체 명령과 같이 target 이 없으면 args.petId 를 본다 (94 문서 4-12, X4)
   const showHide = (shown: boolean) => async (c: Command): Promise<CommandResult> => {
     const id = petTarget(c);
     if (!id) return { ok: false, reason: "no-pet" };
-    return ctx.party.setShown(id, shown);
+    return ctx.party.setShown(id, shown, partyRequest(c));
   };
   dispatcher.register("party.show", showHide(true));
   dispatcher.register("party.hide", showHide(false));
@@ -145,7 +148,7 @@ export function createCommands(ctx: CommandContext): Commands {
     const size = isObj(c.args) ? c.args.size : undefined;
     if (size !== undefined) {
       if (typeof size !== "number") return { ok: false, reason: "bad-value", id };
-      return ctx.party.setSize(id, size);
+      return ctx.party.setSize(id, size, partyRequest(c));
     }
     const home = isObj(c.args) ? c.args.home : undefined;
     if (!inParty) return { ok: false, reason: "no-pet", id };
@@ -154,7 +157,7 @@ export function createCommands(ctx: CommandContext): Commands {
     if (typeof dx !== "number" || typeof dy !== "number" || !Number.isFinite(dx) || !Number.isFinite(dy)) return { ok: false, reason: "bad-value", id };
     // 사는 화면 — 모든 화면 방식에서 끌어다 놓았을 때만 온다. 값 검사는 실행기(src/party/home.ts)가 한다
     const screen = isObj(c.args) && c.args.screen !== undefined ? c.args.screen : undefined;
-    return ctx.party.setHome(id, { dx, dy }, screen);
+    return ctx.party.setHome(id, { dx, dy }, screen, partyRequest(c));
   });
 
   // 돌봄 — 저장은 실행기가 바꾸고 무대는 반응만 보인다

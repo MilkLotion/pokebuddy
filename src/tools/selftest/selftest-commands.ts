@@ -122,6 +122,19 @@ async function main(): Promise<void> {
     assert.notEqual(showByArgs.reason, "no-pet", "party.show 가 args.petId 를 받는다");
     assert.equal((await commands.dispatcher.dispatch({ cmd: "party.show", from: "cli" })).reason, "no-pet", "대상이 없으면 no-pet");
 
+    // 파티 명령도 받은 요청 식별자를 그대로 넘긴다 — 설정창이 다시 보낸 요청은 재생된다 (94 문서 9-2-3, docs/specs/game.md "요청 ID로 중복을 막는다")
+    for (const c of [
+      { cmd: "party.hide", target: "p1", args: { reqId: "hide-same" } },
+      { cmd: "party.show", target: "p1", args: { reqId: "show-same" } },
+      { cmd: "pet.set", target: "p1", args: { size: 2, reqId: "size-same" } },
+      { cmd: "pet.set", target: "p1", args: { home: { dx: -3, dy: 0 }, reqId: "home-same" } },
+    ] as const) {
+      const first = await commands.dispatcher.dispatch({ ...c, from: "settings" });
+      const second = await commands.dispatcher.dispatch({ ...c, from: "settings" });
+      assert.ok(first.ok && !first.replayed, `${c.cmd} 첫 요청 (${first.reason})`);
+      assert.equal(second.replayed, true, `${c.cmd} 같은 reqId 는 재생`);
+    }
+
     // 저장에 닿지 못하면 실패로 답한다
     const beforeFailureChanges = changes;
     const diskBefore = fs.readFileSync(paths.save, "utf8");

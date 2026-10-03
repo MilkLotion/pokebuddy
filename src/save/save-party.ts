@@ -27,13 +27,20 @@ export interface SavePartyOptions {
   log?: ((o: Record<string, unknown>) => void) | null;
 }
 
+// 부르는 쪽이 받은 요청의 식별자와 보낸 곳 — 설정창은 답을 못 받으면 같은 reqId 로 다시 보낸다(docs/specs/game.md "요청 ID로 중복을 막는다").
+// 받은 것이 있으면 그대로 실행기·writer 에 넘기고, 없으면(무대 끌기·메뉴) 여기서 만든다
+export interface PartyRequest {
+  reqId?: string;
+  from?: CommandSource;
+}
+
 export interface SaveParty {
   isWriter(): boolean;
   needsStarter(): boolean;
   begin(species: string): boolean;
-  setHome(id: string, home: HomePoint, screen?: unknown): Promise<CommandResult>; // 저장하지 못하면 그 이유를 돌려준다. screen 은 사는 화면(모든 화면 방식)
-  setSize(id: string, size: number): Promise<CommandResult>; // 그림 크기 단계 번호. 규칙은 src/party/home.ts · src/save/rules.ts SIZE_STEPS
-  setShown(id: string, shown: boolean): Promise<CommandResult>;
+  setHome(id: string, home: HomePoint, screen?: unknown, req?: PartyRequest): Promise<CommandResult>; // 저장하지 못하면 그 이유를 돌려준다. screen 은 사는 화면(모든 화면 방식)
+  setSize(id: string, size: number, req?: PartyRequest): Promise<CommandResult>; // 그림 크기 단계 번호. 규칙은 src/party/home.ts · src/save/rules.ts SIZE_STEPS
+  setShown(id: string, shown: boolean, req?: PartyRequest): Promise<CommandResult>;
   save(): SaveV3 | null;
   refresh(): void; // 명령을 보낸 뒤 바로 다시 읽는다 — 감시를 기다리지 않는다
   onChange(cb: () => void): () => void;
@@ -46,9 +53,11 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
   const now = opts.now ?? Date.now;
   const sw = createSaveWatch({ paths, ...(opts.pid !== undefined ? { pid: opts.pid } : {}), log: opts.log ?? null });
 
-  // reader 의 요청 — writer 가 처리해 파일에 쓰면 감시가 읽어 온다
-  const ask = (cmd: "pet.set" | "party.show" | "party.hide", target: string, args?: Record<string, unknown>): Promise<CommandResult> =>
-    sendToWriter(paths.mailbox, { cmd, target, ...(args ? { args } : {}), from: "pet" });
+  // reader 의 요청 — writer 가 처리해 파일에 쓰면 감시가 읽어 온다. 받은 reqId·from 은 그대로 싣는다
+  const ask = (cmd: "pet.set" | "party.show" | "party.hide", target: string, args: Record<string, unknown>, req: PartyRequest | undefined): Promise<CommandResult> => {
+    const all = req?.reqId ? { ...args, reqId: req.reqId } : args;
+    return sendToWriter(paths.mailbox, { cmd, target, ...(Object.keys(all).length ? { args: all } : {}), from: req?.from ?? "pet" });
+  };
 
   return {
     isWriter: sw.isWriter,
@@ -64,22 +73,22 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
       sw.refresh();
       return r.ok;
     },
-    async setHome(id, home, screen) {
+    async setHome(id, home, screen, req) {
       const extra = screen !== undefined ? { screen } : {};
-      if (!sw.holdsRole()) return ask("pet.set", id, { home, ...extra });
-      const r = send({ cmd: "pet.set", target: id, args: { home, ...extra, reqId: `home:${id}:${now()}` } }, "pet");
+      if (!sw.holdsRole()) return ask("pet.set", id, { home, ...extra }, req);
+      const r = send({ cmd: "pet.set", target: id, args: { home, ...extra, reqId: req?.reqId ?? `home:${id}:${now()}` } }, req?.from ?? "pet");
       sw.refresh();
       return r;
     },
-    async setSize(id, size) {
-      if (!sw.holdsRole()) return ask("pet.set", id, { size });
-      const r = send({ cmd: "pet.set", target: id, args: { size, reqId: `size:${id}:${now()}` } }, "menu");
+    async setSize(id, size, req) {
+      if (!sw.holdsRole()) return ask("pet.set", id, { size }, req);
+      const r = send({ cmd: "pet.set", target: id, args: { size, reqId: req?.reqId ?? `size:${id}:${now()}` } }, req?.from ?? "menu");
       sw.refresh();
       return r;
     },
-    async setShown(id, shown) {
-      if (!sw.holdsRole()) return ask(shown ? "party.show" : "party.hide", id);
-      const r = send({ cmd: shown ? "party.show" : "party.hide", target: id, args: { reqId: `shown:${id}:${now()}` } }, "menu");
+    async setShown(id, shown, req) {
+      if (!sw.holdsRole()) return ask(shown ? "party.show" : "party.hide", id, {}, req);
+      const r = send({ cmd: shown ? "party.show" : "party.hide", target: id, args: { reqId: req?.reqId ?? `shown:${id}:${now()}` } }, req?.from ?? "menu");
       sw.refresh();
       return r;
     },
