@@ -18,6 +18,7 @@
 import { randomUUID } from "node:crypto";
 import { adoptAnonymous } from "./handoff.js";
 import { cloudCodeOf as codeOf } from "./codes.js";
+import type { CloudCode, CloudErrorCode } from "../shared/names/online-codes.js";
 import { callRpc, isUnreachable, messageOf, readFunctionError, withTimeout } from "./server-call.js";
 import { ONLINE_TIMING } from "./timing.js";
 import {
@@ -38,8 +39,9 @@ export function createCloud(o: CloudOptions): Cloud {
   let state: CloudSyncState = normalizeCloudState(o.io.loadState()) ?? freshCloudState(randomUUID());
   let status: CloudStatus = "off";
   let busy = false;
-  let error: string | null = null;
-  let held: string | null = null; // 올리기를 막은 이유 — CLOUD_OWNER_OTHER · CLOUD_BAD_SAVE · CLOUD_PET_TRADED_OUT
+  let error: CloudErrorCode | null = null;
+  let errorDetail: string | null = null; // error 가 UNKNOWN 일 때 서버가 준 원래 코드
+  let held: CloudErrorCode | null = null; // 올리기를 막은 이유 — CLOUD_OWNER_OTHER · CLOUD_BAD_SAVE · CLOUD_PET_TRADED_OUT
   let heldSeq = 0; // CLOUD_PET_TRADED_OUT 로 막을 때의 seq — 로컬 저장이 바뀌면 한 번 다시 올린다
   let other: OtherDevice | null = null;
   let userId: string | null = null;
@@ -67,11 +69,13 @@ export function createCloud(o: CloudOptions): Cloud {
   let unsubscribe: (() => void) | null = null;
 
   const persist = (): void => o.io.saveState(state);
-  const view = (): CloudView => ({ status, lastSavedAt: state.lastSavedAt, busy, error: held ?? error, other });
+  const view = (): CloudView => ({ status, lastSavedAt: state.lastSavedAt, busy, error: held ?? error, errorDetail: held ? null : errorDetail, other });
   const emit = (): void => o.onView(view());
-  const set = (next: CloudStatus, err: string | null = error): void => {
+  // err 를 넘기지 않으면 오류와 그 detail 을 그대로 둔다. 새 오류면 detail 도 새로 받는다
+  const set = (next: CloudStatus, err: CloudErrorCode | null = error, detail: string | null = err === error ? errorDetail : null): void => {
     status = next;
     error = err;
+    errorDetail = detail;
     emit();
   };
   const clearUpload = (): void => {
@@ -95,12 +99,12 @@ export function createCloud(o: CloudOptions): Cloud {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
   };
-  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: string }> =>
-    callRpc<T, string>(o.client, fn, args, (e) => ({ code: codeOf(e) }));
+  const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: CloudCode; detail?: string }> =>
+    callRpc<T, CloudCode>(o.client, fn, args, codeOf);
   // 올리기 — Edge Function upload-save 를 거친다(서버 검증 P4a, worklog/records/cloud-authority/record.md "P4 서버 검증").
   // 답은 RPC 와 같은 모양으로 바꾼다. 오류 본문 { error: "CLOUD_…" } 의 코드를 쓴다.
   // 502·503·504·전송 실패는 NETWORK(오프라인, 같은 키로 다시 시도). 그 밖(토큰 무효 AUTH_TOKEN·SERVER_ERROR)은 UNKNOWN — 계정 분실로도 오프라인으로도 보지 않는다
-  const sendSave = async (a: { device: string; baseRev: number; save: Record<string, unknown>; op: string }): Promise<{ ok: true; data: number } | { ok: false; code: string }> => {
+  const sendSave = async (a: { device: string; baseRev: number; save: Record<string, unknown>; op: string }): Promise<{ ok: true; data: number } | { ok: false; code: CloudCode; detail?: string }> => {
     try {
       const { data, error: e } = await o.client.functions.invoke("upload-save", {
         body: { device: a.device, baseRev: a.baseRev, save: a.save, saveV: typeof a.save.v === "number" ? a.save.v : 3, appVersion: o.appVersion, op: a.op },
@@ -108,16 +112,16 @@ export function createCloud(o: CloudOptions): Cloud {
       if (e) {
         if ((e as { context?: unknown }).context instanceof Response) {
           const f = await readFunctionError(e);
-          if (f.bodyCode?.startsWith("CLOUD_")) return { ok: false, code: f.bodyCode };
+          if (f.bodyCode?.startsWith("CLOUD_")) return { ok: false, ...codeOf({ message: f.bodyCode }) };
           return { ok: false, code: isUnreachable(f) ? "NETWORK" : "UNKNOWN" };
         }
         const name = (e as { name?: unknown }).name;
-        return { ok: false, code: name === "FunctionsFetchError" || name === "FunctionsRelayError" ? "NETWORK" : codeOf(e) };
+        return name === "FunctionsFetchError" || name === "FunctionsRelayError" ? { ok: false, code: "NETWORK" } : { ok: false, ...codeOf(e) };
       }
       const rev = (data as { rev?: unknown } | null)?.rev;
       return typeof rev === "number" ? { ok: true, data: rev } : { ok: false, code: "UNKNOWN" };
     } catch (e) {
-      return { ok: false, code: codeOf({ message: messageOf(e) }) };
+      return { ok: false, ...codeOf({ message: messageOf(e) }) };
     }
   };
   const otherOf = (label: string | null | undefined, seen: string | null | undefined): OtherDevice | null =>
@@ -150,14 +154,14 @@ export function createCloud(o: CloudOptions): Cloud {
     scheduleRetry();
   };
 
-  const block = (code: string): void => {
+  const block = (code: CloudErrorCode): void => {
     clearTimers();
     busy = false;
     set("blocked", code);
     o.onHalt("blocked", { other, code });
   };
 
-  const goOffline = (code: string): void => {
+  const goOffline = (code: CloudErrorCode, detail: string | null = null): void => {
     if (state.accountHeld) {
       accountHeld(); // 정지된 계정 — 서버에 닿지 못해도 풀렸는지 모르므로 멈춘다
       return;
@@ -165,7 +169,7 @@ export function createCloud(o: CloudOptions): Cloud {
     clearUpload();
     clearBeat();
     busy = false;
-    set("offline", code);
+    set("offline", code, detail);
     scheduleRetry();
   };
 
@@ -310,7 +314,7 @@ export function createCloud(o: CloudOptions): Cloud {
       await settleTradedOut(gen, mark); // 교환으로 내보낸 개체가 남았다 — 서버 저장을 받을지 본다
       return false;
     }
-    if (!failed(res.code)) set(status, res.code);
+    if (!failed(res.code)) set(status, res.code, res.detail ?? null);
     return false;
   };
 
@@ -360,7 +364,7 @@ export function createCloud(o: CloudOptions): Cloud {
       return;
     }
     tradedOut = false;
-    if (!failed(probe.code)) set(status, probe.code);
+    if (!failed(probe.code)) set(status, probe.code, probe.detail ?? null);
   };
 
   // 올리기 타이머 — 더 이른 예약이 있으면 그것을 둔다
@@ -382,7 +386,7 @@ export function createCloud(o: CloudOptions): Cloud {
   const download = async (): Promise<{ save: Record<string, unknown> | null; rev: number } | "failed"> => {
     const res = await rpc<{ save: Record<string, unknown> | null; rev: number | string }[]>("download_save", { p_device: state.deviceId });
     if (!res.ok) {
-      if (!failed(res.code)) set(status, res.code);
+      if (!failed(res.code)) set(status, res.code, res.detail ?? null);
       return "failed";
     }
     const row = res.data[0];
@@ -485,7 +489,7 @@ export function createCloud(o: CloudOptions): Cloud {
     const r = await touch("active");
     if (gen !== generation) return;
     if (!r.ok) {
-      if (!failed(r.code)) goOffline(r.code);
+      if (!failed(r.code)) goOffline(r.code, r.detail ?? null);
       return;
     }
     if (!r.data[0]?.active) {
@@ -533,7 +537,7 @@ export function createCloud(o: CloudOptions): Cloud {
     }
     // 망 오류·익명 계정의 열린 교환 — 티켓을 두고 다시 연결할 때 다시 시도한다
     if (r.code === "NETWORK" || r.code === "UNKNOWN") mode = "late";
-    goOffline(r.code);
+    goOffline(r.code, r.detail ?? null);
     return false;
   };
 
@@ -554,10 +558,10 @@ export function createCloud(o: CloudOptions): Cloud {
     if (!r.ok) {
       if (r.code === "NETWORK" || r.code === "UNKNOWN") {
         mode = "late"; // 첫 연결이 실패했다 — 닿을 때 활성 PC 가 온라인이면 이 PC 가 물러난다(F3, D20)
-        goOffline(r.code);
+        goOffline(r.code, r.detail ?? null);
       } else if (!failed(r.code)) {
         clearTimers();
-        set("off", r.code);
+        set("off", r.code, r.detail ?? null);
       }
       return;
     }
@@ -807,6 +811,7 @@ export function createCloud(o: CloudOptions): Cloud {
     stop(false);
     userId = null;
     error = null;
+    errorDetail = null;
     state = freshCloudState(state.deviceId);
     persist();
     emit();

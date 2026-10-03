@@ -62,7 +62,8 @@ export interface CloudView {
   //   CLOUD_OWNER_OTHER  로컬 저장이 다른 계정 것이고 이 계정 서버 저장이 없다 — 올리지 않는다(10절 Q1)
   //   CLOUD_BAD_SAVE     받은 서버 저장을 읽지 못했다 — 올리지 않는다
   //   CLOUD_PET_TRADED_OUT 서버 저장을 받은 뒤에도 교환으로 내보낸 개체가 남아 거부됐다 — 올리지 않는다
-  error: CloudErrorCode | (string & {}) | null; // 목록 밖 CLOUD_* 도 그대로 둔다 (src/online/codes.ts cloudCodeOf)
+  error: CloudErrorCode | null;
+  errorDetail?: string | null; // error 가 UNKNOWN 일 때 서버가 준 원래 코드(목록 밖 CLOUD_*) — 화면이 괄호에 보인다 (src/online/codes.ts cloudCodeOf)
   other: OtherDevice | null; // confirm·blocked·superseded 일 때 상대 PC
 }
 

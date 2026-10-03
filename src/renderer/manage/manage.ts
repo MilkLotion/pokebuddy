@@ -2783,7 +2783,7 @@ let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
 const saveIndicatorEl = needEl("save-indicator", HTMLElement, "manage");
 
-const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : failTextOf(code, "account").text);
+const acctErrorText = (code: string | null, detail?: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : failTextOf(code, "account", "ko", detail ?? undefined).text);
 
 // 마지막 저장 시각 — "3분 전"처럼 짧게
 function ago(at: number | null): string {
@@ -2818,7 +2818,7 @@ function cloudText(c: AccountScreen["cloud"]): { text: string; dot: "ok" | "idle
 // 저장 줄 글자 — 상태 글자와, 상태가 말하지 않는 오류. 로그인 뒤·익명 계정 탭이 같이 쓴다
 function saveLine(c: AccountScreen["cloud"]): string {
   const text = cloudText(c)?.text ?? "";
-  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error) : "";
+  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error, c.errorDetail) : "";
   return err ? (text ? `${text} · ${err}` : err) : text;
 }
 
