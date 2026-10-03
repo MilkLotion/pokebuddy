@@ -1,4 +1,4 @@
-// src/follow 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-follow.js (npm run selftest 가 차례로 돈다)
+// src/terminal 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-follow.js (npm run selftest 가 차례로 돈다)
 //
 // 테스트 프레임워크 없이 assert 만. 파일은 임시 폴더에서만 —
 // 사용자의 ~/.claude/pokebuddy/ 는 건드리지 않는다. 헬퍼는 node 스크립트로 흉내 낸다 (빈 줄마다 한 줄 답).
@@ -7,13 +7,13 @@ import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import * as front from "../../follow/front";
-import { createLineHelper } from "../../follow/line-helper";
-import * as state from "../../follow/state";
+import * as front from "../../terminal/front";
+import { createLineHelper } from "../../terminal/line-helper";
+import * as state from "../../terminal/state";
 import { readHookRecords } from "../../agents/hook-records";
 import { isPidAlive } from "../../platform/pid";
-import type { HelperWindow, StateRecord } from "../../follow/types";
-import * as winbounds from "../../follow/winbounds";
+import type { HelperWindow, StateRecord } from "../../terminal/types";
+import * as winbounds from "../../terminal/winbounds";
 import { makeTmp } from "../harness/tmp-dir";
 import { sleep } from "../harness/wait";
 import { okCounter, printLine as say } from "../harness/report";

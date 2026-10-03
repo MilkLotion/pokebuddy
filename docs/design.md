@@ -162,7 +162,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 |---|---|
 | `src/main/` | 기동, 창, 파티, 메뉴, 명령 등록, 설정창, 종료 |
 | `src/renderer/` | 포켓몬 표시, 스타터 선택 화면, 설정창 |
-| `src/follow/`, `src/motion/` | 창 추적과 마리별 움직임 |
+| `src/terminal/`, `src/motion/` | 창 추적과 마리별 움직임 |
 | `src/state/` | 시간 적용(만복도·친밀도·포인트·버프·알), 돌봄, 설정 |
 | `src/dex/`, `data/` | 성격, 종 프로필, 진화, 해금 규칙 |
 | `src/party/`, `src/box/`, `src/egg/`, `src/bag/`, `src/achievement/`, `src/tutorial/` | 개체·파티 칸·박스·알·가방·업적·튜토리얼 규칙 |

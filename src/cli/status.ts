@@ -6,8 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { hookInstalled } from "../agents/hooks";
 import { dexPath, suggestSlugs } from "../dex/dex-number";
-import { frontWindow, hostOf } from "../follow/front";
-import { agentStateOf, stateFor } from "../follow/state";
+import { frontWindow, hostOf } from "../terminal/front";
+import { agentStateOf, stateFor } from "../terminal/state";
 import { readHookRecords } from "../agents/hook-records";
 import { readLastError } from "../platform/last-error";
 import { PATHS } from "../platform/paths";
@@ -46,7 +46,7 @@ export function runStatus(petArg?: string): void {
 
   const records = readHookRecords(PATHS.state);
 
-  // 맨 앞 창과 그 창이 터미널 호스트인지 — 동반자와 같은 판정 (follow/front hostOf)
+  // 맨 앞 창과 그 창이 터미널 호스트인지 — 동반자와 같은 판정 (terminal/front hostOf)
   try {
     const [cmd, args]: [string, string[]] =
       process.platform === "win32"

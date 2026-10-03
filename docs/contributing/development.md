@@ -21,7 +21,7 @@ bin/pokebuddy setup      # Windows cmd 는 bin\pokebuddy.cmd setup
 npm start                # 빌드한 뒤 동반자를 띄운다
 ```
 
-앱은 빌드 산출물 `dist/` 를 부른다. Electron 은 `dist/main/app.js`(`package.json` 의 `main`)를 연다. 명령(`cli/*.js`)은 `dist/follow/*.js` 를 부른다.
+앱은 빌드 산출물 `dist/` 를 부른다. Electron 은 `dist/main/app.js`(`package.json` 의 `main`)를 연다. 명령(`cli/*.js`)은 `dist/terminal/*.js` 를 부른다.
 `dist/` 는 저장소에 없다. `npm install` 을 건너뛰었거나 `src/` 를 고쳤으면 `npm run build` 를 먼저 한다.
 빌드 전에 `companion` · `status` · `game` · `trade` 를 치면 `bin/pokebuddy` 가 그렇게 안내하고 멈춘다.
 `npm start` 로 띄운 앱도 동반자다. 이 앱은 `companion.lock` 을 스스로 만든다. 그래서 `pokebuddy companion stop` 으로 내릴 수 있다.
@@ -221,7 +221,7 @@ pokebuddy status
 - 저장 파일이 있는지(`저장 있음` · `저장 없음`). 저장 내용은 암호화되어 있어 보이지 않는다
 
 `pokebuddy status eevee` 처럼 포켓몬 이름을 주면 그 포켓몬의 PMD 저작자를 보여 준다. 이름이 없으면 설정 파일의 `slug` 를 본다.
-판정 로직은 동반자와 **같은 코드**(`src/follow/state.ts` · `src/follow/front.ts` — 빌드 산출물 `dist/follow/`)를 쓴다. 그래서 실제 동작과 어긋나지 않는다.
+판정 로직은 동반자와 **같은 코드**(`src/terminal/state.ts` · `src/terminal/front.ts` — 빌드 산출물 `dist/terminal/`)를 쓴다. 그래서 실제 동작과 어긋나지 않는다.
 동반자의 폴링마다 판정을 보려면 디버그 모드로 띄운다.
 
 ```
