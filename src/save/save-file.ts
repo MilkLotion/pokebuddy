@@ -145,6 +145,16 @@ const parse = (text: string): unknown => {
   }
 };
 
+// 파일의 수정 시각과 크기 — 다른 곳이 파일을 바꿨는지 본다. 파일이 없거나 못 읽으면 null (src/tx/live-save.ts, ./save-watch.ts)
+export function saveStampOf(file: string): string | null {
+  try {
+    const st = fs.statSync(file);
+    return `${st.mtimeMs}:${st.size}`;
+  } catch {
+    return null;
+  }
+}
+
 // 저장 JSON 을 정규화 없이 — 클라우드 올리기용. 없거나 읽지 못하면 null
 export function readSaveRaw(file: string): Record<string, unknown> | null {
   const r = readText(file);
