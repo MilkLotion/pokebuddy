@@ -62,12 +62,25 @@ import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
 import { createTicks } from "./app/ticks";
 import { createRun } from "./app/quit";
-import { bootSaveKey } from "./app/boot";
+import { bootSaveKey, type Runtime } from "./app/boot";
 
 // 전역 시계 — 1초마다 틱을 낸다 (src/main/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
-// 그림 캐시 — 관리 창·선택 창과 무대 말풍선 아이콘이 함께 쓴다 (src/main/portraits.ts). main() 에서 만든다
-let portraits: Portraits | null = null;
+// 부팅이 만든 핸들 한 벌 — 처음은 모두 비어 있고 부팅 단계가 채운다. 끌 때 run 의 stop 이 정리한다 (src/main/app/boot.ts Runtime)
+const rt: Runtime = {
+  portraits: null,
+  game: null,
+  notifier: null,
+  hookUpkeep: null,
+  bannerWin: null,
+  party: null,
+  lifetime: null,
+  stages: null,
+  anchor: null,
+  commands: null,
+  tray: null,
+  screenPicker: null,
+};
 
 // POKEBUDDY_LOG 가 있으면 출력(console·stderr)을 그 파일에 이어 쓴다 (src/main/app/log.ts)
 redirectOutput(process.env.POKEBUDDY_LOG);
@@ -107,20 +120,20 @@ const duplicate = !claimSingleInstance({
 // 콜백은 아래에 정의한 핸들을 부를 때 읽는다 — 부팅 전에는 부르지 않는다
 const display = createDisplayState({
   ghost: !!config.clickThrough,
-  settings: () => game?.read()?.settings ?? null,
+  settings: () => rt.game?.read()?.settings ?? null,
   screens: currentScreens,
   mayLogin: app.isPackaged && !updateTestBuild,
-  onPlayArea: () => anchor?.poll(), // 무대 사각형을 바로 다시 정한다
+  onPlayArea: () => rt.anchor?.poll(), // 무대 사각형을 바로 다시 정한다
   onHidden: () => {
-    anchor?.poll();
+    rt.anchor?.poll();
     syncCoach(); // 숨긴 동안 바탕화면 튜토리얼은 기다린다
   },
   onGhost: (on) => {
     // 들고 있는 중에 고스트 모드를 켜면 pointerup 이 영영 안 온다 — 커서에 붙은 채로 남지 않게 놓는다
-    if (on) stages?.releaseHeld();
+    if (on) rt.stages?.releaseHeld();
     // 무대는 늘 통과로 시작해 그림 위에서만 받는다 — 커서 밑은 다음 hoverTick 이 본다
-    stages?.setPassing(true);
-    stages?.sendClickThrough(on);
+    rt.stages?.setPassing(true);
+    rt.stages?.sendClickThrough(on);
     syncCoach(); // 고스트 모드 동안 바탕화면 튜토리얼은 기다린다
   },
   log,
@@ -133,41 +146,29 @@ const SELF: SelfMark = { pid: process.pid, appNames: new Set(["electron", String
 const run = createRun({
   // 멈춘 동안(halted)·새로 시작하는 중(restarting — 저장을 이미 백업으로 옮겼다)은 쓰지 않는다
   flush: () => {
-    if (!frozen() && saveParty()?.isWriter()) game?.flush();
+    if (!frozen() && saveParty()?.isWriter()) rt.game?.flush();
   },
   shouldRelease: () => !freeze.reason() && !halt.sessionEnding() && (halt.releaseStarted() || (services.current()?.cloud.view().status ?? "off") !== "off"),
   release: () => halt.releaseOnce(),
   stop: () => {
     clock.stop();
-    anchor?.stop(); // 헬퍼도 멈춘다
-    lifetime?.stop();
-    tray?.destroy();
-    tray = null;
+    rt.anchor?.stop(); // 헬퍼도 멈춘다
+    rt.lifetime?.stop();
+    rt.tray?.destroy();
+    rt.tray = null;
     update.stop();
-    commands?.stop();
+    rt.commands?.stop();
     services.dispose();
-    bannerWin?.close();
-    screenPicker?.close();
-    bannerWin = null;
-    party?.stop(); // 저장 잠금을 놓는다
+    rt.bannerWin?.close();
+    rt.screenPicker?.close();
+    rt.bannerWin = null;
+    rt.party?.stop(); // 저장 잠금을 놓는다
   },
-  dropLock: () => lifetime?.release(), // 내 lock 을 지운다
+  dropLock: () => rt.lifetime?.release(), // 내 lock 을 지운다
 });
 const quitting = (): boolean => run.quitting();
 
-// 저장을 쓰는 곳은 하나다 — 거래 실행기. 무대·메뉴·관리 창이 모두 이 하나를 본다
-let game: GameV3 | null = null;
-// 알림 배너 — 줄은 notifier 가, 창은 bannerWin 이 맡는다. 저장을 쓰는 프로세스만 배너를 띄운다
-let notifier: Notifier | null = null;
-let hookUpkeep: HookUpkeep | null = null; // 켤 때 훅 정리와 Codex 창 깜빡임 한 번 알림 — writer 만 (src/main/hook-upkeep.ts)
-let bannerWin: BannerWindow | null = null;
-let party: SaveParty | null = null;
-const saveParty = (): SaveParty | null => party;
-let lifetime: Lifetime | null = null;
-// 무대 — 화면마다 무대 창과 마리 움직임 한 쌍. 한 화면·영역 지정이면 한 쌍이다 (src/main/stage-group.ts)
-let stages: StageGroup | null = null;
-let anchor: Anchor | null = null;
-let commands: Commands | null = null;
+const saveParty = (): SaveParty | null => rt.party;
 // 멈춤 상태 — 두 PC 규칙 멈춤·이용 정지·새로 시작하는 중. 멈춘 동안 저장을 쓰지 않는다 (src/main/app/freeze.ts)
 const freeze = createFreeze();
 const frozen = (): boolean => freeze.frozen();
@@ -176,20 +177,20 @@ const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "qui
 // 온라인(계정·클라우드 저장)·친구 교환·우편함과 받아 둔 교환 링크 — writer 인 동반자만 가진다 (src/main/services/registry.ts)
 // 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const services = createServices({
-  ready: () => !quitting() && !frozen() && !!game && !!party && party.isWriter(),
-  game: () => game,
-  isWriter: () => party?.isWriter() ?? false,
+  ready: () => !quitting() && !frozen() && !!rt.game && !!rt.party && rt.party.isWriter(),
+  game: () => rt.game,
+  isWriter: () => rt.party?.isWriter() ?? false,
   saveFile: PATHS.save,
   firstLink: tradeLinkOf(process.argv),
-  refreshParty: () => party?.refresh(),
+  refreshParty: () => rt.party?.refresh(),
   openTrade: () => openManageWindow({ to: "trade" }),
   sendTrade: (screen) => pushTrade(screen),
   sendAccount: (screen) => pushAccount(screen),
   sendMail: (screen) => pushMail(screen),
   online: {
     onSaveReplaced: () => {
-      notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
-      party?.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
+      rt.notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
+      rt.party?.refresh(); // 받은 클라우드 저장 — 무대와 설정창을 다시 그린다
     },
     // 밀려남·넘겨받기 확인·교환 막힘 — 게임을 멈추고 창을 띄운다. 로그아웃하지 않는다(D19)
     onHalt: (reason, info) => halt.onHalt(reason, info),
@@ -208,9 +209,9 @@ const halt = createHalt({
   services,
   quitting,
   isWriter: () => saveParty()?.isWriter() ?? false,
-  flush: () => game?.flush(),
+  flush: () => rt.game?.flush(),
   resetWork: () => ticks.resetWork(),
-  setWriter: (on) => commands?.setWriter(on),
+  setWriter: (on) => rt.commands?.setWriter(on),
   sendAccount: () => {
     const on = services.current();
     if (on) pushAccount(on.screen());
@@ -218,7 +219,6 @@ const halt = createHalt({
   openManage: (route) => openManageWindow(route),
   log,
 });
-let tray: TrayHandle | null = null;
 // 앱 업데이트·패치노트 (src/main/services/update.ts). 패치노트는 켤 때 저장이 이미 있었는지로 새로 설치와 업데이트를 가른다 —
 // 그래서 첫 선택 창이 저장을 만들기 전에 잰다. 켜기(start)는 수명 잠금을 쥔 뒤에 한다
 const update = createUpdateService({
@@ -227,7 +227,7 @@ const update = createUpdateService({
   hadSave: fs.existsSync(PATHS.save),
   onView: (view) => pushUpdate(view),
   beforeInstall: async () => {
-    if (!frozen() && saveParty()?.isWriter()) game?.flush();
+    if (!frozen() && saveParty()?.isWriter()) rt.game?.flush();
     await halt.announceRelease();
   },
   askRequired: askUpdateRequired,
@@ -259,13 +259,12 @@ function offScreen(windows: HelperWindow[]): boolean {
 // ── 배선 ─────────────────────────────────────────────────────────────────────
 
 // 놀이공간 화면 번호 덮개 — 설정의 한 화면 목록이 열린 동안 번호를 보이고, `화면에서 고르기` 로 누른 화면을 고른다
-let screenPicker: ScreenPicker | null = null;
-const picker = (): ScreenPicker => (screenPicker ??= createScreenPicker({ preload: preloadFile(), html: rendererFile("screens.html"), screens: currentScreens }));
+const picker = (): ScreenPicker => (rt.screenPicker ??= createScreenPicker({ preload: preloadFile(), html: rendererFile("screens.html"), screens: currentScreens }));
 
 // 바탕화면 튜토리얼 말풍선과 첫 돌봄 단계 (src/main/stage/coach.ts). 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 sync 를 부른다
 const coach = createCoach({
-  read: () => game?.read() ?? null,
-  stages: () => stages,
+  read: () => rt.game?.read() ?? null,
+  stages: () => rt.stages,
   quiet: () => display.ghost() || display.hidden(),
   areaMode: () => display.playArea().mode,
 });
@@ -273,7 +272,7 @@ const syncCoach = (): void => coach.sync();
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
 function syncJump(): void {
-  const save = game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
+  const save = rt.game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
   if (!save) return;
   const { pets, labels } = jumpListOf(save); // 목록 고르기는 화면 값이다 (src/view/menus.ts)
   syncJumpList(pets, labels);
@@ -284,42 +283,42 @@ const trayMenu = createTrayMenu({
   display,
   openManage: () => openManageWindow(),
   quit: () => app.quit(),
-  pollInput: () => anchor?.poll(),
-  trayRect: () => tray?.bounds() ?? null,
-  holdClick: (ms) => tray?.holdClick(ms),
+  pollInput: () => rt.anchor?.poll(),
+  trayRect: () => rt.tray?.bounds() ?? null,
+  holdClick: (ms) => rt.tray?.holdClick(ms),
 });
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
 function onAnchorUpdate(update: AnchorUpdate): void {
-  if (quitting() || !stages) return;
-  stages.layout(display.lanes(), display.playArea().mode === "all");
-  stages.setVisible(update.visible);
+  if (quitting() || !rt.stages) return;
+  rt.stages.layout(display.lanes(), display.playArea().mode === "all");
+  rt.stages.setVisible(update.visible);
 }
 
 
 const firstPet = (): PartyPet | null => {
-  const id = stages?.petIds()[0];
-  return id ? (stages?.petOf(id) ?? null) : null;
+  const id = rt.stages?.petIds()[0];
+  return id ? (rt.stages?.petOf(id) ?? null) : null;
 };
 const displayName = (): string => {
   const p = firstPet();
-  return p ? petLabel(p) : party?.pets()[0]?.species ?? config.slug;
+  return p ? petLabel(p) : rt.party?.pets()[0]?.species ?? config.slug;
 };
 
 // 관리 창의 명령도 커맨드 처리기를 거친다. reader 면 mailbox 로 writer 에 보내고,
 // 진화 그림 준비와 무대 반응도 다른 표면과 같은 길로 간다
 // route — 알림 배너의 `바로가기` 가 옮겨 갈 곳
 const openManageWindow = (route?: ManageRoute): void => {
-  if (!game) return;
+  if (!rt.game) return;
   openManage({
     ...(route ? { route } : {}),
     preload: preloadFile(),
     html: rendererFile("manage.html"),
-    game,
+    game: rt.game,
     send: async (req) => {
-      if (!commands) return { ok: false, reason: "not-ready" };
-      const reply = await commands.dispatcher.dispatch({ cmd: req.cmd as Command["cmd"], target: req.target, args: req.args, from: "settings" });
+      if (!rt.commands) return { ok: false, reason: "not-ready" };
+      const reply = await rt.commands.dispatcher.dispatch({ cmd: req.cmd as Command["cmd"], target: req.target, args: req.args, from: "settings" });
       if (req.cmd === "settings.set") display.sync("all");
       syncCoach();
       return reply;
@@ -331,22 +330,22 @@ const openManageWindow = (route?: ManageRoute): void => {
     ...(update.isStarted() ? { update: update.act, notes: update.notes } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
-      const current = game?.read()?.settings.playArea.rect ?? null;
+      const current = rt.game?.read()?.settings.playArea.rect ?? null;
       const rect = await askRegion({ preload: preloadFile(), html: rendererFile("region.html"), current });
       if (!rect) return { ok: false, reason: "cancelled" };
-      if (!commands) return { ok: false, reason: "not-ready" };
-      const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playRegion", args: { value: rect }, from: "settings" });
+      if (!rt.commands) return { ok: false, reason: "not-ready" };
+      const reply = await rt.commands.dispatcher.dispatch({ cmd: "settings.set", target: "playRegion", args: { value: rect }, from: "settings" });
       display.sync("play");
       return reply;
     },
     // 설정의 한 화면 — 목록, 목록이 열린 동안 번호 덮개, `화면에서 고르기`. 고른 화면을 저장하면 한 화면 방식이 된다
-    screens: () => screenViews(currentScreens(), game?.read()?.settings.playArea.screen ?? null),
+    screens: () => screenViews(currentScreens(), rt.game?.read()?.settings.playArea.screen ?? null),
     identifyScreens: (on) => picker().identify(on),
     pickScreen: async () => {
       const ref = await picker().ask();
       if (!ref) return { ok: false, reason: "cancelled" };
-      if (!commands) return { ok: false, reason: "not-ready" };
-      const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playScreen", args: { value: ref }, from: "settings" });
+      if (!rt.commands) return { ok: false, reason: "not-ready" };
+      const reply = await rt.commands.dispatcher.dispatch({ cmd: "settings.set", target: "playScreen", args: { value: ref }, from: "settings" });
       display.sync("play");
       return reply;
     },
@@ -356,8 +355,8 @@ const openManageWindow = (route?: ManageRoute): void => {
 // 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
 const cry = createCry({
   dir: path.join(PATHS.home, "cries"),
-  read: () => game?.read() ?? null,
-  send: (petId, uri, volume) => stages?.sendCry(petId, uri, volume),
+  read: () => rt.game?.read() ?? null,
+  send: (petId, uri, volume) => rt.stages?.sendCry(petId, uri, volume),
 });
 
 function notifyGame(body: string): void {
@@ -368,11 +367,11 @@ function notifyGame(body: string): void {
 
 // then — 성공하면 이어서 보낼 명령(첫 돌봄 튜토리얼 완료)
 function runGameCommand(command: Command, then?: () => Command): void {
-  void commands?.dispatcher.dispatch(command).then(async (result) => {
-    if (!result.ok) notifyGame(t("game.failed", { reason: t(`game.reason.${result.reason}`) }));
+  void rt.commands?.dispatcher.dispatch(command).then(async (result) => {
+    if (!result.ok) notifyGame(t("game.failed", { reason: t(`rt.game.reason.${result.reason}`) }));
     else if (then) {
       try {
-        await commands?.dispatcher.dispatch(then());
+        await rt.commands?.dispatcher.dispatch(then());
       } catch (e) {
         console.error(e); // 튜토리얼 기록이 실패해도 트레이·말풍선은 맞춘다 — 다음 메뉴 선택 때 다시 끝난다
       }
@@ -383,9 +382,9 @@ function runGameCommand(command: Command, then?: () => Command): void {
 
 // 포켓몬 메뉴 — 무대의 우클릭과 관리 창의 파티 카드·박스 칸 우클릭이 같은 메뉴를 쓴다 (src/main/menus/pet-menu.ts)
 const petMenu = createPetMenu({
-  read: () => game?.read() ?? null,
-  stagePet: (petId) => stages?.petOf(petId) ?? null,
-  portraits: () => portraits,
+  read: () => rt.game?.read() ?? null,
+  stagePet: (petId) => rt.stages?.petOf(petId) ?? null,
+  portraits: () => rt.portraits,
   run: runGameCommand,
   openManage: (route) => openManageWindow(route),
   coach,
@@ -393,30 +392,30 @@ const petMenu = createPetMenu({
 
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
 async function refreshParty(): Promise<void> {
-  if (!party || !stages) return;
-  await stages.setParty(party.pets());
-  tray?.setIcon(logoFile(256));
+  if (!rt.party || !rt.stages) return;
+  await rt.stages.setParty(rt.party.pets());
+  rt.tray?.setIcon(logoFile(256));
 }
 
 // 아이콘 말풍선 — 줍기·배고픔 (src/main/stage/bubbles.ts)
-const bubbles = createBubbles({ portraits: () => portraits, stages: () => stages, hidden: display.hidden });
+const bubbles = createBubbles({ portraits: () => rt.portraits, stages: () => rt.stages, hidden: display.hidden });
 
 // 에이전트 상태 폴링(500ms)과 전역 시계의 1초 틱 (src/main/app/ticks.ts)
 const ticks = createTicks({
   sendClock: (now) => pushClock(now),
   frozen,
   locked: () => power.isLocked(),
-  anchor: () => anchor,
-  stages: () => stages,
+  anchor: () => rt.anchor,
+  stages: () => rt.stages,
   worker: () => saveParty(),
-  game: () => game,
+  game: () => rt.game,
   hidden: display.hidden,
   bubbles,
-  notifierTick: () => notifier?.tick(),
+  notifierTick: () => rt.notifier?.tick(),
   syncCoach,
   // 15초마다 — 남은 한 번 알림, 다른 프로세스의 관리 창에서 바꾼 놀이공간·잠들기 기준, 점프 목록
   slow: () => {
-    hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
+    rt.hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
     display.sync("play");
     display.sync("sleep");
     syncJump();
@@ -427,7 +426,7 @@ const ticks = createTicks({
 // 잠금·절전·세션 종료 → 쓰기와 클라우드 알림 (src/main/app/power.ts). 멈춘 동안(halted)은 쓰지 않는다
 const power = createPower({
   flushLocal: () => {
-    if (!frozen() && saveParty()?.isWriter()) game?.flush();
+    if (!frozen() && saveParty()?.isWriter()) rt.game?.flush();
   },
   sleep: () => void services.current()?.sleep(),
   wake: () => void services.current()?.wake(),
@@ -451,8 +450,8 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
     return seed ? seededRand(seed, `egg:${eggId}`) : null;
   };
   const reader = createGame({ file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
-  game = reader;
-  bannerWin = createBannerWindow({
+  rt.game = reader;
+  rt.bannerWin = createBannerWindow({
     preload: preloadFile(),
     html: rendererFile("banner.html"),
     chime: () => {
@@ -460,11 +459,11 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
       return s ? gainOf(s, SOUND_RULES.chimeMax) : 0;
     },
     onGo: (route) => openManageWindow(route),
-    onDone: () => notifier?.done(),
+    onDone: () => rt.notifier?.done(),
   });
-  notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => bannerWin?.show(b) }); // 시각은 전역 시계의 틱 시각
+  rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b) }); // 시각은 전역 시계의 틱 시각
   const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
-  party = saveSource;
+  rt.party = saveSource;
 
   return { reader, saveSource };
 }
@@ -472,13 +471,13 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
 // 6단계 수명 감시
 function bootLifetime(): Lifetime {
   // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
-  lifetime = createLifetime({
+  rt.lifetime = createLifetime({
     lockFile: PATHS.companionLock,
-    hasWindow: () => run.isReady() && !!stages?.alive(),
+    hasWindow: () => run.isReady() && !!rt.stages?.alive(),
     quit: () => app.quit(),
   });
-  lifetime.start();
-  return lifetime;
+  rt.lifetime.start();
+  return rt.lifetime;
 
 }
 
@@ -488,7 +487,7 @@ function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: st
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
   const pics = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
-  portraits = pics;
+  rt.portraits = pics;
   const starterList = saveSource.needsStarter() ? starters(unlockRules()) : [];
   const prefetchAt = Date.now();
   void pics
@@ -546,7 +545,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
   saveSource.onChange(prefetchOwned);
   prefetchOwned();
   // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage-group.ts)
-  stages = createStageGroup({
+  rt.stages = createStageGroup({
     createWindow: (hooks) =>
       createStageWindow({
         debug,
@@ -557,7 +556,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
         // 튜토리얼 말풍선의 버튼 — `다음`·`확인` 은 완료, ✕ 는 스킵
         onCoachAction: ({ id, action }) => {
           if (id === "first-care") coach.forgetMenu();
-          void commands?.dispatcher
+          void rt.commands?.dispatcher
             .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, from: "pet" })
             .then(() => syncCoach());
         },
@@ -576,7 +575,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
         onClick: (id) => {
           // 바탕화면 튜토리얼 중에는 왼쪽 클릭이 놀아주기가 아니다 — 무대 렌더러가 먼저 막고, 여기서 한 번 더 막는다
           if (coach.isShown()) return;
-          void commands?.click(id);
+          void rt.commands?.click(id);
           void cry.play(id);
         },
         onMenu: (petId) => petMenu.open(petId),
@@ -590,7 +589,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
     cursorPoint: () => screen.getCursorScreenPoint(),
     // 놓은 자리(와 모든 화면이면 사는 화면)를 저장한다. 실패하면 저장된 자리로 되돌린다
     onDrop: (id, home, onScreen) => {
-      void commands?.dispatcher.dispatch({ cmd: "pet.set", target: id, args: { home, ...(onScreen ? { screen: onScreen } : {}) }, from: "pet" }).then(async (result) => {
+      void rt.commands?.dispatcher.dispatch({ cmd: "pet.set", target: id, args: { home, ...(onScreen ? { screen: onScreen } : {}) }, from: "pet" }).then(async (result) => {
         if (result.ok) return;
         log?.({ drop: "failed", id, reason: result.reason });
         await refreshParty();
@@ -601,15 +600,15 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
   // 첫 배치 — 마리를 싣기 전에 무대 창이 있어야 한다(아래 "그림을 하나도 못 받음" 판정이 무대를 본다)
   display.sync("play");
   display.sync("sleep"); // 첫 마리부터 설정의 잠들기 기준으로 만든다
-  stages.layout(display.lanes(), display.playArea().mode === "all");
+  rt.stages.layout(display.lanes(), display.playArea().mode === "all");
   run.markStaged();
-  return { art, group: stages };
+  return { art, group: rt.stages };
 
 }
 
 // 호스트 감시와 명령 통로 — writer 역할이 바뀌면 명령·서비스를 잇거나 끊는다
 function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): Anchor {
-  anchor = createAnchor({
+  rt.anchor = createAnchor({
     paths: PATHS,
     self: SELF,
     host: {
@@ -617,30 +616,30 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
       offScreen,
       quitting,
     },
-    flags: () => ({ userHidden: display.hidden(), held: stages?.heldId() != null }),
+    flags: () => ({ userHidden: display.hidden(), held: rt.stages?.heldId() != null }),
     onUpdate: onAnchorUpdate,
-    onFocus: (key) => stages?.focus(key),
+    onFocus: (key) => rt.stages?.focus(key),
     onInput: (input) => trayMenu.onInput(input),
     log,
   });
 
-  commands = createCommands({
+  rt.commands = createCommands({
     mailboxDir: PATHS.mailbox,
     party: saveSource,
     game: reader,
     prepareLook: async (look) => !!await art.loadLook(look),
     onChanged: async (evolvedId) => {
       await refreshParty();
-      if (evolvedId) stages?.celebrate(evolvedId);
+      if (evolvedId) rt.stages?.celebrate(evolvedId);
     },
     stage: {
       care: (id, action) => {
-        stages?.care(id, action);
+        rt.stages?.care(id, action);
         if (action === "play") void cry.play(id); // 메뉴·관리 창에서 고른 놀아주기
       },
-      petIds: () => stages?.petIds() ?? [],
-      size: () => stages?.size() ?? { w: 0, h: 0 },
-      visible: () => !!stages?.isVisible(),
+      petIds: () => rt.stages?.petIds() ?? [],
+      size: () => rt.stages?.size() ?? { w: 0, h: 0 },
+      visible: () => !!rt.stages?.isVisible(),
     },
     settings: {
       hidden: display.hidden,
@@ -657,7 +656,7 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
     guard: (command) => (frozen() && !HALT_OPEN.has(command.cmd) ? "halted" : null),
   });
   saveSource.onRole((w) => {
-    commands?.setWriter(w && !frozen());
+    rt.commands?.setWriter(w && !frozen());
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다
     if (w) {
       // 이어받기는 late — 앞 프로세스가 이 PC 를 쥐던 대로 잇는다. 그사이 다른 PC 가 온라인으로 넘겨받았으면 이쪽이 밀려난다(D20, 핑퐁 없음)
@@ -668,13 +667,13 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
       services.dispose();
     }
   });
-  commands.setWriter(saveSource.isWriter());
+  rt.commands.setWriter(saveSource.isWriter());
   saveSource.onChange(() => {
     display.sync("sleep"); // 밖에서 바뀐 저장(다른 프로세스·클라우드 받기)의 잠들기 기준을 바로 따른다
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 
-  return anchor;
+  return rt.anchor;
 }
 
 // 첫 무대 그리기와 수명 잠금 — 그림을 하나도 못 받았거나 다른 동반자가 떠 있으면 끝내고 false
@@ -709,15 +708,15 @@ function bootServices(saveSource: SaveParty): void {
   update.start(); // 수명 잠금을 쥔 동반자 하나만
   // 기존 훅 정리 — 옛 이벤트를 걷고 있는 훅 파일을 새 버전으로. 새로 등록하지 않는다. 시작을 막지 않게 뒤로 미룬다
   if (saveSource.isWriter()) {
-    hookUpkeep = createHookUpkeep({ noticesFile: path.join(path.dirname(PATHS.save), "notices.json"), show: (b) => notifier?.showOnce(b) ?? false, log });
-    setImmediate(() => hookUpkeep?.start());
+    rt.hookUpkeep = createHookUpkeep({ noticesFile: path.join(path.dirname(PATHS.save), "notices.json"), show: (b) => rt.notifier?.showOnce(b) ?? false, log });
+    setImmediate(() => rt.hookUpkeep?.start());
   }
 
 }
 
 // 트레이·첫 동기화·준비 알림·주기 작업·화면 변화 구독
 function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, life: Lifetime): void {
-  tray = createTray({
+  rt.tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
     popup: () => trayMenu.open(),
@@ -738,12 +737,12 @@ function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, lif
   run.every(ticks.state, STAGE_RULES.statePollMs);
   clock.on(ticks.clock);
   clock.start();
-  run.every(() => stages?.tick(), STAGE_RULES.tickMs);
+  run.every(() => rt.stages?.tick(), STAGE_RULES.tickMs);
   // Windows 는 무대 창의 "항상 위"가 풀리거나 다른 항상 위 창에 밀린다 — 1초마다 다시 건다 (src/main/keep-on-top.ts)
-  const keepTop = startKeepOnTop(() => stages);
+  const keepTop = startKeepOnTop(() => rt.stages);
   if (keepTop) run.keep(keepTop);
   // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
-  const relayout = (): void => anchor?.poll();
+  const relayout = (): void => rt.anchor?.poll();
   screen.on("display-added", relayout);
   screen.on("display-removed", relayout);
   screen.on("display-metrics-changed", relayout);
