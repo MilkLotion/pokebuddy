@@ -8,7 +8,7 @@ import type { BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInp
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { ScreenView } from "../model/overlays.js";
 import type { ManageRoute } from "../model/route.js";
-import type { PortraitAsk, Snapshot } from "../model/snapshot.js";
+import type { ArtImage, PortraitAsk, Snapshot } from "../model/snapshot.js";
 import type { TradeScreen } from "../model/trade.js";
 import type { BridgeOf, Invoke, Push, PushOf, Send } from "./kinds.js";
 
@@ -46,7 +46,7 @@ export type ManageCoreIpc = {
   "manage:dim": Send<"dim", [on: boolean]>; // 모달 가림막이 켜졌다·꺼졌다. OS 가 그리는 창 단추 자리도 같은 색으로 어둡게 한다
   "manage:portraits": Invoke<"portraits", [asks: PortraitAsk[]], Record<string, string | null>>; // 초상 — 열쇠(slug 또는 slug:shiny)별 data URI. 못 받으면 null
   "manage:icons": Invoke<"icons", [keys: string[]], Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
-  "manage:art": Invoke<"art", [], Record<string, string>>; // 디스크에 이미 있는 초상·도구·알 그림 전부 — 창을 열 때 한 번 받아 첫 화면부터 그림을 채운다
+  "manage:art": Invoke<"art", [], Record<string, ArtImage>>; // 디스크에 이미 있는 초상·도구·알 그림 전부 — 창을 열 때 한 번 받아 첫 화면부터 그림을 채운다. 초상은 보는 네모를 정할 불투명 영역(box)을 함께 싣는다(X15)
   "manage:trade": Push<"onTrade", [screen: TradeScreen]>; // 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과)
   "manage:copy": Send<"copyText", [text: string]>; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   "manage:account": Invoke<"account", [req: AccountAction], AccountReply>;
