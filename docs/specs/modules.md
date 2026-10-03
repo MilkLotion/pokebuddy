@@ -242,7 +242,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | 명령 | 역할 | 모듈 |
 |---|---|---|
 | `settings:snapshot` | 파티·박스·알·가방·도감·업적·설정 조회 | `src/tx` |
-| `party.place` | 빈 파티 칸에 박스 개체를 숨김 상태로 배치 | `src/party`, `src/box` |
+| `party.place` | 빈 파티 칸에 박스 개체를 꺼낸 상태로 배치 | `src/party`, `src/box` |
 | `party.swap` | 파티 개체와 박스 개체를 한 번에 맞바꿈 | `src/party`, `src/box` |
 | `party.move` | 파티 개체를 다른 파티 칸으로 옮김. 개체 칸이면 맞바꿈 | `src/party` |
 | `party.keep` | 파티 개체를 박스에 보관 | `src/party`, `src/box` |
@@ -265,7 +265,12 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `mail.apply` / `mail.read` | 우편함 선물 넣기·읽음 기록. 우편함(`src/online/mail-inbox.ts`)만 부른다. 명령 처리기에 등록하지 않아 설정창·CLI 는 부를 수 없다 | `src/mail`, `src/tx` |
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다 | `src/state`, `src/main` |
 
-모든 명령은 거래 실행기를 지난다. 완료한 요청을 다시 보내도 중복 반영하지 않는다.
+저장을 바꾸는 명령은 거래 실행기를 지난다. 실행기를 지난 요청은 다시 보내도 중복 반영하지 않는다.
+실행기를 지나지 않는 명령은 다음과 같다(`src/main/commands.ts`).
+- `display.set`: 저장 밖의 창 표시 설정을 바꾼다.
+- `trade.create`·`trade.join`·`trade.offer`·`trade.ready`·`trade.unready`·`trade.leave`·`trade.status`: 교환 세션이 서버와 주고받는다. 교환 결과를 저장에 반영하는 `trade.lock`·`trade.unlock`·`trade.apply` 는 실행기를 지난다.
+- `quit`: 앱을 끝낸다.
+- `snapshot`: 화면 값을 읽기만 한다.
 명령을 보내는 곳은 메뉴·트레이·설정창·CLI 다.
 
 ## 남은 일
