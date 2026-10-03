@@ -7,7 +7,7 @@ const int = (v: unknown): number | undefined => (typeof v === "number" && Number
 // `Command` 의 target·args 를 명령마다 다른 인자 모양으로 바꾼다
 export function argsFromCommand(command: Command): Record<string, unknown> {
   const a = command.args ?? {};
-  const target = command.target;
+  const target = str(command.target); // 빈 글자는 없는 것으로 본다 — 메인 등록부(src/main/commands.ts target·petTarget)와 같은 규칙이다
   switch (command.cmd) {
     case "party.show":
     case "party.hide":
