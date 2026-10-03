@@ -119,8 +119,7 @@
   border: 0;
   background: none;
 }
-.thumb[data-icon="egg"] .icon-art,
-.thumb[data-egg-kind] .icon-art,
+.thumb[data-icon^="egg:"] .icon-art,
 .egg .shell .icon-art {
   object-fit: cover;
   object-view-box: inset(25%);
