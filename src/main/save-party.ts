@@ -12,7 +12,7 @@
 import fs from "node:fs";
 import { appearanceOf } from "../dex/appearance";
 import path from "node:path";
-import * as mailbox from "../save/mailbox.js";
+import { sendToWriter } from "../save/command-channel.js";
 import { backupName, createEmptySave, readSave } from "../save/save-file.js";
 import * as writer from "../save/writer.js";
 import type { CommandResult } from "../shared/command";
@@ -197,7 +197,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
 
   // reader 의 요청 — writer 가 처리해 파일에 쓰면 감시가 읽어 온다
   const ask = (cmd: "pet.set" | "party.show" | "party.hide", target: string, args?: Record<string, unknown>): Promise<CommandResult> =>
-    mailbox.send(paths.mailbox, { cmd, target, ...(args ? { args } : {}), from: "pet" });
+    sendToWriter(paths.mailbox, { cmd, target, ...(args ? { args } : {}), from: "pet" });
 
   // 처음 한 번 — 잡아 보고 파일을 읽는다
   claim();

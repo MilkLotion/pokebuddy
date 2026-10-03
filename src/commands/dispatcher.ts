@@ -6,7 +6,7 @@
 //   핸들러가 던짐          { ok:false, reason:"error", message }   — 표면이 죽지 않게 여기서 받는다
 //   핸들러가 결과를 안 줌   { ok:false, reason:"no-result" }
 // 같은 명령을 두 번 register 하면 던진다 — 모듈 배선 실수를 기동 때 바로 드러내기 위해. 바꿔 끼우려면 먼저 해제(register 가 돌려준 함수)
-import { serve, type MailServer, type ServeOptions } from "../save/mailbox.js";
+import { serveCommands, type CommandServer, type ServeOptions } from "../save/command-channel.js";
 import type { Command, CommandResult } from "../shared/command.js";
 import type { CommandName } from "../shared/names/commands.js";
 
@@ -60,6 +60,6 @@ export function createDispatcher({ log = null }: DispatcherOptions = {}): Dispat
 }
 
 // mailbox 의 요청을 처리기에 잇는다 — writer 만 부른다. 돌려주는 stop 으로 끊는다
-export function bridgeMailbox(dispatcher: Dispatcher, dir: string, opts: ServeOptions = {}): MailServer {
-  return serve(dir, (command) => dispatcher.dispatch(command), opts);
+export function bridgeMailbox(dispatcher: Dispatcher, dir: string, opts: ServeOptions = {}): CommandServer {
+  return serveCommands(dir, (command) => dispatcher.dispatch(command), opts);
 }
