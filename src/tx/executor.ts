@@ -9,11 +9,11 @@
 //
 // 전부 동기다. 그래서 거래는 저절로 한 번에 하나이고 들어온 순서대로 처리된다.
 // 파일을 직접 다루지 않는다. 읽기·쓰기·시계를 받아서 쓴다 — 자체 검사가 파일 없이 돈다.
-import { evaluate } from "../achievement/core.js";
+import { evaluate } from "../achievement/evaluate.js";
 import { grantStones } from "../dex/mega.js";
 import { settleMega } from "../party/mega-form.js";
 import { unlockByRules } from "../dex/unlocks.js";
-import { queueTutorials } from "../tutorial/core.js";
+import { queueTutorials } from "../tutorial/queue.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
 import { SAVE_V3_RULES } from "../save/rules.js";
 import type { Reason } from "../shared/names/reasons.js";

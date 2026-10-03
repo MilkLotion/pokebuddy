@@ -22,7 +22,7 @@ import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { nameOfItem } from "./lists.js";
 import { josa } from "../shared/josa.js";
-import { defs as achievementDefs, rewardPokemon } from "../achievement/core.js";
+import { defs as achievementDefs, rewardPokemon } from "../achievement/defs.js";
 import { hatchBaseOf, needIsMap, regionalOf } from "../dex/regional.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 
