@@ -7,6 +7,7 @@ import assert from "node:assert";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { dexDetail } from "../../view/dex-detail";
+import { onlyStepText, stepText } from "../../view/evo-text";
 import { evoItemNote, shopDetail } from "../../view/shop-detail";
 import { josa } from "../../shared/josa";
 import { iconUrl, portraitKey, portraitUrl } from "../../main/art/portraits";
@@ -222,6 +223,9 @@ function seed(): SaveV3 {
   const kirlia = r.tree.children[0];
   assert.deepStrictEqual([kirlia?.name, kirlia?.locked, kirlia?.need], ["???", true, "Lv.20"]);
   assert.deepStrictEqual(kirlia?.children.map((c) => [c.name, c.need]), [["???", "Lv.30"], ["???", "각성의돌 · 수컷"]], "킬리아 갈래 — 엘레이드는 수컷만");
+  // 도감 문장도 성별 조건을 적는다 — 친밀도 조건처럼 결과 뒤 괄호 (94 항목 2-3)
+  assert.strictEqual(stepText({ to: "gallade", need: { kind: "item", item: "dawn-stone" }, gender: "male" }), "각성의돌로 엘레이드 (수컷)");
+  assert.strictEqual(onlyStepText({ to: "vespiquen", need: { kind: "level", level: 21 }, gender: "female" }), "Lv.21에서 비퀸 (암컷)", "한 단계뿐이어도 괄호 꼴");
   // 이브이 8갈래 — 친밀도·시간대 조건
   s.dex.unlocked.push("eevee", "espeon");
   const e = shopDetail(s, "eevee");
