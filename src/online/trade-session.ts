@@ -71,13 +71,13 @@ export interface TradeSessionOptions {
 // 조작 결과 — 거절 이유를 돌려준다. 보기의 error 는 서버·로컬 실패만 담는다
 //   busy        다른 조작이 진행 중
 //   no-channel  채널이 없다
-//   not-ready   확정할 수 없다 (내 제안·검사를 통과한 친구 제안이 없다)
+//   trade-not-ready   확정할 수 없다 (내 제안·검사를 통과한 친구 제안이 없다)
 //   in-trade    진행 중인 교환이 있다 — 나가기 뒤에 새로 만든다
 //   stopped     세션이 멈췄다
 //   cloud-wait  로그인 계정의 클라우드 저장이 연결되어 올릴 수 있는 상태가 아니다 — 새 교환을 시작하지 않는다
 //   login-required  익명 계정이다 — 교환은 로그인해야 한다 (클라이언트 판정 또는 서버 TRADE_LOGIN_REQUIRED)
 //   save-wait   올린 개체가 아직 서버 저장에 없다 — 저장이 끝나면 다시 올린다 (서버 TRADE_PET_NOT_SYNCED)
-export type TradeRefusal = ReasonOf<"busy" | "no-channel" | "not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait">;
+export type TradeRefusal = ReasonOf<"busy" | "no-channel" | "trade-not-ready" | "in-trade" | "stopped" | "cloud-wait" | "login-required" | "save-wait">;
 export type TradeActionResult = { ok: true } | { ok: false; reason: TradeCode | "LOCAL" | TradeRefusal; detail?: string };
 
 export interface TradeSession {
@@ -365,7 +365,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   const ready: TradeSession["ready"] = async () => {
     const view = state.channel;
     if (!channelId || closedPhase() || !view) return refuse("no-channel");
-    if (!state.myPetId || !state.friendPet) return refuse("not-ready");
+    if (!state.myPetId || !state.friendPet) return refuse("trade-not-ready");
     const no = begin();
     if (no) return no;
     const locked = tx("trade.lock", { channelId, petId: state.myPetId, offerRev: view.offer_rev });

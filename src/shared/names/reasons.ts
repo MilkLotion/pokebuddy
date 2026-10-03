@@ -90,6 +90,7 @@ export const REASONS = [
   "bad-id",
   // 교환 — 로컬 판정
   "busy",
+  "trade-not-ready", // 두 사람 모두 포켓몬을 올리기 전에 확정했다 — 알의 not-ready 와 가른다 (94 항목 4-7)
   "no-channel",
   "in-trade",
   "stopped",
