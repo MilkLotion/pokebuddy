@@ -43,18 +43,18 @@ export function nudgeEl(bubble: HTMLElement): void {
   bubble.classList.add("nudge");
 }
 
-// 말풍선 — head(단계 + ✕) / title / body? / 단추 줄?
-// - 단추는 부르는 쪽이 만든다(창마다 클래스가 다르다). footEl 이 있으면 그것을, 없으면 div.foot 에 go 를 넣는다. 둘 다 없으면 단추 줄이 없다(해 보는 단계)
-// - ✕ 는 스킵이다
+// 말풍선 — head(단계 + ✕) / title / body? / 단추 줄? (C-23, Figma `Coach Bubble` `338:764`)
+// - 단추는 말풍선이 만든다(Figma `Button` Primary Small, styles/coach.css `.coach-go`). 세 창이 같은 단추를 쓴다 (94 4-9)
+// - goLabel 이 없으면 단추 줄이 없다(해 보는 단계). ✕ 는 스킵이다
 export interface CoachBubbleSpec {
   step: string;
   title: string;
   body?: string;
-  go?: HTMLButtonElement | null;
-  footEl?: HTMLElement | null;
+  goLabel?: string;
+  onGo?: () => void;
   onSkip: () => void;
 }
-export function coachBubbleEl(spec: CoachBubbleSpec): { bubble: HTMLElement; skip: HTMLButtonElement } {
+export function coachBubbleEl(spec: CoachBubbleSpec): { bubble: HTMLElement; skip: HTMLButtonElement; go: HTMLButtonElement | null } {
   const bubble = el("div", "coach-bubble");
   const head = el("div", "head");
   const skip = buttonEl("x", "✕", spec.onSkip);
@@ -62,13 +62,23 @@ export function coachBubbleEl(spec: CoachBubbleSpec): { bubble: HTMLElement; ski
   head.append(el("span", "step", spec.step), skip);
   bubble.append(head, el("div", "title", spec.title));
   if (spec.body) bubble.appendChild(el("div", "body", spec.body)); // 본문이 없으면 제목 아래 바로 단추
-  if (spec.footEl) bubble.appendChild(spec.footEl);
-  else if (spec.go) {
+  let go: HTMLButtonElement | null = null;
+  if (spec.goLabel) {
+    go = buttonEl("coach-go", spec.goLabel, spec.onGo);
     const foot = el("div", "foot");
-    foot.appendChild(spec.go);
+    foot.appendChild(go);
     bubble.appendChild(foot);
   }
-  return { bubble, skip };
+  return { bubble, skip, go };
+}
+
+// 말풍선 세로 자리 — 세 창이 같은 규칙이다: 대상 아래 → 위 → (둘 다 모자라면) 창 아래쪽 안. 위 여백보다 위로는 가지 않는다 (94 4-8)
+export function bubbleTopOf(hole: Hole, bubbleHeight: number, H: number, gap: number): number {
+  const { margin } = COACH_SIZE;
+  const below = hole.b + gap;
+  const above = hole.t - gap - bubbleHeight;
+  const top = below + bubbleHeight <= H - margin ? below : above >= margin ? above : H - margin - bubbleHeight;
+  return Math.max(margin, top);
 }
 
 export interface CoachLayer {
@@ -84,9 +94,7 @@ export interface CoachLayerOptions {
   bounds: { W: number; H: number };
   pad: number;
   gap: number;
-  align: "left" | "center"; // 말풍선 가로 — 대상 왼쪽(manage) · 대상 가운데(pet)
-  // 말풍선 세로 — 둘 다 아래 → 위 순서. 위로도 모자랄 때: "clamp" 는 위 여백에 붙인다(pet), "inside" 는 창 아래쪽 안에 둔다(manage)
-  fallback: "clamp" | "inside";
+  align: "left" | "center"; // 말풍선 가로 — 대상 왼쪽(manage) · 대상 가운데(pet). 세로는 bubbleTopOf 하나
   interactive: boolean; // false 면 구멍도 막는다(coach-block) — 대상은 보이되 눌리지 않는다
   bubble: CoachBubbleSpec;
   onTargetResized?: () => void; // 대상이 그린 뒤에 크기·자리가 바뀌었다 — 다시 그린다
@@ -101,7 +109,7 @@ export function drawCoachLayer(opts: CoachLayerOptions): CoachLayer {
   const t1 = opts.also?.getBoundingClientRect();
   const r: EdgeRect = t1 ? { left: Math.min(t0.left, t1.left), top: Math.min(t0.top, t1.top), right: Math.max(t0.right, t1.right), bottom: Math.max(t0.bottom, t1.bottom) } : t0;
   const hole = holeOf(r, pad, W, H);
-  const { bubble, skip } = coachBubbleEl(opts.bubble);
+  const { bubble, skip, go } = coachBubbleEl(opts.bubble);
   // 막을 누르면 아무 일도 없고 말풍선을 한 번 흔든다
   const block = (cls: string, x: number, y: number, w: number, h: number): void => {
     const dim = el("div", cls);
@@ -122,13 +130,11 @@ export function drawCoachLayer(opts: CoachLayerOptions): CoachLayer {
   // 가운데 맞춤은 대상 하나의 가운데다(also 와 함께 쓰지 않는다)
   const anchor = opts.align === "center" ? t0.left + t0.width / 2 - width / 2 : r.left;
   const left = Math.min(Math.max(margin, anchor), W - width - margin);
-  const below = hole.b + gap;
-  const above = hole.t - gap - bh;
-  const top = below + bh <= H - margin ? below : opts.fallback === "clamp" || above >= margin ? above : H - margin - bh;
+  const top = bubbleTopOf(hole, bh, H, gap);
   bubble.style.left = `${Math.round(left)}px`;
-  bubble.style.top = `${Math.round(Math.max(margin, top))}px`;
+  bubble.style.top = `${Math.round(top)}px`;
 
-  const home = opts.bubble.go ?? skip;
+  const home = go ?? skip;
   const allows = (n: Node): boolean => bubble.contains(n) || (opts.interactive && target.contains(n));
   const active = document.activeElement;
   if (!active || active === document.body || !allows(active)) home.focus({ preventScroll: true });

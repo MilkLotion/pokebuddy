@@ -41,9 +41,9 @@ canvas {
 #coach[hidden] {
   display: none;
 }
-.coach-dim {
-  position: fixed;
-  background: rgba(26, 51, 48, 0.45);
+/* 막은 보기만 한다 — 클릭은 아래로 통과한다. 모양은 공용 styles/coach.css */
+#coach .coach-dim {
+  pointer-events: none;
 }
 .coach-area {
   position: fixed;
@@ -61,86 +61,4 @@ canvas {
   color: #ffffff;
   font: 12px var(--font-body);
 }
-.coach-bubble {
-  position: fixed;
-  width: 280px;
-  box-sizing: border-box;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-  font: 12px var(--font-body);
-  color: #4a6663;
-  word-break: keep-all;
-  pointer-events: auto;
-}
-/* 첫 돌봄 중 막을 누르면 말풍선을 한 번 흔든다 (2026-09-28 튜토리얼 입력 규칙) */
-.coach-bubble.nudge {
-  animation: coach-nudge 360ms ease-in-out;
-}
-@keyframes coach-nudge {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-6px);
-  }
-  40% {
-    transform: translateX(6px);
-  }
-  60% {
-    transform: translateX(-4px);
-  }
-  80% {
-    transform: translateX(4px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .coach-bubble.nudge {
-    animation: none;
-    box-shadow:
-      0 0 0 3px #ebf4f1,
-      0 8px 24px rgba(0, 0, 0, 0.22);
-  }
-}
-.coach-bubble .head {
-  display: flex;
-  align-items: center;
-}
-.coach-bubble .step {
-  flex: 1;
-}
-.coach-bubble .title {
-  font-weight: 700;
-  color: #1a3330;
-}
-.coach-bubble .foot {
-  display: flex;
-  justify-content: flex-end;
-}
-.coach-bubble button {
-  appearance: none;
-  font: inherit;
-  cursor: pointer;
-}
-.coach-bubble .x {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #4a6663;
-}
-.coach-bubble .go {
-  height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: #0f766e;
-  color: #ffffff;
-  font-weight: 700;
-}
+/* 말풍선은 공용 styles/coach.css (94 4-9) */

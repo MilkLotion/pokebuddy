@@ -1,12 +1,12 @@
 // 무대 튜토리얼 코치마크 — Figma `Tutorial / First Care` `397:8552`. 문구와 대상은 메인이 준다(stage:coach).
 // 첫 돌봄: 포켓몬 둘레 8px 을 비우고 나머지를 어둡게 한다. 막은 보기만 한다 — 클릭은 그대로 아래로 통과하므로 포켓몬 우클릭이 된다.
-//   포켓몬이 움직이므로 그릴 때마다 자리를 다시 잰다(placeAt). 말풍선은 포켓몬 위(넘치면 아래).
+//   포켓몬이 움직이므로 그릴 때마다 자리를 다시 잰다(placeAt). 말풍선은 포켓몬 아래(모자라면 위, 둘 다 모자라면 창 안 — 세 창이 같은 규칙).
 // 놀이공간: 무대(=놀이공간) 둘레 테두리와 "지금 · 화면 전체" 표시, 말풍선은 가운데.
 // 말풍선 위에서만 클릭을 받는다(answerHover 의 "coach" 답). 버튼은 메인으로 간다 — 버튼은 완료, ✕ 는 스킵
 // 설정창·파티 상세와 같이 쓰는 것은 구멍·막·흔들기(ui/coach.ts)뿐이다. 자리 잡기(메뉴 피하기)·입력 가드·area 형은 여기만 있다
 import type { CoachView } from "../../shared/model/stage.js";
 import { el } from "../ui/dom.js";
-import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
+import { COACH_SIZE, bubbleTopOf, coachBubbleEl, dimRectsOf, guardCoachFocus, holeOf, nudgeEl, type CoachLayer } from "../ui/coach.js";
 
 export interface StageCoachDeps {
   box: HTMLElement; // #coach
@@ -27,6 +27,7 @@ export function createStageCoach(deps: StageCoachDeps): {
   const coachBox = deps.box;
   let coach: CoachView | null = null;
   let bubbleEl: HTMLElement | null = null;
+  let focusRule: CoachLayer | null = null; // 말풍선의 초점 규칙 — 말풍선 밖으로 나간 초점은 단추(없으면 ✕)로 되돌린다
   const dims: HTMLElement[] = [];
 
   function drawCoach(next: CoachView | null): void {
@@ -34,6 +35,7 @@ export function createStageCoach(deps: StageCoachDeps): {
     coachBox.replaceChildren();
     dims.length = 0;
     bubbleEl = null;
+    focusRule = null;
     coachBox.hidden = !next;
     if (!next) return;
     if (next.kind === "pet") {
@@ -42,26 +44,14 @@ export function createStageCoach(deps: StageCoachDeps): {
       const frameEl = coachBox.appendChild(el("div", "coach-area"));
       frameEl.appendChild(el("span", "coach-area-label", next.areaLabel ?? ""));
     }
-    const bubble = el("div", "coach-bubble");
-    const head = el("div", "head");
-    const x = el("button", "x", "✕");
-    x.setAttribute("aria-label", "튜토리얼 닫기");
-    x.addEventListener("click", () => act("skip"));
-    head.append(el("span", "step", next.step), x);
-    bubble.append(head, el("div", "title", next.title));
-    if (next.body) bubble.appendChild(el("div", "body", next.body)); // 본문이 없으면 제목만
+    // 설정창·파티 상세와 같은 말풍선이다 (ui/coach.ts coachBubbleEl, 94 4-9).
     // 버튼 문구가 없는 단계는 행동으로만 넘어간다 — 첫 돌봄은 우클릭·밥 주기 (Figma `579:16959`)
-    if (next.button) {
-      const foot = el("div", "foot");
-      const go = el("button", "go", next.button);
-      go.addEventListener("click", () => act("done"));
-      foot.appendChild(go);
-      bubble.appendChild(foot);
-    }
+    const { bubble, skip, go } = coachBubbleEl({ step: next.step, title: next.title, body: next.body || undefined, goLabel: next.button || undefined, onGo: () => act("done"), onSkip: () => act("skip") });
     // 말풍선을 누른 것이 포켓몬 잡기·우클릭 메뉴로 번지지 않게
     for (const type of ["pointerdown", "pointerup", "contextmenu"]) bubble.addEventListener(type, (e) => e.stopPropagation());
     coachBox.appendChild(bubble);
     bubbleEl = bubble;
+    focusRule = { layer: coachBox, allows: (n) => bubble.contains(n), home: go ?? skip, stop: () => undefined };
     if (next.kind === "area") placeArea();
     else deps.onChanged(); // 다음 그리기가 포켓몬 자리에 맞춘다
   }
@@ -86,10 +76,9 @@ export function createStageCoach(deps: StageCoachDeps): {
     const bw = COACH.width;
     const clampX = (x: number): number => Math.min(Math.max(COACH.margin, x), W - bw - COACH.margin);
     const clampY = (y: number): number => Math.min(Math.max(COACH.margin, y), H - bh - COACH.margin);
-    const above = hole.t - COACH.gap - bh;
-    const below = hole.b + COACH.gap;
     const centerX = clampX(r.x + r.w / 2 - bw / 2);
-    const baseTop = above >= COACH.margin ? above : clampY(below);
+    // 세로는 세 창이 같은 규칙이다 — 아래 → 위 → 창 안 (ui/coach.ts bubbleTopOf, 94 4-8)
+    const baseTop = bubbleTopOf(hole, bh, H, COACH.gap);
     let spot = { left: centerX, top: baseTop };
     // 열린 메뉴를 덮지 않는 자리 — 기본 자리 → 메뉴 왼쪽 → 메뉴 오른쪽 → 메뉴 위 → 메뉴 아래 순서로 처음 맞는 곳
     const a = coach?.avoid;
@@ -133,6 +122,8 @@ export function createStageCoach(deps: StageCoachDeps): {
     return true;
   };
   for (const type of ["pointerdown", "pointerup", "contextmenu"] as const) addEventListener(type, guardCoach, true);
+  // 튜토리얼 중에는 키보드 초점도 말풍선 안에 둔다 — 설정창·파티 상세와 같다 (94 4-9)
+  guardCoachFocus(() => focusRule);
 
   // 커서가 말풍선 위인가 (무대 안 좌표)
   function isOver(x: number, y: number): boolean {

@@ -85,13 +85,13 @@ void app.whenReady().then(async () => {
       fixture.callbacks.hover({ x: b.left + 20, y: b.top + 20 }); const onBubble = fixture.hit;
       fixture.callbacks.hover({ x: 110, y: 110 }); const onPet = fixture.hit;
       fixture.callbacks.hover({ x: 700, y: 550 }); const onDim = fixture.hit;
-      document.querySelector('.coach-bubble .go').click();
+      document.querySelector('.coach-bubble .coach-go').click();
       const done = fixture.messages.at(-1);
       document.querySelector('.coach-bubble .x').click();
       const skip = fixture.messages.at(-1);
       fixture.callbacks.coach({ id: 'first-care', kind: 'pet', petId: 'last', step: 's', title: 't', body: 'b', button: '' });
       await new Promise((r) => setTimeout(r, 50));
-      const noButton = !document.querySelector('.coach-bubble .go') && !!document.querySelector('.coach-bubble .x');
+      const noButton = !document.querySelector('.coach-bubble .coach-go') && !!document.querySelector('.coach-bubble .x');
       // 열린 메뉴 자리(avoid)를 기본 자리 위에 두면 말풍선이 비켜 간다
       const first = document.querySelector('.coach-bubble').getBoundingClientRect();
       const avoid = { x: first.left, y: first.top, w: first.width, h: first.height };

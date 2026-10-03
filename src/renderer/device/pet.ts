@@ -96,23 +96,22 @@ function drawCoachNow(): void {
   const target = step ? device.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
   if (!step || !target) return;
   const last = detailStep === DETAIL_STEPS.length - 1;
-  const go = buttonEl("act primary", last ? "확인" : "다음", () => {
+  const onGo = (): void => {
     if (last) act({ kind: "tutorial", action: "done" });
     else {
       detailStep += 1;
       drawCoach();
     }
-  });
-  // 말풍선은 대상 가운데. 아래에 모자라면 위(넘치면 위 여백에 붙인다). 안내만 한다 — 대상은 보이되 눌리지 않는다
+  };
+  // 말풍선은 대상 가운데. 세로는 세 창이 같은 규칙(ui/coach.ts bubbleTopOf). 안내만 한다 — 대상은 보이되 눌리지 않는다
   coachNow = drawCoachLayer({
     target,
     bounds: { W: document.documentElement.clientWidth, H: device.getBoundingClientRect().height },
     pad: COACH.pad,
     gap: COACH.gap,
     align: "center",
-    fallback: "clamp",
     interactive: false,
-    bubble: { step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`, title: step.title, body: step.body, go, onSkip: () => act({ kind: "tutorial", action: "skip" }) },
+    bubble: { step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`, title: step.title, body: step.body, goLabel: last ? "확인" : "다음", onGo, onSkip: () => act({ kind: "tutorial", action: "skip" }) },
   });
   coachEl = coachNow.layer;
 }

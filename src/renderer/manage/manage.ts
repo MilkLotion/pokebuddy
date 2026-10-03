@@ -3811,7 +3811,6 @@ function drawTutorial(): void {
 }
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {
-  const next = spec.button ? actionButtonEl(spec.button, true, false, spec.onGo) : null; // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
   coachNow?.stop(); // 지난 코치마크의 관찰은 버린다 — 하나만 둔다
   // 말풍선은 대상 왼쪽. 아래 → 위 → (대상이 커서 둘 다 모자라면) 창 아래쪽 안. 안내만 하는 단계는 구멍도 막는다(예: 개체 상세의 박스에 보관)
   coachNow = drawCoachLayer({
@@ -3821,14 +3820,13 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
     pad: COACH.pad,
     gap: COACH.gap,
     align: "left",
-    fallback: "inside",
     interactive: spec.interactive === true,
     bubble: {
       step: spec.step,
       title: spec.title,
       body: spec.body,
-      go: next,
-      footEl: next ? actionsRowEl(el("div", "spacer"), next) : null,
+      goLabel: spec.button || undefined, // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
+      onGo: spec.onGo,
       onSkip: () => void sendCommand("tutorial.skip", id), // 닫기는 스킵이다
     },
     onTargetResized: () => drawTutorial(),
