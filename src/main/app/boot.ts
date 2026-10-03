@@ -1,10 +1,9 @@
 // 부팅 단계 가운데 앱 전역을 쓰지 않는 것 (worklog/records/code-structure/design/10-main.md 3.13절 app/boot.ts, 4.1절)
 //
 // 4단계 저장 키 — 저장 읽기·쓰기가 이 키로 암호화한다 (src/save/key.ts). 기존 평문 저장은 여기서 한 번 옮긴다.
-// 비동기 safeStorage 만 쓴다 — mac 은 키체인 허용 창이 뜨면 동기 호출이 메인을 멈춘다(src/main/trade.ts 와 같은 이유)
-import { safeStorage } from "electron";
 import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../../save/key";
 import { isSealedOnDisk } from "../../save/save-file";
+import { createKeyVault } from "../services/vault";
 import type { Notifier } from "../../notify/notifier";
 import type { Anchor } from "../anchor";
 import type { Commands } from "../commands";
@@ -50,11 +49,7 @@ export interface SaveKeyDeps {
 export async function bootSaveKey(deps: SaveKeyDeps): Promise<boolean> {
   const keyOptions: PrepareSaveKeyOptions = {
     saveFile: deps.saveFile,
-    vault: {
-      available: () => safeStorage.isAsyncEncryptionAvailable(),
-      encrypt: (text) => safeStorage.encryptStringAsync(text),
-      decrypt: (data) => safeStorage.decryptStringAsync(data),
-    },
+    vault: createKeyVault(),
     create: deps.create,
   };
   let saveKey = await prepareSaveKey(keyOptions);
