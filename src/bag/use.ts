@@ -12,6 +12,7 @@ import { recordShiny } from "../dex/record.js";
 import { PET_RULES } from "../party/rules.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off";
 
@@ -33,9 +34,7 @@ export type UseFailure = ReasonOf<
   | "bad-nature" // 바꿀 성격을 고르지 않았거나 모르는 성격이다
 >;
 
-export interface UseResult {
-  ok: boolean;
-  reason?: UseFailure;
+export type UseResult = Outcome<UseFailure> & {
   petId?: string;
   left?: number; // 쓰고 남은 개수
   level?: number;
@@ -43,7 +42,7 @@ export interface UseResult {
   fullness?: number;
   nature?: string;
   shiny?: boolean;
-}
+};
 
 const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<string, ItemEntry>>("items.json", opts);
 
@@ -75,7 +74,7 @@ export function use(save: SaveV3, itemId: string, petId: string, args: { nature?
   if (!free && stock <= 0) return { ok: false, reason: "none-left" };
 
   const rate = growthOf(pet.species, opts);
-  const done = (extra: Partial<UseResult>): UseResult => {
+  const done = (extra: Partial<Omit<UseResult, "ok" | "reason">>): UseResult => {
     if (!free) {
       const left = stock - 1;
       if (left > 0) save.bag[itemId] = left;

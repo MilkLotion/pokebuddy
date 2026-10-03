@@ -5,6 +5,7 @@ import { megaChoices, megaFormsOf, megaFree, megaOf } from "../dex/mega.js";
 import { allPresets, presetPetIds } from "./presets.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 // 개체가 든 프리셋의 칸들. 박스 개체면 null
 function presetMatesOf(save: SaveV3, petId: string): { preset: number; petIds: string[] } | null {
@@ -17,13 +18,11 @@ function presetMatesOf(save: SaveV3, petId: string): { preset: number; petIds: s
 
 export type MegaFailure = ReasonOf<"no-pet" | "no-stone" | "bad-form" | "not-in-party" | "already">;
 
-export interface MegaResult {
-  ok: boolean;
-  reason?: MegaFailure;
+export type MegaResult = Outcome<MegaFailure> & {
   petId?: string;
   on?: string | null; // 바뀐 뒤의 모습. null 이면 기본 모습
   reverted?: string[]; // 같은 프리셋에서 기본 모습으로 돌아간 개체
-}
+};
 
 // 메가 모습을 켜거나 끈다 — form 이 null 이면 기본 모습으로 돌아간다
 export function setMega(save: SaveV3, petId: string, form: unknown, opts?: DexOptions): MegaResult {

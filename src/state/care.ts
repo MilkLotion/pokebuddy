@@ -13,20 +13,19 @@ import { CARE_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { isInParty } from "../party/presets.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export const BASIC_FOOD = "basic-food";
 
 export type PlayFailure = ReasonOf<"no-pet" | "cooldown">;
 
-export interface PlayResult {
-  ok: boolean;
-  reason?: PlayFailure;
+export type PlayResult = Outcome<PlayFailure> & {
   petId?: string;
   affinity?: number;
   streak?: number; // 이어서 놀아준 횟수
   longPlay?: boolean; // 신남 버프가 붙었다 (3중첩)
   shortPlay?: boolean; // 들뜸 버프가 붙었다 (2중첩, 신남이 없을 때만)
-}
+};
 
 // 밥 주기 — 기본먹이 사용과 같은 길로 간다. 검사도 쿨타임도 한 곳에만 둔다
 export const feed = (save: SaveV3, petId: string, opts?: DexOptions): UseResult => use(save, BASIC_FOOD, petId, {}, opts);
@@ -77,7 +76,7 @@ export function checkCare(save: SaveV3, petId: string, kind: CareKind): { ok: tr
   return { ok: true };
 }
 
-export type FeedResult = Omit<UseResult, "reason"> & { reason?: UseFailure | "not-in-party" };
+export type FeedResult = Outcome<UseFailure | ReasonOf<"not-in-party">> & Omit<UseResult, "ok" | "reason">;
 
 // 밥 주기 명령 — 파티 개체만. 메가진화 조건의 돌봄 횟수와 누적 기록(첫 돌봄 튜토리얼이 "이미 돌봤다"를 본다)을 센다
 export function feedPet(save: SaveV3, petId: string, opts?: DexOptions): FeedResult {
@@ -90,7 +89,7 @@ export function feedPet(save: SaveV3, petId: string, opts?: DexOptions): FeedRes
   return res;
 }
 
-export type PlayWithResult = Omit<PlayResult, "reason"> & { reason?: PlayFailure | "not-in-party" };
+export type PlayWithResult = Outcome<PlayFailure | ReasonOf<"not-in-party">> & Omit<PlayResult, "ok" | "reason">;
 
 // 놀아주기 명령 — 파티 개체만. 돌봄 횟수와 누적 기록을 센다
 export function playWithPet(save: SaveV3, petId: string, opts?: DexOptions): PlayWithResult {

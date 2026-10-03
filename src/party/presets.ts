@@ -8,6 +8,7 @@ import { BOX_RULES } from "../box/rules.js";
 import { PARTY_RULES } from "./rules.js";
 import type { PartySlotV3, PartyV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type PresetFailure = ReasonOf<
   | "no-preset" // 그런 프리셋이 없다
@@ -78,7 +79,7 @@ export const defaultPresetName = (index: number): string => `프리셋 ${index +
 export const presetName = (save: Party, index: number): string => save.party.presetNames?.[index] || defaultPresetName(index);
 
 // 이름 바꾸기 — 앞뒤 공백을 떼고 nameMax 자로 자른다. 비우면 기본 이름으로 돌아간다. 박스 이름과 같은 규칙이다
-export function renamePreset(save: Party, index: number, name: string): { ok: boolean; reason?: PresetFailure; name?: string } {
+export function renamePreset(save: Party, index: number, name: string): Outcome<PresetFailure> & { name?: string } {
   if (!slotsOfPreset(save, index)) return { ok: false, reason: "no-preset" };
   const next = [...name.trim()].slice(0, BOX_RULES.nameMax).join("");
   const names = Array.from({ length: presetCount(save) }, (_, i) => save.party.presetNames?.[i] ?? "");
@@ -96,7 +97,7 @@ export function shopSlots(save: Party): { left: number; total: number; bought: n
 }
 
 // 프리셋을 하나 더 살 수 있는가 — 가진 프리셋의 칸을 모두 열어야 한다 (2개면 12칸, 3개면 18칸)
-export function presetBuyable(save: Party): { ok: boolean; reason?: PresetFailure; open: number; need: number } {
+export function presetBuyable(save: Party): Outcome<PresetFailure> & { open: number; need: number } {
   const count = presetCount(save);
   const need = count * PARTY_RULES.total;
   const open = allPresets(save).reduce((n, p) => n + p.slots.filter((s) => s.state !== "locked").length, 0);
@@ -118,7 +119,7 @@ export function addPreset(save: Party, slots: PartySlotV3[]): number {
 }
 
 // 프리셋을 적용한다 — party.slots 와 그 프리셋의 칸을 통째로 맞바꾼다
-export function applyPreset(save: Party, index: number): { ok: boolean; reason?: PresetFailure } {
+export function applyPreset(save: Party, index: number): Outcome<PresetFailure> {
   const target = slotsOfPreset(save, index);
   if (!target) return { ok: false, reason: "no-preset" };
   const from = activePreset(save);

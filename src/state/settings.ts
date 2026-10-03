@@ -8,17 +8,16 @@ import { screenRefOf } from "../shared/raw.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { REGION_MIN, SOUND_RULES } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
 
 export type SettingFailure = ReasonOf<"bad-args" | "bad-value">;
 
-export interface SetResult {
-  ok: boolean;
-  reason?: SettingFailure;
+export type SetResult = Outcome<SettingFailure> & {
   key?: SettingKey;
   value?: unknown;
-}
+};
 
 // 화면이 고를 수 있는 값. 하나뿐인 출처다
 export const SETTING_CHOICES = {

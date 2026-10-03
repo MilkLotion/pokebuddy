@@ -20,6 +20,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import { checkGiveEgg, eggRoomOf, newEgg, nextEggId, randomPool } from "../egg/pool.js";
 import { find, slotPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type BuyFailure = ReasonOf<
   | "no-product" // 그런 상품이 없다
@@ -35,9 +36,7 @@ export type BuyFailure = ReasonOf<
   | "sold-out" // 단일 포켓몬 알인데 남은 종이 없다 (기다리는 같은 알까지 셈)
 >;
 
-export interface BuyResult {
-  ok: boolean;
-  reason?: BuyFailure;
+export type BuyResult = Outcome<BuyFailure> & {
   spent?: number;
   balance?: number;
   eggId?: string;
@@ -46,7 +45,7 @@ export interface BuyResult {
   toBox?: boolean;
   preset?: number; // 새로 산 프리셋 번호
   boxId?: string; // 새로 산 박스
-}
+};
 
 // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다. 새 프리셋은 두 칸이 열린 채 비어 있다
 function buyPreset(save: SaveV3): BuyResult {

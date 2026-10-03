@@ -8,6 +8,7 @@
 import { findPet, putPet, takePet } from "../box/slots.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type PlacementFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
@@ -20,12 +21,10 @@ export type PlacementFailure = ReasonOf<
   | "not-in-party" // 파티에 없다
 >;
 
-export interface PlacementResult {
-  ok: boolean;
-  reason?: PlacementFailure;
+export type PlacementResult = Outcome<PlacementFailure> & {
   slotIndex?: number;
   movedOut?: string; // 교체로 박스에 들어간 개체
-}
+};
 
 const hasPet = (save: SaveV3, petId: string): boolean => save.pets.some((p) => p.id === petId);
 

@@ -4,14 +4,13 @@
 // 여기서는 칸의 `hidden` 만 바꾼다. 저장은 거래 실행기가 한다 (docs/specs/modules.md "경계 원칙").
 import type { PartySlotV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type VisibilityFailure = ReasonOf<"no-slot" | "not-pokemon" | "already">;
 
-export interface VisibilityResult {
-  ok: boolean;
-  reason?: VisibilityFailure;
+export type VisibilityResult = Outcome<VisibilityFailure> & {
   petId?: string;
-}
+};
 
 // 개체가 든 칸을 찾는다. 없으면 -1
 export const slotOf = (slots: PartySlotV3[], petId: string): number =>
