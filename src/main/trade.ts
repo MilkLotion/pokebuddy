@@ -7,13 +7,14 @@
 // 암호화가 한 번 실패해도 평문으로 둔다. 두 파일이 다 있으면 더 나중에 쓴 쪽을 읽는다(W5)
 import fs from "node:fs";
 import path from "node:path";
-import { app, safeStorage } from "electron";
+import { safeStorage } from "electron";
 import { PATHS } from "./paths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTradeNet, type SessionStorage } from "../online/trade-net.js";
 import type { SessionGate } from "../online/session.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../online/trade-session.js";
-import { dataVersion, devRunAt, onlineConfig } from "../trade/config.js";
+import { dataVersion, onlineConfig } from "../trade/config.js";
+import { devEnv, isDevRun } from "./app/dev-run.js";
 import { linkOf } from "../trade/link.js";
 import type { GameV3 } from "./game";
 import { stampOf } from "../platform/move-file.js";
@@ -160,16 +161,6 @@ export interface TradeDevHooks {
   pollMs: number | null;
   retryMs: number | null;
 }
-
-// 개발 실행 — 저장소에서 직접 띄웠을 때만 참. exe·npm 설치본은 거짓이다 (src/trade/config.ts devRunAt)
-let devRun: boolean | null = null;
-export function isDevRun(): boolean {
-  if (devRun == null) devRun = devRunAt(app.isPackaged, app.getAppPath());
-  return devRun;
-}
-
-// 개발 실행이 아니면 환경 변수를 넘기지 않는다 — 서버 주소를 바꿔 세션 토큰을 빼 가지 못하게
-export const devEnv = (): NodeJS.ProcessEnv => (isDevRun() ? process.env : {});
 
 export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun()): TradeDevHooks {
   if (!dev) return { fault: null, dataVersion: null, pollMs: null, retryMs: null };

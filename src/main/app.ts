@@ -22,11 +22,11 @@ import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./li
 import { lockExcept, petMenu, trayMenu, type PetMenuModel } from "./menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
-import { createMainTrade, isDevRun, type MainTrade } from "./trade";
+import { createMainTrade, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "./halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
 import { createMainMail, type MainMail } from "./mail";
 import { mailCodeOf } from "../online/codes.js";
@@ -42,17 +42,17 @@ import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
-import { drawRegion } from "./windows/region-window";
+import { askRegion } from "./windows/region-window";
 import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT, loadConfig } from "./paths";
 import { logoFile, preloadFile, rendererFile } from "./windows/files";
-import { pickStarter } from "./windows/picker-window";
+import { askStarter } from "./windows/picker-window";
 import { createStage } from "./stage";
 import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
 import { langOf, natureName, petLabel, petName, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
-import { careArgOf, syncJumpList } from "./jump-list";
+import { syncJumpList } from "./jump-list";
 import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
 import { createHungerBubbles } from "./hunger-bubble";
@@ -70,7 +70,9 @@ import type { Command } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/model/stage";
 import { currentTutorial } from "../tutorial/queue";
-import { isTradeLink } from "../trade/link.js";
+import { createDebugLog, redirectOutput } from "./app/log";
+import { devNumber, isDevRun, isUpdateTestBuild } from "./app/dev-run";
+import { claimSingleInstance, tradeLinkOf } from "./app/launch";
 
 // 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
 let workMs = 0;
@@ -78,32 +80,12 @@ let workMs = 0;
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
 // 그림 캐시 — 관리 창·선택 창과 무대 말풍선 아이콘이 함께 쓴다 (src/main/portraits.ts). main() 에서 만든다
 let portraits: Portraits | null = null;
-// 화면이 잠겨 있다 — 잠긴 동안은 게임 틱을 돌리지 않는다. 풀리면 다음 틱이 그 틈을 버린다(game.tick 은 틈을 TIME_V3_RULES.maxTickMs 로 자른다).
+// 화면이 잠겨 있다 — 잠긴 동안은 게임 틱을 돌리지 않는다. 풀리면 다음 틱이 그 틈을 버린다(game.tick 은 틈을 TIME_RULES.maxElapsedMs 로 자른다 — src/state/time.ts elapsedSince).
 // 절전은 폴링이 멈춰 저절로 같은 결과가 된다. 잠금만 하고 절전하지 않으면 폴링이 계속 돌아 따로 막는다 (2026-09-27)
 let screenLocked = false;
 
-// POKEBUDDY_LOG 가 있으면 출력(console·stderr)을 그 파일에 이어 쓴다 — pokebuddy 는 펫에 출력 핸들을 넘기지 않는다
-// (Windows 는 Start-Process 로 띄워 넘길 수도 없다. cli/run.js launchPet)
-if (process.env.POKEBUDDY_LOG) {
-  try {
-    const logFd = fs.openSync(process.env.POKEBUDDY_LOG, "w");
-    const write = (chunk: unknown, encoding?: unknown, done?: unknown): boolean => {
-      try {
-        if (typeof chunk === "string") fs.writeSync(logFd, chunk);
-        else fs.writeSync(logFd, Buffer.from(chunk as Uint8Array));
-      } catch {
-        // 로그 실패는 무시
-      }
-      const cb = typeof encoding === "function" ? encoding : done;
-      if (typeof cb === "function") (cb as () => void)();
-      return true;
-    };
-    process.stdout.write = write as typeof process.stdout.write;
-    process.stderr.write = write as typeof process.stderr.write;
-  } catch {
-    // 로그 파일을 못 열면 출력은 원래대로 버려진다
-  }
-}
+// POKEBUDDY_LOG 가 있으면 출력(console·stderr)을 그 파일에 이어 쓴다 (src/main/app/log.ts)
+redirectOutput(process.env.POKEBUDDY_LOG);
 
 // Electron 캐시·세션 폴더를 펫 데이터 아래로 — 기본값(~/Library/Application Support/<패키지 이름>)은
 // 패키지 이름이 바뀌면 옛 폴더가 버려지고, uninstall --purge 로도 안 지워진다. ready 전에 정해야 한다
@@ -117,43 +99,24 @@ const config = loadConfig();
 const { runtime } = config;
 const { debug } = runtime;
 setLang(langOf(config));
-// POKEBUDDY_DEBUG — 판정 로그를 JSON 한 줄씩 (POKEBUDDY_LOG 가 있으면 그 파일로). console.log 대신 stdout 직접
-const log = debug ? (o: Record<string, unknown>) => void process.stdout.write(`${JSON.stringify(o)}\n`) : null;
+// POKEBUDDY_DEBUG — 판정 로그를 JSON 한 줄씩 (src/main/app/log.ts)
+const log = createDebugLog(debug);
 
 // 작업 표시줄·점프 목록이 설치본 바로 가기(scripts/build-exe.cjs appId)와 같은 앱으로 묶이게 — 앱 이름 줄이 "PokeBuddy" 로 보인다
 // 업데이트 실기 시험 빌드(scripts/build-exe.cjs PB_UPDATE_TEST)는 다른 ID 를 쓰고, 사용자의 설치본이 가진 OS 등록(링크·로그인 시 시작)을 건드리지 않는다
-const updateTestBuild = app.isPackaged && fs.existsSync(path.join(PROJECT, "update-test.json"));
+const updateTestBuild = isUpdateTestBuild();
 // 시험 빌드는 로그인 키체인을 쓰지 않는다 — safeStorage(src/main/trade.ts)가 키를 만들며 키체인 대화상자를 띄운다
 // (2026-09-28 mac 업데이트 실기 시험에서 "…Key 를 저장할 키체인을 찾을 수 없습니다" 가 뜸). 업데이트 도우미가 open 으로 다시 켤 때도 적용되게 앱이 스스로 켠다
 if (updateTestBuild) app.commandLine.appendSwitch("use-mock-keychain");
 if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.github.milklotion.pokebuddy.updatetest" : "io.github.milklotion.pokebuddy");
 
-// 동반자는 기기당 하나 — pokebuddy companion 이 lock 파일로 먼저 가리지만 동시에 두 번 치면 둘 다 통과한다.
-// 둘째는 창을 만들기 전에 끝난다
-const duplicate = !app.requestSingleInstanceLock();
-if (duplicate) app.quit();
-// 떠 있는 동반자를 다시 실행했다(설치한 앱의 바로가기를 한 번 더 누름 등) — 새로 띄우지 않고 관리 창을 연다.
-// 교환 링크(pokebuddy://trade/<토큰>)로 실행했으면 그 교환에 참가하고 교환 모달을 연다
-else {
-  app.on("second-instance", (_e, argv) => {
-    // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/jump-list.ts)
-    const care = careArgOf(argv);
-    if (care) return runGameCommand({ cmd: care.action, target: care.petId, from: "menu" });
-    const link = tradeLinkOf(argv);
-    if (link) openTradeLink(link);
-    else if (argv.some(isAccountLink)) openManageWindow({ to: "account" }); // GitHub 로그인을 마친 브라우저에서 돌아왔다
-    else openManageWindow();
-  });
-  // mac 은 딥링크를 open-url 로 준다
-  app.on("open-url", (e, url) => {
-    e.preventDefault();
-    const link = tradeLinkOf([url]);
-    if (link) openTradeLink(link);
-    else if (isAccountLink(url)) openManageWindow({ to: "account" });
-  });
-  // 설치한 앱만 등록한다 — 개발 실행의 electron 을 등록하면 앱 없는 빈 Electron 이 링크를 받는다
-  if (app.isPackaged && !updateTestBuild) app.setAsDefaultProtocolClient("pokebuddy");
-}
+// 동반자는 기기당 하나 — 둘째는 창을 만들기 전에 끝난다. 다시 실행·딥링크는 떠 있는 동반자가 받는다 (src/main/app/launch.ts)
+// 처리기는 이벤트가 올 때 부른다 — 아래에 정의한 함수를 화살표로 감싸 넘긴다
+const duplicate = !claimSingleInstance({
+  onCare: (care) => runGameCommand({ cmd: care.action, target: care.petId, from: "menu" }),
+  onTradeLink: (link) => openTradeLink(link),
+  onOpen: (route) => openManageWindow(route),
+});
 
 // 로그인 시 시작 — 설정 값을 OS 에 적용한다. 설치한 앱에서만 한다.
 // 저장소의 `electron .` 을 등록하면 다음 로그인 때 앱 없는 빈 Electron 이 뜨기 때문이다
@@ -547,7 +510,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
-      const rect = await drawRegion({ preload: preloadFile(), html: rendererFile("region.html"), current });
+      const rect = await askRegion({ preload: preloadFile(), html: rendererFile("region.html"), current });
       if (!rect) return { ok: false, reason: "cancelled" };
       if (!commands) return { ok: false, reason: "not-ready" };
       const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playRegion", args: { value: rect }, from: "settings" });
@@ -558,7 +521,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     screens: () => screenViews(currentScreens(), game?.read()?.settings.playArea.screen ?? null),
     identifyScreens: (on) => picker().identify(on),
     pickScreen: async () => {
-      const ref = await picker().pick();
+      const ref = await picker().ask();
       if (!ref) return { ok: false, reason: "cancelled" };
       if (!commands) return { ok: false, reason: "not-ready" };
       const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playScreen", args: { value: ref }, from: "settings" });
@@ -1010,7 +973,7 @@ function supersede(info: HaltInfo): void {
   mainOnline?.dispose();
   mainOnline = null;
   log?.({ cloud: "superseded", other: info.other?.label ?? null });
-  void showKicked(info).finally(() => app.quit());
+  void askKicked(info).finally(() => app.quit());
 }
 
 // 이용 정지(P4c, D35) — 게임을 멈추고 온라인을 끈 뒤 정지 창을 띄우고 끝낸다. 다시 켜도 cloud.json 의 정지로 같은 창이 뜬다
@@ -1026,7 +989,7 @@ function holdAccount(): void {
   mainOnline?.dispose();
   mainOnline = null;
   log?.({ cloud: "held" });
-  void showHeld().finally(() => app.quit());
+  void askHeld().finally(() => app.quit());
 }
 
 // 세션 종료 직전 — 올리고 released 를 알린다(최대 3초). 클라우드를 멈추지 않는다.
@@ -1088,16 +1051,6 @@ function flushTradeLink(): void {
   openManageWindow({ to: "trade" });
 }
 
-// 계정 링크 — GitHub 로그인 뒤 브라우저 쪽(src/online/github.ts callbackPage)이 여는 pokebuddy://account
-function isAccountLink(arg: string): boolean {
-  return /^pokebuddy:\/\/account\/?$/.test(arg);
-}
-
-// 교환 링크 — 인자 가운데 pokebuddy://trade/ 로 시작하는 것
-function tradeLinkOf(argv: readonly string[]): string | null {
-  return argv.find((a) => isTradeLink(a)) ?? null;
-}
-
 // 교환 링크로 참가하고 교환 모달을 연다. 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
 function openTradeLink(link: string): void {
   tradeLink = { link, at: Date.now() };
@@ -1118,8 +1071,7 @@ const BUBBLE_MS = 5000;
 let findRateMemo: number | null | undefined;
 const findRate = (): number | null => {
   if (findRateMemo === undefined) {
-    const v = process.env.POKEBUDDY_FIND_RATE;
-    findRateMemo = v && /^\d+$/.test(v) && Number(v) > 0 && isDevRun() ? Number(v) : null;
+    findRateMemo = devNumber("POKEBUDDY_FIND_RATE") ?? null;
   }
   return findRateMemo;
 };
@@ -1172,7 +1124,7 @@ function stateTick(): void {
 
 // 전역 시계의 1초 틱 — 게임 시간 적용·줍기·작업 시간·배고픔 말풍선·배너를 이 틱의 now·gap 으로 한다 (2026-09-29 사용자 결정 "전역 타이머 1초").
 // 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 돈다. 틈이 STATE_RULES.maxTickMs 를 넘는 틱(절전 복귀·멈춤)은 작업·줍기로 세지 않는다.
-// 게임 시간의 큰 틈은 `game.tick` 이 TIME_V3_RULES.maxTickMs 로 자른다 (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다").
+// 게임 시간의 큰 틈은 `game.tick` 이 TIME_RULES.maxElapsedMs 로 자른다(src/state/time.ts elapsedSince) (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다").
 // 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스").
 // 무거운 일(놀이공간·점프 목록·트레이 다시 읽기, 남은 안내)은 SLOW_EVERY 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
 const SLOW_EVERY = Math.max(1, Math.round(STATE_RULES.saveMs / CLOCK_RULES.periodMs));
@@ -1353,7 +1305,7 @@ async function main(): Promise<void> {
     const list = starterList;
     let species: string | null = config.fromEnv.has("slug") && list.includes(config.slug) ? config.slug : null;
     if (!species) {
-      species = await pickStarter({
+      species = await askStarter({
         preload: preloadFile(),
         html: rendererFile("picker.html"),
         starters: list,

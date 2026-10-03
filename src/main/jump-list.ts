@@ -2,7 +2,7 @@
 //   (2026-09-28 사용자 "크롬 우클릭 메뉴처럼 냐오하 [아이콘] 밥주기 [아이콘] 놀아주기 …")
 //
 // 항목을 누르면 Windows 가 앱을 인자(--pokebuddy-care=feed:<개체>)와 함께 다시 실행한다.
-// 이미 떠 있는 동반자가 second-instance 로 그 인자를 받아 명령을 돌린다 (src/main/app.ts).
+// 이미 떠 있는 동반자가 second-instance 로 그 인자를 받아 명령을 돌린다 (src/main/app/launch.ts).
 // 앱 이름·작업 표시줄에 고정·창 닫기 줄은 Windows 가 붙인다.
 // 항목 아이콘은 점프 목록 전용 도트 그림이다 — assets/items/jump-feed.ico·jump-play.ico (Figma 99 `803:782`, 16·32·48px).
 //   아이콘이 없으면 Windows 가 실행 파일 아이콘을 대신 붙인다(2026-09-28 사용자 "이게 더 에바네. 이거 아이콘은 새로 만들어야겠다")

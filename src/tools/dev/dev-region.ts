@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
 import { preloadFile, rendererFile } from "../../main/windows/files";
-import { drawRegion } from "../../main/windows/region-window";
+import { askRegion } from "../../main/windows/region-window";
 import { argAfter, hasFlag, numsOf } from "../harness/shot";
 
 const shotFile = argAfter("--shot");
@@ -16,7 +16,7 @@ const drag = numsOf(argAfter("--drag"));
 
 void app.whenReady().then(() => {
   const cur = current ? { x: current[0]!, y: current[1]!, w: current[2]!, h: current[3]! } : null;
-  void drawRegion({ preload: preloadFile(), html: rendererFile("region.html"), current: cur }).then((rect) => {
+  void askRegion({ preload: preloadFile(), html: rendererFile("region.html"), current: cur }).then((rect) => {
     process.stdout.write(`result: ${JSON.stringify(rect)}\n`);
     app.exit(0);
   });

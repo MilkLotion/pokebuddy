@@ -1,7 +1,9 @@
-// 창 도우미 자체 확인 — 입력 검사(src/main/windows/input.ts)와 창 자리 계산(src/main/windows/placement.ts). Electron 없이 돈다
+// 창 도우미 자체 확인 — 입력 검사(src/main/windows/input.ts), 창 자리 계산(src/main/windows/placement.ts),
+// 한 번만 띄우기(src/main/windows/answer-window.ts singleFlight). Electron 없이 돈다
 //   npm run build 뒤 node dist/tools/selftest/selftest-window-helpers.js
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
+import { singleFlight } from "../../main/windows/answer-window";
 import { INPUT_LIMITS, deviceHeightOf, isIndexBelow, isQty, isRecord, isShortId, isStep } from "../../main/windows/input";
 import { centerSpotOf, cornerSpotOf, dockAt } from "../../main/windows/placement";
 
@@ -49,4 +51,44 @@ import { centerSpotOf, cornerSpotOf, dockAt } from "../../main/windows/placement
   process.stdout.write("(2) 창 자리  ok\n");
 }
 
-process.stdout.write("selftest-window-helpers: 통과 (입력 검사·창 자리)\n");
+// (3) 한 번만 띄우기 — 답이 오기 전에는 같은 약속, 답을 받은 쪽이 바로 다시 부르면 새로 띄운다
+async function singleFlightCases(): Promise<void> {
+  let runs = 0;
+  let answer: (v: string) => void = () => undefined;
+  const ask = singleFlight((label: string) => {
+    runs++;
+    return new Promise<string>((resolve) => {
+      answer = (v) => resolve(`${label}:${v}`);
+    });
+  });
+  assert.equal(ask.inFlight(), false);
+  const first = ask("a");
+  const second = ask("b");
+  assert.equal(first, second, "답이 오기 전에는 같은 약속");
+  assert.equal(runs, 1, "창은 한 벌");
+  assert.equal(ask.inFlight(), true);
+  let again: Promise<string> | null = null;
+  const got = first.then((v) => {
+    again = ask("c"); // 답을 받은 자리에서 바로 다시 부른다
+    return v;
+  });
+  answer("ok");
+  assert.equal(await got, "a:ok", "두 번째 부름의 인자는 버린다");
+  assert.equal(runs, 2, "답을 받은 뒤 부르면 새로 띄운다");
+  assert.notEqual(again, first);
+  answer("ok");
+  await again;
+  assert.equal(ask.inFlight(), false);
+  const failing = singleFlight(() => Promise.reject(new Error("못 띄움")));
+  await assert.rejects(failing());
+  assert.equal(failing.inFlight(), false, "거절돼도 비운다");
+  process.stdout.write("(3) 한 번만 띄우기  ok\n");
+}
+
+singleFlightCases().then(
+  () => process.stdout.write("selftest-window-helpers: 통과 (입력 검사·창 자리·한 번만 띄우기)\n"),
+  (e: unknown) => {
+    console.error(e);
+    process.exit(1);
+  },
+);

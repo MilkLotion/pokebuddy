@@ -13,7 +13,7 @@
 import { app, dialog, type BrowserWindow } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";
-import { showAlert } from "./windows/alert-window";
+import { askAlert } from "./windows/alert-window";
 import { preloadFile, rendererFile } from "./windows/files";
 import { t } from "./text";
 import { primaryWorkArea } from "./windows/display";
@@ -88,7 +88,7 @@ export function alertViewOf(o: { title: string; message: string; detail: string;
 // 단추를 고르게 한다 — 고른 단추 번호. 밖에서 닫았으면 closed, 띄우지 못했으면 cancelId
 async function pick(o: PickOptions): Promise<number | "closed"> {
   const started = Date.now();
-  const viaAlert = await showAlert({
+  const viaAlert = await askAlert({
     preload: preloadFile(),
     html: rendererFile("alert.html"),
     view: alertViewOf(o),
@@ -155,7 +155,7 @@ async function ask(o: AskOptions): Promise<HaltAnswer> {
 }
 
 // 밀려남 안내 — 단추 하나. KICKED_CLOSE_MS 뒤 저절로 닫힌다. 답과 무관하게 앱은 종료한다
-export function showKicked(info: HaltInfo): Promise<HaltAnswer> {
+export function askKicked(info: HaltInfo): Promise<HaltAnswer> {
   return ask({
     type: "info",
     title: t("cloud.kicked.title"),
@@ -168,7 +168,7 @@ export function showKicked(info: HaltInfo): Promise<HaltAnswer> {
 }
 
 // 이용 정지 안내(P4c, D35) — 단추 하나. 답과 무관하게 앱은 종료한다. 저절로 닫히지 않는다 — 사용자가 읽고 닫는다
-export function showHeld(): Promise<HaltAnswer> {
+export function askHeld(): Promise<HaltAnswer> {
   return ask({
     type: "warning",
     title: t("cloud.held.title"),

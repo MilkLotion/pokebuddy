@@ -26,7 +26,8 @@ import { createSessionGate, type SessionGate } from "../online/session.js";
 import { withTimeout } from "../online/server-call.js";
 import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../trade/config.js";
-import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
+import { encryptedStorage } from "./trade.js";
+import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
 import { loadCloudState } from "../online/lost.js";
@@ -83,13 +84,6 @@ export interface MainOnline {
   fresh: () => Promise<void>;
   dispose: () => void; // writer 를 놓거나 끌 때 — 클라우드 저장을 멈추고 토큰 갱신·실시간 연결을 닫는다
 }
-
-// 개발용 시험 장치 — 개발 실행에서만 읽는다. 설치본은 무시한다 (E2E 가 기다리지 않게)
-//   POKEBUDDY_CLOUD_UPLOAD_MS · _RETRY_MS · _HEARTBEAT_MS  주기 저장 스로틀·다시 연결·하트비트 간격
-const devMs = (name: string): number | undefined => {
-  const v = isDevRun() ? process.env[name] : undefined;
-  return v && /^\d+$/.test(v) ? Number(v) : undefined;
-};
 
 const deviceLabel = (): string => (process.platform === "win32" ? "Windows PC" : process.platform === "darwin" ? "Mac" : "Linux PC");
 
@@ -154,9 +148,11 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     client,
     appVersion: app.getVersion(),
     deviceLabel: deviceLabel(),
-    ...(devMs("POKEBUDDY_CLOUD_UPLOAD_MS") ? { throttleMs: devMs("POKEBUDDY_CLOUD_UPLOAD_MS") } : {}),
-    ...(devMs("POKEBUDDY_CLOUD_RETRY_MS") ? { retryMs: devMs("POKEBUDDY_CLOUD_RETRY_MS") } : {}),
-    ...(devMs("POKEBUDDY_CLOUD_HEARTBEAT_MS") ? { heartbeatMs: devMs("POKEBUDDY_CLOUD_HEARTBEAT_MS") } : {}),
+    // 개발용 시험 장치 — 개발 실행에서만 읽는다(src/main/app/dev-run.ts devNumber). 설치본은 무시한다 (E2E 가 기다리지 않게)
+    //   POKEBUDDY_CLOUD_UPLOAD_MS · _RETRY_MS · _HEARTBEAT_MS  주기 저장 스로틀·다시 연결·하트비트 간격
+    ...(devNumber("POKEBUDDY_CLOUD_UPLOAD_MS") ? { throttleMs: devNumber("POKEBUDDY_CLOUD_UPLOAD_MS") } : {}),
+    ...(devNumber("POKEBUDDY_CLOUD_RETRY_MS") ? { retryMs: devNumber("POKEBUDDY_CLOUD_RETRY_MS") } : {}),
+    ...(devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") ? { heartbeatMs: devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") } : {}),
     io: {
       // 로컬 저장을 격리했으면(풀지 못함·손으로 고친 평문·키 분실) 맞춘 rev 를 잊는다 — 다음 맞추기가 서버 저장을 받는다 (src/online/lost.ts)
       loadState: () => loadCloudState(cloudFile, o.saveFile),
