@@ -8,11 +8,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_LINK, callbackPage, callbackUrl, githubLogin, type GithubLoginOptions } from "../../online/github";
 import { createSessionGate } from "../../online/session";
 import type { SwitchHooks } from "../../online/handoff";
+import { sleep as sleepMs } from "../harness/wait";
 
 // 시험마다 그 클라이언트의 세션 관문을 붙인다
 const login = (o: Omit<GithubLoginOptions, "gate">): ReturnType<typeof githubLogin> => githubLogin({ ...o, gate: createSessionGate(o.client) });
 
-const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // 가짜 인증 — 로그인 주소에 redirectTo 를 담아 돌려주고, 코드 교환을 기록한다
 //   anon 을 주면 교환 전 세션이 그 익명 사용자다(교환하면 정식 계정으로 바뀐다)

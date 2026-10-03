@@ -10,7 +10,8 @@ import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
 import { ART_RULES, zoomOf } from "../../main/art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageOf, toLocal } from "../../main/layout";
-import { lockExcept, menuView, petLine, petMenu, pickOf, subId, trayMenu } from "../../main/menus";
+import { menuView, pickOf, subId } from "../../main/menus";
+import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../main/text";
 import * as legacy from "../../save/legacy";
@@ -29,11 +30,10 @@ import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep, waitFor } from "../harness/wait";
 import { PARTY_RULES } from "../../party/rules";
+import { printLine as out } from "../harness/report";
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
 let passed = 0;
 const ok = (cond: unknown, what: string): void => {
   assert.ok(cond, what);
@@ -43,15 +43,6 @@ const eq = <T>(a: T, b: T, what: string): void => {
   assert.deepStrictEqual(a, b, `${what}: ${JSON.stringify(a)} ≠ ${JSON.stringify(b)}`);
   passed += 1;
 };
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-async function waitFor(check: () => boolean, ms = 3000, step = 20): Promise<boolean> {
-  const until = Date.now() + ms;
-  while (Date.now() < until) {
-    if (check()) return true;
-    await sleep(step);
-  }
-  return check();
-}
 function spawnIdle(): { pid: number; kill: () => void } {
   const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore", windowsHide: true });
   assert.ok(child.pid, "자식 pid");

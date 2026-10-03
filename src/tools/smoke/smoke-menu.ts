@@ -10,9 +10,11 @@ import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { menuView, petMenu, subId } from "../../main/menus";
+import { menuView, subId } from "../../main/menus";
+import { petMenu } from "../../view/menus";
 import { t } from "../../main/text";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep as wait } from "../harness/wait";
 
 const dir = makeTmp("menu");
 const shots = process.env.POKEBUDDY_SMOKE_SHOTS ?? dir;
@@ -51,7 +53,6 @@ const plainModel = petMenu({ name: "피카츄", nature: null, status: "보통 ·
 
 app.setPath("userData", path.join(dir, "user-data"));
 app.disableHardwareAcceleration();
-const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 void app.whenReady().then(async () => {
   const win = new BrowserWindow({ width: 640, height: 480, show: false, backgroundColor: "#eeeeea", webPreferences: { preload, contextIsolation: false, sandbox: false, offscreen: true, backgroundThrottling: false } });

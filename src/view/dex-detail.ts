@@ -14,7 +14,7 @@ import { profile } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
-import { petName, typeName, t } from "../main/text.js";
+import { petName, typeName, t } from "./text.js";
 import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";

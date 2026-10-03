@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — 앱이 쓴 JSON 을 시험이 그대로 읽는다
@@ -14,10 +15,7 @@ const root = path.resolve(__dirname, "..", "..", "..");
 const dir = makeTmp("companion-e2e");
 const temp = path.join(dir, "tmp");
 fs.mkdirSync(temp);
-const env: NodeJS.ProcessEnv = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, "appdata"), LOCALAPPDATA: path.join(dir, "localappdata"), TEMP: temp, TMP: temp };
-for (const key of Object.keys(env)) {
-  if (key.startsWith("POKEBUDDY_") || key === "NODE_OPTIONS" || key === "ELECTRON_RUN_AS_NODE") delete env[key];
-}
+const env = homeEnv(dir, temp);
 env.PB_E2E_DIR = dir;
 // mock-keychain — 임시 HOME 앱이 사용자 키체인에 닿지 않게 (scripts/e2e/mock-keychain.cjs)
 env.NODE_OPTIONS = ["mock-keychain.cjs", "companion-observer.cjs"].map((f) => `--require "${path.join(root, "scripts", "e2e", f).split(path.sep).join("/")}"`).join(" ");

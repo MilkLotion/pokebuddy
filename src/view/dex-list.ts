@@ -1,6 +1,6 @@
 // 도감 목록 — 도감 번호 순. 상태는 획득 · 해금 · 미해금 셋이다
 import { type DexOptions, isMetaKey } from "../dex/data.js";
-import { petName } from "../main/text.js";
+import { petName } from "./text.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf, isRegional } from "../dex/regional.js";
 import type { DexEntry } from "../shared/model/detail";

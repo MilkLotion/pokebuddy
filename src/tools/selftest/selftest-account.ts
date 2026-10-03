@@ -4,7 +4,6 @@
 // 설계는 worklog/records/trade/record.md "계정과 로그인", "로그인·클라우드 저장 구현 계획"
 //   P2(design-p2.md 2절): 익명 userId·AccountView.anonymous, 세션 교체 훅(switchHooks) — 이관 결과 전달·before 실패 시 로그인 중단
 import assert from "node:assert";
-import { execSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createOnlineClient, memoryStorage } from "../../online/client";
 import { createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Account } from "../../online/account";
@@ -13,18 +12,7 @@ import { createTradeNet } from "../../online/trade-net";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff";
 import { dataVersion, onlineConfig } from "../../trade/config";
-
-function local(): { url: string; key: string } | null {
-  if (process.env.POKEBUDDY_SUPABASE_URL && process.env.POKEBUDDY_SUPABASE_KEY) return { url: process.env.POKEBUDDY_SUPABASE_URL, key: process.env.POKEBUDDY_SUPABASE_KEY };
-  try {
-    const raw = execSync("npx supabase status -o json", { stdio: ["ignore", "pipe", "ignore"], timeout: 60_000 }).toString();
-    const j = JSON.parse(raw.slice(raw.indexOf("{"))) as Record<string, string>;
-    const url = j.API_URL, key = j.PUBLISHABLE_KEY ?? j.ANON_KEY;
-    return url && key ? { url, key } : null;
-  } catch {
-    return null;
-  }
-}
+import { assertLocalUrl, localServer } from "../harness/fakes";
 
 function rules(): void {
   assert.equal(normalizeUsername("Jiwoo_01"), "jiwoo_01", "대문자는 소문자로");
@@ -217,12 +205,12 @@ async function hooks(url: string, key: string): Promise<void> {
 
 async function main(): Promise<void> {
   rules();
-  const cfg = local();
+  const cfg = localServer();
   if (!cfg) {
     process.stdout.write("selftest-account: 로컬 Supabase 가 없어 서버 부분을 건너뜀\n");
     return;
   }
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(cfg.url)) throw new Error("로컬 주소가 아니다 — 실제 프로젝트에는 붙지 않는다");
+  assertLocalUrl(cfg.url);
   await server(cfg.url, cfg.key);
   process.stdout.write("selftest-account: 통과 (규칙·중복검사·가입·동시 가입·로그인·이름·막힘·상대 이름·로그아웃·익명·이관 훅)\n");
 }

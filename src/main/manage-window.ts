@@ -28,6 +28,7 @@ import { bagDeviceModel } from "../view/device-bag.js";
 import { partyDeviceModel } from "../view/device-party.js";
 import { petDeviceModel } from "../view/device-pet.js";
 import { shopDeviceModel } from "../view/device-shop.js";
+import { resultLineOf } from "../view/result-lines.js";
 import { gainOf } from "../state/settings.js";
 import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
@@ -106,7 +107,7 @@ export interface ManageOptions {
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
   mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/main/mail.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
-  petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/main/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
+  petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/view/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
 }
 
 let win: BrowserWindow | null = null;
@@ -135,6 +136,8 @@ const isRequest = (v: unknown): v is ManageRequest =>
 // 표면이 보내지 못하는 명령 — 거래 실행기에만 있는 이름이다 (src/shared/names/commands.ts 의 internal). 명령 이름 표가 생기면 그 표의 표시로 바꾼다
 // (worklog/records/code-structure/design/40-contracts-save-online.md `internal`)
 const INTERNAL_COMMANDS: ReadonlySet<string> = new Set(["trade.lock", "trade.unlock", "trade.apply"]);
+// 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
+const RESULT_COMMANDS = new Set(["bag.use", "shop.buy"]);
 const isInternalCommand = (cmd: string): boolean => cmd.startsWith("mail.") || INTERNAL_COMMANDS.has(cmd);
 
 const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } => {
@@ -437,7 +440,12 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
     if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
     game.tick();
-    return send(req);
+    // 결과 줄이 있는 명령은 거래 앞뒤 화면 값을 견줘 성공 답에 붙인다 (src/view/result-lines.ts)
+    const before = RESULT_COMMANDS.has(req.cmd) ? game.view() : null;
+    const reply = await send(req);
+    const after = reply.ok && before ? game.view() : null;
+    const result = before && after ? resultLineOf(req, before, after) : null;
+    return result ? { ...reply, result } : reply;
   });
 }
 

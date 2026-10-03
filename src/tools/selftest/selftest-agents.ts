@@ -17,17 +17,12 @@ delete process.env.CLAUDE_CONFIG_DIR;
 // 배럴 없이 모듈을 직접. HOME 을 바꾼 뒤에 읽어야 해서 import 문이 아니라 require 꼴 — ES import 는 파일 맨 위로 끌어올려진다
 import usage = require("../../agents/usage");
 import registry = require("../../agents/registry");
+import { okCounter, printLine as say } from "../harness/report";
+
+const checks = okCounter();
+const ok = checks.ok;
 const agents = { ...usage, ...registry };
 
-const say = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
-let n = 0;
-const ok = (name: string, fn: () => void): void => {
-  fn();
-  n += 1;
-  say(`  ok  ${name}`);
-};
 
 // 있어야 하는 값 — 없으면 여기서 실패한다 (없는 값에 점을 찍어 TypeError 로 죽는 대신)
 function some<T>(v: T | null | undefined, what = "값"): T {
@@ -220,7 +215,7 @@ try {
     assert.strictEqual(some(agents.status().find((r) => r.name === "codex")).outdated, false);
   });
 
-  say(`통과 (${n}건)`);
+  say(`통과 (${checks.count()}건)`);
 } finally {
   fs.rmSync(home, { recursive: true, force: true });
 }

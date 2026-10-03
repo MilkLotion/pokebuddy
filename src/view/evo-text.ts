@@ -1,7 +1,7 @@
 // 진화 조건 글자 한 벌 — 도감 상세·상점 상세가 같이 쓴다
 import { type EvoStep } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
-import { petName } from "../main/text.js";
+import { petName } from "./text.js";
 import { nameOfItem } from "./item-name.js";
 import { needIsMap } from "../dex/regional.js";
 import { josa } from "../shared/josa.js";

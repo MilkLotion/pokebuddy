@@ -4,14 +4,15 @@
 // ZIP 파일 하나를 통째로 캐시하고 쓸 때마다 메모리에서 푼다 (250KB deflate 는 수 ms).
 //
 // 지원: deflate(8) · 무압축(0). 암호화·ZIP64·deflate64 는 던진다 — PMD 자산에는 나오지 않는다.
-const zlib = require("zlib");
+// (예전 lib/zip.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다)
+import zlib from "node:zlib";
 
 const EOCD_SIG = 0x06054b50; // PK\x05\x06 — 중앙 디렉터리 끝 기록
 const CEN_SIG = 0x02014b50; // PK\x01\x02 — 중앙 디렉터리 항목
 const LOC_SIG = 0x04034b50; // PK\x03\x04 — 각 파일 앞에 붙는 머리말
 
 // EOCD 는 파일 끝에 있지만 주석이 최대 64KB 붙을 수 있어 뒤에서부터 찾는다
-function findEocd(buf) {
+function findEocd(buf: Buffer): number {
   const from = Math.max(0, buf.length - 66_000);
   for (let i = buf.length - 22; i >= from; i--) {
     if (buf.readUInt32LE(i) === EOCD_SIG) return i;
@@ -20,14 +21,14 @@ function findEocd(buf) {
 }
 
 // { 이름 → Buffer }. 빈 아카이브면 빈 Map (던지지 않는다 — 호출한 쪽이 판단한다)
-function readZip(buf) {
+export function readZip(buf: Buffer): Map<string, Buffer> {
   if (!Buffer.isBuffer(buf) || buf.length < 22) throw new Error("ZIP 이 아님 — 너무 짧다");
   const eocd = findEocd(buf);
   if (eocd < 0) throw new Error("ZIP 이 아님 — 끝 기록을 못 찾음");
 
   const count = buf.readUInt16LE(eocd + 10);
   let at = buf.readUInt32LE(eocd + 16); // 중앙 디렉터리 시작 위치
-  const out = new Map();
+  const out = new Map<string, Buffer>();
 
   for (let i = 0; i < count; i++) {
     if (at + 46 > buf.length || buf.readUInt32LE(at) !== CEN_SIG) break;
@@ -52,5 +53,3 @@ function readZip(buf) {
   }
   return out;
 }
-
-module.exports = { readZip };

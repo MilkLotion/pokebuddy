@@ -1,7 +1,7 @@
 // 앱이 그리는 메뉴 창 — Figma `Context Menu` `338:738`. 문서는 src/renderer/menu.html
 //
 // OS 기본 메뉴는 Windows 에서 체크 표시 자리로 왼쪽을 크게 비운다. 그래서 메뉴를 직접 그린다 (docs/specs/ui-components.md C-21).
-// 메뉴 모델은 Electron 메뉴와 같은 모양(MenuItemConstructorOptions)을 받는다 — src/main/menus.ts 가 그대로 쓸 수 있다.
+// 메뉴 모델은 Electron 메뉴와 같은 모양(MenuItemConstructorOptions)을 받는다 — 화면 값(src/view/menus.ts)이 만든 것을 그대로 쓴다.
 // 커서 자리에 띄우고 화면 끝에서는 방향을 뒤집는다. 항목을 고르거나 Esc 를 누르거나 포커스를 잃으면(바깥 클릭) 닫는다.
 // inactive 메뉴(Windows 트레이)는 포커스를 가져오지 않는다 — 가져오면 Windows 가 숨겨진 아이콘 창을 닫는다.
 //   그래서 바깥 클릭·Esc 는 부르는 쪽이 헬퍼의 입력 감시로 알아채 closeMenu 를 부른다 (helpers/winbounds.ps1).

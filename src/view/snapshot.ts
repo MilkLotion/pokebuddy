@@ -6,7 +6,7 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { profile } from "../dex/species.js";
-import { petName, typeName, moodWord, natureName, t } from "../main/text.js";
+import { petName, typeName, moodWord, natureName, t } from "./text.js";
 import { eggName, toolPrice, eggPalettes } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";

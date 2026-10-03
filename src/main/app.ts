@@ -18,15 +18,13 @@ import { STAGE_RULES } from "./layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
 import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
-import { lockExcept, petMenu, trayMenu, type PetMenuModel } from "./menus";
+import { jumpListOf, lockExcept, petMenu, petMenuOf, trayMenuOf } from "../view/menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
-import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
-import { sellablePet } from "../shop/sell-pet";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
@@ -43,7 +41,7 @@ import { askStarter } from "./windows/picker-window";
 import { createStage } from "./stage";
 import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
-import { langOf, natureName, petLabel, petName, setLang, t } from "./text";
+import { langOf, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { syncJumpList } from "./jump-list";
 import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
@@ -56,7 +54,6 @@ import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { ManageRoute } from "../shared/model/route";
 import type { Command } from "../shared/command";
-import { currentTutorial } from "../tutorial/queue";
 import { createBubbles } from "./stage/bubbles";
 import { createCoach } from "./stage/coach";
 import { createCry } from "./stage/cry";
@@ -267,11 +264,8 @@ const syncCoach = (): void => coach.sync();
 function syncJump(): void {
   const save = game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
   if (!save) return;
-  const pets = save.party.slots
-    .map((slot) => (slot.state === "pokemon" ? save.pets.find((p) => p.id === slot.petId) : undefined))
-    .filter((p): p is NonNullable<typeof p> => p != null)
-    .map((p) => ({ id: p.id, name: petName(p.species), level: p.level }));
-  syncJumpList(pets, { feed: t("menu.feed"), play: t("menu.play") });
+  const { pets, labels } = jumpListOf(save); // 목록 고르기는 화면 값이다 (src/view/menus.ts)
+  syncJumpList(pets, labels);
 }
 
 // 트레이 메뉴 — Windows 는 포커스를 쥐지 않게 띄운다(숨겨진 아이콘 창이 닫히지 않게). 바깥 클릭·Esc 는 헬퍼의 입력 감시로 닫는다.
@@ -406,19 +400,17 @@ const openManageWindow = (route?: ManageRoute): void => {
   });
 };
 
-// 상점·도감·가방은 관리 창이 맡는다. 트레이에는 창을 여는 자리만 둔다 (docs/specs/game.md "화면 구조")
-const trayTemplate = () => [
-  { label: t("menu.manage"), click: () => openManageWindow() },
-  { type: "separator" as const },
-  ...trayMenu(
+// 트레이 메뉴 — 항목은 화면 값이 만든다(src/view/menus.ts trayMenuOf). 여기서는 누르면 할 일만 잇는다
+const trayTemplate = () =>
+  trayMenuOf(
     { hidden: display.hidden(), ghost: display.ghost() },
     {
+      openManage: () => openManageWindow(),
       toggleHidden: display.toggleHidden,
       quit: () => app.quit(),
       toggleGhost: () => display.setGhost(!display.ghost()),
     },
-  ),
-];
+  );
 
 // 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
 const cry = createCry({
@@ -472,67 +464,42 @@ function showPetMenu(id: string, origin: "stage" | "manage" = "stage"): void {
   void Promise.race([got, late]).then((icons) => popPetMenu(id, origin, icons));
 }
 
+// 메뉴의 모델(이름·상태·막힌 항목·첫 돌봄 잠금)은 화면 값이 만든다 (src/view/menus.ts petMenuOf). 여기서는 누르면 할 일을 잇고 띄운다
 function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<string, string>): void {
   const p = stages?.petOf(id) ?? null;
-  const save = game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
-  const pet = save?.pets.find((row) => row.id === id) ?? null;
-  if (!p && !(origin === "manage" && pet)) return;
-  const nature = p?.nature ?? pet?.nature ?? null;
-  const model = { name: p ? petLabel(p) : petName(pet?.species ?? ""), nature: nature ? natureName(nature) : null };
-  const slot = save?.party.slots.find((s) => s.petId === id) ?? null;
-  const off: { enabled: boolean; reason?: string } = { enabled: false };
-  // 팔 수 있는가 — 단일 포켓몬·알에 없는 종·교환에 올린 개체·마지막 한 마리는 못 판다 (src/shop/sell-pet.ts)
-  const sale = save && pet ? sellablePet(save, id) : null;
-  const care: Partial<PetMenuModel> = pet
-    ? {
-        status: petStatus(pet),
-        feed: slot ? careItem(pet, "feed") : off,
-        play: slot ? careItem(pet, "play") : off,
-        ball: { enabled: slot != null, hidden: slot?.hidden === true },
-        forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(formIcons[slug] ? { portrait: formIcons[slug] } : {}) })),
-        // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
-        ...(slot ? {} : { move: { enabled: true } }),
-        sell: { enabled: sale?.ok === true },
-      }
-    : {};
-  // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
-  const firstCare = origin === "stage" && save ? currentTutorial(save)?.id === "first-care" : false;
+  const state = petMenuOf(game?.read() ?? null, id, { origin, stagePet: p, formIcons, now: Date.now() }); // 메모리 값 — 파일은 15초마다 쓴다
+  if (!state) return;
+  const firstCare = state.firstCare;
+  // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다
   const careCmd = (cmd: "feed" | "play") => (): void => {
     if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", from: "pet" }));
     else runGameCommand({ cmd, target: id, from: "menu" });
   };
-  const built = petMenu({ ...model, ...care }, {
+  const sale = state.sale;
+  const built = petMenu(state.model, {
     feed: careCmd("feed"),
     play: careCmd("play"),
-    ...(pet
+    ...(state.inSave
       ? {
-          ball: () => runGameCommand({ cmd: slot?.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
+          ball: () => runGameCommand({ cmd: state.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
           // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정). 무대 우클릭 메뉴에만 있다
           ...(origin === "stage" ? { detail: () => openManageWindow({ to: "pet", petId: id }) } : {}),
           // 옮기기·팔기 — 고른 뒤의 화면(든 상태, 팔기 확인 창)은 관리 창이 그린다
           move: () => openManageWindow({ to: "move", petId: id }),
           sell: () => {
-            if (sale?.ok) openManageWindow({ to: "sell", petId: id, price: sale.price });
+            if (sale) openManageWindow({ to: "sell", petId: id, price: sale.price });
           },
         }
       : {}),
     // 모습 말풍선에서 고른 모습 — 관리 창이 바꾸기 확인 창을 띄운다
     form: (species) => openManageWindow({ to: "form", petId: id, species }),
   });
-  // 첫 돌봄 튜토리얼 중이면 2/2 로 넘기고 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다.
-  // 둘 다 쉬는 중이면 모두 잠그고, 말풍선은 놀아주기까지 남은 시간을 보인다
-  let items = built;
-  if (firstCare && pet) {
-    const keep = care.feed?.enabled ? t("menu.feed") : care.play?.enabled ? t("menu.play") : null;
-    items = lockExcept(built, keep ? [keep] : []);
-    // 쉬는 중(쿨타임)일 때만 남은 시간을 붙인다 — 배부름 같은 다른 이유면 "곧" 으로
-    const cooling = (a: "feed" | "play"): string | null => (pet && careState(pet, a).reason === "cooldown" ? (care[a]?.reason ?? null) : null);
-    const wait = keep ? null : (cooling("play") ?? cooling("feed") ?? t("coach.first-care.wait.soon"));
-    coach.menuStep(keep, wait);
-  }
+  // 첫 돌봄 튜토리얼 2/2 — 남길 항목만 누르게 두고 말풍선에 대기 글자를 알린다
+  const items = firstCare ? lockExcept(built, firstCare.keep ? [firstCare.keep] : []) : built;
+  if (firstCare) coach.menuStep(firstCare.keep, firstCare.wait);
   // OS 기본 메뉴는 Windows 에서 왼쪽을 크게 비운다 — 앱이 그리는 메뉴를 커서 자리에 띄운다 (docs/specs/ui-components.md C-21)
   // 첫 돌봄 중이면 메뉴 자리를 말풍선에 알려 겹치지 않게 한다. 메뉴가 닫히면 말풍선은 제자리로 돌아간다
-  const avoid = firstCare && pet
+  const avoid = firstCare
     ? {
         onPlaced: (r: { x: number; y: number; w: number; h: number }) => coach.menuPlaced(id, r),
         // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게. 스킵이 아니다

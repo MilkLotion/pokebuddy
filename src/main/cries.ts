@@ -5,11 +5,7 @@
 // 무대 창의 CSP 는 media-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import path from "node:path";
 import { profile } from "../dex/species.js";
-
-interface FetchModule {
-  cached(file: string, url: string, validate?: (buf: Buffer) => boolean): Promise<{ buf: Buffer } | null>;
-}
-const { cached } = require("../../art/fetch.js") as FetchModule;
+import { fetchCached } from "./art/fetch";
 
 const BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
 
@@ -36,7 +32,7 @@ export function createCries(dir: string): Cries {
       if (!dex || missing.has(dex)) return null;
       const known = memo.get(dex);
       if (known) return known;
-      const got = await cached(path.join(dir, `${String(dex).padStart(4, "0")}.ogg`), cryUrl(dex), (buf) => audioType(buf) != null);
+      const got = await fetchCached(path.join(dir, `${String(dex).padStart(4, "0")}.ogg`), cryUrl(dex), (buf) => audioType(buf) != null);
       if (!got) {
         missing.add(dex);
         return null;
