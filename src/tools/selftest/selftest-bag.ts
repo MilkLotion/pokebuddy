@@ -11,7 +11,7 @@ import { BAG_V3_RULES, SAVE_V3_RULES } from "../../save/rules";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { feed, play } from "../../state/care";
-import { applyTime } from "../../state/time";
+import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 
 // 놀아주기 상태가 끝날 만큼 시간을 흘린다. 개체가 파티에 있어야 시간이 흐른다
 function applyTimeForTest(s: SaveV3): void {

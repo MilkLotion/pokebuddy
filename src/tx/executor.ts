@@ -9,11 +9,7 @@
 //
 // 전부 동기다. 그래서 거래는 저절로 한 번에 하나이고 들어온 순서대로 처리된다.
 // 파일을 직접 다루지 않는다. 읽기·쓰기·시계를 받아서 쓴다 — 자체 검사가 파일 없이 돈다.
-import { evaluate } from "../achievement/evaluate.js";
-import { grantStones } from "../dex/mega.js";
-import { settleMega } from "../party/mega-form.js";
-import { unlockByRules } from "../dex/unlocks.js";
-import { queueTutorials } from "../tutorial/queue.js";
+import { applySettle } from "./settle.js";
 import type { SaveV3, TxRecordV3 } from "../shared/save-v3";
 import { SAVE_V3_RULES } from "../save/rules.js";
 import type { Reason } from "../shared/names/reasons.js";
@@ -71,14 +67,8 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}) });
     if (!out.ok) return { ok: false, reason: out.reason };
 
-    // 메가진화 — 프리셋을 떠났거나 종이 바뀐 개체의 메가 모습을 풀고, 조건을 채운 개체에 메가스톤을 준다 (src/dex/mega.ts)
-    settleMega(draft);
-    grantStones(draft);
-
-    // 상태가 바뀌었으니 해금 규칙과 업적을 다시 본다. 첫 선택 한 번으로 다른 후보·기본형이 해금되고, 꺼내기 한 번으로도 달성이 생긴다
-    unlockByRules(draft, now);
-    queueTutorials(draft, now);
-    const achieved = evaluate(draft, now, undefined, save); // save 는 거래 전 — 레벨업 업적이 비교한다
+    // 상태가 바뀌었으니 메가 모습·메가스톤·해금·튜토리얼·업적을 다시 본다 (./settle.ts). save 는 거래 전 — 레벨업 업적이 비교한다
+    const { achieved } = applySettle(draft, now, { prev: save, revertMega: true });
 
     const result = out.result ?? null;
     draft.tx = trimTx([...draft.tx, { id: req.id, at: now, result }], now);

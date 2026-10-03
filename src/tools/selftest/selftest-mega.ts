@@ -18,7 +18,7 @@ import { pendingOf, refresh } from "../../notify/queue";
 import { keep, place } from "../../party/placement";
 import { MEGA_RULES } from "../../save/rules";
 import { empty, normalize } from "../../save/v3";
-import { applyTime } from "../../state/time";
+import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import { createExecutor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/handlers";
 import { dexDetail } from "../../tx/dex-detail";

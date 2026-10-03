@@ -16,8 +16,9 @@ import fs from "node:fs";
 import { PATHS } from "./paths.js";
 import * as store from "../save/store.js";
 import { SAVE_V3_RULES, TIME_V3_RULES } from "../save/rules.js";
-import { applyTime, type TickEvents, type TimeInput } from "../state/time.js";
-import { applyHits } from "../find/core.js";
+import type { TimeInput } from "../state/time.js";
+import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
+import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
 import type { TxResult } from "../shared/command.js";
 import { HANDLERS } from "../tx/handlers.js";
@@ -153,7 +154,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const at = now();
     const elapsed = Math.min(TIME_V3_RULES.maxTickMs, Math.max(0, at - save.lastTickAt));
     const workMs = Math.max(0, input.workMs ?? 0) + carriedWorkMs;
-    const events = applyTime(save, elapsed, at, { ...input, workMs });
+    const events = applyTimeAndSettle(save, elapsed, at, { ...input, workMs });
     carriedWorkMs = 0;
     pendingWorkMs += Math.min(elapsed, workMs); // applyTime 이 흐른 시간을 넘는 작업 시간은 버린다
     save.savedAt = at;
@@ -178,9 +179,8 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const save = read();
     if (!save) return null;
     const at = now();
-    const found = applyHits(save, petIds, at, rand);
+    const found = applyFindHits(save, petIds, at, rand);
     if (!found.length) return [];
-    save.savedAt = at;
     return write(save, found.some((f) => f.kind === "pokemon") ? FIND_POKEMON : undefined) ? found : null;
   };
 

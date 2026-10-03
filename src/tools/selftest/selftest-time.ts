@@ -6,7 +6,8 @@
 import assert from "node:assert";
 import { TIME_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
-import { affinityPercent, applyTime, buffPercent, carePercent, zoneOf } from "../../state/time";
+import { affinityPercent, buffPercent, carePercent, zoneOf } from "../../state/time";
+import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();

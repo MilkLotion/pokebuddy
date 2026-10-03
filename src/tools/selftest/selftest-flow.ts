@@ -11,7 +11,7 @@ import path from "node:path";
 import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
-import { applyTime } from "../../state/time";
+import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor, type Executor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/handlers";
