@@ -27,10 +27,21 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
+import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks } from "./command.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
+
+// 명령의 뒤처리 — 다시 읽기·모달 그리기·닫기·도감 비우기는 여기에 있다 (command.ts)
+setCommandHooks({
+  reload: () => refresh(),
+  drawDialog: () => drawDialog(),
+  closeDialog: () => close(),
+  touchesDex: () => {
+    dexRows = null;
+  },
+});
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -534,7 +545,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
     presetRenaming = false;
     const name = input.value;
     if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
-    if (save && name.trim() !== preset.name) void send("party.preset.rename", "", { preset: preset.index, name });
+    if (save && name.trim() !== preset.name) void sendCommand("party.preset.rename", "", { preset: preset.index, name });
     else draw();
   };
   input.addEventListener("keydown", (e) => {
@@ -560,7 +571,7 @@ function stepPreset(delta: -1 | 1): void {
   const p = ui.view?.party.preset;
   if (!p || p.count < 2) return;
   partyHold = null;
-  void send("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
+  void sendCommand("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
 }
 
 // 파티 칸 옮기기 — 개체 칸을 끌어 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다. 잠긴 칸에는 놓지 않는다.
@@ -592,7 +603,7 @@ function drawParty(v: Snapshot): void {
     if (slot.state !== "locked") {
       dropZone(card, () => {
         const from = dragFrom;
-        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void send("party.move", from.partyPet, { toSlot: slot.index });
+        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index });
       });
     }
     if (slot.pet) {
@@ -681,8 +692,8 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
 
 // 알 하나를 연다 — 결과를 돌려준다. 실패하면 null (실패 문구는 send 가 띄운다)
 async function openEgg(eggId: string): Promise<Hatched | null> {
-  if (!(await send("egg.open", eggId, {}, { keepOpen: true }))) return null;
-  const r = lastReply;
+  if (!(await sendCommand("egg.open", eggId, {}, { keepOpen: true }))) return null;
+  const r = lastReplyOf();
   if (!r) return null;
   const egg = r.egg as { id?: unknown } | undefined;
   if (egg && typeof egg.id === "string") return { eggId: egg.id };
@@ -1017,7 +1028,7 @@ function drawMega(petId: string, to?: string): void {
   const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
   const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
   const change = (species: string): void => {
-    void send("pet.form", pet.id, { species }).then((ok) => {
+    void sendCommand("pet.form", pet.id, { species }).then((ok) => {
       if (ok) close();
     });
   };
@@ -1119,7 +1130,7 @@ function drawForm(petId: string, to: string): void {
     el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
   );
   const go = actionButton("바꾸기", true, false, () => {
-    void send("pet.form", pet.id, { species: to }).then((ok) => {
+    void sendCommand("pet.form", pet.id, { species: to }).then((ok) => {
       if (ok) close();
     });
   });
@@ -1347,7 +1358,7 @@ function closeSwap(): void {
 
 // 교체 명령 — 실패 이유는 파티 기기 창의 머리 줄에 보인다
 async function swapSend(cmd: string, target: string, extra: Record<string, unknown>): Promise<void> {
-  const ok = await send(cmd, target, extra, { keepOpen: true });
+  const ok = await sendCommand(cmd, target, extra, { keepOpen: true });
   partyNote = ok ? "" : ui.notice;
   ui.notice = "";
   draw();
@@ -1450,7 +1461,7 @@ function drawSellPet(petId: string, price: number): void {
   }
   dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 팔까요?`, ""));
   const body = el("p", "acct-confirm-body", `${pointText(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
-  const go = actionButton("팔기", true, false, () => void send("pet.sell", pet.id));
+  const go = actionButton("팔기", true, false, () => void sendCommand("pet.sell", pet.id));
   dialogEl.append(body, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
 }
 
@@ -1731,7 +1742,7 @@ function drawPool(productId: string, page: number): void {
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
 async function orderBox(boxId: string, to: number): Promise<void> {
   const shown = ui.view?.boxes[boxPage]?.id;
-  await send("box.order", boxId, { to });
+  await sendCommand("box.order", boxId, { to });
   const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
   if (at >= 0 && at !== boxPage) {
     boxPage = at;
@@ -1751,9 +1762,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   ui.busy = true;
   let reply: ManageReply;
   try {
-    const reqId = reqIdFor(cmd, target, extra);
-    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId } });
-    rememberReply(cmd, target, extra, reqId, reply);
+    reply = await requestCommand(cmd, target, extra);
     if (reply.ok) onOk?.();
     await refresh();
   } finally {
@@ -1811,7 +1820,7 @@ function markDexPick(): void {
 
 // 칸을 누르면 도감 기기 창에 그 종을 띄운다. 같은 칸을 다시 누르면 닫는다
 function pickDex(slug: string): void {
-  if (coachId === "dex") void send("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
+  if (coachId === "dex") void sendCommand("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
   window.pokebuddyManage.dexOpen(dexPick, dexGen);
   markDexPick();
@@ -2299,7 +2308,7 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
     bagBusy = true;
     syncBagDevice();
   }, 300);
-  const ok = await send(cmd, id, extra, { keepOpen: true });
+  const ok = await sendCommand(cmd, id, extra, { keepOpen: true });
   clearTimeout(slow);
   bagSending = false;
   bagBusy = false;
@@ -2317,8 +2326,8 @@ async function useBag(id: string): Promise<void> {
   const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
   if (ok) {
     // 결과 두 줄은 메인이 거래 앞뒤 화면 값으로 만들어 답에 싣는다 (src/view/result-lines.ts)
-    bagResult = lastReply?.result?.lead ?? "";
-    bagResultNote = lastReply?.result?.line ?? "";
+    bagResult = lastReplyOf()?.result?.lead ?? "";
+    bagResultNote = lastReplyOf()?.result?.line ?? "";
     bagQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
@@ -3631,7 +3640,7 @@ function drawGuideStep(id: string): void {
     body: words.body,
     button: step.tryIt ? "" : last ? "확인" : "다음",
     onGo: () => {
-      if (last) return void send("tutorial.done", id);
+      if (last) return void sendCommand("tutorial.done", id);
       if (guide.onNext) guide.onNext();
       else {
         guideStep = index + 1;
@@ -3738,7 +3747,7 @@ function drawTutorial(): void {
         title: step.title,
         body: step.body(ui.view),
         button: tryIt ? "" : "확인", // 해 보는 단계는 그 동작으로만 넘어간다
-        onGo: () => void send("tutorial.done", "area"),
+        onGo: () => void sendCommand("tutorial.done", "area"),
         interactive: tryIt,
         also: alsoKey ? dialogEl.querySelector<HTMLElement>(`[data-tut="${alsoKey}"]`) : null,
       });
@@ -3776,7 +3785,7 @@ function drawTutorial(): void {
       const target = bodyEl.querySelector<HTMLElement>(`[data-tut="${id}"]`);
       // 한 단계뿐이면 "1 / 1" 을 붙이지 않고 단추는 "확인" — 바탕화면 튜토리얼과 같다
       // 상점은 랜덤알 카드를 눌러 사는 것이 목표 행동이다. 부화는 안내만 한다
-      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id), interactive: id === "shop" });
+      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void sendCommand("tutorial.done", id), interactive: id === "shop" });
     } else if (text) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다
       const target = tabsEl.children[TABS.findIndex((t) => t.id === text.tab)] as HTMLElement | undefined;
@@ -3818,7 +3827,7 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
       body: spec.body,
       go: next,
       footEl: next ? actions(el("div", "spacer"), next) : null,
-      onSkip: () => void send("tutorial.skip", id), // 닫기는 스킵이다
+      onSkip: () => void sendCommand("tutorial.skip", id), // 닫기는 스킵이다
     },
     onTargetResized: () => drawTutorial(),
   });
@@ -3977,7 +3986,7 @@ async function buyShop(id: string): Promise<void> {
     shopBusy = true;
     syncShopDevice();
   }, 300);
-  const ok = await send("shop.buy", id, count > 1 ? { count } : {}, { keepOpen: true });
+  const ok = await sendCommand("shop.buy", id, count > 1 ? { count } : {}, { keepOpen: true });
   clearTimeout(slow);
   shopSending = false;
   shopBusy = false;
@@ -3987,7 +3996,7 @@ async function buyShop(id: string): Promise<void> {
     shopQty = 1;
     // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`).
     // 두 줄은 메인이 거래 앞뒤 화면 값으로 만들어 답에 싣는다 (src/view/result-lines.ts)
-    shopDone = lastReply?.result ?? null;
+    shopDone = lastReplyOf()?.result ?? null;
   }
   syncShopDevice();
 }
@@ -4063,11 +4072,11 @@ function onPetAction(action: PetDeviceAction): void {
   const id = ui.detailPet;
   if (!id || action.petId !== id) return; // 기기 창이 다른 개체를 보이던 때 누른 것 — 버린다
   if (action.kind === "cmd") {
-    void send(action.cmd, id, action.args);
+    void sendCommand(action.cmd, id, action.args);
     return;
   }
   if (action.kind === "tutorial") {
-    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail");
+    void sendCommand(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail");
     return;
   }
   if (action.kind === "dex") {
@@ -4185,7 +4194,7 @@ function drawEvolve(petId: string, to?: string): void {
 
   const go = actionButton("진화", true, !picked, () => {
     if (!picked) return;
-    void send("evolve", pet.id, { to: picked.to }).then((ok) => {
+    void sendCommand("evolve", pet.id, { to: picked.to }).then((ok) => {
       if (ok) open({ kind: "pet", petId });
     });
   });
@@ -4254,7 +4263,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
 
   const change = actionButton("바꾸기", true, !picked || have === 0, () => {
     if (!picked) return;
-    void send("bag.use", MINT, { petId, nature: picked.id }).then((ok) => {
+    void sendCommand("bag.use", MINT, { petId, nature: picked.id }).then((ok) => {
       if (ok) open({ kind: "pet", petId });
     });
   });
@@ -4296,7 +4305,7 @@ function achievementRow(a: AchievementView): HTMLElement {
   row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
   if (a.state === "achieved") {
     const claim = buttonEl("act primary", "보상 받기");
-    claim.addEventListener("click", () => void send("achievement.claim", a.id));
+    claim.addEventListener("click", () => void sendCommand("achievement.claim", a.id));
     row.appendChild(claim);
   }
   return row;
@@ -4482,9 +4491,9 @@ function speakerIcon(muted: boolean): SVGSVGElement {
   return svg;
 }
 
-const setSetting = (key: string, value: unknown): void => void send("settings.set", key, { value });
+const setSetting = (key: string, value: unknown): void => void sendCommand("settings.set", key, { value });
 // 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/commands.ts display.set)
-const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void send("display.set", key, { value });
+const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void sendCommand("display.set", key, { value });
 
 // 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
 function drawGeneral(scroll: HTMLElement): void {
@@ -4546,14 +4555,14 @@ function drawDisplay(scroll: HTMLElement): void {
       const row = rows.find((r) => String(r.ref.id) === id);
       if (row) setSetting("playScreen", row.ref);
     }));
-    box.appendChild(actionButton("화면에서 고르기", false, false, () => void screenPick()));
+    box.appendChild(actionButton("화면에서 고르기", false, false, () => void runLocked(() => window.pokebuddyManage.pickScreen())));
     const screenRow = settingRow("화면", undefined, box);
     screenRow.dataset.tut = "area-screen"; // 놀이공간 튜토리얼이 함께 밝힌다
     scroll.appendChild(screenRow);
   }
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
-    const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void regionDraw());
+    const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => window.pokebuddyManage.drawRegion()));
     const regionRow = settingRow("영역", undefined, draw);
     regionRow.dataset.tut = "area-region"; // 화면 탭 튜토리얼이 함께 밝힌다
     scroll.appendChild(regionRow);
@@ -4985,7 +4994,7 @@ function open(next: Dialog): void {
   // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
   // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
-    if (coachId === "evolution") void send("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
+    if (coachId === "evolution") void sendCommand("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
     ui.dialog = null;
     ui.notice = "";
     setScrim(false);
@@ -5026,119 +5035,6 @@ const openPet = (id: string): void => {
 };
 
 // ── 명령 보내기 ────────────────────────────────────────────────────────────────
-
-
-// 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
-const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "pet.sell", "shop.buy"]);
-
-// 도감이 함께 바뀌는 조작 — 다음에 도감을 열 때 다시 읽게 비운다
-const TOUCHES_DEX = new Set(["egg.open", "shop.buy", "evolve", "bag.use"]);
-
-// 조작 하나마다 새 요청이다. 같은 순간의 두 클릭이 하나로 합쳐지지 않게 보내는 쪽이 식별자를 만든다.
-// 같은 값으로 다시 보내면 실행기가 한 번만 반영한다 (docs/specs/modules.md "거래 실행기")
-let seq = 0;
-const nextReqId = (cmd: string, target: string): string => `ui:${Date.now()}:${++seq}:${cmd}:${target}`;
-
-// 응답이 없던 조작(timeout)은 결과를 모른다. 같은 조작을 다시 누르면 같은 요청 ID 로 보내 실행기가 한 번만 반영하게 한다.
-// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (worklog/records/game-runtime/record.md "결과를 모를 때")
-let unknownReq: { key: string; id: string } | null = null;
-function reqIdFor(cmd: string, target: string, extra: Record<string, unknown>): string {
-  const key = JSON.stringify([cmd, target, extra]);
-  if (unknownReq?.key === key) return unknownReq.id;
-  return nextReqId(cmd, target);
-}
-function rememberReply(cmd: string, target: string, extra: Record<string, unknown>, id: string, reply: ManageReply): void {
-  unknownReq = !reply.ok && reply.reason === "timeout" ? { key: JSON.stringify([cmd, target, extra]), id } : null;
-}
-
-let lastReply: ManageReply | null = null; // 마지막으로 성공한 조작의 답 — 결과 창이 읽는다
-
-// 처리 중 표시 — 답이 늦으면 누른 단추·칸에 점 세 개를 띄운다 (Figma `Button` · `Box Slot` 의 `State=Busy`).
-// 빠른 답에서 깜빡이지 않게 BUSY_AFTER_MS 가 지나서야 단다 (worklog/records/response-latency/record.md "B안")
-const BUSY_AFTER_MS = 300;
-const PRESS_FRESH_MS = 1000; // 이보다 오래된 누름은 이번 조작의 단추가 아니다 — 튜토리얼 등 누름 없이 보낸 조작
-let pressed: { button: HTMLButtonElement; at: number } | null = null;
-// 조작 처리기보다 먼저 누른 단추를 기억한다 (캡처 단계). 키보드 Enter·Space 도 click 으로 온다
-document.addEventListener("click", (e) => {
-  const button = e.target instanceof Element ? e.target.closest("button") : null;
-  pressed = button ? { button, at: Date.now() } : null;
-}, true);
-
-function setBusy(target: HTMLButtonElement, on: boolean): void {
-  target.classList.toggle("is-busy", on);
-  if (on) target.setAttribute("aria-busy", "true");
-  else target.removeAttribute("aria-busy");
-}
-
-// 방금 누른 단추에 처리 중을 예약한다. 돌려주는 함수를 부르면 예약을 거두고 표시를 뗀다
-function busyLater(): () => void {
-  const target = pressed && Date.now() - pressed.at < PRESS_FRESH_MS ? pressed.button : null;
-  if (!target) return () => {};
-  const timer = setTimeout(() => setBusy(target, true), BUSY_AFTER_MS);
-  return () => {
-    clearTimeout(timer);
-    setBusy(target, false);
-  };
-}
-
-// 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
-async function send(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
-  if (ui.busy) return false;
-  ui.busy = true;
-  const unbusy = busyLater();
-  let reply: ManageReply;
-  try {
-    const reqId = reqIdFor(cmd, target, extra);
-    reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId } });
-    rememberReply(cmd, target, extra, reqId, reply);
-    if (reply.ok && TOUCHES_DEX.has(cmd)) dexRows = null;
-    await refresh();
-  } finally {
-    ui.busy = false;
-    unbusy();
-  }
-
-  if (!reply.ok) {
-    ui.notice = failTextOf(reply.reason, "command").text;
-    drawDialog();
-    return false;
-  }
-  ui.notice = "";
-  lastReply = reply;
-  if (CLOSES.has(cmd) && !opts.keepOpen) close();
-  else drawDialog();
-  return true;
-}
-
-// 화면 고르기 덮개를 연다. 누른 화면을 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
-async function screenPick(): Promise<void> {
-  if (ui.busy) return;
-  ui.busy = true;
-  let reply: ManageReply;
-  try {
-    reply = await window.pokebuddyManage.pickScreen();
-    await refresh();
-  } finally {
-    ui.busy = false;
-  }
-  ui.notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
-  drawDialog();
-}
-
-// 영역 그리기 창을 연다. 적용하면 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
-async function regionDraw(): Promise<void> {
-  if (ui.busy) return;
-  ui.busy = true;
-  let reply: ManageReply;
-  try {
-    reply = await window.pokebuddyManage.drawRegion();
-    await refresh();
-  } finally {
-    ui.busy = false;
-  }
-  ui.notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
-  drawDialog();
-}
 
 async function agent(name: string, action: AgentAction): Promise<void> {
   // 점검 — 결과는 그 줄의 상태 글자로만 보인다(오류 줄을 끼우지 않는다). 점검 중에는 단추가 점 세 개
