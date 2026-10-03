@@ -14,7 +14,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { buffText, waitText } from "../ui/time-text.js";
+import { buffText, waitText } from "../../shared/count-text.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 

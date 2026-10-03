@@ -25,8 +25,7 @@ import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { buffText, waitText } from "../ui/time-text.js";
-import { numberText, pointText } from "../ui/number-text.js";
+import { buffText, numberText, pointText, waitText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 

@@ -3,7 +3,7 @@
 
 import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { numberText } from "../ui/number-text.js";
+import { numberText } from "../../shared/count-text.js";
 import type { DeviceFrame } from "./device-frame.js";
 
 export interface ItemFace {
