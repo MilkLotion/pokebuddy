@@ -63,6 +63,7 @@ import { claimSingleInstance, tradeLinkOf } from "./app/launch";
 import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
 import { createTicks } from "./app/ticks";
+import { createRun } from "./app/quit";
 
 // 전역 시계 — 1초마다 틱을 낸다 (src/main/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
@@ -129,14 +130,31 @@ const display = createDisplayState({
 // 펫 자신을 가리는 표 — 개발 실행은 Electron 이라 이름으로 함께 걸러야 맨 앞 창에서 빠진다 (follow/front frontWindow)
 const SELF: SelfMark = { pid: process.pid, appNames: new Set(["electron", String(app.getName() || "").toLowerCase()]) };
 
-// 끝내는 중 — 창이 파괴되는 사이에 주기 작업·감시·헬퍼가 그 창을 건드리지 않게 before-quit 에서 멈춘다.
-// 파괴된 창을 건드려 예외가 나면 Electron 기본 처리기가 모달을 띄워 메인이 멈추고, 확인을 누르면 밀린 폴링이
-// 또 던진다 — 대화상자가 끝없이 이어지고 프로세스가 끝나지 못한다
-let quitting = false;
-let picking = false; // 첫 실행 선택 창이 열려 있다 — 그 창이 닫혀도 앱을 끝내지 않는다 (window-all-closed)
-let staged = false; // 무대 창을 만들었다 — 그 전에 닫힌 창(선택 창)으로는 끝내지 않는다
-let bootReady = false; // 그림·명령·수명 잠금 준비 후에만 CLI에 성공 통지
-const intervals: NodeJS.Timeout[] = [];
+// 실행 단계와 끄기 순서 (src/main/app/quit.ts). 끝내는 중에는 주기 작업·감시·헬퍼가 파괴되는 창을 건드리지 않게 먼저 멈춘다
+const run = createRun({
+  // 멈춘 동안(halted)·새로 시작하는 중(restarting — 저장을 이미 백업으로 옮겼다)은 쓰지 않는다
+  flush: () => {
+    if (!frozen() && saveParty()?.isWriter()) game?.flush();
+  },
+  shouldRelease: () => !freeze.reason() && !halt.sessionEnding() && (halt.releaseStarted() || (services.current()?.cloud.view().status ?? "off") !== "off"),
+  release: () => halt.releaseOnce(),
+  stop: () => {
+    clock.stop();
+    anchor?.stop(); // 헬퍼도 멈춘다
+    lifetime?.stop();
+    tray?.destroy();
+    tray = null;
+    update.stop();
+    commands?.stop();
+    services.dispose();
+    bannerWin?.close();
+    screenPicker?.close();
+    bannerWin = null;
+    party?.stop(); // 저장 잠금을 놓는다
+  },
+  dropLock: () => lifetime?.release(), // 내 lock 을 지운다
+});
+const quitting = (): boolean => run.quitting();
 
 // 저장을 쓰는 곳은 하나다 — 거래 실행기. 무대·메뉴·관리 창이 모두 이 하나를 본다
 let game: GameV3 | null = null;
@@ -159,7 +177,7 @@ const HALT_OPEN: ReadonlySet<string> = new Set(["snapshot", "trade.status", "qui
 // 온라인(계정·클라우드 저장)·친구 교환·우편함과 받아 둔 교환 링크 — writer 인 동반자만 가진다 (src/main/services/registry.ts)
 // 링크로 처음 켜졌으면 인자에 있다. 링크 수명(참가 전 10분)이 지나면 버린다
 const services = createServices({
-  ready: () => !quitting && !frozen() && !!game && !!party && party.isWriter(),
+  ready: () => !quitting() && !frozen() && !!game && !!party && party.isWriter(),
   game: () => game,
   isWriter: () => party?.isWriter() ?? false,
   saveFile: PATHS.save,
@@ -189,7 +207,7 @@ const services = createServices({
 const halt = createHalt({
   freeze,
   services,
-  quitting: () => quitting,
+  quitting,
   isWriter: () => saveParty()?.isWriter() ?? false,
   flush: () => game?.flush(),
   resetWork: () => ticks.resetWork(),
@@ -275,7 +293,7 @@ const trayMenu = createTrayMenu({
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
 function onAnchorUpdate(update: AnchorUpdate): void {
-  if (quitting || !stages) return;
+  if (quitting() || !stages) return;
   stages.layout(display.lanes(), display.playArea().mode === "all");
   stages.setVisible(update.visible);
 }
@@ -486,7 +504,7 @@ async function main(): Promise<void> {
   // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
   lifetime = createLifetime({
     lockFile: PATHS.companionLock,
-    hasWindow: () => bootReady && !!stages?.alive(),
+    hasWindow: () => run.isReady() && !!stages?.alive(),
     quit: () => app.quit(),
   });
   lifetime.start();
@@ -513,14 +531,12 @@ async function main(): Promise<void> {
         html: rendererFile("picker.html"),
         starters: list,
         portraits: pics,
-        onPicking: (on) => {
-          picking = on;
-        },
+        onPicking: (on) => run.setPicking(on),
       });
     }
-    if (quitting || !species) {
+    if (quitting() || !species) {
       reportFailure(PATHS, config.slug, t("starter.skipped"), "starter-cancelled");
-      if (!quitting) app.quit();
+      if (!quitting()) app.quit();
       return;
     }
     if (!saveSource.begin(species)) {
@@ -601,7 +617,7 @@ async function main(): Promise<void> {
   display.sync("play");
   display.sync("sleep"); // 첫 마리부터 설정의 잠들기 기준으로 만든다
   stages.layout(display.lanes(), display.playArea().mode === "all");
-  staged = true;
+  run.markStaged();
 
   anchor = createAnchor({
     paths: PATHS,
@@ -609,7 +625,7 @@ async function main(): Promise<void> {
     host: {
       platform: process.platform,
       offScreen,
-      quitting: () => quitting,
+      quitting,
     },
     flags: () => ({ userHidden: display.hidden(), held: stages?.heldId() != null }),
     onUpdate: onAnchorUpdate,
@@ -669,7 +685,7 @@ async function main(): Promise<void> {
   });
 
   await refreshParty();
-  if (quitting) return;
+  if (quitting()) return;
   if (saveSource.pets().length && !stages.petIds().length) {
     // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
     process.stderr.write(`펫 그림을 찾을 수 없음: ${saveSource.pets().map((p) => p.look).join(", ")}\n`);
@@ -712,16 +728,16 @@ async function main(): Promise<void> {
   display.sync("login");
   display.sync("play");
   syncCoach();
-  bootReady = true;
+  run.markReady();
   lifetime.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
 
-  intervals.push(setInterval(ticks.state, STAGE_RULES.statePollMs));
+  run.every(ticks.state, STAGE_RULES.statePollMs);
   clock.on(ticks.clock);
   clock.start();
-  intervals.push(setInterval(() => stages?.tick(), STAGE_RULES.tickMs));
+  run.every(() => stages?.tick(), STAGE_RULES.tickMs);
   // Windows 는 무대 창의 "항상 위"가 풀리거나 다른 항상 위 창에 밀린다 — 1초마다 다시 건다 (src/main/keep-on-top.ts)
   const keepTop = startKeepOnTop(() => stages);
-  if (keepTop) intervals.push(keepTop);
+  if (keepTop) run.keep(keepTop);
   // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
   const relayout = (): void => anchor?.poll();
   screen.on("display-added", relayout);
@@ -740,47 +756,5 @@ app
     app.exit(1);
   });
 
-// 밖에서 끝내라는 신호 (kill 등) — 정리하고 끝낸다
-process.on("SIGTERM", () => app.quit());
-process.on("SIGINT", () => app.quit());
-
-// 창을 닫기 전에 온다 — 주기 작업·감시·헬퍼를 먼저 멈춘다 (quitting 설명 참고).
-// 창이 따로 닫혀 끝나는 경로(window-all-closed → app.quit)도 이곳을 지난다
-let quitWaited = false; // 끄기 전 클라우드 정리를 한 번 기다렸다
-app.on("before-quit", (e) => {
-  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/main/game.ts flush).
-  // 멈춘 동안(halted)·새로 시작하는 중(restarting — 저장을 이미 백업으로 옮겼다)은 쓰지 않는다
-  if (!frozen() && saveParty()?.isWriter()) game?.flush();
-  // 끄기 전에 올리고 released 를 알린다 — 최대 3초. 다른 PC 가 경고 없이 넘겨받는다. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다).
-  // 밀려났거나 확인·막힘으로 멈췄으면 건너뛴다. 세션 종료(Windows 로그오프·mac 끄기·업데이트)가 진행 중이면 이미 알렸다 —
-  // 시스템 종료를 늦추지 않게 기다리지 않고 끝낸다
-  if (!quitWaited && !freeze.reason() && !halt.sessionEnding() && (halt.releaseStarted() || (services.current()?.cloud.view().status ?? "off") !== "off")) {
-    e.preventDefault();
-    quitWaited = true;
-    void halt.releaseOnce().finally(() => app.quit());
-    return;
-  }
-  quitting = true;
-  for (const id of intervals) clearInterval(id);
-  clock.stop();
-  anchor?.stop(); // 헬퍼도 멈춘다
-  lifetime?.stop();
-  tray?.destroy();
-  tray = null;
-  update.stop();
-  commands?.stop();
-  services.dispose();
-  bannerWin?.close();
-  screenPicker?.close();
-  bannerWin = null;
-  party?.stop(); // 저장 잠금을 놓는다
-});
-
-app.on("will-quit", () => {
-  lifetime?.release(); // 내 lock 을 지운다
-});
-
-// 첫 실행 선택 창은 무대 창보다 먼저 열리고 닫힌다 — 그때는 끝내지 않는다 (main 이 이어서 무대 창을 만든다)
-app.on("window-all-closed", () => {
-  if (!picking && staged) app.quit();
-});
+// 신호·before-quit·will-quit·window-all-closed — 끄기 순서는 src/main/app/quit.ts
+run.install();
