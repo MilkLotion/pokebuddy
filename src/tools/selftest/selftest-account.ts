@@ -9,6 +9,7 @@ import { createOnlineClient, memoryStorage } from "../../online/client";
 import { createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Account } from "../../online/account";
 import { authCodeOf } from "../../online/codes";
 import { createTradeNet } from "../../online/trade-net";
+import { isUnreachable, type FunctionFailure } from "../../online/server-call";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff";
 import { onlineConfig } from "../../online/config";
@@ -32,6 +33,11 @@ function rules(): void {
   assert.deepEqual(authCodeOf({ message: "TypeError: fetch failed" }), { code: "NETWORK" });
   assert.deepEqual(viewOf(null), { signedIn: false, anonymous: false, method: null, username: null, displayName: null });
   assert.deepEqual(viewOf({ id: "a", is_anonymous: true } as never), { signedIn: false, anonymous: true, method: null, username: null, displayName: null });
+  // 함수에 닿지 못함 — 저장 올리기와 계정 삭제가 같은 판정을 쓴다 (94 항목 4-5)
+  const failure = (over: Partial<FunctionFailure>): FunctionFailure => ({ bodyCode: null, status: null, transport: false, message: "", ...over });
+  for (const status of [502, 503, 504]) assert.equal(isUnreachable(failure({ status })), true, `게이트웨이 ${status}`);
+  assert.equal(isUnreachable(failure({ transport: true })), true, "전송 실패");
+  for (const status of [400, 401, 500]) assert.equal(isUnreachable(failure({ status })), false, `함수가 답함 ${status}`);
   process.stdout.write("(1) 아이디·이름 규칙, 오류 코드  ok\n");
 }
 

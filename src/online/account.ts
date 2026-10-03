@@ -13,7 +13,7 @@ import type { SessionGate } from "./session.js";
 import { finishSwitch, prepareSwitch, type HandoffReport, type PendingHandoff, type SwitchHooks } from "./handoff.js";
 import type { AccountCode } from "../shared/names/online-codes.js";
 import { authCodeOf } from "./codes.js";
-import { messageOf, readFunctionError } from "./server-call.js";
+import { isUnreachable, messageOf, readFunctionError } from "./server-call.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
 const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
@@ -231,6 +231,8 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
           // 함수가 돌려준 오류 코드 — FunctionsHttpError 의 응답 본문에 있다
           const f = await readFunctionError(error);
           if (f.bodyCode === "AUTH_TRADE_ACTIVE") return fail("AUTH_TRADE_ACTIVE");
+          // 함수에 닿지 못했다(502·503·504·전송 실패) — 저장 올리기와 같이 연결 실패로 본다. 함수가 준 AUTH_* 코드는 그대로 쓴다
+          if (isUnreachable(f) && !f.bodyCode?.startsWith("AUTH_")) return fail("NETWORK");
           return { ok: false, ...authCodeOf({ message: f.bodyCode ?? error.message }) };
         }
         // 사용자가 지워져 세션은 쓸 수 없다 — 이 PC 의 세션만 지운다

@@ -53,6 +53,10 @@ export async function readFunctionError(error: unknown): Promise<FunctionFailure
   return { bodyCode, status, transport: e?.name === "FunctionsFetchError" || e?.name === "FunctionsRelayError", message: typeof e?.message === "string" ? e.message : "" };
 }
 
+// 함수에 닿지 못했다 — 전송 실패이거나 앞단이 502·503·504 를 돌려줬다. 연결 실패(NETWORK)로 본다.
+// 저장 올리기와 계정 삭제가 같은 판정을 쓴다 (worklog/records/code-structure/design/94-same-feature-diffs.md 4-5)
+export const isUnreachable = (f: FunctionFailure): boolean => f.transport || f.status === 502 || f.status === 503 || f.status === 504;
+
 export interface TimerApi {
   setTimer: (fn: () => void, ms: number) => unknown;
   clearTimer: (t: unknown) => void;

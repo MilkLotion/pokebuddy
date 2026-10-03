@@ -18,7 +18,7 @@
 import { randomUUID } from "node:crypto";
 import { adoptAnonymous } from "./handoff.js";
 import { cloudCodeOf as codeOf } from "./codes.js";
-import { callRpc, messageOf, readFunctionError, withTimeout } from "./server-call.js";
+import { callRpc, isUnreachable, messageOf, readFunctionError, withTimeout } from "./server-call.js";
 import { ONLINE_TIMING } from "./timing.js";
 import {
   freshCloudState, hasPets, normalizeCloudState,
@@ -109,7 +109,7 @@ export function createCloud(o: CloudOptions): Cloud {
         if ((e as { context?: unknown }).context instanceof Response) {
           const f = await readFunctionError(e);
           if (f.bodyCode?.startsWith("CLOUD_")) return { ok: false, code: f.bodyCode };
-          return { ok: false, code: f.status === 502 || f.status === 503 || f.status === 504 ? "NETWORK" : "UNKNOWN" };
+          return { ok: false, code: isUnreachable(f) ? "NETWORK" : "UNKNOWN" };
         }
         const name = (e as { name?: unknown }).name;
         return { ok: false, code: name === "FunctionsFetchError" || name === "FunctionsRelayError" ? "NETWORK" : codeOf(e) };
