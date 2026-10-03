@@ -40,7 +40,7 @@ import { askStarter } from "./windows/picker-window";
 import { createStage } from "./stage";
 import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
-import { getLang, langOf, petLabel, setLang, t } from "../view/text";
+import { currentLang, langOf, petLabel, setLang, t } from "../view/text";
 import { failTextOf } from "../shared/fail-text";
 import { createTray, type TrayHandle } from "./tray";
 import { syncJumpList } from "./jump-list";
@@ -378,7 +378,7 @@ function notifyGame(body: string): void {
 // then — 성공하면 이어서 보낼 명령(첫 돌봄 튜토리얼 완료)
 function runGameCommand(command: Command, then?: () => Command): void {
   void rt.commands?.dispatcher.dispatch(command).then(async (result) => {
-    if (!result.ok) notifyGame(t("game.failed", { reason: failTextOf(result.reason, "command", getLang()).text })); // 설정창과 같은 실패 문구표 (94 항목 4-7)
+    if (!result.ok) notifyGame(t("game.failed", { reason: failTextOf(result.reason, "command", currentLang()).text })); // 설정창과 같은 실패 문구표 (94 항목 4-7)
     else if (then) {
       try {
         await rt.commands?.dispatcher.dispatch(then());
@@ -528,7 +528,7 @@ async function bootStarter(saveSource: SaveParty, pics: Portraits, starterList: 
       return false;
     }
     if (!saveSource.begin(species)) {
-      reportFailure(PATHS, config.slug, failTextOf("save-failed", "command", getLang()).text, "save-failed");
+      reportFailure(PATHS, config.slug, failTextOf("save-failed", "command", currentLang()).text, "save-failed");
       app.quit();
       return false;
     }

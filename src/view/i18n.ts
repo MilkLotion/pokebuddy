@@ -35,7 +35,7 @@ export function setLang(next: string): Lang {
   return lang;
 }
 
-export const getLang = (): Lang => lang;
+export const currentLang = (): Lang => lang;
 
 // 문구 — {이름} 자리에 vars 를 채운다. 없는 변수는 그대로 남겨 무엇이 빠졌는지 보이게
 export function t(key: string, vars: Record<string, unknown> = {}): string {
@@ -45,7 +45,7 @@ export function t(key: string, vars: Record<string, unknown> = {}): string {
 }
 
 // 기분 0~100 → 다섯 단계 말 (최고·좋음·보통·시들·우울)
-export function moodWord(mood: number): string {
+export function moodText(mood: number): string {
   const m = Number(mood);
   const level = !Number.isFinite(m) ? 3 : m >= 80 ? 5 : m >= 60 ? 4 : m >= 40 ? 3 : m >= 20 ? 2 : 1;
   return t(`mood.${level}`);

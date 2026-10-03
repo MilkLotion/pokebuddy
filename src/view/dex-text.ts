@@ -1,6 +1,6 @@
 // 공식 도감 글 — 분류·설명문·키·몸무게. 도감 상세와 상점 상세가 같이 쓴다
 import { type DexOptions, loadJson } from "../dex/data.js";
-import { getLang, t } from "./text.js";
+import { currentLang, t } from "./text.js";
 
 // 공식 분류와 설명문 — data/dex-text.json (src/tools/data/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
 export interface DexText {
@@ -35,7 +35,7 @@ export function bodySize(t: DexText | undefined): { height: string; weight: stri
 
 export function officialText(t: DexText | undefined): { genus: string; flavor: string } {
   if (!t) return { genus: "", flavor: "" };
-  const lang = getLang();
+  const lang = currentLang();
   const other = lang === "ko" ? "en" : "ko";
   return { genus: t.genus[lang] ?? t.genus[other] ?? "", flavor: t.flavor[lang] ?? t.flavor[other] ?? "" };
 }

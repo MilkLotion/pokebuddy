@@ -7,7 +7,7 @@ import assert from "node:assert";
 import { regionalOf } from "../../dex/regional";
 import { profileOf, speciesSlugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";
-import { snapshot } from "../../view/snapshot";
+import { snapshotView } from "../../view/snapshot";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { applyStarter } from "../../party/starter";
@@ -240,7 +240,7 @@ function seed(): SaveV3 {
   assert.ok(s.dex.unlocked.includes("lapras") && s.dex.obtained.includes("lapras"), "도감 해금·획득");
   assert.equal(s.achievements["work-100h"]?.claimedAt, T0);
   assert.equal(claimAchievement(s, "work-100h", T0).reason, "already-claimed", "한 번만");
-  const lapras = snapshot(s, T0).achievements.list.find((a) => a.id === "work-100h");
+  const lapras = snapshotView(s, T0).achievements.list.find((a) => a.id === "work-100h");
   assert.equal(lapras?.reward, "라프라스", "업적창에는 포켓몬 이름으로");
   assert.equal(lapras?.name, "함께 100시간 일하기");
   process.stdout.write("(9-1) 함께 100시간 일하기 · 라프라스  ok\n");
@@ -264,7 +264,7 @@ function seed(): SaveV3 {
   assert.equal(s.boxes[1]?.slots[0], res.petId, "가득 찬 박스 다음 박스의 첫 칸");
   assert.equal(s.pets.find((p) => p.id === res.petId)?.species, "ditto");
   assert.ok(s.dex.obtained.includes("ditto"));
-  assert.equal(snapshot(s, T0).achievements.list.find((a) => a.id === "party-three")?.reward, "메타몽");
+  assert.equal(snapshotView(s, T0).achievements.list.find((a) => a.id === "party-three")?.reward, "메타몽");
   process.stdout.write("(9-2) 파티 세 마리 모으기 · 메타몽 · 박스로  ok\n");
 }
 
@@ -467,7 +467,7 @@ function seed(): SaveV3 {
   myth.dex.obtained.push("volcanion", "magearna");
   assert.equal(isAchieved(myth, "dex-soul-heart"), true);
   assert.deepStrictEqual(
-    ["dex-creation", "dex-soul-heart", "dex-1000"].map((id) => snapshot(myth, T0).achievements.list.find((x) => x.id === id)?.reward),
+    ["dex-creation", "dex-soul-heart", "dex-1000"].map((id) => snapshotView(myth, T0).achievements.list.find((x) => x.id === id)?.reward),
     ["아르세우스", "마기아나(500년 전의 색)", "랜덤전설알"],
   );
   // 신오 도감 완성은 493번까지다 — 아르세우스를 얻어야 끝난다
@@ -490,11 +490,11 @@ function seed(): SaveV3 {
   g.dex.obtained = ["mewtwo"];
   assert.equal(isAchieved(g, "single-1"), true, "단일 포켓몬 알의 종");
   // 화면 모델 — 분류와 진행도. 달성한 뒤에는 진행도를 보이지 않는다
-  const view = snapshot(g, T0).achievements.list;
+  const view = snapshotView(g, T0).achievements.list;
   assert.equal(view.find((a) => a.id === "find-500")?.group, "find");
   assert.deepStrictEqual(view.find((a) => a.id === "find-500")?.progress, { now: 212, goal: 500, unit: "" });
   evaluateAchievements(g, T0);
-  assert.equal(snapshot(g, T0).achievements.list.find((a) => a.id === "find-50")?.progress, undefined);
+  assert.equal(snapshotView(g, T0).achievements.list.find((a) => a.id === "find-50")?.progress, undefined);
   assert.deepStrictEqual(
     ["dex-50", "dex-300", "shiny-10", "dex-kanto", "show-two"].map((id) => view.find((a) => a.id === id)?.reward),
     ["200P", "랜덤준전설알", "모습이 바뀌는 약", "뮤", "파티 칸 +1"],
@@ -568,7 +568,7 @@ function seed(): SaveV3 {
   assert.equal(s.achievements["dex-50"]?.quiet, true);
   assert.equal(s.achRev, ACHIEVEMENT_RULES.rev);
   assert.equal(pendingOf(s, T0).some((p) => p.kind === "achievement"), false, "배너 줄에 서지 않는다");
-  assert.equal(snapshot(s, T0).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
+  assert.equal(snapshotView(s, T0).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
   s.dex.obtained = Array.from({ length: 150 }, (_, i) => `x${i}`);
   assert.deepStrictEqual(evaluateAchievements(s, T0 + 1000), ["dex-150"]);
   assert.equal(s.achievements["dex-150"]?.quiet, undefined);

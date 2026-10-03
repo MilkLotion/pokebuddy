@@ -18,7 +18,7 @@ import { requestIdOf, runTxCommand } from "../tx/commands.js";
 import { dexList } from "../view/dex-list.js";
 import { dexDetail } from "../view/dex-detail.js";
 import { shopDetail } from "../view/shop-detail.js";
-import { snapshot } from "../view/snapshot.js";
+import { snapshotView } from "../view/snapshot.js";
 import { agentInfo, agentStatusList, connectAgent, disconnectAgent, hookCommandOf } from "../agents/registry.js";
 import { findNode, lastSignals, probeHook } from "../agents/check.js";
 import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents";
@@ -106,7 +106,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   const view = (): Snapshot | null => {
     const save = read();
     if (!save) return null;
-    const snap = snapshot(save, now());
+    const snap = snapshotView(save, now());
     return live.failing() ? { ...snap, saveFailing: true } : snap;
   };
 
