@@ -5,20 +5,19 @@
 //   reader  mailbox 로 보낸다. writer 가 처리해 파일에 쓰면 감시가 읽어 온다
 // 창 표시 항목(hidden · clickThrough)만 저장 밖의 설정이라 여기서 처리한다.
 // 결과 문구는 표면이 구성한다 — 여기서는 코드만 돌려준다.
-import { bridgeMailbox, createDispatcher, type Dispatcher } from "../commands/dispatcher";
-import type { MailServer } from "../save/mailbox";
+import { bridgeMailbox } from "../commands/dispatcher";
+import { createDispatcher, registerTxCommands, type Dispatcher } from "../tx/dispatcher";
+import { sendToWriter, type CommandServer } from "../save/command-channel";
 import type { Command, CommandResult } from "../shared/command";
-import type { CommandName } from "../shared/names/commands";
 import type { Size } from "../shared/geometry";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
-import { send } from "../save/mailbox";
 import { candidates, dayPartOf } from "../dex/evolve";
 import { appearanceOf } from "../dex/appearance";
 import { unlockRules } from "../dex/unlocks";
 import { itemOf } from "../bag/use";
-import { argsOf } from "../tx/bridge";
+import { argsFromCommand } from "../tx/args";
 import type { SaveV3 } from "../shared/save-v3";
 import type { TradeActionResult, TradeSession } from "../trade/session";
 
@@ -70,34 +69,10 @@ const isSettingKey = (v: unknown): v is SettingKey => typeof v === "string" && (
 // 보낸 쪽이 포기한 뒤에 진화하면 실패로 안 채로 상태만 바뀐다
 const EVOLVE_EXPIRE_MS = 40_000;
 
-// 인자를 풀어 실행기에 넣기만 하면 되는 명령 — 무대 반응도 그림 준비도 필요 없다.
-// party.show · party.hide · pet.set 은 reader 경로가 달라 `ctx.party` 가 맡는다 (src/main/save-party.ts)
-const SAVE_COMMANDS: readonly CommandName[] = [
-  "party.place",
-  "party.swap",
-  "party.move",
-  "party.keep",
-  "party.preset",
-  "party.preset.rename",
-  "egg.open",
-  "bag.use",
-  "bag.sell",
-  "pet.sell",
-  "shop.buy",
-  "achievement.claim",
-  "tutorial.skip",
-  "tutorial.done",
-  "starter.pick",
-  "box.sort",
-  "box.move",
-  "box.rename",
-  "box.order",
-];
-
 export function createCommands(ctx: CommandContext): Commands {
   const log = ctx.log ?? null;
   const dispatcher = createDispatcher({ log });
-  let server: MailServer | null = null;
+  let server: CommandServer | null = null;
 
   const target = (c: Command): string | null => (typeof c.target === "string" && c.target ? c.target : null);
 
@@ -107,7 +82,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 저장을 바꾸는 명령 하나 — writer 면 실행기로, reader 면 mailbox 로.
   // mailbox 를 잇고 있는 쪽(server)이 reader 일 수는 없다. 그때는 받아 줄 writer 가 없다는 뜻이다
   async function runSave(c: Command): Promise<CommandResult> {
-    if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : send(ctx.mailboxDir, c);
+    if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : sendToWriter(ctx.mailboxDir, c);
     const result = ctx.game.send({ cmd: c.cmd, target: c.target, args: c.args }, c.from);
     ctx.party.refresh();
     return result;
@@ -221,20 +196,22 @@ export function createCommands(ctx: CommandContext): Commands {
   // 나머지 저장 명령 — 인자를 풀고 실행기에 넣는 일만 한다.
   // 무대 다시 그리기는 기다리지 않고 답한다. 처음 나오는 종은 그림을 인터넷에서 받느라 1~2초 걸린다 — 관리 창이 그동안 멈춰 보였다
   // (worklog/records/response-latency/record.md)
-  for (const cmd of SAVE_COMMANDS) dispatcher.register(cmd, async (c) => {
+  // 위에서 따로 등록한 명령(무대 반응·그림 준비가 필요한 것과 저장 감시가 맡는 것)은 뺀다.
+  // party.show · party.hide · pet.set 은 reader 경로가 달라 `ctx.party` 가 맡는다 (src/main/save-party.ts)
+  registerTxCommands(dispatcher, async (c) => {
     const result = await runSave(c);
     if (result.ok) {
-      if (cmd === "bag.use") bagReaction(c);
+      if (c.cmd === "bag.use") bagReaction(c);
       void refreshAfter();
     }
     return result;
-  });
+  }, { except: ["settings.set", "party.show", "party.hide", "pet.set", "feed", "play", "evolve", "pet.form"] });
 
   // 가방 도구를 쓴 뒤 무대 반응 — 먹이는 메뉴의 밥 주기, 장난감은 놀아주기와 같은 반응(울음소리 포함)이다.
   // 무대에 없는 개체(박스·숨김)는 stage.care 가 그냥 넘어간다. 그 밖의 도구는 새 반응이 없다(약은 그림이 바뀐다).
   // 파티클은 보류다 (docs/specs/game.md, 2026-09-30 사용자 결정 추천안 "파티클은 뒤로")
   function bagReaction(c: Command): void {
-    const { petId, itemId } = argsOf(c); // 실행기와 같은 풀이 — 도구는 target, 개체는 args.petId
+    const { petId, itemId } = argsFromCommand(c); // 실행기와 같은 풀이 — 도구는 target, 개체는 args.petId
     if (typeof petId !== "string" || !petId || typeof itemId !== "string" || !itemId) return;
     const effect = itemOf(itemId)?.effect;
     if (effect === "fullness" || effect === "fullness-full-buff") ctx.stage.care?.(petId, "feed");
@@ -246,7 +223,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (worklog/records/trade/record.md "구현 2c~2e 계획과 E2E 설계")
   // 결과는 조작의 결과다. 보기의 error 는 앞선 새로 고침의 실패일 수 있어 결과로 쓰지 않는다
   const tradeCommand = (run: (session: TradeSession, c: Command) => Promise<TradeActionResult> | TradeActionResult) => async (c: Command): Promise<CommandResult> => {
-    if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : send(ctx.mailboxDir, c);
+    if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : sendToWriter(ctx.mailboxDir, c);
     const session = ctx.trade?.() ?? null;
     if (!session) return { ok: false, reason: "trade-off" };
     const r = await run(session, c);

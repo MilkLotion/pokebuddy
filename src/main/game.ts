@@ -22,7 +22,8 @@ import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
 import type { TxResult } from "../shared/command.js";
 import { HANDLERS } from "../tx/handlers.js";
-import { argsOf, requestIdOf, toCommandResult } from "../tx/bridge.js";
+import { argsFromCommand } from "../tx/args.js";
+import { requestIdOf, toCommandResult } from "../tx/commands.js";
 import { dexList } from "../tx/lists.js";
 import { dexDetail } from "../tx/dex-detail.js";
 import { shopDetail } from "../tx/shop-detail.js";
@@ -196,7 +197,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const command: Command = { cmd: req.cmd as CommandName, target: req.target, args: req.args, from, at: now() };
     const given = typeof req.args?.reqId === "string" && req.args.reqId !== "";
     const id = given ? requestIdOf(command) : `${requestIdOf(command)}:${++sendSeq}`;
-    const res: TxResult = executor.run({ id, name: command.cmd, args: argsOf(command) });
+    const res: TxResult = executor.run({ id, name: command.cmd, args: argsFromCommand(command) });
     return toCommandResult(res) as ManageReply;
   };
 
