@@ -6,7 +6,7 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { profileOf } from "../dex/species.js";
-import { itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
+import { achievementName, itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
@@ -136,7 +136,7 @@ const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
 const DEBUFF_TONE: Partial<Record<FullnessZone, "warning" | "danger">> = { hungry: "warning", starving: "danger" };
 function debuffOf(zone: FullnessZone): PetView["debuff"] {
   const tone = DEBUFF_TONE[zone];
-  return tone ? { label: zoneText(zone), tone, note: `친밀도 증가량 −${100 - TIME_RULES.zonePercent[zone]}%` } : null;
+  return tone ? { label: zoneText(zone), tone, note: t("debuff.note", { percent: 100 - TIME_RULES.zonePercent[zone] }) } : null;
 }
 
 // 잠들기 기준 선택지 — 0 은 잠들지 않음
@@ -248,7 +248,7 @@ export function snapshot(
       const sale = sellPrice(id);
       const about = itemAbout(save, id);
       return {
-        id, icon: itemArtKey(id), name: item?.ko ?? itemName(id), count, evolution: isEvoItem(id),
+        id, icon: itemArtKey(id), name: itemName(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),
@@ -260,7 +260,7 @@ export function snapshot(
     const row = save.achievements[id];
     return {
       id,
-      name: def.ko,
+      name: achievementName(def),
       desc: def.desc ?? "",
       reward: rewardWord(def),
       state: row?.claimedAt != null ? "claimed" : row?.achievedAt != null ? "achieved" : "locked",

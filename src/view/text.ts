@@ -7,7 +7,7 @@ import type { Lang, NatureId } from "../shared/species";
 import type { DexOptions } from "../dex/data";
 import { isMetaKey } from "../dex/data";
 import { evoItemTable, itemTable } from "../dex/tables";
-import { getLang } from "./i18n";
+import { getLang, t } from "./i18n";
 import { tableName } from "./name-table";
 
 // 문구 — {이름} 자리에 vars 를 채운다. 없는 키는 한국어 → 키 이름 순으로 떨어져 화면이 비지 않는다
@@ -24,12 +24,18 @@ export const natureName = (id: NatureId | string, lang: Lang = getLang()): strin
 
 // 마리의 화면 이름 — 종 이름이다. 별명은 보이지 않는다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다")
 // 도구·진화용 도구의 화면 이름 — 표에 없으면 식별자 그대로 둔다(가방이 모르는 식별자를 만나도 화면이 비지 않게).
-// lang 은 기본이 한국어다 — 가방·상점·진화 글자는 언어와 무관하게 한국어, 알림 배너만 언어 설정을 넘긴다(2026-10-03 오케스트레이터 결정, 언어에 맞출지는 사용자에게 묻는 중)
-export function itemName(id: string, opts?: DexOptions, lang: Lang = "ko"): string {
+// 설정 언어를 따른다 — 가방·상점·진화 조건·배너·편지가 같다 (2026-10-04 사용자 결정, 94 항목 3-2. docs/design.md 화면 언어)
+export function itemName(id: string, opts?: DexOptions, lang: Lang = getLang()): string {
   if (isMetaKey(id)) return id;
   const row = itemTable(opts)[id] ?? evoItemTable(opts)[id];
   return (lang === "en" ? row?.en : undefined) ?? row?.ko ?? id;
 }
+
+// 업적의 화면 이름 — 설정 언어를 따른다. 영어 이름이 없으면 한국어 (94 항목 3-2)
+export const achievementName = (def: { ko: string; en?: string }, lang: Lang = getLang()): string => (lang === "en" ? def.en : undefined) ?? def.ko;
+
+// 진화 조건의 성별 낱말 — 도감 진화 문구·상점 트리 화살표가 같이 쓴다. 글자는 언어 파일의 gender.* (94 항목 3-2)
+export const genderText = (gender: "male" | "female"): string => t(`gender.${gender}`);
 
 export const petLabel = (pet: { species: string }, lang: Lang = getLang()): string => petName(pet.species, lang);
 

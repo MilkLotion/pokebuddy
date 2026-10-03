@@ -6,12 +6,12 @@
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
 import { boxRoom } from "../box/slots.js";
-import { giftItemName, neededBoxRoom, parseGifts, type Gift } from "../mail/gifts.js";
+import { neededBoxRoom, parseGifts, type Gift } from "../mail/gifts.js";
 import { isApplied, isRead } from "../mail/letters.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
 import type { TxResult } from "../shared/command";
-import { petName } from "./text.js";
+import { itemName, petName } from "./text.js";
 import type { MailCode, MailReplyCode, TradeCode } from "../shared/names/online-codes.js";
 
 export interface ServerLetter {
@@ -58,7 +58,7 @@ const isLetter = (v: unknown): v is ServerLetter => {
 };
 
 function giftView(g: Gift): MailGiftView {
-  if (g.kind === "item") return { kind: "item", id: g.id, name: giftItemName(g.id) ?? g.id, count: g.count };
+  if (g.kind === "item") return { kind: "item", id: g.id, name: itemName(g.id), count: g.count };
   if (g.kind === "pokemon") return { kind: "pokemon", id: g.species, name: petName(g.species), count: g.count };
   return { kind: "points", id: null, name: "포인트", count: g.count };
 }

@@ -4,6 +4,7 @@
 import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
+import { t } from "./text.js";
 import { candyMax, candyResult } from "../bag/preview.js";
 import { growthCurve } from "../dex/growth.js";
 import type { GrowthRate } from "../shared/species.js";
@@ -66,9 +67,9 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간", ...buffRefresh(v, pet, "premium-food", "2시간")];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 ×2 · 2시간`, ...buffRefresh(v, pet, "premium-food", "2시간")];
     case "play-buff":
-      return ["신남", "친밀도 증가량 ×1.5 · 2시간", ...buffRefresh(v, pet, "long-play", "2시간")];
+      return [t("buff.long-play"), "친밀도 증가량 ×1.5 · 2시간", ...buffRefresh(v, pet, "long-play", "2시간")];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":

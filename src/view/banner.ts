@@ -4,7 +4,7 @@
 // 줍기 배너는 제목 `줍기` 와 "<주운 마리>가 <것>을 주웠어요" 문구다 (docs/specs/game.md "줍기")
 import { defOf } from "../achievement/defs.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
-import { getLang, itemName, petName, t } from "./text.js";
+import { achievementName, itemName, petName, t } from "./text.js";
 import { josa } from "../shared/josa.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { ManageRoute } from "../shared/model/route";
@@ -15,7 +15,7 @@ import { parseKey } from "../notify/pending.js";
 export function foundThing(rec: FindRecordV3): string {
   if (rec.kind === "points") return `${rec.amount}P`;
   if (rec.kind === "pokemon") return petName(rec.ref);
-  return itemName(rec.ref, undefined, getLang()); // 배너는 언어 설정을 따른다 — 가방·상점은 한국어다
+  return itemName(rec.ref);
 }
 
 // 줍기 문구 — "피카츄가 경험사탕S를 주웠어요", 포켓몬이면 "피카츄가 이브이를 데려왔어요". 주운 마리는 지금 종 이름
@@ -63,5 +63,5 @@ export function bannerOf(save: SaveV3, key: string): BannerView | null {
   }
   const def = defOf(k.target);
   if (!def) return null;
-  return { key, kind: "achievement", title: t("banner.achievement"), target: def.ko, go, route: { to: "achievements", id: k.target } };
+  return { key, kind: "achievement", title: t("banner.achievement"), target: achievementName(def), go, route: { to: "achievements", id: k.target } };
 }
