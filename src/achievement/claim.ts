@@ -30,7 +30,7 @@ export type ClaimResult = Outcome<ClaimFailure> & {
 //   포인트    잔액에 더한다
 //   알        돌보미집에 넣는다. 빈 칸이 없으면 daycare-full, 단일 포켓몬 알의 남은 종이 없으면 egg-none — 미수령으로 남는다
 //   도구      가방에 더한다
-export function claimAchievement(save: SaveV3, id: string, now: number, opts?: DexOptions, rand: Rand = Math.random): ClaimResult {
+export function claimAchievement(save: SaveV3, id: string, now: number, opts: DexOptions | undefined, rand: Rand): ClaimResult {
   const def = defOf(id, opts);
   if (!def) return { ok: false, reason: "no-achievement" };
   const row = save.achievements[id];

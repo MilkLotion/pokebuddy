@@ -166,7 +166,7 @@ const eevee: TradePet = {
 {
   let disk = seed();
   disk.bag["rare-candy"] = 2;
-  const tx = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0 }, HANDLERS);
+  const tx = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0, rand: Math.random }, HANDLERS);
   assert.equal(tx.run({ id: "l1", name: "trade.lock", args: { channelId: "ch1", petId: "p1", offerRev: 2 } }).ok, true);
   const blocked = tx.run({ id: "b1", name: "bag.use", args: { itemId: "rare-candy", petId: "p1" } });
   assert.deepStrictEqual(blocked, { ok: false, reason: "trade-locked" }, "걸린 개체에 사탕을 쓰지 못한다");

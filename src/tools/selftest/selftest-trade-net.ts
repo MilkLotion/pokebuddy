@@ -75,7 +75,7 @@ async function player(species: string, url: string, key: string, po: PlayerOptio
   let disk: SaveV3 = empty(T0);
   disk.pets.push(newPet({ id: "p1", species, shiny: false, nature: "hardy", gender: "male", now: T0 }));
   disk.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  const exec = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => Date.now() }, HANDLERS);
+  const exec = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => Date.now(), rand: Math.random }, HANDLERS);
   const client = po.shared?.client ?? createOnlineClient({ url, key, storage: memoryStorage() });
   const gate = po.shared?.gate ?? createSessionGate(client);
   if (po.member && !po.shared) await signUp(client);

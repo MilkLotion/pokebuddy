@@ -24,7 +24,7 @@ export function fixedGender(species: string, opts?: DexOptions): Gender | null {
 }
 
 // 새로 얻은 개체의 성별 — 성비대로. 한 성별 종도 난수를 하나 쓴다 (앞뒤 뽑기의 순서가 종에 따라 달라지지 않게)
-export function rollGender(species: string, rng: () => number = Math.random, opts?: DexOptions): Gender {
+export function rollGender(species: string, rng: () => number, opts?: DexOptions): Gender {
   const roll = rng();
   const fixed = fixedGender(species, opts);
   if (fixed) return fixed;

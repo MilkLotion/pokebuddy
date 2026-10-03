@@ -118,7 +118,7 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
 // (3) 실행기 — mail.apply 는 실행기에만 있다. 같은 요청 id 는 다시 돌리지 않는다
 {
   let save: SaveV3 = empty(T0);
-  const tx = createExecutor({ read: () => structuredClone(save), write: (s) => ((save = s), true), now: () => T0 }, HANDLERS);
+  const tx = createExecutor({ read: () => structuredClone(save), write: (s) => ((save = s), true), now: () => T0, rand: Math.random }, HANDLERS);
   const res = tx.run({ id: "mail-apply:L9", name: "mail.apply", args: { letterId: "L9", gifts: [{ kind: "points", count: 50 }] } });
   assert.equal(res.ok, true);
   const before = save.points.balance;
@@ -132,7 +132,7 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
 void (async () => {
   let save: SaveV3 = empty(T0);
   save.points.balance = 0;
-  const tx = createExecutor({ read: () => structuredClone(save), write: (s) => ((save = s), true), now: () => T0 }, HANDLERS);
+  const tx = createExecutor({ read: () => structuredClone(save), write: (s) => ((save = s), true), now: () => T0, rand: Math.random }, HANDLERS);
   const iso = (ms: number): string => new Date(T0 + ms).toISOString();
   const letters = [
     { id: "A", title: "선물", body: "", sender: "PokeBuddy", gifts: [{ kind: "points", count: 100 }], starts_at: iso(-1000), ends_at: iso(86_400_000), claimed_at: null as string | null },
@@ -197,7 +197,7 @@ void (async () => {
   // (5) 목록을 읽는 사이 계정이 바뀌면 그 답은 버린다. 넣다가 던져도 받는 중 표시는 풀린다
   {
     let s2: SaveV3 = empty(T0);
-    const tx2 = createExecutor({ read: () => structuredClone(s2), write: (x) => ((s2 = x), true), now: () => T0 }, HANDLERS);
+    const tx2 = createExecutor({ read: () => structuredClone(s2), write: (x) => ((s2 = x), true), now: () => T0, rand: Math.random }, HANDLERS);
     let release: () => void = () => undefined;
     let slow = true;
     let throwOnChange = false;

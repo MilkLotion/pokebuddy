@@ -32,7 +32,7 @@ export interface TxPorts {
   read: () => SaveV3 | null;
   write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/online/save-kind.ts)
   now: () => number;
-  rand?: () => number; // 없으면 Math.random
+  rand: () => number; // 난수 — 앱은 Math.random 을 넘긴다(src/main/game.ts). 도메인은 난수를 주입받는다
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
   petName?: (slug: string) => string; // 종의 화면 이름. 없으면 슬러그 그대로(자체 검사)
 }
@@ -66,7 +66,7 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
 
     const now = ports.now();
     const draft = structuredClone(save);
-    const out = handler(draft, req.args, { now, rand: ports.rand ?? Math.random, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}), petName: ports.petName ?? ((slug) => slug) });
+    const out = handler(draft, req.args, { now, rand: ports.rand, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}), petName: ports.petName ?? ((slug) => slug) });
     if (!out.ok) return { ok: false, reason: out.reason };
 
     // 상태가 바뀌었으니 메가 모습·메가스톤·해금·튜토리얼·업적을 다시 본다 (./settle.ts). save 는 거래 전 — 레벨업 업적이 비교한다

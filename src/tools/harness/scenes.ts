@@ -42,7 +42,7 @@ function addHiddenPet(save: SaveV3, now: number): void {
   }
   const id = nextPetId(save);
   const species = save.dex.unlocked.find((s) => !save.pets.some((p) => p.species === s)) ?? SCENE_RULES.extra;
-  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now }));
+  save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now }));
   save.party.slots[slot] = { state: "pokemon", petId: id, hidden: true }; // 숨긴 채로 — 파티 튜토리얼(지금 꺼짐, src/tutorial/queue.ts)을 다시 켤 때 확인용
   recordDex(save, species, false);
 }
@@ -141,7 +141,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       ensureStarter(s, now);
       const rows: [string, number, number][] = [["bulbasaur", 9, 20], ["squirtle", 14, 60], ["eevee", 7, 80], ["machop", 21, 10], ["pichu", 3, 40], ["totodile", 18, 5], ["mudkip", 11, 90], ["riolu", 25, 30]];
       rows.forEach(([species, level, affinity], i) => {
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now: now - (rows.length - i) * 60_000 });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now: now - (rows.length - i) * 60_000 });
         pet.level = level;
         pet.affinity = affinity;
         s.pets.push(pet);
@@ -160,7 +160,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       const kinds = ["bulbasaur", "charmander", "squirtle", "pikachu", "eevee", "machop", "pichu", "totodile", "mudkip", "riolu"];
       for (let i = 0; i < 33; i++) {
         const species = kinds[i % kinds.length] ?? "pikachu";
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now: now - (33 - i) * 60_000 });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now: now - (33 - i) * 60_000 });
         pet.level = 1 + ((i * 7) % 40);
         s.pets.push(pet);
         addToBox(s.boxes, pet.id);
@@ -175,7 +175,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       applyScene(s, "done-all", now);
       s.points.balance = Math.max(s.points.balance, SHOWCASE.points);
       const add = (species: string, level: number, affinity: number, shiny = false): string => {
-        const pet = newPet({ id: nextPetId(s), species, shiny, nature: randomNature(Math.random).id, gender: rollGender(species), now });
+        const pet = newPet({ id: nextPetId(s), species, shiny, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
         pet.level = level;
         pet.exp = expForLevel(growthOf(species), level); // 레벨만 올리면 서버 검증의 level 규칙에 걸린다(레벨 ≤ 경험치가 허락하는 레벨)
         pet.affinity = affinity;
@@ -208,7 +208,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       applyScene(s, "done-all", now);
       const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
       const add = (species: string, level: number, mega: MegaV3): string => {
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
         pet.level = level;
         pet.exp = expForLevel(growthOf(species), level);
         pet.affinity = 100;
@@ -236,7 +236,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       ensureStarter(s, now);
       const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care, stone: true as const };
       for (const species of ["groudon", "rayquaza"]) {
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
         pet.level = 70;
         pet.exp = expForLevel(growthOf(species), 70);
         pet.affinity = 100;
@@ -259,7 +259,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       // [종, 레벨, 친밀도, 성별(정할 때만)]
       type Row = [string, number, number, ("male" | "female")?];
       const add = ([species, level, affinity, gender]: Row): string => {
-        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: gender ?? rollGender(species), now });
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: gender ?? rollGender(species, Math.random), now });
         pet.level = level;
         pet.exp = expForLevel(growthOf(species), level);
         pet.affinity = affinity;

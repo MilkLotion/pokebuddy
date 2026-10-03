@@ -45,6 +45,7 @@ function fake(state: SaveV3, now = T0): Fake {
         return true;
       },
       now: () => now,
+      rand: Math.random,
     },
   };
   return f;
@@ -97,7 +98,7 @@ function fake(state: SaveV3, now = T0): Fake {
   const f = fake(seed());
   const tx = createExecutor(f.ports, HANDLERS);
   assert.equal(tx.run({ id: "r1", name: "없는명령" }).ok, false);
-  const none = createExecutor({ read: () => null, write: () => true, now: () => T0 }, HANDLERS);
+  const none = createExecutor({ read: () => null, write: () => true, now: () => T0, rand: Math.random }, HANDLERS);
   const res = none.run({ id: "r1", name: "party.hide", args: { petId: "p1" } });
   assert.equal(res.ok === false && res.reason, "no-save");
   process.stdout.write("(4) 모르는 명령과 빈 저장  ok\n");
