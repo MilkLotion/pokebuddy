@@ -1,0 +1,191 @@
+// 메뉴 모델 — 포켓몬 메뉴(무대 우클릭·관리 창 우클릭), 트레이, 작업 표시줄 점프 목록 (설계 30번 D9)
+// Electron 을 값으로 가져오지 않는다 — MenuItemConstructorOptions 모양의 객체만 만든다(node 시험 가능). 누르면 할 일(click)은 메인이 넘긴다.
+// 메뉴 창의 표현(번호 매기기·화면 모양)은 메인의 src/main/menus.ts 다.
+// 문구는 언어 파일(lib/i18n)에서. 호칭(펫·동반자)은 쓰지 않고 동사만 (사용자 결정 2026-09-17).
+// 우클릭 = 이름·상태 / 밥 주기·놀아주기 / 설정창 열기 세 묶음 (docs/specs/game.md 2026-09-24 전환)
+// 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
+import type { MenuItemConstructorOptions } from "electron";
+import { NATURE_SHOWN } from "../dex/natures.js";
+import { formsOf } from "../dex/forms.js";
+import { sellablePet } from "../shop/sell-pet.js";
+import { checkCare } from "../state/care.js";
+import { zoneOf } from "../state/time.js";
+import { currentTutorial } from "../tutorial/queue.js";
+import type { SaveV3 } from "../shared/save-v3";
+import { moodWord, natureName, petName, t, untilWord } from "./text.js";
+
+export interface PetMenuModel {
+  name: string;
+  nature: string | null; // 성격의 화면 이름 — 세션 샌드박스 펫처럼 없으면 이름만
+  status?: string;
+  feed?: { enabled: boolean; reason?: string }; // reason 은 메뉴에 적지 않는다 — 첫 돌봄 말풍선이 쓴다
+  play?: { enabled: boolean; reason?: string };
+  ball?: { enabled: boolean; hidden: boolean }; // 볼 줄의 모양 — 박스 개체는 흐리게, 볼 안의 개체는 `꺼내기`. 없으면 `볼에 넣기`
+  forms?: PetMenuForm[]; // 공유 sid 계열의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
+  move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체에만 둔다
+  sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
+}
+export interface PetMenuForm {
+  species: string;
+  name: string;
+  current: boolean; // 지금 모습 — 누를 수 없다
+  portrait?: string; // 초상의 data URI
+}
+export interface TrayMenuModel {
+  hidden: boolean;
+  ghost: boolean; // 클릭 통과
+}
+// 트레이 — 앱 전체 조작
+export interface MenuActions {
+  toggleHidden(): void;
+  quit(): void;
+  toggleGhost?(): void;
+}
+// 포켓몬 메뉴 — 그 포켓몬 조작만. 숨기기·종료 같은 앱 전체 조작은 받지 않는다
+export interface PetMenuActions {
+  feed?(): void;
+  play?(): void;
+  ball?(): void; // 이 포켓몬만 볼에 넣는다·꺼낸다 — 저장에 있는 개체일 때만
+  detail?(): void; // 그 포켓몬의 개체 상세를 연다
+  form?(species: string): void; // 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
+  move?(): void; // 옮기기 — 관리 창의 박스 탭에서 그 개체를 든다. 동작이 없으면 줄이 흐리다
+  sell?(): void; // 팔기 — 관리 창이 확인 창을 띄운다. 동작이 없으면 줄이 흐리다
+}
+
+// 첫 줄 — "이브이 · 용감". 성격이 없거나 성격을 화면에서 끈 동안(NATURE_SHOWN)은 이름만
+export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
+  NATURE_SHOWN && model.nature ? t("menu.pet", { name: model.name, nature: model.nature }) : model.name;
+
+// 포켓몬 메뉴 — 무대의 우클릭과 관리 창의 파티 카드·박스 칸 누르기가 같은 메뉴를 쓴다 (2026-10-02 사용자 결정)
+// 그 포켓몬 관련 항목만 둔다 — 잠시 숨기기(전체)·종료는 트레이에만 (2026-09-28 사용자 결정)
+// 첫 항목은 이름·상태 두 줄이다 (sublabel 이 둘째 줄). 못 하는 항목은 흐리게만 둔다 — 이유는 적지 않는다 (Figma `Context Menu` `338:738`)
+// 묶음: 이름·상태 / 옮기기 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기 (Figma `Context Menu` `338:738`)
+// 옮기기는 이름·상태 바로 아래에 두고 그 아래에 구분선을 둔다 (2026-10-02 사용자 결정 "옮기기를 포켓몬이름,상태 바로 아래로 옮기고 밑줄")
+// 볼에 넣기와 상세 보기 사이에는 구분선을 두지 않는다 (2026-10-02 사용자 결정 "구분선 없애자")
+// 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다. 옮기기는 박스 개체에만, 팔기는 파티·박스 모두에 있다.
+// 모습 바꾸기는 누르는 동작이 없고 하위 줄(submenu)만 있다 — 눌러도 메뉴가 닫히지 않고 옆에 말풍선으로 뜬다.
+//   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다
+export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
+  const forms = model.forms && model.forms.length > 1 ? model.forms : null;
+  return [
+    { label: petLine(model), ...(model.status ? { sublabel: model.status } : {}), enabled: false },
+    { type: "separator" },
+    ...(model.move ? [{ label: t("menu.move"), enabled: model.move.enabled && !!act.move, click: () => act.move?.() }, { type: "separator" as const }] : []),
+    ...(model.feed ? [{ label: t("menu.feed"), enabled: model.feed.enabled, click: () => act.feed?.() }] : []),
+    ...(model.play ? [{ label: t("menu.play"), enabled: model.play.enabled, click: () => act.play?.() }] : []),
+    ...(act.ball ? [{ label: t(model.ball?.hidden ? "menu.unball" : "menu.ball"), enabled: model.ball?.enabled !== false, click: () => act.ball?.() }] : []),
+    ...(act.detail ? [{ label: t("menu.detail"), click: () => act.detail?.() }] : []),
+    ...(forms
+      ? [
+          {
+            label: t("menu.form"),
+            toolTip: t("menu.form.title"),
+            submenu: forms.map((f) => ({
+              label: f.name,
+              sublabel: t(f.current ? "menu.form.now" : "menu.form.go"),
+              enabled: !f.current,
+              ...(f.portrait ? { icon: f.portrait } : {}),
+              click: () => act.form?.(f.species),
+            })),
+          },
+        ]
+      : []),
+    ...(model.sell ? [{ type: "separator" as const }, { label: t("menu.sell"), enabled: model.sell.enabled && !!act.sell, click: () => act.sell?.() }] : []),
+  ];
+}
+
+// 튜토리얼이 고르게 할 항목만 남기고 나머지 누르는 항목을 흐리게(사용 안 함) 둔다. 이름·상태 줄은 그대로다.
+// 첫 돌봄 2/2 가 쓴다 (Figma `579:17015`, worklog/records/game-runtime/record.md "첫 돌봄 튜토리얼의 피드백")
+export function lockExcept(template: MenuItemConstructorOptions[], keep: readonly string[]): MenuItemConstructorOptions[] {
+  return template.map((m) => ((m.click || m.submenu) && !keep.includes(String(m.label)) ? { ...m, enabled: false } : m));
+}
+
+// 트레이 — 잠시 숨기기 / 클릭 통과 / 종료. 설정창 열기는 trayMenuOf 가 맨 위에 붙인다.
+// 이름 줄과 설정 파일 열기는 뺐다 — 관리 창이 그 일을 한다 (worklog/records/game-runtime/record.md "트레이 메뉴와 표시 설정의 설계")
+export function trayMenu(model: TrayMenuModel, act: MenuActions): MenuItemConstructorOptions[] {
+  return [
+    { label: t(model.hidden ? "menu.show" : "menu.hide"), click: () => act.toggleHidden() },
+    { label: t("menu.ghost"), type: "checkbox", checked: model.ghost, click: () => act.toggleGhost?.() },
+    { type: "separator" },
+    { label: t("menu.quit"), click: () => act.quit() },
+  ];
+}
+
+// 트레이 전체 — 맨 위의 설정창 열기와 트레이 항목. 상점·도감·가방은 관리 창이 맡는다 (docs/specs/game.md "화면 구조")
+export function trayMenuOf(model: TrayMenuModel, act: MenuActions & { openManage(): void }): MenuItemConstructorOptions[] {
+  return [{ label: t("menu.manage"), click: () => act.openManage() }, { type: "separator" }, ...trayMenu(model, act)];
+}
+
+// 이름 옆 한 줄 — "배고픔 · 기분 좋음". 구간 낱말은 화면 값의 zoneText 와 같은 언어 파일 글자다
+const petStatus = (pet: { fullness: number; mood: number }): string => `${t(`zone.${zoneOf(pet.fullness)}`)} · ${moodWord(pet.mood)}`;
+
+// 메뉴 항목 하나의 모양 — 막혔으면 이유를 준다(메뉴에는 적지 않는다 — 첫 돌봄 말풍선이 쓴다).
+// 판정은 돌봄 규칙(src/state/care.ts checkCare) 그대로다. 쿨타임은 분·시간 단위 남은 시간 ("3분 뒤", 1분 안이면 "곧")
+function careItem(save: SaveV3, petId: string, kind: "feed" | "play", now: number): { enabled: boolean; reason?: string } {
+  const r = checkCare(save, petId, kind);
+  if (r.ok) return { enabled: true };
+  if (r.reason === "cooldown") return { enabled: false, reason: untilWord(now + Math.ceil((r.remainMs ?? 0) / 1000) * 1000) };
+  if (r.reason === "full") return { enabled: false, reason: t("care.full") };
+  return { enabled: false };
+}
+
+// 포켓몬 메뉴의 모델과 메인이 동작을 잇는 데 쓰는 값
+export interface PetMenuState {
+  model: PetMenuModel;
+  inSave: boolean; // 저장에 있는 개체 — 볼·옮기기·팔기(무대에서 연 메뉴는 상세 보기도)를 잇는다
+  hidden: boolean; // 볼 안의 개체 — 볼 줄은 꺼내기
+  sale: { price: number } | null; // 팔 수 있으면 값
+  firstCare: { keep: string | null; wait: string | null } | null; // 첫 돌봄 튜토리얼 2/2 — 남길 항목 라벨과 말풍선의 대기 글자
+}
+
+// 무대에 나온 개체는 stagePet(종·성격)이 있다. 관리 창에서 연 메뉴는 저장의 값만으로 만든다. 만들 수 없으면 null
+export function petMenuOf(
+  save: SaveV3 | null,
+  petId: string,
+  o: { origin: "stage" | "manage"; stagePet: { species: string; nature?: string | null } | null; formIcons: Record<string, string>; now: number },
+): PetMenuState | null {
+  const pet = save?.pets.find((row) => row.id === petId) ?? null;
+  if (!o.stagePet && !(o.origin === "manage" && pet)) return null;
+  const nature = o.stagePet?.nature ?? pet?.nature ?? null;
+  const base = { name: petName(o.stagePet?.species ?? pet?.species ?? ""), nature: nature ? natureName(nature) : null };
+  if (!save || !pet) return { model: base, inSave: false, hidden: false, sale: null, firstCare: null };
+  const slot = save.party.slots.find((s) => s.petId === petId) ?? null;
+  const off: { enabled: boolean; reason?: string } = { enabled: false };
+  // 팔 수 있는가 — 단일 포켓몬·알에 없는 종·교환에 올린 개체·마지막 한 마리는 못 판다 (src/shop/sell-pet.ts)
+  const sale = sellablePet(save, petId);
+  const feed = slot ? careItem(save, petId, "feed", o.now) : off;
+  const play = slot ? careItem(save, petId, "play", o.now) : off;
+  const model: PetMenuModel = {
+    ...base,
+    status: petStatus(pet),
+    feed,
+    play,
+    ball: { enabled: slot != null, hidden: slot?.hidden === true },
+    forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(o.formIcons[slug] ? { portrait: o.formIcons[slug] } : {}) })),
+    // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
+    ...(slot ? {} : { move: { enabled: true } }),
+    sell: { enabled: sale.ok },
+  };
+  // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/conditions.ts onlyAtStart).
+  // 밥 주기만 누르게 둔다. 밥 주기를 못 하는 때(쿨타임·배부름)는 놀아주기를 대신 남긴다.
+  // 둘 다 못 하면 모두 잠그고, 쉬는 중(쿨타임)일 때만 남은 시간을 말풍선에 붙인다 — 배부름 같은 다른 이유면 "곧"
+  let firstCare: PetMenuState["firstCare"] = null;
+  if (o.origin === "stage" && currentTutorial(save)?.id === "first-care") {
+    const keep = feed.enabled ? t("menu.feed") : play.enabled ? t("menu.play") : null;
+    const cooling = (kind: "feed" | "play", item: { reason?: string }): string | null => {
+      const r = checkCare(save, petId, kind);
+      return !r.ok && r.reason === "cooldown" ? (item.reason ?? null) : null;
+    };
+    firstCare = { keep, wait: keep ? null : (cooling("play", play) ?? cooling("feed", feed) ?? t("coach.first-care.wait.soon")) };
+  }
+  return { model, inSave: true, hidden: slot?.hidden === true, sale: sale.ok ? { price: sale.price } : null, firstCare };
+}
+
+// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 쿨타임과 무관하게 두 줄을 늘 올린다 (Windows 점프 목록은 항목을 흐리게 둘 수 없다, 설계 U5)
+export function jumpListOf(save: SaveV3): { pets: { id: string; name: string; level: number }[]; labels: { feed: string; play: string } } {
+  const pets = save.party.slots
+    .map((slot) => (slot.state === "pokemon" ? save.pets.find((p) => p.id === slot.petId) : undefined))
+    .filter((p): p is NonNullable<typeof p> => p != null)
+    .map((p) => ({ id: p.id, name: petName(p.species), level: p.level }));
+  return { pets, labels: { feed: t("menu.feed"), play: t("menu.play") } };
+}
