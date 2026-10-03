@@ -7,7 +7,7 @@ import path from "node:path";
 import { hookInstalled } from "../agents/hooks";
 import { dexPath, suggestSlugs } from "../dex/dex-number";
 import { frontWindow, hostOf } from "../follow/front";
-import { readStateRecords, resolveState, stateFor } from "../follow/state";
+import { agentStateOf, readStateRecords, stateFor } from "../follow/state";
 import { PATHS } from "../platform/paths";
 import { USER_DEFAULTS, readConfig } from "../platform/user-config";
 import { parseCredits } from "../shared/pmd-credits";
@@ -69,7 +69,7 @@ export function runStatus(petArg?: string): void {
   for (const record of records.slice(0, 10)) {
     const prompt = record.promptAt ? `  프롬프트 ${age(record.promptAt)}초 전` : "";
     say(
-      `  ${String(record.cli || "claude").padEnd(6)}  기록=${record.state} → 지금=${resolveState(record)}  ${age(record.at)}초 전${prompt}` +
+      `  ${String(record.cli || "claude").padEnd(6)}  기록=${record.state} → 지금=${agentStateOf(record)}  ${age(record.at)}초 전${prompt}` +
         `  조상 ${Array.isArray(record.ancestors) ? record.ancestors.length : 0}개`,
     );
   }

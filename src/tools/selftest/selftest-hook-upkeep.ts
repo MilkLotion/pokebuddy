@@ -43,7 +43,7 @@ try {
   ok("정리: 연결된 CLI 가 없으면 아무 파일도 쓰지 않는다 · 훅 파일이 없으면 만들지 않는다", () => {
     fs.mkdirSync(geminiDir, { recursive: true });
     fs.writeFileSync(path.join(geminiDir, "settings.json"), JSON.stringify({ hooks: { SessionStart: [{ hooks: [other] }] } }));
-    const r = registry.tidy();
+    const r = registry.tidyAgentHooks();
     assert.deepStrictEqual(r.clis, []);
     assert.strictEqual(r.hookFile, "없음");
     assert.ok(!fs.existsSync(hookFile), "훅 파일을 만들지 않는다");
@@ -59,7 +59,7 @@ try {
       codexFile,
       JSON.stringify({ hooks: { SessionStart: [group()], PreToolUse: [{ hooks: [{ type: "command", command: ours }, other] }], PostToolUse: [group()], Stop: [group()] } }),
     );
-    const r = registry.tidy();
+    const r = registry.tidyAgentHooks();
     assert.deepStrictEqual(r.clis.map((c) => [c.cli, c.removed]), [["codex", ["PreToolUse"]]]);
     const after = readJson(codexFile);
     assert.deepStrictEqual(commands(after, "PreToolUse"), [other.command], "남의 PreToolUse 훅은 남긴다");
@@ -68,7 +68,7 @@ try {
     assert.strictEqual(backups(codexFile).length, 1, "고치기 전 백업");
     // 한 번 더 — 걷을 게 없으면 쓰지 않는다
     const before = fs.readFileSync(codexFile, "utf8");
-    assert.deepStrictEqual(registry.tidy().clis, []);
+    assert.deepStrictEqual(registry.tidyAgentHooks().clis, []);
     assert.strictEqual(fs.readFileSync(codexFile, "utf8"), before);
     assert.strictEqual(backups(codexFile).length, 1, "쓰지 않았으니 백업도 없다");
   });
@@ -76,11 +76,11 @@ try {
   ok("정리: 있는 훅 파일만 새 버전으로 바꾼다", () => {
     fs.mkdirSync(path.dirname(hookFile), { recursive: true });
     fs.writeFileSync(hookFile, "// 옛 훅\n");
-    assert.strictEqual(registry.tidy().hookFile, "바꿈");
+    assert.strictEqual(registry.tidyAgentHooks().hookFile, "바꿈");
     assert.ok(fs.readFileSync(hookFile).equals(fs.readFileSync(source)), "원본과 같아진다");
-    assert.strictEqual(registry.tidy().hookFile, "최신");
+    assert.strictEqual(registry.tidyAgentHooks().hookFile, "최신");
     // 정리 뒤 codex 는 연결됨이고, 남은 갱신 필요는 빠진 이벤트(PermissionRequest) 때문뿐이다
-    const row = registry.status().find((a) => a.name === "codex");
+    const row = registry.agentStatusList().find((a) => a.name === "codex");
     assert.strictEqual(row?.connected, true);
     assert.strictEqual(row?.outdated, true);
   });

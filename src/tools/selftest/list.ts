@@ -40,6 +40,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("dex"),
   tool("dex-detail"),
   tool("window-helpers"),
+  tool("asset-cache"),
   tool("notify"),
   tool("find"),
   tool("clock"),

@@ -111,7 +111,7 @@ export function lastSignals(stateDir: string): Record<string, number> {
 }
 
 // 점검 — command 는 그 CLI 에 등록하는 것과 같은 명령, hookFile 은 그 명령이 부르는 훅 파일
-export async function probe(cli: string, command: string, hookFile: string, node: NodeInfo | null, stateDir: string): Promise<ProbeResult> {
+export async function probeHook(cli: string, command: string, hookFile: string, node: NodeInfo | null, stateDir: string): Promise<ProbeResult> {
   if (!node) return { ok: false, reason: "node-missing" };
   if (!fs.existsSync(hookFile)) return { ok: false, reason: "hook-missing" };
   const session = `${CHECK_RULES.session}-${Date.now()}`;

@@ -5,7 +5,7 @@ import { isNatureId } from "../dex/natures";
 
 export type Raw = Record<string, unknown>;
 
-export const isObj = (v: unknown): v is Raw => v != null && typeof v === "object" && !Array.isArray(v);
+export const isRawObject = (v: unknown): v is Raw => v != null && typeof v === "object" && !Array.isArray(v);
 export const numOr = (v: unknown, d = 0): number => (typeof v === "number" && Number.isFinite(v) ? v : d);
 export const intOr = (v: unknown, d = 0): number => Math.round(numOr(v, d));
 export const nonNeg = (v: unknown, d = 0): number => Math.max(0, intOr(v, d));

@@ -63,17 +63,17 @@ async function testPids(): Promise<void> {
 }
 
 async function testStateRecords(): Promise<void> {
-  await ok("resolveState: hold/then · STALE 은 running·waiting 만 · 없으면 idle", () => {
+  await ok("agentStateOf: hold/then · STALE 은 running·waiting 만 · 없으면 idle", () => {
     const now = nowSec();
-    assert.strictEqual(state.resolveState({ state: "running", at: now }), "running");
-    assert.strictEqual(state.resolveState({}), "idle");
-    assert.strictEqual(state.resolveState({ state: "waving", hold: 5, then: "idle", at: now - 10 }), "idle");
-    assert.strictEqual(state.resolveState({ state: "waving", hold: 60, then: "idle", at: now - 10 }), "waving");
-    assert.strictEqual(state.resolveState({ state: "waving", hold: 5, at: now - 10 }), "idle"); // then 없음 → idle
-    assert.strictEqual(state.resolveState({ state: "running", at: now - state.STALE_SEC - 1 }), "idle");
-    assert.strictEqual(state.resolveState({ state: "waiting", at: now - state.STALE_SEC - 1 }), "idle");
-    assert.strictEqual(state.resolveState({ state: "failed", at: now - state.STALE_SEC - 1 }), "failed");
-    assert.strictEqual(state.resolveState({ state: "running", at: now - state.STALE_SEC + 1 }), "running");
+    assert.strictEqual(state.agentStateOf({ state: "running", at: now }), "running");
+    assert.strictEqual(state.agentStateOf({}), "idle");
+    assert.strictEqual(state.agentStateOf({ state: "waving", hold: 5, then: "idle", at: now - 10 }), "idle");
+    assert.strictEqual(state.agentStateOf({ state: "waving", hold: 60, then: "idle", at: now - 10 }), "waving");
+    assert.strictEqual(state.agentStateOf({ state: "waving", hold: 5, at: now - 10 }), "idle"); // then 없음 → idle
+    assert.strictEqual(state.agentStateOf({ state: "running", at: now - state.STALE_SEC - 1 }), "idle");
+    assert.strictEqual(state.agentStateOf({ state: "waiting", at: now - state.STALE_SEC - 1 }), "idle");
+    assert.strictEqual(state.agentStateOf({ state: "failed", at: now - state.STALE_SEC - 1 }), "failed");
+    assert.strictEqual(state.agentStateOf({ state: "running", at: now - state.STALE_SEC + 1 }), "running");
   });
 
   await ok("stateFor: pids 중 하나를 조상으로 가진 최신 기록 · 조상 없는 기록은 거름 · pids 비면 대기", () => {

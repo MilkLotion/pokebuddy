@@ -71,7 +71,7 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
   };
 }
 
-export function migrate(v2: SaveV2, now: number): MigrateResult {
+export function migrateSaveV2(v2: SaveV2, now: number): MigrateResult {
   const date = localDate(now);
   const out = emptySave(now);
 
@@ -129,13 +129,13 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
     if (p.look != null) out.legacy[`look:${p.id}`] = p.look;
   }
 
-  const checks = verify(v2, out);
+  const checks = checkMigration(v2, out);
   const failed = checks.filter((c) => !c.ok).map((c) => c.name);
   return { save: failed.length ? null : out, checks, failed };
 }
 
 // 변환 전후로 같아야 하는 값 — 하나라도 어긋나면 원본을 유지한다
-export function verify(v2: SaveV2, v3: SaveV3): CheckResult[] {
+export function checkMigration(v2: SaveV2, v3: SaveV3): CheckResult[] {
   const idsBefore = v2.party.map((p) => p.id).sort().join(",");
   const idsAfter = v3.pets.map((p) => p.id).sort().join(",");
   const affinityBefore = v2.party.reduce((a, p) => a + Math.min(100, Math.max(0, Math.round(p.affinity))), 0);

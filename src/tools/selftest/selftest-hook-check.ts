@@ -39,21 +39,21 @@ async function main(): Promise<void> {
   process.stdout.write("(2) 마지막 신호  ok\n");
 
   // (3) 점검 — 연결한 뒤 등록한 명령을 돌리면 기록이 생기고, 확인한 기록은 지운다
-  const connected = registry.connect("codex");
+  const connected = registry.connectAgent("codex");
   assert.ok(connected.ok, JSON.stringify(connected));
   const hook = registry.hookCommandOf("codex");
   assert.ok(hook && hook.command.includes("--cli codex") && fs.existsSync(hook.file), JSON.stringify(hook));
-  const ok = await check.probe("codex", hook.command, hook.file, node, stateDir);
+  const ok = await check.probeHook("codex", hook.command, hook.file, node, stateDir);
   assert.deepStrictEqual(ok, { ok: true, reason: "ok" });
   assert.deepStrictEqual(fs.readdirSync(stateDir).filter((n) => n.startsWith("pokebuddy-check")), [], "점검 기록은 지운다");
   process.stdout.write("(3) 점검 성공 · 기록 정리  ok\n");
 
   // (4) 실패 이유 — node 없음, 훅 파일 없음, 종료 코드
-  assert.equal((await check.probe("codex", hook.command, hook.file, null, stateDir)).reason, "node-missing");
-  assert.equal((await check.probe("codex", hook.command, path.join(home, "없는-훅.cjs"), node, stateDir)).reason, "hook-missing");
-  const bad = await check.probe("codex", `node -e "process.exit(3)"`, hook.file, node, stateDir);
+  assert.equal((await check.probeHook("codex", hook.command, hook.file, null, stateDir)).reason, "node-missing");
+  assert.equal((await check.probeHook("codex", hook.command, path.join(home, "없는-훅.cjs"), node, stateDir)).reason, "hook-missing");
+  const bad = await check.probeHook("codex", `node -e "process.exit(3)"`, hook.file, node, stateDir);
   assert.deepStrictEqual(bad, { ok: false, reason: "exit", detail: "3" });
-  const silent = await check.probe("codex", `node -e "0"`, hook.file, node, stateDir);
+  const silent = await check.probeHook("codex", `node -e "0"`, hook.file, node, stateDir);
   assert.equal(silent.reason, "no-record", "돌았지만 기록이 없다");
   process.stdout.write("(4) 실패 이유  ok\n");
 

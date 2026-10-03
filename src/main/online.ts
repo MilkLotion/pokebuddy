@@ -25,7 +25,7 @@ import { handoffHooks, type HandoffReport, type SwitchHooks } from "../online/ha
 import { createSessionGate, type SessionGate } from "../online/session.js";
 import { withTimeout } from "../online/server-call.js";
 import { ONLINE_TIMING } from "../online/timing.js";
-import { onlineConfig } from "../trade/config.js";
+import { onlineConfig } from "../online/config.js";
 import { encryptedStorage } from "./trade.js";
 import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";

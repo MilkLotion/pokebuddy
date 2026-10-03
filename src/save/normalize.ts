@@ -23,7 +23,7 @@ import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { maxPetNo } from "../party/create.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
-import { boolOr as bool, clampNum as clamp, intOr as int, isObj, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
+import { boolOr as bool, clampNum as clamp, intOr as int, isRawObject, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
 
 // 놀이공간 방식 — 옛 "full"(주 화면)과 모르는 값은 "screen"(고른 화면 없음 = 주 화면)이다 (2026-09-28 여러 화면)
 const playModeOf = (v: unknown): SettingsV3["playArea"]["mode"] => (v === "region" || v === "all" ? v : "screen");
@@ -78,10 +78,10 @@ function normalizeEggs(raw: unknown): EggV3[] {
   const list = Array.isArray(raw) ? raw : [];
   const out: EggV3[] = [];
   for (const e of list) {
-    if (!isObj(e)) continue;
+    if (!isRawObject(e)) continue;
     const id = str(e.id);
     if (!id) continue;
-    const actions = isObj(e.actions) ? e.actions : {};
+    const actions = isRawObject(e.actions) ? e.actions : {};
     const remainMs = nonNeg(e.remainMs);
     out.push({
       id,
@@ -101,7 +101,7 @@ function normalizeEggs(raw: unknown): EggV3[] {
 // 합친 민트는 가방 상한(BAG_RULES.max)으로 자른다. 다른 도구의 개수는 건드리지 않는다
 export function normalizeBag(raw: unknown): Record<string, number> {
   const out: Record<string, number> = {};
-  if (!isObj(raw)) return out;
+  if (!isRawObject(raw)) return out;
   let merged = false;
   for (const [k, v] of Object.entries(raw)) {
     const n = nonNeg(v);
@@ -115,9 +115,9 @@ export function normalizeBag(raw: unknown): Record<string, number> {
 }
 
 function normalizeDex(raw: unknown): DexV3 {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   const discovered: Record<string, string> = {};
-  if (isObj(r.discovered)) for (const [k, v] of Object.entries(r.discovered)) if (typeof v === "string") discovered[k] = v;
+  if (isRawObject(r.discovered)) for (const [k, v] of Object.entries(r.discovered)) if (typeof v === "string") discovered[k] = v;
   return {
     unlocked: unique(strings(r.unlocked)),
     obtained: unique(strings(r.obtained)),
@@ -130,9 +130,9 @@ function normalizeDex(raw: unknown): DexV3 {
 
 function normalizeAchievements(raw: unknown): Record<string, AchievementV3> {
   const out: Record<string, AchievementV3> = {};
-  if (!isObj(raw)) return out;
+  if (!isRawObject(raw)) return out;
   for (const [k, v] of Object.entries(raw)) {
-    if (!isObj(v)) continue;
+    if (!isRawObject(v)) continue;
     const achievedAt = typeof v.achievedAt === "number" ? v.achievedAt : null;
     const claimedAt = typeof v.claimedAt === "number" ? v.claimedAt : null;
     // 받은 적이 있으면 달성한 적도 있다 — 어긋난 기록은 달성으로 맞춘다
@@ -143,9 +143,9 @@ function normalizeAchievements(raw: unknown): Record<string, AchievementV3> {
 
 function normalizeTutorials(raw: unknown): Record<string, TutorialV3> {
   const out: Record<string, TutorialV3> = {};
-  if (!isObj(raw)) return out;
+  if (!isRawObject(raw)) return out;
   for (const [k, v] of Object.entries(raw)) {
-    if (!isObj(v)) continue;
+    if (!isRawObject(v)) continue;
     const state = str(v.state, "none");
     out[k] = {
       state: ((TUTORIAL_STATES as readonly string[]).includes(state) ? state : "none") as TutorialState,
@@ -157,10 +157,10 @@ function normalizeTutorials(raw: unknown): Record<string, TutorialV3> {
 }
 
 function normalizeSettings(raw: unknown): SettingsV3 {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   const base = emptySettings();
-  const area = isObj(r.playArea) ? r.playArea : {};
-  const rect = isObj(area.rect) ? area.rect : null;
+  const area = isRawObject(r.playArea) ? r.playArea : {};
+  const rect = isRawObject(area.rect) ? area.rect : null;
   return {
     language: str(r.language, base.language),
     startOnLogin: bool(r.startOnLogin, base.startOnLogin),
@@ -172,7 +172,7 @@ function normalizeSettings(raw: unknown): SettingsV3 {
       rect: rect ? { x: int(rect.x), y: int(rect.y), w: nonNeg(rect.w), h: nonNeg(rect.h) } : null,
       screen: screenRefOf(area.screen),
     },
-    display: isObj(r.display) ? { ...r.display } : {},
+    display: isRawObject(r.display) ? { ...r.display } : {},
   };
 }
 
@@ -181,7 +181,7 @@ export function normalizeTx(raw: unknown, now: number): TxRecordV3[] {
   const list = Array.isArray(raw) ? raw : [];
   const out: TxRecordV3[] = [];
   for (const t of list) {
-    if (!isObj(t)) continue;
+    if (!isRawObject(t)) continue;
     const id = str(t.id);
     if (!id) continue;
     out.push({ id, at: nonNeg(t.at), result: t.result });
@@ -193,20 +193,20 @@ export function normalizeTx(raw: unknown, now: number): TxRecordV3[] {
 }
 
 function normalizePoints(raw: unknown): PointsV3 {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   return { balance: nonNeg(r.balance), progressMs: nonNeg(r.progressMs) };
 }
 
 function normalizeLog(raw: unknown): LogEntry[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter((e): e is LogEntry => isObj(e) && typeof e.at === "number" && typeof e.kind === "string")
+    .filter((e): e is LogEntry => isRawObject(e) && typeof e.at === "number" && typeof e.kind === "string")
     .slice(-SAVE_RULES.logKeep);
 }
 
 // 파일 내용 → SaveV3. 뼈대가 아니면 null. 칸에 없는 개체는 박스의 빈 칸으로 보낸다
 export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
-  if (!isObj(raw) || raw.v !== 3) return null;
+  if (!isRawObject(raw) || raw.v !== 3) return null;
   const date = localDate(now);
   const pets: PetV3[] = [];
   const seen = new Set<string>();
@@ -222,7 +222,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
   addStraysToBox(pets, placed, boxes);
   fillBoxes(boxes); // 옛 저장(박스 1개부터)도 읽을 때 기본 개수로 맞춘다
 
-  const d = isObj(raw.daily) ? raw.daily : {};
+  const d = isRawObject(raw.daily) ? raw.daily : {};
   const dailyDate = str(d.date, date);
   const eggs = normalizeEggs(raw.eggs);
   const bag = normalizeBag(raw.bag);
@@ -248,10 +248,10 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
     daily: dailyDate === date
       ? { date: dailyDate, streak: nonNeg(d.streak), interacted: bool(d.interacted) }
       : { date, streak: nonNeg(d.streak), interacted: false },
-    totals: { ...emptyTotals(), ...(isObj(raw.totals) ? normalizeTotals(raw.totals) : {}) },
-    agents: isObj(raw.agents) ? { ...(raw.agents as SaveV3["agents"]) } : {},
+    totals: { ...emptyTotals(), ...(isRawObject(raw.totals) ? normalizeTotals(raw.totals) : {}) },
+    agents: isRawObject(raw.agents) ? { ...(raw.agents as SaveV3["agents"]) } : {},
     tx: normalizeTx(raw.tx, now),
-    legacy: isObj(raw.legacy) ? { ...raw.legacy } : {},
+    legacy: isRawObject(raw.legacy) ? { ...raw.legacy } : {},
     log: normalizeLog(raw.log),
     trade: normalizeTrade(raw.trade, seen),
     mail: normalizeMail(raw.mail),
@@ -266,7 +266,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
 //   진화   가진 개체의 stage 합. 교환으로 받은 개체의 진화도 든다
 //   교환   0
 function normalizeCounts(raw: unknown, pets: readonly PetV3[], eggs: EggV3[], eggSeq: number): CountsV3 {
-  if (!isObj(raw)) {
+  if (!isRawObject(raw)) {
     return {
       hatched: Math.max(0, Math.max(eggSeq, maxEggNo(eggs)) - eggs.length),
       evolved: pets.reduce((n, p) => n + p.stage, 0),
@@ -282,10 +282,10 @@ const FIND_KINDS: readonly FindKind[] = ["points", "item", "evo", "pokemon"];
 
 // 줍기 — 모양이 깨진 기록은 버린다. 없으면 빈 값 (src/find/pickup.ts)
 function normalizeFind(raw: unknown): FindV3 {
-  const r = isObj(raw) ? raw : {};
+  const r = isRawObject(raw) ? raw : {};
   const log: FindRecordV3[] = [];
   for (const e of Array.isArray(r.log) ? r.log : []) {
-    if (!isObj(e) || typeof e.id !== "string" || !e.id || typeof e.petId !== "string" || !FIND_KINDS.includes(e.kind as FindKind)) continue;
+    if (!isRawObject(e) || typeof e.id !== "string" || !e.id || typeof e.petId !== "string" || !FIND_KINDS.includes(e.kind as FindKind)) continue;
     if (log.some((x) => x.id === e.id)) continue;
     log.push({
       id: e.id,
@@ -304,7 +304,7 @@ function normalizeFind(raw: unknown): FindV3 {
 
 // 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/record.md "로컬 저장과 복구")
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
-  const p = isObj(raw) && isObj(raw.pending) ? raw.pending : null;
+  const p = isRawObject(raw) && isRawObject(raw.pending) ? raw.pending : null;
   if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };
   return { pending: { channelId: p.channelId, petId: p.petId, offerRev: nonNeg(p.offerRev), received: p.received ?? null } };
 }

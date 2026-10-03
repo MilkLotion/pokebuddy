@@ -21,8 +21,8 @@ import { dexList } from "../view/dex-list.js";
 import { dexDetail } from "../view/dex-detail.js";
 import { shopDetail } from "../view/shop-detail.js";
 import { snapshot } from "../view/snapshot.js";
-import { agentInfo, connect, disconnect, hookCommandOf, status } from "../agents/registry.js";
-import { findNode, lastSignals, probe } from "../agents/check.js";
+import { agentInfo, agentStatusList, connectAgent, disconnectAgent, hookCommandOf } from "../agents/registry.js";
+import { findNode, lastSignals, probeHook } from "../agents/check.js";
 import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents";
 import type { DexDetail, DexEntry, ShopDetail } from "../shared/model/detail";
 import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
@@ -135,7 +135,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const node = await findNode(req?.action === "check");
     const list = (): AgentRow[] => {
       const signals = lastSignals(PATHS.state);
-      return status().map((a) => ({ ...a, lastSignalAt: signals[a.name] ?? null }));
+      return agentStatusList().map((a) => ({ ...a, lastSignalAt: signals[a.name] ?? null }));
     };
     const platform = process.platform;
     if (!req || req.action === "check") return { ok: true, reason: "ok", list: list(), platform, node };
@@ -143,11 +143,11 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     if (req.action === "probe") {
       const hook = hookCommandOf(req.name as AgentName);
       if (!hook) return { ok: false, reason: "unknown-cli", list: list(), platform, node };
-      const r = await probe(req.name, hook.command, hook.file, node, PATHS.state);
+      const r = await probeHook(req.name, hook.command, hook.file, node, PATHS.state);
       return { ok: r.ok, reason: r.reason, ...(r.detail ? { detail: r.detail } : {}), list: list(), platform, node };
     }
     if (req.action === "connect" && !node) return { ok: false, reason: "node-missing", list: list(), platform, node };
-    const res = req.action === "connect" ? connect(req.name as AgentName) : disconnect(req.name as AgentName);
+    const res = req.action === "connect" ? connectAgent(req.name as AgentName) : disconnectAgent(req.name as AgentName);
     return { ok: res.ok, reason: res.reason, list: list(), platform, node };
   };
 
