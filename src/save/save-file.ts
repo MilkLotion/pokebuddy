@@ -25,7 +25,8 @@ import type { SaveV3 } from "../shared/save-v3";
 import { isSealed, open, saveKey, seal } from "./crypt.js";
 import { migrate } from "./v2/migrate.js";
 import { normalizeSaveV2 } from "./v2/normalize.js";
-import { writeAtomic } from "./legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
+import { moveFile, stampOf } from "../platform/move-file.js";
 import { emptySave, normalizeSave } from "./normalize.js";
 
 export interface ReadSaveOptions {
@@ -48,8 +49,6 @@ export const backupName = (file: string): string => `${file}.v2.bak`;
 // 저장을 격리했다는 표시 — 클라우드가 읽고 지운다 (src/online/lost.ts)
 export const lostMarkerOf = (file: string): string => `${file}.lost`;
 
-// 옮긴 파일 이름의 시각 — 파일 이름에 쓸 수 있게 : 와 . 을 바꾼다
-const stampOf = (at: number): string => new Date(at).toISOString().replace(/[:.]/g, "-");
 
 const errCode = (e: unknown): string | undefined =>
   e != null && typeof e === "object" && "code" in e && typeof (e as { code: unknown }).code === "string"
@@ -98,21 +97,7 @@ export function setAsideSave(file: string, tag: AsideTag, at = Date.now()): stri
   if (!fs.existsSync(file)) return "";
   const how = ASIDE[tag];
   const to = `${file}.${tag}-${stampOf(at)}${how.bak ? ".bak" : ""}`;
-  try {
-    fs.renameSync(file, to);
-  } catch (e) {
-    if (!how.copy) {
-      console.error(`${file} 을 옮기지 못했다`, e);
-      return null;
-    }
-    try {
-      fs.copyFileSync(file, to);
-      fs.rmSync(file, { force: true });
-    } catch (e2) {
-      console.error(`${file} 을 옮기지도 복사하지도 못했다 — 그대로 둔다`, e2);
-      return null;
-    }
-  }
+  if (!moveFile(file, to, { copyFallback: how.copy })) return null;
   if (how.lost) markSaveLost(file, at);
   return to;
 }

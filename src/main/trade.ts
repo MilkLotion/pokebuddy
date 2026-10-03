@@ -15,6 +15,7 @@ import type { SessionGate } from "../online/session.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../trade/session.js";
 import { dataVersion, devRunAt, linkOf, onlineConfig } from "../trade/config.js";
 import type { GameV3 } from "./game";
+import { stampOf } from "../platform/move-file.js";
 
 const sessionFile = (): string => path.join(PATHS.home, "online", "session.bin");
 
@@ -29,7 +30,6 @@ export interface SessionFileStorage extends SessionStorage {
   status: () => Promise<SessionFileStatus>;
 }
 
-const stamp = (): string => new Date().toISOString().replace(/[:.]/g, "-");
 
 // 키 하나에 값 하나 — supabase-js 는 키 몇 개만 쓴다. 통째로 암호화해 한 파일에 둔다.
 // 비동기 safeStorage 만 쓴다 — mac 은 키체인 허용 창이 뜨면 동기 호출이 답할 때까지 메인을 멈춘다.
@@ -67,7 +67,7 @@ export function encryptedStorage(file = sessionFile()): SessionFileStorage {
       }
       if (aside) {
         // 풀지 못한 파일을 덮지 않게 먼저 옮긴다
-        if (fs.existsSync(file)) await fs.promises.rename(file, `${file}.unreadable-${stamp()}`);
+        if (fs.existsSync(file)) await fs.promises.rename(file, `${file}.unreadable-${stampOf()}`);
         aside = false;
       }
       let data: Buffer;

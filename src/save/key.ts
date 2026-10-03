@@ -21,15 +21,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isSealed, newSaveKey, setSaveKey, SAVE_CRYPT_RULES } from "./crypt.js";
-import { writeAtomic } from "./legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
+import { moveFile, stampOf } from "../platform/move-file.js";
+import type { KeyVault } from "../platform/key-vault.js";
 import { sealPlainSave, setAsideSave } from "./save-file.js";
 
-// OS 키 저장소 — Electron safeStorage 의 비동기 함수 모양
-export interface KeyVault {
-  available: () => Promise<boolean>;
-  encrypt: (text: string) => Promise<Buffer>;
-  decrypt: (data: Buffer) => Promise<{ result: string; shouldReEncrypt: boolean }>;
-}
+// OS 키 저장소의 모양은 src/platform/key-vault.ts 다
+export type { KeyVault }; // [임시] 옛 자리 — src/tools/selftest/selftest-save-crypt.ts 가 읽는다
 
 export interface PrepareSaveKeyOptions {
   saveFile: string;
@@ -60,7 +58,6 @@ interface Sealed {
   migrated: boolean;
 }
 
-const stampOf = (ms: number): string => new Date(ms).toISOString().replace(/[:.]/g, "-");
 const errCode = (e: unknown): string | undefined => (e as NodeJS.ErrnoException | null)?.code;
 
 // missing 없음, io 읽지 못함(잠김·권한), broken 형식이 틀림
@@ -100,15 +97,7 @@ function unwrap(out: { result: string; shouldReEncrypt: boolean }): { sealed: Se
 }
 
 // 옮긴다 — 없으면 true, 옮기지 못하면 false
-function moveAside(file: string, to: string): boolean {
-  try {
-    if (fs.existsSync(file)) fs.renameSync(file, to);
-    return true;
-  } catch (e) {
-    console.error(`${file} 을 옮기지 못했다`, e);
-    return false;
-  }
-}
+const moveAside = (file: string, to: string): boolean => !fs.existsSync(file) || moveFile(file, to);
 
 // 키와 저장을 .unreadable-<시각> 으로 옮기고 격리 표시를 남긴다 — 키 파일이 망가졌을 때와, 저장 잠김 창에서 새로 시작을 골랐을 때.
 // 키를 먼저 옮긴다. 키를 못 옮기면 저장도 옮기지 않는다 — 남은 옛 키가 새 평문 저장을 조작으로 격리하지 않게. 다 옮겼으면 true
