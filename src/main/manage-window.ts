@@ -267,7 +267,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     },
   });
   // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
-  // egg:<종류> 는 설정창이 색칠해 보낸 그림을 처리기가 먼저 넣는다([임시] ShopDeviceInput.eggArt) — 여기까지 오면 null 이다
+  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/egg-art.ts). 상점 기기 창은 아직 설정창이 칠해 보낸 그림을 먼저 넣는다([임시] ShopDeviceInput.eggArt)
   const deviceArt: DeviceArtDeps = {
     art: async (keys) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
@@ -278,7 +278,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
           const shiny = rest.endsWith(":shiny");
           return { key: k, ask: { slug: shiny ? rest.slice(0, -":shiny".length) : rest, shiny } };
         });
-      const items = keys.filter((k) => k.startsWith("item:"));
+      const items = keys.filter((k) => k.startsWith("item:") || k.startsWith("egg:"));
       const [faces, icons] = await Promise.all([asks.length ? portraits.get(asks.map((a) => a.ask)) : {}, items.length ? portraits.icons(items) : {}]);
       const out: Record<string, string | null> = {};
       for (const a of asks) out[a.key] = (faces as Record<string, string | null>)[portraitKey(a.ask)] ?? null;

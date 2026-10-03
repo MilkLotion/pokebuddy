@@ -16,3 +16,14 @@ export const portraitArtKey = (slug: string, shiny: boolean): string => `portrai
 export const itemArtKey = (id: string): string => `item:${id}`;
 
 export const eggArtKey = (kind: string): string => `egg:${kind}`;
+
+// 알 칸의 그림 — 태고의돌은 알이 아니라 돌이라 도구 그림이다(우리가 그린 그림)
+export const eggIconKey = (kind: string): string => (kind === "ancient-stone" ? itemArtKey(kind) : eggArtKey(kind));
+
+// 상품 그림 — 알은 색을 바꾼 알 그림, 도구·진화용 도구는 도구 그림, 포켓몬은 초상, 파티 칸은 빈 칸
+export function shopIconKey(item: { category: string; id: string }): string | null {
+  if (item.category === "slot") return null;
+  if (item.category === "pokemon") return portraitArtKey(item.id, false);
+  if (item.category === "egg") return eggIconKey(item.id);
+  return itemArtKey(item.id);
+}

@@ -4,7 +4,7 @@
 // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/view/shop-list.ts)
 import type { ShopDeviceInput, ShopDeviceOpen } from "../shared/model/devices.js";
 import type { EggPoolView, ShopItemView, Snapshot } from "../shared/model/snapshot.js";
-import { eggArtKey, itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
+import type { DeviceResult } from "./device-art.js";
 import { numberText, pointText } from "../shared/count-text.js";
 
 
@@ -19,14 +19,6 @@ export function poolCount(pool: EggPoolView): string {
   const total = pool.entries.length;
   const got = pool.entries.filter((e) => e.obtained).length;
   return pool.single ? `${total}종 중 ${total - got}종 남음` : `${total}종 중 ${got}종 얻음`;
-}
-
-// 상품 그림 — 알은 색을 바꾼 알 그림, 도구·진화용 도구는 도구 그림, 포켓몬은 초상, 파티 칸은 빈 칸
-function shopArt(item: ShopItemView): string | null {
-  if (item.category === "slot") return null;
-  if (item.category === "pokemon") return portraitArtKey(item.id, false);
-  if (item.category === "egg" && item.id !== "ancient-stone") return eggArtKey(item.id);
-  return itemArtKey(item.id);
 }
 
 // 고른 상품이 상점에 없으면 null(기기 창을 닫는다)
@@ -83,7 +75,7 @@ export function shopDeviceModel(v: Snapshot, given: ShopDeviceInput): DeviceResu
       name: item.name,
       state: item.blocked ?? (short ? "포인트 부족" : "살 수 있음"),
       group: about?.group ?? "",
-      art: shopArt(item),
+      art: item.icon,
       spec: about ? [["가격", pointText(item.price)], about.spec] : [["가격", pointText(item.price)]],
       desc: about?.desc ?? item.note,
       rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
