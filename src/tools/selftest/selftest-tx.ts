@@ -104,21 +104,16 @@ function fake(state: SaveV3, now = T0): Fake {
   process.stdout.write("(4) 모르는 명령과 빈 저장  ok\n");
 }
 
-// (5) 저장 실패가 이어지면 안내 조건이 선다
+// (5) 저장하지 못하면 save-failed — 이어진 실패의 안내는 쓰기 층이 센다(selftest-play (8))
 {
   const f = fake(seed());
   f.fail = true;
   const tx = createExecutor(f.ports, HANDLERS);
-  for (let i = 0; i < SAVE_RULES.saveFailNotifyAfter; i++) {
-    const res = tx.run({ id: `r${i}`, name: "party.hide", args: { petId: "p1" } });
-    assert.equal(res.ok === false && res.reason, "save-failed");
-  }
-  assert.equal(tx.saveFailStreak(), SAVE_RULES.saveFailNotifyAfter);
-  assert.equal(tx.shouldNotifySaveFail(), true);
+  const res = tx.run({ id: "r0", name: "party.hide", args: { petId: "p1" } });
+  assert.equal(res.ok === false && res.reason, "save-failed");
   f.fail = false;
   assert.equal(tx.run({ id: "ok", name: "party.hide", args: { petId: "p1" } }).ok, true);
-  assert.equal(tx.saveFailStreak(), 0, "성공하면 이어진 실패가 풀린다");
-  process.stdout.write("(5) 저장 실패 · 이어지면 안내 조건  ok\n");
+  process.stdout.write("(5) 저장 실패 · save-failed  ok\n");
 }
 
 // (6) 처리기가 사본만 고친다 — 실패해도 원본이 더럽혀지지 않는다

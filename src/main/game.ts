@@ -74,7 +74,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   // 마지막 틱 뒤로 흐른 시간을 적용한다. 앱이 꺼져 있던 틈은 세지 않는다 — 상한을 넘는 몫은 버린다
   // input.workMs — 지난 틱 뒤로 에이전트가 작업한 시간. 흐른 시간을 넘는 몫은 applyTime 이 버린다
   // 주기 쓰기가 실패해도 pending 은 들고 있다(화면 값이 되돌아가지 않게). 다음 시도는 flushMs 뒤다 — 실패는 쓰기 주기마다 한 번 센다.
-  // 그래서 저장 실패 안내(saveFailNotifyAfter 3번)는 주기 쓰기만으로는 약 45초 뒤에 뜬다. 명령 저장의 실패는 따로 센다
+  // 그래서 저장 실패 안내(saveFailNotifyAfter 3번)는 주기 쓰기만으로는 약 45초 뒤에 뜬다. 명령 저장의 실패도 같은 셈에 든다(src/tx/live-save.ts)
   const tick = (input: TimeInput = {}): TickEvents | null => {
     if (!live.writable()) return null;
     const save = live.edit();
