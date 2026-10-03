@@ -20,6 +20,11 @@ import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { portraitImg, rememberPortrait } from "../ui/portrait.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
+import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
+import { typeBadgeEl } from "../ui/type-badge.js";
+import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
+import { buffText, waitText } from "../ui/time-text.js";
+import { numberText, pointText } from "../ui/number-text.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -285,22 +290,6 @@ const dexNoText = (dex: number, form: number | undefined, pad: number): string =
 let dialog: Dialog | null = null;
 let notice = ""; // 마지막 실패 문구. 모달을 다시 그려도 남는다
 
-// 남은 시간 — 1분 미만은 초, 1시간 미만은 분(올림), 그 위는 시간과 분. 쿨타임·알 준비가 10분·몇 시간이라 초로 쓰면 읽기 어렵다
-function waitWord(sec: number): string {
-  const s = Math.max(0, Math.ceil(sec));
-  if (s < 60) return `${s}초`;
-  const min = Math.ceil(s / 60);
-  if (min < 60) return `${min}분`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h}시간 ${m}분` : `${h}시간`;
-}
-
-// 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림). 파티 칸 오른쪽 위 한 줄 폭에 맞춘 짧은 꼴이다.
-// 기기 창(src/renderer/device/pet.ts buffBadge)과 같은 규칙 (2026-09-30 사용자 결정 "추천대로 진행해")
-const buffBadge = (b: PetView["buffs"][number]): string =>
-  `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
-
 // 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
 // - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
 // - 제목이 있으면 Banner(제목 + 설명), 빈 제목이면 Inline 한 줄(폼·대화상자의 짧은 실패)
@@ -321,8 +310,6 @@ function alertBox(tone: AlertTone, title: string, desc = "", onClose?: () => voi
   return box;
 }
 
-const point =(n: number): string => `${n.toLocaleString("ko-KR")}P`;
-
 // 값 막대 하나 — 이름, 현재/최대, 채움
 // live — 시간으로만 바뀌는 값이면 그 개체와 필드. 1초 시계가 이 막대만 고친다 (applyLive)
 function meter(label: string, value: number, zone?: string, live?: { pet: string; field: "affinity" | "fullness" }): HTMLElement {
@@ -333,11 +320,7 @@ function meter(label: string, value: number, zone?: string, live?: { pet: string
   }
   const row = el("div", "row");
   row.append(el("span", undefined, label), el("span", undefined, `${value}/100`));
-  const track = el("div", "track");
-  const fill = el("div", zone && zone !== "full" && zone !== "normal" ? `fill ${zone}` : "fill");
-  fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
-  track.appendChild(fill);
-  box.append(row, track);
+  box.append(row, fillBarEl(value, zoneClassOf(zone)));
   return box;
 }
 
@@ -526,13 +509,6 @@ async function tintEgg(kind: string, palette: string[]): Promise<void> {
 
 // ── 파티 ───────────────────────────────────────────────────────────────────────
 
-// 타입 배지 — Figma `Type Badge` `118:134`. 색은 manage.html 의 `.type[data-type]` 이 타입 키로 고른다
-function typeBadge(name: string, id: string | undefined): HTMLElement {
-  const badge = el("span", "type", name);
-  if (id) badge.dataset.type = id;
-  return badge;
-}
-
 function petCard(pet: PetView): HTMLElement {
   const card = buttonEl("slot");
 
@@ -557,7 +533,7 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(top);
 
   const tags = el("div", "tags");
-  pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
+  pet.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, pet.typeIds[i])));
   info.appendChild(tags);
 
   const meters = el("div", "meters");
@@ -575,7 +551,7 @@ function petCard(pet: PetView): HTMLElement {
     badges.push(badge);
   }
   for (const buff of pet.buffs ?? []) {
-    const badge = el("span", "debuff success", buffBadge(buff));
+    const badge = el("span", "debuff success", buffText(buff));
     badge.dataset.liveBuff = `${pet.id}|${buff.kind}`; // 남은 분은 1초 시계가 고친다 (applyLive)
     badges.push(badge);
   }
@@ -599,9 +575,7 @@ function petCard(pet: PetView): HTMLElement {
 // 빈 칸·잠긴 칸 그림 — Figma `Party Slot` state/empty·state/locked 의 +·자물쇠
 function blankIcon(locked: boolean): HTMLElement {
   const box = el("span", "blank-icon");
-  box.innerHTML = locked
-    ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 6.86H4c-.63 0-1.14.51-1.14 1.14v5.14c0 .63.51 1.15 1.14 1.15h8c.63 0 1.14-.52 1.14-1.15V8c0-.63-.51-1.14-1.14-1.14Z"/><path d="M5.14 6.86V5.14a2.86 2.86 0 0 1 5.72 0v1.72"/></svg>'
-    : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.64v8.72M3.64 8h8.72"/></svg>';
+  box.appendChild(locked ? lockIconEl() : plusIconEl());
   return box;
 }
 
@@ -719,7 +693,7 @@ function drawParty(v: Snapshot): void {
 type Hatched = { petId: string; slotIndex?: number } | { eggId: string };
 let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
 
-const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitWord(egg.remainSec)}`);
+const eggNote = (egg: EggView): string => (egg.ready ? "준비 완료" : `${egg.percent}% · ${waitText(egg.remainSec)}`);
 
 // 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`)
 const BOX_ICON = {
@@ -849,7 +823,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
     }
     dialogEl.append(...dialogHead("알이 부화했어요", ""));
     const tags = el("div", "tags");
-    pet.types.forEach((name, i) => tags.appendChild(typeBadge(name, pet.typeIds[i])));
+    pet.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, pet.typeIds[i])));
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     const name = el("div", "name", pet.name);
     if (pet.shiny) name.appendChild(shinyIcon(16));
@@ -1138,7 +1112,7 @@ function drawMega(petId: string, to?: string): void {
     dialogEl.append(...dialogHead(title, ""));
     const card = el("div", "nat-card");
     const tags = el("div", "tags");
-    form.types.forEach((name, i) => tags.appendChild(typeBadge(name, form.typeIds[i])));
+    form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
     tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
     card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
     const row = el("div", "compare");
@@ -1218,7 +1192,7 @@ function drawForm(petId: string, to: string): void {
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
   const card = el("div", "nat-card");
   const tags = el("div", "tags");
-  form.types.forEach((name, i) => tags.appendChild(typeBadge(name, form.typeIds[i])));
+  form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
   tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
   card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
   const row = el("div", "compare");
@@ -1591,7 +1565,7 @@ function drawSellPet(petId: string, price: number): void {
     return;
   }
   dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 팔까요?`, ""));
-  const body = el("p", "acct-confirm-body", `${point(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
+  const body = el("p", "acct-confirm-body", `${pointText(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
   const go = actionButton("팔기", true, false, () => void send("pet.sell", pet.id));
   dialogEl.append(body, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
 }
@@ -2178,7 +2152,7 @@ function shopRow(item: ShopItemView): HTMLElement {
   // 살 수 없어도 줄은 그대로다 — 문구를 바꾸면 줄 높이가 달라져 목록이 흔들린다 (2026-10-02 사용자 결정)
   if (item.note) body.appendChild(el("div", "note", item.note)); // 설명이 없는 상품은 이름 한 줄만
   // 줄 끝 › — 누르면 옆에 상점 기기 창이 뜬다 (Figma `Shop Layout` product 의 chevron)
-  card.append(body, el("div", "price", point(item.price)), el("span", "chevron", "›"));
+  card.append(body, el("div", "price", pointText(item.price)), el("span", "chevron", "›"));
   // 살 수 없어도 누를 수 있다. 이유는 기기 창이 보여 준다. 고른 줄은 톤 배경
   card.setAttribute("aria-pressed", String(item.id === shopPick));
   card.addEventListener("click", () => pickShop(item.id));
@@ -2191,7 +2165,7 @@ function shopCell(item: ShopItemView): HTMLElement {
   const cell = buttonEl("dex-cell shop-cell");
   cell.dataset.slug = item.id;
   cell.append(el("div", "no", item.dex ? `#${dexNoText(item.dex, item.form, 4)}` : ""), portraitOf(item.id, false, "dot", "", true));
-  cell.append(el("div", undefined, item.name), el("div", "price", point(item.price)));
+  cell.append(el("div", undefined, item.name), el("div", "price", pointText(item.price)));
   cell.setAttribute("aria-pressed", String(item.id === shopPick));
   cell.addEventListener("click", () => pickShop(item.id));
   return cell;
@@ -2335,7 +2309,7 @@ function bagCard(item: BagItemView): HTMLElement {
   const card = buttonEl("bag-card");
   card.setAttribute("aria-pressed", String(item.id === bagPick));
   const info = el("div", "info");
-  info.append(el("div", "name", item.name), el("div", "qty", `×${item.count.toLocaleString("ko-KR")}`)); // 천 단위 쉼표
+  info.append(el("div", "name", item.name), el("div", "qty", `×${numberText(item.count)}`)); // 천 단위 쉼표
   card.append(iconOf(`item:${item.id}`, "thumb"), info);
   card.addEventListener("click", () => pickBag(item.id));
   return card;
@@ -2397,7 +2371,7 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
     case "fullness":
     case "fullness-full-buff":
       if (pet.fullness >= 100) return "배가 불러요.";
-      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${waitWord(pet.feedInSec)}).`;
+      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${waitText(pet.feedInSec)}).`;
     case "shiny-on":
       return pet.shiny ? "이미 이로치예요." : null;
     case "shiny-off":
@@ -2415,7 +2389,7 @@ function bagResultText(item: BagItemView, before: PetView, after: PetView | null
   if (!after) return used;
   const buffWord = (kind: string): string => {
     const hit = after.buffs.find((b) => b.kind === kind);
-    return hit ? ` · ${hit.name} ${waitWord(hit.remainMin * 60)}` : "";
+    return hit ? ` · ${hit.name} ${waitText(hit.remainMin * 60)}` : "";
   };
   const fullness = `${name} 만복도 ${Math.round(before.fullness)} → ${Math.round(after.fullness)}`;
   switch (item.effect) {
@@ -2423,7 +2397,7 @@ function bagResultText(item: BagItemView, before: PetView, after: PetView | null
     case "level":
       return after.level !== before.level
         ? `${name} Lv.${before.level} → Lv.${after.level}`
-        : `${name} 경험치 +${Math.max(0, after.exp - before.exp).toLocaleString("ko-KR")}`;
+        : `${name} 경험치 +${numberText(Math.max(0, after.exp - before.exp))}`;
     case "fullness":
       return fullness;
     case "fullness-full-buff":
@@ -2442,7 +2416,7 @@ function bagResultText(item: BagItemView, before: PetView, after: PetView | null
 // 쓰기는 막지 않는다 (2026-09-30 사용자 결정 "신남일때, 쓰면 시간갱신으로"). 박스 개체는 버프 시간이 멈춰 있다는 것도 적는다
 function buffRefresh(pet: PetView, kind: string, full: string): string[] {
   const hit = pet.buffs.find((b) => b.kind === kind);
-  const lines = hit ? [`이미 ${hit.name} · 남은 ${waitWord(hit.remainMin * 60)} → ${full}${toParticle(full)} 갱신`] : [];
+  const lines = hit ? [`이미 ${hit.name} · 남은 ${waitText(hit.remainMin * 60)} → ${full}${toParticle(full)} 갱신`] : [];
   if (!partyPets().some((p) => p.id === pet.id)) lines.push("버프 시간은 파티에 있을 때만 흘러요");
   return lines;
 }
@@ -2452,8 +2426,8 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     case "exp":
     case "level": {
       const r = candyResult(v, pet, item, qty);
-      const lost = item.effect === "exp" ? ` · 소멸 ${r.lost.toLocaleString("ko-KR")}` : "";
-      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${r.gain.toLocaleString("ko-KR")}${lost}`];
+      const lost = item.effect === "exp" ? ` · 소멸 ${numberText(r.lost)}` : "";
+      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${numberText(r.gain)}${lost}`];
     }
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
@@ -2509,13 +2483,13 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
     itemId: item.id,
     kind: item.evolution ? "진화" : "도구",
     name: item.name,
-    state: `보유 ×${item.count.toLocaleString("ko-KR")}`,
+    state: `보유 ×${numberText(item.count)}`,
     group: about?.group ?? "",
     art: iconNow(`item:${item.id}`),
     spec: (each !== undefined
       ? [
-          ["판매가", point(each)],
-          ["구매가", point(item.buyPrice ?? 0)],
+          ["판매가", pointText(each)],
+          ["구매가", pointText(item.buyPrice ?? 0)],
         ]
       : [["판매가", "팔 수 없음"]]) as [string, string][],
     desc: about?.desc ?? "",
@@ -2538,15 +2512,15 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
     const percent = Math.round((item.sellRate ?? 0) * 100);
     const preview = bagNotice
       ? { lead: "팔지 못했어요", line: bagNotice, tone: "bad" as const }
-      : { lead: `받는 포인트 ${point(earned)}`, line: `1개 ${point(each)} (구매가의 ${percent}%) · 판매 후 ${point(v.points + earned)}`, tone: "" as const };
+      : { lead: `받는 포인트 ${pointText(earned)}`, line: `1개 ${pointText(each)} (구매가의 ${percent}%) · 판매 후 ${pointText(v.points + earned)}`, tone: "" as const };
     return {
       ...face,
       title: "판매하기",
       pager: false,
       party: null,
-      qty: { count: sellQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` },
+      qty: { count: sellQty, cap, hint: `최대 ${numberText(cap)} · 보유 수` },
       preview,
-      go: { label: `${point(earned)}에 팔기`, disabled: false, busy: bagBusy },
+      go: { label: `${pointText(earned)}에 팔기`, disabled: false, busy: bagBusy },
     };
   }
 
@@ -2574,9 +2548,9 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
     title: v.party.preset.name, // 사용 쪽 머리 제목은 지금 프리셋 이름이다 (2026-10-02 사용자 결정)
     pager: v.party.preset.count > 1,
     party: strip,
-    qty: many ? { count: bagQty, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · 보유 수` } : null,
+    qty: many ? { count: bagQty, cap, hint: `최대 ${numberText(cap)} · 보유 수` } : null,
     preview,
-    go: { label: many ? `${bagQty.toLocaleString("ko-KR")}개 사용` : "사용", disabled: !!blocked, busy: bagBusy },
+    go: { label: many ? `${numberText(bagQty)}개 사용` : "사용", disabled: !!blocked, busy: bagBusy },
   };
 }
 
@@ -2666,7 +2640,7 @@ async function useBag(id: string): Promise<void> {
   const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
   if (ok) {
     bagResult = bagResultText(item, before, petOf(pet.id));
-    bagResultNote = `${item.name} ${count.toLocaleString("ko-KR")}개를 썼어요`;
+    bagResultNote = `${item.name} ${numberText(count)}개를 썼어요`;
     bagQty = 1;
     if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
@@ -2817,7 +2791,7 @@ function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
   if (card.shiny) name.appendChild(shinyIcon(10));
   info.append(name, el("div", "trade-meta", lvNature(card.level, card.nature)));
   const tags = el("div", "tags");
-  card.types.forEach((name, i) => tags.appendChild(typeBadge(name, card.typeIds[i])));
+  card.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, card.typeIds[i])));
   info.appendChild(tags);
   line.append(portraitOf(card.species, card.shiny, "trade-portrait"), info);
   return line;
@@ -2982,7 +2956,7 @@ function tradeSide(title: string, card: TradeCardView | null, state: TradeSideSt
     if (card.shiny) name.appendChild(shinyIcon(10));
     const meta = el("div", "trade-side-meta");
     meta.appendChild(el("span", "trade-meta", lvNature(card.level, card.nature)));
-    card.types.forEach((type, i) => meta.appendChild(typeBadge(type, card.typeIds[i])));
+    card.types.forEach((type, i) => meta.appendChild(typeBadgeEl(type, card.typeIds[i])));
     pet.append(portraitOf(card.species, card.shiny, "trade-portrait"), name, meta);
   }
   box.appendChild(pet);
@@ -3649,7 +3623,7 @@ function mailRow(l: MailLetterView): HTMLElement {
   else if (first) {
     const chip = el("span", "mail-chip");
     const more = l.gifts.length > 1 ? ` 외 ${l.gifts.length - 1}` : "";
-    chip.append(giftIcon(first, "mail-chip-icon"), document.createTextNode(`${first.name} ×${first.count.toLocaleString("ko-KR")}${more}`));
+    chip.append(giftIcon(first, "mail-chip-icon"), document.createTextNode(`${first.name} ×${numberText(first.count)}${more}`));
     row.appendChild(chip);
   }
   row.appendChild(el("span", "mail-more", "›"));
@@ -3692,7 +3666,7 @@ function giftCard(l: MailLetterView): HTMLElement {
       const row = el("div", "gift-row");
       const name = el("strong", "gift-name", g.name);
       name.title = g.name; // 칸보다 긴 이름은 말줄임
-      row.append(giftIcon(g, "gift-icon"), name, el("span", "gift-count", `×${g.count.toLocaleString("ko-KR")}`));
+      row.append(giftIcon(g, "gift-icon"), name, el("span", "gift-count", `×${numberText(g.count)}`));
       grid.appendChild(row);
     }
     card.appendChild(grid);
@@ -3828,7 +3802,7 @@ function drawBody(): void {
     bodyEl.appendChild(el("div", "empty-note", "저장이 없습니다. 첫 포켓몬을 먼저 고르세요."));
     return;
   }
-  pointsEl.textContent = view.points.toLocaleString("ko-KR");
+  pointsEl.textContent = numberText(view.points);
   achDotEl.hidden = view.achievements.unclaimed === 0;
   // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
   if (detailPet && !petOf(detailPet)) detailPet = null;
@@ -4428,8 +4402,8 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
   const why = (): string => {
     if (afford < (item.room ?? afford)) return "포인트";
     if (!egg) return "가방 자리";
-    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${(item.room ?? 0).toLocaleString("ko-KR")}`;
-    return `빈 칸 ${eggFree.toLocaleString("ko-KR")}`;
+    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${numberText(item.room ?? 0)}`;
+    return `빈 칸 ${numberText(eggFree)}`;
   };
 
   // 합계 상자 — 실패는 빨강 `사지 못했어요`, 산 직후는 초록 결과(새 줄을 끼우지 않는다, 2026-09-30).
@@ -4443,14 +4417,14 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
     lead = shopDone.lead;
     line = shopDone.line;
   } else if (item.blocked) {
-    lead = `합계 ${point(item.price)}`;
-    line = `보유 ${point(v.points)}${egg ? ` · 돌보미집 ${v.eggs.used} / ${v.eggs.size}` : ""}`;
+    lead = `합계 ${pointText(item.price)}`;
+    line = `보유 ${pointText(v.points)}${egg ? ` · 돌보미집 ${v.eggs.used} / ${v.eggs.size}` : ""}`;
   } else if (short) {
     lead = "포인트가 모자라요";
-    line = `합계 ${point(total)} · 보유 ${point(v.points)}`;
+    line = `합계 ${pointText(total)} · 보유 ${pointText(v.points)}`;
   } else {
-    lead = `합계 ${point(total)}`;
-    line = `구매 후 보유 ${point(v.points - total)}${egg ? ` · 돌보미집 ${v.eggs.used + count} / ${v.eggs.size}` : ""}`;
+    lead = `합계 ${pointText(total)}`;
+    line = `구매 후 보유 ${pointText(v.points - total)}${egg ? ` · 돌보미집 ${v.eggs.used + count} / ${v.eggs.size}` : ""}`;
   }
 
   // 포켓몬 상품은 설명 데이터가 없다(포켓몬 탭은 숨김, SHOP_TABS) — 효과·쓰는 곳만 둔다
@@ -4462,11 +4436,11 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
     state: item.blocked ?? (short ? "포인트 부족" : "살 수 있음"),
     group: about?.group ?? "",
     art: shopArt(item),
-    spec: about ? [["가격", point(item.price)], about.spec] : [["가격", point(item.price)]],
+    spec: about ? [["가격", pointText(item.price)], about.spec] : [["가격", pointText(item.price)]],
     desc: about?.desc ?? item.note,
     rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
     link: item.pool ? { label: "나오는 포켓몬", value: poolCount(item.pool) } : null,
-    qty: many ? { count, cap, hint: `최대 ${cap.toLocaleString("ko-KR")} · ${why()}` } : null,
+    qty: many ? { count, cap, hint: `최대 ${numberText(cap)} · ${why()}` } : null,
     total: { lead, line, tone: shopNotice ? "bad" : shopDone ? "ok" : "" },
     buy: { label: item.price === 0 ? "받기" : "구매", disabled: !!item.blocked || short, busy: shopBusy },
   };
@@ -4545,8 +4519,8 @@ async function buyShop(id: string): Promise<void> {
   if (ok) {
     shopQty = 1;
     // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`)
-    const lead = `${item.name} ${count.toLocaleString("ko-KR")}개를 ${item.price === 0 ? "받았어요" : "샀어요"}`;
-    const line = view ? `보유 ${point(view.points)}${item.category === "egg" ? ` · 돌보미집 ${view.eggs.used} / ${view.eggs.size}` : ""}` : "";
+    const lead = `${item.name} ${numberText(count)}개를 ${item.price === 0 ? "받았어요" : "샀어요"}`;
+    const line = view ? `보유 ${pointText(view.points)}${item.category === "egg" ? ` · 돌보미집 ${view.eggs.used} / ${view.eggs.size}` : ""}` : "";
     shopDone = { lead, line };
   }
   syncShopDevice();
@@ -4806,7 +4780,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   // 안내 상자 자리는 고르기 전에도 잡아 둔다(보이지 않게) — 고를 때 창 높이가 늘어 위로 튀지 않게
   const info = el("div", picked ? "info-box" : "info-box reserve");
   if (!picked) info.setAttribute("aria-hidden", "true");
-  if (have > 0 || !picked) info.append(el("div", undefined, "성격민트 1개를 씁니다"), el("div", "note", `가방에 ${have.toLocaleString("ko-KR")}개 있어요 · 레벨·친밀도는 그대로`));
+  if (have > 0 || !picked) info.append(el("div", undefined, "성격민트 1개를 씁니다"), el("div", "note", `가방에 ${numberText(have)}개 있어요 · 레벨·친밀도는 그대로`));
   else {
     const price = view.shop.find((p) => p.id === MINT)?.price;
     info.append(el("div", undefined, "성격민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
@@ -5852,12 +5826,12 @@ function applyLive(v: Snapshot | null = view): void {
     const shown = box.querySelector<HTMLElement>(".row span:last-child");
     if (shown && shown.textContent !== `${value}/100`) shown.textContent = `${value}/100`;
     const fill = box.querySelector<HTMLElement>(".fill");
-    if (fill) fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
+    if (fill) fill.style.width = `${clampPercent(value)}%`;
   }
   for (const node of document.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const [petId, kind] = (node.dataset.liveBuff ?? "").split("|");
     const buff = pets.get(petId ?? "")?.buffs.find((b) => b.kind === kind);
-    if (buff && node.textContent !== buffBadge(buff)) node.textContent = buffBadge(buff);
+    if (buff && node.textContent !== buffText(buff)) node.textContent = buffText(buff);
   }
   const eggs = new Map(v.eggs.list.map((e) => [e.id, e]));
   for (const node of document.querySelectorAll<HTMLElement>("[data-live-egg]")) {

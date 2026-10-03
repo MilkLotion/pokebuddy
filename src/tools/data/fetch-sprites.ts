@@ -1,4 +1,4 @@
-// 저장소 실행에서 쓸 그림을 미리 받는다 — `node scripts/fetch-sprites.cjs` (개발용)
+// 저장소 실행에서 쓸 그림을 미리 받는다 — `node dist/tools/data/fetch-sprites.js` (개발용)
 // 2026-09-26 부터 설치 파일에는 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다 (src/main/portraits.ts prefetch).
 // 관리 창은 앱 안 sprites/ 가 없으면 여기서 받은 .cache/sprites/ 를 앱 안 그림으로 쓴다 (src/main/manage-window.ts)
 //
@@ -9,17 +9,18 @@
 // 결과: .cache/sprites/ — 앱의 캐시(~/.claude/pokebuddy/sprites/)와 같은 이름이다 (src/main/portraits.ts)
 //   <4자리>.png · <4자리>-shiny.png · items/<식별자>.png · egg.png
 // 이미 받은 파일은 건너뛴다. 저장소에는 넣지 않는다(.gitignore)
-const fs = require("node:fs");
-const path = require("node:path");
+// (예전 scripts/fetch-sprites.cjs. 타입 검사를 받게 src/tools 로 옮겼다)
+import fs from "node:fs";
+import path from "node:path";
 
-const root = path.join(__dirname, "..");
+const root = path.join(__dirname, "..", "..", "..");
 const OUT = path.join(root, ".cache", "sprites");
 const BASE = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites";
 const PARALLEL = 16;
 
-const isPng = (buf) => buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+const isPng = (buf: Buffer) => buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
 
-async function get(url) {
+async function get(url: string): Promise<Buffer | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -34,13 +35,13 @@ async function get(url) {
 }
 
 async function main() {
-  const dex = [...new Set(Object.values(JSON.parse(fs.readFileSync(path.join(root, "lib", "dex.json"), "utf8"))))].sort((a, b) => a - b);
+  const dex = [...new Set(Object.values(JSON.parse(fs.readFileSync(path.join(root, "lib", "dex.json"), "utf8")) as Record<string, number>))].sort((a, b) => a - b);
   const items = [
-    ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "items.json"), "utf8"))),
-    ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "evo-items.json"), "utf8"))),
+    ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "items.json"), "utf8")) as Record<string, unknown>),
+    ...Object.keys(JSON.parse(fs.readFileSync(path.join(root, "data", "evo-items.json"), "utf8")) as Record<string, unknown>),
   ].filter((k) => /^[a-z0-9-]+$/.test(k));
 
-  const jobs = [];
+  const jobs: { rel: string; url: string }[] = [];
   for (const n of dex) {
     const d = String(n).padStart(4, "0");
     jobs.push({ rel: `${d}.png`, url: `${BASE}/pokemon/${n}.png` });
@@ -51,11 +52,11 @@ async function main() {
 
   let got = 0;
   let had = 0;
-  const missing = [];
+  const missing: string[] = [];
   let next = 0;
   async function worker() {
     while (next < jobs.length) {
-      const job = jobs[next++];
+      const job = jobs[next++]!;
       const file = path.join(OUT, job.rel);
       if (fs.existsSync(file)) {
         had++;
@@ -73,7 +74,7 @@ async function main() {
   }
   await Promise.all(Array.from({ length: PARALLEL }, worker));
   let bytes = 0;
-  const walk = (dir) => {
+  const walk = (dir: string) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p);

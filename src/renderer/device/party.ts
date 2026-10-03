@@ -5,15 +5,12 @@ import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/device
 import { portraitImg } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
+import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 
 const api = window.pokebuddyParty;
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("party.html 에 #device 가 없다");
 const device: HTMLElement = root;
-
-// 빈 칸·잠긴 칸·자물쇠 칩의 그림 — 관리 창의 파티 칸과 같은 +·자물쇠 (src/renderer/manage/manage.ts blankIcon)
-const LOCK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 6.86H4c-.63 0-1.14.51-1.14 1.14v5.14c0 .63.51 1.15 1.14 1.15h8c.63 0 1.14-.52 1.14-1.15V8c0-.63-.51-1.14-1.14-1.14Z"/><path d="M5.14 6.86V5.14a2.86 2.86 0 0 1 5.72 0v1.72"/></svg>';
-const PLUS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.64v8.72M3.64 8h8.72"/></svg>';
 
 // 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 높이가 바뀔 때마다 다시 알린다 (item-device.ts 와 같다)
 let sentHeight = -1;
@@ -48,7 +45,7 @@ function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
     b.title = s.name;
   } else {
     const icon = el("span", "icon");
-    icon.innerHTML = s.state === "locked" ? LOCK : PLUS;
+    icon.appendChild(s.state === "locked" ? lockIconEl() : plusIconEl()); // 관리 창의 파티 칸과 같은 +·자물쇠
     b.append(icon, el("div", "who", s.state === "locked" ? "잠긴 칸" : "빈 칸"));
     if (s.state === "empty") b.appendChild(el("div", "hint", "박스에서 배치"));
   }
@@ -94,7 +91,7 @@ function render(v: PartyDeviceView): void {
     b.setAttribute("aria-pressed", String(p.active));
     b.setAttribute("aria-label", p.owned ? `프리셋 ${p.index + 1}` : `프리셋 ${p.index + 1} · 사지 않음`);
     if (!p.owned) {
-      b.innerHTML = LOCK;
+      b.replaceChildren(lockIconEl());
       b.disabled = true;
     }
     presets.appendChild(b);

@@ -4,38 +4,44 @@
 //   두 PC 규칙(P1): 고르기 창·저장 단추가 없다. 나중에 로그인한 PC 가 계정 저장을 받아 잇고, 먼저 켜진 PC 는 안내 뒤 종료한다
 //   익명 계정(P2): 로그인하지 않은 설치도 익명 계정으로 저장한다. 교환은 로그인해야 한다. 로그아웃·삭제는 앱을 다시 켜 처음부터 시작한다
 //   준비: Docker Desktop 과 `npx supabase start`. 계정 삭제까지 보려면 `npx supabase functions serve` 도 띄운다. 빌드: `npm run build`
-//   실행: node scripts/e2e-account.cjs   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
+//   실행: node dist/tools/e2e/e2e-account.js   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
 //   익명 계정을 8개 만든다(계정 삭제를 건너뛰면 7개) — 로컬 auth 의 익명 가입 제한(GOTRUE_RATE_LIMIT_ANONYMOUS_USERS, 시간당·IP당)이 그보다 작으면 실패한다
 //   앱은 로컬 서버를 직접 보지 않고 이 스크립트의 TCP 중계를 거친다 — 중계를 끊어 오프라인을 재현한다
 //   GitHub 로그인은 실제 GitHub 가 필요해 여기서 보지 않는다(selftest-github 와 사용자 실기)
 //   분실 창(D29)은 네이티브 대화상자라 누르지 않는다 — 계정 탭·헤더의 분실 표시까지 본다
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const net = require('node:net');
-const path = require('node:path');
-const { execSync } = require('node:child_process');
-const { root, apps, localServer, sql, makeApp, until, sleep } = require('./e2e/apps.cjs');
+// (예전 scripts/e2e-account.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다. 본문은 줄 그대로다 — 작은따옴표도 그대로 두었다)
+import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import net from "node:net";
+import path from "node:path";
+import { empty } from "../../save/v3";
+import { rollEgg, seededRand } from "../../verify/save-rules";
+import { apps, localServer, makeApp, root, sleep, sql, until, type E2eApp } from "./apps";
 
-const checks = [];
+type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — CLI·저장의 JSON 을 그대로 읽는다
+
+const checks: string[] = [];
+const say = (line: string): void => void process.stdout.write(`${line}\n`);
 
 // 끊을 수 있는 TCP 중계 — HTTP 와 실시간(WebSocket)을 그대로 넘긴다
-function tcpProxy(targetUrl) {
+function tcpProxy(targetUrl: string): Promise<{ url: string; setDown(v: boolean): void; close(): void }> {
   const target = new URL(targetUrl);
-  const sockets = new Set();
+  const sockets = new Set<net.Socket>();
   let down = false;
   const server = net.createServer((client) => {
-    if (down) return client.destroy();
+    if (down) return void client.destroy();
     const upstream = net.connect(Number(target.port), target.hostname);
     for (const s of [client, upstream]) {
       sockets.add(s);
-      s.on('error', () => undefined);
-      s.on('close', () => { sockets.delete(s); client.destroy(); upstream.destroy(); });
+      s.on("error", () => undefined);
+      s.on("close", () => { sockets.delete(s); client.destroy(); upstream.destroy(); });
     }
     client.pipe(upstream).pipe(client);
   });
-  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({
-    url: `http://127.0.0.1:${server.address().port}`,
-    setDown(v) {
+  return new Promise((resolve) => server.listen(0, "127.0.0.1", () => resolve({
+    url: `http://127.0.0.1:${(server.address() as net.AddressInfo).port}`,
+    setDown(v: boolean) {
       down = v;
       if (v) for (const s of sockets) s.destroy();
     },
@@ -46,7 +52,7 @@ function tcpProxy(targetUrl) {
   })));
 }
 
-async function run() {
+async function run(): Promise<void> {
   const local = localServer();
   execSync('npx supabase db reset', { cwd: root, stdio: 'ignore', timeout: 300_000 });
   checks.push('로컬 Supabase 확인과 DB 초기화');
@@ -56,7 +62,7 @@ async function run() {
   const logRoot = fs.existsSync(path.join(root, 'worklog')) ? 'worklog' : 'worklog-mac';
   const shots = path.join(root, logRoot, 'records/cloud-authority/evidence');
   fs.mkdirSync(shots, { recursive: true });
-  const env = { POKEBUDDY_CLOUD_UPLOAD_MS: '1000', POKEBUDDY_CLOUD_RETRY_MS: '1500', POKEBUDDY_CLOUD_HEARTBEAT_MS: '2000' };
+  const env: Record<string, string> = { POKEBUDDY_CLOUD_UPLOAD_MS: '1000', POKEBUDDY_CLOUD_RETRY_MS: '1500', POKEBUDDY_CLOUD_HEARTBEAT_MS: '2000' };
   const opts = { prefix: 'pokebuddy-account-e2e' };
   const name = `e2e${Date.now().toString(36)}`;
   const pw = 'correct-horse-8';
@@ -64,13 +70,13 @@ async function run() {
   const minVersion = sql(`select value from cloud_private.settings where key = 'min_app_version'`);
   const revOf = () => Number(sql(`select coalesce((select s.rev from public.cloud_saves s join auth.users u on u.id = s.user_id where u.email = '${email}'), -1)`));
   const serverPoints = () => sql(`select s.save->'points'->>'balance' from public.cloud_saves s join auth.users u on u.id = s.user_id where u.email = '${email}'`);
-  const userCount = (id) => sql(`select count(*) from auth.users where id = '${id}'`);
-  const anonSaved = (id) => sql(`select count(*) from public.cloud_saves s join auth.users u on u.id = s.user_id where u.id = '${id}' and u.is_anonymous and s.save is not null`) === '1';
-  const pickers = (X) => X.events().filter((e) => e.event === 'picker-ready').length;
-  const boots = (X) => X.events().filter((e) => e.event === 'boot').length;
-  const bak = (X, kind) => fs.readdirSync(X.data).some((f) => f.startsWith(`save.json.${kind}-`) && f.endsWith('.bak'));
+  const userCount = (id: string) => sql(`select count(*) from auth.users where id = '${id}'`);
+  const anonSaved = (id: string) => sql(`select count(*) from public.cloud_saves s join auth.users u on u.id = s.user_id where u.id = '${id}' and u.is_anonymous and s.save is not null`) === '1';
+  const pickers = (X: E2eApp) => X.events().filter((e) => e.event === 'picker-ready').length;
+  const boots = (X: E2eApp) => X.events().filter((e) => e.event === 'boot').length;
+  const bak = (X: E2eApp, kind: string) => fs.readdirSync(X.data).some((f) => f.startsWith(`save.json.${kind}-`) && f.endsWith('.bak'));
   // 익명 계정이 첫 저장을 올릴 때까지 기다리고 그 계정 ID 를 돌려준다
-  const anonOf = async (X, label) => {
+  const anonOf = async (X: E2eApp, label: string): Promise<string> => {
     await until(() => X.cloud()?.ownerKind === 'anonymous' && X.cloud()?.syncedRev >= 1, `${label} 익명 첫 저장`, 30_000);
     return X.cloud().owner;
   };
@@ -105,14 +111,14 @@ async function run() {
   await N.stop();
   // 저장 잠금이 풀린 뒤에도 끝나는 중인 프로세스가 세션 파일을 다시 쓸 수 있다 — 프로세스가 끝날 때까지 기다린다
   const lastBoot = N.events().filter((e) => e.event === 'boot').pop()?.pid;
-  await until(() => { try { process.kill(lastBoot, 0); return false; } catch { return true; } }, 'AC8 앱 프로세스 종료', 30_000);
+  await until(() => { try { process.kill(lastBoot as number, 0); return false; } catch { return true; } }, 'AC8 앱 프로세스 종료', 30_000);
   const online = path.join(N.data, 'online');
   const sessionFiles = ['session.bin', 'session.json'].filter((f) => fs.existsSync(path.join(online, f)));
   assert.ok(sessionFiles.length > 0, 'AC8 세션 파일이 있다');
   for (const f of sessionFiles) fs.rmSync(path.join(online, f));
   await N.start();
   await until(() => N.dialogs().some((d) => d.title === '저장 정보를 찾지 못했어요'), 'AC8 분실 창');
-  const lost = N.dialogs().find((d) => d.title === '저장 정보를 찾지 못했어요');
+  const lost: Json = N.dialogs().find((d) => d.title === '저장 정보를 찾지 못했어요');
   assert.deepEqual(lost.buttons, ['이 PC 저장으로 계속', '처음부터'], 'AC8 익명 분실 창 단추');
   assert.ok(lost.detail.includes('서버에 둔 익명 저장은 되찾을 수 없어요'), `AC8 한 번 올린 익명은 되찾을 수 없다는 줄: ${lost.detail}`);
   await N.accountTab();
@@ -300,7 +306,7 @@ async function run() {
   //   손으로 고친 평문을 넣으면 받지 않고 격리한다 — 선택 창에서 새로 고른 저장은 서버 저장으로 바뀌고, 서버 저장은 덮이지 않는다
   const K = makeApp('k', server, [{ id: 'k1', species: 'pichu', where: 'party' }], { ...env, POKEBUDDY_SAVE_CRYPT: 'on' }, { ...opts, points: 321 });
   const sealed = () => { try { return fs.readFileSync(path.join(K.data, 'save.json')).subarray(0, 4).toString('latin1') === 'PBS1'; } catch { return false; } };
-  const kFiles = (prefix) => fs.readdirSync(K.data).filter((f) => f.startsWith(prefix));
+  const kFiles = (prefix: string) => fs.readdirSync(K.data).filter((f) => f.startsWith(prefix));
   await K.start();
   await until(sealed, 'AC9 저장을 암호화했다');
   assert.ok(fs.existsSync(path.join(K.data, 'save.key')), 'AC9 save.key');
@@ -309,7 +315,6 @@ async function run() {
   assert.equal(sql(`select s.save->'points'->>'balance' from public.cloud_saves s where s.user_id = '${anonK}'`), '321', 'AC9 올린 저장은 푼 값');
   const revK = K.cloud().syncedRev;
   await K.stop();
-  const { empty } = require(path.join(root, 'dist/save/v3.js'));
   const forged = empty(Date.now());
   forged.points.balance = 99999;
   fs.writeFileSync(path.join(K.data, 'save.json'), JSON.stringify(forged));
@@ -332,11 +337,11 @@ async function run() {
   const saveBefore = fs.readFileSync(savePath);
   fs.rmSync(keyPath);
   fs.mkdirSync(keyPath);
-  const lockedDialog = async (label) => {
+  const lockedDialog = async (label: string) => {
     const seen = K.dialogs().length;
     const run = K.cli(['companion']);
     await until(() => K.dialogs().length > seen, `${label} 저장 잠김 창`, 60_000);
-    const d = K.dialogs().at(-1);
+    const d: Json = K.dialogs().at(-1);
     assert.equal(d.title, '저장을 열지 못했어요', `${label} 창 제목`);
     assert.deepEqual(d.buttons, ['종료', '새로 시작'], `${label} 단추`);
     return { run }; // 감싼다 — async 가 CLI 약속을 그대로 돌려주면 끝날 때까지 기다리게 된다
@@ -362,7 +367,7 @@ async function run() {
   const E = makeApp('egg', server, [{ id: 'p1', species: 'pichu', where: 'party' }], env, opts);
   const eSaveFile = path.join(E.data, 'save.json');
   const eSave = JSON.parse(fs.readFileSync(eSaveFile, 'utf8'));
-  const eggOf = (id) => ({ id, kind: 'random', boughtAt: Date.now(), remainMs: 0, ready: true, candidates: ['bulbasaur', 'charmander', 'squirtle', 'dratini'], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+  const eggOf = (id: string) => ({ id, kind: 'random', boughtAt: Date.now(), remainMs: 0, ready: true, candidates: ['bulbasaur', 'charmander', 'squirtle', 'dratini'], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
   eSave.eggs = [eggOf('egg-a'), eggOf('egg-b')];
   eSave.eggSeq = 2;
   fs.writeFileSync(eSaveFile, JSON.stringify(eSave));
@@ -370,11 +375,10 @@ async function run() {
   const anonE = await anonOf(E, 'AC10');
   await until(() => E.cloud()?.seed && E.cloud()?.seedOwner === anonE, 'AC10 계정 시드 받기', 30_000);
   await E.ui('open'); // 관리 창
-  const { rollEgg, seededRand } = require(path.join(root, 'dist/verify/save-rules.js'));
   const verifyData = JSON.parse(fs.readFileSync(path.join(root, 'supabase/functions/_shared/verify-data.json'), 'utf8'));
   for (const id of ['egg-a', 'egg-b']) {
     const before = E.save();
-    const egg = before.eggs.find((x) => x.id === id);
+    const egg = before.eggs.find((x: Json) => x.id === id);
     const expected = rollEgg(egg, before.eggs, before.dex.obtained, seededRand(E.cloud().seed, `egg:${id}`), verifyData);
     // 알 열기는 CLI 명령이 아니다 — 관리 창이 부르는 길(window.pokebuddyManage.command)로 연다
     const r = await E.dom(`window.pokebuddyManage.command({ cmd: 'egg.open', target: '${id}', args: { reqId: 'e2e-open-${id}' } })`);
@@ -394,7 +398,7 @@ async function run() {
   const heldSeen = E.dialogs().length;
   const heldRun = E.cli(['companion']);
   await until(() => E.dialogs().length > heldSeen, 'AC11 정지 창', 60_000);
-  const heldDialog = E.dialogs().at(-1);
+  const heldDialog: Json = E.dialogs().at(-1);
   assert.equal(heldDialog.title, '이용이 정지됐어요', 'AC11 정지 창 제목');
   assert.deepEqual(heldDialog.buttons, ['종료'], 'AC11 단추');
   await E.answer('종료');
@@ -410,8 +414,8 @@ async function run() {
   proxy.close();
 }
 
-async function main() {
-  let failed = null;
+async function main(): Promise<void> {
+  let failed: unknown = null;
   try {
     await run();
   } catch (e) {
@@ -421,20 +425,24 @@ async function main() {
       try { if (fs.existsSync(a.lock)) await a.stop(); } catch { /* 끄기 실패는 아래에서 알린다 */ }
     }
   }
-  for (const c of checks) console.log(`ok  ${c}`);
+  for (const c of checks) say(`ok  ${c}`);
   if (failed) {
-    console.error(`실패: ${failed.stack || failed}`);
-    console.error(`임시 데이터: ${apps.map((a) => a.dir).join(', ')}`);
+    process.stderr.write(`실패: ${(failed as Error).stack || failed}\n`);
+    process.stderr.write(`임시 데이터: ${apps.map((a) => a.dir).join(", ")}\n`);
     process.exit(1);
   }
   for (const a of apps) {
-    try { fs.rmSync(a.dir, { recursive: true, force: true }); } catch (e) { console.error(`임시 폴더를 지우지 못했다: ${a.dir}`, e.message); }
+    try {
+      fs.rmSync(a.dir, { recursive: true, force: true });
+    } catch (e) {
+      process.stderr.write(`임시 폴더를 지우지 못했다: ${a.dir} ${(e as Error).message}\n`);
+    }
   }
-  console.log(`e2e-account: 통과 (${checks.length}개)`);
+  say(`e2e-account: 통과 (${checks.length}개)`);
   process.exit(0);
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch((e: unknown) => {
+  process.stderr.write(`${e instanceof Error && e.stack ? e.stack : String(e)}\n`);
   process.exit(1);
 });
