@@ -1927,7 +1927,7 @@ function markDexPick(): void {
 
 // 칸을 누르면 도감 기기 창에 그 종을 띄운다. 같은 칸을 다시 누르면 닫는다
 function pickDex(slug: string): void {
-  if (coachId === "dex") void send("tutorial.done", "dex", { steps: 1 }); // 칸을 눌러 본 것이 목표 행동이다
+  if (coachId === "dex") void send("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
   window.pokebuddyManage.dexOpen(dexPick, dexGen);
   markDexPick();
@@ -4012,7 +4012,7 @@ function drawGuideStep(id: string): void {
     body: words.body,
     button: step.tryIt ? "" : last ? "확인" : "다음",
     onGo: () => {
-      if (last) return void send("tutorial.done", id, { steps: guide.steps.length });
+      if (last) return void send("tutorial.done", id);
       if (guide.onNext) guide.onNext();
       else {
         guideStep = index + 1;
@@ -4123,7 +4123,7 @@ function drawTutorial(): void {
         title: step.title,
         body: step.body(view),
         button: tryIt ? "" : "확인", // 해 보는 단계는 그 동작으로만 넘어간다
-        onGo: () => void send("tutorial.done", "area", { steps: steps.length }),
+        onGo: () => void send("tutorial.done", "area"),
         interactive: tryIt,
         also: alsoKey ? dialogEl.querySelector<HTMLElement>(`[data-tut="${alsoKey}"]`) : null,
       });
@@ -4161,7 +4161,7 @@ function drawTutorial(): void {
       const target = bodyEl.querySelector<HTMLElement>(`[data-tut="${id}"]`);
       // 한 단계뿐이면 "1 / 1" 을 붙이지 않고 단추는 "확인" — 바탕화면 튜토리얼과 같다
       // 상점은 랜덤알 카드를 눌러 사는 것이 목표 행동이다. 부화는 안내만 한다
-      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id, { steps: 1 }), interactive: id === "shop" });
+      if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void send("tutorial.done", id), interactive: id === "shop" });
     } else if (text) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다
       const target = tabsEl.children[TABS.findIndex((t) => t.id === text.tab)] as HTMLElement | undefined;
@@ -4602,7 +4602,7 @@ function onPetAction(action: PetDeviceAction): void {
     return;
   }
   if (action.kind === "tutorial") {
-    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail", action.action === "done" ? { steps: 4 } : undefined);
+    void send(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail");
     return;
   }
   if (action.kind === "dex") {
@@ -5020,6 +5020,8 @@ function speakerIcon(muted: boolean): SVGSVGElement {
 }
 
 const setSetting = (key: string, value: unknown): void => void send("settings.set", key, { value });
+// 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/commands.ts display.set)
+const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void send("display.set", key, { value });
 
 // 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
 function drawGeneral(scroll: HTMLElement): void {
@@ -5047,9 +5049,9 @@ function drawDisplay(scroll: HTMLElement): void {
   const s = view.settings;
   const d = view.display;
   if (d) {
-    const shown = settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setSetting("hidden", !d.hidden)));
+    const shown = settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setDisplay("hidden", !d.hidden)));
     shown.dataset.tut = "set-hidden"; // 화면 탭 튜토리얼이 밝히는 곳
-    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setSetting("clickThrough", !d.clickThrough)));
+    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setDisplay("clickThrough", !d.clickThrough)));
     ghost.dataset.tut = "set-ghost";
     scroll.append(shown, ghost);
   }
@@ -5520,7 +5522,7 @@ function open(next: Dialog): void {
   // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
   // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
-    if (coachId === "evolution") void send("tutorial.done", "evolution", { steps: 1 }); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
+    if (coachId === "evolution") void send("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
     dialog = null;
     notice = "";
     setScrim(false);

@@ -274,7 +274,7 @@ void app.whenReady().then(async () => {
       };
       return { ok: true, reason: "ok", screen: { ...base, ...(by[tradeArg] ?? {}) } };
     }
-    if (req.cmd === "settings.set" && (req.target === "hidden" || req.target === "clickThrough")) {
+    if (req.cmd === "display.set" && (req.target === "hidden" || req.target === "clickThrough")) {
       shown[req.target] = !!req.args?.value;
       return { ok: true, result: { key: req.target, value: shown[req.target] } };
     }

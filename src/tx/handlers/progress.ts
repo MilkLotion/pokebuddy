@@ -25,8 +25,7 @@ export const claimHandler: TxHandler = (draft, args, ctx) => {
 export const tutorialHandler = (kind: "skip" | "done"): TxHandler => (draft, args) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };
-  const steps = isObj(args) && typeof args.steps === "number" ? args.steps : undefined;
-  const res = kind === "skip" ? skipTutorial(draft, id) : doneTutorial(draft, id, steps);
+  const res = kind === "skip" ? skipTutorial(draft, id) : doneTutorial(draft, id); // 끝낸 단계 수는 표(TUTORIAL_STEPS)가 정한다 — 표면은 싣지 않는다
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { id, state: res.state, steps: res.steps } };
 };

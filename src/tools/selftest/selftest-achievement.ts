@@ -298,7 +298,7 @@ function seed(): SaveV3 {
   assert.equal(skip(s, "shop").reason, "already", "두 번 기록하지 않는다");
   assert.equal(done(s, "shop").reason, "already");
 
-  assert.equal(done(s, "hatch", 2).ok, true);
+  assert.equal(done(s, "hatch").ok, true);
   assert.equal(s.tutorials.hatch?.state, "done");
   assert.equal(s.tutorials.hatch?.steps, 1, "끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다 — 보낸 값이 아니다");
   assert.equal(skip(s, "").reason, "bad-id");
@@ -324,7 +324,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "바탕화면 놀이공간 튜토리얼은 줄에 들지 않는다");
   assert.equal(s.tutorials["first-care"]?.state, "none", "다른 곳의 밥 주기는 완료가 아니다");
   assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
-  assert.ok(done(s, "first-care", 2).ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
+  assert.ok(done(s, "first-care").ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["growth"], "첫 돌봄이 끝나면 성장 튜토리얼이 줄에 든다");
   assert.equal(s.tutorials.playground, undefined, "놀이공간 설명은 설정 › 화면으로 옮겼다(area, 대기열 밖)");
   assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
@@ -339,7 +339,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);
   assert.equal(s.tutorials.shop?.state, "done", "랜덤알을 샀으니 상점 튜토리얼은 완료");
   assert.equal(currentTutorial(s)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
-  assert.ok(done(s, "growth", 3).ok);
+  assert.ok(done(s, "growth").ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["points"], "성장이 끝나면 포인트");
   assert.equal(s.tutorials.points?.queuedAt, s.tutorials.growth?.queuedAt, "포인트는 성장의 대기 시각을 물려받아 부화보다 앞");
   assert.equal(currentTutorial(s)?.id, "points");
@@ -352,7 +352,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"], "둘째 포켓몬을 얻으면 파티와 박스 튜토리얼");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
   assert.equal(currentTutorial(s)?.id, "party");
-  assert.ok(done(s, "party", 2).ok);
+  assert.ok(done(s, "party").ok);
   assert.equal(currentTutorial(s), null);
   // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤 개체가 3마리가 되면 줄에 든다
   assert.deepStrictEqual(queueTutorials(s, T0 + 4), [], "두 마리면 프리셋 튜토리얼은 없다");
@@ -360,7 +360,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 5), ["preset"], "셋째 포켓몬을 얻으면 프리셋 튜토리얼");
   assert.equal(s.tutorials.preset?.queuedAt, s.tutorials.party?.queuedAt, "프리셋은 파티의 대기 시각을 물려받는다");
   assert.equal(currentTutorial(s)?.id, "preset");
-  assert.ok(done(s, "preset", 3).ok);
+  assert.ok(done(s, "preset").ok);
   assert.equal(currentTutorial(s), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
 }

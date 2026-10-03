@@ -105,10 +105,13 @@ export function createCommands(ctx: CommandContext): Commands {
     return { ok: true, reason: "ok" };
   });
 
-  // 창 표시 항목은 저장 밖의 설정이라 여기서 처리한다. 그 밖의 키는 저장으로 넘긴다
-  dispatcher.register("settings.set", (c) => {
+  // 저장 설정은 실행기로 간다 — 무대를 다시 그리지 않는다
+  dispatcher.register("settings.set", (c) => runSave(c));
+
+  // 창 표시 두 항목은 저장 밖의 설정이라 여기서 처리한다. 모르는 키는 bad-value
+  dispatcher.register("display.set", (c) => {
     const key = target(c) ?? (isObj(c.args) ? c.args.key : undefined);
-    if (!isSettingKey(key)) return runSave(c);
+    if (!isSettingKey(key)) return { ok: false, reason: "bad-value", key: String(key) };
     const value = asBool(isObj(c.args) ? c.args.value : undefined);
     if (value == null) return { ok: false, reason: "bad-value", key };
     if (key === "hidden") ctx.settings.setHidden(value);

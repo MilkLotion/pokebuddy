@@ -672,7 +672,7 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
   // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/core.ts onlyAtStart)
   const firstCare = origin === "stage" && save ? currentTutorial(save)?.id === "first-care" : false;
   const careCmd = (cmd: "feed" | "play") => (): void => {
-    if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", args: { steps: 2 }, from: "pet" }));
+    if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", from: "pet" }));
     else runGameCommand({ cmd, target: id, from: "menu" });
   };
   const built = petMenu({ ...model, ...care }, {
@@ -1402,7 +1402,7 @@ async function main(): Promise<void> {
         onCoachAction: ({ id, action }) => {
           if (id === "first-care") firstCareMenu = null;
           void commands?.dispatcher
-            .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, args: { steps: 1 }, from: "pet" })
+            .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, from: "pet" })
             .then(() => syncCoach());
         },
       }),

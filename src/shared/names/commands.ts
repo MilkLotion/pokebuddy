@@ -53,8 +53,9 @@ export const COMMANDS = {
   "pet.form": { via: "tx", cli: true },
   "pet.sell": { via: "tx" },
   "starter.pick": { via: "tx" },
-  // 설정 — 저장 설정은 실행기가, 창 표시 두 항목(hidden·clickThrough)은 메인이 받는다 (src/main/commands.ts)
+  // 설정 — 저장 설정은 settings.set(실행기), 창 표시 두 항목(hidden·clickThrough)은 display.set(메인, src/main/commands.ts). 한 이름이 한 길만 탄다
   "settings.set": { via: "tx" },
+  "display.set": { via: "app" },
   // 앱
   snapshot: { via: "app", cli: true, haltOpen: true },
   quit: { via: "app", haltOpen: true },
