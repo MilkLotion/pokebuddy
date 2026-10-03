@@ -11,16 +11,15 @@ import { addNewPet } from "./create.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { PARTY_RULES } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type StarterFailure = ReasonOf<"already" | "no-slot">;
 
-export interface StarterResult {
-  ok: boolean;
-  reason?: StarterFailure;
+export type StarterResult = Outcome<StarterFailure> & {
   petId?: string;
   species?: string;
   slotIndex?: number;
-}
+};
 
 export function begin(save: SaveV3, species: string, now: number, rand: Rand, opts?: DexOptions): StarterResult {
   if (save.pets.length) return { ok: false, reason: "already" };

@@ -16,19 +16,18 @@ import type { SaveV3 } from "../shared/save-v3";
 import { decide, rollVariant } from "./hatch.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type OpenFailure = ReasonOf<"no-egg" | "not-ready" | "no-candidate" | "box-full">;
 
-export interface OpenResult {
-  ok: boolean;
-  reason?: OpenFailure;
+export type OpenResult = Outcome<OpenFailure> & {
   petId?: string;
   species?: string;
   shiny?: boolean;
   slotIndex?: number; // 파티에 들어갔으면 칸 번호
   toBox?: boolean; // 파티가 가득 차 박스로 갔다
   egg?: { id: string; kind: string }; // 포켓몬 대신 나온 알 — 이때 개체 필드는 비어 있다
-}
+};
 
 // 포켓몬 대신 나올 알 — 없으면 null. 확률 목록이 없는 알은 무작위를 쓰지 않는다.
 // 뽑힌 알을 더 줄 수 없으면(남은 종이 없다) 평소처럼 포켓몬이 나온다

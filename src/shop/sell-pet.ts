@@ -17,6 +17,7 @@ import { checkPetFree } from "../party/pet-actions.js";
 import { eggPrice } from "./catalog.js";
 import { eggOfSpecies } from "../dex/obtain.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type SellPetFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
@@ -26,14 +27,12 @@ export type SellPetFailure = ReasonOf<
   | "in-preset" // 파티 프리셋에 든 개체다
 >;
 
-export interface SellPetResult {
-  ok: boolean;
-  reason?: SellPetFailure;
+export type SellPetResult = Outcome<SellPetFailure> & {
   petId?: string;
   species?: string;
   earned?: number; // 받은 포인트
   balance?: number;
-}
+};
 
 const CHAIN_MAX = 8; // 진화 계열을 거슬러 오르는 횟수의 상한 — 데이터가 돌아도 멈춘다
 
