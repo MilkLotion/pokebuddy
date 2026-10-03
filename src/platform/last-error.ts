@@ -1,4 +1,4 @@
-// 동반자가 못 뜬 까닭의 기록 — 동반자의 출력은 평소 버려지므로 파일에 남긴다. pokebuddy 명령(cli/run.js)과 pokebuddy status(cli/status.js)가 읽는다.
+// 동반자가 못 뜬 까닭의 기록 — 동반자의 출력은 평소 버려지므로 파일에 남긴다. pokebuddy 명령(src/cli/run.ts)과 pokebuddy status(src/cli/status.ts)가 읽는다.
 // 모양: { at: 초(Date.now() / 1000), slug, message, reason? }. 지금 src/main/lifetime.ts reportFailure·clearFailure 와 같은 파일·모양이다. 실패해도 조용히
 import fs from "node:fs";
 import { readJsonFile } from "./json-file.js";

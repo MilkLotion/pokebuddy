@@ -10,6 +10,7 @@ import path from "node:path";
 import * as front from "../../follow/front";
 import { createLineHelper } from "../../follow/line-helper";
 import * as state from "../../follow/state";
+import { isPidAlive } from "../../platform/pid";
 import type { HelperWindow, StateRecord } from "../../follow/types";
 import * as winbounds from "../../follow/winbounds";
 import { makeTmp } from "../harness/tmp-dir";
@@ -56,8 +57,8 @@ const once = <T>(run: (cb: (err: Error | null, v?: T) => void) => void): Promise
 
 async function testPids(): Promise<void> {
   await ok("pidAlive: 나 자신은 살아 있고 끝난 pid 는 아니다", async () => {
-    assert.strictEqual(state.pidAlive(process.pid), true);
-    assert.strictEqual(state.pidAlive(await deadPid()), false);
+    assert.strictEqual(isPidAlive(process.pid), true);
+    assert.strictEqual(isPidAlive(await deadPid()), false);
   });
 }
 

@@ -1,6 +1,6 @@
 // 파일 하나를 원자적으로 쓴다 — 저장·설정·기록 파일이 같이 쓴다. Node 만 쓰고 Electron 을 모른다
 //
-// 쓰기는 tmp 에 쓰고 rename (config.js save 와 같다) — 쓰다 죽어도 반쪽 파일이 남지 않는다.
+// 쓰기는 tmp 에 쓰고 rename (옛 config.js 의 save 와 같은 방식) — 쓰다 죽어도 반쪽 파일이 남지 않는다.
 // Windows 는 읽는 쪽이 파일을 열고 있으면 rename 이 EPERM/EBUSY 를 낸다 — 잠깐 뒤 다시 (확장 extension.js write 의 패턴).
 //   기다림은 동기(Atomics.wait) — 부르는 쪽(tick·act)이 동기라 짧게 멈추는 쪽을 택했다. 최악 150ms, 그것도 Windows 충돌 때만
 import fs from "node:fs";

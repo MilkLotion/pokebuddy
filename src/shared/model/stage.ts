@@ -15,7 +15,7 @@ export interface StageInit {
   debug: boolean;
 }
 
-// PMD 시트 하나 — art/pmd.js sheetOf 의 결과 모양
+// PMD 시트 하나 — src/main/art/pmd.ts sheetOf 의 결과 모양
 export interface SpriteSheet {
   fw: number;
   fh: number;

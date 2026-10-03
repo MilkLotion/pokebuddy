@@ -1,4 +1,4 @@
-// 명령 통로 — mailbox/ 폴더의 파일 하나 = 요청 하나 (config.js PATHS.mailbox). 우편함(src/mail)과 다르다. 1판 game/mailbox.js 를 옮기며 요청·회신을 Command · CommandResult 로
+// 명령 통로 — mailbox/ 폴더의 파일 하나 = 요청 하나 (src/platform/paths.ts PATHS.mailbox). 우편함(src/mail)과 다르다. 1판 game/mailbox.js 를 옮기며 요청·회신을 Command · CommandResult 로
 //
 // 소켓·IPC 서버 없이 파일로만 (저장소 원칙). CLI·확장·읽기 전용 펫이 요청을 두고, writer 펫이 처리해 회신한다.
 //   요청  <시각>-<pid>-<cmd>.json          Command 그대로 { cmd, target?, args?, from, at }   — tmp 에 쓰고 rename (반쪽 파일을 읽지 않게)
