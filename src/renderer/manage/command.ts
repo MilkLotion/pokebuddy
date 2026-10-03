@@ -1,7 +1,7 @@
 // 설정창 → 메인 명령 — 요청 식별자, 처리 중 표시, 잠금, 다시 읽기, 실패 문구
 // 다시 읽기·도감 비우기는 설정창이 setCommandHooks 로 걸어 준다(뼈대 파일이 나뉘면 직접 가져온다). 모달은 dialog.ts
 import type { ManageReply } from "../../shared/ipc/manage.js";
-import { failTextOf } from "../ui/fail-text.js";
+import { failTextOf } from "../../shared/fail-text.js";
 import { closeDialog, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
 

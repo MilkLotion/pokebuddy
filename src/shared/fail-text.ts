@@ -1,8 +1,8 @@
-// 실패 문구 한 벌 — 실패 값(FailCode)을 화면 문구로. 설정창이 쓴다. DOM 을 쓰지 않는다
+// 실패 문구 한 벌 — 실패 값(FailCode)을 화면 문구로. 설정창이 쓴다. 메인도 쓸 수 있게 공용 자리(src/shared)에 둔다. DOM 을 쓰지 않는다
 // - 자리(scope)마다 지금 표를 그대로 옮겼다(글자 그대로). 같은 코드라도 자리마다 문장이 다르다 — 하나로 맞출지는 사용자 결정 대기
 // - 표에 없는 글자가 오면 자리마다 지금 모양의 대체 문구를 쓴다(UNKNOWN)
 // 설계는 worklog/records/code-structure/design/20-renderer.md 3.11절
-import type { FailCode } from "../../shared/names/online-codes.js";
+import type { FailCode } from "./names/online-codes.js";
 
 export type FailScope = "command" | "trade" | "account" | "mail";
 
