@@ -14,7 +14,7 @@
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
 import fs from "node:fs";
 import { PATHS } from "./paths.js";
-import * as store from "../save/store.js";
+import { readSave, writeSave } from "../save/save-file.js";
 import { SAVE_V3_RULES, TIME_V3_RULES } from "../save/rules.js";
 import type { TimeInput } from "../state/time.js";
 import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
@@ -41,7 +41,7 @@ import type { AgentName } from "../shared/names/agents";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
 
-// 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/store.ts)
+// 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/save-file.ts)
 export const saveFile = (): string => PATHS.save;
 
 // 줍기로 포켓몬을 데려온 쓰기의 이름(FIND_POKEMON)은 src/shared/names/commands.ts 에 있다
@@ -110,7 +110,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
   // 수정 시각을 읽기보다 먼저 잰다 — 읽는 사이에 다른 곳이 쓰면 다음 확인에서 알아챈다. 읽으면서 이전·격리로 다시 썼으면 그 뒤 값을 쓴다
   const readDisk = (): SaveV3 | null => {
     const before = statKey();
-    const r = store.read(file, { repair: canWrite ? canWrite() : true });
+    const r = readSave(file, { repair: canWrite ? canWrite() : true });
     diskKey = r.migrated || r.corrupted ? statKey() : before;
     return r.state;
   };
@@ -127,7 +127,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
       dropPending(); // 쓰는 프로세스가 아니다 — 메모리 진행도 들고 있지 않는다
       return false;
     }
-    const ok = store.write(file, s);
+    const ok = writeSave(file, s);
     failStreak = ok ? 0 : failStreak + 1;
     if (ok) {
       pending = null; // 파일이 가장 새 저장이다

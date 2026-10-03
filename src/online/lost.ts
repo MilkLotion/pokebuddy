@@ -9,7 +9,7 @@
 // Electron 을 모른다 — 자체 검사(selftest-save-crypt)가 직접 부른다
 import fs from "node:fs";
 import { writeAtomic } from "../save/legacy.js";
-import { lostMarker } from "../save/store.js";
+import { lostMarkerOf } from "../save/save-file.js";
 
 const readJson = (file: string): unknown => {
   try {
@@ -40,7 +40,7 @@ function markedAt(marker: string): number {
 // cloud.json 내용을 돌려준다(형식 검사는 cloud-state.ts normalizeCloudState). 격리 표시가 있으면 맞춘 rev 를 잊은 상태로
 export function loadCloudState(cloudFile: string, saveFile: string): unknown {
   const raw = readJson(cloudFile);
-  const marker = lostMarker(saveFile);
+  const marker = lostMarkerOf(saveFile);
   if (!fs.existsSync(marker)) return raw;
   if (!raw || typeof raw !== "object") {
     drop(marker);

@@ -13,8 +13,7 @@ import fs from "node:fs";
 import { appearanceOf } from "../dex/appearance";
 import path from "node:path";
 import * as mailbox from "../save/mailbox.js";
-import * as store from "../save/store.js";
-import { emptySave as empty } from "../save/normalize.js";
+import { backupName, createEmptySave, readSave } from "../save/save-file.js";
 import * as writer from "../save/writer.js";
 import type { CommandResult } from "../shared/command";
 import type { NatureId } from "../shared/species";
@@ -133,9 +132,9 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
       return;
     }
     // 읽기 전용은 파손 파일을 옮기지 않는다 — writer 의 일이다
-    const r = store.read(paths.save, { repair: amWriter });
+    const r = readSave(paths.save, { repair: amWriter });
     if (r.reason === "unreadable" || r.reason === "locked") return; // 잠깐 잠겼다·키 없이 암호화 파일 — 지난 값을 그대로 쓴다
-    if (r.migrated) log?.({ party: "migrated-v3", backup: store.backupName(paths.save) });
+    if (r.migrated) log?.({ party: "migrated-v3", backup: backupName(paths.save) });
     if (r.corrupted) log?.({ party: "save-corrupted", movedTo: r.movedTo ?? null });
     cacheKey = key;
     state = r.state;
@@ -214,7 +213,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     begin(species) {
       if (!amWriter) return false;
       // 저장이 아직 없으면 빈 저장을 먼저 만든다. 실행기는 읽을 것이 있어야 돈다
-      if (!state && !store.write(paths.save, empty(now()))) return false;
+      if (!state && !createEmptySave(paths.save, now())) return false;
       const r = game.send({ cmd: "starter.pick", target: species, args: { reqId: `starter:${species}:${now()}` } }, "menu");
       reload(true);
       return r.ok;

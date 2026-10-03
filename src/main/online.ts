@@ -28,8 +28,7 @@ import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../trade/config.js";
 import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
 import { writeAtomic } from "../save/legacy.js";
-import { normalizeSave as normalizeV3 } from "../save/normalize.js";
-import * as store from "../save/store.js";
+import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
 import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";
 import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
@@ -92,7 +91,6 @@ const devMs = (name: string): number | undefined => {
 };
 
 const deviceLabel = (): string => (process.platform === "win32" ? "Windows PC" : process.platform === "darwin" ? "Mac" : "Linux PC");
-const stamp = (): string => new Date().toISOString().replace(/[:.]/g, "-");
 
 // 익명 계정 발급·세션 확인을 다시 시도하는 간격 — 클라우드 다시 연결과 같다
 const SESSION_RETRY_MS = ONLINE_TIMING.retryMs;
@@ -168,18 +166,10 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
           console.error("cloud.json 을 쓰지 못했다", e);
         }
       },
-      readSave: () => store.readRaw(o.saveFile), // 암호화 저장을 풀어 JSON 으로 (src/save/store.ts)
+      readSave: () => readSaveRaw(o.saveFile), // 암호화 저장을 풀어 JSON 으로 (src/save/save-file.ts)
       // 받은 저장을 v3 검사로 읽은 뒤 바꾼다. 바꾸기 전 로컬 저장을 백업한다
       replaceSave: (save) => {
-        const v3 = normalizeV3(save, Date.now());
-        if (!v3) return false;
-        try {
-          if (fs.existsSync(o.saveFile)) fs.copyFileSync(o.saveFile, `${o.saveFile}.cloud-${stamp()}.bak`);
-        } catch (e) {
-          console.error("클라우드 저장을 받기 전 백업에 실패했다 — 바꾸지 않는다", e);
-          return false;
-        }
-        if (!store.write(o.saveFile, v3)) return false;
+        if (!replaceSave(o.saveFile, save, Date.now())) return false;
         o.onSaveReplaced();
         return true;
       },
@@ -342,25 +332,8 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const reply = (ok: boolean, code: string | null, extra: Partial<AccountReply> = {}): AccountReply => ({ ok, code, ...extra, screen: screen() });
   let githubAbort: AbortController | null = null;
 
-  // save.json 을 백업 이름으로 옮긴다. 저장이 없으면 옮길 것이 없다
-  const backupSave = (reason: FreshReason): boolean => {
-    if (!fs.existsSync(o.saveFile)) return true;
-    const to = `${o.saveFile}.${reason}-${stamp()}.bak`;
-    try {
-      fs.renameSync(o.saveFile, to);
-      return true;
-    } catch (e) {
-      console.error("저장을 백업으로 옮기지 못했다 — 복사로 다시 시도한다", e);
-    }
-    try {
-      fs.copyFileSync(o.saveFile, to);
-      fs.rmSync(o.saveFile, { force: true });
-      return true;
-    } catch (e) {
-      console.error("저장을 백업하지 못했다 — 새로 시작하지 않는다", e);
-      return false;
-    }
-  };
+  // save.json 을 백업 이름으로 옮긴다. 저장이 없으면 옮길 것이 없다 (src/save/save-file.ts setAsideSave)
+  const backupSave = (reason: FreshReason): boolean => setAsideSave(o.saveFile, reason) !== null;
 
   // 새로 시작한다(D12) — 올리고 released → 서버 처리(로그아웃·삭제·없음) → save.json 백업 → cloud.json 비움 → 앱이 다시 켠다.
   // 서버 처리나 백업이 실패하면 앱의 멈춤을 풀고 클라우드를 다시 시작한다

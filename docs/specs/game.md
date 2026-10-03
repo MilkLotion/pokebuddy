@@ -1424,7 +1424,7 @@ contextIsolation과 sandbox, 전용 preload, IPC sender·최상위 frame 검사�
 
 흐름과 와이어프레임에서 시작해 컴포넌트를 조립한다. 향후 기능 추가를 고려해 모듈로 나눈다.
 
-대상: [공유 타입](../../src/shared/save-v3.ts), [저장](../../src/save/store.ts), [mailbox](../../src/save/mailbox.ts), [파티](../../src/main/save-party.ts), [해금](../../data/unlocks.json), [종 자료](../../data/species.defaults.json), `src/renderer/`, `src/main/`.
+대상: [공유 타입](../../src/shared/save-v3.ts), [저장 파일](../../src/save/save-file.ts), [mailbox](../../src/save/mailbox.ts), [파티](../../src/main/save-party.ts), [해금](../../data/unlocks.json), [종 자료](../../data/species.defaults.json), `src/renderer/`, `src/main/`.
 위험: 저장 손실, 재소환·재등록으로 인한 보상 중복, 중복 소환, 사용 대상 경합, 중복 부화, 도감 성능, 지방 폼 오분류.
 
 ## 11. 인수 기준

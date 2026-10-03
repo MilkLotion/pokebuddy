@@ -11,7 +11,7 @@
 //   save.key 없음         create 면 새 키를 만든다. 아니면(개발 실행 POKEBUDDY_SAVE_CRYPT=off) 키 없이 돈다
 //   save.key 를 읽지 못함  잠김·권한(백신·동기화 도구) — 이번 실행은 키 없이 돈다. 저장은 locked 로 지킨다. 다음 실행에 다시 본다(검수 P3-2)
 //   save.key 를 풀지 못함  키체인 거부·초기화 — 옮기지 않고 이번만 키 없이 돈다(denied). 앱이 저장 잠김 창으로 묻는다(검수 P3-3,
-//                         2026-09-30 사용자 결정 "안내 창으로 묻기"). 새로 시작을 고르면 setAsideSave 뒤 다시 준비한다
+//                         2026-09-30 사용자 결정 "안내 창으로 묻기"). 새로 시작을 고르면 setAsideKeyAndSave 뒤 다시 준비한다
 //   save.key 모양이 틀림   키와 저장을 .unreadable-<시각> 으로 옮기고 새 키로 시작한다(reset).
 //                         격리 표시를 남겨 클라우드가 서버 저장을 받게 한다. 옮기지 못하면 옛 키를 덮지 않고 키 없이 돈다(검수 P3-7)
 //   migrated 가 거짓       기존 평문 저장을 save.json.plain-<시각>.bak 으로 남기고 암호화해 다시 쓴다.
@@ -20,9 +20,9 @@
 //   메모장 수정을 막는 수준이다 — 나머지는 서버 검증(P4)이 막는다
 import fs from "node:fs";
 import path from "node:path";
-import { isSealed, newSaveKey, seal, setSaveKey, SAVE_CRYPT_RULES } from "./crypt.js";
+import { isSealed, newSaveKey, setSaveKey, SAVE_CRYPT_RULES } from "./crypt.js";
 import { writeAtomic } from "./legacy.js";
-import { markLost } from "./store.js";
+import { sealPlainSave, setAsideSave } from "./save-file.js";
 
 // OS 키 저장소 — Electron safeStorage 의 비동기 함수 모양
 export interface KeyVault {
@@ -110,34 +110,12 @@ function moveAside(file: string, to: string): boolean {
   }
 }
 
-// 기존 평문 저장을 암호화한다 — 백업을 먼저 남긴다. 저장이 없거나 이미 암호화면 할 일이 없다
-function migratePlain(saveFile: string, key: Buffer, stamp: string): boolean {
-  let buf: Buffer;
-  try {
-    buf = fs.readFileSync(saveFile);
-  } catch (e) {
-    return errCode(e) === "ENOENT";
-  }
-  if (isSealed(buf)) return true;
-  try {
-    fs.copyFileSync(saveFile, `${saveFile}.plain-${stamp}.bak`);
-  } catch (e) {
-    console.error("평문 저장을 백업하지 못해 암호화를 미룬다", e);
-    return false;
-  }
-  return writeAtomic(saveFile, seal(key, buf.toString("utf8")));
-}
-
 // 키와 저장을 .unreadable-<시각> 으로 옮기고 격리 표시를 남긴다 — 키 파일이 망가졌을 때와, 저장 잠김 창에서 새로 시작을 골랐을 때.
 // 키를 먼저 옮긴다. 키를 못 옮기면 저장도 옮기지 않는다 — 남은 옛 키가 새 평문 저장을 조작으로 격리하지 않게. 다 옮겼으면 true
-export function setAsideSave(saveFile: string, at = Date.now()): boolean {
-  const stamp = stampOf(at);
+export function setAsideKeyAndSave(saveFile: string, at = Date.now()): boolean {
   const keyFile = keyFileOf(saveFile);
-  if (!moveAside(keyFile, `${keyFile}.unreadable-${stamp}`)) return false;
-  if (!fs.existsSync(saveFile)) return true;
-  if (!moveAside(saveFile, `${saveFile}.unreadable-${stamp}`)) return false;
-  markLost(saveFile, at);
-  return true;
+  if (!moveAside(keyFile, `${keyFile}.unreadable-${stampOf(at)}`)) return false;
+  return setAsideSave(saveFile, "unreadable", at) !== null; // 저장이 없으면 "" — 옮길 것이 없다
 }
 
 const hasPlain = (saveFile: string): boolean => {
@@ -161,7 +139,6 @@ export async function prepareSaveKey({ saveFile, vault, create, now = Date.now }
 
   const keyFile = keyFileOf(saveFile);
   const at = now();
-  const stamp = stampOf(at);
   const found = readKeyFile(keyFile);
   if (found === "io") return without("busy");
 
@@ -187,7 +164,7 @@ export async function prepareSaveKey({ saveFile, vault, create, now = Date.now }
   if (!sealed && found !== "missing") {
     // 키 파일 모양이 틀렸다 — 이 키로 쓴 저장도 못 읽는다. 둘 다 옮겨 두고 새 키로.
     // 옮기지 못하면 새 키로 덮지 않는다 — 옮긴 저장을 영영 못 풀게 된다
-    if (!setAsideSave(saveFile, at)) return without("busy");
+    if (!setAsideKeyAndSave(saveFile, at)) return without("busy");
     status = "reset";
   }
 
@@ -205,7 +182,7 @@ export async function prepareSaveKey({ saveFile, vault, create, now = Date.now }
   let didMigrate = false;
   if (!sealed.migrated) {
     const hadPlain = hasPlain(saveFile);
-    if (!migratePlain(saveFile, sealed.key, stamp)) return without("off"); // 다음 실행에 다시 — 키 파일은 migrated:false 로 남는다
+    if (!sealPlainSave(saveFile, sealed.key, at)) return without("off"); // 다음 실행에 다시 — 키 파일은 migrated:false 로 남는다
     sealed = { ...sealed, migrated: true };
     try {
       await writeKeyFile(keyFile, vault, sealed);
