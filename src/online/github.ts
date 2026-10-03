@@ -16,7 +16,7 @@ import { authCodeOf } from "./codes.js";
 import { messageOf } from "./server-call.js";
 import { ONLINE_TIMING } from "./timing.js";
 import type { SessionGate } from "./session.js";
-import { finishSwitch, prepareSwitch, type HandoffReport, type SwitchHooks } from "./handoff.js";
+import { finishSwitch, prepareSwitch, type SwitchHooks } from "./handoff.js";
 import type { AccountCode, GithubCode } from "../shared/names/online-codes.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다

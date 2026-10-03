@@ -14,15 +14,15 @@ import { messageOf } from "./server-call.js";
 
 import type { SessionCode } from "../shared/names/online-codes.js";
 
-export type SessionErrorCode = SessionCode; // 목록은 src/shared/names/online-codes.ts
+// 세션 호출의 실패 코드는 SessionCode — 목록은 src/shared/names/online-codes.ts
 
-export type SessionResult = { ok: true; user: User } | { ok: false; code: SessionErrorCode; detail?: string };
+export type SessionResult = { ok: true; user: User } | { ok: false; code: SessionCode; detail?: string };
 
 // 부팅 판단용 세션 확인 (design-p2.md 2절)
 //   present  세션이 있다(익명·로그인)
 //   none     세션이 없다 — 저장소가 비었거나 갱신 토큰이 거절돼 지워졌다
 //   unknown  망 오류로 확인하지 못했다 — 저장소의 세션은 남아 있다. 분실로 보지 않는다
-export type SessionProbe = { state: "present"; user: User } | { state: "none" } | { state: "unknown"; code: SessionErrorCode };
+export type SessionProbe = { state: "present"; user: User } | { state: "none" } | { state: "unknown"; code: SessionCode };
 
 // exclusive 안에서만 쓰는 도구 — 잠금을 이미 쥐고 있으므로 기다리지 않는다
 export interface SessionScope {
