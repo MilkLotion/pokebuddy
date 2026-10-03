@@ -15,7 +15,7 @@ import { expForLevel, growthOf } from "../../dex/growth";
 import { megaOf, megaSlugs } from "../../dex/mega";
 import { inRandomEgg } from "../../dex/obtain";
 import { MEGA_RULES } from "../../dex/rules";
-import { slugs } from "../../dex/species";
+import { speciesSlugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
@@ -71,7 +71,7 @@ export function buildVerifyFiles(): Record<string, string> {
   }
   // 진화 간선 — 앱과 같은 nextOf 로 뽑는다. 모습 슬러그(burmy-sandy 등)는 기본 종의 간선을 받는다
   const evo: Record<string, string[]> = {};
-  const species = new Set([...slugs(), ...Object.keys(load("evo.json")).filter((k) => !k.startsWith("_"))]);
+  const species = new Set([...speciesSlugs(), ...Object.keys(load("evo.json")).filter((k) => !k.startsWith("_"))]);
   for (const slug of species) {
     const to = [...new Set(nextOf(slug).map((e) => e.to))];
     if (to.length) evo[slug] = to;

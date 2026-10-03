@@ -2,7 +2,7 @@
 import { type DexOptions } from "../dex/data.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf } from "../dex/regional.js";
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { singleSpecies } from "../dex/obtain.js";
 import { type AchievementCond } from "../dex/tables.js";
 import { defOf } from "./defs.js";
@@ -33,7 +33,7 @@ function obtainedNumbers(save: SaveV3, opts?: DexOptions): Set<number> {
   const nums = new Set<number>();
   for (const slug of list) {
     if (regionalOf(slug, opts)) continue;
-    const dex = profile(slug, opts).dex;
+    const dex = profileOf(slug, opts).dex;
     if (dex) nums.add(dex);
   }
   dexMemo = { key, nums };

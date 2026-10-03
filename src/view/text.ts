@@ -1,7 +1,7 @@
 // 화면 문구·이름의 입구 — 문구 표는 ./i18n.ts, 종 이름 표는 ./name-table.ts.
 // (예전 src/main/text.ts. 화면 값(src/view)이 쓰는데 view 는 main 을 가져다 쓰지 못해 도구 레인 T7a 에서 옮겼다)
 // 메뉴·트레이는 슬러그가 아니라 "피카츄" 를 보인다. 성격 이름은 data/natures.json 의 name (한국어·영어) — 언어 파일에 따로 두지 않는다
-import { nature as natureOf } from "../dex/natures";
+import { natureOf as natureOf } from "../dex/natures";
 import { megaOf } from "../dex/mega";
 import type { Lang, NatureId } from "../shared/species";
 import type { DexOptions } from "../dex/data";

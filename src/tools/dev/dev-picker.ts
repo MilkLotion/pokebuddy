@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
-import { starters, unlockRules } from "../../dex/unlocks";
+import { starterSlugs, unlockRules } from "../../dex/unlocks";
 import { PATHS } from "../../main/paths";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { askStarter } from "../../main/windows/picker-window";
@@ -24,7 +24,7 @@ void app.whenReady().then(() => {
   const portraits = noArt
     ? ({ get: async (asks: { slug: string }[]) => Object.fromEntries(asks.map((a) => [a.slug, null])) } as unknown as Portraits)
     : createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
-  void askStarter({ preload: preloadFile(), html: rendererFile("picker.html"), starters: starters(unlockRules()), portraits, onPicking: () => {} }).then((slug) => {
+  void askStarter({ preload: preloadFile(), html: rendererFile("picker.html"), starters: starterSlugs(unlockRules()), portraits, onPicking: () => {} }).then((slug) => {
     process.stdout.write(`picked: ${slug}\n`);
   });
   if (!shotFile) return;

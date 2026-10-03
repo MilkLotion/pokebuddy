@@ -5,7 +5,7 @@
 // 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
@@ -21,7 +21,7 @@ import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
 import { growthOf, progressTo } from "../dex/growth.js";
 import { itemOf } from "../bag/use.js";
-import { natures as natureTable } from "../dex/natures.js";
+import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
 import { TIME_RULES } from "../state/rules.js";
@@ -34,7 +34,8 @@ import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial } from "../tutorial/queue.js";
-import { candidates, dayPartOf, type EvoMissing } from "../dex/evolve.js";
+import { evolveCandidates, type EvoMissing } from "../dex/evolve.js";
+import { gameDayPart } from "../shared/clock.js";
 import type { DayPart } from "../shared/species";
 import { isEvoItem, itemAbout } from "./bag.js";
 import { shopList } from "./shop-list.js";
@@ -87,7 +88,7 @@ function needText(lacks: readonly EvoMissing[]): string | undefined {
 // (2026-10-01 사용자 결정 "추천대로하자", Figma 05 `1126:23890`)
 function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView[] {
   const known = (slug: string): boolean => isKnownSpecies(save, slug);
-  return candidates(save, pet.id, dayPart).map((c) => ({
+  return evolveCandidates(save, pet.id, dayPart).map((c) => ({
     to: c.to,
     name: known(c.to) ? petName(c.to) : "???",
     known: known(c.to),
@@ -102,11 +103,11 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
 function formsView(pet: PetV3): { forms?: FormView[] } {
   const list = formsOf(pet);
   if (list.length < 2) return {};
-  return { forms: list.map((slug) => ({ species: slug, name: petName(slug), types: profile(slug).types.map((t) => typeName(t)), typeIds: [...profile(slug).types] })) };
+  return { forms: list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] })) };
 }
 
 // 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다
-const typesOf = (slug: string): string[] => megaOf(slug)?.types ?? profile(slug).types;
+const typesOf = (slug: string): string[] => megaOf(slug)?.types ?? profileOf(slug).types;
 const formView = (slug: string): FormView => ({ species: slug, name: petName(slug), types: typesOf(slug).map((x) => typeName(x)), typeIds: [...typesOf(slug)] });
 
 // 메가스톤을 지닌 개체의 메가진화 정보. 메가 모습이 없는 종(진화해 버린 개체)이면 없다
@@ -141,7 +142,7 @@ function debuffOf(zone: FullnessZone): PetView["debuff"] {
 // 잠들기 기준 선택지 — 0 은 잠들지 않음
 const sleepChoices = (): SettingsView["sleepChoices"] => SETTING_CHOICES.sleepAfterMin.map((min) => ({ value: min, label: min === 0 ? "잠들지 않음" : `${min}분` }));
 
-export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = dayPartOf(Date.now())): PetView {
+export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = gameDayPart(Date.now())): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
   const shown = formView(shownSpecies(pet)); // 메가 모습이면 그 이름·타입·그림이다. species 는 그대로다
@@ -208,7 +209,7 @@ export function snapshot(
   maxEggs: number = EGG_RULES.maxEggs,
   now: number = Date.now(), // 진화 후보의 낮·밤을 정한다
 ): Snapshot {
-  const dayPart = dayPartOf(now);
+  const dayPart = gameDayPart(now);
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 
   const slots: SlotView[] = save.party.slots.map((s, index) => {

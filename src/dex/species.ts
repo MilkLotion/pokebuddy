@@ -29,7 +29,7 @@ const overrides = (opts?: DexOptions): Overrides => loadJson<Overrides>("species
 export const rankOf = (slug: string, opts?: DexOptions): number => defaults(opts)[slug]?.rank ?? 1;
 
 // 합친 프로필 — 배열은 새로 만들어 돌려준다 (캐시를 건드리지 못하게)
-export function profile(slug: string, opts?: DexOptions): SpeciesProfile {
+export function profileOf(slug: string, opts?: DexOptions): SpeciesProfile {
   const key = normalizeSlug(slug);
   const base = isMetaKey(key) ? undefined : defaults(opts)[key];
   const over = isMetaKey(key) ? undefined : overrides(opts)[key];
@@ -47,7 +47,7 @@ export function hasProfile(slug: string, opts?: DexOptions): boolean {
 }
 
 // 표에 있는 슬러그 전부 — 정렬
-export function slugs(opts?: DexOptions): string[] {
+export function speciesSlugs(opts?: DexOptions): string[] {
   const set = new Set<string>();
   for (const k of Object.keys(defaults(opts))) if (!isMetaKey(k)) set.add(k);
   for (const k of Object.keys(overrides(opts))) if (!isMetaKey(k)) set.add(k);

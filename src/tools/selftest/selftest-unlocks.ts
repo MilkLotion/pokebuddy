@@ -3,24 +3,24 @@
 // 지금 데이터로도 반드시 참이어야 하는 것만 막는다. 얻을 수 없는 종 목록(전설·환상 등)은 check-unlocks 가 알리기만 한다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { reach } from "../../dex/reach";
-import { starters, unlockByRules, unlockRules } from "../../dex/unlocks";
+import { reachReport } from "../../dex/reach";
+import { starterSlugs, unlockByRules, unlockRules } from "../../dex/unlocks";
 import { begin } from "../../party/starter";
 import { speciesPrice } from "../../shop/catalog";
 import { empty } from "../../save/v3";
 import { dexList } from "../../view/dex-list";
-import { evolve } from "../../dex/evolve";
+import { evolvePet } from "../../dex/evolve";
 import { newPet } from "../../party/create";
 import { inRandomEgg } from "../../dex/obtain";
 import { randomPool } from "../../egg/pool";
 
-const r = reach();
+const r = reachReport();
 const rules = unlockRules();
 const dexSlugs = new Set(dexList(empty(0)).map((e) => e.slug));
 
 // (1) 첫 선택 후보는 모두 얻을 수 있다 — 첫 실행 선택과 랜덤알
-for (const s of starters(rules)) assert.ok(r.obtainable.has(s), `첫 선택 후보 ${s}`);
-process.stdout.write(`(1) 첫 선택 후보 ${starters(rules).length}종 도달  ok\n`);
+for (const s of starterSlugs(rules)) assert.ok(r.obtainable.has(s), `첫 선택 후보 ${s}`);
+process.stdout.write(`(1) 첫 선택 후보 ${starterSlugs(rules).length}종 도달  ok\n`);
 
 // (2) 진화 규칙의 출발 종과 대상 종은 도감에 있는 종이다 — 오타·옛 이름이 사슬을 끊지 않게
 for (const [slug, rule] of Object.entries(rules)) {
@@ -99,7 +99,7 @@ assert.ok(r.obtainable.has("snorlax") && pool.includes("munchlax") && !pool.incl
   const pet = newPet({ id: "m1", species: "munchlax", shiny: false, nature: "hardy", gender: "male", now: 0 });
   pet.affinity = 100;
   s.pets.push(pet);
-  assert.ok(evolve(s, "m1", "day").ok, "친밀도로 진화");
+  assert.ok(evolvePet(s, "m1", "day").ok, "친밀도로 진화");
   assert.equal(pet.species, "snorlax");
   assert.ok(s.dex.unlocked.includes("snorlax") && s.dex.obtained.includes("snorlax"), "진화하면 잠만보 해금·획득");
 }

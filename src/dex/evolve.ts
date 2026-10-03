@@ -81,7 +81,6 @@ export type EvolveResult = Outcome<EvolveFailure> & {
 
 // 게임 시간 — 30분마다 낮과 밤이 바뀐다 (src/shared/clock.ts gameDayPart, docs/specs/game.md "진화 계약")
 export { GAME_DAY } from "../shared/clock";
-export const dayPartOf = (now: number): DayPart => gameDayPart(now);
 
 // 조건 하나를 지금 채웠는가. 못 채웠으면 모자란 조건을 돌려준다. 레벨·친밀도 지도 간선이면 원래 조건 뒤에 지도를 본다
 function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): NeedCheck {
@@ -111,7 +110,7 @@ function checkMainNeed(save: SaveV3, pet: { level: number; affinity: number }, s
 }
 
 // 개체가 갈 수 있는 곳 전부. 화면이 조건을 보여 주는 데 쓴다
-export function candidates(save: SaveV3, petId: string, dayPart: DayPart, opts?: DexOptions): Candidate[] {
+export function evolveCandidates(save: SaveV3, petId: string, dayPart: DayPart, opts?: DexOptions): Candidate[] {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return [];
   const have = formsOf(pet, opts);
@@ -123,13 +122,13 @@ export function candidates(save: SaveV3, petId: string, dayPart: DayPart, opts?:
 
 // 지금 진화할 수 있는가 — 알림 배너와 튜토리얼이 쓴다. 레벨·친밀도 지도 간선은 보지 않는다(짝인 기본형 간선이 같은 조건이라 알림이 겹친다)
 export const canEvolve = (save: SaveV3, petId: string, dayPart: DayPart, opts?: DexOptions): boolean =>
-  candidates(save, petId, dayPart, opts).some((c) => c.ready && (!c.map || needIsMap(c.need)));
+  evolveCandidates(save, petId, dayPart, opts).some((c) => c.ready && (!c.map || needIsMap(c.need)));
 
-export function evolve(save: SaveV3, petId: string, dayPart: DayPart, choice?: string, opts?: DexOptions): EvolveResult {
+export function evolvePet(save: SaveV3, petId: string, dayPart: DayPart, choice?: string, opts?: DexOptions): EvolveResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
 
-  const all = candidates(save, petId, dayPart, opts);
+  const all = evolveCandidates(save, petId, dayPart, opts);
   if (!all.length) return { ok: false, reason: "no-step" };
   const ready = all.filter((c) => c.ready);
   if (!ready.length) return { ok: false, reason: "not-ready" };

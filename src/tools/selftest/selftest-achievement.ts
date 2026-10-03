@@ -5,7 +5,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { regionalOf } from "../../dex/regional";
-import { profile, slugs } from "../../dex/species";
+import { profileOf, speciesSlugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";
 import { snapshot } from "../../view/snapshot";
 import { empty, normalize } from "../../save/v3";
@@ -444,9 +444,9 @@ function seed(): SaveV3 {
   k.dex.obtained = ["bulbasaur", "rattata-alola", "mew"];
   assert.deepStrictEqual(progressOf(k, "dex-kanto"), { now: 1, goal: 150, unit: "" }, "리전폼과 뮤는 세지 않는다");
   const byDex = new Map<number, string>();
-  for (const slug of slugs()) {
+  for (const slug of speciesSlugs()) {
     if (regionalOf(slug)) continue;
-    const d = profile(slug).dex;
+    const d = profileOf(slug).dex;
     if (d >= 1 && d <= 150 && !byDex.has(d)) byDex.set(d, slug);
   }
   assert.equal(byDex.size, 150);

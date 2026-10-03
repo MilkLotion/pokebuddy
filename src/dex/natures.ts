@@ -25,15 +25,15 @@ export const NEUTRAL_AXES: Readonly<Record<Axis, AxisValue>> = {
 const table = (opts?: DexOptions): Nature[] => loadJson<Nature[]>("natures.json", opts);
 
 // 25개 전부 — 표의 순서(대응표 행 순서). 복사본
-export const natures = (opts?: DexOptions): Nature[] => [...table(opts)];
+export const natureList = (opts?: DexOptions): Nature[] => [...table(opts)];
 
 // 하나 — 모르는 id 는 undefined
-export const nature = (id: string, opts?: DexOptions): Nature | undefined => table(opts).find((n) => n.id === id);
+export const natureOf = (id: string, opts?: DexOptions): Nature | undefined => table(opts).find((n) => n.id === id);
 
-export const isNatureId = (id: string, opts?: DexOptions): id is NatureId => nature(id, opts) !== undefined;
+export const isNatureId = (id: string, opts?: DexOptions): id is NatureId => natureOf(id, opts) !== undefined;
 
 // 축 값 — 모르는 id 면 전부 0. 항상 새 객체
-export const axesOf = (id: string, opts?: DexOptions): Record<Axis, AxisValue> => ({ ...(nature(id, opts)?.axes ?? NEUTRAL_AXES) });
+export const axesOf = (id: string, opts?: DexOptions): Record<Axis, AxisValue> => ({ ...(natureOf(id, opts)?.axes ?? NEUTRAL_AXES) });
 
 
 // 변덕은 마리별로 어긋난 주기에 한 축이 잠깐 바뀜 — 시각 주입, 저장·재시작에도 같은 결과

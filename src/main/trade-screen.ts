@@ -2,7 +2,7 @@
 // 모양은 src/shared/manage.d.ts 의 TradeScreen. 화면은 Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면
 //
 // 저장을 읽기만 한다. 완료 화면의 "보낸 포켓몬"은 반영 뒤 저장에 없으므로 교환 중에 본 카드를 기억해 둔다
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { natureName, petName, typeName } from "./text.js";
 import type { TradePet } from "../trade/exchange.js";
 import { isSinglePet } from "../dex/forms.js";
@@ -14,7 +14,7 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 // 개체 하나를 카드 값으로 — 모르는 종이면 null (조작한 제안 등)
 export function cardOf(pet: Pick<TradePet, "species" | "shiny" | "level" | "nature">): TradeCardView | null {
   try {
-    const types = profile(pet.species).types;
+    const types = profileOf(pet.species).types;
     return {
       species: pet.species,
       name: petName(pet.species),

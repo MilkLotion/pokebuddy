@@ -21,7 +21,7 @@ export interface Reach {
   brokenFrom: string[]; // 진화 규칙의 `from` 이 규칙표·알 어디에도 없는 종
 }
 
-export function reach(opts?: DexOptions): Reach {
+export function reachReport(opts?: DexOptions): Reach {
   const rules = unlockRules(opts);
   const fixedPool = fixedEggs(opts).flatMap(([, pool]) => pool);
   const entries = Object.entries(rules).filter(([slug]) => !slug.startsWith("_"));
