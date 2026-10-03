@@ -58,4 +58,3 @@ unused-export-const: TRAY_MENU_RULES @ src/main/menus/tray-menu.ts
 unused-export-const: TUTORIAL_IDS @ src/shared/names/tutorials.ts
 unused-export-const: TX_COMMANDS @ src/tx/command-table.ts
 word-tail: moodWord @ src/view/i18n.ts
-word-tail: untilWord @ src/view/i18n.ts

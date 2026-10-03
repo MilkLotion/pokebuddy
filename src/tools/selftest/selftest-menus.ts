@@ -84,7 +84,7 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
     s.pets[0]!.playCooldownMs = 600_000;
   }), "p1", "stage")?.firstCare;
   assert.equal(both?.keep, null);
-  assert.ok(both?.wait && both.wait !== t("coach.first-care.wait.soon"), "놀아주기 쿨타임이면 남은 시간");
+  assert.equal(both?.wait, "10분", "놀아주기 쿨타임이면 남은 시간 — waitText 한 벌 (94 항목 5-1)");
   const full = menuOf(open((s) => {
     s.pets[0]!.fullness = 100;
     s.pets[0]!.playCooldownMs = 0;

@@ -173,6 +173,8 @@ function applyLive(v: PetDeviceView): void {
   }
   const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
   if (feed) feed.textContent = pet.feedText;
+  const play = device.querySelector<HTMLButtonElement>('[data-live="play"]');
+  if (play) play.textContent = pet.playText;
   for (const node of device.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const buff = pet.buffs.find((b) => b.kind === node.dataset.liveBuff);
     if (buff && node.textContent !== buff.text) node.textContent = buff.text;
@@ -277,10 +279,9 @@ function renderBody(v: PetDeviceView): void {
     const boxed = !v.inParty;
     const feed = buttonEl("key light", boxed ? "밥 주기" : pet.feedText, () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
-    care.append(
-      feed,
-      buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
-    );
+    const play = buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady);
+    if (!boxed) play.dataset.live = "play";
+    care.append(feed, play);
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     device.appendChild(care);
   }

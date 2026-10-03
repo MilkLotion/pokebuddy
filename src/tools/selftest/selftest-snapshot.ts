@@ -8,6 +8,7 @@ import { MINT_RETIRED } from "../../bag/mint";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { snapshot } from "../../view/snapshot";
+import { waitText } from "../../shared/count-text";
 import { BOX_RULES } from "../../box/rules";
 import { EGG_RULES } from "../../egg/rules";
 import { PARTY_RULES } from "../../party/rules";
@@ -297,8 +298,9 @@ function seed(): SaveV3 {
   s.pets[0]!.playCooldownMs = 60_000;
   s.eggs[0]!.ready = true;
   const after = snapshot(s);
-  assert.deepEqual([after.party.slots[0]?.pet?.feedText, after.party.slots[0]?.pet?.playText], ["밥 주기 · 배부름", "놀아주기 · 쉬는 중"]);
+  assert.deepEqual([after.party.slots[0]?.pet?.feedText, after.party.slots[0]?.pet?.playText], ["밥 주기 · 배부름", "놀아주기 · 1분"], "놀아주기도 밥 주기처럼 남은 시간 (94 항목 5-1)");
   assert.equal(after.eggs.list[0]?.noteText, "준비 완료");
+  assert.deepEqual([45, 90, 4800, 7200].map((n) => waitText(n, "en")), ["45s", "2m", "1h 20m", "2h"], "영어 남은 시간");
   process.stdout.write("(14) 시간 글자  ok\n");
 }
 

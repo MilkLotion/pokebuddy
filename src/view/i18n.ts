@@ -50,12 +50,3 @@ export function moodWord(mood: number): string {
   const level = !Number.isFinite(m) ? 3 : m >= 80 ? 5 : m >= 60 ? 4 : m >= 40 ? 3 : m >= 20 ? 2 : 1;
   return t(`mood.${level}`);
 }
-
-// 다음에 할 수 있는 시각까지 남은 시간을 말로 — 1시간 넘으면 시간(반올림 — 2시간 31분은 "3시간 뒤", 3시간 1분은 "3시간 뒤"),
-// 아니면 분(올림), 1분 안이면 "곧"
-export function untilWord(nextAt: number, now: number = Date.now()): string {
-  const ms = Number(nextAt) - now;
-  if (!Number.isFinite(ms) || ms <= 60_000) return t("time.soon");
-  if (ms >= 3_600_000) return t("time.inHours", { n: Math.max(1, Math.round(ms / 3_600_000)) });
-  return t("time.inMinutes", { n: Math.ceil(ms / 60_000) });
-}
