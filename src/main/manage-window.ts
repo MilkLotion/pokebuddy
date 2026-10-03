@@ -210,7 +210,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.art, (e) => {
     if (!mine(e)) return {};
     portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
-    return portraits.all();
+    // [임시] box 는 아직 재지 않는다 — 메인 레인 M5 ⑤(X15)가 그림과 같이 재서 싣는다. 그때까지 관리 창이 그림을 읽어 잰다
+    return portraits.all().then((all) => Object.fromEntries(Object.entries(all).map(([key, uri]) => [key, { uri, box: null }])));
   });
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
   let cries: Cries | null = artServices().cries;

@@ -238,3 +238,19 @@ export interface PortraitAsk {
   slug: string;
   shiny: boolean;
 }
+
+// 그림에서 불투명한 영역 — 알파 128 이상인 점을 모두 담는 네모(px). width·height 는 그림 전체 크기
+export interface OpaqueBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  width: number;
+  height: number;
+}
+
+// 디스크에 있는 그림 하나 — data URI 와 불투명 영역. box 가 null 이면 재지 않았거나 빈 그림이다(받는 쪽이 그림을 읽어 잰다)
+export interface ArtImage {
+  uri: string;
+  box: OpaqueBox | null;
+}

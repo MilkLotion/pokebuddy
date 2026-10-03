@@ -5,7 +5,7 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView } from "../../shared/model/account.js";
-import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
+import type { AchievementView, ArtImage, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
@@ -5154,12 +5154,14 @@ function goTo(route: ManageRoute): void {
 // 같은 주소의 그림은 문서가 이미 가진 그림이 되어, 칸을 그리는 순간 바로 보인다
 const warmed: HTMLImageElement[] = [];
 async function loadArt(): Promise<void> {
-  let got: Record<string, string> = {};
+  let art: Record<string, ArtImage> = {};
   try {
-    got = await window.pokebuddyManage.art();
+    art = await window.pokebuddyManage.art();
   } catch {
     return; // 그림 없이도 창은 돈다 — 칸을 그린 뒤 하나씩 청하는 길이 남아 있다
   }
+  // [임시] box 는 아직 쓰지 않는다 — 메인이 싣기 시작하면 렌더러 레인이 보는 네모를 box 로 정한다(X15)
+  const got: Record<string, string> = Object.fromEntries(Object.entries(art).map(([key, image]) => [key, image.uri]));
   for (const [key, uri] of Object.entries(got)) (key === "egg" || key.startsWith("item:") ? iconCache : portraitCache).set(key, uri);
   // 초상은 디코딩이 끝나면 보는 네모도 재 둔다 — 몸이 큰 그림이 첫 프레임부터 잘리지 않는다 (portrait.ts)
   const portraits = new Set(Object.entries(got).filter(([key]) => key !== "egg" && !key.startsWith("item:")).map(([, uri]) => uri));
