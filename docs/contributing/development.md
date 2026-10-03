@@ -241,8 +241,8 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 ## 빌드와 검사
 
 - 빌드는 `npm run build` 로 한다. `tsconfig.json` 이 메인·CLI 가 부르는 모듈·도구를 `dist/` 로 만든다(CJS). `tsconfig.renderer.json` 이 화면 스크립트를
-  `dist/renderer/` 로 만든다(ESM). HTML 은 빌드하지 않는다. `src/renderer/*.html` 에 그대로 둔다. 이 HTML 은 `../../dist/renderer/*.js` 를 부른다
-- 무대·선택 창 문서에는 CSP 가 있다. 스크립트는 자기 파일에서만 부른다. 그림은 data URL 만 쓴다(`default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:`)
+  `dist/web/` 로 만든다(ESM, `src/renderer/` 와 `src/shared/` 를 같은 폴더 모양으로). HTML 은 빌드하지 않는다. `src/renderer/*.html` 에 그대로 둔다. 이 HTML 은 `../../dist/web/renderer/<폴더>/*.js` 를 부른다. 스타일은 `src/renderer/styles/` 의 CSS 파일이다
+- 무대·선택 창 문서에는 CSP 가 있다. 스크립트는 자기 파일에서만 부른다. 그림은 data URL 만 쓴다(`default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:`, 무대는 `media-src data:` 를 더한다)
 - 창 아이콘은 다음과 같다 — Windows 는 `assets/logo/out/logo-256.png` 를 쓴다. mac 은 Dock 아이콘을 `logo-512.png` 로 정한다. 그 뒤 Dock 에서 숨긴다. 트레이 아이콘은 첫 마리 그림을 쓴다
 - 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `src/tools/selftest/list.ts` 의 `SELFTESTS` 에 있다. 실행기는 `src/tools/selftest/run.ts` 다
   - 목록에 없는 `selftest-*.ts` 가 하나라도 있으면 검사를 하나도 돌리지 않고 실패한다. 새 검사를 만들면 목록에 더한다
@@ -265,7 +265,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 
 - 시험용 HOME 은 `POKEBUDDY_TEST_HOME` 이다. 없으면 저장소의 `.claude/test-home/default` 다. `.claude/` 는 git 이 추적하지 않는다.
 - 저장·잠금·단일 실행 잠금이 모두 이 HOME 아래에 생긴다. 그래서 진짜 저장을 건드리지 않고, 쓰던 동반자와 나란히 뜬다.
-- 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(`src/main/app.ts` `syncLoginItem`).
+- 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(`src/main/app.ts` `mayLogin`, `src/main/app/display-state.ts` `syncLogin`).
 - 도구는 `POKEBUDDY_SAVE_CRYPT=off` 로 동반자를 띄운다. 그래서 새 HOME 의 저장은 평문으로 남고 `scene`·`show` 가 직접 읽고 고친다.
   이 값은 개발 실행과 업데이트 시험 빌드만 받는다. 이미 `save.key` 가 있는 HOME 에서는 그 키로 계속 암호화한다.
 - 작업 트리의 미커밋 변경을 빼고 시험하려면 HEAD 를 `git worktree add --detach <폴더> HEAD` 로 따로 꺼낸다.
@@ -281,7 +281,7 @@ node dist/tools/dev/dev-test.js start              # 고친 저장으로 다시 
 ```
 
 장면은 쉼표로 이어 줄 수 있다(`scene done-all,rich`). 튜토리얼 장면은 그 튜토리얼 앞의 것을 완료로, 그 튜토리얼과 뒤의 것을 미시작으로 둔다. 장면 목록은 `src/tools/harness/scenes.ts` 의 `SCENES` 다. `dev-manage` 의 `--scene` 도 같은 목록을 쓴다.
-첫 포켓몬이 없으면 `charmander` 로 시작 절차(`src/party/starter.ts` `begin`)를 밟는다.
+첫 포켓몬이 없으면 `charmander` 로 시작 절차(`src/party/starter.ts` `applyStarter`)를 밟는다.
 
 | 장면 | 저장을 이렇게 고친다 |
 |---|---|

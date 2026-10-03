@@ -35,7 +35,7 @@
 | `src/follow` | 놀이공간 표시 위치, 창 추적, 영역 | 게임 규칙 | SC-02, 08 |
 | `src/motion` | 움직임과 반응 | 게임 규칙 | SC-02 |
 | `src/agents` | 에이전트 감지와 사용량 | 보상 지급 | SC-11 |
-| `src/find` | 줍기 — 마리별로 조건을 채운 시간으로 주울지 판정, 결과 고르기(포인트·도구·진화용 도구·포켓몬), 반영과 최근 기록. 수치는 `rules.ts` | 저장 쓰기(주운 틱에 `src/main/game.ts` `find` 가 쓴다), 1초 틱마다 굴림 호출과 깨어 있는 마리 판정(`src/main/app.ts` `clockTick`, 무대) | — |
+| `src/find` | 줍기 — 마리별로 조건을 채운 시간으로 주울지 판정, 결과 고르기(포인트·도구·진화용 도구·포켓몬), 반영과 최근 기록. 수치는 `rules.ts` | 저장 쓰기(주운 틱에 `src/main/game.ts` `find` 가 쓴다), 1초 틱마다 굴림 호출과 깨어 있는 마리 판정(`src/main/app/ticks.ts` `clock`, 무대) | — |
 | `src/notify` | 알림 배너 줄 세우기, 같은 상태 한 번 규칙, 표시 순서 | 상태 판정 | SC-04, 05, 06, 10 |
 | `src/main` | 창, 트레이, 우클릭 메뉴, 명령 수신, 전역 시계(`clock.ts`) | 게임 규칙 계산, 배너 순서 | 전체 |
 | `src/renderer` | 설정창, 놀이공간, 도감·파티 상세 기기 창 그리기 | 저장 접근 | 전체 |
@@ -57,7 +57,7 @@
 로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
 세션 저장 `encryptedStorage`는 `~/.claude/pokebuddy/online/session.bin`을 Electron `safeStorage`로 암호화한다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>.bak`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
 앱 업데이트는 `src/main/update/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/update/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다. 서버가 이 앱 버전을 거절하면(`CLOUD_UPDATE_REQUIRED`) 앱은 주기를 기다리지 않고 실행마다 한 번 바로 확인한다(`urgentStep`). 새 버전이 준비되면(`ready`·`manual`) `새 버전으로 바꿔야 해요` 알림 창을 실행마다 한 번 띄운다(`src/main/halt-dialog.ts` `askUpdateRequired`). `지금 다시 시작`(mac 수동은 `받기`)은 설정의 `다시 시작`과 같다. `나중에`(Esc)는 닫기만 하고 게임을 멈추지 않는다.
-두 PC 멈춤·저장 정보 분실·저장 잠김·이용 정지·업데이트 필요 창은 게임 디자인의 알림 창으로 띄운다(`src/main/alert-window.ts`, `src/renderer/alert.html`). 테두리 없는 항상 위 창이 주 화면 가운데 위쪽에 뜬다. 단추 답·Esc(취소 단추)·시간 초과·밖에서 닫기의 뜻은 `src/main/halt-dialog.ts`가 정한다. 단추에는 처음 포커스를 두지 않아 Enter 로는 답하지 않는다(OS 대화상자는 Enter 가 0 번 단추였다). 알림 창이 3초 안에 그려지지 않거나 렌더러가 죽으면 OS 대화상자로 띄운다. 보이기 전에 밖에서 닫히면(앱 종료) 닫힘으로 끝낸다.
+두 PC 멈춤·저장 정보 분실·저장 잠김·이용 정지·업데이트 필요 창은 게임 디자인의 알림 창으로 띄운다(`src/main/windows/alert-window.ts`, `src/renderer/alert.html`). 테두리 없는 항상 위 창이 주 화면 가운데 위쪽에 뜬다. 단추 답·Esc(취소 단추)·시간 초과·밖에서 닫기의 뜻은 `src/main/halt-dialog.ts`가 정한다. 단추에는 처음 포커스를 두지 않아 Enter 로는 답하지 않는다(OS 대화상자는 Enter 가 0 번 단추였다). 알림 창이 3초 안에 그려지지 않거나 렌더러가 죽으면 OS 대화상자로 띄운다. 보이기 전에 밖에서 닫히면(앱 종료) 닫힘으로 끝낸다.
 패치노트는 `src/main/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
 
 알림 배너의 상태 판정은 도메인 모듈이 한다. `src/notify`는 줄 세우기와 표시만 맡는다.
@@ -220,7 +220,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 
 ### 시간 처리 순서
 
-멈춰 있던 시간이 있으면 한 번에 처리한다. 순서는 시간 적용 → 값 변경(만복도·친밀도·포인트·쿨타임·버프·알 준비) → 상태 판정(부화 가능·진화 가능·업적 달성·배고픔 구간) → 알림 배너 생성이다. 같은 순간의 배너는 부화 → 진화 → 업적 → 줍기 → 메가스톤 순서다. 메가스톤 지급은 값 변경 뒤, 상태 판정 앞에 한다(`src/dex/mega.ts` `grantStones`). 거래 실행기도 명령마다 메가 모습을 정리하고 메가스톤 지급을 본다(`settleMega`·`grantStones`).
+멈춰 있던 시간이 있으면 한 번에 처리한다. 순서는 시간 적용 → 값 변경(만복도·친밀도·포인트·쿨타임·버프·알 준비) → 상태 판정(부화 가능·진화 가능·업적 달성·배고픔 구간) → 알림 배너 생성이다. 같은 순간의 배너는 부화 → 진화 → 업적 → 줍기 → 메가스톤 순서다. 메가스톤 지급은 값 변경 뒤, 상태 판정 앞에 한다(`src/dex/mega.ts` `grantStones`). 거래 실행기도 명령마다 메가 모습을 정리하고 메가스톤 지급을 본다(`src/party/mega-form.ts` `settleMega`, `src/dex/mega.ts` `grantStones`).
 
 ### 저장 시점
 

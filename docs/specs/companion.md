@@ -56,7 +56,7 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 - 트레이 메뉴 구성은 다음과 같다 — 설정창 열기, 잠시 숨기기/다시 보이기, 고스트 모드(켜져 있으면 오른쪽에 `켜짐`), 종료.
 - 트레이 아이콘은 Windows 기본 앱처럼 동작한다. 왼쪽 클릭(한 번·더블)은 설정창을 열고, 오른쪽 클릭은 메뉴를 연다. 메뉴가 떠 있을 때 아이콘을 누르면 메뉴만 닫힌다. 메뉴 밖을 누르거나 Esc 를 눌러도 닫힌다.
 - Windows 작업 표시줄 아이콘을 우클릭하면 점프 목록에 파티 포켓몬마다 `이름 · Lv.N` 묶음과 밥 주기·놀아주기가 보인다(아이콘은 `assets/items/jump-feed.ico`·`jump-play.ico`). 누르면 앱이 `--pokebuddy-care=feed:<개체>` 인자로 다시 실행되고, 떠 있는 동반자가 그 명령을 돌린다(`src/main/jump-list.ts`). 파티·레벨이 바뀌면 목록을 다시 만든다. 앱 이름·작업 표시줄에 고정·창 닫기 줄은 Windows 가 붙인다.
-- Windows 에서 트레이 메뉴는 포커스를 가져오지 않는다. 가져오면 숨겨진 아이콘 창이 닫히기 때문이다. 바깥 클릭·Esc 는 창 추적 헬퍼(`helpers/winbounds.ps1` `-Serve`)가 15ms 마다 보는 마우스 버튼·Esc 상태로 알아챈다(`src/main/app.ts` `onTrayInput`).
+- Windows 에서 트레이 메뉴는 포커스를 가져오지 않는다. 가져오면 숨겨진 아이콘 창이 닫히기 때문이다. 바깥 클릭·Esc 는 창 추적 헬퍼(`helpers/winbounds.ps1` `-Serve`)가 15ms 마다 보는 마우스 버튼·Esc 상태로 알아챈다(`src/main/menus/tray-menu.ts` `onInput`).
 - 메뉴는 OS 기본 메뉴가 아니라 앱이 그린다(`src/main/menus/menu-window.ts`). 방향키·Enter·Esc 로 조작하고 바깥을 누르면 닫힌다.
 - 마리마다 우클릭 메뉴가 있다. 트레이와 같은 앱이 그리는 메뉴다. 그림 위에서만 열린다.
 - 우클릭 메뉴 구성은 다음과 같다 — 이름(성격을 끈 동안은 이름만, `src/view/menus.ts` `petLine`)과 그 아래 상태(누를 수 없는 두 줄), 밥 주기·놀아주기(못 하면 흐리게만 보인다. 이유는 적지 않는다), 볼에 넣기(그 포켓몬만), 상세 보기(설정창을 열고 그 포켓몬을 파티 상세 기기 창에 띄운다), 모습 바꾸기(공유 계열 개체만. 누르면 메뉴 옆에 모습 말풍선이 붙어 뜬다), 팔기(설정창에 확인 창을 띄운다. 팔 수 없는 개체는 흐리다). 설정창의 파티 카드와 박스 칸을 우클릭해도 같은 메뉴가 뜬다. 설정창의 메뉴에는 상세 보기가 없다. 카드와 칸을 좌클릭하면 파티 상세 기기 창이 열린다(2026-10-02 사용자 결정). 박스 개체의 메뉴에는 옮기기(설정창의 박스 탭에서 그 개체를 든다)가 더 있다. 옮기기는 이름·상태 바로 아래에 있고 그 아래에 구분선이 있다.
@@ -132,7 +132,7 @@ Windows 는 조상을 구하는 데 PowerShell 을 띄워야 한다(수백 ms). 
 
 ### 상태에 따라 동작이 달라지는 방식
 
-- 상태마다 **다른 PMD 동작 시트**를 재생한다(상태 → 동작 후보는 `src/main/art/pmd.ts`, 재생은 `src/renderer/sprites.ts`). 프레임마다 길이가 다른 원본 타이밍(AnimData.xml)을 그대로 쓴다.
+- 상태마다 **다른 PMD 동작 시트**를 재생한다(상태 → 동작 후보는 `src/main/art/pmd.ts`, 재생은 `src/renderer/stage/sprites.ts`). 프레임마다 길이가 다른 원본 타이밍(AnimData.xml)을 그대로 쓴다.
   한 번만 보여 줄 동작(`Pose`)은 2초가 될 때까지 되풀이한 뒤 대기로 돌아간다(인사 한 번이 0.4초라 한 번만 틀면 못 본다).
   쓰러짐(`Faint`)은 마지막 자세로 멈춰 있다. 작업 중(`running`)은 buddy 가 동작을 고른다.
 - 무대의 상태는 파티 전원이 같다. 모든 마리가 같은 CLI 상태를 따른다.
@@ -213,10 +213,10 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 - **무대 = 놀이공간 ∩ 그 놀이공간이 있는 디스플레이.** `모든 화면` 이면 디스플레이마다 무대 창이 하나씩이다(`src/main/stage-group.ts`). 화면 밖 부분은 보이지도 않는다. GPU 만 먹는다. 그래서 잘라 낸다. 창은 `setBounds` 로만 옮긴다.
   사각형이 바뀔 때만 부른다. 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있기 때문이다
 - **자리는 메인이 정한다.** 마리 위치·집·들고 있는 마리 정보는 메인(`src/main/stage.ts`)에 있다. 40ms(25fps)마다 무대 프레임
-  (마리별 id · 모습 · 배율 · 자리 · 동작)을 렌더러에 보낸다. 렌더러(`src/renderer/stage.ts`)는 받은 대로 그린다. 애니 프레임 진행만 스스로 한다.
+  (마리별 id · 모습 · 배율 · 자리 · 동작)을 렌더러에 보낸다. 렌더러(`src/renderer/stage/stage.ts`)는 받은 대로 그린다. 애니 프레임 진행만 스스로 한다.
   렌더러가 죽었다 다시 떠도 메인이 크기 · 시트 · 마지막 프레임을 다시 보내 복구된다
 - **그림이 없는 곳의 클릭은 아래 창으로 통과한다.** 무대는 놀이공간만큼 크지만 마리 위만 클릭을 받는다. 커서가 무대 위에 있으면 메인이 40ms 마다
-  렌더러에 커서 자리를 묻는다. 렌더러는 그 둘레 3px 안에 투명하지 않은 픽셀이 있는 마리의 id 를 답한다(위에 그려진 마리부터 — `src/renderer/hit.ts`).
+  렌더러에 커서 자리를 묻는다. 렌더러는 그 둘레 3px 안에 투명하지 않은 픽셀이 있는 마리의 id 를 답한다(위에 그려진 마리부터 — `src/renderer/stage/hit.ts`).
   답이 `null` 이면 클릭을 아래 창으로 넘긴다. 통과 중에는 마우스 이벤트가 오지 않는다. 포켓몬이 걷거나 그림이 바뀌어 커서 밑이 달라져도
   이벤트는 생기지 않는다. 그래서 메인이 주기적으로 묻는다. 누르고 있거나 들고 있는 동안은 통과로 바꾸지 않는다. 그러지 않으면 떼기가 아래 창으로 가서 들린 채 남는다
 - **드래그는 마리별이다.** 창은 그대로다. 그 마리만 무대 안에서 옮긴다(끄는 중에도 무대 안에 가둔다). 4px 이상 끌면 드래그다.
@@ -231,17 +231,18 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 ### 계약과 코드 자리
 
-메인 · preload · 렌더러가 주고받는 모양은 선언 파일 `src/shared/stage.d.ts` 한 곳에 있다. 이 파일에는 채널 이름
-(`stage:init` · `stage:sheets` · `stage:frame` · `stage:hover` · `stage:click-through` · `stage:cry` · `stage:coach` · `stage:coach-action` · `stage:ready` · `stage:hit` · `stage:pointer` · `stage:log`,
-선택 창 `picker:list` · `picker:start` · `picker:portraits`)과 프레임 · 포인터 · 시트의 모양이 있다. 메인 빌드와 렌더러 빌드가 함께 읽어야 한다. 그래서 `.d.ts` 로 둔다
-(`.ts` 면 렌더러 빌드가 rootDir 밖 소스라고 거부한다). preload 는 샌드박스다. 그래서 렌더러에 `window.pokebuddy` 다리만 내놓는다.
+메인 · preload · 렌더러가 주고받는 채널은 `src/shared/ipc/stage.ts` 한 곳에 있다. 채널 이름은
+`stage:init` · `stage:sheets` · `stage:frame` · `stage:hover` · `stage:click-through` · `stage:cry` · `stage:icons` · `stage:coach` · `stage:coach-action` · `stage:ready` · `stage:hit` · `stage:pointer` · `stage:log`,
+선택 창 `picker:list` · `picker:start` · `picker:portraits` 다. 프레임 · 포인터 · 시트의 모양은 `src/shared/model/stage.ts` 에 있다. 두 파일은 타입만 둔다. 메인 빌드와 렌더러 빌드가 함께 읽는다.
+preload 는 샌드박스다. 그래서 렌더러에 `window.pokebuddy` 다리만 내놓는다(`src/renderer/bridge.d.ts`).
 
 | 폴더 | 하는 일 |
 |---|---|
 | `src/main/` | 메인 프로세스 — `app.ts`(진입점 · 배선) · `app/`(기동 단계 · 끄기 순서 · 멈춤 · 표시 상태 · 틱 · 전원 · 단일 인스턴스) · `windows/`(창 도우미 · 알림 · 배너 · 영역 그리기 · 화면 고르기 · 첫 실행 선택 · 기기 창 틀) · `menus/`(포켓몬 메뉴 · 트레이 메뉴 · 앱이 그리는 메뉴 창) · `stage/`(울음소리 · 아이콘 말풍선 · 바탕화면 코치) · `art/`(초상 · 울음소리 · PMD 그림 · 걷기·초상 대체 그림 · 받기 캐시) · `services/`(온라인 · 교환 · 우편 · 업데이트 연결) · `update/`(업데이트 엔진) · `anchor.ts`(창 추적 폴링) · `stage-window.ts`(무대 창 · 클릭 통과 · 항상 위) · `stage.ts`(마리 자리 · 25fps 틱 · 포인터) · `layout.ts`(자리 · 놀이공간 계산) · `save-party.ts`(저장 파티) · `keep-on-top.ts`(Windows 항상 위 유지) · `lifetime.ts`(`companion.lock` · 끝날 조건) · `commands.ts` · `tray.ts` · `manage-window.ts`(설정창) · `preload.ts` 등. PNG 해석은 `src/platform/png.ts` |
+| `src/platform/` | 운영체제 · 파일 — `png.ts`(PNG 해석) · `paths.ts` · `dev-run.ts`(개발 실행 판정) 등 |
 | `src/follow/` | 어느 창 · 어느 세션을 따를지 — `state.ts`(훅 상태 기록 · 판정) · `front.ts`(맨 앞 창 · 터미널 호스트) · `winbounds.ts` · `line-helper.ts`(창 추적 헬퍼). `pokebuddy status` 가 같은 코드를 부른다 |
 | `src/motion/` | 마리 하나의 움직임 — `brain.ts` · `pet-motion.ts` · `rules.ts` · `params.ts` |
-| `src/renderer/` | 무대 `stage.html` · `stage.ts` · `sprites.ts` · `hit.ts` · `pointer.ts`, 선택 창 `picker.html` · `picker.ts`, 설정창 `manage.html` · `manage.ts`, 메뉴 `menu.html` · `menu.ts`, 놀이공간 영역 `region.html` · `region.ts` 등 |
+| `src/renderer/` | 창마다 HTML 은 꼭대기에 있다 — 무대 `stage.html`, 선택 창 `picker.html`, 설정창 `manage.html`, 메뉴 `menu.html`, 놀이공간 영역 `region.html` 등. 스크립트는 하위 폴더에 있다 — `stage/`(무대 `stage.ts` · `sprites.ts` · `hit.ts` · `pointer.ts`), `manage/`(설정창 `manage.ts`), `device/`(기기 창), `windows/`(선택 창 `picker.ts` · 메뉴 `menu.ts` · 놀이공간 영역 `region.ts` 등), `ui/`(공용 부품). 스타일은 `styles/` 에 있다 |
 
 ## 그림에 대한 메모
 
@@ -279,4 +280,4 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
   - `src/tools/check/check-overworld.ts` 가 35종의 걷기 그림을 실제 주소에서 받아 본다. 태그를 올릴 때 다시 돌린다.
 - 칸 크기가 동작마다 달라도 기준점은 `(칸너비/2, 칸높이/2+4)` 로 같다. 그래서 몸 칸 가운데에 맞춰 그리면 발 위치가 맞는다
 - 캔버스 크기를 바꾸면 2D 컨텍스트가 기본값으로 돌아간다. 그러면 보간이 다시 켜진다. 정수 배율에서도 도트가 번진다(인접한 검정·흰색 픽셀이
-  `[0,0,32,96,159,223,255,255]` 처럼 그라데이션이 된다). CSS `image-rendering: pixelated` 로는 못 막는다. 그래서 크기를 바꿀 때마다 보간을 다시 끈다(`src/renderer/stage.ts`)
+  `[0,0,32,96,159,223,255,255]` 처럼 그라데이션이 된다). CSS `image-rendering: pixelated` 로는 못 막는다. 그래서 크기를 바꿀 때마다 보간을 다시 끈다(`src/renderer/stage/stage.ts`)
