@@ -105,6 +105,9 @@ export interface TimeInput {
   workMs?: number; // 이 구간 중 에이전트가 작업한 시간. 흐른 시간을 넘지 않는다
 }
 
+// 마지막 틱 뒤로 흐른 시간 — 상한(TIME_RULES.maxElapsedMs, 30초)을 넘는 틈은 앱 종료·절전·잠금으로 보고 버린다. 시각이 뒤로 가면 0
+export const elapsedSince = (save: Pick<SaveV3, "lastTickAt">, now: number): number => Math.min(TIME_RULES.maxElapsedMs, Math.max(0, now - save.lastTickAt));
+
 export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: TimeInput = {}): TimeEvents {
   const events: TimeEvents = { hatchReady: [], hungerEnter: [], pointsGained: 0, affinityGained: [] };
   const elapsed = Math.max(0, Math.round(elapsedMs));
