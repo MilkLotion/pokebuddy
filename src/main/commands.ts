@@ -75,6 +75,8 @@ export function createCommands(ctx: CommandContext): Commands {
   let server: CommandServer | null = null;
 
   const target = (c: Command): string | null => (typeof c.target === "string" && c.target ? c.target : null);
+  // 개체 명령의 대상 — target 이 없으면 args.petId 를 본다. 실행기의 인자 풀기(src/tx/args.ts argsFromCommand)와 같은 규칙이다 (X4, 2026-10-03)
+  const petTarget = (c: Command): string | null => target(c) ?? (isObj(c.args) && typeof c.args.petId === "string" && c.args.petId ? c.args.petId : null);
 
   // 쓰는 프로세스는 메모리 값(1초 틱 진행 포함)을 본다 — 파일은 15초마다 쓴다 (src/main/game.ts). 못 읽으면 저장 감시의 값
   const currentSave = (): SaveV3 | null => (ctx.party.isWriter() ? ctx.game.read() : null) ?? ctx.party.save();
@@ -124,7 +126,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   // pet.set — 자리 또는 그림 크기
   dispatcher.register("pet.set", async (c) => {
-    const id = target(c);
+    const id = petTarget(c);
     // 크기는 박스 개체도 정한다 — 파티에 나오면 그 크기로 보인다 (2026-09-30). 자리(home)는 파티 개체만
     const inParty = !!id && ctx.party.all().some((p) => p.id === id);
     const owned = inParty || (!!id && !!currentSave()?.pets.some((p) => p.id === id));
@@ -146,7 +148,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   // 돌봄 — 저장은 실행기가 바꾸고 무대는 반응만 보인다
   for (const action of ["feed", "play"] as const) dispatcher.register(action, async (c) => {
-    const id = target(c);
+    const id = petTarget(c);
     if (!id) return { ok: false, reason: "no-pet" };
     const result = await runSave(c);
     if (result.ok) ctx.stage.care?.(id, action);
@@ -155,7 +157,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   // 진화는 그림이 있어야 한다. 바뀔 모습을 먼저 받아 두고, 못 받으면 저장을 건드리지 않는다
   dispatcher.register("evolve", async (c) => {
-    const id = target(c);
+    const id = petTarget(c);
     if (!id) return { ok: false, reason: "no-pet" };
     const save = ctx.party.isWriter() ? currentSave() : null;
     if (save) {
@@ -176,7 +178,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   // 공유 sid 계열의 모습 바꾸기 — 진화처럼 바뀔 종의 그림을 먼저 받아 둔다. 못 받으면 저장을 건드리지 않는다
   dispatcher.register("pet.form", async (c) => {
-    const id = target(c);
+    const id = petTarget(c);
     if (!id) return { ok: false, reason: "no-pet" };
     const species = typeof c.args?.species === "string" ? c.args.species : null;
     const save = ctx.party.isWriter() ? currentSave() : null;
