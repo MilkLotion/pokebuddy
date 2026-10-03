@@ -12,7 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { menuView, subId } from "../../main/menus";
 import { petMenu } from "../../view/menus";
-import { t } from "../../main/text";
+import { t } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";
 import { sleep as wait } from "../harness/wait";
 

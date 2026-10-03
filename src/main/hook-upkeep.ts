@@ -8,7 +8,7 @@
 import { agentStatusList, tidyAgentHooks, type AgentStatus, type TidyResult } from "../agents/registry.js";
 import { CODEX_FLASH_NOTICE, codexNoticeDue, markNotice, readNotices } from "../agents/notice.js";
 import type { BannerView } from "../shared/model/overlays";
-import { t } from "./text.js";
+import { t } from "../view/text.js";
 
 export interface HookUpkeepOptions {
   noticesFile: string; // notices.json — save.json 과 같은 폴더

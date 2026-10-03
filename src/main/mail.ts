@@ -11,7 +11,7 @@ import { isApplied, isRead } from "../mail/letters.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
 import type { TxResult } from "../shared/command";
-import { itemName, petName } from "./text.js";
+import { itemName, petName } from "../view/text.js";
 import type { MailCode, MailReplyCode, TradeCode } from "../shared/names/online-codes.js";
 
 export interface ServerLetter {

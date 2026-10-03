@@ -11,7 +11,7 @@ import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaSlugs, shown
 import { pmdSources } from "../../main/art/stage-art";
 import { overworldUrl } from "../../main/art/overworld-art";
 import { portraitIds } from "../../main/art/portraits";
-import { petName } from "../../main/text";
+import { petName } from "../../view/text";
 import { bannerOf } from "../../view/banner";
 import { refresh } from "../../notify/queue";
 import { keepInBox, placeInParty } from "../../party/placement";

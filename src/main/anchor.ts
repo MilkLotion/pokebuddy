@@ -9,7 +9,7 @@ import * as follow from "../follow/front";
 import * as pkstate from "../follow/state";
 import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
 import { helperCommand, parseInfo, queryHelper, stopHelper } from "../follow/winbounds";
-import type { Paths } from "./paths";
+import type { Paths } from "../platform/paths";
 
 export const ANCHOR_RULES = {
   // Windows 도 헬퍼를 띄워 두고 묻기 때문에(한 번 1ms 안쪽) mac 과 같은 간격으로 창을 따라간다

@@ -15,7 +15,7 @@ import type { ScreenView } from "../shared/model/overlays";
 import type { TradeScreen } from "../shared/model/trade";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
-import { PATHS } from "./paths.js";
+import { PATHS } from "../platform/paths.js";
 import { windowIcon } from "./windows/files.js";
 import { webPreferencesOf } from "./windows/options.js";
 import { isFromWindow } from "./windows/ipc.js";

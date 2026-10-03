@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { MINT_RETIRED } from "../../bag/mint";
 import { createGame } from "../../main/game";
-import { setLang } from "../../main/text";
+import { setLang } from "../../view/text";
 import { bannerOf } from "../../view/banner";
 import { refresh } from "../../notify/queue";
 import { newPet } from "../../party/create";

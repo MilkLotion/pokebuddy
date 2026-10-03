@@ -12,7 +12,7 @@ import path from "node:path";
 import { ALERT_RULES, askAlert } from "../../main/windows/alert-window";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "../../main/halt-dialog";
 import { preloadFile, rendererFile } from "../../main/windows/files";
-import { setLang } from "../../main/text";
+import { setLang } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";
 import { sleep } from "../harness/wait";
 

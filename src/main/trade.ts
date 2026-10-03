@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { safeStorage } from "electron";
-import { PATHS } from "./paths.js";
+import { PATHS } from "../platform/paths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTradeNet, type SessionStorage } from "../online/trade-net.js";
 import type { SessionGate } from "../online/session.js";

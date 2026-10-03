@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
 import { starterSlugs, unlockRules } from "../../dex/unlocks";
-import { PATHS } from "../../main/paths";
+import { PATHS } from "../../platform/paths";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { askStarter } from "../../main/windows/picker-window";
 import { createPortraits, type Portraits } from "../../main/art/portraits";

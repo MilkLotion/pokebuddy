@@ -8,7 +8,7 @@ import path from "node:path";
 import { clearLastError, writeLastError } from "../platform/last-error.js";
 import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
 import { watchDir, type DirWatch } from "../platform/watch-dir.js";
-import type { Paths } from "./paths";
+import type { Paths } from "../platform/paths";
 
 export const LIFETIME_RULES = {
   checkMs: 1000, // lock 파일이 남아 있는지 확인하는 주기 (옛 LIFE_CHECK_MS)
