@@ -3,13 +3,13 @@ import { applyTrade, lockTrade, unlockTrade } from "../../trade/exchange.js";
 import { applyGifts } from "../../mail/gifts.js";
 import { markRead } from "../../mail/letters.js";
 import type { TxHandler } from "../executor";
-import { intOf, isObj, petIdOf } from "./args.js";
+import { intOf, isArgsRecord, petIdOf } from "./args.js";
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
 // 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/exchange.ts, worklog/records/trade/record.md)
 
 const strOf = (args: unknown, key: string): string | null => {
-  const v = isObj(args) ? args[key] : undefined;
+  const v = isArgsRecord(args) ? args[key] : undefined;
   return typeof v === "string" && v ? v : null;
 };
 
@@ -35,7 +35,7 @@ export const tradeUnlockHandler: TxHandler = (draft, args) => {
 export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
   const channelId = strOf(args, "channelId");
   if (!channelId) return { ok: false, reason: "bad-args" };
-  const res = applyTrade(draft, channelId, isObj(args) ? args.received : undefined, ctx.now);
+  const res = applyTrade(draft, channelId, isArgsRecord(args) ? args.received : undefined, ctx.now);
   if (!res.ok) return { ok: false, reason: res.reason };
   return { ok: true, result: res.applied ? { channelId, applied: true, petId: res.newPetId, where: res.where } : { channelId, applied: false } };
 };
@@ -45,7 +45,7 @@ export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
 export const mailApplyHandler: TxHandler = (draft, args) => {
   const letterId = strOf(args, "letterId");
   if (!letterId) return { ok: false, reason: "bad-args" };
-  const res = applyGifts(draft, letterId, isObj(args) ? args.gifts : undefined);
+  const res = applyGifts(draft, letterId, isArgsRecord(args) ? args.gifts : undefined);
   if (!res.ok) return { ok: false, reason: res.reason };
   return { ok: true, result: { letterId, applied: res.applied } };
 };

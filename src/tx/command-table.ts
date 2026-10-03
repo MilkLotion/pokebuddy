@@ -8,7 +8,7 @@ import { petIdOf } from "./handlers/args.js";
 import { boxMoveHandler, boxOrderHandler, boxRenameHandler, boxSortHandler } from "./handlers/box.js";
 import { buyHandler, openHandler, sellHandler, sellPetHandler, useHandler } from "./handlers/items.js";
 import { mailApplyHandler, mailReadHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
-import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, swapHandler, visibility } from "./handlers/party.js";
+import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, swapHandler, visibilityHandler } from "./handlers/party.js";
 import { evolveHandler, feedHandler, formHandler, homeHandler, playHandler, starterHandler } from "./handlers/pet.js";
 import { claimHandler, settingsHandler, tutorialHandler } from "./handlers/progress.js";
 
@@ -18,8 +18,8 @@ export interface TxCommandDef {
 }
 
 export const TX_COMMANDS = {
-  "party.show": { handler: visibility(false) },
-  "party.hide": { handler: visibility(true) },
+  "party.show": { handler: visibilityHandler(false) },
+  "party.hide": { handler: visibilityHandler(true) },
   "party.place": { handler: placeHandler },
   "party.swap": { handler: swapHandler },
   "party.move": { handler: moveHandler },

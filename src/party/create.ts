@@ -2,7 +2,7 @@
 //
 // 시작 값을 두 곳에 적지 않는다. 레벨·친밀도·만복도는 규칙표 하나에서 온다.
 // 종과 이로치와 성격과 성별만 부르는 쪽이 정한다 — 그것이 두 경로의 차이 전부다.
-import { boxRoom, putPet } from "../box/slots.js";
+import { boxRoom, addToBox } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
@@ -112,6 +112,6 @@ export function addNewPet(save: SaveV3, spec: NewPetSpec): NewPetResult | null {
     save.party.slots[i] = { state: "pokemon", petId: id, hidden: false };
     return { pet, slotIndex: i, toBox: false };
   }
-  putPet(save.boxes, id);
+  addToBox(save.boxes, id);
   return { pet, toBox: true };
 }

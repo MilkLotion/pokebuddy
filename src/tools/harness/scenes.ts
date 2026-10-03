@@ -4,9 +4,9 @@ import type { MegaV3, SaveV3 } from "../../shared/save-v3";
 import { rollGender } from "../../dex/gender";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { randomNature } from "../../dex/natures";
-import { putPet } from "../../box/slots";
+import { addToBox } from "../../box/slots";
 import { newPet, nextPetId } from "../../party/create";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import { recordDex } from "../../dex/record";
 import { MEGA_RULES } from "../../dex/rules";
 import { newEgg } from "../../egg/pool";
@@ -31,7 +31,7 @@ function tutorialsFrom(save: SaveV3, id: string): void {
 
 function ensureStarter(save: SaveV3, now: number): void {
   if (save.pets.length) return;
-  begin(save, SCENE_RULES.starter, now, Math.random);
+  applyStarter(save, SCENE_RULES.starter, now, Math.random);
 }
 
 function addHiddenPet(save: SaveV3, now: number): void {
@@ -145,7 +145,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         pet.level = level;
         pet.affinity = affinity;
         s.pets.push(pet);
-        putPet(s.boxes, pet.id);
+        addToBox(s.boxes, pet.id);
         recordDex(s, species, false);
       });
     },
@@ -163,7 +163,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now: now - (33 - i) * 60_000 });
         pet.level = 1 + ((i * 7) % 40);
         s.pets.push(pet);
-        putPet(s.boxes, pet.id);
+        addToBox(s.boxes, pet.id);
         recordDex(s, species, false);
       }
     },
@@ -191,7 +191,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         const next = party.shift();
         return next ? { state: "pokemon", petId: add(...next), hidden: false } : { state: "empty" };
       });
-      for (const row of SHOWCASE.box) putPet(s.boxes, add(...row));
+      for (const row of SHOWCASE.box) addToBox(s.boxes, add(...row));
       for (const id of SHOWCASE.bag) s.bag[id] = Math.max(s.bag[id] ?? 0, SHOWCASE.bagCount);
       if (!s.eggs.some((e) => e.ready)) {
         const egg = newEgg(s, "random", now);
@@ -224,10 +224,10 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         const at = s.party.slots.findIndex((slot) => slot.state === "empty");
         const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
         if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
-        else putPet(s.boxes, petId);
+        else addToBox(s.boxes, petId);
       }
-      putPet(s.boxes, add("mewtwo", 70, { ...full, stone: true }));
-      putPet(s.boxes, add("blastoise", 60, { ...full, stone: true }));
+      addToBox(s.boxes, add("mewtwo", 70, { ...full, stone: true }));
+      addToBox(s.boxes, add("blastoise", 60, { ...full, stone: true }));
     },
   },
   "mega-free": {
@@ -247,7 +247,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         const at = s.party.slots.findIndex((slot) => slot.state === "empty");
         const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
         if (i >= 0) s.party.slots[i] = { state: "pokemon", petId: pet.id, hidden: false };
-        else putPet(s.boxes, pet.id);
+        else addToBox(s.boxes, pet.id);
       }
     },
   },
@@ -274,7 +274,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         const at = s.party.slots.findIndex((slot) => slot.state === "empty");
         const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
         if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
-        else putPet(s.boxes, petId);
+        else addToBox(s.boxes, petId);
       }
       const box: Row[] = [
         ["basculin", 20, 100], ["basculin-blue-striped", 20, 100], ["basculin-white-striped", 20, 100], ["basculegion", 40, 80, "male"],
@@ -282,7 +282,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         ["lycanroc", 30, 60], ["lycanroc-midnight", 30, 60], ["lycanroc-dusk", 30, 60], ["toxtricity", 35, 60], ["toxtricity-low-key", 35, 60],
         ["magearna-original", 50, 80], ["pichu-spiky-eared", 10, 60],
       ];
-      for (const row of box) putPet(s.boxes, add(row));
+      for (const row of box) addToBox(s.boxes, add(row));
       // 플라엣테(영원의 꽃)는 메가스톤을 지닌다 — 메가플라엣테는 이 종만 된다
       const eternal = s.pets.find((p) => p.species === "floette-eternal" && !p.mega?.stone);
       if (eternal) {

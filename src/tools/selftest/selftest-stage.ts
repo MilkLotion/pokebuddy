@@ -25,7 +25,7 @@ import type { StageWindow } from "../../main/stage-window";
 import { createCommands } from "../../main/commands";
 import { createGame } from "../../main/game";
 import { createSaveParty, type PartyPet, type SaveParty } from "../../main/save-party";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
@@ -506,7 +506,7 @@ async function stageRuntimeTests(): Promise<void> {
   // 명령 왕복 (저장 v3) — mailbox → dispatcher → 거래 실행기 → 파일
   const commandPaths = pathsIn(tmpDir("care-commands"));
   const seed = emptyV3(T0);
-  begin(seed, "eevee", T0, () => 0);
+  applyStarter(seed, "eevee", T0, () => 0);
   seed.pets[0]!.fullness = 40;
   seed.bag.toy = 1; // 가방 도구 사용의 무대 반응 확인용 (아래 bag.use)
   seed.bag["rare-candy"] = 1;

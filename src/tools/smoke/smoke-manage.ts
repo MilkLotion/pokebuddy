@@ -23,9 +23,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { unlockByRules } from "../../dex/unlocks";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import { newPet, nextPetId } from "../../party/create";
-import { putPet } from "../../box/slots";
+import { addToBox } from "../../box/slots";
 import { empty } from "../../save/v3";
 import { dexList } from "../../view/dex-list";
 import { MINT_RETIRED } from "../../bag/mint";
@@ -44,7 +44,7 @@ const shots = process.env.POKEBUDDY_SMOKE_SHOTS ?? dir;
 
 // 첫 선택을 마친 저장 — 화석 암나이트는 해금해 둔다. 첫 개체는 꺼내 둔다
 const save = empty(0);
-begin(save, "charmander", 0, () => 0.5);
+applyStarter(save, "charmander", 0, () => 0.5);
 unlockByRules(save, 0);
 save.dex.unlocked.push("omanyte");
 save.points.balance = 500;
@@ -52,13 +52,13 @@ save.points.balance = 500;
 for (let i = 0; i < 8; i += 1) {
   const id = nextPetId(save);
   save.pets.push(newPet({ id, species: "rattata", shiny: false, nature: "hardy", gender: "male", now: 0 }));
-  putPet(save.boxes, id);
+  addToBox(save.boxes, id);
 }
 save.bag["exp-candy-s"] = 3;
 // 공유 sid 계열 한 마리 — 코스모그에서 진화한 코스모움. 박스 칸이 단체사진이고 모습이 둘이다 (검사 17)
 const sharedId = nextPetId(save);
 save.pets.push({ ...newPet({ id: sharedId, species: "cosmoem", shiny: false, nature: "hardy", gender: "male", now: 0 }), evolved: ["cosmog"] });
-putPet(save.boxes, sharedId);
+addToBox(save.boxes, sharedId);
 // 이로치 표시 검사 (마지막) — 파티의 첫 개체와 박스의 공유 계열 개체를 이로치로, 파이리는 도감에 이로치 획득으로 둔다
 for (const pet of save.pets) if (pet.id === sharedId || pet.species === "charmander") pet.shiny = true;
 save.dex.shinyObtained.push("charmander");

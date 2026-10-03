@@ -1,10 +1,7 @@
 # names 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-names.js --update-baseline)
 banned-head: getLang @ src/view/i18n.ts
-banned-head: putPet @ src/box/slots.ts
 banned-head: resolveScreen @ src/main/layout.ts
-duplicate: slotOf @ src/party/visibility.ts, src/tx/handlers/args.ts
 one-word: alive @ src/notify/pending.ts
-one-word: begin @ src/party/starter.ts
 one-word: buy @ src/shop/buy.ts
 one-word: claim @ src/achievement/claim.ts
 one-word: decide @ src/egg/hatch.ts
@@ -14,24 +11,16 @@ one-word: eligible @ src/find/pickup.ts
 one-word: evaluate @ src/achievement/evaluate.ts
 one-word: feed @ src/state/care.ts
 one-word: find @ src/shop/catalog.ts
-one-word: keep @ src/party/placement.ts
-one-word: move @ src/party/placement.ts
 one-word: open @ src/egg/open.ts
-one-word: place @ src/party/placement.ts
 one-word: play @ src/state/care.ts
-one-word: quarantine @ src/save/legacy.ts
-one-word: read @ src/save/legacy.ts
 one-word: refresh @ src/notify/queue.ts
 one-word: remember @ src/mail/letters.ts
 one-word: sell @ src/shop/sell.ts
 one-word: settle @ src/notify/queue.ts
 one-word: skip @ src/tutorial/queue.ts
 one-word: snapshot @ src/view/snapshot.ts
-one-word: swap @ src/party/placement.ts
 one-word: take @ src/notify/queue.ts
 one-word: use @ src/bag/use.ts
-one-word: visibility @ src/tx/handlers/party.ts
-one-word: write @ src/save/legacy.ts
 unused-export-const: AGENT_STATES @ src/shared/names/agents.ts
 unused-export-const: APP_ONLINE_CODES @ src/shared/names/online-codes.ts
 unused-export-const: BANNER_KINDS @ src/shared/names/banners.ts

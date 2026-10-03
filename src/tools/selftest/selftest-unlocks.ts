@@ -5,7 +5,7 @@
 import assert from "node:assert";
 import { reachReport } from "../../dex/reach";
 import { starterSlugs, unlockByRules, unlockRules } from "../../dex/unlocks";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import { speciesPrice } from "../../shop/catalog";
 import { empty } from "../../save/v3";
 import { dexList } from "../../view/dex-list";
@@ -36,7 +36,7 @@ process.stdout.write("(3) 첫 선택 후보의 진화 사슬  ok\n");
 
 // (4) 첫 선택 직후 — 다른 후보와 기본형이 해금되고, 진화·조건·전설 종은 아직이다 (2026-09-25 사용자 결정 "처음부터 해금")
 const save = empty(0);
-assert.ok(begin(save, "charmander", 0, () => 0.5).ok);
+assert.ok(applyStarter(save, "charmander", 0, () => 0.5).ok);
 const fresh = unlockByRules(save, 0);
 for (const s of ["bulbasaur", "pichu", "rattata", "munchlax"]) assert.ok(save.dex.unlocked.includes(s), `해금 ${s}`);
 for (const s of ["pikachu", "charmeleon", "snorlax", "ditto", "lapras", "chansey", "mewtwo"]) assert.ok(!save.dex.unlocked.includes(s), `아직 ${s}`);

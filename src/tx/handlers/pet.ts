@@ -6,9 +6,9 @@ import { megaOf } from "../../dex/mega.js";
 import { setMega } from "../../party/mega-form.js";
 import { feedPet, playWithPet } from "../../state/care.js";
 import { setHome, setSize } from "../../party/home.js";
-import { begin } from "../../party/starter.js";
+import { applyStarter } from "../../party/starter.js";
 import type { TxHandler } from "../executor";
-import { isObj, petIdOf, reasonOf } from "./args.js";
+import { isArgsRecord, petIdOf, reasonOf } from "./args.js";
 
 // ── 진화 ───────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ import { isObj, petIdOf, reasonOf } from "./args.js";
 export const evolveHandler: TxHandler = (draft, args, ctx) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  const choice = isObj(args) && typeof args.to === "string" ? args.to : undefined;
+  const choice = isArgsRecord(args) && typeof args.to === "string" ? args.to : undefined;
   const part = gameDayPart(ctx.now);
   const res = evolvePet(draft, petId, part, choice);
   if (!res.ok) return { ok: false, reason: reasonOf(res), ...(res.choices ? { choices: res.choices } : {}) };
@@ -48,10 +48,10 @@ export const playHandler: TxHandler = (draft, args) => {
 
 // 첫 선택 — 저장이 비었을 때 한 번. 고른 종으로 개체 하나를 만들어 꺼내 놓는다
 export const starterHandler: TxHandler = (draft, args, ctx) => {
-  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   const species = typeof args.species === "string" ? args.species : "";
   if (!species) return { ok: false, reason: "bad-args" };
-  const res = begin(draft, species, ctx.now, ctx.rand);
+  const res = applyStarter(draft, species, ctx.now, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId: res.petId, species: res.species, slotIndex: res.slotIndex } };
 };
@@ -60,12 +60,12 @@ export const starterHandler: TxHandler = (draft, args, ctx) => {
 export const homeHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  if (isObj(args) && args.size !== undefined) {
+  if (isArgsRecord(args) && args.size !== undefined) {
     const sized = setSize(draft, petId, args.size);
     if (!sized.ok) return { ok: false, reason: reasonOf(sized) };
     return { ok: true, result: { petId, size: sized.size } };
   }
-  const res = setHome(draft, petId, isObj(args) ? args.home : null, isObj(args) ? args.screen : undefined);
+  const res = setHome(draft, petId, isArgsRecord(args) ? args.home : null, isArgsRecord(args) ? args.screen : undefined);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, home: res.home, ...(res.screen ? { screen: res.screen } : {}) } };
 };
@@ -75,7 +75,7 @@ export const homeHandler: TxHandler = (draft, args) => {
 export const formHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  const want = isObj(args) ? args.species : undefined;
+  const want = isArgsRecord(args) ? args.species : undefined;
   const target = draft.pets.find((p) => p.id === petId);
   const off = target?.mega?.on != null && want === target.species;
   if (off || (typeof want === "string" && megaOf(want))) {
@@ -83,7 +83,7 @@ export const formHandler: TxHandler = (draft, args) => {
     if (!res.ok) return { ok: false, reason: reasonOf(res) };
     return { ok: true, result: { petId, mega: res.on, reverted: res.reverted } };
   }
-  const res = setForm(draft, petId, isObj(args) ? args.species : undefined);
+  const res = setForm(draft, petId, isArgsRecord(args) ? args.species : undefined);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, from: res.from, to: res.to } };
 };

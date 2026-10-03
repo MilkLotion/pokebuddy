@@ -13,12 +13,12 @@ export type VisibilityResult = Outcome<VisibilityFailure> & {
 };
 
 // 개체가 든 칸을 찾는다. 없으면 -1
-export const slotOf = (slots: PartySlotV3[], petId: string): number =>
+export const petSlotIndex = (slots: PartySlotV3[], petId: string): number =>
   slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
 
 // hidden 을 바꾼다. 같은 상태로 다시 바꾸려 하면 실패로 본다 — 중복 반영을 눈에 보이게 한다
 export function setHidden(slots: PartySlotV3[], petId: string, hidden: boolean): VisibilityResult {
-  const i = slotOf(slots, petId);
+  const i = petSlotIndex(slots, petId);
   if (i < 0) return { ok: false, reason: "no-slot" };
   const slot = slots[i];
   if (!slot || slot.state !== "pokemon") return { ok: false, reason: "not-pokemon" };

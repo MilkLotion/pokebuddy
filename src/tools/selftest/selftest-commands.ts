@@ -8,7 +8,7 @@ import { promisify } from "node:util";
 import { createCommands } from "../../main/commands";
 import { createGame } from "../../main/game";
 import { createSaveParty } from "../../main/save-party";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   fs.mkdirSync(gameDir, { recursive: true });
 
   const seed = emptyV3(T);
-  begin(seed, "charmander", T, () => 0);
+  applyStarter(seed, "charmander", T, () => 0);
   seed.pets[0]!.level = 16; // 레벨 조건을 채워 진화할 수 있게
   seed.points.balance = 5000;
   // 박스 개체 하나 — 박스 개체도 크기는 정한다 (2026-09-30 박스 개체 상세 = 파티 상세)

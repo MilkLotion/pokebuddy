@@ -10,7 +10,7 @@ import { sellsSpecies } from "../../shop/catalog";
 import { snapshot } from "../../view/snapshot";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { begin } from "../../party/starter";
+import { applyStarter } from "../../party/starter";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
 import { buy } from "../../shop/buy";
 import { open } from "../../egg/open";
@@ -301,7 +301,7 @@ function seed(): SaveV3 {
 // (11) 튜토리얼 대기열 — 첫 선택 → 첫 돌봄·상점, 첫 돌봄 끝 → 놀이공간(첫 돌봄 바로 뒤), 랜덤알 구매 → 부화. 이미 한 행동은 완료로 넘긴다
 {
   const s = empty(T0);
-  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   assert.equal(s.points.balance, 120, "첫 선택 뒤 시작 포인트 120 — 랜덤알 하나 값");
   assert.deepStrictEqual(queueTutorials(s, T0), ["first-care", "shop"], "같은 순간이면 첫 돌봄이 상점보다 먼저");
   assert.deepStrictEqual(currentTutorial(s), { id: "first-care", surface: "stage" });
@@ -323,7 +323,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(currentTutorial(s), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
   // 줄에 들 때 이미 돌본 옛 저장은 바로 완료로 넘긴다
   const old = empty(T0);
-  assert.ok(begin(old, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(old, "charmander", T0, () => 0.5).ok);
   old.totals.played = 3;
   queueTutorials(old, T0);
   assert.equal(old.tutorials["first-care"]?.state, "done", "이미 돌본 저장은 첫 돌봄을 띄우지 않는다");
@@ -361,7 +361,7 @@ function seed(): SaveV3 {
 // (11b) 가방·진화 튜토리얼 — 처음 쓸 수 있게 될 때 줄에 든다. 쓸 수 없게 되면 차례를 넘긴다
 {
   const s = empty(T0);
-  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   for (const id of ["first-care", "shop", "growth", "points"]) s.tutorials[id] = { state: "done", steps: 0 };
   assert.deepStrictEqual(queueTutorials(s, T0), [], "도구가 없으면 가방 튜토리얼은 없다");
   s.bag["basic-food"] = 5;
@@ -386,7 +386,7 @@ function seed(): SaveV3 {
 // (12) 같은 순간에 생긴 조건은 스펙 순서(상점 → 부화), 먼저 생긴 것이 먼저. 이미 다른 개체가 있는 옛 저장은 상점을 넘긴다
 {
   const s = empty(T0);
-  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   assert.ok(buy(s, "random", T0, () => 0.5).ok);
   s.eggSeq = 0; // 산 기록이 없는 옛 저장처럼 — 상점이 넘어가지 않게
   s.totals.fed = 1; // 첫 돌봄은 이미 했다 — 상점과 부화의 순서만 본다
@@ -395,7 +395,7 @@ function seed(): SaveV3 {
   assert.equal(currentTutorial(s)?.id, "shop", "같은 순간이면 상점이 부화보다 먼저");
 
   const old = empty(T0);
-  assert.ok(begin(old, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(old, "charmander", T0, () => 0.5).ok);
   old.pets.push({ ...old.pets[0]!, id: "p9" });
   queueTutorials(old, T0);
   assert.equal(old.tutorials.shop?.state, "done", "다른 개체가 이미 있으면 상점 튜토리얼은 완료");
@@ -405,7 +405,7 @@ function seed(): SaveV3 {
 // (12b) 업적 튜토리얼 — 달성하면 줄에 들고, 한 번 받으면 끝
 {
   const s = empty(T0);
-  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   s.totals.fed = 1;
   s.eggSeq = 1; // 상점도 이미 했다
   s.tutorials.playground = { state: "skipped", steps: 0 }; // 놀이공간도 넘겼다
@@ -422,7 +422,7 @@ function seed(): SaveV3 {
 // (13) 밥 주기·놀아주기 처리기는 누적 횟수를 올린다 — 첫 돌봄 튜토리얼이 "이미 돌봤다"를 이것으로 본다
 {
   const s = empty(T0);
-  assert.ok(begin(s, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
   s.pets[0]!.fullness = 50;
   const ctx = { now: T0, rand: () => 0.5 };
   assert.equal(HANDLERS["feed"]!(s, { petId: s.pets[0]!.id }, ctx).ok, true);
@@ -613,7 +613,7 @@ function seed(): SaveV3 {
   assert.ok(s.achievements["streak-7"]?.achievedAt != null, "끊겨도 달성은 남는다");
 
   const e = empty(T0);
-  assert.ok(begin(e, "charmander", T0, () => 0.5).ok);
+  assert.ok(applyStarter(e, "charmander", T0, () => 0.5).ok);
   e.points.balance = 1000;
   assert.ok(buy(e, "random", T0, () => 0.5).ok);
   const eggId = e.eggs[0]!.id;
