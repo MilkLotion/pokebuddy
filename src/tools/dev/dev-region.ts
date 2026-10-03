@@ -6,7 +6,7 @@
 // (예전 scripts/dev-region.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
-import { preloadFile, rendererFile } from "../../main/paths";
+import { preloadFile, rendererFile } from "../../main/windows/files";
 import { drawRegion } from "../../main/windows/region-window";
 import { argAfter, hasFlag, numsOf } from "../harness/shot";
 

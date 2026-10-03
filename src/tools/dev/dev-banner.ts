@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
 import { createBannerWindow } from "../../main/windows/banner-window";
-import { preloadFile, rendererFile } from "../../main/paths";
+import { preloadFile, rendererFile } from "../../main/windows/files";
 import type { BannerView } from "../../shared/model/overlays";
 import { argAfter, hasFlag } from "../harness/shot";
 

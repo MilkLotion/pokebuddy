@@ -7,7 +7,7 @@ import fs from "node:fs";
 import { app, BrowserWindow, type MenuItemConstructorOptions } from "electron";
 import { popupMenu } from "../../main/menu-window";
 import { petMenu, trayMenu } from "../../main/menus";
-import { preloadFile, rendererFile } from "../../main/paths";
+import { preloadFile, rendererFile } from "../../main/windows/files";
 import { argAfter, hasFlag } from "../harness/shot";
 
 const shotFile = argAfter("--shot");

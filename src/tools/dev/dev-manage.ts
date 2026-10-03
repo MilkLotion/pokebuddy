@@ -79,7 +79,7 @@ function loadApp() {
   return {
     createGame: (require("../../main/game") as typeof import("../../main/game")).createGame,
     openManage: manageWindow.openManage,
-    paths: require("../../main/paths") as typeof import("../../main/paths"),
+    paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
     store: require("../../save/store") as typeof import("../../save/store"),
     empty: (require("../../save/v3") as typeof import("../../save/v3")).empty,
     createMainMail: (require("../../main/mail") as typeof import("../../main/mail")).createMainMail,
