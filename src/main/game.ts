@@ -19,9 +19,8 @@ import { dexList } from "../view/dex-list.js";
 import { dexDetail } from "../view/dex-detail.js";
 import { shopDetail } from "../view/shop-detail.js";
 import { snapshotView } from "../view/snapshot.js";
-import { agentInfo, agentStatusList, connectAgent, disconnectAgent, hookCommandOf } from "../agents/registry.js";
-import { findNode, lastSignals, probeHook } from "../agents/check.js";
-import type { AgentAction, AgentReply, AgentRow } from "../shared/model/agents";
+import { runAgentRequest } from "../agents/agent-request.js";
+import type { AgentAction, AgentReply } from "../shared/model/agents";
 import type { DexDetail, DexEntry, ShopDetail } from "../shared/model/detail";
 import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
 import type { Snapshot } from "../shared/model/snapshot";
@@ -29,7 +28,6 @@ import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { FIND_POKEMON } from "../shared/names/commands.js";
 import type { SaveKind } from "../online/cloud-state.js";
 import { saveKindOf } from "../online/save-kind.js";
-import type { AgentName } from "../shared/names/agents";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
 import { petName } from "../view/text.js";
@@ -126,27 +124,8 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return save ? dexList(save) : [];
   };
 
-  // CLI 연결 — 저장이 아니라 각 CLI 의 설정 파일을 본다. 읽기만 하는 호출과 바꾸는 호출을 한 입구로 받는다
-  // 연결 점검(2026-09-30): 읽을 때마다 Node.js 와 CLI 별 마지막 신호를 붙인다. Node.js 가 없으면 연결을 막는다. probe 는 훅을 한 번 돌려 본다
-  const agents = async (req?: { name: string; action: AgentAction }): Promise<AgentReply> => {
-    const node = await findNode(req?.action === "check");
-    const list = (): AgentRow[] => {
-      const signals = lastSignals(PATHS.state);
-      return agentStatusList().map((a) => ({ ...a, lastSignalAt: signals[a.name] ?? null }));
-    };
-    const platform = process.platform;
-    if (!req || req.action === "check") return { ok: true, reason: "ok", list: list(), platform, node };
-    if (!agentInfo(req.name)) return { ok: false, reason: "unknown-cli", list: list(), platform, node };
-    if (req.action === "probe") {
-      const hook = hookCommandOf(req.name as AgentName);
-      if (!hook) return { ok: false, reason: "unknown-cli", list: list(), platform, node };
-      const r = await probeHook(req.name, hook.command, hook.file, node, PATHS.state);
-      return { ok: r.ok, reason: r.reason, ...(r.detail ? { detail: r.detail } : {}), list: list(), platform, node };
-    }
-    if (req.action === "connect" && !node) return { ok: false, reason: "node-missing", list: list(), platform, node };
-    const res = req.action === "connect" ? connectAgent(req.name as AgentName) : disconnectAgent(req.name as AgentName);
-    return { ok: res.ok, reason: res.reason, list: list(), platform, node };
-  };
+  // CLI 연결 탭의 요청 — 저장을 읽지 않는다 (src/agents/agent-request.ts)
+  const agents = (req?: { name: string; action: AgentAction }): Promise<AgentReply> => runAgentRequest(req, { stateDir: PATHS.state });
 
   const detail = (slug: string): DexDetail | null => {
     const save = read();
