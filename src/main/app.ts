@@ -27,7 +27,7 @@ import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
 import { createFreeze } from "./app/freeze";
 import { createHalt } from "./app/halt";
-import { portraitKey, type Portraits } from "./art/portraits";
+import type { Portraits } from "./art/portraits";
 import { artServices } from "./art/services";
 import { startKeepOnTop } from "./keep-on-top";
 import { createClock } from "./clock";
@@ -537,11 +537,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
   // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/art/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/art/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
   const art = createArtLoader(PATHS, {
     overworld: createOverworldSource(PATHS.overworld),
-    portrait: async (look) => {
-      const ask = look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false };
-      const uri = (await pics.get([ask]))[portraitKey(ask)];
-      return uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : null;
-    },
+    portrait: (look) => pics.buffer(look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false }),
   });
   // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
   // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/record.md)

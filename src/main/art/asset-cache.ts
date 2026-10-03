@@ -22,6 +22,8 @@ export interface AssetCache {
   fetchBuffer(rel: string, url: string): Promise<Buffer | null>;
   // 앱에 든 폴더 → 캐시 → 네트워크, data URI 로. 메모하고, 못 받은 것은 retryMs 동안 기억한다. parallel 만큼만 동시에 받는다
   fetchUri(rel: string, url: string): Promise<string | null>;
+  // fetchUri 와 같은 순서·규칙(앱에 든 폴더 → 캐시 → 네트워크, 못 받은 것 기억, parallel)으로 받아 버퍼로. data URI 메모는 하지 않는다
+  fetchFile(rel: string, url: string): Promise<Buffer | null>;
   readUri(rel: string): Promise<string | null>; // 디스크만(앱에 든 폴더 → 캐시). 메모를 함께 쓴다
   has(rel: string): boolean; // 디스크에 있는가(앱에 든 폴더 또는 캐시)
   names(sub: string): string[]; // 두 폴더의 sub 안 파일 이름(합집합)
@@ -69,33 +71,37 @@ export function createAssetCache(o: AssetCacheOptions): AssetCache {
     return Date.now() - at < o.retryMs;
   };
 
+  // 앱에 든 폴더 → 캐시 → 네트워크. 앱에 든 그림은 바로(동기로) 읽는다 — 옮기기 전 portraits.ts 와 같은 순서
+  async function fetchFile(rel: string, url: string): Promise<Buffer | null> {
+    const file = fileOf(rel);
+    if (gaveUp(file)) return null;
+    if (o.bundled) {
+      try {
+        const buf = fs.readFileSync(path.join(o.bundled, rel));
+        if (o.validate(buf)) return buf;
+      } catch {
+        // 앱에 없는 그림 — 캐시와 네트워크로 간다
+      }
+    }
+    const got = await slot(() => fetchBuffer(rel, url));
+    if (!got) {
+      missing.set(file, Date.now());
+      return null;
+    }
+    missing.delete(file);
+    return got;
+  }
+
   return {
     fetchBuffer,
+    fetchFile,
     fileOf,
     async fetchUri(rel, url) {
       const file = fileOf(rel);
       const known = memo.get(file);
       if (known) return known;
-      if (gaveUp(file)) return null;
-      // 앱에 든 그림은 바로(동기로) 읽는다 — 옮기기 전 portraits.ts 와 같은 순서
-      if (o.bundled) {
-        try {
-          const buf = fs.readFileSync(path.join(o.bundled, rel));
-          if (o.validate(buf)) {
-            const uri = dataUriOf(o.mime(buf), buf);
-            memo.set(file, uri);
-            return uri;
-          }
-        } catch {
-          // 앱에 없는 그림 — 캐시와 네트워크로 간다
-        }
-      }
-      const got = await slot(() => fetchBuffer(rel, url));
-      if (!got) {
-        missing.set(file, Date.now());
-        return null;
-      }
-      missing.delete(file);
+      const got = await fetchFile(rel, url);
+      if (!got) return null;
       const uri = dataUriOf(o.mime(got), got);
       memo.set(file, uri);
       return uri;
