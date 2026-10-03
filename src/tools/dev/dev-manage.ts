@@ -231,13 +231,14 @@ void app.whenReady().then(async () => {
   }
   // 설정의 `영역 그리기` — 앱과 같은 창을 띄우고, 적용하면 저장한다
   const drawRegion = async () => {
-    const { drawRegion: draw } = require("../../main/region-window") as typeof import("../../main/region-window");
+    const { drawRegion: draw } = require("../../main/windows/region-window") as typeof import("../../main/windows/region-window");
     const rect = await draw({ preload: paths.preloadFile(), html: paths.rendererFile("region.html"), current: game.read()?.settings.playArea.rect ?? null });
     if (!rect) return { ok: false, reason: "cancelled" };
     return game.send({ cmd: "settings.set", target: "playRegion", args: { value: rect } }, "settings");
   };
-  // 설정의 한 화면 — 앱과 같은 목록·번호 덮개·화면에서 고르기 (src/main/screen-picker.ts)
-  const { createScreenPicker, currentScreens, screenViews } = require("../../main/screen-picker") as typeof import("../../main/screen-picker");
+  // 설정의 한 화면 — 앱과 같은 목록·번호 덮개·화면에서 고르기 (src/main/windows/screen-picker.ts)
+  const { createScreenPicker, screenViews } = require("../../main/windows/screen-picker") as typeof import("../../main/windows/screen-picker");
+  const { screensNow: currentScreens } = require("../../main/windows/display") as typeof import("../../main/windows/display");
   const picker = createScreenPicker({ preload: paths.preloadFile(), html: paths.rendererFile("screens.html"), screens: currentScreens });
   const screens = () => screenViews(currentScreens(), game.read()?.settings.playArea.screen ?? null);
   const pickScreen = async () => {

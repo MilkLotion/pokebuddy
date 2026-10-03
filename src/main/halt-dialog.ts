@@ -5,15 +5,15 @@
 // 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다 (worklog/records/app-update/record.md)
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
-// 게임 디자인의 알림 창(src/main/alert-window.ts)으로 먼저 띄운다 — 2026-10-01 사용자 "그것들은 디자인 못바꿔?" → "진행"
+// 게임 디자인의 알림 창(src/main/windows/alert-window.ts)으로 먼저 띄운다 — 2026-10-01 사용자 "그것들은 디자인 못바꿔?" → "진행"
 // (worklog/records/alert-window/record.md). 알림 창을 띄우지 못하면 아래 Electron 네이티브 대화상자로 띄운다.
 // 네이티브는 작은 투명 부모 창을 하나 만들어 붙인다
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
-//   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/region-window.ts 와 같은 층)
+//   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (src/main/windows/region-window.ts 와 같은 층)
 import { app, BrowserWindow, dialog, screen } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";
-import { showAlert } from "./alert-window";
+import { showAlert } from "./windows/alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
 import { webPreferencesOf } from "./windows/options";

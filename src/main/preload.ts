@@ -137,7 +137,7 @@ const BANNER = {
 
 contextBridge.exposeInMainWorld("pokebuddyBanner", bridgeOf<BannerIpc>(BANNER));
 
-// 알림 창 — 내용을 받고, 그린 크기와 누른 단추를 알린다 (src/main/alert-window.ts)
+// 알림 창 — 내용을 받고, 그린 크기와 누른 단추를 알린다 (src/main/windows/alert-window.ts)
 const ALERT = {
   onShow: ["push", "alert:show"],
   size: ["send", "alert:size"],

@@ -7,7 +7,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { createGenGate } from "../../main/device-gen";
+import { createGenGate } from "../../main/windows/device-gen";
 import { createGame } from "../../main/game";
 import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
@@ -257,7 +257,7 @@ try {
     process.stdout.write("(13) 업적 목록  ok\n");
   }
 
-  // (14) 기기 창 세대 번호 — 닫힌 뒤 낡은 번호의 여는 요청은 버리고, 닫힘을 받은 뒤의 요청은 바로 연다 (src/main/device-gen.ts)
+  // (14) 기기 창 세대 번호 — 닫힌 뒤 낡은 번호의 여는 요청은 버리고, 닫힘을 받은 뒤의 요청은 바로 연다 (src/main/windows/device-gen.ts)
   {
     const gate = createGenGate();
     assert.equal(gate.accepts(0), true, "처음 — 관리 창도 0 에서 센다");

@@ -5,11 +5,13 @@
 // 부를 때마다 창을 새로 만들고 답하면 부순다. 게임을 만들기 전(저장 잠김 창)에도 뜬다
 // 창이 내용을 그려 크기를 알려 오지 못하면(ALERT_RULES.readyMs·문서 못 읽음·렌더러 죽음) 창을 부수고 null — 부른 쪽이 OS 대화상자로 띄운다
 // 보이기 전에 밖에서 닫히면(앱 종료·로그오프) closed — 끄는 중에 OS 대화상자를 새로 띄우지 않는다(검수 3)
-import { app, BrowserWindow, ipcMain, screen } from "electron";
-import type { AlertChannel } from "../shared/ipc/overlays";
-import type { AlertView } from "../shared/model/overlays";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./windows/options.js";
+import { app, type BrowserWindow } from "electron";
+import type { AlertChannel } from "../../shared/ipc/overlays";
+import type { AlertView } from "../../shared/model/overlays";
+import { primaryWorkArea } from "./display";
+import { afterLoad, createIpcScope } from "./ipc";
+import { createOverlayWindow } from "./options";
+import { centerSpotOf } from "./placement";
 
 const CH = {
   show: "alert:show",
@@ -42,15 +44,14 @@ export function showAlert(o: AlertOptions): Promise<AlertAnswer> {
     let done = false;
     let shown = false;
     const timers: NodeJS.Timeout[] = [];
-
-    const mine = (sender: unknown): boolean => !!win && !win.isDestroyed() && sender === win.webContents;
+    // 이 알림 창이 보낸 것만 받는다 — 모든 창이 같은 preload 를 쓴다
+    const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
 
     const finish = (answer: AlertAnswer): void => {
       if (done) return;
       done = true;
       for (const t of timers) clearTimeout(t);
-      ipcMain.off(CH.size, onSize);
-      ipcMain.off(CH.pick, onPick);
+      scope.dispose();
       o.signal?.removeEventListener("abort", onAbort);
       if (win && !win.isDestroyed()) win.destroy();
       win = null;
@@ -59,65 +60,42 @@ export function showAlert(o: AlertOptions): Promise<AlertAnswer> {
     const onAbort = (): void => finish("closed");
 
     // 내용 높이를 받았다 — 창 크기를 맞추고 보인다. 한 번만
-    function onSize(e: Electron.IpcMainEvent, height: unknown): void {
-      if (!mine(e.sender) || shown || !win) return;
+    const onSize = (height: unknown): void => {
+      if (shown || !win) return;
       if (typeof height !== "number" || !Number.isFinite(height) || height <= 0) return;
       shown = true;
-      const area = screen.getPrimaryDisplay().workArea;
+      const area = primaryWorkArea();
       const width = ALERT_RULES.box + ALERT_RULES.margin * 2;
       const h = Math.min(Math.ceil(height) + ALERT_RULES.margin * 2, area.height);
-      win.setBounds({
-        x: Math.round(area.x + (area.width - width) / 2),
-        y: Math.round(area.y + Math.max(0, (area.height - h) / 3)),
-        width,
-        height: h,
-      });
+      win.setBounds({ ...centerSpotOf(area, { width, height: h }), width, height: h });
       // Dock 을 숨긴 mac 앱은 앞으로 나오지 않는다 — 창을 보기 전에 앱을 앞으로 가져온다
       if (process.platform === "darwin") app.focus({ steal: true });
       win.show();
       win.focus();
-    }
+    };
 
     // 단추를 눌렀다 — 보인 단추가 아니면(Esc 의 null 포함) 취소 단추로 본다
-    function onPick(e: Electron.IpcMainEvent, index: unknown): void {
-      if (!mine(e.sender) || !shown) return;
+    const onPick = (index: unknown): void => {
+      if (!shown) return;
       finish(o.view.buttons.some((b) => b.index === index) ? (index as number) : o.cancelId);
-    }
+    };
 
+    let w: BrowserWindow;
     try {
-      win = new BrowserWindow({
-        width: ALERT_RULES.box + ALERT_RULES.margin * 2,
-        height: 240,
-        show: false,
-        frame: false,
-        transparent: true,
-        backgroundColor: "#00000000",
-        hasShadow: false,
-        resizable: false,
-        movable: false,
-        minimizable: false,
-        maximizable: false,
-        fullscreenable: false,
-        skipTaskbar: true,
-        alwaysOnTop: true,
-        acceptFirstMouse: true, // mac 에서 첫 클릭을 삼키지 않는다
-        icon: windowIcon(),
-        webPreferences: webPreferencesOf(o.preload),
-      });
+      // mac 의 다른 앱 전체 화면 Space 위에도 뜬다 — 무대 창과 같은 설정(검수 5)
+      w = createOverlayWindow({ preload: o.preload, layer: "screen-saver", bounds: { width: ALERT_RULES.box + ALERT_RULES.margin * 2, height: 240 }, firstMouse: true, allWorkspaces: true });
     } catch (e) {
       console.error("알림 창을 만들지 못했다 — OS 대화상자로 띄운다", e);
       finish(null);
       return;
     }
-    win.setAlwaysOnTop(true, "screen-saver");
-    // mac 의 다른 앱 전체 화면 Space 위에도 뜬다 — 무대 창과 같은 설정(검수 5)
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    win = w;
     // 보인 뒤 닫혔으면(Alt+F4 등) 취소, 보이기 전이면 밖에서 닫은 것(closed)
-    win.on("closed", () => finish(shown ? o.cancelId : "closed"));
+    w.on("closed", () => finish(shown ? o.cancelId : "closed"));
     // 렌더러가 죽으면 답이 오지 않는다 — 보였으면 취소, 아니면 OS 대화상자로(검수 2)
-    win.webContents.on("render-process-gone", () => finish(shown ? o.cancelId : null));
-    ipcMain.on(CH.size, onSize);
-    ipcMain.on(CH.pick, onPick);
+    w.webContents.on("render-process-gone", () => finish(shown ? o.cancelId : null));
+    scope.on(CH.size, (_e, height) => onSize(height));
+    scope.on(CH.pick, (_e, index) => onPick(index));
     o.signal?.addEventListener("abort", onAbort, { once: true });
     if (o.timeoutMs) timers.push(setTimeout(() => finish("closed"), o.timeoutMs));
     timers.push(
@@ -125,10 +103,8 @@ export function showAlert(o: AlertOptions): Promise<AlertAnswer> {
         if (!shown) finish(null);
       }, ALERT_RULES.readyMs),
     );
-    win.webContents.once("did-finish-load", () => {
-      if (win && !win.isDestroyed()) win.webContents.send(CH.show, o.view);
-    });
-    win.loadFile(o.html).catch((e: unknown) => {
+    afterLoad(w, () => w.webContents.send(CH.show, o.view));
+    w.loadFile(o.html).catch((e: unknown) => {
       console.error("알림 창 문서를 읽지 못했다 — OS 대화상자로 띄운다", e);
       if (!shown) finish(null);
     });

@@ -3,12 +3,15 @@
 // 테두리 없음 · 배경 투명 · 항상 위 · 포커스를 뺏지 않음 · 작업 표시줄에 없음. 배너가 없을 때는 숨긴다.
 // 배너는 뜬 뒤 BANNER_RULES.showMs 가 지나면 사라진다. 커서 위치와 무관하다.
 // 제목 줄 오른쪽 `✕` 로 바로 닫는다. 누르지 않아도 시간이 지나면 사라진다 (docs/specs/ui-components.md C-19)
-import { BrowserWindow, ipcMain, screen } from "electron";
-import type { BannerChannel } from "../shared/ipc/overlays";
-import type { BannerView } from "../shared/model/overlays";
-import type { ManageRoute } from "../shared/model/route";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./windows/options.js";
+// 창 하나를 숨겼다 보이며 계속 쓴다 — 한 번 답하는 창 틀에 넣지 않는다 (worklog/records/code-structure/design/10-main.md 3.7절)
+import type { BrowserWindow } from "electron";
+import type { BannerChannel } from "../../shared/ipc/overlays";
+import type { BannerView } from "../../shared/model/overlays";
+import type { ManageRoute } from "../../shared/model/route";
+import { primaryWorkArea } from "./display";
+import { createIpcScope } from "./ipc";
+import { createOverlayWindow } from "./options";
+import { cornerSpotOf } from "./placement";
 
 const CH = {
   show: "banner:show",
@@ -39,8 +42,8 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
   let loaded: Promise<void> | null = null;
   let current: BannerView | null = null;
   let timer: NodeJS.Timeout | null = null;
-
-  const mine = (sender: unknown): boolean => !!win && !win.isDestroyed() && sender === win.webContents;
+  // 배너 창이 보낸 것만 받는다. 창을 다시 만들어도 처리기는 한 벌이다 — 지금 창을 보고 가린다
+  const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
 
   const stopTimer = (): void => {
     if (timer) clearTimeout(timer);
@@ -60,59 +63,37 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
     opts.onDone();
   }
 
-  const onGo = (e: Electron.IpcMainEvent, key: unknown): void => {
-    if (!mine(e.sender) || !current || key !== current.key) return;
+  scope.on(CH.go, (_e, key) => {
+    if (!current || key !== current.key) return;
     const route = current.route;
     finish();
     opts.onGo(route);
-  };
+  });
   // `✕` — 그 배너만 닫는다. 다음 배너는 onDone 에서 나온다
-  const onClose = (e: Electron.IpcMainEvent, key: unknown): void => {
-    if (!mine(e.sender) || !current || key !== current.key) return;
+  scope.on(CH.close, (_e, key) => {
+    if (!current || key !== current.key) return;
     finish();
-  };
-  ipcMain.on(CH.go, onGo);
-  ipcMain.on(CH.close, onClose);
+  });
 
   function ensure(): Promise<void> {
     if (win && !win.isDestroyed() && loaded) return loaded;
-    win = new BrowserWindow({
-      width: BANNER_RULES.width,
-      height: BANNER_RULES.height,
-      show: false,
-      frame: false,
-      transparent: true,
-      backgroundColor: "#00000000",
-      hasShadow: false,
-      resizable: false,
-      movable: false,
-      minimizable: false,
-      maximizable: false,
-      fullscreenable: false,
-      skipTaskbar: true,
-      alwaysOnTop: true,
-      focusable: false, // 누르기는 받지만 쓰던 창의 포커스는 뺏지 않는다
-      acceptFirstMouse: true, // mac 에서 첫 클릭을 삼키지 않는다
-      icon: windowIcon(),
-      webPreferences: webPreferencesOf(opts.preload),
-    });
-    win.setAlwaysOnTop(true, "pop-up-menu");
-    win.on("closed", () => {
+    // 누르기는 받지만 쓰던 창의 포커스는 뺏지 않는다(focusable: false). mac 에서 첫 클릭을 삼키지 않는다(firstMouse)
+    const w = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { width: BANNER_RULES.width, height: BANNER_RULES.height }, focusable: false, firstMouse: true });
+    win = w;
+    w.on("closed", () => {
       win = null;
       loaded = null;
       stopTimer();
       current = null;
     });
-    loaded = win.loadFile(opts.html).catch(() => undefined);
+    loaded = w.loadFile(opts.html).catch(() => undefined);
     return loaded;
   }
 
   // 주 화면 작업 영역 오른쪽 아래. 작업 표시줄을 피한다
   const place = (w: BrowserWindow): void => {
-    const area = screen.getPrimaryDisplay().workArea;
-    const x = area.x + area.width - BANNER_RULES.width - BANNER_RULES.margin;
-    const y = area.y + area.height - BANNER_RULES.height - BANNER_RULES.margin;
-    w.setBounds({ x, y, width: BANNER_RULES.width, height: BANNER_RULES.height });
+    const size = { width: BANNER_RULES.width, height: BANNER_RULES.height };
+    w.setBounds({ ...cornerSpotOf(primaryWorkArea(), size, BANNER_RULES.margin), ...size });
   };
 
   return {
@@ -130,8 +111,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
     close() {
       stopTimer();
       current = null;
-      ipcMain.removeListener(CH.go, onGo);
-      ipcMain.removeListener(CH.close, onClose);
+      scope.dispose();
       if (win && !win.isDestroyed()) win.destroy();
       win = null;
     },

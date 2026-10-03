@@ -10,7 +10,7 @@ import type { DexDeviceChannel } from "../shared/ipc/devices";
 import type { DexDeviceView } from "../shared/model/devices";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./windows/options.js";
-import { createGenGate } from "./device-gen.js";
+import { createGenGate } from "./windows/device-gen.js";
 import { dockAt } from "./windows/placement.js";
 
 const CH = {
@@ -55,7 +55,7 @@ export function bringUp(w: BrowserWindow): void {
 
 export function createDexWindow(opts: DexWindowOptions): DexWindow {
   let win: BrowserWindow | null = null;
-  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
   let owner: BrowserWindow | null = null;
   let slug: string | null = null;
