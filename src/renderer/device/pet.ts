@@ -16,6 +16,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
 import { createDeviceFrame } from "./device-frame.js";
+import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
 
 const api = window.pokebuddyPet;
 // 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
@@ -70,7 +71,7 @@ const DETAIL_STEPS = [
     : { tut: "detail-growth", title: "진화", body: "조건을 채우면 진화를 눌러 직접 진화해요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
 ] as const;
-const COACH = { pad: 6, gap: 10, width: 280, margin: 8 };
+const COACH = { pad: 6, gap: 10, ...COACH_SIZE };
 let detailStep = 0;
 let detailPetId: string | null = null; // 다른 개체를 열면 1단계부터
 let coachEl: HTMLElement | null = null;
@@ -89,28 +90,18 @@ function drawCoach(): void {
   const r = target.getBoundingClientRect();
   const W = document.documentElement.clientWidth;
   const H = device.getBoundingClientRect().height;
-  const hole = { l: Math.max(0, r.left - COACH.pad), t: Math.max(0, r.top - COACH.pad), r: Math.min(W, r.right + COACH.pad), b: Math.min(H, r.bottom + COACH.pad) };
+  const hole = holeOf(r, COACH.pad, W, H);
   const bubble = el("div", "coach-bubble");
-  const nudge = (): void => {
-    bubble.classList.remove("nudge");
-    void bubble.offsetWidth;
-    bubble.classList.add("nudge");
-  };
   const block = (cls: string, x: number, y: number, w: number, h: number): void => {
     const d = el("div", cls);
     Object.assign(d.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
     d.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      nudge();
+      nudgeEl(bubble);
     });
     layer.appendChild(d);
   };
-  for (const [x, y, w, h] of [
-    [0, 0, W, hole.t],
-    [0, hole.b, W, H - hole.b],
-    [0, hole.t, hole.l, hole.b - hole.t],
-    [hole.r, hole.t, W - hole.r, hole.b - hole.t],
-  ] as const) block("coach-dim", x, y, w, h);
+  for (const [x, y, w, h] of dimRectsOf(hole, W, H)) block("coach-dim", x, y, w, h);
   block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t); // 안내만 한다 — 대상은 보이되 눌리지 않는다
   const head = el("div", "head");
   const x = buttonEl("x", "✕", () => act({ kind: "tutorial", action: "skip" }));

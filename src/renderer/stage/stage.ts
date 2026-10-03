@@ -11,6 +11,7 @@ import { enablePointer } from "./pointer.js";
 import { Animator, SpriteStore, TICK_MS } from "./sprites.js";
 import { el, needEl } from "../ui/dom.js";
 import { decodeImage, opaqueBoxOf, readPixels } from "../ui/image.js";
+import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
 
 const params = new URLSearchParams(location.search);
 const opts = {
@@ -327,7 +328,7 @@ bridge.onClickThrough((on) => {
 // 놀이공간: 무대(=놀이공간) 둘레 테두리와 "지금 · 화면 전체" 표시, 말풍선은 가운데.
 // 말풍선 위에서만 클릭을 받는다(onHover 의 "coach" 답). 버튼은 메인으로 간다 — 버튼은 완료, ✕ 는 스킵
 
-const COACH = { pad: 8, gap: 12, width: 280, margin: 8 };
+const COACH = { pad: 8, gap: 12, ...COACH_SIZE };
 let coach: CoachView | null = null;
 let bubbleEl: HTMLElement | null = null;
 const dims: HTMLElement[] = [];
@@ -379,14 +380,8 @@ function placeCoach(r: { x: number; y: number; w: number; h: number }): void {
   if (!bubbleEl || dims.length !== 4) return;
   const W = innerWidth;
   const H = innerHeight;
-  const hole = { l: Math.max(0, r.x - COACH.pad), t: Math.max(0, r.y - COACH.pad), r: Math.min(W, r.x + r.w + COACH.pad), b: Math.min(H, r.y + r.h + COACH.pad) };
-  const boxes = [
-    [0, 0, W, hole.t],
-    [0, hole.b, W, H - hole.b],
-    [0, hole.t, hole.l, hole.b - hole.t],
-    [hole.r, hole.t, W - hole.r, hole.b - hole.t],
-  ] as const;
-  boxes.forEach(([x, y, w, h], i) => {
+  const hole = holeOf({ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h }, COACH.pad, W, H);
+  dimRectsOf(hole, W, H).forEach(([x, y, w, h], i) => {
     const d = dims[i];
     if (d) Object.assign(d.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
   });
@@ -430,10 +425,7 @@ addEventListener("resize", () => {
 // 첫 돌봄 말풍선이 떠 있는 동안의 입력 — 받는 것은 대상 포켓몬 우클릭과 말풍선 단추뿐이다.
 // 왼쪽 누름(잡기·클릭=놀아주기)과 다른 곳 우클릭은 막고 말풍선을 한 번 흔든다. 포인터 모듈(pointer.ts)보다 먼저 본다(캡처)
 function nudgeCoach(): void {
-  if (!bubbleEl) return;
-  bubbleEl.classList.remove("nudge");
-  void bubbleEl.offsetWidth; // 애니메이션을 처음부터 다시
-  bubbleEl.classList.add("nudge");
+  if (bubbleEl) nudgeEl(bubbleEl);
 }
 const guardCoach = (e: MouseEvent): boolean => {
   if (coach?.kind !== "pet" || coach.passive) return false;

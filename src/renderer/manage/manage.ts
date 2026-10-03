@@ -28,6 +28,7 @@ import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
 import { numberText, pointText } from "../ui/number-text.js";
 import { createDeviceLink } from "./device-link.js";
+import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -4044,7 +4045,7 @@ interface CoachSpec {
   interactive?: boolean;
   also?: HTMLElement | null; // 함께 밝힐 요소 — 구멍을 둘을 감싸는 사각형으로 넓힌다(놀이공간 줄 + 화면 줄)
 }
-const COACH = { pad: 8, gap: 12, width: 280, margin: 8 };
+const COACH = { pad: 8, gap: 12, ...COACH_SIZE };
 
 let coachEl: HTMLElement | null = null;
 let coachWatch: ResizeObserver | null = null; // 코치마크 대상의 크기 변화 — 바뀌면 다시 잰다
@@ -4199,29 +4200,19 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
   const r = t1 ? { left: Math.min(t0.left, t1.left), top: Math.min(t0.top, t1.top), right: Math.max(t0.right, t1.right), bottom: Math.max(t0.bottom, t1.bottom) } : t0;
   const W = window.innerWidth;
   const H = window.innerHeight;
-  const hole = { l: Math.max(0, r.left - COACH.pad), t: Math.max(0, r.top - COACH.pad), r: Math.min(W, r.right + COACH.pad), b: Math.min(H, r.bottom + COACH.pad) };
+  const hole = holeOf(r, COACH.pad, W, H);
   const bubble = el("div", "coach-bubble");
   // 막을 누르면 아무 일도 없고 말풍선을 한 번 흔든다 — 넘어가거나 스킵되지 않는다
-  const nudge = (): void => {
-    bubble.classList.remove("nudge");
-    void bubble.offsetWidth; // 애니메이션을 처음부터 다시
-    bubble.classList.add("nudge");
-  };
   const block = (cls: string, x: number, y: number, w: number, h: number): void => {
     const dim = el("div", cls);
     Object.assign(dim.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
     dim.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      nudge();
+      nudgeEl(bubble);
     });
     layer.appendChild(dim);
   };
-  for (const [x, y, w, h] of [
-    [0, 0, W, hole.t],
-    [0, hole.b, W, H - hole.b],
-    [0, hole.t, hole.l, hole.b - hole.t],
-    [hole.r, hole.t, W - hole.r, hole.b - hole.t],
-  ] as const) block("coach-dim", x, y, w, h);
+  for (const [x, y, w, h] of dimRectsOf(hole, W, H)) block("coach-dim", x, y, w, h);
   // 안내만 하는 단계는 구멍도 막는다 — 대상은 보이되 눌리지 않는다(예: 개체 상세의 박스에 보관)
   if (!spec.interactive) block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t);
   const head = el("div", "head");
