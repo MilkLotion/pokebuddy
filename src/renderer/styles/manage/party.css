@@ -1,0 +1,202 @@
+/* manage.html 의 파티 칸·초상·프리셋 넘김 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 파티 칸 */
+/* 열 너비는 칸의 내용과 무관하게 반반이다 — 1fr 만 쓰면 긴 이름(`플라엣테(영원의 꽃)`)이 열을 밀어 가로 스크롤이 생긴다. 이름은 말줄임한다 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.slot {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 12px;
+  min-height: 160px;
+  display: flex;
+  /* 빈 칸·잠긴 칸과 높이를 맞추느라 남는 세로 공간은 위아래로 나눈다 (Figma Party / Base) */
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  position: relative;
+}
+/* 옆 기기 창에 떠 있는 개체 — 옅은 배경만 쓴다(강조 테두리 없음). Figma 05 `908:23772` 의 `Party Layout` 인스턴스 */
+.slot.selected,
+.cell.selected {
+  background: var(--accent-bg);
+}
+/* 디버프 배지 — Figma `Debuff Badge` `126:1065`. 칸 오른쪽 위(오른쪽 12, 위 12, 사이 4). 점 6px + 10px 글자.
+   지금 디버프는 배고픔 두 단계뿐이다 (docs/specs/balance.md "배고픔 디버프") */
+.slot .debuffs {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+.debuff {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  font-family: var(--font-small);
+  font-size: 10px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.debuff::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.debuff.warning::before {
+  background: var(--warning);
+}
+.debuff.danger::before {
+  background: var(--danger);
+}
+/* 버프 — 든든함·신남·들뜸. 디버프 뒤에 초록 점 (Figma `Debuff Badge` Tone=Success `970:20369`, 2026-09-30) */
+.debuff.success::before {
+  background: var(--success);
+}
+/* 파티 칸 초상 — Figma 초상 96 */
+.slot > .portrait {
+  width: 96px;
+  height: 96px;
+}
+/* 파티 칸 이름 — 레벨 옆 한 줄. 길면 말줄임 */
+.slot .top .name {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 이름 뒤 성별 16 · 성격 — 이름만 줄어들고 이 둘은 줄지 않는다 (2026-09-30, Figma `identity-copy` `126:1075`) */
+.slot .top .gender,
+.slot .top .shiny {
+  flex: none;
+  align-self: center;
+}
+.slot .top .nature {
+  flex: none;
+  white-space: nowrap;
+}
+/* 빈 칸·잠긴 칸 — Figma `Party Slot` state/empty·state/locked. 48 옅은 네모 안의 +·자물쇠, 제목, (빈 칸만) 설명 */
+.slot.blank {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+}
+.slot.blank .blank-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--accent-bg);
+  display: grid;
+  place-items: center;
+}
+.slot.blank .blank-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.slot.blank strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+.slot.blank small {
+  font-size: 12px;
+}
+.slot.locked {
+  cursor: default;
+}
+.slot.locked:disabled {
+  opacity: 1;
+}
+/* 포켓몬 초상 — 원형 바탕 없이 그림만 보인다 (2026-10-03 사용자 결정 "원형 저거 굳이 없어도 될거같아" · "다 빼봐"). 포켓몬이 없는 자리 표시만 원형으로 남긴다 */
+.portrait {
+  position: relative;
+  flex: none;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+/* 초상 그림 — PokeAPI 기본 그림(96 × 96). 둘레 여백이 커서 가운데를 잘라 자리를 채운다.
+   몸이 이 네모 밖으로 나가는 그림은 portrait.ts 가 그림마다 보는 네모를 넓혀 덮어쓴다 */
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-view-box: inset(14%);
+}
+.cell .dot,
+.dex-cell .dot {
+  overflow: hidden;
+}
+/* 숨김 마커 — 닫힌 몬스터볼. Figma `visibility-marker` 의 그림(16px)을 원 테두리 위 45도 자리에 둔다.
+   80 원의 45도 자리는 네모 모서리에서 약 12px 안쪽이다 — 16px 표시의 중심을 거기 맞춘다. 그림 예외라 색을 변수에 묶지 않는다 */
+.mark {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  background: var(--ball-closed) center / 14px 14px no-repeat;
+}
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+.name {
+  font-size: 15px;
+  font-family: var(--font-large);
+  font-weight: 600;
+  margin: 2px 0 6px;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.tag {
+  font-size: 10px;
+  font-family: var(--font-small);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--ink);
+}
+/* 파티 머리 줄의 프리셋 넘김 — 파티 ◀ [이름] ▶ … 교체. 박스 넘김 줄과 같은 부품이고 이름 칸은 12글자 폭 고정이다.
+   머리 줄 안에 두어 줄을 더하지 않는다 — 창 높이(682)가 그대로다 (Figma 05 `Party / Base` `217:1705`, 2026-10-02 사용자 결정) */
+.head .pager.preset-pager {
+  align-self: center;
+  margin: 0 0 0 14px;
+}

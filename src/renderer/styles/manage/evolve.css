@@ -1,0 +1,183 @@
+/* manage.html 의 성격 변경·진화 트리·메가진화·단체사진 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 성격 변경 — 왼쪽 지금, 가운데 민트, 오른쪽 바꾼 후. 두 카드는 높이가 같다 (Figma Detail / Nature Change) */
+.compare {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 12px;
+}
+.nat-card {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12px;
+}
+.nat-card .portrait {
+  width: 56px;
+  height: 56px;
+}
+.nat-card .name {
+  font-weight: 600;
+}
+.nat-card .note,
+.mint-mid {
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+.mint-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  max-width: 72px;
+}
+/* 바꾼 후 카드에서 고른 성격 — 보조 글씨가 아니라 본문 글씨로 */
+/* 고른 성격 이름(12px)과 안내(10px)의 줄 높이를 같게 — 고를 때 창 높이가 튀지 않게 */
+.nat-card .note {
+  line-height: 18px;
+}
+.nat-card .note.picked {
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* 성격표 — 원작 성격표처럼 5×5 격자. 25개를 스크롤 없이 한 번에 보인다 (2026-09-29 민트 통일) */
+.nature-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 12px;
+}
+.nature-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 40px;
+  padding: 4px 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 11px;
+  line-height: 14px;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nature-cell .hint {
+  min-height: 12px;
+  font-size: 9px;
+  line-height: 12px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+.nature-cell:hover:not(:disabled) {
+  background: var(--canvas);
+}
+.nature-cell:disabled,
+.nature-cell:disabled .hint {
+  color: var(--disabled);
+  cursor: default;
+}
+.nature-cell[aria-pressed="true"] {
+  background: var(--accent-bg);
+  font-weight: 600;
+}
+.nature-cell:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.info-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--canvas);
+  font-size: 12px;
+}
+/* 고르기 전에 자리만 잡아 둔 안내 상자 — 창 높이가 튀지 않게 */
+.info-box.reserve {
+  visibility: hidden;
+}
+.info-box .note {
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+  margin-top: 2px;
+}
+/* 진화 창의 진화 트리 — 도감 기기 창과 같은 모양(src/renderer/ui/evo-tree.ts, dex.html .evo-*). Figma 05 `Evolution Confirm` `1126:23890`.
+   지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 컬러 테두리 없음 */
+.dialog .evo-card {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+.evo-kids {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.evo-node.current {
+  background: var(--canvas);
+}
+.evo-node.pick {
+  cursor: pointer;
+}
+.evo-node.pick:hover,
+.evo-node.picked {
+  background: var(--accent-bg);
+}
+.evo-node.dim {
+  opacity: 0.45;
+}
+/* 메가진화 고르기 — 메가 모습의 이름이 길다(메가리자몽X). 칸을 넓혀 고른 칸의 바탕 안에 든다 (Figma 05 `Party / Detail Device / Mega Choose` `1325:47012`) */
+.evo-card.mega .evo-branch {
+  gap: 8px;
+}
+.evo-card.mega .evo-kids .evo-node {
+  width: 104px;
+}
+.evo-node .portrait {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.evo-radial {
+  position: relative;
+}
+/* 공유 sid — 단체사진 (Figma `10 · 공유 sid 시안` 시안 C `481:1227`).
+   박스 칸의 초상 자리에 모습 넷을 2×2 로 담는다. 모습 말풍선은 메뉴 창이 그린다 (src/renderer/menu.html) */
+.group-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent-bg);
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+.gp-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.gp-face .art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
