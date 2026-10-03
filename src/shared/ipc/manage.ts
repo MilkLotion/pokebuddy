@@ -4,7 +4,7 @@ import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
-import type { BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput, PetDeviceAction, PetDeviceInput, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { ScreenView } from "../model/overlays.js";
 import type { ManageRoute } from "../model/route.js";
@@ -23,6 +23,7 @@ export interface ManageRequest {
 // 결과는 문구가 아니라 코드 — 문구는 화면이 만든다. 코드의 목록은 ../names/reasons.ts 와 ../names/online-codes.ts
 export type ManageReply = CommandResult & {
   screen?: TradeScreen; // trade.* 명령의 결과 — 교환 모달이 그리는 값
+  result?: ResultLine; // bag.use·shop.buy 가 성공했을 때 기기 창의 결과 두 줄 (src/view/result-lines.ts)
 };
 
 // 설정창의 계약 — 메인이 두 곳에서 걸기 때문에 둘로 적는다

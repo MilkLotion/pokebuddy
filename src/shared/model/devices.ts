@@ -120,6 +120,12 @@ export interface PartyDeviceView extends PartyDeviceOpen {
 
 export type PartyDeviceAction = { kind: "slot"; index: number } | { kind: "preset"; index: number };
 
+// 성공한 명령의 결과 두 줄 — 기기 창의 초록 상자 (src/view/result-lines.ts)
+export interface ResultLine {
+  lead: string;
+  line: string;
+}
+
 // ── 기기 창 입력 — 설정창이 고른 값 ─────────────────────────────────────────────
 // 설정창은 이것만 보내고, 메인이 모델을 만든다 (src/view/device-*.ts). 메인은 바로잡은 입력(수량을 상한으로 자르기, 없는 대상 바꾸기)을 돌려준다
 
@@ -130,7 +136,7 @@ export interface BagDeviceInput {
   qty: number; // 사용 수량(사탕만)
   sellQty: number;
   notice: string; // 마지막 사용·판매 실패 — 미리보기 상자가 빨강
-  result: { lead: string; line: string } | null; // 방금 쓴 결과 — 미리보기 상자가 초록
+  result: ResultLine | null; // 방금 쓴 결과 — 미리보기 상자가 초록
   busy: boolean; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
 }
 
@@ -138,7 +144,7 @@ export interface ShopDeviceInput {
   productId: string;
   qty: number;
   notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
-  done: { lead: string; line: string } | null; // 방금 산 결과 — 합계 상자가 초록
+  done: ResultLine | null; // 방금 산 결과 — 합계 상자가 초록
   busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
   // [임시] 알 상품의 색을 바꾼 그림(data URI) — 알 색칠은 아직 설정창이 한다(렌더러 레인 P11 에서 메인으로 옮긴다). 알이 아니면 null
   eggArt: string | null;

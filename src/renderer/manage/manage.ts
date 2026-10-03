@@ -25,7 +25,7 @@ import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { numberText, pointText, waitText } from "../../shared/count-text.js";
+import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
@@ -2300,37 +2300,6 @@ function drawBag(v: Snapshot): void {
   }
 }
 
-// 쓴 뒤 결과 한 줄 — 쓰기 전 값(before)과 새 스냅샷 값(after)을 견준다.
-// 진화용 도구·성격민트는 따로 창 흐름이 있어 여기 오지 않는다(민트는 바꾼 뒤 개체 상세로 간다)
-function bagResultText(item: BagItemView, before: PetView, after: PetView | null): string {
-  const name = before.name;
-  const used = `${name}에게 ${item.name}${josa(item.name, "을/를")} 썼어요`;
-  if (!after) return used;
-  const buffWord = (kind: string): string => {
-    const hit = after.buffs.find((b) => b.kind === kind);
-    return hit ? ` · ${hit.name} ${waitText(hit.remainMin * 60)}` : "";
-  };
-  const fullness = `${name} 만복도 ${Math.round(before.fullness)} → ${Math.round(after.fullness)}`;
-  switch (item.effect) {
-    case "exp":
-    case "level":
-      return after.level !== before.level
-        ? `${name} Lv.${before.level} → Lv.${after.level}`
-        : `${name} 경험치 +${numberText(Math.max(0, after.exp - before.exp))}`;
-    case "fullness":
-      return fullness;
-    case "fullness-full-buff":
-      return `${fullness}${buffWord("premium-food")}`;
-    case "play-buff":
-      return `${name}에게 ${item.name}${josa(item.name, "을/를")} 줬어요${buffWord("long-play")}`;
-    case "shiny-on":
-    case "shiny-off":
-      return `${name}의 모습이 바뀌었어요`;
-    default:
-      return used;
-  }
-}
-
 // ── 가방 기기 창 ──────────────────────────────────────────────────────────────
 // 가방 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
 // 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/record.md).
@@ -2427,12 +2396,12 @@ async function useBag(id: string): Promise<void> {
   const pet = bagTarget ? petOf(bagTarget) : null;
   if (!item || !pet || !view || bagSending) return;
   const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)
-  const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
   bagResult = "";
   const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
   if (ok) {
-    bagResult = bagResultText(item, before, petOf(pet.id));
-    bagResultNote = `${item.name} ${numberText(count)}개를 썼어요`;
+    // 결과 두 줄은 메인이 거래 앞뒤 화면 값으로 만들어 답에 싣는다 (src/view/result-lines.ts)
+    bagResult = lastReply?.result?.lead ?? "";
+    bagResultNote = lastReply?.result?.line ?? "";
     bagQty = 1;
     if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
@@ -4129,10 +4098,9 @@ async function buyShop(id: string): Promise<void> {
   notice = ""; // 실패 문구는 기기 창의 합계 상자에만 보인다
   if (ok) {
     shopQty = 1;
-    // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`)
-    const lead = `${item.name} ${numberText(count)}개를 ${item.price === 0 ? "받았어요" : "샀어요"}`;
-    const line = view ? `보유 ${pointText(view.points)}${item.category === "egg" ? ` · 돌보미집 ${view.eggs.used} / ${view.eggs.size}` : ""}` : "";
-    shopDone = { lead, line };
+    // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`).
+    // 두 줄은 메인이 거래 앞뒤 화면 값으로 만들어 답에 싣는다 (src/view/result-lines.ts)
+    shopDone = lastReply?.result ?? null;
   }
   syncShopDevice();
 }

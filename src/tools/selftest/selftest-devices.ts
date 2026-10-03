@@ -12,6 +12,7 @@ import { bagDeviceModel } from "../../view/device-bag";
 import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
+import { resultLineOf } from "../../view/result-lines";
 import { snapshot } from "../../view/snapshot";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -152,4 +153,32 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(where("없음"), undefined, "없는 개체면 닫는다");
 }
 
-process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 교체·파티 상세)\n");
+// (9) 결과 줄 — 거래 앞뒤 화면 값을 견준다. 결과 줄이 없는 명령은 null
+{
+  const after = (change: (s: SaveV3) => void) => {
+    const s = seed();
+    change(s);
+    return snapshot(s, undefined, undefined, undefined, T0);
+  };
+  const candy = resultLineOf({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" } }, v, after((s) => void (s.pets[0]!.level = 13)));
+  assert.deepEqual(candy, { lead: "피카츄 Lv.12 → Lv.13", line: "이상한사탕 1개를 썼어요" });
+  const exp = resultLineOf({ cmd: "bag.use", target: "exp-candy-s", args: { petId: "p1", count: 2 } }, v, after((s) => void (s.pets[0]!.exp += 1600)));
+  assert.deepEqual(exp?.line, "경험사탕S 2개를 썼어요");
+  assert.match(exp?.lead ?? "", /^피카츄 (경험치 \+1,600|Lv\.12 → Lv\.\d+)$/);
+  const food = resultLineOf({ cmd: "bag.use", target: "premium-food", args: { petId: "p2" } }, v, after((s) => {
+    s.pets[1]!.fullness = 100;
+    s.pets[1]!.buffs.push({ kind: "premium-food", remainMs: 2 * 3_600_000 });
+  }));
+  assert.equal(food?.lead, "파이리 만복도 30 → 100 · 든든함 2시간");
+  const egg = resultLineOf({ cmd: "shop.buy", target: "random", args: { count: 2 } }, v, after((s) => {
+    s.points.balance -= 240;
+    s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+    s.eggs.push({ id: "e2", kind: "random", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+  }));
+  assert.equal(egg?.lead, "랜덤알 2개를 샀어요");
+  assert.match(egg?.line ?? "", /^보유 1,000P · 돌보미집 2 \/ \d+$/);
+  assert.equal(resultLineOf({ cmd: "bag.sell", target: "toy" }, v, v), null, "판매는 결과 줄이 없다");
+  assert.equal(resultLineOf({ cmd: "bag.use", target: "없는도구", args: { petId: "p1" } }, v, v), null);
+}
+
+process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 교체·파티 상세·결과 줄)\n");
