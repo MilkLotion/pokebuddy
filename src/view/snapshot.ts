@@ -128,14 +128,14 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
   };
 }
 
-// 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창이 같이 쓴다
-const ZONE_TEXT: Record<FullnessZone, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
+// 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창·포켓몬 메뉴가 같이 쓴다. 글자는 언어 파일의 zone.* 다
+const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
 
 // 배고픔 디버프 배지 — 구간 낱말, 색, 친밀도 증가량 감소율(TIME_RULES.zonePercent). 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
 const DEBUFF_TONE: Partial<Record<FullnessZone, "warning" | "danger">> = { hungry: "warning", starving: "danger" };
 function debuffOf(zone: FullnessZone): PetView["debuff"] {
   const tone = DEBUFF_TONE[zone];
-  return tone ? { label: ZONE_TEXT[zone], tone, note: `친밀도 증가량 −${100 - TIME_RULES.zonePercent[zone]}%` } : null;
+  return tone ? { label: zoneText(zone), tone, note: `친밀도 증가량 −${100 - TIME_RULES.zonePercent[zone]}%` } : null;
 }
 
 // 잠들기 기준 선택지 — 0 은 잠들지 않음
@@ -164,7 +164,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     affinity: pet.affinity,
     fullness: pet.fullness,
     zone: zoneOf(pet.fullness),
-    zoneText: ZONE_TEXT[zoneOf(pet.fullness)],
+    zoneText: zoneText(zoneOf(pet.fullness)),
     debuff: debuffOf(zoneOf(pet.fullness)),
     mood: pet.mood,
     moodWord: moodWord(pet.mood),
