@@ -231,7 +231,7 @@ void app.whenReady().then(async () => {
   }
   // 설정의 `영역 그리기` — 앱과 같은 창을 띄우고, 적용하면 저장한다
   const drawRegion = async () => {
-    const { drawRegion: draw } = require("../../main/windows/region-window") as typeof import("../../main/windows/region-window");
+    const { askRegion: draw } = require("../../main/windows/region-window") as typeof import("../../main/windows/region-window");
     const rect = await draw({ preload: paths.preloadFile(), html: paths.rendererFile("region.html"), current: game.read()?.settings.playArea.rect ?? null });
     if (!rect) return { ok: false, reason: "cancelled" };
     return game.send({ cmd: "settings.set", target: "playRegion", args: { value: rect } }, "settings");
@@ -242,7 +242,7 @@ void app.whenReady().then(async () => {
   const picker = createScreenPicker({ preload: paths.preloadFile(), html: paths.rendererFile("screens.html"), screens: currentScreens });
   const screens = () => screenViews(currentScreens(), game.read()?.settings.playArea.screen ?? null);
   const pickScreen = async () => {
-    const ref = await picker.pick();
+    const ref = await picker.ask();
     if (!ref) return { ok: false, reason: "cancelled" };
     return game.send({ cmd: "settings.set", target: "playScreen", args: { value: ref } }, "settings");
   };

@@ -3,9 +3,6 @@ banned-head: getLang @ src/main/text.ts
 banned-head: putPet @ src/box/slots.ts
 banned-head: resolveScreen @ src/main/layout.ts
 banned-head: resolveState @ src/follow/state.ts
-banned-head: showAlert @ src/main/windows/alert-window.ts
-banned-head: showHeld @ src/main/halt-dialog.ts
-banned-head: showKicked @ src/main/halt-dialog.ts
 duplicate: dayPartOf @ src/dex/evolve.ts, src/dex/unlocks.ts
 duplicate: evaluate @ src/achievement/evaluate.ts, src/dex/unlocks.ts
 duplicate: isNatureId @ src/dex/natures.ts, src/save/rules.ts

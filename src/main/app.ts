@@ -26,7 +26,7 @@ import { createMainTrade, isDevRun, type MainTrade } from "./trade";
 import { createTradeScreen, type TradeScreenBuilder } from "./trade-screen";
 import { cloudSeedOf, createMainOnline, type MainOnline } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "./halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "./halt-dialog";
 import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
 import { createMainMail, type MainMail } from "./mail";
 import { mailCodeOf } from "../online/codes.js";
@@ -42,11 +42,11 @@ import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
-import { drawRegion } from "./windows/region-window";
+import { askRegion } from "./windows/region-window";
 import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT, loadConfig } from "./paths";
 import { logoFile, preloadFile, rendererFile } from "./windows/files";
-import { pickStarter } from "./windows/picker-window";
+import { askStarter } from "./windows/picker-window";
 import { createStage } from "./stage";
 import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
@@ -546,7 +546,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
       const current = game?.read()?.settings.playArea.rect ?? null;
-      const rect = await drawRegion({ preload: preloadFile(), html: rendererFile("region.html"), current });
+      const rect = await askRegion({ preload: preloadFile(), html: rendererFile("region.html"), current });
       if (!rect) return { ok: false, reason: "cancelled" };
       if (!commands) return { ok: false, reason: "not-ready" };
       const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playRegion", args: { value: rect }, from: "settings" });
@@ -557,7 +557,7 @@ const openManageWindow = (route?: ManageRoute): void => {
     screens: () => screenViews(currentScreens(), game?.read()?.settings.playArea.screen ?? null),
     identifyScreens: (on) => picker().identify(on),
     pickScreen: async () => {
-      const ref = await picker().pick();
+      const ref = await picker().ask();
       if (!ref) return { ok: false, reason: "cancelled" };
       if (!commands) return { ok: false, reason: "not-ready" };
       const reply = await commands.dispatcher.dispatch({ cmd: "settings.set", target: "playScreen", args: { value: ref }, from: "settings" });
@@ -1009,7 +1009,7 @@ function supersede(info: HaltInfo): void {
   mainOnline?.dispose();
   mainOnline = null;
   log?.({ cloud: "superseded", other: info.other?.label ?? null });
-  void showKicked(info).finally(() => app.quit());
+  void askKicked(info).finally(() => app.quit());
 }
 
 // 이용 정지(P4c, D35) — 게임을 멈추고 온라인을 끈 뒤 정지 창을 띄우고 끝낸다. 다시 켜도 cloud.json 의 정지로 같은 창이 뜬다
@@ -1025,7 +1025,7 @@ function holdAccount(): void {
   mainOnline?.dispose();
   mainOnline = null;
   log?.({ cloud: "held" });
-  void showHeld().finally(() => app.quit());
+  void askHeld().finally(() => app.quit());
 }
 
 // 세션 종료 직전 — 올리고 released 를 알린다(최대 3초). 클라우드를 멈추지 않는다.
@@ -1352,7 +1352,7 @@ async function main(): Promise<void> {
     const list = starterList;
     let species: string | null = config.fromEnv.has("slug") && list.includes(config.slug) ? config.slug : null;
     if (!species) {
-      species = await pickStarter({
+      species = await askStarter({
         preload: preloadFile(),
         html: rendererFile("picker.html"),
         starters: list,

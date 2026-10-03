@@ -9,8 +9,8 @@ import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ALERT_RULES, showAlert } from "../../main/windows/alert-window";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "../../main/halt-dialog";
+import { ALERT_RULES, askAlert } from "../../main/windows/alert-window";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "../../main/halt-dialog";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { setLang } from "../../main/text";
 import { makeTmp } from "../harness/tmp-dir";
@@ -100,7 +100,7 @@ void app.whenReady().then(async () => {
     step("분실(로그인) — 로그인·Esc");
     assert.equal(await run("lost-anonymous", () => askLost("anonymous", true), { title: "저장 정보를 찾지 못했어요", buttons: ["처음부터", "이 PC 저장으로 계속"], primary: "이 PC 저장으로 계속" }, "처음부터"), "fresh");
     step("분실(익명) — 처음부터");
-    assert.equal(await run("kicked", () => showKicked(mac), { title: "다른 PC 에서 시작했어요", buttons: ["확인"], primary: "확인" }, "확인"), "stop");
+    assert.equal(await run("kicked", () => askKicked(mac), { title: "다른 PC 에서 시작했어요", buttons: ["확인"], primary: "확인" }, "확인"), "stop");
     step("밀려남 — 단추 하나");
     assert.equal(await run("confirm", () => askConfirm(mac), { title: "이 PC 에서 시작할까요?", buttons: ["취소", "여기서 시작"], primary: "여기서 시작" }, "여기서 시작"), "go");
     assert.equal(await run("confirm-esc", () => askConfirm(mac), { title: "이 PC 에서 시작할까요?", buttons: ["취소", "여기서 시작"], primary: "여기서 시작" }, null), "stop", "Esc 는 취소");
@@ -111,7 +111,7 @@ void app.whenReady().then(async () => {
     assert.equal(await run("save-locked", () => askSaveLocked(), { title: "저장을 열지 못했어요", buttons: ["새로 시작", "종료"], primary: "종료" }, "새로 시작"), "fresh");
     assert.equal(await run("save-locked-esc", () => askSaveLocked(), { title: "저장을 열지 못했어요", buttons: ["새로 시작", "종료"], primary: "종료" }, null), "quit", "Esc 는 종료");
     step("저장 잠김 — 새로 시작·Esc");
-    assert.equal(await run("held", () => showHeld(), { title: "이용이 정지됐어요", buttons: ["종료"], primary: "종료" }, "종료"), "stop");
+    assert.equal(await run("held", () => askHeld(), { title: "이용이 정지됐어요", buttons: ["종료"], primary: "종료" }, "종료"), "stop");
     step("이용 정지 — 단추 하나");
     assert.equal(await run("update-ready", () => askUpdateRequired("0.15.0", false), { title: "새 버전으로 바꿔야 해요", buttons: ["나중에", "지금 다시 시작"], primary: "지금 다시 시작" }, "지금 다시 시작"), true);
     assert.equal(await run("update-manual", () => askUpdateRequired("0.15.0", true), { title: "새 버전으로 바꿔야 해요", buttons: ["나중에", "받기"], primary: "받기" }, null), false, "Esc 는 나중에");
@@ -137,7 +137,7 @@ void app.whenReady().then(async () => {
 
     // 시간 초과 — closed (밀려남 30초와 같은 길)
     const view = { title: "t", lead: "l", detail: "", buttons: [{ label: "확인", index: 0, primary: true }] };
-    assert.equal(await showAlert({ preload: preloadFile(), html: rendererFile("alert.html"), view, cancelId: 0, timeoutMs: 800 }), "closed");
+    assert.equal(await askAlert({ preload: preloadFile(), html: rendererFile("alert.html"), view, cancelId: 0, timeoutMs: 800 }), "closed");
     step("시간 초과 — closed");
 
     // 보인 뒤 렌더러가 죽음 — 취소 단추(분실 로그인은 로그인)
@@ -150,7 +150,7 @@ void app.whenReady().then(async () => {
     step("렌더러 죽음 — 취소");
 
     // 문서를 읽지 못함 — null(부른 쪽이 OS 창으로)
-    assert.equal(await showAlert({ preload: preloadFile(), html: path.join(dir, "없음.html"), view, cancelId: 0 }), null);
+    assert.equal(await askAlert({ preload: preloadFile(), html: path.join(dir, "없음.html"), view, cancelId: 0 }), null);
     assert.equal(BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed()).length, 0, "실패한 창은 남지 않는다");
     step("문서 없음 — null");
 
