@@ -73,6 +73,22 @@ export function isLockReady(lockFile: string, pid: number): boolean {
   }
 }
 
+// 준비를 마쳤다고 적는다 — "<pid>\nready\n". isLockReady 가 읽는 모양. 적었으면 true
+// r+ 는 없는 파일을 만들지 않는다 — 방금 지워진 lock(동반자 내리기)을 되살리지 않게. 못 적으면 false (방금 지워졌다)
+export function markLockReady(lockFile: string, pid: number = process.pid): boolean {
+  let fd: number | null = null;
+  try {
+    fd = fs.openSync(lockFile, "r+");
+    fs.ftruncateSync(fd);
+    fs.writeSync(fd, `${pid}\nready\n`);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd != null) fs.closeSync(fd);
+  }
+}
+
 // 내 pid 가 적혀 있나 — 파일을 매번 읽는다 (누가 지웠거나 가로챘으면 바로 안다)
 export function ownsLock(lockFile: string, pid: number = process.pid): boolean {
   return readLockPid(lockFile) === pid;

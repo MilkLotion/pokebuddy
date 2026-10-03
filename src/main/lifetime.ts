@@ -5,10 +5,8 @@
 // 끝날 조건: lock 파일이 사라짐 (companion stop) · 트레이·메뉴의 종료
 import fs from "node:fs";
 import path from "node:path";
-import { clearLastError, writeLastError } from "../platform/last-error.js";
-import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
+import { claimLock, markLockReady, ownsLock, releaseLock } from "../platform/pid-lock.js";
 import { watchDir, type DirWatch } from "../platform/watch-dir.js";
-import type { Paths } from "../platform/paths";
 
 export const LIFETIME_RULES = {
   checkMs: 1000, // lock 파일이 남아 있는지 확인하는 주기 (옛 LIFE_CHECK_MS)
@@ -46,18 +44,8 @@ export function createLifetime(opts: LifetimeOptions): Lifetime {
     }
     seen = true;
     if (ready || !hasWindow()) return;
-    let fd: number | null = null;
-    try {
-      // r+ 는 없는 파일을 만들지 않는다 — 방금 내려진 동반자가 파일을 되살리지 않게
-      fd = fs.openSync(file, "r+");
-      fs.ftruncateSync(fd);
-      fs.writeSync(fd, `${pid}\nready\n`);
-      ready = true;
-    } catch {
-      // 방금 지워졌다 — 다음 확인에서 끝난다
-    } finally {
-      if (fd != null) fs.closeSync(fd);
-    }
+    // 못 적었으면 방금 지워졌다 — 다음 확인에서 끝난다 (src/platform/pid-lock.ts markLockReady)
+    ready = markLockReady(file, pid);
   }
 
   return {
@@ -87,9 +75,3 @@ export function createLifetime(opts: LifetimeOptions): Lifetime {
     },
   };
 }
-
-// 펫이 못 뜬 이유의 기록은 src/platform/last-error.ts 다(CLI 와 같이 쓴다).
-// [임시] 옛 이름 — src/main/app.ts 의 부르는 줄 여섯이 이 이름을 쓴다. 메인 레인 M7 이 writeLastError·clearLastError 로 바꾸면 걷는다
-export const reportFailure = (paths: Pick<Paths, "home" | "lastError">, slug: string, message: string, reason?: string): void =>
-  writeLastError(paths, { slug, message, ...(reason !== undefined ? { reason } : {}) });
-export const clearFailure = clearLastError;
