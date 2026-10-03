@@ -8,6 +8,7 @@
 //   play  움직임 모듈이 고른 동작 — 산책·수면·반응. 있으면 상태보다 앞선다. null 이면 상태로 돌아간다
 import type { LookSheets, Play, PlayMode, SpriteSheet, StagePet } from "../../shared/model/stage.js";
 import type { AgentState } from "../../shared/names/agents.js";
+import { decodeImage, readPixels } from "../ui/image.js";
 
 export const TICK_MS = 16;
 // 창이 숨었다 돌아오면 밀린 시간이 쌓여 있다. 따라잡지 않고 지금부터 다시 센다
@@ -32,32 +33,6 @@ export interface LookArt {
   idle: Clip;
   images: Map<string, HTMLImageElement>;
   alpha: Map<string, ImageData>; // 히트용 — 시트 전체 RGBA 를 한 번만 읽어 둔다 (무대 캔버스는 되읽지 않는다)
-}
-
-// 시트 픽셀을 한 번 읽는 숨긴 캔버스 — 무대 캔버스는 되읽지 않는다(GPU 가속 유지).
-// 시트마다 새 캔버스 — 한 캔버스를 여러 번 되읽으면 Chrome 이 willReadFrequently 를 권하는 경고를 낸다. 읽고 버린다
-function readAlpha(img: HTMLImageElement): ImageData | null {
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  if (w < 1 || h < 1) return null;
-  const scratch = document.createElement("canvas");
-  scratch.width = w;
-  scratch.height = h;
-  const c = scratch.getContext("2d");
-  if (!c) return null;
-  c.drawImage(img, 0, 0);
-  return c.getImageData(0, 0, w, h);
-}
-
-async function decode(dataUrl: string): Promise<HTMLImageElement | null> {
-  const img = new Image();
-  img.src = dataUrl;
-  try {
-    await img.decode();
-    return img;
-  } catch {
-    return null; // 깨진 시트 — 그 동작만 뺀다 (이유는 SpriteStore.reason 으로)
-  }
 }
 
 export class SpriteStore {
@@ -87,8 +62,8 @@ export class SpriteStore {
     const missing: string[] = [];
     await Promise.all(
       Object.entries(sheets.anims).map(async ([name, sheet]) => {
-        const img = await decode(sheet.dataUrl);
-        const px = img && readAlpha(img);
+        const img = await decodeImage(sheet.dataUrl); // 깨진 시트면 null — 그 동작만 뺀다 (이유는 SpriteStore.reason 으로)
+        const px = img && (readPixels(img)?.data ?? null); // 시트 픽셀을 한 번 읽는다 — 무대 캔버스는 되읽지 않는다(GPU 가속 유지)
         if (!img || !px) {
           missing.push(name);
           return;

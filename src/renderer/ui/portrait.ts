@@ -1,7 +1,8 @@
 // 포켓몬 그림 공통 — 창마다 따로 두던 그림 맞춤을 한곳에 둔다 (2026-10-03 사용자 지적 "공통코드로 되어있는게아니야?")
 // - portraitImg: 목록의 초상(<img>). 관리 창·파티 기기 창·가방 기기 창의 파티 줄·도감 기기 창의 진화 트리·포켓몬 메뉴·첫 포켓몬 선택 창이 쓴다
-// - sprite: 기기 창의 큰 그림(<canvas>). 파티 상세·도감·상점·가방 기기 창이 쓴다
+// - spriteCanvas: 기기 창의 큰 그림(<canvas>). 파티 상세·도감·상점·가방 기기 창이 쓴다
 // 그림은 PokeAPI 기본 그림(96 × 96)이고 data URI 로 온다 (src/main/portraits.ts)
+import { opaqueBoxOf, readPixels } from "./image.js";
 
 interface OpaqueBox {
   x: number;
@@ -14,24 +15,10 @@ interface OpaqueBox {
 
 // 불투명한 영역 — 알파 128 이상인 점을 모두 담는 네모. 빈 그림은 null
 function opaqueBox(img: HTMLImageElement): { box: OpaqueBox; canvas: HTMLCanvasElement } | null {
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext("2d");
-  if (!ctx || !canvas.width || !canvas.height) return null;
-  ctx.drawImage(img, 0, 0);
-  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  let x0 = width, y0 = height, x1 = -1, y1 = -1;
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++)
-      if ((data[(y * width + x) * 4 + 3] ?? 0) >= 128) {
-        x0 = Math.min(x0, x);
-        y0 = Math.min(y0, y);
-        x1 = Math.max(x1, x);
-        y1 = Math.max(y1, y);
-      }
-  if (x1 < 0) return null;
-  return { box: { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, width, height }, canvas };
+  const pixels = readPixels(img);
+  const box = pixels && opaqueBoxOf(pixels.data, 128);
+  if (!pixels || !box) return null;
+  return { box: { ...box, width: pixels.data.width, height: pixels.data.height }, canvas: pixels.canvas };
 }
 
 // ── 목록의 초상 ────────────────────────────────────────────────────────────────
@@ -98,7 +85,7 @@ export interface SpriteBox {
   maxSide?: number;
 }
 
-export function sprite(uri: string, box: SpriteBox): HTMLCanvasElement {
+export function spriteCanvas(uri: string, box: SpriteBox): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = 0;
   out.height = 0;
