@@ -14,7 +14,10 @@ import * as mailbox from "../../save/mailbox";
 import * as rules from "../../save/rules";
 import * as legacy from "../../save/legacy";
 import * as writer from "../../save/writer";
-import type { Command, CommandName, CommandResult, LogEntry, SaveV2 } from "../../shared/types";
+import type { Command, CommandResult } from "../../shared/command";
+import type { CommandName } from "../../shared/names/commands";
+import type { LogEntry } from "../../shared/save-v3";
+import type { SaveV2 } from "../../shared/types";
 import { makeTmp } from "../harness/tmp-dir";
 
 const save = { ...rules, ...legacy, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접

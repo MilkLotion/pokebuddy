@@ -12,7 +12,6 @@ import { isAuthRetryableFetchError, type SupabaseClient, type User } from "@supa
 import { sessionCodeOf } from "./codes.js";
 import { messageOf } from "./server-call.js";
 
-export { sessionCodeOf }; // [임시] 옛 자리 — 새 코드는 ./codes.ts 에서 가져온다
 import type { SessionCode } from "../shared/names/online-codes.js";
 
 export type SessionErrorCode = SessionCode; // 목록은 src/shared/names/online-codes.ts

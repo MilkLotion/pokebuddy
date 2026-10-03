@@ -72,7 +72,6 @@ export function viewOf(user: User | null | undefined): AccountView {
 }
 
 // supabase-js 인증 오류 → 코드는 ./codes.ts authCodeOf 다
-export { authCodeOf }; // [임시] 옛 자리 — 새 코드는 ./codes.ts 에서 가져온다
 
 export interface AccountOptions {
   client: SupabaseClient;

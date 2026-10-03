@@ -31,7 +31,7 @@
 //   6 장소      우리에 장소가 없다 → 그 장소를 대표하는 원작 돌 (LOCATION_STONE)
 //   7 그 밖의 특수  배틀·걸음·수집 조건 → 친밀도 100
 import path from "node:path";
-import type { DayPart, EvoNeed, Gender } from "../../shared/types";
+import type { DayPart, EvoNeed, Gender } from "../../shared/species";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 import { REGION_MAP, isRegional, regionalOf, regionalTable } from "../../dex/regional";
 

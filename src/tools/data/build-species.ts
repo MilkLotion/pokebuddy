@@ -39,7 +39,7 @@
 //   — 랜덤준전설알의 다른 종과 같은 가중치로 나온다 (2026-10-03). 진화로 얻는 특수 폼(루가루암(한밤중의 모습))은 다른 종과 같은 규칙이다
 // 백분위는 리전폼을 뺀 종들로 정한다 — 리전폼을 넣어도 기존 종의 값이 바뀌지 않게. 리전폼은 그 분포 안의 자리로 잰다
 import path from "node:path";
-import type { GrowthRate, Like } from "../../shared/types";
+import type { GrowthRate, Like } from "../../shared/species";
 import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 import { isRegional, regionalOf } from "../../dex/regional";
 import { singleSpecies } from "../../shop/catalog";

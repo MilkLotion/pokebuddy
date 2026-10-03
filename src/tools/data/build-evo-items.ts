@@ -17,7 +17,7 @@
 //   - 상점의 진화 탭이 이 목록을 그대로 보여준다 (docs/specs/game.md "진화 계약")
 import fs from "node:fs";
 import path from "node:path";
-import type { EvoNeed } from "../../shared/types";
+import type { EvoNeed } from "../../shared/species";
 import { BLANK_CD, BOND_CORD } from "./build-evo";
 import { DATA_DIR, csv, runBuild, writeLineJson } from "./pokeapi-csv";
 import { REGION_MAP } from "../../dex/regional";

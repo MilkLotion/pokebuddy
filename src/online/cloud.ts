@@ -26,10 +26,6 @@ import {
   type ClaimRow, type Cloud, type CloudMode, type CloudOptions, type CloudStatus, type CloudSyncState, type CloudView, type OtherDevice, type OwnerKind, type TouchRow,
 } from "./cloud-state.js";
 
-// [임시] 옛 자리 — src/tools 와 메인이 이 경로로 가져다 쓴다. 가져다 쓰는 쪽을 ./cloud-state.ts 로 이은 뒤 걷는다
-export type * from "./cloud-state.js";
-export { strayAnonymous, normalizeCloudState as readCloudState } from "./cloud-state.js";
-
 
 export function createCloud(o: CloudOptions): Cloud {
   const now = o.now ?? Date.now;

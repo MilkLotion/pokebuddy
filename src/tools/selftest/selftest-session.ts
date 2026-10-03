@@ -3,7 +3,8 @@
 // 설계는 worklog-mac/records/cloud-authority/design-p1.md 4절, 7절 시험 13번 · design-p2.md 2절(부팅 판단 probe)
 import assert from "node:assert";
 import { AuthApiError, AuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
-import { createSessionGate, sessionCodeOf } from "../../online/session";
+import { sessionCodeOf } from "../../online/codes";
+import { createSessionGate } from "../../online/session";
 import { createTradeNet } from "../../trade/net";
 
 const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));

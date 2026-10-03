@@ -30,7 +30,7 @@ import path from "node:path";
 import { starters, unlockRules } from "../../dex/unlocks";
 import { fixedEggs } from "../../shop/catalog";
 import { rewardSpecies } from "../../achievement/core";
-import type { UnlockRule } from "../../shared/types";
+import type { UnlockRule } from "../../shared/species";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
 import { isRegional, regionalTable } from "../../dex/regional";

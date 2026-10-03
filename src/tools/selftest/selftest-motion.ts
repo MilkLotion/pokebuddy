@@ -17,7 +17,7 @@ import { capsOf, createPetMotion } from "../../motion/pet-motion";
 import { MOTION_RULES } from "../../motion/rules";
 import type { MotionRules } from "../../motion/rules";
 import type { MotionCaps, MotionOut, MotionParams, PetMotion, PetMotionOptions, Phase, RoamBox } from "../../motion/types";
-import type { StageState } from "../../shared/stage";
+import type { StageState } from "../../shared/model/stage";
 
 const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
