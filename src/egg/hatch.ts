@@ -33,7 +33,7 @@ export function rollVariant(species: string, rand: Rand, opts?: DexOptions): str
 }
 
 // 알 하나의 결과. 후보가 하나도 없으면 null
-export function decide(candidates: string[], rand: Rand, opts?: DexOptions): HatchResult | null {
+export function pickHatch(candidates: string[], rand: Rand, opts?: DexOptions): HatchResult | null {
   const species = pickWeighted(candidates, rand, opts);
   if (!species) return null;
   return { species, shiny: rand() < 1 / EGG_RULES.shinyOneIn };

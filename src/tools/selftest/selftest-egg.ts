@@ -4,9 +4,9 @@
 // 계약은 docs/specs/game.md "알".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { decide, pickWeighted, rollVariant } from "../../egg/hatch";
-import { open } from "../../egg/open";
-import { buy } from "../../shop/buy";
+import { pickHatch, pickWeighted, rollVariant } from "../../egg/hatch";
+import { openEgg } from "../../egg/open";
+import { buyProduct } from "../../shop/buy";
 import { prevOf } from "../../dex/evo";
 import { unlockRules } from "../../dex/unlocks";
 import { dexDetail } from "../../view/dex-detail";
@@ -66,16 +66,16 @@ const fixed = (...values: number[]): (() => number) => {
 
 // (7) 알의 후보 범위에서만 뽑는다
 {
-  assert.equal(decide(["charmander"], fixed(0, 0.5))?.species, "charmander");
-  assert.equal(decide([], fixed(0, 0.5)), null, "후보가 없으면 결과가 없다");
+  assert.equal(pickHatch(["charmander"], fixed(0, 0.5))?.species, "charmander");
+  assert.equal(pickHatch([], fixed(0, 0.5)), null, "후보가 없으면 결과가 없다");
   process.stdout.write("(7) 후보 범위에서만  ok\n");
 }
 
 // (8) 이로치는 따로 뽑는다
 {
-  const shiny = decide(["charmander"], fixed(0, 0.0001));
+  const shiny = pickHatch(["charmander"], fixed(0, 0.0001));
   assert.equal(shiny?.shiny, true);
-  const plain = decide(["charmander"], fixed(0, 0.5));
+  const plain = pickHatch(["charmander"], fixed(0, 0.5));
   assert.equal(plain?.shiny, false);
   process.stdout.write("(8) 이로치 추첨  ok\n");
 }
@@ -83,7 +83,7 @@ const fixed = (...values: number[]): (() => number) => {
 // (9) 열기 — 개체가 생기고 빈 파티 칸에 꺼낸 상태로 들어간다
 {
   const s = seed({ remainMs: 0, ready: true, actions: { pat: 0, song: 0 } });
-  const res = open(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
+  const res = openEgg(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
   assert.equal(res.ok, true);
   assert.equal(s.pets.length, 1);
   assert.equal(s.pets[0]?.id, "p1");
@@ -101,7 +101,7 @@ const fixed = (...values: number[]): (() => number) => {
 {
   const s = seed({ remainMs: 0, ready: true });
   for (let i = 0; i < s.party.slots.length; i++) s.party.slots[i] = { state: "locked", unlockBy: "shop" };
-  const res = open(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
+  const res = openEgg(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
   assert.equal(res.ok, true);
   assert.equal(res.toBox, true);
   assert.ok(s.boxes[0]?.slots.includes(res.petId ?? ""), "박스 첫 칸으로");
@@ -111,7 +111,7 @@ const fixed = (...values: number[]): (() => number) => {
 // (11) 열기 — 옛 저장의 돌봄 횟수는 결과를 바꾸지 않는다
 {
   const s = seed({ remainMs: 0, ready: true, candidates: ["charmander"], actions: { pat: 9, song: 9 } });
-  const res = open(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
+  const res = openEgg(s, "e1", T0, fixed(NO_BONUS, 0, 0.5, 0.5));
   assert.equal(res.ok, true);
   assert.equal(res.species, "charmander", "후보에서 나온다");
   assert.deepStrictEqual(s.dex.discovered, {}, "발견 기록을 남기지 않는다");
@@ -121,8 +121,8 @@ const fixed = (...values: number[]): (() => number) => {
 // (12) 열기 — 준비가 안 됐거나 없는 알은 거절한다
 {
   const s = seed();
-  assert.equal(open(s, "e1", T0, fixed(0)).reason, "not-ready");
-  assert.equal(open(s, "없는알", T0, fixed(0)).reason, "no-egg");
+  assert.equal(openEgg(s, "e1", T0, fixed(0)).reason, "not-ready");
+  assert.equal(openEgg(s, "없는알", T0, fixed(0)).reason, "no-egg");
   assert.equal(s.pets.length, 0, "개체를 만들지 않는다");
   process.stdout.write("(12) 열기 · 준비 전과 없는 알 거절  ok\n");
 }
@@ -149,7 +149,7 @@ const fixed = (...values: number[]): (() => number) => {
   ];
   for (const [roll, kind, count] of cases) {
     const s = seed({ remainMs: 0, ready: true });
-    const res = open(s, "e1", T0, fixed(roll));
+    const res = openEgg(s, "e1", T0, fixed(roll));
     assert.equal(res.ok, true);
     assert.equal(res.petId, undefined, "포켓몬은 나오지 않는다");
     assert.deepStrictEqual(res.egg, { id: "e2", kind }, "연 알 자리에 새 알 — 식별자는 겹치지 않는다");
@@ -163,12 +163,12 @@ const fixed = (...values: number[]): (() => number) => {
   }
   // 합 5.5% 를 넘으면 포켓몬이 나온다
   const plain = seed({ remainMs: 0, ready: true });
-  const hatched = open(plain, "e1", T0, fixed(0.056, 0, 0.5, 0.5));
+  const hatched = openEgg(plain, "e1", T0, fixed(0.056, 0, 0.5, 0.5));
   assert.equal(hatched.egg, undefined);
   assert.ok(hatched.petId, "5.6% 자리는 포켓몬");
   // 태고의돌은 다른 알을 주지 않는다 — 무작위를 쓰지 않고 바로 뽑는다
   const s = seed({ kind: "ancient-stone", remainMs: 0, ready: true, candidates: ["omanyte"], actions: { pat: 1, song: 0 } });
-  assert.equal(open(s, "e1", T0, fixed(0, 0.5)).species, "omanyte");
+  assert.equal(openEgg(s, "e1", T0, fixed(0, 0.5)).species, "omanyte");
   process.stdout.write("(14) 랜덤알 · 단일 포켓몬 알 확률  ok\n");
 }
 
@@ -191,7 +191,7 @@ const fixed = (...values: number[]): (() => number) => {
   }
   assert.deepStrictEqual(counts, { basculin: 450, "basculin-blue-striped": 450, "basculin-white-striped": 100 });
   const s = seed({ kind: "random", candidates: ["basculin"], ready: true });
-  const res = open(s, s.eggs[0]!.id, T0, fixed(NO_BONUS, 0, 0.5, 0.95, 0.5, 0.5));
+  const res = openEgg(s, s.eggs[0]!.id, T0, fixed(NO_BONUS, 0, 0.5, 0.95, 0.5, 0.5));
   assert.deepStrictEqual([res.ok, res.species, res.shiny], [true, "basculin-white-striped", false]);
   assert.ok(s.dex.obtained.includes("basculin-white-striped") && !s.dex.obtained.includes("basculin"), "도감에는 나온 모습이 남는다");
   // 판매가는 배쓰나이와 같은 알로 정한다
@@ -204,7 +204,7 @@ const fixed = (...values: number[]): (() => number) => {
 {
   const s = seed({ kind: "ultra-beast", remainMs: 0, ready: true, candidates: ["nihilego", "buzzwole"], actions: { pat: 8, song: 8 } });
   s.dex.obtained.push("nihilego");
-  const res = open(s, "e1", T0, fixed(0, 0.5));
+  const res = openEgg(s, "e1", T0, fixed(0, 0.5));
   assert.equal(res.species, "buzzwole", "얻은 텅비드는 빠진다");
   assert.ok(s.dex.obtained.includes("buzzwole"));
   process.stdout.write("(15) 단일 포켓몬 알 · 얻은 종 제외  ok\n");
@@ -217,15 +217,15 @@ const fixed = (...values: number[]): (() => number) => {
   s.points.balance = 10_000;
   s.dex.obtained.push(...ub.slice(0, ub.length - 1)); // 한 종만 남았다
   assert.equal(canGiveEgg(s, "ultra-beast"), true);
-  const first = buy(s, "ultra-beast", T0, fixed(0));
+  const first = buyProduct(s, "ultra-beast", T0, fixed(0));
   assert.equal(first.ok, true);
   assert.deepStrictEqual(s.eggs[0]?.candidates, [ub[ub.length - 1]], "후보는 남은 한 종");
-  assert.equal(buy(s, "ultra-beast", T0, fixed(0)).reason, "sold-out", "남은 한 종을 기다리는 알이 이미 있다");
+  assert.equal(buyProduct(s, "ultra-beast", T0, fixed(0)).reason, "sold-out", "남은 한 종을 기다리는 알이 이미 있다");
   assert.equal(s.points.balance, 10_000 - 2000, "품절이면 포인트를 쓰지 않는다");
   assert.equal(shopList(s).find((p) => p.id === "ultra-beast")?.blocked, "모두 모았어요");
   // 랜덤알 보너스가 울트라비스트를 뽑아도 줄 수 없으면 포켓몬이 나온다
   s.eggs.push(egg({ id: "e9", remainMs: 0, ready: true, actions: { pat: 1, song: 0 } }));
-  const res = open(s, "e9", T0, fixed(0.012, 0, 0.5, 0.5));
+  const res = openEgg(s, "e9", T0, fixed(0.012, 0, 0.5, 0.5));
   assert.equal(res.egg, undefined);
   assert.ok(res.species === "charmander" || res.species === "squirtle");
   process.stdout.write("(16) 단일 포켓몬 알 · 품절  ok\n");

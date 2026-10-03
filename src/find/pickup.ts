@@ -8,7 +8,7 @@
 // 그래서 마리마다 따로, 주운 순간에 말풍선과 배너가 뜬다. 무기억 과정이라 쌓인 시간을 저장에 남기지 않는다.
 // 순수 함수다. 파일을 읽지 않고(데이터 표 제외) 시각과 무작위를 받는다. 저장은 부르는 쪽(src/main/game.ts find)이 한 번에 쓴다
 import { loadJson, type DexOptions } from "../dex/data.js";
-import { decide } from "../egg/hatch.js";
+import { pickHatch } from "../egg/hatch.js";
 import { pickByWeight, type Rand } from "../shared/rand.js";
 import { addItem } from "../bag/items.js";
 import { addNewPet } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
@@ -86,7 +86,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
     addItem(save, id, 1); // 사지 않고 받는 것이라 가방 상한으로 막지 않는다 (src/bag/items.ts)
     ref = id;
   } else {
-    const result = decide(pokemonCandidates(save, opts), rand, opts);
+    const result = pickHatch(pokemonCandidates(save, opts), rand, opts);
     if (!result) return null; // 후보 없음 — 이번 판정은 없음
     const added = addNewPet(save, { species: result.species, shiny: result.shiny, now, rand, place: "party-first", opts });
     if (!added) return null; // 둘 곳 없음 — 이번 판정은 없음

@@ -26,7 +26,7 @@
 //   egg-roll    계정 시드로 다시 계산한 알 결과(보너스 알·종·이로치)와 새 저장이 다르다 (P4b, D24)
 //
 // 결정적 난수(seededRand)와 알 결과 계산(rollEgg)도 여기 둔다 — 앱의 알 열기(src/egg/open.ts)가 같은 난수를 쓰고,
-// 자체 검사가 앱의 open() 과 rollEgg() 의 결과가 같은지 대조한다
+// 자체 검사가 앱의 openEgg() 과 rollEgg() 의 결과가 같은지 대조한다
 
 export interface VerifyItem {
   price: number | null;

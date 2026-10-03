@@ -18,7 +18,7 @@ import type { Rand } from "../shared/rand.js";
 import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { checkGiveEgg, eggRoomOf, newEgg } from "../egg/pool.js";
-import { find, slotPrice } from "./catalog.js";
+import { findProduct, slotPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
@@ -88,7 +88,7 @@ export function buyStateOf(save: SaveV3, productId: string, opts?: DexOptions): 
     return { price, many: false, room: reason ? 0 : 1, ...(reason ? { reason } : {}) };
   }
   const slot = productId === "party-slot";
-  const product = slot ? null : find(productId, opts);
+  const product = slot ? null : findProduct(productId, opts);
   const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
   if (price === null) return { price, many: false, room: 0, reason: slot ? "no-locked-slot" : "no-product" };
   const many = product?.kind === "egg" || product?.kind === "tool";
@@ -112,11 +112,11 @@ export function buyStateOf(save: SaveV3, productId: string, opts?: DexOptions): 
   return { price, many, room: 1 };
 }
 
-export function buy(save: SaveV3, productId: string, now: number, rand: Rand, opts?: DexOptions): BuyResult {
+export function buyProduct(save: SaveV3, productId: string, now: number, rand: Rand, opts?: DexOptions): BuyResult {
   if (productId === "party-preset") return buyPreset(save);
   if (productId === "box") return buyBox(save);
   const slot = productId === "party-slot";
-  const product = slot ? null : find(productId, opts);
+  const product = slot ? null : findProduct(productId, opts);
 
   // 검사 — 값을 바꾸기 전에 모두 본다
   const state = buyStateOf(save, productId, opts);

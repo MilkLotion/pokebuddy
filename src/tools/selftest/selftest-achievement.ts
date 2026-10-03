@@ -12,8 +12,8 @@ import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { applyStarter } from "../../party/starter";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
-import { buy } from "../../shop/buy";
-import { open } from "../../egg/open";
+import { buyProduct } from "../../shop/buy";
+import { openEgg } from "../../egg/open";
 import { createExecutor } from "../../tx/executor";
 import { claim } from "../../achievement/claim";
 import { defs, GROUPS, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../../achievement/defs";
@@ -328,7 +328,7 @@ function seed(): SaveV3 {
   queueTutorials(old, T0);
   assert.equal(old.tutorials["first-care"]?.state, "done", "이미 돌본 저장은 첫 돌봄을 띄우지 않는다");
 
-  assert.ok(buy(s, "random", T0 + 2, () => 0.5).ok);
+  assert.ok(buyProduct(s, "random", T0 + 2, () => 0.5).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);
   assert.equal(s.tutorials.shop?.state, "done", "랜덤알을 샀으니 상점 튜토리얼은 완료");
   assert.equal(currentTutorial(s, T0)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
@@ -341,7 +341,7 @@ function seed(): SaveV3 {
 
   const egg = s.eggs[0]!;
   Object.assign(egg, { ready: true, remainMs: 0, actions: { pat: 1, song: 0 }, candidates: ["rattata"] });
-  assert.ok(open(s, egg.id, T0 + 3, () => 0.99).ok);
+  assert.ok(openEgg(s, egg.id, T0 + 3, () => 0.99).ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"], "둘째 포켓몬을 얻으면 파티와 박스 튜토리얼");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
   assert.equal(currentTutorial(s, T0)?.id, "party");
@@ -387,7 +387,7 @@ function seed(): SaveV3 {
 {
   const s = empty(T0);
   assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
-  assert.ok(buy(s, "random", T0, () => 0.5).ok);
+  assert.ok(buyProduct(s, "random", T0, () => 0.5).ok);
   s.eggSeq = 0; // 산 기록이 없는 옛 저장처럼 — 상점이 넘어가지 않게
   s.totals.fed = 1; // 첫 돌봄은 이미 했다 — 상점과 부화의 순서만 본다
   s.tutorials.playground = { state: "skipped", steps: 0 }; // 놀이공간도 넘겼다
@@ -615,11 +615,11 @@ function seed(): SaveV3 {
   const e = empty(T0);
   assert.ok(applyStarter(e, "charmander", T0, () => 0.5).ok);
   e.points.balance = 1000;
-  assert.ok(buy(e, "random", T0, () => 0.5).ok);
+  assert.ok(buyProduct(e, "random", T0, () => 0.5).ok);
   const eggId = e.eggs[0]!.id;
   e.eggs[0]!.ready = true;
   e.eggs[0]!.remainMs = 0;
-  assert.ok(open(e, eggId, T0, () => 0.99).ok);
+  assert.ok(openEgg(e, eggId, T0, () => 0.99).ok);
   assert.equal(e.counts?.hatched, 1);
   process.stdout.write("(17) 이어진 날 · 부화 횟수  ok\n");
 }
