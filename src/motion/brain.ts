@@ -9,7 +9,8 @@
 // 옛 brain.js 와 다른 점 (판단 로직은 같다)
 //   규칙표를 밖에서 받는다 — params.ts applyParams 가 성격 배율을 곱한 것. 안 주면 MOTION_RULES(중립)
 //   act 에 rate 를 늘 채운다 (걷기 외에는 1) — 렌더러가 rate 없음을 1 로 봤던 것을 계약(Play.rate)으로 고정
-import type { Play, StageState } from "../shared/model/stage";
+import type { Play } from "../shared/model/stage";
+import type { AgentState } from "../shared/names/agents";
 import { MOTION_RULES } from "./rules";
 import type { MotionMode, MotionRules, Range } from "./rules";
 import type { MotionInput, MotionOut, Phase, RoamBox, MotionParams } from "./types";
@@ -37,9 +38,9 @@ export interface Brain {
   tick(input: BrainInput): MotionOut;
   pickup(now: number): void;
   drag(dx: number, dy: number): void;
-  drop(now: number, agent: StageState): void;
+  drop(now: number, agent: AgentState): void;
   rehome(now: number): void;
-  click(now: number, agent: StageState): void;
+  click(now: number, agent: AgentState): void;
 }
 
 interface Walk {

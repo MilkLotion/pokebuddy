@@ -17,7 +17,7 @@ import { capsOf, createPetMotion } from "../../motion/pet-motion";
 import { MOTION_RULES } from "../../motion/rules";
 import type { MotionRules } from "../../motion/rules";
 import type { MotionCaps, MotionOut, MotionParams, PetMotion, PetMotionOptions, Phase, RoamBox } from "../../motion/types";
-import type { StageState } from "../../shared/model/stage";
+import type { AgentState } from "../../shared/names/agents";
 
 const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
@@ -58,7 +58,7 @@ function run(
   m: PetMotion,
   from: number,
   to: number,
-  agent: StageState,
+  agent: AgentState,
   opts: { box?: RoamBox | null; visible?: boolean } = {},
   stop?: (t: Trace) => boolean,
 ): Trace[] {

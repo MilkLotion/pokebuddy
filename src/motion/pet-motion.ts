@@ -13,7 +13,7 @@
 //   없으면 마지막 tick 의 now 로 친다 (틱이 40ms 간격이라 어긋남은 그 안)
 //   활동 시각(activeAt)은 인스턴스 안 — 마리마다 따로 잠든다 (신호는 전원 공통이라 reactMs 지연과 성격 배율로 갈린다)
 //   PMD 검사(art.kind)·mode "off" 처리는 무대 쪽 — 여기는 caps 만 받는다
-import type { StageState } from "../shared/model/stage";
+import type { AgentState } from "../shared/names/agents";
 import { createBrain } from "./brain";
 import { NEUTRAL_PARAMS, applyParams, withSleepAfter } from "./params";
 import { MOTION_RULES } from "./rules";
@@ -65,9 +65,9 @@ export function createPetMotion({
 
   let lastNow: number | null = bornAt ?? null; // 마지막으로 본 시각 — now 를 안 주는 state·focus 의 기준
   let activeAt: number | null = bornAt ?? null; // 마지막 사용자 활동 — 막 켰으면 사용자가 있는 것. 모르면 첫 틱 시각
-  let seen: StageState = "idle"; // 훅이 알려 준 최신 상태 — 활동 시각 규칙은 이것으로 판단
-  let agent: StageState = "idle"; // brain 에 넘기는 상태 — seen 을 마리별 지연 뒤에 따라간다
-  let pending: { next: StageState; at: number } | null = null;
+  let seen: AgentState = "idle"; // 훅이 알려 준 최신 상태 — 활동 시각 규칙은 이것으로 판단
+  let agent: AgentState = "idle"; // brain 에 넘기는 상태 — seen 을 마리별 지연 뒤에 따라간다
+  let pending: { next: AgentState; at: number } | null = null;
   let focusKey: string | null = null;
   let lastLogged: string | null = null; // 마지막으로 찍은 단계·동작 — 작업 동작은 같은 단계(work)에서 동작만 바뀐다
 
@@ -86,7 +86,7 @@ export function createPetMotion({
   //   일이 끝남          사용자가 결과를 읽는 때다. 안 치면 수면 시계가 프롬프트부터 돌아,
   //                       수면 시간보다 긴 작업이 끝나자마자 잠든다 (3분 시절 시뮬레이션: 프롬프트의 46% 가 자는 펫에 도착)
   //   반응 지연  여러 마리가 같은 신호를 같은 틱에 받아 똑같이 움직이지 않게, 마리마다 0~reactMs 뒤에 따른다
-  function state(next: StageState, promptAt: number | null, now?: number): void {
+  function state(next: AgentState, promptAt: number | null, now?: number): void {
     const at = clock(now);
     if (promptAt) bump(promptAt * 1000);
     if (next !== seen && next === "running" && seen !== "failed") bump(at);
