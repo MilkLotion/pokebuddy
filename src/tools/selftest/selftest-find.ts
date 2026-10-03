@@ -1,7 +1,7 @@
 // 줍기 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-find.js
 //
 // 테스트 프레임워크 없이 assert 만. 무작위는 정한 값을 차례로 준다.
-// 네 결과·가방 상한·후보 없음·박스로 보냄·마리별 독립 판정(잠·숨김·박스 제외)·초 누적 확률·틱 상한·저장 반영·배너 문구를 본다.
+// 네 결과·가방 상한을 보지 않음·후보 없음·박스로 보냄·마리별 독립 판정(잠·숨김·박스 제외)·초 누적 확률·틱 상한·저장 반영·배너 문구를 본다.
 // 저장은 임시 폴더에만 쓴다. 계약은 docs/specs/game.md "줍기", 수치는 docs/specs/balance.md "줍기".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
@@ -106,7 +106,7 @@ try {
     process.stdout.write("(2) 포인트  ok\n");
   }
 
-  // (3) 도구 — 1/가격 가중치, 민트는 도구 하나, 가방 상한이면 없음
+  // (3) 도구 — 1/가격 가중치, 민트는 도구 하나. 사지 않고 받는 것이라 가방 상한(999)으로 막지 않는다
   {
     const s = seed();
     const rec = findOne(s, "p1", T0, seq(K_ITEM, 0));
@@ -115,9 +115,8 @@ try {
     assert.equal(s.bag["premium-food"], 1);
     assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0.99999))?.ref, MINT_RETIRED ? "rare-candy" : "mint", "마지막 후보");
     s.bag["premium-food"] = BAG_RULES.max;
-    const before = JSON.stringify(s);
-    assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0)), null, "가방 상한이면 이번 판정은 없음");
-    assert.equal(JSON.stringify(s), before, "가방 상한이면 아무것도 바꾸지 않는다");
+    assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0))?.ref, "premium-food", "가방 상한이어도 줍는다");
+    assert.equal(s.bag["premium-food"], BAG_RULES.max + 1, "상한을 넘어 1개 더한다");
     process.stdout.write("(3) 도구  ok\n");
   }
 

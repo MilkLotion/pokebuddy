@@ -65,7 +65,7 @@ export function eligible(save: SaveV3, awake: Iterable<string>): string[] {
 
 export const emptyFind = (): FindV3 => ({ seq: 0, log: [] });
 
-// 마리 하나가 무언가를 주웠다 — 항목과 내용을 고르고 저장에 반영한다. 반영할 수 없으면(가방 상한·후보 없음) null
+// 마리 하나가 무언가를 주웠다 — 항목과 내용을 고르고 저장에 반영한다. 반영할 수 없으면(후보 없음·둘 곳 없음) null
 export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, opts?: DexOptions): FindRecordV3 | null {
   const finder = save.pets.find((p) => p.id === petId);
   if (!finder) return null;
@@ -83,7 +83,7 @@ export function findOne(save: SaveV3, petId: string, now: number, rand: Rand, op
     const evo = kind === "evo" ? evoCandidates(opts) : [];
     const id = kind === "item" ? pickItem(rand, opts) : evo.length ? evo[pickIndex(evo.length, rand)] : null;
     if (!id) return null;
-    if (!addItem(save, id, 1, { capped: true }).ok) return null; // 가방 상한 — 이번 판정은 없음
+    addItem(save, id, 1); // 사지 않고 받는 것이라 가방 상한으로 막지 않는다 (src/bag/items.ts)
     ref = id;
   } else {
     const result = decide(pokemonCandidates(save, opts), rand, opts);
