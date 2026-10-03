@@ -10,7 +10,7 @@ import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
 import { ART_RULES, zoomOf } from "../../main/art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageRectOf, toLocal } from "../../main/layout";
-import { menuView, pickOf, subId } from "../../main/menus";
+import { menuView, pickOf, subId } from "../../view/menu-view";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../view/text";

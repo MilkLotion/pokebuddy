@@ -11,7 +11,7 @@
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import type { Rect } from "../../shared/geometry";
 import type { MenuChannel } from "../../shared/ipc/overlays";
-import { menuView, pickOf } from "../menus.js";
+import { menuView, pickOf } from "../../view/menu-view.js";
 import { cursorScreen } from "../windows/display.js";
 import { afterLoad, createIpcScope } from "../windows/ipc.js";
 import { createOverlayWindow } from "../windows/options.js";
