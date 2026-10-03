@@ -18,9 +18,9 @@ import { keep, place } from "../../party/placement";
 import { empty, normalize } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import { createExecutor } from "../../tx/executor";
-import { dexDetail } from "../../tx/dex-detail";
-import { dexList } from "../../tx/lists";
-import { snapshot } from "../../tx/snapshot";
+import { dexDetail } from "../../view/dex-detail";
+import { dexList } from "../../view/dex-list";
+import { snapshot } from "../../view/snapshot";
 import { verifySave, type VerifyData } from "../../verify/save-rules";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { appearanceOf } from "../../dex/look";

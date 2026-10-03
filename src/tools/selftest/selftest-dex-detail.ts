@@ -6,8 +6,8 @@
 import assert from "node:assert";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
-import { dexDetail } from "../../tx/dex-detail";
-import { evoItemNote, shopDetail } from "../../tx/shop-detail";
+import { dexDetail } from "../../view/dex-detail";
+import { evoItemNote, shopDetail } from "../../view/shop-detail";
 import { josa } from "../../shared/josa";
 import { iconUrl, portraitKey, portraitUrl } from "../../main/portraits";
 import { cryUrl } from "../../main/cries";

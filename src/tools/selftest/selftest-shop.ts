@@ -8,7 +8,7 @@ import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import { buy } from "../../shop/buy";
 import { eggPrice, find, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
-import { shopList } from "../../tx/lists";
+import { shopList } from "../../view/shop-list";
 import { sell, sellPrice } from "../../shop/sell";
 import { petSellPrice, sellPet, sellablePet } from "../../shop/sell-pet";
 import { newPet, nextPetId } from "../../party/create";

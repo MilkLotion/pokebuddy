@@ -12,79 +12,21 @@
 // 입수 방법은 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
 import { profile } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
-import { nextOf, prevOf, type EvoStep } from "../dex/evo.js";
-import type { DexOptions } from "../dex/data";
-import { getLang, petName, typeName } from "../main/text.js";
-import { loadJson } from "../dex/data.js";
+import { nextOf, prevOf } from "../dex/evo.js";
+import type { DexOptions } from "../dex/data.js";
+import { petName, typeName, t } from "../main/text.js";
 import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
-import { nameOfItem } from "./lists.js";
-import { josa } from "../shared/josa.js";
 import { defs as achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { hatchBaseOf, needIsMap, regionalOf } from "../dex/regional.js";
+import { hatchBaseOf, regionalOf } from "../dex/regional.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
+import { bodySize, officialText, textOf } from "./dex-text.js";
+import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
 
 // 도감 상세의 상점 구매 줄 — 상점 포켓몬 탭을 숨긴 동안 끈다 (docs/specs/game.md "상점 포켓몬")
 const SHOP_SPECIES_LINE = false;
-
-// 진화 한 단계의 문구 — "Lv.16에서 리자드", "불꽃의돌로 부스터", "밤에 친밀도 65로 블래키"
-// 조사는 앞 낱말 받침에 맞춘다 (src/shared/josa.ts). 레벨·친밀도 지도 간선은 결과 뒤에 " (지도)" 를 붙인다 — "Lv.36에서 히스이 블레이범 (지도)"
-// 돌 대신 지도인 간선은 조건이 지도라 표시를 붙이지 않는다 — "천둥의돌로 라이츄 · 지도로 알로라 라이츄" (2026-09-30 사용자 결정)
-// 얻는 방법 줄("피카츄에서 진화 (지도)")·상점 트리 화살표("지도", "Lv.36 · 지도")와 같은 낱말을 쓴다
-export const MAP_MARK = " (지도)";
-export function stepText(step: EvoStep, opts?: DexOptions): string {
-  // 조건에 더해 친밀도도 보는 간선은 결과 뒤에 적는다 — "Lv.25에서 루가루암(황혼의 모습) (친밀도 100)"
-  const to = `${petName(step.to)}${step.map && !needIsMap(step.need) ? MAP_MARK : ""}${step.affinity ? ` (친밀도 ${step.affinity})` : ""}`;
-  const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
-  const need = step.need;
-  if (!need) return `${time}친밀도 100${josa("100", "으로/로")} ${to}`;
-  if (need.kind === "level") return `${time}Lv.${need.level}에서 ${to}`;
-  if (need.kind === "affinity") return `${time}친밀도 ${need.value}${josa(String(need.value), "으로/로")} ${to}`;
-  const item = nameOfItem(need.item, opts);
-  return `${time}${item}${josa(item, "으로/로")} ${to}`;
-}
-
-// 한 단계뿐인 진화 — "Lv.16에서 리자드로 진화", "천둥의돌을 쓰면 라이츄로 진화"
-// 조건 뒤에 '로'가 두 번 겹치지 않게 도구·친밀도는 다른 꼴로 쓴다
-function onlyStepText(step: EvoStep, opts?: DexOptions): string {
-  if (step.map || step.affinity) return stepText(step, opts); // 지도 간선은 기본형 간선과 늘 함께라 여기 올 일이 드물다 — 조건 문구를 겹치지 않게 짧은 꼴로
-  const to = petName(step.to);
-  const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
-  const need = step.need;
-  const cond = !need
-    ? `${time}친밀도 100이 되면`
-    : need.kind === "level"
-      ? `${time}Lv.${need.level}에서`
-      : need.kind === "affinity"
-        ? `${time}친밀도 ${need.value}${josa(String(need.value), "이/가")} 되면`
-        : `${time}${nameOfItem(need.item, opts)}${josa(nameOfItem(need.item, opts), "을/를")} 쓰면`;
-  return `${cond} ${to}${josa(to, "으로/로")} 진화`;
-}
-
-// 공식 분류와 설명문 — data/dex-text.json (src/tools/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
-export interface DexText {
-  genus: { ko?: string; en?: string };
-  flavor: { ko?: string; en?: string };
-  height?: number; // 데시미터
-  weight?: number; // 헥토그램
-}
-export const dexTexts = (opts?: DexOptions): Record<string, DexText> => loadJson<Record<string, DexText>>("dex-text.json", opts);
-
-// 한 종의 도감 글 — 도감 번호 항목(분류·설명문) 위에 슬러그 항목(리전폼의 키·몸무게)을 얹는다. 리전폼 설명문은 기본형 것이다
-export function textOf(slug: string, dex: number, opts?: DexOptions): DexText | undefined {
-  const all = dexTexts(opts);
-  const base = all[String(dex)];
-  const own = all[slug];
-  if (!own) return base;
-  return {
-    genus: { ...base?.genus, ...own.genus },
-    flavor: { ...base?.flavor, ...own.flavor },
-    height: own.height ?? base?.height,
-    weight: own.weight ?? base?.weight,
-  };
-}
 
 // 메가진화 줄 — 얻은 종에만 보인다 (2026-10-02 사용자 결정). 메가스톤이 있는지는 보지 않는다. 조건은 적지 않는다
 function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
@@ -157,18 +99,3 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
 // 입수 경로가 하나도 없을 때 — 첫 선택·진화·알·상점 어디에도 없는 종
 const NO_METHOD = "획득 방법 준비 중";
 const GIFT_METHOD = "이벤트 우편";
-
-// 키·몸무게 — 공식 도감처럼 소수 한 자리. 미해금 종과 값이 없는 종은 빈 문자열
-function bodySize(t: DexText | undefined): { height: string; weight: string } {
-  return {
-    height: t?.height ? `${(t.height / 10).toFixed(1)}m` : "",
-    weight: t?.weight ? `${(t.weight / 10).toFixed(1)}kg` : "",
-  };
-}
-
-export function officialText(t: DexText | undefined): { genus: string; flavor: string } {
-  if (!t) return { genus: "", flavor: "" };
-  const lang = getLang();
-  const other = lang === "ko" ? "en" : "ko";
-  return { genus: t.genus[lang] ?? t.genus[other] ?? "", flavor: t.flavor[lang] ?? t.flavor[other] ?? "" };
-}

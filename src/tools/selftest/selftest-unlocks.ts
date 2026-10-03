@@ -8,7 +8,7 @@ import { starters, unlockByRules, unlockRules } from "../../dex/unlocks";
 import { begin } from "../../party/starter";
 import { speciesPrice } from "../../shop/catalog";
 import { empty } from "../../save/v3";
-import { dexList } from "../../tx/lists";
+import { dexList } from "../../view/dex-list";
 import { evolve } from "../../dex/evolve";
 import { newPet } from "../../party/create";
 import { inRandomEgg } from "../../dex/obtain";

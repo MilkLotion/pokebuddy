@@ -5,34 +5,37 @@
 // 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { defs, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../achievement/defs.js";
-import type { AchievementDef } from "../dex/tables.js";
-import { progressOf } from "../achievement/progress.js";
+import { profile } from "../dex/species.js";
+import { petName, typeName, moodWord, natureName, t } from "../main/text.js";
+import { eggName, toolPrice, eggPalettes } from "../shop/catalog.js";
+import type { SaveV3, PetV3 } from "../shared/save-v3";
+import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
+import { megaOf, megaChoices, shownSpecies } from "../dex/mega.js";
 import { BOX_RULES } from "../box/rules.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { PARTY_RULES } from "../party/rules.js";
-import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
 import { SHOP_RULES } from "../shop/rules.js";
+import { activePreset, presetCount, presetName, locatePet } from "../party/presets.js";
+import type { AchievementDef } from "../dex/tables.js";
+import { progressOf } from "../achievement/progress.js";
+import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
 import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
-import { profile } from "../dex/species.js";
 import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
-import { eggName, eggPalettes, toolPrice } from "../shop/catalog.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
-import { moodWord, natureName, petName, t, typeName } from "../main/text.js";
 import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
-import { megaChoices, megaOf, shownSpecies } from "../dex/mega.js";
 import { megaRivals } from "../party/mega-form.js";
-import { activePreset, locatePet, presetCount, presetName } from "../party/presets.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial } from "../tutorial/queue.js";
 import { candidates, dayPartOf, type EvoMissing } from "../dex/evolve.js";
 import type { DayPart } from "../shared/species";
-import { isEvoItem, itemAbout, nameOfItem, shopList } from "./lists.js";
-import type { PetV3, SaveV3 } from "../shared/save-v3";
+import { isEvoItem, itemAbout } from "./bag.js";
+import { nameOfItem } from "./item-name.js";
+import { shopList } from "./shop-list.js";
+import { isKnownSpecies } from "../dex/record.js";
 
 // 보상 종류 → 화면 문구
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
@@ -79,7 +82,7 @@ function needText(lacks: readonly EvoMissing[]): string | undefined {
 // 도감에서 해금 안 된 결과 종은 이름을 "???" 로 준다 — 도감 기기 창과 같이 가리고 조건만 보인다. 진화가 처음 보는 순간이다
 // (2026-10-01 사용자 결정 "추천대로하자", Figma 05 `1126:23890`)
 function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView[] {
-  const known = (slug: string): boolean => save.dex.unlocked.includes(slug) || save.dex.obtained.includes(slug);
+  const known = (slug: string): boolean => isKnownSpecies(save, slug);
   return candidates(save, pet.id, dayPart).map((c) => ({
     to: c.to,
     name: known(c.to) ? petName(c.to) : "???",

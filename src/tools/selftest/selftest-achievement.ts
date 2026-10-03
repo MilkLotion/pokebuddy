@@ -8,7 +8,7 @@ import { SAVE_V3_RULES } from "../../save/rules";
 import { regionalOf } from "../../dex/regional";
 import { profile, slugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";
-import { snapshot } from "../../tx/snapshot";
+import { snapshot } from "../../view/snapshot";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { begin } from "../../party/starter";

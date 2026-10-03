@@ -5,7 +5,7 @@
 // 막아야 하는 규칙(첫 선택 후보 도달, 진화 규칙의 출발 종이 도감에 있음)은 selftest-unlocks 가 본다
 import { reach } from "../../dex/reach";
 import { empty } from "../../save/v3";
-import { dexList } from "../../tx/lists";
+import { dexList } from "../../view/dex-list";
 
 const r = reach();
 const all = dexList(empty(0)).map((e) => e.slug);

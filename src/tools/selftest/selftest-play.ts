@@ -15,7 +15,7 @@ import { zoomOf } from "../../main/art";
 import { empty, normalize } from "../../save/v3";
 import { setSetting } from "../../state/settings";
 import { createExecutor } from "../../tx/executor";
-import { shopList } from "../../tx/lists";
+import { shopList } from "../../view/shop-list";
 import { eggPrice } from "../../shop/catalog";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";

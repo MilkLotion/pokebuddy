@@ -27,9 +27,9 @@ import { begin } from "../../party/starter";
 import { newPet, nextPetId } from "../../party/create";
 import { putPet } from "../../box/slots";
 import { empty } from "../../save/v3";
-import { dexList } from "../../tx/lists";
+import { dexList } from "../../view/dex-list";
 import { MINT_RETIRED } from "../../bag/mint";
-import { snapshot } from "../../tx/snapshot";
+import { snapshot } from "../../view/snapshot";
 import { makeTmp } from "../harness/tmp-dir";
 
 const dir = makeTmp("manage");

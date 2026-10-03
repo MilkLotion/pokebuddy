@@ -2,6 +2,13 @@
 // 여러 파일이 같은 표를 각자 타입을 달아 읽던 것을 여기로 모은다. 열쇠가 "_" 로 시작하는 항목(설명)은 부르는 쪽이 isMetaKey 로 거른다
 import { loadJson, type DexOptions } from "./data.js";
 
+// ── data/species.defaults.json ── 기본 표만(손으로 다듬은 덮어쓰기는 src/dex/species.ts profile 이 합친다)
+export interface SpeciesRow {
+  dex: number;
+  rank?: number;
+}
+export const speciesTable = (opts?: DexOptions): Record<string, SpeciesRow> => loadJson<Record<string, SpeciesRow>>("species.defaults.json", opts);
+
 // ── data/eggs.json ──
 export interface EggRow {
   ko: string;

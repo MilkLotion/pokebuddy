@@ -1,7 +1,4 @@
 # deps 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-deps.js --update-baseline)
-cycle: src/dex/mega.ts ⇄ src/party/mega-form.ts
-cycle: src/tx/dex-detail.ts ⇄ src/tx/lists.ts ⇄ src/tx/shop-detail.ts
-layer: src/dex/mega.ts → src/party/mega-form.ts
 layer: src/notify/banner.ts → src/main/text.ts
 layer: src/notify/notifier.ts → src/platform/atomic-write.ts
 layer: src/trade/config.ts → src/platform/dev-run.ts
@@ -9,11 +6,14 @@ layer: src/trade/net.ts → src/online/client.ts
 layer: src/trade/net.ts → src/online/codes.ts
 layer: src/trade/net.ts → src/online/server-call.ts
 layer: src/trade/net.ts → src/online/session.ts
-layer: src/tx/dex-detail.ts → src/main/text.ts
 layer: src/tx/handlers/box.ts → src/main/text.ts
-layer: src/tx/lists.ts → src/main/text.ts
-layer: src/tx/shop-detail.ts → src/main/text.ts
-layer: src/tx/snapshot.ts → src/main/text.ts
+layer: src/view/dex-detail.ts → src/main/text.ts
+layer: src/view/dex-list.ts → src/main/text.ts
+layer: src/view/dex-text.ts → src/main/text.ts
+layer: src/view/evo-text.ts → src/main/text.ts
+layer: src/view/shop-detail.ts → src/main/text.ts
+layer: src/view/shop-list.ts → src/main/text.ts
+layer: src/view/snapshot.ts → src/main/text.ts
 outside: src/agents/registry.ts → cli/setup.js
 outside: src/main/art.ts → art/pmd-load.js
 outside: src/main/cries.ts → art/fetch.js

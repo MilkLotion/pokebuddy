@@ -12,3 +12,6 @@ export function recordDex(save: Pick<SaveV3, "dex">, species: string, shiny: boo
 export function recordShiny(save: Pick<SaveV3, "dex">, species: string): void {
   if (!save.dex.shinyObtained.includes(species)) save.dex.shinyObtained.push(species);
 }
+
+// 해금했거나 얻은 종인가 — 아니면 화면이 이름을 숨긴다
+export const isKnownSpecies = (save: Pick<SaveV3, "dex">, slug: string): boolean => save.dex.unlocked.includes(slug) || save.dex.obtained.includes(slug);

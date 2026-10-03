@@ -4,20 +4,18 @@
 //   진화용 도구  이 도구로 진화하는 쌍 전부 — 진화 전 → 진화 후, 도감 번호순
 // 미해금 종은 이름을 "???" 로 준다. 조건 문구는 미해금이어도 준다 (사용자 결정 "다 보여줘").
 // 도감 상세처럼 칸을 누를 때 한 상품만 만든다. 상점 포켓몬은 수백 종이라 스냅샷에 싣지 않는다
-import { loadJson, isMetaKey, type DexOptions } from "../dex/data.js";
-import { nextOf, rootOf, type EvoStep } from "../dex/evo.js";
 import { profile } from "../dex/species.js";
-import { petName, typeName } from "../main/text.js";
-import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
+import { nextOf, type EvoStep, rootOf } from "../dex/evo.js";
+import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
+import { petName, typeName, t } from "../main/text.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { officialText, textOf } from "./dex-detail.js";
-import { REGION_MAP, needIsMap, regionalOf } from "../dex/regional.js";
-import { nameOfItem } from "./lists.js";
+import { needIsMap, regionalOf, REGION_MAP } from "../dex/regional.js";
+import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
+import { officialText, textOf } from "./dex-text.js";
+import { nameOfItem } from "./item-name.js";
+import { isKnownSpecies } from "../dex/record.js";
 
 const LOCKED_NAME = "???";
-
-// 도감에서 해금했거나 얻은 종인가 — 아니면 이름을 숨긴다
-const known = (save: SaveV3, slug: string): boolean => save.dex.unlocked.includes(slug) || save.dex.obtained.includes(slug);
 
 // 시간대·성별·지도 — 도구·레벨 뒤에 붙는 조건. 레벨·친밀도 지도 간선은 "Lv.36 · 지도". 돌 대신 지도인 간선은 조건이 지도라 "지도" 하나
 function extras(step: EvoStep): string[] {
@@ -50,7 +48,7 @@ const isCurrent = (slug: string, current: string, opts?: DexOptions): boolean =>
 // 사슬의 한 종과 그 아래 — 같은 종이 두 번 나오면 멈춘다(자료가 잘못돼도 끝나게)
 function node(save: SaveV3, slug: string, current: string, need: string | undefined, seen: Set<string>, opts?: DexOptions): EvoNodeView {
   seen.add(slug);
-  const locked = !known(save, slug);
+  const locked = !isKnownSpecies(save, slug);
   const children = nextOf(slug, opts)
     .filter((step) => !seen.has(step.to))
     .map((step) => node(save, step.to, current, needLabel(step, opts), seen, opts));
@@ -68,7 +66,7 @@ function node(save: SaveV3, slug: string, current: string, need: string | undefi
 export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPairView[] {
   const table = loadJson<Record<string, EvoStep[]>>("evo.json", opts);
   const dexOf = (slug: string): number => profile(slug, opts).dex || Number.MAX_SAFE_INTEGER;
-  const side = (slug: string): EvoPairView["from"] => ({ slug, name: known(save, slug) ? petName(slug) : LOCKED_NAME, locked: !known(save, slug) });
+  const side = (slug: string): EvoPairView["from"] => ({ slug, name: isKnownSpecies(save, slug) ? petName(slug) : LOCKED_NAME, locked: !isKnownSpecies(save, slug) });
   const pairs: EvoPairView[] = [];
   for (const [from, steps] of Object.entries(table)) {
     if (isMetaKey(from)) continue;

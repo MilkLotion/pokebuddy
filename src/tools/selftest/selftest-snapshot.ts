@@ -8,7 +8,7 @@ import { MINT_RETIRED } from "../../bag/mint";
 import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { snapshot } from "../../tx/snapshot";
+import { snapshot } from "../../view/snapshot";
 import { BOX_RULES } from "../../box/rules";
 import { EGG_RULES } from "../../egg/rules";
 import { PARTY_RULES } from "../../party/rules";
