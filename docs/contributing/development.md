@@ -334,7 +334,7 @@ node dist/tools/dev/dev-test.js stop
 
 창 확인(Windows):
 
-- 설정창은 같은 HOME 으로 앱을 한 번 더 실행하면 열린다(`src/main/app.ts` second-instance). 두 번째 프로세스는 바로 끝난다.
+- 설정창은 같은 HOME 으로 앱을 한 번 더 실행하면 열린다(`src/main/app/launch.ts` second-instance). 두 번째 프로세스는 바로 끝난다.
 - `scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <폴더>` 가 그 앱의 창만 찍는다(`PrintWindow`). pid 는 시험 HOME 의 `.claude/pokebuddy/save.lock` 첫 줄이다. `-List` 는 창 핸들과 사각형만 보인다. `-Restore` 는 최소화된 창을 포커스 없이 되살린다.
 - `scripts/dev-winclick.ps1 -Hwnd <핸들> -X <x> -Y <y>` 가 창에 클릭 메시지를 보낸다(`PostMessage`). 마우스는 움직이지 않는다. 좌표는 찍은 그림에서 읽는다. 설정창은 보이지 않는 왼쪽 테두리 8 px 을 x 에서 뺀다. 화면 배율 100% 기준이다.
 - 화면 전체를 캡처하지 않는다. 사용자의 다른 앱이 찍힌다. 무대의 포켓몬은 작은 사각형만 찍는다.
