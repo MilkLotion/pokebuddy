@@ -18,7 +18,7 @@ import type { SpriteSheet } from "../../shared/model/stage";
 import { megaOf } from "../../dex/mega";
 import { dexFolderOf, lookOf } from "../../dex/look";
 import { decodePng, encodePng, type Rgba } from "../../platform/png";
-import { fetchCached } from "./fetch";
+import { createAssetCache } from "./asset-cache";
 
 export const OVERWORLD_RULES = {
   repo: "https://raw.githubusercontent.com/rh-hideout/pokeemerald-expansion",
@@ -170,6 +170,10 @@ export interface OverworldSource {
 
 // look → 걷기 대체 그림. dir 은 캐시 폴더(PATHS.overworld)
 export function createOverworldSource(dir: string): OverworldSource {
+  // 받기·캐시 (./asset-cache.ts) — 못 받아도 기억하지 않는다(늘 다시). 시트와 팔레트는 검증이 달라 캐시가 둘이다
+  const sheets = createAssetCache({ dir, validate: looksLikeOverworld, mime: () => "image/png", retryMs: 0 });
+  const palettes = createAssetCache({ dir, validate: looksLikePal, mime: () => "text/plain", retryMs: 0 });
+  const relOf = (file: string): string => path.relative(dir, file);
   const parse = (look: string): { slug: string; shiny: boolean } =>
     look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false };
   // 이로치 팔레트를 못 받으면 보통 팔레트다 (이로치 초상이 없으면 보통 초상인 것과 같다). 보통 팔레트도 못 받으면 PNG 의 색이다
@@ -177,12 +181,12 @@ export function createOverworldSource(dir: string): OverworldSource {
     const { slug, shiny } = parse(look);
     if (!/^[a-z0-9-]+$/.test(slug)) return null;
     const files = overworldFiles(dir, slug);
-    const png = await fetchCached(files.png, overworldUrl(slug, PNG_FILE), looksLikeOverworld);
+    const png = await sheets.fetchBuffer(relOf(files.png), overworldUrl(slug, PNG_FILE));
     if (!png) return null;
     const pal =
-      (shiny ? await fetchCached(files.shiny, overworldUrl(slug, SHINY_FILE), looksLikePal) : null) ??
-      (await fetchCached(files.normal, overworldUrl(slug, NORMAL_FILE), looksLikePal));
-    return { png: png.buf, pal: pal?.buf ?? null, slug };
+      (shiny ? await palettes.fetchBuffer(relOf(files.shiny), overworldUrl(slug, SHINY_FILE)) : null) ??
+      (await palettes.fetchBuffer(relOf(files.normal), overworldUrl(slug, NORMAL_FILE)));
+    return { png, pal, slug };
   };
   return {
     async load(look) {
