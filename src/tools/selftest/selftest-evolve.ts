@@ -8,7 +8,10 @@ import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_DATA_DIR } from "../../dex/data";
 import { unlockByRules } from "../../dex/unlocks";
-import { candidates, canEvolve, dayPartOf, evolve } from "../../dex/evolve";
+import { candidates, canEvolve, dayPartOf, evolve, missingKey, type Candidate } from "../../dex/evolve";
+
+// 못 채운 조건을 `kind:값` 으로 쓰고 `|` 로 잇는다 — 단언을 짧게 적으려고. 채웠으면 undefined
+const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
 import { formsOf, setForm } from "../../dex/forms";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
@@ -50,7 +53,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(list[0]?.to, "charmeleon");
   assert.deepStrictEqual(list[0]?.need, { kind: "level", level: 16 });
   assert.equal(list[0]?.ready, false);
-  assert.equal(list[0]?.missing, "level:16", "무엇이 모자란지 알려준다");
+  assert.equal(missingOf(list[0]), "level:16", "무엇이 모자란지 알려준다");
   assert.equal(canEvolve(s, "p1", "day"), false);
   process.stdout.write("(2) 레벨 조건과 모자란 이유  ok\n");
 }
@@ -80,7 +83,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const none = seed({ species: "pikachu", level: 50 });
   const list = candidates(none, "p1", "day");
   assert.deepStrictEqual(list[0]?.need, { kind: "item", item: "thunder-stone" });
-  assert.equal(list[0]?.missing, "item:thunder-stone");
+  assert.equal(missingOf(list[0]), "item:thunder-stone");
   assert.equal(evolve(none, "p1", "day").reason, "not-ready");
 
   const s = seed({ species: "pikachu" }, { "thunder-stone": 2 });
@@ -99,7 +102,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const night = candidates(s, "p1", "night").find((c) => c.to === "espeon");
   assert.equal(day?.ready, true, "에브이는 낮에");
   assert.equal(night?.ready, false);
-  assert.equal(night?.missing, "time:day");
+  assert.equal(missingOf(night), "time:day");
   const umbreon = candidates(s, "p1", "night").find((c) => c.to === "umbreon");
   assert.equal(umbreon?.ready, true, "블래키는 밤에");
   process.stdout.write("(5) 시간대 조건  ok\n");
@@ -192,9 +195,9 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(candidates(r, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["lycanroc"], "낮에는 루가루암");
   assert.deepStrictEqual(candidates(r, "p1", "night").filter((c) => c.ready).map((c) => c.to), ["lycanroc-midnight"], "밤에는 루가루암(한밤중의 모습)");
   // 루가루암(황혼의 모습) — Lv.25 와 친밀도 100, 낮·밤 무관 (2026-10-03 사용자 결정 "추천대로 하자")
-  assert.equal(candidates(r, "p1", "night").find((c) => c.to === "lycanroc-dusk")?.missing, "affinity:100", "친밀도가 모자라다");
+  assert.equal(missingOf(candidates(r, "p1", "night").find((c) => c.to === "lycanroc-dusk")), "affinity:100", "친밀도가 모자라다");
   const low = seed({ species: "rockruff", level: 20 });
-  assert.equal(candidates(low, "p1", "day").find((c) => c.to === "lycanroc-dusk")?.missing, "level:25|affinity:100", "둘 다 모자라면 함께 알린다");
+  assert.equal(missingOf(candidates(low, "p1", "day").find((c) => c.to === "lycanroc-dusk")), "level:25|affinity:100", "둘 다 모자라면 함께 알린다");
   assert.equal(evolve(r, "p1", "night", "lycanroc-dusk").ok, false, "친밀도 없이 진화하지 못한다");
   (r.pets[0] as PetV3).affinity = 100;
   assert.deepStrictEqual(candidates(r, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["lycanroc", "lycanroc-dusk"], "낮에는 루가루암과 황혼");
@@ -259,7 +262,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 // (15) 성별 조건 — 야도뉴는 암컷만 염뉴트로, 킬리아는 수컷만 엘레이드로 (2026-09-30 사용자 결정)
 {
   const male = seed({ species: "salandit", gender: "male", level: 40 });
-  assert.deepEqual(candidates(male, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["salazzle", false, "gender:female"]], "수컷 야도뉴는 진화하지 못한다");
+  assert.deepEqual(candidates(male, "p1", "day").map((c) => [c.to, c.ready, missingOf(c)]), [["salazzle", false, "gender:female"]], "수컷 야도뉴는 진화하지 못한다");
   assert.equal(evolve(male, "p1", "day").reason, "not-ready");
   const female = seed({ species: "salandit", gender: "female", level: 40 });
   assert.equal(evolve(female, "p1", "day").to, "salazzle");
@@ -286,7 +289,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.ok(pika.dex.obtained.includes("raichu-alola") && pika.dex.unlocked.includes("raichu-alola"), "진화로 얻을 때 해금한다");
   // 돌 없이 지도만 — 알로라 라이츄 하나가 준비된다. 라이츄는 천둥의돌이 모자라다
   const mapOnly = seed({ species: "pikachu" }, { "region-map": 1 });
-  assert.deepStrictEqual(candidates(mapOnly, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["raichu", false, "item:thunder-stone"], ["raichu-alola", true, undefined]]);
+  assert.deepStrictEqual(candidates(mapOnly, "p1", "day").map((c) => [c.to, c.ready, missingOf(c)]), [["raichu", false, "item:thunder-stone"], ["raichu-alola", true, undefined]]);
   assert.equal(canEvolve(mapOnly, "p1", "day"), true, "지도만 있어도 진화할 수 있다고 알린다");
   const mo = evolve(mapOnly, "p1", "day");
   assert.deepStrictEqual([mo.ok, mo.to, mo.usedItems, mapOnly.bag["region-map"]], [true, "raichu-alola", ["region-map"], undefined], "준비된 후보가 하나면 고르지 않는다");
@@ -296,14 +299,14 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual([r.to, r.usedItems, plain.bag["thunder-stone"], plain.bag["region-map"]], ["raichu", ["thunder-stone"], undefined, 2]);
   // 지도가 없으면 알로라 라이츄는 조건 모자람 — 이유는 지도. 명령으로 골라도 no-map 이고 가방은 그대로
   const noMap = seed({ species: "pikachu" }, { "thunder-stone": 1 });
-  assert.deepStrictEqual(candidates(noMap, "p1", "day").map((c) => [c.to, c.ready, c.missing]), [["raichu", true, undefined], ["raichu-alola", false, "item:region-map"]]);
+  assert.deepStrictEqual(candidates(noMap, "p1", "day").map((c) => [c.to, c.ready, missingOf(c)]), [["raichu", true, undefined], ["raichu-alola", false, "item:region-map"]]);
   const nm = evolve(noMap, "p1", "day", "raichu-alola");
   assert.deepStrictEqual([nm.ok, nm.reason, nm.choices], [false, "no-map", ["raichu"]]);
   assert.deepStrictEqual([noMap.pets[0]?.species, noMap.bag["thunder-stone"]], ["pikachu", 1], "실패하면 아무것도 바꾸지 않는다");
   assert.equal(evolve(noMap, "p1", "day").to, "raichu", "준비된 후보가 하나면 기본형으로 간다");
   // 둘 다 없으면 각자 자기 도구 하나가 모자라다 — 알로라 라이츄는 돌을 보지 않는다
   const bare = seed({ species: "pikachu" });
-  assert.deepStrictEqual(candidates(bare, "p1", "day").map((c) => c.missing), ["item:thunder-stone", "item:region-map"]);
+  assert.deepStrictEqual(candidates(bare, "p1", "day").map((c) => missingOf(c)), ["item:thunder-stone", "item:region-map"]);
   assert.equal(evolve(bare, "p1", "day", "raichu-alola").reason, "not-ready", "준비된 후보가 없으면 not-ready");
   // 다른 돌 간선 3개도 같다 — 아라리·흉내내·치릴리
   for (const [from, to] of [["exeggcute", "exeggutor-alola"], ["mime-jr", "mr-mime-galar"], ["petilil", "lilligant-hisui"]] as const) {
@@ -316,11 +319,11 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const q = evolve(quilava, "p1", "day", "typhlosion-hisui");
   assert.deepStrictEqual([q.ok, q.to, q.usedItem, q.usedItems, quilava.bag["region-map"]], [true, "typhlosion-hisui", "region-map", ["region-map"], undefined]);
   const lowQuilava = seed({ species: "quilava", level: 35 }, { "region-map": 1 });
-  assert.equal(candidates(lowQuilava, "p1", "day").find((c) => c.map)?.missing, "level:36");
+  assert.equal(missingOf(candidates(lowQuilava, "p1", "day").find((c) => c.map)), "level:36");
   assert.equal(evolve(lowQuilava, "p1", "day", "typhlosion-hisui").reason, "not-ready", "Lv.35 + 지도는 준비 안 됨");
   assert.equal(lowQuilava.bag["region-map"], 1);
   const quilavaNoMap = seed({ species: "quilava", level: 36 });
-  assert.equal(candidates(quilavaNoMap, "p1", "day").find((c) => c.map)?.missing, "item:region-map", "레벨 간선은 조건과 지도를 함께 본다");
+  assert.equal(missingOf(candidates(quilavaNoMap, "p1", "day").find((c) => c.map)), "item:region-map", "레벨 간선은 조건과 지도를 함께 본다");
   // 리전폼 진화 전 종은 자기 간선만 받는다 — 가라르 나옹 Lv.28 은 나이킹 하나. 지도가 필요 없다
   const galar = seed({ species: "meowth-galar", level: 28 });
   assert.deepStrictEqual(candidates(galar, "p1", "day").map((c) => c.to), ["perrserker"]);

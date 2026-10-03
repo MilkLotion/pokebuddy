@@ -7,7 +7,7 @@
 // (docs/specs/modules.md "창이 여러 개여도 저장 쓰기는 주 프로세스 하나가 한다").
 //   writer  잠금을 잡았다. 명령을 직접 실행한다
 //   reader  못 잡았다. 명령을 mailbox 로 보내고, 파일이 바뀌면 다시 읽는다. 10초마다 다시 잡아 본다
-import { appearanceOf } from "../dex/appearance";
+import { appearanceOf } from "../dex/look";
 import { sendToWriter } from "../save/command-channel.js";
 import { createEmptySave } from "../save/save-file.js";
 import { createSaveWatch } from "../save/save-watch.js";

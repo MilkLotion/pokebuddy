@@ -18,7 +18,7 @@ import { maxEggNo } from "../egg/pool.js";
 import { screenRefOf } from "../shared/raw.js";
 import { SAVE_RULES, SAVE_V3_RULES } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
-import { normalizeMail } from "../mail/core.js";
+import { normalizeMail } from "../mail/letters.js";
 import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { maxPetNo } from "../party/create.js";

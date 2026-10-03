@@ -5,7 +5,8 @@
 import type { RegionChannel } from "../../shared/ipc/overlays";
 import type { Rect } from "../../shared/geometry";
 import type { RegionInit } from "../../shared/model/overlays";
-import { REGION_MIN, regionFits } from "../../state/settings.js";
+import { regionFits } from "../../state/settings.js";
+import { REGION_MIN } from "../../state/rules.js";
 import { cursorScreen } from "./display";
 import { afterLoad, createIpcScope } from "./ipc";
 import { createOverlayWindow } from "./options";

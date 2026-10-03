@@ -7,16 +7,18 @@ import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
 import { use } from "../../bag/use";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL, progressTo } from "../../dex/growth";
-import { BAG_V3_RULES, SAVE_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { feed, play } from "../../state/care";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
+import { BAG_RULES } from "../../bag/rules";
+import { CARE_RULES } from "../../state/rules";
 
 // 놀아주기 상태가 끝날 만큼 시간을 흘린다. 개체가 파티에 있어야 시간이 흐른다
 function applyTimeForTest(s: SaveV3): void {
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  applyTime(s, SAVE_V3_RULES.playWindowMs, T0 + SAVE_V3_RULES.playWindowMs);
+  applyTime(s, CARE_RULES.playWindowMs, T0 + CARE_RULES.playWindowMs);
 }
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -89,8 +91,8 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const res = use(s, "basic-food", "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 70, "만복도 +20");
-  assert.equal(s.pets[0]?.feedCooldownMs, SAVE_V3_RULES.feedCooldownMs);
-  assert.equal(s.pets[0]?.affinity, BAG_V3_RULES.feedAffinity);
+  assert.equal(s.pets[0]?.feedCooldownMs, BAG_RULES.feedCooldownMs);
+  assert.equal(s.pets[0]?.affinity, BAG_RULES.feedAffinity);
   assert.equal(s.bag["basic-food"], undefined, "재고를 세지 않는다");
   const again = use(s, "basic-food", "p1");
   assert.equal(again.reason, "cooldown", "쿨타임 중에는 거절");
@@ -111,7 +113,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 100);
   assert.equal(s.pets[0]?.buffs[0]?.kind, "premium-food");
-  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_V3_RULES.buffMs["premium-food"]);
+  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.buffMs["premium-food"]);
   assert.equal(s.bag["premium-food"], 1, "하나 줄었다");
   process.stdout.write("(7) 프리미엄먹이 · 가득과 버프  ok\n");
 }
@@ -122,13 +124,13 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const res = use(s, "toy", "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.buffs.length, 1, "겹쳐 쌓지 않는다");
-  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_V3_RULES.toyBuffMs, "남은 시간을 장난감 지속시간으로 바꾼다");
-  assert.equal(BAG_V3_RULES.toyBuffMs, 2 * 60 * 60_000, "장난감 신남 2시간");
+  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.toyBuffMs, "남은 시간을 장난감 지속시간으로 바꾼다");
+  assert.equal(BAG_RULES.toyBuffMs, 2 * 60 * 60_000, "장난감 신남 2시간");
   assert.equal(s.bag.toy, undefined, "다 쓰면 가방에서 사라진다");
   assert.equal(use(s, "toy", "p1").reason, "none-left");
   const giddy = seed({ buffs: [{ kind: "short-play", remainMs: 1000 }] }, { toy: 1 });
   assert.equal(use(giddy, "toy", "p1").ok, true);
-  assert.deepEqual(giddy.pets[0]?.buffs, [{ kind: "long-play", remainMs: BAG_V3_RULES.toyBuffMs }], "장난감 — 들뜸이 신남으로 바뀐다");
+  assert.deepEqual(giddy.pets[0]?.buffs, [{ kind: "long-play", remainMs: BAG_RULES.toyBuffMs }], "장난감 — 들뜸이 신남으로 바뀐다");
   process.stdout.write("(8) 장난감 · 신남 · 갱신과 소진  ok\n");
 }
 
@@ -260,7 +262,7 @@ process.stdout.write("selftest-bag: 통과 (곡선·먹이·버프·사탕·민�
   const res = feed(s, "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 70);
-  assert.equal(s.pets[0]?.feedCooldownMs, SAVE_V3_RULES.feedCooldownMs);
+  assert.equal(s.pets[0]?.feedCooldownMs, BAG_RULES.feedCooldownMs);
   assert.equal(feed(s, "p1").reason, "cooldown");
   assert.equal(feed(s, "없는개체").reason, "no-pet");
   process.stdout.write("(15) 밥 주기 · 기본먹이와 같은 길  ok\n");
@@ -271,8 +273,8 @@ process.stdout.write("selftest-bag: 통과 (곡선·먹이·버프·사탕·민�
   const s = seed({ affinity: 10 });
   const res = play(s, "p1");
   assert.equal(res.ok, true);
-  assert.equal(s.pets[0]?.affinity, 10 + BAG_V3_RULES.playAffinity);
-  assert.equal(s.pets[0]?.playCooldownMs, SAVE_V3_RULES.playCooldownMs);
+  assert.equal(s.pets[0]?.affinity, 10 + BAG_RULES.playAffinity);
+  assert.equal(s.pets[0]?.playCooldownMs, CARE_RULES.playCooldownMs);
   assert.equal(s.pets[0]?.daily.plays, 1);
   assert.equal(play(s, "p1").reason, "cooldown", "쿨타임 중에는 거절");
   assert.equal(s.pets[0]?.affinity, 13, "친밀도도 오르지 않는다");
@@ -306,32 +308,32 @@ process.stdout.write("selftest-bag: 돌봄 통과 (밥·놀이·쿨타임)\n");
   const first = play(s, "p1");
   assert.equal(first.streak, 1);
   assert.equal(first.longPlay, false, "한 번은 아직 아니다");
-  assert.equal(pet0.playWindowMs, SAVE_V3_RULES.playWindowMs, "20분 상태가 붙는다");
+  assert.equal(pet0.playWindowMs, CARE_RULES.playWindowMs, "20분 상태가 붙는다");
   assert.equal(pet0.buffs.length, 0, "그 자체로는 효과가 없다");
 
   // 쿨타임 10분이 지나고 상태는 10분 남았다
   pet0.playCooldownMs = 0;
-  pet0.playWindowMs = SAVE_V3_RULES.playWindowMs - SAVE_V3_RULES.playCooldownMs;
+  pet0.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
   const second = play(s, "p1");
   assert.equal(second.streak, 2);
   assert.equal(second.longPlay, false);
   assert.equal(second.shortPlay, true, "두 번이면 들뜸");
-  assert.deepEqual(pet0.buffs, [{ kind: "short-play", remainMs: BAG_V3_RULES.buffMs["short-play"] }]);
-  assert.equal(BAG_V3_RULES.buffMs["short-play"], 30 * 60_000, "들뜸 30분");
+  assert.deepEqual(pet0.buffs, [{ kind: "short-play", remainMs: BAG_RULES.buffMs["short-play"] }]);
+  assert.equal(BAG_RULES.buffMs["short-play"], 30 * 60_000, "들뜸 30분");
 
   pet0.playCooldownMs = 0;
-  pet0.playWindowMs = SAVE_V3_RULES.playWindowMs - SAVE_V3_RULES.playCooldownMs;
+  pet0.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
   const third = play(s, "p1");
   assert.equal(third.streak, 3);
   assert.equal(third.longPlay, true, "세 번이면 신남");
-  assert.deepEqual(pet0.buffs, [{ kind: "long-play", remainMs: BAG_V3_RULES.buffMs["long-play"] }], "들뜸은 신남으로 바뀐다 — 둘이 함께 남지 않는다");
+  assert.deepEqual(pet0.buffs, [{ kind: "long-play", remainMs: BAG_RULES.buffMs["long-play"] }], "들뜸은 신남으로 바뀐다 — 둘이 함께 남지 않는다");
 
   // 신남이 남아 있으면 2중첩을 다시 채워도 들뜸을 새로 걸지 않는다
   const s2 = seed({ buffs: [{ kind: "long-play", remainMs: 20 * 60_000 }] });
   const p2 = s2.pets[0]!;
   play(s2, "p1");
   p2.playCooldownMs = 0;
-  p2.playWindowMs = SAVE_V3_RULES.playWindowMs - SAVE_V3_RULES.playCooldownMs;
+  p2.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
   const again = play(s2, "p1");
   assert.equal(again.streak, 2);
   assert.equal(again.shortPlay, false, "신남 중에는 들뜸을 걸지 않는다");
@@ -348,9 +350,9 @@ process.stdout.write("selftest-bag: 돌봄 통과 (밥·놀이·쿨타임)\n");
   const p3 = s3.pets[0]!;
   play(s3, "p1");
   p3.playCooldownMs = 0;
-  p3.playWindowMs = SAVE_V3_RULES.playWindowMs - SAVE_V3_RULES.playCooldownMs;
+  p3.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
   play(s3, "p1");
-  assert.deepEqual(p3.buffs, [{ kind: "short-play", remainMs: BAG_V3_RULES.buffMs["short-play"] }], "들뜸 갱신");
+  assert.deepEqual(p3.buffs, [{ kind: "short-play", remainMs: BAG_RULES.buffMs["short-play"] }], "들뜸 갱신");
 
   // 옛 저장의 오래 놀아주기(long-play)는 그대로 신남으로 이어진다. 신남과 들뜸이 함께 저장돼 있으면 들뜸을 뺀다
   const old = empty(0);

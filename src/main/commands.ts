@@ -14,7 +14,7 @@ import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
 import { candidates, dayPartOf } from "../dex/evolve";
-import { appearanceOf } from "../dex/appearance";
+import { appearanceOf } from "../dex/look";
 import { unlockRules } from "../dex/unlocks";
 import { itemOf } from "../bag/use";
 import { argsFromCommand } from "../tx/args";

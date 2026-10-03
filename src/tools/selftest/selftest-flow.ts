@@ -8,14 +8,17 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor, type Executor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
 import { makeTmp } from "../harness/tmp-dir";
+import { BAG_RULES } from "../../bag/rules";
+import { EGG_RULES } from "../../egg/rules";
+import { PARTY_RULES } from "../../party/rules";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const MIN = 60_000;
@@ -78,7 +81,7 @@ class World {
 try {
   // ── 시작 — 첫 선택을 마친 직후의 저장을 만든다 (SC-01·SC-03) ──────────────
   const seed = empty(T0);
-  seed.points.balance = SHOP_V3_RULES.startPoints;
+  seed.points.balance = PARTY_RULES.startPoints;
   seed.dex.unlocked = ["charmander", "squirtle", "pichu"];
   seed.pets.push({
     id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
@@ -112,7 +115,7 @@ try {
   // ── SC-04 시간을 흘려 부화한다 — 알 돌봄은 없다(2026-09-28 삭제) ─────────
   w.pass(3 * MIN);
   const egg = w.save().eggs[0];
-  assert.equal(egg?.remainMs, EGG_V3_RULES.readyMs - 3 * MIN, "5분에서 흐른 3분만 줄어든다");
+  assert.equal(egg?.remainMs, EGG_RULES.readyMs - 3 * MIN, "5분에서 흐른 3분만 줄어든다");
   process.stdout.write("(4) SC-04 · 준비 시간은 흐른 시간만큼 줄어든다  ok\n");
 
   const events = w.pass(5 * MIN);
@@ -158,7 +161,7 @@ try {
   assert.equal(Number(fed.fullness) - hungry, 20, "만복도 +20");
   const blocked = w.run("feed2", "bag.use", { itemId: "basic-food", petId: "p1" });
   assert.equal(blocked.ok === false && blocked.reason, "cooldown", "쿨타임 중에는 못 준다");
-  w.pass(SAVE_V3_RULES.feedCooldownMs);
+  w.pass(BAG_RULES.feedCooldownMs);
   const waited = w.save().pets.find((p) => p.id === "p1")?.fullness ?? 0;
   assert.equal(Number(w.ok("feed3", "bag.use", { itemId: "basic-food", petId: "p1" }).fullness) - waited, 20, "쿨타임 뒤 다시 준다");
   process.stdout.write("(9) SC-02 · 밥 주기와 쿨타임  ok\n");

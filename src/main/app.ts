@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { app, nativeImage, powerMonitor, safeStorage, screen, shell, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
-import { appearanceOf } from "../dex/appearance";
+import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { isPidAlive } from "../platform/pid";
 import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../save/key";
@@ -32,7 +32,7 @@ import type { HaltInfo, HaltReason, OwnerKind } from "../online/cloud-state.js";
 import { createMainMail, type MainMail } from "./mail";
 import { mailCodeOf } from "../online/codes.js";
 import { callRpc } from "../online/server-call.js";
-import { pendingOf } from "../trade/core";
+import { pendingTradeOf } from "../party/pet-actions";
 import { careItem, careState, petStatus } from "./status";
 import { formsOf } from "../dex/forms";
 import { sellablePet } from "../shop/sell-pet";
@@ -56,10 +56,11 @@ import { careArgOf, syncJumpList } from "./jump-list";
 import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
 import { createCries, type Cries } from "./cries";
 import { createHungerBubbles } from "./hunger-bubble";
-import { SOUND_RULES, gainOf } from "../state/settings";
+import { gainOf } from "../state/settings";
+import { SOUND_RULES } from "../state/rules";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
-import { rollHits } from "../find/core";
+import { rollHits } from "../find/roll";
 import type { FindRecordV3 } from "../shared/save-v3";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
@@ -68,7 +69,7 @@ import type { PatchNotesView, UpdateAction, UpdateView } from "../shared/model/a
 import type { Command } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
 import type { CoachView } from "../shared/model/stage";
-import { currentTutorial } from "../tutorial/core";
+import { currentTutorial } from "../tutorial/queue";
 
 // 에이전트 작업 시간 — 1초 틱마다 running 이던 만큼 쌓아 두고, 게임 틱에 넘기고 비운다
 let workMs = 0;
@@ -769,7 +770,7 @@ function tradeBlocked(): boolean {
   const phase = mainTrade?.session.view().phase;
   if (phase === "hosting" || phase === "trading") return true;
   const save = game?.read();
-  return !!(save && pendingOf(save));
+  return !!(save && pendingTradeOf(save));
 }
 
 // 로그인 계정의 새 교환(만들기·참가)·선물 받기를 막아야 하는가 (worklog-mac/records/cloud-authority 검수 1)

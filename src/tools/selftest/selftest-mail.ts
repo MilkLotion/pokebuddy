@@ -2,14 +2,15 @@
 // 설계: worklog/records/post-box/record.md "구현 설계". 서버 SQL 검사는 supabase/tests/mail_test.sql
 import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
-import { applyGifts, markRead, normalizeMail, parseGifts } from "../../mail/core";
-import { singleSpecies } from "../../shop/catalog";
-import { isSinglePet } from "../../trade/core";
 import { createMainMail, type RpcResult } from "../../main/mail";
 import { empty, normalize } from "../../save/v3";
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
 import type { SaveV3 } from "../../shared/save-v3";
+import { isSinglePet } from "../../dex/forms";
+import { singleSpecies } from "../../dex/obtain";
+import { applyGifts, parseGifts } from "../../mail/gifts";
+import { markRead, normalizeMail } from "../../mail/letters";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
 

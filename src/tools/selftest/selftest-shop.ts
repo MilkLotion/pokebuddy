@@ -4,20 +4,25 @@
 // 계약은 docs/specs/game.md "상점", 가격은 docs/specs/balance.md 가격표다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { EGG_V3_RULES, SAVE_V3_RULES, SHOP_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
-import { buy, nextEggId } from "../../shop/buy";
-import { eggPool, eggPrice, find, inRandomEgg, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
-import { rankOf } from "../../egg/hatch";
+import { buy } from "../../shop/buy";
+import { eggPrice, find, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
 import { shopList } from "../../tx/lists";
 import { sell, sellPrice } from "../../shop/sell";
 import { petSellPrice, sellPet, sellablePet } from "../../shop/sell-pet";
 import { newPet, nextPetId } from "../../party/create";
 import { activePreset, applyPreset, presetBuyable, presetCount, presetName, shopSlots, slotsOfPreset } from "../../party/presets";
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
 import { unlockRules } from "../../dex/unlocks";
 import type { SaveV3 } from "../../shared/save-v3";
+import { eggPool, inRandomEgg } from "../../dex/obtain";
+import { rankOf } from "../../dex/species";
+import { nextEggId } from "../../egg/pool";
+import { EGG_RULES } from "../../egg/rules";
+import { PARTY_RULES } from "../../party/rules";
+import { SHOP_RULES } from "../../shop/rules";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const rand = () => 0.5;
@@ -35,12 +40,12 @@ function seed(points: number): SaveV3 {
   assert.equal(toolPrice("exp-candy-xl"), 320);
   assert.equal(toolPrice("normal-potion"), 0, "돌아오는 약은 0P");
   assert.equal(toolPrice("basic-food"), null, "기본먹이는 팔지 않는다");
-  assert.equal(toolPrice("thunder-stone"), SHOP_V3_RULES.evoItemPrice, "진화용 도구는 공통 가격");
-  assert.equal(toolPrice("bond-cord"), SHOP_V3_RULES.evoItemPrice, "연결의끈도 같다");
+  assert.equal(toolPrice("thunder-stone"), SHOP_RULES.evoItemPrice, "진화용 도구는 공통 가격");
+  assert.equal(toolPrice("bond-cord"), SHOP_RULES.evoItemPrice, "연결의끈도 같다");
   assert.equal(slotPrice(2), 500, "파티 칸은 늘 500P");
   assert.equal(slotPrice(1), 500);
   assert.equal(slotPrice(0), null, "상점으로 열 칸이 남지 않으면 팔지 않는다");
-  assert.equal(SHOP_V3_RULES.presetPrice, 1000, "파티 프리셋은 늘 1000P");
+  assert.equal(SHOP_RULES.presetPrice, 1000, "파티 프리셋은 늘 1000P");
   assert.equal(find("없는상품"), null);
   assert.equal(eggPool("ancient-stone")?.length, 15, "태고의돌은 화석 15종");
   assert.equal(eggPool("random"), null, "랜덤알은 해금한 종에서 뽑는다");
@@ -56,7 +61,7 @@ function seed(points: number): SaveV3 {
   assert.equal(s.points.balance, 80);
   assert.equal(s.eggs.length, 1);
   assert.equal(s.eggs[0]?.kind, "random");
-  assert.equal(s.eggs[0]?.remainMs, EGG_V3_RULES.readyMs);
+  assert.equal(s.eggs[0]?.remainMs, EGG_RULES.readyMs);
   assert.equal(s.eggs[0]?.ready, false);
   process.stdout.write("(2) 알 구매 · 준비 시간 시작  ok\n");
 }
@@ -102,10 +107,10 @@ function seed(points: number): SaveV3 {
 // (6) 돌보미집이 가득 차면 거절한다
 {
   const s = seed(10_000);
-  for (let i = 0; i < EGG_V3_RULES.maxEggs; i++) assert.equal(buy(s, "random", T0, rand).ok, true);
+  for (let i = 0; i < EGG_RULES.maxEggs; i++) assert.equal(buy(s, "random", T0, rand).ok, true);
   const res = buy(s, "random", T0, rand);
   assert.equal(res.reason, "daycare-full");
-  assert.equal(s.eggs.length, EGG_V3_RULES.maxEggs);
+  assert.equal(s.eggs.length, EGG_RULES.maxEggs);
   process.stdout.write("(6) 돌보미집 가득  ok\n");
 }
 
@@ -131,7 +136,7 @@ function seed(points: number): SaveV3 {
   const third = buy(s, "party-slot", T0, rand);
   assert.equal(third.reason, "no-locked-slot");
   const open = s.party.slots.filter((x) => x.state === "empty").length;
-  assert.equal(open, SAVE_V3_RULES.party.openAtStart + SAVE_V3_RULES.party.shopUnlock);
+  assert.equal(open, PARTY_RULES.openAtStart + PARTY_RULES.shopUnlock);
   const left = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
   assert.equal(left, 2, "업적으로 여는 칸은 남는다");
   assert.equal(s.party.slotCount, 4 + 2, "열린 칸 수 — 첫 프리셋 4 + 둘째 프리셋 2");
@@ -168,7 +173,7 @@ function seed(points: number): SaveV3 {
   assert.equal(buy(s, "party-preset", T0, rand).ok, true);
   openAll();
   assert.equal(buy(s, "party-preset", T0, rand).ok, true);
-  assert.equal(presetCount(s), SAVE_V3_RULES.party.presets.max);
+  assert.equal(presetCount(s), PARTY_RULES.presets.max);
   openAll();
   assert.equal(buy(s, "party-preset", T0, rand).reason, "preset-max");
   assert.equal(s.points.balance, 10_000 - 3000);
@@ -232,7 +237,7 @@ function seed(points: number): SaveV3 {
 
 // (9) 종 지정 구매 — 알에서 얻을 수 있는 종을 수집 난이도별 가격에 판다. 해금한 종만 산다 (2026-09-29 사용자 결정)
 {
-  assert.deepStrictEqual({ ...SHOP_V3_RULES.speciesPrices }, { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 });
+  assert.deepStrictEqual({ ...SHOP_RULES.speciesPrices }, { 1: 200, 2: 300, 3: 400, 4: 500, 5: 600 });
   // 판매 대상 — 랜덤알 후보 + 태고의돌 화석
   const fossils = eggPool("ancient-stone") ?? [];
   const sold = [...new Set([...Object.keys(unlockRules()).filter((slug) => inRandomEgg(slug)), ...fossils])];
@@ -240,7 +245,7 @@ function seed(points: number): SaveV3 {
   // 등급별 가격 — 판매 대상 전부가 자기 등급의 값이다
   for (const slug of sold) {
     assert.ok(sellsSpecies(slug), `${slug} 판매`);
-    assert.equal(speciesPrice(slug), SHOP_V3_RULES.speciesPrices[rankOf(slug)], `${slug} 가격`);
+    assert.equal(speciesPrice(slug), SHOP_RULES.speciesPrices[rankOf(slug)], `${slug} 가격`);
   }
   assert.equal(rankOf("rattata"), 1);
   assert.equal(speciesPrice("rattata"), 200, "1등급 200P");
@@ -304,7 +309,7 @@ function seed(points: number): SaveV3 {
 // (11) 가방 판매 — 판매가 = 구매가 × 60%, 내림. 가격이 없거나 0P 인 도구는 팔지 않는다. 한 거래로 판다
 // (2026-09-30 사용자 결정 "아이템 판매 기능 추가 (가방에서) 판매가는 구매가의 60%.")
 {
-  assert.equal(SHOP_V3_RULES.sellRate, 0.6);
+  assert.equal(SHOP_RULES.sellRate, 0.6);
   assert.equal(sellPrice("fire-stone"), 90, "진화용 도구 150P → 90P");
   assert.equal(sellPrice("exp-candy-xs"), 12, "20P → 12P");
   assert.equal(sellPrice("basic-food"), null, "가격 없는 기본먹이는 팔지 않는다");
@@ -348,8 +353,8 @@ function seed(points: number): SaveV3 {
 
 // (12) 리전폼 (data/regional.json) — 지도는 진화용 도구 공통 가격. 리전폼 진화 전 종은 알에서 얻는 종이라 파는 종, 진화 결과·전설은 팔지 않는다
 {
-  assert.equal(toolPrice("region-map"), SHOP_V3_RULES.evoItemPrice, "지도 150P");
-  assert.equal(toolPrice("galarica-cuff"), SHOP_V3_RULES.evoItemPrice, "가라두구팔찌");
+  assert.equal(toolPrice("region-map"), SHOP_RULES.evoItemPrice, "지도 150P");
+  assert.equal(toolPrice("galarica-cuff"), SHOP_RULES.evoItemPrice, "가라두구팔찌");
   assert.equal(sellsSpecies("vulpix-alola"), true);
   assert.equal(sellsSpecies("tauros-paldea-blaze-breed"), true);
   assert.equal(sellsSpecies("raichu-alola"), false, "진화 결과");

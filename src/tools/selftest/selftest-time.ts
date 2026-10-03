@@ -4,11 +4,11 @@
 // 계약은 docs/specs/modules.md "시간 처리 순서", 수치는 docs/specs/balance.md 다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { TIME_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import { affinityPercent, buffPercent, carePercent, zoneOf } from "../../state/time";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
+import { TIME_RULES } from "../../state/rules";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
@@ -120,8 +120,8 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   assert.equal(zoneOf(39), "hungry");
   assert.equal(zoneOf(15), "hungry");
   assert.equal(zoneOf(14), "starving");
-  assert.equal(affinityPercent(pet({ fullness: 30 })), TIME_V3_RULES.zonePercent.hungry);
-  assert.equal(affinityPercent(pet({ fullness: 5 })), TIME_V3_RULES.zonePercent.starving);
+  assert.equal(affinityPercent(pet({ fullness: 30 })), TIME_RULES.zonePercent.hungry);
+  assert.equal(affinityPercent(pet({ fullness: 5 })), TIME_RULES.zonePercent.starving);
   process.stdout.write("(8) 만복도 구간과 디버프  ok\n");
 }
 

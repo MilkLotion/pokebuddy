@@ -11,8 +11,9 @@ import type { BannerView } from "../../shared/model/overlays";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { bannerOf } from "../../notify/banner";
 import { createNotifier } from "../../notify/notifier";
-import { pendingOf, refresh, take, type NotifyState } from "../../notify/queue";
+import { refresh, take, type NotifyState } from "../../notify/queue";
 import { makeTmp } from "../harness/tmp-dir";
+import { pendingOf } from "../../notify/pending";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 const EMPTY: NotifyState = { v: 1, shown: [], queue: [] };

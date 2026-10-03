@@ -9,7 +9,7 @@ import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { bridgeMailbox, createDispatcher } from "../../commands/dispatcher";
+import { bridgeMailbox } from "../../commands/dispatcher";
 import * as mailbox from "../../save/mailbox";
 import * as rules from "../../save/rules";
 import * as legacy from "../../save/legacy";
@@ -19,6 +19,7 @@ import type { CommandName } from "../../shared/names/commands";
 import type { LogEntry } from "../../shared/save-v3";
 import type { SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
+import { createDispatcher } from "../../tx/dispatcher";
 
 const save = { ...rules, ...legacy, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접
 

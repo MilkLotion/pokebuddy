@@ -11,20 +11,12 @@ import { pickByWeight, type Rand } from "../shared/rand.js";
 import { hatchVariants } from "../dex/regional.js";
 import { EGG_RULES } from "./rules.js";
 
-// [임시] 옛 이름 — src/tools 와 scripts/build-verify.cjs 가 새 자리(src/egg/rules.ts EGG_RULES)에서 읽으면 지운다
-export const SHINY_ONE_IN = EGG_RULES.shinyOneIn;
-export const RANK_WEIGHT = EGG_RULES.rankWeight;
 
-// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/shared/rand.ts)에서 가져오면 지운다
-export type { Rand };
 
 export interface HatchResult {
   species: string;
   shiny: boolean;
 }
-
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/species.ts)에서 가져오면 지운다
-export { rankOf };
 
 // 난이도 가중치로 하나 뽑는다. 후보가 없으면 null
 export function pickWeighted(candidates: string[], rand: Rand, opts?: DexOptions): string | null {

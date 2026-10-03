@@ -64,5 +64,3 @@ export function isNotifyState(v: unknown): v is NotifyState {
   );
 }
 
-// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽(src/main, src/tools)이 새 자리(./pending.ts)에서 가져오면 지운다
-export { keyOf, parseKey, pendingOf, type Pending } from "./pending.js";

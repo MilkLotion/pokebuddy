@@ -12,9 +12,12 @@ import { createGame } from "../../main/game";
 import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
-import { SOUND_RULES, gainOf } from "../../state/settings";
+import { gainOf } from "../../state/settings";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
+import { BAG_RULES } from "../../bag/rules";
+import { PARTY_RULES } from "../../party/rules";
+import { SOUND_RULES } from "../../state/rules";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
@@ -60,7 +63,7 @@ try {
     assert.equal(pet?.hidden, true);
     assert.equal(pet?.zone, "normal", "만복도 55 는 보통");
     assert.equal(v.party.shown, 0);
-    assert.equal(v.party.usable, SAVE_V3_RULES.party.openAtStart);
+    assert.equal(v.party.usable, PARTY_RULES.openAtStart);
     process.stdout.write("(2) 스냅샷 값  ok\n");
   }
 
@@ -133,7 +136,7 @@ try {
     const pet = game.view()?.party.slots[0]?.pet;
     assert.equal(pet?.fullness, 20, "0 에서 20 으로");
     assert.equal(pet?.feedReady, false);
-    assert.equal(pet?.feedInSec, SAVE_V3_RULES.feedCooldownMs / 1000, "남은 쿨타임을 초로");
+    assert.equal(pet?.feedInSec, BAG_RULES.feedCooldownMs / 1000, "남은 쿨타임을 초로");
     process.stdout.write("(6) 밥 주기와 쿨타임 표시  ok\n");
   }
 

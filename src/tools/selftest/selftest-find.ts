@@ -8,18 +8,22 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { MINT_RETIRED } from "../../bag/mint";
-import { FIND_RULES, applyFind, chanceFor, eligible, findOne, itemCandidates, rollHits, shareOf } from "../../find/core";
 import { createGame } from "../../main/game";
 import { setLang } from "../../main/text";
 import { bannerOf } from "../../notify/banner";
-import { pendingOf, refresh } from "../../notify/queue";
+import { refresh } from "../../notify/queue";
 import { newPet } from "../../party/create";
-import { SHOP_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty, normalize } from "../../save/v3";
 import { josa } from "../../shared/josa";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
+import { BAG_RULES } from "../../bag/rules";
+import { applyFind, eligible, findOne, itemCandidates } from "../../find/pickup";
+import { chanceFor, rollHits, shareOf } from "../../find/roll";
+import { FIND_RULES } from "../../find/rules";
+import { pendingOf } from "../../notify/pending";
+import { TIME_RULES } from "../../state/rules";
 
 setLang("ko");
 
@@ -110,7 +114,7 @@ try {
     assert.equal(rec?.ref, "premium-food");
     assert.equal(s.bag["premium-food"], 1);
     assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0.99999))?.ref, MINT_RETIRED ? "rare-candy" : "mint", "마지막 후보");
-    s.bag["premium-food"] = SHOP_V3_RULES.bagMax;
+    s.bag["premium-food"] = BAG_RULES.max;
     const before = JSON.stringify(s);
     assert.equal(findOne(s, "p1", T0, seq(K_ITEM, 0)), null, "가방 상한이면 이번 판정은 없음");
     assert.equal(JSON.stringify(s), before, "가방 상한이면 아무것도 바꾸지 않는다");
@@ -178,7 +182,7 @@ try {
   // (7) 틱 상한 — 5초를 넘는 틈은 굴리지 않고, 한 틱에 마리마다 최대 1건이다
   {
     assert.equal(applyFind(seed(), { activeMs: { p1: 10 * 60 * SEC } }, T0, () => 0).length, 0, "10분 틈은 굴리지 않는다");
-    assert.equal(applyFind(seed(), { activeMs: { p1: FIND_RULES.maxGapMs } }, T0, () => 0).length, 1, "5초 틈까지는 굴린다");
+    assert.equal(applyFind(seed(), { activeMs: { p1: TIME_RULES.maxGapMs } }, T0, () => 0).length, 1, "5초 틈까지는 굴린다");
     const s = seed();
     const one = applyFind(s, { activeMs: { p1: 3 * SEC, p4: 3 * SEC } }, T0, () => 0);
     assert.equal(one.length, 2, "마리마다 최대 1건");

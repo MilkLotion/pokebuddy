@@ -63,13 +63,9 @@ export const rewardItem = (def: AchievementDef): { id: string; count: number } |
   return { id: r.item, count: typeof r.count === "number" && r.count > 0 ? r.count : 1 };
 };
 
-// [임시] 옛 이름 — 이 파일을 나눌 때(D5) achievementTable 을 바로 부른다
-const table = achievementTable;
 
 export const defs = (opts?: DexOptions): [string, AchievementDef][] =>
-  Object.entries(table(opts)).filter(([id]) => !isMetaKey(id));
+  Object.entries(achievementTable(opts)).filter(([id]) => !isMetaKey(id));
 
-export const defOf = (id: string, opts?: DexOptions): AchievementDef | null => (isMetaKey(id) ? null : table(opts)[id] ?? null);
+export const defOf = (id: string, opts?: DexOptions): AchievementDef | null => (isMetaKey(id) ? null : achievementTable(opts)[id] ?? null);
 
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/obtain.ts)에서 가져오면 지운다
-export { rewardSpecies };

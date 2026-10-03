@@ -30,8 +30,6 @@ export const SETTING_CHOICES = {
 const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion", "playScreen"];
 
 // 소리 크기와 놀이공간 최소 크기의 값은 src/state/rules.ts 에 있다
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리에서 가져오면 지운다
-export { REGION_MIN, SOUND_RULES };
 
 // 실제로 낼 음량(0~1). 소리를 끄면 0
 export const gainOf = (settings: { sound: boolean; volume: number }, max: number): number =>

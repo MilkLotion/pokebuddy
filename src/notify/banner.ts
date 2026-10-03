@@ -10,7 +10,7 @@ import { josa } from "../shared/josa.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { ManageRoute } from "../shared/model/route";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
-import { parseKey } from "./queue.js";
+import { parseKey } from "./pending.js";
 
 type Named = Record<string, { ko?: string; en?: string } | string>;
 

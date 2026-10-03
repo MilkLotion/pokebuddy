@@ -6,26 +6,28 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { appearanceOf } from "../../dex/appearance";
 import { hasProfile } from "../../dex/species";
-import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaRivals, megaSlugs, setMega, settleMega, shownSpecies, tickMega } from "../../dex/mega";
+import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
 import { pmdSources } from "../../main/art";
 import { overworldUrl } from "../../main/overworld-art";
 import { portraitIds } from "../../main/portraits";
 import { petName } from "../../main/text";
 import { bannerOf } from "../../notify/banner";
-import { pendingOf, refresh } from "../../notify/queue";
+import { refresh } from "../../notify/queue";
 import { keep, place } from "../../party/placement";
-import { MEGA_RULES } from "../../save/rules";
 import { empty, normalize } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
 import { dexDetail } from "../../tx/dex-detail";
 import { dexList } from "../../tx/lists";
 import { snapshot } from "../../tx/snapshot";
 import { verifySave, type VerifyData } from "../../verify/save-rules";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
+import { appearanceOf } from "../../dex/look";
+import { MEGA_RULES } from "../../dex/rules";
+import { pendingOf } from "../../notify/pending";
+import { megaRivals, setMega, settleMega } from "../../party/mega-form";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 9, 2, 10, 0, 0).getTime();
 

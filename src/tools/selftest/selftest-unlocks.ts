@@ -6,12 +6,13 @@ import assert from "node:assert";
 import { reach } from "../../dex/reach";
 import { starters, unlockByRules, unlockRules } from "../../dex/unlocks";
 import { begin } from "../../party/starter";
-import { randomPool } from "../../shop/buy";
-import { inRandomEgg, speciesPrice } from "../../shop/catalog";
+import { speciesPrice } from "../../shop/catalog";
 import { empty } from "../../save/v3";
 import { dexList } from "../../tx/lists";
 import { evolve } from "../../dex/evolve";
 import { newPet } from "../../party/create";
+import { inRandomEgg } from "../../dex/obtain";
+import { randomPool } from "../../egg/pool";
 
 const r = reach();
 const rules = unlockRules();

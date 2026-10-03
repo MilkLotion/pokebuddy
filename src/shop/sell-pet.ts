@@ -14,7 +14,8 @@ import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isSinglePet } from "../dex/forms.js";
 import { checkPetFree } from "../party/pet-actions.js";
-import { eggOfSpecies, eggPrice } from "./catalog.js";
+import { eggPrice } from "./catalog.js";
+import { eggOfSpecies } from "../dex/obtain.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type SellPetFailure = ReasonOf<

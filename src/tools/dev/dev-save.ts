@@ -5,11 +5,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { rollGender } from "../../dex/gender";
 import { randomNature } from "../../dex/natures";
-import { newPet, recordDex } from "../../party/create";
+import { newPet } from "../../party/create";
 import { SAVE_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
+import { recordDex } from "../../dex/record";
+import { PARTY_RULES, PET_RULES } from "../../party/rules";
 
 export interface DevSaveOptions {
   sameHome?: boolean;
@@ -27,12 +29,12 @@ export function devSaveState(speciesList: string[], opts: DevSaveOptions = {}): 
   const now = opts.now ?? Date.now();
   const rng = opts.rng ?? Math.random;
   const spread = opts.spreadPx ?? DEV_SAVE_RULES.spreadPx;
-  const list = speciesList.filter(Boolean).slice(0, SAVE_V3_RULES.party.total);
+  const list = speciesList.filter(Boolean).slice(0, PARTY_RULES.total);
   const save = empty(now);
   list.forEach((species, i) => {
     const id = `p${i + 1}`;
     const pet = newPet({ id, species, shiny: false, nature: randomNature(rng).id, gender: rollGender(species, rng), now });
-    if (!opts.sameHome) pet.home = { dx: SAVE_V3_RULES.pet.home.dx - spread * i, dy: SAVE_V3_RULES.pet.home.dy };
+    if (!opts.sameHome) pet.home = { dx: PET_RULES.home.dx - spread * i, dy: PET_RULES.home.dy };
     save.pets.push(pet);
     save.party.slots[i] = { state: "pokemon", petId: id, hidden: false };
     recordDex(save, species, false);

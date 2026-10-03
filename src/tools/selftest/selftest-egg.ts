@@ -4,19 +4,19 @@
 // 계약은 docs/specs/game.md "알".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { decide, pickWeighted, RANK_WEIGHT, rollVariant } from "../../egg/hatch";
-import { eggOfSpecies } from "../../shop/catalog";
+import { decide, pickWeighted, rollVariant } from "../../egg/hatch";
 import { open } from "../../egg/open";
 import { buy } from "../../shop/buy";
-import { canGiveEgg, eggPool, fixedEggs, inRandomEgg } from "../../shop/catalog";
 import { prevOf } from "../../dex/evo";
 import { unlockRules } from "../../dex/unlocks";
 import { dexDetail } from "../../tx/dex-detail";
 import { shopList } from "../../tx/lists";
 import { nextPetId } from "../../party/create";
-import { EGG_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { EggV3, SaveV3 } from "../../shared/save-v3";
+import { eggOfSpecies, eggPool, fixedEggs, inRandomEgg } from "../../dex/obtain";
+import { canGiveEgg } from "../../egg/pool";
+import { EGG_RULES } from "../../egg/rules";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -24,7 +24,7 @@ const egg = (over: Partial<EggV3> = {}): EggV3 => ({
   id: "e1",
   kind: "random",
   boughtAt: T0,
-  remainMs: EGG_V3_RULES.readyMs,
+  remainMs: EGG_RULES.readyMs,
   ready: false,
   candidates: ["charmander", "squirtle"],
   careCooldownMs: 0,
@@ -49,15 +49,15 @@ const fixed = (...values: number[]): (() => number) => {
 
 // (1) 알 돌봄은 없다 — 준비 시간 5분이 지나야 연다 (2026-09-28 알 돌봄·알 행동 조건 삭제)
 {
-  assert.equal(EGG_V3_RULES.readyMs, 5 * 60_000);
-  assert.ok(!("careShortenMs" in EGG_V3_RULES) && !("careCooldownMs" in EGG_V3_RULES), "돌봄 규칙이 없다");
+  assert.equal(EGG_RULES.readyMs, 5 * 60_000);
+  assert.ok(!("careShortenMs" in EGG_RULES) && !("careCooldownMs" in EGG_RULES), "돌봄 규칙이 없다");
   process.stdout.write("(1) 준비 시간 5분 · 돌봄 없음  ok\n");
 }
 
 // (6) 난이도 가중치 — 흔한 쪽이 먼저 뽑힌다
 {
-  assert.equal(RANK_WEIGHT[1], 100);
-  assert.equal(RANK_WEIGHT[5], 1);
+  assert.equal(EGG_RULES.rankWeight[1], 100);
+  assert.equal(EGG_RULES.rankWeight[5], 1);
   // charmander 는 1등급, tyranitar 는 4등급. 가중치는 100 대 5
   assert.equal(pickWeighted(["charmander", "tyranitar"], fixed(0)), "charmander");
   assert.equal(pickWeighted(["charmander", "tyranitar"], fixed(0.99)), "tyranitar");
@@ -158,7 +158,7 @@ const fixed = (...values: number[]): (() => number) => {
     const next = s.eggs[0];
     assert.equal(next?.kind, kind);
     assert.equal(next?.ready, false);
-    assert.equal(next?.remainMs, EGG_V3_RULES.readyMs);
+    assert.equal(next?.remainMs, EGG_RULES.readyMs);
     assert.equal(next?.candidates.length, count);
     assert.equal(s.pets.length, 0);
   }

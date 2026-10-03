@@ -10,7 +10,6 @@
 // 시험용 HOME 은 POKEBUDDY_TEST_HOME, 없으면 저장소의 .claude/test-home/default (2026-10-03 사용자 결정 — 시험 폴더는 저장소의 .claude 아래에 둔다). 앱은 이 파일이 든 저장소(dist 빌드)를 띄운다.
 // 저장소의 `electron .` 은 로그인 시 시작을 등록하지 않는다(src/main/app.ts syncLoginItem). 절차는 docs/contributing/development.md "시험용 HOME 에서 실기 확인"
 import { spawn } from "node:child_process";
-import { MEGA_RULES } from "../../save/rules";
 import type { MegaV3 } from "../../shared/save-v3";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,14 +17,16 @@ import { rollGender } from "../../dex/gender";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { randomNature } from "../../dex/natures";
 import { putPet } from "../../box/slots";
-import { newPet, nextPetId, recordDex } from "../../party/create";
+import { newPet, nextPetId } from "../../party/create";
 import { begin } from "../../party/starter";
-import { SHOP_V3_RULES } from "../../save/rules";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
-import { newEgg } from "../../shop/buy";
-import { SCREEN_TUTORIALS, TUTORIALS } from "../../tutorial/core";
 import type { SaveV3 } from "../../shared/save-v3";
+import { recordDex } from "../../dex/record";
+import { MEGA_RULES } from "../../dex/rules";
+import { newEgg } from "../../egg/pool";
+import { PARTY_RULES } from "../../party/rules";
+import { SCREEN_TUTORIALS, TUTORIALS } from "../../tutorial/conditions";
 
 export const DEV_TEST_RULES = {
   starter: "charmander", // 저장이 없을 때 첫 포켓몬
@@ -427,7 +428,7 @@ const USAGE = [
   "사용법: node dist/tools/dev/dev-test.js start [--fresh] | stop | show | scene <장면>[,<장면>…]   (끝에 --account 를 붙이면 시험 계정 HOME)",
   "장면:",
   ...Object.entries(SCENES).map(([name, s]) => `  ${name.padEnd(12)} ${s.note}`),
-  `시작 포인트는 첫 포켓몬 선택 때 ${SHOP_V3_RULES.startPoints}`,
+  `시작 포인트는 첫 포켓몬 선택 때 ${PARTY_RULES.startPoints}`,
 ].join("\n");
 
 async function main(argv: string[]): Promise<void> {

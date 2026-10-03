@@ -67,9 +67,6 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
   };
 }
 
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/dex/record.ts)에서 가져오면 지운다
-export { recordDex };
-
 // 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
 export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
 
