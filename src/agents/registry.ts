@@ -1,7 +1,7 @@
 // 에이전트 연결 — Claude Code · Codex · Gemini 를 하나씩 잇고(훅 등록) 끊고, 연결 상태와 사용량 읽기 가능 여부를 알린다.
 // 설정창 "연결" 탭의 버튼과 커맨드 agent.connect / agent.disconnect 가 여기를 부른다 (docs/design.md "에이전트 연결").
 //
-// 훅 등록·해제의 실제 일은 아직 JS 인 cli/setup.js 가 한다(connectCli · disconnectCli · hookInstalled) — [리팩토링 대상] 이 모듈로 옮긴다.
+// 훅 등록·해제의 실제 일은 같은 폴더의 ./hooks 가 한다(connectCli · disconnectCli · hookInstalled — 예전 cli/setup.js).
 // 토큰 사용량 읽기는 ./usage 에 (배럴 없이 직접 import). CLI 마다 "읽을 수 있나" 가 다르다 — 못 읽는 CLI 는 상태 모듈이 일한 시간으로 대신한다
 import { AGENTS as AGENT_LIST, type AgentName } from "../shared/names/agents";
 
@@ -43,7 +43,7 @@ export interface DisconnectResult {
   detail?: string;
 }
 
-// 켤 때 정리의 결과 — cli/setup.js tidyInstalled
+// 켤 때 정리의 결과 — ./hooks tidyInstalled
 export interface TidyResult {
   clis: Array<{ cli: string; removed: string[]; backup?: string | null; error?: string }>; // 옛 이벤트를 걷은(또는 못 읽은) CLI 만
   hookFile: "최신" | "바꿈" | "없음" | "원본 없음" | "실패";
@@ -59,22 +59,13 @@ export interface AgentStatus extends AgentInfo {
   error?: string;
 }
 
-// cli/setup.js 의 모양 — JS 라 여기서 선언만 한다. 옮길 때 이 선언도 사라진다
-interface SetupModule {
-  connectCli(cli: string, opts?: { dryRun?: boolean }): ConnectResult;
-  disconnectCli(cli: string, opts?: { dryRun?: boolean }): DisconnectResult;
-  hookInstalled(): { file: boolean; current: boolean; source: boolean; clis: Array<{ name: string; used: boolean; error?: string; registered?: number; total?: number; stale?: string[] }> };
-  tidyInstalled(opts?: { dryRun?: boolean }): TidyResult;
-  hookCommandFor(cli: string): string | null;
-  hookFile(): string;
-  TARGET_CLIS: Array<{ cli: string; name: string }>;
-}
-
-let setupModule: SetupModule | null = null;
-function setup(): SetupModule {
-  // dist/agents → 프로젝트 루트의 cli/setup.js. 늦게 읽는다 — 순수 함수(usage)만 쓰는 쪽이 설정 파일을 건드리지 않게
-  if (!setupModule) setupModule = require("../../cli/setup.js") as SetupModule;
-  return setupModule;
+// 훅 등록·해제의 실제 일 — ./hooks (예전 cli/setup.js 의 앞부분, 도구 레인 T7b-3)
+type HooksModule = typeof import("./hooks");
+let hooksModule: HooksModule | null = null;
+function setup(): HooksModule {
+  // 늦게 읽는다 — 순수 함수(usage)만 쓰는 쪽이 설정 파일 경로(platform/paths)를 읽지 않게 (예전 cli/setup.js 를 늦게 읽던 것과 같다)
+  if (!hooksModule) hooksModule = require("./hooks") as HooksModule;
+  return hooksModule;
 }
 
 export function connect(name: AgentName, { dryRun = false } = {}): ConnectResult {
@@ -90,7 +81,7 @@ export function disconnect(name: AgentName, { dryRun = false } = {}): Disconnect
 // 연결 점검 — 그 CLI 에 등록하는 것과 같은 훅 명령과 훅 파일 자리 (src/agents/check.ts)
 export function hookCommandOf(name: AgentName): { command: string; file: string } | null {
   const command = setup().hookCommandFor(name);
-  return command ? { command, file: setup().hookFile() } : null;
+  return command ? { command, file: setup().hookTarget() } : null;
 }
 
 // 켤 때 정리 — 새로 등록하지 않는다. 연결된 CLI 의 옛 이벤트(목록에 없는 우리 등록)만 걷고, 있는 훅 파일만 새 버전으로 바꾼다.

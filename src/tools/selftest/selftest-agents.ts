@@ -10,7 +10,7 @@ import { makeTmp } from "../harness/tmp-dir";
 const home = makeTmp("selftest-agents");
 process.env.HOME = home; // platform/paths(dist) · setup.js 가 require 될 때 os.homedir() 로 읽는다 (mac · linux)
 process.env.USERPROFILE = home;
-// 사용자 환경 변수가 설정 폴더를 진짜 자리로 돌리지 않게 임시 HOME 안으로 묶는다 (cli/setup.js claudeDir · codex dir)
+// 사용자 환경 변수가 설정 폴더를 진짜 자리로 돌리지 않게 임시 HOME 안으로 묶는다 (src/agents/hooks.ts claudeDir · codex dir)
 process.env.CODEX_HOME = path.join(home, ".codex");
 delete process.env.CLAUDE_CONFIG_DIR;
 
@@ -135,13 +135,14 @@ try {
     }
     return out;
   };
-  const setupJs = require("../../../cli/setup.js") as { setup(o: { dryRun?: boolean; editor?: boolean }): void };
+  // 임시 HOME 을 정한 뒤에 읽는다 — 경로(platform/paths)가 읽는 순간의 HOME 으로 정해진다 (src/cli/setup.ts, 옛 cli/setup.js)
+  const setupJs = require("../../cli/setup") as typeof import("../../cli/setup");
 
   ok("setup: 훅 파일만 두고 CLI 에 등록하지 않는다 · 옛 이름 등록은 걷는다(남의 훅은 남김)", () => {
     fs.mkdirSync(path.dirname(codexFile), { recursive: true });
     fs.writeFileSync(codexFile, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: 'node "/old/termimon-state.cjs" --cli codex' }, other] }] } }));
     const exit = process.exitCode;
-    const out = quiet(() => setupJs.setup({ editor: false }));
+    const out = quiet(() => setupJs.runSetup({ editor: false }));
     process.exitCode = exit;
     assert.ok(fs.existsSync(hookFile), "훅 파일은 둔다");
     assert.ok(!fs.existsSync(claudeFile) || !JSON.stringify(readJson(claudeFile)).includes("pokebuddy-state"), "claude 에 등록하지 않는다");
@@ -168,7 +169,7 @@ try {
   ok("setup 은 이미 연결된 우리 등록을 건드리지 않는다", () => {
     const before = fs.readFileSync(codexFile, "utf8");
     const exit = process.exitCode;
-    quiet(() => setupJs.setup({ editor: false }));
+    quiet(() => setupJs.runSetup({ editor: false }));
     process.exitCode = exit;
     assert.strictEqual(fs.readFileSync(codexFile, "utf8"), before);
   });

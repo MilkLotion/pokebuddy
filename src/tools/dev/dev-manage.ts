@@ -106,7 +106,7 @@ function loadApp() {
   // --agents-connected — 임시 HOME 에 Claude Code 연결을 만들어 연결 탭에 `연결됨` 을 보인다(문서 캡처 connect)
   if (hasFlag("--agents-connected")) {
     fs.mkdirSync(path.join(dir, ".claude"), { recursive: true });
-    (require(path.join(root, "cli/setup.js")) as { connectCli(cli: string): unknown }).connectCli("claude");
+    (require("../../agents/hooks") as typeof import("../../agents/hooks")).connectCli("claude");
   }
   if (hasFlag("--agents-outdated")) {
     const hook = `node "${path.join(dir, ".claude", "scripts", "hooks", "pokebuddy-state.cjs")}" --cli codex`;
