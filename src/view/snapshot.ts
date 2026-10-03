@@ -302,7 +302,7 @@ export function snapshot(
     natures: natureOptions(),
     limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
-    tutorial: manageTutorial(save),
+    tutorial: manageTutorial(save, now),
     detailTutorial: canShow(save, "detail"),
     areaTutorial: canShow(save, "area"),
     screenTutorials: SCREEN_TUTORIALS.filter((id) => canShow(save, id)),
@@ -310,9 +310,9 @@ export function snapshot(
 }
 
 // 관리 창의 튜토리얼 — 대기열 맨 앞이 관리 창 것일 때만. 바탕화면 것이 앞이면 그것이 끝나기를 기다린다
-function manageTutorial(save: SaveV3): string | null {
-  const now = currentTutorial(save);
-  return now && now.surface === "manage" ? now.id : null;
+function manageTutorial(save: SaveV3, now: number): string | null {
+  const first = currentTutorial(save, now);
+  return first && first.surface === "manage" ? first.id : null;
 }
 
 // 성격 변경 창의 선택지 — 원작 25 성격을 data/natures.json 순서로. 어느 성격이든 민트 한 개로 바꾼다 (2026-09-29 사용자 결정)

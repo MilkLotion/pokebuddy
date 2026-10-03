@@ -54,7 +54,7 @@ export function createCoach(deps: CoachDeps): Coach {
     const stages = deps.stages();
     if (!stages) return;
     const save = deps.read();
-    const now = save ? currentTutorial(save) : null;
+    const now = save ? currentTutorial(save, Date.now()) : null;
     const view = now && now.surface === "stage" && save && !deps.quiet() ? viewOf(now.id, save.starterPetId, stages.petIds()) : null;
     shown = view;
     // 첫 돌봄 동안 밝힌 포켓몬을 세운다 — 걸으면 말풍선이 따라 움직인다 (2026-09-27 사용자 피드백)

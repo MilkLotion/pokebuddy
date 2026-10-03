@@ -76,11 +76,11 @@ export function queueTutorials(save: SaveV3, now: number): string[] {
   return fresh;
 }
 
-// 지금 보여 줄 튜토리얼 — 대기열의 맨 앞. 저장을 바꾸지 않는다(스냅샷이 부른다)
-export function currentTutorial(save: SaveV3): { id: string; surface: TutorialSurface } | null {
+// 지금 보여 줄 튜토리얼 — 대기열의 맨 앞. 저장을 바꾸지 않는다(스냅샷이 부른다). now 는 막힘 판정(진화 튜토리얼의 낮·밤)에 쓴다
+export function currentTutorial(save: SaveV3, now: number): { id: string; surface: TutorialSurface } | null {
   const order = (id: string): number => TUTORIALS.findIndex((t) => t.id === id);
   const first = Object.entries(save.tutorials)
-    .filter(([id, row]) => row.queuedAt != null && !DONE.includes(row.state) && ruleOf(id)?.enabled && !ruleOf(id)?.blocked?.(save))
+    .filter(([id, row]) => row.queuedAt != null && !DONE.includes(row.state) && ruleOf(id)?.enabled && !ruleOf(id)?.blocked?.(save, now))
     .sort(([a, ra], [b, rb]) => (ra.queuedAt ?? 0) - (rb.queuedAt ?? 0) || order(a) - order(b))[0];
   const rule = first ? ruleOf(first[0]) : undefined;
   return rule ? { id: rule.id, surface: rule.surface } : null;

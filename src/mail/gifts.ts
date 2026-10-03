@@ -55,8 +55,8 @@ export function parseGifts(raw: unknown, opts?: DexOptions): Gift[] | null {
 export type ApplyResult = { ok: true; applied: boolean } | { ok: false; reason: "bad-args" | "bad-gift" | "box-full" };
 
 export interface ApplyEnv {
-  now?: number; // 포켓몬 선물의 얻은 시각
-  rand?: () => number; // 포켓몬 선물의 성격·성별
+  now: number; // 포켓몬 선물의 얻은 시각
+  rand: () => number; // 포켓몬 선물의 성격·성별
 }
 
 // 포켓몬 선물마다 실제로 넣을 마리 수 — 단일 포켓몬은 저장마다 한 번만 얻는다. 이미 얻었으면 0마리, 아니면 한 편지에서 한 마리다
@@ -81,7 +81,7 @@ export function neededBoxRoom(save: SaveV3, gifts: readonly Gift[], opts?: DexOp
 }
 
 // 선물을 저장에 넣는다. 이미 넣은 편지면 아무것도 하지 않는다(applied: false)
-export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: DexOptions, env: ApplyEnv = {}): ApplyResult {
+export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts: DexOptions | undefined, env: ApplyEnv): ApplyResult {
   if (!letterId) return { ok: false, reason: "bad-args" };
   const gifts = parseGifts(raw, opts);
   if (!gifts || !gifts.length) return { ok: false, reason: "bad-gift" };
@@ -104,5 +104,5 @@ export function applyGifts(save: SaveV3, letterId: string, raw: unknown, opts?: 
 
 // 포켓몬 선물 한 마리 — 파티가 비어 있어도 박스로 넣는다
 function givePokemon(save: SaveV3, species: string, env: ApplyEnv, opts?: DexOptions): void {
-  addNewPet(save, { species, shiny: false, now: env.now ?? Date.now(), rand: env.rand ?? Math.random, place: "box-only", opts }); // 둘 곳은 applyGifts 가 먼저 봤다
+  addNewPet(save, { species, shiny: false, now: env.now, rand: env.rand, place: "box-only", opts }); // 둘 곳은 applyGifts 가 먼저 봤다
 }
