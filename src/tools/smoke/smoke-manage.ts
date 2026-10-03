@@ -37,6 +37,7 @@ import { shopDeviceModel } from "../../view/device-shop";
 import type { BagDeviceInput, PartyDeviceInput, PetDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
 import type { Snapshot } from "../../shared/model/snapshot";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep as wait } from "../harness/wait";
 
 const dir = makeTmp("manage");
 const shots = process.env.POKEBUDDY_SMOKE_SHOTS ?? dir;
@@ -137,7 +138,6 @@ ipcMain.handle("smoke:device", (_e, kind: string, s: Snapshot, input: unknown) =
 
 app.setPath("userData", path.join(dir, "user-data"));
 app.disableHardwareAcceleration();
-const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 void app.whenReady().then(async () => {
   const win = new BrowserWindow({ width: 640, height: 682, show: false, webPreferences: { preload, contextIsolation: false, sandbox: false, offscreen: true, backgroundThrottling: false } });

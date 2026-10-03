@@ -13,11 +13,11 @@ import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { rollEgg, seededRand, verifySave, type VerifyContext, type VerifyData } from "../../verify/save-rules";
+import { printLine as out } from "../harness/report";
 
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const T0 = new Date(2026, 8, 30, 10, 0, 0).getTime();
 const HOUR = 3_600_000;
-const out = (line: string): void => void process.stdout.write(`${line}\n`);
 
 const data = JSON.parse(fs.readFileSync(path.join(ROOT, "supabase/functions/_shared/verify-data.json"), "utf8")) as VerifyData;
 const ctx = (gapMs: number, extra: Partial<VerifyContext> = {}): VerifyContext => ({ gapMs, margin: 1.1, letters: {}, received: [], receivedBefore: {}, seed: null, ...extra });

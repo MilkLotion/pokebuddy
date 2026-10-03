@@ -14,13 +14,11 @@ import * as unlocks from "../../dex/unlocks";
 import * as regional from "../../dex/regional";
 import type { UnlockRules } from "../../dex/unlocks";
 import type { Pet, SaveV2, World } from "../../save/v2/types";
+import { printLine as out } from "../harness/report";
 
 // 배럴 없이 모듈을 직접
 const dex = { ...data, ...natures, ...species, ...evo, ...unlocks };
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
 const T0 = new Date(2026, 8, 17, 10, 0, 0).getTime(); // 2026-09-17 10:00 로컬
 const DATA_DIR = path.join(__dirname, "..", "..", "..", "data");
 

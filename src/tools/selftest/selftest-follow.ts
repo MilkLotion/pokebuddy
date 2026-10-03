@@ -13,16 +13,12 @@ import * as state from "../../follow/state";
 import type { HelperWindow, StateRecord } from "../../follow/types";
 import * as winbounds from "../../follow/winbounds";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep } from "../harness/wait";
+import { okCounter, printLine as say } from "../harness/report";
 
-const say = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
-let n = 0;
-const ok = async (name: string, fn: () => void | Promise<void>): Promise<void> => {
-  await fn();
-  n += 1;
-  say(`  ok  ${name}`);
-};
+const checks = okCounter();
+const ok = checks.okAsync;
+
 
 // 있어야 하는 값 — 없으면 여기서 실패한다 (없는 값에 점을 찍어 TypeError 로 죽는 대신)
 function some<T>(v: T | null | undefined, what = "값"): T {
@@ -55,7 +51,6 @@ async function deadPid(): Promise<number> {
 // 콜백 한 번을 Promise 로
 const once = <T>(run: (cb: (err: Error | null, v?: T) => void) => void): Promise<{ err: Error | null; v?: T }> =>
   new Promise((resolve) => run((err, v) => resolve({ err, v })));
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // ── state.ts ────────────────────────────────────────────────────────────────
 
@@ -302,7 +297,7 @@ async function main(): Promise<void> {
   await testStateRecords();
   await testFront();
   await testLineHelper();
-  say(`통과 (${n}건)`);
+  say(`통과 (${checks.count()}건)`);
 }
 
 main()

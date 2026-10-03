@@ -280,7 +280,7 @@ node dist/tools/dev/dev-test.js scene hatch        # 앱이 꺼진 상태에서�
 node dist/tools/dev/dev-test.js start              # 고친 저장으로 다시 띄운다
 ```
 
-장면은 쉼표로 이어 줄 수 있다(`scene done-all,rich`). 튜토리얼 장면은 그 튜토리얼 앞의 것을 완료로, 그 튜토리얼과 뒤의 것을 미시작으로 둔다.
+장면은 쉼표로 이어 줄 수 있다(`scene done-all,rich`). 튜토리얼 장면은 그 튜토리얼 앞의 것을 완료로, 그 튜토리얼과 뒤의 것을 미시작으로 둔다. 장면 목록은 `src/tools/harness/scenes.ts` 의 `SCENES` 다. `dev-manage` 의 `--scene` 도 같은 목록을 쓴다.
 첫 포켓몬이 없으면 `charmander` 로 시작 절차(`src/party/starter.ts` `begin`)를 밟는다.
 
 | 장면 | 저장을 이렇게 고친다 |

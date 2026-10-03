@@ -15,10 +15,8 @@ import { createArtLoader, type PmdArt } from "../../main/art";
 import { looksLikeOverworld, looksLikePal, overworldArt, overworldDir, overworldUrl, parsePal, OVERWORLD_RULES } from "../../main/overworld-art";
 import type { Paths } from "../../main/paths";
 import { decodePng, encodePng, pngChunk, PNG_SIGNATURE } from "../../main/png";
+import { printLine as out } from "../harness/report";
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
 
 let passed = 0;
 const failures: string[] = [];

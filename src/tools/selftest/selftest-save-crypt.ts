@@ -13,10 +13,8 @@ import * as store from "../../save/store";
 import { loadCloudState } from "../../online/lost";
 import { empty } from "../../save/v3";
 import { makeTmp } from "../harness/tmp-dir";
+import { printLine as out } from "../harness/report";
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
 
 const T0 = new Date(2026, 8, 30, 10, 0, 0).getTime();
 

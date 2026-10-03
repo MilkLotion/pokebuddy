@@ -18,16 +18,11 @@ delete process.env.CLAUDE_CONFIG_DIR;
 import registry = require("../../agents/registry");
 import notice = require("../../agents/notice");
 import upkeep = require("../../main/hook-upkeep");
+import { okCounter, printLine as say } from "../harness/report";
 
-const say = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
-let n = 0;
-const ok = (name: string, fn: () => void): void => {
-  fn();
-  n += 1;
-  say(`  ok  ${name}`);
-};
+const checks = okCounter();
+const ok = checks.ok;
+
 
 type HookEntry = { type?: string; command?: string };
 type HookFile = { hooks?: Record<string, Array<{ matcher?: string; hooks?: HookEntry[] }>> };
@@ -155,7 +150,7 @@ try {
     assert.ok(logs.some((l) => l.hooks === "tidy-failed"));
   });
 
-  say(`통과 (${n}건)`);
+  say(`통과 (${checks.count()}건)`);
 } finally {
   fs.rmSync(home, { recursive: true, force: true });
 }

@@ -35,7 +35,7 @@
 // `--slow <ms>` 를 주면 명령의 답을 그만큼 늦춘다 — 처리 중 표시(단추·칸의 점 세 개) 확인용
 // `--update-ready` 를 주면 설정 바닥을 "새 버전 준비됨" 으로 연다. `다시 시작` 은 답하지 않고 기다린다 — "다시 시작하는 중" 확인용
 // `--notes` 를 주면 가짜 패치노트 둘을 준다(설정 바닥의 `패치노트` 단추와 목록, 처음 열 때 한 번 뜨는 새 버전 노트)
-// `--scene <이름>` 을 주면 dev-test 의 장면을 저장에 입힌다(여러 번). 예: done-all(튜토리얼 모두 끝남), rich(포인트 넉넉)
+// `--scene <이름>` 을 주면 공용 틀의 장면(harness/scenes.ts)을 저장에 입힌다(여러 번). 예: done-all(튜토리얼 모두 끝남), rich(포인트 넉넉)
 // `--docs` 를 주면 문서 캡처용 저장으로 연다 — 파티 4마리를 모두 꺼내 두고 숨긴 마리가 없다. 교환 모달은 서버 없이 첫 화면을 보인다 (docs/images/README.md)
 // `--trade <offer|blocked|ready|error|empty>` 를 주면 교환 서버 없이 교환 모달의 제안·확정 화면을 보인다. 박스 탭의 `교환` 단추를 누른 뒤에 쓴다
 // `--eval <js>` 를 주면 찍기 직전에 관리 창에서 그 식을 돌려 결과를 `eval: …` 로 출력한다 — 스크롤 높이 같은 값을 잴 때 쓴다
@@ -250,10 +250,10 @@ void app.whenReady().then(async () => {
     seeded.boxes[0]!.slots = seeded.boxes[0]!.slots.map((id) => (id === "p3" || id === "p4" ? null : id));
     seeded.points.balance = 12450;
   }
-  // --scene <이름> — dev-test 장면(src/tools/dev/dev-test.ts SCENES)을 입힌다
+  // --scene <이름> — 장면(src/tools/harness/scenes.ts SCENES)을 입힌다
   const scenes = argsAfter("--scene");
   if (scenes.length) {
-    const { applyScene } = require("./dev-test") as typeof import("./dev-test");
+    const { applyScene } = require("../harness/scenes") as typeof import("../harness/scenes");
     for (const name of scenes) for (const one of name.split(",")) applyScene(seeded, one, Date.now());
   }
   store.write(file, seeded);

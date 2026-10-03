@@ -20,7 +20,9 @@ import type { CommandName } from "../../shared/names/commands";
 import type { LogEntry } from "../../shared/save-v3";
 import type { SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep, waitFor } from "../harness/wait";
 import { createDispatcher } from "../../tx/dispatcher";
+import { printLine as out } from "../harness/report";
 
 const save = { ...rules, ...legacy, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접
 
@@ -28,18 +30,6 @@ const { SAVE_RULES } = save;
 const T0 = new Date(2026, 8, 17, 10, 0, 0).getTime(); // 2026-09-17 10:00 로컬
 const TODAY = "2026-09-17";
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-async function waitFor(check: () => boolean, ms = 3000, step = 20): Promise<boolean> {
-  const until = Date.now() + ms;
-  while (Date.now() < until) {
-    if (check()) return true;
-    await sleep(step);
-  }
-  return check();
-}
 
 // 있어야 하는 값 — 없으면 여기서 실패한다 (없는 값에 점을 찍어 TypeError 로 죽는 대신)
 function some<T>(v: T | null | undefined, what = "값"): T {

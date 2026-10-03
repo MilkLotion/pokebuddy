@@ -14,12 +14,12 @@ import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askH
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { setLang } from "../../main/text";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep } from "../harness/wait";
 
 const dir = makeTmp("alert");
 const shots = process.argv.slice(2).find((a) => !a.startsWith("-") && !a.endsWith(".js")) ?? null;
 app.setPath("userData", path.join(dir, "user-data"));
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 // 보이는 알림 창을 기다린다
 async function shown(): Promise<BrowserWindow> {

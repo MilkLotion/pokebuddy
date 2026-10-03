@@ -7,10 +7,11 @@
 //   19~27 은 P2 익명 계정 저장 — design-p2.md 2절·8절·13절 (익명 새 설치·PET_TRADED_OUT·이관 세 결과·재시도·분실·reset·업데이트 필요 재확인)
 //   (0) 부팅 판단·(20) PET_TRADED_OUT·(27) 은 P2 코드 검수(H1·M1·W5) 뒤 더했다
 import assert from "node:assert";
-import { execSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { memoryStorage } from "../../online/client";
+import { assertLocalUrl, localServer } from "../harness/fakes";
+import { sleep, until } from "../harness/wait";
 import { createAccount } from "../../online/account";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks } from "../../online/handoff";
@@ -19,29 +20,6 @@ import { normalizeCloudState, strayAnonymous, type Cloud, type CloudSyncState, t
 
 const APP_VERSION = "0.13.0"; // 서버 최소 버전(cloud_private.settings) 이상
 
-function local(): { url: string; key: string; service: string | null } | null {
-  if (process.env.POKEBUDDY_SUPABASE_URL && process.env.POKEBUDDY_SUPABASE_KEY) {
-    return { url: process.env.POKEBUDDY_SUPABASE_URL, key: process.env.POKEBUDDY_SUPABASE_KEY, service: process.env.POKEBUDDY_SUPABASE_SERVICE_KEY ?? null };
-  }
-  try {
-    const raw = execSync("npx supabase status -o json", { stdio: ["ignore", "pipe", "ignore"], timeout: 60_000 }).toString();
-    const j = JSON.parse(raw.slice(raw.indexOf("{"))) as Record<string, string>;
-    const url = j.API_URL, key = j.PUBLISHABLE_KEY ?? j.ANON_KEY;
-    return url && key ? { url, key, service: j.SERVICE_ROLE_KEY ?? j.SECRET_KEY ?? null } : null;
-  } catch {
-    return null;
-  }
-}
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-async function until(test: () => boolean | Promise<boolean>, label: string, ms = 10_000): Promise<void> {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    if (await test()) return;
-    await sleep(50);
-  }
-  throw new Error(`대기 실패: ${label}`);
-}
 
 // 망 흉내 — up: 그대로. down: 모든 요청 실패. drop-upload: 올리기 한 번은 서버에 닿지만 응답을 잃는다(그 뒤 down)
 //   fail-download: 받기 한 번만 실패한다(그 뒤 up)
@@ -414,7 +392,7 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
     W.versionBlock(2);
     await cloudW.start(anonW, "boot", "anonymous");
     assert.equal(cloudW.view().status, "update-required");
-    await until(() => cloudW.view().status === "online", "다시 확인해 풀린다", 5_000);
+    await until(() => cloudW.view().status === "online", "다시 확인해 풀린다", { ms: 5_000 });
     await until(async () => (await saveRow(anonW))?.rev === 1, "풀린 뒤 올린다");
     cloudW.stop();
   }
@@ -572,12 +550,12 @@ async function main(): Promise<void> {
   assert.equal(strayAnonymous({ id: "m", is_anonymous: false }, { id: "o", kind: "anonymous" }, null), null, "정식 계정은 G-b 가 푼다");
   process.stdout.write("(0) 부팅 판단 — 주인과 다른 익명 세션은 분실  ok\n");
 
-  const cfg = local();
+  const cfg = localServer();
   if (!cfg) {
     process.stdout.write("selftest-cloud: 로컬 Supabase 가 없어 건너뜀\n");
     return;
   }
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(cfg.url)) throw new Error("로컬 주소가 아니다 — 실제 프로젝트에는 붙지 않는다");
+  assertLocalUrl(cfg.url);
   if (!cfg.service) throw new Error("서비스 키가 없다 — npx supabase status 를 확인");
   const admin = createClient(cfg.url, cfg.service, { auth: { persistSession: false, autoRefreshToken: false } });
   const row = async (userId: string): Promise<{ rev: number; save: { points?: { balance: number } } | null; active_device: string | null; presence: string; last_seen: string | null }> => {
@@ -619,13 +597,13 @@ async function main(): Promise<void> {
     assert.equal(A.state()?.syncedRev, 1, "스로틀 안에서는 올리지 않는다");
     A.bump(120);
     cloudA.noteSaved("event");
-    await until(() => A.state()?.syncedRev === 2, "사건은 바로 올린다", 1_000);
+    await until(() => A.state()?.syncedRev === 2, "사건은 바로 올린다", { ms: 1_000 });
     assert.equal((await row(uid)).save?.points?.balance, 120);
     A.bump(125);
     cloudA.noteSaved("tick");
     await sleep(500);
     assert.equal(A.state()?.syncedRev, 2, "막 올린 뒤의 주기 저장은 기다린다");
-    await until(() => A.state()?.syncedRev === 3, "스로틀이 지나면 올린다", 3_000);
+    await until(() => A.state()?.syncedRev === 3, "스로틀이 지나면 올린다", { ms: 3_000 });
     assert.equal(cloudA.unsaved(), "none");
     process.stdout.write("(2) 주기 저장 스로틀·사건 즉시  ok\n");
 
@@ -788,7 +766,7 @@ async function main(): Promise<void> {
     assert.equal(A.uploads[sent]?.op, op);
     assert.equal((await row(uid)).rev, base + 1, "서버는 이미 썼다");
     A.setNet("up");
-    await until(() => A.uploads.length >= sent + 3 && A.state()?.pendingOp == null && !A.state()?.dirty, "다시 보내기", 5_000);
+    await until(() => A.uploads.length >= sent + 3 && A.state()?.pendingOp == null && !A.state()?.dirty, "다시 보내기", { ms: 5_000 });
     assert.equal(A.uploads[sent + 1]?.op, op, "같은 키로 다시 보낸다");
     assert.equal(A.uploads[sent + 1]?.rev, base + 1, "같은 키는 그때의 rev");
     assert.notEqual(A.uploads[sent + 2]?.op, op, "다시 쓴 키 뒤에는 새 키로 한 번 더");
@@ -821,7 +799,7 @@ async function main(): Promise<void> {
     assert.equal(cloudO.view().status, "online", "세션 종료 알림은 클라우드를 멈추지 않는다");
     assert.equal(cloudO.released(), true);
     assert.equal((await row(uid2)).presence, "released");
-    await until(async () => (await row(uid2)).presence === "active" && !cloudO.released(), "다음 하트비트가 active 로 되돌린다", 3_000);
+    await until(async () => (await row(uid2)).presence === "active" && !cloudO.released(), "다음 하트비트가 active 로 되돌린다", { ms: 3_000 });
     assert.equal(cloudO.view().status, "online");
     cloudO.stop();
     process.stdout.write("(15) 세션 종료 알림 뒤 계속 돌면 active 복귀  ok\n");

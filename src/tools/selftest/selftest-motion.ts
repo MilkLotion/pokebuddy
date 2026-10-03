@@ -18,10 +18,8 @@ import { MOTION_RULES } from "../../motion/rules";
 import type { MotionRules } from "../../motion/rules";
 import type { MotionCaps, MotionOut, MotionParams, PetMotion, PetMotionOptions, Phase, RoamBox } from "../../motion/types";
 import type { AgentState } from "../../shared/names/agents";
+import { printLine as out } from "../harness/report";
 
-const out = (line: string): void => {
-  process.stdout.write(`${line}\n`);
-};
 
 // 고정 rng — mulberry32. 씨앗이 같으면 같은 수열
 function seeded(seed: number): () => number {

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
+import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
 
 export const root = path.resolve(__dirname, "..", "..", "..");
@@ -93,8 +94,7 @@ export function makeApp(name: string, server: Server, pets: PetSpec[], extraEnv:
   const dir = makeTmp(`${(opts.prefix ?? "trade-e2e").replace(/^pokebuddy-/, "")}-${name}`);
   const temp = path.join(dir, "tmp");
   fs.mkdirSync(temp);
-  const env: NodeJS.ProcessEnv = { ...process.env, HOME: dir, USERPROFILE: dir, APPDATA: path.join(dir, "appdata"), LOCALAPPDATA: path.join(dir, "localappdata"), TEMP: temp, TMP: temp };
-  for (const key of Object.keys(env)) if (key.startsWith("POKEBUDDY_") || key === "NODE_OPTIONS" || key === "ELECTRON_RUN_AS_NODE") delete env[key];
+  const env = homeEnv(dir, temp);
   env.PB_E2E_DIR = dir;
   // 저장을 직접 읽고 고친다(app.save·시드) — 평문으로 둔다. 개발 실행만 받는다(src/main/app.ts). 암호화 사례는 extraEnv 로 'on' 을 준다
   env.POKEBUDDY_SAVE_CRYPT = "off";
