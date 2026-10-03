@@ -3,7 +3,7 @@
 // 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/record.md "검사 계획")이 본다
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { createAppUpdater, urgentStep, type UpdaterLike } from "../../main/updater";
+import { createAppUpdater, urgentStep, type UpdaterLike } from "../../main/update/updater";
 import type { UpdateView } from "../../shared/model/account";
 
 class FakeUpdater extends EventEmitter implements UpdaterLike {

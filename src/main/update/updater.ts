@@ -1,6 +1,6 @@
 // 앱 업데이트 — 설치본이 켜진 채로 새 버전을 받고, 다시 시작하거나 끌 때 적용한다.
 // 설계는 worklog/records/app-update/record.md. 엔진은 Windows 가 electron-updater(2026-09-28 사용자 승인),
-// mac 이 src/main/mac-updater.ts(Squirrel.Mac 은 정식 서명이 필요해 직접 한다, 2026-09-28 사용자 승인). 화면 흐름은 같다
+// mac 이 src/main/update/mac-updater.ts(Squirrel.Mac 은 정식 서명이 필요해 직접 한다, 2026-09-28 사용자 승인). 화면 흐름은 같다
 //
 //   확인    켜진 뒤 1분, 그 뒤 6시간마다 GitHub Release 의 latest.yml 을 본다(설치본의 app-update.yml 이 주소를 준다)
 //   받기    새 버전이 있으면 백그라운드로 받는다. 전 설치 파일의 블록맵과 견줘 바뀐 부분만 받는다. sha512 로 검사한다
@@ -8,14 +8,26 @@
 //           누르지 않고 끄면 끌 때 적용한다
 // mac 은 앱을 그 자리에서 바꿀 수 없으면(dmg 안·쓰기 불가) 받지 않고 새 버전만 알린다(manual) — `받기` 가 dmg 주소를 연다
 // 설치본(Windows exe·mac 앱)에서만 켠다. 개발 실행·npm 설치본은 버전만 보인다
-import type { UpdateView } from "../shared/model/account";
+import type { UpdateView } from "../../shared/model/account";
+
+// 엔진이 내는 이벤트와 값 — electron-updater 의 이름 그대로다. update-manual 은 mac 엔진만 낸다(그 자리에서 바꿀 수 없을 때)
+// 값은 엔진이 주는 것이라 받는 쪽은 그래도 좁혀서 읽는다(versionOf)
+export interface UpdaterEvents {
+  "checking-for-update": [];
+  "update-not-available": [info: { version?: string }];
+  "update-available": [info: { version?: string }];
+  "download-progress": [progress: { percent?: number }];
+  "update-downloaded": [info: { version?: string }];
+  "update-manual": [info: { version?: string; reason?: string }];
+  error: [error: unknown];
+}
 
 // electron-updater 의 autoUpdater 에서 쓰는 부분만 — 자체 검사는 가짜를 넘긴다
 export interface UpdaterLike {
   autoDownload: boolean;
   autoInstallOnAppQuit: boolean;
   logger: unknown;
-  on(event: string, listener: (payload: unknown) => void): unknown; // 이벤트마다 값 모양이 달라 받은 뒤에 좁힌다
+  on<K extends keyof UpdaterEvents>(event: K, listener: (...args: UpdaterEvents[K]) => void): unknown;
   checkForUpdates(): Promise<unknown>;
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void;
   openDownload?(): void; // 수동 받기 — mac 엔진만 (update-manual 뒤)
