@@ -37,7 +37,7 @@ export const askRegion = singleFlight((opts: RegionOptions): Promise<Rect | null
   const onScreen = local && local.x < b.width && local.y < b.height && local.x + local.w > 0 && local.y + local.h > 0 ? local : null;
   const init: RegionInit = { current: onScreen, min: { ...REGION_MIN } };
   return askWindow<Rect | null>({
-    create: () => [createOverlayWindow({ preload: opts.preload, layer: "screen-saver", bounds: { x: b.x, y: b.y, width: b.width, height: b.height } })],
+    create: () => [createOverlayWindow({ preload: opts.preload, layer: "screen-saver", bounds: { x: b.x, y: b.y, width: b.width, height: b.height }, firstMouse: true, allWorkspaces: true })], // mac — 알림 창과 같은 옵션 (94 문서 4-3·4-4)
     html: opts.html,
     closed: () => null,
     wire(ctx) {

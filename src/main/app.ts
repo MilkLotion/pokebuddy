@@ -417,11 +417,10 @@ const ticks = createTicks({
   bubbles,
   notifierTick: () => rt.notifier?.tick(),
   syncCoach,
-  // 15초마다 — 남은 한 번 알림, 다른 프로세스의 관리 창에서 바꾼 놀이공간·잠들기 기준, 점프 목록
+  // 15초마다 — 남은 한 번 알림, 저장 설정(놀이공간·잠들기 기준·로그인 시 시작) 다시 읽기, 점프 목록
   slow: () => {
     rt.hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
-    display.sync("play");
-    display.sync("sleep");
+    display.sync("all");
     syncJump();
   },
   log,
@@ -669,7 +668,9 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
   });
   rt.commands.setWriter(saveSource.isWriter());
   saveSource.onChange(() => {
-    display.sync("sleep"); // 밖에서 바뀐 저장(다른 프로세스·클라우드 받기)의 잠들기 기준을 바로 따른다
+    // 밖에서 바뀐 저장(다른 프로세스·클라우드 받기·mailbox)의 놀이공간·잠들기 기준·로그인 시 시작을 바로 따른다 —
+    // 설정창에서 바꾼 것과 같이 셋 다 (94 문서 4-1, X8)
+    display.sync("all");
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 

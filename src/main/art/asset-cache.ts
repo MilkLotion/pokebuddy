@@ -30,6 +30,10 @@ export interface AssetCache {
   fileOf(rel: string): string; // 캐시 안의 경로
 }
 
+// 못 받은 그림·소리를 다시 청하기까지 — 첫 실행의 네트워크 혼잡·끊김이 영영 빈 칸·무음으로 남지 않게.
+// 초상·도구 그림과 울음소리가 같은 값을 쓴다 (94 문서 5-12). 걷기 대체 그림은 늘 다시 본다(0)
+export const ASSET_RULES = { retryMs: 15_000 } as const;
+
 export const dataUriOf = (mime: string, buf: Buffer): string => `data:${mime};base64,${buf.toString("base64")}`;
 
 export function createAssetCache(o: AssetCacheOptions): AssetCache {

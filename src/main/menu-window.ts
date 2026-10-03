@@ -61,7 +61,7 @@ export function popupMenu(opts: MenuWindowOptions, template: MenuItemConstructor
   if (current && !current.isDestroyed()) current.close();
   const { point: at, workArea: area } = cursorScreen();
   // 재기 전 자리 640 × 480 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
-  const win = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { x: at.x, y: at.y, width: 640, height: 480 }, focusable: !opts.inactive });
+  const win = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { x: at.x, y: at.y, width: 640, height: 480 }, focusable: !opts.inactive, firstMouse: true, allWorkspaces: true }); // mac — 놀이공간 위 오버레이 창의 같은 옵션 (src/main/windows/options.ts, 94 문서 4-3·4-4)
   current = win;
   const scope = createIpcScope((sender) => !win.isDestroyed() && sender === win.webContents);
 

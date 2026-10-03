@@ -132,8 +132,9 @@ export function createCommands(ctx: CommandContext): Commands {
     return { ok: true, reason: "ok", key, value };
   });
 
+  // 숨기기·보이기도 다른 개체 명령과 같이 target 이 없으면 args.petId 를 본다 (94 문서 4-12, X4)
   const showHide = (shown: boolean) => async (c: Command): Promise<CommandResult> => {
-    const id = target(c);
+    const id = petTarget(c);
     if (!id) return { ok: false, reason: "no-pet" };
     return ctx.party.setShown(id, shown);
   };

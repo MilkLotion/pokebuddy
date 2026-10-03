@@ -1,10 +1,10 @@
 // 포켓몬 울음소리 — PokeAPI cries 의 최신 울음소리를 받아 캐시하고 무대에 data URI 로 준다
 //
 // 출처는 https://github.com/PokeAPI/cries 다. 경로: cries/pokemon/latest/<도감>.ogg.
-// 캐시: ~/.claude/pokebuddy/cries/<4자리>.ogg. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
+// 캐시: ~/.claude/pokebuddy/cries/<4자리>.ogg. 못 받은 종은 초상과 같이 15초 뒤에 다시 청한다(ASSET_RULES.retryMs).
 // 무대 창의 CSP 는 media-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import { profileOf } from "../../dex/species.js";
-import { createAssetCache } from "./asset-cache";
+import { ASSET_RULES, createAssetCache } from "./asset-cache";
 
 const BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
 
@@ -23,8 +23,8 @@ export interface Cries {
 }
 
 export function createCries(dir: string): Cries {
-  // 받기·캐시 (./asset-cache.ts) — 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다(retryMs null)
-  const cache = createAssetCache({ dir, validate: (buf) => audioType(buf) != null, mime: (buf) => audioType(buf) ?? "audio/mpeg", retryMs: null });
+  // 받기·캐시 (./asset-cache.ts) — 못 받은 종은 초상과 같이 ASSET_RULES.retryMs 뒤에 다시 청한다 (94 문서 5-12)
+  const cache = createAssetCache({ dir, validate: (buf) => audioType(buf) != null, mime: (buf) => audioType(buf) ?? "audio/mpeg", retryMs: ASSET_RULES.retryMs });
   return {
     async get(slug) {
       const dex = profileOf(slug).dex;
