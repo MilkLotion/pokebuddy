@@ -21,8 +21,8 @@ import { PATHS } from "../../platform/paths.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
-import { isPng } from "../../platform/png.js";
-import type { PortraitAsk } from "../../shared/model/snapshot";
+import { decodePng, isPng, opaqueRectOf } from "../../platform/png.js";
+import type { ArtImage, OpaqueBox, PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
 // 네트워크보다 먼저 본다. 만드는 곳은 src/tools/art/build-item-art.ts, 기록은 worklog/records/item-art/record.md (2026-09-27 폰트 세션)
@@ -107,6 +107,15 @@ export function iconUrl(key: string): string | null {
 
 const pngUri = (buf: Buffer): string => dataUriOf("image/png", buf);
 
+// 초상의 불투명 네모 — 알파 128 이상인 점을 모두 담는 네모(px)와 그림 전체 크기. 못 읽거나 빈 그림이면 null.
+// 설정창이 첫 그림부터 보는 네모를 정한다(src/renderer/ui/portrait.ts 와 같은 기준) — 몸이 큰 그림이 한순간 기본 네모로 보였다가 넓어지지 않게 (X15)
+export function portraitBoxOf(png: Buffer): OpaqueBox | null {
+  const img = decodePng(png);
+  if (!img) return null;
+  const box = opaqueRectOf(img.w, img.h, (x, y) => (img.px[(y * img.w + x) * 4 + 3] ?? 0) >= 128);
+  return box ? { ...box, width: img.w, height: img.h } : null;
+}
+
 export interface Portraits {
   get(asks: PortraitAsk[]): Promise<Record<string, string | null>>;
   // 초상 한 장의 PNG — get 과 같은 순서(리전폼 → 기본형, 이로치 → 보통)로 찾는다. 무대의 초상 대체 그림이 쓴다
@@ -115,6 +124,8 @@ export interface Portraits {
   // 디스크에 이미 있는 그림 전부 — 초상 열쇠(slug · slug:shiny)와 도구·알 열쇠. 네트워크는 쓰지 않는다
   // 관리 창이 첫 화면 전에 한 번 받아 둔다. 상점·상세에 들어갈 때 그림이 하나씩 차오르지 않게 하려는 것이다
   all(): Promise<Record<string, string>>;
+  // all 과 같은 그림에 초상만 불투명 네모를 붙인다(도구·알은 null). 네모는 열쇠마다 한 번 재 둔다
+  allImages(): Promise<Record<string, ArtImage>>;
   // 캐시에 없는 그림을 모두 받는다 — 보통·이로치 초상, 도구, 알. 받은 수·없는 수(404)·실패 수를 돌려준다.
   // first 의 종(보통 초상)을 맨 앞에 받는다 — 첫 실행 선택 창의 스타터
   prefetch(onProgress?: (done: number, total: number) => void, first?: string[]): Promise<{ got: number; had: number; missing: number; failed: number }>;
@@ -129,6 +140,15 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
   const diskUri = cache.readUri;
   const names = (sub: string): string[] => cache.names(sub).filter((n) => n.endsWith(".png"));
   const ownMemo = new Map<string, string>(); // 앱 안 우리 그림의 data URI
+  const boxMemo = new Map<string, { uri: string; box: OpaqueBox | null }>(); // 초상 열쇠 → 잰 네모(그 그림의 data URI 와 함께)
+  const isPortraitKey = (key: string): boolean => key !== "egg" && !key.startsWith("item:") && !key.startsWith("egg:");
+  const boxOfUri = (key: string, uri: string): OpaqueBox | null => {
+    const known = boxMemo.get(key);
+    if (known && known.uri === uri) return known.box;
+    const box = portraitBoxOf(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"));
+    boxMemo.set(key, { uri, box });
+    return box;
+  };
 
   // 색을 바꾼 알 그림의 data URI — 알 종류마다 한 번 칠해 둔다
   const tinted = new Map<string, string>();
@@ -167,7 +187,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
   const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => fileUri(relOf(dex, shiny), portraitUrl(dex, shiny));
   const oneBuffer = (dex: PortraitId, shiny: boolean): Promise<Buffer | null> => cache.fetchFile(relOf(dex, shiny), portraitUrl(dex, shiny));
 
-  return {
+  const api: Portraits = {
     async get(asks) {
       const out: Record<string, string | null> = {};
       await Promise.all(
@@ -271,6 +291,10 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       }
       return count;
     },
+    async allImages() {
+      const all = await api.all();
+      return Object.fromEntries(Object.entries(all).map(([key, uri]) => [key, { uri, box: isPortraitKey(key) ? boxOfUri(key, uri) : null }]));
+    },
     async all() {
       const out: Record<string, string> = {};
       const files = new Set(names(""));
@@ -307,4 +331,5 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       return out;
     },
   };
+  return api;
 }
