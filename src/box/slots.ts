@@ -35,7 +35,7 @@ export function takePet(boxes: BoxV3[], petId: string): boolean {
 }
 
 // 개체를 앞 박스의 첫 빈 칸에 넣는다. 모든 박스가 가득 찼으면 넣지 않고 null 을 돌려준다 — 박스는 저절로 늘지 않는다
-export function putPet(boxes: BoxV3[], petId: string): BoxSpot | null {
+export function addToBox(boxes: BoxV3[], petId: string): BoxSpot | null {
   for (let b = 0; b < boxes.length; b++) {
     const box = boxes[b];
     if (!box) continue;

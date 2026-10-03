@@ -5,7 +5,7 @@
 //   2. 교체는 한 번에 맞바꾼다. 먼저 빈 칸을 만드는 조작을 요구하지 않는다
 //   3. 개체의 값은 그대로 둔다. 칸의 이전 개체 값을 새 개체에 복사하지 않는다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
-import { findPet, putPet, takePet } from "../box/slots.js";
+import { findPet, addToBox, takePet } from "../box/slots.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -32,7 +32,7 @@ const hasPet = (save: SaveV3, petId: string): boolean => save.pets.some((p) => p
 export const firstEmptySlot = (save: SaveV3): number => save.party.slots.findIndex((s) => s.state === "empty");
 
 // 박스 개체를 빈 파티 칸에 배치한다. 칸을 지정하지 않으면 앞의 빈 칸에 넣는다
-export function place(save: SaveV3, petId: string, slotIndex?: number): PlacementResult {
+export function placeInParty(save: SaveV3, petId: string, slotIndex?: number): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   if (!findPet(save.boxes, petId)) return { ok: false, reason: "not-in-box" };
 
@@ -50,7 +50,7 @@ export function place(save: SaveV3, petId: string, slotIndex?: number): Placemen
 
 // 파티 칸의 개체와 박스 개체를 한 번에 맞바꾼다. 들어온 개체는 꺼낸 상태로 시작한다.
 // 나간 개체는 들어온 개체가 있던 박스 칸에 들어간다 — 두 자리를 그대로 맞바꾼다
-export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementResult {
+export function swapWithBox(save: SaveV3, slotIndex: number, petId: string): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   const spot = findPet(save.boxes, petId);
   if (!spot) return { ok: false, reason: "not-in-box" };
@@ -68,7 +68,7 @@ export function swap(save: SaveV3, slotIndex: number, petId: string): PlacementR
 
 // 파티 개체를 다른 파티 칸으로 옮긴다. 빈 칸이면 옮기고, 개체 칸이면 두 칸을 맞바꾼다.
 // 칸째 옮기므로 숨김 상태도 개체를 따라간다. 박스는 건드리지 않는다
-export function move(save: SaveV3, petId: string, toSlot: number): PlacementResult {
+export function movePartySlot(save: SaveV3, petId: string, toSlot: number): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   const from = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
   if (from < 0) return { ok: false, reason: "not-in-party" };
@@ -85,7 +85,7 @@ export function move(save: SaveV3, petId: string, toSlot: number): PlacementResu
 
 // 파티 개체를 박스에 보관한다. 칸은 빈 칸이 된다.
 // 박스 칸을 주면 그 빈 칸에 넣는다. 주지 않으면 앞 박스의 첫 빈 칸이다
-export function keep(save: SaveV3, petId: string, to?: { boxId: string; slot: number }): PlacementResult {
+export function keepInBox(save: SaveV3, petId: string, to?: { boxId: string; slot: number }): PlacementResult {
   if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
   const i = save.party.slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
   if (i < 0) return { ok: false, reason: "not-in-party" };
@@ -95,7 +95,7 @@ export function keep(save: SaveV3, petId: string, to?: { boxId: string; slot: nu
     if (!box || to.slot < 0 || to.slot >= box.slots.length) return { ok: false, reason: "no-slot" };
     if (box.slots[to.slot] != null) return { ok: false, reason: "slot-not-empty" };
     box.slots[to.slot] = petId;
-  } else if (!putPet(save.boxes, petId)) {
+  } else if (!addToBox(save.boxes, petId)) {
     return { ok: false, reason: "box-full" };
   }
   save.party.slots[i] = { state: "empty" };

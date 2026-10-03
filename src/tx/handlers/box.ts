@@ -1,20 +1,20 @@
 // 박스 처리기 — 정렬·이동·이름·순서
 import { isBoxSortKey, moveSlot, moveToBox, orderBox, renameBox, sortBox } from "../../box/slots.js";
 import type { TxHandler } from "../executor";
-import { intOf, isObj } from "./args.js";
+import { intOf, isArgsRecord } from "./args.js";
 
 // ── 박스 정렬·이동·이름·순서 ────────────────────────────────────────────────────
 // 박스의 slots 와 name, 박스 배열의 순서만 바꾼다. 파티·알·도감은 건드리지 않는다 (src/box/slots.ts)
 
 const boxIndexOf = (draft: Parameters<TxHandler>[0], args: unknown, key: string): number => {
-  const id = isObj(args) ? args[key] : undefined;
+  const id = isArgsRecord(args) ? args[key] : undefined;
   return typeof id === "string" ? draft.boxes.findIndex((b) => b.id === id) : -1;
 };
 
 // 지금 보는 박스 하나를 기준대로 한 번 정렬한다
 export const boxSortHandler: TxHandler = (draft, args, ctx) => {
   const boxIndex = boxIndexOf(draft, args, "boxId");
-  const by = isObj(args) ? args.by : undefined;
+  const by = isArgsRecord(args) ? args.by : undefined;
   if (boxIndex < 0) return { ok: false, reason: "no-box" };
   if (!isBoxSortKey(by)) return { ok: false, reason: "bad-args" };
   const box = draft.boxes[boxIndex];
@@ -27,7 +27,7 @@ export const boxSortHandler: TxHandler = (draft, args, ctx) => {
 export const boxMoveHandler: TxHandler = (draft, args) => {
   const from = boxIndexOf(draft, args, "boxId");
   const slot = intOf(args, "slot");
-  const to = isObj(args) && args.toBoxId !== undefined ? boxIndexOf(draft, args, "toBoxId") : from;
+  const to = isArgsRecord(args) && args.toBoxId !== undefined ? boxIndexOf(draft, args, "toBoxId") : from;
   const toSlot = intOf(args, "toSlot");
   if (from < 0 || to < 0) return { ok: false, reason: "no-box" };
   if (slot == null) return { ok: false, reason: "bad-args" };
@@ -44,7 +44,7 @@ export const boxMoveHandler: TxHandler = (draft, args) => {
 // 박스 이름 바꾸기 — 비우면 기본 이름으로 돌아간다
 export const boxRenameHandler: TxHandler = (draft, args) => {
   const boxIndex = boxIndexOf(draft, args, "boxId");
-  const name = isObj(args) ? args.name : undefined;
+  const name = isArgsRecord(args) ? args.name : undefined;
   const box = draft.boxes[boxIndex];
   if (!box) return { ok: false, reason: "no-box" };
   if (typeof name !== "string") return { ok: false, reason: "bad-args" };

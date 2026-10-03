@@ -3,12 +3,12 @@ import { claim } from "../../achievement/claim.js";
 import { done as doneTutorial, skip as skipTutorial } from "../../tutorial/queue.js";
 import { isSettingKey, setSetting } from "../../state/settings.js";
 import type { TxHandler } from "../executor";
-import { isObj, reasonOf } from "./args.js";
+import { isArgsRecord, reasonOf } from "./args.js";
 
 // ── 업적과 튜토리얼 ────────────────────────────────────────────────────────────
 
 const idOf = (args: unknown): string | null => {
-  if (!isObj(args)) return null;
+  if (!isArgsRecord(args)) return null;
   const id = args.id;
   return typeof id === "string" && id ? id : null;
 };
@@ -34,7 +34,7 @@ export const tutorialHandler = (kind: "skip" | "done"): TxHandler => (draft, arg
 
 // 설정 한 항목 바꾸기 — 허용 값은 src/state/settings.ts 가 가진다
 export const settingsHandler: TxHandler = (draft, args) => {
-  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   if (!isSettingKey(args.key)) return { ok: false, reason: "bad-args" };
   const res = setSetting(draft, args.key, args.value);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };

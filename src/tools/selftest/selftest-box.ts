@@ -3,9 +3,9 @@
 // 순수 함수(src/box/slots.ts)와 거래 명령(box.sort · box.move · box.rename · box.order, 상점의 box)을 본다. 파일을 만들지 않는다.
 // 설계는 worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
 import assert from "node:assert";
-import { addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, putPet, renameBox, sortBox } from "../../box/slots";
+import { addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, addToBox, renameBox, sortBox } from "../../box/slots";
 import { open } from "../../egg/open";
-import { keep } from "../../party/placement";
+import { keepInBox } from "../../party/placement";
 import { applyGifts } from "../../mail/core";
 import { buy } from "../../shop/buy";
 import { newPet } from "../../party/create";
@@ -161,7 +161,7 @@ check(() => {
   assert.deepStrictEqual(orderBox(s.boxes, -1, 2), { ok: false, reason: "no-box" });
   assert.deepStrictEqual(orderBox(s.boxes, 2, 8), { ok: false, reason: "bad-slot" });
   // 새 개체는 바뀐 순서의 앞 박스부터 들어간다
-  assert.deepStrictEqual(putPet(s.boxes, "p9"), { boxIndex: 0, slotIndex: 0 });
+  assert.deepStrictEqual(addToBox(s.boxes, "p9"), { boxIndex: 0, slotIndex: 0 });
   assert.strictEqual(s.boxes[0]!.id, "b8");
 });
 
@@ -225,7 +225,7 @@ check(() => {
   for (const b of s.boxes) b.slots = b.slots.map((x, i) => x ?? `f${b.id}-${i}`);
   for (const slot of s.party.slots) if (slot.state === "empty") Object.assign(slot, { state: "pokemon", petId: "p1", hidden: false });
   assert.strictEqual(boxRoom(s.boxes), 0);
-  assert.strictEqual(putPet(s.boxes, "p9"), null, "가득 차면 넣지 않는다");
+  assert.strictEqual(addToBox(s.boxes, "p9"), null, "가득 차면 넣지 않는다");
   assert.strictEqual(s.boxes.length, 8, "박스는 저절로 늘지 않는다");
   // 부화 — 알은 그대로 남는다
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 0, ready: true, candidates: ["pikachu"], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
@@ -234,7 +234,7 @@ check(() => {
   assert.strictEqual(s.eggs.length, 1, "알은 그대로");
   assert.strictEqual(s.pets.length, pets, "개체를 만들지 않는다");
   // 보관
-  assert.strictEqual(keep(s, "p1").reason, "box-full");
+  assert.strictEqual(keepInBox(s, "p1").reason, "box-full");
   // 우편 — 도구와 함께 온 편지도 통째로 넣지 않는다
   const mail = applyGifts(s, "m1", [{ kind: "points", count: 10 }, { kind: "pokemon", species: "pikachu", count: 1 }]);
   assert.deepStrictEqual(mail, { ok: false, reason: "box-full" });
@@ -249,7 +249,7 @@ check(() => {
 check(() => {
   // 새 개체는 앞 박스의 첫 빈 칸 — 빈 박스로 건너뛰지 않는다
   const s = seed();
-  assert.deepStrictEqual(putPet(s.boxes, "p9"), { boxIndex: 0, slotIndex: 2 });
+  assert.deepStrictEqual(addToBox(s.boxes, "p9"), { boxIndex: 0, slotIndex: 2 });
   assert.strictEqual(s.boxes.length, BOX_RULES.start);
 });
 check(() => {

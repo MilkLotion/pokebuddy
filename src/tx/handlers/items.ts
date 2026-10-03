@@ -5,12 +5,12 @@ import { buy } from "../../shop/buy.js";
 import { sell } from "../../shop/sell.js";
 import { sellPet } from "../../shop/sell-pet.js";
 import type { TxHandler } from "../executor";
-import { isObj, petIdOf, reasonOf } from "./args.js";
+import { isArgsRecord, petIdOf, reasonOf } from "./args.js";
 
 // ── 알 ─────────────────────────────────────────────────────────────────────────
 
 const eggIdOf = (args: unknown): string | null => {
-  if (!isObj(args)) return null;
+  if (!isArgsRecord(args)) return null;
   const id = args.eggId;
   return typeof id === "string" && id ? id : null;
 };
@@ -34,7 +34,7 @@ export const openHandler: TxHandler = (draft, args, ctx) => {
 
 // 구매 — 검사와 반영을 한 거래로 묶는다. 하나라도 걸리면 아무것도 바꾸지 않는다
 export const buyHandler: TxHandler = (draft, args, ctx) => {
-  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   const productId = typeof args.productId === "string" ? args.productId : "";
   if (!productId) return { ok: false, reason: "bad-args" };
   // 수량 — 없으면 1. 여러 개는 값이 있는 도구와 알만 된다(포켓몬·파티 칸·0P 상품은 하나씩). 상한은 포인트다.
@@ -67,7 +67,7 @@ export const buyHandler: TxHandler = (draft, args, ctx) => {
 
 // 도구 사용 — 대상 개체에 효과를 적용하고 하나를 차감한다
 export const useHandler: TxHandler = (draft, args) => {
-  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   const itemId = typeof args.itemId === "string" ? args.itemId : "";
   const petId = petIdOf(args);
   if (!itemId || !petId) return { ok: false, reason: "bad-args" };
@@ -91,7 +91,7 @@ export const useHandler: TxHandler = (draft, args) => {
 
 // 도구 판매 — 가방에서 count 개를 빼고 판매가만큼 포인트를 더한다 (2026-09-30 사용자 결정, src/shop/sell.ts)
 export const sellHandler: TxHandler = (draft, args) => {
-  if (!isObj(args)) return { ok: false, reason: "bad-args" };
+  if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   const itemId = typeof args.itemId === "string" ? args.itemId : "";
   if (!itemId) return { ok: false, reason: "bad-args" };
   // 수량 — 없으면 1. 1 이상의 정수가 아니면 bad-count

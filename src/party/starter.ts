@@ -21,7 +21,7 @@ export type StarterResult = Outcome<StarterFailure> & {
   slotIndex?: number;
 };
 
-export function begin(save: SaveV3, species: string, now: number, rand: Rand, opts?: DexOptions): StarterResult {
+export function applyStarter(save: SaveV3, species: string, now: number, rand: Rand, opts?: DexOptions): StarterResult {
   if (save.pets.length) return { ok: false, reason: "already" };
   const added = addNewPet(save, { species, shiny: false, now, rand, place: "party-only", opts });
   if (!added) return { ok: false, reason: "no-slot" };
