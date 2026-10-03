@@ -11,7 +11,7 @@ import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
-import type { PetDeviceAction, PetDeviceOpen, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../../shared/model/devices.js";
+import type { PetDeviceAction, PetDeviceInput, BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput, ShopDeviceAction, ShopDeviceInput } from "../../shared/model/devices.js";
 import type { ScreenView } from "../../shared/model/overlays.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import type { AccountReplyCode, CloudErrorCode, FailCode, MailReplyCode, TradeCloseReason } from "../../shared/names/online-codes.js";
@@ -79,9 +79,6 @@ const SLEEP_CHOICES = [
   { id: "0", label: "잠들지 않음" },
 ];
 
-
-// 여러 개 살 수 있는 상품 — 포켓몬·파티 칸은 하나씩만 산다. 알은 돌보미집 빈 칸까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
-const MULTI_BUY = new Set(["tool", "evolution", "egg"]);
 
 // 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
 
@@ -201,9 +198,13 @@ let swapMode = false;
 let partyHold: string | null = null; // 파티 기기 창에서 든 파티 개체 — 박스 칸이나 다른 파티 칸을 누르면 거기 놓는다
 let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창의 머리 줄에 보인다
 // 파티 기기 창 연결 — 교체 화면인 동안 연다 (partyDeviceBuild)
-const partyLink = createDeviceLink<PartyDeviceOpen>({
+const partyLink = createDeviceLink<PartyDeviceInput>({
   build: partyDeviceBuild,
-  open: (model, gen) => window.pokebuddyManage.partyOpen(model, gen),
+  stamp: () => view,
+  open: (input, gen) => window.pokebuddyManage.partyOpen(input, gen),
+  apply: (input) => {
+    partyHold = input.heldPetId;
+  },
   afterClosed: () => {
     if (!swapMode) return false;
     closeSwap();
@@ -1451,34 +1452,10 @@ async function swapSend(cmd: string, target: string, extra: Record<string, unkno
   draw();
 }
 
-function partyDeviceModel(v: Snapshot): PartyDeviceOpen {
-  const holding = !!boxHold || !!partyHold;
-  const slots = v.party.slots.map((s) => {
-    const pet = s.pet ?? null;
-    return {
-      index: s.index,
-      state: pet ? ("pokemon" as const) : s.state === "locked" ? ("locked" as const) : ("empty" as const),
-      name: pet?.name ?? "",
-      level: pet ? `Lv.${pet.level}` : "",
-      art: pet ? portraitNow(pet.look, pet.shiny) : null,
-      held: !!pet && pet.id === partyHold,
-      target: holding && !pet && s.state !== "locked", // 놓을 칸 — 든 것이 있을 때의 빈 칸. 개체 칸은 눌러서 맞바꾼다
-    };
-  });
-  const p = v.party.preset;
-  return {
-    name: p.name,
-    slots,
-    presets: Array.from({ length: p.max }, (_, i) => ({ index: i, owned: i < p.count, active: i === p.index })),
-    notice: partyNote,
-  };
-}
-
-// 파티 기기 창에 보낼 값 — 교체 화면이 아니면 null(닫는다)
-function partyDeviceBuild(): PartyDeviceOpen | null {
+// 파티 기기 창에 보낼 고른 값 — 교체 화면이 아니면 null(닫는다). 모델은 메인이 만든다 (src/view/device-party.ts)
+function partyDeviceBuild(): PartyDeviceInput | null {
   if (!swapMode || tab !== "box" || !view) return null;
-  if (partyHold && slotOfPet(partyHold) == null) partyHold = null; // 든 개체가 파티에서 빠졌다
-  return partyDeviceModel(view);
+  return { heldPetId: partyHold, heldFromBox: !!boxHold, notice: partyNote };
 }
 
 function syncPartyDevice(): void {
@@ -2296,9 +2273,6 @@ let sellQty = 1;
 function bagCategory(item: BagItemView): string {
   return item.evolution ? "evolution" : "tool";
 }
-const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";
-// 가방에서 쓸 수 있는 도구 — 효과가 있는 도구. 진화용 도구는 파티 상세의 진화 줄에서 쓴다. 성격민트는 은퇴했다 (src/bag/mint.ts)
-const bagUsable = (item: BagItemView): boolean => !item.evolution && item.effect !== undefined && item.effect !== "nature";
 
 // 누른 도구 — 같은 도구를 다시 누르면 닫는다(상점 상품·도감 칸과 같다)
 function pickBag(id: string): void {
@@ -2344,49 +2318,6 @@ function drawBag(v: Snapshot): void {
   }
 }
 
-// 사탕을 qty 개 쓰면 — 경험치 곡선으로 새 레벨과 넘쳐 사라지는 경험치를 셈한다 (src/bag/use.ts 와 같은 규칙)
-function candyResult(v: Snapshot, pet: PetView, item: BagItemView, qty: number): { level: number; gain: number; lost: number } {
-  const curve = v.growthCurves[pet.growth] ?? [];
-  const cap = curve[100] ?? pet.exp;
-  if (item.effect === "level") {
-    const level = Math.min(100, pet.level + qty);
-    return { level, gain: Math.max(0, (curve[level] ?? pet.exp) - pet.exp), lost: 0 };
-  }
-  const raw = pet.exp + (item.amount ?? 0) * qty;
-  const exp = Math.min(cap, raw);
-  let level = pet.level;
-  while (level < 100 && (curve[level + 1] ?? Infinity) <= exp) level += 1;
-  return { level, gain: exp - pet.exp, lost: raw - exp };
-}
-
-// 한 번에 쓸 수 있는 최대 개수 — 가진 개수와 100레벨까지 필요한 개수 중 작은 쪽
-function candyMax(v: Snapshot, pet: PetView, item: BagItemView): number {
-  if (pet.level >= 100) return 0;
-  if (item.effect === "level") return Math.min(item.count, 100 - pet.level);
-  const cap = v.growthCurves[pet.growth]?.[100] ?? pet.exp;
-  const per = item.amount ?? 0;
-  return per > 0 ? Math.min(item.count, Math.ceil((cap - pet.exp) / per)) : 0;
-}
-
-// 쓸 수 없는 까닭 — 없으면 null. 실행기와 같은 규칙이다 (src/bag/use.ts)
-function bagBlocked(pet: PetView, item: BagItemView): string | null {
-  switch (item.effect) {
-    case "exp":
-    case "level":
-      return pet.level >= 100 ? "이미 최고 레벨이에요." : null;
-    case "fullness":
-    case "fullness-full-buff":
-      if (pet.fullness >= 100) return "배가 불러요.";
-      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${waitText(pet.feedInSec)}).`;
-    case "shiny-on":
-      return pet.shiny ? "이미 이로치예요." : null;
-    case "shiny-off":
-      return pet.shiny ? null : "이미 일반 색이에요.";
-    default:
-      return null;
-  }
-}
-
 // 쓴 뒤 결과 한 줄 — 쓰기 전 값(before)과 새 스냅샷 값(after)을 견준다.
 // 진화용 도구·성격민트는 따로 창 흐름이 있어 여기 오지 않는다(민트는 바꾼 뒤 개체 상세로 간다)
 function bagResultText(item: BagItemView, before: PetView, after: PetView | null): string {
@@ -2418,49 +2349,24 @@ function bagResultText(item: BagItemView, before: PetView, after: PetView | null
   }
 }
 
-// 이미 걸린 버프를 다시 걸 때 — 남은 시간을 기본 지속시간으로 바꾼다. 더하지 않는다 (src/bag/use.ts setBuff).
-// 쓰기는 막지 않는다 (2026-09-30 사용자 결정 "신남일때, 쓰면 시간갱신으로"). 박스 개체는 버프 시간이 멈춰 있다는 것도 적는다
-function buffRefresh(pet: PetView, kind: string, full: string): string[] {
-  const hit = pet.buffs.find((b) => b.kind === kind);
-  const lines = hit ? [`이미 ${hit.name} · 남은 ${waitText(hit.remainMin * 60)} → ${full}${toParticle(full)} 갱신`] : [];
-  if (!partyPets().some((p) => p.id === pet.id)) lines.push("버프 시간은 파티에 있을 때만 흘러요");
-  return lines;
-}
-
-function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): string[] {
-  switch (item.effect) {
-    case "exp":
-    case "level": {
-      const r = candyResult(v, pet, item, qty);
-      const lost = item.effect === "exp" ? ` · 소멸 ${numberText(r.lost)}` : "";
-      return [`Lv.${pet.level} → Lv.${r.level}`, `획득 경험치 +${numberText(r.gain)}${lost}`];
-    }
-    case "fullness":
-      return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
-    case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, "든든함 · 친밀도 증가량 ×2 · 2시간", ...buffRefresh(pet, "premium-food", "2시간")];
-    case "play-buff":
-      return ["신남", "친밀도 증가량 ×1.5 · 2시간", ...buffRefresh(pet, "long-play", "2시간")];
-    case "shiny-on":
-      return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
-    case "shiny-off":
-      return ["일반 색으로 돌아가요", "도감의 이로치 기록은 남아요"];
-    default:
-      return [item.name];
-  }
-}
-
 // ── 가방 기기 창 ──────────────────────────────────────────────────────────────
 // 가방 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
 // 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/record.md).
-// 도구는 파티 개체에게만 쓴다 ("파티를 기준으로만 사용할 수 있게 하자"). 무엇을 보일지는 여기서 정해 보낸다. 단추는 여기로 돌아와 명령으로 처리한다
+// 도구는 파티 개체에게만 쓴다 ("파티를 기준으로만 사용할 수 있게 하자"). 여기서는 고른 값만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-bag.ts). 단추는 여기로 돌아와 명령으로 처리한다
 
 let bagSending = false; // 사용·판매 명령을 보내는 중 — 두 번 누르기를 막는다
 let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
 // 가방 기기 창 연결 — 도구를 고른 동안 연다 (bagDeviceBuild)
-const bagLink = createDeviceLink<BagDeviceOpen>({
+const bagLink = createDeviceLink<BagDeviceInput>({
   build: bagDeviceBuild,
-  open: (model, gen) => window.pokebuddyManage.bagOpen(model, gen),
+  stamp: () => view,
+  open: (input, gen) => window.pokebuddyManage.bagOpen(input, gen),
+  apply: (input) => {
+    bagMode = input.mode;
+    bagTarget = input.targetPetId;
+    bagQty = input.qty;
+    sellQty = input.sellQty;
+  },
   afterClosed: () => {
     if (!bagPick) return false;
     bagPick = null;
@@ -2468,111 +2374,10 @@ const bagLink = createDeviceLink<BagDeviceOpen>({
   },
   redraw: () => draw(),
 });
-const portraitAsked = new Set<string>(); // 기기 창에 쓸 초상을 청한 키 — 두 번 청하지 않는다
-
-// 초상 data URI — 아직 없으면 받아 온 뒤 기기 창을 다시 보낸다
-function portraitNow(slug: string, shiny: boolean): string | null {
-  const key = shiny ? `${slug}:shiny` : slug;
-  const uri = portraitCache.get(key);
-  if (uri !== undefined) return uri;
-  if (!portraitAsked.has(key)) {
-    portraitAsked.add(key);
-    void window.pokebuddyManage.portraits([{ slug, shiny }]).then((got) => {
-      for (const [k, u] of Object.entries(got)) portraitCache.set(k, u);
-      if (!portraitCache.has(key)) portraitCache.set(key, null);
-      syncBagDevice();
-      syncPartyDevice();
-    });
-  }
-  return null;
-}
-
-function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
-  const usable = bagUsable(item);
-  const each = item.sellPrice;
-  if (!usable) bagMode = "sell";
-  else if (each === undefined) bagMode = "use";
-  const about = item.about;
-  const face = {
-    itemId: item.id,
-    kind: item.evolution ? "진화" : "도구",
-    name: item.name,
-    state: `보유 ×${numberText(item.count)}`,
-    group: about?.group ?? "",
-    art: iconNow(`item:${item.id}`),
-    spec: (each !== undefined
-      ? [
-          ["판매가", pointText(each)],
-          ["구매가", pointText(item.buyPrice ?? 0)],
-        ]
-      : [["판매가", "팔 수 없음"]]) as [string, string][],
-    desc: about?.desc ?? "",
-    rows: [
-      ["효과", about?.effect ?? ""],
-      ["쓰는 곳", about?.where ?? ""],
-    ] as [string, string][],
-    modes: usable && each !== undefined,
-    mode: bagMode,
-  };
-
-  // 판매 쪽 — 수량, 받는 포인트. 한 거래로 판다 (src/shop/sell.ts)
-  if (bagMode === "sell") {
-    if (each === undefined) {
-      return { ...face, title: "판매하기", pager: false, party: null, qty: null, preview: { lead: "팔 수 없는 도구예요", line: "", tone: "" }, go: { label: "팔기", disabled: true, busy: false } };
-    }
-    const cap = Math.max(1, item.count);
-    sellQty = Math.max(1, Math.min(sellQty, cap));
-    const earned = each * sellQty;
-    const percent = Math.round((item.sellRate ?? 0) * 100);
-    const preview = bagNotice
-      ? { lead: "팔지 못했어요", line: bagNotice, tone: "bad" as const }
-      : { lead: `받는 포인트 ${pointText(earned)}`, line: `1개 ${pointText(each)} (구매가의 ${percent}%) · 판매 후 ${pointText(v.points + earned)}`, tone: "" as const };
-    return {
-      ...face,
-      title: "판매하기",
-      pager: false,
-      party: null,
-      qty: { count: sellQty, cap, hint: `최대 ${numberText(cap)} · 보유 수` },
-      preview,
-      go: { label: `${pointText(earned)}에 팔기`, disabled: false, busy: bagBusy },
-    };
-  }
-
-  // 사용 쪽 — 파티 줄, 수량(사탕만), 미리보기
-  const party = partyPets();
-  if (!party.some((p) => p.id === bagTarget)) bagTarget = party[0]?.id ?? null;
-  const pet = party.find((p) => p.id === bagTarget) ?? null;
-  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitNow(p.look, p.shiny), picked: p.id === bagTarget }));
-  if (!pet) return { ...face, title: v.party.preset.name, pager: v.party.preset.count > 1, party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } };
-  const blocked = bagBlocked(pet, item);
-  const many = bagMany(item);
-  const cap = many ? Math.max(1, candyMax(v, pet, item)) : 1;
-  bagQty = Math.max(1, Math.min(bagQty, cap));
-  // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정)
-  let preview: BagDeviceOpen["preview"];
-  if (bagResult) preview = { lead: bagResult, line: bagResultNote, tone: "ok" };
-  else if (bagNotice) preview = { lead: "쓰지 못했어요", line: bagNotice, tone: "bad" };
-  else if (blocked) preview = { lead: `${pet.name} · ${blocked}`, line: "", tone: "" };
-  else {
-    const [lead, ...lines] = bagPreview(v, pet, item, bagQty);
-    preview = { lead: `${pet.name} ${lead ?? ""}`, line: lines.join(" · "), tone: "" };
-  }
-  return {
-    ...face,
-    title: v.party.preset.name, // 사용 쪽 머리 제목은 지금 프리셋 이름이다 (2026-10-02 사용자 결정)
-    pager: v.party.preset.count > 1,
-    party: strip,
-    qty: many ? { count: bagQty, cap, hint: `최대 ${numberText(cap)} · 보유 수` } : null,
-    preview,
-    go: { label: many ? `${numberText(bagQty)}개 사용` : "사용", disabled: !!blocked, busy: bagBusy },
-  };
-}
-
-// 가방 기기 창에 보낼 값 — 고른 도구가 없으면 null(닫는다)
-function bagDeviceBuild(): BagDeviceOpen | null {
-  const item = bagPick && view ? view.bag.find((i) => i.id === bagPick) : undefined;
-  if (!item || !view) return null;
-  return bagDeviceModel(view, item);
+// 가방 기기 창에 보낼 고른 값 — 고른 도구가 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-bag.ts)
+function bagDeviceBuild(): BagDeviceInput | null {
+  if (!bagPick || !view?.bag.some((i) => i.id === bagPick)) return null;
+  return { itemId: bagPick, mode: bagMode, targetPetId: bagTarget, qty: bagQty, sellQty, notice: bagNotice, result: bagResult ? { lead: bagResult, line: bagResultNote } : null, busy: bagBusy };
 }
 
 function syncBagDevice(): void {
@@ -2639,10 +2444,7 @@ async function useBag(id: string): Promise<void> {
   const item = view?.bag.find((i) => i.id === id);
   const pet = bagTarget ? petOf(bagTarget) : null;
   if (!item || !pet || !view || bagSending) return;
-  const model = bagDeviceModel(view, item);
-  if (model.go.disabled) return;
-  const many = bagMany(item);
-  const count = many ? bagQty : 1;
+  const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)
   const before = pet; // 결과 줄은 쓰기 전 값과 새 스냅샷 값을 견준다
   bagResult = "";
   const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
@@ -2658,7 +2460,7 @@ async function useBag(id: string): Promise<void> {
 async function sellBag(id: string): Promise<void> {
   const item = view?.bag.find((i) => i.id === id);
   if (!item || item.sellPrice === undefined || bagSending) return;
-  const count = Math.max(1, Math.min(sellQty, item.count));
+  const count = sellQty; // 메인이 보유 수까지로 바로잡은 수량
   const ok = await bagSend("bag.sell", id, count > 1 ? { count } : {});
   if (ok) {
     sellQty = 1;
@@ -4285,7 +4087,7 @@ const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots
 // ── 상점 기기 창 ──────────────────────────────────────────────────────────────
 // 상품 줄·칸을 누르면 관리 창 옆에 상점 기기 창이 뜬다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
 // 설명과 구매를 한 창에 둔다 — 구매 창(모달)은 없앴다 (2026-10-01 사용자 결정 A안, worklog/records/shop-device/record.md).
-// 무엇을 보일지는 여기서 정해 보낸다. 수량·구매 단추는 여기로 돌아와 명령으로 처리한다
+// 여기서는 고른 값만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-shop.ts). 수량·구매 단추는 여기로 돌아와 명령으로 처리한다
 
 let shopPick: string | null = null; // 기기 창에 띄운 상품
 let shopQty = 1;
@@ -4294,9 +4096,13 @@ let shopDone: { lead: string; line: string } | null = null; // 방금 산 결과
 let shopSending = false; // 구매 명령을 보내는 중 — 두 번 누르기를 막는다
 let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
 // 상점 기기 창 연결 — 상품을 고른 동안 연다 (shopDeviceBuild)
-const shopLink = createDeviceLink<ShopDeviceOpen>({
+const shopLink = createDeviceLink<ShopDeviceInput>({
   build: shopDeviceBuild,
-  open: (model, gen) => window.pokebuddyManage.shopOpen(model, gen),
+  stamp: () => view,
+  open: (input, gen) => window.pokebuddyManage.shopOpen(input, gen),
+  apply: (input) => {
+    shopQty = input.qty;
+  },
   afterClosed: () => {
     if (!shopPick) return false;
     shopPick = null;
@@ -4304,9 +4110,6 @@ const shopLink = createDeviceLink<ShopDeviceOpen>({
   },
   redraw: () => draw(),
 });
-
-// 상점 기기 창 제목 줄의 분류 글자 — 상점 분류 칩(SHOP_TABS)의 이름과 같다. slot 은 파티 칸·파티 프리셋·박스를 담는다 (2026-10-03 사용자 결정)
-const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티", pokemon: "포켓몬" };
 
 // 누른 상품 — 같은 상품을 다시 누르면 닫는다(도감 칸과 같다)
 function pickShop(id: string): void {
@@ -4328,90 +4131,22 @@ function iconNow(key: string): string | null {
   return null;
 }
 
-// 상품 그림 — 알은 색을 바꾼 알 그림, 도구·진화용 도구는 도구 그림, 파티 칸은 빈 칸
-function shopArt(item: ShopItemView): string | null {
-  if (item.category === "slot") return null;
-  if (item.category === "pokemon") {
-    const uri = portraitCache.get(item.id);
-    if (uri === undefined) wantPortrait(item.id);
-    return uri ?? null;
-  }
-  if (item.category === "egg" && item.id !== "ancient-stone") {
-    const palette = view?.eggPalettes[item.id];
-    if (!palette || palette.length !== EGG_SOURCE.length) return iconNow("egg");
-    const done = eggTinted.get(item.id);
-    if (done === undefined) void tintEgg(item.id, palette).then(() => syncShopDevice());
-    return done ?? null;
-  }
-  return iconNow(`item:${item.id}`);
+// [임시] 알 상품의 그림 — 색표로 색을 바꾼 알 그림. 색칠은 아직 여기서 한다(렌더러 레인 P11 에서 메인으로 옮긴다).
+// 색표가 없으면 기본 알 그림. 만드는 중이면 null 이고, 다 만들면 기기 창을 다시 보낸다. 알이 아니면 null — 그림은 메인이 붙인다
+function shopEggArt(item: ShopItemView): string | null {
+  if (item.category !== "egg" || item.id === "ancient-stone") return null;
+  const palette = view?.eggPalettes[item.id];
+  if (!palette || palette.length !== EGG_SOURCE.length) return iconNow("egg");
+  const done = eggTinted.get(item.id);
+  if (done === undefined) void tintEgg(item.id, palette).then(() => syncShopDevice());
+  return done ?? null;
 }
 
-// 기기 창에 보낼 내용 — 수량·합계는 옛 구매 창과 같은 규칙이다.
-// 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
-// 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/tx/lists.ts)
-function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
-  const afford = item.price > 0 ? Math.floor(v.points / item.price) : 1;
-  // 살 수 없으면 상한 0 — 수량 줄은 그대로 두고 단추만 막는다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 돌보미집 가득`)
-  const cap = item.blocked ? 0 : Math.max(1, Math.min(afford, item.room ?? afford));
-  const many = MULTI_BUY.has(item.category);
-  const count = many ? Math.max(1, Math.min(shopQty, cap)) : 1;
-  const total = item.price * count;
-  const short = total > v.points;
-  const egg = item.category === "egg";
-  const eggFree = Math.max(0, v.eggs.size - v.eggs.used);
-  // 수량 상한의 까닭 — 가장 작은 상한 하나 (Figma 05 `Shop / Device / Tool` "최대 311 · 포인트", `… / Egg` "최대 3 · 빈 칸 3")
-  const why = (): string => {
-    if (afford < (item.room ?? afford)) return "포인트";
-    if (!egg) return "가방 자리";
-    if ((item.room ?? eggFree) < eggFree) return `남은 포켓몬 ${numberText(item.room ?? 0)}`;
-    return `빈 칸 ${numberText(eggFree)}`;
-  };
-
-  // 합계 상자 — 실패는 빨강 `사지 못했어요`, 산 직후는 초록 결과(새 줄을 끼우지 않는다, 2026-09-30).
-  // 막혔으면 문구를 바꾸지 않고 합계와 보유만 보인다 — 까닭은 머리의 상태 글자와 수량 안내에 있다
-  let lead: string;
-  let line = "";
-  if (shopNotice) {
-    lead = "사지 못했어요";
-    line = shopNotice;
-  } else if (shopDone) {
-    lead = shopDone.lead;
-    line = shopDone.line;
-  } else if (item.blocked) {
-    lead = `합계 ${pointText(item.price)}`;
-    line = `보유 ${pointText(v.points)}${egg ? ` · 돌보미집 ${v.eggs.used} / ${v.eggs.size}` : ""}`;
-  } else if (short) {
-    lead = "포인트가 모자라요";
-    line = `합계 ${pointText(total)} · 보유 ${pointText(v.points)}`;
-  } else {
-    lead = `합계 ${pointText(total)}`;
-    line = `구매 후 보유 ${pointText(v.points - total)}${egg ? ` · 돌보미집 ${v.eggs.used + count} / ${v.eggs.size}` : ""}`;
-  }
-
-  // 포켓몬 상품은 설명 데이터가 없다(포켓몬 탭은 숨김, SHOP_TABS) — 효과·쓰는 곳만 둔다
-  const about = item.about;
-  return {
-    productId: item.id,
-    kind: SHOP_KIND[item.category] ?? "",
-    name: item.name,
-    state: item.blocked ?? (short ? "포인트 부족" : "살 수 있음"),
-    group: about?.group ?? "",
-    art: shopArt(item),
-    spec: about ? [["가격", pointText(item.price)], about.spec] : [["가격", pointText(item.price)]],
-    desc: about?.desc ?? item.note,
-    rows: about ? [["효과", about.effect], ["쓰는 곳", about.where]] : [["효과", "포켓몬 1마리"], ["쓰는 곳", "빈 파티 칸 · 없으면 박스"]],
-    link: item.pool ? { label: "나오는 포켓몬", value: poolCount(item.pool) } : null,
-    qty: many ? { count, cap, hint: `최대 ${numberText(cap)} · ${why()}` } : null,
-    total: { lead, line, tone: shopNotice ? "bad" : shopDone ? "ok" : "" },
-    buy: { label: item.price === 0 ? "받기" : "구매", disabled: !!item.blocked || short, busy: shopBusy },
-  };
-}
-
-// 상점 기기 창에 보낼 값 — 고른 상품이 없으면 null(닫는다)
-function shopDeviceBuild(): ShopDeviceOpen | null {
+// 상점 기기 창에 보낼 고른 값 — 고른 상품이 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-shop.ts)
+function shopDeviceBuild(): ShopDeviceInput | null {
   const item = shopPick && view ? view.shop.find((i) => i.id === shopPick) : undefined;
-  if (!item || !view) return null;
-  return shopDeviceModel(item, view);
+  if (!item) return null;
+  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, eggArt: shopEggArt(item) };
 }
 
 function syncShopDevice(): void {
@@ -4456,9 +4191,7 @@ function onShopAction(action: ShopDeviceAction): void {
 async function buyShop(id: string): Promise<void> {
   const item = view?.shop.find((i) => i.id === id);
   if (!item || !view || shopSending) return;
-  const model = shopDeviceModel(item, view);
-  if (model.buy.disabled) return;
-  const count = model.qty?.count ?? 1;
+  const count = shopQty; // 메인이 바로잡은 수량 — 하나씩 사는 상품은 1 (src/view/device-shop.ts)
   shopSending = true;
   shopDone = null;
   const slow = setTimeout(() => {
@@ -4483,12 +4216,13 @@ async function buyShop(id: string): Promise<void> {
 
 // ── 파티 상세 기기 창 ─────────────────────────────────────────────────────────────
 // 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`)).
-// 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
+// 여기서는 고른 개체만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-pet.ts). 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
 
 // 파티 상세 기기 창 연결 — 개체를 고른 동안 연다 (petDeviceBuild). 세대 번호·보낸 값은 device-link.ts 가 든다
-const petLink = createDeviceLink<PetDeviceOpen>({
+const petLink = createDeviceLink<PetDeviceInput>({
   build: petDeviceBuild,
-  open: (model, gen) => window.pokebuddyManage.petOpen(model, gen),
+  stamp: () => view,
+  open: (input, gen) => window.pokebuddyManage.petOpen(input, gen),
   afterClosed: () => {
     if (!detailPet) return false;
     detailPet = null;
@@ -4501,19 +4235,15 @@ let dexBeside = false;
 let dexBesideSent: string | null = null; // 마지막으로 보낸 종
 let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
-// 파티 상세 기기 창에 보낼 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
-function petDeviceBuild(): PetDeviceOpen | null {
+// 파티 상세 기기 창에 보낼 고른 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
+function petDeviceBuild(): PetDeviceInput | null {
   const pet = detailPet ? petOf(detailPet) : null;
   if (!pet || !view) return null;
-  const slot = slotOfPet(pet.id);
-  const inParty = slot != null;
-  const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${boxNameOf(pet.id) ?? "박스"} · 보관 중`;
-  const open = { pet, where, inParty, slotIndex: slot, sizeLevels: view.sizeLevels ?? 5, notice, tutorial: inParty && view.detailTutorial, dexOpen: dexBeside };
   if (dexBeside && dexBesideSent !== pet.species) {
     window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
     dexBesideSent = pet.species;
   }
-  return open;
+  return { petId: pet.id, notice, dexOpen: dexBeside };
 }
 
 function syncPetDevice(): void {

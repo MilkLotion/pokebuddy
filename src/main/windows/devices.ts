@@ -11,22 +11,26 @@ import type { DexDetail, EvoNodeView } from "../../shared/model/detail";
 import type { BagDeviceChannel, DexDeviceChannel, PartyDeviceChannel, PetDeviceChannel, ShopDeviceChannel } from "../../shared/ipc/devices";
 import type {
   BagDeviceAction,
+  BagDeviceInput,
   BagDeviceOpen,
   BagDeviceView,
   DexDeviceView,
   PartyDeviceAction,
+  PartyDeviceInput,
   PartyDeviceOpen,
   PartyDeviceView,
   PetDeviceAction,
+  PetDeviceInput,
   PetDeviceOpen,
   PetDeviceView,
   ShopDeviceAction,
+  ShopDeviceInput,
   ShopDeviceOpen,
   ShopDeviceView,
 } from "../../shared/model/devices";
 import { PARTY_RULES } from "../../party/rules.js";
 import type { DeviceSpec } from "./device-window.js";
-import { isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
+import { INPUT_LIMITS, isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
 import { dockAt } from "./placement.js";
 
 // 창 크기 — 폭은 Figma 기기 폭, 높이는 첫 그림 전 어림값이다
@@ -127,7 +131,21 @@ export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen, PetD
   };
 }
 
-// ── 상점·가방·파티 교체 — 관리 창이 정한 값에 붙은 쪽만 더해 보낸다 ─────────────────
+// ── 상점·가방·파티 교체 — 메인이 만든 모델(src/view/device-*.ts)의 그림 열쇠를 그림으로 바꿔 보낸다 ─────────
+
+// 그림 열쇠 풀기 — 모델의 art 칸에 든 열쇠(portrait:·item:·egg:, src/view/device-art.ts)를 data URI 로. 못 받으면 null
+export interface DeviceArtDeps {
+  art(keys: string[]): Promise<Record<string, string | null>>;
+}
+
+const isArtKey = (v: unknown): v is string => typeof v === "string" && /^(portrait|item|egg):/.test(v);
+
+// 열쇠인 칸만 모아 한 번에 받는다. 열쇠가 아닌 값(설정창이 색칠한 알 그림 data URI, null)은 그대로 둔다
+async function artResolver(deps: DeviceArtDeps, values: (string | null)[]): Promise<(v: string | null) => string | null> {
+  const keys = [...new Set(values.filter(isArtKey))];
+  const got = keys.length ? await deps.art(keys) : {};
+  return (v) => (isArtKey(v) ? (got[v] ?? null) : v);
+}
 
 function isShopAction(v: unknown): v is ShopDeviceAction {
   if (!isRecord(v)) return false;
@@ -137,13 +155,18 @@ function isShopAction(v: unknown): v is ShopDeviceAction {
   return a.kind === "buy" || a.kind === "pool";
 }
 
-export const SHOP_DEVICE: DeviceSpec<ShopDeviceOpen, ShopDeviceView, ShopDeviceAction> = {
-  channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
-  size: DEVICE_SIZES.shop,
-  keyOf: (o) => o.productId,
-  viewOf: (o) => o,
-  isAction: isShopAction,
-};
+export function shopDeviceOf(deps: DeviceArtDeps): DeviceSpec<ShopDeviceOpen, ShopDeviceView, ShopDeviceAction> {
+  return {
+    channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
+    size: DEVICE_SIZES.shop,
+    keyOf: (o) => o.productId,
+    viewOf: async (o) => {
+      const art = await artResolver(deps, [o.art]);
+      return { ...o, art: art(o.art) };
+    },
+    isAction: isShopAction,
+  };
+}
 
 function isBagAction(v: unknown): v is BagDeviceAction {
   if (!isRecord(v)) return false;
@@ -156,13 +179,18 @@ function isBagAction(v: unknown): v is BagDeviceAction {
   return a.kind === "go";
 }
 
-export const BAG_DEVICE: DeviceSpec<BagDeviceOpen, BagDeviceView, BagDeviceAction> = {
-  channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
-  size: DEVICE_SIZES.bag,
-  keyOf: (o) => o.itemId,
-  viewOf: (o) => o,
-  isAction: isBagAction,
-};
+export function bagDeviceOf(deps: DeviceArtDeps): DeviceSpec<BagDeviceOpen, BagDeviceView, BagDeviceAction> {
+  return {
+    channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
+    size: DEVICE_SIZES.bag,
+    keyOf: (o) => o.itemId,
+    viewOf: async (o) => {
+      const art = await artResolver(deps, [o.art, ...(o.party ?? []).map((p) => p.art)]);
+      return { ...o, art: art(o.art), party: o.party?.map((p) => ({ ...p, art: art(p.art) })) ?? null };
+    },
+    isAction: isBagAction,
+  };
+}
 
 function isPartyAction(v: unknown): v is PartyDeviceAction {
   if (!isRecord(v)) return false;
@@ -171,11 +199,45 @@ function isPartyAction(v: unknown): v is PartyDeviceAction {
   return isIndexBelow(a.index, PARTY_RULES.total); // 파티 칸은 늘 여섯 (src/party/rules.ts)
 }
 
-export const PARTY_DEVICE: DeviceSpec<PartyDeviceOpen, PartyDeviceView, PartyDeviceAction> = {
-  channels: { show: "partydev:show", size: "partydev:size", step: "partydev:step", close: "partydev:close", act: "partydev:act" } satisfies Record<string, PartyDeviceChannel>,
-  size: DEVICE_SIZES.party,
-  // 창은 하나다 — 열쇠가 늘 같아 내용을 다시 보내도 초점을 빼앗지 않는다
-  keyOf: () => "party",
-  viewOf: (o) => o,
-  isAction: isPartyAction,
-};
+export function partyDeviceOf(deps: DeviceArtDeps): DeviceSpec<PartyDeviceOpen, PartyDeviceView, PartyDeviceAction> {
+  return {
+    channels: { show: "partydev:show", size: "partydev:size", step: "partydev:step", close: "partydev:close", act: "partydev:act" } satisfies Record<string, PartyDeviceChannel>,
+    size: DEVICE_SIZES.party,
+    // 창은 하나다 — 열쇠가 늘 같아 내용을 다시 보내도 초점을 빼앗지 않는다
+    keyOf: () => "party",
+    viewOf: async (o) => {
+      const art = await artResolver(deps, o.slots.map((s) => s.art));
+      return { ...o, slots: o.slots.map((s) => ({ ...s, art: art(s.art) })) };
+    },
+    isAction: isPartyAction,
+  };
+}
+
+// ── 설정창이 보낸 고른 값(…DeviceInput, src/shared/model/devices.ts) — 정해진 모양만 받는다 ─────────
+
+const isText = (v: unknown): v is string => typeof v === "string" && v.length <= INPUT_LIMITS.noticeChars;
+const isResultLine = (v: unknown): boolean => v === null || (isRecord(v) && isText(v.lead) && isText(v.line));
+const isFlag = (v: unknown): v is boolean => typeof v === "boolean";
+
+export function isBagInput(v: unknown): v is BagDeviceInput {
+  if (!isRecord(v)) return false;
+  return isShortId(v.itemId) && (v.mode === "use" || v.mode === "sell") && (v.targetPetId === null || isShortId(v.targetPetId)) && isQty(v.qty) && isQty(v.sellQty) && isText(v.notice) && isResultLine(v.result) && isFlag(v.busy);
+}
+
+// [임시] eggArt — 설정창이 색칠한 알 그림. PNG data URI 만 받는다 (렌더러 레인 P11 에서 메인이 색칠하면 없어진다)
+const isEggArt = (v: unknown): boolean => v === null || (typeof v === "string" && v.startsWith("data:image/png;base64,") && v.length <= INPUT_LIMITS.artChars);
+
+export function isShopInput(v: unknown): v is ShopDeviceInput {
+  if (!isRecord(v)) return false;
+  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy) && isEggArt(v.eggArt);
+}
+
+export function isPartyInput(v: unknown): v is PartyDeviceInput {
+  if (!isRecord(v)) return false;
+  return (v.heldPetId === null || isShortId(v.heldPetId)) && isFlag(v.heldFromBox) && isText(v.notice);
+}
+
+export function isPetInput(v: unknown): v is PetDeviceInput {
+  if (!isRecord(v)) return false;
+  return isShortId(v.petId) && isText(v.notice) && isFlag(v.dexOpen);
+}

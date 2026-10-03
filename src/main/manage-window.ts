@@ -23,7 +23,11 @@ import { INPUT_LIMITS, isShortId } from "./windows/input.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
-import { BAG_DEVICE, DEVICE_SIZES, PARTY_DEVICE, SHOP_DEVICE, dexDeviceOf, petDeviceOf, type DexDeviceOpen } from "./windows/devices.js";
+import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps, type DexDeviceOpen } from "./windows/devices.js";
+import { bagDeviceModel } from "../view/device-bag.js";
+import { partyDeviceModel } from "../view/device-party.js";
+import { petDeviceModel } from "../view/device-pet.js";
+import { shopDeviceModel } from "../view/device-shop.js";
 import { gainOf } from "../state/settings.js";
 import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
@@ -122,6 +126,8 @@ let petWin: DeviceWindow<PetDeviceOpen> | null = null;
 let shopWin: DeviceWindow<ShopDeviceOpen> | null = null;
 let bagWin: DeviceWindow<BagDeviceOpen> | null = null;
 let partyWin: DeviceWindow<PartyDeviceOpen> | null = null;
+// 기기 창에 마지막으로 띄운 모델(세대 번호와 함께) — 설정창은 스냅샷이 바뀔 때마다 고른 값을 다시 보낸다. 모델이 그대로면 다시 그리지 않는다
+const shownModel = new Map<"pet" | "shop" | "bag" | "party", string>();
 
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
@@ -141,6 +147,15 @@ const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } 
 const mine = (e: { sender: unknown }): boolean => isFromWindow(win, e);
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
+
+// 기기 창 띄우기 — 같은 세대 번호로 같은 모델을 이미 띄웠으면 다시 보내지 않는다
+function showDevice<M>(name: "pet" | "shop" | "bag" | "party", w: DeviceWindow<M> | null, model: M, gen: unknown): void {
+  if (!win || !w) return;
+  const key = `${String(gen)}|${JSON.stringify(model)}`;
+  if (shownModel.get(name) === key) return;
+  shownModel.set(name, key);
+  w.show(win, model, gen);
+}
 
 // 관리 창 문서로 보낸다 — 창이나 문서가 이미 닫혔으면 버린다. 창보다 문서(webContents)가 먼저 없어지는 순간이 있다
 function toManage(channel: ManageChannel, ...args: unknown[]): void {
@@ -243,50 +258,110 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   }), {
     onStep: (delta) => toManage(CH.petStep, delta),
     onAct: (action) => toManage(CH.petAct, action),
-    onClosed: (gen) => toManage(CH.petClosed, gen),
+    onClosed: (gen) => {
+      shownModel.delete("pet");
+      toManage(CH.petClosed, gen);
+    },
   });
+  // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
+  // egg:<종류> 는 설정창이 색칠해 보낸 그림을 처리기가 먼저 넣는다([임시] ShopDeviceInput.eggArt) — 여기까지 오면 null 이다
+  const deviceArt: DeviceArtDeps = {
+    art: async (keys) => {
+      portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
+      const asks = keys
+        .filter((k) => k.startsWith("portrait:"))
+        .map((k) => {
+          const rest = k.slice("portrait:".length);
+          const shiny = rest.endsWith(":shiny");
+          return { key: k, ask: { slug: shiny ? rest.slice(0, -":shiny".length) : rest, shiny } };
+        });
+      const items = keys.filter((k) => k.startsWith("item:"));
+      const [faces, icons] = await Promise.all([asks.length ? portraits.get(asks.map((a) => a.ask)) : {}, items.length ? portraits.icons(items) : {}]);
+      const out: Record<string, string | null> = {};
+      for (const a of asks) out[a.key] = (faces as Record<string, string | null>)[portraitKey(a.ask)] ?? null;
+      for (const k of items) out[k] = (icons as Record<string, string | null>)[k] ?? null;
+      return out;
+    },
+  };
   // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
-  shopWin = createDeviceWindow(deviceFiles("shop"), SHOP_DEVICE, {
+  shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => toManage(CH.shopStep, delta),
     onAct: (action) => toManage(CH.shopAct, action),
-    onClosed: (gen) => toManage(CH.shopClosed, gen),
+    onClosed: (gen) => {
+      shownModel.delete("shop");
+      toManage(CH.shopClosed, gen);
+    },
   });
   // 가방 기기 창 — 관리 창이 도구를 정해 보낸다. 사용·판매·파티 고르기·수량·이전·다음은 관리 창으로 돌려보낸다
-  bagWin = createDeviceWindow(deviceFiles("bag"), BAG_DEVICE, {
+  bagWin = createDeviceWindow(deviceFiles("bag"), bagDeviceOf(deviceArt), {
     onStep: (delta) => toManage(CH.bagStep, delta),
     onAct: (action) => toManage(CH.bagAct, action),
-    onClosed: (gen) => toManage(CH.bagClosed, gen),
+    onClosed: (gen) => {
+      shownModel.delete("bag");
+      toManage(CH.bagClosed, gen);
+    },
   });
   // 파티 기기 창(교체 화면) — 관리 창이 지금 프리셋의 칸을 정해 보낸다. 누른 칸·칩은 관리 창으로 돌려보낸다
-  partyWin = createDeviceWindow(deviceFiles("party"), PARTY_DEVICE, {
+  partyWin = createDeviceWindow(deviceFiles("party"), partyDeviceOf(deviceArt), {
     onStep: (delta) => toManage(CH.partyStep, delta),
     onAct: (action) => toManage(CH.partyAct, action),
-    onClosed: (gen) => toManage(CH.partyClosed, gen),
+    onClosed: (gen) => {
+      shownModel.delete("party");
+      toManage(CH.partyClosed, gen);
+    },
   });
-  ipcMain.on(CH.partyOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || !mine(e)) return;
-    const slots = open && typeof open === "object" ? (open as { slots?: unknown }).slots : undefined;
-    if (Array.isArray(slots)) partyWin?.show(win, open as PartyDeviceOpen, gen);
-    else partyWin?.close();
-  });
+  // 파티 상세·상점·가방·파티 교체의 모델은 메인이 만든다 — 설정창은 고른 값(…DeviceInput)만 보낸다 (src/view/device-*.ts).
+  // 지금 저장의 화면 값(스냅샷)으로 만든다. 답은 바로잡은 입력이다 — 설정창은 다음 명령에 이 값을 쓴다. 띄울 것이 없으면 닫고 null.
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
-  ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || !mine(e)) return;
-    const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
-    if (pet && typeof pet.species === "string" && typeof pet.id === "string") petWin?.show(win, open as PetDeviceOpen, gen);
-    else petWin?.close();
+  ipcMain.handle(CH.partyOpen, (e, input: unknown, gen: unknown) => {
+    if (!win || !mine(e)) return null;
+    const v = isPartyInput(input) ? game.view() : null;
+    const r = v && isPartyInput(input) ? partyDeviceModel(v, input) : null;
+    if (!r) {
+      shownModel.delete("party");
+      partyWin?.close();
+      return null;
+    }
+    showDevice("party", partyWin, r.model, gen);
+    return r.input;
   });
-  ipcMain.on(CH.shopOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || !mine(e)) return;
-    const id = open && typeof open === "object" ? (open as { productId?: unknown }).productId : undefined;
-    if (typeof id === "string") shopWin?.show(win, open as ShopDeviceOpen, gen);
-    else shopWin?.close();
+  ipcMain.handle(CH.petOpen, (e, input: unknown, gen: unknown) => {
+    if (!win || !mine(e)) return null;
+    const v = isPetInput(input) ? game.view() : null;
+    const r = v && isPetInput(input) ? petDeviceModel(v, input) : null;
+    if (!r) {
+      shownModel.delete("pet");
+      petWin?.close();
+      return null;
+    }
+    showDevice("pet", petWin, r.model, gen);
+    return r.input;
   });
-  ipcMain.on(CH.bagOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || !mine(e)) return;
-    const id = open && typeof open === "object" ? (open as { itemId?: unknown }).itemId : undefined;
-    if (typeof id === "string") bagWin?.show(win, open as BagDeviceOpen, gen);
-    else bagWin?.close();
+  ipcMain.handle(CH.shopOpen, (e, input: unknown, gen: unknown) => {
+    if (!win || !mine(e)) return null;
+    const v = isShopInput(input) ? game.view() : null;
+    const r = v && isShopInput(input) ? shopDeviceModel(v, input) : null;
+    if (!r) {
+      shownModel.delete("shop");
+      shopWin?.close();
+      return null;
+    }
+    // [임시] 알 그림은 설정창이 색칠해 보낸다 (ShopDeviceInput.eggArt)
+    const model = r.model.art?.startsWith("egg:") ? { ...r.model, art: r.input.eggArt } : r.model;
+    showDevice("shop", shopWin, model, gen);
+    return r.input;
+  });
+  ipcMain.handle(CH.bagOpen, (e, input: unknown, gen: unknown) => {
+    if (!win || !mine(e)) return null;
+    const v = isBagInput(input) ? game.view() : null;
+    const r = v && isBagInput(input) ? bagDeviceModel(v, input) : null;
+    if (!r) {
+      shownModel.delete("bag");
+      bagWin?.close();
+      return null;
+    }
+    showDevice("bag", bagWin, r.model, gen);
+    return r.input;
   });
   ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown, beside: unknown) => {
     if (!win || !mine(e)) return;
@@ -406,10 +481,12 @@ export function openManage(opts: ManageOptions): BrowserWindow {
   });
   win.on("closed", () => {
     win = null;
+    shownModel.clear();
     identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
   });
   // 문서를 (다시) 읽기 시작한다 — 렌더러의 세대 번호가 0 에서 다시 시작하므로 기기 창 번호도 맞춘다
   win.webContents.on("did-start-loading", () => {
+    shownModel.clear();
     petWin?.resetGen();
     dexWin?.resetGen();
     shopWin?.resetGen();

@@ -4,7 +4,7 @@ import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
-import type { BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, PetDeviceAction, PetDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput, PetDeviceAction, PetDeviceInput, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { ScreenView } from "../model/overlays.js";
 import type { ManageRoute } from "../model/route.js";
@@ -59,7 +59,8 @@ export type ManageCoreIpc = {
 };
 
 // 기기 창 다섯과 설정창 사이 — 열기는 렌더러 → 메인, 이전·다음·누른 단추·닫힘은 메인 → 렌더러.
-//   open    기기 창에 이것을 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다
+//   open    기기 창에 이것을 띄운다. null 이면 닫는다. gen 은 마지막으로 받은 닫힘 세대 번호 — 낡으면 메인이 버린다.
+//           파티 상세·상점·가방·파티 교체는 고른 값(…DeviceInput)을 보내고 메인이 모델을 만든다(src/view/device-*.ts). 답은 바로잡은 입력이다. 띄울 것이 없으면 null
 //   step    기기 창의 이전·다음. 순서는 설정창의 지금 목록(검색·칩 적용)이 정한다
 //   act     기기 창에서 누른 단추 — 설정창이 처리한다
 //   closed  기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts). 고른 칸 표시를 지운다
@@ -67,19 +68,19 @@ export type ManageDeviceLinkIpc = {
   "manage:dex-open": Send<"dexOpen", [slug: string | null, gen?: number, beside?: boolean]>; // beside 면 파티 상세 기기 창 옆에 붙인다
   "manage:dex-step": Push<"onDexStep", [delta: -1 | 1]>;
   "manage:dex-closed": Push<"onDexClosed", [gen: number]>;
-  "manage:pet-open": Send<"petOpen", [open: PetDeviceOpen | null, gen?: number]>;
+  "manage:pet-open": Invoke<"petOpen", [input: PetDeviceInput | null, gen?: number], PetDeviceInput | null>;
   "manage:pet-step": Push<"onPetStep", [delta: -1 | 1]>;
   "manage:pet-act": Push<"onPetAct", [action: PetDeviceAction]>;
   "manage:pet-closed": Push<"onPetClosed", [gen: number]>;
-  "manage:shop-open": Send<"shopOpen", [open: ShopDeviceOpen | null, gen?: number]>;
+  "manage:shop-open": Invoke<"shopOpen", [input: ShopDeviceInput | null, gen?: number], ShopDeviceInput | null>;
   "manage:shop-step": Push<"onShopStep", [delta: -1 | 1]>;
   "manage:shop-act": Push<"onShopAct", [action: ShopDeviceAction]>;
   "manage:shop-closed": Push<"onShopClosed", [gen: number]>;
-  "manage:bag-open": Send<"bagOpen", [open: BagDeviceOpen | null, gen?: number]>;
+  "manage:bag-open": Invoke<"bagOpen", [input: BagDeviceInput | null, gen?: number], BagDeviceInput | null>;
   "manage:bag-step": Push<"onBagStep", [delta: -1 | 1]>;
   "manage:bag-act": Push<"onBagAct", [action: BagDeviceAction]>;
   "manage:bag-closed": Push<"onBagClosed", [gen: number]>;
-  "manage:party-open": Send<"partyOpen", [open: PartyDeviceOpen | null, gen?: number]>; // 파티 기기 창(교체 화면)
+  "manage:party-open": Invoke<"partyOpen", [input: PartyDeviceInput | null, gen?: number], PartyDeviceInput | null>; // 파티 기기 창(교체 화면)
   "manage:party-act": Push<"onPartyAct", [action: PartyDeviceAction]>; // 누른 칸·칩
   "manage:party-step": Push<"onPartyStep", [delta: -1 | 1]>; // 방향키 — 앞·뒤 프리셋
   "manage:party-closed": Push<"onPartyClosed", [gen: number]>;

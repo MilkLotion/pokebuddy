@@ -1,20 +1,12 @@
 // 상점 기기 창 모델 — 고른 상품의 설명과 구매 조작 칸 (Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
-// 지금은 설정창(src/renderer/manage/manage.ts shopDeviceModel)이 같은 모델을 만든다 — 기기 창 모델을 메인으로 옮기는 단계(D10b)에서 이 함수로 바꾼다.
+// 설정창은 고른 값(ShopDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
 // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/view/shop-list.ts)
-import type { ShopDeviceOpen } from "../shared/model/devices.js";
+import type { ShopDeviceInput, ShopDeviceOpen } from "../shared/model/devices.js";
 import type { EggPoolView, ShopItemView, Snapshot } from "../shared/model/snapshot.js";
 import { eggArtKey, itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
 import { numberText, pointText } from "../shared/count-text.js";
 
-// 고른 값 — 설정창이 든다
-export interface ShopDeviceInput {
-  productId: string;
-  qty: number;
-  notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
-  done: { lead: string; line: string } | null; // 방금 산 결과 — 합계 상자가 초록
-  busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
-}
 
 // 여러 개 살 수 있는 상품 — 포켓몬·파티 칸은 하나씩만 산다. 알은 돌보미집 빈 칸까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
 export const MULTI_BUY: ReadonlySet<string> = new Set(["tool", "evolution", "egg"]);
