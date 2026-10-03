@@ -5,6 +5,8 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:" />
     <title>pokebuddy</title>
     <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/type-badge.css" />
+    <link rel="stylesheet" href="styles/evo-tree.css" />
     <style>
       /* 관리 창 — 값은 화면 스냅샷이 준다 (manage.ts). 색은 Figma `PB / Color` 변수와 같다 */
       :root {
@@ -453,75 +455,9 @@
         white-space: nowrap;
       }
       /* 색 있는 타입 배지 글자는 모두 흰색 (2026-09-30 사용자 결정 "타입 버튼들 폰트 색 다 흰거로"). 모르는 타입(회색)은 --ink */
-      .type[data-type] {
-        color: var(--inverse);
-      }
       .value.types {
         display: inline-flex;
         gap: 6px;
-      }
-      .type[data-type="electric"] {
-        background: #fac000;
-      }
-      .type[data-type="fire"] {
-        background: #e52829;
-        color: var(--inverse);
-      }
-      .type[data-type="flying"] {
-        background: #81b9ef;
-      }
-      .type[data-type="bug"] {
-        background: #91a119;
-      }
-      .type[data-type="dark"] {
-        background: #624d4e;
-        color: var(--inverse);
-      }
-      .type[data-type="dragon"] {
-        background: #5060e1;
-        color: var(--inverse);
-      }
-      .type[data-type="fairy"] {
-        background: #ef70ef;
-      }
-      .type[data-type="fighting"] {
-        background: #ff8000;
-      }
-      .type[data-type="ghost"] {
-        background: #704170;
-        color: var(--inverse);
-      }
-      .type[data-type="grass"] {
-        background: #358722;
-        color: var(--inverse);
-      }
-      .type[data-type="ground"] {
-        background: #915121;
-        color: var(--inverse);
-      }
-      .type[data-type="ice"] {
-        background: #3dcef3;
-      }
-      .type[data-type="normal"] {
-        background: #9fa19f;
-      }
-      .type[data-type="poison"] {
-        background: #9141cb;
-        color: var(--inverse);
-      }
-      .type[data-type="psychic"] {
-        background: #d53a6c;
-        color: var(--inverse);
-      }
-      .type[data-type="rock"] {
-        background: #afa981;
-      }
-      .type[data-type="steel"] {
-        background: #60a1b8;
-      }
-      .type[data-type="water"] {
-        background: #2675db;
-        color: var(--inverse);
       }
       .meters {
         display: flex;
@@ -2647,26 +2583,10 @@
         justify-content: center;
         margin: 4px 0 12px;
       }
-      .evo-branch,
-      .evo-row {
-        display: flex;
-        align-items: center;
-      }
       .evo-kids {
         display: flex;
         flex-direction: column;
         gap: 8px;
-      }
-      .evo-node {
-        flex: none;
-        width: 72px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 4px;
-        border-radius: 10px;
-        text-align: center;
       }
       .evo-node.current {
         background: var(--canvas);
@@ -2693,60 +2613,8 @@
         height: 40px;
         overflow: hidden;
       }
-      /* 미해금 종 — 그림을 검은 실루엣으로 (2026-10-02 사용자 결정, Figma `Evo Node` `State=Locked` `1379:3`) */
-      .evo-node .portrait.locked .art {
-        filter: brightness(0);
-      }
-      .evo-name {
-        font-size: 12px;
-        white-space: nowrap;
-      }
-      .evo-node.current .evo-name {
-        font-weight: 700;
-      }
-      .evo-need {
-        font-family: var(--font-small);
-        font-size: 10px;
-        color: var(--muted);
-        white-space: nowrap;
-      }
-      .evo-step {
-        flex: none;
-        width: 46px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-      }
-      .evo-arrow {
-        flex: none;
-        fill: none;
-        stroke: var(--muted);
-        stroke-width: 1.25;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
       .evo-radial {
         position: relative;
-      }
-      .evo-radial .evo-node {
-        position: absolute;
-        transform: translate(-50%, -50%);
-        width: auto;
-        min-width: 64px;
-        padding: 2px 4px;
-        gap: 2px;
-      }
-      .evo-radial-arrows {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        fill: none;
-        stroke: var(--muted);
-        stroke-width: 1.5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
       }
       /* 파티 머리 줄의 프리셋 넘김 — 파티 ◀ [이름] ▶ … 교체. 박스 넘김 줄과 같은 부품이고 이름 칸은 12글자 폭 고정이다.
          머리 줄 안에 두어 줄을 더하지 않는다 — 창 높이(682)가 그대로다 (Figma 05 `Party / Base` `217:1705`, 2026-10-02 사용자 결정) */
