@@ -4,7 +4,7 @@ import { MAIL_RULES } from "./rules.js";
 
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 export const mailOf = (save: SaveV3): { applied: string[]; read: string[] } => (save.mail ??= { applied: [], read: [] });
-export const remember = (list: string[], id: string): void => {
+export const rememberId = (list: string[], id: string): void => {
   if (list.includes(id)) return;
   list.push(id);
   if (list.length > MAIL_RULES.keep) list.splice(0, list.length - MAIL_RULES.keep);
@@ -15,7 +15,7 @@ export const isRead = (save: SaveV3, letterId: string): boolean => save.mail?.re
 
 export function markRead(save: SaveV3, letterId: string): boolean {
   if (!letterId) return false;
-  remember(mailOf(save).read, letterId);
+  rememberId(mailOf(save).read, letterId);
   return true;
 }
 

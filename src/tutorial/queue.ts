@@ -45,10 +45,10 @@ function set(save: SaveV3, id: string, state: TutorialState, steps?: number): Tu
   return { ok: true, id, state, steps: next.steps };
 }
 
-export const skip = (save: SaveV3, id: string): TutorialResult => set(save, id, "skipped");
+export const skipTutorial = (save: SaveV3, id: string): TutorialResult => set(save, id, "skipped");
 
 // 끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다. 표에 없는 id 는 적어 둔 값을 그대로 둔다
-export const done = (save: SaveV3, id: string): TutorialResult => set(save, id, "done", isTutorialId(id) ? TUTORIAL_STEPS[id] : undefined);
+export const doneTutorial = (save: SaveV3, id: string): TutorialResult => set(save, id, "done", isTutorialId(id) ? TUTORIAL_STEPS[id] : undefined);
 
 // 지금 띄워도 되는가 — 건너뛰었거나 마친 것은 다시 띄우지 않는다
 export const canShow = (save: SaveV3, id: string): boolean => !DONE.includes(save.tutorials[id]?.state ?? "none");
@@ -68,10 +68,10 @@ export function queueTutorials(save: SaveV3, now: number): string[] {
       const queuedAt = rule.after ? (save.tutorials[rule.after]?.queuedAt ?? now) : now;
       save.tutorials[rule.id] = { state: row?.state ?? "none", steps: row?.steps ?? 0, queuedAt };
       fresh.push(rule.id);
-      if (rule.already(save)) done(save, rule.id);
+      if (rule.already(save)) doneTutorial(save, rule.id);
       continue;
     }
-    if (!rule.onlyAtStart && rule.already(save)) done(save, rule.id);
+    if (!rule.onlyAtStart && rule.already(save)) doneTutorial(save, rule.id);
   }
   return fresh;
 }

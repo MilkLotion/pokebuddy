@@ -1,6 +1,6 @@
 // 업적·튜토리얼·설정 처리기
-import { claim } from "../../achievement/claim.js";
-import { done as doneTutorial, skip as skipTutorial } from "../../tutorial/queue.js";
+import { claimAchievement } from "../../achievement/claim.js";
+import { doneTutorial, skipTutorial } from "../../tutorial/queue.js";
 import { isSettingKey, setSetting } from "../../state/settings.js";
 import type { TxHandler } from "../executor";
 import { isArgsRecord, reasonOf } from "./args.js";
@@ -17,7 +17,7 @@ const idOf = (args: unknown): string | null => {
 export const claimHandler: TxHandler = (draft, args, ctx) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };
-  const res = claim(draft, id, ctx.now, undefined, ctx.rand);
+  const res = claimAchievement(draft, id, ctx.now, undefined, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox, points: res.points, eggId: res.eggId, item: res.item, skipped: res.skipped } };
 };

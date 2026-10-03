@@ -13,7 +13,7 @@ import { overworldUrl } from "../../main/art/overworld-art";
 import { portraitIds } from "../../main/art/portraits";
 import { petName } from "../../view/text";
 import { bannerOf } from "../../view/banner";
-import { refresh } from "../../notify/queue";
+import { refreshQueue } from "../../notify/queue";
 import { keepInBox, placeInParty } from "../../party/placement";
 import { empty, normalize } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
@@ -277,11 +277,11 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
 // (10) 배너 — 메가스톤이 생기면 한 번. 레쿠쟈와 원시회귀는 제목이 다르다
 {
   const s = seed(pet({ mega: { ...full } }), pet({ id: "p2", species: "rayquaza", evolved: [], mega: { ...full } }), pet({ id: "p3", species: "groudon", evolved: [], mega: { ...full } }));
-  let state = refresh(null, s, T0);
+  let state = refreshQueue(null, s, T0);
   assert.deepStrictEqual(state.queue, []);
   grantStones(s);
   assert.deepStrictEqual(pendingOf(s, T0).filter((p) => p.kind === "mega").map((p) => p.key), ["mega:p1", "mega:p2", "mega:p3"]);
-  state = refresh(state, s, T0 + 1);
+  state = refreshQueue(state, s, T0 + 1);
   assert.deepStrictEqual(state.queue.map((q) => q.key), ["mega:p1", "mega:p2", "mega:p3"]);
   const banner = bannerOf(s, "mega:p1");
   assert.equal(banner?.title, "메가스톤 획득");

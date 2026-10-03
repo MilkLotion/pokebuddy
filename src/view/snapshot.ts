@@ -9,7 +9,7 @@ import { profileOf } from "../dex/species.js";
 import { achievementName, itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
-import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
+import { rewardPokemon, achievementDefs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
 import { megaOf, megaChoices, shownSpecies } from "../dex/mega.js";
 import { BOX_RULES } from "../box/rules.js";
 import { EGG_RULES } from "../egg/rules.js";
@@ -254,7 +254,7 @@ export function snapshot(save: SaveV3, now: number): Snapshot {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const achievements: AchievementView[] = defs().map(([id, def]) => {
+  const achievements: AchievementView[] = achievementDefs().map(([id, def]) => {
     const row = save.achievements[id];
     return {
       id,

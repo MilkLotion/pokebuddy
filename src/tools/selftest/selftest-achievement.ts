@@ -15,9 +15,9 @@ import { applyPreset, slotsOfPreset } from "../../party/presets";
 import { buyProduct } from "../../shop/buy";
 import { openEgg } from "../../egg/open";
 import { createExecutor } from "../../tx/executor";
-import { claim } from "../../achievement/claim";
-import { defs, GROUPS, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../../achievement/defs";
-import { evaluate } from "../../achievement/evaluate";
+import { claimAchievement } from "../../achievement/claim";
+import { achievementDefs, GROUPS, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../../achievement/defs";
+import { evaluateAchievements } from "../../achievement/evaluate";
 import { isAchieved, progressOf } from "../../achievement/progress";
 import { ACHIEVEMENT_RULES } from "../../achievement/rules";
 import { isSinglePet } from "../../dex/forms";
@@ -25,7 +25,7 @@ import { eggPool, rewardSpecies, singleSpecies } from "../../dex/obtain";
 import { EGG_RULES } from "../../egg/rules";
 import { pendingOf } from "../../notify/pending";
 import { PET_RULES } from "../../party/rules";
-import { canShow, currentTutorial, done, queueTutorials, skip } from "../../tutorial/queue";
+import { canShow, currentTutorial, doneTutorial, queueTutorials, skipTutorial } from "../../tutorial/queue";
 import { HANDLERS } from "../../tx/command-table";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
@@ -46,7 +46,7 @@ function seed(): SaveV3 {
 
 // (1) 업적 38개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
-  const list = defs();
+  const list = achievementDefs();
   assert.equal(list.length, 38);
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
@@ -94,11 +94,11 @@ function seed(): SaveV3 {
 {
   const s = seed();
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
-  assert.deepStrictEqual(evaluate(s, T0), ["show-two"], "이번에 달성한 것을 돌려준다");
+  assert.deepStrictEqual(evaluateAchievements(s, T0), ["show-two"], "이번에 달성한 것을 돌려준다");
   assert.equal(s.achievements["show-two"]?.achievedAt, T0);
-  assert.deepStrictEqual(evaluate(s, T0 + 1000), [], "두 번 알리지 않는다");
+  assert.deepStrictEqual(evaluateAchievements(s, T0 + 1000), [], "두 번 알리지 않는다");
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = true;
-  evaluate(s, T0 + 2000);
+  evaluateAchievements(s, T0 + 2000);
   assert.equal(s.achievements["show-two"]?.achievedAt, T0, "다시 숨겨도 달성은 남는다");
   process.stdout.write("(3) 달성 기록은 되돌리지 않는다  ok\n");
 }
@@ -143,13 +143,13 @@ function seed(): SaveV3 {
   const p0 = s.pets[0];
   if (p0) p0.level = 70;
   assert.equal(isAchieved(s, "starter-final"), false, "비교할 거래 전 저장이 없다");
-  assert.deepStrictEqual(evaluate(s, T0), [], "시간 흐름만으로는 알리지 않는다");
+  assert.deepStrictEqual(evaluateAchievements(s, T0), [], "시간 흐름만으로는 알리지 않는다");
   const old = seed();
   old.achievements["starter-final"] = { achievedAt: T0 - 1000, claimedAt: T0 - 500 };
   const again = structuredClone(old);
   const a0 = again.pets[0];
   if (a0) a0.level = 60;
-  assert.deepStrictEqual(evaluate(again, T0, undefined, old), [], "옛 조건으로 받은 기록은 다시 알리지 않는다");
+  assert.deepStrictEqual(evaluateAchievements(again, T0, undefined, old), [], "옛 조건으로 받은 기록은 다시 알리지 않는다");
   assert.equal(again.achievements["starter-final"]?.claimedAt, T0 - 500, "옛 수령 기록을 지우지 않는다");
   process.stdout.write("(6) 시간 흐름과 옛 달성 기록  ok\n");
 }
@@ -172,22 +172,22 @@ function seed(): SaveV3 {
 {
   const s = seed();
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
-  evaluate(s, T0);
+  evaluateAchievements(s, T0);
   const before = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
-  const res = claim(s, "show-two", T0);
+  const res = claimAchievement(s, "show-two", T0);
   assert.equal(res.ok, true);
   const after = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
   assert.equal(after, before - 1, "업적 칸 하나가 열렸다");
   assert.equal(s.party.slots[res.slotIndex ?? -1]?.state, "empty");
-  assert.equal(claim(s, "show-two", T0).reason, "already-claimed");
+  assert.equal(claimAchievement(s, "show-two", T0).reason, "already-claimed");
   process.stdout.write("(7) 보상 수령 · 한 번만  ok\n");
 }
 
 // (8) 달성하지 않았거나 없는 업적은 못 받는다
 {
   const s = seed();
-  assert.equal(claim(s, "show-two", T0).reason, "not-achieved");
-  assert.equal(claim(s, "없는업적", T0).reason, "no-achievement");
+  assert.equal(claimAchievement(s, "show-two", T0).reason, "not-achieved");
+  assert.equal(claimAchievement(s, "없는업적", T0).reason, "no-achievement");
   process.stdout.write("(8) 미달성과 없는 업적  ok\n");
 }
 
@@ -195,12 +195,12 @@ function seed(): SaveV3 {
 {
   const s = seed();
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
-  evaluate(s, T0);
+  evaluateAchievements(s, T0);
   for (let i = 0; i < s.party.slots.length; i++) {
     const x = s.party.slots[i];
     if (x?.state === "locked" && x.unlockBy === "achievement") s.party.slots[i] = { state: "empty" };
   }
-  assert.equal(claim(s, "show-two", T0).reason, "no-locked-slot");
+  assert.equal(claimAchievement(s, "show-two", T0).reason, "no-locked-slot");
   process.stdout.write("(9) 열 칸이 없으면 거절  ok\n");
 }
 
@@ -208,10 +208,10 @@ function seed(): SaveV3 {
 {
   const s = seed();
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
-  evaluate(s, T0);
+  evaluateAchievements(s, T0);
   assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
   const before = s.party.slots.filter((x) => x.state === "locked").length;
-  const res = claim(s, "show-two", T0);
+  const res = claimAchievement(s, "show-two", T0);
   assert.equal(res.ok, true);
   assert.equal(s.party.slots.filter((x) => x.state === "locked").length, before, "적용한 프리셋의 칸은 그대로");
   assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length, 1, "첫 프리셋의 업적 칸 하나가 열렸다");
@@ -226,9 +226,9 @@ function seed(): SaveV3 {
   assert.equal(isAchieved(s, "work-100h"), false, "100시간 미만이면 아니다");
   s.totals.workMs = 100 * 3600_000;
   assert.equal(isAchieved(s, "work-100h"), true);
-  assert.ok(evaluate(s, T0).includes("work-100h"), "거래 전 저장 없이도(시간 흐름) 달성");
+  assert.ok(evaluateAchievements(s, T0).includes("work-100h"), "거래 전 저장 없이도(시간 흐름) 달성");
   s.party.slots[1] = { state: "empty" }; // 빈 파티 칸 하나
-  const res = claim(s, "work-100h", T0, undefined, () => 0);
+  const res = claimAchievement(s, "work-100h", T0, undefined, () => 0);
   assert.equal(res.ok, true);
   const got = s.pets.find((p) => p.id === res.petId);
   assert.equal(got?.species, "lapras");
@@ -239,7 +239,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(s.party.slots[1], { state: "pokemon", petId: res.petId, hidden: false }, "꺼낸 상태로 파티에");
   assert.ok(s.dex.unlocked.includes("lapras") && s.dex.obtained.includes("lapras"), "도감 해금·획득");
   assert.equal(s.achievements["work-100h"]?.claimedAt, T0);
-  assert.equal(claim(s, "work-100h", T0).reason, "already-claimed", "한 번만");
+  assert.equal(claimAchievement(s, "work-100h", T0).reason, "already-claimed", "한 번만");
   const lapras = snapshot(s, T0).achievements.list.find((a) => a.id === "work-100h");
   assert.equal(lapras?.reward, "라프라스", "업적창에는 포켓몬 이름으로");
   assert.equal(lapras?.name, "함께 100시간 일하기");
@@ -254,11 +254,11 @@ function seed(): SaveV3 {
   s.pets.push(pet({ id: "p3", species: "bulbasaur" }));
   s.party.slots[2] = { state: "pokemon", petId: "p3", hidden: true };
   assert.equal(isAchieved(s, "party-three"), true, "숨긴 세 마리도 센다");
-  evaluate(s, T0);
+  evaluateAchievements(s, T0);
   assert.equal(s.party.slots.some((x) => x.state === "empty"), false, "빈 파티 칸 없음");
   const box = s.boxes[0];
   if (box) box.slots.fill("filler");
-  const res = claim(s, "party-three", T0, undefined, () => 0.5);
+  const res = claimAchievement(s, "party-three", T0, undefined, () => 0.5);
   assert.equal(res.ok, true);
   assert.equal(res.toBox, true, "박스로");
   assert.equal(s.boxes[1]?.slots[0], res.petId, "가득 찬 박스 다음 박스의 첫 칸");
@@ -272,7 +272,7 @@ function seed(): SaveV3 {
 {
   let disk: SaveV3 = seed();
   disk.totals.workMs = 100 * 3600_000;
-  evaluate(disk, T0);
+  evaluateAchievements(disk, T0);
   const tx = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0 }, HANDLERS);
   const res = tx.run({ id: "c1", name: "achievement.claim", args: { id: "work-100h" } });
   assert.equal(res.ok, true);
@@ -285,16 +285,16 @@ function seed(): SaveV3 {
 {
   const s = seed();
   assert.equal(canShow(s, "shop"), true, "처음에는 띄운다");
-  assert.equal(skip(s, "shop").ok, true);
+  assert.equal(skipTutorial(s, "shop").ok, true);
   assert.equal(s.tutorials.shop?.state, "skipped");
   assert.equal(canShow(s, "shop"), false);
-  assert.equal(skip(s, "shop").reason, "already", "두 번 기록하지 않는다");
-  assert.equal(done(s, "shop").reason, "already");
+  assert.equal(skipTutorial(s, "shop").reason, "already", "두 번 기록하지 않는다");
+  assert.equal(doneTutorial(s, "shop").reason, "already");
 
-  assert.equal(done(s, "hatch").ok, true);
+  assert.equal(doneTutorial(s, "hatch").ok, true);
   assert.equal(s.tutorials.hatch?.state, "done");
   assert.equal(s.tutorials.hatch?.steps, 1, "끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다 — 보낸 값이 아니다");
-  assert.equal(skip(s, "").reason, "bad-id");
+  assert.equal(skipTutorial(s, "").reason, "bad-id");
   process.stdout.write("(10) 튜토리얼 상태 기록  ok\n");
 }
 
@@ -317,7 +317,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "바탕화면 놀이공간 튜토리얼은 줄에 들지 않는다");
   assert.equal(s.tutorials["first-care"]?.state, "none", "다른 곳의 밥 주기는 완료가 아니다");
   assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" });
-  assert.ok(done(s, "first-care").ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
+  assert.ok(doneTutorial(s, "first-care").ok, "튜토리얼 메뉴의 돌봄 — app.ts 가 tutorial.done 을 보낸다");
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), ["growth"], "첫 돌봄이 끝나면 성장 튜토리얼이 줄에 든다");
   assert.equal(s.tutorials.playground, undefined, "놀이공간 설명은 설정 › 화면으로 옮겼다(area, 대기열 밖)");
   assert.deepStrictEqual(currentTutorial(s, T0), { id: "shop", surface: "manage" }, "첫 돌봄 뒤 상점");
@@ -332,11 +332,11 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["hatch"]);
   assert.equal(s.tutorials.shop?.state, "done", "랜덤알을 샀으니 상점 튜토리얼은 완료");
   assert.equal(currentTutorial(s, T0)?.id, "growth", "먼저 줄에 든 성장이 부화보다 앞");
-  assert.ok(done(s, "growth").ok);
+  assert.ok(doneTutorial(s, "growth").ok);
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), ["points"], "성장이 끝나면 포인트");
   assert.equal(s.tutorials.points?.queuedAt, s.tutorials.growth?.queuedAt, "포인트는 성장의 대기 시각을 물려받아 부화보다 앞");
   assert.equal(currentTutorial(s, T0)?.id, "points");
-  assert.ok(skip(s, "points").ok);
+  assert.ok(skipTutorial(s, "points").ok);
   assert.equal(currentTutorial(s, T0)?.id, "hatch");
 
   const egg = s.eggs[0]!;
@@ -345,7 +345,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 3), ["party"], "둘째 포켓몬을 얻으면 파티와 박스 튜토리얼");
   assert.equal(s.tutorials.hatch?.state, "done", "알을 열었으니 부화 튜토리얼은 완료");
   assert.equal(currentTutorial(s, T0)?.id, "party");
-  assert.ok(done(s, "party").ok);
+  assert.ok(doneTutorial(s, "party").ok);
   assert.equal(currentTutorial(s, T0), null);
   // 파티 프리셋 — 파티 튜토리얼을 끝낸 뒤 개체가 3마리가 되면 줄에 든다
   assert.deepStrictEqual(queueTutorials(s, T0 + 4), [], "두 마리면 프리셋 튜토리얼은 없다");
@@ -353,7 +353,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(queueTutorials(s, T0 + 5), ["preset"], "셋째 포켓몬을 얻으면 프리셋 튜토리얼");
   assert.equal(s.tutorials.preset?.queuedAt, s.tutorials.party?.queuedAt, "프리셋은 파티의 대기 시각을 물려받는다");
   assert.equal(currentTutorial(s, T0)?.id, "preset");
-  assert.ok(done(s, "preset").ok);
+  assert.ok(doneTutorial(s, "preset").ok);
   assert.equal(currentTutorial(s, T0), null);
   process.stdout.write("(11) 튜토리얼 대기열 · 시작 조건과 건너뛰기  ok\n");
 }
@@ -372,7 +372,7 @@ function seed(): SaveV3 {
   assert.equal(currentTutorial(s, T0), null, "도구를 다 쓰면 가방 튜토리얼은 차례를 넘긴다");
   s.bag["exp-candy-s"] = 1;
   assert.equal(currentTutorial(s, T0)?.id, "bag");
-  assert.ok(skip(s, "bag").ok);
+  assert.ok(skipTutorial(s, "bag").ok);
   // 파이리는 Lv.16 에 진화한다 — 레벨 조건을 채우면 진화 튜토리얼
   const pet = s.pets[0]!;
   assert.deepStrictEqual(queueTutorials(s, T0 + 2), [], "진화 조건 전에는 없다");
@@ -493,7 +493,7 @@ function seed(): SaveV3 {
   const view = snapshot(g, T0).achievements.list;
   assert.equal(view.find((a) => a.id === "find-500")?.group, "find");
   assert.deepStrictEqual(view.find((a) => a.id === "find-500")?.progress, { now: 212, goal: 500, unit: "" });
-  evaluate(g, T0);
+  evaluateAchievements(g, T0);
   assert.equal(snapshot(g, T0).achievements.list.find((a) => a.id === "find-50")?.progress, undefined);
   assert.deepStrictEqual(
     ["dex-50", "dex-300", "shiny-10", "dex-kanto", "show-two"].map((id) => view.find((a) => a.id === id)?.reward),
@@ -511,12 +511,12 @@ function seed(): SaveV3 {
   const s = seed();
   s.points.balance = 10;
   got(s, "dex-50");
-  assert.deepStrictEqual(claim(s, "dex-50", T0 + 1), { ok: true, id: "dex-50", points: 200 });
+  assert.deepStrictEqual(claimAchievement(s, "dex-50", T0 + 1), { ok: true, id: "dex-50", points: 200 });
   assert.equal(s.points.balance, 210);
-  assert.equal(claim(s, "dex-50", T0 + 2).reason, "already-claimed");
+  assert.equal(claimAchievement(s, "dex-50", T0 + 2).reason, "already-claimed");
 
   got(s, "dex-300");
-  const egg = claim(s, "dex-300", T0 + 1);
+  const egg = claimAchievement(s, "dex-300", T0 + 1);
   assert.equal(egg.ok, true);
   assert.equal(s.eggs.length, 1);
   assert.equal(s.eggs[0]?.kind, "sub-legendary");
@@ -525,31 +525,31 @@ function seed(): SaveV3 {
 
   got(s, "hatch-200");
   while (s.eggs.length < EGG_RULES.maxEggs) s.eggs.push({ ...s.eggs[0]!, id: `e${s.eggs.length + 10}`, kind: "random" });
-  assert.equal(claim(s, "hatch-200", T0 + 1).reason, "daycare-full");
+  assert.equal(claimAchievement(s, "hatch-200", T0 + 1).reason, "daycare-full");
   assert.equal(s.achievements["hatch-200"]?.claimedAt, null, "미수령으로 남는다");
   s.eggs.length = 0;
   s.dex.obtained = [...(eggPool("sub-legendary") ?? [])];
-  assert.equal(claim(s, "hatch-200", T0 + 1).reason, "egg-none");
+  assert.equal(claimAchievement(s, "hatch-200", T0 + 1).reason, "egg-none");
   s.dex.obtained = [];
-  assert.equal(claim(s, "hatch-200", T0 + 1).ok, true);
+  assert.equal(claimAchievement(s, "hatch-200", T0 + 1).ok, true);
 
   got(s, "shiny-10");
-  assert.deepStrictEqual(claim(s, "shiny-10", T0 + 1).item, { id: "shiny-potion", count: 1 });
+  assert.deepStrictEqual(claimAchievement(s, "shiny-10", T0 + 1).item, { id: "shiny-potion", count: 1 });
   assert.equal(s.bag["shiny-potion"], 1);
 
   // 단일 포켓몬 보상 — 이미 얻은 종이면 개체를 주지 않고 수령만 기록한다. 업적 보상 종은 모두 단일 포켓몬이다
   got(s, "party-three");
   s.dex.obtained = ["ditto"];
-  assert.deepStrictEqual(claim(s, "party-three", T0 + 1), { ok: true, id: "party-three", skipped: true }, "옛 규칙으로 이미 얻은 메타몽");
+  assert.deepStrictEqual(claimAchievement(s, "party-three", T0 + 1), { ok: true, id: "party-three", skipped: true }, "옛 규칙으로 이미 얻은 메타몽");
   got(s, "dex-johto");
   s.dex.obtained = ["pichu-spiky-eared"];
   const before = s.pets.length;
-  assert.deepStrictEqual(claim(s, "dex-johto", T0 + 1), { ok: true, id: "dex-johto", skipped: true });
+  assert.deepStrictEqual(claimAchievement(s, "dex-johto", T0 + 1), { ok: true, id: "dex-johto", skipped: true });
   assert.equal(s.pets.length, before);
   assert.equal(s.achievements["dex-johto"]?.claimedAt, T0 + 1);
   const t = seed();
   got(t, "dex-johto");
-  const pichu = claim(t, "dex-johto", T0 + 1, undefined, () => 0.5);
+  const pichu = claimAchievement(t, "dex-johto", T0 + 1, undefined, () => 0.5);
   assert.equal(t.pets.find((p) => p.id === pichu.petId)?.species, "pichu-spiky-eared");
   // 수령 거래의 결과
   const u = seed();
@@ -564,20 +564,20 @@ function seed(): SaveV3 {
   const s = seed();
   s.achRev = 0;
   s.dex.obtained = Array.from({ length: 50 }, (_, i) => `x${i}`);
-  assert.deepStrictEqual(evaluate(s, T0), [], "첫 판정은 알리지 않는다");
+  assert.deepStrictEqual(evaluateAchievements(s, T0), [], "첫 판정은 알리지 않는다");
   assert.equal(s.achievements["dex-50"]?.quiet, true);
   assert.equal(s.achRev, ACHIEVEMENT_RULES.rev);
   assert.equal(pendingOf(s, T0).some((p) => p.kind === "achievement"), false, "배너 줄에 서지 않는다");
   assert.equal(snapshot(s, T0).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
   s.dex.obtained = Array.from({ length: 150 }, (_, i) => `x${i}`);
-  assert.deepStrictEqual(evaluate(s, T0 + 1000), ["dex-150"]);
+  assert.deepStrictEqual(evaluateAchievements(s, T0 + 1000), ["dex-150"]);
   assert.equal(s.achievements["dex-150"]?.quiet, undefined);
   assert.deepStrictEqual(pendingOf(s, T0 + 1000).filter((p) => p.kind === "achievement").map((p) => p.target), ["dex-150"]);
   // 새 저장은 처음부터 알린다
   const n = seed();
   n.party.slots[0]!.hidden = false;
   n.party.slots[1]!.hidden = false;
-  assert.deepStrictEqual(evaluate(n, T0), ["show-two"]);
+  assert.deepStrictEqual(evaluateAchievements(n, T0), ["show-two"]);
   // 정규화 — quiet 와 판을 지킨다. 누적 값이 없는 옛 저장은 흔적에서 시작한다
   const raw = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
   const back = normalize(raw, T0 + 2000);
@@ -597,18 +597,18 @@ function seed(): SaveV3 {
 {
   const DAY = 24 * 3600_000;
   const s = seed();
-  evaluate(s, T0);
+  evaluateAchievements(s, T0);
   assert.equal(s.counts?.streak, 1);
-  evaluate(s, T0 + 3600_000);
+  evaluateAchievements(s, T0 + 3600_000);
   assert.equal(s.counts?.streak, 1, "같은 날");
-  evaluate(s, T0 + DAY);
+  evaluateAchievements(s, T0 + DAY);
   assert.equal(s.counts?.streak, 2);
-  evaluate(s, T0 + 3 * DAY);
+  evaluateAchievements(s, T0 + 3 * DAY);
   assert.equal(s.counts?.streak, 1, "하루를 걸렀다");
-  for (let d = 4; d <= 9; d += 1) evaluate(s, T0 + d * DAY);
+  for (let d = 4; d <= 9; d += 1) evaluateAchievements(s, T0 + d * DAY);
   assert.equal(s.counts?.streak, 7);
   assert.ok(s.achievements["streak-7"]?.achievedAt != null);
-  evaluate(s, T0 + 20 * DAY);
+  evaluateAchievements(s, T0 + 20 * DAY);
   assert.equal(s.counts?.streak, 1);
   assert.ok(s.achievements["streak-7"]?.achievedAt != null, "끊겨도 달성은 남는다");
 

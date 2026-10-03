@@ -1,5 +1,5 @@
 // 알림 배너가 설 상태 — 도메인 물음(알 준비·진화 가능·업적 미수령·메가스톤·줍기 기록)으로 대상 목록을 만든다. 줄 세우기는 src/notify/queue.ts
-import { defs } from "../achievement/defs.js";
+import { achievementDefs } from "../achievement/defs.js";
 import { canEvolve } from "../dex/evolve.js";
 import { gameDayPart } from "../shared/clock.js";
 import type { BannerKind } from "../shared/names/banners";
@@ -31,7 +31,7 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
     const pet = save.pets.find((p) => p.id === id);
     if (pet && canEvolve(save, id, dayPart)) list.push({ key: keyOf({ kind: "evolve", target: id }, pet.species), kind: "evolve", target: id });
   }
-  for (const [id] of defs()) {
+  for (const [id] of achievementDefs()) {
     const row = save.achievements[id];
     // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적(quiet)은 배너를 띄우지 않는다 — 업적 아이콘의 점만 켠다 (src/achievement/evaluate.ts evaluate)
     if (row?.achievedAt != null && row.claimedAt == null && row.quiet !== true) list.push({ key: keyOf({ kind: "achievement", target: id }), kind: "achievement", target: id });
@@ -46,7 +46,7 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
 
 // 표시한 키를 계속 들고 있어야 하는가 — 대상이 남아 있는 동안은 들고 있는다.
 // 밤에만 되는 진화처럼 가능 상태가 오가도 다시 뜨지 않게, 미처리 여부가 아니라 대상의 존재로 판단한다
-export function alive(save: SaveV3, key: string): boolean {
+export function isKeyAlive(save: SaveV3, key: string): boolean {
   const k = parseKey(key);
   if (!k) return false;
   if (k.kind === "hatch") return save.eggs.some((e) => e.id === k.target);
