@@ -14,7 +14,8 @@ import { memoryStorage } from "../../online/client";
 import { createAccount } from "../../online/account";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks } from "../../online/handoff";
-import { createCloud, readCloudState, strayAnonymous, type Cloud, type CloudSyncState, type HaltInfo, type HaltReason, type OwnerKind } from "../../online/cloud";
+import { createCloud } from "../../online/cloud";
+import { normalizeCloudState, strayAnonymous, type Cloud, type CloudSyncState, type HaltInfo, type HaltReason, type OwnerKind } from "../../online/cloud-state";
 
 const APP_VERSION = "0.13.0"; // 서버 최소 버전(cloud_private.settings) 이상
 
@@ -549,16 +550,16 @@ async function p2(url: string, key: string, admin: SupabaseClient, extra: PC[]):
 
 async function main(): Promise<void> {
   // 옛 cloud.json — owner 는 올리던 계정, 새 칸은 기본값
-  assert.deepEqual(readCloudState({ deviceId: "d", userId: "u", syncedRev: 3, dirty: true, offlineDirty: true, lastSavedAt: 7 }), {
+  assert.deepEqual(normalizeCloudState({ deviceId: "d", userId: "u", syncedRev: 3, dirty: true, offlineDirty: true, lastSavedAt: 7 }), {
     deviceId: "d", userId: "u", owner: "u", syncedRev: 3, dirty: true, lastSavedAt: 7, superseded: false, pendingOp: null, ownerKind: "member", handoff: null, seed: null, seedOwner: null, accountHeld: false,
   });
   // P2 형식 — ownerKind·handoff 를 그대로 읽는다. 모양이 틀린 handoff 는 버린다
   const p2State = { deviceId: "d", userId: "a", owner: "a", syncedRev: 1, dirty: false, lastSavedAt: null, superseded: false, pendingOp: null, ownerKind: "anonymous", handoff: { ticket: "t", anon: "a", expiresAt: 9 }, seed: "s", seedOwner: "a", accountHeld: false };
-  assert.deepEqual(readCloudState(p2State), p2State);
-  assert.equal(readCloudState({ ...p2State, handoff: { ticket: 1 } })?.handoff, null);
-  assert.equal(readCloudState({ ...p2State, owner: null })?.ownerKind, null, "주인이 없으면 종류도 없다");
-  assert.equal(readCloudState({ deviceId: "d", userId: null, syncedRev: 0, dirty: false, offlineDirty: false, lastSavedAt: null })?.owner, null);
-  assert.equal(readCloudState({ deviceId: 1 }), null);
+  assert.deepEqual(normalizeCloudState(p2State), p2State);
+  assert.equal(normalizeCloudState({ ...p2State, handoff: { ticket: 1 } })?.handoff, null);
+  assert.equal(normalizeCloudState({ ...p2State, owner: null })?.ownerKind, null, "주인이 없으면 종류도 없다");
+  assert.equal(normalizeCloudState({ deviceId: "d", userId: null, syncedRev: 0, dirty: false, offlineDirty: false, lastSavedAt: null })?.owner, null);
+  assert.equal(normalizeCloudState({ deviceId: 1 }), null);
 
   // 부팅 판단(검수 H1) — 익명 세션인데 저장 주인이 다른 계정이고 이관 티켓이 없으면 분실. 잃은 계정의 종류를 돌려준다
   const anonUser = { id: "n", is_anonymous: true };
