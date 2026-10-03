@@ -13,10 +13,8 @@ import { elapsedSince, type TimeInput } from "../state/time.js";
 import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
 import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
-import type { TxResult } from "../shared/command.js";
 import { HANDLERS } from "../tx/command-table.js";
-import { argsFromCommand } from "../tx/args.js";
-import { requestIdOf, toCommandResult } from "../tx/commands.js";
+import { requestIdOf, runTxCommand } from "../tx/commands.js";
 import { dexList } from "../view/dex-list.js";
 import { dexDetail } from "../view/dex-detail.js";
 import { shopDetail } from "../view/shop-detail.js";
@@ -120,8 +118,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const command: Command = { cmd: req.cmd as CommandName, target: req.target, args: req.args, from, at: now() };
     const given = typeof req.args?.reqId === "string" && req.args.reqId !== "";
     const id = given ? requestIdOf(command) : `${requestIdOf(command)}:${++sendSeq}`;
-    const res: TxResult = executor.run({ id, name: command.cmd, args: argsFromCommand(command) });
-    return toCommandResult(res) as ManageReply;
+    return runTxCommand(executor, command, id) as ManageReply; // 표면 명령의 입구 하나 — internal 명령은 unknown-cmd
   };
 
   const dex = (): DexEntry[] => {
