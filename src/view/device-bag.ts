@@ -5,6 +5,8 @@ import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
 import { candyMax, candyResult } from "../bag/preview.js";
+import { growthCurve } from "../dex/growth.js";
+import type { GrowthRate } from "../shared/species.js";
 import { itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
 
@@ -18,7 +20,7 @@ export const bagUsable = (item: BagItemView): boolean => !item.evolution && item
 const partyPets = (v: Snapshot): PetView[] => v.party.slots.map((s) => s.pet).filter((p): p is PetView => p != null);
 
 const candyOf = (v: Snapshot, pet: PetView, item: BagItemView) => ({
-  curve: v.growthCurves[pet.growth] ?? [],
+  curve: growthCurve(pet.growth as GrowthRate),
   effect: item.effect === "level" ? ("level" as const) : ("exp" as const),
   amount: item.amount ?? 0,
 });
