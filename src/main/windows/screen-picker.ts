@@ -3,26 +3,19 @@
 //   보기(identify)  설정의 한 화면 목록이 열린 동안. 클릭을 통과시키고 포커스를 받지 않는다 — 목록을 계속 쓸 수 있다
 //   고르기(pick)    `화면에서 고르기`. 누른 화면을 돌려주고 Esc·창 닫기는 null. 영역 그리기 창(region-window.ts)과 같은 규칙이다
 //
-// 번호는 설정 목록과 같다 — 주 화면이 1 (layout.ts screenOrder). 저장은 부른 쪽이 한다
-import { BrowserWindow, ipcMain, screen } from "electron";
-import type { ScreenOverlayInit, ScreenView } from "../shared/model/overlays";
-import type { ScreensChannel } from "../shared/ipc/overlays";
-import { resolveScreen, screenOrder, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "./layout";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+// 번호는 설정 목록과 같다 — 주 화면이 1 (layout.ts screenOrder). 지금 화면 목록은 ./display.ts screensNow. 저장은 부른 쪽이 한다
+import type { BrowserWindow } from "electron";
+import type { ScreenOverlayInit, ScreenView } from "../../shared/model/overlays";
+import type { ScreensChannel } from "../../shared/ipc/overlays";
+import { resolveScreen, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "../layout";
+import { afterLoad, createIpcScope } from "./ipc";
+import { createOverlayWindow } from "./options";
 
 const CH = {
   init: "screens:init",
   pick: "screens:pick",
   cancel: "screens:cancel",
 } satisfies Record<string, ScreensChannel>;
-
-// 지금 화면들 — 번호 순 (주 화면이 1). 좌표는 DIP
-export function currentScreens(): ScreenInfo[] {
-  const primary = screen.getPrimaryDisplay().id;
-  const rect = (r: Electron.Rectangle) => ({ x: r.x, y: r.y, w: r.width, h: r.height });
-  return screenOrder(screen.getAllDisplays().map((d) => ({ id: d.id, bounds: rect(d.bounds), work: rect(d.workArea), primary: d.id === primary })));
-}
 
 // 설정의 한 화면 목록 — chosen 은 저장된 고른 화면(없으면 주 화면)
 export function screenViews(screens: readonly ScreenInfo[], chosen: ScreenRef | null): ScreenView[] {
@@ -39,33 +32,10 @@ export interface ScreenPickerOptions {
 // 화면 하나를 덮는 창 — 보기면 클릭 통과·포커스 없음, 고르기면 누를 수 있다
 function overlay(opts: ScreenPickerOptions, s: ScreenInfo, number: number, pick: boolean): BrowserWindow {
   const b = s.bounds;
-  const win = new BrowserWindow({
-    x: b.x,
-    y: b.y,
-    width: b.w,
-    height: b.h,
-    show: false,
-    frame: false,
-    transparent: true,
-    backgroundColor: "#00000000",
-    hasShadow: false,
-    resizable: false,
-    movable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    focusable: pick,
-    icon: windowIcon(),
-    webPreferences: webPreferencesOf(opts.preload),
-  });
-  win.setAlwaysOnTop(true, "screen-saver");
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  const win = createOverlayWindow({ preload: opts.preload, layer: "screen-saver", bounds: { x: b.x, y: b.y, width: b.w, height: b.h }, focusable: pick, allWorkspaces: true });
   if (!pick) win.setIgnoreMouseEvents(true);
   const init: ScreenOverlayInit = { number, primary: s.primary, w: b.w, h: b.h, pick };
-  win.webContents.once("did-finish-load", () => {
-    if (win.isDestroyed()) return;
+  afterLoad(win, () => {
     win.webContents.send(CH.init, init);
     if (pick) {
       win.show();
@@ -107,27 +77,23 @@ export function createScreenPicker(opts: ScreenPickerOptions): ScreenPicker {
       picking = new Promise<ScreenRef | null>((resolve) => {
         const screens = opts.screens();
         const wins = screens.map((s, i) => overlay(opts, s, i + 1, true));
+        const indexOf = (sender: Electron.WebContents): number => wins.findIndex((w) => !w.isDestroyed() && w.webContents === sender);
+        // 덮개 가운데 하나가 보낸 것만 받는다
+        const scope = createIpcScope((sender) => indexOf(sender) >= 0);
         let settled = false;
         const finish = (ref: ScreenRef | null): void => {
           if (settled) return;
           settled = true;
-          ipcMain.removeListener(CH.pick, onPick);
-          ipcMain.removeListener(CH.cancel, onCancel);
+          scope.dispose();
           picking = null;
           resolve(ref);
           closeAll(wins);
         };
-        const indexOf = (sender: Electron.WebContents): number => wins.findIndex((w) => !w.isDestroyed() && w.webContents === sender);
-        const onPick = (e: Electron.IpcMainEvent): void => {
-          const i = indexOf(e.sender);
-          const s = i >= 0 ? screens[i] : undefined;
+        scope.on(CH.pick, (e) => {
+          const s = screens[indexOf(e.sender)];
           if (s) finish(screenRefOfInfo(s));
-        };
-        const onCancel = (e: Electron.IpcMainEvent): void => {
-          if (indexOf(e.sender) >= 0) finish(null);
-        };
-        ipcMain.on(CH.pick, onPick);
-        ipcMain.on(CH.cancel, onCancel);
+        });
+        scope.on(CH.cancel, () => finish(null));
         // 한 화면이라도 닫히면(시스템이 닫음 등) 취소로 친다 — 남은 덮개가 화면을 막지 않게
         for (const w of wins) w.on("closed", () => finish(null));
       });

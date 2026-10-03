@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
 import { preloadFile, rendererFile } from "../../main/paths";
-import { drawRegion } from "../../main/region-window";
+import { drawRegion } from "../../main/windows/region-window";
 import { argAfter, hasFlag, numsOf } from "../harness/shot";
 
 const shotFile = argAfter("--shot");

@@ -9,7 +9,7 @@ import { app, nativeImage, powerMonitor, safeStorage, screen, shell, Notificatio
 import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
-import { pidAlive } from "../save/writer";
+import { isPidAlive } from "../platform/pid";
 import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../save/key";
 import { isSealedOnDisk } from "../save/save-file";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
@@ -17,7 +17,8 @@ import { createArtLoader } from "./art";
 import { createOverworldSource } from "./overworld-art";
 import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES, playLanes, type PlayLane } from "./layout";
-import { createScreenPicker, currentScreens, screenViews, type ScreenPicker } from "./screen-picker";
+import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
+import { screensNow as currentScreens } from "./windows/display";
 import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
 import { lockExcept, petMenu, trayMenu, type PetMenuModel } from "./menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
@@ -42,10 +43,10 @@ import { createPatchNotes, type PatchNotes } from "./patch-notes";
 import { createPortraits, portraitKey, type Portraits } from "./portraits";
 import { startKeepOnTop } from "./keep-on-top";
 import { CLOCK_RULES, createClock, type ClockTick } from "./clock";
-import { drawRegion } from "./region-window";
-import { createBannerWindow, type BannerWindow } from "./banner-window";
+import { drawRegion } from "./windows/region-window";
+import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT, loadConfig, logoFile, preloadFile, rendererFile } from "./paths";
-import { pickStarter } from "./picker-window";
+import { pickStarter } from "./windows/picker-window";
 import { createStage } from "./stage";
 import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
@@ -1329,7 +1330,7 @@ async function main(): Promise<void> {
   // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
   lifetime = createLifetime({
     lockFile: PATHS.companionLock,
-    pidAlive,
+    pidAlive: isPidAlive,
     hasWindow: () => bootReady && !!stages?.alive(),
     quit: () => app.quit(),
   });

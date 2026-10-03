@@ -31,11 +31,10 @@ export interface AccountView {
   displayName: string | null;
 }
 
-// 계정 호출의 실패 코드 — 목록은 src/shared/names/online-codes.ts
-export type AccountErrorCode = AccountCode;
+// 계정 호출의 실패 코드는 AccountCode — 목록은 src/shared/names/online-codes.ts
 
 // handoff — switchHooks 를 받은 가입·로그인에서만. 세션을 바꾼 뒤의 익명 저장 이관 결과
-export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffReport } | { ok: false; code: AccountErrorCode; detail?: string };
+export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffReport } | { ok: false; code: AccountCode; detail?: string };
 export type UsernameCheck = "available" | "taken" | "invalid" | "NETWORK";
 
 // 아이디 규칙 — 영문 소문자·숫자·밑줄, 4~16자, 영문으로 시작. 대문자는 소문자로 바꾼다. 맞지 않으면 null
@@ -110,7 +109,7 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
       return viewOf(local);
     }
   };
-  const fail = (code: AccountErrorCode, detail?: string): AccountResult => ({ ok: false, code, ...(detail ? { detail } : {}) });
+  const fail = (code: AccountCode, detail?: string): AccountResult => ({ ok: false, code, ...(detail ? { detail } : {}) });
   const catchAll = (e: unknown): AccountResult => ({ ok: false, ...authCodeOf({ message: messageOf(e) }) });
   const changed = async (handoff?: HandoffReport): Promise<AccountResult> => {
     const v = await view();

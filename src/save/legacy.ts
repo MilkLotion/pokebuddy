@@ -1,16 +1,13 @@
 // 파일 쓰기 도구와 옛 저장(v2) 파일 읽기·쓰기 — 지금 저장은 v3 이다(src/save/v3.ts · store.ts). v2 의 모양과 정규화는 ./v2/ 에 있다
-// writeAtomic·sleepSync 는 mailbox 등 다른 파일 통로도 쓴다. [리팩토링 대상] 플랫폼 층(src/platform/atomic-write.ts)으로 간다
-//
-// 쓰기는 tmp 에 쓰고 rename (config.js save 와 같다) — 쓰다 죽어도 반쪽 파일이 남지 않는다.
-// Windows 는 읽는 쪽이 파일을 열고 있으면 rename 이 EPERM/EBUSY 를 낸다 — 50ms 뒤 다시 (확장 extension.js write 의 패턴).
-//   기다림은 동기(Atomics.wait) — 부르는 쪽(tick·act)이 동기라 짧게 멈추는 쪽을 택했다. 최악 150ms, 그것도 Windows 충돌 때만
+// 원자적 쓰기(writeAtomic·sleepSync)는 src/platform/atomic-write.ts 다
 // v2 파일의 파손은 save.json.bak 으로 옮기고 state:null — 부르는 쪽이 새로 시작한다
 import fs from "node:fs";
-import path from "node:path";
+import { writeAtomic } from "../platform/atomic-write.js";
 import type { SaveV2 } from "./v2/types.js";
 import { normalizeSaveV2 } from "./v2/normalize.js";
-import { SAVE_RULES } from "./rules.js";
 
+// [임시] 원자적 쓰기의 옛 자리 — src/tools 의 dev-manage · selftest-clock · legacy · play 가 legacy.* 로 읽는다. 원본은 src/platform/atomic-write.ts
+export { sleepSync, writeAtomic } from "../platform/atomic-write.js";
 // [임시] v2 정규화의 옛 이름 — src/tools/selftest/selftest-legacy·save·stage 가 legacy.* 로 읽는다. 원본은 ./v2/normalize.ts
 export { emptyPet, emptySaveV2 as empty, emptyTotals, freshPetDaily, normalizeSaveV2 as normalize, type PetInit } from "./v2/normalize.js";
 
@@ -25,47 +22,6 @@ export interface ReadResult {
 }
 
 const errCode = (e: unknown): string | undefined => (e != null && typeof e === "object" && typeof (e as { code?: unknown }).code === "string" ? (e as { code: string }).code : undefined);
-
-// 동기 대기 — 메인 스레드에서도 된다. setTimeout 을 쓰면 write 가 async 가 되어 부르는 쪽이 전부 번진다
-export function sleepSync(ms: number): void {
-  try {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-  } catch {
-    // 못 기다리면 바로 다시 시도한다
-  }
-}
-
-// 파일 하나를 원자적으로 쓴다 — tmp + rename, 실패하면 잠깐 뒤 다시. 끝내 실패하면 false (조용히)
-// 문자열·Buffer(암호화한 저장, src/save/crypt.ts)는 그대로, 그 밖은 JSON 으로 쓴다
-export function writeAtomic(file: string, data: unknown): boolean {
-  const text = typeof data === "string" || Buffer.isBuffer(data) ? data : `${JSON.stringify(data, null, 2)}\n`;
-  const tmp = `${file}.${process.pid}.tmp`;
-  try {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-  } catch {
-    return false;
-  }
-  const { writeRetries, writeRetryMs } = SAVE_RULES.io;
-  for (let i = 0; i < writeRetries; i++) {
-    try {
-      fs.writeFileSync(tmp, text);
-      fs.renameSync(tmp, file);
-      return true;
-    } catch (e) {
-      const code = errCode(e);
-      if (i === writeRetries - 1 || !(code === "EPERM" || code === "EBUSY" || code === "EACCES")) {
-        try {
-          fs.unlinkSync(tmp);
-        } catch {
-          // 이미 없다
-        }
-        return false;
-      }
-      sleepSync(writeRetryMs);
-    }
-  }
-  return false;
-}
 
 // ── 파일 ───────────────────────────────────────────────────────────────────────
 

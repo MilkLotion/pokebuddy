@@ -7,10 +7,11 @@
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { PetDeviceAction, PetDeviceOpen, PetDeviceView } from "../shared/model/devices";
 import type { PetDeviceChannel } from "../shared/ipc/devices";
-import { bringUp, dockAt } from "./dex-window.js";
+import { bringUp } from "./dex-window.js";
+import { dockAt } from "./windows/placement.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
-import { createGenGate } from "./device-gen.js";
+import { webPreferencesOf } from "./windows/options.js";
+import { createGenGate } from "./windows/device-gen.js";
 
 const CH = {
   show: "petdev:show",
@@ -51,7 +52,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
   let focusNext = false; // 사용자가 연 개체를 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = PET_WINDOW.height;
   let side: "right" | "left" = "right";
-  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
 
   const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() && !closing.has(win) ? win : null);

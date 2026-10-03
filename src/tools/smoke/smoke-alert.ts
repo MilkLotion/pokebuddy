@@ -9,7 +9,7 @@ import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { ALERT_RULES, showAlert } from "../../main/alert-window";
+import { ALERT_RULES, showAlert } from "../../main/windows/alert-window";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "../../main/halt-dialog";
 import { preloadFile, rendererFile } from "../../main/paths";
 import { setLang } from "../../main/text";

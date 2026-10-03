@@ -8,7 +8,7 @@
 // (예전 scripts/dev-banner.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
-import { createBannerWindow } from "../../main/banner-window";
+import { createBannerWindow } from "../../main/windows/banner-window";
 import { preloadFile, rendererFile } from "../../main/paths";
 import type { BannerView } from "../../shared/model/overlays";
 import { argAfter, hasFlag } from "../harness/shot";

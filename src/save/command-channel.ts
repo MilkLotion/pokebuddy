@@ -14,7 +14,8 @@ import type { Command, CommandResult } from "../shared/command.js";
 import type { CommandName } from "../shared/names/commands.js";
 import { hasCommandFlag, isCommandSource } from "../shared/names/commands.js";
 import { SAVE_RULES } from "./rules.js";
-import { writeAtomic } from "./legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
+import { watchDir } from "../platform/watch-dir.js";
 
 export type ChannelLog = (entry: Record<string, unknown>) => void;
 export type CommandHandler = (command: Command) => CommandResult | Promise<CommandResult>;
@@ -121,7 +122,6 @@ export function serveCommands(dir: string, handler: CommandHandler, opts: ServeO
   let closed = false;
   let busy = false;
   let again = false;
-  let pending = false;
 
   try {
     fs.mkdirSync(dir, { recursive: true });
@@ -197,24 +197,8 @@ export function serveCommands(dir: string, handler: CommandHandler, opts: ServeO
     }
   }
 
-  // tmp+rename 은 이벤트를 여러 번 낸다 — 한 틱으로 묶는다 (src/main/anchor.ts watchRecords)
-  const onEvent = () => {
-    if (pending || closed) return;
-    pending = true;
-    setImmediate(() => {
-      pending = false;
-      void scan();
-    });
-  };
-  let watcher: fs.FSWatcher | null = null;
-  try {
-    watcher = fs.watch(dir, onEvent);
-    watcher.on("error", () => {
-      // 폴더가 사라졌다 — 폴링이 이어 간다
-    });
-  } catch {
-    watcher = null;
-  }
+  // tmp+rename 은 이벤트를 여러 번 낸다 — 한 틱으로 묶는다 (src/platform/watch-dir.ts). 감시가 멈추면 폴링이 이어 간다
+  const watcher = watchDir(dir, () => void scan());
   const timer = setInterval(() => void scan(), pollMs);
   void scan(); // 떠 있는 동안 쌓인 요청부터
 
@@ -223,11 +207,7 @@ export function serveCommands(dir: string, handler: CommandHandler, opts: ServeO
     stop() {
       closed = true;
       clearInterval(timer);
-      try {
-        watcher?.close();
-      } catch {
-        // 이미 닫혔다
-      }
+      watcher.stop();
     },
   };
 }

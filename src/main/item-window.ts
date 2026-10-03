@@ -3,10 +3,11 @@
 // 파티 상세 기기 창(src/main/pet-window.ts)과 같은 방식이다. 무엇을 보일지는 관리 창이 정해 보낸다. 누른 단추는 관리 창으로 돌려보낸다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 종류마다 창은 하나만 둔다
 import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import { bringUp, dockAt } from "./dex-window.js";
+import { bringUp } from "./dex-window.js";
+import { dockAt } from "./windows/placement.js";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
-import { createGenGate } from "./device-gen.js";
+import { webPreferencesOf } from "./windows/options.js";
+import { createGenGate } from "./windows/device-gen.js";
 
 export interface ItemWindowChannels {
   show: string;
@@ -44,7 +45,7 @@ export function createItemWindow<Open extends object, Action>(opts: ItemWindowOp
   let focusNext = false; // 사용자가 연 것을 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = SIZE.height;
   let side: "right" | "left" = "right";
-  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
 
   const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() && !closing.has(win) ? win : null);

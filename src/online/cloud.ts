@@ -16,7 +16,6 @@
 //   CLOUD_LOGIN_REQUIRED(계정이 지워졌다): 멈추고 onLost(ownerKind) — 게임은 계속, 창은 앱 몫(D29)
 //   익명 저장 이관: 실패한 티켓은 cloud.json.handoff 에 남기고 정식 계정 start 때 claim 전에 다시 옮긴다
 import { randomUUID } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { adoptAnonymous } from "./handoff.js";
 import { cloudCodeOf as codeOf } from "./codes.js";
 import { callRpc, messageOf, readFunctionError, withTimeout } from "./server-call.js";

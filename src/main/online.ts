@@ -27,7 +27,7 @@ import { withTimeout } from "../online/server-call.js";
 import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../trade/config.js";
 import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
-import { writeAtomic } from "../save/legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
 import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";

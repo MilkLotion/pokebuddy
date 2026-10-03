@@ -9,8 +9,9 @@ import type { DexDetail, EvoNodeView } from "../shared/model/detail";
 import type { DexDeviceChannel } from "../shared/ipc/devices";
 import type { DexDeviceView } from "../shared/model/devices";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
-import { createGenGate } from "./device-gen.js";
+import { webPreferencesOf } from "./windows/options.js";
+import { createGenGate } from "./windows/device-gen.js";
+import { dockAt } from "./windows/placement.js";
 
 const CH = {
   show: "dexdev:show",
@@ -42,15 +43,6 @@ export interface DexWindow {
   resetGen: () => void; // 관리 창 문서를 새로 읽었다 — 세대 번호를 0 으로
 }
 
-// 붙일 자리 — 관리 창 내용 영역 옆. 화면 오른쪽 끝을 넘으면 왼쪽에 붙인다
-export function dockAt(parent: { x: number; y: number; width: number; height: number }, area: { x: number; y: number; width: number; height: number }, size: { width: number; height: number }): { x: number; y: number; side: "right" | "left" } {
-  const right = parent.x + parent.width;
-  const side = right + size.width <= area.x + area.width || parent.x - size.width < area.x ? "right" : "left";
-  const x = side === "right" ? right : parent.x - size.width;
-  const y = Math.max(area.y, Math.min(parent.y, area.y + area.height - size.height));
-  return { x, y, side };
-}
-
 // 사용자가 연 기기 창에 키보드 초점을 준다 — 옆 창을 한 번 더 누르지 않아도 방향키·Esc 가 먹게
 // - show(): 숨은 창을 보이고 앞으로. mac 은 key 창, Windows 는 활성 창이 된다
 // - focus(): 이미 보이는 창도 key·활성 창으로. 관리 창을 누른 직후라 앱이 앞에 있어 OS 가 막지 않는다
@@ -63,7 +55,7 @@ export function bringUp(w: BrowserWindow): void {
 
 export function createDexWindow(opts: DexWindowOptions): DexWindow {
   let win: BrowserWindow | null = null;
-  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/device-gen.ts)
+  // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
   let owner: BrowserWindow | null = null;
   let slug: string | null = null;

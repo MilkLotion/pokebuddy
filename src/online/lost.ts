@@ -8,7 +8,7 @@
 //   cloud.json 이 없으면 맞출 서버 저장도 모른다 — 표시만 지운다
 // Electron 을 모른다 — 자체 검사(selftest-save-crypt)가 직접 부른다
 import fs from "node:fs";
-import { writeAtomic } from "../save/legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 import { lostMarkerOf } from "../save/save-file.js";
 
 const readJson = (file: string): unknown => {

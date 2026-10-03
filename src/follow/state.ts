@@ -8,14 +8,8 @@ import type { StateInfo, StateRecord } from "./types";
 
 export const STALE_SEC = 600; // 작업 중·기다림이 이만큼 갱신 없으면 대기로 — Esc 중단 시 Stop 훅이 안 온다
 
-export function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === "EPERM"; // 남의 소유 프로세스 — 살아 있다
-  }
-}
+// [임시] 옛 이름 — cli/run.js 가 dist/follow/state.js 의 pidAlive 를 부르고 selftest-follow 가 읽는다. 원본은 src/platform/pid.ts isPidAlive
+export { isPidAlive as pidAlive } from "../platform/pid.js";
 
 // 기록 하나를 지금 보여야 할 상태로 환산
 export function resolveState(record: StateRecord): AgentState {

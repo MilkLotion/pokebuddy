@@ -16,7 +16,7 @@ import type { TradeScreen } from "../shared/model/trade";
 import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
@@ -97,7 +97,7 @@ export interface ManageOptions {
   account?: (req: AccountAction) => Promise<AccountReply>; // 계정·클라우드 저장 (src/main/online.ts). 없으면 계정 탭은 쓸 수 없다고 보인다
   update?: (action: UpdateAction) => Promise<UpdateView>; // 버전·업데이트 (src/main/updater.ts). 없으면 설정 바닥에 버전을 그리지 않는다
   notes?: (action: "list" | "seen") => PatchNotesView; // 패치노트 (src/main/patch-notes.ts). 없으면 `패치노트` 단추를 두지 않는다
-  // 놀이공간 화면 — 목록·번호 보기·화면에서 고르기 (src/main/screen-picker.ts). 없으면 목록이 비고 고르기를 쓸 수 없다
+  // 놀이공간 화면 — 목록·번호 보기·화면에서 고르기 (src/main/windows/screen-picker.ts). 없으면 목록이 비고 고르기를 쓸 수 없다
   screens?: () => ScreenView[];
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
@@ -276,7 +276,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (Array.isArray(slots)) partyWin?.show(win, open as PartyDeviceOpen, gen);
     else partyWin?.close();
   });
-  // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/device-gen.ts)
+  // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
   ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
     if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
     const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;

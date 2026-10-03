@@ -11,7 +11,7 @@ import type { StageChannel } from "../shared/ipc/stage";
 import { sameRect } from "./layout";
 import type { Rect, Size } from "../shared/geometry";
 import { windowIcon } from "./paths";
-import { webPreferencesOf } from "./window-options";
+import { webPreferencesOf } from "./windows/options";
 
 // 채널 이름 — preload 와 같은 문자열인지 satisfies 로 검사
 const CH = {
