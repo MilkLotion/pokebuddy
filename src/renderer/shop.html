@@ -5,6 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:; media-src data:" />
     <title>pokebuddy</title>
     <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/device.css" />
     <style>
       /* 상점 기기 — Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution` (worklog/records/shop-device/record.md). 도감 기기 창(dex.html)과 같은 틀이다.
          기기의 호박색·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)와 가른다 */
@@ -15,24 +16,6 @@
         --bar: #dc9540;
         --ink: #3b2c31;
         --muted: #8a8378;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        margin: 0;
-        background: transparent;
-        overflow: hidden;
-        font-family: var(--font-body);
-        font-size: 12px;
-        line-height: 18px;
-        color: var(--ink);
-        user-select: none;
-      }
-      button {
-        font: inherit;
-        color: inherit;
       }
       .device {
         position: relative;
@@ -49,22 +32,6 @@
         overflow: hidden;
       }
       /* 관리 창 왼쪽에 붙으면 경첩 면을 오른쪽에 그린다 */
-      .device.left {
-        padding: 14px 26px 16px 16px;
-        border-radius: 18px 6px 6px 18px;
-      }
-      .hinge {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        width: 12px;
-        background: var(--hinge);
-      }
-      .device.left .hinge {
-        left: auto;
-        right: 0;
-      }
       .hinge::before,
       .hinge::after {
         content: "";
@@ -75,50 +42,16 @@
         border-radius: 3px;
         background: var(--joint);
       }
-      .hinge::before {
-        top: 60px;
-      }
       .hinge::after {
         bottom: 60px;
       }
       /* 윗줄 — 창을 끄는 손잡이. 단추는 끌기에서 뺀다 */
-      .top {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        -webkit-app-region: drag;
-      }
       .light {
         width: 30px;
         height: 30px;
         border-radius: 50%;
         background: #8fe0d6;
         box-shadow: 0 0 0 3px #ffffff;
-      }
-      .led {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-      }
-      .top .title {
-        margin-left: auto;
-        font-weight: 700;
-        color: var(--inverse);
-      }
-      .close {
-        -webkit-app-region: no-drag;
-        width: 24px;
-        height: 24px;
-        padding: 0;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        color: var(--inverse);
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .close:hover {
-        background: rgba(0, 0, 0, 0.15);
       }
       .bezel {
         padding: 8px;

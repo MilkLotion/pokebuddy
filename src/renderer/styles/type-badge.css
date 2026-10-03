@@ -1,0 +1,20 @@
+/* type-badge — 창 dex·pet·manage 이 글자까지 같은 규칙. 창 CSS 앞에 읽는다 */
+.type[data-type] { color: var(--inverse); }
+.type[data-type="electric"] { background: #fac000; }
+.type[data-type="fire"] { background: #e52829; color: var(--inverse); }
+.type[data-type="flying"] { background: #81b9ef; }
+.type[data-type="bug"] { background: #91a119; }
+.type[data-type="dark"] { background: #624d4e; color: var(--inverse); }
+.type[data-type="dragon"] { background: #5060e1; color: var(--inverse); }
+.type[data-type="fairy"] { background: #ef70ef; }
+.type[data-type="fighting"] { background: #ff8000; }
+.type[data-type="ghost"] { background: #704170; color: var(--inverse); }
+.type[data-type="grass"] { background: #358722; color: var(--inverse); }
+.type[data-type="ground"] { background: #915121; color: var(--inverse); }
+.type[data-type="ice"] { background: #3dcef3; }
+.type[data-type="normal"] { background: #9fa19f; }
+.type[data-type="poison"] { background: #9141cb; color: var(--inverse); }
+.type[data-type="psychic"] { background: #d53a6c; color: var(--inverse); }
+.type[data-type="rock"] { background: #afa981; }
+.type[data-type="steel"] { background: #60a1b8; }
+.type[data-type="water"] { background: #2675db; color: var(--inverse); }
