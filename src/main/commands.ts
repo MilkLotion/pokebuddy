@@ -9,7 +9,7 @@ import { bridgeMailbox } from "../commands/dispatcher";
 import { createDispatcher, registerTxCommands, type Dispatcher } from "../tx/dispatcher";
 import { sendToWriter, type CommandServer } from "../save/command-channel";
 import type { Command, CommandResult } from "../shared/command";
-import type { FailCode } from "../shared/names/online-codes";
+import type { Reason } from "../shared/names/reasons";
 import type { Size } from "../shared/geometry";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
@@ -44,7 +44,7 @@ export interface CommandContext {
   tradeScreen?: () => unknown; // 교환 모달이 그리는 값 (src/main/trade-screen.ts) — 결과의 screen 에 싣는다
   // 명령을 받기 전에 거른다 — 거절 사유를 주면 처리기로 보내지 않고 { ok: false, reason } 으로 답한다. null 이면 통과.
   // 무대 클릭(click)·메뉴·관리 창·mailbox 가 모두 dispatcher.dispatch 를 지나므로 한 곳에서 막힌다 (앱의 두 PC 규칙 멈춤)
-  guard?: (command: Command) => FailCode | null;
+  guard?: (command: Command) => Reason | null;
 }
 
 export interface Commands {
@@ -76,15 +76,8 @@ const EVOLVE_EXPIRE_MS = 40_000;
 
 export function createCommands(ctx: CommandContext): Commands {
   const log = ctx.log ?? null;
-  const dispatcher = createDispatcher({ log });
-  const guard = ctx.guard;
-  if (guard) {
-    const dispatchNow = dispatcher.dispatch.bind(dispatcher);
-    dispatcher.dispatch = (command) => {
-      const reason = guard(command);
-      return reason ? Promise.resolve({ ok: false, reason }) : dispatchNow(command);
-    };
-  }
+  // 멈춤 거르기는 명령 통로의 guard 옵션이다 (src/tx/dispatcher.ts) — dispatch 를 덮어쓰지 않는다 (설계 D4)
+  const dispatcher = createDispatcher({ log, guard: ctx.guard ?? null });
   let server: CommandServer | null = null;
 
   const target = (c: Command): string | null => (typeof c.target === "string" && c.target ? c.target : null);
