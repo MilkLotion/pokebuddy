@@ -2,11 +2,11 @@
 //
 // 저장을 쓰는 곳은 거래 실행기 하나다 (docs/specs/modules.md "경계 원칙").
 // 시간은 앱이 깨어 있는 동안만 흐른다. 앱은 전역 시계(src/main/clock.ts)의 1초 틱마다 흐른 시간을 적용한다 (2026-09-29 사용자 결정).
-// 상한(`TIME_V3_RULES.maxTickMs`)을 넘는 틈은 앱 종료·절전·잠금으로 보고 버린다.
+// 상한(`TIME_RULES.maxElapsedMs`)을 넘는 틈은 앱 종료·절전·잠금으로 보고 버린다.
 // 1초마다 적용한 값은 메모리(pending)에 두고, 파일은 flushMs 마다와 명령·줍기 때 쓴다. 1초마다 파일을 쓰면 하루 수 GB 를 쓰고
 // 저장 감시(src/main/save-party.ts)·클라우드 표시(cloud.json)가 1초마다 돈다. 읽는 쪽(명령·스냅샷)은 pending 의 사본을 본다.
 // 다른 곳이 파일을 바꾸면(클라우드 저장 받기 등) pending 을 버리고 파일을 따른다. 시간 진행은 잃지 않는다 — 다음 틱이
-// 파일의 lastTickAt 부터 다시 적용한다(flushMs 15초 < TIME_V3_RULES.maxTickMs 30초). 파일에 아직 안 쓴 작업 시간(workMs)은
+// 파일의 lastTickAt 부터 다시 적용한다(flushMs 15초 < TIME_RULES.maxElapsedMs 30초). 파일에 아직 안 쓴 작업 시간(workMs)은
 // 따로 들고 있다가 다음 틱에 다시 넘긴다.
 // 쓰기 간격은 단조 시계(mono)로 잰다 — 시스템 시각을 뒤로 돌려도 쓰기가 멈추지 않는다.
 // 시각(now)은 앱이 전역 시계의 1초 틱 시각을 준다(src/main/app.ts). 명령 처리처럼 틱 밖에서 부르는 경로도 그 마지막 틱 시각을 쓴다 — 1초 안의 차이다
@@ -15,8 +15,8 @@
 import fs from "node:fs";
 import { PATHS } from "./paths.js";
 import { readSave, writeSave } from "../save/save-file.js";
-import { SAVE_V3_RULES, TIME_V3_RULES } from "../save/rules.js";
-import type { TimeInput } from "../state/time.js";
+import { SAVE_V3_RULES } from "../save/rules.js";
+import { elapsedSince, type TimeInput } from "../state/time.js";
 import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
 import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
@@ -46,9 +46,6 @@ export const saveFile = (): string => PATHS.save;
 
 // 줍기로 포켓몬을 데려온 쓰기의 이름(FIND_POKEMON)은 src/shared/names/commands.ts 에 있다
 
-// 쓰기 종류 — event 는 바로, tick 은 스로틀. 가르는 표는 src/online/save-kind.ts 다
-export type WriteKind = SaveKind;
-
 export interface GameV3 {
   file: string;
   read: () => SaveV3 | null;
@@ -71,7 +68,7 @@ export interface GameV3Options {
   rand?: () => number;
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b 계정 시드). 없거나 null 이면 rand
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
-  onWrite?: (kind: WriteKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
+  onWrite?: (kind: SaveKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
 }
@@ -152,7 +149,7 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     const save = livePending() ?? readDisk();
     if (!save) return null;
     const at = now();
-    const elapsed = Math.min(TIME_V3_RULES.maxTickMs, Math.max(0, at - save.lastTickAt));
+    const elapsed = elapsedSince(save, at);
     const workMs = Math.max(0, input.workMs ?? 0) + carriedWorkMs;
     const events = applyTimeAndSettle(save, elapsed, at, { ...input, workMs });
     carriedWorkMs = 0;
