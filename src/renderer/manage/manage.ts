@@ -28,19 +28,32 @@ import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks } from "./command.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
-// 명령의 뒤처리 — 다시 읽기·모달 그리기·닫기·도감 비우기는 여기에 있다 (command.ts)
+// 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
 setCommandHooks({
   reload: () => refresh(),
-  drawDialog: () => drawDialog(),
-  closeDialog: () => close(),
   touchesDex: () => {
     dexRows = null;
   },
+});
+
+// 모달의 뒤처리 — 검색·돌보미집 겹침·화면 표시·튜토리얼·경고 배너는 여기에 있다 (dialog.ts)
+setDialogHooks({
+  isTyping: (root) => typingSearch(root),
+  drawUnder: () => drawUnder(),
+  alertEl: (text) => alertBox("bad", "", text),
+  afterDraw: () => {
+    restoreSearchFocus();
+    syncIdentify();
+    drawTutorial(); // 대화상자 안의 튜토리얼(설정 › 화면의 놀이공간)
+  },
+  afterEmpty: () => syncIdentify(),
+  onScrimChanged: () => drawTutorial(),
 });
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
@@ -132,8 +145,6 @@ const GUIDE: { title: string; lines: string[] }[] = [
 const pointsEl = needEl("points", HTMLElement, "manage");
 const tabsEl = needEl("tabs", HTMLElement, "manage");
 const bodyEl = needEl("body", HTMLElement, "manage");
-const scrimEl = needEl("scrim", HTMLElement, "manage");
-const dialogEl = needEl("dialog", HTMLElement, "manage");
 const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
 
 
@@ -325,7 +336,7 @@ function head(title: string, sub?: string): HTMLElement {
 }
 
 // ── 초상 ───────────────────────────────────────────────────────────────────────
-// 초상을 메인에서 data URI 로 받아 원 안에 채운다 (src/main/portraits.ts). 받기 전·못 받으면 빈 원 그대로다.
+// 초상을 메인에서 data URI 로 받아 원 안에 채운다 (src/main/art/portraits.ts). 받기 전·못 받으면 빈 원 그대로다.
 // 창을 열 때 디스크에 있는 그림 전부를 먼저 받는다(loadArt). 그래서 상점·상세에 들어가자마자 그림이 모두 보인다.
 // 디스크에 없는 그림만 칸을 그린 뒤 청한다. 도감은 1000 칸이 넘어 보이는 칸만 청한다(lazy).
 // 보이는 칸은 그린 뒤와 스크롤할 때 위치를 재서 고른다 — IntersectionObserver 는 창이 가려져 있으면 반응하지 않았다.
@@ -664,7 +675,7 @@ function daycareCell(egg: EggView, live: boolean): HTMLElement {
 function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   const v = ui.view;
   if (!v) {
-    if (live) close();
+    if (live) closeDialog();
     return;
   }
   const ready = v.eggs.list.filter((e) => e.ready).length;
@@ -680,7 +691,7 @@ function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
   x.disabled = !live;
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   top.append(all, x);
   const grid = el("div", "daycare-grid");
   for (let i = 0; i < v.eggs.size; i++) {
@@ -743,7 +754,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
   } else {
     const pet = petId ? petInView(petId) : undefined;
     if (!pet) {
-      close();
+      closeDialog();
       return;
     }
     dialogEl.append(...dialogHead("알이 부화했어요", ""));
@@ -757,21 +768,15 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
   // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. ✕·Esc·바깥 누르기는 남은 결과를 건너뛴다(dismiss)
   const next = queue?.[at + 1];
   const count = queue ? ` (${at + 1} / ${queue.length})` : "";
-  const done = actionButton(`${next ? "다음" : "확인"}${count}`, true, false, () => {
+  const done = actionButtonEl(`${next ? "다음" : "확인"}${count}`, true, false, () => {
     if (next && queue) open({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
     else if (over) open({ kind: "daycare" });
-    else close();
+    else closeDialog();
   });
   done.dataset.confirm = ""; // Space·Enter 가 누르는 단추 (아래 keydown)
   dialogEl.append(card);
   if (info.childElementCount) dialogEl.appendChild(info);
-  dialogEl.appendChild(actions(done));
-}
-
-// 모달 닫기 — 돌보미집 위에 겹친 부화 결과는 닫으면 돌보미집으로 돌아간다(✕·Esc·바깥 누르기 모두)
-function dismiss(): void {
-  if (ui.dialog?.kind === "hatched" && ui.dialog.over) open({ kind: ui.dialog.over });
-  else close();
+  dialogEl.appendChild(actionsRowEl(done));
 }
 
 // 겹친 모달의 뒤 — 돌보미집 모달 모습과 한 겹 더 어두운 막 (Figma 05 `1096:22424`)
@@ -781,7 +786,7 @@ underEl.hidden = true;
 underScrimEl.hidden = true;
 scrimEl.insertBefore(underScrimEl, dialogEl);
 scrimEl.insertBefore(underEl, underScrimEl);
-underScrimEl.addEventListener("click", dismiss);
+underScrimEl.addEventListener("click", dismissDialog);
 function drawUnder(): void {
   const stacked = ui.dialog?.kind === "hatched" && ui.dialog.over === "daycare";
   underEl.hidden = !stacked;
@@ -800,7 +805,6 @@ function drawUnder(): void {
 const searchDraft = new Map<string, string>();
 let searchSubmitting = false; // 검색을 누른 그 다시 그리기는 미루지 않는다
 let bodyHeld = false; // 입력 중이라 미룬 본문 다시 그리기
-let dialogHeld = false; // 입력 중이라 미룬 대화상자 다시 그리기
 
 // 지금 이 영역의 검색 칸(또는 박스 이름 칸)에 입력하고 있는가 — 창이 앞에 있을 때만. 뒤에 있으면(배너 바로가기 등) 미루지 않는다
 function typingSearch(root: HTMLElement): boolean {
@@ -817,10 +821,7 @@ function releaseHeld(): void {
       bodyHeld = false;
       draw();
     }
-    if (dialogHeld) {
-      dialogHeld = false;
-      drawDialog();
-    }
+    redrawHeldDialog();
   }, 0);
 }
 
@@ -1020,7 +1021,7 @@ function drawMega(petId: string, to?: string): void {
   const pet = petInView(petId);
   const mega = pet?.mega;
   if (!pet || !mega || !mega.canChange) {
-    close();
+    closeDialog();
     return;
   }
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
@@ -1029,7 +1030,7 @@ function drawMega(petId: string, to?: string): void {
   const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
   const change = (species: string): void => {
     void sendCommand("pet.form", pet.id, { species }).then((ok) => {
-      if (ok) close();
+      if (ok) closeDialog();
     });
   };
   // 확인 창 — 바뀔 모습 카드 + 안내 줄
@@ -1045,7 +1046,7 @@ function drawMega(petId: string, to?: string): void {
     const info = el("div", "info-box");
     info.appendChild(el("div", undefined, `지금 ${pet.name} · ${where}`));
     for (const text of lines) info.appendChild(el("div", "note", text));
-    dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("취소", false, false, close), actionButton(label, true, false, () => change(form.species))));
+    dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), actionButtonEl(label, true, false, () => change(form.species))));
   };
   const rival = mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
 
@@ -1100,10 +1101,10 @@ function drawMega(petId: string, to?: string): void {
     );
     dialogEl.appendChild(info);
   }
-  const go = actionButton(word, true, !picked, () => {
+  const go = actionButtonEl(word, true, !picked, () => {
     if (picked) change(picked.species);
   });
-  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => open(back.to)), go));
 }
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
@@ -1111,7 +1112,7 @@ function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
   const form = pet?.forms?.find((f) => f.species === to);
   if (!pet || !form) {
-    close();
+    closeDialog();
     return;
   }
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
@@ -1129,12 +1130,12 @@ function drawForm(petId: string, to: string): void {
     el("div", "note", NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
     el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
   );
-  const go = actionButton("바꾸기", true, false, () => {
+  const go = actionButtonEl("바꾸기", true, false, () => {
     void sendCommand("pet.form", pet.id, { species: to }).then((ok) => {
-      if (ok) close();
+      if (ok) closeDialog();
     });
   });
-  dialogEl.append(row, info, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
+  dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
 }
 
 // 박스 탭의 칸 — 95×86. 초상과 이름만 가운데에 두고 레벨은 오른쪽 위, 이로치 아이콘은 왼쪽 위 구석이다.
@@ -1298,7 +1299,7 @@ function startHold(petId: string): void {
     const box = v.boxes[b];
     const slot = box ? box.slots.findIndex((p) => p?.id === petId) : -1;
     if (!box || slot < 0) continue;
-    if (ui.dialog) close();
+    if (ui.dialog) closeDialog();
     endHold();
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); // 입력 중인 칸이 있으면 다시 그리기가 미뤄진다 (typingSearch)
     setTab("box");
@@ -1341,7 +1342,7 @@ function cancelHold(): void {
 // 프리셋 칩을 누르면 그 프리셋을 적용한다(party.preset)
 
 function openSwap(): void {
-  if (ui.dialog) close();
+  if (ui.dialog) closeDialog();
   endHold();
   setTab("box");
   swapMode = true;
@@ -1456,13 +1457,13 @@ document.addEventListener("keydown", (e) => {
 function drawSellPet(petId: string, price: number): void {
   const pet = petInView(petId);
   if (!pet) {
-    close();
+    closeDialog();
     return;
   }
   dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 팔까요?`, ""));
   const body = el("p", "acct-confirm-body", `${pointText(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
-  const go = actionButton("팔기", true, false, () => void sendCommand("pet.sell", pet.id));
-  dialogEl.append(body, actions(el("div", "spacer"), actionButton("취소", false, false, close), go));
+  const go = actionButtonEl("팔기", true, false, () => void sendCommand("pet.sell", pet.id));
+  dialogEl.append(body, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
 }
 
 // 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)
@@ -1662,7 +1663,7 @@ function boxMenuEl(): HTMLElement {
 function drawBoxOrder(): void {
   const v = ui.view;
   if (!v) {
-    close();
+    closeDialog();
     return;
   }
   const top = el("div", "settings-head");
@@ -1670,7 +1671,7 @@ function drawBoxOrder(): void {
   titles.appendChild(el("h2", undefined, "박스 순서"));
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   top.append(titles, x);
   const grid = el("div", "box-order-grid scroll");
   v.boxes.forEach((box, i) => {
@@ -1680,7 +1681,7 @@ function drawBoxOrder(): void {
     tile.addEventListener("click", () => {
       boxPage = i;
       boxNote = "";
-      close();
+      closeDialog();
       draw();
     });
     tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
@@ -1709,7 +1710,7 @@ function drawPool(productId: string, page: number): void {
   const item = ui.view?.shop.find((i) => i.id === productId);
   const pool = item?.pool;
   if (!item || !pool) {
-    close();
+    closeDialog();
     return;
   }
   const top = el("div", "settings-head");
@@ -1718,7 +1719,7 @@ function drawPool(productId: string, page: number): void {
   titles.appendChild(el("p", undefined, `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`));
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   top.append(titles, x);
   const shown = pageOf(pool.entries, page, GRID_PAGE);
   const grid = el("div", "dex-grid egg-pool-grid");
@@ -2494,7 +2495,7 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
     link.value = `…#${t.link.slice(t.link.lastIndexOf("#") + 1, t.link.lastIndexOf("#") + 7)}`; // 앞 6자만 — 전체는 title 과 복사로 (Figma `Trade / Link Created` "…#Qm7xK2")
     link.title = t.link;
     link.setAttribute("aria-label", "내 교환 링크");
-    const copy = actionButton(tradeCopied ? "복사됨" : "링크 복사", true, false, () => {
+    const copy = actionButtonEl(tradeCopied ? "복사됨" : "링크 복사", true, false, () => {
       window.pokebuddyManage.copyText(t.link ?? "");
       tradeCopied = true;
       redrawTrade();
@@ -2503,12 +2504,12 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
         redrawTrade();
       }, 1500);
     });
-    acts.append(link, copy, actionButton("취소", false, t.busy, () => void tradeSend("trade.leave")));
+    acts.append(link, copy, actionButtonEl("취소", false, t.busy, () => void tradeSend("trade.leave")));
     host.append(left, acts);
   } else {
     host.appendChild(tradeCardHead("공유 채널 만들기"));
     const acts = el("div", "trade-acts");
-    acts.appendChild(actionButton("링크 만들기", true, t.busy, () => void tradeSend("trade.create")));
+    acts.appendChild(actionButtonEl("링크 만들기", true, t.busy, () => void tradeSend("trade.create")));
     host.appendChild(acts);
   }
 
@@ -2520,7 +2521,7 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
   });
   input.type = "text";
   input.classList.add("trade-input");
-  const go = actionButton("참가", false, t.busy || t.phase === "hosting", () => {
+  const go = actionButtonEl("참가", false, t.busy || t.phase === "hosting", () => {
     const link = tradeInput.trim();
     if (!link) return;
     void tradeSend("trade.join", undefined, { link }).then((reply) => {
@@ -2670,8 +2671,8 @@ function drawTradeOffer(t: TradeScreen, out: HTMLElement, fail: [string, string]
   } else bar.appendChild(el("div", "trade-desc", "한쪽이 포켓몬을 바꾸면 양쪽 확정이 풀려요"));
   const canReady = !!t.mine && !!t.friend && !t.friendBlocked && !t.busy;
   bar.append(
-    actionButton("나가기", false, t.busy, () => void tradeSend("trade.leave")),
-    t.myReady ? actionButton("확정 취소", false, t.busy, () => void tradeSend("trade.unready")) : actionButton("확정", true, !canReady, () => void tradeSend("trade.ready")),
+    actionButtonEl("나가기", false, t.busy, () => void tradeSend("trade.leave")),
+    t.myReady ? actionButtonEl("확정 취소", false, t.busy, () => void tradeSend("trade.unready")) : actionButtonEl("확정", true, !canReady, () => void tradeSend("trade.ready")),
   );
   out.appendChild(bar);
 }
@@ -2693,7 +2694,7 @@ function drawTradeDone(t: TradeScreen, out: HTMLElement): void {
     card.appendChild(place);
   }
   const acts = el("div", "trade-acts end");
-  acts.appendChild(actionButton("확인", true, t.busy, () => void tradeSend("trade.leave")));
+  acts.appendChild(actionButtonEl("확인", true, t.busy, () => void tradeSend("trade.leave")));
   card.appendChild(acts);
   out.appendChild(card);
 }
@@ -2705,7 +2706,7 @@ function drawTradeDialog(): void {
   titles.appendChild(el("h2", undefined, "친구 교환"));
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   top.append(titles, x);
   const out = el("div", "scroll");
   dialogEl.append(top, out);
@@ -2742,7 +2743,7 @@ function drawTradeLogin(out: HTMLElement): void {
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("교환은 로그인해야 할 수 있어요"));
   const acts = el("div", "trade-acts");
-  acts.appendChild(actionButton("로그인", true, false, () => open({ kind: "user", tab: "account" })));
+  acts.appendChild(actionButtonEl("로그인", true, false, () => open({ kind: "user", tab: "account" })));
   card.appendChild(acts);
   out.appendChild(card);
 }
@@ -2954,7 +2955,7 @@ function drawSignIn(scroll: HTMLElement): void {
   if (acctGithub) {
     // 기다리는 동안 다른 단추는 막히고 취소만 된다(R3-08)
     const wait = el("div", "acct-inline acct-github-wait");
-    wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButton("취소", false, false, () => void window.pokebuddyManage.account({ action: "github-cancel" })));
+    wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButtonEl("취소", false, false, () => void window.pokebuddyManage.account({ action: "github-cancel" })));
     scroll.appendChild(wait);
   } else {
     const gh = buttonEl("act acct-github", "GitHub로 계속");
@@ -3031,8 +3032,8 @@ function drawSignedIn(scroll: HTMLElement): void {
     const ctl = el("div", "acct-inline");
     ctl.append(
       input,
-      actionButton("취소", false, acctBusy, () => { acctRename = null; redrawAccount(); }),
-      actionButton("저장", true, acctBusy, () => {
+      actionButtonEl("취소", false, acctBusy, () => { acctRename = null; redrawAccount(); }),
+      actionButtonEl("저장", true, acctBusy, () => {
         void acctSend({ action: "rename", displayName: acctRename ?? "" }).then((r) => {
           if (r?.ok) {
             acctRename = null;
@@ -3043,13 +3044,13 @@ function drawSignedIn(scroll: HTMLElement): void {
     );
     scroll.appendChild(acctRow(a.displayName ?? "", acctForm.error || who, ctl));
   } else {
-    scroll.appendChild(acctRow(a.displayName ?? "", who, actionButton("이름 바꾸기", false, acctBusy, () => { acctRename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
+    scroll.appendChild(acctRow(a.displayName ?? "", who, actionButtonEl("이름 바꾸기", false, acctBusy, () => { acctRename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
   }
   // 저장 — 자동으로만 올린다. 상태 글자와, 상태가 말하지 않는 오류만
   scroll.appendChild(acctRow("저장", saveLine(a.cloud)));
   // 로그아웃·삭제 — 둘 다 확인 창을 거친다. 이 PC 는 처음부터 새로 시작한다(D12)
-  scroll.appendChild(acctRow("로그아웃", "이 PC 는 처음부터 새로 시작해요", actionButton("로그아웃", false, acctBusy || a.blocked, () => { acctConfirm = "sign-out"; acctForm.error = ""; redrawAccount(); })));
-  scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButton("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; acctForm.error = ""; redrawAccount(); })));
+  scroll.appendChild(acctRow("로그아웃", "이 PC 는 처음부터 새로 시작해요", actionButtonEl("로그아웃", false, acctBusy || a.blocked, () => { acctConfirm = "sign-out"; acctForm.error = ""; redrawAccount(); })));
+  scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButtonEl("계정 삭제", false, acctBusy || a.blocked, () => { acctConfirm = "delete"; acctForm.error = ""; redrawAccount(); })));
 }
 
 // 사용자 모달 위의 작은 확인 창 — 로그아웃·계정 삭제
@@ -3090,7 +3091,7 @@ function acctOverlay(): HTMLElement | null {
     if (risk) card.appendChild(risk);
     const err = failed();
     if (err) card.appendChild(err);
-    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("삭제", true, acctBusy, () => run("delete"))));
+    card.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, acctBusy, shut), actionButtonEl("삭제", true, acctBusy, () => run("delete"))));
   } else if (acctConfirm === "sign-out") {
     head.append(el("h3", undefined, "로그아웃할까요?"), x);
     card.append(head, el("p", "acct-confirm-body", "로그아웃하면 이 PC 는 처음부터 새로 시작해요. 계정 저장은 그대로라 다시 로그인하면 이어서 할 수 있어요."));
@@ -3098,7 +3099,7 @@ function acctOverlay(): HTMLElement | null {
     if (risk) card.appendChild(risk);
     const err = failed();
     if (err) card.appendChild(err);
-    card.appendChild(actions(el("div", "spacer"), actionButton("취소", false, acctBusy, shut), actionButton("로그아웃하고 새로 시작", true, acctBusy, () => run("sign-out"))));
+    card.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, acctBusy, shut), actionButtonEl("로그아웃하고 새로 시작", true, acctBusy, () => run("sign-out"))));
   } else return null;
   box.appendChild(card);
   return box;
@@ -3146,8 +3147,8 @@ function accountActions(): HTMLElement | null {
   if (!a?.available || a.signedIn) return null;
   const off = acctBusy || a.blocked;
   const left = el("span", "spacer");
-  if (acctForm.mode === "sign-up") return actions(left, actionButton("가입", true, off, () => void signUp()));
-  return actions(left, actionButton("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButton("로그인", true, off, () => void signIn()));
+  if (acctForm.mode === "sign-up") return actionsRowEl(left, actionButtonEl("가입", true, off, () => void signUp()));
+  return actionsRowEl(left, actionButtonEl("가입", false, off, () => { acctForm.mode = "sign-up"; acctForm.error = ""; redrawAccount(); }), actionButtonEl("로그인", true, off, () => void signIn()));
 }
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
@@ -3234,7 +3235,7 @@ function mailHead(title: string, back: boolean): void {
   titles.appendChild(el("h2", undefined, title));
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   head.append(titles, x);
   dialogEl.appendChild(head);
 }
@@ -3318,10 +3319,10 @@ function giftFoot(l: MailLetterView): HTMLElement {
   const left = el("span", "spacer gift-note", note);
   left.title = note;
   const items: HTMLElement[] = [left];
-  if (needLogin) items.push(actionButton("로그인", false, false, () => open({ kind: "user", tab: "account" })));
+  if (needLogin) items.push(actionButtonEl("로그인", false, false, () => open({ kind: "user", tab: "account" })));
   const blocked = done || !signedIn || mailExpired(l) || l.unsupported || busy;
   items.push(
-    actionButton(done ? "받음" : busy ? "받는 중" : "받기", true, blocked, () => {
+    actionButtonEl(done ? "받음" : busy ? "받는 중" : "받기", true, blocked, () => {
       void window.pokebuddyManage
         .mail({ action: "claim", id: l.id })
         .then(async (r) => {
@@ -3332,7 +3333,7 @@ function giftFoot(l: MailLetterView): HTMLElement {
         .catch((e: unknown) => console.error(e));
     }),
   );
-  return actions(...items);
+  return actionsRowEl(...items);
 }
 
 function drawLetter(id: string): void {
@@ -3805,11 +3806,11 @@ function drawTutorial(): void {
     }
   }
   // OS 가 그리는 창 단추 자리도 함께 어둡게 한다 — 모달 가림막과 같은 통로
-  window.pokebuddyManage.dim(dimmed || coachEl != null);
+  window.pokebuddyManage.dim(isDimmed() || coachEl != null);
 }
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {
-  const next = spec.button ? actionButton(spec.button, true, false, spec.onGo) : null; // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
+  const next = spec.button ? actionButtonEl(spec.button, true, false, spec.onGo) : null; // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
   coachNow?.stop(); // 지난 코치마크의 관찰은 버린다 — 하나만 둔다
   // 말풍선은 대상 왼쪽. 아래 → 위 → (대상이 커서 둘 다 모자라면) 창 아래쪽 안. 안내만 하는 단계는 구멍도 막는다(예: 개체 상세의 박스에 보관)
   coachNow = drawCoachLayer({
@@ -3826,7 +3827,7 @@ function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLEleme
       title: spec.title,
       body: spec.body,
       go: next,
-      footEl: next ? actions(el("div", "spacer"), next) : null,
+      footEl: next ? actionsRowEl(el("div", "spacer"), next) : null,
       onSkip: () => void sendCommand("tutorial.skip", id), // 닫기는 스킵이다
     },
     onTargetResized: () => drawTutorial(),
@@ -3856,13 +3857,6 @@ window.addEventListener("resize", () => {
 
 
 
-function actionButton(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
-  const b = buttonEl(primary ? "act primary" : "act", label);
-  b.disabled = disabled;
-  b.addEventListener("click", run);
-  return b;
-}
-
 // 제목 줄 — `back` 을 주면 돌아가기를 앞에 둔다. 모달을 겹치지 않고 안에서 화면을 바꾼다
 function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
   const row = el("div", "title-row");
@@ -3875,13 +3869,7 @@ function dialogHead(title: string, sub: string, back?: { label: string; to: Dial
   return sub ? [row, el("div", "sub", sub)] : [row];
 }
 
-function actions(...items: HTMLElement[]): HTMLElement {
-  const box = el("div", "actions");
-  box.append(...items);
-  return box;
-}
-
-const closeButton = (label = "닫기"): HTMLButtonElement => actionButton(label, false, false, close);
+const closeButton = (label = "닫기"): HTMLButtonElement => actionButtonEl(label, false, false, closeDialog);
 
 // 켬·끔 스위치 — Figma `Toggle` `299:3593`
 function switchButton(on: boolean, label: string, run: () => void): HTMLButtonElement {
@@ -4124,7 +4112,7 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 function drawEvolve(petId: string, to?: string): void {
   const pet = petInView(petId);
   if (!pet) {
-    close();
+    closeDialog();
     return;
   }
   // 후보는 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다. 가방에서 오는 길은 없앴다(2026-10-01 진화용 도구 사용 없음)
@@ -4192,14 +4180,14 @@ function drawEvolve(petId: string, to?: string): void {
     dialogEl.appendChild(info);
   }
 
-  const go = actionButton("진화", true, !picked, () => {
+  const go = actionButtonEl("진화", true, !picked, () => {
     if (!picked) return;
     void sendCommand("evolve", pet.id, { to: picked.to }).then((ok) => {
       if (ok) open({ kind: "pet", petId });
     });
   });
   // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
-  dialogEl.appendChild(actions(el("div", "spacer"), actionButton("취소", false, false, () => open(back.to)), go));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => open(back.to)), go));
 }
 
 // ── 모달 · 성격 변경 ───────────────────────────────────────────────────────────
@@ -4212,7 +4200,7 @@ const MINT = "mint";
 function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
   const pet = petInView(petId);
   if (!pet || !ui.view) {
-    close();
+    closeDialog();
     return;
   }
   const picked = ui.view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
@@ -4261,13 +4249,13 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   }
   dialogEl.appendChild(info);
 
-  const change = actionButton("바꾸기", true, !picked || have === 0, () => {
+  const change = actionButtonEl("바꾸기", true, !picked || have === 0, () => {
     if (!picked) return;
     void sendCommand("bag.use", MINT, { petId, nature: picked.id }).then((ok) => {
       if (ok) open({ kind: "pet", petId });
     });
   });
-  dialogEl.appendChild(actions(change, actionButton("취소", false, false, () => open(back.to))));
+  dialogEl.appendChild(actionsRowEl(change, actionButtonEl("취소", false, false, () => open(back.to))));
 }
 
 // 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 성격은 다음 창에서 고른다
@@ -4275,8 +4263,8 @@ function drawNatureTarget(itemId: string): void {
   const item = ui.view?.bag.find((b) => b.id === itemId);
   const pets = [...partyPets(), ...boxPets()];
   dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
-  const acts = pets.map((p) => actionButton(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
-  dialogEl.appendChild(actions(...acts, closeButton()));
+  const acts = pets.map((p) => actionButtonEl(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
+  dialogEl.appendChild(actionsRowEl(...acts, closeButton()));
 }
 
 // ── 모달 · 업적창 ──────────────────────────────────────────────────────────────
@@ -4326,7 +4314,7 @@ const ACHIEVEMENT_ORDER: Record<AchievementView["state"], number> = { achieved: 
 
 function drawAchievements(): void {
   if (!ui.view) {
-    close();
+    closeDialog();
     return;
   }
   const list = ui.view.achievements.list;
@@ -4334,7 +4322,7 @@ function drawAchievements(): void {
   dialogEl.appendChild(
     chips(ACHIEVEMENT_TABS, achievementTab, (id) => {
       achievementTab = id;
-      dialogScrollKey = ""; // 분류를 바꾸면 목록을 맨 위부터 본다
+      resetDialogScroll(); // 분류를 바꾸면 목록을 맨 위부터 본다
       drawDialog();
     }),
   );
@@ -4345,7 +4333,7 @@ function drawAchievements(): void {
     .sort((x, y) => ACHIEVEMENT_ORDER[x.a.state] - ACHIEVEMENT_ORDER[y.a.state] || x.i - y.i);
   for (const { a } of rows) scroll.appendChild(achievementRow(a));
   dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actions(closeButton()));
+  dialogEl.appendChild(actionsRowEl(closeButton()));
 }
 
 // ── 모달 · 설정 ────────────────────────────────────────────────────────────────
@@ -4555,14 +4543,14 @@ function drawDisplay(scroll: HTMLElement): void {
       const row = rows.find((r) => String(r.ref.id) === id);
       if (row) setSetting("playScreen", row.ref);
     }));
-    box.appendChild(actionButton("화면에서 고르기", false, false, () => void runLocked(() => window.pokebuddyManage.pickScreen())));
+    box.appendChild(actionButtonEl("화면에서 고르기", false, false, () => void runLocked(() => window.pokebuddyManage.pickScreen())));
     const screenRow = settingRow("화면", undefined, box);
     screenRow.dataset.tut = "area-screen"; // 놀이공간 튜토리얼이 함께 밝힌다
     scroll.appendChild(screenRow);
   }
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
-    const draw = actionButton(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => window.pokebuddyManage.drawRegion()));
+    const draw = actionButtonEl(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => window.pokebuddyManage.drawRegion()));
     const regionRow = settingRow("영역", undefined, draw);
     regionRow.dataset.tut = "area-region"; // 화면 탭 튜토리얼이 함께 밝힌다
     scroll.appendChild(regionRow);
@@ -4643,17 +4631,17 @@ function agentRow(row: AgentRow): HTMLElement {
 
   const control = el("div", "actions");
   control.style.margin = "0";
-  if (!row.installed) control.appendChild(actionButton("다시 확인", false, false, () => void agent(row.name, "check")));
-  else if (row.connected && row.outdated && !noNode) control.appendChild(actionButton("갱신", true, false, () => void agent(row.name, "connect")));
+  if (!row.installed) control.appendChild(actionButtonEl("다시 확인", false, false, () => void agent(row.name, "check")));
+  else if (row.connected && row.outdated && !noNode) control.appendChild(actionButtonEl("갱신", true, false, () => void agent(row.name, "connect")));
   else if (row.connected) {
     if (!noNode) {
       const probing = agentProbing === row.name;
-      const probe = actionButton("점검", false, agentProbing != null, () => void agent(row.name, "probe"));
+      const probe = actionButtonEl("점검", false, agentProbing != null, () => void agent(row.name, "probe"));
       probe.classList.toggle("is-busy", probing); // 점검 중 — 글자 대신 점 세 개(폭 그대로)
       control.appendChild(probe);
     }
-    control.appendChild(actionButton("해제", false, agentProbing != null, () => void agent(row.name, "disconnect")));
-  } else control.appendChild(actionButton("연결", true, noNode, () => void agent(row.name, "connect")));
+    control.appendChild(actionButtonEl("해제", false, agentProbing != null, () => void agent(row.name, "disconnect")));
+  } else control.appendChild(actionButtonEl("연결", true, noNode, () => void agent(row.name, "connect")));
 
   const line = settingRow(row.label, hint, control);
   const hintEl = line.querySelector<HTMLElement>(".hint");
@@ -4683,7 +4671,7 @@ function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T;
   titles.appendChild(el("h2", undefined, title));
   const x = buttonEl("dialog-close", "✕");
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", close);
+  x.addEventListener("click", closeDialog);
   head.append(titles, x);
   dialogEl.appendChild(head);
   dialogEl.appendChild(segmented(tabs, current, pick));
@@ -4700,7 +4688,7 @@ function drawSettings(sub: SettingsTab): void {
   if (sub === "general") drawGeneral(scroll);
   else drawDisplay(scroll);
   // 바닥 — 왼쪽은 버전·업데이트. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
-  dialogEl.appendChild(actions(versionFoot()));
+  dialogEl.appendChild(actionsRowEl(versionFoot()));
 }
 
 // 사용자 모달 — 계정·연결. 버전·업데이트 바닥은 두지 않는다(설정 모달에만)
@@ -4733,7 +4721,7 @@ function drawGuide(): void {
     scroll.appendChild(box);
   }
   dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actions(closeButton()));
+  dialogEl.appendChild(actionsRowEl(closeButton()));
 }
 
 // ── 설정 바닥 · 버전과 업데이트 ─────────────────────────────────────────────────
@@ -4791,7 +4779,7 @@ function versionFoot(): HTMLElement {
 }
 
 const smallButton = (label: string, primary: boolean, run: () => void): HTMLButtonElement => {
-  const b = actionButton(label, primary, false, run);
+  const b = actionButtonEl(label, primary, false, run);
   b.classList.add("small");
   return b;
 };
@@ -4869,130 +4857,48 @@ function drawNotes(pick?: string): void {
 }
 
 function drawNotesNew(version: string): void {
-  dialogEl.append(notesHead(`${version} 으로 업데이트했어요`, "이번 버전에서 바뀐 것", close), noteDetail(version));
+  dialogEl.append(notesHead(`${version} 으로 업데이트했어요`, "이번 버전에서 바뀐 것", closeDialog), noteDetail(version));
 }
 
 // ── 모달 · 여닫기 ──────────────────────────────────────────────────────────────
-
-// 모달마다 폭이 다르다. 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
-const SHAPE: Record<Dialog["kind"], string> = {
-  pet: "dialog",
-  evolve: "dialog",
-  nature: "dialog",
-  "nature-target": "dialog",
-  achievements: "dialog tall steady", // 칩을 바꿔도 창 높이가 그대로다 — 줄 수가 달라도 대화상자가 움직이지 않는다
-  settings: "dialog settings",
-  user: "dialog settings",
-  guide: "dialog tall",
-  hatched: "dialog hatched",
-  daycare: "dialog daycare",
-  "box-order": "dialog daycare box-order",
-  pool: "dialog daycare egg-pool",
-  form: "dialog",
-  mega: "dialog",
-  "sell-pet": "dialog",
-  notes: "dialog settings notes",
-  "notes-new": "dialog settings notes-new",
-  mail: "dialog settings mail",
-  letter: "dialog settings mail",
-  trade: "dialog trade",
-};
-
-// 가림막 — 켜고 끌 때 메인에도 알린다. OS 가 그리는 창 단추 자리는 CSS 가 덮지 못한다
-let dimmed = false;
-function setScrim(on: boolean): void {
-  scrimEl.classList.toggle("open", on);
-  if (on === dimmed) return;
-  dimmed = on;
-  drawTutorial(); // 모달이 열리면 코치마크를 감추고, 닫히면 다시 그린다. 창 단추 자리 어둡게 하기도 여기서 맞춘다
-}
-
-// 다시 그린 대화상자의 스크롤 — 같은 대화상자·같은 탭이면 스크롤 위치를 되돌린다.
-// 버튼을 누르거나 1초 새로 그리기 때 대화상자를 통째로 다시 만들어 맨 위로 튀던 것을 막는다 (2026-09-27 사용자 "설정에서 스크롤 내리고, 버튼 누르면 스크롤이 올라가짐")
-let dialogScrollKey = "";
-const dialogKeyOf = (d: Dialog): string => `${d.kind}:${"tab" in d ? String(d.tab) : ""}`;
-
-// 헤더 아이콘의 열림 표시 — 그 아이콘이 여는 모달이 떠 있는 동안 진한 배경 (docs/specs/ui-components.md C-02, Figma `Header Icon Button` `State=Open`)
-const HEADER_OPEN: Record<string, string> = { achievements: "open-achievements", settings: "open-settings", user: "open-user", mail: "open-mail" };
-function markHeaderOpen(): void {
-  for (const [kind, id] of Object.entries(HEADER_OPEN)) document.getElementById(id)?.classList.toggle("open", ui.dialog?.kind === kind);
-}
-
-// 이번 그리기에서 대화상자 안의 상자가 오류를 이미 보였나 — 그러면 바닥 줄에 또 보이지 않는다
-let noticeInline = false;
-
-function drawDialog(): void {
-  markHeaderOpen();
-  noticeInline = false;
-  if (ui.dialog && typingSearch(dialogEl)) {
-    dialogHeld = true;
-    return;
-  }
-  dialogHeld = false;
-  if (!ui.dialog) {
-    setScrim(false);
-    dialogScrollKey = "";
-    syncIdentify();
-    return;
-  }
-  setScrim(true);
-  const key = dialogKeyOf(ui.dialog);
-  const keep = key === dialogScrollKey ? (dialogEl.querySelector<HTMLElement>(".scroll")?.scrollTop ?? 0) : 0;
-  dialogScrollKey = key;
-  dialogEl.className = SHAPE[ui.dialog.kind];
-  dialogEl.replaceChildren();
-  drawUnder();
-
-  if (ui.dialog.kind === "evolve") drawEvolve(ui.dialog.petId, ui.dialog.to);
-  else if (ui.dialog.kind === "nature") drawNature(ui.dialog.petId, ui.dialog.pick, ui.dialog.itemId);
-  else if (ui.dialog.kind === "nature-target") drawNatureTarget(ui.dialog.itemId);
-  else if (ui.dialog.kind === "achievements") drawAchievements();
-  else if (ui.dialog.kind === "settings") drawSettings(ui.dialog.tab);
-  else if (ui.dialog.kind === "user") drawUser(ui.dialog.tab);
-  else if (ui.dialog.kind === "hatched") drawHatched(ui.dialog.petId, ui.dialog.eggId, ui.dialog.over, ui.dialog.queue, ui.dialog.at);
-  else if (ui.dialog.kind === "daycare") drawDaycare();
-  else if (ui.dialog.kind === "box-order") drawBoxOrder();
-  else if (ui.dialog.kind === "pool") drawPool(ui.dialog.productId, ui.dialog.page);
-  else if (ui.dialog.kind === "form") drawForm(ui.dialog.petId, ui.dialog.to);
-  else if (ui.dialog.kind === "mega") drawMega(ui.dialog.petId, ui.dialog.to);
-  else if (ui.dialog.kind === "sell-pet") drawSellPet(ui.dialog.petId, ui.dialog.price);
-  else if (ui.dialog.kind === "notes") drawNotes(ui.dialog.pick);
-  else if (ui.dialog.kind === "notes-new") drawNotesNew(ui.dialog.version);
-  else if (ui.dialog.kind === "mail") drawMail();
-  else if (ui.dialog.kind === "letter") drawLetter(ui.dialog.id);
-  else if (ui.dialog.kind === "trade") drawTradeDialog();
-  else drawGuide();
-
-  // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 05 `Dialog · 실패 (바닥 단추 줄 빈자리)` `1126:24745`).
-  // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
-  if (ui.notice && !noticeInline) {
-    const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions"); // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다
-    const row = rows[rows.length - 1];
-    if (row) {
-      const err = el("div", "footer-error");
-      err.append(el("i"), el("span", undefined, ui.notice));
-      err.title = ui.notice;
-      // 남는 폭에만 선다 — spacer 가 있으면 그 안(보조 단추 뒤, Figma `Dialog` `footer › spacer › error-notice`), 없으면 줄 끝. 단추 자리는 그대로
-      const spacer = row.querySelector(":scope > .spacer");
-      (spacer ?? row).appendChild(err);
-    } else dialogEl.appendChild(alertBox("bad", "", ui.notice));
-  }
-  const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
-  if (scroll && keep) scroll.scrollTop = keep;
-  restoreSearchFocus();
-  syncIdentify();
-  drawTutorial(); // 대화상자 안의 튜토리얼(설정 › 화면의 놀이공간)
-}
-
-// 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
-function open(next: Dialog): void {
+// 여닫기·가림막·스크롤 되돌리기는 dialog.ts. 여기서는 모달 종류마다 폭·헤더 표시·그리기를 등록한다
+// 폭: 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
+registerDialog({ kind: "evolve", shape: "dialog", draw: (d) => drawEvolve(d.petId, d.to) });
+registerDialog({ kind: "nature", shape: "dialog", draw: (d) => drawNature(d.petId, d.pick, d.itemId) });
+registerDialog({ kind: "nature-target", shape: "dialog", draw: (d) => drawNatureTarget(d.itemId) });
+// 칩을 바꿔도 창 높이가 그대로다 — 줄 수가 달라도 대화상자가 움직이지 않는다
+registerDialog({ kind: "achievements", shape: "dialog tall steady", headerButton: "open-achievements", draw: () => drawAchievements() });
+registerDialog({
+  kind: "settings",
+  shape: "dialog settings",
+  headerButton: "open-settings",
+  draw: (d) => drawSettings(d.tab),
   // 설정 › 화면에 새로 들어오면 화면 탭 튜토리얼은 1단계부터
-  if (next.kind === "settings" && next.tab === "display" && !(ui.dialog?.kind === "settings" && ui.dialog.tab === "display")) {
-    areaStep = 0;
-    areaStart = null;
-  }
-  // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
-  // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
+  enter: (d, prev) => {
+    if (d.tab === "display" && !(prev?.kind === "settings" && prev.tab === "display")) {
+      areaStep = 0;
+      areaStart = null;
+    }
+  },
+});
+registerDialog({ kind: "user", shape: "dialog settings", headerButton: "open-user", draw: (d) => drawUser(d.tab) });
+registerDialog({ kind: "guide", shape: "dialog tall", draw: () => drawGuide() });
+registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at) });
+registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
+registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
+registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
+registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
+registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to) });
+registerDialog({ kind: "sell-pet", shape: "dialog", draw: (d) => drawSellPet(d.petId, d.price) });
+registerDialog({ kind: "notes", shape: "dialog settings notes", draw: (d) => drawNotes(d.pick) });
+registerDialog({ kind: "notes-new", shape: "dialog settings notes-new", draw: (d) => drawNotesNew(d.version) });
+registerDialog({ kind: "mail", shape: "dialog settings mail", headerButton: "open-mail", draw: () => drawMail() });
+registerDialog({ kind: "letter", shape: "dialog settings mail", draw: (d) => drawLetter(d.id) });
+registerDialog({ kind: "trade", shape: "dialog trade", draw: () => drawTradeDialog() });
+
+// 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
+// (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형). 나머지는 모달이다 (dialog.ts openDialog)
+function open(next: Dialog): void {
   if (next.kind === "pet") {
     if (coachId === "evolution") void sendCommand("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
     ui.dialog = null;
@@ -5003,16 +4909,7 @@ function open(next: Dialog): void {
     draw();
     return;
   }
-  ui.dialog = next;
-  ui.notice = "";
-  drawDialog();
-}
-
-function close(): void {
-  ui.dialog = null;
-  ui.notice = "";
-  setScrim(false);
-  syncIdentify();
+  openDialog(next);
 }
 
 // 박스 탭을 열고 교환 모달을 띄운다 — 교환 링크(딥링크)로 왔을 때
@@ -5195,10 +5092,10 @@ needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", (
 needEl("open-user", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "user", tab: "account" }));
 
 scrimEl.addEventListener("click", (e) => {
-  if (e.target === scrimEl) dismiss();
+  if (e.target === scrimEl) dismissDialog();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && ui.dialog) dismiss();
+  if (e.key === "Escape" && ui.dialog) dismissDialog();
   // 부화 결과 창 — Space·Enter 는 `확인` 을 누른 것과 같다 (2026-10-02 사용자 결정). 누르고 있는 동안의 반복은 받지 않는다.
   // 단추에 포커스가 있을 때 브라우저가 한 번 더 누르지 않게 기본 동작을 막는다
   if (ui.dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {
@@ -5232,7 +5129,7 @@ function goTo(route: ManageRoute): void {
     // (2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로.")
     if (ui.dialog?.kind === "trade") void loadTrade();
     else {
-      if (ui.dialog) close();
+      if (ui.dialog) closeDialog();
       showTrade();
     }
   } else if (route.to === "agents") {
@@ -5242,7 +5139,7 @@ function goTo(route: ManageRoute): void {
     void loadAgents();
   } else if (route.to === "bag" || route.to === "shop") {
     // 줍기 배너 — 도구·진화용 도구는 가방, 포인트는 상점 (docs/specs/game.md "줍기")
-    close();
+    closeDialog();
     setTab(route.to);
     ui.detailPet = null;
     draw();

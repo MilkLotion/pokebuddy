@@ -1,13 +1,12 @@
 // 설정창 → 메인 명령 — 요청 식별자, 처리 중 표시, 잠금, 다시 읽기, 실패 문구
-// 다시 읽기·모달 그리기·닫기·도감 비우기는 설정창이 setCommandHooks 로 걸어 준다(뼈대 파일이 나뉘면 직접 가져온다)
+// 다시 읽기·도감 비우기는 설정창이 setCommandHooks 로 걸어 준다(뼈대 파일이 나뉘면 직접 가져온다). 모달은 dialog.ts
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import { failTextOf } from "../ui/fail-text.js";
+import { closeDialog, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
 
 export interface CommandHooks {
   reload(): Promise<void>; // 스냅샷을 다시 읽고 그린다
-  drawDialog(): void;
-  closeDialog(): void;
   touchesDex(): void; // 도감이 함께 바뀌었다 — 다음에 도감을 열 때 다시 읽게 비운다
 }
 let hooks: CommandHooks | null = null;
@@ -99,13 +98,13 @@ export async function sendCommand(cmd: string, target: string, extra: Record<str
 
   if (!reply.ok) {
     ui.notice = failTextOf(reply.reason, "command").text;
-    h.drawDialog();
+    drawDialog();
     return false;
   }
   ui.notice = "";
   lastReply = reply;
-  if (CLOSES.has(cmd) && !opts.keepOpen) h.closeDialog();
-  else h.drawDialog();
+  if (CLOSES.has(cmd) && !opts.keepOpen) closeDialog();
+  else drawDialog();
   return true;
 }
 
@@ -122,5 +121,5 @@ export async function runLocked(call: () => Promise<ManageReply>): Promise<void>
     ui.busy = false;
   }
   ui.notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
-  h.drawDialog();
+  drawDialog();
 }
