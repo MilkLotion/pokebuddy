@@ -4,13 +4,12 @@
 const { execFile, spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const settings = require("../config.js");
+const { PATHS } = require("../dist/platform/paths.js"); // 경로 — src/platform/paths.ts (옛 config.js)
 const state = require("../dist/follow/state.js");
 const { electronPath } = require("../lib/electron.js");
 const { optionEnv } = require("./args.js");
 
 const PROJECT = path.join(__dirname, "..");
-const { PATHS } = settings;
 // 동반자가 창을 만들 때까지 기다리는 시간 — 처음 띄우면 그림(PMD ZIP)을 받느라 몇 초 걸린다.
 // 넘기면 더 기다리지 않고 돌아온다 (동반자는 계속 뜨는 중이다)
 const READY_TIMEOUT_MS = 15000;

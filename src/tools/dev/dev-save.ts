@@ -21,7 +21,7 @@ export interface DevSaveOptions {
 
 export const DEV_SAVE_RULES = { spreadPx: 60 };
 
-// HOME → save.json 경로 (config.js PATHS 와 같은 규칙)
+// HOME → save.json 경로 (src/platform/paths.ts PATHS 와 같은 규칙)
 export const devSaveFile = (home: string): string => path.join(home, ".claude", "pokebuddy", "save.json");
 
 export function devSaveState(speciesList: string[], opts: DevSaveOptions = {}): SaveV3 {

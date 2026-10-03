@@ -102,7 +102,7 @@ function stageFiles() {
     fs.cpSync(path.join(root, "node_modules", name), path.join(stage, "node_modules", name), { recursive: true });
     copied.push(`node_modules/${name}`);
   }
-  // home — 앱이 쓸 임시 홈(config.js updateTestHome). 업데이트 설치 파일이 다시 켠 앱도 사용자의 홈 대신 이 홈을 쓴다
+  // home — 앱이 쓸 임시 홈(src/platform/paths.ts updateTestHome). 업데이트 설치 파일이 다시 켠 앱도 사용자의 홈 대신 이 홈을 쓴다
   if (TEST) fs.writeFileSync(path.join(stage, "update-test.json"), `${JSON.stringify({ note: `업데이트 실기 시험 빌드 — ${MAC ? "src/tools/e2e/e2e-update-mac.ts" : "dist/tools/e2e/e2e-update-win.js"}`, home: testHome })}\n`);
   const appPkg = {
     name,

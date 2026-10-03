@@ -4,7 +4,8 @@
 //   2. 상태 훅         dist/hooks/pokebuddy-state.js(TS 빌드 산출물)를 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사.
 //                      CLI 마다 이벤트 등록은 하지 않는다 — 설정창 → 사용자 → 연결 탭의 버튼(connectCli)으로만 한다 (2026-09-28 사용자 결정).
 //                      setup 은 옛 이름(termimon·pkmon) 등록 걷기만 계속한다
-//                      dist/ 가 없으면(git clone 직후) tsc 가 있을 때 npm run build 를 먼저 돌리고, 못 하면 훅 단계를 건너뛰고 알린다
+//                      dist/ 가 없으면(git clone 직후) bin/pokebuddy 가 setup 앞에서 npm run build 를 먼저 돌린다(이 파일도 dist/platform 을 읽는다).
+//                      훅 원본만 없으면 여기서 다시 빌드해 보고, 못 하면 훅 단계를 건너뛰고 알린다
 //   3. 옛 에디터 확장   예전 버전이 설치한 VS Code 계열 확장과 그 기록(cli.json · windows/)을 걷는다 (2026-09-27 창 모드 삭제)
 //   4. 옛 이름          termimon·pkmon 데이터 폴더를 가져오고, 옛 훅 등록·훅 파일·데이터 폴더를 걷는다
 //
@@ -16,7 +17,9 @@ const { execFileSync, execSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { PATHS, LEGACY_HOME_ITEMS, migrateLegacyHome } = require("../config.js");
+// 경로·옛 홈 가져오기 — 빌드 산출물(src/platform/paths.ts·user-config.ts). bin/pokebuddy 가 setup·uninstall 앞에서 dist/ 를 먼저 갖춘다
+const { PATHS } = require("../dist/platform/paths.js");
+const { LEGACY_HOME_ITEMS, migrateLegacyHome } = require("../dist/platform/user-config.js");
 
 const PROJECT = path.join(__dirname, "..");
 const HOOK_NAME = "pokebuddy-state.cjs";

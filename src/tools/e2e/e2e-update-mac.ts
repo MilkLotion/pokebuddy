@@ -101,7 +101,7 @@ function makeHome(): Home {
   save.tutorials = Object.fromEntries(["first-care", "playground", "shop", "hatch", "party", "achievement"].map((k) => [k, { state: "skipped", steps: 0 }]));
   fs.writeFileSync(path.join(data, "save.json"), JSON.stringify(save));
   // 앱에는 HOME 을 바꾸지 않는다 — 바꾸면 macOS 가 로그인 키체인을 찾지 못해 사용자 화면에 대화상자를 띄운다(2026-09-28).
-  // 앱의 임시 홈은 빌드에 박힌 update-test.json 이 준다(config.js updateTestHome). CLI(companion stop)만 HOME 으로 임시 홈을 가리킨다
+  // 앱의 임시 홈은 빌드에 박힌 update-test.json 이 준다(src/platform/paths.ts updateTestHome). CLI(companion stop)만 HOME 으로 임시 홈을 가리킨다
   const appEnv: NodeJS.ProcessEnv = { ...process.env, PB_E2E_DIR: HOME };
   for (const key of Object.keys(appEnv)) if (key.startsWith("POKEBUDDY_") || key === "ELECTRON_RUN_AS_NODE" || key === "NODE_OPTIONS") delete appEnv[key];
   appEnv.POKEBUDDY_SAVE_CRYPT = "off"; // 업데이트 뒤 저장을 직접 읽는다 — 평문(시험 빌드만 받는다, src/main/app.ts)
