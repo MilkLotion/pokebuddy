@@ -26,7 +26,8 @@ import { createSessionGate, type SessionGate } from "../online/session.js";
 import { withTimeout } from "../online/server-call.js";
 import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../online/config.js";
-import { encryptedStorage } from "./trade.js";
+import { createSessionStorage, sessionFile } from "../online/session-storage.js";
+import { createKeyVault } from "./services/vault.js";
 import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
@@ -103,7 +104,7 @@ export function cloudSeedOf(saveFile: string): string | null {
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
-  const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: encryptedStorage() });
+  const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: createSessionStorage({ file: sessionFile(), vault: createKeyVault() }) });
   const gate = createSessionGate(client);
   const cloudFile = path.join(path.dirname(o.saveFile), "cloud.json");
   const listeners = new Set<(screen: AccountScreen) => void>();
