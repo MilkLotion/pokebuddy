@@ -46,9 +46,9 @@ const note = (s: string) => {
   renderDebug();
 };
 
-// 진단 — 화면 debug 와 함께 메인 로그로 (stage:log). 옛 preload 에는 log 가 없을 수 있어 optional call
+// 진단 — 화면 debug 와 함께 메인 로그로 (stage:log). log 는 다리의 필수 멤버다 (src/main/preload.ts STAGE 가 WireOf 로 빠짐없이 검사된다)
 function diag(entry: Record<string, unknown>) {
-  bridge.log?.(entry);
+  bridge.log(entry);
   if (debugOn) note(Object.entries(entry).map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(" "));
 }
 
