@@ -185,6 +185,18 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   process.stdout.write("(8) 정규화 · 뼈대가 아니면 null  ok\n");
 }
 
+// (8-2) 정규화 — 언어·잠들기 기준은 설정 바꾸기와 같은 선택지만 받는다. 목록 밖이면 기본값 (docs/specs/game.md "설정과 연결")
+{
+  const settingsOf = (patch: Record<string, unknown>) => normalize({ ...empty(T0), settings: { ...empty(T0).settings, ...patch } }, T0)?.settings;
+  assert.equal(settingsOf({ language: "en" })?.language, "en");
+  assert.equal(settingsOf({ sleepAfterMin: 0 })?.sleepAfterMin, 0, "0 은 잠들지 않음");
+  assert.equal(settingsOf({ sleepAfterMin: 15 })?.sleepAfterMin, 15);
+  assert.equal(settingsOf({ language: "fr" })?.language, "ko", "모르는 언어는 기본값");
+  assert.equal(settingsOf({ sleepAfterMin: 7 })?.sleepAfterMin, 5, "선택지 밖의 분은 기본값");
+  assert.equal(settingsOf({ sleepAfterMin: "10" })?.sleepAfterMin, 5, "글자는 받지 않는다");
+  process.stdout.write("(8-2) 정규화 · 언어·잠들기 기준은 선택지만  ok\n");
+}
+
 // (9) 파티 칸 — 열린 칸은 앞에서부터. 경로와 관계없이 칸 +1
 {
   // 옛 저장: 업적 보상으로 5번 칸이 열려 1·2·5번이 열린 채

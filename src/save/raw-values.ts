@@ -17,3 +17,6 @@ export const uniqueList = <T>(list: T[]): T[] => [...new Set(list)];
 
 // 성격 식별자인가 — 글자이고 성격 표에 있다
 export const isNatureValue = (v: unknown): v is NatureId => typeof v === "string" && isNatureId(v);
+
+// 정해진 선택지 가운데 하나인가 — 아니면 기본값
+export const choiceOr = <T>(v: unknown, choices: readonly T[], fallback: T): T => (choices.some((c) => c === v) ? (v as T) : fallback);
