@@ -5,7 +5,8 @@
 import { BrowserWindow, ipcMain, screen } from "electron";
 import type { RegionChannel } from "../shared/ipc/overlays";
 import type { RegionInit, RegionRect } from "../shared/model/overlays";
-import { REGION_MIN, regionFits } from "../state/settings.js";
+import { regionFits } from "../state/settings.js";
+import { REGION_MIN } from "../state/rules.js";
 import { windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./window-options.js";
 

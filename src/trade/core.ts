@@ -46,13 +46,11 @@ export type LockFailure = OfferFailure | "busy";
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
 
-// [임시] 옛 이름 — 가져다 쓰는 쪽(src/main, src/tools, src/tx/handlers.ts, ./session.ts)이 새 자리에서 가져오면 지운다
+// [임시] 옛 이름 — ./session.ts(계약 레인 C7)가 새 자리(src/party/pet-actions.ts pendingTradeOf)에서 가져오면 지운다
 //   교환 잠금은 src/party/pet-actions.ts, 단일 포켓몬 판정은 src/dex/forms.ts 에 있다
 export const pendingOf = pendingTradeOf;
 
 // 교환에 걸려 값을 바꾸면 안 되는 개체인가
-export const isLocked = isTradeLocked;
-export { isSinglePet };
 
 // 올릴 수 있는가
 export function offerable(save: SaveV3, petId: string, opts?: DexOptions): { ok: true; pet: PetV3 } | { ok: false; reason: OfferFailure } {

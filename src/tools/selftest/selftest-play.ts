@@ -10,16 +10,21 @@ import path from "node:path";
 import { createGame } from "../../main/game";
 import * as store from "../../save/store";
 import { setSize } from "../../party/home";
-import { DEFAULT_SIZE_LEVEL, EGG_V3_RULES, SAVE_V3_RULES, SIZE_STEPS, sizeLevelOf } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import { zoomOf } from "../../main/art";
 import { empty, normalize } from "../../save/v3";
-import { REGION_MIN, setSetting } from "../../state/settings";
+import { setSetting } from "../../state/settings";
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
 import { shopList } from "../../tx/lists";
-import { eggPool, eggPrice } from "../../shop/catalog";
+import { eggPrice } from "../../shop/catalog";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
+import { eggPool } from "../../dex/obtain";
+import { EGG_RULES } from "../../egg/rules";
+import { PET_RULES } from "../../party/rules";
+import { SIZE_STEPS, sizeLevelOf } from "../../party/size";
+import { REGION_MIN } from "../../state/rules";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 
@@ -52,8 +57,8 @@ const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
     assert.equal(normalize(raw as unknown, T0)?.pets[0]?.size, want, `옛 크기 ${old}`);
   }
   assert.deepStrictEqual([1, 1.5, 2, 2.5, 3].map(sizeLevelOf), [1, 2, 3, 4, 5]);
-  assert.equal(sizeLevelOf(SAVE_V3_RULES.pet.size), DEFAULT_SIZE_LEVEL, "새 개체는 기본 단계");
-  assert.equal(DEFAULT_SIZE_LEVEL, 2);
+  assert.equal(sizeLevelOf(PET_RULES.size), sizeLevelOf(PET_RULES.size), "새 개체는 기본 단계");
+  assert.equal(sizeLevelOf(PET_RULES.size), 2);
   // 무대 배율 — 단계 배율 그대로, 몸이 상한을 넘으면 들어가는 가장 큰 단계로
   assert.equal(zoomOf(1.5, { w: 20, h: 20 }), 1.5);
   assert.equal(zoomOf(3, { w: 1000, h: 1000 }), 1);
@@ -166,16 +171,16 @@ function seedPet(): SaveV3 {
   }
   state.points.balance = 100_000;
   // 빈 칸 3 — 알 셋을 먼저 넣어 둔다
-  assert.ok(ex.run({ id: "egg-pre", name: "shop.buy", args: { productId: "random", count: EGG_V3_RULES.maxEggs - 3 } }).ok);
-  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs - 3);
+  assert.ok(ex.run({ id: "egg-pre", name: "shop.buy", args: { productId: "random", count: EGG_RULES.maxEggs - 3 } }).ok);
+  assert.equal(state?.eggs.length, EGG_RULES.maxEggs - 3);
   const before = state.points.balance;
   const egg4 = ex.run({ id: "buy-egg-4", name: "shop.buy", args: { productId: "random", count: 4 } });
   assert.equal(egg4.ok ? "ok" : egg4.reason, "daycare-full", "빈 칸 3 에 넷은 못 산다");
-  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs - 3, "넘치면 하나도 넣지 않는다");
+  assert.equal(state?.eggs.length, EGG_RULES.maxEggs - 3, "넘치면 하나도 넣지 않는다");
   assert.equal(state?.points.balance, before, "포인트도 그대로");
   const egg3 = ex.run({ id: "buy-egg-3", name: "shop.buy", args: { productId: "random", count: 3 } });
   assert.ok(egg3.ok, JSON.stringify(egg3));
-  assert.equal(state?.eggs.length, EGG_V3_RULES.maxEggs, "빈 칸 3 에 셋");
+  assert.equal(state?.eggs.length, EGG_RULES.maxEggs, "빈 칸 3 에 셋");
   assert.equal(state?.points.balance, before - 3 * (eggPrice("random") ?? 0), "세 개 값을 한 번에 쓴다");
   assert.deepStrictEqual(egg3.ok && (egg3.result as { eggIds?: string[] }).eggIds, state?.eggs.slice(-3).map((e) => e.id), "결과에 새 알 식별자 셋");
   // 단일 포켓몬 알 — 남은 종 2, 기다리는 같은 알 1 이면 하나만 더 산다

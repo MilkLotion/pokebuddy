@@ -24,7 +24,8 @@ import { createPetWindow, PET_WINDOW, type PetWindow } from "./pet-window.js";
 import { createShopWindow, type ShopWindow } from "./shop-window.js";
 import { createBagWindow, type BagWindow } from "./bag-window.js";
 import { createPartyWindow, type PartyWindow } from "./party-window.js";
-import { SOUND_RULES, gainOf } from "../state/settings.js";
+import { gainOf } from "../state/settings.js";
+import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
 import path from "node:path";
 

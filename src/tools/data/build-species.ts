@@ -42,7 +42,7 @@ import path from "node:path";
 import type { GrowthRate, Like } from "../../shared/species";
 import { DATA_DIR, csv, must, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
 import { isRegional, regionalOf } from "../../dex/regional";
-import { singleSpecies } from "../../shop/catalog";
+import { singleSpecies } from "../../dex/obtain";
 
 const OUT = path.join(DATA_DIR, "species.defaults.json");
 

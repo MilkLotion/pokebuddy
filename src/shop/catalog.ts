@@ -86,11 +86,6 @@ export function eggNote(kind: string, opts?: DexOptions): string | null {
   return eggTable(opts)[kind]?.note ?? null;
 }
 
-// [임시] 옛 자리의 다시 내보내기 — src/tools 와 scripts/build-verify.cjs 가 새 자리에서 가져오면 지운다
-//   종을 얻는 길은 src/dex/obtain.ts, 알을 줄 수 있는지는 src/egg/pool.ts 에 있다
-export { eggOfSpecies, eggPool, fixedEggs, inRandomEgg, isSingleEgg, singleSpecies } from "../dex/obtain.js";
-export { canGiveEgg, eggBonus, singleLeft } from "../egg/pool.js";
-
 // 상품 하나를 찾는다. 알 · 도구 · 종 순서로 본다
 export function find(id: string, opts?: DexOptions): Product | null {
   const price = eggPrice(id, opts);

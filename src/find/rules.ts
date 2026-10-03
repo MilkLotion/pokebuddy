@@ -5,7 +5,6 @@
 // 마리끼리 독립이다. 2026-09-29 사용자 결정 "모든 포켓몬들이 개별확률로 돌아야해 … 대충 매초 1/2000 의 확률로 주워야해"
 // 주웠을 때 항목은 가중치로 고른다. 포켓몬 수집 난이도 가중치(100·50·20·…·1)를 따른다 (2026-09-29 사용자 결정)
 import type { FindKind } from "../shared/save-v3";
-import { TIME_RULES } from "../state/rules.js";
 
 export const FIND_RULES = {
   perSecond: 1 / 2000, // 마리가 조건을 채운 1초마다 주울 확률. 2026-09-29 사용자 결정
@@ -13,6 +12,4 @@ export const FIND_RULES = {
   points: { min: 5, max: 10 }, // 포인트 양 — 균등. 2026-09-29 사용자 결정
   itemMaxPrice: 200, // 도구 후보 — 상점가가 0 초과 이 값 이하. 가중치는 1/가격. 제안값, 사용자 확인 전
   keep: 20, // 저장에 남기는 최근 줍기 기록 수 — 알림 배너가 이 기록으로 선다. 제안값
-  // [임시] 옛 이름 — src/tools/selftest-find.ts 가 TIME_RULES.maxGapMs 를 읽으면 지운다. 줍기의 굴림은 TIME_RULES.maxGapMs 로 거른다 (src/find/core.ts)
-  maxGapMs: TIME_RULES.maxGapMs,
 };

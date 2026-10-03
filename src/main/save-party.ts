@@ -10,7 +10,7 @@
 //
 // 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다.
 import fs from "node:fs";
-import { appearanceOf } from "../dex/appearance";
+import { appearanceOf } from "../dex/look";
 import path from "node:path";
 import { sendToWriter } from "../save/command-channel.js";
 import { backupName, createEmptySave, readSave } from "../save/save-file.js";

@@ -6,7 +6,8 @@
 //   받기   claim_mail → mail.apply. 서버가 받은 기록을 남긴 뒤 넣는다
 //   복구   목록에 받은 시각이 있는데 이 저장에 넣지 않은 편지는 목록의 선물로 넣는다 — 받은 뒤 넣기 전에 끊긴 경우
 import { boxRoom } from "../box/slots.js";
-import { giftItemName, isApplied, isRead, neededBoxRoom, parseGifts, type Gift } from "../mail/core.js";
+import { giftItemName, neededBoxRoom, parseGifts, type Gift } from "../mail/gifts.js";
+import { isApplied, isRead } from "../mail/letters.js";
 import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
 import type { TxResult } from "../shared/command";

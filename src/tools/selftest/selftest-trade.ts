@@ -6,13 +6,15 @@
 import assert from "node:assert";
 import path from "node:path";
 import { devRunAt, onlineConfig } from "../../trade/config";
-import { apply, isLocked, isSinglePet, lock, offerable, refOf, snapshot, unlock, validateReceived, type TradePet } from "../../trade/core";
+import { apply, lock, offerable, refOf, snapshot, unlock, validateReceived, type TradePet } from "../../trade/core";
 import { newPet } from "../../party/create";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
 import { empty, normalize } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
+import { isSinglePet } from "../../dex/forms";
+import { isTradeLocked } from "../../party/pet-actions";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 27, 12, 0, 0).getTime();
 
@@ -78,13 +80,13 @@ const eevee: TradePet = {
 {
   const s = seed();
   assert.deepStrictEqual(lock(s, "ch1", "p1", 3), { ok: true });
-  assert.equal(isLocked(s, "p1"), true);
+  assert.equal(isTradeLocked(s, "p1"), true);
   assert.deepStrictEqual(lock(s, "ch1", "p1", 4), { ok: true }, "같은 채널은 판 번호만 바꾼다");
   assert.equal(s.trade?.pending?.offerRev, 4);
   assert.deepStrictEqual(lock(s, "ch2", "p2", 1), { ok: false, reason: "busy" }, "다른 채널은 잠그지 못한다");
   assert.equal(unlock(s, "ch2"), false, "다른 채널의 잠금은 풀지 않는다");
   assert.equal(unlock(s, "ch1"), true);
-  assert.equal(isLocked(s, "p1"), false);
+  assert.equal(isTradeLocked(s, "p1"), false);
   process.stdout.write("(3) 잠그기·풀기  ok\n");
 }
 

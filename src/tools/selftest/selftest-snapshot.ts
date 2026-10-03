@@ -5,10 +5,13 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { MINT_RETIRED } from "../../bag/mint";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { snapshot } from "../../tx/snapshot";
+import { BOX_RULES } from "../../box/rules";
+import { EGG_RULES } from "../../egg/rules";
+import { PARTY_RULES } from "../../party/rules";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 const MIN = 60_000;
@@ -95,7 +98,7 @@ function seed(): SaveV3 {
   assert.equal(v.party.slots[0]?.pet?.hidden, false);
   assert.equal(v.party.slots[1]?.pet?.hidden, true);
   assert.equal(v.party.shown, 1, "보이는 개체는 하나");
-  assert.equal(v.party.usable, SAVE_V3_RULES.party.openAtStart, "쓸 수 있는 칸");
+  assert.equal(v.party.usable, PARTY_RULES.openAtStart, "쓸 수 있는 칸");
   process.stdout.write("(4) 숨김과 표시 수  ok\n");
 }
 
@@ -135,7 +138,7 @@ function seed(): SaveV3 {
   const v = snapshot(seed());
   const box = v.boxes[0];
   assert.equal(box?.used, 1);
-  assert.equal(box?.size, SAVE_V3_RULES.box.size);
+  assert.equal(box?.size, BOX_RULES.size);
   assert.equal(box?.slots[0]?.name, "꼬부기");
   assert.equal(box?.slots[1], null, "빈 칸은 null");
   process.stdout.write("(6) 박스 사용 칸과 개체  ok\n");
@@ -149,7 +152,7 @@ function seed(): SaveV3 {
   assert.equal(egg?.remainSec, 120);
   assert.equal(egg?.percent, 60, "5분 중 3분이 지났다");
   assert.equal(v.eggs.used, 1);
-  assert.equal(v.eggs.size, EGG_V3_RULES.maxEggs);
+  assert.equal(v.eggs.size, EGG_RULES.maxEggs);
   process.stdout.write("(7) 알 남은 시간과 진행  ok\n");
 }
 

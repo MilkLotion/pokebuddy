@@ -35,8 +35,6 @@ export const isNatureId = (id: string, opts?: DexOptions): id is NatureId => nat
 // 축 값 — 모르는 id 면 전부 0. 항상 새 객체
 export const axesOf = (id: string, opts?: DexOptions): Record<Axis, AxisValue> => ({ ...(nature(id, opts)?.axes ?? NEUTRAL_AXES) });
 
-// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/dex/rules.ts)로 가면 지운다
-export { QUIRK_RULES };
 
 // 변덕은 마리별로 어긋난 주기에 한 축이 잠깐 바뀜 — 시각 주입, 저장·재시작에도 같은 결과
 export function axesAt(id: string, petId: string, now: number): Record<Axis, AxisValue> {

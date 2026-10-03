@@ -48,12 +48,10 @@ export interface Candidate {
   ready: boolean; // 지금 조건을 채웠다
   // 못 채운 조건 — 순서는 성별 하나 / 시간대 하나 / 주 조건 → 더하는 친밀도 → 지도. 채웠으면 빈 목록
   lacks: EvoMissing[];
-  // [임시] 옛 모양 — lacks 를 `kind:값` 으로 쓰고 `|` 로 잇는다 ("level:36|item:region-map"). src/tools/selftest/selftest-evolve.ts 가 이 글자를 견준다. 견주는 쪽이 lacks 로 가면 지운다
-  missing?: string;
   map?: true; // 지도 간선 — 지도를 쓴다
 }
 
-// 못 채운 조건 하나의 옛 글자 — `level:36`
+// 못 채운 조건 하나를 `kind:값` 으로 — `level:36`. 로그와 시험이 쓴다
 export function missingKey(m: EvoMissing): string {
   if (m.kind === "level") return `level:${m.level}`;
   if (m.kind === "affinity") return `affinity:${m.value}`;
@@ -120,8 +118,7 @@ export function candidates(save: SaveV3, petId: string, dayPart: DayPart, opts?:
   const have = formsOf(pet, opts);
   return nextOf(pet.species, opts).filter((step) => !have.includes(step.to)).map((step) => {
     const { ready, lacks } = checkNeed(save, petId, step, dayPart);
-    const missing = ready ? undefined : lacks.map(missingKey).join("|");
-    return { to: step.to, need: step.need ?? { kind: "affinity", value: 100 }, when: step.when, ready, lacks, missing, ...(step.map ? { map: true as const } : {}) };
+    return { to: step.to, need: step.need ?? { kind: "affinity", value: 100 }, when: step.when, ready, lacks, ...(step.map ? { map: true as const } : {}) };
   });
 }
 

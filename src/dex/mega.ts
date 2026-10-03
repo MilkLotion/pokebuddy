@@ -122,6 +122,3 @@ export function grantStones(save: SaveV3, opts?: DexOptions): string[] {
 
 // 개체가 고를 수 있는 메가 모습 — 메가스톤이 없으면 빈 목록
 export const megaChoices = (pet: PetV3, opts?: DexOptions): string[] => (pet.mega?.stone === true ? megaFormsOf(pet.species, opts) : []);
-
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/party/mega-form.ts)에서 가져오면 지운다
-export { megaRivals, setMega, settleMega, type MegaFailure, type MegaResult } from "../party/mega-form.js";

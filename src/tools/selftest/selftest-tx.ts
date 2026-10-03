@@ -7,11 +7,12 @@ import assert from "node:assert";
 import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
-import { createDispatcher } from "../../commands/dispatcher";
 import type { CommandResult } from "../../shared/command";
-import { argsOf, registerV3, requestIdOf, V3_COMMANDS } from "../../tx/bridge";
 import { createExecutor, type TxHandler, type TxPorts } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
+import { argsFromCommand } from "../../tx/args";
+import { HANDLERS } from "../../tx/command-table";
+import { requestIdOf, runTxCommand } from "../../tx/commands";
+import { createDispatcher, registerTxCommands, SURFACE_TX_NAMES } from "../../tx/dispatcher";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -356,8 +357,8 @@ async function bridgeChecks(): Promise<void> {
     const f = fake(seedBox());
     const tx = createExecutor(f.ports, HANDLERS);
     const d = createDispatcher();
-    const off = registerV3(d, tx);
-    for (const cmd of V3_COMMANDS) assert.equal(d.has(cmd), true, `${cmd} 을 맡는다`);
+    const off = registerTxCommands(d, (c) => runTxCommand(tx, c));
+    for (const cmd of SURFACE_TX_NAMES) assert.equal(d.has(cmd), true, `${cmd} 을 맡는다`);
     const res = await d.dispatch({ cmd: "party.hide", target: "p1", from: "menu", at: T0 });
     assert.equal(res.ok, true);
     assert.equal(res.reason, "ok");
@@ -376,12 +377,12 @@ async function bridgeChecks(): Promise<void> {
 
   // (16) target 과 args 를 명령마다 다른 모양으로 바꾼다
   {
-    assert.deepStrictEqual(argsOf({ cmd: "party.keep", target: "p1", from: "menu" }), { petId: "p1" });
-    assert.deepStrictEqual(argsOf({ cmd: "party.swap", target: "p2", from: "menu", args: { slotIndex: 3 } }), { petId: "p2", slotIndex: 3 });
-    assert.deepStrictEqual(argsOf({ cmd: "egg.open", target: "e1", from: "menu" }), { eggId: "e1" });
-    assert.deepStrictEqual(argsOf({ cmd: "bag.use", target: "mint", from: "menu", args: { petId: "p1", nature: "brave" } }), { itemId: "mint", petId: "p1", nature: "brave" });
-    assert.deepStrictEqual(argsOf({ cmd: "shop.buy", target: "random", from: "cli" }), { productId: "random" });
-    assert.deepStrictEqual(argsOf({ cmd: "bag.sell", target: "fire-stone", from: "menu", args: { count: 2 } }), { itemId: "fire-stone", count: 2 });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "party.keep", target: "p1", from: "menu" }), { petId: "p1" });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "party.swap", target: "p2", from: "menu", args: { slotIndex: 3 } }), { petId: "p2", slotIndex: 3 });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "egg.open", target: "e1", from: "menu" }), { eggId: "e1" });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "bag.use", target: "mint", from: "menu", args: { petId: "p1", nature: "brave" } }), { itemId: "mint", petId: "p1", nature: "brave" });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "shop.buy", target: "random", from: "cli" }), { productId: "random" });
+    assert.deepStrictEqual(argsFromCommand({ cmd: "bag.sell", target: "fire-stone", from: "menu", args: { count: 2 } }), { itemId: "fire-stone", count: 2 });
     process.stdout.write("(16) 다리 · 인자 모양 바꾸기  ok\n");
   }
 
@@ -390,7 +391,7 @@ async function bridgeChecks(): Promise<void> {
     const f = fake(seedBox());
     const tx = createExecutor(f.ports, HANDLERS);
     const d = createDispatcher();
-    registerV3(d, tx);
+    registerTxCommands(d, (c) => runTxCommand(tx, c));
     const send = (): Promise<CommandResult> =>
       d.dispatch({ cmd: "party.keep", target: "p1", from: "cli", at: T0, args: { reqId: "once" } });
     const first = await send();
@@ -407,7 +408,7 @@ async function bridgeChecks(): Promise<void> {
     const f = fake(seedBox());
     const tx = createExecutor(f.ports, HANDLERS);
     const d = createDispatcher();
-    registerV3(d, tx);
+    registerTxCommands(d, (c) => runTxCommand(tx, c));
     const res = await d.dispatch({ cmd: "party.place", target: "p1", from: "menu", at: T0 });
     assert.equal(res.ok, false);
     assert.equal(res.reason, "not-in-box", "규칙 실패 이유를 그대로");

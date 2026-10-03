@@ -30,6 +30,7 @@ import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
 import { makeTmp } from "../harness/tmp-dir";
+import { PARTY_RULES } from "../../party/rules";
 
 const out = (line: string): void => {
   process.stdout.write(`${line}\n`);
@@ -121,7 +122,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
 // ── dev-save (저장 v3) ─────────────────────────────────────────────────────────
 {
   const many = devSaveState(["a", "b", "c", "d", "e", "f", "g", "h"], { now: T0, rng: () => 0 });
-  eq(many.pets.length, SAVE_V3_RULES.party.total, "dev-save 는 파티 칸 수로 자른다");
+  eq(many.pets.length, PARTY_RULES.total, "dev-save 는 파티 칸 수로 자른다");
   eq(many.party.slots.every((slot) => slot.state === "pokemon" && slot.hidden === false), true, "dev-save 는 모든 마리를 꺼내 놓는다");
   eq(many.starterPetId, "p1", "첫 마리를 첫 선택으로 기억한다");
 }

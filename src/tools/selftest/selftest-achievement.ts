@@ -4,13 +4,10 @@
 // 계약은 docs/specs/game.md "파티 칸과 업적", "튜토리얼" 이다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { GROUPS, claim, defs, evaluate, isAchieved, progressOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon, rewardSpecies } from "../../achievement/core";
-import { EGG_V3_RULES, SAVE_V3_RULES } from "../../save/rules";
+import { SAVE_V3_RULES } from "../../save/rules";
 import { regionalOf } from "../../dex/regional";
 import { profile, slugs } from "../../dex/species";
-import { eggPool, sellsSpecies, singleSpecies } from "../../shop/catalog";
-import { isSinglePet } from "../../trade/core";
-import { pendingOf } from "../../notify/queue";
+import { sellsSpecies } from "../../shop/catalog";
 import { snapshot } from "../../tx/snapshot";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
@@ -18,9 +15,19 @@ import { begin } from "../../party/starter";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
 import { buy } from "../../shop/buy";
 import { open } from "../../egg/open";
-import { HANDLERS } from "../../tx/handlers";
 import { createExecutor } from "../../tx/executor";
-import { canShow, currentTutorial, done, queueTutorials, skip } from "../../tutorial/core";
+import { claim } from "../../achievement/claim";
+import { defs, GROUPS, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../../achievement/defs";
+import { evaluate } from "../../achievement/evaluate";
+import { isAchieved, progressOf } from "../../achievement/progress";
+import { ACHIEVEMENT_RULES } from "../../achievement/rules";
+import { isSinglePet } from "../../dex/forms";
+import { eggPool, rewardSpecies, singleSpecies } from "../../dex/obtain";
+import { EGG_RULES } from "../../egg/rules";
+import { pendingOf } from "../../notify/pending";
+import { PET_RULES } from "../../party/rules";
+import { canShow, currentTutorial, done, queueTutorials, skip } from "../../tutorial/queue";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -233,7 +240,7 @@ function seed(): SaveV3 {
   const got = s.pets.find((p) => p.id === res.petId);
   assert.equal(got?.species, "lapras");
   assert.equal(got?.shiny, false);
-  assert.equal(got?.level, SAVE_V3_RULES.pet.level, "새 개체의 시작 값");
+  assert.equal(got?.level, PET_RULES.level, "새 개체의 시작 값");
   assert.equal(res.slotIndex, 1);
   assert.equal(res.toBox, false);
   assert.deepStrictEqual(s.party.slots[1], { state: "pokemon", petId: res.petId, hidden: false }, "꺼낸 상태로 파티에");
@@ -524,7 +531,7 @@ function seed(): SaveV3 {
   assert.ok((s.eggs[0]?.candidates.length ?? 0) > 0);
 
   got(s, "hatch-200");
-  while (s.eggs.length < EGG_V3_RULES.maxEggs) s.eggs.push({ ...s.eggs[0]!, id: `e${s.eggs.length + 10}`, kind: "random" });
+  while (s.eggs.length < EGG_RULES.maxEggs) s.eggs.push({ ...s.eggs[0]!, id: `e${s.eggs.length + 10}`, kind: "random" });
   assert.equal(claim(s, "hatch-200", T0 + 1).reason, "daycare-full");
   assert.equal(s.achievements["hatch-200"]?.claimedAt, null, "미수령으로 남는다");
   s.eggs.length = 0;
@@ -566,7 +573,7 @@ function seed(): SaveV3 {
   s.dex.obtained = Array.from({ length: 50 }, (_, i) => `x${i}`);
   assert.deepStrictEqual(evaluate(s, T0), [], "첫 판정은 알리지 않는다");
   assert.equal(s.achievements["dex-50"]?.quiet, true);
-  assert.equal(s.achRev, SAVE_V3_RULES.achievementRev);
+  assert.equal(s.achRev, ACHIEVEMENT_RULES.rev);
   assert.equal(pendingOf(s, T0).some((p) => p.kind === "achievement"), false, "배너 줄에 서지 않는다");
   assert.equal(snapshot(s).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
   s.dex.obtained = Array.from({ length: 150 }, (_, i) => `x${i}`);
@@ -582,7 +589,7 @@ function seed(): SaveV3 {
   const raw = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
   const back = normalize(raw, T0 + 2000);
   assert.equal(back?.achievements["dex-50"]?.quiet, true);
-  assert.equal(back?.achRev, SAVE_V3_RULES.achievementRev);
+  assert.equal(back?.achRev, ACHIEVEMENT_RULES.rev);
   delete raw.counts;
   delete raw.achRev;
   raw.eggSeq = 7;

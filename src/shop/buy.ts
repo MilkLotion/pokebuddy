@@ -48,10 +48,6 @@ export interface BuyResult {
   boxId?: string; // 새로 산 박스
 }
 
-// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리에서 가져오면 지운다
-//   새 알은 src/egg/pool.ts, 새 개체를 둘 곳은 src/party/create.ts 에 있다
-export { hasRoom, newEgg, nextEggId, placeNew, randomPool };
-
 // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다. 새 프리셋은 두 칸이 열린 채 비어 있다
 function buyPreset(save: SaveV3): BuyResult {
   const can = presetBuyable(save);

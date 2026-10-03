@@ -22,7 +22,7 @@ import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
+import { HANDLERS } from "../../tx/command-table";
 
 const APP_VERSION = "0.13.0"; // 서버 최소 버전(cloud_private.settings) 이상
 const PROTOCOL = onlineConfig(undefined, {}).protocol;

@@ -19,9 +19,6 @@ import { isApplied, mailOf, remember } from "./letters.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number };
 
-// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽이 새 자리(src/mail/rules.ts)로 가면 지운다
-export { MAIL_RULES };
-
 interface NamedEntry {
   ko: string;
 }
