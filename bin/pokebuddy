@@ -67,11 +67,11 @@ switch (parsed.kind) {
       process.exitCode = 2;
       break;
     }
-    void require("../dist/cli/game.js").game(["trade.join", "-", `link=${process.argv[3]}`]);
+    void require("../dist/cli/game.js").runGameCommand(["trade.join", "-", `link=${process.argv[3]}`]);
     break;
   case "game":
     needDist();
-    void require("../dist/cli/game.js").game(process.argv.slice(3));
+    void require("../dist/cli/game.js").runGameCommand(process.argv.slice(3));
     break;
   case "help":
     process.stdout.write(`${USAGE}\n`);
