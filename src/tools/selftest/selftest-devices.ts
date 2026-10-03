@@ -7,10 +7,10 @@ import assert from "node:assert";
 import { candyMax, candyResult } from "../../bag/preview";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { bagDeviceOf, type BagDeviceInput } from "../../view/device-bag";
-import { partyDeviceOf } from "../../view/device-party";
-import { petDeviceOf } from "../../view/device-pet";
-import { shopDeviceOf, type ShopDeviceInput } from "../../view/device-shop";
+import { bagDeviceModel, type BagDeviceInput } from "../../view/device-bag";
+import { partyDeviceModel } from "../../view/device-party";
+import { petDeviceModel } from "../../view/device-pet";
+import { shopDeviceModel, type ShopDeviceInput } from "../../view/device-shop";
 import { snapshot } from "../../view/snapshot";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -39,7 +39,7 @@ function seed(): SaveV3 {
 const v = snapshot(seed(), undefined, undefined, undefined, T0);
 const bagIn = (over: Partial<BagDeviceInput>): BagDeviceInput => ({ itemId: "rare-candy", mode: "use", targetPetId: "p1", qty: 1, sellQty: 1, notice: "", result: null, busy: false, ...over });
 const bag = (over: Partial<BagDeviceInput>) => {
-  const r = bagDeviceOf(v, bagIn(over));
+  const r = bagDeviceModel(v, bagIn(over));
   assert.ok(r, `가방 모델이 있다 (${JSON.stringify(over)})`);
   return r;
 };
@@ -91,7 +91,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.deepEqual(sell.model.qty, { count: 3, cap: 3, hint: "최대 3 · 보유 수" });
   assert.match(sell.model.preview.lead, /^받는 포인트 [\d,]+P$/);
   assert.equal(sell.model.party, null);
-  assert.equal(bagDeviceOf(v, bagIn({ itemId: "없는도구" })), null, "가방에 없으면 닫는다");
+  assert.equal(bagDeviceModel(v, bagIn({ itemId: "없는도구" })), null, "가방에 없으면 닫는다");
 }
 
 // (5) 파티가 비면 사용 단추를 막는다
@@ -99,7 +99,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const s = seed();
   s.party.slots[0] = { state: "empty" };
   s.party.slots[1] = { state: "empty" };
-  const r = bagDeviceOf(snapshot(s, undefined, undefined, undefined, T0), bagIn({}));
+  const r = bagDeviceModel(snapshot(s, undefined, undefined, undefined, T0), bagIn({}));
   assert.deepEqual([r?.input.targetPetId, r?.model.preview.lead, r?.model.go.disabled], [null, "쓸 포켓몬이 없어요", true]);
 }
 
@@ -107,7 +107,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 {
   const shopIn = (productId: string, over: Partial<ShopDeviceInput> = {}): ShopDeviceInput => ({ productId, qty: 1, notice: "", done: null, busy: false, ...over });
   const shop = (productId: string, over: Partial<ShopDeviceInput> = {}) => {
-    const r = shopDeviceOf(v, shopIn(productId, over));
+    const r = shopDeviceModel(v, shopIn(productId, over));
     assert.ok(r, `상점 모델이 있다 (${productId})`);
     return r;
   };
@@ -128,15 +128,15 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(locked.model.buy.disabled, true);
   assert.equal(shop("toy", { notice: "안 돼요" }).model.total.tone, "bad");
   assert.equal(shop("toy", { done: { lead: "샀어요", line: "" } }).model.total.tone, "ok");
-  assert.equal(shopDeviceOf(v, shopIn("없는상품")), null);
+  assert.equal(shopDeviceModel(v, shopIn("없는상품")), null);
 }
 
 // (7) 파티 교체 — 든 개체가 파티에서 빠졌으면 놓고, 박스 개체를 든 동안 빈 칸이 놓을 칸이다
 {
-  const gone = partyDeviceOf(v, { heldPetId: "p3", heldFromBox: false, notice: "" });
+  const gone = partyDeviceModel(v, { heldPetId: "p3", heldFromBox: false, notice: "" });
   assert.equal(gone.input.heldPetId, null);
   assert.ok(gone.model.slots.every((s) => !s.target), "든 것이 없으면 놓을 칸이 없다");
-  const held = partyDeviceOf(v, { heldPetId: "p1", heldFromBox: false, notice: "실패" });
+  const held = partyDeviceModel(v, { heldPetId: "p1", heldFromBox: false, notice: "실패" });
   assert.deepEqual(held.model.slots.slice(0, 3).map((s) => [s.state, s.held, s.target, s.art]), [["pokemon", true, false, "portrait:pikachu"], ["pokemon", false, false, "portrait:charmander:shiny"], ["locked", false, false, null]]);
   assert.equal(held.model.notice, "실패");
   assert.equal(held.model.presets.length, v.party.preset.max);
@@ -144,7 +144,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (8) 파티 상세 — 자리 글자, 튜토리얼은 파티 개체만
 {
-  const where = (id: string) => petDeviceOf(v, { petId: id, notice: "", dexOpen: false })?.model;
+  const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", dexOpen: false })?.model;
   assert.deepEqual([where("p1")?.where, where("p1")?.slotIndex, where("p1")?.tutorial], ["파티 1번 · 나와 있음", 0, v.detailTutorial]);
   assert.equal(where("p2")?.where, "파티 2번 · 볼 안");
   assert.deepEqual([where("p3")?.where, where("p3")?.inParty, where("p3")?.tutorial], [`${v.boxes[0]?.name} · 보관 중`, false, false]);

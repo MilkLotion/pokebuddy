@@ -13,7 +13,7 @@ export interface PetDeviceInput {
 }
 
 // 고른 개체가 파티와 박스에 없으면 null(기기 창을 닫는다)
-export function petDeviceOf(v: Snapshot, given: PetDeviceInput): DeviceResult<PetDeviceOpen, PetDeviceInput> | null {
+export function petDeviceModel(v: Snapshot, given: PetDeviceInput): DeviceResult<PetDeviceOpen, PetDeviceInput> | null {
   const input = { ...given };
   const partyPet = v.party.slots.find((s) => s.pet?.id === input.petId);
   const box = v.boxes.find((b) => b.slots.some((p) => p?.id === input.petId));

@@ -1,5 +1,2 @@
-// 숫자 글자 — 천 단위 쉼표(한국어)와 포인트 표기
-
-export const numberText = (n: number): string => n.toLocaleString("ko-KR");
-
-export const pointText = (n: number): string => `${numberText(n)}P`;
+// [임시] 숫자 글자는 src/shared/count-text.ts 한 벌이다 — 기기 창 모델을 메인으로 옮기는 단계(D10b) 첫 커밋에서 부르는 곳을 그쪽으로 돌리고 이 파일을 지운다
+export { numberText, pointText } from "../../shared/count-text.js";

@@ -5,8 +5,8 @@ import type { BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
 import { candyMax, candyResult } from "../bag/preview.js";
-import { itemArt, portraitArt, type DeviceResult } from "./device-art.js";
-import { numberText, pointText, waitText } from "./units.js";
+import { itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
+import { numberText, pointText, waitText } from "../shared/count-text.js";
 
 // 고른 값 — 설정창이 든다
 export interface BagDeviceInput {
@@ -88,7 +88,7 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
 }
 
 // 고른 도구가 가방에 없으면 null(기기 창을 닫는다)
-export function bagDeviceOf(v: Snapshot, given: BagDeviceInput): DeviceResult<BagDeviceOpen, BagDeviceInput> | null {
+export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult<BagDeviceOpen, BagDeviceInput> | null {
   const item = v.bag.find((i) => i.id === given.itemId);
   if (!item) return null;
   const input = { ...given };
@@ -103,7 +103,7 @@ export function bagDeviceOf(v: Snapshot, given: BagDeviceInput): DeviceResult<Ba
     name: item.name,
     state: `보유 ×${numberText(item.count)}`,
     group: about?.group ?? "",
-    art: itemArt(item.id),
+    art: itemArtKey(item.id),
     spec: (each !== undefined
       ? [
           ["판매가", pointText(each)],
@@ -149,7 +149,7 @@ export function bagDeviceOf(v: Snapshot, given: BagDeviceInput): DeviceResult<Ba
   const party = partyPets(v);
   if (!party.some((p) => p.id === input.targetPetId)) input.targetPetId = party[0]?.id ?? null;
   const pet = party.find((p) => p.id === input.targetPetId) ?? null;
-  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitArt(p.look, p.shiny), picked: p.id === input.targetPetId }));
+  const strip = party.map((p) => ({ petId: p.id, name: p.name, level: `Lv.${p.level}`, art: portraitArtKey(p.look, p.shiny), picked: p.id === input.targetPetId }));
   if (!pet) {
     return { input, model: { ...face, title: v.party.preset.name, pager: v.party.preset.count > 1, party: strip, qty: null, preview: { lead: "쓸 포켓몬이 없어요", line: "파티에 포켓몬을 넣어 주세요", tone: "" }, go: { label: "사용", disabled: true, busy: false } } };
   }

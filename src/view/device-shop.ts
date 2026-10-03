@@ -4,8 +4,8 @@
 // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/view/shop-list.ts)
 import type { ShopDeviceOpen } from "../shared/model/devices.js";
 import type { EggPoolView, ShopItemView, Snapshot } from "../shared/model/snapshot.js";
-import { eggArt, itemArt, portraitArt, type DeviceResult } from "./device-art.js";
-import { numberText, pointText } from "./units.js";
+import { eggArtKey, itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
+import { numberText, pointText } from "../shared/count-text.js";
 
 // 고른 값 — 설정창이 든다
 export interface ShopDeviceInput {
@@ -32,13 +32,13 @@ export function poolCount(pool: EggPoolView): string {
 // 상품 그림 — 알은 색을 바꾼 알 그림, 도구·진화용 도구는 도구 그림, 포켓몬은 초상, 파티 칸은 빈 칸
 function shopArt(item: ShopItemView): string | null {
   if (item.category === "slot") return null;
-  if (item.category === "pokemon") return portraitArt(item.id, false);
-  if (item.category === "egg" && item.id !== "ancient-stone") return eggArt(item.id);
-  return itemArt(item.id);
+  if (item.category === "pokemon") return portraitArtKey(item.id, false);
+  if (item.category === "egg" && item.id !== "ancient-stone") return eggArtKey(item.id);
+  return itemArtKey(item.id);
 }
 
 // 고른 상품이 상점에 없으면 null(기기 창을 닫는다)
-export function shopDeviceOf(v: Snapshot, given: ShopDeviceInput): DeviceResult<ShopDeviceOpen, ShopDeviceInput> | null {
+export function shopDeviceModel(v: Snapshot, given: ShopDeviceInput): DeviceResult<ShopDeviceOpen, ShopDeviceInput> | null {
   const item = v.shop.find((i) => i.id === given.productId);
   if (!item) return null;
   const input = { ...given };

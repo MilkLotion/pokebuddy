@@ -11,8 +11,8 @@ export interface DeviceResult<M, I> {
   input: I;
 }
 
-export const portraitArt = (slug: string, shiny: boolean): string => `portrait:${slug}${shiny ? ":shiny" : ""}`;
+export const portraitArtKey = (slug: string, shiny: boolean): string => `portrait:${slug}${shiny ? ":shiny" : ""}`;
 
-export const itemArt = (id: string): string => `item:${id}`;
+export const itemArtKey = (id: string): string => `item:${id}`;
 
-export const eggArt = (kind: string): string => `egg:${kind}`;
+export const eggArtKey = (kind: string): string => `egg:${kind}`;
