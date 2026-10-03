@@ -7,7 +7,7 @@ import assert from "node:assert";
 import { randomBytes } from "node:crypto";
 import { createOnlineClient, memoryStorage } from "../../online/client";
 import { createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Account } from "../../online/account";
-import { authCodeOf } from "../../online/codes";
+import { authCodeOf, cloudCodeOf, handoffCodeOf, mailCodeOf, sessionCodeOf, tradeCodeOf } from "../../online/codes";
 import { createTradeNet } from "../../online/trade-net";
 import { isUnreachable, type FunctionFailure } from "../../online/server-call";
 import { createSessionGate } from "../../online/session";
@@ -33,6 +33,15 @@ function rules(): void {
   assert.deepEqual(authCodeOf({ message: "TypeError: fetch failed" }), { code: "NETWORK" });
   assert.deepEqual(viewOf(null), { signedIn: false, anonymous: false, method: null, username: null, displayName: null });
   assert.deepEqual(viewOf({ id: "a", is_anonymous: true } as never), { signedIn: false, anonymous: true, method: null, username: null, displayName: null });
+  // 서버에 닿지 못함 — postgrest-js 의 fetch 실패는 빈 코드다. 모든 길이 NETWORK 로 본다 (94 항목 5-4)
+  const emptyCode = { message: "TypeError: request failed", code: "" };
+  assert.equal(authCodeOf(emptyCode).code, "NETWORK", "계정");
+  assert.equal(sessionCodeOf(emptyCode).code, "NETWORK", "세션");
+  assert.equal(cloudCodeOf(emptyCode), "NETWORK", "클라우드");
+  assert.equal(handoffCodeOf(emptyCode), "NETWORK", "이관");
+  assert.equal(tradeCodeOf(emptyCode).code, "NETWORK", "교환");
+  assert.equal(mailCodeOf(emptyCode).code, "NETWORK", "우편");
+  assert.equal(authCodeOf({ message: "server exploded", code: "XX000" }).code, "UNKNOWN", "코드가 있으면 연결 실패가 아니다");
   // 함수에 닿지 못함 — 저장 올리기와 계정 삭제가 같은 판정을 쓴다 (94 항목 4-5)
   const failure = (over: Partial<FunctionFailure>): FunctionFailure => ({ bodyCode: null, status: null, transport: false, message: "", ...over });
   for (const status of [502, 503, 504]) assert.equal(isUnreachable(failure({ status })), true, `게이트웨이 ${status}`);

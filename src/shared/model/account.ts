@@ -94,9 +94,12 @@ export type AccountAction =
   | { action: "rename"; displayName: string }
   | { action: "delete" }; // 성공하면 저장을 백업하고 앱을 다시 켠다(D12)
 
+// 아이디 중복 확인의 결과 — NETWORK 는 서버에 닿지 못함, UNKNOWN 은 서버가 다른 실패를 돌려줌(입력 중에는 둘 다 글을 보이지 않는다)
+export type UsernameCheck = "available" | "taken" | "invalid" | "NETWORK" | "UNKNOWN";
+
 export interface AccountReply {
   ok: boolean;
   code: AccountReplyCode | null; // 실패 코드 — AUTH_* · SAVE_BACKUP_FAILED · NETWORK
-  check?: "available" | "taken" | "invalid" | "NETWORK"; // check-username 의 결과
+  check?: UsernameCheck; // check-username 의 결과
   screen: AccountScreen;
 }
