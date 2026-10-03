@@ -4,14 +4,12 @@
 // 설정·경로는 config.js에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
-import { app, nativeImage, safeStorage, screen, Notification } from "electron";
+import { app, nativeImage, screen, Notification } from "electron";
 import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
-import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../save/key";
-import { isSealedOnDisk } from "../save/save-file";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
-import { createArtLoader } from "./art";
+import { createArtLoader, type ArtLoader } from "./art";
 import { createOverworldSource } from "./overworld-art";
 import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES } from "./layout";
@@ -64,6 +62,7 @@ import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
 import { createTicks } from "./app/ticks";
 import { createRun } from "./app/quit";
+import { bootSaveKey } from "./app/boot";
 
 // 전역 시계 — 1초마다 틱을 낸다 (src/main/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
@@ -436,44 +435,10 @@ const power = createPower({
   log,
 });
 
-async function main(): Promise<void> {
-  if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
-  power.start();
-  if (process.platform === "darwin") {
-    // Dock 을 숨기기 전에 로고를 한 번 — 숨기지 않는 구간(선택 창 등)이 생겨도 기본 Electron 아이콘이 아니게. 로고가 아직 없으면 건너뛴다
-    const logo = logoFile(512);
-    if (logo) app.dock?.setIcon(nativeImage.createFromPath(logo));
-    app.dock?.hide();
-  }
+// 부팅 — 단계마다 함수 하나. 부르는 순서와 중단 조건은 main() 이 가진다 (worklog/records/code-structure/design/10-main.md 4.1절)
 
-  // 저장 키를 먼저 푼다 — 저장 읽기·쓰기가 이 키로 암호화한다 (src/save/key.ts). 기존 평문 저장은 여기서 한 번 옮긴다.
-  // 비동기 safeStorage 만 쓴다 — mac 은 키체인 허용 창이 뜨면 동기 호출이 메인을 멈춘다(src/main/trade.ts 와 같은 이유)
-  // 개발 실행·업데이트 시험 빌드만 POKEBUDDY_SAVE_CRYPT=off 로 새 키를 만들지 않는다 — 저장을 직접 읽는 E2E 용. 이미 키가 있으면 그대로 쓴다
-  const keyOptions: PrepareSaveKeyOptions = {
-    saveFile: PATHS.save,
-    vault: {
-      available: () => safeStorage.isAsyncEncryptionAvailable(),
-      encrypt: (text) => safeStorage.encryptStringAsync(text),
-      decrypt: (data) => safeStorage.decryptStringAsync(data),
-    },
-    create: !((isDevRun() || updateTestBuild) && process.env.POKEBUDDY_SAVE_CRYPT === "off"),
-  };
-  let saveKey = await prepareSaveKey(keyOptions);
-  log?.({ boot: "save-key", ...saveKey });
-  // 키 없이 도는데 암호화 저장이 있다(키체인 거부·키 파일 잠김·키 저장소 없음) — 저장을 옮기지 않고 묻는다.
-  // 종료면 저장을 그대로 두고 끝낸다. 새로 시작이면 키와 저장을 백업(.unreadable-<시각>)하고 다시 준비한다 — 계정 저장은 클라우드가 받는다
-  if (saveKey.status !== "ok" && saveKey.status !== "reset" && isSealedOnDisk(PATHS.save)) {
-    const answer = await askSaveLocked();
-    if (answer === "fresh" && setAsideKeyAndSave(PATHS.save)) {
-      saveKey = await prepareSaveKey(keyOptions);
-      log?.({ boot: "save-key", after: "fresh", ...saveKey });
-    } else {
-      reportFailure(PATHS, config.slug, t("save.locked.message"), "save-locked");
-      app.quit();
-      return;
-    }
-  }
-
+// 5단계 핵심 — 거래 실행기·배너·알림 줄·저장 감시(writer 잡기)
+function bootCore(): { reader: GameV3; saveSource: SaveParty } {
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다.
   // 두 PC 규칙으로 멈춘 동안(halted)과 새로 시작하는 중(restarting — 저장을 백업으로 옮긴다)도 쓰지 않는다
   // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/online/save-kind.ts)은 바로, 나머지는 2분 스로틀
@@ -501,6 +466,11 @@ async function main(): Promise<void> {
   const saveSource = createSaveParty({ game: reader, paths: PATHS, log });
   party = saveSource;
 
+  return { reader, saveSource };
+}
+
+// 6단계 수명 감시
+function bootLifetime(): Lifetime {
   // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
   lifetime = createLifetime({
     lockFile: PATHS.companionLock,
@@ -508,7 +478,12 @@ async function main(): Promise<void> {
     quit: () => app.quit(),
   });
   lifetime.start();
+  return lifetime;
 
+}
+
+// 그림 미리 받기 — 첫 실행이면 스타터 초상부터
+function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: string[] } {
   // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/portraits.ts).
   // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
@@ -521,6 +496,11 @@ async function main(): Promise<void> {
     .then((r) => log?.({ prefetch: "done", ms: Date.now() - prefetchAt, ...r }))
     .catch((e) => log?.({ prefetch: "failed", message: String(e) }));
 
+  return { pics, starterList };
+}
+
+// 첫 실행 선택 — 취소했거나 저장을 만들지 못했으면 끝내기를 부르고 false
+async function bootStarter(saveSource: SaveParty, pics: Portraits, starterList: string[]): Promise<boolean> {
   // 첫 실행 — 명령에 스타터를 직접 줬으면 그걸로 바로 시작하고, 아니면 선택 창. reader 면 writer 쪽이 첫 실행을 맡는다
   if (saveSource.needsStarter()) {
     const list = starterList;
@@ -537,15 +517,20 @@ async function main(): Promise<void> {
     if (quitting() || !species) {
       reportFailure(PATHS, config.slug, t("starter.skipped"), "starter-cancelled");
       if (!quitting()) app.quit();
-      return;
+      return false;
     }
     if (!saveSource.begin(species)) {
       reportFailure(PATHS, config.slug, t("game.reason.save-failed"), "save-failed");
       app.quit();
-      return;
+      return false;
     }
   }
+  return true;
 
+}
+
+// 무대 — 그림 불러오기·무대 묶음·첫 배치
+function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; group: StageGroup } {
   // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
   const art = createArtLoader(PATHS, {
     overworld: createOverworldSource(PATHS.overworld),
@@ -618,7 +603,12 @@ async function main(): Promise<void> {
   display.sync("sleep"); // 첫 마리부터 설정의 잠들기 기준으로 만든다
   stages.layout(display.lanes(), display.playArea().mode === "all");
   run.markStaged();
+  return { art, group: stages };
 
+}
+
+// 호스트 감시와 명령 통로 — writer 역할이 바뀌면 명령·서비스를 잇거나 끊는다
+function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): Anchor {
   anchor = createAnchor({
     paths: PATHS,
     self: SELF,
@@ -684,22 +674,32 @@ async function main(): Promise<void> {
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 
+  return anchor;
+}
+
+// 첫 무대 그리기와 수명 잠금 — 그림을 하나도 못 받았거나 다른 동반자가 떠 있으면 끝내고 false
+async function bootClaim(saveSource: SaveParty, group: StageGroup, life: Lifetime): Promise<boolean> {
   await refreshParty();
-  if (quitting()) return;
-  if (saveSource.pets().length && !stages.petIds().length) {
+  if (quitting()) return false;
+  if (saveSource.pets().length && !group.petIds().length) {
     // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
     process.stderr.write(`펫 그림을 찾을 수 없음: ${saveSource.pets().map((p) => p.look).join(", ")}\n`);
     app.exit(3);
-    return;
+    return false;
   }
   clearFailure(PATHS, config.slug);
 
-  if (!lifetime.claim()) {
+  if (!life.claim()) {
     // 살아 있는 다른 동반자가 lock 을 쥐고 있다 — 이쪽이 물러난다
     process.stderr.write("동반자가 이미 떠 있음 — 이 프로세스는 끝낸다\n");
     app.quit();
-    return;
+    return false;
   }
+  return true;
+}
+
+// 서비스·업데이트·훅 정리
+function bootServices(saveSource: SaveParty): void {
   // 로그인한 채 켰으면 클라우드 저장을 시작한다 — 교환보다 먼저 만들어 같은 클라이언트를 나눠 쓴다.
   // 켤 때는 boot — 사용자가 이 PC 에 있다. 다른 PC 가 온라인·잠듦이면 바로 넘겨받고, 연결 끊겼으면 확인 창을 띄운다(D17·G2)
   void services.online()?.start("boot");
@@ -713,6 +713,10 @@ async function main(): Promise<void> {
     setImmediate(() => hookUpkeep?.start());
   }
 
+}
+
+// 트레이·첫 동기화·준비 알림·주기 작업·화면 변화 구독
+function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, life: Lifetime): void {
   tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
@@ -729,7 +733,7 @@ async function main(): Promise<void> {
   display.sync("play");
   syncCoach();
   run.markReady();
-  lifetime.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
+  life.check(); // 창이 생겼으니 lock 파일에 ready 를 적는다 — pokebuddy companion 이 이걸 보고 기다림을 끝낸다
 
   run.every(ticks.state, STAGE_RULES.statePollMs);
   clock.on(ticks.clock);
@@ -743,8 +747,40 @@ async function main(): Promise<void> {
   screen.on("display-added", relayout);
   screen.on("display-removed", relayout);
   screen.on("display-metrics-changed", relayout);
-  anchor.start();
-  log?.({ boot: "companion", pets: stages.petIds(), writer: saveSource.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
+  watch.start();
+  log?.({ boot: "companion", pets: group.petIds(), writer: saveSource.isWriter(), stageHtml: fs.existsSync(rendererFile("stage.html")) });
+}
+
+async function main(): Promise<void> {
+  if (duplicate) return; // 둘째 동반자 — 이미 quit 을 불렀다
+  power.start();
+  if (process.platform === "darwin") {
+    // Dock 을 숨기기 전에 로고를 한 번 — 숨기지 않는 구간(선택 창 등)이 생겨도 기본 Electron 아이콘이 아니게. 로고가 아직 없으면 건너뛴다
+    const logo = logoFile(512);
+    if (logo) app.dock?.setIcon(nativeImage.createFromPath(logo));
+    app.dock?.hide();
+  }
+  // 저장 키를 먼저 푼다 (src/main/app/boot.ts bootSaveKey). 잠긴 저장에서 [종료]면 저장을 그대로 두고 끝낸다
+  const keyReady = await bootSaveKey({
+    saveFile: PATHS.save,
+    create: !((isDevRun() || updateTestBuild) && process.env.POKEBUDDY_SAVE_CRYPT === "off"),
+    askLocked: askSaveLocked,
+    onLocked: () => {
+      reportFailure(PATHS, config.slug, t("save.locked.message"), "save-locked");
+      app.quit();
+    },
+    log,
+  });
+  if (!keyReady) return;
+  const { reader, saveSource } = bootCore();
+  const life = bootLifetime();
+  const { pics, starterList } = bootPrefetch(saveSource);
+  if (!(await bootStarter(saveSource, pics, starterList))) return;
+  const { art, group } = bootStage(saveSource, pics);
+  const watch = bootCommands(saveSource, reader, art);
+  if (!(await bootClaim(saveSource, group, life))) return;
+  bootServices(saveSource);
+  bootFinish(saveSource, group, watch, life);
 }
 
 app
