@@ -8,7 +8,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
-import { ART_RULES, zoomOf } from "../../main/art";
+import { ART_RULES, zoomOf } from "../../main/art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageOf, toLocal } from "../../main/layout";
 import { menuView, pickOf, subId } from "../../main/menus";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
@@ -20,7 +20,7 @@ import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stag
 import type { AgentState } from "../../shared/names/agents";
 import { devSaveState } from "../dev/dev-save";
 import { createStage } from "../../main/stage";
-import type { Look, ArtLoader } from "../../main/art";
+import type { Look, ArtLoader } from "../../main/art/stage-art";
 import type { StageWindow } from "../../main/stage-window";
 import { createCommands } from "../../main/commands";
 import { createGame } from "../../main/game";

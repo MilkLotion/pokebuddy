@@ -95,7 +95,7 @@ function stageFiles() {
     }
   }
   // 포켓몬 그림(초상·도구·알)은 넣지 않는다 — 저작권이 The Pokémon Company 에 있어 공개 릴리스로 재배포하지 않는다(2026-09-26 사용자 결정).
-  // 앱이 처음 켜질 때 받아 캐시에 둔다 (src/main/portraits.ts prefetch)
+  // 앱이 처음 켜질 때 받아 캐시에 둔다 (src/main/art/portraits.ts prefetch)
   // 자체 검사와 데이터 생성 도구는 실행에 쓰지 않는다
   fs.rmSync(path.join(stage, "dist", "tools"), { recursive: true, force: true });
   for (const name of runtimePackages()) {

@@ -1,7 +1,7 @@
 // 알 그림 색칠 — 원작 알 그림(sprites/pokemon/egg.png)의 색 아홉 개를 알 종류의 색표(data/eggs.json palette)로 바꾼다.
-// 그림 열쇠 egg:<종류>(src/view/device-art.ts)를 그림 받기(src/main/portraits.ts icons)가 이 함수로 푼다.
+// 그림 열쇠 egg:<종류>(src/view/device-art.ts)를 그림 받기(src/main/art/portraits.ts icons)가 이 함수로 푼다.
 // 알파가 0 인 점은 건너뛴다. 원작 색에 없는 점은 그대로 둔다
-import { decodePng, encodePng } from "./png.js";
+import { decodePng, encodePng } from "../../platform/png.js";
 
 // 원작 알 그림이 쓰는 색 — 색표의 같은 자리 색으로 바꾼다
 export const EGG_SOURCE = ["#5a5241", "#ffffff", "#cdbd83", "#181818", "#fff6de", "#9ccd83", "#cde6b4", "#e6deb4", "#83b46a"] as const;

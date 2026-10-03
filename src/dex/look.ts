@@ -1,7 +1,7 @@
 // 모습 풀이 — 저장의 모습과 그림 열쇠를 한 곳에서 푼다
 // 그림 열쇠는 모습 슬러그에 이로치면 ":shiny" 를 붙인 것이다. 모습은 종 슬러그, 메가 모습(data/mega.json), 리전폼(data/regional.json 의 forms),
 // 성별 그림 이름(data/regional.json 의 gender — 종 슬러그가 아니다) 가운데 하나다
-// 그림 받기(src/main/art.ts·overworld-art.ts·portraits.ts)가 같은 풀이를 쓴다 — 도감 번호를 따로 셈하면 그림 묶음마다 값이 갈린다
+// 그림 받기(src/main/art/stage-art.ts·overworld-art.ts·portraits.ts)가 같은 풀이를 쓴다 — 도감 번호를 따로 셈하면 그림 묶음마다 값이 갈린다
 import type { DexOptions } from "./data";
 import { megaOf, type MegaForm } from "./mega.js";
 import { genderLookInfo, genderLookOf, regionalOf, type GenderLook, type RegionalForm } from "./regional.js";

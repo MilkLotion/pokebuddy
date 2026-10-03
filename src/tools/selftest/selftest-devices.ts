@@ -13,8 +13,8 @@ import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
-import { EGG_SOURCE, tintEgg } from "../../main/egg-art";
-import { decodePng, encodePng } from "../../main/png";
+import { EGG_SOURCE, tintEgg } from "../../main/art/egg-art";
+import { decodePng, encodePng } from "../../platform/png";
 import { snapshot } from "../../view/snapshot";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";

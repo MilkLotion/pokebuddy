@@ -1,7 +1,7 @@
 // 포켓몬 그림 공통 — 창마다 따로 두던 그림 맞춤을 한곳에 둔다 (2026-10-03 사용자 지적 "공통코드로 되어있는게아니야?")
 // - portraitImg: 목록의 초상(<img>). 관리 창·파티 기기 창·가방 기기 창의 파티 줄·도감 기기 창의 진화 트리·포켓몬 메뉴·첫 포켓몬 선택 창이 쓴다
 // - spriteCanvas: 기기 창의 큰 그림(<canvas>). 파티 상세·도감·상점·가방 기기 창이 쓴다
-// 그림은 PokeAPI 기본 그림(96 × 96)이고 data URI 로 온다 (src/main/portraits.ts)
+// 그림은 PokeAPI 기본 그림(96 × 96)이고 data URI 로 온다 (src/main/art/portraits.ts)
 import { opaqueBoxOf, readPixels } from "./image.js";
 
 interface OpaqueBox {

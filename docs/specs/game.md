@@ -1007,8 +1007,8 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 
 그림은 아래와 같다.
 
-- 초상은 PokeAPI 포켓몬 번호로 받는다. 번호는 `forms` 의 `pokemonId` 다. 예: 알로라 라이츄는 `10100` 이다. 리전폼 그림을 받지 못하면 기본형 도감 번호 그림을 쓴다(`src/main/portraits.ts` `portraitIds`).
-- 무대 그림은 PMD 폼 폴더에서 받는다. 폴더는 `forms` 의 `pmd` 다. 예: `0026/0001`. 폼 폴더가 없으면 기본형 폴더로 다시 받는다(`src/main/art.ts` `pmdSources`).
+- 초상은 PokeAPI 포켓몬 번호로 받는다. 번호는 `forms` 의 `pokemonId` 다. 예: 알로라 라이츄는 `10100` 이다. 리전폼 그림을 받지 못하면 기본형 도감 번호 그림을 쓴다(`src/main/art/portraits.ts` `portraitIds`).
+- 무대 그림은 PMD 폼 폴더에서 받는다. 폴더는 `forms` 의 `pmd` 다. 예: `0026/0001`. 폼 폴더가 없으면 기본형 폴더로 다시 받는다(`src/main/art/stage-art.ts` `pmdSources`).
 - 이로치 무대 그림은 폼 이로치(`<pmd>/0001`) → 폼 보통 → 기본형 이로치 순서로 찾는다.
 - 관찰(2026-09-30, P1 조사): PMD 폼 그림이 없는 리전폼은 가라르 메더 하나다. 가라르 메더는 무대에 기본 메더 그림으로 나온다.
 - 기본형 그림으로 대신하는 동작은 구현 판단이다. 사용자가 따로 확인하지 않았다.
@@ -1068,7 +1068,7 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 - 이름 뒤의 조사는 괄호 안 끝 글자의 받침으로 고른다(`src/shared/josa.ts`). 예: `디아루가(오리진폼)으로`.
 - 도감 지방은 `forms` 의 `region` 이다. 다투곰(붉은 달)은 북신의 고장에서 처음 나와 팔데아에 둔다.
 - 성비는 기본 종의 값이다. 원작의 다투곰(붉은 달)은 수컷뿐이지만 다투곰과 같이 반반이다.
-- 피츄(삐쭉귀)는 PokeAPI 포켓몬 번호가 따로 없다. 초상은 `forms` 의 `portrait`(`172-spiky-eared`) 파일로 받는다(`src/main/portraits.ts` `portraitIds`).
+- 피츄(삐쭉귀)는 PokeAPI 포켓몬 번호가 따로 없다. 초상은 `forms` 의 `portrait`(`172-spiky-eared`) 파일로 받는다(`src/main/art/portraits.ts` `portraitIds`).
 
 알에서 얻는 특수 폼(`base`):
 

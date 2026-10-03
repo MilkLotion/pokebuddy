@@ -1,15 +1,15 @@
 // 초상 대체 그림 — PMD 그림이 없는 종(2026-10-01 기준 35종: 탄동·모으령 등)을 무대에 세운다.
 //
-// PokeAPI 초상(96 × 96 PNG, src/main/portraits.ts)을 절반으로 줄이고 투명 여백 없이 잘라 PMD 모양의 시트 하나로 만든다.
+// PokeAPI 초상(96 × 96 PNG, src/main/art/portraits.ts)을 절반으로 줄이고 투명 여백 없이 잘라 PMD 모양의 시트 하나로 만든다.
 //   절반  초상은 PMD 보다 크게 그려져 있다 — 같은 크기 설정에서 혼자 커 보였다 (2026-10-01 사용자 "2여도 너무 크다").
 //         두 그림이 다 있는 42종을 재니 불투명 높이가 초상/PMD 중앙값 2.22배(사분위 1.95~2.35)라 2 로 나눈다
 //   열 2개  0 = 제자리, 1 = 1도트 위 — 번갈아 그려 숨 쉬듯 들썩인다
 //   행 8개  PMD 방향 행(0 정면 2 오른쪽 4 뒤 6 왼쪽). 초상은 왼쪽을 보므로 오른쪽 행(1~3)만 좌우로 뒤집는다
 // 동작은 Idle·Walk 두 개다. 같은 시트를 쓰고 프레임 길이만 다르다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
-// PNG 해석·저장은 src/main/png.ts — 메인 밖(selftest)에서도 돈다. expansion 걷기 그림(overworld-art.ts)이 먼저고 이 그림은 그것도 못 받았을 때 쓴다
-import type { PmdArt } from "./art";
-import type { SpriteSheet } from "../shared/model/stage";
-import { decodePng, encodePng, type Rgba } from "./png";
+// PNG 해석·저장은 src/platform/png.ts — 메인 밖(selftest)에서도 돈다. expansion 걷기 그림(overworld-art.ts)이 먼저고 이 그림은 그것도 못 받았을 때 쓴다
+import type { PmdArt } from "./stage-art";
+import type { SpriteSheet } from "../../shared/model/stage";
+import { decodePng, encodePng, type Rgba } from "../../platform/png";
 
 const SHRINK = 2; // 초상 → PMD 크기
 const BOB = 1; // 들썩이는 높이 (도트)
@@ -95,7 +95,7 @@ export function portraitArt(png: Buffer, dex: string): PmdArt | null {
     workOnly: [],
     zoom: 2,
     anims: { Idle: anim(IDLE_MS), Walk: anim(WALK_MS) },
-    // art/pmd.js STATE_ANIMS 와 같은 상태 이름. 걷기만 오른쪽 행이고 나머지는 정면에서 숨 쉰다
+    // src/main/art/pmd.ts STATE_ANIMS 와 같은 상태 이름. 걷기만 오른쪽 행이고 나머지는 정면에서 숨 쉰다
     clips: {
       idle: { anim: "Idle", mode: "loop", row: 0 },
       running: { anim: "Walk", mode: "loop", row: 2 },

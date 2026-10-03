@@ -1,9 +1,9 @@
 // 울음소리 — 놀아주기가 성공하면 그 포켓몬의 PokeAPI 울음소리를 무대에서 한 번 낸다
 // (worklog/records/code-structure/design/10-main.md 3.10절 stage/cry.ts)
 //
-// 설정의 "알림 소리" 가 꺼져 있으면 내지 않는다. 받은 소리는 ~/.claude/pokebuddy/cries/ 에 캐시한다 (src/main/cries.ts)
+// 설정의 "알림 소리" 가 꺼져 있으면 내지 않는다. 받은 소리는 ~/.claude/pokebuddy/cries/ 에 캐시한다 (src/main/art/cries.ts)
 // 같은 포켓몬을 연달아 누르면 겹쳐 울지 않게 잠깐 쉰다
-import { createCries, type Cries } from "../cries";
+import { createCries, type Cries } from "../art/cries";
 import type { SaveV3 } from "../../shared/save-v3";
 import { gainOf } from "../../state/settings";
 import { SOUND_RULES } from "../../state/rules";

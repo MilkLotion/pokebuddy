@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { dexPath } from "../../dex/dex-number";
 import { parseCredits } from "../../shared/pmd-credits";
-import type { PmdArt } from "../art";
+import type { PmdArt } from "./stage-art";
 import { fetchBuffer, fetchCached, readCache, saveAtomic } from "./fetch";
 import { readZipClips } from "./pmd";
 

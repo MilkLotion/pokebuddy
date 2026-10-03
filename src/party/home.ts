@@ -39,7 +39,7 @@ export function setHome(save: SaveV3, petId: string, home: unknown, screen?: unk
   return { ok: true, petId, home: { ...pet.home }, ...(pet.screen ? { screen: { ...pet.screen } } : {}) };
 }
 
-// 그림 크기 — 단계 번호(1~SIZE_STEPS 길이)를 받아 그 배율을 저장한다. 무대가 도트 배율로 쓴다 (src/main/art.ts zoomOf).
+// 그림 크기 — 단계 번호(1~SIZE_STEPS 길이)를 받아 그 배율을 저장한다. 무대가 도트 배율로 쓴다 (src/main/art/stage-art.ts zoomOf).
 // 상세의 크기 단추가 한 번 누를 때 한 번 저장한다. 단계표는 src/party/size.ts SIZE_STEPS
 
 export type SizeResult = Outcome<HomeFailure> & {

@@ -9,8 +9,8 @@ import type { SaveV3 } from "../../shared/save-v3";
 import { dexDetail } from "../../view/dex-detail";
 import { evoItemNote, shopDetail } from "../../view/shop-detail";
 import { josa } from "../../shared/josa";
-import { iconUrl, portraitKey, portraitUrl } from "../../main/portraits";
-import { cryUrl } from "../../main/cries";
+import { iconUrl, portraitKey, portraitUrl } from "../../main/art/portraits";
+import { cryUrl } from "../../main/art/cries";
 import { dockAt } from "../../main/windows/placement";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();

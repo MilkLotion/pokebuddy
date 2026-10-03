@@ -55,7 +55,7 @@ const SHOWCASE: { points: number; bagCount: number; party: [string, number, numb
   bagCount: 20,
   party: [["pikachu", 24, 120], ["gimmighoul", 12, 60], ["eevee", 18, 200]],
   box: [
-    // PMD 그림이 없어 대체 그림으로 서는 종 (src/main/overworld-art.ts)
+    // PMD 그림이 없어 대체 그림으로 서는 종 (src/main/art/overworld-art.ts)
     ["rolycoly", 8, 30], ["maschiff", 15, 40], ["amoonguss", 40, 80], ["gimmighoul", 5, 10, true],
     // 리전폼
     ["vulpix-alola", 10, 50], ["raichu-alola", 30, 90],
