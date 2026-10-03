@@ -20,7 +20,7 @@ import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적�
 import { createExecutor } from "../../tx/executor";
 import { dexDetail } from "../../view/dex-detail";
 import { dexList } from "../../view/dex-list";
-import { snapshot } from "../../view/snapshot";
+import { snapshotView } from "../../view/snapshot";
 import { verifySave, type VerifyData } from "../../verify/save-rules";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { appearanceOf } from "../../dex/look";
@@ -99,7 +99,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
     g.pets.push(pet({ id: "g1", species: "basculegion", gender: "female", evolved: ["basculin-white-striped"] }), pet({ id: "g2", species: "basculegion", gender: "male", evolved: ["basculin-white-striped"] }));
     g.boxes[0]!.slots[0] = "g1";
     g.boxes[0]!.slots[1] = "g2";
-    const [f, m] = snapshot(g, T0).boxes[0]!.slots;
+    const [f, m] = snapshotView(g, T0).boxes[0]!.slots;
     assert.deepStrictEqual([f?.look, f?.name, f?.species], ["basculegion-female", "대쓰여너", "basculegion"], "초상만 암컷 그림");
     assert.deepStrictEqual([m?.look, m?.name], ["basculegion", "대쓰여너"]);
   }
@@ -243,7 +243,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   const s = seed(pet({ mega: { ...full, stone: true, on: "charizard-mega-x" } }), pet({ id: "p2", species: "gengar", evolved: [], mega: { ...full, stone: true } }), pet({ id: "p3", species: "pikachu", evolved: [] }));
   s.dex.megaOpened = ["charizard", "gengar"];
   s.dex.obtained = ["charizard", "gengar", "pikachu"];
-  const v = snapshot(s, T0);
+  const v = snapshotView(s, T0);
   const [a, b, c] = v.party.slots.map((x) => x.pet);
   assert.equal(a?.species, "charizard");
   assert.equal(a?.look, "charizard-mega-x");

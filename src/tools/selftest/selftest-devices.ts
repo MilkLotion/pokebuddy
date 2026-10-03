@@ -15,7 +15,7 @@ import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
 import { EGG_SOURCE, tintEgg } from "../../main/art/egg-art";
 import { decodePng, encodePng } from "../../platform/png";
-import { snapshot } from "../../view/snapshot";
+import { snapshotView } from "../../view/snapshot";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
 
@@ -35,7 +35,7 @@ function seed(): SaveV3 {
   return s;
 }
 
-const v = snapshot(seed(), T0);
+const v = snapshotView(seed(), T0);
 const bagIn = (over: Partial<BagDeviceInput>): BagDeviceInput => ({ itemId: "rare-candy", mode: "use", targetPetId: "p1", qty: 1, sellQty: 1, notice: "", result: null, busy: false, ...over });
 const bag = (over: Partial<BagDeviceInput>) => {
   const r = bagDeviceModel(v, bagIn(over));
@@ -98,7 +98,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const s = seed();
   s.party.slots[0] = { state: "empty" };
   s.party.slots[1] = { state: "empty" };
-  const r = bagDeviceModel(snapshot(s, T0), bagIn({}));
+  const r = bagDeviceModel(snapshotView(s, T0), bagIn({}));
   assert.deepEqual([r?.input.targetPetId, r?.model.preview.lead, r?.model.go.disabled], [null, "쓸 포켓몬이 없어요", true]);
 }
 
@@ -160,7 +160,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const after = (change: (s: SaveV3) => void) => {
     const s = seed();
     change(s);
-    return snapshot(s, T0);
+    return snapshotView(s, T0);
   };
   const candy = resultLineOf({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" } }, v, after((s) => void (s.pets[0]!.level = 13)));
   assert.deepEqual(candy, { lead: "피카츄 Lv.12 → Lv.13", line: "이상한사탕 1개를 썼어요" });
@@ -192,7 +192,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const s = seed();
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
   s.eggs.push({ id: "e2", kind: "ancient-stone", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
-  assert.deepEqual(snapshot(s, T0).eggs.list.map((e) => e.icon), ["egg:random", "item:ancient-stone"]);
+  assert.deepEqual(snapshotView(s, T0).eggs.list.map((e) => e.icon), ["egg:random", "item:ancient-stone"]);
 }
 
 // (11) 알 색칠 — 원작 색은 색표의 같은 자리 색으로, 투명한 점과 원작 색이 아닌 점은 그대로. 색표 길이가 다르면 null

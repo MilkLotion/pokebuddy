@@ -6,7 +6,7 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { profileOf } from "../dex/species.js";
-import { achievementName, itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
+import { achievementName, itemName, petName, typeName, moodText, natureName, t } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, achievementDefs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
@@ -46,7 +46,7 @@ import { eggIconKey, itemArtKey } from "./device-art.js";
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
 
 // 업적 보상 문구 — 포켓몬은 종 이름(라프라스), 포인트는 `1,000P`, 알은 알 이름, 도구는 도구 이름(여러 개면 `×N`)
-const rewardWord = (def: AchievementDef): string => {
+const rewardText = (def: AchievementDef): string => {
   const species = rewardPokemon(def);
   if (species) return petName(species);
   const points = rewardPoints(def);
@@ -168,7 +168,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     zoneText: zoneText(zoneOf(pet.fullness)),
     debuff: debuffOf(zoneOf(pet.fullness)),
     mood: pet.mood,
-    moodWord: moodWord(pet.mood),
+    moodWord: moodText(pet.mood),
     hidden,
     feedReady: pet.feedCooldownMs <= 0,
     feedInSec: sec(pet.feedCooldownMs),
@@ -197,13 +197,13 @@ function careView(pet: PetV3): CareView | null {
   const order = ["mood", ...BUFF_ORDER] as string[];
   const parts = [...found]
     .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
-    .map((p) => ({ kind: p.kind, name: p.kind === "mood" ? moodWord(pet.mood) : t(`buff.${p.kind}`), bonus: p.percent }));
+    .map((p) => ({ kind: p.kind, name: p.kind === "mood" ? moodText(pet.mood) : t(`buff.${p.kind}`), bonus: p.percent }));
   return { bonus: parts.reduce((sum, p) => sum + p.bonus, 0), parts };
 }
 
 // 시각은 부르는 쪽이 준다(메인은 게임 시계, 시험은 고정 시각) — 진화 후보의 낮·밤을 정한다.
 // 전체 준비 시간과 칸 수는 규칙표에서 온다(예전에는 인자로도 받았지만 다른 값을 넘기는 곳이 없었다)
-export function snapshot(save: SaveV3, now: number): Snapshot {
+export function snapshotView(save: SaveV3, now: number): Snapshot {
   const eggReadyMs = EGG_RULES.readyMs;
   const boxSize = BOX_RULES.size;
   const maxEggs = EGG_RULES.maxEggs;
@@ -260,7 +260,7 @@ export function snapshot(save: SaveV3, now: number): Snapshot {
       id,
       name: achievementName(def),
       desc: def.desc ?? "",
-      reward: rewardWord(def),
+      reward: rewardText(def),
       state: row?.claimedAt != null ? "claimed" : row?.achievedAt != null ? "achieved" : "locked",
       group: def.group,
       // 진행도는 미달성일 때만 — 달성한 뒤에는 값이 줄어도(이어진 날이 끊겨도) 보이지 않는다

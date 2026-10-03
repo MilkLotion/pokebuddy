@@ -8,7 +8,7 @@ import assert from "node:assert";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { jumpListOf, petMenuOf, trayMenuOf } from "../../view/menus";
-import { moodWord, t } from "../../view/text";
+import { moodText, t } from "../../view/text";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -40,7 +40,7 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
 {
   const r = menuOf(seed(), "p1");
   assert.ok(r);
-  assert.equal(r.model.status, `${t("zone.normal")} · ${moodWord(60)}`, "상태 줄은 구간 낱말 · 기분 말");
+  assert.equal(r.model.status, `${t("zone.normal")} · ${moodText(60)}`, "상태 줄은 구간 낱말 · 기분 말");
   assert.deepEqual([r.model.feed, r.model.play], [{ enabled: true }, { enabled: true }]);
   assert.deepEqual(r.model.ball, { enabled: true, hidden: false });
   assert.equal(r.model.move, undefined, "옮기기는 박스 개체에만");

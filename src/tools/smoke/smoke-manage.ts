@@ -29,7 +29,7 @@ import { addToBox } from "../../box/slots";
 import { empty } from "../../save/v3";
 import { dexList } from "../../view/dex-list";
 import { MINT_RETIRED } from "../../bag/mint";
-import { snapshot } from "../../view/snapshot";
+import { snapshotView } from "../../view/snapshot";
 import { bagDeviceModel } from "../../view/device-bag";
 import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
@@ -62,14 +62,14 @@ addToBox(save.boxes, sharedId);
 // 이로치 표시 검사 (마지막) — 파티의 첫 개체와 박스의 공유 계열 개체를 이로치로, 파이리는 도감에 이로치 획득으로 둔다
 for (const pet of save.pets) if (pet.id === sharedId || pet.species === "charmander") pet.shiny = true;
 save.dex.shinyObtained.push("charmander");
-const snap = { ...snapshot(save, Date.now()), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
+const snap = { ...snapshotView(save, Date.now()), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
 const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
 // 가방 판 검사 (12) 에만 더하는 도구 — 불꽃의돌·성격민트. 앞 검사의 가방 순서를 바꾸지 않게 따로 만들어 둔다
 const bagSave = structuredClone(save);
 bagSave.bag["fire-stone"] = 3;
 bagSave.bag.mint = 1;
-const bagExtra = snapshot(bagSave, Date.now()).bag.filter((i) => i.id === "fire-stone" || i.id === "mint");
+const bagExtra = snapshotView(bagSave, Date.now()).bag.filter((i) => i.id === "fire-stone" || i.id === "mint");
 
 // 가짜 preload — snapshot·dex 만 값을 준다. 구독(on*)은 콜백만 받아 둔다(window.__cb). 시계(onClock)는 1초마다 울린다
 // 파티 개체의 만복도는 1초마다 1 줄어든다(시간 값). window.__bump 를 올리면 포인트가 바뀌어 모양이 바뀐다(전체 다시 그리기)
