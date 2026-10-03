@@ -2,7 +2,7 @@
 //
 // 부화 배너는 결과 포켓몬을, 진화 배너는 결과 종을 보이지 않는다 (docs/specs/ui-components.md C-19)
 // 줍기 배너는 제목 `줍기` 와 "<주운 마리>가 <것>을 주웠어요" 문구다 (docs/specs/game.md "줍기")
-import { defOf } from "../achievement/core.js";
+import { defOf } from "../achievement/defs.js";
 import { loadJson } from "../dex/data.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { getLang, petName, t } from "../main/text.js";

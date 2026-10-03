@@ -13,10 +13,10 @@
 // 부분 진행은 ms 정수로 쌓는다. 그래서 짧은 틱을 여러 번 돌려도 긴 틱 한 번과 결과가 같다.
 // 포인트만 예외다. 적립 속도가 친밀도·기분·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
 // 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
-import { evaluate } from "../achievement/core.js";
+import { evaluate } from "../achievement/evaluate.js";
 import { grantStones, tickMega } from "../dex/mega.js";
 import { unlockByRules } from "../dex/unlocks.js";
-import { queueTutorials } from "../tutorial/core.js";
+import { queueTutorials } from "../tutorial/queue.js";
 import { MOOD_RULES, TIME_RULES } from "./rules.js";
 import { PET_RULES } from "../party/rules.js";
 import type { BuffV3, PetV3, SaveV3 } from "../shared/save-v3";

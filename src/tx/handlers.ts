@@ -3,9 +3,9 @@
 // 처리기는 사본만 고치고 성공 여부를 돌려준다. 저장은 거래 실행기가 한다.
 // 도메인 규칙은 각 모듈(src/party 등)에 두고 여기서는 인자를 풀어 넘기기만 한다.
 import { itemOf, use } from "../bag/use.js";
-import { claim } from "../achievement/core.js";
+import { claim } from "../achievement/claim.js";
 import { dayPartOf, evolve } from "../dex/evolve.js";
-import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
+import { done as doneTutorial, skip as skipTutorial } from "../tutorial/queue.js";
 import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
 import { megaOf } from "../dex/mega.js";
@@ -23,7 +23,8 @@ import { sellPet } from "../shop/sell-pet.js";
 import { isBoxSortKey, moveSlot, moveToBox, orderBox, renameBox, sortBox } from "../box/slots.js";
 import { petName } from "../main/text.js";
 import { apply as applyTrade, isLocked as isTradeLocked, lock as lockTrade, unlock as unlockTrade } from "../trade/core.js";
-import { applyGifts, markRead } from "../mail/core.js";
+import { applyGifts } from "../mail/gifts.js";
+import { markRead } from "../mail/letters.js";
 import type { TxHandler } from "./executor";
 
 const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
