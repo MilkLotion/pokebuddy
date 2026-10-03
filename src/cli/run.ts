@@ -8,6 +8,7 @@ import path from "node:path";
 import { PATHS } from "../platform/paths";
 import { isPidAlive } from "../platform/pid";
 import { claimLock, isLockReady, liveLockOwner, releaseLock } from "../platform/pid-lock";
+import { readLastError, type LastError } from "../platform/last-error";
 import { optionEnv, type CompanionOptions } from "./args";
 import { electronPath } from "./electron-path";
 
@@ -25,20 +26,11 @@ const POLL_MS = 100;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const say = (line = ""): void => void process.stdout.write(`${line}\n`);
 
-interface LastError {
-  at: number;
-  reason?: string;
-  message: string;
-}
-
-// 동반자가 스스로 끝났을 때 남긴 이유 (src/main/lifetime.ts reportFailure) — since 이후 것만
+// 동반자가 스스로 끝났을 때 남긴 이유 (src/main/lifetime.ts reportFailure) — since 이후 것만.
+// 읽기는 공통 함수다 — 모양이 틀린 기록은 없는 것으로 본다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-8)
 function lastError(since: number): LastError | null {
-  try {
-    const e = JSON.parse(fs.readFileSync(PATHS.lastError, "utf8")) as LastError | null;
-    return e && e.at >= since ? e : null;
-  } catch {
-    return null;
-  }
+  const e = readLastError(PATHS.lastError);
+  return e && e.at >= since ? e : null;
 }
 
 // 동반자의 pid — lock 파일의 pid 가 살아 있을 때만. 죽은 pid·파손이 남은 lock(크래시)은 지운다.
