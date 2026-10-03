@@ -3,7 +3,7 @@
 // 상점은 스냅샷에 함께 담는다(포켓몬 상품은 해금한 알 종이라 수백 줄이다). 도감은 1089종이라 탭을 열 때만 따로 부른다.
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
-import { petName } from "./text.js";
+import { itemName, petName } from "./text.js";
 import { eggName, speciesPrice, eggNote, eggPrice, slotPrice, toolPrice } from "../shop/catalog.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf } from "../dex/regional.js";
@@ -99,7 +99,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
     // 상점의 쓰는 곳은 어디서 쓰는지까지 — 가방은 파티 개체에게만 쓴다 (2026-10-01 사용자 결정 "파티를 기준으로만 사용할 수 있게 하자")
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id), where: "가방 › 사용 · 파티 포켓몬" };
-    add({ id, name: item.ko, note: "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
+    add({ id, name: itemName(id, opts), note: "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
   }
 
   // 진화용 도구 — 종류와 무관하게 같은 값이다
@@ -111,7 +111,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     // 기기 창의 `쓰는 곳` 도 같은 문구다 (2026-10-01 사용자 Figma 수정 "쓰는곳에 \"피카츄·레어코일 외 5종\" 이걸 적어야겠네")
     const note = evoItemNote(save, id, opts);
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id) };
-    add({ id, name: item.ko, note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
+    add({ id, name: itemName(id, opts), note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
 
   // 파티 칸 — 늘 같은 값. 적용한 프리셋의 칸을 연다. 프리셋마다 따로 산다 (2026-10-02 사용자 결정)

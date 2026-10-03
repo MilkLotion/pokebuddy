@@ -1,7 +1,7 @@
 // 진화 조건 글자 한 벌 — 도감 상세·상점 상세가 같이 쓴다
 import { type EvoStep } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
-import { itemName, petName } from "./text.js";
+import { genderText, itemName, petName } from "./text.js";
 import { needIsMap } from "../dex/regional.js";
 import { josa } from "../shared/josa.js";
 
@@ -13,7 +13,7 @@ export const MAP_MARK = " (지도)";
 export function stepText(step: EvoStep, opts?: DexOptions): string {
   // 조건에 더해 친밀도·성별도 보는 간선은 결과 뒤에 적는다 — "Lv.25에서 루가루암(황혼의 모습) (친밀도 100)", "Lv.20에서 비퀸 (암컷)"
   // 성별 낱말은 상점 트리 화살표(shop-detail.ts extras)와 같다 (94 항목 2-3)
-  const to = `${petName(step.to)}${step.map && !needIsMap(step.need) ? MAP_MARK : ""}${step.affinity ? ` (친밀도 ${step.affinity})` : ""}${step.gender ? ` (${step.gender === "female" ? "암컷" : "수컷"})` : ""}`;
+  const to = `${petName(step.to)}${step.map && !needIsMap(step.need) ? MAP_MARK : ""}${step.affinity ? ` (친밀도 ${step.affinity})` : ""}${step.gender ? ` (${genderText(step.gender)})` : ""}`;
   const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
   const need = step.need;
   if (!need) return `${time}친밀도 100${josa("100", "으로/로")} ${to}`;

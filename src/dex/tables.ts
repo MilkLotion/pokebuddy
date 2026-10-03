@@ -69,7 +69,7 @@ export type AchievementCond =
 
 export interface AchievementDef {
   ko: string;
-  en?: string; // 영어 이름 — 다른 데이터(도구·알)처럼 함께 둔다. 화면은 지금 한국어만 쓴다
+  en?: string; // 영어 이름 — 설정 언어가 en 이면 화면이 쓴다 (src/view/text.ts achievementName)
   desc?: string; // 이름만으로 조건이 드러나면 두지 않는다 — 업적창에 설명 줄이 그려지지 않는다
   group: AchievementGroup;
   cond: AchievementCond;

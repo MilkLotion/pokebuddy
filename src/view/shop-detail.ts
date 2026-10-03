@@ -7,7 +7,7 @@
 import { profileOf } from "../dex/species.js";
 import { nextOf, type EvoStep, rootOf } from "../dex/evo.js";
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
-import { itemName, petName, typeName, t } from "./text.js";
+import { genderText, itemName, petName, typeName, t } from "./text.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { needIsMap, regionalOf, REGION_MAP } from "../dex/regional.js";
 import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
@@ -22,7 +22,7 @@ function extras(step: EvoStep): string[] {
   if (step.map && !needIsMap(step.need)) out.push("지도");
   if (step.affinity) out.push(`친밀도 ${step.affinity}`);
   if (step.when) out.push(step.when === "night" ? "밤" : "낮");
-  if (step.gender) out.push(step.gender === "female" ? "암컷" : "수컷");
+  if (step.gender) out.push(genderText(step.gender));
   return out;
 }
 
