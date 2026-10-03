@@ -18,13 +18,12 @@ import { STAGE_RULES } from "./layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
 import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
-import { jumpListOf, lockExcept, petMenu, petMenuOf, trayMenuOf } from "../view/menus";
+import { jumpListOf } from "../view/menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
-import { formsOf } from "../dex/forms";
 import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate } from "./manage-window";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
@@ -44,7 +43,9 @@ import { createStageWindow } from "./stage-window";
 import { langOf, petLabel, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { syncJumpList } from "./jump-list";
-import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
+import { closeMenu, closedWithin, menuOpen } from "./menu-window";
+import { createPetMenu } from "./menus/pet-menu";
+import { createTrayMenu } from "./menus/tray-menu";
 import { gainOf } from "../state/settings";
 import { SOUND_RULES } from "../state/rules";
 import { STATE_RULES } from "../state/rules";
@@ -268,73 +269,15 @@ function syncJump(): void {
   syncJumpList(pets, labels);
 }
 
-// 트레이 메뉴 — Windows 는 포커스를 쥐지 않게 띄운다(숨겨진 아이콘 창이 닫히지 않게). 바깥 클릭·Esc 는 헬퍼의 입력 감시로 닫는다.
-// 떠 있는 동안만 헬퍼를 자주(50ms) 묻는다. 기준 수는 띄운 뒤 첫 답이다 — 메뉴를 연 그 클릭은 세지 않는다
-const TRAY_INPUT_MS = 50;
-let trayInputBase: { click: number; esc: number } | null = null;
-let trayInputTimer: NodeJS.Timeout | null = null;
-// 아이콘을 다시 눌러 메뉴를 닫은 때 — 메뉴가 떠 있는 동안에는 아이콘 클릭 신호가 오지 않아 Windows 가 더블클릭을 만들지 못한다.
-// 이 뒤 DOUBLE_CLICK_MS 안에 아이콘을 한 번 더 누르면 더블클릭으로 보고 설정창을 연다
-const DOUBLE_CLICK_MS = 200; // 2026-09-28 사용자 "0.2초로 해도 될듯"
-let iconClosed: { at: number; click: number } | null = null;
-
-const stopTrayInput = (): void => {
-  if (trayInputTimer) clearInterval(trayInputTimer);
-  trayInputTimer = null;
-  iconClosed = null;
-};
-
-function popupTrayMenu(): void {
-  const inactive = process.platform === "win32";
-  trayInputBase = null;
-  popupMenu(
-    {
-      preload: preloadFile(),
-      html: rendererFile("menu.html"),
-      inactive,
-      onClosed: () => {
-        if (!iconClosed) stopTrayInput(); // 아이콘으로 닫았으면 더블클릭을 볼 동안 더 묻는다
-      },
-    },
-    trayTemplate(),
-    t("menu.on"),
-  );
-  if (inactive && !trayInputTimer) trayInputTimer = setInterval(() => anchor?.poll(), TRAY_INPUT_MS);
-}
-
-function onTrayInput(input: { click: number; x: number; y: number; esc: number }): void {
-  if (!trayInputTimer) return;
-  const at = screen.screenToDipPoint({ x: input.x, y: input.y });
-  const icon = tray?.bounds();
-  const onIcon = !!icon && icon.width > 0 && at.x >= icon.x && at.x < icon.x + icon.width && at.y >= icon.y && at.y < icon.y + icon.height;
-  if (iconClosed) {
-    const late = Date.now() - iconClosed.at > DOUBLE_CLICK_MS;
-    const again = input.click > iconClosed.click && onIcon;
-    if (again && !late) {
-      stopTrayInput();
-      tray?.holdClick(DOUBLE_CLICK_MS); // 뒤따라 오는 아이콘 클릭 신호로 메뉴가 다시 뜨지 않게
-      openManageWindow();
-    } else if (late) stopTrayInput();
-    return;
-  }
-  if (!menuOpen()) return;
-  if (!trayInputBase) {
-    trayInputBase = { click: input.click, esc: input.esc };
-    return;
-  }
-  if (input.esc !== trayInputBase.esc) return closeMenu();
-  if (input.click === trayInputBase.click) return;
-  trayInputBase.click = input.click;
-  // 트레이 아이콘을 다시 누른 것 — 메뉴가 아이콘 위에 걸쳐 떠도 닫는다(메뉴가 떠 있는 동안 아이콘 클릭 신호는 오지 않는다)
-  if (onIcon) {
-    iconClosed = { at: Date.now(), click: input.click };
-    return closeMenu();
-  }
-  // 메뉴 안을 누른 것은 메뉴가 처리한다(항목 고르기). 바깥이면 닫는다 — 테두리에 걸친 점(메뉴가 붙은 아이콘 자리)은 바깥이다
-  const b = menuBounds();
-  if (b && at.x > b.x && at.x < b.x + b.width - 1 && at.y > b.y && at.y < b.y + b.height - 1) return;
-  closeMenu();
-}
+// 트레이 메뉴와 트레이 입력 — 떠 있는 동안 헬퍼에 입력을 자주 묻는다 (src/main/menus/tray-menu.ts)
+const trayMenu = createTrayMenu({
+  display,
+  openManage: () => openManageWindow(),
+  quit: () => app.quit(),
+  pollInput: () => anchor?.poll(),
+  trayRect: () => tray?.bounds() ?? null,
+  holdClick: (ms) => tray?.holdClick(ms),
+});
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
@@ -372,7 +315,7 @@ const openManageWindow = (route?: ManageRoute): void => {
       return reply;
     },
     display: () => display.view(),
-    petMenu: (petId) => showPetMenu(petId, "manage"),
+    petMenu: (petId) => petMenu.open(petId, "manage"),
     ...(services.current() ? { account: services.current()!.act } : {}),
     ...(services.mail() ? { mail: async (req: MailAction) => (await services.mail()?.act(req)) ?? null } : {}),
     ...(update.isStarted() ? { update: update.act, notes: update.notes } : {}),
@@ -399,18 +342,6 @@ const openManageWindow = (route?: ManageRoute): void => {
     },
   });
 };
-
-// 트레이 메뉴 — 항목은 화면 값이 만든다(src/view/menus.ts trayMenuOf). 여기서는 누르면 할 일만 잇는다
-const trayTemplate = () =>
-  trayMenuOf(
-    { hidden: display.hidden(), ghost: display.ghost() },
-    {
-      openManage: () => openManageWindow(),
-      toggleHidden: display.toggleHidden,
-      quit: () => app.quit(),
-      toggleGhost: () => display.setGhost(!display.ghost()),
-    },
-  );
 
 // 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
 const cry = createCry({
@@ -440,74 +371,15 @@ function runGameCommand(command: Command, then?: () => Command): void {
   });
 }
 
-// 포켓몬 메뉴 — 이름·상태 / 옮기기 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기. 앱 전체 조작은 트레이가 맡는다
-// origin: stage 는 무대의 포켓몬 위 우클릭, manage 는 관리 창의 파티 카드·박스 칸 우클릭 (2026-10-02 사용자 결정 — 같은 메뉴를 쓴다).
-// 관리 창의 메뉴에는 상세 보기가 없다 — 카드·칸을 좌클릭하면 바로 상세가 열린다 (2026-10-02 사용자 결정 "좌클릭으로 상세 열게")
-// 박스 개체와 볼 안의 개체는 무대에 없다 — 저장의 값으로 메뉴를 만든다. 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다
-// 공유 sid 계열이면 모습 말풍선에 넣을 초상을 먼저 받는다. 캐시에 없어 오래 걸리면 초상 없이 띄운다
-const FORM_ICON_WAIT_MS = 400;
-function showPetMenu(id: string, origin: "stage" | "manage" = "stage"): void {
-  const pet = game?.read()?.pets.find((row) => row.id === id) ?? null;
-  const forms = pet ? formsOf(pet) : [];
-  const art = portraits;
-  if (!pet || forms.length < 2 || !art) {
-    popPetMenu(id, origin, {});
-    return;
-  }
-  const asks = forms.map((slug) => ({ slug, shiny: pet.shiny }));
-  const none: Record<string, string> = {};
-  const got = art.get(asks).then(
-    (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
-    () => none,
-  );
-  const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), FORM_ICON_WAIT_MS));
-  void Promise.race([got, late]).then((icons) => popPetMenu(id, origin, icons));
-}
-
-// 메뉴의 모델(이름·상태·막힌 항목·첫 돌봄 잠금)은 화면 값이 만든다 (src/view/menus.ts petMenuOf). 여기서는 누르면 할 일을 잇고 띄운다
-function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<string, string>): void {
-  const p = stages?.petOf(id) ?? null;
-  const state = petMenuOf(game?.read() ?? null, id, { origin, stagePet: p, formIcons, now: Date.now() }); // 메모리 값 — 파일은 15초마다 쓴다
-  if (!state) return;
-  const firstCare = state.firstCare;
-  // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다
-  const careCmd = (cmd: "feed" | "play") => (): void => {
-    if (firstCare) runGameCommand({ cmd, target: id, from: "menu" }, () => ({ cmd: "tutorial.done", target: "first-care", from: "pet" }));
-    else runGameCommand({ cmd, target: id, from: "menu" });
-  };
-  const sale = state.sale;
-  const built = petMenu(state.model, {
-    feed: careCmd("feed"),
-    play: careCmd("play"),
-    ...(state.inSave
-      ? {
-          ball: () => runGameCommand({ cmd: state.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
-          // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정). 무대 우클릭 메뉴에만 있다
-          ...(origin === "stage" ? { detail: () => openManageWindow({ to: "pet", petId: id }) } : {}),
-          // 옮기기·팔기 — 고른 뒤의 화면(든 상태, 팔기 확인 창)은 관리 창이 그린다
-          move: () => openManageWindow({ to: "move", petId: id }),
-          sell: () => {
-            if (sale) openManageWindow({ to: "sell", petId: id, price: sale.price });
-          },
-        }
-      : {}),
-    // 모습 말풍선에서 고른 모습 — 관리 창이 바꾸기 확인 창을 띄운다
-    form: (species) => openManageWindow({ to: "form", petId: id, species }),
-  });
-  // 첫 돌봄 튜토리얼 2/2 — 남길 항목만 누르게 두고 말풍선에 대기 글자를 알린다
-  const items = firstCare ? lockExcept(built, firstCare.keep ? [firstCare.keep] : []) : built;
-  if (firstCare) coach.menuStep(firstCare.keep, firstCare.wait);
-  // OS 기본 메뉴는 Windows 에서 왼쪽을 크게 비운다 — 앱이 그리는 메뉴를 커서 자리에 띄운다 (docs/specs/ui-components.md C-21)
-  // 첫 돌봄 중이면 메뉴 자리를 말풍선에 알려 겹치지 않게 한다. 메뉴가 닫히면 말풍선은 제자리로 돌아간다
-  const avoid = firstCare
-    ? {
-        onPlaced: (r: { x: number; y: number; w: number; h: number }) => coach.menuPlaced(id, r),
-        // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게. 스킵이 아니다
-        onClosed: () => coach.menuClosed(),
-      }
-    : {};
-  popupMenu({ preload: preloadFile(), html: rendererFile("menu.html"), ...avoid }, items, t("menu.on"));
-}
+// 포켓몬 메뉴 — 무대의 우클릭과 관리 창의 파티 카드·박스 칸 우클릭이 같은 메뉴를 쓴다 (src/main/menus/pet-menu.ts)
+const petMenu = createPetMenu({
+  read: () => game?.read() ?? null,
+  stagePet: (petId) => stages?.petOf(petId) ?? null,
+  portraits: () => portraits,
+  run: runGameCommand,
+  openManage: (route) => openManageWindow(route),
+  coach,
+});
 
 // 파티 목록 → 무대. 그림을 받는 동안 기다린다. 트레이는 공식 앱 로고를 유지한다
 async function refreshParty(): Promise<void> {
@@ -787,7 +659,7 @@ async function main(): Promise<void> {
           void commands?.click(id);
           void cry.play(id);
         },
-        onMenu: showPetMenu,
+        onMenu: (petId) => petMenu.open(petId),
         onArtMissing: (pet) => {
           // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다
           process.stderr.write(`${pet.species}: PMD 그림을 받지 못함 — 무대에 나오지 않는다 (네트워크·프록시 확인)\n`);
@@ -823,7 +695,7 @@ async function main(): Promise<void> {
     flags: () => ({ userHidden: display.hidden(), held: stages?.heldId() != null }),
     onUpdate: onAnchorUpdate,
     onFocus: (key) => stages?.focus(key),
-    onInput: onTrayInput,
+    onInput: (input) => trayMenu.onInput(input),
     log,
   });
 
@@ -911,7 +783,7 @@ async function main(): Promise<void> {
   tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
-    popup: popupTrayMenu,
+    popup: () => trayMenu.open(),
     open: () => openManageWindow(),
     menuOpen,
     closeMenu,
