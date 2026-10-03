@@ -11,7 +11,7 @@ import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
-import type { PetDeviceAction, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../../shared/model/devices.js";
+import type { PetDeviceAction, PetDeviceOpen, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../../shared/model/devices.js";
 import type { ScreenView } from "../../shared/model/overlays.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import type { AccountReplyCode, CloudErrorCode, FailCode, MailReplyCode, TradeCloseReason } from "../../shared/names/online-codes.js";
@@ -27,6 +27,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
 import { numberText, pointText } from "../ui/number-text.js";
+import { createDeviceLink } from "./device-link.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -199,9 +200,18 @@ let holdAt: { x: number; y: number } | null = null;
 let swapMode = false;
 let partyHold: string | null = null; // 파티 기기 창에서 든 파티 개체 — 박스 칸이나 다른 파티 칸을 누르면 거기 놓는다
 let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창의 머리 줄에 보인다
-let partyDeviceOpen = false;
-let partyDeviceSent = "";
-let partyGen = 0; // 파티 기기 창이 닫힐 때마다 받는 세대 번호 (src/main/device-gen.ts)
+// 파티 기기 창 연결 — 교체 화면인 동안 연다 (partyDeviceBuild)
+const partyLink = createDeviceLink<PartyDeviceOpen>({
+  build: partyDeviceBuild,
+  open: (model, gen) => window.pokebuddyManage.partyOpen(model, gen),
+  afterClosed: () => {
+    if (!swapMode) return false;
+    closeSwap();
+    endHold();
+    return true;
+  },
+  redraw: () => draw(),
+});
 let presetRenaming = false;
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
 // 박스 순서 모달의 타일이면 박스 ID
@@ -214,7 +224,7 @@ const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "recent", label: "최근 얻은 순" },
   { by: "name", label: "이름순" },
 ];
-const BOX_NAME_MAX = 12; // src/box/slots.ts BOX_RULES.nameMax 와 같다 — 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수에 맞춘다
+const BOX_NAME_MAX = 12; // src/box/rules.ts BOX_RULES.nameMax 와 같다 — 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수에 맞춘다
 // 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
 // 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
 const boxSortedBy = new Map<string, string>();
@@ -609,7 +619,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
   const input = document.createElement("input");
   input.className = "search box-name-input";
   input.value = preset.name;
-  input.maxLength = BOX_NAME_MAX; // 프리셋 이름도 12자다 (src/save/rules.ts SAVE_V3_RULES.party.presets.nameMax)
+  input.maxLength = BOX_NAME_MAX; // 프리셋 이름도 12자다 — 박스 이름과 같다 (src/party/rules.ts PARTY_RULES.presets, src/box/rules.ts BOX_RULES.nameMax)
   input.setAttribute("aria-label", "프리셋 이름");
   let done = false;
   const finish = (save: boolean): void => {
@@ -1464,21 +1474,15 @@ function partyDeviceModel(v: Snapshot): PartyDeviceOpen {
   };
 }
 
-function syncPartyDevice(): void {
-  if (!swapMode || tab !== "box" || !view) {
-    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
-    if (partyDeviceOpen || partyDeviceSent) window.pokebuddyManage.partyOpen(null);
-    partyDeviceOpen = false;
-    partyDeviceSent = "";
-    return;
-  }
+// 파티 기기 창에 보낼 값 — 교체 화면이 아니면 null(닫는다)
+function partyDeviceBuild(): PartyDeviceOpen | null {
+  if (!swapMode || tab !== "box" || !view) return null;
   if (partyHold && slotOfPet(partyHold) == null) partyHold = null; // 든 개체가 파티에서 빠졌다
-  const open = partyDeviceModel(view);
-  const key = JSON.stringify(open);
-  if (partyDeviceOpen && key === partyDeviceSent) return;
-  window.pokebuddyManage.partyOpen(open, partyGen);
-  partyDeviceOpen = true;
-  partyDeviceSent = key;
+  return partyDeviceModel(view);
+}
+
+function syncPartyDevice(): void {
+  partyLink.sync();
 }
 
 // 파티 기기 창에서 누른 칸·칩
@@ -2453,9 +2457,17 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
 
 let bagSending = false; // 사용·판매 명령을 보내는 중 — 두 번 누르기를 막는다
 let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
-let bagGen = 0;
-let bagDeviceOpen = false;
-let bagDeviceSent = "";
+// 가방 기기 창 연결 — 도구를 고른 동안 연다 (bagDeviceBuild)
+const bagLink = createDeviceLink<BagDeviceOpen>({
+  build: bagDeviceBuild,
+  open: (model, gen) => window.pokebuddyManage.bagOpen(model, gen),
+  afterClosed: () => {
+    if (!bagPick) return false;
+    bagPick = null;
+    return true;
+  },
+  redraw: () => draw(),
+});
 const portraitAsked = new Set<string>(); // 기기 창에 쓸 초상을 청한 키 — 두 번 청하지 않는다
 
 // 초상 data URI — 아직 없으면 받아 온 뒤 기기 창을 다시 보낸다
@@ -2556,21 +2568,15 @@ function bagDeviceModel(v: Snapshot, item: BagItemView): BagDeviceOpen {
   };
 }
 
-function syncBagDevice(): void {
+// 가방 기기 창에 보낼 값 — 고른 도구가 없으면 null(닫는다)
+function bagDeviceBuild(): BagDeviceOpen | null {
   const item = bagPick && view ? view.bag.find((i) => i.id === bagPick) : undefined;
-  if (!item || !view) {
-    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
-    if (bagDeviceOpen || bagDeviceSent) window.pokebuddyManage.bagOpen(null);
-    bagDeviceOpen = false;
-    bagDeviceSent = "";
-    return;
-  }
-  const open = bagDeviceModel(view, item);
-  const key = JSON.stringify(open);
-  if (bagDeviceOpen && key === bagDeviceSent) return;
-  window.pokebuddyManage.bagOpen(open, bagGen);
-  bagDeviceOpen = true;
-  bagDeviceSent = key;
+  if (!item || !view) return null;
+  return bagDeviceModel(view, item);
+}
+
+function syncBagDevice(): void {
+  bagLink.sync();
 }
 
 // 이전·다음 — 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래·수량·결과는 처음으로
@@ -4341,10 +4347,17 @@ let shopNotice = ""; // 마지막 구매 실패 — 기기 창의 합계 상자�
 let shopDone: { lead: string; line: string } | null = null; // 방금 산 결과 — 합계 상자가 초록으로 보인다. 수량을 바꾸거나 다른 상품으로 가면 지운다
 let shopSending = false; // 구매 명령을 보내는 중 — 두 번 누르기를 막는다
 let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
-// 기기 창 세대 번호·마지막으로 보낸 내용 — 파티 상세 기기 창과 같다 (syncPetDevice)
-let shopGen = 0;
-let shopDeviceOpen = false;
-let shopDeviceSent = "";
+// 상점 기기 창 연결 — 상품을 고른 동안 연다 (shopDeviceBuild)
+const shopLink = createDeviceLink<ShopDeviceOpen>({
+  build: shopDeviceBuild,
+  open: (model, gen) => window.pokebuddyManage.shopOpen(model, gen),
+  afterClosed: () => {
+    if (!shopPick) return false;
+    shopPick = null;
+    return true;
+  },
+  redraw: () => draw(),
+});
 
 // 상점 기기 창 제목 줄의 분류 글자 — 상점 분류 칩(SHOP_TABS)의 이름과 같다. slot 은 파티 칸·파티 프리셋·박스를 담는다 (2026-10-03 사용자 결정)
 const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티", pokemon: "포켓몬" };
@@ -4448,21 +4461,15 @@ function shopDeviceModel(item: ShopItemView, v: Snapshot): ShopDeviceOpen {
   };
 }
 
-function syncShopDevice(): void {
+// 상점 기기 창에 보낼 값 — 고른 상품이 없으면 null(닫는다)
+function shopDeviceBuild(): ShopDeviceOpen | null {
   const item = shopPick && view ? view.shop.find((i) => i.id === shopPick) : undefined;
-  if (!item || !view) {
-    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
-    if (shopDeviceOpen || shopDeviceSent) window.pokebuddyManage.shopOpen(null);
-    shopDeviceOpen = false;
-    shopDeviceSent = "";
-    return;
-  }
-  const open = shopDeviceModel(item, view);
-  const key = JSON.stringify(open);
-  if (shopDeviceOpen && key === shopDeviceSent) return;
-  window.pokebuddyManage.shopOpen(open, shopGen);
-  shopDeviceOpen = true;
-  shopDeviceSent = key;
+  if (!item || !view) return null;
+  return shopDeviceModel(item, view);
+}
+
+function syncShopDevice(): void {
+  shopLink.sync();
 }
 
 // 이전·다음 — 지금 탭(분류)의 상품 순서로 돈다. 포켓몬 탭은 지방·검색으로 좁힌 순서
@@ -4532,25 +4539,26 @@ async function buyShop(id: string): Promise<void> {
 // 관리 창 옆에 붙는 창에 고른 개체를 띄운다 (src/main/pet-window.ts, Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`)).
 // 무엇을 보일지는 여기서 정해 보낸다. 기기 창의 단추는 여기로 돌아와 명령·대화상자로 처리한다
 
-let petDeviceOpen = false;
-// 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다. 닫힘을 알기 전에 보낸 요청은 메인이 버린다 (src/main/device-gen.ts)
-let petGen = 0;
-let petDeviceSent = ""; // 마지막으로 보낸 내용 — 같으면 다시 보내지 않는다(1초 새로 읽기마다 기기 창을 다시 그리지 않게)
+// 파티 상세 기기 창 연결 — 개체를 고른 동안 연다 (petDeviceBuild). 세대 번호·보낸 값은 device-link.ts 가 든다
+const petLink = createDeviceLink<PetDeviceOpen>({
+  build: petDeviceBuild,
+  open: (model, gen) => window.pokebuddyManage.petOpen(model, gen),
+  afterClosed: () => {
+    if (!detailPet) return false;
+    detailPet = null;
+    return true;
+  },
+  redraw: () => draw(),
+});
 // 파티 상세 옆 도감 기기 창 — `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
 let dexBeside = false;
 let dexBesideSent: string | null = null; // 마지막으로 보낸 종
 let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
-function syncPetDevice(): void {
+// 파티 상세 기기 창에 보낼 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
+function petDeviceBuild(): PetDeviceOpen | null {
   const pet = detailPet ? petOf(detailPet) : null;
-  if (!pet || !view) {
-    // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
-    if (petDeviceOpen || petDeviceSent) window.pokebuddyManage.petOpen(null);
-    petDeviceOpen = false;
-    petDeviceSent = "";
-    closeDexBeside(); // 파티 상세를 닫으면 옆 도감 기기 창도 닫는다
-    return;
-  }
+  if (!pet || !view) return null;
   const slot = slotOfPet(pet.id);
   const inParty = slot != null;
   const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${boxNameOf(pet.id) ?? "박스"} · 보관 중`;
@@ -4559,11 +4567,12 @@ function syncPetDevice(): void {
     window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
     dexBesideSent = pet.species;
   }
-  const key = JSON.stringify(open);
-  if (petDeviceOpen && key === petDeviceSent) return;
-  window.pokebuddyManage.petOpen(open, petGen);
-  petDeviceOpen = true;
-  petDeviceSent = key;
+  return open;
+}
+
+function syncPetDevice(): void {
+  petLink.sync();
+  if (!petLink.isOpen()) closeDexBeside(); // 파티 상세를 닫으면 옆 도감 기기 창도 닫는다
 }
 
 function closeDexBeside(): void {
@@ -5267,7 +5276,7 @@ function drawGuide(): void {
 }
 
 // ── 설정 바닥 · 버전과 업데이트 ─────────────────────────────────────────────────
-// Figma 05 Screens 섹션 `930:18246`(설정) 의 설정 바닥 — 바닥 왼쪽에 버전과 업데이트 상태, 그 옆에 `패치노트` (src/main/updater.ts)
+// Figma 05 Screens 섹션 `930:18246`(설정) 의 설정 바닥 — 바닥 왼쪽에 버전과 업데이트 상태, 그 옆에 `패치노트` (src/main/update/updater.ts)
 
 let upd: UpdateView | null = null;
 let patch: PatchNotesView | null = null;
@@ -5282,7 +5291,7 @@ function versionWord(u: UpdateView): string {
 }
 
 // `다시 시작`을 눌렀다 — 앱이 꺼질 때까지 "다시 시작하는 중"과 처리 중 단추를 둔다. 클라우드 저장을 올리느라 몇 초 걸릴 수 있다
-// (Figma `Settings / Version · 다시 시작하는 중`). 앱이 꺼진 뒤에는 설치 프로그램의 진행 창이 보인다 (src/main/updater.ts)
+// (Figma `Settings / Version · 다시 시작하는 중`). 앱이 꺼진 뒤에는 설치 프로그램의 진행 창이 보인다 (src/main/update/updater.ts)
 let restarting = false;
 
 async function updateSend(action: "check" | "install"): Promise<void> {
@@ -5312,7 +5321,7 @@ function versionFoot(): HTMLElement {
   } else if (upd) {
     box.appendChild(el("span", "version-word", versionWord(upd)));
     if (upd.status === "ready") box.appendChild(smallButton("다시 시작", true, () => void updateSend("install")));
-    // mac 에서 앱을 그 자리에서 바꿀 수 없다(dmg 안·쓰기 불가) — 이 Mac 용 dmg 를 연다 (src/main/mac-updater.ts)
+    // mac 에서 앱을 그 자리에서 바꿀 수 없다(dmg 안·쓰기 불가) — 이 Mac 용 dmg 를 연다 (src/main/update/mac-updater.ts)
     else if (upd.status === "manual") box.appendChild(smallButton("받기", true, () => void updateSend("install")));
     else if (upd.status === "error") box.appendChild(smallButton("다시 확인", false, () => void updateSend("check")));
   }
@@ -6007,45 +6016,16 @@ window.pokebuddyManage.onDexClosed((gen) => {
 });
 window.pokebuddyManage.onPetStep((delta) => stepPet(delta));
 window.pokebuddyManage.onPetAct((action) => onPetAction(action));
-window.pokebuddyManage.onPetClosed((gen) => {
-  petGen = gen;
-  petDeviceOpen = false;
-  petDeviceSent = "";
-  if (!detailPet) return;
-  detailPet = null;
-  draw();
-});
+window.pokebuddyManage.onPetClosed((gen) => petLink.onClosed(gen));
 window.pokebuddyManage.onShopStep((delta) => stepShop(delta));
 window.pokebuddyManage.onShopAct((action) => onShopAction(action));
-window.pokebuddyManage.onShopClosed((gen) => {
-  shopGen = gen;
-  shopDeviceOpen = false;
-  shopDeviceSent = "";
-  if (!shopPick) return;
-  shopPick = null;
-  draw();
-});
+window.pokebuddyManage.onShopClosed((gen) => shopLink.onClosed(gen));
 window.pokebuddyManage.onBagStep((delta) => stepBag(delta));
 window.pokebuddyManage.onBagAct((action) => onBagAction(action));
-window.pokebuddyManage.onBagClosed((gen) => {
-  bagGen = gen;
-  bagDeviceOpen = false;
-  bagDeviceSent = "";
-  if (!bagPick) return;
-  bagPick = null;
-  draw();
-});
+window.pokebuddyManage.onBagClosed((gen) => bagLink.onClosed(gen));
 window.pokebuddyManage.onPartyAct((action) => onPartyAction(action));
 window.pokebuddyManage.onPartyStep((delta) => stepPreset(delta));
-window.pokebuddyManage.onPartyClosed((gen) => {
-  partyGen = gen;
-  partyDeviceOpen = false;
-  partyDeviceSent = "";
-  if (!swapMode) return;
-  closeSwap();
-  endHold();
-  draw();
-});
+window.pokebuddyManage.onPartyClosed((gen) => partyLink.onClosed(gen));
 window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 앱 전역 1초 시계(`manage:clock`)마다 다시 읽는다 (clockTick)
 window.pokebuddyManage.onClock?.(() => void clockTick());
