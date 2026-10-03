@@ -5,7 +5,7 @@ import assert from "node:assert";
 import { AuthApiError, AuthRetryableFetchError, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { sessionCodeOf } from "../../online/codes";
 import { createSessionGate } from "../../online/session";
-import { createTradeNet } from "../../trade/net";
+import { createTradeNet } from "../../online/trade-net";
 
 const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 

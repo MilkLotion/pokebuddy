@@ -53,6 +53,34 @@ import { makeTmp } from "../harness/tmp-dir";
 const seedArg = argAfter("--seed");
 if (seedArg != null) Math.random = seededRand(Number(seedArg) || 0);
 
+// POKEBUDDY_DEVICE_DUMP=<파일> — 관리 창이 기기 창에 보내는 모델(manage:<기기>-open 의 인자)을 받은 순서대로 그 파일에 적는다.
+// 기기 창 모델 A/B 비교(worklog/records/code-structure/ab/device-dump.cjs)가 쓴다. 그림 data URI 같은 긴 글자는 길이와 앞 32자만 남긴다.
+// 환경변수가 없으면 아무것도 하지 않는다. 관리 창이 처리기를 걸기 전이어야 해서 앱 모듈을 읽기 전에 감싼다
+const deviceDump = process.env.POKEBUDDY_DEVICE_DUMP;
+if (deviceDump) {
+  const { ipcMain } = require("electron") as typeof import("electron");
+  const records: { channel: string; args: unknown }[] = [];
+  const shrink = (v: unknown): unknown => {
+    if (typeof v === "string") return v.length > 200 ? `[글자 ${v.length}] ${v.slice(0, 32)}` : v;
+    if (Array.isArray(v)) return v.map(shrink);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, shrink(x)]));
+    return v;
+  };
+  const record = <H extends (event: never, ...args: never[]) => unknown>(channel: string, handler: H): H => {
+    if (!/^manage:[a-z-]+-open$/.test(channel)) return handler;
+    return ((event: never, ...args: never[]) => {
+      records.push({ channel, args: shrink(args) });
+      fs.writeFileSync(deviceDump, JSON.stringify(records, null, 1));
+      return handler(event, ...args);
+    }) as H;
+  };
+  const on = ipcMain.on.bind(ipcMain);
+  const handle = ipcMain.handle.bind(ipcMain);
+  ipcMain.on = ((channel: string, listener: Parameters<typeof on>[1]) => on(channel, record(channel, listener))) as typeof ipcMain.on;
+  ipcMain.handle = ((channel: string, listener: Parameters<typeof handle>[1]) => handle(channel, record(channel, listener))) as typeof ipcMain.handle;
+  fs.writeFileSync(deviceDump, "[]");
+}
+
 const root = path.join(__dirname, "..", "..", "..");
 const dir = makeTmp("dev-manage");
 

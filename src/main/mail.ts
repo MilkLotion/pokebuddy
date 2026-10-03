@@ -12,6 +12,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import type { MailAction, MailGiftView, MailLetterView, MailReply, MailScreen } from "../shared/model/mail";
 import type { TxResult } from "../shared/command";
 import { petName } from "./text.js";
+import type { MailCode, MailReplyCode, TradeCode } from "../shared/names/online-codes.js";
 
 export interface ServerLetter {
   id: string;
@@ -24,7 +25,7 @@ export interface ServerLetter {
   claimed_at: string | null;
 }
 
-export type RpcResult<T> = { ok: true; data: T } | { ok: false; code: string };
+export type RpcResult<T> = { ok: true; data: T } | { ok: false; code: MailCode | TradeCode };
 
 export interface MainMailOptions {
   rpc: <T>(fn: "list_mail" | "claim_mail", args: Record<string, unknown>) => Promise<RpcResult<T>>;
@@ -76,7 +77,7 @@ export function createMainMail(o: MainMailOptions): MainMail {
   let letters: ServerLetter[] = [];
   let status: MailScreen["status"] = "idle";
   let busy: string | null = null;
-  let error: string | null = null;
+  let error: MailReplyCode | null = null;
   let gen = 0; // 계정이 바뀔 때마다 올린다 — 바뀌기 전에 보낸 목록 요청의 답은 버린다(받은 시각은 계정마다 다르다)
 
   const view = (l: ServerLetter, save: SaveV3 | null): MailLetterView => {
@@ -138,7 +139,7 @@ export function createMainMail(o: MainMailOptions): MainMail {
     push();
   };
 
-  const reply = (ok: boolean, code: string | null): MailReply => ({ ok, code, screen: screen() });
+  const reply = (ok: boolean, code: MailReplyCode | null): MailReply => ({ ok, code, screen: screen() });
 
   const act: MainMail["act"] = async (req) => {
     if (req.action === "refresh") {
@@ -187,8 +188,8 @@ export function createMainMail(o: MainMailOptions): MainMail {
   };
 
   // 서버에 받은 기록을 남기고 선물을 넣는다. 실패 코드를 돌려준다
-  const claim = async (letter: ServerLetter): Promise<string | null> => {
-    const r = await o.rpc<{ gifts: unknown; claimed_at: string }[]>("claim_mail", { p_letter: letter.id }).catch(() => ({ ok: false as const, code: "NETWORK" }));
+  const claim = async (letter: ServerLetter): Promise<MailReplyCode | null> => {
+    const r = await o.rpc<{ gifts: unknown; claimed_at: string }[]>("claim_mail", { p_letter: letter.id }).catch(() => ({ ok: false as const, code: "NETWORK" as const }));
     if (!r.ok) return r.code;
     const row = Array.isArray(r.data) ? r.data[0] : null;
     if (!row) return "UNKNOWN";

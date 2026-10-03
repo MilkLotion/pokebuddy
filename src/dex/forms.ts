@@ -15,16 +15,15 @@ import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "already">;
 
-export interface FormResult {
-  ok: boolean;
-  reason?: FormFailure;
+export type FormResult = Outcome<FormFailure> & {
   petId?: string;
   from?: string;
   to?: string;
-}
+};
 
 // 공유 계열인가 — 진화 전 첫 종으로 본다
 export function isShared(pet: PetV3, opts?: DexOptions): boolean {

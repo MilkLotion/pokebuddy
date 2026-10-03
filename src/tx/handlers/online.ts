@@ -1,12 +1,12 @@
 // 친구 교환·우편 처리기 — 메인의 서비스만 낸다(internal). 명령 통로에 등록하지 않는다
-import { apply as applyTrade, lock as lockTrade, unlock as unlockTrade } from "../../trade/core.js";
+import { applyTrade, lockTrade, unlockTrade } from "../../trade/exchange.js";
 import { applyGifts } from "../../mail/gifts.js";
 import { markRead } from "../../mail/letters.js";
 import type { TxHandler } from "../executor";
 import { intOf, isObj, petIdOf } from "./args.js";
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
-// 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/core.ts, worklog/records/trade/record.md)
+// 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/exchange.ts, worklog/records/trade/record.md)
 
 const strOf = (args: unknown, key: string): string | null => {
   const v = isObj(args) ? args[key] : undefined;

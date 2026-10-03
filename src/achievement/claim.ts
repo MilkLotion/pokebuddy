@@ -10,12 +10,11 @@ import { checkGiveEgg, newEgg } from "../egg/pool.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import { defOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "./defs.js";
+import type { Outcome } from "../shared/command.js";
 
 export type ClaimFailure = ReasonOf<"no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none">;
 
-export interface ClaimResult {
-  ok: boolean;
-  reason?: ClaimFailure;
+export type ClaimResult = Outcome<ClaimFailure> & {
   id?: string;
   slotIndex?: number; // 파티 칸 보상이면 연 칸, 포켓몬 보상이면 넣은 파티 칸
   petId?: string; // 포켓몬 보상으로 만든 개체
@@ -24,7 +23,7 @@ export interface ClaimResult {
   eggId?: string; // 알 보상으로 넣은 알
   item?: { id: string; count: number }; // 도구 보상
   skipped?: boolean; // 단일 포켓몬을 이미 얻어 개체를 주지 않았다
-}
+};
 // 보상 수령 — 업적당 한 번
 //   파티 칸   칸 +1 — 첫 잠긴 칸을 연다
 //   포켓몬    새 개체를 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳이 없으면 받지 못한다(box-full) — 미수령으로 남는다

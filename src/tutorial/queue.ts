@@ -26,16 +26,15 @@ import type { ReasonOf } from "../shared/names/reasons.js";
 import { TUTORIAL_STEPS, isTutorialId } from "../shared/names/tutorials.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
 import { DONE, TUTORIALS, ruleOf, type TutorialSurface } from "./conditions.js";
+import type { Outcome } from "../shared/command.js";
 
 export type TutorialFailure = ReasonOf<"bad-id" | "already">;
 
-export interface TutorialResult {
-  ok: boolean;
-  reason?: TutorialFailure;
+export type TutorialResult = Outcome<TutorialFailure> & {
   id?: string;
   state?: TutorialState;
   steps?: number;
-}
+};
 
 function set(save: SaveV3, id: string, state: TutorialState, steps?: number): TutorialResult {
   if (!id) return { ok: false, reason: "bad-id" };

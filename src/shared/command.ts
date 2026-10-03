@@ -36,3 +36,6 @@ export type TxResult =
 
 // 실패 이유 — 저장 실패와 규칙 실패를 구분한다. 화면이 다른 문구를 쓴다. 목록은 src/shared/names/reasons.ts
 export type TxFailure = Reason;
+
+// 도메인 결과의 성공·실패 — 실패에는 까닭이 늘 있다. 성공 쪽의 reason?: undefined 는 가르지 않고 res.reason 을 읽는 줄을 그대로 두려는 것이다
+export type Outcome<R extends string> = { ok: true; reason?: undefined } | { ok: false; reason: R };

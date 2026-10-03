@@ -1,9 +1,10 @@
 // 화면 모델 — 친구 교환. 타입만 둔다
 
 import type { SpeciesLine } from "./snapshot.js";
+import type { FailCode, TradeCloseReason } from "../names/online-codes.js";
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
-// 교환 모달이 그리는 값 — 메인이 교환 흐름(src/trade/session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
+// 교환 모달이 그리는 값 — 메인이 교환 흐름(src/online/trade-session.ts)의 보기와 저장을 합쳐 만든다 (src/main/trade-screen.ts).
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면. 명령은 `command` 의 trade.* 로 보낸다. 결과에도 이 값(`screen`)이 온다
 export interface TradeCardView extends SpeciesLine {
   species: string;
@@ -18,8 +19,8 @@ export interface TradeScreen {
   link: string | null; // 내가 만든 링크 (hosting)
   expiresAt: number | null; // 참가 전 만료 시각 ms (hosting)
   busy: boolean;
-  error: { code: string; detail?: string } | null; // 오류 배너 — 코드는 서버 TRADE_* · NETWORK · LOCAL
-  closedReason: string | null; // closed 일 때 — guest_left · host_left · expired 등
+  error: { code: FailCode; detail?: string } | null; // 오류 배너 — 코드는 서버 TRADE_* · NETWORK · LOCAL · 교환 거절 까닭
+  closedReason: TradeCloseReason | (string & {}) | null; // closed 일 때 — 서버의 글자를 그대로 둔다(모르는 글자도)
   friendJoined: boolean;
   friendName: string | null; // 친구가 로그인했으면 가입 때 받은 이름
   mine: TradeCardView | null; // 내가 올린 포켓몬

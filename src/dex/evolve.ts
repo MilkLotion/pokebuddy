@@ -22,6 +22,7 @@ import { afterEvolve, formsOf } from "./forms.js";
 import { recordDex } from "./record.js";
 import { REGION_MAP, needIsMap } from "./regional.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type EvolveFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
@@ -69,16 +70,14 @@ interface NeedCheck {
 const READY: NeedCheck = { ready: true, lacks: [] };
 const lacking = (...lacks: EvoMissing[]): NeedCheck => ({ ready: false, lacks });
 
-export interface EvolveResult {
-  ok: boolean;
-  reason?: EvolveFailure;
+export type EvolveResult = Outcome<EvolveFailure> & {
   petId?: string;
   from?: string;
   to?: string;
   usedItem?: string; // 쓴 도구의 첫 번째 — 옛 호출용
   usedItems?: string[]; // 쓴 도구 전부 — 지금 규칙에서는 늘 하나다(돌 또는 지도)
   choices?: string[]; // need-choice 일 때 고를 수 있는 종
-}
+};
 
 // 게임 시간 — 30분마다 낮과 밤이 바뀐다 (src/shared/clock.ts gameDayPart, docs/specs/game.md "진화 계약")
 export { GAME_DAY } from "../shared/clock";

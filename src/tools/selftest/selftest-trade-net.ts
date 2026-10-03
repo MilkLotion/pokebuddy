@@ -14,10 +14,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient, memoryStorage } from "../../online/client";
 import { internalEmail } from "../../online/account";
 import { createSessionGate, type SessionGate } from "../../online/session";
-import { createTradeNet, type TradeNet } from "../../trade/net";
-import { createTradeSession, type TradeViewModel } from "../../trade/session";
+import { createTradeNet, type TradeNet } from "../../online/trade-net";
+import { createTradeSession, type TradeViewModel } from "../../online/trade-session";
 import { dataVersion, onlineConfig } from "../../trade/config";
-import { refOf, snapshot } from "../../trade/core";
+import { offerOf, refOf } from "../../trade/exchange";
 import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
     await a.session.refresh();
     assert.equal(a.session.view().phase, "trading");
     const channel = a.session.view().channel!.id;
-    const old = await a.client.rpc("set_offer", { p_channel: channel, p_pet: snapshot(a.save().pets[0]!) });
+    const old = await a.client.rpc("set_offer", { p_channel: channel, p_pet: offerOf(a.save().pets[0]!) });
     assert.match(old.error?.message ?? "", /TRADE_VERSION_MISMATCH/, "옛 앱의 2인자 제안");
     process.stdout.write("(1) 링크 만들기·참가·규약  ok\n");
 
@@ -198,12 +198,12 @@ async function main(): Promise<void> {
     // 지문 대조 — 만든 시각·이로치가 다르면 서버 저장의 개체가 아니다. 정수가 아닌 since 는 형식 오류
     const aPet = a.save().pets[0]!;
     assert.equal((await a.upload()).ok, true, "A 가 저장을 올린다");
-    assert.deepEqual(await a.net.setOffer(channel, snapshot(aPet), { id: aPet.id, since: aPet.since + 1 }), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "since 가 다르다");
-    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), shiny: true }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "이로치가 다르다");
-    assert.deepEqual(await a.net.setOffer(channel, snapshot(aPet), { id: aPet.id, since: 1.5 }), { ok: false, code: "TRADE_OFFER_INVALID" }, "since 가 정수가 아니다");
+    assert.deepEqual(await a.net.setOffer(channel, offerOf(aPet), { id: aPet.id, since: aPet.since + 1 }), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "since 가 다르다");
+    assert.deepEqual(await a.net.setOffer(channel, { ...offerOf(aPet), shiny: true }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "이로치가 다르다");
+    assert.deepEqual(await a.net.setOffer(channel, offerOf(aPet), { id: aPet.id, since: 1.5 }), { ok: false, code: "TRADE_OFFER_INVALID" }, "since 가 정수가 아니다");
     // P5 — 앱 레벨이 서버보다 크면 아직 올리지 않은 진행이다. 제안 값은 서버 저장으로 만든다(앱이 보낸 다른 값은 쓰지 않는다)
-    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), level: aPet.level + 5 }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "앱 레벨이 서버보다 크다 (P5)");
-    assert.deepEqual(await a.net.setOffer(channel, { ...snapshot(aPet), affinity: 100 }, refOf(aPet)).then((r) => r.ok), true, "레벨이 서버 이하면 받는다 — 다른 값은 서버 저장으로 (P5)");
+    assert.deepEqual(await a.net.setOffer(channel, { ...offerOf(aPet), level: aPet.level + 5 }, refOf(aPet)), { ok: false, code: "TRADE_PET_NOT_SYNCED" }, "앱 레벨이 서버보다 크다 (P5)");
+    assert.deepEqual(await a.net.setOffer(channel, { ...offerOf(aPet), affinity: 100 }, refOf(aPet)).then((r) => r.ok), true, "레벨이 서버 이하면 받는다 — 다른 값은 서버 저장으로 (P5)");
 
     // 제안 도중 익명으로 바뀌면 먼저 거절한다
     a.flags.anonymous = true;
@@ -261,7 +261,7 @@ async function main(): Promise<void> {
     assert.deepEqual(again, { ok: false, reason: "TRADE_PET_TRADED" }, "이미 교환으로 보낸 개체");
     assert.equal(a.session.view().error?.code, "TRADE_PET_TRADED");
     assert.equal(a.flags.lastFlush?.ok ? null : (a.flags.lastFlush as { code: string } | null)?.code, "CLOUD_PET_TRADED_OUT", "제안 전 올리기도 막혔다");
-    assert.deepEqual(await a.net.setOffer(a.session.view().channel!.id, snapshot(bak.pets[0]!), sentRef), { ok: false, code: "TRADE_PET_TRADED" }, "지문이 원장에 있으면 서버 저장과 무관하게 거절");
+    assert.deepEqual(await a.net.setOffer(a.session.view().channel!.id, offerOf(bak.pets[0]!), sentRef), { ok: false, code: "TRADE_PET_TRADED" }, "지문이 원장에 있으면 서버 저장과 무관하게 거절");
     a.restore(after);
     await b.session.leave();
     await a.session.refresh();

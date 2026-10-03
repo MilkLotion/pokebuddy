@@ -9,6 +9,7 @@ import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { toolPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type SellFailure = ReasonOf<
   | "not-sellable" // 가격이 없거나 0P 인 도구다
@@ -16,15 +17,13 @@ export type SellFailure = ReasonOf<
   | "bad-count" // 수량이 1 이상의 정수가 아니다
 >;
 
-export interface SellResult {
-  ok: boolean;
-  reason?: SellFailure;
+export type SellResult = Outcome<SellFailure> & {
   itemId?: string;
   count?: number;
   earned?: number; // 받은 포인트
   left?: number; // 판 뒤 남은 개수
   balance?: number;
-}
+};
 
 // 하나의 판매가 — 팔 수 없으면 null
 export function sellPrice(itemId: string, opts?: DexOptions): number | null {

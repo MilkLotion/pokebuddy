@@ -14,6 +14,8 @@ import type { ManageRoute } from "../../shared/model/route.js";
 import type { PetDeviceAction, BagDeviceAction, BagDeviceOpen, PartyDeviceAction, PartyDeviceOpen, ShopDeviceAction, ShopDeviceOpen } from "../../shared/model/devices.js";
 import type { ScreenView } from "../../shared/model/overlays.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
+import type { AccountReplyCode, CloudErrorCode, FailCode, MailReplyCode, TradeCloseReason } from "../../shared/names/online-codes.js";
+import type { Reason } from "../../shared/names/reasons.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
@@ -2697,18 +2699,18 @@ const TRADE_ERROR: Record<string, [string, string]> = {
   TRADE_OFFER_INVALID: ["올릴 수 없는 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
   // 서버 검증을 받지 못한 저장(P5) — 계정 저장을 확인하는 동안 교환을 막는다
   TRADE_SAVE_UNVERIFIED: ["지금은 교환할 수 없어요", "계정 저장을 확인하는 중이에요"],
-};
+} satisfies Partial<Record<FailCode, [string, string]>>;
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
 const TRADE_CLOSED: Record<string, [string, string]> = {
   guest_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
   host_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
   expired: ["링크가 만료됐어요", "참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요"],
-};
+} satisfies Record<TradeCloseReason, [string, string]>;
 const TRADE_LOCAL: Record<string, string> = {
   single: "단일 포켓몬은 교환할 수 없어요",
   locked: "확정한 포켓몬은 바꿀 수 없어요",
   "no-pet": "그 포켓몬을 찾을 수 없어요",
-};
+} satisfies Partial<Record<Reason, string>>;
 
 async function loadTrade(): Promise<void> {
   if (tradeLoading) return;
@@ -3142,7 +3144,7 @@ const ACCT_ERROR: Record<string, string> = {
   CLOUD_ACCOUNT_HELD: "이 계정은 이용이 정지됐어요",
   CLOUD_HANDOFF_INVALID: "이 PC 진행을 계정으로 옮기지 못했어요",
   SAVE_BACKUP_FAILED: "이 PC 저장을 백업하지 못해 새로 시작하지 않았어요",
-};
+} satisfies Partial<Record<AccountReplyCode | CloudErrorCode, string>>;
 const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : ACCT_ERROR[code] ?? `계정 작업을 하지 못했어요 (${code})`);
 
 // 마지막 저장 시각 — "3분 전"처럼 짧게
@@ -3545,7 +3547,7 @@ const MAIL_ERROR: Record<string, string> = {
   "bad-gift": "앱을 업데이트하면 받을 수 있어요.",
   "box-full": "박스에 빈 칸이 없어요. 자리를 만든 뒤 받아 주세요.",
   "cloud-wait": "클라우드 저장이 연결되면 받을 수 있어요. 계정 탭에서 저장 상태를 확인해 주세요.",
-};
+} satisfies Partial<Record<MailReplyCode, string>>;
 
 const monthDay = (at: number): string => {
   const d = new Date(at);

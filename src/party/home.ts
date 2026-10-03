@@ -6,6 +6,7 @@ import { zoomOfLevel } from "./size.js";
 import { screenRefOf } from "../shared/raw.js";
 import type { SaveV3, ScreenRefV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export interface HomePoint {
   dx: number;
@@ -14,13 +15,11 @@ export interface HomePoint {
 
 export type HomeFailure = ReasonOf<"no-pet" | "bad-value">;
 
-export interface HomeResult {
-  ok: boolean;
-  reason?: HomeFailure;
+export type HomeResult = Outcome<HomeFailure> & {
   petId?: string;
   home?: HomePoint;
   screen?: ScreenRefV3;
-}
+};
 
 const isFinitePoint = (v: unknown): v is HomePoint => {
   if (v == null || typeof v !== "object") return false;
@@ -43,12 +42,10 @@ export function setHome(save: SaveV3, petId: string, home: unknown, screen?: unk
 // 그림 크기 — 단계 번호(1~SIZE_STEPS 길이)를 받아 그 배율을 저장한다. 무대가 도트 배율로 쓴다 (src/main/art.ts zoomOf).
 // 상세의 크기 단추가 한 번 누를 때 한 번 저장한다. 단계표는 src/party/size.ts SIZE_STEPS
 
-export interface SizeResult {
-  ok: boolean;
-  reason?: HomeFailure;
+export type SizeResult = Outcome<HomeFailure> & {
   petId?: string;
   size?: number;
-}
+};
 
 export function setSize(save: SaveV3, petId: string, size: unknown): SizeResult {
   const zoom = typeof size === "number" ? zoomOfLevel(size) : null;

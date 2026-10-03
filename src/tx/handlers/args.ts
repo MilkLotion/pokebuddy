@@ -20,5 +20,5 @@ export const intOf = (args: unknown, key: string): number | null => {
   return typeof v === "number" && Number.isInteger(v) ? v : null;
 };
 
-// 도메인 결과의 거절 까닭 — 도메인은 실패에 까닭을 늘 싣는다. 싣지 않았으면 처리기의 잘못으로 보고 error 다
-export const reasonOf = <R extends Reason>(res: { reason?: R }): R | "error" => res.reason ?? "error";
+// 도메인 결과의 거절 까닭 — 실패에는 까닭이 늘 있다(타입이 지킨다, src/shared/command.ts Outcome). 실패로 가른 결과만 받는다
+export const reasonOf = <R extends Reason>(res: { ok: false; reason: R }): R => res.reason;

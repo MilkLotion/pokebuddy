@@ -32,6 +32,7 @@ import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
 import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";
 import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
+import type { AccountReplyCode, CloudErrorCode } from "../shared/names/online-codes.js";
 
 export interface MainOnlineOptions {
   saveFile: string;
@@ -144,7 +145,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     if (!disposed) retryTimer = setTimeout(fn, SESSION_RETRY_MS);
   };
   // 클라우드가 아직 돌지 않는 동안의 표시 — 서버에 닿지 못했다
-  const showOffline = (code: string): void => {
+  const showOffline = (code: CloudErrorCode): void => {
     cloudView = { status: "offline", lastSavedAt: cloudView.lastSavedAt, busy: false, error: code, other: null };
     push();
   };
@@ -329,7 +330,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     await start("boot");
   };
 
-  const reply = (ok: boolean, code: string | null, extra: Partial<AccountReply> = {}): AccountReply => ({ ok, code, ...extra, screen: screen() });
+  const reply = (ok: boolean, code: AccountReplyCode | null, extra: Partial<AccountReply> = {}): AccountReply => ({ ok, code, ...extra, screen: screen() });
   let githubAbort: AbortController | null = null;
 
   // save.json 을 백업 이름으로 옮긴다. 저장이 없으면 옮길 것이 없다 (src/save/save-file.ts setAsideSave)
@@ -337,7 +338,7 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
 
   // 새로 시작한다(D12) — 올리고 released → 서버 처리(로그아웃·삭제·없음) → save.json 백업 → cloud.json 비움 → 앱이 다시 켠다.
   // 서버 처리나 백업이 실패하면 앱의 멈춤을 풀고 클라우드를 다시 시작한다
-  const restartFresh = async (reason: FreshReason, server: () => Promise<{ ok: true } | { ok: false; code: string }>): Promise<AccountReply> => {
+  const restartFresh = async (reason: FreshReason, server: () => Promise<{ ok: true } | { ok: false; code: AccountReplyCode }>): Promise<AccountReply> => {
     o.freeze();
     clearRetry();
     await flush();

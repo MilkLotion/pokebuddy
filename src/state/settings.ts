@@ -6,19 +6,18 @@
 // 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
 import { screenRefOf } from "../shared/raw.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { REGION_MIN, SOUND_RULES } from "./rules.js";
+import { REGION_MIN } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import type { Outcome } from "../shared/command.js";
 
 export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
 
 export type SettingFailure = ReasonOf<"bad-args" | "bad-value">;
 
-export interface SetResult {
-  ok: boolean;
-  reason?: SettingFailure;
+export type SetResult = Outcome<SettingFailure> & {
   key?: SettingKey;
   value?: unknown;
-}
+};
 
 // 화면이 고를 수 있는 값. 하나뿐인 출처다
 export const SETTING_CHOICES = {
