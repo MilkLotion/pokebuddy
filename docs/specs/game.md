@@ -212,18 +212,18 @@ Tab과 방향키로 탭을 이동한다. Enter로 선택한다.
 - 파티·박스 탭을 나가면 기기 창을 닫는다(2026-09-30 사용자 결정 "그냥 해당 탭을 나가면 상세 닫게해."). 같은 탭을 다시 누르면 닫지 않는다. 그 탭으로 돌아와도 기기 창을 다시 열지 않는다.
 - 포켓몬 메뉴의 `상세 보기`와 진화 배너의 `바로가기`는 설정창을 열고 그 개체를 기기 창에 띄운다. 그 개체가 이미 떠 있어도 기기 창을 닫지 않는다.
 - 파티 개체이면 `◀ 이전`·`다음 ▶`은 파티 칸 순서로 돈다. 박스 개체이면 박스 순서로 돈다. 방향키 `←`·`→`도 같다. Esc 는 기기 창을 닫는다.
-- 새 개체를 띄우거나 창을 새로 열면 기기 창에 키보드 포커스를 준다(2026-09-29 사용자 보고 "상세 열고나서 옆의 창 눌러야 scope됨. 자동 필요."). 같은 개체를 다시 보낼 때(1초 갱신·명령 뒤)는 포커스를 옮기지 않는다. 도감 기기 창도 같다(`src/main/dex-window.ts` `bringUp`).
+- 새 개체를 띄우거나 창을 새로 열면 기기 창에 키보드 포커스를 준다(2026-09-29 사용자 보고 "상세 열고나서 옆의 창 눌러야 scope됨. 자동 필요."). 같은 개체를 다시 보낼 때(1초 갱신·명령 뒤)는 포커스를 옮기지 않는다. 도감 기기 창도 같다(`src/main/windows/device-window.ts` `bringUp`).
 - 기기 창을 닫으면 메인이 세대 번호를 하나 올린다. 설정창은 여는 요청에 마지막으로 받은 번호를 싣는다. 닫힘을 알기 전에 보낸 요청(1초 갱신의 다시 보내기)은 번호가 낡아 버린다. 그래서 닫은 창이 다시 떠 포커스를 가져가지 않는다. 닫은 뒤 사용자가 누른 요청은 새 번호라 바로 열린다. 도감 기기 창도 같다. 구현은 `src/main/device-gen.ts` 다. 이 방식은 구현 판단이다.
 - 진화 대화상자는 설정창에서 열린다. 명령은 설정창이 보낸다(`src/renderer/manage.ts` `onPetAction`).
 - 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 표식을 누르면 설정창에서 메가진화 창이 열린다([메가진화](#메가진화)).
 - `도감 보기` 를 누르면 개체 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다(2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까"). 설정창의 탭과 개체 상세는 그대로다. 구현은 `src/renderer/manage.ts` `toggleDexBeside`·`syncPetDevice` 다.
-  - 자리: 설정창과 개체 상세 기기 창을 한 덩어리로 보고 그 오른쪽에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다(`src/main/dex-window.ts` `place`).
+  - 자리: 설정창과 개체 상세 기기 창을 한 덩어리로 보고 그 오른쪽에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다(`src/main/windows/devices.ts` `dexDeviceOf` 의 `baseOf`).
   - 떠 있는 동안 `도감 보기` 줄은 톤 배경이다. 다시 누르면 도감 기기 창을 닫는다.
   - 개체 상세에서 다른 개체로 넘기면 도감 기기 창도 그 종으로 바뀐다. 개체 상세를 닫으면 도감 기기 창도 닫힌다.
   - 이 도감 기기 창은 바닥 단추 줄(`◀ 이전`·`울음소리`·`다음 ▶`)을 두지 않고 방향키로 넘기지 않는다. 울음소리는 개체 상세에 있다(2026-10-01 사용자 "이 도감상세에는 울음소리 없어도 될듯").
 - 설정창의 튜토리얼(상점·부화·업적)은 기기 창이 열린 동안 설정창에 그리지 않는다.
 
-구현은 `src/main/pet-window.ts`, `src/renderer/pet.html`, `src/renderer/pet.ts` 다. 설정창 쪽 연결은 `src/renderer/manage.ts` `syncPetDevice`·`stepPet`·`onPetAction` 이다. 주고받는 값은 `src/shared/manage.d.ts` `PetDeviceOpen`·`PetDeviceView`·`PetDeviceAction` 이다.
+구현은 `src/main/windows/devices.ts` `petDeviceOf`, `src/renderer/pet.html`, `src/renderer/pet.ts` 다. 설정창 쪽 연결은 `src/renderer/manage.ts` `syncPetDevice`·`stepPet`·`onPetAction` 이다. 주고받는 값은 `src/shared/manage.d.ts` `PetDeviceOpen`·`PetDeviceView`·`PetDeviceAction` 이다.
 
 ## 3. 도감 등록과 파티 소환
 
@@ -456,7 +456,7 @@ PC 잠금·절전·앱 종료 중에는 적립하지 않는다. 적립 중인 �
 구현은 `src/party/presets.ts`, `src/save/v3.ts` `normalizeParty`, `src/shop/buy.ts` `buyPreset`, `src/tx/handlers/party.ts`다. 저장 칸은 `party.active`·`party.presets`·`party.presetNames`·`party.presetCount`·`party.slotCount`다(`src/shared/save-v3.ts` `PartyV3`).
 화면: 파티 탭 머리 줄은 `파티 ◀ [프리셋 이름] ▶ … 교체`다. 넘김은 박스 넘김 줄과 같은 부품이다. `◀`·`▶`를 누르면 바로 앞·뒤 프리셋을 적용한다. 가진 프리셋 안에서 끝과 끝이 이어져 돈다. 프리셋 이름을 누르면 그 자리가 입력칸이 된다. Enter 나 바깥 클릭으로 저장하고 Esc 로 취소한다. 이름 칸은 12글자 폭으로 고정한다. 이름 길이와 이름을 고치는 중인지에 따라 `◀`·`▶`·`교체`가 움직이지 않는다. 머리 줄에는 마릿수와 칸 수를 적지 않는다(2026-10-02 사용자 결정).
 프리셋은 세 곳에서 바꾼다. 파티 탭 머리 줄의 `◀`·`▶`, 교체 화면의 프리셋 칩, 가방 기기 창 머리 줄의 `◀`·`▶`다. 셋 다 프리셋을 실제로 적용한다. 바탕화면의 파티도 바뀐다.
-구현은 `src/renderer/manage.ts` `drawParty`·`presetNameEl`·`stepPreset`·`syncPartyDevice`, `src/main/party-window.ts`, `src/renderer/party.ts`다. Figma 는 05 `02 파티` 섹션의 `Party / Base` `217:1705`, `Party / Preset · 2` `1208:952`, `Party / Preset · 3 Empty` `1208:1533`, `Party / Preset · Rename` `1233:23086`, `Party / Swap · Open` `1248:2567`, `Party / Swap · Holding` `1248:2739`, `Party / Swap · Preset 2` `1248:3179` 다.
+구현은 `src/renderer/manage.ts` `drawParty`·`presetNameEl`·`stepPreset`·`syncPartyDevice`, `src/main/windows/devices.ts` `PARTY_DEVICE`, `src/renderer/party.ts`다. Figma 는 05 `02 파티` 섹션의 `Party / Base` `217:1705`, `Party / Preset · 2` `1208:952`, `Party / Preset · 3 Empty` `1208:1533`, `Party / Preset · Rename` `1233:23086`, `Party / Swap · Open` `1248:2567`, `Party / Swap · Holding` `1248:2739`, `Party / Swap · Preset 2` `1248:3179` 다.
 숨긴 채 두 칸에 배치한 것만으로 첫 업적을 달성하지 않는다. 두 마리가 꺼내진 뒤 업적 배너로 달성을 알린다. 달성 후 다시 숨겨도 달성을 유지한다.
 같은 종의 서로 다른 두 개체도 첫 업적에서 인정한다.
 각 업적의 보상은 한 번만 받는다. 수령을 완료한 업적은 다시 수령할 수 없다. 반복형 업적이 필요하면 별도 종류로 나중에 설계한다. 같은 조건의 기준만 다른 업적(50종·150종)은 서로 다른 업적이다.
@@ -1150,7 +1150,7 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 구매에 실패하면 합계 상자가 빨강 `사지 못했어요` 와 이유로 바뀐다. 새 줄을 끼우지 않는다. 이유 문구는 `src/renderer/manage.ts` 의 거절 이유 표 `REASON` 을 따른다. 0.3초 넘게 답이 없으면 `구매` 단추가 점 세 개가 된다.
 진화 탭 상품 줄의 설명은 진화 전 종 이름이다. 한 쌍이면 `야돈 → 야도킹`, 그 밖에는 이름 둘까지 `피카츄·레어코일 외 5종` 이다(사용자 결정 "피카츄·레어코일 외 5종처럼"). 미해금 진화 전 종의 이름은 쓰지 않고 수로 센다. 해금한 이름이 없으면 `대상 N종` 이다(제안).
 포켓몬 상품: 포켓몬 탭은 숨김이다(`src/renderer/manage.ts` `SHOP_TABS`). 기기 창은 효과·쓰는 곳 기본 문구만 보인다. 옛 구매 창의 정보 줄·진화 트리는 없앴다. 진화 트리는 도감 기기 창에서 본다. `[스펙 미확정]` 포켓몬 탭을 다시 켤 때 기기 창 내용을 정한다.
-구현은 `src/main/shop-window.ts`, `src/renderer/shop.html`·`shop.ts`, `src/renderer/manage.ts` `shopDeviceModel`·`syncShopDevice`·`buyShop`, `src/tx/lists.ts`, `src/tx/handlers/items.ts`, `src/shop/buy.ts` 이다. Figma 는 05 `06 상점` 섹션의 `Shop / Device / Tool` `1110:365`, `Shop / Device / Egg` `1110:23592`, `Shop / Device / Evolution` `1110:23904` 이다. 옛 포켓몬 구매 창 화면은 06 보류 페이지 `1112:1548` 에 있다.
+구현은 `src/main/windows/devices.ts` `SHOP_DEVICE`, `src/renderer/shop.html`·`shop.ts`, `src/renderer/manage.ts` `shopDeviceModel`·`syncShopDevice`·`buyShop`, `src/tx/lists.ts`, `src/tx/handlers/items.ts`, `src/shop/buy.ts` 이다. Figma 는 05 `06 상점` 섹션의 `Shop / Device / Tool` `1110:365`, `Shop / Device / Egg` `1110:23592`, `Shop / Device / Evolution` `1110:23904` 이다. 옛 포켓몬 구매 창 화면은 06 보류 페이지 `1112:1548` 에 있다.
 
 ### 가방 기기 창
 
@@ -1163,7 +1163,7 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 파티 줄은 파티 칸 순서의 초상과 레벨이다. 칸 폭은 50 이다. 고른 칸만 옅은 배경이다. 테두리는 없다. 처음에는 첫 파티 개체를 고른다. 이름은 미리보기 첫 줄이 보인다(예 `피카츄 Lv.12 → Lv.13`).
 쓸 수 없는 대상이면 미리보기 첫 줄에 까닭을 보이고 `사용` 을 끈다(`bagBlocked`). 실패하면 미리보기 상자가 빨강 `쓰지 못했어요` 와 이유로 바뀐다. 0.3초 넘게 답이 없으면 주 단추가 점 세 개가 된다.
 닫는 경로는 `✕`, Esc, 같은 칸 다시 누르기, 가방 탭 나가기다. `◀ 이전`·`다음 ▶`·방향키는 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래는 `사용`, 수량은 1, 결과·실패 표시는 지운다.
-구현은 `src/main/bag-window.ts`(공통 틀 `src/main/item-window.ts`), `src/renderer/bag.html`·`bag.ts`(공통 `src/renderer/item-device.ts`), `src/renderer/manage.ts` `bagDeviceModel`·`syncBagDevice`·`useBag`·`sellBag` 이다. Figma 는 05 `07 가방` 섹션의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다.
+구현은 `src/main/windows/devices.ts` `BAG_DEVICE`(공통 틀 `src/main/windows/device-window.ts`), `src/renderer/bag.html`·`bag.ts`(공통 `src/renderer/item-device.ts`), `src/renderer/manage.ts` `bagDeviceModel`·`syncBagDevice`·`useBag`·`sellBag` 이다. Figma 는 05 `07 가방` 섹션의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다.
 
 ### 가방 판매
 

@@ -437,7 +437,7 @@ Figma: `Save Indicator` `633:18434`(`State=Online|Offline|Warn`). `Label` 속성
 이전·다음: 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다. 방향키 `←`·`→`도 같다.
 대화상자: 진화 대화상자는 설정창에서 열린다. 기기 창은 누른 단추를 설정창에 돌려보낸다.
 튜토리얼: 파티 개체이면 개체 상세 튜토리얼을 기기 창 안에서 C-23으로 보여준다. 규칙은 [행동에 따른 단계별 튜토리얼](game.md#행동에-따른-단계별-튜토리얼)을 따른다.
-규칙은 [파티 상세 기기 창](game.md#파티-상세-기기-창)을 따른다. 구현은 `src/main/pet-window.ts`, `src/renderer/pet.html`, `src/renderer/pet.ts` 다.
+규칙은 [파티 상세 기기 창](game.md#파티-상세-기기-창)을 따른다. 구현은 `src/main/windows/devices.ts` `petDeviceOf`, `src/renderer/pet.html`, `src/renderer/pet.ts` 다.
 Figma: 기기는 `Party Detail Device` `1262:76637`(`State=Default|In Ball|Box Pokemon`)다. 머리는 `Device Top`, 막대는 `Stat Meter` Narrow, 돌봄 단추는 `Button` Medium, 성장 줄은 `Link Row`, 크기 줄은 `Size Selector`, 바닥 조작은 `Device Controls` 다. 화면은 `05 · Screens` 의 `Party / Detail Device` `908:23772`(`Party Layout` 인스턴스 + 기기 인스턴스), 볼 안 `914:22572`, 박스 개체 `1126:23642`, 도감 옆 `1143:20169` 이다. 개체 상세 튜토리얼은 `914:25889`·`914:26007`·`914:26130`·`914:26253` 네 장이다. 버프는 기기 화면 안의 상태 배지 `status` 다. 옛 버프 칩 줄 `buffs` 는 2026-09-30 지웠다. 옛 노드 `862:21998`(관리 창)·`862:22000`(기기)·`862:22339`(볼 토글)·`1003:20096`(상태 배지)은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
 
 ### C-29 우편함
@@ -468,7 +468,7 @@ Figma: `05 · Screens` 섹션 `10 우편함` `932:22859` — `Mail / List` `908:
 살 수 없을 때: 줄 구성은 그대로다. 수량 단추와 `구매` 가 비활성이고 머리 줄 상태 글자가 `돌보미집 가득`·`가방 가득`·`모두 모았어요` 다(2026-10-02).
 여는 경로: 상품 카드(C-10)·포켓몬 상품 칸. 닫는 경로: `✕`, Esc, 같은 카드 다시 누르기, 상점 탭 나가기.
 대화상자: 없다. 수량·구매 단추는 설정창으로 돌아가 설정창이 명령을 보낸다.
-규칙은 [상점 기기 창](game.md#상점-기기-창)을 따른다. 구현은 `src/main/shop-window.ts`, `src/renderer/shop.html`, `src/renderer/shop.ts` 다.
+규칙은 [상점 기기 창](game.md#상점-기기-창)을 따른다. 구현은 `src/main/windows/devices.ts` `SHOP_DEVICE`, `src/renderer/shop.html`, `src/renderer/shop.ts` 다.
 Figma: 기기는 `Shop Device` `1262:77893` 이다. 도구·알·진화의 차이는 인스턴스에서 글자와 보임으로 덮어쓴다. 화면은 05 `06 상점` 의 `Shop / Device / Tool` `1110:365`, `Shop / Device / Egg` `1110:23592`, `Shop / Device / Evolution` `1110:23904`, `Shop / Device / Egg · 구매 결과` `1358:45767`, `Shop / Device / Egg · 돌보미집 가득` `1358:45504`, `Shop / Device / Tool · 가방 가득` `1364:49967`, `Shop / Device / Egg · 모두 모았어요` `1364:50253` 이다. 옛 기기 틀 `1110:542`·`1110:23668`·`1110:23980` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
 
 ### C-31 가방 기기 창
@@ -480,5 +480,5 @@ Figma: 기기는 `Shop Device` `1262:77893` 이다. 도구·알·진화의 차�
 조작 칸(판매): 머리 줄(`판매하기` + `사용 | 판매`), 수량 줄, 받는 포인트 상자. 진화용 도구는 전환이 없다.
 결과·실패: 미리보기 상자가 초록(결과)·빨강(실패)으로 바뀐다. 새 줄을 끼우지 않는다.
 여는 경로: 가방 칸(C-09). 닫는 경로: `✕`, Esc, 같은 칸 다시 누르기, 가방 탭 나가기.
-규칙은 [가방 기기 창](game.md#가방-기기-창)을 따른다. 구현은 `src/main/bag-window.ts`, `src/renderer/bag.html`, `src/renderer/bag.ts` 다.
+규칙은 [가방 기기 창](game.md#가방-기기-창)을 따른다. 구현은 `src/main/windows/devices.ts` `BAG_DEVICE`, `src/renderer/bag.html`, `src/renderer/bag.ts` 다.
 Figma: 기기는 `Bag Device` `1262:78407`(`State=Use|Sell|Evolution`)이다. 화면은 05 `07 가방` 의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다. 기기 창에 뜬 도구의 가방 칸은 `Bag Item Card` 의 `State=Selected` 다. 미리보기·합계 상자는 `Info Box` 인스턴스다. 미리보기 상자는 세로 여백 8, 합계 상자는 세로 여백 10·반지름 10 으로 덮어쓴다(재구성 전 크기 54·58). 옛 기기 틀 `1129:24619`·`1129:24693` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
