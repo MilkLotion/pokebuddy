@@ -18,6 +18,7 @@ import { genderLookInfo, regionalOf } from "../dex/regional.js";
 import { megaOf } from "../dex/mega.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
+import { fetchCached } from "./art/fetch.js";
 import type { PortraitAsk } from "../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -40,11 +41,6 @@ function itemIds(): string[] {
   const keys = [...Object.keys(loadJson<Record<string, unknown>>("items.json")), ...Object.keys(loadJson<Record<string, unknown>>("evo-items.json"))];
   return [...new Set(keys.filter((k) => !isMetaKey(k) && /^[a-z0-9-]+$/.test(k)))];
 }
-
-interface FetchModule {
-  cached(file: string, url: string, validate?: (buf: Buffer) => boolean): Promise<{ buf: Buffer } | null>;
-}
-const { cached } = require("../../art/fetch.js") as FetchModule;
 
 const SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites";
 const BASE = `${SPRITES}/pokemon`;
@@ -127,7 +123,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
   const fetchOnce = (file: string, url: string): Promise<{ buf: Buffer } | null> => {
     const going = inflight.get(file);
     if (going) return going;
-    const job = cached(file, url, isPng).finally(() => inflight.delete(file));
+    const job = fetchCached(file, url, isPng).finally(() => inflight.delete(file));
     inflight.set(file, job);
     return job;
   };

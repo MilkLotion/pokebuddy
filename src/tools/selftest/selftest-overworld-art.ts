@@ -202,7 +202,7 @@ async function main(): Promise<void> {
     );
   });
 
-  // (6) 도감에 없는 이름은 PMD 가 네트워크 없이 null 이다 (art/pmd-load.js dexPath) — 그 뒤 순서만 본다
+  // (6) 도감에 없는 이름은 PMD 가 네트워크 없이 null 이다 (src/main/art/pmd-load.ts → src/dex/dex-number.ts dexPath) — 그 뒤 순서만 본다
   const walkArt = six!;
   const portraitPng = encodePng({ w: 8, h: 8, px: Buffer.alloc(8 * 8 * 4, 255) });
   await check("(6) PMD 실패 → 걷기 대체 그림", async () => {

@@ -3,7 +3,7 @@
 // 상점은 스냅샷에 함께 담는다(포켓몬 상품은 해금한 알 종이라 수백 줄이다). 도감은 1089종이라 탭을 열 때만 따로 부른다.
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
-import { petName } from "../main/text.js";
+import { petName } from "./text.js";
 import { eggName, speciesPrice, eggNote, eggPrice, slotPrice, toolPrice } from "../shop/catalog.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf } from "../dex/regional.js";

@@ -66,7 +66,7 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 
 ### 언어와 이름
 
-- 화면 문구는 `lib/i18n/<언어>.json` 에서 키로 가져온다 (`lib/i18n.js t()`, 메인은 `src/main/text.ts` 로 감싸 쓴다). 기본 언어는 한국어(`ko`)다. 영어(`en`)도 있다. 언어 우선순위는 `POKEBUDDY_LANG` → `config.json` 의 `lang` → `ko` 순이다. 없는 키는 한국어로 대체된다. 한국어도 없으면 키 이름을 그대로 보여준다. 그래서 화면이 비지 않는다
+- 화면 문구는 `lib/i18n/<언어>.json` 에서 키로 가져온다 (`src/view/i18n.ts` 의 `t()`, 메인과 화면 값은 `src/view/text.ts` 로 감싸 쓴다). 기본 언어는 한국어(`ko`)다. 영어(`en`)도 있다. 언어 우선순위는 `POKEBUDDY_LANG` → `config.json` 의 `lang` → `ko` 순이다. 없는 키는 한국어로 대체된다. 한국어도 없으면 키 이름을 그대로 보여준다. 그래서 화면이 비지 않는다
 - 코어(명령 처리 `src/commands/`, `src/state/`)는 문구가 아니라 코드(`reason` · `nextAt`)를 돌려준다. 문구는 UI 가 만든다. 언어를 더할 때 코어를 건드리지 않기 위해서다
 - 성격 이름은 `data/natures.json` 의 `name`(한국어·영어)에 있다. 언어 파일에 따로 두지 않는다
 - 포켓몬 이름은 `lib/names.json` 에 있다. 슬러그(eevee · rotom-wash)를 `{ ko, en }` 로 매핑한다. `npm run data:build`(`dist/tools/data/build-names.js`, 원본 `src/tools/data/build-names.ts`) 가 PokeAPI 의 CSV(종 이름표 + 폼 이름표)에서 한 번 뽑아 동봉한다. 폼 슬러그는 폼 이름표를 따른다(워시로토무 · Wash Rotom). `-3d` 는 같은 종으로 본다. 표에 없는 이름은 슬러그 그대로 쓴다
@@ -131,7 +131,7 @@ Windows 는 조상을 구하는 데 PowerShell 을 띄워야 한다(수백 ms). 
 
 ### 상태에 따라 동작이 달라지는 방식
 
-- 상태마다 **다른 PMD 동작 시트**를 재생한다(상태 → 동작 후보는 `art/pmd.js`, 재생은 `src/renderer/sprites.ts`). 프레임마다 길이가 다른 원본 타이밍(AnimData.xml)을 그대로 쓴다.
+- 상태마다 **다른 PMD 동작 시트**를 재생한다(상태 → 동작 후보는 `src/main/art/pmd.ts`, 재생은 `src/renderer/sprites.ts`). 프레임마다 길이가 다른 원본 타이밍(AnimData.xml)을 그대로 쓴다.
   한 번만 보여 줄 동작(`Pose`)은 2초가 될 때까지 되풀이한 뒤 대기로 돌아간다(인사 한 번이 0.4초라 한 번만 틀면 못 본다).
   쓰러짐(`Faint`)은 마지막 자세로 멈춰 있다. 작업 중(`running`)은 buddy 가 동작을 고른다.
 - 무대의 상태는 파티 전원이 같다. 모든 마리가 같은 CLI 상태를 따른다.
@@ -173,7 +173,7 @@ Windows 는 조상을 구하는 데 PowerShell 을 띄워야 한다(수백 ms). 
 한가할 때 동작은 표본 50종 중 27종이 5개를 다 가졌다. 나머지 23종은 `Rotate` 와 두리번뿐이다.
 
 PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 그래서 프레임이 17~33ms 다. 캐릭터가 칸 안에서 크게 움직인다.
-그대로 반복하면 떨리거나 갈라져 보인다. 그래서 19종의 시트를 재서 동작마다 재생 방식을 정했다(`art/pmd.js` `WORK_PLAY`).
+그대로 반복하면 떨리거나 갈라져 보인다. 그래서 19종의 시트를 재서 동작마다 재생 방식을 정했다(`src/main/art/pmd.ts` `WORK_PLAY`).
 같은 이름의 동작은 종이 달라도 거의 같게 나왔다.
 
 | 동작 | 실측 (50ms 이하 프레임 사이 중심 이동) | 처리 |
@@ -263,7 +263,7 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 무대는 캔버스 하나에 동작마다 시트를 미리 풀어 둔다. 그 시트로 그린다.
 
 - `https://spriteserver.pmdcollab.org/assets/<도감4자리>/sprites.zip` 을 받는다. `~/.claude/pokebuddy/pmd/` 에 캐시한다.
-  풀지 않고 메모리에서 읽는다(`art/pmd-load.js` · `art/pmd.js`, 무대 쪽 감싸기는 `src/main/art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
+  풀지 않고 메모리에서 읽는다(`src/main/art/pmd-load.ts` · `src/main/art/pmd.ts`, 무대 쪽 감싸기는 `src/main/art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
 - 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
