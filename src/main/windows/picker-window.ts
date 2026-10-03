@@ -3,7 +3,7 @@ import { BrowserWindow } from "electron";
 import { nextOf } from "../../dex/evo";
 import type { PickerPayload } from "../../shared/model/stage";
 import type { StageChannel } from "../../shared/ipc/stage";
-import { windowIcon } from "../paths";
+import { windowIcon } from "./files";
 import type { Portraits } from "../portraits";
 import { petName, t } from "../text";
 import { createIpcScope } from "./ipc";

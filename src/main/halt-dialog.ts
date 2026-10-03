@@ -14,7 +14,7 @@ import { app, dialog, type BrowserWindow } from "electron";
 import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";
 import { showAlert } from "./windows/alert-window";
-import { preloadFile, rendererFile } from "./paths";
+import { preloadFile, rendererFile } from "./windows/files";
 import { t } from "./text";
 import { primaryWorkArea } from "./windows/display";
 import { createOverlayWindow } from "./windows/options";

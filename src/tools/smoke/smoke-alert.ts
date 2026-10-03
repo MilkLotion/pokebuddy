@@ -11,7 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ALERT_RULES, showAlert } from "../../main/windows/alert-window";
 import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, showHeld, showKicked } from "../../main/halt-dialog";
-import { preloadFile, rendererFile } from "../../main/paths";
+import { preloadFile, rendererFile } from "../../main/windows/files";
 import { setLang } from "../../main/text";
 import { makeTmp } from "../harness/tmp-dir";
 

@@ -4,7 +4,7 @@
 // 투명 창 아홉 종류(무대·기기 창·알림·배너·메뉴·영역·화면 덮개)가 같은 값을 쓰는 키는 transparentOptionsOf 한 곳이다.
 // 오버레이(테두리 없음·항상 위·옮길 수 없음)는 createOverlayWindow 가 만들고 층을 건다. 창마다 넘기는 값은 그 창의 지금 값 그대로다
 import { BrowserWindow, type BrowserWindowConstructorOptions, type Rectangle, type WebPreferences } from "electron";
-import { windowIcon } from "../paths.js";
+import { windowIcon } from "./files.js";
 
 // 항상 위 층 — screen-saver 는 무대 창·배너보다 위(알림·영역·화면 덮개), pop-up-menu 는 배너·메뉴
 export type WindowLayer = "screen-saver" | "pop-up-menu";
