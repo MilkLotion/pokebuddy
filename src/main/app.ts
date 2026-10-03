@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
-import { starters, unlockRules } from "../dex/unlocks";
+import { starterSlugs, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
@@ -491,7 +491,7 @@ function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: st
   // 첫 실행이면 스타터 초상부터 받는다. 선택 창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다
   const pics = createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
   rt.portraits = pics;
-  const starterList = saveSource.needsStarter() ? starters(unlockRules()) : [];
+  const starterList = saveSource.needsStarter() ? starterSlugs(unlockRules()) : [];
   const prefetchAt = Date.now();
   void pics
     .prefetch(undefined, starterList)

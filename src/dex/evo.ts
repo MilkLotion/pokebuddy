@@ -106,7 +106,7 @@ export function rootOf(slug: string, opts?: DexOptions): string {
 }
 
 // 뿌리부터의 거리 — 뿌리 0. 사슬에 없는 종도 0
-export function stageOf(slug: string, opts?: DexOptions): number {
+export function evoStageOf(slug: string, opts?: DexOptions): number {
   const ix = indexOf(opts);
   let cur = resolve(slug, opts);
   let n = 0;

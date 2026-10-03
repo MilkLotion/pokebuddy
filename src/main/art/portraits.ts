@@ -13,7 +13,7 @@
 // 관리 창·선택 창의 CSP 는 img-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import fs from "node:fs";
 import path from "node:path";
-import { profile, slugs } from "../../dex/species.js";
+import { profileOf, speciesSlugs } from "../../dex/species.js";
 import { genderLookInfo, regionalOf } from "../../dex/regional.js";
 import { megaOf } from "../../dex/mega.js";
 import { loadJson, isMetaKey } from "../../dex/data.js";
@@ -65,7 +65,7 @@ export function portraitIds(slug: string): PortraitId[] {
   const byGender = genderLookInfo(slug);
   if (byGender) return [...new Set<PortraitId>([byGender.pokemonId, ...portraitIds(byGender.species)])];
   const mega = megaOf(slug);
-  const dex = profile(mega?.base ?? slug).dex;
+  const dex = profileOf(mega?.base ?? slug).dex;
   const regional = mega ? null : regionalOf(slug);
   const form = mega?.pokemonId ?? regional?.pokemonId;
   const named = regional?.portrait && /^[a-z0-9-]+$/.test(regional.portrait) ? [regional.portrait] : [];
@@ -282,7 +282,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       for (const dex of firstDex) jobs.push({ rel: `${String(dex).padStart(4, "0")}.png`, url: portraitUrl(dex, false) });
       // 도감 번호 그림과 리전폼 그림(포켓몬 번호) 전부
       const order = (d: PortraitId): number => (typeof d === "number" ? d : Number.parseInt(d, 10) || 0); // 파일 이름 초상은 앞의 번호로 줄 세운다
-      const dexes = [...new Set(slugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => order(a) - order(b));
+      const dexes = [...new Set(speciesSlugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => order(a) - order(b));
       for (const dex of dexes) {
         const d = String(dex).padStart(4, "0");
         jobs.push({ rel: `${d}.png`, url: portraitUrl(dex, false) }, { rel: `${d}-shiny.png`, url: portraitUrl(dex, true) });
@@ -343,7 +343,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       const files = new Set(names(""));
       const read = (rel: string): Promise<string | null> => (files.has(rel) ? diskUri(rel) : Promise.resolve(null));
       await Promise.all(
-        slugs().map(async (slug) => {
+        speciesSlugs().map(async (slug) => {
           // 첫 번호(리전폼이면 포켓몬 번호)만 본다 — 리전폼 그림이 아직 없으면 비워 두어 화면이 get 으로 받게 한다(기본형 대신 그림은 get 이 정한다)
           const id = portraitIds(slug)[0];
           if (!id) return;

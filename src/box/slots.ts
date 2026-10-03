@@ -2,7 +2,7 @@
 //
 // 한 박스는 30칸이다. 박스는 8개로 시작하고 상점에서 하나씩 사서 64개까지 늘린다(src/box/rules.ts BOX_RULES). 저절로 늘지 않는다.
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { BOX_RULES } from "./rules.js";
 import { pushBox } from "./boxes.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
@@ -88,7 +88,7 @@ export type BoxFailure = ReasonOf<"no-box" | "bad-slot" | "empty-slot" | "box-fu
 // 한 박스만 정렬한다 — 개체를 기준 순서로 앞 칸부터 다시 놓고 빈 칸은 뒤로. 한 번만 정렬한다(뒤에 오는 개체는 빈 칸으로)
 // 같은 값이면 도감 번호, 그다음 얻은 시각 순이다. nameOf 는 화면 이름(이름순에 쓴다)
 export function sortBox(box: BoxV3, pets: ReadonlyMap<string, PetV3>, key: BoxSortKey, nameOf: (slug: string) => string): void {
-  const dex = (p: PetV3): number => profile(p.species).dex || Number.MAX_SAFE_INTEGER;
+  const dex = (p: PetV3): number => profileOf(p.species).dex || Number.MAX_SAFE_INTEGER;
   const tie = (a: PetV3, b: PetV3): number => dex(a) - dex(b) || a.since - b.since;
   const by: Record<BoxSortKey, (a: PetV3, b: PetV3) => number> = {
     dex: tie,

@@ -1,5 +1,6 @@
 // 개체 처리기 — 진화, 돌봄, 첫 선택, 자리·크기, 모습 바꾸기
-import { dayPartOf, evolve } from "../../dex/evolve.js";
+import { evolvePet } from "../../dex/evolve.js";
+import { gameDayPart } from "../../shared/clock.js";
 import { setForm } from "../../dex/forms.js";
 import { megaOf } from "../../dex/mega.js";
 import { setMega } from "../../party/mega-form.js";
@@ -16,8 +17,8 @@ export const evolveHandler: TxHandler = (draft, args, ctx) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
   const choice = isObj(args) && typeof args.to === "string" ? args.to : undefined;
-  const part = dayPartOf(ctx.now);
-  const res = evolve(draft, petId, part, choice);
+  const part = gameDayPart(ctx.now);
+  const res = evolvePet(draft, petId, part, choice);
   if (!res.ok) return { ok: false, reason: reasonOf(res), ...(res.choices ? { choices: res.choices } : {}) };
   return { ok: true, result: { petId, from: res.from, to: res.to, usedItem: res.usedItem, ...(res.usedItems ? { usedItems: res.usedItems } : {}) } }; // 돌 + 지도면 usedItems 가 둘
 };

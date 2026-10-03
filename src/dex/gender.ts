@@ -6,7 +6,7 @@
 //   진화      data/evo.json 의 gender 가 있으면 그 성별만 진화한다 (src/dex/evolve.ts checkNeed)
 import type { Gender } from "../shared/species";
 import type { DexOptions } from "./data";
-import { profile } from "./species.js";
+import { profileOf } from "./species.js";
 
 // 성비 분모 — genderRate 는 암컷 비율을 8 분의 몇으로 적는다. -1 은 무성
 export const GENDER_RATE_MAX = 8;
@@ -16,7 +16,7 @@ export const isGender = (v: unknown): v is Gender => typeof v === "string" && (G
 
 // 종이 가질 수 있는 성별이 하나뿐이면 그것 — 무성·수컷만·암컷만. 둘 다 가능하면 null
 export function fixedGender(species: string, opts?: DexOptions): Gender | null {
-  const rate = profile(species, opts).genderRate;
+  const rate = profileOf(species, opts).genderRate;
   if (rate < 0) return "none";
   if (rate === 0) return "male";
   if (rate >= GENDER_RATE_MAX) return "female";
@@ -28,7 +28,7 @@ export function rollGender(species: string, rng: () => number = Math.random, opt
   const roll = rng();
   const fixed = fixedGender(species, opts);
   if (fixed) return fixed;
-  return roll * GENDER_RATE_MAX < profile(species, opts).genderRate ? "female" : "male";
+  return roll * GENDER_RATE_MAX < profileOf(species, opts).genderRate ? "female" : "male";
 }
 
 // 문자열 해시 (FNV-1a 32비트) — 옛 개체의 반반 뽑기를 열 때마다 같게 한다

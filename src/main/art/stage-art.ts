@@ -8,7 +8,7 @@
 import { SIZE_STEPS, snapSize } from "../../party/size.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../../shared/model/stage";
 import type { Paths } from "../paths";
-import { profile } from "../../dex/species";
+import { profileOf } from "../../dex/species";
 import { genderLookInfo, regionalOf } from "../../dex/regional";
 import { megaOf } from "../../dex/mega";
 import { dexFolderOf, lookOf } from "../../dex/look";
@@ -87,7 +87,7 @@ export function pmdSources(look: string): PmdSource[] {
     const own = [...(shiny && byGender.pmdShiny ? [byGender.pmdShiny] : []), ...(byGender.pmd ? [byGender.pmd] : [])].map((spritePath) => ({ slug, spritePath }));
     return [...own, ...pmdSources(`${byGender.species}${shiny ? ":shiny" : ""}`).map((src) => ({ ...src, slug }))];
   }
-  const dex = profile(slug).dex;
+  const dex = profileOf(slug).dex;
   const base = dex ? String(dex).padStart(4, "0") : null;
   const mega = megaOf(slug);
   // 메가 모습(src/dex/mega.ts) — 폼 폴더만 본다. 이로치는 `<폼>/0001` → 폼 보통. 폴더가 없으면 빈 목록이라 걷기 대체 그림으로 넘어간다

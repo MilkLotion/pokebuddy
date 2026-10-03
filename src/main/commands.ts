@@ -14,7 +14,8 @@ import type { Size } from "../shared/geometry";
 import type { SaveParty } from "./save-party";
 import type { GameV3 } from "./game";
 import type { CareAction } from "../state/types";
-import { candidates, dayPartOf } from "../dex/evolve";
+import { evolveCandidates } from "../dex/evolve";
+import { gameDayPart } from "../shared/clock";
 import { appearanceOf } from "../dex/look";
 import { unlockRules } from "../dex/unlocks";
 import { itemOf } from "../bag/use";
@@ -179,7 +180,7 @@ export function createCommands(ctx: CommandContext): Commands {
       const pet = save.pets.find((row) => row.id === id);
       if (!pet) return { ok: false, reason: "no-pet", id };
       const choice = typeof c.args?.to === "string" ? c.args.to : null;
-      const targets = choice ? [choice] : candidates(save, id, dayPartOf(Date.now())).filter((x) => x.ready).map((x) => x.to);
+      const targets = choice ? [choice] : evolveCandidates(save, id, gameDayPart(Date.now())).filter((x) => x.ready).map((x) => x.to);
       for (const species of targets) {
         const look = appearanceOf({ species, shiny: pet.shiny, gender: pet.gender }); // 성별 그림이 있는 종(대쓰여너 암컷)은 그 그림을 받는다
         if (ctx.prepareLook && !(await ctx.prepareLook(look))) return { ok: false, reason: "art-missing", look };

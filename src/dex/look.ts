@@ -5,7 +5,7 @@
 import type { DexOptions } from "./data";
 import { megaOf, type MegaForm } from "./mega.js";
 import { genderLookInfo, genderLookOf, regionalOf, type GenderLook, type RegionalForm } from "./regional.js";
-import { profile } from "./species.js";
+import { profileOf } from "./species.js";
 
 // 저장의 모습과 색을 그림 열쇠로 — 메가 모습(mega.on)이 켜져 있으면 그 슬러그가 먼저다.
 // 성별마다 그림이 다른 종(대쓰여너 암컷)은 그 성별의 그림 이름이 종보다 먼저다
@@ -36,7 +36,7 @@ export function lookOf(key: string, opts?: DexOptions): Look {
   const regional = mega || gender ? null : regionalOf(slug, opts);
   const kind: LookKind = mega ? "mega" : gender ? "gender" : regional ? "regional" : "plain";
   const base = mega?.base ?? gender?.species ?? regional?.base ?? slug;
-  const dex = profile(mega?.base ?? gender?.species ?? slug, opts).dex ?? 0;
+  const dex = profileOf(mega?.base ?? gender?.species ?? slug, opts).dex ?? 0;
   return { slug, shiny, kind, base, dex, mega, regional, gender };
 }
 

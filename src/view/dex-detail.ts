@@ -10,7 +10,7 @@
 //   업적 보상      data/achievements.json 의 reward.pokemon — 메타몽·라프라스 (2026-09-29 사용자 결정)
 // 미해금 종은 이름·타입과 진화 줄을 숨긴다. 진화 줄은 다음 종 이름을 드러내기 때문이다.
 // 입수 방법은 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
@@ -37,7 +37,7 @@ function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexD
 }
 
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
-  const row = profile(slug, opts);
+  const row = profileOf(slug, opts);
   if (!row.dex) return null;
   const obtained = save.dex.obtained.includes(slug);
   const unlocked = obtained || save.dex.unlocked.includes(slug);

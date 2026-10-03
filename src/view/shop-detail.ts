@@ -4,7 +4,7 @@
 //   진화용 도구  이 도구로 진화하는 쌍 전부 — 진화 전 → 진화 후, 도감 번호순
 // 미해금 종은 이름을 "???" 로 준다. 조건 문구는 미해금이어도 준다 (사용자 결정 "다 보여줘").
 // 도감 상세처럼 칸을 누를 때 한 상품만 만든다. 상점 포켓몬은 수백 종이라 스냅샷에 싣지 않는다
-import { profile } from "../dex/species.js";
+import { profileOf } from "../dex/species.js";
 import { nextOf, type EvoStep, rootOf } from "../dex/evo.js";
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
 import { itemName, petName, typeName, t } from "./text.js";
@@ -42,7 +42,7 @@ export function needLabel(step: EvoStep, opts?: DexOptions): string {
 // 트리의 한 종이 지금 상품인가 — 도감 번호로 가린다(폼 상품도 기본 종 칸이 켜진다).
 // 리전폼은 번호가 같아도 다른 종이라 슬러그로 가린다 — 라이츄와 알로라 라이츄
 const isCurrent = (slug: string, current: string, opts?: DexOptions): boolean =>
-  slug === current || (!regionalOf(slug, opts) && !regionalOf(current, opts) && profile(slug, opts).dex === profile(current, opts).dex);
+  slug === current || (!regionalOf(slug, opts) && !regionalOf(current, opts) && profileOf(slug, opts).dex === profileOf(current, opts).dex);
 
 // 사슬의 한 종과 그 아래 — 같은 종이 두 번 나오면 멈춘다(자료가 잘못돼도 끝나게)
 function node(save: SaveV3, slug: string, current: string, need: string | undefined, seen: Set<string>, opts?: DexOptions): EvoNodeView {
@@ -64,7 +64,7 @@ function node(save: SaveV3, slug: string, current: string, need: string | undefi
 // 진화용 도구로 진화하는 쌍 — 진화 전 도감 번호, 같으면 진화 후 번호순. 지도는 map 간선(기본형 → 리전폼)의 쌍이다
 export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPairView[] {
   const table = loadJson<Record<string, EvoStep[]>>("evo.json", opts);
-  const dexOf = (slug: string): number => profile(slug, opts).dex || Number.MAX_SAFE_INTEGER;
+  const dexOf = (slug: string): number => profileOf(slug, opts).dex || Number.MAX_SAFE_INTEGER;
   const side = (slug: string): EvoPairView["from"] => ({ slug, name: isKnownSpecies(save, slug) ? petName(slug) : LOCKED_NAME, locked: !isKnownSpecies(save, slug) });
   const pairs: EvoPairView[] = [];
   for (const [from, steps] of Object.entries(table)) {
@@ -96,7 +96,7 @@ export function evoItemNote(save: SaveV3, itemId: string, opts?: DexOptions): st
 export function shopDetail(save: SaveV3, productId: string, opts?: DexOptions): ShopDetail | null {
   const evoItem = loadJson<Record<string, { ko: string }>>("evo-items.json", opts)[productId];
   if (evoItem && !isMetaKey(productId)) return { kind: "evolution", pairs: evoPairs(save, productId, opts) };
-  const row = profile(productId, opts);
+  const row = profileOf(productId, opts);
   if (!row.dex) return null;
   const form = regionalOf(productId, opts);
   return {

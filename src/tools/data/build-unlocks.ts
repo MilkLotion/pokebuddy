@@ -27,7 +27,7 @@
 // 순서: 스타터 → 진화 대상(슬러그순) → 손으로 적은 것(스타터·진화 대상이 아닌 것만 뒤에)
 import fs from "node:fs";
 import path from "node:path";
-import { starters, unlockRules } from "../../dex/unlocks";
+import { starterSlugs, unlockRules } from "../../dex/unlocks";
 import type { UnlockRule } from "../../shared/species";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
@@ -130,10 +130,10 @@ export function build(evo: EvoTable, babies: Set<string>, starterSlugs: string[]
 async function main(): Promise<void> {
   const evo = JSON.parse(fs.readFileSync(EVO, "utf8")) as EvoTable;
   // 스타터는 지금 표에서 — 쓰기 전에 읽는다 (같은 파일을 덮어쓴다)
-  const starterSlugs = starters(unlockRules({ dataDir: DATA_DIR }));
-  if (!starterSlugs.length) throw new Error(`${OUT} 에 starter 항목이 없다 — 스타터 목록의 출처라 비어 있으면 만들 수 없다`);
+  const starterList = starterSlugs(unlockRules({ dataDir: DATA_DIR }));
+  if (!starterList.length) throw new Error(`${OUT} 에 starter 항목이 없다 — 스타터 목록의 출처라 비어 있으면 만들 수 없다`);
   const { babies, bases } = await fetchSpecies();
-  const { out, skipped, replaced } = build(evo, babies, starterSlugs, bases);
+  const { out, skipped, replaced } = build(evo, babies, starterList, bases);
   writeLineJson(OUT, out);
   const counts = { starter: 0, evolve: 0, base: 0, manual: Object.keys(MANUAL).length };
   for (const r of Object.values(out)) {

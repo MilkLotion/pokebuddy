@@ -1,6 +1,6 @@
 // 무대 틱과 포인터 처리. 포켓몬 겹침 허용. 소환 순서대로 그리기.
 import { axesAt } from "../dex/natures";
-import { profile } from "../dex/species";
+import { profileOf } from "../dex/species";
 import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import type { PetMotion, Phase } from "../motion/types";
@@ -110,7 +110,7 @@ export function createStage(opts: StageOptions): Stage {
   // 성격 축 → 움직임 값. 잠드는 빠르기는 종의 졸림으로 나눈다 — 처음 만들 때와 변덕(quirky)의 축이 바뀔 때가 같은 계산이다
   const paramsOf = (axes: ReturnType<typeof axesAt>, species: string): ReturnType<typeof paramsFor> => {
     const params = paramsFor(axes);
-    params.sleepScale /= profile(species).sleepiness;
+    params.sleepScale /= profileOf(species).sleepiness;
     return params;
   };
 

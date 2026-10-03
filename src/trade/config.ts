@@ -8,7 +8,7 @@
 // 개발 실행 판정은 devRunAt — app.isPackaged 만으로는 npm 설치본(`electron .` 으로 뜬다)을 가리지 못한다
 import { createHash } from "node:crypto";
 import { loadJson, type DexOptions } from "../dex/data.js";
-import { slugs } from "../dex/species.js";
+import { speciesSlugs } from "../dex/species.js";
 
 export interface OnlineConfig {
   url: string;
@@ -39,7 +39,7 @@ let cached: string | null = null;
 // 종 데이터의 지문 — 종 ID 목록을 정렬해 SHA-256 앞 12자리. 두 앱의 값이 다르면 참가를 거절한다
 export function dataVersion(opts?: DexOptions): string {
   if (!opts && cached) return cached;
-  const v = createHash("sha256").update(slugs(opts).join("\n")).digest("hex").slice(0, 12);
+  const v = createHash("sha256").update(speciesSlugs(opts).join("\n")).digest("hex").slice(0, 12);
   if (!opts) cached = v;
   return v;
 }
