@@ -243,7 +243,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   const s = seed(pet({ mega: { ...full, stone: true, on: "charizard-mega-x" } }), pet({ id: "p2", species: "gengar", evolved: [], mega: { ...full, stone: true } }), pet({ id: "p3", species: "pikachu", evolved: [] }));
   s.dex.megaOpened = ["charizard", "gengar"];
   s.dex.obtained = ["charizard", "gengar", "pikachu"];
-  const v = snapshot(s, undefined, undefined, undefined, T0);
+  const v = snapshot(s, T0);
   const [a, b, c] = v.party.slots.map((x) => x.pet);
   assert.equal(a?.species, "charizard");
   assert.equal(a?.look, "charizard-mega-x");
