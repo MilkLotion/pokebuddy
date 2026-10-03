@@ -174,7 +174,7 @@ try {
     const game = createGame({ file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     game.tick(); // 첫 틱 — 쓴다
-    const block = `${file}.${process.pid}.tmp`; // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic)
+    const block = `${file}.${process.pid}.tmp`; // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic)
     fs.mkdirSync(block);
     let firstNotice = -1;
     for (let sec = 1; sec <= 60; sec++) {

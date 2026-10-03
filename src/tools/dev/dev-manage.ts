@@ -261,7 +261,7 @@ void app.whenReady().then(async () => {
   const route = routeArg ? JSON.parse(routeArg) : undefined;
   const game = createGame({ file });
   if (hasFlag("--save-failing")) {
-    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic). 설정창은 보기를 만들 때마다 먼저 저장하므로
+    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic). 설정창은 보기를 만들 때마다 먼저 저장하므로
     // 막음을 두는 동안 실패가 이어진다. 끝날 때 푼다 — 임시 폴더째 지워지기도 한다
     const block = `${file}.${process.pid}.tmp`;
     fs.mkdirSync(block);

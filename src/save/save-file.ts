@@ -13,7 +13,7 @@
 //             repair 가 아니면(읽기 전용) 파일을 건드리지 않고 옮긴 값만 돌려준다. 파일 교체는 writer 의 일이다
 //   그 밖     파손으로 보고 <저장>.broken-<시각>.bak 으로 옮긴다 (repair 일 때만). 시각을 붙여 앞선 격리를 덮지 않는다(검수 P3-6)
 // 백업에 실패하면 옮기지 않는다. 사용자의 진행을 잃는 것보다 v3 을 늦게 쓰는 편이 낫다.
-// 쓰기는 legacy.ts 의 writeAtomic 을 그대로 쓴다 — tmp 에 쓰고 rename 이라 반쪽 파일이 남지 않는다.
+// 쓰기는 src/platform/atomic-write.ts 의 writeAtomic 을 쓴다 — tmp 에 쓰고 rename 이라 반쪽 파일이 남지 않는다.
 //
 // 암호화 (src/save/crypt.ts, worklog/records/cloud-authority/record.md "P3 로컬 암호화")
 //   키가 있으면 암호화해 쓰고, 읽을 때 푼다. 풀지 못하면(고침·다른 키) 파손과 같다
