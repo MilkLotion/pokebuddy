@@ -5,6 +5,7 @@
 import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
+import { numberText } from "../ui/number-text.js";
 
 export interface DeviceBridge {
   size: (height: number) => void;
@@ -134,7 +135,7 @@ export function qtyRow(q: { count: number; cap: number; hint: string }, set: (qt
   const max = buttonEl("max", "최대", () => set(q.cap));
   max.disabled = off || q.count >= q.cap;
   const row = el("div", "qty");
-  row.append(minus, el("span", "count", q.count.toLocaleString("ko-KR")), plus, max, el("span", "hint", q.hint));
+  row.append(minus, el("span", "count", numberText(q.count)), plus, max, el("span", "hint", q.hint));
   return row;
 }
 

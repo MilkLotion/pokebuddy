@@ -13,6 +13,9 @@ import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 import { createCryPlayer } from "../ui/cry.js";
+import { typeBadgeEl } from "../ui/type-badge.js";
+import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
+import { buffText, waitText } from "../ui/time-text.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
@@ -47,18 +50,13 @@ const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통",
 // 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
 const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
 
-// 버프 배지 — 이름과 남은 시간. 1시간 미만은 분(0분이면 1분), 그 위는 시간(올림).
-// 관리 창(src/renderer/manage/manage.ts buffBadge)과 같은 규칙이다 — 고칠 때 함께 고친다
-const buffBadge = (b: PetDeviceView["pet"]["buffs"][number]): string =>
-  `${b.name} ${b.remainMin < 60 ? `${Math.max(1, b.remainMin)}분` : `${Math.ceil(b.remainMin / 60)}시간`}`;
-
 // 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
   const tone = DEBUFF_TONE[pet.zone];
   if (tone) list.push(el("span", `badge ${tone}`, ZONE_WORD[pet.zone] ?? pet.zone));
   for (const buff of pet.buffs ?? []) {
-    const badge = el("span", "badge success", buffBadge(buff));
+    const badge = el("span", "badge success", buffText(buff));
     badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)
     list.push(badge);
   }
@@ -165,17 +163,6 @@ document.addEventListener(
   true,
 );
 
-// 남은 시간 — 관리 창 waitWord 와 같은 말
-function waitWord(sec: number): string {
-  const s = Math.max(0, Math.ceil(sec));
-  if (s < 60) return `${s}초`;
-  const min = Math.ceil(s / 60);
-  if (min < 60) return `${min}분`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h}시간 ${m}분` : `${h}시간`;
-}
-
 // 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (ui/portrait.ts spriteCanvas)
 const STAGE = { w: 88, h: 88, maxScale: 2 };
 // 메가스톤 표식 — 28×28. 키스톤 그림(30×30 안의 14×14)의 빈 테두리를 잘라 두 배로 그린다
@@ -190,11 +177,7 @@ function bar(label: string, value: number, shown: string, cls = "", live?: "affi
   if (live) box.dataset.live = live;
   const head = el("div", "head");
   head.append(el("span", undefined, label), el("strong", undefined, shown));
-  const track = el("div", "track");
-  const fill = el("div", cls ? `fill ${cls}` : "fill");
-  fill.style.width = `${Math.max(0, Math.min(100, value))}%`;
-  track.appendChild(fill);
-  box.append(head, track);
+  box.append(head, fillBarEl(value, cls));
   return box;
 }
 
@@ -233,7 +216,7 @@ function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "
   return `${pet.mood} · ${pet.moodWord}`;
 }
 const feedText = (pet: PetDeviceView["pet"]): string =>
-  pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitWord(pet.feedInSec)}`;
+  pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitText(pet.feedInSec)}`;
 
 // 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록이다
 // 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
@@ -249,13 +232,13 @@ function applyLive(v: PetDeviceView): void {
     const shown = box.querySelector<HTMLElement>(".head strong");
     if (shown) shown.textContent = liveShown(pet, field);
     const fill = box.querySelector<HTMLElement>(".fill");
-    if (fill) fill.style.width = `${Math.max(0, Math.min(100, pet[field]))}%`;
+    if (fill) fill.style.width = `${clampPercent(pet[field])}%`;
   }
   const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
   if (feed) feed.textContent = feedText(pet);
   for (const node of device.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const buff = pet.buffs.find((b) => b.kind === node.dataset.liveBuff);
-    if (buff && node.textContent !== buffBadge(buff)) node.textContent = buffBadge(buff);
+    if (buff && node.textContent !== buffText(buff)) node.textContent = buffText(buff);
   }
   lastView = v;
 }
@@ -334,12 +317,7 @@ function renderBody(v: PetDeviceView): void {
   info.appendChild(nameRow);
   info.appendChild(el("div", "sub", NATURE_UI ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
   const types = el("div", "types");
-  pet.types.forEach((name, i) => {
-    const badge = el("span", "type", name);
-    const id = pet.typeIds[i];
-    if (id) badge.dataset.type = id;
-    types.appendChild(badge);
-  });
+  pet.types.forEach((name, i) => types.appendChild(typeBadgeEl(name, pet.typeIds[i])));
   info.appendChild(types);
   entry.appendChild(info);
   screen.appendChild(entry);
@@ -360,7 +338,7 @@ function renderBody(v: PetDeviceView): void {
   records.append(
     bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
     bar("친밀도", pet.affinity, liveShown(pet, "affinity"), "", "affinity"),
-    bar("만복도", pet.fullness, liveShown(pet, "fullness"), pet.zone === "hungry" || pet.zone === "starving" ? pet.zone : "", "fullness"),
+    bar("만복도", pet.fullness, liveShown(pet, "fullness"), zoneClassOf(pet.zone), "fullness"),
     bar("기분", pet.mood, liveShown(pet, "mood"), "mood", "mood"),
   );
   screen.appendChild(records);

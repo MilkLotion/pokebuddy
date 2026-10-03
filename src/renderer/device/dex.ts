@@ -7,6 +7,7 @@ import { portraitImg, spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 import { createCryPlayer } from "../ui/cry.js";
+import { typeBadgeEl } from "../ui/type-badge.js";
 
 const root = document.getElementById("device");
 if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
@@ -78,14 +79,8 @@ function render(v: DexDeviceView): void {
   const info = el("div", "info");
   info.appendChild(el("div", undefined, locked ? UNKNOWN : d.genus || " "));
   const types = el("div", "types");
-  if (d.types.length)
-    d.types.forEach((name, i) => {
-      const badge = el("span", "type", name);
-      const id = d.typeIds[i];
-      if (id) badge.dataset.type = id;
-      types.appendChild(badge);
-    });
-  else types.appendChild(el("span", "type", UNKNOWN));
+  if (d.types.length) d.types.forEach((name, i) => types.appendChild(typeBadgeEl(name, d.typeIds[i])));
+  else types.appendChild(typeBadgeEl(UNKNOWN));
   info.appendChild(types);
   const measure = el("div", "measure");
   for (const [key, value] of [
