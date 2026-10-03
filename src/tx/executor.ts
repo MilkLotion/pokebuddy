@@ -39,8 +39,6 @@ export interface TxPorts {
 
 export interface Executor {
   run: (req: TxRequest) => TxResult;
-  saveFailStreak: () => number; // 이어서 실패한 횟수. 정해진 수를 넘으면 화면이 안내를 남긴다
-  shouldNotifySaveFail: () => boolean;
 }
 
 // 완료한 요청 기록을 최근 건수와 보관 기간 중 큰 쪽으로 자른다
@@ -51,8 +49,8 @@ export function trimTx(list: TxRecordV3[], now: number): TxRecordV3[] {
   return fresh.length >= keep ? fresh : sorted.slice(-keep);
 }
 
+// 저장 실패는 세지 않는다 — 이어진 실패의 안내는 쓰기 층(./live-save.ts failing)이 명령과 주기 저장을 함께 센다 (94 항목 9-2-4)
 export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandler>): Executor {
-  let failStreak = 0;
 
   const run = (req: TxRequest): TxResult => {
     const save = ports.read();
@@ -75,17 +73,9 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     const result = out.result ?? null;
     draft.tx = trimTx([...draft.tx, { id: req.id, at: now, result }], now);
     draft.savedAt = now;
-    if (!ports.write(draft, req.name)) {
-      failStreak += 1;
-      return { ok: false, reason: "save-failed" };
-    }
-    failStreak = 0;
+    if (!ports.write(draft, req.name)) return { ok: false, reason: "save-failed" };
     return { ok: true, result, replayed: false, achieved };
   };
 
-  return {
-    run,
-    saveFailStreak: () => failStreak,
-    shouldNotifySaveFail: () => failStreak >= SAVE_RULES.saveFailNotifyAfter,
-  };
+  return { run };
 }
