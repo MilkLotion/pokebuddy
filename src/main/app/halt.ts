@@ -137,8 +137,9 @@ export function createHalt(deps: HaltDeps): Halt {
         holdAccount();
         return;
       }
-      // 멈추기 전에 1초 틱 진행을 쓴다 — 멈춘 동안은 쓰지 않는다. 쓴 진행은 넘겨받은 뒤 올린다
-      if (!freeze.reason() && deps.isWriter()) deps.flush();
+      // 멈추기 전에 1초 틱 진행을 쓴다 — 멈춘 동안은 쓰지 않는다. 쓴 진행은 넘겨받은 뒤 올린다.
+      // 새로 시작하는 중(저장을 이미 백업으로 옮겼다)에도 쓰지 않는다 — 다른 쓰기 자리와 같은 조건 (94 문서 5-11)
+      if (!freeze.frozen() && deps.isWriter()) deps.flush();
       freeze.set(reason);
       deps.resetWork();
       pauseOnlineWork();
