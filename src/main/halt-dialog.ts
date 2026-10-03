@@ -16,7 +16,7 @@ import type { AlertView } from "../shared/model/overlays";
 import { showAlert } from "./alert-window";
 import { preloadFile, rendererFile } from "./paths";
 import { t } from "./text";
-import { webPreferencesOf } from "./window-options";
+import { webPreferencesOf } from "./windows/options";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
 export const KICKED_CLOSE_MS = 30_000;

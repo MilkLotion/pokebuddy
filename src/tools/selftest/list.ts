@@ -37,6 +37,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("flow"),
   tool("dex"),
   tool("dex-detail"),
+  tool("window-helpers"),
   tool("notify"),
   tool("find"),
   tool("clock"),

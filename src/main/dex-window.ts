@@ -9,8 +9,9 @@ import type { DexDetail, EvoNodeView } from "../shared/model/detail";
 import type { DexDeviceChannel } from "../shared/ipc/devices";
 import type { DexDeviceView } from "../shared/model/devices";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 import { createGenGate } from "./device-gen.js";
+import { dockAt } from "./windows/placement.js";
 
 const CH = {
   show: "dexdev:show",
@@ -40,15 +41,6 @@ export interface DexWindow {
   show: (parent: BrowserWindow, slug: string, gen: unknown, beside?: number) => Promise<void>; // gen 이 지금 세대 번호가 아니면 버린다. beside 는 관리 창 옆에 먼저 붙은 창의 폭(파티 상세 기기 창) — 0 이면 관리 창 옆
   close: () => void;
   resetGen: () => void; // 관리 창 문서를 새로 읽었다 — 세대 번호를 0 으로
-}
-
-// 붙일 자리 — 관리 창 내용 영역 옆. 화면 오른쪽 끝을 넘으면 왼쪽에 붙인다
-export function dockAt(parent: { x: number; y: number; width: number; height: number }, area: { x: number; y: number; width: number; height: number }, size: { width: number; height: number }): { x: number; y: number; side: "right" | "left" } {
-  const right = parent.x + parent.width;
-  const side = right + size.width <= area.x + area.width || parent.x - size.width < area.x ? "right" : "left";
-  const x = side === "right" ? right : parent.x - size.width;
-  const y = Math.max(area.y, Math.min(parent.y, area.y + area.height - size.height));
-  return { x, y, side };
 }
 
 // 사용자가 연 기기 창에 키보드 초점을 준다 — 옆 창을 한 번 더 누르지 않아도 방향키·Esc 가 먹게

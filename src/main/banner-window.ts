@@ -8,7 +8,7 @@ import type { BannerChannel } from "../shared/ipc/overlays";
 import type { BannerView } from "../shared/model/overlays";
 import type { ManageRoute } from "../shared/model/route";
 import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./window-options.js";
+import { webPreferencesOf } from "./windows/options.js";
 
 const CH = {
   show: "banner:show",

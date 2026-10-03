@@ -11,7 +11,7 @@ import { evoItemNote, shopDetail } from "../../tx/shop-detail";
 import { josa } from "../../shared/josa";
 import { iconUrl, portraitKey, portraitUrl } from "../../main/portraits";
 import { cryUrl } from "../../main/cries";
-import { dockAt } from "../../main/dex-window";
+import { dockAt } from "../../main/windows/placement";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();
 
