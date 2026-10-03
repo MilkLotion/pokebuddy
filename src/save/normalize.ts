@@ -23,7 +23,8 @@ import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { maxPetNo } from "../party/create.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
-import { boolOr as bool, clampNum as clamp, intOr as int, isRawObject, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
+import { SETTING_CHOICES } from "../state/settings.js";
+import { boolOr as bool, choiceOr, clampNum as clamp, intOr as int, isRawObject, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
 
 // 놀이공간 방식 — 옛 "full"(주 화면)과 모르는 값은 "screen"(고른 화면 없음 = 주 화면)이다 (2026-09-28 여러 화면)
 const playModeOf = (v: unknown): SettingsV3["playArea"]["mode"] => (v === "region" || v === "all" ? v : "screen");
@@ -162,11 +163,12 @@ function normalizeSettings(raw: unknown): SettingsV3 {
   const area = isRawObject(r.playArea) ? r.playArea : {};
   const rect = isRawObject(area.rect) ? area.rect : null;
   return {
-    language: str(r.language, base.language),
+    // 언어·잠들기 기준은 설정 바꾸기와 같은 선택지만 받는다. 목록 밖이면 기본값 (docs/specs/game.md "설정과 연결")
+    language: choiceOr(r.language, SETTING_CHOICES.language, base.language),
     startOnLogin: bool(r.startOnLogin, base.startOnLogin),
     sound: bool(r.sound, base.sound),
     volume: clamp(int(r.volume, base.volume), 0, 100), // 옛 저장에는 없어 기본값이다
-    sleepAfterMin: clamp(int(r.sleepAfterMin, base.sleepAfterMin), 0, 600), // 0 은 잠들지 않음 (docs/specs/game.md "설정과 연결")
+    sleepAfterMin: choiceOr(r.sleepAfterMin, SETTING_CHOICES.sleepAfterMin, base.sleepAfterMin), // 0 은 잠들지 않음
     playArea: {
       mode: playModeOf(area.mode),
       rect: rect ? { x: int(rect.x), y: int(rect.y), w: nonNeg(rect.w), h: nonNeg(rect.h) } : null,
