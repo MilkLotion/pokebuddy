@@ -12,8 +12,9 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { SessionGate } from "./session.js";
 import { finishSwitch, prepareSwitch, type HandoffReport, type PendingHandoff, type SwitchHooks } from "./handoff.js";
 import type { AccountCode } from "../shared/names/online-codes.js";
+import type { UsernameCheck } from "../shared/model/account.js";
 import { authCodeOf } from "./codes.js";
-import { isUnreachable, messageOf, readFunctionError } from "./server-call.js";
+import { callRpc, isUnreachable, messageOf, readFunctionError } from "./server-call.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
 const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
@@ -35,7 +36,6 @@ export interface AccountView {
 
 // handoff — switchHooks 를 받은 가입·로그인에서만. 세션을 바꾼 뒤의 익명 저장 이관 결과
 export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffReport } | { ok: false; code: AccountCode; detail?: string };
-export type UsernameCheck = "available" | "taken" | "invalid" | "NETWORK";
 
 // 아이디 규칙 — 영문 소문자·숫자·밑줄, 4~16자, 영문으로 시작. 대문자는 소문자로 바꾼다. 맞지 않으면 null
 export function normalizeUsername(input: string): string | null {
@@ -128,19 +128,22 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
 
   // 중복검사 함수는 로그인한 세션(익명 포함)만 부른다 — 세션이 없으면 관문이 익명 계정을 먼저 만든다
   // ensure — 잠금 밖에서는 gate.ensure, exclusive 안에서는 scope.ensure (교착 방지)
-  const checkWith = async (input: string, ensure: () => Promise<{ ok: boolean }>): Promise<UsernameCheck> => {
+  // 서버 실패는 다른 공개 함수와 같이 분류한다(callRpc + authCodeOf). 연결 실패만 NETWORK, 그 밖의 서버 실패는 그 코드로 돌려준다
+  //   (예전에는 모든 서버 실패를 NETWORK 로 모았다 — 94-same-feature-diffs.md 5-3)
+  const checkWith = async (input: string, ensure: () => Promise<{ ok: boolean }>): Promise<UsernameCheck | { code: AccountCode; detail?: string }> => {
     const name = normalizeUsername(input);
     if (!name) return "invalid";
     if (!(await ensure()).ok) return "NETWORK";
-    try {
-      const { data, error } = await client.rpc("is_username_available", { username: name });
-      if (error) return authCodeOf(error).code === "AUTH_USERNAME_INVALID" ? "invalid" : "NETWORK";
-      return data === true ? "available" : "taken";
-    } catch {
-      return "NETWORK";
-    }
+    const res = await callRpc<boolean, AccountCode>(client, "is_username_available", { username: name }, authCodeOf);
+    if (res.ok) return res.data === true ? "available" : "taken";
+    if (res.code === "AUTH_USERNAME_INVALID") return "invalid";
+    if (res.code === "NETWORK") return "NETWORK";
+    return { code: res.code, ...(res.detail ? { detail: res.detail } : {}) };
   };
-  const checkUsername: Account["checkUsername"] = (input) => checkWith(input, gate.ensure);
+  const checkUsername: Account["checkUsername"] = async (input) => {
+    const check = await checkWith(input, gate.ensure);
+    return typeof check === "string" ? check : "UNKNOWN";
+  };
 
   const signUp: Account["signUp"] = async (username, displayName, password) => {
     const name = normalizeUsername(username);
@@ -158,6 +161,7 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
       const check = await checkWith(name, scope.ensure);
       if (check === "taken") return fail("AUTH_USERNAME_TAKEN");
       if (check === "NETWORK") return fail("NETWORK");
+      if (typeof check !== "string") return fail(check.code, check.detail);
       try {
         const { data, error } = await client.auth.signUp({ email: internalEmail(name), password, options: { data: { display_name: shown } } });
         if (error) {

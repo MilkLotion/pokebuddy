@@ -4,7 +4,7 @@
 // 명령을 보내면 새 스냅샷을 다시 받아 그린다. 화면이 스스로 상태를 들고 있지 않는다.
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
-import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView } from "../../shared/model/account.js";
+import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import type { AchievementView, ArtImage, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
@@ -2775,7 +2775,7 @@ let acct: AccountScreen | null = null;
 let acctLoading = false;
 let acctBusy = false;
 let acctGithub = false; // 브라우저에서 GitHub 로그인을 기다리는 중
-const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | "available" | "taken" | "invalid" | "NETWORK" };
+const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | UsernameCheck };
 let acctRename: string | null = null; // 이름 바꾸는 중이면 입력한 이름
 let acctConfirm: "delete" | "sign-out" | null = null;
 let checkTimer: ReturnType<typeof setTimeout> | null = null;
