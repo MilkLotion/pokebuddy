@@ -6,14 +6,14 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { migrate, verify } from "../../save/migrate-v3";
+import { migrate, verify } from "../../save/v2/migrate";
 import * as legacy from "../../save/legacy";
 import * as store from "../../save/store";
 import { SAVE_V3_RULES } from "../../save/rules";
 import { empty, emptySlots, normalize, presetSlots } from "../../save/v3";
 import { openSlot } from "../../party/slots";
 import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../../party/presets";
-import type { Pet, SaveV2 } from "../../shared/types";
+import type { Pet, SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime(); // 2026-09-24 10:00 로컬

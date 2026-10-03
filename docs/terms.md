@@ -90,7 +90,7 @@
 
 ## 육성과 보상
 
-관련 규칙은 [성격과 육성](design.md#성격과-육성), [저장 타입](../src/shared/types.ts), [상태 규칙](../src/state/rules.ts)에 있다.
+관련 규칙은 [성격과 육성](design.md#성격과-육성), [저장 타입](../src/shared/save-v3.ts), [상태 규칙](../src/state/rules.ts)에 있다.
 
 | 용어 | 의미와 사용 규칙 |
 |---|---|

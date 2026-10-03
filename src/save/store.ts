@@ -16,8 +16,9 @@
 import fs from "node:fs";
 import type { SaveV3 } from "../shared/save-v3";
 import { isSealed, open, saveKey, seal } from "./crypt.js";
-import { migrate } from "./migrate-v3.js";
-import { normalize as normalizeV2, writeAtomic } from "./legacy.js";
+import { migrate } from "./v2/migrate.js";
+import { normalizeSaveV2 } from "./v2/normalize.js";
+import { writeAtomic } from "./legacy.js";
 import { normalize as normalizeV3 } from "./v3.js";
 
 export interface ReadV3Options {
@@ -139,7 +140,7 @@ export function read(file: string, { repair = true }: ReadV3Options = {}): ReadV
   if (v3) return { state: v3, corrupted: false, migrated: false };
 
   // v1 · v2 는 옮긴다. store.normalize 가 v1 이전까지 맡는다
-  const v2 = normalizeV2(raw);
+  const v2 = normalizeSaveV2(raw);
   if (v2) {
     if (!repair) {
       const { save } = migrate(v2, now);

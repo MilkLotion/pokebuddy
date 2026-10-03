@@ -13,7 +13,7 @@ import * as species from "../../dex/species";
 import * as unlocks from "../../dex/unlocks";
 import * as regional from "../../dex/regional";
 import type { UnlockRules } from "../../dex/unlocks";
-import type { Pet, SaveV2, World } from "../../shared/types";
+import type { Pet, SaveV2, World } from "../../save/v2/types";
 
 // 배럴 없이 모듈을 직접
 const dex = { ...data, ...natures, ...species, ...evo, ...unlocks };

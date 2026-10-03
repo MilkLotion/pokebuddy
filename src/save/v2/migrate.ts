@@ -4,17 +4,17 @@
 // 여기서는 변환과 검사만 한다. 파일을 옮기는 것은 부르는 쪽(src/save/store.ts)이 한다.
 // 보존 대상: 개체 식별자, 친밀도, 성격, 포인트, 파티 순서, 표시 상태, 도감 기록, 구매 권리.
 // v2 에는 레벨과 경험치가 없다. 새 값으로 시작한다.
-import { MINT_ID, currentItemId, isOldMint } from "../bag/mint.js";
-import { localDate } from "../shared/clock.js";
-import type { PartySlotV3, PetV3, SaveV3 } from "../shared/save-v3";
-import type { Pet, SaveV2 } from "../shared/types";
-import { BAG_RULES } from "../bag/rules.js";
-import { PARTY_RULES, PET_RULES } from "../party/rules.js";
-import { CARE_RULES } from "../state/rules.js";
-import { legacyGender } from "../dex/gender.js";
-import { empty, putStrays } from "./v3.js";
-import { emptySlots } from "../party/slots.js";
-import { fillBoxes } from "../box/boxes.js";
+import { MINT_ID, currentItemId, isOldMint } from "../../bag/mint.js";
+import { localDate } from "../../shared/clock.js";
+import type { PartySlotV3, PetV3, SaveV3 } from "../../shared/save-v3";
+import type { Pet, SaveV2 } from "./types";
+import { BAG_RULES } from "../../bag/rules.js";
+import { PARTY_RULES, PET_RULES } from "../../party/rules.js";
+import { CARE_RULES } from "../../state/rules.js";
+import { legacyGender } from "../../dex/gender.js";
+import { empty, putStrays } from "../v3.js";
+import { emptySlots } from "../../party/slots.js";
+import { fillBoxes } from "../../box/boxes.js";
 
 export interface MigrateResult {
   save: SaveV3 | null; // 검사를 통과한 결과. 실패하면 null

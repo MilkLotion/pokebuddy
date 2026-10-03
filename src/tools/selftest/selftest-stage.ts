@@ -1,7 +1,7 @@
 // 무대(src/main) 자체 확인 — node 만으로, Electron 없이. npm run build 뒤 node dist/tools/selftest/selftest-stage.js
 //
 // 순수 부분만: layout(집·자리·산책 범위·가두기·무대 교집합) · art.zoomOf · party(저장 v3 · 첫 실행 · 옛 저장 사본 · writer/reader · 잠금 상실) ·
-// menus(항목 순서·라벨 키) · anchor 상태기(가짜 헬퍼로 2회 연속 확정 · 표시 디바운스) · 계약 타입 대입(StageState↔AgentState · StageFrame 표본).
+// menus(항목 순서·라벨 키) · anchor 상태기(가짜 헬퍼로 2회 연속 확정 · 표시 디바운스) · 계약 타입 대입(StageFrame 표본).
 // 임시 폴더에서만 돌고 끝나면 지운다 — 사용자의 ~/.claude/pokebuddy/ 는 건드리지 않는다. 끝에 "통과 (N건)"
 import assert from "node:assert";
 import { spawn } from "node:child_process";
@@ -16,7 +16,7 @@ import { t } from "../../main/text";
 import { SAVE_V3_RULES } from "../../save/rules";
 import * as legacy from "../../save/legacy";
 import * as writer from "../../save/writer";
-import type { LookSheets, PointerMsg, StageFrame, StageState } from "../../shared/model/stage";
+import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stage";
 import type { AgentState } from "../../shared/names/agents";
 import { devSaveState } from "../dev/dev-save";
 import { createStage } from "../../main/stage";
@@ -74,9 +74,7 @@ const pathsIn = (dir: string) => ({
 
 // ── 계약 타입 대입 — 컴파일이 곧 검사. 런타임은 표본이 모양을 지키는지만 ─────────
 const agentState: AgentState = "waving";
-const stageState: StageState = agentState;
-const back: AgentState = stageState;
-const frame: StageFrame = { at: T0, state: back, pets: [{ id: "p1", look: "eevee", zoom: 3, x: 10, y: 20, play: { anim: "Walk", row: 2, mode: "loop", rate: 1 }, held: false }] };
+const frame: StageFrame = { at: T0, state: agentState, pets: [{ id: "p1", look: "eevee", zoom: 3, x: 10, y: 20, play: { anim: "Walk", row: 2, mode: "loop", rate: 1 }, held: false }] };
 const sheets: LookSheets = { look: "eevee", cell: { w: 48, h: 56 }, body: { w: 40, h: 56 }, anims: { Idle: { fw: 40, fh: 56, rows: 8, frames: [{ x: 0, ms: 200 }], dataUrl: "data:image/png;base64," } }, clips: { idle: { anim: "Idle", mode: "loop", row: 0 } } };
 const pointer: PointerMsg = { type: "drag", id: "p1", x: 1, y: 2 };
 ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" && pointer.type === "drag", "계약 표본 대입");

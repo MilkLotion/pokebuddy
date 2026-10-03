@@ -3,10 +3,7 @@
 
 import type { FullnessZone, SlotState } from "../save-v3.js";
 
-// 만복도 구간과 칸 상태는 저장의 타입과 같다 — 원본은 ../save-v3.ts
-export type ViewZone = FullnessZone;
 
-export type ViewSlotState = SlotState;
 
 export interface ViewBuff {
   kind: string;
@@ -42,7 +39,7 @@ export interface PetView {
   natureId: string; // 성격 id — 성격 변경 창이 지금 성격을 막을 때 쓴다
   affinity: number;
   fullness: number;
-  zone: ViewZone;
+  zone: FullnessZone;
   mood: number; // 0~100. 보이기만 하는 값이다
   moodWord: string; // 기분 단계 말 — "좋음" 처럼 화면에 그대로 쓴다
   hidden: boolean;
@@ -93,7 +90,7 @@ export interface SpeciesLine {
 
 export interface SlotView {
   index: number;
-  state: ViewSlotState;
+  state: SlotState;
   pet?: PetView;
 }
 

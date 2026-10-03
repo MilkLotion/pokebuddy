@@ -17,7 +17,7 @@ import * as writer from "../../save/writer";
 import type { Command, CommandResult } from "../../shared/command";
 import type { CommandName } from "../../shared/names/commands";
 import type { LogEntry } from "../../shared/save-v3";
-import type { SaveV2 } from "../../shared/types";
+import type { SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
 
 const save = { ...rules, ...legacy, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접

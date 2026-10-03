@@ -1,5 +1,6 @@
 // 움직임 모듈의 타입 — 마리별 brain 의 입출력, 성격 배율과 주변 위치
-import type { Play, StageState } from "../shared/model/stage";
+import type { Play } from "../shared/model/stage";
+import type { AgentState } from "../shared/names/agents";
 
 // 성격 배율 자리 — S2 는 NEUTRAL_PARAMS (전부 1 · 0). S3 가 natures 축 → 값
 export interface MotionParams {
@@ -30,7 +31,7 @@ export interface RoamBox {
 
 export interface MotionInput {
   now: number;
-  agent: StageState;
+  agent: AgentState;
   box: RoamBox | null;
   visible: boolean;
   // 집·돌봄 이동을 뺀 산책 좌표 — 중립이면 입력이 있어도 사용하지 않음
@@ -53,7 +54,7 @@ export interface PetMotion {
   sleepAfter(min: number | null): void;
   tick(input: MotionInput): MotionOut;
   // 옛 body.js state — 활동 bump 규칙 포함. promptAt 은 초 단위. now 를 안 주면 마지막 tick 의 now 로 친다
-  state(agent: StageState, promptAt: number | null, now?: number): void;
+  state(agent: AgentState, promptAt: number | null, now?: number): void;
   focus(key: string | null, now?: number): void;
   pickup(now: number): void;
   drag(dx: number, dy: number): void;

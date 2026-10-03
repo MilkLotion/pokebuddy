@@ -1,9 +1,7 @@
-// 저장 v2 의 모양(Pet · SaveV2 · World) — 옛 저장을 읽어 v3 으로 옮길 때만 쓴다.
-// [리팩토링 대상] 저장을 나눌 때 src/save/v2/ 로 간다. 다른 공유 타입의 자리는 ./species.ts · ./command.ts · ./save-v3.ts · ./hook-record.ts · ./names/ 다
-import type { AgentName } from "./names/agents.js";
-import type { NatureId } from "./species.js";
-import type { AgentStats, LogEntry, PetDaily, Totals } from "./save-v3.js";
-
+// 저장 v2 의 모양 — 옛 저장을 읽어 v3 으로 옮길 때만 쓴다. 가져다 쓰는 것은 src/save/v2/ 와 저장 파일의 변환 경로, 시험뿐이다
+import type { AgentName } from "../../shared/names/agents.js";
+import type { NatureId } from "../../shared/species.js";
+import type { AgentStats, LogEntry, PetDaily, Totals } from "../../shared/save-v3.js";
 
 // 해금 판정에 필요한 세상 — 저장 + 시각
 export interface World {

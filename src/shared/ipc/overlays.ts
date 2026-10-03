@@ -1,12 +1,13 @@
 // 작은 창(알림 배너·알림 창·메뉴·영역 그리기·화면 덮개)의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다
 
-import type { AlertView, BannerView, MenuView, RegionInit, RegionRect, ScreenOverlayInit } from "../model/overlays.js";
+import type { Rect } from "../geometry.js";
+import type { AlertView, BannerView, MenuView, RegionInit, ScreenOverlayInit } from "../model/overlays.js";
 import type { BridgeOf, Push, Send } from "./kinds.js";
 
 // 놀이공간 영역 그리기 창
 export type RegionIpc = {
   "region:init": Push<"onInit", [init: RegionInit]>;
-  "region:done": Send<"done", [rect: RegionRect | null]>; // null 이면 취소
+  "region:done": Send<"done", [rect: Rect | null]>; // null 이면 취소
 };
 export type RegionChannel = keyof RegionIpc;
 export type RegionBridge = BridgeOf<RegionIpc>;

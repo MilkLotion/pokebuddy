@@ -6,7 +6,7 @@
 //   작업  거의 서 있지 않는다. 빠르게 걷고 공격·기 모으기 같은 작업 동작을 이어 간다. 자지 않는다
 // 작업 동작은 한가할 때 쓰지 않는다 — 보기만 해도 일하는 중인지 갈리게.
 // 승인 대기·턴 끝·실패 같은 신호 상태는 어느 모드도 아니다 — 멈춰서 상태 동작에 맡긴다
-import type { StageState } from "../shared/model/stage";
+import type { AgentState } from "../shared/names/agents";
 
 // [최소, 최대] — 그 사이에서 고르게 뽑는다
 export type Range = readonly [number, number];
@@ -67,7 +67,7 @@ export interface MotionRules {
   WORK_ROWS: readonly number[]; // 작업 동작의 방향
   TICK_MS: number; // 무대 틱 간격 — 옛 body.js TICK_MS. 걷는 동안 자리를 옮기는 간격 (25fps)
   rowOf(dx: number, dy: number): number;
-  isSignal(agent: StageState): boolean;
+  isSignal(agent: AgentState): boolean;
 }
 
 export const MOTION_RULES: MotionRules = {

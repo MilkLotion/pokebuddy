@@ -11,7 +11,7 @@ export type PlayMode = "loop" | "hold" | "once";
 export type StageSize = Size; // DIP. 원본은 ../geometry.ts
 
 export interface StageInit {
-  size: StageSize;
+  size: Size;
   debug: boolean;
 }
 
@@ -27,10 +27,10 @@ export interface SpriteSheet {
 // 모습(look) 하나의 그림 묶음 — 렌더러가 look 키로 캐시한다
 export interface LookSheets {
   look: string; // Pet.look ?? Pet.species
-  cell: StageSize; // 담긴 동작 전부를 덮는 칸 (도트, 배율 전)
-  body: StageSize; // 작업 동작을 뺀 몸 칸 — 자리 계산의 기준
+  cell: Size; // 담긴 동작 전부를 덮는 칸 (도트, 배율 전)
+  body: Size; // 작업 동작을 뺀 몸 칸 — 자리 계산의 기준
   anims: Record<string, SpriteSheet>;
-  clips: Record<string, { anim: string; mode: PlayMode; row: number }>; // 상태 → 동작 (StageState 키)
+  clips: Record<string, { anim: string; mode: PlayMode; row: number }>; // 상태 → 동작 (AgentState 키)
 }
 
 // 지금 재생할 동작 — 움직임 모듈이 고른 것. rate 는 재생 속도 배율(걷는 속도)
@@ -57,7 +57,7 @@ export interface StagePet {
 
 export interface StageFrame {
   at: number; // 메인 시각 ms
-  state: StageState; // 상태 동작의 기준 (S2 는 전원 공통)
+  state: AgentState; // 상태 동작의 기준 (S2 는 전원 공통)
   pets: StagePet[]; // 그리는 순서 = 배열 순서 (뒤가 위)
 }
 
