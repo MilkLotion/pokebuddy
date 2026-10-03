@@ -372,7 +372,7 @@ function notifyGame(body: string): void {
 // then — 성공하면 이어서 보낼 명령(첫 돌봄 튜토리얼 완료)
 function runGameCommand(command: Command, then?: () => Command): void {
   void rt.commands?.dispatcher.dispatch(command).then(async (result) => {
-    if (!result.ok) notifyGame(t("game.failed", { reason: t(`rt.game.reason.${result.reason}`) }));
+    if (!result.ok) notifyGame(t("game.failed", { reason: t(`game.reason.${result.reason}`) }));
     else if (then) {
       try {
         await rt.commands?.dispatcher.dispatch(then());
