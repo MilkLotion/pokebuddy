@@ -22,8 +22,8 @@
 //   격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다 — 클라우드가 다음 맞추기에서 서버 저장을 받는다 (src/online/lost.ts)
 import fs from "node:fs";
 import type { SaveV3 } from "../shared/save-v3";
-import { isSealed, open, saveKey, seal } from "./crypt.js";
-import { migrate } from "./v2/migrate.js";
+import { isSealed, saveKey, sealText, unsealText } from "./crypt.js";
+import { migrateSaveV2 } from "./v2/migrate.js";
 import { normalizeSaveV2 } from "./v2/normalize.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { moveFile, stampOf } from "../platform/move-file.js";
@@ -115,7 +115,7 @@ function readText(file: string): Text {
   const key = saveKey();
   if (isSealed(buf)) {
     if (!key) return { text: null, reason: "locked" };
-    const text = open(key, buf);
+    const text = unsealText(key, buf);
     return text == null ? { text: null, reason: "broken" } : { text };
   }
   if (key) return { text: null, reason: "plain" };
@@ -167,11 +167,11 @@ export function readSave(file: string, { repair = true }: ReadSaveOptions = {}):
   const v2 = normalizeSaveV2(raw);
   if (v2) {
     if (!repair) {
-      const { save } = migrate(v2, now);
+      const { save } = migrateSaveV2(v2, now);
       return save ? { state: save, corrupted: false, migrated: false } : { state: null, corrupted: false, migrated: false, reason: "migrate-failed" };
     }
     if (!backup(file)) return { state: null, corrupted: false, migrated: false, reason: "backup-failed" };
-    const { save, failed } = migrate(v2, now);
+    const { save, failed } = migrateSaveV2(v2, now);
     if (!save) return { state: null, corrupted: false, migrated: false, failedChecks: failed, reason: "migrate-failed" };
     if (!writeSave(file, save)) return { state: save, corrupted: false, migrated: true, reason: "write-failed" };
     return { state: save, corrupted: false, migrated: true };
@@ -200,7 +200,7 @@ export function isSealedOnDisk(file: string): boolean {
 
 export function writeSave(file: string, state: SaveV3): boolean {
   const key = saveKey();
-  if (key) return writeAtomic(file, seal(key, `${JSON.stringify(state, null, 2)}\n`));
+  if (key) return writeAtomic(file, sealText(key, `${JSON.stringify(state, null, 2)}\n`));
   if (isSealedOnDisk(file)) return false;
   return writeAtomic(file, state);
 }
@@ -238,5 +238,5 @@ export function sealPlainSave(file: string, key: Buffer, at: number): boolean {
     console.error("평문 저장을 백업하지 못해 암호화를 미룬다", e);
     return false;
   }
-  return writeAtomic(file, seal(key, buf.toString("utf8")));
+  return writeAtomic(file, sealText(key, buf.toString("utf8")));
 }

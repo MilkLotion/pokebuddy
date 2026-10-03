@@ -9,7 +9,7 @@ import type { StateInfo, StateRecord } from "./types";
 export const STALE_SEC = 600; // 작업 중·기다림이 이만큼 갱신 없으면 대기로 — Esc 중단 시 Stop 훅이 안 온다
 
 // 기록 하나를 지금 보여야 할 상태로 환산
-export function resolveState(record: StateRecord): AgentState {
+export function agentStateOf(record: StateRecord): AgentState {
   const age = Date.now() / 1000 - (record.at || 0);
   let state: AgentState = record.state || "idle";
   if (record.hold != null && age >= record.hold) state = record.then || "idle";
@@ -48,5 +48,5 @@ export function stateFor(records: StateRecord[], pids: Iterable<number> | null |
   if (!want.size) return { state: "idle", promptAt: null };
   const record = records.find((r) => Array.isArray(r.ancestors) && r.ancestors.some((pid) => want.has(pid)));
   if (!record) return { state: "idle", promptAt: null };
-  return { state: resolveState(record), promptAt: Number(record.promptAt) || null, ...(record.usage ? { tokenWork: true } : {}) };
+  return { state: agentStateOf(record), promptAt: Number(record.promptAt) || null, ...(record.usage ? { tokenWork: true } : {}) };
 }

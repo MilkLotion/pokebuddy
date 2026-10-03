@@ -7,7 +7,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { isSealed, newSaveKey, open, saveKey, seal, setSaveKey } from "../../save/crypt";
+import { isSealed, newSaveKey, saveKey, sealText, setSaveKey, unsealText } from "../../save/crypt";
 import { keyFileOf, prepareSaveKey, setAsideKeyAndSave, type KeyVault } from "../../save/key";
 import * as store from "../../save/store";
 import { loadCloudState } from "../../online/lost";
@@ -56,13 +56,13 @@ async function main(): Promise<void> {
     // 1. 암호 — 되돌리기·고침·다른 키
     {
       const key = newSaveKey();
-      const box = seal(key, "안녕 pokebuddy");
+      const box = sealText(key, "안녕 pokebuddy");
       assert.ok(isSealed(box), "머리 PBS1");
-      assert.equal(open(key, box), "안녕 pokebuddy", "되돌리기");
+      assert.equal(unsealText(key, box), "안녕 pokebuddy", "되돌리기");
       const bad = Buffer.from(box);
       bad.writeUInt8(bad.readUInt8(bad.length - 1) ^ 1, bad.length - 1);
-      assert.equal(open(key, bad), null, "한 바이트 고치면 풀지 못함");
-      assert.equal(open(newSaveKey(), box), null, "다른 키");
+      assert.equal(unsealText(key, bad), null, "한 바이트 고치면 풀지 못함");
+      assert.equal(unsealText(newSaveKey(), box), null, "다른 키");
       assert.equal(isSealed(Buffer.from("{}")), false, "평문은 암호화 아님");
       assert.throws(() => setSaveKey(Buffer.alloc(8)), /길이/, "짧은 키 거부");
       out("1 암호 — 되돌리기·고침·다른 키");

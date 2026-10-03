@@ -59,7 +59,7 @@ try {
 
   ok("usage: 기준점과 증분 — 처음엔 0, 늘어난 만큼만, 새 세션은 전부", () => {
     const cur = [{ sessionId: "a", cli: "claude", usage: { in: 100, out: 50, cacheRead: 0, cacheWrite: 0 }, at: 1 }];
-    const seen = agents.baseline(cur);
+    const seen = agents.usageBaseline(cur);
     let r = agents.deltaSince(cur, seen);
     assert.strictEqual(agents.tokensOf(r.delta), 0);
     const cur2 = [
@@ -87,22 +87,22 @@ try {
   });
 
   ok("connect/disconnect --dry-run: 임시 HOME 에서 claude 는 등록 예정, codex 는 설치 안 됨, 모르는 CLI 는 거절", () => {
-    const c = agents.connect("claude", { dryRun: true });
+    const c = agents.connectAgent("claude", { dryRun: true });
     assert.strictEqual(c.ok, true);
     assert.strictEqual(c.changed, true);
     assert.ok(some(c.added).includes("Stop"));
     assert.ok(!fs.existsSync(path.join(home, ".claude", "settings.json"))); // dry-run 은 쓰지 않는다
-    const x = agents.connect("codex", { dryRun: true });
+    const x = agents.connectAgent("codex", { dryRun: true });
     assert.strictEqual(x.ok, false);
     assert.strictEqual(x.reason, "not-installed");
-    assert.strictEqual(agents.connect("bogus" as AgentName, { dryRun: true }).reason, "unknown-cli"); // 타입 밖의 이름 — 런타임 거절을 본다
-    const d = agents.disconnect("claude", { dryRun: true });
+    assert.strictEqual(agents.connectAgent("bogus" as AgentName, { dryRun: true }).reason, "unknown-cli"); // 타입 밖의 이름 — 런타임 거절을 본다
+    const d = agents.disconnectAgent("claude", { dryRun: true });
     assert.strictEqual(d.ok, true);
     assert.deepStrictEqual(d.removed, []);
   });
 
   ok("status: 세 줄, 임시 HOME 에서는 전부 미연결", () => {
-    const rows = agents.status();
+    const rows = agents.agentStatusList();
     assert.strictEqual(rows.length, 3);
     for (const r of rows) assert.strictEqual(r.connected, false);
     assert.strictEqual(some(rows.find((r) => r.name === "claude")).installed, true); // claude 는 설정 폴더가 없어도 쓰는 것으로 (always)
@@ -151,17 +151,17 @@ try {
     assert.ok(!JSON.stringify(codex).includes("pokebuddy-state"), "codex 에 등록하지 않는다");
     assert.strictEqual(backups(codexFile).length, 1, "걷기 전 백업");
     assert.match(out, /연결 탭/);
-    assert.ok(!agents.status().some((r) => r.connected), "setup 뒤에도 전부 미연결");
+    assert.ok(!agents.agentStatusList().some((r) => r.connected), "setup 뒤에도 전부 미연결");
   });
 
   ok("connect codex: PreToolUse 없이 등록 · 연결됨 · 갱신 필요 아님", () => {
-    const c = agents.connect("codex");
+    const c = agents.connectAgent("codex");
     assert.strictEqual(c.ok, true);
     const codex = readJson(codexFile);
     assert.ok(!codex.hooks?.PreToolUse, "codex 에 PreToolUse 를 등록하지 않는다");
     for (const e of ["SessionStart", "UserPromptSubmit", "PermissionRequest", "PostToolUse", "Stop"]) assert.ok(commands(codex, e).includes(ours), e);
     assert.deepStrictEqual(commands(codex, "Stop"), [other.command, ours], "남의 훅 뒤에 더한다");
-    const row = some(agents.status().find((r) => r.name === "codex"));
+    const row = some(agents.agentStatusList().find((r) => r.name === "codex"));
     assert.strictEqual(row.connected, true);
     assert.strictEqual(row.outdated, false);
   });
@@ -178,42 +178,42 @@ try {
     const data = readJson(codexFile);
     data.hooks = { ...data.hooks, PreToolUse: [{ hooks: [{ type: "command", command: ours }, other] }] };
     fs.writeFileSync(codexFile, JSON.stringify(data));
-    const stale = some(agents.status().find((r) => r.name === "codex"));
+    const stale = some(agents.agentStatusList().find((r) => r.name === "codex"));
     assert.strictEqual(stale.connected, true);
     assert.strictEqual(stale.outdated, true, "목록에 없는 우리 이벤트 → 갱신 필요");
     const n = backups(codexFile).length;
-    const c = agents.connect("codex");
+    const c = agents.connectAgent("codex");
     assert.strictEqual(c.ok, true);
     assert.deepStrictEqual(c.stale, ["PreToolUse"]);
     assert.deepStrictEqual(commands(readJson(codexFile), "PreToolUse"), [other.command], "남의 PreToolUse 훅은 남긴다");
     assert.strictEqual(backups(codexFile).length, n + 1, "바꾸기 전 백업");
-    assert.strictEqual(some(agents.status().find((r) => r.name === "codex")).outdated, false);
+    assert.strictEqual(some(agents.agentStatusList().find((r) => r.name === "codex")).outdated, false);
   });
 
   ok("빠진 이벤트 → 갱신 필요 → connect 로 채운다", () => {
     const data = readJson(codexFile);
     delete data.hooks?.PermissionRequest;
     fs.writeFileSync(codexFile, JSON.stringify(data));
-    const row = some(agents.status().find((r) => r.name === "codex"));
+    const row = some(agents.agentStatusList().find((r) => r.name === "codex"));
     assert.strictEqual(row.connected, true);
     assert.strictEqual(row.outdated, true);
-    assert.deepStrictEqual(agents.connect("codex").added, ["PermissionRequest"]);
-    assert.strictEqual(some(agents.status().find((r) => r.name === "codex")).outdated, false);
+    assert.deepStrictEqual(agents.connectAgent("codex").added, ["PermissionRequest"]);
+    assert.strictEqual(some(agents.agentStatusList().find((r) => r.name === "codex")).outdated, false);
   });
 
   ok("훅 파일만 옛 버전 → 연결된 줄 갱신 필요 → connect 뒤 최신", () => {
-    assert.strictEqual(some(agents.status().find((r) => r.name === "codex")).outdated, false);
+    assert.strictEqual(some(agents.agentStatusList().find((r) => r.name === "codex")).outdated, false);
     fs.writeFileSync(hookFile, "// 옛 훅\n");
-    const row = some(agents.status().find((r) => r.name === "codex"));
+    const row = some(agents.agentStatusList().find((r) => r.name === "codex"));
     assert.strictEqual(row.connected, true);
     assert.strictEqual(row.outdated, true, "훅 파일이 원본과 다르면 갱신 필요");
-    assert.strictEqual(some(agents.status().find((r) => r.name === "claude")).outdated, false, "연결 안 된 줄은 갱신 필요로 두지 않는다");
+    assert.strictEqual(some(agents.agentStatusList().find((r) => r.name === "claude")).outdated, false, "연결 안 된 줄은 갱신 필요로 두지 않는다");
     const before = readJson(codexFile);
-    const c = agents.connect("codex");
+    const c = agents.connectAgent("codex");
     assert.strictEqual(c.ok, true);
     assert.notStrictEqual(fs.readFileSync(hookFile, "utf8"), "// 옛 훅\n", "connect 가 훅 파일을 바꾼다");
     assert.deepStrictEqual(readJson(codexFile), before, "등록은 이미 맞아 그대로");
-    assert.strictEqual(some(agents.status().find((r) => r.name === "codex")).outdated, false);
+    assert.strictEqual(some(agents.agentStatusList().find((r) => r.name === "codex")).outdated, false);
   });
 
   say(`통과 (${checks.count()}건)`);

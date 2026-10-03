@@ -33,7 +33,7 @@ export function isSealed(buf: Buffer): boolean {
   return buf.length >= magic.length && buf.subarray(0, magic.length).equals(magic);
 }
 
-export function seal(key: Buffer, text: string): Buffer {
+export function sealText(key: Buffer, text: string): Buffer {
   const { magic, ivBytes } = SAVE_CRYPT_RULES;
   const iv = randomBytes(ivBytes);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -42,7 +42,7 @@ export function seal(key: Buffer, text: string): Buffer {
 }
 
 // 풀기 — 키가 다르거나 내용을 고쳤으면 null
-export function open(key: Buffer, buf: Buffer): string | null {
+export function unsealText(key: Buffer, buf: Buffer): string | null {
   const { magic, ivBytes, tagBytes } = SAVE_CRYPT_RULES;
   if (!isSealed(buf) || buf.length < magic.length + ivBytes + tagBytes) return null;
   const iv = buf.subarray(magic.length, magic.length + ivBytes);
