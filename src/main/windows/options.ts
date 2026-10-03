@@ -37,6 +37,8 @@ export interface OverlaySpec {
   layer: WindowLayer;
   bounds?: Partial<Rectangle>;
   focusable?: boolean; // 없으면 Electron 기본값
+  // 놀이공간 위에 뜨는 오버레이 창(알림·배너·메뉴·영역 그리기·화면 덮개)은 둘 다 켠다 — 무대 창이 전체 화면 Space 위에도 보이므로
+  // 그 위에서 여는 창도 같아야 같은 기능이 Space 에 따라 다르게 굴지 않는다 (2026-10-03 오케스트레이터 결정, 94 문서 4-3·4-4)
   firstMouse?: boolean; // acceptFirstMouse — mac 에서 첫 클릭을 삼키지 않는다
   allWorkspaces?: boolean; // mac 의 다른 앱 전체 화면 Space 위에도 보인다
   icon?: false; // 아이콘을 붙이지 않는다 (OS 대화상자의 부모 — 지금 그대로)

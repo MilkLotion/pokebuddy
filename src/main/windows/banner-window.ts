@@ -78,7 +78,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
   function ensure(): Promise<void> {
     if (win && !win.isDestroyed() && loaded) return loaded;
     // 누르기는 받지만 쓰던 창의 포커스는 뺏지 않는다(focusable: false). mac 에서 첫 클릭을 삼키지 않는다(firstMouse)
-    const w = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { width: BANNER_RULES.width, height: BANNER_RULES.height }, focusable: false, firstMouse: true });
+    const w = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { width: BANNER_RULES.width, height: BANNER_RULES.height }, focusable: false, firstMouse: true, allWorkspaces: true }); // mac — 놀이공간 위 오버레이 창의 같은 옵션 (src/main/windows/options.ts)
     win = w;
     w.on("closed", () => {
       win = null;

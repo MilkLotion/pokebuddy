@@ -34,7 +34,7 @@ export interface ScreenPickerOptions {
 // 화면 하나를 덮는 창 — 보기면 클릭 통과·포커스 없음, 고르기면 누를 수 있다
 function overlay(opts: ScreenPickerOptions, s: ScreenInfo, pick: boolean): BrowserWindow {
   const b = s.bounds;
-  const win = createOverlayWindow({ preload: opts.preload, layer: "screen-saver", bounds: { x: b.x, y: b.y, width: b.w, height: b.h }, focusable: pick, allWorkspaces: true });
+  const win = createOverlayWindow({ preload: opts.preload, layer: "screen-saver", bounds: { x: b.x, y: b.y, width: b.w, height: b.h }, focusable: pick, firstMouse: true, allWorkspaces: true }); // mac 첫 클릭 — 알림 창과 같다 (94 문서 4-4)
   if (!pick) win.setIgnoreMouseEvents(true);
   return win;
 }
