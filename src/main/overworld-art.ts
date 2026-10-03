@@ -15,8 +15,8 @@
 import path from "node:path";
 import type { PmdArt } from "./art";
 import type { SpriteSheet } from "../shared/model/stage";
-import { profile } from "../dex/species";
 import { megaOf } from "../dex/mega";
+import { dexFolderOf, lookOf } from "../dex/look";
 import { decodePng, encodePng, type Rgba } from "./png";
 
 export const OVERWORLD_RULES = {
@@ -191,7 +191,7 @@ export function createOverworldSource(dir: string): OverworldSource {
   return {
     async load(look) {
       const got = await fetchBoth(look);
-      return got ? overworldArt(got.png, got.pal, String(profile(megaOf(got.slug)?.base ?? got.slug).dex ?? "").padStart(4, "0")) : null;
+      return got ? overworldArt(got.png, got.pal, dexFolderOf(lookOf(got.slug))) : null; // 성별 그림이면 그 종의 번호 — 무대 그림(src/main/art.ts dexOfLook)과 같은 풀이
     },
     async prefetch(look) {
       return !!(await fetchBoth(look));
