@@ -1,0 +1,176 @@
+/* manage.html 의 우편함 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 우편함 — Figma 05 Screens 섹션 `10 우편함` `932:22859`. 편지 줄은 중립 1px 경계, 안 읽음은 왼쪽 점 */
+.mail-titles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mail-titles .back {
+  font-size: 16px;
+  padding: 0 6px 0 0;
+}
+.mail-list,
+.mail-letter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-top: 12px;
+}
+.mail-row {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mail-row:hover {
+  background: var(--accent-bg);
+}
+.mail-unread {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.mail-unread[hidden] {
+  display: block;
+  visibility: hidden;
+}
+.mail-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+.mail-text {
+  flex: 1;
+  min-width: 0;
+}
+.mail-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mail-meta {
+  font-family: var(--font-small);
+  font-size: 11px;
+  color: var(--muted);
+}
+.mail-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--primary);
+  font-family: var(--font-small);
+  font-size: 10px;
+}
+.mail-chip.done {
+  background: var(--subtle);
+  color: var(--muted);
+}
+.mail-chip-icon {
+  width: 14px;
+  height: 14px;
+}
+.mail-more {
+  flex: none;
+  color: var(--muted);
+}
+.mail-note {
+  font-family: var(--font-small);
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 4px;
+}
+.mail-body {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+.gift-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+/* 선물 줄은 2열 — 받기 전과 받은 뒤의 카드 높이가 같다 (Figma `Mail Dialog` `State=Letter`·`Letter Claimed`) */
+.gift-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 10px;
+}
+.gift-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* 받은 뒤 — 선물 줄만 흐리게. 카드 면과 높이는 그대로 */
+.gift-card.done .gift-row {
+  opacity: 0.5;
+}
+.gift-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gift-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--canvas);
+}
+.gift-point {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--inverse);
+  font-size: 9px;
+  font-weight: 700;
+}
+.gift-icon.gift-point {
+  border-radius: 50%;
+  background: var(--primary);
+}
+.gift-count {
+  flex: none;
+  color: var(--muted);
+}
+/* 편지 바닥 단추 줄의 상태 글자 — 남는 폭만 쓴다. 길면 말줄임(전체는 title) */
+.actions > .gift-note {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-small);
+  font-size: 11px;
+  color: var(--muted);
+}

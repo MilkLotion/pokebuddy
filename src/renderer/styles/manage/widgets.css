@@ -1,0 +1,547 @@
+/* manage.html 의 공용 부품(타입 배지 바탕·스위치·막대·단추·처리 중·경고 배너·칩·목록 행·정렬 목록·검색 칸) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 타입 배지 — Figma `Type Badge` `118:134` (높이 22, 좌우 8, 11px Semibold, 폭 52). 색은 Scarlet·Violet 타입 팔레트다.
+   그림처럼 타입마다 정해진 색이라 변수에 묶지 않는다. 모르는 타입은 중립 회색이다 */
+.type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--ink);
+  font-size: 10px;
+  font-family: var(--font-small);
+  white-space: nowrap;
+}
+/* 색 있는 타입 배지 글자는 모두 흰색 (2026-09-30 사용자 결정 "타입 버튼들 폰트 색 다 흰거로"). 모르는 타입(회색)은 --ink */
+.value.types {
+  display: inline-flex;
+  gap: 6px;
+}
+.meters {
+  display: flex;
+  gap: 10px;
+}
+/* 켬·끔 스위치 — Figma `Toggle` `299:3593` (36 × 20) */
+.switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--disabled);
+  cursor: pointer;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: left 0.15s;
+}
+.switch[aria-checked="true"] {
+  background: var(--primary);
+}
+.switch[aria-checked="true"]::after {
+  left: 18px;
+}
+.switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.meter {
+  flex: 1;
+  min-width: 0;
+}
+.meter .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+.track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--subtle);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.fill {
+  height: 100%;
+  background: var(--primary);
+}
+.fill.hungry {
+  background: var(--warning);
+}
+.fill.starving {
+  background: var(--danger);
+}
+
+/* 개체 상세 — 칸을 누르면 뜬다 */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  /* 위 여백은 창 머리(40) + 16 — 긴 모달이 창 조작 단추(축소·최대화·닫기) 밑으로 들어가 가려졌다 (2026-10-01) */
+  padding: 56px 24px 24px;
+}
+.scrim.open {
+  display: flex;
+}
+.dialog {
+  width: 380px;
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.dialog h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-family: var(--font-large);
+}
+.dialog .sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+button.act {
+  appearance: none;
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+button.act.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--inverse);
+}
+button.act.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+button.act:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+/* 주 버튼이 막히면 옅은 청록 — 채움은 그대로 두고 단추 전체를 0.45 로 흐리게 (Figma Button Style=Primary State=Disabled,
+   05 Shop / Buy Blocked 387:6958). 2026-09-27 사용자 "시안대로 옅은 청록으로 바꿔" — 옛 회색 채움 규칙을 바꿨다 */
+button.act.primary:disabled {
+  color: var(--inverse);
+  opacity: 0.45;
+}
+/* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage/manage.ts busyLater).
+   폭과 색은 그대로 두고 글자 자리에 점 세 개가 차례로 밝아진다. 답이 올 때까지 다른 조작은 받지 않는다 */
+button.is-busy {
+  position: relative;
+  pointer-events: none;
+  cursor: progress;
+}
+button.is-busy:not(.cell) {
+  color: transparent !important;
+}
+button.is-busy.primary {
+  --busy-dot: var(--inverse);
+}
+button.is-busy:not(.cell)::after,
+.cell.is-busy > :first-child::after {
+  --on: var(--busy-dot, var(--ink));
+  --off: color-mix(in srgb, var(--busy-dot, var(--ink)) 35%, transparent);
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--on);
+  box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+  animation: busy-dots 0.9s step-end infinite;
+}
+/* 칸은 내용을 옅게 덮고 초상 가운데에 점을 둔다 */
+.cell.is-busy {
+  isolation: isolate;
+}
+.cell.is-busy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--surface) 70%, transparent); /* 60% 는 흐린 점이 초상 그림에 묻혔다 */
+  z-index: 1;
+}
+.cell.is-busy > :first-child {
+  position: relative;
+}
+.cell.is-busy > :first-child::after {
+  z-index: 2;
+}
+@keyframes busy-dots {
+  0% {
+    background: var(--off);
+    box-shadow: -7px 0 0 var(--on), 7px 0 0 var(--off);
+  }
+  33.333% {
+    background: var(--on);
+    box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+  }
+  66.667% {
+    background: var(--off);
+    box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--on);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button.is-busy:not(.cell)::after,
+  .cell.is-busy > :first-child::after {
+    animation: none;
+  }
+}
+/* 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
+   - 종류는 바탕 톤 + 16px 픽셀 아이콘으로 가른다. 테두리 없음, radius 8 (카드 12 와 구분)
+   - 제목이 있으면 Banner(제목 + 설명), 없으면 Inline(한 줄, 톤 글자색) */
+.alert {
+  --alert-bg: var(--accent-bg);
+  --alert-dot: var(--primary);
+  --alert-ink: var(--ink);
+  --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='7' y='3' width='2' height='2'/%3E%3Crect x='7' y='6' width='2' height='7'/%3E%3C/svg%3E");
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--alert-bg);
+  font-size: 12px;
+  word-break: keep-all; /* 한국어 낱말 가운데서 줄을 끊지 않는다 */
+}
+.alert.bad {
+  --alert-bg: var(--danger-bg);
+  --alert-dot: var(--danger);
+  --alert-ink: var(--danger-ink);
+  --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='7' y='3' width='2' height='7'/%3E%3Crect x='7' y='11' width='2' height='2'/%3E%3C/svg%3E");
+}
+.alert.warn {
+  --alert-bg: var(--warning-bg);
+  --alert-dot: var(--warning);
+  --alert-ink: var(--warning-ink);
+  --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%231a3330'%3E%3Crect x='7' y='3' width='2' height='7'/%3E%3Crect x='7' y='11' width='2' height='2'/%3E%3C/svg%3E");
+}
+.alert.ok {
+  --alert-bg: var(--success-bg);
+  --alert-dot: var(--success);
+  --alert-ink: var(--success-ink);
+  --alert-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Crect x='3' y='8' width='2' height='2'/%3E%3Crect x='5' y='10' width='2' height='2'/%3E%3Crect x='7' y='8' width='2' height='2'/%3E%3Crect x='9' y='6' width='2' height='2'/%3E%3Crect x='11' y='4' width='2' height='2'/%3E%3C/svg%3E");
+}
+.alert-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px; /* 제목 줄(18px) 가운데 */
+  border-radius: 50%;
+  background: var(--alert-glyph) center / 16px no-repeat, var(--alert-dot);
+}
+.alert-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.alert-text strong {
+  color: var(--alert-ink);
+  font-weight: 700;
+}
+.alert-text span {
+  color: var(--muted);
+}
+.alert.inline {
+  align-items: center;
+  margin: 14px 0 0;
+  padding: 8px 12px;
+}
+.alert.inline .alert-icon {
+  margin-top: 0;
+}
+.alert.inline .alert-text span {
+  color: var(--alert-ink);
+}
+.alert .dialog-close {
+  width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  border-radius: 4px;
+}
+.empty-note {
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+}
+/* 곁들이는 한 줄 — 알·박스 칸에서 쓴다 */
+.note {
+  color: var(--muted);
+}
+
+/* 분류 칩 — 도감·상점의 거르개 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.chip {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.chip[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--inverse);
+}
+
+/* 목록 행 — 상점 상품과 가방 도구 */
+.rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+/* 대화상자 안의 목록은 한 줄에 하나 — 좁은 폭에서 반씩 나누면 글자가 잘린다 */
+#dialog .rows {
+  grid-template-columns: 1fr;
+}
+.row-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+/* 도구 그림 칸 — Figma 가방 카드·상점 줄의 28 칸. 그림이 없으면 빈 회색 칸이다 */
+.thumb {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.thumb.round {
+  border-radius: 50%;
+  background: var(--accent-bg);
+}
+.thumb.has-art:not(.round) {
+  background: var(--accent-bg);
+}
+/* 도구·알 그림은 작은 도트다(도구 30 × 30). 흐려지지 않게 확대 보간을 끈다 */
+.icon-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.row-card:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+/* 고른 행 — 옅은 배경만. 선택 막대·테두리 색으로 강조하지 않는다 */
+.row-card[aria-pressed="true"] {
+  position: relative;
+  background: var(--accent-bg);
+}
+.row-card .body {
+  flex: 1;
+  min-width: 0;
+}
+.row-card .title {
+  font-weight: 600;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-card .note {
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row-card .price {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.row-card .chevron {
+  flex: none;
+  color: var(--muted);
+}
+.row-card .count {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pager .sort-toggle,
+.search-row .sort-toggle {
+  height: 32px;
+  width: 124px;
+  white-space: nowrap;
+  padding: 0 11px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 12px;
+}
+/* 목록은 누르는 칸과 같은 폭이다 (2026-09-27 사용자 "항상 select는 그 눌리는 input이랑 너비가 같아야해") */
+.sort-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(26, 51, 48, 0.16);
+}
+.pager .sort-menu .sort-item,
+.search-row .sort-menu .sort-item {
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  font-size: 12px;
+}
+/* 가리킨 기준과 지금 적용된 기준 — 옅은 바탕 */
+.pager .sort-menu .sort-item:hover,
+.pager .sort-menu .sort-item.on,
+.search-row .sort-menu .sort-item:hover,
+.search-row .sort-menu .sort-item.on {
+  background: var(--accent-bg);
+}
+.pager .sort-menu .sort-item.on,
+.search-row .sort-menu .sort-item.on {
+  font-weight: 600;
+}
+/* 도감 지방 — 검색 칸 왼쪽. 목록은 왼쪽에 맞춘다 */
+.search-row .box-sort {
+  margin-right: 8px;
+}
+.search-row .sort-toggle {
+  width: 112px;
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  cursor: pointer;
+}
+/* 검색 칸 — Field 와 같은 높이·테두리 (Figma Field 377:303) */
+.search {
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+}
+.search:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.pager .search {
+  margin-left: auto;
+  width: 170px;
+}
+/* 검색 칸 + `검색` 단추 — 누를 때만 거른다 (2026-09-29 사용자 결정). 단추 높이는 칸과 같다 */
+.search-field {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.search-field .search {
+  flex: 1;
+  min-width: 0;
+}
+.search-field .search-go {
+  appearance: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.search-field .search-go:hover {
+  background: var(--accent-bg);
+}
+.pager .search-field {
+  margin-left: auto;
+}
+.pager .search-field .search {
+  margin-left: 0;
+  width: 124px;
+  flex: none;
+}
+.search-row {
+  display: flex;
+  margin-bottom: 16px;
+}
+.search-row .search-field {
+  flex: 1;
+}

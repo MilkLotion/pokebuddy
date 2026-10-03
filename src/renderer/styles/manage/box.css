@@ -1,0 +1,347 @@
+/* manage.html 의 박스(넘김 줄·머리 메뉴·박스 순서·끌기·칸) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 박스 */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pager button {
+  appearance: none;
+  font: inherit;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+}
+.pager button:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+.pager .label {
+  font-weight: 600;
+}
+/* 박스 이름 — 누르면 입력칸이 된다 (Figma 05 `Box / Rename` `633:17378`) */
+.pager button.box-name {
+  border-color: transparent;
+  background: none;
+  padding: 3px 4px;
+}
+.pager button.box-name:hover {
+  background: var(--accent-bg);
+}
+/* 검색 칸 규칙(.pager .search 폭 170·왼쪽 자동 여백)보다 앞서야 한다 — 이름 입력칸이 넓어져 사용 칸 수가 두 줄로 밀렸다 */
+.pager .search.box-name-input {
+  width: 100%;
+  margin-left: 0;
+  font-weight: 600;
+  text-align: center;
+}
+/* 박스 넘김 줄 — ◀ [이름] ▶ … 정렬. 이름 칸은 12글자 폭 고정이라
+   이름 길이·이름 고치는 중에 따라 ◀·▶·정렬이 움직이지 않는다 (2026-10-01 사용자 결정, Figma 05 `Box / Rename`). 칸 수는 두지 않는다 (2026-10-02) */
+.pager.box-pager {
+  gap: 8px;
+}
+.pager .box-name-cell {
+  flex: none;
+  width: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pager .box-name-cell .label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pager .used {
+  white-space: nowrap;
+}
+/* 정렬 — 검색 칸과 같은 높이. 목록은 칸 아래에 뜬다 (Figma 05 `Box / Sort Open` `633:17372`) */
+.box-sort {
+  position: relative;
+}
+/* 박스 줄에 검색이 없어 정렬을 오른쪽 끝에 붙인다 */
+.pager .box-sort {
+  margin-left: auto;
+}
+/* 박스 넘김 줄 — 돌보미집 아이콘 단추가 정렬 왼쪽에 선다. 둘이 오른쪽 끝에 붙는다 (Figma 02 `Box Toolbar`) */
+.pager .daycare-open {
+  margin-left: auto;
+}
+.pager .daycare-open + .box-sort {
+  margin-left: 0;
+}
+/* 아이콘 단추 — 32×32, 1px 중립 테두리. 옆의 ◀·▶·정렬과 높이가 같다. 점은 오른쪽 위 (Figma 02 `Icon Button`) */
+button.icon-button,
+.pager button.icon-button {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon-button .dot {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.icon-button .dot[hidden] {
+  display: none;
+}
+/* 박스 머리 메뉴 — 햄버거 단추 아래에 뜬다. 오른쪽 끝을 단추에 맞춘다. 줄 모양은 정렬 목록과 같다 (Figma 05 `Box / Menu Open`) */
+.head .box-menu {
+  position: relative;
+}
+.head .box-menu .sort-menu {
+  left: auto;
+  right: 0;
+  width: 124px;
+  box-sizing: border-box;
+}
+.head .box-menu .sort-item {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: inherit;
+  white-space: nowrap;
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.head .box-menu .sort-item:hover {
+  background: var(--accent-bg);
+}
+/* 박스 순서 모달 — 폭 560, 타일 한 줄 4개(간격 6). 타일은 이름과 사용 칸 수. 이름은 한 줄이고 넘치면 끝을 줄인다.
+   지금 보는 박스와 놓을 타일은 옅은 바탕이다. 테두리로 강조하지 않는다 (Figma 05 `Box / Order Modal`) */
+.dialog.daycare.box-order {
+  width: min(560px, calc(100vw - 40px));
+  flex: none;
+}
+.box-order-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+.box-tile {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-drag: none;
+}
+.box-tile .tile-name {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.box-tile .tile-count {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+.box-tile.on,
+.box-tile.drop-on {
+  background: var(--accent-bg);
+}
+.box-tile.dragging {
+  opacity: 0.35;
+}
+/* 박스 명령 실패 — 머리 부제 자리의 글자만 바꾼다(빨간 점 + 이유). 줄을 끼우지 않는다 */
+.head .sub.fail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--danger-ink);
+}
+.head .sub.fail i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.head .sub.fail span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 끌기 — 원래 자리는 빈 칸처럼 흐리고, 놓을 칸은 옅은 바탕. 테두리로 강조하지 않는다 (Figma 05 `Box / Dragging` `633:17375`) */
+.cell.dragging,
+.slot.dragging {
+  opacity: 0.35;
+}
+/* 커서를 따라가는 칸 — 그림자로 들린 느낌만 준다 */
+.drag-ghost {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.95;
+  box-shadow: 0 6px 14px rgba(26, 51, 48, 0.22);
+}
+.box-grid .cell,
+.grid .slot:not(.blank) {
+  touch-action: none;
+  -webkit-user-drag: none;
+}
+.cell.drop-on,
+.slot.drop-on,
+.pager button.drop-on {
+  background: var(--accent-bg);
+}
+.pager .used {
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+/* 박스 검색으로 찾아간 칸 — 옅은 배경 */
+.cell[aria-pressed="true"] {
+  position: relative;
+  background: var(--accent-bg);
+}
+.box-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.cell {
+  appearance: none;
+  font: inherit;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10px;
+  font-family: var(--font-small);
+  cursor: pointer;
+  padding: 2px;
+}
+.cell.blank {
+  background: none;
+  border-style: dashed;
+  cursor: default;
+}
+/* 박스 칸 초상 — Figma `Portrait` Medium 40 */
+.cell .dot {
+  width: 40px;
+  height: 40px;
+}
+.cell .who {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 박스 탭의 칸 — 95×86. 6×5 가 기본 창 높이(682)에서 스크롤 없이 맞는다. 초상과 이름만 가운데, 레벨은 오른쪽 위·이로치 아이콘은 왼쪽 위 구석
+   (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`). 커서를 따라가는 사본(.drag-ghost)도 같은 모양이라 칸 자신에 건다 */
+.cell.tall {
+  aspect-ratio: auto;
+  height: 86px;
+  gap: 6px;
+  padding: 0 2px;
+}
+/* 구석 표시의 기준 — 커서를 따라가는 사본은 position: fixed 라 그대로 기준이 된다 */
+.cell:not(.drag-ghost) {
+  position: relative;
+}
+.cell.tall .lv {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  line-height: 14px;
+}
+/* 이로치 아이콘 — 칸 왼쪽 위 구석 10 (Figma `Box Slot` 의 `shiny`, 박스 칸 7·8 / 교체 모달 칸 6·6) */
+.cell .shiny {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+}
+.cell.tall .shiny {
+  left: 7px;
+  top: 8px;
+}
+/* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage/manage.ts megaMark). 크기는 요소가 정한다.
+   박스 칸은 왼쪽 위(이로치 자리), 이로치 아이콘은 그 오른쪽으로 비킨다. 도감 칸은 얻음 표식(볼) 오른쪽에 볼과 같은 12 다 (2026-10-02 사용자 결정) */
+.mega-mark {
+  display: block;
+  flex: none;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+.cell .mega-mark {
+  position: absolute;
+  left: 6px;
+  top: 5px;
+}
+.cell.tall .mega-mark {
+  left: 7px;
+  top: 6px;
+}
+.cell.has-mega .shiny {
+  left: 21px;
+}
+.cell.tall.has-mega .shiny {
+  left: 24px;
+}
+/* 공유 sid 계열 — 계열 이름 아래에 지금 종 한 줄이 더 있다 */
+.cell.tall.family {
+  gap: 2px;
+}
+/* 옮기기로 든 동안 — 놓을 칸은 옅은 바탕 (끌기의 .drop-on 과 같다) */
+.box-grid.holding .cell {
+  cursor: pointer;
+}
+.box-grid.holding .cell:not(.dragging):hover {
+  background: var(--accent-bg);
+}

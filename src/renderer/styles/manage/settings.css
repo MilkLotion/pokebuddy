@@ -1,0 +1,420 @@
+/* manage.html 의 설정·패치노트·연결·소리 크기·가이드북 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+.dialog.settings .segmented {
+  align-self: flex-start;
+  margin-bottom: -12px;
+}
+.dialog.settings .scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -24px;
+  padding: 0 24px;
+}
+.dialog.settings .setting {
+  min-height: 49px;
+  box-sizing: border-box;
+  padding: 6px 0;
+  gap: 16px;
+  border-bottom: 0;
+}
+.dialog.settings .setting .label {
+  font-size: 12px;
+}
+.dialog.settings > .actions {
+  margin-top: 0;
+}
+.dialog.settings > .actions .act.primary {
+  min-width: 120px;
+  height: 36px;
+}
+.dialog.settings .titles .sub {
+  margin: 0;
+}
+/* 설정 바닥 왼쪽 — 버전·업데이트 상태와 작은 단추 (Figma 05 Screens 섹션 `930:18246`(설정)). 닫기 단추는 없다 */
+.version-foot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.version-word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font: 12px/18px var(--font-body);
+}
+.dialog.settings > .actions .version-foot .act.small {
+  flex: none;
+  min-width: 0;
+  height: 32px;
+  padding: 0 12px;
+  font-weight: 700;
+}
+/* 패치노트 — 왼쪽 버전 목록(넘치면 목록만 스크롤), 오른쪽 고른 버전 (Figma `800:18345`) */
+.notes-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 20px;
+}
+.dialog.settings .notes-list.scroll {
+  flex: none;
+  width: 136px;
+  margin: 0;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.notes-item {
+  appearance: none;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.notes-item:hover {
+  background: var(--canvas);
+}
+/* 고른 버전은 tonal 배경만 */
+.notes-item.on {
+  background: var(--accent-bg);
+}
+.notes-item-version {
+  font: 700 12px/18px var(--font-body);
+}
+.notes-date {
+  color: var(--muted);
+  font: 12px/16px var(--font-body);
+}
+.notes-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.notes-version {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.notes-version h3 {
+  margin: 0;
+  font: 15px/22px var(--font-large);
+}
+.notes-line {
+  margin: 0;
+  padding-left: 10px;
+  text-indent: -10px; /* 줄이 넘치면 둘째 줄을 "· " 뒤에 맞춘다 */
+  font: 12px/18px var(--font-body);
+  font-weight: 400;
+}
+/* 업데이트 뒤 처음 켤 때 — 한 버전뿐이라 높이는 내용에 맞춘다 (Figma `800:18549`) */
+.dialog.settings.notes-new {
+  height: auto;
+}
+/* 놀이공간 한 화면 — 화면 목록과 `화면에서 고르기` 를 한 줄에. 단추를 목록 칸 높이(28)에 맞춘다 */
+.screen-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.screen-pick button.act {
+  height: 28px;
+  padding: 0 11px;
+}
+/* 설정의 고르기 — 박스 정렬 목록과 같은 모양 */
+.setting .setting-select .sort-toggle {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.setting .setting-select .sort-menu .sort-item {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.setting .setting-select .sort-menu .sort-item:hover,
+.setting .setting-select .sort-menu .sort-item.on {
+  background: var(--accent-bg);
+}
+.setting .setting-select .sort-menu .sort-item.on {
+  font-weight: 600;
+}
+/* 두 칸·네 칸 전환 — 회색 틀 안에서 고른 칸만 흰 면 (C-15) */
+.segmented {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--subtle);
+}
+.segmented button {
+  appearance: none;
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.segmented button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+/* 연결 상태 — dot(분류). 연결됨만 초록 */
+.agent-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--disabled);
+  vertical-align: middle;
+}
+.agent-dot.on {
+  background: var(--primary);
+}
+.agent-dot.warn {
+  background: var(--warning);
+}
+.agent-dot.bad {
+  background: var(--danger);
+}
+.agent-tip {
+  margin-top: 2px;
+}
+.agents-note {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+/* 모달 안의 탭 — 설정의 일반 / 연결 */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.subtabs button {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px 5px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.subtabs button[aria-selected="true"] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* 설정 한 줄 — 왼쪽에 이름과 설명, 오른쪽에 조작 */
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.setting:last-child {
+  border-bottom: 0;
+}
+.setting .body {
+  flex: 1;
+  min-width: 0;
+}
+.setting .label {
+  font-weight: 600;
+}
+.hint {
+  color: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-small);
+}
+.setting .hint {
+  color: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-small);
+}
+/* 조작이 넓은 줄 — 이름 아래에 조작을 깐다 */
+.setting.stack {
+  display: block;
+}
+.setting.stack .chips {
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+.setting .chips {
+  margin: 0;
+  justify-content: flex-end;
+}
+/* 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 120 · 숫자 칸 40×24 · 스피커 단추 28, 사이 8.
+   음소거면 슬라이더·숫자를 흐리게 하고 값은 그대로 보인다 */
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  --rail: #64748b; /* Figma bg/control-off */
+}
+.volume input[type="range"] {
+  appearance: none;
+  width: 120px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.volume input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--primary) var(--p, 0%), var(--rail) var(--p, 0%));
+}
+.volume input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--primary);
+}
+.volume input[type="number"] {
+  width: 40px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-small);
+  font-size: 10px;
+  text-align: right;
+  appearance: textfield;
+}
+.volume input[type="number"]::-webkit-inner-spin-button,
+.volume input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.volume .mute {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.volume .mute:hover {
+  background: var(--accent-bg);
+}
+.volume .mute svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.volume.muted .mute {
+  background: var(--subtle);
+}
+.volume.muted input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--disabled) var(--p, 0%), var(--rail) var(--p, 0%));
+}
+.volume.muted input[type="range"]::-webkit-slider-thumb {
+  border-color: var(--disabled);
+}
+.volume.muted input[type="number"] {
+  color: var(--disabled);
+}
+/* 설정 안의 다른 화면으로 가는 줄 — 가이드북 */
+.go {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  padding: 11px 0;
+  cursor: pointer;
+}
+.go .body {
+  flex: 1;
+  min-width: 0;
+}
+.go .label {
+  font-weight: 600;
+}
+.go .arrow {
+  flex: none;
+  color: var(--muted);
+}
+
+/* 가이드북 한 꼭지 */
+.topic {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.topic:last-child {
+  border-bottom: 0;
+}
+.topic h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.topic p {
+  margin: 0 0 4px;
+  color: var(--muted);
+}

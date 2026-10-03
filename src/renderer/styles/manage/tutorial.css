@@ -1,0 +1,97 @@
+/* manage.html 의 튜토리얼 코치마크 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 튜토리얼 코치마크 (Figma `Tutorial / Shop` `399:8590` 등). 대상 둘레를 비운 배경막 네 장과 말풍선.
+   대상에는 강조 테두리를 두르지 않는다 (docs/specs/game.md "코치마크") */
+.coach {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.coach-dim {
+  position: fixed;
+  background: var(--scrim);
+  pointer-events: auto;
+}
+/* 안내만 하는 단계의 구멍 — 대상은 보이되 눌리지 않는다 */
+.coach-block {
+  position: fixed;
+  background: transparent;
+  pointer-events: auto;
+}
+/* 막을 누르면 말풍선을 한 번 흔든다 (2026-09-28 튜토리얼 입력 규칙) */
+.coach-bubble.nudge {
+  animation: coach-nudge 360ms ease-in-out;
+}
+@keyframes coach-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coach-bubble.nudge {
+    animation: none;
+    box-shadow:
+      0 0 0 3px var(--accent-bg),
+      0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+}
+.coach-bubble {
+  position: fixed;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  word-break: keep-all; /* "바탕화면" 같은 낱말을 쪼개지 않는다 */
+  pointer-events: auto;
+}
+.coach-bubble .head {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0; /* 페이지 머리(.head)의 아래 여백을 물려받지 않게 */
+  color: var(--muted);
+}
+.coach-bubble .step {
+  flex: 1;
+}
+.coach-bubble .x {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.coach-bubble .title {
+  font-weight: 700;
+  color: var(--ink);
+}
+.coach-bubble .body {
+  color: var(--muted);
+}
+.coach-bubble .actions {
+  margin-top: 0;
+}
