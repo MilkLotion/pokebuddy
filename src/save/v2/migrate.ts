@@ -12,7 +12,8 @@ import { BAG_RULES } from "../../bag/rules.js";
 import { PARTY_RULES, PET_RULES } from "../../party/rules.js";
 import { CARE_RULES } from "../../state/rules.js";
 import { legacyGender } from "../../dex/gender.js";
-import { empty, putStrays } from "../v3.js";
+import { emptySave } from "../normalize.js";
+import { addStraysToBox } from "../normalize-pets.js";
 import { emptySlots } from "../../party/slots.js";
 import { fillBoxes } from "../../box/boxes.js";
 
@@ -72,7 +73,7 @@ export function convertPet(pet: Pet, now: number, date: string): PetV3 {
 
 export function migrate(v2: SaveV2, now: number): MigrateResult {
   const date = localDate(now);
-  const out = empty(now);
+  const out = emptySave(now);
 
   // 개체와 파티 칸 — v2 는 배열 순서가 곧 칸 순서다
   out.pets = v2.party.map((p) => convertPet(p, now, date));
@@ -90,7 +91,7 @@ export function migrate(v2: SaveV2, now: number): MigrateResult {
 
   const placed = new Set<string>();
   for (const s of slots) if (s.state === "pokemon" && s.petId) placed.add(s.petId);
-  putStrays(out.pets, placed, out.boxes);
+  addStraysToBox(out.pets, placed, out.boxes);
   fillBoxes(out.boxes);
 
   // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다. 옛 민트를 합친 개수는 가방 상한에서 자른다 (src/save/v3.ts normalizeBag 과 같다)

@@ -19,7 +19,7 @@ import { isSealed, open, saveKey, seal } from "./crypt.js";
 import { migrate } from "./v2/migrate.js";
 import { normalizeSaveV2 } from "./v2/normalize.js";
 import { writeAtomic } from "./legacy.js";
-import { normalize as normalizeV3 } from "./v3.js";
+import { normalizeSave } from "./normalize.js";
 
 export interface ReadV3Options {
   repair?: boolean; // 파손 격리와 v2 이전 파일 교체를 한다 — 쓰는 쪽만. 읽기 전용은 false
@@ -136,7 +136,7 @@ export function read(file: string, { repair = true }: ReadV3Options = {}): ReadV
 
   const raw = parse(r.text);
   const now = Date.now();
-  const v3 = normalizeV3(raw, now);
+  const v3 = normalizeSave(raw, now);
   if (v3) return { state: v3, corrupted: false, migrated: false };
 
   // v1 · v2 는 옮긴다. store.normalize 가 v1 이전까지 맡는다

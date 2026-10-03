@@ -28,7 +28,7 @@ import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../trade/config.js";
 import { devEnv, encryptedStorage, isDevRun } from "./trade.js";
 import { writeAtomic } from "../save/legacy.js";
-import { normalize as normalizeV3 } from "../save/v3.js";
+import { normalizeSave as normalizeV3 } from "../save/normalize.js";
 import * as store from "../save/store.js";
 import { loadCloudState } from "../online/lost.js";
 import { t } from "./text";
