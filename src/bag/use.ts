@@ -8,6 +8,7 @@ import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_RULES } from "./rules.js";
+import { recordShiny } from "../dex/record.js";
 import { PET_RULES } from "../party/rules.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -130,7 +131,7 @@ export function use(save: SaveV3, itemId: string, petId: string, args: { nature?
     case "shiny-on": {
       if (pet.shiny) return { ok: false, reason: "already" };
       pet.shiny = true;
-      if (!save.dex.shinyObtained.includes(pet.species)) save.dex.shinyObtained.push(pet.species);
+      recordShiny(save, pet.species);
       return done({ shiny: true });
     }
     case "shiny-off": {

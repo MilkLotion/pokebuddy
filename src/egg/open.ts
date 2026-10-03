@@ -12,10 +12,11 @@ import { rollGender } from "../dex/gender.js";
 import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
 import { isSingleEgg } from "../dex/obtain.js";
-import { newPet, nextPetId, recordDex } from "../party/create.js";
+import { addNewPet } from "../party/create.js";
 import { canGiveEgg, eggBonus, newEgg } from "./pool.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { decide, rollVariant, type Rand } from "./hatch.js";
+import { decide, rollVariant } from "./hatch.js";
+import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type OpenFailure = ReasonOf<"no-egg" | "not-ready" | "no-candidate" | "box-full">;
@@ -68,21 +69,12 @@ export function open(save: SaveV3, eggId: string, now: number, rand: Rand, opts?
   // 모습이 여럿인 종(배쓰나이)은 종·이로치 다음에 모습을 뽑는다 — 서버 재계산(src/verify/save-rules.ts rollEgg)과 같은 순서
   const result = { species: rollVariant(picked.species, rand, opts), shiny: picked.shiny };
 
-  const id = nextPetId(save);
-  save.pets.push(newPet({ id, species: result.species, shiny: result.shiny, nature: randomNature(rand, opts).id, gender: rollGender(result.species, rand, opts), now }));
-
-  // 배치 — 빈 파티 칸에 꺼낸 상태로. 없으면 박스로
-  const slotIndex = save.party.slots.findIndex((s) => s.state === "empty");
-  let toBox = false;
-  if (slotIndex >= 0) {
-    save.party.slots[slotIndex] = { state: "pokemon", petId: id, hidden: false };
-  } else {
-    putPet(save.boxes, id);
-    toBox = true;
-  }
-
-  // 도감 — 얻음 기록. 해금 기록이 없으면 함께 남긴다
-  recordDex(save, result.species, result.shiny);
+  // 개체 만들기·도감 기록·배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳은 위에서 봤다
+  const added = addNewPet(save, { species: result.species, shiny: result.shiny, now, rand, place: "party-first", opts });
+  if (!added) return { ok: false, reason: "box-full" };
+  const id = added.pet.id;
+  const slotIndex = added.slotIndex ?? -1;
+  const toBox = added.toBox;
   save.counts.hatched += 1; // 부화 업적이 센다. 알에서 다른 알이 나온 것은 세지 않는다
 
   save.eggs.splice(i, 1);
