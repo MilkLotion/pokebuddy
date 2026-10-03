@@ -146,8 +146,6 @@ export interface ShopDeviceInput {
   notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
   done: ResultLine | null; // 방금 산 결과 — 합계 상자가 초록
   busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
-  // [임시] 알 상품의 색을 바꾼 그림(data URI) — 알 색칠은 아직 설정창이 한다(렌더러 레인 P11 에서 메인으로 옮긴다). 알이 아니면 null
-  eggArt: string | null;
 }
 
 export interface PartyDeviceInput {

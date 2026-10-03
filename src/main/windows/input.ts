@@ -10,7 +10,6 @@ export const INPUT_LIMITS = {
   iconKeys: 200, // 도구·알 그림 요청 한 번의 개수
   deviceHeight: { min: 200, max: 1200 }, // 기기 창 높이
   noticeChars: 500, // 기기 창 입력의 안내·결과 글자
-  artChars: 400_000, // [임시] 설정창이 보내는 색칠한 알 그림(data URI) 글자 수
 } as const;
 
 export const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object";

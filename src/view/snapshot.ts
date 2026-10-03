@@ -7,7 +7,7 @@
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { profile } from "../dex/species.js";
 import { itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
-import { eggName, toolPrice, eggPalettes } from "../shop/catalog.js";
+import { eggName, toolPrice } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
 import { megaOf, megaChoices, shownSpecies } from "../dex/mega.js";
@@ -299,7 +299,6 @@ export function snapshot(
       sleepChoices: sleepChoices(),
     },
     natures: natureOptions(),
-    eggPalettes: eggPalettes(),
     limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
