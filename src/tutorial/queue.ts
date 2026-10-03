@@ -23,6 +23,7 @@
 //   파티 프리셋(3단계)은 파티 튜토리얼을 끝낸 뒤 개체가 3마리 이상이면 줄에 든다 (2026-10-02).
 //   목표 행동을 이미 했는지(already)는 보지 않는다 — 설명을 읽거나 닫아야 끝난다
 import type { ReasonOf } from "../shared/names/reasons.js";
+import { TUTORIAL_STEPS, isTutorialId } from "../shared/names/tutorials.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
 import { DONE, TUTORIALS, ruleOf, type TutorialSurface } from "./conditions.js";
 
@@ -47,7 +48,8 @@ function set(save: SaveV3, id: string, state: TutorialState, steps?: number): Tu
 
 export const skip = (save: SaveV3, id: string): TutorialResult => set(save, id, "skipped");
 
-export const done = (save: SaveV3, id: string, steps?: number): TutorialResult => set(save, id, "done", steps);
+// 끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다. 표에 없는 id 만 받은 steps 를 적는다 — [임시] 표면(src/main, src/renderer)이 steps 를 보내지 않게 되면 인자를 지운다
+export const done = (save: SaveV3, id: string, steps?: number): TutorialResult => set(save, id, "done", isTutorialId(id) ? TUTORIAL_STEPS[id] : steps);
 
 // 지금 띄워도 되는가 — 건너뛰었거나 마친 것은 다시 띄우지 않는다
 export const canShow = (save: SaveV3, id: string): boolean => !DONE.includes(save.tutorials[id]?.state ?? "none");

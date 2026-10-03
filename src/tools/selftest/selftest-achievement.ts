@@ -293,7 +293,7 @@ function seed(): SaveV3 {
 
   assert.equal(done(s, "hatch", 2).ok, true);
   assert.equal(s.tutorials.hatch?.state, "done");
-  assert.equal(s.tutorials.hatch?.steps, 2, "끝낸 단계 수를 남긴다");
+  assert.equal(s.tutorials.hatch?.steps, 1, "끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다 — 보낸 값이 아니다");
   assert.equal(skip(s, "").reason, "bad-id");
   process.stdout.write("(10) 튜토리얼 상태 기록  ok\n");
 }
