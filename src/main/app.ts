@@ -15,7 +15,8 @@ import { createCommands, type Commands } from "./commands";
 import { STAGE_RULES } from "./layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
-import { clearFailure, createLifetime, reportFailure, type Lifetime } from "./lifetime";
+import { createLifetime, type Lifetime } from "./lifetime";
+import { clearLastError, writeLastError } from "../platform/last-error.js";
 import { jumpListOf } from "../view/menus";
 import { createSaveParty, type PartyPet, type SaveParty } from "./save-party";
 import { createGame, type GameV3 } from "./game";
@@ -523,12 +524,12 @@ async function bootStarter(saveSource: SaveParty, pics: Portraits, starterList: 
       });
     }
     if (quitting() || !species) {
-      reportFailure(PATHS, config.slug, t("starter.skipped"), "starter-cancelled");
+      writeLastError(PATHS, { slug: config.slug, message: t("starter.skipped"), reason: "starter-cancelled" });
       if (!quitting()) app.quit();
       return false;
     }
     if (!saveSource.begin(species)) {
-      reportFailure(PATHS, config.slug, failTextOf("save-failed", "command", currentLang()).text, "save-failed");
+      writeLastError(PATHS, { slug: config.slug, message: failTextOf("save-failed", "command", currentLang()).text, reason: "save-failed" });
       app.quit();
       return false;
     }
@@ -587,7 +588,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
         onArtMissing: (pet) => {
           // PMD 를 못 받았다 — 대개 없는 이름이거나 네트워크가 막혔다. 무대에 나오지 않고 이유만 남긴다
           process.stderr.write(`${pet.species}: PMD 그림을 받지 못함 — 무대에 나오지 않는다 (네트워크·프록시 확인)\n`);
-          reportFailure(PATHS, pet.look, `${pet.look} 그림을 받지 못함 — 네트워크(프록시)를 확인하거나 다른 펫 이름으로 시도`);
+          writeLastError(PATHS, { slug: pet.look, message: `${pet.look} 그림을 받지 못함 — 네트워크(프록시)를 확인하거나 다른 펫 이름으로 시도` });
         },
         log,
       }),
@@ -693,7 +694,7 @@ async function bootClaim(saveSource: SaveParty, group: StageGroup, life: Lifetim
     app.exit(3);
     return false;
   }
-  clearFailure(PATHS, config.slug);
+  clearLastError(PATHS, config.slug);
 
   if (!life.claim()) {
     // 살아 있는 다른 동반자가 lock 을 쥐고 있다 — 이쪽이 물러난다
@@ -772,7 +773,7 @@ async function main(): Promise<void> {
     create: !((isDevRun() || updateTestBuild) && process.env.POKEBUDDY_SAVE_CRYPT === "off"),
     askLocked: askSaveLocked,
     onLocked: () => {
-      reportFailure(PATHS, config.slug, t("save.locked.message"), "save-locked");
+      writeLastError(PATHS, { slug: config.slug, message: t("save.locked.message"), reason: "save-locked" });
       app.quit();
     },
     log,
@@ -794,7 +795,7 @@ app
   .then(main)
   .catch((e: unknown) => {
     console.error(e);
-    reportFailure(PATHS, config.slug, `기동 실패 — ${e instanceof Error ? e.message : String(e)}`);
+    writeLastError(PATHS, { slug: config.slug, message: `기동 실패 — ${e instanceof Error ? e.message : String(e)}` });
     app.exit(1);
   });
 
