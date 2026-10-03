@@ -16,7 +16,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
 import { createDeviceFrame } from "./device-frame.js";
-import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
+import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 const api = window.pokebuddyPet;
 // 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
@@ -75,6 +75,7 @@ const COACH = { pad: 6, gap: 10, ...COACH_SIZE };
 let detailStep = 0;
 let detailPetId: string | null = null; // 다른 개체를 열면 1단계부터
 let coachEl: HTMLElement | null = null;
+let coachNow: CoachLayer | null = null; // coachEl 의 초점 규칙(말풍선만·단추로 되돌림)
 let lastView: PetDeviceView | null = null;
 
 function drawCoach(): void {
@@ -86,27 +87,6 @@ function drawCoach(): void {
   const target = step ? device.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
   if (!step || !target) return;
   const last = detailStep === DETAIL_STEPS.length - 1;
-  const layer = el("div", "coach");
-  const r = target.getBoundingClientRect();
-  const W = document.documentElement.clientWidth;
-  const H = device.getBoundingClientRect().height;
-  const hole = holeOf(r, COACH.pad, W, H);
-  const bubble = el("div", "coach-bubble");
-  const block = (cls: string, x: number, y: number, w: number, h: number): void => {
-    const d = el("div", cls);
-    Object.assign(d.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
-    d.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      nudgeEl(bubble);
-    });
-    layer.appendChild(d);
-  };
-  for (const [x, y, w, h] of dimRectsOf(hole, W, H)) block("coach-dim", x, y, w, h);
-  block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t); // 안내만 한다 — 대상은 보이되 눌리지 않는다
-  const head = el("div", "head");
-  const x = buttonEl("x", "✕", () => act({ kind: "tutorial", action: "skip" }));
-  x.setAttribute("aria-label", "튜토리얼 닫기");
-  head.append(el("span", "step", `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`), x);
   const go = buttonEl("act primary", last ? "확인" : "다음", () => {
     if (last) act({ kind: "tutorial", action: "done" });
     else {
@@ -114,30 +94,22 @@ function drawCoach(): void {
       drawCoach();
     }
   });
-  const foot = el("div", "foot");
-  foot.appendChild(go);
-  bubble.append(head, el("div", "title", step.title), el("div", "body", step.body), foot);
-  layer.appendChild(bubble);
-  document.body.appendChild(layer);
-  const bh = bubble.offsetHeight;
-  const left = Math.min(Math.max(COACH.margin, r.left + r.width / 2 - COACH.width / 2), W - COACH.width - COACH.margin);
-  const below = hole.b + COACH.gap;
-  const top = below + bh > H - COACH.margin ? hole.t - COACH.gap - bh : below;
-  bubble.style.left = `${Math.round(left)}px`;
-  bubble.style.top = `${Math.round(Math.max(COACH.margin, top))}px`;
-  go.focus({ preventScroll: true });
-  coachEl = layer;
+  // 말풍선은 대상 가운데. 아래에 모자라면 위(넘치면 위 여백에 붙인다). 안내만 한다 — 대상은 보이되 눌리지 않는다
+  coachNow = drawCoachLayer({
+    target,
+    bounds: { W: document.documentElement.clientWidth, H: device.getBoundingClientRect().height },
+    pad: COACH.pad,
+    gap: COACH.gap,
+    align: "center",
+    fallback: "clamp",
+    interactive: false,
+    bubble: { step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`, title: step.title, body: step.body, go, onSkip: () => act({ kind: "tutorial", action: "skip" }) },
+  });
+  coachEl = coachNow.layer;
 }
 
 // 튜토리얼 중에는 키보드 초점도 말풍선 안에 둔다
-document.addEventListener(
-  "focusin",
-  (e) => {
-    if (!coachEl || !(e.target instanceof Node) || coachEl.contains(e.target)) return;
-    coachEl.querySelector<HTMLButtonElement>(".coach-bubble .act")?.focus({ preventScroll: true });
-  },
-  true,
-);
+guardCoachFocus(() => (coachEl ? coachNow : null));
 
 // 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (ui/portrait.ts spriteCanvas)
 const STAGE = { w: 88, h: 88, maxScale: 2 };
