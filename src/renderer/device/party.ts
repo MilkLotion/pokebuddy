@@ -1,4 +1,4 @@
-// 파티 기기 창 — 교체 화면. 관리 창이 정해 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
+// 파티 기기 창 — 교체 화면. 메인이 만들어 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
 // Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 기기 창 틀(device-frame.ts)이다. 바닥 줄은 두지 않는다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
 import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";

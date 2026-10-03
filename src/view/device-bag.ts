@@ -1,24 +1,13 @@
 // 가방 기기 창 모델 — 고른 도구 하나의 머리 줄·정보 칸과 사용·판매 조작 칸 (Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
-// 지금은 설정창(src/renderer/manage/manage.ts bagDeviceModel)이 같은 모델을 만든다 — 기기 창 모델을 메인으로 옮기는 단계(D10b)에서 이 함수로 바꾼다.
+// 설정창은 고른 값(BagDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안)
-import type { BagDeviceOpen } from "../shared/model/devices.js";
+import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
 import { candyMax, candyResult } from "../bag/preview.js";
 import { itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
 
-// 고른 값 — 설정창이 든다
-export interface BagDeviceInput {
-  itemId: string;
-  mode: "use" | "sell";
-  targetPetId: string | null; // 사용 쪽 대상 개체. 파티에 없으면 첫 개체로 바꾼다
-  qty: number; // 사용 수량(사탕만)
-  sellQty: number;
-  notice: string; // 마지막 사용·판매 실패 — 미리보기 상자가 빨강
-  result: { lead: string; line: string } | null; // 방금 쓴 결과 — 미리보기 상자가 초록
-  busy: boolean; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
-}
 
 // 한 번에 여러 개 쓰는 도구 — 사탕
 export const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";

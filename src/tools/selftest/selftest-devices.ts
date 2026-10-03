@@ -7,10 +7,11 @@ import assert from "node:assert";
 import { candyMax, candyResult } from "../../bag/preview";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { bagDeviceModel, type BagDeviceInput } from "../../view/device-bag";
+import type { BagDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
+import { bagDeviceModel } from "../../view/device-bag";
 import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
-import { shopDeviceModel, type ShopDeviceInput } from "../../view/device-shop";
+import { shopDeviceModel } from "../../view/device-shop";
 import { snapshot } from "../../view/snapshot";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -105,7 +106,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (6) 상점 — 수량 상한과 까닭, 포인트 부족, 그림 열쇠, 하나씩만 사는 상품
 {
-  const shopIn = (productId: string, over: Partial<ShopDeviceInput> = {}): ShopDeviceInput => ({ productId, qty: 1, notice: "", done: null, busy: false, ...over });
+  const shopIn = (productId: string, over: Partial<ShopDeviceInput> = {}): ShopDeviceInput => ({ productId, qty: 1, notice: "", done: null, busy: false, eggArt: null, ...over });
   const shop = (productId: string, over: Partial<ShopDeviceInput> = {}) => {
     const r = shopDeviceModel(v, shopIn(productId, over));
     assert.ok(r, `상점 모델이 있다 (${productId})`);

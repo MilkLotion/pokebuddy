@@ -1,15 +1,9 @@
 // 파티 기기 창 모델 — 교체 화면에서 지금 프리셋의 파티 칸과 프리셋 칩 (Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
-// 지금은 설정창(src/renderer/manage/manage.ts partyDeviceModel)이 같은 모델을 만든다 — 기기 창 모델을 메인으로 옮기는 단계(D10b)에서 이 함수로 바꾼다
-import type { PartyDeviceOpen } from "../shared/model/devices.js";
+// 설정창은 고른 값(PartyDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다
+import type { PartyDeviceInput, PartyDeviceOpen } from "../shared/model/devices.js";
 import type { Snapshot } from "../shared/model/snapshot.js";
 import { portraitArtKey, type DeviceResult } from "./device-art.js";
 
-// 고른 값 — 설정창이 든다
-export interface PartyDeviceInput {
-  heldPetId: string | null; // 파티 기기 창에서 든 파티 개체. 파티에서 빠졌으면 놓는다
-  heldFromBox: boolean; // 박스 개체를 들었다 — 빈 칸이 놓을 칸이 된다
-  notice: string; // 마지막 교체 실패 — 머리 줄의 이름 옆 자리
-}
 
 export function partyDeviceModel(v: Snapshot, given: PartyDeviceInput): DeviceResult<PartyDeviceOpen, PartyDeviceInput> {
   const input = { ...given };

@@ -1,16 +1,10 @@
 // 파티 상세 기기 창 모델 — 고른 개체 하나 (Figma 05 `Party / Detail Device` `908:23772`).
-// 지금은 설정창(src/renderer/manage/manage.ts petDeviceBuild)이 같은 모델을 만든다 — 기기 창 모델을 메인으로 옮기는 단계(D10b)에서 이 함수로 바꾼다.
+// 설정창은 고른 값(PetDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 초상·메가스톤 표식 그림은 메인의 기기 창 틀이 붙인다 (src/main/windows/devices.ts petDeviceOf)
-import type { PetDeviceOpen } from "../shared/model/devices.js";
+import type { PetDeviceInput, PetDeviceOpen } from "../shared/model/devices.js";
 import type { PetView, Snapshot } from "../shared/model/snapshot.js";
 import type { DeviceResult } from "./device-art.js";
 
-// 고른 값 — 설정창이 든다
-export interface PetDeviceInput {
-  petId: string;
-  notice: string; // 마지막 실패 문구
-  dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다
-}
 
 // 고른 개체가 파티와 박스에 없으면 null(기기 창을 닫는다)
 export function petDeviceModel(v: Snapshot, given: PetDeviceInput): DeviceResult<PetDeviceOpen, PetDeviceInput> | null {

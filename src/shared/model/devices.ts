@@ -119,3 +119,39 @@ export interface PartyDeviceView extends PartyDeviceOpen {
 }
 
 export type PartyDeviceAction = { kind: "slot"; index: number } | { kind: "preset"; index: number };
+
+// ── 기기 창 입력 — 설정창이 고른 값 ─────────────────────────────────────────────
+// 설정창은 이것만 보내고, 메인이 모델을 만든다 (src/view/device-*.ts). 메인은 바로잡은 입력(수량을 상한으로 자르기, 없는 대상 바꾸기)을 돌려준다
+
+export interface BagDeviceInput {
+  itemId: string;
+  mode: "use" | "sell";
+  targetPetId: string | null; // 사용 쪽 대상 개체. 파티에 없으면 첫 개체로 바꾼다
+  qty: number; // 사용 수량(사탕만)
+  sellQty: number;
+  notice: string; // 마지막 사용·판매 실패 — 미리보기 상자가 빨강
+  result: { lead: string; line: string } | null; // 방금 쓴 결과 — 미리보기 상자가 초록
+  busy: boolean; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
+}
+
+export interface ShopDeviceInput {
+  productId: string;
+  qty: number;
+  notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
+  done: { lead: string; line: string } | null; // 방금 산 결과 — 합계 상자가 초록
+  busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
+  // [임시] 알 상품의 색을 바꾼 그림(data URI) — 알 색칠은 아직 설정창이 한다(렌더러 레인 P11 에서 메인으로 옮긴다). 알이 아니면 null
+  eggArt: string | null;
+}
+
+export interface PartyDeviceInput {
+  heldPetId: string | null; // 파티 기기 창에서 든 파티 개체. 파티에서 빠졌으면 놓는다
+  heldFromBox: boolean; // 박스 개체를 들었다 — 빈 칸이 놓을 칸이 된다
+  notice: string; // 마지막 교체 실패 — 머리 줄의 이름 옆 자리
+}
+
+export interface PetDeviceInput {
+  petId: string;
+  notice: string; // 마지막 실패 문구
+  dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다
+}
