@@ -24,7 +24,7 @@ export function loadJson<T>(name: string, opts?: DexOptions): T {
   return parsed;
 }
 
-// 슬러그 정규화 — 공백·대소문자, codex 팩의 `-3d`(같은 종의 다른 그림체)를 뗀다 (lib/dex.js normalize 와 같은 규칙)
+// 슬러그 정규화 — 공백·대소문자, codex 팩의 `-3d`(같은 종의 다른 그림체)를 뗀다 (src/dex/dex-number.ts 도 이 함수로 슬러그를 맞춘다)
 export const normalizeSlug = (slug: string): string =>
   String(slug ?? "")
     .trim()

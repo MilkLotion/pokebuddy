@@ -1,4 +1,4 @@
-// 진화 사슬 — data/evo.json (src/tools/build-evo.ts). 종 단위 표이고, 폼 슬러그(rotom-wash · deoxys-attack)는
+// 진화 사슬 — data/evo.json (src/tools/data/build-evo.ts). 종 단위 표이고, 폼 슬러그(rotom-wash · deoxys-attack)는
 // 같은 도감번호의 기본 종으로 풀어 본다 — 그래서 lineOf 는 "같은 사슬의 모습 전부" 를 준다 (design.md "모습 선택지")
 //
 // stageOf 는 사슬의 뿌리부터의 거리(도감 사실)다. 저장의 Pet.stage(그 마리가 몇 번 진화했나)와는 다른 수 —
@@ -14,7 +14,7 @@ import { isRegional } from "./regional.js";
 export interface EvoStep {
   to: string;
   when?: DayPart;
-  need?: EvoNeed; // 진화 조건 — 옛 data/evo.json 에는 없다 (src/tools/build-evo.ts)
+  need?: EvoNeed; // 진화 조건 — 옛 data/evo.json 에는 없다 (src/tools/data/build-evo.ts)
   gender?: Exclude<Gender, "none">; // 이 성별만 진화한다 — 염뉴트 암컷, 엘레이드 수컷 (2026-09-30 사용자 결정)
   map?: true; // 지도(region-map)도 필요한 간선 — 기본형 → 리전폼 진화 (data/regional.json)
   affinity?: number; // 조건에 더해 친밀도도 이만큼 필요한 간선 — 암멍이 → 루가루암(황혼의 모습) (Lv.25 와 친밀도 100, data/regional.json)

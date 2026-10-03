@@ -2,7 +2,7 @@
 import { type DexOptions, loadJson } from "../dex/data.js";
 import { getLang, t } from "./text.js";
 
-// 공식 분류와 설명문 — data/dex-text.json (src/tools/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
+// 공식 분류와 설명문 — data/dex-text.json (src/tools/data/build-dex-text.ts 가 PokeAPI CSV 로 만든다)
 export interface DexText {
   genus: { ko?: string; en?: string };
   flavor: { ko?: string; en?: string };

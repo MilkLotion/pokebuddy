@@ -26,7 +26,7 @@ export function fixedEggs(opts?: DexOptions): [string, string[]][] {
 // 종별로 저장마다 한 번만 얻는다. 이미 얻은 종은 후보에서 뺀다 (src/egg/pool.ts)
 export const isSingleEgg = (kind: string, opts?: DexOptions): boolean => !isMetaKey(kind) && eggTable(opts)[kind]?.single === true;
 
-// 업적 보상으로 주는 종 전부 — 해금 규칙 생성기가 이 종들을 기본형에서 뺀다 (src/tools/build-unlocks.ts)
+// 업적 보상으로 주는 종 전부 — 해금 규칙 생성기가 이 종들을 기본형에서 뺀다 (src/tools/data/build-unlocks.ts)
 export function rewardSpecies(opts?: DexOptions): string[] {
   const out: string[] = [];
   for (const [id, def] of Object.entries(achievementTable(opts))) {

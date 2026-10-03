@@ -48,7 +48,7 @@ export interface MotionRules {
     dragTurnPx: number; // 끄는 방향을 바꾸는 누적 이동
     speedPxPerZoom: number; // 도트 배율 1 당 걷는 속도 (px/s) — 옛 body.js 의 18 * art.zoom
   };
-  // 반응별 후보 — 보유한 것 중에서 고른다. 작업 중에 하는 동작은 art/pmd.js 의 WORK_PLAY 가 정한다
+  // 반응별 후보 — 보유한 것 중에서 고른다. 작업 중에 하는 동작은 src/main/art/pmd.ts 의 WORK_PLAY 가 정한다
   MOVES: {
     walk: readonly string[];
     fidget: readonly string[];

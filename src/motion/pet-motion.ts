@@ -19,7 +19,7 @@ import { NEUTRAL_PARAMS, applyParams, withSleepAfter } from "./params";
 import { MOTION_RULES } from "./rules";
 import type { MotionCaps, MotionInput, MotionOut, PetMotion, PetMotionOptions } from "./types";
 
-// art/pmd.js buildClips 결과 중 움직임에 필요한 부분 — 무대의 art 층이 이 모양으로 넘긴다
+// src/main/art/pmd.ts buildClips 결과 중 움직임에 필요한 부분 — 무대의 art 층이 이 모양으로 넘긴다
 export interface PmdArtLike {
   anims: Record<string, { frames: { ms: number }[] }>;
   work?: Record<string, "once" | "loop">;

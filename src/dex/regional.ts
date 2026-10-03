@@ -2,7 +2,7 @@
 // 특수 폼(플라엣테(영원의 꽃) · 루가루암(한밤중의 모습) 등)도 이 표에 special 로 든다 — 지방 모습은 아니지만 같은 규칙의 다른 종이다 (worklog/records/extra-evolution)
 //
 //   forms  슬러그 → 기본 종 · 지방 · 폼 순번 · PokeAPI 포켓몬 번호(초상) · PMD 폼 경로(무대) · 얻는 방법
-//   edges   진화 간선 — 빌드가 data/evo.json 에 덧붙인다 (src/tools/build-evo.ts). 런타임은 evo.json 만 본다
+//   edges   진화 간선 — 빌드가 data/evo.json 에 덧붙인다 (src/tools/data/build-evo.ts). 런타임은 evo.json 만 본다
 //           need 는 원작 조건이다. 지도 간선의 원작 조건이 도구면 빌드가 지도로 바꿔 적는다
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
@@ -53,7 +53,7 @@ export interface GenderLook {
 // 지도 도구 식별자 — 진화 간선의 map 표시가 요구하는 도구
 export const REGION_MAP = "region-map";
 
-// 조건 자체가 지도인가 — 원작 조건이 돌인 지도 간선은 빌드가 need 를 지도로 바꿔 둔다 (src/tools/build-evo.ts)
+// 조건 자체가 지도인가 — 원작 조건이 돌인 지도 간선은 빌드가 need 를 지도로 바꿔 둔다 (src/tools/data/build-evo.ts)
 //   이런 간선은 돌을 보지도 쓰지도 않는다. 화면도 "지도" 하나만 적는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
 export const needIsMap = (need: EvoNeed | undefined): boolean => need?.kind === "item" && need.item === REGION_MAP;
 

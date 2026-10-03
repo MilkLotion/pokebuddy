@@ -57,7 +57,7 @@ const rewardWord = (def: AchievementDef): string => {
   return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
 };
 
-// 버프를 보이는 순서 — 든든함 · 신남 · 들뜸. 이름은 lib/i18n 의 buff.<식별자> (2026-09-29 사용자 결정)
+// 버프를 보이는 순서 — 든든함 · 신남 · 들뜸. 이름은 data/i18n 의 buff.<식별자> (2026-09-29 사용자 결정)
 const BUFF_ORDER = ["premium-food", "long-play", "short-play"] as const;
 
 const sec = (ms: number): number => Math.round(ms / 1000);

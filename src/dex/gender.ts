@@ -1,4 +1,4 @@
-// 성별 — 원작 성비(data/species.defaults.json 의 genderRate, src/tools/build-species.ts)를 따른다 (2026-09-30 사용자 결정)
+// 성별 — 원작 성비(data/species.defaults.json 의 genderRate, src/tools/data/build-species.ts)를 따른다 (2026-09-30 사용자 결정)
 //
 //   얻을 때   성비대로 무작위. 무성 종은 none, 한 성별뿐인 종(럭키·루주라·엘레이드)은 그 성별
 //   옛 개체   성별이 없는 저장은 반반으로 정한다. 무성·한 성별 종은 그 성별이다.

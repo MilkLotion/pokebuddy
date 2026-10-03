@@ -18,7 +18,7 @@ import type { MotionInput, MotionOut, Phase, RoamBox, MotionParams } from "./typ
 export interface BrainOptions {
   have: Set<string>; // 보유 동작 이름
   durOf(anim: string): number; // 동작 한 번 재생 길이 (ms)
-  work?: Record<string, "once" | "loop">; // 작업 동작 이름 → 재생 방식 (art/pmd.js WORK_PLAY 중 가진 것)
+  work?: Record<string, "once" | "loop">; // 작업 동작 이름 → 재생 방식 (src/main/art/pmd.ts WORK_PLAY 중 가진 것)
   workOnly?: Set<string>; // 작업 동작으로만 담긴 이름 — 만지기 반응에는 쓰지 않는다
   mode?: MotionMode;
   speedPx?: number; // 걷는 속도 (px/s, pace 1 기준)

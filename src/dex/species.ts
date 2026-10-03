@@ -1,4 +1,4 @@
-// 종 프로필 — data/species.defaults.json(PokeAPI 에서 뽑은 1089종, src/tools/build-species.ts) 위에
+// 종 프로필 — data/species.defaults.json(PokeAPI 에서 뽑은 1089종, src/tools/data/build-species.ts) 위에
 // data/species.overrides.json(손으로 다듬은 종)을 덧씌운다. 모르는 슬러그는 기본 프로필 (design.md "상태")
 
 import type { SpeciesProfile } from "../shared/species";
