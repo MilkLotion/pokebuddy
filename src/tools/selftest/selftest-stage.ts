@@ -14,7 +14,7 @@ import { menuView, pickOf, subId } from "../../main/menus";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../main/text";
-import * as legacy from "../../save/legacy";
+import { emptyPet, emptySaveV2 } from "../../save/v2/normalize";
 import * as writer from "../../save/writer";
 import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stage";
 import type { AgentState } from "../../shared/names/agents";
@@ -30,6 +30,7 @@ import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
 import { send } from "../../save/mailbox";
 import { makeTmp } from "../harness/tmp-dir";
+import { writeSaveV2 } from "../harness/v2-save";
 import { sleep, waitFor } from "../harness/wait";
 import { PARTY_RULES } from "../../party/rules";
 import { printLine as out } from "../harness/report";
@@ -478,13 +479,13 @@ async function stageRuntimeTests(): Promise<void> {
   // v2 저장을 처음 열면 v3 으로 옮긴다. 원본은 옆에 남고 무대는 그대로 돈다
   {
     const migPaths = pathsIn(tmpDir("migrate-v3"));
-    const old = legacy.empty(T0);
-    old.party.push(legacy.emptyPet({ id: "p1", species: "eevee", now: T0 }), legacy.emptyPet({ id: "p2", species: "pikachu", now: T0 }));
+    const old = emptySaveV2(T0);
+    old.party.push(emptyPet({ id: "p1", species: "eevee", now: T0 }), emptyPet({ id: "p2", species: "pikachu", now: T0 }));
     old.slots = 2;
     old.party[0]!.nick = "뽀야";
     old.party[0]!.look = "eevee-starter";
     old.points = 1234;
-    legacy.write(migPaths.save, old);
+    writeSaveV2(migPaths.save, old);
     const migGame = createGame({ file: migPaths.save });
     const migParty = createSaveParty({ game: migGame, paths: migPaths });
     try {

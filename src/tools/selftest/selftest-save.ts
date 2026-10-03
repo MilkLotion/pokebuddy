@@ -7,7 +7,6 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { checkMigration, migrateSaveV2 } from "../../save/v2/migrate";
-import * as legacy from "../../save/legacy";
 import * as store from "../../save/store";
 import { BAG_RULES } from "../../bag/rules";
 import { BOX_RULES } from "../../box/rules";
@@ -18,6 +17,7 @@ import { openSlot } from "../../party/slots";
 import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../../party/presets";
 import type { Pet, SaveV2 } from "../../save/v2/types";
 import { makeTmp } from "../harness/tmp-dir";
+import { writeSaveV2 } from "../harness/v2-save";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 
 const TODAY = "2026-09-24";
@@ -352,7 +352,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
     {
       const file = path.join(root, "v2.json");
       const src = v2Save();
-      assert.equal(legacy.write(file, src), true);
+      assert.equal(writeSaveV2(file, src), true);
       const res = store.read(file);
       assert.ok(res.state, "이전 결과가 있다");
       assert.equal(res.migrated, true);
@@ -396,7 +396,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
     // (14) 읽기 전용은 v2 파일을 바꾸지 않는다. 옮긴 값만 돌려준다
     {
       const file = path.join(root, "v2-reader.json");
-      assert.equal(legacy.write(file, v2Save()), true);
+      assert.equal(writeSaveV2(file, v2Save()), true);
       const before = fs.readFileSync(file, "utf8");
       const res = store.read(file, { repair: false });
       assert.equal(res.state?.v, 3, "옮긴 값을 돌려준다");

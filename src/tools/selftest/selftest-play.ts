@@ -218,7 +218,7 @@ function seedPet(): SaveV3 {
     seed.points.balance = 100;
     store.write(file, seed);
     const game = createGame({ file, now: () => T0 });
-    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/save/legacy.ts writeAtomic)
+    // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic)
     const block = `${file}.${process.pid}.tmp`;
     fs.mkdirSync(block);
     game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/main/game.ts)
