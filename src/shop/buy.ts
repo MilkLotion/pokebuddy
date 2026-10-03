@@ -10,7 +10,7 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { addBox, boxBuyable, boxRoom, putPet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
-import { addNewPet, checkNewPetRoom, hasRoom, placeNew } from "../party/create.js";
+import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { addItem, bagRoomOf } from "../bag/items.js";
 import { openSlot, presetSlots } from "../party/slots.js";
 import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";

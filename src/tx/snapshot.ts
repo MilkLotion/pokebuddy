@@ -5,7 +5,8 @@
 // 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { defs, rewardEgg, rewardItem, rewardPoints, rewardPokemon, type AchievementDef } from "../achievement/defs.js";
+import { defs, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "../achievement/defs.js";
+import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { BOX_RULES } from "../box/rules.js";
 import { EGG_RULES } from "../egg/rules.js";

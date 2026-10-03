@@ -7,7 +7,7 @@
 //   evolve:<개체 id>:<지금 종>     개체 하나마다. 종을 넣어 다음 단계 진화는 새 배너가 된다
 //   achievement:<업적 id>          업적 하나마다
 //   mega:<개체 id>                 메가스톤이 생긴 개체 하나마다 (src/dex/mega.ts)
-//   find:<줍기 기록 id>            주운 것 하나마다 (src/find/core.ts). 저장의 최근 줍기 기록(find.log)에 있는 동안 산다
+//   find:<줍기 기록 id>            주운 것 하나마다 (src/find/pickup.ts). 저장의 최근 줍기 기록(find.log)에 있는 동안 산다
 // 순서는 먼저 생긴 것부터. 같은 틱에 생긴 것은 부화 → 진화 → 업적 → 줍기, 같은 종류는 화면 목록 순서다(줍기는 주운 순서).
 // pendingOf 가 그 순서로 목록을 만들고 refresh 가 새 키를 끝에 붙이므로 줄은 늘 그 순서다
 import type { BannerKind } from "../shared/names/banners";

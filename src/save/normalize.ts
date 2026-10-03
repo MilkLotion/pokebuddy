@@ -261,7 +261,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
   };
 }
 
-// 업적이 세는 누적 값 — 없으면 옛 저장이다. 저장에 남은 흔적에서 시작 값을 정한다 (src/achievement/core.ts)
+// 업적이 세는 누적 값 — 없으면 옛 저장이다. 저장에 남은 흔적에서 시작 값을 정한다 (src/achievement/evaluate.ts)
 //   부화   만든 알 수(eggSeq) − 기다리는 알 수. 알에서 다른 알이 나온 경우도 한 번으로 센다
 //   진화   가진 개체의 stage 합. 교환으로 받은 개체의 진화도 든다
 //   교환   0
@@ -280,7 +280,7 @@ function normalizeCounts(raw: unknown, pets: readonly PetV3[], eggs: EggV3[], eg
 
 const FIND_KINDS: readonly FindKind[] = ["points", "item", "evo", "pokemon"];
 
-// 줍기 — 모양이 깨진 기록은 버린다. 없으면 빈 값 (src/find/core.ts)
+// 줍기 — 모양이 깨진 기록은 버린다. 없으면 빈 값 (src/find/pickup.ts)
 function normalizeFind(raw: unknown): FindV3 {
   const r = isObj(raw) ? raw : {};
   const log: FindRecordV3[] = [];

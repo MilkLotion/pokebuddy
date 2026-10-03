@@ -45,7 +45,7 @@ export interface GameV3 {
   read: () => SaveV3 | null;
   tick: (input?: TimeInput) => TickEvents | null; // 마지막 틱 뒤로 흐른 시간을 적용한다. 상한을 넘는 틈은 버린다. 파일은 flushMs 마다 쓴다
   flush: () => boolean; // 메모리에만 있는 시간 진행을 지금 쓴다 — 끄기·화면 잠금 직전. 쓸 것이 없으면 true
-  find: (petIds: string[]) => FindRecordV3[] | null; // 줍기 — 굴림에서 주운 마리를 그 자리에서 저장에 넣는다. 쓰지 못했으면 null (src/find/core.ts)
+  find: (petIds: string[]) => FindRecordV3[] | null; // 줍기 — 굴림에서 주운 마리를 그 자리에서 저장에 넣는다. 쓰지 못했으면 null (src/find/pickup.ts)
   view: () => Snapshot | null;
   dex: () => DexEntry[];
   dexDetail: (slug: string) => DexDetail | null; // 도감 칸 하나의 상세

@@ -12,7 +12,7 @@ import type { PortraitAsk, Snapshot } from "../model/snapshot.js";
 import type { TradeScreen } from "../model/trade.js";
 import type { BridgeOf, Invoke, Push, PushOf, Send } from "./kinds.js";
 
-// 화면이 보내는 요청 — 이름과 인자는 src/tx/bridge.ts 가 푼다.
+// 화면이 보내는 요청 — 이름과 인자는 src/tx/args.ts argsFromCommand 가 푼다.
 // 조작 하나마다 `args.reqId` 를 새로 붙인다. 없으면 같은 순간의 두 조작이 하나로 합쳐진다
 export interface ManageRequest {
   cmd: string;

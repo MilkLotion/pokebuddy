@@ -88,7 +88,7 @@ function addHiddenPet(save: SaveV3, now: number): void {
   const id = nextPetId(save);
   const species = save.dex.unlocked.find((s) => !save.pets.some((p) => p.species === s)) ?? DEV_TEST_RULES.extra;
   save.pets.push(newPet({ id, species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species), now }));
-  save.party.slots[slot] = { state: "pokemon", petId: id, hidden: true }; // 숨긴 채로 — 파티 튜토리얼(지금 꺼짐, src/tutorial/core.ts)을 다시 켤 때 확인용
+  save.party.slots[slot] = { state: "pokemon", petId: id, hidden: true }; // 숨긴 채로 — 파티 튜토리얼(지금 꺼짐, src/tutorial/queue.ts)을 다시 켤 때 확인용
   recordDex(save, species, false);
 }
 

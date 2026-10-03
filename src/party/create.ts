@@ -67,19 +67,6 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
   };
 }
 
-// 새 개체를 둘 곳이 있는가 — 적용한 프리셋의 빈 칸 또는 박스의 빈 칸. 개체를 만들기 전에 본다
-export const hasRoom = (save: SaveV3): boolean => save.party.slots.some((s) => s.state === "empty") || boxRoom(save.boxes) > 0;
-
-// 새 개체를 파티나 박스에 넣는다 — 상점 구매, 업적의 포켓몬 보상, 줍기가 쓴다.
-// 부르기 전에 hasRoom 으로 둘 곳을 본다. 둘 곳이 없으면 넣지 않고 null
-export function placeNew(save: SaveV3, petId: string): { slotIndex?: number; toBox: boolean } | null {
-  const i = save.party.slots.findIndex((s) => s.state === "empty");
-  if (i >= 0) {
-    save.party.slots[i] = { state: "pokemon", petId, hidden: false };
-    return { slotIndex: i, toBox: false };
-  }
-  return putPet(save.boxes, petId) ? { toBox: true } : null;
-}
 
 // 새 개체를 둘 곳 — 상점·알·줍기·업적은 파티 먼저, 우편은 박스에만, 첫 선택은 파티에만
 //   party-first  적용한 프리셋의 첫 빈 칸에 꺼낸 상태로, 없으면 박스

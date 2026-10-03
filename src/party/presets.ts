@@ -105,7 +105,7 @@ export function presetBuyable(save: Party): { ok: boolean; reason?: PresetFailur
   return { ok: true, open, need };
 }
 
-// 프리셋을 하나 더한다 — 새 프리셋의 칸은 부르는 쪽이 준다 (src/save/v3.ts presetSlots). 새 번호를 돌려준다
+// 프리셋을 하나 더한다 — 새 프리셋의 칸은 부르는 쪽이 준다 (src/party/slots.ts presetSlots). 새 번호를 돌려준다
 export function addPreset(save: Party, slots: PartySlotV3[]): number {
   const index = presetCount(save);
   const presets = save.party.presets ?? [];

@@ -91,7 +91,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 개체 상세 튜토리얼은 파티 개체를 파티 상세 기기 창에 처음 띄우면 기기 창의 조작을 4단계로 설명한다.
 튜토리얼이 떠 있으면 `다음`·`확인`, 그 단계의 목표 행동, `✕` 만 누를 수 있다. 다른 곳을 누르면 말풍선이 흔들린다. 규칙은 [튜토리얼 입력 규칙](specs/game.md#튜토리얼-입력-규칙)을 따른다.
 기능마다 튜토리얼을 둔다(2026-09-28 사용자 결정 "모든 기능에 대한 튜토리얼 다 만든다 생각해줘"). 성장·포인트·파티·가방·진화는 그 기능을 처음 쓸 수 있게 될 때, 도감·교환·사용자는 그 화면을 처음 열 때 시작한다. 할 수 있는 것은 직접 해 보게 한다. 규칙은 [새 기능 튜토리얼](specs/game.md#새-기능-튜토리얼)을 따른다.
-업적 튜토리얼은 받지 않은 업적이 처음 생기면 시작한다. 헤더의 업적 아이콘을 밝혀 업적창으로 이어 준다. 업적 보상을 한 번 받으면 끝난다(`src/tutorial/core.ts` `achievement`). 업적 배너의 `바로가기`도 업적창을 연다.
+업적 튜토리얼은 받지 않은 업적이 처음 생기면 시작한다. 헤더의 업적 아이콘을 밝혀 업적창으로 이어 준다. 업적 보상을 한 번 받으면 끝난다(`src/tutorial/queue.ts` `achievement`). 업적 배너의 `바로가기`도 업적창을 연다.
 시작 포인트는 다른 상품에도 쓸 수 있다. 랜덤알 구매를 강제하지 않는다. 다른 곳에 써도 일반 게임 진행을 막지 않는다.
 시작 포인트를 다른 곳에 썼다가 나중에 알을 구매하면 그때 부화 튜토리얼을 시작한다.
 한 단계가 늦어져도 다른 기능의 사용을 막지 않는다. 단계별 진행과 재개 규칙은 [행동에 따른 단계별 튜토리얼](specs/game.md#행동에-따른-단계별-튜토리얼)을 따른다.
@@ -353,7 +353,7 @@ S5는 획득과 사용을 분리한다. 사탕 6종은 획득 경로와 관계�
 
 명령 계약은 [명령 타입](../src/shared/command.ts)과 [등록 처리기](../src/main/commands.ts)를 따른다. 메뉴·CLI·mailbox는 같은 명령 처리 경로를 사용한다.
 명령 이름은 [명령 이름표](../src/shared/names/commands.ts)의 `CommandName`이다. `feed`, `play`, `evolve`, `party.show`, `party.hide`, `party.remove`, `party.place`, `party.swap`, `party.move`, `party.keep`, `box.sort`, `box.move`, `box.rename`, `box.order`, `egg.open`, `bag.use`, `bag.sell`, `achievement.claim`, `tutorial.skip`, `tutorial.done`, `pet.set`, `pet.form`, `pet.sell`, `starter.pick`, `agent.connect`, `agent.disconnect`, `settings.set`, `shop.buy`, `snapshot`, `quit`이다.
-설정창이 쓰는 이름은 [명령 다리](../src/tx/bridge.ts)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.move`·`party.keep`이 맡는다.
+설정창이 쓰는 이름은 [인자 풀기](../src/tx/args.ts)(`argsFromCommand`)가 푼다. 파티 배치는 `party.place`·`party.swap`·`party.move`·`party.keep`이 맡는다.
 
 `companion`은 포켓몬 인자를 받지 않는다. 빈 파티이면 선택창을 연다. 선택 취소와 저장 실패를 구분한다.
 `pet.set`의 위치 변경은 저장에 성공한 뒤 성공으로 응답한다. 마우스 위치 변경도 같은 명령을 사용한다.

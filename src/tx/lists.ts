@@ -4,7 +4,6 @@
 // 값의 출처는 한 곳이다. 가격은 `src/shop/catalog.ts`, 이름은 이름표, 상태는 저장이 가진다.
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { petName } from "../main/text.js";
-import { BAG_RULES } from "../bag/rules.js";
 import { BOX_RULES } from "../box/rules.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { PARTY_RULES } from "../party/rules.js";
