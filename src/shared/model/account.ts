@@ -79,6 +79,7 @@ export interface AccountScreen {
     lastSavedAt: number | null;
     busy: boolean;
     error: string | null; // CloudErrorCode 또는 그 밖의 실패 코드
+    errorDetail?: string | null; // error 가 UNKNOWN 일 때 서버가 준 원래 코드 — failTextOf 의 detail 로 괄호에 보인다
     other: CloudOtherView | null; // confirm·blocked·superseded 일 때 상대 PC
   };
 }

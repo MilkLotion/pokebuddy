@@ -1,6 +1,6 @@
 // 서버 오류 → 코드. 호출 길마다 받아들이는 서버 코드와 예외가 다르다 — 그 차이만 여기 둔다.
 // 공통 순서: 그 길의 서버 코드인가 → 서버에 닿지 못했는가(NETWORK, isUnreachableError) → 그 밖(UNKNOWN). 코드의 목록은 src/shared/names/online-codes.ts
-import type { AccountCode, HandoffCode, MailCode, SessionCode, TradeCode } from "../shared/names/online-codes.js";
+import { SERVER_CLOUD_CODES, type AccountCode, type CloudCode, type HandoffCode, type MailCode, type SessionCode, type TradeCode } from "../shared/names/online-codes.js";
 import { isNetworkMessage, type ServerError } from "./server-call.js";
 
 const messageOfError = (error: ServerError): string => (error?.message ?? "").trim();
@@ -10,22 +10,28 @@ const messageOfError = (error: ServerError): string => (error?.message ?? "").tr
 // 처음에는 교환 길에만 있었다(c5c4a41). 모든 길이 같은 판정을 쓴다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-4)
 const isUnreachableError = (error: ServerError): boolean => isNetworkMessage(messageOfError(error)) || error?.code === "";
 
-// 클라우드 저장 — 메시지 안의 CLOUD_* 를 그대로 돌려준다(목록 검사 없음). 서버가 새 코드를 내도 그 글자가 온다
-export const cloudCodeOf = (error: ServerError): string => {
+// 목록 밖 서버 코드 — 코드는 UNKNOWN, 원래 글자는 detail 로 남긴다. 화면은 failTextOf 가 detail 을 괄호에 보인다(사용자가 알릴 때 쓸 정보).
+// 모든 길이 같은 규칙이다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-4)
+const outOfList = (code: string): { code: "UNKNOWN"; detail: string } => ({ code: "UNKNOWN", detail: code });
+
+const CLOUD_KNOWN = new Set<string>(SERVER_CLOUD_CODES);
+
+// 클라우드 저장 — 메시지 안의 CLOUD_* 가운데 목록에 있는 것만 받는다
+export function cloudCodeOf(error: ServerError): { code: CloudCode; detail?: string } {
   const message = messageOfError(error);
   const m = /(CLOUD_[A-Z_]+)/.exec(message);
-  if (m?.[1]) return m[1];
-  return isUnreachableError(error) ? "NETWORK" : "UNKNOWN";
-};
+  if (m?.[1]) return CLOUD_KNOWN.has(m[1]) ? { code: m[1] as CloudCode } : outOfList(m[1]);
+  return { code: isUnreachableError(error) ? "NETWORK" : "UNKNOWN" };
+}
 
 const HANDOFF_KNOWN = new Set<HandoffCode>(["CLOUD_HANDOFF_INVALID", "CLOUD_TRADE_ACTIVE", "CLOUD_LOGIN_REQUIRED", "CLOUD_ACCOUNT_HELD"]);
 
-// 익명 저장 이관 — 아는 네 코드만 받는다. 서버 코드 밖은 망 오류면 NETWORK, 나머지는 UNKNOWN
-export function handoffCodeOf(error: ServerError): HandoffCode {
+// 익명 저장 이관 — 아는 네 코드만 받는다. 그 밖의 CLOUD_* 는 목록 밖이다
+export function handoffCodeOf(error: ServerError): { code: HandoffCode; detail?: string } {
   const message = messageOfError(error);
   const m = /(CLOUD_[A-Z_]+)/.exec(message);
-  if (m?.[1] && HANDOFF_KNOWN.has(m[1] as HandoffCode)) return m[1] as HandoffCode;
-  return isUnreachableError(error) ? "NETWORK" : "UNKNOWN";
+  if (m?.[1]) return HANDOFF_KNOWN.has(m[1] as HandoffCode) ? { code: m[1] as HandoffCode } : outOfList(m[1]);
+  return { code: isUnreachableError(error) ? "NETWORK" : "UNKNOWN" };
 }
 
 // 계정 — supabase-js 인증 오류의 코드를 먼저 본다. 그다음 메시지 안의 AUTH_*
@@ -61,7 +67,8 @@ export function tradeCodeOf(error: ServerError): { code: TradeCode; detail?: str
   return { code: "UNKNOWN", ...(message ? { detail: message } : {}) };
 }
 
-// 우편함 — 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN). detail 은 주지 않는다
-export function mailCodeOf(error: ServerError): { code: MailCode | TradeCode } {
-  return { code: (/^MAIL_[A-Z_]+$/.exec(messageOfError(error))?.[0] as MailCode | undefined) ?? tradeCodeOf(error).code };
+// 우편함 — 서버 함수의 MAIL_* 는 그대로, 그 밖은 교환과 같은 규칙(NETWORK · UNKNOWN 과 detail)
+export function mailCodeOf(error: ServerError): { code: MailCode | TradeCode; detail?: string } {
+  const mail = /^MAIL_[A-Z_]+$/.exec(messageOfError(error))?.[0] as MailCode | undefined;
+  return mail ? { code: mail } : tradeCodeOf(error);
 }

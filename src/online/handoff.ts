@@ -25,8 +25,8 @@ export interface PendingHandoff {
 //   empty      익명 계정에 서버 저장이 없었다
 export type HandoffOutcome = "moved" | "discarded" | "empty";
 
-export type BeginResult = { ok: true; handoff: PendingHandoff } | { ok: false; code: HandoffCode };
-export type AdoptResult = { ok: true; outcome: HandoffOutcome; rev: number } | { ok: false; code: HandoffCode };
+export type BeginResult = { ok: true; handoff: PendingHandoff } | { ok: false; code: HandoffCode; detail?: string };
+export type AdoptResult = { ok: true; outcome: HandoffOutcome; rev: number } | { ok: false; code: HandoffCode; detail?: string };
 
 // 세션 교체가 끝난 뒤 호출자에 돌려주는 이관 결과
 //   none     바꾸기 전 세션이 익명이 아니었다(또는 세션이 없었다) — 옮길 것 없음
@@ -69,7 +69,7 @@ export async function finishSwitch(hooks: SwitchHooks | undefined, handoff: Pend
 }
 
 // RPC 오류 → 이관 코드는 ./codes.ts handoffCodeOf 다
-const classify = (error: Parameters<typeof handoffCodeOf>[0]): { code: HandoffCode } => ({ code: handoffCodeOf(error) });
+const classify = (error: Parameters<typeof handoffCodeOf>[0]): { code: HandoffCode; detail?: string } => handoffCodeOf(error);
 
 // 익명 세션으로 티켓을 받는다. anon 은 지금 익명 계정 ID
 export async function beginHandoff(client: SupabaseClient, anon: string, now: () => number = Date.now): Promise<BeginResult> {

@@ -10,6 +10,7 @@ import { createAccount, normalizeDisplayName, normalizeUsername, viewOf, type Ac
 import { authCodeOf, cloudCodeOf, handoffCodeOf, mailCodeOf, sessionCodeOf, tradeCodeOf } from "../../online/codes";
 import { createTradeNet } from "../../online/trade-net";
 import { isUnreachable, type FunctionFailure } from "../../online/server-call";
+import { failTextOf } from "../../shared/fail-text";
 import { createSessionGate } from "../../online/session";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff";
 import { onlineConfig } from "../../online/config";
@@ -37,11 +38,16 @@ function rules(): void {
   const emptyCode = { message: "TypeError: request failed", code: "" };
   assert.equal(authCodeOf(emptyCode).code, "NETWORK", "계정");
   assert.equal(sessionCodeOf(emptyCode).code, "NETWORK", "세션");
-  assert.equal(cloudCodeOf(emptyCode), "NETWORK", "클라우드");
-  assert.equal(handoffCodeOf(emptyCode), "NETWORK", "이관");
+  assert.equal(cloudCodeOf(emptyCode).code, "NETWORK", "클라우드");
+  assert.equal(handoffCodeOf(emptyCode).code, "NETWORK", "이관");
   assert.equal(tradeCodeOf(emptyCode).code, "NETWORK", "교환");
   assert.equal(mailCodeOf(emptyCode).code, "NETWORK", "우편");
   assert.equal(authCodeOf({ message: "server exploded", code: "XX000" }).code, "UNKNOWN", "코드가 있으면 연결 실패가 아니다");
+  // 목록 밖 서버 코드 — 코드는 UNKNOWN, 원래 글자는 detail. 화면 글자는 예전처럼 괄호에 그 글자다 (94 항목 5-4)
+  assert.deepEqual(cloudCodeOf({ message: "CLOUD_REV_CONFLICT" }), { code: "CLOUD_REV_CONFLICT" }, "목록 안");
+  assert.deepEqual(cloudCodeOf({ message: "CLOUD_SOMETHING_NEW" }), { code: "UNKNOWN", detail: "CLOUD_SOMETHING_NEW" }, "클라우드 목록 밖");
+  assert.deepEqual(handoffCodeOf({ message: "CLOUD_REV_CONFLICT" }), { code: "UNKNOWN", detail: "CLOUD_REV_CONFLICT" }, "이관 목록 밖");
+  assert.equal(failTextOf("UNKNOWN", "account", "ko", "CLOUD_SOMETHING_NEW").text, failTextOf("CLOUD_SOMETHING_NEW", "account").text, "화면 글자는 예전과 같다");
   // 함수에 닿지 못함 — 저장 올리기와 계정 삭제가 같은 판정을 쓴다 (94 항목 4-5)
   const failure = (over: Partial<FunctionFailure>): FunctionFailure => ({ bodyCode: null, status: null, transport: false, message: "", ...over });
   for (const status of [502, 503, 504]) assert.equal(isUnreachable(failure({ status })), true, `게이트웨이 ${status}`);

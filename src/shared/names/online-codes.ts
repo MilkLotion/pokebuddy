@@ -129,7 +129,7 @@ export type FailCode = Reason | OnlineCode;
 export type AccountReplyCode = GithubCode | "SAVE_BACKUP_FAILED";
 
 // 클라우드 표시(CloudView.error) — 클라우드 호출과 세션 확보의 코드.
-// 클라우드 분류(src/online/codes.ts cloudCodeOf)는 목록 밖의 CLOUD_* 도 글자 그대로 넘긴다 — 사용자가 알릴 때 쓸 정보라서다(2026-10-03 결정)
+// 목록 밖의 CLOUD_* 는 UNKNOWN 이고 원래 글자는 CloudView.errorDetail 로 간다 — 화면은 괄호에 그 글자를 보인다(사용자가 알릴 때 쓸 정보, 94 항목 5-4)
 export type CloudErrorCode = CloudCode | SessionCode;
 
 // 우편 응답(MailReply.code) — 우편 호출의 코드(교환과 같은 분류를 거친다), 받기 전 검사와 넣기의 까닭
