@@ -1,5 +1,5 @@
 // 사용자 설정 — 기본값·설정 파일 읽기·환경변수 덮어쓰기. 옛 이름 폴더와 옛 위치 설정을 처음 한 번 가져온다
-// 메인(src/main/app.ts)과 CLI(cli/run.js·status.js·setup.js)가 같이 쓴다
+// 메인(src/main/app.ts)과 CLI(src/cli/run.ts·status.ts·setup.ts)가 같이 쓴다
 // (예전 config.js 의 뒤쪽. 도구 레인 T7b-1 에서 옮겼다. 경로는 ./paths.ts)
 import fs from "node:fs";
 import path from "node:path";

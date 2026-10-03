@@ -8,8 +8,8 @@ export const SAVE_V2_RULES = {
   pet: {
     hunger: 30, // 0~100, 높으면 배고프다 [스펙 미확정]
     mood: 60, // 시작 기분 (1판 RULES.mood.start) [스펙 미확정]
-    size: 2, // 도트 배율 — config.js dotSize 기본과 같다
-    home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — config.js anchorDx·anchorDy 기본과 같다
+    size: 2, // 도트 배율 — 옛 config.js 의 dotSize 기본과 같았다
+    home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준 — 옛 config.js 의 anchorDx·anchorDy 기본과 같았다
     nature: FALLBACK_NATURE, // 성격을 모르는 마리(v1 이전·값 파손)에 붙이는 중립 성격 — 축이 전부 0 (src/dex/natures.ts)
   },
   range: { min: 0, max: 100 }, // hunger · mood 의 범위

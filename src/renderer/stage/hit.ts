@@ -27,7 +27,7 @@ export type HitLookup = (pet: StagePet) => HitTarget | null;
 
 type Placed = Pick<StagePet, "x" | "y" | "zoom">;
 
-// 프레임이 놓이는 무대 사각형(DIP) — 몸 칸 가운데에 프레임을 맞춘다 (art/pmd.js · 옛 renderer/pmd.js 의 정렬 규칙).
+// 프레임이 놓이는 무대 사각형(DIP) — 몸 칸 가운데에 프레임을 맞춘다 (src/main/art/pmd.ts · 옛 renderer/pmd.js 의 정렬 규칙).
 // PMD 의 정렬 기준점은 칸 안의 (칸너비/2, 칸높이/2 + 4). 프레임을 몸 칸 가운데에 놓으면 이 점이 몸 칸의 (w/2, h/2+4) 에 떨어진다 —
 // 칸 크기와 무관한 상수라 동작이 바뀌어도 발 위치가 그대로다. 몸 칸 = 작업 동작을 뺀 칸이라 공격 동작은 몸 밖으로 넘친다
 export function rectOf(pet: Placed, body: Size, frame: { fw: number; fh: number }): Rect {
