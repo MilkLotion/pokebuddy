@@ -8,6 +8,7 @@ import { hookInstalled } from "../agents/hooks";
 import { dexPath, suggestSlugs } from "../dex/dex-number";
 import { frontWindow, hostOf } from "../follow/front";
 import { agentStateOf, readStateRecords, stateFor } from "../follow/state";
+import { readLastError } from "../platform/last-error";
 import { PATHS } from "../platform/paths";
 import { USER_DEFAULTS, readConfig } from "../platform/user-config";
 import { parseCredits } from "../shared/pmd-credits";
@@ -38,13 +39,9 @@ export function runStatus(petArg?: string): void {
     else say(`${head}연결됨 (${cli.registered}/${cli.total})`);
   }
 
-  // 동반자가 스스로 끝난 이유 — 동반자의 출력은 평소 버려지므로 여기서만 보인다
-  try {
-    const e = JSON.parse(fs.readFileSync(PATHS.lastError, "utf8")) as { reason?: string; slug?: string; message?: string; at?: number };
-    if (e.reason !== "starter-cancelled") say(`마지막 실패: ${e.slug} — ${e.message} (${Math.round(Number(age(e.at)) / 60)}분 전)`);
-  } catch {
-    // 실패 기록 없음
-  }
+  // 동반자가 스스로 끝난 이유 — 동반자의 출력은 평소 버려지므로 여기서만 보인다. 모양이 틀린 기록은 없는 것으로 본다(readLastError)
+  const failure = readLastError(PATHS.lastError);
+  if (failure && failure.reason !== "starter-cancelled") say(`마지막 실패: ${failure.slug} — ${failure.message} (${Math.round(Number(age(failure.at)) / 60)}분 전)`);
 
   const records = readStateRecords(PATHS.state);
 

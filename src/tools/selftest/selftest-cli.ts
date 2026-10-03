@@ -7,6 +7,7 @@ import path from "node:path";
 import { parseArgs as parseCliArgs } from "../../cli/args";
 import { makeTmp } from "../harness/tmp-dir";
 import { claimLock, isLockReady } from "../../platform/pid-lock";
+import { clearLastError, readLastError } from "../../platform/last-error";
 
 interface Parsed {
   kind: string;
@@ -67,4 +68,17 @@ assert.equal(isLockReady(lock, process.pid + 1), false, "다른 pid 의 ready �
 assert.equal(claimLock(lock, process.pid + 1).reason, "busy", "살아 있는 다른 동반자가 잡고 있다"); checks++;
 assert.equal(fs.readFileSync(lock, "utf8"), content, "잡지 못하면 잠금을 바꾸지 않는다"); checks++;
 fs.rmSync(lock);
+
+// 동반자 실패 기록 — run·status·지우기가 같은 읽기(readLastError)를 쓴다. 깨진 기록은 없는 것, BOM 은 벗긴다 (94 항목 5-8)
+const errFile = path.join(home, ".claude", "pokebuddy", "last-error.json");
+fs.writeFileSync(errFile, JSON.stringify({ slug: "eevee" }));
+assert.equal(readLastError(errFile), null, "모양이 틀린 기록은 없는 것"); checks++;
+clearLastError({ lastError: errFile }, "eevee");
+assert.ok(fs.existsSync(errFile), "모양이 틀린 기록은 지우지도 않는다"); checks++;
+fs.writeFileSync(errFile, `\uFEFF${JSON.stringify({ at: 1, slug: "eevee", message: "창을 만들지 못함" })}`);
+assert.deepEqual(readLastError(errFile), { at: 1, slug: "eevee", message: "창을 만들지 못함" }, "BOM 을 벗긴다"); checks++;
+clearLastError({ lastError: errFile }, "pikachu");
+assert.ok(fs.existsSync(errFile), "다른 펫의 기록은 둔다"); checks++;
+clearLastError({ lastError: errFile }, "eevee");
+assert.ok(!fs.existsSync(errFile), "그 펫의 기록은 지운다"); checks++;
 process.stdout.write(`CLI PASS: ${checks}개 검사, 입구 ${launchers.length}종. 임시 데이터: ${home}\n`);

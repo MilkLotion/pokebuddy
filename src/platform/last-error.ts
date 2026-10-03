@@ -21,13 +21,13 @@ export function writeLastError(paths: Pick<Paths, "home" | "lastError">, error: 
   }
 }
 
-// 이 펫이 떴으니 이 펫의 옛 기록은 지운다 — 다른 펫의 기록은 건드리지 않는다
+// 이 펫이 떴으니 이 펫의 옛 기록은 지운다 — 다른 펫의 기록은 건드리지 않는다. 읽기는 readLastError 와 같다(BOM·모양 검사)
 export function clearLastError(paths: Pick<Paths, "lastError">, slug: string): void {
+  if (readLastError(paths.lastError)?.slug !== slug) return;
   try {
-    const e = JSON.parse(fs.readFileSync(paths.lastError, "utf8")) as { slug?: unknown };
-    if (e.slug === slug) fs.rmSync(paths.lastError, { force: true });
+    fs.rmSync(paths.lastError, { force: true });
   } catch {
-    // 기록 없음
+    // 지우지 못하면 다음에 다시
   }
 }
 
