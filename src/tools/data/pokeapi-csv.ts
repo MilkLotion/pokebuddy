@@ -11,12 +11,11 @@ export const BASE = "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/da
 // dist/tools/data → 프로젝트 루트
 export const PROJECT_ROOT = path.join(__dirname, "..", "..", "..");
 export const DATA_DIR = path.join(PROJECT_ROOT, "data");
-export const LIB_DIR = path.join(PROJECT_ROOT, "lib");
 
 // CSV 한 줄 — 열 이름 → 값. 열 목록(K)을 밝힌 표는 그 열이 있음이 보장된다 (csv 가 헤더로 검사)
 export type CsvRow<K extends string = string> = Record<K, string>;
 
-// 도감표 lib/dex.json — 슬러그 → 도감 번호
+// 도감표 data/dex.json — 슬러그 → 도감 번호
 export type DexTable = Record<string, number>;
 
 // 따옴표·쉼표가 든 값(Farfetch'd, "Type: Null", 설명글)을 다루는 최소 CSV 파서.
@@ -74,9 +73,9 @@ export async function csv<K extends string>(name: string, columns: readonly K[])
   return rows as CsvRow<K>[];
 }
 
-// lib/dex.json — 우리 도감표 (PokeAPI 의 종 전부 + 고른 폼. src/tools/build-dex.ts)
+// data/dex.json — 우리 도감표 (PokeAPI 의 종 전부 + 고른 폼. src/tools/data/build-dex.ts)
 export function readDex(): DexTable {
-  return JSON.parse(fs.readFileSync(path.join(LIB_DIR, "dex.json"), "utf8")) as DexTable;
+  return JSON.parse(fs.readFileSync(path.join(DATA_DIR, "dex.json"), "utf8")) as DexTable;
 }
 
 // 한 항목 한 줄 — diff 를 읽을 수 있게. 키 순서는 들어온 그대로

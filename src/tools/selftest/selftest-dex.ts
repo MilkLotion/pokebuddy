@@ -255,7 +255,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(edges.filter(specialEdge).length, 5, "특수 폼 간선 5개");
   const count = (get: string): number => forms.filter(([, f]) => f.get === get && !f.special).length;
   assert.deepStrictEqual([count("map"), count("base"), count("path")], [12, 28, 17]);
-  const names = require(path.join(__dirname, "..", "..", "..", "lib", "names.json")) as Record<string, { ko: string; en: string }>;
+  const names = require(path.join(__dirname, "..", "..", "..", "data", "names.json")) as Record<string, { ko: string; en: string }>;
   for (const [slug, f] of forms) {
     const p = dex.profile(slug);
     assert.ok(dex.hasProfile(slug), `${slug} 프로필`);

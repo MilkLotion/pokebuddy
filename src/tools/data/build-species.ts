@@ -10,7 +10,7 @@
 //   pokemon_types.csv       포켓몬 번호 → 타입 (types.csv 로 이름)
 //   pokemon_form_types.csv  폼 고유 타입 (아르세우스 폼처럼 폼마다 타입이 다른 것)
 //   pokemon_forms.csv       폼 식별자(arceus-bug · burmy-sandy) → 포켓몬 번호
-// 우리 도감표(lib/dex.json)의 슬러그마다 프로필 하나. `-3d` 는 같은 종이라 떼고 본다.
+// 우리 도감표(data/dex.json)의 슬러그마다 프로필 하나. `-3d` 는 같은 종이라 떼고 본다.
 //
 // 슬러그 → 포켓몬 번호 잇기 (차례로 시도)
 //   1. pokemon.csv 의 identifier          pikachu · rotom-wash · raichu-alola

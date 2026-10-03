@@ -1,4 +1,4 @@
-// 포켓몬 화면 이름표(lib/names.json)를 만든다 — 개발용, 네트워크 필요. 배포 패키지에는 결과 JSON 만 들어간다.
+// 포켓몬 화면 이름표(data/names.json)를 만든다 — 개발용, 네트워크 필요. 배포 패키지에는 결과 JSON 만 들어간다.
 //
 //   npm run build && node dist/tools/data/build-names.js   (npm run data:build 가 네 빌드를 차례로 돈다)
 //
@@ -6,7 +6,7 @@
 //   pokemon_species_names.csv   종 번호 → 언어별 이름 (한국어 3 · 영어 9)
 //   pokemon_forms.csv           폼 식별자(rotom-wash) → 폼 번호
 //   pokemon_form_names.csv      폼 번호 → 언어별 폼 이름 (워시로토무 · Wash Rotom)
-// 우리 도감표(lib/dex.json, build-dex 가 만든다)의 슬러그를 전부 잇는다. 폼 슬러그는 폼 이름표를, 나머지는 종 이름표를 쓴다.
+// 우리 도감표(data/dex.json, build-dex 가 만든다)의 슬러그를 전부 잇는다. 폼 슬러그는 폼 이름표를, 나머지는 종 이름표를 쓴다.
 // 폼 이름표는 언어마다 "폼 이름"과 "포켓몬 이름" 두 칸인데 어느 칸이 온전한 이름인지 폼마다 다르다
 // (히트로토무 는 폼 이름 칸, 알로라 라이츄 는 포켓몬 이름 칸) — 종 이름을 품은 칸을 고르고, 둘 다 아니면 "종 이름 + 폼 이름" 으로 잇는다.
 // 그래도 어긋나는 것은 OVERRIDES 에 손으로 적는다.
@@ -14,12 +14,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Lang } from "../../shared/species";
-import { LIB_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
+import { DATA_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
 import { regionalOf } from "../../dex/regional";
 
 const LANG: Record<Lang, string> = { ko: "3", en: "9" };
 const LANGS = Object.keys(LANG) as Lang[];
-const OUT = path.join(LIB_DIR, "names.json");
+const OUT = path.join(DATA_DIR, "names.json");
 
 type NameEntry = Record<Lang, string>;
 type FormName = { form: string; pokemon: string };

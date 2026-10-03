@@ -1,17 +1,17 @@
-// 화면 문구 — 메뉴·트레이·설정창이 쓰는 말을 언어 파일(lib/i18n/<언어>.json)에서 키로 가져온다.
+// 화면 문구 — 메뉴·트레이·설정창이 쓰는 말을 언어 파일(data/i18n/<언어>.json)에서 키로 가져온다.
 //
 // 기본은 한국어(ko). 언어는 환경변수 POKEBUDDY_LANG → 설정 파일 lang → ko 순서로 정한다.
 // 없는 키는 한국어 → 키 이름 순으로 떨어져 화면이 비지 않는다 (새 키를 영어에 아직 안 적어도 깨지지 않게).
 // 코어(src/save · src/commands)는 문구가 아니라 코드(reason·nextAt)를 돌려주고, 문구는 여기서만 만든다 — 언어를 하나 더 얹을 때 코어를 건드리지 않게.
 // CLI 의 안내문은 아직 한국어 그대로다 — 터미널 쪽은 다음 단계에서 같은 표로 옮긴다
-// (예전 lib/i18n.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다. 언어 파일은 아직 lib/i18n/ 에 있다 — data/ 로 옮기는 일은 T7b.
+// (예전 lib/i18n.js. 도구 레인 T7a 에서 타입 검사를 받게 옮겼다. 언어 파일은 T7b-2 에서 lib/i18n/ 에서 data/i18n/ 로 옮겼다.
 //  메인·화면 값이 부르는 입구는 ./text.ts 다)
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { Lang } from "../shared/species";
 
-// dist/view → 프로젝트/lib/i18n
-const I18N_DIR = path.join(__dirname, "..", "..", "lib", "i18n");
+// dist/view → 프로젝트/data/i18n
+const I18N_DIR = path.join(__dirname, "..", "..", "data", "i18n");
 const readTable = (lang: Lang): Record<string, string> => JSON.parse(readFileSync(path.join(I18N_DIR, `${lang}.json`), "utf8")) as Record<string, string>;
 
 const TABLES: Record<Lang, Record<string, string>> = {
