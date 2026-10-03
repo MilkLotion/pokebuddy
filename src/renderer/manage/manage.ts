@@ -28,7 +28,7 @@ import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
 import { numberText, pointText } from "../ui/number-text.js";
 import { createDeviceLink } from "./device-link.js";
-import { COACH_SIZE, dimRectsOf, holeOf, nudgeEl } from "../ui/coach.js";
+import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -4048,10 +4048,8 @@ interface CoachSpec {
 const COACH = { pad: 8, gap: 12, ...COACH_SIZE };
 
 let coachEl: HTMLElement | null = null;
-let coachWatch: ResizeObserver | null = null; // 코치마크 대상의 크기 변화 — 바뀌면 다시 잰다
-// 튜토리얼 중 초점을 둘 수 있는 곳 — 말풍선, 그리고 목표 행동이면 대상. 막 밖으로 Tab 이 나가면 말풍선 단추로 되돌린다
-let coachAllows: ((n: Node) => boolean) | null = null;
-let coachHome: HTMLElement | null = null;
+// coachEl 의 초점 규칙과 대상 크기 감시 — 초점은 말풍선, 그리고 목표 행동이면 대상. 막 밖으로 Tab 이 나가면 말풍선 단추로 되돌린다
+let coachNow: CoachLayer | null = null;
 
 // 개체 상세 튜토리얼은 파티 상세 기기 창이 그린다(src/renderer/device/pet.ts) — 끝내거나 닫으면 여기로 알려 와 기록한다
 
@@ -4093,11 +4091,9 @@ const areaSteps = (v: Snapshot): AreaStep[] => AREA_STEPS.filter((st) => !st.nee
 function drawTutorial(): void {
   coachEl?.remove();
   coachEl = null;
-  coachWatch?.disconnect();
-  coachWatch = null;
+  coachNow?.stop();
+  coachNow = null;
   const id = view?.tutorial ?? null;
-  coachAllows = null;
-  coachHome = null;
   coachId = null;
   const screenTut = (tid: string): boolean => view?.screenTutorials?.includes(tid) === true;
   if (view && dialog?.kind === "user" && !dialogEl.querySelector(".acct-overlay") && screenTut("user")) {
@@ -4194,73 +4190,33 @@ function drawTutorial(): void {
 }
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {
-  const layer = el("div", "coach");
-  const t0 = target.getBoundingClientRect();
-  const t1 = spec.also?.getBoundingClientRect();
-  const r = t1 ? { left: Math.min(t0.left, t1.left), top: Math.min(t0.top, t1.top), right: Math.max(t0.right, t1.right), bottom: Math.max(t0.bottom, t1.bottom) } : t0;
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  const hole = holeOf(r, COACH.pad, W, H);
-  const bubble = el("div", "coach-bubble");
-  // 막을 누르면 아무 일도 없고 말풍선을 한 번 흔든다 — 넘어가거나 스킵되지 않는다
-  const block = (cls: string, x: number, y: number, w: number, h: number): void => {
-    const dim = el("div", cls);
-    Object.assign(dim.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
-    dim.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      nudgeEl(bubble);
-    });
-    layer.appendChild(dim);
-  };
-  for (const [x, y, w, h] of dimRectsOf(hole, W, H)) block("coach-dim", x, y, w, h);
-  // 안내만 하는 단계는 구멍도 막는다 — 대상은 보이되 눌리지 않는다(예: 개체 상세의 박스에 보관)
-  if (!spec.interactive) block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t);
-  const head = el("div", "head");
-  const x = buttonEl("x", "✕");
-  x.setAttribute("aria-label", "튜토리얼 닫기");
-  x.addEventListener("click", () => void send("tutorial.skip", id)); // 닫기는 스킵이다
-  head.append(el("span", "step", spec.step), x);
-  const next = actionButton(spec.button, true, false, spec.onGo);
-  bubble.append(head, el("div", "title", spec.title));
-  if (spec.body) bubble.appendChild(el("div", "body", spec.body)); // 본문이 없으면 제목 아래 바로 단추
-  if (spec.button) bubble.appendChild(actions(el("div", "spacer"), next)); // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
-  layer.appendChild(bubble);
-  document.body.appendChild(layer);
-  const left = Math.min(Math.max(COACH.margin, r.left), W - COACH.width - COACH.margin);
-  const below = hole.b + COACH.gap;
-  const above = hole.t - COACH.gap - bubble.offsetHeight;
-  // 아래 → 위 → (대상이 커서 둘 다 모자라면) 창 아래쪽 안
-  const top = below + bubble.offsetHeight <= H - COACH.margin ? below : above >= COACH.margin ? above : H - COACH.margin - bubble.offsetHeight;
-  bubble.style.left = `${Math.round(left)}px`;
-  bubble.style.top = `${Math.round(Math.max(COACH.margin, top))}px`;
-  coachAllows = (n) => bubble.contains(n) || (spec.interactive === true && target.contains(n));
-  coachHome = spec.button ? next : x;
-  const active = document.activeElement;
-  if (!active || active === document.body || !coachAllows(active)) coachHome.focus({ preventScroll: true });
-  // 대상이 그린 뒤에 크기가 바뀌면 다시 잰다 — 도감 칸은 어림 높이(content-visibility)로 먼저 잡혔다가 다음 프레임에 줄어든다
-  coachWatch?.disconnect(); // 지난 코치마크의 관찰은 버린다 — 하나만 둔다
-  const watch = new ResizeObserver(() => {
-    if (coachEl !== layer) return watch.disconnect();
-    const now = target.getBoundingClientRect();
-    if (Math.abs(now.top - t0.top) > 1 || Math.abs(now.height - t0.height) > 1 || Math.abs(now.width - t0.width) > 1) {
-      watch.disconnect();
-      drawTutorial();
-    }
+  const next = spec.button ? actionButton(spec.button, true, false, spec.onGo) : null; // 해 보는 단계는 단추 없이 그 동작으로 넘어간다
+  coachNow?.stop(); // 지난 코치마크의 관찰은 버린다 — 하나만 둔다
+  // 말풍선은 대상 왼쪽. 아래 → 위 → (대상이 커서 둘 다 모자라면) 창 아래쪽 안. 안내만 하는 단계는 구멍도 막는다(예: 개체 상세의 박스에 보관)
+  coachNow = drawCoachLayer({
+    target,
+    also: spec.also,
+    bounds: { W: window.innerWidth, H: window.innerHeight },
+    pad: COACH.pad,
+    gap: COACH.gap,
+    align: "left",
+    fallback: "inside",
+    interactive: spec.interactive === true,
+    bubble: {
+      step: spec.step,
+      title: spec.title,
+      body: spec.body,
+      go: next,
+      footEl: next ? actions(el("div", "spacer"), next) : null,
+      onSkip: () => void send("tutorial.skip", id), // 닫기는 스킵이다
+    },
+    onTargetResized: () => drawTutorial(),
   });
-  watch.observe(target);
-  coachWatch = watch;
-  return layer;
+  return coachNow.layer;
 }
 
 // 튜토리얼 중에는 키보드 초점도 말풍선(과 목표 대상) 안에 둔다 — Tab·Enter 로 막 밖의 단추를 누르지 않게
-document.addEventListener(
-  "focusin",
-  (e) => {
-    if (!coachEl || !coachAllows || !coachHome) return;
-    if (e.target instanceof Node && !coachAllows(e.target)) coachHome.focus({ preventScroll: true });
-  },
-  true,
-);
+guardCoachFocus(() => (coachEl ? coachNow : null));
 
 // 본문·대화상자가 스크롤되거나 창 크기가 바뀌면 자리를 다시 잰다
 bodyEl.addEventListener("scroll", () => {
