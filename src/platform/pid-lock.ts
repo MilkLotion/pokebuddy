@@ -63,6 +63,16 @@ export function claimLock(lockFile: string, pid: number = process.pid): ClaimRes
   return { ok: false, owner: readLockPid(lockFile), reason: "busy" };
 }
 
+// 그 pid 가 준비를 마쳤다고 적었나 — "<pid>\nready\n". 다른 pid 의 ready 는 보지 않는다
+export function isLockReady(lockFile: string, pid: number): boolean {
+  try {
+    const words = String(fs.readFileSync(lockFile, "utf8")).trim().split(/\s+/);
+    return Number(words[0]) === pid && words.includes("ready");
+  } catch {
+    return false;
+  }
+}
+
 // 내 pid 가 적혀 있나 — 파일을 매번 읽는다 (누가 지웠거나 가로챘으면 바로 안다)
 export function ownsLock(lockFile: string, pid: number = process.pid): boolean {
   return readLockPid(lockFile) === pid;
