@@ -14,7 +14,7 @@ import type { ManageRoute } from "../../shared/model/route.js";
 import type { PetDeviceAction, PetDeviceInput, BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput, ShopDeviceAction, ShopDeviceInput } from "../../shared/model/devices.js";
 import type { ScreenView } from "../../shared/model/overlays.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
-import type { AccountReplyCode, CloudErrorCode, FailCode, MailReplyCode, TradeCloseReason } from "../../shared/names/online-codes.js";
+import type { TradeCloseReason } from "../../shared/names/online-codes.js";
 import type { Reason } from "../../shared/names/reasons.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
@@ -27,6 +27,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, numberText, pointText, waitText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
+import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
@@ -1858,7 +1859,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   } finally {
     busy = false;
   }
-  boxNote = reply.ok ? "" : REASON[reply.reason] ?? reply.reason;
+  boxNote = reply.ok ? "" : failTextOf(reply.reason, "command").text;
   draw();
 }
 
@@ -2481,33 +2482,6 @@ let tradeLoading = false;
 let tradeInput = ""; // 링크로 참가 칸에 붙여 넣은 글자
 let tradeCopied = false; // 링크 복사 직후 — 단추 글자를 바꾼다
 
-// 오류 배너 — 제목·문구 (Figma `Trade / Error` 와 주석 `633:18930`)
-const TRADE_ERROR: Record<string, [string, string]> = {
-  TRADE_LINK_EXPIRED: ["링크가 만료됐어요", "참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요"],
-  TRADE_LINK_USED: ["이미 사용된 링크예요", "다른 사람이 먼저 참가했어요"],
-  TRADE_OWN_LINK: ["내가 만든 링크예요", "친구에게 보내 주세요"],
-  TRADE_VERSION_MISMATCH: ["앱 버전이 달라요", "두 사람 모두 앱을 업데이트해 주세요"],
-  NETWORK: ["서버에 연결할 수 없어요", "교환 밖의 게임은 그대로 할 수 있어요"],
-  TRADE_LINK_INVALID: ["링크가 올바르지 않아요", "친구가 보낸 링크를 그대로 붙여 넣어 주세요"],
-  TRADE_RATE_LIMITED: ["잠시 뒤에 다시 해 주세요", "짧은 시간에 링크를 너무 많이 만들었어요"],
-  TRADE_CLOSED: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
-  "in-trade": ["진행 중인 교환이 있어요", "지금 교환에서 나간 뒤 다시 해 주세요"],
-  busy: ["잠시 뒤에 다시 해 주세요", "앞의 조작을 처리하는 중이에요"],
-  "not-ready": ["아직 확정할 수 없어요", "두 사람 모두 포켓몬을 올려야 확정할 수 있어요"],
-  timeout: ["응답이 늦어요", "잠시 뒤에 다시 해 주세요"],
-  "cloud-wait": ["클라우드 저장이 연결되지 않았어요", "연결되면 다시 해 주세요. 계정 탭에서 저장 상태를 볼 수 있어요"],
-  // 교환 규약 2 — 익명 계정 거절·원장 (design-p2.md 14절)
-  "login-required": ["로그인해야 교환할 수 있어요", "계정 탭에서 로그인해 주세요"],
-  TRADE_LOGIN_REQUIRED: ["로그인해야 교환할 수 있어요", "계정 탭에서 로그인해 주세요"],
-  "save-wait": ["아직 저장되지 않은 포켓몬이에요", "저장이 끝나면 다시 올려 주세요"],
-  TRADE_PET_NOT_SYNCED: ["아직 저장되지 않은 포켓몬이에요", "저장이 끝나면 다시 올려 주세요"],
-  TRADE_PET_TRADED: ["이미 교환으로 보낸 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
-  // 서버 교환 중 예약 — 같은 개체가 다른 교환에 올라가 있다 (design-p2.md 17절 D31)
-  TRADE_PET_BUSY: ["다른 교환에 올라가 있는 포켓몬이에요", "그 교환이 닫힌 뒤 다시 올리거나 다른 포켓몬을 골라 주세요"],
-  TRADE_OFFER_INVALID: ["올릴 수 없는 포켓몬이에요", "다른 포켓몬을 골라 주세요"],
-  // 서버 검증을 받지 못한 저장(P5) — 계정 저장을 확인하는 동안 교환을 막는다
-  TRADE_SAVE_UNVERIFIED: ["지금은 교환할 수 없어요", "계정 저장을 확인하는 중이에요"],
-} satisfies Partial<Record<FailCode, [string, string]>>;
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
 const TRADE_CLOSED: Record<string, [string, string]> = {
   guest_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
@@ -2875,7 +2849,7 @@ function drawTradeDialog(): void {
     ? null
     : err.code === "LOCAL"
       ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"]
-      : TRADE_ERROR[err.code] ?? ["교환을 진행하지 못했어요", `잠시 뒤에 다시 해 주세요 (${err.code})`];
+      : ((f) => [f.text, f.detail ?? ""] as [string, string])(failTextOf(err.code, "trade"));
   if (fail && t.phase !== "trading") out.appendChild(alertBox("bad", fail[0], fail[1]));
   else if (!fail && t.phase === "closed") {
     const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
@@ -2931,29 +2905,7 @@ let checkTimer: ReturnType<typeof setTimeout> | null = null;
 
 const saveIndicatorEl = needEl("save-indicator", HTMLElement, "manage");
 
-const ACCT_ERROR: Record<string, string> = {
-  AUTH_INVALID_LOGIN: "아이디 또는 비밀번호가 맞지 않아요",
-  AUTH_USERNAME_TAKEN: "이미 쓰는 아이디",
-  AUTH_USERNAME_INVALID: "영문 소문자로 시작, 소문자·숫자·_ 4~16자",
-  AUTH_NAME_INVALID: "이름은 1~12자로 적어 주세요",
-  AUTH_PASSWORD_WEAK: "비밀번호는 8자 이상이에요",
-  AUTH_TRADE_ACTIVE: "교환 중에는 계정을 바꿀 수 없어요",
-  AUTH_RATE_LIMITED: "잠시 뒤에 다시 해 주세요",
-  AUTH_PORT_BUSY: "로그인 창을 열 수 없어요. 잠시 뒤에 다시 해 주세요",
-  NETWORK: "서버에 연결할 수 없어요",
-  CLOUD_LOGIN_REQUIRED: "다시 로그인해 주세요",
-  CLOUD_UPDATE_REQUIRED: "업데이트해야 계정에 저장돼요",
-  CLOUD_TRADE_ACTIVE: "다른 PC 에서 교환 중이라 넘겨받을 수 없어요",
-  CLOUD_TRADE_UNSYNCED: "다른 PC 에서 끝낸 교환이 아직 저장되지 않았어요",
-  CLOUD_OWNER_OTHER: "이 PC 진행은 다른 계정 것이라 올리지 않아요",
-  CLOUD_BAD_SAVE: "계정 저장을 읽지 못해 올리지 않아요",
-  CLOUD_TOO_LARGE: "저장이 너무 커서 올리지 못했어요",
-  CLOUD_PET_TRADED_OUT: "교환으로 보낸 포켓몬이 남아 있어 올리지 않아요",
-  CLOUD_ACCOUNT_HELD: "이 계정은 이용이 정지됐어요",
-  CLOUD_HANDOFF_INVALID: "이 PC 진행을 계정으로 옮기지 못했어요",
-  SAVE_BACKUP_FAILED: "이 PC 저장을 백업하지 못해 새로 시작하지 않았어요",
-} satisfies Partial<Record<AccountReplyCode | CloudErrorCode, string>>;
-const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : ACCT_ERROR[code] ?? `계정 작업을 하지 못했어요 (${code})`);
+const acctErrorText = (code: string | null): string => (!code || code === "AUTH_CANCELLED" ? "" : failTextOf(code, "account").text);
 
 // 마지막 저장 시각 — "3분 전"처럼 짧게
 function ago(at: number | null): string {
@@ -3278,7 +3230,7 @@ function acctOverlay(): HTMLElement | null {
 
 async function signIn(): Promise<void> {
   if (!acctForm.username.trim() || !acctForm.password) {
-    acctForm.error = ACCT_ERROR.AUTH_INVALID_LOGIN ?? "";
+    acctForm.error = failTextOf("AUTH_INVALID_LOGIN", "account").text;
     redrawAccount();
     return;
   }
@@ -3346,16 +3298,6 @@ async function refreshMail(): Promise<void> {
   }
 }
 
-const MAIL_ERROR: Record<string, string> = {
-  MAIL_LOGIN_REQUIRED: "로그인하면 받을 수 있어요.",
-  MAIL_EXPIRED: "기간이 지나 받을 수 없어요.",
-  MAIL_NOT_FOUND: "편지를 찾지 못했어요.",
-  MAIL_NO_GIFTS: "받을 선물이 없어요.",
-  NETWORK: "서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.",
-  "bad-gift": "앱을 업데이트하면 받을 수 있어요.",
-  "box-full": "박스에 빈 칸이 없어요. 자리를 만든 뒤 받아 주세요.",
-  "cloud-wait": "클라우드 저장이 연결되면 받을 수 있어요. 계정 탭에서 저장 상태를 확인해 주세요.",
-} satisfies Partial<Record<MailReplyCode, string>>;
 
 const monthDay = (at: number): string => {
   const d = new Date(at);
@@ -3493,10 +3435,10 @@ function giftFoot(l: MailLetterView): HTMLElement {
   const needLogin = !done && !l.unsupported && !mailExpired(l) && !signedIn;
   let note = "";
   if (done) note = `${l.claimedAt ? `${monthDay(l.claimedAt)}에 받았어요 · ` : ""}${giftWhere(l.gifts)}`;
-  else if (l.unsupported) note = MAIL_ERROR["bad-gift"] ?? "";
-  else if (mailExpired(l)) note = MAIL_ERROR.MAIL_EXPIRED ?? "";
-  else if (needLogin) note = MAIL_ERROR.MAIL_LOGIN_REQUIRED ?? "";
-  else if (mailView?.error && !busy) note = MAIL_ERROR[mailView.error] ?? `받지 못했어요 (${mailView.error})`;
+  else if (l.unsupported) note = failTextOf("bad-gift", "mail").text;
+  else if (mailExpired(l)) note = failTextOf("MAIL_EXPIRED", "mail").text;
+  else if (needLogin) note = failTextOf("MAIL_LOGIN_REQUIRED", "mail").text;
+  else if (mailView?.error && !busy) note = failTextOf(mailView.error, "mail").text;
   const left = el("span", "spacer gift-note", note);
   left.title = note;
   const items: HTMLElement[] = [left];
@@ -5251,65 +5193,6 @@ const openPet = (id: string): void => {
 
 // ── 명령 보내기 ────────────────────────────────────────────────────────────────
 
-// 실패 이유 → 화면 문구. 모르는 이유는 그대로 보여 무엇이 빠졌는지 드러나게 한다
-const REASON: Record<string, string> = {
-  cooldown: "아직 쉬는 시간이에요.",
-  full: "이미 배가 불러요.",
-  already: "이미 그 상태예요.",
-  "max-level": "이미 최고 레벨이에요.",
-  "no-slot": "그 칸이 없어요.",
-  "no-pet": "그 개체가 없어요.",
-  "not-in-party": "파티에 없어요.",
-  "not-in-box": "박스에 없어요.",
-  "party-full": "파티에 빈 칸이 없어요.",
-  "no-empty-slot": "파티에 빈 칸이 없어요.",
-  "slot-locked": "잠긴 칸이에요.",
-  "slot-not-empty": "그 칸이 이미 차 있어요.",
-  "not-pokemon": "그 칸에 개체가 없어요.",
-  "not-enough-points": "포인트가 모자라요.",
-  "daycare-full": "돌보미집이 가득 찼어요.",
-  "egg-none": "이 알에서 나올 포켓몬을 모두 모았어요.",
-  "bag-full": "한 종류는 999개까지만 살 수 있어요.",
-  "sold-out": "이 알에서 나올 포켓몬을 모두 모았어요.",
-  "bad-form": "고를 수 없는 모습이에요.",
-  "not-shared": "모습을 바꿀 수 없는 포켓몬이에요.",
-  "max-slots": "더 열 수 있는 칸이 없어요.",
-  "no-locked-slot": "더 열 수 있는 칸이 없어요.",
-  "not-unlocked": "아직 해금하지 않은 종이에요.",
-  "not-ready": "아직 준비되지 않았어요.",
-  "no-candidate": "지금은 진화할 수 없어요.",
-  "need-choice": "진화할 모습을 골라 주세요.",
-  "bad-choice": "고른 모습으로는 지금 진화할 수 없어요.",
-  "no-step": "더 진화하지 않아요.",
-  "none-left": "가방에 남은 것이 없어요.",
-  "no-item": "가방에 없어요.",
-  "no-map": "지도가 있어야 이 모습으로 진화해요.",
-  "not-sellable": "팔 수 없는 도구예요.",
-  "not-enough-items": "가진 개수보다 많이 팔 수 없어요.",
-  "bad-count": "고를 수 없는 수량이에요.",
-  "unknown-item": "모르는 도구예요.",
-  "bad-nature": "쓸 수 없는 성격이에요.",
-  "bad-value": "고를 수 없는 값이에요.",
-  "daily-cap": "오늘은 더 쓸 수 없어요.",
-  "not-achieved": "아직 달성하지 않았어요.",
-  "already-claimed": "이미 받았어요.",
-  "save-failed": "저장하지 못했어요. 잠시 뒤 다시 해 주세요.",
-  "art-missing": "바뀔 모습의 그림을 받지 못했어요. 잠시 뒤 다시 해 주세요.",
-  "not-writer": "다른 창이 저장을 맡고 있어요. 잠시 뒤 다시 해 주세요.",
-  halted: "다른 PC 확인이 끝날 때까지 게임이 멈춰 있어요.",
-  "box-full": "박스에 빈 칸이 없어요.",
-  "box-max": "더 살 수 있는 박스가 없어요.",
-  "pet-not-sellable": "팔 수 없는 포켓몬이에요.",
-  "last-pet": "마지막 한 마리는 팔 수 없어요.",
-  "in-preset": "파티에 든 포켓몬은 팔 수 없어요. 박스로 옮긴 뒤 팔아 주세요.",
-  "preset-max": "더 살 수 있는 프리셋이 없어요.",
-  "slots-not-full": "가진 프리셋의 파티 칸을 모두 열어야 해요.",
-  "no-preset": "그 프리셋이 없어요.",
-  "no-box": "그 박스를 찾지 못했어요.",
-  // 교환에 올려 둔 개체 — 도구 사용·진화·모습 바꾸기를 막는다 (src/tx/command-table.ts 의 action, src/party/pet-actions.ts isTradeLocked)
-  "trade-locked": "교환에 올린 포켓몬이에요. 교환을 끝내거나 나간 뒤 다시 해 주세요.",
-  timeout: "응답이 없어요. 처리됐는지 확인해 주세요. 다시 눌러도 두 번 반영되지 않아요.",
-};
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
 const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "pet.sell", "shop.buy"]);
@@ -5385,7 +5268,7 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
   }
 
   if (!reply.ok) {
-    notice = REASON[reply.reason] ?? reply.reason;
+    notice = failTextOf(reply.reason, "command").text;
     drawDialog();
     return false;
   }
@@ -5407,7 +5290,7 @@ async function screenPick(): Promise<void> {
   } finally {
     busy = false;
   }
-  notice = reply.ok || reply.reason === "cancelled" ? "" : REASON[reply.reason] ?? reply.reason;
+  notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
   drawDialog();
 }
 
@@ -5422,7 +5305,7 @@ async function regionDraw(): Promise<void> {
   } finally {
     busy = false;
   }
-  notice = reply.ok || reply.reason === "cancelled" ? "" : REASON[reply.reason] ?? reply.reason;
+  notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
   drawDialog();
 }
 
@@ -5444,7 +5327,7 @@ async function agent(name: string, action: AgentAction): Promise<void> {
     agentChecks.delete(name); // 연결·해제·다시 확인 뒤에는 옛 점검 결과를 지운다
     const verb = action === "connect" ? "연결하지 못했어요" : action === "disconnect" ? "해제하지 못했어요" : "확인하지 못했어요";
     if (reply.ok) agentFails.delete(name);
-    else agentFails.set(name, `${verb} · ${REASON[reply.reason] ?? reply.reason}`);
+    else agentFails.set(name, `${verb} · ${failTextOf(reply.reason, "command").text}`);
   }
   drawDialog();
 }
