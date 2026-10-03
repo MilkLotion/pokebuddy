@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { newPet } from "../../party/create";
 import { empty } from "../../save/v3";
+import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — 디버거·관측기의 JSON 을 그대로 읽는다
@@ -118,8 +119,7 @@ function makeHome(): Home {
   // TEMP 는 짧은 경로로 둔다 — 업데이트 설치 파일이 앱의 TEMP 를 물려받아 옛 파일을 TEMP\ns….tmp\old-install 아래로 옮긴다.
   // 길면 260자를 넘어 "Failed to uninstall old application files: 2" 로 멈춘다(2026-09-28 확인. 사용자 PC 의 TEMP 는 짧다)
   const temp = makeTmp('pbu');
-  const env: NodeJS.ProcessEnv = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: path.join(home, 'appdata'), LOCALAPPDATA: path.join(home, 'localappdata'), TEMP: temp, TMP: temp, PB_E2E_DIR: home };
-  for (const key of Object.keys(env)) if (key.startsWith('POKEBUDDY_') || key === 'ELECTRON_RUN_AS_NODE' || key === 'NODE_OPTIONS') delete env[key];
+  const env = homeEnv(home, temp, { PB_E2E_DIR: home });
   // 옛 판(암호화 전, 0.13.0 까지)처럼 평문으로 돈다 — 첫 실행만. 업데이트 설치 파일이 다시 켠 앱은 환경 변수를 물려받지 않으므로
   // 그때 새 판처럼 저장 키를 만들고 평문 저장을 암호화한다(P3 업데이트 첫 실행 이전). 시험 빌드만 이 값을 받는다(src/main/app.ts). 지우는 반복문 뒤에 둔다
   env.POKEBUDDY_SAVE_CRYPT = 'off';

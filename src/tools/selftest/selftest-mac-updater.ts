@@ -10,6 +10,7 @@ import path from "node:path";
 import { bundleOf, compareVersions, feedUrls, manualReason, parseLatestMac, parseUpdateConfig, pickFile } from "../../main/update/mac-feed";
 import { INSTALL_SCRIPT, MacUpdater, startInstaller } from "../../main/update/mac-updater";
 import { makeTmp } from "../harness/tmp-dir";
+import { sleep, until } from "../harness/wait";
 
 const LATEST = `version: 0.9.0
 files:
@@ -30,16 +31,6 @@ releaseDate: '2026-09-28T00:00:00.000Z'
 `;
 
 const work = makeTmp("mac-updater");
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
-async function until(test: () => boolean, label: string, ms = 10_000): Promise<void> {
-  const end = Date.now() + ms;
-  while (Date.now() < end) {
-    if (test()) return;
-    await sleep(50);
-  }
-  throw new Error(`대기 실패: ${label}`);
-}
 
 // 가짜 앱 번들 — Info.plist 의 버전과 표시 파일 하나
 function fakeApp(dir: string, name: string, version: string): string {

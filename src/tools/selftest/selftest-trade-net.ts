@@ -8,7 +8,6 @@
 //   제안한 개체는 서버 저장에 먼저 있어야 한다 — 제안 직전 올리기(beforeOffer)가 claim_device·Edge Function upload-save 를 부른다
 //   익명 계정은 한 번만 발급해 서버 거절과 클라이언트 거절을 함께 본다
 import assert from "node:assert";
-import { execSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient, memoryStorage } from "../../online/client";
@@ -23,22 +22,11 @@ import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/command-table";
+import { assertLocalUrl, localServer } from "../harness/fakes";
 
 const APP_VERSION = "0.13.0"; // 서버 최소 버전(cloud_private.settings) 이상
 const PROTOCOL = onlineConfig(undefined, {}).protocol;
 const PASSWORD = "correct-horse-8";
-
-function local(): { url: string; key: string } | null {
-  if (process.env.POKEBUDDY_SUPABASE_URL && process.env.POKEBUDDY_SUPABASE_KEY) return { url: process.env.POKEBUDDY_SUPABASE_URL, key: process.env.POKEBUDDY_SUPABASE_KEY };
-  try {
-    const raw = execSync("npx supabase status -o json", { stdio: ["ignore", "pipe", "ignore"], timeout: 60_000 }).toString();
-    const j = JSON.parse(raw.slice(raw.indexOf("{"))) as Record<string, string>;
-    const url = j.API_URL, key = j.PUBLISHABLE_KEY ?? j.ANON_KEY;
-    return url && key ? { url, key } : null;
-  } catch {
-    return null;
-  }
-}
 
 type Upload = { ok: true; rev: number } | { ok: false; code: string };
 
@@ -132,9 +120,9 @@ async function player(species: string, url: string, key: string, po: PlayerOptio
 }
 
 async function main(): Promise<void> {
-  const cfg = local();
+  const cfg = localServer();
   if (!cfg) { process.stdout.write("selftest-trade-net: 로컬 Supabase 가 없어 건너뜀\n"); return; }
-  if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(cfg.url)) throw new Error("로컬 주소가 아니다 — 실제 프로젝트에는 붙지 않는다");
+  assertLocalUrl(cfg.url);
   assert.equal(PROTOCOL, 2, "앱 규약은 2");
 
   // (0) 익명 계정 — 서버 거절과 클라이언트 거절. 익명 발급은 여기서 한 번만

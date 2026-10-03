@@ -6,8 +6,8 @@ import { AuthApiError, AuthRetryableFetchError, type SupabaseClient, type User }
 import { sessionCodeOf } from "../../online/codes";
 import { createSessionGate } from "../../online/session";
 import { createTradeNet } from "../../online/trade-net";
+import { sleep as sleepMs, within } from "../harness/wait";
 
-const sleepMs = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 interface Fake {
   client: SupabaseClient;
@@ -41,8 +41,6 @@ function fakeClient(opts: { delayMs?: number; failWith?: { message: string; stat
 }
 
 // 시간 안에 끝나지 않으면 교착으로 본다
-const within = <T>(p: Promise<T>, ms: number, what: string): Promise<T> =>
-  Promise.race([p, sleepMs(ms).then(() => { throw new Error(`${what} — ${ms}ms 안에 끝나지 않았다(교착)`); })]);
 
 async function main(): Promise<void> {
   // (1) 동시 ensure 다섯 번 — 익명 계정은 하나
