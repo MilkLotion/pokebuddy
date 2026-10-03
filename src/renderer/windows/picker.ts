@@ -40,7 +40,7 @@ function card(item: PickerItem): HTMLButtonElement {
   b.addEventListener("click", () => pick(item, b));
   b.addEventListener("dblclick", () => {
     pick(item, b);
-    window.pokebuddy.pickerStart(item.slug);
+    window.pokebuddyPicker.start(item.slug);
   });
   return b;
 }
@@ -58,7 +58,7 @@ function render(payload: PickerPayload) {
 // 초상 — 받는 대로 원을 채운다. 못 받은 칸은 잠시 뒤 다시 청한다(첫 실행은 그림을 받는 중일 수 있다)
 const PORTRAIT_RETRY = { times: 4, waitMs: 4000 };
 async function fillPortraits(slugs: string[], tried: number): Promise<void> {
-  const got = await window.pokebuddy.pickerPortraits(slugs);
+  const got = await window.pokebuddyPicker.portraits(slugs);
   const left: string[] = [];
   for (const slug of slugs) {
     const b = list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"]`);
@@ -81,8 +81,8 @@ async function fillPortraits(slugs: string[], tried: number): Promise<void> {
   for (const slug of left) list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"] .portrait`)?.classList.add("no-art");
 }
 
-void window.pokebuddy.pickerList().then(render);
+void window.pokebuddyPicker.list().then(render);
 
 start.addEventListener("click", () => {
-  if (picked) window.pokebuddy.pickerStart(picked);
+  if (picked) window.pokebuddyPicker.start(picked);
 });

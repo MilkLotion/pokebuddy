@@ -21,15 +21,16 @@ export type StageIpc = {
   "stage:log": Send<"log", [entry: Record<string, unknown>]>; // 렌더러 진단(시트 디코드 실패 등)을 메인 로그로
 };
 
-// 선택 창 — 지금은 무대와 같은 다리(window.pokebuddy)에 얹혀 있어 다리 함수 이름에 picker 가 붙는다
+// 선택 창 — 자기 다리(window.pokebuddyPicker)를 쓴다. 무대와 preload 파일은 같다
 export type PickerIpc = {
-  "picker:list": Invoke<"pickerList", [], PickerPayload>;
-  "picker:start": Send<"pickerStart", [slug: string]>;
-  "picker:portraits": Invoke<"pickerPortraits", [slugs: string[]], Record<string, string | null>>; // 선택 창 카드의 초상 — slug 별 data URI (못 받으면 null)
+  "picker:list": Invoke<"list", [], PickerPayload>;
+  "picker:start": Send<"start", [slug: string]>;
+  "picker:portraits": Invoke<"portraits", [slugs: string[]], Record<string, string | null>>; // 선택 창 카드의 초상 — slug 별 data URI (못 받으면 null)
 };
 
 // 채널 이름 — preload 와 메인이 같은 문자열을 쓰도록 계약의 열쇠로 묶는다
 export type StageChannel = keyof StageIpc | keyof PickerIpc;
 
-// preload 가 window.pokebuddy 로 내놓는 것 — 무대와 선택 창이 같은 preload 를 쓴다
-export type StageBridge = BridgeOf<StageIpc & PickerIpc>;
+// preload 가 내놓는 다리 — 무대는 window.pokebuddy, 선택 창은 window.pokebuddyPicker
+export type StageBridge = BridgeOf<StageIpc>;
+export type PickerBridge = BridgeOf<PickerIpc>;

@@ -8,6 +8,7 @@ type BridgeOf<C extends Contract> = import("../shared/ipc/kinds").BridgeOf<C>;
 type StageIpc = import("../shared/ipc/stage").StageIpc;
 type PickerIpc = import("../shared/ipc/stage").PickerIpc;
 type StageBridge = import("../shared/ipc/stage").StageBridge;
+type PickerBridge = import("../shared/ipc/stage").PickerBridge;
 type ManageIpc = import("../shared/ipc/manage").ManageIpc;
 type ManageBridge = import("../shared/ipc/manage").ManageBridge;
 type BannerIpc = import("../shared/ipc/overlays").BannerIpc;
@@ -37,7 +38,7 @@ function bridgeOf<C extends Contract>(wire: WireOf<C>): BridgeOf<C> {
   return out as BridgeOf<C>;
 }
 
-// 무대 창과 선택 창 — 같은 다리(window.pokebuddy)를 쓴다
+// 무대 창(window.pokebuddy)과 선택 창(window.pokebuddyPicker)
 const STAGE = {
   ready: ["send", "stage:ready"],
   onInit: ["push", "stage:init"],
@@ -55,14 +56,13 @@ const STAGE = {
 } as const satisfies WireOf<StageIpc>;
 
 const PICKER = {
-  pickerList: ["invoke", "picker:list"],
-  pickerStart: ["send", "picker:start"],
-  pickerPortraits: ["invoke", "picker:portraits"],
+  list: ["invoke", "picker:list"],
+  start: ["send", "picker:start"],
+  portraits: ["invoke", "picker:portraits"],
 } as const satisfies WireOf<PickerIpc>;
 
-const bridge: StageBridge = { ...bridgeOf<StageIpc>(STAGE), ...bridgeOf<PickerIpc>(PICKER) };
-
-contextBridge.exposeInMainWorld("pokebuddy", bridge);
+contextBridge.exposeInMainWorld("pokebuddy", bridgeOf<StageIpc>(STAGE) satisfies StageBridge);
+contextBridge.exposeInMainWorld("pokebuddyPicker", bridgeOf<PickerIpc>(PICKER) satisfies PickerBridge);
 
 // 설정창 — 스냅샷과 명령, 스냅샷에 담지 않는 도감과 CLI 연결, 기기 창 다섯과의 연결
 const MANAGE = {

@@ -1,5 +1,5 @@
 // 에이전트 연결 — Claude Code · Codex · Gemini 를 하나씩 잇고(훅 등록) 끊고, 연결 상태와 사용량 읽기 가능 여부를 알린다.
-// 설정창 "연결" 탭의 버튼과 커맨드 agent.connect / agent.disconnect 가 여기를 부른다 (docs/design.md "에이전트 연결").
+// 설정창 "연결" 탭의 버튼이 manage:agents IPC 로 여기를 부른다 — 명령 통로·CLI 명령은 없다 (docs/specs/game.md "설정과 연결", docs/specs/scenarios.md SC-11).
 //
 // 훅 등록·해제의 실제 일은 같은 폴더의 ./hooks 가 한다(connectCli · disconnectCli · hookInstalled — 예전 cli/setup.js).
 // 토큰 사용량 읽기는 ./usage 에 (배럴 없이 직접 import). CLI 마다 "읽을 수 있나" 가 다르다 — 못 읽는 CLI 는 상태 모듈이 일한 시간으로 대신한다
@@ -98,10 +98,8 @@ export function agentStatusList(): AgentStatus[] {
   const installed = setup().hookInstalled();
   const { clis } = installed;
   const fileStale = installed.source && !installed.current;
-  const TARGET_CLIS = setup().TARGET_CLIS;
   return AGENTS.map((a) => {
-    const label = TARGET_CLIS.find((t) => t.cli === a.name)?.name;
-    const row = clis.find((c) => c.name === label);
+    const row = clis.find((c) => c.name === a.label); // 훅 쪽도 같은 표시 이름을 쓴다(./hooks TARGETS)
     const registered = row?.registered ?? 0;
     const total = row?.total ?? 0;
     const stale = row?.stale ?? [];

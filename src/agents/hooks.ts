@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { PATHS } from "../platform/paths";
+import { AGENTS, type AgentName } from "../shared/names/agents";
 import type { ConnectResult, DisconnectResult, TidyResult } from "./registry"; // 결과 모양의 원본은 registry(설정창 연결이 쓴다)
 
 // 설정 파일 JSON 의 최소 모양 — 우리가 읽고 고치는 필드만 적는다. 나머지는 그대로 둔다
@@ -107,10 +108,13 @@ export const legacyHookTargets = (): string[] => LEGACY_HOOK_NAMES.map((name) =>
 //   events   이벤트 → matcher (undefined 면 넣지 않는다 — 모든 경우에 맞는다)
 //   handler  우리 훅 한 항목. 타임아웃 단위가 CLI 마다 다르다 (claude·codex 초, gemini ms)
 //   always   설정 폴더가 없어도 등록한다 — 펫 데이터가 ~/.claude 아래라 claude 만
+// 표시 이름의 원본은 src/shared/names/agents.ts 다 — 연결 상태(hookInstalled 의 clis[].name)와 연결 탭이 같은 글자를 쓴다
+const labelOf = (cli: AgentName): string => AGENTS.find((a) => a.name === cli)?.label ?? cli;
+
 export const TARGETS: Target[] = [
   {
     cli: "claude",
-    name: "Claude Code",
+    name: labelOf("claude"),
     dir: claudeDir,
     file: "settings.json",
     always: true,
@@ -130,7 +134,7 @@ export const TARGETS: Target[] = [
   },
   {
     cli: "gemini",
-    name: "Gemini CLI",
+    name: labelOf("gemini"),
     dir: () => path.join(os.homedir(), ".gemini"),
     file: "settings.json",
     // gemini 는 훅을 모두 기다린다(async 없음) — 도구 전·모델 호출처럼 잦은 이벤트는 빼고 상태가 바뀌는 곳만.
@@ -147,7 +151,7 @@ export const TARGETS: Target[] = [
   },
   {
     cli: "codex",
-    name: "Codex CLI",
+    name: labelOf("codex"),
     dir: () => process.env.CODEX_HOME || path.join(os.homedir(), ".codex"),
     file: "hooks.json",
     // 훅은 codex 0.124 부터 (Interrupt 0.150 · SessionEnd 0.145). 옛 버전은 모르는 이벤트 이름을 무시한다.
@@ -412,7 +416,7 @@ function ensureHookFile({ dryRun = false }: DryRunOptions = {}): "최신" | "복
   return exists ? "바꿈" : "복사함";
 }
 
-// 에이전트 연결 — 설정창 "연결" 버튼·커맨드 agent.connect 가 부른다 (src/agents). 훅 파일을 두고 그 CLI 에 등록한다
+// 에이전트 연결 — 설정창 "연결" 탭의 버튼이 manage:agents 로 부른다 (src/agents/registry.ts connectAgent). 훅 파일을 두고 그 CLI 에 등록한다
 export function connectCli(cli: string, { dryRun = false }: DryRunOptions = {}): ConnectResult {
   const t = targetOf(cli);
   if (!t) return { ok: false, reason: "unknown-cli" };
@@ -531,5 +535,3 @@ export const hookCommandFor = (cli: string): string | null => {
   const t = targetOf(cli);
   return t ? hookCommand(t) : null;
 };
-
-export const TARGET_CLIS = TARGETS.map((t) => ({ cli: t.cli, name: t.name }));
