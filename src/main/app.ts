@@ -727,12 +727,10 @@ async function main(): Promise<void> {
     log,
     trade: services.trade,
     tradeScreen: services.tradeScreen,
+    // 두 PC 규칙으로 멈춘 동안(halted)·새로 시작하는 중(restarting) — 저장을 바꾸는 명령은 실행기로 보내지 않고 멈춤 사유로 거절한다.
+    // 읽기·무대 반응·끄기만 연다
+    guard: (command) => (frozen() && !HALT_OPEN.has(command.cmd) ? "halted" : null),
   });
-  // 두 PC 규칙으로 멈춘 동안(halted)·새로 시작하는 중(restarting) — 저장을 바꾸는 명령은 실행기로 보내지 않고 멈춤 사유로 거절한다.
-  // 무대 클릭(commands.click)·메뉴·관리 창·mailbox 가 모두 이 dispatch 를 지난다. 읽기·무대 반응·끄기만 연다
-  const dispatchNow = commands.dispatcher.dispatch.bind(commands.dispatcher);
-  commands.dispatcher.dispatch = (command) =>
-    frozen() && !HALT_OPEN.has(command.cmd) ? Promise.resolve({ ok: false, reason: "halted" }) : dispatchNow(command);
   saveSource.onRole((w) => {
     commands?.setWriter(w && !frozen());
     // writer 가 되면 반영하지 않은 교환을 이어 간다. writer 를 놓으면 교환도 멈춘다 — 저장을 쓸 수 없다

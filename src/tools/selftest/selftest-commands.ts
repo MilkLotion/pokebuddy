@@ -39,10 +39,12 @@ async function main(): Promise<void> {
   let beforeArt: (() => void) | undefined;
   let changes = 0;
   let stageHold: Promise<void> | null = null; // 있으면 무대 갱신이 이것을 기다린다 — 처음 나오는 종의 그림을 받는 중인 무대
+  let frozen = false; // 앱의 두 PC 규칙 멈춤 — 켜면 snapshot 밖의 명령을 거른다(guard)
   const commands = createCommands({ mailboxDir: paths.mailbox, party, game,
     stage: { petIds: () => [], size: () => ({ w: 1, h: 1 }), visible: () => true },
     settings: { hidden: () => false, setHidden() {}, clickThrough: () => false, setClickThrough() {} },
     quit() {}, prepareLook: async () => { beforeArt?.(); return artOk; }, onChanged: async () => { changes++; if (stageHold) await stageHold; },
+    guard: (c) => (frozen && c.cmd !== "snapshot" ? "halted" : null),
   });
   const evolveCmd: Command = { cmd: "evolve", target: "p1", from: "cli" };
   try {
@@ -103,6 +105,16 @@ async function main(): Promise<void> {
     assert.equal(again.replayed, true, "두 번째는 재생");
     assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 2, "한 번만 늘었다");
 
+    // 멈춘 동안 — 처리기로 보내지 않고 거른다. 직접 부름·mailbox 모두 같은 통로라 함께 막힌다. 열어 둔 명령은 지난다
+    frozen = true;
+    const bagBefore = store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"];
+    assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", from: "settings" })).reason, "halted", "멈춘 동안 저장 명령은 halted");
+    assert.equal((await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" })).reason, "halted", "mailbox 로 온 명령도 halted");
+    assert.equal((await commands.click("p1")).reason, "halted", "무대 클릭(놀아주기)도 halted");
+    assert.ok((await commands.dispatcher.dispatch({ cmd: "snapshot", from: "cli" })).ok, "열어 둔 명령은 지난다");
+    assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
+    frozen = false;
+
     // 저장에 닿지 못하면 실패로 답한다
     const beforeFailureChanges = changes;
     const diskBefore = fs.readFileSync(paths.save, "utf8");
@@ -126,6 +138,6 @@ async function main(): Promise<void> {
     commands.stop(); party.stop(); fs.rmSync(dir, { recursive: true, force: true });
   }
 
-  process.stdout.write("통과: 앱 명령 경로(그림·mailbox·CLI·중복·저장 실패·잠금)\n");
+  process.stdout.write("통과: 앱 명령 경로(그림·mailbox·CLI·중복·멈춤 거르기·저장 실패·잠금)\n");
 }
 void main().catch((e) => { console.error(e); process.exitCode = 1; });
