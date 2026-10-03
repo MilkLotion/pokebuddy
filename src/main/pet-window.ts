@@ -10,7 +10,7 @@ import type { PetDeviceChannel } from "../shared/ipc/devices";
 import { bringUp } from "./dex-window.js";
 import { dockAt } from "./windows/placement.js";
 import { transparentOptionsOf } from "./windows/options.js";
-import { deviceHeightOf, isRecord, isStep } from "./windows/input.js";
+import { deviceHeightOf, isRecord, isShortId, isStep } from "./windows/input.js";
 import { workAreaAt } from "./windows/display.js";
 import { createGenGate } from "./windows/device-gen.js";
 
@@ -182,7 +182,7 @@ const CMDS = new Set(["feed", "play", "party.show", "party.hide", "pet.set"]);
 function isAction(v: unknown): v is PetDeviceAction {
   if (!isRecord(v)) return false;
   const a = v;
-  if (typeof a.petId !== "string" || !a.petId) return false; // 누른 개체 — 관리 창이 지금 개체와 같은지 본다
+  if (!isShortId(a.petId)) return false; // 누른 개체 — 관리 창이 지금 개체와 같은지 본다
   if (a.kind === "dialog") return typeof a.dialog === "string" && DIALOGS.has(a.dialog);
   if (a.kind === "tutorial") return a.action === "done" || a.action === "skip";
   if (a.kind === "dex") return true;
