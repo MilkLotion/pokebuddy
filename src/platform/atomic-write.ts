@@ -23,8 +23,9 @@ export function sleepSync(ms: number): void {
 }
 
 // 파일 하나를 원자적으로 쓴다 — tmp + rename, 실패하면 잠깐 뒤 다시. 끝내 실패하면 false (조용히)
-// 문자열·Buffer(암호화한 저장, src/save/crypt.ts)는 그대로, 그 밖은 JSON 으로 쓴다
-export function writeAtomic(file: string, data: unknown): boolean {
+// 문자열·Buffer(암호화한 저장, src/save/crypt.ts)는 그대로, 그 밖은 JSON 으로 쓴다.
+// mode 를 주면 tmp 를 그 권한으로 만든다 — rename 뒤 파일도 그 권한이다(평문 세션 파일 0600, src/main/trade.ts)
+export function writeAtomic(file: string, data: unknown, { mode }: { mode?: number } = {}): boolean {
   const text = typeof data === "string" || Buffer.isBuffer(data) ? data : `${JSON.stringify(data, null, 2)}\n`;
   const tmp = `${file}.${process.pid}.tmp`;
   try {
@@ -35,7 +36,7 @@ export function writeAtomic(file: string, data: unknown): boolean {
   const { writeRetries, writeRetryMs } = IO_RULES;
   for (let i = 0; i < writeRetries; i++) {
     try {
-      fs.writeFileSync(tmp, text);
+      fs.writeFileSync(tmp, text, mode === undefined ? undefined : { mode });
       fs.renameSync(tmp, file);
       return true;
     } catch (e) {
