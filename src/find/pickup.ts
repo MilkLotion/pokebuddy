@@ -50,7 +50,7 @@ export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
 export const evoCandidates = (opts?: DexOptions): string[] =>
   Object.keys(loadJson<Record<string, unknown>>("evo-items.json", opts)).filter((id) => !id.startsWith("_"));
 
-// 포켓몬 후보 — 랜덤알과 같다. 해금한 종 가운데 랜덤알에서 나올 수 있는 종 (src/shop/catalog.ts inRandomEgg)
+// 포켓몬 후보 — 랜덤알과 같다. 해금한 종 가운데 랜덤알에서 나올 수 있는 종 (src/dex/obtain.ts inRandomEgg)
 export const pokemonCandidates = (save: SaveV3, opts?: DexOptions): string[] => save.dex.unlocked.filter((slug) => inRandomEgg(slug, opts));
 
 const pickIndex = (n: number, rand: Rand): number => Math.min(n - 1, Math.max(0, Math.floor(rand() * n)));

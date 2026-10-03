@@ -33,7 +33,7 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
   }
   for (const [id] of achievementDefs()) {
     const row = save.achievements[id];
-    // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적(quiet)은 배너를 띄우지 않는다 — 업적 아이콘의 점만 켠다 (src/achievement/evaluate.ts evaluate)
+    // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적(quiet)은 배너를 띄우지 않는다 — 업적 아이콘의 점만 켠다 (src/achievement/evaluate.ts evaluateAchievements)
     if (row?.achievedAt != null && row.claimedAt == null && row.quiet !== true) list.push({ key: keyOf({ kind: "achievement", target: id }), kind: "achievement", target: id });
   }
   for (const rec of save.find?.log ?? []) list.push({ key: keyOf({ kind: "find", target: rec.id }), kind: "find", target: rec.id });

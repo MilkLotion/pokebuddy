@@ -41,7 +41,7 @@ export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
 };
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────
-// 서버 호출은 메인 프로세스가 한다(src/main/mail.ts). 명령 처리기(dispatcher)에는 등록하지 않는다 — 설정 창·CLI 가 선물을 만들어 넣지 못하게
+// 서버 호출은 온라인 층의 우편함이 한다(src/online/mail-inbox.ts). 명령 처리기(dispatcher)에는 등록하지 않는다 — 설정 창·CLI 가 선물을 만들어 넣지 못하게
 export const mailApplyHandler: TxHandler = (draft, args, ctx) => {
   const letterId = strOf(args, "letterId");
   if (!letterId) return { ok: false, reason: "bad-args" };

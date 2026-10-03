@@ -1,6 +1,6 @@
 // 우편함 — 서버에서 받은 편지의 선물을 로컬 저장에 넣는다. 설계는 worklog/records/post-box/record.md "구현 설계"
 //
-// 서버 호출은 메인(src/main/mail.ts)이 한다. 여기서는 선물 검사와 저장만 다룬다.
+// 서버 호출은 온라인 층의 우편함(src/online/mail-inbox.ts)이 한다. 여기서는 선물 검사와 저장만 다룬다.
 //   선물은 가방 도구(기본먹이 제외)·진화용 도구·포인트·포켓몬. 모르는 선물이 하나라도 있으면 그 편지는 넣지 않는다 — 앱이 옛 버전이다
 //   단일 포켓몬 선물은 한 마리만 넣는다. 이미 얻은 종이면 넣지 않는다 — 편지의 다른 선물은 그대로 받는다 (docs/specs/game.md "단일 포켓몬")
 //   포켓몬 선물은 레벨 1 새 개체로 박스에 넣는다. 박스 빈 칸이 모자라면 그 편지는 넣지 않는다(box-full) — 자리를 만든 뒤 다시 받는다. 성격·성별은 상점 종 구매와 같은 규칙, 이로치 아님. 도감에 입수로 남긴다
@@ -75,7 +75,7 @@ function pokemonCounts(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions):
   return give;
 }
 
-// 이 선물을 받는 데 드는 박스 빈 칸 수 — 받기 전 검사(src/main/mail.ts)와 applyGifts 가 같은 셈을 쓴다
+// 이 선물을 받는 데 드는 박스 빈 칸 수 — 받기 전 검사(src/online/mail-inbox.ts)와 applyGifts 가 같은 셈을 쓴다
 export function neededBoxRoom(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions): number {
   return [...pokemonCounts(save, gifts, opts).values()].reduce((n, c) => n + c, 0);
 }
