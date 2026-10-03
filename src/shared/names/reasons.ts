@@ -9,7 +9,6 @@ export const REASONS = [
   // 공통 — 명령 통로·실행기·메인
   "ok",
   "error", // 처리기가 던졌다
-  "failed", // 도메인 결과에 까닭이 없을 때의 대체 글자 (src/tx/handlers.ts). [리팩토링 대상] 결과 타입에 까닭이 꼭 있게 되면 뺀다
   "bad-args",
   "bad-count",
   "bad-value",
