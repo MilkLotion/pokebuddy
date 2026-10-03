@@ -4,12 +4,13 @@
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창 내용 영역의 오른쪽 위에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다.
 // 관리 창을 옮기면 따라간다. 관리 창이 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
 // 파티 상세의 `도감 보기` 로 열면 파티 상세 기기 창 옆에 붙는다 — 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆(2026-10-01 사용자 결정 "옆에 그 포켓몬 상세도감기기를 띄울까")
-import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { DexDetail, EvoNodeView } from "../shared/model/detail";
 import type { DexDeviceChannel } from "../shared/ipc/devices";
 import type { DexDeviceView } from "../shared/model/devices";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./windows/options.js";
+import { transparentOptionsOf } from "./windows/options.js";
+import { deviceHeightOf, isStep } from "./windows/input.js";
+import { workAreaAt } from "./windows/display.js";
 import { createGenGate } from "./windows/device-gen.js";
 import { dockAt } from "./windows/placement.js";
 
@@ -71,7 +72,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     const w = alive();
     if (!w || !owner || owner.isDestroyed()) return;
     const b = owner.getContentBounds();
-    const area = screen.getDisplayMatching(b).workArea;
+    const area = workAreaAt(b);
     // 파티 상세 옆 — 파티 상세 기기 창 자리를 같은 규칙(dockAt)으로 셈해 관리 창과 합친 덩어리 옆에 붙인다.
     // 파티 상세 창의 지금 위치를 읽지 않는다 — 관리 창을 옮길 때 두 창이 따라가는 순서와 상관없이 같은 자리가 나온다
     const pet = beside ? dockAt(b, area, { width: beside, height }) : null;
@@ -113,24 +114,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
   }
 
   function create(parent: BrowserWindow): BrowserWindow {
-    const w = new BrowserWindow({
-      width: DEX_WINDOW.width,
-      height,
-      show: false,
-      parent,
-      frame: false,
-      transparent: true,
-      backgroundColor: "#00000000",
-      hasShadow: false,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      fullscreenable: false,
-      skipTaskbar: true,
-      title: "pokebuddy",
-      icon: windowIcon(),
-      webPreferences: webPreferencesOf(opts.preload),
-    });
+    const w = new BrowserWindow({ ...transparentOptionsOf(opts.preload), width: DEX_WINDOW.width, height, parent, minimizable: false, maximizable: false, title: "pokebuddy" });
     w.removeMenu();
     w.on("closed", () => {
       win = null;
@@ -165,8 +149,9 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
 
   // 채널은 한 번만 건다. 창이 다시 만들어져도 처리기는 하나다
   ipcMain.on(CH.size, (e, h: unknown) => {
-    if (!mine(e) || typeof h !== "number" || !Number.isFinite(h)) return;
-    height = Math.max(200, Math.min(1200, Math.ceil(h)));
+    const next = deviceHeightOf(h);
+    if (!mine(e) || next == null) return;
+    height = next;
     place();
     const w = alive();
     if (!w || w.isVisible()) return;
@@ -175,7 +160,7 @@ export function createDexWindow(opts: DexWindowOptions): DexWindow {
     focusNext = false;
   });
   ipcMain.on(CH.step, (e, delta: unknown) => {
-    if (mine(e) && (delta === 1 || delta === -1)) opts.onStep(delta);
+    if (mine(e) && isStep(delta)) opts.onStep(delta);
   });
   ipcMain.handle(CH.cry, async (e) => (mine(e) && slug && opts.volume() > 0 ? opts.cry(slug) : null));
   ipcMain.on(CH.close, (e) => {

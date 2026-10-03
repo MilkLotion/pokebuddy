@@ -6,6 +6,7 @@
 import type { BagDeviceAction, BagDeviceOpen } from "../shared/model/devices";
 import type { BagDeviceChannel } from "../shared/ipc/devices";
 import { createItemWindow, type ItemWindow } from "./item-window.js";
+import { isQty, isRecord, isShortId, isStep } from "./windows/input.js";
 
 const CH = {
   show: "bagdev:show",
@@ -34,12 +35,12 @@ export function createBagWindow(opts: BagWindowOptions): BagWindow {
 
 // 렌더러가 보낸 값은 믿지 않는다 — 정해진 모양만 넘긴다
 function isAction(v: unknown): v is BagDeviceAction {
-  if (!v || typeof v !== "object") return false;
-  const a = v as Record<string, unknown>;
-  if (typeof a.itemId !== "string" || !a.itemId || a.itemId.length > 80) return false;
+  if (!isRecord(v)) return false;
+  const a = v;
+  if (!isShortId(a.itemId)) return false;
   if (a.kind === "mode") return a.mode === "use" || a.mode === "sell";
-  if (a.kind === "target") return typeof a.petId === "string" && a.petId.length > 0 && a.petId.length <= 80;
-  if (a.kind === "qty") return typeof a.qty === "number" && Number.isInteger(a.qty) && a.qty >= 1 && a.qty <= 999;
-  if (a.kind === "preset") return a.delta === 1 || a.delta === -1;
+  if (a.kind === "target") return isShortId(a.petId);
+  if (a.kind === "qty") return isQty(a.qty);
+  if (a.kind === "preset") return isStep(a.delta);
   return a.kind === "go";
 }

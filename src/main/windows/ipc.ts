@@ -48,10 +48,3 @@ export function afterLoad(win: BrowserWindow, fn: () => void): void {
     if (!win.isDestroyed()) fn();
   });
 }
-
-// 이미 문서를 읽고 있는 창에 보낸다 — 읽는 중이면 다 읽은 뒤에, 아니면 바로. 창이 부서졌으면 버린다
-export function sendWhenLoaded(win: BrowserWindow, channel: string, payload: unknown): void {
-  if (win.isDestroyed()) return;
-  if (win.webContents.isLoading()) afterLoad(win, () => win.webContents.send(channel, payload));
-  else win.webContents.send(channel, payload);
-}

@@ -4,13 +4,14 @@
 // 옆에 뜨는거로 바꾸자", A안 기기형 — Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`), worklog/records/party-detail-window/record.md).
 // 무엇을 보일지는 관리 창이 정해 보낸다(개체·자리·빈 파티 칸). 누른 단추는 관리 창으로 돌려보낸다 — 명령과 대화상자는 관리 창이 처리한다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 관리 창을 옮기면 따라가고, 닫히면 같이 닫힌다(parent). 창은 하나만 둔다
-import { BrowserWindow, ipcMain, screen, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
 import type { PetDeviceAction, PetDeviceOpen, PetDeviceView } from "../shared/model/devices";
 import type { PetDeviceChannel } from "../shared/ipc/devices";
 import { bringUp } from "./dex-window.js";
 import { dockAt } from "./windows/placement.js";
-import { windowIcon } from "./paths.js";
-import { webPreferencesOf } from "./windows/options.js";
+import { transparentOptionsOf } from "./windows/options.js";
+import { deviceHeightOf, isRecord, isStep } from "./windows/input.js";
+import { workAreaAt } from "./windows/display.js";
 import { createGenGate } from "./windows/device-gen.js";
 
 const CH = {
@@ -62,7 +63,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
     const w = alive();
     if (!w || !owner || owner.isDestroyed()) return;
     const b = owner.getContentBounds();
-    const area = screen.getDisplayMatching(b).workArea;
+    const area = workAreaAt(b);
     const at = dockAt(b, area, { width: PET_WINDOW.width, height });
     side = at.side;
     w.setBounds({ x: at.x, y: at.y, width: PET_WINDOW.width, height });
@@ -100,24 +101,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
   }
 
   function create(parent: BrowserWindow): BrowserWindow {
-    const w = new BrowserWindow({
-      width: PET_WINDOW.width,
-      height,
-      show: false,
-      parent,
-      frame: false,
-      transparent: true,
-      backgroundColor: "#00000000",
-      hasShadow: false,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      fullscreenable: false,
-      skipTaskbar: true,
-      title: "pokebuddy",
-      icon: windowIcon(),
-      webPreferences: webPreferencesOf(opts.preload),
-    });
+    const w = new BrowserWindow({ ...transparentOptionsOf(opts.preload), width: PET_WINDOW.width, height, parent, minimizable: false, maximizable: false, title: "pokebuddy" });
     w.removeMenu();
     w.on("close", () => closing.add(w));
     w.on("closed", () => {
@@ -146,8 +130,9 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
   }
 
   ipcMain.on(CH.size, (e, h: unknown) => {
-    if (!mine(e) || typeof h !== "number" || !Number.isFinite(h)) return;
-    height = Math.max(200, Math.min(1200, Math.ceil(h)));
+    const next = deviceHeightOf(h);
+    if (!mine(e) || next == null) return;
+    height = next;
     place();
     // 관리 창이 최소화돼 있으면 따라 숨어 있는다 — 기기 창만 혼자 뜨지 않게
     const w = alive();
@@ -157,7 +142,7 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
     focusNext = false;
   });
   ipcMain.on(CH.step, (e, delta: unknown) => {
-    if (mine(e) && (delta === 1 || delta === -1)) opts.onStep(delta);
+    if (mine(e) && isStep(delta)) opts.onStep(delta);
   });
   ipcMain.handle(CH.cry, async (e) => (mine(e) && current && opts.volume() > 0 ? opts.cry(current.pet.species) : null));
   ipcMain.on(CH.close, (e) => {
@@ -195,8 +180,8 @@ export function createPetWindow(opts: PetWindowOptions): PetWindow {
 const DIALOGS = new Set(["evolve", "nature", "mega"]);
 const CMDS = new Set(["feed", "play", "party.show", "party.hide", "pet.set"]);
 function isAction(v: unknown): v is PetDeviceAction {
-  if (!v || typeof v !== "object") return false;
-  const a = v as Record<string, unknown>;
+  if (!isRecord(v)) return false;
+  const a = v;
   if (typeof a.petId !== "string" || !a.petId) return false; // 누른 개체 — 관리 창이 지금 개체와 같은지 본다
   if (a.kind === "dialog") return typeof a.dialog === "string" && DIALOGS.has(a.dialog);
   if (a.kind === "tutorial") return a.action === "done" || a.action === "skip";

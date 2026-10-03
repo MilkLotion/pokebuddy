@@ -3,7 +3,7 @@
 // 폭은 고정이고 세로만 조절한다. 박스 6열과 도감 5열 격자가 640 폭에 맞춰져 있다 (docs/specs/game.md "관리 창").
 // 창을 열 때 흐른 시간을 먼저 적용한다. 그래야 만복도와 쿨타임이 지금 값으로 보인다.
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
-import { BrowserWindow, clipboard, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, clipboard, ipcMain } from "electron";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
 import type { AgentAction } from "../shared/model/agents";
 import type { DisplayView, PortraitAsk } from "../shared/model/snapshot";
@@ -17,6 +17,8 @@ import { WINDOW_V3_RULES } from "../save/rules.js";
 import { createGame, type GameV3 } from "./game.js";
 import { PATHS, windowIcon } from "./paths.js";
 import { webPreferencesOf } from "./windows/options.js";
+import { isFromWindow } from "./windows/ipc.js";
+import { INPUT_LIMITS } from "./windows/input.js";
 import { MEGA_STONE_ICON, createPortraits, portraitKey, type Portraits } from "./portraits.js";
 import { createCries, type Cries } from "./cries.js";
 import { createDexWindow, type DexWindow } from "./dex-window.js";
@@ -137,7 +139,7 @@ const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } 
 };
 
 // 관리 창이 보낸 요청인가. 무대 창·선택 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
-const mine = (e: IpcMainInvokeEvent): boolean => !!win && !win.isDestroyed() && e.sender === win.webContents;
+const mine = (e: { sender: unknown }): boolean => isFromWindow(win, e);
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
@@ -175,7 +177,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (!mine(e) || !Array.isArray(asks)) return {};
     const list = asks
       .filter((a): a is PortraitAsk => a != null && typeof a === "object" && typeof (a as PortraitAsk).slug === "string")
-      .slice(0, 300)
+      .slice(0, INPUT_LIMITS.portraitAsks)
       .map((a) => ({ slug: a.slug, shiny: a.shiny === true }));
     portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
     return portraits.get(list);
@@ -183,7 +185,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.icons, async (e, keys: unknown) => {
     if (!mine(e) || !Array.isArray(keys)) return {};
     portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
-    return portraits.icons(keys.filter((k): k is string => typeof k === "string").slice(0, 200));
+    return portraits.icons(keys.filter((k): k is string => typeof k === "string").slice(0, INPUT_LIMITS.iconKeys));
   });
   // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다
   ipcMain.handle(CH.art, (e) => {
@@ -270,38 +272,38 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     onClosed: (gen) => toManage(CH.partyClosed, gen),
   });
   ipcMain.on(CH.partyOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     const slots = open && typeof open === "object" ? (open as { slots?: unknown }).slots : undefined;
     if (Array.isArray(slots)) partyWin?.show(win, open as PartyDeviceOpen, gen);
     else partyWin?.close();
   });
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
   ipcMain.on(CH.petOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     const pet = open && typeof open === "object" ? (open as { pet?: { species?: unknown; id?: unknown } }).pet : undefined;
     if (pet && typeof pet.species === "string" && typeof pet.id === "string") void petWin?.show(win, open as PetDeviceOpen, gen);
     else petWin?.close();
   });
   ipcMain.on(CH.shopOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     const id = open && typeof open === "object" ? (open as { productId?: unknown }).productId : undefined;
     if (typeof id === "string") shopWin?.show(win, open as ShopDeviceOpen, gen);
     else shopWin?.close();
   });
   ipcMain.on(CH.bagOpen, (e, open: unknown, gen: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     const id = open && typeof open === "object" ? (open as { itemId?: unknown }).itemId : undefined;
     if (typeof id === "string") bagWin?.show(win, open as BagDeviceOpen, gen);
     else bagWin?.close();
   });
   ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown, beside: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
     if (typeof slug === "string") void dexWin?.show(win, slug, gen, beside === true ? PET_WINDOW.width : 0);
     else dexWin?.close();
   });
   ipcMain.on(CH.dim, (e, on: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     const c = on === true ? CHROME_DIM : CHROME;
     try {
       win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: CHROME.height });
@@ -311,8 +313,8 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
   ipcMain.on(CH.copy, (e, text: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
-    if (typeof text === "string" && text.length <= 2000) clipboard.writeText(text);
+    if (!win || !mine(e)) return;
+    if (typeof text === "string" && text.length <= INPUT_LIMITS.copyChars) clipboard.writeText(text);
   });
   // 계정 — 요청 모양은 action 문자열만 확인한다. 값의 검사는 src/online/account.ts 가 한다
   ipcMain.handle(CH.account, async (e, req: unknown): Promise<AccountReply | null> => {
@@ -349,7 +351,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.handle(CH.screens, (e): ScreenView[] => (mine(e) && screens ? screens() : []));
   ipcMain.on(CH.identifyScreens, (e, on: unknown) => {
-    if (!win || win.isDestroyed() || e.sender !== win.webContents) return;
+    if (!win || !mine(e)) return;
     identifyScreens?.(on === true);
   });
   ipcMain.handle(CH.pickScreen, async (e): Promise<ManageReply> => {
