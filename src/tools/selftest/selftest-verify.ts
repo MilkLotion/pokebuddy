@@ -1,7 +1,7 @@
 // 서버 저장 검증 규칙 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-verify.js
 //
 // src/verify/save-rules.ts 를 손으로 만든 저장 쌍으로 본다. 정상 진행은 위반 0, 조작은 해당 규칙 위반.
-// supabase/functions/_shared 의 복사본·데이터가 지금 규칙과 같은지도 본다(scripts/build-verify.cjs --check).
+// supabase/functions/_shared 의 복사본·데이터가 지금 규칙과 같은지도 본다(dist/tools/data/build-verify.js --check).
 // 설계는 worklog/records/cloud-authority/record.md "P4 서버 검증", 검수 사례는 evidence/2026-09-30-review-p4a-code.md
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
@@ -42,7 +42,7 @@ const broke = (prev: SaveV3, next: SaveV3, c: VerifyContext): SaveV3 => {
 };
 
 // 0. 복사본·데이터가 최신이다
-execFileSync(process.execPath, [path.join(ROOT, "scripts/build-verify.cjs"), "--check"], { stdio: "inherit" });
+execFileSync(process.execPath, [path.join(ROOT, "dist/tools/data/build-verify.js"), "--check"], { stdio: "inherit" });
 out("0 supabase/functions/_shared 가 최신");
 
 // 1. 정상 진행 — 한 시간, 포인트 +300, 작업 30분, 친밀도 +10

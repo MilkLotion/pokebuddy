@@ -1,35 +1,32 @@
-// 첫 포켓몬 선택 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron scripts/dev-picker.cjs --shot <파일> [--pick <번호>] [--no-art]`
+// 첫 포켓몬 선택 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron dist/tools/dev/dev-picker.js --shot <파일> [--pick <번호>] [--no-art]`
 //
 // 저장을 읽지도 쓰지도 않는다. 창을 띄워 찍은 뒤 끝낸다. `--pick 2` 는 둘째 카드를 눌러 놓고 찍는다.
 // `--no-art` 는 초상을 하나도 주지 않아 그림 자리표시(받는 중 깜빡임)를 찍는다.
 // 찍은 그림은 Figma `First Run / Starter Selected` `402:9417`, `Starter Empty` `402:9579` 와 비교한다
-const fs = require("node:fs");
-const path = require("node:path");
-const { app, BrowserWindow } = require("electron");
+// (예전 scripts/dev-picker.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
+import fs from "node:fs";
+import path from "node:path";
+import { app, BrowserWindow } from "electron";
+import { starters, unlockRules } from "../../dex/unlocks";
+import { PATHS, preloadFile, rendererFile } from "../../main/paths";
+import { pickStarter } from "../../main/picker-window";
+import { createPortraits, type Portraits } from "../../main/portraits";
+import { argAfter, hasFlag } from "../harness/shot";
 
-const root = path.join(__dirname, "..");
-const argAfter = (flag) => {
-  const at = process.argv.indexOf(flag);
-  return at >= 0 ? process.argv[at + 1] : null;
-};
 const shotFile = argAfter("--shot");
 const pickAt = Number(argAfter("--pick")) || 0;
-const noArt = process.argv.includes("--no-art");
+const noArt = hasFlag("--no-art");
 
-app.whenReady().then(() => {
-  const { pickStarter } = require(path.join(root, "dist/main/picker-window.js"));
-  const { starters, unlockRules } = require(path.join(root, "dist/dex/unlocks.js"));
-  const { preloadFile, rendererFile, PATHS } = require(path.join(root, "dist/main/paths.js"));
-  const { createPortraits } = require(path.join(root, "dist/main/portraits.js"));
+void app.whenReady().then(() => {
   const portraits = noArt
-    ? { get: async (asks) => Object.fromEntries(asks.map((a) => [a.slug, null])) }
+    ? ({ get: async (asks: { slug: string }[]) => Object.fromEntries(asks.map((a) => [a.slug, null])) } as unknown as Portraits)
     : createPortraits(path.join(PATHS.home, "sprites"), path.join(PATHS.project, "sprites"));
   void pickStarter({ preload: preloadFile(), html: rendererFile("picker.html"), starters: starters(unlockRules()), portraits, onPicking: () => {} }).then((slug) => {
     process.stdout.write(`picked: ${slug}\n`);
   });
   if (!shotFile) return;
   setTimeout(async () => {
-    const win = BrowserWindow.getAllWindows()[0];
+    const win = BrowserWindow.getAllWindows()[0]!;
     try {
       if (pickAt > 0) {
         await win.webContents.executeJavaScript(`document.querySelectorAll('.card')[${pickAt - 1}].click(); true`);

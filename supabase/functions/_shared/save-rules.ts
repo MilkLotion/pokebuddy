@@ -1,9 +1,9 @@
-// 생성 파일 — src/verify/save-rules.ts 복사본. 고치지 말고 scripts/build-verify.cjs 를 돌린다
+// 생성 파일 — src/verify/save-rules.ts 복사본. 고치지 말고 npm run verify:build 를 돌린다
 // 서버 저장 검증 규칙 v1 — 직전 서버 저장과 새 저장을 비교해 정상 플레이로 불가능한 변화를 찾는다.
 // 설계는 worklog/records/cloud-authority/record.md "P4 서버 검증", 수치 근거는 docs/specs/balance.md "서버 검증 상한"
 //
-// 이 파일은 import 가 없다 — scripts/build-verify.cjs 가 그대로 supabase/functions/_shared/save-rules.ts 로 복사한다(Deno).
-// node 자체 검사(src/tools/selftest-verify.ts)도 이 파일을 그대로 부른다
+// 이 파일은 import 가 없다 — src/tools/data/build-verify.ts 가 그대로 supabase/functions/_shared/save-rules.ts 로 복사한다(Deno).
+// node 자체 검사(src/tools/selftest/selftest-verify.ts)도 이 파일을 그대로 부른다
 // 저장 모양은 src/shared/save-v3.ts 를 따르되, 손으로 만든 JSON 도 받으므로 모든 값을 의심해서 읽는다
 //
 // 규칙 (상한에는 여유 비율 margin 을 곱한다 — D32 1.1. 틈에는 파일 쓰기·틱 지연 slackMs 를 더한다)
@@ -35,11 +35,11 @@ export interface VerifyItem {
   amount: number;
 }
 
-// scripts/build-verify.cjs 가 data/ 와 규칙표에서 뽑는다
+// src/tools/data/build-verify.ts 가 data/ 와 규칙표에서 뽑는다
 export interface VerifyData {
   items: Record<string, VerifyItem>;
   eggs: Record<string, number>; // 알 종류 → 값
-  achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (scripts/build-verify.cjs)
+  achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름

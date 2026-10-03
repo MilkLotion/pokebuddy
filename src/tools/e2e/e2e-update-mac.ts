@@ -1,5 +1,5 @@
 // mac 앱 업데이트 실기 시험 — 시험 앱 N 을 임시 Applications 폴더에 두고 켜서, 로컬 HTTP 가 내놓는 N+1 로 바뀌는지 본다.
-// Windows 판(scripts/e2e-update.cjs)과 같은 확인 목록을 mac 자체 업데이트(src/main/update/mac-updater.ts)에 맞게 한다
+// Windows 판(./e2e-update-win.ts)과 같은 확인 목록을 mac 자체 업데이트(src/main/update/mac-updater.ts)에 맞게 한다
 //   준비: `npm run build`. 시험 빌드 두 개(zip, 이 Mac 아키텍처만)를 만드느라 몇 분 걸린다. mac 에서만
 //   실행: node dist/tools/e2e/e2e-update-mac.js
 //   시험 빌드는 다른 appId·이름(pokebuddy-update-test.app)이라 사용자의 앱과 섞이지 않는다. 링크·로그인 시 시작을 등록하지 않고

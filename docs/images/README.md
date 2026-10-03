@@ -37,20 +37,20 @@
 |---|---|---|---|---|
 | `install-windows-smartscreen` | `install-windows-smartscreen.png` | 설명서 설치 | "Windows의 PC 보호" 첫 화면 | 넣음 (2026-09-29) |
 | `hero` | `hero.gif` | README 머리 | 에디터나 터미널 위에서 포켓몬 3~4마리가 걷고, 두리번거리고, 하나를 끌어 옮기는 장면 | 대기 |
-| `settings-party` | `settings-party.png` | README 이렇게 놀아요 | 설정창 파티 탭에 3마리 이상, 옆에 파티 상세 기기 창이 붙어 열린 화면 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `shop` | `shop.png` | README 설정창, 설명서 포인트와 상점 | 상점 탭 `알` 분류. 포인트가 넉넉히 보이게 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
+| `settings-party` | `settings-party.png` | README 이렇게 놀아요 | 설정창 파티 탭에 3마리 이상, 옆에 파티 상세 기기 창이 붙어 열린 화면 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
+| `shop` | `shop.png` | README 설정창, 설명서 포인트와 상점 | 상점 탭 `알` 분류. 포인트가 넉넉히 보이게 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `cli-state` | `cli-state.gif` | README 함께하면 더 좋은 것 | 터미널에서 Claude Code 가 일하는 동안 포켓몬이 작업 동작을 하고, 끝나면 인사하는 장면 | 대기 |
 | `install-windows-run` | `install-windows-run.png` | 설명서 설치 — Windows | `추가 정보` 를 누른 뒤 `실행` 단추가 보이는 화면 | 대기 |
 | `install-mac-open-anyway` | `install-mac-open-anyway.png` | 설명서 설치 — Mac | 시스템 설정 → 개인정보 보호 및 보안의 `그래도 열기` | 대기 |
 | `install-mac-keychain` | `install-mac-keychain.png` | 설명서 설치 — Mac | `PokeBuddy Safe Storage` 키체인 허용 창 | 대기 |
 | `starter` | `starter.png` | 설명서 처음 시작하기 | 첫 포켓몬 선택 창 | 넣음 (2026-09-30) |
-| `playground` | `playground.png` | 설명서 놀이공간과 포켓몬 | 설정 모달 `화면` 탭의 놀이공간 전환 단추 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
+| `playground` | `playground.png` | 설명서 놀이공간과 포켓몬 | 설정 모달 `화면` 탭의 놀이공간 전환 단추 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. `팔기` 줄까지 보이게 | 다시 찍기 대기 — 2026-09-30 그림은 옛 메뉴다(남은 시간 글이 있고 `팔기` 줄이 없다) |
-| `hatch` | `hatch.png` | 설명서 알과 부화 | 돌보미집 모달 위에 뜬 부화 결과 창 | 넣음 (2026-09-30 다시 찍음, `scripts/dev-manage.cjs --docs --scene done-all --scene hatch --tab 박스 --click-text 돌보미집 --click-text 열기`) |
+| `hatch` | `hatch.png` | 설명서 알과 부화 | 돌보미집 모달 위에 뜬 부화 결과 창 | 넣음 (2026-09-30 다시 찍음, `dist/tools/dev/dev-manage.js --docs --scene done-all --scene hatch --tab 박스 --click-text 돌보미집 --click-text 열기`) |
 | `evolve` | `evolve.png` | 설명서 성장과 진화 | 파티 상세 기기 창에서 진화 대상을 고르는 화면 | 넣음 (2026-09-30) |
-| `dex` | `dex.png` | 설명서 도감과 업적 | 도감 탭 목록. 해금한 종과 해금하지 않은 종이 섞여 보이게 | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `trade` | `trade.png` | 설명서 친구 교환 | 교환 모달(박스 탭 머리 메뉴의 `교환`)의 `공유 채널 만들기`·`링크로 참가` | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
-| `connect` | `connect.png` | 설명서 AI 코딩 도구 연결 | 사용자 모달 `연결` 탭. CLI 하나 이상이 `연결됨` | 넣음 (2026-09-30, `scripts/dev-manage.cjs --docs`) |
+| `dex` | `dex.png` | 설명서 도감과 업적 | 도감 탭 목록. 해금한 종과 해금하지 않은 종이 섞여 보이게 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
+| `trade` | `trade.png` | 설명서 친구 교환 | 교환 모달(박스 탭 머리 메뉴의 `교환`)의 `공유 채널 만들기`·`링크로 참가` | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
+| `connect` | `connect.png` | 설명서 AI 코딩 도구 연결 | 사용자 모달 `연결` 탭. CLI 하나 이상이 `연결됨` | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 
 넣은 뒤에는 `상태` 칸을 `넣음 (날짜)` 로 바꾼다.
 
@@ -64,7 +64,7 @@
 | 포인트가 많은 상점 (`shop`) | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene shop` |
 | 준비된 알 (`hatch`) | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene hatch` |
 | 튜토리얼 없이 깨끗한 화면 | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene done-all,rich` |
-| 관리 창 화면을 앱 없이 (`settings-party`·`shop`·`dex`·`trade`·`playground`·`connect`·`hatch`·`evolve`) | `npm run build` 뒤 `npx electron scripts/dev-manage.cjs --docs --scene done-all --shot <파일>` 에 `--tab`·`--click`·`--click-text`·`--detail --pet-shot` 을 더한다. 연결 탭은 `--agents-connected`, 진화는 `--detail --pet-click-text 진화 --pet-shot <파일>` |
+| 관리 창 화면을 앱 없이 (`settings-party`·`shop`·`dex`·`trade`·`playground`·`connect`·`hatch`·`evolve`) | `npm run build` 뒤 `npx electron dist/tools/dev/dev-manage.js --docs --scene done-all --shot <파일>` 에 `--tab`·`--click`·`--click-text`·`--detail --pet-shot` 을 더한다. 연결 탭은 `--agents-connected`, 진화는 `--detail --pet-click-text 진화 --pet-shot <파일>` |
 
 - 장면을 바꾼 뒤 `node dist/tools/dev/dev-test.js start` 로 다시 띄운다.
 - 튜토리얼 코치마크가 화면을 가리면 `done-all` 장면을 먼저 쓴다.
