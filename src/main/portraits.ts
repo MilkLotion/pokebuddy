@@ -18,6 +18,8 @@ import { genderLookInfo, regionalOf } from "../dex/regional.js";
 import { megaOf } from "../dex/mega.js";
 import { loadJson, isMetaKey } from "../dex/data.js";
 import { PATHS } from "./paths.js";
+import { eggPalettes } from "../shop/catalog.js";
+import { tintEgg } from "./egg-art.js";
 import { fetchCached } from "./art/fetch.js";
 import type { PortraitAsk } from "../shared/model/snapshot";
 
@@ -107,7 +109,7 @@ const isPng = (buf: Buffer): boolean => buf.length > 8 && buf[0] === 0x89 && buf
 
 export interface Portraits {
   get(asks: PortraitAsk[]): Promise<Record<string, string | null>>;
-  icons(keys: string[]): Promise<Record<string, string | null>>; // 도구·알 그림 — iconUrl 의 열쇠
+  icons(keys: string[]): Promise<Record<string, string | null>>; // 도구·알 그림 — iconUrl 의 열쇠와 색을 바꾼 알 egg:<종류>
   // 디스크에 이미 있는 그림 전부 — 초상 열쇠(slug · slug:shiny)와 도구·알 열쇠. 네트워크는 쓰지 않는다
   // 관리 창이 첫 화면 전에 한 번 받아 둔다. 상점·상세에 들어갈 때 그림이 하나씩 차오르지 않게 하려는 것이다
   all(): Promise<Record<string, string>>;
@@ -142,6 +144,21 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
   };
 
   // 파일 하나 — 앱에 든 그림, 캐시 순서로 읽고, 둘 다 없으면 받아 캐시에 둔다. rel 은 두 폴더 안의 이름이다
+  // 색을 바꾼 알 그림의 data URI — 알 종류마다 한 번 칠해 둔다
+  const tinted = new Map<string, string>();
+  async function eggUri(kind: string): Promise<string | null> {
+    const known = tinted.get(kind);
+    if (known) return known;
+    const url = iconUrl("egg");
+    const base = url ? await fileUri("egg.png", url) : null;
+    if (!base) return null;
+    const palette = eggPalettes()[kind];
+    const png = palette ? tintEgg(Buffer.from(base.slice(base.indexOf(",") + 1), "base64"), palette) : null;
+    const uri = png ? `data:image/png;base64,${png.toString("base64")}` : base;
+    tinted.set(kind, uri);
+    return uri;
+  }
+
   async function fileUri(rel: string, url: string): Promise<string | null> {
     const file = path.join(dir, rel);
     const known = memo.get(file);
@@ -243,6 +260,11 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       const out: Record<string, string | null> = {};
       await Promise.all(
         keys.map(async (key) => {
+          // egg:<종류> — 기본 알 그림을 그 알의 색표로 칠한다(src/main/egg-art.ts). 색표가 없거나 칠하지 못하면 기본 알 그림
+          if (key.startsWith("egg:")) {
+            out[key] = await eggUri(key.slice(4));
+            return;
+          }
           const own = key.startsWith("item:") ? ownItem(key.slice(5)) : null;
           if (own) {
             out[key] = await ownUri(own);

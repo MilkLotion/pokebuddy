@@ -13,6 +13,8 @@ import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
+import { EGG_SOURCE, tintEgg } from "../../main/egg-art";
+import { decodePng, encodePng } from "../../main/png";
 import { snapshot } from "../../view/snapshot";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -181,4 +183,26 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(resultLineOf({ cmd: "bag.use", target: "없는도구", args: { petId: "p1" } }, v, v), null);
 }
 
-process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 교체·파티 상세·결과 줄)\n");
+// (10) 그림 열쇠 칸 — 상점 상품·가방 도구·돌보미집 알. 상점 기기 창의 그림도 같은 열쇠다
+{
+  const shopIcon = (id: string) => v.shop.find((i) => i.id === id)?.icon;
+  assert.deepEqual([shopIcon("random"), shopIcon("ancient-stone"), shopIcon("premium-food"), shopIcon("party-slot")], ["egg:random", "item:ancient-stone", "item:premium-food", null]);
+  assert.equal(shopDeviceModel(v, { productId: "random", qty: 1, notice: "", done: null, busy: false, eggArt: null })?.model.art, "egg:random");
+  assert.ok(v.bag.every((i) => i.icon === `item:${i.id}`), "가방 도구는 item:<id>");
+  const s = seed();
+  s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+  s.eggs.push({ id: "e2", kind: "ancient-stone", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });
+  assert.deepEqual(snapshot(s, undefined, undefined, undefined, T0).eggs.list.map((e) => e.icon), ["egg:random", "item:ancient-stone"]);
+}
+
+// (11) 알 색칠 — 원작 색은 색표의 같은 자리 색으로, 투명한 점과 원작 색이 아닌 점은 그대로. 색표 길이가 다르면 null
+{
+  const rgba = (hex: string, a = 255): number[] => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), a];
+  const base = encodePng({ w: 3, h: 1, px: Buffer.from([...rgba(EGG_SOURCE[0]), ...rgba(EGG_SOURCE[3], 0), ...rgba("#123456")]) });
+  const palette = EGG_SOURCE.map((_, i) => `#0000${i.toString(16).padStart(2, "0")}`);
+  const out = decodePng(tintEgg(base, palette)!);
+  assert.deepEqual([...(out?.px ?? [])], [0, 0, 0, 255, ...rgba(EGG_SOURCE[3], 0), ...rgba("#123456")]);
+  assert.equal(tintEgg(base, palette.slice(1)), null, "색표 길이가 다르면 칠하지 않는다");
+}
+
+process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 교체·파티 상세·결과 줄·그림 열쇠·알 색칠)\n");

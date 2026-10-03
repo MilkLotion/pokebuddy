@@ -39,6 +39,7 @@ import type { DayPart } from "../shared/species";
 import { isEvoItem, itemAbout } from "./bag.js";
 import { shopList } from "./shop-list.js";
 import { isKnownSpecies } from "../dex/record.js";
+import { eggIconKey, itemArtKey } from "./device-art.js";
 
 // 보상 종류 → 화면 문구
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
@@ -231,6 +232,7 @@ export function snapshot(
   const eggs: EggView[] = save.eggs.map((e) => ({
     id: e.id,
     kind: e.kind,
+    icon: eggIconKey(e.kind),
     name: eggName(e.kind) ?? e.kind,
     ready: e.ready,
     remainSec: sec(e.remainMs),
@@ -245,7 +247,7 @@ export function snapshot(
       const sale = sellPrice(id);
       const about = itemAbout(save, id);
       return {
-        id, name: item?.ko ?? itemName(id), count, evolution: isEvoItem(id),
+        id, icon: itemArtKey(id), name: item?.ko ?? itemName(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),

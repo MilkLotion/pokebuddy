@@ -102,6 +102,7 @@ export interface SlotView {
 export interface EggView {
   id: string;
   kind: string;
+  icon: string; // 그림 열쇠 egg:<종류>(태고의돌은 item:ancient-stone)
   name: string;
   ready: boolean;
   remainSec: number;
@@ -119,6 +120,7 @@ export interface BoxView {
 
 export interface BagItemView {
   id: string;
+  icon: string; // 그림 열쇠 item:<id>
   name: string;
   count: number;
   evolution: boolean; // 진화용 도구 — 누르면 진화할 개체를 고른다
@@ -148,6 +150,7 @@ export type ShopCategory = "egg" | "pokemon" | "tool" | "evolution" | "slot";
 
 export interface ShopItemView {
   id: string;
+  icon: string | null; // 그림 열쇠 — 알 egg:<종류>(태고의돌은 item:ancient-stone), 도구 item:<id>, 포켓몬 portrait:<slug>, 파티 칸은 null (src/view/device-art.ts)
   name: string;
   note: string;
   price: number;
