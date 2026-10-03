@@ -5,35 +5,16 @@ import type { DexDeviceView } from "../../shared/model/devices.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "../ui/evo-tree.js";
 import { portraitImg, spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
+import { createDeviceFrame } from "./device-frame.js";
+import { pairsEl } from "./item-face.js";
 
-const root = document.getElementById("device");
-if (!(root instanceof HTMLElement)) throw new Error("dex.html 에 #device 가 없다");
-const device: HTMLElement = root;
 const api = window.pokebuddyDex;
-
-// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
-// - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
-// - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
-// - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
-let sentHeight = -1;
-function sendSize(force: boolean): void {
-  const h = Math.ceil(device.getBoundingClientRect().height);
-  if (!force && h === sentHeight) return;
-  sentHeight = h;
-  api.size(h);
-}
-// 첫 render() 전(sentHeight < 0)에는 보내지 않는다 — 빈 #device 높이로 숨은 새 창이 먼저 보이면 안 된다
-new ResizeObserver(() => {
-  if (sentHeight >= 0) sendSize(false);
-}).observe(device);
-
-// 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
-// - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (dex.html @font-face)
-// - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
-const fontsReady = whenFontsReady(DEVICE_FONTS);
+// 방향키로도 넘긴다. Esc 는 닫는다. 파티 상세 옆에 붙은 창은 넘기지 않는다
+let besideNow = false;
+const frame = createDeviceFrame({ api, windowName: "dex", canKey: (key) => !(besideNow && key !== "Escape") });
+const device = frame.device;
 
 const UNKNOWN = "???";
 const STATE_WORD: Record<string, string> = { obtained: "획득", unlocked: "해금", locked: "미해금" };
@@ -48,23 +29,7 @@ function render(v: DexDeviceView): void {
   const d = v.detail;
   cryPlayer.setVolume(v.volume);
   const locked = d.state === "locked";
-  device.className = `device${v.side === "left" ? " left" : ""}${locked ? " locked" : ""}`;
-  device.replaceChildren();
-
-  device.appendChild(el("div", "hinge"));
-
-  const top = el("div", "top");
-  top.appendChild(el("div", "light"));
-  for (const c of ["#ff6b6b", "#ffd84a", "#6ad06a"]) {
-    const led = el("div", "led");
-    led.style.background = c;
-    top.appendChild(led);
-  }
-  top.appendChild(el("div", "title", "도감"));
-  const close = buttonEl("close", "✕", () => api.close());
-  close.title = "닫기";
-  top.appendChild(close);
-  device.appendChild(top);
+  frame.beginDraw(v.side, "도감", locked ? "locked" : undefined);
 
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
@@ -82,15 +47,10 @@ function render(v: DexDeviceView): void {
   if (d.types.length) d.types.forEach((name, i) => types.appendChild(typeBadgeEl(name, d.typeIds[i])));
   else types.appendChild(typeBadgeEl(UNKNOWN));
   info.appendChild(types);
-  const measure = el("div", "measure");
-  for (const [key, value] of [
-    ["키", d.height],
-    ["몸무게", d.weight],
-  ] as const) {
-    const row = el("div");
-    row.append(el("span", "key", key), el("span", undefined, value || UNKNOWN));
-    measure.appendChild(row);
-  }
+  const measure = pairsEl("measure", [
+    ["키", d.height || UNKNOWN],
+    ["몸무게", d.weight || UNKNOWN],
+  ]);
   info.appendChild(measure);
   entry.appendChild(info);
   screen.appendChild(entry);
@@ -98,7 +58,6 @@ function render(v: DexDeviceView): void {
   bezel.appendChild(screen);
   device.appendChild(bezel);
 
-  const records = el("div", "records");
   const state = locked ? "미해금" : `이로치 ${d.shiny ? "획득" : "미획득"} · 보유 ${d.owned}마리`;
   // 진화 트리가 있으면 진화 줄 대신 아래 카드로 보인다. 미해금 종도 카드다 — 트리가 없는 종만 진화 줄을 둔다
   const rows: (readonly [string, string])[] = [["상태", state], ["입수처", d.methods]];
@@ -106,33 +65,21 @@ function render(v: DexDeviceView): void {
   rows.push(["특수 기믹", d.gimmick]);
   // 메가진화하는 종 — 얻은 종에만 메가 모습의 이름을 한 줄로 (2026-10-02 사용자 결정 "얻은 종에만", 시안 A, Figma 05 `Dex / Device / Mega` `1380:55226`)
   if (d.mega) rows.push([d.mega.label, d.mega.names]);
-  for (const [key, value] of rows) {
-    const row = el("div");
-    row.append(el("span", "key", key), el("span", "value", value));
-    records.appendChild(row);
-  }
-  device.appendChild(records);
+  device.appendChild(pairsEl("records", rows, "value"));
   if (v.tree) device.appendChild(evolutionCard(v));
 
   besideNow = v.beside;
   // 파티 상세 옆에 붙은 창은 바닥 단추 줄을 두지 않는다 — 울음소리는 파티 상세에 있고, 넘기기는 파티 상세가 한다 (2026-10-01 사용자 "이 도감상세에는 울음소리 없어도 될듯")
   if (v.beside) {
-    sendSize(true);
+    frame.endDraw();
     return;
   }
-  const controls = el("div", "controls");
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
   cry.disabled = locked || v.volume <= 0;
-  controls.append(
-    buttonEl("prev", "◀ 이전", () => api.step(-1)),
-    cry,
-    buttonEl("next", "다음 ▶", () => api.step(1)),
-  );
-  device.appendChild(controls);
+  device.appendChild(frame.controlsEl(cry));
 
-  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
-  sendSize(true);
+  frame.endDraw();
 }
 
 // 진화 카드 — 기록 칸 아래. 상점 구매 창과 같은 트리를 기기 폭에 맞춰 그린다 (2026-09-30 사용자 결정 "도감상세는 a.", Figma 05 `Dex / Device / Unlocked` `1091:23559`)
@@ -154,16 +101,4 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
   return card;
 }
 
-// 방향키로도 넘긴다. Esc 는 닫는다. 파티 상세 옆에 붙은 창은 넘기지 않는다
-let besideNow = false;
-document.addEventListener("keydown", (e) => {
-  if (besideNow && (e.key === "ArrowLeft" || e.key === "ArrowRight")) return;
-  if (e.key === "ArrowLeft") api.step(-1);
-  else if (e.key === "ArrowRight") api.step(1);
-  else if (e.key === "Escape") api.close();
-});
-
-api.onShow((view) => {
-  // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void fontsReady.then(() => render(view));
-});
+frame.showWith((cb) => api.onShow(cb), render);

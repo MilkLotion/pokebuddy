@@ -11,39 +11,24 @@ import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { buffText, waitText } from "../ui/time-text.js";
+import { createDeviceFrame } from "./device-frame.js";
 
-const root = document.getElementById("device");
-if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
-const device: HTMLElement = root;
 const api = window.pokebuddyPet;
-
-// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
-// - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
-// - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
-// - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
-// - 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
-let sentHeight = -1;
-function sendSize(force: boolean): boolean {
-  const h = Math.ceil(device.getBoundingClientRect().height);
-  if (!force && h === sentHeight) return false;
-  sentHeight = h;
-  api.size(h);
-  return true;
-}
-// 첫 render() 전(sentHeight < 0)에는 보내지 않는다 — 빈 #device 높이로 숨은 새 창이 먼저 보이면 안 된다
-new ResizeObserver(() => {
-  if (sentHeight >= 0 && sendSize(false) && coachEl) drawCoach();
-}).observe(device);
-
-// 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
-// - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (pet.html @font-face)
-// - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
-const fontsReady = whenFontsReady(DEVICE_FONTS);
+// 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
+// 튜토리얼 중에는 넘기지도 닫지도 않는다 — 다음·확인·✕ 만 받는다
+const frame = createDeviceFrame({
+  api,
+  windowName: "pet",
+  canKey: () => !coachEl,
+  onResized: () => {
+    if (coachEl) drawCoach();
+  },
+});
+const device = frame.device;
 
 const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
 
@@ -269,22 +254,7 @@ function renderBody(v: PetDeviceView): void {
   const pet = v.pet;
   shownPetId = pet.id;
   cryPlayer.setVolume(v.volume);
-  device.className = `device${v.side === "left" ? " left" : ""}`;
-  device.replaceChildren();
-  device.appendChild(el("div", "hinge"));
-
-  const top = el("div", "top");
-  top.appendChild(el("div", "light"));
-  for (const c of ["#ff6b6b", "#ffd84a", "#6ad06a"]) {
-    const led = el("div", "led");
-    led.style.background = c;
-    top.appendChild(led);
-  }
-  top.appendChild(el("div", "title", "파티"));
-  const close = buttonEl("close", "✕", () => api.close());
-  close.title = "닫기";
-  top.appendChild(close);
-  device.appendChild(top);
+  frame.beginDraw(v.side, "파티");
 
   // 화면 — 자리·상태, 초상·이름·레벨·성격·타입, 볼 토글
   const bezel = el("div", "bezel");
@@ -409,13 +379,10 @@ function renderBody(v: PetDeviceView): void {
   }
   device.appendChild(actions);
 
-  const controls = el("div", "controls");
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
-  controls.append(buttonEl("prev", "◀ 이전", () => api.step(-1)), cry, buttonEl("next", "다음 ▶", () => api.step(1)));
-  device.appendChild(controls);
+  device.appendChild(frame.controlsEl(cry));
 
-  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
-  sendSize(true);
+  frame.endDraw();
   if (detailPetId !== pet.id) {
     detailPetId = pet.id;
     detailStep = 0; // 다른 개체를 열면 튜토리얼은 1단계부터
@@ -424,21 +391,13 @@ function renderBody(v: PetDeviceView): void {
   drawCoach();
 }
 
-// 방향키로도 넘긴다. Esc 는 닫는다
-document.addEventListener("keydown", (e) => {
-  if (coachEl) return; // 튜토리얼 중에는 넘기지도 닫지도 않는다 — 다음·확인·✕ 만 받는다
-  if (e.key === "ArrowLeft") api.step(-1);
-  else if (e.key === "ArrowRight") api.step(1);
-  else if (e.key === "Escape") api.close();
-});
-
 // 관리 창은 1초 시계마다 값이 바뀌면 다시 보낸다(쿨타임·만복도). 누르는 중(눌렀다 떼기 사이)에 다시 그리면 단추 누름이 사라진다 —
 // 그동안 온 보기는 들고 있다가 뗀 뒤에 그린다
 let pointerDown = false;
 let pending: PetDeviceView | null = null;
 const show = (view: PetDeviceView): void => {
   // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void fontsReady.then(() => render(view));
+  void frame.fontsReady.then(() => render(view));
 };
 const release = (): void => {
   pointerDown = false;
