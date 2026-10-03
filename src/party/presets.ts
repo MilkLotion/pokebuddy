@@ -132,3 +132,7 @@ export function applyPreset(save: Party, index: number): { ok: boolean; reason?:
   save.party.active = index;
   return { ok: true };
 }
+
+// 적용한 프리셋의 칸에 있는가 — 숨겨도 참이다. 박스 개체·다른 프리셋의 개체는 거짓
+export const isInParty = (save: Pick<SaveV3, "party">, petId: string): boolean =>
+  save.party.slots.some((s) => s.state === "pokemon" && s.petId === petId);

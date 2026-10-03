@@ -8,12 +8,12 @@ import { dayPartOf, evolve } from "../dex/evolve.js";
 import { done as doneTutorial, skip as skipTutorial } from "../tutorial/core.js";
 import { open } from "../egg/open.js";
 import { setForm } from "../dex/forms.js";
-import { countCare, megaOf } from "../dex/mega.js";
+import { megaOf } from "../dex/mega.js";
 import { setMega } from "../party/mega-form.js";
 import { keep, move, place, swap } from "../party/placement.js";
 import { setHidden, shownCount } from "../party/visibility.js";
 import { applyPreset, presetName, renamePreset } from "../party/presets.js";
-import { feed, play } from "../state/care.js";
+import { feedPet, playWithPet } from "../state/care.js";
 import { isSettingKey, setSetting } from "../state/settings.js";
 import { setHome, setSize } from "../party/home.js";
 import { begin } from "../party/starter.js";
@@ -258,20 +258,14 @@ const evolveHandler: TxHandler = (draft, args, ctx) => {
 HANDLERS["evolve"] = evolveHandler;
 
 // ── 돌봄 ───────────────────────────────────────────────────────────────────────
-// 박스 개체는 돌보지 않는다 — 박스에서는 값이 줄지 않아 올린 값이 그대로 남는다 (2026-09-30 사용자 결정 "박스에선 막고").
-// 가방 도구(bag.use)는 따로다 — 박스 개체에게도 쓸 수 있다
-const inParty = (save: { party: { slots: { state: string; petId?: string }[] } }, petId: string): boolean =>
-  save.party.slots.some((s) => s.state === "pokemon" && s.petId === petId);
+// 박스 개체는 돌보지 않는다 — 판정과 횟수 세기는 src/state/care.ts feedPet·playWithPet 이 한다
 
 // 밥 주기 — 기본먹이를 쓰는 것과 같다. 무료이며 쿨타임을 함께 쓴다
 const feedHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  if (draft.pets.some((p) => p.id === petId) && !inParty(draft, petId)) return { ok: false, reason: "not-in-party" };
-  const res = feed(draft, petId);
+  const res = feedPet(draft, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  countCare(draft.pets.find((p) => p.id === petId)!); // 메가진화 조건의 돌봄 횟수 (src/dex/mega.ts)
-  draft.totals.fed += 1; // 누적 기록 — 첫 돌봄 튜토리얼이 "이미 돌봤다"를 본다. 2026-09-26 전에는 v3 에서 늘지 않았다
   return { ok: true, result: { petId, fullness: res.fullness } };
 };
 
@@ -279,11 +273,8 @@ const feedHandler: TxHandler = (draft, args) => {
 const playHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
   if (!petId) return { ok: false, reason: "bad-args" };
-  if (draft.pets.some((p) => p.id === petId) && !inParty(draft, petId)) return { ok: false, reason: "not-in-party" };
-  const res = play(draft, petId);
+  const res = playWithPet(draft, petId);
   if (!res.ok) return { ok: false, reason: res.reason ?? "failed" };
-  countCare(draft.pets.find((p) => p.id === petId)!);
-  draft.totals.played += 1;
   return { ok: true, result: { petId, affinity: res.affinity, streak: res.streak, longPlay: res.longPlay } };
 };
 

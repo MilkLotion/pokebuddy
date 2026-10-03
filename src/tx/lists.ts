@@ -10,7 +10,8 @@ import { EGG_RULES } from "../egg/rules.js";
 import { PARTY_RULES } from "../party/rules.js";
 import { SHOP_RULES } from "../shop/rules.js";
 import { eggPool, isSingleEgg } from "../dex/obtain.js";
-import { canGiveEgg, singleLeft } from "../egg/pool.js";
+import { canGiveEgg, eggRoomOf } from "../egg/pool.js";
+import { bagRoomOf } from "../bag/items.js";
 import { eggName, eggNote, eggPrice, slotPrice, speciesPrice, toolName, toolPrice } from "../shop/catalog.js";
 import type { DexEntry } from "../shared/model/detail";
 import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/model/snapshot";
@@ -57,7 +58,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   // 도구 — 가방에 더 담을 수 있는 개수. 다 찼으면 살 수 없다 (BAG_RULES.max)
   // blocked 는 상점 기기 창 머리의 짧은 상태 글자다. 목록 줄은 바꾸지 않는다 (2026-10-02 사용자 결정 — 문구가 바뀌면 레이아웃이 깨진다)
   const bagRoom = (id: string): Pick<ShopItemView, "room" | "blocked"> => {
-    const room = Math.max(0, BAG_RULES.max - (save.bag[id] ?? 0));
+    const room = bagRoomOf(save, id);
     return room > 0 ? { room } : { room, blocked: "가방 가득" };
   };
 
@@ -79,12 +80,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   // 알 — 돌보미집이 가득 차면 살 수 없다. 단일 포켓몬 알은 남은 종이 없으면 살 수 없다.
   // room 은 한 번에 살 수 있는 개수 — 빈 칸 수, 단일 포켓몬 알이면 (남은 종 수 − 기다리는 같은 알 수)까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const daycareFull = save.eggs.length >= EGG_RULES.maxEggs;
-  const daycareRoom = Math.max(0, EGG_RULES.maxEggs - save.eggs.length);
-  const eggRoom = (kind: string): number => {
-    if (!isSingleEgg(kind, opts)) return daycareRoom;
-    const waiting = save.eggs.filter((e) => e.kind === kind).length;
-    return Math.max(0, Math.min(daycareRoom, singleLeft(save, kind, opts).length - waiting));
-  };
+  const eggRoom = (kind: string): number => eggRoomOf(save, kind, opts);
   // 종 목록이 정해진 알의 후보 — 얻었는지와 함께. 랜덤알은 목록이 없다
   const got = new Set(save.dex.obtained);
   const poolOf = (kind: string): { pool?: EggPoolView } => {

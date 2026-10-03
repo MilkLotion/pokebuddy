@@ -7,6 +7,7 @@ import { isMetaKey, type DexOptions } from "../dex/data.js";
 import { eggPool, inRandomEgg, isSingleEgg } from "../dex/obtain.js";
 import { eggTable } from "../dex/tables.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
+import type { Check } from "../shared/names/reasons.js";
 import { EGG_RULES } from "./rules.js";
 
 // 아직 얻지 않은 종
@@ -19,6 +20,23 @@ export function canGiveEgg(save: SaveV3, kind: string, opts?: DexOptions): boole
   if (!isSingleEgg(kind, opts)) return true;
   const waiting = save.eggs.filter((e) => e.kind === kind).length;
   return singleLeft(save, kind, opts).length > waiting;
+}
+
+// 이 알을 한 번에 더 넣을 수 있는 수 — 돌보미집 빈 칸 수. 단일 포켓몬 알이면 (남은 종 수 − 기다리는 같은 알 수)까지
+// (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
+export function eggRoomOf(save: SaveV3, kind: string, opts?: DexOptions): number {
+  const daycare = Math.max(0, EGG_RULES.maxEggs - save.eggs.length);
+  if (!isSingleEgg(kind, opts)) return daycare;
+  const waiting = save.eggs.filter((e) => e.kind === kind).length;
+  return Math.max(0, Math.min(daycare, singleLeft(save, kind, opts).length - waiting));
+}
+
+// 이 알을 하나 줄 수 있는가 — 돌보미집이 가득이면 daycare-full, 단일 포켓몬 알의 남은 종이 없으면 sold-out.
+// 업적은 sold-out 을 egg-none 으로 바꿔 돌려준다
+export function checkGiveEgg(save: SaveV3, kind: string, opts?: DexOptions): Check<"daycare-full" | "sold-out"> {
+  if (save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
+  if (!canGiveEgg(save, kind, opts)) return { ok: false, reason: "sold-out" };
+  return { ok: true };
 }
 
 // 이 알을 열 때 다른 알이 나올 확률 — [알 종류, 확률]. 데이터에 적은 순서대로
