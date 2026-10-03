@@ -33,9 +33,14 @@ export function liveLockOwner(lockFile: string): number | null {
 
 // 잡기 — { ok, owner, reason }. reason: ok · busy(살아 있는 다른 pid) · error
 export function claimLock(lockFile: string, pid: number = process.pid): ClaimResult {
+  // 폴더를 못 만들면 잠금을 쓸 수 없다 — error. 폴더 자리에 파일이 있어 EEXIST 가 나도 "잠금이 이미 있다"로 읽지 않게 따로 본다
+  try {
+    fs.mkdirSync(path.dirname(lockFile), { recursive: true });
+  } catch {
+    return { ok: false, owner: null, reason: "error" };
+  }
   for (let i = 0; i < 2; i++) {
     try {
-      fs.mkdirSync(path.dirname(lockFile), { recursive: true });
       const fd = fs.openSync(lockFile, "wx");
       try {
         fs.writeSync(fd, `${pid}\n`);

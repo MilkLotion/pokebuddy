@@ -3,13 +3,14 @@
 // 순수 함수(src/box/slots.ts)와 거래 명령(box.sort · box.move · box.rename · box.order, 상점의 box)을 본다. 파일을 만들지 않는다.
 // 설계는 worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계"
 import assert from "node:assert";
-import { BOX_RULES, addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, putPet, renameBox, sortBox } from "../../box/slots";
+import { addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, putPet, renameBox, sortBox } from "../../box/slots";
 import { open } from "../../egg/open";
 import { keep } from "../../party/placement";
 import { applyGifts } from "../../mail/core";
 import { buy } from "../../shop/buy";
 import { newPet } from "../../party/create";
-import { SAVE_V3_RULES, SHOP_V3_RULES } from "../../save/rules";
+import { BOX_RULES } from "../../box/rules";
+import { SHOP_RULES } from "../../shop/rules";
 import { empty, normalize } from "../../save/v3";
 import { fillBoxes, newBox } from "../../box/boxes";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -166,7 +167,7 @@ check(() => {
 
 // ── 박스 수 — 8개로 시작한다. 저절로 늘지 않고 상점에서 하나씩 사서 64개까지 늘린다 (2026-10-02 사용자 결정) ──
 check(() => {
-  const { start, max } = SAVE_V3_RULES.box;
+  const { start, max } = BOX_RULES;
   const s = empty(T0);
   assert.strictEqual(start, 8);
   assert.strictEqual(max, 64);
@@ -183,7 +184,7 @@ check(() => {
 check(() => {
   // 구매 — 300P, 맨 뒤에 빈 박스. 포인트가 모자라면 거절
   const s = seed();
-  const price = SHOP_V3_RULES.boxPrice;
+  const price = SHOP_RULES.boxPrice;
   assert.strictEqual(price, 300);
   s.points.balance = price - 1;
   assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "not-enough-points");
@@ -203,7 +204,7 @@ check(() => {
 check(() => {
   // 상한 — 64개면 더 사지 못한다. 포인트는 그대로다
   const s = empty(T0);
-  while (s.boxes.length < SAVE_V3_RULES.box.max) assert.ok(addBox(s.boxes));
+  while (s.boxes.length < BOX_RULES.max) assert.ok(addBox(s.boxes));
   assert.strictEqual(addBox(s.boxes), null);
   s.points.balance = 10_000;
   assert.strictEqual(buy(s, "box", T0, () => 0.5).reason, "box-max");
@@ -249,7 +250,7 @@ check(() => {
   // 새 개체는 앞 박스의 첫 빈 칸 — 빈 박스로 건너뛰지 않는다
   const s = seed();
   assert.deepStrictEqual(putPet(s.boxes, "p9"), { boxIndex: 0, slotIndex: 2 });
-  assert.strictEqual(s.boxes.length, SAVE_V3_RULES.box.start);
+  assert.strictEqual(s.boxes.length, BOX_RULES.start);
 });
 check(() => {
   // 옛 저장(박스 1개)은 읽을 때 8개가 된다. 박스 이름과 칸은 그대로다
@@ -258,10 +259,10 @@ check(() => {
   old.boxes[0]!.name = "내 박스";
   const read = normalize(JSON.parse(JSON.stringify(old)), T0);
   assert.ok(read, "읽힌다");
-  assert.strictEqual(read!.boxes.length, SAVE_V3_RULES.box.start);
+  assert.strictEqual(read!.boxes.length, BOX_RULES.start);
   assert.strictEqual(read!.boxes[0]!.name, "내 박스");
   assert.deepStrictEqual(read!.boxes[0]!.slots.slice(0, 2), ["p1", "p2"]);
-  assert.strictEqual(newBox("b9", "박스 9").slots.length, SAVE_V3_RULES.box.size);
+  assert.strictEqual(newBox("b9", "박스 9").slots.length, BOX_RULES.size);
 });
 
 process.stdout.write(`통과 (${n}건)\n`);

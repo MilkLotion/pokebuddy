@@ -7,7 +7,6 @@ import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
 import { use } from "../../bag/use";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL, progressTo } from "../../dex/growth";
-import { SAVE_V3_RULES } from "../../save/rules";
 import { empty, normalize } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { feed, play } from "../../state/care";

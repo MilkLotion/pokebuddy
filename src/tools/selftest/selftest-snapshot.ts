@@ -5,7 +5,6 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { MINT_RETIRED } from "../../bag/mint";
-import { SAVE_V3_RULES } from "../../save/rules";
 import { empty } from "../../save/v3";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { snapshot } from "../../view/snapshot";

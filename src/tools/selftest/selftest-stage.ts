@@ -13,7 +13,6 @@ import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stage
 import { lockExcept, menuView, petLine, petMenu, pickOf, subId, trayMenu } from "../../main/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../main/text";
-import { SAVE_V3_RULES } from "../../save/rules";
 import * as legacy from "../../save/legacy";
 import * as writer from "../../save/writer";
 import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stage";

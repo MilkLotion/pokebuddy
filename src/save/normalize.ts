@@ -16,7 +16,7 @@ import { UNLOCK_RULES } from "../dex/rules.js";
 import { fillBoxes, newBox } from "../box/boxes.js";
 import { maxEggNo } from "../egg/pool.js";
 import { screenRefOf } from "../shared/raw.js";
-import { SAVE_RULES, SAVE_V3_RULES } from "./rules.js";
+import { SAVE_RULES } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { normalizeMail } from "../mail/letters.js";
 import { FIND_RULES } from "../find/rules.js";
@@ -187,7 +187,7 @@ export function normalizeTx(raw: unknown, now: number): TxRecordV3[] {
     out.push({ id, at: nonNeg(t.at), result: t.result });
   }
   out.sort((a, b) => a.at - b.at);
-  const { keep, ttlMs } = SAVE_V3_RULES.tx;
+  const { keep, ttlMs } = SAVE_RULES.tx;
   const fresh = out.filter((t) => now - t.at <= ttlMs);
   return fresh.length >= keep ? fresh : out.slice(-keep);
 }
@@ -201,7 +201,7 @@ function normalizeLog(raw: unknown): LogEntry[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((e): e is LogEntry => isObj(e) && typeof e.at === "number" && typeof e.kind === "string")
-    .slice(-SAVE_RULES.log.keep);
+    .slice(-SAVE_RULES.logKeep);
 }
 
 // 파일 내용 → SaveV3. 뼈대가 아니면 null. 칸에 없는 개체는 박스의 빈 칸으로 보낸다

@@ -9,7 +9,7 @@
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
 import type { SaveV3 } from "../shared/save-v3";
 import { readSave, saveStampOf, writeSave } from "../save/save-file.js";
-import { SAVE_V3_RULES } from "../save/rules.js";
+import { SAVE_RULES } from "../save/rules.js";
 
 export interface LiveSaveOptions {
   file: string;
@@ -27,7 +27,7 @@ export interface LiveSave {
   keep(save: SaveV3, usedWorkMs: number): boolean; // 틱이 고친 값을 메모리에 두고, 간격이 됐으면 쓴다. 건진 작업 시간은 비운다
   write(save: SaveV3, name?: string): boolean; // 지금 쓴다 — 명령·줍기
   flush(): boolean; // 메모리 값이 있으면 지금 쓴다
-  failing(): boolean; // 이어서 실패한 횟수가 SAVE_V3_RULES.saveFailNotifyAfter 이상이다
+  failing(): boolean; // 이어서 실패한 횟수가 SAVE_RULES.saveFailNotifyAfter 이상이다
 }
 
 export function createLiveSave({ file, canWrite, flushMs = 0, mono = () => performance.now(), onWrite }: LiveSaveOptions): LiveSave {
@@ -112,6 +112,6 @@ export function createLiveSave({ file, canWrite, flushMs = 0, mono = () => perfo
       lastFlushMono = mono();
       return write(p);
     },
-    failing: () => failStreak >= SAVE_V3_RULES.saveFailNotifyAfter,
+    failing: () => failStreak >= SAVE_RULES.saveFailNotifyAfter,
   };
 }

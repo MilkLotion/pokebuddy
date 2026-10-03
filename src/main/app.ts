@@ -9,7 +9,6 @@ import { app, nativeImage, powerMonitor, safeStorage, screen, shell, Notificatio
 import { starters, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../follow/types";
-import { isPidAlive } from "../platform/pid";
 import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "../save/key";
 import { isSealedOnDisk } from "../save/save-file";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
@@ -1331,7 +1330,6 @@ async function main(): Promise<void> {
   // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
   lifetime = createLifetime({
     lockFile: PATHS.companionLock,
-    pidAlive: isPidAlive,
     hasWindow: () => bootReady && !!stages?.alive(),
     quit: () => app.quit(),
   });
