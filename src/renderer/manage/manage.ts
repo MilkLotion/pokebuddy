@@ -31,7 +31,7 @@ import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setComman
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
-import { failTextOf } from "../ui/fail-text.js";
+import { failTextOf } from "../../shared/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
