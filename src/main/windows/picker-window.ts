@@ -1,12 +1,10 @@
-// 첫 실행 선택 창 — 스타터 29종을 세대별로. 고르면 슬러그, 닫으면 null. 문서는 src/renderer/picker.html (C 단위), 문구·목록은 여기서 준다
+// 첫 실행 선택 창 — 스타터 29종을 세대별로. 고르면 슬러그, 닫으면 null. 문서는 src/renderer/picker.html (C 단위), 문구·목록은 화면 값이 만든다 (src/view/picker.ts)
 // 한 번 답하는 창의 공통 동작은 틀(./answer-window.ts)이 한다
 import { BrowserWindow } from "electron";
-import { nextOf } from "../../dex/evo";
-import type { PickerPayload } from "../../shared/model/stage";
 import type { StageChannel } from "../../shared/ipc/stage";
 import { windowIcon } from "./files";
 import type { Portraits } from "../art/portraits";
-import { petName, t } from "../../view/text";
+import { pickerPayload } from "../../view/picker";
 import { askWindow } from "./answer-window";
 import { webPreferencesOf } from "./options";
 
@@ -22,34 +20,6 @@ export interface PickerOptions {
   starters: string[]; // data/unlocks.json 의 starter 표시 순서 — 세대별 3종 × 9 + 피카츄·이브이
   onPicking(on: boolean): void; // 선택 창이 열려 있는 동안 window-all-closed 로 끝나지 않게
   portraits: Portraits; // 미리 받기와 같은 것을 쓴다 — 같은 그림을 두 번 받지 않고, 받는 중인 그림을 함께 기다린다
-}
-
-// 진화 줄 — 한 갈래면 끝까지 "리자드 → 리자몽", 갈래가 여럿이면 그 단계의 이름을 모두 적고 멈춘다 ("샤미드 · 쥬피썬더 · …")
-// 지도 간선(기본형 → 리전폼)은 적지 않는다 — 첫 선택에서는 기본 사슬만 보인다 ("피카츄 → 라이츄", "나로테 → 모크나이퍼")
-export function evolutionLine(slug: string): string {
-  const names: string[] = [];
-  let at = slug;
-  for (let guard = 0; guard < 5; guard++) {
-    const next = [...new Set(nextOf(at).filter((s) => !s.map).map((s) => s.to))];
-    if (!next.length) break;
-    if (next.length > 1) {
-      names.push(next.map((to) => petName(to)).join(" · "));
-      break;
-    }
-    at = next[0] as string;
-    names.push(petName(at));
-  }
-  return names.length ? t("starter.evolution", { chain: names.join(" → ") }) : "";
-}
-
-// 선택 창에 줄 목록 — data/unlocks.json 의 starter 순서 그대로. 이름은 지금 언어로
-export function pickerPayload(starters: string[]): PickerPayload {
-  return {
-    title: t("starter.title"),
-    start: t("starter.start"),
-    empty: t("starter.empty"),
-    items: starters.map((slug) => ({ slug, name: petName(slug), evolution: evolutionLine(slug) })),
-  };
 }
 
 export function askStarter(opts: PickerOptions): Promise<string | null> {
