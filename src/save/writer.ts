@@ -4,8 +4,9 @@
 // 파일은 'wx'(없을 때만 만들기)로 만든다 — 동시에 뜬 둘이 "없네" 하고 같이 쓰는 것을 막는다.
 // 누가 writer 가 되는지(독립 펫이 있으면 그것, 없으면 먼저 뜬 창 펫)는 부르는 쪽(main)이 정한다 —
 // 여기는 claim · release · isMine · owner 만 내놓는다. 창 펫이 독립 펫에 자리를 내주려면 release 뒤 독립 펫이 claim 한다
-// pidAlive 는 src/follow/state.ts 와 같은 로직을 여기 다시 둔다 — 저장 모듈이 창 추적 모듈에 기대지 않게
+// 살아 있는지 보기는 src/platform/pid.ts 다
 import fs from "node:fs";
+import { isPidAlive } from "../platform/pid.js";
 import path from "node:path";
 
 export type ClaimReason = "ok" | "busy" | "error";
@@ -16,15 +17,8 @@ export interface ClaimResult {
   reason: ClaimReason;
 }
 
-// 프로세스가 살아 있나 — 신호 0 은 보내지 않고 존재만 확인한다
-export function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return (e as NodeJS.ErrnoException).code === "EPERM"; // 남의 소유 프로세스 — 살아 있다
-  }
-}
+// [임시] 옛 이름 — src/tools/selftest/selftest-legacy.ts 가 읽는다. 원본은 src/platform/pid.ts isPidAlive
+export { isPidAlive as pidAlive } from "../platform/pid.js";
 
 // lock 에 적힌 pid — 없거나 파손이면 null
 export function readOwner(lockFile: string): number | null {
@@ -39,7 +33,7 @@ export function readOwner(lockFile: string): number | null {
 // 살아 있는 소유자 pid — 죽었거나 없으면 null
 export function owner(lockFile: string): number | null {
   const pid = readOwner(lockFile);
-  return pid != null && pidAlive(pid) ? pid : null;
+  return pid != null && isPidAlive(pid) ? pid : null;
 }
 
 // 잡기 — { ok, owner, reason }. reason: ok · busy(살아 있는 다른 pid) · error
@@ -59,7 +53,7 @@ export function claim(lockFile: string, pid: number = process.pid): ClaimResult 
     }
     const cur = readOwner(lockFile);
     if (cur === pid) return { ok: true, owner: pid, reason: "ok" }; // 이미 내 것
-    if (cur != null && pidAlive(cur)) return { ok: false, owner: cur, reason: "busy" };
+    if (cur != null && isPidAlive(cur)) return { ok: false, owner: cur, reason: "busy" };
     try {
       fs.unlinkSync(lockFile); // 죽은 pid · 파손 — 지우고 한 번 더
     } catch {

@@ -14,7 +14,7 @@ import type { Command, CommandResult } from "../shared/command.js";
 import type { CommandName } from "../shared/names/commands.js";
 import { hasCommandFlag, isCommandSource } from "../shared/names/commands.js";
 import { SAVE_RULES } from "./rules.js";
-import { writeAtomic } from "./legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 
 export type ChannelLog = (entry: Record<string, unknown>) => void;
 export type CommandHandler = (command: Command) => CommandResult | Promise<CommandResult>;

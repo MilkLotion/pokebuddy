@@ -1,5 +1,5 @@
 // 게임 명령 진입 — 관리 창과 같은 명령을 명령 통로(mailbox)로 보낸다. 게임 저장은 writer 만 바꾼다 (docs/contributing/development.md "게임 명령")
-import { PATHS } from "../main/paths";
+import { PATHS } from "../platform/paths";
 import { sendToWriter } from "../save/command-channel";
 import { commandNamesWhere } from "../shared/names/commands";
 import type { Command } from "../shared/command";

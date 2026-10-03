@@ -4,7 +4,7 @@
 // 배너가 끝나면(done) 다음 것을 내보낸다. 배너를 얼마나 보일지는 배너 창이 정한다.
 // 파일을 쓰지 못해도 배너는 보인다. 바뀐 줄은 기억해 두었다가 다음 틱에 다시 쓴다
 import fs from "node:fs";
-import { writeAtomic } from "../save/legacy.js";
+import { writeAtomic } from "../platform/atomic-write.js";
 import type { BannerView } from "../shared/model/overlays";
 import type { SaveV3 } from "../shared/save-v3";
 import { bannerOf } from "./banner.js";
