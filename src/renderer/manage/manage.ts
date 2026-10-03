@@ -46,14 +46,6 @@ const TABS: { id: TabId; label: string }[] = [
 // 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
 // (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
 
-// 만복도 구간 → 화면 낱말. 계약의 구간 이름과 1:1 이다
-const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
-// 만복도 구간별 디버프 — 파티 칸의 상태 배지 (Figma `Party Slot Card` 의 debuff 자리)
-const DEBUFF: Record<string, { label: string; tone: "warning" | "danger"; note: string }> = {
-  hungry: { label: "배고픔", tone: "warning", note: "친밀도 증가량 −30%" },
-  starving: { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" },
-};
-
 // 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
 const SHOP_TABS = [
   { id: "egg", label: "알" },
@@ -70,14 +62,6 @@ const DEX_TABS = [
   { id: "locked", label: "미해금" },
 ];
 
-// 잠들기 기준 — 0 은 잠들지 않음. 값은 src/state/settings.ts 의 허용 목록과 같다
-const SLEEP_CHOICES = [
-  { id: "3", label: "3분" },
-  { id: "5", label: "5분" },
-  { id: "10", label: "10분" },
-  { id: "15", label: "15분" },
-  { id: "0", label: "잠들지 않음" },
-];
 
 
 // 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
@@ -225,7 +209,6 @@ const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "recent", label: "최근 얻은 순" },
   { by: "name", label: "이름순" },
 ];
-const BOX_NAME_MAX = 12; // src/box/rules.ts BOX_RULES.nameMax 와 같다 — 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수에 맞춘다
 // 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
 // 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
 const boxSortedBy = new Map<string, string>();
@@ -554,10 +537,10 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(meters);
 
   card.appendChild(info);
-  // 상태 배지 — 디버프(배고픔 −30%, 매우 배고픔 −60%, docs/specs/balance.md) 뒤에 켜진 버프(든든함·신남·들뜸).
+  // 상태 배지 — 디버프(배고픔·매우 배고픔, 스냅샷의 pet.debuff) 뒤에 켜진 버프(든든함·신남·들뜸). Figma `Party Slot Card` 의 debuff 자리.
   // 버프도 배고픔처럼 칸 오른쪽 위에 둔다 (2026-09-30 사용자 결정 "들뜸, 신남 도 배고픔처럼"). 하나도 없으면 두지 않는다
   const badges: HTMLElement[] = [];
-  const debuff = DEBUFF[pet.zone];
+  const debuff = pet.debuff;
   if (debuff) {
     const badge = el("span", `debuff ${debuff.tone}`, debuff.label);
     badge.title = debuff.note;
@@ -581,7 +564,7 @@ function petCard(pet: PetView): HTMLElement {
     askPetMenu(pet.id);
   });
   if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
-  card.title = `${pet.name} · ${ZONE_WORD[pet.zone] ?? pet.zone} · 다음 레벨까지 ${pet.percentToNext}%`;
+  card.title = `${pet.name} · ${pet.zoneText} · 다음 레벨까지 ${pet.percentToNext}%`;
   return card;
 }
 
@@ -620,7 +603,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
   const input = document.createElement("input");
   input.className = "search box-name-input";
   input.value = preset.name;
-  input.maxLength = BOX_NAME_MAX; // 프리셋 이름도 12자다 — 박스 이름과 같다 (src/party/rules.ts PARTY_RULES.presets, src/box/rules.ts BOX_RULES.nameMax)
+  if (view) input.maxLength = view.limits.presetNameMax; // 프리셋 이름 상한은 박스 이름과 같다 (src/box/rules.ts BOX_RULES.nameMax)
   input.setAttribute("aria-label", "프리셋 이름");
   let done = false;
   const finish = (save: boolean): void => {
@@ -1641,7 +1624,7 @@ function boxNameEl(box: BoxView): HTMLElement {
   const input = document.createElement("input");
   input.className = "search box-name-input";
   input.value = box.name;
-  input.maxLength = BOX_NAME_MAX;
+  if (view) input.maxLength = view.limits.boxNameMax; // 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수(12)에 맞춘다
   input.setAttribute("aria-label", "박스 이름");
   let done = false;
   const finish = (save: boolean): void => {
@@ -4714,7 +4697,7 @@ const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => voi
 function drawGeneral(scroll: HTMLElement): void {
   if (!view) return;
   const s = view.settings;
-  const sleep = SLEEP_CHOICES.map((c) => ({ value: c.id, label: c.label }));
+  const sleep = s.sleepChoices.map((c) => ({ value: String(c.value), label: c.label }));
   scroll.appendChild(
     settingRow("잠들기 기준", "이 시간 동안 조작이 없으면 잠듦", settingSelect("sleep", sleep, String(s.sleepAfterMin), 104, (v) => setSetting("sleepAfterMin", Number(v)))),
   );

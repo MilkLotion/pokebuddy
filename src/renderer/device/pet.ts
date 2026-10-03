@@ -31,16 +31,11 @@ const frame = createDeviceFrame({
 });
 const device = frame.device;
 
-const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
-
-// 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
-const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
-
 // 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
-  const tone = DEBUFF_TONE[pet.zone];
-  if (tone) list.push(el("span", `badge ${tone}`, ZONE_WORD[pet.zone] ?? pet.zone));
+  // 배고픔 디버프 — 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuff, docs/specs/balance.md "배고픔 디버프")
+  if (pet.debuff) list.push(el("span", `badge ${pet.debuff.tone}`, pet.debuff.label));
   for (const buff of pet.buffs ?? []) {
     const badge = el("span", "badge success", buffText(buff));
     badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)
@@ -160,7 +155,7 @@ function careLine(v: PetDeviceView): HTMLElement {
 // 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
 function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "mood"): string {
   if (field === "affinity") return `${pet.affinity}`;
-  if (field === "fullness") return `${pet.fullness} · ${ZONE_WORD[pet.zone] ?? pet.zone}`;
+  if (field === "fullness") return `${pet.fullness} · ${pet.zoneText}`;
   return `${pet.mood} · ${pet.moodWord}`;
 }
 const feedText = (pet: PetDeviceView["pet"]): string =>

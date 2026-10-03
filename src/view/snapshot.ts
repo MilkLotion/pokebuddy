@@ -24,7 +24,10 @@ import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
-import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/model/snapshot";
+import { TIME_RULES } from "../state/rules.js";
+import { SETTING_CHOICES } from "../state/settings.js";
+import type { FullnessZone } from "../shared/save-v3.js";
+import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
@@ -130,6 +133,19 @@ const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
   GROWTH_RATES.map((rate) => [rate, Array.from({ length: MAX_LEVEL + 1 }, (_, level) => (level < 1 ? 0 : expForLevel(rate, level)))]),
 );
 
+// 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창이 같이 쓴다
+const ZONE_TEXT: Record<FullnessZone, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
+
+// 배고픔 디버프 배지 — 구간 낱말, 색, 친밀도 증가량 감소율(TIME_RULES.zonePercent). 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
+const DEBUFF_TONE: Partial<Record<FullnessZone, "warning" | "danger">> = { hungry: "warning", starving: "danger" };
+function debuffOf(zone: FullnessZone): PetView["debuff"] {
+  const tone = DEBUFF_TONE[zone];
+  return tone ? { label: ZONE_TEXT[zone], tone, note: `친밀도 증가량 −${100 - TIME_RULES.zonePercent[zone]}%` } : null;
+}
+
+// 잠들기 기준 선택지 — 0 은 잠들지 않음
+const sleepChoices = (): SettingsView["sleepChoices"] => SETTING_CHOICES.sleepAfterMin.map((min) => ({ value: min, label: min === 0 ? "잠들지 않음" : `${min}분` }));
+
 export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = dayPartOf(Date.now())): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
@@ -153,6 +169,8 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     affinity: pet.affinity,
     fullness: pet.fullness,
     zone: zoneOf(pet.fullness),
+    zoneText: ZONE_TEXT[zoneOf(pet.fullness)],
+    debuff: debuffOf(zoneOf(pet.fullness)),
     mood: pet.mood,
     moodWord: moodWord(pet.mood),
     hidden,
@@ -279,10 +297,12 @@ export function snapshot(
       sleepAfterMin: save.settings.sleepAfterMin,
       playArea: save.settings.playArea.mode,
       hasRegion: save.settings.playArea.rect != null,
+      sleepChoices: sleepChoices(),
     },
     natures: natureOptions(),
     eggPalettes: eggPalettes(),
     growthCurves: GROWTH_CURVES,
+    limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
     detailTutorial: canShow(save, "detail"),

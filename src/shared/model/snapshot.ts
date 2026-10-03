@@ -40,6 +40,8 @@ export interface PetView {
   affinity: number;
   fullness: number;
   zone: FullnessZone;
+  zoneText: string; // 만복도 구간 낱말 — "배부름" · "보통" · "배고픔" · "매우 배고픔"
+  debuff: { label: string; tone: "warning" | "danger"; note: string } | null; // 배고픔 디버프 배지. 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
   mood: number; // 0~100. 보이기만 하는 값이다
   moodWord: string; // 기분 단계 말 — "좋음" 처럼 화면에 그대로 쓴다
   hidden: boolean;
@@ -193,6 +195,7 @@ export interface SettingsView {
   sleepAfterMin: number; // 0 이면 잠들지 않음
   playArea: "all" | "screen" | "region"; // 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면)
   hasRegion: boolean; // 영역을 이미 그렸는가
+  sleepChoices: { value: number; label: string }[]; // 잠들기 기준 선택지 — 0 은 잠들지 않음 (src/state/settings.ts SETTING_CHOICES)
 }
 
 export interface Snapshot {
@@ -208,6 +211,7 @@ export interface Snapshot {
   settings: SettingsView;
   natures: NatureOption[];
   growthCurves: Record<string, number[]>; // 경험치 타입별 레벨 L 이 되는 누적 경험치 — 칸 L(1~100). 가방 사용 패널의 미리보기
+  limits: { boxNameMax: number; presetNameMax: number }; // 이름 칸 글자 수 상한 (src/box/rules.ts BOX_RULES.nameMax — 프리셋 이름도 같다)
   sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/party/size.ts SIZE_STEPS)
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/queue.ts)

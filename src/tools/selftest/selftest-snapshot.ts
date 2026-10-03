@@ -270,4 +270,20 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 공유 sid 모습 목록  ok\n");
 }
 
-process.stdout.write("selftest-snapshot: 통과 (이름·구간·단위·칸·알·가방·도감·진화 후보·공유 sid)\n");
+// (13) 구간 낱말·배고픔 디버프·이름 상한·잠들기 선택지 — 화면이 표를 따로 두지 않는다
+{
+  const v = snapshot(seed());
+  const p1 = v.party.slots[0]?.pet;
+  const p2 = v.party.slots[1]?.pet;
+  assert.deepEqual([p1?.zone, p1?.zoneText, p1?.debuff], ["normal", "보통", null], "만복도 55 는 보통 — 디버프 없음");
+  assert.deepEqual([p2?.zone, p2?.zoneText, p2?.debuff], ["hungry", "배고픔", { label: "배고픔", tone: "warning", note: "친밀도 증가량 −30%" }], "만복도 30 은 배고픔");
+  const s = seed();
+  s.pets[1]!.fullness = 5;
+  assert.deepEqual(snapshot(s).party.slots[1]?.pet?.debuff, { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" }, "만복도 5 는 매우 배고픔");
+  assert.deepEqual(v.limits, { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax });
+  assert.deepEqual(v.settings.sleepChoices.map((c) => c.label), ["3분", "5분", "10분", "15분", "잠들지 않음"]);
+  assert.deepEqual(v.settings.sleepChoices.map((c) => c.value), [3, 5, 10, 15, 0]);
+  process.stdout.write("(13) 구간 낱말·디버프·이름 상한·잠들기 선택지  ok\n");
+}
+
+process.stdout.write("selftest-snapshot: 통과 (이름·구간·단위·칸·알·가방·도감·진화 후보·공유 sid·구간 낱말·디버프·이름 상한·잠들기)\n");
