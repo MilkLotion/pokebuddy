@@ -8,7 +8,7 @@
 //   박스    상한(BOX_RULES.max)까지 하나씩 산다. 값은 늘 같다. 빈 박스가 맨 뒤에 생긴다
 //   종      해금한 종만 산다. 새 개체는 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳이 없으면 사지 못한다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
-import { addBox, boxBuyable, boxRoom, putPet } from "../box/slots.js";
+import { addBox, boxBuyable } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { addItem, bagRoomOf } from "../bag/items.js";
@@ -17,7 +17,7 @@ import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "..
 import type { Rand } from "../shared/rand.js";
 import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { checkGiveEgg, eggRoomOf, newEgg, nextEggId, randomPool } from "../egg/pool.js";
+import { checkGiveEgg, eggRoomOf, newEgg } from "../egg/pool.js";
 import { find, slotPrice } from "./catalog.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
