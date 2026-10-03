@@ -40,7 +40,7 @@ const { app, BrowserWindow } = require("electron");
 
 const root = path.join(__dirname, "..");
 // 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
-const { makeTmp } = require(path.join(root, "dist/tools/tmp-dir.js"));
+const { makeTmp } = require(path.join(root, "dist/tools/harness/tmp-dir.js"));
 const dir = makeTmp("dev-manage");
 
 // 앱 모듈은 HOME 을 바꾼 뒤에 읽는다. 경로를 읽을 때 HOME 을 보기 때문이다 (src/tools/selftest-agents.ts 와 같은 방식).
@@ -185,7 +185,7 @@ app.whenReady().then(async () => {
   // --scene <이름> — dev-test 장면(src/tools/dev-test.ts SCENES)을 입힌다
   const scenes = argsAfter("--scene");
   if (scenes.length) {
-    const { applyScene } = require(path.join(root, "dist/tools/dev-test.js"));
+    const { applyScene } = require(path.join(root, "dist/tools/dev/dev-test.js"));
     for (const name of scenes) for (const one of name.split(",")) applyScene(seeded, one, Date.now());
   }
   store.write(file, seeded);

@@ -8,7 +8,7 @@ export interface SelftestEntry {
   needs?: "server" | "mac"; // 없으면 그 검사가 스스로 건너뛴다(종료 코드 0). 실행기는 표시만 한다
 }
 
-const tool = (name: string, needs?: SelftestEntry["needs"]): SelftestEntry => ({ name, file: `dist/tools/selftest-${name}.js`, ...(needs ? { needs } : {}) });
+const tool = (name: string, needs?: SelftestEntry["needs"]): SelftestEntry => ({ name, file: `dist/tools/selftest/selftest-${name}.js`, ...(needs ? { needs } : {}) });
 
 const check = (name: string): SelftestEntry => ({ name: `check-${name}`, file: `dist/tools/check/check-${name}.js` });
 

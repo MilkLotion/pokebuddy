@@ -6,7 +6,7 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 // 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
-const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
+const { makeTmp } = require(path.join(root, 'dist/tools/harness/tmp-dir.js'));
 const dir = makeTmp('companion-e2e');
 const temp = path.join(dir, 'tmp');
 fs.mkdirSync(temp);

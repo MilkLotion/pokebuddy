@@ -8,7 +8,7 @@ const { spawn, execSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..', '..');
 // 임시 폴더는 <임시 폴더>/pokebuddy/ 아래에 만들고 끝나면 지운다 (src/tools/tmp-dir.ts) — npm run build 뒤에 실행한다
-const { makeTmp } = require(path.join(root, 'dist/tools/tmp-dir.js'));
+const { makeTmp } = require(path.join(root, 'dist/tools/harness/tmp-dir.js'));
 // 로컬 DB 컨테이너 이름 — supabase/config.toml 의 project_id 로 정해진다
 const DB_CONTAINER = `supabase_db_${/^project_id\s*=\s*"([^"]+)"/m.exec(fs.readFileSync(path.join(root, 'supabase/config.toml'), 'utf8'))[1]}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -60,13 +60,13 @@
 
 | 필요한 상태 | 명령 |
 |---|---|
-| 첫 포켓몬 선택 창 (`starter`) | `node dist/tools/dev-test.js start --fresh` |
-| 포인트가 많은 상점 (`shop`) | 앱을 끈 뒤 `node dist/tools/dev-test.js scene shop` |
-| 준비된 알 (`hatch`) | 앱을 끈 뒤 `node dist/tools/dev-test.js scene hatch` |
-| 튜토리얼 없이 깨끗한 화면 | 앱을 끈 뒤 `node dist/tools/dev-test.js scene done-all,rich` |
+| 첫 포켓몬 선택 창 (`starter`) | `node dist/tools/dev/dev-test.js start --fresh` |
+| 포인트가 많은 상점 (`shop`) | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene shop` |
+| 준비된 알 (`hatch`) | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene hatch` |
+| 튜토리얼 없이 깨끗한 화면 | 앱을 끈 뒤 `node dist/tools/dev/dev-test.js scene done-all,rich` |
 | 관리 창 화면을 앱 없이 (`settings-party`·`shop`·`dex`·`trade`·`playground`·`connect`·`hatch`·`evolve`) | `npm run build` 뒤 `npx electron scripts/dev-manage.cjs --docs --scene done-all --shot <파일>` 에 `--tab`·`--click`·`--click-text`·`--detail --pet-shot` 을 더한다. 연결 탭은 `--agents-connected`, 진화는 `--detail --pet-click-text 진화 --pet-shot <파일>` |
 
-- 장면을 바꾼 뒤 `node dist/tools/dev-test.js start` 로 다시 띄운다.
+- 장면을 바꾼 뒤 `node dist/tools/dev/dev-test.js start` 로 다시 띄운다.
 - 튜토리얼 코치마크가 화면을 가리면 `done-all` 장면을 먼저 쓴다.
 
 ## 찍을 때 지킬 것

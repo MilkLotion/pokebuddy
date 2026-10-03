@@ -56,9 +56,9 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json",
     "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "selftest": "npm run build && node dist/tools/selftest/run.js",
-    "dev:account": "npm run build && node dist/tools/dev-test.js start --account",
+    "dev:account": "npm run build && node dist/tools/dev/dev-test.js start --account",
     "test:e2e": "npm run build && node scripts/e2e-companion.cjs",
-    "data:build": "npm run build && node dist/tools/build-dex.js && node dist/tools/build-names.js && node dist/tools/build-species.js && node dist/tools/build-evo.js && node dist/tools/build-evo-items.js && node dist/tools/build-unlocks.js && node dist/tools/build-natures.js && node dist/tools/build-items.js && node dist/tools/build-dex-text.js",
+    "data:build": "npm run build && node dist/tools/data/build-dex.js && node dist/tools/data/build-names.js && node dist/tools/data/build-species.js && node dist/tools/data/build-evo.js && node dist/tools/data/build-evo-items.js && node dist/tools/data/build-unlocks.js && node dist/tools/data/build-natures.js && node dist/tools/data/build-items.js && node dist/tools/data/build-dex-text.js",
     "logo:build": "npm run build && node scripts/sync-official-logo.js"
   },
   "dependencies": {

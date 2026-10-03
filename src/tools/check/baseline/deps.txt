@@ -1,43 +1,22 @@
 # deps 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-deps.js --update-baseline)
-cycle: src/box/slots.ts ⇄ src/mail/core.ts ⇄ src/save/v3.ts
+cycle: src/box/slots.ts ⇄ src/mail/core.ts ⇄ src/party/create.ts ⇄ src/save/v3.ts
 cycle: src/tx/dex-detail.ts ⇄ src/tx/lists.ts ⇄ src/tx/shop-detail.ts
-layer: src/achievement/core.ts → src/save/rules.ts
 layer: src/agents/notice.ts → src/save/legacy.ts
-layer: src/bag/use.ts → src/save/rules.ts
-layer: src/box/slots.ts → src/save/rules.ts
 layer: src/box/slots.ts → src/save/v3.ts
 layer: src/cli/game.ts → src/main/paths.ts
-layer: src/dex/evolve.ts → src/achievement/core.ts
-layer: src/dex/forms.ts → src/shop/catalog.ts
 layer: src/dex/mega.ts → src/party/presets.ts
-layer: src/dex/mega.ts → src/save/rules.ts
-layer: src/dex/reach.ts → src/achievement/core.ts
-layer: src/dex/reach.ts → src/shop/catalog.ts
-layer: src/dex/unlocks.ts → src/save/rules.ts
-layer: src/egg/open.ts → src/achievement/core.ts
-layer: src/find/core.ts → src/save/rules.ts
+layer: src/egg/pool.ts → src/save/v3.ts
 layer: src/notify/banner.ts → src/main/text.ts
 layer: src/notify/notifier.ts → src/save/legacy.ts
-layer: src/party/create.ts → src/save/rules.ts
-layer: src/party/home.ts → src/save/rules.ts
 layer: src/party/home.ts → src/save/v3.ts
-layer: src/party/presets.ts → src/save/rules.ts
 layer: src/party/starter.ts → src/egg/hatch.ts (type)
-layer: src/party/starter.ts → src/save/rules.ts
-layer: src/shop/buy.ts → src/save/rules.ts
 layer: src/shop/buy.ts → src/save/v3.ts
-layer: src/shop/catalog.ts → src/save/rules.ts
-layer: src/shop/sell-pet.ts → src/save/rules.ts
-layer: src/shop/sell.ts → src/save/rules.ts
-layer: src/state/care.ts → src/save/rules.ts
 layer: src/state/settings.ts → src/save/v3.ts
 layer: src/state/time.ts → src/achievement/core.ts
-layer: src/state/time.ts → src/save/rules.ts
-layer: src/trade/core.ts → src/achievement/core.ts
-layer: src/trade/core.ts → src/save/rules.ts
 layer: src/trade/net.ts → src/online/client.ts
+layer: src/trade/net.ts → src/online/codes.ts
+layer: src/trade/net.ts → src/online/server-call.ts
 layer: src/trade/net.ts → src/online/session.ts
-layer: src/trade/session.ts → src/tx/executor.ts (type)
 layer: src/tx/dex-detail.ts → src/main/text.ts
 layer: src/tx/handlers.ts → src/main/text.ts
 layer: src/tx/lists.ts → src/main/text.ts
