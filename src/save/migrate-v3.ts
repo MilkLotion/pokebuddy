@@ -12,7 +12,9 @@ import { BAG_RULES } from "../bag/rules.js";
 import { PARTY_RULES, PET_RULES } from "../party/rules.js";
 import { CARE_RULES } from "../state/rules.js";
 import { legacyGender } from "../dex/gender.js";
-import { empty, emptySlots, fillBoxes, putStrays } from "./v3.js";
+import { empty, putStrays } from "./v3.js";
+import { emptySlots } from "../party/slots.js";
+import { fillBoxes } from "../box/boxes.js";
 
 export interface MigrateResult {
   save: SaveV3 | null; // 검사를 통과한 결과. 실패하면 null

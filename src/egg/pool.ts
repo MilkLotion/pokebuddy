@@ -6,7 +6,6 @@
 import { isMetaKey, type DexOptions } from "../dex/data.js";
 import { eggPool, inRandomEgg, isSingleEgg } from "../dex/obtain.js";
 import { eggTable } from "../dex/tables.js";
-import { maxEggNo } from "../save/v3.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 import { EGG_RULES } from "./rules.js";
 
@@ -27,6 +26,16 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
   if (isMetaKey(kind)) return [];
   const eggs = eggTable(opts);
   return Object.entries(eggs[kind]?.bonus ?? {}).filter(([k, p]) => typeof p === "number" && p > 0 && eggs[k] != null);
+}
+
+// 알 식별자 `e숫자` 의 가장 큰 번호
+export function maxEggNo(eggs: { id: string }[]): number {
+  let max = 0;
+  for (const e of eggs) {
+    const m = /^e(\d+)$/.exec(e.id);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max;
 }
 
 // 다음 알 식별자 — 지금까지 만든 알 수(eggSeq)와 지금 있는 알의 가장 큰 번호 중 큰 것의 다음.

@@ -13,9 +13,7 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기와 시간 적용이 한다
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import { MEGA_RULES } from "./rules.js";
-import { allPresets } from "../party/presets.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
-import type { ReasonOf } from "../shared/names/reasons.js";
 
 export type MegaKind = "mega" | "primal";
 
@@ -125,73 +123,5 @@ export function grantStones(save: SaveV3, opts?: DexOptions): string[] {
 // 개체가 고를 수 있는 메가 모습 — 메가스톤이 없으면 빈 목록
 export const megaChoices = (pet: PetV3, opts?: DexOptions): string[] => (pet.mega?.stone === true ? megaFormsOf(pet.species, opts) : []);
 
-// 개체가 든 프리셋의 칸들. 박스 개체면 null
-function presetSlotsOf(save: SaveV3, petId: string): { preset: number; petIds: string[] } | null {
-  for (const { preset, slots } of allPresets(save)) {
-    const ids = slots.filter((s) => s.state === "pokemon" && s.petId).map((s) => s.petId as string);
-    if (ids.includes(petId)) return { preset, petIds: ids };
-  }
-  return null;
-}
-
-export type MegaFailure = ReasonOf<"no-pet" | "no-stone" | "bad-form" | "not-in-party" | "already">;
-
-export interface MegaResult {
-  ok: boolean;
-  reason?: MegaFailure;
-  petId?: string;
-  on?: string | null; // 바뀐 뒤의 모습. null 이면 기본 모습
-  reverted?: string[]; // 같은 프리셋에서 기본 모습으로 돌아간 개체
-}
-
-// 메가 모습을 켜거나 끈다 — form 이 null 이면 기본 모습으로 돌아간다
-export function setMega(save: SaveV3, petId: string, form: unknown, opts?: DexOptions): MegaResult {
-  const pet = save.pets.find((p) => p.id === petId);
-  if (!pet) return { ok: false, reason: "no-pet" };
-  if (form == null) {
-    if (!pet.mega?.on) return { ok: false, reason: "already" };
-    delete pet.mega.on;
-    return { ok: true, petId, on: null, reverted: [] };
-  }
-  if (pet.mega?.stone !== true) return { ok: false, reason: "no-stone" };
-  if (typeof form !== "string" || !megaChoices(pet, opts).includes(form)) return { ok: false, reason: "bad-form" };
-  if (pet.mega.on === form) return { ok: false, reason: "already" };
-  const place = presetSlotsOf(save, petId);
-  if (!place) return { ok: false, reason: "not-in-party" };
-  const reverted: string[] = [];
-  // 제한에서 빠지는 모습은 다른 개체를 풀지 않는다. 다른 개체의 제한 밖 모습도 풀지 않는다
-  if (!megaFree(form, opts)) {
-    for (const other of save.pets) {
-      if (other.id === petId || !other.mega?.on || megaFree(other.mega.on, opts) || !place.petIds.includes(other.id)) continue;
-      delete other.mega.on;
-      reverted.push(other.id);
-    }
-  }
-  pet.mega.on = form;
-  return { ok: true, petId, on: form, reverted };
-}
-
-// 같은 프리셋에서 지금 메가 모습인 다른 개체 — 확인 창이 "원래 모습으로 돌아가요" 줄에 쓴다
-export function megaRivals(save: SaveV3, petId: string, opts?: DexOptions): PetV3[] {
-  const place = presetSlotsOf(save, petId);
-  const pet = save.pets.find((p) => p.id === petId);
-  // 이 개체의 모습이 제한 밖이면 아무도 풀리지 않는다. 한 종의 모습은 모두 같은 쪽이다
-  if (!place || !pet || megaFree(megaFormsOf(pet.species, opts)[0], opts)) return [];
-  return save.pets.filter((p) => p.id !== petId && p.mega?.on && !megaFree(p.mega.on, opts) && place.petIds.includes(p.id));
-}
-
-// 규칙에 맞지 않는 메가 모습을 푼다 — 거래 실행기가 명령마다 한 번 부른다
-//   프리셋에 들지 않은 개체(박스), 종이 바뀌어 모습의 기본 종이 지금 종과 다른 개체, 메가스톤이 없는 개체
-export function settleMega(save: SaveV3, opts?: DexOptions): string[] {
-  const inPreset = new Set<string>();
-  for (const { slots } of allPresets(save)) for (const s of slots) if (s.state === "pokemon" && s.petId) inPreset.add(s.petId);
-  const reverted: string[] = [];
-  for (const pet of save.pets) {
-    const on = pet.mega?.on;
-    if (!on) continue;
-    if (inPreset.has(pet.id) && pet.mega?.stone === true && megaOf(on, opts)?.base === pet.species) continue;
-    delete pet.mega!.on;
-    reverted.push(pet.id);
-  }
-  return reverted;
-}
+// [임시] 옛 자리의 다시 내보내기 — src/tools 가 새 자리(src/party/mega-form.ts)에서 가져오면 지운다
+export { megaRivals, setMega, settleMega, type MegaFailure, type MegaResult } from "../party/mega-form.js";
