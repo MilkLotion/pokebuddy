@@ -1,5 +1,7 @@
-// 메뉴 창의 표현 — 메뉴 모델(MenuItemConstructorOptions 모양) → 메뉴 창이 그리는 모양, 고른 번호 → 모델의 항목.
-// 메뉴 모델(포켓몬 메뉴·트레이·점프 목록)은 화면 값이 만든다 (src/view/menus.ts). Electron 을 값으로 가져오지 않는다 (node 시험 가능)
+// 메뉴 창의 표현 — 메뉴 모델(MenuItemConstructorOptions 모양) → 메뉴 창이 그리는 모양(MenuView), 고른 번호 → 모델의 항목.
+// view/menus.ts 와 다른 점: 그쪽은 "무슨 항목이 있나"(포켓몬 메뉴·트레이·점프 목록의 모델)를 만들고, 이 파일은 그 모델을 메뉴 창
+// (src/main/menus/menu-window.ts)이 그릴 모양으로 바꾸고 고른 번호를 항목으로 되돌린다. Electron 을 값으로 가져오지 않는다 (node 시험 가능)
+// (예전 src/main/menus.ts. 메인 레인 M8-3 에서 화면 값으로 옮겼다)
 import type { MenuItemConstructorOptions } from "electron";
 import type { MenuSubView, MenuView } from "../shared/model/overlays";
 

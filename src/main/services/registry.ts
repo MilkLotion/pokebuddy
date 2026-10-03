@@ -15,7 +15,7 @@ import type { GameV3 } from "../game";
 import { createMainMail, type MainMail } from "../mail";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "../online";
 import { createMainTrade, type MainTrade } from "../trade";
-import { createTradeScreen, type TradeScreenBuilder } from "../trade-screen";
+import { createTradeScreen, type TradeScreenBuilder } from "../../view/trade-screen";
 
 // 아직 참가하지 않은 교환 링크의 수명 — 참가 전 10분이 지나면 버린다
 export const TRADE_LINK_RULES = { ttlMs: 10 * 60_000, settleMs: 10_000 } as const;

@@ -10,7 +10,7 @@ import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { menuView, subId } from "../../main/menus";
+import { menuView, subId } from "../../view/menu-view";
 import { petMenu } from "../../view/menus";
 import { t } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";

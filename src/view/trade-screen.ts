@@ -1,9 +1,10 @@
 // 교환 모달이 그리는 값 — 교환 흐름의 보기(src/online/trade-session.ts)와 저장을 합쳐 화면이 바로 그릴 모양으로 바꾼다.
-// 모양은 src/shared/manage.d.ts 의 TradeScreen. 화면은 Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면
+// 모양은 src/shared/model/trade.ts 의 TradeScreen. 화면은 Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 6화면
 //
 // 저장을 읽기만 한다. 완료 화면의 "보낸 포켓몬"은 반영 뒤 저장에 없으므로 교환 중에 본 카드를 기억해 둔다
+// (예전 src/main/trade-screen.ts. 메인 레인 M8-2 에서 화면 값으로 옮겼다 — 만드는 곳은 메인의 서비스 묶음 src/main/services/registry.ts)
 import { profileOf } from "../dex/species.js";
-import { natureName, petName, typeName } from "../view/text.js";
+import { natureName, petName, typeName } from "./text.js";
 import type { TradePet } from "../trade/exchange.js";
 import { isSinglePet } from "../dex/forms.js";
 import { locatePet, presetName } from "../party/presets.js";
