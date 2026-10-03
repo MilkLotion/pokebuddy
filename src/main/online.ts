@@ -26,8 +26,7 @@ import { createSessionGate, type SessionGate } from "../online/session.js";
 import { withTimeout } from "../online/server-call.js";
 import { ONLINE_TIMING } from "../online/timing.js";
 import { onlineConfig } from "../online/config.js";
-import { createSessionStorage, sessionFile } from "../online/session-storage.js";
-import { createKeyVault } from "./services/vault.js";
+import type { SessionStorage } from "../online/client.js";
 import { devEnv, devNumber } from "./app/dev-run.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
@@ -38,6 +37,7 @@ import type { AccountReplyCode, CloudErrorCode } from "../shared/names/online-co
 
 export interface MainOnlineOptions {
   saveFile: string;
+  storage: SessionStorage; // 세션 파일 저장소 — 교환과 같은 한 벌을 앱이 넘긴다 (src/main/services/registry.ts)
   tradeBlocked: () => boolean; // 걸린 교환(열린 채널·반영하지 않은 교환)이 있다
   onUserChanged: () => void; // 로그인·로그아웃·익명 계정 발급 — 앱은 교환 세션을 새로 만든다
   onSaveReplaced: () => void; // 클라우드 저장을 받아 로컬 저장을 바꿨다 — 앱은 파티를 다시 읽는다
@@ -104,7 +104,7 @@ export function cloudSeedOf(saveFile: string): string | null {
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
-  const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: createSessionStorage({ file: sessionFile(), vault: createKeyVault() }) });
+  const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: o.storage });
   const gate = createSessionGate(client);
   const cloudFile = path.join(path.dirname(o.saveFile), "cloud.json");
   const listeners = new Set<(screen: AccountScreen) => void>();

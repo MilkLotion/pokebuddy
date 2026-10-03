@@ -10,12 +10,14 @@ import type { MailScreen } from "../../shared/model/mail";
 import type { TradeScreen } from "../../shared/model/trade";
 import { mailCodeOf } from "../../online/codes.js";
 import { callRpc } from "../../online/server-call.js";
+import { createSessionStorage, sessionFile, type SessionFileStorage } from "../../online/session-storage.js";
 import { pendingTradeOf } from "../../party/pet-actions";
 import type { GameV3 } from "../game";
 import { createMainMail, type MainMail } from "../mail";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "../online";
 import { createMainTrade, type MainTrade } from "../trade";
 import { createTradeScreen, type TradeScreenBuilder } from "../../view/trade-screen";
+import { createKeyVault } from "./vault";
 
 // 아직 참가하지 않은 교환 링크의 수명 — 참가 전 10분이 지나면 버린다
 export const TRADE_LINK_RULES = { ttlMs: 10 * 60_000, settleMs: 10_000 } as const;
@@ -57,6 +59,10 @@ export function createServices(deps: ServicesDeps): Services {
   let mainMail: MainMail | null = null;
   let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
   let tradeLink: { link: string; at: number } | null = deps.firstLink ? { link: deps.firstLink, at: Date.now() } : null;
+  // 세션 파일 저장소 한 벌 — 계정·클라우드(online)와 교환이 같은 메모리로 session.bin 을 본다.
+  // 따로 두 벌이면 한쪽이 쓴 세션을 다른 쪽이 낡은 메모리로 덮는다(초상·울음소리 인스턴스를 한 벌로 맞춘 것과 같은 일)
+  let sessionStorage: SessionFileStorage | null = null;
+  const sessions = (): SessionFileStorage => (sessionStorage ??= createSessionStorage({ file: sessionFile(), vault: createKeyVault() }));
 
   const stopTrade = (): void => {
     mainTrade?.session.stop();
@@ -73,7 +79,7 @@ export function createServices(deps: ServicesDeps): Services {
       const on = online();
       mainTrade = createMainTrade(
         game,
-        on ?? undefined,
+        on ?? { storage: sessions() },
         () => mainOnline?.noteSaved("event"),
         hold,
         on ? { isAnonymous: () => on.isAnonymous(), beforeOffer: () => on.flush(), mayIssue: () => on.mayIssue() } : undefined,
@@ -153,6 +159,7 @@ export function createServices(deps: ServicesDeps): Services {
       mainOnline = createMainOnline({
         ...deps.online,
         saveFile: deps.saveFile,
+        storage: sessions(),
         tradeBlocked,
         // 사용자가 바뀌었다 — 교환 채널은 사용자에 묶여 있으므로 교환 세션을 새로 만든다
         onUserChanged: () => {
