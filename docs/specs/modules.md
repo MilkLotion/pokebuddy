@@ -261,7 +261,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `starter.pick` | 첫 선택 | `src/party` |
 | `box.sort` / `box.move` / `box.rename` / `box.order` | 박스 정렬·칸 옮기기·이름 바꾸기·박스 순서 바꾸기 | `src/box` |
 | `agent.connect` / `agent.disconnect` | 개별 연결 | `src/agents` |
-| `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/trade/session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 명령 통로 `mailbox` 로 넘긴다 | `src/trade`, `src/main` |
+| `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/online/trade-session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 명령 통로 `mailbox` 로 넘긴다 | `src/trade`, `src/main` |
 | `trade.lock` / `trade.unlock` / `trade.apply` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영. 교환 세션만 부른다 | `src/trade`, `src/tx` |
 | `mail.apply` / `mail.read` | 우편함 선물 넣기·읽음 기록. 우편함(`src/main/mail.ts`)만 부른다. 명령 처리기에 등록하지 않아 설정창·CLI 는 부를 수 없다 | `src/mail`, `src/tx` |
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다 | `src/state`, `src/main` |

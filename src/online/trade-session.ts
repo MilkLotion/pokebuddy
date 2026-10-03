@@ -1,4 +1,4 @@
-// 친구 교환 흐름 — 서버 호출(src/trade/net.ts)과 로컬 거래(trade.lock·unlock·apply)를 잇는다.
+// 친구 교환 흐름 — 서버 호출(./trade-net.ts)과 로컬 거래(trade.lock·unlock·apply)를 잇는다.
 // 설계는 worklog/records/trade/record.md "전체 구조", "로컬 저장과 복구", "실시간 알림"
 //
 // Electron 을 모른다. 거래 실행과 저장 읽기를 받아서 쓴다. 화면은 onView 로 받은 보기만 그린다.
@@ -9,8 +9,10 @@
 //   로그인  익명 계정은 만들기·참가·제안을 먼저 거절한다(login-required). 판정을 넘기지 않으면 서버 오류(TRADE_LOGIN_REQUIRED)로 같은 거절이 된다
 //   제안    올리기 직전 클라우드 저장을 올린다(beforeOffer). 서버 저장에 그 개체가 아직 없으면 save-wait 로 거절한다
 //           (worklog-mac/records/cloud-authority/design-p2.md 4절 원장, 13절 서버 계약)
-import { offerable, pendingOf, refOf, snapshot, validateReceived, type ReceiveFailure, type TradePet } from "./core.js";
-import { tokenOf, type ChannelView, type TradeNet } from "./net.js";
+import { checkOffer, offerOf, refOf, validateReceived, type ReceiveFailure, type TradePet } from "../trade/exchange.js";
+import { tokenOf } from "../trade/link.js";
+import { pendingTradeOf } from "../party/pet-actions.js";
+import type { ChannelView, TradeNet } from "./trade-net.js";
 import type { TradeCode } from "../shared/names/online-codes.js";
 import type { TxResult } from "../shared/command";
 import type { SaveV3 } from "../shared/save-v3";
@@ -186,7 +188,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   // 서버가 끝났다고 알린 채널을 로컬에 맞춘다
   const settle = async (view: ChannelView): Promise<void> => {
     if (view.status === "done") {
-      if ((o.read() ? pendingOf(o.read()!) : null)?.channelId === view.id && o.beforeApply?.() === true) return;
+      if ((o.read() ? pendingTradeOf(o.read()!) : null)?.channelId === view.id && o.beforeApply?.() === true) return;
       const res = tx("trade.apply", { channelId: view.id, received: view.friend_offer });
       if (!res.ok) { fail("LOCAL", String(res.reason)); return; }
       const result = res.result as { applied: boolean; petId?: string };
@@ -231,7 +233,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     const view = res.data;
     // 친구가 제안을 바꿔 판 번호가 달라졌으면 내 확정은 풀렸다. 로컬 잠금도 푼다
     // 판 번호가 같으면 풀지 않는다 — 확정하기 전에 읽은 오래된 보기일 수 있다
-    const pending = (() => { const s = o.read(); return s ? pendingOf(s) : null; })();
+    const pending = (() => { const s = o.read(); return s ? pendingTradeOf(s) : null; })();
     if (view.status === "joined" && pending?.channelId === id && !view.my_ready && pending.offerRev !== view.offer_rev) tx("trade.unlock", { channelId: id });
     let friendPet: TradePet | null = null;
     let friendBlocked: ReceiveFailure | null = null;
@@ -258,7 +260,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     const s = await session();
     if (stopped) return;
     const save = o.read();
-    const pending = save ? pendingOf(save) : null;
+    const pending = save ? pendingTradeOf(save) : null;
     if (!s.ok) {
       // 세션이 없고 만들지 않는다 — 복구할 교환이 없으면 기다릴 것이 없다. 계정이 바뀌면 앱이 세션을 새로 만든다
       if (s.code === "TRADE_LOGIN_REQUIRED" && !pending) { emit({ busy: false }); return; }
@@ -335,7 +337,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (no) return no;
     const first = o.read();
     if (!first) return fail("LOCAL", "no-save");
-    const check = offerable(first, petId);
+    const check = checkOffer(first, petId);
     if (!check.ok) return fail("LOCAL", check.reason);
     if (await anonymous()) return release("login-required");
     // 서버 저장을 먼저 맞춘다. 실패해도 보낸다 — 서버 저장에 없으면 서버가 save-wait 로 돌려준다
@@ -348,9 +350,9 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     // 올리는 동안 바뀌었을 수 있다 — 다시 읽어 보낸다
     const save = o.read();
     if (!save) return fail("LOCAL", "no-save");
-    const ok = offerable(save, petId);
+    const ok = checkOffer(save, petId);
     if (!ok.ok) return fail("LOCAL", ok.reason);
-    const res = await o.net.setOffer(channelId, snapshot(ok.pet), refOf(ok.pet));
+    const res = await o.net.setOffer(channelId, offerOf(ok.pet), refOf(ok.pet));
     if (!res.ok) return failNet(res.code, res.detail);
     emit({ myPetId: petId, busy: false });
     await refresh();
