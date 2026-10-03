@@ -2,7 +2,7 @@
 //
 // save.json 의 바이트를 쓰거나 옮기는 코드는 이 파일에만 있다. 입구는 아래 다섯과 읽기(repair)다. 모두 writer 프로세스만 부른다(확인은 부르는 쪽)
 //   writeSave        정규화된 저장을 쓴다 — 실행기의 쓰기(src/main/game.ts)
-//   createEmptySave  저장이 없을 때 빈 저장 — 첫 포켓몬 고르기(src/main/save-party.ts)
+//   createEmptySave  저장이 없을 때 빈 저장 — 첫 포켓몬 고르기(src/save/save-party.ts)
 //   replaceSave      받은 클라우드 저장으로 바꾼다. 로컬을 <저장>.cloud-<시각>.bak 으로 남긴다(src/main/online.ts)
 //   sealPlainSave    평문 저장을 <저장>.plain-<시각>.bak 으로 남기고 암호화해 다시 쓴다(src/save/key.ts)
 //   setAsideSave     저장을 <저장>.<태그>-<시각>[.bak] 으로 옮긴다 — 파손 격리, 키 파손·새로 시작, 로그아웃·삭제

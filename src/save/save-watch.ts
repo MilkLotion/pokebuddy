@@ -6,7 +6,7 @@
 //   reader  못 잡았다. 읽기만 한다. reclaimMs 마다 다시 잡아 본다
 //
 // 파일 감시는 두 역할 모두 건다. 자기가 쓴 것도 감시로 돌아와 읽으므로 메모리와 파일이 갈라지지 않는다. reclaimMs 마다 주기로도 본다.
-// 무대가 읽을 모양으로 바꾸기와 명령 보내기는 부르는 쪽(src/main/save-party.ts)의 일이다
+// 명령 보내기는 부르는 쪽(./save-party.ts)의 일이고, 무대가 읽을 모양은 화면 값(src/view/party-pet.ts)이 만든다
 import fs from "node:fs";
 import path from "node:path";
 import type { SaveV3 } from "../shared/save-v3";
