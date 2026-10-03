@@ -7,7 +7,8 @@ import path from "node:path";
 import { hookInstalled } from "../agents/hooks";
 import { dexPath, suggestSlugs } from "../dex/dex-number";
 import { frontWindow, hostOf } from "../follow/front";
-import { agentStateOf, readStateRecords, stateFor } from "../follow/state";
+import { agentStateOf, stateFor } from "../follow/state";
+import { readHookRecords } from "../agents/hook-records";
 import { readLastError } from "../platform/last-error";
 import { PATHS } from "../platform/paths";
 import { USER_DEFAULTS, readConfig } from "../platform/user-config";
@@ -43,7 +44,7 @@ export function runStatus(petArg?: string): void {
   const failure = readLastError(PATHS.lastError);
   if (failure && failure.reason !== "starter-cancelled") say(`마지막 실패: ${failure.slug} — ${failure.message} (${Math.round(Number(age(failure.at)) / 60)}분 전)`);
 
-  const records = readStateRecords(PATHS.state);
+  const records = readHookRecords(PATHS.state);
 
   // 맨 앞 창과 그 창이 터미널 호스트인지 — 동반자와 같은 판정 (follow/front hostOf)
   try {

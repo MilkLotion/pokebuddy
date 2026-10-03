@@ -11,6 +11,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { HookStateRead } from "../shared/hook-record";
+import { lastSignalsOf, readHookRecords } from "./hook-records";
 
 export interface NodeInfo {
   path: string;
@@ -88,27 +89,7 @@ export async function findNode(fresh = false): Promise<NodeInfo | null> {
 }
 
 // CLI 별 마지막 신호 시각(ms) — 훅이 쓴 state/<세션>.json 의 at(초). 점검 기록은 세지 않는다
-export function lastSignals(stateDir: string): Record<string, number> {
-  const out: Record<string, number> = {};
-  let names: string[] = [];
-  try {
-    names = fs.readdirSync(stateDir).filter((n) => n.endsWith(".json") && !n.startsWith(CHECK_RULES.session));
-  } catch {
-    return out;
-  }
-  for (const name of names) {
-    try {
-      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as HookStateRead;
-      const cli = typeof rec.cli === "string" ? rec.cli : "claude";
-      if (typeof rec.at !== "number") continue;
-      const ms = Math.round(rec.at * 1000);
-      if (ms > (out[cli] ?? 0)) out[cli] = ms;
-    } catch {
-      // 쓰는 중이거나 깨진 파일 — 건너뛴다
-    }
-  }
-  return out;
-}
+export const lastSignals = (stateDir: string): Record<string, number> => lastSignalsOf(readHookRecords(stateDir, { skipPrefix: CHECK_RULES.session }));
 
 // 점검 — command 는 그 CLI 에 등록하는 것과 같은 명령, hookFile 은 그 명령이 부르는 훅 파일
 export async function probeHook(cli: string, command: string, hookFile: string, node: NodeInfo | null, stateDir: string): Promise<ProbeResult> {

@@ -4,10 +4,9 @@
 // 상태 모듈은 누적값이 아니라 "지난 tick 뒤 얼마나 늘었나" 만 쓰므로 여기서 증분을 만든다.
 // 펫이 처음 뜰 때는 기존 세션의 누적값을 기준점(baseline)으로 잡아 옛 사용량을 세지 않는다.
 // 파일·시각을 모르는 순수 함수와, 폴더를 읽는 함수 하나(readSessionUsages)로 나뉜다
-import fs from "node:fs";
-import path from "node:path";
 import type { AgentName } from "../shared/names/agents";
-import type { HookStateRead, Usage } from "../shared/hook-record";
+import type { Usage } from "../shared/hook-record";
+import { cliOf, readHookFiles } from "./hook-records";
 
 export const ZERO_USAGE: Readonly<Usage> = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -51,22 +50,11 @@ export const isUsage = (v: unknown): v is Usage =>
 
 // 훅 기록 폴더 → 세션별 사용량. 파일 이름이 세션 id 다. usage 가 없는 기록(codex·gemini·옛 훅)은 뺀다
 export function readSessionUsages(stateDir: string): SessionUsage[] {
-  let names: string[];
-  try {
-    names = fs.readdirSync(stateDir).filter((f) => f.endsWith(".json"));
-  } catch {
-    return [];
-  }
   const out: SessionUsage[] = [];
-  for (const name of names) {
-    try {
-      const rec = JSON.parse(fs.readFileSync(path.join(stateDir, name), "utf8")) as HookStateRead;
-      if (!isUsage(rec.usage)) continue;
-      const atSec = Number(rec.usageAt ?? rec.at) || 0;
-      out.push({ sessionId: name.slice(0, -5), cli: String(rec.cli || "claude"), usage: rec.usage, at: Math.round(atSec * 1000) });
-    } catch {
-      // 쓰는 중·파손 — 이 파일만 건너뛴다
-    }
+  for (const { session, record } of readHookFiles(stateDir)) {
+    if (!isUsage(record.usage)) continue;
+    const atSec = Number(record.usageAt ?? record.at) || 0;
+    out.push({ sessionId: session, cli: cliOf(record), usage: record.usage, at: Math.round(atSec * 1000) });
   }
   return out;
 }

@@ -7,6 +7,7 @@
 // 따를 창의 좌표는 정하지 않는다 — 무대의 자리는 놀이공간 설정이 정한다 (src/main/layout.ts playLanes)
 import * as follow from "../follow/front";
 import * as pkstate from "../follow/state";
+import { readHookRecords } from "../agents/hook-records";
 import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../follow/types";
 import { helperCommand, parseInfo, queryHelper, stopHelper } from "../follow/winbounds";
 import type { Paths } from "../platform/paths";
@@ -102,7 +103,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
   function poll(): void {
     if (host.quitting()) return;
     // 훅 기록은 폴링마다 한 번 — 호스트 판정(어느 앱이 CLI 를 띄운 적 있나)과 상태 판정이 같이 쓴다
-    stateRecords = pkstate.readStateRecords(paths.state);
+    stateRecords = readHookRecords(paths.state);
     const helper = helperCommand(host.platform, paths.project, env);
     if (!helper) {
       // 추적 수단이 없다 — 무대는 놀이공간에 그대로 있다. 상태는 대기
