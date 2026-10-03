@@ -200,6 +200,14 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   s.pets.push(pet({ id: "box", species: "gengar", evolved: [], mega: { ...full, stone: true } }));
   s.boxes[0]!.slots[0] = "box";
   assert.equal(setMega(s, "box", "gengar-mega").reason, "not-in-party");
+  // 적용하지 않은 프리셋의 개체도 켜지 못한다 (docs/specs/game.md "적용한 프리셋의 칸에 든 개체만", 94 항목 9-2-1)
+  s.party.presetCount = 2;
+  s.party.presets = [null, s.party.slots.map((x, i) => (i === 0 ? { state: "pokemon" as const, petId: "box", hidden: false } : { state: "empty" as const }))];
+  s.boxes[0]!.slots[0] = null;
+  assert.equal(setMega(s, "box", "gengar-mega").reason, "not-in-party", "다른 프리셋의 개체");
+  s.party.presetCount = 1;
+  delete s.party.presets;
+  s.boxes[0]!.slots[0] = "box";
   setMega(s, "p1", "charizard-mega-x");
   assert.deepStrictEqual(settleMega(s), [], "제자리면 그대로");
   assert.ok(keepInBox(s, "p1").ok);

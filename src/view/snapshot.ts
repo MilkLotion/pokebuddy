@@ -123,7 +123,7 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
       baseTypes: base.types,
       baseTypeIds: base.typeIds,
       forms: choices.map(formView),
-      canChange: locatePet(save, pet.id)?.kind === "preset",
+      canChange: (() => { const at = locatePet(save, pet.id); return at?.kind === "preset" && at.active; })(), // 적용한 프리셋의 개체만 (94 항목 9-2-1)
       rivals: megaRivals(save, pet.id).map((p) => petName(shownSpecies(p))),
     },
   };
