@@ -31,8 +31,5 @@ export type PickerIpc = {
 // 채널 이름 — preload 와 메인이 같은 문자열을 쓰도록 계약의 열쇠로 묶는다
 export type StageChannel = keyof StageIpc | keyof PickerIpc;
 
-// preload 가 window.pokebuddy 로 내놓는 것 — 무대와 선택 창이 같은 preload 를 쓴다.
-// [임시] onCry 만 계약과 다르다 — preload 가 { uri, volume } 을 인자 둘로 푼다. 다리를 계약과 1:1 로 맞추면 이 덧쓰기를 걷는다
-export type StageBridge = Omit<BridgeOf<StageIpc & PickerIpc>, "onCry"> & {
-  onCry: (cb: (uri: string, volume: number) => void) => void;
-};
+// preload 가 window.pokebuddy 로 내놓는 것 — 무대와 선택 창이 같은 preload 를 쓴다
+export type StageBridge = BridgeOf<StageIpc & PickerIpc>;

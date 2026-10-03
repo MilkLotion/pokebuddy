@@ -60,13 +60,7 @@ const PICKER = {
   pickerPortraits: ["invoke", "picker:portraits"],
 } as const satisfies WireOf<PickerIpc>;
 
-const stageBridge = bridgeOf<StageIpc>(STAGE);
-const bridge: StageBridge = {
-  ...stageBridge,
-  ...bridgeOf<PickerIpc>(PICKER),
-  // [임시] 계약과 1:1 이 아닌 다리 — 메인이 보낸 { uri, volume } 을 인자 둘로 푼다. 렌더러가 cry 를 통째로 받게 되면 걷는다
-  onCry: (cb) => stageBridge.onCry((cry) => cb(cry.uri, cry.volume)),
-};
+const bridge: StageBridge = { ...bridgeOf<StageIpc>(STAGE), ...bridgeOf<PickerIpc>(PICKER) };
 
 contextBridge.exposeInMainWorld("pokebuddy", bridge);
 
