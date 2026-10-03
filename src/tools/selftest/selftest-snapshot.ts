@@ -68,7 +68,7 @@ function seed(): SaveV3 {
   const second = v.party.slots[1]?.pet;
   assert.equal(second?.feedReady, false);
   assert.equal(second?.feedInSec, 90, "ms 를 초로");
-  assert.deepStrictEqual(second?.buffs, [{ kind: "premium-food", name: "든든함", remainMin: 45 }], "ms 를 분으로 · 화면 이름과 함께");
+  assert.deepStrictEqual(second?.buffs, [{ kind: "premium-food", name: "든든함", remainMin: 45, text: "든든함 45분" }], "ms 를 분으로 · 화면 이름과 배지 글자와 함께");
   assert.deepStrictEqual(second?.buffNames, ["든든함"], "프리미엄먹이 버프의 화면 이름은 든든함 (2026-09-29 사용자 결정)");
   assert.equal(v.party.slots[0]?.pet?.feedReady, true);
   process.stdout.write("(3) 쿨타임과 버프 단위  ok\n");
@@ -286,4 +286,24 @@ function seed(): SaveV3 {
   process.stdout.write("(13) 구간 낱말·디버프·이름 상한·잠들기 선택지  ok\n");
 }
 
-process.stdout.write("selftest-snapshot: 통과 (이름·구간·단위·칸·알·가방·도감·진화 후보·공유 sid·구간 낱말·디버프·이름 상한·잠들기)\n");
+// (14) 시간으로 바뀌는 글자 — 버프 배지, 돌봄 단추, 알 칸 아래 글자. 화면은 이 글자를 그대로 쓰고 1초 시계가 표시만 고친다
+{
+  const v = snapshot(seed());
+  const p1 = v.party.slots[0]?.pet;
+  const p2 = v.party.slots[1]?.pet;
+  assert.deepEqual([p1?.feedText, p1?.playText], ["밥 주기", "놀아주기"]);
+  assert.equal(p2?.feedText, "밥 주기 · 2분", "쿨타임 90초는 올려서 2분");
+  assert.deepEqual(p2?.buffs.map((b) => b.text), ["든든함 45분"]);
+  const egg = v.eggs.list[0];
+  assert.equal(egg?.noteText, `${egg?.percent}% · 2분`);
+  const s = seed();
+  s.pets[0]!.fullness = 100;
+  s.pets[0]!.playCooldownMs = 60_000;
+  s.eggs[0]!.ready = true;
+  const after = snapshot(s);
+  assert.deepEqual([after.party.slots[0]?.pet?.feedText, after.party.slots[0]?.pet?.playText], ["밥 주기 · 배부름", "놀아주기 · 쉬는 중"]);
+  assert.equal(after.eggs.list[0]?.noteText, "준비 완료");
+  process.stdout.write("(14) 시간 글자  ok\n");
+}
+
+process.stdout.write("selftest-snapshot: 통과 (이름·구간·단위·칸·알·가방·도감·진화 후보·공유 sid·구간 낱말·디버프·이름 상한·잠들기·시간 글자)\n");

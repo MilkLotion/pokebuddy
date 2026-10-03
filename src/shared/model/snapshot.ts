@@ -9,6 +9,7 @@ export interface ViewBuff {
   kind: string;
   name: string; // 화면 이름 — 든든함 · 신남 · 들뜸
   remainMin: number; // 남은 분(반올림). 시간으로만 바뀌는 값이라 1초 시계가 표시만 고친다
+  text: string; // 배지 글자 — "신남 12분" · "든든함 2시간" (src/shared/count-text.ts buffText)
 }
 
 // 진화 후보 하나 — 화면이 그대로 보인다. 낮·밤은 스냅샷을 만든 시각으로 정했다
@@ -48,6 +49,8 @@ export interface PetView {
   feedReady: boolean;
   feedInSec: number;
   playReady: boolean;
+  feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
+  playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 쉬는 중"
   playStreak: number;
   longPlay: boolean; // 신남 버프가 켜져 있다
   buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서
@@ -103,6 +106,7 @@ export interface EggView {
   ready: boolean;
   remainSec: number;
   percent: number;
+  noteText: string; // 알 칸 아래 글자 — "준비 완료" · "40% · 3분"
 }
 
 export interface BoxView {

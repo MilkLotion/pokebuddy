@@ -25,6 +25,7 @@ import { natures as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
 import { TIME_RULES } from "../state/rules.js";
+import { buffText, waitText } from "../shared/count-text.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
@@ -177,12 +178,14 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     feedReady: pet.feedCooldownMs <= 0,
     feedInSec: sec(pet.feedCooldownMs),
     playReady: pet.playCooldownMs <= 0,
+    feedText: pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedCooldownMs <= 0 ? "밥 주기" : `밥 주기 · ${waitText(sec(pet.feedCooldownMs))}`,
+    playText: pet.playCooldownMs <= 0 ? "놀아주기" : "놀아주기 · 쉬는 중",
     playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")
     buffs: BUFF_ORDER.flatMap((kind) => {
       const hit = pet.buffs.find((b) => b.kind === kind && b.remainMs > 0);
-      return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: min(hit.remainMs) }] : [];
+      return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: min(hit.remainMs), text: buffText({ name: t(`buff.${kind}`), remainMin: min(hit.remainMs) }) }] : [];
     }),
     buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
@@ -239,6 +242,7 @@ export function snapshot(
     ready: e.ready,
     remainSec: sec(e.remainMs),
     percent: eggPercent(e.remainMs, eggReadyMs),
+    noteText: e.ready ? "준비 완료" : `${eggPercent(e.remainMs, eggReadyMs)}% · ${waitText(sec(e.remainMs))}`,
   }));
 
   const bag: BagItemView[] = Object.entries(save.bag)
