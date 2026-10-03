@@ -1,0 +1,60 @@
+/* screens.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
+:root {
+  /* 색은 관리 창·영역 그리기 창과 같은 `PB / Color` 변수다 */
+  --ink: #1a3330;
+  --muted: #4a6663;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  font: 12px/1.5 var(--font-body);
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* 고르기 — 화면 전체를 어둡게 하고 어디를 눌러도 이 화면을 고른다 */
+body.pick {
+  background: var(--scrim);
+  cursor: pointer;
+}
+/* 번호 카드 — 강조는 옅은 배경(accent-bg)으로만 한다. 경계는 중립 1px 선 */
+#card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 240px;
+  padding: 24px 32px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(26, 51, 48, 0.25);
+}
+body.pick:hover #card {
+  background: var(--accent-bg);
+}
+#number {
+  font: 120px/1 var(--font-large);
+  color: var(--primary);
+}
+#label {
+  font-weight: 700;
+}
+#hint {
+  color: var(--muted);
+}
+#hint[hidden] {
+  display: none;
+}

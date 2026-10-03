@@ -1,0 +1,98 @@
+/* alert.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
+:root {
+  /* 색은 관리 창과 같은 `PB / Color` 변수다 */
+  --ink: #1a3330;
+  --muted: #4a6663;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+/* 창은 상자 440 에 그림자 자리 16 을 둘렀다 (src/main/alert-window.ts ALERT_RULES) */
+body {
+  padding: 16px;
+  color: var(--ink);
+  font: 12px/16px var(--font-body);
+  user-select: none;
+}
+/* 알림 상자 — Figma 99 `Alert / *` (`1152:20447`, 바탕 Dialog Compact). 창 밖 바탕화면 위에 뜨므로 배너와 같은 그림자를 둔다 */
+.alert {
+  width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(26, 51, 48, 0.12);
+}
+.alert:focus {
+  outline: none;
+}
+.alert[hidden] {
+  display: none;
+}
+.title {
+  margin: 0;
+  font: 15px/22px var(--font-large);
+  font-weight: 400;
+  color: var(--ink);
+}
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.lead {
+  margin: 0;
+  font-weight: 700;
+  line-height: 18px;
+}
+.detail {
+  margin: 0;
+  white-space: pre-line;
+}
+.detail[hidden] {
+  display: none;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.actions button {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 12px/18px var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.actions button:hover {
+  background: var(--accent-bg);
+}
+.actions button.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--inverse);
+}
+.actions button.primary:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+}
+.actions button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
