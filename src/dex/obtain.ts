@@ -1,5 +1,5 @@
 // 종을 얻는 길 — 알의 후보, 단일 포켓몬, 랜덤알 후보, 업적 보상 종. 규칙은 docs/specs/game.md "알", "랜덤알"
-// 상점(src/shop/catalog.ts)과 업적(src/achievement/core.ts)에 흩어져 있던 것을 도감 쪽으로 모았다. 저장을 읽지 않는다
+// 상점(src/shop/catalog.ts)과 업적(src/achievement/evaluate.ts)에 흩어져 있던 것을 도감 쪽으로 모았다. 저장을 읽지 않는다
 import { isMetaKey, type DexOptions } from "./data.js";
 import { prevOf } from "./evo.js";
 import { hatchBaseOf, regionalTable, shiftGroupOf } from "./regional.js";

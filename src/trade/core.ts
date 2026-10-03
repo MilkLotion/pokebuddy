@@ -13,13 +13,12 @@ import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { isNatureId } from "../dex/natures.js";
 import { hasProfile } from "../dex/species.js";
 import { locatePet, slotsOfPreset } from "../party/presets.js";
-import { singleSpecies } from "../dex/obtain.js";
 import { newPet, nextPetId } from "../party/create.js";
 import { recordDex } from "../dex/record.js";
 import { snapSize } from "../party/size.js";
 import type { DexOptions } from "../dex/data";
 import type { Gender, NatureId } from "../shared/species";
-import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
+import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
 // 교환으로 옮기는 값. 나머지(쿨타임·버프·위치·하루 기록)는 받는 쪽에서 처음 값으로 둔다

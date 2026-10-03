@@ -61,7 +61,7 @@ export function buildVerifyFiles(): Record<string, string> {
   const achievements: Record<string, string> = {};
   for (const [id, a] of Object.entries(load("achievements.json"))) {
     if (id.startsWith("_")) continue;
-    // 보상 — pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/achievement/core.ts)
+    // 보상 — pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/achievement/evaluate.ts)
     const r = a.reward && typeof a.reward === "object" ? a.reward : {};
     achievements[id] = r.pokemon ? "pokemon"
       : typeof r.points === "number" ? `points:${r.points}`

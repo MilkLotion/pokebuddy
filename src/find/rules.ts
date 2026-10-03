@@ -1,4 +1,4 @@
-// 줍기의 규칙표 — 수치는 docs/specs/balance.md "줍기". 판정 로직은 src/find/core.ts
+// 줍기의 규칙표 — 수치는 docs/specs/balance.md "줍기". 판정 로직은 src/find/pickup.ts
 // 저장 정규화(src/save/v3.ts)도 기록 수(keep)를 쓴다. 그래서 규칙표만 가져오는 파일로 따로 둔다
 //
 // 판정은 마리마다 따로 한다. 그 마리가 조건(무대에 나온 꺼낸 파티 개체 · 깨어 있음)을 채운 1초마다 1/2000 확률이다.

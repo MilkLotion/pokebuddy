@@ -3,7 +3,7 @@
 //
 // 값 모듈이다. 다른 파일을 가져다 쓰지 않는다
 
-// 대기열에 서는 튜토리얼 — 순서가 규칙이다. 같은 순간에 생긴 조건은 이 순서로 보여 준다 (src/tutorial/core.ts TUTORIALS)
+// 대기열에 서는 튜토리얼 — 순서가 규칙이다. 같은 순간에 생긴 조건은 이 순서로 보여 준다 (src/tutorial/conditions.ts TUTORIALS)
 export const TUTORIAL_IDS = ["first-care", "playground", "shop", "hatch", "achievement", "growth", "points", "party", "preset", "bag", "evolution"] as const;
 
 export type QueuedTutorialId = (typeof TUTORIAL_IDS)[number];

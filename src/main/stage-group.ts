@@ -75,7 +75,7 @@ export interface StageGroup {
   say(id: string, keys: string[], uris: Record<string, string>, ms: number): void; // 아이콘 말풍선 — src/main/stage.ts say
   pin(id: string | null): void;
   petIds(): string[]; // 파티 순서
-  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/core.ts)
+  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/pickup.ts)
   petOf(id: string): PartyPet | null;
   heldId(): string | null;
   stageRectOf(id: string): Rect | null; // 그 마리가 있는 무대 창 사각형(화면 좌표)

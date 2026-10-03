@@ -128,7 +128,7 @@ let partyWin: PartyWindow | null = null;
 const isRequest = (v: unknown): v is ManageRequest =>
   v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
 
-// 표면이 보내지 못하는 명령 — 거래 실행기에만 있는 이름이다 (src/tx/handlers.ts). 명령 이름 표가 생기면 그 표의 표시로 바꾼다
+// 표면이 보내지 못하는 명령 — 거래 실행기에만 있는 이름이다 (src/shared/names/commands.ts 의 internal). 명령 이름 표가 생기면 그 표의 표시로 바꾼다
 // (worklog/records/code-structure/design/40-contracts-save-online.md `internal`)
 const INTERNAL_COMMANDS: ReadonlySet<string> = new Set(["trade.lock", "trade.unlock", "trade.apply"]);
 const isInternalCommand = (cmd: string): boolean => cmd.startsWith("mail.") || INTERNAL_COMMANDS.has(cmd);

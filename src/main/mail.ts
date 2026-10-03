@@ -1,4 +1,4 @@
-// 우편함의 메인 쪽 입구 — 서버 편지 목록과 받기(supabase/migrations/20260929100000_mail.sql)를 로컬 저장(src/mail/core.ts)에 잇는다.
+// 우편함의 메인 쪽 입구 — 서버 편지 목록과 받기(supabase/migrations/20260929100000_mail.sql)를 로컬 저장(src/mail/gifts.ts)에 잇는다.
 // 설계는 worklog/records/post-box/record.md "구현 설계" (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행")
 //
 // Electron 을 모른다 — 서버 호출(rpc)과 실행기(run)를 받는다. 앱은 공유 Supabase 클라이언트를, 자체 검사는 가짜를 넘긴다.
@@ -158,7 +158,7 @@ export function createMainMail(o: MainMailOptions): MainMail {
     if (!o.signedIn()) return reply(false, "MAIL_LOGIN_REQUIRED");
     const gifts = parseGifts(letter.gifts);
     if (!gifts) return reply(false, "bad-gift"); // 모르는 선물 — 서버에 받은 기록을 남기지 않는다
-    // 포켓몬 선물이 들어갈 박스 빈 칸이 모자라다 — 서버에 받은 기록을 남기지 않는다. 자리를 만든 뒤 다시 받는다. 이미 얻은 단일 포켓몬은 세지 않는다 (src/mail/core.ts neededBoxRoom)
+    // 포켓몬 선물이 들어갈 박스 빈 칸이 모자라다 — 서버에 받은 기록을 남기지 않는다. 자리를 만든 뒤 다시 받는다. 이미 얻은 단일 포켓몬은 세지 않는다 (src/mail/gifts.ts neededBoxRoom)
     const mine = o.read();
     if (mine && neededBoxRoom(mine, gifts) > boxRoom(mine.boxes)) {
       error = "box-full";

@@ -5,8 +5,6 @@
 // 시작 포인트를 한 번 준다. 튜토리얼을 건너뛰어도 같다 (docs/specs/game.md "튜토리얼을 건너뛰어도 시작 포인트를 동일하게 한 번 지급한다").
 // 2026-09-26 전에는 규칙표에만 있고 주지 않았다 — 새 게임이 0 포인트로 시작했다.
 // 이미 개체가 있으면 아무것도 하지 않는다. 두 번 부르면 두 마리가 되기 때문이다.
-import { rollGender } from "../dex/gender.js";
-import { randomNature } from "../dex/natures.js";
 import type { DexOptions } from "../dex/data";
 import type { Rand } from "../shared/rand.js";
 import { addNewPet } from "./create.js";

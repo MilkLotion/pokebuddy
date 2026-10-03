@@ -160,10 +160,10 @@ export interface DexV3 {
 export interface AchievementV3 {
   achievedAt: number | null;
   claimedAt: number | null;
-  quiet?: true; // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적 — 배너를 띄우지 않는다 (src/achievement/core.ts evaluate)
+  quiet?: true; // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적 — 배너를 띄우지 않는다 (src/achievement/evaluate.ts evaluate)
 }
 
-// 업적이 세는 누적 값 (src/achievement/core.ts). 2026-10-03 에 더했다
+// 업적이 세는 누적 값 (src/achievement/evaluate.ts). 2026-10-03 에 더했다
 export interface CountsV3 {
   hatched: number; // 알에서 포켓몬이 나온 횟수. 옛 저장은 만든 알 수 − 기다리는 알 수에서 시작한다
   evolved: number; // 진화 횟수. 옛 저장은 가진 개체의 stage 합에서 시작한다
@@ -177,7 +177,7 @@ export type TutorialState = "none" | "active" | "skipped" | "done";
 export interface TutorialV3 {
   state: TutorialState;
   steps: number; // 끝낸 단계 수
-  queuedAt?: number; // 시작 조건을 채운 시각 — 먼저 생긴 것부터 보여 준다 (src/tutorial/core.ts)
+  queuedAt?: number; // 시작 조건을 채운 시각 — 먼저 생긴 것부터 보여 준다 (src/tutorial/queue.ts)
 }
 
 // 놀이공간 방식 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면). 옛 "full"(주 화면)은 읽을 때 "screen" + 주 화면이 된다
@@ -211,7 +211,7 @@ export interface TradePendingV3 {
   received: unknown; // 완료 뒤 받은 개체 값. 반영 전에 앱이 꺼져도 다시 받아 오므로 비어 있을 수 있다
 }
 
-// 줍기 — 무대의 포켓몬이 주워 온 것 (src/find/core.ts). 저장 형식 번호는 올리지 않는다. 없으면 빈 값으로 읽는다
+// 줍기 — 무대의 포켓몬이 주워 온 것 (src/find/pickup.ts). 저장 형식 번호는 올리지 않는다. 없으면 빈 값으로 읽는다
 export type FindKind = "points" | "item" | "evo" | "pokemon";
 
 export interface FindRecordV3 {
@@ -261,8 +261,8 @@ export interface SaveV3 {
   legacy: Record<string, unknown>; // 새 화면에서 쓰지 않는 옛 값. 지우지 않고 보존한다
   log: LogEntry[];
   trade?: { pending: TradePendingV3 | null };
-  mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/core.ts)
-  find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/core.ts)
+  mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/gifts.ts)
+  find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/pickup.ts)
   counts: CountsV3; // 업적이 세는 누적 값 — 새 저장과 정규화가 늘 채운다 (src/save/v3.ts)
   achRev?: number; // 업적 목록의 판 — ACHIEVEMENT_REV 보다 작으면 다음 판정에서 달성한 업적을 조용히 기록한다
 }

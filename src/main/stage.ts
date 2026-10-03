@@ -71,7 +71,7 @@ export interface Stage {
   // (docs/specs/game.md "배고픔 상태 표시"·"줍기", 2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
   say(id: string, keys: string[], uris: Record<string, string>, ms: number): void;
   petIds(): string[];
-  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/core.ts). 움직임이 꺼져 있으면 모두 깨어 있다
+  awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/pickup.ts). 움직임이 꺼져 있으면 모두 깨어 있다
   petOf(id: string): PartyPet | null;
   bodyOf(id: string): Size | null; // 몸 크기 (DIP) — 다른 화면에 놓을 때 자리를 잡는다 (src/main/stage-group.ts)
   heldId(): string | null;

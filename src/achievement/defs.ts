@@ -35,8 +35,6 @@ import { rewardSpecies } from "../dex/obtain.js";
 import { achievementTable, type AchievementCond, type AchievementDef, type AchievementGroup } from "../dex/tables.js";
 
 // 업적 표의 타입은 src/dex/tables.ts 에 있다 — 도감(src/dex/obtain.ts)도 같은 표를 읽는다
-// [임시] 옛 자리의 다시 내보내기 — 가져다 쓰는 쪽(src/tx/snapshot.ts, src/tools)이 새 자리에서 가져오면 지운다
-export type { AchievementCond, AchievementDef, AchievementGroup, AchievementReward } from "../dex/tables.js";
 // 업적창의 분류 칩 — 순서는 GROUPS
 export const GROUPS: readonly AchievementGroup[] = ["dex", "grow", "egg", "find", "together"];
 

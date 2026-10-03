@@ -13,7 +13,7 @@ const idOf = (args: unknown): string | null => {
   return typeof id === "string" && id ? id : null;
 };
 
-// 업적 보상 수령 — 업적당 한 번. 파티 칸·포켓몬·포인트·알·도구 가운데 그 업적의 보상을 준다 (src/achievement/core.ts claim)
+// 업적 보상 수령 — 업적당 한 번. 파티 칸·포켓몬·포인트·알·도구 가운데 그 업적의 보상을 준다 (src/achievement/claim.ts claim)
 export const claimHandler: TxHandler = (draft, args, ctx) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };

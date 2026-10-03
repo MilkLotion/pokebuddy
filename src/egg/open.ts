@@ -7,9 +7,7 @@
 // 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
 // 파티 빈 칸도 박스 빈 칸도 없으면 열지 않는다 — 알은 그대로 남는다 (2026-10-02 사용자 결정 "박스에서 둘곳이 없으면 알에서 부화안되게").
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
-import { boxRoom, putPet } from "../box/slots.js";
-import { rollGender } from "../dex/gender.js";
-import { randomNature } from "../dex/natures.js";
+import { boxRoom } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { isSingleEgg } from "../dex/obtain.js";
 import { addNewPet } from "../party/create.js";
