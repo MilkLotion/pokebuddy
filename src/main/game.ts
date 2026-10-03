@@ -14,7 +14,7 @@ import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
 import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
 import type { TxResult } from "../shared/command.js";
-import { HANDLERS } from "../tx/handlers.js";
+import { HANDLERS } from "../tx/command-table.js";
 import { argsFromCommand } from "../tx/args.js";
 import { requestIdOf, toCommandResult } from "../tx/commands.js";
 import { dexList } from "../view/dex-list.js";
@@ -54,7 +54,7 @@ export interface GameV3 {
   agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>;
   send: (req: ManageRequest, from: CommandSource) => ManageReply;
   executor: Executor;
-  saveFailing: () => boolean; // 저장이 이어서 SAVE_V3_RULES.saveFailNotifyAfter 번 실패했다 — 설정창이 안내를 띄운다
+  saveFailing: () => boolean; // 저장이 이어서 SAVE_RULES.saveFailNotifyAfter 번 실패했다 — 설정창이 안내를 띄운다
 }
 
 export interface GameV3Options {

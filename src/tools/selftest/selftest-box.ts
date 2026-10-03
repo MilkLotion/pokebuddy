@@ -14,9 +14,9 @@ import { SHOP_RULES } from "../../shop/rules";
 import { empty, normalize } from "../../save/v3";
 import { fillBoxes, newBox } from "../../box/boxes";
 import type { SaveV3 } from "../../shared/save-v3";
-import { argsOf } from "../../tx/bridge";
+import { argsFromCommand } from "../../tx/args";
 import { createExecutor, type TxPorts } from "../../tx/executor";
-import { HANDLERS } from "../../tx/handlers";
+import { HANDLERS } from "../../tx/command-table";
 
 const T0 = new Date(2026, 8, 27, 10, 0, 0).getTime();
 
@@ -124,7 +124,7 @@ check(() => {
   const ports: TxPorts = { read: () => structuredClone(saved), write: (next) => ((saved = structuredClone(next)), true), now: () => T0, rand: () => 0.5 };
   const ex = createExecutor(ports, HANDLERS);
   const run = (name: "box.sort" | "box.move" | "box.rename" | "box.order", target: string, args: Record<string, unknown>, id: string) =>
-    ex.run({ id, name, args: argsOf({ cmd: name, target, args, from: "settings" }) });
+    ex.run({ id, name, args: argsFromCommand({ cmd: name, target, args, from: "settings" }) });
   assert.strictEqual(run("box.sort", "b1", { by: "dex" }, "t1").ok, true);
   assert.deepStrictEqual(saved.boxes[0]!.slots.slice(0, 5), ["p2", "p4", "p3", "p1", "p5"], "box.sort 저장");
   assert.strictEqual(run("box.sort", "b1", { by: "weight" }, "t2").ok, false, "모르는 기준은 거절");
