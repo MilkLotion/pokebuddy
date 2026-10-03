@@ -54,22 +54,20 @@ import { langOf, natureName, petLabel, petName, setLang, t } from "./text";
 import { createTray, type TrayHandle } from "./tray";
 import { syncJumpList } from "./jump-list";
 import { closeMenu, closedWithin, menuBounds, menuOpen, popupMenu } from "./menu-window";
-import { createCries, type Cries } from "./cries";
-import { createHungerBubbles } from "./hunger-bubble";
 import { gainOf } from "../state/settings";
 import { SOUND_RULES } from "../state/rules";
 import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
 import { rollHits } from "../find/roll";
-import type { FindRecordV3 } from "../shared/save-v3";
 import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { ManageRoute } from "../shared/model/route";
 import type { PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
 import type { Command } from "../shared/command";
-import type { SaveV3 } from "../shared/save-v3";
-import type { CoachView } from "../shared/model/stage";
 import { currentTutorial } from "../tutorial/queue";
+import { createBubbles } from "./stage/bubbles";
+import { createCoach } from "./stage/coach";
+import { createCry } from "./stage/cry";
 import { createDebugLog, redirectOutput } from "./app/log";
 import { devNumber, isDevRun, isUpdateTestBuild } from "./app/dev-run";
 import { claimSingleInstance, tradeLinkOf } from "./app/launch";
@@ -238,29 +236,14 @@ function offScreen(windows: HelperWindow[]): boolean {
 let screenPicker: ScreenPicker | null = null;
 const picker = (): ScreenPicker => (screenPicker ??= createScreenPicker({ preload: preloadFile(), html: rendererFile("screens.html"), screens: currentScreens }));
 
-// 바탕화면 튜토리얼 — 대기열 맨 앞이 바탕화면 것이면 무대에 말풍선을 보낸다 (src/tutorial/core.ts, docs/specs/game.md "코치마크")
-// 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 부른다. 같은 값이면 무대 창이 다시 보내지 않는다
-function syncCoach(): void {
-  if (!game || !stages) return;
-  const save = game.read();
-  const now = save ? currentTutorial(save) : null;
-  // 고스트 모드·숨김 중에는 띄우지 않고 기다린다 — 말풍선의 ✕ 도 못 누르는 상태를 만들지 않는다 (2026-09-28 튜토리얼 입력 규칙)
-  const quiet = display.ghost() || display.hidden();
-  const view = now && now.surface === "stage" && save && !quiet ? coachView(now.id, save.starterPetId) : null;
-  coachShown = view;
-  // 첫 돌봄 동안 밝힌 포켓몬을 세운다 — 걸으면 말풍선이 따라 움직인다 (2026-09-27 사용자 피드백)
-  stages.pin(view?.kind === "pet" ? view.petId ?? null : null);
-  stages.sendCoach(view);
-}
-
-// 첫 돌봄의 단계 — 1/2 우클릭 유도, 포켓몬 메뉴가 열리면 2/2 메뉴에서 밥 주기 (2026-09-27 사용자 결정 "시안대로 진행", Figma `579:16959`).
-// 값은 메뉴에 남긴 항목의 이름이다. 새 개체는 배부른 채 시작해 밥 주기가 막혀 있으므로 대개 놀아주기다.
-// 저장에 두지 않는다 — 앱을 다시 켜면 1/2 부터 다시 보인다
-let firstCareMenu: string | null = null;
-// 무대에 떠 있는 바탕화면 말풍선 — 떠 있는 동안 포켓몬 왼쪽 클릭은 놀아주기가 아니다
-let coachShown: CoachView | null = null;
-// 첫 돌봄 2/2 에서 밥 주기·놀아주기가 둘 다 쉬는 중이면 기다리는 문구와 남은 시간을 보인다
-let firstCareWait: string | null = null;
+// 바탕화면 튜토리얼 말풍선과 첫 돌봄 단계 (src/main/stage/coach.ts). 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 sync 를 부른다
+const coach = createCoach({
+  read: () => game?.read() ?? null,
+  stages: () => stages,
+  quiet: () => display.ghost() || display.hidden(),
+  areaMode: () => display.playArea().mode,
+});
+const syncCoach = (): void => coach.sync();
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
 function syncJump(): void {
@@ -339,23 +322,6 @@ function onTrayInput(input: { click: number; x: number; y: number; esc: number }
   const b = menuBounds();
   if (b && at.x > b.x && at.x < b.x + b.width - 1 && at.y > b.y && at.y < b.y + b.height - 1) return;
   closeMenu();
-}
-let firstCareAvoid: CoachView["avoid"] = undefined; // 열린 메뉴의 자리(무대 좌표) — 말풍선이 피한다
-
-function coachView(id: string, starterPetId: string | null): CoachView | null {
-  const waitStep = id === "first-care" && firstCareWait != null;
-  const menuStep = id === "first-care" && (firstCareMenu != null || waitStep);
-  const key = waitStep ? `coach.${id}.wait` : menuStep ? `coach.${id}.menu` : `coach.${id}`;
-  const total = id === "first-care" ? 2 : 1;
-  const name = t(`coach.${id}.name`);
-  const step = total === 1 ? t("coach.step.single", { name }) : t("coach.step", { name, at: menuStep ? 2 : 1, total }); // 한 단계뿐이면 "1 / 1" 을 붙이지 않는다
-  const base = { id, step, title: t(`${key}.title`, { action: firstCareMenu ?? "" }), body: t(`${key}.body`, { when: firstCareWait ?? "" }), button: t(`coach.${id}.button`) };
-  if (id === "playground") return { ...base, kind: "area", areaLabel: t(`coach.area.${display.playArea().mode}`) };
-  // 첫 돌봄은 첫 포켓몬을 밝힌다. 무대에 없으면(숨김) 나와 있는 첫 마리. 아무도 없으면 기다린다
-  const ids = stages?.petIds() ?? [];
-  const petId = starterPetId && ids.includes(starterPetId) ? starterPetId : ids[0];
-  // 쉬는 중 단계는 할 수 있는 행동이 없다 — 클릭을 막지 않고 말풍선만 받는다(passive)
-  return petId ? { ...base, kind: "pet", petId, ...(waitStep ? { passive: true } : {}), ...(id === "first-care" && firstCareAvoid ? { avoid: firstCareAvoid } : {}) } : null;
 }
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
@@ -512,25 +478,12 @@ const trayTemplate = () => [
   ),
 ];
 
-// 울음소리 — 놀아주기가 성공하면 그 포켓몬의 PokeAPI 울음소리를 무대에서 한 번 낸다.
-// 설정의 "알림 소리" 가 꺼져 있으면 내지 않는다. 받은 소리는 ~/.claude/pokebuddy/cries/ 에 캐시한다 (src/main/cries.ts)
-let cries: Cries | null = null;
-// 같은 포켓몬을 연달아 누르면 겹쳐 울지 않게 잠깐 쉰다
-const cryAt = new Map<string, number>();
-const CRY_GAP_MS = 1500;
-async function playCry(id: string): Promise<void> {
-  const at = Date.now();
-  if (at - (cryAt.get(id) ?? 0) < CRY_GAP_MS) return;
-  cryAt.set(id, at);
-  const save = game?.read();
-  const volume = save ? gainOf(save.settings, SOUND_RULES.cryMax) : 0;
-  if (!save || volume <= 0) return;
-  const pet = save.pets.find((p) => p.id === id);
-  if (!pet) return;
-  cries ??= createCries(path.join(PATHS.home, "cries"));
-  const uri = await cries.get(pet.species);
-  if (uri) stages?.sendCry(id, uri, volume);
-}
+// 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
+const cry = createCry({
+  dir: path.join(PATHS.home, "cries"),
+  read: () => game?.read() ?? null,
+  send: (petId, uri, volume) => stages?.sendCry(petId, uri, volume),
+});
 
 function notifyGame(body: string): void {
   try {
@@ -633,27 +586,15 @@ function popPetMenu(id: string, origin: "stage" | "manage", formIcons: Record<st
     // 쉬는 중(쿨타임)일 때만 남은 시간을 붙인다 — 배부름 같은 다른 이유면 "곧" 으로
     const cooling = (a: "feed" | "play"): string | null => (pet && careState(pet, a).reason === "cooldown" ? (care[a]?.reason ?? null) : null);
     const wait = keep ? null : (cooling("play") ?? cooling("feed") ?? t("coach.first-care.wait.soon"));
-    if (firstCareMenu !== keep || firstCareWait !== wait) {
-      firstCareMenu = keep;
-      firstCareWait = wait;
-      syncCoach();
-    }
+    coach.menuStep(keep, wait);
   }
   // OS 기본 메뉴는 Windows 에서 왼쪽을 크게 비운다 — 앱이 그리는 메뉴를 커서 자리에 띄운다 (docs/specs/ui-components.md C-21)
   // 첫 돌봄 중이면 메뉴 자리를 말풍선에 알려 겹치지 않게 한다. 메뉴가 닫히면 말풍선은 제자리로 돌아간다
   const avoid = firstCare && pet
     ? {
-        onPlaced: (r: { x: number; y: number; w: number; h: number }) => {
-          const s = stages?.stageRectOf(id);
-          firstCareAvoid = s ? { x: r.x - s.x, y: r.y - s.y, w: r.w, h: r.h } : undefined;
-          syncCoach();
-        },
-        onClosed: () => {
-          firstCareAvoid = undefined;
-          firstCareMenu = null; // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게. 스킵이 아니다
-          firstCareWait = null;
-          syncCoach();
-        },
+        onPlaced: (r: { x: number; y: number; w: number; h: number }) => coach.menuPlaced(id, r),
+        // 메뉴가 닫히면 1/2(우클릭)로 되돌린다 — 메뉴 없이 "메뉴에서 …" 가 남지 않게. 스킵이 아니다
+        onClosed: () => coach.menuClosed(),
       }
     : {};
   popupMenu({ preload: preloadFile(), html: rendererFile("menu.html"), ...avoid }, items, t("menu.on"));
@@ -1031,9 +972,6 @@ async function refreshParty(): Promise<void> {
   tray?.setIcon(logoFile(256));
 }
 
-// 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
-// (worklog/records/game-runtime/record.md "배고픔 말풍선 되풀이")
-const BUBBLE_MS = 5000;
 // 줍기 확률 배율 — 개발 실행에서만 POKEBUDDY_FIND_RATE(양의 정수). 100 이면 초당 100/2000. 마리마다 독립은 그대로다. 실기 확인용 (src/find/rules.ts perSecond)
 let findRateMemo: number | null | undefined;
 const findRate = (): number | null => {
@@ -1042,40 +980,8 @@ const findRate = (): number | null => {
   }
   return findRateMemo;
 };
-const hungerBubbles = createHungerBubbles();
-
-// 말풍선 아이콘 열쇠 — 글자 대신 그림을 넣는다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
-//   배고픔 고기 1개 · 매우 배고픔 고기 3개 · 포인트 금화 — 우리가 그린 assets/items/meat.png · coin.png
-//   도구·진화용 도구 — 관리 창과 같은 도구 그림(item:<식별자>) · 포켓몬 — 데려온 종의 초상(pokemon:<종>[:shiny])
-const MEAT = "item:meat";
-const COIN = "item:coin";
-const foundIcon = (rec: FindRecordV3, save: SaveV3 | null): string => {
-  if (rec.kind === "points") return COIN;
-  if (rec.kind !== "pokemon") return `item:${rec.ref}`;
-  const shiny = save?.pets.find((p) => p.id === rec.newPetId)?.shiny === true;
-  return `pokemon:${rec.ref}${shiny ? ":shiny" : ""}`;
-};
-
-// 열쇠별 그림(data URI). 하나라도 못 구하면 null — 말풍선을 띄우지 않는다. 글자로 되돌리지 않는다
-async function iconUris(keys: string[]): Promise<Record<string, string> | null> {
-  const art = portraits;
-  if (!art) return null;
-  const out: Record<string, string> = {};
-  for (const key of new Set(keys)) {
-    const mon = /^pokemon:([a-z0-9-]+)(:shiny)?$/.exec(key);
-    const got = mon ? Object.values(await art.get([{ slug: mon[1] ?? "", shiny: !!mon[2] }]))[0] : (await art.icons([key]))[key];
-    if (!got) return null;
-    out[key] = got;
-  }
-  return out;
-}
-
-// 아이콘 말풍선 — 그림을 구한 뒤 그 마리 위에 BUBBLE_MS 동안. 그 사이 무대에서 빠졌거나 직접 숨겼으면 띄우지 않는다
-function sayIcons(petId: string, keys: string[]): void {
-  void iconUris(keys).then((uris) => {
-    if (uris && stages && !display.hidden() && stages.petOf(petId)) stages.say(petId, keys, uris, BUBBLE_MS);
-  });
-}
+// 아이콘 말풍선 — 줍기·배고픔 (src/main/stage/bubbles.ts)
+const bubbles = createBubbles({ portraits: () => portraits, stages: () => stages, hidden: display.hidden });
 
 // 에이전트 상태 폴링 — 500ms(STAGE_RULES.statePollMs). 화면·입력용이라 전역 시계를 쓰지 않는다 — 상태가 바뀐 것을 반 초 안에 무대에 보인다.
 // 게임 값은 바꾸지 않는다. 게임 시간·줍기·작업 시간은 전역 시계의 1초 틱(clockTick)이 한다
@@ -1118,8 +1024,7 @@ function clockTick({ now, gap, seq }: ClockTick): void {
     const found = hits.length ? game.find(hits) : null; // 쓰지 못하면 null — 그 건은 버린다
     if (found?.length) {
       worker.refresh();
-      const save = game.read();
-      for (const rec of found) sayIcons(rec.petId, [foundIcon(rec, save)]);
+      bubbles.found(found, game.read());
     }
   }
 
@@ -1127,13 +1032,8 @@ function clockTick({ now, gap, seq }: ClockTick): void {
   const events = game.tick({ workMs });
   if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
 
-  // 배고픔 말풍선 — 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
-  // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
-  if (!display.hidden()) {
-    const st = stages;
-    const shown = (game.read()?.pets ?? []).filter((p) => st.petOf(p.id));
-    for (const b of hungerBubbles.due(shown, now)) sayIcons(b.id, b.zone === "starving" ? [MEAT, MEAT, MEAT] : [MEAT]); // 배고픔 고기 1개, 매우 배고픔 고기 3개
-  }
+  // 배고픔 말풍선 — 무대에 나와 있는 포켓몬만, 직접 숨긴 동안은 띄우지 않는다 (src/main/stage/bubbles.ts onTick)
+  if (!display.hidden()) bubbles.onTick(now, game.read()?.pets ?? []);
   notifier?.tick(); // 부화 준비·진화 가능·업적 미수령·줍기를 배너 줄에 세운다 — 1초 안에 뜬다 (src/notify)
   syncCoach();
 
@@ -1319,7 +1219,7 @@ async function main(): Promise<void> {
         ...hooks,
         // 튜토리얼 말풍선의 버튼 — `다음`·`확인` 은 완료, ✕ 는 스킵
         onCoachAction: ({ id, action }) => {
-          if (id === "first-care") firstCareMenu = null;
+          if (id === "first-care") coach.forgetMenu();
           void commands?.dispatcher
             .dispatch({ cmd: action === "done" ? "tutorial.done" : "tutorial.skip", target: id, from: "pet" })
             .then(() => syncCoach());
@@ -1338,9 +1238,9 @@ async function main(): Promise<void> {
         // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
         onClick: (id) => {
           // 바탕화면 튜토리얼 중에는 왼쪽 클릭이 놀아주기가 아니다 — 무대 렌더러가 먼저 막고, 여기서 한 번 더 막는다
-          if (coachShown) return;
+          if (coach.isShown()) return;
           void commands?.click(id);
-          void playCry(id);
+          void cry.play(id);
         },
         onMenu: showPetMenu,
         onArtMissing: (pet) => {
@@ -1394,7 +1294,7 @@ async function main(): Promise<void> {
     stage: {
       care: (id, action) => {
         stages?.care(id, action);
-        if (action === "play") void playCry(id); // 메뉴·관리 창에서 고른 놀아주기
+        if (action === "play") void cry.play(id); // 메뉴·관리 창에서 고른 놀아주기
       },
       petIds: () => stages?.petIds() ?? [],
       size: () => stages?.size() ?? { w: 0, h: 0 },
