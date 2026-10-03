@@ -4,6 +4,8 @@
 import { nature as natureOf } from "../dex/natures";
 import { megaOf } from "../dex/mega";
 import type { Lang, NatureId } from "../shared/species";
+import type { DexOptions } from "../dex/data";
+import { toolName } from "../shop/catalog";
 import { getLang } from "./i18n";
 import { tableName } from "./name-table";
 
@@ -20,6 +22,9 @@ export const petName = (slug: string, lang: Lang = getLang()): string => {
 export const natureName = (id: NatureId | string, lang: Lang = getLang()): string => natureOf(id)?.name[lang] ?? String(id);
 
 // 마리의 화면 이름 — 종 이름이다. 별명은 보이지 않는다 (docs/specs/game.md "별명 입력과 모습 선택을 제공하지 않는다")
+// 도구·진화용 도구의 화면 이름 — 가방이 모르는 식별자를 만나도 화면이 비지 않게 식별자 그대로 둔다 (src/shop/catalog.ts toolName)
+export const itemName = (id: string, opts?: DexOptions): string => toolName(id, opts) ?? id;
+
 export const petLabel = (pet: { species: string }, lang: Lang = getLang()): string => petName(pet.species, lang);
 
 // 타입의 화면 이름 — 18종 고정이라 표를 여기 둔다. 모르는 값은 그대로 보여 무엇이 빠졌는지 드러나게

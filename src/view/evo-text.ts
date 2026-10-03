@@ -1,8 +1,7 @@
 // 진화 조건 글자 한 벌 — 도감 상세·상점 상세가 같이 쓴다
 import { type EvoStep } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
-import { petName } from "./text.js";
-import { nameOfItem } from "./item-name.js";
+import { itemName, petName } from "./text.js";
 import { needIsMap } from "../dex/regional.js";
 import { josa } from "../shared/josa.js";
 
@@ -19,7 +18,7 @@ export function stepText(step: EvoStep, opts?: DexOptions): string {
   if (!need) return `${time}친밀도 100${josa("100", "으로/로")} ${to}`;
   if (need.kind === "level") return `${time}Lv.${need.level}에서 ${to}`;
   if (need.kind === "affinity") return `${time}친밀도 ${need.value}${josa(String(need.value), "으로/로")} ${to}`;
-  const item = nameOfItem(need.item, opts);
+  const item = itemName(need.item, opts);
   return `${time}${item}${josa(item, "으로/로")} ${to}`;
 }
 
@@ -36,6 +35,6 @@ export function onlyStepText(step: EvoStep, opts?: DexOptions): string {
       ? `${time}Lv.${need.level}에서`
       : need.kind === "affinity"
         ? `${time}친밀도 ${need.value}${josa(String(need.value), "이/가")} 되면`
-        : `${time}${nameOfItem(need.item, opts)}${josa(nameOfItem(need.item, opts), "을/를")} 쓰면`;
+        : `${time}${itemName(need.item, opts)}${josa(itemName(need.item, opts), "을/를")} 쓰면`;
   return `${cond} ${to}${josa(to, "으로/로")} 진화`;
 }

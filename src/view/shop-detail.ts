@@ -7,12 +7,11 @@
 import { profile } from "../dex/species.js";
 import { nextOf, type EvoStep, rootOf } from "../dex/evo.js";
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
-import { petName, typeName, t } from "./text.js";
+import { itemName, petName, typeName, t } from "./text.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { needIsMap, regionalOf, REGION_MAP } from "../dex/regional.js";
 import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
 import { officialText, textOf } from "./dex-text.js";
-import { nameOfItem } from "./item-name.js";
 import { isKnownSpecies } from "../dex/record.js";
 
 const LOCKED_NAME = "???";
@@ -36,7 +35,7 @@ export function needLabel(step: EvoStep, opts?: DexOptions): string {
       ? `Lv.${need.level}`
       : need.kind === "affinity"
         ? `친밀도 ${need.value}`
-        : nameOfItem(need.item, opts);
+        : itemName(need.item, opts);
   return [head, ...extras(step)].join(" · ");
 }
 

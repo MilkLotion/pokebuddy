@@ -6,7 +6,7 @@
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 반올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { profile } from "../dex/species.js";
-import { petName, typeName, moodWord, natureName, t } from "./text.js";
+import { itemName, petName, typeName, moodWord, natureName, t } from "./text.js";
 import { eggName, toolPrice, eggPalettes } from "../shop/catalog.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, defs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
@@ -37,7 +37,6 @@ import { canShow, currentTutorial } from "../tutorial/queue.js";
 import { candidates, dayPartOf, type EvoMissing } from "../dex/evolve.js";
 import type { DayPart } from "../shared/species";
 import { isEvoItem, itemAbout } from "./bag.js";
-import { nameOfItem } from "./item-name.js";
 import { shopList } from "./shop-list.js";
 import { isKnownSpecies } from "../dex/record.js";
 
@@ -53,7 +52,7 @@ const rewardWord = (def: AchievementDef): string => {
   const egg = rewardEgg(def);
   if (egg) return eggName(egg) ?? egg;
   const item = rewardItem(def);
-  if (item) return item.count > 1 ? `${nameOfItem(item.id)} ×${item.count}` : nameOfItem(item.id);
+  if (item) return item.count > 1 ? `${itemName(item.id)} ×${item.count}` : itemName(item.id);
   return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
 };
 
@@ -72,7 +71,7 @@ const eggPercent = (remainMs: number, readyMs: number): number =>
 function missingText(m: EvoMissing): string {
   if (m.kind === "level") return `Lv.${m.level} 필요`;
   if (m.kind === "affinity") return `친밀도 ${m.value} 필요`;
-  if (m.kind === "item") return `${nameOfItem(m.item)} 필요`;
+  if (m.kind === "item") return `${itemName(m.item)} 필요`;
   if (m.kind === "time") return m.when === "night" ? "밤에만" : "낮에만";
   return m.gender === "female" ? "암컷만" : "수컷만";
 }
@@ -246,7 +245,7 @@ export function snapshot(
       const sale = sellPrice(id);
       const about = itemAbout(save, id);
       return {
-        id, name: item?.ko ?? nameOfItem(id), count, evolution: isEvoItem(id),
+        id, name: item?.ko ?? itemName(id), count, evolution: isEvoItem(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),
