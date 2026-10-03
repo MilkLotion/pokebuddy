@@ -453,57 +453,6 @@ function iconOf(key: string | null, cls: string): HTMLElement {
   return host;
 }
 
-// 알 그림 — 알 종류에 색표가 있으면 원작 알 그림의 색을 바꿔 쓴다 (data/eggs.json palette).
-// 원작 그림을 저장소에 넣지 않으려고 실행 때 받은 그림을 캔버스로 바꾼다. 원작 9색과 RGB 가 정확히 같은 칸만 바꾼다
-const EGG_SOURCE = ["#5a5241", "#ffffff", "#cdbd83", "#181818", "#fff6de", "#9ccd83", "#cde6b4", "#e6deb4", "#83b46a"];
-const eggTinted = new Map<string, string | null>(); // 알 종류 → 색을 바꾼 data URI (null 이면 만드는 중)
-
-function eggIcon(kind: string, cls: string): HTMLElement {
-  if (kind === "ancient-stone") return iconOf("item:ancient-stone", cls); // 태고의돌은 알이 아니라 돌 — 우리가 그린 그림 (assets/items)
-  const palette = view?.eggPalettes[kind];
-  if (!palette || palette.length !== EGG_SOURCE.length) return iconOf("egg", cls);
-  const host = el("div", cls);
-  host.dataset.eggKind = kind;
-  const done = eggTinted.get(kind);
-  if (done) paintPortrait(host, done, "icon-art");
-  else if (done === undefined) void tintEgg(kind, palette);
-  return host;
-}
-
-async function tintEgg(kind: string, palette: string[]): Promise<void> {
-  eggTinted.set(kind, null);
-  const base = iconCache.get("egg") ?? (await window.pokebuddyManage.icons(["egg"]))["egg"];
-  if (!base) {
-    eggTinted.delete(kind); // 그림을 아직 못 받았다 — 다음에 다시 만든다
-    return;
-  }
-  const img = new Image();
-  img.src = base;
-  await img.decode();
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const g = canvas.getContext("2d");
-  if (!g) return;
-  g.drawImage(img, 0, 0);
-  const data = g.getImageData(0, 0, canvas.width, canvas.height);
-  const hex = (n: number): string => n.toString(16).padStart(2, "0");
-  const swap = new Map(EGG_SOURCE.map((c, i) => [c, palette[i] ?? c]));
-  const d = data.data;
-  for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3]) continue;
-    const to = swap.get(`#${hex(d[i] ?? 0)}${hex(d[i + 1] ?? 0)}${hex(d[i + 2] ?? 0)}`);
-    if (!to) continue;
-    d[i] = parseInt(to.slice(1, 3), 16);
-    d[i + 1] = parseInt(to.slice(3, 5), 16);
-    d[i + 2] = parseInt(to.slice(5, 7), 16);
-  }
-  g.putImageData(data, 0, 0);
-  const uri = canvas.toDataURL("image/png");
-  eggTinted.set(kind, uri);
-  for (const host of document.querySelectorAll<HTMLElement>(`[data-egg-kind="${CSS.escape(kind)}"]`)) paintPortrait(host, uri, "icon-art");
-}
-
 // ── 파티 ───────────────────────────────────────────────────────────────────────
 
 function petCard(pet: PetView): HTMLElement {
@@ -716,7 +665,7 @@ function daycareOpenButton(v: Snapshot): HTMLButtonElement {
 function daycareCell(egg: EggView, live: boolean): HTMLElement {
   const cell = el("div", egg.ready ? "egg ready" : "egg");
   cell.title = egg.name;
-  cell.appendChild(eggIcon(egg.kind, "shell"));
+  cell.appendChild(iconOf(egg.icon, "shell"));
   if (egg.ready) {
     const openEgg = buttonEl("primary", "열기");
     openEgg.disabled = !live;
@@ -808,7 +757,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
   if (eggId) {
     const egg = view?.eggs.list.find((e) => e.id === eggId);
     dialogEl.append(...dialogHead("알에서 새 알이 나왔어요", ""));
-    card.append(eggIcon(egg?.kind ?? "random", "portrait"), el("div", "name", egg?.name ?? "알"));
+    card.append(iconOf(egg?.icon ?? "egg:random", "portrait"), el("div", "name", egg?.name ?? "알"));
     info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "아직 얻지 않은 포켓몬이 나와요."));
   } else {
     const pet = petId ? petOf(petId) : undefined;
@@ -2101,12 +2050,10 @@ function drawDex(v: Snapshot): void {
 
 // ── 상점 ───────────────────────────────────────────────────────────────────────
 
-// 상점 줄의 그림 — 랜덤알은 알, 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸
+// 상점 줄의 그림 — 알은 알 그림(메인이 칠한다), 도구는 도구 그림. 칸 늘리기처럼 그림이 없는 상품은 빈 칸(icon 이 null)
 // 포켓몬 상품은 두 방식 모두 격자 칸(shopCell)이라 줄로 그리지 않는다 (2026-09-30)
 function shopThumb(item: ShopItemView): HTMLElement {
-  if (item.category === "egg") return eggIcon(item.id, "thumb");
-  if (item.category === "slot") return iconOf(null, "thumb");
-  return iconOf(`item:${item.id}`, "thumb");
+  return iconOf(item.icon, "thumb");
 }
 
 function shopRow(item: ShopItemView): HTMLElement {
@@ -2272,7 +2219,7 @@ function bagCard(item: BagItemView): HTMLElement {
   card.setAttribute("aria-pressed", String(item.id === bagPick));
   const info = el("div", "info");
   info.append(el("div", "name", item.name), el("div", "qty", `×${numberText(item.count)}`)); // 천 단위 쉼표
-  card.append(iconOf(`item:${item.id}`, "thumb"), info);
+  card.append(iconOf(item.icon, "thumb"), info);
   card.addEventListener("click", () => pickBag(item.id));
   return card;
 }
@@ -4012,33 +3959,11 @@ function pickShop(id: string): void {
   draw();
 }
 
-// 아이콘 data URI — 아직 없으면 받아 온 뒤 기기 창을 다시 보낸다. 받아도 없으면 null 로 남긴다(다시 청하지 않는다)
-function iconNow(key: string): string | null {
-  const uri = iconCache.get(key);
-  if (uri !== undefined) return uri;
-  void window.pokebuddyManage.icons([key]).then((got) => {
-    iconCache.set(key, got[key] ?? null);
-    syncShopDevice();
-  });
-  return null;
-}
-
-// [임시] 알 상품의 그림 — 색표로 색을 바꾼 알 그림. 색칠은 아직 여기서 한다(렌더러 레인 P11 에서 메인으로 옮긴다).
-// 색표가 없으면 기본 알 그림. 만드는 중이면 null 이고, 다 만들면 기기 창을 다시 보낸다. 알이 아니면 null — 그림은 메인이 붙인다
-function shopEggArt(item: ShopItemView): string | null {
-  if (item.category !== "egg" || item.id === "ancient-stone") return null;
-  const palette = view?.eggPalettes[item.id];
-  if (!palette || palette.length !== EGG_SOURCE.length) return iconNow("egg");
-  const done = eggTinted.get(item.id);
-  if (done === undefined) void tintEgg(item.id, palette).then(() => syncShopDevice());
-  return done ?? null;
-}
-
 // 상점 기기 창에 보낼 고른 값 — 고른 상품이 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-shop.ts)
 function shopDeviceBuild(): ShopDeviceInput | null {
   const item = shopPick && view ? view.shop.find((i) => i.id === shopPick) : undefined;
   if (!item) return null;
-  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, eggArt: shopEggArt(item) };
+  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, eggArt: null }; // [임시] eggArt 칸 — 그림은 메인이 icon 열쇠로 붙인다. 칸은 도메인이 지운다
 }
 
 function syncShopDevice(): void {

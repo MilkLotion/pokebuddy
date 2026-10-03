@@ -267,7 +267,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     },
   });
   // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
-  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/egg-art.ts). 상점 기기 창은 아직 설정창이 칠해 보낸 그림을 먼저 넣는다([임시] ShopDeviceInput.eggArt)
+  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/egg-art.ts)
   const deviceArt: DeviceArtDeps = {
     art: async (keys) => {
       portraits ??= createPortraits(path.join(PATHS.home, "sprites"), bundled());
@@ -349,9 +349,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
       shopWin?.close();
       return null;
     }
-    // [임시] 알 그림은 설정창이 색칠해 보낸다 (ShopDeviceInput.eggArt)
-    const model = r.model.art?.startsWith("egg:") ? { ...r.model, art: r.input.eggArt } : r.model;
-    showDevice("shop", shopWin, model, gen);
+    showDevice("shop", shopWin, r.model, gen);
     return r.input;
   });
   ipcMain.handle(CH.bagOpen, (e, input: unknown, gen: unknown) => {
