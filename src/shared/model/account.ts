@@ -1,7 +1,7 @@
 // 화면 모델 — 계정·클라우드 저장·업데이트·패치노트. 타입만 둔다
 
 // ── 앱 버전과 업데이트 ──────────────────────────────────────────────────────────────
-// 설정 모달 바닥 왼쪽이 그린다 (src/main/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
+// 설정 모달 바닥 왼쪽이 그린다 (src/main/update/updater.ts). off 는 개발 실행·npm 설치본 — 버전만 보인다
 export interface UpdateView {
   version: string; // 지금 버전
   status: "off" | "idle" | "checking" | "latest" | "downloading" | "ready" | "manual" | "error"; // manual — mac 에서 앱을 그 자리에서 바꿀 수 없어 새 버전만 알린다

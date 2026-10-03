@@ -423,7 +423,7 @@ npm run dist:mac    # release/PokeBuddy-<버전>-arm64.dmg · release/PokeBuddy-
   - Windows 에서 릴리스를 만들 때 `latest-mac.yml` 을 올리지 않는다. 옛 `latest-mac.yml` 이 올라가면 Mac 앱이 옛 버전을 최신으로 본다. 0.10.0~0.11.1 릴리스가 이 상태였다.
   - 서명 인증서는 저장소 Secrets 두 개로 넘긴다. `MAC_SIGNING_P12` 는 `.p12` 의 base64 값이고, `MAC_SIGNING_PASSWORD` 는 그 `.p12` 의 암호다. 두 값이 없으면 워크플로가 멈춘다.
   - 이미 있는 태그에 Mac 파일을 다시 올릴 때는 Actions 에서 `release-mac` 을 수동 실행하고 `tag` 에 태그를 적는다.
-- Mac 업데이트는 electron-updater 를 쓰지 않는다. electron-updater 의 mac 설치기(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치하기 때문이다. `src/main/mac-updater.ts` 가 같은 이벤트를 내는 자체 엔진이다. 받은 zip 은 sha512 로 검사하고, 앱이 끝난 뒤 도우미 스크립트가 같은 폴더 안에서 앱을 바꾼다. 실패하면 옛 앱을 되돌린다.
+- Mac 업데이트는 electron-updater 를 쓰지 않는다. electron-updater 의 mac 설치기(Squirrel.Mac)는 정식 서명이 있어야 새 버전을 설치하기 때문이다. `src/main/update/mac-updater.ts` 가 같은 이벤트를 내는 자체 엔진이다. 받은 zip 은 sha512 로 검사하고, 앱이 끝난 뒤 도우미 스크립트가 같은 폴더 안에서 앱을 바꾼다. 실패하면 옛 앱을 되돌린다.
 - 업데이트 실기 시험은 `node dist/tools/e2e/e2e-update-mac.js` 다. 임시 폴더에 시험 앱(`pokebuddy-update-test.app`)을 두고 로컬 서버의 다음 버전으로 바꾼다. 사용자의 앱·저장·키체인은 건드리지 않는다.
 - `pokebuddy://` 링크는 앱의 `Info.plist` 에 등록한다. mac 은 여기에 적힌 스킴만 앱에 넘긴다.
 - 확인은 `release/mac-arm64/PokeBuddy.app` 을 먼저 띄워 본 뒤 dmg 로 한다.
