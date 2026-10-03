@@ -21,6 +21,7 @@ import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
 import { CARE_RULES, MOOD_RULES, STATE_RULES, TIME_RULES } from "../../state/rules";
+import { writeTextIfChanged } from "./write-text";
 
 // data/*.json 의 항목 — 이 도구는 몇 칸만 읽는다. 모양 검사는 앱의 로더가 한다
 // eslint 없음 — 데이터 표는 키마다 모양이 달라 느슨하게 읽는다
@@ -160,6 +161,7 @@ if (require.main === module) {
     process.exit(0);
   }
   fs.mkdirSync(out, { recursive: true });
-  for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(out, name), text);
-  process.stdout.write(`만듦: ${Object.keys(files).map((n) => `supabase/functions/_shared/${n}`).join(", ")}\n`);
+  const written = Object.entries(files).filter(([name, text]) => writeTextIfChanged(path.join(out, name), text)).map(([name]) => name);
+  const shown = (list: string[]): string => list.map((n) => `supabase/functions/_shared/${n}`).join(", ");
+  process.stdout.write(written.length ? `만듦: ${shown(written)}\n` : `그대로: ${shown(Object.keys(files))} — 내용이 같아 쓰지 않았다\n`);
 }

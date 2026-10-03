@@ -16,6 +16,7 @@ import path from "node:path";
 import type { Lang } from "../../shared/species";
 import { DATA_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
 import { regionalOf } from "../../dex/regional";
+import { writeTextIfChanged } from "./write-text";
 
 const LANG: Record<Lang, string> = { ko: "3", en: "9" };
 const LANGS = Object.keys(LANG) as Lang[];
@@ -87,7 +88,7 @@ export async function build(): Promise<void> {
     if (!entry.ko || !entry.en) missing.push(key);
     if (entry.ko || entry.en) out[key] = entry;
   }
-  fs.writeFileSync(OUT, `${JSON.stringify(out, null, 0)}\n`);
+  writeTextIfChanged(OUT, `${JSON.stringify(out, null, 0)}\n`);
   process.stdout.write(`이름표: ${OUT} — ${Object.keys(out).length}종\n`);
   if (missing.length) process.stdout.write(`한쪽 언어가 빈 것 ${missing.length}: ${missing.slice(0, 30).join(", ")}${missing.length > 30 ? " …" : ""}\n`);
   const formSlugs = Object.keys(out).filter((k) => k.includes("-"));

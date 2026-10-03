@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, runBuild } from "./pokeapi-csv";
+import { writeTextIfChanged } from "./write-text";
 
 const FILE = path.join(DATA_DIR, "items.json");
 const LANG = { ko: "3", en: "9" } as const;
@@ -47,7 +48,7 @@ export async function build(): Promise<void> {
     if (next !== line) changed.push(`${id} → ${hit?.ko} / ${hit?.en}`);
     return next;
   });
-  fs.writeFileSync(FILE, out);
+  writeTextIfChanged(FILE, out);
   process.stdout.write(`도구 이름: ${FILE} — 바꾼 도구 ${changed.length}${changed.length ? `\n  ${changed.join("\n  ")}` : ""}\n`);
   process.stdout.write(`공식에 없는 게임 고유 도구 ${own.length}: ${own.join(", ")}\n`);
 }

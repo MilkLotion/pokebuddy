@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
 import { regionalSlugs } from "../../dex/regional";
+import { writeTextIfChanged } from "./write-text";
 
 const OUT = path.join(DATA_DIR, "dex.json");
 
@@ -59,7 +60,7 @@ export async function build(): Promise<void> {
   }
 
   const sorted = Object.fromEntries(Object.keys(out).sort().map((k) => [k, out[k]]));
-  fs.writeFileSync(OUT, `${JSON.stringify(sorted)}\n`);
+  writeTextIfChanged(OUT, `${JSON.stringify(sorted)}\n`);
   const added = Object.keys(out).filter((k) => !(k in before)).sort((a, b) => (out[a] ?? 0) - (out[b] ?? 0));
   const moved = Object.keys(before).filter((k) => k in out && out[k] !== before[k]);
   process.stdout.write(`도감표: ${OUT} — 종 ${speciesRows.length} · 폼 ${forms}(리전폼 ${regional}) · 합 ${Object.keys(out).length}\n`);

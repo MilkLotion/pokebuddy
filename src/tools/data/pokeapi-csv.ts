@@ -5,6 +5,7 @@
 // 경로는 dist/tools 기준으로 프로젝트 루트를 잡는다 — 실행은 npm run build 뒤 node dist/tools/<이름>.js
 import fs from "node:fs";
 import path from "node:path";
+import { writeTextIfChanged } from "./write-text";
 
 export const BASE = "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv";
 
@@ -81,7 +82,7 @@ export function readDex(): DexTable {
 // 한 항목 한 줄 — diff 를 읽을 수 있게. 키 순서는 들어온 그대로
 export function writeLineJson(file: string, table: Record<string, unknown>): void {
   const lines = Object.keys(table).map((k) => `  ${JSON.stringify(k)}: ${JSON.stringify(table[k])}`);
-  fs.writeFileSync(file, `{\n${lines.join(",\n")}\n}\n`);
+  writeTextIfChanged(file, `{\n${lines.join(",\n")}\n}\n`);
 }
 
 // 있어야 하는 값 — 없으면 던진다 (noUncheckedIndexedAccess 로 undefined 가 섞인 자리에서 뜻을 밝힌다)
