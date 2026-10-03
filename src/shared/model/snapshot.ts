@@ -31,7 +31,7 @@ export interface PetView {
   level: number;
   percentToNext: number; // 다음 레벨까지 백분율
   exp: number; // 누적 경험치 — 가방 사용 패널이 사탕 미리보기와 최대 개수를 셈한다
-  growth: string; // 경험치 타입 (src/dex/growth.ts) — Snapshot.growthCurves 의 키
+  growth: string; // 경험치 타입 (src/dex/growth.ts) — 가방 기기 창의 사탕 미리보기가 곡선을 찾는다 (src/view/device-bag.ts)
   types: string[]; // 화면에 보이는 타입 이름
   typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등) — 타입 배지 색을 고른다
   nature: string; // 화면에 보이는 성격 이름
@@ -214,7 +214,6 @@ export interface Snapshot {
   achievements: { total: number; unclaimed: number; list: AchievementView[] };
   settings: SettingsView;
   natures: NatureOption[];
-  growthCurves: Record<string, number[]>; // 경험치 타입별 레벨 L 이 되는 누적 경험치 — 칸 L(1~100). 가방 사용 패널의 미리보기
   limits: { boxNameMax: number; presetNameMax: number }; // 이름 칸 글자 수 상한 (src/box/rules.ts BOX_RULES.nameMax — 프리셋 이름도 같다)
   sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/party/size.ts SIZE_STEPS)
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림

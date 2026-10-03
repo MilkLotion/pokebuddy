@@ -19,7 +19,7 @@ import { activePreset, presetCount, presetName, locatePet } from "../party/prese
 import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
-import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
+import { growthOf, progressTo } from "../dex/growth.js";
 import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
@@ -127,12 +127,6 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
     },
   };
 }
-
-// 경험치 타입별 누적 경험치 표 — 칸 L 이 레벨 L. 한 번 만들어 둔다
-const GROWTH_RATES = ["fast", "medium-fast", "medium-slow", "slow", "erratic", "fluctuating"] as const;
-const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
-  GROWTH_RATES.map((rate) => [rate, Array.from({ length: MAX_LEVEL + 1 }, (_, level) => (level < 1 ? 0 : expForLevel(rate, level)))]),
-);
 
 // 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창이 같이 쓴다
 const ZONE_TEXT: Record<FullnessZone, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
@@ -305,7 +299,6 @@ export function snapshot(
     },
     natures: natureOptions(),
     eggPalettes: eggPalettes(),
-    growthCurves: GROWTH_CURVES,
     limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
