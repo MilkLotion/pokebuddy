@@ -27,6 +27,8 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
+import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
+import { boxPets, findPartySlot, findPet, partyPets, ui } from "./state.js";
 import { failTextOf } from "../ui/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
@@ -35,7 +37,6 @@ import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "..
 const NATURE_UI = false;
 const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
-type TabId = "party" | "box" | "dex" | "shop" | "bag";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "party", label: "파티" },
@@ -124,34 +125,7 @@ const scrimEl = needEl("scrim", HTMLElement, "manage");
 const dialogEl = needEl("dialog", HTMLElement, "manage");
 const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
 
-// 모달 하나. 어느 것인지와 그 모달만 쓰는 값을 함께 담는다
-type Dialog =
-  | { kind: "pet"; petId: string }
-  | { kind: "evolve"; petId: string; to?: string } // 진화 확인 — to 는 고른 후보
-  | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
-  | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
-  | { kind: "achievements" }
-  | { kind: "settings"; tab: SettingsTab }
-  | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
-  | { kind: "guide" }
-  // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다.
-  // 모두 열기면 queue 에 결과 전부, at 은 지금 보이는 차례(0 부터) — `다음 (1 / N)` 으로 하나씩 넘긴다
-  | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }
-  | { kind: "daycare" } // 돌보미집 — 박스 넘김 줄의 집 아이콘 단추
-  | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
-  | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
-  | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
-  | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
-  | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
-  | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
-  | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
-  | { kind: "mail" } // 우편함 — 헤더 봉투 단추
-  | { kind: "letter"; id: string } // 우편함의 편지 한 통
-  | { kind: "trade" }; // 친구 교환 — 박스 머리 메뉴의 `교환`
 
-let tab: TabId = "party";
-let view: Snapshot | null = null;
-let detailPet: string | null = null; // 개체 상세 페이지에 띄운 개체 — 있으면 탭 본문 대신 상세를 그린다
 let dexRows: DexEntry[] | null = null;
 // 도감에서 고른 칸 — 상세는 관리 창 옆 도감 기기 창이 보인다 (src/main/dex-window.ts)
 let dexPick: string | null = null;
@@ -185,7 +159,7 @@ let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창�
 // 파티 기기 창 연결 — 교체 화면인 동안 연다 (partyDeviceBuild)
 const partyLink = createDeviceLink<PartyDeviceInput>({
   build: partyDeviceBuild,
-  stamp: () => view,
+  stamp: () => ui.view,
   open: (input, gen) => window.pokebuddyManage.partyOpen(input, gen),
   apply: (input) => {
     partyHold = input.heldPetId;
@@ -284,8 +258,6 @@ function inDexRegion(regionId: string, dex: number, formRegion?: string): boolea
 // 도감 표시 번호 — `#0026`, 리전폼이면 `#0026-1` (src/dex/regional.ts dexLabel 과 같은 모양)
 const dexNoText = (dex: number, form: number | undefined, pad: number): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}`;
 
-let dialog: Dialog | null = null;
-let notice = ""; // 마지막 실패 문구. 모달을 다시 그려도 남는다
 
 // 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
 // - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
@@ -513,7 +485,7 @@ function petCard(pet: PetView): HTMLElement {
     e.preventDefault();
     askPetMenu(pet.id);
   });
-  if (pet.id === detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
+  if (pet.id === ui.detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
   card.title = `${pet.name} · ${pet.zoneText} · 다음 레벨까지 ${pet.percentToNext}%`;
   return card;
 }
@@ -553,7 +525,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
   const input = document.createElement("input");
   input.className = "search box-name-input";
   input.value = preset.name;
-  if (view) input.maxLength = view.limits.presetNameMax; // 프리셋 이름 상한은 박스 이름과 같다 (src/box/rules.ts BOX_RULES.nameMax)
+  if (ui.view) input.maxLength = ui.view.limits.presetNameMax; // 프리셋 이름 상한은 박스 이름과 같다 (src/box/rules.ts BOX_RULES.nameMax)
   input.setAttribute("aria-label", "프리셋 이름");
   let done = false;
   const finish = (save: boolean): void => {
@@ -585,7 +557,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
 // 앞·뒤 프리셋을 적용한다 — 가진 프리셋 안에서 끝과 끝이 이어져 돈다. 바탕화면의 파티도 바뀐다.
 // 파티 탭 머리 줄, 가방 기기 창의 파티 줄, 파티 기기 창의 방향키가 같이 쓴다 (2026-10-02 사용자 결정)
 function stepPreset(delta: -1 | 1): void {
-  const p = view?.party.preset;
+  const p = ui.view?.party.preset;
   if (!p || p.count < 2) return;
   partyHold = null;
   void send("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
@@ -635,8 +607,6 @@ function drawParty(v: Snapshot): void {
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────
 
-// 알 하나를 연 결과 — 태어난 개체, 또는 포켓몬 대신 나온 알
-type Hatched = { petId: string; slotIndex?: number } | { eggId: string };
 let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
 
 // 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`)
@@ -681,7 +651,7 @@ function daycareCell(egg: EggView, live: boolean): HTMLElement {
 
 // 돌보미집 모달 — 제목·부제(알 수, 준비 수)·✕, 3×2 칸. live 가 아니면 부화 결과 창 뒤에 깔린 모습이다(누를 수 없다)
 function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
-  const v = view;
+  const v = ui.view;
   if (!v) {
     if (live) close();
     return;
@@ -729,8 +699,8 @@ async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
 // 모두 열기 — 준비된 알을 칸 순서대로 하나씩 연다(알마다 egg.open 하나). 다 연 뒤 결과를 하나씩 보인다.
 // 여는 중에 실패하면 거기서 멈추고 그때까지 연 결과만 보인다. 하나도 못 열면 실패 문구가 돌보미집 모달에 남는다
 async function openAllEggs(): Promise<void> {
-  if (openingAll || !view) return;
-  const ids = view.eggs.list.filter((e) => e.ready).map((e) => e.id);
+  if (openingAll || !ui.view) return;
+  const ids = ui.view.eggs.list.filter((e) => e.ready).map((e) => e.id);
   if (!ids.length) return;
   openingAll = true;
   const queue: Hatched[] = [];
@@ -755,12 +725,12 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
   const card = el("div", "nat-card");
   const info = el("div", "info-box");
   if (eggId) {
-    const egg = view?.eggs.list.find((e) => e.id === eggId);
+    const egg = ui.view?.eggs.list.find((e) => e.id === eggId);
     dialogEl.append(...dialogHead("알에서 새 알이 나왔어요", ""));
     card.append(iconOf(egg?.icon ?? "egg:random", "portrait"), el("div", "name", egg?.name ?? "알"));
     info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "아직 얻지 않은 포켓몬이 나와요."));
   } else {
-    const pet = petId ? petOf(petId) : undefined;
+    const pet = petId ? findPet(petId) : undefined;
     if (!pet) {
       close();
       return;
@@ -789,7 +759,7 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
 
 // 모달 닫기 — 돌보미집 위에 겹친 부화 결과는 닫으면 돌보미집으로 돌아간다(✕·Esc·바깥 누르기 모두)
 function dismiss(): void {
-  if (dialog?.kind === "hatched" && dialog.over) open({ kind: dialog.over });
+  if (ui.dialog?.kind === "hatched" && ui.dialog.over) open({ kind: ui.dialog.over });
   else close();
 }
 
@@ -802,7 +772,7 @@ scrimEl.insertBefore(underScrimEl, dialogEl);
 scrimEl.insertBefore(underEl, underScrimEl);
 underScrimEl.addEventListener("click", dismiss);
 function drawUnder(): void {
-  const stacked = dialog?.kind === "hatched" && dialog.over === "daycare";
+  const stacked = ui.dialog?.kind === "hatched" && ui.dialog.over === "daycare";
   underEl.hidden = !stacked;
   underScrimEl.hidden = !stacked;
   underEl.replaceChildren();
@@ -1036,14 +1006,14 @@ function markMega(cell: HTMLElement, pet: PetView, size: number): void {
 const megaDrawer = (shiny: boolean): ReturnType<typeof evoDrawer> => evoDrawer((slug, cls) => portraitOf(slug, shiny, cls));
 
 function drawMega(petId: string, to?: string): void {
-  const pet = petOf(petId);
+  const pet = findPet(petId);
   const mega = pet?.mega;
   if (!pet || !mega || !mega.canChange) {
     close();
     return;
   }
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
-  const slot = slotOfPet(pet.id);
+  const slot = findPartySlot(pet.id);
   const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
   const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
   const change = (species: string): void => {
@@ -1127,7 +1097,7 @@ function drawMega(petId: string, to?: string): void {
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
 function drawForm(petId: string, to: string): void {
-  const pet = petOf(petId);
+  const pet = findPet(petId);
   const form = pet?.forms?.find((f) => f.species === to);
   if (!pet || !form) {
     close();
@@ -1141,7 +1111,7 @@ function drawForm(petId: string, to: string): void {
   card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
   const row = el("div", "compare");
   row.appendChild(card);
-  const slot = slotOfPet(pet.id);
+  const slot = findPartySlot(pet.id);
   const info = el("div", "info-box");
   info.append(
     el("div", undefined, `지금 ${pet.name} · ${slot != null ? `파티 ${slot + 1}번 칸` : "박스"}`),
@@ -1247,7 +1217,7 @@ function drawBox(v: Snapshot): void {
     const held = partyHold;
     if (!held) return;
     partyHold = null;
-    const at = slotOfPet(held);
+    const at = findPartySlot(held);
     if (!pet) void swapSend("party.keep", held, { toBoxId: box.id, toSlot: slot });
     else if (at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
     else draw();
@@ -1291,7 +1261,7 @@ function drawBox(v: Snapshot): void {
       if (!boxHold) askPetMenu(pet.id);
     });
     cell.dataset.hold = "";
-    if (pet.id === detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
+    if (pet.id === ui.detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     if (hold && hold.boxId === box.id && hold.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => {
@@ -1311,17 +1281,17 @@ function drawBox(v: Snapshot): void {
 // 명령은 끌어 놓기와 같은 box.move 다
 
 function startHold(petId: string): void {
-  const v = view;
+  const v = ui.view;
   if (!v) return;
   for (let b = 0; b < v.boxes.length; b += 1) {
     const box = v.boxes[b];
     const slot = box ? box.slots.findIndex((p) => p?.id === petId) : -1;
     if (!box || slot < 0) continue;
-    if (dialog) close();
+    if (ui.dialog) close();
     endHold();
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); // 입력 중인 칸이 있으면 다시 그리기가 미뤄진다 (typingSearch)
     setTab("box");
-    detailPet = null;
+    ui.detailPet = null;
     boxPage = b;
     boxSortOpen = false;
     boxMenuOpen = false;
@@ -1360,7 +1330,7 @@ function cancelHold(): void {
 // 프리셋 칩을 누르면 그 프리셋을 적용한다(party.preset)
 
 function openSwap(): void {
-  if (dialog) close();
+  if (ui.dialog) close();
   endHold();
   setTab("box");
   swapMode = true;
@@ -1378,14 +1348,14 @@ function closeSwap(): void {
 // 교체 명령 — 실패 이유는 파티 기기 창의 머리 줄에 보인다
 async function swapSend(cmd: string, target: string, extra: Record<string, unknown>): Promise<void> {
   const ok = await send(cmd, target, extra, { keepOpen: true });
-  partyNote = ok ? "" : notice;
-  notice = "";
+  partyNote = ok ? "" : ui.notice;
+  ui.notice = "";
   draw();
 }
 
 // 파티 기기 창에 보낼 고른 값 — 교체 화면이 아니면 null(닫는다). 모델은 메인이 만든다 (src/view/device-party.ts)
 function partyDeviceBuild(): PartyDeviceInput | null {
-  if (!swapMode || tab !== "box" || !view) return null;
+  if (!swapMode || ui.tab !== "box" || !ui.view) return null;
   return { heldPetId: partyHold, heldFromBox: !!boxHold, notice: partyNote };
 }
 
@@ -1395,7 +1365,7 @@ function syncPartyDevice(): void {
 
 // 파티 기기 창에서 누른 칸·칩
 function onPartyAction(action: PartyDeviceAction): void {
-  const v = view;
+  const v = ui.view;
   if (!swapMode || !v) return;
   partyNote = "";
   if (action.kind === "preset") {
@@ -1432,7 +1402,7 @@ function onPartyAction(action: PartyDeviceAction): void {
 // 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다.
 // 포켓몬 메뉴의 `옮기기` 로 든 때만 띄운다 (boxHold.ghost)
 function showHoldGhost(grid: HTMLElement, petId: string): void {
-  const pet = petOf(petId);
+  const pet = findPet(petId);
   const any = grid.querySelector<HTMLElement>(".cell");
   if (!pet || !any) return;
   if (!holdGhost) {
@@ -1473,7 +1443,7 @@ document.addEventListener("keydown", (e) => {
 
 // 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
 function drawSellPet(petId: string, price: number): void {
-  const pet = petOf(petId);
+  const pet = findPet(petId);
   if (!pet) {
     close();
     return;
@@ -1572,7 +1542,7 @@ function boxNameEl(box: BoxView): HTMLElement {
   const input = document.createElement("input");
   input.className = "search box-name-input";
   input.value = box.name;
-  if (view) input.maxLength = view.limits.boxNameMax; // 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수(12)에 맞춘다
+  if (ui.view) input.maxLength = ui.view.limits.boxNameMax; // 넘김 줄의 이름 칸 폭(.box-name-cell)도 이 글자 수(12)에 맞춘다
   input.setAttribute("aria-label", "박스 이름");
   let done = false;
   const finish = (save: boolean): void => {
@@ -1679,7 +1649,7 @@ function boxMenuEl(): HTMLElement {
 // 타일을 끌어 다른 타일에 놓으면 그 자리로 옮긴다(box.order). 사이의 박스는 한 칸씩 밀린다. 타일을 누르면 그 박스로 간다
 // (2026-10-02 사용자 결정 "a로 하자."·"한줄에 4개 들어가게", Figma 05 `Box / Order Modal`)
 function drawBoxOrder(): void {
-  const v = view;
+  const v = ui.view;
   if (!v) {
     close();
     return;
@@ -1725,7 +1695,7 @@ function poolCount(pool: EggPoolView): string {
 }
 
 function drawPool(productId: string, page: number): void {
-  const item = view?.shop.find((i) => i.id === productId);
+  const item = ui.view?.shop.find((i) => i.id === productId);
   const pool = item?.pool;
   if (!item || !pool) {
     close();
@@ -1760,9 +1730,9 @@ function drawPool(productId: string, page: number): void {
 
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
 async function orderBox(boxId: string, to: number): Promise<void> {
-  const shown = view?.boxes[boxPage]?.id;
+  const shown = ui.view?.boxes[boxPage]?.id;
   await send("box.order", boxId, { to });
-  const at = view?.boxes.findIndex((b) => b.id === shown) ?? -1;
+  const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
   if (at >= 0 && at !== boxPage) {
     boxPage = at;
     draw();
@@ -1777,8 +1747,8 @@ function unsorted(...boxIds: string[]): void {
 
 // 박스 명령 — 대화상자 밖에서 보낸다. 실패하면 박스 줄 아래에 이유를 한 줄 보인다. 성공하면 onOk 를 먼저 부르고 다시 그린다
 async function boxCommand(cmd: string, target: string, extra: Record<string, unknown>, onOk?: () => void): Promise<void> {
-  if (busy) return;
-  busy = true;
+  if (ui.busy) return;
+  ui.busy = true;
   let reply: ManageReply;
   try {
     const reqId = reqIdFor(cmd, target, extra);
@@ -1787,7 +1757,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
     if (reply.ok) onOk?.();
     await refresh();
   } finally {
-    busy = false;
+    ui.busy = false;
   }
   boxNote = reply.ok ? "" : failTextOf(reply.reason, "command").text;
   draw();
@@ -1976,7 +1946,7 @@ function stepDex(delta: -1 | 1): void {
   window.pokebuddyManage.dexOpen(dexPick, dexGen);
   // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
   const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
-  if (dexView === "grid" && page !== dexPageNo && tab === "dex") {
+  if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
     dexPageNo = page;
     draw();
   }
@@ -2257,7 +2227,7 @@ let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 �
 // 가방 기기 창 연결 — 도구를 고른 동안 연다 (bagDeviceBuild)
 const bagLink = createDeviceLink<BagDeviceInput>({
   build: bagDeviceBuild,
-  stamp: () => view,
+  stamp: () => ui.view,
   open: (input, gen) => window.pokebuddyManage.bagOpen(input, gen),
   apply: (input) => {
     bagMode = input.mode;
@@ -2274,7 +2244,7 @@ const bagLink = createDeviceLink<BagDeviceInput>({
 });
 // 가방 기기 창에 보낼 고른 값 — 고른 도구가 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-bag.ts)
 function bagDeviceBuild(): BagDeviceInput | null {
-  if (!bagPick || !view?.bag.some((i) => i.id === bagPick)) return null;
+  if (!bagPick || !ui.view?.bag.some((i) => i.id === bagPick)) return null;
   return { itemId: bagPick, mode: bagMode, targetPetId: bagTarget, qty: bagQty, sellQty, notice: bagNotice, result: bagResult ? { lead: bagResult, line: bagResultNote } : null, busy: bagBusy };
 }
 
@@ -2284,8 +2254,8 @@ function syncBagDevice(): void {
 
 // 이전·다음 — 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래·수량·결과는 처음으로
 function stepBag(delta: -1 | 1): void {
-  if (!bagPick || !view) return;
-  const list = view.bag.filter((i) => bagCategory(i) === bagFilter);
+  if (!bagPick || !ui.view) return;
+  const list = ui.view.bag.filter((i) => bagCategory(i) === bagFilter);
   if (list.length < 2) return;
   const at = list.findIndex((i) => i.id === bagPick);
   const next = list[(at + delta + list.length) % list.length];
@@ -2333,15 +2303,15 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
   clearTimeout(slow);
   bagSending = false;
   bagBusy = false;
-  bagNotice = ok ? "" : notice;
-  notice = "";
+  bagNotice = ok ? "" : ui.notice;
+  ui.notice = "";
   return ok;
 }
 
 async function useBag(id: string): Promise<void> {
-  const item = view?.bag.find((i) => i.id === id);
-  const pet = bagTarget ? petOf(bagTarget) : null;
-  if (!item || !pet || !view || bagSending) return;
+  const item = ui.view?.bag.find((i) => i.id === id);
+  const pet = bagTarget ? findPet(bagTarget) : null;
+  if (!item || !pet || !ui.view || bagSending) return;
   const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)
   bagResult = "";
   const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
@@ -2350,19 +2320,19 @@ async function useBag(id: string): Promise<void> {
     bagResult = lastReply?.result?.lead ?? "";
     bagResultNote = lastReply?.result?.line ?? "";
     bagQty = 1;
-    if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
+    if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
   draw();
 }
 
 async function sellBag(id: string): Promise<void> {
-  const item = view?.bag.find((i) => i.id === id);
+  const item = ui.view?.bag.find((i) => i.id === id);
   if (!item || item.sellPrice === undefined || bagSending) return;
   const count = sellQty; // 메인이 보유 수까지로 바로잡은 수량
   const ok = await bagSend("bag.sell", id, count > 1 ? { count } : {});
   if (ok) {
     sellQty = 1;
-    if (!view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
+    if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
   }
   draw();
 }
@@ -2406,7 +2376,7 @@ async function loadTrade(): Promise<void> {
 
 // 교환 모달이 떠 있으면 다시 그린다. 본문(박스 탭)은 건드리지 않는다
 function redrawTrade(): void {
-  if (dialog?.kind === "trade") drawDialog();
+  if (ui.dialog?.kind === "trade") drawDialog();
 }
 
 // 진행 중 — 링크를 만들었거나, 친구와 고르는 중이거나, 완료 화면의 `확인` 을 아직 누르지 않았다
@@ -2451,7 +2421,7 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   // 거절(진행 중인 교환 등)은 보기에 남지 않는다 — 배너로 보인다
   if (!reply.ok && !trade.error && trade.available) trade = { ...trade, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };
   if (trade.received && trade.received.petId !== before) {
-    view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
+    ui.view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
     draw();
   }
   syncTradeDot();
@@ -2589,11 +2559,11 @@ function tradePicker(t: TradeScreen): HTMLElement {
     b.addEventListener("click", () => void tradeSend("trade.offer", pet.id));
     return b;
   };
-  const boxes = view?.boxes ?? [];
+  const boxes = ui.view?.boxes ?? [];
   if (tradePage > boxes.length) tradePage = 0;
   const shown = tradePage === 0 ? null : boxes[tradePage - 1];
   // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다
-  const slots: (PetView | null)[] = shown ? shown.slots : (view?.party.slots ?? []).map((s) => s.pet ?? null);
+  const slots: (PetView | null)[] = shown ? shown.slots : (ui.view?.party.slots ?? []).map((s) => s.pet ?? null);
   const pager = el("div", "pager trade-pager");
   const pages = boxes.length + 1; // 파티 판 + 박스. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
   const prev = buttonEl("", "◀");
@@ -2882,7 +2852,7 @@ const ACCOUNT_OFF: AccountScreen = {
 
 // 계정 탭이 열려 있으면 다시 그린다
 function redrawAccount(): void {
-  if (dialog?.kind === "user" && dialog.tab === "account") drawDialog();
+  if (ui.dialog?.kind === "user" && ui.dialog.tab === "account") drawDialog();
 }
 
 async function acctSend(req: AccountAction): Promise<AccountReply | null> {
@@ -3183,7 +3153,7 @@ function setMail(screen: MailScreen): void {
   mailView = screen;
   mailBtn.hidden = !screen.available;
   mailDotEl.hidden = screen.unread === 0;
-  if (dialog?.kind === "mail" || dialog?.kind === "letter") drawDialog();
+  if (ui.dialog?.kind === "mail" || ui.dialog?.kind === "letter") drawDialog();
 }
 
 async function refreshMail(): Promise<void> {
@@ -3404,7 +3374,7 @@ function drawTabs(): void {
     const b = buttonEl("");
     b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" style="color: var(--muted)">${TAB_ICON[t.id]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
     b.appendChild(el("span", undefined, t.label));
-    b.setAttribute("aria-selected", String(t.id === tab));
+    b.setAttribute("aria-selected", String(t.id === ui.tab));
     b.addEventListener("click", () => {
       setTab(t.id);
       draw();
@@ -3417,18 +3387,18 @@ function drawTabs(): void {
 // - 나가는 탭의 상세 기기 창을 닫는다: 파티·박스는 개체 상세, 도감은 도감 기기 창 (2026-09-30 사용자 결정 "그냥 해당 탭을 나가면 상세 닫게해.")
 // - 같은 탭이면 아무것도 닫지 않는다. 다시 그 탭에 와도 상세를 다시 열지 않는다
 function setTab(next: TabId): void {
-  if (next === tab) return;
-  detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
+  if (next === ui.tab) return;
+  ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
   if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
-  if (tab === "box") closeSwap(); // 교체 화면은 박스 탭을 나가면 끝난다 — 다음 draw 의 syncPartyDevice 가 파티 기기 창을 닫는다
+  if (ui.tab === "box") closeSwap(); // 교체 화면은 박스 탭을 나가면 끝난다 — 다음 draw 의 syncPartyDevice 가 파티 기기 창을 닫는다
   presetRenaming = false;
-  if (tab === "dex" && dexPick) {
+  if (ui.tab === "dex" && dexPick) {
     dexPick = null;
     window.pokebuddyManage.dexOpen(null, dexGen);
   }
-  if (tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
-  if (tab === "bag") bagPick = null; // 가방 기기 창 — 다음 draw 의 syncBagDevice 가 닫는다
-  tab = next;
+  if (ui.tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
+  if (ui.tab === "bag") bagPick = null; // 가방 기기 창 — 다음 draw 의 syncBagDevice 가 닫는다
+  ui.tab = next;
   bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
   if (next === "dex" && !dexRows) void loadDex();
 }
@@ -3447,25 +3417,25 @@ function draw(): void {
 function drawBody(): void {
   drawTabs();
   bodyEl.replaceChildren();
-  if (!view) {
+  if (!ui.view) {
     bodyEl.appendChild(el("div", "empty-note", "저장이 없습니다. 첫 포켓몬을 먼저 고르세요."));
     return;
   }
-  pointsEl.textContent = numberText(view.points);
-  achDotEl.hidden = view.achievements.unclaimed === 0;
+  pointsEl.textContent = numberText(ui.view.points);
+  achDotEl.hidden = ui.view.achievements.unclaimed === 0;
   // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
-  if (detailPet && !petOf(detailPet)) detailPet = null;
+  if (ui.detailPet && !findPet(ui.detailPet)) ui.detailPet = null;
   syncPetDevice();
-  if (shopPick && !view.shop.some((i) => i.id === shopPick)) shopPick = null;
+  if (shopPick && !ui.view.shop.some((i) => i.id === shopPick)) shopPick = null;
   syncShopDevice();
-  if (bagPick && !view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
+  if (bagPick && !ui.view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
   syncBagDevice();
   syncPartyDevice();
-  if (tab === "party") drawParty(view);
-  else if (tab === "box") drawBox(view);
-  else if (tab === "dex") drawDex(view);
-  else if (tab === "shop") drawShop(view);
-  else drawBag(view);
+  if (ui.tab === "party") drawParty(ui.view);
+  else if (ui.tab === "box") drawBox(ui.view);
+  else if (ui.tab === "dex") drawDex(ui.view);
+  else if (ui.tab === "shop") drawShop(ui.view);
+  else drawBag(ui.view);
   drawSaveFailing();
   restoreSearchFocus();
   drawTutorial();
@@ -3474,7 +3444,7 @@ function drawBody(): void {
 // 이어진 저장 실패 안내 — 제목 줄 바로 아래. 한 번 저장하면 다음 새로 읽기에서 사라진다. 조작은 막지 않는다
 // Figma 05 `Party / Save Failing` `716:17993` (Alert Tone=Error). 2026-09-27 사용자 "그렇게해"
 function drawSaveFailing(): void {
-  if (!view?.saveFailing) return;
+  if (!ui.view?.saveFailing) return;
   const banner = alertBox("bad", "저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.");
   banner.classList.add("save-failing");
   const first = bodyEl.firstElementChild;
@@ -3624,7 +3594,7 @@ const GUIDES: Record<string, Guide> = {
   },
   user: {
     name: "사용자", tab: null, go: "",
-    step: () => (dialog?.kind === "user" && dialog.tab === "agents" ? 1 : 0),
+    step: () => (ui.dialog?.kind === "user" && ui.dialog.tab === "agents" ? 1 : 0),
     onNext: () => {
       if (!agentRows) void loadAgents();
       open({ kind: "user", tab: "agents" });
@@ -3733,50 +3703,50 @@ function drawTutorial(): void {
   coachEl = null;
   coachNow?.stop();
   coachNow = null;
-  const id = view?.tutorial ?? null;
+  const id = ui.view?.tutorial ?? null;
   coachId = null;
-  const screenTut = (tid: string): boolean => view?.screenTutorials?.includes(tid) === true;
-  if (view && dialog?.kind === "user" && !dialogEl.querySelector(".acct-overlay") && screenTut("user")) {
+  const screenTut = (tid: string): boolean => ui.view?.screenTutorials?.includes(tid) === true;
+  if (ui.view && ui.dialog?.kind === "user" && !dialogEl.querySelector(".acct-overlay") && screenTut("user")) {
     drawGuideStep("user"); // 사용자 모달을 처음 열 때 — 계정 → 연결
-  } else if (view && dialog?.kind === "trade" && screenTut("trade")) {
+  } else if (ui.view && ui.dialog?.kind === "trade" && screenTut("trade")) {
     drawGuideStep("trade"); // 교환 모달을 처음 열 때
-  } else if (view && !dialog && tab === "dex" && screenTut("dex")) {
+  } else if (ui.view && !ui.dialog && ui.tab === "dex" && screenTut("dex")) {
     drawGuideStep("dex"); // 도감 탭을 처음 열 때
-  } else if (view && !dialog && !detailPet && !boxHold && !swapMode && tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
+  } else if (ui.view && !ui.dialog && !ui.detailPet && !boxHold && !swapMode && ui.tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
     // 박스 탭을 처음 열 때 — 지금 박스에 개체가 있을 때만. 부화 튜토리얼 차례면 그것이 먼저다(같은 탭의 돌보미집 단추를 밝힌다).
     // 교체 화면(swapMode)에서는 띄우지 않는다 — 칸 좌클릭이 상세가 아니라 들기라 1단계 문구와 다르다
     drawGuideStep("box");
-  } else if (view && dialog?.kind === "settings" && dialog.tab === "display" && view.areaTutorial) {
+  } else if (ui.view && ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && ui.view.areaTutorial) {
     // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다
     // (2026-09-28 사용자 "이 영역설명은 설정에서 설명하게 해야할거같아", Figma 99 `Tutorial / Playground · 설정`)
-    const steps = areaSteps(view);
+    const steps = areaSteps(ui.view);
     // 해 보는 단계의 동작을 했으면 다음 단계로 — 설정이 바뀌면 스냅샷이 새로 와서 여기로 다시 온다
     for (;;) {
       const cur = steps[areaStep];
-      if (!areaStart) areaStart = view;
-      if (!cur?.until || !cur.until(view, areaStart) || areaStep >= steps.length - 1) break;
+      if (!areaStart) areaStart = ui.view;
+      if (!cur?.until || !cur.until(ui.view, areaStart) || areaStep >= steps.length - 1) break;
       areaStep += 1;
-      areaStart = view;
+      areaStart = ui.view;
     }
     const step = steps[areaStep];
     const target = step ? dialogEl.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
     if (step && target) {
-      const alsoKey = step.also?.(view) ?? null;
+      const alsoKey = step.also?.(ui.view) ?? null;
       const tryIt = step.until != null;
       coachEl = coachLayer("area", target, {
         step: `튜토리얼 · 화면 ${areaStep + 1} / ${steps.length}`,
         title: step.title,
-        body: step.body(view),
+        body: step.body(ui.view),
         button: tryIt ? "" : "확인", // 해 보는 단계는 그 동작으로만 넘어간다
         onGo: () => void send("tutorial.done", "area"),
         interactive: tryIt,
         also: alsoKey ? dialogEl.querySelector<HTMLElement>(`[data-tut="${alsoKey}"]`) : null,
       });
     }
-  } else if (id && view && !dialog && !detailPet) {
+  } else if (id && ui.view && !ui.dialog && !ui.detailPet) {
     const text = TUTORIAL_TEXT[id];
     const guide = GUIDES[id];
-    if (guide && (guide.tab == null || guide.tab === tab)) {
+    if (guide && (guide.tab == null || guide.tab === ui.tab)) {
       drawGuideStep(id);
     } else if (guide && guide.tab) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다(상점·부화 튜토리얼과 같다)
@@ -3797,12 +3767,12 @@ function drawTutorial(): void {
         });
       }
     } else if (id === "achievement") {
-      const done = view.achievements.list.find((a) => a.state === "achieved");
+      const done = ui.view.achievements.list.find((a) => a.state === "achieved");
       const target = document.getElementById("open-achievements");
       if (done && target) {
         coachEl = coachLayer(id, target, { step: "튜토리얼 · 업적", ...ACHIEVEMENT_GUIDE, onGo: () => open({ kind: "achievements" }), interactive: true });
       }
-    } else if (text && tab === text.tab) {
+    } else if (text && ui.tab === text.tab) {
       const target = bodyEl.querySelector<HTMLElement>(`[data-tut="${id}"]`);
       // 한 단계뿐이면 "1 / 1" 을 붙이지 않고 단추는 "확인" — 바탕화면 튜토리얼과 같다
       // 상점은 랜덤알 카드를 눌러 사는 것이 목표 행동이다. 부화는 안내만 한다
@@ -3875,13 +3845,6 @@ window.addEventListener("resize", () => {
 
 // ── 모달 · 공통 ────────────────────────────────────────────────────────────────
 
-const partyPets = (): PetView[] => (view ? view.party.slots.map((s) => s.pet).filter((p): p is PetView => p != null) : []);
-
-const boxPets = (): PetView[] => (view ? view.boxes.flatMap((b) => b.slots.filter((p): p is PetView => p != null)) : []);
-
-const petOf = (id: string): PetView | null => [...partyPets(), ...boxPets()].find((p) => p.id === id) ?? null;
-
-const slotOfPet = (id: string): number | null => view?.party.slots.find((s) => s.pet?.id === id)?.index ?? null;
 
 
 function actionButton(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
@@ -3921,7 +3884,6 @@ function switchButton(on: boolean, label: string, run: () => void): HTMLButtonEl
   return b;
 }
 
-const boxNameOf = (id: string): string | null => view?.boxes.find((b) => b.slots.some((p) => p?.id === id))?.name ?? null;
 
 // ── 상점 기기 창 ──────────────────────────────────────────────────────────────
 // 상품 줄·칸을 누르면 관리 창 옆에 상점 기기 창이 뜬다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
@@ -3937,7 +3899,7 @@ let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 �
 // 상점 기기 창 연결 — 상품을 고른 동안 연다 (shopDeviceBuild)
 const shopLink = createDeviceLink<ShopDeviceInput>({
   build: shopDeviceBuild,
-  stamp: () => view,
+  stamp: () => ui.view,
   open: (input, gen) => window.pokebuddyManage.shopOpen(input, gen),
   apply: (input) => {
     shopQty = input.qty;
@@ -3961,7 +3923,7 @@ function pickShop(id: string): void {
 
 // 상점 기기 창에 보낼 고른 값 — 고른 상품이 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-shop.ts)
 function shopDeviceBuild(): ShopDeviceInput | null {
-  const item = shopPick && view ? view.shop.find((i) => i.id === shopPick) : undefined;
+  const item = shopPick && ui.view ? ui.view.shop.find((i) => i.id === shopPick) : undefined;
   if (!item) return null;
   return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, eggArt: null }; // [임시] eggArt 칸 — 그림은 메인이 icon 열쇠로 붙인다. 칸은 도메인이 지운다
 }
@@ -3972,8 +3934,8 @@ function syncShopDevice(): void {
 
 // 이전·다음 — 지금 탭(분류)의 상품 순서로 돈다. 포켓몬 탭은 지방·검색으로 좁힌 순서
 function stepShop(delta: -1 | 1): void {
-  if (!shopPick || !view) return;
-  const rows = view.shop.filter((i) => i.category === shopFilter);
+  if (!shopPick || !ui.view) return;
+  const rows = ui.view.shop.filter((i) => i.category === shopFilter);
   const list = shopFilter === "pokemon" ? shopPokemonShown(rows) : rows;
   if (list.length < 2) return;
   const at = list.findIndex((i) => i.id === shopPick);
@@ -4006,8 +3968,8 @@ function onShopAction(action: ShopDeviceAction): void {
 
 // 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다
 async function buyShop(id: string): Promise<void> {
-  const item = view?.shop.find((i) => i.id === id);
-  if (!item || !view || shopSending) return;
+  const item = ui.view?.shop.find((i) => i.id === id);
+  if (!item || !ui.view || shopSending) return;
   const count = shopQty; // 메인이 바로잡은 수량 — 하나씩 사는 상품은 1 (src/view/device-shop.ts)
   shopSending = true;
   shopDone = null;
@@ -4019,8 +3981,8 @@ async function buyShop(id: string): Promise<void> {
   clearTimeout(slow);
   shopSending = false;
   shopBusy = false;
-  shopNotice = ok ? "" : notice;
-  notice = ""; // 실패 문구는 기기 창의 합계 상자에만 보인다
+  shopNotice = ok ? "" : ui.notice;
+  ui.notice = ""; // 실패 문구는 기기 창의 합계 상자에만 보인다
   if (ok) {
     shopQty = 1;
     // 산 결과 — 기기 창은 닫지 않고 합계 상자를 초록 결과로 바꾼다 (2026-10-02 사용자 결정, Figma 05 `Shop / Device / Egg · 구매 결과`).
@@ -4037,11 +3999,11 @@ async function buyShop(id: string): Promise<void> {
 // 파티 상세 기기 창 연결 — 개체를 고른 동안 연다 (petDeviceBuild). 세대 번호·보낸 값은 device-link.ts 가 든다
 const petLink = createDeviceLink<PetDeviceInput>({
   build: petDeviceBuild,
-  stamp: () => view,
+  stamp: () => ui.view,
   open: (input, gen) => window.pokebuddyManage.petOpen(input, gen),
   afterClosed: () => {
-    if (!detailPet) return false;
-    detailPet = null;
+    if (!ui.detailPet) return false;
+    ui.detailPet = null;
     return true;
   },
   redraw: () => draw(),
@@ -4053,13 +4015,13 @@ let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫
 
 // 파티 상세 기기 창에 보낼 고른 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
 function petDeviceBuild(): PetDeviceInput | null {
-  const pet = detailPet ? petOf(detailPet) : null;
-  if (!pet || !view) return null;
+  const pet = ui.detailPet ? findPet(ui.detailPet) : null;
+  if (!pet || !ui.view) return null;
   if (dexBeside && dexBesideSent !== pet.species) {
     window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
     dexBesideSent = pet.species;
   }
-  return { petId: pet.id, notice, dexOpen: dexBeside };
+  return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside };
 }
 
 function syncPetDevice(): void {
@@ -4077,13 +4039,13 @@ function closeDexBeside(): void {
 
 // 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
 function stepPet(delta: -1 | 1): void {
-  if (!detailPet) return;
-  const list = slotOfPet(detailPet) != null ? partyPets() : boxPets();
+  if (!ui.detailPet) return;
+  const list = findPartySlot(ui.detailPet) != null ? partyPets() : boxPets();
   if (list.length < 2) return;
-  const at = list.findIndex((p) => p.id === detailPet);
+  const at = list.findIndex((p) => p.id === ui.detailPet);
   const next = list[(at + delta + list.length) % list.length];
   if (!next) return;
-  detailPet = next.id;
+  ui.detailPet = next.id;
   draw();
 }
 
@@ -4098,7 +4060,7 @@ function toggleDexBeside(): void {
 
 // 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
 function onPetAction(action: PetDeviceAction): void {
-  const id = detailPet;
+  const id = ui.detailPet;
   if (!id || action.petId !== id) return; // 기기 창이 다른 개체를 보이던 때 누른 것 — 버린다
   if (action.kind === "cmd") {
     void send(action.cmd, id, action.args);
@@ -4135,7 +4097,7 @@ function evoTreeOf(species: string): EvoNodeView | null {
       .shopDetail(species)
       .then((d) => {
         evoTrees.set(species, d?.kind === "pokemon" ? d.tree : null);
-        if (dialog?.kind === "evolve") drawDialog();
+        if (ui.dialog?.kind === "evolve") drawDialog();
       })
       .catch((e) => {
         console.error(e); // 사슬을 못 받았다 — 후보 줄로 그린다
@@ -4151,7 +4113,7 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 // 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
 // 도감에서 해금 안 된 후보는 도감 기기 창과 같이 검은 실루엣과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
 function drawEvolve(petId: string, to?: string): void {
-  const pet = petOf(petId);
+  const pet = findPet(petId);
   if (!pet) {
     close();
     return;
@@ -4212,7 +4174,7 @@ function drawEvolve(petId: string, to?: string): void {
     const info = el("div", "info-box");
     info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
     // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
-    const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
+    const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => ui.view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
     const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
     const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
     info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. ${kept}` : kept));
@@ -4239,14 +4201,14 @@ function drawEvolve(petId: string, to?: string): void {
 const MINT = "mint";
 
 function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
-  const pet = petOf(petId);
-  if (!pet || !view) {
+  const pet = findPet(petId);
+  if (!pet || !ui.view) {
     close();
     return;
   }
-  const picked = view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
+  const picked = ui.view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
   const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "nature-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
-  const slot = slotOfPet(petId);
+  const slot = findPartySlot(petId);
   dialogEl.append(...dialogHead("성격을 바꿀까요?", `${pet.name} Lv.${pet.level} · ${slot != null ? `파티 ${slot + 1}번` : "박스"}`, back));
   const redraw = (next: string): void => open({ kind: "nature", petId, ...(itemId ? { itemId } : {}), pick: next });
 
@@ -4267,7 +4229,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   const grid = el("div", "nature-grid");
   grid.setAttribute("role", "group");
   grid.setAttribute("aria-label", "바꿀 성격");
-  for (const n of view.natures) {
+  for (const n of ui.view.natures) {
     const cell = buttonEl("nature-cell");
     const current = n.id === pet.natureId;
     cell.appendChild(el("span", undefined, n.name));
@@ -4279,13 +4241,13 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
   }
   dialogEl.appendChild(grid);
 
-  const have = view.bag.find((b) => b.id === MINT)?.count ?? 0;
+  const have = ui.view.bag.find((b) => b.id === MINT)?.count ?? 0;
   // 안내 상자 자리는 고르기 전에도 잡아 둔다(보이지 않게) — 고를 때 창 높이가 늘어 위로 튀지 않게
   const info = el("div", picked ? "info-box" : "info-box reserve");
   if (!picked) info.setAttribute("aria-hidden", "true");
   if (have > 0 || !picked) info.append(el("div", undefined, "성격민트 1개를 씁니다"), el("div", "note", `가방에 ${numberText(have)}개 있어요 · 레벨·친밀도는 그대로`));
   else {
-    const price = view.shop.find((p) => p.id === MINT)?.price;
+    const price = ui.view.shop.find((p) => p.id === MINT)?.price;
     info.append(el("div", undefined, "성격민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
   }
   dialogEl.appendChild(info);
@@ -4301,7 +4263,7 @@ function drawNature(petId: string, pick: string | undefined, itemId: string | un
 
 // 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 성격은 다음 창에서 고른다
 function drawNatureTarget(itemId: string): void {
-  const item = view?.bag.find((b) => b.id === itemId);
+  const item = ui.view?.bag.find((b) => b.id === itemId);
   const pets = [...partyPets(), ...boxPets()];
   dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
   const acts = pets.map((p) => actionButton(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
@@ -4354,12 +4316,12 @@ let achievementTab = "all";
 const ACHIEVEMENT_ORDER: Record<AchievementView["state"], number> = { achieved: 0, locked: 1, claimed: 2 };
 
 function drawAchievements(): void {
-  if (!view) {
+  if (!ui.view) {
     close();
     return;
   }
-  const list = view.achievements.list;
-  dialogEl.append(...dialogHead("업적", `달성 ${view.achievements.total} / ${list.length} · 미수령 ${view.achievements.unclaimed}`));
+  const list = ui.view.achievements.list;
+  dialogEl.append(...dialogHead("업적", `달성 ${ui.view.achievements.total} / ${list.length} · 미수령 ${ui.view.achievements.unclaimed}`));
   dialogEl.appendChild(
     chips(ACHIEVEMENT_TABS, achievementTab, (id) => {
       achievementTab = id;
@@ -4383,12 +4345,10 @@ function drawAchievements(): void {
 // 두 모달은 같은 틀이다. 탭을 바꿔도 모달 크기(560×500)가 같다.
 // Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `User / Connect` `1079:1891` (worklog/records/trade/record.md "계정 탭 구조로 수정").
 // 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
-type SettingsTab = "general" | "display";
 const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
   { id: "general", label: "일반" },
   { id: "display", label: "화면" },
 ];
-type UserTab = "account" | "agents";
 const USER_TABS: readonly { id: UserTab; label: string }[] = [
   { id: "account", label: "계정" },
   { id: "agents", label: "연결" },
@@ -4528,8 +4488,8 @@ const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => voi
 
 // 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
 function drawGeneral(scroll: HTMLElement): void {
-  if (!view) return;
-  const s = view.settings;
+  if (!ui.view) return;
+  const s = ui.view.settings;
   const sleep = s.sleepChoices.map((c) => ({ value: String(c.value), label: c.label }));
   scroll.appendChild(
     settingRow("잠들기 기준", "이 시간 동안 조작이 없으면 잠듦", settingSelect("sleep", sleep, String(s.sleepAfterMin), 104, (v) => setSetting("sleepAfterMin", Number(v)))),
@@ -4548,9 +4508,9 @@ function drawGeneral(scroll: HTMLElement): void {
 
 // 화면 — 포켓몬 표시, 클릭 통과, 놀이공간. 앞의 두 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
 function drawDisplay(scroll: HTMLElement): void {
-  if (!view) return;
-  const s = view.settings;
-  const d = view.display;
+  if (!ui.view) return;
+  const s = ui.view.settings;
+  const d = ui.view.display;
   if (d) {
     const shown = settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setDisplay("hidden", !d.hidden)));
     shown.dataset.tut = "set-hidden"; // 화면 탭 튜토리얼이 밝히는 곳
@@ -4610,7 +4570,7 @@ async function loadScreens(): Promise<void> {
     const next = await window.pokebuddyManage.screens();
     const changed = JSON.stringify(next) !== JSON.stringify(screenRows);
     screenRows = next;
-    if (changed && dialog?.kind === "settings" && dialog.tab === "display") drawDialog();
+    if (changed && ui.dialog?.kind === "settings" && ui.dialog.tab === "display") drawDialog();
   } finally {
     screensLoading = false;
   }
@@ -4619,7 +4579,7 @@ async function loadScreens(): Promise<void> {
 // 한 화면 목록이 열린 동안만 모든 모니터에 번호 덮개 — 바뀔 때만 메인에 알린다
 let identifying = false;
 function syncIdentify(): void {
-  const on = dialog?.kind === "settings" && dialog.tab === "display" && settingSelectOpen === "screen";
+  const on = ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && settingSelectOpen === "screen";
   if (on === identifying) return;
   identifying = on;
   window.pokebuddyManage.identifyScreens(on);
@@ -4790,7 +4750,7 @@ async function updateSend(action: "check" | "install"): Promise<void> {
   const restart = action === "install" && upd?.status === "ready";
   if (restart) {
     restarting = true;
-    if (dialog?.kind === "settings") drawDialog();
+    if (ui.dialog?.kind === "settings") drawDialog();
   }
   let next: UpdateView | null = null;
   try {
@@ -4800,7 +4760,7 @@ async function updateSend(action: "check" | "install"): Promise<void> {
   }
   if (next) upd = next;
   if (restart && !next) restarting = false; // 요청이 닿지 않았다 — 다시 누를 수 있게 되돌린다
-  if (dialog?.kind === "settings") drawDialog();
+  if (ui.dialog?.kind === "settings") drawDialog();
 }
 
 function versionFoot(): HTMLElement {
@@ -4836,13 +4796,13 @@ async function loadUpdate(): Promise<void> {
     console.error("버전·패치노트를 읽지 못했다", e);
     return;
   }
-  if (dialog?.kind === "settings") drawDialog();
+  if (ui.dialog?.kind === "settings") drawDialog();
 }
 
 // 업데이트한 뒤 처음 열었다 — 그 버전의 노트를 한 번 띄운다. 다른 모달이 떠 있으면 가리지 않고 다음에 연다
 function showUnseenNotes(): void {
   const v = patch?.unseen;
-  if (!v || dialog) return;
+  if (!v || ui.dialog) return;
   open({ kind: "notes-new", version: v });
   void window.pokebuddyManage.notes("seen").then((n) => {
     if (n) patch = n;
@@ -4851,7 +4811,7 @@ function showUnseenNotes(): void {
 
 window.pokebuddyManage.onUpdate((next) => {
   upd = next;
-  if (dialog?.kind === "settings") drawDialog();
+  if (ui.dialog?.kind === "settings") drawDialog();
 });
 
 // ── 모달 · 패치노트 ────────────────────────────────────────────────────────────
@@ -4946,7 +4906,7 @@ const dialogKeyOf = (d: Dialog): string => `${d.kind}:${"tab" in d ? String(d.ta
 // 헤더 아이콘의 열림 표시 — 그 아이콘이 여는 모달이 떠 있는 동안 진한 배경 (docs/specs/ui-components.md C-02, Figma `Header Icon Button` `State=Open`)
 const HEADER_OPEN: Record<string, string> = { achievements: "open-achievements", settings: "open-settings", user: "open-user", mail: "open-mail" };
 function markHeaderOpen(): void {
-  for (const [kind, id] of Object.entries(HEADER_OPEN)) document.getElementById(id)?.classList.toggle("open", dialog?.kind === kind);
+  for (const [kind, id] of Object.entries(HEADER_OPEN)) document.getElementById(id)?.classList.toggle("open", ui.dialog?.kind === kind);
 }
 
 // 이번 그리기에서 대화상자 안의 상자가 오류를 이미 보였나 — 그러면 바닥 줄에 또 보이지 않는다
@@ -4955,58 +4915,58 @@ let noticeInline = false;
 function drawDialog(): void {
   markHeaderOpen();
   noticeInline = false;
-  if (dialog && typingSearch(dialogEl)) {
+  if (ui.dialog && typingSearch(dialogEl)) {
     dialogHeld = true;
     return;
   }
   dialogHeld = false;
-  if (!dialog) {
+  if (!ui.dialog) {
     setScrim(false);
     dialogScrollKey = "";
     syncIdentify();
     return;
   }
   setScrim(true);
-  const key = dialogKeyOf(dialog);
+  const key = dialogKeyOf(ui.dialog);
   const keep = key === dialogScrollKey ? (dialogEl.querySelector<HTMLElement>(".scroll")?.scrollTop ?? 0) : 0;
   dialogScrollKey = key;
-  dialogEl.className = SHAPE[dialog.kind];
+  dialogEl.className = SHAPE[ui.dialog.kind];
   dialogEl.replaceChildren();
   drawUnder();
 
-  if (dialog.kind === "evolve") drawEvolve(dialog.petId, dialog.to);
-  else if (dialog.kind === "nature") drawNature(dialog.petId, dialog.pick, dialog.itemId);
-  else if (dialog.kind === "nature-target") drawNatureTarget(dialog.itemId);
-  else if (dialog.kind === "achievements") drawAchievements();
-  else if (dialog.kind === "settings") drawSettings(dialog.tab);
-  else if (dialog.kind === "user") drawUser(dialog.tab);
-  else if (dialog.kind === "hatched") drawHatched(dialog.petId, dialog.eggId, dialog.over, dialog.queue, dialog.at);
-  else if (dialog.kind === "daycare") drawDaycare();
-  else if (dialog.kind === "box-order") drawBoxOrder();
-  else if (dialog.kind === "pool") drawPool(dialog.productId, dialog.page);
-  else if (dialog.kind === "form") drawForm(dialog.petId, dialog.to);
-  else if (dialog.kind === "mega") drawMega(dialog.petId, dialog.to);
-  else if (dialog.kind === "sell-pet") drawSellPet(dialog.petId, dialog.price);
-  else if (dialog.kind === "notes") drawNotes(dialog.pick);
-  else if (dialog.kind === "notes-new") drawNotesNew(dialog.version);
-  else if (dialog.kind === "mail") drawMail();
-  else if (dialog.kind === "letter") drawLetter(dialog.id);
-  else if (dialog.kind === "trade") drawTradeDialog();
+  if (ui.dialog.kind === "evolve") drawEvolve(ui.dialog.petId, ui.dialog.to);
+  else if (ui.dialog.kind === "nature") drawNature(ui.dialog.petId, ui.dialog.pick, ui.dialog.itemId);
+  else if (ui.dialog.kind === "nature-target") drawNatureTarget(ui.dialog.itemId);
+  else if (ui.dialog.kind === "achievements") drawAchievements();
+  else if (ui.dialog.kind === "settings") drawSettings(ui.dialog.tab);
+  else if (ui.dialog.kind === "user") drawUser(ui.dialog.tab);
+  else if (ui.dialog.kind === "hatched") drawHatched(ui.dialog.petId, ui.dialog.eggId, ui.dialog.over, ui.dialog.queue, ui.dialog.at);
+  else if (ui.dialog.kind === "daycare") drawDaycare();
+  else if (ui.dialog.kind === "box-order") drawBoxOrder();
+  else if (ui.dialog.kind === "pool") drawPool(ui.dialog.productId, ui.dialog.page);
+  else if (ui.dialog.kind === "form") drawForm(ui.dialog.petId, ui.dialog.to);
+  else if (ui.dialog.kind === "mega") drawMega(ui.dialog.petId, ui.dialog.to);
+  else if (ui.dialog.kind === "sell-pet") drawSellPet(ui.dialog.petId, ui.dialog.price);
+  else if (ui.dialog.kind === "notes") drawNotes(ui.dialog.pick);
+  else if (ui.dialog.kind === "notes-new") drawNotesNew(ui.dialog.version);
+  else if (ui.dialog.kind === "mail") drawMail();
+  else if (ui.dialog.kind === "letter") drawLetter(ui.dialog.id);
+  else if (ui.dialog.kind === "trade") drawTradeDialog();
   else drawGuide();
 
   // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 05 `Dialog · 실패 (바닥 단추 줄 빈자리)` `1126:24745`).
   // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
-  if (notice && !noticeInline) {
+  if (ui.notice && !noticeInline) {
     const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions"); // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다
     const row = rows[rows.length - 1];
     if (row) {
       const err = el("div", "footer-error");
-      err.append(el("i"), el("span", undefined, notice));
-      err.title = notice;
+      err.append(el("i"), el("span", undefined, ui.notice));
+      err.title = ui.notice;
       // 남는 폭에만 선다 — spacer 가 있으면 그 안(보조 단추 뒤, Figma `Dialog` `footer › spacer › error-notice`), 없으면 줄 끝. 단추 자리는 그대로
       const spacer = row.querySelector(":scope > .spacer");
       (spacer ?? row).appendChild(err);
-    } else dialogEl.appendChild(alertBox("bad", "", notice));
+    } else dialogEl.appendChild(alertBox("bad", "", ui.notice));
   }
   const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
   if (scroll && keep) scroll.scrollTop = keep;
@@ -5018,7 +4978,7 @@ function drawDialog(): void {
 // 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
 function open(next: Dialog): void {
   // 설정 › 화면에 새로 들어오면 화면 탭 튜토리얼은 1단계부터
-  if (next.kind === "settings" && next.tab === "display" && !(dialog?.kind === "settings" && dialog.tab === "display")) {
+  if (next.kind === "settings" && next.tab === "display" && !(ui.dialog?.kind === "settings" && ui.dialog.tab === "display")) {
     areaStep = 0;
     areaStart = null;
   }
@@ -5026,22 +4986,22 @@ function open(next: Dialog): void {
   // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형)
   if (next.kind === "pet") {
     if (coachId === "evolution") void send("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
-    dialog = null;
-    notice = "";
+    ui.dialog = null;
+    ui.notice = "";
     setScrim(false);
-    setTab(slotOfPet(next.petId) != null ? "party" : "box");
-    detailPet = next.petId;
+    setTab(findPartySlot(next.petId) != null ? "party" : "box");
+    ui.detailPet = next.petId;
     draw();
     return;
   }
-  dialog = next;
-  notice = "";
+  ui.dialog = next;
+  ui.notice = "";
   drawDialog();
 }
 
 function close(): void {
-  dialog = null;
-  notice = "";
+  ui.dialog = null;
+  ui.notice = "";
   setScrim(false);
   syncIdentify();
 }
@@ -5049,7 +5009,7 @@ function close(): void {
 // 박스 탭을 열고 교환 모달을 띄운다 — 교환 링크(딥링크)로 왔을 때
 function showTrade(): void {
   setTab("box");
-  detailPet = null; // 박스 탭에 있었어도 개체 상세는 닫고 교환 모달만 띄운다
+  ui.detailPet = null; // 박스 탭에 있었어도 개체 상세는 닫고 교환 모달만 띄운다
   draw();
   open({ kind: "trade" });
   void loadTrade();
@@ -5057,8 +5017,8 @@ function showTrade(): void {
 
 // 파티 카드·박스 칸의 좌클릭 — 개체 상세를 연다
 const openPet = (id: string): void => {
-  if (detailPet === id && !dialog) {
-    detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
+  if (ui.detailPet === id && !ui.dialog) {
+    ui.detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
     draw();
     return;
   }
@@ -5091,9 +5051,6 @@ function rememberReply(cmd: string, target: string, extra: Record<string, unknow
   unknownReq = !reply.ok && reply.reason === "timeout" ? { key: JSON.stringify([cmd, target, extra]), id } : null;
 }
 
-// 답을 기다리는 조작이 있으면 새 조작을 받지 않는다. 빠른 두 번 클릭이 두 번 사거나 두 번 쓰지 않게 한다.
-// 여러 개 사기는 앞 조작의 답을 받은 뒤 다음을 보내므로 막히지 않는다
-let busy = false;
 let lastReply: ManageReply | null = null; // 마지막으로 성공한 조작의 답 — 결과 창이 읽는다
 
 // 처리 중 표시 — 답이 늦으면 누른 단추·칸에 점 세 개를 띄운다 (Figma `Button` · `Box Slot` 의 `State=Busy`).
@@ -5126,8 +5083,8 @@ function busyLater(): () => void {
 
 // 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
 async function send(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
-  if (busy) return false;
-  busy = true;
+  if (ui.busy) return false;
+  ui.busy = true;
   const unbusy = busyLater();
   let reply: ManageReply;
   try {
@@ -5137,16 +5094,16 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
     if (reply.ok && TOUCHES_DEX.has(cmd)) dexRows = null;
     await refresh();
   } finally {
-    busy = false;
+    ui.busy = false;
     unbusy();
   }
 
   if (!reply.ok) {
-    notice = failTextOf(reply.reason, "command").text;
+    ui.notice = failTextOf(reply.reason, "command").text;
     drawDialog();
     return false;
   }
-  notice = "";
+  ui.notice = "";
   lastReply = reply;
   if (CLOSES.has(cmd) && !opts.keepOpen) close();
   else drawDialog();
@@ -5155,31 +5112,31 @@ async function send(cmd: string, target: string, extra: Record<string, unknown> 
 
 // 화면 고르기 덮개를 연다. 누른 화면을 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
 async function screenPick(): Promise<void> {
-  if (busy) return;
-  busy = true;
+  if (ui.busy) return;
+  ui.busy = true;
   let reply: ManageReply;
   try {
     reply = await window.pokebuddyManage.pickScreen();
     await refresh();
   } finally {
-    busy = false;
+    ui.busy = false;
   }
-  notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
+  ui.notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
   drawDialog();
 }
 
 // 영역 그리기 창을 연다. 적용하면 메인이 저장한다. 취소는 아무것도 바꾸지 않으므로 알리지 않는다
 async function regionDraw(): Promise<void> {
-  if (busy) return;
-  busy = true;
+  if (ui.busy) return;
+  ui.busy = true;
   let reply: ManageReply;
   try {
     reply = await window.pokebuddyManage.drawRegion();
     await refresh();
   } finally {
-    busy = false;
+    ui.busy = false;
   }
-  notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
+  ui.notice = reply.ok || reply.reason === "cancelled" ? "" : failTextOf(reply.reason, "command").text;
   drawDialog();
 }
 
@@ -5210,7 +5167,7 @@ async function loadDex(): Promise<void> {
   dexRows = await window.pokebuddyManage.dex();
   if (dexPick) window.pokebuddyManage.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
   else if (dexBeside && dexBesideSent) window.pokebuddyManage.dexOpen(dexBesideSent, dexGen, true);
-  if (tab === "dex") draw();
+  if (ui.tab === "dex") draw();
 }
 
 async function loadAgents(): Promise<void> {
@@ -5218,12 +5175,12 @@ async function loadAgents(): Promise<void> {
   agentRows = reply.list;
   agentPlatform = reply.platform;
   agentNode = reply.node;
-  if (dialog?.kind === "user" && dialog.tab === "agents") drawDialog();
+  if (ui.dialog?.kind === "user" && ui.dialog.tab === "agents") drawDialog();
 }
 
 async function refresh(): Promise<void> {
-  view = await window.pokebuddyManage.snapshot();
-  drawnStructure = structureOf(view);
+  ui.view = await window.pokebuddyManage.snapshot();
+  drawnStructure = structureOf(ui.view);
   draw();
 }
 
@@ -5259,7 +5216,7 @@ const typingText = (): boolean => {
 const holdFullDraw = (): boolean => dragFrom != null || boxRenaming || pointerDown || composing || typingText();
 
 // 시간 표시만 고친다 — 개체 막대(data-live-pet)와 알 글자(data-live-egg)
-function applyLive(v: Snapshot | null = view): void {
+function applyLive(v: Snapshot | null = ui.view): void {
   if (!v) return;
   const pets = new Map<string, PetView>();
   for (const s of v.party.slots) if (s.pet) pets.set(s.pet.id, s.pet);
@@ -5293,7 +5250,7 @@ async function clockTick(): Promise<void> {
     const next = await window.pokebuddyManage.snapshot();
     const structure = structureOf(next);
     if (structure === drawnStructure) {
-      view = next; // 모양이 같다 — 시간 값만 새것으로
+      ui.view = next; // 모양이 같다 — 시간 값만 새것으로
       applyLive();
       syncPetDevice(); // 기기 창도 새 시간 값을 받는다. 기기 창이 표시만 고친다
       syncShopDevice();
@@ -5304,7 +5261,7 @@ async function clockTick(): Promise<void> {
       applyLive(next); // 모양은 다음 시계에 — 시간 표시만 먼저
       return;
     }
-    view = next;
+    ui.view = next;
     drawnStructure = structure;
     draw();
     drawDialog();
@@ -5345,10 +5302,10 @@ scrimEl.addEventListener("click", (e) => {
   if (e.target === scrimEl) dismiss();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && dialog) dismiss();
+  if (e.key === "Escape" && ui.dialog) dismiss();
   // 부화 결과 창 — Space·Enter 는 `확인` 을 누른 것과 같다 (2026-10-02 사용자 결정). 누르고 있는 동안의 반복은 받지 않는다.
   // 단추에 포커스가 있을 때 브라우저가 한 번 더 누르지 않게 기본 동작을 막는다
-  if (dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {
+  if (ui.dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {
     e.preventDefault();
     if (!e.repeat) dialogEl.querySelector<HTMLButtonElement>("button[data-confirm]:not(:disabled)")?.click();
   }
@@ -5361,37 +5318,37 @@ function goTo(route: ManageRoute): void {
     draw();
     open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
-    if (petOf(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
+    if (findPet(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
   } else if (route.to === "form") {
     // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
-    if (petOf(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
+    if (findPet(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
   } else if (route.to === "move") {
     startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
   } else if (route.to === "sell") {
-    if (petOf(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
+    if (findPet(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {
-    detailPet = null;
+    ui.detailPet = null;
     open({ kind: "user", tab: "account" });
     void loadAccount();
   } else if (route.to === "trade") {
     // 교환 링크(딥링크)로 왔다 — 박스 탭을 열고 교환 모달을 띄운다.
     // 교환 모달이 이미 떠 있으면 그대로 두고 상태만 다시 읽는다. 다른 대화상자가 떠 있으면 닫고 연다
     // (2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로.")
-    if (dialog?.kind === "trade") void loadTrade();
+    if (ui.dialog?.kind === "trade") void loadTrade();
     else {
-      if (dialog) close();
+      if (ui.dialog) close();
       showTrade();
     }
   } else if (route.to === "agents") {
     // Codex 창 깜빡임 알림 — 사용자 모달의 연결 탭 (src/agents/notice.ts)
-    detailPet = null;
+    ui.detailPet = null;
     open({ kind: "user", tab: "agents" });
     void loadAgents();
   } else if (route.to === "bag" || route.to === "shop") {
     // 줍기 배너 — 도구·진화용 도구는 가방, 포인트는 상점 (docs/specs/game.md "줍기")
     close();
     setTab(route.to);
-    detailPet = null;
+    ui.detailPet = null;
     draw();
   } else {
     achievementTab = "all"; // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
