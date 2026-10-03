@@ -20,7 +20,7 @@ import { loadJson, isMetaKey } from "../../dex/data.js";
 import { PATHS } from "../paths.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
-import { fetchCached } from "./fetch.js";
+import { createAssetCache, dataUriOf } from "./asset-cache.js";
 import type { PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -106,6 +106,7 @@ export function iconUrl(key: string): string | null {
 }
 
 const isPng = (buf: Buffer): boolean => buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+const pngUri = (buf: Buffer): string => dataUriOf("image/png", buf);
 
 export interface Portraits {
   get(asks: PortraitAsk[]): Promise<Record<string, string | null>>;
@@ -120,30 +121,14 @@ export interface Portraits {
 
 // dir 은 사용자 캐시, bundled 는 앱에 들어 있는 그림 폴더(없어도 된다). 두 폴더의 파일 이름은 같다
 export function createPortraits(dir: string, bundled?: string): Portraits {
-  const missing = new Map<string, number>(); // 못 받은 파일 → 시각. MISSING_RETRY_MS 동안 다시 청하지 않는다(네트워크 실패가 영영 남지 않게)
-  const inflight = new Map<string, Promise<{ buf: Buffer } | null>>(); // 받는 중인 파일 — get·icons·prefetch 가 같은 파일을 두 번 받지 않는다
-  const fetchOnce = (file: string, url: string): Promise<{ buf: Buffer } | null> => {
-    const going = inflight.get(file);
-    if (going) return going;
-    const job = fetchCached(file, url, isPng).finally(() => inflight.delete(file));
-    inflight.set(file, job);
-    return job;
-  };
-  const memo = new Map<string, string>(); // 이미 읽은 data URI
-  let running = 0;
-  const waiting: (() => void)[] = [];
-  const slot = async <T>(job: () => Promise<T>): Promise<T> => {
-    if (running >= PARALLEL) await new Promise<void>((r) => waiting.push(r));
-    running++;
-    try {
-      return await job();
-    } finally {
-      running--;
-      waiting.shift()?.();
-    }
-  };
+  // 받기·캐시·못 받은 것 기억 (./asset-cache.ts) — 못 받은 그림은 MISSING_RETRY_MS 동안 다시 청하지 않는다(네트워크 실패가 영영 남지 않게).
+  // get·icons·prefetch 가 같은 파일을 두 번 받지 않는다. rel 은 두 폴더 안의 이름이다
+  const cache = createAssetCache({ dir, ...(bundled ? { bundled } : {}), validate: isPng, mime: () => "image/png", parallel: PARALLEL, retryMs: MISSING_RETRY_MS });
+  const fileUri = cache.fetchUri;
+  const diskUri = cache.readUri;
+  const names = (sub: string): string[] => cache.names(sub).filter((n) => n.endsWith(".png"));
+  const ownMemo = new Map<string, string>(); // 앱 안 우리 그림의 data URI
 
-  // 파일 하나 — 앱에 든 그림, 캐시 순서로 읽고, 둘 다 없으면 받아 캐시에 둔다. rel 은 두 폴더 안의 이름이다
   // 색을 바꾼 알 그림의 data URI — 알 종류마다 한 번 칠해 둔다
   const tinted = new Map<string, string>();
   async function eggUri(kind: string): Promise<string | null> {
@@ -154,81 +139,20 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     if (!base) return null;
     const palette = eggPalettes()[kind];
     const png = palette ? tintEgg(Buffer.from(base.slice(base.indexOf(",") + 1), "base64"), palette) : null;
-    const uri = png ? `data:image/png;base64,${png.toString("base64")}` : base;
+    const uri = png ? pngUri(png) : base;
     tinted.set(kind, uri);
     return uri;
   }
 
-  async function fileUri(rel: string, url: string): Promise<string | null> {
-    const file = path.join(dir, rel);
-    const known = memo.get(file);
-    if (known) return known;
-    const failedAt = missing.get(file);
-    if (failedAt != null && Date.now() - failedAt < MISSING_RETRY_MS) return null;
-    if (bundled) {
-      try {
-        const buf = fs.readFileSync(path.join(bundled, rel));
-        if (isPng(buf)) {
-          const uri = `data:image/png;base64,${buf.toString("base64")}`;
-          memo.set(file, uri);
-          return uri;
-        }
-      } catch {
-        // 앱에 없는 그림 — 캐시와 네트워크로 간다
-      }
-    }
-    const got = await slot(() => fetchOnce(file, url));
-    if (!got) {
-      missing.set(file, Date.now());
-      return null;
-    }
-    missing.delete(file);
-    const uri = `data:image/png;base64,${got.buf.toString("base64")}`;
-    memo.set(file, uri);
-    return uri;
-  }
-
-  // 디스크에서만 읽는다 — 앱에 든 그림, 캐시 순서. 없으면 null. 비동기다 — 창을 처음 열 때 메인이 멈추지 않게
-  async function diskUri(rel: string): Promise<string | null> {
-    const file = path.join(dir, rel);
-    const known = memo.get(file);
-    if (known) return known;
-    for (const root of bundled ? [bundled, dir] : [dir]) {
-      try {
-        const buf = await fs.promises.readFile(path.join(root, rel));
-        if (!isPng(buf)) continue;
-        const uri = `data:image/png;base64,${buf.toString("base64")}`;
-        memo.set(file, uri);
-        return uri;
-      } catch {
-        // 이 폴더에 없는 그림
-      }
-    }
-    return null;
-  }
-
-  // 폴더 안 파일 이름 — 없는 폴더는 빈 목록
-  const names = (sub: string): string[] => {
-    const out = new Set<string>();
-    for (const root of bundled ? [bundled, dir] : [dir]) {
-      try {
-        for (const n of fs.readdirSync(path.join(root, sub))) if (n.endsWith(".png")) out.add(n);
-      } catch {
-        // 폴더 없음
-      }
-    }
-    return [...out];
-  };
-
-  // 앱 안 우리 그림 하나 — memo 를 함께 쓴다
+  // 앱 안 우리 그림 하나
   async function ownUri(file: string): Promise<string | null> {
-    const known = memo.get(file);
+    const known = ownMemo.get(file);
     if (known) return known;
     try {
       const buf = await fs.promises.readFile(file);
       if (!isPng(buf)) return null;
-      const uri = `data:image/png;base64,${buf.toString("base64")}`;
-      memo.set(file, uri);
+      const uri = pngUri(buf);
+      ownMemo.set(file, uri);
       return uri;
     } catch {
       return null;
@@ -309,12 +233,11 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
         while (next < jobs.length) {
           const job = jobs[next++];
           if (!job) break;
-          const file = path.join(dir, job.rel);
-          if (fs.existsSync(file) || (bundled && fs.existsSync(path.join(bundled, job.rel)))) count.had++; // 앞에 받은 first 도 여기로 온다
+          if (cache.has(job.rel)) count.had++; // 앞에 받은 first 도 여기로 온다
           else if (absent.has(job.url)) count.missing++;
           else {
             try {
-              const got = await fetchOnce(file, job.url);
+              const got = await cache.fetchBuffer(job.rel, job.url);
               if (got) count.got++;
               else {
                 count.missing++; // 404 — 그림이 없는 도구 등
