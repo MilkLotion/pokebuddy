@@ -1,5 +1,7 @@
 // 경로·설정의 typed facade — config.js(JS 로 남아 있다 — CLI·설치본이 함께 쓴다)를 감싼다. 값·규칙·기본값은 그쪽이 소유하고 여기는 모양만 붙인다
 // dist/platform/paths.js 에서 ../../config.js = 프로젝트 루트의 config.js
+import fs from "node:fs";
+import path from "node:path";
 import type { Lang } from "../shared/species";
 
 export interface Paths {
@@ -48,3 +50,21 @@ export const PROJECT: string = PATHS.project;
 
 // 사용자 설정 — 파일과 환경변수를 합친 값
 export const readConfig = (): UserConfig => settings.load();
+
+// ── 사용자 홈 아래 캐시 폴더 ───────────────────────────────────────────────────
+// 받아 둔 그림(초상·도구·알)과 울음소리. 지우면 다시 받는다
+export const spriteCacheDir = (home: string = PATHS.home): string => path.join(home, "sprites");
+export const cryCacheDir = (home: string = PATHS.home): string => path.join(home, "cries");
+
+// 앱 안 그림 폴더 — 설치본은 <앱>/sprites, 저장소 실행은 그 폴더가 없어 scripts 가 받아 둔 <앱>/.cache/sprites
+export function bundledSpritesDir(project: string = PROJECT, exists: (file: string) => boolean = fs.existsSync): string {
+  const packed = path.join(project, "sprites");
+  return exists(packed) ? packed : path.join(project, ".cache", "sprites");
+}
+
+// ── 저장(save.json) 옆 파일 ───────────────────────────────────────────────────
+// 게임 저장에 필드를 더하지 않고 같은 폴더에 따로 둔다. 자체 검사는 임시 저장 파일로 부른다
+export const cloudFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "cloud.json"); // 클라우드 맞추기 상태 (src/online/cloud.ts)
+export const noticesFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notices.json"); // 한 번 띄운 안내 (src/agents/notice.ts)
+export const notifyFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notify.json"); // 알림 배너 줄 (src/notify/notifier.ts)
+export const notesSeenFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notes-seen.json"); // 본 패치 노트 판 (src/main/patch-notes.ts)
