@@ -113,7 +113,7 @@ jobs:
             done
           done
 
-      # blockmap 은 올리지 않는다 — mac 업데이터(src/main/mac-updater.ts)가 쓰지 않는다
+      # blockmap 은 올리지 않는다 — mac 업데이터(src/main/update/mac-updater.ts)가 쓰지 않는다
       - name: 릴리스에 올리기
         env:
           GH_TOKEN: ${{ github.token }}

@@ -97,7 +97,7 @@ export interface ManageOptions {
   drawRegion?: () => Promise<ManageReply>;
   display?: () => DisplayView; // 포켓몬 표시·클릭 통과의 지금 값. 저장 밖이라 앱이 준다
   account?: (req: AccountAction) => Promise<AccountReply>; // 계정·클라우드 저장 (src/main/online.ts). 없으면 계정 탭은 쓸 수 없다고 보인다
-  update?: (action: UpdateAction) => Promise<UpdateView>; // 버전·업데이트 (src/main/updater.ts). 없으면 설정 바닥에 버전을 그리지 않는다
+  update?: (action: UpdateAction) => Promise<UpdateView>; // 버전·업데이트 (src/main/update/updater.ts). 없으면 설정 바닥에 버전을 그리지 않는다
   notes?: (action: "list" | "seen") => PatchNotesView; // 패치노트 (src/main/patch-notes.ts). 없으면 `패치노트` 단추를 두지 않는다
   // 놀이공간 화면 — 목록·번호 보기·화면에서 고르기 (src/main/windows/screen-picker.ts). 없으면 목록이 비고 고르기를 쓸 수 없다
   screens?: () => ScreenView[];
