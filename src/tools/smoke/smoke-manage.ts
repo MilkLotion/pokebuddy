@@ -18,7 +18,7 @@
 //   보는 방식  도감·상점 포켓몬 탭의 쪽 | 스크롤 토글. 스크롤은 작업 전 화면(도감 칸 격자·상점 상품 줄) 그대로 넘김 없이 · 다시 그려도 스크롤 유지 ·
 //              도감·상점을 따로 기억하고 다시 읽어도(localStorage) 남는다 (2026-09-29 사용자 결정)
 // 실제 IME 는 흉내 낼 수 없어서 요소가 같은 객체로 남는지, 조합 이벤트 사이에 다시 그리지 않는지로 본다
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +30,12 @@ import { empty } from "../../save/v3";
 import { dexList } from "../../view/dex-list";
 import { MINT_RETIRED } from "../../bag/mint";
 import { snapshot } from "../../view/snapshot";
+import { bagDeviceModel } from "../../view/device-bag";
+import { partyDeviceModel } from "../../view/device-party";
+import { petDeviceModel } from "../../view/device-pet";
+import { shopDeviceModel } from "../../view/device-shop";
+import type { BagDeviceInput, PartyDeviceInput, PetDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
+import type { Snapshot } from "../../shared/model/snapshot";
 import { makeTmp } from "../harness/tmp-dir";
 
 const dir = makeTmp("manage");
@@ -77,6 +83,16 @@ const t0 = Date.now();
 window.__bump = 0;
 window.__bagExtra = false;
 window.__cb = {};
+const { ipcRenderer } = require("electron");
+async function device(kind, input, put) {
+  if (input === null) {
+    put(null);
+    return null;
+  }
+  const r = await ipcRenderer.invoke("smoke:device", kind, await window.pokebuddyManage.snapshot(), input);
+  put(r ? r.model : null);
+  return r ? r.input : null;
+}
 window.pokebuddyManage = new Proxy({}, {
   get(_t, name) {
     if (name === "snapshot") return async () => {
@@ -93,11 +109,12 @@ window.pokebuddyManage = new Proxy({}, {
     };
     if (name === "dex") return async () => dex;
     if (name === "dexOpen") return (slug, gen, beside) => { window.__dexOpen = slug; window.__dexBeside = beside === true; };
-    if (name === "petOpen") return (open) => { window.__petOpen = open; };
+    // 기기 창 넷 — 설정창은 고른 값만 보낸다. 시험 메인이 앱 메인처럼 모델을 만들고(smoke:device), 받은 모델은 window.__<기기>Open 에 둔다
+    if (name === "petOpen") return (input) => device("pet", input, (m) => { window.__petOpen = m; });
     if (name === "petMenu") return async (id) => { window.__petMenu = id; return window.__menuOn === true; }; // 메뉴를 띄운 것으로 칠지는 window.__menuOn
-    if (name === "shopOpen") return (open) => { window.__shopOpen = open; };
-    if (name === "bagOpen") return (open) => { window.__bagOpen = open; };
-    if (name === "partyOpen") return (open) => { window.__partyOpen = open; };
+    if (name === "shopOpen") return (input) => device("shop", input, (m) => { window.__shopOpen = m; });
+    if (name === "bagOpen") return (input) => device("bag", input, (m) => { window.__bagOpen = m; });
+    if (name === "partyOpen") return (input) => device("party", input, (m) => { window.__partyOpen = m; });
     if (name === "onClock") return (cb) => setInterval(() => cb({ now: Date.now() }), 1000); // 메인의 전역 1초 시계 대신
     if (typeof name === "string" && name.startsWith("on")) return (cb) => { window.__cb[name] = cb; };
     if (name === "portraits" || name === "icons" || name === "art") return async () => ({});
@@ -108,6 +125,15 @@ window.pokebuddyManage = new Proxy({}, {
 });
 `,
 );
+
+// 기기 창 모델 — 앱 메인의 처리기(src/main/manage-window.ts)와 같이 가짜 스냅샷과 고른 값으로 만든다. 알 그림은 설정창이 보낸 것([임시] eggArt)
+ipcMain.handle("smoke:device", (_e, kind: string, s: Snapshot, input: unknown) => {
+  if (kind === "bag") return bagDeviceModel(s, input as BagDeviceInput);
+  if (kind === "party") return partyDeviceModel(s, input as PartyDeviceInput);
+  if (kind === "pet") return petDeviceModel(s, input as PetDeviceInput);
+  const r = shopDeviceModel(s, input as ShopDeviceInput);
+  return r && r.model.art?.startsWith("egg:") ? { ...r, model: { ...r.model, art: r.input.eggArt } } : r;
+});
 
 app.setPath("userData", path.join(dir, "user-data"));
 app.disableHardwareAcceleration();
@@ -722,7 +748,7 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
     await wait(200);
     const tutDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
-    assert.deepEqual(tutDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "box", 3]], "확인은 tutorial.done box");
+    assert.deepEqual(tutDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "box", undefined]], "확인은 tutorial.done box — 단계 수는 싣지 않는다(tutorial/queue 의 done 이 TUTORIAL_STEPS 로 적는다)");
     await js(`window.__screenTut = null; window.__cmds = []; window.__bump = 32; 0`);
     await wait(1400);
     assert.equal(await js<unknown>(coach), null, "끝내면 다시 뜨지 않는다");
@@ -755,7 +781,7 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
     await wait(200);
     const presetDone = await js<{ cmd: string; target: string; args: Record<string, unknown> }[]>(`window.__cmds`);
-    assert.deepEqual(presetDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "preset", 3]], "확인은 tutorial.done preset");
+    assert.deepEqual(presetDone.map((c) => [c.cmd, c.target, c.args?.steps]), [["tutorial.done", "preset", undefined]], "확인은 tutorial.done preset — 단계 수는 싣지 않는다");
     await js(`window.__tut = null; window.__cmds = []; window.__bump = 34; ${tabBtn("박스")}.click(); 0`);
     await wait(1400);
     assert.equal(await js<unknown>(coach), null, "프리셋 튜토리얼을 끝내면 뜨지 않는다");

@@ -113,5 +113,5 @@ export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = 
     return box;
   }
 
-  return { evoArrow, evoPortrait, evoTree, evoRadial };
+  return { evoTree, evoRadial };
 }

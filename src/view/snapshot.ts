@@ -19,12 +19,16 @@ import { activePreset, presetCount, presetName, locatePet } from "../party/prese
 import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS, sizeLevelOf } from "../party/size.js";
-import { MAX_LEVEL, expForLevel, growthOf, progressTo } from "../dex/growth.js";
+import { growthOf, progressTo } from "../dex/growth.js";
 import { itemOf } from "../bag/use.js";
 import { natures as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
-import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SlotView, Snapshot } from "../shared/model/snapshot";
+import { TIME_RULES } from "../state/rules.js";
+import { buffText, waitText } from "../shared/count-text.js";
+import { SETTING_CHOICES } from "../state/settings.js";
+import type { FullnessZone } from "../shared/save-v3.js";
+import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
@@ -124,11 +128,18 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
   };
 }
 
-// 경험치 타입별 누적 경험치 표 — 칸 L 이 레벨 L. 한 번 만들어 둔다
-const GROWTH_RATES = ["fast", "medium-fast", "medium-slow", "slow", "erratic", "fluctuating"] as const;
-const GROWTH_CURVES: Record<string, number[]> = Object.fromEntries(
-  GROWTH_RATES.map((rate) => [rate, Array.from({ length: MAX_LEVEL + 1 }, (_, level) => (level < 1 ? 0 : expForLevel(rate, level)))]),
-);
+// 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창·포켓몬 메뉴가 같이 쓴다. 글자는 언어 파일의 zone.* 다
+const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
+
+// 배고픔 디버프 배지 — 구간 낱말, 색, 친밀도 증가량 감소율(TIME_RULES.zonePercent). 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
+const DEBUFF_TONE: Partial<Record<FullnessZone, "warning" | "danger">> = { hungry: "warning", starving: "danger" };
+function debuffOf(zone: FullnessZone): PetView["debuff"] {
+  const tone = DEBUFF_TONE[zone];
+  return tone ? { label: zoneText(zone), tone, note: `친밀도 증가량 −${100 - TIME_RULES.zonePercent[zone]}%` } : null;
+}
+
+// 잠들기 기준 선택지 — 0 은 잠들지 않음
+const sleepChoices = (): SettingsView["sleepChoices"] => SETTING_CHOICES.sleepAfterMin.map((min) => ({ value: min, label: min === 0 ? "잠들지 않음" : `${min}분` }));
 
 export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart = dayPartOf(Date.now())): PetView {
   const rate = growthOf(pet.species);
@@ -153,18 +164,22 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     affinity: pet.affinity,
     fullness: pet.fullness,
     zone: zoneOf(pet.fullness),
+    zoneText: zoneText(zoneOf(pet.fullness)),
+    debuff: debuffOf(zoneOf(pet.fullness)),
     mood: pet.mood,
     moodWord: moodWord(pet.mood),
     hidden,
     feedReady: pet.feedCooldownMs <= 0,
     feedInSec: sec(pet.feedCooldownMs),
     playReady: pet.playCooldownMs <= 0,
+    feedText: pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedCooldownMs <= 0 ? "밥 주기" : `밥 주기 · ${waitText(sec(pet.feedCooldownMs))}`,
+    playText: pet.playCooldownMs <= 0 ? "놀아주기" : "놀아주기 · 쉬는 중",
     playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")
     buffs: BUFF_ORDER.flatMap((kind) => {
       const hit = pet.buffs.find((b) => b.kind === kind && b.remainMs > 0);
-      return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: min(hit.remainMs) }] : [];
+      return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: min(hit.remainMs), text: buffText({ name: t(`buff.${kind}`), remainMin: min(hit.remainMs) }) }] : [];
     }),
     buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
@@ -221,6 +236,7 @@ export function snapshot(
     ready: e.ready,
     remainSec: sec(e.remainMs),
     percent: eggPercent(e.remainMs, eggReadyMs),
+    noteText: e.ready ? "준비 완료" : `${eggPercent(e.remainMs, eggReadyMs)}% · ${waitText(sec(e.remainMs))}`,
   }));
 
   const bag: BagItemView[] = Object.entries(save.bag)
@@ -279,10 +295,11 @@ export function snapshot(
       sleepAfterMin: save.settings.sleepAfterMin,
       playArea: save.settings.playArea.mode,
       hasRegion: save.settings.playArea.rect != null,
+      sleepChoices: sleepChoices(),
     },
     natures: natureOptions(),
     eggPalettes: eggPalettes(),
-    growthCurves: GROWTH_CURVES,
+    limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save),
     detailTutorial: canShow(save, "detail"),

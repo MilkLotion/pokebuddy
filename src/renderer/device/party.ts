@@ -1,38 +1,18 @@
-// 파티 기기 창 — 교체 화면. 관리 창이 정해 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
-// Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 가방·상점 기기 창과 같다.
+// 파티 기기 창 — 교체 화면. 메인이 만들어 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
+// Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 기기 창 틀(device-frame.ts)이다. 바닥 줄은 두지 않는다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
 import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
 import { portraitImg } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
+import { DEVICE_FONTS } from "../ui/fonts.js";
+import { createDeviceFrame } from "./device-frame.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 
 const api = window.pokebuddyParty;
-const root = document.getElementById("device");
-if (!(root instanceof HTMLElement)) throw new Error("party.html 에 #device 가 없다");
-const device: HTMLElement = root;
-
-// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 높이가 바뀔 때마다 다시 알린다 (item-device.ts 와 같다)
-let sentHeight = -1;
-const sendSize = (force: boolean): void => {
-  const h = Math.ceil(device.getBoundingClientRect().height);
-  if (!force && h === sentHeight) return;
-  sentHeight = h;
-  api.size(h);
-};
-new ResizeObserver(() => {
-  if (sentHeight >= 0) sendSize(false);
-}).observe(device);
-
-// 쓰는 글꼴 — 첫 측정 전에 직접 부른다
-const fontsReady = whenFontsReady(DEVICE_FONTS.slice(0, 2));
-
+// 글꼴은 Galmuri9 를 쓰지 않아 앞의 둘만 기다린다.
 // 방향키는 앞·뒤 프리셋. Esc 는 든 것을 내려놓고, 든 것이 없으면 닫는다 — 판정은 관리 창이 한다
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") api.step(-1);
-  else if (e.key === "ArrowRight") api.step(1);
-  else if (e.key === "Escape") api.close();
-});
+const frame = createDeviceFrame({ api, windowName: "party", fonts: DEVICE_FONTS.slice(0, 2) });
+const device = frame.device;
 
 function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
   const b = buttonEl("slot", "", () => api.act({ kind: "slot", index: s.index }));
@@ -59,22 +39,7 @@ function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
 }
 
 function render(v: PartyDeviceView): void {
-  device.className = `device${v.side === "left" ? " left" : ""}`;
-  device.replaceChildren();
-  device.appendChild(el("div", "hinge"));
-
-  const top = el("div", "top");
-  top.appendChild(el("div", "light"));
-  for (const c of ["#ff6b6b", "#ffd84a", "#6ad06a"]) {
-    const led = el("div", "led");
-    led.style.background = c;
-    top.appendChild(led);
-  }
-  top.appendChild(el("div", "title", "파티"));
-  const close = buttonEl("close", "✕", () => api.close());
-  close.title = "닫기";
-  top.appendChild(close);
-  device.appendChild(top);
+  frame.beginDraw(v.side, "파티");
 
   const panel = el("div", "panel");
   const head = el("div", "panel-head");
@@ -99,11 +64,7 @@ function render(v: PartyDeviceView): void {
   panel.appendChild(presets);
   device.appendChild(panel);
 
-  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
-  sendSize(true);
+  frame.endDraw();
 }
 
-api.onShow((view) => {
-  // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void fontsReady.then(() => render(view));
-});
+frame.showWith((cb) => api.onShow(cb), render);

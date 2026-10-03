@@ -31,6 +31,17 @@ function fluctuating(x: number): number {
   return Math.floor((cube(x) * (Math.floor(x / 2) + 32)) / 50);
 }
 
+// 경험치 곡선 — 칸 L 은 레벨 L 이 되는 누적 경험치(칸 0 은 0). 사탕 미리보기(src/bag/preview.ts)가 쓴다. 타입마다 한 번 만든다
+const curves = new Map<GrowthRate, readonly number[]>();
+export function growthCurve(rate: GrowthRate): readonly number[] {
+  let curve = curves.get(rate);
+  if (!curve) {
+    curve = Array.from({ length: MAX_LEVEL + 1 }, (_, level) => (level < 1 ? 0 : expForLevel(rate, level)));
+    curves.set(rate, curve);
+  }
+  return curve;
+}
+
 // 그 레벨이 되는 데 필요한 누적 경험치
 export function expForLevel(rate: GrowthRate, level: number): number {
   const x = Math.min(MAX_LEVEL, Math.max(1, Math.round(level)));

@@ -1,4 +1,4 @@
-// 파티 상세 기기 창 — 관리 창이 정해 보낸 개체 하나를 그린다 (src/main/pet-window.ts). Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)
+// 파티 상세 기기 창 — 메인이 만들어 보낸 개체 하나를 그린다 (src/main/pet-window.ts). Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)
 // 배치는 시안 C 다 (2026-10-02 사용자 결정 "c로 확정", Figma `Party Detail Device` `1262:76637` — 변형 셋을 C 배치로 바꿨다)
 //   화면  자리·상태 → 초상·이름·레벨·타입 → 네 막대(경험치·친밀도·만복도·기분)
 //   몸통  돌봄 단추 둘(밥 주기는 밝은 단추)
@@ -11,52 +11,32 @@ import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
-import { buffText, waitText } from "../ui/time-text.js";
+import { createDeviceFrame } from "./device-frame.js";
+import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
-const root = document.getElementById("device");
-if (!(root instanceof HTMLElement)) throw new Error("pet.html 에 #device 가 없다");
-const device: HTMLElement = root;
 const api = window.pokebuddyPet;
-
-// 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
-// - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
-// - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
-// - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
-// - 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
-let sentHeight = -1;
-function sendSize(force: boolean): boolean {
-  const h = Math.ceil(device.getBoundingClientRect().height);
-  if (!force && h === sentHeight) return false;
-  sentHeight = h;
-  api.size(h);
-  return true;
-}
-// 첫 render() 전(sentHeight < 0)에는 보내지 않는다 — 빈 #device 높이로 숨은 새 창이 먼저 보이면 안 된다
-new ResizeObserver(() => {
-  if (sentHeight >= 0 && sendSize(false) && coachEl) drawCoach();
-}).observe(device);
-
-// 쓰는 글꼴 — 빈 문서는 글꼴을 아직 요청하지 않아 fonts.ready 가 바로 끝난다. 첫 측정 전에 직접 부른다
-// - 굵기별로 파일이 따로다: Galmuri11 400·700, Galmuri9 400 (pet.html @font-face)
-// - 실패해도 그리기는 한다. 늦게 오면 위 ResizeObserver 가 높이를 고친다
-const fontsReady = whenFontsReady(DEVICE_FONTS);
-
-const ZONE_WORD: Record<string, string> = { full: "배부름", normal: "보통", hungry: "배고픔", starving: "매우 배고픔" };
-
-// 배고픔 디버프 — 관리 창 파티 칸의 `DEBUFF` 와 같은 이름·색 (docs/specs/balance.md "배고픔 디버프")
-const DEBUFF_TONE: Record<string, "warning" | "danger"> = { hungry: "warning", starving: "danger" };
+// 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
+// 튜토리얼 중에는 넘기지도 닫지도 않는다 — 다음·확인·✕ 만 받는다
+const frame = createDeviceFrame({
+  api,
+  windowName: "pet",
+  canKey: () => !coachEl,
+  onResized: () => {
+    if (coachEl) drawCoach();
+  },
+});
+const device = frame.device;
 
 // 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
-  const tone = DEBUFF_TONE[pet.zone];
-  if (tone) list.push(el("span", `badge ${tone}`, ZONE_WORD[pet.zone] ?? pet.zone));
+  // 배고픔 디버프 — 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuff, docs/specs/balance.md "배고픔 디버프")
+  if (pet.debuff) list.push(el("span", `badge ${pet.debuff.tone}`, pet.debuff.label));
   for (const buff of pet.buffs ?? []) {
-    const badge = el("span", "badge success", buffText(buff));
+    const badge = el("span", "badge success", buff.text);
     badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)
     list.push(badge);
   }
@@ -85,10 +65,11 @@ const DETAIL_STEPS = [
     : { tut: "detail-growth", title: "진화", body: "조건을 채우면 진화를 눌러 직접 진화해요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
 ] as const;
-const COACH = { pad: 6, gap: 10, width: 280, margin: 8 };
+const COACH = { pad: 6, gap: 10, ...COACH_SIZE };
 let detailStep = 0;
 let detailPetId: string | null = null; // 다른 개체를 열면 1단계부터
 let coachEl: HTMLElement | null = null;
+let coachNow: CoachLayer | null = null; // coachEl 의 초점 규칙(말풍선만·단추로 되돌림)
 let lastView: PetDeviceView | null = null;
 
 function drawCoach(): void {
@@ -100,37 +81,6 @@ function drawCoach(): void {
   const target = step ? device.querySelector<HTMLElement>(`[data-tut="${step.tut}"]`) : null;
   if (!step || !target) return;
   const last = detailStep === DETAIL_STEPS.length - 1;
-  const layer = el("div", "coach");
-  const r = target.getBoundingClientRect();
-  const W = document.documentElement.clientWidth;
-  const H = device.getBoundingClientRect().height;
-  const hole = { l: Math.max(0, r.left - COACH.pad), t: Math.max(0, r.top - COACH.pad), r: Math.min(W, r.right + COACH.pad), b: Math.min(H, r.bottom + COACH.pad) };
-  const bubble = el("div", "coach-bubble");
-  const nudge = (): void => {
-    bubble.classList.remove("nudge");
-    void bubble.offsetWidth;
-    bubble.classList.add("nudge");
-  };
-  const block = (cls: string, x: number, y: number, w: number, h: number): void => {
-    const d = el("div", cls);
-    Object.assign(d.style, { left: `${x}px`, top: `${y}px`, width: `${Math.max(0, w)}px`, height: `${Math.max(0, h)}px` });
-    d.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      nudge();
-    });
-    layer.appendChild(d);
-  };
-  for (const [x, y, w, h] of [
-    [0, 0, W, hole.t],
-    [0, hole.b, W, H - hole.b],
-    [0, hole.t, hole.l, hole.b - hole.t],
-    [hole.r, hole.t, W - hole.r, hole.b - hole.t],
-  ] as const) block("coach-dim", x, y, w, h);
-  block("coach-block", hole.l, hole.t, hole.r - hole.l, hole.b - hole.t); // 안내만 한다 — 대상은 보이되 눌리지 않는다
-  const head = el("div", "head");
-  const x = buttonEl("x", "✕", () => act({ kind: "tutorial", action: "skip" }));
-  x.setAttribute("aria-label", "튜토리얼 닫기");
-  head.append(el("span", "step", `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`), x);
   const go = buttonEl("act primary", last ? "확인" : "다음", () => {
     if (last) act({ kind: "tutorial", action: "done" });
     else {
@@ -138,30 +88,22 @@ function drawCoach(): void {
       drawCoach();
     }
   });
-  const foot = el("div", "foot");
-  foot.appendChild(go);
-  bubble.append(head, el("div", "title", step.title), el("div", "body", step.body), foot);
-  layer.appendChild(bubble);
-  document.body.appendChild(layer);
-  const bh = bubble.offsetHeight;
-  const left = Math.min(Math.max(COACH.margin, r.left + r.width / 2 - COACH.width / 2), W - COACH.width - COACH.margin);
-  const below = hole.b + COACH.gap;
-  const top = below + bh > H - COACH.margin ? hole.t - COACH.gap - bh : below;
-  bubble.style.left = `${Math.round(left)}px`;
-  bubble.style.top = `${Math.round(Math.max(COACH.margin, top))}px`;
-  go.focus({ preventScroll: true });
-  coachEl = layer;
+  // 말풍선은 대상 가운데. 아래에 모자라면 위(넘치면 위 여백에 붙인다). 안내만 한다 — 대상은 보이되 눌리지 않는다
+  coachNow = drawCoachLayer({
+    target,
+    bounds: { W: document.documentElement.clientWidth, H: device.getBoundingClientRect().height },
+    pad: COACH.pad,
+    gap: COACH.gap,
+    align: "center",
+    fallback: "clamp",
+    interactive: false,
+    bubble: { step: `튜토리얼 · 개체 상세 ${detailStep + 1} / ${DETAIL_STEPS.length}`, title: step.title, body: step.body, go, onSkip: () => act({ kind: "tutorial", action: "skip" }) },
+  });
+  coachEl = coachNow.layer;
 }
 
 // 튜토리얼 중에는 키보드 초점도 말풍선 안에 둔다
-document.addEventListener(
-  "focusin",
-  (e) => {
-    if (!coachEl || !(e.target instanceof Node) || coachEl.contains(e.target)) return;
-    coachEl.querySelector<HTMLButtonElement>(".coach-bubble .act")?.focus({ preventScroll: true });
-  },
-  true,
-);
+guardCoachFocus(() => (coachEl ? coachNow : null));
 
 // 그림 자리 — 88×88 네모. 빈 테두리를 잘라 들어가는 가장 큰 정수 배(최대 2배)로 그린다 (ui/portrait.ts spriteCanvas)
 const STAGE = { w: 88, h: 88, maxScale: 2 };
@@ -212,15 +154,13 @@ function careLine(v: PetDeviceView): HTMLElement {
 // 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
 function liveShown(pet: PetDeviceView["pet"], field: "affinity" | "fullness" | "mood"): string {
   if (field === "affinity") return `${pet.affinity}`;
-  if (field === "fullness") return `${pet.fullness} · ${ZONE_WORD[pet.zone] ?? pet.zone}`;
+  if (field === "fullness") return `${pet.fullness} · ${pet.zoneText}`;
   return `${pet.mood} · ${pet.moodWord}`;
 }
-const feedText = (pet: PetDeviceView["pet"]): string =>
-  pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedReady ? "밥 주기" : `밥 주기 · ${waitText(pet.feedInSec)}`;
 
 // 시간으로만 바뀌는 값 — 이것만 다르면 다시 그리지 않고 표시만 고친다. 관리 창(src/renderer/manage/manage.ts structureOf)과 같은 목록이다
 // 다시 그리면 키보드 포커스·title 툴팁이 사라진다 (2026-09-29 검수 C2)
-const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin"]);
+const LIVE_KEYS = new Set(["feedInSec", "affinity", "mood", "moodWord", "remainSec", "percent", "remainMin", "text", "noteText", "feedText"]);
 const structureOf = (v: PetDeviceView): string =>
   JSON.stringify(v, (k: string, val: unknown) => (LIVE_KEYS.has(k) ? undefined : k === "fullness" && typeof val === "number" ? val >= 100 : val));
 let renderedStructure = "";
@@ -235,10 +175,10 @@ function applyLive(v: PetDeviceView): void {
     if (fill) fill.style.width = `${clampPercent(pet[field])}%`;
   }
   const feed = device.querySelector<HTMLButtonElement>('[data-live="feed"]');
-  if (feed) feed.textContent = feedText(pet);
+  if (feed) feed.textContent = pet.feedText;
   for (const node of device.querySelectorAll<HTMLElement>("[data-live-buff]")) {
     const buff = pet.buffs.find((b) => b.kind === node.dataset.liveBuff);
-    if (buff && node.textContent !== buffText(buff)) node.textContent = buffText(buff);
+    if (buff && node.textContent !== buff.text) node.textContent = buff.text;
   }
   lastView = v;
 }
@@ -269,22 +209,7 @@ function renderBody(v: PetDeviceView): void {
   const pet = v.pet;
   shownPetId = pet.id;
   cryPlayer.setVolume(v.volume);
-  device.className = `device${v.side === "left" ? " left" : ""}`;
-  device.replaceChildren();
-  device.appendChild(el("div", "hinge"));
-
-  const top = el("div", "top");
-  top.appendChild(el("div", "light"));
-  for (const c of ["#ff6b6b", "#ffd84a", "#6ad06a"]) {
-    const led = el("div", "led");
-    led.style.background = c;
-    top.appendChild(led);
-  }
-  top.appendChild(el("div", "title", "파티"));
-  const close = buttonEl("close", "✕", () => api.close());
-  close.title = "닫기";
-  top.appendChild(close);
-  device.appendChild(top);
+  frame.beginDraw(v.side, "파티");
 
   // 화면 — 자리·상태, 초상·이름·레벨·성격·타입, 볼 토글
   const bezel = el("div", "bezel");
@@ -353,11 +278,11 @@ function renderBody(v: PetDeviceView): void {
     const care = el("div", "keys");
     care.dataset.tut = "detail-care";
     const boxed = !v.inParty;
-    const feed = buttonEl("key light", boxed ? "밥 주기" : feedText(pet), () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    const feed = buttonEl("key light", boxed ? "밥 주기" : pet.feedText, () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     care.append(
       feed,
-      buttonEl("key", pet.playReady || boxed ? "놀아주기" : "놀아주기 · 쉬는 중", () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
+      buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady),
     );
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     device.appendChild(care);
@@ -409,13 +334,10 @@ function renderBody(v: PetDeviceView): void {
   }
   device.appendChild(actions);
 
-  const controls = el("div", "controls");
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
-  controls.append(buttonEl("prev", "◀ 이전", () => api.step(-1)), cry, buttonEl("next", "다음 ▶", () => api.step(1)));
-  device.appendChild(controls);
+  device.appendChild(frame.controlsEl(cry));
 
-  // 숨은 새 창은 이 값을 받아야 보인다 — 같은 높이여도 보낸다
-  sendSize(true);
+  frame.endDraw();
   if (detailPetId !== pet.id) {
     detailPetId = pet.id;
     detailStep = 0; // 다른 개체를 열면 튜토리얼은 1단계부터
@@ -424,21 +346,13 @@ function renderBody(v: PetDeviceView): void {
   drawCoach();
 }
 
-// 방향키로도 넘긴다. Esc 는 닫는다
-document.addEventListener("keydown", (e) => {
-  if (coachEl) return; // 튜토리얼 중에는 넘기지도 닫지도 않는다 — 다음·확인·✕ 만 받는다
-  if (e.key === "ArrowLeft") api.step(-1);
-  else if (e.key === "ArrowRight") api.step(1);
-  else if (e.key === "Escape") api.close();
-});
-
 // 관리 창은 1초 시계마다 값이 바뀌면 다시 보낸다(쿨타임·만복도). 누르는 중(눌렀다 떼기 사이)에 다시 그리면 단추 누름이 사라진다 —
 // 그동안 온 보기는 들고 있다가 뗀 뒤에 그린다
 let pointerDown = false;
 let pending: PetDeviceView | null = null;
 const show = (view: PetDeviceView): void => {
   // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void fontsReady.then(() => render(view));
+  void frame.fontsReady.then(() => render(view));
 };
 const release = (): void => {
   pointerDown = false;

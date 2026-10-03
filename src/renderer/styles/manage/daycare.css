@@ -1,0 +1,132 @@
+/* manage.html 의 돌보미집·부화 결과 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 돌보미집 모달 — Figma 05 `Box / Daycare Modal` `1093:23698`. 폭 322, 머리(제목·부제·✕), 3 × 2 칸.
+   준비된 칸은 톤 바탕(테두리 강조 없음), 기다리는 칸은 흰 칸, 빈 칸은 옅은 회색 */
+.dialog.daycare {
+  width: 322px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog.daycare .settings-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dialog.daycare .titles {
+  flex: 1;
+  min-width: 0;
+}
+/* 모두 열기 — 머리 오른쪽, ✕ 왼쪽. ✕ 와 같은 높이 */
+.dialog.daycare .open-all {
+  flex: none;
+  height: 32px;
+  white-space: nowrap;
+}
+.dialog.daycare .titles h2 {
+  margin: 0 0 4px;
+}
+.dialog.daycare .titles .sub {
+  margin: 0;
+}
+.daycare-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.egg {
+  height: 96px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 10px;
+  font-family: var(--font-small);
+  color: var(--muted);
+}
+.egg.ready {
+  background: var(--accent-bg);
+  border-color: transparent;
+}
+.egg.empty {
+  background: var(--subtle);
+  border-color: transparent;
+}
+.egg button.primary {
+  appearance: none;
+  font: inherit;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--primary);
+  color: var(--inverse);
+  cursor: pointer;
+}
+/* 부화 결과 창 뒤에 깔린 돌보미집 모달과 한 겹 더 어두운 막 (Figma 05 `1096:22424`) */
+.dialog.under {
+  position: absolute;
+  pointer-events: none;
+}
+.scrim-under {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+}
+.scrim > #dialog {
+  position: relative;
+}
+/* 부화 결과 — 내용 폭(최소 170). 초상·이름·타입은 가운데, `확인` 은 창 폭 (Figma 05 `hatch-result` `1096:22613`) */
+.dialog.hatched {
+  width: auto;
+  min-width: 170px;
+  padding: 24px;
+}
+.dialog.hatched .nat-card {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.daycare-grid .egg .shell {
+  margin: 0;
+}
+.dialog.hatched .actions {
+  margin-top: 16px;
+}
+.dialog.hatched .actions button {
+  flex: 1;
+}
+.egg .shell {
+  width: 30px;
+  height: 38px;
+  margin: 0 auto 6px;
+  border-radius: 50% 50% 46% 46%;
+  background: var(--accent-bg);
+  border: 1px solid var(--line);
+}
+/* PokeAPI 알 그림(96 × 96, 둘레 여백이 크다)이 오면 테두리를 지우고 가운데를 잘라 보인다 */
+.egg .shell.has-art {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+}
+.thumb[data-icon="egg"] .icon-art,
+.thumb[data-egg-kind] .icon-art,
+.egg .shell .icon-art {
+  object-fit: cover;
+  object-view-box: inset(25%);
+}
+/* 태고의돌은 우리가 그린 30×30 그림이라 여백을 자르지 않는다 (위 규칙은 원작 알 그림의 넓은 여백용) */
+.egg .shell[data-icon="item:ancient-stone"] .icon-art {
+  object-fit: contain;
+  object-view-box: none;
+}

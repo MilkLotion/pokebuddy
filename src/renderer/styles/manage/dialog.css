@@ -1,0 +1,101 @@
+/* manage.html 의 모달 공통(긴 모달·제목 줄·닫기·실패 줄) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* ── 모달 ─────────────────────────────────────────────────────────────── */
+/* 긴 모달 — 업적창·설정·가이드북. 안에서 스크롤한다 */
+.dialog.tall {
+  width: 460px;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+}
+.dialog.tall .scroll {
+  overflow-y: auto;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+/* 모달 제목 줄 — 돌아가기와 제목을 한 줄에 둔다 */
+.dialog .title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.back {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 6px 2px 0;
+  cursor: pointer;
+}
+.back:hover {
+  color: var(--primary);
+}
+
+/* 설정 모달 — 탭을 바꿔도 560×500 (Figma 05 `Settings / General` `633:18937`). 내용은 위에서부터, 닫기는 바닥 */
+.dialog.settings {
+  width: 560px;
+  height: 500px;
+  max-height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog.settings .settings-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dialog.settings .titles {
+  flex: 1;
+  min-width: 0;
+}
+.dialog.settings .titles h2 {
+  margin: 0 0 4px;
+}
+.dialog-close {
+  appearance: none;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.dialog-close:hover {
+  background: var(--accent-bg);
+}
+/* 대화상자 실패 — 바닥 단추 줄의 빈자리. 길면 말줄임(전체는 title) */
+.footer-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 0; /* 남는 폭만 쓴다 — 단추를 밀거나 줄을 바꾸지 않는다 */
+  min-width: 0;
+  font-size: 12px;
+  color: var(--danger-ink);
+}
+.actions > .spacer:has(> .footer-error) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.footer-error i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.footer-error span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

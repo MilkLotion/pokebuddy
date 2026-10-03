@@ -1,4 +1,9 @@
-// 시간 글자 — 설정창과 파티 상세 기기 창이 같이 쓴다. 화면 값 옮기기(view) 뒤에는 메인이 글자를 실어 보내고 이 파일은 없어진다
+// 숫자·포인트·남은 시간 글자 — 메인의 화면 값(view)과 렌더러가 같이 쓴다. node·DOM 을 쓰지 않는다
+
+// 천 단위 쉼표(한국어)
+export const numberText = (n: number): string => n.toLocaleString("ko-KR");
+
+export const pointText = (n: number): string => `${numberText(n)}P`;
 
 // 남은 시간 — 1분 미만은 초, 1시간 미만은 분(올림), 그 위는 시간과 분. 쿨타임·알 준비가 10분·몇 시간이라 초로 쓰면 읽기 어렵다
 export function waitText(sec: number): string {

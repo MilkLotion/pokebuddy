@@ -1,0 +1,212 @@
+/* manage.html 의 저장 표시·계정 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 헤더 저장 표시 — Figma C-27 `Save Indicator`. 창 끌기 영역에서 뺀다(누르면 계정 탭) */
+.save-chip {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.save-chip[hidden] {
+  display: none;
+}
+.save-chip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.save-chip[data-state="ok"] i {
+  background: #10b981;
+}
+/* 업데이트 필요·확인 대기·넘겨받지 못함·다른 PC 에서 시작 — 사용자 손이 필요하거나 게임이 멈춘 상태 */
+.save-chip[data-state="warn"] {
+  border-color: transparent;
+  background: var(--accent-bg);
+  color: var(--ink);
+  font-weight: 700;
+}
+.save-chip[data-state="warn"] i {
+  background: var(--warning);
+}
+
+/* 계정 탭 — Figma 05 Screens `633:19206`~`633:20029` */
+.dialog.settings {
+  position: relative;
+}
+.acct-lead {
+  color: var(--muted);
+  margin: 2px 0 12px;
+}
+.acct-back {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+}
+.acct-back:hover {
+  color: var(--ink);
+}
+button.act.acct-github {
+  width: 100%;
+  height: 36px;
+  font-weight: 700;
+}
+.acct-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  color: var(--muted);
+}
+.acct-or span {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.acct-label {
+  font-weight: 700;
+}
+.search.acct-input {
+  width: 100%;
+  height: 32px;
+}
+.acct-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+}
+.acct-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.acct-note i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.acct-note.ok i {
+  background: #10b981;
+}
+.acct-note.bad {
+  color: var(--danger);
+}
+.acct-note.bad i {
+  background: var(--danger);
+}
+.acct-note.warn i {
+  background: var(--warning);
+}
+.acct-notice {
+  margin-bottom: 12px;
+}
+.acct-row .label {
+  font-weight: 700;
+}
+/* 계정 행의 설명은 시안처럼 본문 크기 */
+.acct-row .hint {
+  font-size: 12px;
+  font-family: var(--font-body);
+}
+.acct-confirm button.act {
+  min-width: 112px;
+  height: 34px;
+  font-weight: 700;
+}
+/* 계정 탭 바닥의 보조 단추(가입)도 주 단추와 같은 120×36 */
+.dialog.settings > .actions .act {
+  min-width: 120px;
+  height: 36px;
+  font-weight: 700;
+}
+.acct-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.acct-inline .search.acct-input {
+  width: 140px;
+}
+.acct-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+  border-radius: inherit;
+  z-index: 5;
+}
+.acct-confirm {
+  width: 450px;
+  box-sizing: border-box;
+  padding: 20px 24px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.acct-confirm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.acct-confirm-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-family: var(--font-large);
+  font-weight: 400;
+}
+.acct-confirm-body {
+  margin: 0;
+  color: var(--muted);
+  white-space: pre-line;
+}
+.acct-option {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.acct-option span {
+  color: var(--muted);
+}
+.acct-option[aria-pressed="true"] {
+  background: var(--accent-bg);
+}
+.acct-option:disabled {
+  cursor: default;
+  opacity: 0.5;
+}

@@ -9,6 +9,7 @@ export interface ViewBuff {
   kind: string;
   name: string; // 화면 이름 — 든든함 · 신남 · 들뜸
   remainMin: number; // 남은 분(반올림). 시간으로만 바뀌는 값이라 1초 시계가 표시만 고친다
+  text: string; // 배지 글자 — "신남 12분" · "든든함 2시간" (src/shared/count-text.ts buffText)
 }
 
 // 진화 후보 하나 — 화면이 그대로 보인다. 낮·밤은 스냅샷을 만든 시각으로 정했다
@@ -30,7 +31,7 @@ export interface PetView {
   level: number;
   percentToNext: number; // 다음 레벨까지 백분율
   exp: number; // 누적 경험치 — 가방 사용 패널이 사탕 미리보기와 최대 개수를 셈한다
-  growth: string; // 경험치 타입 (src/dex/growth.ts) — Snapshot.growthCurves 의 키
+  growth: string; // 경험치 타입 (src/dex/growth.ts) — 가방 기기 창의 사탕 미리보기가 곡선을 찾는다 (src/view/device-bag.ts)
   types: string[]; // 화면에 보이는 타입 이름
   typeIds: string[]; // types 와 같은 순서의 타입 키 (grass 등) — 타입 배지 색을 고른다
   nature: string; // 화면에 보이는 성격 이름
@@ -40,12 +41,16 @@ export interface PetView {
   affinity: number;
   fullness: number;
   zone: FullnessZone;
+  zoneText: string; // 만복도 구간 낱말 — "배부름" · "보통" · "배고픔" · "매우 배고픔"
+  debuff: { label: string; tone: "warning" | "danger"; note: string } | null; // 배고픔 디버프 배지. 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
   mood: number; // 0~100. 보이기만 하는 값이다
   moodWord: string; // 기분 단계 말 — "좋음" 처럼 화면에 그대로 쓴다
   hidden: boolean;
   feedReady: boolean;
   feedInSec: number;
   playReady: boolean;
+  feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
+  playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 쉬는 중"
   playStreak: number;
   longPlay: boolean; // 신남 버프가 켜져 있다
   buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서
@@ -101,6 +106,7 @@ export interface EggView {
   ready: boolean;
   remainSec: number;
   percent: number;
+  noteText: string; // 알 칸 아래 글자 — "준비 완료" · "40% · 3분"
 }
 
 export interface BoxView {
@@ -193,6 +199,7 @@ export interface SettingsView {
   sleepAfterMin: number; // 0 이면 잠들지 않음
   playArea: "all" | "screen" | "region"; // 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면)
   hasRegion: boolean; // 영역을 이미 그렸는가
+  sleepChoices: { value: number; label: string }[]; // 잠들기 기준 선택지 — 0 은 잠들지 않음 (src/state/settings.ts SETTING_CHOICES)
 }
 
 export interface Snapshot {
@@ -207,7 +214,7 @@ export interface Snapshot {
   achievements: { total: number; unclaimed: number; list: AchievementView[] };
   settings: SettingsView;
   natures: NatureOption[];
-  growthCurves: Record<string, number[]>; // 경험치 타입별 레벨 L 이 되는 누적 경험치 — 칸 L(1~100). 가방 사용 패널의 미리보기
+  limits: { boxNameMax: number; presetNameMax: number }; // 이름 칸 글자 수 상한 (src/box/rules.ts BOX_RULES.nameMax — 프리셋 이름도 같다)
   sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/party/size.ts SIZE_STEPS)
   eggPalettes: Record<string, string[]>; // 알 종류별 그림 색표 (data/eggs.json palette) — 없는 알은 원작 그림
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/queue.ts)

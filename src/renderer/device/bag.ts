@@ -1,13 +1,14 @@
-// 가방 기기 창 — 관리 창이 정해 보낸 도구 하나를 그린다 (src/main/bag-window.ts). Figma 05 `Bag / Device / Use`
-// 틀은 상점 기기 창과 같다(item-device.ts). 가운데 조작 칸은 머리 줄(제목·사용|판매), 사용 쪽 파티 줄, 수량, 미리보기 상자.
+// 가방 기기 창 — 메인이 만들어 보낸 도구 하나를 그린다 (src/main/bag-window.ts). Figma 05 `Bag / Device / Use`
+// 틀은 상점 기기 창과 같다(item-face.ts). 가운데 조작 칸은 머리 줄(제목·사용|판매), 사용 쪽 파티 줄, 수량, 미리보기 상자.
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안). 누른 단추는 관리 창으로 돌려보낸다
 import type { BagDeviceView } from "../../shared/model/devices.js";
-import { deviceFrame, goButton, qtyRow } from "./item-device.js";
+import { createDeviceFrame } from "./device-frame.js";
+import { drawItemFace, goButtonEl, qtyRowEl } from "./item-face.js";
 import { portraitImg } from "../ui/portrait.js";
 import { el } from "../ui/dom.js";
 
 const api = window.pokebuddyBag;
-const frame = deviceFrame(api, "bag.html");
+const frame = createDeviceFrame({ api, windowName: "bag" });
 
 function render(v: BagDeviceView): void {
   const act = api.act;
@@ -67,7 +68,7 @@ function render(v: BagDeviceView): void {
     }
     card.appendChild(row);
   }
-  if (v.qty) card.appendChild(qtyRow(v.qty, (qty) => act({ itemId: v.itemId, kind: "qty", qty })));
+  if (v.qty) card.appendChild(qtyRowEl(v.qty, (qty) => act({ itemId: v.itemId, kind: "qty", qty })));
 
   // 미리보기 상자 — 결과는 초록, 실패는 빨강. 새 줄을 끼우지 않는다 (2026-09-30 레이아웃 흔들림 금지)
   const preview = el("div", v.preview.tone ? `total ${v.preview.tone}` : "total");
@@ -75,11 +76,8 @@ function render(v: BagDeviceView): void {
   if (v.preview.line) preview.appendChild(el("div", undefined, v.preview.line));
   card.appendChild(preview);
 
-  const go = goButton(v.go.label, v.go.disabled, v.go.busy, () => act({ itemId: v.itemId, kind: "go" }));
-  frame.render({ ...v, title: "가방" }, card, go);
+  const go = goButtonEl(v.go.label, v.go.disabled, v.go.busy, () => act({ itemId: v.itemId, kind: "go" }));
+  drawItemFace(frame, { ...v, title: "가방" }, card, go);
 }
 
-api.onShow((view) => {
-  // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-  void frame.fontsReady.then(() => render(view));
-});
+frame.showWith((cb) => api.onShow(cb), render);

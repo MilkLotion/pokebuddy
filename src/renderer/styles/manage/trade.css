@@ -1,0 +1,430 @@
+/* manage.html 의 교환 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 교환 — Figma 05 Screens 섹션 `930:18244`(교환) 교환 6화면. 카드는 중립 테두리 1px, 상태는 점으로 보인다 */
+.trade-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.trade-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 16px;
+}
+.trade-row .trade-card {
+  margin-bottom: 0;
+  min-height: 124px;
+  min-width: 0;
+}
+.trade-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
+}
+.trade-card-head strong {
+  font-weight: 700;
+}
+.trade-desc {
+  color: var(--muted);
+}
+.trade-left {
+  color: var(--ink);
+  font-weight: 700;
+}
+.trade-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.trade-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.trade-state.ok i {
+  background: #10b981;
+}
+.trade-state.wait i {
+  background: var(--warning);
+}
+.trade-state.bad i {
+  background: var(--danger);
+}
+.trade-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+}
+.trade-acts.end {
+  justify-content: flex-end;
+}
+/* 카드 안 한 줄 — 단추는 줄지 않고(flex: none) 남는 폭은 입력칸이 받는다. 카드 안쪽 240 에 링크칸 + `링크 복사` + `취소` 가 들어가야 한다.
+   좌우 12 — 14 면 링크칸 글자 자리 63 < `…#PVGY_N` 68 이라 잘린다(2026-09-30 취소 단추가 카드 밖으로 나간 결함) */
+.trade-acts button.act {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.trade-input,
+.search.trade-input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+}
+.trade-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+/* 링크칸 — 고정 폭 116 을 두면 단추 둘과 합이 카드 안쪽을 넘는다. 남는 폭을 받고 모자라면 말줄임 */
+.trade-link {
+  flex: 1 1 0;
+  min-width: 0;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+/* 이어진 저장 실패 안내 — Alert Banner. 제목 줄과 본문 사이에 둔다 */
+.alert.save-failing {
+  margin: 0 0 14px;
+}
+.trade-pet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.trade-portrait {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+}
+/* 올린 포켓몬이 없는 빈 자리만 원형으로 보인다 */
+.trade-portrait:not([data-portrait]) {
+  border-radius: 50%;
+  background: var(--accent-bg);
+}
+.trade-pet.big .trade-portrait {
+  width: 80px;
+  height: 80px;
+}
+.trade-pet.big .trade-info strong {
+  font-size: 15px;
+  font-family: var(--font-large);
+  font-weight: 400;
+}
+/* 이름 옆 이로치 아이콘 — 교환 카드 10(큰 카드 16), 부화 결과 16 */
+.trade-info strong .shiny,
+.dialog.hatched .name .shiny {
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.trade-pet.big .trade-info strong .shiny {
+  width: 16px;
+  height: 16px;
+}
+.trade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.trade-meta,
+.trade-empty {
+  color: var(--muted);
+}
+.trade-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.trade-bar .trade-desc {
+  flex: 1;
+}
+.trade-bar button.act {
+  flex: none;
+  height: 32px;
+  padding: 0 14px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.trade-bar .trade-desc,
+.trade-bar .trade-notice {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 막힘·오류 한 줄 — 빨간 점과 글자. 안내 글 자리의 글자만 바뀌어 모달 높이가 그대로다 (Figma `Status Line` `1262:80743`, 점 `Tone=Danger`) */
+.trade-notice {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger-ink);
+}
+.trade-notice i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+.trade-notice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 제안·확정 화면 — 왼쪽 보낼 포켓몬(414), 오른쪽 두 카드(134). 기본 창 높이(682)에서 스크롤이 없다
+   (2026-10-02 사용자 결정 B안, Figma 03 `Trade Dialog` `State=Offer` `1344:5372`·`State=Blocked` `1344:5552`) */
+.trade-body {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.trade-pick {
+  flex: none;
+  width: 414px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.trade-pick-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+}
+/* 넘김 — ◀ [이름] ▶ 칸 수. 이름 칸과 칸 수 칸은 폭 고정이라 넘겨도 ◀·▶ 가 움직이지 않는다 */
+.trade-pick-head .trade-pager {
+  margin: 0 0 0 auto;
+  gap: 8px;
+}
+.trade-pager .label {
+  width: 168px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trade-pager .used {
+  width: 52px;
+}
+/* 보낼 포켓몬 격자 — 6열 정사각 64, 칸 영역은 5줄 높이(64×5 + 6×4)로 고정. 파티 판(6칸)으로 넘겨도 창 높이가 그대로다 */
+.trade-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 64px);
+  grid-auto-rows: 64px;
+  align-content: start;
+  gap: 6px;
+  height: 344px;
+}
+/* 오른쪽 두 카드 — 같은 높이로 나눠 선다. 교환 표시는 두 카드 사이 가운데에 걸친다 */
+.trade-sides {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.trade-card.trade-side {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 14px 12px;
+  align-items: center;
+  text-align: center;
+}
+/* 확정함 — 톤 바탕만(고른 칸과 같은 표현). 테두리 색을 바탕과 맞춰 높이는 그대로 둔다 */
+.trade-side.ready {
+  background: var(--accent-bg);
+  border-color: var(--accent-bg);
+}
+.trade-side.blocked {
+  background: var(--danger-bg);
+  border-color: var(--danger-bg);
+}
+.trade-side.ready .trade-portrait:not([data-portrait]),
+.trade-side.blocked .trade-portrait:not([data-portrait]) {
+  background: var(--surface);
+}
+.trade-side-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.trade-side-pet {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.trade-side-pet .trade-portrait {
+  width: 40px;
+  height: 40px;
+}
+.trade-side-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.trade-side-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+}
+.trade-swap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+}
+.trade-swap.on {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--inverse);
+}
+.trade-swap svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* 박스 머리 단추 묶음 — 햄버거 단추 하나(메뉴: 박스 순서·교환). 교환이 진행 중이면 단추 오른쪽 위 점. Figma 04 템플릿 `Box Layout` `340:3665` 머리 */
+.head .head-acts {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-self: center;
+}
+.head .head-acts button.trade-open {
+  margin-left: 0;
+}
+.head button.swap-open,
+.head button.trade-open {
+  position: relative;
+  align-self: center;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 12px; /* Figma `Button` Size=Small 옆 여백 12 */
+  font-weight: 700;
+}
+.trade-open .dot {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.trade-open .dot[hidden] {
+  display: none;
+}
+/* 교환 모달 — 폭 600, 머리 "친구 교환" + ✕, 본문은 안에서 스크롤. Figma 05 `930:18244` 의 `Trade / … · 교환 모달`(Base `1036:23257` 등).
+   창 폭 640 에서 가림막 안쪽 여백(24)보다 넓어 좌우 20 으로 맞춘다(flex: none 이라 줄지 않고 가운데 선다) */
+.dialog.trade {
+  flex: none;
+  width: min(600px, calc(100vw - 40px));
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog.trade .settings-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dialog.trade .titles {
+  flex: 1;
+  min-width: 0;
+}
+.dialog.trade .titles h2 {
+  margin: 0;
+}
+.dialog.trade .scroll {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+.dialog.trade .scroll > :last-child {
+  margin-bottom: 0;
+}
+/* 모달 안의 두 카드는 내용 높이 — Figma `Trade / Base · 교환 모달` `1036:23257` 의 카드 96, `링크 만들기` 는 제목 바로 아래 */
+.dialog.trade .trade-row .trade-card {
+  min-height: 0;
+}
+.dialog.trade .trade-row .trade-acts {
+  margin-top: 0;
+}
+/* 보낼 포켓몬 칸 — 정사각 64, 초상 28 (Figma `Box Slot` `Size=Compact` 를 64×64 로) */
+.trade-cell {
+  aspect-ratio: auto;
+  height: 64px;
+  padding: 0 2px;
+  min-width: 0;
+}
+.trade-cell .dot {
+  width: 28px;
+  height: 28px;
+}
+.trade-cell:disabled {
+  cursor: default;
+}
+.trade-cell.off {
+  opacity: 0.4;
+}
+.trade-place {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--canvas);
+}

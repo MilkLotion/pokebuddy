@@ -1,0 +1,67 @@
+/* manage.html 의 알에서 나오는 포켓몬·가방 — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* 알에서 나오는 포켓몬 — 도감 칸 15개(5열 3줄)와 넘김 줄. 알마다 창 높이가 같다 (Figma 03 `Egg Pool Panel`) */
+.dialog.daycare.egg-pool {
+  width: min(560px, calc(100vw - 40px));
+  flex: none;
+}
+.dialog.egg-pool .titles p {
+  margin: 0;
+  color: var(--soft);
+}
+.egg-pool-grid .dex-cell {
+  cursor: default;
+}
+.egg-pool-grid .dex-cell.blank {
+  visibility: hidden;
+}
+.dialog.egg-pool .grid-pager {
+  margin: 0;
+}
+/* 가방 — Figma 05 Bag / Base 381:6555. 칸은 4열 · 60 높이, 고른 칸은 옅은 바탕만(색 테두리 강조 없음) */
+.bag-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.bag-card {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 60px;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* 고른 카드 — 옅은 배경 + 평소 회색 테두리 유지. 배경이 창 바탕과 가까워 테두리가 없으면 묻힘 */
+.bag-card[aria-pressed="true"] {
+  background: var(--accent-bg);
+}
+.bag-card .thumb {
+  width: 32px;
+  height: 32px;
+}
+.bag-card .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+}
+.bag-card .info .name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bag-card .qty {
+  color: var(--muted);
+}
