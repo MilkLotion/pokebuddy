@@ -125,7 +125,7 @@ async function run(): Promise<void> {
   assert.ifError(offered.error);
   await until(async () => (await A.status()).friendBlocked === "single", "A 가 조작한 제안을 막는다");
   ok(await A.game("trade.offer", A.partyPet().id), "E6 A 제안");
-  assert.equal((await A.game("trade.ready")).reason, "not-ready", "막힌 제안에는 확정하지 않는다");
+  assert.equal((await A.game("trade.ready")).reason, "trade-not-ready", "막힌 제안에는 확정하지 않는다");
   assert.equal((await A.status()).channel?.my_ready, false, "서버에도 확정이 없다");
   assert.ok(!A.save().trade?.pending, "잠금도 없다");
   ok(await A.game("trade.leave"), "E6 나가기");
