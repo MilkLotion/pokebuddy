@@ -1,5 +1,4 @@
 # names 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-names.js --update-baseline)
-unused-export-const: AGENT_STATES @ src/shared/names/agents.ts
 unused-export-const: BANNER_KINDS @ src/shared/names/banners.ts
 unused-export-const: BANNER_RULES @ src/main/windows/banner-window.ts
 unused-export-const: BASIC_FOOD @ src/state/care.ts

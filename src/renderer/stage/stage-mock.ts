@@ -2,6 +2,7 @@
 // 그리기·히트·드래그를 화면 안 텍스트로 확인한다. Electron 에서는 쓰지 않는다(smoke-renderer 는 이 모드를 쓴다)
 import type { CoachView, HoverQuery, LookSheets, PointerMsg, SpriteSheet, StageFrame, StageInit } from "../../shared/model/stage.js";
 import type { StageBridge } from "../../shared/ipc/stage.js";
+import { AGENT_STATES } from "../../shared/names/agents.js";
 
 export function createMockBridge(opts: { coach: string | null; note: (s: string) => void }): StageBridge {
   type Cb<T> = (v: T) => void;
@@ -51,7 +52,7 @@ export function createMockBridge(opts: { coach: string | null; note: (s: string)
     };
   }
 
-  const states: StageFrame["state"][] = ["idle", "running", "waiting", "waving", "failed"];
+  const states: readonly StageFrame["state"][] = AGENT_STATES; // 에이전트 상태 다섯 — 공용 이름 한 벌 (shared/names/agents.ts)
   const pets = [
     { id: "a", look: "mock-a", zoom: 2, x: 40, y: 60, held: false, walk: true },
     { id: "b", look: "mock-b", zoom: 3, x: 200, y: 40, held: false, walk: false },
