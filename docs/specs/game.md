@@ -214,16 +214,16 @@ Tab과 방향키로 탭을 이동한다. Enter로 선택한다.
 - 파티 개체이면 `◀ 이전`·`다음 ▶`은 파티 칸 순서로 돈다. 박스 개체이면 박스 순서로 돈다. 방향키 `←`·`→`도 같다. Esc 는 기기 창을 닫는다.
 - 새 개체를 띄우거나 창을 새로 열면 기기 창에 키보드 포커스를 준다(2026-09-29 사용자 보고 "상세 열고나서 옆의 창 눌러야 scope됨. 자동 필요."). 같은 개체를 다시 보낼 때(1초 갱신·명령 뒤)는 포커스를 옮기지 않는다. 도감 기기 창도 같다(`src/main/windows/device-window.ts` `bringUp`).
 - 기기 창을 닫으면 메인이 세대 번호를 하나 올린다. 설정창은 여는 요청에 마지막으로 받은 번호를 싣는다. 닫힘을 알기 전에 보낸 요청(1초 갱신의 다시 보내기)은 번호가 낡아 버린다. 그래서 닫은 창이 다시 떠 포커스를 가져가지 않는다. 닫은 뒤 사용자가 누른 요청은 새 번호라 바로 열린다. 도감 기기 창도 같다. 구현은 `src/main/windows/device-gen.ts` 다. 이 방식은 구현 판단이다.
-- 진화 대화상자는 설정창에서 열린다. 명령은 설정창이 보낸다(`src/renderer/manage/manage.ts` `onPetAction`).
+- 진화 대화상자는 설정창에서 열린다. 명령은 설정창이 보낸다(`src/renderer/manage/pet-link.ts` `onPetAction`).
 - 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 표식을 누르면 설정창에서 메가진화 창이 열린다([메가진화](#메가진화)).
-- `도감 보기` 를 누르면 개체 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다(2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까"). 설정창의 탭과 개체 상세는 그대로다. 구현은 `src/renderer/manage/dex-link.ts` `toggleDexBeside`, `src/renderer/manage/manage.ts` `syncPetDevice` 다.
+- `도감 보기` 를 누르면 개체 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다(2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까"). 설정창의 탭과 개체 상세는 그대로다. 구현은 `src/renderer/manage/dex-link.ts` `toggleDexBeside`, `src/renderer/manage/pet-link.ts` `syncPetDevice` 다.
   - 자리: 설정창과 개체 상세 기기 창을 한 덩어리로 보고 그 오른쪽에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다(`src/main/windows/devices.ts` `dexDeviceOf` 의 `baseOf`).
   - 떠 있는 동안 `도감 보기` 줄은 톤 배경이다. 다시 누르면 도감 기기 창을 닫는다.
   - 개체 상세에서 다른 개체로 넘기면 도감 기기 창도 그 종으로 바뀐다. 개체 상세를 닫으면 도감 기기 창도 닫힌다.
   - 이 도감 기기 창은 바닥 단추 줄(`◀ 이전`·`울음소리`·`다음 ▶`)을 두지 않고 방향키로 넘기지 않는다. 울음소리는 개체 상세에 있다(2026-10-01 사용자 "이 도감상세에는 울음소리 없어도 될듯").
 - 설정창의 튜토리얼(상점·부화·업적)은 기기 창이 열린 동안 설정창에 그리지 않는다.
 
-구현은 `src/main/windows/devices.ts` `petDeviceOf`, `src/renderer/pet.html`, `src/renderer/device/pet.ts` 다. 설정창 쪽 연결은 `src/renderer/manage/manage.ts` `syncPetDevice`·`stepPet`·`onPetAction` 이다. 주고받는 값은 `src/shared/model/devices.ts` `PetDeviceOpen`·`PetDeviceView`·`PetDeviceAction` 이다.
+구현은 `src/main/windows/devices.ts` `petDeviceOf`, `src/renderer/pet.html`, `src/renderer/device/pet.ts` 다. 설정창 쪽 연결은 `src/renderer/manage/pet-link.ts` `syncPetDevice`·`stepPet`·`onPetAction` 이다. 주고받는 값은 `src/shared/model/devices.ts` `PetDeviceOpen`·`PetDeviceView`·`PetDeviceAction` 이다.
 
 ## 3. 도감 등록과 파티 소환
 
