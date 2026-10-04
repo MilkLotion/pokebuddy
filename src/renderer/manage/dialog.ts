@@ -53,6 +53,7 @@ let dimmed = false;
 export const isDimmed = (): boolean => dimmed;
 export function setScrim(on: boolean): void {
   scrimEl.classList.toggle("open", on);
+  markHeaderOpen(); // 닫는 길(closeDialog·개체 상세로 넘어가기)은 drawDialog 를 거치지 않는다 — 헤더 아이콘의 열림 표시도 여기서 맞춘다
   if (on === dimmed) return;
   dimmed = on;
   hooksOf().onScrimChanged(); // 모달이 열리면 코치마크를 감추고, 닫히면 다시 그린다. 창 단추 자리 어둡게 하기도 여기서 맞춘다
