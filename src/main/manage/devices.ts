@@ -174,11 +174,13 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:pet-open": { denied: null, run: (_e, input, gen) => openDevice("pet", petWin, isPetInput(input) ? input : null, petDeviceModel, gen) },
     "manage:shop-open": { denied: null, run: (_e, input, gen) => openDevice("shop", shopWin, isShopInput(input) ? input : null, shopDeviceModel, gen) },
     "manage:bag-open": { denied: null, run: (_e, input, gen) => openDevice("bag", bagWin, isBagInput(input) ? input : null, bagDeviceModel, gen) },
-    "manage:dex-open": (_e, slug, gen, beside) => {
+    "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;
+      // open 은 렌더러가 보낸 값이다 — { slug, beside } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
+      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; beside?: unknown }) : null;
       // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
-      if (typeof slug === "string") dexWin.show(parent, { slug, beside: beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
+      if (o && typeof o.slug === "string") dexWin.show(parent, { slug: o.slug, beside: o.beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
       else dexWin.close();
     },
   });
