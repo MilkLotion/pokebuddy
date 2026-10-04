@@ -1844,7 +1844,7 @@ function markDexPick(): void {
 function pickDex(slug: string): void {
   if (coachId === "dex") void sendCommand("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
-  api.dexOpen(dexPick, dexGen);
+  api.dexOpen(dexPick ? { slug: dexPick, beside: false } : null, dexGen);
   markDexPick();
 }
 
@@ -1974,7 +1974,7 @@ function stepDex(delta: -1 | 1): void {
   const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
   if (!next || next.slug === dexPick) return;
   dexPick = next.slug;
-  api.dexOpen(dexPick, dexGen);
+  api.dexOpen({ slug: dexPick, beside: false }, dexGen);
   // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
   const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
   if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
@@ -4048,7 +4048,7 @@ function petDeviceBuild(): PetDeviceInput | null {
   const pet = ui.detailPet ? petInView(ui.detailPet) : null;
   if (!pet || !ui.view) return null;
   if (dexBeside && dexBesideSent !== pet.species) {
-    api.dexOpen(pet.species, dexGen, true);
+    api.dexOpen({ slug: pet.species, beside: true }, dexGen);
     dexBesideSent = pet.species;
   }
   return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside, busy: petBusy };
@@ -5004,8 +5004,8 @@ async function agent(name: string, action: AgentAction): Promise<void> {
 
 async function loadDex(): Promise<void> {
   dexRows = await api.dex();
-  if (dexPick) api.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
-  else if (dexBeside && dexBesideSent) api.dexOpen(dexBesideSent, dexGen, true);
+  if (dexPick) api.dexOpen({ slug: dexPick, beside: false }, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
+  else if (dexBeside && dexBesideSent) api.dexOpen({ slug: dexBesideSent, beside: true }, dexGen);
   if (ui.tab === "dex") draw();
 }
 

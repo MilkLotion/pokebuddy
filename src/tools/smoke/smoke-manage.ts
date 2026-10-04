@@ -109,7 +109,7 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
-    if (name === "dexOpen") return (slug, gen, beside) => { window.__dexOpen = slug; window.__dexBeside = beside === true; };
+    if (name === "dexOpen") return (open) => { window.__dexOpen = open ? open.slug : null; window.__dexBeside = !!open && open.beside === true; }; // 열기 인자는 { slug, beside } | null (마 ⑤)
     // 기기 창 넷 — 설정창은 고른 값만 보낸다. 시험 메인이 앱 메인처럼 모델을 만들고(smoke:device), 받은 모델은 window.__<기기>Open 에 둔다
     if (name === "petOpen") return (input) => device("pet", input, (m) => { window.__petOpen = m; });
     if (name === "petMenu") return async (id) => { window.__petMenu = id; return window.__menuOn === true; }; // 메뉴를 띄운 것으로 칠지는 window.__menuOn

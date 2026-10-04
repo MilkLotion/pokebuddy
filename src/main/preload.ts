@@ -113,14 +113,7 @@ const MANAGE = {
   onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/clock.ts)
 } as const satisfies WireOf<ManageIpc>;
 
-const manageBridge = bridgeOf<ManageIpc>(MANAGE);
-const manage: ManageBridge = {
-  ...manageBridge,
-  // [임시] 계약과 1:1 이 아닌 다리 — beside 를 참·거짓으로 고쳐 보낸다. 열기 인자가 { slug, beside } 한 값이 되면 걷는다
-  dexOpen: (slug, gen, beside) => manageBridge.dexOpen(slug, gen, beside === true),
-};
-
-contextBridge.exposeInMainWorld("pokebuddyManage", manage);
+contextBridge.exposeInMainWorld("pokebuddyManage", bridgeOf<ManageIpc>(MANAGE) satisfies ManageBridge);
 
 // 알림 배너 창 — 배너 하나를 받고, `바로가기`·`✕` 닫기를 알린다
 const BANNER = {
