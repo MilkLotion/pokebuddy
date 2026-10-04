@@ -13,7 +13,7 @@ import { snapshotOfGame } from "../../view/snapshot";
 import * as store from "../../save/save-file";
 import { setSize } from "../../party/home";
 import { zoomOf } from "../../main/art/stage-art";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { setSetting } from "../../state/settings";
 import { createExecutor } from "../../tx/executor";
 import { shopList } from "../../view/shop-list";

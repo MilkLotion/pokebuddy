@@ -19,7 +19,7 @@ import { onlineConfig } from "../../online/config";
 import { dataVersion } from "../../trade/data-version";
 import { offerOf, refOf } from "../../trade/exchange";
 import { newPet } from "../../party/create";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/command-table";

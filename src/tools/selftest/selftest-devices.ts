@@ -5,7 +5,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { candyMax, candyResult } from "../../bag/preview";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import type { BagDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
 import { bagDeviceModel } from "../../view/device-bag";

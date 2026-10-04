@@ -13,7 +13,7 @@ import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import { dexList } from "../../view/dex-list";
 import * as store from "../../save/save-file";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { gainOf } from "../../state/settings";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";

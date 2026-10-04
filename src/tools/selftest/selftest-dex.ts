@@ -16,7 +16,7 @@ import type { UnlockRules } from "../../dex/unlocks";
 import type { Pet, SaveV2, World } from "../../save/v2/types";
 import { printLine as out } from "../harness/report";
 import { hasObtained, hasShiny, hasUnlocked, isKnownSpecies, recordDex } from "../../dex/record";
-import { empty as emptySave } from "../../save/v3";
+import { emptySave } from "../../save/normalize";
 import { isSingleSpecies } from "../../dex/forms";
 
 // 배럴 없이 모듈을 직접

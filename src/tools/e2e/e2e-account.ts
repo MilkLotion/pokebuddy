@@ -15,7 +15,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { rollEgg, seededRand } from "../../verify/save-rules";
 import { apps, localServer, makeApp, root, sleep, sql, until, type E2eApp } from "./apps";
 

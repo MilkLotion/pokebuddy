@@ -29,7 +29,7 @@ import { createSaveParty, type SaveParty } from "../../save/save-party";
 import { partyPetsOf, type PartyPet } from "../../view/party-pet";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/save-file";
-import { empty as emptyV3 } from "../../save/v3";
+import { emptySave as emptyV3 } from "../../save/normalize";
 import { sendToWriter as send } from "../../save/command-channel";
 import { makeTmp } from "../harness/tmp-dir";
 import { writeSaveV2 } from "../harness/v2-save";

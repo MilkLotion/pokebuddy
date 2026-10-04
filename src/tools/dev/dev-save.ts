@@ -7,7 +7,7 @@ import { rollGender } from "../../dex/gender";
 import { randomNature } from "../../dex/natures";
 import { newPet } from "../../party/create";
 import * as store from "../../save/save-file";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { recordDex } from "../../dex/record";
 import { PARTY_RULES, PET_RULES } from "../../party/rules";

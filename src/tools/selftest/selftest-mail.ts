@@ -4,7 +4,7 @@ import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
 import { createMailInbox, type RpcResult } from "../../online/mail-inbox";
 import { mailScreenOf } from "../../view/mail";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { createExecutor } from "../../tx/executor";
 import type { SaveV3 } from "../../shared/save-v3";
 import { isSinglePet } from "../../dex/forms";

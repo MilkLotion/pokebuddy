@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { newPet } from "../../party/create";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { apps, localServer, makeApp, ok, online, root, sql, until, type E2eApp, type Server } from "./apps";
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — CLI·RPC 의 JSON 을 그대로 읽는다

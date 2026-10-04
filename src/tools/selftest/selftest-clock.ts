@@ -12,7 +12,7 @@ import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { newPet } from "../../party/create";
 import * as store from "../../save/save-file";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
 

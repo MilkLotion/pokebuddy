@@ -110,7 +110,7 @@ export interface PartySlotV3 {
 }
 
 // 파티 프리셋 (2026-10-02) — 규칙은 worklog/records/party-preset/record.md "확정 설계".
-// 저장 형식 번호는 올리지 않는다. 새 칸은 없으면 읽을 때 채운다 (src/save/v3.ts normalize)
+// 저장 형식 번호는 올리지 않는다. 새 칸은 없으면 읽을 때 채운다 (src/save/normalize.ts normalizeSave)
 //   - 개체는 한 프리셋에만 든다. 프리셋에 든 개체는 박스에 없다
 //   - 칸의 잠금은 프리셋마다 따로다. 적용은 칸을 잠금째 맞바꾼다 (src/party/presets.ts applyPreset)
 export interface PartyV3 {
@@ -263,6 +263,6 @@ export interface SaveV3 {
   trade?: { pending: TradePendingV3 | null };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/gifts.ts)
   find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/pickup.ts)
-  counts: CountsV3; // 업적이 세는 누적 값 — 새 저장과 정규화가 늘 채운다 (src/save/v3.ts)
+  counts: CountsV3; // 업적이 세는 누적 값 — 새 저장과 정규화가 늘 채운다 (src/save/normalize.ts)
   achRev?: number; // 업적 목록의 판 — ACHIEVEMENT_REV 보다 작으면 다음 판정에서 달성한 업적을 조용히 기록한다
 }

@@ -94,7 +94,7 @@ export function migrateSaveV2(v2: SaveV2, now: number): MigrateResult {
   addStraysToBox(out.pets, placed, out.boxes);
   fillBoxes(out.boxes);
 
-  // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다. 옛 민트를 합친 개수는 가방 상한에서 자른다 (src/save/v3.ts normalizeBag 과 같다)
+  // 가방 — 이로치 권리는 도구가 아니므로 legacy 로 옮긴다. 옛 민트를 합친 개수는 가방 상한에서 자른다 (src/save/normalize.ts normalizeBag 과 같다)
   let mergedMint = false;
   for (const [k, v] of Object.entries(v2.inventory)) {
     if (k.startsWith(SHINY_RIGHT)) {

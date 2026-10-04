@@ -7,7 +7,7 @@ import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { newPet } from "../../party/create";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
 

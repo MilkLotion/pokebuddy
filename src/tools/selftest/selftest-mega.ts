@@ -15,7 +15,7 @@ import { petName } from "../../view/text";
 import { bannerOf } from "../../view/banner";
 import { refreshQueue } from "../../notify/queue";
 import { keepInBox, placeInParty } from "../../party/placement";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import { createExecutor } from "../../tx/executor";
 import { dexDetail } from "../../view/dex-detail";

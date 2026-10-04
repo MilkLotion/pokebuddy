@@ -11,7 +11,7 @@ import * as store from "../../save/save-file";
 import { BAG_RULES } from "../../bag/rules";
 import { BOX_RULES } from "../../box/rules";
 import { PARTY_RULES } from "../../party/rules";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { emptySlots, presetSlots } from "../../party/slots";
 import { openSlot } from "../../party/slots";
 import { activePreset, applyPreset, locatePet, presetCount, presetPetIds, slotsOfPreset } from "../../party/presets";

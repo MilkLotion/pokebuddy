@@ -4,7 +4,7 @@
 // 계약은 docs/specs/modules.md "시간 처리 순서", 수치는 docs/specs/balance.md 다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { affinityPercent, buffPercent, carePercent, zoneOf } from "../../state/time";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";

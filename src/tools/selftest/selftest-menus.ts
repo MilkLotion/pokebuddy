@@ -5,7 +5,7 @@
 // 항목의 순서·라벨과 메뉴 창의 모양은 selftest-stage 의 메뉴 절이 본다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { jumpListOf, petMenuOf, trayMenuOf } from "../../view/menus";
 import { moodText, t } from "../../view/text";

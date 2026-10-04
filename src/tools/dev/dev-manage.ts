@@ -120,7 +120,7 @@ function loadApp() {
     createManage: (require("../../main/manage/window") as typeof import("../../main/manage/window")).createManage,
     paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
     store: require("../../save/save-file") as typeof import("../../save/save-file"),
-    empty: (require("../../save/v3") as typeof import("../../save/v3")).empty,
+    empty: (require("../../save/normalize") as typeof import("../../save/normalize")).emptySave,
     createMailInbox: (require("../../online/mail-inbox") as typeof import("../../online/mail-inbox")).createMailInbox,
     mailScreenOf: (require("../../view/mail") as typeof import("../../view/mail")).mailScreenOf,
   };

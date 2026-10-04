@@ -7,7 +7,7 @@ import { reachReport } from "../../dex/reach";
 import { starterSlugs, unlockByRules, unlockRules } from "../../dex/unlocks";
 import { applyStarter } from "../../party/starter";
 import { speciesPrice } from "../../shop/catalog";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { dexList } from "../../view/dex-list";
 import { evolvePet } from "../../dex/evolve";
 import { newPet } from "../../party/create";

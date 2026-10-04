@@ -11,7 +11,7 @@ import { buyProduct } from "../../shop/buy";
 import { newPet } from "../../party/create";
 import { BOX_RULES } from "../../box/rules";
 import { SHOP_RULES } from "../../shop/rules";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { boxName, fillBoxes, newBox } from "../../box/boxes";
 import type { SaveV3 } from "../../shared/save-v3";
 import { argsFromCommand } from "../../tx/args";

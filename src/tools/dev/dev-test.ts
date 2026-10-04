@@ -13,7 +13,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as store from "../../save/save-file";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { PARTY_RULES } from "../../party/rules";
 import { TUTORIALS } from "../../tutorial/conditions";
 import { applyScene, SCENES } from "../harness/scenes";

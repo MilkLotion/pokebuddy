@@ -12,7 +12,7 @@ import { keyFileOf, prepareSaveKey, setAsideKeyAndSave } from "../../save/key";
 import type { KeyVault } from "../../platform/key-vault";
 import * as store from "../../save/save-file";
 import { readCloudFile } from "../../online/lost";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { makeTmp } from "../harness/tmp-dir";
 import { printLine as out } from "../harness/report";
 

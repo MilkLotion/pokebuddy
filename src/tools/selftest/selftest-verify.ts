@@ -10,7 +10,7 @@ import path from "node:path";
 import { expForLevel } from "../../dex/growth";
 import { openEgg } from "../../egg/open";
 import { newPet } from "../../party/create";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { EggV3, PetV3, SaveV3 } from "../../shared/save-v3";
 import { rollEgg, seededRand, verifySave, type VerifyContext, type VerifyData } from "../../verify/save-rules";
 import { printLine as out } from "../harness/report";

@@ -9,7 +9,7 @@ import { unclaimedAchievementIds } from "../../dex/tables";
 import { profileOf, speciesSlugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";
 import { snapshotView } from "../../view/snapshot";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { applyStarter } from "../../party/starter";
 import { applyPreset, slotsOfPreset } from "../../party/presets";

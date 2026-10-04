@@ -15,7 +15,7 @@ import { bannerOf } from "../../view/banner";
 import { refreshQueue } from "../../notify/queue";
 import { newPet } from "../../party/create";
 import * as store from "../../save/save-file";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { josa } from "../../shared/josa";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";

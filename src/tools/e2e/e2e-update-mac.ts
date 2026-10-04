@@ -91,7 +91,7 @@ function makeHome(): Home {
   fs.rmSync(HOME, { recursive: true, force: true });
   const data = path.join(HOME, ".claude", "pokebuddy");
   fs.mkdirSync(data, { recursive: true });
-  const { empty } = require(path.join(root, "dist/save/v3.js")) as { empty: (now: number) => Record<string, unknown> & { pets: unknown[]; party: { slots: unknown[] }; points: { balance: number } } };
+  const { emptySave: empty } = require(path.join(root, "dist/save/normalize.js")) as { emptySave: (now: number) => Record<string, unknown> & { pets: unknown[]; party: { slots: unknown[] }; points: { balance: number } } };
   const { newPet } = require(path.join(root, "dist/party/create.js")) as { newPet: (o: Record<string, unknown>) => unknown };
   const save = empty(Date.now());
   save.pets.push(newPet({ id: "u1", species: "pichu", shiny: false, nature: "hardy", gender: "male", now: Date.now() }));

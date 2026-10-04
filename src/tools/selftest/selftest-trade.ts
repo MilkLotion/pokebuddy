@@ -10,7 +10,7 @@ import { isRepoRun } from "../../platform/dev-run";
 import { applyTrade, checkOffer, lockTrade, offerOf, refOf, unlockTrade, validateReceived, type TradePet } from "../../trade/exchange";
 import { newPet } from "../../party/create";
 import { applyPreset, slotsOfPreset } from "../../party/presets";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
 import { isSinglePet } from "../../dex/forms";

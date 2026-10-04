@@ -26,7 +26,7 @@ import { unlockByRules } from "../../dex/unlocks";
 import { applyStarter } from "../../party/starter";
 import { newPet, nextPetId } from "../../party/create";
 import { addToBox } from "../../box/slots";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { dexList } from "../../view/dex-list";
 import { MINT_RETIRED } from "../../bag/mint";
 import { snapshotView } from "../../view/snapshot";

@@ -4,7 +4,7 @@
 // 계약은 docs/specs/game.md "상점", 가격은 docs/specs/balance.md 가격표다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import { buyProduct } from "../../shop/buy";
 import { eggPrice, findProduct, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
 import { shopList } from "../../view/shop-list";

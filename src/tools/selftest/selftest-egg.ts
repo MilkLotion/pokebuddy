@@ -12,7 +12,7 @@ import { unlockRules } from "../../dex/unlocks";
 import { dexDetail } from "../../view/dex-detail";
 import { shopList } from "../../view/shop-list";
 import { nextPetId } from "../../party/create";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { EggV3, SaveV3 } from "../../shared/save-v3";
 import { eggOfSpecies, eggPool, fixedEggs, inRandomEgg } from "../../dex/obtain";
 import { canGiveEgg } from "../../egg/pool";

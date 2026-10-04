@@ -4,7 +4,7 @@
 // 계약은 docs/specs/game.md "도감", 화면은 Figma Dex / Base 와 도감 기기 창이다(설정창 안의 옛 Dex / Detail / * 는 2026-09-29 지웠다).
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { empty } from "../../save/v3";
+import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { dexDetail } from "../../view/dex-detail";
 import { onlyStepText, stepText } from "../../view/evo-text";

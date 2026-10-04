@@ -1,5 +1,5 @@
 // 민트 식별자 — 성격별 민트 21종을 민트 한 종류로 합쳤다 (2026-09-29 사용자 결정 "민트는 그냥 지금것도 한 종류로 통일")
-// 가져오는 것이 없는 파일이다. 저장 정규화(src/save/v3.ts)·v2 변환·우편함이 함께 쓴다
+// 가져오는 것이 없는 파일이다. 저장 정규화(src/save/normalize.ts)·v2 변환·우편함이 함께 쓴다
 export const MINT_ID = "mint";
 
 // 옛 민트 식별자 — `<성격>-mint`(2026-09-25~2026-09-29)와 `mint-<성격>`(그 전)
@@ -16,7 +16,7 @@ export const MINT_RETIRED = true;
 export const MINT_REFUND_EACH = 100;
 
 // 가방의 민트를 지우고 그 값만큼 포인트를 더한다. 돌려준 포인트를 돌려준다(없으면 0).
-// 저장을 읽을 때마다 부른다(src/save/v3.ts normalize). 지운 가방을 쓰면 민트가 없어 두 번 돌려주지 않는다
+// 저장을 읽을 때마다 부른다(src/save/normalize.ts normalizeSave). 지운 가방을 쓰면 민트가 없어 두 번 돌려주지 않는다
 export function refundRetiredMint(bag: Record<string, number>, points: { balance: number }): number {
   if (!MINT_RETIRED) return 0;
   const count = bag[MINT_ID] ?? 0;

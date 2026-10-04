@@ -11,7 +11,7 @@ import type { Stage } from "../../main/stage";
 import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../../main/stage-group";
 import type { StageWindow } from "../../main/stage-window";
 import { setHome } from "../../party/home";
-import { empty, normalize } from "../../save/v3";
+import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import type { CoachView, PointerMsg } from "../../shared/model/stage";
 import { setSetting } from "../../state/settings";
 
