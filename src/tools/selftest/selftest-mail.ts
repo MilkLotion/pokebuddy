@@ -113,6 +113,10 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   s.pets = s.pets.filter((p) => p.species !== "magearna-original");
   assert.deepStrictEqual(applyGifts(s, "S3", [{ kind: "pokemon", species: "magearna-original", count: 1 }], undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: true });
   assert.ok(!s.pets.some((p) => p.species === "magearna-original"), "획득 이력으로 본다");
+  // 진화 계열 기준 — 단일 포켓몬의 진화형(실버디)도 한 마리만 넣는다 (2026-10-04 사용자 결정 "진화 계열 기준", 94 항목 9-3-7)
+  const evolvedBefore = s.pets.length;
+  assert.deepStrictEqual(applyGifts(s, "S4", [{ kind: "pokemon", species: "silvally", count: 3 }], undefined, { now: T0, rand: () => 0.5 }), { ok: true, applied: true });
+  assert.equal(s.pets.length, evolvedBefore + 1, "진화형 단일 포켓몬도 한 마리");
   process.stdout.write("(2c) 단일 포켓몬 선물  ok\n");
 }
 

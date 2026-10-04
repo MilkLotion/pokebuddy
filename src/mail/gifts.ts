@@ -8,6 +8,7 @@
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
+import { isSingleSpecies } from "../dex/forms.js";
 import { boxRoom } from "../box/slots.js";
 import { hasProfile } from "../dex/species.js";
 import { addNewPet } from "../party/create.js";
@@ -67,7 +68,7 @@ function pokemonCounts(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions):
   const give = new Map<Gift, number>();
   for (const g of gifts) {
     if (g.kind !== "pokemon") continue;
-    if (!singles.has(g.species)) give.set(g, g.count);
+    if (!isSingleSpecies(g.species, opts, singles)) give.set(g, g.count); // 진화 계열 기준 (94 항목 9-3-7)
     else {
       give.set(g, hasObtained(save, g.species) || taken.has(g.species) ? 0 : 1);
       taken.add(g.species);

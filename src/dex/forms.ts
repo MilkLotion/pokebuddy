@@ -9,7 +9,7 @@
 //             스탯은 바꾼 종을 따른다(종에서 읽으므로 따로 할 일이 없다)
 // 한 개체이므로 같은 sid 가 두 파티 칸을 차지하지 않고, 박스 사용 수도 1마리다.
 import type { DexOptions } from "./data";
-import { nextOf } from "./evo.js";
+import { nextOf, prevOf } from "./evo.js";
 import { shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
@@ -68,9 +68,21 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   return { ok: true, petId, from, to: species };
 }
 
-// 단일 포켓몬인가 — 단일 포켓몬(src/dex/obtain.ts singleSpecies)을 거쳐 왔거나 지금 그 종이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
+// 단일 포켓몬 종인가 — 진화 계열 기준이다. 그 종이나 진화 전 종 가운데 하나가 단일 포켓몬(src/dex/obtain.ts singleSpecies)이면 단일 포켓몬이다
+// (코스모그 → 코스모움·솔가레오, 타입:널 → 실버디). 우편 선물·업적 보상·업적 진행·교환·판매가 이 판정 하나를 쓴다
+// (2026-10-04 사용자 결정 "진화 계열 기준", 94 항목 9-3-7). 여러 번 물을 때는 singles 를 한 번 만들어 넘긴다
+export function isSingleSpecies(slug: string, opts?: DexOptions, singles: ReadonlySet<string> = singleSpecies(opts)): boolean {
+  let at: string | null = slug;
+  for (let guard = 0; at && guard < 10; guard += 1) {
+    if (singles.has(at)) return true;
+    at = prevOf(at, opts);
+  }
+  return false;
+}
+
+// 단일 포켓몬인가 — 거쳐 온 종이나 지금 종이 단일 포켓몬 계열이면 단일 포켓몬이다. 공유 sid 계열도 단일 포켓몬 판정을 따른다 (사용자 결정 2026-09-26: 교환 불가)
 export function isSinglePet(pet: Pick<PetV3, "species" | "evolved">, opts?: DexOptions): boolean {
   const singles = singleSpecies(opts);
-  if ([...pet.evolved, pet.species].some((s) => singles.has(s))) return true;
+  if ([...pet.evolved, pet.species].some((s) => isSingleSpecies(s, opts, singles))) return true;
   return isShared({ ...(pet as PetV3), evolved: pet.evolved }, opts);
 }

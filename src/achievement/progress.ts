@@ -1,6 +1,7 @@
 // 업적 조건의 지금 값과 진행도 — 조건의 뜻은 src/achievement/defs.ts 머리말
 import { type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
+import { isSingleSpecies } from "../dex/forms.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
@@ -58,7 +59,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
     case "hatch": return save.counts.hatched;
     case "single": {
       const singles = singleSpecies(opts);
-      return save.dex.obtained.filter((s) => singles.has(s)).length;
+      return save.dex.obtained.filter((s) => isSingleSpecies(s, opts, singles)).length; // 진화 계열 기준 (94 항목 9-3-7)
     }
     case "find": return save.find?.seq ?? 0;
     case "work": return Math.floor(save.totals.workMs / 3600_000);

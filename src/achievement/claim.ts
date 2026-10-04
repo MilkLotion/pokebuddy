@@ -1,12 +1,12 @@
 // 업적 보상 수령 — 업적당 한 번. 보상 종류는 src/achievement/defs.ts 머리말
 import { type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
+import { isSingleSpecies } from "../dex/forms.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { openSlot } from "../party/slots.js";
 import { countParty, slotsOfPreset } from "../party/presets.js";
 import { addNewPet } from "../party/create.js";
 import { addItem } from "../bag/items.js";
-import { singleSpecies } from "../dex/obtain.js";
 import { checkGiveEgg, newEgg } from "../egg/pool.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -44,7 +44,7 @@ export function claimAchievement(save: SaveV3, id: string, now: number, opts: De
   const species = rewardPokemon(def);
   if (species) {
     // 단일 포켓몬은 저장마다 한 번만 얻는다 — 옛 규칙의 알이나 우편으로 먼저 얻었으면 개체를 주지 않는다
-    if (singleSpecies(opts).has(species) && hasObtained(save, species)) {
+    if (isSingleSpecies(species, opts) && hasObtained(save, species)) {
       done();
       return { ok: true, id, skipped: true };
     }

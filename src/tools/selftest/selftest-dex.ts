@@ -17,6 +17,7 @@ import type { Pet, SaveV2, World } from "../../save/v2/types";
 import { printLine as out } from "../harness/report";
 import { hasObtained, hasShiny, hasUnlocked, isKnownSpecies, recordDex } from "../../dex/record";
 import { empty as emptySave } from "../../save/v3";
+import { isSingleSpecies } from "../../dex/forms";
 
 // 배럴 없이 모듈을 직접
 const dex = { ...data, ...natures, ...species, ...evo, ...unlocks };
@@ -421,6 +422,14 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   recordDex(save, "pikachu", false);
   assert.equal(save.dex.obtained.length, 1, "같은 종을 두 번 적지 않는다");
   out("도감 기록 정규화 ok");
+}
+
+// ── 단일 포켓몬 종 — 진화 계열 기준 (2026-10-04 사용자 결정, 94 항목 9-3-7) ──
+{
+  assert.ok(isSingleSpecies("type-null") && isSingleSpecies("silvally"), "타입:널과 실버디");
+  assert.ok(isSingleSpecies("cosmog") && isSingleSpecies("cosmoem") && isSingleSpecies("solgaleo"), "코스모그 계열");
+  assert.ok(!isSingleSpecies("pikachu") && !isSingleSpecies("charizard"), "보통 종은 아니다");
+  out("단일 포켓몬 종 ok");
 }
 
 out("통과");
