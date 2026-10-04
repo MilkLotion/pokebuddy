@@ -36,8 +36,9 @@ export type TutorialResult = Outcome<TutorialFailure> & {
   steps?: number;
 };
 
+// 표(TUTORIAL_STEPS)에 없는 id 는 bad-id 다 — 모르는 이름을 저장에 남기지 않는다 (94 항목 9-5-5)
 function set(save: SaveV3, id: string, state: TutorialState, steps?: number): TutorialResult {
-  if (!id) return { ok: false, reason: "bad-id" };
+  if (!id || !isTutorialId(id)) return { ok: false, reason: "bad-id" };
   const row = save.tutorials[id];
   if (row && DONE.includes(row.state)) return { ok: false, reason: "already" };
   const next = { ...row, state, steps: steps ?? row?.steps ?? 0 };
@@ -47,7 +48,7 @@ function set(save: SaveV3, id: string, state: TutorialState, steps?: number): Tu
 
 export const skipTutorial = (save: SaveV3, id: string): TutorialResult => set(save, id, "skipped");
 
-// 끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다. 표에 없는 id 는 적어 둔 값을 그대로 둔다
+// 끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다
 export const doneTutorial = (save: SaveV3, id: string): TutorialResult => set(save, id, "done", isTutorialId(id) ? TUTORIAL_STEPS[id] : undefined);
 
 // 지금 띄워도 되는가 — 건너뛰었거나 마친 것은 다시 띄우지 않는다

@@ -296,6 +296,8 @@ function seed(): SaveV3 {
   assert.equal(s.tutorials.hatch?.state, "done");
   assert.equal(s.tutorials.hatch?.steps, 1, "끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다 — 보낸 값이 아니다");
   assert.equal(skipTutorial(s, "").reason, "bad-id");
+  assert.equal(doneTutorial(s, "no-such-tutorial").reason, "bad-id", "표에 없는 id 는 거절 (94 항목 9-5-5)");
+  assert.equal(s.tutorials["no-such-tutorial"], undefined, "저장에 남기지 않는다");
   process.stdout.write("(10) 튜토리얼 상태 기록  ok\n");
 }
 
