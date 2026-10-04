@@ -28,7 +28,7 @@ import { petName } from "../../view/text";
 import { createSaveParty, type SaveParty } from "../../save/save-party";
 import { partyPetsOf, type PartyPet } from "../../view/party-pet";
 import { applyStarter } from "../../party/starter";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty as emptyV3 } from "../../save/v3";
 import { sendToWriter as send } from "../../save/command-channel";
 import { makeTmp } from "../harness/tmp-dir";
@@ -232,18 +232,18 @@ async function partyTests(): Promise<void> {
   // writer — 파일을 읽고 자리·숨김이 실행기를 거쳐 파일에 내려간다
   {
     const p = pathsIn(tmpDir("writer"));
-    store.write(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
+    store.writeSave(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
     const { party } = openParty(p);
     ok(party.isWriter(), "writer 가 됐다");
     eq(partyPetsOf(party.save(), true).map((x) => x.id), ["p1", "p2"], "writer 가 파티를 읽었다");
     eq(partyPetsOf(party.save(), true)[0]?.nature, "hardy", "성격이 실렸다");
     ok(!party.needsStarter(), "파티가 있으면 첫 실행 아님");
     ok((await party.setHome("p1", { dx: -10, dy: -20 })).ok, "setHome 성공");
-    const disk = store.read(p.save, { repair: false }).state!;
+    const disk = store.readSave(p.save, { repair: false }).state!;
     eq(disk.pets[0]!.home, { dx: -10, dy: -20 }, "setHome 이 파일에 내려갔다");
     eq(disk.pets[1]!.home, devSaveState(["eevee", "pikachu"], { now: T0 }).pets[1]!.home, "다른 마리의 집은 그대로");
     const shown = await party.setShown("p2", false);
-    ok(shown.ok && store.read(p.save, { repair: false }).state!.party.slots[1]!.hidden === true, "setShown 이 파일에 내려갔다");
+    ok(shown.ok && store.readSave(p.save, { repair: false }).state!.party.slots[1]!.hidden === true, "setShown 이 파일에 내려갔다");
     eq(partyPetsOf(party.save(), true).length, 1, "숨긴 마리는 pets 에서 빠진다");
     eq(partyPetsOf(party.save(), false).length, 2, "all 은 숨긴 마리도 준다");
     party.stop();
@@ -273,7 +273,7 @@ async function partyTests(): Promise<void> {
     try {
       fs.writeFileSync(p.saveLock, `${idle.pid}
 `);
-      store.write(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
+      store.writeSave(p.save, devSaveState(["eevee", "pikachu"], { now: T0, rng: () => 0 }));
       const before = fs.readFileSync(p.save, "utf8");
       const { game, party } = openParty(p);
       ok(!party.isWriter(), "잠금이 남의 것이면 reader");
@@ -288,7 +288,7 @@ async function partyTests(): Promise<void> {
       let changes = 0;
       party.onChange(() => void (changes += 1));
       await sleep(50);
-      store.write(p.save, devSaveState(["eevee", "pikachu", "squirtle"], { now: T0 + 1000, rng: () => 0 }));
+      store.writeSave(p.save, devSaveState(["eevee", "pikachu", "squirtle"], { now: T0 + 1000, rng: () => 0 }));
       ok(await waitFor(() => partyPetsOf(party.save(), true).length === 3), "reader 가 파일 변화를 감시로 읽었다");
       ok(changes >= 1, "onChange 가 불렸다");
       party.stop();
@@ -306,7 +306,7 @@ async function partyTests(): Promise<void> {
     eq(partyPetsOf(party.save(), true), [], "첫 실행 전에는 빈 파티");
     ok(party.begin("eevee"), "begin 이 첫 선택으로 시작한다");
     ok(!party.needsStarter(), "begin 뒤에는 첫 실행 아님");
-    const disk = store.read(p.save, { repair: false }).state!;
+    const disk = store.readSave(p.save, { repair: false }).state!;
     eq([disk.pets.length, disk.pets[0]!.species, disk.party.slots[0]!.petId], [1, "eevee", "p1"], "첫 실행 저장 모양");
     ok(disk.dex.obtained.includes("eevee"), "첫 포켓몬은 도감에");
     ok(!party.begin("pikachu"), "두 번째 begin 은 거절");
@@ -465,7 +465,7 @@ async function stageRuntimeTests(): Promise<void> {
   // 잠금을 잃으면 곧바로 reader 다. 실행기도 쓰지 않는다 — 다른 writer 의 저장을 덮지 않는다
   {
     const lost = pathsIn(tmpDir("lost-writer"));
-    store.write(lost.save, devSaveState(["eevee"], { now: T0 }));
+    store.writeSave(lost.save, devSaveState(["eevee"], { now: T0 }));
     const { game, party } = openParty(lost);
     const other = spawnIdle();
     try {
@@ -495,7 +495,7 @@ async function stageRuntimeTests(): Promise<void> {
     const migGame = createGame({ petName, file: migPaths.save });
     const migParty = createSaveParty({ send: migGame.send, paths: migPaths });
     try {
-      const moved = store.read(migPaths.save, { repair: false }).state!;
+      const moved = store.readSave(migPaths.save, { repair: false }).state!;
       eq(moved.pets.length, 2, "두 마리가 그대로 옮겨진다");
       eq(moved.points.balance, 1234, "포인트가 그대로");
       ok(fs.existsSync(store.backupName(migPaths.save)), "원본을 옆에 남긴다");
@@ -516,7 +516,7 @@ async function stageRuntimeTests(): Promise<void> {
   seed.pets[0]!.fullness = 40;
   seed.bag.toy = 1; // 가방 도구 사용의 무대 반응 확인용 (아래 bag.use)
   seed.bag["rare-candy"] = 1;
-  store.write(commandPaths.save, seed);
+  store.writeSave(commandPaths.save, seed);
   const game = createGame({ petName, file: commandPaths.save, rand: () => 0 });
   const source = createSaveParty({ send: game.send, paths: commandPaths });
   let animations = 0;
@@ -530,7 +530,7 @@ async function stageRuntimeTests(): Promise<void> {
     commands.setWriter(true);
     const fed = await send(commandPaths.mailbox, { cmd: "feed", target: "p1", from: "cli" });
     ok(fed.ok, "mailbox → dispatcher → 실행기 → 저장 왕복");
-    eq(store.read(commandPaths.save, { repair: false }).state!.pets[0]!.fullness, 60, "밥 효과가 디스크에 저장");
+    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.fullness, 60, "밥 효과가 디스크에 저장");
     eq(animations, 1, "저장 성공 뒤 연출 요청");
     const again = await commands.dispatcher.dispatch({ cmd: "feed", target: "p1", from: "menu" });
     eq(again.reason, "cooldown", "중복 밥 거절");
@@ -539,7 +539,7 @@ async function stageRuntimeTests(): Promise<void> {
     // 포켓몬 클릭은 놀아주기다. 쿨타임이면 무대 반응만으로 끝난다
     const clicked = await commands.click("p1");
     ok(clicked.ok, "클릭이 놀아주기로 저장된다");
-    eq(store.read(commandPaths.save, { repair: false }).state!.pets[0]!.playStreak, 1, "놀아주기 중첩 1");
+    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.playStreak, 1, "놀아주기 중첩 1");
     eq(animations, 2, "놀아주기 연출");
     eq((await commands.click("p1")).reason, "cooldown", "쿨타임의 클릭은 놀아주지 않는다");
     eq(animations, 2, "쿨타임이면 놀이 연출이 없다");

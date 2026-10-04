@@ -14,7 +14,7 @@ import { setLang } from "../../view/text";
 import { bannerOf } from "../../view/banner";
 import { refreshQueue } from "../../notify/queue";
 import { newPet } from "../../party/create";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty, normalize } from "../../save/v3";
 import { josa } from "../../shared/josa";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -209,7 +209,7 @@ try {
   // (9) 저장 경로 — 1초 틱의 굴림(rollHits)에서 주운 마리만 game.find 가 그 자리에서 저장한다. 쓰지 못하면 아무것도 반영하지 않는다
   {
     const file = path.join(root, "save.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     let writable = true;
     let next: number[] = [];
@@ -226,7 +226,7 @@ try {
     next = [K_POINTS, 0, K_POINTS, 0];
     const found = game.find(["p1", "p4", "p2", "p3"]);
     assert.deepEqual(found?.map((r) => r.petId), ["p1", "p4"], "숨긴 마리·박스 마리는 반영하지 않는다");
-    const saved = store.read(file, { repair: false }).state!;
+    const saved = store.readSave(file, { repair: false }).state!;
     assert.equal(saved.find?.log.length, 2, "그 자리에서 저장에 남는다");
     assert.equal(saved.points.balance, 100 + 2 * FIND_RULES.points.min, "포인트가 저장에 들어간다");
     assert.deepEqual(game.find([]), [], "주운 마리가 없으면 쓰지 않는다");
@@ -236,7 +236,7 @@ try {
     now += SEC;
     next = [K_POINTS, 0];
     assert.equal(game.find(["p1"]), null);
-    const after = store.read(file, { repair: false }).state!;
+    const after = store.readSave(file, { repair: false }).state!;
     assert.equal(after.find?.log.length, 2, "실패한 줍기는 없다");
     assert.equal(after.points.balance, saved.points.balance);
     process.stdout.write("(9) 1초 굴림과 그 자리 저장  ok\n");

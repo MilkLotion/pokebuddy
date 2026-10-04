@@ -8,7 +8,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty } from "../../save/v3";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { SaveV3 } from "../../shared/save-v3";
@@ -37,8 +37,8 @@ class World {
   constructor() {
     this.tx = createExecutor(
       {
-        read: () => store.read(file, { repair: false }).state,
-        write: (s) => store.write(file, s),
+        read: () => store.readSave(file, { repair: false }).state,
+        write: (s) => store.writeSave(file, s),
         now: () => this.now,
         rand: () => this.rolls[Math.min(this.rollAt++, this.rolls.length - 1)] ?? 0.5,
       },
@@ -53,7 +53,7 @@ class World {
   }
 
   save(): SaveV3 {
-    const { state } = store.read(file, { repair: false });
+    const { state } = store.readSave(file, { repair: false });
     assert.ok(state, "저장을 읽는다");
     return state;
   }
@@ -63,7 +63,7 @@ class World {
     const s = this.save();
     this.now += ms;
     const events = applyTime(s, ms, this.now);
-    assert.equal(store.write(file, s), true);
+    assert.equal(store.writeSave(file, s), true);
     return events;
   }
 
@@ -86,7 +86,7 @@ try {
   seed.pets.push(testPet({ size: 2 }));
   seed.dex.obtained = ["charmander"];
   seed.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  assert.equal(store.write(file, seed), true);
+  assert.equal(store.writeSave(file, seed), true);
 
   const w = new World();
   assert.equal(w.save().points.balance, 120, "시작 포인트 120");
@@ -185,7 +185,7 @@ try {
   // ── SC-09 파티 칸을 산다 ─────────────────────────────────────────────────
   const rich = w.save();
   rich.points.balance = 1000;
-  assert.equal(store.write(file, rich), true);
+  assert.equal(store.writeSave(file, rich), true);
   const slotBuy = w.ok("buy3", "shop.buy", { productId: "party-slot" });
   assert.equal(slotBuy.spent, 500, "파티 칸은 500P");
   const open = w.save().party.slots.filter((s) => s.state === "empty").length;
@@ -193,7 +193,7 @@ try {
   process.stdout.write("(12) SC-09 · 파티 칸 구매  ok\n");
 
   // ── SC-10 다시 열어도 이어진다 ───────────────────────────────────────────
-  const reopened = store.read(file, { repair: false });
+  const reopened = store.readSave(file, { repair: false });
   assert.ok(reopened.state);
   assert.equal(reopened.migrated, false, "이미 v3 이라 옮기지 않는다");
   assert.equal(reopened.state.pets.length, 2);

@@ -4,7 +4,7 @@
 //   한 바이트라도 고치면 태그 검사가 실패한다 — 부르는 쪽은 파손으로 다룬다
 // 키는 이 모듈이 만들거나 보관하지 않는다. 앱이 켜질 때 src/save/key.ts 가 풀어 setSaveKey 로 넘긴다
 //   키가 없으면(node 자체 검사·개발 도구·암호화를 못 쓰는 환경) 저장은 평문이다
-// 메모리의 키로 동기 암호화한다 — 저장 읽기·쓰기(store.ts)는 동기라서
+// 메모리의 키로 동기 암호화한다 — 저장 읽기·쓰기(save-file.ts)는 동기라서
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 export const SAVE_CRYPT_RULES = {

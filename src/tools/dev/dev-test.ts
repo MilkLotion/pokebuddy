@@ -12,7 +12,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty } from "../../save/v3";
 import { PARTY_RULES } from "../../party/rules";
 import { TUTORIALS } from "../../tutorial/conditions";
@@ -85,10 +85,10 @@ function scene(home: string, names: string[]): void {
   if (running(home)) throw new Error("시험 동반자가 떠 있다 — stop 한 뒤 장면을 바꾼다(앱이 저장을 덮어쓴다)");
   const file = saveFile(home);
   const now = Date.now();
-  const save = store.read(file).state ?? empty(now);
+  const save = store.readSave(file).state ?? empty(now);
   for (const name of names) applyScene(save, name, now);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (!store.write(file, save)) throw new Error(`쓰지 못함: ${file}`);
+  if (!store.writeSave(file, save)) throw new Error(`쓰지 못함: ${file}`);
   process.stdout.write(`${names.join(", ")} → ${file}\n`);
 }
 
@@ -103,7 +103,7 @@ function cloudLine(home: string): string {
 }
 
 function show(home: string): void {
-  const save = store.read(saveFile(home), { repair: false }).state;
+  const save = store.readSave(saveFile(home), { repair: false }).state;
   if (!save) {
     process.stdout.write(`저장 없음 (HOME=${home}) — 다음 실행은 첫 포켓몬 선택부터\n`);
     return;

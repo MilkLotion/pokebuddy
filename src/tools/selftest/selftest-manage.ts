@@ -12,7 +12,7 @@ import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import { dexList } from "../../view/dex-list";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty } from "../../save/v3";
 import { gainOf } from "../../state/settings";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -48,7 +48,7 @@ try {
   assert.equal(game.tick(), null);
   process.stdout.write("(1) 저장 없음  ok\n");
 
-  assert.equal(store.write(file, seed()), true);
+  assert.equal(store.writeSave(file, seed()), true);
 
   // (2) 스냅샷은 화면이 바로 쓸 값을 준다
   {
@@ -119,10 +119,10 @@ try {
     process.stdout.write("(5) 틱 · 꺼 둔 틈은 버리고 켜 둔 시간만 적용  ok\n");
 
     // 틱은 에이전트 작업 시간을 받는다. 흐른 시간을 넘는 몫은 버린다
-    const before = store.read(file, { repair: false }).state!.totals.workMs;
+    const before = store.readSave(file, { repair: false }).state!.totals.workMs;
     now += step;
     assert.ok(game.tick({ workMs: 10 * step }));
-    assert.equal(store.read(file, { repair: false }).state!.totals.workMs - before, step, "흐른 30초만 작업으로 센다");
+    assert.equal(store.readSave(file, { repair: false }).state!.totals.workMs - before, step, "흐른 30초만 작업으로 센다");
     process.stdout.write("(5b) 틱 · 에이전트 작업 시간  ok\n");
   }
 

@@ -18,7 +18,7 @@ export interface Paths {
   companionLock: string; // 동반자 — 기기당 하나
   legacyCli: string; // 옛 VS Code 확장의 실행 경로 기록 — setup 이 지운다
   legacyWindows: string; // 옛 VS Code 확장의 창 기록 폴더 — setup 이 지운다
-  save: string; // 저장 (src/save/store.ts). 옛 v1·v2 파일은 처음 열 때 v3 로 옮긴다
+  save: string; // 저장 (src/save/save-file.ts). 옛 v1·v2 파일은 처음 열 때 v3 로 옮긴다
   saveLock: string; // 저장을 쓰는 프로세스의 pid (./pid-lock.ts, 잡는 쪽은 src/save/save-watch.ts)
   mailbox: string; // 명령 통로 (src/save/command-channel.ts)
 }

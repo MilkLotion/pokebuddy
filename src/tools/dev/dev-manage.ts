@@ -119,7 +119,7 @@ function loadApp() {
     petName: (require("../../view/text") as typeof import("../../view/text")).petName,
     createManage: (require("../../main/manage/window") as typeof import("../../main/manage/window")).createManage,
     paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
-    store: require("../../save/store") as typeof import("../../save/store"),
+    store: require("../../save/save-file") as typeof import("../../save/save-file"),
     empty: (require("../../save/v3") as typeof import("../../save/v3")).empty,
     createMailInbox: (require("../../online/mail-inbox") as typeof import("../../online/mail-inbox")).createMailInbox,
     mailScreenOf: (require("../../view/mail") as typeof import("../../view/mail")).mailScreenOf,
@@ -256,7 +256,7 @@ void app.whenReady().then(async () => {
     const { applyScene } = require("../harness/scenes") as typeof import("../harness/scenes");
     for (const name of scenes) for (const one of name.split(",")) applyScene(seeded, one, Date.now());
   }
-  store.write(file, seeded);
+  store.writeSave(file, seeded);
 
   const route = routeArg ? JSON.parse(routeArg) : undefined;
   const game = createGame({ petName, file });
