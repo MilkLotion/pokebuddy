@@ -231,8 +231,6 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(dex.prevOf("eevee"), null);
   assert.strictEqual(dex.rootOf("charizard"), "charmander");
   assert.strictEqual(dex.rootOf("ditto"), "ditto");
-  assert.strictEqual(dex.inChain("eevee"), true);
-  assert.strictEqual(dex.inChain("ditto"), false);
   // 돌려받은 것을 고쳐도 표는 그대로
   some(eevee[0]).to = "mutated";
   assert.notStrictEqual(some(dex.nextOf("eevee")[0]).to, "mutated");

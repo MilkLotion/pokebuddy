@@ -6,7 +6,7 @@ export const realClock: Clock = () => Date.now();
 
 // 게임 시간 — 30분마다 낮과 밤이 바뀐다. 매시 0~29분이 낮이고 30~59분이 밤이다
 //   진화와 해금이 같은 기준을 쓴다 — 하루를 기다리지 않아도 시간대 조건을 볼 수 있게 한 사용자 결정
-export const GAME_DAY = { halfMin: 30 };
+const GAME_DAY = { halfMin: 30 };
 export const gameDayPart = (now: number): "day" | "night" => (new Date(now).getMinutes() < GAME_DAY.halfMin ? "day" : "night");
 
 // 로컬 날짜 YYYY-MM-DD — 하루 상한·스트릭의 기준. UTC 가 아니라 사용자의 하루

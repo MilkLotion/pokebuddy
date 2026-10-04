@@ -79,9 +79,6 @@ export type EvolveResult = Outcome<EvolveFailure> & {
   choices?: string[]; // need-choice 일 때 고를 수 있는 종
 };
 
-// 게임 시간 — 30분마다 낮과 밤이 바뀐다 (src/shared/clock.ts gameDayPart, docs/specs/game.md "진화 계약")
-export { GAME_DAY } from "../shared/clock";
-
 // 조건 하나를 지금 채웠는가. 못 채웠으면 모자란 조건을 돌려준다. 레벨·친밀도 지도 간선이면 원래 조건 뒤에 지도를 본다
 function checkNeed(save: SaveV3, petId: string, step: EvoStep, dayPart: DayPart): NeedCheck {
   const base = checkBaseNeed(save, petId, step, dayPart);
