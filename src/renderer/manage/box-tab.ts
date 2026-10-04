@@ -13,25 +13,13 @@ import { wrapPage } from "./grid-view.js";
 import { refreshView } from "./live.js";
 import { swapSend } from "./party-link.js";
 import { askPetMenu } from "./pet-menu.js";
+import { openPet } from "./routes.js";
+import { daycareOpenButton } from "./daycare.js";
 import { markMega } from "./pet-forms.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { findPartySlot, ui } from "./state.js";
 import { boxNameCell, pageHeadEl } from "./widgets.js";
 import { boxMenuEl } from "./box-order.js";
-
-// 설정창이 거는 고리 — 개체 상세·돌보미집 단추를 이 파일이 가져오지 않게
-export interface BoxTabHooks {
-  openPet(id: string): void; // 칸을 눌렀다 — 개체 상세(이미 떠 있으면 닫는다)
-  daycareButton(v: Snapshot): HTMLButtonElement; // 넘김 줄 오른쪽의 돌보미집 아이콘 단추
-}
-let hooks: BoxTabHooks | null = null;
-export function setBoxTabHooks(next: BoxTabHooks): void {
-  hooks = next;
-}
-function hooksOf(): BoxTabHooks {
-  if (!hooks) throw new Error("box-tab.ts 의 고리가 걸리지 않았다 — setBoxTabHooks 를 먼저 부른다");
-  return hooks;
-}
 
 const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "dex", label: "도감 번호" },
@@ -126,7 +114,7 @@ export function drawBox(v: Snapshot): void {
   pager.append(prev, boxNameCell(boxNameEl(box)), next);
   // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
   // 오른쪽 끝 — 돌보미집 아이콘 단추, 정렬. 돌보미집은 모달로 연다
-  pager.append(hooksOf().daycareButton(v), boxSortEl(box));
+  pager.append(daycareOpenButton(v), boxSortEl(box));
   bodyEl.appendChild(pager);
 
   const grid = el("div", boxHeld || hold.party ? "box-grid holding" : "box-grid");
@@ -172,7 +160,7 @@ export function drawBox(v: Snapshot): void {
       if (hold.box) dropHold(slot);
       else if (hold.party) dropParty(slot, pet);
       else if (hold.swap) startHold(pet.id);
-      else hooksOf().openPet(pet.id);
+      else openPet(pet.id);
     });
     cell.addEventListener("contextmenu", (e) => {
       e.preventDefault();

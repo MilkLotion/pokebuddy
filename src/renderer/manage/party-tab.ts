@@ -12,22 +12,10 @@ import { sendCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { openSwap } from "./party-link.js";
 import { askPetMenu } from "./pet-menu.js";
+import { openPet } from "./routes.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { boxNameCell, meterEl, NATURE_UI, pageHeadEl } from "./widgets.js";
-
-// 설정창이 거는 고리 — 개체 상세 열기를 이 파일이 가져오지 않게
-export interface PartyTabHooks {
-  openPet(id: string): void; // 카드를 눌렀다 — 개체 상세(이미 떠 있으면 닫는다)
-}
-let hooks: PartyTabHooks | null = null;
-export function setPartyTabHooks(next: PartyTabHooks): void {
-  hooks = next;
-}
-function hooksOf(): PartyTabHooks {
-  if (!hooks) throw new Error("party-tab.ts 의 고리가 걸리지 않았다 — setPartyTabHooks 를 먼저 부른다");
-  return hooks;
-}
 
 let presetRenaming = false;
 // 탭을 옮긴다 — 프리셋 이름 고치기를 끝낸다 (shell.ts setTab 의 고리)
@@ -88,7 +76,7 @@ function petCard(pet: PetView): HTMLElement {
   }
   card.dataset.pet = pet.id; // 진화 튜토리얼이 이 카드를 찾는다
   // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴 (2026-10-02 사용자 결정 "좌클릭에 메뉴생기는게 생각보다 어색하네 … 우클릭으로 바꾸고 … 좌클릭으로 상세 열게")
-  card.addEventListener("click", () => hooksOf().openPet(pet.id));
+  card.addEventListener("click", () => openPet(pet.id));
   card.addEventListener("contextmenu", (e) => {
     e.preventDefault();
     askPetMenu(pet.id);
