@@ -59,14 +59,22 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     return sendToWriter(paths.mailbox, { cmd, target, ...(Object.keys(all).length ? { args: all } : {}), from: req?.from ?? "pet" });
   };
 
+  // writer 판정은 하나다 — 잠금 파일에 내 pid 가 적혀 있는가까지 본다(sw.isWriter). 앱의 다른 writer 검사(명령 통로·우편·교환)와 같다 (94 문서 9-5-4)
+  //   run   writer — 실행기로 바로
+  //   ask   reader — writer 에게 mailbox 로 보낸다
+  //   lost  역할을 맡았다고 알고 있는데 잠금이 내 것이 아니다(빼앗겼다, 감시가 아직 모른다) — not-writer.
+  //         mailbox 로 보내면 아직 잇고 있는 내 명령 통로로 되돌아온다 (src/main/commands.ts runSave 의 server 분기와 같은 뜻)
+  const route = (): "run" | "ask" | "lost" => (sw.isWriter() ? "run" : sw.holdsRole() ? "lost" : "ask");
+  const lost: CommandResult = { ok: false, reason: "not-writer" };
+
   return {
     isWriter: sw.isWriter,
     needsStarter: () => {
       const state = sw.save();
-      return sw.holdsRole() && (!state || state.pets.length === 0);
+      return sw.isWriter() && (!state || state.pets.length === 0);
     },
     begin(species) {
-      if (!sw.holdsRole()) return false;
+      if (!sw.isWriter()) return false;
       // 저장이 아직 없으면 빈 저장을 먼저 만든다. 실행기는 읽을 것이 있어야 돈다
       if (!sw.save() && !createEmptySave(paths.save, now())) return false;
       const r = send({ cmd: "starter.pick", target: species, args: { reqId: `starter:${species}:${now()}` } }, "menu");
@@ -75,19 +83,25 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     },
     async setHome(id, home, screen, req) {
       const extra = screen !== undefined ? { screen } : {};
-      if (!sw.holdsRole()) return ask("pet.set", id, { home, ...extra }, req);
+      const way = route();
+      if (way === "lost") return lost;
+      if (way === "ask") return ask("pet.set", id, { home, ...extra }, req);
       const r = send({ cmd: "pet.set", target: id, args: { home, ...extra, reqId: req?.reqId ?? `home:${id}:${now()}` } }, req?.from ?? "pet");
       sw.refresh();
       return r;
     },
     async setSize(id, size, req) {
-      if (!sw.holdsRole()) return ask("pet.set", id, { size }, req);
+      const way = route();
+      if (way === "lost") return lost;
+      if (way === "ask") return ask("pet.set", id, { size }, req);
       const r = send({ cmd: "pet.set", target: id, args: { size, reqId: req?.reqId ?? `size:${id}:${now()}` } }, req?.from ?? "menu");
       sw.refresh();
       return r;
     },
     async setShown(id, shown, req) {
-      if (!sw.holdsRole()) return ask(shown ? "party.show" : "party.hide", id, {}, req);
+      const way = route();
+      if (way === "lost") return lost;
+      if (way === "ask") return ask(shown ? "party.show" : "party.hide", id, {}, req);
       const r = send({ cmd: shown ? "party.show" : "party.hide", target: id, args: { reqId: req?.reqId ?? `shown:${id}:${now()}` } }, req?.from ?? "menu");
       sw.refresh();
       return r;

@@ -47,8 +47,10 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun())
 // hold — 새 교환(만들기·참가)을 막아야 하는가. 로그인 계정의 클라우드 저장이 올릴 수 있는 상태가 아니다
 // account — 익명 계정 교환 거절과 제안 전 클라우드 올리기 (design-p2.md 14절). 없으면 서버가 거절한다
 //   mayIssue 가 거짓이면 교환은 익명 계정을 만들지 않는다 — 분실·주인 있고 세션 없음(검수 H1)
+// isWriter — 저장을 쓰는 프로세스인가. 아니면 교환의 쓰기(잠금·반영)를 not-writer 로 거절한다 — 우편과 같다 (94 문서 9-5-4)
 export function createMainTrade(
   game: GameV3,
+  isWriter: () => boolean,
   link: { client: SupabaseClient; gate: SessionGate } | { storage: SessionStorage },
   onSettled?: () => void,
   hold?: () => boolean | Promise<boolean>,
@@ -60,7 +62,7 @@ export function createMainTrade(
   const listeners = new Set<(view: TradeViewModel) => void>();
   const session = createTradeSession({
     net: createTradeNet("client" in link ? { client: link.client, gate: link.gate } : { url: config.url, key: config.publishableKey, storage: link.storage }),
-    run: (id, name, args) => game.executor.run({ id, name, args }),
+    run: (id, name, args) => (isWriter() ? game.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
     read: game.read,
     protocol: config.protocol,
     dataVersion: dev.dataVersion ?? dataVersion(),
