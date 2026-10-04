@@ -37,6 +37,7 @@ export interface DialogHooks {
   afterDraw(): void; // 다 그린 뒤 — 검색 칸 초점 되돌리기, 화면 표시, 튜토리얼
   afterEmpty(): void; // 모달이 없어졌다 — 화면 표시
   onScrimChanged(): void; // 가림막이 켜지거나 꺼졌다 — 코치마크를 감추거나 다시 그린다
+  openAny(next: Dialog): void; // 제목 줄의 돌아가기 — 개체 상세(pet)도 여는 설정창의 open
 }
 let hooks: DialogHooks | null = null;
 export function setDialogHooks(next: DialogHooks): void {
@@ -159,4 +160,24 @@ export function actionsRowEl(...items: HTMLElement[]): HTMLElement {
   const box = el("div", "actions");
   box.append(...items);
   return box;
+}
+
+// 제목 줄 — `back` 을 주면 돌아가기를 앞에 둔다. 모달을 겹치지 않고 안에서 화면을 바꾼다.
+// 돌아갈 곳이 개체 상세(pet)일 수 있어 설정창의 open 고리로 연다
+export function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
+  const row = el("div", "title-row");
+  if (back) {
+    const b = buttonEl("back", `‹ ${back.label}`);
+    b.addEventListener("click", () => openAnyDialog(back.to));
+    row.appendChild(b);
+  }
+  row.appendChild(el("h2", undefined, title));
+  return sub ? [row, el("div", "sub", sub)] : [row];
+}
+
+export const closeButton = (label = "닫기"): HTMLButtonElement => actionButtonEl(label, false, false, closeDialog);
+
+// 개체 상세(pet)일 수도 있는 곳으로 간다 — 대화상자 안의 `취소`·돌아가기가 연 곳으로 되돌아갈 때. 모달만 열 때는 openDialog
+export function openAnyDialog(next: Dialog): void {
+  hooksOf().openAny(next);
 }

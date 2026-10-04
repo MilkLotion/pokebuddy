@@ -33,7 +33,7 @@ import { structureOf } from "../ui/live-draw.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks, whenSlow } from "./command.js";
 import { bodyEl, redrawBody, redrawHeldBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf, tabsEl } from "./shell.js";
 import { partyBusyKey, petBusyKey } from "../../shared/device-busy.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
@@ -60,6 +60,7 @@ setDialogHooks({
   },
   afterEmpty: () => syncIdentify(),
   onScrimChanged: () => drawTutorial(),
+  openAny: (next) => open(next),
 });
 
 // 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
@@ -3708,19 +3709,6 @@ window.addEventListener("resize", () => {
 
 
 
-// 제목 줄 — `back` 을 주면 돌아가기를 앞에 둔다. 모달을 겹치지 않고 안에서 화면을 바꾼다
-function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
-  const row = el("div", "title-row");
-  if (back) {
-    const b = buttonEl("back", `‹ ${back.label}`);
-    b.addEventListener("click", () => open(back.to));
-    row.appendChild(b);
-  }
-  row.appendChild(el("h2", undefined, title));
-  return sub ? [row, el("div", "sub", sub)] : [row];
-}
-
-const closeButton = (label = "닫기"): HTMLButtonElement => actionButtonEl(label, false, false, closeDialog);
 
 
 // ── 상점 기기 창 ──────────────────────────────────────────────────────────────
