@@ -12,6 +12,7 @@ import type { LogEntry, Totals } from "../shared/save-v3";
 import { ACHIEVEMENT_RULES } from "../achievement/rules.js";
 import { BAG_RULES } from "../bag/rules.js";
 import { UNLOCK_RULES } from "../dex/rules.js";
+import { normalizeSlug } from "../dex/data.js";
 import { fillBoxes, newBox } from "../box/boxes.js";
 import { maxEggNo } from "../egg/pool.js";
 import { screenRefOf } from "../shared/raw.js";
@@ -114,17 +115,22 @@ export function normalizeBag(raw: unknown): Record<string, number> {
   return out;
 }
 
+// 도감 목록의 종 이름(unlocked·obtained·shinyObtained·megaOpened) — 기록과 같은 모양(normalizeSlug)으로 맞추고 중복·빈 이름을 걷는다.
+// discovered 는 종 이름 목록이 아니라 삭제된 알 행동 조건의 옛 칸이다 — 저장 타입이 정한 대로 읽은 값을 그대로 둔다(src/shared/save-v3.ts).
+// 도감은 맞춘 이름으로 적고 찾는 이름만 맞춰 조회한다 — 옛 저장의 맞추지 않은 이름을 조회가 놓치지 않게 (94-same-feature-diffs.md 9-5-5 (라))
+const dexSlugs = (v: unknown): string[] => unique(strings(v).map(normalizeSlug).filter(Boolean));
+
 function normalizeDex(raw: unknown): DexV3 {
   const r = isRawObject(raw) ? raw : {};
   const discovered: Record<string, string> = {};
   if (isRawObject(r.discovered)) for (const [k, v] of Object.entries(r.discovered)) if (typeof v === "string") discovered[k] = v;
   return {
-    unlocked: unique(strings(r.unlocked)),
-    obtained: unique(strings(r.obtained)),
-    shinyObtained: unique(strings(r.shinyObtained)),
+    unlocked: dexSlugs(r.unlocked),
+    obtained: dexSlugs(r.obtained),
+    shinyObtained: dexSlugs(r.shinyObtained),
     discovered,
     rulesRev: nonNeg(r.rulesRev),
-    ...(Array.isArray(r.megaOpened) ? { megaOpened: unique(strings(r.megaOpened)) } : {}), // 2026-10-02 에 더했다
+    ...(Array.isArray(r.megaOpened) ? { megaOpened: dexSlugs(r.megaOpened) } : {}), // 2026-10-02 에 더했다. 메가스톤이 생긴 종 이름 — 위 셋과 같이 맞춘다
   };
 }
 
