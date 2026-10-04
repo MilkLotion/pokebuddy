@@ -94,3 +94,14 @@ export function segmentedEl<T extends string>(items: readonly { id: T; label: st
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
 export const NATURE_UI = false;
 export const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
+
+// 설정 한 줄. 조작이 넓으면 이름 아래에 깐다 — 옆에 두면 설명이 좁아져 여러 줄로 접힌다
+// 힌트가 없으면 .hint 줄을 만들지 않는다 — 라벨 한 줄만 남는다
+export function settingRow(label: string, hint: string | undefined, control: HTMLElement, stack = false): HTMLElement {
+  const row = el("div", stack ? "setting stack" : "setting");
+  const body = el("div", "body");
+  body.appendChild(el("div", "label", label));
+  if (hint) body.appendChild(el("div", "hint", hint));
+  row.append(body, control);
+  return row;
+}

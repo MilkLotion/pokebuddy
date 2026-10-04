@@ -5,11 +5,13 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
+import { agentRows, loadAgents } from "./agents.js";
+import { closeSettingSelect, drawGuide, drawSettings, drawUser, syncIdentify } from "./settings.js";
 import { boxUi, hold, type DragFrom } from "./box-state.js";
-import { accountActionsEl, accountOverlayEl, currentAccount, drawAccount, loadAccount, setAccountHooks, shortAgoText } from "./account.js";
+import { currentAccount, loadAccount, setAccountHooks } from "./account.js";
 import { drawTradeDialog, loadTrade, redrawTrade, setTradeHooks, tradeInProgress } from "./trade.js";
 import { drawLetter, drawMail } from "./mail.js";
-import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, versionFoot } from "./update-notes.js";
+import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes } from "./update-notes.js";
 import { drawAchievements, resetAchievementTab } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
@@ -23,15 +25,13 @@ import { drawNature, drawNatureTarget } from "./nature.js";
 import { drawForm, drawMega, markMega } from "./pet-forms.js";
 import { wrapPage } from "./grid-view.js";
 import { restoreSearchFocus, typingSearch } from "./search.js";
-import { alertEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
+import { alertEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { BoxView, EggView, FormView, PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
-import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
 import type { PartyDeviceAction, PartyDeviceInput } from "../../shared/model/devices.js";
-import type { ScreenView } from "../../shared/model/overlays.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { josa } from "../../shared/josa.js";
@@ -40,11 +40,11 @@ import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
-import { lastReplyOf, requestCommand, runLocked, sendCommand, setCommandHooks, whenSlow } from "./command.js";
+import { lastReplyOf, requestCommand, sendCommand, setCommandHooks, whenSlow } from "./command.js";
 import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf } from "./shell.js";
 import { partyBusyKey } from "../../shared/device-busy.js";
-import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, registerDialog, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
-import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, registerDialog, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
+import type { Dialog, Hatched, TabId } from "./dialog-types.js";
 import { findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
@@ -128,65 +128,10 @@ setShellHooks({
 
 // 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
 
-// 가이드북 — 구성은 docs/specs/game.md "튜토리얼과 가이드북" 의 다섯 주제다.
-// 숫자는 적지 않는다. 밸런스 값이 바뀌어도 이 문구가 어긋나지 않게 한다
-const GUIDE: { title: string; lines: string[] }[] = [
-  {
-    title: "돌봄",
-    lines: [
-      "밥을 주면 만복도가 오른다. 쿨타임이 지나야 다시 줄 수 있다.",
-      "놀아주면 친밀도가 오른다. 쿨타임이 지난 뒤 남은 시간 안에 이어서 놀아주면 중첩이 오른다.",
-      "두 번 이어서 놀아주면 들뜸, 세 번이면 신남이 되고 친밀도 증가량이 늘어난다.",
-      "프리미엄먹이를 먹으면 든든함이 되고 친밀도 증가량이 늘어난다.",
-      "친밀도가 가득이면 기분과 버프가 포인트 적립을 올린다.",
-      "PC 잠금·절전·앱 종료 중에는 시간이 흐르지 않는다.",
-    ],
-  },
-  {
-    title: "상점과 알",
-    lines: [
-      "포인트로 알, 포켓몬, 도구, 진화용 도구, 파티 칸을 산다.",
-      "산 알은 돌보미집으로 간다. 5분이 지나면 열 수 있다.",
-      "준비를 마친 알을 열면 개체가 나온다. 파티가 차 있으면 박스로 간다.",
-    ],
-  },
-  {
-    title: "파티와 박스",
-    lines: [
-      "파티 칸은 처음부터 다 열려 있지 않다. 상점과 업적으로 연다.",
-      "파티에 있는 개체만 시간이 흐른다. 박스에 둔 개체는 멈춘다.",
-      "꺼낸 개체만 바탕화면에 보인다. 숨겨도 포인트와 친밀도는 쌓인다.",
-      "박스는 상점에서 사서 늘린다. 파티와 박스에 빈 칸이 없으면 알을 열 수 없다.",
-    ],
-  },
-  {
-    title: "진화",
-    lines: [
-      "조건을 채운 개체는 상세에서 직접 진화시킨다. 저절로 진화하지 않는다.",
-      "조건은 종마다 다르다. 레벨, 친밀도, 도구, 시간대를 본다.",
-      NATURE_UI ? "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다." : "진화해도 같은 개체다. 이로치는 그대로 남는다.",
-    ],
-  },
-  {
-    title: "업적",
-    lines: [
-      "달성한 업적은 나중에 상태가 바뀌어도 사라지지 않는다.",
-      "보상은 업적창에서 직접 받는다.",
-      "받지 않은 보상이 있으면 탭 줄 오른쪽의 업적창 아이콘에 점이 뜬다.",
-    ],
-  },
-];
 
 
 
 
-let agentRows: AgentRow[] | null = null;
-let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
-// 연결 점검 (worklog/records/hook-check/record.md) — Node.js(undefined 면 아직 모름), CLI 별 점검 결과, 점검 중인 CLI
-let agentNode: AgentReply["node"] | undefined;
-const agentChecks = new Map<string, { ok: boolean; text: string; at: number }>();
-const agentFails = new Map<string, string>(); // 연결·해제·다시 확인 실패 — 그 줄의 상태 글자로 보인다(경고 줄을 끼우지 않는다)
-let agentProbing: string | null = null;
 // 커서를 따라가는 칸(holdGhost)과 마지막 커서 자리(holdAt) — 옮기기로 든 동안 (든 개체는 box-state.ts hold.box)
 let holdGhost: HTMLElement | null = null;
 let holdAt: { x: number; y: number } | null = null;
@@ -1204,10 +1149,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
 
 // 정렬·지방·설정 목록은 바깥을 누르면 닫는다
 document.addEventListener("click", () => {
-  if (settingSelectOpen) {
-    settingSelectOpen = null;
-    drawDialog();
-  }
+  if (closeSettingSelect()) drawDialog();
   if (!boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
@@ -1685,379 +1627,6 @@ window.addEventListener("resize", () => {
 
 // ── 모달 · 공통 ────────────────────────────────────────────────────────────────
 
-// ── 모달 · 설정 ────────────────────────────────────────────────────────────────
-
-// 설정 모달 탭 — 일반·화면 두 칸. 사용자 모달 탭 — 계정·연결 두 칸 (2026-09-28 사용자 "설정모달에서 계정은 빼고, 설정옆에 유저아이콘 추가 후 해당 메뉴에서 계정,연결 설정").
-// 두 모달은 같은 틀이다. 탭을 바꿔도 모달 크기(560×500)가 같다.
-// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `User / Connect` `1079:1891` (worklog/records/trade/record.md "계정 탭 구조로 수정").
-// 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
-const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
-  { id: "general", label: "일반" },
-  { id: "display", label: "화면" },
-];
-const USER_TABS: readonly { id: UserTab; label: string }[] = [
-  { id: "account", label: "계정" },
-  { id: "agents", label: "연결" },
-];
-
-// 설정의 고르기 — 박스 정렬과 같은 목록. 목록은 누르는 칸과 폭이 같다. 칸 폭은 가장 긴 선택지에 맞춘 고정값
-let settingSelectOpen: string | null = null;
-function settingSelect<T extends string>(id: string, options: readonly { value: T; label: string }[], current: T, width: number, pick: (value: T) => void): HTMLElement {
-  const wrap = el("div", "box-sort setting-select");
-  const now = options.find((o) => o.value === current);
-  const toggle = buttonEl("sort-toggle", `${now?.label ?? current} ▾`);
-  toggle.style.width = `${width}px`;
-  toggle.setAttribute("aria-expanded", String(settingSelectOpen === id));
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    settingSelectOpen = settingSelectOpen === id ? null : id;
-    drawDialog();
-  });
-  wrap.appendChild(toggle);
-  if (settingSelectOpen === id) {
-    const menu = el("div", "sort-menu");
-    menu.setAttribute("role", "menu");
-    for (const o of options) {
-      const item = buttonEl(o.value === current ? "sort-item on" : "sort-item", o.label);
-      item.setAttribute("role", "menuitemradio");
-      item.setAttribute("aria-checked", String(o.value === current));
-      item.addEventListener("click", (e) => {
-        e.stopPropagation();
-        settingSelectOpen = null;
-        if (o.value === current) drawDialog();
-        else pick(o.value);
-      });
-      menu.appendChild(item);
-    }
-    wrap.appendChild(menu);
-  }
-  return wrap;
-}
-
-// 설정 한 줄. 조작이 넓으면 이름 아래에 깐다 — 옆에 두면 설명이 좁아져 여러 줄로 접힌다
-// 힌트가 없으면 .hint 줄을 만들지 않는다 — 라벨 한 줄만 남는다
-function settingRow(label: string, hint: string | undefined, control: HTMLElement, stack = false): HTMLElement {
-  const row = el("div", stack ? "setting stack" : "setting");
-  const body = el("div", "body");
-  body.appendChild(el("div", "label", label));
-  if (hint) body.appendChild(el("div", "hint", hint));
-  row.append(body, control);
-  return row;
-}
-
-// 소리 크기 — Figma `Volume Control` `645:16735`. 슬라이더 + 숫자 입력 + 스피커 단추(누르면 음소거, 다시 누르면 켬).
-// 음소거는 설정의 sound 를 끈다. 크기 값은 그대로 남긴다. 슬라이더는 놓을 때, 숫자는 입력을 마칠 때 한 번 저장한다
-function volumeControl(volume: number, on: boolean, set: (key: string, value: unknown) => void): HTMLElement {
-  const box = el("div", on ? "volume" : "volume muted");
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = "0";
-  range.max = "100";
-  range.step = "1";
-  range.value = String(volume);
-  range.setAttribute("aria-label", "소리 크기");
-  const number = document.createElement("input");
-  number.type = "number";
-  number.min = "0";
-  number.max = "100";
-  number.step = "1";
-  number.value = String(volume);
-  number.setAttribute("aria-label", "소리 크기 숫자");
-  const paint = (v: number): void => range.style.setProperty("--p", `${v}%`);
-  paint(volume);
-  range.addEventListener("input", () => {
-    number.value = range.value;
-    paint(Number(range.value));
-  });
-  range.addEventListener("change", () => set("volume", Number(range.value)));
-  // 숫자 칸 — 범위 밖이나 소수는 0~100 정수로 맞춘다. 빈 칸이면 원래 값으로 되돌린다
-  number.addEventListener("change", () => {
-    const raw = Number(number.value);
-    if (number.value.trim() === "" || !Number.isFinite(raw)) {
-      number.value = String(volume);
-      return;
-    }
-    const v = Math.max(0, Math.min(100, Math.round(raw)));
-    number.value = String(v);
-    range.value = String(v);
-    paint(v);
-    if (v !== volume) set("volume", v);
-  });
-  number.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") number.blur();
-  });
-  const mute = buttonEl("mute", "");
-  mute.setAttribute("aria-pressed", String(!on));
-  mute.setAttribute("aria-label", on ? "음소거" : "소리 켜기");
-  mute.title = on ? "음소거" : "소리 켜기";
-  mute.appendChild(speakerIcon(!on));
-  mute.addEventListener("click", () => set("sound", !on));
-  box.append(range, number, mute);
-  return box;
-}
-
-// 스피커 그림 16px — Figma `Icon / Sound` `645:346` (On · Muted). 선 색은 글자색을 따른다
-function speakerIcon(muted: boolean): SVGSVGElement {
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("width", "16");
-  svg.setAttribute("height", "16");
-  svg.setAttribute("aria-hidden", "true");
-  const paths = ["M4 6 H7 L11 3 V13 L7 10 H4 Z", ...(muted ? ["M12 6 L16 10", "M16 6 L12 10"] : ["M12.5 5.5 Q14 8 12.5 10.5", "M14 3.5 Q16.5 8 14 12.5"])];
-  for (const d of paths) {
-    const p = document.createElementNS(NS, "path");
-    p.setAttribute("d", d);
-    svg.appendChild(p);
-  }
-  return svg;
-}
-
-const setSetting = (key: string, value: unknown): void => void sendCommand("settings.set", key, { value });
-// 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/app/commands.ts display.set)
-const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void sendCommand("display.set", key, { value });
-
-// 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
-function drawGeneral(scroll: HTMLElement): void {
-  if (!ui.view) return;
-  const s = ui.view.settings;
-  const sleep = s.sleepChoices.map((c) => ({ value: String(c.value), label: c.label }));
-  scroll.appendChild(
-    settingRow("잠들기 기준", "이 시간 동안 조작이 없으면 잠듦", settingSelect("sleep", sleep, String(s.sleepAfterMin), 104, (v) => setSetting("sleepAfterMin", Number(v)))),
-  );
-  const langs = [
-    { value: "ko", label: "한국어" },
-    { value: "en", label: "English" },
-  ] as const;
-  scroll.appendChild(settingRow("언어", undefined, settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
-  scroll.appendChild(settingRow("로그인 시 시작", undefined, switchEl(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
-  scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
-  const guide = buttonEl("act", "열기 ›");
-  guide.addEventListener("click", () => open({ kind: "guide" }));
-  scroll.appendChild(settingRow("가이드북", undefined, guide));
-}
-
-// 화면 — 포켓몬 표시, 클릭 통과, 놀이공간. 앞의 두 줄은 이 앱의 창 상태라 앱이 값을 줄 때만 둔다
-function drawDisplay(scroll: HTMLElement): void {
-  if (!ui.view) return;
-  const s = ui.view.settings;
-  const d = ui.view.display;
-  if (d) {
-    const shown = settingRow("포켓몬 표시", undefined, switchEl(!d.hidden, "포켓몬 표시", () => setDisplay("hidden", !d.hidden)));
-    shown.dataset.tut = "set-hidden"; // 화면 탭 튜토리얼이 밝히는 곳
-    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchEl(d.clickThrough, "고스트 모드", () => setDisplay("clickThrough", !d.clickThrough)));
-    ghost.dataset.tut = "set-ghost";
-    scroll.append(shown, ghost);
-  }
-  // 놀이공간 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면, worklog/records/multi-display/record.md)
-  const area = [
-    { id: "all", label: "모든 화면" },
-    { id: "screen", label: "한 화면" },
-    { id: "region", label: "영역 지정" },
-  ] as const;
-  const hint =
-    s.playArea === "all"
-      ? "다른 화면으로 끌어다 놓으면 그 화면으로 옮겨 감"
-      : s.playArea === "region"
-        ? s.hasRegion
-          ? "그려 둔 영역 안에서만 돌아다님"
-          : "영역을 아직 그리지 않았음"
-        : undefined;
-  const areaRow = settingRow("놀이공간", hint, segmentedEl(area, s.playArea, (id) => setSetting("playArea", id)));
-  areaRow.dataset.tut = "area"; // 놀이공간 튜토리얼이 밝히는 곳
-  scroll.appendChild(areaRow);
-  // 한 화면 — 목록에서 고르거나 화면 위에서 눌러 고른다. 목록이 열린 동안 모든 모니터에 번호를 띄운다(syncIdentify)
-  if (s.playArea === "screen") {
-    void loadScreens();
-    const rows = screenRows ?? [];
-    const options = rows.map((r) => ({ value: String(r.ref.id), label: [`화면 ${r.number}`, r.primary ? "주 화면" : "", `${r.w}×${r.h}`].filter(Boolean).join(" · ") }));
-    const now = rows.find((r) => r.current) ?? rows[0];
-    const box = el("div", "screen-pick");
-    if (now) box.appendChild(settingSelect("screen", options, String(now.ref.id), 224, (id) => {
-      const row = rows.find((r) => String(r.ref.id) === id);
-      if (row) setSetting("playScreen", row.ref);
-    }));
-    box.appendChild(actionButtonEl("화면에서 고르기", false, false, () => void runLocked(() => api.pickScreen())));
-    const screenRow = settingRow("화면", undefined, box);
-    screenRow.dataset.tut = "area-screen"; // 놀이공간 튜토리얼이 함께 밝힌다
-    scroll.appendChild(screenRow);
-  }
-  // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
-  if (s.playArea === "region") {
-    const draw = actionButtonEl(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => api.drawRegion()));
-    const regionRow = settingRow("영역", undefined, draw);
-    regionRow.dataset.tut = "area-region"; // 화면 탭 튜토리얼이 함께 밝힌다
-    scroll.appendChild(regionRow);
-  }
-}
-
-// 한 화면 목록 — 그릴 때마다 새로 읽고, 바뀌었을 때만 다시 그린다(모니터를 꽂거나 뺐을 수 있다)
-let screenRows: ScreenView[] | null = null;
-let screensLoading = false;
-async function loadScreens(): Promise<void> {
-  if (screensLoading) return;
-  screensLoading = true;
-  try {
-    const next = await api.screens();
-    const changed = JSON.stringify(next) !== JSON.stringify(screenRows);
-    screenRows = next;
-    if (changed && ui.dialog?.kind === "settings" && ui.dialog.tab === "display") drawDialog();
-  } finally {
-    screensLoading = false;
-  }
-}
-
-// 한 화면 목록이 열린 동안만 모든 모니터에 번호 덮개 — 바뀔 때만 메인에 알린다
-let identifying = false;
-function syncIdentify(): void {
-  const on = ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && settingSelectOpen === "screen";
-  if (on === identifying) return;
-  identifying = on;
-  api.identifyScreens(on);
-}
-
-// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
-
-// 점검 실패 이유 — 상태 글자에 붙인다 (src/agents/check.ts ProbeReason)
-const PROBE_TEXT: Record<string, string> = {
-  "node-missing": "Node.js 없음",
-  "hook-missing": "훅 파일 없음",
-  "no-record": "기록이 생기지 않음",
-  timeout: "5초 안에 끝나지 않음",
-  "spawn-failed": "실행하지 못함",
-};
-
-// CLI 한 줄 — 상태를 글자와 점으로 보인다 (docs/specs/game.md "설정과 연결", Figma 05 `User / Connect` `1079:1891`).
-// 결과는 새 줄을 끼우지 않고 이 줄의 상태 글자·점 색만 바꾼다 — 레이아웃이 흔들리지 않게 (2026-09-30 사용자 결정)
-//   연결됨        마지막 신호(훅이 쓴 state 기록) · 없으면 아직 신호 없음
-//   점검 뒤       점검 정상 · 방금 / 점검 실패 · 이유 (빨강)
-//   명령 실패     연결하지 못했어요 · 이유 (빨강) — 연결 탭은 바닥 단추 줄이 없어 줄의 상태 글자로 보인다
-//   Node.js 없음  연결된 줄은 확인 필요(주황), 연결 안 된 줄의 `연결` 은 막는다
-//   갱신 필요     연결됐지만 등록 목록·훅 파일이 지금과 다르다(옛 codex PreToolUse 등). "갱신" 이 connect 를 다시 불러 맞춘다
-function agentRow(row: AgentRow): HTMLElement {
-  const noNode = agentNode === null;
-  const check = agentChecks.get(row.name);
-  let hint: string;
-  let dot = "agent-dot";
-  const fail = agentFails.get(row.name);
-  if (fail) {
-    hint = fail;
-    dot = "agent-dot bad";
-  } else if (row.error) hint = `확인 필요 · ${row.error}`;
-  else if (!row.installed) hint = "미설치";
-  else if (!row.connected) hint = "연결 안 됨";
-  else if (noNode) {
-    hint = "확인 필요 · Node.js 없음";
-    dot = "agent-dot warn";
-  } else if (row.outdated) {
-    hint = "연결됨 · 갱신 필요";
-    dot = "agent-dot warn";
-  } else if (check && !check.ok) {
-    hint = `점검 실패 · ${check.text}`;
-    dot = "agent-dot bad";
-  } else if (check) {
-    hint = `연결됨 · 점검 정상 · ${shortAgoText(check.at)}`;
-    dot = "agent-dot on";
-  } else {
-    hint = row.lastSignalAt ? `연결됨 · 마지막 신호 ${shortAgoText(row.lastSignalAt)}` : "연결됨 · 아직 신호 없음";
-    dot = "agent-dot on";
-  }
-
-  const control = el("div", "actions");
-  control.style.margin = "0";
-  if (!row.installed) control.appendChild(actionButtonEl("다시 확인", false, false, () => void agent(row.name, "check")));
-  else if (row.connected && row.outdated && !noNode) control.appendChild(actionButtonEl("갱신", true, false, () => void agent(row.name, "connect")));
-  else if (row.connected) {
-    if (!noNode) {
-      const probing = agentProbing === row.name;
-      const probe = actionButtonEl("점검", false, agentProbing != null, () => void agent(row.name, "probe"));
-      probe.classList.toggle("is-busy", probing); // 점검 중 — 글자 대신 점 세 개(폭 그대로)
-      control.appendChild(probe);
-    }
-    control.appendChild(actionButtonEl("해제", false, agentProbing != null, () => void agent(row.name, "disconnect")));
-  } else control.appendChild(actionButtonEl("연결", true, noNode, () => void agent(row.name, "connect")));
-
-  const line = settingRow(row.label, hint, control);
-  const hintEl = line.querySelector<HTMLElement>(".hint");
-  if (hintEl) hintEl.prepend(el("span", dot));
-  // Windows codex 데몬은 훅마다 콘솔 창을 띄운다(openai/codex#44768) — 알려진 우회를 줄 아래에 둔다
-  if (row.name === "codex" && row.installed && agentPlatform === "win32") {
-    line.querySelector(".body")?.appendChild(el("div", "hint agent-tip", "Windows 에서 창이 깜빡이면 codex --no-daemon 으로 실행하세요"));
-  }
-  return line;
-}
-
-function drawAgents(scroll: HTMLElement): void {
-  if (!agentRows) {
-    scroll.appendChild(el("div", "empty-note", "연결 상태를 읽는 중입니다."));
-    return;
-  }
-  // Node.js 가 없는 동안 늘 보이는 경고 — 누를 때마다 생겼다 사라지는 것이 아니다 (Figma 05 `User / Connect · Node.js 없음` `1079:2477`)
-  if (agentNode === null) scroll.appendChild(alertEl("warn", "Node.js 가 없어요", "연결하려면 Node.js 를 설치한 뒤 다시 확인을 눌러 주세요"));
-  for (const row of agentRows) scroll.appendChild(agentRow(row));
-  scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
-}
-
-// 설정·사용자 모달의 틀 — 제목과 오른쪽 위 닫기, 두 칸 전환, 스크롤 본문. 바닥과 덧창은 모달마다 붙인다
-function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {
-  const head = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, title));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  head.append(titles, x);
-  dialogEl.appendChild(head);
-  dialogEl.appendChild(segmentedEl(tabs, current, pick));
-  const scroll = el("div", "scroll");
-  dialogEl.appendChild(scroll);
-  return scroll;
-}
-
-function drawSettings(sub: SettingsTab): void {
-  const scroll = drawTabbedHead("설정", SETTINGS_TABS, sub, (id) => {
-    settingSelectOpen = null;
-    open({ kind: "settings", tab: id });
-  });
-  if (sub === "general") drawGeneral(scroll);
-  else drawDisplay(scroll);
-  // 바닥 — 왼쪽은 버전·업데이트. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
-  dialogEl.appendChild(actionsRowEl(versionFoot()));
-}
-
-// 사용자 모달 — 계정·연결. 버전·업데이트 바닥은 두지 않는다(설정 모달에만)
-function drawUser(sub: UserTab): void {
-  const scroll = drawTabbedHead("사용자", USER_TABS, sub, (id) => {
-    if (id === "agents" && !agentRows) void loadAgents();
-    open({ kind: "user", tab: id });
-  });
-  if (sub === "agents") {
-    drawAgents(scroll);
-    return;
-  }
-  drawAccount(scroll);
-  const foot = accountActionsEl();
-  if (foot) dialogEl.appendChild(foot);
-  // 계정 탭의 확인 창(삭제·로그아웃·로그인 때 고르기)은 사용자 모달 위에 뜬다
-  const overlay = accountOverlayEl();
-  if (overlay) dialogEl.appendChild(overlay);
-}
-
-// ── 모달 · 가이드북 ────────────────────────────────────────────────────────────
-
-function drawGuide(): void {
-  dialogEl.append(...dialogHead("가이드북", "", { label: "설정", to: { kind: "settings", tab: "general" } }));
-  const scroll = el("div", "scroll");
-  for (const topic of GUIDE) {
-    const box = el("div", "topic");
-    box.appendChild(el("h3", undefined, topic.title));
-    for (const line of topic.lines) box.appendChild(el("p", undefined, line));
-    scroll.appendChild(box);
-  }
-  dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actionsRowEl(closeButton()));
-}
-
 // ── 모달 · 여닫기 ──────────────────────────────────────────────────────────────
 // 여닫기·가림막·스크롤 되돌리기는 dialog.ts. 여기서는 모달 종류마다 폭·헤더 표시·그리기를 등록한다
 // 폭: 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
@@ -2130,38 +1699,6 @@ const openPet = (id: string): void => {
 };
 
 // ── 명령 보내기 ────────────────────────────────────────────────────────────────
-
-async function agent(name: string, action: AgentAction): Promise<void> {
-  // 점검 — 결과는 그 줄의 상태 글자로만 보인다(오류 줄을 끼우지 않는다). 점검 중에는 단추가 점 세 개
-  if (action === "probe") {
-    agentProbing = name;
-    drawDialog();
-  }
-  const reply = await api.agents({ name, action });
-  agentRows = reply.list;
-  agentPlatform = reply.platform;
-  agentNode = reply.node;
-  if (action === "probe") {
-    agentProbing = null;
-    agentFails.delete(name);
-    agentChecks.set(name, { ok: reply.ok, text: reply.reason === "exit" ? `종료 코드 ${reply.detail ?? "?"}` : (PROBE_TEXT[reply.reason] ?? reply.reason), at: Date.now() });
-  } else {
-    agentChecks.delete(name); // 연결·해제·다시 확인 뒤에는 옛 점검 결과를 지운다
-    const verb = action === "connect" ? "연결하지 못했어요" : action === "disconnect" ? "해제하지 못했어요" : "확인하지 못했어요";
-    if (reply.ok) agentFails.delete(name);
-    else agentFails.set(name, `${verb} · ${failTextOf(reply.reason, "command").text}`);
-  }
-  drawDialog();
-}
-
-async function loadAgents(): Promise<void> {
-  const reply = await api.agents();
-  agentRows = reply.list;
-  agentPlatform = reply.platform;
-  agentNode = reply.node;
-  if (ui.dialog?.kind === "user" && ui.dialog.tab === "agents") drawDialog();
-}
-
 
 needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "achievements" }));
 needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "settings", tab: "general" }));
