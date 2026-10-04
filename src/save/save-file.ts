@@ -1,7 +1,7 @@
 // 저장 파일(save.json) 통로 — 계약은 docs/specs/modules.md "저장 구조". 모양은 src/shared/save-v3.ts
 //
 // save.json 의 바이트를 쓰거나 옮기는 코드는 이 파일에만 있다. 입구는 아래 다섯과 읽기(repair)다. 모두 writer 프로세스만 부른다(확인은 부르는 쪽)
-//   writeSave        정규화된 저장을 쓴다 — 실행기의 쓰기(src/main/game.ts)
+//   writeSave        정규화된 저장을 쓴다 — 실행기의 쓰기(src/tx/game.ts)
 //   createEmptySave  저장이 없을 때 빈 저장 — 첫 포켓몬 고르기(src/save/save-party.ts)
 //   replaceSave      받은 클라우드 저장으로 바꾼다. 로컬을 <저장>.cloud-<시각>.bak 으로 남긴다(src/main/online.ts)
 //   sealPlainSave    평문 저장을 <저장>.plain-<시각>.bak 으로 남기고 암호화해 다시 쓴다(src/save/key.ts)

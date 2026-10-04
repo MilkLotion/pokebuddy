@@ -1,6 +1,6 @@
 // 커맨드 배선 — dispatcher 를 만들고 무대가 받는 명령을 등록한다. writer 면 mailbox 를 잇는다 (CLI·읽기 전용 펫의 요청).
 //
-// 저장을 바꾸는 명령은 전부 거래 실행기(`src/main/game.ts`)로 간다. 여기서 저장을 직접 고치지 않는다.
+// 저장을 바꾸는 명령은 전부 거래 실행기(`src/tx/game.ts`)로 간다. 여기서 저장을 직접 고치지 않는다.
 //   writer  실행기를 직접 부른다
 //   reader  mailbox 로 보낸다. writer 가 처리해 파일에 쓰면 감시가 읽어 온다
 // 창 표시 항목(hidden · clickThrough)만 저장 밖의 설정이라 여기서 처리한다.
@@ -13,7 +13,7 @@ import type { Reason } from "../shared/names/reasons";
 import type { Size } from "../shared/geometry";
 import type { PartyRequest, SaveParty } from "../save/save-party";
 import { partyPetsOf } from "../view/party-pet";
-import type { GameV3 } from "./game";
+import type { GameV3 } from "../tx/game";
 import type { CareAction } from "../state/types";
 import { evolveCandidates } from "../dex/evolve";
 import { gameDayPart } from "../shared/clock";
@@ -88,7 +88,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 개체 명령의 대상 — target 이 없으면 args.petId 를 본다. 실행기의 인자 풀기(src/tx/args.ts argsFromCommand)와 같은 규칙이다 (X4, 2026-10-03)
   const petTarget = (c: Command): string | null => target(c) ?? (isObj(c.args) && typeof c.args.petId === "string" && c.args.petId ? c.args.petId : null);
 
-  // 쓰는 프로세스는 메모리 값(1초 틱 진행 포함)을 본다 — 파일은 15초마다 쓴다 (src/main/game.ts). 못 읽으면 저장 감시의 값
+  // 쓰는 프로세스는 메모리 값(1초 틱 진행 포함)을 본다 — 파일은 15초마다 쓴다 (src/tx/game.ts). 못 읽으면 저장 감시의 값
   const currentSave = (): SaveV3 | null => (ctx.party.isWriter() ? ctx.game.read() : null) ?? ctx.party.save();
 
   // 저장을 바꾸는 명령 하나 — writer 면 실행기로, reader 면 mailbox 로.

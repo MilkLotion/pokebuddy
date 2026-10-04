@@ -1,4 +1,4 @@
-// 저장 v3 을 다루는 메인 쪽 입구 — 파일 읽기·쓰기, 거래 실행기, 시간 적용, 화면이 읽는 스냅샷을 한 곳에 모은다.
+// 저장 v3 을 다루는 게임 입구 — 파일 읽기·쓰기, 거래 실행기, 시간 적용을 한 곳에 모은다.
 //
 // 저장을 쓰는 곳은 거래 실행기 하나다 (docs/specs/modules.md "경계 원칙").
 // 시간은 앱이 깨어 있는 동안만 흐른다. 앱은 전역 시계(src/main/clock.ts)의 1초 틱마다 흐른 시간을 적용한다 (2026-09-29 사용자 결정).
@@ -7,14 +7,16 @@
 // 시각(now)은 앱이 전역 시계의 1초 틱 시각을 준다(src/main/app.ts). 명령 처리처럼 틱 밖에서 부르는 경로도 그 마지막 틱 시각을 쓴다 — 1초 안의 차이다
 // 저장은 하나다. 기존 `save.json` 을 그대로 쓴다 — 처음 읽을 때 v2 를 v3 으로 옮기고 원본을 `save.json.v2.bak` 에 남긴다.
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
+// 화면 읽기(스냅샷·도감·상세)는 부르는 쪽이 화면 값을 바로 부른다 (src/view/snapshot.ts snapshotOfGame)
+// (예전 src/main/game.ts. 메인 레인 M8-9 에서 거래 층으로 옮겼다)
 import { PATHS } from "../platform/paths.js";
-import { createLiveSave } from "../tx/live-save.js";
+import { createLiveSave } from "./live-save.js";
 import { elapsedSince, type TimeInput } from "../state/time.js";
-import { applyTimeAndSettle, type TickEvents } from "../tx/tick.js";
-import { applyFindHits } from "../tx/find.js";
-import { createExecutor, type Executor } from "../tx/executor.js";
-import { HANDLERS } from "../tx/command-table.js";
-import { requestIdOf, runTxCommand } from "../tx/commands.js";
+import { applyTimeAndSettle, type TickEvents } from "./tick.js";
+import { applyFindHits } from "./find.js";
+import { createExecutor, type Executor } from "./executor.js";
+import { HANDLERS } from "./command-table.js";
+import { requestIdOf, runTxCommand } from "./commands.js";
 import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { FIND_POKEMON } from "../shared/names/commands.js";
@@ -22,7 +24,6 @@ import type { SaveKind } from "../online/cloud-state.js";
 import { saveKindOf } from "../online/save-kind.js";
 import type { Command } from "../shared/command";
 import type { CommandName, CommandSource } from "../shared/names/commands";
-import { petName } from "../view/text.js";
 
 // 저장 파일 — v2 와 같은 자리다. 파일을 처음 읽을 때 v3 으로 옮긴다 (src/save/save-file.ts)
 export const saveFile = (): string => PATHS.save;
@@ -50,9 +51,10 @@ export interface GameV3Options {
   onWrite?: (kind: SaveKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
+  petName: (slug: string) => string; // 종의 화면 이름 — 실행기의 박스 이름순 정렬이 쓴다. 실행기는 화면 값을 가져오지 않으므로 부르는 쪽이 넘긴다(앱은 src/view/text.ts petName)
 }
 
-export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, eggRand, canWrite, onWrite, flushMs = 0, mono = () => performance.now() }: GameV3Options = {}): GameV3 {
+export function createGame({ file = saveFile(), now = Date.now, rand = Math.random, eggRand, canWrite, onWrite, flushMs = 0, mono = () => performance.now(), petName }: GameV3Options): GameV3 {
   // 쓰기 캐시 — 올리기 종류는 쓰기 이름으로 가른다 (src/online/save-kind.ts)
   const live = createLiveSave({ file, ...(canWrite ? { canWrite } : {}), flushMs, mono, onWrite: (name) => onWrite?.(saveKindOf(name)) });
   const { read, write } = live;

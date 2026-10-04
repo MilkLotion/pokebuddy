@@ -12,7 +12,7 @@ import { mailCodeOf } from "../../online/codes.js";
 import { callRpc } from "../../online/server-call.js";
 import { createSessionStorage, sessionFile, type SessionFileStorage } from "../../online/session-storage.js";
 import { pendingTradeOf } from "../../party/pet-actions";
-import type { GameV3 } from "../game";
+import type { GameV3 } from "../../tx/game";
 import { createMailInbox, type MailInbox } from "../../online/mail-inbox.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "../online";
 import { createMainTrade, type MainTrade } from "../trade";

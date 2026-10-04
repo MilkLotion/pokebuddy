@@ -6,7 +6,8 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { createCommands } from "../../main/commands";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { createSaveParty } from "../../save/save-party";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
@@ -33,7 +34,7 @@ async function main(): Promise<void> {
   seed.boxes[0]!.slots[0] = "b-pet";
   store.write(paths.save, seed);
 
-  const game = createGame({ file: paths.save, rand: () => 0 });
+  const game = createGame({ petName, file: paths.save, rand: () => 0 });
   const party = createSaveParty({ send: game.send, paths });
   let artOk = false;
   let beforeArt: (() => void) | undefined;

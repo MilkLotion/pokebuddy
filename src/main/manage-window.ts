@@ -15,7 +15,7 @@ import type { ScreenView } from "../shared/model/overlays";
 import type { TradeScreen } from "../shared/model/trade";
 import { hasCommandFlag } from "../shared/names/commands.js";
 import { WINDOW_V3_RULES } from "../save/rules.js";
-import { createGame, type GameV3 } from "./game.js";
+import { createGame, type GameV3 } from "../tx/game.js";
 import { PATHS } from "../platform/paths.js";
 import { windowIcon } from "./windows/files.js";
 import { webPreferencesOf } from "./windows/options.js";
@@ -35,6 +35,7 @@ import { dexList } from "../view/dex-list.js";
 import { dexDetail } from "../view/dex-detail.js";
 import { shopDetail } from "../view/shop-detail.js";
 import { runAgentRequest } from "../agents/agent-request.js";
+import { petName } from "../view/text.js";
 import { gainOf } from "../state/settings.js";
 import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
@@ -492,7 +493,7 @@ export function openManage(opts: ManageOptions): BrowserWindow {
     if (opts.route) win.webContents.send(CH.route, opts.route);
     return win;
   }
-  const game = opts.game ?? createGame();
+  const game = opts.game ?? createGame({ petName });
   wire(game, opts.send, opts.preload, opts.html);
   win = new BrowserWindow({
     width: WINDOW_V3_RULES.width,

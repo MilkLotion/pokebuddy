@@ -4,9 +4,9 @@
 // 판정은 마리마다 따로 한다. 그 마리가 조건을 채운 1초마다 1/2000 확률이다 (2026-09-29 사용자 결정). 마리끼리 독립이다.
 // 조건 — 앱이 켜져 있고, 그 마리가 무대에 나와 있는 꺼낸 파티 개체이며, 깨어 있다.
 // 메인은 전역 1초 시계의 틱마다 깨어 있는 마리 각각을 그 틱 간격으로 굴린다(rollHits — src/main/app.ts clockTick). P = 1 − (1 − 1/2000)^(초).
-// 주운 마리는 그 자리에서 저장에 반영한다(applyHits — src/main/game.ts find). 한 번 굴림에 마리마다 최대 1건이다.
+// 주운 마리는 그 자리에서 저장에 반영한다(applyHits — src/tx/game.ts find). 한 번 굴림에 마리마다 최대 1건이다.
 // 그래서 마리마다 따로, 주운 순간에 말풍선과 배너가 뜬다. 무기억 과정이라 쌓인 시간을 저장에 남기지 않는다.
-// 순수 함수다. 파일을 읽지 않고(데이터 표 제외) 시각과 무작위를 받는다. 저장은 부르는 쪽(src/main/game.ts find)이 한 번에 쓴다
+// 순수 함수다. 파일을 읽지 않고(데이터 표 제외) 시각과 무작위를 받는다. 저장은 부르는 쪽(src/tx/game.ts find)이 한 번에 쓴다
 import { loadJson, type DexOptions } from "../dex/data.js";
 import { pickHatch } from "../egg/hatch.js";
 import { pickByWeight, type Rand } from "../shared/rand.js";
