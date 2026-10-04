@@ -6,6 +6,7 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { liveInputEl, matchesDex, matchesName, normQuery, restoreSearchFocus, searchBoxEl, typingSearch } from "./search.js";
 import { alertEl, chipsEl, dialogCloseEl, meterEl, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
 import { iconCache, iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
@@ -229,8 +230,6 @@ const BOX_SORTS: readonly { by: string; label: string }[] = [
 // 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
 // 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
 const boxSortedBy = new Map<string, string>();
-// 다시 그린 뒤 되돌릴 검색 칸 — 입력 중에 화면을 새로 그려도 포커스와 커서가 남게
-let searchFocus: { key: string; caret: number } | null = null;
 let shopFilter = "egg";
 // 상점 포켓몬 격자 — 도감과 같은 지방·검색 (2026-09-29 사용자 결정 "도감처럼 격자 칸")
 let shopQuery = "";
@@ -646,135 +645,6 @@ function drawUnder(): void {
   underScrimEl.hidden = !stacked;
   underEl.replaceChildren();
   if (stacked) drawDaycare(underEl, false);
-}
-
-// ── 검색 ───────────────────────────────────────────────────────────────────────
-// 검색 칸은 입력 중에 결과를 바꾸지 않는다. Enter 나 `검색` 단추를 누를 때 그 값으로 한 번 거른다 (2026-09-29 사용자 결정)
-//   한글 조합을 확정하는 Enter(isComposing)는 검색하지 않는다 — 조합 확정에만 쓴다
-//   지우기(×)로 칸을 비우면 바로 전체로 돌린다 — 빈 칸은 걸러 볼 것이 없다
-// 입력 중인 글자는 초안(searchDraft)으로 들고 있다 — 검색 전에 다른 일로 다시 그려도 사라지지 않는다.
-// 검색 칸에 입력하는 동안 들어온 다시 그리기는 미뤘다가 칸을 떠날 때 그린다 — 칸을 갈아 끼우면 한글 조합이 끊긴다
-// (2026-09-29 사용자 "어래곤 검색했는데 … 어곤 이렇게 래 씹힌다")
-const searchDraft = new Map<string, string>();
-let searchSubmitting = false; // 검색을 누른 그 다시 그리기는 미루지 않는다
-
-// 지금 이 영역의 검색 칸(또는 박스 이름 칸)에 입력하고 있는가 — 창이 앞에 있을 때만. 뒤에 있으면(배너 바로가기 등) 미루지 않는다
-function typingSearch(root: HTMLElement): boolean {
-  if (searchSubmitting || !document.hasFocus()) return false;
-  const a = document.activeElement;
-  // 검색 칸과 박스 이름 입력칸 — 둘 다 한글을 친다. 계정·교환 입력칸(liveInput)은 다시 그려도 커서를 되돌린다
-  return a instanceof HTMLInputElement && (a.dataset.search != null || a.classList.contains("box-name-input")) && root.contains(a);
-}
-
-// 검색 칸을 떠났다 — 미룬 다시 그리기를 한다. 누른 단추의 click 이 먼저 돌게 한 틱 미룬다
-function releaseHeld(): void {
-  setTimeout(() => {
-    redrawHeldBody();
-    redrawHeldDialog();
-  }, 0);
-}
-
-function searchBox(key: string, value: string, placeholder: string, onSearch: (q: string) => void): HTMLElement {
-  const box = el("span", "search-field");
-  const input = document.createElement("input");
-  input.type = "search";
-  input.className = "search";
-  input.id = `search-${key}`;
-  input.dataset.search = key;
-  input.placeholder = placeholder;
-  input.value = searchDraft.get(key) ?? value;
-  input.setAttribute("aria-label", placeholder);
-  const go = buttonEl("search-go", "검색");
-  go.setAttribute("aria-label", `${placeholder} 실행`);
-  const submit = (): void => {
-    if (!input.isConnected) return;
-    searchDraft.delete(key);
-    // 다시 그리면 옛 칸이 빠지며 blur 가 먼저 온다(Chromium) — 기억은 그린 뒤에 넣고 되돌린다
-    const saved = document.activeElement === input ? { key, caret: input.selectionStart ?? input.value.length } : null;
-    searchSubmitting = true;
-    try {
-      onSearch(input.value);
-    } finally {
-      searchSubmitting = false;
-    }
-    searchFocus = saved;
-    restoreSearchFocus();
-  };
-  input.addEventListener("input", () => searchDraft.set(key, input.value));
-  // 조합 중 Enter 는 검색을 예약만 한다 — 칸을 갈아 끼우면 조합이 끊긴다. 확정(compositionend) 직후 그 값으로 한 번 거른다.
-  // 그래서 사용자는 Enter 를 한 번만 누른다 (2026-09-29 검수 반영)
-  let pending = false;
-  input.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    if (e.isComposing || e.keyCode === 229) pending = true; // 229 — 조합 중 키 (IME)
-    else submit();
-  });
-  input.addEventListener("compositionend", () => {
-    if (!pending) return;
-    pending = false;
-    setTimeout(submit, 0); // 확정한 글자가 값에 들어간 뒤
-  });
-  // type="search" 의 지우기(×) — 빈 칸이 되면 search 이벤트가 온다. Enter 도 이 이벤트를 내지만 위에서 이미 처리했다
-  input.addEventListener("search", () => {
-    if (input.value === "") submit();
-  });
-  go.addEventListener("click", submit);
-  input.addEventListener("blur", () => {
-    if (searchFocus?.key === key) searchFocus = null;
-    releaseHeld();
-  });
-  box.append(input, go);
-  return box;
-}
-
-// 글자를 칠 때마다 값을 넘기는 입력 칸 — 계정·교환 링크. 다시 그리기는 하지 않는다. 포커스 복원은 searchFocus 를 쓴다
-function liveInput(key: string, value: string, placeholder: string, onChange: (q: string) => void): HTMLInputElement {
-  const input = document.createElement("input");
-  input.type = "search";
-  input.className = "search";
-  input.id = `search-${key}`;
-  input.placeholder = placeholder;
-  input.value = value;
-  input.setAttribute("aria-label", placeholder);
-  // 다시 그리면 옛 칸이 빠지며 blur 가 먼저 온다(Chromium). 그래서 그린 뒤에 기억을 다시 넣고 되돌린다
-  const apply = (): void => {
-    const saved = { key, caret: input.selectionStart ?? input.value.length };
-    onChange(input.value);
-    searchFocus = saved;
-    restoreSearchFocus();
-  };
-  input.addEventListener("input", (e) => {
-    if (!(e as InputEvent).isComposing) apply();
-  });
-  input.addEventListener("compositionend", apply);
-  // 사용자가 다른 곳을 누르면 포커스 기억을 지운다
-  input.addEventListener("blur", () => {
-    if (searchFocus?.key === key) searchFocus = null;
-  });
-  return input;
-}
-
-function restoreSearchFocus(): void {
-  if (!searchFocus) return;
-  const input = document.getElementById(`search-${searchFocus.key}`);
-  if (!(input instanceof HTMLInputElement)) return;
-  input.focus();
-  input.setSelectionRange(searchFocus.caret, searchFocus.caret);
-}
-
-const normQuery = (q: string): string => q.trim().toLowerCase();
-
-// 이름은 부분 일치, 숫자만 넣으면 도감 번호 앞자리 일치("025" 와 "25" 가 같다). `26-1` 처럼 하이픈이 있으면 표시 번호와 정확히 비교한다
-function matchesName(name: string, q: string): boolean {
-  return name.toLowerCase().includes(q);
-}
-function matchesDex(row: DexEntry, q: string): boolean {
-  if (/^\d+$/.test(q)) return String(row.dex).startsWith(String(Number(q)));
-  const m = /^(\d+)-(\d+)$/.exec(q);
-  if (m) return row.dex === Number(m[1]) && row.form === Number(m[2]);
-  // 미해금 종은 이름이 숨겨져 있다 — 이름으로 찾으면 무엇인지 드러나므로 번호로만 찾는다
-  return row.state !== "locked" && matchesName(row.name, q);
 }
 
 function boxCell(pet: PetView, onPick: () => void): HTMLButtonElement {
@@ -1828,7 +1698,7 @@ function drawDex(v: Snapshot): void {
   const bar = el("div", "search-row");
   bar.appendChild(dexRegionEl());
   bar.appendChild(
-    searchBox("dex", dexQuery, "이름 또는 번호 검색", (q) => {
+    searchBoxEl("dex", dexQuery, "이름 또는 번호 검색", (q) => {
       dexQuery = q;
       dexPageNo = 0;
       redrawBody();
@@ -1968,7 +1838,7 @@ function drawShop(v: Snapshot): void {
       }),
     );
     bar.appendChild(
-      searchBox("shop", shopQuery, "이름 또는 번호 검색", (q) => {
+      searchBoxEl("shop", shopQuery, "이름 또는 번호 검색", (q) => {
         shopQuery = q;
         shopPageNo = 0;
         redrawBody();
@@ -2377,7 +2247,7 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
   const join = el("div", "trade-card");
   join.appendChild(tradeCardHead("링크로 참가"));
   const acts = el("div", "trade-acts");
-  const input = liveInput("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
+  const input = liveInputEl("trade-link", tradeInput, "교환 링크 붙여넣기", (q) => {
     tradeInput = q;
   });
   input.type = "text";
@@ -2747,7 +2617,7 @@ async function acctSend(req: AccountAction): Promise<AccountReply | null> {
 
 // 입력칸 — liveInput 의 포커스 복원을 쓴다. 다시 그려도 커서가 그대로다
 function acctInput(key: string, value: string, placeholder: string, type: "text" | "password", onChange: (v: string) => void): HTMLInputElement {
-  const input = liveInput(key, value, placeholder, onChange);
+  const input = liveInputEl(key, value, placeholder, onChange);
   input.type = type;
   input.classList.add("acct-input");
   input.autocomplete = "off";
