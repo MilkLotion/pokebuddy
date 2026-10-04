@@ -271,7 +271,7 @@ Figma: 도감 칸은 `Species Card` `336:299`(`State=Obtained|Unlocked|Locked|Se
 규칙: 목록은 미수령 → 미달성 → 수령 완료 순서다. 같은 상태는 `data/achievements.json` 의 순서다. 보상은 `보상 받기`에서만 지급한다.
 분류 칩: 업적창 머리 아래에 `Filter Chip` 여섯(`전체`·`도감`·`육성`·`알`·`탐색`·`함께`)을 둔다(2026-10-03 사용자 결정 "전체 + chip으로 볼수 있게"). 고른 분류의 업적만 보인다. 분류를 바꾸면 목록을 맨 위부터 보인다. 머리의 `달성 N / M · 미수령 K` 는 분류와 관계없이 전체 값이다.
 높이: 업적창은 창 높이의 78% 로 고정한다. 분류를 바꿔 줄 수가 달라져도 대화상자가 움직이지 않는다. 목록은 대화상자 안에서 스크롤한다. 이것은 구현 판단이다. Figma 화면은 목록을 펼쳐 그려서 대화상자 높이가 내용을 따른다.
-구현: `src/renderer/manage/manage.ts` `achievementRow`·`drawAchievements`·`ACHIEVEMENT_TABS`, `src/renderer/styles/manage/achievements.css` `.achievement`·`.dialog.tall.steady`. 화면 모델은 `src/shared/model/snapshot.ts` `AchievementView`(`group`·`progress`)다.
+구현: `src/renderer/manage/achievements.ts` `achievementRow`·`drawAchievements`·`ACHIEVEMENT_TABS`, `src/renderer/styles/manage/achievements.css` `.achievement`·`.dialog.tall.steady`. 화면 모델은 `src/shared/model/snapshot.ts` `AchievementView`(`group`·`progress`)다.
 Figma: `Achievement Row` `1394:80276`(`State=Claimable|Open|Claimed`, 속성 `Label`·`Hint`·`Show Hint`·`Count`·`Show Progress`·`Reward`). 막대 길이는 `track` 의 오른쪽 여백으로 정한다. 인스턴스 안의 층은 크기를 바꿀 수 없기 때문이다. 업적창 본문은 `Achievements Panel` `1399:81678`(`Tab=All|Dex|Egg`. `Tab=All` 이 `1294:47368` 이다)이다. 05 `09 업적` 섹션: `Achievements / Base` `384:4819`(전체 38줄), `Achievements / Tab · 도감` `1399:82078`, `Achievements / Tab · 알` `1399:82084`. 목록은 펼쳐 그렸고 창 끝(682)에 점선이 있다. 화면의 달성 수와 진행 값은 예시다. 옛 `Achievement Row` `1294:47355`(`State=Claimable|Done`)는 쓰는 화면이 없어 2026-10-03 지웠다. 옛 카드형 `Achievement Row` `336:341` 은 2026-10-02 지웠다.
 
 ### C-13 대화상자

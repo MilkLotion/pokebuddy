@@ -6,6 +6,7 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { drawAchievements, resetAchievementTab } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
@@ -18,10 +19,10 @@ import { drawNature, drawNatureTarget } from "./nature.js";
 import { drawForm, drawMega, markMega } from "./pet-forms.js";
 import { wrapPage } from "./grid-view.js";
 import { liveInputEl, restoreSearchFocus, typingSearch } from "./search.js";
-import { alertEl, chipsEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
+import { alertEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
-import type { AchievementView, BoxView, EggView, FormView, PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
+import type { BoxView, EggView, FormView, PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
@@ -42,7 +43,7 @@ import { createDeviceLink } from "./device-link.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks, whenSlow } from "./command.js";
 import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf } from "./shell.js";
 import { partyBusyKey } from "../../shared/device-busy.js";
-import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, registerDialog, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
@@ -2718,79 +2719,6 @@ window.addEventListener("resize", () => {
 
 // ── 모달 · 공통 ────────────────────────────────────────────────────────────────
 
-
-
-
-
-// ── 모달 · 업적창 ──────────────────────────────────────────────────────────────
-
-// 업적 한 줄 — Figma 05 `Achievements / Base` 의 `Achievement Row` (`State=Claimable|Open|Claimed`, 2026-10-03 업적 개선).
-//   미달성   이름 아래에 진행도 줄(막대 + `현재 / 기준`). 오른쪽에 보상
-//   미수령   보상 글자와 `보상 받기` 단추
-//   받음     `<보상> 받음`
-function achievementRow(a: AchievementView): HTMLElement {
-  const row = el("div", `achievement ${a.state}`);
-  row.dataset.id = a.id; // 알림 배너의 `바로가기` 가 이 줄로 옮겨 온다
-  row.appendChild(el("span", "state"));
-  const body = el("div", "body");
-  body.appendChild(el("div", "label", a.name));
-  if (a.desc) body.appendChild(el("div", "hint", a.desc));
-  if (a.progress) {
-    const line = el("div", "progress");
-    const track = el("span", "track");
-    const fill = el("span", "fill");
-    fill.style.width = `${Math.round((100 * a.progress.now) / a.progress.goal)}%`;
-    track.appendChild(fill);
-    line.append(track, el("span", "count", `${a.progress.now} / ${a.progress.goal}${a.progress.unit}`));
-    body.appendChild(line);
-  }
-  row.appendChild(body);
-  row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
-  if (a.state === "achieved") {
-    const claim = buttonEl("act primary", "보상 받기");
-    claim.addEventListener("click", () => void sendCommand("achievement.claim", a.id));
-    row.appendChild(claim);
-  }
-  return row;
-}
-
-// 업적창의 분류 칩 — `전체` 와 분류 다섯 (2026-10-03 사용자 결정 "전체 + chip으로 볼수 있게"). 탐험·배틀은 그 기능이 생길 때 더한다
-const ACHIEVEMENT_TABS: { id: string; label: string }[] = [
-  { id: "all", label: "전체" },
-  { id: "dex", label: "도감" },
-  { id: "grow", label: "육성" },
-  { id: "egg", label: "알" },
-  { id: "find", label: "탐색" },
-  { id: "together", label: "함께" },
-];
-let achievementTab = "all";
-// 줄 순서 — 미수령 → 미달성 → 수령 완료. 같은 상태는 목록 순서 (docs/specs/ui-components.md C-12)
-const ACHIEVEMENT_ORDER: Record<AchievementView["state"], number> = { achieved: 0, locked: 1, claimed: 2 };
-
-function drawAchievements(): void {
-  if (!ui.view) {
-    closeDialog();
-    return;
-  }
-  const list = ui.view.achievements.list;
-  dialogEl.append(...dialogHead("업적", `달성 ${ui.view.achievements.total} / ${list.length} · 미수령 ${ui.view.achievements.unclaimed}`));
-  dialogEl.appendChild(
-    chipsEl(ACHIEVEMENT_TABS, achievementTab, (id) => {
-      achievementTab = id;
-      resetDialogScroll(); // 분류를 바꾸면 목록을 맨 위부터 본다
-      drawDialog();
-    }),
-  );
-  const scroll = el("div", "scroll");
-  const rows = list
-    .map((a, i) => ({ a, i }))
-    .filter(({ a }) => achievementTab === "all" || a.group === achievementTab)
-    .sort((x, y) => ACHIEVEMENT_ORDER[x.a.state] - ACHIEVEMENT_ORDER[y.a.state] || x.i - y.i);
-  for (const { a } of rows) scroll.appendChild(achievementRow(a));
-  dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actionsRowEl(closeButton()));
-}
-
 // ── 모달 · 설정 ────────────────────────────────────────────────────────────────
 
 // 설정 모달 탭 — 일반·화면 두 칸. 사용자 모달 탭 — 계정·연결 두 칸 (2026-09-28 사용자 "설정모달에서 계정은 빼고, 설정옆에 유저아이콘 추가 후 해당 메뉴에서 계정,연결 설정").
@@ -3462,7 +3390,7 @@ function goTo(route: ManageRoute): void {
     ui.detailPet = null;
     redrawBody();
   } else {
-    achievementTab = "all"; // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
+    resetAchievementTab(); // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
     open({ kind: "achievements" });
     dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });
   }
