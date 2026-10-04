@@ -17,6 +17,7 @@
 | [specs/game.md](specs/game.md) | 게임 규칙 — 파티·박스·도감·상점·가방·알·진화·튜토리얼·설정 |
 | [specs/scenarios.md](specs/scenarios.md) | 사용자 흐름과 수용 조건 |
 | [specs/balance.md](specs/balance.md) | 가격·적립·성장 같은 밸런스 수치 |
+| [specs/moves.md](specs/moves.md) | 기술·특성 데이터와 탐험·배틀 전투 규칙 |
 | [specs/modules.md](specs/modules.md) | 모듈 책임과 경계, 저장 구조, 명령 계약 |
 | [specs/companion.md](specs/companion.md) | 동반자 동작 — 따르는 창, CLI 상태 연동, buddy, 무대 창, 그림 |
 | [specs/ui-components.md](specs/ui-components.md) | 화면에서 반복되는 UI 컴포넌트 계약 |
