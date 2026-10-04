@@ -7,7 +7,8 @@ import assert from "node:assert";
 import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/hunger-bubble";
 import fs from "node:fs";
 import path from "node:path";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import * as store from "../../save/store";
 import { setSize } from "../../party/home";
@@ -218,11 +219,11 @@ function seedPet(): SaveV3 {
     const seed = seedPet();
     seed.points.balance = 100;
     store.write(file, seed);
-    const game = createGame({ file, now: () => T0 });
+    const game = createGame({ petName, file, now: () => T0 });
     // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic)
     const block = `${file}.${process.pid}.tmp`;
     fs.mkdirSync(block);
-    game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/main/game.ts)
+    game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/tx/game.ts)
     assert.equal(game.saveFailing(), false, "한 번 실패로는 안내하지 않는다");
     assert.equal(game.send({ cmd: "shop.buy", target: "exp-candy-xs" }, "settings").reason, "save-failed", "2번째 실패");
     assert.equal(snapshotOfGame(game)?.saveFailing, undefined, "두 번까지는 안내하지 않는다");

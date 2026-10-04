@@ -11,7 +11,7 @@ import { onlineConfig } from "../online/config.js";
 import { dataVersion } from "../trade/data-version.js";
 import { devEnv, isDevRun } from "./app/dev-run.js";
 import { linkOf } from "../trade/link.js";
-import type { GameV3 } from "./game";
+import type { GameV3 } from "../tx/game";
 
 export interface MainTrade {
   session: TradeSession;

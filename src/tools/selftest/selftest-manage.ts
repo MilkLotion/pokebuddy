@@ -1,6 +1,6 @@
 // 관리 창이 쓰는 길 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-manage.js
 //
-// Electron 없이 확인한다. 창은 `src/main/game.ts` 하나만 부르므로 그것을 직접 부른다.
+// Electron 없이 확인한다. 창은 `src/tx/game.ts` 하나만 부르므로 그것을 직접 부른다.
 // 임시 폴더에 실제 저장 파일을 만들고, 스냅샷을 읽고 명령을 보낸 뒤 다시 읽는다.
 // 계약은 docs/specs/modules.md 의 명령 계약과 `src/shared/manage.d.ts` 다.
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
@@ -8,7 +8,8 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { createGenGate } from "../../main/windows/device-gen";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import { dexList } from "../../view/dex-list";
 import * as store from "../../save/store";
@@ -40,7 +41,7 @@ function seed(): SaveV3 {
 
 try {
   let now = T0;
-  const game = createGame({ file, now: () => now, rand: () => 0.5 });
+  const game = createGame({ petName, file, now: () => now, rand: () => 0.5 });
 
   // (1) 저장이 없으면 스냅샷도 없다
   assert.equal(snapshotOfGame(game), null, "저장이 없으면 null");

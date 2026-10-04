@@ -7,7 +7,7 @@
 import { app } from "electron";
 
 export interface QuitDeps {
-  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/main/game.ts flush). 부르는 쪽이 멈춤·writer 를 본다
+  // 메모리에만 있는 1초 틱 진행을 먼저 쓴다 — 클라우드 올리기가 그 값을 보게 (src/tx/game.ts flush). 부르는 쪽이 멈춤·writer 를 본다
   flush(): void;
   // 끄기 전에 클라우드 정리를 기다려야 하는가 — 멈춤·세션 종료 중이 아니고 클라우드를 쓰고 있다
   shouldRelease(): boolean;

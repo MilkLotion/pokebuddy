@@ -23,7 +23,7 @@ export interface TxContext {
   rand: () => number; // 0 이상 1 미만. 자체 검사가 결과를 정할 수 있게 받아서 쓴다
   // 알 하나의 결정적 난수(P4b, 계정 시드 — src/verify/save-rules.ts seededRand). 시드가 없으면 null — 그때는 rand 를 쓴다
   eggRand?: (eggId: string) => (() => number) | null;
-  petName?: (slug: string) => string; // 종의 화면 이름 — 박스 이름순 정렬이 쓴다. 없으면 슬러그 그대로. tx 는 화면 글자를 가져오지 않는다 — 조립하는 쪽(src/main/game.ts)이 꽂는다
+  petName?: (slug: string) => string; // 종의 화면 이름 — 박스 이름순 정렬이 쓴다. 없으면 슬러그 그대로. tx 는 화면 글자를 가져오지 않는다 — 조립하는 쪽이 꽂는다(메인이 createGame 에 넘긴 값, src/tx/game.ts)
 }
 
 export type TxHandler = (draft: SaveV3, args: unknown, ctx: TxContext) => TxOutcome;
@@ -32,7 +32,7 @@ export interface TxPorts {
   read: () => SaveV3 | null;
   write: (save: SaveV3, name?: string) => boolean; // name — 거래 이름. 앱이 이름으로 클라우드 즉시 올리기를 가른다 (src/online/save-kind.ts)
   now: () => number;
-  rand: () => number; // 난수 — 앱은 Math.random 을 넘긴다(src/main/game.ts). 도메인은 난수를 주입받는다
+  rand: () => number; // 난수 — 앱은 Math.random 을 넘긴다(src/tx/game.ts). 도메인은 난수를 주입받는다
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
   petName?: (slug: string) => string; // 종의 화면 이름. 없으면 슬러그 그대로(자체 검사)
 }

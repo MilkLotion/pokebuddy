@@ -116,7 +116,8 @@ function loadApp() {
   }
   const manageWindow = require("../../main/manage-window") as typeof import("../../main/manage-window");
   return {
-    createGame: (require("../../main/game") as typeof import("../../main/game")).createGame,
+    createGame: (require("../../tx/game") as typeof import("../../tx/game")).createGame,
+    petName: (require("../../view/text") as typeof import("../../view/text")).petName,
     openManage: manageWindow.openManage,
     paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
     store: require("../../save/store") as typeof import("../../save/store"),
@@ -236,7 +237,7 @@ const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
 
 void app.whenReady().then(async () => {
   const file = path.join(dir, "save-v3.json");
-  const { createGame, openManage, paths, store, empty, createMailInbox, mailScreenOf, pushMail } = loadApp();
+  const { createGame, petName, openManage, paths, store, empty, createMailInbox, mailScreenOf, pushMail } = loadApp();
   const seeded = seed(empty, Date.now());
   // --tut <id>=<done|skipped|none> — 튜토리얼 상태를 정해 둔다(여러 번). 새 기능 튜토리얼 화면을 차례로 보려고
   for (const pair of argsAfter("--tut")) {
@@ -260,7 +261,7 @@ void app.whenReady().then(async () => {
   store.write(file, seeded);
 
   const route = routeArg ? JSON.parse(routeArg) : undefined;
-  const game = createGame({ file });
+  const game = createGame({ petName, file });
   if (hasFlag("--save-failing")) {
     // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic). 설정창은 보기를 만들 때마다 먼저 저장하므로
     // 막음을 두는 동안 실패가 이어진다. 끝날 때 푼다 — 임시 폴더째 지워지기도 한다

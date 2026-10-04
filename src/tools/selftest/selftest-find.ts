@@ -8,7 +8,8 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { MINT_RETIRED } from "../../bag/mint";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { setLang } from "../../view/text";
 import { bannerOf } from "../../view/banner";
 import { refreshQueue } from "../../notify/queue";
@@ -212,7 +213,7 @@ try {
     let now = T0;
     let writable = true;
     let next: number[] = [];
-    const game = createGame({ file, now: () => now, rand: () => (next.length ? (next.shift() as number) : MISS), canWrite: () => writable });
+    const game = createGame({ petName, file, now: () => now, rand: () => (next.length ? (next.shift() as number) : MISS), canWrite: () => writable });
 
     // 1초 틱 — 깨어 있는 마리마다 1초분으로 따로 굴린다. 1초 확률 바로 아래면 줍고, 바로 위면 못 줍는다
     const p1s = chanceFor(SEC);

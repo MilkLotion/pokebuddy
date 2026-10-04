@@ -28,7 +28,7 @@ export function toCommandResult(res: ReturnType<Executor["run"]>): CommandResult
 }
 
 // 표면이 보낸 명령 하나를 실행기에 넘긴다 — 명령 표에 없거나, 거래 명령이 아니거나, 표면이 보낼 수 없는(internal) 명령이면 unknown-cmd
-// 표면 명령의 입구는 이것 하나다 — 메인의 화면 요청(src/main/game.ts send)도 이것을 부른다. id 는 부르는 쪽이 정할 수 있다(send 는 순번을 붙인다)
+// 표면 명령의 입구는 이것 하나다 — 게임 입구의 화면 요청(src/tx/game.ts send)도 이것을 부른다. id 는 부르는 쪽이 정할 수 있다(send 는 순번을 붙인다)
 export function runTxCommand(executor: Executor, command: Command, id: string = requestIdOf(command)): CommandResult {
   const spec = (COMMANDS as Record<string, { via: string; internal?: true } | undefined>)[command.cmd];
   if (!spec || spec.via !== "tx" || spec.internal === true) return { ok: false, reason: "unknown-cmd" };

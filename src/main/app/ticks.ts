@@ -10,7 +10,7 @@ import { rollHits } from "../../find/roll";
 import { STATE_RULES } from "../../state/rules";
 import type { Anchor } from "../anchor";
 import { CLOCK_RULES, type ClockTick } from "../clock";
-import type { GameV3 } from "../game";
+import type { GameV3 } from "../../tx/game";
 import type { SaveParty } from "../../save/save-party";
 import type { Bubbles } from "../stage/bubbles";
 import type { StageGroup } from "../stage-group";
@@ -95,7 +95,7 @@ export function createTicks(deps: TicksDeps): Ticks {
         }
       }
 
-      // 게임 시간 — 1초마다 메모리에 적용하고 파일은 STATE_RULES.saveMs 마다 쓴다 (src/main/game.ts flushMs)
+      // 게임 시간 — 1초마다 메모리에 적용하고 파일은 STATE_RULES.saveMs 마다 쓴다 (src/tx/game.ts flushMs)
       const events = game.tick({ workMs });
       if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
 

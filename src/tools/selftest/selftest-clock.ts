@@ -8,7 +8,8 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { CLOCK_RULES, createClock, type ClockTick } from "../../main/clock";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { newPet } from "../../party/create";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
@@ -74,7 +75,7 @@ try {
     const file = path.join(root, "save.json");
     assert.equal(store.write(file, seed()), true);
     let now = T0;
-    const game = createGame({ file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
+    const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     assert.ok(game.tick(), "첫 틱은 쓴다");
     const first = store.read(file, { repair: false }).state!.lastTickAt;
@@ -129,7 +130,7 @@ try {
     assert.equal(store.write(file, seed()), true);
     let now = T0;
     let writer = true;
-    const game = createGame({ file, now: () => now, canWrite: () => writer, flushMs: 15_000, mono: () => now - T0 });
+    const game = createGame({ petName, file, now: () => now, canWrite: () => writer, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     game.tick();
     now += 1000;
@@ -147,7 +148,7 @@ try {
     assert.equal(store.write(file, seed()), true);
     let now = T0;
     let mono = 0;
-    const game = createGame({ file, now: () => now, flushMs: 15_000, mono: () => mono });
+    const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => mono });
     now += 1000;
     mono += 1000;
     game.tick(); // 첫 틱 — 쓴다
@@ -171,7 +172,7 @@ try {
     const file = path.join(root, "save-fail.json");
     assert.equal(store.write(file, seed()), true);
     let now = T0;
-    const game = createGame({ file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
+    const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     game.tick(); // 첫 틱 — 쓴다
     const block = `${file}.${process.pid}.tmp`; // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic)
@@ -199,7 +200,7 @@ try {
     const file = path.join(root, "save-work.json");
     assert.equal(store.write(file, seed()), true);
     let now = T0;
-    const game = createGame({ file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
+    const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     game.tick(); // 첫 틱 — 쓴다
     now += 1000;
@@ -224,8 +225,8 @@ try {
     assert.equal(store.write(b, seed()), true);
     let ta = T0;
     let tb = T0;
-    const ga = createGame({ file: a, now: () => ta });
-    const gb = createGame({ file: b, now: () => tb });
+    const ga = createGame({ petName, file: a, now: () => ta });
+    const gb = createGame({ petName, file: b, now: () => tb });
     for (let i = 0; i < 600; i++) {
       ta += 1000;
       ga.tick();

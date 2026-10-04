@@ -1,6 +1,6 @@
 // 파티 저장의 writer·reader 나누기 — 무대·메뉴의 파티 명령을 writer 면 실행기로, reader 면 writer 에게 보낸다.
 //
-// 저장을 직접 고치지 않는다. 모든 변경은 거래 실행기를 거친다 — 앱이 실행기의 입구(send)를 넘긴다 (src/main/game.ts).
+// 저장을 직접 고치지 않는다. 모든 변경은 거래 실행기를 거친다 — 앱이 실행기의 입구(send)를 넘긴다 (src/tx/game.ts).
 // 그래서 여기는 명령 보내기만 한다. 잠금 잡기와 파일 다시 읽기는 저장 감시(src/save/save-watch.ts)다.
 // 무대가 읽을 모양(PartyPet)은 화면 값이 만든다 — 부르는 쪽이 partyPetsOf(party.save(), …)를 부른다 (src/view/party-pet.ts)
 //

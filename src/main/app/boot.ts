@@ -7,7 +7,7 @@ import { createKeyVault } from "../services/vault";
 import type { Notifier } from "../../notify/notifier";
 import type { Anchor } from "../anchor";
 import type { Commands } from "../commands";
-import type { GameV3 } from "../game";
+import type { GameV3 } from "../../tx/game";
 import type { HookUpkeep } from "../hook-upkeep";
 import type { Lifetime } from "../lifetime";
 import type { Portraits } from "../art/portraits";

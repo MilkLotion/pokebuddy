@@ -23,7 +23,8 @@ import { createStage } from "../../main/stage";
 import type { Look, ArtLoader } from "../../main/art/stage-art";
 import type { StageWindow } from "../../main/stage-window";
 import { createCommands } from "../../main/commands";
-import { createGame } from "../../main/game";
+import { createGame } from "../../tx/game";
+import { petName } from "../../view/text";
 import { createSaveParty, type SaveParty } from "../../save/save-party";
 import { partyPetsOf, type PartyPet } from "../../view/party-pet";
 import { applyStarter } from "../../party/starter";
@@ -222,7 +223,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
 // 앱과 같게 묶는다 — 실행기는 잠금을 잡은 프로세스만 쓴다 (src/main/app.ts)
 function openParty(p: ReturnType<typeof pathsIn>) {
   let party: SaveParty | null = null;
-  const game = createGame({ file: p.save, canWrite: () => party?.isWriter() ?? false, rand: () => 0.5 });
+  const game = createGame({ petName, file: p.save, canWrite: () => party?.isWriter() ?? false, rand: () => 0.5 });
   party = createSaveParty({ send: game.send, paths: p });
   return { game, party };
 }
@@ -491,7 +492,7 @@ async function stageRuntimeTests(): Promise<void> {
     old.party[0]!.look = "eevee-starter";
     old.points = 1234;
     writeSaveV2(migPaths.save, old);
-    const migGame = createGame({ file: migPaths.save });
+    const migGame = createGame({ petName, file: migPaths.save });
     const migParty = createSaveParty({ send: migGame.send, paths: migPaths });
     try {
       const moved = store.read(migPaths.save, { repair: false }).state!;
@@ -516,7 +517,7 @@ async function stageRuntimeTests(): Promise<void> {
   seed.bag.toy = 1; // 가방 도구 사용의 무대 반응 확인용 (아래 bag.use)
   seed.bag["rare-candy"] = 1;
   store.write(commandPaths.save, seed);
-  const game = createGame({ file: commandPaths.save, rand: () => 0 });
+  const game = createGame({ petName, file: commandPaths.save, rand: () => 0 });
   const source = createSaveParty({ send: game.send, paths: commandPaths });
   let animations = 0;
   let lastCare = "";
