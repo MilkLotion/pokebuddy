@@ -9,7 +9,7 @@ import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { bridgeMailbox } from "../../commands/dispatcher";
+import { bridgeMailbox } from "../../main/commands";
 import * as mailbox from "../../save/command-channel";
 import * as rules from "../../save/rules";
 import { SAVE_V2_RULES } from "../../save/v2/rules";
