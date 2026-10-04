@@ -8,7 +8,7 @@ import { FALLBACK_NATURE } from "../dex/natures.js";
 import { PARTY_RULES, PET_RULES } from "../party/rules.js";
 import { snapSize } from "../party/size.js";
 import { compactSlots, presetSlots } from "../party/slots.js";
-import { newBox, pushBox } from "../box/boxes.js";
+import { defaultBoxName, newBox, pushBox } from "../box/boxes.js";
 import { screenRefOf } from "../shared/raw.js";
 import { countParty } from "../party/presets.js";
 import { MAX_LEVEL } from "../dex/growth.js";
@@ -176,7 +176,11 @@ export function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<st
     if (!isRawObject(b)) continue;
     const id = str(b.id);
     if (!id) continue;
-    const box = newBox(id, str(b.name, `박스 ${out.length + 1}`));
+    // 이름 — 기본 이름은 저장하지 않고("") 화면이 자리 번호로 보인다(src/box/boxes.ts boxName, 파티 프리셋과 같은 규칙).
+    // 옛 저장이 채워 둔 "박스 N" 은 그 자리의 기본 이름과 같을 때만 비운다. 자리와 다른 "박스 N" 은 사용자가 지은 이름으로 보고 둔다
+    // (94-same-feature-diffs.md 9-5-5)
+    const name = str(b.name);
+    const box = newBox(id, name === defaultBoxName(out.length) ? "" : name);
     const slots = Array.isArray(b.slots) ? b.slots : [];
     for (let i = 0; i < box.slots.length; i++) {
       const petId = str(slots[i]);
@@ -186,7 +190,7 @@ export function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<st
     }
     out.push(box);
   }
-  return out.length ? out : [newBox("b1", BOX_RULES.firstName)];
+  return out.length ? out : [newBox("b1", "")];
 }
 
 // 파티에도 박스에도 없는 개체를 박스의 빈 칸에 넣는다. 자리가 없으면 박스를 새로 만든다.

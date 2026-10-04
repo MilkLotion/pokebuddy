@@ -11,7 +11,6 @@ import type {
 import type { LogEntry, Totals } from "../shared/save-v3";
 import { ACHIEVEMENT_RULES } from "../achievement/rules.js";
 import { BAG_RULES } from "../bag/rules.js";
-import { BOX_RULES } from "../box/rules.js";
 import { UNLOCK_RULES } from "../dex/rules.js";
 import { fillBoxes, newBox } from "../box/boxes.js";
 import { maxEggNo } from "../egg/pool.js";
@@ -42,7 +41,7 @@ export function emptySave(now: number): SaveV3 {
     pets: [],
     starterPetId: null,
     party: emptyParty(),
-    boxes: fillBoxes([newBox("b1", BOX_RULES.firstName)]),
+    boxes: fillBoxes([newBox("b1", "")]), // 기본 이름은 저장하지 않는다 — 화면이 "박스 1" 로 보인다(src/box/boxes.ts boxName)
     petSeq: 0,
     eggs: [],
     eggSeq: 0,
