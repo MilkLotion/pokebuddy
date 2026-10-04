@@ -54,7 +54,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("agents"),
   tool("hook-check"),
   tool("hook-upkeep"),
-  tool("follow"),
+  tool("terminal"),
   tool("motion"),
   tool("overworld-art"),
   tool("stage"),
