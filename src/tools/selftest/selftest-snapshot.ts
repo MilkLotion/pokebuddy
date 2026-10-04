@@ -312,6 +312,11 @@ function seed(): SaveV3 {
   const after = snapshotView(s, T0);
   assert.deepEqual([after.party.slots[0]?.pet?.feedText, after.party.slots[0]?.pet?.playText], ["밥 주기 · 배부름", "놀아주기 · 1분"], "놀아주기도 밥 주기처럼 남은 시간 (94 항목 5-1)");
   assert.equal(after.eggs.list[0]?.noteText, "준비 완료");
+  // 진행 퍼센트는 내림 — 1초 남은 알은 99% 다 (94 항목 9-5-5)
+  const almost = seed();
+  almost.eggs[0]!.remainMs = 1000;
+  almost.eggs[0]!.ready = false;
+  assert.equal(snapshotView(almost, T0).eggs.list[0]?.percent, 99, "준비 전에는 100% 가 아니다");
   assert.deepEqual([45, 90, 4800, 7200].map((n) => waitText(n, "en")), ["45s", "2m", "1h 20m", "2h"], "영어 남은 시간");
   process.stdout.write("(14) 시간 글자  ok\n");
 }

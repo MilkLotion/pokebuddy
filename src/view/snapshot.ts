@@ -67,9 +67,10 @@ const BUFF_ORDER = ["premium-food", "long-play", "short-play"] as const;
 const sec = (ms: number): number => Math.round(ms / 1000);
 const min = (ms: number): number => Math.round(ms / 60_000);
 
-// 알 준비 시간의 진행 백분율 — 남은 시간만 저장하므로 전체는 규칙표에서 온다
+// 알 준비 시간의 진행 백분율 — 남은 시간만 저장하므로 전체는 규칙표에서 온다.
+// 내림이다 — 경험치 진행(src/dex/growth.ts progressTo)과 같고, 준비되기 전에 100% 를 보이지 않는다 (94 항목 9-5-5)
 const eggPercent = (remainMs: number, readyMs: number): number =>
-  readyMs <= 0 ? 100 : Math.min(100, Math.max(0, Math.round(((readyMs - remainMs) / readyMs) * 100)));
+  readyMs <= 0 ? 100 : Math.min(100, Math.max(0, Math.floor(((readyMs - remainMs) / readyMs) * 100)));
 
 // 모자란 조건 → 화면 문구. 판정은 src/dex/evolve.ts 의 candidates 다
 // 둘 이상이면(레벨·친밀도 지도 간선) 이름을 `·` 로 잇는다 — "Lv.36·지도 필요". 돌 대신 지도인 간선은 "지도 필요"
