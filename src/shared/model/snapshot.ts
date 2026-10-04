@@ -60,6 +60,7 @@ export interface PetView {
   shiftForms?: FormView[]; // 모습 바꾸기 종(로토무)의 고를 수 있는 모습 — 해금 뒤에만. 박스 칸은 지금 종 그대로라 forms 와 나눈다
   look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
   mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
+  megaGoal?: MegaGoalView; // 메가진화하는 종인데 메가스톤이 아직 없는 개체만
   care: CareView | null; // 돌봄 보너스 — 친밀도가 100 미만이면 null
 }
 
@@ -80,6 +81,16 @@ export interface MegaView {
   forms: FormView[]; // 고를 수 있는 메가 모습 — 리자몽·뮤츠는 둘
   canChange: boolean; // 프리셋 칸에 든 개체만 메가진화한다. 박스 개체는 false
   rivals: string[]; // 같은 프리셋에서 지금 메가 모습인 다른 개체의 이름 — 이 개체가 메가진화하면 원래 모습으로 돌아간다
+}
+
+// 메가스톤 조건과 진행 — 파티 상세 기기 창의 흐린 메가스톤 표식과 조건 말풍선이 쓴다 (docs/specs/game.md "조건 말풍선")
+// 값은 [지금, 기준]. 시간과 횟수는 친밀도 100 뒤부터 센다. 시간은 시간 단위로 내림한다
+export interface MegaGoalView {
+  kind: "mega" | "primal" | "rayquaza"; // 말풍선 머리 — 메가스톤 조건 · 원시회귀 조건 · 메가진화 조건
+  affinity: [number, number];
+  level: [number, number];
+  hours: [number, number];
+  care: [number, number];
 }
 
 // 공유 sid 계열의 모습 하나 — 박스 칸의 단체사진·툴팁과 바꾸기 확인 창이 쓴다

@@ -34,7 +34,7 @@ export interface PetDeviceOpen {
 
 export interface PetDeviceView extends PetDeviceOpen {
   portrait: string | null; // data URI
-  megaIcon: string | null; // 메가스톤 표식 그림(키스톤) data URI — 메가스톤을 지닌 개체일 때만 받는다
+  megaIcon: string | null; // 메가스톤 표식 그림(키스톤) data URI — 메가스톤을 지녔거나 메가진화하는 종의 개체일 때만 받는다
   side: "right" | "left";
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
 }

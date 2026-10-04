@@ -115,6 +115,58 @@
 .mega-stone:disabled canvas {
   opacity: 0.45;
 }
+/* 메가스톤이 아직 없다 — 흐린 표식. 누르면 조건 말풍선 (docs/specs/game.md "조건 말풍선", Figma 03 `Mega Condition Bubble`) */
+.mega-stone.goal canvas {
+  opacity: 0.35;
+}
+.mega-stone.goal[aria-expanded="true"] {
+  background: var(--accent-bg);
+}
+/* 조건 말풍선 — 표식 바로 아래. 포켓몬 메뉴의 모습 바꾸기 말풍선과 같은 틀 */
+.mega-goal {
+  position: absolute;
+  z-index: 5;
+  left: 50px;
+  top: calc(100% + 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.mega-goal-head,
+.mega-goal-foot {
+  color: var(--muted);
+  font: 12px/16px var(--font-body);
+  white-space: nowrap;
+}
+.mega-goal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+}
+.mega-goal-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font: 700 12px/18px var(--font-body);
+}
+.mega-goal-value {
+  color: var(--muted);
+  font: 12px/16px var(--font-body);
+  white-space: nowrap;
+}
+/* 채운 조건 — 강조색 글자. 테두리·막대로 강조하지 않는다 */
+.mega-goal-value.done {
+  color: var(--primary);
+}
 /* 초상 칸 — 도감·상점·가방 기기 창의 그림 칸과 같은 네모 (2026-10-03 사용자 결정 "도감상세는 네모잖아. 둘 다 네모로할까") */
 .stage {
   display: grid;

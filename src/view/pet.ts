@@ -3,7 +3,8 @@
 import { profileOf } from "../dex/species.js";
 import { itemName, petName, typeName, moodText, natureName, t } from "./text.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
-import { megaOf, megaChoices, shownSpecies } from "../dex/mega.js";
+import { megaOf, megaChoices, megaFormsOf, shownSpecies } from "../dex/mega.js";
+import { MEGA_RULES } from "../dex/rules.js";
 import { locatePet } from "../party/locate.js";
 import { sizeLevelOf } from "../party/size.js";
 import { growthOf, progressTo } from "../dex/growth.js";
@@ -11,7 +12,7 @@ import { careParts, zoneOf } from "../state/time.js";
 import { TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
-import type { CareView, EvolutionView, FormView, MegaView, PetView } from "../shared/model/snapshot";
+import type { CareView, EvolutionView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
 import { formsOf, isFormLocked, isShared } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
@@ -91,6 +92,23 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
   };
 }
 
+// 메가스톤 조건과 진행 — 메가진화하는 종인데 메가스톤이 아직 없는 개체만 (docs/specs/game.md "조건 말풍선")
+function megaGoalView(pet: PetV3): { megaGoal?: MegaGoalView } {
+  const forms = megaFormsOf(pet.species);
+  if (!forms.length || pet.mega?.stone === true) return {};
+  const kind = megaOf(forms[0] as string)?.kind === "primal" ? "primal" : pet.species === "rayquaza" ? "rayquaza" : "mega";
+  const hour = 60 * 60_000;
+  return {
+    megaGoal: {
+      kind,
+      affinity: [Math.floor(pet.affinity), MEGA_RULES.affinity],
+      level: [pet.level, MEGA_RULES.level],
+      hours: [Math.floor((pet.mega?.bondMs ?? 0) / hour), MEGA_RULES.bondMs / hour],
+      care: [pet.mega?.care ?? 0, MEGA_RULES.care],
+    },
+  };
+}
+
 // 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창·포켓몬 메뉴가 같이 쓴다. 글자는 언어 파일의 zone.* 다
 const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
 
@@ -145,6 +163,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(save, pet),
     ...megaView(save, pet),
+    ...megaGoalView(pet),
     care: careView(pet),
   };
 }

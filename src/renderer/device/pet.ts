@@ -59,6 +59,45 @@ function markBusy(b: HTMLButtonElement, busy: string | null, body: ActBody): voi
   if (busy !== null && busy === petBusyKey({ ...body, petId: shownPetId } as PetDeviceAction)) b.setAttribute("aria-busy", "true");
 }
 
+// 메가스톤 조건 말풍선 — 흐린 표식 아래. 1초마다 다시 그려도 열린 채로 둔다 (Figma 03 `Mega Condition Bubble`)
+const GOAL_TITLE: Record<NonNullable<PetDeviceView["pet"]["megaGoal"]>["kind"], string> = { mega: "메가스톤 조건", primal: "원시회귀 조건", rayquaza: "메가진화 조건" };
+let goalOpen = false;
+function closeGoal(): void {
+  goalOpen = false;
+  device.querySelector(".mega-goal")?.remove();
+  device.querySelector(".mega-stone.goal")?.setAttribute("aria-expanded", "false");
+}
+function drawGoal(portrait: HTMLElement, stone: HTMLElement, goal: NonNullable<PetDeviceView["pet"]["megaGoal"]>): void {
+  portrait.querySelector(".mega-goal")?.remove();
+  stone.setAttribute("aria-expanded", String(goalOpen));
+  if (!goalOpen) return;
+  const box = el("div", "mega-goal");
+  box.appendChild(el("div", "mega-goal-head", `${GOAL_TITLE[goal.kind]} · 모두 채우면 생겨요`));
+  const rows: [string, [number, number], (n: number) => string][] = [
+    ["친밀도", goal.affinity, (n) => String(n)],
+    ["레벨", goal.level, (n) => `Lv.${n}`],
+    ["파티에서 함께", goal.hours, (n) => `${n}`],
+    ["밥 주기·놀아주기", goal.care, (n) => `${n}`],
+  ];
+  const unit = ["", "", "시간", "회"];
+  rows.forEach(([label, [now, need], show], i) => {
+    const done = now >= need;
+    const row = el("div", "mega-goal-row");
+    const value = i === 1 ? `${show(now)} / ${need}` : `${show(Math.min(now, need))} / ${need}${unit[i]}`;
+    row.append(el("span", "mega-goal-label", label), el("span", done ? "mega-goal-value done" : "mega-goal-value", done ? `✓ ${value}` : value));
+    box.appendChild(row);
+  });
+  box.appendChild(el("div", "mega-goal-foot", "시간과 횟수는 친밀도 100 뒤부터 세요"));
+  portrait.appendChild(box);
+}
+// 말풍선 밖을 누르면 닫는다. 표식 자신은 표식의 click 이 여닫는다
+document.addEventListener("pointerdown", (e) => {
+  if (!goalOpen) return;
+  const target = e.target as Element | null;
+  if (target?.closest(".mega-goal, .mega-stone.goal")) return;
+  closeGoal();
+});
+
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).
 // 입력 규칙은 관리 창과 같다 — 막·구멍을 누르면 말풍선만 흔든다. 다음·확인·✕ 만 받는다 (worklog/records/tutorial-overhaul/record.md)
 const DETAIL_STEPS = [
@@ -235,6 +274,18 @@ function renderBody(v: PetDeviceView): void {
     stone.setAttribute("aria-label", label);
     if (v.megaIcon) stone.appendChild(spriteCanvas(v.megaIcon, MEGA_STONE));
     portrait.appendChild(stone);
+  } else if (pet.megaGoal) {
+    // 메가스톤이 아직 없다 — 같은 자리의 흐린 표식. 누르면 조건 말풍선을 열고 닫는다 (docs/specs/game.md "조건 말풍선")
+    const goal = pet.megaGoal;
+    const stone = buttonEl("mega-stone goal", "", () => {
+      goalOpen = !goalOpen;
+      drawGoal(portrait, stone, goal);
+    });
+    stone.setAttribute("aria-label", `${GOAL_TITLE[goal.kind]} 보기`);
+    stone.setAttribute("aria-expanded", String(goalOpen));
+    if (v.megaIcon) stone.appendChild(spriteCanvas(v.megaIcon, MEGA_STONE));
+    portrait.appendChild(stone);
+    drawGoal(portrait, stone, goal);
   }
   entry.appendChild(portrait);
   const info = el("div", "info");
@@ -343,6 +394,7 @@ function renderBody(v: PetDeviceView): void {
   frame.endDraw();
   if (detailPetId !== pet.id) {
     detailPetId = pet.id;
+    closeGoal(); // 다른 개체를 열면 조건 말풍선은 닫는다
     detailStep = 0; // 다른 개체를 열면 튜토리얼은 1단계부터
   } else if (v.tutorial && !lastView?.tutorial) detailStep = 0; // 가이드북의 다시 보기 — 같은 개체여도 1단계부터
   lastView = v;

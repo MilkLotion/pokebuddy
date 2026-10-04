@@ -125,7 +125,7 @@ export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen, PetD
     keyOf: (o) => o.pet.id,
     // 메가 모습이면 그 초상이다 (PetView.look)
     viewOf: (o) =>
-      Promise.all([deps.portrait(o.pet.look, o.pet.shiny), o.pet.mega ? deps.megaIcon() : null]).then(([portrait, megaIcon]) => ({ ...o, portrait, megaIcon, volume: deps.volume() })),
+      Promise.all([deps.portrait(o.pet.look, o.pet.shiny), o.pet.mega || o.pet.megaGoal ? deps.megaIcon() : null]).then(([portrait, megaIcon]) => ({ ...o, portrait, megaIcon, volume: deps.volume() })),
     isAction: isPetAction,
     cry: { of: (o) => deps.cry(o.pet.species), volume: deps.volume },
   };

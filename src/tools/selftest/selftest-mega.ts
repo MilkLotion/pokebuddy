@@ -282,6 +282,25 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   process.stdout.write("(9) 화면 모델과 도감 표식 · 도감 상세의 메가진화 줄  ok\n");
 }
 
+// (9b) 조건 말풍선 — 메가진화하는 종인데 메가스톤이 없는 개체만 조건과 진행을 받는다. 시간은 시간 단위 내림
+{
+  const s = seed(
+    pet({ affinity: 100, level: 62, mega: { bondMs: 13.9 * 60 * 60_000, care: 42 } }),
+    pet({ id: "p2", species: "gengar", evolved: [], mega: { ...full, stone: true } }),
+    pet({ id: "p3", species: "pikachu", evolved: [] }),
+    pet({ id: "p4", species: "groudon", evolved: [], affinity: 30, level: 10 }),
+    pet({ id: "p5", species: "rayquaza", evolved: [] }),
+  );
+  const pets = snapshotView(s, T0).party.slots.map((x) => x.pet);
+  const goalOf = (id: string) => pets.find((p) => p?.id === id)?.megaGoal;
+  assert.deepStrictEqual(goalOf("p1"), { kind: "mega", affinity: [100, MEGA_RULES.affinity], level: [62, MEGA_RULES.level], hours: [13, 24], care: [42, MEGA_RULES.care] });
+  assert.equal(goalOf("p2"), undefined, "메가스톤을 지니면 조건 대신 메가진화 표식");
+  assert.equal(goalOf("p3"), undefined, "메가진화하지 않는 종");
+  assert.deepStrictEqual(goalOf("p4"), { kind: "primal", affinity: [30, 100], level: [10, 60], hours: [0, 24], care: [0, 100] }, "친밀도 100 전에는 시간·횟수가 0");
+  assert.equal(goalOf("p5")?.kind, "rayquaza");
+  process.stdout.write("(9b) 조건 말풍선 — 조건과 진행  ok\n");
+}
+
 // (10) 배너 — 메가스톤이 생기면 한 번. 레쿠쟈와 원시회귀는 제목이 다르다
 {
   const s = seed(pet({ mega: { ...full } }), pet({ id: "p2", species: "rayquaza", evolved: [], mega: { ...full } }), pet({ id: "p3", species: "groudon", evolved: [], mega: { ...full } }));
