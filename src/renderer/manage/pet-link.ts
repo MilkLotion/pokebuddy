@@ -4,6 +4,7 @@
 import { petBusyKey } from "../../shared/device-busy.js";
 import type { PetDeviceAction, PetDeviceInput } from "../../shared/model/devices.js";
 import { api } from "./api.js";
+import { boxUi } from "./box-state.js";
 import { sendCommand, whenSlow } from "./command.js";
 import { closeDexBeside, syncDexBeside, toggleDexBeside } from "./dex-link.js";
 import { createDeviceLink } from "./device-link.js";
@@ -47,6 +48,9 @@ export function stepPet(delta: -1 | 1): void {
   const next = list[(at + delta + list.length) % list.length];
   if (!next) return;
   ui.detailPet = next.id;
+  // 다음 개체가 다른 박스에 있으면 박스 탭도 그 박스로 넘긴다 — 도감 넘기기가 쪽을 따라가는 것과 같다 (dex-tab.ts stepDex)
+  const box = ui.view?.boxes.findIndex((b) => b.slots.some((p) => p?.id === next.id)) ?? -1;
+  if (box >= 0) boxUi.page = box;
   redrawBody();
 }
 
