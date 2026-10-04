@@ -54,7 +54,7 @@ export interface ManageHandlerDeps {
   // 명령을 보내는 길 — 앱은 커맨드 처리기를 준다 (src/main/manage/window.ts ManageDeps.send)
   send(req: ManageRequest): Promise<ManageReply>;
   services(): ManageServices; // 마지막으로 창을 연 때의 기능. 없는 기능의 채널은 빈 답을 준다
-  setDim(on: boolean): void; // 모달 가림막이 켜졌다·꺼졌다 — 창 단추 자리를 함께 어둡게 한다
+  setDim(layers: 0 | 1 | 2): void; // 가림막 겹수 — 창 단추 자리를 같은 겹수로 어둡게 한다
 }
 
 export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): void {
@@ -130,7 +130,7 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
         return pickScreen ? pickScreen() : { ok: false, reason: "not-ready" };
       },
     },
-    "manage:dim": (_e, on) => deps.setDim(on === true),
+    "manage:dim": (_e, layers) => deps.setDim(layers === 2 ? 2 : layers === 1 ? 1 : 0),
     // 초상·아이콘 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
     "manage:portraits": {
       denied: {},

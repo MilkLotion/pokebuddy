@@ -184,8 +184,10 @@ export function drawTutorial(): void {
       }
     }
   }
-  // OS 가 그리는 창 단추 자리도 함께 어둡게 한다 — 모달 가림막과 같은 통로
-  api.dim(isDimmed() || coachEl != null);
+  // OS 가 그리는 창 단추 자리도 함께 어둡게 한다 — 헤더를 덮은 막의 겹수만큼. 모달 가림막 한 겹,
+  // 돌보미집 위의 부화 결과 한 겹 더(daycare.ts drawUnder), 창 전체를 덮는 튜토리얼 막 한 겹 더(모달 안의 사용자·교환·화면 튜토리얼이면 두 겹)
+  const stacked = ui.dialog?.kind === "hatched" && ui.dialog.over === "daycare";
+  api.dim(Math.min(2, (isDimmed() ? 1 : 0) + (stacked ? 1 : 0) + (coachEl ? 1 : 0)));
 }
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {

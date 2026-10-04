@@ -43,7 +43,7 @@ export type ManageCoreIpc = {
   "manage:screens": Invoke<"screens", [], ScreenView[]>; // 지금 화면 목록 — 번호 순. 화면을 모르면(개발 실행기 등) 빈 목록
   "manage:identify-screens": Send<"identifyScreens", [on: boolean]>; // 모든 화면에 번호 덮개를 띄운다·치운다 — 한 화면 목록이 열린 동안
   "manage:pick-screen": Invoke<"pickScreen", [], ManageReply>; // 화면 위에서 눌러 고른다. 고르면 저장하고 ok, 취소하면 reason "cancelled"
-  "manage:dim": Send<"dim", [on: boolean]>; // 모달 가림막이 켜졌다·꺼졌다. OS 가 그리는 창 단추 자리도 같은 색으로 어둡게 한다
+  "manage:dim": Send<"dim", [layers: number]>; // 가림막이 몇 겹인가 — 0 없음, 1 모달·튜토리얼, 2 모달 위의 모달(부화 결과)·모달 안의 튜토리얼. OS 가 그리는 창 단추 자리도 같은 겹수로 어둡게 한다
   "manage:portraits": Invoke<"portraits", [asks: PortraitAsk[]], Record<string, string | null>>; // 초상 — 열쇠(slug 또는 slug:shiny)별 data URI. 못 받으면 null
   "manage:icons": Invoke<"icons", [keys: string[]], Record<string, string | null>>; // 도구·알 그림 — 열쇠는 "egg" 또는 "item:<식별자>"
   "manage:art": Invoke<"art", [], Record<string, ArtImage>>; // 디스크에 이미 있는 초상·도구·알 그림 전부 — 창을 열 때 한 번 받아 첫 화면부터 그림을 채운다. 초상은 보는 네모를 정할 불투명 영역(box)을 함께 싣는다(X15)

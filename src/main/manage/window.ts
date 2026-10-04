@@ -34,6 +34,8 @@ const MANAGE_WINDOW_RULES = {
 const CHROME = { color: "#ffffff", symbolColor: "#4a6663", height: 39 };
 // 모달이 열리면 가림막(`--scrim` rgba(26,51,48,0.45))이 헤더를 덮는다. 창 단추 자리도 그 색을 겹친 값으로 바꾼다
 const CHROME_DIM = { color: "#98a3a2", symbolColor: "#344f4c" };
+// 모달 위의 모달(돌보미집 위의 부화 결과)과 모달 안의 튜토리얼은 가림막이 두 겹이다 — 한 겹 값 위에 같은 막을 한 번 더 겹친 값
+const CHROME_DIM2 = { color: "#5f716f", symbolColor: "#284240" };
 // 열 때마다 읽는 기능 — 늦게 생기는 서비스(계정·우편·업데이트)는 그때 있으면 싣는다. 처리기는 마지막으로 연 때의 값을 쓴다
 export interface ManageServices {
   // 설정의 `영역 그리기`. 영역 그리기 창을 열고 적용한 영역을 저장한다. 없으면 이 기능을 쓸 수 없다
@@ -75,19 +77,21 @@ export function createManage(deps: ManageDeps): Manage {
   //   modal  설정창의 모달 가림막과 설정창 튜토리얼 (manage:dim)
   //   pet    파티 상세 기기 창의 튜토리얼 (petdev:coach)
   //   stage  바탕화면 튜토리얼 — 첫 돌봄·놀이공간 (setStageCoachDim)
-  const dimFrom = { modal: false, pet: false, stage: false };
+  //   modal 은 겹수(0·1·2)다. 기기 창·무대의 튜토리얼은 한 겹이다
+  const dimFrom: { modal: 0 | 1 | 2; pet: boolean; stage: boolean } = { modal: 0, pet: false, stage: false };
   function paintChrome(): void {
     if (!win || win.isDestroyed()) return;
-    const c = dimFrom.modal || dimFrom.pet || dimFrom.stage ? CHROME_DIM : CHROME;
+    const layers = Math.max(dimFrom.modal, dimFrom.pet || dimFrom.stage ? 1 : 0);
+    const c = layers === 2 ? CHROME_DIM2 : layers === 1 ? CHROME_DIM : CHROME;
     try {
       win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor, height: CHROME.height });
     } catch {
       // 창 단추를 OS 가 그리지 않는 곳(mac 등)에서는 할 일이 없다
     }
   }
-  function setDimFrom(from: keyof typeof dimFrom, on: boolean): void {
-    if (dimFrom[from] === on) return;
-    dimFrom[from] = on;
+  function setDimFrom<K extends keyof typeof dimFrom>(from: K, value: (typeof dimFrom)[K]): void {
+    if (dimFrom[from] === value) return;
+    dimFrom[from] = value;
     paintChrome();
   }
 
@@ -108,7 +112,7 @@ export function createManage(deps: ManageDeps): Manage {
     wired = true;
     // 본 처리기(계약 ManageCoreIpc)는 처리기 파일이 건다 — 보낸 창 검사는 묶음이 한다 (src/main/manage/handlers.ts)
     const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
-    wireManageHandlers(scope, { game, send, services: () => svc, setDim: (on) => setDimFrom("modal", on) });
+    wireManageHandlers(scope, { game, send, services: () => svc, setDim: (layers) => setDimFrom("modal", layers) });
     // 기기 창 다섯과의 길(계약 ManageDeviceLinkIpc)은 기기 창 파일이 건다 — 같은 묶음, 같은 화면 읽기
     devices = wireManageDevices(scope, {
       game,
@@ -156,7 +160,7 @@ export function createManage(deps: ManageDeps): Manage {
     paintChrome(); // 다른 창의 튜토리얼이 떠 있는 동안 열렸다 — 처음부터 어둡게
     win.on("closed", () => {
       win = null;
-      dimFrom.modal = false; // 설정창의 모달·튜토리얼은 창과 함께 사라졌다
+      dimFrom.modal = 0; // 설정창의 모달·튜토리얼은 창과 함께 사라졌다
       devices?.forget();
       svc.identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
     });
