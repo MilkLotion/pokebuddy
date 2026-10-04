@@ -1,6 +1,6 @@
 // 알림 배너가 설 상태 — 도메인 물음(알 준비·진화 가능·업적 미수령·메가스톤·줍기 기록)으로 대상 목록을 만든다. 줄 세우기는 src/notify/queue.ts
 import { achievementDefs } from "../achievement/defs.js";
-import { canEvolve } from "../dex/evolve.js";
+import { evolveAllowed } from "../party/pet-actions.js";
 import { gameDayPart } from "../shared/clock.js";
 import type { BannerKind } from "../shared/names/banners";
 import type { SaveV3 } from "../shared/save-v3";
@@ -29,7 +29,7 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
   const dayPart = gameDayPart(now);
   for (const id of petOrder(save)) {
     const pet = save.pets.find((p) => p.id === id);
-    if (pet && canEvolve(save, id, dayPart)) list.push({ key: keyOf({ kind: "evolve", target: id }, pet.species), kind: "evolve", target: id });
+    if (pet && evolveAllowed(save, id, dayPart)) list.push({ key: keyOf({ kind: "evolve", target: id }, pet.species), kind: "evolve", target: id });
   }
   for (const [id] of achievementDefs()) {
     const row = save.achievements[id];

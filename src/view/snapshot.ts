@@ -32,6 +32,8 @@ import type { AchievementView, BagItemView, BoxView, CareView, EggView, Evolutio
 import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
+import { checkPetFree } from "../party/pet-actions.js";
+import { failTextOf } from "../shared/fail-text.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial } from "../tutorial/queue.js";
 import { evolveCandidates, type EvoMissing } from "../dex/evolve.js";
@@ -86,14 +88,16 @@ function needText(lacks: readonly EvoMissing[]): string | undefined {
 // 다음 한 단계의 후보 — 상세의 진화 확인 창과 가방의 진화용 도구가 같은 판정을 본다.
 // 도감에서 해금 안 된 결과 종은 이름을 "???" 로 준다 — 도감 기기 창과 같이 가리고 조건만 보인다. 진화가 처음 보는 순간이다
 // (2026-10-01 사용자 결정 "추천대로하자", Figma 05 `1126:23890`)
+// 교환에 걸린 개체는 조건을 채워도 준비되지 않은 것으로 보이고, 까닭은 실패 문구표의 trade-locked 제목이다 (94 항목 9-5-1)
 function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView[] {
   const known = (slug: string): boolean => isKnownSpecies(save, slug);
+  const locked = !checkPetFree(save, pet.id, "evolve").ok;
   return evolveCandidates(save, pet.id, dayPart).map((c) => ({
     to: c.to,
     name: known(c.to) ? petName(c.to) : "???",
     known: known(c.to),
-    ready: c.ready,
-    ...(c.ready ? {} : { need: needText(c.lacks) }),
+    ready: c.ready && !locked,
+    ...(c.ready && !locked ? {} : { need: locked && c.ready ? failTextOf("trade-locked", "trade").text : needText(c.lacks) }),
     ...(c.need.kind === "item" ? { item: c.need.item } : {}),
     ...(c.map ? { map: true as const } : {}),
   }));

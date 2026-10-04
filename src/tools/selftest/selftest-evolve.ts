@@ -9,6 +9,7 @@ import path from "node:path";
 import { DEFAULT_DATA_DIR } from "../../dex/data";
 import { unlockByRules } from "../../dex/unlocks";
 import { evolveCandidates, canEvolve, evolvePet, missingKey, type Candidate } from "../../dex/evolve";
+import { evolveAllowed } from "../../party/pet-actions";
 import { gameDayPart } from "../../shared/clock";
 
 // 못 채운 조건을 `kind:값` 으로 쓰고 `|` 로 잇는다 — 단언을 짧게 적으려고. 채웠으면 undefined
@@ -58,6 +59,11 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 {
   const s = seed({ species: "charmander", level: 16, affinity: 40, exp: 4096 });
   assert.equal(canEvolve(s, "p1", "day"), true);
+  // 교환에 올린 개체는 알리는 쪽(배너·튜토리얼)도 진화할 수 없다고 본다 — 실행이 trade-locked 로 거절한다 (94 항목 9-5-1)
+  s.trade = { pending: { channelId: "c1", petId: "p1", offerRev: 1, received: null } };
+  assert.equal(evolveAllowed(s, "p1", "day"), false, "교환에 걸린 개체");
+  s.trade = { pending: null };
+  assert.equal(evolveAllowed(s, "p1", "day"), true);
   const res = evolvePet(s, "p1", "day");
   assert.equal(res.ok, true);
   assert.equal(res.from, "charmander");

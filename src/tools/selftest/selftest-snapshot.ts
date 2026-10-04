@@ -217,6 +217,13 @@ function seed(): SaveV3 {
   assert.equal(byTo(nightEvo, "umbreon")?.need, "친밀도 65 필요", "밤에는 친밀도가 모자란 것만 남는다");
   assert.equal(byTo(nightEvo, "espeon")?.need, "낮에만");
   assert.deepStrictEqual(day.party.slots[1]?.pet?.evolutions, [], "최종 단계는 후보가 없다");
+  // 교환에 올린 개체는 조건을 채워도 준비되지 않았고, 까닭은 trade-locked 문구다 (94 항목 9-5-1)
+  s.trade = { pending: { channelId: "c1", petId: "p1", offerRev: 1, received: null } };
+  const lockedEvo = snapshotView(s, T0).party.slots[0]?.pet?.evolutions ?? [];
+  assert.equal(byTo(lockedEvo, "flareon")?.ready, false, "교환에 걸린 개체");
+  assert.equal(byTo(lockedEvo, "flareon")?.need, "교환에 올린 포켓몬이에요");
+  assert.equal(byTo(lockedEvo, "vaporeon")?.need, "물의돌 필요", "조건이 모자라면 그 조건을 그대로");
+  s.trade = { pending: null };
   assert.equal(day.bag.find((b) => b.id === "fire-stone")?.evolution, true, "진화용 도구 표시");
   assert.equal(day.bag.find((b) => b.id === "premium-food")?.evolution, false);
   // 판매가 — 구매가 × 60% 내림 (src/shop/sell.ts). 가격이 있으면 구매가·비율도 함께 준다
