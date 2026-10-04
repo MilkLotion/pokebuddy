@@ -449,7 +449,7 @@ Figma: 기기는 `Party Detail Device` `1262:76637`(`State=Default|In Ball|Box P
 편지: 머리는 `‹ 제목` 과 `✕` 다. `‹` 는 목록으로 돌아간다. 아래로 `보낸 이 · 날짜`, 본문, 선물 카드다. 선물이 든 편지는 대화상자 바닥에 단추 줄을 둔다. 공지 편지는 단추 줄이 없다.
 선물 카드: 제목과 선물 줄(그림·이름·`×개수`)이다. 제목은 받기 전 `선물 N`, 받은 뒤 `받은 선물` 이다. 선물 줄은 2열이다. 칸보다 긴 이름은 말줄임한다. 카드의 면과 높이는 받기 전과 받은 뒤가 같다(2026-10-03 사용자 결정 "이정도면 괜찮은거같은데, 1/2열은 뭐 알아서 해"). 받은 뒤는 선물 줄을 흐리게(불투명도 50%) 둔다(2026-10-03 사용자 지시 "받으면 상품을 disable처럼 흐리게 해야할거같아").
 단추 줄: 왼쪽은 상태 글자, 오른쪽은 `받기` 다. 단추는 다른 대화상자의 바닥 단추와 같은 크기(120×36)다. 받은 뒤는 잠긴 `받음` 과 `M월 D일에 받았어요 · 가방에 들어갔어요` 다. 로그인하지 않았으면 `로그인하면 받을 수 있어요.`, `로그인`, 잠긴 `받기` 다. 기간 지남, 앱 업데이트 안내, 받기 실패도 같은 상태 글자 자리에 적는다. 상태가 바뀌어도 줄을 더하거나 빼지 않는다.
-규칙은 [우편함](game.md#우편함)을 따른다. 구현은 `src/renderer/manage/manage.ts` `drawMail`·`drawLetter`·`giftCard`·`giftFoot`, `src/renderer/styles/manage/mail.css` `.mail-*`·`.gift-*` 다.
+규칙은 [우편함](game.md#우편함)을 따른다. 구현은 `src/renderer/manage/mail.ts` `drawMail`·`drawLetter`·`giftCard`·`giftFoot`, `src/renderer/styles/manage/mail.css` `.mail-*`·`.gift-*` 다.
 Figma: `05 · Screens` 섹션 `10 우편함` `932:22859` — `Mail / List` `908:5779`, 편지 로그인 전 `932:22703`, 받기 전 `908:6022`, 받은 뒤 `908:6232`. 대화상자는 `Mail Dialog` `1262:89524`(`State=List|Letter|Letter Login|Letter Claimed|Empty`)이고 편지 줄은 `Mail Row` `1262:84951`, 선물 줄은 `Mail Gift Row` `1262:82229`, 목록의 `받음` 칩은 `Status Chip` `1262:84907`, 편지의 바닥 단추는 `Button` `113:313`(Medium)이다. 헤더 단추는 `Primary Navigation` `208:542` 의 mail-button(`Icon / Mail` `907:578`, `Show Dot`).
 
 ## 남은 일
