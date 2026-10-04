@@ -12,6 +12,7 @@ import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { rewardPokemon, achievementDefs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
 import { megaOf, megaChoices, shownSpecies } from "../dex/mega.js";
 import { BOX_RULES } from "../box/rules.js";
+import { boxName } from "../box/boxes.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { PARTY_RULES } from "../party/rules.js";
 import { SHOP_RULES } from "../shop/rules.js";
@@ -223,9 +224,9 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart) };
   });
 
-  const boxes: BoxView[] = save.boxes.map((b) => ({
+  const boxes: BoxView[] = save.boxes.map((b, i) => ({
     id: b.id,
-    name: b.name,
+    name: boxName(b, i),
     used: b.slots.filter((x) => x !== null).length,
     size: boxSize,
     slots: b.slots.map((id) => {

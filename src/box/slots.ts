@@ -4,7 +4,7 @@
 // 개체의 값은 건드리지 않는다. 박스는 어느 칸에 누가 있는지만 안다.
 import { profileOf } from "../dex/species.js";
 import { BOX_RULES } from "./rules.js";
-import { pushBox } from "./boxes.js";
+import { boxName, defaultBoxName, pushBox } from "./boxes.js";
 import type { BoxV3, PetV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 
@@ -132,11 +132,12 @@ export function moveToBox(boxes: BoxV3[], from: BoxSpot, boxIndex: number): { ok
   return res.ok ? { ok: true, spot: { boxIndex, slotIndex } } : res;
 }
 
-// 박스 이름 — 앞뒤 공백을 지우고 nameMax 글자로 자른다. 비면 기본 이름(박스 N)으로 돌아간다
+// 박스 이름 — 앞뒤 공백을 지우고 nameMax 글자로 자른다. 비우거나 기본 이름이면 "" 를 저장해 자리 번호를 따른다(프리셋과 같다).
+// 돌려주는 값은 화면 이름이다 (94 항목 9-5-5)
 export function renameBox(box: BoxV3, name: string, boxIndex: number): string {
   const next = [...name.trim()].slice(0, BOX_RULES.nameMax).join("");
-  box.name = next || `박스 ${boxIndex + 1}`;
-  return box.name;
+  box.name = next === defaultBoxName(boxIndex) ? "" : next;
+  return boxName(box, boxIndex);
 }
 
 const validSlot = (box: BoxV3, i: number): boolean => Number.isInteger(i) && i >= 0 && i < box.slots.length;

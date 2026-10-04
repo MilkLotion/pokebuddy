@@ -12,7 +12,7 @@ import { newPet } from "../../party/create";
 import { BOX_RULES } from "../../box/rules";
 import { SHOP_RULES } from "../../shop/rules";
 import { empty, normalize } from "../../save/v3";
-import { fillBoxes, newBox } from "../../box/boxes";
+import { boxName, fillBoxes, newBox } from "../../box/boxes";
 import type { SaveV3 } from "../../shared/save-v3";
 import { argsFromCommand } from "../../tx/args";
 import { createExecutor, type TxPorts } from "../../tx/executor";
@@ -116,6 +116,9 @@ check(() => {
   assert.strictEqual(BOX_RULES.nameMax, 12, "이름은 12자까지 (2026-10-01 사용자 결정)");
   assert.strictEqual(renameBox(s.boxes[0]!, "가".repeat(BOX_RULES.nameMax + 3), 0), "가".repeat(BOX_RULES.nameMax));
   assert.strictEqual(renameBox(s.boxes[1]!, "   ", 1), "박스 2", "비우면 기본 이름");
+  assert.strictEqual(s.boxes[1]!.name, "", "기본 이름은 저장하지 않는다 — 프리셋과 같다 (94 항목 9-5-5)");
+  assert.strictEqual(renameBox(s.boxes[1]!, "박스 2", 1), "박스 2");
+  assert.strictEqual(s.boxes[1]!.name, "", "기본 이름과 같은 글자도 비운다");
 });
 
 // ── 거래 명령 — 실행기를 거쳐 저장이 바뀐다 ──
@@ -173,7 +176,7 @@ check(() => {
   assert.strictEqual(max, 64);
   assert.strictEqual(s.boxes.length, start, "새 저장은 8개");
   assert.deepStrictEqual(s.boxes.map((b) => b.id), ["b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8"]);
-  assert.strictEqual(s.boxes[7]!.name, "박스 8");
+  assert.deepStrictEqual([s.boxes[7]!.name, boxName(s.boxes[7]!, 7)], ["", "박스 8"], "기본 이름은 저장하지 않고 자리 번호로 보인다 (94 항목 9-5-5)");
   // 모든 박스에 한 마리 이상 있어도 늘지 않는다
   for (let b = 0; b < start - 1; b += 1) s.boxes[b]!.slots[0] = `x${b}`;
   s.boxes[0]!.slots[1] = "y";
@@ -193,7 +196,7 @@ check(() => {
   const first = buyProduct(s, "box", T0, () => 0.5);
   assert.deepStrictEqual([first.ok, first.spent, first.balance, first.boxId], [true, price, price + 5, "b9"]);
   assert.strictEqual(s.boxes.length, 9);
-  assert.strictEqual(s.boxes[8]!.name, "박스 9");
+  assert.deepStrictEqual([s.boxes[8]!.name, boxName(s.boxes[8]!, 8)], ["", "박스 9"]);
   assert.ok(s.boxes[8]!.slots.every((x) => x === null), "새 박스는 비어 있다");
   assert.deepStrictEqual(boxBuyable(s.boxes), { ok: true, bought: 1, total: 56 });
   // 순서를 바꾼 뒤에 사도 식별자가 겹치지 않는다

@@ -14,9 +14,14 @@ export function nextBoxId(boxes: BoxV3[]): string {
   return `b${max + 1}`;
 }
 
-// 빈 박스 하나를 맨 뒤에 더한다. 상한은 보지 않는다 — 사는 쪽(src/box/slots.ts addBox)이 본다
+// 박스의 화면 이름 — 저장한 이름이 없으면 자리 번호의 기본 이름(박스 N). 순서를 바꾸면 기본 이름도 자리를 따른다.
+// 파티 프리셋 이름(src/party/presets.ts presetName)과 같은 규칙이다 (94 항목 9-5-5)
+export const defaultBoxName = (index: number): string => `박스 ${index + 1}`;
+export const boxName = (box: Pick<BoxV3, "name">, index: number): string => box.name || defaultBoxName(index);
+
+// 빈 박스 하나를 맨 뒤에 더한다. 상한은 보지 않는다 — 사는 쪽(src/box/slots.ts addBox)이 본다. 이름은 비워 두고 자리 번호로 보인다
 export function pushBox(boxes: BoxV3[]): BoxV3 {
-  const box = newBox(nextBoxId(boxes), `박스 ${boxes.length + 1}`);
+  const box = newBox(nextBoxId(boxes), "");
   boxes.push(box);
   return box;
 }
