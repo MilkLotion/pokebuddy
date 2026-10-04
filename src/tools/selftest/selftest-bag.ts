@@ -109,6 +109,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(s.pets[0]?.buffs[0]?.kind, "premium-food");
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.buffMs["premium-food"]);
   assert.equal(s.bag["premium-food"], 1, "하나 줄었다");
+  assert.deepStrictEqual([s.totals.fed, s.totals.played], [1, 0], "프리미엄먹이는 밥 주기 횟수에 든다 (94 항목 9-3-6)");
   process.stdout.write("(7) 프리미엄먹이 · 가득과 버프  ok\n");
 }
 
@@ -121,6 +122,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.toyBuffMs, "남은 시간을 장난감 지속시간으로 바꾼다");
   assert.equal(BAG_RULES.toyBuffMs, 2 * 60 * 60_000, "장난감 신남 2시간");
   assert.equal(s.bag.toy, undefined, "다 쓰면 가방에서 사라진다");
+  assert.deepStrictEqual([s.totals.fed, s.totals.played], [0, 1], "장난감은 놀아주기 횟수에 든다 (94 항목 9-3-6)");
   assert.equal(useItem(s, "toy", "p1").reason, "none-left");
   const giddy = seed({ buffs: [{ kind: "short-play", remainMs: 1000 }] }, { toy: 1 });
   assert.equal(useItem(giddy, "toy", "p1").ok, true);

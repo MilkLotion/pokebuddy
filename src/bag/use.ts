@@ -4,6 +4,7 @@
 // 기본먹이는 무료이며 무제한이라 가방에서 차감하지 않는다. 나머지는 하나씩 쓴다.
 // 진화용 도구는 여기서 다루지 않는다. 진화는 따로 계약이 있다.
 import { loadJson, type DexOptions } from "../dex/data.js";
+import { countCare } from "../dex/mega.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
@@ -92,7 +93,13 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       pet.fullness = item.effect === "fullness-full-buff" ? PET_RULES.statMax : Math.min(PET_RULES.statMax, pet.fullness + item.amount);
       pet.fullnessProgressMs = 0;
       pet.feedCooldownMs = BAG_RULES.feedCooldownMs;
-      if (item.effect === "fullness-full-buff") setBuff(pet, "premium-food");
+      if (item.effect === "fullness-full-buff") {
+        setBuff(pet, "premium-food");
+        // 프리미엄먹이는 밥 주기 횟수에 든다 — 메가진화 조건의 돌봄 횟수와 누적 기록(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6).
+        // 기본먹이는 밥 주기 명령(src/state/care.ts feedPet)이 센다 — 같은 길을 지나 여기서 세면 두 번이 된다
+        countCare(pet, opts);
+        save.totals.fed += 1;
+      }
       addAffinity(pet, BAG_RULES.feedAffinity);
       pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.feedMood);
       pet.daily.feeds += 1;
@@ -103,6 +110,9 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       addAffinity(pet, BAG_RULES.playAffinity);
       pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.playMood); // 장난감도 놀아주기다
       pet.daily.plays += 1;
+      // 장난감은 놀아주기 횟수에 든다 (2026-10-04 사용자 결정 "센다", 94 항목 9-3-6)
+      countCare(pet, opts);
+      save.totals.played += 1;
       return done({});
     }
     case "exp": {
