@@ -2367,12 +2367,15 @@ let tradeLoading = false;
 let tradeInput = ""; // 링크로 참가 칸에 붙여 넣은 글자
 let tradeCopied = false; // 링크 복사 직후 — 단추 글자를 바꾼다
 
-// 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다
-const TRADE_CLOSED: Record<string, [string, string]> = {
+// 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다. 열쇠는 서버의 닫힘 이유 한 벌(shared/names/online-codes.ts)이다
+const TRADE_CLOSED: Record<TradeCloseReason, [string, string]> = {
   guest_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
   host_left: ["친구가 교환을 닫았어요", "새 링크로 다시 시작해 주세요"],
   expired: ["링크가 만료됐어요", "참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요"],
-} satisfies Record<TradeCloseReason, [string, string]>;
+};
+// 서버가 모르는 글자를 보낼 수 있다 — 표에 있는 이유만 글을 돌려준다
+const tradeClosedText = (reason: string | null): [string, string] | null =>
+  reason !== null && Object.hasOwn(TRADE_CLOSED, reason) ? TRADE_CLOSED[reason as TradeCloseReason] : null;
 const TRADE_LOCAL: Record<string, string> = {
   single: "단일 포켓몬은 교환할 수 없어요",
   locked: "확정한 포켓몬은 바꿀 수 없어요",
@@ -2737,7 +2740,7 @@ function drawTradeDialog(): void {
       : ((f) => [f.text, f.detail ?? ""] as [string, string])(failTextOf(err.code, "trade"));
   if (fail && t.phase !== "trading") out.appendChild(alertBox("bad", fail[0], fail[1]));
   else if (!fail && t.phase === "closed") {
-    const text = TRADE_CLOSED[t.closedReason ?? ""] ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
+    const text = tradeClosedText(t.closedReason) ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
     out.appendChild(alertBox("bad", text[0], text[1]));
   }
   if (t.phase === "trading") drawTradeOffer(t, out, fail);
