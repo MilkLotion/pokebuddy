@@ -9,6 +9,7 @@
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import { boxRoom } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
+import { hasObtained } from "../dex/record.js";
 import { isSingleEgg } from "../dex/obtain.js";
 import { addNewPet } from "../party/create.js";
 import { canGiveEgg, eggBonus, newEgg } from "./pool.js";
@@ -60,7 +61,7 @@ export function openEgg(save: SaveV3, eggId: string, now: number, rand: Rand, op
   }
 
   const single = isSingleEgg(egg.kind, opts);
-  const candidates = single ? egg.candidates.filter((s) => !save.dex.obtained.includes(s)) : egg.candidates;
+  const candidates = single ? egg.candidates.filter((s) => !hasObtained(save, s)) : egg.candidates;
   const picked = pickHatch(candidates, rand, opts);
   if (!picked) return { ok: false, reason: "no-candidate" };
   // 모습이 여럿인 종(배쓰나이)은 종·이로치 다음에 모습을 뽑는다 — 서버 재계산(src/verify/save-rules.ts rollEgg)과 같은 순서

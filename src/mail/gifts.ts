@@ -7,6 +7,7 @@
 //   넣은 편지 id 는 save.mail.applied 에 남긴다. 같은 편지는 두 번 넣지 않는다(서버가 끊김 복구로 같은 선물을 다시 돌려줘도)
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
 import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
+import { hasObtained } from "../dex/record.js";
 import { boxRoom } from "../box/slots.js";
 import { hasProfile } from "../dex/species.js";
 import { addNewPet } from "../party/create.js";
@@ -68,7 +69,7 @@ function pokemonCounts(save: SaveV3, gifts: readonly Gift[], opts?: DexOptions):
     if (g.kind !== "pokemon") continue;
     if (!singles.has(g.species)) give.set(g, g.count);
     else {
-      give.set(g, save.dex.obtained.includes(g.species) || taken.has(g.species) ? 0 : 1);
+      give.set(g, hasObtained(save, g.species) || taken.has(g.species) ? 0 : 1);
       taken.add(g.species);
     }
   }

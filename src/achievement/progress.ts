@@ -1,5 +1,6 @@
 // 업적 조건의 지금 값과 진행도 — 조건의 뜻은 src/achievement/defs.ts 머리말
 import { type DexOptions } from "../dex/data.js";
+import { hasObtained } from "../dex/record.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
@@ -50,7 +51,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
       for (let d = cond.from; d <= cond.to; d += 1) if (nums.has(d)) n += 1;
       return n;
     }
-    case "species": return cond.species.filter((s) => save.dex.obtained.includes(s)).length;
+    case "species": return cond.species.filter((s) => hasObtained(save, s)).length;
     case "shiny": return save.dex.shinyObtained.length;
     case "evolve": return save.counts.evolved;
     case "mega": return save.dex.megaOpened?.length ?? 0;

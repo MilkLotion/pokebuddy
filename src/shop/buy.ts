@@ -10,6 +10,7 @@
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
 import { addBox, boxBuyable } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
+import { hasUnlocked } from "../dex/record.js";
 import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { addItem, bagRoomOf } from "../bag/items.js";
 import { openSlot, presetSlots } from "../party/slots.js";
@@ -101,7 +102,7 @@ export function buyStateOf(save: SaveV3, productId: string, opts?: DexOptions): 
     return { price, many, room: Math.min(byPoints, eggRoomOf(save, product.ref, opts)) };
   }
   if (product?.kind === "species") {
-    if (!save.dex.unlocked.includes(product.ref)) return fail("not-unlocked");
+    if (!hasUnlocked(save, product.ref)) return fail("not-unlocked");
     if (!checkNewPetRoom(save, "party-first").ok) return fail("box-full");
   }
   if (product?.kind === "tool") {
