@@ -1,4 +1,4 @@
-// 계정 입력 규칙 — 서버 판정(src/online/account.ts), 설정창 안내(src/renderer/manage/manage.ts), 실패 문구(./fail-text.ts)가 같은 값을 쓴다.
+// 계정 입력 규칙 — 서버 판정(src/online/account.ts), 설정창 안내(src/renderer/manage/account.ts), 실패 문구(./fail-text.ts)가 같은 값을 쓴다.
 // 렌더러는 shared 만 읽으므로 여기 둔다. 서버(supabase)의 아이디 검사는 SQL 쪽에 따로 있다
 export const ACCOUNT_RULES = {
   usernameMin: 4, // 아이디 — 영문 소문자로 시작, 소문자·숫자·_
