@@ -136,5 +136,5 @@ export type CloudErrorCode = CloudCode | SessionCode;
 export type MailReplyCode = MailCode | TradeCode | Reason;
 
 // 교환이 닫힌 까닭 — 서버가 trade_channels.closed_reason 에 적는 글자의 사본이다 (supabase/migrations/20260927100000_trade.sql)
-export const TRADE_CLOSE_REASONS = ["host_left", "guest_left", "expired"] as const;
+const TRADE_CLOSE_REASONS = ["host_left", "guest_left", "expired"] as const;
 export type TradeCloseReason = (typeof TRADE_CLOSE_REASONS)[number];

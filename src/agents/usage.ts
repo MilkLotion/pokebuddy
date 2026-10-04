@@ -17,7 +17,7 @@ export interface UsageWeights {
   cacheRead: number;
   cacheWrite: number;
 }
-export const DEFAULT_WEIGHTS: Readonly<UsageWeights> = { in: 1, out: 1, cacheRead: 0.1, cacheWrite: 1 };
+const DEFAULT_WEIGHTS: Readonly<UsageWeights> = { in: 1, out: 1, cacheRead: 0.1, cacheWrite: 1 };
 
 export interface SessionUsage {
   sessionId: string;

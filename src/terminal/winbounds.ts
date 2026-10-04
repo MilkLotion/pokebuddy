@@ -12,8 +12,8 @@ import path from "node:path";
 import { createLineHelper } from "./line-helper";
 import type { HelperCommand, HelperInfo, HelperReply, HelperWindow, LineHelper, LineHelperOptions } from "./types";
 
-export const HELPER_TIMEOUT_MS = 2000; // 답 한 번을 기다리는 시간
-export const HELPER_START_TIMEOUT_MS = 20000; // 막 띄운 serve 헬퍼의 첫 답 — PowerShell 기동·C# 컴파일이 낀다
+const HELPER_TIMEOUT_MS = 2000; // 답 한 번을 기다리는 시간
+const HELPER_START_TIMEOUT_MS = 20000; // 막 띄운 serve 헬퍼의 첫 답 — PowerShell 기동·C# 컴파일이 낀다
 
 // 헬퍼 실행 명령 — mac 은 컴파일된 Swift, Windows 는 PowerShell. 그 밖의 플랫폼·파일 없음이면 null (추적 수단 없음)
 // env.POKEBUDDY_WINBOUNDS 로 다른 실행 파일을 가리킬 수 있다 (테스트가 실제 헬퍼를 건드리지 않도록)

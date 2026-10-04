@@ -100,7 +100,7 @@ export const commandNamesWhere = (flag: CommandFlag): AnyCommandName[] =>
   (Object.keys(COMMANDS) as AnyCommandName[]).filter((name) => hasCommandFlag(name, flag));
 
 // 명령을 보낸 곳
-export const COMMAND_SOURCES = ["menu", "tray", "settings", "cli", "vscode", "pet"] as const;
+const COMMAND_SOURCES = ["menu", "tray", "settings", "cli", "vscode", "pet"] as const;
 export type CommandSource = (typeof COMMAND_SOURCES)[number];
 export const isCommandSource = (v: unknown): v is CommandSource => typeof v === "string" && (COMMAND_SOURCES as readonly string[]).includes(v);
 

@@ -15,7 +15,7 @@ import { isInParty } from "../party/presets.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export const BASIC_FOOD = "basic-food";
+const BASIC_FOOD = "basic-food";
 
 export type PlayFailure = ReasonOf<"no-pet" | "cooldown">;
 

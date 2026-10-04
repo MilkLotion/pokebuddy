@@ -13,7 +13,7 @@
 // 기록: worklog/records/stage-visibility/record.md
 import { BrowserWindow } from "electron";
 
-export const KEEP_ON_TOP_MS = 1000;
+const KEEP_ON_TOP_MS = 1000;
 
 export interface Raisable {
   raise(): void;

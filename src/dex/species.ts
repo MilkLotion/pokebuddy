@@ -9,7 +9,7 @@ type Defaults = Record<string, Stored>;
 type Overrides = Record<string, Partial<Stored>>;
 
 // 표에 없는 종의 값 — build-species.js 의 DEFAULT 와 같다
-export const DEFAULT_PROFILE: Readonly<Omit<Stored, "dex">> = {
+const DEFAULT_PROFILE: Readonly<Omit<Stored, "dex">> = {
   growthRate: "medium-fast",
   bst: 0,
   stage: 1,

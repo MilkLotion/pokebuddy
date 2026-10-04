@@ -8,7 +8,7 @@ import type { SaveV3 } from "../../shared/save-v3";
 import { gainOf } from "../../state/settings";
 import { SOUND_RULES } from "../../state/rules";
 
-export const CRY_RULES = { gapMs: 1500 } as const;
+const CRY_RULES = { gapMs: 1500 } as const;
 
 export interface CryDeps {
   cries(): Cries; // 울음소리 받기·캐시 — 처음 울 때 부른다 (src/main/art/services.ts 한 벌)

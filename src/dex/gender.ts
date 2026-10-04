@@ -9,9 +9,9 @@ import type { DexOptions } from "./data";
 import { profileOf } from "./species.js";
 
 // 성비 분모 — genderRate 는 암컷 비율을 8 분의 몇으로 적는다. -1 은 무성
-export const GENDER_RATE_MAX = 8;
+const GENDER_RATE_MAX = 8;
 
-export const GENDERS: readonly Gender[] = ["male", "female", "none"];
+const GENDERS: readonly Gender[] = ["male", "female", "none"];
 export const isGender = (v: unknown): v is Gender => typeof v === "string" && (GENDERS as readonly string[]).includes(v);
 
 // 종이 가질 수 있는 성별이 하나뿐이면 그것 — 무성·수컷만·암컷만. 둘 다 가능하면 null
