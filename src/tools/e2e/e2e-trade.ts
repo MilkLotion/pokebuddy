@@ -222,7 +222,7 @@ async function ui(server: Server): Promise<void> {
   await UA.ui("open");
   await opened(UA);
   assert.equal(await UA.press("박스"), true, "박스 탭");
-  assert.equal(await UA.press("교환"), true, "교환 단추");
+  assert.equal(await UA.pressBoxMenu("교환"), true, "교환 단추");
   await until(() => has(UA, ["친구 교환", "공유 채널 만들기", "링크로 참가", "교환 규칙"]), "U1 교환 모달 첫 화면");
   await shot(UA, "trade-base.png");
   checks.push("U1 박스 `교환` 단추 → 교환 모달 첫 화면(공유 채널 만들기·링크로 참가·규칙)");

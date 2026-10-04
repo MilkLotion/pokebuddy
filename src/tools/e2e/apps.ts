@@ -48,6 +48,7 @@ export interface E2eApp {
   dom(js: string): Promise<Json>;
   text(): Promise<string>;
   press(label: string): Promise<boolean>;
+  pressBoxMenu(label: string): Promise<boolean>;
   shot(file: string): Promise<Json>;
   has(words: string[]): Promise<boolean>;
   fill(id: string, value: string): Promise<boolean>;
@@ -177,6 +178,12 @@ export function makeApp(name: string, server: Server, pets: PetSpec[], extraEnv:
   app.text = () => app.dom("document.body.innerText");
   // 글자가 같은 단추를 누른다. 막힌 단추면 false
   app.press = (label) => app.dom(`(() => { const b = [...document.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)}); if (!b || b.disabled) return false; b.click(); return true; })()`);
+  // 박스 탭 머리의 `⋯` 메뉴를 열고 항목을 누른다 — 박스 순서·교환은 이 메뉴 안에 있다(메뉴가 닫혀 있으면 항목 단추가 DOM 에 없다)
+  app.pressBoxMenu = async (label) => {
+    const opened = await app.dom(`(() => { const t = document.querySelector(".box-menu-toggle"); if (!t) return false; if (!document.querySelector(".sort-menu")) t.click(); return true; })()`);
+    if (opened !== true) return false;
+    return until(() => app.press(label), `[${name}] 박스 메뉴 ${label}`).then(() => true, () => false);
+  };
   app.shot = (file) => app.ui("shot", { file });
   app.has = async (words) => { const t = await app.text(); return words.every((w) => t.includes(w)); };
   app.fill = (id, value) => app.dom(`(() => { const i = document.getElementById(${JSON.stringify(id)}); if (!i) return false; i.value = ${JSON.stringify(value)}; i.dispatchEvent(new Event('input')); return true; })()`);

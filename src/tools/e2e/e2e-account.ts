@@ -97,7 +97,7 @@ async function run(): Promise<void> {
   // AC0-1 익명은 교환하지 못한다 — 교환 모달에 로그인 안내, 누르면 계정 탭. 명령은 login-required
   await N.closeDialog();
   assert.equal(await N.press('박스'), true, 'AC0-1 박스 탭');
-  assert.equal(await N.press('교환'), true, 'AC0-1 교환 단추');
+  assert.equal(await N.pressBoxMenu('교환'), true, 'AC0-1 교환 단추');
   await until(() => N.has(['친구 교환', '교환은 로그인해야 할 수 있어요']), 'AC0-1 교환 모달 로그인 안내');
   assert.equal(await N.has(['링크 만들기']), false, 'AC0-1 링크 만들기 없음');
   await N.shot(path.join(shots, 'trade-login-required.png'));
