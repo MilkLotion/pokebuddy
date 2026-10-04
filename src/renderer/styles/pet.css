@@ -192,6 +192,10 @@
 .ball-toggle.closed {
   background: var(--ball-closed) center / 28px 28px no-repeat;
 }
+/* 처리 중 — 볼 그림 자리에 점 세 개 (Figma `Visibility Marker` State=Busy, device.css) */
+.ball-toggle[aria-busy="true"] {
+  background: none;
+}
 /* 상태 배지 — 초상·이름 줄의 오른쪽 아래(사이 4). 점 6px + 10px 글자, 점은 왼쪽 정렬.
    Figma `Debuff Badge` `126:1065` — 배고픔 주황·매우 배고픔 빨강·버프 초록 */
 .status {
@@ -283,6 +287,13 @@
 .key.light {
   background: var(--screen);
   color: var(--ink);
+}
+/* 처리 중 점 색 — 단추 글자 색 (Figma `Device Button` State=Busy, device.css) */
+.key {
+  --busy-dot: var(--inverse);
+}
+.key.light {
+  --busy-dot: var(--ink);
 }
 .key:hover:not(:disabled) {
   background: #56424a;

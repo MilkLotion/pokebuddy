@@ -28,7 +28,8 @@ import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { structureOf } from "../ui/live-draw.js";
-import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks } from "./command.js";
+import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks, whenSlow } from "./command.js";
+import { partyBusyKey, petBusyKey } from "../../shared/device-busy.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
@@ -180,6 +181,7 @@ let holdAt: { x: number; y: number } | null = null;
 let swapMode = false;
 let partyHold: string | null = null; // 파티 기기 창에서 든 파티 개체 — 박스 칸이나 다른 파티 칸을 누르면 거기 놓는다
 let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창의 머리 줄에 보인다
+let partyBusy: string | null = null; // 0.3초 넘게 답이 없는 칸·칩의 열쇠 — 파티 기기 창이 그것만 점 세 개로
 // 파티 기기 창 연결 — 교체 화면인 동안 연다 (partyDeviceBuild)
 const partyLink = createDeviceLink<PartyDeviceInput>({
   build: partyDeviceBuild,
@@ -1367,8 +1369,17 @@ function closeSwap(): void {
 }
 
 // 교체 명령 — 실패 이유는 파티 기기 창의 머리 줄에 보인다
-async function swapSend(cmd: string, target: string, extra: Record<string, unknown>): Promise<void> {
+// - pressedKey: 파티 기기 창에서 누른 칸·칩. 답이 늦으면 그것만 처리 중 (94 2-1). 박스 탭 칸은 sendCommand 의 처리 중이 맡아 null
+async function swapSend(cmd: string, target: string, extra: Record<string, unknown>, pressedKey: string | null = null): Promise<void> {
+  const settle = pressedKey
+    ? whenSlow(() => {
+        partyBusy = pressedKey;
+        syncPartyDevice();
+      })
+    : () => {};
   const ok = await sendCommand(cmd, target, extra, { keepOpen: true });
+  settle();
+  partyBusy = null;
   partyNote = ok ? "" : ui.notice;
   ui.notice = "";
   draw();
@@ -1377,7 +1388,7 @@ async function swapSend(cmd: string, target: string, extra: Record<string, unkno
 // 파티 기기 창에 보낼 고른 값 — 교체 화면이 아니면 null(닫는다). 모델은 메인이 만든다 (src/view/device-party.ts)
 function partyDeviceBuild(): PartyDeviceInput | null {
   if (!swapMode || ui.tab !== "box" || !ui.view) return null;
-  return { heldPetId: partyHold, heldFromBox: !!boxHold, notice: partyNote };
+  return { heldPetId: partyHold, heldFromBox: !!boxHold, notice: partyNote, busy: partyBusy };
 }
 
 function syncPartyDevice(): void {
@@ -1393,7 +1404,7 @@ function onPartyAction(action: PartyDeviceAction): void {
     const p = v.party.preset;
     endHold();
     partyHold = null;
-    if (action.index !== p.index && action.index < p.count) void swapSend("party.preset", "", { preset: action.index });
+    if (action.index !== p.index && action.index < p.count) void swapSend("party.preset", "", { preset: action.index }, partyBusyKey(action));
     else draw();
     return;
   }
@@ -1403,7 +1414,7 @@ function onPartyAction(action: PartyDeviceAction): void {
   if (h) {
     // 박스 개체를 든 채 파티 칸을 눌렀다
     endHold();
-    void swapSend(slot.pet ? "party.swap" : "party.place", h.petId, { slotIndex: slot.index });
+    void swapSend(slot.pet ? "party.swap" : "party.place", h.petId, { slotIndex: slot.index }, partyBusyKey(action));
     return;
   }
   if (partyHold) {
@@ -1411,7 +1422,7 @@ function onPartyAction(action: PartyDeviceAction): void {
     const held = partyHold;
     partyHold = null;
     if (slot.pet?.id === held) draw();
-    else void swapSend("party.move", held, { toSlot: slot.index });
+    else void swapSend("party.move", held, { toSlot: slot.index }, partyBusyKey(action));
     return;
   }
   if (slot.pet) {
@@ -4027,6 +4038,7 @@ const petLink = createDeviceLink<PetDeviceInput>({
 });
 // 파티 상세 옆 도감 기기 창 — `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
 let dexBeside = false;
+let petBusy: string | null = null; // 0.3초 넘게 답이 없는 기기 창 단추의 열쇠 — 기기 창이 그것만 점 세 개로
 let dexBesideSent: string | null = null; // 마지막으로 보낸 종
 let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
@@ -4038,7 +4050,7 @@ function petDeviceBuild(): PetDeviceInput | null {
     window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
     dexBesideSent = pet.species;
   }
-  return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside };
+  return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside, busy: petBusy };
 }
 
 function syncPetDevice(): void {
@@ -4080,7 +4092,7 @@ function onPetAction(action: PetDeviceAction): void {
   const id = ui.detailPet;
   if (!id || action.petId !== id) return; // 기기 창이 다른 개체를 보이던 때 누른 것 — 버린다
   if (action.kind === "cmd") {
-    void sendCommand(action.cmd, id, action.args);
+    void petSend(action, id);
     return;
   }
   if (action.kind === "tutorial") {
@@ -4094,6 +4106,19 @@ function onPetAction(action: PetDeviceAction): void {
   if (action.dialog === "evolve") open({ kind: "evolve", petId: id });
   else if (action.dialog === "mega") open({ kind: "mega", petId: id });
   else open({ kind: "nature", petId: id });
+}
+
+// 기기 창 단추의 명령 — 답이 늦으면 누른 단추만 처리 중 (94 2-1)
+async function petSend(action: PetDeviceAction & { kind: "cmd" }, id: string): Promise<void> {
+  const settle = whenSlow(() => {
+    petBusy = petBusyKey(action);
+    syncPetDevice();
+  });
+  await sendCommand(action.cmd, id, action.args);
+  settle();
+  if (petBusy === null) return;
+  petBusy = null;
+  syncPetDevice();
 }
 
 // ── 모달 · 진화 확인 ───────────────────────────────────────────────────────────

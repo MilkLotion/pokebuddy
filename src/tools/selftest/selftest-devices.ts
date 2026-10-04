@@ -8,6 +8,7 @@ import { candyMax, candyResult } from "../../bag/preview";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import type { BagDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
+import { partyBusyKey, petBusyKey } from "../../shared/device-busy";
 import { bagDeviceModel } from "../../view/device-bag";
 import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
@@ -139,10 +140,13 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (7) 파티 교체 — 든 개체가 파티에서 빠졌으면 놓고, 박스 개체를 든 동안 빈 칸이 놓을 칸이다
 {
-  const gone = partyDeviceModel(v, { heldPetId: "p3", heldFromBox: false, notice: "" });
+  const gone = partyDeviceModel(v, { heldPetId: "p3", heldFromBox: false, notice: "", busy: null });
   assert.equal(gone.input.heldPetId, null);
   assert.ok(gone.model.slots.every((s) => !s.target), "든 것이 없으면 놓을 칸이 없다");
-  const held = partyDeviceModel(v, { heldPetId: "p1", heldFromBox: false, notice: "실패" });
+  assert.equal(gone.model.busy, null);
+  const held = partyDeviceModel(v, { heldPetId: "p1", heldFromBox: false, notice: "실패", busy: partyBusyKey({ kind: "preset", index: 1 }) });
+  assert.equal(held.model.busy, "preset:1", "처리 중 열쇠는 그대로 모델로 간다 (94 2-1)");
+  assert.notEqual(partyBusyKey({ kind: "slot", index: 1 }), partyBusyKey({ kind: "preset", index: 1 }), "칸과 칩의 열쇠는 다르다");
   assert.deepEqual(held.model.slots.slice(0, 3).map((s) => [s.state, s.held, s.target, s.art]), [["pokemon", true, false, "portrait:pikachu"], ["pokemon", false, false, "portrait:charmander:shiny"], ["locked", false, false, null]]);
   assert.equal(held.model.notice, "실패");
   assert.equal(held.model.presets.length, v.party.preset.max);
@@ -150,7 +154,19 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (8) 파티 상세 — 자리 글자, 튜토리얼은 파티 개체만
 {
-  const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", dexOpen: false })?.model;
+  const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", dexOpen: false, busy: null })?.model;
+  // 처리 중 열쇠 — 명령 단추만 열쇠가 있고, 볼 토글은 꺼내기·넣기가 같은 열쇠다 (94 2-1)
+  assert.equal(petDeviceModel(v, { petId: "p1", notice: "", dexOpen: false, busy: "feed" })?.model.busy, "feed");
+  assert.deepEqual(
+    [
+      petBusyKey({ petId: "p1", kind: "cmd", cmd: "feed" }),
+      petBusyKey({ petId: "p1", kind: "cmd", cmd: "party.show" }),
+      petBusyKey({ petId: "p1", kind: "cmd", cmd: "party.hide" }),
+      petBusyKey({ petId: "p1", kind: "cmd", cmd: "pet.set", args: { size: 4 } }),
+      petBusyKey({ petId: "p1", kind: "dialog", dialog: "evolve" }),
+    ],
+    ["feed", "ball", "ball", "size:4", null],
+  );
   assert.deepEqual([where("p1")?.where, where("p1")?.slotIndex, where("p1")?.tutorial], ["파티 1번 · 나와 있음", 0, v.detailTutorial]);
   assert.equal(where("p2")?.where, "파티 2번 · 볼 안");
   assert.deepEqual([where("p3")?.where, where("p3")?.inParty, where("p3")?.tutorial], [`${v.boxes[0]?.name} · 보관 중`, false, false]);

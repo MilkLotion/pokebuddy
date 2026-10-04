@@ -29,6 +29,7 @@ export interface PetDeviceOpen {
   dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다 — `도감 보기` 줄을 톤 배경으로
   careLine: { title: string; desc: string }; // `포인트 적립` 줄 — 제목과 설명(보너스 내역)
   bars: { affinity: string; fullness: string; mood: string }; // 막대 오른쪽 글자 — "80" · "55 · 보통" · "60 · 좋음". 시간으로만 바뀌어 1초 시계가 글자만 고친다
+  busy: string | null; // 처리 중인 단추의 열쇠(src/shared/device-busy.ts petBusyKey) — 그 단추만 점 세 개
 }
 
 export interface PetDeviceView extends PetDeviceOpen {
@@ -114,6 +115,7 @@ export interface PartyDeviceOpen {
   slots: PartyDeviceSlot[];
   presets: { index: number; owned: boolean; active: boolean }[]; // 늘 max 개. 사지 않은 프리셋은 자물쇠 칩
   notice: string; // 마지막 실패 문구. 머리 줄의 이름 옆 자리에 보인다 — 줄을 끼우지 않는다
+  busy: string | null; // 처리 중인 칸·칩의 열쇠(src/shared/device-busy.ts partyBusyKey) — 그것만 점 세 개
 }
 
 export interface PartyDeviceView extends PartyDeviceOpen {
@@ -154,10 +156,12 @@ export interface PartyDeviceInput {
   heldPetId: string | null; // 파티 기기 창에서 든 파티 개체. 파티에서 빠졌으면 놓는다
   heldFromBox: boolean; // 박스 개체를 들었다 — 빈 칸이 놓을 칸이 된다
   notice: string; // 마지막 교체 실패 — 머리 줄의 이름 옆 자리
+  busy: string | null; // 0.3초 넘게 답이 없는 칸·칩의 열쇠. 없으면 null
 }
 
 export interface PetDeviceInput {
   petId: string;
   notice: string; // 마지막 실패 문구
   dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다
+  busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
 }

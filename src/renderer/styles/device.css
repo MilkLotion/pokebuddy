@@ -68,3 +68,48 @@ button {
 .close:hover {
   background: rgba(0, 0, 0, 0.15);
 }
+/* 처리 중 — 답이 늦은 단추·칸 하나 (파티 상세·파티 기기 창, Figma 각 부품의 State=Busy, 2026-10-04 사용자 결정 94 2-1).
+   폭과 바탕은 그대로 두고 내용 대신 가운데에 점 세 개가 차례로 밝아진다. 점 색은 글자 색(--busy-dot 로 바꾼다).
+   설정창 widgets.css 의 처리 중과 같은 점이다. 상점·가방의 주 단추는 각 창 CSS 의 .go.is-busy 가 맡는다 */
+button[aria-busy="true"] {
+  position: relative;
+  pointer-events: none;
+  cursor: progress;
+  color: transparent !important;
+}
+button[aria-busy="true"] > * {
+  visibility: hidden;
+}
+button[aria-busy="true"]::after {
+  --on: var(--busy-dot, var(--ink));
+  --off: color-mix(in srgb, var(--busy-dot, var(--ink)) 35%, transparent);
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--on);
+  box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+  animation: busy-dots 0.9s step-end infinite;
+}
+@keyframes busy-dots {
+  0% {
+    background: var(--off);
+    box-shadow: -7px 0 0 var(--on), 7px 0 0 var(--off);
+  }
+  33.333% {
+    background: var(--on);
+    box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+  }
+  66.667% {
+    background: var(--off);
+    box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--on);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button[aria-busy="true"]::after {
+    animation: none;
+  }
+}

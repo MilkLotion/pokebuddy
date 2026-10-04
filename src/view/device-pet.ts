@@ -35,6 +35,6 @@ export function petDeviceModel(v: Snapshot, given: PetDeviceInput): DeviceResult
   const where = inParty ? `파티 ${slot + 1}번 · ${pet.hidden ? "볼 안" : "나와 있음"}` : `${box?.name ?? "박스"} · 보관 중`;
   return {
     input,
-    model: { pet, where, inParty, slotIndex: slot, sizeLevels: v.sizeLevels ?? 5, notice: input.notice, tutorial: inParty && v.detailTutorial, dexOpen: input.dexOpen, careLine: careLineOf(pet, inParty), bars: barsOf(pet) },
+    model: { pet, where, inParty, slotIndex: slot, sizeLevels: v.sizeLevels ?? 5, notice: input.notice, tutorial: inParty && v.detailTutorial, dexOpen: input.dexOpen, busy: input.busy, careLine: careLineOf(pet, inParty), bars: barsOf(pet) },
   };
 }

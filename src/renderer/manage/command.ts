@@ -80,6 +80,12 @@ function busyLater(): () => void {
   };
 }
 
+// 기기 창의 단추처럼 이 창에 없는 것의 처리 중 — 답이 BUSY_AFTER_MS 안에 오지 않으면 onSlow 를 부른다. 돌려주는 함수를 부르면 예약을 거둔다
+export function whenSlow(onSlow: () => void): () => void {
+  const timer = setTimeout(onSlow, BUSY_AFTER_MS);
+  return () => clearTimeout(timer);
+}
+
 // 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
 export async function sendCommand(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
   const h = hooksOf();

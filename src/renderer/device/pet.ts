@@ -15,6 +15,7 @@ import { createCryPlayer } from "../ui/cry.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { createDeviceFrame } from "./device-frame.js";
+import { petBusyKey } from "../../shared/device-busy.js";
 import { structureOf } from "../ui/live-draw.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
@@ -51,6 +52,10 @@ function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
 type ActBody = PetDeviceAction extends infer A ? (A extends PetDeviceAction ? Omit<A, "petId"> : never) : never;
 let shownPetId = "";
 const act = (action: ActBody): void => api.act({ ...action, petId: shownPetId } as PetDeviceAction);
+// 처리 중 — 설정창이 실어 보낸 열쇠와 같은 단추만 점 세 개 (94 2-1, src/shared/device-busy.ts)
+function markBusy(b: HTMLButtonElement, busy: string | null, body: ActBody): void {
+  if (busy !== null && busy === petBusyKey({ ...body, petId: shownPetId } as PetDeviceAction)) b.setAttribute("aria-busy", "true");
+}
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 성격 부여·저장은 그대로다.
 // 관리 창 src/renderer/manage/manage.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
@@ -250,7 +255,9 @@ function renderBody(v: PetDeviceView): void {
   screen.appendChild(entry);
   if (v.inParty) {
     const action = pet.hidden ? "꺼내기" : "볼에 넣기";
-    const ball = buttonEl(`ball-toggle ${pet.hidden ? "closed" : "open"}`, "", () => act({ kind: "cmd", cmd: pet.hidden ? "party.show" : "party.hide" }));
+    const ballBody: ActBody = { kind: "cmd", cmd: pet.hidden ? "party.show" : "party.hide" };
+    const ball = buttonEl(`ball-toggle ${pet.hidden ? "closed" : "open"}`, "", () => act(ballBody));
+    markBusy(ball, v.busy, ballBody);
     ball.dataset.tut = "detail-ball";
     ball.title = action;
     ball.setAttribute("aria-label", action);
@@ -284,6 +291,8 @@ function renderBody(v: PetDeviceView): void {
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
     const play = buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady);
     if (!boxed) play.dataset.live = "play";
+    markBusy(feed, v.busy, { kind: "cmd", cmd: "feed" });
+    markBusy(play, v.busy, { kind: "cmd", cmd: "play" });
     care.append(feed, play);
     if (boxed) care.title = "박스에 있는 포켓몬은 돌볼 수 없어요";
     device.appendChild(care);
@@ -319,6 +328,7 @@ function renderBody(v: PetDeviceView): void {
         if (n !== pet.size) act({ kind: "cmd", cmd: "pet.set", args: { size: n } });
       });
       b.setAttribute("aria-pressed", String(n === pet.size));
+      markBusy(b, v.busy, { kind: "cmd", cmd: "pet.set", args: { size: n } });
       sizes.appendChild(b);
     }
     const size = el("div", "group");

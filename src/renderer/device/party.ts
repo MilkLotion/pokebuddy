@@ -1,7 +1,8 @@
 // 파티 기기 창 — 교체 화면. 메인이 만들어 보낸 지금 프리셋의 파티 칸과 프리셋 칩을 그린다 (src/main/party-window.ts).
 // Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 기기 창 틀(device-frame.ts)이다. 바닥 줄은 두지 않는다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
-import type { PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
+import type { PartyDeviceAction, PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
+import { partyBusyKey } from "../../shared/device-busy.js";
 import { portraitImg } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
@@ -14,8 +15,15 @@ const api = window.pokebuddyParty;
 const frame = createDeviceFrame({ api, windowName: "party", fonts: DEVICE_FONTS.slice(0, 2) });
 const device = frame.device;
 
-function slotCell(s: PartyDeviceSlot): HTMLButtonElement {
-  const b = buttonEl("slot", "", () => api.act({ kind: "slot", index: s.index }));
+// 처리 중 — 설정창이 실어 보낸 열쇠와 같은 칸·칩만 점 세 개 (94 2-1, src/shared/device-busy.ts)
+function markBusy(b: HTMLButtonElement, busy: string | null, action: PartyDeviceAction): void {
+  if (busy !== null && busy === partyBusyKey(action)) b.setAttribute("aria-busy", "true");
+}
+
+function slotCell(s: PartyDeviceSlot, busy: string | null): HTMLButtonElement {
+  const action: PartyDeviceAction = { kind: "slot", index: s.index };
+  const b = buttonEl("slot", "", () => api.act(action));
+  markBusy(b, busy, action);
   if (s.state === "pokemon") {
     const face = el("div", "face");
     if (s.art) {
@@ -47,13 +55,15 @@ function render(v: PartyDeviceView): void {
   panel.appendChild(head);
 
   const slots = el("div", "slots");
-  for (const s of v.slots) slots.appendChild(slotCell(s));
+  for (const s of v.slots) slots.appendChild(slotCell(s, v.busy));
   panel.appendChild(slots);
 
   const presets = el("div", "presets");
   for (const p of v.presets) {
-    const b = buttonEl("", p.owned ? String(p.index + 1) : "", () => api.act({ kind: "preset", index: p.index }));
+    const action: PartyDeviceAction = { kind: "preset", index: p.index };
+    const b = buttonEl("", p.owned ? String(p.index + 1) : "", () => api.act(action));
     b.setAttribute("aria-pressed", String(p.active));
+    markBusy(b, v.busy, action);
     b.setAttribute("aria-label", p.owned ? `프리셋 ${p.index + 1}` : `프리셋 ${p.index + 1} · 사지 않음`);
     if (!p.owned) {
       b.replaceChildren(lockIconEl());

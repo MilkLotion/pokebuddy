@@ -29,6 +29,7 @@ export function partyDeviceModel(v: Snapshot, given: PartyDeviceInput): DeviceRe
       slots,
       presets: Array.from({ length: p.max }, (_, i) => ({ index: i, owned: i < p.count, active: i === p.index })),
       notice: input.notice,
+      busy: input.busy,
     },
   };
 }

@@ -218,6 +218,7 @@ export function partyDeviceOf(deps: DeviceArtDeps): DeviceSpec<PartyDeviceOpen, 
 const isText = (v: unknown): v is string => typeof v === "string" && v.length <= INPUT_LIMITS.noticeChars;
 const isResultLine = (v: unknown): boolean => v === null || (isRecord(v) && isText(v.lead) && isText(v.line));
 const isFlag = (v: unknown): v is boolean => typeof v === "boolean";
+const isBusyKey = (v: unknown): v is string | null => v === null || (typeof v === "string" && v.length <= 24); // 처리 중 열쇠 (src/shared/device-busy.ts)
 
 export function isBagInput(v: unknown): v is BagDeviceInput {
   if (!isRecord(v)) return false;
@@ -231,10 +232,10 @@ export function isShopInput(v: unknown): v is ShopDeviceInput {
 
 export function isPartyInput(v: unknown): v is PartyDeviceInput {
   if (!isRecord(v)) return false;
-  return (v.heldPetId === null || isShortId(v.heldPetId)) && isFlag(v.heldFromBox) && isText(v.notice);
+  return (v.heldPetId === null || isShortId(v.heldPetId)) && isFlag(v.heldFromBox) && isText(v.notice) && isBusyKey(v.busy);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.petId) && isText(v.notice) && isFlag(v.dexOpen);
+  return isShortId(v.petId) && isText(v.notice) && isFlag(v.dexOpen) && isBusyKey(v.busy);
 }
