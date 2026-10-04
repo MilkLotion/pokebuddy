@@ -1,5 +1,5 @@
 // 멈춤·안내 창의 화면 값 — 창마다 제목·본문·단추 글자와 Esc 단추, 알림 창에 보낼 단추 순서. 창은 메인이 띄운다 (src/main/windows/alert-ask.ts)
-// 창의 답을 무엇으로 읽을지는 메인이 정한다 (src/main/halt-dialog.ts)
+// 창의 답을 무엇으로 읽을지는 메인이 정한다 (src/main/app/halt-dialog.ts)
 // (예전 src/main/halt-dialog.ts 안에 있었다. 메인 레인 M8-5 에서 화면 값으로 옮겼다)
 import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
 import type { AlertView } from "../shared/model/overlays";

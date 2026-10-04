@@ -37,7 +37,7 @@
 | `src/agents` | 에이전트 감지와 사용량 | 보상 지급 | SC-11 |
 | `src/find` | 줍기 — 마리별로 조건을 채운 시간으로 주울지 판정, 결과 고르기(포인트·도구·진화용 도구·포켓몬), 반영과 최근 기록. 수치는 `rules.ts` | 저장 쓰기(주운 틱에 `src/tx/game.ts` `find` 가 쓴다), 1초 틱마다 굴림 호출과 깨어 있는 마리 판정(`src/main/app/ticks.ts` `clock`, 무대) | — |
 | `src/notify` | 알림 배너 줄 세우기, 같은 상태 한 번 규칙, 표시 순서 | 상태 판정 | SC-04, 05, 06, 10 |
-| `src/main` | 창, 트레이, 우클릭 메뉴, 명령 수신, 전역 시계(`clock.ts`) | 게임 규칙 계산, 배너 순서 | 전체 |
+| `src/main` | 창, 트레이, 우클릭 메뉴, 명령 수신, 전역 시계(`app/clock.ts`) | 게임 규칙 계산, 배너 순서 | 전체 |
 | `src/renderer` | 설정창, 놀이공간, 도감·파티 상세 기기 창 그리기 | 저장 접근 | 전체 |
 | `src/cli` | `pokebuddy game` 게임 명령 진입. 명령 통로 `mailbox` 로 보낸다 | 저장 쓰기 | SC-11 |
 | `src/hooks` | CLI 훅 이벤트를 세션별 상태 파일로 남긴다 | 게임 규칙 | SC-11 |
@@ -55,15 +55,15 @@
 부팅하면 `src/main/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
 로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
 세션 저장 `createSessionStorage`(`src/online/session-storage.ts`)는 `~/.claude/pokebuddy/online/session.bin`을 OS 키 저장소로 암호화한다. 키 저장소는 메인이 Electron `safeStorage`로 채운다(`src/main/services/vault.ts`). 저장 키도 같은 키 저장소를 쓴다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>.bak`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
-앱 업데이트는 `src/main/update/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/update/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다. 서버가 이 앱 버전을 거절하면(`CLOUD_UPDATE_REQUIRED`) 앱은 주기를 기다리지 않고 실행마다 한 번 바로 확인한다(`urgentStep`). 새 버전이 준비되면(`ready`·`manual`) `새 버전으로 바꿔야 해요` 알림 창을 실행마다 한 번 띄운다(`src/main/halt-dialog.ts` `askUpdateRequired`). `지금 다시 시작`(mac 수동은 `받기`)은 설정의 `다시 시작`과 같다. `나중에`(Esc)는 닫기만 하고 게임을 멈추지 않는다.
-두 PC 멈춤·저장 정보 분실·저장 잠김·이용 정지·업데이트 필요 창은 게임 디자인의 알림 창으로 띄운다(`src/main/windows/alert-window.ts`, `src/renderer/alert.html`). 테두리 없는 항상 위 창이 주 화면 가운데 위쪽에 뜬다. 단추 답·Esc(취소 단추)·시간 초과·밖에서 닫기의 뜻은 `src/main/halt-dialog.ts`가 정한다. 단추에는 처음 포커스를 두지 않아 Enter 로는 답하지 않는다(OS 대화상자는 Enter 가 0 번 단추였다). 알림 창이 3초 안에 그려지지 않거나 렌더러가 죽으면 OS 대화상자로 띄운다(`src/main/windows/alert-ask.ts`). 창의 글자는 `src/view/halt.ts`가 만든다. 보이기 전에 밖에서 닫히면(앱 종료) 닫힘으로 끝낸다.
-패치노트는 `src/main/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
+앱 업데이트는 `src/main/update/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/update/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다. 서버가 이 앱 버전을 거절하면(`CLOUD_UPDATE_REQUIRED`) 앱은 주기를 기다리지 않고 실행마다 한 번 바로 확인한다(`urgentStep`). 새 버전이 준비되면(`ready`·`manual`) `새 버전으로 바꿔야 해요` 알림 창을 실행마다 한 번 띄운다(`src/main/app/halt-dialog.ts` `askUpdateRequired`). `지금 다시 시작`(mac 수동은 `받기`)은 설정의 `다시 시작`과 같다. `나중에`(Esc)는 닫기만 하고 게임을 멈추지 않는다.
+두 PC 멈춤·저장 정보 분실·저장 잠김·이용 정지·업데이트 필요 창은 게임 디자인의 알림 창으로 띄운다(`src/main/windows/alert-window.ts`, `src/renderer/alert.html`). 테두리 없는 항상 위 창이 주 화면 가운데 위쪽에 뜬다. 단추 답·Esc(취소 단추)·시간 초과·밖에서 닫기의 뜻은 `src/main/app/halt-dialog.ts`가 정한다. 단추에는 처음 포커스를 두지 않아 Enter 로는 답하지 않는다(OS 대화상자는 Enter 가 0 번 단추였다). 알림 창이 3초 안에 그려지지 않거나 렌더러가 죽으면 OS 대화상자로 띄운다(`src/main/windows/alert-ask.ts`). 창의 글자는 `src/view/halt.ts`가 만든다. 보이기 전에 밖에서 닫히면(앱 종료) 닫힘으로 끝낸다.
+패치노트는 `src/main/update/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
 
 알림 배너의 상태 판정은 도메인 모듈이 한다. `src/notify`는 줄 세우기와 표시만 맡는다.
 
 ## 전역 시계
 
-앱의 시간·확률 계산은 전역 시계(`src/main/clock.ts`)의 1초 틱을 본다(2026-09-29 사용자 결정 "앱 자체의 전역으로 타이머 기능 만들고, 그게 1초마다 갱신").
+앱의 시간·확률 계산은 전역 시계(`src/main/app/clock.ts`)의 1초 틱을 본다(2026-09-29 사용자 결정 "앱 자체의 전역으로 타이머 기능 만들고, 그게 1초마다 갱신").
 틱마다 그 순간의 시각 `now` 와 앞 틱과의 간격 `gap` 을 준다. 큰 틈은 있는 그대로 주고, 자르는 규칙은 받는 쪽이 가진다.
 
 | 1초 틱이 하는 일 | 주기 |
@@ -145,7 +145,7 @@
 | `save.key`를 읽지 못함 | 잠김·권한 오류다. 이번 실행은 키 없이 돈다. 저장은 옮기지 않고 `locked`로 지킨다. 다음 실행에 다시 읽는다 |
 | `save.key`를 풀지 못함 | 키 저장소가 풀기를 거부했다(허용 창 거부·키체인 초기화). 저장을 옮기지 않고 이번 실행은 키 없이 돈다(`denied`) |
 | `save.key` 모양이 틀림 | 키와 저장을 `.unreadable-<시각>.bak`으로 옮기고 새 키로 시작한다(`reset`). 표시를 남긴다. 옮기지 못하면 옛 키를 덮지 않고 키 없이 돈다 |
-| 저장 잠김 창 | 키 없이 도는데(`denied`·`busy`·`unavailable`) 암호화 저장이 있으면 게임을 만들기 전에 `저장을 열지 못했어요` 창을 띄운다. `종료`(Esc)는 저장을 그대로 두고 끝낸다. `새로 시작`은 키와 저장을 `.unreadable-<시각>.bak`으로 옮기고 표시를 남긴 뒤 키를 다시 준비한다(`src/main/app.ts`, `src/main/halt-dialog.ts` `askSaveLocked`) |
+| 저장 잠김 창 | 키 없이 도는데(`denied`·`busy`·`unavailable`) 암호화 저장이 있으면 게임을 만들기 전에 `저장을 열지 못했어요` 창을 띄운다. `종료`(Esc)는 저장을 그대로 두고 끝낸다. `새로 시작`은 키와 저장을 `.unreadable-<시각>.bak`으로 옮기고 표시를 남긴 뒤 키를 다시 준비한다(`src/main/app.ts`, `src/main/app/halt-dialog.ts` `askSaveLocked`) |
 | 키 저장소 없음 | 평문으로 돈다. 이미 암호화된 저장은 읽지 않고 덮어쓰지도 않는다(`locked`) |
 | `save.json.lost` | 클라우드가 `cloud.json`을 읽을 때 처리한다(`src/online/lost.ts`). `syncedRev`를 `-1`로 바꾼 상태를 `cloud.json`에 먼저 쓰고 표시를 지운다. 서버 저장이 있으면 다음 맞추기에서 받는다. 격리 뒤에 올린 적이 있으면(`lastSavedAt` > 격리 시각) 표시만 지운다. 격리 뒤 새로 고른 첫 포켓몬 저장은 `save.json.cloud-<시각>.bak`으로 남는다 |
 
@@ -225,7 +225,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 
 거래는 성공한 순간에 저장한다. 줍기는 주운 틱에 저장한다(`src/tx/game.ts` `find`). 줍기 저장에 실패하면 그 건은 버린다.
 시간에 따른 값은 전역 시계의 1초 틱마다 메모리에 적용한다. 계산에는 그 틱의 시각을 쓴다. 틱 밖에서 처리하는 명령도 마지막 틱의 시각을 쓴다(`src/main/app.ts` `clock.last()`).
-메모리 값은 15초(`CLOCK_RULES.saveMs`, `src/main/clock.ts`)마다 파일에 쓴다(`src/tx/game.ts` `flushMs`). 쓰기 간격은 단조 시계(`performance.now`)로 잰다. 그래서 시스템 시각을 뒤로 돌려도 주기 쓰기가 멈추지 않는다.
+메모리 값은 15초(`CLOCK_RULES.saveMs`, `src/main/app/clock.ts`)마다 파일에 쓴다(`src/tx/game.ts` `flushMs`). 쓰기 간격은 단조 시계(`performance.now`)로 잰다. 그래서 시스템 시각을 뒤로 돌려도 주기 쓰기가 멈추지 않는다.
 명령과 줍기가 저장할 때는 메모리 값도 함께 쓴다. 아래 직전에도 쓴다(`game.flush`): 앱 끄기(`before-quit`), 화면 잠금(`lock-screen`), 절전(`suspend`), 시스템 종료(`powerMonitor` `shutdown`, Windows 창 `session-end`).
 15초 주기는 Claude 가 쓰기 비용을 측정한 뒤 정한 구현 판단이다. 사용자가 확인하기 전이다. 강제 종료되면 최대 15초의 시간 진행을 잃는다.
 1초마다 파일을 쓰지 않는 이유: 쓰기 자체는 약 0.4ms 였다(58KB 저장, 2026-09-29 측정). 그러나 켜 둔 8시간에 약 1.7GB 를 쓰고, 저장 감시(`src/save/save-watch.ts`)와 클라우드 표시 파일(`cloud.json`)이 1초마다 돈다.
@@ -265,7 +265,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다 | `src/state`, `src/main` |
 
 저장을 바꾸는 명령은 거래 실행기를 지난다. 실행기를 지난 요청은 다시 보내도 중복 반영하지 않는다.
-실행기를 지나지 않는 명령은 다음과 같다(`src/main/commands.ts`).
+실행기를 지나지 않는 명령은 다음과 같다(`src/main/app/commands.ts`).
 - `display.set`: 저장 밖의 창 표시 설정을 바꾼다.
 - `trade.create`·`trade.join`·`trade.offer`·`trade.ready`·`trade.unready`·`trade.leave`·`trade.status`: 교환 세션이 서버와 주고받는다. 교환 결과를 저장에 반영하는 `trade.lock`·`trade.unlock`·`trade.apply` 는 실행기를 지난다.
 - `quit`: 앱을 끝낸다.

@@ -110,7 +110,7 @@ const MANAGE = {
   notes: ["invoke", "manage:notes"],
   mail: ["invoke", "manage:mail"],
   onMail: ["push", "manage:mail-view"],
-  onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/clock.ts)
+  onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/app/clock.ts)
 } as const satisfies WireOf<ManageIpc>;
 
 const manageBridge = bridgeOf<ManageIpc>(MANAGE);

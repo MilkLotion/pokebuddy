@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app, type JumpListCategory } from "electron";
-import type { CareKind } from "../state/care";
+import type { CareKind } from "../../state/care";
 
 
 export interface JumpPet {

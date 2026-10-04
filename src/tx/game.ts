@@ -1,7 +1,7 @@
 // 저장 v3 을 다루는 게임 입구 — 파일 읽기·쓰기, 거래 실행기, 시간 적용을 한 곳에 모은다.
 //
 // 저장을 쓰는 곳은 거래 실행기 하나다 (docs/specs/modules.md "경계 원칙").
-// 시간은 앱이 깨어 있는 동안만 흐른다. 앱은 전역 시계(src/main/clock.ts)의 1초 틱마다 흐른 시간을 적용한다 (2026-09-29 사용자 결정).
+// 시간은 앱이 깨어 있는 동안만 흐른다. 앱은 전역 시계(src/main/app/clock.ts)의 1초 틱마다 흐른 시간을 적용한다 (2026-09-29 사용자 결정).
 // 상한(`TIME_RULES.maxElapsedMs`)을 넘는 틈은 앱 종료·절전·잠금으로 보고 버린다.
 // 1초마다 적용한 값은 메모리에 두고, 파일은 flushMs 마다와 명령·줍기 때 쓴다 — 쓰기 캐시는 src/tx/live-save.ts 다.
 // 시각(now)은 앱이 전역 시계의 1초 틱 시각을 준다(src/main/app.ts). 명령 처리처럼 틱 밖에서 부르는 경로도 그 마지막 틱 시각을 쓴다 — 1초 안의 차이다
@@ -49,7 +49,7 @@ export interface GameV3Options {
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b 계정 시드). 없거나 null 이면 rand
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
   onWrite?: (kind: SaveKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
-  flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 CLOCK_RULES.saveMs (src/main/clock.ts)
+  flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 CLOCK_RULES.saveMs (src/main/app/clock.ts)
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
   petName: (slug: string) => string; // 종의 화면 이름 — 실행기의 박스 이름순 정렬이 쓴다. 실행기는 화면 값을 가져오지 않으므로 부르는 쪽이 넘긴다(앱은 src/view/text.ts petName)
 }

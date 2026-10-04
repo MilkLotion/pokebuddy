@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { createCommands } from "../../main/commands";
+import { createCommands } from "../../main/app/commands";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { createSaveParty } from "../../save/save-party";

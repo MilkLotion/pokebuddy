@@ -21,7 +21,7 @@ import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
 import { CARE_RULES, MOOD_RULES, TIME_RULES } from "../../state/rules";
-import { CLOCK_RULES } from "../../main/clock";
+import { CLOCK_RULES } from "../../main/app/clock";
 import { writeTextIfChanged } from "./write-text";
 
 // data/*.json 의 항목 — 이 도구는 몇 칸만 읽는다. 모양 검사는 앱의 로더가 한다

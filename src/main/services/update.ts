@@ -7,7 +7,7 @@
 import os from "node:os";
 import { app, shell } from "electron";
 import type { PatchNotesView, UpdateAction, UpdateView } from "../../shared/model/account";
-import { createPatchNotes, type PatchNotes } from "../patch-notes";
+import { createPatchNotes, type PatchNotes } from "../update/patch-notes";
 import { createMacUpdater } from "../update/mac-updater";
 import { createAppUpdater, urgentStep, type AppUpdater } from "../update/updater";
 

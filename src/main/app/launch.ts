@@ -7,7 +7,7 @@
 import { app } from "electron";
 import type { ManageRoute } from "../../shared/model/route";
 import { isTradeLink } from "../../trade/link.js";
-import { careArgOf } from "../jump-list";
+import { careArgOf } from "../menus/jump-list";
 import type { CareKind } from "../../state/care";
 import { isUpdateTestBuild } from "./dev-run";
 
@@ -34,7 +34,7 @@ export function claimSingleInstance(hooks: LaunchHooks): boolean {
     return false;
   }
   app.on("second-instance", (_e, argv) => {
-    // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/jump-list.ts)
+    // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/menus/jump-list.ts)
     const care = careArgOf(argv);
     if (care) return hooks.onCare(care);
     const link = tradeLinkOf(argv);

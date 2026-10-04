@@ -5,10 +5,10 @@
 //   tick   알림이 남았고 다른 배너가 없으면 띄운다. 띄웠으면 notices.json 에 남겨 다시 띄우지 않는다
 //
 // 실패는 기록만 하고 사용자에게 알리지 않는다. 앱 시작을 막지 않는다
-import { agentStatusList, tidyAgentHooks, type AgentStatus, type TidyResult } from "../agents/registry.js";
-import { CODEX_FLASH_NOTICE, codexNoticeDue, markNotice, readNotices } from "../agents/notice.js";
-import type { BannerView } from "../shared/model/overlays";
-import { t } from "../view/text.js";
+import { agentStatusList, tidyAgentHooks, type AgentStatus, type TidyResult } from "../../agents/registry.js";
+import { CODEX_FLASH_NOTICE, codexNoticeDue, markNotice, readNotices } from "../../agents/notice.js";
+import type { BannerView } from "../../shared/model/overlays";
+import { t } from "../../view/text.js";
 
 export interface HookUpkeepOptions {
   noticesFile: string; // notices.json — save.json 과 같은 폴더

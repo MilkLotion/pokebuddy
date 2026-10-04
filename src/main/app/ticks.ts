@@ -9,7 +9,7 @@
 import { rollHits } from "../../find/roll";
 import { TIME_RULES } from "../../state/rules";
 import type { Anchor } from "../anchor";
-import { CLOCK_RULES, type ClockTick } from "../clock";
+import { CLOCK_RULES, type ClockTick } from "./clock";
 import type { GameV3 } from "../../tx/game";
 import type { SaveParty } from "../../save/save-party";
 import type { Bubbles } from "../stage/bubbles";

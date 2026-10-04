@@ -1,6 +1,6 @@
 // pokebuddy companion — 동반자 하나를 띄우고 곧바로 돌아온다. 항상 위에 떠서 맨 앞 터미널 창의 에이전트 상태를 따른다.
 //
-// 펫은 따로 떠서 스스로 lock 파일이 사라졌는지 본다 (src/main/lifetime.ts). 세션 펫(pokebuddy <종>)은 2026-09-27 에 지웠다
+// 펫은 따로 떠서 스스로 lock 파일이 사라졌는지 본다 (src/main/app/lifetime.ts). 세션 펫(pokebuddy <종>)은 2026-09-27 에 지웠다
 // (예전 cli/run.js. 도구 레인 T7b-3 에서 TypeScript 로 옮겼다)
 import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -26,7 +26,7 @@ const POLL_MS = 100;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const say = (line = ""): void => void process.stdout.write(`${line}\n`);
 
-// 동반자가 스스로 끝났을 때 남긴 이유 (src/main/lifetime.ts reportFailure) — since 이후 것만.
+// 동반자가 스스로 끝났을 때 남긴 이유 (src/main/app/lifetime.ts reportFailure) — since 이후 것만.
 // 읽기는 공통 함수다 — 모양이 틀린 기록은 없는 것으로 본다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-8)
 function lastError(since: number): LastError | null {
   const e = readLastError(PATHS.lastError);
@@ -34,7 +34,7 @@ function lastError(since: number): LastError | null {
 }
 
 // 동반자의 pid — lock 파일의 pid 가 살아 있을 때만. 죽은 pid·파손이 남은 lock(크래시)은 지운다.
-// 읽기·잡기·놓기는 앱(src/main/lifetime.ts)과 같은 함수(src/platform/pid-lock.ts)다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-7)
+// 읽기·잡기·놓기는 앱(src/main/app/lifetime.ts)과 같은 함수(src/platform/pid-lock.ts)다 (worklog/records/code-structure/design/94-same-feature-diffs.md 5-7)
 export function companionPid(): number | null {
   const pid = liveLockOwner(PATHS.companionLock);
   if (pid != null) return pid;
@@ -150,7 +150,7 @@ export async function startCompanion(opts: Partial<CompanionOptions> = {}): Prom
     return;
   }
   // 띄운 자식의 pid 로 잡는다 — 없을 때만 만들기(앱과 같은 claimLock). 자식이 먼저 잡았으면 그대로 잡은 것이다.
-  // 그사이 다른 동반자가 잡았으면 띄운 자식은 스스로 끝난다(src/main/lifetime.ts claim) — 떠 있는 쪽을 알린다
+  // 그사이 다른 동반자가 잡았으면 띄운 자식은 스스로 끝난다(src/main/app/lifetime.ts claim) — 떠 있는 쪽을 알린다
   const claim = claimLock(pet.file, pet.pid);
   if (!claim.ok && claim.reason === "busy" && claim.owner != null) {
     say(`동반자가 이미 떠 있음 (pid ${claim.owner}) — 내리기: pokebuddy companion stop`);

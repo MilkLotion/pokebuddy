@@ -5,7 +5,7 @@
 // 예외 — 화면·입력용 틱은 이 시계를 쓰지 않는다. 무대 그리기 40ms(STAGE_RULES.tickMs)는 움직임이 1초로는 끊겨 보이고,
 // 훅 상태 폴링 500ms(STAGE_RULES.statePollMs)는 에이전트 상태가 바뀐 것을 반 초 안에 보여 주려는 것이다. 둘 다 게임 값을 바꾸지 않는다.
 // Electron 을 모른다. 시각과 타이머를 받아서 쓴다 — 자체 확인이 가짜 시각으로 틱을 돌린다
-import { realClock, type Clock } from "../shared/clock.js";
+import { realClock, type Clock } from "../../shared/clock.js";
 
 export const CLOCK_RULES = {
   periodMs: 1000, // 틱 간격 1초. 2026-09-29 사용자 결정

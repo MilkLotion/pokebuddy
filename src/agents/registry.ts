@@ -85,7 +85,7 @@ export function hookCommandOf(name: AgentName): { command: string; file: string 
 }
 
 // 켤 때 정리 — 새로 등록하지 않는다. 연결된 CLI 의 옛 이벤트(목록에 없는 우리 등록)만 걷고, 있는 훅 파일만 새 버전으로 바꾼다.
-// 앱 시작 때 writer 하나가 부른다 (src/main/hook-upkeep.ts). 사용자의 설정 파일은 백업을 남기고 우리 항목만 고친다
+// 앱 시작 때 writer 하나가 부른다 (src/main/app/hook-upkeep.ts). 사용자의 설정 파일은 백업을 남기고 우리 항목만 고친다
 export function tidyAgentHooks({ dryRun = false } = {}): TidyResult {
   return setup().tidyInstalled({ dryRun });
 }
