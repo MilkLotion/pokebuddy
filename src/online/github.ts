@@ -20,7 +20,7 @@ import { finishSwitch, prepareSwitch, type SwitchHooks } from "./handoff.js";
 import type { AccountCode, GithubCode } from "../shared/names/online-codes.js";
 
 // 로컬 Supabase 기본 포트(54321~54324)와 겹치지 않는다
-export const GITHUB_PORTS = [54380, 54381, 54382] as const;
+const GITHUB_PORTS = [54380, 54381, 54382] as const;
 export const callbackUrl = (port: number): string => `http://127.0.0.1:${port}/auth/callback`;
 
 export interface GithubLoginOptions {

@@ -21,7 +21,7 @@ import { createTradeScreen, type TradeScreenBuilder } from "../../view/trade-scr
 import { createKeyVault } from "./vault";
 
 // 아직 참가하지 않은 교환 링크의 수명 — 참가 전 10분이 지나면 버린다
-export const TRADE_LINK_RULES = { ttlMs: 10 * 60_000, settleMs: 10_000 } as const;
+const TRADE_LINK_RULES = { ttlMs: 10 * 60_000, settleMs: 10_000 } as const;
 
 export interface ServicesDeps {
   ready(): boolean; // 만들어도 되는가 — 끄는 중이 아니고, 멈추지 않았고, 게임이 있고, writer 다

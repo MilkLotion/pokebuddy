@@ -1,6 +1,6 @@
 // 교환 링크의 글자 규칙 — 앱 실행 인자(pokebuddy://trade/<토큰>), 공유 주소(<linkBase>#<토큰>), 토큰.
 // 웹 페이지(site/trade/index.html)의 같은 정규식은 공유하지 못한다 — 바꾸면 그쪽도 같이 바꾼다
-export const TRADE_LINK = {
+const TRADE_LINK = {
   scheme: "pokebuddy://trade/",
   token: /^[A-Za-z0-9_-]{16,64}$/,
 } as const;

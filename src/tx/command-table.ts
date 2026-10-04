@@ -17,7 +17,7 @@ export interface TxCommandDef {
   action?: PetAction;
 }
 
-export const TX_COMMANDS = {
+const TX_COMMANDS = {
   "party.show": { handler: visibilityHandler(false) },
   "party.hide": { handler: visibilityHandler(true) },
   "party.place": { handler: placeHandler },

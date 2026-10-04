@@ -17,7 +17,7 @@ import type { UsernameCheck } from "../shared/model/account.js";
 import { authCodeOf } from "./codes.js";
 import { callRpc, isUnreachable, messageOf, readFunctionError } from "./server-call.js";
 
-export const ID_DOMAIN = "id.pokebuddy.invalid";
+const ID_DOMAIN = "id.pokebuddy.invalid";
 
 export type AccountMethod = "password" | "github";
 

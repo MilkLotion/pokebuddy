@@ -17,7 +17,7 @@ import type { StageGroup } from "../stage-group";
 import { devNumber } from "./dev-run";
 import type { DebugLog } from "./log";
 
-export const TICK_RULES = { slowEvery: Math.max(1, Math.round(CLOCK_RULES.saveMs / CLOCK_RULES.periodMs)) } as const;
+const TICK_RULES = { slowEvery: Math.max(1, Math.round(CLOCK_RULES.saveMs / CLOCK_RULES.periodMs)) } as const;
 
 export interface TicksDeps {
   sendClock(now: number): void; // 관리 창·기기 창이 이 틱에 스냅샷을 다시 읽는다 (manage:clock)

@@ -9,7 +9,7 @@
 //   find         줍기 — 대상 그림 없이 문구 두 줄 (src/find/pickup.ts)
 //   mega         메가스톤이 생겼다 (src/dex/mega.ts)
 //   notice       대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). 줄 밖에서 한 번 띄운다
-export const BANNER_KINDS = ["hatch", "evolve", "achievement", "notice", "find", "mega"] as const;
+const BANNER_KINDS = ["hatch", "evolve", "achievement", "notice", "find", "mega"] as const;
 
 export type BannerKind = (typeof BANNER_KINDS)[number];
 

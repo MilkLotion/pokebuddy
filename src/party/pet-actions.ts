@@ -9,7 +9,7 @@ import type { SaveV3, TradePendingV3 } from "../shared/save-v3";
 export type PetAction = "use" | "evolve" | "form" | "sell" | "care" | "move" | "hide" | "size" | "home";
 
 // 교환에 걸린 개체에 막는 일 — 값을 바꾸거나 개체를 없애는 일. 돌봄·옮기기·숨기기·크기·자리는 막지 않는다
-export const TRADE_LOCKED_ACTIONS: readonly PetAction[] = ["use", "evolve", "form", "sell"];
+const TRADE_LOCKED_ACTIONS: readonly PetAction[] = ["use", "evolve", "form", "sell"];
 
 // 교환에 걸린 개체 — 없으면 null
 export const pendingTradeOf = (save: Pick<SaveV3, "trade">): TradePendingV3 | null => save.trade?.pending ?? null;

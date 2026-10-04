@@ -77,7 +77,7 @@ export function orderBox(boxes: BoxV3[], from: number, to: number): { ok: true }
 // ── 정렬·이동·이름 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
 export type BoxSortKey = "dex" | "level" | "affinity" | "recent" | "name";
-export const BOX_SORT_KEYS: readonly BoxSortKey[] = ["dex", "level", "affinity", "recent", "name"];
+const BOX_SORT_KEYS: readonly BoxSortKey[] = ["dex", "level", "affinity", "recent", "name"];
 export const isBoxSortKey = (v: unknown): v is BoxSortKey => typeof v === "string" && (BOX_SORT_KEYS as readonly string[]).includes(v);
 
 export type BoxFailure = ReasonOf<"no-box" | "bad-slot" | "empty-slot" | "box-full" | "same-slot">;

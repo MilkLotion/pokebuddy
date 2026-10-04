@@ -18,7 +18,7 @@ import { t } from "../../view/text";
 import { preloadFile, rendererFile } from "../windows/files";
 
 // 공유 sid 계열이면 모습 말풍선에 넣을 초상을 먼저 받는다. 캐시에 없어 오래 걸리면 초상 없이 띄운다
-export const PET_MENU_RULES = { formIconWaitMs: 400 } as const;
+const PET_MENU_RULES = { formIconWaitMs: 400 } as const;
 
 export type MenuOrigin = "stage" | "manage";
 

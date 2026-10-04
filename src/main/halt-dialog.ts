@@ -12,7 +12,7 @@ import { blockedAlert, confirmAlert, heldAlert, kickedAlert, lostAlert, saveLock
 import { askChoice } from "./windows/alert-ask";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
-export const KICKED_CLOSE_MS = 30_000;
+const KICKED_CLOSE_MS = 30_000;
 
 // 창의 답 — go 는 넘겨받기·다시 시도, stop 은 취소·종료, closed 는 밖에서 닫았다(시간 초과·밀려남)
 export type HaltAnswer = "go" | "stop" | "closed";

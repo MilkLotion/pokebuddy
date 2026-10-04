@@ -12,7 +12,7 @@ import { preloadFile, rendererFile } from "../windows/files";
 
 // 아이콘을 다시 눌러 메뉴를 닫은 때 — 메뉴가 떠 있는 동안에는 아이콘 클릭 신호가 오지 않아 Windows 가 더블클릭을 만들지 못한다.
 // 그 뒤 doubleClickMs 안에 아이콘을 한 번 더 누르면 더블클릭으로 보고 설정창을 연다
-export const TRAY_MENU_RULES = {
+const TRAY_MENU_RULES = {
   inputMs: 50,
   doubleClickMs: 200, // 2026-09-28 사용자 "0.2초로 해도 될듯"
 } as const;

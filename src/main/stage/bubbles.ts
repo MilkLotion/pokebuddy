@@ -12,7 +12,7 @@ import type { StageGroup } from "../stage-group";
 
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
 // (worklog/records/game-runtime/record.md "배고픔 말풍선 되풀이")
-export const BUBBLE_RULES = { showMs: 5000 } as const;
+const BUBBLE_RULES = { showMs: 5000 } as const;
 
 const MEAT = "item:meat";
 const COIN = "item:coin";

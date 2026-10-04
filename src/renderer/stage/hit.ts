@@ -6,7 +6,7 @@ import type { Rect, Size } from "../../shared/geometry.js";
 import type { StageFrame, StagePet } from "../../shared/model/stage.js";
 
 // 그림 가장자리에서 이만큼(DIP) 떨어진 곳까지 그림으로 친다 — 도트 사이 틈에서 클릭이 새지 않게 (옛 pointer.js HIT_PAD_PX)
-export const HIT_PAD_PX = 3;
+const HIT_PAD_PX = 3;
 
 // 시트 안 프레임 하나. alpha 는 시트 전체 RGBA (ImageData 와 같은 모양 — width 가 시트 너비)
 export interface HitSprite {

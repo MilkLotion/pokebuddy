@@ -14,7 +14,7 @@ import { backupName, readSave, saveStampOf } from "./save-file.js";
 import { watchDir, type DirWatch } from "../platform/watch-dir.js";
 import { claimLock, ownsLock, releaseLock } from "../platform/pid-lock.js";
 
-export const SAVE_WATCH_RULES = {
+const SAVE_WATCH_RULES = {
   reclaimMs: 10_000, // reader 가 writer 자리를 다시 잡아 보는 간격. 같은 간격으로 파일도 다시 본다(감시를 받쳐 준다)
 };
 

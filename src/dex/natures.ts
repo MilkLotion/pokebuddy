@@ -14,7 +14,7 @@ export const AXES: readonly Axis[] = ["activity", "boldness", "steadiness", "soc
 export const FALLBACK_NATURE: NatureId = "hardy";
 
 // 모르는 성격의 축 — 전부 0 (중립)
-export const NEUTRAL_AXES: Readonly<Record<Axis, AxisValue>> = {
+const NEUTRAL_AXES: Readonly<Record<Axis, AxisValue>> = {
   activity: 0,
   boldness: 0,
   steadiness: 0,

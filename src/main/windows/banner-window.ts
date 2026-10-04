@@ -22,7 +22,7 @@ const CH = {
 // 표시 시간 3초 — 2026-09-30 사용자 결정 "시간은 3초로 늘리고, 모든 알림은 생성되고 3초뒤에 사라지게 해" (worklog/records/features-0930/record.md)
 // 옛 2초·커서 멈춤은 뺐다 — 멈춤 신호가 풀리지 않아 배너가 남던 문제
 // 창 크기는 배너 280 × 82 에 그림자 자리 8 을 둘렀다. margin 은 작업 영역 가장자리와의 거리다
-export const BANNER_RULES = { showMs: 3000, width: 296, height: 98, margin: 8 } as const;
+const BANNER_RULES = { showMs: 3000, width: 296, height: 98, margin: 8 } as const;
 
 export interface BannerWindowOptions {
   preload: string;

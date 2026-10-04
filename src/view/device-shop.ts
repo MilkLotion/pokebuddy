@@ -9,7 +9,7 @@ import { numberText, pointText } from "../shared/count-text.js";
 
 
 // 여러 개 살 수 있는 상품 — 포켓몬·파티 칸은 하나씩만 산다. 알은 돌보미집 빈 칸까지 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
-export const MULTI_BUY: ReadonlySet<string> = new Set(["tool", "evolution", "egg"]);
+const MULTI_BUY: ReadonlySet<string> = new Set(["tool", "evolution", "egg"]);
 
 // 제목 줄의 분류 글자 — 상점 분류 칩(SHOP_TABS)의 이름과 같다. slot 은 파티 칸·파티 프리셋·박스를 담는다 (2026-10-03 사용자 결정)
 const SHOP_KIND: Record<string, string> = { egg: "알", tool: "도구", evolution: "진화", slot: "파티", pokemon: "포켓몬" };
