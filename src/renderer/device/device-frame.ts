@@ -66,6 +66,7 @@ export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
   // 방향키로도 넘긴다. Esc 는 닫는다. canKey 가 false 면 그 키는 무시한다
   document.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Escape") return;
+    if (e.target instanceof HTMLInputElement) return; // 수량 칸에 적는 중 — 방향키는 글자 사이를 옮기고 Esc 는 적던 것을 버린다 (item-face.ts qtyRowEl)
     if (opts.canKey && !opts.canKey(e.key)) return;
     if (e.key === "ArrowLeft") api.step(-1);
     else if (e.key === "ArrowRight") api.step(1);

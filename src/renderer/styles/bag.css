@@ -342,9 +342,31 @@
   color: var(--disabled);
   cursor: default;
 }
+/* 수량 — 눌러서 직접 적는다. 평소는 숫자만, 가리키면 중립 테두리, 적는 중이면 흰 바탕과 강조 테두리. 높이는 옆 단추와 같은 32 */
 .qty .count {
-  min-width: 32px;
+  box-sizing: border-box;
+  width: 56px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   text-align: center;
+  cursor: text;
+}
+.qty .count:hover:not(:disabled) {
+  border-color: var(--line);
+}
+.qty .count:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--paper);
+}
+.qty .count:disabled {
+  color: var(--disabled);
+  cursor: default;
 }
 .qty .hint {
   min-width: 0;

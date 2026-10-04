@@ -193,6 +193,11 @@ function seed(points: number): SaveV3 {
   assert.deepStrictEqual({ note: slot?.note, price: slot?.price, blocked: slot?.blocked }, { note: "프리셋 1 · 구매 0 / 2", price: 500, blocked: undefined });
   assert.deepStrictEqual({ note: preset?.note, price: preset?.price, category: preset?.category }, { note: "구매 0 / 3 · 칸 4 / 12", price: 1000, category: "slot" });
   assert.ok(preset?.blocked?.startsWith("칸 먼저 ("), "칸 조건을 못 채우면 막는다 — 짧은 꼴 (94 항목 9-3-4)");
+  // 도구 상품의 설명은 효과 한 줄 — 기기 창 `효과` 줄과 같다 (2026-10-05)
+  const tools = list.filter((i) => i.category === "tool");
+  assert.ok(tools.length > 0 && tools.every((i) => i.note !== ""), "도구 상품은 모두 설명이 있다");
+  assert.equal(tools.find((i) => i.id === "exp-candy-s")?.note, "경험치 +800");
+  assert.equal(tools.find((i) => i.id === "rare-candy")?.note, "레벨 +1");
   process.stdout.write("(8b) 파티 프리셋 · 1000P 고정 · 칸 조건 · 다섯 개까지  ok\n");
 }
 

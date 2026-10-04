@@ -72,6 +72,9 @@ export function drawItemFace(frame: DeviceFrame, face: ItemFace, middle: HTMLEle
 }
 
 // 수량 줄 — − · 수 · + · 최대 · 안내
+// 수량 칸 — 숫자를 눌러 직접 적을 수 있다. Enter·칸 밖으로 나가면 1~최대로 맞춰 보낸다. Esc 는 적던 것을 버린다
+// 기기 창은 새 보기마다 통째로 다시 그린다 — 적는 중이면 그 글자와 초점을 새 칸에 옮긴다 (한 창에 수량 칸은 하나다)
+let qtyDraft: string | null = null;
 export function qtyRowEl(q: { count: number; cap: number; hint: string }, set: (qty: number) => void, off = false): HTMLElement {
   const minus = buttonEl("", "−", () => set(q.count - 1));
   minus.disabled = off || q.count <= 1;
@@ -79,8 +82,56 @@ export function qtyRowEl(q: { count: number; cap: number; hint: string }, set: (
   plus.disabled = off || q.count >= q.cap;
   const max = buttonEl("max", "최대", () => set(q.cap));
   max.disabled = off || q.count >= q.cap;
+  const count = document.createElement("input");
+  count.className = "count";
+  count.type = "text";
+  count.inputMode = "numeric";
+  count.setAttribute("aria-label", "수량");
+  count.disabled = off;
+  count.value = qtyDraft ?? numberText(q.count);
+  const commit = (): void => {
+    if (qtyDraft === null) return;
+    const n = Number.parseInt(qtyDraft.replace(/[^0-9]/g, ""), 10);
+    qtyDraft = null;
+    const next = Number.isFinite(n) ? Math.min(Math.max(n, 1), Math.max(q.cap, 1)) : q.count;
+    count.value = numberText(next);
+    if (next !== q.count) set(next);
+  };
+  // 눌러서 들어오면 숫자를 통째로 골라 바로 새로 적게 한다. 다시 그린 칸으로 넘어온 초점은 적던 자리 그대로다
+  // 밖에서 눌러 들어오면 숫자를 통째로 골라 바로 새로 적게 한다. 이미 적는 중에 누르면 커서만 옮긴다
+  let wasIn = false;
+  count.addEventListener("mousedown", () => {
+    wasIn = document.activeElement === count;
+  });
+  count.addEventListener("click", () => {
+    if (!wasIn && qtyDraft === null) count.select();
+  });
+  count.addEventListener("input", () => {
+    count.value = count.value.replace(/[^0-9]/g, "");
+    qtyDraft = count.value;
+  });
+  count.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      commit();
+      count.blur();
+    } else if (e.key === "Escape") {
+      qtyDraft = null;
+      count.value = numberText(q.count);
+      count.blur();
+    }
+  });
+  count.addEventListener("blur", () => {
+    if (count.isConnected) commit(); // 다시 그리느라 떼어 낸 칸은 적던 것을 새 칸으로 넘긴다
+  });
+  if (qtyDraft !== null && !off) {
+    queueMicrotask(() => {
+      if (!count.isConnected) return;
+      count.focus();
+      count.setSelectionRange(count.value.length, count.value.length);
+    });
+  } else qtyDraft = null;
   const row = el("div", "qty");
-  row.append(minus, el("span", "count", numberText(q.count)), plus, max, el("span", "hint", q.hint));
+  row.append(minus, count, plus, max, el("span", "hint", q.hint));
   return row;
 }
 

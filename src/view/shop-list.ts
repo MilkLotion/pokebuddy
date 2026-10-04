@@ -100,7 +100,8 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
     // 상점의 쓰는 곳은 어디서 쓰는지까지 — 가방은 파티 개체에게만 쓴다 (2026-10-01 사용자 결정 "파티를 기준으로만 사용할 수 있게 하자")
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id), where: "가방 › 사용 · 파티 포켓몬" };
-    add({ id, name: itemName(id, opts), note: "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
+    // 설명은 효과 한 줄 — 기기 창의 `효과` 줄과 같은 문구 (2026-10-05 사용자 "상점에 도구만 밑에 설명이없음")
+    add({ id, name: itemName(id, opts), note: item.effectText ?? "", price: item.price, category: "tool", affordable: false, about, ...bagRoom(id) });
   }
 
   // 진화용 도구 — 종류와 무관하게 같은 값이다
