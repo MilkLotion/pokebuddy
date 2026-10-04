@@ -6,7 +6,7 @@ import type { PartySlotV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type VisibilityFailure = ReasonOf<"no-slot" | "not-pokemon" | "already">;
+export type VisibilityFailure = ReasonOf<"not-in-party" | "not-pokemon" | "already">;
 
 export type VisibilityResult = Outcome<VisibilityFailure> & {
   petId?: string;
@@ -19,7 +19,7 @@ export const petSlotIndex = (slots: PartySlotV3[], petId: string): number =>
 // hidden 을 바꾼다. 같은 상태로 다시 바꾸려 하면 실패로 본다 — 중복 반영을 눈에 보이게 한다
 export function setHidden(slots: PartySlotV3[], petId: string, hidden: boolean): VisibilityResult {
   const i = petSlotIndex(slots, petId);
-  if (i < 0) return { ok: false, reason: "no-slot" };
+  if (i < 0) return { ok: false, reason: "not-in-party" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   const slot = slots[i];
   if (!slot || slot.state !== "pokemon") return { ok: false, reason: "not-pokemon" };
   if ((slot.hidden === true) === hidden) return { ok: false, reason: "already" };

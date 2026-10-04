@@ -118,10 +118,10 @@ async function main(): Promise<void> {
 
     // 숨기기·보이기도 target 이 없으면 args.petId 를 본다 — 다른 개체 명령과 같은 규칙 (94 문서 4-12)
     const hideByArgs = await commands.dispatcher.dispatch({ cmd: "party.hide", args: { petId: "p1" }, from: "cli" });
-    assert.notEqual(hideByArgs.reason, "no-pet", "party.hide 가 args.petId 를 받는다");
+    assert.notEqual(hideByArgs.reason, "bad-args", "party.hide 가 args.petId 를 받는다");
     const showByArgs = await commands.dispatcher.dispatch({ cmd: "party.show", args: { petId: "p1" }, from: "cli" });
-    assert.notEqual(showByArgs.reason, "no-pet", "party.show 가 args.petId 를 받는다");
-    assert.equal((await commands.dispatcher.dispatch({ cmd: "party.show", from: "cli" })).reason, "no-pet", "대상이 없으면 no-pet");
+    assert.notEqual(showByArgs.reason, "bad-args", "party.show 가 args.petId 를 받는다");
+    assert.equal((await commands.dispatcher.dispatch({ cmd: "party.show", from: "cli" })).reason, "bad-args", "대상 인자가 없으면 bad-args — 실행기와 같다 (94 항목 9-5-2)");
 
     // 파티 명령도 받은 요청 식별자를 그대로 넘긴다 — 설정창이 다시 보낸 요청은 재생된다 (94 문서 9-2-3, docs/specs/game.md "요청 ID로 중복을 막는다")
     for (const c of [

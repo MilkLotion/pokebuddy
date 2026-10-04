@@ -13,7 +13,7 @@ import { PARTY_RULES } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type StarterFailure = ReasonOf<"already" | "no-slot">;
+export type StarterFailure = ReasonOf<"already" | "no-empty-slot">;
 
 export type StarterResult = Outcome<StarterFailure> & {
   petId?: string;
@@ -24,7 +24,7 @@ export type StarterResult = Outcome<StarterFailure> & {
 export function applyStarter(save: SaveV3, species: string, now: number, rand: Rand, opts?: DexOptions): StarterResult {
   if (save.pets.length) return { ok: false, reason: "already" };
   const added = addNewPet(save, { species, shiny: false, now, rand, place: "party-only", opts });
-  if (!added) return { ok: false, reason: "no-slot" };
+  if (!added) return { ok: false, reason: "no-empty-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   save.starterPetId = added.pet.id;
   save.points.balance += PARTY_RULES.startPoints;
   return { ok: true, petId: added.pet.id, species, slotIndex: added.slotIndex };

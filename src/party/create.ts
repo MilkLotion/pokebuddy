@@ -75,9 +75,9 @@ export function newPet({ id, species, shiny, nature, gender, now }: NewPetOption
 export type NewPetPlace = "party-first" | "box-only" | "party-only";
 
 // 새 개체를 둘 곳이 있는가 — 무작위를 쓰기 전에 본다
-export function checkNewPetRoom(save: SaveV3, place: NewPetPlace): Check<"box-full" | "no-slot"> {
+export function checkNewPetRoom(save: SaveV3, place: NewPetPlace): Check<"box-full" | "no-empty-slot"> {
   const party = save.party.slots.some((s) => s.state === "empty");
-  if (place === "party-only") return party ? { ok: true } : { ok: false, reason: "no-slot" };
+  if (place === "party-only") return party ? { ok: true } : { ok: false, reason: "no-empty-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   if (place === "box-only") return boxRoom(save.boxes) > 0 ? { ok: true } : { ok: false, reason: "box-full" };
   return party || boxRoom(save.boxes) > 0 ? { ok: true } : { ok: false, reason: "box-full" };
 }

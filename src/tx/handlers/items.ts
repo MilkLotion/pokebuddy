@@ -40,7 +40,7 @@ export const buyHandler: TxHandler = (draft, args, ctx) => {
   // 수량 — 없으면 1. 여러 개는 값이 있는 도구와 알만 된다(포켓몬·파티 칸·0P 상품은 하나씩). 상한은 포인트다.
   // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수도 상한이다 — 매번 buy 가 검사한다 (2026-09-30 사용자 결정 "알 여러개 구매 가능하게 수정.")
   const count = args.count === undefined ? 1 : args.count;
-  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
+  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-count" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   let res = buyProduct(draft, productId, ctx.now, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   let spent = res.spent ?? 0;
@@ -75,7 +75,7 @@ export const useHandler: TxHandler = (draft, args) => {
   // 수량 — 없으면 1. 여러 개는 경험사탕·이상한사탕만 된다(가방 사용 패널의 수량, 2026-09-27 사용자 결정).
   // 한 거래로 쓴다. 하나라도 못 쓰면 실행기가 사본을 버려 앞서 쓴 것도 반영하지 않는다
   const count = args.count === undefined ? 1 : args.count;
-  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-args" };
+  if (typeof count !== "number" || !Number.isInteger(count) || count < 1) return { ok: false, reason: "bad-count" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   if (count > 1 && !["exp", "level"].includes(itemOf(itemId)?.effect ?? "")) return { ok: false, reason: "bad-args" };
   let res = useItem(draft, itemId, petId, { nature });
   if (!res.ok) return { ok: false, reason: reasonOf(res) };

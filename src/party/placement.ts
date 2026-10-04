@@ -14,7 +14,8 @@ import type { Outcome } from "../shared/command.js";
 export type PlacementFailure = ReasonOf<
   | "no-pet" // 그런 개체가 없다
   | "not-in-box" // 박스에 없다 (이미 파티에 있거나 사라졌다)
-  | "no-slot" // 그런 칸이 없다
+  | "bad-slot" // 그런 칸이 없다(칸 번호가 범위 밖) — 박스와 같은 코드
+  | "no-box" // 그런 박스가 없다
   | "slot-not-empty" // 빈 칸이 아니다
   | "slot-locked" // 잠긴 칸이다
   | "no-empty-slot" // 빈 칸이 하나도 없다
@@ -41,7 +42,7 @@ export function placeInParty(save: SaveV3, petId: string, slotIndex?: number): P
   const i = slotIndex ?? firstEmptySlot(save);
   if (i < 0) return { ok: false, reason: "no-empty-slot" };
   const slot = save.party.slots[i];
-  if (!slot) return { ok: false, reason: "no-slot" };
+  if (!slot) return { ok: false, reason: "bad-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   if (slot.state === "locked") return { ok: false, reason: "slot-locked" };
   if (slot.state !== "empty") return { ok: false, reason: "slot-not-empty" };
 
@@ -58,7 +59,7 @@ export function swapWithBox(save: SaveV3, slotIndex: number, petId: string): Pla
   if (!spot) return { ok: false, reason: "not-in-box" };
 
   const slot = save.party.slots[slotIndex];
-  if (!slot) return { ok: false, reason: "no-slot" };
+  if (!slot) return { ok: false, reason: "bad-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   if (slot.state === "locked") return { ok: false, reason: "slot-locked" };
   if (slot.state !== "pokemon" || !slot.petId) return { ok: false, reason: "not-in-party" };
 
@@ -75,7 +76,7 @@ export function movePartySlot(save: SaveV3, petId: string, toSlot: number): Plac
   const from = petSlotIndex(save.party.slots, petId);
   if (from < 0) return { ok: false, reason: "not-in-party" };
   const target = save.party.slots[toSlot];
-  if (!target) return { ok: false, reason: "no-slot" };
+  if (!target) return { ok: false, reason: "bad-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
   if (target.state === "locked") return { ok: false, reason: "slot-locked" };
   if (from === toSlot) return { ok: false, reason: "same-slot" }; // 박스 칸 옮기기(src/box/slots.ts moveSlot)와 같다 (94 항목 9-5-3)
 
@@ -94,7 +95,8 @@ export function keepInBox(save: SaveV3, petId: string, to?: { boxId: string; slo
 
   if (to) {
     const box = save.boxes.find((b) => b.id === to.boxId);
-    if (!box || to.slot < 0 || to.slot >= box.slots.length) return { ok: false, reason: "no-slot" };
+    if (!box) return { ok: false, reason: "no-box" };
+    if (to.slot < 0 || to.slot >= box.slots.length) return { ok: false, reason: "bad-slot" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     if (box.slots[to.slot] != null) return { ok: false, reason: "slot-not-empty" };
     box.slots[to.slot] = petId;
   } else if (!addToBox(save.boxes, petId)) {

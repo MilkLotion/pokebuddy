@@ -88,7 +88,7 @@ function fake(state: SaveV3, now = T0): Fake {
   assert.equal(f.writes, 0);
   assert.equal(f.state.tx.length, 0, "실패한 요청은 기록하지 않는다");
   const gone = tx.run({ id: "r2", name: "party.hide", args: { petId: "없는개체" } });
-  assert.equal(gone.ok === false && gone.reason, "no-slot");
+  assert.equal(gone.ok === false && gone.reason, "not-in-party", "파티에 없는 개체 — 같은 잘못은 같은 코드 (94 항목 9-5-2)");
   assert.equal(f.writes, 0);
   process.stdout.write("(3) 실패 · 상태를 그대로 둔다  ok\n");
 }
@@ -250,7 +250,7 @@ function seedBox(): SaveV3 {
   const taken = tx.run({ id: "r1", name: "party.keep", args: { petId: "p1", toBoxId: f.state.boxes[0]!.id, toSlot: 0 } });
   assert.equal(taken.ok === false && taken.reason, "slot-not-empty");
   const bad = tx.run({ id: "r2", name: "party.keep", args: { petId: "p1", toBoxId: "nope", toSlot: 5 } });
-  assert.equal(bad.ok === false && bad.reason, "no-slot");
+  assert.equal(bad.ok === false && bad.reason, "no-box", "모르는 박스 (94 항목 9-5-2)");
   assert.equal(tx.run({ id: "r3", name: "party.keep", args: { petId: "p1", toBoxId: f.state.boxes[0]!.id, toSlot: 7 } }).ok, true);
   assert.equal(f.state.boxes[0]?.slots[7], "p1", "고른 칸에 들어간다");
   assert.equal(f.state.party.slots[0]?.state, "empty");

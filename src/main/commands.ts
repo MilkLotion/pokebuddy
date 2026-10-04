@@ -121,7 +121,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 창 표시 두 항목은 저장 밖의 설정이라 여기서 처리한다. 모르는 키는 bad-value
   dispatcher.register("display.set", (c) => {
     const key = target(c) ?? (isObj(c.args) ? c.args.key : undefined);
-    if (!isSettingKey(key)) return { ok: false, reason: "bad-value", key: String(key) };
+    if (!isSettingKey(key)) return { ok: false, reason: "bad-args", key: String(key) }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     const value = asBool(isObj(c.args) ? c.args.value : undefined);
     if (value == null) return { ok: false, reason: "bad-value", key };
     if (key === "hidden") ctx.settings.setHidden(value);
@@ -135,7 +135,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 숨기기·보이기도 다른 개체 명령과 같이 target 이 없으면 args.petId 를 본다 (94 문서 4-12, X4)
   const showHide = (shown: boolean) => async (c: Command): Promise<CommandResult> => {
     const id = petTarget(c);
-    if (!id) return { ok: false, reason: "no-pet" };
+    if (!id) return { ok: false, reason: "bad-args" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     return ctx.party.setShown(id, shown, partyRequest(c));
   };
   dispatcher.register("party.show", showHide(true));
@@ -166,7 +166,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 돌봄 — 저장은 실행기가 바꾸고 무대는 반응만 보인다
   for (const action of ["feed", "play"] as const) dispatcher.register(action, async (c) => {
     const id = petTarget(c);
-    if (!id) return { ok: false, reason: "no-pet" };
+    if (!id) return { ok: false, reason: "bad-args" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     const result = await runSave(c);
     if (result.ok) ctx.stage.care?.(id, action);
     return result;
@@ -175,7 +175,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 진화는 그림이 있어야 한다. 바뀔 모습을 먼저 받아 두고, 못 받으면 저장을 건드리지 않는다
   dispatcher.register("evolve", async (c) => {
     const id = petTarget(c);
-    if (!id) return { ok: false, reason: "no-pet" };
+    if (!id) return { ok: false, reason: "bad-args" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     const save = ctx.party.isWriter() ? currentSave() : null;
     if (save) {
       const pet = save.pets.find((row) => row.id === id);
@@ -198,7 +198,7 @@ export function createCommands(ctx: CommandContext): Commands {
   // 공유 sid 계열의 모습 바꾸기 — 진화처럼 바뀔 종의 그림을 먼저 받아 둔다. 못 받으면 저장을 건드리지 않는다
   dispatcher.register("pet.form", async (c) => {
     const id = petTarget(c);
-    if (!id) return { ok: false, reason: "no-pet" };
+    if (!id) return { ok: false, reason: "bad-args" }; // 같은 잘못은 같은 코드 (94 항목 9-5-2)
     const species = typeof c.args?.species === "string" ? c.args.species : null;
     const save = ctx.party.isWriter() ? currentSave() : null;
     const pet = save?.pets.find((row) => row.id === id);
