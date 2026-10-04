@@ -66,10 +66,11 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     }
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
+    // 버프 효과는 "+N%" 꼴 하나 — 적립 줄·명세 돌봄 보너스 표와 같다 (2026-10-04 사용자 결정 "+% 하나", 94 항목 9-3-2)
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 ×2 · 2시간`, ...buffRefresh(v, pet, "premium-food", "2시간")];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 +100% · 2시간`, ...buffRefresh(v, pet, "premium-food", "2시간")];
     case "play-buff":
-      return [t("buff.long-play"), "친밀도 증가량 ×1.5 · 2시간", ...buffRefresh(v, pet, "long-play", "2시간")];
+      return [t("buff.long-play"), "친밀도 증가량 +50% · 2시간", ...buffRefresh(v, pet, "long-play", "2시간")];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
