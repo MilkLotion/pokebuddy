@@ -24,6 +24,8 @@ Link source files, data, commands, and review evidence. Resolve conflicts with `
 
 ## Required Work Cycle
 
+Unless the user gives a different instruction for a task, every task starts with a solid plan, including small fixes. Write the goal, scope, SSOT files, risks, and acceptance checks before you change code. When you report, state what you did in each step below.
+
 Use this order for every feature or bug fix:
 
 Role instructions: [design](docs/contributing/roles/design.md), [work](docs/contributing/roles/work.md), [review](docs/contributing/roles/review.md), [feedback](docs/contributing/roles/feedback.md), and [revision](docs/contributing/roles/revision.md).
@@ -49,6 +51,8 @@ Before completion, manually review changed prose with the writing checklist. Rec
 - `data/`: editable rules and species data.
 - `assets/`: fonts, item icons, and logo. `scripts/`, `bin/`, `helpers/`: packaging tools. `bin/pokebuddy` is a thin entry; commands live in `src/cli/main.ts`.
 - `docs/`: records.
+
+Read [`docs/contributing/code-map.md`](docs/contributing/code-map.md) before changing code. It lists where each kind of code goes, the import rules that `check-deps` enforces, and the common code for shared behavior (dialogs, two-pane dialogs, scrim and window-button dimming, device frame, quantity input, coach marks, count text, banners). Same feature, same behavior: reuse that common code instead of writing a per-window copy. If a window needs different behavior, add an option to the common code, and first confirm the rule in `docs/specs/`.
 
 ## Build and Test Commands
 
