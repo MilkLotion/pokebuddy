@@ -73,7 +73,7 @@ const SETTING_KEYS = ["hidden", "clickThrough"] as const;
 type SettingKey = (typeof SETTING_KEYS)[number];
 const isSettingKey = (v: unknown): v is SettingKey => typeof v === "string" && (SETTING_KEYS as readonly string[]).includes(v);
 
-// 그림을 기다린 뒤 이보다 오래된 요청은 반영하지 않는다. 보낸 쪽은 진화 답을 45초 기다린다 (src/save/mailbox.ts).
+// 그림을 기다린 뒤 이보다 오래된 요청은 반영하지 않는다. 보낸 쪽은 진화 답을 45초 기다린다 (src/save/command-channel.ts).
 // 보낸 쪽이 포기한 뒤에 진화하면 실패로 안 채로 상태만 바뀐다
 const EVOLVE_EXPIRE_MS = 40_000;
 

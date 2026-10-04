@@ -12,7 +12,7 @@ import { createSaveParty } from "../../save/save-party";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
-import { send } from "../../save/mailbox";
+import { sendToWriter as send } from "../../save/command-channel";
 import type { Command } from "../../shared/command";
 import { makeTmp } from "../harness/tmp-dir";
 

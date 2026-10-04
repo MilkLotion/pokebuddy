@@ -316,7 +316,7 @@ node dist/tools/dev/dev-test.js start              # 고친 저장으로 다시 
    - 온라인이 필요한 확인은 그대로 띄운다. 운영 서버에 새 익명 계정이 생긴다. 서버는 첫 올리기를 직전 저장과 견주지 않는다. 그래서 3번에서 만든 저장은 위반이 아니다.
    - 띄운 뒤에는 온라인 HOME 의 저장 파일을 고치지 않는다. 고쳐야 하면 [시험 계정](#시험-계정)의 `save put` 절차를 따른다.
    - 배포 전의 규칙(확률표·가격 등)이 운영 서버의 `upload-save` 와 다르면 온라인 실기는 위반을 기록한다. 그런 확인은 오프라인으로 한다. 또는 `upload-save` 를 재배포한 뒤에 한다.
-5. `start` 로 띄운다. 명령은 `node bin/pokebuddy game <명령> …` 으로 보낸다. `HOME` 과 `USERPROFILE` 을 시험 HOME 으로 준다. CLI 가 받지 않는 명령(`egg.open`·`bag.use` 등)은 `dist/save/mailbox.js` 의 `send(PATHS.mailbox, { cmd, target, args, from: "cli" })` 로 보낸다.
+5. `start` 로 띄운다. 명령은 `node bin/pokebuddy game <명령> …` 으로 보낸다. `HOME` 과 `USERPROFILE` 을 시험 HOME 으로 준다. CLI 가 받지 않는 명령(`egg.open`·`bag.use` 등)은 `dist/save/command-channel.js` 의 `sendToWriter(PATHS.mailbox, { cmd, target, args, from: "cli" })` 로 보낸다.
 6. 결과는 저장 파일로 확인한다. `show` 와 평문 `save.json` 을 읽는다.
 7. 실제 창은 아래 "창 확인"으로 본다.
 8. 끝나면 `stop` 으로 내린다. 온라인이었으면 관리자 CLI `violations <uuid>` 로 위반이 없는지 본다. uuid 는 시험 HOME 의 `cloud.json` `userId` 다.

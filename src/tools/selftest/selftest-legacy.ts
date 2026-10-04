@@ -10,13 +10,14 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { bridgeMailbox } from "../../commands/dispatcher";
-import * as mailbox from "../../save/mailbox";
+import * as mailbox from "../../save/command-channel";
 import * as rules from "../../save/rules";
 import { SAVE_V2_RULES } from "../../save/v2/rules";
 import { emptyPet, emptySaveV2, normalizeSaveV2 } from "../../save/v2/normalize";
 import { writeAtomic } from "../../platform/atomic-write";
 import { writeSaveV2 } from "../harness/v2-save";
-import * as writer from "../../save/writer";
+import * as writer from "../../platform/pid-lock";
+import { isPidAlive } from "../../platform/pid";
 import type { Command, CommandResult } from "../../shared/command";
 import type { CommandName } from "../../shared/names/commands";
 import type { LogEntry } from "../../shared/save-v3";
@@ -26,7 +27,7 @@ import { sleep, waitFor } from "../harness/wait";
 import { createDispatcher } from "../../tx/dispatcher";
 import { printLine as out } from "../harness/report";
 
-const save = { ...rules, ...writer, ...mailbox }; // 배럴 없이 모듈을 직접
+const save = { ...rules, ...writer, ...mailbox, isPidAlive }; // 배럴 없이 모듈을 직접
 
 const { SAVE_RULES } = save;
 const T0 = new Date(2026, 8, 17, 10, 0, 0).getTime(); // 2026-09-17 10:00 로컬
@@ -352,48 +353,48 @@ function testFiles(): void {
 async function testWriter(): Promise<void> {
   const lock = path.join(tmpDir("writer"), "deep", "save.lock");
 
-  assert.deepStrictEqual(save.claim(lock), { ok: true, owner: process.pid, reason: "ok" });
-  assert.strictEqual(save.isMine(lock), true);
-  assert.strictEqual(save.owner(lock), process.pid);
-  assert.strictEqual(save.claim(lock).ok, true, "내 것은 다시 잡아도 된다");
-  assert.strictEqual(save.release(lock), true);
+  assert.deepStrictEqual(save.claimLock(lock), { ok: true, owner: process.pid, reason: "ok" });
+  assert.strictEqual(save.ownsLock(lock), true);
+  assert.strictEqual(save.liveLockOwner(lock), process.pid);
+  assert.strictEqual(save.claimLock(lock).ok, true, "내 것은 다시 잡아도 된다");
+  assert.strictEqual(save.releaseLock(lock), true);
   assert.strictEqual(fs.existsSync(lock), false);
-  assert.strictEqual(save.release(lock), false, "없는 lock 은 놓을 것이 없다");
-  assert.strictEqual(save.isMine(lock), false);
-  assert.strictEqual(save.owner(lock), null);
+  assert.strictEqual(save.releaseLock(lock), false, "없는 lock 은 놓을 것이 없다");
+  assert.strictEqual(save.ownsLock(lock), false);
+  assert.strictEqual(save.liveLockOwner(lock), null);
 
   // 죽은 pid 는 덮어쓴다
   fs.writeFileSync(lock, `${await deadPid()}\n`);
-  assert.strictEqual(save.owner(lock), null);
-  assert.strictEqual(save.claim(lock).ok, true);
-  assert.strictEqual(save.isMine(lock), true);
-  save.release(lock);
+  assert.strictEqual(save.liveLockOwner(lock), null);
+  assert.strictEqual(save.claimLock(lock).ok, true);
+  assert.strictEqual(save.ownsLock(lock), true);
+  save.releaseLock(lock);
 
   // 파손 lock 도 덮어쓴다
   fs.writeFileSync(lock, "garbage");
-  assert.strictEqual(save.readOwner(lock), null);
-  assert.strictEqual(save.claim(lock).ok, true);
-  save.release(lock);
+  assert.strictEqual(save.readLockPid(lock), null);
+  assert.strictEqual(save.claimLock(lock).ok, true);
+  save.releaseLock(lock);
 
   // 살아 있는 다른 pid 는 busy — release 도 남의 것은 건드리지 않는다
   const other = spawnIdle();
   try {
     fs.writeFileSync(lock, `${other.pid}\n`);
-    assert.strictEqual(save.pidAlive(other.pid), true);
-    assert.deepStrictEqual(save.claim(lock), { ok: false, owner: other.pid, reason: "busy" });
-    assert.strictEqual(save.owner(lock), other.pid);
-    assert.strictEqual(save.isMine(lock), false);
-    assert.strictEqual(save.release(lock), false);
-    assert.strictEqual(save.readOwner(lock), other.pid, "남의 lock 은 그대로");
-    assert.strictEqual(save.release(lock, other.pid), true, "그 pid 로는 놓을 수 있다");
+    assert.strictEqual(save.isPidAlive(other.pid), true);
+    assert.deepStrictEqual(save.claimLock(lock), { ok: false, owner: other.pid, reason: "busy" });
+    assert.strictEqual(save.liveLockOwner(lock), other.pid);
+    assert.strictEqual(save.ownsLock(lock), false);
+    assert.strictEqual(save.releaseLock(lock), false);
+    assert.strictEqual(save.readLockPid(lock), other.pid, "남의 lock 은 그대로");
+    assert.strictEqual(save.releaseLock(lock, other.pid), true, "그 pid 로는 놓을 수 있다");
     fs.writeFileSync(lock, `${other.pid}\n`);
   } finally {
     other.kill();
     await other.exited;
   }
-  assert.ok(await waitFor(() => !save.pidAlive(other.pid)));
-  assert.strictEqual(save.claim(lock).ok, true, "죽으면 이어받는다");
-  assert.strictEqual(save.release(lock), true);
+  assert.ok(await waitFor(() => !save.isPidAlive(other.pid)));
+  assert.strictEqual(save.claimLock(lock).ok, true, "죽으면 이어받는다");
+  assert.strictEqual(save.releaseLock(lock), true);
   out("  writer 잠금");
 }
 
@@ -402,7 +403,7 @@ async function testWriter(): Promise<void> {
 async function testMailboxDetached(): Promise<void> {
   const dir = path.join(tmpDir("mailbox-detached"), "box");
   const done: string[] = [];
-  const server = save.serve(
+  const server = save.serveCommands(
     dir,
     async (command) => {
       if (command.cmd === "trade.create") await sleep(1500); // 서버를 기다린다
@@ -413,10 +414,10 @@ async function testMailboxDetached(): Promise<void> {
   );
   const sendOpts = { timeoutMs: 5000, pollMs: 20 };
   try {
-    const slow = save.send(dir, { cmd: "trade.create", from: "cli" }, sendOpts);
+    const slow = save.sendToWriter(dir, { cmd: "trade.create", from: "cli" }, sendOpts);
     await sleep(150);
     const started = Date.now();
-    const fed = await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts);
+    const fed = await save.sendToWriter(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts);
     assert.strictEqual(fed.ok, true);
     assert.ok(Date.now() - started < 1000, "돌봄은 교환 명령을 기다리지 않는다");
     assert.strictEqual((await slow).ok, true, "교환 명령도 끝난다");
@@ -431,7 +432,7 @@ async function testMailbox(): Promise<void> {
   const dir = path.join(tmpDir("mailbox"), "box");
   const seen: Command[] = [];
   const logs: Record<string, unknown>[] = [];
-  const server = save.serve(
+  const server = save.serveCommands(
     dir,
     async (command) => {
       seen.push(command);
@@ -446,7 +447,7 @@ async function testMailbox(): Promise<void> {
     assert.strictEqual(fs.existsSync(dir), true, "serve 가 폴더를 만든다");
 
     // 왕복
-    const r1 = await save.send(dir, { cmd: "feed", target: "p1", args: { x: 1 }, from: "cli" }, sendOpts);
+    const r1 = await save.sendToWriter(dir, { cmd: "feed", target: "p1", args: { x: 1 }, from: "cli" }, sendOpts);
     assert.deepStrictEqual(r1, { ok: true, reason: "ok", echo: { x: 1 }, target: "p1" });
     assert.strictEqual(seen.length, 1);
     const first = some(seen[0]);
@@ -457,7 +458,7 @@ async function testMailbox(): Promise<void> {
     assert.ok(Date.now() - some(first.at) < 3000, "at 은 보낸 시각");
 
     // 점이 든 명령 이름
-    const r2 = await save.send(dir, { cmd: "party.show", target: "p2", from: "vscode" }, sendOpts);
+    const r2 = await save.sendToWriter(dir, { cmd: "party.show", target: "p2", from: "vscode" }, sendOpts);
     assert.strictEqual(r2.ok, true);
     const second = some(seen[1]);
     assert.strictEqual(second.cmd, "party.show");
@@ -466,24 +467,24 @@ async function testMailbox(): Promise<void> {
 
     // 이름이 틀리면 파일을 만들지 않고 bad-cmd
     for (const cmd of ["Feed", "feed!", "", "x.result", "1feed", ".feed", undefined]) {
-      const r = await save.send(dir, asCommand({ cmd, from: "cli" }), sendOpts);
+      const r = await save.sendToWriter(dir, asCommand({ cmd, from: "cli" }), sendOpts);
       assert.strictEqual(r.reason, "bad-cmd", `bad-cmd: ${cmd}`);
     }
     assert.strictEqual(seen.length, 2);
 
     // 핸들러가 던지면 error, 결과를 안 주면 no-result — 통로는 살아 있다
-    const r3 = await save.send(dir, { cmd: "quit", from: "tray" }, sendOpts);
+    const r3 = await save.sendToWriter(dir, { cmd: "quit", from: "tray" }, sendOpts);
     assert.strictEqual(r3.ok, false);
     assert.strictEqual(r3.reason, "error");
     assert.strictEqual(r3.message, "boom");
     assert.strictEqual(logs.filter((e) => e.mailbox === "handle-error").length, 1);
-    const r4 = await save.send(dir, { cmd: "snapshot", from: "cli" }, sendOpts);
+    const r4 = await save.sendToWriter(dir, { cmd: "snapshot", from: "cli" }, sendOpts);
     assert.deepStrictEqual(r4, { ok: false, reason: "no-result", cmd: "snapshot" });
-    const r5 = await save.send(dir, { cmd: "box.sort", from: "pet" }, sendOpts);
+    const r5 = await save.sendToWriter(dir, { cmd: "box.sort", from: "pet" }, sendOpts);
     assert.strictEqual(r5.ok, true, "죽지 않고 다음 요청을 받는다");
 
     const sameTime = Date.now();
-    const simultaneous = await Promise.all(["p1", "p2"].map((target) => save.send(dir, { cmd: "feed", target, from: "cli" }, { ...sendOpts, clock: () => sameTime })));
+    const simultaneous = await Promise.all(["p1", "p2"].map((target) => save.sendToWriter(dir, { cmd: "feed", target, from: "cli" }, { ...sendOpts, clock: () => sameTime })));
     assert.deepStrictEqual(simultaneous.map((r) => r.target), ["p1", "p2"], "동일 시각·명령도 두 요청과 회신이 독립");
 
     // 손으로 둔 요청 — from 을 모르면 cli, target 아닌 값은 버린다
@@ -542,7 +543,7 @@ async function testMailbox(): Promise<void> {
   }
 
   // writer 가 없으면 timeout — 요청은 회수한다
-  const r6 = await save.send(dir, { cmd: "feed", from: "cli" }, { timeoutMs: 200, pollMs: 20 });
+  const r6 = await save.sendToWriter(dir, { cmd: "feed", from: "cli" }, { timeoutMs: 200, pollMs: 20 });
   assert.deepStrictEqual(r6, { ok: false, reason: "timeout", cmd: "feed" });
   assert.deepStrictEqual(fs.readdirSync(dir), [], "회수한 요청은 남지 않는다");
 
@@ -554,9 +555,9 @@ async function testMailbox(): Promise<void> {
 
   // 시계 주입 — 서버 시계가 미래면 방금 요청도 오래된 것
   const dir2 = path.join(tmpDir("mailbox-clock"), "box");
-  const late = save.serve(dir2, () => ({ ok: true, reason: "ok" }), { pollMs: 50, clock: () => Date.now() + SAVE_RULES.channel.requestTtlMs * 2 });
+  const late = save.serveCommands(dir2, () => ({ ok: true, reason: "ok" }), { pollMs: 50, clock: () => Date.now() + SAVE_RULES.channel.requestTtlMs * 2 });
   try {
-    const r7 = await save.send(dir2, { cmd: "feed", from: "cli" }, { timeoutMs: 300, pollMs: 20 });
+    const r7 = await save.sendToWriter(dir2, { cmd: "feed", from: "cli" }, { timeoutMs: 300, pollMs: 20 });
     assert.strictEqual(r7.reason, "timeout");
   } finally {
     late.stop();
@@ -627,9 +628,9 @@ async function testDispatcher(): Promise<void> {
   const server = bridgeMailbox(d, dir, { pollMs: 50 });
   try {
     const sendOpts = { timeoutMs: 3000, pollMs: 20 };
-    assert.deepStrictEqual(await save.send(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts), { ok: true, reason: "already" });
-    assert.deepStrictEqual(await save.send(dir, { cmd: "shop.buy" satisfies CommandName, from: "cli" }, sendOpts), { ok: false, reason: "unknown-cmd", cmd: "shop.buy" });
-    const r = await save.send(dir, { cmd: "box.sort", from: "vscode" }, sendOpts);
+    assert.deepStrictEqual(await save.sendToWriter(dir, { cmd: "feed", target: "p1", from: "cli" }, sendOpts), { ok: true, reason: "already" });
+    assert.deepStrictEqual(await save.sendToWriter(dir, { cmd: "shop.buy" satisfies CommandName, from: "cli" }, sendOpts), { ok: false, reason: "unknown-cmd", cmd: "shop.buy" });
+    const r = await save.sendToWriter(dir, { cmd: "box.sort", from: "vscode" }, sendOpts);
     assert.strictEqual(r.reason, "error");
     assert.strictEqual(r.message, "boom");
     assert.deepStrictEqual(fs.readdirSync(dir), []);

@@ -37,8 +37,8 @@ export interface CommandServer {
   stop(): void; // 감시·폴링을 멈춘다
 }
 
-export const CMD = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/;
-export const REQUEST = /^(\d+)-(\d+)-([a-z][a-z0-9.-]*)(?:-\d+)?\.json$/;
+const CMD = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/;
+const REQUEST = /^(\d+)-(\d+)-([a-z][a-z0-9.-]*)(?:-\d+)?\.json$/;
 export const RESULT = /\.result\.json$/;
 
 // 파일 이름에 넣을 수 있는 명령 이름인가 — ".result" 로 끝나면 회신 파일과 헷갈리므로 막는다
