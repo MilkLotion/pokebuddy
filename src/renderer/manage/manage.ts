@@ -5,6 +5,7 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
+import { boxUi, hold, type DragFrom } from "./box-state.js";
 import { accountActionsEl, accountOverlayEl, currentAccount, drawAccount, loadAccount, setAccountHooks, shortAgoText } from "./account.js";
 import { drawTradeDialog, loadTrade, redrawTrade, setTradeHooks, tradeInProgress } from "./trade.js";
 import { drawLetter, drawMail } from "./mail.js";
@@ -88,7 +89,7 @@ setBagLinkHooks({ stepRows: (bag) => bagStepRows(bag), stepPreset: (delta) => st
 
 // 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
 setLiveHooks({
-  isHolding: () => dragFrom != null || boxRenaming,
+  isHolding: () => hold.drag != null || boxUi.renaming,
   afterLive: () => {
     syncPetDevice();
     syncShopDevice();
@@ -108,7 +109,7 @@ setShellHooks({
   isTyping: (root) => typingSearch(root),
   beforeTabChange: () => {
     ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 그리기의 syncPetDevice 가 기기 창을 닫는다
-    if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
+    if (hold.box) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
     presetRenaming = false;
   },
   afterTabChange: () => {
@@ -186,22 +187,9 @@ let agentNode: AgentReply["node"] | undefined;
 const agentChecks = new Map<string, { ok: boolean; text: string; at: number }>();
 const agentFails = new Map<string, string>(); // 연결·해제·다시 확인 실패 — 그 줄의 상태 글자로 보인다(경고 줄을 끼우지 않는다)
 let agentProbing: string | null = null;
-let boxPage = 0;
-// 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
-let boxSortOpen = false;
-let boxMenuOpen = false; // 박스 머리의 햄버거 메뉴 — 박스 순서·교환 (2026-10-02 사용자 결정, Figma 05 `Box / Menu Open`)
-let boxRenaming = false;
-let boxNote = ""; // 박스 명령이 실패한 이유 — 머리 부제 자리에 보인다. 줄을 끼우지 않는다 (2026-10-01 사용자 "레이아웃은 바뀌면 안된다")
-// 옮기기로 든 개체 — 든 동안 원래 칸은 흐리다. ghost 가 참이면 커서를 따라가는 칸(holdGhost)도 띄운다. holdAt 은 마지막 커서 자리.
-//   포켓몬 메뉴의 `옮기기`   커서를 따라간다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고")
-//   교체 화면               따라가지 않는다 — 파티 기기 창에서 든 것처럼 원래 칸만 흐리다 (2026-10-02 사용자 결정 "교체일때는 지금처럼유지")
-let boxHold: { petId: string; boxId: string; slot: number; ghost: boolean } | null = null;
+// 커서를 따라가는 칸(holdGhost)과 마지막 커서 자리(holdAt) — 옮기기로 든 동안 (든 개체는 box-state.ts hold.box)
 let holdGhost: HTMLElement | null = null;
 let holdAt: { x: number; y: number } | null = null;
-// 교체 화면 — 박스 탭 + 파티 기기 창. 파티 탭의 `교체` 와 빈 파티 칸이 연다. 박스 탭을 나가거나 기기 창을 닫으면 끝난다.
-// 이 동안 박스 칸을 누르면 상세 대신 그 개체를 든다. 파티 기기 창의 칸을 누르면 그 칸에 놓는다 (2026-10-02 사용자 결정)
-let swapMode = false;
-let partyHold: string | null = null; // 파티 기기 창에서 든 파티 개체 — 박스 칸이나 다른 파티 칸을 누르면 거기 놓는다
 let partyNote = ""; // 교체 명령이 실패한 이유 — 파티 기기 창의 머리 줄에 보인다
 let partyBusy: string | null = null; // 0.3초 넘게 답이 없는 칸·칩의 열쇠 — 파티 기기 창이 그것만 점 세 개로
 // 파티 기기 창 연결 — 교체 화면인 동안 연다 (partyDeviceBuild)
@@ -210,10 +198,10 @@ const partyLink = createDeviceLink<PartyDeviceInput>({
   stamp: () => ui.view,
   open: (input, gen) => api.partyOpen(input, gen),
   apply: (input) => {
-    partyHold = input.heldPetId;
+    hold.party = input.heldPetId;
   },
   afterClosed: () => {
-    if (!swapMode) return false;
+    if (!hold.swap) return false;
     closeSwap();
     endHold();
     return true;
@@ -221,10 +209,6 @@ const partyLink = createDeviceLink<PartyDeviceInput>({
   redraw: () => redrawBody(),
 });
 let presetRenaming = false;
-// 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
-// 박스 순서 모달의 타일이면 박스 ID
-type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string };
-let dragFrom: DragFrom | null = null;
 const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "dex", label: "도감 번호" },
   { by: "level", label: "레벨 높은 순" },
@@ -370,7 +354,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
 function stepPreset(delta: -1 | 1): void {
   const p = ui.view?.party.preset;
   if (!p || p.count < 2) return;
-  partyHold = null;
+  hold.party = null;
   void sendCommand("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
 }
 
@@ -402,7 +386,7 @@ function drawParty(v: Snapshot): void {
     const card = slot.pet ? petCard(slot.pet) : blankCard(slot);
     if (slot.state !== "locked") {
       dropZone(card, () => {
-        const from = dragFrom;
+        const from = hold.drag;
         if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index });
       });
     }
@@ -654,10 +638,10 @@ function drawBox(v: Snapshot): void {
   const top = pageHeadEl("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
-  if (boxNote && sub) {
+  if (boxUi.note && sub) {
     sub.className = "sub fail";
-    sub.replaceChildren(el("i"), el("span", undefined, boxNote));
-    (sub as HTMLElement).title = boxNote;
+    sub.replaceChildren(el("i"), el("span", undefined, boxUi.note));
+    (sub as HTMLElement).title = boxUi.note;
   }
   // 머리 오른쪽 — 햄버거 단추 하나. 누르면 메뉴(박스 순서·교환)가 뜬다 (2026-10-02 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665` 머리)
   const acts = el("div", "head-acts");
@@ -665,36 +649,36 @@ function drawBox(v: Snapshot): void {
   top.appendChild(acts);
   bodyEl.appendChild(top);
 
-  if (boxPage >= v.boxes.length) boxPage = 0;
-  const box = v.boxes[boxPage];
+  if (boxUi.page >= v.boxes.length) boxUi.page = 0;
+  const box = v.boxes[boxUi.page];
   if (!box) return;
 
   // 든 개체가 그 칸에 없으면(다른 곳에서 옮겼거나 사라졌다) 내려놓는다
-  if (boxHold) {
-    const at = boxHold;
+  if (hold.box) {
+    const at = hold.box;
     if (v.boxes.find((b) => b.id === at.boxId)?.slots[at.slot]?.id !== at.petId) endHold();
   }
-  const hold = boxHold;
+  const boxHeld = hold.box;
 
   // 넘김 줄 — ◀ [이름] ▶ … 정렬. 이름 칸은 고정 폭이다. 칸 수(12 / 30)는 두지 않는다 — 보관 수는 머리 부제에 있다 (2026-10-02 사용자 결정, Figma `Box Toolbar` Show Count 끔)
   // 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다 (2026-10-02 사용자 결정)
   const pager = el("div", "pager box-pager");
-  const prevPage = wrapPage(boxPage - 1, v.boxes.length);
-  const nextPage = wrapPage(boxPage + 1, v.boxes.length);
+  const prevPage = wrapPage(boxUi.page - 1, v.boxes.length);
+  const nextPage = wrapPage(boxUi.page + 1, v.boxes.length);
   const prev = buttonEl("", "◀");
   prev.disabled = v.boxes.length <= 1;
   prev.dataset.hold = ""; // 든 채로 박스를 넘긴다 — 든 것을 내려놓지 않는다
   prev.addEventListener("click", () => {
-    boxPage = prevPage;
-    boxNote = "";
+    boxUi.page = prevPage;
+    boxUi.note = "";
     redrawBody();
   });
   const next = buttonEl("", "▶");
   next.disabled = v.boxes.length <= 1;
   next.dataset.hold = "";
   next.addEventListener("click", () => {
-    boxPage = nextPage;
-    boxNote = "";
+    boxUi.page = nextPage;
+    boxUi.note = "";
     redrawBody();
   });
   // ◀·▶ 는 놓을 곳이 아니다 — 끌어 놓기는 지금 박스 안의 자리만 바꾼다. 다른 박스로는 포켓몬 메뉴의 `옮기기` 로만 보낸다 (2026-10-02 사용자 결정)
@@ -704,12 +688,12 @@ function drawBox(v: Snapshot): void {
   pager.append(daycareOpenButton(v), boxSortEl(box));
   bodyEl.appendChild(pager);
 
-  const grid = el("div", hold || partyHold ? "box-grid holding" : "box-grid");
+  const grid = el("div", boxHeld || hold.party ? "box-grid holding" : "box-grid");
   // 교체 화면에서 파티 기기 창의 개체를 든 채 박스 칸을 눌렀다 — 빈 칸이면 그 칸에 보관하고, 개체 칸이면 맞바꾼다
   const dropParty = (slot: number, pet: PetView | null): void => {
-    const held = partyHold;
+    const held = hold.party;
     if (!held) return;
-    partyHold = null;
+    hold.party = null;
     const at = findPartySlot(held);
     if (!pet) void swapSend("party.keep", held, { toBoxId: box.id, toSlot: slot });
     else if (at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
@@ -717,7 +701,7 @@ function drawBox(v: Snapshot): void {
   };
   // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
   const dropHold = (toSlot: number): void => {
-    const h = boxHold;
+    const h = hold.box;
     if (!h) return;
     endHold();
     if (h.boxId === box.id && h.slot === toSlot) {
@@ -729,14 +713,14 @@ function drawBox(v: Snapshot): void {
   box.slots.forEach((pet, slot) => {
     // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
     const onDrop = (): void => {
-      const from = dragFrom;
+      const from = hold.drag;
       if (!from || !("boxId" in from) || (from.boxId === box.id && from.slot === slot)) return;
       void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id));
     };
     if (!pet) {
       const blank = el("div", "cell tall blank");
       blank.dataset.hold = "";
-      blank.addEventListener("click", () => (boxHold ? dropHold(slot) : dropParty(slot, null)));
+      blank.addEventListener("click", () => (hold.box ? dropHold(slot) : dropParty(slot, null)));
       dropZone(blank, onDrop);
       grid.appendChild(blank);
       return;
@@ -744,28 +728,28 @@ function drawBox(v: Snapshot): void {
     // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다).
     // 교체 화면에서는 좌클릭이 상세 대신 그 개체를 든다 (2026-10-02 사용자 결정 "박스칸을 누르면 바로 옮기기 한것처럼")
     const cell = boxSlot(pet, () => {
-      if (boxHold) dropHold(slot);
-      else if (partyHold) dropParty(slot, pet);
-      else if (swapMode) startHold(pet.id);
+      if (hold.box) dropHold(slot);
+      else if (hold.party) dropParty(slot, pet);
+      else if (hold.swap) startHold(pet.id);
       else openPet(pet.id);
     });
     cell.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if (!boxHold) askPetMenu(pet.id);
+      if (!hold.box) askPetMenu(pet.id);
     });
     cell.dataset.hold = "";
     if (pet.id === ui.detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
-    if (hold && hold.boxId === box.id && hold.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
+    if (boxHeld && boxHeld.boxId === box.id && boxHeld.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => {
-      if (!boxHold) startDrag(e, cell, { boxId: box.id, slot });
+      if (!hold.box) startDrag(e, cell, { boxId: box.id, slot });
     });
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
     dropZone(cell, onDrop);
     grid.appendChild(cell);
   });
   bodyEl.appendChild(grid);
-  if (hold?.ghost) showHoldGhost(grid, hold.petId);
+  if (boxHeld?.ghost) showHoldGhost(grid, boxHeld.petId);
 }
 
 // ── 옮기기 — 포켓몬 메뉴의 `옮기기` 로 박스 개체를 든다 ──────────────────────────────
@@ -785,12 +769,12 @@ function startHold(petId: string): void {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); // 입력 중인 칸이 있으면 다시 그리기가 미뤄진다 (typingSearch)
     setTab("box");
     ui.detailPet = null;
-    boxPage = b;
-    boxSortOpen = false;
-    boxMenuOpen = false;
-    boxRenaming = false;
-    boxNote = "";
-    boxHold = { petId, boxId: box.id, slot, ghost: !swapMode };
+    boxUi.page = b;
+    boxUi.sortOpen = false;
+    boxUi.menuOpen = false;
+    boxUi.renaming = false;
+    boxUi.note = "";
+    hold.box = { petId, boxId: box.id, slot, ghost: !hold.swap };
     redrawBody();
     return;
   }
@@ -798,16 +782,16 @@ function startHold(petId: string): void {
 
 // 든 것을 내려놓는다 — 다시 그리지는 않는다
 function endHold(): void {
-  boxHold = null;
+  hold.box = null;
   holdAt = null;
   holdGhost?.remove();
   holdGhost = null;
 }
 
 function cancelHold(): void {
-  if (!boxHold && !partyHold) return;
+  if (!hold.box && !hold.party) return;
   endHold();
-  partyHold = null;
+  hold.party = null;
   redrawBody();
 }
 
@@ -826,15 +810,15 @@ function openSwap(): void {
   if (ui.dialog) closeDialog();
   endHold();
   setTab("box");
-  swapMode = true;
-  partyHold = null;
+  hold.swap = true;
+  hold.party = null;
   partyNote = "";
   redrawBody();
 }
 
 function closeSwap(): void {
-  swapMode = false;
-  partyHold = null;
+  hold.swap = false;
+  hold.party = null;
   partyNote = "";
 }
 
@@ -857,8 +841,8 @@ async function swapSend(cmd: string, target: string, extra: Record<string, unkno
 
 // 파티 기기 창에 보낼 고른 값 — 교체 화면이 아니면 null(닫는다). 모델은 메인이 만든다 (src/view/device-party.ts)
 function partyDeviceBuild(): PartyDeviceInput | null {
-  if (!swapMode || ui.tab !== "box" || !ui.view) return null;
-  return { heldPetId: partyHold, heldFromBox: !!boxHold, notice: partyNote, busy: partyBusy };
+  if (!hold.swap || ui.tab !== "box" || !ui.view) return null;
+  return { heldPetId: hold.party, heldFromBox: !!hold.box, notice: partyNote, busy: partyBusy };
 }
 
 function syncPartyDevice(): void {
@@ -868,41 +852,41 @@ function syncPartyDevice(): void {
 // 파티 기기 창에서 누른 칸·칩
 function onPartyAction(action: PartyDeviceAction): void {
   const v = ui.view;
-  if (!swapMode || !v) return;
+  if (!hold.swap || !v) return;
   partyNote = "";
   if (action.kind === "preset") {
     const p = v.party.preset;
     endHold();
-    partyHold = null;
+    hold.party = null;
     if (action.index !== p.index && action.index < p.count) void swapSend("party.preset", "", { preset: action.index }, partyBusyKey(action));
     else redrawBody();
     return;
   }
   const slot = v.party.slots[action.index];
   if (!slot || slot.state === "locked") return;
-  const h = boxHold;
+  const h = hold.box;
   if (h) {
     // 박스 개체를 든 채 파티 칸을 눌렀다
     endHold();
     void swapSend(slot.pet ? "party.swap" : "party.place", h.petId, { slotIndex: slot.index }, partyBusyKey(action));
     return;
   }
-  if (partyHold) {
+  if (hold.party) {
     // 파티 개체를 든 채 다른 파티 칸을 눌렀다. 제자리면 내려놓는다
-    const held = partyHold;
-    partyHold = null;
+    const held = hold.party;
+    hold.party = null;
     if (slot.pet?.id === held) redrawBody();
     else void swapSend("party.move", held, { toSlot: slot.index }, partyBusyKey(action));
     return;
   }
   if (slot.pet) {
-    partyHold = slot.pet.id;
+    hold.party = slot.pet.id;
     redrawBody();
   }
 }
 
 // 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다.
-// 포켓몬 메뉴의 `옮기기` 로 든 때만 띄운다 (boxHold.ghost)
+// 포켓몬 메뉴의 `옮기기` 로 든 때만 띄운다 (hold.box.ghost)
 function showHoldGhost(grid: HTMLElement, petId: string): void {
   const pet = petInView(petId);
   const any = grid.querySelector<HTMLElement>(".cell");
@@ -929,18 +913,18 @@ function placeHoldGhost(): void {
 }
 
 window.addEventListener("pointermove", (e) => {
-  if (!boxHold?.ghost) return;
+  if (!hold.box?.ghost) return;
   holdAt = { x: e.clientX, y: e.clientY };
   placeHoldGhost();
 });
 // 칸과 ◀·▶ 밖을 누르면 취소한다 — 칸과 ◀·▶ 는 제 처리기가 먼저 돈다
 document.addEventListener("click", (e) => {
-  if (!boxHold && !partyHold) return;
+  if (!hold.box && !hold.party) return;
   if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
   cancelHold();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (boxHold || partyHold)) cancelHold();
+  if (e.key === "Escape" && (hold.box || hold.party)) cancelHold();
 });
 
 // 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
@@ -987,9 +971,9 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
   const move = (e: PointerEvent): void => {
     if (!ghost) {
       if (Math.hypot(e.clientX - x0, e.clientY - y0) < DRAG_START_PX) return;
-      dragFrom = from;
-      boxSortOpen = false;
-      boxMenuOpen = false;
+      hold.drag = from;
+      boxUi.sortOpen = false;
+      boxUi.menuOpen = false;
       const rect = cell.getBoundingClientRect();
       ghost = cell.cloneNode(true) as HTMLElement;
       ghost.classList.add("drag-ghost");
@@ -1017,9 +1001,9 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
     };
     window.addEventListener("click", swallow, { capture: true, once: true });
     setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
-    // 놓을 곳의 처리기는 dragFrom 을 읽는다 — 부른 뒤에 지운다
+    // 놓을 곳의 처리기는 hold.drag 를 읽는다 — 부른 뒤에 지운다
     if (drop && target) dropTargets.get(target)?.();
-    dragFrom = null;
+    hold.drag = null;
   };
   const up = (): void => end(true);
   const cancel = (): void => end(false);
@@ -1030,13 +1014,13 @@ function startDrag(down: PointerEvent, cell: HTMLElement, from: DragFrom): void 
 
 // 박스 이름 — 누르면 입력칸이 된다. Enter·바깥 클릭으로 저장, Esc 로 취소. 비우면 기본 이름(박스 N)
 function boxNameEl(box: BoxView): HTMLElement {
-  if (!boxRenaming) {
+  if (!boxUi.renaming) {
     const name = buttonEl("label box-name", box.name);
     name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
-      boxRenaming = true;
-      boxSortOpen = false;
-      boxMenuOpen = false;
+      boxUi.renaming = true;
+      boxUi.sortOpen = false;
+      boxUi.menuOpen = false;
       redrawBody();
     });
     return name;
@@ -1050,7 +1034,7 @@ function boxNameEl(box: BoxView): HTMLElement {
   const finish = (save: boolean): void => {
     if (done) return;
     done = true;
-    boxRenaming = false;
+    boxUi.renaming = false;
     const name = input.value;
     if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
     if (save && name.trim() !== box.name) void boxCommand("box.rename", box.id, { name });
@@ -1078,15 +1062,15 @@ function boxSortEl(box: BoxView): HTMLElement {
   const wrap = el("div", "box-sort");
   const current = BOX_SORTS.find((s) => s.by === boxSortedBy.get(box.id));
   const toggle = buttonEl("sort-toggle", `${current?.label ?? "정렬"} ▾`);
-  toggle.setAttribute("aria-expanded", String(boxSortOpen));
+  toggle.setAttribute("aria-expanded", String(boxUi.sortOpen));
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
-    boxSortOpen = !boxSortOpen;
-    boxMenuOpen = false;
+    boxUi.sortOpen = !boxUi.sortOpen;
+    boxUi.menuOpen = false;
     redrawBody();
   });
   wrap.appendChild(toggle);
-  if (boxSortOpen) {
+  if (boxUi.sortOpen) {
     const menu = el("div", "sort-menu");
     menu.setAttribute("role", "menu");
     for (const s of BOX_SORTS) {
@@ -1095,7 +1079,7 @@ function boxSortEl(box: BoxView): HTMLElement {
       item.setAttribute("aria-checked", String(s.by === current?.by));
       item.addEventListener("click", (e) => {
         e.stopPropagation();
-        boxSortOpen = false;
+        boxUi.sortOpen = false;
         void boxCommand("box.sort", box.id, { by: s.by }, () => boxSortedBy.set(box.id, s.by));
       });
       menu.appendChild(item);
@@ -1112,19 +1096,19 @@ function boxMenuEl(): HTMLElement {
   const toggle = buttonEl("icon-button box-menu-toggle");
   toggle.innerHTML = BOX_ICON.menu; // 고정 그림 — 사용자 값이 들어가지 않는다
   toggle.setAttribute("aria-label", "박스 메뉴");
-  toggle.setAttribute("aria-expanded", String(boxMenuOpen));
+  toggle.setAttribute("aria-expanded", String(boxUi.menuOpen));
   const dot = el("span", "dot");
   dot.setAttribute("aria-hidden", "true");
   dot.hidden = !tradeInProgress();
   toggle.appendChild(dot);
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
-    boxMenuOpen = !boxMenuOpen;
-    boxSortOpen = false;
+    boxUi.menuOpen = !boxUi.menuOpen;
+    boxUi.sortOpen = false;
     redrawBody();
   });
   wrap.appendChild(toggle);
-  if (!boxMenuOpen) return wrap;
+  if (!boxUi.menuOpen) return wrap;
   const menu = el("div", "sort-menu");
   menu.setAttribute("role", "menu");
   const item = (label: string, run: () => void): void => {
@@ -1132,7 +1116,7 @@ function boxMenuEl(): HTMLElement {
     b.setAttribute("role", "menuitem");
     b.addEventListener("click", (e) => {
       e.stopPropagation();
-      boxMenuOpen = false;
+      boxUi.menuOpen = false;
       redrawBody();
       run();
     });
@@ -1165,19 +1149,19 @@ function drawBoxOrder(): void {
   top.append(titles, x);
   const grid = el("div", "box-order-grid scroll");
   v.boxes.forEach((box, i) => {
-    const tile = buttonEl(i === boxPage ? "box-tile on" : "box-tile");
+    const tile = buttonEl(i === boxUi.page ? "box-tile on" : "box-tile");
     tile.title = box.name;
     tile.append(el("span", "tile-name", box.name), el("span", "tile-count", `${box.used} / ${box.size}`));
     tile.addEventListener("click", () => {
-      boxPage = i;
-      boxNote = "";
+      boxUi.page = i;
+      boxUi.note = "";
       closeDialog();
       redrawBody();
     });
     tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
     tile.addEventListener("dragstart", (e) => e.preventDefault());
     dropZone(tile, () => {
-      const from = dragFrom;
+      const from = hold.drag;
       if (from && "box" in from && from.box !== box.id) void orderBox(from.box, i);
     });
     grid.appendChild(tile);
@@ -1187,11 +1171,11 @@ function drawBoxOrder(): void {
 
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
 async function orderBox(boxId: string, to: number): Promise<void> {
-  const shown = ui.view?.boxes[boxPage]?.id;
+  const shown = ui.view?.boxes[boxUi.page]?.id;
   await sendCommand("box.order", boxId, { to });
   const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
-  if (at >= 0 && at !== boxPage) {
-    boxPage = at;
+  if (at >= 0 && at !== boxUi.page) {
+    boxUi.page = at;
     redrawBody();
     drawDialog();
   }
@@ -1214,7 +1198,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   } finally {
     ui.busy = false;
   }
-  boxNote = reply.ok ? "" : failTextOf(reply.reason, "command").text;
+  boxUi.note = reply.ok ? "" : failTextOf(reply.reason, "command").text;
   redrawBody();
 }
 
@@ -1224,9 +1208,9 @@ document.addEventListener("click", () => {
     settingSelectOpen = null;
     drawDialog();
   }
-  if (!boxSortOpen && !boxMenuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
-  boxSortOpen = false;
-  boxMenuOpen = false;
+  if (!boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  boxUi.sortOpen = false;
+  boxUi.menuOpen = false;
   closeDexRegion();
   closeShopRegion();
   redrawBody();
@@ -1560,9 +1544,9 @@ function drawTutorial(): void {
     drawGuideStep("trade"); // 교환 모달을 처음 열 때
   } else if (ui.view && !ui.dialog && ui.tab === "dex" && screenTut("dex")) {
     drawGuideStep("dex"); // 도감 탭을 처음 열 때
-  } else if (ui.view && !ui.dialog && !ui.detailPet && !boxHold && !swapMode && ui.tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
+  } else if (ui.view && !ui.dialog && !ui.detailPet && !hold.box && !hold.swap && ui.tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
     // 박스 탭을 처음 열 때 — 지금 박스에 개체가 있을 때만. 부화 튜토리얼 차례면 그것이 먼저다(같은 탭의 돌보미집 단추를 밝힌다).
-    // 교체 화면(swapMode)에서는 띄우지 않는다 — 칸 좌클릭이 상세가 아니라 들기라 1단계 문구와 다르다
+    // 교체 화면(hold.swap)에서는 띄우지 않는다 — 칸 좌클릭이 상세가 아니라 들기라 1단계 문구와 다르다
     drawGuideStep("box");
   } else if (ui.view && ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && ui.view.areaTutorial) {
     // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다
