@@ -12,14 +12,12 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { SessionGate } from "./session.js";
 import { finishSwitch, prepareSwitch, type HandoffReport, type PendingHandoff, type SwitchHooks } from "./handoff.js";
 import type { AccountCode } from "../shared/names/online-codes.js";
+import { ACCOUNT_RULES, USERNAME_PATTERN } from "../shared/account-rules.js";
 import type { UsernameCheck } from "../shared/model/account.js";
 import { authCodeOf } from "./codes.js";
 import { callRpc, isUnreachable, messageOf, readFunctionError } from "./server-call.js";
 
 export const ID_DOMAIN = "id.pokebuddy.invalid";
-const USERNAME = /^[a-z][a-z0-9_]{3,15}$/;
-export const PASSWORD_MIN = 8;
-export const NAME_MAX = 12;
 
 export type AccountMethod = "password" | "github";
 
@@ -40,7 +38,7 @@ export type AccountResult = { ok: true; view: AccountView; handoff?: HandoffRepo
 // 아이디 규칙 — 영문 소문자·숫자·밑줄, 4~16자, 영문으로 시작. 대문자는 소문자로 바꾼다. 맞지 않으면 null
 export function normalizeUsername(input: string): string | null {
   const name = input.trim().toLowerCase();
-  return USERNAME.test(name) ? name : null;
+  return USERNAME_PATTERN.test(name) ? name : null;
 }
 
 // 이름 규칙 — 앞뒤 공백을 지우고 1~12자, 줄바꿈·제어 문자 없음. 한글 가능. 맞지 않으면 null
@@ -48,7 +46,7 @@ export function normalizeDisplayName(input: string): string | null {
   const name = input.trim();
   const length = [...name].length;
   // 제어 문자 범위 — C0·DEL·C1
-  return length >= 1 && length <= NAME_MAX && !/[\u0000-\u001f\u007f-\u009f]/.test(name) ? name : null;
+  return length >= 1 && length <= ACCOUNT_RULES.nameMax && !/[\u0000-\u001f\u007f-\u009f]/.test(name) ? name : null;
 }
 
 export const internalEmail = (username: string): string => `${username}@${ID_DOMAIN}`;
@@ -150,7 +148,7 @@ export function createAccount({ client, gate, blocked, onUserChanged, switchHook
     if (!name) return fail("AUTH_USERNAME_INVALID");
     const shown = normalizeDisplayName(displayName);
     if (!shown) return fail("AUTH_NAME_INVALID");
-    if (password.length < PASSWORD_MIN) return fail("AUTH_PASSWORD_WEAK");
+    if (password.length < ACCOUNT_RULES.passwordMin) return fail("AUTH_PASSWORD_WEAK");
     if (blocked()) return fail("AUTH_TRADE_ACTIVE");
     // 세션 교체만 잠금 안에서 — 사용자 변경 알림(changed)은 잠금을 푼 뒤에 부른다
     const done = await gate.exclusive(async (scope): Promise<AccountResult | { handoff: HandoffReport | undefined }> => {

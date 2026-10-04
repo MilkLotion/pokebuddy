@@ -33,6 +33,7 @@ import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, dra
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
+import { ACCOUNT_RULES, USERNAME_PATTERN } from "../../shared/account-rules.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
@@ -2925,7 +2926,7 @@ function acctNotice(title: string, desc: string, tone: "warn" | "bad"): HTMLElem
 function usernameNote(): { text: string; tone: "ok" | "bad" | "idle" } | undefined {
   if (acctForm.check === "available") return { text: "사용할 수 있는 아이디", tone: "ok" };
   if (acctForm.check === "taken") return { text: "이미 쓰는 아이디", tone: "bad" };
-  if (acctForm.check === "invalid") return { text: "영문 소문자로 시작, 소문자·숫자·_ 4~16자", tone: "bad" };
+  if (acctForm.check === "invalid") return { text: `영문 소문자로 시작, 소문자·숫자·_ ${ACCOUNT_RULES.usernameMin}~${ACCOUNT_RULES.usernameMax}자`, tone: "bad" };
   return undefined;
 }
 
@@ -2937,7 +2938,7 @@ function scheduleUsernameCheck(): void {
     acctForm.check = "";
     return;
   }
-  if (!/^[a-z][a-z0-9_]{3,15}$/.test(name)) {
+  if (!USERNAME_PATTERN.test(name)) {
     acctForm.check = "invalid";
     return;
   }
@@ -3007,8 +3008,8 @@ function drawSignUp(scroll: HTMLElement): void {
   });
   grid.append(
     acctField("아이디", user, usernameNote()),
-    acctField("이름", acctInput("acct-new-name", acctForm.displayName, "이름", "text", (v) => { acctForm.displayName = v; }), { text: "화면에 보이는 이름 · 1~12자", tone: "idle" }),
-    acctField("비밀번호", acctInput("acct-new-pass", acctForm.password, "비밀번호", "password", (v) => { acctForm.password = v; }), { text: "8자 이상", tone: "idle" }),
+    acctField("이름", acctInput("acct-new-name", acctForm.displayName, "이름", "text", (v) => { acctForm.displayName = v; }), { text: `화면에 보이는 이름 · 1~${ACCOUNT_RULES.nameMax}자`, tone: "idle" }),
+    acctField("비밀번호", acctInput("acct-new-pass", acctForm.password, "비밀번호", "password", (v) => { acctForm.password = v; }), { text: `${ACCOUNT_RULES.passwordMin}자 이상`, tone: "idle" }),
     acctField("비밀번호 확인", acctInput("acct-new-pass2", acctForm.password2, "비밀번호 확인", "password", (v) => { acctForm.password2 = v; })),
   );
   scroll.appendChild(grid);

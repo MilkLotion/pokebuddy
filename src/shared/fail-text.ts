@@ -4,6 +4,7 @@
 // - 표에 없는 글자(실행 때 목록 밖의 코드)가 오면 자리마다 지금 모양의 대체 문구를 쓴다(UNKNOWN)
 // 언어는 부르는 쪽이 준다 — shared 는 설정 언어를 모른다. 설정창은 아직 한국어만 쓴다
 import type { FailCode } from "./names/online-codes.js";
+import { ACCOUNT_RULES as AR } from "./account-rules.js";
 
 export type FailScope = "command" | "trade" | "account" | "mail";
 export type FailLang = "ko" | "en";
@@ -136,8 +137,8 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   MAIL_LOGIN_REQUIRED: { ko: "로그인하면 받을 수 있어요.", en: "Sign in to receive it." },
   MAIL_NO_GIFTS: { ko: "받을 선물이 없어요.", en: "There are no gifts to receive." },
   MAIL_NOT_FOUND: { ko: "편지를 찾지 못했어요.", en: "Couldn't find the letter." },
-  AUTH_NAME_INVALID: { ko: "이름은 1~12자로 적어 주세요.", en: "Names must be 1–12 characters." },
-  AUTH_USERNAME_INVALID: { ko: "아이디는 영문 소문자로 시작하고 소문자·숫자·_ 4~16자예요.", en: "Usernames start with a lowercase letter and use 4–16 lowercase letters, digits, or _." },
+  AUTH_NAME_INVALID: { ko: `이름은 1~${AR.nameMax}자로 적어 주세요.`, en: `Names must be 1–${AR.nameMax} characters.` },
+  AUTH_USERNAME_INVALID: { ko: `아이디는 영문 소문자로 시작하고 소문자·숫자·_ ${AR.usernameMin}~${AR.usernameMax}자예요.`, en: `Usernames start with a lowercase letter and use ${AR.usernameMin}–${AR.usernameMax} lowercase letters, digits, or _.` },
   AUTH_USERNAME_RESERVED: { ko: "이미 쓰는 아이디예요.", en: "That username is taken." },
   AUTH_ANONYMOUS: { ko: "익명 계정으로는 할 수 없어요. 로그인해 주세요.", en: "You can't do this with an anonymous account. Please sign in." },
   AUTH_REQUIRED: { ko: "로그인해야 해요. 계정 탭에서 로그인해 주세요.", en: "You need to sign in. Sign in from the Account tab." },
@@ -150,7 +151,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   CLOUD_BAD_SAVE: { ko: "계정 저장을 읽지 못해 올리지 않아요.", en: "Not uploaded because the account save couldn't be read." },
   AUTH_INVALID_LOGIN: { ko: "아이디 또는 비밀번호가 맞지 않아요.", en: "Wrong username or password." },
   AUTH_USERNAME_TAKEN: { ko: "이미 쓰는 아이디예요.", en: "That username is taken." },
-  AUTH_PASSWORD_WEAK: { ko: "비밀번호는 8자 이상이에요.", en: "Passwords must be at least 8 characters." },
+  AUTH_PASSWORD_WEAK: { ko: `비밀번호는 ${AR.passwordMin}자 이상이에요.`, en: `Passwords must be at least ${AR.passwordMin} characters.` },
   AUTH_RATE_LIMITED: { ko: "잠시 뒤에 다시 해 주세요.", en: "Please try again later." },
   AUTH_CANCELLED: { ko: "로그인을 취소했어요.", en: "Sign-in was cancelled." },
   AUTH_PORT_BUSY: { ko: "로그인 창을 열 수 없어요. 잠시 뒤에 다시 해 주세요.", en: "Can't open the sign-in window. Please try again later." },
