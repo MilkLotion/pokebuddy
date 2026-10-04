@@ -7,7 +7,8 @@
 import { api } from "./api.js";
 import { goTo, openDialogOrPet, openPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
-import { BOX_ICON, boxSlot, drawBox, drawBoxOrder, setBoxTabHooks } from "./box-tab.js";
+import { boxSlot, drawBox, setBoxTabHooks } from "./box-tab.js";
+import { drawBoxOrder } from "./box-order.js";
 import { drawParty, setPartyTabHooks, stepPreset, stopPresetRename } from "./party-tab.js";
 import { closeSwap, onPartyAction, partyLink, syncPartyDevice } from "./party-link.js";
 import { drawGuide } from "./guide.js";
@@ -30,7 +31,7 @@ import { drawEvolve } from "./evolve.js";
 import { drawNature, drawNatureTarget } from "./nature.js";
 import { drawForm, drawMega } from "./pet-forms.js";
 import { restoreSearchFocus, typingSearch } from "./search.js";
-import { alertEl, dialogCloseEl, lvNature } from "./widgets.js";
+import { alertEl, BOX_ICON, dialogCloseEl, lvNature } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { EggView, Snapshot } from "../../shared/model/snapshot.js";

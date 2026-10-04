@@ -1,4 +1,4 @@
-// 설정창의 박스 탭 — 칸 격자, 넘김 줄(이름·정렬), 햄버거 메뉴, 박스 순서 모달, 박스 명령 (P10 13b)
+// 설정창의 박스 탭 — 칸 격자, 넘김 줄(이름·정렬), 박스 명령 (P10 13b). 머리 메뉴와 박스 순서 모달은 box-order.ts
 // 든 것·끄는 것의 상태는 box-state.ts, 옮기기·끌기는 box-move.ts, 교체 화면은 party-link.ts
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { BoxView, FormView, PetView, Snapshot } from "../../shared/model/snapshot.js";
@@ -8,16 +8,15 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
 import { boxUi, hold } from "./box-state.js";
 import { drawHoldGhost, dropZone, endHold, startDrag, startHold } from "./box-move.js";
-import { requestCommand, sendCommand } from "./command.js";
-import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
+import { requestCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { refreshView } from "./live.js";
 import { swapSend } from "./party-link.js";
 import { markMega } from "./pet-forms.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { findPartySlot, ui } from "./state.js";
-import { loadTrade, tradeInProgress } from "./trade.js";
-import { boxNameCell, dialogCloseEl, pageHeadEl } from "./widgets.js";
+import { boxNameCell, pageHeadEl } from "./widgets.js";
+import { boxMenuEl } from "./box-order.js";
 
 // 설정창이 거는 고리 — 개체 상세·포켓몬 메뉴·돌보미집 단추를 이 파일이 가져오지 않게
 export interface BoxTabHooks {
@@ -44,12 +43,6 @@ const BOX_SORTS: readonly { by: string; label: string }[] = [
 // 박스마다 마지막으로 적용한 정렬 기준 — 단추와 목록에 보인다. 그 박스의 칸을 옮기면 순서가 흐트러지므로 지운다.
 // 저장하지 않는다 — 관리 창을 다시 열면 "정렬" 로 돌아간다
 const boxSortedBy = new Map<string, string>();
-
-// 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`)
-export const BOX_ICON = {
-  menu: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>',
-  house: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8 8 3l5.5 5M4 7v6.5h8V7M7 13.5V10h2v3.5"/></svg>',
-} as const;
 
 // ── 공유 sid 계열 ───────────────────────────────────────────────────────────────
 // 박스 칸은 2×2 단체사진이다. 파티 카드와 개체 상세는 지금 종 하나만 보인다 (2026-09-26 사용자 결정 "너 제안대로 하자").
@@ -275,98 +268,6 @@ function boxSortEl(box: BoxView): HTMLElement {
     wrap.appendChild(menu);
   }
   return wrap;
-}
-
-// 박스 머리의 햄버거 단추 — 누르면 메뉴가 단추 아래에 뜬다. 메뉴는 떠 있는 층이라 본문을 밀지 않는다. 바깥을 누르면 닫힌다.
-// 교환이 진행 중이면 단추 오른쪽 위에 점을 둔다 (2026-10-02 사용자 결정 "햄버거 버튼 두고, 그거 누르면 메뉴나오게"·"교환도 메뉴로")
-function boxMenuEl(): HTMLElement {
-  const wrap = el("div", "box-menu");
-  const toggle = buttonEl("icon-button box-menu-toggle");
-  toggle.innerHTML = BOX_ICON.menu; // 고정 그림 — 사용자 값이 들어가지 않는다
-  toggle.setAttribute("aria-label", "박스 메뉴");
-  toggle.setAttribute("aria-expanded", String(boxUi.menuOpen));
-  const dot = el("span", "dot");
-  dot.setAttribute("aria-hidden", "true");
-  dot.hidden = !tradeInProgress();
-  toggle.appendChild(dot);
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    boxUi.menuOpen = !boxUi.menuOpen;
-    boxUi.sortOpen = false;
-    redrawBody();
-  });
-  wrap.appendChild(toggle);
-  if (!boxUi.menuOpen) return wrap;
-  const menu = el("div", "sort-menu");
-  menu.setAttribute("role", "menu");
-  const item = (label: string, run: () => void): void => {
-    const b = buttonEl("sort-item", label);
-    b.setAttribute("role", "menuitem");
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      boxUi.menuOpen = false;
-      redrawBody();
-      run();
-    });
-    menu.appendChild(b);
-  };
-  item("박스 순서", () => openAnyDialog({ kind: "box-order" }));
-  item("교환", () => {
-    openAnyDialog({ kind: "trade" });
-    void loadTrade();
-  });
-  wrap.appendChild(menu);
-  return wrap;
-}
-
-// 박스 순서 모달 — 박스 타일을 한 줄에 4개씩 보인다. 타일은 이름과 사용 칸 수다. 지금 보는 박스는 옅은 바탕이다.
-// 타일을 끌어 다른 타일에 놓으면 그 자리로 옮긴다(box.order). 사이의 박스는 한 칸씩 밀린다. 타일을 누르면 그 박스로 간다
-// (2026-10-02 사용자 결정 "a로 하자."·"한줄에 4개 들어가게", Figma 05 `Box / Order Modal`)
-export function drawBoxOrder(): void {
-  const v = ui.view;
-  if (!v) {
-    closeDialog();
-    return;
-  }
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "박스 순서"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
-  const grid = el("div", "box-order-grid scroll");
-  v.boxes.forEach((box, i) => {
-    const tile = buttonEl(i === boxUi.page ? "box-tile on" : "box-tile");
-    tile.title = box.name;
-    tile.append(el("span", "tile-name", box.name), el("span", "tile-count", `${box.used} / ${box.size}`));
-    tile.addEventListener("click", () => {
-      boxUi.page = i;
-      boxUi.note = "";
-      closeDialog();
-      redrawBody();
-    });
-    tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
-    tile.addEventListener("dragstart", (e) => e.preventDefault());
-    dropZone(tile, () => {
-      const from = hold.drag;
-      if (from && "box" in from && from.box !== box.id) void orderBox(from.box, i);
-    });
-    grid.appendChild(tile);
-  });
-  dialogEl.append(top, grid);
-}
-
-// 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
-async function orderBox(boxId: string, to: number): Promise<void> {
-  const shown = ui.view?.boxes[boxUi.page]?.id;
-  await sendCommand("box.order", boxId, { to });
-  const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
-  if (at >= 0 && at !== boxUi.page) {
-    boxUi.page = at;
-    redrawBody();
-    drawDialog();
-  }
 }
 
 // 칸을 옮겨 순서가 흐트러진 박스는 정렬 표시를 지운다

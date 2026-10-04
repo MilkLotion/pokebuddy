@@ -114,3 +114,9 @@ export function boxNameCell(inner: HTMLElement): HTMLElement {
   cell.appendChild(inner);
   return cell;
 }
+
+// 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`). 머리 메뉴(box-order.ts)와 돌보미집 단추가 쓴다
+export const BOX_ICON = {
+  menu: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>',
+  house: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8 8 3l5.5 5M4 7v6.5h8V7M7 13.5V10h2v3.5"/></svg>',
+} as const;
