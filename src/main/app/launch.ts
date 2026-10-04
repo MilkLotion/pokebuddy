@@ -7,7 +7,8 @@
 import { app } from "electron";
 import type { ManageRoute } from "../../shared/model/route";
 import { isTradeLink } from "../../trade/link.js";
-import { careArgOf, type CareAction } from "../jump-list";
+import { careArgOf } from "../jump-list";
+import type { CareKind } from "../../state/care";
 import { isUpdateTestBuild } from "./dev-run";
 
 // 계정 링크 — GitHub 로그인 뒤 브라우저 쪽(src/online/github.ts callbackPage)이 여는 pokebuddy://account
@@ -21,7 +22,7 @@ export function tradeLinkOf(argv: readonly string[]): string | null {
 }
 
 export interface LaunchHooks {
-  onCare(care: { action: CareAction; petId: string }): void; // 점프 목록의 밥 주기·놀아주기
+  onCare(care: { action: CareKind; petId: string }): void; // 점프 목록의 밥 주기·놀아주기
   onTradeLink(link: string): void; // 교환 링크로 참가
   onOpen(route?: ManageRoute): void; // 관리 창 열기
 }

@@ -13,7 +13,7 @@ import type { Size } from "../shared/geometry";
 import type { PartyRequest, SaveParty } from "../save/save-party";
 import { partyPetsOf } from "../view/party-pet";
 import type { GameV3 } from "../tx/game";
-import type { CareAction } from "../state/types";
+import type { CareKind } from "../state/care";
 import { evolveCandidates } from "../dex/evolve";
 import { gameDayPart } from "../shared/clock";
 import { appearanceOf } from "../dex/look";
@@ -34,7 +34,7 @@ export interface CommandContext {
   mailboxDir: string;
   party: SaveParty;
   game: GameV3;
-  stage: { care?(id: string, action: CareAction): void; petIds(): string[]; size(): Size; visible(): boolean };
+  stage: { care?(id: string, action: CareKind): void; petIds(): string[]; size(): Size; visible(): boolean };
   settings: CommandSettings;
   quit(): void;
   prepareLook?(look: string): Promise<boolean>;

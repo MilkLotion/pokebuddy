@@ -9,8 +9,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app, type JumpListCategory } from "electron";
+import type { CareKind } from "../state/care";
 
-export type CareAction = "feed" | "play";
 
 export interface JumpPet {
   id: string;
@@ -21,10 +21,10 @@ export interface JumpPet {
 const ARG = "--pokebuddy-care=";
 
 // 실행 인자에서 점프 목록 명령을 찾는다 — 없으면 null
-export function careArgOf(argv: readonly string[]): { action: CareAction; petId: string } | null {
+export function careArgOf(argv: readonly string[]): { action: CareKind; petId: string } | null {
   const raw = argv.find((a) => a.startsWith(ARG));
   const m = raw ? /^(feed|play):(.+)$/.exec(raw.slice(ARG.length)) : null;
-  return m ? { action: m[1] as CareAction, petId: m[2]! } : null;
+  return m ? { action: m[1] as CareKind, petId: m[2]! } : null;
 }
 
 let lastKey = "";
@@ -37,7 +37,7 @@ export function syncJumpList(pets: readonly JumpPet[], labels: { feed: string; p
   lastKey = key;
   // 개발 실행(electron .)은 앱 폴더를 첫 인자로 넘겨야 같은 앱이 뜬다
   const lead = process.defaultApp ? `"${app.getAppPath()}" ` : "";
-  const icon = (action: CareAction): string | null => {
+  const icon = (action: CareKind): string | null => {
     const file = path.join(app.getAppPath(), "assets", "items", `jump-${action}.ico`);
     return fs.existsSync(file) ? file : null;
   };

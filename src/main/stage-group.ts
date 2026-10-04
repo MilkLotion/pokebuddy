@@ -11,7 +11,7 @@
 // 창·무대를 만드는 일은 부르는 쪽이 준다 — 이 모듈은 Electron 을 부르지 않아 자체 시험에서 가짜로 돌린다
 import type { BrowserWindow } from "electron";
 import type { CoachView, HitReply, PointerMsg, StageState } from "../shared/model/stage";
-import type { CareAction } from "../state/types";
+import type { CareKind } from "../state/care";
 import { assignScreens, clampInStage, homeOf, screenRefOfInfo, stackShift, toLocal, type Home, type PlayLane, type ScreenRef, type Spot } from "./layout";
 import type { Rect, Size } from "../shared/geometry";
 import type { PartyPet } from "../view/party-pet";
@@ -70,7 +70,7 @@ export interface StageGroup {
   focus(key: string | null): void;
   tick(): void;
   releaseHeld(): void;
-  care(id: string, action: CareAction): void;
+  care(id: string, action: CareKind): void;
   celebrate(id: string): void;
   say(id: string, keys: string[], uris: Record<string, string>, ms: number): void; // 아이콘 말풍선 — src/main/stage.ts say
   pin(id: string | null): void;

@@ -5,7 +5,7 @@ import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
 import { capsOf, createPetMotion } from "../motion/pet-motion";
 import type { PetMotion, Phase } from "../motion/types";
 import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/model/stage";
-import type { CareAction } from "../state/types";
+import type { CareKind } from "../state/care";
 import { MOTION_RULES } from "../motion/rules";
 import { zoomOf, type ArtLoader, type Look } from "./art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Spot } from "./layout";
@@ -65,7 +65,7 @@ export interface Stage {
   hit(id: HitReply): void; // 렌더러의 답 — 커서 밑의 마리
   releaseHeld(): void; // 들고 있던 마리를 놓은 것으로 친다 — pointerup 이 영영 안 오는 경로의 탈출구. 저장하지 않는다
   resend(): void; // 렌더러가 새로 떴다 — init · 모든 look 의 sheets · 마지막 frame 을 다시 보낸다
-  care(id: string, action: CareAction): void;
+  care(id: string, action: CareKind): void;
   celebrate(id: string): void;
   // 아이콘 말풍선을 ms 동안 — 배고픔(고기)·줍기(주운 것). keys 는 그릴 순서, uris 는 열쇠별 그림. 그림이 빠진 열쇠가 있으면 띄우지 않는다
   // (docs/specs/game.md "배고픔 상태 표시"·"줍기", 2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
