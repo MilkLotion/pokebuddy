@@ -4,7 +4,7 @@
 // 설계는 worklog/records/game-runtime/record.md "놀이공간·설정의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/hunger-bubble";
+import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/stage/hunger-bubble";
 import fs from "node:fs";
 import path from "node:path";
 import { createGame } from "../../tx/game";

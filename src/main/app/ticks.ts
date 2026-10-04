@@ -8,12 +8,12 @@
 // 무거운 일(놀이공간·점프 목록·트레이 다시 읽기, 남은 안내)은 slowEvery 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
 import { rollHits } from "../../find/roll";
 import { TIME_RULES } from "../../state/rules";
-import type { Anchor } from "../anchor";
+import type { HostWatch } from "../stage/host-watch";
 import { CLOCK_RULES, type ClockTick } from "./clock";
 import type { GameV3 } from "../../tx/game";
 import type { SaveParty } from "../../save/save-party";
 import type { Bubbles } from "../stage/bubbles";
-import type { StageGroup } from "../stage-group";
+import type { StageGroup } from "../stage/stage-group";
 import { devNumber } from "./dev-run";
 import type { DebugLog } from "./log";
 
@@ -23,7 +23,7 @@ export interface TicksDeps {
   sendClock(now: number): void; // 관리 창·기기 창이 이 틱에 스냅샷을 다시 읽는다 (manage:clock)
   frozen(): boolean; // 두 PC 규칙 멈춤·새로 시작하는 중
   locked(): boolean; // 화면 잠김
-  anchor(): Anchor | null;
+  hostWatch(): HostWatch | null;
   stages(): StageGroup | null;
   worker(): SaveParty | null;
   game(): GameV3 | null;
@@ -54,10 +54,10 @@ export function createTicks(deps: TicksDeps): Ticks {
 
   return {
     state() {
-      const anchor = deps.anchor();
+      const watch = deps.hostWatch();
       const stages = deps.stages();
-      if (!anchor || !stages) return;
-      const { state, promptAt } = anchor.currentInfo();
+      if (!watch || !stages) return;
+      const { state, promptAt } = watch.currentInfo();
       stages.setState(state, promptAt);
       if (state !== lastState) {
         lastState = state;
@@ -72,9 +72,9 @@ export function createTicks(deps: TicksDeps): Ticks {
         workMs = 0;
         return;
       }
-      const anchor = deps.anchor();
+      const watch = deps.hostWatch();
       const stages = deps.stages();
-      if (!anchor || !stages) return;
+      if (!watch || !stages) return;
       const worker = deps.worker();
       const game = deps.game();
       if (!worker?.isWriter() || !game || deps.locked()) {
@@ -82,7 +82,7 @@ export function createTicks(deps: TicksDeps): Ticks {
         return;
       }
       const counted = gap > 0 && gap <= TIME_RULES.maxGapMs;
-      if (counted && anchor.currentInfo().state === "running") workMs += gap;
+      if (counted && watch.currentInfo().state === "running") workMs += gap;
 
       // 줍기 — 깨어 있는 마리 각각을 이 틱의 간격으로 따로 굴린다. 주우면 그 틱에 저장하고 말풍선·배너를 띄운다.
       // 직접 숨긴 동안은 무대에 아무도 없는 것으로 본다 (src/find/core.ts rollHits)

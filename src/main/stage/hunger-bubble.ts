@@ -1,7 +1,7 @@
 // 배고픔 말풍선의 때 — 배고픔·매우 배고픔 구간에 들어갈 때 한 번 띄우고, 그 구간에 머무는 동안 되풀이한다.
 // 배고픔은 10분, 매우 배고픔은 5분마다 (2026-09-27 사용자 결정 "배고픔 말풍선 은 10분에 한번씩, 매우배고픔은 5분에 한번씩").
 // 시각은 메모리에만 둔다 — 앱을 다시 켜면 처음부터 센다. Electron 을 모르는 순수 상태기
-import { zoneOf } from "../state/time";
+import { zoneOf } from "../../state/time";
 
 export const HUNGER_BUBBLE_RULES = {
   repeatMs: { hungry: 10 * 60_000, starving: 5 * 60_000 },

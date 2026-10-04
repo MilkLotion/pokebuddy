@@ -6,9 +6,9 @@
 //   도구·진화용 도구 — 관리 창과 같은 도구 그림(item:<식별자>) · 포켓몬 — 데려온 종의 초상(pokemon:<종>[:shiny])
 // 그림을 하나라도 못 구하면 말풍선을 띄우지 않는다. 글자로 되돌리지 않는다
 import type { FindRecordV3, PetV3, SaveV3 } from "../../shared/save-v3";
-import { createHungerBubbles } from "../hunger-bubble";
+import { createHungerBubbles } from "./hunger-bubble";
 import type { Portraits } from "../art/portraits";
-import type { StageGroup } from "../stage-group";
+import type { StageGroup } from "./stage-group";
 
 // 말풍선을 보이는 시간 5초 — 2026-09-25 구현에서 정했고, 2026-09-27 사용자가 되풀이 간격만 정하고 이 값은 그대로 두었다
 // (worklog/records/game-runtime/record.md "배고픔 말풍선 되풀이")
@@ -63,7 +63,7 @@ export function createBubbles(deps: BubblesDeps): Bubbles {
 
   return {
     say,
-    // 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/hunger-bubble.ts).
+    // 무대에 나와 있는 포켓몬이 배고픔·매우 배고픔 구간에 들어가면 띄우고, 머무는 동안 되풀이한다 (src/main/stage/hunger-bubble.ts).
     // 숨긴 포켓몬은 무대에 없어 띄우지 않는다. 직접 숨긴 동안에도 띄우지 않는다
     onTick(now, pets) {
       const st = deps.stages();

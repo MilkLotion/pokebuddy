@@ -3,7 +3,7 @@
 // 소켓·IPC 서버 없이 파일로만 (저장소 원칙). CLI·확장·읽기 전용 펫이 요청을 두고, writer 펫이 처리해 회신한다.
 //   요청  <시각>-<pid>-<cmd>.json          Command 그대로 { cmd, target?, args?, from, at }   — tmp 에 쓰고 rename (반쪽 파일을 읽지 않게)
 //   회신  <시각>-<pid>-<cmd>.result.json   CommandResult 그대로                              — 보낸 쪽이 받으면 지운다
-// writer 는 fs.watch (src/main/anchor.ts watchRecords 의 pending 디바운스) + 5초 폴링 보강으로 폴더를 본다.
+// writer 는 fs.watch (src/main/stage/host-watch.ts watchRecords 의 pending 디바운스) + 5초 폴링 보강으로 폴더를 본다.
 // 파손 요청은 지운다. 60초 넘은 회신은 청소한다. 60초 넘은 요청도 처리하지 않고 지운다 — 죽은 writer 가 남긴 어제의 밥을 주지 않게
 // 시계는 기본 실제 시계(realClock) — 다른 프로세스가 쓴 at·mtime 과 견주므로 게임 시계를 주입하면 어긋난다. 시험에서만 바꾼다
 // 명령 이름은 소문자·점 (party.show 처럼) — 파일 이름에 그대로 들어가므로 그 밖의 글자는 bad-cmd

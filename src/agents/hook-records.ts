@@ -1,4 +1,4 @@
-// 훅 상태 파일(state/<세션>.json) 읽기 한 벌 — 동반자의 따라가기(src/main/anchor.ts), 진단(src/cli/status.ts),
+// 훅 상태 파일(state/<세션>.json) 읽기 한 벌 — 동반자의 따라가기(src/main/stage/host-watch.ts), 진단(src/cli/status.ts),
 // 연결 탭의 마지막 신호(./check.ts lastSignals), 토큰 사용량(./usage.ts)이 같이 쓴다.
 // 쓰는 쪽은 훅(src/hooks/pokebuddy-state.ts)이고 모양은 src/shared/hook-record.ts 다. 읽는 쪽은 모든 필드를 의심한다.
 // 쓰는 중이거나 깨진 파일은 그 파일만 건너뛴다. 폴더가 없으면 빈 목록이다

@@ -8,7 +8,7 @@
 import type { BrowserWindow } from "electron";
 import type { ScreenOverlayInit, ScreenView } from "../../shared/model/overlays";
 import type { ScreensChannel } from "../../shared/ipc/overlays";
-import { findScreen, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "../layout";
+import { findScreen, screenRefOfInfo, type ScreenInfo, type ScreenRef } from "./screens";
 import { askWindow, singleFlight } from "./answer-window";
 import { afterLoad } from "./ipc";
 import { createOverlayWindow } from "./options";

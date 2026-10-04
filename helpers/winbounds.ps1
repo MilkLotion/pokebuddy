@@ -12,7 +12,7 @@
 # 최상위 창 전부를 메인 프로세스 하나가 소유하므로, 그 값으로는 창을 하나밖에 못 본다.
 # EnumWindows 로 직접 열거해야 창마다 HWND 를 얻을 수 있다.
 #
-# 좌표는 물리 픽셀이다 (모니터별 DPI 인식). 받는 쪽은 좌표를 쓰지 않는다 — 창의 id·pid·앱 이름만 본다 (src/main/anchor.ts).
+# 좌표는 물리 픽셀이다 (모니터별 DPI 인식). 받는 쪽은 좌표를 쓰지 않는다 — 창의 id·pid·앱 이름만 본다 (src/main/stage/host-watch.ts).
 # 출력: {"frontmost":"Code","frontId":123456,"windows":[{"app":"Code","pid":2108,"id":65792,"x":0,"y":0,"w":1600,"h":900}],
 #        "input":{"click":3,"x":10,"y":20,"esc":1}}
 #   input 은 -Serve 에서만 — 마우스 버튼(왼·오른)을 누른 횟수와 마지막 누른 자리(물리 픽셀), Esc 를 누른 횟수.

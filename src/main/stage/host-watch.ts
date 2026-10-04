@@ -4,16 +4,16 @@
 // Electron 이 필요한 부분(offScreen)은 host 로 받아 node 에서도 돌릴 수 있게 한다.
 //
 // 결과는 onUpdate 로 낸다 — 폴링마다 앱이 무대 사각형을 놀이공간으로 다시 맞추고 표시를 정한다.
-// 따를 창의 좌표는 정하지 않는다 — 무대의 자리는 놀이공간 설정이 정한다 (src/main/layout.ts playLanes)
-import * as follow from "../terminal/front";
-import * as pkstate from "../terminal/state";
-import { readHookRecords } from "../agents/hook-records";
-import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo } from "../terminal/types";
-import type { HookStateRead } from "../shared/hook-record";
-import { helperCommand, parseInfo, queryHelper, stopHelper } from "../terminal/winbounds";
-import type { Paths } from "../platform/paths";
+// 따를 창의 좌표는 정하지 않는다 — 무대의 자리는 놀이공간 설정이 정한다 (src/main/stage/layout.ts playLanes)
+import * as follow from "../../terminal/front";
+import * as pkstate from "../../terminal/state";
+import { readHookRecords } from "../../agents/hook-records";
+import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo } from "../../terminal/types";
+import type { HookStateRead } from "../../shared/hook-record";
+import { helperCommand, parseInfo, queryHelper, stopHelper } from "../../terminal/winbounds";
+import type { Paths } from "../../platform/paths";
 
-export const ANCHOR_RULES = {
+export const HOST_WATCH_RULES = {
   // Windows 도 헬퍼를 띄워 두고 묻기 때문에(한 번 1ms 안쪽) mac 과 같은 간격으로 창을 따라간다
   pollMs: 400,
   visibleConfirm: 2, // 표시 전환은 이만큼 연속 같은 판정일 때만 — 한 번의 경합이 깜빡임이 되지 않게
@@ -21,44 +21,44 @@ export const ANCHOR_RULES = {
 };
 
 // Electron 이 있어야 하는 일 — 시험에서는 가짜를 준다
-export interface AnchorHost {
+export interface HostWatchHost {
   platform: NodeJS.Platform;
   offScreen(windows: HelperWindow[]): boolean; // mac Space 전환 중 표본인가 — 헬퍼가 준 좌표 그대로 본다(mac 은 포인트 단위다)
   quitting(): boolean; // 끝내는 중에는 헬퍼에 묻지 않는다 — before-quit 에서 멈춘 헬퍼를 다음 질문이 다시 띄우면 펫보다 오래 남는다
 }
 
-export interface AnchorFlags {
+export interface HostWatchFlags {
   userHidden: boolean; // 우클릭 · 트레이 · 설정으로 직접 숨김
   held: boolean; // 마리를 들고 있는 중 — 표시 판정을 보류하고 직전 상태를 유지한다
 }
 
-export interface AnchorUpdate {
+export interface HostWatchUpdate {
   visible: boolean; // 디바운스를 거친 표시 여부
 }
 
-export interface AnchorOptions {
+export interface HostWatchOptions {
   paths: Pick<Paths, "state" | "project">;
   self: SelfMark; // 펫 자신을 가리는 표 — 맨 앞 창에서 뺀다
   env?: NodeJS.ProcessEnv;
-  host: AnchorHost;
-  flags(): AnchorFlags;
-  onUpdate(u: AnchorUpdate): void;
+  host: HostWatchHost;
+  flags(): HostWatchFlags;
+  onUpdate(u: HostWatchUpdate): void;
   onFocus(key: string | null): void; // 포커스 묶음이 바뀌었다 — 움직임 모듈의 "사용자가 뭔가 했다"
   onInput?(input: HelperInput): void; // 헬퍼가 센 클릭·Esc — 포커스를 쥐지 않은 트레이 메뉴를 닫는다
   log: ((o: Record<string, unknown>) => void) | null;
 }
 
-export interface Anchor {
+export interface HostWatch {
   start(): void;
   stop(): void;
   poll(): void; // 지금 바로 한 번 (메뉴·설정 뒤)
   currentInfo(): StateInfo; // 따를 훅 상태
 }
 
-export function createAnchor(opts: AnchorOptions): Anchor {
+export function createHostWatch(opts: HostWatchOptions): HostWatch {
   const { paths, self, host, log } = opts;
   const env = opts.env ?? process.env;
-  const R = ANCHOR_RULES;
+  const R = HOST_WATCH_RULES;
 
   let visible = false;
   let wantLast: boolean | null = null;

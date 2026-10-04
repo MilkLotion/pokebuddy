@@ -1,16 +1,16 @@
 // 무대 틱과 포인터 처리. 포켓몬 겹침 허용. 소환 순서대로 그리기.
-import { axesAt } from "../dex/natures";
-import { profileOf } from "../dex/species";
-import { paramsFor, NEUTRAL_PARAMS } from "../motion/params";
-import { capsOf, createPetMotion } from "../motion/pet-motion";
-import type { PetMotion, Phase } from "../motion/types";
-import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../shared/model/stage";
-import type { CareKind } from "../state/care";
-import { MOTION_RULES } from "../motion/rules";
-import { zoomOf, type ArtLoader, type Look } from "./art/stage-art";
+import { axesAt } from "../../dex/natures";
+import { profileOf } from "../../dex/species";
+import { paramsFor, NEUTRAL_PARAMS } from "../../motion/params";
+import { capsOf, createPetMotion } from "../../motion/pet-motion";
+import type { PetMotion, Phase } from "../../motion/types";
+import type { HitReply, Play, PointerMsg, StageFrame, StageState } from "../../shared/model/stage";
+import type { CareKind } from "../../state/care";
+import { MOTION_RULES } from "../../motion/rules";
+import { zoomOf, type ArtLoader, type Look } from "../art/stage-art";
 import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, type Home, type Spot } from "./layout";
-import type { Rect, Size } from "../shared/geometry";
-import type { PartyPet } from "../view/party-pet";
+import type { Rect, Size } from "../../shared/geometry";
+import type { PartyPet } from "../../view/party-pet";
 import type { StageWindow } from "./stage-window";
 
 // 작업 상태가 바뀐 뒤 마리마다 반응하기까지 최대 지연 — 0~이 값 사이에서 무작위
@@ -60,7 +60,7 @@ export interface Stage {
   focus(key: string | null): void;
   tick(): void; // 40ms
   pointer(msg: PointerMsg): void;
-  // 다른 화면의 무대에서 끌려 온 마리를 들린 채로 받는다 — at 은 몸 좌상단(이 무대 좌표). 그 마리가 없으면 false (src/main/stage-group.ts)
+  // 다른 화면의 무대에서 끌려 온 마리를 들린 채로 받는다 — at 은 몸 좌상단(이 무대 좌표). 그 마리가 없으면 false (src/main/stage/stage-group.ts)
   adopt(id: string, at: Spot): boolean;
   hit(id: HitReply): void; // 렌더러의 답 — 커서 밑의 마리
   releaseHeld(): void; // 들고 있던 마리를 놓은 것으로 친다 — pointerup 이 영영 안 오는 경로의 탈출구. 저장하지 않는다
@@ -73,7 +73,7 @@ export interface Stage {
   petIds(): string[];
   awakeIds(): string[]; // 무대의 마리 가운데 자고 있지 않은 마리 — 줍기의 활동 시간 (src/find/pickup.ts). 움직임이 꺼져 있으면 모두 깨어 있다
   petOf(id: string): PartyPet | null;
-  bodyOf(id: string): Size | null; // 몸 크기 (DIP) — 다른 화면에 놓을 때 자리를 잡는다 (src/main/stage-group.ts)
+  bodyOf(id: string): Size | null; // 몸 크기 (DIP) — 다른 화면에 놓을 때 자리를 잡는다 (src/main/stage/stage-group.ts)
   heldId(): string | null;
   lastFrame(): StageFrame | null;
   pin(id: string | null): void; // 그 마리를 제자리에 세운다(걷지 않고 서 있는 동작). null 이면 풀고 선 자리에서 다시 움직인다 — 첫 돌봄 튜토리얼
