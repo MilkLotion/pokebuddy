@@ -2,6 +2,7 @@
 //
 // 단추에 처음 포커스를 두지 않는다 — Enter 로 뜻하지 않은 답을 고르지 않게. Esc 는 취소 단추(메인이 고른다)
 import type { AlertView } from "../../shared/model/overlays.js";
+import { needBridge } from "../ui/bridge.js";
 import { needEl } from "../ui/dom.js";
 
 
@@ -13,7 +14,7 @@ const actionsEl = needEl("actions", HTMLElement, "alert");
 
 const FONTS = ["15px Galmuri14", "12px Galmuri11", "700 12px Galmuri11"] as const;
 
-const api = window.pokebuddyAlert;
+const api = needBridge("pokebuddyAlert");
 let answered = false;
 
 const answer = (index: number | null): void => {

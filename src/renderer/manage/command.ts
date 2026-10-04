@@ -1,6 +1,7 @@
 // 설정창 → 메인 명령 — 요청 식별자, 처리 중 표시, 잠금, 다시 읽기, 실패 문구
 // 다시 읽기·도감 비우기는 설정창이 setCommandHooks 로 걸어 준다(뼈대 파일이 나뉘면 직접 가져온다). 모달은 dialog.ts
 import type { ManageReply } from "../../shared/ipc/manage.js";
+import { api } from "./api.js";
 import { failTextOf } from "../../shared/fail-text.js";
 import { closeDialog, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
@@ -44,7 +45,7 @@ function rememberReply(cmd: string, target: string, extra: Record<string, unknow
 // 명령 하나를 보내고 답을 받는다 — 요청 식별자를 붙이고, 결과를 모르는 답이면 다음 같은 조작에 같은 식별자를 쓴다
 export async function requestCommand(cmd: string, target: string, extra: Record<string, unknown>): Promise<ManageReply> {
   const reqId = reqIdFor(cmd, target, extra);
-  const reply = await window.pokebuddyManage.command({ cmd, target, args: { ...extra, reqId } });
+  const reply = await api.command({ cmd, target, args: { ...extra, reqId } });
   rememberReply(cmd, target, extra, reqId, reply);
   return reply;
 }

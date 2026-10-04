@@ -4,6 +4,7 @@
 // 렌더러가 죽고 다시 떠도 ready → 메인의 재송신(init · sheets · 마지막 frame)으로 복구된다.
 // 다시 그리는 때: 프레임이 새로 왔거나 · 어느 마리의 애니 프레임이 바뀌었거나 · 캔버스 크기가 바뀌었을 때만
 import type { HoverQuery, StageFrame, StageInit } from "../../shared/model/stage.js";
+import { needBridge } from "../ui/bridge.js";
 import type { StageBridge } from "../../shared/ipc/stage.js";
 import type { Size } from "../../shared/geometry.js";
 import { hitAt, rectOf, type HitLookup } from "./hit.js";
@@ -187,7 +188,7 @@ function tick() {
   }
 }
 
-const bridge: StageBridge = opts.mock ? createMockBridge({ coach: opts.mockCoach, note }) : window.pokebuddy;
+const bridge: StageBridge = opts.mock ? createMockBridge({ coach: opts.mockCoach, note }) : needBridge("pokebuddy");
 
 const pointer = enablePointer(document.body, {
   hitAt: hitAtStage,

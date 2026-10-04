@@ -2,6 +2,7 @@
 //
 // 배너 본문 클릭 동작은 없다. `바로가기` 와 제목 줄 `✕`(닫기)만 누른다 (docs/specs/game.md "알림 배너의 개별 표시")
 import type { BannerView } from "../../shared/model/overlays.js";
+import { needBridge } from "../ui/bridge.js";
 import { needEl } from "../ui/dom.js";
 
 
@@ -12,7 +13,7 @@ const nameEl = needEl("name", HTMLElement, "banner");
 const goEl = needEl("go", HTMLButtonElement, "banner");
 const closeEl = needEl("close", HTMLButtonElement, "banner");
 
-const api = window.pokebuddyBanner;
+const api = needBridge("pokebuddyBanner");
 let key: string | null = null;
 
 // 알림음 — 짧은 두 음(원작 메뉴 효과음 느낌). 파일 없이 WebAudio 로 만든다. 음량은 메인이 준다(설정의 소리 크기)
