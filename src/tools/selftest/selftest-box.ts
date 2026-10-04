@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { addBox, boxBuyable, boxRoom, moveSlot, moveToBox, orderBox, addToBox, renameBox, sortBox } from "../../box/slots";
 import { openEgg } from "../../egg/open";
 import { keepInBox } from "../../party/placement";
-import { applyGifts } from "../../mail/core";
+import { applyGifts } from "../../mail/gifts";
 import { buyProduct } from "../../shop/buy";
 import { newPet } from "../../party/create";
 import { BOX_RULES } from "../../box/rules";
