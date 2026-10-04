@@ -187,13 +187,10 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
 
   return {
     forget: () => shownModel.clear(),
+    // 설정창을 다시 읽으면(Ctrl+R 등) 고른 개체·옆 도감이 비므로 떠 있던 기기 창을 닫는다 — 남겨 두면 설정창과 어긋난다
     reset: () => {
       shownModel.clear();
-      petWin.resetGen();
-      dexWin.resetGen();
-      shopWin.resetGen();
-      bagWin.resetGen();
-      partyWin.resetGen();
+      for (const w of [petWin, dexWin, shopWin, bagWin, partyWin]) w.discard();
     },
   };
 }

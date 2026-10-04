@@ -47,7 +47,9 @@ export interface DeviceHooks<Action> {
 export interface DeviceWindow<Open> {
   show(parent: BrowserWindow, open: Open, gen: unknown): void; // gen 이 지금 세대 번호가 아니면 버린다
   close(): void;
-  resetGen(): void; // 설정창 문서를 새로 읽었다 — 세대 번호를 0 으로
+  // 설정창 문서를 새로 읽었다 — 떠 있던 창을 없애고 세대 번호를 0 으로. 닫힘 알림(세대 번호 올림)은 보내지 않는다.
+  // close() 뒤 세대 번호만 0 으로 돌리면 늦게 오는 closed 가 번호를 1 로 올려, 0 에서 시작하는 새 문서의 열기 요청을 버린다
+  discard(): void;
 }
 
 // 사용자가 연 기기 창에 키보드 초점을 준다 — 옆 창을 한 번 더 누르지 않아도 방향키·Esc 가 먹게
@@ -210,6 +212,18 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
     close() {
       alive()?.close();
     },
-    resetGen: () => gate.reset(),
+    discard() {
+      const w = alive();
+      if (w) {
+        win = null; // closed 처리기가 이 창을 지난 창으로 보고 넘어간다 — 세대 번호를 올리지 않는다
+        current = null;
+        focusNext = false;
+        detach();
+        owner = null;
+        if (CH.coach) hooks.onCoach?.(false);
+        w.destroy();
+      }
+      gate.reset();
+    },
   };
 }
