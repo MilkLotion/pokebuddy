@@ -13,7 +13,8 @@ import type { SettingsTab, UserTab } from "./dialog-types.js";
 import { ui } from "./state.js";
 import { dialogCloseEl, segmentedEl, settingRow, switchEl } from "./widgets.js";
 import { versionFoot } from "./update-notes.js";
-import { accountActionsEl, accountOverlayEl, drawAccount } from "./account.js";
+import { accountOverlayEl } from "./account.js";
+import { accountActionsEl, drawAccount } from "./account-forms.js";
 
 const SETTINGS_TABS: readonly { id: SettingsTab; label: string }[] = [
   { id: "general", label: "일반" },
