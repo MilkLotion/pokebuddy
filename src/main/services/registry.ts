@@ -14,8 +14,8 @@ import { createSessionStorage, sessionFile, type SessionFileStorage } from "../.
 import { pendingTradeOf } from "../../party/pet-actions";
 import type { GameV3 } from "../../tx/game";
 import { createMailInbox, type MailInbox } from "../../online/mail-inbox.js";
-import { createMainOnline, type MainOnline, type MainOnlineOptions } from "../online";
-import { createMainTrade, type MainTrade } from "../trade";
+import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
+import { createMainTrade, type MainTrade } from "./trade";
 import { mailScreenOf } from "../../view/mail.js";
 import { createTradeScreen, type TradeScreenBuilder } from "../../view/trade-screen";
 import { createKeyVault } from "./vault";

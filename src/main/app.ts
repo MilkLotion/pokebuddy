@@ -21,7 +21,7 @@ import { jumpListOf } from "../view/menus";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
 import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "../tx/game.js";
-import { cloudSeedOf } from "./online";
+import { cloudSeedOf } from "./services/online";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./app/halt-dialog";
 import { createManage } from "./manage/window.js";

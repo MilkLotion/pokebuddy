@@ -3,15 +3,15 @@
 //
 // Supabase 클라이언트는 메인 프로세스에서만 쓴다. 렌더러에는 교환 보기(TradeViewModel)만 넘긴다. 토큰은 넘기지 않는다.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createTradeNet } from "../online/trade-net.js";
-import type { SessionStorage } from "../online/client.js";
-import type { SessionGate } from "../online/session.js";
-import { createTradeSession, type TradeSession, type TradeViewModel } from "../online/trade-session.js";
-import { onlineConfig } from "../online/config.js";
-import { dataVersion } from "../trade/data-version.js";
-import { devEnv, isDevRun } from "./app/dev-run.js";
-import { linkOf } from "../trade/link.js";
-import type { GameV3 } from "../tx/game";
+import { createTradeNet } from "../../online/trade-net.js";
+import type { SessionStorage } from "../../online/client.js";
+import type { SessionGate } from "../../online/session.js";
+import { createTradeSession, type TradeSession, type TradeViewModel } from "../../online/trade-session.js";
+import { onlineConfig } from "../../online/config.js";
+import { dataVersion } from "../../trade/data-version.js";
+import { devEnv, isDevRun } from "../app/dev-run.js";
+import { linkOf } from "../../trade/link.js";
+import type { GameV3 } from "../../tx/game";
 
 export interface MainTrade {
   session: TradeSession;
@@ -41,7 +41,7 @@ export function devHooks(env: NodeJS.ProcessEnv = process.env, dev = isDevRun())
 }
 
 // 앱이 준비된 뒤(키 저장소 safeStorage 사용 가능) 한 번 만든다. 서버 설정이 없으면 null
-// link — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트와 세션 관문(src/main/online.ts).
+// link — 계정·클라우드 저장과 같은 세션을 쓰는 공유 클라이언트와 세션 관문(src/main/services/online.ts).
 //   계정이 없으면 클라이언트만 따로 만들고, 세션 파일 저장소는 앱이 넘긴 같은 한 벌을 쓴다 (src/main/services/registry.ts)
 // onSettled — 교환 반영을 서버에 알린 뒤. 앱이 클라우드 저장을 바로 올린다 (src/online/trade-session.ts)
 // hold — 새 교환(만들기·참가)을 막아야 하는가. 로그인 계정의 클라우드 저장이 올릴 수 있는 상태가 아니다

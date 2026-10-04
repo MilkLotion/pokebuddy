@@ -64,7 +64,7 @@ export interface TradeSessionOptions {
   // 실패해도 제안은 보낸다. 서버 저장에 없으면 서버가 TRADE_PET_NOT_SYNCED 로 거절한다
   beforeOffer?: () => Promise<void>;
   // 세션이 없을 때 새 익명 계정을 만들어도 되는가 — 거짓이면 있는 세션만 쓴다(검수 H1). 넘기지 않으면 참.
-  //   앱은 저장 계정을 잃었거나(D29) 저장 주인이 있는데 세션이 없을 때 거짓을 준다. 익명 발급은 앱(src/main/online.ts)이 맡는다
+  //   앱은 저장 계정을 잃었거나(D29) 저장 주인이 있는데 세션이 없을 때 거짓을 준다. 익명 발급은 앱(src/main/services/online.ts)이 맡는다
   mayIssue?: () => boolean | Promise<boolean>;
 }
 

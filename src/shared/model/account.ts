@@ -27,7 +27,7 @@ export interface PatchNotesView {
 }
 
 // ── 계정과 클라우드 저장 ──────────────────────────────────────────────────────────────
-// 설정의 계정 탭·헤더 저장 표시가 그리는 값 (src/main/online.ts). Figma 05 Screens `633:19206`~`633:20029`
+// 설정의 계정 탭·헤더 저장 표시가 그리는 값 (src/main/services/online.ts). Figma 05 Screens `633:19206`~`633:20029`
 // manage:account 는 렌더러 → 메인 요청(결과에 screen), manage:account-view 는 메인 → 렌더러 밀어 보내기다
 // 클라우드 상태 — src/online/cloud.ts CloudStatus 와 같다 (worklog-mac/records/cloud-authority/design-p1.md 2절)
 //   confirm·blocked·superseded 는 게임이 멈춘 상태다. 안내·확인 창은 메인 창이 띄운다
@@ -63,7 +63,7 @@ export interface CloudOtherView {
 export interface AccountScreen {
   available: boolean; // 서버 설정이 있고 이 앱이 저장을 쓴다
   signedIn: boolean;
-  // 아래 두 값은 메인(src/main/online.ts)이 늘 채운다. 렌더러의 기본값(서버 설정 없음)이 빼도 되게 선택으로 둔다
+  // 아래 두 값은 메인(src/main/services/online.ts)이 늘 채운다. 렌더러의 기본값(서버 설정 없음)이 빼도 되게 선택으로 둔다
   anonymous?: boolean; // 익명 계정으로 저장 중이다 — signedIn 은 거짓 (design-p2.md 5절)
   // 저장 계정을 잃었다(D29) — 클라우드 저장은 꺼져 있고 게임은 계속. 분실 창은 메인이 띄운다.
   //   member 는 다시 로그인하면 풀린다. anonymous 는 되찾을 수 없다. null 이면 분실 아님

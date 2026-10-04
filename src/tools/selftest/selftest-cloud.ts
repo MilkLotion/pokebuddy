@@ -140,7 +140,7 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
     points: () => (save.points as { balance: number }).balance,
     bump: (n: number) => { save = { ...save, points: { balance: n } }; },
     state: () => stored,
-    // 로컬 저장을 격리했다 — src/main/online.ts loadState 가 격리 표시를 보고 맞춘 rev 를 잊는 것과 같다
+    // 로컬 저장을 격리했다 — src/main/services/online.ts loadState 가 격리 표시를 보고 맞춘 rev 를 잊는 것과 같다
     forget: () => { if (stored) stored = { ...stored, syncedRev: -1, pendingOp: null }; },
     lastHalt: () => halts.at(-1),
   };

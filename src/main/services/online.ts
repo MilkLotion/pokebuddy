@@ -2,7 +2,7 @@
 // 설계는 worklog/records/trade/record.md "계정과 로그인", "클라우드 저장", "로그인·클라우드 저장 구현 계획"
 // 두 PC 규칙(밀려남·확인·잠듦·released)은 worklog-mac/records/cloud-authority/design-p1.md 2·3절
 //
-// 교환(src/main/trade.ts)도 이 클라이언트를 쓴다 — 로그인하면 교환 채널도 그 계정으로 연다.
+// 교환(src/main/services/trade.ts)도 이 클라이언트를 쓴다 — 로그인하면 교환 채널도 그 계정으로 연다.
 // 렌더러에는 계정 화면 값(AccountScreen)만 넘긴다. 토큰·내부 주소·사용자 ID 는 넘기지 않는다.
 // 클라우드 동기화 정보는 save.json 과 같은 폴더의 cloud.json 이다. save.json 에는 필드를 더하지 않는다
 //
@@ -16,24 +16,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { app, shell } from "electron";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { createOnlineClient } from "../online/client.js";
-import { createAccount, viewOf, type Account, type AccountView } from "../online/account.js";
-import { createCloud } from "../online/cloud.js";
-import { normalizeCloudState, strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../online/cloud-state.js";
-import { githubLogin } from "../online/github.js";
-import { handoffHooks, type HandoffReport, type SwitchHooks } from "../online/handoff.js";
-import { createSessionGate, type SessionGate } from "../online/session.js";
-import { withTimeout } from "../online/server-call.js";
-import { ONLINE_TIMING } from "../online/timing.js";
-import { onlineConfig } from "../online/config.js";
-import type { SessionStorage } from "../online/client.js";
-import { devEnv, devNumber } from "./app/dev-run.js";
-import { writeAtomic } from "../platform/atomic-write.js";
-import { readSaveRaw, replaceSave, setAsideSave } from "../save/save-file.js";
-import { readCloudFile } from "../online/lost.js";
-import { t } from "../view/text";
-import type { AccountAction, AccountReply, AccountScreen } from "../shared/model/account";
-import type { AccountReplyCode, CloudErrorCode } from "../shared/names/online-codes.js";
+import { createOnlineClient } from "../../online/client.js";
+import { createAccount, viewOf, type Account, type AccountView } from "../../online/account.js";
+import { createCloud } from "../../online/cloud.js";
+import { normalizeCloudState, strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../../online/cloud-state.js";
+import { githubLogin } from "../../online/github.js";
+import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff.js";
+import { createSessionGate, type SessionGate } from "../../online/session.js";
+import { withTimeout } from "../../online/server-call.js";
+import { ONLINE_TIMING } from "../../online/timing.js";
+import { onlineConfig } from "../../online/config.js";
+import type { SessionStorage } from "../../online/client.js";
+import { devEnv, devNumber } from "../app/dev-run.js";
+import { writeAtomic } from "../../platform/atomic-write.js";
+import { readSaveRaw, replaceSave, setAsideSave } from "../../save/save-file.js";
+import { readCloudFile } from "../../online/lost.js";
+import { t } from "../../view/text";
+import type { AccountAction, AccountReply, AccountScreen } from "../../shared/model/account";
+import type { AccountReplyCode, CloudErrorCode } from "../../shared/names/online-codes.js";
 
 export interface MainOnlineOptions {
   saveFile: string;
@@ -61,7 +61,7 @@ export type FreshReason = "signout" | "delete" | "fresh";
 
 export interface MainOnline {
   client: SupabaseClient;
-  gate: SessionGate; // 세션 관문 — 교환(src/main/trade.ts)도 이것으로 세션을 확보한다
+  gate: SessionGate; // 세션 관문 — 교환(src/main/services/trade.ts)도 이것으로 세션을 확보한다
   account: Account;
   cloud: Cloud;
   screen: () => AccountScreen;
