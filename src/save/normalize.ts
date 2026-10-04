@@ -156,6 +156,7 @@ function normalizeTutorials(raw: unknown): Record<string, TutorialV3> {
       state: ((TUTORIAL_STATES as readonly string[]).includes(state) ? state : "none") as TutorialState,
       steps: nonNeg(v.steps),
       ...(typeof v.queuedAt === "number" && Number.isFinite(v.queuedAt) ? { queuedAt: v.queuedAt } : {}), // 2026-09-26 에 더했다
+      ...(v.replay === true ? { replay: true } : {}), // 2026-10-05 에 더했다 — 가이드북 다시 보기
     };
   }
   return out;

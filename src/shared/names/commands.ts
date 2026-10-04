@@ -48,6 +48,7 @@ export const COMMANDS = {
   "achievement.claim": { via: "tx" },
   "tutorial.skip": { via: "tx" },
   "tutorial.done": { via: "tx" },
+  "tutorial.replay": { via: "tx" },
   // 개체
   "pet.set": { via: "tx", cli: true },
   "pet.form": { via: "tx", cli: true },

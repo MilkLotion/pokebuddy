@@ -25,7 +25,7 @@
 import type { ReasonOf } from "../shared/names/reasons.js";
 import { TUTORIAL_STEPS, isTutorialId } from "../shared/names/tutorials.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
-import { DONE, TUTORIALS, ruleOf, type TutorialSurface } from "./conditions.js";
+import { DONE, TUTORIALS, replayReady, ruleOf, type TutorialSurface } from "./conditions.js";
 import type { Outcome } from "../shared/command.js";
 
 export type TutorialFailure = ReasonOf<"bad-id" | "already">;
@@ -41,7 +41,8 @@ function set(save: SaveV3, id: string, state: TutorialState, steps?: number): Tu
   if (!id || !isTutorialId(id)) return { ok: false, reason: "bad-id" };
   const row = save.tutorials[id];
   if (row && DONE.includes(row.state)) return { ok: false, reason: "already" };
-  const next = { ...row, state, steps: steps ?? row?.steps ?? 0 };
+  const { replay: _replay, ...rest } = row ?? { state: "none" as TutorialState, steps: 0 }; // 끝내거나 닫으면 다시 보기 표시를 지운다
+  const next = { ...rest, state, steps: steps ?? row?.steps ?? 0 };
   save.tutorials[id] = next;
   return { ok: true, id, state, steps: next.steps };
 }
@@ -50,6 +51,21 @@ export const skipTutorial = (save: SaveV3, id: string): TutorialResult => set(sa
 
 // 끝낸 단계 수는 표(TUTORIAL_STEPS)의 값이다
 export const doneTutorial = (save: SaveV3, id: string): TutorialResult => set(save, id, "done", isTutorialId(id) ? TUTORIAL_STEPS[id] : undefined);
+
+// 가이드북의 `다시 보기` 로 고를 수 있는 튜토리얼 — 꺼 둔 놀이공간과, 처음 시작할 때를 전제로 쓴 상점은 뺀다 (docs/specs/game.md "튜토리얼 다시 보기")
+export const REPLAYABLE_TUTORIALS = ["first-care", "growth", "points", "hatch", "party", "preset", "box", "bag", "evolution", "dex", "achievement", "trade", "user", "area", "detail"] as const;
+
+// 다시 보기 — 마친·닫은 기록을 지우고 1단계부터 다시 띄운다. 보상이 없는 튜토리얼이라 다시 봐도 포인트·업적은 바뀌지 않는다.
+//   대기열 튜토리얼은 맨 앞(queuedAt 0)에 다시 세운다. 화면 튜토리얼·개체 상세는 그 화면을 열 때 뜬다(canShow).
+//   replay 표시가 있는 동안 queueTutorials 가 "이미 했다"(already)로 바로 끝내지 않는다
+export const replayableNow = (save: SaveV3, now: number): string[] => REPLAYABLE_TUTORIALS.filter((id) => replayReady(save, id, now));
+
+export function replayTutorial(save: SaveV3, id: string): TutorialResult {
+  if (!id || !(REPLAYABLE_TUTORIALS as readonly string[]).includes(id)) return { ok: false, reason: "bad-id" };
+  const queued = ruleOf(id) != null;
+  save.tutorials[id] = { state: "none", steps: 0, ...(queued ? { queuedAt: 0 } : {}), replay: true };
+  return { ok: true, id, state: "none", steps: 0 };
+}
 
 // 지금 띄워도 되는가 — 건너뛰었거나 마친 것은 다시 띄우지 않는다
 export const canShow = (save: SaveV3, id: string): boolean => !DONE.includes(save.tutorials[id]?.state ?? "none");
@@ -72,7 +88,7 @@ export function queueTutorials(save: SaveV3, now: number): string[] {
       if (rule.already(save)) doneTutorial(save, rule.id);
       continue;
     }
-    if (!rule.onlyAtStart && rule.already(save)) doneTutorial(save, rule.id);
+    if (!rule.onlyAtStart && !row.replay && rule.already(save)) doneTutorial(save, rule.id);
   }
   return fresh;
 }

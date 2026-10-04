@@ -117,7 +117,8 @@ function noteDetail(version: string): HTMLElement {
   return box;
 }
 
-function notesHead(title: string, sub: string, onClose: () => void): HTMLElement {
+// 2단 모달(패치노트·가이드북)의 머리 — 제목·부제와 ✕
+export function notesHead(title: string, sub: string, onClose: () => void): HTMLElement {
   const head = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.append(el("h2", undefined, title), el("div", "sub", sub));

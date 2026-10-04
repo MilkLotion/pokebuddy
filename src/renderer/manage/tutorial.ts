@@ -81,6 +81,12 @@ export function restartAreaTutorial(): void {
   areaStep = 0;
   areaStart = null;
 }
+// 가이드북의 다시 보기 — 지난번에 멈춘 단계가 아니라 1단계부터 센다
+export function restartTutorialSteps(): void {
+  guideId = null;
+  guideStep = 0;
+  restartAreaTutorial();
+}
 export function drawTutorial(): void {
   coachEl?.remove();
   coachEl = null;

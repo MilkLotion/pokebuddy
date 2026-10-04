@@ -1,6 +1,6 @@
 // 업적·튜토리얼·설정 처리기
 import { claimAchievement } from "../../achievement/claim.js";
-import { doneTutorial, skipTutorial } from "../../tutorial/queue.js";
+import { doneTutorial, replayTutorial, skipTutorial } from "../../tutorial/queue.js";
 import { isSettingKey, setSetting } from "../../state/settings.js";
 import type { TxHandler } from "../executor";
 import { isArgsRecord, reasonOf } from "./args.js";
@@ -22,10 +22,10 @@ export const claimHandler: TxHandler = (draft, args, ctx) => {
   return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox, points: res.points, eggId: res.eggId, item: res.item, skipped: res.skipped } };
 };
 
-export const tutorialHandler = (kind: "skip" | "done"): TxHandler => (draft, args) => {
+export const tutorialHandler = (kind: "skip" | "done" | "replay"): TxHandler => (draft, args) => {
   const id = idOf(args);
   if (!id) return { ok: false, reason: "bad-args" };
-  const res = kind === "skip" ? skipTutorial(draft, id) : doneTutorial(draft, id); // 끝낸 단계 수는 표(TUTORIAL_STEPS)가 정한다 — 표면은 싣지 않는다
+  const res = kind === "skip" ? skipTutorial(draft, id) : kind === "replay" ? replayTutorial(draft, id) : doneTutorial(draft, id); // 끝낸 단계 수는 표(TUTORIAL_STEPS)가 정한다 — 표면은 싣지 않는다
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { id, state: res.state, steps: res.steps } };
 };

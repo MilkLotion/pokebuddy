@@ -60,5 +60,20 @@ export const SCREEN_TUTORIALS = SCREEN_TUTORIAL_IDS; // 목록의 원본은 src/
 
 export const ruleOf = (id: string): TutorialRule | undefined => TUTORIALS.find((t) => t.id === id);
 
+// 가이드북 다시 보기 — 지금 그 튜토리얼이 뜰 대상이 있는가. 없으면 `다시 보기` 가 흐리다 (docs/specs/game.md "튜토리얼 다시 보기")
+//   대기열 것은 막힘(blocked)이 없고, 시작 조건이 대상인 것(부화·업적)은 그 조건을 본다. 박스는 박스에 개체, 개체 상세는 파티 개체
+const boxHasPet = (save: SaveV3): boolean => save.boxes.some((b) => b.slots.some((id) => id != null));
+const REPLAY_READY: Record<string, (save: SaveV3, now: number) => boolean> = {
+  hatch: hasRandomEgg,
+  achievement: (s) => unclaimedAchievementIds(s).length > 0,
+  box: boxHasPet,
+  detail: (s) => !noPartyPet(s),
+};
+export function replayReady(save: SaveV3, id: string, now: number): boolean {
+  const rule = ruleOf(id);
+  if (rule?.blocked?.(save, now)) return false;
+  return REPLAY_READY[id]?.(save, now) ?? true;
+}
+
 // 끝난 것으로 보는 상태 — 다시 띄우지 않는다
 export const DONE: readonly TutorialState[] = ["skipped", "done"];

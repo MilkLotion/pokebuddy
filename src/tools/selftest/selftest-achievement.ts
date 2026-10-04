@@ -386,6 +386,54 @@ function seed(): SaveV3 {
   process.stdout.write("(11b) 새 기능 튜토리얼 · 가방과 진화  ok\n");
 }
 
+// (11c) 가이드북의 다시 보기 — 끝낸 튜토리얼도 처음부터, 줄 맨 앞에. "이미 했다"로 바로 끝내지 않는다. 대상이 없으면 목록에서 빠진다
+{
+  const s = empty(T0);
+  assert.ok(applyStarter(s, "charmander", T0, () => 0.5).ok);
+  queueTutorials(s, T0);
+  for (const id of ["first-care", "shop", "dex", "detail"]) s.tutorials[id] = { state: "done", steps: 1, queuedAt: T0 };
+  s.tutorials.growth = { state: "none", steps: 0, queuedAt: T0 + 5 };
+  const ready = (): string[] => snapshotView(s, T0).replayTutorials;
+  assert.ok(ready().includes("first-care") && ready().includes("growth") && ready().includes("detail"), "파티 포켓몬이 있으면 첫 돌봄·성장·개체 상세를 다시 볼 수 있다");
+  for (const id of ["hatch", "achievement", "box", "bag", "evolution"]) assert.ok(!ready().includes(id), `${id} — 대상이 없으면 흐린다`);
+  assert.ok(!ready().includes("shop") && !ready().includes("playground"), "상점·놀이공간은 다시 보기에 없다");
+
+  s.totals.fed = 3; // 첫 돌봄의 "이미 했다"
+  assert.ok(HANDLERS["tutorial.replay"]!(s, { id: "first-care" }, { now: T0, rand: () => 0.5 }).ok);
+  assert.deepStrictEqual(s.tutorials["first-care"], { state: "none", steps: 0, queuedAt: 0, replay: true });
+  queueTutorials(s, T0 + 1);
+  assert.equal(s.tutorials["first-care"]?.state, "none", "다시 보는 중에는 이미 한 행동으로 끝내지 않는다");
+  assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" }, "먼저 줄에 든 성장보다 앞");
+  assert.ok(skipTutorial(s, "first-care").ok);
+  assert.equal(s.tutorials["first-care"]?.replay, undefined, "닫으면 다시 보기 표시를 지운다");
+  assert.equal(currentTutorial(s, T0)?.id, "growth");
+
+  assert.ok(buyProduct(s, "random", T0 + 2, () => 0.5).ok);
+  s.tutorials.hatch = { state: "done", steps: 1, queuedAt: T0 };
+  const pts = s.points.balance;
+  assert.ok(ready().includes("hatch"), "랜덤알이 있으면 부화를 다시 볼 수 있다");
+  assert.ok(HANDLERS["tutorial.replay"]!(s, { id: "hatch" }, { now: T0, rand: () => 0.5 }).ok);
+  s.eggs = [];
+  queueTutorials(s, T0 + 2);
+  assert.equal(s.tutorials.hatch?.state, "none", "알이 없어져도 다시 보기는 바로 끝나지 않는다 — 대상이 없으면 차례만 넘긴다");
+
+  assert.ok(HANDLERS["tutorial.replay"]!(s, { id: "dex" }, { now: T0, rand: () => 0.5 }).ok);
+  assert.deepStrictEqual(s.tutorials.dex, { state: "none", steps: 0, replay: true }, "화면 튜토리얼은 줄에 들지 않고 그 화면을 열 때 보인다");
+  assert.ok(snapshotView(s, T0).screenTutorials?.includes("dex"));
+  assert.ok(doneTutorial(s, "dex").ok);
+  assert.equal(s.tutorials.dex?.replay, undefined, "끝내면 다시 보기 표시를 지운다");
+  assert.ok(HANDLERS["tutorial.replay"]!(s, { id: "detail" }, { now: T0, rand: () => 0.5 }).ok);
+  assert.equal(snapshotView(s, T0).detailTutorial, true, "개체 상세 튜토리얼이 다시 보인다");
+
+  assert.equal(HANDLERS["tutorial.replay"]!(s, { id: "shop" }, { now: T0, rand: () => 0.5 }).ok, false, "상점은 다시 보기에 없다");
+  assert.equal(HANDLERS["tutorial.replay"]!(s, { id: "playground" }, { now: T0, rand: () => 0.5 }).ok, false);
+  assert.equal(HANDLERS["tutorial.replay"]!(s, { id: "" }, { now: T0, rand: () => 0.5 }).ok, false);
+  assert.equal(s.points.balance, pts, "다시 보기는 포인트를 바꾸지 않는다");
+  const norm = normalize(structuredClone(s) as unknown, T0);
+  assert.equal(norm?.tutorials.detail?.replay, true, "다시 보기 표시는 저장을 다시 읽어도 남는다");
+  process.stdout.write("(11c) 튜토리얼 다시 보기 — 처음부터·줄 맨 앞·대상 판정  ok\n");
+}
+
 // (12) 같은 순간에 생긴 조건은 스펙 순서(상점 → 부화), 먼저 생긴 것이 먼저. 이미 다른 개체가 있는 옛 저장은 상점을 넘긴다
 {
   const s = empty(T0);
@@ -628,4 +676,4 @@ function seed(): SaveV3 {
   process.stdout.write("(17) 이어진 날 · 부화 횟수  ok\n");
 }
 
-process.stdout.write("selftest-achievement: 통과 (업적 목록·조건·진행도·보상 종류·수령·조용한 첫 판정·이어진 날·튜토리얼·대기열·돌봄 누적)\n");
+process.stdout.write("selftest-achievement: 통과 (업적 목록·조건·진행도·보상 종류·수령·조용한 첫 판정·이어진 날·튜토리얼·대기열·다시 보기·돌봄 누적)\n");

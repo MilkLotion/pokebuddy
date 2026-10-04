@@ -223,7 +223,8 @@ export interface Snapshot {
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/queue.ts)
   detailTutorial: boolean; // 개체 상세 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 파티 개체 상세를 처음 열면 화면이 4단계를 보여 준다(볼·돌봄·성장·크기, docs/specs/game.md 개체 상세 튜토리얼)
   areaTutorial: boolean; // 놀이공간 튜토리얼을 아직 끝내거나 건너뛰지 않았다 — 설정 › 화면을 처음 열면 놀이공간 줄을 밝힌다 (2026-09-28 바탕화면에서 옮김)
-  screenTutorials: string[]; // 화면을 처음 열 때 띄우는 튜토리얼 가운데 아직 끝내거나 건너뛰지 않은 것 — area · dex · trade · user (src/tutorial/conditions.ts SCREEN_TUTORIALS)
+  screenTutorials: string[];
+  replayTutorials: string[]; // 가이드북에서 지금 다시 볼 수 있는 튜토리얼(뜰 대상이 있는 것) — 나머지는 `다시 보기` 가 흐리다 (src/tutorial/queue.ts replayableNow) // 화면을 처음 열 때 띄우는 튜토리얼 가운데 아직 끝내거나 건너뛰지 않은 것 — area · dex · trade · user (src/tutorial/conditions.ts SCREEN_TUTORIALS)
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
   display?: DisplayView;
   saveFailing?: boolean; // 저장이 이어서 3번 실패했다 — 모든 탭 위쪽에 안내를 띄운다 (src/tx/game.ts)

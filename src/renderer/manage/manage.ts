@@ -217,7 +217,7 @@ registerDialog({
   },
 });
 registerDialog({ kind: "user", shape: "dialog settings", headerButton: "open-user", draw: (d) => drawUser(d.tab) });
-registerDialog({ kind: "guide", shape: "dialog tall", draw: () => drawGuide() });
+registerDialog({ kind: "guide", shape: "dialog settings notes", draw: (d) => drawGuide(d.pick) });
 registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at) });
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });

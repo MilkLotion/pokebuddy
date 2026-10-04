@@ -344,7 +344,7 @@ function renderBody(v: PetDeviceView): void {
   if (detailPetId !== pet.id) {
     detailPetId = pet.id;
     detailStep = 0; // 다른 개체를 열면 튜토리얼은 1단계부터
-  }
+  } else if (v.tutorial && !lastView?.tutorial) detailStep = 0; // 가이드북의 다시 보기 — 같은 개체여도 1단계부터
   lastView = v;
   drawCoach();
 }

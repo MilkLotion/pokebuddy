@@ -41,6 +41,7 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
       return { id: target ?? str(a.id) };
     case "tutorial.skip":
     case "tutorial.done":
+    case "tutorial.replay":
       return { id: target ?? str(a.id), steps: int(a.steps) };
     case "settings.set":
       return { key: target ?? str(a.key), value: a.value };

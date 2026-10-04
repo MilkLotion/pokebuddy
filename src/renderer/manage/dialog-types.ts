@@ -18,7 +18,7 @@ export type Dialog =
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
-  | { kind: "guide" }
+  | { kind: "guide"; pick?: string } // 가이드북 — 설정의 `가이드북`. pick 은 왼쪽 목록에서 고른 주제·튜토리얼
   // 부화 결과 — 태어난 개체 또는 포켓몬 대신 나온 알. over 면 돌보미집 모달 위에 겹친다.
   // 모두 열기면 queue 에 결과 전부, at 은 지금 보이는 차례(0 부터) — `다음 (1 / N)` 으로 하나씩 넘긴다
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; over?: "daycare"; queue?: Hatched[]; at?: number }

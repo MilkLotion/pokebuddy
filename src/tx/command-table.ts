@@ -39,6 +39,7 @@ const TX_COMMANDS = {
   "achievement.claim": { handler: claimHandler },
   "tutorial.skip": { handler: tutorialHandler("skip") },
   "tutorial.done": { handler: tutorialHandler("done") },
+  "tutorial.replay": { handler: tutorialHandler("replay") }, // 가이드북의 다시 보기
   "settings.set": { handler: settingsHandler },
   "starter.pick": { handler: starterHandler },
   "pet.set": { handler: homeHandler },

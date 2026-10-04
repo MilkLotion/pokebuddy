@@ -27,7 +27,7 @@ import { SETTING_CHOICES } from "../state/settings.js";
 import type { AchievementView, BagItemView, BoxView, EggView, NatureOption, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
 import { unclaimedAchievementIds } from "../dex/tables.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
-import { canShow, currentTutorial } from "../tutorial/queue.js";
+import { canShow, currentTutorial, replayableNow } from "../tutorial/queue.js";
 import { gameDayPart } from "../shared/clock.js";
 import { itemAbout } from "./bag.js";
 import { shopList } from "./shop-list.js";
@@ -161,6 +161,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     detailTutorial: canShow(save, "detail"),
     areaTutorial: canShow(save, "area"),
     screenTutorials: SCREEN_TUTORIALS.filter((id) => canShow(save, id)),
+    replayTutorials: replayableNow(save, now),
   };
 }
 

@@ -178,6 +178,7 @@ export interface TutorialV3 {
   state: TutorialState;
   steps: number; // 끝낸 단계 수
   queuedAt?: number; // 시작 조건을 채운 시각 — 먼저 생긴 것부터 보여 준다 (src/tutorial/queue.ts)
+  replay?: boolean; // 가이드북의 `다시 보기` 로 다시 연 것 — 목표 행동을 이미 했어도 완료로 적지 않는다. 끝내거나 닫으면 지운다 (2026-10-05)
 }
 
 // 놀이공간 방식 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면). 옛 "full"(주 화면)은 읽을 때 "screen" + 주 화면이 된다
