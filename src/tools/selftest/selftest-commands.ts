@@ -10,7 +10,7 @@ import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { createSaveParty } from "../../save/save-party";
 import { applyStarter } from "../../party/starter";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty as emptyV3 } from "../../save/v3";
 import { sendToWriter as send } from "../../save/command-channel";
 import type { Command } from "../../shared/command";
@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   // 박스 개체 하나 — 박스 개체도 크기는 정한다 (2026-09-30 박스 개체 상세 = 파티 상세)
   seed.pets.push({ ...structuredClone(seed.pets[0]!), id: "b-pet" });
   seed.boxes[0]!.slots[0] = "b-pet";
-  store.write(paths.save, seed);
+  store.writeSave(paths.save, seed);
 
   const game = createGame({ petName, file: paths.save, rand: () => 0 });
   const party = createSaveParty({ send: game.send, paths });
@@ -56,19 +56,19 @@ async function main(): Promise<void> {
 
     artOk = true;
     assert.ok((await commands.dispatcher.dispatch(evolveCmd)).ok, "그림을 받으면 진화한다");
-    assert.equal(store.read(paths.save, { repair: false }).state!.pets[0]!.species, "charmeleon", "진화가 디스크에 저장");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.pets[0]!.species, "charmeleon", "진화가 디스크에 저장");
     assert.equal(changes, 1, "저장 뒤 무대 갱신");
 
     // 박스 명령 — 관리 창이 앱 명령 경로로 보낸다. 목록에 빠지면 unknown-cmd 가 된다
     const renamed = await commands.dispatcher.dispatch({ cmd: "box.rename", target: "b1", args: { name: "내 박스" }, from: "settings" });
     assert.ok(renamed.ok, `box.rename 이 앱 명령 경로에서 동작 (${renamed.reason})`);
-    assert.equal(store.read(paths.save, { repair: false }).state!.boxes[0]!.name, "내 박스");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.boxes[0]!.name, "내 박스");
     assert.ok((await commands.dispatcher.dispatch({ cmd: "box.sort", target: "b1", args: { by: "dex" }, from: "settings" })).ok, "box.sort 가 앱 명령 경로에서 동작");
 
     // 박스 개체 — 크기는 바뀌고 자리(home)는 거절한다
     const boxSize = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "b-pet", args: { size: 3 }, from: "settings" });
     assert.ok(boxSize.ok, `박스 개체 크기 (${boxSize.reason})`);
-    assert.equal(store.read(paths.save, { repair: false }).state!.pets.find((p) => p.id === "b-pet")!.size, 2, "크기 3단계 = 배율 2");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.pets.find((p) => p.id === "b-pet")!.size, 2, "크기 3단계 = 배율 2");
     const boxHome = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "b-pet", args: { home: { dx: 1, dy: 1 } }, from: "settings" });
     assert.equal(boxHome.ok, false, "박스 개체의 자리는 정하지 않는다");
 
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
     commands.setWriter(true);
     const bought = await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" });
     assert.ok(bought.ok, "mailbox → dispatcher → 실행기");
-    assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 1);
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 1);
 
     // 실제 CLI → 임시 HOME mailbox 왕복
     const child = await promisify(execFile)(process.execPath, [path.resolve(__dirname, "../../../bin/pokebuddy"), "game", "snapshot"], {
@@ -104,16 +104,16 @@ async function main(): Promise<void> {
     const again = await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", args: { reqId: "same" }, from: "cli" });
     assert.ok(once.ok && again.ok);
     assert.equal(again.replayed, true, "두 번째는 재생");
-    assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 2, "한 번만 늘었다");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 2, "한 번만 늘었다");
 
     // 멈춘 동안 — 처리기로 보내지 않고 거른다. 직접 부름·mailbox 모두 같은 통로라 함께 막힌다. 열어 둔 명령은 지난다
     frozen = true;
-    const bagBefore = store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"];
+    const bagBefore = store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"];
     assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", from: "settings" })).reason, "halted", "멈춘 동안 저장 명령은 halted");
     assert.equal((await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" })).reason, "halted", "mailbox 로 온 명령도 halted");
     assert.equal((await commands.click("p1")).reason, "halted", "무대 클릭(놀아주기)도 halted");
     assert.ok((await commands.dispatcher.dispatch({ cmd: "snapshot", from: "cli" })).ok, "열어 둔 명령은 지난다");
-    assert.equal(store.read(paths.save, { repair: false }).state!.bag["exp-candy-xs"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
     frozen = false;
 
     // 숨기기·보이기도 target 이 없으면 args.petId 를 본다 — 다른 개체 명령과 같은 규칙 (94 문서 4-12)

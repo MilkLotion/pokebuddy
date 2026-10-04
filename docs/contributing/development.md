@@ -310,7 +310,7 @@ node dist/tools/dev/dev-test.js start              # 고친 저장으로 다시 
 
 1. 시험 HOME 을 정한다. 위치는 저장소의 `.claude/test-home/<작업명>` 이다(2026-10-03 사용자 결정). `.claude/` 는 git 이 추적하지 않는다. 사용자 홈의 `~/.claude` 아래에는 만들지 않는다. 모든 명령에 `POKEBUDDY_TEST_HOME` 으로 준다.
 2. 띄울 코드를 정한다. 작업 트리에 다른 작업의 미커밋 변경이 있으면 HEAD 를 worktree 로 꺼내 빌드한다(위 목록의 worktree 항목).
-3. 앱을 띄우기 전에 저장을 만든다. `scene <장면>` 을 쓴다. 장면에 없는 값은 `dist/save/store.js` 의 `read`·`write` 로 고친다.
+3. 앱을 띄우기 전에 저장을 만든다. `scene <장면>` 을 쓴다. 장면에 없는 값은 `dist/save/save-file.js` 의 `readSave`·`writeSave` 로 고친다.
 4. 서버를 쓸지 정한다.
    - 서버가 필요 없는 확인은 `POKEBUDDY_ONLINE=off` 로 띄운다. 계정이 생기지 않는다. 서버 검증 위반이 생길 수 없다.
    - 온라인이 필요한 확인은 그대로 띄운다. 운영 서버에 새 익명 계정이 생긴다. 서버는 첫 올리기를 직전 저장과 견주지 않는다. 그래서 3번에서 만든 저장은 위반이 아니다.

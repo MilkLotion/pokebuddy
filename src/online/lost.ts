@@ -1,6 +1,6 @@
 // 로컬 저장 격리 표시 처리 — cloud.json 을 읽을 때 한 번. 설계는 worklog/records/cloud-authority/record.md "P3 로컬 암호화"
 //
-// 저장 통로(src/save/store.ts)·키 준비(src/save/key.ts)가 로컬 저장을 격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다.
+// 저장 파일(src/save/save-file.ts)·키 준비(src/save/key.ts)가 로컬 저장을 격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다.
 // 여기서 cloud.json 의 syncedRev 를 -1 로 바꾼다 — 다음 맞추기(src/online/cloud.ts reconcile)가 rev 와 관계없이 서버 저장을 받는다.
 // 격리 뒤 새로 고른 첫 포켓몬 저장이 서버 저장을 덮지 않게 한다
 //   바꾼 상태를 cloud.json 에 먼저 쓰고, 쓴 뒤에만 표시를 지운다 — 올리기 전에 앱이 꺼져도 다음 부팅이 다시 잊는다(검수 P3-1)

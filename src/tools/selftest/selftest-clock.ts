@@ -11,7 +11,7 @@ import { CLOCK_RULES, createClock, type ClockTick } from "../../main/clock";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { newPet } from "../../party/create";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
@@ -73,37 +73,37 @@ try {
   // (2) 1초 틱 — 메모리에 적용하고 파일은 flushMs 마다 쓴다. 읽는 쪽은 메모리 값을 본다
   {
     const file = path.join(root, "save.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     assert.ok(game.tick(), "첫 틱은 쓴다");
-    const first = store.read(file, { repair: false }).state!.lastTickAt;
+    const first = store.readSave(file, { repair: false }).state!.lastTickAt;
     assert.equal(first, now);
     for (let i = 0; i < 5; i++) {
       now += 1000;
       assert.ok(game.tick());
     }
-    assert.equal(store.read(file, { repair: false }).state!.lastTickAt, first, "15초 전에는 파일을 쓰지 않는다");
+    assert.equal(store.readSave(file, { repair: false }).state!.lastTickAt, first, "15초 전에는 파일을 쓰지 않는다");
     assert.equal(game.read()?.lastTickAt, now, "읽는 쪽은 메모리의 새 값을 본다");
     for (let i = 0; i < 10; i++) {
       now += 1000;
       game.tick();
     }
-    assert.equal(store.read(file, { repair: false }).state!.lastTickAt, now, "15초가 되면 쓴다");
+    assert.equal(store.readSave(file, { repair: false }).state!.lastTickAt, now, "15초가 되면 쓴다");
 
     // 끄기 직전 flush — 메모리 진행을 바로 쓴다
     now += 1000;
     game.tick();
     assert.equal(game.flush(), true);
-    assert.equal(store.read(file, { repair: false }).state!.lastTickAt, now);
+    assert.equal(store.readSave(file, { repair: false }).state!.lastTickAt, now);
 
     // 명령은 메모리 값 위에서 돌고, 쓰면 메모리 값까지 파일에 들어간다
     now += 1000;
     game.tick();
     const reply = game.send({ cmd: "settings.set", args: { key: "sound", value: false } }, "settings");
     assert.equal(reply.ok, true);
-    const disk = store.read(file, { repair: false }).state!;
+    const disk = store.readSave(file, { repair: false }).state!;
     assert.equal(disk.lastTickAt, now, "명령 저장에 1초 틱 진행이 함께 들어간다");
     assert.equal(disk.settings.sound, false);
 
@@ -118,7 +118,7 @@ try {
     const other = seed();
     other.points.balance = 4321;
     other.lastTickAt = now;
-    assert.equal(store.write(file, other), true);
+    assert.equal(store.writeSave(file, other), true);
     fs.utimesSync(file, new Date(), new Date(Date.now() + 5000)); // 수정 시각이 확실히 달라지게
     assert.equal(game.read()?.points.balance, 4321, "바뀐 파일을 따른다");
     process.stdout.write("(2) 메모리 적용과 주기 쓰기  ok\n");
@@ -127,7 +127,7 @@ try {
   // (3) 쓰는 프로세스가 아니면 메모리 진행도 들고 있지 않는다
   {
     const file = path.join(root, "save-reader.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     let writer = true;
     const game = createGame({ petName, file, now: () => now, canWrite: () => writer, flushMs: 15_000, mono: () => now - T0 });
@@ -145,7 +145,7 @@ try {
   // (3b) 시스템 시각을 뒤로 돌려도 쓰기가 멈추지 않는다 — 간격은 단조 시계로 잰다 (검수 B1)
   {
     const file = path.join(root, "save-back.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     let mono = 0;
     const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => mono });
@@ -154,12 +154,12 @@ try {
     game.tick(); // 첫 틱 — 쓴다
     now -= 60 * 60_000; // 한 시간 뒤로
     let writes = 0;
-    let lastDisk = store.read(file, { repair: false }).state!.savedAt;
+    let lastDisk = store.readSave(file, { repair: false }).state!.savedAt;
     for (let i = 0; i < 60; i++) {
       now += 1000;
       mono += 1000;
       game.tick();
-      const at = store.read(file, { repair: false }).state!.savedAt;
+      const at = store.readSave(file, { repair: false }).state!.savedAt;
       if (at !== lastDisk) writes += 1;
       lastDisk = at;
     }
@@ -170,7 +170,7 @@ try {
   // (3c) 주기 쓰기가 실패해도 메모리 값을 들고 있고, 다시 시도는 다음 쓰기 주기다. 실패는 주기마다 한 번 센다 (검수 B2)
   {
     const file = path.join(root, "save-fail.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
@@ -191,23 +191,23 @@ try {
       game.tick();
     }
     assert.equal(game.saveFailing(), false, "다시 쓰면 안내가 사라진다");
-    assert.equal(store.read(file, { repair: false }).state!.lastTickAt, now, "들고 있던 진행이 파일에 들어간다");
+    assert.equal(store.readSave(file, { repair: false }).state!.lastTickAt, now, "들고 있던 진행이 파일에 들어간다");
     process.stdout.write("(3c) 쓰기 실패 주기와 메모리 유지  ok\n");
   }
 
   // (3d) 밖에서 파일이 바뀌어 메모리 값을 버려도, 파일에 안 쓴 작업 시간은 다음 틱에 다시 넣는다 (검수 A3)
   {
     const file = path.join(root, "save-work.json");
-    assert.equal(store.write(file, seed()), true);
+    assert.equal(store.writeSave(file, seed()), true);
     let now = T0;
     const game = createGame({ petName, file, now: () => now, flushMs: 15_000, mono: () => now - T0 });
     now += 1000;
     game.tick(); // 첫 틱 — 쓴다
     now += 1000;
     game.tick({ workMs: 1000 }); // 메모리에만 있다
-    const outside = store.read(file, { repair: false }).state!;
+    const outside = store.readSave(file, { repair: false }).state!;
     outside.points.balance = 77;
-    assert.equal(store.write(file, outside), true);
+    assert.equal(store.writeSave(file, outside), true);
     fs.utimesSync(file, new Date(), new Date(Date.now() + 5000));
     now += 1000;
     game.tick({ workMs: 0 });
@@ -221,8 +221,8 @@ try {
   {
     const a = path.join(root, "a.json");
     const b = path.join(root, "b.json");
-    assert.equal(store.write(a, seed()), true);
-    assert.equal(store.write(b, seed()), true);
+    assert.equal(store.writeSave(a, seed()), true);
+    assert.equal(store.writeSave(b, seed()), true);
     let ta = T0;
     let tb = T0;
     const ga = createGame({ petName, file: a, now: () => ta });
@@ -235,8 +235,8 @@ try {
       tb += 30_000;
       gb.tick();
     }
-    const pa = store.read(a, { repair: false }).state!.pets[0]!;
-    const pb = store.read(b, { repair: false }).state!.pets[0]!;
+    const pa = store.readSave(a, { repair: false }).state!.pets[0]!;
+    const pb = store.readSave(b, { repair: false }).state!.pets[0]!;
     assert.deepEqual([pa.fullness, pa.fullnessProgressMs, pa.affinity, pa.affinityProgressMs, pa.mood], [pb.fullness, pb.fullnessProgressMs, pb.affinity, pb.affinityProgressMs, pb.mood], "10분 — 1초 × 600 과 30초 × 20 이 같다");
     process.stdout.write("(4) 1초 틱과 긴 틱의 결과  ok\n");
   }

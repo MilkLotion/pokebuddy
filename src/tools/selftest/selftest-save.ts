@@ -7,7 +7,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { checkMigration, migrateSaveV2 } from "../../save/v2/migrate";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { BAG_RULES } from "../../bag/rules";
 import { BOX_RULES } from "../../box/rules";
 import { PARTY_RULES } from "../../party/rules";
@@ -374,7 +374,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
   try {
     // (9) 없는 파일
     {
-      const res = store.read(path.join(root, "none.json"));
+      const res = store.readSave(path.join(root, "none.json"));
       assert.equal(res.state, null);
       assert.equal(res.corrupted, false);
       process.stdout.write("(9) 파일 없음  ok\n");
@@ -385,8 +385,8 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       const file = path.join(root, "v3.json");
       const s = empty(T0);
       s.points.balance = 77;
-      assert.equal(store.write(file, s), true);
-      const res = store.read(file);
+      assert.equal(store.writeSave(file, s), true);
+      const res = store.readSave(file);
       assert.ok(res.state);
       assert.equal(res.migrated, false);
       assert.equal(res.state.points.balance, 77);
@@ -398,7 +398,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       const file = path.join(root, "v2.json");
       const src = v2Save();
       assert.equal(writeSaveV2(file, src), true);
-      const res = store.read(file);
+      const res = store.readSave(file);
       assert.ok(res.state, "이전 결과가 있다");
       assert.equal(res.migrated, true);
       assert.equal(res.state.v, 3);
@@ -407,7 +407,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       const backup = JSON.parse(fs.readFileSync(store.backupName(file), "utf8")) as { v: number };
       assert.equal(backup.v, 2, "백업은 v2 그대로");
       // 파일은 v3 으로 바뀌었다 — 다시 읽어도 옮기지 않는다
-      const again = store.read(file);
+      const again = store.readSave(file);
       assert.equal(again.migrated, false);
       assert.equal(again.state?.v, 3);
       process.stdout.write("(11) v2 이전 · 백업 후 교체  ok\n");
@@ -417,12 +417,12 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
     {
       const file = path.join(root, "broken.json");
       fs.writeFileSync(file, "{ 이건 JSON 이 아니다");
-      const res = store.read(file);
+      const res = store.readSave(file);
       assert.equal(res.state, null);
       assert.equal(res.corrupted, true);
       assert.ok(res.movedTo && fs.existsSync(res.movedTo) && path.basename(res.movedTo).startsWith("broken.json.broken-"), `파손 파일을 격리한다: ${res.movedTo}`);
       assert.ok(!fs.existsSync(file), "원본 자리는 비었다");
-      assert.ok(fs.existsSync(store.lostMarker(file)), "격리 표시");
+      assert.ok(fs.existsSync(store.lostMarkerOf(file)), "격리 표시");
       process.stdout.write("(12) 파손 격리  ok\n");
     }
 
@@ -430,11 +430,11 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
     {
       const file = path.join(root, "broken2.json");
       fs.writeFileSync(file, "깨진 내용");
-      const res = store.read(file, { repair: false });
+      const res = store.readSave(file, { repair: false });
       assert.equal(res.corrupted, true);
       assert.ok(fs.existsSync(file), "원본이 남아 있다");
       assert.equal(res.movedTo, undefined);
-      assert.equal(fs.existsSync(store.lostMarker(file)), false);
+      assert.equal(fs.existsSync(store.lostMarkerOf(file)), false);
       process.stdout.write("(13) 읽기 전용은 격리하지 않는다  ok\n");
     }
 
@@ -443,7 +443,7 @@ process.stdout.write("selftest-save: 통과 (빈 저장·이전·검사·정규�
       const file = path.join(root, "v2-reader.json");
       assert.equal(writeSaveV2(file, v2Save()), true);
       const before = fs.readFileSync(file, "utf8");
-      const res = store.read(file, { repair: false });
+      const res = store.readSave(file, { repair: false });
       assert.equal(res.state?.v, 3, "옮긴 값을 돌려준다");
       assert.equal(fs.readFileSync(file, "utf8"), before, "파일은 v2 그대로");
       assert.equal(fs.existsSync(store.backupName(file)), false, "백업도 만들지 않는다");

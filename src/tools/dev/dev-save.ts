@@ -6,7 +6,7 @@ import path from "node:path";
 import { rollGender } from "../../dex/gender";
 import { randomNature } from "../../dex/natures";
 import { newPet } from "../../party/create";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { empty } from "../../save/v3";
 import type { SaveV3 } from "../../shared/save-v3";
 import { recordDex } from "../../dex/record";
@@ -46,7 +46,7 @@ export function devSave(home: string, speciesList: string[], opts: DevSaveOption
   const file = devSaveFile(home);
   const save = devSaveState(speciesList, opts);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  if (!store.write(file, save)) throw new Error(`쓰지 못함: ${file}`);
+  if (!store.writeSave(file, save)) throw new Error(`쓰지 못함: ${file}`);
   return { file, save };
 }
 

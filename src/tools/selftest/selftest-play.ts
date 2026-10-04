@@ -10,7 +10,7 @@ import path from "node:path";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
-import * as store from "../../save/store";
+import * as store from "../../save/save-file";
 import { setSize } from "../../party/home";
 import { zoomOf } from "../../main/art/stage-art";
 import { empty, normalize } from "../../save/v3";
@@ -218,7 +218,7 @@ function seedPet(): SaveV3 {
     const file = path.join(dir, "save.json");
     const seed = seedPet();
     seed.points.balance = 100;
-    store.write(file, seed);
+    store.writeSave(file, seed);
     const game = createGame({ petName, file, now: () => T0 });
     // 임시 파일 자리에 폴더를 두면 쓰기가 실패한다 (src/platform/atomic-write.ts writeAtomic)
     const block = `${file}.${process.pid}.tmp`;
