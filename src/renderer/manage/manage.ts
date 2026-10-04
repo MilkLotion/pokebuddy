@@ -6,6 +6,8 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
+import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, stepShop, syncShopDevice } from "./shop-link.js";
 import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
 import { closeDexBeside, onDexClosed, setDexLinkHooks, syncDexBeside, toggleDexBeside } from "./dex-link.js";
@@ -18,12 +20,12 @@ import { liveInputEl, restoreSearchFocus, typingSearch } from "./search.js";
 import { alertEl, chipsEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
-import type { AchievementView, BagItemView, BoxView, EggView, FormView, PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
+import type { AchievementView, BoxView, EggView, FormView, PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
-import type { PetDeviceAction, PetDeviceInput, BagDeviceAction, BagDeviceInput, PartyDeviceAction, PartyDeviceInput } from "../../shared/model/devices.js";
+import type { PetDeviceAction, PetDeviceInput, PartyDeviceAction, PartyDeviceInput } from "../../shared/model/devices.js";
 import type { ScreenView } from "../../shared/model/overlays.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import type { TradeCloseReason } from "../../shared/names/online-codes.js";
@@ -81,6 +83,9 @@ setDexLinkHooks({
 // 상점 기기 창의 이전·다음 — 상점 탭이 보이는 순서로 돈다
 setShopLinkHooks({ stepRows: (shop) => shopStepRows(shop) });
 
+// 가방 기기 창 — 이전·다음은 가방 탭의 순서, 파티 줄의 ◀ ▶ 는 파티 탭의 프리셋 넘김
+setBagLinkHooks({ stepRows: (bag) => bagStepRows(bag), stepPreset: (delta) => stepPreset(delta) });
+
 // 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
 setLiveHooks({
   isHolding: () => dragFrom != null || boxRenaming,
@@ -100,7 +105,7 @@ setShellHooks({
     presetRenaming = false;
   },
   afterTabChange: () => {
-    bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
+    clearBagResult(); // 가방 결과 줄은 탭을 떠나면 지운다
   },
 });
 
@@ -1220,197 +1225,6 @@ document.addEventListener("click", () => {
   redrawBody();
 });
 
-// ── 가방 ───────────────────────────────────────────────────────────────────────
-// Figma 05 `Bag / Base` `381:6555` — 분류 칩, 4열 도구 칸. 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다(아래 `가방 기기 창`).
-// 여러 개 쓰기는 경험사탕·이상한사탕만 되고 한 거래다 (2026-09-27 사용자 결정 "수량 선택 + 최대", src/tx/handlers/items.ts useHandler)
-
-// 가방 분류 — 상점(SHOP_TABS)의 도구 분류와 같다. data/items.json 의 도구는 `도구`, data/evo-items.json 의 진화용 도구는 `진화`.
-// `전체` 는 두지 않고 첫 탭 `도구` 를 연다 (2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애.")
-const BAG_TABS = [
-  { id: "tool", label: "도구" },
-  { id: "evolution", label: "진화" },
-];
-let bagFilter = "tool";
-let bagPick: string | null = null; // 가방 기기 창에 띄운 도구
-let bagTarget: string | null = null; // 사용 쪽에서 고른 파티 개체
-let bagQty = 1;
-// 방금 쓴 결과 — 미리보기 상자가 초록으로 보인다. 도구·대상·갈래·수량·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
-let bagResult = "";
-let bagResultNote = ""; // 결과 둘째 줄 — "이상한사탕 1개를 썼어요"
-let bagNotice = ""; // 마지막 사용·판매 실패 — 미리보기 상자가 빨강으로 보인다
-// 조작 칸의 갈래 — 사용·판매. 판매가(sellPrice)가 있는 도구만 판매 갈래가 있다. 진화용 도구는 판매만 (2026-10-01 사용자 결정 "진화아이템에는 사용을 없애자")
-let bagMode: "use" | "sell" = "use";
-let sellQty = 1;
-
-// 도구의 분류 — 상점과 같은 기준. evolution 은 data/evo-items.json 에 있는 도구 (src/tx/lists.ts isEvoItem)
-function bagCategory(item: BagItemView): string {
-  return item.evolution ? "evolution" : "tool";
-}
-
-// 누른 도구 — 같은 도구를 다시 누르면 닫는다(상점 상품·도감 칸과 같다)
-function pickBag(id: string): void {
-  bagPick = bagPick === id ? null : id;
-  bagMode = "use";
-  bagQty = 1;
-  sellQty = 1;
-  bagNotice = "";
-  bagResult = "";
-  redrawBody();
-}
-
-function bagCard(item: BagItemView): HTMLElement {
-  const card = buttonEl("bag-card");
-  card.setAttribute("aria-pressed", String(item.id === bagPick));
-  const info = el("div", "info");
-  info.append(el("div", "name", item.name), el("div", "qty", `×${numberText(item.count)}`)); // 천 단위 쉼표
-  card.append(iconOf(item.icon, "thumb"), info);
-  card.addEventListener("click", () => pickBag(item.id));
-  return card;
-}
-
-function drawBag(v: Snapshot): void {
-  bodyEl.appendChild(pageHeadEl("가방"));
-  if (!v.bag.length) {
-    bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다."));
-    return;
-  }
-  if (!BAG_TABS.some((t) => t.id === bagFilter)) bagFilter = BAG_TABS[0]?.id ?? "tool"; // 모르는 분류(옛 `all` 등)는 첫 탭으로
-  bodyEl.appendChild(
-    chipsEl(BAG_TABS, bagFilter, (id) => {
-      bagFilter = id;
-      bagResult = "";
-      redrawBody();
-    }),
-  );
-  const items = v.bag.filter((i) => bagCategory(i) === bagFilter);
-  if (!items.length) bodyEl.appendChild(el("div", "empty-note", "이 분류의 도구가 없습니다."));
-  else {
-    const grid = el("div", "bag-grid");
-    for (const item of items) grid.appendChild(bagCard(item));
-    bodyEl.appendChild(grid);
-  }
-}
-
-// ── 가방 기기 창 ──────────────────────────────────────────────────────────────
-// 가방 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
-// 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/record.md).
-// 도구는 파티 개체에게만 쓴다 ("파티를 기준으로만 사용할 수 있게 하자"). 여기서는 고른 값만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-bag.ts). 단추는 여기로 돌아와 명령으로 처리한다
-
-let bagSending = false; // 사용·판매 명령을 보내는 중 — 두 번 누르기를 막는다
-let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
-// 가방 기기 창 연결 — 도구를 고른 동안 연다 (bagDeviceBuild)
-const bagLink = createDeviceLink<BagDeviceInput>({
-  build: bagDeviceBuild,
-  stamp: () => ui.view,
-  open: (input, gen) => api.bagOpen(input, gen),
-  apply: (input) => {
-    bagMode = input.mode;
-    bagTarget = input.targetPetId;
-    bagQty = input.qty;
-    sellQty = input.sellQty;
-  },
-  afterClosed: () => {
-    if (!bagPick) return false;
-    bagPick = null;
-    return true;
-  },
-  redraw: () => redrawBody(),
-});
-// 가방 기기 창에 보낼 고른 값 — 고른 도구가 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-bag.ts)
-function bagDeviceBuild(): BagDeviceInput | null {
-  if (!bagPick || !ui.view?.bag.some((i) => i.id === bagPick)) return null;
-  return { itemId: bagPick, mode: bagMode, targetPetId: bagTarget, qty: bagQty, sellQty, notice: bagNotice, result: bagResult ? { lead: bagResult, line: bagResultNote } : null, busy: bagBusy };
-}
-
-function syncBagDevice(): void {
-  bagLink.sync();
-}
-
-// 이전·다음 — 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래·수량·결과는 처음으로
-function stepBag(delta: -1 | 1): void {
-  if (!bagPick || !ui.view) return;
-  const list = ui.view.bag.filter((i) => bagCategory(i) === bagFilter);
-  if (list.length < 2) return;
-  const at = list.findIndex((i) => i.id === bagPick);
-  const next = list[(at + delta + list.length) % list.length];
-  if (!next) return;
-  pickBag(next.id);
-}
-
-// 기기 창에서 누른 단추 — 기기 창이 다른 도구를 보이던 때 누른 것은 버린다
-function onBagAction(action: BagDeviceAction): void {
-  if (!bagPick || action.itemId !== bagPick) return;
-  if (action.kind === "go") {
-    void (bagMode === "sell" ? sellBag(bagPick) : useBag(bagPick));
-    return;
-  }
-  if (action.kind === "preset") {
-    // 파티 줄 양끝의 ◀ ▶ — 앞·뒤 프리셋을 적용한다. 대상·수량·결과는 처음으로
-    bagNotice = "";
-    bagResult = "";
-    bagTarget = null;
-    bagQty = 1;
-    stepPreset(action.delta);
-    return;
-  }
-  bagNotice = "";
-  bagResult = "";
-  if (action.kind === "mode") {
-    bagMode = action.mode;
-    sellQty = 1;
-  } else if (action.kind === "target") {
-    bagTarget = action.petId;
-    bagQty = 1;
-  } else if (bagMode === "sell") sellQty = action.qty;
-  else bagQty = action.qty;
-  syncBagDevice();
-}
-
-// 명령 보내기 — 0.3초 넘게 답이 없으면 주 단추가 점 세 개. 실패 문구는 기기 창의 미리보기 상자에만 보인다
-async function bagSend(cmd: string, id: string, extra: Record<string, unknown>): Promise<boolean> {
-  bagSending = true;
-  const slow = setTimeout(() => {
-    bagBusy = true;
-    syncBagDevice();
-  }, 300);
-  const ok = await sendCommand(cmd, id, extra, { keepOpen: true });
-  clearTimeout(slow);
-  bagSending = false;
-  bagBusy = false;
-  bagNotice = ok ? "" : ui.notice;
-  ui.notice = "";
-  return ok;
-}
-
-async function useBag(id: string): Promise<void> {
-  const item = ui.view?.bag.find((i) => i.id === id);
-  const pet = bagTarget ? petInView(bagTarget) : null;
-  if (!item || !pet || !ui.view || bagSending) return;
-  const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)
-  bagResult = "";
-  const ok = await bagSend("bag.use", id, { petId: pet.id, ...(count > 1 ? { count } : {}) });
-  if (ok) {
-    // 결과 두 줄은 메인이 거래 앞뒤 화면 값으로 만들어 답에 싣는다 (src/view/result-lines.ts)
-    bagResult = lastReplyOf()?.result?.lead ?? "";
-    bagResultNote = lastReplyOf()?.result?.line ?? "";
-    bagQty = 1;
-    if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
-  }
-  redrawBody();
-}
-
-async function sellBag(id: string): Promise<void> {
-  const item = ui.view?.bag.find((i) => i.id === id);
-  if (!item || item.sellPrice === undefined || bagSending) return;
-  const count = sellQty; // 메인이 보유 수까지로 바로잡은 수량
-  const ok = await bagSend("bag.sell", id, count > 1 ? { count } : {});
-  if (ok) {
-    sellQty = 1;
-    if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
-  }
-  redrawBody();
-}
-
 // ── 교환 ───────────────────────────────────────────────────────────────────────
 // Figma 05 Screens 섹션 `930:18244`(교환) 의 교환 모달 6화면 — Base `1036:23257`·Link Created `1036:22965`·Offer `1036:22673`·Blocked `1036:22381`·Done `1036:22089`·Error `1036:21797`.
 // 값은 메인이 만든 TradeScreen(src/view/trade-screen.ts). 조작은 명령 trade.* 로 보내고, 결과와 실시간 변경은 같은 값으로 온다.
@@ -2470,9 +2284,7 @@ registerTab({
   label: "가방",
   icon: TAB_ICON.bag,
   draw: (v) => drawBag(v),
-  leave: () => {
-    bagPick = null;
-  },
+  leave: () => leaveBag(),
 });
 
 // 본문을 그리기 전 기기 창 맞추기 — 고른 것이 사라졌으면 닫는다. 순서: 파티 상세 → 상점 → 가방 → 파티
@@ -2485,7 +2297,7 @@ registerBodySync(() => {
   syncShopDevice();
 });
 registerBodySync(() => {
-  if (bagPick && ui.view && !ui.view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
+  dropGoneBagPick(); // 다 쓰거나 팔았다
   syncBagDevice();
 });
 registerBodySync(() => syncPartyDevice());
@@ -2604,7 +2416,7 @@ const GUIDES: Record<string, Guide> = {
   bag: {
     name: "가방", tab: "bag", go: "가방으로 가기",
     // 도구를 눌러 가방 기기 창이 뜨면 2단계, 닫으면 1단계로 돌아간다 (2026-10-01 가방 기기 창)
-    step: () => (bagPick ? 1 : 0),
+    step: () => (bagPickOf() ? 1 : 0),
     steps: [
       { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 먹이와 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
       {

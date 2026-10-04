@@ -237,7 +237,7 @@ Figma: `Egg Slot` `334:238`(`Preparing|Ready|Empty|Selected`), 모달 `Box / Day
 상태: 기본, 선택(옅은 배경). 선택해도 기본 상태의 회색 테두리를 유지한다. 선택 배경이 창 바탕색과 가까워 테두리가 없으면 카드 윤곽이 사라진다.
 내용: 아이콘, 이름, `×수량`.
 보유 0개가 된 도구는 목록에서 뺀다(`src/view/snapshot.ts`).
-가방 분류 칩은 `도구 / 진화` 다. 상점의 도구·진화 분류와 같다(2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애."). `전체` 칩은 없다. 구현은 `src/renderer/manage/manage.ts` `BAG_TABS`·`bagCategory` 다. Figma 는 템플릿 `Bag Layout` `380:2064` 의 칩 두 개다(2026-09-30 반영).
+가방 분류 칩은 `도구 / 진화` 다. 상점의 도구·진화 분류와 같다(2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애."). `전체` 칩은 없다. 구현은 `src/renderer/manage/bag-tab.ts` `BAG_TABS`·`bagCategory` 다. Figma 는 템플릿 `Bag Layout` `380:2064` 의 칩 두 개다(2026-09-30 반영).
 Figma: `Bag Item Card` `335:257`(`Default|Selected`).
 
 ### C-10 상점 상품 카드

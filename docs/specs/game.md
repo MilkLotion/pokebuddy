@@ -1163,7 +1163,7 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 파티 줄은 파티 칸 순서의 초상과 레벨이다. 칸 폭은 50 이다. 고른 칸만 옅은 배경이다. 테두리는 없다. 처음에는 첫 파티 개체를 고른다. 이름은 미리보기 첫 줄이 보인다(예 `피카츄 Lv.12 → Lv.13`).
 쓸 수 없는 대상이면 미리보기 첫 줄에 까닭을 보이고 `사용` 을 끈다(`bagBlocked`). 실패하면 미리보기 상자가 빨강 `쓰지 못했어요` 와 이유로 바뀐다. 0.3초 넘게 답이 없으면 주 단추가 점 세 개가 된다.
 닫는 경로는 `✕`, Esc, 같은 칸 다시 누르기, 가방 탭 나가기다. `◀ 이전`·`다음 ▶`·방향키는 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래는 `사용`, 수량은 1, 결과·실패 표시는 지운다.
-구현은 `src/main/windows/devices.ts` `bagDeviceOf`(공통 틀 `src/main/windows/device-window.ts`), `src/renderer/bag.html`·`src/renderer/device/bag.ts`(공통 `src/renderer/device/item-face.ts`), `src/view/device-bag.ts` `bagDeviceModel`, `src/renderer/manage/manage.ts` `syncBagDevice`·`useBag`·`sellBag` 이다. Figma 는 05 `07 가방` 섹션의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다.
+구현은 `src/main/windows/devices.ts` `bagDeviceOf`(공통 틀 `src/main/windows/device-window.ts`), `src/renderer/bag.html`·`src/renderer/device/bag.ts`(공통 `src/renderer/device/item-face.ts`), `src/view/device-bag.ts` `bagDeviceModel`, `src/renderer/manage/bag-link.ts` `syncBagDevice`·`useBag`·`sellBag` 이다. Figma 는 05 `07 가방` 섹션의 `Bag / Device / Use` `1242:1896`, `Bag / Device / Sell` `1129:24615`, `Bag / Device / Evolution` `1129:24689` 이다.
 
 ### 가방 판매
 
@@ -1176,7 +1176,7 @@ v2 의 마리는 각각 같은 식별자의 v3 개체가 된다. 같은 종의 �
 여러 개는 명령 하나(`bag.sell`의 `count`)로 한 거래에서 판다. 검사를 모두 통과해야 가방과 포인트를 바꾼다.
 거절 이유는 `not-sellable`(판매가 없음), `not-enough-items`(보유 부족), `bad-count`(1 이상의 정수가 아닌 수량)다.
 판매는 저장의 `bag`과 `points.balance`만 바꾼다. 다 팔면 가방에서 그 도구를 뺀다.
-구현은 `src/shop/sell.ts`, `src/tx/handlers/items.ts` `sellHandler`, `src/view/snapshot.ts`(`BagItemView.sellPrice`), `src/view/device-bag.ts` `bagDeviceModel`, `src/renderer/manage/manage.ts` `sellBag`이다.
+구현은 `src/shop/sell.ts`, `src/tx/handlers/items.ts` `sellHandler`, `src/view/snapshot.ts`(`BagItemView.sellPrice`), `src/view/device-bag.ts` `bagDeviceModel`, `src/renderer/manage/bag-link.ts` `sellBag`이다.
 
 ### 포켓몬 판매
 
