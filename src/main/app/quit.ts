@@ -33,6 +33,7 @@ export function createRun(deps: QuitDeps): Run {
   let staged = false;
   let bootReady = false;
   let quitWaited = false; // 끄기 전 클라우드 정리를 한 번 기다렸다
+  let releasing = false; // 그 정리를 기다리는 중 — 이 동안 다시 온 끄기 요청은 버린다
   const intervals: NodeJS.Timeout[] = [];
 
   return {
@@ -48,10 +49,19 @@ export function createRun(deps: QuitDeps): Run {
         // 끄기 전에 올리고 released 를 알린다 — 최대 3초. 다른 PC 가 경고 없이 넘겨받는다. 실패해도 끄기를 막지 않는다(다음 실행에서 올린다).
         // 밀려났거나 확인·막힘으로 멈췄으면 건너뛴다. 세션 종료(Windows 로그오프·mac 끄기·업데이트)가 진행 중이면 이미 알렸다 —
         // 시스템 종료를 늦추지 않게 기다리지 않고 끝낸다
+        // companion stop 은 lock 이 사라진 것을 주기 확인과 폴더 감시가 각각 보고 quit() 을 거듭 부른다 — 기다리는 중의 요청은 버리고 기다림이 끝나면 한 번 끝낸다
+        if (releasing) {
+          e.preventDefault();
+          return;
+        }
         if (!quitWaited && deps.shouldRelease()) {
           e.preventDefault();
           quitWaited = true;
-          void deps.release().finally(() => app.quit());
+          releasing = true;
+          void deps.release().finally(() => {
+            releasing = false;
+            app.quit();
+          });
           return;
         }
         quitting = true;
