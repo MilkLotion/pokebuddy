@@ -79,7 +79,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 // (3) 막힘·결과·실패 — 새 줄을 끼우지 않고 미리보기 상자의 글자와 색만 바뀐다
 {
   const cool = bag({ itemId: "premium-food", targetPetId: "p2" });
-  assert.match(cool.model.preview.lead, /^파이리 · 밥 주기 쿨타임이에요 \(.+\)\.$/);
+  assert.match(cool.model.preview.lead, /^파이리 · 아직 쉬는 시간이에요\. .+ 남았어요\.$/, "막는 글은 실패 문구 + 남은 시간 (94 항목 9-3-3)");
   assert.equal(cool.model.go.disabled, true);
   const play = bag({ itemId: "toy", targetPetId: "p2" });
   assert.match(play.model.preview.line, /이미 신남 · 남은 45분 → 2시간으로 갱신/, "걸린 버프는 남은 시간을 바꾼다");

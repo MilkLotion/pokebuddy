@@ -33,6 +33,8 @@ export type UseFailure = ReasonOf<
   | "cooldown" // 밥 주기 쿨타임이다
   | "max-level" // 이미 최대 레벨이다
   | "already" // 이미 그 상태다
+  | "already-shiny" // 이미 이로치다
+  | "already-normal" // 이미 일반 색이다
   | "bad-nature" // 바꿀 성격을 고르지 않았거나 모르는 성격이다
   | "not-in-party" // 파티 개체에게만 쓰는 도구를 박스 개체에게 쓰려 했다
 >;
@@ -145,13 +147,13 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       return done({ nature: next });
     }
     case "shiny-on": {
-      if (pet.shiny) return { ok: false, reason: "already" };
+      if (pet.shiny) return { ok: false, reason: "already-shiny" }; // 약마다 다른 까닭 (94 항목 9-3-3)
       pet.shiny = true;
       recordShiny(save, pet.species);
       return done({ shiny: true });
     }
     case "shiny-off": {
-      if (!pet.shiny) return { ok: false, reason: "already" };
+      if (!pet.shiny) return { ok: false, reason: "already-normal" };
       pet.shiny = false; // 도감의 이로치 획득 기록은 지우지 않는다
       return done({ shiny: false });
     }

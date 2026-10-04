@@ -10,6 +10,8 @@ import { growthCurve } from "../dex/growth.js";
 import type { GrowthRate } from "../shared/species.js";
 import { itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
+import { failTextOf } from "../shared/fail-text.js";
+import type { FailCode } from "../shared/names/online-codes.js";
 
 
 // 한 번에 여러 개 쓰는 도구 — 사탕
@@ -27,19 +29,21 @@ const candyOf = (v: Snapshot, pet: PetView, item: BagItemView) => ({
 });
 
 // 쓸 수 없는 까닭 — 없으면 null. 실행기와 같은 규칙이다 (src/bag/use.ts)
+// 쓰기 전에 막는 글은 실행이 낼 실패 코드의 문구 그대로다 — 실패 문구표 한 벌 (src/shared/fail-text.ts, 94 항목 9-3-3)
+const failText = (code: FailCode): string => failTextOf(code, "command").text;
 function bagBlocked(pet: PetView, item: BagItemView): string | null {
   switch (item.effect) {
     case "exp":
     case "level":
-      return pet.level >= 100 ? "이미 최고 레벨이에요." : null;
+      return pet.level >= 100 ? failText("max-level") : null;
     case "fullness":
     case "fullness-full-buff":
-      if (pet.fullness >= 100) return "배가 불러요.";
-      return pet.feedReady ? null : `밥 주기 쿨타임이에요 (${waitText(pet.feedInSec)}).`;
+      if (pet.fullness >= 100) return failText("full");
+      return pet.feedReady ? null : `${failText("cooldown")} ${waitText(pet.feedInSec)} 남았어요.`;
     case "shiny-on":
-      return pet.shiny ? "이미 이로치예요." : null;
+      return pet.shiny ? failText("already-shiny") : null;
     case "shiny-off":
-      return pet.shiny ? null : "이미 일반 색이에요.";
+      return pet.shiny ? null : failText("already-normal");
     default:
       return null;
   }

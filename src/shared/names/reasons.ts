@@ -30,6 +30,8 @@ export const REASONS = [
   // 개체·파티·프리셋
   "no-pet",
   "already",
+  "already-shiny", // 이로치에 이로치 약 — already 와 가른다 (94 항목 9-3-3)
+  "already-normal", // 일반 색에 돌아오는 약 — already 와 가른다 (94 항목 9-3-3)
   "no-slot",
   "not-pokemon",
   "not-in-box",

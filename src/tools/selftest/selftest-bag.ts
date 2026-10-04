@@ -243,7 +243,7 @@ if (MINT_RETIRED) {
 // (13) 약 두 개는 이로치를 오간다. 도감 기록은 남는다
 {
   const s = seed({}, { "shiny-potion": 1, "normal-potion": 1 });
-  assert.equal(useItem(s, "normal-potion", "p1").reason, "already", "이미 일반색");
+  assert.equal(useItem(s, "normal-potion", "p1").reason, "already-normal", "이미 일반색 — 약마다 다른 까닭 (94 항목 9-3-3)");
   assert.equal(useItem(s, "shiny-potion", "p1").ok, true);
   assert.equal(s.pets[0]?.shiny, true);
   assert.ok(s.dex.shinyObtained.includes("charmander"), "도감에 이로치 획득");
