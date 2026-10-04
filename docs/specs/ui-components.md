@@ -117,7 +117,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 층 | 컴포넌트 (노드, 변형) |
 |---|---|
 | 01 Atoms | `Icon / Menu` `1366:1750`(햄버거), `Icon / House` `1366:1752`(집). 16×16, 선 1.5. `Icon Button` `1366:1754`(32×32, 1px 중립 테두리, 속성 `Icon`·`Show Dot`). |
-| 02 Molecules | `Box Tile` `1362:18`(`State=Default\|Selected\|Faded`, 123 폭, 이름과 사용 칸 수). `Dropdown Menu` `1262:82096` 에 `Kind=Box` `1362:95`(`박스 순서`·`교환`). `Box Toolbar` `337:284` 에 돌보미집 `Icon Button` 과 `Show Daycare`(기본 꺼짐, `Box Layout` 에서 켠다). |
+| 02 Molecules | `Box Tile` `1362:18`(`State=Default\|Selected\|Faded`, 123 폭, 이름과 사용 칸 수). `Dropdown Menu` `1262:82096` 에 `Kind=Box` `1362:95`(`교체`·`박스 순서`·`교환`). `Box Toolbar` `337:284` 에 돌보미집 `Icon Button` 과 `Show Daycare`(기본 꺼짐, `Box Layout` 에서 켠다). |
 | 03 Organisms | `Box Order Panel` `1362:19`(`Box Tile` 4열, 간격 6, 폭 510). `Page Header / Box` `1262:83221` 의 `actions` 는 `Icon Button`(햄버거) 하나다. 부제는 `보관 12마리 · 박스 8개`다. |
 | 05 Screens | `Box / Menu Open` `1362:1375`, `Box / Order Modal` `1362:136`, `Box / Order Modal · Dragging` `1362:973`. `Shop / Party` `1208:2667` 에 `박스 +1` 카드. `Tutorial / Hatch` `399:8901` 의 밝히는 자리를 돌보미집 아이콘 단추로 옮겼다. |
 
