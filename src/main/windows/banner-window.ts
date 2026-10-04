@@ -66,6 +66,7 @@ export function createBannerWindow(opts: BannerWindowOptions): BannerWindow {
   scope.on(CH.go, (_e, key) => {
     if (!current || key !== current.key) return;
     const route = current.route;
+    if (!route) return; // 단추가 없는 배너 — 오는 일이 없다
     finish();
     opts.onGo(route);
   });

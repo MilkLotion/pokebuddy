@@ -30,12 +30,13 @@ export function foundText(save: SaveV3, rec: FindRecordV3): string {
 function findBanner(save: SaveV3, key: string, id: string): BannerView | null {
   const rec = save.find?.log.find((r) => r.id === id);
   if (!rec) return null;
-  let route: ManageRoute;
+  // 포켓몬만 `바로가기`(데려온 개체의 상세). 도구·진화용 도구·포인트는 단추가 없다 (2026-10-05 사용자 "아이템 줍기에선 없애")
+  let route: ManageRoute | undefined;
   if (rec.kind === "pokemon") {
     if (!rec.newPetId || !save.pets.some((p) => p.id === rec.newPetId)) return null;
     route = { to: "pet", petId: rec.newPetId };
-  } else route = rec.kind === "points" ? { to: "shop" } : { to: "bag" };
-  return { key, kind: "find", title: t("banner.find"), target: foundText(save, rec), go: t("banner.go"), route };
+  }
+  return { key, kind: "find", title: t("banner.find"), target: foundText(save, rec), go: t("banner.go"), ...(route ? { route } : {}) };
 }
 
 // 대상이 이미 사라졌으면 null — 부른 쪽은 그 배너를 건너뛴다

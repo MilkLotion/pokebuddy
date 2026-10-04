@@ -60,6 +60,7 @@ body {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  min-height: 32px; /* 단추가 없는 배너도 높이가 같다 */
 }
 .target {
   width: 28px;

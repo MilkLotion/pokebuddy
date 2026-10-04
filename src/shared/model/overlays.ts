@@ -40,7 +40,7 @@ export interface BannerView {
   title: string; // 부화 준비 완료 · 진화 가능 · 업적 달성 · 줍기
   target: string; // 돌보미집 알 N · <이름> Lv.N · 업적 이름 · <이름>이 <것>을 주웠어요
   go: string; // 바로가기
-  route: ManageRoute;
+  route?: ManageRoute; // 없으면 `바로가기` 를 두지 않는다 — 도구·진화용 도구·포인트 줍기 (docs/specs/game.md "줍기")
   chime?: number; // 알림음 음량 0~1. 0 이면 소리를 내지 않는다 (src/state/settings.ts gainOf)
 }
 

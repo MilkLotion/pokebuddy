@@ -259,13 +259,13 @@ try {
     pts.amount = 1500;
     assert.equal(bannerOf(s, `find:${pts.id}`)?.target, "피카츄가 1,500P를 주웠어요", "천 단위 쉼표 (94 항목 9-2-5)");
     pts.amount = 10;
-    assert.deepEqual(b1?.route, { to: "shop" });
+    assert.equal(b1?.route, undefined, "포인트 줍기는 바로가기가 없다 (2026-10-05)");
     const b2 = bannerOf(s, `find:${item.id}`);
     assert.equal(b2?.target, "피카츄가 장난감을 주웠어요");
-    assert.deepEqual(b2?.route, { to: "bag" });
+    assert.equal(b2?.route, undefined, "도구 줍기는 바로가기가 없다");
     const b3 = bannerOf(s, `find:${mon.id}`);
     assert.equal(b3?.target, "피카츄가 이브이를 데려왔어요");
-    assert.deepEqual(b3?.route, { to: "pet", petId: mon.newPetId });
+    assert.deepEqual(b3?.route, { to: "pet", petId: mon.newPetId }, "포켓몬을 데려오면 바로가기로 상세를 연다");
 
     // 한 번 띄운 기록은 다시 줄에 서지 않는다. 처음 켤 때 있던 기록은 띄운 것으로 둔다
     const first = refreshQueue(null, s, T0);

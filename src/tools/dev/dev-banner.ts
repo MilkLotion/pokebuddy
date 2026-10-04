@@ -1,4 +1,4 @@
-// 알림 배너 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron dist/tools/dev/dev-banner.js --shot <파일> [--kind hatch|evolve|achievement|notice]`
+// 알림 배너 창만 띄워 보는 개발용 실행기 — npm run build 뒤 `npx electron dist/tools/dev/dev-banner.js --shot <파일> [--kind hatch|evolve|achievement|notice|find|find-pokemon]`
 //
 // 저장을 읽지 않는다. 보기용 배너 하나를 바로 창에 넣고 찍은 뒤 끝낸다. 소리는 내지 않는다.
 // 찍은 그림은 Figma `Notification Banner` `338:732` 와 비교한다.
@@ -21,6 +21,9 @@ const SAMPLES: Record<string, BannerView> = {
   evolve: { key: "evolve:p1:charmander", kind: "evolve", title: "진화 가능", target: "파이리 Lv.16", go: "바로가기", route: { to: "pet", petId: "p1" } },
   notice: { key: "notice:codex-console", kind: "notice", title: "Codex 창이 깜빡이면", target: "codex --no-daemon 으로 실행하거나 연결 해제", go: "바로가기", route: { to: "agents" } },
   achievement: { key: "achievement:show-two", kind: "achievement", title: "업적 달성", target: "두 마리 함께 꺼내기 달성", go: "바로가기", route: { to: "achievements", id: "show-two" } },
+  // 줍기 — 도구·포인트는 바로가기가 없다. 포켓몬을 데려오면 있다 (Figma `Type=Find` · `Type=Find Pokemon`)
+  find: { key: "find:f1", kind: "find", title: "줍기", target: "피카츄가 경험사탕S를 주웠어요", go: "바로가기" },
+  "find-pokemon": { key: "find:f2", kind: "find", title: "줍기", target: "피카츄가 이브이를 데려왔어요", go: "바로가기", route: { to: "pet", petId: "p2" } },
 };
 
 void app.whenReady().then(() => {

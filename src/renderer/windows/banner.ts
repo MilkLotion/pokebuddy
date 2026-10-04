@@ -56,6 +56,7 @@ api.onShow((view: BannerView) => {
   // 안내(notice)·줍기(find)는 대상 그림 없이 문구를 두 줄까지 보인다 — 한 줄 말줄임이면 문구가 잘린다
   nameEl.classList.toggle("wrap", view.kind === "notice" || view.kind === "find");
   goEl.textContent = view.go;
+  goEl.hidden = !view.route; // 목적지가 없는 배너(도구·포인트 줍기)는 단추를 두지 않는다. 문구가 그 자리까지 넓어진다
   bannerEl.hidden = false;
 });
 
