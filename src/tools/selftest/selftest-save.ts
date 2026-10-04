@@ -197,6 +197,22 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   process.stdout.write("(8-2) 정규화 · 언어·잠들기 기준은 선택지만  ok\n");
 }
 
+// (8-3) 정규화 — 박스 기본 이름은 저장하지 않는다. 자리와 같은 "박스 N" 은 비우고, 사용자 이름과 자리와 다른 "박스 N" 은 둔다 (94 항목 9-5-5)
+{
+  const raw = JSON.parse(JSON.stringify(empty(T0))) as Record<string, unknown>;
+  raw.boxes = [
+    { id: "b1", name: "박스 1", slots: [] },
+    { id: "b2", name: "보관함", slots: [] },
+    { id: "b3", name: "박스 2", slots: [] },
+    { id: "b4", slots: [] },
+    { id: "b5", name: "", slots: [] },
+  ];
+  const names = normalize(raw, T0)?.boxes.slice(0, 5).map((b) => b.name);
+  assert.deepEqual(names, ["", "보관함", "박스 2", "", ""], "자리와 같은 기본 이름만 비운다");
+  assert.equal(empty(T0).boxes[0]?.name, "", "빈 저장의 첫 박스도 이름을 저장하지 않는다");
+  process.stdout.write("(8-3) 정규화 · 박스 기본 이름은 저장하지 않는다  ok\n");
+}
+
 // (9) 파티 칸 — 열린 칸은 앞에서부터. 경로와 관계없이 칸 +1
 {
   // 옛 저장: 업적 보상으로 5번 칸이 열려 1·2·5번이 열린 채
