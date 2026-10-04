@@ -12,7 +12,8 @@
 import assert from "node:assert";
 import zlib from "node:zlib";
 import { createArtLoader, type PmdArt } from "../../main/art/stage-art";
-import { looksLikeOverworld, looksLikePal, overworldArt, overworldDir, overworldUrl, parsePal, OVERWORLD_RULES } from "../../main/art/overworld-art";
+import { looksLikeOverworld, looksLikePal, overworldArt, parsePal, OVERWORLD_RULES } from "../../main/art/overworld-art";
+import { OVERWORLD_SOURCE, overworldDir, overworldUrl } from "../../main/art/sources";
 import type { Paths } from "../../platform/paths";
 import { decodePng, encodePng, pngChunk, PNG_SIGNATURE } from "../../platform/png";
 import { printLine as out } from "../harness/report";
@@ -196,7 +197,7 @@ async function main(): Promise<void> {
     assert.strictEqual(overworldDir("mr-rime"), "mr_rime");
     assert.strictEqual(
       overworldUrl("mr-rime", "overworld.png"),
-      `https://raw.githubusercontent.com/rh-hideout/pokeemerald-expansion/${OVERWORLD_RULES.ref}/graphics/pokemon/mr_rime/overworld.png`,
+      `https://raw.githubusercontent.com/rh-hideout/pokeemerald-expansion/${OVERWORLD_SOURCE.ref}/graphics/pokemon/mr_rime/overworld.png`,
     );
   });
 

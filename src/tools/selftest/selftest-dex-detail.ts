@@ -10,8 +10,8 @@ import { dexDetail } from "../../view/dex-detail";
 import { onlyStepText, stepText } from "../../view/evo-text";
 import { evoItemNote, shopDetail } from "../../view/shop-detail";
 import { josa } from "../../shared/josa";
-import { iconUrl, portraitKey, portraitUrl } from "../../main/art/portraits";
-import { cryUrl } from "../../main/art/cries";
+import { portraitKey } from "../../main/art/portraits";
+import { cryUrl, iconUrl, portraitUrl } from "../../main/art/sources";
 import { dockAt } from "../../main/windows/placement";
 
 const T0 = new Date(2026, 8, 25, 10, 0, 0).getTime();

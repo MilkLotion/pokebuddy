@@ -5,10 +5,7 @@
 // 무대 창의 CSP 는 media-src data: 만 허용한다. 그래서 파일 경로가 아니라 data URI 로 준다
 import { profileOf } from "../../dex/species.js";
 import { ASSET_RULES, createAssetCache } from "./asset-cache";
-
-const BASE = "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest";
-
-export const cryUrl = (dex: number): string => `${BASE}/${dex}.ogg`;
+import { cryFile, cryUrl } from "./sources.js";
 
 // 소리 형식 — 경로는 .ogg 지만 latest 울음소리는 내용이 MP3 다(2026-09-25 확인: 첫 바이트 FF FB). 둘 다 받는다
 function audioType(buf: Buffer): string | null {
@@ -29,7 +26,7 @@ export function createCries(dir: string): Cries {
     async get(slug) {
       const dex = profileOf(slug).dex;
       if (!dex) return null;
-      return cache.fetchUri(`${String(dex).padStart(4, "0")}.ogg`, cryUrl(dex));
+      return cache.fetchUri(cryFile(dex), cryUrl(dex));
     },
   };
 }
