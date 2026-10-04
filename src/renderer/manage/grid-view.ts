@@ -37,7 +37,7 @@ export function saveView(where: keyof typeof VIEW_KEY, mode: ViewMode): void {
 // 방식을 바꾼 직후 스크롤할 항목 — 쪽 방식에서 보던 첫 항목 (drawDex·drawShop 이 스크롤 방식을 그린 뒤 한 번 쓴다)
 let listScrollTo: { where: "dex" | "shop"; index: number } | null = null;
 
-export const DEX_REGIONS: readonly { id: string; label: string; from: number; to: number }[] = [
+const DEX_REGIONS: readonly { id: string; label: string; from: number; to: number }[] = [
   { id: "all", label: "전체", from: 1, to: Number.MAX_SAFE_INTEGER },
   { id: "kanto", label: "관동", from: 1, to: 151 },
   { id: "johto", label: "성도", from: 152, to: 251 },

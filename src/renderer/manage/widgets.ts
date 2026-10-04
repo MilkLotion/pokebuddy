@@ -89,3 +89,8 @@ export function segmentedEl<T extends string>(items: readonly { id: T; label: st
   }
   return box;
 }
+
+// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
+// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+export const NATURE_UI = false;
+export const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);

@@ -6,14 +6,17 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
-import { DEX_PAGE, DEX_REGIONS, GRID_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
+import { drawEvolve } from "./evolve.js";
+import { drawNature, drawNatureTarget } from "./nature.js";
+import { drawForm, drawMega, markMega, megaMark } from "./pet-forms.js";
+import { DEX_PAGE, GRID_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
 import { liveInputEl, matchesDex, matchesName, normQuery, restoreSearchFocus, searchBoxEl, typingSearch } from "./search.js";
-import { alertEl, chipsEl, dialogCloseEl, meterEl, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
-import { iconCache, iconOf, loadArt, portraitOf } from "./art-cache.js";
+import { alertEl, chipsEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
+import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
-import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
+import type { DexEntry } from "../../shared/model/detail.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
@@ -24,18 +27,16 @@ import type { TradeCloseReason } from "../../shared/names/online-codes.js";
 import type { Reason } from "../../shared/names/reasons.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
-import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
-import { structureOf } from "../ui/live-draw.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks, whenSlow } from "./command.js";
-import { bodyEl, redrawBody, redrawHeldBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf, tabsEl } from "./shell.js";
+import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf } from "./shell.js";
 import { partyBusyKey, petBusyKey } from "../../shared/device-busy.js";
-import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, isDimmed, openDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
 import { boxPets, findPartySlot, petInView, partyPets, ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
@@ -88,10 +89,6 @@ setShellHooks({
   },
 });
 
-// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
-// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
-const NATURE_UI = false;
-const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
 
 // 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
@@ -630,179 +627,6 @@ function askPetMenu(petId: string): void {
   void api.petMenu(petId).catch(() => undefined);
 }
 
-// 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
-function toParticle(word: string): string {
-  return josa(word, "으로/로");
-}
-
-// ── 메가진화 ────────────────────────────────────────────────────────────────────
-// 규칙은 src/dex/mega.ts. 메가스톤을 지닌 개체는 박스 칸에 메가스톤 표식이 붙고, 파티 상세 기기 창의 초상 표식을 누르면 메가진화한다.
-// 표식 그림은 키스톤이다 (2026-10-02 사용자 결정 "다 키스톤으로"). PokeAPI 그림은 30×30 이고 구슬은 그 안의 14×14(8,9)다 — 구슬만 잘라 보인다
-const MEGA_ICON = "item:key-stone";
-const MEGA_CROP = { x: 8, y: 9, size: 14, sheet: 30 };
-
-function paintMegaMark(mark: HTMLElement, uri: string): void {
-  const k = Number(mark.dataset.megaMark) / MEGA_CROP.size;
-  mark.style.backgroundImage = `url("${uri}")`;
-  mark.style.backgroundSize = `${MEGA_CROP.sheet * k}px ${MEGA_CROP.sheet * k}px`;
-  mark.style.backgroundPosition = `${-MEGA_CROP.x * k}px ${-MEGA_CROP.y * k}px`;
-}
-
-function megaMark(size: number, title = "메가스톤"): HTMLElement {
-  const mark = el("span", "mega-mark");
-  mark.dataset.megaMark = String(size);
-  mark.style.width = `${size}px`;
-  mark.style.height = `${size}px`;
-  mark.title = title;
-  mark.setAttribute("role", "img");
-  mark.setAttribute("aria-label", title);
-  const uri = iconCache.get(MEGA_ICON);
-  if (uri) paintMegaMark(mark, uri);
-  else if (uri === undefined) {
-    iconCache.set(MEGA_ICON, null); // 청하는 중 — 두 번 청하지 않는다
-    void api.icons([MEGA_ICON]).then((got) => {
-      const u = got[MEGA_ICON] ?? null;
-      iconCache.set(MEGA_ICON, u);
-      if (u) for (const m of document.querySelectorAll<HTMLElement>("[data-mega-mark]")) paintMegaMark(m, u);
-    });
-  }
-  return mark;
-}
-
-// 박스 칸의 표식 — 메가스톤을 지닌 개체만 (PetView.mega). 이로치 아이콘은 표식 오른쪽으로 비킨다 (CSS .has-mega)
-function markMega(cell: HTMLElement, pet: PetView, size: number): void {
-  if (!pet.mega) return;
-  cell.classList.add("has-mega");
-  cell.appendChild(megaMark(size));
-}
-
-// 메가진화 창 — 파티 상세 기기 창의 메가스톤 표식을 누르면 뜬다 (Figma 05 `Party / Mega Confirm` `1319:50090`·`Party / Mega Confirm · 다른 메가 있음` `1319:50396`·`Party / Detail Device / Mega Choose` `1325:47012`)
-//   메가 모습이 하나   바꾸기 확인 창과 같은 모양. 단추는 `메가진화`
-//   메가 모습이 둘     진화 창의 틀로 고른다 — 트리는 지금 종과 메가 모습뿐이다. 고르고 `메가진화` 로 바로 바뀐다
-//   지금 메가 모습     원래 모습으로 돌아가는 확인
-// 같은 프리셋에 메가 모습인 다른 개체가 있으면 그 개체가 원래 모습으로 돌아간다고 한 줄로 알린다
-const megaDrawer = (shiny: boolean): ReturnType<typeof evoDrawer> => evoDrawer((slug, cls) => portraitOf(slug, shiny, cls));
-
-function drawMega(petId: string, to?: string): void {
-  const pet = petInView(petId);
-  const mega = pet?.mega;
-  if (!pet || !mega || !mega.canChange) {
-    closeDialog();
-    return;
-  }
-  const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
-  const slot = findPartySlot(pet.id);
-  const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
-  const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
-  const change = (species: string): void => {
-    void sendCommand("pet.form", pet.id, { species }).then((ok) => {
-      if (ok) closeDialog();
-    });
-  };
-  // 확인 창 — 바뀔 모습 카드 + 안내 줄
-  const confirm = (title: string, form: FormView, lines: string[], label: string): void => {
-    dialogEl.append(...dialogHead(title, ""));
-    const card = el("div", "nat-card");
-    const tags = el("div", "tags");
-    form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
-    tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
-    card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
-    const row = el("div", "compare");
-    row.appendChild(card);
-    const info = el("div", "info-box");
-    info.appendChild(el("div", undefined, `지금 ${pet.name} · ${where}`));
-    for (const text of lines) info.appendChild(el("div", "note", text));
-    dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), actionButtonEl(label, true, false, () => change(form.species))));
-  };
-  const rival = mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
-
-  if (mega.on) {
-    const base: FormView = { species: pet.species, name: mega.baseName, types: mega.baseTypes, typeIds: mega.baseTypeIds };
-    confirm(`${base.name}${toParticle(base.name)} 돌아갈까요?`, base, [kept, "같은 칸에서 바뀌어요"], "돌아가기");
-    return;
-  }
-  const only = mega.forms.length === 1 ? mega.forms[0] : undefined;
-  if (only) {
-    confirm(`${only.name}${toParticle(only.name)} ${word}할까요?`, only, [kept, "같은 칸에서 바뀌어요", ...(rival ? [rival] : [])], word);
-    return;
-  }
-
-  // 고르기 — 진화 창의 틀. 준비된 후보를 미리 고른다
-  const picked = mega.forms.find((f) => f.species === to) ?? mega.forms[0];
-  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...dialogHead(word, `${pet.name} · Lv.${pet.level}`, back));
-  const tree: EvoNodeView = {
-    slug: pet.species,
-    name: pet.name,
-    locked: false,
-    current: true,
-    children: mega.forms.map((f) => ({ slug: f.species, name: f.name, locked: false, current: false, need: "메가스톤", children: [] })),
-  };
-  const card = el("div", "evo-card mega");
-  card.appendChild(megaDrawer(pet.shiny).evoTree(tree));
-  for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
-    const f = mega.forms.find((x) => x.species === node.dataset.slug);
-    if (!f) continue;
-    node.classList.add("pick");
-    if (picked?.species === f.species) node.classList.add("picked");
-    node.setAttribute("role", "button");
-    node.tabIndex = 0;
-    node.setAttribute("aria-pressed", String(picked?.species === f.species));
-    const choose = (): void => open({ kind: "mega", petId, to: f.species });
-    node.addEventListener("click", choose);
-    node.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        choose();
-      }
-    });
-  }
-  dialogEl.appendChild(card);
-  if (picked) {
-    const info = el("div", "info-box");
-    info.append(
-      el("div", undefined, `${pet.name} → ${picked.name}`),
-      el("div", "note", `${kept}. 언제든 원래 모습으로 돌아가요.`),
-      el("div", "note", rival ?? `한 프리셋에서 ${word}는 한 마리예요.`),
-    );
-    dialogEl.appendChild(info);
-  }
-  const go = actionButtonEl(word, true, !picked, () => {
-    if (picked) change(picked.species);
-  });
-  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => open(back.to)), go));
-}
-
-// 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
-function drawForm(petId: string, to: string): void {
-  const pet = petInView(petId);
-  const form = pet?.forms?.find((f) => f.species === to);
-  if (!pet || !form) {
-    closeDialog();
-    return;
-  }
-  dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
-  const card = el("div", "nat-card");
-  const tags = el("div", "tags");
-  form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
-  tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
-  card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
-  const row = el("div", "compare");
-  row.appendChild(card);
-  const slot = findPartySlot(pet.id);
-  const info = el("div", "info-box");
-  info.append(
-    el("div", undefined, `지금 ${pet.name} · ${slot != null ? `파티 ${slot + 1}번 칸` : "박스"}`),
-    el("div", "note", NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
-    el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
-  );
-  const go = actionButtonEl("바꾸기", true, false, () => {
-    void sendCommand("pet.form", pet.id, { species: to }).then((ok) => {
-      if (ok) closeDialog();
-    });
-  });
-  dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
-}
 
 // 박스 탭의 칸 — 95×86. 초상과 이름만 가운데에 두고 레벨은 오른쪽 위, 이로치 아이콘은 왼쪽 위 구석이다.
 // 6×5 가 기본 창 높이에서 스크롤 없이 맞는다 (2026-10-02 사용자 결정 B안, Figma 05 `Box / Base`).
@@ -3628,197 +3452,6 @@ async function petSend(action: PetDeviceAction & { kind: "cmd" }, id: string): P
   if (petBusy === null) return;
   petBusy = null;
   syncPetDevice();
-}
-
-// ── 모달 · 진화 확인 ───────────────────────────────────────────────────────────
-// 후보마다 결과 종과 상태를 보인다. 가능한 후보가 하나면 그것을 고른 채로 연다.
-// `취소` 는 아무것도 바꾸지 않는다 (docs/specs/game.md "진화 확인 화면에서 취소한 개체는 진화 가능 상태를 유지한다")
-
-// 지도 — 기본형 → 리전폼 진화(지도 간선)에 쓴다. 돌 간선은 돌 대신, 레벨·친밀도 간선은 조건과 함께 (src/dex/evolve.ts, worklog-mac/records/region-map/record.md)
-const REGION_MAP = "region-map";
-
-// 진화 사슬 — 도감·상점과 같은 트리(src/tx/shop-detail.ts). 종마다 한 번 받는다. 받기 전·못 받으면 후보 줄로 그린다
-const evoTrees = new Map<string, EvoNodeView | null>();
-const evoTreeAsked = new Set<string>();
-function evoTreeOf(species: string): EvoNodeView | null {
-  if (evoTrees.has(species)) return evoTrees.get(species) ?? null;
-  if (!evoTreeAsked.has(species)) {
-    evoTreeAsked.add(species);
-    void api
-      .shopDetail(species)
-      .then((d) => {
-        evoTrees.set(species, d?.kind === "pokemon" ? d.tree : null);
-        if (ui.dialog?.kind === "evolve") drawDialog();
-      })
-      .catch((e) => {
-        console.error(e); // 사슬을 못 받았다 — 후보 줄로 그린다
-        evoTrees.set(species, null);
-      });
-  }
-  return null;
-}
-const EVOLVE_RADIAL = { ...RADIAL, width: 340 };
-const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
-
-// 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
-// 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
-// 도감에서 해금 안 된 후보는 도감 기기 창과 같이 검은 실루엣과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
-function drawEvolve(petId: string, to?: string): void {
-  const pet = petInView(petId);
-  if (!pet) {
-    closeDialog();
-    return;
-  }
-  // 후보는 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다. 가방에서 오는 길은 없앴다(2026-10-01 진화용 도구 사용 없음)
-  const list = pet.evolutions;
-  const ready = list.filter((c) => c.ready);
-  const picked = list.find((c) => c.to === to && c.ready) ?? ready[0];
-  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...dialogHead("진화", `${pet.name} · Lv.${pet.level}`, back));
-
-  const tree = evoTreeOf(pet.species);
-  if (tree) {
-    const card = el("div", "evo-card");
-    card.appendChild(tree.children.length >= RADIAL_MIN ? evolveDrawer.evoRadial(tree, EVOLVE_RADIAL) : evolveDrawer.evoTree(tree));
-    for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
-      const c = list.find((x) => x.to === node.dataset.slug);
-      if (!c) continue;
-      if (!c.ready) {
-        node.classList.add("dim");
-        node.title = c.need ?? "조건이 모자라요";
-        continue;
-      }
-      node.classList.add("pick");
-      if (picked?.to === c.to) node.classList.add("picked");
-      node.setAttribute("role", "button");
-      node.tabIndex = 0;
-      node.setAttribute("aria-pressed", String(picked?.to === c.to));
-      const choose = (): void => open({ kind: "evolve", petId, to: c.to });
-      node.addEventListener("click", choose);
-      node.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          choose();
-        }
-      });
-    }
-    dialogEl.appendChild(card);
-  }
-
-  // 트리를 아직 못 받았으면 후보 줄로 고른다
-  const rows = el("div", "rows");
-  for (const c of tree ? [] : list) {
-    const row = buttonEl("row-card");
-    const body = el("div", "body");
-    // 지도 간선은 준비됐을 때도 지도를 쓴다고 적는다 — 옆의 기본형 결과와 가른다
-    const readyNote = c.map ? "지도를 쓰면 진화할 수 있어요" : "진화할 수 있어요";
-    body.append(el("div", "title", c.name), el("div", "note", c.ready ? readyNote : (c.need ?? "조건이 모자라요")));
-    row.appendChild(body);
-    row.disabled = !c.ready;
-    row.setAttribute("aria-pressed", String(picked?.to === c.to));
-    row.addEventListener("click", () => open({ kind: "evolve", petId, to: c.to }));
-    rows.appendChild(row);
-  }
-  if (!tree) dialogEl.appendChild(rows);
-
-  if (picked) {
-    const info = el("div", "info-box");
-    info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
-    // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
-    const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => ui.view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
-    const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
-    const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
-    info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. ${kept}` : kept));
-    // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/scenarios.md 진화 흐름)
-    info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));
-    dialogEl.appendChild(info);
-  }
-
-  const go = actionButtonEl("진화", true, !picked, () => {
-    if (!picked) return;
-    void sendCommand("evolve", pet.id, { to: picked.to }).then((ok) => {
-      if (ok) open({ kind: "pet", petId });
-    });
-  });
-  // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
-  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => open(back.to)), go));
-}
-
-// ── 모달 · 성격 변경 ───────────────────────────────────────────────────────────
-// 왼쪽은 지금, 오른쪽은 바꾼 후다. 가운데에 민트 그림을 둔다 (Figma Detail / Nature Change).
-// 민트는 한 종류다. 원작 25 성격 가운데 아무 성격이나 고른다. 지금 성격은 고를 수 없다 (2026-09-29 사용자 결정).
-// 성격은 원작 성격표처럼 5×5 격자로 한 번에 보인다 — 스크롤 목록을 두지 않는다. 순서는 data/natures.json(원작 성격 번호 순)이다.
-// `취소` 는 아무것도 바꾸지 않는다
-const MINT = "mint";
-
-function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
-  const pet = petInView(petId);
-  if (!pet || !ui.view) {
-    closeDialog();
-    return;
-  }
-  const picked = ui.view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
-  const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "nature-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
-  const slot = findPartySlot(petId);
-  dialogEl.append(...dialogHead("성격을 바꿀까요?", `${pet.name} Lv.${pet.level} · ${slot != null ? `파티 ${slot + 1}번` : "박스"}`, back));
-  const redraw = (next: string): void => open({ kind: "nature", petId, ...(itemId ? { itemId } : {}), pick: next });
-
-  const before = el("div", "nat-card");
-  before.append(portraitOf(pet.look, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", "note", pet.nature), el("div", "note", "지금"));
-
-  const mid = el("div", "mint-mid");
-  mid.append(iconOf(`item:${MINT}`, "thumb"), el("div", undefined, "→"));
-
-  const after = el("div", "nat-card");
-  after.append(portraitOf(pet.look, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", picked ? "note picked" : "note", picked ? picked.name : "성격 고르기"), el("div", "note", "바꾼 후"));
-
-  const row = el("div", "compare");
-  row.append(before, mid, after);
-  dialogEl.appendChild(row);
-
-  // 성격표 — 5×5. 지금 성격 칸은 눌리지 않고 `지금` 을 붙인다. 고른 칸은 톤 배경
-  const grid = el("div", "nature-grid");
-  grid.setAttribute("role", "group");
-  grid.setAttribute("aria-label", "바꿀 성격");
-  for (const n of ui.view.natures) {
-    const cell = buttonEl("nature-cell");
-    const current = n.id === pet.natureId;
-    cell.appendChild(el("span", undefined, n.name));
-    if (current) cell.appendChild(el("span", "hint", "지금")); // 빈 줄을 두지 않는다 — 이름이 칸 가운데에 온다
-    cell.disabled = current;
-    cell.setAttribute("aria-pressed", String(n.id === picked?.id));
-    cell.addEventListener("click", () => redraw(n.id));
-    grid.appendChild(cell);
-  }
-  dialogEl.appendChild(grid);
-
-  const have = ui.view.bag.find((b) => b.id === MINT)?.count ?? 0;
-  // 안내 상자 자리는 고르기 전에도 잡아 둔다(보이지 않게) — 고를 때 창 높이가 늘어 위로 튀지 않게
-  const info = el("div", picked ? "info-box" : "info-box reserve");
-  if (!picked) info.setAttribute("aria-hidden", "true");
-  if (have > 0 || !picked) info.append(el("div", undefined, "성격민트 1개를 씁니다"), el("div", "note", `가방에 ${numberText(have)}개 있어요 · 레벨·친밀도는 그대로`));
-  else {
-    const price = ui.view.shop.find((p) => p.id === MINT)?.price;
-    info.append(el("div", undefined, "성격민트가 없어요"), el("div", "note", price != null ? `상점 도구 분류에서 ${price}P 에 살 수 있어요` : "상점에서 살 수 있어요"));
-  }
-  dialogEl.appendChild(info);
-
-  const change = actionButtonEl("바꾸기", true, !picked || have === 0, () => {
-    if (!picked) return;
-    void sendCommand("bag.use", MINT, { petId, nature: picked.id }).then((ok) => {
-      if (ok) open({ kind: "pet", petId });
-    });
-  });
-  dialogEl.appendChild(actionsRowEl(change, actionButtonEl("취소", false, false, () => open(back.to))));
-}
-
-// 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 성격은 다음 창에서 고른다
-function drawNatureTarget(itemId: string): void {
-  const item = ui.view?.bag.find((b) => b.id === itemId);
-  const pets = [...partyPets(), ...boxPets()];
-  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
-  const acts = pets.map((p) => actionButtonEl(`${p.name} (${p.nature})`, false, false, () => open({ kind: "nature", petId: p.id, itemId })));
-  dialogEl.appendChild(actionsRowEl(...acts, closeButton()));
 }
 
 // ── 모달 · 업적창 ──────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import type { TabId } from "./dialog-types.js";
 import { ui } from "./state.js";
 
 const pointsEl = needEl("points", HTMLElement, "manage");
-export const tabsEl = needEl("tabs", HTMLElement, "manage");
+const tabsEl = needEl("tabs", HTMLElement, "manage");
 export const bodyEl = needEl("body", HTMLElement, "manage");
 const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
 
