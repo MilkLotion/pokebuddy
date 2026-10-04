@@ -1,5 +1,5 @@
 // 알림 배너가 설 상태 — 도메인 물음(알 준비·진화 가능·업적 미수령·메가스톤·줍기 기록)으로 대상 목록을 만든다. 줄 세우기는 src/notify/queue.ts
-import { achievementDefs } from "../achievement/defs.js";
+import { unclaimedAchievementIds } from "../dex/tables.js";
 import { evolveAllowed } from "../party/pet-actions.js";
 import { gameDayPart } from "../shared/clock.js";
 import type { BannerKind } from "../shared/names/banners";
@@ -31,10 +31,9 @@ export function pendingOf(save: SaveV3, now: number): Pending[] {
     const pet = save.pets.find((p) => p.id === id);
     if (pet && evolveAllowed(save, id, dayPart)) list.push({ key: keyOf({ kind: "evolve", target: id }, pet.species), kind: "evolve", target: id });
   }
-  for (const [id] of achievementDefs()) {
-    const row = save.achievements[id];
+  for (const id of unclaimedAchievementIds(save)) {
     // 업적 목록이 늘어난 뒤 첫 판정에서 한꺼번에 달성한 업적(quiet)은 배너를 띄우지 않는다 — 업적 아이콘의 점만 켠다 (src/achievement/evaluate.ts evaluateAchievements)
-    if (row?.achievedAt != null && row.claimedAt == null && row.quiet !== true) list.push({ key: keyOf({ kind: "achievement", target: id }), kind: "achievement", target: id });
+    if (save.achievements[id]?.quiet !== true) list.push({ key: keyOf({ kind: "achievement", target: id }), kind: "achievement", target: id });
   }
   for (const rec of save.find?.log ?? []) list.push({ key: keyOf({ kind: "find", target: rec.id }), kind: "find", target: rec.id });
   // 메가스톤 — 지닌 개체마다 한 번 (src/dex/mega.ts)

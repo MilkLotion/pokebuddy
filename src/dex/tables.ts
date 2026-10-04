@@ -1,6 +1,7 @@
 // data/*.json 표의 항목 타입과 읽기 — 표 하나에 항목 타입 하나, 읽기 함수 하나.
 // 여러 파일이 같은 표를 각자 타입을 달아 읽던 것을 여기로 모은다. 열쇠가 "_" 로 시작하는 항목(설명)은 부르는 쪽이 isMetaKey 로 거른다
-import { loadJson, type DexOptions } from "./data.js";
+import { isMetaKey, loadJson, type DexOptions } from "./data.js";
+import type { SaveV3 } from "../shared/save-v3";
 
 // ── data/species.defaults.json ── 기본 표만(손으로 다듬은 덮어쓰기는 src/dex/species.ts profile 이 합친다)
 export interface SpeciesRow {
@@ -76,3 +77,8 @@ export interface AchievementDef {
   reward: AchievementReward;
 }
 export const achievementTable = (opts?: DexOptions): Record<string, AchievementDef> => loadJson<Record<string, AchievementDef>>("achievements.json", opts);
+
+// 달성하고 아직 받지 않은 업적 — 표에 있는 것만, 표 순서. 배너·업적 아이콘 점·업적창 머리 수·업적 튜토리얼이 이 셈 하나를 쓴다 (94 항목 9-3-8)
+// quiet(목록이 늘어난 뒤 한꺼번에 달성한 것)도 든다 — 배너만 끈다 (docs/specs/game.md "배너를 띄우지 않는다. 업적 아이콘의 점은 켠다")
+export const unclaimedAchievementIds = (save: Pick<SaveV3, "achievements">, opts?: DexOptions): string[] =>
+  Object.keys(achievementTable(opts)).filter((id) => !isMetaKey(id) && save.achievements[id]?.achievedAt != null && save.achievements[id]?.claimedAt == null);

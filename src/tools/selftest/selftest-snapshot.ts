@@ -33,7 +33,7 @@ function seed(): SaveV3 {
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 2 * MIN, ready: false, candidates: [], careCooldownMs: 30_000, actions: { pat: 2, song: 0 } });
   s.bag = { mint: 2, "exp-candy-s": 1, "없는도구": 3 };
   s.dex = { unlocked: ["pikachu", "charmander"], obtained: ["pikachu"], shinyObtained: [], discovered: {}, rulesRev: 1 };
-  s.achievements = { a1: { achievedAt: T0, claimedAt: null }, a2: { achievedAt: T0, claimedAt: T0 }, a3: { achievedAt: null, claimedAt: null } };
+  s.achievements = { "dex-50": { achievedAt: T0, claimedAt: null }, "dex-150": { achievedAt: T0, claimedAt: T0 }, "dex-300": { achievedAt: null, claimedAt: null } }; // 표에 있는 업적 id — 셈은 표에 있는 것만 본다 (94 항목 9-3-8)
   return s;
 }
 
@@ -182,6 +182,11 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(v.dex, { unlocked: 2, obtained: 1, shiny: 0 });
   assert.equal(v.achievements.total, 2, "달성한 업적");
   assert.equal(v.achievements.unclaimed, 1, "받지 않은 업적");
+  // 표에 없는 업적 행(목록에서 빠진 옛 id)은 세지 않는다 — 배너·튜토리얼과 같은 셈 (94 항목 9-3-8)
+  const old = seed();
+  old.achievements["gone-old-id"] = { achievedAt: T0, claimedAt: null };
+  const ov = snapshotView(old, T0);
+  assert.deepStrictEqual([ov.achievements.total, ov.achievements.unclaimed], [2, 1], "표 밖의 행은 달성·미수령 어디에도 들지 않는다");
   process.stdout.write("(9) 도감과 업적 수  ok\n");
 }
 
