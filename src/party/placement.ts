@@ -19,6 +19,7 @@ export type PlacementFailure = ReasonOf<
   | "no-empty-slot" // 빈 칸이 하나도 없다
   | "box-full" // 모든 박스가 가득 찼다
   | "not-in-party" // 파티에 없다
+  | "same-slot" // 지금 칸으로 옮기려 했다 — 박스 옮기기와 같다 (docs/specs/game.md box.order)
 >;
 
 export type PlacementResult = Outcome<PlacementFailure> & {
@@ -75,7 +76,7 @@ export function movePartySlot(save: SaveV3, petId: string, toSlot: number): Plac
   const target = save.party.slots[toSlot];
   if (!target) return { ok: false, reason: "no-slot" };
   if (target.state === "locked") return { ok: false, reason: "slot-locked" };
-  if (from === toSlot) return { ok: true, slotIndex: toSlot };
+  if (from === toSlot) return { ok: false, reason: "same-slot" }; // 박스 칸 옮기기(src/box/slots.ts moveSlot)와 같다 (94 항목 9-5-3)
 
   const source = save.party.slots[from]!;
   save.party.slots[from] = target;

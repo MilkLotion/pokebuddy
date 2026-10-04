@@ -88,6 +88,7 @@ for (const s of ["ditto", "lapras"]) {
 assert.ok(r.obtainable.has("ditto") && r.obtainable.has("lapras"), "업적 보상으로 얻는다");
 const oldPool = randomPool({ ...save, dex: { ...save.dex, unlocked: [...save.dex.unlocked, "ditto", "lapras"] } });
 assert.ok(!oldPool.includes("ditto") && !oldPool.includes("lapras"), "옛 해금이 남아도 랜덤알 후보가 아니다");
+assert.deepStrictEqual(randomPool({ ...save, dex: { ...save.dex, unlocked: ["ivysaur", "venusaur"] } }), [], "후보가 없어도 진화 전용 종으로 대신하지 않는다 (94 항목 9-2-6)");
 process.stdout.write("(6) 옛 조건 규칙 없음 · 럭키 진화 · 메타몽·라프라스 알·상점 제외  ok\n");
 
 // (7) 잠만보는 먹고자에서 진화해 얻는다 — 상점 전용 규칙은 없다 (2026-09-29 사용자 결정)

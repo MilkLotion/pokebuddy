@@ -186,6 +186,11 @@ function seedBox(): SaveV3 {
   assert.equal(taken.ok === false && taken.reason, "slot-not-empty");
   const inParty = tx.run({ id: "r3", name: "party.place", args: { petId: "p1" } });
   assert.equal(inParty.ok === false && inParty.reason, "not-in-box", "이미 파티에 있는 개체");
+  // 잘못된 칸 번호는 첫 빈 칸으로 넘기지 않는다 — party.swap 과 같은 bad-args (94 항목 9-5-3)
+  for (const [i, slotIndex] of ([-1, 1.5, "2"] as unknown[]).entries()) {
+    const bad = tx.run({ id: `bad${i}`, name: "party.place", args: { petId: "p2", slotIndex } });
+    assert.equal(bad.ok === false && bad.reason, "bad-args", `slotIndex ${String(slotIndex)}`);
+  }
   assert.equal(f.writes, 0);
   process.stdout.write("(9) 배치 · 잠김·차 있음·파티 개체 거절  ok\n");
 }
@@ -222,6 +227,8 @@ function seedBox(): SaveV3 {
   assert.equal(locked.ok === false && locked.reason, "slot-locked");
   const boxed = tx.run({ id: "r5", name: "party.move", args: { petId: "p3", toSlot: 1 } });
   assert.equal(boxed.ok === false && boxed.reason, "not-in-party", "박스 개체는 옮기지 않는다");
+  const same = tx.run({ id: "r6", name: "party.move", args: { petId: "p2", toSlot: 1 } });
+  assert.equal(same.ok === false && same.reason, "same-slot", "지금 칸으로는 옮기지 않는다 — 박스 옮기기와 같다 (94 항목 9-5-3)");
   assert.equal(f.state.boxes[0]?.slots[1], "p3", "박스는 그대로");
   process.stdout.write("(10b) 파티 칸 옮기기 · 옮김·맞바꿈·잠김 거절  ok\n");
 }

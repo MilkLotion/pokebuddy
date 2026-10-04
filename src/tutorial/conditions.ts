@@ -1,7 +1,7 @@
 // 튜토리얼마다의 시작 조건·목표 행동·막힘 — 대기열 규칙은 src/tutorial/queue.ts 머리말
 import { SCREEN_TUTORIAL_IDS } from "../shared/names/tutorials.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
-import { canEvolve } from "../dex/evolve.js";
+import { evolveAllowed } from "../party/pet-actions.js";
 import { gameDayPart } from "../shared/clock.js";
 
 export type TutorialSurface = "manage" | "stage"; // 관리 창 · 바탕화면
@@ -24,7 +24,7 @@ const noPartyPet = (save: SaveV3): boolean => partyPetIds(save).length === 0;
 const ended = (save: SaveV3, id: string): boolean => DONE.includes(save.tutorials[id]?.state ?? "none");
 const hasTool = (save: SaveV3): boolean => Object.entries(save.bag).some(([id, n]) => id !== "basic-food" && n > 0);
 // 파티 개체 가운데 지금 진화할 수 있는 것이 있다 — 진화 튜토리얼이 그 카드를 밝힌다
-const canEvolveNow = (save: SaveV3, now: number): boolean => partyPetIds(save).some((id) => canEvolve(save, id, gameDayPart(now)));
+const canEvolveNow = (save: SaveV3, now: number): boolean => partyPetIds(save).some((id) => evolveAllowed(save, id, gameDayPart(now)));
 const never = (): boolean => false;
 
 // 스펙 표의 순서 그대로. 같은 순간에 생긴 조건은 이 순서로 보여 준다

@@ -1,5 +1,8 @@
 // 개체에 지금 할 수 있는 일의 공통 조건 — 친구 교환에 걸린 개체는 값을 바꾸거나 없애는 일을 하지 않는다
-// (worklog/records/trade/record.md "로컬 저장과 복구"). 저장의 trade.pending 만 읽는다. 다른 도메인을 부르지 않는다
+// (worklog/records/trade/record.md "로컬 저장과 복구"). 저장의 trade.pending 만 읽는다. 진화 판정만 도감(dex/evolve)을 함께 본다
+import type { DexOptions } from "../dex/data";
+import { canEvolve } from "../dex/evolve.js";
+import type { DayPart } from "../shared/species";
 import type { SaveV3, TradePendingV3 } from "../shared/save-v3";
 
 // 개체에 하는 일 — 교환 잠금이 막는 것은 TRADE_LOCKED_ACTIONS 다
@@ -19,3 +22,8 @@ export function checkPetFree(save: Pick<SaveV3, "trade">, petId: string, action:
   if (TRADE_LOCKED_ACTIONS.includes(action) && isTradeLocked(save, petId)) return { ok: false, reason: "trade-locked" };
   return { ok: true };
 }
+
+// 지금 진화할 수 있는가 — 진화 규칙(dex/evolve canEvolve)과 교환 잠금을 함께 본다. 배너·진화 튜토리얼이 이것을 쓴다.
+// 실행(evolve 명령)이 교환에 걸린 개체를 trade-locked 로 거절하므로, 알리는 쪽도 같은 판정이어야 한다 (94 항목 9-5-1)
+export const evolveAllowed = (save: SaveV3, petId: string, dayPart: DayPart, opts?: DexOptions): boolean =>
+  checkPetFree(save, petId, "evolve").ok && canEvolve(save, petId, dayPart, opts);
