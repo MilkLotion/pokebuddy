@@ -19,6 +19,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   check("hook-bundle"),
   check("server-codes"),
   check("fail-text"),
+  check("bare-open"),
   tool("cli"),
   tool("legacy"),
   tool("save"),
