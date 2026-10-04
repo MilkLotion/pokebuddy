@@ -166,3 +166,6 @@ export function regionEl(value: string, open: boolean, setOpen: (open: boolean) 
   }
   return wrap;
 }
+
+// 넘김 줄의 쪽 번호 — 끝을 넘으면 반대쪽 끝으로 돈다
+export const wrapPage = (page: number, count: number): number => (count <= 0 ? 0 : ((page % count) + count) % count);
