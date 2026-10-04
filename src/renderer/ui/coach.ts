@@ -161,6 +161,24 @@ export function drawCoachLayer(opts: CoachLayerOptions): CoachLayer {
 
 // 튜토리얼 중에는 키보드 초점도 코치마크 안에 둔다 — Tab·Enter 로 막 밖의 단추를 누르지 않게
 export function guardCoachFocus(current: () => CoachLayer | null): void {
+  // Tab·Shift+Tab 은 받는 요소들 사이에서만 돈다 — 밖으로 나갔다 home 으로 끌려오면 앞으로 Tab 으로는 ✕ 에 닿지 못한다
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key !== "Tab") return;
+      const coach = current();
+      if (!coach) return;
+      const list = [...document.querySelectorAll<HTMLElement>("button, a[href], input, select, textarea, [tabindex]")].filter(
+        (el) => el.tabIndex >= 0 && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0 && coach.allows(el),
+      );
+      if (!list.length) return;
+      e.preventDefault();
+      const at = list.indexOf(document.activeElement as HTMLElement);
+      const next = at < 0 ? 0 : (at + (e.shiftKey ? list.length - 1 : 1)) % list.length;
+      list[next]?.focus({ preventScroll: true });
+    },
+    true,
+  );
   document.addEventListener(
     "focusin",
     (e) => {
