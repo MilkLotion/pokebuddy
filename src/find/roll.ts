@@ -4,7 +4,6 @@ import { TIME_RULES } from "../state/rules.js";
 import { FIND_RULES } from "./rules.js";
 import type { FindKind } from "../shared/save-v3";
 
-export { FIND_RULES };
 
 // 항목 순서 — 가중치 누적 순서. 자주 나오는 것부터
 export const KINDS: readonly FindKind[] = ["points", "item", "evo", "pokemon"];

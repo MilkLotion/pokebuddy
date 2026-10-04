@@ -143,6 +143,3 @@ export function lineOf(slug: string, opts?: DexOptions): string[] {
   }
   return out;
 }
-
-// 사슬에 나오는 종인가 (폼은 기본 종으로 풀어 본다)
-export const inChain = (slug: string, opts?: DexOptions): boolean => indexOf(opts).members.has(resolve(slug, opts));
