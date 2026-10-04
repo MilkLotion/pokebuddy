@@ -312,7 +312,7 @@ button.icon-button,
   left: 7px;
   top: 8px;
 }
-/* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage/manage.ts megaMark). 크기는 요소가 정한다.
+/* 메가스톤 표식 — 키스톤 그림의 구슬만 잘라 보인다 (src/renderer/manage/pet-forms.ts megaMark). 크기는 요소가 정한다.
    박스 칸은 왼쪽 위(이로치 자리), 이로치 아이콘은 그 오른쪽으로 비킨다. 도감 칸은 얻음 표식(볼) 오른쪽에 볼과 같은 12 다 (2026-10-02 사용자 결정) */
 .mega-mark {
   display: block;

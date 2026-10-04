@@ -72,7 +72,7 @@ export function portraitIds(slug: string): PortraitId[] {
 }
 
 // 메가스톤 표식의 그림 — 모든 종이 키스톤 그림을 쓴다 (2026-10-02 사용자 결정 "다 키스톤으로"). 30×30 안의 14×14 다.
-// 화면은 불투명 영역만 잘라 쓴다 (src/renderer/manage.ts megaMark, src/renderer/pet.ts)
+// 화면은 불투명 영역만 잘라 쓴다 (src/renderer/manage/pet-forms.ts megaMark, src/renderer/device/pet.ts)
 export const MEGA_STONE_ICON = "item:key-stone";
 
 const pngUri = (buf: Buffer): string => dataUriOf("image/png", buf);

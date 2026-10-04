@@ -63,7 +63,7 @@ export interface PetView {
 }
 
 // 돌봄 보너스 — 파티 상세 기기 창의 `포인트 적립` 줄이 쓴다 (src/state/time.ts careParts, docs/specs/balance.md "돌봄 보너스")
-// 필드 이름을 percent 로 두지 않는다 — 기기 창이 percent 를 시간으로만 바뀌는 값으로 보고 다시 그리지 않는다 (src/renderer/pet.ts LIVE_KEYS)
+// 필드 이름을 percent 로 두지 않는다 — 기기 창이 percent 를 시간으로만 바뀌는 값으로 보고 다시 그리지 않는다 (src/shared/live-keys.ts LIVE_KEYS)
 export interface CareView {
   bonus: number; // 보너스 합(백분율). 0 이면 기본 속도다
   parts: { kind: string; name: string; bonus: number }[]; // 내역 — kind 는 mood 또는 버프 종류. name 은 기분 단계 말이나 버프 이름

@@ -59,7 +59,7 @@ function markBusy(b: HTMLButtonElement, busy: string | null, body: ActBody): voi
 }
 
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 성격 부여·저장은 그대로다.
-// 관리 창 src/renderer/manage/manage.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
+// 관리 창 src/renderer/manage/widgets.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
 const NATURE_UI = false;
 
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).

@@ -4,7 +4,7 @@
 // 디스크에 없는 그림만 칸을 그린 뒤 청한다. 도감은 1000 칸이 넘어 보이는 칸만 청한다(lazy).
 // 보이는 칸은 그린 뒤와 스크롤할 때 위치를 재서 고른다 — IntersectionObserver 는 창이 가려져 있으면 반응하지 않았다.
 // 받은 것은 창이 떠 있는 동안 기억한다
-// 메가스톤 표식(manage.ts megaMark)도 도구 그림 캐시를 같이 쓴다
+// 메가스톤 표식(pet-forms.ts megaMark)도 도구 그림 캐시를 같이 쓴다
 import type { ArtImage, PortraitAsk } from "../../shared/model/snapshot.js";
 import { el } from "../ui/dom.js";
 import { portraitImg, rememberPortrait, rememberPortraitBox } from "../ui/portrait.js";

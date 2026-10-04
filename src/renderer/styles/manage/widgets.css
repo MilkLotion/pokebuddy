@@ -151,7 +151,7 @@ button.act.primary:disabled {
   color: var(--inverse);
   opacity: 0.45;
 }
-/* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage/manage.ts busyLater).
+/* 처리 중 — 답이 늦은 조작의 단추·칸 (Figma `Button` · `Box Slot` 의 State=Busy, src/renderer/manage/command.ts busyLater).
    폭과 색은 그대로 두고 글자 자리에 점 세 개가 차례로 밝아진다. 답이 올 때까지 다른 조작은 받지 않는다 */
 button.is-busy {
   position: relative;

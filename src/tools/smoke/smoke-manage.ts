@@ -64,7 +64,7 @@ for (const pet of save.pets) if (pet.id === sharedId || pet.species === "charman
 save.dex.shinyObtained.push("charmander");
 const snap = { ...snapshotView(save, Date.now()), screenTutorials: [], detailTutorial: false }; // 첫 진입 튜토리얼은 뺀다 — 말풍선이 초점을 가져간다
 const dex = dexList(save);
-const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage.ts DEX_PAGE
+const DEX_PAGE = 30; // 도감 한 쪽 칸 수 — src/renderer/manage/grid-view.ts DEX_PAGE
 // 가방 판 검사 (12) 에만 더하는 도구 — 불꽃의돌·성격민트. 앞 검사의 가방 순서를 바꾸지 않게 따로 만들어 둔다
 const bagSave = structuredClone(save);
 bagSave.bag["fire-stone"] = 3;
@@ -267,7 +267,7 @@ void app.whenReady().then(async () => {
     // (7) 상점 포켓몬 격자 넘김
     await js(`${tabBtn("상점")}.click()`);
     await wait(200);
-    // 상점 포켓몬 탭은 잠시 숨김이다(src/renderer/manage.ts SHOP_TABS, 2026-09-30) — 탭이 없으면 (7)·(11)의 포켓몬 부분을 건너뛴다
+    // 상점 포켓몬 탭은 잠시 숨김이다(src/renderer/manage/shop-tab.ts SHOP_TABS, 2026-09-30) — 탭이 없으면 (7)·(11)의 포켓몬 부분을 건너뛴다
     const pokemonTab = await js<boolean>(`[...document.querySelectorAll('#body .chip')].some((c) => c.textContent === '포켓몬')`);
     if (pokemonTab) {
       await js(`[...document.querySelectorAll('#body .chip')].find((c) => c.textContent === '포켓몬').click()`);
