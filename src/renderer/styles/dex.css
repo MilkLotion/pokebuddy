@@ -8,7 +8,6 @@
   --bar: #e25050;
   --ink: #3b2c31;
   --muted: #8a8378;
-  --evo-current: #ebf4f1; /* 진화 카드의 지금 종 — 상점 구매 창 트리와 같은 톤 (Figma 변수 113:268) */
 }
 .device {
   position: relative;
@@ -183,14 +182,6 @@
 }
 .evo-card > .evo-branch {
   align-self: center;
-}
-.evo-kids {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.evo-node.current {
-  background: var(--evo-current);
 }
 /* 진화 트리 초상 — 원형 바탕 없이 그림만 (2026-10-03 사용자 결정 "원형 저거 굳이 없어도 될거같아" · "다 빼봐") */
 .evo-node .portrait {

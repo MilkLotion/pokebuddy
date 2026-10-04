@@ -23,8 +23,18 @@
   font-size: 12px;
   white-space: nowrap;
 }
+/* 지금 종 — 회색 톤 바탕·굵은 이름. 고르는 화면의 청록(고른 후보)과 겹치지 않는다 (Figma `Evo Node` State=Current `1262:75740` bg/canvas, 2026-10-04 사용자 결정 94 4-10) */
+.evo-node.current {
+  background: var(--canvas);
+}
 .evo-node.current .evo-name {
   font-weight: 700;
+}
+/* 갈래 — 위아래 사이 8 (Figma `Evolution Dialog` evo-kids, 94 4-10) */
+.evo-kids {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .evo-need {
   font-family: var(--font-small);

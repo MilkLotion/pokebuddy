@@ -125,14 +125,6 @@
   justify-content: center;
   margin: 4px 0 12px;
 }
-.evo-kids {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.evo-node.current {
-  background: var(--canvas);
-}
 .evo-node.pick {
   cursor: pointer;
 }
