@@ -65,8 +65,9 @@ const rewardText = (def: AchievementDef): string => {
 // 버프를 보이는 순서 — 든든함 · 신남 · 들뜸. 이름은 data/i18n 의 buff.<식별자> (2026-09-29 사용자 결정)
 const BUFF_ORDER = ["premium-food", "long-play", "short-play"] as const;
 
-const sec = (ms: number): number => Math.round(ms / 1000);
-const min = (ms: number): number => Math.round(ms / 60_000);
+// 남은 시간은 올림이다 — 기다리는 동안 0 을 보이지 않는다. 글자(waitText·buffText)도 올림이라 반올림 뒤 다시 올리지 않는다 (94 항목 9-3-1)
+const sec = (ms: number): number => Math.ceil(ms / 1000);
+const min = (ms: number): number => Math.ceil(ms / 60_000);
 
 // 알 준비 시간의 진행 백분율 — 남은 시간만 저장하므로 전체는 규칙표에서 온다.
 // 내림이다 — 경험치 진행(src/dex/growth.ts progressTo)과 같고, 준비되기 전에 100% 를 보이지 않는다 (94 항목 9-5-5)
