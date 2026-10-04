@@ -105,3 +105,10 @@ export function settingRow(label: string, hint: string | undefined, control: HTM
   row.append(body, control);
   return row;
 }
+
+// 박스·프리셋 넘김 줄 가운데의 이름 칸 — 박스 탭과 파티 탭이 같이 쓴다
+export function boxNameCell(inner: HTMLElement): HTMLElement {
+  const cell = el("div", "box-name-cell");
+  cell.appendChild(inner);
+  return cell;
+}
