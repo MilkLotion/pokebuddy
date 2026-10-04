@@ -231,9 +231,9 @@ PMD 공격 동작은 게임에서 한 번 쓰는 0.3초 안팎의 동작이다. 
 
 ### 계약과 코드 자리
 
-메인 · preload · 렌더러가 주고받는 채널은 `src/shared/ipc/stage.ts` 한 곳에 있다. 채널 이름은
+메인 · preload · 렌더러가 주고받는 채널은 무대가 `src/shared/ipc/stage.ts`, 선택 창이 `src/shared/ipc/picker.ts` 에 있다. 채널 이름은
 `stage:init` · `stage:sheets` · `stage:frame` · `stage:hover` · `stage:click-through` · `stage:cry` · `stage:icons` · `stage:coach` · `stage:coach-action` · `stage:ready` · `stage:hit` · `stage:pointer` · `stage:log`,
-선택 창 `picker:list` · `picker:start` · `picker:portraits` 다. 프레임 · 포인터 · 시트의 모양은 `src/shared/model/stage.ts` 에 있다. 두 파일은 타입만 둔다. 메인 빌드와 렌더러 빌드가 함께 읽는다.
+선택 창 `picker:list` · `picker:start` · `picker:portraits` 다. 프레임 · 포인터 · 시트의 모양은 `src/shared/model/stage.ts` 에 있다. 세 파일은 타입만 둔다. 메인 빌드와 렌더러 빌드가 함께 읽는다.
 preload 는 샌드박스다. 그래서 렌더러에 창마다 다리 하나(`window.pokebuddy`, 선택 창은 `window.pokebuddyPicker`)만 내놓는다. 렌더러는 진입점 맨 위에서 `needBridge` 로 그 다리를 받는다(`src/renderer/ui/bridge.ts`). 다리가 없으면 던진다.
 
 | 폴더 | 하는 일 |

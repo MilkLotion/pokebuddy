@@ -1,7 +1,7 @@
 // 첫 실행 선택 창 — 스타터 29종을 세대별로. 고르면 슬러그, 닫으면 null. 문서는 src/renderer/picker.html (C 단위), 문구·목록은 화면 값이 만든다 (src/view/picker.ts)
 // 한 번 답하는 창의 공통 동작은 틀(./answer-window.ts)이 한다
 import { BrowserWindow } from "electron";
-import type { StageChannel } from "../../shared/ipc/stage";
+import type { PickerChannel } from "../../shared/ipc/picker";
 import { windowIcon } from "./files";
 import type { Portraits } from "../art/portraits";
 import { pickerPayload } from "../../view/picker";
@@ -12,7 +12,7 @@ const CH = {
   list: "picker:list",
   start: "picker:start",
   portraits: "picker:portraits",
-} satisfies Record<string, StageChannel>;
+} satisfies Record<string, PickerChannel>;
 
 export interface PickerOptions {
   preload: string;

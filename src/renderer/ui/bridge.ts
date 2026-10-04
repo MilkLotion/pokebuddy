@@ -2,11 +2,12 @@
 // - 진입점이 맨 위에서 한 번 부른다. 그 뒤로 window.pokebuddy* 를 직접 읽지 않는다
 // - 다른 창의 다리를 청했거나 preload 가 내지 않았으면 던진다 — 그 창을 처음 열 때 드러난다
 // - 열쇠가 preload 의 내놓는 표와 같은지는 타입으로 묶을 수 없다(preload 는 이 모듈을 가져오지 못한다). 실행 때 던지는 것으로 잡는다
-// 계약은 src/shared/ipc/ 의 창별 파일(stage·manage·devices·overlays)이다
+// 계약은 src/shared/ipc/ 의 창별 파일(stage·picker·manage·devices·overlays)이다
 import type { AlertBridge, BannerBridge, MenuBridge, RegionBridge, ScreensBridge } from "../../shared/ipc/overlays.js";
 import type { BagDeviceBridge, DexDeviceBridge, PartyDeviceBridge, PetDeviceBridge, ShopDeviceBridge } from "../../shared/ipc/devices.js";
 import type { ManageBridge } from "../../shared/ipc/manage.js";
-import type { PickerBridge, StageBridge } from "../../shared/ipc/stage.js";
+import type { PickerBridge } from "../../shared/ipc/picker.js";
+import type { StageBridge } from "../../shared/ipc/stage.js";
 
 // 전역 이름 → 그 창의 다리. 창 하나가 다리 하나만 쓴다
 export interface Bridges {

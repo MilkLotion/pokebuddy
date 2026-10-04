@@ -1,8 +1,8 @@
-// 무대와 선택 창의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다
+// 무대 창의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다. 선택 창은 ./picker.ts
 // 말풍선 위라는 히트 답은 문자열 "coach" 다 — 마리 id(p숫자)와 겹치지 않는다
 
-import type { CoachAction, CoachView, HitReply, HoverQuery, LookSheets, PickerPayload, PointerMsg, StageFrame, StageInit } from "../model/stage.js";
-import type { BridgeOf, Push, Send, Invoke } from "./kinds.js";
+import type { CoachAction, CoachView, HitReply, HoverQuery, LookSheets, PointerMsg, StageFrame, StageInit } from "../model/stage.js";
+import type { BridgeOf, Push, Send } from "./kinds.js";
 
 // 무대 창
 export type StageIpc = {
@@ -21,16 +21,8 @@ export type StageIpc = {
   "stage:log": Send<"log", [entry: Record<string, unknown>]>; // 렌더러 진단(시트 디코드 실패 등)을 메인 로그로
 };
 
-// 선택 창 — 자기 다리(window.pokebuddyPicker)를 쓴다. 무대와 preload 파일은 같다
-export type PickerIpc = {
-  "picker:list": Invoke<"list", [], PickerPayload>;
-  "picker:start": Send<"start", [slug: string]>;
-  "picker:portraits": Invoke<"portraits", [slugs: string[]], Record<string, string | null>>; // 선택 창 카드의 초상 — slug 별 data URI (못 받으면 null)
-};
-
 // 채널 이름 — preload 와 메인이 같은 문자열을 쓰도록 계약의 열쇠로 묶는다
-export type StageChannel = keyof StageIpc | keyof PickerIpc;
+export type StageChannel = keyof StageIpc;
 
-// preload 가 내놓는 다리 — 무대는 window.pokebuddy, 선택 창은 window.pokebuddyPicker
+// preload 가 내놓는 다리 — window.pokebuddy
 export type StageBridge = BridgeOf<StageIpc>;
-export type PickerBridge = BridgeOf<PickerIpc>;
