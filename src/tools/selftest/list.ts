@@ -38,6 +38,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("menus"),
   tool("manage"),
   tool("manage-requests"),
+  tool("wire-ipc"),
   tool("flow"),
   tool("dex"),
   tool("dex-detail"),
