@@ -18,7 +18,8 @@ import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./sett
 import { boxUi, hold } from "./box-state.js";
 import { endHold, setBoxMoveHooks } from "./box-move.js";
 import { currentAccount, setAccountHooks } from "./account.js";
-import { drawTradeDialog, loadTrade, redrawTrade, setTradeHooks } from "./trade.js";
+import { drawTradeDialog, setTradeHooks } from "./trade.js";
+import { loadTrade, redrawTrade } from "./trade-state.js";
 import { drawLetter, drawMail } from "./mail.js";
 import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes } from "./update-notes.js";
 import { drawAchievements } from "./achievements.js";

@@ -10,7 +10,7 @@ import { closeDialog, dialogEl, openDialog, setScrim } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
 import { redrawBody, setTab } from "./shell.js";
 import { findPartySlot, petInView, ui } from "./state.js";
-import { loadTrade } from "./trade.js";
+import { loadTrade } from "./trade-state.js";
 import { coachIdOf } from "./tutorial.js";
 
 // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다

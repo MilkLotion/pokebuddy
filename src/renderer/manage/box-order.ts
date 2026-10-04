@@ -6,7 +6,7 @@ import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
-import { loadTrade, tradeInProgress } from "./trade.js";
+import { loadTrade, tradeInProgress } from "./trade-state.js";
 import { BOX_ICON, dialogCloseEl } from "./widgets.js";
 
 // 박스 머리의 햄버거 단추 — 누르면 메뉴가 단추 아래에 뜬다. 메뉴는 떠 있는 층이라 본문을 밀지 않는다. 바깥을 누르면 닫힌다.
