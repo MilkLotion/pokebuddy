@@ -199,7 +199,7 @@
   "sand-stream": {"ko":"모래날림","en":"Sand Stream","group":"날씨","when":"later","rule":"모래바람 (날씨 보류)"},
   "sand-veil": {"ko":"모래숨기","en":"Sand Veil","group":"날씨","when":"later","rule":"모래바람이면 회피 상승 (날씨 보류)"},
   "sap-sipper": {"ko":"초식","en":"Sap Sipper","group":"타입무효","when":"now","rule":"풀 기술 무효, 공격 상승 (시간제 능력 변화)"},
-  "schooling": {"ko":"어군","en":"Schooling","group":"특수 종","when":"now","rule":"약어리 — 무리의 모습으로 시작하고 HP 25% 미만이면 단독의 모습이 된다"},
+  "schooling": {"ko":"어군","en":"Schooling","group":"특수 종","when":"now","rule":"약어리 — 60레벨에 어군 모습 바꾸기가 해금된다. 해금 뒤에는 무리의 모습으로 시작하고 HP 25% 미만이면 단독의 모습이 된다. 해금 전에는 단독의 모습으로 싸운다"},
   "scrappy": {"ko":"배짱","en":"Scrappy","group":"상성","when":"now","rule":"노말·격투로 고스트 공격"},
   "screen-cleaner": {"ko":"배리어프리","en":"Screen Cleaner","group":"전장","when":"none","rule":"벽 없애기 (효과 없음)"},
   "seed-sower": {"ko":"넘치는씨","en":"Seed Sower","group":"필드","when":"later","rule":"맞으면 그래스필드 (필드 필요)"},
