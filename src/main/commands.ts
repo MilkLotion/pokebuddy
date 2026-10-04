@@ -46,6 +46,8 @@ export interface CommandContext {
   // 명령을 받기 전에 거른다 — 거절 사유를 주면 처리기로 보내지 않고 { ok: false, reason } 으로 답한다. null 이면 통과.
   // 무대 클릭(click)·메뉴·관리 창·mailbox 가 모두 dispatcher.dispatch 를 지나므로 한 곳에서 막힌다 (앱의 두 PC 규칙 멈춤)
   guard?: (command: Command) => Reason | null;
+  // 게임 시각 — 마지막 1초 틱의 시각(앱은 전역 시계 clock.last). 틱 밖의 명령도 실행기처럼 이 시각으로 계산한다 (docs/specs/modules.md "저장 시점"). 없으면 지금 시각(자체 검사)
+  now?: () => number;
 }
 
 export interface Commands {
@@ -76,6 +78,7 @@ const isSettingKey = (v: unknown): v is SettingKey => typeof v === "string" && (
 const EVOLVE_EXPIRE_MS = 40_000;
 
 export function createCommands(ctx: CommandContext): Commands {
+  const now = ctx.now ?? Date.now;
   const log = ctx.log ?? null;
   // 멈춤 거르기는 명령 통로의 guard 옵션이다 (src/tx/dispatcher.ts) — dispatch 를 덮어쓰지 않는다 (설계 D4)
   const dispatcher = createDispatcher({ log, guard: ctx.guard ?? null });
@@ -178,11 +181,13 @@ export function createCommands(ctx: CommandContext): Commands {
       const pet = save.pets.find((row) => row.id === id);
       if (!pet) return { ok: false, reason: "no-pet", id };
       const choice = typeof c.args?.to === "string" ? c.args.to : null;
-      const targets = choice ? [choice] : evolveCandidates(save, id, gameDayPart(Date.now())).filter((x) => x.ready).map((x) => x.to);
+      // 낮·밤은 실행기(src/tx/handlers/pet.ts)와 같은 틱 시각으로 가른다 (94 문서 9-2-2)
+      const targets = choice ? [choice] : evolveCandidates(save, id, gameDayPart(now())).filter((x) => x.ready).map((x) => x.to);
       for (const species of targets) {
         const look = appearanceOf({ species, shiny: pet.shiny, gender: pet.gender }); // 성별 그림이 있는 종(대쓰여너 암컷)은 그 그림을 받는다
         if (ctx.prepareLook && !(await ctx.prepareLook(look))) return { ok: false, reason: "art-missing", look };
       }
+      // 만료는 보낸 쪽 벽시계(c.at)와 견주는 기다림 한도라 벽시계로 잰다 — 게임 계산이 아니다
       if (c.at != null && Date.now() - c.at > EVOLVE_EXPIRE_MS) return { ok: false, reason: "expired", id };
     }
     const result = await runSave(c);

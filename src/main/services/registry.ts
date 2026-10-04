@@ -80,6 +80,7 @@ export function createServices(deps: ServicesDeps): Services {
       const on = online();
       mainTrade = createMainTrade(
         game,
+        deps.isWriter, // writer 를 놓은 뒤의 교환 쓰기는 not-writer — 우편(mail 의 run)과 같다
         on ?? { storage: sessions() },
         () => mainOnline?.noteSaved("event"),
         hold,

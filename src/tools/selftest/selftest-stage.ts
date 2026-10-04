@@ -473,6 +473,10 @@ async function stageRuntimeTests(): Promise<void> {
       ok(!party.isWriter(), "잠금 상실을 즉시 인식");
       const original = fs.readFileSync(lost.save, "utf8");
       eq(game.send({ cmd: "party.hide", target: "p1" }, "menu").reason, "save-failed", "잠금을 잃은 프로세스의 쓰기 거절");
+      // 파티 저장도 같은 writer 판정(잠금 파일까지)을 쓴다 — 실행기로 가지 않고, 내 명령 통로로 되돌려 보내지도 않는다 (94 문서 9-5-4)
+      eq((await party.setShown("p1", false)).reason, "not-writer", "잠금을 잃은 파티 저장은 not-writer");
+      eq((await party.setSize("p1", 3)).reason, "not-writer", "크기도 not-writer");
+      eq(party.needsStarter(), false, "잠금을 잃으면 첫 실행 고르기도 하지 않는다");
       eq(fs.readFileSync(lost.save, "utf8"), original, "다른 writer 의 저장을 덮지 않음");
     } finally { party.stop(); other.kill(); }
   }
