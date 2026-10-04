@@ -5,31 +5,19 @@
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 // 앱이 부팅 때 createManage 를 한 번 부른다. 창·기기 창·처리기 상태는 그 안에만 있다 — 모듈 전역 상태가 없다.
 // (예전 src/main/manage-window.ts 의 openManage·push*. 메인 레인 M6b 에서 옮기고 묶었다)
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow } from "electron";
 import type { AccountAction, AccountReply, PatchNotesView, UpdateAction, UpdateView } from "../../shared/model/account";
 import type { DisplayView } from "../../shared/model/snapshot";
 import type { MailAction, MailReply } from "../../shared/model/mail";
-import type { ManageChannel, ManagePush, ManageReply, ManageRequest } from "../../shared/ipc/manage";
+import type { ManagePush, ManageReply, ManageRequest } from "../../shared/ipc/manage";
 import type { ManageRoute } from "../../shared/model/route";
-import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../../shared/model/devices";
 import type { ScreenView } from "../../shared/model/overlays";
 import type { GameV3 } from "../../tx/game.js";
 import { windowIcon } from "../windows/files.js";
 import { webPreferencesOf } from "../windows/options.js";
-import { createIpcScope, isFromWindow } from "../windows/ipc.js";
+import { createIpcScope } from "../windows/ipc.js";
 import { gameReads, wireManageHandlers } from "./handlers.js";
-import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
-import { artServices } from "../art/services.js";
-import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
-import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps, type DexDeviceOpen } from "../windows/devices.js";
-import { bagDeviceModel } from "../../view/device-bag.js";
-import { partyDeviceModel } from "../../view/device-party.js";
-import { petDeviceModel } from "../../view/device-pet.js";
-import { shopDeviceModel } from "../../view/device-shop.js";
-import { gainOf } from "../../state/settings.js";
-import { SOUND_RULES } from "../../state/rules.js";
-import fs from "node:fs";
-import path from "node:path";
+import { wireManageDevices, type ManageDevices } from "./devices.js";
 
 // 설정창의 크기 (예전 src/save/rules.ts 의 WINDOW_V3_RULES. 메인 레인 M6b 에서 창 파일로 옮겼다)
 // docs/specs/game.md "관리 창". Figma 의 640 px 를 DIP 로 그대로 쓴다
@@ -40,29 +28,6 @@ const MANAGE_WINDOW_RULES = {
   height: 682,
   minHeight: 560, // 본문이 스크롤이라 이만큼까지 줄일 수 있다
 };
-
-const CH = {
-  route: "manage:route",
-  dexOpen: "manage:dex-open",
-  dexStep: "manage:dex-step",
-  dexClosed: "manage:dex-closed",
-  petOpen: "manage:pet-open",
-  petStep: "manage:pet-step",
-  petAct: "manage:pet-act",
-  petClosed: "manage:pet-closed",
-  shopOpen: "manage:shop-open",
-  shopStep: "manage:shop-step",
-  shopAct: "manage:shop-act",
-  shopClosed: "manage:shop-closed",
-  bagOpen: "manage:bag-open",
-  bagStep: "manage:bag-step",
-  bagAct: "manage:bag-act",
-  bagClosed: "manage:bag-closed",
-  partyOpen: "manage:party-open",
-  partyAct: "manage:party-act",
-  partyStep: "manage:party-step",
-  partyClosed: "manage:party-closed",
-} satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
 // 높이는 헤더(40)보다 1 작다 — 헤더 맨 아래 1px 테두리를 덮지 않아야 단추 아래까지 선이 이어진다
@@ -129,29 +94,10 @@ export function createManage(deps: ManageDeps): Manage {
   let win: BrowserWindow | null = null;
   let wired = false;
   let svc: ManageServices = {}; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
-  let dexWin: DeviceWindow<DexDeviceOpen> | null = null;
-  let petWin: DeviceWindow<PetDeviceOpen> | null = null;
-  let shopWin: DeviceWindow<ShopDeviceOpen> | null = null;
-  let bagWin: DeviceWindow<BagDeviceOpen> | null = null;
-  let partyWin: DeviceWindow<PartyDeviceOpen> | null = null;
-  // 기기 창에 마지막으로 띄운 모델(세대 번호와 함께) — 설정창은 스냅샷이 바뀔 때마다 고른 값을 다시 보낸다. 모델이 그대로면 다시 그리지 않는다
-  const shownModel = new Map<"pet" | "shop" | "bag" | "party", string>();
-
-  // 관리 창이 보낸 요청인가. 무대 창·선택 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
-  const mine = (e: { sender: unknown }): boolean => isFromWindow(win, e);
-
-
-  // 기기 창 띄우기 — 같은 세대 번호로 같은 모델을 이미 띄웠으면 다시 보내지 않는다
-  function showDevice<M>(name: "pet" | "shop" | "bag" | "party", w: DeviceWindow<M> | null, model: M, gen: unknown): void {
-    if (!win || !w) return;
-    const key = `${String(gen)}|${JSON.stringify(model)}`;
-    if (shownModel.get(name) === key) return;
-    shownModel.set(name, key);
-    w.show(win, model, gen);
-  }
+  let devices: ManageDevices | null = null; // 기기 창 다섯 — 처음 열 때 건다 (src/main/manage/devices.ts)
 
   // 관리 창 문서로 보낸다 — 창이나 문서가 이미 닫혔으면 버린다. 창보다 문서(webContents)가 먼저 없어지는 순간이 있다
-  function toManage(channel: ManageChannel, ...args: unknown[]): void {
+  function toManage<K extends keyof ManagePush>(channel: K, ...args: ManagePush[K]): void {
     if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return;
     win.webContents.send(channel, ...args);
   }
@@ -163,164 +109,15 @@ export function createManage(deps: ManageDeps): Manage {
     // 본 처리기(계약 ManageCoreIpc)는 처리기 파일이 건다 — 보낸 창 검사는 묶음이 한다 (src/main/manage/handlers.ts)
     const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
     wireManageHandlers(scope, { game, send, services: () => svc, setDim: (on) => setDimFrom("modal", on) });
-    const { snapshot, detailOf, shopDetailOf } = gameReads(game);
-    // 초상 — 기기 창도 앱과 같은 인스턴스를 쓴다 (src/main/art/services.ts)
-    const portraits = artServices().portraits;
-    // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
-    const cries = artServices().cries;
-    const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
-    dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
-      detail: (slug) => detailOf(slug),
-      portrait: async (slug) => {
-        return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
-      },
-      tree: (slug) => {
-        const detail = shopDetailOf(slug); // 상점 구매 창의 포켓몬 상세와 같은 사슬 (src/view/shop-detail.ts)
-        return detail?.kind === "pokemon" ? detail.tree : null;
-      },
-      portraits: async (slugs) => {
-        const got = await portraits.get(slugs.map((slug) => ({ slug, shiny: false })));
-        const out: Record<string, string> = {};
-        for (const slug of slugs) {
-          const uri = got[slug];
-          if (uri) out[slug] = uri;
-        }
-        return out;
-      },
-      cry: (slug) => cries.get(slug),
-      volume: () => {
-        const s = game.read()?.settings;
-        return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
-      },
-    }), {
-      onStep: (delta) => toManage(CH.dexStep, delta),
-      // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
-      onClosed: (gen) => toManage(CH.dexClosed, gen),
-    });
-    // 파티 상세 기기 창 — 관리 창이 개체를 정해 보낸다. 누른 단추·이전·다음은 관리 창으로 돌려보낸다
-    petWin = createDeviceWindow(deviceFiles("pet"), petDeviceOf({
-      portrait: async (slug, shiny) => {
-        return (await portraits.get([{ slug, shiny }]))[portraitKey({ slug, shiny })] ?? null;
-      },
-      megaIcon: async () => {
-        return (await portraits.icons([MEGA_STONE_ICON]))[MEGA_STONE_ICON] ?? null;
-      },
-      cry: (slug) => cries.get(slug),
-      volume: () => {
-        const s = game.read()?.settings;
-        return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
-      },
-    }), {
-      onStep: (delta) => toManage(CH.petStep, delta),
-      onAct: (action) => toManage(CH.petAct, action),
-      onCoach: (on) => setDimFrom("pet", on),
-      onClosed: (gen) => {
-        shownModel.delete("pet");
-        toManage(CH.petClosed, gen);
-      },
-    });
-    // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
-    // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/art/egg-art.ts)
-    const deviceArt: DeviceArtDeps = {
-      art: async (keys) => {
-        const asks = keys
-          .filter((k) => k.startsWith("portrait:"))
-          .map((k) => {
-            const rest = k.slice("portrait:".length);
-            const shiny = rest.endsWith(":shiny");
-            return { key: k, ask: { slug: shiny ? rest.slice(0, -":shiny".length) : rest, shiny } };
-          });
-        const items = keys.filter((k) => k.startsWith("item:") || k.startsWith("egg:"));
-        const [faces, icons] = await Promise.all([asks.length ? portraits.get(asks.map((a) => a.ask)) : {}, items.length ? portraits.icons(items) : {}]);
-        const out: Record<string, string | null> = {};
-        for (const a of asks) out[a.key] = (faces as Record<string, string | null>)[portraitKey(a.ask)] ?? null;
-        for (const k of items) out[k] = (icons as Record<string, string | null>)[k] ?? null;
-        return out;
-      },
-    };
-    // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
-    shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
-      onStep: (delta) => toManage(CH.shopStep, delta),
-      onAct: (action) => toManage(CH.shopAct, action),
-      onClosed: (gen) => {
-        shownModel.delete("shop");
-        toManage(CH.shopClosed, gen);
-      },
-    });
-    // 가방 기기 창 — 관리 창이 도구를 정해 보낸다. 사용·판매·파티 고르기·수량·이전·다음은 관리 창으로 돌려보낸다
-    bagWin = createDeviceWindow(deviceFiles("bag"), bagDeviceOf(deviceArt), {
-      onStep: (delta) => toManage(CH.bagStep, delta),
-      onAct: (action) => toManage(CH.bagAct, action),
-      onClosed: (gen) => {
-        shownModel.delete("bag");
-        toManage(CH.bagClosed, gen);
-      },
-    });
-    // 파티 기기 창(교체 화면) — 관리 창이 지금 프리셋의 칸을 정해 보낸다. 누른 칸·칩은 관리 창으로 돌려보낸다
-    partyWin = createDeviceWindow(deviceFiles("party"), partyDeviceOf(deviceArt), {
-      onStep: (delta) => toManage(CH.partyStep, delta),
-      onAct: (action) => toManage(CH.partyAct, action),
-      onClosed: (gen) => {
-        shownModel.delete("party");
-        toManage(CH.partyClosed, gen);
-      },
-    });
-    // 파티 상세·상점·가방·파티 교체의 모델은 메인이 만든다 — 설정창은 고른 값(…DeviceInput)만 보낸다 (src/view/device-*.ts).
-    // 지금 저장의 화면 값(스냅샷)으로 만든다. 답은 바로잡은 입력이다 — 설정창은 다음 명령에 이 값을 쓴다. 띄울 것이 없으면 닫고 null.
-    // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
-    ipcMain.handle(CH.partyOpen, (e, input: unknown, gen: unknown) => {
-      if (!win || !mine(e)) return null;
-      const v = isPartyInput(input) ? snapshot() : null;
-      const r = v && isPartyInput(input) ? partyDeviceModel(v, input) : null;
-      if (!r) {
-        shownModel.delete("party");
-        partyWin?.close();
-        return null;
-      }
-      showDevice("party", partyWin, r.model, gen);
-      return r.input;
-    });
-    ipcMain.handle(CH.petOpen, (e, input: unknown, gen: unknown) => {
-      if (!win || !mine(e)) return null;
-      const v = isPetInput(input) ? snapshot() : null;
-      const r = v && isPetInput(input) ? petDeviceModel(v, input) : null;
-      if (!r) {
-        shownModel.delete("pet");
-        petWin?.close();
-        return null;
-      }
-      showDevice("pet", petWin, r.model, gen);
-      return r.input;
-    });
-    ipcMain.handle(CH.shopOpen, (e, input: unknown, gen: unknown) => {
-      if (!win || !mine(e)) return null;
-      const v = isShopInput(input) ? snapshot() : null;
-      const r = v && isShopInput(input) ? shopDeviceModel(v, input) : null;
-      if (!r) {
-        shownModel.delete("shop");
-        shopWin?.close();
-        return null;
-      }
-      showDevice("shop", shopWin, r.model, gen);
-      return r.input;
-    });
-    ipcMain.handle(CH.bagOpen, (e, input: unknown, gen: unknown) => {
-      if (!win || !mine(e)) return null;
-      const v = isBagInput(input) ? snapshot() : null;
-      const r = v && isBagInput(input) ? bagDeviceModel(v, input) : null;
-      if (!r) {
-        shownModel.delete("bag");
-        bagWin?.close();
-        return null;
-      }
-      showDevice("bag", bagWin, r.model, gen);
-      return r.input;
-    });
-    ipcMain.on(CH.dexOpen, (e, slug: unknown, gen: unknown, beside: unknown) => {
-      if (!win || !mine(e)) return;
-      // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
-      if (typeof slug === "string") dexWin?.show(win, { slug, beside: beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
-      else dexWin?.close();
+    // 기기 창 다섯과의 길(계약 ManageDeviceLinkIpc)은 기기 창 파일이 건다 — 같은 묶음, 같은 화면 읽기
+    devices = wireManageDevices(scope, {
+      game,
+      reads: gameReads(game),
+      preload,
+      html,
+      parent: () => win,
+      send: (channel, ...args) => toManage(channel, ...args),
+      setPetCoach: (on) => setDimFrom("pet", on),
     });
   }
 
@@ -330,7 +127,7 @@ export function createManage(deps: ManageDeps): Manage {
       if (win.isMinimized()) win.restore();
       win.show();
       win.focus();
-      if (route) win.webContents.send(CH.route, route);
+      if (route) toManage("manage:route", route);
       return win;
     }
     if (!wired) {
@@ -360,27 +157,20 @@ export function createManage(deps: ManageDeps): Manage {
     win.on("closed", () => {
       win = null;
       dimFrom.modal = false; // 설정창의 모달·튜토리얼은 창과 함께 사라졌다
-      shownModel.clear();
+      devices?.forget();
       svc.identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
     });
     // 문서를 (다시) 읽기 시작한다 — 렌더러의 세대 번호가 0 에서 다시 시작하므로 기기 창 번호도 맞춘다
-    win.webContents.on("did-start-loading", () => {
-      shownModel.clear();
-      petWin?.resetGen();
-      dexWin?.resetGen();
-      shopWin?.resetGen();
-      bagWin?.resetGen();
-      partyWin?.resetGen();
-    });
+    win.webContents.on("did-start-loading", () => devices?.reset());
     // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다
-    if (route) win.webContents.once("did-finish-load", () => win?.webContents.send(CH.route, route));
+    if (route) win.webContents.once("did-finish-load", () => toManage("manage:route", route));
     void win.loadFile(deps.html);
     return win;
   }
 
   return {
     open,
-    send: (channel, ...args) => toManage(channel, ...args),
+    send: toManage,
     setStageCoachDim: (on) => setDimFrom("stage", on),
   };
 }
