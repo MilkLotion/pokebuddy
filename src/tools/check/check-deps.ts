@@ -64,6 +64,7 @@ const MAIN_SUB: Readonly<Record<string, { value: readonly string[] | "all"; type
   windows: { value: [], type: ["art"] },
   art: { value: [], top: false, electron: false }, // 경로는 src/platform/paths 를 바로 쓴다
   update: { value: [], electron: false }, // 엔진은 주입받는다 — electron 은 타입만
+  manage: { value: ["windows", "art"], top: false }, // 설정창 — 게임·서비스·메뉴·화면 고르기는 deps 로 주입받는다. electron 은 값으로 쓴다(창을 만든다) (메인 레인 M6b, 2026-10-04)
 };
 // art 의 electron 예외 — 시스템 프록시·인증서를 따르게 net.fetch 를 조건부 require 한다(Electron 밖에서는 Node fetch)
 const MAIN_ELECTRON_OK = new Set(["src/main/art/fetch.ts"]);
