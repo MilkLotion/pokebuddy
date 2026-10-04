@@ -9,7 +9,7 @@ import path from "node:path";
 import { hasProfile } from "../../dex/species";
 import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
 import { pmdSources } from "../../main/art/stage-art";
-import { overworldUrl } from "../../main/art/overworld-art";
+import { overworldUrl } from "../../main/art/sources";
 import { portraitIds } from "../../main/art/portraits";
 import { petName } from "../../view/text";
 import { bannerOf } from "../../view/banner";

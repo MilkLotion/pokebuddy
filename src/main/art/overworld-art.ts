@@ -14,15 +14,14 @@
 // 잠자기·반응 동작은 없다. 없는 동작은 움직임 모듈이 알아서 빼고 고른다
 import path from "node:path";
 import type { PmdArt } from "./stage-art";
-import { megaOf } from "../../dex/mega";
 import { dexFolderOf, lookOf } from "../../dex/look";
 import { decodePng, encodePng, opaqueRectOf, pngHeaderOf, type Rgba } from "../../platform/png";
 import { FALLBACK_RULES, fallbackAnimOf, fallbackArtOf } from "./fallback-art";
 import { createAssetCache } from "./asset-cache";
+import { overworldDir, overworldUrl } from "./sources.js";
 
 export const OVERWORLD_RULES = {
-  repo: "https://raw.githubusercontent.com/rh-hideout/pokeemerald-expansion",
-  ref: "expansion/1.17.1", // 릴리스 태그 (2026-09-29). 올릴 때 src/tools/check/check-overworld.ts 를 다시 돌린다
+  // 받는 곳(저장소·릴리스 태그)은 src/main/art/sources.ts OVERWORLD_SOURCE
   walkMs: [200, 200],
   idleMs: [...FALLBACK_RULES.idleMs], // 제자리 → 위 (src/main/art/fallback-art.ts — 초상 대체 그림과 같다)
   bob: FALLBACK_RULES.bob, // 들썩이는 높이 (도트)
@@ -33,11 +32,6 @@ const PNG_FILE = "overworld.png";
 const NORMAL_FILE = "overworld_normal.pal";
 const SHINY_FILE = "overworld_shiny.pal";
 
-// 종 이름 → expansion 폴더 이름 (mr-rime → mr_rime)
-export const overworldDir = (slug: string): string => slug.replace(/-/g, "_");
-// 메가 모습은 종 폴더 아래의 폼 폴더다 (charizard/mega_x) — data/mega.json 의 overworld. 캐시 파일 이름은 슬러그 그대로다
-export const overworldUrl = (slug: string, file: string): string =>
-  `${OVERWORLD_RULES.repo}/${OVERWORLD_RULES.ref}/graphics/pokemon/${megaOf(slug)?.overworld ?? overworldDir(slug)}/${file}`;
 
 // JASC-PAL → 번호 순 RGB. 못 읽으면 null
 export function parsePal(text: string): [number, number, number][] | null {

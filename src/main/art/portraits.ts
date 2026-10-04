@@ -23,6 +23,7 @@ import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
 import { decodePng, isPng, opaqueRectOf } from "../../platform/png.js";
+import { EGG_FILE, EGG_URL, iconUrl, itemFile, itemUrl, portraitFile, portraitUrl, type PortraitId } from "./sources.js";
 import type { ArtImage, OpaqueBox, PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -46,8 +47,6 @@ function itemIds(): string[] {
   return [...new Set(keys.filter((k) => !isMetaKey(k) && /^[a-z0-9-]+$/.test(k)))];
 }
 
-const SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites";
-const BASE = `${SPRITES}/pokemon`;
 // 한 번에 받는 수 — 도감처럼 칸이 많아도 네트워크를 한꺼번에 쓰지 않는다
 const PARALLEL = 4;
 // 미리 받기의 동시 요청 수 — 그림이 작아(평균 1KB) 요청 수가 비용이다. 16 이면 2천 장이 이 연결에서 10초 안팎이었다(2026-09-26 측정)
@@ -60,7 +59,6 @@ export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shi
 // 초상 그림 번호 — 리전폼·메가 모습이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0.
 // 포켓몬 번호가 따로 없는 폼(피츄(삐쭉귀))은 표의 portrait 파일 이름(`172-spiky-eared`)이 먼저다.
 // 메가 모습의 초상이 없으면(지가르데) 기본 종의 초상이다
-export type PortraitId = number | string;
 export function portraitIds(slug: string): PortraitId[] {
   // 성별 그림(대쓰여너 암컷) — 그 성별의 포켓몬 번호가 먼저, 없으면 종의 초상
   const byGender = genderLookInfo(slug);
@@ -73,38 +71,9 @@ export function portraitIds(slug: string): PortraitId[] {
   return [...new Set<PortraitId>([...named, ...[form, dex].filter((n): n is number => typeof n === "number" && n > 0)])];
 }
 
-// 받을 주소 — 도감 번호 그대로(앞의 0 없음)
-export const portraitUrl = (dex: PortraitId, shiny: boolean): string => (shiny ? `${BASE}/shiny/${dex}.png` : `${BASE}/${dex}.png`);
-
-// PokeAPI 에 없는 도구 그림 — msikma/pokesprite (코드 MIT, 그림 © Nintendo·Creatures·GAME FREAK). 32×32 로 PokeAPI 30×30 과 모양이 같다.
-// 2026-09-26 폰트 세션이 조사해 넘겼다(사용자 결정).
-// 민트는 한 종류라 초록 민트 한 장만 쓴다 (2026-09-29 사용자 결정 "초록색민트 이미지만 사용").
-// pokesprite mint 6장의 픽셀을 받아 본 결과 초록(주색 #65c65d)은 speed.png 다. attack 빨강·defense 파랑·special-attack 하늘·special-defense 분홍·neutral 노랑
-const POKESPRITE = "https://raw.githubusercontent.com/msikma/pokesprite/master/items";
-const MINT_URL = `${POKESPRITE}/mint/speed.png`;
-const POKESPRITE_EVO = new Set(["galarica-wreath", "galarica-cuff", "sweet-apple", "tart-apple", "cracked-pot"]);
-
 // 메가스톤 표식의 그림 — 모든 종이 키스톤 그림을 쓴다 (2026-10-02 사용자 결정 "다 키스톤으로"). 30×30 안의 14×14 다.
 // 화면은 불투명 영역만 잘라 쓴다 (src/renderer/manage.ts megaMark, src/renderer/pet.ts)
 export const MEGA_STONE_ICON = "item:key-stone";
-
-// 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구는 pokesprite, 나머지는 PokeAPI
-export function itemUrl(id: string): string {
-  const candy = /^exp-candy-(xs|s|m|l|xl)$/.exec(id);
-  if (candy) return `${POKESPRITE}/exp-candy/${candy[1]}.png`;
-  if (id === "mint") return MINT_URL;
-  if (POKESPRITE_EVO.has(id)) return `${POKESPRITE}/evo-item/${id}.png`;
-  // 빈 기술머신(기술 진화를 대신하는 도구, id 는 옛 이름 blank-cd)은 원작 기술머신 그림을 쓴다 — 2026-09-26 사용자 결정 "빈기술머신으로 사용할게 그냥"
-  if (id === "blank-cd") return `${SPRITES}/items/tm-normal.png`;
-  return `${SPRITES}/items/${id}.png`;
-}
-
-// 도구·알 그림의 열쇠 → 받을 주소. 열쇠는 "egg" 또는 "item:<식별자>" 다. 모르는 열쇠는 null
-export function iconUrl(key: string): string | null {
-  if (key === "egg") return `${BASE}/egg.png`;
-  const m = /^item:([a-z0-9-]+)$/.exec(key);
-  return m ? itemUrl(m[1] ?? "") : null;
-}
 
 const pngUri = (buf: Buffer): string => dataUriOf("image/png", buf);
 
@@ -181,12 +150,8 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     }
   }
 
-  const relOf = (dex: PortraitId, shiny: boolean): string => {
-    const d = String(dex).padStart(4, "0");
-    return shiny ? `${d}-shiny.png` : `${d}.png`;
-  };
-  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => fileUri(relOf(dex, shiny), portraitUrl(dex, shiny));
-  const oneBuffer = (dex: PortraitId, shiny: boolean): Promise<Buffer | null> => cache.fetchFile(relOf(dex, shiny), portraitUrl(dex, shiny));
+  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => fileUri(portraitFile(dex, shiny), portraitUrl(dex, shiny));
+  const oneBuffer = (dex: PortraitId, shiny: boolean): Promise<Buffer | null> => cache.fetchFile(portraitFile(dex, shiny), portraitUrl(dex, shiny));
 
   const api: Portraits = {
     async get(asks) {
@@ -234,17 +199,14 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     async prefetch(onProgress, first = []) {
       const jobs: { rel: string; url: string }[] = [];
       const firstDex = first.map((slug) => portraitIds(slug)[0] ?? 0).filter((d) => d !== 0);
-      for (const dex of firstDex) jobs.push({ rel: `${String(dex).padStart(4, "0")}.png`, url: portraitUrl(dex, false) });
+      for (const dex of firstDex) jobs.push({ rel: portraitFile(dex, false), url: portraitUrl(dex, false) });
       // 도감 번호 그림과 리전폼 그림(포켓몬 번호) 전부
       const order = (d: PortraitId): number => (typeof d === "number" ? d : Number.parseInt(d, 10) || 0); // 파일 이름 초상은 앞의 번호로 줄 세운다
       const dexes = [...new Set(speciesSlugs().flatMap((slug) => portraitIds(slug)))].sort((a, b) => order(a) - order(b));
-      for (const dex of dexes) {
-        const d = String(dex).padStart(4, "0");
-        jobs.push({ rel: `${d}.png`, url: portraitUrl(dex, false) }, { rel: `${d}-shiny.png`, url: portraitUrl(dex, true) });
-      }
-      jobs.push({ rel: "egg.png", url: `${BASE}/egg.png` });
-      for (const id of itemIds()) if (!ownItem(id)) jobs.push({ rel: `items/${id}.png`, url: itemUrl(id) }); // 우리 그림이 있는 도구는 받지 않는다
-      jobs.push({ rel: `items/${MEGA_STONE_ICON.slice(5)}.png`, url: itemUrl(MEGA_STONE_ICON.slice(5)) }); // 메가스톤 표식 — 도구 목록에 없다
+      for (const dex of dexes) jobs.push({ rel: portraitFile(dex, false), url: portraitUrl(dex, false) }, { rel: portraitFile(dex, true), url: portraitUrl(dex, true) });
+      jobs.push({ rel: EGG_FILE, url: EGG_URL });
+      for (const id of itemIds()) if (!ownItem(id)) jobs.push({ rel: itemFile(id), url: itemUrl(id) }); // 우리 그림이 있는 도구는 받지 않는다
+      jobs.push({ rel: itemFile(MEGA_STONE_ICON.slice(5)), url: itemUrl(MEGA_STONE_ICON.slice(5)) }); // 메가스톤 표식 — 도구 목록에 없다
       const count = { got: 0, had: 0, missing: 0, failed: 0 };
       // 그림이 없다고(404) 확인한 주소 — 켤 때마다 다시 묻지 않게 캐시 폴더에 적어 둔다.
       // 파일 이름이 아니라 주소로 적는다 — 받을 곳을 바꾸면(경험사탕·민트 → pokesprite) 새 주소로 다시 묻는다
@@ -301,12 +263,11 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
           // 첫 번호(리전폼이면 포켓몬 번호)만 본다 — 리전폼 그림이 아직 없으면 비워 두어 화면이 get 으로 받게 한다(기본형 대신 그림은 get 이 정한다)
           const id = portraitIds(slug)[0];
           if (!id) return;
-          const d = String(id).padStart(4, "0");
-          const plain = await read(`${d}.png`);
+          const plain = await read(portraitFile(id, false));
           if (!plain) return;
           out[slug] = plain;
           // 이로치 그림이 없으면 보통 그림 — get 과 같은 규칙
-          out[`${slug}:shiny`] = (await read(`${d}-shiny.png`)) ?? plain;
+          out[`${slug}:shiny`] = (await read(portraitFile(id, true))) ?? plain;
         }),
       );
       const egg = await read("egg.png");

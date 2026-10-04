@@ -270,7 +270,7 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
 - 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art/stage-art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
 - PMD 그림을 못 받은 종은 대체 그림으로 무대에 나온다. 관찰(2026-10-02): 리전폼을 뺀 등장 종 890종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
-  - 먼저 걷기 대체 그림을 쓴다(`src/main/art/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_RULES.ref`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
+  - 먼저 걷기 대체 그림을 쓴다(`src/main/art/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_SOURCE.ref`, `src/main/art/sources.ts`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
   - 걷기 시트는 정사각 칸 6개다. 정면·뒤·왼쪽이 2칸씩이다. 오른쪽은 왼쪽 칸을 좌우로 뒤집는다. 칸이 8개인 시트는 오른쪽 전용 칸을 쓴다. 팔레트 0번 색이 배경이라 지운다.
   - 색은 `overworld_normal.pal` 의 같은 번호 색으로 칠한다. 이로치는 `overworld_shiny.pal` 이다. 팔레트 파일을 못 받으면 PNG 에 든 색이다.
   - 동작은 `Idle`·`Walk` 두 개다. `Walk` 는 두 칸을 0.2초씩 돈다. `Idle` 은 첫 칸을 1도트 들썩인다.

@@ -3,14 +3,15 @@
 //   npm run build && node dist/tools/check/check-overworld.js                  PMD 에 그림이 없는 35종 (2026-10-02 조사)
 //   npm run build && node dist/tools/check/check-overworld.js pikachu eevee    고른 종만
 //
-// OVERWORLD_RULES.ref(릴리스 태그)를 올릴 때 다시 돌린다. 확인 (worklog/records/fallback-art/record.md 수용 조건)
+// OVERWORLD_SOURCE.ref(릴리스 태그, src/main/art/sources.ts)를 올릴 때 다시 돌린다. 확인 (worklog/records/fallback-art/record.md 수용 조건)
 //   1. overworld.png · overworld_normal.pal · overworld_shiny.pal 을 받는다
 //   2. 왼쪽 위 점이 팔레트 0번이다 — 0번을 배경으로 지우는 규칙의 근거
 //   3. 그림이 쓰는 번호가 두 팔레트 파일에 모두 있다 — 팔레트 파일의 같은 번호 색으로 칠하는 규칙의 근거
 //   4. 보통·이로치 모두 시트로 만들어진다
 // PNG 에 든 팔레트가 overworld_normal.pal 과 다른 종은 알리기만 한다(어긋남 아님) — 앱은 팔레트 파일의 색을 쓴다
 // 결과는 출력만 한다. 어긋남이 있으면 종료 코드 1
-import { overworldArt, overworldUrl, parsePal } from "../../main/art/overworld-art";
+import { overworldArt, parsePal } from "../../main/art/overworld-art";
+import { overworldUrl } from "../../main/art/sources";
 import { decodePng } from "../../platform/png";
 
 // PMD ZIP 을 앱 로더로 읽지 못한 등장 종 — worklog/records/fallback-art/evidence/fallback-survey.json
