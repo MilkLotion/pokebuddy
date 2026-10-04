@@ -321,3 +321,14 @@ function manageTutorial(save: SaveV3, now: number): string | null {
 function natureOptions(): NatureOption[] {
   return natureTable().map((n) => ({ id: n.id, name: natureName(n.id) }));
 }
+
+// 게임의 지금 화면 값 — 저장을 읽어 그 게임의 시각(마지막 틱)으로 스냅샷을 만들고, 저장이 이어서 실패하는 중이면 안내를 싣는다.
+// 형식은 구조로만 받는다 — 화면 값은 실행기(tx)를 가져오지 않는다. 저장이 없으면 null
+// 부르는 곳: src/main/manage-window.ts, 도구 selftest-manage·selftest-play
+// (예전 src/main/game.ts 의 game.view. 메인 레인 M8-9 에서 화면 값으로 옮겼다)
+export function snapshotOfGame(game: { read(): SaveV3 | null; now(): number; saveFailing(): boolean }): Snapshot | null {
+  const save = game.read();
+  if (!save) return null;
+  const snap = snapshotView(save, game.now());
+  return game.saveFailing() ? { ...snap, saveFailing: true } : snap;
+}

@@ -9,6 +9,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createGenGate } from "../../main/windows/device-gen";
 import { createGame } from "../../main/game";
+import { snapshotOfGame } from "../../view/snapshot";
+import { dexList } from "../../view/dex-list";
 import * as store from "../../save/store";
 import { empty } from "../../save/v3";
 import { gainOf } from "../../state/settings";
@@ -41,7 +43,7 @@ try {
   const game = createGame({ file, now: () => now, rand: () => 0.5 });
 
   // (1) 저장이 없으면 스냅샷도 없다
-  assert.equal(game.view(), null, "저장이 없으면 null");
+  assert.equal(snapshotOfGame(game), null, "저장이 없으면 null");
   assert.equal(game.tick(), null);
   process.stdout.write("(1) 저장 없음  ok\n");
 
@@ -49,7 +51,7 @@ try {
 
   // (2) 스냅샷은 화면이 바로 쓸 값을 준다
   {
-    const v = game.view();
+    const v = snapshotOfGame(game);
     assert.ok(v);
     assert.equal(v.points, 340);
     const pet = v.party.slots[0]?.pet;
@@ -73,7 +75,7 @@ try {
     const reply = click("party.show", "p1");
     assert.equal(reply.ok, true);
     assert.equal(reply.reason, "ok");
-    const v = game.view();
+    const v = snapshotOfGame(game);
     assert.equal(v?.party.slots[0]?.pet?.hidden, false, "꺼낸 상태가 보인다");
     assert.equal(v?.party.shown, 1);
     process.stdout.write("(3) 명령 · 꺼내기  ok\n");
@@ -98,7 +100,7 @@ try {
   {
     now = T0 + 24 * HOUR;
     assert.ok(game.tick());
-    assert.equal(game.view()?.party.slots[0]?.pet?.fullness, 55, "하루 꺼 둔 틈에는 만복도가 줄지 않는다");
+    assert.equal(snapshotOfGame(game)?.party.slots[0]?.pet?.fullness, 55, "하루 꺼 둔 틈에는 만복도가 줄지 않는다");
 
     // 앱처럼 짧은 간격으로 2시간을 흘린다
     const step = 30_000;
@@ -109,7 +111,7 @@ try {
       assert.ok(events);
       hungry += events.hungerEnter.length;
     }
-    const v = game.view();
+    const v = snapshotOfGame(game);
     assert.equal(v?.party.slots[0]?.pet?.fullness, 0, "2시간에 60 감소, 0 에서 멈춘다");
     assert.ok(v && v.points > 340, "포인트가 쌓였다");
     assert.ok(hungry >= 1, "배고픔 구간 진입을 알린다");
@@ -127,7 +129,7 @@ try {
   {
     const reply = game.send({ cmd: "feed", target: "p1" }, "settings");
     assert.equal(reply.ok, true);
-    const pet = game.view()?.party.slots[0]?.pet;
+    const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
     assert.equal(pet?.fullness, 20, "0 에서 20 으로");
     assert.equal(pet?.feedReady, false);
     assert.equal(pet?.feedInSec, BAG_RULES.feedCooldownMs / 1000, "남은 쿨타임을 초로");
@@ -137,7 +139,7 @@ try {
   // (7) 놀아주면 중첩이 화면 값에 실린다
   {
     assert.equal(game.send({ cmd: "play", target: "p1" }, "settings").ok, true);
-    const pet = game.view()?.party.slots[0]?.pet;
+    const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
     assert.equal(pet?.playStreak, 1);
     assert.equal(pet?.longPlay, false);
     assert.equal(pet?.playReady, false);
@@ -147,7 +149,7 @@ try {
   // (8) 박스에 보관하면 파티 칸이 빈다
   {
     assert.equal(game.send({ cmd: "party.keep", target: "p1" }, "settings").ok, true);
-    const v = game.view();
+    const v = snapshotOfGame(game);
     assert.equal(v?.party.slots[0]?.state, "empty");
     assert.equal(v?.boxes[0]?.used, 1, "박스로 갔다");
     process.stdout.write("(8) 박스 보관  ok\n");
@@ -165,7 +167,7 @@ try {
 
   // (10) 상점 목록은 스냅샷에 실려 온다. 살 수 없으면 이유가 붙는다
   {
-    const shop = game.view()?.shop ?? [];
+    const shop = snapshotOfGame(game)?.shop ?? [];
     const egg = shop.find((i) => i.id === "random");
     assert.ok(egg, "랜덤알이 있다");
     assert.equal(egg.category, "egg");
@@ -174,14 +176,14 @@ try {
     assert.ok(slot, "파티 칸이 있다");
     assert.equal(slot.category, "slot");
     // 포인트가 모자란 상품은 affordable 이 false 다. 화면이 그것으로 비활성을 정한다
-    const dear = shop.find((i) => i.price > (game.view()?.points ?? 0));
+    const dear = shop.find((i) => i.price > (snapshotOfGame(game)?.points ?? 0));
     assert.equal(dear?.affordable, false, "비싼 상품은 살 수 없다");
     process.stdout.write("(10) 상점 목록  ok\n");
   }
 
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
-    const rows = game.dex();
+    const rows = dexList(game.read()!);
     assert.equal(rows.length, 1095, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 13 — 리전폼과 특수 폼은 다른 종이라 따로 보인다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
     let prev = 0;
@@ -212,13 +214,13 @@ try {
 
   // (12) 설정은 한 항목씩 바꾼다. 허용 밖의 값이면 저장을 건드리지 않는다
   {
-    assert.equal(game.view()?.settings.sound, true, "기본은 켬");
+    assert.equal(snapshotOfGame(game)?.settings.sound, true, "기본은 켬");
     assert.equal(click2("settings.set", "sound", { value: false }).ok, true);
-    assert.equal(game.view()?.settings.sound, false, "끔으로 바뀐다");
+    assert.equal(snapshotOfGame(game)?.settings.sound, false, "끔으로 바뀐다");
     // 소리 크기 — 0~100 정수. 기본 30. 음량은 설정 값 × 소리별 최대, 끄면 0 (src/state/settings.ts gainOf)
-    assert.equal(game.view()?.settings.volume, SOUND_RULES.defaultVolume);
+    assert.equal(snapshotOfGame(game)?.settings.volume, SOUND_RULES.defaultVolume);
     assert.equal(click2("settings.set", "volume", { value: 55 }).ok, true);
-    assert.equal(game.view()?.settings.volume, 55);
+    assert.equal(snapshotOfGame(game)?.settings.volume, 55);
     for (const v of [-1, 101, 12.5, "50"]) assert.equal(click2("settings.set", "volume", { value: v }).reason, "bad-value", String(v));
     assert.equal(gainOf({ sound: true, volume: 30 }, SOUND_RULES.cryMax), 0.105);
     assert.equal(gainOf({ sound: false, volume: 100 }, SOUND_RULES.cryMax), 0, "소리를 끄면 무음");
@@ -228,7 +230,7 @@ try {
     assert.equal(bad.ok, false);
     assert.equal(bad.reason, "bad-value", "목록에 없는 값은 거절");
     assert.equal(click2("settings.set", "sleepAfterMin", { value: 0 }).ok, true, "0 은 잠들지 않음");
-    assert.equal(game.view()?.settings.sleepAfterMin, 0);
+    assert.equal(snapshotOfGame(game)?.settings.sleepAfterMin, 0);
 
     const unknown = click2("settings.set", "없는키", { value: 1 });
     assert.equal(unknown.ok, false);
@@ -238,14 +240,14 @@ try {
 
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
-    const list = game.view()?.achievements.list ?? [];
+    const list = snapshotOfGame(game)?.achievements.list ?? [];
     assert.equal(list.length, 38, "업적 38개");
     assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");
     assert.equal(two?.name, "두 마리 함께 꺼내기");
     assert.equal(two?.reward, "파티 칸 +1", "보상은 화면 문구로");
     assert.equal(two?.state, "locked", "한 마리뿐이라 아직 달성 전");
-    assert.equal(game.view()?.achievements.unclaimed, 0);
+    assert.equal(snapshotOfGame(game)?.achievements.unclaimed, 0);
 
     // 달성하지 않은 업적의 보상은 받을 수 없다
     const claim = click2("achievement.claim", "show-two", {});

@@ -30,6 +30,11 @@ import { partyDeviceModel } from "../view/device-party.js";
 import { petDeviceModel } from "../view/device-pet.js";
 import { shopDeviceModel } from "../view/device-shop.js";
 import { resultLineOf } from "../view/result-lines.js";
+import { snapshotOfGame } from "../view/snapshot.js";
+import { dexList } from "../view/dex-list.js";
+import { dexDetail } from "../view/dex-detail.js";
+import { shopDetail } from "../view/shop-detail.js";
+import { runAgentRequest } from "../agents/agent-request.js";
 import { gainOf } from "../state/settings.js";
 import { SOUND_RULES } from "../state/rules.js";
 import fs from "node:fs";
@@ -193,18 +198,32 @@ function toManage(channel: ManageChannel, ...args: unknown[]): void {
 function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, preload: string, html: string): void {
   if (wired) return;
   wired = true;
+  // 화면 읽기 — 저장을 읽어 화면 값을 바로 만든다(실행기는 쓰기만 맡는다). 저장이 없으면 빈 값
+  const snapshot = () => snapshotOfGame(game);
+  const detailOf = (slug: string) => {
+    const save = game.read();
+    return save ? dexDetail(save, slug) : null;
+  };
+  const shopDetailOf = (id: string) => {
+    const save = game.read();
+    return save ? shopDetail(save, id) : null;
+  };
   ipcMain.handle(CH.snapshot, (e) => {
     if (!mine(e)) return null;
     game.tick(); // 본 값이 지금 값이 되도록 먼저 시간을 적용한다
-    const view = game.view();
+    const view = snapshot();
     return view && display ? { ...view, display: display() } : view;
   });
-  ipcMain.handle(CH.dex, (e) => (mine(e) ? game.dex() : []));
-  ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? game.dexDetail(slug) : null));
-  ipcMain.handle(CH.shopDetail, (e, id: unknown) => (mine(e) && typeof id === "string" ? game.shopDetail(id) : null));
+  ipcMain.handle(CH.dex, (e) => {
+    const save = mine(e) ? game.read() : null;
+    return save ? dexList(save) : [];
+  });
+  ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? detailOf(slug) : null));
+  ipcMain.handle(CH.shopDetail, (e, id: unknown) => (mine(e) && typeof id === "string" ? shopDetailOf(id) : null));
   ipcMain.handle(CH.agents, (e, req: unknown) => {
     if (!mine(e)) return { ...DENIED, list: [], platform: process.platform, node: null };
-    return game.agents(isAgentRequest(req) ? req : undefined);
+    // CLI 연결 탭의 요청 — 저장을 읽지 않는다 (src/agents/agent-request.ts)
+    return runAgentRequest(isAgentRequest(req) ? req : undefined, { stateDir: PATHS.state });
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
   // 앱과 같은 인스턴스다 — 앱 안 그림 폴더 규칙도 그곳에 있다 (src/main/art/services.ts)
@@ -231,12 +250,12 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   const cries = artServices().cries;
   const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
   dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
-    detail: (slug) => game.dexDetail(slug),
+    detail: (slug) => detailOf(slug),
     portrait: async (slug) => {
       return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
     },
     tree: (slug) => {
-      const detail = game.shopDetail(slug); // 상점 구매 창의 포켓몬 상세와 같은 사슬 (src/tx/shop-detail.ts)
+      const detail = shopDetailOf(slug); // 상점 구매 창의 포켓몬 상세와 같은 사슬 (src/view/shop-detail.ts)
       return detail?.kind === "pokemon" ? detail.tree : null;
     },
     portraits: async (slugs) => {
@@ -331,7 +350,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
   ipcMain.handle(CH.partyOpen, (e, input: unknown, gen: unknown) => {
     if (!win || !mine(e)) return null;
-    const v = isPartyInput(input) ? game.view() : null;
+    const v = isPartyInput(input) ? snapshot() : null;
     const r = v && isPartyInput(input) ? partyDeviceModel(v, input) : null;
     if (!r) {
       shownModel.delete("party");
@@ -343,7 +362,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.handle(CH.petOpen, (e, input: unknown, gen: unknown) => {
     if (!win || !mine(e)) return null;
-    const v = isPetInput(input) ? game.view() : null;
+    const v = isPetInput(input) ? snapshot() : null;
     const r = v && isPetInput(input) ? petDeviceModel(v, input) : null;
     if (!r) {
       shownModel.delete("pet");
@@ -355,7 +374,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.handle(CH.shopOpen, (e, input: unknown, gen: unknown) => {
     if (!win || !mine(e)) return null;
-    const v = isShopInput(input) ? game.view() : null;
+    const v = isShopInput(input) ? snapshot() : null;
     const r = v && isShopInput(input) ? shopDeviceModel(v, input) : null;
     if (!r) {
       shownModel.delete("shop");
@@ -367,7 +386,7 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   });
   ipcMain.handle(CH.bagOpen, (e, input: unknown, gen: unknown) => {
     if (!win || !mine(e)) return null;
-    const v = isBagInput(input) ? game.view() : null;
+    const v = isBagInput(input) ? snapshot() : null;
     const r = v && isBagInput(input) ? bagDeviceModel(v, input) : null;
     if (!r) {
       shownModel.delete("bag");
@@ -447,9 +466,9 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
     game.tick();
     // 결과 줄이 있는 명령은 거래 앞뒤 화면 값을 견줘 성공 답에 붙인다 (src/view/result-lines.ts)
-    const before = RESULT_COMMANDS.has(req.cmd) ? game.view() : null;
+    const before = RESULT_COMMANDS.has(req.cmd) ? snapshot() : null;
     const reply = await send(req);
-    const after = reply.ok && before ? game.view() : null;
+    const after = reply.ok && before ? snapshot() : null;
     const result = before && after ? resultLineOf(req, before, after) : null;
     return result ? { ...reply, result } : reply;
   });

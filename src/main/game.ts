@@ -15,15 +15,7 @@ import { applyFindHits } from "../tx/find.js";
 import { createExecutor, type Executor } from "../tx/executor.js";
 import { HANDLERS } from "../tx/command-table.js";
 import { requestIdOf, runTxCommand } from "../tx/commands.js";
-import { dexList } from "../view/dex-list.js";
-import { dexDetail } from "../view/dex-detail.js";
-import { shopDetail } from "../view/shop-detail.js";
-import { snapshotView } from "../view/snapshot.js";
-import { runAgentRequest } from "../agents/agent-request.js";
-import type { AgentAction, AgentReply } from "../shared/model/agents";
-import type { DexDetail, DexEntry, ShopDetail } from "../shared/model/detail";
 import type { ManageReply, ManageRequest } from "../shared/ipc/manage";
-import type { Snapshot } from "../shared/model/snapshot";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { FIND_POKEMON } from "../shared/names/commands.js";
 import type { SaveKind } from "../online/cloud-state.js";
@@ -43,11 +35,7 @@ export interface GameV3 {
   tick: (input?: TimeInput) => TickEvents | null; // 마지막 틱 뒤로 흐른 시간을 적용한다. 상한을 넘는 틈은 버린다. 파일은 flushMs 마다 쓴다
   flush: () => boolean; // 메모리에만 있는 시간 진행을 지금 쓴다 — 끄기·화면 잠금 직전. 쓸 것이 없으면 true
   find: (petIds: string[]) => FindRecordV3[] | null; // 줍기 — 굴림에서 주운 마리를 그 자리에서 저장에 넣는다. 쓰지 못했으면 null (src/find/pickup.ts)
-  view: () => Snapshot | null;
-  dex: () => DexEntry[];
-  dexDetail: (slug: string) => DexDetail | null; // 도감 칸 하나의 상세
-  shopDetail: (productId: string) => ShopDetail | null; // 상점 구매 창의 상세 (src/tx/shop-detail.ts)
-  agents: (req?: { name: string; action: AgentAction }) => Promise<AgentReply>;
+  now: () => number; // 이 게임의 시각 — 앱은 마지막 1초 틱 시각. 화면 값이 스냅샷을 이 시각으로 만든다 (src/view/snapshot.ts snapshotOfGame)
   send: (req: ManageRequest, from: CommandSource) => ManageReply;
   executor: Executor;
   saveFailing: () => boolean; // 저장이 이어서 SAVE_RULES.saveFailNotifyAfter 번 실패했다 — 설정창이 안내를 띄운다
@@ -101,13 +89,6 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return write(save, found.some((f) => f.kind === "pokemon") ? FIND_POKEMON : undefined) ? found : null;
   };
 
-  const view = (): Snapshot | null => {
-    const save = read();
-    if (!save) return null;
-    const snap = snapshotView(save, now());
-    return live.failing() ? { ...snap, saveFailing: true } : snap;
-  };
-
   // 화면이 보낸 요청을 명령으로 바꿔 실행기에 넘긴다. 다리와 같은 규칙을 쓴다
   // 보낸 쪽이 reqId 를 주지 않으면 순번을 붙인다 — now() 는 마지막 1초 틱 시각이라, 같은 틱 안의 같은 명령 두 번이 같은 식별자가 돼
   // 두 번째가 replayed(앞 결과 재사용)로 처리됐다(2026-09-30 e2e-companion `game play` 두 번). 다시 보내 한 번만 반영할 조작은 reqId 를 준다
@@ -119,23 +100,5 @@ export function createGame({ file = saveFile(), now = Date.now, rand = Math.rand
     return runTxCommand(executor, command, id) as ManageReply; // 표면 명령의 입구 하나 — internal 명령은 unknown-cmd
   };
 
-  const dex = (): DexEntry[] => {
-    const save = read();
-    return save ? dexList(save) : [];
-  };
-
-  // CLI 연결 탭의 요청 — 저장을 읽지 않는다 (src/agents/agent-request.ts)
-  const agents = (req?: { name: string; action: AgentAction }): Promise<AgentReply> => runAgentRequest(req, { stateDir: PATHS.state });
-
-  const detail = (slug: string): DexDetail | null => {
-    const save = read();
-    return save ? dexDetail(save, slug) : null;
-  };
-
-  const shop = (productId: string): ShopDetail | null => {
-    const save = read();
-    return save ? shopDetail(save, productId) : null;
-  };
-
-  return { file, read, tick, flush, find, view, dex, dexDetail: detail, shopDetail: shop, agents, send, executor, saveFailing: live.failing };
+  return { file, read, tick, flush, find, now, send, executor, saveFailing: live.failing };
 }

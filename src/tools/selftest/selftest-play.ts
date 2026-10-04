@@ -8,6 +8,7 @@ import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/hunger-bubb
 import fs from "node:fs";
 import path from "node:path";
 import { createGame } from "../../main/game";
+import { snapshotOfGame } from "../../view/snapshot";
 import * as store from "../../save/store";
 import { setSize } from "../../party/home";
 import { zoomOf } from "../../main/art/stage-art";
@@ -224,13 +225,13 @@ function seedPet(): SaveV3 {
     game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/main/game.ts)
     assert.equal(game.saveFailing(), false, "한 번 실패로는 안내하지 않는다");
     assert.equal(game.send({ cmd: "shop.buy", target: "exp-candy-xs" }, "settings").reason, "save-failed", "2번째 실패");
-    assert.equal(game.view()?.saveFailing, undefined, "두 번까지는 안내하지 않는다");
+    assert.equal(snapshotOfGame(game)?.saveFailing, undefined, "두 번까지는 안내하지 않는다");
     game.tick();
     assert.equal(game.saveFailing(), true, "3번 이어서 실패");
-    assert.equal(game.view()?.saveFailing, true, "보기에 싣는다");
+    assert.equal(snapshotOfGame(game)?.saveFailing, true, "보기에 싣는다");
     fs.rmdirSync(block);
     assert.ok(game.tick(), "다시 쓸 수 있다");
-    assert.equal(game.view()?.saveFailing, undefined, "한 번 쓰면 사라진다");
+    assert.equal(snapshotOfGame(game)?.saveFailing, undefined, "한 번 쓰면 사라진다");
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
