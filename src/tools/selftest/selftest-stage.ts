@@ -15,7 +15,7 @@ import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
 import { t } from "../../view/text";
 import { emptyPet, emptySaveV2 } from "../../save/v2/normalize";
-import * as writer from "../../save/writer";
+import { readLockPid } from "../../platform/pid-lock";
 import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stage";
 import type { AgentState } from "../../shared/names/agents";
 import { devSaveState } from "../dev/dev-save";
@@ -30,7 +30,7 @@ import { partyPetsOf, type PartyPet } from "../../view/party-pet";
 import { applyStarter } from "../../party/starter";
 import * as store from "../../save/store";
 import { empty as emptyV3 } from "../../save/v3";
-import { send } from "../../save/mailbox";
+import { sendToWriter as send } from "../../save/command-channel";
 import { makeTmp } from "../harness/tmp-dir";
 import { writeSaveV2 } from "../harness/v2-save";
 import { sleep, waitFor } from "../harness/wait";
@@ -247,7 +247,7 @@ async function partyTests(): Promise<void> {
     eq(partyPetsOf(party.save(), true).length, 1, "숨긴 마리는 pets 에서 빠진다");
     eq(partyPetsOf(party.save(), false).length, 2, "all 은 숨긴 마리도 준다");
     party.stop();
-    eq(writer.readOwner(p.saveLock), null, "stop 이 잠금을 놓는다");
+    eq(readLockPid(p.saveLock), null, "stop 이 잠금을 놓는다");
   }
   // 옛 저장 v1 — v2 읽기를 거쳐 v3 로 옮긴다. 원본은 한 번만 사본으로 남긴다
   {
@@ -292,7 +292,7 @@ async function partyTests(): Promise<void> {
       ok(await waitFor(() => partyPetsOf(party.save(), true).length === 3), "reader 가 파일 변화를 감시로 읽었다");
       ok(changes >= 1, "onChange 가 불렸다");
       party.stop();
-      eq(writer.readOwner(p.saveLock), idle.pid, "reader 는 남의 잠금을 건드리지 않는다");
+      eq(readLockPid(p.saveLock), idle.pid, "reader 는 남의 잠금을 건드리지 않는다");
       eq((await moved).reason, "timeout", "받아 줄 writer 가 없으면 시간 초과로 끝난다");
     } finally {
       idle.kill();

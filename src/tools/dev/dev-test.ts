@@ -42,7 +42,7 @@ function alive(pid: number): boolean {
   }
 }
 
-// 저장을 쓰는 프로세스가 살아 있는가 (src/save/writer.ts 의 save.lock)
+// 저장을 쓰는 프로세스가 살아 있는가 (save.lock — src/platform/pid-lock.ts)
 export function running(home: string): boolean {
   try {
     return alive(Number(fs.readFileSync(path.join(dataDir(home), "save.lock"), "utf8").split("\n")[0]));
