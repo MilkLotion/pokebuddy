@@ -58,12 +58,13 @@ export function drawEvolve(petId: string, to?: string): void {
   if (tree) {
     const card = el("div", "evo-card");
     card.appendChild(tree.children.length >= RADIAL_MIN ? evolveDrawer.evoRadial(tree, EVOLVE_RADIAL) : evolveDrawer.evoTree(tree));
+    // 지금 종과 고를 수 있는 후보만 진하게, 나머지(앞 단계·조건이 모자란 후보·그다음 단계)는 흐리게 (2026-10-04 사용자 결정 "고를 수 없는 칸은 다 흐리게")
     for (const node of card.querySelectorAll<HTMLElement>(".evo-node[data-slug]")) {
+      if (node.classList.contains("current")) continue;
       const c = list.find((x) => x.to === node.dataset.slug);
-      if (!c) continue;
-      if (!c.ready) {
+      if (!c?.ready) {
         node.classList.add("dim");
-        node.title = c.need ?? "조건이 모자라요";
+        if (c) node.title = c.need ?? "조건이 모자라요";
         continue;
       }
       node.classList.add("pick");

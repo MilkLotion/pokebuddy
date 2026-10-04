@@ -119,7 +119,7 @@
   margin-top: 2px;
 }
 /* 진화 창의 진화 트리 — 도감 기기 창과 같은 모양(src/renderer/ui/evo-tree.ts, dex.html .evo-*). Figma 05 `Evolution Confirm` `1126:23890`.
-   지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 컬러 테두리 없음 */
+   지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 고를 수 없는 칸(앞 단계·조건이 모자란 후보·그다음 단계)은 흐리게(Figma `Evolution Dialog` `1262:85407`). 컬러 테두리 없음 */
 .dialog .evo-card {
   display: flex;
   justify-content: center;
