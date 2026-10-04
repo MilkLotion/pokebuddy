@@ -34,7 +34,6 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   already: { ko: "이미 그 상태예요.", en: "It's already like that." },
   "already-shiny": { ko: "이미 이로치예요.", en: "It's already shiny." },
   "already-normal": { ko: "이미 일반 색이에요.", en: "It already has its normal colors." },
-  "no-slot": { ko: "그 칸이 없어요.", en: "That slot doesn't exist." },
   "not-pokemon": { ko: "그 칸에 개체가 없어요.", en: "There's no Pokémon in that slot." },
   "not-in-box": { ko: "박스에 없어요.", en: "It's not in the box." },
   "not-in-party": { ko: "파티에 없어요.", en: "It's not in the party." },
