@@ -632,6 +632,7 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
 
   rt.commands = createCommands({
     mailboxDir: PATHS.mailbox,
+    now: () => clock.last()?.now ?? Date.now(), // 실행기(createGame)와 같은 틱 시각
     party: saveSource,
     game: reader,
     prepareLook: async (look) => !!await art.loadLook(look),
