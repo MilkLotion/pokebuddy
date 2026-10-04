@@ -7,11 +7,10 @@
 // 배치는 빈 파티 칸에 꺼낸 상태로 넣는다. 칸이 없으면 박스로 보낸다.
 // 파티 빈 칸도 박스 빈 칸도 없으면 열지 않는다 — 알은 그대로 남는다 (2026-10-02 사용자 결정 "박스에서 둘곳이 없으면 알에서 부화안되게").
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
-import { boxRoom } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { hasObtained } from "../dex/record.js";
 import { isSingleEgg } from "../dex/obtain.js";
-import { addNewPet } from "../party/create.js";
+import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { canGiveEgg, eggBonus, newEgg } from "./pool.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { pickHatch, rollVariant } from "./hatch.js";
@@ -51,7 +50,7 @@ export function openEgg(save: SaveV3, eggId: string, now: number, rand: Rand, op
   if (!egg) return { ok: false, reason: "no-egg" };
   if (!egg.ready) return { ok: false, reason: "not-ready" };
   // 둘 곳 — 무작위를 쓰기 전에 본다. 다른 알이 나올 차례여도 같다(둘 곳이 생긴 뒤 열어도 결과가 같게)
-  if (!save.party.slots.some((s) => s.state === "empty") && boxRoom(save.boxes) < 1) return { ok: false, reason: "box-full" };
+  if (!checkNewPetRoom(save, "party-first").ok) return { ok: false, reason: "box-full" }; // 새 개체를 두는 곳과 같은 검사 (94 항목 9-5-5)
 
   const bonus = bonusEgg(save, egg.kind, rand, opts);
   if (bonus) {

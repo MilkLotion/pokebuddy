@@ -6,6 +6,7 @@
 //   3. 적용은 칸을 잠금·숨김째 맞바꾼다. 박스는 건드리지 않는다
 import { BOX_RULES } from "../box/rules.js";
 import { PARTY_RULES } from "./rules.js";
+import { petSlotIndex } from "./visibility.js";
 import type { PartySlotV3, PartyV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -57,7 +58,7 @@ export function presetPetIds(save: Party): Set<string> {
 export function locatePet(save: Pick<SaveV3, "party" | "boxes">, petId: string): PetPlace | null {
   const active = activePreset(save);
   for (const { preset, slots } of allPresets(save)) {
-    const slot = slots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
+    const slot = petSlotIndex(slots, petId);
     if (slot >= 0) return { kind: "preset", preset, slot, active: preset === active };
   }
   for (let box = 0; box < save.boxes.length; box += 1) {
@@ -136,4 +137,4 @@ export function applyPreset(save: Party, index: number): Outcome<PresetFailure> 
 
 // 적용한 프리셋의 칸에 있는가 — 숨겨도 참이다. 박스 개체·다른 프리셋의 개체는 거짓
 export const isInParty = (save: Pick<SaveV3, "party">, petId: string): boolean =>
-  save.party.slots.some((s) => s.state === "pokemon" && s.petId === petId);
+  petSlotIndex(save.party.slots, petId) >= 0;

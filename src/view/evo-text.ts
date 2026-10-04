@@ -10,11 +10,14 @@ import { josa } from "../shared/josa.js";
 // 돌 대신 지도인 간선은 조건이 지도라 표시를 붙이지 않는다 — "천둥의돌로 라이츄 · 지도로 알로라 라이츄" (2026-09-30 사용자 결정)
 // 얻는 방법 줄("피카츄에서 진화 (지도)")·상점 트리 화살표("지도", "Lv.36 · 지도")와 같은 낱말을 쓴다
 export const MAP_MARK = " (지도)";
+
+// 시간대 조건의 앞말 — "밤에 " · "낮에 " · 없음. 두 문장 꼴이 같이 쓴다 (94 항목 9-5-5)
+const timePrefix = (step: EvoStep): string => (step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "");
 export function stepText(step: EvoStep, opts?: DexOptions): string {
   // 조건에 더해 친밀도·성별도 보는 간선은 결과 뒤에 적는다 — "Lv.25에서 루가루암(황혼의 모습) (친밀도 100)", "Lv.20에서 비퀸 (암컷)"
   // 성별 낱말은 상점 트리 화살표(shop-detail.ts extras)와 같다 (94 항목 2-3)
   const to = `${petName(step.to)}${step.map && !needIsMap(step.need) ? MAP_MARK : ""}${step.affinity ? ` (친밀도 ${step.affinity})` : ""}${step.gender ? ` (${genderText(step.gender)})` : ""}`;
-  const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
+  const time = timePrefix(step);
   const need = step.need;
   if (!need) return `${time}친밀도 100${josa("100", "으로/로")} ${to}`;
   if (need.kind === "level") return `${time}Lv.${need.level}에서 ${to}`;
@@ -28,7 +31,7 @@ export function stepText(step: EvoStep, opts?: DexOptions): string {
 export function onlyStepText(step: EvoStep, opts?: DexOptions): string {
   if (step.map || step.affinity || step.gender) return stepText(step, opts); // 성별 간선도 괄호 꼴로 적는다(94 항목 2-3). 지도 간선은 기본형 간선과 늘 함께라 여기 올 일이 드물다 — 조건 문구를 겹치지 않게 짧은 꼴로
   const to = petName(step.to);
-  const time = step.when === "night" ? "밤에 " : step.when === "day" ? "낮에 " : "";
+  const time = timePrefix(step);
   const need = step.need;
   const cond = !need
     ? `${time}친밀도 100이 되면`

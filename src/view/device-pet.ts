@@ -4,6 +4,7 @@
 import type { PetDeviceInput, PetDeviceOpen } from "../shared/model/devices.js";
 import type { PetView, Snapshot } from "../shared/model/snapshot.js";
 import type { DeviceResult } from "./device-art.js";
+import { snapshotPet } from "./result-lines.js";
 
 
 // `포인트 적립` 줄 — 돌봄 보너스를 보인다. 줄은 늘 있고 글자만 바뀐다 (Figma 03 `Party Detail Device` `row/포인트 적립`, 2026-10-02 사용자 결정 A안)
@@ -27,7 +28,7 @@ export function petDeviceModel(v: Snapshot, given: PetDeviceInput): DeviceResult
   const input = { ...given };
   const partyPet = v.party.slots.find((s) => s.pet?.id === input.petId);
   const box = v.boxes.find((b) => b.slots.some((p) => p?.id === input.petId));
-  const pet: PetView | null = partyPet?.pet ?? box?.slots.find((p): p is PetView => p?.id === input.petId) ?? null;
+  const pet: PetView | null = snapshotPet(v, input.petId);
   if (!pet) return null;
   const slot = partyPet ? partyPet.index : null;
   const inParty = slot != null;
