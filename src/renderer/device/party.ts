@@ -2,6 +2,7 @@
 // Figma 05 `Party / Swap · Open` `1248:2567`. 틀(경첩·윗줄)은 기기 창 틀(device-frame.ts)이다. 바닥 줄은 두지 않는다.
 // 누른 칸과 칩은 관리 창으로 돌려보낸다 — 눌러서 들고 눌러서 놓는 판정과 명령은 관리 창이 한다 (src/renderer/manage/manage.ts onPartyAction)
 import type { PartyDeviceAction, PartyDeviceSlot, PartyDeviceView } from "../../shared/model/devices.js";
+import { needBridge } from "../ui/bridge.js";
 import { partyBusyKey } from "../../shared/device-busy.js";
 import { portraitImg } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
@@ -9,7 +10,7 @@ import { DEVICE_FONTS } from "../ui/fonts.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 
-const api = window.pokebuddyParty;
+const api = needBridge("pokebuddyParty");
 // 글꼴은 Galmuri9 를 쓰지 않아 앞의 둘만 기다린다.
 // 방향키는 앞·뒤 프리셋. Esc 는 든 것을 내려놓고, 든 것이 없으면 닫는다 — 판정은 관리 창이 한다
 const frame = createDeviceFrame({ api, windowName: "party", fonts: DEVICE_FONTS.slice(0, 2) });

@@ -2,6 +2,7 @@
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
 import type { DexDeviceView } from "../../shared/model/devices.js";
+import { needBridge } from "../ui/bridge.js";
 import { RADIAL, RADIAL_MIN, evoDrawer } from "../ui/evo-tree.js";
 import { portraitImg, spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
@@ -10,7 +11,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { pairsEl } from "./item-face.js";
 
-const api = window.pokebuddyDex;
+const api = needBridge("pokebuddyDex");
 // 방향키로도 넘긴다. Esc 는 닫는다. 파티 상세 옆에 붙은 창은 넘기지 않는다
 let besideNow = false;
 const frame = createDeviceFrame({ api, windowName: "dex", canKey: (key) => !(besideNow && key !== "Escape") });

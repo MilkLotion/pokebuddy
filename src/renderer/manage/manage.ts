@@ -5,6 +5,7 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
+import { api } from "./api.js";
 import type { AchievementView, ArtImage, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
@@ -186,7 +187,7 @@ let partyBusy: string | null = null; // 0.3초 넘게 답이 없는 칸·칩의 
 const partyLink = createDeviceLink<PartyDeviceInput>({
   build: partyDeviceBuild,
   stamp: () => ui.view,
-  open: (input, gen) => window.pokebuddyManage.partyOpen(input, gen),
+  open: (input, gen) => api.partyOpen(input, gen),
   apply: (input) => {
     partyHold = input.heldPetId;
   },
@@ -379,7 +380,7 @@ function askPortraits(): void {
     const asks = [...portraitWant.values()];
     portraitWant.clear();
     if (!asks.length) return;
-    void window.pokebuddyManage.portraits(asks).then((got) => {
+    void api.portraits(asks).then((got) => {
       for (const [key, uri] of Object.entries(got)) portraitCache.set(key, uri);
       for (const host of document.querySelectorAll<HTMLElement>("[data-portrait]")) {
         const uri = portraitCache.get(host.dataset.portrait ?? "");
@@ -446,7 +447,7 @@ function iconOf(key: string | null, cls: string): HTMLElement {
       iconTimer = null;
       const keys = [...iconWant];
       iconWant.clear();
-      void window.pokebuddyManage.icons(keys).then((got) => {
+      void api.icons(keys).then((got) => {
         for (const [k, u] of Object.entries(got)) iconCache.set(k, u);
         for (const h of document.querySelectorAll<HTMLElement>("[data-icon]")) {
           const u = iconCache.get(h.dataset.icon ?? "");
@@ -972,7 +973,7 @@ function groupPhoto(forms: FormView[], shiny: boolean): HTMLElement {
 // 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/windows/menu.ts). 고른 모습·옮기기·팔기는 경로(goTo)로 돌아온다.
 // 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
 function askPetMenu(petId: string): void {
-  void window.pokebuddyManage.petMenu(petId).catch(() => undefined);
+  void api.petMenu(petId).catch(() => undefined);
 }
 
 // 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
@@ -1005,7 +1006,7 @@ function megaMark(size: number, title = "메가스톤"): HTMLElement {
   if (uri) paintMegaMark(mark, uri);
   else if (uri === undefined) {
     iconCache.set(MEGA_ICON, null); // 청하는 중 — 두 번 청하지 않는다
-    void window.pokebuddyManage.icons([MEGA_ICON]).then((got) => {
+    void api.icons([MEGA_ICON]).then((got) => {
       const u = got[MEGA_ICON] ?? null;
       iconCache.set(MEGA_ICON, u);
       if (u) for (const m of document.querySelectorAll<HTMLElement>("[data-mega-mark]")) paintMegaMark(m, u);
@@ -1843,7 +1844,7 @@ function markDexPick(): void {
 function pickDex(slug: string): void {
   if (coachId === "dex") void sendCommand("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
-  window.pokebuddyManage.dexOpen(dexPick, dexGen);
+  api.dexOpen(dexPick, dexGen);
   markDexPick();
 }
 
@@ -1973,7 +1974,7 @@ function stepDex(delta: -1 | 1): void {
   const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
   if (!next || next.slug === dexPick) return;
   dexPick = next.slug;
-  window.pokebuddyManage.dexOpen(dexPick, dexGen);
+  api.dexOpen(dexPick, dexGen);
   // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
   const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
   if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
@@ -2258,7 +2259,7 @@ let bagBusy = false; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 �
 const bagLink = createDeviceLink<BagDeviceInput>({
   build: bagDeviceBuild,
   stamp: () => ui.view,
-  open: (input, gen) => window.pokebuddyManage.bagOpen(input, gen),
+  open: (input, gen) => api.bagOpen(input, gen),
   apply: (input) => {
     bagMode = input.mode;
     bagTarget = input.targetPetId;
@@ -2398,7 +2399,7 @@ async function loadTrade(): Promise<void> {
   if (tradeLoading) return;
   tradeLoading = true;
   try {
-    const reply = await window.pokebuddyManage.command({ cmd: "trade.status" });
+    const reply = await api.command({ cmd: "trade.status" });
     trade = tradeOf(reply);
   } finally {
     tradeLoading = false;
@@ -2445,7 +2446,7 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   }
   let reply: ManageReply;
   try {
-    reply = await window.pokebuddyManage.command({ cmd, ...(target ? { target } : {}), ...(args ? { args } : {}) });
+    reply = await api.command({ cmd, ...(target ? { target } : {}), ...(args ? { args } : {}) });
   } catch (e) {
     console.error("교환 명령을 보내지 못했다", e);
     reply = { ok: false, reason: "error" };
@@ -2454,7 +2455,7 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   // 거절(진행 중인 교환 등)은 보기에 남지 않는다 — 배너로 보인다
   if (!reply.ok && !trade.error && trade.available) trade = { ...trade, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };
   if (trade.received && trade.received.petId !== before) {
-    ui.view = await window.pokebuddyManage.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
+    ui.view = await api.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
     draw();
   }
   syncTradeDot();
@@ -2519,7 +2520,7 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
     link.title = t.link;
     link.setAttribute("aria-label", "내 교환 링크");
     const copy = actionButtonEl(tradeCopied ? "복사됨" : "링크 복사", true, false, () => {
-      window.pokebuddyManage.copyText(t.link ?? "");
+      api.copyText(t.link ?? "");
       tradeCopied = true;
       redrawTrade();
       setTimeout(() => {
@@ -2779,7 +2780,7 @@ setInterval(() => {
   }
 }, 1000);
 
-window.pokebuddyManage.onTrade((screen) => {
+api.onTrade((screen) => {
   const got = screen.received?.petId !== trade?.received?.petId && screen.received != null;
   trade = screen;
   syncTradeDot();
@@ -2865,7 +2866,7 @@ async function loadAccount(): Promise<void> {
   if (acctLoading) return;
   acctLoading = true;
   try {
-    const reply = await window.pokebuddyManage.account({ action: "status" });
+    const reply = await api.account({ action: "status" });
     acct = reply?.screen ?? { ...ACCOUNT_OFF };
   } catch (e) {
     console.error("계정 상태를 읽지 못했다", e);
@@ -2893,7 +2894,7 @@ async function acctSend(req: AccountAction): Promise<AccountReply | null> {
   redrawAccount();
   let reply: AccountReply | null = null;
   try {
-    reply = await window.pokebuddyManage.account(req);
+    reply = await api.account(req);
   } catch (e) {
     console.error("계정 요청을 보내지 못했다", e);
   } finally {
@@ -2955,7 +2956,7 @@ function scheduleUsernameCheck(): void {
   }
   checkTimer = setTimeout(() => {
     checkTimer = null;
-    void window.pokebuddyManage.account({ action: "check-username", username: name }).then((r) => {
+    void api.account({ action: "check-username", username: name }).then((r) => {
       if (acctForm.username.trim().toLowerCase() !== name) return; // 그사이 바뀌었다
       acctForm.check = r?.check ?? "NETWORK";
       redrawAccount();
@@ -2978,7 +2979,7 @@ function drawSignIn(scroll: HTMLElement): void {
   if (acctGithub) {
     // 기다리는 동안 다른 단추는 막히고 취소만 된다(R3-08)
     const wait = el("div", "acct-inline acct-github-wait");
-    wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButtonEl("취소", false, false, () => void window.pokebuddyManage.account({ action: "github-cancel" })));
+    wait.append(el("span", "acct-lead", "브라우저에서 GitHub 로그인을 마쳐 주세요"), actionButtonEl("취소", false, false, () => void api.account({ action: "github-cancel" })));
     scroll.appendChild(wait);
   } else {
     const gh = buttonEl("act acct-github", "GitHub로 계속");
@@ -3191,7 +3192,7 @@ function setMail(screen: MailScreen): void {
 
 async function refreshMail(): Promise<void> {
   try {
-    const r = await window.pokebuddyManage.mail({ action: "refresh" });
+    const r = await api.mail({ action: "refresh" });
     if (r) setMail(r.screen);
   } catch (e) {
     console.error(e); // 메인이 답하지 못했다 — 봉투 단추는 지난 상태 그대로
@@ -3287,7 +3288,7 @@ function openLetter(id: string): void {
   open({ kind: "letter", id });
   const l = mailView?.letters.find((x) => x.id === id);
   if (l && !l.read)
-    void window.pokebuddyManage
+    void api
       .mail({ action: "read", id })
       .then((r) => r && setMail(r.screen))
       .catch((e: unknown) => console.error(e));
@@ -3346,7 +3347,7 @@ function giftFoot(l: MailLetterView): HTMLElement {
   const blocked = done || !signedIn || mailExpired(l) || l.unsupported || busy;
   items.push(
     actionButtonEl(done ? "받음" : busy ? "받는 중" : "받기", true, blocked, () => {
-      void window.pokebuddyManage
+      void api
         .mail({ action: "claim", id: l.id })
         .then(async (r) => {
           if (!r) return;
@@ -3378,10 +3379,10 @@ mailBtn.addEventListener("click", () => {
   open({ kind: "mail" });
   void refreshMail();
 });
-window.pokebuddyManage.onMail(setMail);
+api.onMail(setMail);
 void refreshMail();
 
-window.pokebuddyManage.onAccount((screen) => {
+api.onAccount((screen) => {
   acct = screen;
   drawSaveIndicator();
   redrawAccount();
@@ -3427,7 +3428,7 @@ function setTab(next: TabId): void {
   presetRenaming = false;
   if (ui.tab === "dex" && dexPick) {
     dexPick = null;
-    window.pokebuddyManage.dexOpen(null, dexGen);
+    api.dexOpen(null, dexGen);
   }
   if (ui.tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
   if (ui.tab === "bag") bagPick = null; // 가방 기기 창 — 다음 draw 의 syncBagDevice 가 닫는다
@@ -3829,7 +3830,7 @@ function drawTutorial(): void {
     }
   }
   // OS 가 그리는 창 단추 자리도 함께 어둡게 한다 — 모달 가림막과 같은 통로
-  window.pokebuddyManage.dim(isDimmed() || coachEl != null);
+  api.dim(isDimmed() || coachEl != null);
 }
 
 function coachLayer(id: string, target: HTMLElement, spec: CoachSpec): HTMLElement {
@@ -3928,7 +3929,7 @@ let shopBusy = false; // 0.3초 넘게 답이 없다 — 구매 단추가 점 �
 const shopLink = createDeviceLink<ShopDeviceInput>({
   build: shopDeviceBuild,
   stamp: () => ui.view,
-  open: (input, gen) => window.pokebuddyManage.shopOpen(input, gen),
+  open: (input, gen) => api.shopOpen(input, gen),
   apply: (input) => {
     shopQty = input.qty;
   },
@@ -4028,7 +4029,7 @@ async function buyShop(id: string): Promise<void> {
 const petLink = createDeviceLink<PetDeviceInput>({
   build: petDeviceBuild,
   stamp: () => ui.view,
-  open: (input, gen) => window.pokebuddyManage.petOpen(input, gen),
+  open: (input, gen) => api.petOpen(input, gen),
   afterClosed: () => {
     if (!ui.detailPet) return false;
     ui.detailPet = null;
@@ -4047,7 +4048,7 @@ function petDeviceBuild(): PetDeviceInput | null {
   const pet = ui.detailPet ? petInView(ui.detailPet) : null;
   if (!pet || !ui.view) return null;
   if (dexBeside && dexBesideSent !== pet.species) {
-    window.pokebuddyManage.dexOpen(pet.species, dexGen, true);
+    api.dexOpen(pet.species, dexGen, true);
     dexBesideSent = pet.species;
   }
   return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside, busy: petBusy };
@@ -4063,7 +4064,7 @@ function closeDexBeside(): void {
   if (dexBesideSent) dexBesideClosing = true;
   dexBeside = false;
   dexBesideSent = null;
-  window.pokebuddyManage.dexOpen(null, dexGen);
+  api.dexOpen(null, dexGen);
 }
 
 // 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
@@ -4135,7 +4136,7 @@ function evoTreeOf(species: string): EvoNodeView | null {
   if (evoTrees.has(species)) return evoTrees.get(species) ?? null;
   if (!evoTreeAsked.has(species)) {
     evoTreeAsked.add(species);
-    void window.pokebuddyManage
+    void api
       .shopDetail(species)
       .then((d) => {
         evoTrees.set(species, d?.kind === "pokemon" ? d.tree : null);
@@ -4588,14 +4589,14 @@ function drawDisplay(scroll: HTMLElement): void {
       const row = rows.find((r) => String(r.ref.id) === id);
       if (row) setSetting("playScreen", row.ref);
     }));
-    box.appendChild(actionButtonEl("화면에서 고르기", false, false, () => void runLocked(() => window.pokebuddyManage.pickScreen())));
+    box.appendChild(actionButtonEl("화면에서 고르기", false, false, () => void runLocked(() => api.pickScreen())));
     const screenRow = settingRow("화면", undefined, box);
     screenRow.dataset.tut = "area-screen"; // 놀이공간 튜토리얼이 함께 밝힌다
     scroll.appendChild(screenRow);
   }
   // 영역 지정일 때만 그리기 단추를 둔다. 그린 뒤에는 `다시 그리기` (docs/specs/game.md 설정 계약)
   if (s.playArea === "region") {
-    const draw = actionButtonEl(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => window.pokebuddyManage.drawRegion()));
+    const draw = actionButtonEl(s.hasRegion ? "다시 그리기" : "영역 그리기", !s.hasRegion, false, () => void runLocked(() => api.drawRegion()));
     const regionRow = settingRow("영역", undefined, draw);
     regionRow.dataset.tut = "area-region"; // 화면 탭 튜토리얼이 함께 밝힌다
     scroll.appendChild(regionRow);
@@ -4609,7 +4610,7 @@ async function loadScreens(): Promise<void> {
   if (screensLoading) return;
   screensLoading = true;
   try {
-    const next = await window.pokebuddyManage.screens();
+    const next = await api.screens();
     const changed = JSON.stringify(next) !== JSON.stringify(screenRows);
     screenRows = next;
     if (changed && ui.dialog?.kind === "settings" && ui.dialog.tab === "display") drawDialog();
@@ -4624,7 +4625,7 @@ function syncIdentify(): void {
   const on = ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && settingSelectOpen === "screen";
   if (on === identifying) return;
   identifying = on;
-  window.pokebuddyManage.identifyScreens(on);
+  api.identifyScreens(on);
 }
 
 // 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
@@ -4796,7 +4797,7 @@ async function updateSend(action: "check" | "install"): Promise<void> {
   }
   let next: UpdateView | null = null;
   try {
-    next = await window.pokebuddyManage.update(action);
+    next = await api.update(action);
   } catch (e) {
     console.error("업데이트 요청 실패", e);
   }
@@ -4831,7 +4832,7 @@ const smallButton = (label: string, primary: boolean, run: () => void): HTMLButt
 
 async function loadUpdate(): Promise<void> {
   try {
-    const [u, n] = await Promise.all([window.pokebuddyManage.update("status"), window.pokebuddyManage.notes("list")]);
+    const [u, n] = await Promise.all([api.update("status"), api.notes("list")]);
     upd = u;
     patch = n;
   } catch (e) {
@@ -4846,12 +4847,12 @@ function showUnseenNotes(): void {
   const v = patch?.unseen;
   if (!v || ui.dialog) return;
   open({ kind: "notes-new", version: v });
-  void window.pokebuddyManage.notes("seen").then((n) => {
+  void api.notes("seen").then((n) => {
     if (n) patch = n;
   });
 }
 
-window.pokebuddyManage.onUpdate((next) => {
+api.onUpdate((next) => {
   upd = next;
   if (ui.dialog?.kind === "settings") drawDialog();
 });
@@ -4984,7 +4985,7 @@ async function agent(name: string, action: AgentAction): Promise<void> {
     agentProbing = name;
     drawDialog();
   }
-  const reply = await window.pokebuddyManage.agents({ name, action });
+  const reply = await api.agents({ name, action });
   agentRows = reply.list;
   agentPlatform = reply.platform;
   agentNode = reply.node;
@@ -5002,14 +5003,14 @@ async function agent(name: string, action: AgentAction): Promise<void> {
 }
 
 async function loadDex(): Promise<void> {
-  dexRows = await window.pokebuddyManage.dex();
-  if (dexPick) window.pokebuddyManage.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
-  else if (dexBeside && dexBesideSent) window.pokebuddyManage.dexOpen(dexBesideSent, dexGen, true);
+  dexRows = await api.dex();
+  if (dexPick) api.dexOpen(dexPick, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
+  else if (dexBeside && dexBesideSent) api.dexOpen(dexBesideSent, dexGen, true);
   if (ui.tab === "dex") draw();
 }
 
 async function loadAgents(): Promise<void> {
-  const reply = await window.pokebuddyManage.agents();
+  const reply = await api.agents();
   agentRows = reply.list;
   agentPlatform = reply.platform;
   agentNode = reply.node;
@@ -5017,7 +5018,7 @@ async function loadAgents(): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
-  ui.view = await window.pokebuddyManage.snapshot();
+  ui.view = await api.snapshot();
   drawnStructure = structureOf(ui.view);
   draw();
 }
@@ -5082,7 +5083,7 @@ async function clockTick(): Promise<void> {
   if (clockBusy) return;
   clockBusy = true;
   try {
-    const next = await window.pokebuddyManage.snapshot();
+    const next = await api.snapshot();
     const structure = structureOf(next);
     if (structure === drawnStructure) {
       ui.view = next; // 모양이 같다 — 시간 값만 새것으로
@@ -5198,7 +5199,7 @@ const warmed: HTMLImageElement[] = [];
 async function loadArt(): Promise<void> {
   let art: Record<string, ArtImage> = {};
   try {
-    art = await window.pokebuddyManage.art();
+    art = await api.art();
   } catch {
     return; // 그림 없이도 창은 돈다 — 칸을 그린 뒤 하나씩 청하는 길이 남아 있다
   }
@@ -5226,8 +5227,8 @@ const firstDraw = loadArt().then(refresh);
 void firstDraw.then(loadUpdate).then(showUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
 void firstDraw.then(loadTrade);
-window.pokebuddyManage.onDexStep((delta) => stepDex(delta));
-window.pokebuddyManage.onDexClosed((gen) => {
+api.onDexStep((delta) => stepDex(delta));
+api.onDexClosed((gen) => {
   dexGen = gen;
   dexPick = null;
   markDexPick();
@@ -5246,18 +5247,18 @@ window.pokebuddyManage.onDexClosed((gen) => {
   dexBesideSent = null;
   syncPetDevice();
 });
-window.pokebuddyManage.onPetStep((delta) => stepPet(delta));
-window.pokebuddyManage.onPetAct((action) => onPetAction(action));
-window.pokebuddyManage.onPetClosed((gen) => petLink.onClosed(gen));
-window.pokebuddyManage.onShopStep((delta) => stepShop(delta));
-window.pokebuddyManage.onShopAct((action) => onShopAction(action));
-window.pokebuddyManage.onShopClosed((gen) => shopLink.onClosed(gen));
-window.pokebuddyManage.onBagStep((delta) => stepBag(delta));
-window.pokebuddyManage.onBagAct((action) => onBagAction(action));
-window.pokebuddyManage.onBagClosed((gen) => bagLink.onClosed(gen));
-window.pokebuddyManage.onPartyAct((action) => onPartyAction(action));
-window.pokebuddyManage.onPartyStep((delta) => stepPreset(delta));
-window.pokebuddyManage.onPartyClosed((gen) => partyLink.onClosed(gen));
-window.pokebuddyManage.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
+api.onPetStep((delta) => stepPet(delta));
+api.onPetAct((action) => onPetAction(action));
+api.onPetClosed((gen) => petLink.onClosed(gen));
+api.onShopStep((delta) => stepShop(delta));
+api.onShopAct((action) => onShopAction(action));
+api.onShopClosed((gen) => shopLink.onClosed(gen));
+api.onBagStep((delta) => stepBag(delta));
+api.onBagAct((action) => onBagAction(action));
+api.onBagClosed((gen) => bagLink.onClosed(gen));
+api.onPartyAct((action) => onPartyAction(action));
+api.onPartyStep((delta) => stepPreset(delta));
+api.onPartyClosed((gen) => partyLink.onClosed(gen));
+api.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 앱 전역 1초 시계(`manage:clock`)마다 다시 읽는다 (clockTick)
-window.pokebuddyManage.onClock?.(() => void clockTick());
+api.onClock?.(() => void clockTick());

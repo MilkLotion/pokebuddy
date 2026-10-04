@@ -7,6 +7,7 @@
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
 // 단추는 무엇을 할지만 관리 창에 돌려보낸다 — 명령과 대화상자(진화·성격·교체)는 관리 창이 처리한다
 import type { PetDeviceAction, PetDeviceView } from "../../shared/model/devices.js";
+import { needBridge } from "../ui/bridge.js";
 import { genderIcon } from "../ui/gender-icon.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { spriteCanvas } from "../ui/portrait.js";
@@ -19,7 +20,7 @@ import { petBusyKey } from "../../shared/device-busy.js";
 import { structureOf } from "../ui/live-draw.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
-const api = window.pokebuddyPet;
+const api = needBridge("pokebuddyPet");
 // 튜토리얼 막은 body 에 fixed 로 붙어 #device 높이에 들지 않는다. 높이가 바뀌면 막 자리를 다시 잡는다
 // 튜토리얼 중에는 넘기지도 닫지도 않는다 — 다음·확인·✕ 만 받는다
 const frame = createDeviceFrame({

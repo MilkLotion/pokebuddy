@@ -4,6 +4,9 @@
 import type { PickerItem, PickerPayload } from "../../shared/model/stage.js";
 import { portraitImg } from "../ui/portrait.js";
 import { needEl } from "../ui/dom.js";
+import { needBridge } from "../ui/bridge.js";
+
+const api = needBridge("pokebuddyPicker");
 
 const list = needEl("list", HTMLElement, "picker");
 const title = needEl("title", HTMLElement, "picker");
@@ -40,7 +43,7 @@ function card(item: PickerItem): HTMLButtonElement {
   b.addEventListener("click", () => pick(item, b));
   b.addEventListener("dblclick", () => {
     pick(item, b);
-    window.pokebuddyPicker.start(item.slug);
+    api.start(item.slug);
   });
   return b;
 }
@@ -58,7 +61,7 @@ function render(payload: PickerPayload) {
 // 초상 — 받는 대로 원을 채운다. 못 받은 칸은 잠시 뒤 다시 청한다(첫 실행은 그림을 받는 중일 수 있다)
 const PORTRAIT_RETRY = { times: 4, waitMs: 4000 };
 async function fillPortraits(slugs: string[], tried: number): Promise<void> {
-  const got = await window.pokebuddyPicker.portraits(slugs);
+  const got = await api.portraits(slugs);
   const left: string[] = [];
   for (const slug of slugs) {
     const b = list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"]`);
@@ -81,8 +84,8 @@ async function fillPortraits(slugs: string[], tried: number): Promise<void> {
   for (const slug of left) list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"] .portrait`)?.classList.add("no-art");
 }
 
-void window.pokebuddyPicker.list().then(render);
+void api.list().then(render);
 
 start.addEventListener("click", () => {
-  if (picked) window.pokebuddyPicker.start(picked);
+  if (picked) api.start(picked);
 });

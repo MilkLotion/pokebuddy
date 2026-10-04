@@ -1,6 +1,7 @@
 // 놀이공간 영역 그리기 — 드래그로 사각형을 그리고 `적용` 하면 메인에 보낸다. 좌표는 창 안 좌표(DIP)다.
 // 저장은 메인이 한다. `취소`·Esc 는 아무것도 바꾸지 않는다 (docs/specs/game.md "놀이공간 변경을 취소하면 적용 전 영역을 유지한다")
 import type { Rect } from "../../shared/geometry.js";
+import { needBridge } from "../ui/bridge.js";
 import type { RegionInit } from "../../shared/model/overlays.js";
 import { needEl } from "../ui/dom.js";
 
@@ -13,7 +14,7 @@ const redraw = needEl("redraw", HTMLButtonElement, "region");
 const cancel = needEl("cancel", HTMLButtonElement, "region");
 const apply = needEl("apply", HTMLButtonElement, "region");
 
-const api = window.pokebuddyRegion;
+const api = needBridge("pokebuddyRegion");
 let min = { area: 240 * 160, side: 80 }; // 메인이 init 으로 준다 (src/state/settings.ts REGION_MIN)
 let rect: Rect | null = null;
 let from: { x: number; y: number } | null = null; // 드래그를 시작한 점

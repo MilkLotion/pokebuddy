@@ -2,12 +2,13 @@
 // 틀은 상점 기기 창과 같다(item-face.ts). 가운데 조작 칸은 머리 줄(제목·사용|판매), 사용 쪽 파티 줄, 수량, 미리보기 상자.
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안). 누른 단추는 관리 창으로 돌려보낸다
 import type { BagDeviceView } from "../../shared/model/devices.js";
+import { needBridge } from "../ui/bridge.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { drawItemFace, goButtonEl, qtyRowEl } from "./item-face.js";
 import { portraitImg } from "../ui/portrait.js";
 import { el } from "../ui/dom.js";
 
-const api = window.pokebuddyBag;
+const api = needBridge("pokebuddyBag");
 const frame = createDeviceFrame({ api, windowName: "bag" });
 
 function render(v: BagDeviceView): void {

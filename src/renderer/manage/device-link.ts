@@ -15,7 +15,7 @@ export interface DeviceLink {
 export interface DeviceLinkOptions<I> {
   build: () => I | null; // 고른 값. null 이면 닫는다
   stamp: () => unknown; // 지금 스냅샷 — 고른 값이 같아도 이것이 바뀌면 다시 보낸다(포인트·시간 같은 저장 값이 모델에 들어간다)
-  open: (input: I | null, gen?: number) => Promise<I | null>; // window.pokebuddyManage.xOpen — 답은 바로잡은 값. 띄울 것이 없으면 null
+  open: (input: I | null, gen?: number) => Promise<I | null>; // api.xOpen(manage/api.ts) — 답은 바로잡은 값. 띄울 것이 없으면 null
   apply?: (input: I) => void; // 바로잡은 값을 설정창의 고른 값에 되돌린다
   afterClosed: () => boolean; // 기기 창이 닫혔다 — 고른 것을 비운다. 다시 그릴 것이면 true
   redraw: () => void; // afterClosed 가 true 면 부른다
