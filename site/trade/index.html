@@ -41,6 +41,8 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 16px;
     padding: 24px 16px;
     background: var(--bg);
     color: var(--text);
@@ -100,6 +102,9 @@
   }
   code { font-size: 13px; word-break: break-all; }
   .bad { color: var(--danger); }
+  /* 권리 고지 — 카드 아래 작은 글. 규칙: docs/design.md 제품과 실행 "권리와 배포" */
+  footer { width: 100%; max-width: 440px; text-align: center; }
+  footer p { font-size: 12px; line-height: 1.5; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -128,6 +133,10 @@
     <p class="bad">교환 링크가 올바르지 않아요. 친구에게 링크를 다시 받아 주세요.</p>
   </section>
 </main>
+<footer>
+  <p>pokebuddy 는 팬이 만든 비공식 앱이에요. Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 와 제휴하지 않았어요.</p>
+  <p>포켓몬의 권리는 Nintendo · Creatures Inc. · GAME FREAK inc. 에 있어요. <a href="https://github.com/MilkLotion/pokebuddy#라이선스">그림 출처와 라이선스</a></p>
+</footer>
 <script>
   (function () {
     var token = "";

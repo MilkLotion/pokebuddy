@@ -261,8 +261,11 @@ export function drawSettings(sub: SettingsTab): void {
   });
   if (sub === "general") drawGeneral(scroll);
   else drawDisplay(scroll);
-  // 바닥 — 왼쪽은 버전·업데이트. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
-  dialogEl.appendChild(actionsRowEl(versionFoot()));
+  // 바닥 — 왼쪽은 버전·업데이트, 오른쪽 끝은 저작권 안내. 닫기 단추는 없다 (2026-09-28 사용자 "설정모달에서 우하단의 닫기버튼 없애자")
+  // 저작권 안내는 README 의 라이선스 절을 기본 브라우저로 연다 — 주소는 메인이 정한다 (2026-10-03 사용자 결정, Figma 05 Screens 섹션 `930:18246`)
+  const rights = actionButtonEl("저작권 안내", false, false, () => api.openRights());
+  rights.classList.add("small");
+  dialogEl.appendChild(actionsRowEl(versionFoot(), rights));
 }
 
 // 사용자 모달 — 계정·연결. 버전·업데이트 바닥은 두지 않는다(설정 모달에만)

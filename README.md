@@ -94,10 +94,20 @@ AI 가 일하는 동안에는 친밀도와 포인트가 두 배로 쌓인다. �
 
 코드는 [MIT](LICENSE) 다.
 
-포켓몬 권리는 Nintendo · Game Freak · Creatures Inc. 에 있다. 이 앱은 개인 · 비상업 팬 용도로만 쓴다.
-포켓몬 그림은 저장소와 설치 파일에 없다. 처음 실행할 때 받아서 내 컴퓨터에만 캐시한다.
+pokebuddy 는 팬이 만든 비공식 앱이다. Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 와 제휴하지 않았다. 승인이나 후원도 받지 않았다.
+포켓몬과 포켓몬 캐릭터의 권리는 Nintendo · Creatures Inc. · GAME FREAK inc. 에 있다. MIT 라이선스는 이 저장소의 코드에만 적용한다.
 
-- 움직이는 그림: [PMDCollab/SpriteCollab](https://github.com/PMDCollab/SpriteCollab) 기여자들의 작품, CC BY-NC 4.0
+- 무료다. 개인 · 비상업 팬 용도로만 쓴다. 후원을 받지 않고 유료 기능도 없다.
+- 이 앱을 돈을 받고 파는 곳은 이 프로젝트와 관계가 없다.
+- 권리자가 요청하면 그림 받기와 배포를 멈춘다. 요청은 [이슈](https://github.com/MilkLotion/pokebuddy/issues)로 받는다.
+- 포켓몬 그림 파일은 저장소와 설치 파일에 없다. 처음 실행할 때 받아서 내 컴퓨터에만 캐시한다.
+- 저장소에 있는 그림은 로고, 이 프로젝트가 그린 도구 아이콘(`assets/items`), 문서의 화면 캡처다. 화면 캡처에는 포켓몬 그림이 보인다.
+
+### 그림 출처
+
+- 움직이는 그림: [PMDCollab/SpriteCollab](https://github.com/PMDCollab/SpriteCollab). 기여자들의 작품은 CC BY-NC 4.0 이다. 일부는 원작 게임에서 온 그림이고 제작자 표기가 `CHUNSOFT` 다. 제작자는 포켓몬마다 다르다. [SpriteCollab 사이트](https://sprites.pmdcollab.org)에서 포켓몬별 제작자를 본다.
 - PMDCollab 에 그림이 없는 종의 걷는 그림: [rh-hideout/pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion)(RHH)의 따라다니기 그림. 9세대 그림은 [DarkusShadow 의 묶음](https://www.deviantart.com/darkusshadow/art/Gen-9-Paldea-Pokemon-Overworld-Sprites-967776690)에서 왔고 제작자는 Darkus_Shadow · Princess-Phoenix · shaderr31 · Molfang62 · CarmaNekko · EduarPokeN · Larryturbo · TyranitarDark · Anarlaurendil 이다. 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
 - 초상·도구·알 그림: [PokeAPI sprites](https://github.com/PokeAPI/sprites)(저장소 CC0). PokeAPI 에 없는 경험사탕·민트·일부 진화 도구는 [msikma/pokesprite](https://github.com/msikma/pokesprite)(코드 MIT). 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
 - 글꼴: [Galmuri](https://github.com/quiple/galmuri)(© Lee Minseo), SIL Open Font License 1.1. 전문은 [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+
+제작자 표시가 빠졌거나 틀렸으면 [이슈](https://github.com/MilkLotion/pokebuddy/issues)로 알려 주면 고친다.

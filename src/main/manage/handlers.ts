@@ -2,7 +2,7 @@
 // 계약 한 장을 wireIpc 로 건다 — 빠진 채널과 인자 모양은 컴파일이 잡는다. 보낸 창 검사는 묶음(scope)이 한다(내 창이 아니면 각 채널의 denied)
 // 기기 창 다섯과의 길(ManageDeviceLinkIpc)은 창 파일이 건다 (src/main/manage/window.ts)
 // (예전 src/main/manage-window.ts wire() 안에 있었다. 메인 레인 M6c 에서 나눴다)
-import { clipboard } from "electron";
+import { clipboard, shell } from "electron";
 import type { ManageCoreIpc, ManageReply, ManageRequest } from "../../shared/ipc/manage";
 import type { DexDetail, ShopDetail } from "../../shared/model/detail";
 import type { Snapshot } from "../../shared/model/snapshot";
@@ -19,6 +19,9 @@ import { isShortId } from "../windows/input.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import { isInternalCommand, parseAccountAction, parseAgentRequest, parseCommand, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
 import type { ManageServices } from "./window.js";
+
+// 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
+const RIGHTS_URL = `https://github.com/MilkLotion/pokebuddy#${encodeURIComponent("라이선스")}`;
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
@@ -146,6 +149,10 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
     // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다.
     // 초상은 불투명 네모를 함께 싣는다 — 관리 창이 첫 그림부터 보는 네모를 정한다 (X15, src/main/art/portraits.ts allImages)
     "manage:art": { denied: {}, run: () => portraits.allImages() },
+    // 저작권 안내 — 인자를 받지 않는다. 정해 둔 주소만 기본 브라우저로 연다
+    "manage:rights": () => {
+      void shell.openExternal(RIGHTS_URL);
+    },
     // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
     "manage:copy": (_e, text) => {
       const copy = parseCopyText(text);

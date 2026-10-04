@@ -46,7 +46,9 @@
   color: var(--muted);
   font: 12px/18px var(--font-body);
 }
-.dialog.settings > .actions .version-foot .act.small {
+/* 바닥 오른쪽 끝의 저작권 안내도 같은 작은 단추다 */
+.dialog.settings > .actions .version-foot .act.small,
+.dialog.settings > .actions > .act.small {
   flex: none;
   min-width: 0;
   height: 32px;

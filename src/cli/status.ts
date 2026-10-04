@@ -94,7 +94,7 @@ export function runStatus(petArg?: string): void {
     const walk = path.join(PATHS.overworld, `${slug.replace(/-/g, "_")}.png`);
     if (!fs.existsSync(zip) && fs.existsSync(walk)) {
       say("  대체 그림: rh-hideout/pokeemerald-expansion 의 걷기 그림 (https://github.com/rh-hideout/pokeemerald-expansion)");
-      say("  그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다. 제작자 목록은 README 의 출처 절에 있다");
+      say("  그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다. 제작자 목록은 README 의 그림 출처 절에 있다");
     }
   }
 

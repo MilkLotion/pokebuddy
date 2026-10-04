@@ -110,6 +110,7 @@ const MANAGE = {
   onPartyClosed: ["push", "manage:party-closed"],
   onTrade: ["push", "manage:trade"],
   copyText: ["send", "manage:copy"],
+  openRights: ["send", "manage:rights"],
   account: ["invoke", "manage:account"],
   onAccount: ["push", "manage:account-view"],
   update: ["invoke", "manage:update"],
