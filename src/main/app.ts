@@ -32,7 +32,7 @@ import { createHalt } from "./app/halt";
 import type { Portraits } from "./art/portraits";
 import { artServices } from "./art/services";
 import { startKeepOnTop } from "./keep-on-top";
-import { createClock } from "./clock";
+import { CLOCK_RULES, createClock } from "./clock";
 import { askRegion } from "./windows/region-window";
 import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT } from "../platform/paths";
@@ -51,7 +51,6 @@ import { createPetMenu } from "./menus/pet-menu";
 import { createTrayMenu } from "./menus/tray-menu";
 import { gainOf } from "../state/settings";
 import { SOUND_RULES } from "../state/rules";
-import { STATE_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
 import { bannerOf } from "../view/banner";
 import { writeAtomic } from "../platform/atomic-write";
@@ -455,7 +454,7 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
   // 저장을 쓰는 것은 잠금을 잡은 프로세스 하나다. 실행기에 그 조건을 걸어 reader 는 쓰지 못하게 한다.
   // 두 PC 규칙으로 멈춘 동안(halted)과 새로 시작하는 중(restarting — 저장을 백업으로 옮긴다)도 쓰지 않는다
   // 쓰고 나면 클라우드 저장에 알린다 — 교환·부화·진화 등 사건(src/online/save-kind.ts)은 바로, 나머지는 2분 스로틀
-  // 시간 진행은 1초마다 메모리에, 파일은 STATE_RULES.saveMs 마다 쓴다 (src/tx/game.ts flushMs)
+  // 시간 진행은 1초마다 메모리에, 파일은 CLOCK_RULES.saveMs 마다 쓴다 (src/tx/game.ts flushMs)
   // 시각은 전역 시계의 마지막 틱 시각이다 — 게임 시간·스냅샷·줍기가 같은 시각을 본다. 첫 틱 전에는 지금 시각 (2026-09-29 사용자 결정 "확률이나 시간 등등은 그 시간값 보게 해")
   // 알 결과는 계정 시드로 정한다(P4b, D24) — 되돌려 다시 열어도 같다. 시드가 없으면(첫 올리기 전) 평소 난수
   const eggRand = (eggId: string): (() => number) | null => {
@@ -463,7 +462,7 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
     const seed = on ? on.cloud.seed() : cloudSeedOf(PATHS.save);
     return seed ? seededRand(seed, `egg:${eggId}`) : null;
   };
-  const reader = createGame({ petName, file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), flushMs: STATE_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
+  const reader = createGame({ petName, file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), flushMs: CLOCK_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
   rt.game = reader;
   rt.bannerWin = createBannerWindow({
     preload: preloadFile(),

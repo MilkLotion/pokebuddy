@@ -1,7 +1,7 @@
 // 전역 시계 — 앱 전체가 보는 1초 틱 (2026-09-29 사용자 결정 "앱 자체의 전역으로 타이머 기능 만들고, 그게 1초마다 갱신. 확률이나 시간 등등은 그 시간값 보게 해")
 //
 // 틱마다 그 순간의 시각 now 와 앞 틱과의 간격 gap 을 구독자에게 준다. 시간·확률 계산(게임 시간 적용·줍기·작업 시간)은 이 now·gap 을 쓴다.
-// 틱 사이가 크게 벌어져도(절전 복귀·멈춤) gap 은 있는 그대로 준다. 자르는 규칙은 받는 쪽이 가진다(STATE_RULES.maxTickMs · TIME_RULES.maxElapsedMs).
+// 틱 사이가 크게 벌어져도(절전 복귀·멈춤) gap 은 있는 그대로 준다. 자르는 규칙은 받는 쪽이 가진다(TIME_RULES.maxGapMs · TIME_RULES.maxElapsedMs).
 // 예외 — 화면·입력용 틱은 이 시계를 쓰지 않는다. 무대 그리기 40ms(STAGE_RULES.tickMs)는 움직임이 1초로는 끊겨 보이고,
 // 훅 상태 폴링 500ms(STAGE_RULES.statePollMs)는 에이전트 상태가 바뀐 것을 반 초 안에 보여 주려는 것이다. 둘 다 게임 값을 바꾸지 않는다.
 // Electron 을 모른다. 시각과 타이머를 받아서 쓴다 — 자체 확인이 가짜 시각으로 틱을 돌린다
@@ -9,6 +9,9 @@ import { realClock, type Clock } from "../shared/clock.js";
 
 export const CLOCK_RULES = {
   periodMs: 1000, // 틱 간격 1초. 2026-09-29 사용자 결정
+  // 1초마다 메모리에 적용한 게임 시간을 파일에 쓰는 주기 (src/tx/game.ts flushMs). 쓰기 비용과 8시간 쓰기 양 — docs/specs/modules.md "저장 시점"
+  // (예전 src/state/rules.ts 의 STATE_RULES.saveMs)
+  saveMs: 15_000,
 };
 
 export interface ClockTick {
