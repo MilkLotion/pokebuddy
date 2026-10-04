@@ -1,5 +1,6 @@
 // 알·상점·가방 처리기 — 알 열기, 사기, 도구 쓰기·팔기, 포켓몬 팔기
-import { itemOf, useItem } from "../../bag/use.js";
+import { useItem } from "../../bag/use.js";
+import { itemOf } from "../../bag/items.js";
 import { openEgg } from "../../egg/open.js";
 import { buyProduct } from "../../shop/buy.js";
 import { sellItem } from "../../shop/sell.js";

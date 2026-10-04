@@ -3,7 +3,7 @@
 // 검사와 반영을 한 거래로 묶는다. 하나라도 걸리면 아무것도 바꾸지 않는다.
 // 기본먹이는 무료이며 무제한이라 가방에서 차감하지 않는다. 나머지는 하나씩 쓴다.
 // 진화용 도구는 여기서 다루지 않는다. 진화는 따로 계약이 있다.
-import { loadJson, type DexOptions } from "../dex/data.js";
+import type { DexOptions } from "../dex/data.js";
 import { countCare } from "../dex/mega.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
@@ -15,15 +15,7 @@ import { isInParty } from "../party/presets.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
-
-export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off";
-
-export interface ItemEntry {
-  ko: string;
-  price: number | null;
-  effect: ItemEffect;
-  amount: number;
-}
+import { itemOf } from "./items.js";
 
 export type UseFailure = ReasonOf<
   | "no-item" // 그런 도구가 없다
@@ -48,10 +40,6 @@ export type UseResult = Outcome<UseFailure> & {
   nature?: string;
   shiny?: boolean;
 };
-
-const items = (opts?: DexOptions): Record<string, ItemEntry> => loadJson<Record<string, ItemEntry>>("items.json", opts);
-
-export const itemOf = (id: string, opts?: DexOptions): ItemEntry | null => (id.startsWith("_") ? null : items(opts)[id] ?? null);
 
 // 버프를 건다. 남아 있으면 지속시간으로 바꾼다. 더하지 않는다.
 // 남은 시간이 더 길면 그대로 둔다 — 장난감 신남(2시간)이 남은 동안 3중첩 놀아주기(30분)가 줄이지 않는다.

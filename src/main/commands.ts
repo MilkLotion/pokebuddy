@@ -18,7 +18,7 @@ import { evolveCandidates } from "../dex/evolve";
 import { gameDayPart } from "../shared/clock";
 import { appearanceOf } from "../dex/look";
 import { unlockRules } from "../dex/unlocks";
-import { itemOf } from "../bag/use";
+import { itemOf } from "../bag/items";
 import { argsFromCommand } from "../tx/args";
 import type { SaveV3 } from "../shared/save-v3";
 import type { TradeActionResult, TradeSession } from "../online/trade-session";
