@@ -2,7 +2,7 @@
 //
 // 저장을 그대로 넘기지 않는다. 화면이 바로 그릴 수 있는 값으로 바꿔서 넘긴다.
 //   슬러그 대신 한국어 이름, ms 대신 초·분 정수, 만복도 값 대신 구간 이름
-// 모양은 src/shared/manage.d.ts 가 가진다. 렌더러와 같은 타입을 본다.
+// 모양은 src/shared/model/snapshot.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { achievementName, itemName, petName, natureName } from "./text.js";
