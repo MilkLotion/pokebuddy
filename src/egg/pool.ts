@@ -4,6 +4,7 @@
 // 같은 알이 돌보미집에 여럿 기다릴 수 있다. 남은 종 수가 기다리는 알 수보다 많을 때만 새로 준다 —
 // 그래야 알마다 열 때 남은 종이 적어도 하나 있다
 import { isMetaKey, type DexOptions } from "../dex/data.js";
+import { hasObtained } from "../dex/record.js";
 import { eggPool, inRandomEgg, isSingleEgg } from "../dex/obtain.js";
 import { eggTable } from "../dex/tables.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
@@ -12,7 +13,7 @@ import { EGG_RULES } from "./rules.js";
 
 // 아직 얻지 않은 종
 export function singleLeft(save: SaveV3, kind: string, opts?: DexOptions): string[] {
-  return (eggPool(kind, opts) ?? []).filter((slug) => !save.dex.obtained.includes(slug));
+  return (eggPool(kind, opts) ?? []).filter((slug) => !hasObtained(save, slug));
 }
 
 // 이 알을 하나 더 줄 수 있는가 — 단일 포켓몬 알이 아니면 늘 된다

@@ -15,6 +15,8 @@ import * as regional from "../../dex/regional";
 import type { UnlockRules } from "../../dex/unlocks";
 import type { Pet, SaveV2, World } from "../../save/v2/types";
 import { printLine as out } from "../harness/report";
+import { hasObtained, hasShiny, hasUnlocked, isKnownSpecies, recordDex } from "../../dex/record";
+import { empty as emptySave } from "../../save/v3";
 
 // 배럴 없이 모듈을 직접
 const dex = { ...data, ...natures, ...species, ...evo, ...unlocks };
@@ -404,6 +406,21 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
     }
   }
   out("starters·표 ok");
+}
+
+// ── 도감 기록 — 이름을 맞춰 적고 맞춰 찾는다 (94 항목 9-5-5) ──
+{
+  const save = emptySave(0);
+  save.dex.unlocked = [];
+  save.dex.obtained = [];
+  save.dex.shinyObtained = [];
+  recordDex(save, " Pikachu-3D ", true);
+  assert.deepStrictEqual([save.dex.unlocked, save.dex.obtained, save.dex.shinyObtained], [["pikachu"], ["pikachu"], ["pikachu"]], "맞춘 이름으로 적는다");
+  assert.ok(hasObtained(save, "PIKACHU") && hasUnlocked(save, "pikachu-3d") && hasShiny(save, "Pikachu"), "찾는 이름도 맞춘다");
+  assert.ok(isKnownSpecies(save, "pikachu-3d"));
+  recordDex(save, "pikachu", false);
+  assert.equal(save.dex.obtained.length, 1, "같은 종을 두 번 적지 않는다");
+  out("도감 기록 정규화 ok");
 }
 
 out("통과");

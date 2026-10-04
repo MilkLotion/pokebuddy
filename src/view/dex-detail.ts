@@ -14,6 +14,7 @@ import { profileOf } from "../dex/species.js";
 import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
+import { hasObtained, hasShiny, hasUnlocked } from "../dex/record.js";
 import { achievementName, petName, typeName, t } from "./text.js";
 import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
@@ -39,8 +40,8 @@ function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexD
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
   const row = profileOf(slug, opts);
   if (!row.dex) return null;
-  const obtained = save.dex.obtained.includes(slug);
-  const unlocked = obtained || save.dex.unlocked.includes(slug);
+  const obtained = hasObtained(save, slug);
+  const unlocked = obtained || hasUnlocked(save, slug);
   const state = obtained ? "obtained" : unlocked ? "unlocked" : "locked";
 
   const methods: string[] = [];
@@ -84,7 +85,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     state,
     types: unlocked ? row.types.map((t) => typeName(t)) : [],
     typeIds: unlocked ? [...row.types] : [],
-    shiny: save.dex.shinyObtained.includes(slug),
+    shiny: hasShiny(save, slug),
     owned: save.pets.filter((p) => p.species === slug).length,
     methods: methods.length ? methods.join(" · ") : NO_METHOD,
     evolution,
