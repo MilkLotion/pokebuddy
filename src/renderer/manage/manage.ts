@@ -38,7 +38,7 @@ import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
-import { numberText, pointText } from "../../shared/count-text.js";
+import { pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setCommandHooks, whenSlow } from "./command.js";
 import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf } from "./shell.js";

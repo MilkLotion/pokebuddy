@@ -22,7 +22,6 @@ import { buttonEl, el } from "../ui/dom.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
-import type { Dialog } from "./dialog-types.js";
 import { ui } from "./state.js";
 import { failTextOf } from "../../shared/fail-text.js";
 
