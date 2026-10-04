@@ -24,6 +24,13 @@ type PartyDeviceIpc = import("../shared/ipc/devices").PartyDeviceIpc;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
+// 창마다 필요한 다리만 내놓는다(X7) — 모든 창이 이 preload 하나를 쓰므로 문서의 파일 이름으로 그 창을 안다.
+// 다리가 빠진 창은 렌더러의 needBridge 가 처음 열 때 던진다(src/renderer/ui/bridge.ts). 무대·선택 창처럼 같은 문서가 아닌 창이 남의 다리를 보지 않는다
+const PAGE = decodeURIComponent((globalThis as { location?: { pathname?: string } }).location?.pathname?.split("/").pop() ?? "");
+const expose = (page: string, name: string, make: () => unknown): void => {
+  if (PAGE === page) contextBridge.exposeInMainWorld(name, make());
+};
+
 type Wire = Record<string, readonly ["invoke" | "send" | "push", string]>;
 
 // 표에서 다리를 만든다. invoke 는 답을 기다리고, send 는 보내기만 하고, push 는 콜백을 받아 메인이 보낼 때마다 부른다.
@@ -61,8 +68,8 @@ const PICKER = {
   portraits: ["invoke", "picker:portraits"],
 } as const satisfies WireOf<PickerIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddy", bridgeOf<StageIpc>(STAGE) satisfies StageBridge);
-contextBridge.exposeInMainWorld("pokebuddyPicker", bridgeOf<PickerIpc>(PICKER) satisfies PickerBridge);
+expose("stage.html", "pokebuddy", () => bridgeOf<StageIpc>(STAGE) satisfies StageBridge);
+expose("picker.html", "pokebuddyPicker", () => bridgeOf<PickerIpc>(PICKER) satisfies PickerBridge);
 
 // 설정창 — 스냅샷과 명령, 스냅샷에 담지 않는 도감과 CLI 연결, 기기 창 다섯과의 연결
 const MANAGE = {
@@ -113,7 +120,7 @@ const MANAGE = {
   onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/app/clock.ts)
 } as const satisfies WireOf<ManageIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyManage", bridgeOf<ManageIpc>(MANAGE) satisfies ManageBridge);
+expose("manage.html", "pokebuddyManage", () => bridgeOf<ManageIpc>(MANAGE) satisfies ManageBridge);
 
 // 알림 배너 창 — 배너 하나를 받고, `바로가기`·`✕` 닫기를 알린다
 const BANNER = {
@@ -122,7 +129,7 @@ const BANNER = {
   close: ["send", "banner:close"],
 } as const satisfies WireOf<BannerIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyBanner", bridgeOf<BannerIpc>(BANNER));
+expose("banner.html", "pokebuddyBanner", () => bridgeOf<BannerIpc>(BANNER));
 
 // 알림 창 — 내용을 받고, 그린 크기와 누른 단추를 알린다 (src/main/windows/alert-window.ts)
 const ALERT = {
@@ -131,7 +138,7 @@ const ALERT = {
   pick: ["send", "alert:pick"],
 } as const satisfies WireOf<AlertIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyAlert", bridgeOf<AlertIpc>(ALERT));
+expose("alert.html", "pokebuddyAlert", () => bridgeOf<AlertIpc>(ALERT));
 
 // 놀이공간 영역 그리기 창 — 지금 영역을 받고, 적용한 사각형(취소면 null)을 돌려준다
 const REGION = {
@@ -139,7 +146,7 @@ const REGION = {
   done: ["send", "region:done"],
 } as const satisfies WireOf<RegionIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyRegion", bridgeOf<RegionIpc>(REGION));
+expose("region.html", "pokebuddyRegion", () => bridgeOf<RegionIpc>(REGION));
 
 // 놀이공간 화면 번호 덮개 창 — 번호를 받고, 이 화면을 골랐는지·취소했는지 알린다
 const SCREENS = {
@@ -148,7 +155,7 @@ const SCREENS = {
   cancel: ["send", "screens:cancel"],
 } as const satisfies WireOf<ScreensIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyScreens", bridgeOf<ScreensIpc>(SCREENS));
+expose("screens.html", "pokebuddyScreens", () => bridgeOf<ScreensIpc>(SCREENS));
 
 // 앱이 그리는 메뉴 창 — 항목을 받고, 그린 크기와 고른 항목을 돌려준다
 const MENU = {
@@ -159,7 +166,7 @@ const MENU = {
   pick: ["send", "menu:pick"],
 } as const satisfies WireOf<MenuIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyMenu", bridgeOf<MenuIpc>(MENU));
+expose("menu.html", "pokebuddyMenu", () => bridgeOf<MenuIpc>(MENU));
 
 // 기기 창 다섯 — 접두사만 다른 같은 틀이다. 값 하나를 받고, 그린 높이와 이전·다음·닫기를 보낸다
 const deviceWire = <P extends string>(prefix: P) =>
@@ -173,24 +180,24 @@ const deviceWire = <P extends string>(prefix: P) =>
 // 도감 기기 창 — 한 종의 항목. 울음소리를 부른다
 const DEX = { ...deviceWire("dexdev"), cry: ["invoke", "dexdev:cry"] } as const satisfies WireOf<DexDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyDex", bridgeOf<DexDeviceIpc>(DEX));
+expose("dex.html", "pokebuddyDex", () => bridgeOf<DexDeviceIpc>(DEX));
 
 // 파티 상세 기기 창 — 개체 하나. 울음소리와 누른 단추, 튜토리얼 코치마크가 떴는지
 const PET = { ...deviceWire("petdev"), cry: ["invoke", "petdev:cry"], act: ["send", "petdev:act"], coach: ["send", "petdev:coach"] } as const satisfies WireOf<PetDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyPet", bridgeOf<PetDeviceIpc>(PET));
+expose("pet.html", "pokebuddyPet", () => bridgeOf<PetDeviceIpc>(PET));
 
 // 상점 기기 창 — 상품 하나. 누른 단추(수량·구매)
 const SHOP = { ...deviceWire("shopdev"), act: ["send", "shopdev:act"] } as const satisfies WireOf<ShopDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyShop", bridgeOf<ShopDeviceIpc>(SHOP));
+expose("shop.html", "pokebuddyShop", () => bridgeOf<ShopDeviceIpc>(SHOP));
 
 // 가방 기기 창 — 도구 하나. 누른 단추(사용·판매 전환, 파티 고르기, 수량, 사용·팔기)
 const BAG = { ...deviceWire("bagdev"), act: ["send", "bagdev:act"] } as const satisfies WireOf<BagDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyBag", bridgeOf<BagDeviceIpc>(BAG));
+expose("bag.html", "pokebuddyBag", () => bridgeOf<BagDeviceIpc>(BAG));
 
 // 파티 기기 창(교체 화면) — 지금 프리셋의 파티 칸과 프리셋 칩. 누른 칸·칩
 const PARTY = { ...deviceWire("partydev"), act: ["send", "partydev:act"] } as const satisfies WireOf<PartyDeviceIpc>;
 
-contextBridge.exposeInMainWorld("pokebuddyParty", bridgeOf<PartyDeviceIpc>(PARTY));
+expose("party.html", "pokebuddyParty", () => bridgeOf<PartyDeviceIpc>(PARTY));
