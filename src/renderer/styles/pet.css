@@ -1,14 +1,18 @@
 /* pet.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
 /* 파티 상세 기기 — Figma 05 `Party / Detail Device` `908:23772`(기기 `Party Detail Device` `1262:76637`) (2026-09-28 사용자 "a로 하자").
    도감 기기(dex.html)와 같은 틀에 몸 색만 청록이다 — 도감(빨강)과 짝. 기기 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다.
-   기록 칸 아래 흰 판의 단추·막대 색은 관리 창과 같은 값이다 */
+   기록 칸 아래 흰 판의 단추·막대·보조 글자 색은 관리 창과 같은 값이다. 글자색(--ink)은 다른 기기 창과 같다 */
 :root {
   --body: #0f766e;
   --hinge: #0a5750;
   --joint: #074540;
-  --ink: #1a3330;
+  --ink: #3b2c31; /* 기기 창 글자색 하나 — 도감·상품·가방·파티 기기 창과 같다 (Figma device/text, 2026-10-04 사용자 결정 94 4-11) */
   --muted: #4a6663;
   --subtle: #e7ebe6;
+}
+/* 코치마크 말풍선은 세 창이 같은 모양 — 관리 창 글자색(Figma Coach Bubble text/primary)을 그대로 쓴다 */
+.coach-bubble {
+  --ink: #1a3330;
 }
 .device {
   position: relative;
