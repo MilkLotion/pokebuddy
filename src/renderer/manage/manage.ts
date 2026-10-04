@@ -6,17 +6,18 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { closeDexBeside, onDexClosed, setDexLinkHooks, syncDexBeside, toggleDexBeside } from "./dex-link.js";
+import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature, drawNatureTarget } from "./nature.js";
-import { drawForm, drawMega, markMega, megaMark } from "./pet-forms.js";
-import { DEX_PAGE, GRID_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
-import { liveInputEl, matchesDex, matchesName, normQuery, restoreSearchFocus, searchBoxEl, typingSearch } from "./search.js";
+import { drawForm, drawMega, markMega } from "./pet-forms.js";
+import { GRID_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
+import { liveInputEl, matchesName, normQuery, restoreSearchFocus, searchBoxEl, typingSearch } from "./search.js";
 import { alertEl, chipsEl, dialogCloseEl, lvNature, meterEl, NATURE_UI, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
-import type { DexEntry } from "../../shared/model/detail.js";
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import type { ManageRoute } from "../../shared/model/route.js";
@@ -46,9 +47,7 @@ import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "..
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
 setCommandHooks({
   reload: () => refreshView(),
-  touchesDex: () => {
-    dexRows = null;
-  },
+  touchesDex: () => forgetDexRows(),
 });
 
 // 모달의 뒤처리 — 검색·돌보미집 겹침·화면 표시·튜토리얼·경고 배너는 여기에 있다 (dialog.ts)
@@ -64,6 +63,17 @@ setDialogHooks({
   afterEmpty: () => syncIdentify(),
   onScrimChanged: () => drawTutorial(),
   openAny: (next) => open(next),
+});
+
+// 도감 — 칸을 누른 것은 도감 튜토리얼의 목표 행동이다. 기기 창이 닫히면 고른 칸을 비우고, 옆 도감이 바뀌면 파티 상세 기기 창을 맞춘다
+setDexTabHooks({
+  onPicked: () => {
+    if (coachId === "dex") void sendCommand("tutorial.done", "dex");
+  },
+});
+setDexLinkHooks({
+  pickClosed: () => clearDexPick(),
+  besideChanged: () => syncPetDevice(),
 });
 
 // 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
@@ -101,13 +111,6 @@ const SHOP_TABS = [
   { id: "tool", label: "도구" },
   { id: "evolution", label: "진화" },
   { id: "slot", label: "파티" }, // 파티 칸과 파티 프리셋 (2026-10-02 사용자 결정 "\"파티\" 로 상점 탭 이름 변경")
-];
-
-const DEX_TABS = [
-  { id: "all", label: "전체" },
-  { id: "obtained", label: "획득" },
-  { id: "unlocked", label: "해금" },
-  { id: "locked", label: "미해금" },
 ];
 
 
@@ -166,10 +169,6 @@ const GUIDE: { title: string; lines: string[] }[] = [
 
 
 
-let dexRows: DexEntry[] | null = null;
-// 도감에서 고른 칸 — 상세는 관리 창 옆 도감 기기 창이 보인다 (src/main/dex-window.ts)
-let dexPick: string | null = null;
-let dexGen = 0; // 도감 기기 창 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다 (src/main/device-gen.ts)
 let agentRows: AgentRow[] | null = null;
 let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
 // 연결 점검 (worklog/records/hook-check/record.md) — Node.js(undefined 면 아직 모름), CLI 별 점검 결과, 점검 중인 CLI
@@ -178,8 +177,6 @@ const agentChecks = new Map<string, { ok: boolean; text: string; at: number }>()
 const agentFails = new Map<string, string>(); // 연결·해제·다시 확인 실패 — 그 줄의 상태 글자로 보인다(경고 줄을 끼우지 않는다)
 let agentProbing: string | null = null;
 let boxPage = 0;
-// 검색어 — 탭을 옮겨도 남는다 (docs/specs/game.md "검색과 선택을 유지한다")
-let dexQuery = "";
 // 박스 정렬·이동·이름 (Figma 05 `Box / Sort Open` `633:17372` · `Box / Dragging` `633:17375` · `Box / Rename` `633:17378`)
 let boxSortOpen = false;
 let boxMenuOpen = false; // 박스 머리의 햄버거 메뉴 — 박스 순서·교환 (2026-10-02 사용자 결정, Figma 05 `Box / Menu Open`)
@@ -233,15 +230,8 @@ let shopFilter = "egg";
 let shopQuery = "";
 let shopRegion = "all";
 let shopRegionOpen = false;
-let dexPageNo = 0;
 let shopPageNo = 0;
-let dexView: ViewMode = loadView("dex");
 let shopView: ViewMode = loadView("shop");
-let dexFilter = "all";
-// 도감 지방 — 최초 등장 지방 기준의 전국도감 번호 구간 (Figma 05 `Dex / Base` `381:6028` 의 "지방: 전체 ▾").
-// 리전폼 항목(알로라 라이츄 등)과 특수 폼 항목(다투곰(붉은 달) 등)은 번호가 아니라 항목의 지방(region)으로 나눈다(스펙) — inDexRegion
-let dexRegion = "all";
-let dexRegionOpen = false;
 
 // ── 파티 ───────────────────────────────────────────────────────────────────────
 
@@ -1278,148 +1268,13 @@ document.addEventListener("click", () => {
     settingSelectOpen = null;
     drawDialog();
   }
-  if (!boxSortOpen && !boxMenuOpen && !dexRegionOpen && !shopRegionOpen) return;
+  if (!boxSortOpen && !boxMenuOpen && !isDexRegionOpen() && !shopRegionOpen) return;
   boxSortOpen = false;
   boxMenuOpen = false;
-  dexRegionOpen = false;
+  closeDexRegion();
   shopRegionOpen = false;
   redrawBody();
 });
-
-// ── 도감 ───────────────────────────────────────────────────────────────────────
-
-// 도감 칸 — 박스 칸처럼 초상 → 이름 → 번호. 획득은 왼쪽 위 몬스터볼, 이로치 획득은 그 옆 이로치 아이콘
-// (Figma 04 템플릿 `Dex Layout` `378:1524`, 2026-10-02 사용자 결정 "초록점말고 몬스터볼아이콘으로 … 안2로")
-function dexCell(row: DexEntry): HTMLElement {
-  const cell = buttonEl(row.state === "locked" ? "dex-cell dex-box locked" : "dex-cell dex-box");
-  cell.dataset.slug = row.slug;
-  cell.setAttribute("aria-pressed", String(row.slug === dexPick));
-  cell.addEventListener("click", () => pickDex(row.slug));
-  // 미해금 종은 그림을 검은 실루엣으로 보인다 — CSS .dex-cell.locked .art (2026-09-27 사용자 결정 "모든 미해금에 다 하자")
-  cell.append(portraitOf(row.slug, false, "dot", "", true), el("div", "who", row.state === "locked" ? "???" : row.name), el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`));
-  if (row.state === "obtained") {
-    const got = el("span", "got");
-    got.title = "획득";
-    got.setAttribute("role", "img");
-    got.setAttribute("aria-label", got.title);
-    cell.appendChild(got);
-    // 메가스톤 — 내 개체에 메가스톤이 생긴 적이 있는 종만. 얻음 표식(볼) 오른쪽에 같은 크기 12 로 둔다 (2026-10-02 사용자 결정)
-    if (row.mega) {
-      cell.classList.add("has-mega");
-      cell.appendChild(megaMark(12, "메가스톤 획득"));
-    }
-    if (row.shiny) cell.appendChild(shinyIcon(10, "이로치 획득"));
-  }
-  return cell;
-}
-
-// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (worklog/records/play-bugs/record.md)
-function markDexPick(): void {
-  for (const cell of bodyEl.querySelectorAll<HTMLElement>(".dex-cell")) cell.setAttribute("aria-pressed", String(cell.dataset.slug === dexPick));
-}
-
-// 칸을 누르면 도감 기기 창에 그 종을 띄운다. 같은 칸을 다시 누르면 닫는다
-function pickDex(slug: string): void {
-  if (coachId === "dex") void sendCommand("tutorial.done", "dex"); // 칸을 눌러 본 것이 목표 행동이다
-  dexPick = dexPick === slug ? null : slug;
-  api.dexOpen(dexPick ? { slug: dexPick, beside: false } : null, dexGen);
-  markDexPick();
-}
-
-// 지금 격자에 보이는 목록 — 지방, 검색어, 등록 상태 칩을 함께 적용한다. 기기 창의 이전·다음도 이 순서를 따른다
-function dexShown(): DexEntry[] {
-  if (!dexRows) return [];
-  const q = normQuery(dexQuery);
-  return dexRows.filter((r) => inDexRegion(dexRegion, r.dex, r.region) && (dexFilter === "all" || r.state === dexFilter) && (!q || matchesDex(r, q)));
-}
-
-const dexRegionEl = (): HTMLElement =>
-  regionEl(dexRegion, dexRegionOpen, (open) => (dexRegionOpen = open), (id) => {
-    dexRegion = id;
-    dexPageNo = 0;
-  });
-
-function stepDex(delta: -1 | 1): void {
-  const rows = dexShown();
-  if (!rows.length) return;
-  const at = rows.findIndex((r) => r.slug === dexPick);
-  const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
-  if (!next || next.slug === dexPick) return;
-  dexPick = next.slug;
-  api.dexOpen({ slug: dexPick, beside: false }, dexGen);
-  // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
-  const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
-  if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
-    dexPageNo = page;
-    redrawBody();
-  }
-  markDexPick();
-  if (dexView === "list") bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(next.slug)}"]`)?.scrollIntoView({ block: "nearest" });
-}
-
-function drawDex(v: Snapshot): void {
-  bodyEl.appendChild(pageHeadEl("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`));
-  // 지방·이름·번호 검색 — 등록 상태 칩과 함께 적용한다
-  const bar = el("div", "search-row");
-  bar.appendChild(dexRegionEl());
-  bar.appendChild(
-    searchBoxEl("dex", dexQuery, "이름 또는 번호 검색", (q) => {
-      dexQuery = q;
-      dexPageNo = 0;
-      redrawBody();
-    }),
-  );
-  bar.appendChild(
-    viewToggle(dexView, (mode) => {
-      dexPageNo = switchView("dex", dexView, mode, dexPageNo);
-      dexView = mode;
-      saveView("dex", mode);
-      redrawBody();
-    }),
-  );
-  bodyEl.appendChild(bar);
-  // 넘김·필터 줄 — 박스 넘김 줄처럼 넘김은 왼쪽, 등록 상태 칩은 오른쪽 (2026-09-30 사용자 "grid-pager 는 좌측, filters 는 우측에")
-  const toolbar = el("div", "dex-toolbar");
-  const filters = chipsEl(DEX_TABS, dexFilter, (id) => {
-    dexFilter = id;
-    dexPageNo = 0;
-    redrawBody();
-  });
-  toolbar.appendChild(filters);
-  bodyEl.appendChild(toolbar);
-  if (!dexRows) {
-    bodyEl.appendChild(el("div", "empty-note", "도감을 읽는 중입니다."));
-    return;
-  }
-  const q = normQuery(dexQuery);
-  const rows = dexShown();
-  if (!rows.length) {
-    bodyEl.appendChild(el("div", "empty-note", q ? "검색 결과 없음" : "해당하는 종이 없습니다."));
-    return;
-  }
-  // 스크롤 방식 — 작업 전 화면 그대로 칸 격자를 전부 그린다(2026-09-25 사용자 요청). 화면 밖 칸은 CSS content-visibility 로
-  // 그리기를 미루고, 초상은 보이는 칸만 받는다
-  if (dexView === "list") {
-    const all = el("div", "dex-grid dex-box-grid");
-    for (const row of rows) all.appendChild(dexCell(row));
-    bodyEl.appendChild(all);
-    scrollListAfterSwitch("dex", all);
-    return;
-  }
-  // 격자 — 한 쪽씩. 2026-09-29 사용자 결정 "페이지 넘김 추가"로 전부 그리기(2026-09-25)를 바꿨다
-  const shown = pageOf(rows, dexPageNo, DEX_PAGE);
-  dexPageNo = shown.page;
-  toolbar.insertBefore(
-    gridPager(shown.page, shown.pages, (page) => {
-      dexPageNo = page;
-      redrawBody();
-    }),
-    filters,
-  );
-  const grid = el("div", "dex-grid dex-box-grid");
-  for (const row of shown.items) grid.appendChild(dexCell(row));
-  bodyEl.appendChild(grid);
-}
 
 // ── 상점 ───────────────────────────────────────────────────────────────────────
 
@@ -2783,14 +2638,8 @@ registerTab({
   label: "도감",
   icon: TAB_ICON.dex,
   draw: (v) => drawDex(v),
-  enter: () => {
-    if (!dexRows) void loadDex();
-  },
-  leave: () => {
-    if (!dexPick) return;
-    dexPick = null;
-    api.dexOpen(null, dexGen);
-  },
+  enter: () => enterDex(),
+  leave: () => leaveDex(),
 });
 // 상점·가방 기기 창 — 다음 그리기의 syncShopDevice·syncBagDevice 가 닫는다
 registerTab({
@@ -3369,34 +3218,19 @@ const petLink = createDeviceLink<PetDeviceInput>({
   },
   redraw: () => redrawBody(),
 });
-// 파티 상세 옆 도감 기기 창 — `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
-let dexBeside = false;
 let petBusy: string | null = null; // 0.3초 넘게 답이 없는 기기 창 단추의 열쇠 — 기기 창이 그것만 점 세 개로
-let dexBesideSent: string | null = null; // 마지막으로 보낸 종
-let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
 // 파티 상세 기기 창에 보낼 고른 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
 function petDeviceBuild(): PetDeviceInput | null {
   const pet = ui.detailPet ? petInView(ui.detailPet) : null;
   if (!pet || !ui.view) return null;
-  if (dexBeside && dexBesideSent !== pet.species) {
-    api.dexOpen({ slug: pet.species, beside: true }, dexGen);
-    dexBesideSent = pet.species;
-  }
-  return { petId: pet.id, notice: ui.notice, dexOpen: dexBeside, busy: petBusy };
+  const dexOpen = syncDexBeside(pet.species);
+  return { petId: pet.id, notice: ui.notice, dexOpen, busy: petBusy };
 }
 
 function syncPetDevice(): void {
   petLink.sync();
   if (!petLink.isOpen()) closeDexBeside(); // 파티 상세를 닫으면 옆 도감 기기 창도 닫는다
-}
-
-function closeDexBeside(): void {
-  if (!dexBeside) return;
-  if (dexBesideSent) dexBesideClosing = true;
-  dexBeside = false;
-  dexBesideSent = null;
-  api.dexOpen(null, dexGen);
 }
 
 // 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
@@ -3409,15 +3243,6 @@ function stepPet(delta: -1 | 1): void {
   if (!next) return;
   ui.detailPet = next.id;
   redrawBody();
-}
-
-// 도감 보기 — 파티 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 떠 있으면 닫는다. 관리 창 탭은 그대로다
-// (2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까", Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`).
-// 창을 보내는 일은 syncPetDevice 가 한다 — 개체를 넘기면 그 종으로 바뀐다
-function toggleDexBeside(): void {
-  if (dexBeside) closeDexBeside();
-  else dexBeside = true;
-  syncPetDevice();
 }
 
 // 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
@@ -4128,13 +3953,6 @@ async function agent(name: string, action: AgentAction): Promise<void> {
   drawDialog();
 }
 
-async function loadDex(): Promise<void> {
-  dexRows = await api.dex();
-  if (dexPick) api.dexOpen({ slug: dexPick, beside: false }, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
-  else if (dexBeside && dexBesideSent) api.dexOpen({ slug: dexBesideSent, beside: true }, dexGen);
-  if (ui.tab === "dex") redrawBody();
-}
-
 async function loadAgents(): Promise<void> {
   const reply = await api.agents();
   agentRows = reply.list;
@@ -4214,25 +4032,7 @@ void firstDraw.then(loadUpdate).then(showUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
 void firstDraw.then(loadTrade);
 api.onDexStep((delta) => stepDex(delta));
-api.onDexClosed((gen) => {
-  dexGen = gen;
-  dexPick = null;
-  markDexPick();
-  // 우리가 닫은 창이다. 그사이 다시 켰으면 새 세대 번호로 다시 연다 — 닫히기 전에 보낸 여는 요청은 메인이 버렸다
-  if (dexBesideClosing) {
-    dexBesideClosing = false;
-    if (dexBeside) {
-      dexBesideSent = null;
-      syncPetDevice();
-    }
-    return;
-  }
-  // 옆 도감 기기 창을 ✕·Esc 로 닫았다 — 파티 상세의 `도감 보기` 줄 톤을 끈다
-  if (!dexBeside) return;
-  dexBeside = false;
-  dexBesideSent = null;
-  syncPetDevice();
-});
+api.onDexClosed((gen) => onDexClosed(gen));
 api.onPetStep((delta) => stepPet(delta));
 api.onPetAct((action) => onPetAction(action));
 api.onPetClosed((gen) => petLink.onClosed(gen));
