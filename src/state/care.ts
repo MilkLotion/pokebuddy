@@ -60,7 +60,7 @@ export function applyPlay(save: SaveV3, petId: string): PlayResult {
 
 // ── 돌봄 명령 — 밥 주기·놀아주기를 할 수 있는지 보고, 하고, 센다 ─────────────────────
 // 박스 개체는 돌보지 않는다 — 박스에서는 값이 줄지 않아 올린 값이 그대로 남는다 (2026-09-30 사용자 결정 "박스에선 막고").
-// 가방 도구(bag.use)는 따로다 — 박스 개체에게도 쓸 수 있다
+// 가방 도구(bag.use)는 따로 본다 — 사탕만 박스 개체에게도 쓸 수 있다 (src/bag/use.ts)
 
 export type CareKind = "feed" | "play";
 export type CareFailure = ReasonOf<"no-pet" | "not-in-party" | "full" | "cooldown">;
