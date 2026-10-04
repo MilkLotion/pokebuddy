@@ -106,7 +106,9 @@ export function settingRow(label: string, hint: string | undefined, control: HTM
   return row;
 }
 
-// 박스·프리셋 넘김 줄 가운데의 이름 칸 — 박스 탭과 파티 탭이 같이 쓴다
+// 박스 넘김 줄의 이름 칸 — 이름 길이와 고치는 중인지에 따라 ◀·▶·정렬이 움직이지 않게 12글자 폭으로 고정한다
+// (2026-10-01 사용자 "박스 이름에 따라 화살표 위치 바껴 … 최대12글자로 가정하고 구성해야해", Figma 05 `Box / Rename`)
+// 파티 탭의 프리셋 넘김 줄도 같은 칸을 쓴다
 export function boxNameCell(inner: HTMLElement): HTMLElement {
   const cell = el("div", "box-name-cell");
   cell.appendChild(inner);

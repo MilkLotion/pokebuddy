@@ -81,7 +81,7 @@ export function redrawTrade(): void {
 export const tradeInProgress = (): boolean => tradeActive(trade);
 const tradeActive = (t: TradeScreen | null): boolean => !!t?.available && (t.phase === "hosting" || t.phase === "trading" || t.phase === "done");
 
-// 박스 머리 햄버거 단추의 교환 진행 중 점 — 본문을 다시 그리지 않고 점만 켜고 끈다. 교환은 그 메뉴의 `교환` 이 연다 (boxMenuEl)
+// 박스 머리 햄버거 단추의 교환 진행 중 점 — 본문을 다시 그리지 않고 점만 켜고 끈다. 교환은 그 메뉴의 `교환` 이 연다 (box-tab.ts boxMenuEl)
 function syncTradeDot(): void {
   const dot = bodyEl.querySelector<HTMLElement>(".box-menu-toggle .dot");
   if (dot) dot.hidden = !tradeActive(trade);
