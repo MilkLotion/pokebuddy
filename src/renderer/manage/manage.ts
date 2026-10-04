@@ -5,20 +5,20 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
+import { goTo, openDialogOrPet, openPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
 import { BOX_ICON, boxSlot, drawBox, drawBoxOrder, setBoxTabHooks } from "./box-tab.js";
 import { drawParty, setPartyTabHooks, stepPreset, stopPresetRename } from "./party-tab.js";
 import { closeSwap, onPartyAction, partyLink, syncPartyDevice } from "./party-link.js";
 import { drawGuide } from "./guide.js";
-import { loadAgents } from "./agents.js";
 import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
 import { boxUi, hold } from "./box-state.js";
-import { endHold, setBoxMoveHooks, startHold } from "./box-move.js";
-import { currentAccount, loadAccount, setAccountHooks } from "./account.js";
+import { endHold, setBoxMoveHooks } from "./box-move.js";
+import { currentAccount, setAccountHooks } from "./account.js";
 import { drawTradeDialog, loadTrade, redrawTrade, setTradeHooks } from "./trade.js";
 import { drawLetter, drawMail } from "./mail.js";
 import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes } from "./update-notes.js";
-import { drawAchievements, resetAchievementTab } from "./achievements.js";
+import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
@@ -34,17 +34,16 @@ import { alertEl, dialogCloseEl, lvNature } from "./widgets.js";
 import { iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { EggView, Snapshot } from "../../shared/model/snapshot.js";
-import type { ManageRoute } from "../../shared/model/route.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { pointText } from "../../shared/count-text.js";
 import { lastReplyOf, sendCommand, setCommandHooks } from "./command.js";
-import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab } from "./shell.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openDialog, registerDialog, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
-import type { Dialog, Hatched, TabId } from "./dialog-types.js";
-import { findPartySlot, petInView, ui } from "./state.js";
+import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks } from "./shell.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openAnyDialog, registerDialog, scrimEl, setDialogHooks } from "./dialog.js";
+import type { Hatched, TabId } from "./dialog-types.js";
+import { petInView, ui } from "./state.js";
 
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
 setCommandHooks({
@@ -64,7 +63,7 @@ setDialogHooks({
   },
   afterEmpty: () => syncIdentify(),
   onScrimChanged: () => drawTutorial(),
-  openAny: (next) => open(next),
+  openAny: (next) => openDialogOrPet(next),
 });
 
 // 도감 — 칸을 누른 것은 도감 튜토리얼의 목표 행동이다. 기기 창이 닫히면 고른 칸을 비우고, 옆 도감이 바뀌면 파티 상세 기기 창을 맞춘다
@@ -154,7 +153,7 @@ function daycareOpenButton(v: Snapshot): HTMLButtonElement {
   dot.setAttribute("aria-hidden", "true");
   dot.hidden = !v.eggs.list.some((e) => e.ready);
   b.appendChild(dot);
-  b.addEventListener("click", () => open({ kind: "daycare" }));
+  b.addEventListener("click", () => openAnyDialog({ kind: "daycare" }));
   return b;
 }
 
@@ -220,7 +219,7 @@ async function openEgg(eggId: string): Promise<Hatched | null> {
 // 알 열기 — 끝나면 부화 결과 창을 연다. 돌보미집 모달에서 열면 그 모달 위에 겹친다 (2026-09-30 사용자 "열기를 누르면 모달열린채로 부화결과창")
 async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
   const got = await openEgg(eggId);
-  if (got) open({ kind: "hatched", ...got, ...(over ? { over } : {}) });
+  if (got) openAnyDialog({ kind: "hatched", ...got, ...(over ? { over } : {}) });
 }
 
 // 모두 열기 — 준비된 알을 칸 순서대로 하나씩 연다(알마다 egg.open 하나). 다 연 뒤 결과를 하나씩 보인다.
@@ -241,7 +240,7 @@ async function openAllEggs(): Promise<void> {
     openingAll = false;
   }
   const first = queue[0];
-  if (first) open({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
+  if (first) openAnyDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
   else drawDialog(); // 단추의 흐림을 되돌린다
 }
 
@@ -274,8 +273,8 @@ function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: H
   const next = queue?.[at + 1];
   const count = queue ? ` (${at + 1} / ${queue.length})` : "";
   const done = actionButtonEl(`${next ? "다음" : "확인"}${count}`, true, false, () => {
-    if (next && queue) open({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
-    else if (over) open({ kind: "daycare" });
+    if (next && queue) openAnyDialog({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
+    else if (over) openAnyDialog({ kind: "daycare" });
     else closeDialog();
   });
   done.dataset.confirm = ""; // Space·Enter 가 누르는 단추 (아래 keydown)
@@ -303,7 +302,7 @@ function drawUnder(): void {
 // ── 포켓몬 메뉴 ────────────────────────────────────────────────────────────────
 // 파티 카드·박스 칸을 우클릭하면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/view/menus.ts petMenu, 2026-10-02 사용자 결정).
 // 좌클릭은 개체 상세를 연다. 그래서 이 메뉴에는 `상세 보기` 가 없다 (같은 날 사용자 결정 — 좌클릭 메뉴가 어색했다).
-// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/windows/menu.ts). 고른 모습·옮기기·팔기는 경로(goTo)로 돌아온다.
+// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/windows/menu.ts). 고른 모습·옮기기·팔기는 경로(routes.ts goTo)로 돌아온다.
 // 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
 function askPetMenu(petId: string): void {
   void api.petMenu(petId).catch(() => undefined);
@@ -438,46 +437,11 @@ registerDialog({ kind: "mail", shape: "dialog settings mail", headerButton: "ope
 registerDialog({ kind: "letter", shape: "dialog settings mail", draw: (d) => drawLetter(d.id) });
 registerDialog({ kind: "trade", shape: "dialog trade", draw: () => drawTradeDialog() });
 
-// 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
-// (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형). 나머지는 모달이다 (dialog.ts openDialog)
-function open(next: Dialog): void {
-  if (next.kind === "pet") {
-    if (coachIdOf() === "evolution") void sendCommand("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
-    ui.dialog = null;
-    ui.notice = "";
-    setScrim(false);
-    setTab(findPartySlot(next.petId) != null ? "party" : "box");
-    ui.detailPet = next.petId;
-    redrawBody();
-    return;
-  }
-  openDialog(next);
-}
+// ── 헤더 단추 · 가림막 · Esc ─────────────────────────────────────────────────────
 
-// 박스 탭을 열고 교환 모달을 띄운다 — 교환 링크(딥링크)로 왔을 때
-function showTrade(): void {
-  setTab("box");
-  ui.detailPet = null; // 박스 탭에 있었어도 개체 상세는 닫고 교환 모달만 띄운다
-  redrawBody();
-  open({ kind: "trade" });
-  void loadTrade();
-}
-
-// 파티 카드·박스 칸의 좌클릭 — 개체 상세를 연다
-const openPet = (id: string): void => {
-  if (ui.detailPet === id && !ui.dialog) {
-    ui.detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
-    redrawBody();
-    return;
-  }
-  open({ kind: "pet", petId: id });
-};
-
-// ── 명령 보내기 ────────────────────────────────────────────────────────────────
-
-needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "achievements" }));
-needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "settings", tab: "general" }));
-needEl("open-user", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "user", tab: "account" }));
+needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => openAnyDialog({ kind: "achievements" }));
+needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", () => openAnyDialog({ kind: "settings", tab: "general" }));
+needEl("open-user", HTMLButtonElement, "manage").addEventListener("click", () => openAnyDialog({ kind: "user", tab: "account" }));
 
 scrimEl.addEventListener("click", (e) => {
   if (e.target === scrimEl) dismissDialog();
@@ -491,52 +455,6 @@ document.addEventListener("keydown", (e) => {
     if (!e.repeat) dialogEl.querySelector<HTMLButtonElement>("button[data-confirm]:not(:disabled)")?.click();
   }
 });
-
-// 알림 배너의 `바로가기` — 부화는 돌보미집, 진화는 개체 상세, 업적은 업적 창의 그 줄 (docs/specs/game.md "알림 배너의 개별 표시")
-function goTo(route: ManageRoute): void {
-  if (route.to === "daycare") {
-    setTab("box");
-    redrawBody();
-    open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
-  } else if (route.to === "pet") {
-    if (petInView(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
-  } else if (route.to === "form") {
-    // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
-    if (petInView(route.petId)) open({ kind: "form", petId: route.petId, to: route.species });
-  } else if (route.to === "move") {
-    startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
-  } else if (route.to === "sell") {
-    if (petInView(route.petId)) open({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
-  } else if (route.to === "account") {
-    ui.detailPet = null;
-    open({ kind: "user", tab: "account" });
-    void loadAccount();
-  } else if (route.to === "trade") {
-    // 교환 링크(딥링크)로 왔다 — 박스 탭을 열고 교환 모달을 띄운다.
-    // 교환 모달이 이미 떠 있으면 그대로 두고 상태만 다시 읽는다. 다른 대화상자가 떠 있으면 닫고 연다
-    // (2026-09-30 사용자 결정 "ㅇㅇ 닫고 교환모달로.")
-    if (ui.dialog?.kind === "trade") void loadTrade();
-    else {
-      if (ui.dialog) closeDialog();
-      showTrade();
-    }
-  } else if (route.to === "agents") {
-    // Codex 창 깜빡임 알림 — 사용자 모달의 연결 탭 (src/agents/notice.ts)
-    ui.detailPet = null;
-    open({ kind: "user", tab: "agents" });
-    void loadAgents();
-  } else if (route.to === "bag" || route.to === "shop") {
-    // 줍기 배너 — 도구·진화용 도구는 가방, 포인트는 상점 (docs/specs/game.md "줍기")
-    closeDialog();
-    setTab(route.to);
-    ui.detailPet = null;
-    redrawBody();
-  } else {
-    resetAchievementTab(); // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
-    open({ kind: "achievements" });
-    dialogEl.querySelector(`.achievement[data-id="${CSS.escape(route.id)}"]`)?.scrollIntoView({ block: "nearest" });
-  }
-}
 
 // 첫 화면을 그린 뒤에 옮긴다 — 창을 새로 열면서 온 목적지는 스냅샷보다 먼저 올 수 있다
 const firstDraw = loadArt().then(refreshView);

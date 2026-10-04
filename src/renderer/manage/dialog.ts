@@ -37,7 +37,7 @@ export interface DialogHooks {
   afterDraw(): void; // 다 그린 뒤 — 검색 칸 초점 되돌리기, 화면 표시, 튜토리얼
   afterEmpty(): void; // 모달이 없어졌다 — 화면 표시
   onScrimChanged(): void; // 가림막이 켜지거나 꺼졌다 — 코치마크를 감추거나 다시 그린다
-  openAny(next: Dialog): void; // 제목 줄의 돌아가기 — 개체 상세(pet)도 여는 설정창의 open
+  openAny(next: Dialog): void; // 제목 줄의 돌아가기 — 개체 상세(pet)도 여는 routes.ts openDialogOrPet
 }
 let hooks: DialogHooks | null = null;
 export function setDialogHooks(next: DialogHooks): void {
@@ -128,7 +128,7 @@ export function drawDialog(): void {
 }
 
 // 모달을 연다 — 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
-// 개체 상세(`pet`)는 모달이 아니다 — 설정창의 open 이 먼저 가른다
+// 개체 상세(`pet`)는 모달이 아니다 — routes.ts openDialogOrPet 이 먼저 가른다
 export function openDialog(next: Dialog): void {
   moduleOf(next.kind).enter?.(next, ui.dialog);
   ui.dialog = next;
@@ -163,7 +163,7 @@ export function actionsRowEl(...items: HTMLElement[]): HTMLElement {
 }
 
 // 제목 줄 — `back` 을 주면 돌아가기를 앞에 둔다. 모달을 겹치지 않고 안에서 화면을 바꾼다.
-// 돌아갈 곳이 개체 상세(pet)일 수 있어 설정창의 open 고리로 연다
+// 돌아갈 곳이 개체 상세(pet)일 수 있어 설정창의 openAny 고리(routes.ts openDialogOrPet)로 연다
 export function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
   const row = el("div", "title-row");
   if (back) {
