@@ -26,9 +26,6 @@ import { moveFile, stampOf } from "../platform/move-file.js";
 import type { KeyVault } from "../platform/key-vault.js";
 import { sealPlainSave, setAsideSave } from "./save-file.js";
 
-// OS 키 저장소의 모양은 src/platform/key-vault.ts 다
-export type { KeyVault }; // [임시] 옛 자리 — src/tools/selftest/selftest-save-crypt.ts 가 읽는다
-
 export interface PrepareSaveKeyOptions {
   saveFile: string;
   vault: KeyVault;
