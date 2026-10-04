@@ -13,7 +13,7 @@ body {
   background: transparent;
   overflow: hidden;
 }
-/* 여백 8 은 그림자 자리다 — src/main/menu-window.ts SHADOW 와 같다 */
+/* 여백 8 은 그림자 자리다 — src/shared/window-metrics.ts MENU_METRICS.shadow 와 같다. CSS 는 import 하지 못하므로 바꿀 때 둘을 함께 바꾼다 */
 body {
   padding: 8px;
   display: inline-block;

@@ -4,6 +4,7 @@
 //   마우스를 올려서는 뜨지 않는다 (2026-10-02 사용자 "클릭해야 나오게 하자"). 다시 누르거나 Esc·←(→) 로 말풍선만 닫는다
 //   말풍선의 자리는 창을 띄울 때 한 번 잡는다 — 창이 말풍선 자리까지 넓으므로 빈 곳을 누르면 메뉴를 닫는다
 import type { MenuSubView, MenuView } from "../../shared/model/overlays.js";
+import { MENU_METRICS } from "../../shared/window-metrics.js";
 import { needBridge } from "../ui/bridge.js";
 import { portraitImg } from "../ui/portrait.js";
 import { needEl } from "../ui/dom.js";
@@ -13,7 +14,7 @@ const menu = needEl("menu", HTMLElement, "menu");
 const bubble = needEl("bubble", HTMLElement, "menu");
 const api = needBridge("pokebuddyMenu");
 
-const SUB_GAP = 8; // 메뉴와 말풍선 사이 — src/main/menus/menu-window.ts SUB_GAP 과 같다
+const SUB_GAP = MENU_METRICS.subGap; // 메뉴와 말풍선 사이 — 메인(src/main/menus/menu-window.ts)과 같은 값을 src/shared/window-metrics.ts 에서 읽는다
 const SUB_DROP = 5; // 말풍선 아래 끝은 그 항목 아래 끝보다 이만큼 아래 — 메뉴 안쪽 여백 4 + 테두리 1
 const TAIL = 10; // 꼬리 한 변 — menu.html `.tail`
 

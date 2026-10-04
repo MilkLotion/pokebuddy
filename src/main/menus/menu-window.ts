@@ -11,6 +11,7 @@
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import type { Rect } from "../../shared/geometry";
 import type { MenuChannel } from "../../shared/ipc/overlays";
+import { MENU_METRICS } from "../../shared/window-metrics.js";
 import { menuView, pickOf } from "../../view/menu-view.js";
 import { cursorScreen } from "../windows/display.js";
 import { afterLoad, createIpcScope } from "../windows/ipc.js";
@@ -24,10 +25,9 @@ const CH = {
   placed: "menu:placed",
 } satisfies Record<string, MenuChannel>;
 
-// 그림자 자리 — menu.html 의 body 여백과 같다
-const SHADOW = 8;
-// 메뉴와 말풍선 사이 — src/renderer/menu.ts SUB_GAP 과 같다 (Figma 05 `Party / Shared Form Tip` `501:14010`)
-const SUB_GAP = 8;
+// 그림자 자리와 메뉴·말풍선 사이 — 렌더러(src/renderer/windows/menu.ts)와 같은 값을 src/shared/window-metrics.ts 에서 읽는다
+const SHADOW = MENU_METRICS.shadow;
+const SUB_GAP = MENU_METRICS.subGap;
 
 export interface MenuWindowOptions {
   preload: string;
