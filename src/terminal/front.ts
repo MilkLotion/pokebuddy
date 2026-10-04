@@ -6,7 +6,8 @@
 //   (c) 아니면 터미널 호스트가 아니다 → 부르는 쪽이 앵커를 유지한다 (브라우저를 봐도 펫은 마지막 자리에 남는다)
 // 앱 이름표(b)는 대비책일 뿐 — (a) 는 이름을 몰라도 맞는다.
 // 같은 앱의 창이 여럿이면 창을 가리지 않고 그 앱이 띄운 최신 세션을 따른다 (2026-09-27 창 기록·VS Code 확장 삭제)
-import type { HelperInfo, HelperWindow, HostInfo, SelfMark, StateRecord } from "./types";
+import type { HelperInfo, HelperWindow, HostInfo, SelfMark } from "./types";
+import type { HookStateRead } from "../shared/hook-record";
 
 // 터미널 앱 이름 — 헬퍼가 주는 app 필드 (mac 은 앱 이름, Windows 는 실행 파일 이름). 대소문자를 가리지 않는다
 export const KNOWN_TERMINAL_APPS: ReadonlySet<string> = new Set(
@@ -49,7 +50,7 @@ export function frontWindow(
 //   front          frontWindow 의 결과
 //   stateRecords   훅이 적은 세션 기록 (src/agents/hook-records.ts readHookRecords)
 // 반환: { kind: "hook" | "known", pids } — pids 는 따를 세션의 pid (비면 대기). 호스트가 아니면 null
-export function hostOf(front: HelperWindow | null | undefined, stateRecords: StateRecord[] | null | undefined): HostInfo | null {
+export function hostOf(front: HelperWindow | null | undefined, stateRecords: HookStateRead[] | null | undefined): HostInfo | null {
   if (!front) return null;
   const hooked = (stateRecords || []).some((r) => Array.isArray(r.ancestors) && r.ancestors.includes(front.pid));
   if (hooked) return { kind: "hook", pids: [front.pid] };

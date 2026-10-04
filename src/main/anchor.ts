@@ -8,7 +8,8 @@
 import * as follow from "../terminal/front";
 import * as pkstate from "../terminal/state";
 import { readHookRecords } from "../agents/hook-records";
-import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo, StateRecord } from "../terminal/types";
+import type { HelperInfo, HelperInput, HelperWindow, SelfMark, StateInfo } from "../terminal/types";
+import type { HookStateRead } from "../shared/hook-record";
 import { helperCommand, parseInfo, queryHelper, stopHelper } from "../terminal/winbounds";
 import type { Paths } from "../platform/paths";
 
@@ -64,7 +65,7 @@ export function createAnchor(opts: AnchorOptions): Anchor {
   let wantStreak = 0;
   let helperFails = 0;
   let followPids = new Set<number>(); // 이번 폴링이 고른 "따를 세션"의 pid (창 주인)
-  let stateRecords: StateRecord[] = []; // 마지막으로 읽은 훅 기록 (최신순) — 폴링마다 한 번 읽어 판정 둘에 같이 쓴다
+  let stateRecords: HookStateRead[] = []; // 마지막으로 읽은 훅 기록 (최신순) — 폴링마다 한 번 읽어 판정 둘에 같이 쓴다
   let timer: NodeJS.Timeout | null = null;
 
   // 훅(pokebuddy-state)이 남긴 세션 상태 중 따를 것 — followPids 를 조상으로 가진 최신 기록 (terminal/state stateFor). 비면 대기

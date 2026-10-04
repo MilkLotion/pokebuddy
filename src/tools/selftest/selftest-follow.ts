@@ -12,7 +12,8 @@ import { createLineHelper } from "../../terminal/line-helper";
 import * as state from "../../terminal/state";
 import { readHookRecords } from "../../agents/hook-records";
 import { isPidAlive } from "../../platform/pid";
-import type { HelperWindow, StateRecord } from "../../terminal/types";
+import type { HelperWindow } from "../../terminal/types";
+import type { HookStateRead } from "../../shared/hook-record";
 import * as winbounds from "../../terminal/winbounds";
 import { makeTmp } from "../harness/tmp-dir";
 import { sleep } from "../harness/wait";
@@ -79,7 +80,7 @@ async function testStateRecords(): Promise<void> {
 
   await ok("stateFor: pids 중 하나를 조상으로 가진 최신 기록 · 조상 없는 기록은 거름 · pids 비면 대기", () => {
     const now = nowSec();
-    const recs: StateRecord[] = [
+    const recs: HookStateRead[] = [
       { state: "waiting", at: now, cwd: "/x" }, // 조상 없음 — 거른다
       { state: "running", at: now, ancestors: [30, 31], promptAt: 1234 },
       { state: "failed", at: now, ancestors: [30] },
@@ -104,7 +105,7 @@ async function testStateRecords(): Promise<void> {
     fs.utimesSync(older, t - 300, t - 300);
     fs.utimesSync(loose, t - 200, t - 200);
     fs.utimesSync(newer, t - 100, t - 100);
-    const recs = readHookRecords(dir) as (StateRecord & { tag: string })[];
+    const recs = readHookRecords(dir) as (HookStateRead & { tag: string })[];
     assert.deepStrictEqual(recs.map((r) => r.tag), ["new", "loose", "old"]);
 
   });
@@ -135,7 +136,7 @@ async function testFront(): Promise<void> {
   });
 
   await ok("hostOf: (a) 훅 기록의 조상에 창 주인 → hook · (b) 알려진 터미널 이름 → known · (c) 아니면 null", () => {
-    const hooked: StateRecord[] = [{ state: "running", at: nowSec(), ancestors: [40, 41] }];
+    const hooked: HookStateRead[] = [{ state: "running", at: nowSec(), ancestors: [40, 41] }];
     assert.deepStrictEqual(front.hostOf(win(41, "mystery"), hooked), { kind: "hook", pids: [41] });
     assert.deepStrictEqual(front.hostOf(win(20, "Code"), [{ state: "running", at: nowSec(), ancestors: [20] }]), { kind: "hook", pids: [20] });
     assert.deepStrictEqual(front.hostOf(win(50, "iterm2"), hooked), { kind: "known", pids: [] });
