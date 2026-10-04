@@ -50,7 +50,7 @@ const EXTRA_ANIMS = [
   "Walk", "Sleep", "EventSleep", "Laying", "Wake", "Hurt", "Cringe", "Nod", "Pose", "Hop", "LookUp", "Rotate", "Sit", "DeepBreath",
 ];
 // 추가 동작의 칸 크기 상한 — 상태 동작이 정한 칸의 이 배수까지만 받는다. 여기까지가 펫 "몸"이다.
-// 자리(집·산책·가두기·저장)는 몸 칸으로 계산한다 — 작업 동작이 창을 키워도 펫이 서는 자리는 그대로다 (src/main/layout.ts)
+// 자리(집·산책·가두기·저장)는 몸 칸으로 계산한다 — 작업 동작이 창을 키워도 펫이 서는 자리는 그대로다 (src/main/stage/layout.ts)
 //   Hop  점프 높이까지 칸에 담겨 이브이 48→80, 썬더 104→136 — 몸에서는 빠지고 작업 동작으로만 들어온다
 //   Hurt 이브이 40x48 → 48x48 로 가로 20% 늘지만 받는다 — 집어 들 때 아파하는 반응이 buddy 의 핵심이다
 const EXTRA_BUDGET = 1.25;
@@ -68,7 +68,7 @@ const EXTRA_BUDGET = 1.25;
 //   LeapForth    앞으로 뛰쳐나간 자세로 끝난다(끝이 시작에서 16~25px) — 제자리로 돌아올 때 튄다
 //   Emit         2종 중 1종이 떨린다(5번 뒤집힘)
 // 공격 동작은 몸을 내밀어 칸이 크다(피카츄 Idle 40x56 · Attack 80x80 · Swing 80x96). 그래서 몸보다 넉넉한 WORK_BUDGET 까지 받는다.
-// 창은 이 칸만큼 커지지만 그림이 없는 투명한 곳의 클릭은 아래 창으로 통과한다 (src/main/stage-window.ts hoverTick)
+// 창은 이 칸만큼 커지지만 그림이 없는 투명한 곳의 클릭은 아래 창으로 통과한다 (src/main/stage/stage-window.ts hoverTick)
 // 표본 50종 실측 — 2배면 Attack 40종 · Swing 31종이 들어오고 창 면적은 중앙값 2.7배(최대 4배). 1.5배는 Attack 9종뿐이다
 const WORK_PLAY: Record<string, WorkPlay> = {
   Attack: "once", Strike: "once", MultiStrike: "once", Kick: "once", Punch: "once", Slam: "once", Stomp: "once",

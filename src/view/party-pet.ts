@@ -1,4 +1,4 @@
-// 무대가 보는 마리 — 저장 v3 의 파티 칸을 무대가 읽을 모양(PartyPet)으로 바꾼다. 무대(src/main/stage.ts)는 이것 하나만 본다
+// 무대가 보는 마리 — 저장 v3 의 파티 칸을 무대가 읽을 모양(PartyPet)으로 바꾼다. 무대(src/main/stage/stage.ts)는 이것 하나만 본다
 // 저장 읽기·명령 보내기는 저장 쪽이 한다 (src/save/save-party.ts)
 // (예전 src/main/save-party.ts 안에 있었다. 메인 레인 M8-8 에서 화면 값으로 옮겼다)
 import { appearanceOf } from "../dex/look.js";
@@ -14,7 +14,7 @@ export interface PartyPet {
   size: number; // 도트 배율 (zoomOf 로 가둔다)
   nature: NatureId | null;
   home: HomePoint;
-  screen: ScreenRefV3 | null; // 모든 화면 방식에서 사는 화면 — 없으면 무대 묶음이 개체가 가장 적은 화면에 둔다 (src/main/stage-group.ts)
+  screen: ScreenRefV3 | null; // 모든 화면 방식에서 사는 화면 — 없으면 무대 묶음이 개체가 가장 적은 화면에 둔다 (src/main/stage/stage-group.ts)
   shown: boolean;
 }
 

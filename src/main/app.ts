@@ -8,11 +8,11 @@ import { app, nativeImage, screen, Notification } from "electron";
 import { starterSlugs, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../terminal/types";
-import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
+import { createHostWatch, type HostWatch, type HostWatchUpdate } from "./stage/host-watch";
 import { createArtLoader, type ArtLoader } from "./art/stage-art";
 import { createOverworldSource } from "./art/overworld-art";
 import { createCommands, type Commands } from "./app/commands";
-import { STAGE_RULES } from "./layout";
+import { STAGE_RULES } from "./stage/layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
 import { createLifetime, type Lifetime } from "./app/lifetime";
@@ -31,7 +31,7 @@ import { createFreeze } from "./app/freeze";
 import { createHalt } from "./app/halt";
 import type { Portraits } from "./art/portraits";
 import { artServices } from "./art/services";
-import { startKeepOnTop } from "./keep-on-top";
+import { startKeepOnTop } from "./stage/keep-on-top";
 import { CLOCK_RULES, createClock } from "./app/clock";
 import { askRegion } from "./windows/region-window";
 import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
@@ -39,9 +39,9 @@ import { PATHS, PROJECT } from "../platform/paths";
 import { readConfig } from "../platform/user-config";
 import { logoFile, preloadFile, rendererFile } from "./windows/files";
 import { askStarter } from "./windows/picker-window";
-import { createStage } from "./stage";
-import { createStageGroup, type StageGroup } from "./stage-group";
-import { createStageWindow } from "./stage-window";
+import { createStage } from "./stage/stage";
+import { createStageGroup, type StageGroup } from "./stage/stage-group";
+import { createStageWindow } from "./stage/stage-window";
 import { currentLang, langOf, petLabel, petName, setLang, t } from "../view/text";
 import { failTextOf } from "../shared/fail-text";
 import { createTray, type TrayHandle } from "./menus/tray";
@@ -83,7 +83,7 @@ const rt: Runtime = {
   party: null,
   lifetime: null,
   stages: null,
-  anchor: null,
+  hostWatch: null,
   commands: null,
   tray: null,
   screenPicker: null,
@@ -130,9 +130,9 @@ const display = createDisplayState({
   settings: () => rt.game?.read()?.settings ?? null,
   screens: currentScreens,
   mayLogin: app.isPackaged && !updateTestBuild,
-  onPlayArea: () => rt.anchor?.poll(), // 무대 사각형을 바로 다시 정한다
+  onPlayArea: () => rt.hostWatch?.poll(), // 무대 사각형을 바로 다시 정한다
   onHidden: () => {
-    rt.anchor?.poll();
+    rt.hostWatch?.poll();
     syncCoach(); // 숨긴 동안 바탕화면 튜토리얼은 기다린다
   },
   onGhost: (on) => {
@@ -159,7 +159,7 @@ const run = createRun({
   release: () => halt.releaseOnce(),
   stop: () => {
     clock.stop();
-    rt.anchor?.stop(); // 헬퍼도 멈춘다
+    rt.hostWatch?.stop(); // 헬퍼도 멈춘다
     rt.lifetime?.stop();
     rt.tray?.destroy();
     rt.tray = null;
@@ -294,14 +294,14 @@ const trayMenu = createTrayMenu({
   display,
   openManage: () => openManageWindow(),
   quit: () => app.quit(),
-  pollInput: () => rt.anchor?.poll(),
+  pollInput: () => rt.hostWatch?.poll(),
   trayRect: () => rt.tray?.bounds() ?? null,
   holdClick: (ms) => rt.tray?.holdClick(ms),
 });
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
-function onAnchorUpdate(update: AnchorUpdate): void {
+function onHostWatchUpdate(update: HostWatchUpdate): void {
   if (quitting() || !rt.stages) return;
   rt.stages.layout(display.lanes(), display.playArea().mode === "all");
   rt.stages.setVisible(update.visible);
@@ -419,7 +419,7 @@ const ticks = createTicks({
   sendClock: (now) => manage.send("manage:clock", { now }),
   frozen,
   locked: () => power.isLocked(),
-  anchor: () => rt.anchor,
+  hostWatch: () => rt.hostWatch,
   stages: () => rt.stages,
   worker: () => saveParty(),
   game: () => rt.game,
@@ -553,7 +553,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
   const prefetchOwned = (): void => art.prefetch((saveSource.save()?.pets ?? []).map(appearanceOf));
   saveSource.onChange(prefetchOwned);
   prefetchOwned();
-  // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage-group.ts)
+  // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage/stage-group.ts)
   rt.stages = createStageGroup({
     createWindow: (hooks) =>
       createStageWindow({
@@ -616,8 +616,8 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
 }
 
 // 호스트 감시와 명령 통로 — writer 역할이 바뀌면 명령·서비스를 잇거나 끊는다
-function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): Anchor {
-  rt.anchor = createAnchor({
+function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): HostWatch {
+  rt.hostWatch = createHostWatch({
     paths: PATHS,
     self: SELF,
     host: {
@@ -626,7 +626,7 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
       quitting,
     },
     flags: () => ({ userHidden: display.hidden(), held: rt.stages?.heldId() != null }),
-    onUpdate: onAnchorUpdate,
+    onUpdate: onHostWatchUpdate,
     onFocus: (key) => rt.stages?.focus(key),
     onInput: (input) => trayMenu.onInput(input),
     log,
@@ -685,7 +685,7 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): An
     void refreshParty().then(syncCoach); // 무대에 나온 마리가 바뀌면 첫 돌봄이 밝힐 마리도 바뀐다
   });
 
-  return rt.anchor;
+  return rt.hostWatch;
 }
 
 // 첫 무대 그리기와 수명 잠금 — 그림을 하나도 못 받았거나 다른 동반자가 떠 있으면 끝내고 false
@@ -727,7 +727,7 @@ function bootServices(saveSource: SaveParty): void {
 }
 
 // 트레이·첫 동기화·준비 알림·주기 작업·화면 변화 구독
-function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, life: Lifetime): void {
+function bootFinish(saveSource: SaveParty, group: StageGroup, watch: HostWatch, life: Lifetime): void {
   rt.tray = createTray({
     icon: logoFile(256),
     tooltip: t("tray.title", { name: displayName() }),
@@ -750,11 +750,11 @@ function bootFinish(saveSource: SaveParty, group: StageGroup, watch: Anchor, lif
   clock.on(ticks.clock);
   clock.start();
   run.every(() => rt.stages?.tick(), STAGE_RULES.tickMs);
-  // Windows 는 무대 창의 "항상 위"가 풀리거나 다른 항상 위 창에 밀린다 — 1초마다 다시 건다 (src/main/keep-on-top.ts)
+  // Windows 는 무대 창의 "항상 위"가 풀리거나 다른 항상 위 창에 밀린다 — 1초마다 다시 건다 (src/main/stage/keep-on-top.ts)
   const keepTop = startKeepOnTop(() => rt.stages);
   if (keepTop) run.keep(keepTop);
   // 모니터를 꽂거나 빼거나 배치·해상도가 바뀌면 무대 창을 바로 다시 정한다 — 빠진 화면의 마리는 주 화면에 임시로 간다
-  const relayout = (): void => rt.anchor?.poll();
+  const relayout = (): void => rt.hostWatch?.poll();
   screen.on("display-added", relayout);
   screen.on("display-removed", relayout);
   screen.on("display-metrics-changed", relayout);

@@ -16,7 +16,7 @@ export interface RegionInit {
 // ── 놀이공간 화면 고르기 (2026-09-28 여러 화면) ────────────────────────────────
 // 설정의 한 화면 목록 한 줄. ref 를 그대로 `playScreen` 설정 값으로 보낸다
 export interface ScreenView {
-  number: number; // 화면 번호 — 주 화면이 1 (src/main/layout.ts screenOrder)
+  number: number; // 화면 번호 — 주 화면이 1 (src/main/windows/screens.ts screenOrder)
   primary: boolean;
   w: number;
   h: number;

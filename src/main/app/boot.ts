@@ -5,14 +5,14 @@ import { prepareSaveKey, setAsideKeyAndSave, type PrepareSaveKeyOptions } from "
 import { isSealedOnDisk } from "../../save/save-file";
 import { createKeyVault } from "../services/vault";
 import type { Notifier } from "../../notify/notifier";
-import type { Anchor } from "../anchor";
+import type { HostWatch } from "../stage/host-watch";
 import type { Commands } from "./commands";
 import type { GameV3 } from "../../tx/game";
 import type { HookUpkeep } from "./hook-upkeep";
 import type { Lifetime } from "./lifetime";
 import type { Portraits } from "../art/portraits";
 import type { SaveParty } from "../../save/save-party";
-import type { StageGroup } from "../stage-group";
+import type { StageGroup } from "../stage/stage-group";
 import type { TrayHandle } from "../menus/tray";
 import type { BannerWindow } from "../windows/banner-window";
 import type { ScreenPicker } from "../windows/screen-picker";
@@ -29,7 +29,7 @@ export interface Runtime {
   party: SaveParty | null; // 저장 감시 — writer 잡기와 무대가 볼 마리 목록
   lifetime: Lifetime | null; // 동반자 lock 수명 감시
   stages: StageGroup | null; // 무대 — 화면마다 무대 창과 마리 움직임 한 쌍. 한 화면·영역 지정이면 한 쌍이다
-  anchor: Anchor | null; // 호스트·표시 판정(헬퍼)
+  hostWatch: HostWatch | null; // 호스트·표시 판정(헬퍼)
   commands: Commands | null; // 명령 통로
   tray: TrayHandle | null;
   screenPicker: ScreenPicker | null; // 놀이공간 화면 번호 덮개

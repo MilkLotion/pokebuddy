@@ -1,7 +1,7 @@
 // 화면 얻기 — Electron screen 을 부르는 곳을 한 파일로 모은다 (worklog/records/code-structure/design/10-main.md 3.4절)
 // 사각형 계산(옆에 붙이기·가운데·모서리)은 ./placement.ts, 무대의 화면 계산은 ../layout.ts 다
 import { screen, type Point, type Rectangle } from "electron";
-import { screenOrder, type ScreenInfo } from "../layout";
+import { screenOrder, type ScreenInfo } from "./screens";
 
 // 지금 화면들 — 번호 순 (주 화면이 1). 좌표는 DIP
 export function screensNow(): ScreenInfo[] {

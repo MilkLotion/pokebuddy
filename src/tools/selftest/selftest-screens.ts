@@ -4,12 +4,13 @@
 // 개체 배분, 무대 묶음(가짜 창·가짜 무대)의 배분·다른 화면에 놓기·화면 빠짐을 본다.
 // 설계는 worklog/records/multi-display/record.md. 끝에 "통과" 한 줄. 실패하면 종료 코드 1
 import assert from "node:assert/strict";
-import { assignScreens, playLanes, findScreen, screenOrder, type PlayLane, type ScreenInfo } from "../../main/layout";
+import { assignScreens, playLanes, type PlayLane } from "../../main/stage/layout";
+import { findScreen, screenOrder, type ScreenInfo } from "../../main/windows/screens";
 import type { Rect, Size } from "../../shared/geometry";
 import type { PartyPet } from "../../view/party-pet";
-import type { Stage } from "../../main/stage";
-import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../../main/stage-group";
-import type { StageWindow } from "../../main/stage-window";
+import type { Stage } from "../../main/stage/stage";
+import { createStageGroup, type LaneHooks, type LaneStageHooks } from "../../main/stage/stage-group";
+import type { StageWindow } from "../../main/stage/stage-window";
 import { setHome } from "../../party/home";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import type { CoachView, PointerMsg } from "../../shared/model/stage";

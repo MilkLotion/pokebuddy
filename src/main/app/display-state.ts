@@ -5,7 +5,7 @@
 //   고스트 모드  이번 실행에만 둔다 — config.json 에 쓰지 않는다. 설정 키는 clickThrough (docs/terms.md "고스트 모드")
 //   놀이공간    설정의 `모든 화면 | 한 화면 | 영역 지정`. 터미널 창 대신 이 사각형을 따라가는 창으로 삼는다
 //               (2026-09-25 사용자 선택, 2026-09-28 여러 화면)
-//   잠들기 기준 설정 `잠들기 기준`(분) — 무대가 틱마다 이 값을 보고 모든 마리에 넣는다 (src/main/stage.ts sleepAfterMin).
+//   잠들기 기준 설정 `잠들기 기준`(분) — 무대가 틱마다 이 값을 보고 모든 마리에 넣는다 (src/main/stage/stage.ts sleepAfterMin).
 //               0 은 잠들지 않음, null 은 규칙표 기본값
 //   로그인 시 시작  설정 값을 OS 에 적용한다. 설치한 앱에서만 한다 — 저장소의 `electron .` 을 등록하면
 //               다음 로그인 때 앱 없는 빈 Electron 이 뜨기 때문이다
@@ -13,7 +13,8 @@
 // 저장 설정은 매 폴링마다 읽지 않는다. 게임 틱과 관리 창의 설정 변경 뒤에 sync 로 다시 읽는다
 import { app } from "electron";
 import type { SaveV3 } from "../../shared/save-v3";
-import { playLanes, type PlayLane, type ScreenInfo } from "../layout";
+import { playLanes, type PlayLane } from "../stage/layout";
+import type { ScreenInfo } from "../windows/screens";
 import type { DebugLog } from "./log";
 
 type Settings = SaveV3["settings"];

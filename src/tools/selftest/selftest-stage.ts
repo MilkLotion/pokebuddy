@@ -7,9 +7,10 @@ import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { ANCHOR_RULES, createAnchor, type AnchorUpdate } from "../../main/anchor";
+import { HOST_WATCH_RULES, createHostWatch, type HostWatchUpdate } from "../../main/stage/host-watch";
 import { ART_RULES, zoomOf } from "../../main/art/stage-art";
-import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, stageRectOf, toLocal } from "../../main/layout";
+import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, toLocal } from "../../main/stage/layout";
+import { stageRectOf } from "../../main/windows/screens";
 import { menuView, pickOf, subId } from "../../view/menu-view";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
 import { NATURE_SHOWN } from "../../dex/natures";
@@ -19,9 +20,9 @@ import { readLockPid } from "../../platform/pid-lock";
 import type { LookSheets, PointerMsg, StageFrame } from "../../shared/model/stage";
 import type { AgentState } from "../../shared/names/agents";
 import { devSaveState } from "../dev/dev-save";
-import { createStage } from "../../main/stage";
+import { createStage } from "../../main/stage/stage";
 import type { Look, ArtLoader } from "../../main/art/stage-art";
-import type { StageWindow } from "../../main/stage-window";
+import type { StageWindow } from "../../main/stage/stage-window";
 import { createCommands } from "../../main/app/commands";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
@@ -441,7 +442,7 @@ async function stageRuntimeTests(): Promise<void> {
   await overlap.setParty(six.map((p) => p.id === "p1" ? { ...p, look: "umbreon", species: "umbreon" } : p));
   overlap.tick();
   eq(overlap.petIds(), six.map((p) => p.id), "진화 그림 교체 후 소환 순서 유지");
-  // 다른 화면에서 끌려 온 마리를 들린 채로 받는다 — 자리는 무대 안에 가둔다 (src/main/stage-group.ts 넘기기)
+  // 다른 화면에서 끌려 온 마리를 들린 채로 받는다 — 자리는 무대 안에 가둔다 (src/main/stage/stage-group.ts 넘기기)
   ok(overlap.adopt("p2", { x: 10_000, y: 20 }), "있는 마리는 받는다");
   eq(overlap.heldId(), "p2", "받은 마리를 든다");
   overlap.tick();
@@ -575,15 +576,15 @@ async function anchorTests(): Promise<void> {
   const win = { app: "Fake", pid: 424242, id: 77, x: 10, y: 20, w: 800, h: 600 };
   fs.writeFileSync(helper, `#!/bin/sh\nprintf '%s\\n' '${JSON.stringify({ frontmost: "Fake", frontPid: 424242, windows: [win] })}'\n`, { mode: 0o755 });
   const env = { ...process.env, POKEBUDDY_WINBOUNDS: helper };
-  const make = (flags: { userHidden: boolean; held: boolean }, updates: AnchorUpdate[]) => {
-    const anchor = createAnchor({
+  const make = (flags: { userHidden: boolean; held: boolean }, updates: HostWatchUpdate[]) => {
+    const anchor = createHostWatch({
       paths: { state: path.join(dir, "state"), project: dir }, self: { pid: process.pid, appNames: new Set(["electron"]) }, env,
       host: { platform: "darwin", offScreen: () => false, quitting: () => false },
       flags: () => flags, onUpdate: (u) => updates.push(u), onFocus: () => {}, log: null,
     });
     return { anchor };
   };
-  const pollOnce = async (anchor: { poll(): void }, updates: AnchorUpdate[]): Promise<AnchorUpdate> => {
+  const pollOnce = async (anchor: { poll(): void }, updates: HostWatchUpdate[]): Promise<HostWatchUpdate> => {
     const n = updates.length;
     anchor.poll();
     ok(await waitFor(() => updates.length > n), "헬퍼 답이 왔다");
@@ -591,11 +592,11 @@ async function anchorTests(): Promise<void> {
   };
   // 맨 앞 창이 터미널 호스트가 아니어도(모르는 앱) 보인다. 표시는 2회 연속 뒤. 직접 숨김·들기 판정
   {
-    const updates: AnchorUpdate[] = [];
+    const updates: HostWatchUpdate[] = [];
     const flags = { userHidden: false, held: false };
     const { anchor } = make(flags, updates);
     const u1 = await pollOnce(anchor, updates);
-    eq(u1.visible, false, `1회: 표시는 아직 (visibleConfirm=${ANCHOR_RULES.visibleConfirm})`);
+    eq(u1.visible, false, `1회: 표시는 아직 (visibleConfirm=${HOST_WATCH_RULES.visibleConfirm})`);
     const u2 = await pollOnce(anchor, updates);
     eq(u2.visible, true, "2회: 호스트 없음 → 늘 보임");
     eq(anchor.currentInfo(), { state: "idle", promptAt: null }, "훅 기록이 없으면 대기");
@@ -614,7 +615,7 @@ async function anchorTests(): Promise<void> {
   {
     const stateDir = tmpDir("anchor/state");
     fs.writeFileSync(path.join(stateDir, "s.json"), JSON.stringify({ at: Date.now() / 1000, state: "running", ancestors: [424242], promptAt: 1 }));
-    const updates: AnchorUpdate[] = [];
+    const updates: HostWatchUpdate[] = [];
     const { anchor } = make({ userHidden: false, held: false }, updates);
     await pollOnce(anchor, updates);
     const u = await pollOnce(anchor, updates);

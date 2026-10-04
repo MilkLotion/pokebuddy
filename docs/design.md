@@ -68,7 +68,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | 제품 구조 | 상주 Electron 앱 하나로 구성한다. 앱이 런타임과 저장을 맡는다. VS Code 확장은 없다. | [기동](../src/main/app.ts), [설명서](guide.md) |
 | 독립 실행 | `pokebuddy companion`을 사용한다. 첫 실행에서 스타터를 고른다. 이후에는 저장된 파티를 복원한다. | [설명서](guide.md) |
 | 실행 모드 | 동반자(`companion`) 하나만 둔다. 세션 펫과 창 펫은 없다. 특정 창에만 펫을 띄우는 기능은 두지 않는다. | [기동](../src/main/app.ts) |
-| 표시 구조 | 투명 창 하나에 최대 여섯 마리를 그린다. 마리별 크기·성격·표시 상태를 유지한다. | [표시 창](../src/main/stage-window.ts), [무대](../src/main/stage.ts) |
+| 표시 구조 | 투명 창 하나에 최대 여섯 마리를 그린다. 마리별 크기·성격·표시 상태를 유지한다. | [표시 창](../src/main/stage/stage-window.ts), [무대](../src/main/stage/stage.ts) |
 | 정식 로고 | 원본은 `assets/logo/src/logo.svg`다. 산출물은 `assets/logo/out/`에 둔다. | [원본](../assets/logo/src/logo.svg) |
 | 구현 기술 | `src/`에 TypeScript를 작성한다. 메인과 렌더러를 `tsc`로 각각 빌드한다. | [패키지 설정](../package.json) |
 | S5 설정창 | 바닐라 HTML·CSS와 컴파일한 TypeScript를 사용한다. 탭은 파티·박스·도감·상점·가방이다. 교환은 박스 탭 머리 메뉴의 `교환`으로 여는 모달이다. | [게임 규칙](specs/game.md) |
@@ -152,7 +152,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | 숨김 | 숨겨도 파티 배치와 육성을 유지한다. 다시 표시하면 마지막에 그린다. 재시작하면 저장된 파티 순서로 그린다. |
 | 여러 창 | 동반자 하나가 파티를 표시한다. 창별 파티 배분은 없다. |
 
-구현은 [무대](../src/main/stage.ts)와 [렌더러](../src/renderer/stage/stage.ts)에 있다.
+구현은 [무대](../src/main/stage/stage.ts)와 [렌더러](../src/renderer/stage/stage.ts)에 있다.
 
 ## 모듈 규칙
 

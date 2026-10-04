@@ -6,12 +6,12 @@
 // 400ms 폴링마다 부르면 mac 에서 깜빡일 수 있다
 import fs from "node:fs";
 import { BrowserWindow, screen } from "electron";
-import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../shared/model/stage";
-import type { StageChannel } from "../shared/ipc/stage";
+import type { CoachAction, CoachView, HitReply, LookSheets, PointerMsg, StageFrame, StageInit } from "../../shared/model/stage";
+import type { StageChannel } from "../../shared/ipc/stage";
 import { sameRect } from "./layout";
-import type { Rect, Size } from "../shared/geometry";
-import { transparentOptionsOf } from "./windows/options";
-import { createIpcScope } from "./windows/ipc";
+import type { Rect, Size } from "../../shared/geometry";
+import { transparentOptionsOf } from "../windows/options";
+import { createIpcScope } from "../windows/ipc";
 
 // 채널 이름 — preload 와 같은 문자열인지 satisfies 로 검사
 const CH = {
@@ -52,7 +52,7 @@ export interface StageWindow {
   size(): Size; // 무대 크기 — 아직 없으면 0×0
   setStage(rect: Rect): boolean; // 바뀔 때만 setBounds. 바뀌었으면 true (렌더러에 stage:init 도 보낸다)
   setVisible(on: boolean): void;
-  raise(): void; // "항상 위"를 다시 걸어 항상 위 창들 맨 앞으로 — 보일 때만 (src/main/keep-on-top.ts)
+  raise(): void; // "항상 위"를 다시 걸어 항상 위 창들 맨 앞으로 — 보일 때만 (src/main/stage/keep-on-top.ts)
   owns(w: BrowserWindow): boolean; // 이 무대의 창인가
   isVisible(): boolean;
   setPassing(on: boolean): void;
