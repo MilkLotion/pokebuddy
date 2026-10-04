@@ -5,22 +5,21 @@
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 import { BrowserWindow, clipboard, ipcMain } from "electron";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../shared/model/account";
-import type { AgentAction } from "../shared/model/agents";
-import type { DisplayView, PortraitAsk } from "../shared/model/snapshot";
+import type { DisplayView } from "../shared/model/snapshot";
 import type { MailAction, MailReply, MailScreen } from "../shared/model/mail";
 import type { ManageChannel, ManageReply, ManageRequest } from "../shared/ipc/manage";
 import type { ManageRoute } from "../shared/model/route";
 import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../shared/model/devices";
 import type { ScreenView } from "../shared/model/overlays";
 import type { TradeScreen } from "../shared/model/trade";
-import { hasCommandFlag } from "../shared/names/commands.js";
 import { WINDOW_V3_RULES } from "../save/rules.js";
+import { isInternalCommand, parseAccountAction, parseAgentRequest, parseCommand, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./manage/requests.js";
 import { createGame, type GameV3 } from "../tx/game.js";
 import { PATHS } from "../platform/paths.js";
 import { windowIcon } from "./windows/files.js";
 import { webPreferencesOf } from "./windows/options.js";
 import { isFromWindow } from "./windows/ipc.js";
-import { INPUT_LIMITS, isShortId } from "./windows/input.js";
+import { isShortId } from "./windows/input.js";
 import { MEGA_STONE_ICON, portraitKey } from "./art/portraits.js";
 import { artServices } from "./art/services.js";
 import { createDeviceWindow, type DeviceWindow } from "./windows/device-window.js";
@@ -161,20 +160,8 @@ let partyWin: DeviceWindow<PartyDeviceOpen> | null = null;
 // 기기 창에 마지막으로 띄운 모델(세대 번호와 함께) — 설정창은 스냅샷이 바뀔 때마다 고른 값을 다시 보낸다. 모델이 그대로면 다시 그리지 않는다
 const shownModel = new Map<"pet" | "shop" | "bag" | "party", string>();
 
-const isRequest = (v: unknown): v is ManageRequest =>
-  v != null && typeof v === "object" && typeof (v as { cmd?: unknown }).cmd === "string";
-
 // 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
 const RESULT_COMMANDS = new Set(["bag.use", "shop.buy"]);
-// 표면이 보내지 못하는 명령 — 명령 이름 표의 internal 표시 하나로 가린다(교환 잠금·반영, 우편 받기·읽음). 메인의 서비스만 실행기에 낸다
-const isInternalCommand = (cmd: string): boolean => hasCommandFlag(cmd, "internal");
-
-const isAgentRequest = (v: unknown): v is { name: string; action: AgentAction } => {
-  if (v == null || typeof v !== "object") return false;
-  const r = v as { name?: unknown; action?: unknown };
-  return typeof r.name === "string" && (r.action === "connect" || r.action === "disconnect" || r.action === "check" || r.action === "probe");
-};
-
 // 관리 창이 보낸 요청인가. 무대 창·선택 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
 const mine = (e: { sender: unknown }): boolean => isFromWindow(win, e);
 
@@ -224,22 +211,18 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   ipcMain.handle(CH.agents, (e, req: unknown) => {
     if (!mine(e)) return { ...DENIED, list: [], platform: process.platform, node: null };
     // CLI 연결 탭의 요청 — 저장을 읽지 않는다 (src/agents/agent-request.ts)
-    return runAgentRequest(isAgentRequest(req) ? req : undefined, { stateDir: PATHS.state });
+    return runAgentRequest(parseAgentRequest(req) ?? undefined, { stateDir: PATHS.state });
   });
   // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
   // 앱과 같은 인스턴스다 — 앱 안 그림 폴더 규칙도 그곳에 있다 (src/main/art/services.ts)
   const portraits = artServices().portraits;
   ipcMain.handle(CH.portraits, async (e, asks: unknown) => {
-    if (!mine(e) || !Array.isArray(asks)) return {};
-    const list = asks
-      .filter((a): a is PortraitAsk => a != null && typeof a === "object" && typeof (a as PortraitAsk).slug === "string")
-      .slice(0, INPUT_LIMITS.portraitAsks)
-      .map((a) => ({ slug: a.slug, shiny: a.shiny === true }));
-    return portraits.get(list);
+    const list = mine(e) ? parsePortraitAsks(asks) : null;
+    return list ? portraits.get(list) : {};
   });
   ipcMain.handle(CH.icons, async (e, keys: unknown) => {
-    if (!mine(e) || !Array.isArray(keys)) return {};
-    return portraits.icons(keys.filter((k): k is string => typeof k === "string").slice(0, INPUT_LIMITS.iconKeys));
+    const list = mine(e) ? parseIconKeys(keys) : null;
+    return list ? portraits.icons(list) : {};
   });
   // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다
   ipcMain.handle(CH.art, (e) => {
@@ -410,34 +393,32 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
   // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
   ipcMain.on(CH.copy, (e, text: unknown) => {
     if (!win || !mine(e)) return;
-    if (typeof text === "string" && text.length <= INPUT_LIMITS.copyChars) clipboard.writeText(text);
+    const copy = parseCopyText(text);
+    if (copy != null) clipboard.writeText(copy);
   });
   // 계정 — 요청 모양은 action 문자열만 확인한다. 값의 검사는 src/online/account.ts 가 한다
   ipcMain.handle(CH.account, async (e, req: unknown): Promise<AccountReply | null> => {
     if (!mine(e)) return null;
     if (!account) return null;
-    if (req == null || typeof req !== "object" || typeof (req as { action?: unknown }).action !== "string") return null;
-    return account(req as AccountAction);
+    const action = parseAccountAction(req);
+    return action ? account(action) : null;
   });
   // 우편함 — 정한 세 동작만 받는다. 편지 id 는 짧은 글자만. 선물 값은 렌더러에서 받지 않는다
   ipcMain.handle(CH.mail, async (e, req: unknown): Promise<MailReply | null> => {
     if (!mine(e) || !mail) return null;
-    const r = req as { action?: unknown; id?: unknown } | null;
-    if (!r || typeof r !== "object") return null;
-    if (r.action === "refresh") return mail({ action: "refresh" });
-    if ((r.action === "read" || r.action === "claim") && typeof r.id === "string" && /^[0-9a-f-]{36}$/i.test(r.id)) return mail({ action: r.action, id: r.id });
-    return null;
+    const action = parseMailAction(req);
+    return action ? mail(action) : null;
   });
   // 업데이트 — 정한 세 동작만 받는다
   ipcMain.handle(CH.update, async (e, action: unknown): Promise<UpdateView | null> => {
     if (!mine(e) || !update) return null;
-    if (action !== "status" && action !== "check" && action !== "install") return null;
-    return update(action);
+    const act = parseUpdateAction(action);
+    return act ? update(act) : null;
   });
   ipcMain.handle(CH.notes, (e, action: unknown): PatchNotesView | null => {
     if (!mine(e) || !notes) return null;
-    if (action !== "list" && action !== "seen") return null;
-    return notes(action);
+    const act = parseNotesAction(action);
+    return act ? notes(act) : null;
   });
   // 포켓몬 메뉴 — 개체 식별자만 받는다. 띄웠으면 true, 띄울 길이 없으면 false
   ipcMain.handle(CH.petMenu, (e, petId: unknown): boolean => {
@@ -460,9 +441,10 @@ function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, 
     if (!drawRegion) return { ok: false, reason: "not-ready" };
     return drawRegion();
   });
-  ipcMain.handle(CH.command, async (e, req: unknown): Promise<ManageReply> => {
+  ipcMain.handle(CH.command, async (e, raw: unknown): Promise<ManageReply> => {
     if (!mine(e)) return DENIED;
-    if (!isRequest(req)) return { ok: false, reason: "bad-request" };
+    const req = parseCommand(raw);
+    if (!req) return { ok: false, reason: "bad-request" };
     // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
     if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
     game.tick();
