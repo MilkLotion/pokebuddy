@@ -5,8 +5,9 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
+import { drawGuide } from "./guide.js";
 import { agentRows, loadAgents } from "./agents.js";
-import { closeSettingSelect, drawGuide, drawSettings, drawUser, syncIdentify } from "./settings.js";
+import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
 import { boxUi, hold } from "./box-state.js";
 import { drawHoldGhost, dropZone, endHold, setBoxMoveHooks, startDrag, startHold } from "./box-move.js";
 import { currentAccount, loadAccount, setAccountHooks } from "./account.js";
