@@ -37,10 +37,9 @@ const LAYERS: Readonly<Record<string, readonly string[]>> = {
   online: [...LOW, ...DOMAINS, "save"],
   agents: LOW,
   terminal: LOW,
-  tx: [...LOW, ...DOMAINS, ...MID, "commands"],
-  commands: [...LOW, ...DOMAINS, ...MID, "tx"],
+  tx: [...LOW, ...DOMAINS, ...MID],
   view: [...LOW, ...DOMAINS, ...MID],
-  main: [...LOW, ...DOMAINS, ...MID, "tx", "commands", "view", "verify"],
+  main: [...LOW, ...DOMAINS, ...MID, "tx", "view", "verify"],
   renderer: ["shared"],
   hooks: ["shared"],
   // cli 는 도메인(아래층)도 읽는다 — pokebuddy status 가 도감 번호(dex/dex-number)를 푼다 (도구 레인 T7b-3, 오케스트레이터에 알림)
