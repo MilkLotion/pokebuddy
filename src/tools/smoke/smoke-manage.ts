@@ -127,7 +127,7 @@ window.pokebuddyManage = new Proxy({}, {
 `,
 );
 
-// 기기 창 모델 — 앱 메인의 처리기(src/main/manage-window.ts)와 같이 가짜 스냅샷과 고른 값으로 만든다. 그림 열쇠는 풀지 않는다(시험은 그림을 그리지 않는다)
+// 기기 창 모델 — 앱 메인의 처리기(src/main/manage/window.ts)와 같이 가짜 스냅샷과 고른 값으로 만든다. 그림 열쇠는 풀지 않는다(시험은 그림을 그리지 않는다)
 ipcMain.handle("smoke:device", (_e, kind: string, s: Snapshot, input: unknown) => {
   if (kind === "bag") return bagDeviceModel(s, input as BagDeviceInput);
   if (kind === "party") return partyDeviceModel(s, input as PartyDeviceInput);

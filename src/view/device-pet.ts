@@ -1,5 +1,5 @@
 // 파티 상세 기기 창 모델 — 고른 개체 하나 (Figma 05 `Party / Detail Device` `908:23772`).
-// 설정창은 고른 값(PetDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
+// 설정창은 고른 값(PetDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage/window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 초상·메가스톤 표식 그림은 메인의 기기 창 틀이 붙인다 (src/main/windows/devices.ts petDeviceOf)
 import type { PetDeviceInput, PetDeviceOpen } from "../shared/model/devices.js";
 import type { PetView, Snapshot } from "../shared/model/snapshot.js";

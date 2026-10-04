@@ -174,7 +174,7 @@ PC 잠금·절전·앱 종료 중에는 배고픔·친밀도·포인트·버프 
 | `src/shared/` | 저장·명령·표시 계약 |
 | `src/tools/` | 자체 검사와 화면 검사 도구 |
 
-S5 설정창은 `src/main/manage-window.ts` 와 `src/renderer/manage/manage.ts` 다. 그림 받기는 `src/main/art/` 에 있다. CLI 는 `src/cli/` 에 있다. 이름·도감 번호·언어 자료(JSON)는 `data/` 에 있다.
+S5 설정창은 `src/main/manage/window.ts` 와 `src/renderer/manage/manage.ts` 다. 그림 받기는 `src/main/art/` 에 있다. CLI 는 `src/cli/` 에 있다. 이름·도감 번호·언어 자료(JSON)는 `data/` 에 있다.
 
 ## 성격과 육성
 

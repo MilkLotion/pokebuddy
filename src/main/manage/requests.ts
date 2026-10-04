@@ -1,4 +1,4 @@
-// 설정창이 보낸 값의 모양 검사 — 순수 함수. 설정창 처리기(src/main/manage-window.ts)가 부른다. 렌더러가 보낸 값은 믿지 않는다
+// 설정창이 보낸 값의 모양 검사 — 순수 함수. 설정창 처리기(src/main/manage/window.ts)가 부른다. 렌더러가 보낸 값은 믿지 않는다
 // 모양이 맞지 않으면 null — 처리기는 그때 각 채널의 빈 답을 돌려준다. 값의 뜻(잔액·소유 등)은 실행기·서비스가 따로 검사한다
 // 기기 창 다섯의 고른 값(…DeviceInput)은 src/main/windows/devices.ts 의 is…Input 이 본다
 // (예전 src/main/manage-window.ts 처리기 안에 흩어져 있었다. 메인 레인 M6a 에서 모았다)

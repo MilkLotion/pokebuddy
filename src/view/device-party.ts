@@ -1,5 +1,5 @@
 // 파티 기기 창 모델 — 교체 화면에서 지금 프리셋의 파티 칸과 프리셋 칩 (Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
-// 설정창은 고른 값(PartyDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다
+// 설정창은 고른 값(PartyDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage/window.ts)가 지금 스냅샷으로 이 함수를 부른다
 import type { PartyDeviceInput, PartyDeviceOpen } from "../shared/model/devices.js";
 import type { Snapshot } from "../shared/model/snapshot.js";
 import { portraitArtKey, type DeviceResult } from "./device-art.js";

@@ -1,5 +1,5 @@
 // 상점 기기 창 모델 — 고른 상품의 설명과 구매 조작 칸 (Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
-// 설정창은 고른 값(ShopDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
+// 설정창은 고른 값(ShopDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage/window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 살 수 있는 개수는 포인트만큼이고, 도구는 가방에 더 담을 수 있는 만큼(최대 999)까지다 (2026-09-27 사용자 결정). 0P 상품은 하나씩 받는다.
 // 알은 돌보미집 빈 칸과 단일 포켓몬 알의 남은 수까지다 — 스냅샷의 room (src/view/shop-list.ts)
 import type { ShopDeviceInput, ShopDeviceOpen } from "../shared/model/devices.js";

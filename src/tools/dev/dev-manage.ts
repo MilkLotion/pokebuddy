@@ -114,17 +114,15 @@ function loadApp() {
     fs.mkdirSync(process.env.CODEX_HOME, { recursive: true });
     fs.writeFileSync(path.join(process.env.CODEX_HOME, "hooks.json"), JSON.stringify({ hooks: Object.fromEntries(events.map((e) => [e, [{ hooks: [{ type: "command", command: hook, timeout: 5 }] }]])) }));
   }
-  const manageWindow = require("../../main/manage-window") as typeof import("../../main/manage-window");
   return {
     createGame: (require("../../tx/game") as typeof import("../../tx/game")).createGame,
     petName: (require("../../view/text") as typeof import("../../view/text")).petName,
-    openManage: manageWindow.openManage,
+    createManage: (require("../../main/manage/window") as typeof import("../../main/manage/window")).createManage,
     paths: require("../../main/windows/files") as typeof import("../../main/windows/files"),
     store: require("../../save/store") as typeof import("../../save/store"),
     empty: (require("../../save/v3") as typeof import("../../save/v3")).empty,
     createMailInbox: (require("../../online/mail-inbox") as typeof import("../../online/mail-inbox")).createMailInbox,
     mailScreenOf: (require("../../view/mail") as typeof import("../../view/mail")).mailScreenOf,
-    pushMail: manageWindow.pushMail,
   };
 }
 
@@ -237,7 +235,7 @@ const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
 
 void app.whenReady().then(async () => {
   const file = path.join(dir, "save-v3.json");
-  const { createGame, petName, openManage, paths, store, empty, createMailInbox, mailScreenOf, pushMail } = loadApp();
+  const { createGame, petName, createManage, paths, store, empty, createMailInbox, mailScreenOf } = loadApp();
   const seeded = seed(empty, Date.now());
   // --tut <id>=<done|skipped|none> — 튜토리얼 상태를 정해 둔다(여러 번). 새 기능 튜토리얼 화면을 차례로 보려고
   for (const pair of argsAfter("--tut")) {
@@ -322,6 +320,8 @@ void app.whenReady().then(async () => {
     return game.send({ cmd: req.cmd, target: req.target, args: req.args } as Parameters<typeof game.send>[0], "settings");
   };
   // 가짜 우편함 서버 — 받은 기록은 메모리에만 둔다
+  // 설정창 — 아래에서 한 번 만든다. 가짜 우편함이 그 전에 밀어 보내면 버린다(앱과 같다)
+  let manage: ReturnType<typeof createManage> | null = null;
   let mailOpt = {};
   if (hasFlag("--mail")) {
     const day = 86_400_000;
@@ -350,7 +350,7 @@ void app.whenReady().then(async () => {
       onChanged: () => undefined,
       screen: mailScreenOf,
     });
-    box.onScreen((screen) => pushMail(screen));
+    box.onScreen((screen) => manage?.send("manage:mail-view", screen));
     mailOpt = { mail: (req: never) => box.act(req) };
   }
   // 가짜 업데이트 — 준비됨. 설치는 앱이 꺼지는 것을 흉내 내어 답하지 않는다
@@ -369,21 +369,23 @@ void app.whenReady().then(async () => {
         }),
       }
     : {};
-  const win = openManage({
-    ...mailOpt,
-    ...updateOpt,
-    ...notesOpt,
+  manage = createManage({
     preload: paths.preloadFile(),
     html: paths.rendererFile("manage.html"),
-    game,
-    drawRegion,
-    screens,
-    identifyScreens: (on: boolean) => picker.identify(on),
-    pickScreen,
-    display: () => ({ ...shown }),
+    game: () => game,
     send: devSend,
-    ...(route ? { route } : {}),
-  } as unknown as Parameters<typeof openManage>[0]);
+    services: () => ({
+      ...mailOpt,
+      ...updateOpt,
+      ...notesOpt,
+      drawRegion,
+      screens,
+      identifyScreens: (on: boolean) => picker.identify(on),
+      pickScreen,
+      display: () => ({ ...shown }),
+    }),
+  } as unknown as Parameters<typeof createManage>[0]);
+  const win = manage.open(route)!;
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다
