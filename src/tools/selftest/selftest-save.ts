@@ -213,6 +213,19 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   process.stdout.write("(8-3) 정규화 · 박스 기본 이름은 저장하지 않는다  ok\n");
 }
 
+// (8-4) 정규화 — 도감 목록은 기록과 같은 모양(normalizeSlug)으로 맞추고 중복을 걷는다 (94 항목 9-5-5 (라))
+{
+  const raw = JSON.parse(JSON.stringify(empty(T0))) as Record<string, unknown>;
+  raw.dex = { unlocked: ["pikachu", " Pikachu ", "eevee-3d", ""], obtained: ["Eevee", "eevee"], shinyObtained: ["CHARMANDER"], megaOpened: ["Charizard", "charizard"], discovered: { egg: "Kept" }, rulesRev: 0 };
+  const dex = normalize(raw, T0)?.dex;
+  assert.deepEqual(dex?.unlocked, ["pikachu", "eevee"], "공백·대소문자·-3d 를 맞추고 중복·빈 이름을 걷는다");
+  assert.deepEqual(dex?.obtained, ["eevee"]);
+  assert.deepEqual(dex?.shinyObtained, ["charmander"]);
+  assert.deepEqual(dex?.megaOpened, ["charizard"], "메가스톤이 생긴 종도 같이 맞춘다");
+  assert.deepEqual(dex?.discovered, { egg: "Kept" }, "옛 칸 discovered 는 그대로");
+  process.stdout.write("(8-4) 정규화 · 도감 목록의 종 이름을 맞춘다  ok\n");
+}
+
 // (9) 파티 칸 — 열린 칸은 앞에서부터. 경로와 관계없이 칸 +1
 {
   // 옛 저장: 업적 보상으로 5번 칸이 열려 1·2·5번이 열린 채
