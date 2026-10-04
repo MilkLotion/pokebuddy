@@ -20,7 +20,8 @@ import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
-import { CARE_RULES, MOOD_RULES, STATE_RULES, TIME_RULES } from "../../state/rules";
+import { CARE_RULES, MOOD_RULES, TIME_RULES } from "../../state/rules";
+import { CLOCK_RULES } from "../../main/clock";
 import { writeTextIfChanged } from "./write-text";
 
 // data/*.json 의 항목 — 이 도구는 몇 칸만 읽는다. 모양 검사는 앱의 로더가 한다
@@ -132,7 +133,7 @@ export function buildVerifyFiles(): Record<string, string> {
       toyAffinity: BAG_RULES.playAffinity,
       maxEggs: EGG_RULES.maxEggs,
       // 파일 쓰기 주기 + 게임 틱 한 번의 최대 + 여유 — 올린 저장이 이만큼 늦게 찍혔을 수 있다
-      slackMs: STATE_RULES.saveMs + TIME_RULES.maxElapsedMs + 15_000,
+      slackMs: CLOCK_RULES.saveMs + TIME_RULES.maxElapsedMs + 15_000,
     },
   };
   return {

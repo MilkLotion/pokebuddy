@@ -47,11 +47,3 @@ export const SOUND_RULES = { defaultVolume: 30, cryMax: 0.35, chimeMax: 0.35 } a
 //   area  넓이 — 240 × 160 과 같은 넓이. 폭·높이 비율은 자유다(아래로 길게, 옆으로 길게) — 2026-09-26 사용자 요청
 //   side  한 변 — 기본 크기(2) 포켓몬 한 마리가 들어가는 길이. 이보다 얇으면 움직일 자리가 없다
 export const REGION_MIN = { area: 240 * 160, side: 80 } as const;
-
-// [임시] 메인이 읽는 옛 이름 — 메인 레인이 CLOCK_RULES(src/main/clock.ts)로 옮기면 지운다 (worklog/records/code-structure/lanes/domain.md)
-//   maxTickMs  TIME_RULES.maxGapMs 와 같은 값이다
-//   saveMs     1초마다 메모리에 적용한 게임 시간을 파일에 쓰는 주기. 적용은 전역 시계의 1초 틱마다다 (src/main/clock.ts, 2026-09-29 사용자 결정)
-export const STATE_RULES = {
-  maxTickMs: TIME_RULES.maxGapMs,
-  saveMs: 15_000,
-};

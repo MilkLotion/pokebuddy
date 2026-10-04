@@ -226,7 +226,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 
 거래는 성공한 순간에 저장한다. 줍기는 주운 틱에 저장한다(`src/tx/game.ts` `find`). 줍기 저장에 실패하면 그 건은 버린다.
 시간에 따른 값은 전역 시계의 1초 틱마다 메모리에 적용한다. 계산에는 그 틱의 시각을 쓴다. 틱 밖에서 처리하는 명령도 마지막 틱의 시각을 쓴다(`src/main/app.ts` `clock.last()`).
-메모리 값은 15초(`STATE_RULES.saveMs`)마다 파일에 쓴다(`src/tx/game.ts` `flushMs`). 쓰기 간격은 단조 시계(`performance.now`)로 잰다. 그래서 시스템 시각을 뒤로 돌려도 주기 쓰기가 멈추지 않는다.
+메모리 값은 15초(`CLOCK_RULES.saveMs`, `src/main/clock.ts`)마다 파일에 쓴다(`src/tx/game.ts` `flushMs`). 쓰기 간격은 단조 시계(`performance.now`)로 잰다. 그래서 시스템 시각을 뒤로 돌려도 주기 쓰기가 멈추지 않는다.
 명령과 줍기가 저장할 때는 메모리 값도 함께 쓴다. 아래 직전에도 쓴다(`game.flush`): 앱 끄기(`before-quit`), 화면 잠금(`lock-screen`), 절전(`suspend`), 시스템 종료(`powerMonitor` `shutdown`, Windows 창 `session-end`).
 15초 주기는 Claude 가 쓰기 비용을 측정한 뒤 정한 구현 판단이다. 사용자가 확인하기 전이다. 강제 종료되면 최대 15초의 시간 진행을 잃는다.
 1초마다 파일을 쓰지 않는 이유: 쓰기 자체는 약 0.4ms 였다(58KB 저장, 2026-09-29 측정). 그러나 켜 둔 8시간에 약 1.7GB 를 쓰고, 저장 감시(`src/save/save-watch.ts`)와 클라우드 표시 파일(`cloud.json`)이 1초마다 돈다.

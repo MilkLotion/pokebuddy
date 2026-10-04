@@ -49,7 +49,7 @@ export interface GameV3Options {
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b 계정 시드). 없거나 null 이면 rand
   canWrite?: () => boolean; // 잠금을 잡은 프로세스만 쓴다. 없으면 늘 쓴다 (자체 검사·개발용 실행기)
   onWrite?: (kind: SaveKind) => void; // 저장을 썼다 — 클라우드 저장이 바뀐 것으로 보고 올린다. 종류는 src/online/save-kind.ts saveKindOf (src/online/cloud.ts noteSaved)
-  flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 STATE_RULES.saveMs
+  flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다(기본 — 자체 검사·개발용 실행기). 앱은 CLOCK_RULES.saveMs (src/main/clock.ts)
   mono?: () => number; // 단조 시계 ms — 쓰기 간격을 잰다. 기본 performance.now. 자체 확인이 가짜로 준다
   petName: (slug: string) => string; // 종의 화면 이름 — 실행기의 박스 이름순 정렬이 쓴다. 실행기는 화면 값을 가져오지 않으므로 부르는 쪽이 넘긴다(앱은 src/view/text.ts petName)
 }
