@@ -5,6 +5,7 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
+import { askPetMenu, drawSellPet } from "./pet-menu.js";
 import { daycareOpenButton, drawDaycare, drawHatched, drawUnder } from "./daycare.js";
 import { goTo, openDialogOrPet, openPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
@@ -35,12 +36,10 @@ import { restoreSearchFocus, typingSearch } from "./search.js";
 import { alertEl } from "./widgets.js";
 import { loadArt } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
-import { josa } from "../../shared/josa.js";
-import { el, needEl } from "../ui/dom.js";
-import { pointText } from "../../shared/count-text.js";
+import { needEl } from "../ui/dom.js";
 import { sendCommand, setCommandHooks } from "./command.js";
 import { bodyEl, redrawBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks } from "./shell.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openAnyDialog, registerDialog, scrimEl, setDialogHooks } from "./dialog.js";
+import { dialogEl, dismissDialog, drawDialog, openAnyDialog, registerDialog, scrimEl, setDialogHooks } from "./dialog.js";
 import type { TabId } from "./dialog-types.js";
 import { petInView, ui } from "./state.js";
 
@@ -120,44 +119,6 @@ setShellHooks({
     clearBagResult(); // 가방 결과 줄은 탭을 떠나면 지운다
   },
 });
-
-
-
-// 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
-// (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
-
-// 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
-
-
-
-// 성격을 골라야 하는 도구 — 고르는 화면이 아직 없어 여기서 막는다
-
-
-
-
-
-// ── 포켓몬 메뉴 ────────────────────────────────────────────────────────────────
-// 파티 카드·박스 칸을 우클릭하면 무대 우클릭과 같은 메뉴를 메인이 커서 자리에 띄운다 (src/view/menus.ts petMenu, 2026-10-02 사용자 결정).
-// 좌클릭은 개체 상세를 연다. 그래서 이 메뉴에는 `상세 보기` 가 없다 (같은 날 사용자 결정 — 좌클릭 메뉴가 어색했다).
-// 메뉴와 모습 말풍선은 메뉴 창이 그린다 (src/renderer/windows/menu.ts). 고른 모습·옮기기·팔기는 경로(routes.ts goTo)로 돌아온다.
-// 메뉴를 띄울 길이 없으면(개발용 실행기) 아무것도 하지 않는다
-function askPetMenu(petId: string): void {
-  void api.petMenu(petId).catch(() => undefined);
-}
-
-
-// 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
-function drawSellPet(petId: string, price: number): void {
-  const pet = petInView(petId);
-  if (!pet) {
-    closeDialog();
-    return;
-  }
-  dialogEl.append(...dialogHead(`${pet.name}${josa(pet.name, "을/를")} 팔까요?`, ""));
-  const body = el("p", "acct-confirm-body", `${pointText(price)}를 받아요. 판 포켓몬은 되돌릴 수 없어요.`); // 확인 창 본문 — 계정 확인 창과 같은 글자
-  const go = actionButtonEl("팔기", true, false, () => void sendCommand("pet.sell", pet.id));
-  dialogEl.append(body, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
-}
 
 // 정렬·지방·설정 목록은 바깥을 누르면 닫는다
 document.addEventListener("click", () => {

@@ -4,6 +4,8 @@
 // 교환 흐름은 메인이 들고 있다. 여기서는 받은 값을 그리기만 한다.
 // 그리는 곳은 교환 모달이다 — 박스 머리 메뉴의 `교환` 이 연다(2026-09-30·10-02 사용자 결정).
 // 모달을 닫아도 교환은 이어진다. 진행 중이면 머리의 햄버거 단추에 점을 둔다
+// 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
+// (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
 import type { AccountScreen } from "../../shared/model/account.js";
 import { api } from "./api.js";
 import { wrapPage } from "./grid-view.js";
