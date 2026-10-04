@@ -8,7 +8,7 @@
 import { takePet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
-import { maxPetNo } from "../party/create.js";
+import { maxIdNo } from "../shared/ids.js";
 import { locatePet } from "../party/locate.js";
 import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
@@ -77,7 +77,7 @@ export function sellPet(save: SaveV3, petId: string, opts?: DexOptions): SellPet
   if (!res.ok) return { ok: false, reason: res.reason };
 
   takePet(save.boxes, petId); // 팔 수 있는 개체는 박스에만 있다
-  save.petSeq = Math.max(save.petSeq ?? 0, maxPetNo(save.pets)); // 판 개체의 번호를 새 개체가 다시 쓰지 않게 — 서버 검증의 pet-id 규칙
+  save.petSeq = Math.max(save.petSeq ?? 0, maxIdNo(save.pets, "p")); // 판 개체의 번호를 새 개체가 다시 쓰지 않게 — 서버 검증의 pet-id 규칙
   save.pets.splice(save.pets.indexOf(res.pet), 1);
   if (save.starterPetId === petId) save.starterPetId = null;
   save.points.balance += res.price;

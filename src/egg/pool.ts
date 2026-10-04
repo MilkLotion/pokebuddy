@@ -9,6 +9,7 @@ import { eggPool, inRandomEgg, isSingleEgg } from "../dex/obtain.js";
 import { eggTable } from "../dex/tables.js";
 import type { EggV3, SaveV3 } from "../shared/save-v3";
 import type { Check } from "../shared/names/reasons.js";
+import { nextId } from "../shared/ids.js";
 import { EGG_RULES } from "./rules.js";
 
 // 아직 얻지 않은 종
@@ -47,20 +48,10 @@ export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
   return Object.entries(eggs[kind]?.bonus ?? {}).filter(([k, p]) => typeof p === "number" && p > 0 && eggs[k] != null);
 }
 
-// 알 식별자 `e숫자` 의 가장 큰 번호
-export function maxEggNo(eggs: { id: string }[]): number {
-  let max = 0;
-  for (const e of eggs) {
-    const m = /^e(\d+)$/.exec(e.id);
-    if (m) max = Math.max(max, Number(m[1]));
-  }
-  return max;
-}
-
 // 다음 알 식별자 — 지금까지 만든 알 수(eggSeq)와 지금 있는 알의 가장 큰 번호 중 큰 것의 다음.
 // 연 알의 식별자를 다시 쓰지 않는다. 다시 쓰면 "부화 준비" 배너의 표시 기록이 새 알에 겹쳐 배너가 뜨지 않는다
 export function nextEggId(save: SaveV3): string {
-  return `e${Math.max(save.eggSeq, maxEggNo(save.eggs)) + 1}`;
+  return nextId("e", save.eggs, save.eggSeq);
 }
 
 // 새 알 하나 — 후보는 이 순간에 정해 저장한다 (docs/specs/game.md "알 결과 저장"). 저장에 넣는 것은 부르는 쪽이다

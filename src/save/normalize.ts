@@ -14,14 +14,13 @@ import { BAG_RULES } from "../bag/rules.js";
 import { UNLOCK_RULES } from "../dex/rules.js";
 import { normalizeSlug } from "../dex/data.js";
 import { fillBoxes, newBox } from "../box/boxes.js";
-import { maxEggNo } from "../egg/pool.js";
+import { maxIdNo } from "../shared/ids.js";
 import { screenRefOf } from "../shared/raw.js";
 import { SAVE_RULES } from "./rules.js";
 import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/mint.js";
 import { normalizeMail } from "../mail/letters.js";
 import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
-import { maxPetNo } from "../party/create.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import { boolOr as bool, choiceOr, clampNum as clamp, intOr as int, isRawObject, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
@@ -244,8 +243,8 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
     party,
     boxes,
     eggs,
-    petSeq: Math.max(nonNeg(raw.petSeq), maxPetNo(pets)), // 2026-10-02 에 더했다. 옛 저장은 지금 있는 개체의 가장 큰 번호에서 시작한다
-    eggSeq: Math.max(nonNeg(raw.eggSeq), maxEggNo(eggs)), // 2026-09-26 에 더했다. 옛 저장은 지금 있는 알의 가장 큰 번호에서 시작한다
+    petSeq: Math.max(nonNeg(raw.petSeq), maxIdNo(pets, "p")), // 2026-10-02 에 더했다. 옛 저장은 지금 있는 개체의 가장 큰 번호에서 시작한다
+    eggSeq: Math.max(nonNeg(raw.eggSeq), maxIdNo(eggs, "e")), // 2026-09-26 에 더했다. 옛 저장은 지금 있는 알의 가장 큰 번호에서 시작한다
     bag,
     points,
     dex: normalizeDex(raw.dex),
@@ -275,7 +274,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
 function normalizeCounts(raw: unknown, pets: readonly PetV3[], eggs: EggV3[], eggSeq: number): CountsV3 {
   if (!isRawObject(raw)) {
     return {
-      hatched: Math.max(0, Math.max(eggSeq, maxEggNo(eggs)) - eggs.length),
+      hatched: Math.max(0, Math.max(eggSeq, maxIdNo(eggs, "e")) - eggs.length),
       evolved: pets.reduce((n, p) => n + p.stage, 0),
       traded: 0,
       day: "",
@@ -305,8 +304,7 @@ function normalizeFind(raw: unknown): FindV3 {
       ...(typeof e.newPetId === "string" && e.newPetId ? { newPetId: e.newPetId } : {}),
     });
   }
-  const maxNo = log.reduce((m, e) => Math.max(m, Number(/^f(\d+)$/.exec(e.id)?.[1] ?? 0)), 0);
-  return { seq: Math.max(nonNeg(r.seq), maxNo), log: log.slice(-FIND_RULES.keep) }; // 옛 activeMs 는 버린다 — 판정이 무기억이다
+  return { seq: Math.max(nonNeg(r.seq), maxIdNo(log, "f")), log: log.slice(-FIND_RULES.keep) }; // 옛 activeMs 는 버린다 — 판정이 무기억이다
 }
 
 // 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/record.md "로컬 저장과 복구")

@@ -1,17 +1,13 @@
 // 박스 만들기 — 새 박스, 식별자, 기본 개수 채우기. 순수 함수이며 저장을 쓰지 않는다 (규칙표는 src/box/rules.ts)
 import type { BoxV3 } from "../shared/save-v3";
+import { nextId } from "../shared/ids.js";
 import { BOX_RULES } from "./rules.js";
 
 export const newBox = (id: string, name: string): BoxV3 => ({ id, name, slots: Array.from({ length: BOX_RULES.size }, () => null) });
 
 // 다음 박스 식별자 — 지금 있는 `b숫자` 의 가장 큰 번호 다음. 순서를 바꾼 뒤에도 겹치지 않는다
 export function nextBoxId(boxes: BoxV3[]): string {
-  let max = boxes.length;
-  for (const b of boxes) {
-    const m = /^b(\d+)$/.exec(b.id);
-    if (m) max = Math.max(max, Number(m[1]));
-  }
-  return `b${max + 1}`;
+  return nextId("b", boxes, boxes.length);
 }
 
 // 박스의 화면 이름 — 저장한 이름이 없으면 자리 번호의 기본 이름(박스 N). 순서를 바꾸면 기본 이름도 자리를 따른다.
