@@ -79,7 +79,7 @@ async function petSend(action: PetDeviceAction & { kind: "cmd" }, id: string): P
   });
   await sendCommand(action.cmd, id, action.args);
   settle();
-  if (petBusy === null) return;
+  // 답이 빨라 처리 중을 보이지 않았어도 다시 보낸다 — 실패 문구(ui.notice)가 이 답에 실려야 한다(파티 기기 창 swapSend 와 같다)
   petBusy = null;
   syncPetDevice();
 }
