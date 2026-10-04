@@ -212,7 +212,11 @@ function renderBody(v: PetDeviceView): void {
   // 화면 — 자리·상태, 초상·이름·레벨·성격·타입, 볼 토글
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
-  screen.appendChild(el("div", "where", v.where));
+  // 첫 줄 — 자리·상태. 실패하면 줄을 끼우지 않고 이 자리의 글자·색만 실패 문구로 바꾼다(한 줄, 넘치면 말줄임, 전체는 title)
+  // (2026-10-04 사용자 결정 94 1-3, Figma 05 `Party / Detail Device · 실패 문구` · 파티 기기 창의 머리 줄 실패 자리와 같은 방식)
+  const where = el("div", v.notice ? "where bad" : "where", v.notice || v.where);
+  if (v.notice) where.title = v.notice;
+  screen.appendChild(where);
   const entry = el("div", "entry");
   const portrait = el("div", "portrait");
   const stage = el("div", "stage");
@@ -323,12 +327,6 @@ function renderBody(v: PetDeviceView): void {
     actions.appendChild(size);
   }
   // 교체·박스에 보관·파티에 배치 단추는 두지 않는다 — 파티 탭 `교체` 모달에서 끌어 놓아 옮긴다 (2026-09-30 사용자 결정)
-  // 실패 문구 — 관리 창 Alert Inline(오류)과 같은 모양 (Figma `Alert` `1040:216`)
-  if (v.notice) {
-    const box = el("div", "alert bad inline");
-    box.append(el("i", "alert-icon"), el("span", undefined, v.notice));
-    actions.appendChild(box);
-  }
   device.appendChild(actions);
 
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0); // 설정에서 소리를 끄면 막는다
