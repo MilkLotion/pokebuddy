@@ -126,7 +126,9 @@ export function drawHatched(petId?: string, eggId?: string, over?: "daycare", qu
     const egg = ui.view?.eggs.list.find((e) => e.id === eggId);
     dialogEl.append(...dialogHead("알에서 새 알이 나왔어요", ""));
     card.append(iconOf(egg?.icon ?? "egg:random", "portrait"), el("div", "name", egg?.name ?? "알"));
-    info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", "아직 얻지 않은 포켓몬이 나와요."));
+    // 태고의돌은 얻은 화석도 다시 나온다 — 상점의 `나오는 포켓몬` 부제와 같은 뜻으로 적는다
+    const repeat = egg?.kind === "ancient-stone";
+    info.append(el("div", undefined, "돌보미집에 들어갔어요."), el("div", "note", repeat ? "얻은 포켓몬도 다시 나와요." : "아직 얻지 않은 포켓몬이 나와요."));
   } else {
     const pet = petId ? petInView(petId) : undefined;
     if (!pet) {
