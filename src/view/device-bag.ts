@@ -1,5 +1,5 @@
 // 가방 기기 창 모델 — 고른 도구 하나의 머리 줄·정보 칸과 사용·판매 조작 칸 (Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
-// 설정창은 고른 값(BagDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage-window.ts)가 지금 스냅샷으로 이 함수를 부른다.
+// 설정창은 고른 값(BagDeviceInput, src/shared/model/devices.ts)만 보내고, 메인의 처리기(src/main/manage/window.ts)가 지금 스냅샷으로 이 함수를 부른다.
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안)
 import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";

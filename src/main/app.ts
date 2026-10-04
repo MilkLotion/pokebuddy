@@ -24,7 +24,7 @@ import { createGame, type GameV3 } from "../tx/game.js";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
-import { openManage, pushAccount, pushClock, pushMail, pushTrade, pushUpdate, setStageCoachDim } from "./manage-window";
+import { createManage } from "./manage/window.js";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
 import { createFreeze } from "./app/freeze";
@@ -192,9 +192,9 @@ const services = createServices({
   firstLink: tradeLinkOf(process.argv),
   refreshParty: () => rt.party?.refresh(),
   openTrade: () => openManageWindow({ to: "trade" }),
-  sendTrade: (screen) => pushTrade(screen),
-  sendAccount: (screen) => pushAccount(screen),
-  sendMail: (screen) => pushMail(screen),
+  sendTrade: (screen) => manage.send("manage:trade", screen),
+  sendAccount: (screen) => manage.send("manage:account-view", screen),
+  sendMail: (screen) => manage.send("manage:mail-view", screen),
   online: {
     onSaveReplaced: () => {
       rt.notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
@@ -222,7 +222,7 @@ const halt = createHalt({
   setWriter: (on) => rt.commands?.setWriter(on),
   sendAccount: () => {
     const on = services.current();
-    if (on) pushAccount(on.screen());
+    if (on) manage.send("manage:account-view", on.screen());
   },
   openManage: (route) => openManageWindow(route),
   log,
@@ -233,7 +233,7 @@ const update = createUpdateService({
   notesFile: path.join(PROJECT, "data", "patch-notes.json"),
   seenFile: path.join(path.dirname(PATHS.save), "notes-seen.json"),
   hadSave: fs.existsSync(PATHS.save),
-  onView: (view) => pushUpdate(view),
+  onView: (view) => manage.send("manage:update-view", view),
   beforeInstall: async () => {
     if (!frozen() && saveParty()?.isWriter()) rt.game?.flush();
     await halt.announceRelease();
@@ -279,7 +279,7 @@ const coach = createCoach({
 // 바탕화면 튜토리얼이 떠 있는 동안 설정창의 창 단추 자리도 어둡게 한다 (94 1-1)
 const syncCoach = (): void => {
   coach.sync();
-  setStageCoachDim(coach.isShown());
+  manage.setStageCoachDim(coach.isShown());
 };
 
 // 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
@@ -321,20 +321,19 @@ const displayName = (): string => {
 // 관리 창의 명령도 커맨드 처리기를 거친다. reader 면 mailbox 로 writer 에 보내고,
 // 진화 그림 준비와 무대 반응도 다른 표면과 같은 길로 간다
 // route — 알림 배너의 `바로가기` 가 옮겨 갈 곳
-const openManageWindow = (route?: ManageRoute): void => {
-  if (!rt.game) return;
-  openManage({
-    ...(route ? { route } : {}),
-    preload: preloadFile(),
-    html: rendererFile("manage.html"),
-    game: rt.game,
-    send: async (req) => {
-      if (!rt.commands) return { ok: false, reason: "not-ready" };
-      const reply = await rt.commands.dispatcher.dispatch({ cmd: req.cmd as Command["cmd"], target: req.target, args: req.args, from: "settings" });
-      if (req.cmd === "settings.set") display.sync("all");
-      syncCoach();
-      return reply;
-    },
+// 설정창 — 부팅 때 한 번 만든다. 늦게 생기는 서비스(계정·우편·업데이트)는 열 때마다 읽는다 (src/main/manage/window.ts)
+const manage = createManage({
+  preload: preloadFile(),
+  html: rendererFile("manage.html"),
+  game: () => rt.game,
+  send: async (req) => {
+    if (!rt.commands) return { ok: false, reason: "not-ready" };
+    const reply = await rt.commands.dispatcher.dispatch({ cmd: req.cmd as Command["cmd"], target: req.target, args: req.args, from: "settings" });
+    if (req.cmd === "settings.set") display.sync("all");
+    syncCoach();
+    return reply;
+  },
+  services: () => ({
     display: () => display.view(),
     petMenu: (petId) => petMenu.open(petId, "manage"),
     ...(services.current() ? { account: services.current()!.act } : {}),
@@ -361,7 +360,11 @@ const openManageWindow = (route?: ManageRoute): void => {
       display.sync("play");
       return reply;
     },
-  });
+  }),
+});
+const openManageWindow = (route?: ManageRoute): void => {
+  if (!rt.game) return;
+  manage.open(route);
 };
 
 // 울음소리 — 놀아주기가 성공하면 무대에서 한 번 낸다 (src/main/stage/cry.ts)
@@ -414,7 +417,7 @@ const bubbles = createBubbles({ portraits: () => rt.portraits, stages: () => rt.
 
 // 에이전트 상태 폴링(500ms)과 전역 시계의 1초 틱 (src/main/app/ticks.ts)
 const ticks = createTicks({
-  sendClock: (now) => pushClock(now),
+  sendClock: (now) => manage.send("manage:clock", { now }),
   frozen,
   locked: () => power.isLocked(),
   anchor: () => rt.anchor,

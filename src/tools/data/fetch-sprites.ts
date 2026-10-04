@@ -1,6 +1,6 @@
 // 저장소 실행에서 쓸 그림을 미리 받는다 — `node dist/tools/data/fetch-sprites.js` (개발용)
 // 2026-09-26 부터 설치 파일에는 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다 (src/main/art/portraits.ts prefetch).
-// 관리 창은 앱 안 sprites/ 가 없으면 여기서 받은 .cache/sprites/ 를 앱 안 그림으로 쓴다 (src/main/manage-window.ts)
+// 관리 창은 앱 안 sprites/ 가 없으면 여기서 받은 .cache/sprites/ 를 앱 안 그림으로 쓴다 (src/main/manage/window.ts)
 //
 // 출처: PokeAPI sprites (https://github.com/PokeAPI/sprites — 저장소 CC0, 그림 저작권은 The Pokémon Company)
 //   초상    sprites/pokemon/<도감>.png · sprites/pokemon/shiny/<도감>.png  (data/dex.json 의 도감 번호 전부)
