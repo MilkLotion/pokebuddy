@@ -13,7 +13,7 @@ import { STAGE_RULES, clampInStage, homeOf, homeSpot, roamBox, stackShift, toLoc
 import { stageRectOf } from "../../main/windows/screens";
 import { menuView, pickOf, subId } from "../../view/menu-view";
 import { lockExcept, petLine, petMenu, trayMenu } from "../../view/menus";
-import { NATURE_SHOWN } from "../../dex/natures";
+import { NATURE_SHOWN } from "../../shared/features";
 import { t } from "../../view/text";
 import { emptyPet, emptySaveV2 } from "../../save/v2/normalize";
 import { readLockPid } from "../../platform/pid-lock";

@@ -17,6 +17,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { petBusyKey } from "../../shared/device-busy.js";
+import { NATURE_SHOWN } from "../../shared/features.js";
 import { structureOf } from "../ui/live-draw.js";
 import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "../ui/coach.js";
 
@@ -58,16 +59,12 @@ function markBusy(b: HTMLButtonElement, busy: string | null, body: ActBody): voi
   if (busy !== null && busy === petBusyKey({ ...body, petId: shownPetId } as PetDeviceAction)) b.setAttribute("aria-busy", "true");
 }
 
-// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 성격 부여·저장은 그대로다.
-// 관리 창 src/renderer/manage/widgets.ts NATURE_UI, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
-const NATURE_UI = false;
-
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).
 // 입력 규칙은 관리 창과 같다 — 막·구멍을 누르면 말풍선만 흔든다. 다음·확인·✕ 만 받는다 (worklog/records/tutorial-overhaul/record.md)
 const DETAIL_STEPS = [
   { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
   { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
-  NATURE_UI
+  NATURE_SHOWN
     ? { tut: "detail-growth", title: "진화와 성격", body: "조건을 채우면 진화를 눌러 직접 진화해요. 성격민트로 성격을 바꿔요." }
     : { tut: "detail-growth", title: "진화", body: "조건을 채우면 진화를 눌러 직접 진화해요." },
   { tut: "detail-size", title: "바탕화면 크기", body: "이 포켓몬의 크기만 바뀌어요." },
@@ -248,7 +245,7 @@ function renderBody(v: PetDeviceView): void {
   if (sex) nameRow.appendChild(sex);
   if (pet.shiny) nameRow.appendChild(shinyIcon(24));
   info.appendChild(nameRow);
-  info.appendChild(el("div", "sub", NATURE_UI ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
+  info.appendChild(el("div", "sub", NATURE_SHOWN ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
   const types = el("div", "types");
   pet.types.forEach((name, i) => types.appendChild(typeBadgeEl(name, pet.typeIds[i])));
   info.appendChild(types);
@@ -311,10 +308,10 @@ function renderBody(v: PetDeviceView): void {
   growth.dataset.tut = "detail-growth";
   // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.
   // 떠 있는 동안 줄은 톤 배경 (2026-10-01 사용자 결정, Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
-  const second = NATURE_UI
+  const second = NATURE_SHOWN
     ? line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" }))
     : line("도감 보기", null, [], () => act({ kind: "dex" }));
-  if (!NATURE_UI) {
+  if (!NATURE_SHOWN) {
     second.classList.toggle("on", v.dexOpen);
     second.setAttribute("aria-pressed", String(v.dexOpen));
   }

@@ -10,7 +10,7 @@ import { sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, drawDialog, openAnyDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
 import { petInView, ui } from "./state.js";
-import { NATURE_UI } from "./widgets.js";
+import { NATURE_SHOWN } from "../../shared/features.js";
 
 // 지도 — 기본형 → 리전폼 진화(지도 간선)에 쓴다. 돌 간선은 돌 대신, 레벨·친밀도 간선은 조건과 함께 (src/dex/evolve.ts, worklog-mac/records/region-map/record.md)
 const REGION_MAP = "region-map";
@@ -105,7 +105,7 @@ export function drawEvolve(petId: string, to?: string): void {
     // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
     const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => ui.view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
     const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
-    const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
+    const kept = NATURE_SHOWN ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
     info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. ${kept}` : kept));
     // 되돌릴 수 없는 결과는 확인 창에 한 줄로 알린다 (2026-09-27 사용자 "추천대로진행", docs/specs/scenarios.md 진화 흐름)
     info.appendChild(el("div", "note", "진화는 되돌릴 수 없어요."));

@@ -15,7 +15,8 @@ import { askPetMenu } from "./pet-menu.js";
 import { openPet } from "./routes.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
-import { boxNameCell, meterEl, NATURE_UI, pageHeadEl } from "./widgets.js";
+import { boxNameCell, meterEl, pageHeadEl } from "./widgets.js";
+import { NATURE_SHOWN } from "../../shared/features.js";
 
 let presetRenaming = false;
 // 탭을 옮긴다 — 프리셋 이름 고치기를 끝낸다 (shell.ts setTab 의 고리)
@@ -43,7 +44,7 @@ function petCard(pet: PetView): HTMLElement {
   if (sex) top.appendChild(sex);
   // 이로치 아이콘 — 성별 아이콘 옆 16 (Figma `Party Slot Card` 의 `Show Shiny`, 2026-10-02 사용자 결정)
   if (pet.shiny) top.appendChild(shinyIcon(16));
-  if (NATURE_UI) top.appendChild(el("span", "nature", pet.nature));
+  if (NATURE_SHOWN) top.appendChild(el("span", "nature", pet.nature));
   info.appendChild(top);
 
   const tags = el("div", "tags");

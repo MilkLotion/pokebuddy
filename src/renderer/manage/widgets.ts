@@ -1,4 +1,5 @@
 // 설정창의 공용 부품 — 탭·대화상자가 같이 쓰는 작은 조각 (P10g). 상태를 갖지 않는다 — 누르면 부르는 쪽이 준 함수를 부른다
+import { NATURE_SHOWN } from "../../shared/features.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { closeIconEl } from "../ui/line-icons.js";
@@ -90,10 +91,8 @@ export function segmentedEl<T extends string>(items: readonly { id: T; label: st
   return box;
 }
 
-// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
-// 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
-export const NATURE_UI = false;
-export const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
+// 레벨 줄 — 성격은 스위치(src/shared/features.ts NATURE_SHOWN)가 켜져 있을 때만 붙인다
+export const lvNature = (level: number, nature: string): string => (NATURE_SHOWN ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
 // 설정 한 줄. 조작이 넓으면 이름 아래에 깐다 — 옆에 두면 설명이 좁아져 여러 줄로 접힌다
 // 힌트가 없으면 .hint 줄을 만들지 않는다 — 라벨 한 줄만 남는다

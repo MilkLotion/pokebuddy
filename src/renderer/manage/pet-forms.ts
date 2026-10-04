@@ -13,7 +13,8 @@ import { sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, openAnyDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
 import { findPartySlot, petInView } from "./state.js";
-import { lvNature, NATURE_UI } from "./widgets.js";
+import { lvNature } from "./widgets.js";
+import { NATURE_SHOWN } from "../../shared/features.js";
 
 // 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
 function toParticle(word: string): string {
@@ -75,7 +76,7 @@ export function drawMega(petId: string, to?: string): void {
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
   const slot = findPartySlot(pet.id);
   const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
-  const kept = NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
+  const kept = NATURE_SHOWN ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
   const change = (species: string): void => {
     void sendCommand("pet.form", pet.id, { species }).then((ok) => {
       if (ok) closeDialog();
@@ -175,7 +176,7 @@ export function drawForm(petId: string, to: string): void {
   const info = el("div", "info-box");
   info.append(
     el("div", undefined, `지금 ${pet.name} · ${slot != null ? `파티 ${slot + 1}번 칸` : "박스"}`),
-    el("div", "note", NATURE_UI ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
+    el("div", "note", NATURE_SHOWN ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
     el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
   );
   const go = actionButtonEl("바꾸기", true, false, () => {

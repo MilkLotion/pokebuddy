@@ -4,10 +4,6 @@ import type { Axis, AxisValue, Nature, NatureId } from "../shared/species";
 import { loadJson, type DexOptions } from "./data";
 import { QUIRK_RULES } from "./rules";
 
-// 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고". 부여·저장·교환 검증·움직임 배율은 그대로다.
-// 끄면 우클릭 메뉴 첫 줄과 CLI 상태 줄에서 성격을 뺀다. 관리 창 src/renderer/manage/widgets.ts·device/pet.ts 의 NATURE_UI 와 같이 바꾼다
-export const NATURE_SHOWN = false;
-
 export const AXES: readonly Axis[] = ["activity", "boldness", "steadiness", "sociability", "patience"];
 
 // 성격을 모르는 개체(옛 저장·값 파손)에 붙이는 중립 성격 — 축이 전부 0

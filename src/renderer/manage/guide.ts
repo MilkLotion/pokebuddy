@@ -1,7 +1,7 @@
 // 설정창의 가이드북 모달 — 다섯 주제의 글과 그리기 (P10o2)
 import { el } from "../ui/dom.js";
 import { actionsRowEl, closeButton, dialogEl, dialogHead } from "./dialog.js";
-import { NATURE_UI } from "./widgets.js";
+import { NATURE_SHOWN } from "../../shared/features.js";
 
 // 가이드북 — 구성은 docs/specs/game.md "튜토리얼과 가이드북" 의 다섯 주제다.
 // 숫자는 적지 않는다. 밸런스 값이 바뀌어도 이 문구가 어긋나지 않게 한다
@@ -39,7 +39,7 @@ const GUIDE: { title: string; lines: string[] }[] = [
     lines: [
       "조건을 채운 개체는 상세에서 직접 진화시킨다. 저절로 진화하지 않는다.",
       "조건은 종마다 다르다. 레벨, 친밀도, 도구, 시간대를 본다.",
-      NATURE_UI ? "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다." : "진화해도 같은 개체다. 이로치는 그대로 남는다.",
+      NATURE_SHOWN ? "진화해도 같은 개체다. 이로치와 성격은 그대로 남는다." : "진화해도 같은 개체다. 이로치는 그대로 남는다.",
     ],
   },
   {
