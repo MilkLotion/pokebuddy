@@ -1,6 +1,6 @@
 /* manage.html 의 공용 부품(타입 배지 바탕·스위치·막대·단추·처리 중·경고 배너·칩·목록 행·정렬 목록·검색 칸) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
 /* 타입 배지 — Figma `Type Badge` `118:134` (높이 22, 좌우 8, 11px Semibold, 폭 52). 색은 Scarlet·Violet 타입 팔레트다.
-   그림처럼 타입마다 정해진 색이라 변수에 묶지 않는다. 모르는 타입은 중립 회색이다 */
+   그림처럼 타입마다 정해진 색이라 변수에 묶지 않는다. 모르는 타입은 크림색 — 파티 상세·도감 기기 창과 같다 (Figma `Type Badge` Type=Unknown cream/300, 2026-10-04 사용자 결정 94 5-13) */
 .type {
   display: inline-flex;
   align-items: center;
@@ -8,13 +8,13 @@
   height: 18px;
   padding: 0 8px;
   border-radius: 999px;
-  background: var(--subtle);
+  background: var(--unknown);
   color: var(--ink);
   font-size: 10px;
   font-family: var(--font-small);
   white-space: nowrap;
 }
-/* 색 있는 타입 배지 글자는 모두 흰색 (2026-09-30 사용자 결정 "타입 버튼들 폰트 색 다 흰거로"). 모르는 타입(회색)은 --ink */
+/* 색 있는 타입 배지 글자는 모두 흰색 (2026-09-30 사용자 결정 "타입 버튼들 폰트 색 다 흰거로"). 모르는 타입(크림)은 --ink */
 .value.types {
   display: inline-flex;
   gap: 6px;
