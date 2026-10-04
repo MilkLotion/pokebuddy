@@ -30,6 +30,7 @@ import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { structureOf } from "../ui/live-draw.js";
 import { lastReplyOf, requestCommand, runLocked, sendCommand, setBusy, setCommandHooks, whenSlow } from "./command.js";
+import { bodyEl, redrawBody, redrawHeldBody, registerAfterDraw, registerBodySync, registerTab, setShellHooks, setTab, tabButtonOf, tabsEl } from "./shell.js";
 import { partyBusyKey, petBusyKey } from "../../shared/device-busy.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dismissDialog, drawDialog, isDimmed, openDialog, redrawHeldDialog, registerDialog, resetDialogScroll, scrimEl, setDialogHooks, setScrim } from "./dialog.js";
 import type { Dialog, Hatched, SettingsTab, TabId, UserTab } from "./dialog-types.js";
@@ -60,19 +61,25 @@ setDialogHooks({
   onScrimChanged: () => drawTutorial(),
 });
 
+// 탭을 옮길 때 탭과 무관한 정리 — 개체 상세·든 개체·프리셋 이름 고치기·가방 결과 줄 (shell.ts setTab)
+setShellHooks({
+  isTyping: (root) => typingSearch(root),
+  beforeTabChange: () => {
+    ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 그리기의 syncPetDevice 가 기기 창을 닫는다
+    if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
+    presetRenaming = false;
+  },
+  afterTabChange: () => {
+    bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
+  },
+});
+
 // 성격을 화면에 보일지 — 2026-09-30 사용자 결정 "성격은 없앨거야 … 코드는 남겨두고 … 능력치나 민트, 성격변경 등 없애자".
 // 성격 부여·저장·교환 검증은 그대로다. 파티 기기 창 src/renderer/device/pet.ts, 메인 src/dex/natures.ts NATURE_SHOWN 과 같이 바꾼다
 const NATURE_UI = false;
 const lvNature = (level: number, nature: string): string => (NATURE_UI ? `Lv.${level} · ${nature}` : `Lv.${level}`);
 
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "party", label: "파티" },
-  { id: "box", label: "박스" },
-  { id: "dex", label: "도감" },
-  { id: "shop", label: "상점" },
-  { id: "bag", label: "가방" },
-];
 // 친구 교환은 탭이 아니다 — 박스 머리 메뉴의 `교환` 이 모달로 연다 (2026-10-02 사용자 결정 "교환도 메뉴로")
 // (2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게." worklog/records/features-0930/record.md 7)
 
@@ -146,10 +153,6 @@ const GUIDE: { title: string; lines: string[] }[] = [
 ];
 
 
-const pointsEl = needEl("points", HTMLElement, "manage");
-const tabsEl = needEl("tabs", HTMLElement, "manage");
-const bodyEl = needEl("body", HTMLElement, "manage");
-const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
 
 
 let dexRows: DexEntry[] | null = null;
@@ -197,7 +200,7 @@ const partyLink = createDeviceLink<PartyDeviceInput>({
     endHold();
     return true;
   },
-  redraw: () => draw(),
+  redraw: () => redrawBody(),
 });
 let presetRenaming = false;
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
@@ -552,7 +555,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
     name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
       presetRenaming = true;
-      draw();
+      redrawBody();
     });
     return name;
   }
@@ -569,7 +572,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
     const name = input.value;
     if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
     if (save && name.trim() !== preset.name) void sendCommand("party.preset.rename", "", { preset: preset.index, name });
-    else draw();
+    else redrawBody();
   };
   input.addEventListener("keydown", (e) => {
     if (e.isComposing) return;
@@ -816,7 +819,6 @@ function drawUnder(): void {
 // (2026-09-29 사용자 "어래곤 검색했는데 … 어곤 이렇게 래 씹힌다")
 const searchDraft = new Map<string, string>();
 let searchSubmitting = false; // 검색을 누른 그 다시 그리기는 미루지 않는다
-let bodyHeld = false; // 입력 중이라 미룬 본문 다시 그리기
 
 // 지금 이 영역의 검색 칸(또는 박스 이름 칸)에 입력하고 있는가 — 창이 앞에 있을 때만. 뒤에 있으면(배너 바로가기 등) 미루지 않는다
 function typingSearch(root: HTMLElement): boolean {
@@ -829,10 +831,7 @@ function typingSearch(root: HTMLElement): boolean {
 // 검색 칸을 떠났다 — 미룬 다시 그리기를 한다. 누른 단추의 click 이 먼저 돌게 한 틱 미룬다
 function releaseHeld(): void {
   setTimeout(() => {
-    if (bodyHeld) {
-      bodyHeld = false;
-      draw();
-    }
+    redrawHeldBody();
     redrawHeldDialog();
   }, 0);
 }
@@ -1218,7 +1217,7 @@ function drawBox(v: Snapshot): void {
   prev.addEventListener("click", () => {
     boxPage = prevPage;
     boxNote = "";
-    draw();
+    redrawBody();
   });
   const next = buttonEl("", "▶");
   next.disabled = v.boxes.length <= 1;
@@ -1226,7 +1225,7 @@ function drawBox(v: Snapshot): void {
   next.addEventListener("click", () => {
     boxPage = nextPage;
     boxNote = "";
-    draw();
+    redrawBody();
   });
   // ◀·▶ 는 놓을 곳이 아니다 — 끌어 놓기는 지금 박스 안의 자리만 바꾼다. 다른 박스로는 포켓몬 메뉴의 `옮기기` 로만 보낸다 (2026-10-02 사용자 결정)
   pager.append(prev, boxNameCell(boxNameEl(box)), next);
@@ -1244,7 +1243,7 @@ function drawBox(v: Snapshot): void {
     const at = findPartySlot(held);
     if (!pet) void swapSend("party.keep", held, { toBoxId: box.id, toSlot: slot });
     else if (at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
-    else draw();
+    else redrawBody();
   };
   // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
   const dropHold = (toSlot: number): void => {
@@ -1252,7 +1251,7 @@ function drawBox(v: Snapshot): void {
     if (!h) return;
     endHold();
     if (h.boxId === box.id && h.slot === toSlot) {
-      draw();
+      redrawBody();
       return;
     }
     void boxCommand("box.move", h.boxId, { slot: h.slot, toBoxId: box.id, toSlot }, () => unsorted(h.boxId, box.id));
@@ -1322,7 +1321,7 @@ function startHold(petId: string): void {
     boxRenaming = false;
     boxNote = "";
     boxHold = { petId, boxId: box.id, slot, ghost: !swapMode };
-    draw();
+    redrawBody();
     return;
   }
 }
@@ -1339,7 +1338,7 @@ function cancelHold(): void {
   if (!boxHold && !partyHold) return;
   endHold();
   partyHold = null;
-  draw();
+  redrawBody();
 }
 
 // ── 교체 화면 — 박스 탭 + 파티 기기 창 ──────────────────────────────────────────
@@ -1360,7 +1359,7 @@ function openSwap(): void {
   swapMode = true;
   partyHold = null;
   partyNote = "";
-  draw();
+  redrawBody();
 }
 
 function closeSwap(): void {
@@ -1383,7 +1382,7 @@ async function swapSend(cmd: string, target: string, extra: Record<string, unkno
   partyBusy = null;
   partyNote = ok ? "" : ui.notice;
   ui.notice = "";
-  draw();
+  redrawBody();
 }
 
 // 파티 기기 창에 보낼 고른 값 — 교체 화면이 아니면 null(닫는다). 모델은 메인이 만든다 (src/view/device-party.ts)
@@ -1406,7 +1405,7 @@ function onPartyAction(action: PartyDeviceAction): void {
     endHold();
     partyHold = null;
     if (action.index !== p.index && action.index < p.count) void swapSend("party.preset", "", { preset: action.index }, partyBusyKey(action));
-    else draw();
+    else redrawBody();
     return;
   }
   const slot = v.party.slots[action.index];
@@ -1422,13 +1421,13 @@ function onPartyAction(action: PartyDeviceAction): void {
     // 파티 개체를 든 채 다른 파티 칸을 눌렀다. 제자리면 내려놓는다
     const held = partyHold;
     partyHold = null;
-    if (slot.pet?.id === held) draw();
+    if (slot.pet?.id === held) redrawBody();
     else void swapSend("party.move", held, { toSlot: slot.index }, partyBusyKey(action));
     return;
   }
   if (slot.pet) {
     partyHold = slot.pet.id;
-    draw();
+    redrawBody();
   }
 }
 
@@ -1568,7 +1567,7 @@ function boxNameEl(box: BoxView): HTMLElement {
       boxRenaming = true;
       boxSortOpen = false;
       boxMenuOpen = false;
-      draw();
+      redrawBody();
     });
     return name;
   }
@@ -1585,7 +1584,7 @@ function boxNameEl(box: BoxView): HTMLElement {
     const name = input.value;
     if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
     if (save && name.trim() !== box.name) void boxCommand("box.rename", box.id, { name });
-    else draw();
+    else redrawBody();
   };
   input.addEventListener("keydown", (e) => {
     if (e.isComposing) return;
@@ -1614,7 +1613,7 @@ function boxSortEl(box: BoxView): HTMLElement {
     e.stopPropagation();
     boxSortOpen = !boxSortOpen;
     boxMenuOpen = false;
-    draw();
+    redrawBody();
   });
   wrap.appendChild(toggle);
   if (boxSortOpen) {
@@ -1652,7 +1651,7 @@ function boxMenuEl(): HTMLElement {
     e.stopPropagation();
     boxMenuOpen = !boxMenuOpen;
     boxSortOpen = false;
-    draw();
+    redrawBody();
   });
   wrap.appendChild(toggle);
   if (!boxMenuOpen) return wrap;
@@ -1664,7 +1663,7 @@ function boxMenuEl(): HTMLElement {
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       boxMenuOpen = false;
-      draw();
+      redrawBody();
       run();
     });
     menu.appendChild(b);
@@ -1703,7 +1702,7 @@ function drawBoxOrder(): void {
       boxPage = i;
       boxNote = "";
       closeDialog();
-      draw();
+      redrawBody();
     });
     tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
     tile.addEventListener("dragstart", (e) => e.preventDefault());
@@ -1768,7 +1767,7 @@ async function orderBox(boxId: string, to: number): Promise<void> {
   const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
   if (at >= 0 && at !== boxPage) {
     boxPage = at;
-    draw();
+    redrawBody();
     drawDialog();
   }
 }
@@ -1791,7 +1790,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
     ui.busy = false;
   }
   boxNote = reply.ok ? "" : failTextOf(reply.reason, "command").text;
-  draw();
+  redrawBody();
 }
 
 // 정렬·지방·설정 목록은 바깥을 누르면 닫는다
@@ -1805,7 +1804,7 @@ document.addEventListener("click", () => {
   boxMenuOpen = false;
   dexRegionOpen = false;
   shopRegionOpen = false;
-  draw();
+  redrawBody();
 });
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
@@ -1944,7 +1943,7 @@ function regionEl(value: string, open: boolean, setOpen: (open: boolean) => void
   toggle.addEventListener("click", (e) => {
     e.stopPropagation();
     setOpen(!open);
-    draw();
+    redrawBody();
   });
   wrap.appendChild(toggle);
   if (open) {
@@ -1958,7 +1957,7 @@ function regionEl(value: string, open: boolean, setOpen: (open: boolean) => void
         e.stopPropagation();
         pick(r.id);
         setOpen(false);
-        draw();
+        redrawBody();
       });
       menu.appendChild(item);
     }
@@ -1979,7 +1978,7 @@ function stepDex(delta: -1 | 1): void {
   const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
   if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
     dexPageNo = page;
-    draw();
+    redrawBody();
   }
   markDexPick();
   if (dexView === "list") bodyEl.querySelector<HTMLElement>(`.dex-cell[data-slug="${CSS.escape(next.slug)}"]`)?.scrollIntoView({ block: "nearest" });
@@ -1994,7 +1993,7 @@ function drawDex(v: Snapshot): void {
     searchBox("dex", dexQuery, "이름 또는 번호 검색", (q) => {
       dexQuery = q;
       dexPageNo = 0;
-      draw();
+      redrawBody();
     }),
   );
   bar.appendChild(
@@ -2002,7 +2001,7 @@ function drawDex(v: Snapshot): void {
       dexPageNo = switchView("dex", dexView, mode, dexPageNo);
       dexView = mode;
       saveView("dex", mode);
-      draw();
+      redrawBody();
     }),
   );
   bodyEl.appendChild(bar);
@@ -2011,7 +2010,7 @@ function drawDex(v: Snapshot): void {
   const filters = chips(DEX_TABS, dexFilter, (id) => {
     dexFilter = id;
     dexPageNo = 0;
-    draw();
+    redrawBody();
   });
   toolbar.appendChild(filters);
   bodyEl.appendChild(toolbar);
@@ -2040,7 +2039,7 @@ function drawDex(v: Snapshot): void {
   toolbar.insertBefore(
     gridPager(shown.page, shown.pages, (page) => {
       dexPageNo = page;
-      draw();
+      redrawBody();
     }),
     filters,
   );
@@ -2109,7 +2108,7 @@ function drawShop(v: Snapshot): void {
     chips(SHOP_TABS, shopFilter, (id) => {
       shopFilter = id;
       shopPageNo = 0;
-      draw();
+      redrawBody();
     }),
   );
   if (!SHOP_TABS.some((t) => t.id === shopFilter)) shopFilter = SHOP_TABS[0]?.id ?? "egg"; // 모르는 분류(옛 `all` 등)는 첫 탭으로
@@ -2134,7 +2133,7 @@ function drawShop(v: Snapshot): void {
       searchBox("shop", shopQuery, "이름 또는 번호 검색", (q) => {
         shopQuery = q;
         shopPageNo = 0;
-        draw();
+        redrawBody();
       }),
     );
     bar.appendChild(
@@ -2142,7 +2141,7 @@ function drawShop(v: Snapshot): void {
         shopPageNo = switchView("shop", shopView, mode, shopPageNo);
         shopView = mode;
         saveView("shop", mode);
-        draw();
+        redrawBody();
       }),
     );
     bodyEl.appendChild(bar);
@@ -2164,7 +2163,7 @@ function drawShop(v: Snapshot): void {
     bodyEl.appendChild(
       gridPager(shown.page, shown.pages, (page) => {
         shopPageNo = page;
-        draw();
+        redrawBody();
       }),
     );
     bodyEl.appendChild(shopGrid(shown.items));
@@ -2212,7 +2211,7 @@ function pickBag(id: string): void {
   sellQty = 1;
   bagNotice = "";
   bagResult = "";
-  draw();
+  redrawBody();
 }
 
 function bagCard(item: BagItemView): HTMLElement {
@@ -2236,7 +2235,7 @@ function drawBag(v: Snapshot): void {
     chips(BAG_TABS, bagFilter, (id) => {
       bagFilter = id;
       bagResult = "";
-      draw();
+      redrawBody();
     }),
   );
   const items = v.bag.filter((i) => bagCategory(i) === bagFilter);
@@ -2271,7 +2270,7 @@ const bagLink = createDeviceLink<BagDeviceInput>({
     bagPick = null;
     return true;
   },
-  redraw: () => draw(),
+  redraw: () => redrawBody(),
 });
 // 가방 기기 창에 보낼 고른 값 — 고른 도구가 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-bag.ts)
 function bagDeviceBuild(): BagDeviceInput | null {
@@ -2353,7 +2352,7 @@ async function useBag(id: string): Promise<void> {
     bagQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
-  draw();
+  redrawBody();
 }
 
 async function sellBag(id: string): Promise<void> {
@@ -2365,7 +2364,7 @@ async function sellBag(id: string): Promise<void> {
     sellQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
   }
-  draw();
+  redrawBody();
 }
 
 // ── 교환 ───────────────────────────────────────────────────────────────────────
@@ -2456,7 +2455,7 @@ async function tradeSend(cmd: string, target?: string, args?: Record<string, unk
   if (!reply.ok && !trade.error && trade.available) trade = { ...trade, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };
   if (trade.received && trade.received.petId !== before) {
     ui.view = await api.snapshot(); // 교환이 끝났다 — 바뀐 개체를 다시 받는다
-    draw();
+    redrawBody();
   }
   syncTradeDot();
   redrawTrade();
@@ -2904,7 +2903,7 @@ async function acctSend(req: AccountAction): Promise<AccountReply | null> {
   acctForm.error = reply ? acctErrorText(reply.code) : acctErrorText("NETWORK");
   drawSaveIndicator();
   redrawAccount();
-  draw();
+  redrawBody();
   return reply;
 }
 
@@ -3402,78 +3401,62 @@ const TAB_ICON: Record<TabId, string> = {
   bag: '<path d="M12.5 5.5h-9C2.67 5.5 2 6.17 2 7v6c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V7c0-.83-.67-1.5-1.5-1.5Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.75 2.75 0 0 1 5.5 0v1.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
-function drawTabs(): void {
-  tabsEl.replaceChildren();
-  for (const t of TABS) {
-    const b = buttonEl("");
-    b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true" style="color: var(--muted)">${TAB_ICON[t.id]}</svg>`; // 고정 그림 — 사용자 값이 들어가지 않는다
-    b.appendChild(el("span", undefined, t.label));
-    b.setAttribute("aria-selected", String(t.id === ui.tab));
-    b.addEventListener("click", () => {
-      setTab(t.id);
-      draw();
-    });
-    tabsEl.appendChild(b);
-  }
-}
-
-// 탭 옮기기 — 탭을 바꾸는 곳은 모두 여기를 거친다. 그리기는 부르는 쪽이 한다
-// - 나가는 탭의 상세 기기 창을 닫는다: 파티·박스는 개체 상세, 도감은 도감 기기 창 (2026-09-30 사용자 결정 "그냥 해당 탭을 나가면 상세 닫게해.")
-// - 같은 탭이면 아무것도 닫지 않는다. 다시 그 탭에 와도 상세를 다시 열지 않는다
-function setTab(next: TabId): void {
-  if (next === ui.tab) return;
-  ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 draw 의 syncPetDevice 가 기기 창을 닫는다
-  if (boxHold) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
-  if (ui.tab === "box") closeSwap(); // 교체 화면은 박스 탭을 나가면 끝난다 — 다음 draw 의 syncPartyDevice 가 파티 기기 창을 닫는다
-  presetRenaming = false;
-  if (ui.tab === "dex" && dexPick) {
+// 탭 — 등록한 순서대로 탭 줄에 선다 (shell.ts). 나갈 때 그 탭의 기기 창을 닫는다
+registerTab({ id: "party", label: "파티", icon: TAB_ICON.party, draw: (v) => drawParty(v) });
+// 교체 화면은 박스 탭을 나가면 끝난다 — 다음 그리기의 syncPartyDevice 가 파티 기기 창을 닫는다
+registerTab({ id: "box", label: "박스", icon: TAB_ICON.box, draw: (v) => drawBox(v), leave: () => closeSwap() });
+registerTab({
+  id: "dex",
+  label: "도감",
+  icon: TAB_ICON.dex,
+  draw: (v) => drawDex(v),
+  enter: () => {
+    if (!dexRows) void loadDex();
+  },
+  leave: () => {
+    if (!dexPick) return;
     dexPick = null;
     api.dexOpen(null, dexGen);
-  }
-  if (ui.tab === "shop") shopPick = null; // 상점 기기 창 — 다음 draw 의 syncShopDevice 가 닫는다
-  if (ui.tab === "bag") bagPick = null; // 가방 기기 창 — 다음 draw 의 syncBagDevice 가 닫는다
-  ui.tab = next;
-  bagResult = ""; // 가방 결과 줄은 탭을 떠나면 지운다
-  if (next === "dex" && !dexRows) void loadDex();
-}
+  },
+});
+// 상점·가방 기기 창 — 다음 그리기의 syncShopDevice·syncBagDevice 가 닫는다
+registerTab({
+  id: "shop",
+  label: "상점",
+  icon: TAB_ICON.shop,
+  draw: (v) => drawShop(v),
+  leave: () => {
+    shopPick = null;
+  },
+});
+registerTab({
+  id: "bag",
+  label: "가방",
+  icon: TAB_ICON.bag,
+  draw: (v) => drawBag(v),
+  leave: () => {
+    bagPick = null;
+  },
+});
 
-function draw(): void {
-  if (typingSearch(bodyEl)) {
-    bodyHeld = true; // 검색 칸을 떠나면 그린다 (releaseHeld)
-    return;
-  }
-  bodyHeld = false;
-  const kept = focusPath();
-  drawBody();
-  restoreFocusPath(kept);
-}
-
-function drawBody(): void {
-  drawTabs();
-  bodyEl.replaceChildren();
-  if (!ui.view) {
-    bodyEl.appendChild(el("div", "empty-note", "저장이 없습니다. 첫 포켓몬을 먼저 고르세요."));
-    return;
-  }
-  pointsEl.textContent = numberText(ui.view.points);
-  achDotEl.hidden = ui.view.achievements.unclaimed === 0;
-  // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
-  if (ui.detailPet && !petInView(ui.detailPet)) ui.detailPet = null;
+// 본문을 그리기 전 기기 창 맞추기 — 고른 것이 사라졌으면 닫는다. 순서: 파티 상세 → 상점 → 가방 → 파티
+registerBodySync(() => {
+  if (ui.detailPet && !petInView(ui.detailPet)) ui.detailPet = null; // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
   syncPetDevice();
-  if (shopPick && !ui.view.shop.some((i) => i.id === shopPick)) shopPick = null;
+});
+registerBodySync(() => {
+  if (shopPick && ui.view && !ui.view.shop.some((i) => i.id === shopPick)) shopPick = null;
   syncShopDevice();
-  if (bagPick && !ui.view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
+});
+registerBodySync(() => {
+  if (bagPick && ui.view && !ui.view.bag.some((i) => i.id === bagPick)) bagPick = null; // 다 쓰거나 팔았다
   syncBagDevice();
-  syncPartyDevice();
-  if (ui.tab === "party") drawParty(ui.view);
-  else if (ui.tab === "box") drawBox(ui.view);
-  else if (ui.tab === "dex") drawDex(ui.view);
-  else if (ui.tab === "shop") drawShop(ui.view);
-  else drawBag(ui.view);
-  drawSaveFailing();
-  restoreSearchFocus();
-  drawTutorial();
-}
+});
+registerBodySync(() => syncPartyDevice());
+// 본문을 그린 뒤 — 저장 실패 줄 → 검색 칸 초점 → 튜토리얼
+registerAfterDraw(() => drawSaveFailing());
+registerAfterDraw(() => restoreSearchFocus());
+registerAfterDraw(() => drawTutorial());
 
 // 이어진 저장 실패 안내 — 제목 줄 바로 아래. 한 번 저장하면 다음 새로 읽기에서 사라진다. 조작은 막지 않는다
 // Figma 05 `Party / Save Failing` `716:17993` (Alert Tone=Error). 2026-09-27 사용자 "그렇게해"
@@ -3539,7 +3522,6 @@ interface Guide {
 const firstPetCard = (): HTMLElement | null => bodyEl.querySelector<HTMLElement>(".grid .slot[data-pet]");
 // 지금 박스의 첫 개체 칸 — 박스 튜토리얼은 개체가 있을 때만 뜬다
 const firstBoxPet = (): HTMLElement | null => bodyEl.querySelector<HTMLElement>(".box-grid > .cell:not(.blank)");
-const tabButton = (id: TabId): HTMLElement | null => (tabsEl.children[TABS.findIndex((t) => t.id === id)] as HTMLElement | undefined) ?? null;
 // 사용자 모달의 첫 블록(계정 · CLI 목록) — 스크롤 영역 전체를 밝히면 말풍선이 탭을 가린다
 const dialogScroll = (): HTMLElement | null => dialogEl.querySelector<HTMLElement>(".scroll > *:first-child") ?? dialogEl.querySelector<HTMLElement>(".scroll");
 // 지금 진화할 수 있는 파티 개체의 카드
@@ -3564,7 +3546,7 @@ const GUIDES: Record<string, Guide> = {
     name: "파티", tab: "party", go: "파티로 가기",
     steps: [
       { title: "볼에 넣으면 바탕화면에서 쉬어요", body: "카드를 우클릭해 볼에 넣기를 눌러요. 볼 안에서도 성장은 이어져요.", target: firstPetCard }, // 볼에 넣기는 우클릭 메뉴에 있다 (2026-10-02)
-      { title: "박스에 보관하면 성장이 멈춰요", body: "파티 칸이 모자라면 박스에 맡겨요.", target: () => tabButton("box") },
+      { title: "박스에 보관하면 성장이 멈춰요", body: "파티 칸이 모자라면 박스에 맡겨요.", target: () => tabButtonOf("box") },
     ],
   },
   // 파티 프리셋 — 머리 줄의 넘김 → 첫 줄의 카드 → 교체 단추. 설명만 하고 대상은 막는다. 파티 기기 창은 다른 창이라 가리키지 않는다
@@ -3785,7 +3767,7 @@ function drawTutorial(): void {
     } else if (guide && guide.tab) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다(상점·부화 튜토리얼과 같다)
       const to = guide.tab;
-      const target = tabButton(to);
+      const target = tabButtonOf(to);
       const first = guide.steps[0];
       if (target && first) {
         coachEl = coachLayer(id, target, {
@@ -3795,7 +3777,7 @@ function drawTutorial(): void {
           button: guide.go,
           onGo: () => {
             setTab(to);
-            draw();
+            redrawBody();
           },
           interactive: true,
         });
@@ -3813,7 +3795,7 @@ function drawTutorial(): void {
       if (target) coachEl = coachLayer(id, target, { step: `튜토리얼 · ${text.name}`, title: text.title, body: text.body, button: "확인", onGo: () => void sendCommand("tutorial.done", id), interactive: id === "shop" });
     } else if (text) {
       // 다른 탭에 있다 — 그 탭 버튼으로 이어 준다. 누를 때만 옮긴다
-      const target = tabsEl.children[TABS.findIndex((t) => t.id === text.tab)] as HTMLElement | undefined;
+      const target = tabButtonOf(text.tab) ?? undefined;
       if (target) {
         coachEl = coachLayer(id, target, {
           step: `튜토리얼 · ${text.name}`,
@@ -3822,7 +3804,7 @@ function drawTutorial(): void {
           button: text.guideButton,
           onGo: () => {
             setTab(text.tab);
-            draw();
+            redrawBody();
           },
           interactive: true,
         });
@@ -3938,7 +3920,7 @@ const shopLink = createDeviceLink<ShopDeviceInput>({
     shopPick = null;
     return true;
   },
-  redraw: () => draw(),
+  redraw: () => redrawBody(),
 });
 
 // 누른 상품 — 같은 상품을 다시 누르면 닫는다(도감 칸과 같다)
@@ -3947,7 +3929,7 @@ function pickShop(id: string): void {
   shopQty = 1;
   shopNotice = "";
   shopDone = null;
-  draw();
+  redrawBody();
 }
 
 // 상점 기기 창에 보낼 고른 값 — 고른 상품이 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-shop.ts)
@@ -3974,7 +3956,7 @@ function stepShop(delta: -1 | 1): void {
   shopQty = 1;
   shopNotice = "";
   shopDone = null;
-  draw();
+  redrawBody();
   bodyEl.querySelector<HTMLElement>('#body [aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
 }
 
@@ -4035,7 +4017,7 @@ const petLink = createDeviceLink<PetDeviceInput>({
     ui.detailPet = null;
     return true;
   },
-  redraw: () => draw(),
+  redraw: () => redrawBody(),
 });
 // 파티 상세 옆 도감 기기 창 — `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
 let dexBeside = false;
@@ -4076,7 +4058,7 @@ function stepPet(delta: -1 | 1): void {
   const next = list[(at + delta + list.length) % list.length];
   if (!next) return;
   ui.detailPet = next.id;
-  draw();
+  redrawBody();
 }
 
 // 도감 보기 — 파티 상세 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 떠 있으면 닫는다. 관리 창 탭은 그대로다
@@ -4952,7 +4934,7 @@ function open(next: Dialog): void {
     setScrim(false);
     setTab(findPartySlot(next.petId) != null ? "party" : "box");
     ui.detailPet = next.petId;
-    draw();
+    redrawBody();
     return;
   }
   openDialog(next);
@@ -4962,7 +4944,7 @@ function open(next: Dialog): void {
 function showTrade(): void {
   setTab("box");
   ui.detailPet = null; // 박스 탭에 있었어도 개체 상세는 닫고 교환 모달만 띄운다
-  draw();
+  redrawBody();
   open({ kind: "trade" });
   void loadTrade();
 }
@@ -4971,7 +4953,7 @@ function showTrade(): void {
 const openPet = (id: string): void => {
   if (ui.detailPet === id && !ui.dialog) {
     ui.detailPet = null; // 이미 떠 있는 개체를 다시 누르면 기기 창을 닫는다 — 도감 칸과 같다
-    draw();
+    redrawBody();
     return;
   }
   open({ kind: "pet", petId: id });
@@ -5006,7 +4988,7 @@ async function loadDex(): Promise<void> {
   dexRows = await api.dex();
   if (dexPick) api.dexOpen({ slug: dexPick, beside: false }, dexGen); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
   else if (dexBeside && dexBesideSent) api.dexOpen({ slug: dexBesideSent, beside: true }, dexGen);
-  if (ui.tab === "dex") draw();
+  if (ui.tab === "dex") redrawBody();
 }
 
 async function loadAgents(): Promise<void> {
@@ -5020,7 +5002,7 @@ async function loadAgents(): Promise<void> {
 async function refresh(): Promise<void> {
   ui.view = await api.snapshot();
   drawnStructure = structureOf(ui.view);
-  draw();
+  redrawBody();
 }
 
 // ── 1초 시계 ──────────────────────────────────────────────────────────────────
@@ -5099,35 +5081,11 @@ async function clockTick(): Promise<void> {
     }
     ui.view = next;
     drawnStructure = structure;
-    draw();
+    redrawBody();
     drawDialog();
   } finally {
     clockBusy = false;
   }
-}
-
-// 전체 다시 그리기 뒤 포커스를 같은 자리로 — 탭 줄·본문 안에서 자식 번호 길과 모양(태그·클래스)이 같은 요소
-// 다시 그리면 요소가 새로 생겨 키보드 포커스가 사라진다 (2026-09-29 검수 C2)
-interface FocusPath {
-  root: HTMLElement;
-  path: number[];
-  sign: string;
-}
-const signOf = (e: Element): string => `${e.tagName}.${e.className}`;
-function focusPath(): FocusPath | null {
-  const a = document.activeElement;
-  if (!(a instanceof HTMLElement) || a === document.body || a.dataset.search != null) return null; // 검색 칸은 searchFocus 가 맡는다
-  const root = [tabsEl, bodyEl].find((r) => r.contains(a) && r !== a);
-  if (!root) return null;
-  const path: number[] = [];
-  for (let n: Element = a; n !== root; n = n.parentElement as Element) path.unshift([...(n.parentElement?.children ?? [])].indexOf(n));
-  return { root, path, sign: signOf(a) };
-}
-function restoreFocusPath(kept: FocusPath | null): void {
-  if (!kept || (document.activeElement && document.activeElement !== document.body)) return;
-  let n: Element | undefined = kept.root;
-  for (const i of kept.path) n = n?.children[i];
-  if (n instanceof HTMLElement && signOf(n) === kept.sign) n.focus({ preventScroll: true });
 }
 
 needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "achievements" }));
@@ -5151,7 +5109,7 @@ document.addEventListener("keydown", (e) => {
 function goTo(route: ManageRoute): void {
   if (route.to === "daycare") {
     setTab("box");
-    draw();
+    redrawBody();
     open({ kind: "daycare" }); // 돌보미집은 모달이다 (2026-09-30)
   } else if (route.to === "pet") {
     if (petInView(route.petId)) open({ kind: "pet", petId: route.petId }); // 이미 떠 있어도 닫지 않는다 — 무대 우클릭 메뉴의 상세 보기·진화 배너
@@ -5185,7 +5143,7 @@ function goTo(route: ManageRoute): void {
     closeDialog();
     setTab(route.to);
     ui.detailPet = null;
-    draw();
+    redrawBody();
   } else {
     achievementTab = "all"; // 다른 분류를 고른 채면 그 업적 줄이 목록에 없다
     open({ kind: "achievements" });
