@@ -11,7 +11,7 @@ import { currentSaveKey, isSealed, newSaveKey, sealText, setSaveKey, unsealText 
 import { keyFileOf, prepareSaveKey, setAsideKeyAndSave } from "../../save/key";
 import type { KeyVault } from "../../platform/key-vault";
 import * as store from "../../save/save-file";
-import { readCloudFile } from "../../online/lost";
+import { readCloudFile } from "../../online/cloud-file";
 import { emptySave as empty } from "../../save/normalize";
 import { makeTmp } from "../harness/tmp-dir";
 import { printLine as out } from "../harness/report";
@@ -266,7 +266,7 @@ async function main(): Promise<void> {
       out("8 키 파일 읽기 오류 — 옮기지 않고 이번만 키 없이");
     }
 
-    // 9. 격리 표시 → cloud.json (src/online/lost.ts)
+    // 9. 격리 표시 → cloud.json (src/online/cloud-file.ts)
     {
       const d = dir();
       const file = path.join(d, "save.json");

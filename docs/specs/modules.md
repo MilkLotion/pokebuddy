@@ -147,7 +147,7 @@
 | `save.key` 모양이 틀림 | 키와 저장을 `.unreadable-<시각>.bak`으로 옮기고 새 키로 시작한다(`reset`). 표시를 남긴다. 옮기지 못하면 옛 키를 덮지 않고 키 없이 돈다 |
 | 저장 잠김 창 | 키 없이 도는데(`denied`·`busy`·`unavailable`) 암호화 저장이 있으면 게임을 만들기 전에 `저장을 열지 못했어요` 창을 띄운다. `종료`(Esc)는 저장을 그대로 두고 끝낸다. `새로 시작`은 키와 저장을 `.unreadable-<시각>.bak`으로 옮기고 표시를 남긴 뒤 키를 다시 준비한다(`src/main/app.ts`, `src/main/app/halt-dialog.ts` `askSaveLocked`) |
 | 키 저장소 없음 | 평문으로 돈다. 이미 암호화된 저장은 읽지 않고 덮어쓰지도 않는다(`locked`) |
-| `save.json.lost` | 클라우드가 `cloud.json`을 읽을 때 처리한다(`src/online/lost.ts`). `syncedRev`를 `-1`로 바꾼 상태를 `cloud.json`에 먼저 쓰고 표시를 지운다. 서버 저장이 있으면 다음 맞추기에서 받는다. 격리 뒤에 올린 적이 있으면(`lastSavedAt` > 격리 시각) 표시만 지운다. 격리 뒤 새로 고른 첫 포켓몬 저장은 `save.json.cloud-<시각>.bak`으로 남는다 |
+| `save.json.lost` | 클라우드가 `cloud.json`을 읽을 때 처리한다(`src/online/cloud-file.ts`). `syncedRev`를 `-1`로 바꾼 상태를 `cloud.json`에 먼저 쓰고 표시를 지운다. 서버 저장이 있으면 다음 맞추기에서 받는다. 격리 뒤에 올린 적이 있으면(`lastSavedAt` > 격리 시각) 표시만 지운다. 격리 뒤 새로 고른 첫 포켓몬 저장은 `save.json.cloud-<시각>.bak`으로 남는다 |
 
 ### 서버 저장 검증
 

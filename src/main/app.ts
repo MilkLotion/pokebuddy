@@ -20,7 +20,7 @@ import { jumpListOf } from "../view/menus";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
 import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "../tx/game.js";
-import { cloudSeedOf } from "./services/online";
+import { readCloudSeed } from "../online/cloud-file.js";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./app/halt-dialog";
 import { createManage } from "./manage/window.js";
@@ -457,7 +457,7 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
   // 알 결과는 계정 시드로 정한다(P4b, D24) — 되돌려 다시 열어도 같다. 시드가 없으면(첫 올리기 전) 평소 난수
   const eggRand = (eggId: string): (() => number) | null => {
     const on = services.current();
-    const seed = on ? on.cloud.seed() : cloudSeedOf(PATHS.save);
+    const seed = on ? on.cloud.seed() : readCloudSeed(PATHS.save);
     return seed ? seededRand(seed, `egg:${eggId}`) : null;
   };
   const reader = createGame({ petName, file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), flushMs: CLOCK_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });

@@ -12,14 +12,12 @@
 //   로그인·가입·GitHub: 세션 교체 직전에 올리고 멈춘다 → 익명 저장 이관(handoff.ts) → 정식 계정으로 다시 시작. 실패하면 원래대로 다시 시작
 //   로그아웃·삭제(D12): 올리고 released → 서버 처리 → save.json 을 백업으로 옮김 → cloud.json 비움 → 앱이 다시 켠다(선택 창)
 //   분실(D29): 클라우드는 끄고 게임은 계속. 창은 앱이 띄우고, 답에 따라 continueLocal·fresh 를 부른다
-import fs from "node:fs";
-import path from "node:path";
 import { app, shell } from "electron";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createOnlineClient } from "../../online/client.js";
 import { createAccount, viewOf, type Account, type AccountView } from "../../online/account.js";
 import { createCloud } from "../../online/cloud.js";
-import { normalizeCloudState, strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../../online/cloud-state.js";
+import { strayAnonymous, type Cloud, type CloudMode, type CloudView, type HaltInfo, type HaltReason, type OwnerKind, type SaveKind } from "../../online/cloud-state.js";
 import { githubLogin } from "../../online/github.js";
 import { handoffHooks, type HandoffReport, type SwitchHooks } from "../../online/handoff.js";
 import { createSessionGate, type SessionGate } from "../../online/session.js";
@@ -28,9 +26,9 @@ import { ONLINE_TIMING } from "../../online/timing.js";
 import { onlineConfig } from "../../online/config.js";
 import type { SessionStorage } from "../../online/client.js";
 import { devEnv, devNumber } from "../app/dev-run.js";
-import { writeAtomic } from "../../platform/atomic-write.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../../save/save-file.js";
-import { readCloudFile } from "../../online/lost.js";
+import { readCloudFile, writeCloudFile } from "../../online/cloud-file.js";
+import { cloudFileOf } from "../../platform/paths.js";
 import { t } from "../../view/text";
 import type { AccountAction, AccountReply, AccountScreen } from "../../shared/model/account";
 import type { AccountReplyCode, CloudErrorCode } from "../../shared/names/online-codes.js";
@@ -91,22 +89,12 @@ const deviceLabel = (): string => (process.platform === "win32" ? "Windows PC" :
 // 익명 계정 발급·세션 확인을 다시 시도하는 간격 — 클라우드 다시 연결과 같다
 const SESSION_RETRY_MS = ONLINE_TIMING.retryMs;
 
-// 계정 시드(P4b) — 클라우드가 아직 돌지 않을 때 cloud.json 에서 읽는다. 저장 주인의 시드일 때만
-export function cloudSeedOf(saveFile: string): string | null {
-  try {
-    const s = normalizeCloudState(JSON.parse(fs.readFileSync(path.join(path.dirname(saveFile), "cloud.json"), "utf8")));
-    return s?.seed && s.owner && s.seedOwner === s.owner ? s.seed : null;
-  } catch {
-    return null;
-  }
-}
-
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const config = onlineConfig(undefined, devEnv());
   if (!config.url || !config.publishableKey) return null;
   const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: o.storage });
   const gate = createSessionGate(client);
-  const cloudFile = path.join(path.dirname(o.saveFile), "cloud.json");
+  const cloudFile = cloudFileOf(o.saveFile);
   const listeners = new Set<(screen: AccountScreen) => void>();
   let accountView: AccountView = viewOf(null);
   let cloudView: CloudView = { status: "off", lastSavedAt: null, busy: false, error: null, other: null };
@@ -155,15 +143,9 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
     ...(devNumber("POKEBUDDY_CLOUD_RETRY_MS") ? { retryMs: devNumber("POKEBUDDY_CLOUD_RETRY_MS") } : {}),
     ...(devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") ? { heartbeatMs: devNumber("POKEBUDDY_CLOUD_HEARTBEAT_MS") } : {}),
     io: {
-      // 로컬 저장을 격리했으면(풀지 못함·손으로 고친 평문·키 분실) 맞춘 rev 를 잊는다 — 다음 맞추기가 서버 저장을 받는다 (src/online/lost.ts)
+      // 로컬 저장을 격리했으면(풀지 못함·손으로 고친 평문·키 분실) 맞춘 rev 를 잊는다 — 다음 맞추기가 서버 저장을 받는다 (src/online/cloud-file.ts)
       loadState: () => readCloudFile(cloudFile, o.saveFile),
-      saveState: (s) => {
-        try {
-          if (!writeAtomic(cloudFile, s)) throw new Error(cloudFile);
-        } catch (e) {
-          console.error("cloud.json 을 쓰지 못했다", e);
-        }
-      },
+      saveState: (s) => writeCloudFile(cloudFile, s),
       readSave: () => readSaveRaw(o.saveFile), // 암호화 저장을 풀어 JSON 으로 (src/save/save-file.ts)
       // 받은 저장을 v3 검사로 읽은 뒤 바꾼다. 바꾸기 전 로컬 저장을 백업한다
       replaceSave: (save) => {

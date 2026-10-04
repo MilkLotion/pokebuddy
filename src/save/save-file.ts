@@ -19,7 +19,7 @@
 //   키가 있으면 암호화해 쓰고, 읽을 때 푼다. 풀지 못하면(고침·다른 키) 파손과 같다
 //   키가 있는데 평문이면 손으로 고친 저장으로 보고 파손과 같게 다룬다. 기존 평문의 이전은 켤 때 src/save/key.ts 가 한 번 한다
 //   키가 없는데 암호화 파일이면 읽지 못한다(reason "locked"). 격리하지 않고, 덮어쓰지도 않는다
-//   격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다 — 클라우드가 다음 맞추기에서 서버 저장을 받는다 (src/online/lost.ts)
+//   격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다 — 클라우드가 다음 맞추기에서 서버 저장을 받는다 (src/online/cloud-file.ts)
 import fs from "node:fs";
 import type { SaveV3 } from "../shared/save-v3";
 import { currentSaveKey, isSealed, sealText, unsealText } from "./crypt.js";
@@ -46,7 +46,7 @@ export interface ReadSaveResult {
 // v2 원본을 남겨 두는 자리. 두 번 옮기는 일은 없으므로 덮어쓰지 않는다
 export const backupName = (file: string): string => `${file}.v2.bak`;
 
-// 저장을 격리했다는 표시 — 클라우드가 읽고 지운다 (src/online/lost.ts)
+// 저장을 격리했다는 표시 — 클라우드가 읽고 지운다 (src/online/cloud-file.ts)
 export const lostMarkerOf = (file: string): string => `${file}.lost`;
 
 
