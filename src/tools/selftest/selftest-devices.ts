@@ -65,6 +65,13 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const many = bag({ itemId: "exp-candy-s", qty: 999 });
   assert.equal(many.input.qty, many.model.qty?.cap, "수량은 상한까지");
   assert.ok((many.model.qty?.cap ?? 0) <= 5, "가진 개수를 넘지 않는다");
+  assert.equal(many.model.qty?.hint, "최대 5 · 보유 수", "보유 수가 상한이면 보유 수");
+  // 100레벨까지 드는 개수가 상한이면 그 까닭을 적는다 — 상점의 상한 까닭 고르기와 같다 (94 항목 9-3-5)
+  const near = seed();
+  near.pets[0]!.level = 98;
+  near.bag["rare-candy"] = 5;
+  const nearModel = bagDeviceModel(snapshotView(near, T0), bagIn({ qty: 9 }));
+  assert.deepEqual(nearModel?.model.qty && { cap: nearModel.model.qty.cap, hint: nearModel.model.qty.hint }, { cap: 2, hint: "최대 2 · Lv.100" });
   assert.match(many.model.preview.line, /^획득 경험치 \+[\d,]+ · 소멸 [\d,]+$/);
   assert.equal(bag({ itemId: "premium-food", qty: 9 }).model.qty, null, "사탕이 아니면 수량 줄이 없다");
 }

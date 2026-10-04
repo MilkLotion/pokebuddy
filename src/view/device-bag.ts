@@ -166,7 +166,8 @@ export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult
       title: v.party.preset.name, // 사용 쪽 머리 제목은 지금 프리셋 이름이다 (2026-10-02 사용자 결정)
       pager: v.party.preset.count > 1,
       party: strip,
-      qty: many ? { count: input.qty, cap, hint: `최대 ${numberText(cap)} · 보유 수` } : null,
+      // 상한의 까닭 — 상점 기기 창처럼 가장 작은 상한 하나. 100레벨까지 드는 개수가 보유 수보다 작으면 Lv.100 (94 항목 9-3-5)
+      qty: many ? { count: input.qty, cap, hint: `최대 ${numberText(cap)} · ${cap < item.count ? "Lv.100" : "보유 수"}` } : null,
       preview,
       go: { label: many ? `${numberText(input.qty)}개 사용` : "사용", disabled: !!blocked, busy: input.busy },
     },
