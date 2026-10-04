@@ -185,7 +185,7 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = dexList(game.read()!);
-    assert.equal(rows.length, 1095, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 13 — 리전폼과 특수 폼은 다른 종이라 따로 보인다");
+    assert.equal(rows.length, 1100, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 18 — 리전폼과 특수 폼은 다른 종이라 따로 보인다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
     let prev = 0;
     let prevForm = 0;

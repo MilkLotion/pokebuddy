@@ -5,7 +5,7 @@
 // 관리 창의 메뉴에는 상세 보기가 없다 — 카드·칸을 좌클릭하면 바로 상세가 열린다 (2026-10-02 사용자 결정 "좌클릭으로 상세 열게")
 // 박스 개체와 볼 안의 개체는 무대에 없다 — 저장의 값으로 메뉴를 만든다. 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다
 // 메뉴의 모델(이름·상태·막힌 항목·첫 돌봄 잠금)은 화면 값이 만든다 (src/view/menus.ts petMenuOf). 여기서는 누르면 할 일을 잇고 띄운다
-import { formsOf } from "../../dex/forms";
+import { formsOf, isFormLocked } from "../../dex/forms";
 import type { Command } from "../../shared/command";
 import type { ManageRoute } from "../../shared/model/route";
 import type { SaveV3 } from "../../shared/save-v3";
@@ -81,10 +81,12 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
 
   return {
     open(id, origin = "stage") {
-      const pet = deps.read()?.pets.find((row) => row.id === id) ?? null;
+      const save = deps.read();
+      const pet = save?.pets.find((row) => row.id === id) ?? null;
       const forms = pet ? formsOf(pet) : [];
       const art = deps.portraits();
-      if (!pet || forms.length < 2 || !art) {
+      // 모습 바꾸기 해금 전(로토무)은 말풍선이 없다 — 초상을 기다리지 않고 바로 띄운다
+      if (!save || !pet || forms.length < 2 || isFormLocked(save, pet) || !art) {
         pop(id, origin, {});
         return;
       }

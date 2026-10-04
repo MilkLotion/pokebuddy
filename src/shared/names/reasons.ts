@@ -81,6 +81,7 @@ export const REASONS = [
   "no-map",
   "not-shared",
   "bad-form",
+  "form-locked", // 모습 바꾸기 해금 전(로토무 — 에이전트 작업 시간)
   "no-stone",
   "art-missing", // 바뀔 모습의 그림을 받지 못했다
   // 업적·튜토리얼

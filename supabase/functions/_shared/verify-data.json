@@ -1933,6 +1933,13 @@
    "tatsugiri-curly-mega"
   ]
  },
+ "shiftWork": {
+  "rotom-heat": 180000000,
+  "rotom-wash": 180000000,
+  "rotom-frost": 180000000,
+  "rotom-fan": 180000000,
+  "rotom-mow": 180000000
+ },
  "growth": {
   "abomasnow": "slow",
   "abra": "medium-slow",

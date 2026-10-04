@@ -18,6 +18,7 @@
 //   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수
 //   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만
+//   form-lock   작업 시간 조건이 있는 모습(로토무의 다섯 모습)인 개체가 있으면 계정의 작업 시간이 그 조건 이상이어야 한다 (src/dex/rules.ts SHIFT_RULES)
 //   mega        메가스톤을 지닌 개체는 친밀도·레벨 조건을 채워야 한다. 메가 모습은 메가스톤이 있고 그 종의 모습이어야 한다 (src/dex/mega.ts)
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
@@ -41,6 +42,7 @@ export interface VerifyData {
   achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
+  shiftWork?: Record<string, number>; // 모습 슬러그 → 그 모습이 되는 데 드는 작업 시간(ms) (src/dex/rules.ts SHIFT_RULES). 없으면 form-lock 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
   maxExp: number; // 모든 성장 곡선의 100레벨 누적 경험치 중 최대
@@ -426,6 +428,14 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     for (const p of nextPets) {
       if (p.megaStone && (p.level < r.megaLevel || p.affinity < r.megaAffinity)) add("mega", 1, 0, p.id);
       if (p.megaOn && (!p.megaStone || !(data.megaForms[p.species] ?? []).includes(p.megaOn))) add("mega", 1, 0, p.id);
+    }
+  }
+
+  // form-lock — 작업 시간 조건이 있는 모습(로토무의 다섯 모습)은 계정의 작업 시간이 그 이상이어야 한다. 작업 시간은 줄지 않으므로 지금 저장만 본다
+  if (data.shiftWork) {
+    for (const p of nextPets) {
+      const need = data.shiftWork[p.species];
+      if (need != null) add("form-lock", need, workOf(next), p.id);
     }
   }
 

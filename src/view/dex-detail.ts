@@ -21,7 +21,8 @@ import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { hatchBaseOf, regionalOf } from "../dex/regional.js";
+import { hatchBaseOf, regionalOf, shiftGroupOf } from "../dex/regional.js";
+import { shiftWorkMs } from "../dex/forms.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
 import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
@@ -38,6 +39,22 @@ function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexD
   return { mega: { label, names: forms.map((f) => petName(f)).join(" · ") } };
 }
 
+// 모습 바꾸기의 작업 시간 조건 — "(에이전트 작업 50시간)". 조건이 없는 묶음(오리진폼)은 빈 글자. 쌓인 시간은 적지 않는다
+function shiftNeedText(slug: string, opts?: DexOptions): string {
+  const need = shiftWorkMs(slug, opts);
+  return need == null ? "" : `(에이전트 작업 ${need / 3_600_000}시간)`;
+}
+
+// 모습 바꾸기 줄 — 작업 시간 조건이 있는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
+// 값은 모습 수와 조건 — "다섯 모습(에이전트 작업 50시간)" (docs/specs/game.md "로토무의 모습 바꾸기")
+const COUNT_WORDS = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"];
+function shiftLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
+  const group = shiftGroupOf(slug, opts);
+  if (!obtained || group[0] !== slug || shiftWorkMs(slug, opts) == null) return {};
+  const n = group.length - 1;
+  return { mega: { label: "모습 바꾸기", names: `${COUNT_WORDS[n] ?? n} 모습${shiftNeedText(slug, opts)}` } };
+}
+
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
   const row = profileOf(slug, opts);
   if (!row.dex) return null;
@@ -51,9 +68,9 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (prev) methods.push(`${petName(prev)}에서 진화${nextOf(prev, opts).some((s) => s.to === slug && s.map) ? MAP_MARK : ""}`);
   const random = eggName("random", opts) ?? "랜덤알";
   if (inRandomEgg(slug, opts)) methods.push(unlocked ? random : `${random}(해금 후)`);
-  // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼))
+  // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼)·로토무의 다섯 모습). 작업 시간 조건이 있으면 괄호로 붙인다
   const shiftForm = regionalOf(slug, opts);
-  if (shiftForm?.get === "shift") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기`);
+  if (shiftForm?.get === "shift") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}`);
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);
@@ -92,6 +109,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
     ...megaLine(slug, obtained, opts),
+    ...shiftLine(slug, obtained, opts),
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종은 영어로 대신한다(899번부터는 data/dex-text.ko.json 으로 채워 지금은 없다)
     ...officialText(unlocked ? textOf(slug, row.dex, opts) : undefined),
     ...bodySize(unlocked ? textOf(slug, row.dex, opts) : undefined),

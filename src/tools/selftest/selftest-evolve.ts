@@ -14,7 +14,8 @@ import { gameDayPart } from "../../shared/clock";
 
 // 못 채운 조건을 `kind:값` 으로 쓰고 `|` 로 잇는다 — 단언을 짧게 적으려고. 채웠으면 undefined
 const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
-import { formsOf, setForm } from "../../dex/forms";
+import { formsOf, isFormLocked, isSinglePet, setForm } from "../../dex/forms";
+import { SHIFT_RULES } from "../../dex/rules";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
@@ -230,6 +231,33 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(formsOf(seed({ species: "mewtwo", level: 50 }).pets[0] as PetV3), ["mewtwo"], "모습이 없는 단일 포켓몬은 자기 하나");
   assert.deepStrictEqual(formsOf(seed({ species: "giratina-origin", level: 50 }).pets[0] as PetV3), ["giratina-origin", "giratina"], "오리진폼만 든 저장도 공유 계열이다");
   process.stdout.write("(12c) 기라티나 모습 바꾸기  ok\n");
+}
+
+// (12d) 로토무 — 공유 계열이 아니어도 다섯 모습과 모습 바꾸기로 오간다. 계정의 에이전트 작업 시간 50시간부터 열린다
+// (2026-10-04 사용자 결정 "그렇게하자", "에이전트 작업 시간", "50시간" — docs/specs/game.md "로토무의 모습 바꾸기")
+{
+  const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
+  assert.equal(SHIFT_RULES.workMs.rotom, 180_000_000, "50시간");
+  const s = seed({ species: "rotom", level: 20 });
+  const p = s.pets[0] as PetV3;
+  assert.deepStrictEqual(formsOf(p), ROTOM, "로토무와 다섯 모습");
+  assert.equal(isSinglePet(p), false, "단일 포켓몬이 아니다 — 판매·교환은 지금 종 그대로");
+  s.totals.workMs = 180_000_000 - 1;
+  assert.equal(isFormLocked(s, p), true, "50시간 미만은 잠김");
+  assert.equal(setForm(s, "p1", "rotom-heat").reason, "form-locked");
+  assert.equal(p.species, "rotom");
+  assert.ok(!s.dex.obtained.includes("rotom-heat"));
+  assert.equal(setForm(s, "p1", "pikachu").reason, "bad-form", "묶음 밖의 종은 해금과 무관하게 bad-form");
+  s.totals.workMs = 180_000_000;
+  assert.equal(isFormLocked(s, p), false, "50시간이면 열림");
+  assert.deepStrictEqual(setForm(s, "p1", "rotom-heat"), { ok: true, petId: "p1", from: "rotom", to: "rotom-heat" });
+  assert.ok(s.dex.obtained.includes("rotom-heat"), "처음 바꾼 모습은 도감에 남는다");
+  assert.deepStrictEqual(p.forms, ROTOM, "서버 검증의 종 변경 근거로 묶음을 남긴다");
+  assert.deepStrictEqual(formsOf(p), ROTOM, "모습에서도 같은 목록");
+  assert.equal(setForm(s, "p1", "rotom-mow").ok, true, "모습끼리도 오간다");
+  assert.equal(setForm(s, "p1", "rotom").ok, true, "돌아간다");
+  assert.equal(isFormLocked(s, seed({ species: "giratina", level: 50 }).pets[0] as PetV3), false, "공유 계열(오리진폼)은 잠그지 않는다");
+  process.stdout.write("(12d) 로토무 모습 바꾸기  ok\n");
 }
 
 // (13) 모습 바꾸기 — 고를 수 있는 종만, 진행 상태는 그대로. 가진 종으로 가는 진화는 다시 열리지 않는다

@@ -14,7 +14,7 @@ import { nextOf } from "../../dex/evo";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { megaOf, megaSlugs } from "../../dex/mega";
 import { inRandomEgg } from "../../dex/obtain";
-import { MEGA_RULES } from "../../dex/rules";
+import { MEGA_RULES, SHIFT_RULES } from "../../dex/rules";
 import { speciesSlugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
@@ -95,12 +95,20 @@ export function buildVerifyFiles(): Record<string, string> {
   // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
   const megaForms: Record<string, string[]> = {};
   for (const slug of megaSlugs()) (megaForms[megaOf(slug)!.base] ??= []).push(slug);
+  // 작업 시간 조건이 있는 모습 — 모습 슬러그 → 조건(ms). 묶음은 data/regional.json 의 shift, 조건은 SHIFT_RULES (로토무의 다섯 모습)
+  const shiftWork: Record<string, number> = {};
+  for (const [base, list] of Object.entries((load("regional.json").shift ?? {}) as Record<string, unknown>)) {
+    const need = SHIFT_RULES.workMs[base];
+    if (base.startsWith("_") || need == null || !Array.isArray(list)) continue;
+    for (const slug of list) if (typeof slug === "string") shiftWork[slug] = need;
+  }
   const data = {
     items,
     eggs,
     achievements,
     evo,
     megaForms,
+    shiftWork,
     growth,
     expTable,
     maxExp,

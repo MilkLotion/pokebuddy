@@ -7,7 +7,8 @@
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { jumpListOf, petMenuOf, trayMenuOf } from "../../view/menus";
+import { jumpListOf, petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
+import { menuView } from "../../view/menu-view";
 import { moodText, t } from "../../view/text";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -102,4 +103,26 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.deepEqual(jump.labels, { feed: t("menu.feed"), play: t("menu.play") });
 }
 
-process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이와 점프 목록)\n");
+// (6) 로토무 — 해금 전에는 `모습 바꾸기` 줄만 흐리고 말풍선(하위 줄)이 없다. 에이전트 작업 50시간이면 여섯 모습 말풍선 (docs/specs/game.md "로토무의 모습 바꾸기")
+{
+  const s = seed();
+  s.pets.push(pet({ id: "p4", species: "rotom", level: 20 }));
+  s.party.slots[2] = { state: "pokemon", petId: "p4", hidden: false };
+  const shut = menuOf(s, "p4")!.model;
+  assert.equal(shut.formsLocked, true, "50시간 미만은 잠김");
+  assert.equal(shut.forms?.length, 6);
+  const shutItem = petMenu(shut, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  assert.equal(shutItem?.enabled, false, "흐린 줄");
+  assert.equal(shutItem?.submenu, undefined, "말풍선(하위 줄) 없음");
+  assert.equal(shutItem?.sublabel, undefined, "이유를 적지 않는다");
+  const shutRow = menuView(petMenu(shut, { form: () => undefined }), "켜짐").find((r) => r.kind === "item" && r.label === t("menu.form"));
+  assert.ok(shutRow && shutRow.kind === "item" && shutRow.disabled && !shutRow.sub, "메뉴 창에서도 머리 줄이 아니라 흐린 항목이다 (menu-view)");
+  s.totals.workMs = 180_000_000;
+  const open = menuOf(s, "p4")!.model;
+  assert.equal(open.formsLocked, undefined, "50시간이면 열림");
+  const openItem = petMenu(open, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  assert.equal(Array.isArray(openItem?.submenu) ? openItem.submenu.length : 0, 6, "로토무와 다섯 모습");
+  assert.equal(menuOf(s, "p1")!.model.forms?.length ?? 0, 0, "모습이 없는 종은 줄이 없다");
+}
+
+process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이와 점프 목록·로토무 모습 잠금)\n");

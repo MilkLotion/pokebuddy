@@ -272,4 +272,19 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 상점 상세 · 진화 트리·대상·줄 문구  ok\n");
 }
 
+// (13) 로토무의 모습 바꾸기 — 다섯 모습의 입수 방법에 조건을 괄호로, 얻은 로토무의 기록 칸에 `모습 바꾸기` 줄(메가진화 줄 자리). 쌓인 시간은 적지 않는다
+{
+  const s = seed();
+  assert.equal(dexDetail(s, "rotom-heat")?.methods, "로토무의 모습 바꾸기(에이전트 작업 50시간)");
+  assert.equal(dexDetail(s, "rotom-heat")?.form, 1);
+  assert.equal(dexDetail(s, "rotom-mow")?.form, 5);
+  assert.equal(dexDetail(s, "giratina-origin")?.methods, "기라티나(어나더폼)의 모습 바꾸기", "조건이 없는 모습 바꾸기는 괄호가 없다");
+  assert.equal(dexDetail(s, "rotom")?.mega, undefined, "얻지 않은 로토무는 줄이 없다 — 메가진화 줄과 같다");
+  s.dex.obtained.push("rotom");
+  s.totals.workMs = 3_600_000;
+  assert.deepEqual(dexDetail(s, "rotom")?.mega, { label: "모습 바꾸기", names: "다섯 모습(에이전트 작업 50시간)" });
+  assert.equal(dexDetail(s, "rotom-heat")?.mega, undefined, "모습 쪽에는 줄이 없다");
+  process.stdout.write("(13) 로토무 모습 바꾸기 · 입수 방법과 기록 줄  ok\n");
+}
+
 process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명·키 몸무게·기기 창 자리)\n");

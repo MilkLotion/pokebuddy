@@ -172,7 +172,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profileOf("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.speciesSlugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 83 + 리전폼 57 + 특수 폼 13 (배쓰나이(청색근의 모습)와 기라티나(오리진폼)는 폼에서 특수 폼으로 옮겼다)");
+  assert.strictEqual(dex.speciesSlugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 78 + 리전폼 57 + 특수 폼 18 (배쓰나이(청색근의 모습)·기라티나(오리진폼)·로토무의 다섯 모습은 폼에서 특수 폼으로 옮겼다)");
   assert.ok(!dex.speciesSlugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.speciesSlugs()) {
@@ -210,10 +210,11 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.lineOf("charizard"), ["charmander", "charmeleon", "charizard"]);
   assert.deepStrictEqual(dex.lineOf("ditto"), ["ditto"], "사슬에 없는 종은 자기만");
   assert.deepStrictEqual(dex.lineOf("not-a-mon"), ["not-a-mon"]);
-  // 폼 — 같은 도감번호는 사슬의 모습으로 붙는다
-  const rotom = dex.lineOf("rotom");
-  assert.ok(rotom.includes("rotom") && rotom.includes("rotom-wash") && rotom.includes("rotom-heat"), "로토무 폼");
-  assert.deepStrictEqual(dex.lineOf("rotom-wash"), rotom, "폼에서 봐도 같은 목록");
+  // 폼 — 같은 도감번호는 사슬의 모습으로 붙는다. 특수 폼(로토무의 다섯 모습 — 2026-10-04 폼에서 옮김)은 다른 종이라 붙지 않는다
+  const deoxys = dex.lineOf("deoxys");
+  assert.deepStrictEqual(deoxys, ["deoxys", "deoxys-attack", "deoxys-defense", "deoxys-speed"], "테오키스 폼");
+  assert.deepStrictEqual(dex.lineOf("deoxys-speed"), deoxys, "폼에서 봐도 같은 목록");
+  assert.deepStrictEqual(dex.lineOf("rotom"), ["rotom"], "특수 폼은 사슬에 붙지 않는다(기라티나(오리진폼)와 같다)");
   assert.deepStrictEqual(dex.lineOf("deoxys-attack")[0], "deoxys");
 
   assert.strictEqual(dex.evoStageOf("eevee"), 0);
@@ -247,8 +248,8 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
-    "특수 폼 13종과 얻는 방법",
+    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
+    "특수 폼 18종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
   const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);

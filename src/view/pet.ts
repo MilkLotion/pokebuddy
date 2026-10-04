@@ -12,7 +12,7 @@ import { TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { CareView, EvolutionView, FormView, MegaView, PetView } from "../shared/model/snapshot";
-import { formsOf } from "../dex/forms.js";
+import { formsOf, isFormLocked, isShared } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
 import { checkPetFree } from "../party/pet-actions.js";
@@ -58,11 +58,14 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
   }));
 }
 
-// 공유 sid 계열이면 고를 수 있는 종 — 박스 칸이 단체사진과 툴팁으로 보인다
-function formsView(pet: PetV3): { forms?: FormView[] } {
+// 고를 수 있는 종 — 공유 sid 계열은 forms(박스 칸이 단체사진과 툴팁으로 보인다).
+// 모습 바꾸기 종(로토무)은 박스 칸이 지금 종 그대로라 shiftForms 에 둔다 — 모습 바꾸기 확인 창이 읽는다. 해금 전에는 없다
+function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForms"> {
   const list = formsOf(pet);
   if (list.length < 2) return {};
-  return { forms: list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] })) };
+  const views = list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] }));
+  if (isShared(pet)) return { forms: views };
+  return isFormLocked(save, pet) ? {} : { shiftForms: views };
 }
 
 // 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다
@@ -140,7 +143,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     }),
     buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
-    ...formsView(pet),
+    ...formsView(save, pet),
     ...megaView(save, pet),
     care: careView(pet),
   };

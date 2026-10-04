@@ -54,6 +54,11 @@
     "corsola-galar": {"base":"corsola","region":"galar","no":1,"pokemonId":10173,"pmd":"0222/0001","ko":"가라르 코산호","en":"Galarian Corsola","get":"base"},
     "zigzagoon-galar": {"base":"zigzagoon","region":"galar","no":1,"pokemonId":10174,"pmd":"0263/0001","ko":"가라르 지그제구리","en":"Galarian Zigzagoon","get":"base"},
     "linoone-galar": {"base":"linoone","region":"galar","no":1,"pokemonId":10175,"pmd":"0264/0001","ko":"가라르 직구리","en":"Galarian Linoone","get":"path"},
+    "rotom-heat": {"base":"rotom","region":"sinnoh","no":1,"pokemonId":10008,"pmd":"0479/0001","ko":"히트로토무","en":"Heat Rotom","get":"shift","special":true},
+    "rotom-wash": {"base":"rotom","region":"sinnoh","no":2,"pokemonId":10009,"pmd":"0479/0002","ko":"워시로토무","en":"Wash Rotom","get":"shift","special":true},
+    "rotom-frost": {"base":"rotom","region":"sinnoh","no":3,"pokemonId":10010,"pmd":"0479/0003","ko":"프로스트로토무","en":"Frost Rotom","get":"shift","special":true},
+    "rotom-fan": {"base":"rotom","region":"sinnoh","no":4,"pokemonId":10011,"pmd":"0479/0004","ko":"스핀로토무","en":"Fan Rotom","get":"shift","special":true},
+    "rotom-mow": {"base":"rotom","region":"sinnoh","no":5,"pokemonId":10012,"pmd":"0479/0005","ko":"커트로토무","en":"Mow Rotom","get":"shift","special":true},
     "dialga-origin": {"base":"dialga","region":"hisui","no":1,"pokemonId":10245,"pmd":"0483/0001","ko":"디아루가(오리진폼)","en":"Dialga (Origin Forme)","get":"shift","special":true},
     "palkia-origin": {"base":"palkia","region":"hisui","no":1,"pokemonId":10246,"pmd":"0484/0001","ko":"펄기아(오리진폼)","en":"Palkia (Origin Forme)","get":"shift","special":true},
     "giratina-origin": {"base":"giratina","region":"sinnoh","no":1,"pokemonId":10007,"pmd":"0487/0001","ko":"기라티나(오리진폼)","en":"Giratina (Origin Forme)","get":"shift","special":true},
@@ -127,6 +132,7 @@
     "basculin": [["basculin",45],["basculin-blue-striped",45],["basculin-white-striped",10]]
   },
   "shift": {
+    "rotom": ["rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"],
     "dialga": ["dialga-origin"],
     "palkia": ["palkia-origin"],
     "giratina": ["giratina-origin"]

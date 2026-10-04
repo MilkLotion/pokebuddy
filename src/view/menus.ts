@@ -6,7 +6,7 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
-import { formsOf } from "../dex/forms.js";
+import { formsOf, isFormLocked } from "../dex/forms.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
 import { zoneOf } from "../state/time.js";
@@ -22,7 +22,8 @@ export interface PetMenuModel {
   feed?: { enabled: boolean; reason?: string }; // reason 은 메뉴에 적지 않는다 — 첫 돌봄 말풍선이 쓴다
   play?: { enabled: boolean; reason?: string };
   ball?: { enabled: boolean; hidden: boolean }; // 볼 줄의 모양 — 박스 개체는 흐리게, 볼 안의 개체는 `꺼내기`. 없으면 `볼에 넣기`
-  forms?: PetMenuForm[]; // 공유 sid 계열의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
+  forms?: PetMenuForm[]; // 공유 sid 계열·모습 바꾸기 종(로토무)의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
+  formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 — 에이전트 작업 시간) — 줄만 흐리게 두고 말풍선은 없다. 이유는 적지 않는다
   move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체에만 둔다
   sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
 }
@@ -65,6 +66,7 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 // 볼에 넣기와 상세 보기 사이에는 구분선을 두지 않는다 (2026-10-02 사용자 결정 "구분선 없애자")
 // 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다. 옮기기는 박스 개체에만, 팔기는 파티·박스 모두에 있다.
 // 모습 바꾸기는 누르는 동작이 없고 하위 줄(submenu)만 있다 — 눌러도 메뉴가 닫히지 않고 옆에 말풍선으로 뜬다.
+//   해금 전(formsLocked)이면 하위 줄 없이 흐린 줄 하나다 (docs/specs/game.md "로토무의 모습 바꾸기", Figma `Menu Item` `State=Disabled`)
 //   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다
 export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
   const forms = model.forms && model.forms.length > 1 ? model.forms : null;
@@ -76,7 +78,9 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
     ...(model.play ? [{ label: t("menu.play"), enabled: model.play.enabled, click: () => act.play?.() }] : []),
     ...(act.ball ? [{ label: t(model.ball?.hidden ? "menu.unball" : "menu.ball"), enabled: model.ball?.enabled !== false, click: () => act.ball?.() }] : []),
     ...(act.detail ? [{ label: t("menu.detail"), click: () => act.detail?.() }] : []),
-    ...(forms
+    // 흐린 줄도 click 을 둔다 — 누르는 동작도 하위 줄도 없는 비활성 줄은 메뉴 창이 이름·상태 같은 머리 줄로 그린다 (src/view/menu-view.ts)
+    ...(forms && model.formsLocked ? [{ label: t("menu.form"), enabled: false, click: () => undefined }] : []),
+    ...(forms && !model.formsLocked
       ? [
           {
             label: t("menu.form"),
@@ -163,6 +167,7 @@ export function petMenuOf(
     play,
     ball: { enabled: slot != null, hidden: slot?.hidden === true },
     forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(o.formIcons[slug] ? { portrait: o.formIcons[slug] } : {}) })),
+    ...(isFormLocked(save, pet) ? { formsLocked: true } : {}),
     // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
     ...(slot ? {} : { move: { enabled: true } }),
     sell: { enabled: sale.ok },

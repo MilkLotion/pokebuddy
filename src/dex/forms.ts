@@ -8,16 +8,22 @@
 //   바꾸기    forms 안의 종으로 species 만 바꾼다. 파티·박스 칸, 레벨·친밀도·만복도 등은 그대로다.
 //             스탯은 바꾼 종을 따른다(종에서 읽으므로 따로 할 일이 없다)
 // 한 개체이므로 같은 sid 가 두 파티 칸을 차지하지 않고, 박스 사용 수도 1마리다.
+//
+// 공유 계열이 아닌 모습 바꾸기 종(로토무 — docs/specs/game.md "로토무의 모습 바꾸기")도 같은 바꾸기를 쓴다.
+//   고를 종   data/regional.json shift 의 묶음 전부(로토무와 다섯 모습)
+//   해금      묶음의 기본 종에 작업 시간 조건(src/dex/rules.ts SHIFT_RULES)이 있으면 계정의 에이전트 작업 시간이 그 이상이어야 바꾼다.
+//             해금 전에도 목록은 준다 — 메뉴는 `모습 바꾸기` 줄을 흐리게 둔다(isFormLocked)
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
 import { shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
+import { SHIFT_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "already">;
+export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already">;
 
 export type FormResult = Outcome<FormFailure> & {
   petId?: string;
@@ -31,12 +37,25 @@ export function isShared(pet: PetV3, opts?: DexOptions): boolean {
   return singleSpecies(opts).has(root);
 }
 
-// 고를 수 있는 종 — 공유 계열이 아니면 빈 목록. 저장에 없으면 거쳐 온 종과 지금 종으로 만든다
+// 고를 수 있는 종 — 공유 계열이면 거쳐 온 종과 지금 종(저장에 없으면 만든다), 공유 계열이 아니면 모습 바꾸기 묶음(로토무). 둘 다 아니면 빈 목록
 export function formsOf(pet: PetV3, opts?: DexOptions): string[] {
-  if (!isShared(pet, opts)) return [];
+  if (!isShared(pet, opts)) return shiftGroupOf(pet.species, opts);
   const list = pet.forms?.length ? pet.forms : [...pet.evolved, pet.species];
   const own = [...new Set([...list, pet.species])];
   return [...new Set([...own, ...own.flatMap((slug) => shiftGroupOf(slug, opts))])];
+}
+
+// 이 종의 모습 바꾸기에 드는 에이전트 작업 시간 — 묶음의 기본 종에 조건이 없으면 null
+export function shiftWorkMs(slug: string, opts?: DexOptions): number | null {
+  const base = shiftGroupOf(slug, opts)[0];
+  return base ? (SHIFT_RULES.workMs[base] ?? null) : null;
+}
+
+// 모습 바꾸기가 아직 잠겼는가 — 작업 시간 조건이 있는 묶음(로토무)만. 공유 계열은 잠그지 않는다
+export function isFormLocked(save: Pick<SaveV3, "totals">, pet: PetV3, opts?: DexOptions): boolean {
+  if (isShared(pet, opts)) return false;
+  const need = shiftWorkMs(pet.species, opts);
+  return need != null && (save.totals?.workMs ?? 0) < need;
 }
 
 // 진화한 직후에 부른다 — 이전 종을 남기고, 갈래 진화면 다른 결과 종도 함께 준다(도감 획득 기록 포함).
@@ -59,11 +78,12 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   const forms = formsOf(pet, opts);
   if (!forms.length) return { ok: false, reason: "not-shared" };
   if (typeof species !== "string" || !forms.includes(species)) return { ok: false, reason: "bad-form" };
+  if (isFormLocked(save, pet, opts)) return { ok: false, reason: "form-locked" };
   if (species === pet.species) return { ok: false, reason: "already" };
   const from = pet.species;
   pet.forms = forms;
   pet.species = species;
-  // 처음 바꾼 모습은 도감에 얻음으로 남긴다 — 진화 없이 드는 모습(기라티나(오리진폼))은 여기서 처음 기록된다
+  // 처음 바꾼 모습은 도감에 얻음으로 남긴다 — 진화 없이 드는 모습(기라티나(오리진폼)·로토무의 다섯 모습)은 여기서 처음 기록된다
   recordDex(save, species, pet.shiny);
   return { ok: true, petId, from, to: species };
 }

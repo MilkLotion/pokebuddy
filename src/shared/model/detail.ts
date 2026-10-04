@@ -31,7 +31,8 @@ export interface DexDetail {
   flavor: string; // 공식 도감 설명문. 한국어가 없으면 영어. 미해금이면 빈 문자열
   height: string; // "1.1m". 미해금이면 빈 문자열
   weight: string; // "19.0kg". 미해금이면 빈 문자열
-  mega?: { label: string; names: string }; // 얻은 종이 메가진화하는 종일 때만 — 줄 머리(`메가진화`·`원시회귀`)와 메가 모습의 이름(`메가리자몽X · 메가리자몽Y`)
+  mega?: { label: string; names: string }; // 얻은 종이 메가진화하는 종일 때만 — 줄 머리(`메가진화`·`원시회귀`)와 메가 모습의 이름(`메가리자몽X · 메가리자몽Y`).
+  // 로토무(작업 시간 조건이 있는 모습 바꾸기 종)도 같은 줄 자리를 쓴다 — `모습 바꾸기` · `다섯 모습(에이전트 작업 50시간)` (src/view/dex-detail.ts shiftLine)
 }
 
 // 상점 상세 — 구매 창을 열 때 상품 하나만 만든다 (src/tx/shop-detail.ts, 2026-09-30 사용자 결정 "상점에서 포켓몬 상세 추가")

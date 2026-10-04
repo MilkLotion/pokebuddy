@@ -159,7 +159,7 @@ export function drawMega(petId: string, to?: string): void {
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
 export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
-  const form = pet?.forms?.find((f) => f.species === to);
+  const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
   if (!pet || !form) {
     closeDialog();
     return;

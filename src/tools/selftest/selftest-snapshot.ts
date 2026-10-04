@@ -279,6 +279,22 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 공유 sid 모습 목록  ok\n");
 }
 
+// (12b) 로토무 — 박스 칸은 지금 종 그대로(forms 없음). 모습 바꾸기 확인 창이 읽는 shiftForms 는 해금 뒤에만 (docs/specs/game.md "로토무의 모습 바꾸기")
+{
+  const s = empty(T0);
+  s.pets.push(pet({ id: "p1", species: "rotom", level: 20 }));
+  s.boxes[0]!.slots[0] = "p1";
+  const shut = snapshotView(s, T0).boxes[0]?.slots[0];
+  assert.equal(shut?.forms, undefined, "단체사진이 아니다");
+  assert.equal(shut?.shiftForms, undefined, "해금 전에는 고를 모습이 없다");
+  s.totals.workMs = 180_000_000;
+  const open = snapshotView(s, T0).boxes[0]?.slots[0];
+  assert.equal(open?.forms, undefined, "해금 뒤에도 박스 칸은 지금 종 그대로");
+  assert.deepStrictEqual(open?.shiftForms?.map((f) => f.name), ["로토무", "히트로토무", "워시로토무", "프로스트로토무", "스핀로토무", "커트로토무"]);
+  assert.deepStrictEqual(open?.shiftForms?.[1]?.typeIds, ["electric", "fire"], "바꾸기 확인 창의 타입 배지");
+  process.stdout.write("(12b) 로토무 모습 목록  ok\n");
+}
+
 // (13) 구간 낱말·배고픔 디버프·이름 상한·잠들기 선택지 — 화면이 표를 따로 두지 않는다
 {
   const v = snapshotView(seed(), T0);

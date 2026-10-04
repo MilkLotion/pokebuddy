@@ -470,4 +470,29 @@ out("0 supabase/functions/_shared 가 최신");
   out("13 포켓몬 판매 — 사라진 개체·부화 뒤 판매·번호 재사용·번호 부풀리기");
 }
 
+// 14. form-lock — 로토무의 다섯 모습은 계정의 작업 시간 50시간부터 (src/dex/rules.ts SHIFT_RULES, docs/specs/game.md "로토무의 모습 바꾸기")
+{
+  const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
+  assert.deepEqual(Object.keys(data.shiftWork ?? {}).sort(), ROTOM.slice(1).sort(), "다섯 모습만 조건이 있다");
+  assert.equal(data.shiftWork?.["rotom-heat"], 180_000_000);
+  const at = (workMs: number): { prev: SaveV3; next: SaveV3 } => {
+    const prev = base();
+    prev.pets.push(pet("p2", "rotom"));
+    prev.totals.workMs = workMs;
+    const next = clone(prev);
+    next.pets[1]!.species = "rotom-heat";
+    next.pets[1]!.forms = [...ROTOM];
+    return { prev, next };
+  };
+  const open = at(180_000_000);
+  assert.deepEqual(rules(open.prev, open.next, ctx(HOUR)), [], "50시간이면 바꾼 모습이 통과한다");
+  const shut = at(180_000_000 - 1);
+  assert.deepEqual(rules(shut.prev, shut.next, ctx(HOUR)), ["form-lock"], "50시간 미만에 로토무 모습이면 위반");
+  const kept = at(0);
+  kept.prev.pets[1]!.species = "rotom-wash";
+  kept.next.pets[1]!.species = "rotom-wash";
+  assert.deepEqual(rules(kept.prev, kept.next, ctx(HOUR)), ["form-lock"], "직전 저장부터 모습이었어도 작업 시간이 모자라면 위반");
+  out("14 로토무 모습 — 작업 시간 50시간");
+}
+
 out("selftest-verify: 통과");
