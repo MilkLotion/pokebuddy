@@ -133,7 +133,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       effect: "파티 칸 +1",
       where: `파티 탭 · ${here} · 사면 바로 열림`,
     },
-    blocked: price === null ? "더 살 수 있는 칸이 없어요" : undefined,
+    blocked: price === null ? "모두 열었어요" : undefined, // 짧은 꼴 (docs/specs/game.md 상점 기기 창, 94 항목 9-3-4)
   });
 
   // 파티 프리셋 — 늘 같은 값. 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정)
@@ -154,7 +154,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       effect: "파티 프리셋 +1 · 파티 칸 2칸",
       where: "파티 탭 · ◀ ▶ 로 바꾸기",
     },
-    blocked: can.reason === "preset-max" ? "더 살 수 있는 프리셋이 없어요" : can.reason === "slots-not-full" ? `파티 칸을 모두 열어야 해요 (${can.open} / ${can.need})` : undefined,
+    blocked: can.reason === "preset-max" ? "프리셋 가득" : can.reason === "slots-not-full" ? `칸 먼저 (${can.open} / ${can.need})` : undefined,
   });
 
   // 박스 — 늘 같은 값. 상한까지 하나씩 산다. 파티 분류에 함께 둔다 (2026-10-02 사용자 결정 "파티분류로 ㅇㅇ")
@@ -173,7 +173,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
       effect: `박스 +1 · ${BOX_RULES.size}칸`,
       where: "박스 탭 · 맨 뒤에 생김",
     },
-    blocked: boxes.ok ? undefined : "더 살 수 있는 박스가 없어요",
+    blocked: boxes.ok ? undefined : "모두 샀어요",
   });
 
   return out;

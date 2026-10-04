@@ -130,7 +130,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const slot = shop("party-slot", { qty: 5 });
   assert.deepEqual([slot.model.art, slot.model.qty, slot.input.qty], [null, null, 1], "파티 칸은 하나씩");
   const locked = shop("party-preset");
-  assert.equal(locked.model.state, "파티 칸을 모두 열어야 해요 (4 / 12)", "살 수 없는 까닭은 머리 줄에");
+  assert.equal(locked.model.state, "칸 먼저 (4 / 12)", "살 수 없는 까닭은 머리 줄에 — 짧은 꼴 (94 항목 9-3-4)");
   assert.equal(locked.model.buy.disabled, true);
   assert.equal(shop("toy", { notice: "안 돼요" }).model.total.tone, "bad");
   assert.equal(shop("toy", { done: { lead: "샀어요", line: "" } }).model.total.tone, "ok");
