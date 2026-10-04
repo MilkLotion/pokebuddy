@@ -6,6 +6,7 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { AchievementView, ArtImage, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, PortraitAsk, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import type { AgentAction, AgentReply, AgentRow } from "../../shared/model/agents.js";
 import type { DexEntry, EvoNodeView } from "../../shared/model/detail.js";
@@ -41,7 +42,7 @@ import { COACH_SIZE, drawCoachLayer, guardCoachFocus, type CoachLayer } from "..
 
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
 setCommandHooks({
-  reload: () => refresh(),
+  reload: () => refreshView(),
   touchesDex: () => {
     dexRows = null;
   },
@@ -59,6 +60,16 @@ setDialogHooks({
   },
   afterEmpty: () => syncIdentify(),
   onScrimChanged: () => drawTutorial(),
+});
+
+// 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
+setLiveHooks({
+  isHolding: () => dragFrom != null || boxRenaming,
+  afterLive: () => {
+    syncPetDevice();
+    syncShopDevice();
+    syncBagDevice();
+  },
 });
 
 // 탭을 옮길 때 탭과 무관한 정리 — 개체 상세·든 개체·프리셋 이름 고치기·가방 결과 줄 (shell.ts setTab)
@@ -1785,7 +1796,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   try {
     reply = await requestCommand(cmd, target, extra);
     if (reply.ok) onOk?.();
-    await refresh();
+    await refreshView();
   } finally {
     ui.busy = false;
   }
@@ -2784,7 +2795,7 @@ api.onTrade((screen) => {
   trade = screen;
   syncTradeDot();
   // 교환이 끝나 개체가 바뀌었다 — 스냅샷도 다시 받는다. 받지 않으면 보낸 개체가 파티·박스에 남아 보인다(2026-09-27 화면 E2E 에서 발견)
-  if (got) void refresh().then(redrawTrade);
+  if (got) void refreshView().then(redrawTrade);
   else redrawTrade();
 });
 
@@ -3351,7 +3362,7 @@ function giftFoot(l: MailLetterView): HTMLElement {
         .then(async (r) => {
           if (!r) return;
           setMail(r.screen);
-          if (r.ok) await refresh(); // 가방·포인트가 바뀌었다
+          if (r.ok) await refreshView(); // 가방·포인트가 바뀌었다
         })
         .catch((e: unknown) => console.error(e));
     }),
@@ -4999,94 +5010,6 @@ async function loadAgents(): Promise<void> {
   if (ui.dialog?.kind === "user" && ui.dialog.tab === "agents") drawDialog();
 }
 
-async function refresh(): Promise<void> {
-  ui.view = await api.snapshot();
-  drawnStructure = structureOf(ui.view);
-  redrawBody();
-}
-
-// ── 1초 시계 ──────────────────────────────────────────────────────────────────
-// 시계가 울릴 때마다 스냅샷을 다시 읽는다 (2026-09-29 사용자 지시 — 앱 전역 타이머가 1초마다 갱신)
-//   시간으로만 바뀌는 값(LIVE_KEYS)만 달라졌다   표시만 고친다(applyLive). 탭 포커스·title 툴팁·글자 선택이 남는다
-//   그 밖의 모양이 바뀌었다                       전체를 다시 그린다. 포커스는 같은 자리 요소로 되돌린다(focusPath)
-// 전체 다시 그리기는 끊기는 조작 중에는 미루고 다음 시계에 한다 — 끌기·박스 이름 입력·누르는 중·한글 조합 중·글자 입력 칸 포커스.
-// 표시 고치기는 입력 요소를 건드리지 않으므로 그동안에도 한다.
-// view 는 화면에 그린 모양의 값이다 — 처리기(단추)는 이것을 읽는다. 미루는 동안에는 새 값의 시간 표시만 먼저 보인다
-// 모양 비교와 시간 필드 목록은 ui/live-draw.ts · shared/live-keys.ts
-let drawnStructure = ""; // 마지막으로 그린 모양
-let clockBusy = false;
-let pointerDown = false;
-let composing = false;
-document.addEventListener("pointerdown", () => (pointerDown = true), true);
-document.addEventListener("pointerup", () => (pointerDown = false), true);
-document.addEventListener("pointercancel", () => (pointerDown = false), true);
-window.addEventListener("blur", () => (pointerDown = false));
-document.addEventListener("compositionstart", () => (composing = true), true);
-document.addEventListener("compositionend", () => (composing = false), true);
-
-// 글자를 치는 칸에 포커스가 있는가 — 슬라이더·체크 칸은 누르는 중에만 막는다(pointerDown). 창이 뒤에 있으면 입력 중으로 보지 않는다
-const TEXT_TYPES = new Set(["text", "search", "password", "email", "number", "url", "tel"]);
-const typingText = (): boolean => {
-  if (!document.hasFocus()) return false;
-  const a = document.activeElement;
-  return (a instanceof HTMLInputElement && TEXT_TYPES.has(a.type)) || a instanceof HTMLTextAreaElement || (a instanceof HTMLElement && a.isContentEditable);
-};
-const holdFullDraw = (): boolean => dragFrom != null || boxRenaming || pointerDown || composing || typingText();
-
-// 시간 표시만 고친다 — 개체 막대(data-live-pet)와 알 글자(data-live-egg)
-function applyLive(v: Snapshot | null = ui.view): void {
-  if (!v) return;
-  const pets = new Map<string, PetView>();
-  for (const s of v.party.slots) if (s.pet) pets.set(s.pet.id, s.pet);
-  for (const b of v.boxes) for (const p of b.slots) if (p) pets.set(p.id, p);
-  for (const box of document.querySelectorAll<HTMLElement>("[data-live-pet]")) {
-    const pet = pets.get(box.dataset.livePet ?? "");
-    const field = box.dataset.liveField;
-    if (!pet || (field !== "affinity" && field !== "fullness")) continue;
-    const value = pet[field];
-    const shown = box.querySelector<HTMLElement>(".row span:last-child");
-    if (shown && shown.textContent !== `${value}/100`) shown.textContent = `${value}/100`;
-    const fill = box.querySelector<HTMLElement>(".fill");
-    if (fill) fill.style.width = `${clampPercent(value)}%`;
-  }
-  for (const node of document.querySelectorAll<HTMLElement>("[data-live-buff]")) {
-    const [petId, kind] = (node.dataset.liveBuff ?? "").split("|");
-    const buff = pets.get(petId ?? "")?.buffs.find((b) => b.kind === kind);
-    if (buff && node.textContent !== buff.text) node.textContent = buff.text;
-  }
-  const eggs = new Map(v.eggs.list.map((e) => [e.id, e]));
-  for (const node of document.querySelectorAll<HTMLElement>("[data-live-egg]")) {
-    const egg = eggs.get(node.dataset.liveEgg ?? "");
-    if (egg && node.textContent !== egg.noteText) node.textContent = egg.noteText;
-  }
-}
-
-async function clockTick(): Promise<void> {
-  if (clockBusy) return;
-  clockBusy = true;
-  try {
-    const next = await api.snapshot();
-    const structure = structureOf(next);
-    if (structure === drawnStructure) {
-      ui.view = next; // 모양이 같다 — 시간 값만 새것으로
-      applyLive();
-      syncPetDevice(); // 기기 창도 새 시간 값을 받는다. 기기 창이 표시만 고친다
-      syncShopDevice();
-      syncBagDevice();
-      return;
-    }
-    if (holdFullDraw()) {
-      applyLive(next); // 모양은 다음 시계에 — 시간 표시만 먼저
-      return;
-    }
-    ui.view = next;
-    drawnStructure = structure;
-    redrawBody();
-    drawDialog();
-  } finally {
-    clockBusy = false;
-  }
-}
 
 needEl("open-achievements", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "achievements" }));
 needEl("open-settings", HTMLButtonElement, "manage").addEventListener("click", () => open({ kind: "settings", tab: "general" }));
@@ -5180,7 +5103,7 @@ async function loadArt(): Promise<void> {
 }
 
 // 첫 화면을 그린 뒤에 옮긴다 — 창을 새로 열면서 온 목적지는 스냅샷보다 먼저 올 수 있다
-const firstDraw = loadArt().then(refresh);
+const firstDraw = loadArt().then(refreshView);
 // 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
 void firstDraw.then(loadUpdate).then(showUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
@@ -5217,6 +5140,6 @@ api.onBagClosed((gen) => bagLink.onClosed(gen));
 api.onPartyAct((action) => onPartyAction(action));
 api.onPartyStep((delta) => stepPreset(delta));
 api.onPartyClosed((gen) => partyLink.onClosed(gen));
-api.onRoute((route) => void firstDraw.then(() => refresh()).then(() => goTo(route)));
+api.onRoute((route) => void firstDraw.then(() => refreshView()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 앱 전역 1초 시계(`manage:clock`)마다 다시 읽는다 (clockTick)
 api.onClock?.(() => void clockTick());
