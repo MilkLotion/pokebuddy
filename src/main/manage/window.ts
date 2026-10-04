@@ -5,7 +5,7 @@
 // 창은 하나만 둔다. 다시 열면 이미 떠 있는 창을 앞으로 가져온다.
 // 앱이 부팅 때 createManage 를 한 번 부른다. 창·기기 창·처리기 상태는 그 안에만 있다 — 모듈 전역 상태가 없다.
 // (예전 src/main/manage-window.ts 의 openManage·push*. 메인 레인 M6b 에서 옮기고 묶었다)
-import { BrowserWindow, clipboard, ipcMain } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
 import type { AccountAction, AccountReply, PatchNotesView, UpdateAction, UpdateView } from "../../shared/model/account";
 import type { DisplayView } from "../../shared/model/snapshot";
 import type { MailAction, MailReply } from "../../shared/model/mail";
@@ -13,13 +13,11 @@ import type { ManageChannel, ManagePush, ManageReply, ManageRequest } from "../.
 import type { ManageRoute } from "../../shared/model/route";
 import type { PetDeviceOpen, ShopDeviceOpen, BagDeviceOpen, PartyDeviceOpen } from "../../shared/model/devices";
 import type { ScreenView } from "../../shared/model/overlays";
-import { isInternalCommand, parseAccountAction, parseAgentRequest, parseCommand, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
 import type { GameV3 } from "../../tx/game.js";
-import { PATHS } from "../../platform/paths.js";
 import { windowIcon } from "../windows/files.js";
 import { webPreferencesOf } from "../windows/options.js";
-import { isFromWindow } from "../windows/ipc.js";
-import { isShortId } from "../windows/input.js";
+import { createIpcScope, isFromWindow } from "../windows/ipc.js";
+import { gameReads, wireManageHandlers } from "./handlers.js";
 import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
@@ -28,12 +26,6 @@ import { bagDeviceModel } from "../../view/device-bag.js";
 import { partyDeviceModel } from "../../view/device-party.js";
 import { petDeviceModel } from "../../view/device-pet.js";
 import { shopDeviceModel } from "../../view/device-shop.js";
-import { resultLineOf } from "../../view/result-lines.js";
-import { snapshotOfGame } from "../../view/snapshot.js";
-import { dexList } from "../../view/dex-list.js";
-import { dexDetail } from "../../view/dex-detail.js";
-import { shopDetail } from "../../view/shop-detail.js";
-import { runAgentRequest } from "../../agents/agent-request.js";
 import { gainOf } from "../../state/settings.js";
 import { SOUND_RULES } from "../../state/rules.js";
 import fs from "node:fs";
@@ -50,18 +42,7 @@ const MANAGE_WINDOW_RULES = {
 };
 
 const CH = {
-  snapshot: "manage:snapshot",
-  command: "manage:command",
-  dex: "manage:dex",
-  dexDetail: "manage:dex-detail",
-  shopDetail: "manage:shop-detail",
-  agents: "manage:agents",
   route: "manage:route",
-  drawRegion: "manage:draw-region",
-  dim: "manage:dim",
-  portraits: "manage:portraits",
-  icons: "manage:icons",
-  art: "manage:art",
   dexOpen: "manage:dex-open",
   dexStep: "manage:dex-step",
   dexClosed: "manage:dex-closed",
@@ -81,20 +62,6 @@ const CH = {
   partyAct: "manage:party-act",
   partyStep: "manage:party-step",
   partyClosed: "manage:party-closed",
-  trade: "manage:trade",
-  copy: "manage:copy",
-  account: "manage:account",
-  accountView: "manage:account-view",
-  update: "manage:update",
-  updateView: "manage:update-view",
-  notes: "manage:notes",
-  screens: "manage:screens",
-  identifyScreens: "manage:identify-screens",
-  pickScreen: "manage:pick-screen",
-  mail: "manage:mail",
-  mailView: "manage:mail-view",
-  clock: "manage:clock",
-  petMenu: "manage:pet-menu",
 } satisfies Record<string, ManageChannel>;
 
 // 창 조작 단추가 앉는 자리. 색은 헤더와 같아야 이어져 보인다 (`--surface` 와 `--muted`)
@@ -161,16 +128,7 @@ export function createManage(deps: ManageDeps): Manage {
 
   let win: BrowserWindow | null = null;
   let wired = false;
-  let drawRegion: ManageServices["drawRegion"] = undefined; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
-  let display: ManageServices["display"] = undefined;
-  let account: ManageServices["account"] = undefined;
-  let update: ManageServices["update"] = undefined;
-  let notes: ManageServices["notes"] = undefined;
-  let screens: ManageServices["screens"] = undefined;
-  let identifyScreens: ManageServices["identifyScreens"] = undefined;
-  let pickScreen: ManageServices["pickScreen"] = undefined;
-  let mail: ManageServices["mail"] = undefined;
-  let petMenu: ManageServices["petMenu"] = undefined;
+  let svc: ManageServices = {}; // 창을 열 때마다 새로 받는다 — 처리기는 한 번만 건다
   let dexWin: DeviceWindow<DexDeviceOpen> | null = null;
   let petWin: DeviceWindow<PetDeviceOpen> | null = null;
   let shopWin: DeviceWindow<ShopDeviceOpen> | null = null;
@@ -179,12 +137,9 @@ export function createManage(deps: ManageDeps): Manage {
   // 기기 창에 마지막으로 띄운 모델(세대 번호와 함께) — 설정창은 스냅샷이 바뀔 때마다 고른 값을 다시 보낸다. 모델이 그대로면 다시 그리지 않는다
   const shownModel = new Map<"pet" | "shop" | "bag" | "party", string>();
 
-  // 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
-  const RESULT_COMMANDS = new Set(["bag.use", "shop.buy"]);
   // 관리 창이 보낸 요청인가. 무대 창·선택 창도 같은 preload 를 쓰므로 보낸 창을 확인한다
   const mine = (e: { sender: unknown }): boolean => isFromWindow(win, e);
 
-  const DENIED: ManageReply = { ok: false, reason: "denied" };
 
   // 기기 창 띄우기 — 같은 세대 번호로 같은 모델을 이미 띄웠으면 다시 보내지 않는다
   function showDevice<M>(name: "pet" | "shop" | "bag" | "party", w: DeviceWindow<M> | null, model: M, gen: unknown): void {
@@ -205,50 +160,12 @@ export function createManage(deps: ManageDeps): Manage {
   function wire(game: GameV3, send: (req: ManageRequest) => Promise<ManageReply>, preload: string, html: string): void {
     if (wired) return;
     wired = true;
-    // 화면 읽기 — 저장을 읽어 화면 값을 바로 만든다(실행기는 쓰기만 맡는다). 저장이 없으면 빈 값
-    const snapshot = () => snapshotOfGame(game);
-    const detailOf = (slug: string) => {
-      const save = game.read();
-      return save ? dexDetail(save, slug) : null;
-    };
-    const shopDetailOf = (id: string) => {
-      const save = game.read();
-      return save ? shopDetail(save, id) : null;
-    };
-    ipcMain.handle(CH.snapshot, (e) => {
-      if (!mine(e)) return null;
-      game.tick(); // 본 값이 지금 값이 되도록 먼저 시간을 적용한다
-      const view = snapshot();
-      return view && display ? { ...view, display: display() } : view;
-    });
-    ipcMain.handle(CH.dex, (e) => {
-      const save = mine(e) ? game.read() : null;
-      return save ? dexList(save) : [];
-    });
-    ipcMain.handle(CH.dexDetail, (e, slug: unknown) => (mine(e) && typeof slug === "string" ? detailOf(slug) : null));
-    ipcMain.handle(CH.shopDetail, (e, id: unknown) => (mine(e) && typeof id === "string" ? shopDetailOf(id) : null));
-    ipcMain.handle(CH.agents, (e, req: unknown) => {
-      if (!mine(e)) return { ...DENIED, list: [], platform: process.platform, node: null };
-      // CLI 연결 탭의 요청 — 저장을 읽지 않는다 (src/agents/agent-request.ts)
-      return runAgentRequest(parseAgentRequest(req) ?? undefined, { stateDir: PATHS.state });
-    });
-    // 초상 — 요청 모양을 검사하고 한 번에 너무 많이 받지 않는다 (도감 한 화면 분량)
-    // 앱과 같은 인스턴스다 — 앱 안 그림 폴더 규칙도 그곳에 있다 (src/main/art/services.ts)
+    // 본 처리기(계약 ManageCoreIpc)는 처리기 파일이 건다 — 보낸 창 검사는 묶음이 한다 (src/main/manage/handlers.ts)
+    const scope = createIpcScope((sender) => !!win && !win.isDestroyed() && sender === win.webContents);
+    wireManageHandlers(scope, { game, send, services: () => svc, setDim: (on) => setDimFrom("modal", on) });
+    const { snapshot, detailOf, shopDetailOf } = gameReads(game);
+    // 초상 — 기기 창도 앱과 같은 인스턴스를 쓴다 (src/main/art/services.ts)
     const portraits = artServices().portraits;
-    ipcMain.handle(CH.portraits, async (e, asks: unknown) => {
-      const list = mine(e) ? parsePortraitAsks(asks) : null;
-      return list ? portraits.get(list) : {};
-    });
-    ipcMain.handle(CH.icons, async (e, keys: unknown) => {
-      const list = mine(e) ? parseIconKeys(keys) : null;
-      return list ? portraits.icons(list) : {};
-    });
-    // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다
-    ipcMain.handle(CH.art, (e) => {
-      if (!mine(e)) return {};
-      // 초상은 불투명 네모를 함께 싣는다 — 관리 창이 첫 그림부터 보는 네모를 정한다 (X15, src/main/art/portraits.ts allImages)
-      return portraits.allImages();
-    });
     // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
     const cries = artServices().cries;
     const deviceFiles = (name: string) => ({ preload, html: path.join(path.dirname(html), `${name}.html`) });
@@ -405,89 +322,10 @@ export function createManage(deps: ManageDeps): Manage {
       if (typeof slug === "string") dexWin?.show(win, { slug, beside: beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
       else dexWin?.close();
     });
-    ipcMain.on(CH.dim, (e, on: unknown) => {
-      if (!win || !mine(e)) return;
-      setDimFrom("modal", on === true);
-    });
-    // 교환 링크 복사 — 관리 창이 보낸 짧은 글자만 받는다
-    ipcMain.on(CH.copy, (e, text: unknown) => {
-      if (!win || !mine(e)) return;
-      const copy = parseCopyText(text);
-      if (copy != null) clipboard.writeText(copy);
-    });
-    // 계정 — 요청 모양은 action 문자열만 확인한다. 값의 검사는 src/online/account.ts 가 한다
-    ipcMain.handle(CH.account, async (e, req: unknown): Promise<AccountReply | null> => {
-      if (!mine(e)) return null;
-      if (!account) return null;
-      const action = parseAccountAction(req);
-      return action ? account(action) : null;
-    });
-    // 우편함 — 정한 세 동작만 받는다. 편지 id 는 짧은 글자만. 선물 값은 렌더러에서 받지 않는다
-    ipcMain.handle(CH.mail, async (e, req: unknown): Promise<MailReply | null> => {
-      if (!mine(e) || !mail) return null;
-      const action = parseMailAction(req);
-      return action ? mail(action) : null;
-    });
-    // 업데이트 — 정한 세 동작만 받는다
-    ipcMain.handle(CH.update, async (e, action: unknown): Promise<UpdateView | null> => {
-      if (!mine(e) || !update) return null;
-      const act = parseUpdateAction(action);
-      return act ? update(act) : null;
-    });
-    ipcMain.handle(CH.notes, (e, action: unknown): PatchNotesView | null => {
-      if (!mine(e) || !notes) return null;
-      const act = parseNotesAction(action);
-      return act ? notes(act) : null;
-    });
-    // 포켓몬 메뉴 — 개체 식별자만 받는다. 띄웠으면 true, 띄울 길이 없으면 false
-    ipcMain.handle(CH.petMenu, (e, petId: unknown): boolean => {
-      if (!mine(e) || !petMenu || !isShortId(petId)) return false; // 식별자는 다른 창과 같은 상한(INPUT_LIMITS.idChars)
-      petMenu(petId);
-      return true;
-    });
-    ipcMain.handle(CH.screens, (e): ScreenView[] => (mine(e) && screens ? screens() : []));
-    ipcMain.on(CH.identifyScreens, (e, on: unknown) => {
-      if (!win || !mine(e)) return;
-      identifyScreens?.(on === true);
-    });
-    ipcMain.handle(CH.pickScreen, async (e): Promise<ManageReply> => {
-      if (!mine(e)) return DENIED;
-      if (!pickScreen) return { ok: false, reason: "not-ready" };
-      return pickScreen();
-    });
-    ipcMain.handle(CH.drawRegion, async (e): Promise<ManageReply> => {
-      if (!mine(e)) return DENIED;
-      if (!drawRegion) return { ok: false, reason: "not-ready" };
-      return drawRegion();
-    });
-    ipcMain.handle(CH.command, async (e, raw: unknown): Promise<ManageReply> => {
-      if (!mine(e)) return DENIED;
-      const req = parseCommand(raw);
-      if (!req) return { ok: false, reason: "bad-request" };
-      // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
-      if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
-      game.tick();
-      // 결과 줄이 있는 명령은 거래 앞뒤 화면 값을 견줘 성공 답에 붙인다 (src/view/result-lines.ts)
-      const before = RESULT_COMMANDS.has(req.cmd) ? snapshot() : null;
-      const reply = await send(req);
-      const after = reply.ok && before ? snapshot() : null;
-      const result = before && after ? resultLineOf(req, before, after) : null;
-      return result ? { ...reply, result } : reply;
-    });
   }
 
   function open(route?: ManageRoute): BrowserWindow | null {
-    const opts: ManageServices = deps.services();
-    drawRegion = opts.drawRegion;
-    display = opts.display;
-    account = opts.account;
-    update = opts.update;
-    notes = opts.notes;
-    screens = opts.screens;
-    identifyScreens = opts.identifyScreens;
-    pickScreen = opts.pickScreen;
-    mail = opts.mail;
-    petMenu = opts.petMenu;
+    svc = deps.services();
     if (win && !win.isDestroyed()) {
       if (win.isMinimized()) win.restore();
       win.show();
@@ -523,7 +361,7 @@ export function createManage(deps: ManageDeps): Manage {
       win = null;
       dimFrom.modal = false; // 설정창의 모달·튜토리얼은 창과 함께 사라졌다
       shownModel.clear();
-      identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
+      svc.identifyScreens?.(false); // 한 화면 목록이 열린 채 닫혀도 번호 덮개가 남지 않게
     });
     // 문서를 (다시) 읽기 시작한다 — 렌더러의 세대 번호가 0 에서 다시 시작하므로 기기 창 번호도 맞춘다
     win.webContents.on("did-start-loading", () => {
