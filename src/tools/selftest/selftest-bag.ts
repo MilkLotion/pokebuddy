@@ -25,11 +25,26 @@ function applyTimeForTest(s: SaveV3): void {
 // 시험 개체 — newPet 결과에 크기 2 와 over 를 덮는다 (src/tools/harness/fixtures.ts)
 const pet = (over: Partial<PetV3> = {}): PetV3 => testPet({ size: 2, ...over });
 
+// 개체는 파티 첫 칸에 둔다 — 사탕이 아닌 도구는 파티 개체에게만 쓴다 (94 항목 9-1-1)
 function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): SaveV3 {
   const s = empty(T0);
-  s.pets.push(pet(over));
+  const p = pet(over);
+  s.pets.push(p);
+  s.party.slots[0] = { state: "pokemon", petId: p.id, hidden: false };
   s.bag = { ...bag };
   return s;
+}
+
+// (0) 박스 개체에는 사탕만 쓴다 (2026-10-04 사용자 결정 "사탕만 박스도", 94 항목 9-1-1)
+{
+  const s = seed({}, { "premium-food": 1, toy: 1, "exp-candy-xs": 1, "rare-candy": 1 });
+  s.party.slots[0] = { state: "empty" };
+  s.boxes[0]!.slots[0] = "p1";
+  assert.equal(useItem(s, "premium-food", "p1").reason, "not-in-party", "먹이는 파티 개체만");
+  assert.equal(useItem(s, "toy", "p1").reason, "not-in-party", "장난감은 파티 개체만");
+  assert.equal(useItem(s, "exp-candy-xs", "p1").ok, true, "경험사탕은 박스 개체도");
+  assert.equal(useItem(s, "rare-candy", "p1").ok, true, "이상한사탕도 박스 개체도");
+  process.stdout.write("(0) 박스 개체는 사탕만  ok\n");
 }
 
 // (1) 100레벨 누적 경험치가 원작과 같다

@@ -11,6 +11,7 @@ import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_RULES } from "./rules.js";
 import { recordShiny } from "../dex/record.js";
 import { PET_RULES } from "../party/rules.js";
+import { isInParty } from "../party/presets.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -33,6 +34,7 @@ export type UseFailure = ReasonOf<
   | "max-level" // 이미 최대 레벨이다
   | "already" // 이미 그 상태다
   | "bad-nature" // 바꿀 성격을 고르지 않았거나 모르는 성격이다
+  | "not-in-party" // 파티 개체에게만 쓰는 도구를 박스 개체에게 쓰려 했다
 >;
 
 export type UseResult = Outcome<UseFailure> & {
@@ -63,12 +65,17 @@ const addAffinity = (pet: PetV3, gain: number): void => {
   pet.affinity = Math.min(PET_RULES.statMax, pet.affinity + gain);
 };
 
+// 박스 개체에게도 쓸 수 있는 도구의 효과 — 사탕뿐이다
+const BOX_OK_EFFECTS: readonly string[] = ["exp", "level"];
+
 export function useItem(save: SaveV3, itemId: string, petId: string, args: { nature?: string } = {}, opts?: DexOptions): UseResult {
   const item = itemOf(itemId, opts);
   if (!item || (MINT_RETIRED && itemId === MINT_ID)) return { ok: false, reason: "no-item" }; // 성격민트 은퇴 — 쓰지 않는다 (src/bag/mint.ts)
 
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
+  // 사탕(경험사탕·이상한사탕)만 박스 개체에게도 쓴다. 그 밖의 도구는 적용한 프리셋의 파티 개체에게만 (2026-10-04 사용자 결정 "사탕만 박스도", 94 항목 9-1-1)
+  if (!BOX_OK_EFFECTS.includes(item.effect) && !isInParty(save, petId)) return { ok: false, reason: "not-in-party" };
 
   const free = item.price === null; // 기본먹이처럼 무료인 도구는 재고를 세지 않는다
   const stock = save.bag[itemId] ?? 0;
