@@ -5,9 +5,8 @@
 //   reader  mailbox 로 보낸다. writer 가 처리해 파일에 쓰면 감시가 읽어 온다
 // 창 표시 항목(hidden · clickThrough)만 저장 밖의 설정이라 여기서 처리한다.
 // 결과 문구는 표면이 구성한다 — 여기서는 코드만 돌려준다.
-import { bridgeMailbox } from "../commands/dispatcher";
 import { createDispatcher, registerTxCommands, type Dispatcher } from "../tx/dispatcher";
-import { sendToWriter, type CommandServer } from "../save/command-channel";
+import { sendToWriter, serveCommands, type CommandServer, type ServeOptions } from "../save/command-channel";
 import type { Command, CommandResult } from "../shared/command";
 import type { Reason } from "../shared/names/reasons";
 import type { Size } from "../shared/geometry";
@@ -76,6 +75,12 @@ const isSettingKey = (v: unknown): v is SettingKey => typeof v === "string" && (
 // 그림을 기다린 뒤 이보다 오래된 요청은 반영하지 않는다. 보낸 쪽은 진화 답을 45초 기다린다 (src/save/command-channel.ts).
 // 보낸 쪽이 포기한 뒤에 진화하면 실패로 안 채로 상태만 바뀐다
 const EVOLVE_EXPIRE_MS = 40_000;
+
+// 명령 통로 파일(mailbox)의 요청을 처리기에 잇는다 — writer 만 부른다. 돌려주는 stop 으로 끊는다
+// (예전 src/commands/dispatcher.ts. 메인 레인이 명령 배선 옆으로 옮겼다)
+export function bridgeMailbox(dispatcher: Dispatcher, dir: string, opts: ServeOptions = {}): CommandServer {
+  return serveCommands(dir, (command) => dispatcher.dispatch(command), opts);
+}
 
 export function createCommands(ctx: CommandContext): Commands {
   const now = ctx.now ?? Date.now;
