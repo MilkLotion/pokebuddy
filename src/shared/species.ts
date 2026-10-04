@@ -1,12 +1,5 @@
 // 종·성격·성별·진화 조건·해금 조건의 모양 — 데이터를 소유하는 모듈은 dex 다. 여기는 타입만 둔다
 
-import type { AgentName, AgentState } from "./names/agents.js";
-import type { CommandName, CommandSource } from "./names/commands.js";
-
-// 이름 목록에서 얻는 타입 — 원본은 ./names/ 다. [임시] 이 파일을 주제별로 나눌 때 다시 내보내기를 없앤다
-export type { AgentName, AgentState } from "./names/agents.js";
-export type { CommandName, CommandSource } from "./names/commands.js";
-
 export type Lang = "ko" | "en";
 
 // ── 성격 ──────────────────────────────────────────────────────────────────────
