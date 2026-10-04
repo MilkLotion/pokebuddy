@@ -6,6 +6,7 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import type { AccountAction, AccountReply, AccountScreen, CloudStatusView, PatchNotesView, UpdateView, UsernameCheck } from "../../shared/model/account.js";
 import { api } from "./api.js";
+import { alertEl, chipsEl, dialogCloseEl, meterEl, pageHeadEl, segmentedEl, switchEl } from "./widgets.js";
 import { iconCache, iconOf, loadArt, portraitOf } from "./art-cache.js";
 import { clockTick, refreshView, setLiveHooks } from "./live.js";
 import type { AchievementView, BagItemView, BoxView, EggPoolView, EggView, FormView, PetView, ShopItemView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
@@ -24,9 +25,8 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
-import { closeIconEl, lockIconEl, plusIconEl } from "../ui/line-icons.js";
+import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
-import { clampPercent, fillBarEl, zoneClassOf } from "../ui/fill-bar.js";
 import { numberText, pointText } from "../../shared/count-text.js";
 import { createDeviceLink } from "./device-link.js";
 import { structureOf } from "../ui/live-draw.js";
@@ -52,7 +52,7 @@ setCommandHooks({
 setDialogHooks({
   isTyping: (root) => typingSearch(root),
   drawUnder: () => drawUnder(),
-  alertEl: (text) => alertBox("bad", "", text),
+  alertEl: (text) => alertEl("bad", "", text),
   afterDraw: () => {
     restoreSearchFocus();
     syncIdentify();
@@ -299,68 +299,6 @@ function inDexRegion(regionId: string, dex: number, formRegion?: string): boolea
 // 도감 표시 번호 — `#0026`, 리전폼이면 `#0026-1` (src/dex/regional.ts dexLabel 과 같은 모양)
 const dexNoText = (dex: number, form: number | undefined, pad: number): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}`;
 
-// 닫기 단추 — 대화상자 머리·경고 배너가 같이 쓴다. 글자 ✕ 가 아니라 Figma `Icon / Close` `299:166` 선 아이콘이다
-// (대화상자는 `Header Icon Button` `295:3083` 안의 아이콘, 경고 배너는 `Alert` Type=Banner 의 아이콘)
-function dialogCloseEl(): HTMLButtonElement {
-  const x = buttonEl("dialog-close");
-  x.appendChild(closeIconEl());
-  return x;
-}
-
-// 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
-// - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
-// - 제목이 있으면 Banner(제목 + 설명), 빈 제목이면 Inline 한 줄(폼·대화상자의 짧은 실패)
-// - onClose 가 있을 때만 오른쪽 ✕
-type AlertTone = "bad" | "warn" | "ok" | "info";
-function alertBox(tone: AlertTone, title: string, desc = "", onClose?: () => void): HTMLElement {
-  const box = el("div", `alert ${tone}${title ? "" : " inline"}`);
-  const text = el("div", "alert-text");
-  if (title) text.appendChild(el("strong", undefined, title));
-  if (desc) text.appendChild(el("span", undefined, desc));
-  box.append(el("i", "alert-icon"), text);
-  if (onClose) {
-    const x = dialogCloseEl();
-    x.setAttribute("aria-label", "닫기");
-    x.addEventListener("click", onClose);
-    box.appendChild(x);
-  }
-  return box;
-}
-
-// 값 막대 하나 — 이름, 현재/최대, 채움
-// live — 시간으로만 바뀌는 값이면 그 개체와 필드. 1초 시계가 이 막대만 고친다 (applyLive)
-function meter(label: string, value: number, zone?: string, live?: { pet: string; field: "affinity" | "fullness" }): HTMLElement {
-  const box = el("div", "meter");
-  if (live) {
-    box.dataset.livePet = live.pet;
-    box.dataset.liveField = live.field;
-  }
-  const row = el("div", "row");
-  row.append(el("span", undefined, label), el("span", undefined, `${value}/100`));
-  box.append(row, fillBarEl(value, zoneClassOf(zone)));
-  return box;
-}
-
-// 거르개 칩 한 줄 — 도감·상점·설정이 같은 모양을 쓴다
-function chips(items: { id: string; label: string }[], current: string, pick: (id: string) => void): HTMLElement {
-  const row = el("div", "chips");
-  for (const it of items) {
-    const b = buttonEl("chip", it.label);
-    b.setAttribute("aria-pressed", String(it.id === current));
-    b.addEventListener("click", () => pick(it.id));
-    row.appendChild(b);
-  }
-  return row;
-}
-
-// 부제가 없으면 부제 줄을 그리지 않는다
-function head(title: string, sub?: string): HTMLElement {
-  const box = el("div", "head");
-  box.appendChild(el("h1", undefined, title));
-  if (sub) box.appendChild(el("div", "sub", sub));
-  return box;
-}
-
 // ── 파티 ───────────────────────────────────────────────────────────────────────
 
 function petCard(pet: PetView): HTMLElement {
@@ -391,7 +329,7 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(tags);
 
   const meters = el("div", "meters");
-  meters.append(meter("친밀도", pet.affinity, undefined, { pet: pet.id, field: "affinity" }), meter("만복도", pet.fullness, pet.zone, { pet: pet.id, field: "fullness" }));
+  meters.append(meterEl("친밀도", pet.affinity, undefined, { pet: pet.id, field: "affinity" }), meterEl("만복도", pet.fullness, pet.zone, { pet: pet.id, field: "fullness" }));
   info.appendChild(meters);
 
   card.appendChild(info);
@@ -504,7 +442,7 @@ function stepPreset(delta: -1 | 1): void {
 function drawParty(v: Snapshot): void {
   // 머리 줄 — 파티 ◀ [프리셋 이름] ▶ … 교체. 넘김은 박스 넘김 줄과 같은 부품이다. 누르면 바로 그 프리셋을 적용한다.
   // 마릿수·칸 수 부제는 두지 않는다 (2026-10-02 사용자 결정 "프리셋이름만 보여줘도 될거같아", Figma 05 `Party / Base` `217:1705`)
-  const top = head("파티");
+  const top = pageHeadEl("파티");
   const preset = v.party.preset;
   const pager = el("div", "pager box-pager preset-pager");
   const prev = buttonEl("", "◀");
@@ -1080,7 +1018,7 @@ function boxNameCell(inner: HTMLElement): HTMLElement {
 
 function drawBox(v: Snapshot): void {
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
-  const top = head("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
+  const top = pageHeadEl("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
   if (boxNote && sub) {
@@ -1884,7 +1822,7 @@ function stepDex(delta: -1 | 1): void {
 }
 
 function drawDex(v: Snapshot): void {
-  bodyEl.appendChild(head("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`));
+  bodyEl.appendChild(pageHeadEl("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`));
   // 지방·이름·번호 검색 — 등록 상태 칩과 함께 적용한다
   const bar = el("div", "search-row");
   bar.appendChild(dexRegionEl());
@@ -1906,7 +1844,7 @@ function drawDex(v: Snapshot): void {
   bodyEl.appendChild(bar);
   // 넘김·필터 줄 — 박스 넘김 줄처럼 넘김은 왼쪽, 등록 상태 칩은 오른쪽 (2026-09-30 사용자 "grid-pager 는 좌측, filters 는 우측에")
   const toolbar = el("div", "dex-toolbar");
-  const filters = chips(DEX_TABS, dexFilter, (id) => {
+  const filters = chipsEl(DEX_TABS, dexFilter, (id) => {
     dexFilter = id;
     dexPageNo = 0;
     redrawBody();
@@ -2002,9 +1940,9 @@ function shopGrid(items: ShopItemView[]): HTMLElement {
 }
 
 function drawShop(v: Snapshot): void {
-  bodyEl.appendChild(head("상점"));
+  bodyEl.appendChild(pageHeadEl("상점"));
   bodyEl.appendChild(
-    chips(SHOP_TABS, shopFilter, (id) => {
+    chipsEl(SHOP_TABS, shopFilter, (id) => {
       shopFilter = id;
       shopPageNo = 0;
       redrawBody();
@@ -2124,14 +2062,14 @@ function bagCard(item: BagItemView): HTMLElement {
 }
 
 function drawBag(v: Snapshot): void {
-  bodyEl.appendChild(head("가방"));
+  bodyEl.appendChild(pageHeadEl("가방"));
   if (!v.bag.length) {
     bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다."));
     return;
   }
   if (!BAG_TABS.some((t) => t.id === bagFilter)) bagFilter = BAG_TABS[0]?.id ?? "tool"; // 모르는 분류(옛 `all` 등)는 첫 탭으로
   bodyEl.appendChild(
-    chips(BAG_TABS, bagFilter, (id) => {
+    chipsEl(BAG_TABS, bagFilter, (id) => {
       bagFilter = id;
       bagResult = "";
       redrawBody();
@@ -2601,7 +2539,7 @@ function drawTradeOffer(t: TradeScreen, out: HTMLElement, fail: [string, string]
 
 // 교환 완료 — Done
 function drawTradeDone(t: TradeScreen, out: HTMLElement): void {
-  out.appendChild(alertBox("ok", "교환 완료"));
+  out.appendChild(alertEl("ok", "교환 완료"));
   const r = t.received;
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("받은 포켓몬"));
@@ -2649,10 +2587,10 @@ function drawTradeDialog(): void {
     : err.code === "LOCAL"
       ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"]
       : ((f) => [f.text, f.detail ?? ""] as [string, string])(failTextOf(err.code, "trade"));
-  if (fail && t.phase !== "trading") out.appendChild(alertBox("bad", fail[0], fail[1]));
+  if (fail && t.phase !== "trading") out.appendChild(alertEl("bad", fail[0], fail[1]));
   else if (!fail && t.phase === "closed") {
     const text = tradeClosedText(t.closedReason) ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
-    out.appendChild(alertBox("bad", text[0], text[1]));
+    out.appendChild(alertEl("bad", text[0], text[1]));
   }
   if (t.phase === "trading") drawTradeOffer(t, out, fail);
   else if (t.phase === "done") drawTradeDone(t, out);
@@ -2828,7 +2766,7 @@ function acctField(label: string, input: HTMLElement, note?: { text: string; ton
 }
 
 function acctNotice(title: string, desc: string, tone: "warn" | "bad"): HTMLElement {
-  const box = alertBox(tone, title, desc);
+  const box = alertEl(tone, title, desc);
   box.classList.add("acct-notice");
   return box;
 }
@@ -3361,7 +3299,7 @@ registerAfterDraw(() => drawTutorial());
 // Figma 05 `Party / Save Failing` `716:17993` (Alert Tone=Error). 2026-09-27 사용자 "그렇게해"
 function drawSaveFailing(): void {
   if (!ui.view?.saveFailing) return;
-  const banner = alertBox("bad", "저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.");
+  const banner = alertEl("bad", "저장하지 못하고 있어요", "3번 이어서 저장하지 못했어요. 디스크 공간과 폴더 권한을 확인해 주세요.");
   banner.classList.add("save-failing");
   const first = bodyEl.firstElementChild;
   if (first?.classList.contains("head")) first.after(banner);
@@ -3783,16 +3721,6 @@ function dialogHead(title: string, sub: string, back?: { label: string; to: Dial
 }
 
 const closeButton = (label = "닫기"): HTMLButtonElement => actionButtonEl(label, false, false, closeDialog);
-
-// 켬·끔 스위치 — Figma `Toggle` `299:3593`
-function switchButton(on: boolean, label: string, run: () => void): HTMLButtonElement {
-  const b = buttonEl("switch");
-  b.setAttribute("role", "switch");
-  b.setAttribute("aria-checked", String(on));
-  b.setAttribute("aria-label", label);
-  b.addEventListener("click", run);
-  return b;
-}
 
 
 // ── 상점 기기 창 ──────────────────────────────────────────────────────────────
@@ -4247,7 +4175,7 @@ function drawAchievements(): void {
   const list = ui.view.achievements.list;
   dialogEl.append(...dialogHead("업적", `달성 ${ui.view.achievements.total} / ${list.length} · 미수령 ${ui.view.achievements.unclaimed}`));
   dialogEl.appendChild(
-    chips(ACHIEVEMENT_TABS, achievementTab, (id) => {
+    chipsEl(ACHIEVEMENT_TABS, achievementTab, (id) => {
       achievementTab = id;
       resetDialogScroll(); // 분류를 바꾸면 목록을 맨 위부터 본다
       drawDialog();
@@ -4277,21 +4205,6 @@ const USER_TABS: readonly { id: UserTab; label: string }[] = [
   { id: "account", label: "계정" },
   { id: "agents", label: "연결" },
 ];
-
-// 두 칸·네 칸 전환 — 회색 틀 안에서 고른 칸만 흰 면 (docs/specs/ui-components.md C-15)
-function segmented<T extends string>(items: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {
-  const box = el("div", "segmented");
-  box.setAttribute("role", "tablist");
-  for (const item of items) {
-    const b = buttonEl("", item.label);
-    b.setAttribute("aria-pressed", String(item.id === current));
-    b.addEventListener("click", () => {
-      if (item.id !== current) pick(item.id);
-    });
-    box.appendChild(b);
-  }
-  return box;
-}
 
 // 설정의 고르기 — 박스 정렬과 같은 목록. 목록은 누르는 칸과 폭이 같다. 칸 폭은 가장 긴 선택지에 맞춘 고정값
 let settingSelectOpen: string | null = null;
@@ -4423,7 +4336,7 @@ function drawGeneral(scroll: HTMLElement): void {
     { value: "en", label: "English" },
   ] as const;
   scroll.appendChild(settingRow("언어", undefined, settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
-  scroll.appendChild(settingRow("로그인 시 시작", undefined, switchButton(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
+  scroll.appendChild(settingRow("로그인 시 시작", undefined, switchEl(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
   scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
   const guide = buttonEl("act", "열기 ›");
   guide.addEventListener("click", () => open({ kind: "guide" }));
@@ -4436,9 +4349,9 @@ function drawDisplay(scroll: HTMLElement): void {
   const s = ui.view.settings;
   const d = ui.view.display;
   if (d) {
-    const shown = settingRow("포켓몬 표시", undefined, switchButton(!d.hidden, "포켓몬 표시", () => setDisplay("hidden", !d.hidden)));
+    const shown = settingRow("포켓몬 표시", undefined, switchEl(!d.hidden, "포켓몬 표시", () => setDisplay("hidden", !d.hidden)));
     shown.dataset.tut = "set-hidden"; // 화면 탭 튜토리얼이 밝히는 곳
-    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchButton(d.clickThrough, "고스트 모드", () => setDisplay("clickThrough", !d.clickThrough)));
+    const ghost = settingRow("고스트 모드", "포켓몬 위도 뒤 창을 클릭", switchEl(d.clickThrough, "고스트 모드", () => setDisplay("clickThrough", !d.clickThrough)));
     ghost.dataset.tut = "set-ghost";
     scroll.append(shown, ghost);
   }
@@ -4456,7 +4369,7 @@ function drawDisplay(scroll: HTMLElement): void {
           ? "그려 둔 영역 안에서만 돌아다님"
           : "영역을 아직 그리지 않았음"
         : undefined;
-  const areaRow = settingRow("놀이공간", hint, segmented(area, s.playArea, (id) => setSetting("playArea", id)));
+  const areaRow = settingRow("놀이공간", hint, segmentedEl(area, s.playArea, (id) => setSetting("playArea", id)));
   areaRow.dataset.tut = "area"; // 놀이공간 튜토리얼이 밝히는 곳
   scroll.appendChild(areaRow);
   // 한 화면 — 목록에서 고르거나 화면 위에서 눌러 고른다. 목록이 열린 동안 모든 모니터에 번호를 띄운다(syncIdentify)
@@ -4586,7 +4499,7 @@ function drawAgents(scroll: HTMLElement): void {
     return;
   }
   // Node.js 가 없는 동안 늘 보이는 경고 — 누를 때마다 생겼다 사라지는 것이 아니다 (Figma 05 `User / Connect · Node.js 없음` `1079:2477`)
-  if (agentNode === null) scroll.appendChild(alertBox("warn", "Node.js 가 없어요", "연결하려면 Node.js 를 설치한 뒤 다시 확인을 눌러 주세요"));
+  if (agentNode === null) scroll.appendChild(alertEl("warn", "Node.js 가 없어요", "연결하려면 Node.js 를 설치한 뒤 다시 확인을 눌러 주세요"));
   for (const row of agentRows) scroll.appendChild(agentRow(row));
   scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
 }
@@ -4601,7 +4514,7 @@ function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T;
   x.addEventListener("click", closeDialog);
   head.append(titles, x);
   dialogEl.appendChild(head);
-  dialogEl.appendChild(segmented(tabs, current, pick));
+  dialogEl.appendChild(segmentedEl(tabs, current, pick));
   const scroll = el("div", "scroll");
   dialogEl.appendChild(scroll);
   return scroll;
