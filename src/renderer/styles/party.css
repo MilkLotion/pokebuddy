@@ -141,11 +141,12 @@
   background: var(--subtle);
   cursor: default;
 }
-/* 가리킨 칸 — 박스에서 가리킨 칸과 같은 옅은 바탕. 초상 원·아이콘 상자는 흰 바탕으로 바꿔 묻히지 않게 한다. 잠긴 칸은 그대로다 */
+/* 가리킨 칸 — 박스에서 가리킨 칸과 같은 옅은 바탕. 잠긴 칸은 그대로다.
+   그림이 없는 초상 원·아이콘 상자만 흰 바탕으로 바꿔 묻히지 않게 한다 — 그림이 있으면 바탕 없이 그림만 (Figma `Party Device Slot` State=Pokemon Target) */
 .slot:not(.locked):hover {
   background: var(--accent);
 }
-.slot:not(.locked):hover .face,
+.slot:not(.locked):hover .face:empty,
 .slot:not(.locked):hover .icon,
 .slot.target .icon {
   background: var(--paper);

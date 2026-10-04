@@ -273,6 +273,10 @@ button.icon-button,
   border-style: dashed;
   cursor: default;
 }
+/* 가리킨 칸 — 교체 기기의 가리킨 칸과 같은 옅은 바탕. 테두리는 그대로다 (Figma `Box Slot` State=Hover) */
+.box-grid .cell:not(.blank):hover {
+  background: var(--accent-bg);
+}
 /* 박스 칸 초상 — Figma `Portrait` Medium 40 */
 .cell .dot {
   width: 40px;
