@@ -45,9 +45,9 @@ Before completion, manually review changed prose with the writing checklist. Rec
 ## Project Structure
 
 - `src/`: TypeScript runtime. Main process is in `src/main/`; other features are grouped by module.
-- `src/renderer/`: stage and picker windows.
-- `data/`: editable rules and species data. `lib/`: generated or compatibility JavaScript.
-- `art/`, `assets/`: sprite and logo assets. `scripts/`, `bin/`, `helpers/`: packaging tools.
+- `src/renderer/`: all windows (stage, settings `manage/`, device windows, menus, picker).
+- `data/`: editable rules and species data.
+- `assets/`: fonts, item icons, and logo. `scripts/`, `bin/`, `helpers/`: packaging tools. `bin/pokebuddy` is a thin entry; commands live in `src/cli/main.ts`.
 - `docs/`: records.
 
 ## Build and Test Commands

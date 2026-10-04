@@ -21,7 +21,7 @@ bin/pokebuddy setup      # Windows cmd 는 bin\pokebuddy.cmd setup
 npm start                # 빌드한 뒤 동반자를 띄운다
 ```
 
-앱은 빌드 산출물 `dist/` 를 부른다. Electron 은 `dist/main/app.js`(`package.json` 의 `main`)를 연다. 명령(`cli/*.js`)은 `dist/terminal/*.js` 를 부른다.
+앱은 빌드 산출물 `dist/` 를 부른다. Electron 은 `dist/main/app.js`(`package.json` 의 `main`)를 연다. 명령(`bin/pokebuddy`)은 `dist/cli/main.js` 의 `runCli` 를 부른다.
 `dist/` 는 저장소에 없다. `npm install` 을 건너뛰었거나 `src/` 를 고쳤으면 `npm run build` 를 먼저 한다.
 빌드 전에 `companion` · `status` · `game` · `trade` 를 치면 `bin/pokebuddy` 가 그렇게 안내하고 멈춘다.
 `npm start` 로 띄운 앱도 동반자다. 이 앱은 `companion.lock` 을 스스로 만든다. 그래서 `pokebuddy companion stop` 으로 내릴 수 있다.
