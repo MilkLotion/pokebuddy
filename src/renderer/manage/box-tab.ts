@@ -12,16 +12,16 @@ import { requestCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { refreshView } from "./live.js";
 import { swapSend } from "./party-link.js";
+import { askPetMenu } from "./pet-menu.js";
 import { markMega } from "./pet-forms.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { findPartySlot, ui } from "./state.js";
 import { boxNameCell, pageHeadEl } from "./widgets.js";
 import { boxMenuEl } from "./box-order.js";
 
-// 설정창이 거는 고리 — 개체 상세·포켓몬 메뉴·돌보미집 단추를 이 파일이 가져오지 않게
+// 설정창이 거는 고리 — 개체 상세·돌보미집 단추를 이 파일이 가져오지 않게
 export interface BoxTabHooks {
   openPet(id: string): void; // 칸을 눌렀다 — 개체 상세(이미 떠 있으면 닫는다)
-  askPetMenu(id: string): void; // 오른쪽 누르기 — 포켓몬 메뉴
   daycareButton(v: Snapshot): HTMLButtonElement; // 넘김 줄 오른쪽의 돌보미집 아이콘 단추
 }
 let hooks: BoxTabHooks | null = null;
@@ -176,7 +176,7 @@ export function drawBox(v: Snapshot): void {
     });
     cell.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if (!hold.box) hooksOf().askPetMenu(pet.id);
+      if (!hold.box) askPetMenu(pet.id);
     });
     cell.dataset.hold = "";
     if (pet.id === ui.detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체

@@ -11,14 +11,14 @@ import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { openSwap } from "./party-link.js";
+import { askPetMenu } from "./pet-menu.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { boxNameCell, meterEl, NATURE_UI, pageHeadEl } from "./widgets.js";
 
-// 설정창이 거는 고리 — 개체 상세 열기와 포켓몬 메뉴를 이 파일이 가져오지 않게
+// 설정창이 거는 고리 — 개체 상세 열기를 이 파일이 가져오지 않게
 export interface PartyTabHooks {
   openPet(id: string): void; // 카드를 눌렀다 — 개체 상세(이미 떠 있으면 닫는다)
-  askPetMenu(id: string): void; // 오른쪽 누르기 — 포켓몬 메뉴
 }
 let hooks: PartyTabHooks | null = null;
 export function setPartyTabHooks(next: PartyTabHooks): void {
@@ -91,7 +91,7 @@ function petCard(pet: PetView): HTMLElement {
   card.addEventListener("click", () => hooksOf().openPet(pet.id));
   card.addEventListener("contextmenu", (e) => {
     e.preventDefault();
-    hooksOf().askPetMenu(pet.id);
+    askPetMenu(pet.id);
   });
   if (pet.id === ui.detailPet) card.classList.add("selected"); // 옆 기기 창에 떠 있는 개체 — 옅은 배경만 (강조 테두리 없음)
   card.title = `${pet.name} · ${pet.zoneText} · 다음 레벨까지 ${pet.percentToNext}%`;

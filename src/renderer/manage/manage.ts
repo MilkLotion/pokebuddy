@@ -5,7 +5,7 @@
 // 도감과 CLI 연결은 스냅샷에 없다. 필요할 때만 따로 부르고 그다음부터는 들고 있는다.
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
-import { askPetMenu, drawSellPet } from "./pet-menu.js";
+import { drawSellPet } from "./pet-menu.js";
 import { daycareOpenButton, drawDaycare, drawHatched, drawUnder } from "./daycare.js";
 import { goTo, openDialogOrPet, openPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
@@ -84,11 +84,11 @@ setBagLinkHooks({ stepRows: (bag) => bagStepRows(bag), stepPreset: (delta) => st
 // 옮기기 — 커서를 따라오는 칸은 박스 칸과 같은 모습이다
 setBoxMoveHooks({ ghostCell: (pet) => boxSlot(pet, () => undefined) });
 
-// 파티 탭 — 카드는 개체 상세를, 오른쪽 누르기는 포켓몬 메뉴를 연다
-setPartyTabHooks({ openPet: (id) => openPet(id), askPetMenu: (id) => askPetMenu(id) });
+// 파티 탭 — 카드는 개체 상세를 연다(오른쪽 누르기의 포켓몬 메뉴는 party-tab.ts 가 pet-menu.ts 로 직접)
+setPartyTabHooks({ openPet: (id) => openPet(id) });
 
-// 박스 탭 — 칸은 개체 상세를, 오른쪽 누르기는 포켓몬 메뉴를 연다. 넘김 줄의 돌보미집 단추는 돌보미집 모달 쪽에 있다
-setBoxTabHooks({ openPet: (id) => openPet(id), askPetMenu: (id) => askPetMenu(id), daycareButton: (v) => daycareOpenButton(v) });
+// 박스 탭 — 칸은 개체 상세를 연다(포켓몬 메뉴는 box-tab.ts 가 직접). 넘김 줄의 돌보미집 단추는 돌보미집 모달 쪽에 있다
+setBoxTabHooks({ openPet: (id) => openPet(id), daycareButton: (v) => daycareOpenButton(v) });
 
 // 1초 시계 — 탭이 아는 끊기는 조작(끌기·박스 이름 입력)과 시간 값만 바뀐 뒤의 기기 창 맞추기 (live.ts)
 setLiveHooks({
