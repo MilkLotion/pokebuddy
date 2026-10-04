@@ -10,10 +10,11 @@ import type { BannerView } from "../shared/model/overlays";
 import type { ManageRoute } from "../shared/model/route";
 import type { FindRecordV3, SaveV3 } from "../shared/save-v3";
 import { parseKey } from "../notify/pending.js";
+import { pointText } from "../shared/count-text.js";
 
 // 주운 것의 화면 이름 — 포인트는 "120P", 포켓몬은 종 이름
 export function foundThing(rec: FindRecordV3): string {
-  if (rec.kind === "points") return `${rec.amount}P`;
+  if (rec.kind === "points") return pointText(rec.amount); // 천 단위 쉼표 (94 항목 9-2-5)
   if (rec.kind === "pokemon") return petName(rec.ref);
   return itemName(rec.ref);
 }

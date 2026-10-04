@@ -23,6 +23,7 @@ import { eggTable, itemTable, evoItemTable, speciesTable } from "../dex/tables.j
 import { BOX_RULES } from "../box/rules.js";
 import { formFields } from "./dex-list.js";
 import { shopIconKey } from "./device-art.js";
+import { numberText } from "../shared/count-text.js";
 
 // 상점에 늘어놓을 상품. 살 수 없으면 이유를 함께 준다 — 화면이 비활성으로 그린다
 export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
@@ -38,7 +39,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   };
 
   // 상점 기기 창 설명 — 정보 줄은 효과·쓰는 곳 두 줄 (2026-10-01 사용자 결정 "records에는 효과,쓰는곳 만 적어")
-  const owned = (id: string): [string, string] => ["보유", `${(save.bag[id] ?? 0).toLocaleString("ko-KR")}개`];
+  const owned = (id: string): [string, string] => ["보유", `${numberText(save.bag[id] ?? 0)}개`];
   const readyMin = Math.round(EGG_RULES.readyMs / 60_000);
   const eggAbout = (kind: string): ShopAbout => {
     // 다른 알이 나오는 알 — 확률 숫자는 적지 않는다 (2026-10-02 사용자 결정 "일정확률로 특별한 알")

@@ -256,6 +256,9 @@ try {
     const b1 = bannerOf(s, `find:${pts.id}`);
     assert.equal(b1?.title, "줍기");
     assert.equal(b1?.target, "피카츄가 10P를 주웠어요");
+    pts.amount = 1500;
+    assert.equal(bannerOf(s, `find:${pts.id}`)?.target, "피카츄가 1,500P를 주웠어요", "천 단위 쉼표 (94 항목 9-2-5)");
+    pts.amount = 10;
     assert.deepEqual(b1?.route, { to: "shop" });
     const b2 = bannerOf(s, `find:${item.id}`);
     assert.equal(b2?.target, "피카츄가 장난감을 주웠어요");

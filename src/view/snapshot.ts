@@ -26,7 +26,7 @@ import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { careParts, zoneOf } from "../state/time.js";
 import { TIME_RULES } from "../state/rules.js";
-import { buffText, waitText } from "../shared/count-text.js";
+import { buffText, numberText, pointText, waitText } from "../shared/count-text.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { AchievementView, BagItemView, BoxView, CareView, EggView, EvolutionView, FormView, MegaView, NatureOption, PetView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
@@ -54,11 +54,11 @@ const rewardText = (def: AchievementDef): string => {
   const species = rewardPokemon(def);
   if (species) return petName(species);
   const points = rewardPoints(def);
-  if (points != null) return `${points.toLocaleString("en-US")}P`;
+  if (points != null) return pointText(points); // 천 단위 쉼표는 공용 글자 (94 항목 9-2-5)
   const egg = rewardEgg(def);
   if (egg) return eggName(egg) ?? egg;
   const item = rewardItem(def);
-  if (item) return item.count > 1 ? `${itemName(item.id)} ×${item.count}` : itemName(item.id);
+  if (item) return item.count > 1 ? `${itemName(item.id)} ×${numberText(item.count)}` : itemName(item.id);
   return typeof def.reward === "string" ? REWARD_WORD[def.reward] ?? def.reward : "";
 };
 
