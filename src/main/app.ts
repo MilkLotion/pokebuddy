@@ -5,7 +5,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
-import { starterSlugs, unlockRules } from "../dex/unlocks";
 import { appearanceOf } from "../dex/look";
 import type { HelperWindow, SelfMark } from "../terminal/types";
 import { createHostWatch, type HostWatch, type HostWatchUpdate } from "./stage/host-watch";
@@ -15,8 +14,8 @@ import { createCommands, type Commands } from "./app/commands";
 import { STAGE_RULES } from "./stage/layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
-import { createLifetime, type Lifetime } from "./app/lifetime";
-import { clearLastError, writeLastError } from "../platform/last-error.js";
+import type { Lifetime } from "./app/lifetime";
+import { writeLastError } from "../platform/last-error.js";
 import { jumpListOf } from "../view/menus";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
 import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
@@ -38,7 +37,6 @@ import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT } from "../platform/paths";
 import { readConfig } from "../platform/user-config";
 import { logoFile, preloadFile, rendererFile } from "./windows/files";
-import { askStarter } from "./windows/picker-window";
 import { createStage } from "./stage/stage";
 import { createStageGroup, type StageGroup } from "./stage/stage-group";
 import { createStageWindow } from "./stage/stage-window";
@@ -69,7 +67,7 @@ import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
 import { createTicks } from "./app/ticks";
 import { createRun } from "./app/quit";
-import { bootSaveKey, type Runtime } from "./app/boot";
+import { bootClaim, bootLifetime, bootPrefetch, bootSaveKey, bootStarter, type BootSteps, type Runtime } from "./app/boot";
 
 // 전역 시계 — 1초마다 틱을 낸다 (src/main/app/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
@@ -481,66 +479,6 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
   return { reader, saveSource };
 }
 
-// 6단계 수명 감시
-function bootLifetime(): Lifetime {
-  // 수명 감시는 첫 실행 선택 창보다 먼저 — 고르는 동안 companion stop(lock 삭제)이 와도 끝나야 한다
-  rt.lifetime = createLifetime({
-    lockFile: PATHS.companionLock,
-    hasWindow: () => run.isReady() && !!rt.stages?.alive(),
-    quit: () => app.quit(),
-  });
-  rt.lifetime.start();
-  return rt.lifetime;
-
-}
-
-// 그림 미리 받기 — 첫 실행이면 스타터 초상부터
-function bootPrefetch(saveSource: SaveParty): { pics: Portraits; starterList: string[] } {
-  // 그림 미리 받기 — 설치 파일에 그림이 없다. 빠진 초상·도구·알 그림을 뒤에서 받아 캐시에 둔다(src/main/art/portraits.ts).
-  // 첫 실행이면 아래 선택 창에서 고르는 동안 받는다. 관리 창은 창을 열 때 캐시를 한 번에 읽는다
-  // 첫 실행이면 스타터 초상부터 받는다. 선택 창·설정창도 같은 portraits 를 써서 받는 중인 그림을 함께 기다린다 (src/main/art/services.ts)
-  const pics = artServices().portraits;
-  rt.portraits = pics;
-  const starterList = saveSource.needsStarter() ? starterSlugs(unlockRules()) : [];
-  const prefetchAt = Date.now();
-  void pics
-    .prefetch(undefined, starterList)
-    .then((r) => log?.({ prefetch: "done", ms: Date.now() - prefetchAt, ...r }))
-    .catch((e) => log?.({ prefetch: "failed", message: String(e) }));
-
-  return { pics, starterList };
-}
-
-// 첫 실행 선택 — 취소했거나 저장을 만들지 못했으면 끝내기를 부르고 false
-async function bootStarter(saveSource: SaveParty, pics: Portraits, starterList: string[]): Promise<boolean> {
-  // 첫 실행 — 명령에 스타터를 직접 줬으면 그걸로 바로 시작하고, 아니면 선택 창. reader 면 writer 쪽이 첫 실행을 맡는다
-  if (saveSource.needsStarter()) {
-    const list = starterList;
-    let species: string | null = config.fromEnv.has("slug") && list.includes(config.slug) ? config.slug : null;
-    if (!species) {
-      species = await askStarter({
-        preload: preloadFile(),
-        html: rendererFile("picker.html"),
-        starters: list,
-        portraits: pics,
-        onPicking: (on) => run.setPicking(on),
-      });
-    }
-    if (quitting() || !species) {
-      writeLastError(PATHS, { slug: config.slug, message: t("starter.skipped"), reason: "starter-cancelled" });
-      if (!quitting()) app.quit();
-      return false;
-    }
-    if (!saveSource.begin(species)) {
-      writeLastError(PATHS, { slug: config.slug, message: failTextOf("save-failed", "command", currentLang()).text, reason: "save-failed" });
-      app.quit();
-      return false;
-    }
-  }
-  return true;
-
-}
-
 // 무대 — 그림 불러오기·무대 묶음·첫 배치
 function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; group: StageGroup } {
   // PMD 그림이 없는 종은 걷기 대체 그림으로 무대에 세운다 (src/main/art/overworld-art.ts). 그것도 못 받으면 초상이다 (src/main/art/portrait-art.ts). 이로치 초상이 없으면 보통 초상이다
@@ -688,27 +626,6 @@ function bootCommands(saveSource: SaveParty, reader: GameV3, art: ArtLoader): Ho
   return rt.hostWatch;
 }
 
-// 첫 무대 그리기와 수명 잠금 — 그림을 하나도 못 받았거나 다른 동반자가 떠 있으면 끝내고 false
-async function bootClaim(saveSource: SaveParty, group: StageGroup, life: Lifetime): Promise<boolean> {
-  await refreshParty();
-  if (quitting()) return false;
-  if (partyPetsOf(saveSource.save(), true).length && !group.petIds().length) {
-    // 나올 마리가 있는데 하나도 그림을 못 받았다 — 실패로 끝낸다. pokebuddy 가 종료 코드를 보고 "펫이 뜨지 못함"을 알린다
-    process.stderr.write(`펫 그림을 찾을 수 없음: ${partyPetsOf(saveSource.save(), true).map((p) => p.look).join(", ")}\n`);
-    app.exit(3);
-    return false;
-  }
-  clearLastError(PATHS, config.slug);
-
-  if (!life.claim()) {
-    // 살아 있는 다른 동반자가 lock 을 쥐고 있다 — 이쪽이 물러난다
-    process.stderr.write("동반자가 이미 떠 있음 — 이 프로세스는 끝낸다\n");
-    app.quit();
-    return false;
-  }
-  return true;
-}
-
 // 서비스·업데이트·훅 정리
 function bootServices(saveSource: SaveParty): void {
   // 로그인한 채 켰으면 클라우드 저장을 시작한다 — 교환보다 먼저 만들어 같은 클라이언트를 나눠 쓴다.
@@ -784,12 +701,16 @@ async function main(): Promise<void> {
   });
   if (!keyReady) return;
   const { reader, saveSource } = bootCore();
-  const life = bootLifetime();
-  const { pics, starterList } = bootPrefetch(saveSource);
-  if (!(await bootStarter(saveSource, pics, starterList))) return;
+  // 앱 쪽 값이 적은 단계는 src/main/app/boot.ts 에 있다 — 끝내기·로그·실패 기록 자리만 넘긴다. 배선 단계는 이 파일에 둔다
+  const steps: BootSteps = { paths: PATHS, slug: config.slug, quitting, quit: () => app.quit(), exit: (code) => app.exit(code), log };
+  const life = bootLifetime(steps, () => run.isReady() && !!rt.stages?.alive());
+  rt.lifetime = life;
+  const { pics, starterList } = bootPrefetch(steps, saveSource);
+  rt.portraits = pics;
+  if (!(await bootStarter(steps, saveSource, pics, starterList, { given: config.fromEnv.has("slug") ? config.slug : null, onPicking: (on) => run.setPicking(on) }))) return;
   const { art, group } = bootStage(saveSource, pics);
   const watch = bootCommands(saveSource, reader, art);
-  if (!(await bootClaim(saveSource, group, life))) return;
+  if (!(await bootClaim(steps, saveSource, group, life, refreshParty))) return;
   bootServices(saveSource);
   bootFinish(saveSource, group, watch, life);
 }
