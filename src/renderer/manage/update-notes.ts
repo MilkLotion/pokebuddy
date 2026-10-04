@@ -66,6 +66,19 @@ const smallButton = (label: string, primary: boolean, run: () => void): HTMLButt
   return b;
 };
 
+// 설정창을 열 때 — 마지막 확인 뒤 오래되었으면 메인이 새 버전을 확인한다. 상태가 바뀌면 다시 그린다
+export async function peekUpdate(): Promise<void> {
+  try {
+    const next = await api.update("peek");
+    if (!next) return;
+    upd = next;
+  } catch (e) {
+    console.error("업데이트 확인 요청 실패", e);
+    return;
+  }
+  if (ui.dialog?.kind === "settings") drawDialog();
+}
+
 export async function loadUpdate(): Promise<void> {
   try {
     const [u, n] = await Promise.all([api.update("status"), api.notes("list")]);

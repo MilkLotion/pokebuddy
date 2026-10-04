@@ -96,6 +96,7 @@ export function createUpdateService(deps: UpdateDeps): UpdateService {
     async act(action) {
       if (!updater) throw new Error("updater not started");
       if (action === "check") await updater.check();
+      else if (action === "peek") await updater.peek();
       else if (action === "install") await updater.install();
       return updater.view();
     },

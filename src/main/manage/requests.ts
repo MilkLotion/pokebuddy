@@ -61,9 +61,9 @@ export function parseMailAction(v: unknown): MailAction | null {
   return null;
 }
 
-// 업데이트 — 정한 세 동작만
+// 업데이트 — 정한 네 동작만
 export function parseUpdateAction(v: unknown): UpdateAction | null {
-  return v === "status" || v === "check" || v === "install" ? v : null;
+  return v === "status" || v === "check" || v === "peek" || v === "install" ? v : null;
 }
 
 // 패치노트 — 목록 읽기와 본 것으로 적기

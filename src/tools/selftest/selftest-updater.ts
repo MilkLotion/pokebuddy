@@ -3,7 +3,7 @@
 // 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/record.md "검사 계획")이 본다
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { createAppUpdater, urgentStep, type UpdaterLike } from "../../main/update/updater";
+import { createAppUpdater, PEEK_GAP_MS, urgentStep, type UpdaterLike } from "../../main/update/updater";
 import type { UpdateView } from "../../shared/model/account";
 
 class FakeUpdater extends EventEmitter implements UpdaterLike {
@@ -119,7 +119,28 @@ async function main(): Promise<void> {
   assert.deepEqual(steps(true, true), { off: "none", idle: "none", checking: "none", latest: "none", downloading: "none", ready: "none", manual: "none", error: "none" }, "창은 실행마다 한 번");
   process.stdout.write("(7) 업데이트 필요 — 바로 확인·창 한 번  ok\n");
 
-  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동·업데이트 필요)\n");
+  // (8) 설정창을 열 때(peek) — 첫 번째는 확인, 10분 안에 다시 열면 건너뜀, 10분 지나면 다시 확인
+  {
+    const fake8 = new FakeUpdater();
+    let clock = 1_000_000;
+    const up8 = createAppUpdater({ version: "0.16.0", enabled: true, updater: fake8, onView: () => undefined, beforeInstall: async () => undefined, setTimer: () => 0, clearTimer: () => undefined, now: () => clock });
+    await up8.peek();
+    assert.equal(fake8.checks, 1, "처음 열면 확인한다");
+    clock += PEEK_GAP_MS - 1;
+    await up8.peek();
+    assert.equal(fake8.checks, 1, "10분 안에 다시 열면 건너뛴다");
+    clock += 1;
+    await up8.peek();
+    assert.equal(fake8.checks, 2, "10분이 지나면 다시 확인한다");
+    await up8.check();
+    await up8.peek();
+    assert.equal(fake8.checks, 3, "다시 확인 단추 뒤의 peek 은 건너뛴다");
+    const off8 = createAppUpdater({ version: "0.16.0", enabled: false, onView: () => undefined, beforeInstall: async () => undefined });
+    await off8.peek();
+  }
+  process.stdout.write("(8) 설정창을 열 때 — 10분 간격  ok\n");
+
+  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동·업데이트 필요·설정창 열 때)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

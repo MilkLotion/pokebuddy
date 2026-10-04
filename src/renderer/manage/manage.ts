@@ -21,7 +21,7 @@ import { currentAccount, setAccountHooks } from "./account.js";
 import { drawTradeDialog, setTradeHooks } from "./trade.js";
 import { loadTrade, redrawTrade } from "./trade-state.js";
 import { drawLetter, drawMail } from "./mail.js";
-import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes } from "./update-notes.js";
+import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from "./update-notes.js";
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
@@ -212,6 +212,7 @@ registerDialog({
   draw: (d) => drawSettings(d.tab),
   // 설정 › 화면에 새로 들어오면 화면 탭 튜토리얼은 1단계부터
   enter: (d, prev) => {
+    if (prev?.kind !== "settings") void peekUpdate(); // 설정창을 열 때 새 버전도 확인한다(마지막 확인 뒤 10분 지났을 때만)
     if (d.tab === "display" && !(prev?.kind === "settings" && prev.tab === "display")) restartAreaTutorial();
   },
 });

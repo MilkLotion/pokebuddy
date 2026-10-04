@@ -43,11 +43,16 @@ export interface AppUpdaterOptions {
   everyMs?: number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (t: unknown) => void;
+  now?: () => number; // peek 의 간격을 잴 시각 — 시험이 넣는다
 }
+
+// 설정창을 열 때의 확인(peek)은 마지막 확인 뒤 이만큼 지났을 때만 한다 — 설정창을 여닫을 때마다 GitHub 를 부르지 않게
+export const PEEK_GAP_MS = 10 * 60_000;
 
 export interface AppUpdater {
   view: () => UpdateView;
   check: () => Promise<void>; // "다시 확인"
+  peek: () => Promise<void>; // 설정창을 열 때 — 마지막 확인 뒤 PEEK_GAP_MS 가 지났을 때만 check
   install: () => Promise<boolean>; // "다시 시작" — 준비된 새 버전이 없으면 false
   stop: () => void;
 }
@@ -83,7 +88,7 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
   let installing = false;
 
   // 켜지 않는다 — 개발 실행·npm 설치본
-  if (!o.enabled) return { view: () => view, check: async () => undefined, install: async () => false, stop: () => undefined };
+  if (!o.enabled) return { view: () => view, check: async () => undefined, peek: async () => undefined, install: async () => false, stop: () => undefined };
 
   // electron-updater 는 설치본에서만 불러온다 — 개발 실행에서 app-update.yml 을 찾지 않게
   const updater: UpdaterLike = o.updater ?? (require("electron-updater") as { autoUpdater: UpdaterLike }).autoUpdater;
@@ -106,8 +111,11 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
     if (view.status !== "ready") set({ status: "error", error: e instanceof Error ? e.message.slice(0, 200) : "unknown" });
   });
 
+  const now = o.now ?? Date.now;
+  let checkedAt: number | null = null;
   const check: AppUpdater["check"] = async () => {
     if (stopped || view.status === "downloading" || view.status === "ready") return;
+    checkedAt = now();
     set({ status: "checking", error: null });
     try {
       await updater.checkForUpdates();
@@ -140,9 +148,15 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
     return true;
   };
 
+  const peek: AppUpdater["peek"] = async () => {
+    if (checkedAt != null && now() - checkedAt < PEEK_GAP_MS) return;
+    await check();
+  };
+
   return {
     view: () => view,
     check,
+    peek,
     install,
     stop: () => {
       stopped = true;
