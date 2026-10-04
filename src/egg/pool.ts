@@ -82,7 +82,8 @@ export function newEgg(save: SaveV3, kind: string, now: number, opts?: DexOption
 }
 
 // 랜덤알 후보 — 해금한 종 가운데 랜덤알에서 나올 수 있는 종 (규칙은 src/dex/obtain.ts inRandomEgg)
+// 후보가 없어도 해금한 종 전부(진화 전용 종 포함)로 대신하지 않는다 — 진화 전용 종 제외 규칙(docs/specs/game.md "랜덤알의 결과 종"), 줍기와 같다 (94 항목 9-2-6).
+// 첫 선택 종은 이 규칙의 예외로 늘 후보에 남아, 시작한 저장에서는 비지 않는다
 export function randomPool(save: SaveV3, opts?: DexOptions): string[] {
-  const pool = save.dex.unlocked.filter((slug) => inRandomEgg(slug, opts));
-  return pool.length ? pool : [...save.dex.unlocked];
+  return save.dex.unlocked.filter((slug) => inRandomEgg(slug, opts));
 }
