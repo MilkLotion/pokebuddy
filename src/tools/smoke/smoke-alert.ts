@@ -1,4 +1,4 @@
-// 알림 창 검사 — 멈춤·분실·저장 잠김·정지·업데이트 창 함수 7개의 경우 10가지를 실제 함수(src/main/halt-dialog.ts)로 띄워 본다
+// 알림 창 검사 — 멈춤·분실·저장 잠김·정지·업데이트 창 함수 7개의 경우 10가지를 실제 함수(src/main/app/halt-dialog.ts)로 띄워 본다
 // 손으로 돌리는 시험이다(npm run selftest 에 없다 — 화면에 창이 뜬다)
 //   npm run build && npx electron dist/tools/smoke/smoke-alert.js [캡처 폴더]
 // 확인: 문구·단추 순서(왼쪽 보조 → 오른쪽 주)·항상 위·창 크기, 단추 답, Esc 는 취소, 밖에서 닫기·시간 초과는 closed,
@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { ALERT_RULES, askAlert } from "../../main/windows/alert-window";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "../../main/halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "../../main/app/halt-dialog";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { setLang } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";

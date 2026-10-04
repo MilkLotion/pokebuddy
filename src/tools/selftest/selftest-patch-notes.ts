@@ -3,7 +3,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { createPatchNotes, readNotes } from "../../main/patch-notes";
+import { createPatchNotes, readNotes } from "../../main/update/patch-notes";
 import { makeTmp } from "../harness/tmp-dir";
 
 const dir = makeTmp("notes");

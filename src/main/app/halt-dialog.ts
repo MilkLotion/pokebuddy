@@ -7,9 +7,9 @@
 //
 // 이 파일은 창마다 띄우는 때의 규칙(저절로 닫힘·밖에서 닫기)과 고른 단추를 답으로 읽는 규칙만 둔다.
 // 글자는 화면 값(src/view/halt.ts), 창 띄우기는 src/main/windows/alert-ask.ts 가 맡는다
-import type { HaltInfo, OwnerKind } from "../online/cloud-state.js";
-import { blockedAlert, confirmAlert, heldAlert, kickedAlert, lostAlert, saveLockedAlert, updateRequiredAlert, type AlertSpec } from "../view/halt";
-import { askChoice } from "./windows/alert-ask";
+import type { HaltInfo, OwnerKind } from "../../online/cloud-state.js";
+import { blockedAlert, confirmAlert, heldAlert, kickedAlert, lostAlert, saveLockedAlert, updateRequiredAlert, type AlertSpec } from "../../view/halt";
+import { askChoice } from "../windows/alert-ask";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
 const KICKED_CLOSE_MS = 30_000;

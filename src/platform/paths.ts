@@ -82,4 +82,4 @@ export function bundledSpritesDir(project: string = PROJECT, exists: (file: stri
 export const cloudFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "cloud.json"); // 클라우드 맞추기 상태 (src/online/cloud.ts)
 export const noticesFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notices.json"); // 한 번 띄운 안내 (src/agents/notice.ts)
 export const notifyFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notify.json"); // 알림 배너 줄 (src/notify/notifier.ts)
-export const notesSeenFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notes-seen.json"); // 본 패치 노트 판 (src/main/patch-notes.ts)
+export const notesSeenFileOf = (saveFile: string): string => path.join(path.dirname(saveFile), "notes-seen.json"); // 본 패치 노트 판 (src/main/update/patch-notes.ts)

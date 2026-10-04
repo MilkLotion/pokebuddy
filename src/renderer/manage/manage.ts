@@ -4525,7 +4525,7 @@ function speakerIcon(muted: boolean): SVGSVGElement {
 }
 
 const setSetting = (key: string, value: unknown): void => void sendCommand("settings.set", key, { value });
-// 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/commands.ts display.set)
+// 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/app/commands.ts display.set)
 const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void sendCommand("display.set", key, { value });
 
 // 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북

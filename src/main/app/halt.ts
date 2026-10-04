@@ -6,7 +6,7 @@
 import { app } from "electron";
 import type { HaltInfo, HaltReason, OwnerKind } from "../../online/cloud-state.js";
 import type { ManageRoute } from "../../shared/model/route";
-import { askBlocked, askConfirm, askHeld, askKicked, askLost } from "../halt-dialog";
+import { askBlocked, askConfirm, askHeld, askKicked, askLost } from "./halt-dialog";
 import type { Services } from "../services/registry";
 import type { Freeze } from "./freeze";
 import type { DebugLog } from "./log";

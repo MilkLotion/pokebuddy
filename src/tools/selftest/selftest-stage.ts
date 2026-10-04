@@ -22,7 +22,7 @@ import { devSaveState } from "../dev/dev-save";
 import { createStage } from "../../main/stage";
 import type { Look, ArtLoader } from "../../main/art/stage-art";
 import type { StageWindow } from "../../main/stage-window";
-import { createCommands } from "../../main/commands";
+import { createCommands } from "../../main/app/commands";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { createSaveParty, type SaveParty } from "../../save/save-party";

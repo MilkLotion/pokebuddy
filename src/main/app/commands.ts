@@ -5,23 +5,23 @@
 //   reader  mailbox 로 보낸다. writer 가 처리해 파일에 쓰면 감시가 읽어 온다
 // 창 표시 항목(hidden · clickThrough)만 저장 밖의 설정이라 여기서 처리한다.
 // 결과 문구는 표면이 구성한다 — 여기서는 코드만 돌려준다.
-import { createDispatcher, registerTxCommands, type Dispatcher } from "../tx/dispatcher";
-import { sendToWriter, serveCommands, type CommandServer, type ServeOptions } from "../save/command-channel";
-import type { Command, CommandResult } from "../shared/command";
-import type { Reason } from "../shared/names/reasons";
-import type { Size } from "../shared/geometry";
-import type { PartyRequest, SaveParty } from "../save/save-party";
-import { partyPetsOf } from "../view/party-pet";
-import type { GameV3 } from "../tx/game";
-import type { CareKind } from "../state/care";
-import { evolveCandidates } from "../dex/evolve";
-import { gameDayPart } from "../shared/clock";
-import { appearanceOf } from "../dex/look";
-import { unlockRules } from "../dex/unlocks";
-import { itemOf } from "../bag/items";
-import { argsFromCommand } from "../tx/args";
-import type { SaveV3 } from "../shared/save-v3";
-import type { TradeActionResult, TradeSession } from "../online/trade-session";
+import { createDispatcher, registerTxCommands, type Dispatcher } from "../../tx/dispatcher";
+import { sendToWriter, serveCommands, type CommandServer, type ServeOptions } from "../../save/command-channel";
+import type { Command, CommandResult } from "../../shared/command";
+import type { Reason } from "../../shared/names/reasons";
+import type { Size } from "../../shared/geometry";
+import type { PartyRequest, SaveParty } from "../../save/save-party";
+import { partyPetsOf } from "../../view/party-pet";
+import type { GameV3 } from "../../tx/game";
+import type { CareKind } from "../../state/care";
+import { evolveCandidates } from "../../dex/evolve";
+import { gameDayPart } from "../../shared/clock";
+import { appearanceOf } from "../../dex/look";
+import { unlockRules } from "../../dex/unlocks";
+import { itemOf } from "../../bag/items";
+import { argsFromCommand } from "../../tx/args";
+import type { SaveV3 } from "../../shared/save-v3";
+import type { TradeActionResult, TradeSession } from "../../online/trade-session";
 
 export interface CommandSettings {
   hidden(): boolean;

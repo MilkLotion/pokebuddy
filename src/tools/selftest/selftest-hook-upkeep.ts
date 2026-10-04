@@ -17,7 +17,7 @@ delete process.env.CLAUDE_CONFIG_DIR;
 // HOME 을 바꾼 뒤에 읽어야 해서 import 문이 아니라 require 꼴 — ES import 는 파일 맨 위로 끌어올려진다
 import registry = require("../../agents/registry");
 import notice = require("../../agents/notice");
-import upkeep = require("../../main/hook-upkeep");
+import upkeep = require("../../main/app/hook-upkeep");
 import { okCounter, printLine as say } from "../harness/report";
 
 const checks = okCounter();

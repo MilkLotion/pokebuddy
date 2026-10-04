@@ -7,7 +7,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { CLOCK_RULES, createClock, type ClockTick } from "../../main/clock";
+import { CLOCK_RULES, createClock, type ClockTick } from "../../main/app/clock";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { newPet } from "../../party/create";

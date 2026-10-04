@@ -1,6 +1,6 @@
 // 단추를 고르게 하는 창 — 게임 디자인의 알림 창(alert-window.ts)으로 먼저 띄우고, 띄우지 못하면 Electron 네이티브 대화상자로 띄운다
 // 알림 창: 2026-10-01 사용자 "그것들은 디자인 못바꿔?" → "진행" (worklog/records/alert-window/record.md)
-// 창의 글자는 화면 값이 만든다 (src/view/halt.ts). 답을 무엇으로 읽을지는 부르는 쪽이 정한다 (src/main/halt-dialog.ts)
+// 창의 글자는 화면 값이 만든다 (src/view/halt.ts). 답을 무엇으로 읽을지는 부르는 쪽이 정한다 (src/main/app/halt-dialog.ts)
 // 네이티브는 작은 투명 부모 창을 하나 만들어 붙인다
 //   - mac 은 부모 없는 대화상자가 동기로 돌아 메인을 멈추고, signal(자동 닫힘·밀려남으로 닫기)이 먹지 않는다 (electron.d.ts MessageBoxOptions.signal)
 //   - 무대 창·배너가 항상 위에 떠 있다 — 부모를 그보다 위 층(screen-saver)에 둬서 가리지 않게 한다 (region-window.ts 와 같은 층)

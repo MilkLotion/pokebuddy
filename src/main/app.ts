@@ -11,11 +11,11 @@ import type { HelperWindow, SelfMark } from "../terminal/types";
 import { createAnchor, type Anchor, type AnchorUpdate } from "./anchor";
 import { createArtLoader, type ArtLoader } from "./art/stage-art";
 import { createOverworldSource } from "./art/overworld-art";
-import { createCommands, type Commands } from "./commands";
+import { createCommands, type Commands } from "./app/commands";
 import { STAGE_RULES } from "./layout";
 import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/screen-picker";
 import { screensNow as currentScreens } from "./windows/display";
-import { createLifetime, type Lifetime } from "./lifetime";
+import { createLifetime, type Lifetime } from "./app/lifetime";
 import { clearLastError, writeLastError } from "../platform/last-error.js";
 import { jumpListOf } from "../view/menus";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
@@ -23,7 +23,7 @@ import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "../tx/game.js";
 import { cloudSeedOf } from "./online";
 import { seededRand } from "../verify/save-rules";
-import { askSaveLocked, askUpdateRequired } from "./halt-dialog";
+import { askSaveLocked, askUpdateRequired } from "./app/halt-dialog";
 import { createManage } from "./manage/window.js";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
@@ -32,7 +32,7 @@ import { createHalt } from "./app/halt";
 import type { Portraits } from "./art/portraits";
 import { artServices } from "./art/services";
 import { startKeepOnTop } from "./keep-on-top";
-import { CLOCK_RULES, createClock } from "./clock";
+import { CLOCK_RULES, createClock } from "./app/clock";
 import { askRegion } from "./windows/region-window";
 import { createBannerWindow, type BannerWindow } from "./windows/banner-window";
 import { PATHS, PROJECT } from "../platform/paths";
@@ -44,8 +44,8 @@ import { createStageGroup, type StageGroup } from "./stage-group";
 import { createStageWindow } from "./stage-window";
 import { currentLang, langOf, petLabel, petName, setLang, t } from "../view/text";
 import { failTextOf } from "../shared/fail-text";
-import { createTray, type TrayHandle } from "./tray";
-import { syncJumpList } from "./jump-list";
+import { createTray, type TrayHandle } from "./menus/tray";
+import { syncJumpList } from "./menus/jump-list";
 import { closeMenu, closedWithin, isMenuOpen } from "./menus/menu-window";
 import { createPetMenu } from "./menus/pet-menu";
 import { createTrayMenu } from "./menus/tray-menu";
@@ -55,7 +55,7 @@ import { createNotifier, type Notifier } from "../notify/notifier";
 import { bannerOf } from "../view/banner";
 import { writeAtomic } from "../platform/atomic-write";
 import { readJsonFile } from "../platform/json-file";
-import { createHookUpkeep, type HookUpkeep } from "./hook-upkeep";
+import { createHookUpkeep, type HookUpkeep } from "./app/hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { ManageRoute } from "../shared/model/route";
 import type { Command } from "../shared/command";
@@ -71,7 +71,7 @@ import { createTicks } from "./app/ticks";
 import { createRun } from "./app/quit";
 import { bootSaveKey, type Runtime } from "./app/boot";
 
-// 전역 시계 — 1초마다 틱을 낸다 (src/main/clock.ts)
+// 전역 시계 — 1초마다 틱을 낸다 (src/main/app/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
 // 부팅이 만든 핸들 한 벌 — 처음은 모두 비어 있고 부팅 단계가 채운다. 끌 때 run 의 stop 이 정리한다 (src/main/app/boot.ts Runtime)
 const rt: Runtime = {
@@ -281,7 +281,7 @@ const syncCoach = (): void => {
   manage.setStageCoachDim(coach.isShown());
 };
 
-// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/jump-list.ts)
+// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/menus/jump-list.ts)
 function syncJump(): void {
   const save = rt.game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
   if (!save) return;
@@ -580,7 +580,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
         cursor: hooks.cursor,
         sleepAfterMin: display.sleepAfterMin,
         onDrop: hooks.onDrop,
-        // 클릭은 놀아주기 (src/main/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
+        // 클릭은 놀아주기 (src/main/app/commands.ts). 울음소리는 놀아주기가 쿨타임이어도 클릭할 때마다 낸다 — 반응을 들려준다
         onClick: (id) => {
           // 바탕화면 튜토리얼 중에는 왼쪽 클릭이 놀아주기가 아니다 — 무대 렌더러가 먼저 막고, 여기서 한 번 더 막는다
           if (coach.isShown()) return;

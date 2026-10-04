@@ -286,7 +286,7 @@ void app.whenReady().then(async () => {
     return game.send({ cmd: "settings.set", target: "playScreen", args: { value: ref } }, "settings");
   };
   app.on("will-quit", () => picker.close());
-  // 포켓몬 표시·고스트 모드 — 앱은 저장 밖에서 처리한다(src/main/commands.ts). 여기서는 값만 바꿔 화면 탭 튜토리얼을 확인할 수 있게 한다
+  // 포켓몬 표시·고스트 모드 — 앱은 저장 밖에서 처리한다(src/main/app/commands.ts). 여기서는 값만 바꿔 화면 탭 튜토리얼을 확인할 수 있게 한다
   const shown: Record<"hidden" | "clickThrough", boolean> = { hidden: false, clickThrough: false };
   const slowMs = Number(argAfter("--slow")) || 0;
   // --fail <명령>=<까닭> — 그 명령은 실행하지 않고 실패로 답한다

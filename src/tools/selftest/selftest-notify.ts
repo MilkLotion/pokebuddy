@@ -201,7 +201,7 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   process.stdout.write("(8) 하나씩 표시와 재시작  ok\n");
 }
 
-// (9) 줄 밖의 안내 배너(showOnce) — 보이는 배너가 없을 때만 보이고, 보이는 동안 틱이 줄의 배너로 덮지 않는다 (src/main/hook-upkeep.ts)
+// (9) 줄 밖의 안내 배너(showOnce) — 보이는 배너가 없을 때만 보이고, 보이는 동안 틱이 줄의 배너로 덮지 않는다 (src/main/app/hook-upkeep.ts)
 {
   const dir = makeTmp("notify");
   const file = path.join(dir, "notify.json");

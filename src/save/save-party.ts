@@ -63,7 +63,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
   //   run   writer — 실행기로 바로
   //   ask   reader — writer 에게 mailbox 로 보낸다
   //   lost  역할을 맡았다고 알고 있는데 잠금이 내 것이 아니다(빼앗겼다, 감시가 아직 모른다) — not-writer.
-  //         mailbox 로 보내면 아직 잇고 있는 내 명령 통로로 되돌아온다 (src/main/commands.ts runSave 의 server 분기와 같은 뜻)
+  //         mailbox 로 보내면 아직 잇고 있는 내 명령 통로로 되돌아온다 (src/main/app/commands.ts runSave 의 server 분기와 같은 뜻)
   const route = (): "run" | "ask" | "lost" => (sw.isWriter() ? "run" : sw.holdsRole() ? "lost" : "ask");
   const lost: CommandResult = { ok: false, reason: "not-writer" };
 

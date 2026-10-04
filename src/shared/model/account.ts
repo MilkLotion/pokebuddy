@@ -14,7 +14,7 @@ export interface UpdateView {
 // 설정 바닥의 업데이트 요청 — status 는 읽기만, check 는 `다시 확인`, install 은 `다시 시작`(manual 이면 `받기`)
 export type UpdateAction = "status" | "check" | "install";
 
-// 패치노트 — data/patch-notes.json 의 한 버전 (src/main/patch-notes.ts). Figma `99 · 시안` `800:18345`·`800:18549`
+// 패치노트 — data/patch-notes.json 의 한 버전 (src/main/update/patch-notes.ts). Figma `99 · 시안` `800:18345`·`800:18549`
 export interface PatchNote {
   version: string;
   date: string; // YYYY-MM-DD
