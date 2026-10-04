@@ -2,7 +2,8 @@
 // 모습 표와 메가스톤 조건은 도감(src/dex/mega.ts)이 가진다. 여기는 개체가 어느 프리셋에 있는지를 본다
 import type { DexOptions } from "../dex/data";
 import { megaChoices, megaFormsOf, megaFree, megaOf } from "../dex/mega.js";
-import { activePreset, allPresets, presetPetIds } from "./presets.js";
+import { activePreset, allPresets } from "./presets.js";
+import { presetPetIds } from "./locate.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";

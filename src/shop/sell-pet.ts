@@ -9,7 +9,7 @@ import { takePet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
 import { maxPetNo } from "../party/create.js";
-import { locatePet } from "../party/presets.js";
+import { locatePet } from "../party/locate.js";
 import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isSinglePet } from "../dex/forms.js";

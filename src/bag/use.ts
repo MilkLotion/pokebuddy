@@ -11,7 +11,7 @@ import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_RULES } from "./rules.js";
 import { recordShiny } from "../dex/record.js";
 import { PET_RULES } from "../party/rules.js";
-import { isInParty } from "../party/presets.js";
+import { isInParty } from "../party/locate.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";

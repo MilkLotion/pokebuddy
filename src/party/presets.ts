@@ -6,8 +6,7 @@
 //   3. 적용은 칸을 잠금·숨김째 맞바꾼다. 박스는 건드리지 않는다
 import { BOX_RULES } from "../box/rules.js";
 import { PARTY_RULES } from "./rules.js";
-import { petSlotIndex } from "./visibility.js";
-import type { PartySlotV3, PartyV3, SaveV3 } from "../shared/save-v3";
+import type { PartySlotV3, PartyV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
@@ -17,11 +16,6 @@ export type PresetFailure = ReasonOf<
   | "preset-max" // 프리셋을 더 가질 수 없다
   | "slots-not-full" // 가진 프리셋의 칸을 모두 열지 않았다
 >;
-
-// 개체의 자리 — 적용한 프리셋도 preset 이다. active 로 구분한다
-export type PetPlace =
-  | { kind: "preset"; preset: number; slot: number; active: boolean }
-  | { kind: "box"; box: number; slot: number };
 
 type Party = { party: PartyV3 };
 
@@ -43,29 +37,6 @@ export function allPresets(save: Party): { preset: number; slots: PartySlotV3[] 
     if (slots) out.push({ preset: i, slots });
   }
   return out;
-}
-
-// 어느 프리셋에든 든 개체의 식별자
-export function presetPetIds(save: Party): Set<string> {
-  const ids = new Set<string>();
-  for (const { slots } of allPresets(save)) {
-    for (const s of slots) if (s.state === "pokemon" && s.petId) ids.add(s.petId);
-  }
-  return ids;
-}
-
-// 개체의 자리를 찾는다. 프리셋을 먼저 보고 박스를 본다. 어디에도 없으면 null
-export function locatePet(save: Pick<SaveV3, "party" | "boxes">, petId: string): PetPlace | null {
-  const active = activePreset(save);
-  for (const { preset, slots } of allPresets(save)) {
-    const slot = petSlotIndex(slots, petId);
-    if (slot >= 0) return { kind: "preset", preset, slot, active: preset === active };
-  }
-  for (let box = 0; box < save.boxes.length; box += 1) {
-    const slot = save.boxes[box]!.slots.indexOf(petId);
-    if (slot >= 0) return { kind: "box", box, slot };
-  }
-  return null;
 }
 
 // 가진 프리셋 수와 열린 칸 수를 다시 적는다. 칸을 열거나 프리셋을 더한 뒤, 그리고 읽을 때 부른다
@@ -134,7 +105,3 @@ export function applyPreset(save: Party, index: number): Outcome<PresetFailure> 
   save.party.active = index;
   return { ok: true };
 }
-
-// 적용한 프리셋의 칸에 있는가 — 숨겨도 참이다. 박스 개체·다른 프리셋의 개체는 거짓
-export const isInParty = (save: Pick<SaveV3, "party">, petId: string): boolean =>
-  petSlotIndex(save.party.slots, petId) >= 0;

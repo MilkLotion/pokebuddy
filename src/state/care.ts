@@ -11,7 +11,7 @@ import { BAG_RULES } from "../bag/rules.js";
 import { PET_RULES } from "../party/rules.js";
 import { CARE_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { isInParty } from "../party/presets.js";
+import { isInParty } from "../party/locate.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
