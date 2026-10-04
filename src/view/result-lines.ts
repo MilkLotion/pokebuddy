@@ -11,7 +11,8 @@ const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof 
 // 명령의 수량 — 없으면 1
 const countOf = (args: unknown): number => (isObj(args) && typeof args.count === "number" && args.count > 0 ? args.count : 1);
 
-const petIn = (v: Snapshot, id: string): PetView | null =>
+// 스냅샷의 개체 하나 — 파티 칸 먼저, 그다음 박스. 파티 상세 기기 창(./device-pet.ts)도 같은 찾기를 쓴다 (94 항목 9-5-5)
+export const snapshotPet = (v: Snapshot, id: string): PetView | null =>
   v.party.slots.find((s) => s.pet?.id === id)?.pet ?? v.boxes.flatMap((b) => b.slots).find((p): p is PetView => p?.id === id) ?? null;
 
 // 쓴 뒤 첫 줄 — 쓰기 전 값(before)과 쓴 뒤 값(after)을 견준다.
@@ -49,9 +50,9 @@ export function resultLineOf(req: { cmd: string; target?: string; args?: unknown
   if (req.cmd === "bag.use") {
     const item = before.bag.find((i) => i.id === req.target);
     const petId = isObj(req.args) && typeof req.args.petId === "string" ? req.args.petId : null;
-    const pet = petId ? petIn(before, petId) : null;
+    const pet = petId ? snapshotPet(before, petId) : null;
     if (!item || !pet) return null;
-    return { lead: usedLead(item, pet, petIn(after, pet.id)), line: `${item.name} ${numberText(count)}개를 썼어요` };
+    return { lead: usedLead(item, pet, snapshotPet(after, pet.id)), line: `${item.name} ${numberText(count)}개를 썼어요` };
   }
   if (req.cmd === "shop.buy") {
     const item = before.shop.find((i) => i.id === req.target);
