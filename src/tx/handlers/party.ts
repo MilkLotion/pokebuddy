@@ -14,11 +14,14 @@ export const visibilityHandler = (hidden: boolean): TxHandler => (draft, args) =
   return { ok: true, result: { petId, hidden, shown: shownCount(draft.party.slots) } };
 };
 
-// 박스 개체를 빈 파티 칸에 — 칸을 지정하지 않으면 앞의 빈 칸에 넣는다
+// 박스 개체를 빈 파티 칸에 — 칸을 지정하지 않으면 앞의 빈 칸에 넣는다.
+// 칸 번호를 줬는데 잘못됐으면(음수·소수·글자) party.swap 과 같이 bad-args 다 — 첫 빈 칸으로 넘기지 않는다 (94 항목 9-5-3)
 export const placeHandler: TxHandler = (draft, args) => {
   const petId = petIdOf(args);
-  if (!petId) return { ok: false, reason: "bad-args" };
-  const res = placeInParty(draft, petId, slotIndexOf(args) ?? undefined);
+  const given = isArgsRecord(args) && args.slotIndex !== undefined;
+  const slotIndex = slotIndexOf(args);
+  if (!petId || (given && slotIndex == null)) return { ok: false, reason: "bad-args" };
+  const res = placeInParty(draft, petId, slotIndex ?? undefined);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, slotIndex: res.slotIndex, hidden: false } };
 };
