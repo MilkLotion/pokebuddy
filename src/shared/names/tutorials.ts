@@ -23,8 +23,8 @@ export type TutorialId = QueuedTutorialId | ScreenTutorialId | typeof DETAIL_TUT
 //   first-care 2   src/renderer/stage/stage.ts "튜토리얼 · 첫 돌봄 1 / 2"
 //   playground 1   src/renderer/stage/stage.ts "놀이공간 1 / 1" (꺼 둔 튜토리얼)
 //   shop·hatch·achievement 1   src/renderer/manage/tutorial.ts 의 말풍선 하나("한 단계뿐이면 … 확인")
-//   growth·points·party·preset·bag·evolution·box·dex·trade·user   src/renderer/manage/tutorial.ts GUIDES 의 steps 길이
-//   area 6         src/renderer/manage/tutorial.ts AREA_STEPS 길이 — 바탕화면 표시 줄이 있을 때의 전체 목록
+//   growth·points·party·preset·bag·evolution·box·dex·trade·user   src/renderer/manage/tutorial-steps.ts GUIDES 의 steps 길이
+//   area 6         src/renderer/manage/tutorial-steps.ts AREA_STEPS 길이 — 바탕화면 표시 줄이 있을 때의 전체 목록
 //   detail 4       src/renderer/device/pet.ts DETAIL_STEPS 길이
 export const TUTORIAL_STEPS = {
   "first-care": 2,
