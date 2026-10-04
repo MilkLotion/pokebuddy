@@ -1,5 +1,6 @@
 // 박스 처리기 — 정렬·이동·이름·순서
-import { isBoxSortKey, moveSlot, moveToBox, orderBox, renameBox, sortBox } from "../../box/slots.js";
+import { moveSlot, moveToBox } from "../../box/slots.js";
+import { isBoxSortKey, orderBox, renameBox, sortBox } from "../../box/order.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord } from "./args.js";
 

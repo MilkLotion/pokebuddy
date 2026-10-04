@@ -379,7 +379,7 @@ PC 잠금·절전·앱 종료 중에는 적립하지 않는다. 적립 중인 �
 - 박스의 이름과 칸은 박스를 따라간다. 박스 식별자는 바뀌지 않는다. 새 개체가 들어가는 "앞 박스부터 첫 빈 칸"은 바뀐 순서를 따른다.
 
 명령은 `box.order`(`boxId`, `to`)다. 거절 이유는 `no-box`, `bad-slot`, `same-slot`이다. 상점 구매의 거절 이유는 `box-max`, `not-enough-points`다.
-구현은 `src/box/slots.ts` `addBox`·`boxBuyable`·`orderBox`, `src/box/boxes.ts` `fillBoxes`·`pushBox`, `src/shop/buy.ts` `buyBox`, `src/renderer/manage/manage.ts` `boxMenuEl`·`drawBoxOrder`다.
+구현은 `src/box/slots.ts` `addBox`·`boxBuyable`, `src/box/order.ts` `orderBox`, `src/box/boxes.ts` `fillBoxes`·`pushBox`, `src/shop/buy.ts` `buyBox`, `src/renderer/manage/manage.ts` `boxMenuEl`·`drawBoxOrder`다.
 
 #### 둘 곳이 없을 때
 
