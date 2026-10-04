@@ -2,6 +2,7 @@
 import { SCREEN_TUTORIAL_IDS } from "../shared/names/tutorials.js";
 import type { SaveV3, TutorialState } from "../shared/save-v3";
 import { evolveAllowed } from "../party/pet-actions.js";
+import { unclaimedAchievementIds } from "../dex/tables.js";
 import { gameDayPart } from "../shared/clock.js";
 
 export type TutorialSurface = "manage" | "stage"; // 관리 창 · 바탕화면
@@ -39,7 +40,7 @@ export const TUTORIALS: readonly TutorialRule[] = [
     id: "achievement",
     surface: "manage",
     enabled: true,
-    start: (s) => Object.values(s.achievements).some((a) => a.achievedAt != null),
+    start: (s) => unclaimedAchievementIds(s).length > 0, // 업적 아이콘 점과 같은 셈 (94 항목 9-3-8)
     already: (s) => Object.values(s.achievements).some((a) => a.claimedAt != null),
   },
   // 새 기능 튜토리얼 — 설명을 끝내거나 닫아야 끝난다(already 없음)

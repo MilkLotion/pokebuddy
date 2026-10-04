@@ -33,6 +33,7 @@ import { formsOf } from "../dex/forms.js";
 import { genderLookOf } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
 import { checkPetFree } from "../party/pet-actions.js";
+import { unclaimedAchievementIds } from "../dex/tables.js";
 import { failTextOf } from "../shared/fail-text.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial } from "../tutorial/queue.js";
@@ -272,7 +273,6 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     };
   });
 
-  const claimed = Object.values(save.achievements);
   return {
     points: save.points.balance,
     party: {
@@ -287,8 +287,8 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     dex: { unlocked: save.dex.unlocked.length, obtained: save.dex.obtained.length, shiny: save.dex.shinyObtained.length },
     shop: shopList(save),
     achievements: {
-      total: claimed.filter((a) => a.achievedAt != null).length,
-      unclaimed: claimed.filter((a) => a.achievedAt != null && a.claimedAt == null).length,
+      total: achievements.filter((a) => a.state !== "locked").length, // 표에 있는 업적만 — 목록 수와 같은 기준
+      unclaimed: unclaimedAchievementIds(save).length, // 배너·튜토리얼과 같은 셈 (94 항목 9-3-8)
       list: achievements,
     },
     settings: {

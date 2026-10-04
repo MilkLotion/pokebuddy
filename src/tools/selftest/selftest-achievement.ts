@@ -5,6 +5,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { regionalOf } from "../../dex/regional";
+import { unclaimedAchievementIds } from "../../dex/tables";
 import { profileOf, speciesSlugs } from "../../dex/species";
 import { sellsSpecies } from "../../shop/catalog";
 import { snapshotView } from "../../view/snapshot";
@@ -569,6 +570,7 @@ function seed(): SaveV3 {
   assert.equal(s.achRev, ACHIEVEMENT_RULES.rev);
   assert.equal(pendingOf(s, T0).some((p) => p.kind === "achievement"), false, "배너 줄에 서지 않는다");
   assert.equal(snapshotView(s, T0).achievements.unclaimed, 1, "업적 아이콘의 점은 켠다");
+  assert.deepStrictEqual(unclaimedAchievementIds(s), ["dex-50"], "quiet 도 미수령 셈에 든다 — 배너만 끈다 (94 항목 9-3-8)");
   s.dex.obtained = Array.from({ length: 150 }, (_, i) => `x${i}`);
   assert.deepStrictEqual(evaluateAchievements(s, T0 + 1000), ["dex-150"]);
   assert.equal(s.achievements["dex-150"]?.quiet, undefined);
