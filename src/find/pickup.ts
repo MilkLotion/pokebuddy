@@ -25,6 +25,7 @@ export interface FindInput {
 
 interface ItemEntry {
   price?: number | null;
+  effect?: string;
 }
 
 export interface ItemCandidate {
@@ -32,13 +33,15 @@ export interface ItemCandidate {
   weight: number;
 }
 
-// 도구 후보 — data/items.json 에서 상점가가 0 초과 FIND_RULES.itemMaxPrice 이하. 가중치는 1/가격. 성격민트는 은퇴해 빠진다 (src/bag/mint.ts)
+// 도구 후보 — data/items.json 에서 상점가가 0 초과 FIND_RULES.itemMaxPrice 이하. 가중치는 1/가격. 성격민트는 은퇴해 빠진다 (src/bag/mint.ts).
+// 모습 바꾸기 도구(로토무카탈로그, effect form)도 빠진다 — 줍기로 얻지 않는다 (2026-10-05 설계, worklog/records/rotom-forms)
 export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
   const table = loadJson<Record<string, ItemEntry>>("items.json", opts);
   const out: ItemCandidate[] = [];
   for (const [id, e] of Object.entries(table)) {
     if (id.startsWith("_") || e == null || typeof e !== "object") continue;
     if (MINT_RETIRED && id === MINT_ID) continue;
+    if (e.effect === "form") continue;
     const price = e.price;
     if (typeof price !== "number" || price <= 0 || price > FIND_RULES.itemMaxPrice) continue;
     out.push({ id, weight: 1 / price });

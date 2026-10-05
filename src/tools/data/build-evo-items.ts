@@ -7,7 +7,9 @@
 //   items.csv        도구 번호 → 식별자
 //   item_names.csv   도구 번호 → 한국어·영어 이름
 //
-// 결과: { "<item>": { "ko": "…", "en": "…", "targets": ["<slug>", …] } }
+// 결과: { "<item>": { "ko": "…", "en": "…", "gen": 1, "targets": ["<slug>", …] } }
+//   - gen 은 원작 첫 등장 세대 — 상점·가방 진화 탭 정렬 기준. 우리 도구(OWN_ITEMS — 빈 기술머신·연결의끈·지도)는 없어 맨 위에 선다
+//     (2026-10-05 사용자 결정 "원작에 없음 … 가장위로", "연결의끈도 제일 위로 … 빈기술머신-연결의끈-지도 순서")
 //   - data/evo.json 의 `need.kind === "item"` 에 실제로 쓰인 도구만 담는다
 //   - bond-cord(연결의끈)·blank-cd(빈 기술머신)는 우리 도구라 이름을 여기서 준다. 빈 기술머신은 2026-09-26 "빈 CD"에서,
 //     연결의끈(원작 레전드 아르세우스의 Linking Cord)은 2026-09-27 "유대의끈"에서 바꿨다(사용자 결정). id 는 저장 호환을 위해 그대로다
@@ -33,9 +35,38 @@ export const OWN_ITEMS: Readonly<Record<string, { ko: string; en: string }>> = {
   [REGION_MAP]: { ko: "지도", en: "Map" },
 };
 
+// 원작 첫 등장 세대 — PokeAPI item_game_indices 는 빠지거나 틀린 값이 있어(악의 족자 9·복합금속 없음) 손으로 둔다
+// 새 진화 도구가 생기면 여기에 더한다. 없으면 빌드가 실패한다 (우리 도구 OWN_ITEMS 는 예외 — 세대를 두지 않는다)
+export const ITEM_GEN: Readonly<Record<string, number>> = {
+  "moon-stone": 1,
+  "leaf-stone": 1,
+  "water-stone": 1,
+  "fire-stone": 1,
+  "thunder-stone": 1,
+  "sun-stone": 2,
+  "dawn-stone": 4,
+  "shiny-stone": 4,
+  "dusk-stone": 4,
+  "ice-stone": 7,
+  "galarica-cuff": 8,
+  "galarica-wreath": 8,
+  "cracked-pot": 8,
+  "sweet-apple": 8,
+  "tart-apple": 8,
+  "scroll-of-darkness": 8,
+  "black-augurite": 8,
+  "peat-block": 8,
+  "auspicious-armor": 9,
+  "malicious-armor": 9,
+  "metal-alloy": 9,
+  "syrupy-apple": 9,
+  "unremarkable-teacup": 9,
+};
+
 interface EvoItem {
   ko: string;
   en: string;
+  gen?: number;
   targets: string[];
 }
 
@@ -75,7 +106,9 @@ export async function build(): Promise<void> {
     const own = OWN_ITEMS[item];
     const hit = own ?? names.get(idOf.get(item) ?? "") ?? {};
     if (!hit.ko || !hit.en) missing.push(item);
-    out[item] = { ko: hit.ko ?? item, en: hit.en ?? item, targets: [...new Set(targets.get(item) ?? [])].sort() }; // 같은 결과가 두 출발에서 오면(어둠의돌 데스니칸) 한 번만
+    const gen = ITEM_GEN[item];
+    if (gen === undefined && !(item in OWN_ITEMS)) throw new Error(`${item} 의 원작 세대(ITEM_GEN)가 없다`);
+    out[item] = { ko: hit.ko ?? item, en: hit.en ?? item, ...(gen !== undefined ? { gen } : {}), targets: [...new Set(targets.get(item) ?? [])].sort() }; // 같은 결과가 두 출발에서 오면(어둠의돌 데스니칸) 한 번만
   }
 
   writeLineJson(OUT, out);

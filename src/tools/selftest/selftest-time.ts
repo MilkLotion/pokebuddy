@@ -9,6 +9,7 @@ import { affinityPercent, buffPercent, carePercent, zoneOf } from "../../state/t
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { TIME_RULES } from "../../state/rules";
+import { applyPreset } from "../../party/presets";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
 
@@ -85,8 +86,13 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const s = seed();
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
   applyTime(s, 20 * MIN, T0 + 20 * MIN);
-  assert.equal(s.points.balance, 10, "숨겨도 적립한다");
-  assert.equal(s.pets[0]?.affinity, 2);
+  assert.equal(s.points.balance, 10, "숨겨도 적립한다 (2026-10-05 사용자 결정 숨김은 정배)");
+  assert.equal(s.pets[0]?.affinity, 2, "친밀도는 그대로 쌓인다");
+  assert.equal(s.pets[0]?.fullness, 90, "만복도도 그대로 준다");
+  const care = seed({ affinity: 100, mood: 0, buffs: [{ kind: "premium-food", remainMs: 2 * HOUR }] });
+  care.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
+  applyTime(care, 20 * MIN, T0 + 20 * MIN);
+  assert.equal(care.points.balance, 40, "볼 안도 돌봄 보너스를 받는다");
   process.stdout.write("(6) 숨김 · 적립은 이어진다  ok\n");
 }
 
@@ -169,30 +175,28 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(12) 흐른 시간 0  ok\n");
 }
 
-// (13) 에이전트 작업 보너스 — 작업한 시간만큼 친밀도와 포인트를 한 번 더 쌓는다
+// (13) 에이전트 작업 시간 — 누적만 센다. 친밀도·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고")
 {
   const base = seed();
   applyTime(base, HOUR, T0 + HOUR);
   const working = seed();
   applyTime(working, HOUR, T0 + HOUR, { workMs: HOUR });
   assert.equal(base.pets[0]?.affinity, 6, "기본은 1시간에 친밀도 6");
-  assert.equal(working.pets[0]?.affinity, 12, "작업한 1시간은 2배");
-  assert.ok(working.points.balance >= base.points.balance * 2 - 1, "포인트도 2배");
-  assert.equal(working.pets[0]?.fullness, base.pets[0]?.fullness, "만복도 감소는 그대로");
-  assert.equal(working.pets[0]?.daily.work, HOUR, "오늘 작업 적립을 가중 시간으로 남긴다");
-  assert.equal(working.totals.workMs, HOUR);
-  process.stdout.write("(13) 작업 보너스 · 적립 2배  ok\n");
+  assert.equal(working.pets[0]?.affinity, 6, "작업해도 친밀도는 같다");
+  assert.equal(working.points.balance, base.points.balance, "포인트도 같다");
+  assert.equal(working.pets[0]?.daily.work, 0, "옛 작업 적립 칸은 쌓지 않는다");
+  assert.equal(working.totals.workMs, HOUR, "누적 작업 시간은 센다 — 업적·로토무");
+  process.stdout.write("(13) 작업 시간 · 누적만 센다  ok\n");
 }
 
-// (14) 작업 시간은 흐른 시간을 넘지 않는다. 박스 개체는 받지 않는다
+// (14) 작업 시간은 흐른 시간을 넘지 않는다
 {
   const s = seed();
   s.pets.push(pet({ id: "p2" })); // 파티 칸에 없다 — 박스와 같다
   applyTime(s, HOUR, T0 + HOUR, { workMs: 5 * HOUR });
-  assert.equal(s.pets[0]?.affinity, 12, "흐른 시간만큼만 더한다");
-  assert.equal(s.pets[1]?.affinity, 0, "파티 밖 개체는 받지 않는다");
-  assert.equal(s.pets[1]?.daily.work, 0);
-  process.stdout.write("(14) 작업 보너스 · 상한과 대상  ok\n");
+  assert.equal(s.totals.workMs, HOUR, "흐른 시간만큼만 센다");
+  assert.equal(s.pets[1]?.affinity, 0, "파티 밖 개체는 시간이 멈춘다");
+  process.stdout.write("(14) 작업 시간 · 상한  ok\n");
 }
 
 // (15) 기분 — 파티 개체는 10분에 1 줄고, 배고프면 2배·매우 배고프면 3배로 준다
@@ -251,8 +255,71 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   // 작업 보너스와는 곱해진다 — 적립 시간을 두 번 센다
   const working = seed({ affinity: 100, mood: 80 });
   applyTime(working, 20 * MIN, T0 + 20 * MIN, { workMs: 20 * MIN });
-  assert.equal(working.points.balance, 52, "작업한 20분은 26 의 두 배");
+  assert.equal(working.points.balance, 26, "작업해도 돌봄 보너스 적립은 같다");
   process.stdout.write("(17) 돌봄 보너스 · 기분과 버프  ok\n");
+}
+
+// (18) 다른 프리셋 — 포인트만 0.2배, 돌봄 보너스 없음. 나머지 시간은 멈춘다 (2026-10-05 사용자 결정 "프리셋의 포켓몬들은 0.2배")
+{
+  const other = (over: Partial<PetV3> = {}): SaveV3 => {
+    const s = empty(T0);
+    s.pets.push(pet({ id: "p2", ...over }));
+    const slots = s.party.presets?.[1];
+    assert.ok(slots, "빈 저장에는 둘째 프리셋이 있다");
+    slots[0] = { state: "pokemon", petId: "p2", hidden: false };
+    return s;
+  };
+  const food = [{ kind: "premium-food" as const, remainMs: 2 * HOUR }];
+  const a = other({ affinity: 100, mood: 100, fullness: 80, buffs: food });
+  applyTime(a, 20 * MIN, T0 + 20 * MIN);
+  assert.equal(a.points.balance, 4, "친밀도 100 은 20분 20P × 0.2 — 돌봄 보너스 없음");
+  assert.equal(a.pets[0]?.fullness, 80, "만복도는 멈춘다");
+  assert.equal(a.pets[0]?.mood, 100, "기분은 멈춘다");
+  assert.equal(a.pets[0]?.buffs[0]?.remainMs, 2 * HOUR, "버프 시간은 멈춘다");
+  const b = other({ affinity: 0 });
+  applyTime(b, HOUR, T0 + HOUR, { workMs: HOUR });
+  assert.equal(b.points.balance, 6, "한 시간 30P × 0.2 — 작업해도 같다");
+  assert.equal(b.pets[0]?.affinity, 0, "친밀도는 멈춘다");
+  // 박스는 그대로 0 — 프리셋에 없는 개체
+  const box = empty(T0);
+  box.pets.push(pet({ id: "p3", affinity: 100 }));
+  applyTime(box, HOUR, T0 + HOUR);
+  assert.equal(box.points.balance, 0, "박스는 적립하지 않는다");
+  process.stdout.write("(18) 다른 프리셋 · 포인트만 0.2배  ok\n");
+}
+
+// (19) 프리셋을 적용하면 새로 적용한 프리셋의 숨김이 풀린다. 떠난 프리셋의 숨김은 남는다 (2026-10-05 사용자 결정)
+{
+  const s = seed();
+  s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
+  s.pets.push(pet({ id: "p2" }));
+  const slots = s.party.presets?.[1];
+  assert.ok(slots);
+  slots[0] = { state: "pokemon", petId: "p2", hidden: true };
+  assert.equal(applyPreset(s, 1).ok, true);
+  assert.equal(s.party.slots[0]?.hidden, false, "들어온 칸의 숨김이 풀린다");
+  assert.equal(s.party.presets?.[0]?.[0]?.hidden, true, "떠난 칸은 그대로");
+  assert.equal(applyPreset(s, 0).ok, true);
+  assert.equal(s.party.slots[0]?.hidden, false, "돌아오면 풀린다");
+  process.stdout.write("(19) 프리셋 적용 · 숨김 풀림  ok\n");
+}
+
+// (20) 로토무 개체 작업 시간 — 지금 파티(볼 안 포함)에서 받은 작업 시간만, 2시간에서 멈춘다. 박스·다른 프리셋은 멈춘다 (2026-10-05)
+{
+  const s = seed({ species: "rotom" });
+  s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
+  applyTime(s, HOUR, T0 + HOUR);
+  assert.equal(s.pets[0]?.workMs, undefined, "작업하지 않으면 늘지 않는다");
+  applyTime(s, HOUR, T0 + 2 * HOUR, { workMs: 30 * MIN });
+  assert.equal(s.pets[0]?.workMs, 30 * MIN, "볼 안이어도 작업한 만큼");
+  applyTime(s, 3 * HOUR, T0 + 5 * HOUR, { workMs: 3 * HOUR });
+  assert.equal(s.pets[0]?.workMs, 2 * HOUR, "2시간에서 멈춘다");
+  const box = empty(T0);
+  box.pets.push(pet({ id: "p2", species: "rotom" }));
+  box.boxes[0]!.slots[0] = "p2";
+  applyTime(box, HOUR, T0 + HOUR, { workMs: HOUR });
+  assert.equal(box.pets[0]?.workMs, undefined, "박스는 멈춘다");
+  process.stdout.write("(20) 로토무 개체 작업 시간  ok\n");
 }
 
 process.stdout.write("selftest-time: 통과 (만복도·친밀도·포인트·버프·구간·알·작업 보너스·기분·돌봄 보너스)\n");

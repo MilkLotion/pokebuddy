@@ -20,7 +20,7 @@ function hooksOf(): CommandHooks {
 }
 
 // 대상이 사라지거나 일이 끝나는 조작 — 결과를 보여 줄 곳이 없으므로 모달을 닫는다
-const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "pet.sell", "shop.buy"]);
+const CLOSES = new Set(["party.keep", "party.place", "party.swap", "egg.open", "bag.use", "bag.sell", "pet.sell", "pet.sell.many", "shop.buy"]);
 
 // 도감이 함께 바뀌는 조작 — 다음에 도감을 열 때 다시 읽게 비운다
 const TOUCHES_DEX = new Set(["egg.open", "shop.buy", "evolve", "bag.use"]);

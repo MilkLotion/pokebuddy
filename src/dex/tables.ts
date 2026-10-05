@@ -23,7 +23,7 @@ export interface EggRow {
 export const eggTable = (opts?: DexOptions): Record<string, EggRow> => loadJson<Record<string, EggRow>>("eggs.json", opts);
 
 // ── data/items.json ──
-export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off";
+export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form";
 export interface ItemRow {
   ko: string;
   en?: string;
@@ -40,6 +40,8 @@ export const itemTable = (opts?: DexOptions): Record<string, ItemRow> => loadJso
 export interface EvoItemRow {
   ko: string;
   en?: string;
+  // 원작 첫 등장 세대 — 원작에 없는 우리 도구는 없다
+  gen?: number;
   targets?: string[];
 }
 export const evoItemTable = (opts?: DexOptions): Record<string, EvoItemRow> => loadJson<Record<string, EvoItemRow>>("evo-items.json", opts);
@@ -63,6 +65,7 @@ export type AchievementCond =
   | { kind: "single"; count: number }
   | { kind: "find"; count: number }
   | { kind: "work"; hours: number }
+  | { kind: "agent"; count: number }
   | { kind: "streak"; days: number }
   | { kind: "trade"; count: number }
   | { kind: "shown"; count: number }

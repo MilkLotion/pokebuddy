@@ -173,3 +173,30 @@
   height: 100%;
   object-fit: cover;
 }
+/* 모습 바꾸기·메가진화 확인 — 지금 모습 → 바뀔 모습. 두 카드 사이 화살표 (Figma 03 `Form Confirm Panel` 의 `step`, 2026-10-05) */
+.form-compare {
+  align-items: center;
+}
+.form-compare .nat-card {
+  align-self: stretch;
+}
+.compare-arrow {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 46px;
+  color: var(--muted);
+}
+.compare-mark {
+  font-size: 16px;
+}
+/* 화살표 위 쓰는 도구 이름 — Figma `Evo Step` 의 글자와 같은 크기 */
+.compare-item {
+  font-size: 10px;
+  white-space: nowrap;
+}
+/* 해금 안 된 진화 결과 — 진화 트리와 같은 검은 실루엣 */
+.form-compare .portrait.locked .art {
+  filter: brightness(0);
+}

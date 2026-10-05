@@ -55,6 +55,11 @@
    "effect": "shiny-on",
    "amount": 0
   },
+  "rotom-catalog": {
+   "price": 150,
+   "effect": "form",
+   "amount": 0
+  },
   "normal-potion": {
    "price": 0,
    "effect": "shiny-off",
@@ -234,8 +239,13 @@
   "find-3000": "points:1500",
   "show-two": "party-slot",
   "party-three": "pokemon",
+  "work-1h": "pokemon",
+  "work-10h": "points:300",
+  "work-50h": "egg:sub-legendary",
   "work-100h": "pokemon",
+  "work-300h": "egg:mythical",
   "work-500h": "points:1000",
+  "work-1000h": "egg:legendary",
   "streak-7": "points:200",
   "streak-30": "points:1000",
   "trade-1": "points:300"
@@ -1933,12 +1943,37 @@
    "tatsugiri-curly-mega"
   ]
  },
- "shiftWork": {
-  "rotom-heat": 180000000,
-  "rotom-wash": 180000000,
-  "rotom-frost": 180000000,
-  "rotom-fan": 180000000,
-  "rotom-mow": 180000000
+ "shiftRules": {
+  "rotom": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  },
+  "rotom-heat": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  },
+  "rotom-wash": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  },
+  "rotom-frost": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  },
+  "rotom-fan": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  },
+  "rotom-mow": {
+   "base": "rotom",
+   "workMs": 7200000,
+   "item": "rotom-catalog"
+  }
  },
  "growth": {
   "abomasnow": "slow",
@@ -4905,7 +4940,6 @@
   "roggenrola",
   "rolycoly",
   "rookidee",
-  "rotom",
   "rowlet",
   "rufflet",
   "sableye",
@@ -5054,15 +5088,19 @@
  "rules": {
   "pointMs": 120000,
   "maxPartySlots": 6,
-  "maxEarnFactor": 11.2,
+  "maxEarnFactor": 5.6,
+  "otherPresetEarn": 9.6,
   "findPointsMax": 10,
   "mintRefund": 100,
   "sellRatio": 0.6,
   "petSellMax": 50,
   "speciesMinPrice": 200,
   "megaLevel": 60,
+  "megaBondMs": 86400000,
+  "megaCare": 100,
+  "careCountPerHour": 12,
   "megaAffinity": 100,
-  "affinityPerHour": 30,
+  "affinityPerHour": 15,
   "carePerHour": 30,
   "careOnce": 5,
   "toyAffinity": 3,

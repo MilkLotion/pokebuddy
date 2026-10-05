@@ -362,7 +362,9 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   assert.deepStrictEqual(s.boxes, before.boxes, "박스는 그대로");
   assert.deepStrictEqual(locatePet(s, "p1"), { kind: "preset", preset: 1, slot: 0, active: false });
   assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
-  assert.deepStrictEqual(s.party, before.party, "왕복하면 처음과 같다");
+  // 돌아온 프리셋의 숨김만 풀린다 (2026-10-05 사용자 결정 "프리셋바꾸면 숨기 다 풀리게")
+  const unhidden = { ...before.party, slots: before.party.slots.map((x) => (x.state === "pokemon" ? { ...x, hidden: false } : x)) };
+  assert.deepStrictEqual(s.party, unhidden, "왕복하면 숨김만 풀리고 처음과 같다");
   process.stdout.write("(11) 파티 프리셋 · 읽기·자리 찾기·적용  ok\n");
 }
 

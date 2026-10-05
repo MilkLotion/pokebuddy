@@ -9,7 +9,7 @@ import { buyProduct } from "../../shop/buy";
 import { eggPrice, findProduct, sellsSpecies, slotPrice, speciesPrice, toolPrice } from "../../shop/catalog";
 import { shopList } from "../../view/shop-list";
 import { sellItem, sellPrice } from "../../shop/sell";
-import { petSellPrice, sellPet, sellablePet } from "../../shop/sell-pet";
+import { duplicateCandidates, petSellPrice, sellPet, sellablePet } from "../../shop/sell-pet";
 import { newPet, nextPetId } from "../../party/create";
 import { activePreset, applyPreset, presetBuyable, presetCount, presetName, shopSlots, slotsOfPreset } from "../../party/presets";
 import { createExecutor } from "../../tx/executor";
@@ -446,4 +446,70 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(13) 포켓몬 판매 · 알 값의 1/4 · 단일·알 없는 종 거절 · 교환 잠금 · 프리셋 개체 거절 · 마지막 한 마리 · 번호 재사용 없음  ok\n");
 }
 
-process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼·포켓몬 판매)\n");
+// (14) 중복 팔기 — 같은 종에서 한 마리를 남긴 나머지가 후보다. 남길 개체는 이로치 > 레벨 > 친밀도. 이로치는 후보가 아니다.
+//      그 종이 프리셋에 있으면 박스의 그 종은 모두 후보다. 여러 마리를 한 거래에서 팔고, 하나라도 거절되면 아무것도 팔지 않는다 (2026-10-05)
+{
+  const mk = (id: string, species: string, over: { level?: number; affinity?: number; shiny?: boolean } = {}) => {
+    const p = newPet({ id, species, shiny: over.shiny ?? false, nature: "hardy", gender: "male", now: T0 });
+    p.level = over.level ?? 1;
+    p.affinity = over.affinity ?? 0;
+    return p;
+  };
+  let state: SaveV3 | null = seed(0);
+  state.pets.push(
+    mk("p1", "pikachu", { level: 5 }), // 파티 — 피카츄는 프리셋에 있는 종
+    mk("p2", "pikachu", { level: 30 }),
+    mk("p3", "pikachu", { level: 2 }),
+    mk("p4", "bulbasaur", { level: 10 }), // 남긴다 — 레벨이 높다
+    mk("p5", "bulbasaur", { level: 10, affinity: 5 }), // 레벨이 같으면 친밀도 — 이쪽을 남긴다
+    mk("p6", "bulbasaur", { level: 3 }),
+    mk("p7", "bulbasaur", { shiny: true }), // 이로치 — 남기는 첫째. 후보도 아니다
+    mk("p8", "charmander"), // 한 마리뿐 — 후보 아님
+    mk("p9", "mewtwo"), // 단일 포켓몬 둘 — 팔 수 없어 후보 아님
+    mk("p10", "mewtwo"),
+  );
+  state.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  ["p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10"].forEach((id, i) => (state!.boxes[0]!.slots[i] = id));
+  const ids = (s: SaveV3) => duplicateCandidates(s).map((c) => c.petId);
+  assert.deepEqual(ids(state), ["p2", "p3", "p4", "p5", "p6"], "피카츄는 프리셋에 있어 박스 모두, 이상해씨는 이로치를 남겨 나머지");
+  state.pets.find((p) => p.id === "p7")!.shiny = false;
+  assert.deepEqual(ids(state), ["p2", "p3", "p4", "p6", "p7"], "이로치가 없으면 레벨 > 친밀도로 p5 를 남긴다");
+  assert.ok(duplicateCandidates(state).every((c) => c.price === 30), "판매가는 한 마리 판매와 같다");
+  state.trade = { pending: { channelId: "c1", petId: "p3", offerRev: 0, received: null } };
+  assert.equal(ids(state).includes("p3"), false, "교환에 올린 개체는 후보가 아니다");
+  state.trade = { pending: null };
+
+  const ex = createExecutor({ read: () => structuredClone(state), write: (next) => ((state = next), true), now: () => T0, rand }, HANDLERS);
+  const run = (id: string, petIds: unknown) => ex.run({ id, name: "pet.sell.many", args: { petIds } });
+  const fail = run("pm-mixed", ["p2", "p1"]);
+  assert.equal(fail.ok ? "ok" : fail.reason, "in-preset", "하나라도 거절되면");
+  assert.equal(state.pets.length, 10, "아무것도 팔지 않는다");
+  assert.equal(state.points.balance, 0);
+  for (const bad of [[], "p2", [3]]) {
+    const r = run("pm-bad-" + JSON.stringify(bad), bad);
+    assert.equal(r.ok ? "ok" : r.reason, "bad-args", JSON.stringify(bad));
+  }
+  const ok = run("pm-ok", ["p2", "p3", "p6", "p2"]);
+  assert.deepStrictEqual(ok.ok && ok.result, { count: 3, earned: 90, balance: 90 }, "같은 번호는 한 번만");
+  assert.deepEqual(state?.boxes[0]!.slots.slice(0, 6), [null, null, "p4", "p5", null, "p7"], "판 칸이 빈다");
+  assert.equal(state?.petSeq, 10, "판 개체의 번호를 기억한다");
+  process.stdout.write("(14) 중복 팔기 · 남길 개체 · 프리셋 종 · 이로치 · 교환 잠금 · 한 거래  ok\n");
+}
+
+// (15) 진화 탭 — 로토무카탈로그가 진화 탭에 있다. 순서는 우리 도구, 원작 세대 오래된 순, 같은 세대는 가나다순
+// (2026-10-05 사용자 결정 "카탈로구는 진화로", "옛날아이템이 위로 … 가나다순으로", "원작에 없음 … 가장위로", "빈기술머신-연결의끈-지도 순서")
+{
+  const list = shopList(seed(0));
+  const evo = list.filter((i) => i.category === "evolution").map((i) => i.name);
+  assert.equal(list.find((i) => i.id === "rotom-catalog")?.category, "evolution", "카탈로그는 진화 탭");
+  assert.equal(list.filter((i) => i.category === "tool").some((i) => i.id === "rotom-catalog"), false, "도구 탭에는 없다");
+  assert.deepEqual(evo.slice(0, 3), ["빈 기술머신", "연결의끈", "지도"], "우리 도구가 맨 위 — 가나다순");
+  assert.deepEqual(evo.slice(3, 9), ["달의돌", "리프의돌", "물의돌", "불꽃의돌", "천둥의돌", "태양의돌"], "1세대 가나다순, 그다음 2세대");
+  assert.deepEqual(evo.slice(9, 13), ["각성의돌", "로토무카탈로그", "빛의돌", "어둠의돌"], "4세대 — 카탈로그는 플라티나");
+  assert.equal(evo[13], "얼음의돌", "7세대");
+  assert.deepEqual(evo.slice(-5), ["꿀맛사과", "범작찻잔", "복합금속", "저주받은갑옷", "축복받은갑옷"], "9세대가 맨 아래");
+  assert.equal(list.find((i) => i.id === "rotom-catalog")?.about?.where, "로토무 · 모습 바꾸기", "카탈로그 쓰는 곳");
+  process.stdout.write("(15) 진화 탭 · 카탈로그 · 원작 세대순 · 같은 세대 가나다순  ok\n");
+}
+
+process.stdout.write("selftest-shop: 통과 (가격·알·도구·파티 칸·종·리전폼·포켓몬 판매·중복 팔기·진화 탭 순서)\n");

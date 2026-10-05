@@ -57,23 +57,25 @@ out("0 supabase/functions/_shared 가 최신");
   out("1 정상 진행 — 위반 없음");
 }
 
-// 2. 포인트 — 한 시간 2,016P(6마리 × 친밀도 2 × 작업 2 × 돌봄 보너스 2.8), 짧은 틈의 지연 여유, 99999, 우편, 72시간
+// 2. 포인트 — 한 시간 1,296P(적용한 프리셋 6마리 × 친밀도 2 × 돌봄 보너스 2.8 + 다른 프리셋 24마리 × 친밀도 2 × 0.2),
+//    짧은 틈의 지연 여유, 99999, 우편, 72시간
 {
   const prev = base();
+  assert.equal(data.rules.otherPresetEarn, 9.6, "다른 프리셋 24마리 × 친밀도 2 × 0.2");
   const ok = clone(prev);
-  ok.points.balance += 2200;
-  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 2,200P 는 상한 안(지연 여유 포함)");
+  ok.points.balance += 1400;
+  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 1,400P 는 상한 안(지연 여유 포함)");
   const tooFast = clone(prev);
-  tooFast.points.balance += 2400;
-  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 2,400P 는 위반");
+  tooFast.points.balance += 1500;
+  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 1,500P 는 위반");
   const quick = clone(prev);
-  quick.points.balance += 30; // 파일 쓰기 지연 — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
+  quick.points.balance += 20; // 파일 쓰기 지연(시간당 1,296P 의 61초 몫 약 24P 안) — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
   assert.deepEqual(rules(prev, quick, ctx(1_000)), [], "짧은 틈의 지연 여유");
   const over = clone(prev);
   over.points.balance = 99_999;
   assert.deepEqual(rules(prev, over, ctx(HOUR)), ["points"], "99999 는 위반");
   const long = clone(prev);
-  long.points.balance += 2016 * 72;
+  long.points.balance += 1296 * 72;
   assert.deepEqual(rules(prev, long, ctx(72 * HOUR)), [], "72시간 진행");
   out("2 포인트 — 상한·지연 여유·99999·72시간");
 }
@@ -470,29 +472,81 @@ out("0 supabase/functions/_shared 가 최신");
   out("13 포켓몬 판매 — 사라진 개체·부화 뒤 판매·번호 재사용·번호 부풀리기");
 }
 
-// 14. form-lock — 로토무의 다섯 모습은 계정의 작업 시간 50시간부터 (src/dex/rules.ts SHIFT_RULES, docs/specs/game.md "로토무의 모습 바꾸기")
+// 14. 로토무 모습 — 개체 작업 시간 2시간, 바꿀 때마다 로토무카탈로그 1개 (src/dex/rules.ts SHIFT_RULES, 2026-10-05 사용자 결정)
 {
   const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
-  assert.deepEqual(Object.keys(data.shiftWork ?? {}).sort(), ROTOM.slice(1).sort(), "다섯 모습만 조건이 있다");
-  assert.equal(data.shiftWork?.["rotom-heat"], 180_000_000);
-  const at = (workMs: number): { prev: SaveV3; next: SaveV3 } => {
+  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM].sort(), "로토무 묶음만 규칙이 있다");
+  assert.deepEqual(data.shiftRules?.["rotom-heat"], { base: "rotom", workMs: 7_200_000, item: "rotom-catalog" });
+  const at = (workMs: number, catalogs: number): { prev: SaveV3; next: SaveV3 } => {
     const prev = base();
-    prev.pets.push(pet("p2", "rotom"));
-    prev.totals.workMs = workMs;
+    prev.pets.push(pet("p2", "rotom", { workMs }));
+    prev.bag["rotom-catalog"] = catalogs;
+    prev.totals.workMs = 100 * HOUR;
     const next = clone(prev);
     next.pets[1]!.species = "rotom-heat";
     next.pets[1]!.forms = [...ROTOM];
+    next.bag["rotom-catalog"] = catalogs - 1;
+    if (next.bag["rotom-catalog"] <= 0) delete next.bag["rotom-catalog"];
     return { prev, next };
   };
-  const open = at(180_000_000);
-  assert.deepEqual(rules(open.prev, open.next, ctx(HOUR)), [], "50시간이면 바꾼 모습이 통과한다");
-  const shut = at(180_000_000 - 1);
-  assert.deepEqual(rules(shut.prev, shut.next, ctx(HOUR)), ["form-lock"], "50시간 미만에 로토무 모습이면 위반");
-  const kept = at(0);
+  const open = at(7_200_000, 1);
+  assert.deepEqual(rules(open.prev, open.next, ctx(60_000)), [], "2시간이고 카탈로그를 썼으면 통과");
+  const shut = at(7_200_000 - 1, 1);
+  assert.deepEqual(rules(shut.prev, shut.next, ctx(60_000)), ["form-lock"], "개체 작업 시간이 모자라면 위반 — 계정 작업 시간은 보지 않는다");
+  const free = at(7_200_000, 1);
+  free.next.bag["rotom-catalog"] = 1;
+  assert.deepEqual(rules(free.prev, free.next, ctx(60_000)), ["form-item"], "카탈로그를 쓰지 않고 바꿨으면 위반");
+  const back = at(7_200_000, 1);
+  back.prev.pets[1]!.species = "rotom-mow";
+  back.next.pets[1]!.species = "rotom";
+  back.next.bag["rotom-catalog"] = 1;
+  assert.deepEqual(rules(back.prev, back.next, ctx(60_000)), [], "원래 모습으로 돌아갈 때는 카탈로그를 쓰지 않는다");
+  const kept = at(0, 1);
   kept.prev.pets[1]!.species = "rotom-wash";
   kept.next.pets[1]!.species = "rotom-wash";
-  assert.deepEqual(rules(kept.prev, kept.next, ctx(HOUR)), ["form-lock"], "직전 저장부터 모습이었어도 작업 시간이 모자라면 위반");
-  out("14 로토무 모습 — 작업 시간 50시간");
+  kept.next.bag["rotom-catalog"] = 1;
+  assert.deepEqual(rules(kept.prev, kept.next, ctx(60_000)), [], "직전 저장부터 그 모습이면 보지 않는다 — 옛 규칙(계정 50시간)으로 바꾼 개체");
+  // form-work — 개체 작업 시간은 계정 작업 시간보다 빨리 늘지 않고 2시간을 넘지 않는다
+  const grow = at(0, 1);
+  grow.next.pets[1]!.species = "rotom";
+  grow.next.bag["rotom-catalog"] = 1;
+  grow.next.pets[1]!.workMs = 2 * HOUR;
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(60_000)), ["form-work"], "계정 작업 시간이 늘지 않았는데 개체만 늘었다");
+  grow.next.totals.workMs = grow.prev.totals.workMs + 2 * HOUR;
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(2 * HOUR)), [], "같이 늘었으면 통과");
+  grow.next.pets[1]!.workMs = 3 * HOUR;
+  grow.next.totals.workMs = grow.prev.totals.workMs + 3 * HOUR;
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(3 * HOUR)), ["form-work"], "2시간을 넘을 수 없다");
+  out("14 로토무 모습 — 개체 작업 2시간·카탈로그");
+}
+
+// 15. 메가 — 파티 시간·돌봄 횟수의 증가 상한과 새 메가스톤 조건 (src/dex/rules.ts MEGA_RULES, 2026-10-05 사용자 결정 "메가스톤이랑 … 다 서버에서 검사")
+{
+  const mk = (bondMs: number, care: number, stone = false): PetV3 => pet("p2", "gengar", { level: 70, exp: expForLevel(data.growth.gengar as Parameters<typeof expForLevel>[0], 70), affinity: 100, mega: { bondMs, care, ...(stone ? { stone: true } : {}) } });
+  const pair = (a: PetV3, b: PetV3): { prev: SaveV3; next: SaveV3 } => {
+    const prev = base(); prev.pets.push(a);
+    const next = clone(prev); next.pets[1] = b;
+    return { prev, next };
+  };
+  const ok = pair(mk(0, 0), mk(HOUR, 20));
+  assert.deepEqual(rules(ok.prev, ok.next, ctx(HOUR)), [], "한 시간 · 돌봄 12회 쿨타임 + 장난감 없이 20회까지(여유 포함)");
+  const fast = pair(mk(0, 0), mk(5 * HOUR, 0));
+  assert.deepEqual(rules(fast.prev, fast.next, ctx(HOUR)), ["mega-bond"], "파티 시간이 틈보다 빨리 늘었다");
+  // 1분 틈·잔액 0 — 그사이 번 포인트로 장난감을 살 수 없다
+  const care = pair(mk(0, 0), mk(0, 30));
+  care.prev.points.balance = 0;
+  care.next.points.balance = 0;
+  assert.deepEqual(rules(care.prev, care.next, ctx(60_000)), ["mega-care"], "돌봄 횟수가 쿨타임·장난감보다 많다");
+  care.prev.bag.toy = 40;
+  delete care.next.bag.toy;
+  assert.deepEqual(rules(care.prev, care.next, ctx(60_000)).includes("mega-care"), false, "장난감 40개를 썼으면 통과");
+  const stone = pair(mk(24 * HOUR - HOUR, 99), mk(24 * HOUR, 100, true));
+  assert.deepEqual(rules(stone.prev, stone.next, ctx(HOUR)), [], "조건을 채운 새 메가스톤");
+  const early = pair(mk(10 * HOUR, 100), mk(10 * HOUR, 100, true));
+  assert.deepEqual(rules(early.prev, early.next, ctx(HOUR)), ["mega"], "파티 24시간 전에 생긴 메가스톤은 위반");
+  const old = pair(mk(0, 0, true), mk(0, 0, true));
+  assert.deepEqual(rules(old.prev, old.next, ctx(HOUR)), [], "이미 있던 메가스톤은 보지 않는다");
+  out("15 메가 — 파티 시간·돌봄 횟수·새 메가스톤");
 }
 
 out("selftest-verify: 통과");

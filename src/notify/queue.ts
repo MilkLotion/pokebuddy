@@ -10,9 +10,9 @@
 //   find:<줍기 기록 id>            주운 것 하나마다 (src/find/pickup.ts). 저장의 최근 줍기 기록(find.log)에 있는 동안 산다
 // 순서는 먼저 생긴 것부터. 같은 틱에 생긴 것은 부화 → 진화 → 업적 → 줍기, 같은 종류는 화면 목록 순서다(줍기는 주운 순서).
 // pendingOf 가 그 순서로 목록을 만들고 refresh 가 새 키를 끝에 붙이므로 줄은 늘 그 순서다
-import type { BannerKind } from "../shared/names/banners";
+import { notifyKindOf } from "../shared/names/banners.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { isKeyAlive, pendingOf } from "./pending.js";
+import { isKeyAlive, parseKey, pendingOf } from "./pending.js";
 
 // notify.json 의 모양. 게임 저장과 따로 둔다 — 배너는 게임 상태를 바꾸지 않는다
 export interface NotifyState {
@@ -21,16 +21,34 @@ export interface NotifyState {
   queue: { key: string; at: number }[]; // 아직 표시하지 않은 키. at 은 줄에 들어온 시각
 }
 
-// 저장을 한 번 훑은 뒤의 줄. state 가 null 이면 처음 켠 것이다 — 이미 미처리인 상태는 표시한 것으로 둔다
+// 설정에서 끈 종류의 키인가 (save.settings.notifyOff, 2026-10-05 알림 끄기)
+function mutedOf(save: SaveV3): (key: string) => boolean {
+  const off = new Set(save.settings.notifyOff ?? []);
+  if (off.size === 0) return () => false;
+  return (key) => {
+    const k = parseKey(key);
+    const kind = k ? notifyKindOf(k.kind) : null;
+    return kind != null && off.has(kind);
+  };
+}
+
+// 저장을 한 번 훑은 뒤의 줄. state 가 null 이면 처음 켠 것이다 — 이미 미처리인 상태는 표시한 것으로 둔다.
+// 끈 종류는 줄에 세우지 않고 표시한 것으로 둔다 — 다시 켜도 꺼 둔 동안의 배너가 한꺼번에 뜨지 않는다
 export function refreshQueue(state: NotifyState | null, save: SaveV3, now: number): NotifyState {
   const pending = pendingOf(save, now);
   if (!state) return { v: 1, shown: pending.map((p) => p.key), queue: [] };
+  const muted = mutedOf(save);
   const open = new Set(pending.map((p) => p.key));
   const shown = state.shown.filter((key) => isKeyAlive(save, key));
-  // 기다리는 동안 풀린 상태는 표시하지 않고 뺀다
-  const queue = state.queue.filter((q) => open.has(q.key));
+  // 기다리는 동안 풀린 상태는 표시하지 않고 뺀다. 기다리는 동안 끈 종류는 표시한 것으로 옮긴다
+  const queue = state.queue.filter((q) => open.has(q.key) && !muted(q.key));
+  for (const q of state.queue) if (open.has(q.key) && muted(q.key)) shown.push(q.key);
   const known = new Set([...shown, ...queue.map((q) => q.key)]);
-  for (const p of pending) if (!known.has(p.key)) queue.push({ key: p.key, at: now });
+  for (const p of pending) {
+    if (known.has(p.key)) continue;
+    if (muted(p.key)) shown.push(p.key);
+    else queue.push({ key: p.key, at: now });
+  }
   return { v: 1, shown, queue };
 }
 

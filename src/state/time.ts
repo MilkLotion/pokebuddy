@@ -2,11 +2,12 @@
 //
 // 순서는 시간 적용 → 값 변경 → 상태 판정 → 배너다. 여기서는 값 변경을 하고 배너 거리를 돌려준다. 상태 판정은 src/tx/settle.ts
 // 흐르는 시간은 부르는 쪽이 준다. PC 잠금·절전·앱 종료 중에는 시간이 흐르지 않는다.
-// 에이전트가 작업한 시간(workMs)도 부르는 쪽이 준다. 그 시간만큼 친밀도와 포인트를 한 번 더 쌓는다.
-// 기본 적립에 더하는 추가 이득이며 상한이 없다 (docs/specs/balance.md "에이전트 작업 보너스")
+// 에이전트가 작업한 시간(workMs)도 부르는 쪽이 준다. 작업 시간 누적(totals.workMs)에만 더한다 — 업적과 로토무 모습 바꾸기가 쓴다.
+// 작업 시간으로 친밀도·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고", docs/specs/balance.md "에이전트 작업 시간")
 //
 // 값 변경 대상
-//   파티에 있는 개체   만복도 감소, 기분 감소, 친밀도 획득, 포인트 적립, 밥 쿨타임, 버프 잔여 시간
+//   파티에 있는 개체   만복도 감소, 기분 감소, 친밀도 획득, 포인트 적립, 밥 쿨타임, 버프 잔여 시간. 숨겨도 같다
+//   다른 프리셋 개체   포인트 적립만 — 0.2배, 돌봄 보너스 없음. 나머지 시간은 멈춘다 (docs/specs/balance.md "적립 배율")
 //   박스에 있는 개체   아무것도 하지 않는다. 박스 보관은 시간을 멈춘다
 //   알                 준비 남은 시간, 돌봄 쿨타임
 //
@@ -14,8 +15,10 @@
 // 포인트만 예외다. 적립 속도가 친밀도·기분·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
 // 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
 import { tickMega } from "../dex/mega.js";
+import { tickFormWork } from "../dex/forms.js";
 import { MOOD_RULES, TIME_RULES } from "./rules.js";
 import { PET_RULES } from "../party/rules.js";
+import { activePreset, allPresets } from "../party/presets.js";
 import type { BuffV3, PetV3, SaveV3 } from "../shared/save-v3";
 import type { FullnessZone } from "../shared/save-v3.js";
 
@@ -101,6 +104,17 @@ function tickBuffs(pet: PetV3, elapsed: number): void {
 const partyPetIds = (save: SaveV3): string[] =>
   save.party.slots.filter((s) => s.state === "pokemon" && s.petId).map((s) => s.petId as string);
 
+// 적용하지 않은 프리셋의 개체 식별자 — 포인트만 쌓는다
+function otherPresetPetIds(save: SaveV3): Set<string> {
+  const ids = new Set<string>();
+  const active = activePreset(save);
+  for (const { preset, slots } of allPresets(save)) {
+    if (preset === active) continue;
+    for (const s of slots) if (s.state === "pokemon" && s.petId) ids.add(s.petId);
+  }
+  return ids;
+}
+
 export interface TimeInput {
   workMs?: number; // 이 구간 중 에이전트가 작업한 시간. 흐른 시간을 넘지 않는다
 }
@@ -114,19 +128,24 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
   save.lastTickAt = now;
   if (elapsed === 0) return events;
   const work = Math.min(elapsed, Math.max(0, Math.round(input.workMs ?? 0)));
-  const earning = elapsed + work; // 친밀도·포인트를 쌓는 시간. 작업한 시간은 두 번 센다
 
   const { fullnessDropMs, affinityGainMs, pointGainMs } = TIME_RULES;
   const inParty = new Set(partyPetIds(save));
+  const others = otherPresetPetIds(save);
   let pointWeighted = 0;
 
   for (const pet of save.pets) {
+    // 다른 프리셋 — 포인트만 0.2배로 쌓는다. 돌봄 보너스는 받지 않는다(멈춘 버프가 계속 남기 때문)
+    if (others.has(pet.id)) {
+      pointWeighted += Math.round((elapsed * (100 + pet.affinity) * TIME_RULES.otherPresetPointPercent) / 10_000);
+      continue;
+    }
     if (!inParty.has(pet.id)) continue;
     const before = zoneOf(pet.fullness);
 
     // 포인트 — 이 구간 동안 가지고 있던 친밀도로 셈한다. 구간 중간에 오른 친밀도를 소급하지 않는다.
     // 돌봄 보너스도 구간 시작 시점의 기분과 버프로 셈한다
-    pointWeighted += Math.round((earning * (100 + pet.affinity) * carePercent(pet)) / 10_000);
+    pointWeighted += Math.round((elapsed * (100 + pet.affinity) * carePercent(pet)) / 10_000);
 
     // 만복도 — 부분 진행을 쌓아 1씩 줄인다
     pet.fullnessProgressMs += elapsed;
@@ -138,10 +157,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
 
     // 친밀도 — 버프와 디버프를 반영한 가중 시간으로 쌓는다. 줄어든 만복도를 기준으로 본다
     const percent = affinityPercent(pet);
-    pet.affinityProgressMs += Math.round((earning * percent) / 100);
-    // 오늘 작업 보너스로 쌓은 친밀도 진행(ms). 저장은 정수만 받으므로 ms 로 둔다.
-    // 친밀도로 보일 때는 affinityGainMs 로 나눈다 (docs/specs/game.md "오늘 날짜의 파티 전체 작업 적립")
-    if (work > 0) pet.daily.work += Math.round((work * percent) / 100);
+    pet.affinityProgressMs += Math.round((elapsed * percent) / 100);
     const gain = Math.floor(pet.affinityProgressMs / affinityGainMs);
     if (gain > 0) {
       pet.affinityProgressMs -= gain * affinityGainMs;
@@ -164,6 +180,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     if (pet.playWindowMs === 0) pet.playStreak = 0; // 창이 닫히면 처음부터 다시 센다
     tickBuffs(pet, elapsed);
     tickMega(pet, elapsed); // 친밀도 100 뒤 파티에서 보낸 시간 — 메가진화 조건 (src/dex/mega.ts)
+    tickFormWork(pet, work); // 파티에서 받은 작업 시간 — 로토무 모습 바꾸기 해금 (src/dex/forms.ts)
 
     const after = zoneOf(pet.fullness);
     if (after !== before && NOTIFY_ZONES.includes(after)) events.hungerEnter.push({ petId: pet.id, zone: after });

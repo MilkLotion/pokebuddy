@@ -39,12 +39,14 @@ export const portraitFile = (dex: PortraitId, shiny: boolean): string => {
 export const EGG_URL = `${POKEMON}/egg.png`;
 export const EGG_FILE = "egg.png";
 
-// 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구는 pokesprite, 나머지는 PokeAPI
+// 도구 하나의 그림 주소 — 경험사탕·민트·일부 진화 도구·로토무카탈로그는 pokesprite, 나머지는 PokeAPI
 export function itemUrl(id: string): string {
   const candy = /^exp-candy-(xs|s|m|l|xl)$/.exec(id);
   if (candy) return `${POKESPRITE}/exp-candy/${candy[1]}.png`;
   if (id === "mint") return MINT_URL;
   if (POKESPRITE_EVO.has(id)) return `${POKESPRITE}/evo-item/${id}.png`;
+  // 로토무카탈로그 — 원작 8세대 가방 도트 그대로 (2026-10-05 사용자 결정 "저거로해")
+  if (id === "rotom-catalog") return `${POKESPRITE}/key-item/rotom-catalog.png`;
   // 빈 기술머신(기술 진화를 대신하는 도구, id 는 옛 이름 blank-cd)은 원작 기술머신 그림을 쓴다 — 2026-09-26 사용자 결정 "빈기술머신으로 사용할게 그냥"
   if (id === "blank-cd") return `${SPRITES}/items/tm-normal.png`;
   return `${SPRITES}/items/${id}.png`;

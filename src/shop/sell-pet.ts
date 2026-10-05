@@ -4,12 +4,14 @@
 // 종은 그 개체의 진화 계열 맨 앞 종으로 본다. 레벨·이로치·성별은 값에 넣지 않는다.
 // 팔지 않는 개체: 단일 포켓몬(공유 sid 계열 포함), 어느 알에도 없는 종, 교환에 올린 개체, 마지막 한 마리, 파티 프리셋에 든 개체.
 // 박스 개체만 판다 (2026-10-02 사용자 결정 — 그 전에는 파티 개체도 팔았다). 도감 기록은 지우지 않는다.
+// 중복 팔기 — 같은 종에서 한 마리를 남기고 나머지를 한 거래에서 판다 (2026-10-05 사용자 결정, docs/specs/game.md "중복 팔기")
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다
 import { takePet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
 import { maxIdNo } from "../shared/ids.js";
 import { locatePet } from "../party/locate.js";
+import { allPresets } from "../party/presets.js";
 import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { isSinglePet } from "../dex/forms.js";
@@ -82,4 +84,65 @@ export function sellPet(save: SaveV3, petId: string, opts?: DexOptions): SellPet
   if (save.starterPetId === petId) save.starterPetId = null;
   save.points.balance += res.price;
   return { ok: true, petId, species: res.pet.species, earned: res.price, balance: save.points.balance };
+}
+
+// 남길 개체의 순서 — 이로치 > 레벨 > 친밀도 > 먼저 얻은 개체 (2026-10-05 사용자 결정 "같은 종 1마리 남김")
+const keepFirst = (a: PetV3, b: PetV3): number =>
+  Number(b.shiny) - Number(a.shiny) || b.level - a.level || b.affinity - a.affinity || a.since - b.since;
+
+// 중복 팔기 후보 — 박스 순서대로. 같은 종(모습 포함, species 값)을 묶는다.
+//   그 종이 파티 프리셋에 있으면 박스의 그 종은 모두 후보다
+//   프리셋에 없으면 박스에서 한 마리를 남긴다(keepFirst 의 맨 앞)
+//   이로치는 후보가 아니다. 팔 수 없는 개체(sellablePet 이 거절)도 후보가 아니다
+export function duplicateCandidates(save: SaveV3, opts?: DexOptions): { petId: string; price: number }[] {
+  const inPreset = new Set<string>();
+  for (const { slots } of allPresets(save)) {
+    for (const s of slots) {
+      const species = s.petId ? save.pets.find((p) => p.id === s.petId)?.species : undefined;
+      if (species) inPreset.add(species);
+    }
+  }
+  const boxed: PetV3[] = [];
+  for (const box of save.boxes) {
+    for (const id of box.slots) {
+      const pet = id ? save.pets.find((p) => p.id === id) : undefined;
+      if (pet) boxed.push(pet);
+    }
+  }
+  const keep = new Set<string>();
+  const bySpecies = new Map<string, PetV3[]>();
+  for (const pet of boxed) bySpecies.set(pet.species, [...(bySpecies.get(pet.species) ?? []), pet]);
+  for (const [species, pets] of bySpecies) {
+    if (inPreset.has(species)) continue;
+    const best = [...pets].sort(keepFirst)[0];
+    if (best) keep.add(best.id);
+  }
+  const out: { petId: string; price: number }[] = [];
+  for (const pet of boxed) {
+    if (keep.has(pet.id) || pet.shiny) continue;
+    const res = sellablePet(save, pet.id, opts);
+    if (res.ok) out.push({ petId: pet.id, price: res.price });
+  }
+  return out;
+}
+
+export type SellPetsResult = Outcome<SellPetFailure | ReasonOf<"bad-args">> & {
+  petId?: string; // 거절한 개체
+  count?: number;
+  earned?: number;
+  balance?: number;
+};
+
+// 여러 마리를 한 거래에서 판다. 하나라도 팔 수 없으면 거절한다 — 거래 실행기가 바꾼 사본을 버린다 (가방 판매와 같은 원칙).
+// 규칙은 한 마리 판매(sellPet)와 같다
+export function sellPets(save: SaveV3, petIds: string[], opts?: DexOptions): SellPetsResult {
+  const ids = [...new Set(petIds)];
+  if (ids.length === 0) return { ok: false, reason: "bad-args" };
+  let earned = 0;
+  for (const id of ids) {
+    const res = sellPet(save, id, opts);
+    if (!res.ok) return { ok: false, reason: res.reason, petId: id };
+    earned += res.earned ?? 0;
+  }
+  return { ok: true, count: ids.length, earned, balance: save.points.balance };
 }

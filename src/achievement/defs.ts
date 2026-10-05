@@ -14,6 +14,7 @@
 //   single    얻은 단일 포켓몬 종 수 ≥ count (src/dex/obtain.ts singleSpecies)
 //   find      줍기 횟수 find.seq ≥ count
 //   work      에이전트와 함께 일한 누적 시간 totals.workMs ≥ hours
+//   agent     연결한 CLI 의 첫 작업 신호 — totals.workMs > 0. count 는 1 이다 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상")
 //   streak    이어서 앱이 돈 날 수 counts.streak ≥ days. 하루를 거르면 1 로 돌아간다
 //   trade     끝난 교환 횟수 counts.traded ≥ count
 //   shown     파티의 개체를 count 마리 이상 동시에 꺼냈다. 숨긴 채 배치만 한 것은 아니다

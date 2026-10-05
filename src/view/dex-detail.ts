@@ -15,14 +15,14 @@ import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
 import { hasObtained, hasShiny, hasUnlocked } from "../dex/record.js";
-import { achievementName, petName, typeName, t } from "./text.js";
+import { achievementName, itemName, petName, typeName, t } from "./text.js";
 import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
 import { hatchBaseOf, regionalOf, shiftGroupOf } from "../dex/regional.js";
-import { shiftWorkMs } from "../dex/forms.js";
+import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
 import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
@@ -39,14 +39,14 @@ function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexD
   return { mega: { label, names: forms.map((f) => petName(f)).join(" · ") } };
 }
 
-// 모습 바꾸기의 작업 시간 조건 — "(에이전트 작업 50시간)". 조건이 없는 묶음(오리진폼)은 빈 글자. 쌓인 시간은 적지 않는다
+// 모습 바꾸기의 조건 — "(파티에서 작업 2시간 · 로토무카탈로그)". 규칙이 없는 묶음(오리진폼)은 빈 글자. 쌓인 시간은 적지 않는다 (2026-10-05)
 function shiftNeedText(slug: string, opts?: DexOptions): string {
-  const need = shiftWorkMs(slug, opts);
-  return need == null ? "" : `(에이전트 작업 ${need / 3_600_000}시간)`;
+  const rule = shiftRuleOf(slug, opts);
+  return rule == null ? "" : `(파티에서 작업 ${rule.workMs / 3_600_000}시간 · ${itemName(rule.item)})`;
 }
 
 // 모습 바꾸기 줄 — 작업 시간 조건이 있는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
-// 값은 모습 수와 조건 — "다섯 모습(에이전트 작업 50시간)" (docs/specs/game.md "로토무의 모습 바꾸기")
+// 값은 모습 수와 조건 — "다섯 모습(파티에서 작업 2시간 · 로토무카탈로그)" (docs/specs/game.md "로토무의 모습 바꾸기")
 const COUNT_WORDS = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"];
 function shiftLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
   const group = shiftGroupOf(slug, opts);

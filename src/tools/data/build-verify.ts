@@ -87,20 +87,20 @@ export function buildVerifyFiles(): Record<string, string> {
   // 이상한사탕 — 한 레벨 간격의 최대
   let rareCandyExp = 0;
   for (const r of rates) for (let l = 1; l < 100; l++) rareCandyExp = Math.max(rareCandyExp, expTable[r]![l]! - expTable[r]![l - 1]!);
-  // 친밀도 시간 적립 최대 — 버프 합(든든함+신남) × 작업 2배
+  // 친밀도 시간 적립 최대 — 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
   const buffTop = 100 + TIME_RULES.buffBonusPercent["premium-food"] + TIME_RULES.buffBonusPercent["long-play"];
-  const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (buffTop / 100) * 2;
+  const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (buffTop / 100);
   // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩
   const carePerHour = (3_600_000 / BAG_RULES.feedCooldownMs) * BAG_RULES.feedAffinity + (3_600_000 / CARE_RULES.playCooldownMs) * BAG_RULES.playAffinity;
   // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
   const megaForms: Record<string, string[]> = {};
   for (const slug of megaSlugs()) (megaForms[megaOf(slug)!.base] ??= []).push(slug);
-  // 작업 시간 조건이 있는 모습 — 모습 슬러그 → 조건(ms). 묶음은 data/regional.json 의 shift, 조건은 SHIFT_RULES (로토무의 다섯 모습)
-  const shiftWork: Record<string, number> = {};
+  // 규칙이 있는 모습 바꾸기 묶음 — 종(기본 종 포함) → 규칙. 묶음은 data/regional.json 의 shift, 규칙은 SHIFT_RULES (로토무와 다섯 모습)
+  const shiftRules: Record<string, { base: string; workMs: number; item: string }> = {};
   for (const [base, list] of Object.entries((load("regional.json").shift ?? {}) as Record<string, unknown>)) {
-    const need = SHIFT_RULES.workMs[base];
-    if (base.startsWith("_") || need == null || !Array.isArray(list)) continue;
-    for (const slug of list) if (typeof slug === "string") shiftWork[slug] = need;
+    const rule = SHIFT_RULES[base];
+    if (base.startsWith("_") || !rule || !Array.isArray(list)) continue;
+    for (const slug of [base, ...list]) if (typeof slug === "string") shiftRules[slug] = { base, ...rule };
   }
   const data = {
     items,
@@ -108,7 +108,7 @@ export function buildVerifyFiles(): Record<string, string> {
     achievements,
     evo,
     megaForms,
-    shiftWork,
+    shiftRules,
     growth,
     expTable,
     maxExp,
@@ -124,8 +124,10 @@ export function buildVerifyFiles(): Record<string, string> {
     rules: {
       pointMs: TIME_RULES.pointGainMs,
       maxPartySlots: PARTY_RULES.total,
-      // 친밀도 배율(2) × 작업 배율(2) × 돌봄 보너스 최대(든든함 + 신남 + 기분 최고) — src/state/time.ts carePercent
-      maxEarnFactor: (4 * (buffTop + Math.max(0, ...MOOD_RULES.pointBonus.map((b) => b.percent)))) / 100,
+      // 친밀도 배율(2) × 돌봄 보너스 최대(든든함 + 신남 + 기분 최고) — src/state/time.ts carePercent
+      maxEarnFactor: (2 * (buffTop + Math.max(0, ...MOOD_RULES.pointBonus.map((b) => b.percent)))) / 100,
+      // 다른 프리셋 — (최대 프리셋 수 − 1) × 6마리 × 친밀도 배율(2) × 적립 배율. 돌봄 보너스는 받지 않는다 (src/state/time.ts applyTime)
+      otherPresetEarn: ((PARTY_RULES.presets.max - 1) * PARTY_RULES.total * 2 * TIME_RULES.otherPresetPointPercent) / 100,
       findPointsMax: FIND_RULES.points.max,
       mintRefund: MINT_REFUND_EACH,
       sellRatio: SHOP_RULES.sellRate,
@@ -134,6 +136,9 @@ export function buildVerifyFiles(): Record<string, string> {
         .map(([kind]) => Math.floor(((eggs[kind] ?? 0) * SHOP_RULES.petSellRate) / SHOP_RULES.petSellUnit) * SHOP_RULES.petSellUnit)),
       speciesMinPrice: Math.min(...Object.values(SHOP_RULES.speciesPrices)),
       megaLevel: MEGA_RULES.level,
+      megaBondMs: MEGA_RULES.bondMs,
+      megaCare: MEGA_RULES.care,
+      careCountPerHour: 3_600_000 / BAG_RULES.feedCooldownMs + 3_600_000 / CARE_RULES.playCooldownMs,
       megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,
       carePerHour,

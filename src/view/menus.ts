@@ -6,12 +6,12 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
-import { formsOf, isFormLocked } from "../dex/forms.js";
+import { formsOf, isFormLocked, shiftRuleOf } from "../dex/forms.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
 import { zoneOf } from "../state/time.js";
 import { currentTutorial } from "../tutorial/queue.js";
-import type { SaveV3 } from "../shared/save-v3";
+import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { currentLang, moodText, natureName, petName, t } from "./text.js";
 import { waitText } from "../shared/count-text.js";
 
@@ -23,7 +23,8 @@ export interface PetMenuModel {
   play?: { enabled: boolean; reason?: string };
   ball?: { enabled: boolean; hidden: boolean }; // 볼 줄의 모양 — 박스 개체는 흐리게, 볼 안의 개체는 `꺼내기`. 없으면 `볼에 넣기`
   forms?: PetMenuForm[]; // 공유 sid 계열·모습 바꾸기 종(로토무)의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
-  formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 — 에이전트 작업 시간) — 줄만 흐리게 두고 말풍선은 없다. 이유는 적지 않는다
+  formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 — 그 개체의 파티 작업 시간) — 줄만 흐리게 두고 말풍선은 없다. 이유는 적지 않는다
+  formsCatalog?: boolean; // 도구를 쓰는 묶음(로토무) — 말풍선 머리가 `모습 바꾸기 · 카탈로그 1개를 써요`, 맨 아래 줄이 `로토무 · 원래대로`
   move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체에만 둔다
   sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
 }
@@ -32,6 +33,8 @@ export interface PetMenuForm {
   name: string;
   current: boolean; // 지금 모습 — 누를 수 없다
   portrait?: string; // 초상의 data URI
+  back?: boolean; // 도구 없이 돌아가는 기본 종 줄(로토무) — 오른쪽 글자가 `원래대로`
+  noItem?: boolean; // 도구가 없어 누를 수 없다 — 이유는 적지 않는다
 }
 export interface TrayMenuModel {
   hidden: boolean;
@@ -70,6 +73,8 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 //   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다
 export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
   const forms = model.forms && model.forms.length > 1 ? model.forms : null;
+  // 누를 줄이 하나도 없으면(해금 전, 또는 카탈로그가 없고 지금 기본 종) `모습 바꾸기` 줄을 흐리게 둔다 (Figma 03 `Form Bubble / Rotom`, 2026-10-05)
+  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current || f.noItem));
   return [
     { label: petLine(model), ...(model.status ? { sublabel: model.status } : {}), enabled: false },
     { type: "separator" },
@@ -79,16 +84,16 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
     ...(act.ball ? [{ label: t(model.ball?.hidden ? "menu.unball" : "menu.ball"), enabled: model.ball?.enabled !== false, click: () => act.ball?.() }] : []),
     ...(act.detail ? [{ label: t("menu.detail"), click: () => act.detail?.() }] : []),
     // 흐린 줄도 click 을 둔다 — 누르는 동작도 하위 줄도 없는 비활성 줄은 메뉴 창이 이름·상태 같은 머리 줄로 그린다 (src/view/menu-view.ts)
-    ...(forms && model.formsLocked ? [{ label: t("menu.form"), enabled: false, click: () => undefined }] : []),
-    ...(forms && !model.formsLocked
+    ...(forms && formsOff ? [{ label: t("menu.form"), enabled: false, click: () => undefined }] : []),
+    ...(forms && !formsOff
       ? [
           {
             label: t("menu.form"),
-            toolTip: t("menu.form.title"),
+            toolTip: t(model.formsCatalog ? "menu.form.title.catalog" : "menu.form.title"),
             submenu: forms.map((f) => ({
               label: f.name,
-              sublabel: t(f.current ? "menu.form.now" : "menu.form.go"),
-              enabled: !f.current,
+              sublabel: t(f.current ? "menu.form.now" : f.back ? "menu.form.back" : "menu.form.go"),
+              enabled: !f.current && !f.noItem,
               ...(f.portrait ? { icon: f.portrait } : {}),
               click: () => act.form?.(f.species),
             })),
@@ -143,6 +148,21 @@ export interface PetMenuState {
   firstCare: { keep: string | null; wait: string | null } | null; // 첫 돌봄 튜토리얼 2/2 — 남길 항목 라벨과 말풍선의 대기 글자
 }
 
+// 모습 줄 — 도구를 쓰는 묶음(로토무)은 다섯 모습 다음 맨 아래에 기본 종을 `원래대로` 로 둔다. 도구가 없으면 모습 줄을 흐리게 (2026-10-05 사용자 결정)
+function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): PetMenuForm[] {
+  const rule = shiftRuleOf(pet.species);
+  const have = rule ? (save.bag[rule.item] ?? 0) > 0 : true;
+  const rows = formsOf(pet).map((slug): PetMenuForm => ({
+    species: slug,
+    name: petName(slug),
+    current: slug === pet.species,
+    ...(icons[slug] ? { portrait: icons[slug] } : {}),
+    ...(rule && slug === rule.base ? { back: true } : {}),
+    ...(rule && slug !== rule.base && !have ? { noItem: true } : {}),
+  }));
+  return rule ? [...rows.filter((f) => !f.back), ...rows.filter((f) => f.back)] : rows;
+}
+
 // 무대에 나온 개체는 stagePet(종·성격)이 있다. 관리 창에서 연 메뉴는 저장의 값만으로 만든다. 만들 수 없으면 null
 export function petMenuOf(
   save: SaveV3 | null,
@@ -166,8 +186,9 @@ export function petMenuOf(
     feed,
     play,
     ball: { enabled: slot != null, hidden: slot?.hidden === true },
-    forms: formsOf(pet).map((slug) => ({ species: slug, name: petName(slug), current: slug === pet.species, ...(o.formIcons[slug] ? { portrait: o.formIcons[slug] } : {}) })),
-    ...(isFormLocked(save, pet) ? { formsLocked: true } : {}),
+    forms: menuForms(save, pet, o.formIcons),
+    ...(isFormLocked(pet) ? { formsLocked: true } : {}),
+    ...(shiftRuleOf(pet.species) ? { formsCatalog: true } : {}),
     // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
     ...(slot ? {} : { move: { enabled: true } }),
     sell: { enabled: sale.ok },

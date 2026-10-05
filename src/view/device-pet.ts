@@ -13,7 +13,8 @@ import { snapshotPet } from "./result-lines.js";
 //   친밀도 100         보너스 합과 내역(기분 단계 · 버프). 보너스가 없으면 기본 속도
 function careLineOf(pet: PetView, inParty: boolean): PetDeviceOpen["careLine"] {
   const care = pet.care;
-  if (!inParty) return { title: "포인트 적립 없음", desc: "파티에 있을 때만 포인트가 쌓여요" };
+  // 다른 프리셋도 0.2배로 쌓으므로 "파티나 프리셋" 이다 (2026-10-05, Figma 05 `Party / Detail Device / Box Pokemon`)
+  if (!inParty) return { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" };
   if (!care) return { title: "포인트 적립 기본", desc: "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요" };
   if (care.bonus <= 0) return { title: "포인트 적립 기본", desc: "기분이 좋거나 버프가 켜지면 더 빨리 쌓여요" };
   const parts = care.parts.map((p) => `${p.kind === "mood" ? `기분 ${p.name}` : p.name} +${p.bonus}%`);

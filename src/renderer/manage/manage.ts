@@ -6,6 +6,7 @@
 // 모달은 하나만 뜬다. 어느 모달인지는 `dialog` 하나가 가진다 — 겹쳐 띄우지 않는다.
 import { api } from "./api.js";
 import { drawSellPet } from "./pet-menu.js";
+import { drawSellDuplicates } from "./sell-dup.js";
 import { drawDaycare, drawHatched, drawUnder } from "./daycare.js";
 import { goTo, openDialogOrPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
@@ -32,7 +33,7 @@ import { onDexClosed, setDexLinkHooks } from "./dex-link.js";
 import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature, drawNatureTarget } from "./nature.js";
-import { drawForm, drawMega } from "./pet-forms.js";
+import { drawEvolveConfirm, drawForm, drawMega } from "./pet-forms.js";
 import { restoreSearchFocus, typingSearch } from "./search.js";
 import { alertEl } from "./widgets.js";
 import { loadArt } from "./art-cache.js";
@@ -201,6 +202,7 @@ function drawSaveFailing(): void {
 // 여닫기·가림막·스크롤 되돌리기는 dialog.ts. 여기서는 모달 종류마다 폭·헤더 표시·그리기를 등록한다
 // 폭: 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
 registerDialog({ kind: "evolve", shape: "dialog", draw: (d) => drawEvolve(d.petId, d.to) });
+registerDialog({ kind: "evolve-confirm", shape: "dialog", draw: (d) => drawEvolveConfirm(d.petId, d.to) });
 registerDialog({ kind: "nature", shape: "dialog", draw: (d) => drawNature(d.petId, d.pick, d.itemId) });
 registerDialog({ kind: "nature-target", shape: "dialog", draw: (d) => drawNatureTarget(d.itemId) });
 // 칩을 바꿔도 창 높이가 그대로다 — 줄 수가 달라도 대화상자가 움직이지 않는다
@@ -225,6 +227,7 @@ registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => dr
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
 registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to) });
 registerDialog({ kind: "sell-pet", shape: "dialog", draw: (d) => drawSellPet(d.petId, d.price) });
+registerDialog({ kind: "sell-dup", shape: "dialog sell-dup", draw: (d) => drawSellDuplicates(d.off ?? []) });
 registerDialog({ kind: "notes", shape: "dialog settings notes", draw: (d) => drawNotes(d.pick) });
 registerDialog({ kind: "notes-new", shape: "dialog settings notes-new", draw: (d) => drawNotesNew(d.version) });
 registerDialog({ kind: "mail", shape: "dialog settings mail", headerButton: "open-mail", draw: () => drawMail() });

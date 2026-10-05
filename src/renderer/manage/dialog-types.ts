@@ -12,7 +12,8 @@ export type Hatched = { petId: string; slotIndex?: number } | { eggId: string };
 // 모달 하나. 어느 것인지와 그 모달만 쓰는 값을 함께 담는다
 export type Dialog =
   | { kind: "pet"; petId: string }
-  | { kind: "evolve"; petId: string; to?: string } // 진화 확인 — to 는 고른 후보
+  | { kind: "evolve"; petId: string; to?: string } // 진화 창 — to 는 고른 후보
+  | { kind: "evolve-confirm"; petId: string; to: string } // 진화 확인 — 진화 창의 `진화` 가 연다. `취소` 는 진화 창으로
   | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
   | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
   | { kind: "achievements" }
@@ -28,6 +29,7 @@ export type Dialog =
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
+  | { kind: "sell-dup"; off?: string[] } // 중복 팔기 — 박스 머리 메뉴의 `중복 팔기`. off 는 판매에서 뺀 개체
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
   | { kind: "mail" } // 우편함 — 헤더 봉투 단추

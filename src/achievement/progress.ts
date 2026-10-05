@@ -63,6 +63,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
     }
     case "find": return save.find?.seq ?? 0;
     case "work": return Math.floor(save.totals.workMs / 3600_000);
+    case "agent": return save.totals.workMs > 0 ? 1 : 0;
     case "streak": return save.counts.streak;
     case "trade": return save.counts.traded;
     case "shown": return shownCount(save);
@@ -86,7 +87,7 @@ function goalOf(cond: AchievementCond): number {
 
 const UNIT: Partial<Record<AchievementCond["kind"], string>> = { work: "시간", streak: "일" };
 // 진행도를 보이지 않는 조건 — 한 번에 채우는 조건과 옛 업적의 조건
-const NO_PROGRESS: readonly AchievementCond["kind"][] = ["level", "affinity", "shown", "party"];
+const NO_PROGRESS: readonly AchievementCond["kind"][] = ["level", "affinity", "shown", "party", "agent"];
 
 // 업적창의 진행도 — 기준이 2 이상인 셀 수 있는 조건만. 현재 값은 기준을 넘지 않게 보인다
 export function progressOf(save: SaveV3, id: string, opts?: DexOptions): { now: number; goal: number; unit: string } | null {

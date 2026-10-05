@@ -4,13 +4,15 @@
 // 화면은 무엇을 보여 줄지만 정하고 값 검사는 하지 않는다. 허용 밖의 값이면 저장을 바꾸지 않는다.
 // 놀이공간 영역(`playRegion`)은 영역 그리기 창이 적용할 때 보낸다. 영역과 `region` 방식을 한 번에 바꾼다.
 // 놀이공간 화면(`playScreen`)은 화면 목록이나 화면 고르기 창이 보낸다. 고른 화면과 `screen` 방식을 한 번에 바꾼다 (2026-09-28 여러 화면)
+// 알림(`notify`)은 종류 하나를 켜거나 끈다. 값은 { kind, on } 이다 (2026-10-05 알림 끄기)
 import { screenRefOf } from "../shared/raw.js";
+import { NOTIFY_KINDS, type NotifyKind } from "../shared/names/banners.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { REGION_MIN } from "./rules.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen";
+export type SettingKey = "language" | "startOnLogin" | "sound" | "volume" | "sleepAfterMin" | "playArea" | "playRegion" | "playScreen" | "notify";
 
 export type SettingFailure = ReasonOf<"bad-args" | "bad-value">;
 
@@ -26,7 +28,7 @@ export const SETTING_CHOICES = {
   playArea: ["all", "screen", "region"],
 } as const;
 
-const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion", "playScreen"];
+const KEYS: readonly SettingKey[] = ["language", "startOnLogin", "sound", "volume", "sleepAfterMin", "playArea", "playRegion", "playScreen", "notify"];
 
 // 소리 크기와 놀이공간 최소 크기의 값은 src/state/rules.ts 에 있다
 
@@ -69,6 +71,16 @@ export function setSetting(save: SaveV3, key: SettingKey, value: unknown): SetRe
     if (!SETTING_CHOICES.sleepAfterMin.some((v) => v === value)) return { ok: false, reason: "bad-value" };
     s.sleepAfterMin = value as number;
     return { ok: true, key, value };
+  }
+  if (key === "notify") {
+    const v = value != null && typeof value === "object" ? (value as { kind?: unknown; on?: unknown }) : {};
+    if (!NOTIFY_KINDS.some((k) => k === v.kind) || typeof v.on !== "boolean") return { ok: false, reason: "bad-value" };
+    const kind = v.kind as NotifyKind;
+    const off = new Set(s.notifyOff);
+    if (v.on) off.delete(kind);
+    else off.add(kind);
+    s.notifyOff = NOTIFY_KINDS.filter((k) => off.has(k)); // 늘 같은 순서로 둔다
+    return { ok: true, key, value: { kind, on: v.on } };
   }
   if (key === "playRegion") {
     const rect = regionOf(value);

@@ -18,7 +18,8 @@ import type { FailCode } from "../shared/names/online-codes.js";
 export const bagMany = (item: BagItemView): boolean => item.effect === "exp" || item.effect === "level";
 
 // 가방에서 쓸 수 있는 도구 — 효과가 있는 도구. 진화용 도구는 파티 상세의 진화 줄에서 쓴다. 성격민트는 은퇴했다 (src/bag/mint.ts)
-export const bagUsable = (item: BagItemView): boolean => !item.evolution && item.effect !== undefined && item.effect !== "nature";
+// 모습 바꾸기 도구(로토무카탈로그, effect form)는 가방에서 쓰지 않는다 — 모습 바꾸기가 하나씩 쓴다. 판매 쪽만 있다 (2026-10-05)
+export const bagUsable = (item: BagItemView): boolean => !item.evolution && item.effect !== undefined && item.effect !== "nature" && item.effect !== "form";
 
 const partyPets = (v: Snapshot): PetView[] => v.party.slots.map((s) => s.pet).filter((p): p is PetView => p != null);
 

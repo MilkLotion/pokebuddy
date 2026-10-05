@@ -1,4 +1,4 @@
-// 진화 도구 8종 도트 그림 — `node dist/tools/art/build-evo-item-art.js` 로 assets/items/<도구 id>.png 를 만든다
+// 진화 도구 8종 도트 그림 — `node dist/tools/art/build-evo-item-art.js [도구 id …]` 로 assets/items/<도구 id>.png 를 만든다. id 를 주면 그 그림만
 //
 // PokeAPI·pokesprite 에 그림이 없는 진화 도구를 원작 9세대 아이콘(포켓몬 위키, 160×160)을 보고 30×30 도트로 옮긴다.
 // 순서: 면적 평균 축소 → 도구별 색 수 줄이기(k-평균) → 외톨이 화소 정리 → 1px 외곽선.
@@ -97,11 +97,13 @@ function toDot(file: string, k: number) {
 
 fs.mkdirSync(SRC, { recursive: true });
 fs.mkdirSync(OUT, { recursive: true });
-for (const [id, [url, k]] of Object.entries(ICONS)) {
+const want = process.argv.slice(2);
+const todo = Object.entries(ICONS).filter(([id]) => want.length === 0 || want.includes(id));
+for (const [id, [url, k]] of todo) {
   const src = path.join(SRC, id + ".png");
   // 원본 PNG — 위키는 기본으로 WebP 를 주므로 format=original 을 붙인다
   if (!fs.existsSync(src)) execFileSync("curl", ["-sL", "-A", UA, "-H", "Accept: image/png", "-o", src, url + "&format=original"]);
   if (fs.readFileSync(src).subarray(1, 4).toString() !== "PNG") throw new Error(`PNG 가 아니다: ${src} — 위키가 요청을 막았을 수 있다`);
   fs.writeFileSync(path.join(OUT, id + ".png"), png(toDot(src, k), N, N));
 }
-process.stdout.write(`그림 ${Object.keys(ICONS).length}개 → ${path.relative(process.cwd(), OUT)}\n`);
+process.stdout.write(`그림 ${todo.length}개 → ${path.relative(process.cwd(), OUT)}\n`);

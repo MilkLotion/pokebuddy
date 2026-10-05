@@ -1,4 +1,4 @@
-// 설정창의 진화 확인 — 진화 트리로 후보를 고르고 바로 진화한다 (P10p)
+// 설정창의 진화 창 — 진화 트리로 후보를 고르고 `진화` 로 진화 확인 창을 연다 (P10p, 확인 창은 ./pet-forms.ts drawEvolveConfirm)
 // 후보마다 결과 종과 상태를 보인다. 가능한 후보가 하나면 그것을 고른 채로 연다.
 // `취소` 는 아무것도 바꾸지 않는다 (docs/specs/game.md "진화 확인 화면에서 취소한 개체는 진화 가능 상태를 유지한다")
 import type { EvoNodeView } from "../../shared/model/detail.js";
@@ -6,14 +6,10 @@ import { buttonEl, el } from "../ui/dom.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
-import { sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, drawDialog, openAnyDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
 import { petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
-
-// 지도 — 기본형 → 리전폼 진화(지도 간선)에 쓴다. 돌 간선은 돌 대신, 레벨·친밀도 간선은 조건과 함께 (src/dex/evolve.ts, worklog-mac/records/region-map/record.md)
-const REGION_MAP = "region-map";
 
 // 진화 사슬 — 도감·상점과 같은 트리(src/tx/shop-detail.ts). 종마다 한 번 받는다. 받기 전·못 받으면 후보 줄로 그린다
 const evoTrees = new Map<string, EvoNodeView | null>();
@@ -38,7 +34,8 @@ function evoTreeOf(species: string): EvoNodeView | null {
 const EVOLVE_RADIAL = { ...RADIAL, width: 340 };
 const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 
-// 진화 창 — 진화 트리에서 고르고 `진화` 로 바로 진화한다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서", "고르고 진화하면 바로 진화되게").
+// 진화 창 — 진화 트리에서 고르고 `진화` 를 누르면 진화 확인 창이 뜬다 (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 사용자 결정 "진화트리 이용해서").
+// 2026-09-30 의 "고르고 진화하면 바로 진화되게" 를 2026-10-05 사용자 결정 "진화 누르면 진화하시겠습니까? 그거 창 뜨게" 로 바꿨다
 // 지금 종은 회색 톤·굵은 이름, 고른 후보는 청록 톤, 조건이 모자란 후보는 흐리게. 준비된 후보가 있으면 첫 후보를 미리 고른다.
 // 도감에서 해금 안 된 후보는 도감 기기 창과 같이 검은 실루엣과 ??? 로 둔다 — 고르기·진화는 된다 (2026-10-01 사용자 결정, Figma 05 `1126:23890`)
 export function drawEvolve(petId: string, to?: string): void {
@@ -104,7 +101,7 @@ export function drawEvolve(petId: string, to?: string): void {
     const info = el("div", "info-box");
     info.appendChild(el("div", undefined, `${pet.name} → ${picked.name}`));
     // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도 하나 ("지도 1개를 씁니다.")
-    const uses = [...new Set([...(picked.item ? [picked.item] : []), ...(picked.map ? [REGION_MAP] : [])])].map((id) => ui.view?.bag.find((b) => b.id === id)?.name ?? (id === REGION_MAP ? "지도" : id));
+    const uses = picked.uses;
     const useText = uses.map((name) => `${name} 1개`).join("와 "); // "1개" 뒤라 조사는 늘 "와"·"를"
     const kept = NATURE_SHOWN ? "레벨·친밀도·성격은 그대로입니다." : "레벨·친밀도는 그대로입니다.";
     info.appendChild(el("div", "note", uses.length ? `${useText}를 씁니다. ${kept}` : kept));
@@ -114,10 +111,7 @@ export function drawEvolve(petId: string, to?: string): void {
   }
 
   const go = actionButtonEl("진화", true, !picked, () => {
-    if (!picked) return;
-    void sendCommand("evolve", pet.id, { to: picked.to }).then((ok) => {
-      if (ok) openAnyDialog({ kind: "pet", petId });
-    });
+    if (picked) openAnyDialog({ kind: "evolve-confirm", petId, to: picked.to });
   });
   // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
   dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back.to)), go));

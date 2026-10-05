@@ -12,10 +12,13 @@ export const MEGA_RULES = {
 // 변덕 — 마리별로 어긋난 주기에 한 축이 잠깐 바뀐다 (src/dex/natures.ts)
 export const QUIRK_RULES = { periodMs: 90_000, durationMs: 10_000 };
 
-// 모습 바꾸기 해금 — 공유 계열이 아닌 모습 바꾸기 종(로토무)은 계정의 에이전트 작업 시간(save.totals.workMs)이 이 값 이상이면 모든 모습이 한꺼번에 열린다.
-// 키는 data/regional.json shift 의 기본 종. 수치는 docs/specs/balance.md "로토무의 모습 바꾸기" (2026-10-04 사용자 결정 "에이전트 작업 시간", "50시간")
-export const SHIFT_RULES: { workMs: Readonly<Record<string, number>> } = {
-  workMs: { rotom: 50 * 60 * 60_000 },
+// 모습 바꾸기 해금과 값 — 키는 data/regional.json shift 의 기본 종(로토무). 수치는 docs/specs/balance.md "로토무의 모습 바꾸기"
+//   workMs  그 개체가 지금 파티에 있는 동안 받은 에이전트 작업 시간(PetV3.workMs)이 이 값 이상이면 모든 모습이 열린다
+//   item    기본 종이 아닌 모습으로 바꿀 때마다 쓰는 도구. 기본 종으로 돌아갈 때는 쓰지 않는다
+// (2026-10-05 사용자 결정 "누적말고, 구한 후 2시간으로(로토무가 파티에 있던채로 2시간)", "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게".
+//  그 전에는 계정 작업 시간 50시간이었다)
+export const SHIFT_RULES: Readonly<Record<string, { workMs: number; item: string }>> = {
+  rotom: { workMs: 2 * 60 * 60_000, item: "rotom-catalog" },
 };
 
 // 해금 정리

@@ -7,6 +7,7 @@
 //   - 멈추는 값은 시각이 아니라 남은 시간으로 저장한다. PC 잠금·절전 중에는 시간이 흐르지 않기 때문이다.
 //   - 시간 값은 전부 ms 정수다. 화면 표기만 초·분으로 반올림한다.
 import type { Gender, NatureId } from "./species.js";
+import type { NotifyKind } from "./names/banners.js";
 
 // ── 저장이 함께 쓰는 작은 모양 ─────────────────────────────────────────────────
 // 시각은 전부 ms (Date.now())
@@ -19,7 +20,7 @@ export interface PetDaily {
   plays: number;
   pokes: number;
   presence: number; // 오늘 켜 두기로 오른 친밀도
-  work: number; // 오늘 일한 양(토큰·시간)으로 오른 친밀도
+  work: number; // 옛 작업 보너스로 오른 친밀도 진행. 2026-10-05 작업 보너스를 없앤 뒤로 쌓지 않는다 — 저장 모양만 남긴다
   turns: number; // 오늘 턴 완료 횟수
 }
 
@@ -91,7 +92,8 @@ export interface PetV3 {
   stage: number; // 이 개체가 진화한 횟수
   evolved: string[]; // 거쳐 온 종
   forms?: string[]; // 공유 sid 계열의 고를 수 있는 종 (src/dex/forms.ts). 그 밖의 개체에는 없다
-  mega?: MegaV3; // 메가진화 진행과 모습 (src/dex/mega.ts). 메가 모습이 있는 종이 친밀도 100 이 된 뒤에 생긴다
+  mega?: MegaV3;
+  workMs?: number; // 지금 파티에 있는 동안 받은 에이전트 작업 시간 — 작업 시간 해금이 있는 모습 바꾸기 종(로토무)만 세고 조건 값에서 멈춘다 (src/dex/forms.ts tickFormWork). 2026-10-05 에 더했다 // 메가진화 진행과 모습 (src/dex/mega.ts). 메가 모습이 있는 종이 친밀도 100 이 된 뒤에 생긴다
   daily: PetDaily;
 }
 
@@ -105,7 +107,7 @@ export type SlotUnlockBy = "shop" | "achievement";
 export interface PartySlotV3 {
   state: SlotState;
   petId?: string; // state 가 pokemon 일 때만
-  hidden?: boolean; // 숨김 여부. 숨겨도 포인트와 친밀도는 쌓인다
+  hidden?: boolean; // 숨김 여부. 숨겨도 친밀도는 쌓이고 포인트는 절반이다. 프리셋을 적용하면 풀린다
   unlockBy?: SlotUnlockBy; // state 가 locked 일 때 어떻게 여는가
 }
 
@@ -199,6 +201,7 @@ export interface SettingsV3 {
   sound: boolean;
   volume: number; // 소리 크기 0~100 (src/state/settings.ts SOUND_RULES). 2026-09-27 에 더했다
   sleepAfterMin: number;
+  notifyOff: NotifyKind[]; // 끈 알림 종류 (src/shared/names/banners.ts NOTIFY_KINDS). 2026-10-05 에 더했다. 옛 저장은 빈 목록이다
   playArea: { mode: PlayAreaMode; rect: { x: number; y: number; w: number; h: number } | null; screen: ScreenRefV3 | null }; // screen 은 한 화면 방식의 고른 화면. null 이면 주 화면
   display: Record<string, unknown>;
 }

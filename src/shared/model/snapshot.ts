@@ -21,6 +21,9 @@ export interface EvolutionView {
   need?: string; // 모자란 조건의 화면 문구 — "Lv.16 필요", "물의돌 필요", "밤에만"
   item?: string; // 진화용 도구가 조건이면 그 도구 id. 가방의 돌로 대상을 고를 때 쓴다
   map?: true; // 지도 간선(기본형 → 리전폼) — 지도도 쓴다. 가방의 지도로 대상을 고를 때 쓴다
+  uses: string[]; // 진화에 쓰는 도구의 화면 이름 — 돌·지도. 진화 창 안내와 진화 확인 창의 화살표가 읽는다
+  types: string[]; // 결과 종의 화면 타입 이름 — 해금 안 된 종이면 비어 있다(이름처럼 가린다)
+  typeIds: string[];
 }
 
 export interface PetView {
@@ -58,6 +61,7 @@ export interface PetView {
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
   shiftForms?: FormView[]; // 모습 바꾸기 종(로토무)의 고를 수 있는 모습 — 해금 뒤에만. 박스 칸은 지금 종 그대로라 forms 와 나눈다
+  formItem?: { name: string; base: string }; // 모습 바꾸기에 쓰는 도구의 이름과 도구 없이 돌아가는 기본 종(로토무 — 로토무카탈로그). 확인 창 안내 줄이 쓴다
   look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
   mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
   megaGoal?: MegaGoalView; // 메가진화하는 종인데 메가스톤이 아직 없는 개체만
@@ -215,6 +219,7 @@ export interface SettingsView {
   playArea: "all" | "screen" | "region"; // 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면)
   hasRegion: boolean; // 영역을 이미 그렸는가
   sleepChoices: { value: number; label: string }[]; // 잠들기 기준 선택지 — 0 은 잠들지 않음 (src/state/settings.ts SETTING_CHOICES)
+  notifyOff: string[]; // 끈 알림 종류 — hatch · evolve · achievement · find (src/shared/names/banners.ts NOTIFY_KINDS)
 }
 
 export interface Snapshot {
@@ -229,6 +234,7 @@ export interface Snapshot {
   achievements: { total: number; unclaimed: number; list: AchievementView[] };
   settings: SettingsView;
   natures: NatureOption[];
+  sellDuplicates: { petId: string; price: number }[]; // 중복 팔기 후보 — 박스 순서. 같은 종에서 한 마리를 남긴 나머지 (src/shop/sell-pet.ts duplicateCandidates, 2026-10-05)
   limits: { boxNameMax: number; presetNameMax: number }; // 이름 칸 글자 수 상한 (src/box/rules.ts BOX_RULES.nameMax — 프리셋 이름도 같다)
   sizeLevels: number; // 그림 크기 단계 수 — 상세의 크기 단추 수 (src/party/size.ts SIZE_STEPS)
   tutorial: string | null; // 관리 창에 지금 보여 줄 튜토리얼 id(shop · hatch · achievement). 해당 탭에 있을 때만 화면이 코치마크를 그린다 (src/tutorial/queue.ts)

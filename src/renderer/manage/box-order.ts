@@ -1,4 +1,4 @@
-// 설정창의 박스 머리 메뉴와 박스 순서 모달 — 햄버거 단추(박스 순서·교환), 박스 타일 끌어 놓기 (P10 17)
+// 설정창의 박스 머리 메뉴와 박스 순서 모달 — 햄버거 단추(교체·박스 순서·교환·중복 팔기), 박스 타일 끌어 놓기 (P10 17)
 import { buttonEl, el } from "../ui/dom.js";
 import { boxUi, hold } from "./box-state.js";
 import { dropZone, startDrag } from "./box-move.js";
@@ -50,6 +50,8 @@ export function boxMenuEl(): HTMLElement {
     openAnyDialog({ kind: "trade" });
     void loadTrade();
   });
+  // 중복 팔기 — 같은 종에서 한 마리를 남기고 나머지를 한 번에 판다 (2026-10-05 사용자 결정, Figma 05 `Box / Sell Duplicates`)
+  item("중복 팔기", () => openAnyDialog({ kind: "sell-dup" }));
   wrap.appendChild(menu);
   return wrap;
 }

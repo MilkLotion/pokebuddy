@@ -20,6 +20,8 @@
   "menu.form.title": "Change form · click to switch",
   "menu.form.now": "Now",
   "menu.form.go": "Switch",
+  "menu.form.title.catalog": "Change form · uses 1 catalog",
+  "menu.form.back": "Revert",
   "menu.move": "Move",
   "menu.sell": "Sell",
   "menu.later": "{what} · {when}",

@@ -350,3 +350,35 @@ button.icon-button,
 .box-grid.holding .cell:not(.dragging):hover {
   background: var(--accent-bg);
 }
+/* 중복 팔기 모달 — Figma 05 `Box / Sell Duplicates`, 03 `Sell Duplicates Body` (2026-10-05). 폭 560, 안내 한 줄, 후보 칸 5열(Box Slot Compact 86×66),
+   마릿수와 받는 포인트. 팔 칸은 톤 배경(.cell.selected), 뺀 칸은 흰 칸이다. 테두리로 강조하지 않는다 */
+.dialog.sell-dup {
+  width: min(560px, calc(100vw - 40px));
+}
+.sell-dup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+.sell-dup-body .hint,
+.sell-dup-body .sum {
+  margin: 0;
+}
+.sell-dup-body .hint {
+  color: var(--muted);
+}
+.sell-dup-body .sum {
+  font-weight: 600;
+}
+.sell-dup-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 86px);
+  gap: 8px;
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+}
+.sell-dup-grid .cell.tall {
+  height: 66px;
+  gap: 2px;
+}

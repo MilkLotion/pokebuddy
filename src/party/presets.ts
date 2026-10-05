@@ -3,7 +3,7 @@
 // 세 가지 규칙만 지킨다
 //   1. 적용한 프리셋의 칸은 party.slots 다. 나머지 프리셋의 칸은 party.presets 에 번호 순으로 둔다
 //   2. 개체의 자리는 프리셋 칸 하나 또는 박스 칸 하나다. 프리셋에 든 개체는 박스에 없다
-//   3. 적용은 칸을 잠금·숨김째 맞바꾼다. 박스는 건드리지 않는다
+//   3. 적용은 칸을 잠금째 맞바꾼다. 새로 적용한 프리셋의 숨김은 모두 푼다 (2026-10-05 사용자 결정). 박스는 건드리지 않는다
 import { BOX_RULES } from "../box/rules.js";
 import { PARTY_RULES } from "./rules.js";
 import type { PartySlotV3, PartyV3 } from "../shared/save-v3";
@@ -90,7 +90,7 @@ export function addPreset(save: Party, slots: PartySlotV3[]): number {
   return index;
 }
 
-// 프리셋을 적용한다 — party.slots 와 그 프리셋의 칸을 통째로 맞바꾼다
+// 프리셋을 적용한다 — party.slots 와 그 프리셋의 칸을 통째로 맞바꾼다. 들어온 칸의 숨김은 푼다
 export function applyPreset(save: Party, index: number): Outcome<PresetFailure> {
   const target = slotsOfPreset(save, index);
   if (!target) return { ok: false, reason: "no-preset" };
@@ -101,6 +101,7 @@ export function applyPreset(save: Party, index: number): Outcome<PresetFailure> 
   presets[from] = save.party.slots;
   presets[index] = null;
   save.party.presets = presets;
+  for (const s of target) if (s.state === "pokemon") s.hidden = false;
   save.party.slots = target;
   save.party.active = index;
   return { ok: true };

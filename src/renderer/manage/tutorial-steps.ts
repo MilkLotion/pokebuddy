@@ -151,7 +151,7 @@ export const GUIDES: Record<string, Guide> = {
     steps: [
       { title: "로그인하면 다른 컴퓨터에서도 이어서 해요", body: "지금 진행도 익명 저장으로 서버에 올라가요.", target: dialogScroll },
       // CLI 목록 전체 — 첫 줄부터 아래 안내 줄까지
-      { title: "CLI 를 연결하면 더 빨리 자라요", body: "에이전트가 일하는 동안 친밀도와 포인트가 두 배로 쌓여요.", target: dialogScroll, also: () => dialogEl.querySelector<HTMLElement>(".scroll .agents-note") },
+      { title: "CLI 를 연결하면 업적이 열려요", body: "에이전트와 함께 일한 시간이 쌓이면 함께 일하기 업적 보상을 받아요.", target: dialogScroll, also: () => dialogEl.querySelector<HTMLElement>(".scroll .agents-note") },
     ],
   },
 };

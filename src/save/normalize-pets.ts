@@ -113,6 +113,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     stage: nonNeg(raw.stage),
     evolved: strings(raw.evolved),
     ...(Array.isArray(raw.forms) ? { forms: strings(raw.forms) } : {}), // 2026-09-26 에 더했다. 공유 sid 계열만 가진다
+    ...(typeof raw.workMs === "number" && Number.isFinite(raw.workMs) && raw.workMs > 0 ? { workMs: Math.round(raw.workMs) } : {}), // 2026-10-05 에 더했다. 로토무 모습 바꾸기 해금
     ...(megaOf(raw.mega) ? { mega: megaOf(raw.mega)! } : {}), // 2026-10-02 에 더했다. 메가진화 진행과 모습
     daily: normalizeDaily(raw.daily, date),
   };

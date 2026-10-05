@@ -233,6 +233,15 @@ try {
     assert.equal(click2("settings.set", "sleepAfterMin", { value: 0 }).ok, true, "0 은 잠들지 않음");
     assert.equal(snapshotOfGame(game)?.settings.sleepAfterMin, 0);
 
+    // 알림 — 종류 하나씩 켜고 끈다. 기본은 모두 켬 (2026-10-05 알림 끄기)
+    assert.deepEqual(snapshotOfGame(game)?.settings.notifyOff, [], "기본은 모두 켬");
+    assert.equal(click2("settings.set", "notify", { value: { kind: "find", on: false } }).ok, true);
+    assert.equal(click2("settings.set", "notify", { value: { kind: "hatch", on: false } }).ok, true);
+    assert.deepEqual(snapshotOfGame(game)?.settings.notifyOff, ["hatch", "find"], "끈 종류 — 늘 같은 순서");
+    assert.equal(click2("settings.set", "notify", { value: { kind: "hatch", on: true } }).ok, true);
+    assert.deepEqual(snapshotOfGame(game)?.settings.notifyOff, ["find"]);
+    for (const v of [{ kind: "mega", on: false }, { kind: "find" }, "find"]) assert.equal(click2("settings.set", "notify", { value: v }).reason, "bad-value", JSON.stringify(v));
+
     const unknown = click2("settings.set", "없는키", { value: 1 });
     assert.equal(unknown.ok, false);
     assert.equal(unknown.reason, "bad-args");
@@ -242,13 +251,16 @@ try {
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
     const list = snapshotOfGame(game)?.achievements.list ?? [];
-    assert.equal(list.length, 38, "업적 38개");
+    assert.equal(list.length, 43, "업적 43개");
     assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");
     assert.equal(two?.name, "두 마리 함께 꺼내기");
     assert.equal(two?.reward, "파티 칸 +1", "보상은 화면 문구로");
     assert.equal(two?.state, "locked", "한 마리뿐이라 아직 달성 전");
-    assert.equal(snapshotOfGame(game)?.achievements.unclaimed, 0);
+    // 작업 시간이 쌓인 저장이면 `처음 함께 일하기`(첫 작업 신호, 2026-10-05)만 받을 수 있다
+    const claimable = list.filter((a) => a.state === "achieved").map((a) => a.id);
+    assert.deepEqual(claimable.filter((id) => id !== "work-1h"), []);
+    assert.equal(snapshotOfGame(game)?.achievements.unclaimed, claimable.length);
 
     // 달성하지 않은 업적의 보상은 받을 수 없다
     const claim = click2("achievement.claim", "show-two", {});

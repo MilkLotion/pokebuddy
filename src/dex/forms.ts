@@ -9,10 +9,11 @@
 //             스탯은 바꾼 종을 따른다(종에서 읽으므로 따로 할 일이 없다)
 // 한 개체이므로 같은 sid 가 두 파티 칸을 차지하지 않고, 박스 사용 수도 1마리다.
 //
-// 공유 계열이 아닌 모습 바꾸기 종(로토무 — docs/specs/game.md "로토무의 모습 바꾸기")도 같은 바꾸기를 쓴다.
-//   고를 종   data/regional.json shift 의 묶음 전부(로토무와 다섯 모습)
-//   해금      묶음의 기본 종에 작업 시간 조건(src/dex/rules.ts SHIFT_RULES)이 있으면 계정의 에이전트 작업 시간이 그 이상이어야 바꾼다.
+// 모습 바꾸기 묶음(data/regional.json shift)에 규칙(src/dex/rules.ts SHIFT_RULES)이 있는 종(로토무 — docs/specs/game.md "로토무의 모습 바꾸기")
+//   해금      그 개체가 지금 파티에 있는 동안 받은 에이전트 작업 시간(PetV3.workMs)이 조건 이상이어야 바꾼다.
 //             해금 전에도 목록은 준다 — 메뉴는 `모습 바꾸기` 줄을 흐리게 둔다(isFormLocked)
+//   도구      기본 종이 아닌 모습으로 바꿀 때마다 도구(로토무카탈로그) 하나를 쓴다. 기본 종으로 돌아갈 때는 쓰지 않는다(formItemOf)
+// 로토무는 업적 보상 종이라 공유 계열(isShared)로도 판정된다 — 해금·도구 규칙은 공유 계열 여부와 상관없이 본다
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
 import { shiftGroupOf } from "./regional.js";
@@ -23,7 +24,7 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already">;
+export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already" | "no-item">;
 
 export type FormResult = Outcome<FormFailure> & {
   petId?: string;
@@ -45,17 +46,34 @@ export function formsOf(pet: PetV3, opts?: DexOptions): string[] {
   return [...new Set([...own, ...own.flatMap((slug) => shiftGroupOf(slug, opts))])];
 }
 
-// 이 종의 모습 바꾸기에 드는 에이전트 작업 시간 — 묶음의 기본 종에 조건이 없으면 null
-export function shiftWorkMs(slug: string, opts?: DexOptions): number | null {
+// 이 종이 든 모습 바꾸기 묶음의 규칙과 기본 종 — 규칙이 없으면 null
+export function shiftRuleOf(slug: string, opts?: DexOptions): { base: string; workMs: number; item: string } | null {
   const base = shiftGroupOf(slug, opts)[0];
-  return base ? (SHIFT_RULES.workMs[base] ?? null) : null;
+  const rule = base ? SHIFT_RULES[base] : undefined;
+  return base && rule ? { base, ...rule } : null;
 }
 
-// 모습 바꾸기가 아직 잠겼는가 — 작업 시간 조건이 있는 묶음(로토무)만. 공유 계열은 잠그지 않는다
-export function isFormLocked(save: Pick<SaveV3, "totals">, pet: PetV3, opts?: DexOptions): boolean {
-  if (isShared(pet, opts)) return false;
-  const need = shiftWorkMs(pet.species, opts);
-  return need != null && (save.totals?.workMs ?? 0) < need;
+// 이 종의 모습 바꾸기에 드는 개체 작업 시간 — 규칙이 없으면 null
+export const shiftWorkMs = (slug: string, opts?: DexOptions): number | null => shiftRuleOf(slug, opts)?.workMs ?? null;
+
+// 모습 바꾸기가 아직 잠겼는가 — 규칙이 있는 묶음(로토무)만. 그 개체의 작업 시간(PetV3.workMs)으로 본다
+export function isFormLocked(pet: PetV3, opts?: DexOptions): boolean {
+  const rule = shiftRuleOf(pet.species, opts);
+  return rule != null && (pet.workMs ?? 0) < rule.workMs;
+}
+
+// 그 모습으로 바꿀 때 쓰는 도구 — 규칙이 있는 묶음에서 기본 종이 아닌 모습으로 갈 때만. 아니면 null
+export function formItemOf(pet: PetV3, to: string, opts?: DexOptions): string | null {
+  const rule = shiftRuleOf(pet.species, opts);
+  return rule && to !== rule.base ? rule.item : null;
+}
+
+// 개체 작업 시간 — 시간 적용이 지금 파티 칸 개체마다 부른다. 규칙이 있는 묶음의 개체만 세고 조건 값에서 멈춘다
+export function tickFormWork(pet: PetV3, workMs: number, opts?: DexOptions): void {
+  if (workMs <= 0) return;
+  const rule = shiftRuleOf(pet.species, opts);
+  if (!rule || (pet.workMs ?? 0) >= rule.workMs) return;
+  pet.workMs = Math.min(rule.workMs, (pet.workMs ?? 0) + workMs);
 }
 
 // 진화한 직후에 부른다 — 이전 종을 남기고, 갈래 진화면 다른 결과 종도 함께 준다(도감 획득 기록 포함).
@@ -78,8 +96,14 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   const forms = formsOf(pet, opts);
   if (!forms.length) return { ok: false, reason: "not-shared" };
   if (typeof species !== "string" || !forms.includes(species)) return { ok: false, reason: "bad-form" };
-  if (isFormLocked(save, pet, opts)) return { ok: false, reason: "form-locked" };
+  if (isFormLocked(pet, opts)) return { ok: false, reason: "form-locked" };
   if (species === pet.species) return { ok: false, reason: "already" };
+  const item = formItemOf(pet, species, opts);
+  if (item && (save.bag[item] ?? 0) < 1) return { ok: false, reason: "no-item" };
+  if (item) {
+    save.bag[item] = (save.bag[item] ?? 0) - 1;
+    if (save.bag[item] <= 0) delete save.bag[item];
+  }
   const from = pet.species;
   pet.forms = forms;
   pet.species = species;

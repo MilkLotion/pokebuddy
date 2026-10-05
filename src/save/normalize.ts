@@ -23,6 +23,7 @@ import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
 import { SETTING_CHOICES } from "../state/settings.js";
+import { NOTIFY_KINDS } from "../shared/names/banners.js";
 import { boolOr as bool, choiceOr, clampNum as clamp, intOr as int, isRawObject, nonNeg, strOr as str, stringList as strings, uniqueList as unique, type Raw } from "./raw-values.js";
 
 // 놀이공간 방식 — 옛 "full"(주 화면)과 모르는 값은 "screen"(고른 화면 없음 = 주 화면)이다 (2026-09-28 여러 화면)
@@ -68,6 +69,7 @@ const emptySettings = (): SettingsV3 => ({
   sound: true,
   volume: SOUND_RULES.defaultVolume,
   sleepAfterMin: 5,
+  notifyOff: [], // 알림은 모두 켠 채로 시작한다 (docs/specs/game.md "알림 끄기")
   playArea: { mode: "screen", rect: null, screen: null }, // 새 저장은 주 화면 (2026-09-28 사용자 결정)
   display: {},
 });
@@ -174,6 +176,8 @@ function normalizeSettings(raw: unknown): SettingsV3 {
     sound: bool(r.sound, base.sound),
     volume: clamp(int(r.volume, base.volume), 0, 100), // 옛 저장에는 없어 기본값이다
     sleepAfterMin: choiceOr(r.sleepAfterMin, SETTING_CHOICES.sleepAfterMin, base.sleepAfterMin), // 0 은 잠들지 않음
+    // 끈 알림 — 아는 종류만, 겹치지 않게. 옛 저장에는 없어 빈 목록이다
+    notifyOff: Array.isArray(r.notifyOff) ? NOTIFY_KINDS.filter((k) => (r.notifyOff as unknown[]).includes(k)) : [],
     playArea: {
       mode: playModeOf(area.mode),
       rect: rect ? { x: int(rect.x), y: int(rect.y), w: nonNeg(rect.w), h: nonNeg(rect.h) } : null,

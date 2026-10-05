@@ -19,8 +19,13 @@
 //   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수
 //   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만
-//   form-lock   작업 시간 조건이 있는 모습(로토무의 다섯 모습)인 개체가 있으면 계정의 작업 시간이 그 조건 이상이어야 한다 (src/dex/rules.ts SHIFT_RULES)
-//   mega        메가스톤을 지닌 개체는 친밀도·레벨 조건을 채워야 한다. 메가 모습은 메가스톤이 있고 그 종의 모습이어야 한다 (src/dex/mega.ts)
+//   form-work   개체 작업 시간(PetV3.workMs)의 증가 ≤ 계정 작업 시간 증가, 조건 값 이하 (src/dex/forms.ts tickFormWork)
+//   form-lock   기본 종이 아닌 모습(로토무의 다섯 모습)으로 새로 바뀐 개체는 개체 작업 시간이 조건 이상이어야 한다 (src/dex/rules.ts SHIFT_RULES)
+//   form-item   그렇게 바뀐 개체 수 ≤ 그사이 쓴 도구(로토무카탈로그) 수 (2026-10-05 사용자 결정 "다 서버에서 검사")
+//   mega        메가스톤을 지닌 개체는 친밀도·레벨 조건을 채워야 한다. 메가 모습은 메가스톤이 있고 그 종의 모습이어야 한다 (src/dex/mega.ts).
+//               새로 메가스톤이 생긴 개체는 파티 시간·돌봄 횟수 조건도 채워야 한다
+//   mega-bond   메가 파티 시간(mega.bondMs) 증가 ≤ 틈, 조건 값 이하
+//   mega-care   메가 돌봄 횟수(mega.care) 증가 ≤ 밥 주기·놀아주기 쿨타임 횟수 + 장난감, 조건 값 이하
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
 //   eggs        알은 6개 이하
@@ -43,7 +48,7 @@ export interface VerifyData {
   achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
-  shiftWork?: Record<string, number>; // 모습 슬러그 → 그 모습이 되는 데 드는 작업 시간(ms) (src/dex/rules.ts SHIFT_RULES). 없으면 form-lock 규칙을 보지 않는다
+  shiftRules?: Record<string, { base: string; workMs: number; item: string }>; // 규칙이 있는 모습 바꾸기 묶음의 종(기본 종 포함) → 규칙 (src/dex/rules.ts SHIFT_RULES). 없으면 form-* 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
   maxExp: number; // 모든 성장 곡선의 100레벨 누적 경험치 중 최대
@@ -57,7 +62,8 @@ export interface VerifyData {
   rules: {
     pointMs: number; // 가중 시간 이만큼에 1P
     maxPartySlots: number;
-    maxEarnFactor: number; // 친밀도 배율(2) × 작업 배율(2) × 돌봄 보너스 최대(2.8)
+    maxEarnFactor: number; // 친밀도 배율(2) × 돌봄 보너스 최대(2.8)
+    otherPresetEarn?: number; // 다른 프리셋 개체의 적립을 파티 칸 수로 환산한 값 — 개체 수 × 친밀도 배율(2) × 적립 배율(0.2). 없으면 0(옛 데이터)
     findPointsMax: number; // 줍기 한 번 최대 포인트
     mintRefund: number;
     sellRatio: number;
@@ -65,7 +71,10 @@ export interface VerifyData {
     speciesMinPrice: number; // 종 지정 구매 최저가
     megaLevel?: number; // 메가스톤 조건의 레벨 (src/save/rules.ts MEGA_RULES)
     megaAffinity?: number; // 메가스톤 조건의 친밀도
-    affinityPerHour: number; // 시간 적립 최대(버프·작업 반영)
+    megaBondMs?: number; // 메가스톤 조건의 파티 시간 (MEGA_RULES.bondMs). 없으면 mega-bond 를 보지 않는다
+    megaCare?: number; // 메가스톤 조건의 돌봄 횟수 (MEGA_RULES.care). 없으면 mega-care 를 보지 않는다
+    careCountPerHour?: number; // 밥 주기·놀아주기 쿨타임 기준 한 시간 최대 횟수 — 장난감은 따로 센다
+    affinityPerHour: number; // 시간 적립 최대(버프 반영)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
     careOnce: number; // 밥 한 번 + 놀기 한 번 — 짧은 틈에도 한 번씩은 할 수 있다
     toyAffinity: number;
@@ -204,6 +213,9 @@ interface Pet {
   forms: string[];
   megaStone: boolean; // 메가스톤을 지녔다
   megaOn: string; // 지금 메가 모습. 기본 모습이면 빈 글자
+  megaBond: number; // 친밀도 100 뒤 파티에서 보낸 시간(ms)
+  megaCare: number; // 친밀도 100 뒤 돌봄 횟수
+  workMs: number; // 지금 파티에서 받은 에이전트 작업 시간(ms) — 로토무 모습 바꾸기 해금
 }
 
 const petOf = (v: unknown): Pet | null => {
@@ -221,6 +233,9 @@ const petOf = (v: unknown): Pet | null => {
     forms: list(v.forms).map(str),
     megaStone: isObj(v.mega) && v.mega.stone === true,
     megaOn: isObj(v.mega) ? str(v.mega.on) : "",
+    megaBond: isObj(v.mega) ? num(v.mega.bondMs) : 0,
+    megaCare: isObj(v.mega) ? num(v.mega.care) : 0,
+    workMs: num(v.workMs),
   };
 };
 
@@ -382,7 +397,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const gonePets = petsOf(prev).filter((p) => !keptIds.has(p.id)).length;
   const vanishedPets = pos(petSeqOf(next) - prevPetSeq - petsOf(next).filter((p) => idNo(p.id) > prevPetSeq).length);
   const petSell = (gonePets + vanishedPets) * num(r.petSellMax);
-  const earnPerHour = (HOUR / r.pointMs) * r.maxPartySlots * r.maxEarnFactor;
+  const earnPerHour = (HOUR / r.pointMs) * (r.maxPartySlots * r.maxEarnFactor + num(r.otherPresetEarn));
   const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint;
   add("points", balanceOf(next) - balanceOf(prev), pointAllowance);
   // 그사이 쓴 포인트의 상한 — 산 도구·알·개체의 값은 이 안이어야 한다
@@ -432,13 +447,6 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     }
   }
 
-  // form-lock — 작업 시간 조건이 있는 모습(로토무의 다섯 모습)은 계정의 작업 시간이 그 이상이어야 한다. 작업 시간은 줄지 않으므로 지금 저장만 본다
-  if (data.shiftWork) {
-    for (const p of nextPets) {
-      const need = data.shiftWork[p.species];
-      if (need != null) add("form-lock", need, workOf(next), p.id);
-    }
-  }
 
   // 같은 개체 — id 와 since 가 같다. 새 개체 — 그 밖
   const prevPets = petsOf(prev);
@@ -512,6 +520,42 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (p.shiny && !q.shiny) turnedShiny += 1;
   }
   add("shiny", turnedShiny + tradedTurnedShiny, potionBudget);
+
+  // form-work · form-lock · form-item — 로토무 모습 바꾸기 (2026-10-05 사용자 결정 "다 서버에서 검사")
+  if (data.shiftRules) {
+    const workGain = pos(workOf(next) - workOf(prev)) + r.slackMs * m;
+    const changed: Record<string, number> = {}; // 도구 → 새로 바뀐 개체 수
+    const prevPet = (id: string): Pet | undefined => same.find((x) => x.p.id === id)?.q;
+    for (const p of nextPets) {
+      const rule = data.shiftRules[p.species];
+      const q = prevPet(p.id);
+      add("form-work", pos(p.workMs - (q?.workMs ?? 0)), workGain, p.id);
+      if (rule) add("form-work", p.workMs, rule.workMs, p.id);
+      if (!rule || p.species === rule.base || (q && q.species === p.species)) continue;
+      add("form-lock", rule.workMs, p.workMs, p.id);
+      changed[rule.item] = (changed[rule.item] ?? 0) + 1;
+    }
+    for (const [item, n] of Object.entries(changed)) {
+      const price = data.items[item]?.price ?? 0;
+      add("form-item", n, pos(had(item) - (nextBag[item] ?? 0)) + (price ? Math.floor(leftover / price) : 0));
+    }
+  }
+
+  // mega-bond · mega-care · mega(새 메가스톤) — 시간·횟수 조건 (2026-10-05 사용자 결정 "메가스톤이랑 … 다 서버에서 검사")
+  if (r.megaBondMs != null && r.megaCare != null && r.careCountPerHour != null) {
+    const careCap = r.careCountPerHour * hours * m + 2; // 쿨타임마다 밥 한 번·놀기 한 번, 짧은 틈에도 한 번씩
+    let careOver = 0;
+    for (const p of nextPets) {
+      const q = same.find((x) => x.p.id === p.id)?.q;
+      add("mega-bond", pos(p.megaBond - (q?.megaBond ?? 0)), hours * HOUR * m, p.id);
+      add("mega-bond", p.megaBond, r.megaBondMs, p.id);
+      add("mega-care", p.megaCare, r.megaCare, p.id);
+      careOver += pos(p.megaCare - (q?.megaCare ?? 0) - careCap);
+      const fresh = !q || !q.megaStone;
+      if (p.megaStone && fresh && !tradedFrom.has(p.id) && (p.megaBond < r.megaBondMs || p.megaCare < r.megaCare)) add("mega", 1, 0, p.id);
+    }
+    add("mega-care", careOver, toyBudget); // 쿨타임을 넘는 몫은 장난감으로 놀아 줬어야 한다 — 장난감은 모든 개체가 함께 쓴다
+  }
 
   // new-pets · pet-id · shiny(새 개체)
   const prevIds = new Set(prevPets.map((p) => p.id));

@@ -1,8 +1,8 @@
-// 설정창의 메가진화·모습 바꾸기 — 메가스톤 표식, 메가진화 창, 모습 바꾸기 확인 (P10p)
+// 설정창의 메가진화·모습 바꾸기·진화 확인 — 메가스톤 표식, 메가진화 창, 모습 바꾸기 확인, 진화 확인 (P10p)
 // 규칙은 src/dex/mega.ts. 메가스톤을 지닌 개체는 박스 칸에 메가스톤 표식이 붙고, 파티 상세 기기 창의 초상 표식을 누르면 메가진화한다.
 // 표식 그림은 키스톤이다 (2026-10-02 사용자 결정 "다 키스톤으로"). PokeAPI 그림은 30×30 이고 구슬은 그 안의 14×14(8,9)다 — 구슬만 잘라 보인다
 import type { EvoNodeView } from "../../shared/model/detail.js";
-import type { FormView, PetView } from "../../shared/model/snapshot.js";
+import type { EvolutionView, FormView, PetView } from "../../shared/model/snapshot.js";
 import { josa } from "../../shared/josa.js";
 import { el } from "../ui/dom.js";
 import { evoDrawer } from "../ui/evo-tree.js";
@@ -74,24 +74,17 @@ export function drawMega(petId: string, to?: string): void {
     return;
   }
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
-  const slot = findPartySlot(pet.id);
-  const where = slot != null ? `파티 ${slot + 1}번 칸` : "박스";
-  const kept = NATURE_SHOWN ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
+  const where = whereText(pet);
+  const kept = KEPT;
   const change = (species: string): void => {
     void sendCommand("pet.form", pet.id, { species }).then((ok) => {
       if (ok) closeDialog();
     });
   };
-  // 확인 창 — 바뀔 모습 카드 + 안내 줄
+  // 확인 창 — 지금 모습 → 바뀔 모습 카드 + 안내 줄
   const confirm = (title: string, form: FormView, lines: string[], label: string): void => {
     dialogEl.append(...dialogHead(title, ""));
-    const card = el("div", "nat-card");
-    const tags = el("div", "tags");
-    form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
-    tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
-    card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
-    const row = el("div", "compare");
-    row.appendChild(card);
+    const row = compareEl(pet, formCardEl(pet, form.species, form.name, form.types, form.typeIds));
     const info = el("div", "info-box");
     info.appendChild(el("div", undefined, `지금 ${pet.name} · ${where}`));
     for (const text of lines) info.appendChild(el("div", "note", text));
@@ -156,7 +149,41 @@ export function drawMega(petId: string, to?: string): void {
   dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back.to)), go));
 }
 
-// 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `473:15738`
+// 확인 창 안내의 공통 줄
+const KEPT = NATURE_SHOWN ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요";
+const whereText = (pet: PetView): string => {
+  const slot = findPartySlot(pet.id);
+  return slot != null ? `파티 ${slot + 1}번 칸` : "박스";
+};
+// 쓰는 도구 한 줄 — "천둥의돌 1개를 써요", 둘이면 "물의돌 1개와 지도 1개를 써요" ("1개" 뒤라 조사는 늘 "와"·"를")
+const usesText = (uses: readonly string[]): string => `${uses.map((name) => `${name} 1개`).join("와 ")}를 써요`;
+
+// 지금 모습 → 바뀔 모습 두 카드 — 모습 바꾸기·메가진화·원래 모습·진화 확인이 같이 쓴다
+// (Figma 03 `Form Confirm Panel` `1315:47600` 의 `before-after`, 2026-10-05 사용자 결정 "이전모습 -> 다음모습 으로 … 진화처럼")
+// locked — 도감에서 해금 안 된 진화 결과. 진화 트리처럼 검은 실루엣으로 그린다
+function formCardEl(pet: PetView, species: string, name: string, types: string[], typeIds: string[], locked = false): HTMLElement {
+  const card = el("div", "nat-card");
+  const tags = el("div", "tags");
+  types.forEach((t, i) => tags.appendChild(typeBadgeEl(t, typeIds[i])));
+  tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
+  card.append(portraitOf(species, pet.shiny, locked ? "portrait locked" : "portrait"), el("div", "name", name), tags);
+  return card;
+}
+// 화살표 위에는 쓰는 도구 이름 — 로토무카탈로그·진화 돌·지도. 없으면 화살표만
+// (2026-10-05 사용자 결정 "화살표에 필요한아이템 적어", Figma 03 `Form Confirm Panel` 의 `step`)
+function compareEl(pet: PetView, after: HTMLElement, uses: readonly string[] = []): HTMLElement {
+  const row = el("div", "compare form-compare");
+  const arrow = el("div", "compare-arrow");
+  if (uses.length) arrow.appendChild(el("div", "compare-item", uses.join(" · ")));
+  const mark = el("div", "compare-mark", "→");
+  mark.setAttribute("aria-hidden", "true");
+  arrow.appendChild(mark);
+  row.append(formCardEl(pet, pet.look, pet.name, pet.types, pet.typeIds), arrow, after);
+  return row;
+}
+
+// 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `1315:47601`. 도구를 쓰는 모습(로토무)은 화살표와 안내에 `로토무카탈로그`
+// 안내는 세 줄이다 — 도구가 있으면 `같은 칸에서 바뀌어요` 대신 도구 줄
 export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
   const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
@@ -165,24 +192,45 @@ export function drawForm(petId: string, to: string): void {
     return;
   }
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
-  const card = el("div", "nat-card");
-  const tags = el("div", "tags");
-  form.types.forEach((name, i) => tags.appendChild(typeBadgeEl(name, form.typeIds[i])));
-  tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
-  card.append(portraitOf(form.species, pet.shiny, "portrait"), el("div", "name", form.name), tags);
-  const row = el("div", "compare");
-  row.appendChild(card);
-  const slot = findPartySlot(pet.id);
+  const item = pet.formItem && to !== pet.formItem.base ? pet.formItem.name : null;
+  const row = compareEl(pet, formCardEl(pet, form.species, form.name, form.types, form.typeIds), item ? [item] : []);
   const info = el("div", "info-box");
-  info.append(
-    el("div", undefined, `지금 ${pet.name} · ${slot != null ? `파티 ${slot + 1}번 칸` : "박스"}`),
-    el("div", "note", NATURE_SHOWN ? "레벨·친밀도·성격은 그대로예요" : "레벨·친밀도는 그대로예요"),
-    el("div", "note", "같은 칸에서 바뀌어요"), // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
-  );
+  info.appendChild(el("div", undefined, `지금 ${pet.name} · ${whereText(pet)}`));
+  if (item) info.appendChild(el("div", "note", usesText([item])));
+  info.appendChild(el("div", "note", KEPT));
+  if (!item) info.appendChild(el("div", "note", "같은 칸에서 바뀌어요")); // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
   const go = actionButtonEl("바꾸기", true, false, () => {
     void sendCommand("pet.form", pet.id, { species: to }).then((ok) => {
       if (ok) closeDialog();
     });
   });
   dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
+}
+
+// 진화 확인 — 진화 창의 `진화` 가 연다. 지금 종 → (쓰는 도구) → 진화 뒤 종
+// (2026-10-05 사용자 결정 "진화 누르면 진화하시겠습니까? 그거 창 뜨게 … 그 모달 응용해서", Figma 05 진화 확인 화면)
+// 안내는 세 줄 — 위치, 쓰는 도구(없으면 그대로인 값), 되돌릴 수 없다. `취소` 는 고른 후보 그대로 진화 창으로 돌아간다
+export function drawEvolveConfirm(petId: string, to: string): void {
+  const pet = petInView(petId);
+  const c: EvolutionView | undefined = pet?.evolutions.find((x) => x.to === to && x.ready);
+  // 후보가 없으면 닫는다 — 진화가 끝나 새 스냅샷으로 다시 그릴 때도 여기로 온다(진화 창으로 돌리면 진화 뒤 종의 진화 창이 남는다)
+  if (!pet || !c) {
+    closeDialog();
+    return;
+  }
+  const back: Dialog = { kind: "evolve", petId, to };
+  dialogEl.append(...dialogHead(`${c.name}${toParticle(c.name)} 진화할까요?`, ""));
+  const row = compareEl(pet, formCardEl(pet, c.to, c.name, c.types, c.typeIds, !c.known), c.uses);
+  const info = el("div", "info-box");
+  info.append(
+    el("div", undefined, `지금 ${pet.name} · ${whereText(pet)}`),
+    el("div", "note", c.uses.length ? usesText(c.uses) : KEPT),
+    el("div", "note", "진화는 되돌릴 수 없어요"),
+  );
+  const go = actionButtonEl("진화", true, false, () => {
+    void sendCommand("evolve", pet.id, { to: c.to }).then((ok) => {
+      if (ok) openAnyDialog({ kind: "pet", petId });
+    });
+  });
+  dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back)), go));
 }

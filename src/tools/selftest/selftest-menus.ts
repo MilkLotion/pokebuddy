@@ -103,13 +103,14 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.deepEqual(jump.labels, { feed: t("menu.feed"), play: t("menu.play") });
 }
 
-// (6) 로토무 — 해금 전에는 `모습 바꾸기` 줄만 흐리고 말풍선(하위 줄)이 없다. 에이전트 작업 50시간이면 여섯 모습 말풍선 (docs/specs/game.md "로토무의 모습 바꾸기")
+// (6) 로토무 — 해금 전에는 `모습 바꾸기` 줄만 흐리고 말풍선(하위 줄)이 없다. 개체 작업 2시간이면 다섯 모습 + 맨 아래 `로토무 · 원래대로` 말풍선.
+//     카탈로그가 없으면 모습 줄이 흐리고, 누를 줄이 없으면 `모습 바꾸기` 줄도 흐리다 (2026-10-05, Figma 03 `Form Bubble / Rotom`)
 {
   const s = seed();
   s.pets.push(pet({ id: "p4", species: "rotom", level: 20 }));
   s.party.slots[2] = { state: "pokemon", petId: "p4", hidden: false };
   const shut = menuOf(s, "p4")!.model;
-  assert.equal(shut.formsLocked, true, "50시간 미만은 잠김");
+  assert.equal(shut.formsLocked, true, "개체 작업 2시간 미만은 잠김");
   assert.equal(shut.forms?.length, 6);
   const shutItem = petMenu(shut, { form: () => undefined }).find((m) => m.label === t("menu.form"));
   assert.equal(shutItem?.enabled, false, "흐린 줄");
@@ -117,11 +118,25 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(shutItem?.sublabel, undefined, "이유를 적지 않는다");
   const shutRow = menuView(petMenu(shut, { form: () => undefined }), "켜짐").find((r) => r.kind === "item" && r.label === t("menu.form"));
   assert.ok(shutRow && shutRow.kind === "item" && shutRow.disabled && !shutRow.sub, "메뉴 창에서도 머리 줄이 아니라 흐린 항목이다 (menu-view)");
-  s.totals.workMs = 180_000_000;
+  s.pets.find((p) => p.id === "p4")!.workMs = 7_200_000;
+  const noBook = menuOf(s, "p4")!.model;
+  assert.equal(noBook.formsLocked, undefined, "2시간이면 열림");
+  assert.equal(petMenu(noBook, { form: () => undefined }).find((m) => m.label === t("menu.form"))?.enabled, false, "카탈로그가 없고 지금 로토무면 누를 줄이 없다");
+  s.bag["rotom-catalog"] = 1;
   const open = menuOf(s, "p4")!.model;
-  assert.equal(open.formsLocked, undefined, "50시간이면 열림");
   const openItem = petMenu(open, { form: () => undefined }).find((m) => m.label === t("menu.form"));
-  assert.equal(Array.isArray(openItem?.submenu) ? openItem.submenu.length : 0, 6, "로토무와 다섯 모습");
+  const rows = Array.isArray(openItem?.submenu) ? openItem.submenu : [];
+  assert.equal(openItem?.toolTip, t("menu.form.title.catalog"), "머리 글 — 카탈로그 1개를 써요");
+  assert.deepEqual(rows.map((r) => r.label), ["히트로토무", "워시로토무", "프로스트로토무", "스핀로토무", "커트로토무", "로토무"], "다섯 모습 다음 맨 아래 로토무");
+  assert.deepEqual(rows.map((r) => r.sublabel), [t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.now")]);
+  // 다른 모습이면 맨 아래 줄은 `원래대로`, 카탈로그가 없어도 누를 수 있다
+  s.pets.find((p) => p.id === "p4")!.species = "rotom-heat";
+  delete s.bag["rotom-catalog"];
+  const heat = petMenu(menuOf(s, "p4")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  const heatRows = Array.isArray(heat?.submenu) ? heat.submenu : [];
+  assert.equal(heat?.enabled !== false, true, "원래대로를 누를 수 있으니 줄이 살아 있다");
+  assert.deepEqual(heatRows.map((r) => r.enabled), [false, false, false, false, false, true], "지금 모습·카탈로그 없는 모습은 흐리고 원래대로만 누른다");
+  assert.equal(heatRows[5]?.sublabel, t("menu.form.back"));
   assert.equal(menuOf(s, "p1")!.model.forms?.length ?? 0, 0, "모습이 없는 종은 줄이 없다");
 }
 

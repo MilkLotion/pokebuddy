@@ -45,10 +45,10 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 38개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
+// (1) 업적 43개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = achievementDefs();
-  assert.equal(list.length, 38);
+  assert.equal(list.length, 43);
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
@@ -58,12 +58,13 @@ function seed(): SaveV3 {
     assert.equal(kinds.filter(Boolean).length, 1, `보상은 한 종류 ${id}`);
   }
   const byGroup = Object.fromEntries(GROUPS.map((g) => [g, list.filter(([, d]) => d.group === g).length]));
-  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 7 });
+  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 12 });
   const old = ["show-two", "starter-final", "work-100h", "party-three"];
   const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
   // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전의 색)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼의 모습)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
-  assert.deepStrictEqual(rewardSpecies().sort(), ["arceus", "ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "togepi"]);
+  // 로토무는 CLI 첫 연결(첫 작업 신호) 보상이다 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상으로")
+  assert.deepStrictEqual(rewardSpecies().sort(), ["arceus", "ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "rotom", "togepi"]);
   // 업적 보상 종은 모두 단일 포켓몬이다 — 팔거나 교환할 수 없고 상점에서 팔지 않는다 (2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
   for (const slug of rewardSpecies()) {
     assert.ok(singleSpecies().has(slug), `단일 포켓몬 ${slug}`);
@@ -217,6 +218,24 @@ function seed(): SaveV3 {
   assert.equal(s.party.slots.filter((x) => x.state === "locked").length, before, "적용한 프리셋의 칸은 그대로");
   assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length, 1, "첫 프리셋의 업적 칸 하나가 열렸다");
   process.stdout.write("(9-0) 업적 칸은 첫 프리셋에  ok\n");
+}
+
+// (9-0) 함께 N시간 일하기 사다리 — 1·10·50·300·1000시간 (2026-10-05 사용자 결정, CLI 적립 2배를 업적으로 옮김)
+{
+  const s = seed();
+  // 처음 함께 일하기 — 첫 작업 신호(작업 시간 > 0)에 로토무 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상으로")
+  s.totals.workMs = 0;
+  assert.equal(isAchieved(s, "work-1h"), false, "작업 신호가 없으면 아니다");
+  s.totals.workMs = 1;
+  assert.equal(isAchieved(s, "work-1h"), true, "첫 작업 신호");
+  const ladder = [10, 50, 100, 300, 500, 1000];
+  for (const h of ladder) {
+    s.totals.workMs = h * 3600_000 - 1;
+    assert.equal(isAchieved(s, `work-${h}h`), false, `${h}시간 미만이면 아니다`);
+    s.totals.workMs = h * 3600_000;
+    assert.equal(isAchieved(s, `work-${h}h`), true, `${h}시간이면 달성`);
+  }
+  process.stdout.write("(9-0) 함께 N시간 일하기 사다리  ok\n");
 }
 
 // (9-1) 함께 100시간 일하기 — 일한 누적 시간 100시간이면 달성. 시간 흐름에서도 판정한다(옛 저장은 다음 판정에 달성)

@@ -53,6 +53,7 @@ export const COMMANDS = {
   "pet.set": { via: "tx", cli: true },
   "pet.form": { via: "tx", cli: true },
   "pet.sell": { via: "tx" },
+  "pet.sell.many": { via: "tx" }, // 중복 팔기 — args.petIds (2026-10-05)
   "starter.pick": { via: "tx" },
   // 설정 — 저장 설정은 settings.set(실행기), 창 표시 두 항목(hidden·clickThrough)은 display.set(메인, src/main/app/commands.ts). 한 이름이 한 길만 탄다
   "settings.set": { via: "tx" },

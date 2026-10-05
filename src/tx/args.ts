@@ -37,6 +37,8 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
     case "play":
     case "pet.sell":
       return { petId: target ?? str(a.petId) };
+    case "pet.sell.many":
+      return { petIds: Array.isArray(a.petIds) ? a.petIds : undefined };
     case "achievement.claim":
       return { id: target ?? str(a.id) };
     case "tutorial.skip":

@@ -11,5 +11,6 @@
   "rare-candy": { "ko": "이상한사탕", "en": "Rare Candy", "price": 200, "effect": "level", "amount": 1, "group": "레벨 도구", "desc": "포켓몬에게 쓰면 레벨이 1 오른다. 레벨이 오르면 진화할 수도 있다.", "effectText": "레벨 +1" },
   "mint": { "ko": "성격민트", "en": "Mint", "price": 100, "effect": "nature", "amount": 0, "group": "성격 도구", "desc": "포켓몬의 성격을 지금과 다른 성격으로 바꾼다.", "effectText": "성격 바꾸기" },
   "shiny-potion": { "ko": "모습이 바뀌는 약", "en": "Shiny Potion", "price": 1200, "effect": "shiny-on", "amount": 0, "group": "모습 도구", "desc": "포켓몬에게 쓰면 색이 다른 모습(이로치)이 된다. 돌아오는 약으로 되돌릴 수 있다.", "effectText": "이로치 모습으로" },
+  "rotom-catalog": { "ko": "로토무카탈로그", "en": "Rotom Catalog", "gen": 4, "price": 150, "effect": "form", "amount": 0, "group": "모습 도구", "desc": "로토무가 좋아하는 가전제품이 실려 있다. 로토무의 모습을 바꿀 때마다 하나를 쓴다. 원래 모습으로 돌아갈 때는 쓰지 않는다.", "effectText": "로토무 모습 바꾸기 1번" },
   "normal-potion": { "ko": "돌아오는 약", "en": "Normal Potion", "price": 0, "effect": "shiny-off", "amount": 0, "group": "모습 도구", "desc": "이로치 모습인 포켓몬에게 쓰면 원래 모습으로 돌아온다.", "effectText": "원래 모습으로" }
 }

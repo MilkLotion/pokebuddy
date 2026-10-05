@@ -172,7 +172,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.deepEqual([where("p3")?.where, where("p3")?.inParty, where("p3")?.tutorial], [`${v.boxes[0]?.name} · 보관 중`, false, false]);
   assert.equal(where("없음"), undefined, "없는 개체면 닫는다");
   // 포인트 적립 줄과 막대 글자 — 박스 개체는 적립 없음, 친밀도 100 전은 기본
-  assert.deepEqual(where("p3")?.careLine, { title: "포인트 적립 없음", desc: "파티에 있을 때만 포인트가 쌓여요" });
+  assert.deepEqual(where("p3")?.careLine, { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" });
   assert.deepEqual(where("p1")?.careLine, { title: "포인트 적립 기본", desc: "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요" });
   const p1 = v.party.slots[0]?.pet;
   assert.deepEqual(where("p1")?.bars, { affinity: `${p1?.affinity}`, fullness: `55 · ${p1?.zoneText}`, mood: `${p1?.mood} · ${p1?.moodWord}` });

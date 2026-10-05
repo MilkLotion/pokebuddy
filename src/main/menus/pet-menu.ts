@@ -86,7 +86,7 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
       const forms = pet ? formsOf(pet) : [];
       const art = deps.portraits();
       // 모습 바꾸기 해금 전(로토무)은 말풍선이 없다 — 초상을 기다리지 않고 바로 띄운다
-      if (!save || !pet || forms.length < 2 || isFormLocked(save, pet) || !art) {
+      if (!save || !pet || forms.length < 2 || isFormLocked(pet) || !art) {
         pop(id, origin, {});
         return;
       }

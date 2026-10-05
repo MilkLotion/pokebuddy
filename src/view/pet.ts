@@ -13,8 +13,8 @@ import { TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { CareView, EvolutionView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
-import { formsOf, isFormLocked, isShared } from "../dex/forms.js";
-import { genderLookOf } from "../dex/regional.js";
+import { formsOf, isFormLocked, isShared, shiftRuleOf } from "../dex/forms.js";
+import { genderLookOf, REGION_MAP } from "../dex/regional.js";
 import { megaRivals } from "../party/mega-form.js";
 import { checkPetFree } from "../party/pet-actions.js";
 import { failTextOf } from "../shared/fail-text.js";
@@ -52,6 +52,10 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
     to: c.to,
     name: known(c.to) ? petName(c.to) : "???",
     known: known(c.to),
+    // 쓰는 도구 — 돌 진화의 돌, 지도 간선의 지도. 같은 도구는 한 번만
+    uses: [...new Set([...(c.need.kind === "item" ? [c.need.item] : []), ...(c.map ? [REGION_MAP] : [])])].map((id) => itemName(id)),
+    types: known(c.to) ? profileOf(c.to).types.map((x) => typeName(x)) : [],
+    typeIds: known(c.to) ? [...profileOf(c.to).types] : [],
     ready: c.ready && !locked,
     ...(c.ready && !locked ? {} : { need: locked && c.ready ? failTextOf("trade-locked", "trade").text : needText(c.lacks) }),
     ...(c.need.kind === "item" ? { item: c.need.item } : {}),
@@ -61,12 +65,15 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
 
 // 고를 수 있는 종 — 공유 sid 계열은 forms(박스 칸이 단체사진과 툴팁으로 보인다).
 // 모습 바꾸기 종(로토무)은 박스 칸이 지금 종 그대로라 shiftForms 에 둔다 — 모습 바꾸기 확인 창이 읽는다. 해금 전에는 없다
-function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForms"> {
+// 규칙이 있는 묶음(로토무)은 업적 보상 종이라 공유 계열로도 판정된다 — 그래도 박스 칸은 단체사진이 아니라 지금 종이다. 그래서 규칙을 먼저 본다
+function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForms" | "formItem"> {
   const list = formsOf(pet);
   if (list.length < 2) return {};
   const views = list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] }));
+  const rule = shiftRuleOf(pet.species);
+  if (rule) return isFormLocked(pet) ? {} : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base } };
   if (isShared(pet)) return { forms: views };
-  return isFormLocked(save, pet) ? {} : { shiftForms: views };
+  return isFormLocked(pet) ? {} : { shiftForms: views };
 }
 
 // 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다

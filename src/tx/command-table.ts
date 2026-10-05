@@ -6,7 +6,7 @@ import { checkPetFree, type PetAction } from "../party/pet-actions.js";
 import type { TxHandler } from "./executor";
 import { petIdOf } from "./handlers/args.js";
 import { boxMoveHandler, boxOrderHandler, boxRenameHandler, boxSortHandler } from "./handlers/box.js";
-import { buyHandler, openHandler, sellHandler, sellPetHandler, useHandler } from "./handlers/items.js";
+import { buyHandler, openHandler, sellHandler, sellPetHandler, sellPetsHandler, useHandler } from "./handlers/items.js";
 import { mailApplyHandler, mailReadHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
 import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, swapHandler, visibilityHandler } from "./handlers/party.js";
 import { evolveHandler, feedHandler, formHandler, homeHandler, playHandler, starterHandler } from "./handlers/pet.js";
@@ -33,6 +33,7 @@ const TX_COMMANDS = {
   "bag.use": { handler: useHandler, action: "use" },
   "bag.sell": { handler: sellHandler },
   "pet.sell": { handler: sellPetHandler },
+  "pet.sell.many": { handler: sellPetsHandler },
   "evolve": { handler: evolveHandler, action: "evolve" },
   "feed": { handler: feedHandler },
   "play": { handler: playHandler },

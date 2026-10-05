@@ -46,12 +46,14 @@ export function meterEl(label: string, value: number, zone?: string, live?: { pe
   return box;
 }
 
-// 거르개 칩 한 줄 — 도감·상점·설정이 같은 모양을 쓴다
-export function chipsEl(items: { id: string; label: string }[], current: string, pick: (id: string) => void): HTMLElement {
+// 거르개 칩 한 줄 — 도감·상점·설정이 같은 모양을 쓴다.
+// current 가 목록이면 여러 칩을 함께 눌린 상태로 둔다 — 설정의 알림 칩처럼 하나씩 켜고 끄는 줄 (2026-10-05)
+export function chipsEl(items: { id: string; label: string }[], current: string | readonly string[], pick: (id: string) => void): HTMLElement {
   const row = el("div", "chips");
+  const on = (id: string): boolean => (typeof current === "string" ? id === current : current.includes(id));
   for (const it of items) {
     const b = buttonEl("chip", it.label);
-    b.setAttribute("aria-pressed", String(it.id === current));
+    b.setAttribute("aria-pressed", String(on(it.id)));
     b.addEventListener("click", () => pick(it.id));
     row.appendChild(b);
   }

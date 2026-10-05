@@ -4,7 +4,7 @@ import { itemOf } from "../../bag/items.js";
 import { openEgg } from "../../egg/open.js";
 import { buyProduct } from "../../shop/buy.js";
 import { sellItem } from "../../shop/sell.js";
-import { sellPet } from "../../shop/sell-pet.js";
+import { sellPet, sellPets } from "../../shop/sell-pet.js";
 import type { TxHandler } from "../executor";
 import { isArgsRecord, petIdOf, reasonOf } from "./args.js";
 
@@ -110,4 +110,13 @@ export const sellPetHandler: TxHandler = (draft, args) => {
   const res = sellPet(draft, petId);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, species: res.species, earned: res.earned, balance: res.balance } };
+};
+
+// 중복 팔기 — 고른 박스 개체 여러 마리를 한 거래에서 판다. 하나라도 거절되면 아무것도 팔지 않는다 (2026-10-05, src/shop/sell-pet.ts sellPets)
+export const sellPetsHandler: TxHandler = (draft, args) => {
+  const raw = isArgsRecord(args) ? args.petIds : undefined;
+  if (!Array.isArray(raw) || !raw.every((id) => typeof id === "string" && id)) return { ok: false, reason: "bad-args" };
+  const res = sellPets(draft, raw as string[]);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { count: res.count, earned: res.earned, balance: res.balance } };
 };

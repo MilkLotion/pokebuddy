@@ -7,6 +7,7 @@
 // 시간 표기는 올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
 import { achievementName, itemName, petName, natureName } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
+import { duplicateCandidates } from "../shop/sell-pet.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { rewardPokemon, achievementDefs, rewardEgg, rewardItem, rewardPoints } from "../achievement/defs.js";
 import { BOX_RULES } from "../box/rules.js";
@@ -19,7 +20,7 @@ import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS } from "../party/size.js";
 import { progressTo } from "../dex/growth.js";
-import { isEvoItem, itemOf } from "../bag/items.js";
+import { evoOrder, inEvoCategory, itemOf } from "../bag/items.js";
 import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
@@ -104,13 +105,14 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
       const sale = sellPrice(id);
       const about = itemAbout(save, id);
       return {
-        id, icon: itemArtKey(id), name: itemName(id), count, evolution: isEvoItem(id),
+        id, icon: itemArtKey(id), name: itemName(id), count, evolution: inEvoCategory(id),
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),
       };
     })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    // 도구는 이름순, 진화 분류는 상점 진화 탭과 같은 순서 (src/bag/items.ts evoOrder)
+    .sort((a, b) => Number(a.evolution) - Number(b.evolution) || (a.evolution ? evoOrder(a, b) : a.name.localeCompare(b.name)));
 
   const achievements: AchievementView[] = achievementDefs().map(([id, def]) => {
     const row = save.achievements[id];
@@ -153,8 +155,10 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
       playArea: save.settings.playArea.mode,
       hasRegion: save.settings.playArea.rect != null,
       sleepChoices: sleepChoices(),
+      notifyOff: [...save.settings.notifyOff],
     },
     natures: natureOptions(),
+    sellDuplicates: duplicateCandidates(save),
     limits: { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax },
     sizeLevels: SIZE_STEPS.length,
     tutorial: manageTutorial(save, now),

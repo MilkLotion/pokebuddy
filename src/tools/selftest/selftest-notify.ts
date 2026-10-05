@@ -268,4 +268,27 @@ const keys = (state: NotifyState): string[] => state.queue.map((q) => q.key);
   process.stdout.write("(10) 서버 저장 받기  ok\n");
 }
 
-process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작·안내·서버 저장 받기)\n");
+// (11) 알림 끄기 — 끈 종류는 줄에 서지 않고 표시한 것으로 둔다. 다시 켜도 꺼 둔 동안의 배너는 뜨지 않는다 (2026-10-05)
+{
+  const s = empty(T0);
+  s.eggs.push(egg("e1", true));
+  s.settings.notifyOff = ["hatch"];
+  const off = refreshQueue(EMPTY, s, T0);
+  assert.equal(off.queue.length, 0, "끈 부화는 줄에 서지 않는다");
+  assert.ok(off.shown.includes("hatch:e1"), "표시한 것으로 둔다");
+  s.settings.notifyOff = [];
+  const back = refreshQueue(off, s, T0 + 1000);
+  assert.equal(back.queue.length, 0, "다시 켜도 꺼 둔 동안의 배너는 뜨지 않는다");
+  s.eggs.push(egg("e2", true));
+  assert.deepEqual(refreshQueue(back, s, T0 + 2000).queue.map((q) => q.key), ["hatch:e2"], "켠 뒤에 생긴 것은 선다");
+  // 기다리는 중에 끄면 줄에서 빠진다
+  const waiting = refreshQueue(EMPTY, s, T0);
+  assert.equal(waiting.queue.length, 2);
+  s.settings.notifyOff = ["hatch"];
+  const later = refreshQueue(waiting, s, T0 + 3000);
+  assert.equal(later.queue.length, 0, "기다리던 부화도 빠진다");
+  assert.ok(later.shown.includes("hatch:e1") && later.shown.includes("hatch:e2"));
+  process.stdout.write("(11) 알림 끄기  ok\n");
+}
+
+process.stdout.write("selftest-notify: 통과 (개별·순서·한 번·제외·진화 단계·첫 실행·문구·재시작·안내·서버 저장 받기·알림 끄기)\n");

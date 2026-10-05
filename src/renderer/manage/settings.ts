@@ -11,7 +11,7 @@ import { runLocked, sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import type { SettingsTab, UserTab } from "./dialog-types.js";
 import { ui } from "./state.js";
-import { dialogCloseEl, segmentedEl, settingRow, switchEl } from "./widgets.js";
+import { chipsEl, dialogCloseEl, segmentedEl, settingRow, switchEl } from "./widgets.js";
 import { versionFoot } from "./update-notes.js";
 import { accountOverlayEl } from "./account.js";
 import { accountActionsEl, drawAccount } from "./account-forms.js";
@@ -137,7 +137,7 @@ const setSetting = (key: string, value: unknown): void => void sendCommand("sett
 // 창 표시 두 항목(포켓몬 표시·고스트 모드)은 저장 밖의 설정이라 메인이 받는다 (src/main/app/commands.ts display.set)
 const setDisplay = (key: "hidden" | "clickThrough", value: boolean): void => void sendCommand("display.set", key, { value });
 
-// 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 가이드북
+// 일반 — 잠들기 기준, 언어, 로그인 시 시작, 소리, 알림, 가이드북
 function drawGeneral(scroll: HTMLElement): void {
   if (!ui.view) return;
   const s = ui.view.settings;
@@ -152,6 +152,15 @@ function drawGeneral(scroll: HTMLElement): void {
   scroll.appendChild(settingRow("언어", undefined, settingSelect("language", langs, s.language === "en" ? "en" : "ko", 92, (v) => setSetting("language", v))));
   scroll.appendChild(settingRow("로그인 시 시작", undefined, switchEl(s.startOnLogin, "로그인 시 시작", () => setSetting("startOnLogin", !s.startOnLogin))));
   scroll.appendChild(settingRow("소리", "알림음과 울음소리 크기", volumeControl(s.volume, s.sound, setSetting)));
+  // 알림 — 종류마다 켜고 끈다. 눌린 칩이 켠 알림이다 (Figma 03 `Settings Panel` `setting/알림`, 02 `Notify Chips`, 2026-10-05)
+  const kinds = [
+    { id: "hatch", label: "부화" },
+    { id: "evolve", label: "진화" },
+    { id: "achievement", label: "업적" },
+    { id: "find", label: "줍기" },
+  ];
+  const onKinds = kinds.map((k) => k.id).filter((id) => !s.notifyOff.includes(id));
+  scroll.appendChild(settingRow("알림", "끈 알림은 배너로 띄우지 않아요", chipsEl(kinds, onKinds, (id) => setSetting("notify", { kind: id, on: s.notifyOff.includes(id) }))));
   const guide = buttonEl("act", "열기 ›");
   guide.addEventListener("click", () => openAnyDialog({ kind: "guide" }));
   scroll.appendChild(settingRow("가이드북", undefined, guide));

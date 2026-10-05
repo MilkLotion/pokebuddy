@@ -157,6 +157,13 @@ function seed(): SaveV3 {
   const v = snapshotView(seed(), T0);
   assert.equal(v.bag.length, 3);
   assert.deepStrictEqual(v.bag.map((i) => i.name), ["경험사탕S", "성격민트", "없는도구"], "이름순");
+  // 진화 분류는 도구 뒤, 원작 세대순 — 카탈로그(4세대)는 진화 분류다 (src/bag/items.ts evoOrder)
+  {
+    const s2 = seed();
+    s2.bag = { "rotom-catalog": 1, "fire-stone": 1, "region-map": 1, "exp-candy-s": 1, "dawn-stone": 1 };
+    const bag = snapshotView(s2, T0).bag;
+    assert.deepStrictEqual(bag.map((i) => [i.name, i.evolution]), [["경험사탕S", false], ["지도", true], ["불꽃의돌", true], ["각성의돌", true], ["로토무카탈로그", true]], "도구 → 원작에 없는 도구 → 세대순 · 가나다순");
+  }
   assert.equal(v.bag.find((i) => i.id === "mint")?.count, 2);
   assert.equal(v.bag.find((i) => i.id === "없는도구")?.name, "없는도구", "모르는 도구는 식별자 그대로");
   process.stdout.write("(8) 가방 이름과 정렬  ok\n");
@@ -214,6 +221,10 @@ function seed(): SaveV3 {
   const byTo = (list: typeof evo, to: string) => list.find((c) => c.to === to);
   assert.equal(byTo(evo, "flareon")?.name, "부스터", "결과 종은 화면 이름");
   assert.equal(byTo(evo, "flareon")?.item, "fire-stone", "돌 조건이면 도구 id 를 준다");
+  // 진화 확인 창이 읽는 값 — 쓰는 도구 이름과 결과 종 타입. 해금 안 된 종은 타입도 가린다 (2026-10-05)
+  assert.deepStrictEqual(byTo(evo, "flareon")?.uses, ["불꽃의돌"], "쓰는 도구 이름");
+  assert.deepStrictEqual(byTo(evo, "flareon")?.typeIds, ["fire"], "결과 종 타입");
+  assert.deepStrictEqual(byTo(evo, "espeon")?.uses, [], "친밀도 진화는 도구가 없다");
   assert.equal(byTo(evo, "vaporeon")?.need, "물의돌 필요", "없는 돌은 모자란 조건");
   assert.equal(byTo(evo, "espeon")?.need, "친밀도 65 필요");
   assert.equal(byTo(evo, "umbreon")?.need, "밤에만", "낮에는 밤 조건을 알린다");
@@ -279,7 +290,8 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 공유 sid 모습 목록  ok\n");
 }
 
-// (12b) 로토무 — 박스 칸은 지금 종 그대로(forms 없음). 모습 바꾸기 확인 창이 읽는 shiftForms 는 해금 뒤에만 (docs/specs/game.md "로토무의 모습 바꾸기")
+// (12b) 로토무 — 박스 칸은 지금 종 그대로(forms 없음). 모습 바꾸기 확인 창이 읽는 shiftForms 는 해금(개체 작업 2시간) 뒤에만 (docs/specs/game.md "로토무의 모습 바꾸기").
+//       업적 보상 종이라 공유 계열로도 판정되지만 단체사진이 아니다 (2026-10-05)
 {
   const s = empty(T0);
   s.pets.push(pet({ id: "p1", species: "rotom", level: 20 }));
@@ -287,11 +299,12 @@ function seed(): SaveV3 {
   const shut = snapshotView(s, T0).boxes[0]?.slots[0];
   assert.equal(shut?.forms, undefined, "단체사진이 아니다");
   assert.equal(shut?.shiftForms, undefined, "해금 전에는 고를 모습이 없다");
-  s.totals.workMs = 180_000_000;
+  s.pets[0]!.workMs = 7_200_000;
   const open = snapshotView(s, T0).boxes[0]?.slots[0];
   assert.equal(open?.forms, undefined, "해금 뒤에도 박스 칸은 지금 종 그대로");
   assert.deepStrictEqual(open?.shiftForms?.map((f) => f.name), ["로토무", "히트로토무", "워시로토무", "프로스트로토무", "스핀로토무", "커트로토무"]);
   assert.deepStrictEqual(open?.shiftForms?.[1]?.typeIds, ["electric", "fire"], "바꾸기 확인 창의 타입 배지");
+  assert.deepStrictEqual(open?.formItem, { name: "로토무카탈로그", base: "rotom" }, "확인 창 안내 — 카탈로그 1개, 로토무로는 공짜");
   process.stdout.write("(12b) 로토무 모습 목록  ok\n");
 }
 
