@@ -83,7 +83,9 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.match(cool.model.preview.lead, /^파이리 · 아직 쉬는 시간이에요\. .+ 남았어요\.$/, "막는 글은 실패 문구 + 남은 시간 (94 항목 9-3-3)");
   assert.equal(cool.model.go.disabled, true);
   const play = bag({ itemId: "toy", targetPetId: "p2" });
-  assert.match(play.model.preview.line, /이미 신남 · 남은 45분 → 2시간으로 갱신/, "걸린 버프는 남은 시간을 바꾼다");
+  assert.deepEqual([play.model.preview.tone, play.model.preview.lead, play.model.preview.line, play.model.go.disabled], ["warn", "파이리 · 장난감 45분 남음", "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", false], "신남이 남아 있으면 쓸 수는 있고 손해를 경고 상자로 보인다 (2026-10-05)");
+  const after = bag({ itemId: "toy", targetPetId: "p2", result: { lead: "파이리에게 장난감을 줬어요 · 신남 2시간", line: "장난감 1개를 썼어요" } });
+  assert.equal(after.model.preview.tone, "warn", "쓴 직후라도 고른 포켓몬이 신남이면 결과 대신 경고다 (2026-10-05)");
   assert.equal(bag({ notice: "안 돼요" }).model.preview.tone, "bad");
   const done = bag({ result: { lead: "피카츄 Lv.12 → Lv.13", line: "이상한사탕 1개를 썼어요" }, busy: true });
   assert.deepEqual([done.model.preview.tone, done.model.preview.lead, done.model.go.busy], ["ok", "피카츄 Lv.12 → Lv.13", true]);

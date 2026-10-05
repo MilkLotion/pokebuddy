@@ -66,7 +66,7 @@ export interface ShopDeviceOpen extends ItemFace {
   productId: string;
   link: { label: string; value: string } | null; // 정보 줄 아래의 누르는 줄 — 알의 `나오는 포켓몬`. 없으면 null
   qty: { count: number; cap: number; hint: string } | null; // 여러 개 살 수 있는 상품만. 살 수 없으면 cap 0 — 줄은 그대로 두고 단추만 막는다
-  total: { lead: string; line: string; tone: "" | "ok" | "bad" }; // 합계 상자 — 산 직후는 초록 결과, 실패는 빨강
+  total: { lead: string; line: string; tone: "" | "ok" | "bad" | "warn" }; // 합계 상자 — 산 직후는 초록 결과, 실패는 빨강
   buy: { label: string; disabled: boolean; busy: boolean };
 }
 
@@ -87,7 +87,7 @@ export interface BagDeviceOpen extends ItemFace {
   modes: boolean; // 사용·판매 전환을 둔다 — 사용도 판매도 되는 도구만
   party: { petId: string; name: string; level: string; art: string | null; picked: boolean }[] | null; // 사용 쪽 파티 줄
   qty: { count: number; cap: number; hint: string } | null;
-  preview: { lead: string; line: string; tone: "" | "ok" | "bad" };
+  preview: { lead: string; line: string; tone: "" | "ok" | "bad" | "warn" }; // warn — 쓰면 손해가 있다(남은 버프 시간이 사라짐)
   go: { label: string; disabled: boolean; busy: boolean }; // 바닥 가운데 주 단추 — `N개 사용` · `NP에 팔기`
 }
 

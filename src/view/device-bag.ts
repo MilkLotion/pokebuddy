@@ -3,7 +3,6 @@
 // 도구는 파티 개체에게만 쓴다. 진화용 도구는 판매만 있다 (2026-10-01 사용자 결정 C안)
 import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
-import { josa } from "../shared/josa.js";
 import { t } from "./text.js";
 import { candyMax, candyResult } from "../bag/preview.js";
 import { growthCurve } from "../dex/growth.js";
@@ -50,13 +49,14 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
   }
 }
 
-// 이미 걸린 버프를 다시 걸 때 — 남은 시간을 기본 지속시간으로 바꾼다. 더하지 않는다 (src/bag/use.ts setBuff).
-// 쓰기는 막지 않는다 (2026-09-30 사용자 결정 "신남일때, 쓰면 시간갱신으로"). 박스 개체는 버프 시간이 멈춰 있다는 것도 적는다
-function buffRefresh(v: Snapshot, pet: PetView, kind: string, full: string): string[] {
-  const hit = pet.buffs.find((b) => b.kind === kind);
-  const lines = hit ? [`이미 ${hit.name} · 남은 ${waitText(hit.remainMin * 60)} → ${full}${josa(full, "으로/로")} 갱신`] : [];
-  if (!partyPets(v).some((p) => p.id === pet.id)) lines.push("버프 시간은 파티에 있을 때만 흘러요");
-  return lines;
+// 같은 버프가 남아 있는데 그 도구를 쓰려 한다 — 쓸 수는 있다. 남은 시간이 사라지고 지속시간으로 바뀐다는 것을 경고 상자로 보인다
+// (2026-10-05 사용자 결정 — 확인 창 없이 손해를 보이기, Figma `Result Box` `Tone=Warning`). 놀아주기로 다시 얻는 갱신은 경고하지 않는다
+const BUFF_OF: Partial<Record<string, string>> = { "fullness-full-buff": "premium-food", "play-buff": "long-play" };
+function buffWarn(pet: PetView, item: BagItemView): BagDeviceOpen["preview"] | null {
+  const kind = item.effect ? BUFF_OF[item.effect] : undefined;
+  const hit = kind ? pet.buffs.find((b) => b.kind === kind) : undefined;
+  if (!hit) return null;
+  return { lead: `${pet.name} · ${item.name} ${waitText(hit.remainMin * 60)} 남음`, line: "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", tone: "warn" };
 }
 
 // 미리보기 — 첫 줄과 덧붙는 줄
@@ -73,9 +73,9 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
     // 버프 효과는 "+N%" 꼴 하나 — 적립 줄·명세 돌봄 보너스 표와 같다 (2026-10-04 사용자 결정 "+% 하나", 94 항목 9-3-2)
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 +100% · 2시간`, ...buffRefresh(v, pet, "premium-food", "2시간")];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 +100% · 2시간`];
     case "play-buff":
-      return [t("buff.long-play"), "친밀도 증가량 +50% · 2시간", ...buffRefresh(v, pet, "long-play", "2시간")];
+      return [t("buff.long-play"), "친밀도 증가량 +50% · 2시간"];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
@@ -157,9 +157,13 @@ export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult
   const cap = many ? Math.max(1, candyMax(c.curve, pet, c.effect, c.amount, item.count)) : 1;
   input.qty = Math.max(1, Math.min(input.qty, cap));
   // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정)
+  const warn = blocked ? null : buffWarn(pet, item);
   let preview: BagDeviceOpen["preview"];
-  if (input.result) preview = { lead: input.result.lead, line: input.result.line, tone: "ok" };
-  else if (input.notice) preview = { lead: "쓰지 못했어요", line: input.notice, tone: "bad" };
+  // 경고는 고른 포켓몬의 지금 버프를 따른다 — 장난감을 쓴 직후에도 이미 신남이면 결과 대신 경고다. 바로 다시 눌러도 손해를 보고 누른다
+  // (2026-10-05 사용자 결정 "사용할 포켓몬의 버프상태에 따라 저게 보이게하자"). 실패 문구가 먼저다
+  if (input.notice) preview = { lead: "쓰지 못했어요", line: input.notice, tone: "bad" };
+  else if (warn) preview = warn;
+  else if (input.result) preview = { lead: input.result.lead, line: input.result.line, tone: "ok" };
   else if (blocked) preview = { lead: `${pet.name} · ${blocked}`, line: "", tone: "" };
   else {
     const [lead, ...lines] = bagPreview(v, pet, item, input.qty);

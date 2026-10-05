@@ -4,7 +4,7 @@
 import type { BagDeviceView } from "../../shared/model/devices.js";
 import { needBridge } from "../ui/bridge.js";
 import { createDeviceFrame } from "./device-frame.js";
-import { drawItemFace, goButtonEl, qtyRowEl } from "./item-face.js";
+import { drawItemFace, goButtonEl, qtyRowEl, totalBoxEl } from "./item-face.js";
 import { portraitImg } from "../ui/portrait.js";
 import { el } from "../ui/dom.js";
 
@@ -72,10 +72,7 @@ function render(v: BagDeviceView): void {
   if (v.qty) card.appendChild(qtyRowEl(v.qty, (qty) => act({ itemId: v.itemId, kind: "qty", qty })));
 
   // 미리보기 상자 — 결과는 초록, 실패는 빨강. 새 줄을 끼우지 않는다 (2026-09-30 레이아웃 흔들림 금지)
-  const preview = el("div", v.preview.tone ? `total ${v.preview.tone}` : "total");
-  preview.appendChild(el("strong", undefined, v.preview.lead));
-  if (v.preview.line) preview.appendChild(el("div", undefined, v.preview.line));
-  card.appendChild(preview);
+  card.appendChild(totalBoxEl(v.preview));
 
   const go = goButtonEl(v.go.label, v.go.disabled, v.go.busy, () => act({ itemId: v.itemId, kind: "go" }));
   drawItemFace(frame, { ...v, title: "가방" }, card, go);

@@ -387,6 +387,14 @@
 .total strong {
   color: var(--ink);
 }
+/* 두 줄 고정 — 첫 줄과 둘째 줄 모두 한 줄에서 말줄임한다. 둘째 줄이 비어도 자리를 둔다 (item-face.ts totalBoxEl, 2026-10-05) */
+.total strong,
+.total .line {
+  min-height: 1lh;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* 실패·막힘 — 새 줄 대신 같은 상자의 색 (2026-09-30 레이아웃 흔들림 금지) */
 .total.bad {
   background: var(--danger-bg);
@@ -399,4 +407,12 @@
 .total.ok {
   background: var(--success-bg);
   color: var(--success-ink);
+}
+/* 쓰면 손해가 있다 — 같은 상자가 주황 경고로 바뀐다. 단추는 그대로 눌린다 (Figma `Result Box` `Tone=Warning`, 2026-10-05) */
+.total.warn {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+.total.warn strong {
+  color: inherit;
 }

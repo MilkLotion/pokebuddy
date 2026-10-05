@@ -135,6 +135,18 @@ export function qtyRowEl(q: { count: number; cap: number; hint: string }, set: (
   return row;
 }
 
+// 결과 상자 — 상점 합계·가방 미리보기·결과·실패를 같은 자리에서 글자와 색만 바꿔 보인다 (docs/specs/ui-components.md "결과·실패 표시").
+// 늘 두 줄 높이다. 둘째 줄이 없어도 자리를 두고, 길면 한 줄에서 말줄임하고 전체는 가리키면 보인다 (2026-10-05 사용자 "고정시켜줘")
+export function totalBoxEl(v: { lead: string; line: string; tone: "" | "ok" | "bad" | "warn" }): HTMLElement {
+  const box = el("div", v.tone ? `total ${v.tone}` : "total");
+  const lead = el("strong", undefined, v.lead);
+  const line = el("div", "line", v.line);
+  if (v.lead) lead.title = v.lead;
+  if (v.line) line.title = v.line;
+  box.append(lead, line);
+  return box;
+}
+
 // 바닥 가운데 주 단추 — 처리 중이면 글자 대신 점 세 개(폭 그대로)
 export function goButtonEl(label: string, disabled: boolean, busy: boolean, onClick: () => void): HTMLButtonElement {
   const go = buttonEl("go", label, onClick);

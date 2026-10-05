@@ -229,8 +229,8 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 기기 창
 
 - **틀** — `device/device-frame.ts` 의 `createDeviceFrame`. 머리·바닥·높이 알림, ←→ 넘기기와 Esc 닫기가 여기 있다. 입력칸 안의 키는 넘기기·닫기에 쓰지 않는다.
-- **상품 화면** — 상점과 가방은 `item-face.ts` 의 `drawItemFace` 를 같이 쓴다. 수량은 `qtyRowEl`(`−`·숫자 칸·`+`·`최대`), 바닥 주 단추는 `goButtonEl`.
-- **설정창과의 연결** — `manage/device-link.ts` 의 `createDeviceLink`.
+- **상품 화면** — 상점과 가방은 `item-face.ts` 의 `drawItemFace` 를 같이 쓴다. 수량은 `qtyRowEl`(`−`·숫자 칸·`+`·`최대`), 미리보기·합계·결과 상자는 `totalBoxEl`(늘 두 줄 높이), 바닥 주 단추는 `goButtonEl`.
+- **설정창과의 연결** — `manage/device-link.ts` 의 `createDeviceLink`. 명령을 보내는 동안 중간 장면을 보내지 않으려면 `holding` 을 켠다(상점·가방).
 
 ### 여러 창이 같이 쓰는 것
 

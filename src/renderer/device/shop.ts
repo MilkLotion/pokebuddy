@@ -3,7 +3,7 @@
 import type { ShopDeviceView } from "../../shared/model/devices.js";
 import { needBridge } from "../ui/bridge.js";
 import { createDeviceFrame } from "./device-frame.js";
-import { drawItemFace, goButtonEl, qtyRowEl } from "./item-face.js";
+import { drawItemFace, goButtonEl, qtyRowEl, totalBoxEl } from "./item-face.js";
 import { el } from "../ui/dom.js";
 
 const api = needBridge("pokebuddyShop");
@@ -15,10 +15,7 @@ function render(v: ShopDeviceView): void {
   const card = el("div", "buy-card");
   card.appendChild(el("div", "buy-label", "구매"));
   if (v.qty) card.appendChild(qtyRowEl(v.qty, (qty) => api.act({ productId: v.productId, kind: "qty", qty }), v.qty.cap < 1));
-  const total = el("div", v.total.tone ? `total ${v.total.tone}` : "total");
-  total.appendChild(el("strong", undefined, v.total.lead));
-  if (v.total.line) total.appendChild(el("div", undefined, v.total.line));
-  card.appendChild(total);
+  card.appendChild(totalBoxEl(v.total));
   const go = goButtonEl(v.buy.label, v.buy.disabled, v.buy.busy, () => api.act({ productId: v.productId, kind: "buy" }));
   drawItemFace(frame, { ...v, title: "상점" }, card, go, () => api.act({ productId: v.productId, kind: "pool" }));
 }
