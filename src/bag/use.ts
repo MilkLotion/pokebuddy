@@ -16,6 +16,7 @@ import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 import { itemOf } from "./items.js";
+import { feedBlock } from "../state/care-block.js";
 
 export type UseFailure = ReasonOf<
   | "no-item" // 그런 도구가 없다
@@ -82,9 +83,9 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
   switch (item.effect) {
     case "fullness":
     case "fullness-full-buff": {
-      // 기본먹이만 배부르면 거절한다. 프리미엄먹이는 배불러도 쓴다 — 자리 비울 때 든든함을 걸어 두는 도구다 (2026-10-05 사용자 결정 "배불러도 사용가능")
-      if (item.effect === "fullness" && pet.fullness >= 100) return { ok: false, reason: "full" };
-      if (pet.feedCooldownMs > 0) return { ok: false, reason: "cooldown" };
+      // 배부름·쿨타임 판정은 src/state/care-block.ts feedBlock 하나 — 두 먹이가 같이 쓴다. 배부를 때 프리미엄먹이를 쓰게 두면 친밀도 +8 을 쿨타임마다 얻어서 막는다 (2026-10-05)
+      const blocked = feedBlock(pet);
+      if (blocked) return { ok: false, reason: blocked };
       pet.fullness = item.effect === "fullness-full-buff" ? PET_RULES.statMax : Math.min(PET_RULES.statMax, pet.fullness + item.amount);
       pet.fullnessProgressMs = 0;
       pet.feedCooldownMs = BAG_RULES.feedCooldownMs;

@@ -112,9 +112,10 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 {
   const s = seed({ fullness: 100 });
   assert.equal(useItem(s, "basic-food", "p1").reason, "full");
-  // 프리미엄먹이는 배불러도 쓴다 — 든든함을 걸어 두고 자리를 비운다 (2026-10-05 사용자 결정 "배불러도 사용가능")
-  const premium = seed({ fullness: 100 }, { "premium-food": 1 });
-  assert.equal(useItem(premium, "premium-food", "p1").ok, true, "배불러도 프리미엄먹이");
+  // 프리미엄먹이도 가득이면 거절하고, 1 이라도 줄면 쓴다 (2026-10-05 사용자 결정 "1이라도 떨어져야 쓸 수 있게 하자")
+  assert.equal(useItem(seed({ fullness: 100 }, { "premium-food": 1 }), "premium-food", "p1").reason, "full", "가득이면 프리미엄먹이도 거절");
+  const premium = seed({ fullness: 99 }, { "premium-food": 1 });
+  assert.equal(useItem(premium, "premium-food", "p1").ok, true, "99 면 쓴다");
   assert.equal(premium.pets[0]?.buffs[0]?.kind, "premium-food");
   process.stdout.write("(6) 만복도 가득  ok\n");
 }

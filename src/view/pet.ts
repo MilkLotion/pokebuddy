@@ -22,6 +22,7 @@ import { evolveCandidates, type EvoMissing } from "../dex/evolve.js";
 import type { DayPart } from "../shared/species";
 import { isKnownSpecies } from "../dex/record.js";
 import { ceilMin, ceilSec } from "../shared/count-text.js";
+import { feedBlock, playBlock } from "../state/care-block.js";
 
 // 버프를 보이는 순서 — 든든함 · 신남. 이름은 data/i18n 의 buff.<식별자> (2026-10-05 돌봄 개편)
 const BUFF_ORDER = ["premium-food", "long-play"] as const;
@@ -160,11 +161,12 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     boredom: pet.boredom,
     boredWord: boredText(boredStepOf(pet.boredom)),
     hidden,
-    feedReady: pet.feedCooldownMs <= 0,
+    feedBlock: feedBlock(pet),
     feedInSec: ceilSec(pet.feedCooldownMs),
-    playReady: pet.playCooldownMs <= 0,
-    feedText: pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedCooldownMs <= 0 ? "밥 주기" : `밥 주기 · ${waitText(ceilSec(pet.feedCooldownMs))}`,
-    playText: pet.playCooldownMs <= 0 ? "놀아주기" : `놀아주기 · ${waitText(ceilSec(pet.playCooldownMs))}`,
+    playBlock: playBlock(pet),
+    // 단추 글자 — 막는 까닭을 그대로 쓴다 (src/state/care-block.ts)
+    feedText: feedBlock(pet) === "full" ? "밥 주기 · 배부름" : feedBlock(pet) === "cooldown" ? `밥 주기 · ${waitText(ceilSec(pet.feedCooldownMs))}` : "밥 주기",
+    playText: playBlock(pet) ? `놀아주기 · ${waitText(ceilSec(pet.playCooldownMs))}` : "놀아주기",
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")
     buffs: BUFF_ORDER.filter((kind) => activeBuffs(pet.buffs).includes(kind)).flatMap((kind) => {

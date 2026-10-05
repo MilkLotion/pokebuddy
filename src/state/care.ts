@@ -12,6 +12,7 @@ import { PET_RULES } from "../party/rules.js";
 import { BOREDOM_RULES, CARE_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { isInParty } from "../party/locate.js";
+import { feedBlock, playBlock } from "./care-block.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
@@ -33,7 +34,8 @@ export const applyFeed = (save: SaveV3, petId: string, opts?: DexOptions): UseRe
 export function applyPlay(save: SaveV3, petId: string): PlayResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
-  if (pet.playCooldownMs > 0) return { ok: false, reason: "cooldown" };
+  const blocked = playBlock(pet);
+  if (blocked) return { ok: false, reason: blocked };
 
   pet.playCooldownMs = CARE_RULES.playCooldownMs;
   pet.affinity = Math.min(PET_RULES.statMax, pet.affinity + BAG_RULES.playAffinity);
@@ -49,15 +51,14 @@ export function applyPlay(save: SaveV3, petId: string): PlayResult {
 export type CareKind = "feed" | "play";
 export type CareFailure = ReasonOf<"no-pet" | "not-in-party" | "full" | "cooldown">;
 
-// 돌볼 수 있는가 — 개체 없음 → 파티에 없음 → (밥) 배부름 → 쿨타임 순으로 본다. 쿨타임이면 남은 시간도 준다
+// 돌볼 수 있는가 — 개체 없음 → 파티에 없음 → 밥·놀기 판정(src/state/care-block.ts — 배부름, 쿨타임) 순으로 본다. 쿨타임이면 남은 시간도 준다
 export function checkCare(save: SaveV3, petId: string, kind: CareKind): { ok: true } | { ok: false; reason: CareFailure; remainMs?: number } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (!isInParty(save, petId)) return { ok: false, reason: "not-in-party" };
-  if (kind === "feed" && pet.fullness >= PET_RULES.statMax) return { ok: false, reason: "full" };
-  const remainMs = kind === "feed" ? pet.feedCooldownMs : pet.playCooldownMs;
-  if (remainMs > 0) return { ok: false, reason: "cooldown", remainMs };
-  return { ok: true };
+  const blocked = kind === "feed" ? feedBlock(pet) : playBlock(pet);
+  if (!blocked) return { ok: true };
+  return blocked === "cooldown" ? { ok: false, reason: "cooldown", remainMs: kind === "feed" ? pet.feedCooldownMs : pet.playCooldownMs } : { ok: false, reason: blocked };
 }
 
 export type FeedResult = Outcome<UseFailure | ReasonOf<"not-in-party">> & Omit<UseResult, "ok" | "reason">;

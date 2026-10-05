@@ -49,9 +49,9 @@ export interface PetView {
   boredom: number; // 심심함 0~100. 높을수록 심심하다 (2026-10-05 — 기분을 대신한다)
   boredWord: string; // 심심함 단계 말 — "보통" · "심심해" · "지루해" 를 화면에 그대로 쓴다
   hidden: boolean;
-  feedReady: boolean;
+  feedBlock: "full" | "cooldown" | null; // 밥 주기를 막는 까닭 — 없으면 null. 판정은 src/state/care-block.ts feedBlock 하나
   feedInSec: number;
-  playReady: boolean;
+  playBlock: "cooldown" | null; // 놀아주기를 막는 까닭 (src/state/care-block.ts playBlock)
   feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
   playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 3분" (밥 주기와 같은 꼴, 94 항목 5-1)
   longPlay: boolean; // 신남(장난감)이 켜져 있다 — 그동안 심심함이 쌓이지 않는다

@@ -142,7 +142,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 | `bag/` | 도구를 넣고 쓴다. 사탕 미리보기(`preview.ts`)도 여기. |
 | `egg/` | 새 알, 부화 추첨, 알 열기. |
 | `shop/` | 상품, 가격, 구매, 판매. |
-| `state/` | 흐른 시간 적용(`time.ts`), 밥·놀이(`care.ts`), 설정 바꾸기(`settings.ts`). |
+| `state/` | 흐른 시간 적용(`time.ts`), 밥·놀이(`care.ts`), 밥·놀이를 지금 할 수 있는지 판정(`care-block.ts` — 가방 먹이·돌봄 명령·화면 단추가 모두 이것만 본다), 설정 바꾸기(`settings.ts`). |
 | `find/` | 1초 틱마다 줍기를 굴리고(`roll.ts`) 주운 것을 넣는다(`pickup.ts`). |
 | `mail/` | 우편 선물을 넣고 받은 편지를 기록한다. |
 | `tutorial/` | 튜토리얼 시작 조건(`conditions.ts`)과 대기열·다시 보기(`queue.ts`). |

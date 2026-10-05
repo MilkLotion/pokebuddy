@@ -132,7 +132,7 @@ try {
     assert.equal(reply.ok, true);
     const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
     assert.equal(pet?.fullness, 40, "0 에서 40 으로 (기본먹이 +40)");
-    assert.equal(pet?.feedReady, false);
+    assert.equal(pet?.feedBlock, "cooldown");
     assert.equal(pet?.feedInSec, BAG_RULES.feedCooldownMs / 1000, "남은 쿨타임을 초로");
     process.stdout.write("(6) 밥 주기와 쿨타임 표시  ok\n");
   }
@@ -143,7 +143,7 @@ try {
     const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
     assert.deepEqual(pet?.buffNames, [], "놀아주기는 버프를 주지 않는다");
     assert.equal(pet?.longPlay, false);
-    assert.equal(pet?.playReady, false);
+    assert.equal(pet?.playBlock, "cooldown");
     process.stdout.write("(7) 놀아주기 쿨타임 표시  ok\n");
   }
 

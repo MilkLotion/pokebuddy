@@ -336,13 +336,12 @@ function renderBody(v: PetDeviceView): void {
   // 볼 토글은 파티 개체 전용이다 — 박스 개체는 바탕화면에 꺼낼 수 없다.
   // 돌봄 단추는 박스 개체에게는 막는다 — 박스에서는 값이 줄지 않는다 (2026-09-30 사용자 "박스에선 막고")
   {
-    const full = pet.fullness >= 100;
     const care = el("div", "keys");
     care.dataset.tut = "detail-care";
     const boxed = !v.inParty;
-    const feed = buttonEl("key light", boxed ? "밥 주기" : pet.feedText, () => act({ kind: "cmd", cmd: "feed" }), boxed || !pet.feedReady || full);
+    const feed = buttonEl("key light", boxed ? "밥 주기" : pet.feedText, () => act({ kind: "cmd", cmd: "feed" }), boxed || pet.feedBlock !== null); // 배부름·쿨타임은 메인이 판정해 준다 (PetView.feedBlock)
     if (!boxed) feed.dataset.live = "feed"; // 남은 시간은 1초 시계가 고친다 (applyLive)
-    const play = buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || !pet.playReady);
+    const play = buttonEl("key", boxed ? "놀아주기" : pet.playText, () => act({ kind: "cmd", cmd: "play" }), boxed || pet.playBlock !== null);
     if (!boxed) play.dataset.live = "play";
     markBusy(feed, v.busy, { kind: "cmd", cmd: "feed" });
     markBusy(play, v.busy, { kind: "cmd", cmd: "play" });
