@@ -1,6 +1,6 @@
 {
   "name": "pokebuddy",
-  "version": "0.16.2",
+  "version": "0.17.0",
   "private": true,
   "description": "터미널 위에 떠 있는 포켓몬 펫 오버레이 (macOS / Windows)",
   "license": "MIT",
