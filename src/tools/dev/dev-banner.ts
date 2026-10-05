@@ -4,7 +4,7 @@
 // 찍은 그림은 Figma `Notification Banner` `338:732` 와 비교한다.
 // `--go` 를 주면 찍은 뒤 `바로가기` 를 눌러 목적지(go:)와 사라짐(done)이 출력되는지 본다
 // `--close` 를 주면 찍은 뒤 제목 줄 `✕` 를 눌러 목적지 없이 사라짐(done)만 출력되는지 본다
-// `--wait` 를 주면 아무것도 누르지 않는다. 창이 보인 때부터 1.5초에는 보이고 2.5초에는 숨었는지 두 번 본다(표시 2초 판정)
+// `--wait` 를 주면 아무것도 누르지 않는다. 창이 보인 때부터 2.5초에는 보이고 3.5초에는 숨었는지 두 번 본다(표시 3초 판정, banner-window.ts BANNER_RULES.showMs)
 // (예전 scripts/dev-banner.cjs. 앱 코드를 부르므로 타입 검사를 받게 src/tools 로 옮겼다)
 import fs from "node:fs";
 import { app, BrowserWindow } from "electron";
@@ -48,9 +48,9 @@ void app.whenReady().then(() => {
           r(!!win && win.isVisible());
         }, 20);
       });
-    void look(1500).then((early) =>
-      look(2500).then((late) => {
-        process.stdout.write(`visible at 1500ms: ${early}, at 2500ms: ${late}\n`);
+    void look(2500).then((early) =>
+      look(3500).then((late) => {
+        process.stdout.write(`visible at 2500ms: ${early}, at 3500ms: ${late}\n`);
         app.exit(early && !late ? 0 : 1);
       }),
     );
