@@ -8,8 +8,8 @@ import { MEGA_RULES } from "../dex/rules.js";
 import { locatePet } from "../party/locate.js";
 import { sizeLevelOf } from "../party/size.js";
 import { growthOf, progressTo } from "../dex/growth.js";
-import { activeBuffs, boredStepOf, pointParts, pointPercent, zoneOf } from "../state/time.js";
-import { TIME_RULES } from "../state/rules.js";
+import { activeBuffs, boredStepOf, pointParts, pointPercent, zoneOf, type BoredStep } from "../state/time.js";
+import { BOREDOM_RULES, TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { CareView, EvolutionView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
@@ -119,11 +119,17 @@ function megaGoalView(pet: PetV3): { megaGoal?: MegaGoalView } {
 // 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창·포켓몬 메뉴가 같이 쓴다. 글자는 언어 파일의 zone.* 다
 const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
 
-// 배고픔 디버프 배지 — 구간 낱말, 색, 친밀도 증가량 감소율(TIME_RULES.zonePercent). 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
-const DEBUFF_TONE: Partial<Record<FullnessZone, "warning" | "danger">> = { hungry: "warning", starving: "danger" };
-function debuffOf(zone: FullnessZone): PetView["debuff"] {
-  const tone = DEBUFF_TONE[zone];
-  return tone ? { label: zoneText(zone), tone, note: t("debuff.note", { percent: 100 - TIME_RULES.zonePercent[zone] }) } : null;
+// 디버프 배지 — 배고픔(구간 낱말, 포인트·친밀도 증가량 감소율), 그다음 심심함(단계 말, 포인트 감소율). 색은 1단계 warning, 2단계 danger
+// (docs/specs/balance.md "만복도와 돌봄"·"심심함", 2026-10-05 사용자 결정 — 심심해·지루해 배지 "그 2개도")
+const DEBUFF_TONE: Partial<Record<FullnessZone | BoredStep, "warning" | "danger">> = { hungry: "warning", starving: "danger", bored: "warning", tired: "danger" };
+function debuffsOf(pet: PetV3): PetView["debuffs"] {
+  const out: PetView["debuffs"] = [];
+  const zone = zoneOf(pet.fullness);
+  const zoneTone = DEBUFF_TONE[zone];
+  if (zoneTone) out.push({ label: zoneText(zone), tone: zoneTone, note: t("debuff.note", { point: TIME_RULES.zonePointPenalty[zone], percent: 100 - TIME_RULES.zonePercent[zone] }) });
+  const step = BOREDOM_RULES.steps.find((s) => pet.boredom >= s.min);
+  if (step) out.push({ label: boredText(step.id), tone: DEBUFF_TONE[step.id] ?? "warning", note: t("debuff.noteBored", { point: step.penalty }) });
+  return out;
 }
 
 export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart): PetView {
@@ -150,7 +156,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     fullness: pet.fullness,
     zone: zoneOf(pet.fullness),
     zoneText: zoneText(zoneOf(pet.fullness)),
-    debuff: debuffOf(zoneOf(pet.fullness)),
+    debuffs: debuffsOf(pet),
     boredom: pet.boredom,
     boredWord: boredText(boredStepOf(pet.boredom)),
     hidden,

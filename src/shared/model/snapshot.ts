@@ -45,7 +45,7 @@ export interface PetView {
   fullness: number;
   zone: FullnessZone;
   zoneText: string; // 만복도 구간 낱말 — "배부름" · "보통" · "배고픔" · "매우 배고픔"
-  debuff: { label: string; tone: "warning" | "danger"; note: string } | null; // 배고픔 디버프 배지. 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
+  debuffs: { label: string; tone: "warning" | "danger"; note: string }[]; // 디버프 배지 — 배고픔(배고픔·매우 배고픔), 그다음 심심함(심심해·지루해). 없으면 빈 목록 (2026-10-05 사용자 결정 "그 2개도")
   boredom: number; // 심심함 0~100. 높을수록 심심하다 (2026-10-05 — 기분을 대신한다)
   boredWord: string; // 심심함 단계 말 — "보통" · "심심해" · "지루해" 를 화면에 그대로 쓴다
   hidden: boolean;

@@ -56,11 +56,10 @@ function petCard(pet: PetView): HTMLElement {
   info.appendChild(meters);
 
   card.appendChild(info);
-  // 상태 배지 — 디버프(배고픔·매우 배고픔, 스냅샷의 pet.debuff) 뒤에 켜진 버프(든든함·신남). Figma `Party Slot Card` 의 debuff 자리.
+  // 상태 배지 — 디버프(배고픔·매우 배고픔, 심심해·지루해 — 스냅샷의 pet.debuffs) 뒤에 켜진 버프(든든함·신남). Figma `Party Slot Card` 의 debuff 자리.
   // 버프도 배고픔처럼 칸 오른쪽 위에 둔다 (2026-09-30 사용자 결정 "들뜸, 신남 도 배고픔처럼"). 하나도 없으면 두지 않는다
   const badges: HTMLElement[] = [];
-  const debuff = pet.debuff;
-  if (debuff) {
+  for (const debuff of pet.debuffs) {
     const badge = el("span", `debuff ${debuff.tone}`, debuff.label);
     badge.title = debuff.note;
     badges.push(badge);

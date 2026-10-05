@@ -40,7 +40,8 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
       return pet.level >= 100 ? failText("max-level") : null;
     case "fullness":
     case "fullness-full-buff":
-      if (pet.fullness >= 100) return failText("full");
+      // 프리미엄먹이는 배불러도 쓴다 (2026-10-05 사용자 결정 "배불러도 사용가능", src/bag/use.ts)
+      if (item.effect === "fullness" && pet.fullness >= 100) return failText("full");
       return pet.feedReady ? null : `${failText("cooldown")} ${waitText(pet.feedInSec)} 남았어요.`;
     case "shiny-on":
       return pet.shiny ? failText("already-shiny") : null;

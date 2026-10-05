@@ -37,8 +37,12 @@ const device = frame.device;
 // 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
-  // 배고픔 디버프 — 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuff, docs/specs/balance.md "배고픔 디버프")
-  if (pet.debuff) list.push(el("span", `badge ${pet.debuff.tone}`, pet.debuff.label));
+  // 디버프 — 배고픔, 그다음 심심해·지루해. 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuffs)
+  for (const d of pet.debuffs ?? []) {
+    const badge = el("span", `badge ${d.tone}`, d.label);
+    badge.title = d.note;
+    list.push(badge);
+  }
   for (const buff of pet.buffs ?? []) {
     const badge = el("span", "badge success", buff.text);
     badge.dataset.liveBuff = buff.kind; // 남은 분은 1초 시계가 고친다 (applyLive)

@@ -313,11 +313,20 @@ function seed(): SaveV3 {
   const v = snapshotView(seed(), T0);
   const p1 = v.party.slots[0]?.pet;
   const p2 = v.party.slots[1]?.pet;
-  assert.deepEqual([p1?.zone, p1?.zoneText, p1?.debuff], ["normal", "보통", null], "만복도 55 는 보통 — 디버프 없음");
-  assert.deepEqual([p2?.zone, p2?.zoneText, p2?.debuff], ["hungry", "배고픔", { label: "배고픔", tone: "warning", note: "친밀도 증가량 −30%" }], "만복도 30 은 배고픔");
+  assert.deepEqual([p1?.zone, p1?.zoneText, p1?.debuffs], ["normal", "보통", []], "만복도 55 는 보통 — 디버프 없음");
+  // 심심함 배지 — 배고픔 뒤에 심심해(경고)·지루해(위험) (2026-10-05 사용자 결정 "그 2개도")
+  {
+    const b = seed();
+    Object.assign(b.pets[0]!, { boredom: 60 });
+    Object.assign(b.pets[1]!, { boredom: 90 });
+    const bv = snapshotView(b, T0);
+    assert.deepEqual(bv.party.slots[0]?.pet?.debuffs, [{ label: "심심해", tone: "warning", note: "포인트 −10%" }]);
+    assert.deepEqual(bv.party.slots[1]?.pet?.debuffs.map((d) => d.label), ["배고픔", "지루해"], "배고픔 다음 심심함");
+  }
+  assert.deepEqual([p2?.zone, p2?.zoneText, p2?.debuffs], ["hungry", "배고픔", [{ label: "배고픔", tone: "warning", note: "포인트 −30% · 친밀도 증가량 −30%" }]], "만복도 30 은 배고픔");
   const s = seed();
   s.pets[1]!.fullness = 5;
-  assert.deepEqual(snapshotView(s, T0).party.slots[1]?.pet?.debuff, { label: "매우 배고픔", tone: "danger", note: "친밀도 증가량 −60%" }, "만복도 5 는 매우 배고픔");
+  assert.deepEqual(snapshotView(s, T0).party.slots[1]?.pet?.debuffs, [{ label: "매우 배고픔", tone: "danger", note: "포인트 −60% · 친밀도 증가량 −60%" }], "만복도 5 는 매우 배고픔");
   assert.deepEqual(v.limits, { boxNameMax: BOX_RULES.nameMax, presetNameMax: BOX_RULES.nameMax });
   assert.deepEqual(v.settings.sleepChoices.map((c) => c.label), ["3분", "5분", "10분", "15분", "잠들지 않음"]);
   assert.deepEqual(v.settings.sleepChoices.map((c) => c.value), [3, 5, 10, 15, 0]);

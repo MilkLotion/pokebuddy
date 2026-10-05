@@ -82,7 +82,8 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
   switch (item.effect) {
     case "fullness":
     case "fullness-full-buff": {
-      if (pet.fullness >= 100) return { ok: false, reason: "full" };
+      // 기본먹이만 배부르면 거절한다. 프리미엄먹이는 배불러도 쓴다 — 자리 비울 때 든든함을 걸어 두는 도구다 (2026-10-05 사용자 결정 "배불러도 사용가능")
+      if (item.effect === "fullness" && pet.fullness >= 100) return { ok: false, reason: "full" };
       if (pet.feedCooldownMs > 0) return { ok: false, reason: "cooldown" };
       pet.fullness = item.effect === "fullness-full-buff" ? PET_RULES.statMax : Math.min(PET_RULES.statMax, pet.fullness + item.amount);
       pet.fullnessProgressMs = 0;
