@@ -21,7 +21,7 @@ import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
 import { BAG_RULES } from "../../bag/rules";
 import { applyFind, eligiblePetIds, findOne, itemCandidates } from "../../find/pickup";
-import { chanceFor, rollHits, shareOf } from "../../find/roll";
+import { chanceFor, isCaredFor, rollHits, shareOf } from "../../find/roll";
 import { FIND_RULES } from "../../find/rules";
 import { pendingOf } from "../../notify/pending";
 import { TIME_RULES } from "../../state/rules";
@@ -68,19 +68,25 @@ const near = (a: number, b: number, eps: number): boolean => Math.abs(a - b) < e
 const root = makeTmp("selftest-find");
 
 try {
-  // (1) 수치 — 마리마다 1초에 1/2000, 항목 가중치 100·50·20·1, 포인트 5~10P (2026-09-29 사용자 결정)
+  // (1) 수치 — 마리마다 1초에 1/3000, 잘 돌본 마리는 1/2000 (2026-10-05 사용자 결정). 항목 가중치 100·50·20·1, 포인트 5~10P (2026-09-29 사용자 결정)
   {
-    assert.equal(FIND_RULES.perSecond, 1 / 2000);
+    assert.equal(FIND_RULES.perSecond, 1 / 3000);
+    assert.equal(FIND_RULES.caredPerSecond, 1 / 2000);
+    assert.ok(near(chanceFor(SEC), 1 / 3000, 1e-12), "기본 1초에 1/3000");
+    assert.equal(isCaredFor({ fullness: 40, boredom: 49 }), true, "만복도 40 이상 · 심심함 50 미만이면 잘 돌봄");
+    assert.equal(isCaredFor({ fullness: 39, boredom: 0 }), false, "배고프면 아니다");
+    assert.equal(isCaredFor({ fullness: 100, boredom: 50 }), false, "심심하면 아니다");
+    assert.deepEqual(rollHits({ a: SEC, b: SEC }, () => 0.0004, 1, new Set(["a"])), ["a"], "같은 굴림 값에서 잘 돌본 마리만 줍는다 — 0.0004 는 1/3000 과 1/2000 사이");
     assert.deepEqual(FIND_RULES.weights, { points: 100, item: 50, evo: 20, pokemon: 1 });
     assert.deepEqual(FIND_RULES.points, { min: 5, max: 10 });
     assert.ok(near(shareOf("pokemon"), 1 / 171, 1e-12));
     assert.equal(chanceFor(0), 0, "조건을 채운 시간이 없으면 0");
-    assert.ok(near(chanceFor(SEC), 1 / 2000, 1e-12), "1초에 1/2000");
-    assert.ok(near(chanceFor(30 * 60 * SEC), 1 - (1 - 1 / 2000) ** 1800, 1e-12), "초 누적 → 1 − (1 − 1/2000)^초");
-    assert.ok(near(chanceFor(30 * 60 * SEC), 0.593, 0.001), "30분에 약 59%");
-    assert.ok(near(chanceFor(SEC, 100), 100 / 2000, 1e-12), "개발용 배율 100 이면 초당 100/2000");
+    assert.ok(near(chanceFor(SEC, 1, true), 1 / 2000, 1e-12), "잘 돌본 마리 1초에 1/2000");
+    assert.ok(near(chanceFor(30 * 60 * SEC, 1, true), 1 - (1 - 1 / 2000) ** 1800, 1e-12), "초 누적 → 1 − (1 − 1/2000)^초");
+    assert.ok(near(chanceFor(30 * 60 * SEC, 1, true), 0.593, 0.001), "30분에 약 59%");
+    assert.ok(near(chanceFor(SEC, 100, true), 100 / 2000, 1e-12), "개발용 배율 100 이면 초당 100/2000");
     assert.equal(chanceFor(SEC, 5000), 1, "배율을 올려도 1 을 넘지 않는다");
-    const perDay = 28_800 / 2000; // 하루 활동 8시간의 기대 건수 약 14.4
+    const perDay = 28_800 / 2000; // 잘 돌본 마리 하루 활동 8시간의 기대 건수 약 14.4
     assert.ok(near(perDay * shareOf("points"), 8.42, 0.01) && near(perDay * shareOf("item"), 4.21, 0.01) && near(perDay * shareOf("evo"), 1.68, 0.01));
     assert.ok(near(1 / (perDay * shareOf("pokemon")), 11.9, 0.1), "1마리 포켓몬 약 12일에 1번");
     const ids = itemCandidates().map((c) => c.id);
@@ -171,7 +177,7 @@ try {
     const each = applyFind(s, { activeMs: { p1: 3 * SEC, p4: 3 * SEC } }, T0, seq(MISS, HIT, K_ITEM, 0));
     assert.deepEqual(each.map((r) => [r.petId, r.kind]), [["p4", "item"]], "마리끼리 독립");
     // 굴리는 값은 조건을 채운 시간으로 정한 확률과 견준다 — 3초 확률 바로 아래면 줍고, 바로 위면 못 줍는다
-    const p3 = chanceFor(3 * SEC);
+    const p3 = chanceFor(3 * SEC, 1, true); // 시험 개체는 배부르고 심심하지 않다 — 잘 돌본 마리의 확률
     assert.equal(applyFind(seed(), { activeMs: { p1: 3 * SEC } }, T0, seq(p3 * 0.99, K_POINTS, 0)).length, 1);
     assert.equal(applyFind(seed(), { activeMs: { p1: 3 * SEC } }, T0, seq(p3 * 1.01)).length, 0);
     // 시간이 0 이면 굴리지 않는다
@@ -220,7 +226,7 @@ try {
     assert.deepEqual(rollHits({ p1: SEC, p4: SEC }, seq(p1s * 0.99, p1s * 1.01)), ["p1"], "마리끼리 독립 — p1 만 줍는다");
     assert.deepEqual(rollHits({ p1: 0 }, () => 0), [], "시간이 0 이면 굴리지 않는다");
     assert.deepEqual(rollHits({ p1: 10 * 60 * SEC }, () => 0), [], "큰 틈은 굴리지 않는다");
-    assert.deepEqual(rollHits({ p1: SEC }, seq(0.04), 100), ["p1"], "개발 배율 100 이면 초당 5% — 0.04 는 줍는다");
+    assert.deepEqual(rollHits({ p1: SEC }, seq(0.03), 100), ["p1"], "개발 배율 100 이면 초당 약 3.3% — 0.03 은 줍는다");
 
     now += SEC;
     next = [K_POINTS, 0, K_POINTS, 0];

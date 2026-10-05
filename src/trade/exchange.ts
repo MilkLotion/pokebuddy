@@ -33,7 +33,8 @@ export interface TradePet {
   exp: number;
   affinity: number;
   fullness: number;
-  mood: number;
+  // 옛 판 앱이 검사하는 자리 — 2026-10-05 기분을 없앤 뒤에도 보낸다(늘 60). 받을 때는 쓰지 않는다. 받은 개체의 심심함은 0 이다
+  mood?: number;
   stage: number;
   evolved: string[];
 }
@@ -56,6 +57,9 @@ export function checkOffer(save: SaveV3, petId: string, opts?: DexOptions): { ok
   return { ok: true, pet };
 }
 
+// 옛 판 앱(기분이 있던)이 받는 값 — 그 앱의 새 개체 기분 시작값과 같다
+const TRADE_LEGACY_MOOD = 60;
+
 // 올릴 값
 export function offerOf(pet: PetV3): TradePet {
   return {
@@ -68,7 +72,7 @@ export function offerOf(pet: PetV3): TradePet {
     exp: pet.exp,
     affinity: pet.affinity,
     fullness: pet.fullness,
-    mood: pet.mood,
+    mood: TRADE_LEGACY_MOOD,
     stage: pet.stage,
     evolved: [...pet.evolved],
   };
@@ -94,7 +98,7 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
   if (!intIn(raw.level, 1, MAX_LEVEL)) return { ok: false, reason: "bad-level" };
   if (typeof raw.nature !== "string" || !isNatureId(raw.nature, opts)) return { ok: false, reason: "bad-nature" };
   if (typeof raw.shiny !== "boolean" || typeof raw.size !== "number" || !Number.isFinite(raw.size)
-      || !intIn(raw.affinity, 0, 100) || !intIn(raw.fullness, 0, 100) || !intIn(raw.mood, 0, 100)
+      || !intIn(raw.affinity, 0, 100) || !intIn(raw.fullness, 0, 100) || (raw.mood !== undefined && !intIn(raw.mood, 0, 100))
       || !intIn(raw.stage, 0, 10) || !intIn(raw.exp, 0, Number.MAX_SAFE_INTEGER)) {
     return { ok: false, reason: "bad-value" };
   }
@@ -107,7 +111,7 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
     ok: true,
     pet: {
       species, shiny: raw.shiny, nature: raw.nature as NatureId, ...(gender ? { gender } : {}), size: snapSize(raw.size), level: raw.level, exp, // 크기는 도트 배율 — 가장 가까운 단계로 맞춘다
-      affinity: raw.affinity, fullness: raw.fullness, mood: raw.mood, stage: raw.stage, evolved: [...(evolved as string[])],
+      affinity: raw.affinity, fullness: raw.fullness, stage: raw.stage, evolved: [...(evolved as string[])],
     },
   };
 }
@@ -152,7 +156,7 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
   const pet: PetV3 = {
     ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, gender: got.gender ?? legacyGender({ id, species: got.species, since: now }, opts), now }),
     size: got.size, level: got.level, exp: got.exp, affinity: got.affinity,
-    fullness: got.fullness, mood: got.mood, stage: got.stage, evolved: [...got.evolved],
+    fullness: got.fullness, stage: got.stage, evolved: [...got.evolved],
   };
 
   // 받은 개체는 보낸 개체의 자리를 물려받는다 — 적용한 프리셋(파티), 다른 프리셋, 박스 (src/party/presets.ts locatePet)

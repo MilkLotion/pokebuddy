@@ -54,9 +54,9 @@ function seed(): SaveV3 {
   assert.equal(v.party.slots[0]?.pet?.fullness, 55);
   assert.equal(v.party.slots[0]?.pet?.zone, "normal", "55 는 보통");
   assert.equal(v.party.slots[1]?.pet?.zone, "hungry", "30 은 배고픔");
-  assert.equal(v.party.slots[0]?.pet?.mood, 60, "기분 값");
-  assert.equal(v.party.slots[0]?.pet?.moodWord, "좋음", "기분 단계 말 — 60 은 좋음");
-  process.stdout.write("(2) 만복도 구간과 기분  ok\n");
+  assert.equal(v.party.slots[0]?.pet?.boredom, 0, "심심함 값");
+  assert.equal(v.party.slots[0]?.pet?.boredWord, "보통", "심심함 단계 말 — 0 은 보통");
+  process.stdout.write("(2) 만복도 구간과 심심함  ok\n");
 }
 
 // (3) 쿨타임과 버프는 사람이 읽는 단위로
@@ -71,21 +71,21 @@ function seed(): SaveV3 {
   process.stdout.write("(3) 쿨타임과 버프 단위  ok\n");
 }
 
-// (3b) 돌봄 보너스 — 친밀도 100 인 개체만 준다. 내역은 기분, 그다음 버프를 배지 순서로 (2026-10-02 사용자 결정)
+// (3b) 포인트 적립 배율의 내역 — 친밀도와 상관없다. 버프(배지 순서), 그다음 배고픔·심심함 손해 (2026-10-05 돌봄 개편)
 {
   const s = seed();
   const [p1, p2] = s.pets;
   assert.ok(p1 && p2);
-  assert.equal(snapshotView(s, T0).party.slots[0]?.pet?.care, null, "친밀도 80 은 보너스가 없다");
-  Object.assign(p1, { affinity: 100, mood: 95, buffs: [{ kind: "short-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }, { kind: "premium-food", remainMs: MIN }] });
-  Object.assign(p2, { affinity: 100, mood: 40, buffs: [] });
+  assert.deepStrictEqual(snapshotView(s, T0).party.slots[0]?.pet?.care, { bonus: 0, parts: [] }, "버프·손해가 없으면 0");
+  Object.assign(p1, { boredom: 60, buffs: [{ kind: "long-play", remainMs: MIN }, { kind: "premium-food", remainMs: MIN }] });
+  Object.assign(p2, { buffs: [] }); // 시험 저장의 둘째 개체는 든든함이 있다 — 손해만 보려고 지운다
   const v = snapshotView(s, T0);
   assert.deepStrictEqual(v.party.slots[0]?.pet?.care, {
-    bonus: 180,
-    parts: [{ kind: "mood", name: "최고", bonus: 30 }, { kind: "premium-food", name: "든든함", bonus: 100 }, { kind: "long-play", name: "신남", bonus: 50 }],
-  }, "기분 · 든든함 · 신남 순서. 신남이 있으면 들뜸은 세지 않는다");
-  assert.deepStrictEqual(v.party.slots[1]?.pet?.care, { bonus: 0, parts: [] }, "친밀도 100 이어도 기분 보통·버프 없음이면 0");
-  process.stdout.write("(3b) 돌봄 보너스 내역  ok\n");
+    bonus: 110,
+    parts: [{ kind: "premium-food", name: "든든함", bonus: 60 }, { kind: "long-play", name: "신남", bonus: 60 }, { kind: "bored", name: "심심해", bonus: -10 }],
+  }, "든든함 · 신남 · 심심해 순서 — 저장 순서와 상관없다");
+  assert.deepStrictEqual(v.party.slots[1]?.pet?.care, { bonus: -30, parts: [{ kind: "hungry", name: "배고픔", bonus: -30 }] }, "만복도 30 은 배고픔 −30");
+  process.stdout.write("(3b) 포인트 적립 배율 내역  ok\n");
 }
 
 // (4) 숨김과 표시 수
@@ -244,7 +244,7 @@ function seed(): SaveV3 {
   assert.equal(day.bag.find((b) => b.id === "premium-food")?.evolution, false);
   // 판매가 — 구매가 × 60% 내림 (src/shop/sell.ts). 가격이 있으면 구매가·비율도 함께 준다
   assert.deepStrictEqual([day.bag.find((b) => b.id === "fire-stone")?.sellPrice, day.bag.find((b) => b.id === "fire-stone")?.buyPrice, day.bag.find((b) => b.id === "fire-stone")?.sellRate], [90, 150, 0.6], "진화용 도구 판매가");
-  assert.equal(day.bag.find((b) => b.id === "premium-food")?.sellPrice, 36, "60P → 36P");
+  assert.equal(day.bag.find((b) => b.id === "premium-food")?.sellPrice, 30, "50P → 30P (2026-10-05 프리미엄먹이 50P)");
   process.stdout.write("(11) 진화 후보와 조건 문구  ok\n");
 }
 

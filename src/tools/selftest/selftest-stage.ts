@@ -531,7 +531,7 @@ async function stageRuntimeTests(): Promise<void> {
     commands.setWriter(true);
     const fed = await send(commandPaths.mailbox, { cmd: "feed", target: "p1", from: "cli" });
     ok(fed.ok, "mailbox → dispatcher → 실행기 → 저장 왕복");
-    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.fullness, 60, "밥 효과가 디스크에 저장");
+    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.fullness, 80, "밥 효과가 디스크에 저장 (기본먹이 +40)");
     eq(animations, 1, "저장 성공 뒤 연출 요청");
     const again = await commands.dispatcher.dispatch({ cmd: "feed", target: "p1", from: "menu" });
     eq(again.reason, "cooldown", "중복 밥 거절");
@@ -540,7 +540,7 @@ async function stageRuntimeTests(): Promise<void> {
     // 포켓몬 클릭은 놀아주기다. 쿨타임이면 무대 반응만으로 끝난다
     const clicked = await commands.click("p1");
     ok(clicked.ok, "클릭이 놀아주기로 저장된다");
-    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.playStreak, 1, "놀아주기 중첩 1");
+    eq(store.readSave(commandPaths.save, { repair: false }).state!.pets[0]!.daily.plays, 1, "놀아주기가 저장된다");
     eq(animations, 2, "놀아주기 연출");
     eq((await commands.click("p1")).reason, "cooldown", "쿨타임의 클릭은 놀아주지 않는다");
     eq(animations, 2, "쿨타임이면 놀이 연출이 없다");

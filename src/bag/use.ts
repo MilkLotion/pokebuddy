@@ -41,11 +41,8 @@ export type UseResult = Outcome<UseFailure> & {
   shiny?: boolean;
 };
 
-// 버프를 건다. 남아 있으면 지속시간으로 바꾼다. 더하지 않는다.
-// 남은 시간이 더 길면 그대로 둔다 — 장난감 신남(2시간)이 남은 동안 3중첩 놀아주기(30분)가 줄이지 않는다.
-// 신남(long-play)을 걸면 들뜸(short-play)은 지운다 — 아랫단계가 윗단계로 바뀐다(곱하지 않는다, 제안). 놀아주기(src/state/care.ts)와 장난감이 함께 쓴다
+// 버프를 건다. 남아 있으면 지속시간으로 바꾼다. 더하지 않는다. 남은 시간이 더 길면 그대로 둔다. 장난감·프리미엄먹이가 쓴다
 export function setBuff(pet: PetV3, kind: BuffKind, remainMs: number = BAG_RULES.buffMs[kind]): void {
-  if (kind === "long-play") pet.buffs = pet.buffs.filter((b) => b.kind !== "short-play");
   const hit = pet.buffs.find((b) => b.kind === kind);
   if (hit) hit.remainMs = Math.max(hit.remainMs, remainMs);
   else pet.buffs.push({ kind, remainMs });
@@ -91,21 +88,24 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       pet.fullnessProgressMs = 0;
       pet.feedCooldownMs = BAG_RULES.feedCooldownMs;
       if (item.effect === "fullness-full-buff") {
+        // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(그동안 만복도가 줄지 않는다) + 친밀도 +8 (2026-10-05 사용자 결정 — 돌봄 개편)
         setBuff(pet, "premium-food");
+        addAffinity(pet, BAG_RULES.premiumAffinity - BAG_RULES.feedAffinity); // 아래 밥 주기 몫(+2)과 합쳐 +8
         // 프리미엄먹이는 밥 주기 횟수에 든다 — 메가진화 조건의 돌봄 횟수와 누적 기록(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6).
         // 기본먹이는 밥 주기 명령(src/state/care.ts feedPet)이 센다 — 같은 길을 지나 여기서 세면 두 번이 된다
         countCare(pet, opts);
         save.totals.fed += 1;
       }
       addAffinity(pet, BAG_RULES.feedAffinity);
-      pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.feedMood);
       pet.daily.feeds += 1;
       return done({ fullness: pet.fullness });
     }
     case "play-buff": {
-      setBuff(pet, "long-play", BAG_RULES.toyBuffMs); // 장난감은 신남을 준다. 놀아주기로 켠 신남보다 길다
-      addAffinity(pet, BAG_RULES.playAffinity);
-      pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.playMood); // 장난감도 놀아주기다
+      // 장난감 — 심심함 0 + 신남 +60% 2시간(그동안 심심함이 쌓이지 않는다) + 친밀도 +5 (2026-10-05 사용자 결정 — 돌봄 개편)
+      setBuff(pet, "long-play");
+      addAffinity(pet, BAG_RULES.toyAffinity);
+      pet.boredom = 0;
+      pet.boredomProgressMs = 0;
       pet.daily.plays += 1;
       // 장난감은 놀아주기 횟수에 든다 (2026-10-04 사용자 결정 "센다", 94 항목 9-3-6)
       countCare(pet, opts);

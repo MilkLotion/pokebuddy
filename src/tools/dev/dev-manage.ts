@@ -131,7 +131,7 @@ const tabLabel = argAfter("--tab");
 const routeArg = argAfter("--route");
 
 // 보기용 저장 — 꺼낸 마리, 숨긴 마리, 빈 칸, 잠긴 칸, 박스, 알, 가방이 한 번에 보이게 만든다.
-// 개체는 손으로 적은 모양이다(예전 그대로 — 캡처 기준과 같아야 한다). moodProgressMs 가 없고 daily.date 가 "" 인 것은
+// 개체는 손으로 적은 모양이다(예전 그대로 — 캡처 기준과 같아야 한다). boredomProgressMs 가 없고 daily.date 가 "" 인 것은
 // 앱의 새 개체(src/party/create.ts newPet)와 다르다(코드 구조 조사 B5). 고칠 때는 화면이 바뀌므로 따로 커밋한다
 function seed(empty: (now: number) => SaveV3, now: number): SaveV3 {
   const save = empty(now);
@@ -149,11 +149,9 @@ function seed(empty: (now: number) => SaveV3, now: number): SaveV3 {
       affinityProgressMs: 0,
       fullness: 72,
       fullnessProgressMs: 0,
-      mood: 60,
+      boredom: 20,
       feedCooldownMs: 0,
       playCooldownMs: 0,
-      playWindowMs: 0,
-      playStreak: 0,
       buffs: [],
       home: { dx: -24, dy: -60 },
       since: now,

@@ -48,10 +48,10 @@ export interface LogEntry {
 }
 
 // ── 개체 ───────────────────────────────────────────────────────────────────────
-// 장난감은 놀아주기 3중첩과 같은 버프(신남)를 준다. 그래서 종류를 따로 두지 않는다 (docs/specs/game.md "장난감")
-// 이름 — premium-food 든든함 · long-play 신남(옛 이름 오래 놀아주기) · short-play 들뜸 (2026-09-29 사용자 결정).
-// 식별자는 바꾸지 않았다 — 옛 저장과 옛 판 앱(클라우드로 같은 저장을 읽는)이 신남 버프를 그대로 읽는다
-export type BuffKind = "premium-food" | "long-play" | "short-play";
+// 이름 — premium-food 든든함(프리미엄먹이) · long-play 신남(장난감) (2026-10-05 사용자 결정 — 돌봄 개편).
+// short-play(옛 들뜸, 잠시 놀아주기 신남)는 없앴다 (2026-10-05 사용자 결정 "b로 하자" — 놀아주기 신남을 빼고 신남은 장난감 전용). 옛 저장의 short-play 는 정규화가 버린다
+// 식별자는 바꾸지 않았다 — 옛 저장과 옛 판 앱(클라우드로 같은 저장을 읽는)이 버프를 그대로 읽는다
+export type BuffKind = "premium-food" | "long-play";
 
 export interface BuffV3 {
   kind: BuffKind;
@@ -79,12 +79,10 @@ export interface PetV3 {
   affinityProgressMs: number; // 다음 친밀도 1 까지의 부분 진행. 버프와 디버프를 반영한 가중 시간
   fullness: number; // 만복도 0~100. 높을수록 배부르다
   fullnessProgressMs: number; // 다음 만복도 1 감소까지의 부분 진행
-  mood: number; // 0~100
-  moodProgressMs: number; // 다음 기분 1 감소까지의 부분 진행 (배율을 반영한 가중 시간)
+  boredom: number; // 심심함 0~100. 높을수록 심심하다. 일한 시간만큼 쌓이고 놀아주면 준다 (2026-10-05 — 기분을 대신한다)
+  boredomProgressMs: number; // 다음 심심함 1 증가까지의 부분 진행
   feedCooldownMs: number; // 밥 주기 남은 쿨타임
   playCooldownMs: number; // 놀아주기 남은 쿨타임
-  playWindowMs: number; // 놀아주기 상태의 남은 시간. 이 안에 또 놀아주면 중첩이 오른다
-  playStreak: number; // 이어서 놀아준 횟수. 2 면 들뜸, 3 이면 신남 버프가 붙는다
   buffs: BuffV3[];
   home: { dx: number; dy: number };
   screen?: ScreenRefV3; // 모든 화면 놀이공간에서 사는 화면 — 끌어다 놓을 때 정한다. 없으면 개체가 가장 적은 화면 (2026-09-28 여러 화면)

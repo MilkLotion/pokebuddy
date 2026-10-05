@@ -2,14 +2,14 @@
 //
 // 밥 주기와 놀아주기는 우클릭 메뉴와 개체 상세에서 부른다.
 //   밥 주기    기본먹이를 쓰는 것과 같다. 무료이며 무제한이고 쿨타임을 함께 쓴다
-//   놀아주기   쿨타임마다 한 번 친밀도를 올린다. 이어서 놀아주면 버프 들뜸(2중첩)·신남(3중첩)이 붙는다. 장난감은 신남을 준다
+//   놀아주기   쿨타임마다 한 번 친밀도를 올리고 심심함을 줄인다. 버프는 없다 — 신남은 장난감이 준다
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기가 한다.
-import { setBuff, useItem, type UseFailure, type UseResult } from "../bag/use.js";
+import { useItem, type UseFailure, type UseResult } from "../bag/use.js";
 import { countCare } from "../dex/mega.js";
 import type { DexOptions } from "../dex/data";
 import { BAG_RULES } from "../bag/rules.js";
 import { PET_RULES } from "../party/rules.js";
-import { CARE_RULES } from "./rules.js";
+import { BOREDOM_RULES, CARE_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { isInParty } from "../party/locate.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -22,40 +22,24 @@ export type PlayFailure = ReasonOf<"no-pet" | "cooldown">;
 export type PlayResult = Outcome<PlayFailure> & {
   petId?: string;
   affinity?: number;
-  streak?: number; // 이어서 놀아준 횟수
-  longPlay?: boolean; // 신남 버프가 붙었다 (3중첩)
-  shortPlay?: boolean; // 들뜸 버프가 붙었다 (2중첩, 신남이 없을 때만)
+  boredom?: number; // 놀아준 뒤의 심심함
 };
 
 // 밥 주기 — 기본먹이 사용과 같은 길로 간다. 검사도 쿨타임도 한 곳에만 둔다
 export const applyFeed = (save: SaveV3, petId: string, opts?: DexOptions): UseResult => useItem(save, BASIC_FOOD, petId, {}, opts);
 
-// 놀아주기 — 쿨타임마다 한 번 친밀도를 올린다. 이어서 놀아주면 중첩이 오른다
-//
-// 한 번 놀아주면 20분짜리 놀아주기 상태가 붙는다. 그 자체로는 아무 효과가 없다.
-// 쿨타임 10분이 지난 뒤 남은 10분 안에 또 놀아주면 중첩이 오른다.
-// 두 번 이어지면 버프 들뜸(×1.2, 30분), 세 번 이어지면 버프 신남(×1.5, 30분)이 붙는다 (2026-09-29 사용자 결정).
-// 신남이 붙으면 들뜸은 신남으로 바뀐다(곱하지 않는다). 신남이 남아 있으면 들뜸을 새로 걸지 않는다 (제안, 사용자 확인 전).
-// 신남은 장난감이 주는 것과 같은 버프다.
+// 놀아주기 — 쿨타임(10분)마다 한 번. 친밀도 +3, 심심함 −50 (2026-10-05 사용자 결정 — 돌봄 개편).
+// 이어서 놀아주는 중첩(들뜸·신남)과 놀아주기 신남은 없앴다 (2026-10-05 사용자 결정 "b로 하자" — 놀아주기 신남을 빼고 신남은 장난감 전용)
 export function applyPlay(save: SaveV3, petId: string): PlayResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (pet.playCooldownMs > 0) return { ok: false, reason: "cooldown" };
 
-  // 상태가 남아 있으면 이어 센다. 끊겼으면 처음부터
-  pet.playStreak = pet.playWindowMs > 0 ? pet.playStreak + 1 : 1;
-  pet.playWindowMs = CARE_RULES.playWindowMs;
   pet.playCooldownMs = CARE_RULES.playCooldownMs;
   pet.affinity = Math.min(PET_RULES.statMax, pet.affinity + BAG_RULES.playAffinity);
-  pet.mood = Math.min(PET_RULES.statMax, pet.mood + BAG_RULES.playMood);
+  pet.boredom = Math.max(0, pet.boredom - BOREDOM_RULES.playDrop);
   pet.daily.plays += 1;
-
-  const longPlay = pet.playStreak >= CARE_RULES.longPlayAt;
-  const excited = pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0);
-  const shortPlay = !longPlay && !excited && pet.playStreak >= CARE_RULES.shortPlayAt;
-  if (longPlay) setBuff(pet, "long-play");
-  else if (shortPlay) setBuff(pet, "short-play");
-  return { ok: true, petId, affinity: pet.affinity, streak: pet.playStreak, longPlay, shortPlay };
+  return { ok: true, petId, affinity: pet.affinity, boredom: pet.boredom };
 }
 
 // ── 돌봄 명령 — 밥 주기·놀아주기를 할 수 있는지 보고, 하고, 센다 ─────────────────────

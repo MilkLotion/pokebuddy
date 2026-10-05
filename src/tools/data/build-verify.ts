@@ -20,7 +20,7 @@ import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
 import { SHOP_RULES } from "../../shop/rules";
-import { CARE_RULES, MOOD_RULES, TIME_RULES } from "../../state/rules";
+import { CARE_RULES, TIME_RULES } from "../../state/rules";
 import { CLOCK_RULES } from "../../main/app/clock";
 import { writeTextIfChanged } from "./write-text";
 
@@ -90,8 +90,9 @@ export function buildVerifyFiles(): Record<string, string> {
   // 친밀도 시간 적립 최대 — 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
   const buffTop = 100 + TIME_RULES.buffBonusPercent["premium-food"] + TIME_RULES.buffBonusPercent["long-play"];
   const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (buffTop / 100);
-  // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩
-  const carePerHour = (3_600_000 / BAG_RULES.feedCooldownMs) * BAG_RULES.feedAffinity + (3_600_000 / CARE_RULES.playCooldownMs) * BAG_RULES.playAffinity;
+  // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩. 프리미엄먹이(+8)는 밥 주기 쿨타임을 같이 쓰므로 밥 몫의 최대로 센다 (2026-10-05 돌봄 개편)
+  const feedTop = Math.max(BAG_RULES.feedAffinity, BAG_RULES.premiumAffinity);
+  const carePerHour = (3_600_000 / BAG_RULES.feedCooldownMs) * feedTop + (3_600_000 / CARE_RULES.playCooldownMs) * BAG_RULES.playAffinity;
   // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
   const megaForms: Record<string, string[]> = {};
   for (const slug of megaSlugs()) (megaForms[megaOf(slug)!.base] ??= []).push(slug);
@@ -124,9 +125,9 @@ export function buildVerifyFiles(): Record<string, string> {
     rules: {
       pointMs: TIME_RULES.pointGainMs,
       maxPartySlots: PARTY_RULES.total,
-      // 친밀도 배율(2) × 돌봄 보너스 최대(든든함 + 신남 + 기분 최고) — src/state/time.ts carePercent
-      maxEarnFactor: (2 * (buffTop + Math.max(0, ...MOOD_RULES.pointBonus.map((b) => b.percent)))) / 100,
-      // 다른 프리셋 — (최대 프리셋 수 − 1) × 6마리 × 친밀도 배율(2) × 적립 배율. 돌봄 보너스는 받지 않는다 (src/state/time.ts applyTime)
+      // 친밀도 배율(2) × 포인트 적립 배율 최대(100 + 든든함 + 신남) — src/state/time.ts pointPercent. 손해는 줄이기만 한다 (2026-10-05 돌봄 개편, 그 전에는 기분 최고까지 2.8)
+      maxEarnFactor: (2 * buffTop) / 100,
+      // 다른 프리셋 — (최대 프리셋 수 − 1) × 6마리 × 친밀도 배율(2) × 적립 배율. 버프·손해는 받지 않는다 (src/state/time.ts applyTime)
       otherPresetEarn: ((PARTY_RULES.presets.max - 1) * PARTY_RULES.total * 2 * TIME_RULES.otherPresetPointPercent) / 100,
       findPointsMax: FIND_RULES.points.max,
       mintRefund: MINT_REFUND_EACH,
@@ -142,8 +143,8 @@ export function buildVerifyFiles(): Record<string, string> {
       megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,
       carePerHour,
-      careOnce: BAG_RULES.feedAffinity + BAG_RULES.playAffinity,
-      toyAffinity: BAG_RULES.playAffinity,
+      careOnce: feedTop + BAG_RULES.playAffinity,
+      toyAffinity: BAG_RULES.toyAffinity, // 장난감 하나가 바로 올리는 친밀도 (2026-10-05 +5)
       maxEggs: EGG_RULES.maxEggs,
       // 파일 쓰기 주기 + 게임 틱 한 번의 최대 + 여유 — 올린 저장이 이만큼 늦게 찍혔을 수 있다
       slackMs: CLOCK_RULES.saveMs + TIME_RULES.maxElapsedMs + 15_000,

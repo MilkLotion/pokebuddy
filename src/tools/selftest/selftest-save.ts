@@ -171,7 +171,7 @@ const v2Save = (over: Partial<SaveV2> = {}): SaveV2 => ({
   assert.equal(s.pets[0]?.affinity, 100, "친밀도는 100 을 넘지 않는다");
   assert.equal(s.pets[0]?.fullness, 0, "만복도는 0 아래로 내려가지 않는다");
   assert.equal(s.pets[0]?.level, 1, "레벨은 1 부터");
-  assert.equal(s.pets[0]?.moodProgressMs, 0, "기분 진행이 없는 옛 저장은 0 으로 읽는다");
+  assert.equal(s.pets[0]?.boredomProgressMs, 0, "심심함 진행이 없는 옛 저장은 0 으로 읽는다");
   assert.equal(s.party.slots[0]?.state, "empty", "없는 개체를 가리키면 빈 칸");
   assert.equal(s.party.slots[1]?.petId, "p1");
   assert.equal(s.tx.length, 1);

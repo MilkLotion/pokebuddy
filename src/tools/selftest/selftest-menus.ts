@@ -9,14 +9,14 @@ import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { jumpListOf, petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
 import { menuView } from "../../view/menu-view";
-import { moodText, t } from "../../view/text";
+import { boredText, t } from "../../view/text";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
 const pet = (over: Partial<PetV3> = {}): PetV3 => ({
   id: "p1", species: "charmander", shiny: false, nature: "hardy", gender: "male", size: 2,
   level: 1, exp: 0, affinity: 0, affinityProgressMs: 0, fullness: 100, fullnessProgressMs: 0,
-  mood: 60, moodProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, playWindowMs: 0, playStreak: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
+  boredom: 0, boredomProgressMs: 0, feedCooldownMs: 0, playCooldownMs: 0, buffs: [], home: { dx: -24, dy: -60 }, since: T0, stage: 0, evolved: [],
   daily: { date: "2026-09-24", gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 },
   ...over,
 });
@@ -41,7 +41,7 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
 {
   const r = menuOf(seed(), "p1");
   assert.ok(r);
-  assert.equal(r.model.status, `${t("zone.normal")} · ${moodText(60)}`, "상태 줄은 구간 낱말 · 기분 말");
+  assert.equal(r.model.status, `${t("zone.normal")} · ${boredText(null)}`, "상태 줄은 구간 낱말 · 심심함 단계 말");
   assert.deepEqual([r.model.feed, r.model.play], [{ enabled: true }, { enabled: true }]);
   assert.deepEqual(r.model.ball, { enabled: true, hidden: false });
   assert.equal(r.model.move, undefined, "옮기기는 박스 개체에만");
@@ -89,7 +89,6 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const full = menuOf(open((s) => {
     s.pets[0]!.fullness = 100;
     s.pets[0]!.playCooldownMs = 0;
-    s.pets[0]!.playStreak = 0;
   }), "p1", "stage")?.firstCare;
   assert.equal(full?.keep, t("menu.play"), "배부르면 놀아주기를 남긴다");
 }

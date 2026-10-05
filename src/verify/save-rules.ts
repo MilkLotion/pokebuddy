@@ -61,7 +61,7 @@ export interface VerifyData {
   rules: {
     pointMs: number; // 가중 시간 이만큼에 1P
     maxPartySlots: number;
-    maxEarnFactor: number; // 친밀도 배율(2) × 돌봄 보너스 최대(2.8)
+    maxEarnFactor: number; // 친밀도 배율(2) × 포인트 적립 배율 최대(2.2 — 2026-10-05 돌봄 개편, 그 전 2.8)
     otherPresetEarn?: number; // 다른 프리셋 개체의 적립을 파티 칸 수로 환산한 값 — 개체 수 × 친밀도 배율(2) × 적립 배율(0.2). 없으면 0(옛 데이터)
     findPointsMax: number; // 줍기 한 번 최대 포인트
     mintRefund: number;

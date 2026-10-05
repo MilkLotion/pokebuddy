@@ -7,7 +7,7 @@ import type { FullnessZone, SlotState } from "../save-v3.js";
 
 export interface ViewBuff {
   kind: string;
-  name: string; // 화면 이름 — 든든함 · 신남 · 들뜸
+  name: string; // 화면 이름 — 든든함 · 신남
   remainMin: number; // 남은 분(반올림). 시간으로만 바뀌는 값이라 1초 시계가 표시만 고친다
   text: string; // 배지 글자 — "신남 12분" · "든든함 2시간" (src/shared/count-text.ts buffText)
 }
@@ -46,18 +46,17 @@ export interface PetView {
   zone: FullnessZone;
   zoneText: string; // 만복도 구간 낱말 — "배부름" · "보통" · "배고픔" · "매우 배고픔"
   debuff: { label: string; tone: "warning" | "danger"; note: string } | null; // 배고픔 디버프 배지. 배부름·보통이면 null (docs/specs/balance.md "배고픔 디버프")
-  mood: number; // 0~100. 보이기만 하는 값이다
-  moodWord: string; // 기분 단계 말 — "좋음" 처럼 화면에 그대로 쓴다
+  boredom: number; // 심심함 0~100. 높을수록 심심하다 (2026-10-05 — 기분을 대신한다)
+  boredWord: string; // 심심함 단계 말 — "보통" · "심심해" · "지루해" 를 화면에 그대로 쓴다
   hidden: boolean;
   feedReady: boolean;
   feedInSec: number;
   playReady: boolean;
   feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
   playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 3분" (밥 주기와 같은 꼴, 94 항목 5-1)
-  playStreak: number;
-  longPlay: boolean; // 신남 버프가 켜져 있다
+  longPlay: boolean; // 신남(장난감)이 켜져 있다 — 그동안 심심함이 쌓이지 않는다
   buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서
-  buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 · 들뜸 순서 (2026-09-29 사용자 결정)
+  buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 순서
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
   shiftForms?: FormView[]; // 모습 바꾸기 종(로토무)의 고를 수 있는 모습 — 해금 뒤에만. 박스 칸은 지금 종 그대로라 forms 와 나눈다
@@ -65,14 +64,14 @@ export interface PetView {
   look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
   mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
   megaGoal?: MegaGoalView; // 메가진화하는 종인데 메가스톤이 아직 없는 개체만
-  care: CareView | null; // 돌봄 보너스 — 친밀도가 100 미만이면 null
+  care: CareView; // 포인트 적립 배율의 내역 — 버프(+)와 배고픔·심심함(−). 친밀도와 상관없다 (2026-10-05)
 }
 
-// 돌봄 보너스 — 파티 상세 기기 창의 `포인트 적립` 줄이 쓴다 (src/state/time.ts careParts, docs/specs/balance.md "돌봄 보너스")
+// 포인트 적립 배율의 내역 — 파티 상세 기기 창의 `포인트 적립` 줄이 쓴다 (src/state/time.ts pointParts, docs/specs/balance.md "포인트 적립 배율")
 // 필드 이름을 percent 로 두지 않는다 — 기기 창이 percent 를 시간으로만 바뀌는 값으로 보고 다시 그리지 않는다 (src/shared/live-keys.ts LIVE_KEYS)
 export interface CareView {
-  bonus: number; // 보너스 합(백분율). 0 이면 기본 속도다
-  parts: { kind: string; name: string; bonus: number }[]; // 내역 — kind 는 mood 또는 버프 종류. name 은 기분 단계 말이나 버프 이름
+  bonus: number; // 합(백분율) — 버프는 +, 손해는 −. 바닥(−90)에서 멈춘다. 0 이면 기본 속도다
+  parts: { kind: string; name: string; bonus: number }[]; // 내역 — kind 는 버프 종류·만복도 구간(hungry·starving)·심심함 단계(bored·tired). name 은 화면 이름
 }
 
 // 메가진화 — 파티 상세 기기 창의 메가스톤 표식과 확인·고르기 창이 쓴다

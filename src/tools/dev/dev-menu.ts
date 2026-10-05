@@ -17,7 +17,7 @@ void app.whenReady().then(() => {
   const say = (what: string) => (): void => void process.stdout.write(`picked: ${what}\n`);
   const act = { toggleHidden: say("hide"), quit: say("quit"), toggleGhost: say("ghost") };
   // --pet 은 포켓몬 위 우클릭 메뉴 — 앱과 같게 상세 보기를 끝에 붙인다 (src/main/app.ts showPetMenu)
-  const pet = petMenu({ name: "피카츄", nature: "노력", status: "배부름 · 기분 좋음", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, { feed: say("feed"), play: say("play"), ball: say("ball") });
+  const pet = petMenu({ name: "피카츄", nature: "노력", status: "배부름 · 보통", feed: { enabled: false, reason: "0:40" }, play: { enabled: true } }, { feed: say("feed"), play: say("play"), ball: say("ball") });
   pet.push({ type: "separator" }, { label: "상세 보기", click: say("detail") });
   const template: MenuItemConstructorOptions[] = hasFlag("--pet")
     ? pet

@@ -41,7 +41,7 @@ export const playHandler: TxHandler = (draft, args) => {
   if (!petId) return { ok: false, reason: "bad-args" };
   const res = playWithPet(draft, petId);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
-  return { ok: true, result: { petId, affinity: res.affinity, streak: res.streak, longPlay: res.longPlay } };
+  return { ok: true, result: { petId, affinity: res.affinity, boredom: res.boredom } };
 };
 
 // ── 첫 선택과 자리 ─────────────────────────────────────────────────────────────

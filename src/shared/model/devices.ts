@@ -27,8 +27,8 @@ export interface PetDeviceOpen {
   notice: string; // 마지막 실패 문구
   tutorial: boolean; // 개체 상세 튜토리얼을 보일 차례 — 파티 개체이고 아직 끝내거나 건너뛰지 않았다
   dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다 — `도감 보기` 줄을 톤 배경으로
-  careLine: { title: string; desc: string }; // `포인트 적립` 줄 — 제목과 설명(보너스 내역)
-  bars: { affinity: string; fullness: string; mood: string }; // 막대 오른쪽 글자 — "80" · "55 · 보통" · "60 · 좋음". 시간으로만 바뀌어 1초 시계가 글자만 고친다
+  careLine: { title: string; desc: string }; // `포인트 적립` 줄 — 제목(합)과 설명(버프·손해 내역)
+  bars: { affinity: string; fullness: string; boredom: string }; // 막대 오른쪽 글자 — "80" · "55 · 보통" · "20 · 보통". 시간으로만 바뀌어 1초 시계가 글자만 고친다
   busy: string | null; // 처리 중인 단추의 열쇠(src/shared/device-busy.ts petBusyKey) — 그 단추만 점 세 개
 }
 

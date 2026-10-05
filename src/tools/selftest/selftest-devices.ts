@@ -175,9 +175,9 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(where("없음"), undefined, "없는 개체면 닫는다");
   // 포인트 적립 줄과 막대 글자 — 박스 개체는 적립 없음, 친밀도 100 전은 기본
   assert.deepEqual(where("p3")?.careLine, { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" });
-  assert.deepEqual(where("p1")?.careLine, { title: "포인트 적립 기본", desc: "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요" });
+  assert.deepEqual(where("p1")?.careLine, { title: "포인트 적립 기본", desc: "배고프거나 심심하면 느리게 쌓여요" });
   const p1 = v.party.slots[0]?.pet;
-  assert.deepEqual(where("p1")?.bars, { affinity: `${p1?.affinity}`, fullness: `55 · ${p1?.zoneText}`, mood: `${p1?.mood} · ${p1?.moodWord}` });
+  assert.deepEqual(where("p1")?.bars, { affinity: `${p1?.affinity}`, fullness: `55 · ${p1?.zoneText}`, boredom: `${p1?.boredom} · ${p1?.boredWord}` });
 }
 
 // (9) 결과 줄 — 거래 앞뒤 화면 값을 견준다. 결과 줄이 없는 명령은 null

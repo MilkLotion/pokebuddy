@@ -178,7 +178,7 @@ CLI(`pokebuddy status`·`companion`)는 저장 내용을 읽지 않는다. 첫 �
 | 영역 | 필드 |
 |---|---|
 | `meta` | `v: 3`, `savedAt`, `lastTickAt` |
-| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `gender`(`male`·`female`·`none`, 2026-09-30 추가. 옛 저장은 열 때 정한다), `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `mood`, `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily`, `mega`(선택 필드, 2026-10-02 추가: `bondMs` 친밀도 100 뒤 파티에서 보낸 시간, `care` 친밀도 100 뒤 돌봄 횟수, `stone` 메가스톤, `on` 지금 메가 모습의 슬러그) |
+| `pets[]` | `id`, `species`, `stage`, `shiny`, `nature`, `gender`(`male`·`female`·`none`, 2026-09-30 추가. 옛 저장은 열 때 정한다), `size`, `level`, `exp`, `affinity`(친밀도 누적), `fullness`(만복도 0~100), `boredom`(심심함 0~100, 2026-10-05 `mood` 를 대신했다), `feedCooldownMs`(남은 시간), `buffs[]`(`kind`, `remainMs`), `since`, `evolved[]`, `daily`, `mega`(선택 필드, 2026-10-02 추가: `bondMs` 친밀도 100 뒤 파티에서 보낸 시간, `care` 친밀도 100 뒤 돌봄 횟수, `stone` 메가스톤, `on` 지금 메가 모습의 슬러그) |
 | `party` | `slots[6]`. 칸마다 `state`(`pokemon`·`empty`·`locked`), `petId`, `hidden`, `unlockBy`(`shop`·`achievement`). `unlockBy` 는 경로별로 더 열 수 있는 칸 수만 센다. 칸은 앞에서부터 연다(`src/party/slots.ts`) |
 | `boxes[]` | `id`, `name`, `slots[30]`(개체 식별자 또는 빈 칸) |
 | `eggs[]` | `id`, `boughtAt`, `remainMs`(준비 남은 시간), `ready`, `candidates[]`(구매 당시 후보 종). `actions`·`careCooldownMs`는 옛 판 호환용이며 쓰지 않는다 |

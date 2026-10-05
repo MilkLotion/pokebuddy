@@ -1,6 +1,6 @@
 // 저장의 규칙표 — save.json 의 판, 거래 기록과 기록의 보관, 저장 실패 안내, 명령 통로의 시간. "숫자는 모듈마다 규칙표 하나" (design.md 모듈 규칙)
 //
-// 게임 숫자(친밀도·기분·쿨다운·가격)는 여기 없다 — 주인 모듈의 rules.ts 에 있다. 저장 v2 의 값은 ./v2/rules.ts,
+// 게임 숫자(친밀도·만복도·쿨다운·가격)는 여기 없다 — 주인 모듈의 rules.ts 에 있다. 저장 v2 의 값은 ./v2/rules.ts,
 // 원자적 쓰기의 재시도는 src/platform/atomic-write.ts IO_RULES 다
 export const SAVE_RULES = {
   version: 3 as const, // save.json 스키마 판 (v). 1·2 는 읽어서 옮긴다 (./v2/)

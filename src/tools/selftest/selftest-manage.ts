@@ -131,20 +131,20 @@ try {
     const reply = game.send({ cmd: "feed", target: "p1" }, "settings");
     assert.equal(reply.ok, true);
     const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
-    assert.equal(pet?.fullness, 20, "0 에서 20 으로");
+    assert.equal(pet?.fullness, 40, "0 에서 40 으로 (기본먹이 +40)");
     assert.equal(pet?.feedReady, false);
     assert.equal(pet?.feedInSec, BAG_RULES.feedCooldownMs / 1000, "남은 쿨타임을 초로");
     process.stdout.write("(6) 밥 주기와 쿨타임 표시  ok\n");
   }
 
-  // (7) 놀아주면 중첩이 화면 값에 실린다
+  // (7) 놀아주면 쿨타임이 화면 값에 실린다. 버프는 없다 (2026-10-05 "b로 하자")
   {
     assert.equal(game.send({ cmd: "play", target: "p1" }, "settings").ok, true);
     const pet = snapshotOfGame(game)?.party.slots[0]?.pet;
-    assert.equal(pet?.playStreak, 1);
+    assert.deepEqual(pet?.buffNames, [], "놀아주기는 버프를 주지 않는다");
     assert.equal(pet?.longPlay, false);
     assert.equal(pet?.playReady, false);
-    process.stdout.write("(7) 놀아주기 중첩 표시  ok\n");
+    process.stdout.write("(7) 놀아주기 쿨타임 표시  ok\n");
   }
 
   // (8) 박스에 보관하면 파티 칸이 빈다

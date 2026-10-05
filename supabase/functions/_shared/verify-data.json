@@ -3,10 +3,10 @@
   "basic-food": {
    "price": null,
    "effect": "fullness",
-   "amount": 20
+   "amount": 40
   },
   "premium-food": {
-   "price": 60,
+   "price": 50,
    "effect": "fullness-full-buff",
    "amount": 100
   },
@@ -5088,7 +5088,7 @@
  "rules": {
   "pointMs": 120000,
   "maxPartySlots": 6,
-  "maxEarnFactor": 5.6,
+  "maxEarnFactor": 4.4,
   "otherPresetEarn": 9.6,
   "findPointsMax": 10,
   "mintRefund": 100,
@@ -5100,10 +5100,10 @@
   "megaCare": 100,
   "careCountPerHour": 12,
   "megaAffinity": 100,
-  "affinityPerHour": 15,
-  "carePerHour": 30,
-  "careOnce": 5,
-  "toyAffinity": 3,
+  "affinityPerHour": 13.200000000000001,
+  "carePerHour": 66,
+  "careOnce": 11,
+  "toyAffinity": 5,
   "maxEggs": 6,
   "slackMs": 60000
  }

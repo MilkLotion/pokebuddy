@@ -1,7 +1,7 @@
 // 줍기 — 무대에서 돌아다니는 포켓몬이 가끔 무언가를 주워 온다. 계약은 docs/specs/game.md "줍기", 수치는 docs/specs/balance.md "줍기"
 //
 // 주울 수 있는 것은 포인트·도구·진화용 도구·포켓몬 넷이다 (2026-09-29 사용자 결정).
-// 판정은 마리마다 따로 한다. 그 마리가 조건을 채운 1초마다 1/2000 확률이다 (2026-09-29 사용자 결정). 마리끼리 독립이다.
+// 판정은 마리마다 따로 한다. 그 마리가 조건을 채운 1초마다 1/3000, 잘 돌본 마리는 1/2000 확률이다 (2026-10-05 사용자 결정, src/find/roll.ts isCaredFor). 마리끼리 독립이다.
 // 조건 — 앱이 켜져 있고, 그 마리가 무대에 나와 있는 꺼낸 파티 개체이며, 깨어 있다.
 // 메인은 전역 1초 시계의 틱마다 깨어 있는 마리 각각을 그 틱 간격으로 굴린다(rollHits — src/main/app.ts clockTick). P = 1 − (1 − 1/2000)^(초).
 // 주운 마리는 그 자리에서 저장에 반영한다(applyHits — src/tx/game.ts find). 한 번 굴림에 마리마다 최대 1건이다.
@@ -16,7 +16,7 @@ import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { inRandomEgg } from "../dex/obtain.js";
 import type { FindRecordV3, FindV3, SaveV3 } from "../shared/save-v3";
-import { KINDS, rollHits } from "./roll.js";
+import { isCaredFor, KINDS, rollHits } from "./roll.js";
 
 export interface FindInput {
   activeMs: Readonly<Record<string, number>>; // 마리별로 조건을 채운 시간 — 부르는 쪽이 무대에서 센다
@@ -65,6 +65,9 @@ export function eligiblePetIds(save: SaveV3, awake: Iterable<string>): string[] 
   const shown = new Set(save.party.slots.filter((s) => s.state === "pokemon" && s.petId && !s.hidden).map((s) => s.petId as string));
   return [...new Set(awake)].filter((id) => shown.has(id) && save.pets.some((p) => p.id === id));
 }
+
+// 잘 돌본 마리 — 줍기 확률이 1/2000 인 마리 (src/find/roll.ts isCaredFor). 메인 시계가 굴릴 때도 쓴다
+export const caredIds = (save: SaveV3): Set<string> => new Set(save.pets.filter(isCaredFor).map((p) => p.id));
 
 export const emptyFind = (): FindV3 => ({ seq: 0, log: [] });
 
@@ -119,5 +122,5 @@ export function applyHits(save: SaveV3, petIds: readonly string[], now: number, 
 export function applyFind(save: SaveV3, input: FindInput, now: number, rand: Rand, opts?: DexOptions): FindRecordV3[] {
   const shown = new Set(eligiblePetIds(save, Object.keys(input.activeMs)));
   const activeMs = Object.fromEntries(Object.entries(input.activeMs).filter(([id]) => shown.has(id)));
-  return applyHits(save, rollHits(activeMs, rand, input.rate), now, rand, opts);
+  return applyHits(save, rollHits(activeMs, rand, input.rate, caredIds(save)), now, rand, opts);
 }

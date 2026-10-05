@@ -4,7 +4,7 @@
 // 설계는 worklog/records/game-runtime/record.md "놀이공간·설정의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { HUNGER_BUBBLE_RULES, createHungerBubbles } from "../../main/stage/hunger-bubble";
+import { BORED_BUBBLE_RULES, HUNGER_BUBBLE_RULES, createBoredBubbles, createHungerBubbles } from "../../main/stage/hunger-bubble";
 import fs from "node:fs";
 import path from "node:path";
 import { createGame } from "../../tx/game";
@@ -117,12 +117,10 @@ function seedPet(): SaveV3 {
     affinityProgressMs: 0,
     fullness: 80,
     fullnessProgressMs: 0,
-    mood: 60,
-    moodProgressMs: 0,
+    boredom: 0,
+    boredomProgressMs: 0,
     feedCooldownMs: 0,
     playCooldownMs: 0,
-    playWindowMs: 0,
-    playStreak: 0,
     buffs: [],
     home: { dx: -24, dy: -60 },
     since: T0,
@@ -140,16 +138,30 @@ function seedPet(): SaveV3 {
   const { hungry, starving } = HUNGER_BUBBLE_RULES.repeatMs;
   const ids = (list: Array<{ id: string }>) => list.map((x) => x.id);
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 80 }], T0)), [], "배부름·보통은 띄우지 않는다");
-  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 30 }], T0), [{ id: "p1", zone: "hungry" }], "배고픔에 들어가면 바로");
+  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 30 }], T0), [{ id: "p1", level: "hungry" }], "배고픔에 들어가면 바로");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 29 }], T0 + hungry - 1)), [], "배고픔은 10분 안에 다시 띄우지 않는다");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 28 }], T0 + hungry)), ["p1"], "10분이 지나면 다시");
-  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 10 }], T0 + hungry + 1), [{ id: "p1", zone: "starving" }], "매우 배고픔에 들어가면 바로");
+  assert.deepStrictEqual(b.due([{ id: "p1", fullness: 10 }], T0 + hungry + 1), [{ id: "p1", level: "starving" }], "매우 배고픔에 들어가면 바로");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 9 }], T0 + hungry + 1 + starving)), ["p1"], "매우 배고픔은 5분마다");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 70 }], T0 + hungry + starving + 2)), [], "밥을 먹어 벗어나면 멈춘다");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 30 }], T0 + hungry + starving + 3)), ["p1"], "다시 들어가면 바로");
   assert.deepStrictEqual(ids(b.due([], T0 + hungry + starving + 4)), [], "무대에서 빠진 마리는 기록을 지운다");
   assert.deepStrictEqual(ids(b.due([{ id: "p1", fullness: 30 }], T0 + hungry + starving + 5)), ["p1"], "다시 나오면 처음부터");
   process.stdout.write("(6) 배고픔 말풍선 되풀이  ok\n");
+}
+
+// (6b) 심심함 말풍선 — 심심해(50 이상)·지루해(80 이상)에 들어갈 때 바로, 머무는 동안 10분·5분마다 (2026-10-05 돌봄 개편)
+{
+  const b = createBoredBubbles();
+  const { bored, tired } = BORED_BUBBLE_RULES.repeatMs;
+  const ids = (list: Array<{ id: string }>) => list.map((x) => x.id);
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", boredom: 49 }], T0)), [], "보통은 띄우지 않는다");
+  assert.deepStrictEqual(b.due([{ id: "p1", boredom: 50 }], T0), [{ id: "p1", level: "bored" }], "심심해에 들어가면 바로");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", boredom: 60 }], T0 + bored - 1)), [], "10분 안에 다시 띄우지 않는다");
+  assert.deepStrictEqual(b.due([{ id: "p1", boredom: 80 }], T0 + bored), [{ id: "p1", level: "tired" }], "지루해에 들어가면 바로");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", boredom: 90 }], T0 + bored + tired)), ["p1"], "지루해는 5분마다");
+  assert.deepStrictEqual(ids(b.due([{ id: "p1", boredom: 40 }], T0 + bored + tired + 1)), [], "놀아 줘서 벗어나면 멈춘다");
+  process.stdout.write("(6b) 심심함 말풍선 되풀이  ok\n");
 }
 
 // (7) 여러 개 구매 — 명령 하나(count)로 한 거래. 모자라면 하나도 사지 않는다. 0개 이하·소수는 거절.

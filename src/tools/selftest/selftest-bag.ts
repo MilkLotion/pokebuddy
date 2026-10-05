@@ -12,14 +12,14 @@ import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { applyFeed, applyPlay } from "../../state/care";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import { BAG_RULES } from "../../bag/rules";
-import { CARE_RULES } from "../../state/rules";
+import { BOREDOM_RULES, CARE_RULES } from "../../state/rules";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
 
-// 놀아주기 상태가 끝날 만큼 시간을 흘린다. 개체가 파티에 있어야 시간이 흐른다
-function applyTimeForTest(s: SaveV3): void {
+// 시간을 흘린다(30초씩 나눠). 개체가 파티에 있어야 시간이 흐른다
+function applyTimeForTest(s: SaveV3, ms: number): void {
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  applyTime(s, CARE_RULES.playWindowMs, T0 + CARE_RULES.playWindowMs);
+  for (let at = 30_000; at <= ms; at += 30_000) applyTime(s, 30_000, T0 + at);
 }
 
 // 시험 개체 — newPet 결과에 크기 2 와 over 를 덮는다 (src/tools/harness/fixtures.ts)
@@ -99,7 +99,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const s = seed({ fullness: 50 });
   const res = useItem(s, "basic-food", "p1");
   assert.equal(res.ok, true);
-  assert.equal(s.pets[0]?.fullness, 70, "만복도 +20");
+  assert.equal(s.pets[0]?.fullness, 90, "만복도 +40 (2026-10-05 돌봄 개편)");
   assert.equal(s.pets[0]?.feedCooldownMs, BAG_RULES.feedCooldownMs);
   assert.equal(s.pets[0]?.affinity, BAG_RULES.feedAffinity);
   assert.equal(s.bag["basic-food"], undefined, "재고를 세지 않는다");
@@ -115,12 +115,13 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(6) 만복도 가득  ok\n");
 }
 
-// (7) 프리미엄먹이는 가득 채우고 버프를 건다
+// (7) 프리미엄먹이는 가득 채우고 든든함을 건다. 친밀도 +8 (2026-10-05 돌봄 개편)
 {
   const s = seed({ fullness: 10 }, { "premium-food": 2 });
   const res = useItem(s, "premium-food", "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 100);
+  assert.equal(s.pets[0]?.affinity, BAG_RULES.premiumAffinity, "친밀도 +8");
   assert.equal(s.pets[0]?.buffs[0]?.kind, "premium-food");
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.buffMs["premium-food"]);
   assert.equal(s.bag["premium-food"], 1, "하나 줄었다");
@@ -128,20 +129,19 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(7) 프리미엄먹이 · 가득과 버프  ok\n");
 }
 
-// (8) 장난감은 신남 버프를 건다. 다시 쓰면 갱신한다. 들뜸이 있으면 신남으로 바뀐다 (2026-09-29 사용자 결정 — 이름, 교체는 제안)
+// (8) 장난감은 신남(+60%, 2시간)을 걸고 심심함을 0 으로. 친밀도 +5. 다시 쓰면 갱신한다 (2026-10-05 돌봄 개편)
 {
-  const s = seed({ buffs: [{ kind: "long-play", remainMs: 1000 }] }, { toy: 1 });
+  const s = seed({ buffs: [{ kind: "long-play", remainMs: 1000 }], boredom: 70 }, { toy: 1 });
   const res = useItem(s, "toy", "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.buffs.length, 1, "겹쳐 쌓지 않는다");
-  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.toyBuffMs, "남은 시간을 장난감 지속시간으로 바꾼다");
-  assert.equal(BAG_RULES.toyBuffMs, 2 * 60 * 60_000, "장난감 신남 2시간");
+  assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.buffMs["long-play"], "남은 시간을 장난감 지속시간으로 바꾼다");
+  assert.equal(BAG_RULES.buffMs["long-play"], 2 * 60 * 60_000, "장난감 신남 2시간");
+  assert.equal(s.pets[0]?.boredom, 0, "심심함 0");
+  assert.equal(s.pets[0]?.affinity, BAG_RULES.toyAffinity, "친밀도 +5");
   assert.equal(s.bag.toy, undefined, "다 쓰면 가방에서 사라진다");
   assert.deepStrictEqual([s.totals.fed, s.totals.played], [0, 1], "장난감은 놀아주기 횟수에 든다 (94 항목 9-3-6)");
   assert.equal(useItem(s, "toy", "p1").reason, "none-left");
-  const giddy = seed({ buffs: [{ kind: "short-play", remainMs: 1000 }] }, { toy: 1 });
-  assert.equal(useItem(giddy, "toy", "p1").ok, true);
-  assert.deepEqual(giddy.pets[0]?.buffs, [{ kind: "long-play", remainMs: BAG_RULES.toyBuffMs }], "장난감 — 들뜸이 신남으로 바뀐다");
   process.stdout.write("(8) 장난감 · 신남 · 갱신과 소진  ok\n");
 }
 
@@ -272,7 +272,7 @@ process.stdout.write("selftest-bag: 통과 (곡선·먹이·버프·사탕·민�
   const s = seed({ fullness: 50 });
   const res = applyFeed(s, "p1");
   assert.equal(res.ok, true);
-  assert.equal(s.pets[0]?.fullness, 70);
+  assert.equal(s.pets[0]?.fullness, 90, "만복도 +40");
   assert.equal(s.pets[0]?.feedCooldownMs, BAG_RULES.feedCooldownMs);
   assert.equal(applyFeed(s, "p1").reason, "cooldown");
   assert.equal(applyFeed(s, "없는개체").reason, "no-pet");
@@ -311,105 +311,57 @@ process.stdout.write("selftest-bag: 통과 (곡선·먹이·버프·사탕·민�
 
 process.stdout.write("selftest-bag: 돌봄 통과 (밥·놀이·쿨타임)\n");
 
-// (19) 놀아주기 2중첩이면 들뜸(×1.2, 30분), 3중첩이면 신남(×1.5, 30분). 신남이 되면 들뜸은 신남으로 바뀐다 (2026-09-29 사용자 결정 — 이름·수치, 교체는 제안)
+// (19) 놀아주기는 심심함 −50 과 친밀도 +3 뿐이다. 버프·중첩은 없다 (2026-10-05 사용자 결정 "b로 하자")
 {
-  const s = seed();
-  const pet0 = s.pets[0];
-  assert.ok(pet0);
+  const s = seed({ boredom: 70 });
+  const pet0 = s.pets[0]!;
   const first = applyPlay(s, "p1");
-  assert.equal(first.streak, 1);
-  assert.equal(first.longPlay, false, "한 번은 아직 아니다");
-  assert.equal(pet0.playWindowMs, CARE_RULES.playWindowMs, "20분 상태가 붙는다");
-  assert.equal(pet0.buffs.length, 0, "그 자체로는 효과가 없다");
-
-  // 쿨타임 10분이 지나고 상태는 10분 남았다
+  assert.equal(first.boredom, 70 - BOREDOM_RULES.playDrop, "심심함 −50");
+  assert.deepEqual(pet0.buffs, [], "버프는 붙지 않는다");
   pet0.playCooldownMs = 0;
-  pet0.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
-  const second = applyPlay(s, "p1");
-  assert.equal(second.streak, 2);
-  assert.equal(second.longPlay, false);
-  assert.equal(second.shortPlay, true, "두 번이면 들뜸");
-  assert.deepEqual(pet0.buffs, [{ kind: "short-play", remainMs: BAG_RULES.buffMs["short-play"] }]);
-  assert.equal(BAG_RULES.buffMs["short-play"], 30 * 60_000, "들뜸 30분");
-
-  pet0.playCooldownMs = 0;
-  pet0.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
-  const third = applyPlay(s, "p1");
-  assert.equal(third.streak, 3);
-  assert.equal(third.longPlay, true, "세 번이면 신남");
-  assert.deepEqual(pet0.buffs, [{ kind: "long-play", remainMs: BAG_RULES.buffMs["long-play"] }], "들뜸은 신남으로 바뀐다 — 둘이 함께 남지 않는다");
-
-  // 신남이 남아 있으면 2중첩을 다시 채워도 들뜸을 새로 걸지 않는다
-  const s2 = seed({ buffs: [{ kind: "long-play", remainMs: 20 * 60_000 }] });
-  const p2 = s2.pets[0]!;
-  applyPlay(s2, "p1");
-  p2.playCooldownMs = 0;
-  p2.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
-  const again = applyPlay(s2, "p1");
-  assert.equal(again.streak, 2);
-  assert.equal(again.shortPlay, false, "신남 중에는 들뜸을 걸지 않는다");
-  assert.deepEqual(p2.buffs, [{ kind: "long-play", remainMs: 20 * 60_000 }], "신남은 그대로");
-
-  // 장난감 신남(2시간)이 남은 동안 3중첩 놀아주기가 남은 시간을 줄이지 않는다 (2026-10-02)
-  const s4 = seed({ buffs: [{ kind: "long-play", remainMs: 90 * 60_000 }], playStreak: 2, playWindowMs: 60_000 });
-  const kept = applyPlay(s4, "p1");
-  assert.equal(kept.longPlay, true);
-  assert.deepEqual(s4.pets[0]?.buffs, [{ kind: "long-play", remainMs: 90 * 60_000 }], "남은 시간이 더 길면 그대로");
-
-  // 들뜸이 남아 있을 때 다시 2중첩이면 기본 지속시간으로 갱신한다
-  const s3 = seed({ buffs: [{ kind: "short-play", remainMs: 1000 }] });
-  const p3 = s3.pets[0]!;
-  applyPlay(s3, "p1");
-  p3.playCooldownMs = 0;
-  p3.playWindowMs = CARE_RULES.playWindowMs - CARE_RULES.playCooldownMs;
-  applyPlay(s3, "p1");
-  assert.deepEqual(p3.buffs, [{ kind: "short-play", remainMs: BAG_RULES.buffMs["short-play"] }], "들뜸 갱신");
-
-  // 옛 저장의 오래 놀아주기(long-play)는 그대로 신남으로 이어진다. 신남과 들뜸이 함께 저장돼 있으면 들뜸을 뺀다
-  const old = empty(0);
-  old.pets.push(pet({ buffs: [{ kind: "long-play", remainMs: 5000 }, { kind: "short-play", remainMs: 5000 }] }));
-  old.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  assert.deepEqual(normalize(JSON.parse(JSON.stringify(old)) as unknown, 0)?.pets[0]?.buffs, [{ kind: "long-play", remainMs: 5000 }]);
-  process.stdout.write("(19) 놀아주기 2중첩 들뜸 · 3중첩 신남  ok\n");
-}
-
-// (20) 상태가 끊기면 처음부터 다시 센다
-{
-  const s = seed();
-  const pet0 = s.pets[0];
-  assert.ok(pet0);
-  assert.equal(applyPlay(s, "p1").streak, 1);
-  pet0.playCooldownMs = 0;
-  pet0.playWindowMs = 0; // 20분이 다 지났다
-  assert.equal(applyPlay(s, "p1").streak, 1, "끊기면 처음부터");
-  process.stdout.write("(20) 상태가 끊기면 다시 1부터  ok\n");
-}
-
-// (21) 시간이 흘러 상태가 끝나면 중첩이 풀린다
-{
-  const s = seed();
   applyPlay(s, "p1");
-  applyTimeForTest(s);
-  assert.equal(s.pets[0]?.playWindowMs, 0);
-  assert.equal(s.pets[0]?.playStreak, 0, "창이 닫히면 중첩도 0");
-  process.stdout.write("(21) 창이 닫히면 중첩이 풀린다  ok\n");
+  assert.equal(pet0.boredom, 0, "0 아래로 내려가지 않는다");
+
+  // 신남(장난감)이 남아 있어도 놀아주기는 그것을 건드리지 않는다
+  const s2 = seed({ buffs: [{ kind: "long-play", remainMs: 90 * 60_000 }] });
+  applyPlay(s2, "p1");
+  assert.deepEqual(s2.pets[0]?.buffs, [{ kind: "long-play", remainMs: 90 * 60_000 }], "신남 그대로");
+
+  // 옛 저장 — 옛 들뜸(short-play)은 버린다. 옛 기분·중첩 칸은 읽지 않는다
+  const old = empty(0);
+  old.pets.push(pet({ buffs: [{ kind: "long-play", remainMs: 5000 }] }));
+  old.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  const raw = JSON.parse(JSON.stringify(old)) as { pets: Record<string, unknown>[] };
+  Object.assign(raw.pets[0]!, { mood: 90, moodProgressMs: 10, playWindowMs: 1000, playStreak: 2 });
+  (raw.pets[0]!.buffs as unknown[]).push({ kind: "short-play", remainMs: 5000 });
+  delete raw.pets[0]!.boredom;
+  const read = normalize(raw as unknown, 0)?.pets[0];
+  assert.deepEqual(read?.buffs, [{ kind: "long-play", remainMs: 5000 }]);
+  assert.equal(read?.boredom, 0, "옛 저장은 심심함 0");
+  assert.equal("mood" in (read ?? {}), false, "옛 기분은 버린다");
+  process.stdout.write("(19) 놀아주기 심심함 −50 · 버프 없음 · 옛 저장  ok\n");
 }
 
-// (22) 기분 — 놀아주기·장난감 +15, 밥 주기 +10, 100 을 넘지 않는다
+// (20) 심심함 — 시간당 +30 으로 쌓이고, 장난감 신남이 남은 동안은 쌓이지 않는다
 {
-  const played = seed({ mood: 60 });
-  assert.equal(applyPlay(played, "p1").ok, true);
-  assert.equal(played.pets[0]?.mood, 75, "놀아주기 +15");
-  const fed = seed({ mood: 60, fullness: 50 });
-  assert.equal(applyFeed(fed, "p1").ok, true);
-  assert.equal(fed.pets[0]?.mood, 70, "밥 주기 +10");
-  const toyed = seed({ mood: 60 }, { toy: 1 });
-  assert.equal(useItem(toyed, "toy", "p1").ok, true);
-  assert.equal(toyed.pets[0]?.mood, 75, "장난감도 놀아주기다");
-  const full = seed({ mood: 95 });
-  applyPlay(full, "p1");
-  assert.equal(full.pets[0]?.mood, 100, "100 을 넘지 않는다");
-  process.stdout.write("(22) 기분 · 돌봄으로 오른다  ok\n");
+  const s = seed();
+  applyTimeForTest(s, 60 * 60_000);
+  assert.equal(s.pets[0]?.boredom, 30, "1시간에 +30");
+  const toyed = seed({ buffs: [{ kind: "long-play", remainMs: 2 * 60 * 60_000 }] });
+  applyTimeForTest(toyed, 60 * 60_000);
+  assert.equal(toyed.pets[0]?.boredom, 0, "장난감 신남 동안 쌓이지 않는다");
+  process.stdout.write("(20) 심심함 증가 · 장난감 동안 멈춤  ok\n");
 }
 
-process.stdout.write("selftest-bag: 놀아주기 중첩 통과\n");
+// (21) 든든함(프리미엄먹이)이 남은 동안 만복도가 줄지 않는다
+{
+  const s = seed({ fullness: 100, buffs: [{ kind: "premium-food", remainMs: 2 * 60 * 60_000 }] });
+  applyTimeForTest(s, 60 * 60_000);
+  assert.equal(s.pets[0]?.fullness, 100, "든든함 동안 그대로");
+  const plain = seed({ fullness: 100 });
+  applyTimeForTest(plain, 60 * 60_000);
+  assert.equal(plain.pets[0]?.fullness, 60, "그 밖에는 시간당 −40");
+  process.stdout.write("(21) 든든함 동안 만복도 멈춤  ok\n");
+}
+
+process.stdout.write("selftest-bag: 놀아주기·심심함·든든함 통과\n");

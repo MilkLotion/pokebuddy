@@ -57,25 +57,25 @@ out("0 supabase/functions/_shared 가 최신");
   out("1 정상 진행 — 위반 없음");
 }
 
-// 2. 포인트 — 한 시간 1,296P(적용한 프리셋 6마리 × 친밀도 2 × 돌봄 보너스 2.8 + 다른 프리셋 24마리 × 친밀도 2 × 0.2),
+// 2. 포인트 — 한 시간 1,080P(적용한 프리셋 6마리 × 친밀도 2 × 적립 배율 2.2 + 다른 프리셋 24마리 × 친밀도 2 × 0.2. 2026-10-05 돌봄 개편, 그 전 1,296P),
 //    짧은 틈의 지연 여유, 99999, 우편, 72시간
 {
   const prev = base();
   assert.equal(data.rules.otherPresetEarn, 9.6, "다른 프리셋 24마리 × 친밀도 2 × 0.2");
   const ok = clone(prev);
-  ok.points.balance += 1400;
-  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 1,400P 는 상한 안(지연 여유 포함)");
+  ok.points.balance += 1150;
+  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 1,150P 는 상한 안(지연 여유 포함)");
   const tooFast = clone(prev);
-  tooFast.points.balance += 1500;
-  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 1,500P 는 위반");
+  tooFast.points.balance += 1250;
+  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 1,250P 는 위반");
   const quick = clone(prev);
-  quick.points.balance += 20; // 파일 쓰기 지연(시간당 1,296P 의 61초 몫 약 24P 안) — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
+  quick.points.balance += 15; // 파일 쓰기 지연(시간당 1,080P 의 61초 몫 약 18P 안) — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
   assert.deepEqual(rules(prev, quick, ctx(1_000)), [], "짧은 틈의 지연 여유");
   const over = clone(prev);
   over.points.balance = 99_999;
   assert.deepEqual(rules(prev, over, ctx(HOUR)), ["points"], "99999 는 위반");
   const long = clone(prev);
-  long.points.balance += 1296 * 72;
+  long.points.balance += 1080 * 72;
   assert.deepEqual(rules(prev, long, ctx(72 * HOUR)), [], "72시간 진행");
   out("2 포인트 — 상한·지연 여유·99999·72시간");
 }
@@ -188,7 +188,8 @@ out("0 supabase/functions/_shared 가 최신");
   // 받은 개체를 부풀렸다 — 제안보다 경험치·친밀도가 큰 몫은 사탕·장난감 예산으로 센다
   const inflated = clone(prev);
   inflated.pets = [pet("p2", "pikachu", { shiny: true, level: 100, exp: expForLevel("medium-fast", 100), affinity: 100 })];
-  assert.deepEqual(rules(prev, inflated, ctx(1_000, { received: [offer] })), ["affinity", "exp"], "받은 개체의 경험치·친밀도를 부풀림"); // 틈 1초 — 장난감(20P)을 다섯 개 살 수 없는 틈이다
+  // 제안의 친밀도는 40 — 장난감(+5)·프리미엄먹이(+8)로 메울 수 있는 몫보다 크게 부풀린다 (2026-10-05 돌봄 개편 뒤 장난감 하나가 +5)
+  assert.deepEqual(rules(prev, inflated, ctx(1_000, { received: [{ ...offer, affinity: 40 }] })), ["affinity", "exp"], "받은 개체의 경험치·친밀도를 부풀림"); // 틈 1초 — 장난감(20P)을 열 개 살 수 없는 틈이다
   // 다른 종으로 바꿨다 — 제안과 맞지 않는다
   const swapped = clone(prev);
   swapped.pets = [pet("p2", "mewtwo", { shiny: true, level: 40, exp: expForLevel("slow", 40), affinity: 80 })];

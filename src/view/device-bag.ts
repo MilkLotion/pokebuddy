@@ -4,6 +4,8 @@
 import type { BagDeviceInput, BagDeviceOpen } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { t } from "./text.js";
+import { BAG_RULES } from "../bag/rules.js";
+import { TIME_RULES } from "../state/rules.js";
 import { candyMax, candyResult } from "../bag/preview.js";
 import { growthCurve } from "../dex/growth.js";
 import type { GrowthRate } from "../shared/species.js";
@@ -59,6 +61,10 @@ function buffWarn(pet: PetView, item: BagItemView): BagDeviceOpen["preview"] | n
   return { lead: `${pet.name} · ${item.name} ${waitText(hit.remainMin * 60)} 남음`, line: "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", tone: "warn" };
 }
 
+// 강화 도구의 둘째 줄 — "신남 +60% · 2시간 · 친밀도 +5"
+const buffLine = (kind: "premium-food" | "long-play", affinity: number): string =>
+  `${t(`buff.${kind}`)} +${TIME_RULES.buffBonusPercent[kind]}% · ${waitText(BAG_RULES.buffMs[kind] / 1000)} · 친밀도 +${affinity}`;
+
 // 미리보기 — 첫 줄과 덧붙는 줄
 function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): string[] {
   switch (item.effect) {
@@ -71,11 +77,12 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     }
     case "fullness":
       return [`만복도 ${Math.round(pet.fullness)} → ${Math.min(100, Math.round(pet.fullness + (item.amount ?? 0)))}`, "밥 주기 쿨타임이 시작돼요"];
-    // 버프 효과는 "+N%" 꼴 하나 — 적립 줄·명세 돌봄 보너스 표와 같다 (2026-10-04 사용자 결정 "+% 하나", 94 항목 9-3-2)
+    // 버프 효과는 "+N%" 꼴 하나 — 포인트 적립 줄과 같다 (2026-10-04 사용자 결정 "+% 하나", 94 항목 9-3-2).
+    // 강화 도구는 게이지 변화와 버프·친밀도 한 줄 (2026-10-05 돌봄 개편, Figma 05 `Bag / Device / Use · 장난감`·`· 프리미엄먹이`). 결과 상자는 두 줄이라 "2시간 동안 …" 셋째 줄은 두지 않는다
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100`, `${t("buff.premium-food")} · 친밀도 증가량 +100% · 2시간`];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, buffLine("premium-food", BAG_RULES.premiumAffinity)];
     case "play-buff":
-      return [t("buff.long-play"), "친밀도 증가량 +50% · 2시간"];
+      return [`심심함 ${Math.round(pet.boredom)} → 0`, buffLine("long-play", BAG_RULES.toyAffinity)];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":

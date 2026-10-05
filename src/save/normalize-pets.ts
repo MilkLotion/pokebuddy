@@ -15,7 +15,8 @@ import { MAX_LEVEL } from "../dex/growth.js";
 import { fixedGender, isGender, legacyGender } from "../dex/gender.js";
 import { boolOr as bool, clampNum as clamp, intOr as int, isNatureValue, isRawObject, nonNeg, numOr as num, strOr as str, stringList as strings } from "./raw-values.js";
 
-const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play", "short-play"];
+// 놀아주기 신남·옛 들뜸(short-play)은 읽지 않는다 (2026-10-05 사용자 결정 "b로 하자" — 놀아주기 신남을 빼고 신남은 장난감 전용)
+const BUFF_KINDS: readonly BuffKind[] = ["premium-food", "long-play"];
 const SLOT_STATES: readonly SlotState[] = ["pokemon", "empty", "locked"];
 
 export const emptyDaily = (date: string): PetDaily => ({ date, gained: 0, feeds: 0, plays: 0, pokes: 0, presence: 0, work: 0, turns: 0 });
@@ -61,8 +62,7 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
     if (remainMs <= 0) continue;
     out.push({ kind: kind as BuffKind, remainMs });
   }
-  // 신남이 있으면 들뜸은 두지 않는다 — 들뜸은 신남으로 바뀌는 아랫단계다
-  return out.some((b) => b.kind === "long-play") ? out.filter((b) => b.kind !== "short-play") : out;
+  return out;
 }
 
 // 메가진화 칸 — 모양이 아니면 null. 규칙에 맞는지는 보지 않는다 (src/dex/mega.ts settleMega 가 푼다)
@@ -100,12 +100,11 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     affinityProgressMs: nonNeg(raw.affinityProgressMs),
     fullness: clamp(int(raw.fullness, PET_RULES.fullness), 0, PET_RULES.statMax),
     fullnessProgressMs: nonNeg(raw.fullnessProgressMs),
-    mood: clamp(int(raw.mood, PET_RULES.mood), 0, PET_RULES.statMax),
-    moodProgressMs: nonNeg(raw.moodProgressMs), // 2026-09-25 에 더했다. 옛 저장에는 없어 0 이다
+    // 심심함 — 2026-10-05 에 기분(mood)을 대신했다. 옛 저장에는 없어 0(심심하지 않음)이다. 옛 mood 는 읽지 않는다(뜻이 반대라 옮기지 않는다)
+    boredom: clamp(int(raw.boredom, 0), 0, PET_RULES.statMax),
+    boredomProgressMs: nonNeg(raw.boredomProgressMs),
     feedCooldownMs: nonNeg(raw.feedCooldownMs),
     playCooldownMs: nonNeg(raw.playCooldownMs),
-    playWindowMs: nonNeg(raw.playWindowMs),
-    playStreak: nonNeg(raw.playStreak),
     buffs: normalizeBuffs(raw.buffs),
     home: { dx: int(home.dx, PET_RULES.home.dx), dy: int(home.dy, PET_RULES.home.dy) },
     ...(screenRefOf(raw.screen) ? { screen: screenRefOf(raw.screen)! } : {}), // 2026-09-28 에 더했다. 모든 화면 방식에서 끌어다 놓은 개체만 가진다

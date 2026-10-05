@@ -15,8 +15,7 @@ export const PET_RULES = {
   exp: 0,
   affinity: 0,
   fullness: 100, // 새 개체는 배부른 상태로 시작한다
-  mood: 60,
   size: 1.5, // 도트 배율 — 크기 단계 2 의 배율 (src/party/size.ts SIZE_STEPS[1])
   home: { dx: -24, dy: -60 }, // 따라가는 창 오른쪽 아래 기준
-  statMax: 100, // 친밀도·만복도·기분의 상한
+  statMax: 100, // 친밀도·만복도·심심함의 상한
 };

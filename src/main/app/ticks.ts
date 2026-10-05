@@ -7,6 +7,7 @@
 // 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스").
 // 무거운 일(놀이공간·점프 목록·트레이 다시 읽기, 남은 안내)은 slowEvery 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
 import { rollHits } from "../../find/roll";
+import { caredIds } from "../../find/pickup";
 import { TIME_RULES } from "../../state/rules";
 import type { HostWatch } from "../stage/host-watch";
 import { CLOCK_RULES, type ClockTick } from "./clock";
@@ -87,7 +88,8 @@ export function createTicks(deps: TicksDeps): Ticks {
       // 줍기 — 깨어 있는 마리 각각을 이 틱의 간격으로 따로 굴린다. 주우면 그 틱에 저장하고 말풍선·배너를 띄운다.
       // 직접 숨긴 동안은 무대에 아무도 없는 것으로 본다 (src/find/core.ts rollHits)
       if (counted && !deps.hidden()) {
-        const hits = rollHits(Object.fromEntries(stages.awakeIds().map((id) => [id, gap])), Math.random, findRate() ?? 1);
+        const save = game.read();
+        const hits = rollHits(Object.fromEntries(stages.awakeIds().map((id) => [id, gap])), Math.random, findRate() ?? 1, save ? caredIds(save) : new Set()); // 잘 돌본 마리는 1/2000
         const found = hits.length ? game.find(hits) : null; // 쓰지 못하면 null — 그 건은 버린다
         if (found?.length) {
           worker.refresh();

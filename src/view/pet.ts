@@ -1,14 +1,14 @@
 // 개체 하나의 화면 값 — 파티 칸·박스 칸·파티 상세가 보는 PetView(진화 후보·메가·모습·디버프·돌봄 보너스·버프). 저장을 읽기만 한다
 // 스냅샷 조립은 ./snapshot.ts 가 한다 (96 대조 ④ — snapshot.ts 337줄을 나눴다, 설계 30번 view/pet.ts)
 import { profileOf } from "../dex/species.js";
-import { itemName, petName, typeName, moodText, natureName, t } from "./text.js";
+import { itemName, petName, typeName, boredText, natureName, t } from "./text.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { megaOf, megaChoices, megaFormsOf, shownSpecies } from "../dex/mega.js";
 import { MEGA_RULES } from "../dex/rules.js";
 import { locatePet } from "../party/locate.js";
 import { sizeLevelOf } from "../party/size.js";
 import { growthOf, progressTo } from "../dex/growth.js";
-import { careParts, zoneOf } from "../state/time.js";
+import { activeBuffs, boredStepOf, pointParts, pointPercent, zoneOf } from "../state/time.js";
 import { TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
@@ -23,8 +23,8 @@ import type { DayPart } from "../shared/species";
 import { isKnownSpecies } from "../dex/record.js";
 import { ceilMin, ceilSec } from "../shared/count-text.js";
 
-// 버프를 보이는 순서 — 든든함 · 신남 · 들뜸. 이름은 data/i18n 의 buff.<식별자> (2026-09-29 사용자 결정)
-const BUFF_ORDER = ["premium-food", "long-play", "short-play"] as const;
+// 버프를 보이는 순서 — 든든함 · 신남. 이름은 data/i18n 의 buff.<식별자> (2026-10-05 돌봄 개편)
+const BUFF_ORDER = ["premium-food", "long-play"] as const;
 
 // 모자란 조건 → 화면 문구. 판정은 src/dex/evolve.ts 의 candidates 다
 // 둘 이상이면(레벨·친밀도 지도 간선) 이름을 `·` 로 잇는다 — "Lv.36·지도 필요". 돌 대신 지도인 간선은 "지도 필요"
@@ -151,22 +151,21 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     zone: zoneOf(pet.fullness),
     zoneText: zoneText(zoneOf(pet.fullness)),
     debuff: debuffOf(zoneOf(pet.fullness)),
-    mood: pet.mood,
-    moodWord: moodText(pet.mood),
+    boredom: pet.boredom,
+    boredWord: boredText(boredStepOf(pet.boredom)),
     hidden,
     feedReady: pet.feedCooldownMs <= 0,
     feedInSec: ceilSec(pet.feedCooldownMs),
     playReady: pet.playCooldownMs <= 0,
     feedText: pet.fullness >= 100 ? "밥 주기 · 배부름" : pet.feedCooldownMs <= 0 ? "밥 주기" : `밥 주기 · ${waitText(ceilSec(pet.feedCooldownMs))}`,
     playText: pet.playCooldownMs <= 0 ? "놀아주기" : `놀아주기 · ${waitText(ceilSec(pet.playCooldownMs))}`,
-    playStreak: pet.playStreak,
     longPlay: pet.buffs.some((b) => b.kind === "long-play" && b.remainMs > 0),
     // 켜진 버프 — 보이는 순서대로 이름과 남은 분. 배지가 `신남 12분` 처럼 쓴다 (2026-09-30 사용자 결정 "추천대로 진행해")
-    buffs: BUFF_ORDER.flatMap((kind) => {
+    buffs: BUFF_ORDER.filter((kind) => activeBuffs(pet.buffs).includes(kind)).flatMap((kind) => {
       const hit = pet.buffs.find((b) => b.kind === kind && b.remainMs > 0);
       return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: ceilMin(hit.remainMs), text: buffText({ name: t(`buff.${kind}`), remainMin: ceilMin(hit.remainMs) }) }] : [];
     }),
-    buffNames: BUFF_ORDER.filter((kind) => pet.buffs.some((b) => b.kind === kind && b.remainMs > 0)).map((kind) => t(`buff.${kind}`)),
+    buffNames: BUFF_ORDER.filter((kind) => activeBuffs(pet.buffs).includes(kind)).map((kind) => t(`buff.${kind}`)),
     evolutions: evolutionsOf(save, pet, dayPart),
     ...formsView(save, pet),
     ...megaView(save, pet),
@@ -175,13 +174,14 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
   };
 }
 
-// 돌봄 보너스 — 친밀도가 100 미만이면 없다. 내역은 기분, 그다음 버프를 배지와 같은 순서로 둔다
-function careView(pet: PetV3): CareView | null {
-  if (pet.affinity < 100) return null;
-  const found = careParts(pet);
-  const order = ["mood", ...BUFF_ORDER] as string[];
-  const parts = [...found]
+// 포인트 적립 배율의 내역 — 버프(배지와 같은 순서), 그다음 배고픔·심심함 손해. 합은 바닥에서 멈춘다 (src/state/time.ts pointPercent)
+// 친밀도와 상관없이 늘 있다 (2026-10-05 사용자 결정 — 돌봄 개편, 그 전의 "친밀도 100 일 때만 돌봄 보너스" 를 대신한다)
+function careView(pet: PetV3): CareView {
+  const nameOf = (kind: string): string =>
+    kind === "hungry" || kind === "starving" ? t(`zone.${kind}`) : kind === "bored" || kind === "tired" ? boredText(kind) : t(`buff.${kind}`);
+  const order: string[] = [...BUFF_ORDER, "hungry", "starving", "bored", "tired"];
+  const parts = pointParts(pet)
     .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
-    .map((p) => ({ kind: p.kind, name: p.kind === "mood" ? moodText(pet.mood) : t(`buff.${p.kind}`), bonus: p.percent }));
-  return { bonus: parts.reduce((sum, p) => sum + p.bonus, 0), parts };
+    .map((p) => ({ kind: p.kind, name: nameOf(p.kind), bonus: p.percent }));
+  return { bonus: pointPercent(pet) - 100, parts };
 }

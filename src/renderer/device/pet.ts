@@ -1,6 +1,6 @@
 // 파티 상세 기기 창 — 메인이 만들어 보낸 개체 하나를 그린다 (src/main/pet-window.ts). Figma 05 `Party / Detail Device` `908:23772`(기기 `862:22000`)
 // 배치는 시안 C 다 (2026-10-02 사용자 결정 "c로 확정", Figma `Party Detail Device` `1262:76637` — 변형 셋을 C 배치로 바꿨다)
-//   화면  자리·상태 → 초상·이름·레벨·타입 → 네 막대(경험치·친밀도·만복도·기분)
+//   화면  자리·상태 → 초상·이름·레벨·타입 → 네 막대(경험치·친밀도·만복도·심심함)
 //   몸통  돌봄 단추 둘(밥 주기는 밝은 단추)
 //   흰 판 포인트 적립 · 진화 · 도감 보기 · 크기 줄을 구분선으로 나눈 목록
 // 메가스톤을 지닌 개체는 초상 오른쪽 아래에 메가스톤 표식이 있다. 누르면 메가진화한다 (같은 날 사용자 결정)
@@ -34,7 +34,7 @@ const frame = createDeviceFrame({
 });
 const device = frame.device;
 
-// 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남·들뜸). 하나도 없으면 null
+// 상태 배지 묶음 — 디버프 뒤에 켜진 버프(든든함·신남). 하나도 없으면 null
 function statusBadges(pet: PetDeviceView["pet"]): HTMLElement | null {
   const list: HTMLElement[] = [];
   // 배고픔 디버프 — 관리 창 파티 칸과 같은 이름·색(스냅샷의 pet.debuff, docs/specs/balance.md "배고픔 디버프")
@@ -170,7 +170,7 @@ const MEGA_STONE = { w: 28, h: 28, maxScale: 2 };
 const cryPlayer = createCryPlayer(() => api.cry());
 
 // live — 시간으로만 바뀌는 값이면 그 필드. 새 보기가 모양은 같고 이 값만 다르면 막대만 고친다 (applyLive)
-function bar(label: string, value: number, shown: string, cls = "", live?: "affinity" | "fullness" | "mood"): HTMLElement {
+function bar(label: string, value: number, shown: string, cls = "", live?: "affinity" | "fullness" | "boredom"): HTMLElement {
   const box = el("div", "bar");
   if (live) box.dataset.live = live;
   const head = el("div", "head");
@@ -206,7 +206,7 @@ let renderedStructure = "";
 function applyLive(v: PetDeviceView): void {
   const pet = v.pet;
   for (const box of device.querySelectorAll<HTMLElement>(".bar[data-live]")) {
-    const field = box.dataset.live as "affinity" | "fullness" | "mood";
+    const field = box.dataset.live as "affinity" | "fullness" | "boredom";
     const shown = box.querySelector<HTMLElement>(".head strong");
     if (shown) shown.textContent = v.bars[field];
     const fill = box.querySelector<HTMLElement>(".fill");
@@ -322,7 +322,7 @@ function renderBody(v: PetDeviceView): void {
     bar("경험치", pet.percentToNext, `${pet.percentToNext}%`),
     bar("친밀도", pet.affinity, v.bars.affinity, "", "affinity"),
     bar("만복도", pet.fullness, v.bars.fullness, zoneClassOf(pet.zone), "fullness"),
-    bar("기분", pet.mood, v.bars.mood, "mood", "mood"),
+    bar("심심함", pet.boredom, v.bars.boredom, "boredom", "boredom"), // 기분의 자리 (2026-10-05 돌봄 개편, Figma 03 `Party Detail Device` `bar/심심함`)
   );
   screen.appendChild(records);
   bezel.appendChild(screen);

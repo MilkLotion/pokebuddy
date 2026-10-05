@@ -44,9 +44,5 @@ export function t(key: string, vars: Record<string, unknown> = {}): string {
   return text.replace(/\{(\w+)\}/g, (whole, name: string) => (vars[name] == null ? whole : String(vars[name])));
 }
 
-// 기분 0~100 → 다섯 단계 말 (최고·좋음·보통·시들·우울)
-export function moodText(mood: number): string {
-  const m = Number(mood);
-  const level = !Number.isFinite(m) ? 3 : m >= 80 ? 5 : m >= 60 ? 4 : m >= 40 ? 3 : m >= 20 ? 2 : 1;
-  return t(`mood.${level}`);
-}
+// 심심함 단계 말 — 보통 · 심심해 · 지루해 (src/state/time.ts boredStepOf, 2026-10-05 사용자 결정). 단계 id 가 없으면 보통
+export const boredText = (step: "bored" | "tired" | null): string => t(`bored.${step ?? "none"}`);

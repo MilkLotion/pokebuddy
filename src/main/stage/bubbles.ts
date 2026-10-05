@@ -1,12 +1,13 @@
-// 아이콘 말풍선 — 줍기와 배고픔을 포켓몬 위에 그림으로 띄운다
+// 아이콘 말풍선 — 줍기·배고픔·심심함을 포켓몬 위에 그림으로 띄운다
 // (worklog/records/code-structure/design/10-main.md 3.10절 stage/bubbles.ts)
 //
 // 말풍선 아이콘 열쇠 — 글자 대신 그림을 넣는다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어")
 //   배고픔 고기 1개 · 매우 배고픔 고기 3개 · 포인트 금화 — 우리가 그린 assets/items/meat.png · coin.png
+//   심심해·지루해 장난감 공 1개 — 장난감 도구 그림 item:toy (2026-10-05 돌봄 개편, Figma 05 `Desktop / Bubble · 배고픔·심심해`)
 //   도구·진화용 도구 — 관리 창과 같은 도구 그림(item:<식별자>) · 포켓몬 — 데려온 종의 초상(pokemon:<종>[:shiny])
 // 그림을 하나라도 못 구하면 말풍선을 띄우지 않는다. 글자로 되돌리지 않는다
 import type { FindRecordV3, PetV3, SaveV3 } from "../../shared/save-v3";
-import { createHungerBubbles } from "./hunger-bubble";
+import { createBoredBubbles, createHungerBubbles } from "./hunger-bubble";
 import type { Portraits } from "../art/portraits";
 import type { StageGroup } from "./stage-group";
 
@@ -16,6 +17,7 @@ const BUBBLE_RULES = { showMs: 5000 } as const;
 
 const MEAT = "item:meat";
 const COIN = "item:coin";
+const TOY = "item:toy";
 
 export function foundIconOf(rec: FindRecordV3, save: SaveV3 | null): string {
   if (rec.kind === "points") return COIN;
@@ -32,12 +34,13 @@ export interface BubblesDeps {
 
 export interface Bubbles {
   say(petId: string, keys: string[]): void;
-  onTick(now: number, pets: readonly PetV3[]): void; // 배고픔 — 무대에 나와 있는 마리만
+  onTick(now: number, pets: readonly PetV3[]): void; // 배고픔·심심함 — 무대에 나와 있는 마리만
   found(records: readonly FindRecordV3[], save: SaveV3 | null): void; // 줍기 — 주운 마리 위에
 }
 
 export function createBubbles(deps: BubblesDeps): Bubbles {
   const hunger = createHungerBubbles();
+  const bored = createBoredBubbles();
 
   // 열쇠별 그림(data URI). 하나라도 못 구하면 null
   async function urisOf(keys: string[]): Promise<Record<string, string> | null> {
@@ -69,7 +72,11 @@ export function createBubbles(deps: BubblesDeps): Bubbles {
       const st = deps.stages();
       if (deps.hidden() || !st) return;
       const shown = pets.filter((p) => st.petOf(p.id));
-      for (const b of hunger.due(shown, now)) say(b.id, b.zone === "starving" ? [MEAT, MEAT, MEAT] : [MEAT]); // 배고픔 고기 1개, 매우 배고픔 고기 3개
+      // 같은 틱에 둘 다면 한 말풍선에 같이 — 배고픔 고기 1개(매우 배고픔 3개) 뒤에 장난감 공 1개
+      const keys = new Map<string, string[]>();
+      for (const b of hunger.due(shown, now)) keys.set(b.id, b.level === "starving" ? [MEAT, MEAT, MEAT] : [MEAT]);
+      for (const b of bored.due(shown, now)) keys.set(b.id, [...(keys.get(b.id) ?? []), TOY]);
+      for (const [id, k] of keys) say(id, k);
     },
     found(records, save) {
       for (const rec of records) say(rec.petId, [foundIconOf(rec, save)]);

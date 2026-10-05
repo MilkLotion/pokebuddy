@@ -312,7 +312,7 @@
   border-radius: 999px;
   background: var(--primary);
 }
-.bar .fill.mood,
+.bar .fill.boredom,
 .bar .fill.hungry {
   background: var(--warning);
 }

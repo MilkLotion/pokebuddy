@@ -9,10 +9,10 @@ import { NATURE_SHOWN } from "../shared/features.js";
 import { formsOf, isFormLocked, shiftRuleOf } from "../dex/forms.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
-import { zoneOf } from "../state/time.js";
+import { boredStepOf, zoneOf } from "../state/time.js";
 import { currentTutorial } from "../tutorial/queue.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
-import { currentLang, moodText, natureName, petName, t } from "./text.js";
+import { boredText, currentLang, natureName, petName, t } from "./text.js";
 import { waitText } from "../shared/count-text.js";
 
 export interface PetMenuModel {
@@ -126,8 +126,8 @@ export function trayMenuOf(model: TrayMenuModel, act: MenuActions & { openManage
   return [{ label: t("menu.manage"), click: () => act.openManage() }, { type: "separator" }, ...trayMenu(model, act)];
 }
 
-// 이름 옆 한 줄 — "배고픔 · 기분 좋음". 구간 낱말은 화면 값의 zoneText 와 같은 언어 파일 글자다
-const petStatus = (pet: { fullness: number; mood: number }): string => `${t(`zone.${zoneOf(pet.fullness)}`)} · ${moodText(pet.mood)}`;
+// 이름 옆 한 줄 — "배고픔 · 심심해". 구간 낱말은 화면 값의 zoneText·boredWord 와 같은 언어 파일 글자다
+const petStatus = (pet: { fullness: number; boredom: number }): string => `${t(`zone.${zoneOf(pet.fullness)}`)} · ${boredText(boredStepOf(pet.boredom))}`;
 
 // 메뉴 항목 하나의 모양 — 막혔으면 이유를 준다(메뉴에는 적지 않는다 — 첫 돌봄 말풍선이 쓴다).
 // 판정은 돌봄 규칙(src/state/care.ts checkCare) 그대로다. 쿨타임은 남은 시간 글자(waitText — "45초", "3분", "1시간 20분")

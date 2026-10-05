@@ -7,22 +7,23 @@ import type { DeviceResult } from "./device-art.js";
 import { snapshotPet } from "./result-lines.js";
 
 
-// `포인트 적립` 줄 — 돌봄 보너스를 보인다. 줄은 늘 있고 글자만 바뀐다 (Figma 03 `Party Detail Device` `row/포인트 적립`, 2026-10-02 사용자 결정 A안)
+// `포인트 적립` 줄 — 적립 배율을 보인다. 줄은 늘 있고 글자만 바뀐다 (Figma 03 `Party Detail Device` `row/포인트 적립`, 2026-10-02 사용자 결정 A안)
 //   박스 개체          적립하지 않는다
-//   친밀도 100 전      기본 속도. 친밀도가 가득이면 보너스가 붙는다고 알린다
-//   친밀도 100         보너스 합과 내역(기분 단계 · 버프). 보너스가 없으면 기본 속도
+//   버프·손해 없음     기본 속도. 놀아주면 빨라지고 배고프거나 심심하면 느려진다고 알린다
+//   그 밖              합(+30%, −50%)과 내역(버프 +, 배고픔·심심함 −). 2026-10-05 돌봄 개편 — 친밀도와 상관없다
 function careLineOf(pet: PetView, inParty: boolean): PetDeviceOpen["careLine"] {
   const care = pet.care;
   // 다른 프리셋도 0.2배로 쌓으므로 "파티나 프리셋" 이다 (2026-10-05, Figma 05 `Party / Detail Device / Box Pokemon`)
   if (!inParty) return { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" };
-  if (!care) return { title: "포인트 적립 기본", desc: "친밀도가 가득이면 돌봄으로 더 빨리 쌓여요" };
-  if (care.bonus <= 0) return { title: "포인트 적립 기본", desc: "기분이 좋거나 버프가 켜지면 더 빨리 쌓여요" };
-  const parts = care.parts.map((p) => `${p.kind === "mood" ? `기분 ${p.name}` : p.name} +${p.bonus}%`);
-  return { title: `포인트 적립 +${care.bonus}%`, desc: parts.join(" · ") };
+  // 제목은 합, 설명은 내역 — 버프는 +, 손해는 − (2026-10-05 사용자 결정 "-30% -60%로 보기편하게", 2026-10-04 "+% 하나")
+  if (!care.parts.length) return { title: "포인트 적립 기본", desc: "배고프거나 심심하면 느리게 쌓여요" };
+  const signed = (n: number): string => (n > 0 ? `+${n}%` : n < 0 ? `−${-n}%` : "±0%");
+  const parts = care.parts.map((p) => `${p.name} ${signed(p.bonus)}`);
+  return { title: care.bonus === 0 ? "포인트 적립 기본" : `포인트 적립 ${signed(care.bonus)}`, desc: parts.join(" · ") };
 }
 
-// 막대 글자 — 친밀도 · 만복도(구간) · 기분(말)
-const barsOf = (pet: PetView): PetDeviceOpen["bars"] => ({ affinity: `${pet.affinity}`, fullness: `${pet.fullness} · ${pet.zoneText}`, mood: `${pet.mood} · ${pet.moodWord}` });
+// 막대 글자 — 친밀도 · 만복도(구간) · 심심함(단계)
+const barsOf = (pet: PetView): PetDeviceOpen["bars"] => ({ affinity: `${pet.affinity}`, fullness: `${pet.fullness} · ${pet.zoneText}`, boredom: `${pet.boredom} · ${pet.boredWord}` });
 
 // 고른 개체가 파티와 박스에 없으면 null(기기 창을 닫는다)
 export function petDeviceModel(v: Snapshot, given: PetDeviceInput): DeviceResult<PetDeviceOpen, PetDeviceInput> | null {

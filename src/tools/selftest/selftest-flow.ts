@@ -144,7 +144,7 @@ try {
   const tick = w.pass(2 * HOUR);
   const grown = w.save();
   const dropped = (before.pets.find((p) => p.id === "p1")?.fullness ?? 0) - (grown.pets.find((p) => p.id === "p1")?.fullness ?? 0);
-  assert.equal(dropped, 60, "2시간에 60 감소");
+  assert.equal(dropped, 80, "2시간에 80 감소 (시간당 40)");
   assert.equal(grown.points.balance - before.points.balance, tick.pointsGained, "이번 틱에 쌓인 만큼 늘었다");
   assert.ok(tick.pointsGained >= 100, "두 마리가 2시간이면 100 이상");
   assert.ok(tick.hungerEnter.length >= 1, "배고픔 구간 진입을 알린다");
@@ -153,12 +153,12 @@ try {
   // ── SC-02 밥을 준다 ──────────────────────────────────────────────────────
   const hungry = w.save().pets.find((p) => p.id === "p1")?.fullness ?? 0;
   const fed = w.ok("feed1", "bag.use", { itemId: "basic-food", petId: "p1" });
-  assert.equal(Number(fed.fullness) - hungry, 20, "만복도 +20");
+  assert.equal(Number(fed.fullness) - hungry, 40, "만복도 +40");
   const blocked = w.run("feed2", "bag.use", { itemId: "basic-food", petId: "p1" });
   assert.equal(blocked.ok === false && blocked.reason, "cooldown", "쿨타임 중에는 못 준다");
   w.pass(BAG_RULES.feedCooldownMs);
   const waited = w.save().pets.find((p) => p.id === "p1")?.fullness ?? 0;
-  assert.equal(Number(w.ok("feed3", "bag.use", { itemId: "basic-food", petId: "p1" }).fullness) - waited, 20, "쿨타임 뒤 다시 준다");
+  assert.equal(Number(w.ok("feed3", "bag.use", { itemId: "basic-food", petId: "p1" }).fullness) - waited, 40, "쿨타임 뒤 다시 준다");
   process.stdout.write("(9) SC-02 · 밥 주기와 쿨타임  ok\n");
 
   // ── SC-06 사탕으로 레벨을 올린다 ─────────────────────────────────────────

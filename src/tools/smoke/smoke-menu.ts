@@ -47,9 +47,9 @@ const forms = [
   { species: "lunala", name: "루나아라", current: false, portrait: DOT },
 ];
 const act = { feed: () => undefined, play: () => undefined, ball: () => undefined, detail: () => undefined, form: () => undefined };
-const partyModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 기분 좋음", feed: { enabled: true }, play: { enabled: true }, ball: { enabled: true, hidden: false }, forms, sell: { enabled: false } }, act);
-const boxModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 기분 좋음", feed: off, play: off, ball: { enabled: false, hidden: false }, forms, move: { enabled: true }, sell: { enabled: false } }, act);
-const plainModel = petMenu({ name: "피카츄", nature: null, status: "보통 · 기분 좋음", feed: { enabled: true }, play: off, ball: { enabled: true, hidden: false }, sell: { enabled: true } }, act);
+const partyModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 보통", feed: { enabled: true }, play: { enabled: true }, ball: { enabled: true, hidden: false }, forms, sell: { enabled: false } }, act);
+const boxModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 보통", feed: off, play: off, ball: { enabled: false, hidden: false }, forms, move: { enabled: true }, sell: { enabled: false } }, act);
+const plainModel = petMenu({ name: "피카츄", nature: null, status: "보통 · 심심해", feed: { enabled: true }, play: off, ball: { enabled: true, hidden: false }, sell: { enabled: true } }, act);
 
 app.setPath("userData", path.join(dir, "user-data"));
 app.disableHardwareAcceleration();

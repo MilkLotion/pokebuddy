@@ -237,7 +237,7 @@ try {
     }
     const pa = store.readSave(a, { repair: false }).state!.pets[0]!;
     const pb = store.readSave(b, { repair: false }).state!.pets[0]!;
-    assert.deepEqual([pa.fullness, pa.fullnessProgressMs, pa.affinity, pa.affinityProgressMs, pa.mood], [pb.fullness, pb.fullnessProgressMs, pb.affinity, pb.affinityProgressMs, pb.mood], "10분 — 1초 × 600 과 30초 × 20 이 같다");
+    assert.deepEqual([pa.fullness, pa.fullnessProgressMs, pa.affinity, pa.affinityProgressMs, pa.boredom], [pb.fullness, pb.fullnessProgressMs, pb.affinity, pb.affinityProgressMs, pb.boredom], "10분 — 1초 × 600 과 30초 × 20 이 같다");
     process.stdout.write("(4) 1초 틱과 긴 틱의 결과  ok\n");
   }
 
