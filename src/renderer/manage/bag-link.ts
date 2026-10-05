@@ -53,6 +53,7 @@ export const bagLink = createDeviceLink<BagDeviceInput>({
   build: bagDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.bagOpen(input, gen),
+  holding: () => bagSending, // 쓰기·팔기 중 — 결과가 붙은 뒤 한 번 보낸다 (device-link.ts)
   apply: (input) => {
     bagMode = input.mode;
     bagTarget = input.targetPetId;
@@ -121,7 +122,7 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
   bagSending = true;
   const slow = setTimeout(() => {
     bagBusy = true;
-    syncBagDevice();
+    bagLink.sync(true); // 처리 중 점 표시는 보내는 중에도 보낸다
   }, 300);
   const ok = await sendCommand(cmd, id, extra, { keepOpen: true });
   clearTimeout(slow);

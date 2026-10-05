@@ -35,6 +35,7 @@ export const shopLink = createDeviceLink<ShopDeviceInput>({
   build: shopDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.shopOpen(input, gen),
+  holding: () => shopSending, // 사는 중 — 결과가 붙은 뒤 한 번 보낸다 (device-link.ts)
   apply: (input) => {
     shopQty = input.qty;
   },
@@ -108,7 +109,7 @@ async function buyShop(id: string): Promise<void> {
   shopDone = null;
   const slow = setTimeout(() => {
     shopBusy = true;
-    syncShopDevice();
+    shopLink.sync(true); // 처리 중 점 표시는 보내는 중에도 보낸다
   }, 300);
   const ok = await sendCommand("shop.buy", id, count > 1 ? { count } : {}, { keepOpen: true });
   clearTimeout(slow);

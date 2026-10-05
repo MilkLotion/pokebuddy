@@ -4,10 +4,12 @@
 // - 모델은 메인이 만든다 (src/view/device-*.ts). 답은 메인이 바로잡은 고른 값이다 — 수량을 상한으로 자르거나 없는 대상을 바꾼 값.
 //   바로잡은 값은 apply 로 설정창에 되돌린다. 뒤에 보낸 것이 있으면 늦은 답은 버린다(± 를 빨리 누를 때 앞 답이 뒤 값을 덮지 않게)
 // - onClosed: 메인의 닫힘 알림. 세대 번호를 받아 두고 열림·보낸 값을 비운다
+// - holding: 그 기기 창의 명령을 보내는 중이면 true. 그동안 스냅샷이 바뀌어도 새로 보내지 않는다 — 결과가 붙기 전의 중간 장면을 한 번 그려
+//   상자 높이가 들썩이지 않게(상점·가방 결과 상자, 2026-10-05). 처리 중 점 표시는 sync(true) 로 보낸다. 닫기는 늘 보낸다
 // - 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다. 닫힘을 알기 전에 보낸 요청은 메인이 버린다 (src/main/device-gen.ts)
 
 export interface DeviceLink {
-  sync(): void;
+  sync(force?: boolean): void; // force — holding 중에도 보낸다(처리 중 점 표시)
   onClosed(gen: number): void;
   isOpen(): boolean;
 }
@@ -19,6 +21,7 @@ export interface DeviceLinkOptions<I> {
   apply?: (input: I) => void; // 바로잡은 값을 설정창의 고른 값에 되돌린다
   afterClosed: () => boolean; // 기기 창이 닫혔다 — 고른 것을 비운다. 다시 그릴 것이면 true
   redraw: () => void; // afterClosed 가 true 면 부른다
+  holding?: () => boolean; // 명령을 보내는 중 — 새로 보내지 않는다
 }
 
 export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
@@ -28,8 +31,9 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
   let asked = 0; // 보낸 요청 번호 — 늦은 답을 가린다
   let stamped: unknown = undefined; // 마지막으로 보낼 때의 스냅샷
 
-  function sync(): void {
+  function sync(force = false): void {
     const input = opts.build();
+    if (input !== null && !force && open && opts.holding?.()) return;
     if (input === null) {
       // 늘 닫으라고 보낸다 — 기기 창의 ✕ 와 새로 읽기가 겹쳐 메인이 창을 새로 만든 경우도 닫힌다
       if (open || sent) void opts.open(null);
