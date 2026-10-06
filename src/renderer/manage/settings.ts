@@ -274,7 +274,8 @@ export function drawSettings(sub: SettingsTab): void {
   // 저작권 안내는 README 의 라이선스 절을 기본 브라우저로 연다 — 주소는 메인이 정한다 (2026-10-03 사용자 결정, Figma 05 Screens 섹션 `930:18246`)
   const rights = actionButtonEl("저작권 안내", false, false, () => api.openRights());
   rights.classList.add("small");
-  dialogEl.appendChild(actionsRowEl(versionFoot(), rights));
+  // 가운데 spacer — 실패 글자가 이 빈자리에 서고 저작권 안내는 오른쪽 끝에 남는다 (src/renderer/manage/dialog.ts 실패 표시, 2026-10-07)
+  dialogEl.appendChild(actionsRowEl(versionFoot(), el("div", "spacer"), rights));
 }
 
 // 사용자 모달 — 계정·연결. 버전·업데이트 바닥은 두지 않는다(설정 모달에만)

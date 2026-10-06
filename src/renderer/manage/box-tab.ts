@@ -14,12 +14,13 @@ import { refreshView } from "./live.js";
 import { swapSend } from "./party-link.js";
 import { askPetMenu } from "./pet-menu.js";
 import { openPet } from "./routes.js";
-import { daycareOpenButton } from "./daycare.js";
+import { daycareOpenButton, hiddenHatchIds } from "./daycare.js";
 import { markMega } from "./pet-forms.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { findPartySlot, ui } from "./state.js";
 import { boxNameCell, pageHeadEl } from "./widgets.js";
 import { boxMenuEl } from "./box-order.js";
+import { boxFindEl } from "./box-find.js";
 
 const BOX_SORTS: readonly { by: string; label: string }[] = [
   { by: "dex", label: "도감 번호" },
@@ -63,7 +64,8 @@ export function boxSlot(pet: PetView, onPick: () => void): HTMLButtonElement {
 }
 
 export function drawBox(v: Snapshot): void {
-  const kept = v.boxes.reduce((sum, b) => sum + b.used, 0);
+  const unseen = hiddenHatchIds(v); // 부화 결과 창에서 아직 확인하지 않은 개체 — 빈 칸으로 그리고 보관 수에서 뺀다
+  const kept = v.boxes.reduce((sum, b) => sum + b.used, 0) - unseen.size;
   const top = pageHeadEl("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
@@ -73,8 +75,9 @@ export function drawBox(v: Snapshot): void {
     (sub as HTMLElement).title = boxUi.note;
   }
   // 머리 오른쪽 — 햄버거 단추 하나. 누르면 메뉴(박스 순서·교환)가 뜬다 (2026-10-02 사용자 결정, Figma 04 템플릿 `Box Layout` `340:3665` 머리)
+  // 찾기 줄은 햄버거 단추 앞이다 (2026-10-07 사용자 결정 "7번 시안대로 진행", Figma 05 `Box / Find · Found 2/3` `1590:65782`)
   const acts = el("div", "head-acts");
-  acts.append(boxMenuEl());
+  acts.append(boxFindEl(v, unseen), boxMenuEl());
   top.appendChild(acts);
   bodyEl.appendChild(top);
 
@@ -112,7 +115,7 @@ export function drawBox(v: Snapshot): void {
   });
   // ◀·▶ 는 놓을 곳이 아니다 — 끌어 놓기는 지금 박스 안의 자리만 바꾼다. 다른 박스로는 포켓몬 메뉴의 `옮기기` 로만 보낸다 (2026-10-02 사용자 결정)
   pager.append(prev, boxNameCell(boxNameEl(box)), next);
-  // 이름 검색은 두지 않는다 (2026-09-30 사용자 결정 "박스에는 검색기능 없애.", Figma `Box Layout` 툴바)
+  // 넘김 줄에는 검색을 두지 않는다 — 찾기는 머리 줄의 찾기 줄이다 (2026-10-07, 2026-09-30 "박스에는 검색기능 없애." 를 바꿨다)
   // 오른쪽 끝 — 돌보미집 아이콘 단추, 정렬. 돌보미집은 모달로 연다
   pager.append(daycareOpenButton(v), boxSortEl(box));
   bodyEl.appendChild(pager);
@@ -140,6 +143,11 @@ export function drawBox(v: Snapshot): void {
     void boxCommand("box.move", h.boxId, { slot: h.slot, toBoxId: box.id, toSlot }, () => unsorted(h.boxId, box.id));
   };
   box.slots.forEach((pet, slot) => {
+    // 확인 전 부화 개체 — 부화 결과 창이 덮고 있어 누를 수 없다. 모습만 빈 칸이다
+    if (pet && unseen.has(pet.id)) {
+      grid.appendChild(el("div", "cell tall blank"));
+      return;
+    }
     // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
     const onDrop = (): void => {
       const from = hold.drag;
@@ -168,6 +176,7 @@ export function drawBox(v: Snapshot): void {
     });
     cell.dataset.hold = "";
     if (pet.id === ui.detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
+    if (pet.id === boxUi.find.pet) cell.classList.add("found"); // 박스 찾기의 지금 결과 — 옅은 바탕만
     if (boxHeld && boxHeld.boxId === box.id && boxHeld.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
     cell.title = `${pet.name} · 끌어서 옮기기`;
     cell.addEventListener("pointerdown", (e) => {

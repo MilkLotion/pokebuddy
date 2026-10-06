@@ -7,7 +7,7 @@
 //
 // 규칙 (상한에는 여유 비율 margin 을 곱한다 — D32 1.1. 틈에는 파일 쓰기·틱 지연 slackMs 를 더한다)
 //   work        작업 시간 증가 ≤ 틈
-//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 업적 보상 + 판매(도구·포켓몬) + 민트 환불
+//   points      포인트 증가 ≤ 시간 적립 + 줍기 + 우편 + 업적 보상 + 판매(도구·포켓몬) + 민트 환불 + 다 모은 알의 포인트
 //   spend       늘어난 도구·새 알의 값 ≤ 그사이 쓸 수 있었던 포인트
 //   bag         팔지 않는 도구가 출처 없이 늘었다
 //   mail        서버에서 받지 않은 편지를 넣었다
@@ -15,7 +15,8 @@
 //   level       레벨 1~100, 경험치 0~최대, 레벨 ≤ 경험치가 허락하는 레벨
 //   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕
 //   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감
-//   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수
+//   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수. 유대의고삐로 부른 말(블리자포스·레이스포스)은 그사이 줄어든 고삐 수까지 출처로 센다
+//   rider       새로 생긴 말은 새 저장에 버드렉스 계열 개체가 있어야 한다. 백마·흑마 모습 개체는 그 말 개체가 있어야 한다 (data/regional.json riders)
 //   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만
 //   form-work   개체 작업 시간(PetV3.workMs)의 증가 ≤ 계정 작업 시간 증가, 조건 값 이하 (src/dex/forms.ts tickFormWork)
@@ -47,12 +48,16 @@ export interface VerifyData {
   achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
   evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
+  riders?: Record<string, string>; // 모습 → 그 모습에 있어야 하는 말 (data/regional.json riders). 없으면 rider 규칙과 말 부르기 몫을 보지 않는다
+  riderOwners?: string[]; // 말을 부를 수 있는 종 — 버드렉스와 그 모습들
+  riderItem?: string; // 말 부르기 도구(유대의고삐)
   shiftRules?: Record<string, { base: string; workMs: number; item: string }>; // 규칙이 있는 모습 바꾸기 묶음의 종(기본 종 포함) → 규칙 (src/dex/rules.ts SHIFT_RULES). 없으면 form-* 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
   maxExp: number; // 모든 성장 곡선의 100레벨 누적 경험치 중 최대
   rareCandyExp: number; // 이상한사탕 하나가 올릴 수 있는 경험치 최대(한 레벨 간격 최대)
   eggKinds: Record<string, EggKind>;
+  allCaught?: Record<string, number>; // 단일 포켓몬 알 → 다 모았을 때 대신 주는 포인트 (src/egg/pool.ts allCaughtPoints). 없으면 0
   ranks: Record<string, number>; // 종 → 수집 난이도(1 이 아닌 것만). 없으면 1
   rankWeight: Record<string, number>; // 난이도 → 추첨 가중치 (src/egg/hatch.ts RANK_WEIGHT)
   shinyOneIn: number;
@@ -121,7 +126,8 @@ export function seededRand(seed: string, key: string): () => number {
 // 알 하나를 열면 무엇이 나오는가 — src/egg/open.ts 와 같은 순서로 수를 쓴다
 //   보너스 알 표가 있으면 1회 → (보너스가 아니면) 종 가중 추첨 1회 → 이로치 1회 → (모습이 여럿인 종이면) 모습 1회
 //   waiting 은 그 알을 열 때 돌보미집에 있던 알(연 알 포함), obtained 는 그때 얻은 종 — 앱은 열기 직전 저장, 규칙은 여는 순서를 대입한 모의 상태
-export type EggRoll = { egg: string } | { species: string; shiny: boolean } | null;
+//   보너스 알을 줄 수 없으면(다 모았다) 포인트를 주고 수를 더 쓰지 않는다
+export type EggRoll = { egg: string } | { points: number; kind: string } | { species: string; shiny: boolean } | null;
 export function rollEgg(egg: { id: string; kind: string; candidates: string[] }, waiting: { kind: string }[], obtained: string[], rand: () => number, data: VerifyData): EggRoll {
   const kind = data.eggKinds[egg.kind];
   const table = kind?.bonus ?? [];
@@ -134,7 +140,7 @@ export function rollEgg(egg: { id: string; kind: string; candidates: string[] },
         const single = data.eggKinds[next];
         const give = !single?.single || single.pool.filter((s) => !obtained.includes(s)).length > waiting.filter((e) => e.kind === next).length;
         if (give) return { egg: next };
-        break;
+        return { points: data.allCaught?.[next] ?? 0, kind: next };
       }
     }
   }
@@ -274,6 +280,38 @@ const idNo = (id: string): number => {
   return m ? Number(m[1]) : 0;
 };
 // 지금까지 쓴 개체 번호 — src/party/create.ts nextPetId 와 같다. petSeq 가 없는 옛 저장은 지금 있는 개체의 가장 큰 번호
+// 다 모은 알의 포인트 몫 — 랜덤알을 열 때 첫 수가 단일 포켓몬 알 구간이면 그 알의 포인트를 받을 수 있다.
+// 첫 수는 계정 시드와 알 id 로만 정해져 여는 순서와 상관없다. 그 구간이면 알을 줄 수 있었는지와 상관없이 몫으로 센다(넉넉히)
+// 같은 틈에 만들어 연 알(번호만 늘었다)은 종류를 몰라 보너스 표가 있는 알 중 가장 큰 몫으로 본다.
+// 시드가 없으면 몫이 없다 — 넉넉히 잡으면 그 포인트가 spend·장난감·사탕 예산까지 키운다(selftest-verify 7 "알에서 레벨 100·친밀도 100")
+function allCaughtAllowance(prev: Raw, next: Raw, seed: string | null, data: VerifyData): number {
+  const table = data.allCaught ?? {};
+  if (!seed || maxOf(Object.values(table)) <= 0) return 0;
+  const bonusKinds = Object.entries(data.eggKinds).filter(([, k]) => k.bonus.length).map(([kind]) => kind);
+  const shareOf = (kind: string, id: string): number => {
+    const bonus = data.eggKinds[kind]?.bonus ?? [];
+    if (!bonus.length) return 0;
+    const roll = seededRand(seed, `egg:${id}`)();
+    let acc = 0;
+    for (const [k, p] of bonus) {
+      acc += p;
+      if (roll < acc) return table[k] ?? 0;
+    }
+    return 0;
+  };
+  const nextIds = new Set(eggsOf(next).map((e) => e.id));
+  const prevEggs = eggsOf(prev);
+  let sum = 0;
+  for (const e of prevEggs) if (!nextIds.has(e.id)) sum += shareOf(e.kind, e.id);
+  const seen = new Set([...prevEggs.map((e) => e.id), ...nextIds]);
+  const from = eggSeqOf(prev) + 1;
+  const to = Math.min(eggSeqOf(next), from + 9_999); // 번호를 크게 부풀린 저장 — 만든 알 값은 spend 가 따로 본다
+  for (let n = from; n <= to; n++) {
+    const id = `e${n}`;
+    if (!seen.has(id)) sum += maxOf(bonusKinds.map((kind) => shareOf(kind, id)));
+  }
+  return sum;
+}
 const petSeqOf = (save: Raw): number => Math.max(num(save.petSeq), maxOf(petsOf(save).map((p) => idNo(p.id))));
 const maxOf = (values: number[]): number => {
   let m = 0;
@@ -326,7 +364,9 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const unseen = pos(newFinds - seen.length);
   const findPoints = seen.reduce((s, f) => s + (str(f.kind) === "points" ? num(f.amount) : 0), 0) + unseen * r.findPointsMax;
   const found: Record<string, number> = {};
-  for (const f of seen) if (str(f.kind) === "item" || str(f.kind) === "evo") found[str(f.ref)] = (found[str(f.ref)] ?? 0) + 1;
+  // 모습 도구(로토무카탈로그·유대의고삐)는 줍기 후보가 아니다 — 줍기 기록에 있어도 주운 것으로 세지 않는다 (src/find/pickup.ts itemCandidates)
+  const formTool = (id: string): boolean => data.items[id]?.effect === "form" || data.items[id]?.effect === "call-rider";
+  for (const f of seen) if ((str(f.kind) === "item" || str(f.kind) === "evo") && !formTool(str(f.ref))) found[str(f.ref)] = (found[str(f.ref)] ?? 0) + 1;
   const findPets = seen.filter((f) => str(f.kind) === "pokemon").length + unseen;
 
   // 우편 — 새로 넣은 편지 id 를 서버에서 받은 편지와 대조한다(받은 시각이 아니라 id 로 — 올리기와 받기가 엇갈려도 맞다)
@@ -396,8 +436,9 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const gonePets = petsOf(prev).filter((p) => !keptIds.has(p.id)).length;
   const vanishedPets = pos(petSeqOf(next) - prevPetSeq - petsOf(next).filter((p) => idNo(p.id) > prevPetSeq).length);
   const petSell = (gonePets + vanishedPets) * num(r.petSellMax);
+  const caught = allCaughtAllowance(prev, next, ctx.seed, data);
   const earnPerHour = (HOUR / r.pointMs) * (r.maxPartySlots * r.maxEarnFactor + num(r.otherPresetEarn));
-  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint;
+  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint + caught;
   add("points", balanceOf(next) - balanceOf(prev), pointAllowance);
   // 그사이 쓴 포인트의 상한 — 산 도구·알·개체의 값은 이 안이어야 한다
   const spendable = pos(balanceOf(prev) + pointAllowance - balanceOf(next));
@@ -562,7 +603,23 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (prevIds.has(p.id) || idNo(p.id) <= prevPetSeq) add("pet-id", 1, 0, p.id);
   }
   const boughtAndOpened = Math.floor(leftover / minBuy); // 사서 연 알·종 지정 구매 — 두 저장 어디에도 흔적이 없다
-  add("new-pets", fresh.length + vanishedPets, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened);
+  // 말 부르기 — 직전 저장에서 얻지 않았던 말의 새 개체, 그사이 줄어든 유대의고삐 수까지. 같은 틈에 사서 바로 쓴 고삐는 위의 사서 생긴 몫(boughtAndOpened)이 덮는다
+  const horses = new Set(Object.values(data.riders ?? {}));
+  const owners = new Set(data.riderOwners ?? []);
+  const before = new Set(obtainedOf(prev));
+  const freshHorses = fresh.filter((p) => horses.has(p.species) && !before.has(p.species));
+  const reinsUsed = data.riderItem ? pos(had(data.riderItem) - (nextBag[data.riderItem] ?? 0)) : 0;
+  const calledPets = Math.min(new Set(freshHorses.map((p) => p.species)).size, reinsUsed);
+  add("new-pets", fresh.length + vanishedPets, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened + calledPets);
+  // rider — 새 말은 버드렉스 계열이 있어야, 백마·흑마 모습은 그 말이 있어야 한다
+  if (data.riders) {
+    const hasOwner = nextPets.some((p) => owners.has(p.species));
+    for (const p of freshHorses) if (!hasOwner) add("rider", 1, 0, p.id);
+    for (const p of nextPets) {
+      const horse = data.riders[p.species];
+      if (horse && !nextPets.some((q) => q.species === horse)) add("rider", 1, 0, p.id);
+    }
+  }
   add("shiny", fresh.filter((p) => p.shiny).length, opened + vanished + findPets + traded + boughtAndOpened);
 
   // eggs
@@ -606,6 +663,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
         const at = waiting.findIndex((w) => w.id === e.id);
         if (at >= 0) waiting.splice(at, 1);
         if (!roll) continue;
+        if ("points" in roll) continue; // 다 모은 알 — 개체도 알도 생기지 않는다. 포인트는 points 규칙이 본다
         if ("egg" in roll) {
           const hit = freshEggs.find((x) => x.kind === roll.egg && !usedEggs.has(x.id));
           if (hit) {

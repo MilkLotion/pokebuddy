@@ -135,6 +135,21 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
 
 async function useBag(id: string): Promise<void> {
   const item = ui.view?.bag.find((i) => i.id === id);
+  // 유대의고삐 — 대상은 개체가 아니라 부를 말이다. 고른 말이 없으면 고를 수 있는 첫 말 (src/view/device-bag.ts riderUse 와 같은 규칙)
+  if (item?.riders) {
+    const open = item.riders.horses.filter((h) => !h.owned);
+    const pick = open.find((h) => h.to === bagTarget)?.to ?? open[0]?.to;
+    if (!pick || bagSending) return;
+    bagResult = "";
+    const ok = await bagSend("bag.use", id, { pick });
+    if (ok) {
+      bagResult = lastReplyOf()?.result?.lead ?? "";
+      bagResultNote = lastReplyOf()?.result?.line ?? "";
+      if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
+    }
+    redrawBody();
+    return;
+  }
   const pet = bagTarget ? petInView(bagTarget) : null;
   if (!item || !pet || !ui.view || bagSending) return;
   const count = bagQty; // 메인이 바로잡은 수량 — 사탕이 아니면 1 (src/view/device-bag.ts)

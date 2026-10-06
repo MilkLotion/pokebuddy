@@ -2,6 +2,7 @@
 // 받기·캐시·풀기는 각 파일이 한다(portraits·cries·overworld-art). 이 파일은 "어디서 받아 어떤 이름으로 두나"만 적는다
 // (예전 portraits.ts·cries.ts·overworld-art.ts 에 흩어져 있었다. 메인 레인 96-E 에서 모았다)
 import { megaOf } from "../../dex/mega.js";
+import { regionalOf } from "../../dex/regional.js";
 
 // PokeAPI sprites — 초상·알·대부분의 도구
 const SPRITES = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites";
@@ -67,6 +68,6 @@ export const cryFile = (dex: number): string => `${String(dex).padStart(4, "0")}
 
 // 종 이름 → expansion 폴더 이름 (mr-rime → mr_rime). 걷기 그림 캐시 파일 이름도 이 이름이다
 export const overworldDir = (slug: string): string => slug.replace(/-/g, "_");
-// 메가 모습은 종 폴더 아래의 폼 폴더다 (charizard/mega_x) — data/mega.json 의 overworld. 캐시 파일 이름은 슬러그 그대로다
+// 메가 모습과 PMD 그림이 없는 특수 폼은 종 폴더 아래의 폼 폴더다 (charizard/mega_x, calyrex/ice) — data/mega.json·data/regional.json 의 overworld. 캐시 파일 이름은 슬러그 그대로다
 export const overworldUrl = (slug: string, file: string): string =>
-  `${OVERWORLD_SOURCE.repo}/${OVERWORLD_SOURCE.ref}/graphics/pokemon/${megaOf(slug)?.overworld ?? overworldDir(slug)}/${file}`;
+  `${OVERWORLD_SOURCE.repo}/${OVERWORLD_SOURCE.ref}/graphics/pokemon/${megaOf(slug)?.overworld ?? regionalOf(slug)?.overworld ?? overworldDir(slug)}/${file}`;

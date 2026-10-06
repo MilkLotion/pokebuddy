@@ -60,6 +60,11 @@
    "effect": "form",
    "amount": 0
   },
+  "reins-of-unity": {
+   "price": 2000,
+   "effect": "call-rider",
+   "amount": 0
+  },
   "normal-potion": {
    "price": 0,
    "effect": "shiny-off",
@@ -1943,6 +1948,16 @@
    "tatsugiri-curly-mega"
   ]
  },
+ "riders": {
+  "calyrex-ice": "glastrier",
+  "calyrex-shadow": "spectrier"
+ },
+ "riderOwners": [
+  "calyrex",
+  "calyrex-ice",
+  "calyrex-shadow"
+ ],
+ "riderItem": "reins-of-unity",
  "shiftRules": {
   "rotom": {
    "base": "rotom",
@@ -2104,6 +2119,8 @@
   "cacnea": "medium-slow",
   "cacturne": "medium-slow",
   "calyrex": "slow",
+  "calyrex-ice": "slow",
+  "calyrex-shadow": "slow",
   "camerupt": "medium-fast",
   "capsakid": "medium-fast",
   "carbink": "slow",
@@ -3137,7 +3154,9 @@
   "yungoos": "medium-fast",
   "yveltal": "slow",
   "zacian": "slow",
+  "zacian-crowned": "slow",
   "zamazenta": "slow",
+  "zamazenta-crowned": "slow",
   "zangoose": "erratic",
   "zapdos": "slow",
   "zapdos-galar": "slow",
@@ -3861,8 +3880,6 @@
     "kubfu",
     "regieleki",
     "regidrago",
-    "glastrier",
-    "spectrier",
     "enamorus",
     "wo-chien",
     "chien-pao",
@@ -3975,6 +3992,13 @@
    ]
   }
  },
+ "allCaught": {
+  "sub-legendary": 1000,
+  "ultra-beast": 1000,
+  "paradox": 1000,
+  "mythical": 1500,
+  "legendary": 2500
+ },
  "ranks": {
   "abomasnow": 2,
   "absol": 2,
@@ -4059,6 +4083,8 @@
   "buzzwole": 4,
   "cacturne": 2,
   "calyrex": 5,
+  "calyrex-ice": 5,
+  "calyrex-shadow": 5,
   "camerupt": 2,
   "carbink": 3,
   "carnivine": 2,
@@ -4452,11 +4478,11 @@
   "roaring-moon": 4,
   "roserade": 3,
   "rotom": 2,
-  "rotom-fan": 3,
-  "rotom-frost": 3,
-  "rotom-heat": 3,
-  "rotom-mow": 3,
-  "rotom-wash": 3,
+  "rotom-fan": 5,
+  "rotom-frost": 5,
+  "rotom-heat": 5,
+  "rotom-mow": 5,
+  "rotom-wash": 5,
   "runerigus": 2,
   "salamence": 4,
   "salazzle": 2,
@@ -4618,7 +4644,9 @@
   "yanmega": 3,
   "yveltal": 5,
   "zacian": 5,
+  "zacian-crowned": 5,
   "zamazenta": 5,
+  "zamazenta-crowned": 5,
   "zangoose": 2,
   "zapdos": 5,
   "zapdos-galar": 5,

@@ -301,7 +301,44 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       }
     },
   },
+  presets: {
+    note: "프리셋 전체보기 — showcase 에 프리셋 5개(가득·일부·빈 칸·잠긴 칸)와 이름 하나를 더한다",
+    apply: (s, now) => {
+      applyScene(s, "showcase", now);
+      const add = (species: string, level: number): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        s.pets.push(pet);
+        recordDex(s, species, false);
+        return pet.id;
+      };
+      const row = (species: string[], open: number): SaveV3["party"]["slots"] =>
+        Array.from({ length: 6 }, (_, i) => {
+          const sp = species[i];
+          if (sp) return { state: "pokemon" as const, petId: add(sp, 10 + i * 3) };
+          return i < open ? { state: "empty" as const } : { state: "locked" as const, unlockBy: "shop" as const };
+        });
+      s.party.active = 0;
+      s.party.presetCount = 5;
+      s.party.presets = [null, row(["eevee", "squirtle", "charmander", "bulbasaur"], 6), row(["mew", "dragonite"], 4), row([], 2), row(["garchomp"], 2)];
+      s.party.presetNames = ["", "산책 파티", "", "", ""];
+    },
+  },
   rich: { note: `포인트를 ${SCENE_RULES.points * 10} 이상으로`, apply: (s) => void (s.points.balance = Math.max(s.points.balance, SCENE_RULES.points * 10)) },
+  "calyrex-reins": {
+    note: "버드렉스의 말 부르기 — 파티 첫 칸에 버드렉스 Lv.70, 가방에 유대의고삐 1개 (bugs-1007 항목 2)",
+    apply: (s, now) => {
+      applyScene(s, "showcase", now);
+      const pet = newPet({ id: nextPetId(s), species: "calyrex", shiny: false, nature: randomNature(Math.random).id, gender: rollGender("calyrex", Math.random), now });
+      pet.level = 70;
+      pet.exp = expForLevel(growthOf("calyrex"), 70);
+      s.pets.push(pet);
+      recordDex(s, "calyrex", false);
+      s.party.slots[0] = { state: "pokemon", petId: pet.id, hidden: false };
+      s.bag["reins-of-unity"] = 1;
+    },
+  },
 };
 
 export function applyScene(save: SaveV3, name: string, now = Date.now()): SaveV3 {

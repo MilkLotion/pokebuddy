@@ -10,7 +10,7 @@
 import { loadJson, type DexOptions } from "../dex/data.js";
 import { pickHatch } from "../egg/hatch.js";
 import { pickByWeight, type Rand } from "../shared/rand.js";
-import { addItem } from "../bag/items.js";
+import { addItem, isFormTool } from "../bag/items.js";
 import { addNewPet } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
 import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
@@ -34,14 +34,15 @@ export interface ItemCandidate {
 }
 
 // 도구 후보 — data/items.json 에서 상점가가 0 초과 FIND_RULES.itemMaxPrice 이하. 가중치는 1/가격. 성격민트는 은퇴해 빠진다 (src/bag/mint.ts).
-// 모습 바꾸기 도구(로토무카탈로그, effect form)도 빠진다 — 줍기로 얻지 않는다 (2026-10-05 설계, worklog/records/rotom-forms)
+// 모습 도구(로토무카탈로그 effect form, 유대의고삐 effect call-rider)도 빠진다 — 줍기로 얻지 않는다
+// (2026-10-05 설계 worklog/records/rotom-forms, 2026-10-07 사용자 "유대의고삐는 줍기에서 안 뜨게")
 export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
   const table = loadJson<Record<string, ItemEntry>>("items.json", opts);
   const out: ItemCandidate[] = [];
   for (const [id, e] of Object.entries(table)) {
     if (id.startsWith("_") || e == null || typeof e !== "object") continue;
     if (MINT_RETIRED && id === MINT_ID) continue;
-    if (e.effect === "form") continue;
+    if (isFormTool(e.effect)) continue;
     const price = e.price;
     if (typeof price !== "number" || price <= 0 || price > FIND_RULES.itemMaxPrice) continue;
     out.push({ id, weight: 1 / price });

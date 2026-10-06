@@ -6,7 +6,7 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
-import { formsOf, isFormLocked, shiftRuleOf } from "../dex/forms.js";
+import { formsOf, isFormLocked, riderMissing, shiftRuleOf } from "../dex/forms.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
 import { boredStepOf, zoneOf } from "../state/time.js";
@@ -158,7 +158,8 @@ function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): Pet
     current: slug === pet.species,
     ...(icons[slug] ? { portrait: icons[slug] } : {}),
     ...(rule && slug === rule.base ? { back: true } : {}),
-    ...(rule && slug !== rule.base && !have ? { noItem: true } : {}),
+    // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말이 없으면(버드렉스(백마 탄 모습) — 블리자포스) 줄이 흐리다
+    ...((rule && slug !== rule.base && !have) || riderMissing(save, slug) ? { noItem: true } : {}),
   }));
   return rule ? [...rows.filter((f) => !f.back), ...rows.filter((f) => f.back)] : rows;
 }

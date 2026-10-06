@@ -21,12 +21,14 @@ import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { hatchBaseOf, regionalOf, shiftGroupOf } from "../dex/regional.js";
+import { hatchBaseOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
 import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
 import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
 import { pointText } from "../shared/count-text.js";
+import { josa } from "../shared/josa.js";
+import { RIDER_ITEM } from "../dex/rules.js";
 
 // 도감 상세의 상점 구매 줄 — 상점 포켓몬 탭을 숨긴 동안 끈다 (docs/specs/game.md "상점 포켓몬")
 const SHOP_SPECIES_LINE = false;
@@ -75,6 +77,11 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);
   for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
+  // 버드렉스의 말(블리자포스·레이스포스) — "유대의고삐로 부르기" (data/regional.json riders, 2026-10-07)
+  if (riderOwnerOf(slug, opts)) {
+    const reins = itemName(RIDER_ITEM, opts);
+    methods.push(`${reins}${josa(reins, "으로/로")} 부르기`);
+  }
   // 상점 구매 줄은 잠시 숨긴다 — 상점의 포켓몬 탭을 숨긴 동안 (2026-09-30 사용자 결정 "그 줄도 숨기자"). 탭을 다시 열면 SHOP_SPECIES_LINE 을 true 로
   const price = SHOP_SPECIES_LINE ? speciesPrice(slug, opts) : null;
   if (price != null) methods.push(unlocked ? `상점 구매 ${pointText(price)}` : `상점 구매 ${pointText(price)}(해금 후)`);

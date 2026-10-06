@@ -139,7 +139,7 @@ const fixed = (...values: number[]): (() => number) => {
 // (14) 랜덤알에서 다른 알이 나온다 — 준전설 1 · 울트라비스트 0.5 · 패러독스 0.5 · 환상 0.3 · 전설 0.2 · 태고의돌 3 (%), 합 5.5 (2026-10-02 사용자 결정)
 {
   const cases: [number, string, number][] = [
-    [0.005, "sub-legendary", 47], // 가라르 프리져·썬더·파이어(2026-09-30)와 특수 폼 2종(플라엣테(영원의 꽃)·다투곰(붉은 달), 2026-10-03) 포함 (data/regional.json)
+    [0.005, "sub-legendary", 45], // 가라르 프리져·썬더·파이어(2026-09-30)와 특수 폼 2종(플라엣테(영원의 꽃)·다투곰(붉은 달), 2026-10-03) 포함 (data/regional.json). 블리자포스·레이스포스는 버드렉스와 같이 받아 뺐다(2026-10-07)
     [0.012, "ultra-beast", 10],
     [0.017, "paradox", 20],
     [0.021, "mythical", 20], // 아르세우스는 전설알로 옮겼다(2026-10-03 사용자 결정 "그냥 전설알에 넣자"). 뮤는 업적 보상으로만 얻는다(같은 날 "뮤는 1세대 도감완성으로", worklog/records/achievements/record.md)
@@ -223,12 +223,54 @@ const fixed = (...values: number[]): (() => number) => {
   assert.equal(buyProduct(s, "ultra-beast", T0, fixed(0)).reason, "sold-out", "남은 한 종을 기다리는 알이 이미 있다");
   assert.equal(s.points.balance, 10_000 - 2000, "품절이면 포인트를 쓰지 않는다");
   assert.equal(shopList(s).find((p) => p.id === "ultra-beast")?.blocked, "모두 모았어요");
-  // 랜덤알 보너스가 울트라비스트를 뽑아도 줄 수 없으면 포켓몬이 나온다
+  // 랜덤알 보너스가 울트라비스트를 뽑아도 줄 수 없으면(남은 종을 기다리는 알이 있다) 포켓몬 대신 포인트 — 상점가의 절반 (2026-10-07 사용자 결정)
   s.eggs.push(egg({ id: "e9", remainMs: 0, ready: true, actions: { pat: 1, song: 0 } }));
+  const before = s.points.balance;
   const res = openEgg(s, "e9", T0, fixed(0.012, 0, 0.5, 0.5));
+  assert.equal(res.ok, true);
   assert.equal(res.egg, undefined);
-  assert.ok(res.species === "charmander" || res.species === "squirtle");
+  assert.equal(res.petId, undefined, "포켓몬은 나오지 않는다");
+  assert.deepStrictEqual(res.allCaught, { kind: "ultra-beast", points: 1000 });
+  assert.equal(s.points.balance, before + 1000);
+  assert.ok(!s.eggs.some((e) => e.id === "e9"), "연 알은 없어진다");
   process.stdout.write("(16) 단일 포켓몬 알 · 품절  ok\n");
+}
+
+// (16b) 다 모은 단일 포켓몬 알 — 랜덤알에서 그 알이 나오면 포켓몬 대신 상점가의 절반을 포인트로 준다. 확률은 그대로다 (2026-10-07 사용자 결정)
+{
+  const cases: [number, string, number][] = [
+    [0.005, "sub-legendary", 1000],
+    [0.012, "ultra-beast", 1000],
+    [0.017, "paradox", 1000],
+    [0.021, "mythical", 1500],
+    [0.024, "legendary", 2500],
+  ];
+  for (const [roll, kind, points] of cases) {
+    const s = seed({ remainMs: 0, ready: true });
+    s.dex.obtained.push(...(eggPool(kind) ?? []));
+    const hatched = s.counts.hatched;
+    const res = openEgg(s, "e1", T0, fixed(roll));
+    assert.equal(res.ok, true, kind);
+    assert.deepStrictEqual(res.allCaught, { kind, points }, kind);
+    assert.equal(res.egg, undefined);
+    assert.equal(res.petId, undefined);
+    assert.equal(s.points.balance, points, `${kind} 포인트`);
+    assert.equal(s.eggs.length, 0, "연 알은 없어진다");
+    assert.equal(s.pets.length, 0);
+    assert.equal(s.counts.hatched, hatched, "부화 수에 세지 않는다");
+  }
+  // 한 종이라도 남았으면 지금처럼 그 알이 나온다
+  const s = seed({ remainMs: 0, ready: true });
+  const legend = eggPool("legendary") ?? [];
+  s.dex.obtained.push(...legend.slice(1));
+  const res = openEgg(s, "e1", T0, fixed(0.024));
+  assert.deepStrictEqual(res.egg, { id: "e2", kind: "legendary" });
+  assert.equal(res.allCaught, undefined);
+  // 태고의돌 구간은 화석을 다 모아도 태고의돌이다
+  const stone = seed({ remainMs: 0, ready: true });
+  stone.dex.obtained.push(...(eggPool("ancient-stone") ?? []));
+  assert.equal(openEgg(stone, "e1", T0, fixed(0.03)).egg?.kind, "ancient-stone");
+  process.stdout.write("(16b) 다 모은 단일 포켓몬 알 · 포인트  ok\n");
 }
 
 // (17) 상점 가격과 도감 입수 방법

@@ -26,7 +26,7 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
     case "egg.open":
       return { eggId: target ?? str(a.eggId) };
     case "bag.use":
-      return { itemId: target ?? str(a.itemId), petId: str(a.petId), nature: str(a.nature), ...(a.count !== undefined ? { count: a.count } : {}) };
+      return { itemId: target ?? str(a.itemId), petId: str(a.petId), nature: str(a.nature), ...(a.count !== undefined ? { count: a.count } : {}), ...(a.pick !== undefined ? { pick: str(a.pick) } : {}) }; // pick — 유대의고삐로 부를 말
     case "bag.sell":
       return { itemId: target ?? str(a.itemId), ...(a.count !== undefined ? { count: a.count } : {}) };
     case "shop.buy":

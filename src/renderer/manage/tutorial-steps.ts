@@ -82,7 +82,7 @@ export const GUIDES: Record<string, Guide> = {
       { title: "박스에 보관하면 성장이 멈춰요", body: "파티 칸이 모자라면 박스에 맡겨요.", target: () => tabButtonOf("box") },
     ],
   },
-  // 파티 프리셋 — 머리 줄의 넘김 → 첫 줄의 카드 → 교체 단추. 설명만 하고 대상은 막는다. 파티 기기 창은 다른 창이라 가리키지 않는다
+  // 파티 프리셋 — 머리 줄의 넘김 → 첫 줄의 카드 → 머리 메뉴 단추(교체가 든 메뉴). 설명만 하고 대상은 막는다. 파티 기기 창은 다른 창이라 가리키지 않는다
   // (2026-10-02 사용자 확인, Figma 05 `1260:23402` · `1260:23424` · `1260:23446`)
   preset: {
     name: "프리셋", tab: "party", go: "파티로 가기",
@@ -95,7 +95,8 @@ export const GUIDES: Record<string, Guide> = {
         target: () => bodyEl.querySelectorAll<HTMLElement>(".grid .slot")[0] ?? null,
         also: () => bodyEl.querySelectorAll<HTMLElement>(".grid .slot")[1] ?? null,
       },
-      { title: "교체로 포켓몬을 넣고 빼요", body: "박스의 포켓몬을 눌러 들고, 옆 창의 칸을 눌러 놓아요.", target: () => bodyEl.querySelector<HTMLElement>(".head .swap-open") },
+      // 교체는 머리 햄버거 메뉴 안에 있다 — 메뉴 단추를 밝힌다
+      { title: "교체로 포켓몬을 넣고 빼요", body: "박스의 포켓몬을 눌러 들고, 옆 창의 칸을 눌러 놓아요.", target: () => bodyEl.querySelector<HTMLElement>(".head .party-menu-toggle") },
     ],
   },
   bag: {

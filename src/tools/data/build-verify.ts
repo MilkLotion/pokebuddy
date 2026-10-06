@@ -14,7 +14,7 @@ import { nextOf } from "../../dex/evo";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { megaOf, megaSlugs } from "../../dex/mega";
 import { inRandomEgg } from "../../dex/obtain";
-import { MEGA_RULES, SHIFT_RULES } from "../../dex/rules";
+import { MEGA_RULES, RIDER_ITEM, SHIFT_RULES } from "../../dex/rules";
 import { speciesSlugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
@@ -55,6 +55,12 @@ export function buildVerifyFiles(): Record<string, string> {
     if (kind.startsWith("_")) continue;
     const bonus = Object.entries((egg.bonus ?? {}) as Record<string, unknown>).filter(([k, p]) => typeof p === "number" && p > 0 && eggData[k] != null);
     eggKinds[kind] = { bonus, single: egg.single === true, pool: Array.isArray(egg.pool) ? egg.pool : [] };
+  }
+  // 다 모은 단일 포켓몬 알의 포인트 — 앱의 allCaughtPoints 와 같은 계산 (src/egg/pool.ts)
+  const allCaught: Record<string, number> = {};
+  for (const [kind, k] of Object.entries(eggKinds)) {
+    const price = eggs[kind] ?? 0;
+    if (k.single && price > 0) allCaught[kind] = Math.floor((price * EGG_RULES.allCaughtRate) / EGG_RULES.allCaughtUnit) * EGG_RULES.allCaughtUnit;
   }
   const ranks: Record<string, number> = {};
   for (const [slug, sp] of Object.entries(load("species.defaults.json"))) {
@@ -103,18 +109,33 @@ export function buildVerifyFiles(): Record<string, string> {
     if (base.startsWith("_") || !rule || !Array.isArray(list)) continue;
     for (const slug of [base, ...list]) if (typeof slug === "string") shiftRules[slug] = { base, ...rule };
   }
+  // 버드렉스의 말 — 모습 → 있어야 하는 말(data/regional.json riders), 말을 부를 수 있는 종(그 모습들의 shift 묶음), 부르기 도구
+  const regional = load("regional.json");
+  const riders: Record<string, string> = {};
+  const riderOwners = new Set<string>();
+  for (const [form, horse] of Object.entries((regional.riders ?? {}) as Record<string, unknown>)) {
+    if (form.startsWith("_") || typeof horse !== "string") continue;
+    riders[form] = horse;
+    for (const [base, list] of Object.entries((regional.shift ?? {}) as Record<string, unknown>)) {
+      if (Array.isArray(list) && list.includes(form)) for (const slug of [base, ...list]) if (typeof slug === "string") riderOwners.add(slug);
+    }
+  }
   const data = {
     items,
     eggs,
     achievements,
     evo,
     megaForms,
+    riders,
+    riderOwners: [...riderOwners].sort(),
+    riderItem: RIDER_ITEM,
     shiftRules,
     growth,
     expTable,
     maxExp,
     rareCandyExp,
     eggKinds,
+    allCaught,
     ranks,
     rankWeight: EGG_RULES.rankWeight,
     shinyOneIn: EGG_RULES.shinyOneIn,

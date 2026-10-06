@@ -286,6 +286,20 @@
   color: var(--ink);
   font-weight: 700;
 }
+/* 유대의고삐의 부를 말 — 칸 아래가 이름이라 칸 폭을 이름에 맞춘다. 이미 가진 말은 흐리게 (Figma 99 `1613:5214`) */
+.party.riders {
+  gap: 16px;
+}
+.party.riders button {
+  width: auto;
+  min-width: 50px;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+.party button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .party .face {
   display: grid;
   place-items: center;

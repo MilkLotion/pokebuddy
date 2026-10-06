@@ -31,7 +31,13 @@ function releaseHeld(): void {
   }, 0);
 }
 
-export function searchBoxEl(key: string, value: string, placeholder: string, onSearch: (q: string) => void): HTMLElement {
+// 검색어 초안을 버린다 — 칸 밖의 닫기(박스 찾기 줄의 ✕)가 칸을 비울 때 쓴다
+export function forgetSearchDraft(key: string): void {
+  searchDraft.delete(key);
+}
+
+// go 가 false 면 `검색` 단추를 두지 않는다 — Enter 로만 검색한다(박스 찾기 줄. 옆에 이전·다음 단추가 있다)
+export function searchBoxEl(key: string, value: string, placeholder: string, onSearch: (q: string) => void, opts: { go?: boolean } = {}): HTMLElement {
   const box = el("span", "search-field");
   const input = document.createElement("input");
   input.type = "search";
@@ -81,7 +87,8 @@ export function searchBoxEl(key: string, value: string, placeholder: string, onS
     if (searchFocus?.key === key) searchFocus = null;
     releaseHeld();
   });
-  box.append(input, go);
+  box.append(input);
+  if (opts.go !== false) box.appendChild(go);
   return box;
 }
 

@@ -92,6 +92,8 @@ export function pmdSources(look: string): PmdSource[] {
   const mega = megaOf(slug);
   // 메가 모습(src/dex/mega.ts) — 폼 폴더만 본다. 이로치는 `<폼>/0001` → 폼 보통. 폴더가 없으면 빈 목록이라 걷기 대체 그림으로 넘어간다
   if (mega) return mega.pmd ? (shiny ? [{ slug, spritePath: `${mega.pmd}/0001` }, { slug, spritePath: mega.pmd }] : [{ slug, spritePath: mega.pmd }]) : [];
+  // PMD 그림이 없고 걷기 그림 폴더가 있는 특수 폼(버드렉스(백마 탄 모습)) — 기본형 PMD 로 떨어지지 않게 빈 목록. 걷기 대체 그림으로 넘어간다 (data/regional.json overworld)
+  if (regionalOf(slug)?.overworld && !regionalOf(slug)?.pmd) return [];
   const form = regionalOf(slug)?.pmd;
   const out: PmdSource[] = [];
   if (form) out.push({ slug, spritePath: shiny ? `${form}/0001` : form });
@@ -102,8 +104,11 @@ export function pmdSources(look: string): PmdSource[] {
   return out;
 }
 
-// 그림을 찾을 수 있는 모습인가 — PMD 후보가 있거나 메가 모습이다. 메가 모습은 PMD 폴더가 없어도 걷기 대체 그림·초상으로 선다
-const knownLook = (look: string, srcs: PmdSource[]): boolean => srcs.length > 0 || megaOf(look.replace(/:shiny$/, "")) !== null;
+// 그림을 찾을 수 있는 모습인가 — PMD 후보가 있거나 메가 모습·걷기 그림 폴더가 있는 특수 폼이다. 둘은 PMD 폴더가 없어도 걷기 대체 그림·초상으로 선다
+const knownLook = (look: string, srcs: PmdSource[]): boolean => {
+  const slug = look.replace(/:shiny$/, "");
+  return srcs.length > 0 || megaOf(slug) !== null || regionalOf(slug)?.overworld != null;
+};
 
 // 그림 묶음에 적는 도감 번호 — 메가 모습은 기본 종의 번호
 export const dexOfLook = (look: string): string => {

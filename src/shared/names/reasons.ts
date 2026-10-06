@@ -82,6 +82,8 @@ export const REASONS = [
   "not-shared",
   "bad-form",
   "form-locked", // 모습 바꾸기 해금 전(로토무 — 에이전트 작업 시간)
+  "no-rider", // 그 모습이 되려면 있어야 하는 말이 없다(버드렉스(백마 탄 모습) — 블리자포스)
+  "not-rider-owner", // 말을 부를 버드렉스 계열 개체가 저장에 없다(유대의고삐)
   "no-stone",
   "art-missing", // 바뀔 모습의 그림을 받지 못했다
   // 업적·튜토리얼

@@ -116,6 +116,50 @@ export function boxNameCell(inner: HTMLElement): HTMLElement {
   return cell;
 }
 
+// 탭 머리의 햄버거 메뉴 — 누르면 목록이 단추 아래 오른쪽 맞춤으로 뜬다. 목록은 떠 있는 층이라 본문을 밀지 않는다.
+// 박스 탭(교체·박스 순서·교환·중복 팔기)과 파티 탭(교체·전체보기)이 같이 쓴다 (2026-10-07 사용자 "여기도 햄버거 버튼하고, 교체·전체보기 목록으로 하자").
+// 열림 상태는 부르는 쪽이 들고, 바깥을 누르면 닫는 일도 부르는 쪽(manage.ts)이 한다. Figma `Dropdown Menu` Kind=Box `1362:95`, Kind=Party `1603:75051`
+export interface HeadMenu {
+  cls: string; // 묶음의 이름표 — 시험이 찾는다(box-menu·party-menu)
+  label: string; // 단추의 접근성 이름
+  open: boolean;
+  toggle: () => void; // 단추를 눌렀다 — 부르는 쪽이 열림을 뒤집고 다시 그린다
+  pick: () => void; // 항목을 눌렀다 — 부르는 쪽이 닫고 다시 그린다. 항목의 일은 그 뒤에 한다
+  items: readonly (readonly [string, () => void])[];
+  dot?: boolean; // 단추 오른쪽 위 점(교환 진행 중)
+}
+export function headMenuEl(m: HeadMenu): HTMLElement {
+  const wrap = el("div", `head-menu ${m.cls}`);
+  const toggle = buttonEl(`icon-button ${m.cls}-toggle`);
+  toggle.innerHTML = BOX_ICON.menu; // 고정 그림 — 사용자 값이 들어가지 않는다
+  toggle.setAttribute("aria-label", m.label);
+  toggle.setAttribute("aria-expanded", String(m.open));
+  const dot = el("span", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  dot.hidden = !m.dot;
+  toggle.appendChild(dot);
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    m.toggle();
+  });
+  wrap.appendChild(toggle);
+  if (!m.open) return wrap;
+  const menu = el("div", "sort-menu");
+  menu.setAttribute("role", "menu");
+  for (const [label, run] of m.items) {
+    const b = buttonEl("sort-item", label);
+    b.setAttribute("role", "menuitem");
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      m.pick();
+      run();
+    });
+    menu.appendChild(b);
+  }
+  wrap.appendChild(menu);
+  return wrap;
+}
+
 // 박스 탭의 아이콘 — 16×16, 선 1.5. 고정 그림이다 (Figma 01 `Icon / Menu`·`Icon / House`). 머리 메뉴(box-order.ts)와 돌보미집 단추가 쓴다
 export const BOX_ICON = {
   menu: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></svg>',

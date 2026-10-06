@@ -16,7 +16,7 @@
 // 로토무는 업적 보상 종이라 공유 계열(isShared)로도 판정된다 — 해금·도구 규칙은 공유 계열 여부와 상관없이 본다
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
-import { shiftGroupOf } from "./regional.js";
+import { riderOf, shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
 import { SHIFT_RULES } from "./rules.js";
@@ -24,7 +24,7 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already" | "no-item">;
+export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already" | "no-item" | "no-rider">;
 
 export type FormResult = Outcome<FormFailure> & {
   petId?: string;
@@ -68,6 +68,13 @@ export function formItemOf(pet: PetV3, to: string, opts?: DexOptions): string | 
   return rule && to !== rule.base ? rule.item : null;
 }
 
+// 그 모습에 있어야 하는 말이 저장에 없는가 — 버드렉스(백마 탄 모습)는 블리자포스 개체가 있어야 한다. 말은 쓰지 않는다
+// (2026-10-07 사용자 결정 "백마는 블리자포스, 흑마는 레이스포스를 가지고 있어야", data/regional.json riders)
+export function riderMissing(save: Pick<SaveV3, "pets">, to: string, opts?: DexOptions): boolean {
+  const horse = riderOf(to, opts);
+  return horse != null && !save.pets.some((p) => p.species === horse);
+}
+
 // 개체 작업 시간 — 시간 적용이 지금 파티 칸 개체마다 부른다. 규칙이 있는 묶음의 개체만 세고 조건 값에서 멈춘다
 export function tickFormWork(pet: PetV3, workMs: number, opts?: DexOptions): void {
   if (workMs <= 0) return;
@@ -98,6 +105,7 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   if (typeof species !== "string" || !forms.includes(species)) return { ok: false, reason: "bad-form" };
   if (isFormLocked(pet, opts)) return { ok: false, reason: "form-locked" };
   if (species === pet.species) return { ok: false, reason: "already" };
+  if (riderMissing(save, species, opts)) return { ok: false, reason: "no-rider" };
   const item = formItemOf(pet, species, opts);
   if (item && (save.bag[item] ?? 0) < 1) return { ok: false, reason: "no-item" };
   if (item) {

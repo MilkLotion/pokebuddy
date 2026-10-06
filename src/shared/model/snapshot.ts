@@ -19,6 +19,7 @@ export interface EvolutionView {
   known: boolean; // 도감에서 해금(또는 획득)한 종 — 아니면 이름·그림을 가린다 (2026-10-01 사용자 결정)
   ready: boolean;
   need?: string; // 모자란 조건의 화면 문구 — "Lv.16 필요", "물의돌 필요", "밤에만"
+  genderBlocked?: true; // 성별이 맞지 않아 이 개체는 갈 수 없는 후보 — 진화 창은 흐리게 "암컷만", 파티 상세 진화 줄은 세지 않는다 (2026-10-07)
   item?: string; // 진화용 도구가 조건이면 그 도구 id. 가방의 돌로 대상을 고를 때 쓴다
   map?: true; // 지도 간선(기본형 → 리전폼) — 지도도 쓴다. 가방의 지도로 대상을 고를 때 쓴다
   uses: string[]; // 진화에 쓰는 도구의 화면 이름 — 돌·지도. 진화 창 안내와 진화 확인 창의 화살표가 읽는다
@@ -114,6 +115,13 @@ export interface SlotView {
   pet?: PetView;
 }
 
+// 프리셋 한 개 — 프리셋 전체보기 모달이 쓴다. 칸은 파티 순서다 (src/party/presets.ts allPresets)
+export interface PresetView {
+  index: number;
+  name: string;
+  slots: SlotView[];
+}
+
 export interface EggView {
   id: string;
   kind: string;
@@ -145,6 +153,13 @@ export interface BagItemView {
   buyPrice?: number; // 판매가의 바탕인 구매가 — 판매 안내 "구매가 Y P의 60%" 가 쓴다. sellPrice 가 있을 때만
   sellRate?: number; // 판매 비율 (SHOP_RULES.sellRate) — 판매 안내의 백분율. sellPrice 가 있을 때만
   about?: ItemAbout; // 가방 기기 창의 설명 (src/tx/lists.ts itemAbout)
+  riders?: RiderCallView; // 유대의고삐(효과 call-rider)만 — 부를 말과 쓸 수 있는지 (src/party/riders.ts riderCall)
+}
+
+// 유대의고삐로 부를 말 — 가방 기기 창의 "부를 말" 줄 (docs/specs/game.md "버드렉스의 말 부르기")
+export interface RiderCallView {
+  horses: { to: string; name: string; owned: boolean }[]; // 이미 가진 말은 owned — 흐리고 못 고른다
+  block: "not-rider-owner" | "already" | "box-full" | null; // 쓸 수 없는 까닭 — 버드렉스 없음 · 부를 말 없음 · 박스 빈칸 없음
 }
 
 // 도구 설명 — 상점·가방 기기 창이 같이 쓴다 (src/tx/lists.ts itemAbout, data/items.json group·desc·effectText)
@@ -224,7 +239,8 @@ export interface SettingsView {
 export interface Snapshot {
   points: number;
   // preset 은 지금 적용한 파티 프리셋 — 번호(0 부터), 가진 수, 최대 수, 이름 (src/party/presets.ts)
-  party: { slots: SlotView[]; shown: number; usable: number; preset: { index: number; count: number; max: number; name: string } };
+  // presets 는 가진 프리셋 전부 — 번호 순. 적용한 프리셋도 들고 칸은 slots 와 같다 (2026-10-07 프리셋 전체보기)
+  party: { slots: SlotView[]; shown: number; usable: number; preset: { index: number; count: number; max: number; name: string }; presets: PresetView[] };
   boxes: BoxView[];
   eggs: { list: EggView[]; used: number; size: number };
   bag: BagItemView[];

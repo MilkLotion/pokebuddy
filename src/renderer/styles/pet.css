@@ -446,8 +446,10 @@ button.line.on {
 .line .copy strong {
   font-weight: 700;
 }
+/* 설명 줄 높이 16 — 두 줄(18 + 16)에 구분선을 더해도 최소 높이 52 안이라 한 줄·두 줄 모두 52 (Figma `Link Row`, 2026-10-07) */
 .line .copy span {
   color: var(--muted);
+  line-height: 16px;
 }
 .line .go {
   color: var(--muted);

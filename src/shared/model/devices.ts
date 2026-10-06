@@ -85,7 +85,8 @@ export interface BagDeviceOpen extends ItemFace {
   pager: boolean; // 사용 쪽 파티 줄 양끝에 ◀ ▶ 를 둔다 — 프리셋이 둘 이상일 때. 누르면 앞·뒤 프리셋을 적용한다 (2026-10-02 사용자 결정)
   mode: "use" | "sell";
   modes: boolean; // 사용·판매 전환을 둔다 — 사용도 판매도 되는 도구만
-  party: { petId: string; name: string; level: string; art: string | null; picked: boolean }[] | null; // 사용 쪽 파티 줄
+  party: { petId: string; name: string; level: string; art: string | null; picked: boolean; dim?: boolean }[] | null; // 사용 쪽 파티 줄. 유대의고삐는 부를 말 — petId 가 말 종, level 이 말 이름, dim 은 이미 가진 말(못 고른다)
+  riders?: true; // 파티 줄 자리가 유대의고삐의 부를 말이다 — 칸 아래 글자가 레벨 대신 이름이라 칸 폭을 이름에 맞춘다
   qty: { count: number; cap: number; hint: string } | null;
   preview: { lead: string; line: string; tone: "" | "ok" | "bad" | "warn" }; // warn — 쓰면 손해가 있다(남은 버프 시간이 사라짐)
   go: { label: string; disabled: boolean; busy: boolean }; // 바닥 가운데 주 단추 — `N개 사용` · `NP에 팔기`

@@ -61,6 +61,7 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
     ...(c.ready && !locked ? {} : { need: locked && c.ready ? failTextOf("trade-locked", "trade").text : needText(c.lacks) }),
     ...(c.need.kind === "item" ? { item: c.need.item } : {}),
     ...(c.map ? { map: true as const } : {}),
+    ...(c.lacks.some((m) => m.kind === "gender") ? { genderBlocked: true as const } : {}),
   }));
 }
 

@@ -104,6 +104,13 @@
 .dialog.hatched .actions button {
   flex: 1;
 }
+/* 다 모은 알의 포인트 — `확인` 은 가운데, 단추 폭 120 (Figma 99 `1599:65117`) */
+.dialog.hatched .actions.center {
+  justify-content: center;
+}
+.dialog.hatched .actions.center button {
+  flex: 0 0 120px;
+}
 .egg .shell {
   width: 30px;
   height: 38px;

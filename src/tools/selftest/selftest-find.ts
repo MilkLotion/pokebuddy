@@ -94,6 +94,8 @@ try {
     const base = ["premium-food", "toy", "exp-candy-xs", "exp-candy-s", "exp-candy-m", "exp-candy-l", "rare-candy"];
     assert.deepEqual(ids, MINT_RETIRED ? base : [...base, "mint"], "상점가 0 초과 200 이하. 민트는 한 종류");
     if (!MINT_RETIRED) assert.ok(near(itemCandidates().find((c) => c.id === "mint")?.weight ?? 0, 1 / 100, 1e-12), "민트 가중치 1/100");
+    // 모습 도구는 값과 상관없이 줍기 후보가 아니다 (2026-10-07 사용자 "유대의고삐는 줍기에서 안 뜨게")
+    assert.ok(!ids.includes("reins-of-unity") && !ids.includes("rotom-catalog"), "줍기 후보에 reins-of-unity 없음");
     process.stdout.write("(1) 수치와 도구 후보  ok\n");
   }
 

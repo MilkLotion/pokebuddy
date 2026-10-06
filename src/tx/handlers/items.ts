@@ -1,6 +1,7 @@
 // 알·상점·가방 처리기 — 알 열기, 사기, 도구 쓰기·팔기, 포켓몬 팔기
 import { useItem } from "../../bag/use.js";
 import { itemOf } from "../../bag/items.js";
+import { callRider } from "../../party/riders.js";
 import { openEgg } from "../../egg/open.js";
 import { buyProduct } from "../../shop/buy.js";
 import { sellItem } from "../../shop/sell.js";
@@ -27,7 +28,9 @@ export const openHandler: TxHandler = (draft, args, ctx) => {
     ok: true,
     result: res.egg
       ? { egg: res.egg }
-      : { petId: res.petId, species: res.species, shiny: res.shiny, slotIndex: res.slotIndex, toBox: res.toBox },
+      : res.allCaught
+        ? { allCaught: res.allCaught }
+        : { petId: res.petId, species: res.species, shiny: res.shiny, slotIndex: res.slotIndex, toBox: res.toBox },
   };
 };
 
@@ -67,9 +70,16 @@ export const buyHandler: TxHandler = (draft, args, ctx) => {
 // ── 가방 ───────────────────────────────────────────────────────────────────────
 
 // 도구 사용 — 대상 개체에 효과를 적용하고 하나를 차감한다
-export const useHandler: TxHandler = (draft, args) => {
+export const useHandler: TxHandler = (draft, args, ctx) => {
   if (!isArgsRecord(args)) return { ok: false, reason: "bad-args" };
   const itemId = typeof args.itemId === "string" ? args.itemId : "";
+  // 유대의고삐 — 대상 개체가 없다. 고른 말(pick)을 박스로 부른다 (src/party/riders.ts, 2026-10-07 사용자 결정 "유대의고삐를 가방에서 사용")
+  if (itemOf(itemId)?.effect === "call-rider") {
+    if (args.count !== undefined && args.count !== 1) return { ok: false, reason: "bad-args" };
+    const res = callRider(draft, args.pick, ctx.now, ctx.rand);
+    if (!res.ok) return { ok: false, reason: reasonOf(res) };
+    return { ok: true, result: { itemId, petId: res.petId, species: res.species, left: res.left } };
+  }
   const petId = petIdOf(args);
   if (!itemId || !petId) return { ok: false, reason: "bad-args" };
   const nature = typeof args.nature === "string" ? args.nature : undefined;

@@ -12,16 +12,25 @@ import { sendCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { openSwap } from "./party-link.js";
 import { askPetMenu } from "./pet-menu.js";
+import { openAnyDialog } from "./dialog.js";
 import { openPet } from "./routes.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
-import { boxNameCell, meterEl, pageHeadEl } from "./widgets.js";
+import { boxNameCell, headMenuEl, meterEl, pageHeadEl } from "./widgets.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
 let presetRenaming = false;
-// 탭을 옮긴다 — 프리셋 이름 고치기를 끝낸다 (shell.ts setTab 의 고리)
+let menuOpen = false; // 머리 햄버거 메뉴(교체·전체보기)
+// 탭을 옮긴다 — 프리셋 이름 고치기를 끝내고 메뉴를 닫는다 (shell.ts setTab 의 고리)
 export function stopPresetRename(): void {
   presetRenaming = false;
+  menuOpen = false;
+}
+// 바깥을 눌렀다 — 열린 메뉴를 닫는다. 닫았으면 참 (manage.ts 의 바깥 누르기)
+export function closePartyMenu(): boolean {
+  if (!menuOpen) return false;
+  menuOpen = false;
+  return true;
 }
 
 function petCard(pet: PetView): HTMLElement {
@@ -177,10 +186,29 @@ export function drawParty(v: Snapshot): void {
   next.addEventListener("click", () => stepPreset(1));
   pager.append(prev, boxNameCell(presetNameEl(preset)), next);
   top.appendChild(pager);
-  // 머리 오른쪽 `교체` — 박스 탭으로 가고 파티 기기 창을 띄운다 (Figma 05 `Party / Swap · Open` `1248:2567`)
-  const swap = buttonEl("act swap-open", "교체");
-  swap.addEventListener("click", openSwap);
-  top.appendChild(swap);
+  // 머리 오른쪽 햄버거 — 메뉴는 `교체`(박스 탭 + 파티 기기 창, Figma 05 `Party / Swap · Open` `1248:2567`)와 `전체보기`(프리셋 전체보기 모달).
+  // 박스 탭 머리 메뉴와 같은 부품이다 (2026-10-07 사용자 "여기도 햄버거 버튼하고, 교체·전체보기 목록으로 하자", Figma 05 `Party / Menu Open` `1603:75410`, 머리는 03 `Page Header / Party` `1262:83118`)
+  const acts = el("div", "head-acts");
+  acts.appendChild(
+    headMenuEl({
+      cls: "party-menu",
+      label: "파티 메뉴",
+      open: menuOpen,
+      toggle: () => {
+        menuOpen = !menuOpen;
+        redrawBody();
+      },
+      pick: () => {
+        menuOpen = false;
+        redrawBody();
+      },
+      items: [
+        ["교체", openSwap],
+        ["전체보기", () => openAnyDialog({ kind: "preset-overview" })],
+      ],
+    }),
+  );
+  top.appendChild(acts);
   bodyEl.appendChild(top);
   const grid = el("div", "grid");
   for (const slot of v.party.slots) {

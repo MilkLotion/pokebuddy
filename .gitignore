@@ -11,6 +11,8 @@ release/
 .playwright-mcp/
 .claude/
 .supabase
+# PowerShell 모듈 분석 캐시 — 저장소를 작업 폴더로 둔 PowerShell 이 가끔 쓴다. 원인 미확정 (2026-10-07 사용자 "진행")
+/Microsoft/
 # 작업 기록 — 저장소 밖에 둔다 (2026-09-27 사용자 결정). 설계·작업·검수 기록, 월간 이력, 진행 현황
 /worklog/
 # Mac 쪽 작업 기록 — worklog/ 는 Windows PC 에 있다 (2026-09-30 사용자 결정)

@@ -1,5 +1,7 @@
 // 설정창의 돌보미집 — 넘김 줄의 돌보미집 단추, 돌보미집 모달, 알 열기·모두 열기, 부화 결과 창, 겹친 모달의 뒤 (P10 19)
 // 겹친 모달의 뒤(underEl·underScrimEl)는 이 파일을 읽을 때 가림막에 끼운다 — 대화상자(dialogEl) 바로 앞
+import { numberText } from "../../shared/count-text.js";
+import { josa } from "../../shared/josa.js";
 import type { EggView, Snapshot } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
@@ -7,11 +9,45 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { lastReplyOf, sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openAnyDialog, scrimEl } from "./dialog.js";
-import type { Hatched } from "./dialog-types.js";
+import type { AllCaught, Hatched } from "./dialog-types.js";
+import { redrawBody } from "./shell.js";
 import { petInView, ui } from "./state.js";
 import { BOX_ICON, dialogCloseEl, lvNature } from "./widgets.js";
 
 let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
+
+// 부화 확인 전 숨김 — 저장에는 바로 박스에 들어가지만, 박스 화면에는 부화 결과 창의 `확인`·`다음` 뒤에 보인다
+// (2026-10-07 사용자 "데이터상으로 박스에 있지만 ui상으로는 확인 눌러야 박스에 있게", 박스만 숨긴다)
+// - 열기 응답보다 스냅숏 다시 그리기가 먼저 올 수 있어 개체 ID 대신 "열기 시작 때 박스에 없던 개체"로 가린다
+// - 따로 지우는 때가 없다 — 여는 중도 아니고 부화 결과 창도 없으면 빈 집합이다
+let hatchBase: Set<string> | null = null; // 열기 시작 때 박스에 있던 개체
+let hatching = false; // 알 열기 명령을 보내고 부화 결과 창을 띄우기 전
+
+const boxPetIds = (v: Snapshot): string[] => v.boxes.flatMap((b) => b.slots.flatMap((p) => (p ? [p.id] : [])));
+
+// 열기 시작 — 늘 지금 박스로 다시 잡는다. 박스 탭이 그려지지 않아 지난 기준이 남아 있어도 덮는다
+function beginHatch(): void {
+  hatchBase = ui.view ? new Set(boxPetIds(ui.view)) : null;
+  hatching = true;
+}
+
+function endHatch(): void {
+  hatching = false;
+  if (ui.dialog?.kind !== "hatched") hatchBase = null; // 하나도 못 열었다
+}
+
+// 박스 화면에서 아직 숨길 개체 — 모두 열기는 이미 넘긴 결과(queue 의 at 앞)를 보인다
+export function hiddenHatchIds(v: Snapshot): Set<string> {
+  const d = ui.dialog;
+  const showing = d?.kind === "hatched";
+  if (!hatchBase || (!hatching && !showing)) {
+    hatchBase = null;
+    return new Set();
+  }
+  const base = hatchBase;
+  const seen = new Set(showing && d.queue ? d.queue.slice(0, d.at ?? 0).flatMap((h) => ("petId" in h ? [h.petId] : [])) : []);
+  return new Set(boxPetIds(v).filter((id) => !base.has(id) && !seen.has(id)));
+}
 
 // 넘김 줄의 돌보미집 단추 — 집 아이콘, `정렬` 왼쪽. 부화할 수 있는 알이 있으면 오른쪽 위 점
 // (2026-10-02 사용자 결정 "돌보미집은 집아이콘 만들어서 정렬 왼쪽에 버튼으로 두자")
@@ -84,14 +120,21 @@ async function openEgg(eggId: string): Promise<Hatched | null> {
   if (!r) return null;
   const egg = r.egg as { id?: unknown } | undefined;
   if (egg && typeof egg.id === "string") return { eggId: egg.id };
+  const caught = r.allCaught as { kind?: unknown; points?: unknown } | undefined;
+  if (caught && typeof caught.kind === "string" && typeof caught.points === "number") return { allCaught: { kind: caught.kind, points: caught.points } };
   if (typeof r.petId === "string") return { petId: r.petId, ...(typeof r.slotIndex === "number" ? { slotIndex: r.slotIndex } : {}) };
   return null;
 }
 
 // 알 열기 — 끝나면 부화 결과 창을 연다. 돌보미집 모달에서 열면 그 모달 위에 겹친다 (2026-09-30 사용자 "열기를 누르면 모달열린채로 부화결과창")
 async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
-  const got = await openEgg(eggId);
-  if (got) openAnyDialog({ kind: "hatched", ...got, ...(over ? { over } : {}) });
+  beginHatch();
+  try {
+    const got = await openEgg(eggId);
+    if (got) openAnyDialog({ kind: "hatched", ...got, ...(over ? { over } : {}) });
+  } finally {
+    endHatch();
+  }
 }
 
 // 모두 열기 — 준비된 알을 칸 순서대로 하나씩 연다(알마다 egg.open 하나). 다 연 뒤 결과를 하나씩 보인다.
@@ -101,6 +144,7 @@ async function openAllEggs(): Promise<void> {
   const ids = ui.view.eggs.list.filter((e) => e.ready).map((e) => e.id);
   if (!ids.length) return;
   openingAll = true;
+  beginHatch();
   const queue: Hatched[] = [];
   try {
     for (const id of ids) {
@@ -114,15 +158,25 @@ async function openAllEggs(): Promise<void> {
   const first = queue[0];
   if (first) openAnyDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
   else drawDialog(); // 단추의 흐림을 되돌린다
+  endHatch();
 }
 
 // 부화 결과 — Figma 05 `Box / Daycare Modal · Hatch Result` `1096:22424`. 제목, 초상·이름·타입·레벨, `확인` 만 둔 작은 창.
 // 들어간 자리 안내 줄은 뺐다 — 파티·박스 화면에서 본다 (2026-09-30 사용자 "info 는 삭제해서 부화결과창 ui를 작게")
 // 랜덤알에서 단일 포켓몬 알이 나오면 같은 창으로 그 알을 알린다 (docs/specs/game.md 단일 포켓몬 알). 이때는 알이 어디 갔는지 안내가 필요해 두 줄을 남긴다
-export function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: Hatched[], at = 0): void {
+// 그 알을 다 모았으면 포인트를 알린다 — 안내 한 줄, `확인` 은 가운데 (2026-10-07 사용자 "확인 버튼 중앙으로", Figma 99 `1599:65117`)
+export function drawHatched(petId?: string, eggId?: string, over?: "daycare", queue?: Hatched[], at = 0, allCaught?: AllCaught): void {
   const card = el("div", "nat-card");
   const info = el("div", "info-box");
-  if (eggId) {
+  if (allCaught) {
+    // 알 이름·그림은 상점 목록의 그 알 상품 — 연 알은 이미 없다. 무리 이름은 알 이름에서 `랜덤`·`알` 을 뗀 것(랜덤전설알 → 전설)
+    const product = ui.view?.shop.find((p) => p.id === allCaught.kind);
+    const name = product?.name ?? "알";
+    const group = name.replace(/^랜덤/, "").replace(/알$/, "") || name;
+    dialogEl.append(...dialogHead("알을 모두 모았어요", ""));
+    card.append(iconOf(product?.icon ?? `egg:${allCaught.kind}`, "portrait"), el("div", "name", name));
+    info.appendChild(el("div", undefined, `${group}${josa(group, "을/를")} 모두 포획하여 ${numberText(allCaught.points)}P를 얻었습니다.`));
+  } else if (eggId) {
     const egg = ui.view?.eggs.list.find((e) => e.id === eggId);
     dialogEl.append(...dialogHead("알에서 새 알이 나왔어요", ""));
     card.append(iconOf(egg?.icon ?? "egg:random", "portrait"), el("div", "name", egg?.name ?? "알"));
@@ -150,11 +204,14 @@ export function drawHatched(petId?: string, eggId?: string, over?: "daycare", qu
     if (next && queue) openAnyDialog({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
     else if (over) openAnyDialog({ kind: "daycare" });
     else closeDialog();
+    if (next || !over) redrawBody(); // 확인한 개체를 박스에 보인다 (hiddenHatchIds). 돌보미집으로 돌아가는 `확인`은 drawUnder 가 다시 그린다
   });
   done.dataset.confirm = ""; // Space·Enter 가 누르는 단추 (manage.ts 의 keydown)
   dialogEl.append(card);
   if (info.childElementCount) dialogEl.appendChild(info);
-  dialogEl.appendChild(actionsRowEl(done));
+  const row = actionsRowEl(done);
+  if (allCaught) row.classList.add("center");
+  dialogEl.appendChild(row);
 }
 
 // 겹친 모달의 뒤 — 돌보미집 모달 모습과 한 겹 더 어두운 막 (Figma 05 `1096:22424`)
@@ -165,8 +222,12 @@ underScrimEl.hidden = true;
 scrimEl.insertBefore(underScrimEl, dialogEl);
 scrimEl.insertBefore(underEl, underScrimEl);
 underScrimEl.addEventListener("click", dismissDialog);
+let wasStacked = false;
 export function drawUnder(): void {
   const stacked = ui.dialog?.kind === "hatched" && ui.dialog.over === "daycare";
+  // 부화 결과 창이 닫혔다(`확인`·✕·Esc·바깥) — 숨겼던 개체를 박스에 보인다 (hiddenHatchIds)
+  if (wasStacked && !stacked) redrawBody();
+  wasStacked = stacked;
   underEl.hidden = !stacked;
   underScrimEl.hidden = !stacked;
   underEl.replaceChildren();

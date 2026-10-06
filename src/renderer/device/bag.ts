@@ -53,7 +53,7 @@ function render(v: BagDeviceView): void {
     const row = el("div", "party-row");
     if (!v.party.length) row.appendChild(el("div", "party-empty", "파티에 포켓몬이 없어요"));
     else {
-      const strip = el("div", "party");
+      const strip = el("div", v.riders ? "party riders" : "party");
       for (const p of v.party) {
         const b = document.createElement("button");
         b.type = "button";
@@ -62,7 +62,9 @@ function render(v: BagDeviceView): void {
         const face = el("div", "face");
         if (p.art) face.appendChild(portraitImg(p.art));
         b.append(face, el("span", undefined, p.level));
-        b.addEventListener("click", () => act({ itemId: v.itemId, kind: "target", petId: p.petId }));
+        // 유대의고삐의 이미 가진 말 — 흐리고 못 고른다 (docs/specs/game.md "버드렉스의 말 부르기")
+        if (p.dim) b.disabled = true;
+        else b.addEventListener("click", () => act({ itemId: v.itemId, kind: "target", petId: p.petId }));
         strip.appendChild(b);
       }
       row.appendChild(strip);

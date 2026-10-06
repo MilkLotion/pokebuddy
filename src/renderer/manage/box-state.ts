@@ -25,5 +25,7 @@ export interface BoxUi {
   menuOpen: boolean; // 박스 머리의 햄버거 메뉴 — 박스 순서·교환 (2026-10-02 사용자 결정, Figma 05 `Box / Menu Open`)
   renaming: boolean;
   note: string; // 박스 명령이 실패한 이유 — 머리 부제 자리에 보인다. 줄을 끼우지 않는다 (2026-10-01 사용자 "레이아웃은 바뀌면 안된다")
+  // 박스 찾기 — 검색한 말(소문자, 빈 글자면 찾지 않는 중)과 지금 결과 개체. 강조는 이 개체 한 칸이다 (box-find.ts)
+  find: { query: string; pet: string | null };
 }
-export const boxUi: BoxUi = { page: 0, sortOpen: false, menuOpen: false, renaming: false, note: "" };
+export const boxUi: BoxUi = { page: 0, sortOpen: false, menuOpen: false, renaming: false, note: "", find: { query: "", pet: null } };

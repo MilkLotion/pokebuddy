@@ -108,6 +108,24 @@ function seed(): SaveV3 {
   process.stdout.write("(5) 잠긴 칸은 뒤에, 출처 없음  ok\n");
 }
 
+// (5a) 프리셋 전체보기 — 가진 프리셋 전부를 번호 순으로 싣는다. 적용한 프리셋은 party.slots 와 같은 칸, 다른 프리셋은 저장의 칸 (2026-10-07)
+{
+  const s = seed();
+  s.pets.push(pet({ id: "p4", species: "bulbasaur", level: 7 }));
+  s.party.presetCount = 2;
+  s.party.presetNames = ["", "산책 파티"];
+  s.party.presets = [null, [{ state: "pokemon", petId: "p4" }, { state: "empty" }, { state: "locked" }, { state: "locked" }, { state: "locked" }, { state: "locked" }]];
+  const v = snapshotView(s, T0);
+  assert.equal(v.party.presets.length, 2, "가진 프리셋 수만큼");
+  assert.deepStrictEqual(v.party.presets.map((p) => [p.index, p.name]), [[0, "프리셋 1"], [1, "산책 파티"]], "번호와 이름");
+  assert.deepStrictEqual(v.party.presets[0]?.slots, v.party.slots, "적용한 프리셋은 party.slots 와 같다");
+  const other = v.party.presets[1]?.slots ?? [];
+  assert.equal(other.length, 6, "칸 6개");
+  assert.equal(other[0]?.pet?.name, "이상해씨", "다른 프리셋의 개체도 화면 이름");
+  assert.deepStrictEqual(other.slice(1).map((x) => x.state), ["empty", "locked", "locked", "locked", "locked"], "빈 칸·잠긴 칸은 파티 순서 그대로");
+  process.stdout.write("(5a) 프리셋 전체보기의 프리셋 칸  ok\n");
+}
+
 // (5b) 개체 상세 튜토리얼 — 끝내거나 건너뛰기 전까지 켜져 있다
 {
   const s = seed();
@@ -273,6 +291,25 @@ function seed(): SaveV3 {
   const onlyMap = snapshotView(s, T0).party.slots[0]?.pet?.evolutions ?? [];
   assert.deepStrictEqual(onlyMap.map((c) => [c.ready, c.need]), [[false, "천둥의돌 필요"], [true, undefined]], "지도만 있으면 알로라 라이츄가 준비된다");
   process.stdout.write("(11b) 지도 간선 후보와 조건 문구  ok\n");
+}
+
+// (11c) 성별 조건 후보 — 성별이 맞지 않는 후보는 genderBlocked 다. 진화 창은 그대로 보이고, 파티 상세 진화 줄은 세지 않는다 (2026-10-07)
+{
+  const s = empty(T0);
+  const rows: [string, string, "male" | "female"][] = [["p1", "burmy", "male"], ["p2", "burmy", "female"], ["p3", "combee", "male"], ["p4", "combee", "female"], ["p5", "kirlia", "male"], ["p6", "kirlia", "female"]];
+  rows.forEach(([id, species, gender], i) => {
+    s.pets.push(pet({ id, species, gender, level: 10 }));
+    s.party.slots[i] = { state: "pokemon", petId: id, hidden: false };
+  });
+  const v = snapshotView(s, T0);
+  const branches = (i: number) => (v.party.slots[i]?.pet?.evolutions ?? []).map((c) => [c.to, c.genderBlocked === true, c.need]);
+  assert.deepStrictEqual(branches(0), [["wormadam", true, "암컷만"], ["mothim", false, "Lv.20 필요"]], "수컷 도롱충이는 나메일만 갈 수 있다");
+  assert.deepStrictEqual(branches(1), [["wormadam", false, "Lv.20 필요"], ["mothim", true, "수컷만"]], "암컷 도롱충이는 도롱마담만");
+  assert.deepStrictEqual(branches(2), [["vespiquen", true, "암컷만"]], "수컷 세꿀버리는 갈 갈래가 없다");
+  assert.deepStrictEqual(branches(3), [["vespiquen", false, "Lv.21 필요"]], "암컷 세꿀버리는 성별 표기 없이 레벨");
+  assert.deepStrictEqual(branches(4).map((b) => b[1]), [false, false], "수컷 킬리아는 가디안·엘레이드 둘 다");
+  assert.deepStrictEqual(branches(5).map((b) => b[1]), [false, true], "암컷 킬리아는 가디안만");
+  process.stdout.write("(11c) 성별 조건 후보  ok\n");
 }
 
 // (12) 공유 sid 계열 — 박스 칸의 단체사진·툴팁이 쓰는 모습 목록. 일반 개체에는 없다

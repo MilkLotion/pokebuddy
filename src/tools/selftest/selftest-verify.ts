@@ -334,6 +334,8 @@ out("0 supabase/functions/_shared 가 최신");
     if (got.egg) {
       bonus += 1;
       assert.deepEqual(expected, { egg: got.egg.kind }, `보너스 알 ${n}`);
+    } else if (got.allCaught) {
+      assert.deepEqual(expected, got.allCaught, `다 모은 알 ${n}`);
     } else {
       assert.deepEqual(expected, { species: got.species, shiny: got.shiny }, `종·이로치 ${n}`);
       if (got.species?.startsWith("basculin")) basculins.add(got.species);
@@ -348,6 +350,48 @@ out("0 supabase/functions/_shared 가 최신");
   assert.deepEqual([a(), a(), a()], [b(), b(), b()], "같은 시드·키는 같은 수");
   assert.notEqual(seededRand("s", "egg:e1")(), seededRand("s", "egg:e2")(), "알마다 다른 수");
   out(`10 계정 시드 — 앱과 서버 계산 일치 ${checked}건(보너스 알 ${bonus})`);
+}
+
+// 10b. 다 모은 단일 포켓몬 알의 포인트 — 앱과 서버가 같은 값을 내고, points 규칙이 그 몫을 허락한다 (2026-10-07 사용자 결정)
+{
+  const legend = (data.eggKinds.legendary?.pool ?? []) as string[];
+  // 첫 수가 전설알 구간(0.023 ~ 0.025)인 시드를 찾는다
+  let seed = "";
+  for (let n = 0; n < 20_000 && !seed; n++) {
+    const r = seededRand(`all-${n}`, "egg:e1")();
+    if (r >= 0.023 && r < 0.025) seed = `all-${n}`;
+  }
+  assert.ok(seed, "전설알 구간 시드");
+  const prev = base();
+  prev.points.balance = 0;
+  prev.dex.obtained.push(...legend);
+  prev.eggs.push(egg("e1", { candidates: ["bulbasaur", "charmander"] }));
+  prev.eggSeq = 1;
+  const expected = rollEgg({ id: "e1", kind: "random", candidates: ["bulbasaur", "charmander"] }, prev.eggs, [...prev.dex.obtained], seededRand(seed, "egg:e1"), data);
+  assert.deepEqual(expected, { points: 2500, kind: "legendary" }, "서버 계산");
+  const next = clone(prev);
+  const got = openEgg(next, "e1", T0, seededRand(seed, "egg:e1"));
+  assert.deepEqual(got.allCaught, { kind: "legendary", points: 2500 }, "앱 계산");
+  assert.equal(next.points.balance, 2500);
+  assert.deepEqual(rules(prev, next, ctx(60_000, { seed })), [], "다 모은 알의 포인트는 통과");
+  assert.deepEqual(rules(prev, next, ctx(60_000)), ["points"], "시드가 없으면 몫이 없다");
+  const more = clone(next);
+  more.points.balance += 2500;
+  assert.deepEqual(rules(prev, more, ctx(60_000, { seed })), ["points"], "몫을 넘는 포인트는 위반");
+  // 같은 틈에 사서 연 알 — 두 저장 어디에도 없고 번호만 늘었다
+  const bought = base();
+  bought.points.balance = 1000;
+  bought.dex.obtained.push(...legend);
+  const after = clone(bought);
+  after.eggSeq = 1;
+  after.points.balance = 1000 - 120 + 2500;
+  assert.deepEqual(rules(bought, after, ctx(60_000, { seed })), [], "같은 틈에 사서 연 알의 포인트도 통과");
+  // 첫 수가 전설알 구간이 아닌 알은 몫이 없다
+  let plain = "";
+  for (let n = 0; n < 200 && !plain; n++) if (seededRand(`no-${n}`, "egg:e1")() > 0.06) plain = `no-${n}`;
+  const fake = clone(next);
+  assert.deepEqual(rules(prev, fake, ctx(60_000, { seed: plain })).includes("points"), true, "구간이 아니면 포인트는 위반");
+  out("10b 다 모은 알 — 앱·서버 2500P 일치, points 몫");
 }
 
 // 11. egg-roll — 시드로 연 결과는 통과, 종·이로치를 바꾸면 위반
@@ -548,6 +592,43 @@ out("0 supabase/functions/_shared 가 최신");
   const old = pair(mk(0, 0, true), mk(0, 0, true));
   assert.deepEqual(rules(old.prev, old.next, ctx(HOUR)), [], "이미 있던 메가스톤은 보지 않는다");
   out("15 메가 — 파티 시간·돌봄 횟수·새 메가스톤");
+}
+
+// 16. 버드렉스의 말 — 유대의고삐로 부른 말은 쓴 고삐 수까지 새 개체 출처다. 백마·흑마 모습은 그 말이 있어야 한다 (data/regional.json riders, 2026-10-07 사용자 결정)
+{
+  const owner = base();
+  owner.points.balance = 0;
+  owner.pets.push(pet("p2", "calyrex", { gender: "none", forms: ["calyrex", "calyrex-ice", "calyrex-shadow"] }));
+  owner.bag["reins-of-unity"] = 1;
+  const called = clone(owner);
+  delete called.bag["reins-of-unity"];
+  called.pets.push(pet("p3", "glastrier", { gender: "none" }));
+  assert.deepEqual(rules(owner, called, ctx(60_000)), [], "고삐 1개로 말 하나");
+  // 고삐를 쓰지 않고 생긴 말 — 출처가 없다 (줄어든 고삐는 판 것으로도 보므로 같은 틈의 포인트 여유가 생긴다. 그래서 고삐가 그대로인 저장으로 본다)
+  const free = clone(owner);
+  free.pets.push(pet("p3", "spectrier", { gender: "none" }));
+  assert.deepEqual(rules(owner, free, ctx(60_000)), ["new-pets"], "고삐를 쓰지 않은 말");
+  const noOwner = base();
+  noOwner.points.balance = 0;
+  noOwner.bag["reins-of-unity"] = 1;
+  const stray = clone(noOwner);
+  delete stray.bag["reins-of-unity"];
+  stray.pets.push(pet("p2", "glastrier", { gender: "none" }));
+  assert.deepEqual(rules(noOwner, stray, ctx(60_000)), ["rider"], "버드렉스 없이 말");
+  const ice = clone(called);
+  ice.pets[1]!.species = "calyrex-ice";
+  assert.deepEqual(rules(called, ice, ctx(60_000)), [], "블리자포스가 있으면 백마 탄 모습");
+  const shadow = clone(called);
+  shadow.pets[1]!.species = "calyrex-shadow";
+  assert.deepEqual(rules(called, shadow, ctx(60_000)), ["rider"], "레이스포스 없이 흑마 탄 모습");
+  // 줍기 기록에 유대의고삐를 적어도 주운 것으로 세지 않는다 — 출처 없이 늘어난 도구
+  const findPrev = base();
+  findPrev.points.balance = 0;
+  const findNext = clone(findPrev);
+  findNext.bag["reins-of-unity"] = 1;
+  findNext.find = { ...(findNext.find ?? { seq: 0, log: [] }), seq: (findNext.find?.seq ?? 0) + 1, log: [{ id: "f1", at: T0, petId: "p1", species: "bulbasaur", kind: "evo", ref: "reins-of-unity", amount: 1 }] } as SaveV3["find"];
+  assert.ok(rules(findPrev, findNext, ctx(60_000)).includes("spend"), "줍기로 얻은 유대의고삐는 출처가 아니다");
+  out("16 버드렉스의 말 — 고삐 수만큼·버드렉스 없이·말 없는 모습·줍기 기록");
 }
 
 out("selftest-verify: 통과");

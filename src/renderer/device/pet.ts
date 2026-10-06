@@ -183,9 +183,6 @@ function bar(label: string, value: number, shown: string, cls = "", live?: "affi
   return box;
 }
 
-// 진화 줄의 결과 종 이름 — 도감 미해금 종은 "???"(src/tx/snapshot.ts evolutionsOf). 같은 "???" 는 한 번만 적는다
-const evoNames = (list: PetDeviceView["pet"]["evolutions"]): string => [...new Set(list.map((e) => e.name))].join(" · ");
-
 // 카드 한 줄 — 누를 수 있으면 단추다(진화·도감 보기)
 function line(title: string, desc: string | null, right: HTMLElement[], run?: () => void): HTMLElement {
   const row = run ? buttonEl("line", "", run) : el("div", "line");
@@ -351,13 +348,18 @@ function renderBody(v: PetDeviceView): void {
   }
   // 흰 판 — 진화 · 도감 보기 · 크기 줄의 목록. 줄 사이는 구분선이다 (시안 C)
   const actions = el("div", "actions");
-  const ready = pet.evolutions.filter((e) => e.ready);
+  // 진화 줄 — 이 개체가 갈 수 있는 갈래(성별이 맞는 후보)로 정한다. 성별은 적지 않는다 (2026-10-07 사용자 결정)
+  //   0개는 최종 진화와 같다. 1개는 이름과 모자란 조건. 2개 이상은 나열하지 않고 진화 트리에서 확인한다(이브이·암멍이·수컷 킬리아)
+  //   진화할 수 있는 갈래가 있으면 진화 가능 칩. 미해금 결과 종의 이름은 "???"(src/view/pet.ts evolutionsOf)
+  const branches = pet.evolutions.filter((e) => !e.genderBlocked);
+  const only = branches.length === 1 ? branches[0] : undefined;
+  const readyChip = branches.some((e) => e.ready) ? [el("span", "chip-ready", "진화 가능")] : [];
   const evolve = (): void => act({ kind: "dialog", dialog: "evolve" });
-  const evoLine = !pet.evolutions.length
+  const evoLine = !branches.length
     ? line("진화", "더 진화하지 않아요", [])
-    : ready.length
-      ? line(`진화 · ${evoNames(ready)}`, null, [el("span", "chip-ready", "진화 가능")], evolve)
-      : line(`진화 · ${evoNames(pet.evolutions)}`, pet.evolutions.map((e) => e.need ?? "").filter(Boolean).join(" · ") || null, [], evolve);
+    : only
+      ? line(`진화 · ${only.name}`, only.ready ? null : (only.need ?? null), readyChip, evolve)
+      : line("진화", "진화 트리에서 확인해요", readyChip, evolve);
   const growth = el("div", "group");
   growth.dataset.tut = "detail-growth";
   // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.

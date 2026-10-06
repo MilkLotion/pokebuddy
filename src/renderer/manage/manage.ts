@@ -12,7 +12,8 @@ import { goTo, openDialogOrPet } from "./routes.js";
 import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
 import { boxSlot, drawBox } from "./box-tab.js";
 import { drawBoxOrder } from "./box-order.js";
-import { drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
+import { drawPresetOverview } from "./preset-overview.js";
+import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
 import { closeSwap, onPartyAction, partyLink, syncPartyDevice } from "./party-link.js";
 import { drawGuide } from "./guide.js";
 import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
@@ -119,7 +120,8 @@ setShellHooks({
 // 정렬·지방·설정 목록은 바깥을 누르면 닫는다
 document.addEventListener("click", () => {
   if (closeSettingSelect()) drawDialog();
-  if (!boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  const partyMenu = closePartyMenu();
+  if (!partyMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
   closeDexRegion();
@@ -220,9 +222,10 @@ registerDialog({
 });
 registerDialog({ kind: "user", shape: "dialog settings", headerButton: "open-user", draw: (d) => drawUser(d.tab) });
 registerDialog({ kind: "guide", shape: "dialog settings notes", draw: (d) => drawGuide(d.pick) });
-registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at) });
+registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at, d.allCaught) });
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
+registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: () => drawPresetOverview() });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
 registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to) });

@@ -49,6 +49,10 @@ export function resultLineOf(req: { cmd: string; target?: string; args?: unknown
   const count = countOf(req.args);
   if (req.cmd === "bag.use") {
     const item = before.bag.find((i) => i.id === req.target);
+    // 유대의고삐 — 대상 개체가 없다. 부른 말이 박스로 왔다 (Figma 99 `1613:5854`, docs/specs/game.md "버드렉스의 말 부르기")
+    const pick = isObj(req.args) && typeof req.args.pick === "string" ? req.args.pick : null;
+    const horse = pick ? item?.riders?.horses.find((h) => h.to === pick) : undefined;
+    if (item && horse) return { lead: `${horse.name}${josa(horse.name, "이/가")} 박스에 왔어요`, line: `${item.name} 1개를 썼어요` };
     const petId = isObj(req.args) && typeof req.args.petId === "string" ? req.args.petId : null;
     const pet = petId ? snapshotPet(before, petId) : null;
     if (!item || !pet) return null;

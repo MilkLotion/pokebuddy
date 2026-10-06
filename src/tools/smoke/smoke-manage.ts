@@ -775,7 +775,7 @@ void app.whenReady().then(async () => {
     await wait(200);
     const preset3 = await js<CoachView>(coach);
     assert.deepEqual({ step: preset3.step, title: preset3.title, go: preset3.go }, { step: "튜토리얼 · 프리셋 3 / 3", title: "교체로 포켓몬을 넣고 빼요", go: "확인" });
-    assert.deepEqual(preset3.hole, await js<number[]>(holeOf(`document.querySelector('#body .head .swap-open')`, `document.querySelector('#body .head .swap-open')`)), "3단계는 교체 단추를 밝힌다");
+    assert.deepEqual(preset3.hole, await js<number[]>(holeOf(`document.querySelector('#body .head .party-menu-toggle')`, `document.querySelector('#body .head .party-menu-toggle')`)), "3단계는 교체가 든 머리 메뉴 단추를 밝힌다 (2026-10-07)");
     await shot("preset-tutorial-3.png");
     await js(`document.querySelector('.coach .coach-bubble button:not(.x)').click(); 0`);
     await wait(200);
@@ -882,10 +882,10 @@ void app.whenReady().then(async () => {
       const s = p.querySelector('.box-sort').getBoundingClientRect();
       return { acts: [...document.querySelectorAll('#body .head .head-acts button')].map((b) => b.getAttribute('aria-label') ?? b.textContent), day: [Math.round(d.width), Math.round(d.height), Math.round(s.left - d.right)], menu: document.querySelectorAll('#body .head .sort-menu').length };
     })()`);
-    assert.deepEqual(headLook, { acts: ["박스 메뉴"], day: [32, 32, 8], menu: 0 }, "머리에는 햄버거 단추만, 돌보미집 아이콘 단추는 정렬 왼쪽");
+    assert.deepEqual(headLook, { acts: ["이전 결과", "다음 결과", "검색 닫기", "박스 메뉴"], day: [32, 32, 8], menu: 0 }, "머리에는 찾기 줄(2026-10-07)과 햄버거 단추, 돌보미집 아이콘 단추는 정렬 왼쪽");
     await js(`document.querySelector('#body .box-menu-toggle').click(); 0`);
     await wait(200);
-    assert.deepEqual(await js<string[]>(`[...document.querySelectorAll('#body .head .box-menu .sort-item')].map((b) => b.textContent)`), ["박스 순서", "교환"], "메뉴 — 박스 순서·교환");
+    assert.deepEqual(await js<string[]>(`[...document.querySelectorAll('#body .head .box-menu .sort-item')].map((b) => b.textContent)`), ["교체", "박스 순서", "교환", "중복 팔기"], "메뉴 — 교체·박스 순서·교환·중복 팔기 (2026-10-04 교체, 2026-10-05 중복 팔기)");
     assert.equal(await js<number>(gridTop), gridTop0, "메뉴가 떠도 격자 자리가 같다");
     await shot("box-menu.png");
     await js(`document.querySelector('#body .head h1').click(); 0`);
@@ -893,7 +893,7 @@ void app.whenReady().then(async () => {
     assert.equal(await js<number>(`document.querySelectorAll('#body .head .sort-menu').length`), 0, "바깥을 누르면 메뉴가 닫힌다");
     await js(`document.querySelector('#body .box-menu-toggle').click(); 0`);
     await wait(200);
-    await js(`document.querySelector('#body .head .box-menu .sort-item').click(); 0`);
+    await js(`[...document.querySelectorAll('#body .head .box-menu .sort-item')].find((b) => b.textContent === '박스 순서').click(); 0`);
     await wait(300);
     const orderLook = await js<{ title: string; tiles: number; row: number; on: number[]; widths: number[]; first: string }>(`(() => {
       const t = [...document.querySelectorAll('#dialog .box-tile')];
@@ -1012,10 +1012,10 @@ void app.whenReady().then(async () => {
     const cmds = (): Promise<Cmd[]> => js<Cmd[]>(`window.__cmds ?? []`);
     await js(`window.__cmds = []; window.__menuOn = false; ${tabBtn("파티")}.click()`);
     await wait(300);
-    const presetHead = `({ name: document.querySelector('#body .head .box-name')?.textContent ?? '', arrows: document.querySelectorAll('#body .head .preset-pager > button').length, sub: !!document.querySelector('#body .head .sub'), swap: !!document.querySelector('#body .head .swap-open') })`;
-    assert.deepEqual(await js<unknown>(presetHead), { name: "프리셋 1", arrows: 2, sub: false, swap: true }, "파티 머리 줄 — ◀ 프리셋 이름 ▶ 와 교체. 부제는 없다");
+    const presetHead = `({ name: document.querySelector('#body .head .box-name')?.textContent ?? '', arrows: document.querySelectorAll('#body .head .preset-pager > button').length, sub: !!document.querySelector('#body .head .sub'), swap: !!document.querySelector('#body .head .party-menu-toggle') })`;
+    assert.deepEqual(await js<unknown>(presetHead), { name: "프리셋 1", arrows: 2, sub: false, swap: true }, "파티 머리 줄 — ◀ 프리셋 이름 ▶ 와 머리 메뉴 단추(교체·전체보기, 2026-10-07). 부제는 없다");
     await shot("party-preset.png");
-    const presetAt = `[...document.querySelectorAll('#body .head .preset-pager > button'), document.querySelector('#body .head .swap-open')].map((b) => Math.round(b.getBoundingClientRect().left)).join(',')`;
+    const presetAt = `[...document.querySelectorAll('#body .head .preset-pager > button'), document.querySelector('#body .head .party-menu-toggle')].map((b) => Math.round(b.getBoundingClientRect().left)).join(',')`;
     const presetShort = await js<string>(presetAt);
     await js(`document.querySelectorAll('#body .head .preset-pager > button')[1].click(); 0`);
     await wait(300);
@@ -1036,7 +1036,10 @@ void app.whenReady().then(async () => {
     // 교체 — 박스 탭으로 가고 파티 기기 창을 띄운다. 대화상자는 없다
     type PartyOpen = { name: string; notice: string; slots: { index: number; state: string; name: string; held: boolean; target: boolean }[]; presets: { index: number; owned: boolean; active: boolean }[] } | null;
     const partyOpen = (): Promise<PartyOpen> => js<PartyOpen>(`window.__partyOpen ?? null`);
-    await js(`window.__cmds = []; document.querySelector('#body .head .swap-open').click(); 0`);
+    // 교체는 머리 메뉴 안에 있다 — 메뉴 단추를 누르고 `교체` 를 고른다 (2026-10-07 사용자 "교체·전체보기 목록으로 하자")
+    await js(`document.querySelector('#body .head .party-menu-toggle').click(); 0`);
+    await wait(200);
+    await js(`window.__cmds = []; [...document.querySelectorAll('#body .head .party-menu .sort-item')].find((b) => b.textContent === '교체').click(); 0`);
     await wait(400);
     const swapOpened = await partyOpen();
     assert.equal(await js<string>(`document.querySelector('#body .head h1').textContent`), "박스", "교체 — 박스 탭으로 간다");

@@ -12,7 +12,7 @@ import { PARTY_RULES } from "../party/rules.js";
 import { SHOP_RULES } from "../shop/rules.js";
 import { eggPool, isSingleEgg } from "../dex/obtain.js";
 import { canGiveEgg, eggRoomOf } from "../egg/pool.js";
-import { bagRoomOf, evoOrder, isEvoItem } from "../bag/items.js";
+import { bagRoomOf, evoOrder, isEvoItem, isFormTool } from "../bag/items.js";
 import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/model/snapshot";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { activePreset, presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
@@ -98,7 +98,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const [id, item] of Object.entries(itemTable(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
-    if (item.effect === "form") continue; // 모습 도구는 진화 탭 — 아래 진화용 도구와 같이 늘어놓는다
+    if (isFormTool(item.effect)) continue; // 모습 도구(로토무카탈로그·유대의고삐)는 진화 탭 — 아래 진화용 도구와 같이 늘어놓는다
     // 상점의 쓰는 곳은 어디서 쓰는지까지 — 가방은 파티 개체에게만 쓴다 (2026-10-01 사용자 결정 "파티를 기준으로만 사용할 수 있게 하자")
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id), where: "가방 › 사용 · 파티 포켓몬" };
     // 설명은 효과 한 줄 — 기기 창의 `효과` 줄과 같은 문구 (2026-10-05 사용자 "상점에 도구만 밑에 설명이없음")
@@ -118,7 +118,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     evoRows.push({ id, name: itemName(id, opts), note, price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
   for (const [id, item] of Object.entries(itemTable(opts))) {
-    if (isMetaKey(id) || item.price === null || item.effect !== "form" || isEvoItem(id, opts)) continue;
+    if (isMetaKey(id) || item.price === null || !isFormTool(item.effect) || isEvoItem(id, opts)) continue;
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id) };
     evoRows.push({ id, name: itemName(id, opts), note: item.effectText ?? "", price: item.price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }

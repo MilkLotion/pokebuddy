@@ -15,7 +15,7 @@ export type RegionId = "johto" | "sinnoh" | "unova" | "kalos" | "alola" | "galar
 // 얻는 방법 — map 지도 진화 결과 · base 다른 종과 같은 규칙의 진화 전 종 · path 리전폼이 진화해 얻는 종
 //   branch 기본형 종에서 지도 없이 진화해 얻는 특수 폼(루가루암(한밤중의 모습)) · gift 우편으로만 받는 특수 폼(피츄(삐쭉귀)) — 단일 포켓몬이다
 //   variant 알에서 기본형 대신 나오는 특수 폼(배쓰나이(백색근의 모습)) — 표의 hatch 가 확률을 정한다
-//   shift 기본형 개체가 모습 바꾸기로 오가는 특수 폼(기라티나(오리진폼)) — 표의 shift 가 짝을 정한다
+//   shift 기본형 개체가 모습 바꾸기로 오가는 특수 폼(기라티나(오리진폼) · 자시안(검왕) · 버드렉스(백마 탄 모습)) — 표의 shift 가 짝을 정한다
 export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift";
 
 export interface RegionalForm {
@@ -25,6 +25,7 @@ export interface RegionalForm {
   pokemonId: number; // PokeAPI pokemon.csv id — 초상 그림 번호
   portrait?: string; // 초상 파일 이름(`172-spiky-eared`) — 포켓몬 번호가 따로 없는 폼만 적는다. 있으면 pokemonId 보다 먼저 쓴다
   pmd?: string; // PMD SpriteCollab 폼 경로(`0026/0001`). 없으면 기본형 그림을 쓴다
+  overworld?: string; // PMD 그림이 없는 폼의 걷기 그림 폴더(`calyrex/ice`) — 있으면 기본형 PMD 로 떨어지지 않는다 (src/main/art/stage-art.ts pmdSources)
   ko: string;
   en: string;
   get: RegionalGet;
@@ -39,6 +40,7 @@ export interface RegionalTable {
   edges: Record<string, EvoStep[]>;
   hatch: Record<string, HatchVariants>;
   shift: Record<string, string[]>; // 기본 종 → 모습 바꾸기로 오가는 모습들
+  riders: Record<string, string>; // 모습 → 그 모습이 되려면 저장에 있어야 하는 말 (버드렉스(백마 탄 모습) → 블리자포스, src/party/riders.ts)
   gender: Record<string, Partial<Record<"male" | "female", GenderLook>>>; // 종 → 성별 → 그 성별의 그림
 }
 
@@ -57,7 +59,7 @@ export const REGION_MAP = "region-map";
 //   이런 간선은 돌을 보지도 쓰지도 않는다. 화면도 "지도" 하나만 적는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
 export const needIsMap = (need: EvoNeed | undefined): boolean => need?.kind === "item" && need.item === REGION_MAP;
 
-const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, gender: {} };
+const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, gender: {} };
 const tables = new Map<string, RegionalTable>();
 
 // 표 전체 — 파일이 없거나 깨졌으면 빈 표
@@ -68,7 +70,7 @@ export function regionalTable(opts?: DexOptions): RegionalTable {
   let table = EMPTY;
   try {
     const raw = loadJson<Partial<RegionalTable>>("regional.json", opts);
-    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, gender: raw.gender ?? {} };
+    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, gender: raw.gender ?? {} };
   } catch {
     table = EMPTY;
   }
@@ -100,6 +102,31 @@ export function shiftGroupOf(slug: string, opts?: DexOptions): string[] {
     if (base === key || list.includes(key)) return [base, ...list.filter((s) => typeof s === "string")];
   }
   return [];
+}
+
+// 이 모습이 되려면 저장에 있어야 하는 말 — 버드렉스(백마 탄 모습) → 블리자포스. 없으면 null (data/regional.json 의 riders)
+export function riderOf(form: string, opts?: DexOptions): string | null {
+  const key = normalizeSlug(form);
+  const horse = isMetaKey(key) ? undefined : regionalTable(opts).riders[key];
+  return typeof horse === "string" ? horse : null;
+}
+
+// 이 종(모습 바꾸기 묶음 전체)이 부를 수 있는 말 — 버드렉스 계열이면 블리자포스·레이스포스, 아니면 빈 목록
+export function ridersOf(slug: string, opts?: DexOptions): string[] {
+  const group = shiftGroupOf(slug, opts);
+  return [...new Set(group.map((s) => riderOf(s, opts)).filter((h): h is string => h != null))];
+}
+
+// 이 말을 부르는 주인 종(기본 종) — 도감 상세의 얻는 방법 줄이 쓴다. 말이 아니면 null
+export function riderOwnerOf(horse: string, opts?: DexOptions): string | null {
+  const key = normalizeSlug(horse);
+  for (const [form, h] of Object.entries(regionalTable(opts).riders)) if (!isMetaKey(form) && h === key) return shiftGroupOf(form, opts)[0] ?? null;
+  return null;
+}
+
+// 말 전체 — 단일 포켓몬 판정(src/dex/obtain.ts singleSpecies)이 쓴다
+export function allRiders(opts?: DexOptions): string[] {
+  return [...new Set(Object.entries(regionalTable(opts).riders).filter(([k, h]) => !isMetaKey(k) && typeof h === "string").map(([, h]) => h))];
 }
 
 // 이 종·성별의 그림 이름 — 성별 그림이 따로 없으면 null (data/regional.json 의 gender)

@@ -279,6 +279,8 @@ function seed(): SaveV3 {
   assert.equal(dexDetail(s, "rotom-heat")?.form, 1);
   assert.equal(dexDetail(s, "rotom-mow")?.form, 5);
   assert.equal(dexDetail(s, "giratina-origin")?.methods, "기라티나(어나더폼)의 모습 바꾸기", "조건이 없는 모습 바꾸기는 괄호가 없다");
+  assert.deepStrictEqual(["zacian-crowned", "calyrex-shadow"].map((k) => dexDetail(s, k)?.methods), ["자시안의 모습 바꾸기", "버드렉스의 모습 바꾸기"]);
+  assert.deepStrictEqual(["glastrier", "spectrier"].map((k) => dexDetail(s, k)?.methods), ["유대의고삐로 부르기", "유대의고삐로 부르기"], "버드렉스의 말은 유대의고삐로 부른다 (2026-10-07)");
   assert.equal(dexDetail(s, "rotom")?.mega, undefined, "얻지 않은 로토무는 줄이 없다 — 메가진화 줄과 같다");
   s.dex.obtained.push("rotom");
   s.totals.workMs = 3_600_000;

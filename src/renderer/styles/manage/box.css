@@ -114,16 +114,16 @@ button.icon-button,
   display: none;
 }
 /* 박스 머리 메뉴 — 햄버거 단추 아래에 뜬다. 오른쪽 끝을 단추에 맞춘다. 줄 모양은 정렬 목록과 같다 (Figma 05 `Box / Menu Open`) */
-.head .box-menu {
+.head .head-menu {
   position: relative;
 }
-.head .box-menu .sort-menu {
+.head .head-menu .sort-menu {
   left: auto;
   right: 0;
   width: 124px;
   box-sizing: border-box;
 }
-.head .box-menu .sort-item {
+.head .head-menu .sort-item {
   appearance: none;
   font: inherit;
   font-size: 12px;
@@ -140,7 +140,7 @@ button.icon-button,
   text-align: left;
   cursor: pointer;
 }
-.head .box-menu .sort-item:hover {
+.head .head-menu .sort-item:hover {
   background: var(--accent-bg);
 }
 /* 박스 순서 모달 — 폭 560, 타일 한 줄 4개(간격 6). 타일은 이름과 사용 칸 수. 이름은 한 줄이고 넘치면 끝을 줄인다.
@@ -381,4 +381,84 @@ button.icon-button,
 .sell-dup-grid .cell.tall {
   height: 66px;
   gap: 2px;
+}
+/* 박스 찾기 줄 — 한 틀 안에 입력칸·n/m | ^ v ✕ (2026-10-07 사용자 그림 "([    ]|[][][])", Figma 02 `Find Bar` `1590:60744`).
+   틀은 검색 칸과 같은 1px 중립 테두리다. 안의 입력칸은 테두리가 없다. 단추는 대화상자 ✕ 와 같은 테두리 없는 28 단추다 */
+.box-find {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 300px;
+  height: 32px;
+  padding-right: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-sizing: border-box;
+}
+.box-find:focus-within {
+  border-color: var(--primary);
+}
+.box-find .search-field {
+  flex: 1;
+  min-width: 0;
+}
+.box-find .search {
+  height: 30px;
+  border: 0;
+  background: none;
+}
+.box-find .search::-webkit-search-cancel-button {
+  display: none;
+}
+.box-find .find-count {
+  flex: none;
+  width: 36px;
+  padding-right: 8px;
+  text-align: right;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted);
+}
+.box-find .find-divider {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+}
+.box-find .find-btn {
+  appearance: none;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.box-find .find-btn:hover:not(:disabled) {
+  background: var(--accent-bg);
+}
+.box-find .find-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.box-find .find-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* 찾기의 지금 결과 칸 — 옅은 바탕만(테두리 강조 없음). Figma `Box Slot` State=Selected */
+.box-grid .cell.found {
+  background: var(--accent-bg);
 }

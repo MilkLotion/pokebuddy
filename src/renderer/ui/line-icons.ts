@@ -26,3 +26,7 @@ export const lockIconEl = (): SVGSVGElement =>
 export const plusIconEl = (): SVGSVGElement => lineIconEl(["M8 3.64v8.72M3.64 8h8.72"]);
 
 export const closeIconEl = (): SVGSVGElement => lineIconEl(["M4 4l8 8", "M12 4l-8 8"]);
+
+// 위·아래 꺽쇠 — 박스 찾기 줄의 이전·다음 결과. 닫기와 같은 선이다 (Figma 01 `Icon / Chevron Up` `1590:60740`·`Icon / Chevron Down` `1590:60742`)
+export const chevronUpIconEl = (): SVGSVGElement => lineIconEl(["M4 10l4-4 4 4"]);
+export const chevronDownIconEl = (): SVGSVGElement => lineIconEl(["M4 6l4 4 4-4"]);

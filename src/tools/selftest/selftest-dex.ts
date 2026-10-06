@@ -12,6 +12,7 @@ import * as natures from "../../dex/natures";
 import * as species from "../../dex/species";
 import * as unlocks from "../../dex/unlocks";
 import * as regional from "../../dex/regional";
+import * as obtain from "../../dex/obtain";
 import type { UnlockRules } from "../../dex/unlocks";
 import type { Pet, SaveV2, World } from "../../save/v2/types";
 import { printLine as out } from "../harness/report";
@@ -172,7 +173,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profileOf("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.speciesSlugs().length, 1178, "표의 종 수 — PokeAPI 종 1025 + 폼 78 + 리전폼 57 + 특수 폼 18 (배쓰나이(청색근의 모습)·기라티나(오리진폼)·로토무의 다섯 모습은 폼에서 특수 폼으로 옮겼다)");
+  assert.strictEqual(dex.speciesSlugs().length, 1182, "표의 종 수 — PokeAPI 종 1025 + 폼 78 + 리전폼 57 + 특수 폼 22 (배쓰나이(청색근의 모습)·기라티나(오리진폼)·로토무의 다섯 모습은 폼에서 특수 폼으로 옮겼다)");
   assert.ok(!dex.speciesSlugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.speciesSlugs()) {
@@ -248,8 +249,8 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "ursaluna-bloodmoon:base"],
-    "특수 폼 18종과 얻는 방법",
+    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:base"],
+    "특수 폼 22종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
   const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);
@@ -350,6 +351,17 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([regional.shiftGroupOf("giratina"), regional.shiftGroupOf("giratina-origin"), regional.shiftGroupOf("mewtwo")], [["giratina", "giratina-origin"], ["giratina", "giratina-origin"], []]);
   assert.deepStrictEqual([regional.shiftGroupOf("dialga"), regional.shiftGroupOf("palkia-origin")], [["dialga", "dialga-origin"], ["palkia", "palkia-origin"]]);
   assert.strictEqual(regional.dexLabel("giratina-origin", 487), "487-1");
+  // 자시안(검왕)·자마젠타(방패왕)·버드렉스(백마 탄 모습·흑마 탄 모습) — 조건 없이 모습 바꾸기로 오간다 (2026-10-07 사용자 결정, worklog/records/bugs-1007)
+  assert.deepStrictEqual([regional.shiftGroupOf("zacian"), regional.shiftGroupOf("zamazenta-crowned"), regional.shiftGroupOf("calyrex-shadow")], [["zacian", "zacian-crowned"], ["zamazenta", "zamazenta-crowned"], ["calyrex", "calyrex-ice", "calyrex-shadow"]]);
+  assert.deepStrictEqual(["zacian-crowned", "zamazenta-crowned", "calyrex-ice", "calyrex-shadow"].map((s) => regional.dexLabel(s, dex.profileOf(s).dex)), ["888-1", "889-1", "898-1", "898-2"]);
+  assert.deepStrictEqual(["zacian-crowned", "zamazenta-crowned", "calyrex-ice", "calyrex-shadow"].map((s) => dex.profileOf(s).types.join("/")), ["fairy/steel", "fighting/steel", "psychic/ice", "psychic/ghost"]);
+  assert.deepStrictEqual([names["zacian-crowned"]?.ko, names["zamazenta-crowned"]?.ko, names["calyrex-ice"]?.ko, names["calyrex-shadow"]?.ko], ["자시안(검왕)", "자마젠타(방패왕)", "버드렉스(백마 탄 모습)", "버드렉스(흑마 탄 모습)"]);
+  // 버드렉스의 말 — 백마 탄 모습은 블리자포스, 흑마 탄 모습은 레이스포스. 두 말은 알 후보에 없어도 단일 포켓몬이다 (2026-10-07 사용자 결정, data/regional.json riders)
+  assert.deepStrictEqual([regional.riderOf("calyrex-ice"), regional.riderOf("calyrex-shadow"), regional.riderOf("calyrex"), regional.riderOf("zacian-crowned")], ["glastrier", "spectrier", null, null]);
+  assert.deepStrictEqual([regional.ridersOf("calyrex"), regional.ridersOf("calyrex-shadow"), regional.ridersOf("glastrier"), regional.ridersOf("zacian")], [["glastrier", "spectrier"], ["glastrier", "spectrier"], [], []]);
+  assert.deepStrictEqual([regional.riderOwnerOf("glastrier"), regional.riderOwnerOf("spectrier"), regional.riderOwnerOf("calyrex")], ["calyrex", "calyrex", null]);
+  assert.ok(obtain.singleSpecies().has("glastrier") && obtain.singleSpecies().has("spectrier") && obtain.singleSpecies().has("calyrex-ice"), "말과 버드렉스 모습은 단일 포켓몬");
+  assert.ok(!obtain.inRandomEgg("glastrier") && !obtain.inRandomEgg("spectrier"), "말은 랜덤알에도 없다");
   assert.deepStrictEqual([dex.nextOf("giratina-origin"), dex.prevOf("giratina-origin")], [[], null]);
   // 성별 그림 — 대쓰여너 암컷은 종은 그대로이고 그림 이름만 다르다 (2026-10-03)
   assert.deepStrictEqual([regional.genderLookOf("basculegion", "female"), regional.genderLookOf("basculegion", "male"), regional.genderLookOf("basculegion", "none"), regional.genderLookOf("pikachu", "female")], ["basculegion-female", null, null, null]);
@@ -364,7 +376,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([names["dialga"]?.ko, names["magearna"]?.ko, names["magearna-original"]?.ko], ["디아루가", "마기아나", "마기아나(500년 전의 색)"], "공식 도감에 모습 이름이 없는 기본형은 종 이름 그대로");
   assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
-  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, gender: {} });
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, gender: {} });
   out("리전폼 ok");
 }
 

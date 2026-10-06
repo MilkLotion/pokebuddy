@@ -85,7 +85,32 @@ const bag = (over: Partial<BagDeviceInput>) => {
   const play = bag({ itemId: "toy", targetPetId: "p2" });
   assert.deepEqual([play.model.preview.tone, play.model.preview.lead, play.model.preview.line, play.model.go.disabled], ["warn", "파이리 · 장난감 45분 남음", "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", false], "신남이 남아 있으면 쓸 수는 있고 손해를 경고 상자로 보인다 (2026-10-05)");
   const after = bag({ itemId: "toy", targetPetId: "p2", result: { lead: "파이리에게 장난감을 줬어요 · 신남 2시간", line: "장난감 1개를 썼어요" } });
-  assert.equal(after.model.preview.tone, "warn", "쓴 직후라도 고른 포켓몬이 신남이면 결과 대신 경고다 (2026-10-05)");
+  assert.deepEqual([after.model.preview.tone, after.model.preview.lead], ["ok", "파이리에게 장난감을 줬어요 · 신남 2시간"], "쓴 직후는 신남이어도 초록 결과다. 다시 누르면 결과가 지워져 경고다 (2026-10-07)");
+  // 프리미엄먹이 — 든든함이 남아 있으면 배가 불러 쓸 수 없어도 주황 경고. 둘째 줄은 쓸 수 없는 까닭, `사용` 은 흐림 (2026-10-07 사용자 "프리미엄먹이도 든든함 주황색 경고 뜨게")
+  const fullV = snapshotView((() => {
+    const s = seed();
+    const p = s.pets.find((x) => x.id === "p2")!;
+    p.fullness = 100;
+    p.buffs = [{ kind: "premium-food", remainMs: 110 * 60_000 }];
+    return s;
+  })(), T0);
+  const full = bagDeviceModel(fullV, bagIn({ itemId: "premium-food", targetPetId: "p2" }));
+  assert.ok(full);
+  assert.equal(full.model.preview.tone, "warn", "든든함이 남으면 막혀도 주황 경고");
+  assert.equal(full.model.preview.lead, "파이리 · 프리미엄먹이 1시간 50분 남음");
+  assert.notEqual(full.model.preview.line, "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", "쓸 수 없으니 둘째 줄은 막힘 글");
+  assert.equal(full.model.go.disabled, true, "막힘이라 사용은 흐리다");
+  const fed = bagDeviceModel(fullV, bagIn({ itemId: "premium-food", targetPetId: "p2", result: { lead: "파이리 만복도 30 → 100 · 든든함 2시간", line: "프리미엄먹이 1개를 썼어요" } }));
+  assert.equal(fed?.model.preview.tone, "ok", "쓴 직후는 초록 결과");
+  const hungry = bagDeviceModel(snapshotView((() => {
+    const s = seed();
+    const p = s.pets.find((x) => x.id === "p2")!;
+    p.fullness = 50;
+    p.feedCooldownMs = 0;
+    p.buffs = [{ kind: "premium-food", remainMs: 30 * 60_000 }];
+    return s;
+  })(), T0), bagIn({ itemId: "premium-food", targetPetId: "p2" }));
+  assert.deepEqual([hungry?.model.preview.tone, hungry?.model.preview.line, hungry?.model.go.disabled], ["warn", "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", false], "막히지 않으면 지금 경고 그대로");
   assert.equal(bag({ notice: "안 돼요" }).model.preview.tone, "bad");
   const done = bag({ result: { lead: "피카츄 Lv.12 → Lv.13", line: "이상한사탕 1개를 썼어요" }, busy: true });
   assert.deepEqual([done.model.preview.tone, done.model.preview.lead, done.model.go.busy], ["ok", "피카츄 Lv.12 → Lv.13", true]);

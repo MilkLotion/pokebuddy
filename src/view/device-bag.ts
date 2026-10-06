@@ -12,6 +12,7 @@ import type { GrowthRate } from "../shared/species.js";
 import { itemArtKey, portraitArtKey, type DeviceResult } from "./device-art.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
 import { failTextOf } from "../shared/fail-text.js";
+import { josa } from "../shared/josa.js";
 import type { FailCode } from "../shared/names/online-codes.js";
 
 
@@ -20,7 +21,34 @@ export const bagMany = (item: BagItemView): boolean => item.effect === "exp" || 
 
 // 가방에서 쓸 수 있는 도구 — 효과가 있는 도구. 진화용 도구는 파티 상세의 진화 줄에서 쓴다. 성격민트는 은퇴했다 (src/bag/mint.ts)
 // 모습 바꾸기 도구(로토무카탈로그, effect form)는 가방에서 쓰지 않는다 — 모습 바꾸기가 하나씩 쓴다. 판매 쪽만 있다 (2026-10-05)
-export const bagUsable = (item: BagItemView): boolean => !item.evolution && item.effect !== undefined && item.effect !== "nature" && item.effect !== "form";
+// 유대의고삐(effect call-rider)는 진화 분류지만 가방에서 쓴다 — 쓸 곳이 포켓몬 쪽에 없다. 진화 분류에서 사용 쪽이 있는 유일한 도구다
+// (2026-10-07 사용자 "나는 유대의고삐를 가방에서 사용하는 거로 봤었는데?")
+export const bagUsable = (item: BagItemView): boolean =>
+  item.effect === "call-rider" || (!item.evolution && item.effect !== undefined && item.effect !== "nature" && item.effect !== "form");
+
+// 유대의고삐를 쓸 수 없는 까닭 — 명령이 낼 실패 코드와 같은 순서 (src/party/riders.ts riderCall)
+const RIDER_BLOCK: Record<"not-rider-owner" | "already" | "box-full", string> = {
+  "not-rider-owner": "버드렉스가 있어야 쓸 수 있어요",
+  already: "부를 말이 없어요",
+  "box-full": "박스에 빈칸이 없어요",
+};
+
+// 유대의고삐의 사용 쪽 — 파티 줄 자리에 "부를 말" 두 칸. 이미 가진 말은 흐리고 못 고른다. 수량은 1개 (Figma 99 `1613:4833`·`5214`·`5534`·`5854`)
+function riderUse(face: Omit<BagDeviceOpen, "title" | "pager" | "party" | "qty" | "preview" | "go">, item: BagItemView, input: BagDeviceInput): DeviceResult<BagDeviceOpen, BagDeviceInput> {
+  const riders = item.riders ?? { horses: [], block: "not-rider-owner" as const };
+  const open = riders.horses.filter((h) => !h.owned);
+  if (!open.some((h) => h.to === input.targetPetId)) input.targetPetId = open[0]?.to ?? null;
+  const picked = open.find((h) => h.to === input.targetPetId) ?? null;
+  input.qty = 1;
+  const strip = riders.horses.map((h) => ({ petId: h.to, name: h.name, level: h.name, art: portraitArtKey(h.to, false), picked: h.to === picked?.to, ...(h.owned ? { dim: true } : {}) }));
+  const use = `${item.name} 1개를 써요 · 박스로 가요`;
+  let preview: BagDeviceOpen["preview"];
+  if (input.notice) preview = { lead: "쓰지 못했어요", line: input.notice, tone: "bad" };
+  else if (input.result) preview = { lead: input.result.lead, line: input.result.line, tone: "ok" };
+  else if (riders.block) preview = { lead: RIDER_BLOCK[riders.block], line: use, tone: "" };
+  else preview = { lead: picked ? `${picked.name}${josa(picked.name, "을/를")} 불러요` : RIDER_BLOCK.already, line: use, tone: "" };
+  return { input, model: { ...face, title: "부를 말", pager: false, party: strip, riders: true, qty: null, preview, go: { label: "사용", disabled: !!riders.block || !picked, busy: input.busy } } };
+}
 
 const partyPets = (v: Snapshot): PetView[] => v.party.slots.map((s) => s.pet).filter((p): p is PetView => p != null);
 
@@ -151,6 +179,8 @@ export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult
     };
   }
 
+  if (item.effect === "call-rider") return riderUse(face, item, input);
+
   // 사용 쪽 — 파티 줄, 수량(사탕만), 미리보기
   const party = partyPets(v);
   if (!party.some((p) => p.id === input.targetPetId)) input.targetPetId = party[0]?.id ?? null;
@@ -165,13 +195,16 @@ export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult
   const cap = many ? Math.max(1, candyMax(c.curve, pet, c.effect, c.amount, item.count)) : 1;
   input.qty = Math.max(1, Math.min(input.qty, cap));
   // 결과·실패는 새 줄을 끼우지 않고 미리보기 상자의 색과 글자로 보인다 (2026-09-30 사용자 결정)
-  const warn = blocked ? null : buffWarn(pet, item);
+  // 경고는 막힘과 상관없이 본다 — 프리미엄먹이는 쓰면 배가 불러 막히지만 든든함이 남은 것은 알려야 한다 (2026-10-07 사용자 "프리미엄먹이도 든든함 주황색 경고 뜨게")
+  // 막힘과 겹치면 둘째 줄은 쓸 수 없는 까닭이다. `사용` 은 막힘대로 흐리다
+  const buff = buffWarn(pet, item);
+  const warn = buff && blocked ? { ...buff, line: blocked } : buff;
   let preview: BagDeviceOpen["preview"];
-  // 경고는 고른 포켓몬의 지금 버프를 따른다 — 장난감을 쓴 직후에도 이미 신남이면 결과 대신 경고다. 바로 다시 눌러도 손해를 보고 누른다
-  // (2026-10-05 사용자 결정 "사용할 포켓몬의 버프상태에 따라 저게 보이게하자"). 실패 문구가 먼저다
+  // 순서 — 실패 → 결과 → 경고 → 막힘. 쓴 직후는 초록 결과, 그 포켓몬을 다시 누르면 결과가 지워져 주황 경고다 (src/renderer/manage/bag-link.ts onBagAction)
+  // (2026-10-07 사용자 결정 "사용후엔 사용했어요 뜨게 … 그 포켓몬 다시 눌러야 주황색". 2026-10-05 의 "쓴 직후에도 경고" 를 바꿨다)
   if (input.notice) preview = { lead: "쓰지 못했어요", line: input.notice, tone: "bad" };
-  else if (warn) preview = warn;
   else if (input.result) preview = { lead: input.result.lead, line: input.result.line, tone: "ok" };
+  else if (warn) preview = warn;
   else if (blocked) preview = { lead: `${pet.name} · ${blocked}`, line: "", tone: "" };
   else {
     const [lead, ...lines] = bagPreview(v, pet, item, input.qty);

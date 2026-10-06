@@ -15,7 +15,7 @@ import { boxName } from "../box/boxes.js";
 import { EGG_RULES } from "../egg/rules.js";
 import { PARTY_RULES } from "../party/rules.js";
 import { SHOP_RULES } from "../shop/rules.js";
-import { activePreset, presetCount, presetName } from "../party/presets.js";
+import { activePreset, allPresets, presetCount, presetName } from "../party/presets.js";
 import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS } from "../party/size.js";
@@ -25,7 +25,8 @@ import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
 import { SETTING_CHOICES } from "../state/settings.js";
-import type { AchievementView, BagItemView, BoxView, EggView, NatureOption, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
+import type { AchievementView, BagItemView, BoxView, EggView, NatureOption, PresetView, RiderCallView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
+import type { PartySlotV3 } from "../shared/save-v3";
 import { unclaimedAchievementIds } from "../dex/tables.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial, replayableNow } from "../tutorial/queue.js";
@@ -35,6 +36,7 @@ import { shopList } from "./shop-list.js";
 import { eggIconKey, itemArtKey } from "./device-art.js";
 import { ceilSec } from "../shared/count-text.js";
 import { petView } from "./pet.js";
+import { riderCall } from "../party/riders.js";
 
 // 보상 종류 → 화면 문구
 const REWARD_WORD: Record<string, string> = { "party-slot": "파티 칸 +1" };
@@ -69,12 +71,17 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
   const dayPart = gameDayPart(now);
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 
-  const slots: SlotView[] = save.party.slots.map((s, index) => {
-    if (s.state !== "pokemon" || !s.petId) return { index, state: s.state };
-    const pet = byId.get(s.petId);
-    if (!pet) return { index, state: "empty" };
-    return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart) };
-  });
+  const slotViews = (list: PartySlotV3[]): SlotView[] =>
+    list.map((s, index) => {
+      if (s.state !== "pokemon" || !s.petId) return { index, state: s.state };
+      const pet = byId.get(s.petId);
+      if (!pet) return { index, state: "empty" };
+      return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart) };
+    });
+  const slots = slotViews(save.party.slots);
+  // 가진 프리셋 전부 — 적용한 프리셋은 위의 slots 를 그대로 쓴다
+  const active = activePreset(save);
+  const presets: PresetView[] = allPresets(save).map((p) => ({ index: p.preset, name: presetName(save, p.preset), slots: p.preset === active ? slots : slotViews(p.slots) }));
 
   const boxes: BoxView[] = save.boxes.map((b, i) => ({
     id: b.id,
@@ -109,6 +116,8 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
         ...(item ? { effect: item.effect, amount: item.amount } : {}),
         ...(sale !== null ? { sellPrice: sale, buyPrice: toolPrice(id) ?? 0, sellRate: SHOP_RULES.sellRate } : {}),
         ...(about ? { about } : {}),
+        // 유대의고삐 — 부를 말과 쓸 수 있는지 (src/party/riders.ts riderCall)
+        ...(item?.effect === "call-rider" ? { riders: riderView(save) } : {}),
       };
     })
     // 도구는 이름순, 진화 분류는 상점 진화 탭과 같은 순서 (src/bag/items.ts evoOrder)
@@ -134,7 +143,8 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
       slots,
       shown: slots.filter((s) => s.pet && !s.pet.hidden).length,
       usable: slots.filter((s) => s.state !== "locked").length,
-      preset: { index: activePreset(save), count: presetCount(save), max: PARTY_RULES.presets.max, name: presetName(save, activePreset(save)) },
+      preset: { index: active, count: presetCount(save), max: PARTY_RULES.presets.max, name: presetName(save, active) },
+      presets,
     },
     boxes,
     eggs: { list: eggs, used: eggs.length, size: maxEggs },
@@ -189,4 +199,10 @@ export function snapshotOfGame(game: { read(): SaveV3 | null; now(): number; sav
   if (!save) return null;
   const snap = snapshotView(save, game.now());
   return game.saveFailing() ? { ...snap, saveFailing: true } : snap;
+}
+
+// 유대의고삐로 부를 말 — 가방 기기 창의 "부를 말" 줄 (docs/specs/game.md "버드렉스의 말 부르기")
+function riderView(save: SaveV3): RiderCallView {
+  const { horses, block } = riderCall(save);
+  return { horses: horses.map((h) => ({ to: h.species, name: petName(h.species), owned: h.owned })), block };
 }

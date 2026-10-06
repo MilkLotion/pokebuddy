@@ -23,7 +23,7 @@ export interface EggRow {
 export const eggTable = (opts?: DexOptions): Record<string, EggRow> => loadJson<Record<string, EggRow>>("eggs.json", opts);
 
 // ── data/items.json ──
-export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form";
+export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form" | "call-rider";
 export interface ItemRow {
   ko: string;
   en?: string;

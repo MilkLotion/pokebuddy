@@ -16,6 +16,13 @@ import { gameDayPart } from "../../shared/clock";
 const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
 import { formsOf, isFormLocked, tickFormWork, isSinglePet, setForm } from "../../dex/forms";
 import { SHIFT_RULES } from "../../dex/rules";
+import { callRider, riderCall } from "../../party/riders";
+import { snapshotView } from "../../view/snapshot";
+import { bagDeviceModel, bagUsable } from "../../view/device-bag";
+import { resultLineOf } from "../../view/result-lines";
+import { createExecutor } from "../../tx/executor";
+import { HANDLERS } from "../../tx/command-table";
+import type { BagDeviceInput } from "../../shared/model/devices";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
@@ -231,6 +238,84 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(formsOf(seed({ species: "mewtwo", level: 50 }).pets[0] as PetV3), ["mewtwo"], "모습이 없는 단일 포켓몬은 자기 하나");
   assert.deepStrictEqual(formsOf(seed({ species: "giratina-origin", level: 50 }).pets[0] as PetV3), ["giratina-origin", "giratina"], "오리진폼만 든 저장도 공유 계열이다");
   process.stdout.write("(12c) 기라티나 모습 바꾸기  ok\n");
+}
+
+// (12c-2) 자시안·자마젠타·버드렉스 — 조건 없이 검왕·방패왕, 백마 탄 모습·흑마 탄 모습과 오간다 (2026-10-07 사용자 결정, worklog/records/bugs-1007)
+{
+  const z = seed({ species: "zacian", level: 50 });
+  assert.deepStrictEqual(formsOf(z.pets[0] as PetV3), ["zacian", "zacian-crowned"]);
+  assert.deepStrictEqual(setForm(z, "p1", "zacian-crowned"), { ok: true, petId: "p1", from: "zacian", to: "zacian-crowned" }, "도구 없이 바꾼다");
+  assert.ok(z.dex.obtained.includes("zacian-crowned"));
+  assert.deepStrictEqual(formsOf(seed({ species: "zamazenta", level: 50 }).pets[0] as PetV3), ["zamazenta", "zamazenta-crowned"]);
+  const c = seed({ species: "calyrex", level: 50 });
+  const cp = c.pets[0] as PetV3;
+  assert.deepStrictEqual(formsOf(cp), ["calyrex", "calyrex-ice", "calyrex-shadow"]);
+  assert.equal(isFormLocked(cp), false);
+  // 말이 없으면 백마·흑마로 못 바꾼다 — 말은 쓰지 않는다 (data/regional.json riders)
+  assert.deepStrictEqual(setForm(c, "p1", "calyrex-shadow"), { ok: false, reason: "no-rider" }, "레이스포스가 없으면 흑마 탄 모습 불가");
+  c.pets.push({ ...(seed({ species: "spectrier", level: 5 }).pets[0] as PetV3), id: "p2" });
+  assert.equal(setForm(c, "p1", "calyrex-shadow").ok, true, "레이스포스가 있으면 된다");
+  assert.equal(setForm(c, "p1", "calyrex-ice").reason, "no-rider", "블리자포스는 아직 없다");
+  c.pets.push({ ...(seed({ species: "glastrier", level: 5 }).pets[0] as PetV3), id: "p3" });
+  assert.equal(setForm(c, "p1", "calyrex-ice").ok, true, "백마와 흑마 사이도 바로 오간다");
+  assert.equal(c.pets.length, 3, "말은 쓰지 않는다");
+  assert.ok(isSinglePet(cp), "단일 포켓몬");
+  process.stdout.write("(12c-2) 자시안·자마젠타·버드렉스 모습 바꾸기  ok\n");
+}
+
+// (12c-3) 유대의고삐로 말 부르기 — 버드렉스 계열이 있을 때만, 아직 없는 말만, 고삐 1개 소모, 박스로 (src/party/riders.ts, 2026-10-07 사용자 결정)
+{
+  const s = seed({ species: "calyrex-ice", level: 50 }, { "reins-of-unity": 2 });
+  assert.deepStrictEqual(riderCall(s), { horses: [{ species: "glastrier", owned: false }, { species: "spectrier", owned: false }], block: null });
+  assert.deepStrictEqual(callRider(s, "glastrier", T0, () => 0.5), { ok: true, petId: s.pets[1]?.id, species: "glastrier", left: 1 });
+  assert.equal(s.bag["reins-of-unity"], 1, "고삐 1개를 썼다");
+  assert.ok(s.dex.obtained.includes("glastrier") && s.boxes.some((b) => b.slots.includes(s.pets[1]!.id)), "박스로, 도감에 얻음");
+  assert.deepStrictEqual(callRider(s, "glastrier", T0, () => 0.5), { ok: false, reason: "already" }, "이미 있는 말");
+  assert.deepStrictEqual(callRider(s, "mewtwo", T0, () => 0.5), { ok: false, reason: "bad-choice" });
+  const full = structuredClone(s);
+  for (const box of full.boxes) box.slots = box.slots.map((x) => x ?? "x");
+  assert.equal(riderCall(full).block, "box-full");
+  assert.deepStrictEqual(callRider(full, "spectrier", T0, () => 0.5), { ok: false, reason: "box-full" });
+  assert.equal(full.bag["reins-of-unity"], 1, "거절하면 쓰지 않는다");
+  assert.deepStrictEqual(callRider(s, "spectrier", T0, () => 0.5).left, 0);
+  assert.equal(s.bag["reins-of-unity"], undefined, "다 쓰면 가방에서 빠진다");
+  assert.equal(riderCall(s).block, "already", "두 말을 다 가졌다");
+  const empty = seed({ species: "calyrex", level: 50 });
+  assert.deepStrictEqual(callRider(empty, "glastrier", T0, () => 0.5), { ok: false, reason: "none-left" }, "고삐가 없다");
+  const other = seed({ species: "zacian", level: 50 }, { "reins-of-unity": 1 });
+  assert.equal(riderCall(other).block, "not-rider-owner");
+  assert.deepStrictEqual(callRider(other, "glastrier", T0, () => 0.5), { ok: false, reason: "not-rider-owner" }, "버드렉스만");
+  process.stdout.write("(12c-3) 유대의고삐로 말 부르기  ok\n");
+}
+
+// (12c-4) 유대의고삐 — 가방 기기 창과 bag.use (진화 분류지만 가방에서 쓴다, 2026-10-07 사용자 "나는 유대의고삐를 가방에서 사용하는 거로 봤었는데?")
+{
+  const s = seed({ species: "calyrex", level: 50 }, { "reins-of-unity": 2 });
+  s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  const input = (over: Partial<BagDeviceInput> = {}): BagDeviceInput => ({ itemId: "reins-of-unity", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, ...over });
+  const v = snapshotView(s, T0);
+  const item = v.bag.find((i) => i.id === "reins-of-unity");
+  assert.ok(item?.evolution && bagUsable(item), "진화 분류인데 사용 쪽이 있다");
+  const m = bagDeviceModel(v, input())!;
+  assert.equal(m.model.mode, "use");
+  assert.deepStrictEqual(m.model.party?.map((p) => [p.petId, p.level, p.picked, p.dim ?? false]), [["glastrier", "블리자포스", true, false], ["spectrier", "레이스포스", false, false]]);
+  assert.deepStrictEqual([m.model.title, m.model.qty, m.model.preview.lead, m.model.preview.line, m.model.go.label, m.model.go.disabled], ["부를 말", null, "블리자포스를 불러요", "유대의고삐 1개를 써요 · 박스로 가요", "사용", false]);
+  // 명령 — 대상 개체 없이 pick 으로
+  let save = s;
+  const tx = createExecutor({ read: () => structuredClone(save), write: (x) => ((save = x), true), now: () => T0, rand: () => 0.5 }, HANDLERS);
+  assert.equal(tx.run({ id: "u1", name: "bag.use", args: { itemId: "reins-of-unity", pick: "glastrier" } }).ok, true);
+  assert.ok(save.pets.some((p) => p.species === "glastrier") && save.bag["reins-of-unity"] === 1);
+  const v2 = snapshotView(save, T0);
+  const m2 = bagDeviceModel(v2, input({ targetPetId: "glastrier" }))!;
+  assert.deepStrictEqual(m2.model.party?.map((p) => [p.petId, p.picked, p.dim ?? false]), [["glastrier", false, true], ["spectrier", true, false]], "이미 가진 말은 흐리고 다음 말을 고른다");
+  assert.deepStrictEqual(resultLineOf({ cmd: "bag.use", target: "reins-of-unity", args: { pick: "spectrier" } }, v2, v2), { lead: "레이스포스가 박스에 왔어요", line: "유대의고삐 1개를 썼어요" });
+  assert.deepStrictEqual(tx.run({ id: "u2", name: "bag.use", args: { itemId: "reins-of-unity", pick: "glastrier" } }), { ok: false, reason: "already" });
+  // 버드렉스가 없으면 막는다
+  const lone = seed({ species: "pikachu", level: 5 }, { "reins-of-unity": 1 });
+  lone.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  const m3 = bagDeviceModel(snapshotView(lone, T0), input())!;
+  assert.deepStrictEqual([m3.model.preview.lead, m3.model.go.disabled], ["버드렉스가 있어야 쓸 수 있어요", true]);
+  process.stdout.write("(12c-4) 유대의고삐 가방 사용  ok\n");
 }
 
 // (12d) 로토무 — 다섯 모습과 모습 바꾸기로 오간다. 그 개체가 파티에서 받은 작업 시간 2시간부터 열린다.

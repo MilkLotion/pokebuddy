@@ -15,7 +15,11 @@ export function addItem(save: Pick<SaveV3, "bag">, id: string, count: number): v
 
 // 가방 도구 표(data/items.json)의 한 줄 — 효과와 수치. 쓰기(./use.ts)·화면 값·명령이 같이 읽는다 (96 대조 ③)
 // form — 모습 바꾸기에 쓰는 도구(로토무카탈로그). 가방에서 쓰지 않고 모습 바꾸기가 하나씩 쓴다 (src/dex/forms.ts setForm)
-export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form";
+// call-rider — 버드렉스의 말을 부르는 도구(유대의고삐). 가방에서 쓰지 않고 버드렉스의 파티 상세 `말 부르기` 가 하나씩 쓴다 (src/party/riders.ts callRider)
+export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form" | "call-rider";
+
+// 모습 도구인가 — 로토무카탈로그(form)와 유대의고삐(call-rider). 진화 분류에 두고, 가방에서 쓰지 않고, 줍기로 얻지 않는다
+export const isFormTool = (effect: ItemEffect | string | undefined): boolean => effect === "form" || effect === "call-rider";
 
 export interface ItemEntry {
   ko: string;
@@ -33,9 +37,9 @@ export const itemOf = (id: string, opts?: DexOptions): ItemEntry | null => (id.s
 // 진화용 도구인가 — data/evo-items.json 에 있으면 그렇다
 export const isEvoItem = (id: string, opts?: DexOptions): boolean => evoItemTable(opts)[id] != null;
 
-// 상점·가방의 `진화` 분류에 두는가 — 진화용 도구와 모습 도구(로토무카탈로그, 효과 `form`)
-// (2026-10-05 사용자 결정 "카탈로구는 진화로 옮기고")
-export const inEvoCategory = (id: string, opts?: DexOptions): boolean => isEvoItem(id, opts) || itemOf(id, opts)?.effect === "form";
+// 상점·가방의 `진화` 분류에 두는가 — 진화용 도구와 모습 도구(로토무카탈로그·유대의고삐)
+// (2026-10-05 사용자 결정 "카탈로구는 진화로 옮기고", 2026-10-07 "아이템은 진화에 추가하고")
+export const inEvoCategory = (id: string, opts?: DexOptions): boolean => isEvoItem(id, opts) || isFormTool(itemOf(id, opts)?.effect);
 
 // 원작 첫 등장 세대 — 우리 도구(빈 기술머신·연결의끈·지도)는 0
 const itemGen = (id: string, opts?: DexOptions): number => evoItemTable(opts)[id]?.gen ?? itemOf(id, opts)?.gen ?? 0;

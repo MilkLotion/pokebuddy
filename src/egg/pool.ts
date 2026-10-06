@@ -41,6 +41,13 @@ export function checkGiveEgg(save: SaveV3, kind: string, opts?: DexOptions): Che
   return { ok: true };
 }
 
+// 다 모은 단일 포켓몬 알 대신 주는 포인트 — 알 값 × EGG_RULES.allCaughtRate, allCaughtUnit 단위로 내림. 값이 없는 알은 0
+export function allCaughtPoints(kind: string, opts?: DexOptions): number {
+  const price = eggTable(opts)[kind]?.price;
+  if (typeof price !== "number" || price <= 0) return 0;
+  return Math.floor((price * EGG_RULES.allCaughtRate) / EGG_RULES.allCaughtUnit) * EGG_RULES.allCaughtUnit;
+}
+
 // 이 알을 열 때 다른 알이 나올 확률 — [알 종류, 확률]. 데이터에 적은 순서대로
 export function eggBonus(kind: string, opts?: DexOptions): [string, number][] {
   if (isMetaKey(kind)) return [];

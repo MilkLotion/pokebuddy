@@ -2,7 +2,7 @@
 // 상점(src/shop/catalog.ts)과 업적(src/achievement/evaluate.ts)에 흩어져 있던 것을 도감 쪽으로 모았다. 저장을 읽지 않는다
 import { isMetaKey, type DexOptions } from "./data.js";
 import { prevOf } from "./evo.js";
-import { hatchBaseOf, regionalTable, shiftGroupOf } from "./regional.js";
+import { allRiders, hatchBaseOf, regionalTable, shiftGroupOf } from "./regional.js";
 import { achievementTable, eggTable } from "./tables.js";
 import { unlockRules } from "./unlocks.js";
 
@@ -45,6 +45,8 @@ export function singleSpecies(opts?: DexOptions): Set<string> {
   for (const [kind, pool] of fixedEggs(opts)) if (isSingleEgg(kind, opts)) for (const slug of pool) out.add(slug);
   for (const [slug, form] of Object.entries(regionalTable(opts).forms)) if (!isMetaKey(slug) && form.get === "gift") out.add(slug);
   for (const slug of rewardSpecies(opts)) out.add(slug);
+  // 버드렉스의 말(블리자포스·레이스포스) — 알 후보에서 빠졌어도 유대의고삐로 한 번만 부른다 (2026-10-07 사용자 결정, data/regional.json riders)
+  for (const slug of allRiders(opts)) out.add(slug);
   // 단일 포켓몬이 모습 바꾸기로 오가는 모습(기라티나(오리진폼))도 같은 개체라 단일 포켓몬이다
   for (const slug of [...out]) for (const form of shiftGroupOf(slug, opts)) out.add(form);
   return out;
