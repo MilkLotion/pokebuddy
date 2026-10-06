@@ -1,5 +1,5 @@
 // 친구 교환 E2E — 실제 앱(동반자) 여러 개를 임시 HOME 으로 띄우고 로컬 Supabase 에서 교환을 끝까지 돌린다.
-// 설계: worklog/records/trade/record.md "구현 2c~2e 계획과 E2E 설계"
+// 설계: worklog/records/trade/trade.md "구현 2c~2e 계획과 E2E 설계"
 //   준비: Docker Desktop 과 `npx supabase start`. 빌드: `npm run build`
 //   실행: node dist/tools/e2e/e2e-trade.js [--ui]   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다. --ui 면 화면 시나리오만)
 //   조작은 `pokebuddy game trade.*` CLI 의 JSON 결과로 판정한다. 창은 관측기가 숨긴다

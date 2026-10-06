@@ -2,7 +2,7 @@
 //
 // src/verify/save-rules.ts 를 손으로 만든 저장 쌍으로 본다. 정상 진행은 위반 0, 조작은 해당 규칙 위반.
 // supabase/functions/_shared 의 복사본·데이터가 지금 규칙과 같은지도 본다(dist/tools/data/build-verify.js --check).
-// 설계는 worklog/records/cloud-authority/record.md "P4 서버 검증", 검수 사례는 evidence/2026-09-30-review-p4a-code.md
+// 설계는 worklog/records/cloud-authority/cloud-authority.md "P4 서버 검증", 검수 사례는 evidence/2026-09-30-review-p4a-code.md
 import assert from "node:assert";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";

@@ -1,6 +1,6 @@
 // 업적 정의 — 표 읽기와 보상 종류. 업적 달성 판정과 보상 수령 — 규칙은 docs/specs/game.md "파티 칸과 업적", 이름·분류·조건·보상은 data/achievements.json
 //
-// 조건은 데이터의 cond 로 적는다. 판정과 진행도는 여기서 한다 (2026-10-03 업적 개선, worklog/records/achievements/record.md)
+// 조건은 데이터의 cond 로 적는다. 판정과 진행도는 여기서 한다 (2026-10-03 업적 개선, worklog/records/achievements/achievements.md)
 //   dex       얻은 종 수 dex.obtained ≥ count. 도감 탭 머리의 `획득` 수와 같다(리전폼·특수 폼 포함)
 //   region    도감 번호 from~to 를 모두 얻었다. 번호마다 기본형 하나를 얻으면 된다. 리전폼·특수 폼은 세지 않는다
 //   species   적은 종을 모두 얻었다(dex.obtained). 종마다 그 슬러그 그대로 본다 — 다른 모습(오리진폼)은 세지 않는다

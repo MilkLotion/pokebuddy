@@ -1,5 +1,5 @@
 // 앱 업데이트 — 설치본이 켜진 채로 새 버전을 받고, 다시 시작하거나 끌 때 적용한다.
-// 설계는 worklog/records/app-update/record.md. 엔진은 Windows 가 electron-updater(2026-09-28 사용자 승인),
+// 설계는 worklog/records/app-update/app-update.md. 엔진은 Windows 가 electron-updater(2026-09-28 사용자 승인),
 // mac 이 src/main/update/mac-updater.ts(Squirrel.Mac 은 정식 서명이 필요해 직접 한다, 2026-09-28 사용자 승인). 화면 흐름은 같다
 //
 //   확인    켜진 뒤 1분, 그 뒤 6시간마다 GitHub Release 의 latest.yml 을 본다(설치본의 app-update.yml 이 주소를 준다)
@@ -57,7 +57,7 @@ export interface AppUpdater {
   stop: () => void;
 }
 
-// 업데이트 필요(서버가 이 앱 버전을 거절)를 받은 뒤 할 일 — 설계는 worklog/records/app-update/record.md "업데이트 필요 때 바로 받기"
+// 업데이트 필요(서버가 이 앱 버전을 거절)를 받은 뒤 할 일 — 설계는 worklog/records/app-update/app-update.md "업데이트 필요 때 바로 받기"
 //   ask    준비됐다(ready)·수동(manual) — 창을 띄운다. 실행마다 한 번(asked)
 //   check  대기·최신·실패 상태다 — 주기를 기다리지 않고 바로 확인한다. 실행마다 한 번(checked) —
 //          클라우드 표시는 자주 바뀌므로 매번 GitHub 를 부르지 않는다. 그 뒤는 6시간 주기가 맡는다

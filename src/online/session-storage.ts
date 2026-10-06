@@ -1,5 +1,5 @@
 // 온라인 세션 파일 저장소 — supabase-js 의 세션(토큰)을 파일에 둔다. 계정·교환·클라우드 저장이 같은 세션을 본다
-// 설계는 worklog/records/trade/record.md "세션 저장", 세션 파일 상태는 worklog-mac/records/cloud-authority/design-p2.md 2절·12절 Q3
+// 설계는 worklog/records/trade/trade.md "세션 저장", 세션 파일 상태는 worklog-mac/records/cloud-authority/design-p2.md 2절·12절 Q3
 //
 // 세션은 키 저장소로 암호화해 ~/.claude/pokebuddy/online/session.bin 에 둔다.
 // 암호화를 쓸 수 없는 환경(키 저장소 없음)이면 같은 폴더의 session.json 에 평문으로 둔다 — 권한 0600(Q3)

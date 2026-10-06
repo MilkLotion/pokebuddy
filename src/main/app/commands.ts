@@ -221,7 +221,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
   // 나머지 저장 명령 — 인자를 풀고 실행기에 넣는 일만 한다.
   // 무대 다시 그리기는 기다리지 않고 답한다. 처음 나오는 종은 그림을 인터넷에서 받느라 1~2초 걸린다 — 관리 창이 그동안 멈춰 보였다
-  // (worklog/records/response-latency/record.md)
+  // (worklog/records/response-latency/response-latency.md)
   // 위에서 따로 등록한 명령(무대 반응·그림 준비가 필요한 것과 저장 감시가 맡는 것)은 뺀다.
   // party.show · party.hide · pet.set 은 reader 경로가 달라 `ctx.party` 가 맡는다 (src/save/save-party.ts)
   registerTxCommands(dispatcher, async (c) => {
@@ -246,7 +246,7 @@ export function createCommands(ctx: CommandContext): Commands {
 
 
   // 친구 교환 — 서버를 타므로 결과를 기다려 교환 보기를 돌려준다. writer 만 교환 세션을 가진다.
-  // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (worklog/records/trade/record.md "구현 2c~2e 계획과 E2E 설계")
+  // reader 는 다른 저장 명령처럼 mailbox 로 writer 에 넘긴다 (worklog/records/trade/trade.md "구현 2c~2e 계획과 E2E 설계")
   // 결과는 조작의 결과다. 보기의 error 는 앞선 새로 고침의 실패일 수 있어 결과로 쓰지 않는다
   const tradeCommand = (run: (session: TradeSession, c: Command) => Promise<TradeActionResult> | TradeActionResult) => async (c: Command): Promise<CommandResult> => {
     if (!ctx.party.isWriter()) return server ? { ok: false, reason: "not-writer" } : sendToWriter(ctx.mailboxDir, c);

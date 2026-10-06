@@ -1,6 +1,6 @@
 // 설정창의 상점 기기 창 연결 — 고른 상품, 수량·구매, 이전·다음 (P10r)
 // 상품 줄·칸을 누르면 관리 창 옆에 상점 기기 창이 뜬다 (src/main/shop-window.ts, Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution`).
-// 설명과 구매를 한 창에 둔다 — 구매 창(모달)은 없앴다 (2026-10-01 사용자 결정 A안, worklog/records/shop-device/record.md).
+// 설명과 구매를 한 창에 둔다 — 구매 창(모달)은 없앴다 (2026-10-01 사용자 결정 A안, worklog/records/shop-device/shop-device.md).
 // 여기서는 고른 값만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-shop.ts). 수량·구매 단추는 여기로 돌아와 명령으로 처리한다
 import type { ShopItemView } from "../../shared/model/snapshot.js";
 import type { ShopDeviceAction, ShopDeviceInput } from "../../shared/model/devices.js";

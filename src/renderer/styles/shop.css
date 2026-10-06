@@ -1,5 +1,5 @@
 /* shop.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
-/* 상점 기기 — Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution` (worklog/records/shop-device/record.md). 도감 기기 창(dex.html)과 같은 틀이다.
+/* 상점 기기 — Figma 05 `Shop / Device / Tool`·`Egg`·`Evolution` (worklog/records/shop-device/shop-device.md). 도감 기기 창(dex.html)과 같은 틀이다.
    기기의 호박색·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)와 가른다 */
 :root {
   --body: #c9822e;

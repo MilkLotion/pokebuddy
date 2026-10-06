@@ -1,5 +1,5 @@
 // 친구 교환의 메인 쪽 입구 — 세션 저장소(src/online/session-storage.ts)와 교환 흐름(src/online/trade-session.ts)을 잇는다.
-// 설계는 worklog/records/trade/record.md "앱 구조"
+// 설계는 worklog/records/trade/trade.md "앱 구조"
 //
 // Supabase 클라이언트는 메인 프로세스에서만 쓴다. 렌더러에는 교환 보기(TradeViewModel)만 넘긴다. 토큰은 넘기지 않는다.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -18,7 +18,7 @@ export interface MainTrade {
   onView: (fn: (view: TradeViewModel) => void) => () => void;
 }
 
-// 개발용 시험 장치 — 개발 실행에서만 읽는다. 설치본은 무시한다 (worklog/records/trade/record.md "E2E 설계")
+// 개발용 시험 장치 — 개발 실행에서만 읽는다. 설치본은 무시한다 (worklog/records/trade/trade.md "E2E 설계")
 //   POKEBUDDY_TRADE_FAULT=before-apply   서버 완료 뒤 로컬 반영 직전에 앱을 끝낸다
 //   POKEBUDDY_TRADE_DATA_VERSION         데이터 버전을 바꿔 참가 거절을 재현한다
 //   POKEBUDDY_TRADE_POLL_MS · _RETRY_MS  다시 읽기·재시도 간격

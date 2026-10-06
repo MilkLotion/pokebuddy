@@ -31,7 +31,7 @@ let seq = 0;
 const nextReqId = (cmd: string, target: string): string => `ui:${Date.now()}:${++seq}:${cmd}:${target}`;
 
 // 응답이 없던 조작(timeout)은 결과를 모른다. 같은 조작을 다시 누르면 같은 요청 ID 로 보내 실행기가 한 번만 반영하게 한다.
-// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (worklog/records/game-runtime/record.md "결과를 모를 때")
+// 조작이 같은지는 명령·대상·인자로 본다. 답을 받으면(성공·실패) 잊는다 (worklog/records/game-runtime/game-runtime.md "결과를 모를 때")
 let unknownReq: { key: string; id: string } | null = null;
 function reqIdFor(cmd: string, target: string, extra: Record<string, unknown>): string {
   const key = JSON.stringify([cmd, target, extra]);
@@ -54,7 +54,7 @@ let lastReply: ManageReply | null = null; // 마지막으로 성공한 조작의
 export const lastReplyOf = (): ManageReply | null => lastReply;
 
 // 처리 중 표시 — 답이 늦으면 누른 단추·칸에 점 세 개를 띄운다 (Figma `Button` · `Box Slot` 의 `State=Busy`).
-// 빠른 답에서 깜빡이지 않게 BUSY_AFTER_MS 가 지나서야 단다 (worklog/records/response-latency/record.md "B안")
+// 빠른 답에서 깜빡이지 않게 BUSY_AFTER_MS 가 지나서야 단다 (worklog/records/response-latency/response-latency.md "B안")
 const BUSY_AFTER_MS = 300;
 const PRESS_FRESH_MS = 1000; // 이보다 오래된 누름은 이번 조작의 단추가 아니다 — 튜토리얼 등 누름 없이 보낸 조작
 let pressed: { button: HTMLButtonElement; at: number } | null = null;

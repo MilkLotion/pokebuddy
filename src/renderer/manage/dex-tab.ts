@@ -95,7 +95,7 @@ function dexCell(row: DexEntry): HTMLElement {
   return cell;
 }
 
-// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (worklog/records/play-bugs/record.md)
+// 고른 칸 표시만 바꾼다 — 격자를 다시 그리면 스크롤이 튄다 (worklog/records/play-bugs/play-bugs.md)
 function markDexPick(): void {
   for (const cell of bodyEl.querySelectorAll<HTMLElement>(".dex-cell")) cell.setAttribute("aria-pressed", String(cell.dataset.slug === dexPick));
 }

@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     const boxHome = await commands.dispatcher.dispatch({ cmd: "pet.set", target: "b-pet", args: { home: { dx: 1, dy: 1 } }, from: "settings" });
     assert.equal(boxHome.ok, false, "박스 개체의 자리는 정하지 않는다");
 
-    // 저장 명령은 무대 갱신을 기다리지 않고 답한다 — 그림을 받는 동안 관리 창이 멈춰 보이지 않게 (worklog/records/response-latency/record.md)
+    // 저장 명령은 무대 갱신을 기다리지 않고 답한다 — 그림을 받는 동안 관리 창이 멈춰 보이지 않게 (worklog/records/response-latency/response-latency.md)
     let release = (): void => {};
     stageHold = new Promise<void>((r) => { release = r; });
     const heldChanges = changes;

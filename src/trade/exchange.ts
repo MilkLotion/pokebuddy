@@ -1,4 +1,4 @@
-// 친구 교환의 규칙(저장 사본만 고친다) — 서버 호출은 src/online/trade-net.ts, 진행은 src/online/trade-session.ts. 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
+// 친구 교환의 규칙(저장 사본만 고친다) — 서버 호출은 src/online/trade-net.ts, 진행은 src/online/trade-session.ts. 설계는 worklog/records/trade/trade.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 //
 // 순수 함수다. 저장 사본을 고치고 결과만 돌려준다. 서버와 파일은 모른다.
 //   올리기    내 개체의 값을 TradePet 으로 만든다(checkOffer · offerOf). 단일 포켓몬은 올리지 못한다. 지문(refOf)을 함께 보낸다

@@ -1,5 +1,5 @@
 // 개체에 지금 할 수 있는 일의 공통 조건 — 친구 교환에 걸린 개체는 값을 바꾸거나 없애는 일을 하지 않는다
-// (worklog/records/trade/record.md "로컬 저장과 복구"). 저장의 trade.pending 만 읽는다. 진화 판정만 도감(dex/evolve)을 함께 본다
+// (worklog/records/trade/trade.md "로컬 저장과 복구"). 저장의 trade.pending 만 읽는다. 진화 판정만 도감(dex/evolve)을 함께 본다
 import type { DexOptions } from "../dex/data";
 import { canEvolve } from "../dex/evolve.js";
 import type { DayPart } from "../shared/species";

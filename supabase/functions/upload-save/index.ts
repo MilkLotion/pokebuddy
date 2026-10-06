@@ -1,4 +1,4 @@
-// 클라우드 저장 올리기 — 서버 검증 P4a. 설계는 worklog/records/cloud-authority/record.md "P4 서버 검증"
+// 클라우드 저장 올리기 — 서버 검증 P4a. 설계는 worklog/records/cloud-authority/cloud-authority.md "P4 서버 검증"
 //
 // 앱은 upload_save RPC 대신 이 함수를 부른다(src/online/cloud.ts). 순서:
 //   1. Authorization 의 사용자 토큰으로 본인을 확인한다. 익명 계정도 올린다(P2)

@@ -27,7 +27,7 @@ import { EGG_FILE, EGG_URL, iconUrl, itemFile, itemUrl, portraitFile, portraitUr
 import type { ArtImage, OpaqueBox, PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
-// 네트워크보다 먼저 본다. 만드는 곳은 src/tools/art/build-item-art.ts, 기록은 worklog/records/item-art/record.md (2026-09-27 폰트 세션)
+// 네트워크보다 먼저 본다. 만드는 곳은 src/tools/art/build-item-art.ts, 기록은 worklog/records/item-art/item-art.md (2026-09-27 폰트 세션)
 const OWN_ITEMS = path.join(PATHS.project, "assets", "items");
 const ownItem = (id: string): string | null => {
   const file = path.join(OWN_ITEMS, `${id}.png`);

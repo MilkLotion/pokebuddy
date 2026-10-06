@@ -1,5 +1,5 @@
 // 패치노트 — 설정 바닥의 `패치노트` 와 업데이트 뒤 처음 켤 때 한 번 뜨는 창이 그린다.
-// 내용은 data/patch-notes.json (새 버전이 맨 앞). 설계는 worklog/records/app-update/record.md "패치노트"
+// 내용은 data/patch-notes.json (새 버전이 맨 앞). 설계는 worklog/records/app-update/app-update.md "패치노트"
 //
 //   본 버전   save.json 과 같은 폴더의 notes-seen.json { "seen": "<버전>" }. save.json 에는 필드를 더하지 않는다
 //   안 본 노트  켤 때 한 번 정한다 — 본 버전이 지금 버전과 다르고 지금 버전의 노트가 있으면 그 버전.

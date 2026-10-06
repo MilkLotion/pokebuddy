@@ -1,4 +1,4 @@
--- 교환 제안을 서버 저장에서 만든다 P5 (worklog/records/cloud-authority/record.md "P5", 설계 S6)
+-- 교환 제안을 서버 저장에서 만든다 P5 (worklog/records/cloud-authority/cloud-authority.md "P5", 설계 S6)
 --   set_offer: 지문(id·since)으로 찾은 서버 저장 개체로 제안을 만들어 채널에 넣는다. 앱이 보낸 p_pet 은 올렸는지 확인하는 데만 쓴다
 --     (종·이로치·성격이 다르면 TRADE_PET_NOT_SYNCED). 레벨·경험치·친밀도 등은 보내는 PC 가 정하지 못한다
 --   save_verify_context: 받은 제안(received·received_before)을 싣는다 — 서버 검증이 받은 개체를 제안과 대조한다

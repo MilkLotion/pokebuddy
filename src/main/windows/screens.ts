@@ -1,4 +1,4 @@
-// 화면 — 지금 화면 목록의 모양, 저장에 두는 화면 가리키기, 화면 번호 순서, 저장된 화면 되찾기, 창 ∩ 디스플레이 (설계는 worklog/records/multi-display/record.md)
+// 화면 — 지금 화면 목록의 모양, 저장에 두는 화면 가리키기, 화면 번호 순서, 저장된 화면 되찾기, 창 ∩ 디스플레이 (설계는 worklog/records/multi-display/multi-display.md)
 // 화면을 다루는 창 도우미(display·screen-picker)와 무대(src/main/stage/layout.ts)가 같이 쓴다. 순수 함수다
 // (예전 src/main/layout.ts 안에 있었다. 메인 레인 96-D 에서 무대 자리 계산과 나눴다)
 import type { Rect } from "../../shared/geometry";

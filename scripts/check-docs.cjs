@@ -110,8 +110,25 @@ for (const file of jsonFiles) {
   }
 }
 
-for (const file of allFiles.filter((file) => file.endsWith(`${path.sep}record.md`))) {
-  if (!display(file).startsWith('worklog/records/')) continue;
+// 작업 기록 본문 — worklog/records/<작업>/<작업>.md (공개 문서와 이름이 겹치면 <작업>-record.md). Obsidian 그래프에서 이름이 겹치지 않게 (2026-10-07)
+const isRecordMain = (file) => {
+  const parts = display(file).split('/');
+  if (parts.length !== 4 || parts[0] !== 'worklog' || parts[1] !== 'records') return false;
+  return parts[3] === `${parts[2]}.md` || parts[3] === `${parts[2]}-record.md`;
+};
+// worklog 의 Markdown 이름은 하나뿐이어야 한다 — record.md·README.md 금지, 공개 문서·다른 기록과 겹침 금지
+const mdNames = new Map();
+for (const file of allFiles.filter((file) => file.endsWith('.md'))) {
+  const name = path.basename(file).toLowerCase();
+  mdNames.set(name, [...(mdNames.get(name) ?? []), file]);
+}
+for (const file of worklogFiles.filter((file) => file.endsWith('.md'))) {
+  const name = path.basename(file).toLowerCase();
+  if (name === 'record.md' || name === 'readme.md') failures.push(`작업 기록 이름 금지: ${display(file)} → <작업>.md 처럼 고유한 이름`);
+  else if ((mdNames.get(name) ?? []).length > 1) failures.push(`작업 기록 이름 겹침: ${display(file)} ↔ ${mdNames.get(name).filter((other) => other !== file).map(display).join(', ')}`);
+}
+
+for (const file of allFiles.filter(isRecordMain)) {
   const content = read(file);
   for (const section of ['설계', '작업', '검수', '피드백과 수정']) {
     if (!content.includes(`\n## ${section}\n`)) failures.push(`작업 기록 절 누락: ${display(file)} → ${section}`);

@@ -1,7 +1,7 @@
 // 계정 확인 — 규칙 함수와 로컬 Supabase 에서의 가입·로그인·로그아웃·이름 바꾸기
 //   npx supabase start 뒤: npm run build && node dist/tools/selftest/selftest-account.js
 //   로컬 서버가 없으면 서버 부분을 건너뛴다(종료 코드 0). 주소가 127.0.0.1·localhost 가 아니면 멈춘다
-// 설계는 worklog/records/trade/record.md "계정과 로그인", "로그인·클라우드 저장 구현 계획"
+// 설계는 worklog/records/trade/trade.md "계정과 로그인", "로그인·클라우드 저장 구현 계획"
 //   P2(design-p2.md 2절): 익명 userId·AccountView.anonymous, 세션 교체 훅(switchHooks) — 이관 결과 전달·before 실패 시 로그인 중단
 import assert from "node:assert";
 import { randomBytes } from "node:crypto";

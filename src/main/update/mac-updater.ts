@@ -1,6 +1,6 @@
 // mac 앱 업데이트 엔진 — electron-updater 의 mac 쪽(Squirrel.Mac)은 정식 서명(Apple 개발자 인증서)이 없으면 새 번들을 거부한다.
 // ad-hoc 서명 앱이라 직접 한다. 화면 흐름은 Windows 와 같다 — src/main/update/updater.ts 의 UpdaterLike 를 따라 같은 이벤트를 낸다.
-// 설계: worklog/records/mac-app/record.md "mac 자체 업데이트" (2026-09-28 사용자 승인 "그렇게 진행하자")
+// 설계: worklog/records/mac-app/mac-app.md "mac 자체 업데이트" (2026-09-28 사용자 승인 "그렇게 진행하자")
 // 공급처·목록 풀이와 번들 위치(순수)는 src/main/update/mac-feed.ts 다
 //
 //   공급처  번들의 Contents/Resources/app-update.yml (electron-builder 가 publish 로 만든다) — github 또는 generic

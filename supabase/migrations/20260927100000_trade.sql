@@ -1,5 +1,5 @@
 -- 친구 교환 공유 채널
--- 설계: docs/work/trade/record.md "서버 설계"
+-- 설계: docs/work/trade/trade.md "서버 설계"
 --   서버는 교환 순서만 판정한다. 개체 값의 정본은 각자의 save.json 이다
 --   앱은 테이블을 직접 읽거나 쓰지 않는다. 아래 public 함수(RPC)로만 다룬다
 --   실시간 알림은 신호만 보낸다. 앱은 신호를 받으면 get_channel 로 다시 읽는다

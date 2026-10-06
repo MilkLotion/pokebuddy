@@ -1,4 +1,4 @@
-// 온라인 서버 설정 — 교환·계정·클라우드 저장·우편이 같이 쓴다. worklog/records/trade/record.md "프로젝트 구성"
+// 온라인 서버 설정 — 교환·계정·클라우드 저장·우편이 같이 쓴다. worklog/records/trade/trade.md "프로젝트 구성"
 //
 // data/online.json 은 공개해도 되는 값만 둔다(주소, publishable 키, 규약 번호).
 // 개발 중에는 환경 변수로 로컬 Supabase 를 가리킨다: POKEBUDDY_SUPABASE_URL, POKEBUDDY_SUPABASE_KEY

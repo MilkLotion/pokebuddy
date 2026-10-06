@@ -50,7 +50,7 @@ export const CARE_RULES = {
 //   chimeMax       배너 알림음 최대 음량(0~1) — OS 기본음(shell.beep)은 크기를 못 바꿔서 앱이 직접 낸다
 export const SOUND_RULES = { defaultVolume: 30, cryMax: 0.35, chimeMax: 0.35 } as const;
 
-// 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (worklog/records/game-runtime/record.md "놀이공간·설정의 설계")
+// 놀이공간 영역의 최소 크기 (화면 좌표 DIP). 스펙 미확정이라 구현에서 정했다 (worklog/records/game-runtime/game-runtime.md "놀이공간·설정의 설계")
 //   area  넓이 — 240 × 160 과 같은 넓이. 폭·높이 비율은 자유다(아래로 길게, 옆으로 길게) — 2026-09-26 사용자 요청
 //   side  한 변 — 기본 크기(2) 포켓몬 한 마리가 들어가는 길이. 이보다 얇으면 움직일 자리가 없다
 export const REGION_MIN = { area: 240 * 160, side: 80 } as const;

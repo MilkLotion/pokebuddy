@@ -195,7 +195,7 @@ export interface ShopItemView {
   pool?: EggPoolView; // 알 — 종 목록이 정해진 알(단일 포켓몬 알·태고의돌)만. 랜덤알에는 없다
 }
 
-// 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄과 목록 창이 쓴다 (2026-10-03 사용자 결정, worklog/records/egg-pool/record.md)
+// 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄과 목록 창이 쓴다 (2026-10-03 사용자 결정, worklog/records/egg-pool/egg-pool.md)
 // 종은 도감 번호 순이다. 얻지 않은 종은 화면이 실루엣과 `???` 로 보인다 — 도감의 미해금 칸과 같다
 export interface EggPoolView {
   single: boolean; // 단일 포켓몬 알 — 얻은 종은 다시 나오지 않는다. 태고의돌은 false 다

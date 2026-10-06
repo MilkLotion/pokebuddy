@@ -1,5 +1,5 @@
 // 우편함 자체 검사 — 선물 검사·저장에 넣기·중복 방지·끊김 복구·명령 통로 차단
-// 설계: worklog/records/post-box/record.md "구현 설계". 서버 SQL 검사는 supabase/tests/mail_test.sql
+// 설계: worklog/records/post-box/post-box.md "구현 설계". 서버 SQL 검사는 supabase/tests/mail_test.sql
 import assert from "node:assert";
 import { MINT_REFUND_EACH, MINT_RETIRED } from "../../bag/mint";
 import { createMailInbox, type RpcResult } from "../../online/mail-inbox";

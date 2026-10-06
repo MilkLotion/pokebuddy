@@ -101,7 +101,7 @@ export function createCloud(o: CloudOptions): Cloud {
   };
   const rpc = <T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: CloudCode; detail?: string }> =>
     callRpc<T, CloudCode>(o.client, fn, args, codeOf);
-  // 올리기 — Edge Function upload-save 를 거친다(서버 검증 P4a, worklog/records/cloud-authority/record.md "P4 서버 검증").
+  // 올리기 — Edge Function upload-save 를 거친다(서버 검증 P4a, worklog/records/cloud-authority/cloud-authority.md "P4 서버 검증").
   // 답은 RPC 와 같은 모양으로 바꾼다. 오류 본문 { error: "CLOUD_…" } 의 코드를 쓴다.
   // 502·503·504·전송 실패는 NETWORK(오프라인, 같은 키로 다시 시도). 그 밖(토큰 무효 AUTH_TOKEN·SERVER_ERROR)은 UNKNOWN — 계정 분실로도 오프라인으로도 보지 않는다
   const sendSave = async (a: { device: string; baseRev: number; save: Record<string, unknown>; op: string }): Promise<{ ok: true; data: number } | { ok: false; code: CloudCode; detail?: string }> => {

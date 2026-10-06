@@ -1,7 +1,7 @@
 -- 친구 교환 공유 채널 검사 — npx supabase test db
 -- 2026-10-02 P2: 규약 2, 3인자 set_offer(개체 지문), 익명 거부로 바꿨다 (worklog-mac/records/cloud-authority/design-p2.md 1절)
 -- 2026-09-30 D31: 교환 중 예약(trade_private.pet_offers)과 TRADE_PET_BUSY 를 더했다 (같은 문서 17절)
--- 설계의 상태 전이 표와 동시에 일어나는 경우 표를 순서대로 재현한다 (docs/work/trade/record.md "서버 설계")
+-- 설계의 상태 전이 표와 동시에 일어나는 경우 표를 순서대로 재현한다 (docs/work/trade/trade.md "서버 설계")
 -- 한 트랜잭션 안이라 now() 가 고정이다. 만료는 postgres 역할로 expires_at 을 과거로 옮겨 재현한다
 begin;
 create extension if not exists pgtap with schema extensions;

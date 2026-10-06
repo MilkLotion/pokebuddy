@@ -1,4 +1,4 @@
-// CLI 훅 연결 점검 — 연결 탭의 가벼운 확인·`점검`·마지막 신호 (worklog/records/hook-check/record.md)
+// CLI 훅 연결 점검 — 연결 탭의 가벼운 확인·`점검`·마지막 신호 (worklog/records/hook-check/hook-check.md)
 //
 // 훅은 CLI 가 `node "<~/.claude/scripts/hooks/pokebuddy-state.cjs>" [--cli x]` 로 부른다. 설치본에는 Node.js 가 없으므로
 // 사용자 PC 에 node 가 없으면 CLI 이벤트마다 훅이 실패하고 앱에 신호가 오지 않는다 — 그래서 node 를 먼저 찾는다.

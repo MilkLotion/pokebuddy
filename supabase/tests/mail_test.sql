@@ -1,5 +1,5 @@
 -- 우편함 검사 — npx supabase test db
--- worklog/records/post-box/record.md "구현 설계"
+-- worklog/records/post-box/post-box.md "구현 설계"
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();

@@ -2,7 +2,7 @@
 //
 // 암호(src/save/crypt.ts)·저장 파일(src/save/save-file.ts)·키 준비(src/save/key.ts)를 임시 폴더에서 본다.
 // 키 저장소는 가짜다 — 사용자의 키체인·DPAPI 에 닿지 않는다. 사용자의 ~/.claude/pokebuddy/ 는 건드리지 않는다.
-// 설계는 worklog/records/cloud-authority/record.md "P3 로컬 암호화"
+// 설계는 worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화"
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";

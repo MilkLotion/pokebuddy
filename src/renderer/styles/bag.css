@@ -1,5 +1,5 @@
 /* bag.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
-/* 가방 기기 — Figma 05 `Bag / Device / Use`·`Sell`·`Evolution` (worklog/records/bag-device/record.md). 상점 기기 창(shop.html)과 같은 틀이다.
+/* 가방 기기 — Figma 05 `Bag / Device / Use`·`Sell`·`Evolution` (worklog/records/bag-device/bag-device.md). 상점 기기 창(shop.html)과 같은 틀이다.
    기기의 파랑·화면 색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다. 도감(빨강)·파티(초록)·상점(호박색)과 가른다 */
 :root {
   --body: #4f78b8;

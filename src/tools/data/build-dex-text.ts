@@ -5,7 +5,7 @@
 // 출처: PokeAPI 저장소의 CSV (https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv)
 //   pokemon_species_names.csv         종 번호 → 언어별 분류(genus — "쥐포켓몬" · "Mouse Pokémon")
 //   pokemon_species_flavor_text.csv   종 번호 · 버전 → 언어별 설명문. 언어마다 가장 최근 버전의 문장을 쓴다
-//   pokemon.csv                       기본 모습(is_default)의 키(데시미터)·몸무게(헥토그램) — 도감 기기 창 (worklog/records/play-bugs/record.md)
+//   pokemon.csv                       기본 모습(is_default)의 키(데시미터)·몸무게(헥토그램) — 도감 기기 창 (worklog/records/play-bugs/play-bugs.md)
 //
 // 결과: { "<도감 번호>": { "genus": { "ko", "en" }, "flavor": { "ko"?, "en"? }, "height"?, "weight"? } }
 //   - PokeAPI 의 한국어 설명문은 898번까지만 있다(2026-09-25 확인, 2026-10-03 다시 확인). 899~1025번은 data/dex-text.ko.json 으로 채운다

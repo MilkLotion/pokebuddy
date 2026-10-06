@@ -15,7 +15,7 @@
 // 백업에 실패하면 옮기지 않는다. 사용자의 진행을 잃는 것보다 v3 을 늦게 쓰는 편이 낫다.
 // 쓰기는 src/platform/atomic-write.ts 의 writeAtomic 을 쓴다 — tmp 에 쓰고 rename 이라 반쪽 파일이 남지 않는다.
 //
-// 암호화 (src/save/crypt.ts, worklog/records/cloud-authority/record.md "P3 로컬 암호화")
+// 암호화 (src/save/crypt.ts, worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화")
 //   키가 있으면 암호화해 쓰고, 읽을 때 푼다. 풀지 못하면(고침·다른 키) 파손과 같다
 //   키가 있는데 평문이면 손으로 고친 저장으로 보고 파손과 같게 다룬다. 기존 평문의 이전은 켤 때 src/save/key.ts 가 한 번 한다
 //   키가 없는데 암호화 파일이면 읽지 못한다(reason "locked"). 격리하지 않고, 덮어쓰지도 않는다

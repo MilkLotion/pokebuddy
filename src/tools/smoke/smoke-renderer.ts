@@ -104,7 +104,7 @@ void app.whenReady().then(async () => {
     })()`) as { onBubble: string; onPet: string; onDim: string | null; done: { id: string; action: string }; skip: { action: string }; noButton: boolean; clear: boolean; hidden: boolean };
     assert.equal(coach.onBubble, "coach", "말풍선 위는 클릭을 받는다");
     assert.equal(coach.onPet, "last", "밝힌 마리는 그대로 누를 수 있다");
-    // 튜토리얼 전수 개선 뒤: 첫 돌봄 말풍선이 떠 있는 동안 창이 모든 클릭을 받고 말풍선을 흔든다 (worklog/records/tutorial-overhaul/record.md, src/renderer/stage.ts)
+    // 튜토리얼 전수 개선 뒤: 첫 돌봄 말풍선이 떠 있는 동안 창이 모든 클릭을 받고 말풍선을 흔든다 (worklog/records/tutorial-overhaul/tutorial-overhaul.md, src/renderer/stage.ts)
     assert.equal(coach.onDim, "coach", "어두운 막 위도 창이 받는다 — 아래 창으로 통과하지 않는다");
     assert.deepEqual(coach.done, { id: "first-care", action: "done" });
     assert.equal(coach.skip.action, "skip");

@@ -17,6 +17,8 @@ release/
 /worklog/
 # Mac 쪽 작업 기록 — worklog/ 는 Windows PC 에 있다 (2026-09-30 사용자 결정)
 /worklog-mac/
+# Obsidian vault 설정 — 저장소 루트를 vault 로 연다. 그래프 필터는 개인 설정이다 (2026-10-07 사용자 결정)
+/.obsidian/
 
 # 관리자 CLI — 이 프로젝트 Supabase 운영용. 게임과 저장소 밖 (2026-09-27 사용자 "게임에선 아예 모르게")
 admin/

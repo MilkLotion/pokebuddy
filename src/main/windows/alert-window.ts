@@ -1,5 +1,5 @@
 // 알림 창 — OS 대화상자 대신 게임 디자인으로 멈춤·분실·저장 잠김·정지·업데이트를 묻는다. 문서는 src/renderer/alert.html
-// 설계는 worklog/records/alert-window/record.md. Figma 시안은 99 `시안 · 알림 창 (OS 대화상자 대체)` `1152:20447`
+// 설계는 worklog/records/alert-window/alert-window.md. Figma 시안은 99 `시안 · 알림 창 (OS 대화상자 대체)` `1152:20447`
 //
 // 테두리 없음 · 배경 투명 · 항상 위(무대 창·배너보다 위 screen-saver 층) · 작업 표시줄에 없음. 주 화면 가운데 위쪽 1/3 에 띄운다
 // 부를 때마다 창을 새로 만들고 답하면 부순다. 게임을 만들기 전(저장 잠김 창)에도 뜬다

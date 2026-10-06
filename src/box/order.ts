@@ -17,7 +17,7 @@ export function orderBox(boxes: BoxV3[], from: number, to: number): { ok: true }
   return { ok: true };
 }
 
-// ── 정렬 (worklog/records/game-runtime/record.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
+// ── 정렬 (worklog/records/game-runtime/game-runtime.md "박스 정렬·이동·이름 변경의 설계", Figma 05 `Box / Sort Open` 등) ──
 
 export type BoxSortKey = "dex" | "level" | "affinity" | "recent" | "name";
 const BOX_SORT_KEYS: readonly BoxSortKey[] = ["dex", "level", "affinity", "recent", "name"];

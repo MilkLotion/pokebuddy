@@ -1,7 +1,7 @@
 // cloud.json 을 읽고 쓰는 한 곳 — 클라우드 상태 읽기·쓰기, 계정 시드 읽기 (설계 design/40 1.4절, G21-08)
 // cloud.json 은 save.json 과 같은 폴더다(경로는 src/platform/paths.ts cloudFileOf). 형식은 cloud-state.ts(normalizeCloudState)
 //
-// 로컬 저장 격리 표시 처리 — 클라우드 상태를 읽을 때 한 번. 설계는 worklog/records/cloud-authority/record.md "P3 로컬 암호화"
+// 로컬 저장 격리 표시 처리 — 클라우드 상태를 읽을 때 한 번. 설계는 worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화"
 // 저장 파일(src/save/save-file.ts)·키 준비(src/save/key.ts)가 로컬 저장을 격리하면 <저장>.lost 에 격리 시각(ms)을 남긴다.
 // 여기서 cloud.json 의 syncedRev 를 -1 로 바꾼다 — 다음 맞추기(src/online/cloud.ts reconcile)가 rev 와 관계없이 서버 저장을 받는다.
 // 격리 뒤 새로 고른 첫 포켓몬 저장이 서버 저장을 덮지 않게 한다

@@ -1,6 +1,6 @@
 // 걷기 대체 그림 — PMD 그림이 없는 종(2026-10-02 기준 35종: 탄동·모으령 등)을 무대에 세운다. 초상 대체 그림(portrait-art.ts)보다 먼저다.
 //
-// 출처: rh-hideout/pokeemerald-expansion 의 따라다니기 그림 graphics/pokemon/<이름>/overworld.png (worklog/records/fallback-art/record.md)
+// 출처: rh-hideout/pokeemerald-expansion 의 따라다니기 그림 graphics/pokemon/<이름>/overworld.png (worklog/records/fallback-art/fallback-art.md)
 //   저장소에 라이선스가 없다 — 설치 파일에 넣지 않고 실행할 때 받아 캐시한다. 릴리스 태그로 고정한다(폴더 구조가 바뀐 적이 있다)
 // 시트: 가로로 정사각 칸 6개(칸 = 시트 높이, 32 또는 64). 팔레트 PNG 이고 팔레트 0번이 배경이다(투명 아님, 색은 파일마다 다르다)
 //   칸 0·1 아래(정면) · 2·3 위(뒤) · 4·5 왼쪽. 오른쪽은 4·5 를 좌우로 뒤집는다. 칸이 8개면 6·7 이 오른쪽이다

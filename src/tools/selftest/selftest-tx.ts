@@ -318,7 +318,7 @@ function seedBox(): SaveV3 {
   process.stdout.write("(13) 교체 실패 · 양쪽 모두 그대로  ok\n");
 }
 
-// (13b) 리전폼 진화 — 지도 하나를 쓴다. 돌은 남는다. 지도가 없으면 no-map 이고 저장을 쓰지 않는다 (worklog-mac/records/region-map/record.md)
+// (13b) 리전폼 진화 — 지도 하나를 쓴다. 돌은 남는다. 지도가 없으면 no-map 이고 저장을 쓰지 않는다 (worklog-mac/records/region-map/region-map.md)
 {
   const pika = (bag: Record<string, number>): SaveV3 => {
     const s = seed();

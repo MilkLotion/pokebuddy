@@ -43,7 +43,7 @@ export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
   const device: HTMLElement = root;
 
   // 창 높이 맞추기 — 그린 직후 한 번 알리고, 그 뒤 #device 높이가 바뀔 때마다 다시 알린다
-  // - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/record.md 6번)
+  // - 늦게 온 글꼴로 줄바꿈이 늘어도 창이 따라간다. 안 하면 아래가 잘린다 (worklog/records/features-0930/features-0930.md 6번)
   // - ResizeObserver 는 한 프레임에 한 번 부른다. 지난번과 같은 높이면 보내지 않는다
   // - #device 는 폭 고정·높이 내용 기준이다. 창 크기가 바뀌어도 #device 높이는 그대로라 다시 불리지 않는다
   let sentHeight = -1;

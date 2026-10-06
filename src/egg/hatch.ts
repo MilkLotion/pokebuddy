@@ -3,7 +3,7 @@
 // 결정 순서
 //   1. 알에 저장한 후보 범위에서 수집 난이도 가중치로 뽑는다. 1등급이 흔하고 5등급이 귀하다
 //   2. 이로치는 따로 같은 확률로 뽑는다
-// 알 행동 조건(쓰다듬기·노래로 결과를 바꾸는 규칙)은 2026-09-28 삭제했다 (worklog/records/game-runtime/record.md "알에서 진화형이 나옴")
+// 알 행동 조건(쓰다듬기·노래로 결과를 바꾸는 규칙)은 2026-09-28 삭제했다 (worklog/records/game-runtime/game-runtime.md "알에서 진화형이 나옴")
 // 무작위는 받아서 쓴다 — 자체 검사가 결과를 정할 수 있어야 한다.
 import type { DexOptions } from "../dex/data.js";
 import { rankOf } from "../dex/species.js";

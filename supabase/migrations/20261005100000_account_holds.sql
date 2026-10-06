@@ -1,4 +1,4 @@
--- 이용 정지 P4c — 거부 모드에서 저장이 거부된 계정은 모든 조작을 막는다 (worklog/records/cloud-authority/record.md "P4c", D35·D36)
+-- 이용 정지 P4c — 거부 모드에서 저장이 거부된 계정은 모든 조작을 막는다 (worklog/records/cloud-authority/cloud-authority.md "P4c", D35·D36)
 --   정지는 운영자가 위반 기록을 확인한 뒤 풀거나 그대로 둔다(관리자 CLI — admin_hold_set). 자동 말소는 하지 않는다
 --   막는 곳: 계정 도우미(cloud_private.require_account — 기기 연결·하트비트·받기·이관·시드), 교환 도우미(trade_private.require_uid —
 --   만들기·참가·제안·확정·나가기·반영), 편지 받기(claim_mail), 올리기(upload-save 함수가 문맥의 held 를 본다)

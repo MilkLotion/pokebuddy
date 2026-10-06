@@ -109,7 +109,7 @@ export interface PartySlotV3 {
   unlockBy?: SlotUnlockBy; // state 가 locked 일 때 어떻게 여는가
 }
 
-// 파티 프리셋 (2026-10-02) — 규칙은 worklog/records/party-preset/record.md "확정 설계".
+// 파티 프리셋 (2026-10-02) — 규칙은 worklog/records/party-preset/party-preset.md "확정 설계".
 // 저장 형식 번호는 올리지 않는다. 새 칸은 없으면 읽을 때 채운다 (src/save/normalize.ts normalizeSave)
 //   - 개체는 한 프리셋에만 든다. 프리셋에 든 개체는 박스에 없다
 //   - 칸의 잠금은 프리셋마다 따로다. 적용은 칸을 잠금째 맞바꾼다 (src/party/presets.ts applyPreset)

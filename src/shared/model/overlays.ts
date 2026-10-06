@@ -58,7 +58,7 @@ export interface MenuSubView {
 }
 
 // 알림 창 — OS 대화상자 대신 띄우는 멈춤·분실·저장 잠김·정지·업데이트 창
-// 메인 src/main/alert-window.ts, 렌더러 src/renderer/alert.ts. 설계는 worklog/records/alert-window/record.md
+// 메인 src/main/alert-window.ts, 렌더러 src/renderer/alert.ts. 설계는 worklog/records/alert-window/alert-window.md
 // buttons 는 보이는 순서(왼쪽 보조 → 오른쪽 주 단추)다. index 는 부른 쪽의 단추 번호다
 export interface AlertView {
   title: string;

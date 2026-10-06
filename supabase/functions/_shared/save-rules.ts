@@ -1,6 +1,6 @@
 // 생성 파일 — src/verify/save-rules.ts 복사본. 고치지 말고 npm run verify:build 를 돌린다
 // 서버 저장 검증 규칙 v1 — 직전 서버 저장과 새 저장을 비교해 정상 플레이로 불가능한 변화를 찾는다.
-// 설계는 worklog/records/cloud-authority/record.md "P4 서버 검증", 수치 근거는 docs/specs/balance.md "서버 검증 상한"
+// 설계는 worklog/records/cloud-authority/cloud-authority.md "P4 서버 검증", 수치 근거는 docs/specs/balance.md "서버 검증 상한"
 //
 // 이 파일은 import 가 없다 — src/tools/data/build-verify.ts 가 그대로 supabase/functions/_shared/save-rules.ts 로 복사한다(Deno).
 // node 자체 검사(src/tools/selftest/selftest-verify.ts)도 이 파일을 그대로 부른다

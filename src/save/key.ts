@@ -1,4 +1,4 @@
-// 저장 키 준비 — 앱이 켜질 때 게임을 만들기 전에 한 번. 설계는 worklog/records/cloud-authority/record.md "P3 로컬 암호화"
+// 저장 키 준비 — 앱이 켜질 때 게임을 만들기 전에 한 번. 설계는 worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화"
 //
 // 키는 설치마다 무작위 32바이트다. OS 키 저장소(Electron safeStorage — Windows DPAPI·mac 키체인)로 감싸
 // <저장 폴더>/save.key 에 둔다: { "v": 1, "key": "<감싼 값 base64>" }

@@ -6,7 +6,7 @@ import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf } from "./args.js";
 
 // ── 친구 교환 ───────────────────────────────────────────────────────────────────
-// 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/exchange.ts, worklog/records/trade/record.md)
+// 서버 호출은 메인 프로세스가 한다. 여기서는 로컬 저장만 바꾼다 (src/trade/exchange.ts, worklog/records/trade/trade.md)
 
 const strOf = (args: unknown, key: string): string | null => {
   const v = isArgsRecord(args) ? args[key] : undefined;

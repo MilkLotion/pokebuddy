@@ -1,5 +1,5 @@
 // 친구 교환 흐름 — 서버 호출(./trade-net.ts)과 로컬 거래(trade.lock·unlock·apply)를 잇는다.
-// 설계는 worklog/records/trade/record.md "전체 구조", "로컬 저장과 복구", "실시간 알림"
+// 설계는 worklog/records/trade/trade.md "전체 구조", "로컬 저장과 복구", "실시간 알림"
 //
 // Electron 을 모른다. 거래 실행과 저장 읽기를 받아서 쓴다. 화면은 onView 로 받은 보기만 그린다.
 //   확정    로컬 잠금(trade.lock) → 서버 확정(set_ready). 서버가 거절하면 잠금을 푼다

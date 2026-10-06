@@ -1,4 +1,4 @@
-// 종 데이터의 지문 — 교환하는 두 앱의 종 목록이 같은지 본다. worklog/records/trade/record.md "버전 값"
+// 종 데이터의 지문 — 교환하는 두 앱의 종 목록이 같은지 본다. worklog/records/trade/trade.md "버전 값"
 import { createHash } from "node:crypto";
 import type { DexOptions } from "../dex/data.js";
 import { speciesSlugs } from "../dex/species.js";

@@ -1,6 +1,6 @@
 // 설정창의 가방 기기 창 연결 — 고른 도구, 사용·판매 갈래, 대상·수량, 결과·실패 (P10s)
 // 가방 칸을 누르면 관리 창 옆에 가방 기기 창이 뜬다 (src/main/bag-window.ts, Figma 05 `Bag / Device / Use`·`Sell`·`Evolution`).
-// 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/record.md).
+// 상점 기기 창과 같은 틀이다. 격자 아래 사용 판은 없앴다 (2026-10-01 사용자 결정 C안, worklog/records/bag-device/bag-device.md).
 // 도구는 파티 개체에게만 쓴다 ("파티를 기준으로만 사용할 수 있게 하자"). 여기서는 고른 값만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-bag.ts). 단추는 여기로 돌아와 명령으로 처리한다
 import type { BagDeviceAction, BagDeviceInput } from "../../shared/model/devices.js";
 import type { BagItemView } from "../../shared/model/snapshot.js";

@@ -1,4 +1,4 @@
-// 파티 프리셋 — 규칙은 worklog/records/party-preset/record.md "확정 설계". 순수 함수이며 저장을 쓰지 않는다.
+// 파티 프리셋 — 규칙은 worklog/records/party-preset/party-preset.md "확정 설계". 순수 함수이며 저장을 쓰지 않는다.
 //
 // 세 가지 규칙만 지킨다
 //   1. 적용한 프리셋의 칸은 party.slots 다. 나머지 프리셋의 칸은 party.presets 에 번호 순으로 둔다

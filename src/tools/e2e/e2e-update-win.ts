@@ -1,5 +1,5 @@
 // 앱 업데이트 E2E — 시험용 설치본 N 을 조용히 설치해 켜고, 로컬 HTTP 서버가 내놓는 N+1 로 업데이트되는지 본다.
-// 설계: worklog/records/app-update/record.md "검사 계획" U-03
+// 설계: worklog/records/app-update/app-update.md "검사 계획" U-03
 //   준비: `npm run build`. 설치 파일 두 개를 만드느라 몇 분 걸린다
 //   실행: node dist/tools/e2e/e2e-update-win.js
 //   시험 빌드는 다른 appId·이름(pokebuddy-update-test)이라 사용자의 설치본과 섞이지 않는다. 바로 가기를 만들지 않고

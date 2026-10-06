@@ -14,7 +14,7 @@ Public (`docs/`, committed):
 
 Local only (`worklog/`, git-ignored):
 - `worklog/progress.md`: current stage, next action, and validation status.
-- `worklog/records/<task>/record.md`: design, work, review, feedback, and revision in one record.
+- `worklog/records/<task>/<task>.md`: design, work, review, feedback, and revision in one record. Name every worklog file uniquely in the repository, so the Obsidian graph shows distinct names. Use `<task>-plan.md`, `<task>-review.md`, and similar names for split records. Do not use `README.md` or `record.md` in `worklog/`.
 - `worklog/records/<task>/evidence/`: observations, JSON, and screenshots for that task.
 - `worklog/history/YYYY-MM.md`: concise dated record of completed work cycles.
 

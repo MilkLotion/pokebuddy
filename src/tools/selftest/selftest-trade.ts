@@ -1,7 +1,7 @@
 // 친구 교환 로컬 규칙 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-trade.js
 //
 // 순수 함수(src/trade/exchange.ts)와 거래 명령(trade.lock · trade.unlock · trade.apply)을 본다. 서버와 파일은 쓰지 않는다.
-// 설계는 worklog/records/trade/record.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
+// 설계는 worklog/records/trade/trade.md "교환 규칙", "개체에서 옮기는 값", "검사", "로컬 저장과 복구"
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import path from "node:path";

@@ -1,5 +1,5 @@
 // 온라인 기능이 함께 쓰는 Supabase 클라이언트 — 교환·계정·클라우드 저장이 같은 세션을 본다.
-// 설계는 worklog/records/trade/record.md "로그인·클라우드 저장 구현 계획" P-03
+// 설계는 worklog/records/trade/trade.md "로그인·클라우드 저장 구현 계획" P-03
 //
 // Electron 을 모른다. 세션 저장소를 받아서 쓴다 — 메인은 safeStorage 파일을, 자체 검사는 메모리를 넘긴다
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";

@@ -1,4 +1,4 @@
-// 저장 파일 암호화 — AES-256-GCM. 설계는 worklog/records/cloud-authority/record.md "P3 로컬 암호화"
+// 저장 파일 암호화 — AES-256-GCM. 설계는 worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화"
 //
 // 파일 형식: "PBS1" 머리 4바이트 + IV 12바이트 + 태그 16바이트 + 암호문
 //   한 바이트라도 고치면 태그 검사가 실패한다 — 부르는 쪽은 파손으로 다룬다

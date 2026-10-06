@@ -105,13 +105,13 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
 }
 
 // 튜토리얼이 고르게 할 항목만 남기고 나머지 누르는 항목을 흐리게(사용 안 함) 둔다. 이름·상태 줄은 그대로다.
-// 첫 돌봄 2/2 가 쓴다 (Figma `579:17015`, worklog/records/game-runtime/record.md "첫 돌봄 튜토리얼의 피드백")
+// 첫 돌봄 2/2 가 쓴다 (Figma `579:17015`, worklog/records/game-runtime/game-runtime.md "첫 돌봄 튜토리얼의 피드백")
 export function lockExcept(template: MenuItemConstructorOptions[], keep: readonly string[]): MenuItemConstructorOptions[] {
   return template.map((m) => ((m.click || m.submenu) && !keep.includes(String(m.label)) ? { ...m, enabled: false } : m));
 }
 
 // 트레이 — 잠시 숨기기 / 클릭 통과 / 종료. 설정창 열기는 trayMenuOf 가 맨 위에 붙인다.
-// 이름 줄과 설정 파일 열기는 뺐다 — 관리 창이 그 일을 한다 (worklog/records/game-runtime/record.md "트레이 메뉴와 표시 설정의 설계")
+// 이름 줄과 설정 파일 열기는 뺐다 — 관리 창이 그 일을 한다 (worklog/records/game-runtime/game-runtime.md "트레이 메뉴와 표시 설정의 설계")
 export function trayMenu(model: TrayMenuModel, act: MenuActions): MenuItemConstructorOptions[] {
   return [
     { label: t(model.hidden ? "menu.show" : "menu.hide"), click: () => act.toggleHidden() },

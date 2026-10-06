@@ -18,7 +18,7 @@
 // 개체 상세 튜토리얼(detail, 4단계)은 대기열 밖이다 — 화면이 상세를 처음 열 때 띄우고 done·skip 만 여기 적는다.
 // 화면을 처음 열 때 띄우는 것(area·dex·trade·user·box)도 대기열 밖이다 — SCREEN_TUTORIALS
 //
-// 새 기능 튜토리얼(2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", Figma 05 `930:18248`, worklog/records/tutorial-overhaul/record.md)
+// 새 기능 튜토리얼(2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", Figma 05 `930:18248`, worklog/records/tutorial-overhaul/tutorial-overhaul.md)
 //   성장(3단계) → 포인트는 첫 돌봄 뒤에 차례로 선다. 파티와 박스·가방·진화는 그 기능을 처음 쓸 수 있게 될 때 줄에 든다.
 //   파티 프리셋(3단계)은 파티 튜토리얼을 끝낸 뒤 개체가 3마리 이상이면 줄에 든다 (2026-10-02).
 //   목표 행동을 이미 했는지(already)는 보지 않는다 — 설명을 읽거나 닫아야 끝난다

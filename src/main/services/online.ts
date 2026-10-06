@@ -1,5 +1,5 @@
 // 온라인 기능의 메인 쪽 입구 — 공유 Supabase 클라이언트, 계정, 클라우드 저장, GitHub 로그인을 묶는다.
-// 설계는 worklog/records/trade/record.md "계정과 로그인", "클라우드 저장", "로그인·클라우드 저장 구현 계획"
+// 설계는 worklog/records/trade/trade.md "계정과 로그인", "클라우드 저장", "로그인·클라우드 저장 구현 계획"
 // 두 PC 규칙(밀려남·확인·잠듦·released)은 worklog-mac/records/cloud-authority/design-p1.md 2·3절
 //
 // 교환(src/main/services/trade.ts)도 이 클라이언트를 쓴다 — 로그인하면 교환 채널도 그 계정으로 연다.

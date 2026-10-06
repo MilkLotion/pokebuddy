@@ -1,8 +1,8 @@
 // 두 PC 규칙의 멈춤 창 — 밀려남 안내·넘겨받기 확인·넘겨받기 막힘 (worklog-mac/records/cloud-authority/design-p1.md 3·5절)
 // 저장 계정 분실 창(D29) — 게임은 멈추지 않는다 (worklog-mac/records/cloud-authority/design-p2.md 5절·15절 G-a·G-c)
-// 저장 잠김 창 — 저장 키를 쓰지 못해 암호화 저장을 열 수 없다 (worklog/records/cloud-authority/record.md "P3 로컬 암호화")
+// 저장 잠김 창 — 저장 키를 쓰지 못해 암호화 저장을 열 수 없다 (worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화")
 // 이용 정지 창 — 서버가 계정을 정지했다 (같은 기록 "P4c")
-// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다 (worklog/records/app-update/record.md)
+// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다 (worklog/records/app-update/app-update.md)
 // 앱이 게임을 멈춘 뒤 띄운다. 창의 답을 받아 무엇을 할지는 앱(src/main/app.ts)이 정한다.
 //
 // 이 파일은 창마다 띄우는 때의 규칙(저절로 닫힘·밖에서 닫기)과 고른 단추를 답으로 읽는 규칙만 둔다.
@@ -34,7 +34,7 @@ export function askHeld(): Promise<HaltAnswer> {
   return askGoStop(heldAlert());
 }
 
-// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다(worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
+// 업데이트 필요 창 — 서버가 이 앱 버전을 거절했고 새 버전이 준비됐다(worklog/records/app-update/app-update.md "업데이트 필요 때 바로 받기")
 //   Esc 는 나중에 — 게임은 멈추지 않고, 설정의 다시 시작·끌 때 적용이 남는다. 알림 창은 단추에 처음 포커스를 두지 않는다
 export async function askUpdateRequired(version: string, manual: boolean): Promise<boolean> {
   return (await askChoice(updateRequiredAlert(version, manual))) === 1;

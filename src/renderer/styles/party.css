@@ -1,5 +1,5 @@
 /* party.html 의 창 CSS — 공용 CSS(tokens 등) 다음에 읽는다 */
-/* 파티 기기 — 교체 화면. Figma 05 `Party / Swap · Open` `1248:2567` (worklog/records/party-preset/record.md).
+/* 파티 기기 — 교체 화면. Figma 05 `Party / Swap · Open` `1248:2567` (worklog/records/party-preset/party-preset.md).
    틀은 가방·상점 기기 창과 같다. 기기의 회청색은 그림처럼 정해진 색이라 관리 창 변수에 묶지 않는다.
    도감(빨강)·개체 상세(청록)·상점(호박색)·가방(파랑)과 가른다 */
 :root {

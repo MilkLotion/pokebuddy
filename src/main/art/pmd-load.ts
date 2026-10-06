@@ -48,7 +48,7 @@ export async function loadPmd(config: PmdConfig, PATHS: PmdPaths): Promise<PmdAr
   if (!d) return null; // 모르는 이름
 
   // 저작자 표시 — 받아두되 실패해도 그림은 보여준다.
-  // zip 과 동시에 받는다 — 차례로 받으면 처음 나오는 종이 0.2~0.3초 더 늦게 뜬다 (worklog/records/response-latency/record.md)
+  // zip 과 동시에 받는다 — 차례로 받으면 처음 나오는 종이 0.2~0.3초 더 늦게 뜬다 (worklog/records/response-latency/response-latency.md)
   const credFile = path.join(PATHS.pmd, `${d}.credits.txt`);
   let credText = readCache(credFile);
   const credJob = credText ? null : fetchCredits(d, credFile);

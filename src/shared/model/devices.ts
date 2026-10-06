@@ -5,7 +5,7 @@ import type { PetView } from "./snapshot.js";
 import type { SlotState } from "../save-v3.js";
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
-// 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/record.md)
+// 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/play-bugs.md)
 export interface DexDeviceView {
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다

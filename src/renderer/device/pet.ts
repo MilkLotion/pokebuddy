@@ -103,7 +103,7 @@ document.addEventListener("pointerdown", (e) => {
 });
 
 // 개체 상세 튜토리얼 — 파티 개체를 처음 열면 위에서 아래로 다섯 곳을 차례로 밝힌다 (Figma 05 `914:25889` ~ `914:26376`, 옛 관리 창 상세에서 옮김).
-// 입력 규칙은 관리 창과 같다 — 막·구멍을 누르면 말풍선만 흔든다. 다음·확인·✕ 만 받는다 (worklog/records/tutorial-overhaul/record.md)
+// 입력 규칙은 관리 창과 같다 — 막·구멍을 누르면 말풍선만 흔든다. 다음·확인·✕ 만 받는다 (worklog/records/tutorial-overhaul/tutorial-overhaul.md)
 const DETAIL_STEPS = [
   { tut: "detail-ball", title: "볼을 눌러 넣고 꺼낼 수 있어요", body: "볼에 넣어도 파티에 남아 계속 자라요." },
   { tut: "detail-care", title: "여기서도 돌볼 수 있어요", body: "바탕화면 우클릭 메뉴의 밥 주기·놀아주기와 같아요." },
@@ -120,7 +120,7 @@ let coachNow: CoachLayer | null = null; // coachEl 의 초점 규칙(말풍선�
 let lastView: PetDeviceView | null = null;
 let coachSent = false; // 메인에 알린 코치마크 상태 — 바뀔 때만 보낸다
 
-// 튜토리얼 동안 설정창의 창 단추 자리도 함께 어둡게 한다 — 메인이 설정창에 칠한다 (94 1-1, worklog/records/game-runtime/record.md 706·1143)
+// 튜토리얼 동안 설정창의 창 단추 자리도 함께 어둡게 한다 — 메인이 설정창에 칠한다 (94 1-1, worklog/records/game-runtime/game-runtime.md 706·1143)
 function drawCoach(): void {
   try {
     drawCoachNow();

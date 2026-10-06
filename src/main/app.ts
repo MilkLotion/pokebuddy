@@ -1,6 +1,6 @@
 // 펫 오버레이 메인 프로세스 — 기동 · 단일 인스턴스 · 종료 순서. 얇게 — 배선만 (옛 main.js 1398줄을 역할별 파일로 나눈 뒤 남은 것)
 // 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (terminal/front).
-// 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/record.md "세션·창 모드 삭제")
+// 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/game-runtime.md "세션·창 모드 삭제")
 // 설정·경로는 src/platform/paths.ts·user-config.ts 에서 읽음. 육성과 해금은 writer만 갱신
 import fs from "node:fs";
 import path from "node:path";
@@ -487,7 +487,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
     portrait: (look) => pics.buffer(look.endsWith(":shiny") ? { slug: look.slice(0, -6), shiny: true } : { slug: look, shiny: false }),
   });
   // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
-  // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/record.md)
+  // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/response-latency.md)
   const prefetchOwned = (): void => art.prefetch((saveSource.save()?.pets ?? []).map(appearanceOf));
   saveSource.onChange(prefetchOwned);
   prefetchOwned();

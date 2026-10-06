@@ -1,7 +1,7 @@
 // 설정창의 우편함 — 편지 목록과 편지 한 통, 선물 받기 단추와 헤더 봉투 단추·안 읽음 점 (P10l)
 // Figma 05 Screens 섹션 `10 우편함` `932:22859` — 목록 `908:5779` · 편지 로그인 전 `932:22703` · 받기 전 `908:6022` · 받은 뒤(일반 편지) `908:6232`.
 // 편지는 받은 뒤에도 남는다. 선물은 로그인해야 받는다. 받기 단추와 상태 글자는 편지 바닥 단추 줄에 둔다. 서버 호출과 저장은 메인이 한다(src/online/mail-inbox.ts) — 여기서는 편지 id 만 보낸다
-// (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/record.md)
+// (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행", worklog/records/post-box/post-box.md)
 import type { MailGiftView, MailLetterView, MailScreen } from "../../shared/model/mail.js";
 import { numberText } from "../../shared/count-text.js";
 import { failTextOf } from "../../shared/fail-text.js";
@@ -144,7 +144,7 @@ export function drawMail(): void {
 }
 
 // 선물 카드 — 제목(`선물 N`, 받은 뒤 `받은 선물`)과 2열 선물 줄. 받기 전과 받은 뒤의 높이가 같다. 받은 뒤는 선물 줄을 흐리게 둔다
-// (2026-10-03 사용자 "이정도면 괜찮은거같은데", "받으면 상품을 disable처럼 흐리게", worklog/records/post-box/record.md)
+// (2026-10-03 사용자 "이정도면 괜찮은거같은데", "받으면 상품을 disable처럼 흐리게", worklog/records/post-box/post-box.md)
 function giftCard(l: MailLetterView): HTMLElement {
   const card = el("div", l.applied ? "gift-card done" : "gift-card");
   card.appendChild(el("strong", "gift-head", l.applied ? "받은 선물" : `선물 ${l.gifts.length}`));

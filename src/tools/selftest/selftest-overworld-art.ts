@@ -1,7 +1,7 @@
 // 걷기 대체 그림 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-overworld-art.js (npm run selftest 가 차례로 돈다)
 //
 // 테스트 프레임워크 없이 assert 만. 네트워크·Electron 없이 시험이 만든 팔레트 PNG 로 본다.
-// 확인하는 것 (worklog/records/fallback-art/record.md 수용 조건)
+// 확인하는 것 (worklog/records/fallback-art/fallback-art.md 수용 조건)
 //   (1) 6칸 팔레트 PNG → 8행 × 2열 시트 둘(Idle·Walk). 팔레트 0번 점은 투명이다
 //   (2) 행마다 쓰는 칸 — 0 아래 · 4 위 · 5~7 왼쪽 · 1~3 왼쪽 칸의 좌우 반전. 8칸 PNG 는 1~3 이 오른쪽 전용 칸이다
 //   (3) Idle 은 첫 칸을 1도트 올려 번갈아 그린다

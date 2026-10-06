@@ -1,5 +1,5 @@
 // 우편함의 받은편지 — 서버 편지 목록과 받기(supabase/migrations/20260929100000_mail.sql)를 로컬 저장(src/mail/gifts.ts)에 잇는다.
-// 설계는 worklog/records/post-box/record.md "구현 설계" (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행")
+// 설계는 worklog/records/post-box/post-box.md "구현 설계" (2026-09-28 사용자 "a안으로 진행", 2026-09-29 "개발진행")
 // 우편함의 코드 이름은 mail 이다 — CLI 명령 통로 mailbox 와 다르다 (docs/terms.md)
 //
 // Electron 을 모른다 — 서버 호출(rpc)과 실행기(run)를 받는다. 앱은 공유 Supabase 클라이언트를, 자체 검사는 가짜를 넘긴다.

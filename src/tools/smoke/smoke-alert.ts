@@ -4,7 +4,7 @@
 // 확인: 문구·단추 순서(왼쪽 보조 → 오른쪽 주)·항상 위·창 크기, 단추 답, Esc 는 취소, 밖에서 닫기·시간 초과는 closed,
 //       보인 뒤 렌더러가 죽으면 취소, 문서를 읽지 못하면 null(부른 쪽이 OS 창으로). 캡처 폴더를 주면 창마다 PNG 를 남긴다
 // 못 보는 것: OS 창 대비 경로, 실제 무대 창 위 여부, mac 포커스 — 실기로 본다
-// 설계는 worklog/records/alert-window/record.md
+// 설계는 worklog/records/alert-window/alert-window.md
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";

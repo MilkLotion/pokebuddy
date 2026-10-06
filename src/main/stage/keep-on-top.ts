@@ -10,7 +10,7 @@
 // 전체 화면 창이 앞에 와 작업 표시줄이 내려간 동안 이 주기가 매번 무대를 같이 끌어내렸다 (2026-10-02 사용자 보고 "아직도 … 갑자기 다른창들에 가려지는")
 // 우리 앱의 다른 항상 위 창(트레이 메뉴·알림 띠·멈춤 창 등)은 무대 뒤로 깔리지 않게 무대 다음에 다시 앞으로 올린다.
 // mac 은 창 수준(level)이 제대로 층을 나눠 이런 일이 없다 — 돌리지 않는다
-// 기록: worklog/records/stage-visibility/record.md
+// 기록: worklog/records/stage-visibility/stage-visibility.md
 import { BrowserWindow } from "electron";
 
 const KEEP_ON_TOP_MS = 1000;

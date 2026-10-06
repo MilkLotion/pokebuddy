@@ -37,7 +37,7 @@ export function createUpdateService(deps: UpdateDeps): UpdateService {
   let checked = false;
   let asked = false;
 
-  // 업데이트 필요를 받았거나 그 뒤 업데이트 상태가 바뀌었다 — 확인·창 띄우기 (worklog/records/app-update/record.md "업데이트 필요 때 바로 받기")
+  // 업데이트 필요를 받았거나 그 뒤 업데이트 상태가 바뀌었다 — 확인·창 띄우기 (worklog/records/app-update/app-update.md "업데이트 필요 때 바로 받기")
   //   창은 게임을 멈추지 않는다. 나중에를 고르면 설정의 다시 시작·끌 때 적용이 남는다
   function urgentUpdate(): void {
     if (!updater) return;

@@ -1,5 +1,5 @@
 -- 아이디 로그인 검사 — npx supabase test db
--- docs/work/trade/record.md "계정과 로그인 > 아이디와 비밀번호"
+-- docs/work/trade/trade.md "계정과 로그인 > 아이디와 비밀번호"
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();

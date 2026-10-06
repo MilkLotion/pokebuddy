@@ -1,7 +1,7 @@
 // 설정창의 설정·사용자 모달 — 일반·화면 설정, 계정·연결 탭의 틀 (P10o). 연결 탭 본문은 ./agents.ts, 가이드북은 ./guide.ts
 // 설정 모달 탭 — 일반·화면 두 칸. 사용자 모달 탭 — 계정·연결 두 칸 (2026-09-28 사용자 "설정모달에서 계정은 빼고, 설정옆에 유저아이콘 추가 후 해당 메뉴에서 계정,연결 설정").
 // 두 모달은 같은 틀이다. 탭을 바꿔도 모달 크기(560×500)가 같다.
-// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `User / Connect` `1079:1891` (worklog/records/trade/record.md "계정 탭 구조로 수정").
+// Figma 05 `Settings / General` `633:18937` · `Settings / Display` `633:19017` · `User / Connect` `1079:1891` (worklog/records/trade/trade.md "계정 탭 구조로 수정").
 // 계정 탭의 내용은 교환 세션이 로그인과 함께 채운다 — 여기서는 자리만 둔다
 import type { ScreenView } from "../../shared/model/overlays.js";
 import { buttonEl, el } from "../ui/dom.js";
@@ -178,7 +178,7 @@ function drawDisplay(scroll: HTMLElement): void {
     ghost.dataset.tut = "set-ghost";
     scroll.append(shown, ghost);
   }
-  // 놀이공간 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면, worklog/records/multi-display/record.md)
+  // 놀이공간 — 모든 화면 · 한 화면 · 영역 지정 (2026-09-28 여러 화면, worklog/records/multi-display/multi-display.md)
   const area = [
     { id: "all", label: "모든 화면" },
     { id: "screen", label: "한 화면" },
@@ -245,7 +245,7 @@ export function syncIdentify(): void {
   api.identifyScreens(on);
 }
 
-// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/record.md "계정과 로그인")
+// 계정 — 로그인·계정 화면은 교환 세션이 채운다 (worklog/records/trade/trade.md "계정과 로그인")
 
 // 설정·사용자 모달의 틀 — 제목과 오른쪽 위 닫기, 두 칸 전환, 스크롤 본문. 바닥과 덧창은 모달마다 붙인다
 function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {

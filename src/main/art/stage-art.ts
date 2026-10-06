@@ -77,7 +77,7 @@ type PmdSource = { slug: string; spritePath?: string };
 
 // look → PMD 묶음을 찾는 값들 — 앞에서부터 받아 보고 되는 것을 쓴다. 이로치는 도감 번호 아래 이로치 경로다. 도감 번호를 모르는 이로치는 빈 목록.
 // 리전폼(src/dex/regional.ts)은 폼 폴더(`0026/0001`)가 먼저다. 이로치는 `<폼>/0001` → 폼 보통 → 기본형 이로치, 보통은 폼 → 기본형 순서다.
-// 폼 그림이 없는 리전폼(가라르 메더)은 기본형 그림으로 무대에 나온다 (worklog-mac/records/region-map/design.md B.3)
+// 폼 그림이 없는 리전폼(가라르 메더)은 기본형 그림으로 무대에 나온다 (worklog-mac/records/region-map/region-map-design.md B.3)
 export function pmdSources(look: string): PmdSource[] {
   const shiny = look.endsWith(":shiny");
   const slug = shiny ? look.slice(0, -6) : look;

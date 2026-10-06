@@ -2,7 +2,7 @@
 //
 // 테스트 프레임워크 없이 assert 만. 방식 정규화(옛 full 이전), 설정 명령, 사는 화면 저장, 화면 식별 대체, 무대 창 목록,
 // 개체 배분, 무대 묶음(가짜 창·가짜 무대)의 배분·다른 화면에 놓기·화면 빠짐을 본다.
-// 설계는 worklog/records/multi-display/record.md. 끝에 "통과" 한 줄. 실패하면 종료 코드 1
+// 설계는 worklog/records/multi-display/multi-display.md. 끝에 "통과" 한 줄. 실패하면 종료 코드 1
 import assert from "node:assert/strict";
 import { assignScreens, playLanes, type PlayLane } from "../../main/stage/layout";
 import { findScreen, screenOrder, type ScreenInfo } from "../../main/windows/screens";

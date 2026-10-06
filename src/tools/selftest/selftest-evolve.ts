@@ -401,7 +401,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(15) 성별 조건  ok\n");
 }
 
-// (16) 리전폼 (data/regional.json) — 지도 간선은 지도 하나를 쓴다. 돌 간선은 지도가 돌을 대신한다 (worklog-mac/records/region-map/record.md 2차 결정, "지도 1개 소비로 변경")
+// (16) 리전폼 (data/regional.json) — 지도 간선은 지도 하나를 쓴다. 돌 간선은 지도가 돌을 대신한다 (worklog-mac/records/region-map/region-map.md 2차 결정, "지도 1개 소비로 변경")
 {
   // 피카츄 + 천둥의돌 + 지도 → 라이츄와 알로라 라이츄 둘 다 후보. 고르지 않으면 need-choice
   const pika = seed({ species: "pikachu" }, { "thunder-stone": 1, "region-map": 1 });

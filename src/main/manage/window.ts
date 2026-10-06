@@ -73,7 +73,7 @@ export interface Manage {
 
 export function createManage(deps: ManageDeps): Manage {
   // 창 단추 자리를 어둡게 하는 원천 — 하나라도 켜져 있으면 어둡다. 어느 창의 튜토리얼이든 떠 있는 동안 함께 어둡게 한다
-  // (94 1-1, worklog/records/game-runtime/record.md 706·1143 "창 단추 자리도 함께 어둡게 한다")
+  // (94 1-1, worklog/records/game-runtime/game-runtime.md 706·1143 "창 단추 자리도 함께 어둡게 한다")
   //   modal  설정창의 모달 가림막과 설정창 튜토리얼 (manage:dim)
   //   pet    파티 상세 기기 창의 튜토리얼 (petdev:coach)
   //   stage  바탕화면 튜토리얼 — 첫 돌봄·놀이공간 (setStageCoachDim)

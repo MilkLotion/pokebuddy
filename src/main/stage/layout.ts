@@ -31,7 +31,7 @@ export const STAGE_RULES = {
 };
 
 // ── 여러 화면 (2026-09-28) ─────────────────────────────────────────────────────
-// 놀이공간 방식 — 모든 화면(화면마다 무대 창 하나) · 한 화면(고른 화면) · 영역 지정(그린 영역). 설계는 worklog/records/multi-display/record.md
+// 놀이공간 방식 — 모든 화면(화면마다 무대 창 하나) · 한 화면(고른 화면) · 영역 지정(그린 영역). 설계는 worklog/records/multi-display/multi-display.md
 
 // 무대 창 하나 — key 는 화면 id. target 은 놀이공간(화면 좌표), rect 는 무대 창 사각형(= target ∩ 화면)
 export interface PlayLane {

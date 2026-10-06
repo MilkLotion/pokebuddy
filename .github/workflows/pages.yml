@@ -1,4 +1,4 @@
-# 친구 교환 링크 페이지 배포 — site/ 만 GitHub Pages 에 올린다. 액션은 커밋 SHA 로 고정한다(태그가 옮겨져도 바뀌지 않게) (worklog/records/trade/record.md "링크")
+# 친구 교환 링크 페이지 배포 — site/ 만 GitHub Pages 에 올린다. 액션은 커밋 SHA 로 고정한다(태그가 옮겨져도 바뀌지 않게) (worklog/records/trade/trade.md "링크")
 name: pages
 
 on:

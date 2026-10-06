@@ -1,4 +1,4 @@
--- 서버 저장 검증 P4a — 올리기는 Edge Function upload-save 를 거친다 (worklog/records/cloud-authority/record.md "P4 서버 검증")
+-- 서버 저장 검증 P4a — 올리기는 Edge Function upload-save 를 거친다 (worklog/records/cloud-authority/cloud-authority.md "P4 서버 검증")
 --   앱은 upload_save RPC 를 더 부르지 않는다. 함수가 직전 서버 저장과 새 저장을 비교(supabase/functions/_shared/save-rules.ts)한 뒤
 --   service_role 전용 accept_save 로 쓴다. rev CAS·활성 기기·교환 원장 검사는 지금처럼 DB 함수 안에 있다(검수 F9)
 --   Δt 는 서버 시각이다 — last_accepted_at(마지막으로 받은 시각)부터. 클라이언트 시계는 믿지 않는다(검수 F5)

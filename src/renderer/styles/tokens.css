@@ -1,6 +1,6 @@
 /* 토큰과 글꼴 — 창 문서 13개가 맨 먼저 읽는다. 창 CSS 가 뒤에서 같은 변수를 덮을 수 있다.
    글꼴은 Galmuri (SIL OFL 1.1, assets/fonts/OFL.txt). 도트 글꼴이라 정해진 크기에서만 선명하다.
-   Galmuri11 은 12·24px, Galmuri14 는 15px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/record.md)
+   Galmuri11 은 12·24px, Galmuri14 는 15px, Galmuri9 는 10px 로만 쓴다 (worklog/records/ui-pixel-style/ui-pixel-style.md)
    글꼴 경로는 이 파일(src/renderer/styles/) 기준이다 */
 @font-face {
   font-family: "Galmuri11";

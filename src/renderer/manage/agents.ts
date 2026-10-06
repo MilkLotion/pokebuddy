@@ -11,7 +11,7 @@ import { shortAgoText } from "./account.js";
 // 연결 탭 상태 — 처음 열 때 읽고 그다음부터 들고 있는다. agentRows 는 튜토리얼(사용자 단계)이 읽는다
 export let agentRows: AgentRow[] | null = null;
 let agentPlatform = ""; // 연결 탭의 Windows 안내를 가른다 — 에이전트 응답이 싣는다
-// 연결 점검 (worklog/records/hook-check/record.md) — Node.js(undefined 면 아직 모름), CLI 별 점검 결과, 점검 중인 CLI
+// 연결 점검 (worklog/records/hook-check/hook-check.md) — Node.js(undefined 면 아직 모름), CLI 별 점검 결과, 점검 중인 CLI
 let agentNode: AgentReply["node"] | undefined;
 const agentChecks = new Map<string, { ok: boolean; text: string; at: number }>();
 const agentFails = new Map<string, string>(); // 연결·해제·다시 확인 실패 — 그 줄의 상태 글자로 보인다(경고 줄을 끼우지 않는다)

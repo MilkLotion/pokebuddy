@@ -1,4 +1,4 @@
-// 해금 사슬 도달 검사 — 모든 종이 실제로 얻어질 수 있는지 규칙을 따라가며 넓힌다 (worklog/records/s5-design-system-v2/feedback.md SR-06)
+// 해금 사슬 도달 검사 — 모든 종이 실제로 얻어질 수 있는지 규칙을 따라가며 넓힌다 (worklog/records/s5-design-system-v2/s5-design-system-v2-feedback.md SR-06)
 //
 // 얻는 길(획득)과 해금을 나눠 본다. 시작은 첫 선택 후보 전부다(누구를 골라도 다른 후보는 해금돼 있다).
 //   랜덤알       해금한 종 가운데 랜덤알에서 나올 수 있는 종을 얻는다 (src/shop/catalog.ts inRandomEgg)

@@ -1,5 +1,5 @@
 -- 클라우드 저장 검사 — npx supabase test db
--- docs/work/trade/record.md "클라우드 저장"
+-- docs/work/trade/trade.md "클라우드 저장"
 -- 2026-10-01 새 시그니처(claim 5인자·upload 6인자)로 바꿨다. 두 PC 규칙은 cloud_devices_test.sql
 begin;
 create extension if not exists pgtap with schema extensions;

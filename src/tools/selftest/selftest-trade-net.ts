@@ -2,7 +2,7 @@
 //   npx supabase start 뒤: npm run build && node dist/tools/selftest/selftest-trade-net.js
 //   주소와 키는 POKEBUDDY_SUPABASE_URL, POKEBUDDY_SUPABASE_KEY 로 받는다. 없으면 `npx supabase status -o json` 에서 읽는다
 //   로컬 서버가 없으면 건너뛴다(종료 코드 0). 실제 프로젝트에는 붙지 않는다 — 주소가 127.0.0.1 이 아니면 멈춘다
-// 설계는 worklog/records/trade/record.md "전체 구조", "로컬 저장과 복구"
+// 설계는 worklog/records/trade/trade.md "전체 구조", "로컬 저장과 복구"
 // 규약 2 (worklog-mac/records/cloud-authority/design-p2.md 4절·8절·13절)
 //   교환하는 사용자는 로그인 계정이다 — 아이디로 바로 가입한다(익명 발급을 거치지 않는다. 로컬 익명 가입 한도 5/시간)
 //   제안한 개체는 서버 저장에 먼저 있어야 한다 — 제안 직전 올리기(beforeOffer)가 claim_device·Edge Function upload-save 를 부른다

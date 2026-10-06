@@ -15,7 +15,7 @@
 // 따로 모아 묶는 이유 — electron-builder 는 앱의 dependencies 에 electron 이 있으면 묶기를 거부한다.
 // 루트 package.json 은 npm 판 CLI 가 실행 때 electron 을 쓰므로 dependencies 에 둔다. 그래서 루트를 바꾸지 않고 따로 모은다.
 // asar 로 묶지 않는다 — 훅 원본 복사(src/agents/hooks.ts)와 창 추적 도우미(helpers/winbounds.ps1)가 실제 파일 경로를 쓴다.
-// 코드 서명은 하지 않는다. 처음 실행 때 SmartScreen 경고가 뜬다 (worklog/records/game-runtime/record.md "Windows 실행 파일의 설계")
+// 코드 서명은 하지 않는다. 처음 실행 때 SmartScreen 경고가 뜬다 (worklog/records/game-runtime/game-runtime.md "Windows 실행 파일의 설계")
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");

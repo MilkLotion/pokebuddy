@@ -1,6 +1,6 @@
 // 앱 업데이트 확인 — 가짜 autoUpdater 로 상태 전이·주기 확인·다시 시작·꺼 둔 경우를 본다
 //   npm run build && node dist/tools/selftest/selftest-updater.js
-// 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/record.md "검사 계획")이 본다
+// 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/app-update.md "검사 계획")이 본다
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { createAppUpdater, PEEK_GAP_MS, urgentStep, type UpdaterLike } from "../../main/update/updater";

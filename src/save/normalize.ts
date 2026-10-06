@@ -312,7 +312,7 @@ function normalizeFind(raw: unknown): FindV3 {
   return { seq: Math.max(nonNeg(r.seq), maxIdNo(log, "f")), log: log.slice(-FIND_RULES.keep) }; // 옛 activeMs 는 버린다 — 판정이 무기억이다
 }
 
-// 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/record.md "로컬 저장과 복구")
+// 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/trade.md "로컬 저장과 복구")
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
   const p = isRawObject(raw) && isRawObject(raw.pending) ? raw.pending : null;
   if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };

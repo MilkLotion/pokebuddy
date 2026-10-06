@@ -1,4 +1,4 @@
-// 계정 — 아이디+비밀번호 가입·로그인, 로그아웃, 이름 바꾸기. 설계는 worklog/records/trade/record.md "계정과 로그인"
+// 계정 — 아이디+비밀번호 가입·로그인, 로그아웃, 이름 바꾸기. 설계는 worklog/records/trade/trade.md "계정과 로그인"
 //
 // Electron 을 모른다. 공유 클라이언트(src/online/client.ts)를 받는다. GitHub 로그인은 src/online/github.ts 다.
 //   아이디는 메일이 갈 수 없는 내부 주소 <아이디>@id.pokebuddy.invalid 로 바꿔 Supabase 비밀번호 로그인을 쓴다

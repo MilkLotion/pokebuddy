@@ -1,4 +1,4 @@
--- 계정 시드 P4b — 알 결과를 계정마다 정해진 난수로 정한다 (worklog/records/cloud-authority/record.md "P4b 서버 시드", D24)
+-- 계정 시드 P4b — 알 결과를 계정마다 정해진 난수로 정한다 (worklog/records/cloud-authority/cloud-authority.md "P4b 서버 시드", D24)
 --   앱은 account_seed() 로 자기 계정 시드를 받아 cloud.json 에 둔다(오프라인에서도 쓴다). 알 id 를 키로 결정적 난수를 낸다(src/verify/save-rules.ts seededRand)
 --   서버 검증(upload-save)은 save_verify_context 의 seed 로 열린 알의 결과를 다시 계산해 새 저장과 대조한다(egg-roll)
 --   시드는 처음 요청 때 만든다. 시드가 없는 계정(아직 한 번도 받지 않음)은 알 결과를 대조하지 않는다

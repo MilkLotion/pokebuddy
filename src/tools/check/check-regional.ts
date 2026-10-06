@@ -3,7 +3,7 @@
 //   npm run build && node dist/tools/check/check-regional.js          표·그림 번호·간선만 (CSV 와 tracker.json)
 //   npm run build && node dist/tools/check/check-regional.js --net    초상 두 장과 PMD 묶음(sprites.zip)까지 받아 본다 — 느리다
 //
-// 확인 (worklog-mac/records/region-map/design.md B.4)
+// 확인 (worklog-mac/records/region-map/region-map-design.md B.4)
 //   1. forms 의 pokemonId 가 pokemon.csv 의 그 슬러그 행이고 종 번호가 기본 종과 같은가
 //   2. pmd 경로가 tracker.json 의 지방 이름 하위 폴더인가, sprite_complete 가 몇인가. pmd 가 없는 폼은 tracker 에 폴더가 있는지 알린다
 //      특수 폼(special)은 폴더 이름이 지방이 아니라 폼 이름이다(Eternal · Bloodmoon) — 슬러그의 폼 이름과 견준다

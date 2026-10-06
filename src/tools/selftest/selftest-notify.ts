@@ -1,7 +1,7 @@
 // 알림 배너 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-notify.js
 //
 // 테스트 프레임워크 없이 assert 만. 배너 줄 세우기·한 번 규칙·순서·재시작을 본다.
-// 계약은 docs/specs/game.md "알림 배너의 개별 표시", 설계는 worklog/records/game-runtime/record.md "알림 배너의 설계".
+// 계약은 docs/specs/game.md "알림 배너의 개별 표시", 설계는 worklog/records/game-runtime/game-runtime.md "알림 배너의 설계".
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";

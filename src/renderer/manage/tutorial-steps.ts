@@ -33,7 +33,7 @@ export const TUTORIAL_TEXT: Record<string, TutorialText> = {
 export const ACHIEVEMENT_GUIDE = { title: "보상을 받으면 첫 프리셋의 칸이 열려요", body: "", button: "업적 보기" };
 
 // 새 기능 튜토리얼 — 문구는 Figma 05 Screens 섹션 `13 튜토리얼 · 관리 창` `930:18248` 그대로다
-// (2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", worklog/records/tutorial-overhaul/record.md "새 기능 튜토리얼 8종 — 코드 설계").
+// (2026-09-29 사용자 "새 기능 튜토리얼 8종 … 개발진행", worklog/records/tutorial-overhaul/tutorial-overhaul.md "새 기능 튜토리얼 8종 — 코드 설계").
 // 파티 1/2 · 진화는 파티 카드를 밝힌다 — 상세는 옆 기기 창이다(Figma `932:17544` · `932:18610`)
 interface GuideStep {
   title: string;

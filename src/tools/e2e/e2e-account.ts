@@ -1,5 +1,5 @@
 // 계정·클라우드 저장 E2E — 실제 앱(동반자) 여러 개를 임시 HOME 으로 띄우고 로컬 Supabase 에서 사용자 모달의 계정 탭을 눌러 본다.
-// 설계: worklog/records/trade/record.md "로그인·클라우드 저장 구현 계획" L6, 두 PC 규칙은 worklog-mac/records/cloud-authority/design-p1.md,
+// 설계: worklog/records/trade/trade.md "로그인·클라우드 저장 구현 계획" L6, 두 PC 규칙은 worklog-mac/records/cloud-authority/design-p1.md,
 //   익명 계정 저장·진행 옮기기·새로 시작·저장 정보 분실은 worklog-mac/records/cloud-authority/design-p2.md 5절·8절
 //   두 PC 규칙(P1): 고르기 창·저장 단추가 없다. 나중에 로그인한 PC 가 계정 저장을 받아 잇고, 먼저 켜진 PC 는 안내 뒤 종료한다
 //   익명 계정(P2): 로그인하지 않은 설치도 익명 계정으로 저장한다. 교환은 로그인해야 한다. 로그아웃·삭제는 앱을 다시 켜 처음부터 시작한다
@@ -301,7 +301,7 @@ async function run(): Promise<void> {
     checks.push('AC7 계정 삭제 — 확인 창 문구, 서버 계정·클라우드 저장 삭제, delete 백업, 앱 다시 켜기 → 선택 창 → 새 익명 첫 저장(OWNER_OTHER 없음)');
   }
 
-  // AC9 로컬 저장 암호화(P3, worklog/records/cloud-authority/record.md "P3 로컬 암호화") — 이 사례만 암호화를 켠다
+  // AC9 로컬 저장 암호화(P3, worklog/records/cloud-authority/cloud-authority.md "P3 로컬 암호화") — 이 사례만 암호화를 켠다
   //   기존 평문 저장은 첫 실행에 백업 뒤 암호화한다. 올리기는 푼 저장을 보낸다.
   //   손으로 고친 평문을 넣으면 받지 않고 격리한다 — 선택 창에서 새로 고른 저장은 서버 저장으로 바뀌고, 서버 저장은 덮이지 않는다
   const K = makeApp('k', server, [{ id: 'k1', species: 'pichu', where: 'party' }], { ...env, POKEBUDDY_SAVE_CRYPT: 'on' }, { ...opts, points: 321 });
