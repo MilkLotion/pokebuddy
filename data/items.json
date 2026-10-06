@@ -12,6 +12,6 @@
   "mint": { "ko": "성격민트", "en": "Mint", "price": 100, "effect": "nature", "amount": 0, "group": "성격 도구", "desc": "포켓몬의 성격을 지금과 다른 성격으로 바꾼다.", "effectText": "성격 바꾸기" },
   "shiny-potion": { "ko": "모습이 바뀌는 약", "en": "Shiny Potion", "price": 1200, "effect": "shiny-on", "amount": 0, "group": "모습 도구", "desc": "포켓몬에게 쓰면 색이 다른 모습(이로치)이 된다. 돌아오는 약으로 되돌릴 수 있다.", "effectText": "이로치 모습으로" },
   "rotom-catalog": { "ko": "로토무카탈로그", "en": "Rotom Catalog", "gen": 4, "price": 150, "effect": "form", "amount": 0, "group": "모습 도구", "desc": "로토무가 좋아하는 가전제품이 실려 있다. 로토무의 모습을 바꿀 때마다 하나를 쓴다. 원래 모습으로 돌아갈 때는 쓰지 않는다.", "effectText": "로토무 모습 바꾸기 1번" },
-  "reins-of-unity": { "ko": "유대의고삐", "en": "Reins of Unity", "gen": 8, "price": 2000, "effect": "call-rider", "amount": 0, "group": "모습 도구", "desc": "버드렉스와 두 말을 잇는 고삐. 버드렉스의 파티 상세에서 쓰면 블리자포스와 레이스포스 가운데 하나를 부른다.", "effectText": "블리자포스·레이스포스 부르기" },
+  "reins-of-unity": { "ko": "유대의고삐", "en": "Reins of Unity", "gen": 8, "price": 2000, "effect": "call-rider", "amount": 0, "group": "모습 도구", "desc": "버드렉스와 두 말을 잇는 고삐. 버드렉스가 있으면 가방에서 써서 블리자포스와 레이스포스 가운데 고른 말을 박스로 부른다. 쓰면 1개 줄어든다.", "effectText": "블리자포스·레이스포스 부르기" },
   "normal-potion": { "ko": "돌아오는 약", "en": "Normal Potion", "price": 0, "effect": "shiny-off", "amount": 0, "group": "모습 도구", "desc": "이로치 모습인 포켓몬에게 쓰면 원래 모습으로 돌아온다.", "effectText": "원래 모습으로" }
 }

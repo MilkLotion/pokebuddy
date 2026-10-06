@@ -15,7 +15,7 @@ export function addItem(save: Pick<SaveV3, "bag">, id: string, count: number): v
 
 // 가방 도구 표(data/items.json)의 한 줄 — 효과와 수치. 쓰기(./use.ts)·화면 값·명령이 같이 읽는다 (96 대조 ③)
 // form — 모습 바꾸기에 쓰는 도구(로토무카탈로그). 가방에서 쓰지 않고 모습 바꾸기가 하나씩 쓴다 (src/dex/forms.ts setForm)
-// call-rider — 버드렉스의 말을 부르는 도구(유대의고삐). 가방에서 쓰지 않고 버드렉스의 파티 상세 `말 부르기` 가 하나씩 쓴다 (src/party/riders.ts callRider)
+// call-rider — 버드렉스의 말을 부르는 도구(유대의고삐). 버드렉스가 있으면 가방 기기 창에서 부를 말을 골라 하나씩 쓴다 (src/view/device-bag.ts riderUse, src/party/riders.ts callRider)
 export type ItemEffect = "fullness" | "fullness-full-buff" | "play-buff" | "exp" | "level" | "nature" | "shiny-on" | "shiny-off" | "form" | "call-rider";
 
 // 모습 도구인가 — 로토무카탈로그(form)와 유대의고삐(call-rider). 진화 분류에 두고, 가방에서 쓰지 않고, 줍기로 얻지 않는다

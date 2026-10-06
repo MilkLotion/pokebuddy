@@ -21,7 +21,7 @@ export const SHIFT_RULES: Readonly<Record<string, { workMs: number; item: string
   rotom: { workMs: 2 * 60 * 60_000, item: "rotom-catalog" },
 };
 
-// 버드렉스의 말 부르기 도구 — 버드렉스 계열 개체의 파티 상세 `말 부르기` 에서 하나 쓰면 블리자포스·레이스포스 가운데 고른 말이 박스로 온다
+// 버드렉스의 말 부르기 도구 — 버드렉스가 있으면 가방 기기 창에서 하나 쓰고, 블리자포스·레이스포스 가운데 고른 말이 박스로 온다
 // (2026-10-07 사용자 결정 "유대의고삐라는 아이템을 2천 원에 팔고, 버드렉스가 있으면 사용 가능하게 제한", src/party/riders.ts)
 export const RIDER_ITEM = "reins-of-unity";
 

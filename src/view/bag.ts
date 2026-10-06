@@ -19,7 +19,7 @@ export function itemAbout(save: SaveV3, id: string, opts?: DexOptions): ItemAbou
     };
   const item = itemTable(opts)[id];
   if (!item) return undefined;
-  // 모습 도구는 가방에서 쓰지 않는다 — 로토무카탈로그는 로토무의 모습 바꾸기, 유대의고삐는 버드렉스의 말 부르기에서 쓴다
+  // 쓰는 곳 — 로토무카탈로그는 로토무의 모습 바꾸기에서 쓴다. 유대의고삐는 가방에서 쓰고 버드렉스가 있어야 한다(말 부르기)
   const where = item.effect === "form" ? "로토무 · 모습 바꾸기" : item.effect === "call-rider" ? "버드렉스 · 말 부르기" : "파티 포켓몬";
   return { group: item.group ?? "도구", desc: item.desc ?? "", effect: item.effectText ?? "", where };
 }
