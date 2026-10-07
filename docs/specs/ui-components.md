@@ -495,7 +495,7 @@ Figma: `05 · Screens` 섹션 `10 우편함` `932:22859` — `Mail / List` `908:
 여는 경로: 상품 카드(C-10)·포켓몬 상품 칸. 닫는 경로: `✕`, Esc, 같은 카드 다시 누르기, 상점 탭 나가기.
 대화상자: 없다. 수량·구매 단추는 설정창으로 돌아가 설정창이 명령을 보낸다.
 규칙은 [상점 기기 창](game.md#상점-기기-창)을 따른다. 구현은 `src/main/windows/devices.ts` `shopDeviceOf`, `src/renderer/shop.html`, `src/renderer/device/shop.ts` 다.
-Figma: 기기는 `Shop Device` `1262:77893` 이다. 도구·알·진화의 차이는 인스턴스에서 글자와 보임으로 덮어쓴다. 화면은 05 `06 상점` 의 `Shop / Device / Tool` `1110:365`, `Shop / Device / Egg` `1110:23592`, `Shop / Device / Evolution` `1110:23904`, `Shop / Device / Egg · 구매 결과` `1358:45767`, `Shop / Device / Egg · 돌보미집 가득` `1358:45504`, `Shop / Device / Tool · 가방 가득` `1364:49967`, `Shop / Device / Egg · 모두 모았어요` `1364:50253` 이다. 옛 기기 틀 `1110:542`·`1110:23668`·`1110:23980` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
+Figma: 기기는 `Shop Device` `1262:77893` 이다. 도구·알·진화의 차이는 인스턴스에서 글자와 보임으로 덮어쓴다. 화면은 05 `06 상점` 의 `Shop / Device / Tool` `1110:365`, `Shop / Device / Egg` `1110:23592`, `Shop / Device / Evolution` `1110:23904`, `Shop / Device / Egg · 구매 결과` `1358:45767`, `Shop / Device / Egg · 돌보미집 가득` `1358:45504`, `Shop / Device / Tool · 가방 가득` `1364:49967`, `Shop / Device / Egg · 모두 모았어요` `1364:50253`, `Shop / Device / Evolution · 영원의 꽃` `1730:937`, `Shop / Device / Evolution · 붉은 달` `1730:941` 이다(마지막 둘은 2026-10-08). 그림 칸 `item-art` 는 판(150×124) 가운데 90×90 이다. 앱이 빈 테두리를 자른 그림을 판 가운데에 정수배로 그리는 것과 같다(`src/renderer/device/item-face.ts` `STAGE`). 그 전에는 15·12 에 96×96 으로 왼쪽에 치우쳐 있었다(2026-10-08 고침). 옛 기기 틀 `1110:542`·`1110:23668`·`1110:23980` 은 2026-10-02 재구성에서 인스턴스로 바뀌어 없다.
 
 ### C-31 가방 기기 창
 

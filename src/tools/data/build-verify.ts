@@ -108,7 +108,7 @@ export function buildVerifyFiles(): Record<string, string> {
   const megaForms: Record<string, string[]> = {};
   for (const slug of megaSlugs()) (megaForms[megaOf(slug)!.base] ??= []).push(slug);
   // 규칙이 있는 모습 바꾸기 묶음 — 종(기본 종 포함) → 규칙. 묶음은 data/regional.json 의 shift, 규칙은 SHIFT_RULES (로토무와 다섯 모습)
-  const shiftRules: Record<string, { base: string; workMs: number; item: string }> = {};
+  const shiftRules: Record<string, { base: string; workMs: number; item: string; oneWay?: true }> = {};
   for (const [base, list] of Object.entries((load("regional.json").shift ?? {}) as Record<string, unknown>)) {
     const rule = SHIFT_RULES[base];
     if (base.startsWith("_") || !rule || !Array.isArray(list)) continue;

@@ -12,7 +12,7 @@ import { checkCare } from "../state/care.js";
 import { boredStepOf, zoneOf } from "../state/time.js";
 import { currentTutorial } from "../tutorial/queue.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
-import { boredText, currentLang, natureName, petName, t } from "./text.js";
+import { boredText, currentLang, itemName, natureName, petName, t } from "./text.js";
 import { waitText } from "../shared/count-text.js";
 
 export interface PetMenuModel {
@@ -25,6 +25,7 @@ export interface PetMenuModel {
   forms?: PetMenuForm[]; // 공유 sid 계열·모습 바꾸기 종(로토무)의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
   formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 — 그 개체의 파티 작업 시간) — 줄만 흐리게 두고 말풍선은 없다. 이유는 적지 않는다
   formsCatalog?: boolean; // 도구를 쓰는 묶음(로토무) — 말풍선 머리가 `모습 바꾸기 · 카탈로그 1개를 써요`, 맨 아래 줄이 `로토무 · 원래대로`
+  formsItem?: string; // 한 방향 묶음(플라엣테·다투곰)의 도구 이름 — 말풍선 머리가 `모습 바꾸기 · 영원의 꽃 1개를 써요`, 줄은 바뀔 모습 하나다 (2026-10-08)
   move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체에만 둔다
   sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
 }
@@ -72,7 +73,8 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 //   해금 전(formsLocked)이면 하위 줄 없이 흐린 줄 하나다 (docs/specs/game.md "로토무의 모습 바꾸기", Figma `Menu Item` `State=Disabled`)
 //   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다
 export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
-  const forms = model.forms && model.forms.length > 1 ? model.forms : null;
+  // 한 방향 묶음(formsItem)은 바뀔 모습 한 줄만 있어도 `모습 바꾸기` 줄을 둔다
+  const forms = model.forms && (model.forms.length > 1 || (model.formsItem != null && model.forms.length > 0)) ? model.forms : null;
   // 누를 줄이 하나도 없으면(해금 전, 또는 카탈로그가 없고 지금 기본 종) `모습 바꾸기` 줄을 흐리게 둔다 (Figma 03 `Form Bubble / Rotom`, 2026-10-05)
   const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current || f.noItem));
   return [
@@ -89,7 +91,7 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
       ? [
           {
             label: t("menu.form"),
-            toolTip: t(model.formsCatalog ? "menu.form.title.catalog" : "menu.form.title"),
+            toolTip: model.formsItem != null ? t("menu.form.title.item", { item: model.formsItem }) : t(model.formsCatalog ? "menu.form.title.catalog" : "menu.form.title"),
             submenu: forms.map((f) => ({
               label: f.name,
               sublabel: t(f.current ? "menu.form.now" : f.back ? "menu.form.back" : "menu.form.go"),
@@ -161,6 +163,8 @@ function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): Pet
     // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말이 없으면(버드렉스(백마 탄 모습) — 블리자포스) 줄이 흐리다
     ...((rule && slug !== rule.base && !have) || riderMissing(save, slug) ? { noItem: true } : {}),
   }));
+  // 한 방향 묶음(플라엣테·다투곰)은 바뀔 모습만 — 지금 모습 줄과 `원래대로` 줄이 없다 (2026-10-08 사용자 지시 "모습바꾸기 말풍선에 플라엣테(영원의 꽃) 만 있어야지")
+  if (rule?.oneWay) return rows.filter((f) => !f.current);
   return rule ? [...rows.filter((f) => !f.back), ...rows.filter((f) => f.back)] : rows;
 }
 
@@ -189,7 +193,8 @@ export function petMenuOf(
     ball: { enabled: slot != null, hidden: slot?.hidden === true },
     forms: menuForms(save, pet, o.formIcons),
     ...(isFormLocked(pet) ? { formsLocked: true } : {}),
-    ...(shiftRuleOf(pet.species) ? { formsCatalog: true } : {}),
+    ...(shiftRuleOf(pet.species) && !shiftRuleOf(pet.species)?.oneWay ? { formsCatalog: true } : {}),
+    ...(shiftRuleOf(pet.species)?.oneWay ? { formsItem: itemName(shiftRuleOf(pet.species)!.item) } : {}),
     // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
     ...(slot ? {} : { move: { enabled: true } }),
     sell: { enabled: sale.ok },

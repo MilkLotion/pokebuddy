@@ -14,12 +14,14 @@
 //             해금 전에도 목록은 준다 — 메뉴는 `모습 바꾸기` 줄을 흐리게 둔다(isFormLocked)
 //   도구      기본 종이 아닌 모습으로 바꿀 때마다 도구(로토무카탈로그) 하나를 쓴다. 기본 종으로 돌아갈 때는 쓰지 않는다(formItemOf)
 // 로토무는 업적 보상 종이라 공유 계열(isShared)로도 판정된다 — 해금·도구 규칙은 공유 계열 여부와 상관없이 본다
+//   한 방향  규칙에 oneWay 가 있는 묶음(플라엣테·다투곰)은 기본 종에서 모습으로 한 번만 바꾼다. 바뀐 개체는 고를 모습이 없다(formsOf 빈 목록)
+//            (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
 import { riderOf, shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
-import { SHIFT_RULES } from "./rules.js";
+import { SHIFT_RULES, type ShiftRule } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -40,17 +42,28 @@ export function isShared(pet: PetV3, opts?: DexOptions): boolean {
 
 // 고를 수 있는 종 — 공유 계열이면 거쳐 온 종과 지금 종(저장에 없으면 만든다), 공유 계열이 아니면 모습 바꾸기 묶음(로토무). 둘 다 아니면 빈 목록
 export function formsOf(pet: PetV3, opts?: DexOptions): string[] {
-  if (!isShared(pet, opts)) return shiftGroupOf(pet.species, opts);
+  if (!isShared(pet, opts)) {
+    const group = shiftGroupOf(pet.species, opts);
+    // 한 방향 묶음 — 이미 바뀐 개체(플라엣테(영원의 꽃))는 고를 모습이 없다
+    const base = group[0];
+    return base && SHIFT_RULES[base]?.oneWay && pet.species !== base ? [] : group;
+  }
   const list = pet.forms?.length ? pet.forms : [...pet.evolved, pet.species];
   const own = [...new Set([...list, pet.species])];
   return [...new Set([...own, ...own.flatMap((slug) => shiftGroupOf(slug, opts))])];
 }
 
 // 이 종이 든 모습 바꾸기 묶음의 규칙과 기본 종 — 규칙이 없으면 null
-export function shiftRuleOf(slug: string, opts?: DexOptions): { base: string; workMs: number; item: string } | null {
+export function shiftRuleOf(slug: string, opts?: DexOptions): ({ base: string } & ShiftRule) | null {
   const base = shiftGroupOf(slug, opts)[0];
   const rule = base ? SHIFT_RULES[base] : undefined;
   return base && rule ? { base, ...rule } : null;
+}
+
+// 이 도구를 쓰는 모습 바꾸기 묶음의 기본 종과 규칙 — 로토무카탈로그는 로토무, 영원의 꽃은 플라엣테. 없으면 null
+export function shiftOfItem(itemId: string): ({ base: string } & ShiftRule) | null {
+  const hit = Object.entries(SHIFT_RULES).find(([, rule]) => rule.item === itemId);
+  return hit ? { base: hit[0], ...hit[1] } : null;
 }
 
 // 이 종의 모습 바꾸기에 드는 개체 작업 시간 — 규칙이 없으면 null

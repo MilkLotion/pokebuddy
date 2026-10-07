@@ -1,5 +1,5 @@
 {
- "hash": "8486323a9adddae6",
+ "hash": "9bbdfe303bbb2089",
  "items": {
   "basic-food": {
    "price": null,
@@ -58,6 +58,16 @@
   },
   "rotom-catalog": {
    "price": 150,
+   "effect": "form",
+   "amount": 0
+  },
+  "eternal-flower": {
+   "price": 3000,
+   "effect": "form",
+   "amount": 0
+  },
+  "red-moon": {
+   "price": 3000,
    "effect": "form",
    "amount": 0
   },
@@ -1970,6 +1980,30 @@
    "base": "rotom",
    "workMs": 7200000,
    "item": "rotom-catalog"
+  },
+  "floette": {
+   "base": "floette",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "floette-eternal": {
+   "base": "floette",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "ursaluna": {
+   "base": "ursaluna",
+   "workMs": 0,
+   "item": "red-moon",
+   "oneWay": true
+  },
+  "ursaluna-bloodmoon": {
+   "base": "ursaluna",
+   "workMs": 0,
+   "item": "red-moon",
+   "oneWay": true
   }
  },
  "growth": {
@@ -3870,9 +3904,7 @@
     "okidogi",
     "munkidori",
     "fezandipiti",
-    "ogerpon",
-    "floette-eternal",
-    "ursaluna-bloodmoon"
+    "ogerpon"
    ]
   },
   "ultra-beast": {
@@ -4184,7 +4216,7 @@
   "flapple": 2,
   "flareon": 3,
   "floatzel": 2,
-  "floette-eternal": 5,
+  "floette-eternal": 2,
   "florges": 3,
   "flutter-mane": 4,
   "flygon": 3,
@@ -4583,7 +4615,7 @@
   "umbreon": 3,
   "unfezant": 2,
   "ursaluna": 3,
-  "ursaluna-bloodmoon": 5,
+  "ursaluna-bloodmoon": 3,
   "ursaring": 2,
   "urshifu": 5,
   "urshifu-rapid-strike": 5,

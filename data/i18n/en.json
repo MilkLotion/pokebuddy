@@ -21,6 +21,7 @@
   "menu.form.now": "Now",
   "menu.form.go": "Switch",
   "menu.form.title.catalog": "Change form · uses 1 catalog",
+  "menu.form.title.item": "Change form · uses 1 {item}",
   "menu.form.back": "Revert",
   "menu.move": "Move",
   "menu.sell": "Sell",

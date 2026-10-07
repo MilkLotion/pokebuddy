@@ -21,6 +21,7 @@
   "menu.form.now": "지금",
   "menu.form.go": "바꾸기",
   "menu.form.title.catalog": "모습 바꾸기 · 카탈로그 1개를 써요",
+  "menu.form.title.item": "모습 바꾸기 · {item} 1개를 써요",
   "menu.form.back": "원래대로",
   "menu.move": "옮기기",
   "menu.sell": "팔기",

@@ -1,10 +1,10 @@
 {
   "_comment": "리전폼 표 — 손으로 관리한다(worklog-mac/records/region-map). forms 는 도감 항목 74종(리전폼 57 · 특수 폼 17), edges 는 진화 간선 43개(리전폼 38 · 특수 폼 5). src/tools/check/check-regional.ts 가 PokeAPI 와 비교한다",
-  "_comment_special": "special 이 true 인 항목은 특수 폼이다 — 지방 모습은 아니지만 리전폼처럼 도감 번호가 같은 다른 종으로 본다(2026-10-03, worklog/records/extra-evolution). region 은 도감의 지방 칸이다. 얻는 방법은 get 이다 — 플라엣테(영원의 꽃)·다투곰(붉은 달)은 base(랜덤준전설알의 단일 포켓몬), 마기아나(500년 전의 색)·피츄(삐쭉귀)는 gift(우편으로만 받는 단일 포켓몬), 루가루암(한밤중의 모습)·루가루암(황혼의 모습)·스트린더(로우한 모습)·우라오스(연격의 태세)는 branch(기본형 종에서 진화). portrait 는 포켓몬 번호가 따로 없는 폼의 초상 파일 이름이다",
+  "_comment_special": "special 이 true 인 항목은 특수 폼이다 — 지방 모습은 아니지만 리전폼처럼 도감 번호가 같은 다른 종으로 본다(2026-10-03, worklog/records/extra-evolution). region 은 도감의 지방 칸이다. 얻는 방법은 get 이다 — 플라엣테(영원의 꽃)·다투곰(붉은 달)은 tool(플라엣테·다투곰이 모습 도구 영원의 꽃·붉은 달로 한 번 바꾸고 돌아가지 않는 모습, 일반 포켓몬. 2026-10-08 사용자 결정, 그 전에는 base — 랜덤준전설알의 단일 포켓몬), 마기아나(500년 전의 색)·피츄(삐쭉귀)는 gift(우편으로만 받는 단일 포켓몬), 루가루암(한밤중의 모습)·루가루암(황혼의 모습)·스트린더(로우한 모습)·우라오스(연격의 태세)는 branch(기본형 종에서 진화). portrait 는 포켓몬 번호가 따로 없는 폼의 초상 파일 이름이다",
   "_comment_names": "특수 폼의 화면 이름은 `<종 이름>(<모습>)` 이다. 괄호 안은 포켓몬코리아 공식 도감의 모습 이름 그대로다 — 디아루가(오리진폼) · 루가루암(한밤중의 모습) · 배쓰나이(청색근의 모습). 공식 도감이 기본형에도 모습 이름을 붙이는 종은 기본형도 적는다(src/tools/data/build-names.ts OVERRIDES — 루가루암(한낮의 모습) 등). 리전폼은 `알로라 라이츄` 처럼 지방을 앞에 붙인다(2026-10-03 사용자 결정 \"다 적고, 괄호로 그 모습을 적자.\")",
-  "_comment_get": "get — map 은 기본형에서 지도로 진화해 얻는다(12, 돌 간선은 돌 대신 지도, 레벨 간선은 레벨과 지도). base 는 다른 종과 같은 규칙으로 얻는 진화 전 종이다(리전폼 28 · 특수 폼 2, 전설과 특수 폼은 전설 규칙). path 는 리전폼이 진화해 얻는다(17, 지도 없음). branch 는 기본형 종이 지도 없이 진화해 얻는 특수 폼이다(4). gift 는 우편으로만 받는 특수 폼이다(2, 단일 포켓몬). variant 는 알에서 기본형 대신 나오는 특수 폼이다(2, hatch 표). shift 는 기본형 개체가 모습 바꾸기로 오가는 특수 폼이다(12, shift 표)",
+  "_comment_get": "get — map 은 기본형에서 지도로 진화해 얻는다(12, 돌 간선은 돌 대신 지도, 레벨 간선은 레벨과 지도). base 는 다른 종과 같은 규칙으로 얻는 진화 전 종이다(리전폼 28, 전설은 전설 규칙). path 는 리전폼이 진화해 얻는다(17, 지도 없음). branch 는 기본형 종이 지도 없이 진화해 얻는 특수 폼이다(4). gift 는 우편으로만 받는 특수 폼이다(2, 단일 포켓몬). variant 는 알에서 기본형 대신 나오는 특수 폼이다(2, hatch 표). shift 는 기본형 개체가 모습 바꾸기로 오가는 특수 폼이다(12, shift 표). tool 은 기본형 개체가 모습 도구로 한 번 바꾸고 돌아가지 않는 특수 폼이다(2, shift 표에 들고 규칙은 src/dex/rules.ts SHIFT_RULES 의 oneWay)",
   "_comment_hatch": "hatch — 알에서 이 종이 나올 때 대신 나오는 모습과 가중치다. 배쓰나이는 적색근(기본형) 45 · 청색근 45 · 백색근 10 이고 백색근만 대쓰여너로 진화한다(2026-10-03 사용자 결정). 알 열기에만 쓴다 — 줍기·상점·우편은 기본형이다(src/egg/hatch.ts rollVariant). 서버 검증도 같은 표로 다시 계산한다(src/verify/save-rules.ts rollEgg)",
-  "_comment_shift": "shift — 기본형 개체가 모습 바꾸기로 오가는 모습이다. 디아루가·펄기아·기라티나는 오리진폼과 오간다(2026-10-03 사용자 결정 \"이거는 모습변경으로하자.\", \"셋 다 모습 바꾸기로 통일하자\"). 자시안·자마젠타는 검왕·방패왕과, 버드렉스는 백마 탄 모습·흑마 탄 모습과 오간다(2026-10-07 사용자 결정 — 녹슨검·녹슨방패 조건 없음, 원작식 합체 없음, worklog/records/bugs-1007/1-2.md). 기본 종이 단일 포켓몬일 때만 쓴다 — 공유 계열의 모습 목록에 넣는다(src/dex/forms.ts formsOf). 도구나 조건은 없다",
+  "_comment_shift": "shift — 기본형 개체가 모습 바꾸기로 오가는 모습이다. 디아루가·펄기아·기라티나는 오리진폼과 오간다(2026-10-03 사용자 결정 \"이거는 모습변경으로하자.\", \"셋 다 모습 바꾸기로 통일하자\"). 자시안·자마젠타는 검왕·방패왕과, 버드렉스는 백마 탄 모습·흑마 탄 모습과 오간다(2026-10-07 사용자 결정 — 녹슨검·녹슨방패 조건 없음, 원작식 합체 없음, worklog/records/bugs-1007/1-2.md). 기본 종이 단일 포켓몬일 때만 쓴다 — 공유 계열의 모습 목록에 넣는다(src/dex/forms.ts formsOf). 도구나 조건은 없다. 예외: 플라엣테 → 플라엣테(영원의 꽃), 다투곰 → 다투곰(붉은 달)은 단일 포켓몬이 아닌 기본 종의 한 방향 모습이다 — 모습 도구 하나를 쓰고 돌아가지 않는다(get tool, src/dex/rules.ts SHIFT_RULES oneWay, 2026-10-08 사용자 결정 \"모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기\")",
   "_comment_riders": "riders — 모습 → 그 모습이 되려면 저장에 있어야 하는 말. 버드렉스(백마 탄 모습)는 블리자포스, 버드렉스(흑마 탄 모습)는 레이스포스가 있어야 모습 바꾸기를 한다. 말은 쓰지 않는다. 말은 유대의고삐(data/items.json reins-of-unity)를 버드렉스의 파티 상세 `말 부르기` 에서 써서 박스로 부른다(2026-10-07 사용자 결정, worklog/records/bugs-1007/1-2.md). 두 말은 알 후보에 없고 단일 포켓몬이다(src/dex/obtain.ts singleSpecies). 판정은 src/party/riders.ts, 서버 검증은 src/verify/save-rules.ts rider",
   "_comment_overworld": "overworld — PMD 그림이 없는 특수 폼의 걷기 그림 폴더(pokeemerald-expansion graphics/pokemon/ 아래). 있으면 무대가 기본형 PMD 로 떨어지지 않고 이 폴더의 걷기 그림을 쓴다(src/main/art/stage-art.ts pmdSources). 버드렉스(백마 탄 모습)·버드렉스(흑마 탄 모습)",
   "_comment_gender": "gender — 성별마다 그림이 다른 종의 그림이다. 종과 도감 항목은 하나이고 개체의 성별에 따라 그림만 바뀐다(대쓰여너 암컷, 2026-10-03). look 은 그림을 가리키는 이름(PokeAPI 포켓몬 식별자), pokemonId 는 초상, pmd·pmdShiny 는 PMD 폴더다. 표에 없는 성별은 종의 기본 그림이다",
@@ -75,7 +75,7 @@
     "zoroark-hisui": {"base":"zoroark","region":"hisui","no":1,"pokemonId":10239,"pmd":"0571/0001","ko":"히스이 조로아크","en":"Hisuian Zoroark","get":"path"},
     "stunfisk-galar": {"base":"stunfisk","region":"galar","no":1,"pokemonId":10180,"ko":"가라르 메더","en":"Galarian Stunfisk","get":"base"},
     "braviary-hisui": {"base":"braviary","region":"hisui","no":1,"pokemonId":10240,"pmd":"0628/0001","ko":"히스이 워글","en":"Hisuian Braviary","get":"map"},
-    "floette-eternal": {"base":"floette","region":"kalos","no":1,"pokemonId":10061,"pmd":"0670/0005","ko":"플라엣테(영원의 꽃)","en":"Floette (Eternal Flower)","get":"base","special":true},
+    "floette-eternal": {"base":"floette","region":"kalos","no":1,"pokemonId":10061,"pmd":"0670/0005","ko":"플라엣테(영원의 꽃)","en":"Floette (Eternal Flower)","get":"tool","special":true},
     "sliggoo-hisui": {"base":"sliggoo","region":"hisui","no":1,"pokemonId":10241,"pmd":"0705/0001","ko":"히스이 미끄네일","en":"Hisuian Sliggoo","get":"map"},
     "goodra-hisui": {"base":"goodra","region":"hisui","no":1,"pokemonId":10242,"pmd":"0706/0001","ko":"히스이 미끄래곤","en":"Hisuian Goodra","get":"path"},
     "avalugg-hisui": {"base":"avalugg","region":"hisui","no":1,"pokemonId":10243,"pmd":"0713/0001","ko":"히스이 크레베이스","en":"Hisuian Avalugg","get":"map"},
@@ -89,7 +89,7 @@
     "zamazenta-crowned": {"base":"zamazenta","region":"galar","no":1,"pokemonId":10189,"pmd":"0889/0001","ko":"자마젠타(방패왕)","en":"Zamazenta (Crowned Shield)","get":"shift","special":true},
     "calyrex-ice": {"base":"calyrex","region":"galar","no":1,"pokemonId":10193,"overworld":"calyrex/ice","ko":"버드렉스(백마 탄 모습)","en":"Calyrex (Ice Rider)","get":"shift","special":true},
     "calyrex-shadow": {"base":"calyrex","region":"galar","no":2,"pokemonId":10194,"overworld":"calyrex/shadow","ko":"버드렉스(흑마 탄 모습)","en":"Calyrex (Shadow Rider)","get":"shift","special":true},
-    "ursaluna-bloodmoon": {"base":"ursaluna","region":"paldea","no":1,"pokemonId":10272,"pmd":"0901/0001","ko":"다투곰(붉은 달)","en":"Ursaluna (Bloodmoon)","get":"base","special":true}
+    "ursaluna-bloodmoon": {"base":"ursaluna","region":"paldea","no":1,"pokemonId":10272,"pmd":"0901/0001","ko":"다투곰(붉은 달)","en":"Ursaluna (Bloodmoon)","get":"tool","special":true}
   },
   "edges": {
     "pikachu": [{"to":"raichu-alola","need":{"kind":"item","item":"thunder-stone"},"map":true}],
@@ -144,7 +144,9 @@
     "giratina": ["giratina-origin"],
     "zacian": ["zacian-crowned"],
     "zamazenta": ["zamazenta-crowned"],
-    "calyrex": ["calyrex-ice", "calyrex-shadow"]
+    "calyrex": ["calyrex-ice", "calyrex-shadow"],
+    "floette": ["floette-eternal"],
+    "ursaluna": ["ursaluna-bloodmoon"]
   },
   "riders": {
     "calyrex-ice": "glastrier",

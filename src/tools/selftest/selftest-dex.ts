@@ -249,7 +249,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:base", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:base"],
+    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool"],
     "특수 폼 22종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
@@ -267,7 +267,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
     assert.strictEqual(names[slug]?.ko, f.ko, `${slug} 이름표`);
     assert.match(regional.dexLabel(slug, p.dex), /^\d+-\d+$/, `${slug} 표시 번호`);
     if (f.pmd) assert.match(f.pmd, /^\d{4}\/\d{4}$/, `${slug} PMD 경로`);
-    assert.strictEqual(dex.evoStageOf(slug) === 0, f.get === "base" || f.get === "gift" || f.get === "variant" || f.get === "shift", `${slug} 진화 전 종은 base · gift · variant · shift 뿐`);
+    assert.strictEqual(dex.evoStageOf(slug) === 0, f.get === "base" || f.get === "gift" || f.get === "variant" || f.get === "shift" || f.get === "tool", `${slug} 진화 전 종은 base · gift · variant · shift · tool 뿐`);
   }
   for (const e of edges) {
     assert.ok(dex.hasProfile(e.from) && dex.hasProfile(e.to), `${e.from}→${e.to} 도감표`);
@@ -300,18 +300,20 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 기본 야돈 → 야도킹은 교환(연결의끈). 가라두구머리장식은 가라르 야도킹 전용 (2026-09-30 사용자 결정)
   assert.deepStrictEqual(dex.nextOf("slowpoke").find((st) => st.to === "slowking")?.need, { kind: "item", item: "bond-cord" });
   assert.deepStrictEqual(dex.nextOf("slowpoke-galar").find((st) => st.to === "slowking-galar")?.need, { kind: "item", item: "galarica-wreath" });
-  // 특수 폼 — 리전폼처럼 다른 종이다. 간선이 없고 기본형의 간선도 그대로다. 수집 난이도는 준전설과 같은 5 (worklog/records/extra-evolution 특수 폼 설계)
+  // 특수 폼 — 리전폼처럼 다른 종이다. 간선이 없고 기본형의 간선도 그대로다. 플라엣테·다투곰의 한 방향 모습 바꾸기로 얻는다 (2026-10-08 사용자 결정, 그 전에는 랜덤준전설알).
+  // 일반 포켓몬이라 수집 난이도는 종족값 규칙대로다 (src/tools/data/build-species.ts rankOf)
   assert.strictEqual(regional.dexLabel("floette-eternal", 670), "670-1");
   assert.strictEqual(regional.dexLabel("ursaluna-bloodmoon", 901), "901-1");
   assert.deepStrictEqual([regional.regionalOf("floette-eternal")?.region, regional.regionalOf("ursaluna-bloodmoon")?.region], ["kalos", "paldea"], "도감 지방 칸");
   for (const slug of ["floette-eternal", "ursaluna-bloodmoon"]) {
     assert.deepStrictEqual(dex.nextOf(slug), [], `${slug} 는 진화하지 않는다`);
     assert.strictEqual(dex.prevOf(slug), null, `${slug} 는 진화로 얻지 않는다`);
-    assert.strictEqual(dex.profileOf(slug).rank, 5, `${slug} 수집 난이도`);
+    assert.notStrictEqual(dex.profileOf(slug).rank, 5, `${slug} 는 단일 포켓몬 난이도가 아니다`);
   }
   assert.deepStrictEqual(dex.nextOf("floette").map((st) => st.to), ["florges"]);
   assert.deepStrictEqual(dex.nextOf("ursaring").map((st) => st.to), ["ursaluna"]);
   assert.ok(!dex.lineOf("floette").includes("floette-eternal"), "특수 폼은 사슬의 모습이 아니다");
+  assert.deepStrictEqual([regional.shiftGroupOf("floette"), regional.shiftGroupOf("ursaluna-bloodmoon")], [["floette", "floette-eternal"], ["ursaluna", "ursaluna-bloodmoon"]], "한 방향 모습 묶음");
   // 진화로 얻는 특수 폼 — 암멍이는 낮에 루가루암, 밤에 루가루암(한밤중의 모습). 루가루암(황혼의 모습)은 낮·밤과 관계없이 Lv.25 와 친밀도 100 ("추천대로 하자"). 일레즌은 둘 가운데 고른다.
   // 치고마의 두 간선은 모두 족자다("족자는 하나만 하자") (2026-10-03 사용자 결정)
   assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => [st.to, st.when ?? "", st.need]), [["lycanroc", "day", { kind: "level", level: 25 }], ["lycanroc-midnight", "night", { kind: "level", level: 25 }], ["lycanroc-dusk", "", { kind: "level", level: 25 }]]);

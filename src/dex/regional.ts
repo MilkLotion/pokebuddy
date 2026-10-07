@@ -16,7 +16,7 @@ export type RegionId = "johto" | "sinnoh" | "unova" | "kalos" | "alola" | "galar
 //   branch 기본형 종에서 지도 없이 진화해 얻는 특수 폼(루가루암(한밤중의 모습)) · gift 우편으로만 받는 특수 폼(피츄(삐쭉귀)) — 단일 포켓몬이다
 //   variant 알에서 기본형 대신 나오는 특수 폼(배쓰나이(백색근의 모습)) — 표의 hatch 가 확률을 정한다
 //   shift 기본형 개체가 모습 바꾸기로 오가는 특수 폼(기라티나(오리진폼) · 자시안(검왕) · 버드렉스(백마 탄 모습)) — 표의 shift 가 짝을 정한다
-export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift";
+export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift" | "tool";
 
 export interface RegionalForm {
   base: string; // 같은 도감 번호의 기본 종

@@ -18,6 +18,7 @@ import { formsOf, isFormLocked, tickFormWork, isSinglePet, setForm } from "../..
 import { SHIFT_RULES } from "../../dex/rules";
 import { callRider, riderCall } from "../../party/riders";
 import { snapshotView } from "../../view/snapshot";
+import { dexDetail } from "../../view/dex-detail";
 import { bagDeviceModel, bagUsable } from "../../view/device-bag";
 import { resultLineOf } from "../../view/result-lines";
 import { createExecutor } from "../../tx/executor";
@@ -356,6 +357,39 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(setForm(s, "p1", "rotom").ok, true, "원래 모습으로는 카탈로그 없이 돌아간다");
   assert.equal(isFormLocked(seed({ species: "giratina", level: 50 }).pets[0] as PetV3), false, "규칙이 없는 묶음(오리진폼)은 잠그지 않는다");
   process.stdout.write("(12d) 로토무 모습 바꾸기 · 개체 작업 2시간 · 카탈로그  ok\n");
+}
+
+// (12e) 한 방향 모습 바꾸기 — 플라엣테 → 플라엣테(영원의 꽃), 다투곰 → 다투곰(붉은 달). 도구 1개, 작업 시간 조건 없음, 되돌리지 않는다. 진화가 아니다
+// (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
+{
+  assert.deepStrictEqual(SHIFT_RULES.floette, { workMs: 0, item: "eternal-flower", oneWay: true });
+  const s = seed({ species: "floette", level: 30 });
+  const p = s.pets[0] as PetV3;
+  assert.deepStrictEqual(formsOf(p), ["floette", "floette-eternal"], "플라엣테는 영원의 꽃 모습을 고를 수 있다");
+  assert.equal(isFormLocked(p), false, "작업 시간 조건이 없다");
+  assert.equal(isSinglePet(p), false, "일반 포켓몬");
+  assert.deepStrictEqual(evolveCandidates(s, "p1", "day").map((c) => c.to), ["florges"], "진화 후보에는 없다 — 플라제스만");
+  assert.equal(setForm(s, "p1", "floette-eternal").reason, "no-item", "영원의 꽃이 없으면 거절");
+  s.bag["eternal-flower"] = 1;
+  assert.deepStrictEqual(setForm(s, "p1", "floette-eternal"), { ok: true, petId: "p1", from: "floette", to: "floette-eternal" });
+  assert.deepStrictEqual([p.species, s.bag["eternal-flower"], p.evolved], ["floette-eternal", undefined, []], "도구 1개를 쓰고 진화 이력은 그대로");
+  assert.ok(s.dex.obtained.includes("floette-eternal"), "처음 바꾼 모습은 도감에 남는다");
+  assert.deepStrictEqual(formsOf(p), [], "바뀐 개체는 고를 모습이 없다 — 모습 바꾸기 메뉴가 없다");
+  assert.equal(setForm(s, "p1", "floette").reason, "not-shared", "원래 모습으로 돌아가지 않는다");
+  assert.equal(isSinglePet(p), false, "바뀐 개체도 일반 포켓몬");
+  // 도감 입수처 — "플라엣테의 모습 바꾸기(영원의 꽃)". 기본 종의 "모습 바꾸기" 기록 줄은 작업 시간 조건이 있는 로토무에만 있다
+  assert.ok(dexDetail(s, "floette-eternal")?.methods.includes("플라엣테의 모습 바꾸기(영원의 꽃)"), "도감 입수처");
+  assert.equal(dexDetail(s, "floette")?.mega, undefined, "플라엣테에는 모습 바꾸기 기록 줄이 없다");
+  // 확인 창 — 넷째 줄을 켜는 표시(oneWay)
+  const view = seed({ species: "floette", level: 30 });
+  view.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  const pv = snapshotView(view, T0).party.slots[0]?.pet;
+  assert.deepStrictEqual(pv?.formItem, { name: "영원의 꽃", base: "floette", oneWay: true }, "확인 창의 도구와 한 방향 표시");
+  const u = seed({ species: "ursaluna", level: 40 });
+  u.bag["red-moon"] = 2;
+  assert.equal(setForm(u, "p1", "ursaluna-bloodmoon").ok, true, "붉은 달로 다투곰(붉은 달)");
+  assert.equal(u.bag["red-moon"], 1);
+  process.stdout.write("(12e) 한 방향 모습 바꾸기 · 영원의 꽃·붉은 달 · 되돌리지 않음  ok\n");
 }
 
 // (13) 모습 바꾸기 — 고를 수 있는 종만, 진행 상태는 그대로. 가진 종으로 가는 진화는 다시 열리지 않는다

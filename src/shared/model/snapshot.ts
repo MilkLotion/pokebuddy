@@ -62,7 +62,7 @@ export interface PetView {
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
   shiftForms?: FormView[]; // 모습 바꾸기 종(로토무)의 고를 수 있는 모습 — 해금 뒤에만. 박스 칸은 지금 종 그대로라 forms 와 나눈다
-  formItem?: { name: string; base: string }; // 모습 바꾸기에 쓰는 도구의 이름과 도구 없이 돌아가는 기본 종(로토무 — 로토무카탈로그). 확인 창 안내 줄이 쓴다
+  formItem?: { name: string; base: string; oneWay?: true }; // 모습 바꾸기에 쓰는 도구의 이름과 도구 없이 돌아가는 기본 종(로토무 — 로토무카탈로그). 확인 창 안내 줄이 쓴다. oneWay 는 돌아가지 않는 모습(플라엣테(영원의 꽃))
   look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
   mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
   megaGoal?: MegaGoalView; // 메가진화하는 종인데 메가스톤이 아직 없는 개체만

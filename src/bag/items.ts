@@ -41,8 +41,9 @@ export const isEvoItem = (id: string, opts?: DexOptions): boolean => evoItemTabl
 // (2026-10-05 사용자 결정 "카탈로구는 진화로 옮기고", 2026-10-07 "아이템은 진화에 추가하고")
 export const inEvoCategory = (id: string, opts?: DexOptions): boolean => isEvoItem(id, opts) || isFormTool(itemOf(id, opts)?.effect);
 
-// 원작 첫 등장 세대 — 우리 도구(빈 기술머신·연결의끈·지도)는 0
-const itemGen = (id: string, opts?: DexOptions): number => evoItemTable(opts)[id]?.gen ?? itemOf(id, opts)?.gen ?? 0;
+// 원작 첫 등장 세대 — 우리 도구(빈 기술머신·연결의끈·지도)는 0.
+// 세대가 없는 우리 모습 도구(영원의 꽃·붉은 달)는 0.5 — 우리 진화 도구 바로 아래. "빈기술머신-연결의끈-지도 순서" 를 지키는 구현 판단 (2026-10-08)
+const itemGen = (id: string, opts?: DexOptions): number => evoItemTable(opts)[id]?.gen ?? itemOf(id, opts)?.gen ?? (isFormTool(itemOf(id, opts)?.effect) ? 0.5 : 0);
 
 // `진화` 분류의 순서 — 우리 도구(빈 기술머신·연결의끈·지도)가 맨 위, 그 아래 원작 세대 오래된 순, 같은 세대는 가나다순
 // 상점 진화 탭과 가방 진화 탭이 같이 쓴다 (2026-10-05 사용자 결정 "옛날아이템이 위로", "가나다순으로", "원작에 없음 … 가장위로", "빈기술머신-연결의끈-지도 순서")

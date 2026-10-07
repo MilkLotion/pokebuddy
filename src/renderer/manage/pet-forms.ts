@@ -188,6 +188,7 @@ function compareEl(pet: PetView, after: HTMLElement, uses: readonly string[] = [
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `1315:47601`. 도구를 쓰는 모습(로토무)은 화살표와 안내에 `로토무카탈로그`
 // 안내는 세 줄이다 — 도구가 있으면 `같은 칸에서 바뀌어요` 대신 도구 줄.
+// 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달))은 넷째 줄 `원래 모습으로 돌아갈 수 없어요` (2026-10-08 사용자 확인, Figma 05 `Box / Form Confirm · 영원의 꽃`)
 export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
   const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
@@ -203,6 +204,7 @@ export function drawForm(petId: string, to: string): void {
   if (item) info.appendChild(el("div", "note", usesText([item])));
   info.appendChild(el("div", "note", KEPT));
   if (!item) info.appendChild(el("div", "note", "같은 칸에서 바뀌어요")); // 스탯 문장은 뺐다 — 능력치 기능이 없다 (2026-09-30 사용자 결정 "능력치 … 없애자")
+  if (item && pet.formItem?.oneWay) info.appendChild(el("div", "note", "원래 모습으로 돌아갈 수 없어요"));
   const go = actionButtonEl("바꾸기", true, false, () => {
     void sendCommand("pet.form", pet.id, { species: to }).then((ok) => {
       if (ok) closeDialog();

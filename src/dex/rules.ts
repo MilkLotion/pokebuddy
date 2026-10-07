@@ -15,10 +15,20 @@ export const QUIRK_RULES = { periodMs: 90_000, durationMs: 10_000 };
 // 모습 바꾸기 해금과 값 — 키는 data/regional.json shift 의 기본 종(로토무). 수치는 docs/specs/balance.md "로토무의 모습 바꾸기"
 //   workMs  그 개체가 지금 파티에 있는 동안 받은 에이전트 작업 시간(PetV3.workMs)이 이 값 이상이면 모든 모습이 열린다
 //   item    기본 종이 아닌 모습으로 바꿀 때마다 쓰는 도구. 기본 종으로 돌아갈 때는 쓰지 않는다
+//   oneWay  한 방향 — 기본 종에서 모습으로 한 번 바꾸고 돌아가지 않는다. 바뀐 개체에는 모습 바꾸기가 없다
 // (2026-10-05 사용자 결정 "누적말고, 구한 후 2시간으로(로토무가 파티에 있던채로 2시간)", "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게".
 //  그 전에는 계정 작업 시간 50시간이었다)
-export const SHIFT_RULES: Readonly<Record<string, { workMs: number; item: string }>> = {
+// 플라엣테·다투곰 — 영원의 꽃·붉은 달로 플라엣테(영원의 꽃)·다투곰(붉은 달)이 된다. 작업 시간 조건은 없다
+// (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
+export interface ShiftRule {
+  workMs: number;
+  item: string;
+  oneWay?: true;
+}
+export const SHIFT_RULES: Readonly<Record<string, ShiftRule>> = {
   rotom: { workMs: 2 * 60 * 60_000, item: "rotom-catalog" },
+  floette: { workMs: 0, item: "eternal-flower", oneWay: true },
+  ursaluna: { workMs: 0, item: "red-moon", oneWay: true },
 };
 
 // 버드렉스의 말 부르기 도구 — 버드렉스가 있으면 가방 기기 창에서 하나 쓰고, 블리자포스·레이스포스 가운데 고른 말이 박스로 온다

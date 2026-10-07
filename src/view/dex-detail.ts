@@ -42,9 +42,11 @@ function megaLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexD
 }
 
 // 모습 바꾸기의 조건 — "(파티에서 작업 2시간 · 로토무카탈로그)". 규칙이 없는 묶음(오리진폼)은 빈 글자. 쌓인 시간은 적지 않는다 (2026-10-05)
+// 작업 시간 조건이 없는 묶음(플라엣테·다투곰)은 도구만 — "(영원의 꽃)" (2026-10-08 사용자 확인)
 function shiftNeedText(slug: string, opts?: DexOptions): string {
   const rule = shiftRuleOf(slug, opts);
-  return rule == null ? "" : `(파티에서 작업 ${rule.workMs / 3_600_000}시간 · ${itemName(rule.item)})`;
+  if (rule == null) return "";
+  return rule.workMs > 0 ? `(파티에서 작업 ${rule.workMs / 3_600_000}시간 · ${itemName(rule.item)})` : `(${itemName(rule.item)})`;
 }
 
 // 모습 바꾸기 줄 — 작업 시간 조건이 있는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
@@ -52,7 +54,8 @@ function shiftNeedText(slug: string, opts?: DexOptions): string {
 const COUNT_WORDS = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"];
 function shiftLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
   const group = shiftGroupOf(slug, opts);
-  if (!obtained || group[0] !== slug || shiftWorkMs(slug, opts) == null) return {};
+  // 작업 시간 조건이 없는 한 방향 묶음(플라엣테·다투곰)에는 이 줄이 없다
+  if (!obtained || group[0] !== slug || !(shiftWorkMs(slug, opts) ?? 0)) return {};
   const n = group.length - 1;
   return { mega: { label: "모습 바꾸기", names: `${COUNT_WORDS[n] ?? n} 모습${shiftNeedText(slug, opts)}` } };
 }
@@ -72,7 +75,8 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   if (inRandomEgg(slug, opts)) methods.push(unlocked ? random : `${random}(해금 후)`);
   // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼)·로토무의 다섯 모습). 작업 시간 조건이 있으면 괄호로 붙인다
   const shiftForm = regionalOf(slug, opts);
-  if (shiftForm?.get === "shift") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}`);
+  // 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달), get tool)도 같다 — "플라엣테의 모습 바꾸기(영원의 꽃)"
+  if (shiftForm?.get === "shift" || shiftForm?.get === "tool") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}`);
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);

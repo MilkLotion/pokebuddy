@@ -73,7 +73,7 @@ function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForm
   if (list.length < 2) return {};
   const views = list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] }));
   const rule = shiftRuleOf(pet.species);
-  if (rule) return isFormLocked(pet) ? {} : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base } };
+  if (rule) return isFormLocked(pet) ? {} : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base, ...(rule.oneWay ? { oneWay: true as const } : {}) } };
   if (isShared(pet)) return { forms: views };
   return isFormLocked(pet) ? {} : { shiftForms: views };
 }

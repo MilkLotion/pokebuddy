@@ -96,6 +96,7 @@ try {
     if (!MINT_RETIRED) assert.ok(near(itemCandidates().find((c) => c.id === "mint")?.weight ?? 0, 1 / 100, 1e-12), "민트 가중치 1/100");
     // 모습 도구는 값과 상관없이 줍기 후보가 아니다 (2026-10-07 사용자 "유대의고삐는 줍기에서 안 뜨게")
     assert.ok(!ids.includes("reins-of-unity") && !ids.includes("rotom-catalog"), "줍기 후보에 reins-of-unity 없음");
+    assert.ok(!ids.includes("eternal-flower") && !ids.includes("red-moon"), "모습 도구 영원의 꽃·붉은 달도 줍지 않는다 (2026-10-08)");
     process.stdout.write("(1) 수치와 도구 후보  ok\n");
   }
 

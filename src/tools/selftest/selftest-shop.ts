@@ -366,11 +366,13 @@ function seed(points: number): SaveV3 {
   assert.equal(sellsSpecies("raichu-alola"), false, "진화 결과");
   assert.equal(sellsSpecies("articuno-galar"), false, "단일 포켓몬 알의 종");
   assert.ok(eggPool("sub-legendary")?.includes("articuno-galar"), "가라르 프리져는 랜덤준전설알");
-  // 특수 폼 2종도 랜덤준전설알의 단일 포켓몬이라 팔지 않는다 (2026-10-03 사용자 결정 "준전설알로.")
+  // 특수 폼 2종은 플라엣테·다투곰이 모습 도구로 바꿔 얻는다 — 알에 없어 종으로 팔지 않는다. 도구는 3000P (2026-10-08 사용자 결정)
   for (const s of ["floette-eternal", "ursaluna-bloodmoon"]) {
-    assert.equal(sellsSpecies(s), false, `단일 포켓몬 알의 종 ${s}`);
-    assert.ok(eggPool("sub-legendary")?.includes(s), `${s} 는 랜덤준전설알`);
+    assert.equal(sellsSpecies(s), false, `알에 없는 종 ${s}`);
+    assert.ok(!eggPool("sub-legendary")?.includes(s), `${s} 는 랜덤준전설알에서 뺐다`);
   }
+  assert.equal(toolPrice("eternal-flower"), 3000, "영원의 꽃 3000P");
+  assert.equal(toolPrice("red-moon"), 3000, "붉은 달 3000P");
   process.stdout.write("(12) 리전폼 · 지도 가격 · 파는 종  ok\n");
 }
 
@@ -386,6 +388,10 @@ function seed(points: number): SaveV3 {
   assert.equal(of("solgaleo", ["cosmog", "cosmoem"]), null, "공유 계열도 단일 포켓몬");
   assert.equal(of("ditto"), null, "어느 알에도 없는 종 — 업적 보상");
   assert.equal(of("lapras"), null, "어느 알에도 없는 종 — 업적 보상");
+  // 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달))은 기본 종과 같은 값 — 예전에 랜덤준전설알에서 받은 개체도 같다 (2026-10-08)
+  assert.equal(of("floette-eternal"), of("floette"), "플라엣테(영원의 꽃)는 플라엣테와 같은 값");
+  assert.equal(of("ursaluna-bloodmoon"), of("ursaluna"), "다투곰(붉은 달)은 다투곰과 같은 값");
+  assert.ok((of("floette-eternal") ?? 0) > 0, "팔 수 있다");
 
   const mk = (id: string, species: string) => newPet({ id, species, shiny: false, nature: "hardy", gender: "male", now: T0 });
   let state: SaveV3 | null = seed(100);
@@ -506,9 +512,11 @@ function seed(points: number): SaveV3 {
   assert.equal(list.find((i) => i.id === "rotom-catalog")?.category, "evolution", "카탈로그는 진화 탭");
   assert.equal(list.filter((i) => i.category === "tool").some((i) => i.id === "rotom-catalog"), false, "도구 탭에는 없다");
   assert.deepEqual(evo.slice(0, 3), ["빈 기술머신", "연결의끈", "지도"], "우리 도구가 맨 위 — 가나다순");
-  assert.deepEqual(evo.slice(3, 9), ["달의돌", "리프의돌", "물의돌", "불꽃의돌", "천둥의돌", "태양의돌"], "1세대 가나다순, 그다음 2세대");
-  assert.deepEqual(evo.slice(9, 13), ["각성의돌", "로토무카탈로그", "빛의돌", "어둠의돌"], "4세대 — 카탈로그는 플라티나");
-  assert.equal(evo[13], "얼음의돌", "7세대");
+  assert.deepEqual(evo.slice(3, 5), ["붉은 달", "영원의 꽃"], "우리 모습 도구는 우리 진화 도구 바로 아래 — 가나다순 (2026-10-08)");
+  assert.deepEqual(list.filter((i) => i.id === "eternal-flower" || i.id === "red-moon").map((i) => [i.note, i.price, i.about?.where]), [["다투곰", 3000, "다투곰"], ["플라엣테", 3000, "플라엣테"]], "설명·쓰는 곳은 쓰는 종 이름만, 3000P");
+  assert.deepEqual(evo.slice(5, 11), ["달의돌", "리프의돌", "물의돌", "불꽃의돌", "천둥의돌", "태양의돌"], "1세대 가나다순, 그다음 2세대");
+  assert.deepEqual(evo.slice(11, 15), ["각성의돌", "로토무카탈로그", "빛의돌", "어둠의돌"], "4세대 — 카탈로그는 플라티나");
+  assert.equal(evo[15], "얼음의돌", "7세대");
   assert.deepEqual(evo.slice(-5), ["꿀맛사과", "범작찻잔", "복합금속", "저주받은갑옷", "축복받은갑옷"], "9세대가 맨 아래");
   assert.equal(list.find((i) => i.id === "rotom-catalog")?.about?.where, "로토무 · 모습 바꾸기", "카탈로그 쓰는 곳");
   process.stdout.write("(15) 진화 탭 · 카탈로그 · 원작 세대순 · 같은 세대 가나다순  ok\n");

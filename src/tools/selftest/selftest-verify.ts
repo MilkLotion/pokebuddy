@@ -523,7 +523,9 @@ out("0 supabase/functions/_shared 가 최신");
 // 14. 로토무 모습 — 개체 작업 시간 2시간, 바꿀 때마다 로토무카탈로그 1개 (src/dex/rules.ts SHIFT_RULES, 2026-10-05 사용자 결정)
 {
   const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
-  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM].sort(), "로토무 묶음만 규칙이 있다");
+  // 로토무와 한 방향 묶음(플라엣테·다투곰, 2026-10-08)만 규칙이 있다
+  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM, "floette", "floette-eternal", "ursaluna", "ursaluna-bloodmoon"].sort(), "규칙이 있는 묶음");
+  assert.deepEqual(data.shiftRules?.["floette-eternal"], { base: "floette", workMs: 0, item: "eternal-flower", oneWay: true });
   assert.deepEqual(data.shiftRules?.["rotom-heat"], { base: "rotom", workMs: 7_200_000, item: "rotom-catalog" });
   const at = (workMs: number, catalogs: number): { prev: SaveV3; next: SaveV3 } => {
     const prev = base();
@@ -554,6 +556,29 @@ out("0 supabase/functions/_shared 가 최신");
   kept.next.pets[1]!.species = "rotom-wash";
   kept.next.bag["rotom-catalog"] = 1;
   assert.deepEqual(rules(kept.prev, kept.next, ctx(60_000)), [], "직전 저장부터 그 모습이면 보지 않는다 — 옛 규칙(계정 50시간)으로 바꾼 개체");
+  // 한 방향 모습 — 플라엣테 → 플라엣테(영원의 꽃)은 영원의 꽃 1개, 작업 시간 조건 없음. 되돌리면 종 위반 (2026-10-08)
+  const flower = (items: number): { prev: SaveV3; next: SaveV3 } => {
+    const prev = base();
+    prev.pets.push(pet("p2", "floette"));
+    prev.bag["eternal-flower"] = items;
+    const next = clone(prev);
+    next.pets[1]!.species = "floette-eternal";
+    next.pets[1]!.forms = ["floette", "floette-eternal"];
+    next.bag["eternal-flower"] = items - 1;
+    if (next.bag["eternal-flower"] <= 0) delete next.bag["eternal-flower"];
+    return { prev, next };
+  };
+  const fOk = flower(1);
+  assert.deepEqual(rules(fOk.prev, fOk.next, ctx(60_000)), [], "영원의 꽃을 썼으면 통과 — 작업 시간 조건이 없다");
+  const fFree = flower(1);
+  fFree.next.bag["eternal-flower"] = 1;
+  assert.deepEqual(rules(fFree.prev, fFree.next, ctx(60_000)), ["form-item"], "영원의 꽃을 쓰지 않고 바꾸면 위반");
+  const fBack = flower(1);
+  fBack.prev.pets[1]!.species = "floette-eternal";
+  fBack.prev.pets[1]!.forms = ["floette", "floette-eternal"];
+  fBack.next.pets[1]!.species = "floette";
+  fBack.next.bag["eternal-flower"] = 1;
+  assert.deepEqual(rules(fBack.prev, fBack.next, ctx(60_000)), ["species"], "플라엣테로 되돌리면 종 위반");
   // form-work — 개체 작업 시간은 계정 작업 시간보다 빨리 늘지 않고 2시간을 넘지 않는다
   const grow = at(0, 1);
   grow.next.pets[1]!.species = "rotom";

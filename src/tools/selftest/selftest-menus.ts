@@ -136,4 +136,22 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(menuOf(s, "p1")!.model.forms?.length ?? 0, 0, "모습이 없는 종은 줄이 없다");
 }
 
+// (7) 한 방향 모습 바꾸기 — 플라엣테의 말풍선은 플라엣테(영원의 꽃) 한 줄. 머리 "모습 바꾸기 · 영원의 꽃 1개를 써요". 도구가 없으면 줄이 흐리다.
+//     바뀐 개체(플라엣테(영원의 꽃))에는 "모습 바꾸기" 줄이 없다 (2026-10-08 사용자 결정·지시 "모습바꾸기 말풍선에 플라엣테(영원의 꽃) 만 있어야지")
+{
+  const s = seed();
+  s.pets.push(pet({ id: "p5", species: "floette", level: 30 }));
+  s.party.slots[2] = { state: "pokemon", petId: "p5", hidden: false };
+  const none = petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  assert.equal(none?.enabled, false, "영원의 꽃이 없으면 누를 줄이 없어 흐리다");
+  s.bag["eternal-flower"] = 1;
+  const item = petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  const rows = Array.isArray(item?.submenu) ? item.submenu : [];
+  assert.equal(item?.toolTip, t("menu.form.title.item", { item: "영원의 꽃" }), "머리 글 — 영원의 꽃 1개를 써요");
+  assert.equal(item?.toolTip, "모습 바꾸기 · 영원의 꽃 1개를 써요");
+  assert.deepEqual(rows.map((r) => [r.label, r.sublabel, r.enabled]), [["플라엣테(영원의 꽃)", t("menu.form.go"), true]], "바뀔 모습 한 줄 — 지금 모습·원래대로 줄이 없다");
+  s.pets.find((p) => p.id === "p5")!.species = "floette-eternal";
+  assert.equal(petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).some((m) => m.label === t("menu.form")), false, "바뀐 개체에는 모습 바꾸기 줄이 없다");
+}
+
 process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금)\n");

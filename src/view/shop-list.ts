@@ -17,7 +17,8 @@ import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
 import { activePreset, presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
 import { boxBuyable } from "../box/slots.js";
-import { itemAbout } from "./bag.js";
+import { formWhere, itemAbout } from "./bag.js";
+import { shiftOfItem } from "../dex/forms.js";
 import { evoItemNote } from "./shop-detail.js";
 import { eggTable, itemTable, evoItemTable, speciesTable } from "../dex/tables.js";
 import { BOX_RULES } from "../box/rules.js";
@@ -120,7 +121,9 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const [id, item] of Object.entries(itemTable(opts))) {
     if (isMetaKey(id) || item.price === null || !isFormTool(item.effect) || isEvoItem(id, opts)) continue;
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id) };
-    evoRows.push({ id, name: itemName(id, opts), note: item.effectText ?? "", price: item.price, category: "evolution", affordable: false, about, ...bagRoom(id) });
+    // 한 방향 모습 도구(영원의 꽃·붉은 달)의 설명은 쓰는 종 이름만 (2026-10-08 사용자 결정 "플라엣테, 다투곰 만 적자")
+    const note = shiftOfItem(id)?.oneWay ? formWhere(id) : (item.effectText ?? "");
+    evoRows.push({ id, name: itemName(id, opts), note, price: item.price, category: "evolution", affordable: false, about, ...bagRoom(id) });
   }
   for (const row of evoRows.sort((a, b) => evoOrder(a, b, opts))) add(row);
 

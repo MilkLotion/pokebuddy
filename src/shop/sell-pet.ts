@@ -9,6 +9,7 @@
 import { takePet } from "../box/slots.js";
 import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
+import { regionalOf } from "../dex/regional.js";
 import { maxIdNo } from "../shared/ids.js";
 import { locatePet } from "../party/locate.js";
 import { isInBattle } from "../battle/party.js";
@@ -41,8 +42,11 @@ export type SellPetResult = Outcome<SellPetFailure> & {
 const CHAIN_MAX = 8; // 진화 계열을 거슬러 오르는 횟수의 상한 — 데이터가 돌아도 멈춘다
 
 // 진화 계열 맨 앞 종 — 진화 이력의 첫 종에서 진화 전 종을 더 거슬러 오른다(우편·교환으로 받은 진화형)
+// 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달), get tool)은 기본 종에서 시작한다 — 판매가는 기본 종과 같다 (2026-10-08)
 function rootSpecies(pet: Pick<PetV3, "species" | "evolved">, opts?: DexOptions): string {
-  let slug = pet.evolved[0] ?? pet.species;
+  const first = pet.evolved[0] ?? pet.species;
+  const form = regionalOf(first, opts);
+  let slug = form?.get === "tool" ? form.base : first;
   for (let i = 0; i < CHAIN_MAX; i += 1) {
     const prev = prevOf(slug, opts);
     if (!prev) break;

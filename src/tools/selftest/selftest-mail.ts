@@ -118,8 +118,9 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
 // (2c) 단일 포켓몬 선물 — 한 마리만 넣는다. 이미 얻은 종이면 넣지 않고 다른 선물은 받는다. 우편 전용 특수 폼도 단일 포켓몬이다
 // (2026-10-03 사용자 결정 "이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해.")
 {
-  for (const slug of ["magearna-original", "pichu-spiky-eared", "floette-eternal", "mewtwo"]) assert.ok(singleSpecies().has(slug), `단일 포켓몬 ${slug}`);
-  for (const slug of ["lycanroc-dusk", "toxtricity-low-key", "pichu", "magearna-mega"]) assert.ok(!singleSpecies().has(slug), `단일 포켓몬이 아니다 ${slug}`);
+  for (const slug of ["magearna-original", "pichu-spiky-eared", "mewtwo"]) assert.ok(singleSpecies().has(slug), `단일 포켓몬 ${slug}`);
+  // 플라엣테(영원의 꽃)·다투곰(붉은 달)은 2026-10-08 진화용 도구로 얻는 일반 포켓몬이 됐다
+  for (const slug of ["lycanroc-dusk", "toxtricity-low-key", "pichu", "magearna-mega", "floette-eternal", "ursaluna-bloodmoon"]) assert.ok(!singleSpecies().has(slug), `단일 포켓몬이 아니다 ${slug}`);
   assert.equal(isSinglePet({ species: "pichu-spiky-eared", evolved: [] }), true, "교환할 수 없다");
   const s = empty(T0);
   const before = s.pets.length;
