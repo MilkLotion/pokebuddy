@@ -9,7 +9,7 @@ import { portraitOf } from "./art-cache.js";
 import { openDexPick, resendDex } from "./dex-link.js";
 import { DEX_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
 import { megaMark } from "./pet-forms.js";
-import { matchesDex, normQuery, searchBoxEl } from "./search.js";
+import { findBarEl, matchesDex, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { chipsEl, pageHeadEl } from "./widgets.js";
@@ -145,10 +145,16 @@ export function drawDex(v: Snapshot): void {
   const bar = el("div", "search-row");
   bar.appendChild(dexRegionEl());
   bar.appendChild(
-    searchBoxEl("dex", dexQuery, "이름 또는 번호 검색", (q) => {
-      dexQuery = q;
-      dexPageNo = 0;
-      redrawBody();
+    findBarEl({
+      key: "dex",
+      value: dexQuery,
+      placeholder: "이름 또는 번호 검색",
+      onSearch: (q) => {
+        if (q === dexQuery) return; // 같은 말 — 다시 그리지 않는다
+        dexQuery = q;
+        dexPageNo = 0;
+        redrawBody();
+      },
     }),
   );
   bar.appendChild(

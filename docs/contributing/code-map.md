@@ -223,7 +223,8 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **가림막과 OS 창 단추** — 가림막은 `setScrim` 이 켜고 끈다. OS 가 그리는 창 단추 자리는 `tutorial.ts` 가 헤더를 덮은 막의 겹수(0·1·2)를 메인에 보내고, 메인 `manage/window.ts` 가 같은 겹수 색으로 칠한다. 막을 새로 겹치는 화면을 만들면 이 겹수 계산에 넣는다.
 - **헤더 아이콘의 열림 표시** — `registerDialog` 의 `headerButton` 으로 건다. 표시는 `setScrim` 이 맞춘다.
 - **명령** — `command.ts` 의 `sendCommand`. 처리 중 모양은 `setBusy`·`whenSlow`, 실패 문구는 `shared/fail-text.ts` 의 `failTextOf`.
-- **작은 부품** — `widgets.ts` 의 `chipsEl`(분류 칩), `pageHeadEl`(탭 머리), `switchEl`·`segmentedEl`·`settingRow`(설정 줄), `alertEl`(이어지는 상태 안내), `meterEl`. 검색 칸은 `search.ts`, 격자 쪽 넘김과 보기 바꾸기는 `grid-view.ts`.
+- **작은 부품** — `widgets.ts` 의 `chipsEl`(분류 칩), `pageHeadEl`(탭 머리), `switchEl`·`segmentedEl`·`settingRow`(설정 줄), `alertEl`(이어지는 상태 안내), `meterEl`. 격자 쪽 넘김과 보기 바꾸기는 `grid-view.ts`.
+- **검색 칸** — `search.ts` 의 `findBarEl`(찾기 줄). 박스 찾기·도감·상점이 같이 쓴다. 입력을 멈추고 1초 뒤나 Enter 로 검색하고, `✕` 로 지운다. 이전·다음 결과가 필요하면 `nav` 를 켠다(박스). CSS 는 `widgets.css` `.find-bar` 다.
 - **튜토리얼** — 문구는 `tutorial-steps.ts` 의 표에 더하고, 그리기·입력 막기는 `tutorial.ts` 가 한다. 다시 보기는 `tutorial/queue.ts` 의 `REPLAYABLE_TUTORIALS` 에 넣는다.
 
 ### 기기 창

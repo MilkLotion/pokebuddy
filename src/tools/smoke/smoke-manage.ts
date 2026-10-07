@@ -2,8 +2,8 @@
 // npm run build 뒤 electron dist/tools/smoke/smoke-manage.js   (POKEBUDDY_SMOKE_SHOTS=폴더 를 주면 화면 그림을 거기에 남긴다)
 //
 // 검사 대상
-//   검색 칸    입력 중에는 거르지 않고 Enter·`검색` 단추에서만 거른다 (2026-09-29 사용자 결정). 입력 중에는 칸 요소를 갈아 끼우지 않는다 —
-//              갈아 끼우면 한글 조합이 끊긴다("어래곤" → "어곤"). 조합 중 Enter 는 확정 직후 한 번 거른다(Enter 한 번)
+//   검색 칸    찾기 줄(search.ts findBarEl) — 입력을 멈추고 1초 뒤나 Enter 로 거른다. 검색 단추는 없고 ✕ 로 지운다 (2026-10-07 사용자 결정).
+//              입력 중에는 칸 요소를 갈아 끼우지 않는다 — 갈아 끼우면 한글 조합이 끊긴다("어래곤" → "어곤"). 조합 중 Enter 는 확정 직후 한 번 거른다(Enter 한 번)
 //   1초 시계   시간 값만 바뀌면 표시만 고친다 — 탭 포커스·title 요소가 남는다. 모양이 바뀌어 다시 그려도 포커스를 되돌린다
 //   격자 넘김  도감은 한 쪽 30칸(박스처럼 6×5), 상점 포켓몬 탭은 15칸 · ◀ ▶. 1초 시계에도 쪽이 남는다. 도감 쪽은 한 줄 안쪽만 넘친다
 //   성격 창    고르기 전후로 창 높이가 같다
@@ -199,26 +199,35 @@ void app.whenReady().then(async () => {
     assert.equal(await js<string>(label), `2 / ${pages}`, "다시 그려도 쪽이 남는다");
     await shot("dex-page.png");
 
-    // (4) 검색 칸 — 입력만 하면 거르지 않는다. 1초 시계가 돌아도 같은 입력 칸·포커스·글자가 남는다
+    // (4) 찾기 줄 — 입력 중에는 거르지 않고 칸도 갈아 끼우지 않는다. 입력을 멈추고 1초 뒤 거른다(2026-10-07 사용자 "1초 디바운스로").
+    //     조합 중에는 1초 시계가 돌아도 같은 입력 칸·포커스·글자가 남는다
     const typed = await js<{ cells: number }>(`(async () => {
       const input = document.getElementById('search-dex');
       window.__input = input;
       input.focus();
+      input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
       input.value = '어래곤';
-      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: '곤', inputType: 'insertText' }));
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: '곤', inputType: 'insertCompositionText', isComposing: true }));
       window.__bump = 11; // 입력 중 모양이 바뀌어도 다시 그리기를 미룬다
+      await new Promise((r) => setTimeout(r, 500));
       return { cells: ${cells} };
     })()`);
-    assert.equal(typed.cells, DEX_PAGE, "입력만으로는 거르지 않는다");
-    await wait(2300);
+    assert.equal(typed.cells, DEX_PAGE, "1초 안에는 거르지 않는다");
     const kept = await js<{ same: boolean; focused: boolean; value: string }>(`({ same: document.getElementById('search-dex') === window.__input, focused: document.activeElement === window.__input, value: window.__input.value })`);
-    assert.equal(kept.same, true, "1초 시계가 돌아도 입력 칸을 갈아 끼우지 않는다");
+    assert.equal(kept.same, true, "입력 중에는 시계가 돌아도 입력 칸을 갈아 끼우지 않는다");
     assert.equal(kept.focused, true, "포커스도 그대로");
     assert.equal(kept.value, "어래곤", "입력 중인 글자가 남는다");
+    await wait(900);
+    const debounced = await js<{ cells: number; focus: string | undefined; value: string }>(`({ cells: ${cells}, focus: document.activeElement?.id, value: document.getElementById('search-dex').value })`);
+    assert.ok(debounced.cells < DEX_PAGE, `입력을 멈추고 1초 뒤 거른다 (${debounced.cells}칸)`);
+    assert.equal(debounced.focus, "search-dex", "1초 뒤 거른 뒤에도 검색 칸에 포커스");
+    assert.equal(debounced.value, "어래곤", "조합 중이던 글자를 확정하고 남긴다");
+    await js(`document.getElementById('search-dex').dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '곤' }))`);
 
     // (5) 조합 중 Enter — 누른 순간에는 칸을 갈아 끼우지 않고, 확정 직후 한 번 거른다(Enter 한 번)
+    const cellsBefore = await js<number>(cells); // (4)에서 거른 칸 수
     const composing = await js<{ sameAtEnter: boolean; cellsAtEnter: number; cells: number; label: string }>(`(async () => {
-      const input = window.__input;
+      const input = document.getElementById('search-dex'); // 1초 뒤 검색에서 칸을 갈아 끼웠다
       input.value = '88';
       input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
       input.value = '882';
@@ -230,11 +239,11 @@ void app.whenReady().then(async () => {
       return { sameAtEnter, cellsAtEnter, cells: ${cells}, label: ${label} };
     })()`);
     assert.equal(composing.sameAtEnter, true, "조합 중 Enter 에는 칸을 갈아 끼우지 않는다");
-    assert.equal(composing.cellsAtEnter, DEX_PAGE, "조합 중 Enter 순간에는 거르지 않는다");
+    assert.equal(composing.cellsAtEnter, cellsBefore, "조합 중 Enter 순간에는 거르지 않는다");
     assert.equal(composing.cells, 1, "확정 직후 한 번 거른다");
     assert.equal(composing.label, "1 / 1", "검색하면 첫 쪽");
 
-    // (6) Enter · `검색` 단추 · 지우기(×)
+    // (6) Enter · 검색 단추 없음 · ✕ 로 지우기
     const entered = await js<{ cells: number; focus: string | undefined }>(`(async () => {
       const input = document.getElementById('search-dex');
       input.value = '암나이트';
@@ -245,24 +254,16 @@ void app.whenReady().then(async () => {
     })()`);
     assert.equal(entered.cells, 1, "Enter 로 거른다 — 해금한 종은 이름으로 찾는다");
     assert.equal(entered.focus, "search-dex", "거른 뒤에도 검색 칸에 포커스");
-    const clicked = await js<number>(`(async () => {
-      const input = document.getElementById('search-dex');
-      input.value = '1';
-      input.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      input.closest('.search-field').querySelector('.search-go').click();
-      await new Promise((r) => setTimeout(r, 100));
-      return ${cells};
-    })()`);
-    assert.equal(clicked, DEX_PAGE, "검색 단추로 거른다 — 1로 시작하는 번호가 한 쪽을 넘는다");
-    const cleared = await js<string>(`(async () => {
-      const input = document.getElementById('search-dex');
-      input.value = '';
-      input.dispatchEvent(new Event('search'));
+    const noGo = await js<number>(`document.querySelectorAll('#body .search-go').length`);
+    assert.equal(noGo, 0, "검색 단추가 없다");
+    const cleared = await js<{ label: string; value: string }>(`(async () => {
+      document.getElementById('search-dex').closest('.find-bar').querySelector('.find-close').click();
       await new Promise((r) => setTimeout(r, 100));
       document.activeElement?.blur();
-      return ${label};
+      return { label: ${label}, value: document.getElementById('search-dex').value };
     })()`);
-    assert.equal(cleared, `1 / ${pages}`, "빈 칸이면 전체");
+    assert.equal(cleared.label, `1 / ${pages}`, "✕ 로 지우면 전체");
+    assert.equal(cleared.value, "", "✕ 는 검색어도 비운다");
 
     // (7) 상점 포켓몬 격자 넘김
     await js(`${tabBtn("상점")}.click()`);

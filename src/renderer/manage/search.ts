@@ -1,14 +1,19 @@
-// 설정창의 검색 칸 — 검색 칸·글자마다 넘기는 입력 칸, 다시 그린 뒤 초점 되돌리기, 이름·번호 일치 (P10h)
-// 검색 칸은 입력 중에 결과를 바꾸지 않는다. Enter 나 `검색` 단추를 누를 때 그 값으로 한 번 거른다 (2026-09-29 사용자 결정)
-//   한글 조합을 확정하는 Enter(isComposing)는 검색하지 않는다 — 조합 확정에만 쓴다
-//   지우기(×)로 칸을 비우면 바로 전체로 돌린다 — 빈 칸은 걸러 볼 것이 없다
+// 설정창의 검색 칸 — 찾기 줄(검색 칸 공통 부품)·글자마다 넘기는 입력 칸, 다시 그린 뒤 초점 되돌리기, 이름·번호 일치 (P10h)
+// 찾기 줄은 입력을 멈추고 1초 뒤 검색한다. Enter 는 바로 검색한다. `검색` 단추는 없다
+// (2026-10-07 사용자 "구글검색도 검색버튼이 없으니 없애고, 검색버튼말고 1초 디바운스로". 그 전에는 Enter·`검색` 단추로만 걸렀다)
+//   한글 조합을 확정하는 Enter(isComposing)는 검색을 예약만 한다 — 확정 직후 그 값으로 한 번 거른다
+//   1초가 지났는데 조합 중이면 칸에서 초점을 빼 조합을 확정한 뒤 검색하고 초점을 되돌린다 — 조합 중에 칸을 갈아 끼우면 글자가 씹힌다
 // 입력 중인 글자는 초안(searchDraft)으로 들고 있다 — 검색 전에 다른 일로 다시 그려도 사라지지 않는다.
 // 검색 칸에 입력하는 동안 들어온 다시 그리기는 미뤘다가 칸을 떠날 때 그린다 — 칸을 갈아 끼우면 한글 조합이 끊긴다
 // (2026-09-29 사용자 "어래곤 검색했는데 … 어곤 이렇게 래 씹힌다")
 import type { DexEntry } from "../../shared/model/detail.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { chevronDownIconEl, chevronUpIconEl, closeIconEl } from "../ui/line-icons.js";
 import { redrawHeldDialog } from "./dialog.js";
 import { redrawHeldBody } from "./shell.js";
+
+// 입력을 멈추고 검색하기까지 (2026-10-07 사용자 "1초 디바운스로")
+const SEARCH_DEBOUNCE_MS = 1000;
 
 // 다시 그린 뒤 되돌릴 검색 칸 — 입력 중에 화면을 새로 그려도 포커스와 커서가 남게
 let searchFocus: { key: string; caret: number } | null = null;
@@ -36,60 +41,127 @@ export function forgetSearchDraft(key: string): void {
   searchDraft.delete(key);
 }
 
-// go 가 false 면 `검색` 단추를 두지 않는다 — Enter 로만 검색한다(박스 찾기 줄. 옆에 이전·다음 단추가 있다)
-export function searchBoxEl(key: string, value: string, placeholder: string, onSearch: (q: string) => void, opts: { go?: boolean } = {}): HTMLElement {
-  const box = el("span", "search-field");
+// 찾기 줄의 이전·다음 — 박스 찾기만 쓴다. count 는 `n/m`(찾지 않는 중이면 빈 글자)
+export interface FindNav {
+  count: string;
+  none: boolean; // 결과가 없다 — ^ v 를 흐리게
+  onPrev: () => void;
+  onNext: () => void;
+}
+
+export interface FindBarOpts {
+  key: string; // 입력칸 id(`search-<key>`)와 초안의 열쇠
+  value: string; // 지금 검색어
+  placeholder: string;
+  // 검색 — how 는 무엇이 검색했는가. enter 는 Enter, auto 는 입력을 멈추고 1초. 박스는 같은 말의 Enter 를 다음 결과로 쓴다
+  onSearch: (q: string, how: "enter" | "auto") => void;
+  // ✕ — 없으면 검색어를 지운다(onSearch("")). 박스는 찾기를 닫는다
+  onClose?: () => void;
+  closeLabel?: string; // ✕ 의 이름 — 기본 `검색어 지우기`
+  nav?: FindNav; // n/m · 구분선 · ^ v (Figma `Find Bar` 의 `Show Nav`)
+  className?: string; // 쓰는 곳의 자리·폭 (박스 `box-find`)
+}
+
+function findButton(cls: string, label: string, icon: SVGSVGElement, run: () => void): HTMLButtonElement {
+  const b = buttonEl(`find-btn ${cls}`);
+  b.setAttribute("aria-label", label);
+  b.title = label;
+  b.appendChild(icon);
+  b.addEventListener("click", run);
+  return b;
+}
+
+// 찾기 줄 — 검색 칸 공통 부품. 한 틀 안에 입력칸·(n/m | ^ v)·✕ (Figma 02 `Find Bar` `1590:60744`, 2026-10-07 사용자 "이 검색을 공통코드로")
+// 박스 찾기·도감·상점 포켓몬이 같이 쓴다. 다르게 동작해야 하면 따로 만들지 말고 여기에 선택지를 더한다
+export function findBarEl(opts: FindBarOpts): HTMLElement {
+  const { key } = opts;
+  const bar = el("div", opts.className ? `find-bar ${opts.className}` : "find-bar");
   const input = document.createElement("input");
   input.type = "search";
   input.className = "search";
   input.id = `search-${key}`;
   input.dataset.search = key;
-  input.placeholder = placeholder;
-  input.value = searchDraft.get(key) ?? value;
-  input.setAttribute("aria-label", placeholder);
-  const go = buttonEl("search-go", "검색");
-  go.setAttribute("aria-label", `${placeholder} 실행`);
-  const submit = (): void => {
-    if (!input.isConnected) return;
-    searchDraft.delete(key);
+  input.placeholder = opts.placeholder;
+  input.value = searchDraft.get(key) ?? opts.value;
+  input.setAttribute("aria-label", opts.placeholder);
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let composing = false;
+  let pending = false; // 조합 중 Enter — 확정 직후 한 번 거른다
+  const stop = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+  };
+  // 검색·지우기를 돌린다 — 입력 중 미루기를 건너뛰고 바로 다시 그린 뒤 초점을 되돌린다
+  const run = (job: () => void, refocus: boolean): void => {
     // 다시 그리면 옛 칸이 빠지며 blur 가 먼저 온다(Chromium) — 기억은 그린 뒤에 넣고 되돌린다
-    const saved = document.activeElement === input ? { key, caret: input.selectionStart ?? input.value.length } : null;
+    const saved = refocus ? { key, caret: input.selectionStart ?? input.value.length } : null;
     searchSubmitting = true;
     try {
-      onSearch(input.value);
+      job();
     } finally {
       searchSubmitting = false;
     }
     searchFocus = saved;
     restoreSearchFocus();
   };
-  input.addEventListener("input", () => searchDraft.set(key, input.value));
-  // 조합 중 Enter 는 검색을 예약만 한다 — 칸을 갈아 끼우면 조합이 끊긴다. 확정(compositionend) 직후 그 값으로 한 번 거른다.
-  // 그래서 사용자는 Enter 를 한 번만 누른다 (2026-09-29 검수 반영)
-  let pending = false;
+  const submit = (how: "enter" | "auto", refocus = document.activeElement === input): void => {
+    stop();
+    if (!input.isConnected) return;
+    // 친 글자 그대로 남긴다 — 검색어는 쓰는 곳이 다듬어(소문자·공백) 들고 있어 다시 그리면 바뀔 수 있다
+    searchDraft.set(key, input.value);
+    run(() => opts.onSearch(input.value, how), refocus);
+  };
+  // 1초 뒤 — 조합 중이면 초점을 빼 확정한 뒤 검색한다(확정한 글자가 값에 들어간 뒤)
+  const auto = (): void => {
+    timer = undefined;
+    if (!input.isConnected) return;
+    if (!composing) return submit("auto");
+    const focused = document.activeElement === input;
+    input.blur();
+    setTimeout(() => submit("auto", focused), 0);
+  };
+  input.addEventListener("input", () => {
+    searchDraft.set(key, input.value);
+    stop();
+    timer = setTimeout(auto, SEARCH_DEBOUNCE_MS);
+  });
+  input.addEventListener("compositionstart", () => (composing = true));
+  input.addEventListener("compositionend", () => {
+    composing = false;
+    if (!pending) return;
+    pending = false;
+    setTimeout(() => submit("enter"), 0); // 확정한 글자가 값에 들어간 뒤
+  });
   input.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
     if (e.isComposing || e.keyCode === 229) pending = true; // 229 — 조합 중 키 (IME)
-    else submit();
+    else submit("enter");
   });
-  input.addEventListener("compositionend", () => {
-    if (!pending) return;
-    pending = false;
-    setTimeout(submit, 0); // 확정한 글자가 값에 들어간 뒤
-  });
-  // type="search" 의 지우기(×) — 빈 칸이 되면 search 이벤트가 온다. Enter 도 이 이벤트를 내지만 위에서 이미 처리했다
-  input.addEventListener("search", () => {
-    if (input.value === "") submit();
-  });
-  go.addEventListener("click", submit);
   input.addEventListener("blur", () => {
     if (searchFocus?.key === key) searchFocus = null;
     releaseHeld();
   });
-  box.append(input);
-  if (opts.go !== false) box.appendChild(go);
-  return box;
+  bar.appendChild(input);
+
+  if (opts.nav) {
+    const { nav } = opts;
+    // n/m — 입력칸 안 오른쪽. 폭은 고정이라 글자 수가 달라도 단추가 움직이지 않는다
+    const prev = findButton("find-prev", "이전 결과", chevronUpIconEl(), nav.onPrev);
+    const next = findButton("find-next", "다음 결과", chevronDownIconEl(), nav.onNext);
+    prev.disabled = nav.none;
+    next.disabled = nav.none;
+    bar.append(el("span", "find-count", nav.count), el("span", "find-divider"), prev, next);
+  }
+  const close = findButton("find-close", opts.closeLabel ?? "검색어 지우기", closeIconEl(), () => {
+    stop();
+    searchDraft.delete(key);
+    input.value = "";
+    run(() => (opts.onClose ? opts.onClose() : opts.onSearch("", "enter")), false);
+  });
+  bar.appendChild(close);
+  return bar;
 }
 
 // 글자를 칠 때마다 값을 넘기는 입력 칸 — 계정·교환 링크. 다시 그리기는 하지 않는다. 포커스 복원은 searchFocus 를 쓴다

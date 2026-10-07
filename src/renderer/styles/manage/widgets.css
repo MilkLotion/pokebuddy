@@ -504,44 +504,84 @@ button.is-busy:not(.cell)::after,
   margin-left: auto;
   width: 170px;
 }
-/* 검색 칸 + `검색` 단추 — 누를 때만 거른다 (2026-09-29 사용자 결정). 단추 높이는 칸과 같다 */
-.search-field {
+/* 찾기 줄 — 검색 칸 공통 부품(search.ts findBarEl). 한 틀 안에 입력칸·(n/m | ^ v)·✕ (2026-10-07 사용자 그림 "([    ]|[][][])", Figma 02 `Find Bar` `1590:60744`).
+   틀은 검색 칸과 같은 1px 중립 테두리다. 안의 입력칸은 테두리가 없다. 단추는 대화상자 ✕ 와 같은 테두리 없는 28 단추다 */
+.find-bar {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
-}
-.search-field .search {
-  flex: 1;
-  min-width: 0;
-}
-.search-field .search-go {
-  appearance: none;
   height: 32px;
-  padding: 0 12px;
+  padding-right: 2px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  font: inherit;
+  box-sizing: border-box;
+}
+.find-bar:focus-within {
+  border-color: var(--primary);
+}
+.find-bar .search {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: 0;
+  background: none;
+}
+.find-bar .search::-webkit-search-cancel-button {
+  display: none;
+}
+.find-bar .find-count {
+  flex: none;
+  width: 36px;
+  padding-right: 8px;
+  text-align: right;
   font-size: 12px;
-  color: inherit;
-  white-space: nowrap;
+  line-height: 16px;
+  color: var(--muted);
+}
+.find-bar .find-divider {
+  flex: none;
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+}
+.find-bar .find-btn {
+  appearance: none;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
-.search-field .search-go:hover {
+.find-bar .find-btn:hover:not(:disabled) {
   background: var(--accent-bg);
 }
-.pager .search-field {
-  margin-left: auto;
+.find-bar .find-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
-.pager .search-field .search {
-  margin-left: 0;
-  width: 124px;
-  flex: none;
+.find-bar .find-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .search-row {
   display: flex;
   margin-bottom: 16px;
 }
-.search-row .search-field {
+.search-row .find-bar {
   flex: 1;
 }

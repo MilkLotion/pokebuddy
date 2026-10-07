@@ -10,7 +10,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { closeDialog, dialogEl, openAnyDialog } from "./dialog.js";
 import { dexNoText, GRID_PAGE, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
-import { matchesName, normQuery, searchBoxEl } from "./search.js";
+import { findBarEl, matchesName, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { pickShop, shopPickOf } from "./shop-link.js";
 import { ui } from "./state.js";
@@ -123,10 +123,16 @@ export function drawShop(v: Snapshot): void {
       }),
     );
     bar.appendChild(
-      searchBoxEl("shop", shopQuery, "이름 또는 번호 검색", (q) => {
-        shopQuery = q;
-        shopPageNo = 0;
-        redrawBody();
+      findBarEl({
+        key: "shop",
+        value: shopQuery,
+        placeholder: "이름 또는 번호 검색",
+        onSearch: (q) => {
+          if (q === shopQuery) return; // 같은 말 — 다시 그리지 않는다
+          shopQuery = q;
+          shopPageNo = 0;
+          redrawBody();
+        },
       }),
     );
     bar.appendChild(
