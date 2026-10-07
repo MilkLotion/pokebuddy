@@ -34,6 +34,9 @@ const root = path.join(__dirname, "..", "..", "..");
 const out = path.join(root, "supabase", "functions", "_shared");
 const load = (f: string): Record<string, Json> => JSON.parse(fs.readFileSync(path.join(root, "data", f), "utf8")) as Record<string, Json>;
 const lf = (t: string): string => t.replace(/\r\n/g, "\n");
+// 메가스톤 돌봄 조건의 옛 값 — 2026-10-08 100 → 70 으로 내렸다. 옛 앱은 100 까지 세고 옛 저장에 71~99 가 있다.
+// 서버의 돌봄 횟수 상한(mega-care)은 이 값까지 받는다. 새 메가스톤 판정(mega)은 지금 조건(MEGA_RULES.care)을 쓴다
+const MEGA_CARE_BEFORE = 100;
 
 export function buildVerifyFiles(): Record<string, string> {
   const items: Record<string, { price: number | null; effect: unknown; amount: number }> = {};
@@ -162,6 +165,7 @@ export function buildVerifyFiles(): Record<string, string> {
       megaLevel: MEGA_RULES.level,
       megaBondMs: MEGA_RULES.bondMs,
       megaCare: MEGA_RULES.care,
+      megaCareMax: Math.max(MEGA_RULES.care, MEGA_CARE_BEFORE),
       careCountPerHour: 3_600_000 / BAG_RULES.feedCooldownMs + 3_600_000 / CARE_RULES.playCooldownMs,
       megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,

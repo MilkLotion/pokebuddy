@@ -1,5 +1,5 @@
 {
- "hash": "a1141f44b12c2a00",
+ "hash": "8486323a9adddae6",
  "items": {
   "basic-food": {
    "price": null,
@@ -5107,7 +5107,8 @@
   "speciesMinPrice": 200,
   "megaLevel": 60,
   "megaBondMs": 86400000,
-  "megaCare": 100,
+  "megaCare": 70,
+  "megaCareMax": 100,
   "careCountPerHour": 12,
   "megaAffinity": 100,
   "affinityPerHour": 13.200000000000001,

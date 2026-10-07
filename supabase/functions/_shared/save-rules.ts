@@ -79,6 +79,7 @@ export interface VerifyData {
     megaAffinity?: number; // 메가스톤 조건의 친밀도
     megaBondMs?: number; // 메가스톤 조건의 파티 시간 (MEGA_RULES.bondMs). 없으면 mega-bond 를 보지 않는다
     megaCare?: number; // 메가스톤 조건의 돌봄 횟수 (MEGA_RULES.care). 없으면 mega-care 를 보지 않는다
+    megaCareMax?: number; // 돌봄 횟수의 상한 — 조건을 내려도 옛 앱·옛 저장이 센 값까지 받는다. 없으면 megaCare
     careCountPerHour?: number; // 밥 주기·놀아주기 쿨타임 기준 한 시간 최대 횟수 — 장난감은 따로 센다
     affinityPerHour: number; // 시간 적립 최대(버프 반영)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
@@ -591,7 +592,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
       const q = same.find((x) => x.p.id === p.id)?.q;
       add("mega-bond", pos(p.megaBond - (q?.megaBond ?? 0)), hours * HOUR * m, p.id);
       add("mega-bond", p.megaBond, r.megaBondMs, p.id);
-      add("mega-care", p.megaCare, r.megaCare, p.id);
+      add("mega-care", p.megaCare, r.megaCareMax ?? r.megaCare, p.id);
       careOver += pos(p.megaCare - (q?.megaCare ?? 0) - careCap);
       const fresh = !q || !q.megaStone;
       if (p.megaStone && fresh && !tradedFrom.has(p.id) && (p.megaBond < r.megaBondMs || p.megaCare < r.megaCare)) add("mega", 1, 0, p.id);

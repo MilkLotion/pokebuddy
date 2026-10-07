@@ -113,7 +113,7 @@ function megaGoalView(pet: PetV3): { megaGoal?: MegaGoalView } {
       affinity: [Math.floor(pet.affinity), MEGA_RULES.affinity],
       level: [pet.level, MEGA_RULES.level],
       hours: [Math.floor((pet.mega?.bondMs ?? 0) / hour), MEGA_RULES.bondMs / hour],
-      care: [pet.mega?.care ?? 0, MEGA_RULES.care],
+      care: [Math.min(pet.mega?.care ?? 0, MEGA_RULES.care), MEGA_RULES.care], // 조건을 내리기 전에 센 값(71~99)은 조건 값으로 보인다
     },
   };
 }

@@ -302,9 +302,18 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.deepStrictEqual(goalOf("p1"), { kind: "mega", affinity: [100, MEGA_RULES.affinity], level: [62, MEGA_RULES.level], hours: [13, 24], care: [42, MEGA_RULES.care] });
   assert.equal(goalOf("p2"), undefined, "메가스톤을 지니면 조건 대신 메가진화 표식");
   assert.equal(goalOf("p3"), undefined, "메가진화하지 않는 종");
-  assert.deepStrictEqual(goalOf("p4"), { kind: "primal", affinity: [30, 100], level: [10, 60], hours: [0, 24], care: [0, 100] }, "친밀도 100 전에는 시간·횟수가 0");
+  assert.deepStrictEqual(goalOf("p4"), { kind: "primal", affinity: [30, 100], level: [10, 60], hours: [0, 24], care: [0, MEGA_RULES.care] }, "친밀도 100 전에는 시간·횟수가 0");
   assert.equal(goalOf("p5")?.kind, "rayquaza");
   process.stdout.write("(9b) 조건 말풍선 — 조건과 진행  ok\n");
+}
+
+// (9c) 조건을 100 → 70 으로 내렸다(2026-10-08) — 그 전에 센 71~99 회는 조건을 채운 것으로 본다. 진행 표시는 조건 값까지
+{
+  const s = seed(pet({ affinity: 100, level: 62, mega: { bondMs: 0, care: 85 } }));
+  assert.deepStrictEqual(snapshotView(s, T0).party.slots[0]?.pet?.megaGoal?.care, [MEGA_RULES.care, MEGA_RULES.care], "85회는 70 / 70 으로 보인다");
+  s.pets[0]!.mega!.bondMs = MEGA_RULES.bondMs;
+  assert.deepStrictEqual(grantStones(s), ["p1"], "시간을 채우면 85회로 메가스톤");
+  process.stdout.write("(9c) 조건을 내리기 전에 센 횟수  ok\n");
 }
 
 // (10) 배너 — 메가스톤이 생기면 한 번. 레쿠쟈와 원시회귀는 제목이 다르다
