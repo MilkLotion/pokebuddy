@@ -35,6 +35,12 @@ export const OWN_ITEMS: Readonly<Record<string, { ko: string; en: string }>> = {
   [REGION_MAP]: { ko: "지도", en: "Map" },
 };
 
+// 원작 이름 대신 쓰는 이름 — 악의 족자는 족자다. 치고마만 쓰고 물의 족자는 없다
+// (2026-10-07 사용자 결정 "악의족자를 족자로 이름 변경. 어짜피 치고마만 쓰고")
+export const NAME_BY_DECISION: Readonly<Record<string, { ko: string; en: string }>> = {
+  "scroll-of-darkness": { ko: "족자", en: "Scroll" },
+};
+
 // 원작 첫 등장 세대 — PokeAPI item_game_indices 는 빠지거나 틀린 값이 있어(악의 족자 9·복합금속 없음) 손으로 둔다
 // 새 진화 도구가 생기면 여기에 더한다. 없으면 빌드가 실패한다 (우리 도구 OWN_ITEMS 는 예외 — 세대를 두지 않는다)
 export const ITEM_GEN: Readonly<Record<string, number>> = {
@@ -104,7 +110,7 @@ export async function build(): Promise<void> {
   const missing: string[] = [];
   for (const item of [...targets.keys()].sort()) {
     const own = OWN_ITEMS[item];
-    const hit = own ?? names.get(idOf.get(item) ?? "") ?? {};
+    const hit = own ?? NAME_BY_DECISION[item] ?? names.get(idOf.get(item) ?? "") ?? {};
     if (!hit.ko || !hit.en) missing.push(item);
     const gen = ITEM_GEN[item];
     if (gen === undefined && !(item in OWN_ITEMS)) throw new Error(`${item} 의 원작 세대(ITEM_GEN)가 없다`);

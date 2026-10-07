@@ -20,7 +20,7 @@ import { josa } from "../../shared/josa";
 import type { SaveV3 } from "../../shared/save-v3";
 import { makeTmp } from "../harness/tmp-dir";
 import { BAG_RULES } from "../../bag/rules";
-import { applyFind, eligiblePetIds, findOne, itemCandidates } from "../../find/pickup";
+import { applyFind, evoCandidates, eligiblePetIds, findOne, itemCandidates } from "../../find/pickup";
 import { chanceFor, isCaredFor, rollHits, shareOf } from "../../find/roll";
 import { FIND_RULES } from "../../find/rules";
 import { pendingOf } from "../../notify/pending";
@@ -136,6 +136,9 @@ try {
     assert.equal(rec?.kind, "evo");
     assert.equal(rec?.ref, "auspicious-armor");
     assert.equal(s.bag["auspicious-armor"], 1);
+    // 족자는 줍기 후보가 아니다 (2026-10-07 사용자 결정 "이제 줍기에서 안나오게")
+    assert.ok(!evoCandidates().includes("scroll-of-darkness"), "족자는 줍지 않는다");
+    assert.ok(evoCandidates().includes("region-map"), "다른 진화용 도구는 그대로");
     process.stdout.write("(4) 진화용 도구  ok\n");
   }
 

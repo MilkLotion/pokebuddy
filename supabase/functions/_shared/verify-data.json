@@ -1,5 +1,5 @@
 {
- "hash": "35646b9839fac32a",
+ "hash": "a1141f44b12c2a00",
  "items": {
   "basic-food": {
    "price": null,
@@ -157,7 +157,7 @@
    "amount": 0
   },
   "scroll-of-darkness": {
-   "price": 150,
+   "price": 2000,
    "effect": "evolve",
    "amount": 0
   },

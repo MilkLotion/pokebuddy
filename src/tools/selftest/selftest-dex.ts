@@ -313,7 +313,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.nextOf("ursaring").map((st) => st.to), ["ursaluna"]);
   assert.ok(!dex.lineOf("floette").includes("floette-eternal"), "특수 폼은 사슬의 모습이 아니다");
   // 진화로 얻는 특수 폼 — 암멍이는 낮에 루가루암, 밤에 루가루암(한밤중의 모습). 루가루암(황혼의 모습)은 낮·밤과 관계없이 Lv.25 와 친밀도 100 ("추천대로 하자"). 일레즌은 둘 가운데 고른다.
-  // 치고마의 두 간선은 모두 악의 족자다("족자는 하나만 하자") (2026-10-03 사용자 결정)
+  // 치고마의 두 간선은 모두 족자다("족자는 하나만 하자") (2026-10-03 사용자 결정)
   assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => [st.to, st.when ?? "", st.need]), [["lycanroc", "day", { kind: "level", level: 25 }], ["lycanroc-midnight", "night", { kind: "level", level: 25 }], ["lycanroc-dusk", "", { kind: "level", level: 25 }]]);
   assert.deepStrictEqual(dex.nextOf("rockruff").map((st) => st.affinity ?? 0), [0, 0, 100], "황혼만 친밀도 100 을 더 본다");
   assert.deepStrictEqual(dex.nextOf("toxel").map((st) => [st.to, st.when ?? ""]), [["toxtricity", ""], ["toxtricity-low-key", ""]]);

@@ -12,6 +12,7 @@ export const FIND_RULES = {
   caredPerSecond: 1 / 2000, // 잘 돌본 마리 — 만복도 40 이상(배고프지 않음)이고 심심함 50 미만(심심하지 않음). 2026-10-05 사용자 결정
   weights: { points: 100, item: 50, evo: 20, pokemon: 1 } as Readonly<Record<FindKind, number>>, // 주웠을 때 항목 가중치. 2026-09-29 사용자 결정
   points: { min: 5, max: 10 }, // 포인트 양 — 균등. 2026-09-29 사용자 결정
+  evoExcluded: ["scroll-of-darkness"] as readonly string[], // 진화용 도구 가운데 줍기 후보가 아닌 것 — 족자(치고마 전용, 2000P). 2026-10-07 사용자 결정 "악의족자를 족자로 이름 변경. 어짜피 치고마만 쓰고, 2000포인트로 변경 … 이제 줍기에서 안나오게"
   itemMaxPrice: 200, // 도구 후보 — 상점가가 0 초과 이 값 이하. 가중치는 1/가격. 제안값, 사용자 확인 전
   keep: 20, // 저장에 남기는 최근 줍기 기록 수 — 알림 배너가 이 기록으로 선다. 제안값
 };

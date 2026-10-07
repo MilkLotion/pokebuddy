@@ -50,9 +50,9 @@ export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
   return out;
 }
 
-// 진화용 도구 후보 — data/evo-items.json 전부
+// 진화용 도구 후보 — data/evo-items.json 에서 FIND_RULES.evoExcluded(족자)를 뺀 것
 export const evoCandidates = (opts?: DexOptions): string[] =>
-  Object.keys(loadJson<Record<string, unknown>>("evo-items.json", opts)).filter((id) => !id.startsWith("_"));
+  Object.keys(loadJson<Record<string, unknown>>("evo-items.json", opts)).filter((id) => !id.startsWith("_") && !FIND_RULES.evoExcluded.includes(id));
 
 // 포켓몬 후보 — 랜덤알과 같다. 해금한 종 가운데 랜덤알에서 나올 수 있는 종 (src/dex/obtain.ts inRandomEgg)
 export const pokemonCandidates = (save: SaveV3, opts?: DexOptions): string[] => save.dex.unlocked.filter((slug) => inRandomEgg(slug, opts));

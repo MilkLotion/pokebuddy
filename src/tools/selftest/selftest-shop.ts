@@ -315,6 +315,8 @@ function seed(points: number): SaveV3 {
 {
   assert.equal(SHOP_RULES.sellRate, 0.6);
   assert.equal(sellPrice("fire-stone"), 90, "진화용 도구 150P → 90P");
+  assert.equal(toolPrice("scroll-of-darkness"), 2000, "족자는 2000P (2026-10-07 사용자 결정)");
+  assert.equal(sellPrice("scroll-of-darkness"), 1200, "족자 2000P → 1200P");
   assert.equal(sellPrice("exp-candy-xs"), 12, "20P → 12P");
   assert.equal(sellPrice("basic-food"), null, "가격 없는 기본먹이는 팔지 않는다");
   assert.equal(sellPrice("normal-potion"), null, "0P 돌아오는 약은 팔지 않는다");

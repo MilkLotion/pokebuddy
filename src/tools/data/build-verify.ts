@@ -21,7 +21,7 @@ import { speciesSlugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
 import { PARTY_RULES } from "../../party/rules";
-import { SHOP_RULES } from "../../shop/rules";
+import { SHOP_RULES, evoItemPriceOf } from "../../shop/rules";
 import { CARE_RULES, TIME_RULES } from "../../state/rules";
 import { CLOCK_RULES } from "../../main/app/clock";
 import { writeTextIfChanged } from "./write-text";
@@ -41,10 +41,10 @@ export function buildVerifyFiles(): Record<string, string> {
     if (id.startsWith("_")) continue;
     items[id] = { price: it.price ?? null, effect: it.effect, amount: it.amount ?? 0 };
   }
-  // 진화용 도구 — 종류와 무관하게 같은 값
+  // 진화용 도구 — 종류와 무관하게 같은 값. 족자만 따로 (src/shop/rules.ts evoItemPrices)
   for (const id of Object.keys(load("evo-items.json"))) {
     if (id.startsWith("_")) continue;
-    items[id] = { price: SHOP_RULES.evoItemPrice, effect: "evolve", amount: 0 };
+    items[id] = { price: evoItemPriceOf(id), effect: "evolve", amount: 0 };
   }
   const eggs: Record<string, number> = {};
   for (const [kind, egg] of Object.entries(load("eggs.json"))) {

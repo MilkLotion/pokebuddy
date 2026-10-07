@@ -1,6 +1,8 @@
 // 상점의 규칙표 — 가격은 docs/specs/balance.md 가격표. 가져오는 것이 없는 파일이다
 export const SHOP_RULES = {
-  evoItemPrice: 150, // 진화용 도구는 종류와 무관하게 같은 값이다
+  evoItemPrice: 150, // 진화용 도구는 종류와 무관하게 같은 값이다. 예외는 evoItemPrices
+  // 값이 다른 진화용 도구 — 족자(치고마 전용)는 2000P. 2026-10-07 사용자 결정 "악의족자를 족자로 이름 변경. 어짜피 치고마만 쓰고, 2000포인트로 변경 … 이제 줍기에서 안나오게"
+  evoItemPrices: { "scroll-of-darkness": 2000 } as Readonly<Record<string, number>>,
   slotPrice: 500, // 파티 칸 하나 — 순서와 프리셋에 관계없이 같은 값이다 (2026-10-02 사용자 결정 "파티칸 가격은 500포인트 고정하자")
   boxPrice: 300, // 박스 하나 — 늘 같은 값이다 (2026-10-02 사용자 결정 "1개씩 300P")
   presetPrice: 1000, // 파티 프리셋 하나 — 가진 프리셋의 칸을 모두 열어야 산다 (2026-10-02 사용자 결정 "프리셋 가격은 1000포인트 고정하자")
@@ -11,3 +13,6 @@ export const SHOP_RULES = {
   petSellRate: 0.25,
   petSellUnit: 10,
 };
+
+// 진화용 도구 하나의 값 — 상점(src/shop/catalog.ts toolPrice)과 서버 검증 데이터(src/tools/data/build-verify.ts)가 같이 쓴다
+export const evoItemPriceOf = (id: string): number => SHOP_RULES.evoItemPrices[id] ?? SHOP_RULES.evoItemPrice;

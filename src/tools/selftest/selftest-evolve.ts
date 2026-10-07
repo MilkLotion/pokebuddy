@@ -186,13 +186,13 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(12) 공유 sid · 코스모움 갈래는 둘 다  ok\n");
 }
 
-// (12b) 공유 sid — 치고마는 악의 족자 하나로 진화하고 두 태세를 함께 받는다. 암멍이는 공유 계열이 아니라 낮·밤의 종 하나가 된다
+// (12b) 공유 sid — 치고마는 족자 하나로 진화하고 두 태세를 함께 받는다. 암멍이는 공유 계열이 아니라 낮·밤의 종 하나가 된다
 // (2026-10-03 사용자 결정 "얘는 단일종이라 모습변화로 해야해", "족자는 하나만 하자", "루가루암은 진화루트 분리하고", "황혼은 업적으로 넘기자")
 {
   const s = seed({ species: "kubfu", level: 30 });
   assert.deepStrictEqual(evolveCandidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), [], "족자가 없으면 후보가 없다");
   s.bag["scroll-of-darkness"] = 1;
-  assert.deepStrictEqual(evolveCandidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["urshifu", "urshifu-rapid-strike"], "악의 족자 하나로 두 태세가 모두 후보");
+  assert.deepStrictEqual(evolveCandidates(s, "p1", "day").filter((c) => c.ready).map((c) => c.to), ["urshifu", "urshifu-rapid-strike"], "족자 하나로 두 태세가 모두 후보");
   const res = evolvePet(s, "p1", "day", "urshifu-rapid-strike");
   assert.deepStrictEqual([res.ok, res.to, s.bag["scroll-of-darkness"]], [true, "urshifu-rapid-strike", undefined]);
   const p = s.pets[0] as PetV3;

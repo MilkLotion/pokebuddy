@@ -267,7 +267,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         recordDex(s, species, false);
         return pet.id;
       };
-      // 파티 — 암멍이는 Lv.25·친밀도 100 이라 낮밤의 종과 황혼이 함께 후보다. 치고마는 악의 족자, 기라티나는 모습 바꾸기
+      // 파티 — 암멍이는 Lv.25·친밀도 100 이라 낮밤의 종과 황혼이 함께 후보다. 치고마는 족자, 기라티나는 모습 바꾸기
       const party: Row[] = [["rockruff", 25, 100], ["kubfu", 30, 60], ["toxel", 30, 60], ["giratina", 50, 80], ["floette-eternal", 60, 100], ["basculegion", 40, 80, "female"]];
       for (const row of party) {
         const petId = add(row);

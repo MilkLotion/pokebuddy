@@ -36,7 +36,7 @@ const nameMatches = (node: string | undefined, want: string, special: boolean): 
 };
 
 // 사용자 결정으로 원작과 다르게 둔 간선 — 원작 조건과 견주지 않는다
-//   치고마 → 우라오스(연격의 태세): 원작은 물의 족자다. 족자는 악의 족자 하나만 쓴다 (2026-10-03 사용자 결정 "족자는 하나만 하자")
+//   치고마 → 우라오스(연격의 태세): 원작은 물의 족자다. 족자(원작 이름 악의 족자) 하나만 쓴다 (2026-10-03 사용자 결정 "족자는 하나만 하자")
 const NEED_BY_DECISION: ReadonlySet<string> = new Set(["kubfu→urshifu-rapid-strike"]);
 
 interface TrackerNode {
