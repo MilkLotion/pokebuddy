@@ -38,8 +38,10 @@ select is((select rev from public.claim_device('22222222-2222-2222-2222-22222222
 select throws_ok($$ select public.test_upload('11111111-1111-1111-1111-111111111111', 1, '{"v":3}', 3, '0.13.0', '0b000000-0000-0000-0000-000000000003') $$, 'P0001', 'CLOUD_NOT_ACTIVE', '밀려난 PC A 는 올리지 못한다');
 select throws_ok($$ select * from public.download_save('11111111-1111-1111-1111-111111111111') $$, 'P0001', 'CLOUD_NOT_ACTIVE', '밀려난 PC A 는 받지 못한다');
 select is(public.test_upload('22222222-2222-2222-2222-222222222222', 1, '{"v":3,"pets":[1]}', 3, '0.13.0', '0b000000-0000-0000-0000-000000000004'), 2::bigint, 'PC B 가 올린다 → rev 2');
-select throws_ok($$ select public.test_upload('22222222-2222-2222-2222-222222222222', 2, jsonb_build_object('big', (select string_agg(md5(i::text), '') from generate_series(1, 9000) i)), 3, '0.13.0', '0b000000-0000-0000-0000-000000000005') $$,
-  'P0001', 'CLOUD_TOO_LARGE', '256KB 를 넘으면 올리지 못한다');
+-- 상한은 압축 전 jsonb 1MiB 다(20261008100000_save_size_limit.sql). 옛 상한 256KB 를 넘는 저장도 받는다
+select is(public.test_upload('22222222-2222-2222-2222-222222222222', 2, jsonb_build_object('pets', '[1]'::jsonb, 'big', repeat('a', 300000)), 3, '0.13.0', '0b000000-0000-0000-0000-000000000006'), 3::bigint, '압축 전 300KB 저장도 올린다 → rev 3');
+select throws_ok($$ select public.test_upload('22222222-2222-2222-2222-222222222222', 3, jsonb_build_object('big', (select string_agg(md5(i::text), '') from generate_series(1, 40000) i)), 3, '0.13.0', '0b000000-0000-0000-0000-000000000005') $$,
+  'P0001', 'CLOUD_TOO_LARGE', '1MiB 를 넘으면 올리지 못한다');
 
 reset role;
 select ok(exists (select 1 from realtime.messages where topic = 'account:00000000-0000-0000-0000-0000000000b2' and event = 'kicked'), '앞 PC 에 kicked 신호를 보낸다');

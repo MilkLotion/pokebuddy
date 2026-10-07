@@ -19,7 +19,9 @@ import { verifySave, type VerifyData, type Violation } from "../_shared/save-rul
 import rulesData from "../_shared/verify-data.json" with { type: "json" };
 
 const data = rulesData as unknown as VerifyData;
-const MAX_BODY = 300_000; // 저장 상한(DB 256KB) + 여유 — 규칙을 돌리기 전에 자른다
+// 본문 상한 — 규칙을 돌리기 전에 자른다. DB 상한(압축 전 jsonb 1MiB, 20261008100000_save_size_limit.sql)보다 조금 크게.
+//   JSON 글자 수는 압축 전 jsonb 의 약 0.75배다(2026-10-08 계정 저장 196,046자 = 262,012바이트)
+const MAX_BODY = 1_000_000;
 
 const json = (body: Record<string, unknown>, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });

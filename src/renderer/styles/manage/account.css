@@ -131,6 +131,22 @@ button.act.acct-github {
   font-size: 12px;
   font-family: var(--font-body);
 }
+/* 로그인한 계정 탭 — 로그아웃·계정 삭제는 구분선 아래 탭 바닥 (Figma `Account Panel` `State=Signed In`, 2026-10-08)
+   미는 칸이 있을 때만 스크롤 영역을 세로 flex 로 바꾼다. 내용이 넘치면 미는 칸이 0 이 되고 그대로 스크롤된다 */
+.dialog.settings .scroll:has(> .acct-push) {
+  display: flex;
+  flex-direction: column;
+}
+.acct-push {
+  flex: 1 0 0;
+}
+.acct-divider {
+  flex: none;
+  height: 1px;
+  margin: 16px 0;
+  border: 0;
+  background: var(--line);
+}
 .acct-confirm button.act {
   min-width: 112px;
   height: 34px;

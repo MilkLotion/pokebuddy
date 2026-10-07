@@ -68,7 +68,8 @@ function cloudText(c: AccountScreen["cloud"]): { text: string; dot: "ok" | "idle
 // 저장 줄 글자 — 상태 글자와, 상태가 말하지 않는 오류. 로그인 뒤·익명 계정 탭이 같이 쓴다
 export function saveLine(c: AccountScreen["cloud"]): string {
   const text = cloudText(c)?.text ?? "";
-  const err = c.error && c.status !== "online" && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error, c.errorDetail) : "";
+  // online 이어도 붙인다 — 올리기가 거절되면 상태는 online 그대로라 오류를 버리면 "저장됨"만 남는다
+  const err = c.error && CLOUD_SAID[c.status] !== c.error ? acctErrorText(c.error, c.errorDetail) : "";
   return err ? (text ? `${text} · ${err}` : err) : text;
 }
 

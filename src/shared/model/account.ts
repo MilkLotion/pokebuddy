@@ -94,6 +94,7 @@ export type AccountAction =
   | { action: "github-cancel" } // 브라우저 로그인을 기다리다 취소
   | { action: "sign-out" } // 올리고 released 를 알린 뒤 로그아웃한다. 성공하면 저장을 백업하고 앱을 다시 켠다(D12)
   | { action: "rename"; displayName: string }
+  | { action: "save-now" } // 계정 탭 [저장하기] — 올리지 않은 진행을 지금 한 번 올린다. 결과는 screen.cloud 에 담긴다
   | { action: "delete" }; // 성공하면 저장을 백업하고 앱을 다시 켠다(D12)
 
 // 아이디 중복 확인의 결과 — NETWORK 는 서버에 닿지 못함, UNKNOWN 은 서버가 다른 실패를 돌려줌(입력 중에는 둘 다 글을 보이지 않는다)

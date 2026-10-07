@@ -393,6 +393,10 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
         if (r.ok) accountView = r.view;
         return r.ok ? reply(true, null) : reply(false, r.code);
       }
+      case "save-now":
+        // 자동 올리기와 같은 길(cloud.flush). 실패는 cloud 의 오류로 남아 screen 에 실린다 — 요청 자체는 성공으로 답한다
+        await flush(ONLINE_TIMING.fetchTimeoutMs + 5_000);
+        return reply(true, null);
       case "delete":
         if (o.tradeBlocked()) return reply(false, "AUTH_TRADE_ACTIVE");
         if (!(await account.view()).signedIn) return reply(false, "AUTH_INVALID_LOGIN");

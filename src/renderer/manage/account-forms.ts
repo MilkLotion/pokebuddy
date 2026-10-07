@@ -5,6 +5,7 @@ import { liveInputEl } from "./search.js";
 import { alertEl } from "./widgets.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { actionButtonEl, actionsRowEl } from "./dialog.js";
+import { setBusy, whenSlow } from "./command.js";
 import { failTextOf } from "../../shared/fail-text.js";
 import { ACCOUNT_RULES, USERNAME_PATTERN } from "../../shared/account-rules.js";
 import { accountUi, acctForm } from "./account-state.js";
@@ -149,6 +150,26 @@ function acctRow(title: string, hint: string, control?: HTMLElement): HTMLElemen
   return row;
 }
 
+// [저장하기] — 온라인일 때만 누른다. 답이 늦으면 공통 처리 중(점 셋, 폭 그대로). 처리 중엔 흐리지 않게 잠그지 않는다(is-busy 가 입력을 막는다)
+function saveNowButton(online: boolean): HTMLButtonElement {
+  const b = actionButtonEl("저장하기", false, !online || (accountUi.busy && accountUi.saving !== "slow"), () => void saveNow());
+  if (accountUi.saving === "slow") setBusy(b, true);
+  return b;
+}
+
+async function saveNow(): Promise<void> {
+  if (accountUi.busy) return;
+  accountUi.saving = "wait";
+  const settle = whenSlow(() => {
+    accountUi.saving = "slow";
+    redrawAccount();
+  });
+  await acctSend({ action: "save-now" });
+  settle();
+  accountUi.saving = "no";
+  redrawAccount();
+}
+
 function drawSignedIn(scroll: HTMLElement): void {
   const a = accountUi.screen!;
   if (accountUi.screen?.blocked) scroll.appendChild(acctNotice("교환 중에는 계정을 바꿀 수 없어요", "교환을 끝내거나 나간 뒤 다시 시도해 주세요", "warn"));
@@ -174,9 +195,11 @@ function drawSignedIn(scroll: HTMLElement): void {
   } else {
     scroll.appendChild(acctRow(a.displayName ?? "", who, actionButtonEl("이름 바꾸기", false, accountUi.busy, () => { accountUi.rename = a.displayName ?? ""; acctForm.error = ""; redrawAccount(); })));
   }
-  // 저장 — 자동으로만 올린다. 상태 글자와, 상태가 말하지 않는 오류만
-  scroll.appendChild(acctRow("저장", saveLine(a.cloud)));
-  // 로그아웃·삭제 — 둘 다 확인 창을 거친다. 이 PC 는 처음부터 새로 시작한다(D12)
+  // 저장 — 자동으로 올리고, [저장하기] 로 지금 한 번 올린다. 결과는 같은 줄 글자로만(성공 시각·오류)
+  scroll.appendChild(acctRow("저장", saveLine(a.cloud), saveNowButton(a.cloud.status === "online")));
+  // 로그아웃·삭제 — 구분선 아래 탭 바닥. 둘 다 확인 창을 거친다. 이 PC 는 처음부터 새로 시작한다(D12)
+  scroll.appendChild(el("div", "acct-push"));
+  scroll.appendChild(el("hr", "acct-divider"));
   scroll.appendChild(acctRow("로그아웃", "이 PC 는 처음부터 새로 시작해요", actionButtonEl("로그아웃", false, accountUi.busy || a.blocked, () => { accountUi.confirm = "sign-out"; acctForm.error = ""; redrawAccount(); })));
   scroll.appendChild(acctRow("계정 삭제", "되돌릴 수 없어요", actionButtonEl("계정 삭제", false, accountUi.busy || a.blocked, () => { accountUi.confirm = "delete"; acctForm.error = ""; redrawAccount(); })));
 }

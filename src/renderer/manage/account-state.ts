@@ -10,7 +10,8 @@ export interface AccountUi {
   github: boolean; // 브라우저에서 GitHub 로그인을 기다리는 중
   rename: string | null; // 이름 바꾸는 중이면 입력한 이름
   confirm: "delete" | "sign-out" | null; // 띄운 확인 창
+  saving: "no" | "wait" | "slow"; // [저장하기] — 답을 기다림, 답이 늦어 처리 중 표시
 }
-export const accountUi: AccountUi = { screen: null, loading: false, busy: false, github: false, rename: null, confirm: null };
+export const accountUi: AccountUi = { screen: null, loading: false, busy: false, github: false, rename: null, confirm: null, saving: "no" };
 
 export const acctForm = { mode: "sign-in" as "sign-in" | "sign-up", username: "", password: "", password2: "", displayName: "", error: "", check: "" as "" | UsernameCheck };
