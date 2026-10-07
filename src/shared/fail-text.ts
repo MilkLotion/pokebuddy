@@ -135,7 +135,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   TRADE_PET_TRADED: { ko: "이미 교환으로 보낸 포켓몬이에요. 다른 포켓몬을 골라 주세요.", en: "That Pokémon was already traded away. Choose another one." },
   TRADE_PET_NOT_SYNCED: { ko: "아직 저장되지 않은 포켓몬이에요. 저장이 끝나면 다시 올려 주세요.", en: "That Pokémon isn't saved yet. Offer it again once saving finishes." },
   TRADE_PET_BUSY: { ko: "다른 교환에 올라가 있는 포켓몬이에요. 그 교환이 닫힌 뒤 다시 올리거나 다른 포켓몬을 골라 주세요.", en: "That Pokémon is in another trade. Offer it after that trade closes, or choose another one." },
-  TRADE_SAVE_UNVERIFIED: { ko: "지금은 교환할 수 없어요. 계정 저장을 확인하는 중이에요.", en: "You can't trade right now. The account save is being checked." },
+  TRADE_SAVE_UNVERIFIED: { ko: "이 계정은 교환할 수 없어요. 계정 저장 확인이 필요해요.", en: "This account can't trade. The account save needs a review." },
   MAIL_EXPIRED: { ko: "기간이 지나 받을 수 없어요.", en: "It has expired and can't be received." },
   MAIL_LOGIN_REQUIRED: { ko: "로그인하면 받을 수 있어요.", en: "Sign in to receive it." },
   MAIL_NO_GIFTS: { ko: "받을 선물이 없어요.", en: "There are no gifts to receive." },

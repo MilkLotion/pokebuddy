@@ -48,7 +48,7 @@
 | `src/trade` | 친구 교환. `core`는 올리기·받기 검사와 로컬 잠금·반영(순수 함수), `net`은 Supabase 호출과 실시간 신호, `session`은 교환 흐름(확정·완료·닫힘·복구), `config`는 서버 설정·데이터 버전·링크 | 저장 쓰기(거래 실행기의 `trade.*`가 한다), 창 | — |
 
 친구 교환의 Electron 쪽 입구는 `src/main/services/trade.ts`(개발용 시험 장치)이고, 교환 모달 화면 값은 `src/view/trade-screen.ts` 가 만든다. 서버 SQL 은 `supabase/migrations/`에 있다.
-교환 제안의 값은 서버가 만든다(`set_offer`). 앱이 보낸 개체 값은 서버 저장에 올렸는지 확인하는 데만 쓴다 — 종·이로치·성격이 다르거나 레벨·경험치가 서버보다 크면 `TRADE_PET_NOT_SYNCED`다. 채널에는 지문(`id`·`since`)으로 찾은 서버 저장 개체의 값을 넣는다. 서버 저장이 검증받지 않은 계정(`trust = unverified` — 첫 저장 분류·관찰 모드 위반)은 `TRADE_SAVE_UNVERIFIED`로 제안하지 못한다. 교환이 끝나는 순간 두 사람이 받은 제안을 `cloud_private.trade_receipts`에 남긴다 — 두 사람이 반영하면 채널의 제안 값은 지워진다.
+교환 제안의 값은 서버가 만든다(`set_offer`). 앱이 보낸 개체 값은 서버 저장에 올렸는지 확인하는 데만 쓴다 — 종·이로치·성격이 다르거나 레벨·경험치가 서버보다 크면 `TRADE_PET_NOT_SYNCED`다. 채널에는 지문(`id`·`since`)으로 찾은 서버 저장 개체의 값을 넣는다. 서버 저장이 검증받지 않은 계정(`trust = unverified` — 첫 저장 분류·관찰 모드 위반)은 `TRADE_SAVE_UNVERIFIED`로 제안하지 못한다. `unverified` 는 저절로 풀리지 않는다. 운영자가 위반 기록을 보고 오탐이면 `admin.cjs trust <계정> legacy --yes` 로 푼다. 교환이 끝나는 순간 두 사람이 받은 제안을 `cloud_private.trade_receipts`에 남긴다 — 두 사람이 반영하면 채널의 제안 값은 지워진다.
 우편함의 받기 흐름은 `src/online/mail-inbox.ts`(`createMailInbox`)다. 메인이 넘긴 공유 클라이언트로 `list_mail`·`claim_mail` 을 부르고, 받은 선물을 거래 실행기의 `mail.apply` 로 넣는다. 우편함 모달의 화면 값은 `src/view/mail.ts` 가 만든다. 서버 SQL 은 `supabase/migrations/20260929100000_mail.sql` 이다.
 계정·클라우드 저장의 Electron 쪽 입구는 `src/main/services/online.ts`다. 공유 클라이언트를 한 번 만들어 교환에 넘기고, `cloud.json` 읽기·쓰기와 받은 저장의 v3 검사·백업·교체를 맡는다. 계정 삭제는 서비스 역할 키가 필요해 Edge Function `supabase/functions/delete-account`가 한다. 앱과 저장소에는 서비스 역할 키가 없다.
 클라우드 저장 올리기는 Edge Function `supabase/functions/upload-save`를 거친다(`src/online/cloud.ts`). 앱이 `upload_save` RPC 를 직접 부르면 `CLOUD_UPDATE_REQUIRED`다. 검증은 아래 [서버 저장 검증](#서버-저장-검증)을 따른다.
@@ -159,11 +159,11 @@
 | 틈 | 서버 시각 기준. `cloud_saves.last_accepted_at`부터 지금까지, 72시간(`verify_max_gap_hours`)에서 자른다 |
 | 비교 대상 | 같은 rev 위의 요청만 비교한다. rev 가 다르면 멱등 재전송(마지막 op)만 받고 나머지는 `CLOUD_REV_CONFLICT`다. `accept_save` 는 비교에 쓴 rev(`p_checked_rev`)가 지금 rev 와 같을 때만 기존 행에 쓴다. 첫 저장은 `trust`(fresh·legacy·unverified) 분류만 한다 |
 | 오류 | `CLOUD_*` 코드, 토큰 무효 401 `AUTH_TOKEN`, 잠깐 답 없음 503 `SERVER_BUSY`, 그 밖 500 `SERVER_ERROR`. 앱은 502·503·504·전송 실패만 오프라인으로 본다 |
-| 관찰 모드 | `verify_mode = observe`(기본). 위반이 있어도 받는다. `cloud_private.save_violations`에 적고 `trust`를 `unverified`로 둔다 |
+| 관찰 모드 | `verify_mode = observe`(기본). 위반이 있어도 받는다. `cloud_private.save_violations`에 적고 `trust`를 `unverified`로 둔다. 위반 없는 올리기는 `trust`를 되돌리지 않는다 |
 | 거부 모드 | `verify_mode = enforce`. 위반을 적고 계정을 이용 정지한 뒤 `CLOUD_SAVE_REJECTED`(409)를 돌려준다. 앱은 정지와 같게 멈춘다 |
 | 권한 | `accept_save`·`save_verify_context`·`reject_save`·`admin_*`는 service_role 전용이다 |
 | 규칙 복사본 | Edge Function(Deno)은 `supabase/functions/_shared/save-rules.ts`·`verify-data.json`을 쓴다. `node dist/tools/data/build-verify.js`(빌드 뒤)가 `src/verify/save-rules.ts`와 `data/`·규칙표에서 만든다. `selftest-verify`가 최신인지 본다 |
-| 관리 | `admin/admin.cjs violations`(위반 목록), `verify [--mode] [--margin] [--yes]`(설정) |
+| 관리 | `admin/admin.cjs violations`(위반 목록), `verify [--mode] [--margin] [--yes]`(설정), `trust <계정> [legacy\|unverified] [--yes]`(trust 보기·바꾸기) |
 | 이용 정지 | 서버 `cloud_private.account_holds`. 거부 모드에서 `reject_save`가 위반을 적고 정지를 건다. 계정 도우미(`require_account`)·교환 도우미(`require_uid`)·편지 받기·`upload-save`가 정지된 계정을 `CLOUD_ACCOUNT_HELD`로 거절한다. `delete-account`도 정지 중이면 거절한다. 앱은 이 코드(또는 `CLOUD_SAVE_REJECTED`)를 받으면 `cloud.json`의 `accountHeld`를 켜고 맞춘 rev 를 잊은 뒤(풀리면 서버 저장을 받는다) 게임을 멈추고 정지 창을 띄운 뒤 끝난다. 서버에 닿기 전(오프라인·세션 분실)에 `accountHeld`가 켜져 있어도 같다. 기기 연결(claim)이 계정 확인을 통과하면 `accountHeld`를 지운다. 관리: `admin.cjs holds`·`hold add|release <계정> --yes` |
 | 계정 시드 | 서버 `cloud_private.account_seeds`에 계정마다 시드가 있다. 앱은 온라인이 되면 `account_seed()`로 받아 `cloud.json`의 `seed`·`seedOwner`에 둔다. 알 열기 난수는 `seededRand(seed, "egg:<알 id>")`다(`src/verify/save-rules.ts`). 검증은 열린 알마다 `rollEgg`로 다시 계산해 새 저장과 대조한다(`egg-roll`). 직전에 받은 저장보다 나중에 만든 시드는 문맥에 싣지 않는다 — 시드를 받기 전에 연 알은 대조하지 않는다. 시드는 사용자 PC 에 있어 다음 결과를 미리 계산할 수 있다. 알의 id·종류·후보를 고치면 `egg` 위반이다 |
 
