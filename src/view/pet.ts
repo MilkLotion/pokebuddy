@@ -1,7 +1,7 @@
 // 개체 하나의 화면 값 — 파티 칸·박스 칸·파티 상세가 보는 PetView(진화 후보·메가·모습·디버프·돌봄 보너스·버프). 저장을 읽기만 한다
 // 스냅샷 조립은 ./snapshot.ts 가 한다 (96 대조 ④ — snapshot.ts 337줄을 나눴다, 설계 30번 view/pet.ts)
 import { profileOf } from "../dex/species.js";
-import { itemName, petName, typeName, boredText, natureName, t } from "./text.js";
+import { itemName, petName, petNameParts, typeName, boredText, natureName, t } from "./text.js";
 import type { SaveV3, PetV3 } from "../shared/save-v3";
 import { megaOf, megaChoices, megaFormsOf, shownSpecies } from "../dex/mega.js";
 import { MEGA_RULES } from "../dex/rules.js";
@@ -143,6 +143,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     species: pet.species,
     look: pet.mega?.on ? shown.species : (genderLookOf(pet.species, pet.gender) ?? shown.species), // 초상 그림 — 성별 그림이 있으면 그것 (data/regional.json 의 gender)
     name: shown.name,
+    nameParts: petNameParts(shownSpecies(pet)),
     shiny: pet.shiny,
     level: pet.level,
     percentToNext: percent,

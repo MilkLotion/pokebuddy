@@ -3,6 +3,7 @@
 // 메뉴·트레이는 슬러그가 아니라 "피카츄" 를 보인다. 성격 이름은 data/natures.json 의 name (한국어·영어) — 언어 파일에 따로 두지 않는다
 import { natureOf } from "../dex/natures";
 import { megaOf } from "../dex/mega";
+import { regionalOf } from "../dex/regional";
 import type { Lang, NatureId } from "../shared/species";
 import type { DexOptions } from "../dex/data";
 import { isMetaKey } from "../dex/data";
@@ -18,6 +19,26 @@ export const petName = (slug: string, lang: Lang = currentLang()): string => {
   const mega = megaOf(slug);
   return mega ? (lang === "en" ? mega.en : mega.ko) : tableName(slug, lang);
 };
+
+// 종 이름을 이름과 모습으로 나눈다 — 파티 상세 기기 창의 두 줄 (docs/specs/game.md "파티 상세 기기 창", 2026-10-07 사용자 결정)
+// 지방 모습은 기본 종 이름 / `<지방>의 모습`. 뒤에 더 붙은 말(켄타로스 컴뱃종)은 ` · ` 로 잇는다. 괄호 모습은 괄호 앞 / 괄호 안.
+// 그 밖(히트로토무·메가 모습)은 이름 그대로이고 모습이 없다
+export function petNameParts(slug: string, lang: Lang = currentLang()): { name: string; form?: string } {
+  const full = petName(slug, lang);
+  const regional = regionalOf(slug);
+  if (regional && !regional.special) {
+    const base = petName(regional.base, lang);
+    const at = full.indexOf(base);
+    if (at > 0) {
+      const region = full.slice(0, at).trim();
+      const rest = full.slice(at + base.length).trim().replace(/^\((.*)\)$/, "$1");
+      const form = lang === "en" ? `${region} Form` : `${region}의 모습`;
+      return { name: base, form: rest ? `${form} · ${rest}` : form };
+    }
+  }
+  const paren = /^(.+?)\s*\((.+)\)$/.exec(full);
+  return paren ? { name: paren[1]!, form: paren[2]! } : { name: full };
+}
 
 // 성격의 화면 이름 — 모르는 id 는 그대로 보여 무엇이 빠졌는지 드러나게
 export const natureName = (id: NatureId | string, lang: Lang = currentLang()): string => natureOf(id)?.name[lang] ?? String(id);

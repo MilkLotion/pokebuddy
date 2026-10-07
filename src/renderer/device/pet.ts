@@ -291,12 +291,19 @@ function renderBody(v: PetDeviceView): void {
   entry.appendChild(portrait);
   const info = el("div", "info");
   // 이름 줄 — 이름 · 성별 24 · 이로치 24 (Figma `862:22000` 의 `gender`·`shiny`, 2026-09-30·2026-10-02 사용자 결정)
+  // 모습은 이름 아래 작은 줄 — 모습이 없으면 줄이 없다. 칸 높이가 정해져 있어 아래 막대는 움직이지 않는다
+  // (Figma `Party Detail Device` 의 `name-block`·`Show Form`, 2026-10-07 사용자 결정 "이렇게하자")
+  const nameBlock = el("div", "name-block");
   const nameRow = el("div", "name-row");
-  nameRow.appendChild(el("div", "name", pet.name));
+  const name = el("div", "name", pet.nameParts.name);
+  name.title = pet.name; // 칸보다 긴 이름은 말줄임
+  nameRow.appendChild(name);
   const sex = genderIcon(pet.gender, 24);
   if (sex) nameRow.appendChild(sex);
   if (pet.shiny) nameRow.appendChild(shinyIcon(24));
-  info.appendChild(nameRow);
+  nameBlock.appendChild(nameRow);
+  if (pet.nameParts.form) nameBlock.appendChild(el("div", "form", pet.nameParts.form));
+  info.appendChild(nameBlock);
   info.appendChild(el("div", "sub", NATURE_SHOWN ? `Lv.${pet.level} · ${pet.nature}` : `Lv.${pet.level}`));
   const types = el("div", "types");
   pet.types.forEach((name, i) => types.appendChild(typeBadgeEl(name, pet.typeIds[i])));

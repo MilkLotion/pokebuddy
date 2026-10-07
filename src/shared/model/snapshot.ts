@@ -31,6 +31,7 @@ export interface PetView {
   id: string;
   species: string;
   name: string; // 화면에 보이는 종 이름
+  nameParts: { name: string; form?: string }; // name 을 이름과 모습으로 나눈 것 — 파티 상세 기기 창의 두 줄 (src/view/text.ts petNameParts)
   shiny: boolean;
   level: number;
   percentToNext: number; // 다음 레벨까지 백분율

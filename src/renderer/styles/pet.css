@@ -75,11 +75,14 @@
 .where.bad {
   color: var(--danger-ink);
 }
+/* 초상·이름 칸 — 높이 92 고정. 이름·레벨·타입 묶음은 세로 가운데라 모습 줄이 있든 없든 아래 막대가 움직이지 않는다
+   (Figma `Party Detail Device` 의 entry, 2026-10-07 사용자 결정 "이렇게하자") */
 .entry {
   position: relative;
   display: flex;
   align-items: center;
   gap: 16px;
+  height: 92px;
 }
 /* 초상과 메가스톤 표식 — 표식은 초상 오른쪽 아래에 걸친다 (2026-10-02 사용자 결정, Figma `Party Detail Device` `1262:76637` 의 `Show Mega Stone`·`Mega Form`, 05 `Party / Detail Device / Mega Stone` `1325:47009`) */
 .portrait {
@@ -184,10 +187,16 @@
 .info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
-/* 이름 줄 — 이름 · 성별 24 · 이로치 24 (src/renderer/ui/gender-icon.ts, shiny.ts) */
+/* 이름과 모습 — 모습은 이름 아래 작은 줄 (Figma `name-block`·`form`) */
+.name-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* 이름 줄 — 이름 · 성별 24 · 이로치 24 (src/renderer/ui/gender-icon.ts, shiny.ts). 줄을 바꾸지 않고 넘치면 말줄임 */
 .name-row {
   display: flex;
   align-items: center;
@@ -199,9 +208,21 @@
   flex: none;
 }
 .name {
+  min-width: 0;
   font-size: 24px;
   line-height: 28px;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.form {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .sub {
   color: var(--muted);

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createGenGate } from "../../main/windows/device-gen";
 import { createGame } from "../../tx/game";
-import { petName } from "../../view/text";
+import { petName, petNameParts } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import { dexList } from "../../view/dex-list";
 import * as store from "../../save/save-file";
@@ -281,6 +281,18 @@ try {
     gate.reset();
     assert.equal(gate.accepts(0), true, "관리 창 문서를 새로 읽으면 0 부터");
     process.stdout.write("(14) 기기 창 세대 번호  ok\n");
+  }
+
+  // (15) 이름과 모습 나누기 — 파티 상세 기기 창의 두 줄 (src/view/text.ts petNameParts, 2026-10-07 사용자 결정)
+  {
+    assert.deepStrictEqual(petNameParts("ninetales-alola", "ko"), { name: "나인테일", form: "알로라의 모습" }, "지방 모습은 기본 종 이름 / <지방>의 모습");
+    assert.deepStrictEqual(petNameParts("urshifu-rapid-strike", "ko"), { name: "우라오스", form: "연격의 태세" }, "괄호 모습은 괄호 앞 / 괄호 안");
+    assert.deepStrictEqual(petNameParts("urshifu", "ko"), { name: "우라오스", form: "일격의 태세" }, "기본형에 모습 이름이 붙은 종도 나눈다");
+    assert.deepStrictEqual(petNameParts("tauros-paldea-combat-breed", "ko"), { name: "켄타로스", form: "팔데아의 모습 · 컴뱃종" }, "지방 모습 뒤에 더 붙은 말은 · 로 잇는다");
+    assert.deepStrictEqual(petNameParts("rotom-heat", "ko"), { name: "히트로토무" }, "이름에 모습이 녹아 있는 종은 그대로");
+    assert.deepStrictEqual(petNameParts("pikachu", "ko"), { name: "피카츄" }, "모습이 없는 종은 그대로");
+    assert.deepStrictEqual(petNameParts("ninetales-alola", "en"), { name: "Ninetales", form: "Alolan Form" }, "영어도 같은 규칙");
+    process.stdout.write("(15) 이름과 모습 나누기  ok\n");
   }
 
   process.stdout.write("selftest-manage: 통과 (스냅샷·명령·틱·실패·목록·설정·업적)\n");
