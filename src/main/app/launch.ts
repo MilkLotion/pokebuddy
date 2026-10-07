@@ -7,8 +7,6 @@
 import { app } from "electron";
 import type { ManageRoute } from "../../shared/model/route";
 import { isTradeLink } from "../../trade/link.js";
-import { careArgOf } from "../menus/jump-list";
-import type { CareKind } from "../../state/care";
 import { isUpdateTestBuild } from "./dev-run";
 
 // 계정 링크 — GitHub 로그인 뒤 브라우저 쪽(src/online/github.ts callbackPage)이 여는 pokebuddy://account
@@ -22,7 +20,6 @@ export function tradeLinkOf(argv: readonly string[]): string | null {
 }
 
 export interface LaunchHooks {
-  onCare(care: { action: CareKind; petId: string }): void; // 점프 목록의 밥 주기·놀아주기
   onTradeLink(link: string): void; // 교환 링크로 참가
   onOpen(route?: ManageRoute): void; // 관리 창 열기
 }
@@ -34,9 +31,6 @@ export function claimSingleInstance(hooks: LaunchHooks): boolean {
     return false;
   }
   app.on("second-instance", (_e, argv) => {
-    // 작업 표시줄 점프 목록의 밥 주기·놀아주기 — 창을 열지 않고 명령만 돌린다 (src/main/menus/jump-list.ts)
-    const care = careArgOf(argv);
-    if (care) return hooks.onCare(care);
     const link = tradeLinkOf(argv);
     if (link) hooks.onTradeLink(link);
     else if (argv.some(isAccountLink)) hooks.onOpen({ to: "account" }); // GitHub 로그인을 마친 브라우저에서 돌아왔다

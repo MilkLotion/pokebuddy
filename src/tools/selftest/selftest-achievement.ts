@@ -333,7 +333,7 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(currentTutorial(s, T0), { id: "shop", surface: "manage" }, "첫 돌봄이 막히면 상점이 먼저");
   for (const x of s.party.slots) if (x.state === "pokemon") x.hidden = false;
   assert.deepStrictEqual(currentTutorial(s, T0), { id: "first-care", surface: "stage" }, "꺼내면 첫 돌봄이 다시 앞");
-  // 튜토리얼 밖(설정창·점프 목록·CLI)의 밥 주기는 첫 돌봄을 끝내지 않는다 — 튜토리얼 메뉴에서 고른 돌봄으로만 끝난다
+  // 튜토리얼 밖(설정창·CLI)의 밥 주기는 첫 돌봄을 끝내지 않는다 — 튜토리얼 메뉴에서 고른 돌봄으로만 끝난다
   // (2026-09-28 사용자 "다음버튼이나 튜토리얼 행동이나, 아예 닫기버튼 이것들만 눌리게해줘")
   s.totals.fed += 1;
   assert.deepStrictEqual(queueTutorials(s, T0 + 1), [], "바탕화면 놀이공간 튜토리얼은 줄에 들지 않는다");

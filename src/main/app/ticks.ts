@@ -5,7 +5,7 @@
 // 쓰기는 거래 실행기 하나가 하므로 writer 일 때만 돈다. 틈이 TIME_RULES.maxGapMs 를 넘는 틱(절전 복귀·멈춤)은 작업·줍기로 세지 않는다.
 // 게임 시간의 큰 틈은 `game.tick` 이 TIME_RULES.maxElapsedMs 로 자른다(src/state/time.ts elapsedSince) (docs/specs/game.md "복귀할 때 중단 기간을 소급 진행하지 않는다").
 // 에이전트가 작업하는 동안 적립이 2배다. 작업 판정은 무대의 에이전트 상태 running 이다 (docs/specs/balance.md "에이전트 작업 보너스").
-// 무거운 일(놀이공간·점프 목록·트레이 다시 읽기, 남은 안내)은 slowEvery 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
+// 무거운 일(놀이공간·트레이 다시 읽기, 남은 안내)은 slowEvery 틱(15초)마다 — 1초로 당길 까닭이 없고 OS 호출이 섞여 있다
 import { rollHits } from "../../find/roll";
 import { caredIds } from "../../find/pickup";
 import { TIME_RULES } from "../../state/rules";

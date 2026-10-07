@@ -16,7 +16,6 @@ import { createScreenPicker, screenViews, type ScreenPicker } from "./windows/sc
 import { screensNow as currentScreens } from "./windows/display";
 import type { Lifetime } from "./app/lifetime";
 import { writeLastError } from "../platform/last-error.js";
-import { jumpListOf } from "../view/menus";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
 import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "../tx/game.js";
@@ -43,7 +42,6 @@ import { createStageWindow } from "./stage/stage-window";
 import { currentLang, langOf, petLabel, petName, setLang, t } from "../view/text";
 import { failTextOf } from "../shared/fail-text";
 import { createTray, type TrayHandle } from "./menus/tray";
-import { syncJumpList } from "./menus/jump-list";
 import { closeMenu, closedWithin, isMenuOpen } from "./menus/menu-window";
 import { createPetMenu } from "./menus/pet-menu";
 import { createTrayMenu } from "./menus/tray-menu";
@@ -116,7 +114,6 @@ if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.gi
 // 동반자는 기기당 하나 — 둘째는 창을 만들기 전에 끝난다. 다시 실행·딥링크는 떠 있는 동반자가 받는다 (src/main/app/launch.ts)
 // 처리기는 이벤트가 올 때 부른다 — 아래에 정의한 함수를 화살표로 감싸 넘긴다
 const duplicate = !claimSingleInstance({
-  onCare: (care) => runGameCommand({ cmd: care.action, target: care.petId, from: "menu" }),
   onTradeLink: (link) => services.openTradeLink(link),
   onOpen: (route) => openManageWindow(route),
 });
@@ -279,14 +276,6 @@ const syncCoach = (): void => {
   manage.setStageCoachDim(coach.isShown());
 };
 
-// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 파티·이름·레벨이 바뀌면 다시 만든다 (src/main/menus/jump-list.ts)
-function syncJump(): void {
-  const save = rt.game?.read(); // 메모리 값 — 파일은 15초마다 쓴다
-  if (!save) return;
-  const { pets, labels } = jumpListOf(save); // 목록 고르기는 화면 값이다 (src/view/menus.ts)
-  syncJumpList(pets, labels);
-}
-
 // 트레이 메뉴와 트레이 입력 — 떠 있는 동안 헬퍼에 입력을 자주 묻는다 (src/main/menus/tray-menu.ts)
 const trayMenu = createTrayMenu({
   display,
@@ -425,11 +414,10 @@ const ticks = createTicks({
   bubbles,
   notifierTick: () => rt.notifier?.tick(),
   syncCoach,
-  // 15초마다 — 남은 한 번 알림, 저장 설정(놀이공간·잠들기 기준·로그인 시 시작) 다시 읽기, 점프 목록
+  // 15초마다 — 남은 한 번 알림, 저장 설정(놀이공간·잠들기 기준·로그인 시 시작) 다시 읽기
   slow: () => {
     rt.hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
     display.sync("all");
-    syncJump();
   },
   log,
 });
@@ -656,7 +644,8 @@ function bootFinish(saveSource: SaveParty, group: StageGroup, watch: HostWatch, 
   });
 
   display.setGhost(display.ghost());
-  syncJump();
+  // 옛 버전이 만든 작업 표시줄 점프 목록을 비운다 — Windows 는 앱이 지울 때까지 남겨 둔다 (2026-10-08 사용자 결정으로 점프 목록을 뺐다)
+  if (process.platform === "win32") app.setJumpList(null);
   display.sync("login");
   display.sync("play");
   syncCoach();

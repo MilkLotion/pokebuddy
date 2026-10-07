@@ -7,7 +7,7 @@
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { jumpListOf, petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
+import { petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
 import { menuView } from "../../view/menu-view";
 import { boredText, t } from "../../view/text";
 
@@ -93,13 +93,10 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(full?.keep, t("menu.play"), "배부르면 놀아주기를 남긴다");
 }
 
-// (5) 트레이 — 맨 위 설정창 열기, 그 아래 트레이 항목. 점프 목록 — 파티 개체(볼 안 포함)와 두 줄의 라벨
+// (5) 트레이 — 맨 위 설정창 열기, 그 아래 트레이 항목
 {
   const tray = trayMenuOf({ hidden: false, ghost: false }, { openManage: () => undefined, toggleHidden: () => undefined, quit: () => undefined });
   assert.deepEqual(tray.map((m) => m.label ?? m.type), [t("menu.manage"), "separator", t("menu.hide"), t("menu.ghost"), "separator", t("menu.quit")]);
-  const jump = jumpListOf(seed());
-  assert.deepEqual(jump.pets.map((p) => [p.id, p.level]), [["p1", 12], ["p2", 1]]);
-  assert.deepEqual(jump.labels, { feed: t("menu.feed"), play: t("menu.play") });
 }
 
 // (6) 로토무 — 해금 전에는 `모습 바꾸기` 줄만 흐리고 말풍선(하위 줄)이 없다. 개체 작업 2시간이면 다섯 모습 + 맨 아래 `로토무 · 원래대로` 말풍선.
@@ -139,4 +136,4 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(menuOf(s, "p1")!.model.forms?.length ?? 0, 0, "모습이 없는 종은 줄이 없다");
 }
 
-process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이와 점프 목록·로토무 모습 잠금)\n");
+process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금)\n");

@@ -1,4 +1,4 @@
-// 메뉴 모델 — 포켓몬 메뉴(무대 우클릭·관리 창 우클릭), 트레이, 작업 표시줄 점프 목록 (설계 30번 D9)
+// 메뉴 모델 — 포켓몬 메뉴(무대 우클릭·관리 창 우클릭), 트레이 (설계 30번 D9)
 // Electron 을 값으로 가져오지 않는다 — MenuItemConstructorOptions 모양의 객체만 만든다(node 시험 가능). 누르면 할 일(click)은 메인이 넘긴다.
 // 메뉴 창의 표현(번호 매기기·화면 모양)은 src/view/menu-view.ts 다(메인 레인 M8-3 에서 src/main/menus.ts 를 옮겼다).
 // 문구는 언어 파일(data/i18n)에서. 호칭(펫·동반자)은 쓰지 않고 동사만 (사용자 결정 2026-09-17).
@@ -207,13 +207,4 @@ export function petMenuOf(
     firstCare = { keep, wait: keep ? null : (cooling("play", play) ?? cooling("feed", feed) ?? t("coach.first-care.wait.soon")) };
   }
   return { model, inSave: true, hidden: slot?.hidden === true, sale: sale.ok ? { price: sale.price } : null, firstCare };
-}
-
-// 작업 표시줄 점프 목록 — 파티 포켓몬마다 밥 주기·놀아주기. 쿨타임과 무관하게 두 줄을 늘 올린다 (Windows 점프 목록은 항목을 흐리게 둘 수 없다, 설계 U5)
-export function jumpListOf(save: SaveV3): { pets: { id: string; name: string; level: number }[]; labels: { feed: string; play: string } } {
-  const pets = save.party.slots
-    .map((slot) => (slot.state === "pokemon" ? save.pets.find((p) => p.id === slot.petId) : undefined))
-    .filter((p): p is NonNullable<typeof p> => p != null)
-    .map((p) => ({ id: p.id, name: petName(p.species), level: p.level }));
-  return { pets, labels: { feed: t("menu.feed"), play: t("menu.play") } };
 }
