@@ -267,9 +267,15 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(b?.mega?.canChange, true);
   assert.equal(c?.mega, undefined);
   assert.equal(c?.look, "pikachu");
+  s.dex.unlocked = ["venusaur", "groudon", "floette"];
   const dex = dexList(s);
-  assert.equal(dex.find((d) => d.slug === "charizard")?.mega, true);
-  assert.equal(dex.find((d) => d.slug === "pikachu")?.mega, undefined);
+  const megaOfDex = (slug: string) => dex.find((d) => d.slug === slug)?.mega;
+  assert.deepStrictEqual(megaOfDex("charizard"), { opened: true, kind: "mega" }, "메가스톤이 생긴 종은 진한 표식");
+  assert.deepStrictEqual(megaOfDex("venusaur"), { opened: false, kind: "mega" }, "해금만 한 종도 흐린 표식");
+  assert.deepStrictEqual(megaOfDex("groudon"), { opened: false, kind: "primal" });
+  assert.equal(megaOfDex("blastoise"), undefined, "미해금 칸에는 없다");
+  assert.equal(megaOfDex("pikachu"), undefined, "메가진화하지 않는 종");
+  assert.equal(megaOfDex("floette"), undefined, "일반 플라엣테는 메가진화하지 않는다");
   assert.equal(dex.some((d) => megaOf(d.slug) !== null), false, "메가 모습은 도감 항목이 아니다");
   // 도감 상세 — 얻은 종에만 메가진화 줄. 메가스톤이 없어도 보인다. 해금만 한 종과 메가진화하지 않는 종에는 없다
   s.dex.obtained = ["charizard", "pikachu", "groudon"];

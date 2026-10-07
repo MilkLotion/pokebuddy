@@ -5,6 +5,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import { regionalOf, isRegional } from "../dex/regional.js";
 import type { DexEntry } from "../shared/model/detail";
 import { speciesTable, type SpeciesRow } from "../dex/tables.js";
+import { megaFormsOf, megaOf } from "../dex/mega.js";
 
 // 리전폼 항목의 폼 순번·지방 — 리전폼이 아니면 빈 객체
 export function formFields(slug: string, opts?: DexOptions): { form?: number; region?: string } {
@@ -38,14 +39,17 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
   const mega = new Set(save.dex.megaOpened ?? []);
   const out: DexEntry[] = [];
   for (const { slug, dex } of baseForms(speciesTable(opts), opts)) {
+    const state = obtained.has(slug) ? "obtained" : unlocked.has(slug) ? "unlocked" : "locked";
+    // 메가진화하는 종 — 미해금 칸에는 표식이 없다 (docs/specs/game.md "메가진화")
+    const form = state === "locked" ? undefined : megaFormsOf(slug, opts)[0];
     out.push({
       slug,
       dex,
       ...formFields(slug, opts),
       name: petName(slug),
-      state: obtained.has(slug) ? "obtained" : unlocked.has(slug) ? "unlocked" : "locked",
+      state,
       shiny: shiny.has(slug),
-      ...(mega.has(slug) ? { mega: true as const } : {}),
+      ...(form ? { mega: { opened: mega.has(slug), kind: megaOf(form, opts)?.kind ?? "mega" } } : {}),
     });
   }
   out.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0));

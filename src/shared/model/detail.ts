@@ -10,7 +10,13 @@ export interface DexEntry {
   name: string;
   state: DexState;
   shiny: boolean;
-  mega?: true; // 내 개체에 메가스톤이 생긴 적이 있는 종 — 얻음 표식 옆에 메가스톤 표식 (2026-10-02 사용자 결정)
+  mega?: DexMegaMark; // 메가진화하는 종의 해금·획득 칸만 — 얻음 표식 옆에 메가스톤 표식 (2026-10-08 사용자 결정 "추천대로해보자")
+}
+
+// 도감 칸의 메가스톤 표식 — opened 는 내 개체에 메가스톤이 생긴 적이 있는 종(진한 표식), 아니면 흐린 표식
+export interface DexMegaMark {
+  opened: boolean;
+  kind: "mega" | "primal"; // 원시회귀는 툴팁 문구만 다르다
 }
 
 // 도감 상세 — 칸을 누를 때 한 종만 따로 읽는다. 문구는 화면이 그대로 쓴다 (Figma Dex / Base 상세 패널)

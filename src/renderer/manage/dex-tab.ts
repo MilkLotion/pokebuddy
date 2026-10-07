@@ -85,12 +85,15 @@ function dexCell(row: DexEntry): HTMLElement {
     got.setAttribute("role", "img");
     got.setAttribute("aria-label", got.title);
     cell.appendChild(got);
-    // 메가스톤 — 내 개체에 메가스톤이 생긴 적이 있는 종만. 얻음 표식(볼) 오른쪽에 같은 크기 12 로 둔다 (2026-10-02 사용자 결정)
-    if (row.mega) {
-      cell.classList.add("has-mega");
-      cell.appendChild(megaMark(12, "메가스톤 획득"));
-    }
     if (row.shiny) cell.appendChild(shinyIcon(10, "이로치 획득"));
+  }
+  // 메가스톤 — 메가진화하는 종의 해금·획득 칸. 얻음 표식(볼) 오른쪽에 같은 크기 12 로, 해금 칸도 같은 자리 (2026-10-08 사용자 결정 "추천대로해보자")
+  // 메가스톤이 생긴 적이 있으면 진한 표식, 아니면 흐린 표식 (Figma 02 `Species Card` `Mega=Opened|Possible`)
+  if (row.mega) {
+    const mark = row.mega.opened ? megaMark(12, "메가스톤 획득") : megaMark(12, row.mega.kind === "primal" ? "원시회귀" : "메가진화");
+    if (!row.mega.opened) mark.classList.add("dim");
+    cell.classList.add("has-mega");
+    cell.appendChild(mark);
   }
   return cell;
 }

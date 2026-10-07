@@ -151,6 +151,10 @@
   left: 19px;
   top: 5px;
 }
+/* 메가스톤이 아직 없다 — 흐린 표식. 파티 상세 기기 창의 흐린 표식과 같은 값 (pet.css .mega-stone.goal) */
+.dex-cell .mega-mark.dim {
+  opacity: 0.35;
+}
 .dex-cell.has-mega .shiny {
   left: 34px;
 }
