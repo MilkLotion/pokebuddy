@@ -78,6 +78,7 @@ export interface NewPetSpec {
   rand: Rand;
   place: NewPetPlace;
   opts?: DexOptions;
+  gender?: Gender; // 정한 성별 — 우편 선물. 없으면 성비대로. 있어도 난수 한 번은 쓴다
 }
 
 export interface NewPetResult {
@@ -93,7 +94,9 @@ export function addNewPet(save: SaveV3, spec: NewPetSpec): NewPetResult | null {
   if (!checkNewPetRoom(save, spec.place).ok) return null;
   const { species, shiny, now, rand, opts } = spec;
   const id = nextPetId(save);
-  const pet = newPet({ id, species, shiny, nature: randomNature(rand, opts).id, gender: rollGender(species, rand, opts), now });
+  const nature = randomNature(rand, opts).id;
+  const rolled = rollGender(species, rand, opts);
+  const pet = newPet({ id, species, shiny, nature, gender: spec.gender ?? rolled, now });
   save.pets.push(pet);
   recordDex(save, species, shiny);
   const i = spec.place === "box-only" ? -1 : save.party.slots.findIndex((s) => s.state === "empty");

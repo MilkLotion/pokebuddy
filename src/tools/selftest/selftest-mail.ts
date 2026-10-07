@@ -96,6 +96,25 @@ const T0 = Date.UTC(2026, 8, 29, 3, 0, 0);
   process.stdout.write("(2b) 포켓몬 선물  ok\n");
 }
 
+// (2b-2) 포켓몬 선물의 성별 — gender 가 있으면 그 성별로 넣는다. 그 종이 가질 수 없는 성별이면 모르는 선물이다
+{
+  assert.deepStrictEqual(parseGifts([{ kind: "pokemon", species: "ralts", count: 1, gender: "female" }]), [{ kind: "pokemon", species: "ralts", count: 1, gender: "female" }]);
+  assert.deepStrictEqual(parseGifts([{ kind: "pokemon", species: "chansey", count: 1, gender: "female" }]), [{ kind: "pokemon", species: "chansey", count: 1, gender: "female" }], "한 성별 종의 그 성별");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "chansey", count: 1, gender: "male" }]), null, "암컷만 있는 종의 수컷");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "tauros", count: 1, gender: "female" }]), null, "수컷만 있는 종의 암컷");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "magnemite", count: 1, gender: "male" }]), null, "무성 종");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "ralts", count: 1, gender: "none" }]), null, "none 은 정하지 못한다");
+  assert.equal(parseGifts([{ kind: "pokemon", species: "ralts", count: 1, gender: 1 }]), null, "모르는 값");
+  const s = empty(T0);
+  const before = s.pets.length;
+  // rand 0.9 는 랄토스(암컷 4/8)를 수컷으로 뽑는다 — 정한 성별이 이긴다
+  assert.deepStrictEqual(applyGifts(s, "G1", [{ kind: "pokemon", species: "ralts", count: 2, gender: "female" }], undefined, { now: T0, rand: () => 0.9 }), { ok: true, applied: true });
+  assert.deepStrictEqual(s.pets.slice(before).map((p) => p.gender), ["female", "female"]);
+  assert.deepStrictEqual(applyGifts(s, "G2", [{ kind: "pokemon", species: "ralts", count: 1 }], undefined, { now: T0, rand: () => 0.9 }), { ok: true, applied: true });
+  assert.equal(s.pets.at(-1)!.gender, "male", "gender 가 없으면 성비대로");
+  process.stdout.write("(2b-2) 포켓몬 선물 성별  ok\n");
+}
+
 // (2c) 단일 포켓몬 선물 — 한 마리만 넣는다. 이미 얻은 종이면 넣지 않고 다른 선물은 받는다. 우편 전용 특수 폼도 단일 포켓몬이다
 // (2026-10-03 사용자 결정 "이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해.")
 {
