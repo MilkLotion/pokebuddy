@@ -33,7 +33,7 @@
 import path from "node:path";
 import type { DayPart, EvoNeed, Gender } from "../../shared/species";
 import { DATA_DIR, csv, readDex, runBuild, writeLineJson } from "./pokeapi-csv";
-import { REGION_MAP, isRegional, regionalOf, regionalTable } from "../../dex/regional";
+import { REGION_MAP, isRegional, regionalTable } from "../../dex/regional";
 
 const OUT = path.join(DATA_DIR, "evo.json");
 
@@ -102,11 +102,12 @@ export async function build(): Promise<void> {
     const name = r.evolved_pokemon_form_id ? formName.get(r.evolved_pokemon_form_id) : undefined;
     return name !== undefined && isRegional(name);
   };
-  // 진화 전 모습이 표의 특수 폼으로 정해진 행(배쓰나이(백색근의 모습) → 대쓰여너) — 기본형 간선을 만들지 않는다. 표의 edges 가 그 간선을 준다.
-  // 리전폼에서만 진화하는 종(가라르 나옹 → 나이킹)은 여기에 들지 않는다 — 기본형 간선도 그대로 둔다 (2026-09-30 사용자 결정)
+  // 진화 전 모습이 표의 리전폼·특수 폼으로 정해진 행 — 기본형 간선을 만들지 않는다. 표의 edges 가 그 간선을 준다.
+  //   배쓰나이(백색근의 모습) → 대쓰여너, 지방 전용 진화 9개(가라르 나옹 → 나이킹, 히스이 포푸니 → 포푸니크 등)
+  //   일반 폼에서는 진화하지 않는다 (2026-10-07 사용자 결정 "포푸니크는 히스이포푸니의 진화체지 일반 포푸니의 진화가 아니므로", "막자")
   const fromRegional = (r: { required_pokemon_form_id: string }): boolean => {
     const name = r.required_pokemon_form_id ? formName.get(r.required_pokemon_form_id) : undefined;
-    return name !== undefined && regionalOf(name)?.special === true;
+    return name !== undefined && isRegional(name);
   };
   const baseRows = evoRows.filter((r) => !toRegional(r) && !fromRegional(r));
   const onlyFromRegional = new Set(evoRows.filter(fromRegional).map((r) => r.evolved_species_id));

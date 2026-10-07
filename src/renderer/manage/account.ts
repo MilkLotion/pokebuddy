@@ -73,6 +73,7 @@ export function saveLine(c: AccountScreen["cloud"]): string {
 }
 
 // 헤더 저장 표시 — 로그인·익명 계정이면 보인다. 저장 계정을 잃었으면(D29) 저장 꺼짐. 누르면 사용자 모달의 계정 탭을 연다
+//   업데이트 필요면 설정 모달을 연다 — 버전·업데이트는 설정 모달 바닥에 있다 (2026-10-07 사용자 결정)
 function drawSaveIndicator(): void {
   if (accountUi.screen?.lost) {
     saveIndicatorEl.hidden = false;
@@ -87,7 +88,10 @@ function drawSaveIndicator(): void {
   saveIndicatorEl.dataset.state = shown.dot;
   saveIndicatorEl.replaceChildren(el("i"), document.createTextNode(shown.text));
 }
-saveIndicatorEl.addEventListener("click", () => openAnyDialog({ kind: "user", tab: "account" }));
+saveIndicatorEl.addEventListener("click", () => {
+  const updateRequired = !accountUi.screen?.lost && accountUi.screen?.cloud.status === "update-required";
+  openAnyDialog(updateRequired ? { kind: "settings", tab: "general" } : { kind: "user", tab: "account" });
+});
 
 export async function loadAccount(): Promise<void> {
   if (accountUi.loading) return;

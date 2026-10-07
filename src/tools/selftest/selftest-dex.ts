@@ -278,10 +278,11 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(regional.dexLabel("tauros-paldea-aqua-breed", 128), "128-3");
   assert.strictEqual(regional.dexLabel("raichu", 26), "26");
   assert.strictEqual(dex.profileOf("raichu-alola").types.join("/"), "electric/psychic");
-  // 부모는 기본형 — 지방 전용 진화는 기본형에서도 리전폼에서도 간다
-  assert.strictEqual(dex.prevOf("perrserker"), "meowth");
-  assert.strictEqual(dex.prevOf("sirfetchd"), "farfetchd");
-  assert.strictEqual(dex.prevOf("obstagoon"), "linoone");
+  // 지방 전용 진화는 리전폼에서만 간다 — 부모는 리전폼 (2026-10-07 사용자 결정)
+  assert.strictEqual(dex.prevOf("perrserker"), "meowth-galar");
+  assert.strictEqual(dex.prevOf("sirfetchd"), "farfetchd-galar");
+  assert.strictEqual(dex.prevOf("obstagoon"), "linoone-galar");
+  assert.strictEqual(dex.prevOf("sneasler"), "sneasel-hisui");
   assert.strictEqual(dex.prevOf("raichu-alola"), "pikachu");
   assert.strictEqual(dex.prevOf("meowth-galar"), null, "리전폼 진화 전 종은 뿌리");
   assert.strictEqual(dex.rootOf("ninetales-alola"), "vulpix-alola");
@@ -289,7 +290,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.strictEqual(dex.evoStageOf("golem-alola"), 2);
   // 리전폼은 자기 자신으로 풀린다 — 기본형 간선을 받지 않는다
   assert.deepStrictEqual(dex.nextOf("meowth-galar").map((st) => st.to), ["perrserker"]);
-  assert.deepStrictEqual(dex.nextOf("meowth").map((st) => st.to), ["persian", "perrserker"]);
+  assert.deepStrictEqual(dex.nextOf("meowth").map((st) => st.to), ["persian"], "일반 나옹은 나이킹으로 가지 않는다");
   assert.deepStrictEqual(dex.nextOf("stunfisk-galar"), [], "간선 없는 리전폼");
   assert.deepStrictEqual(dex.nextOf("articuno-galar"), []);
   assert.deepStrictEqual(dex.nextOf("tauros-paldea-blaze-breed"), []);
@@ -337,8 +338,9 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.nextOf("basculin-white-striped"), [{ to: "basculegion", need: { kind: "affinity", value: 100 } }]);
   assert.strictEqual(dex.prevOf("basculegion"), "basculin-white-striped");
   assert.deepStrictEqual([regional.dexLabel("basculin-blue-striped", 550), regional.dexLabel("basculin-white-striped", 550)], ["550-1", "550-2"]);
-  // 지방 전용 진화의 기본형 간선은 그대로다 — 특수 폼 거르기에 걸리지 않는다
-  assert.deepStrictEqual(dex.nextOf("corsola").map((st) => st.to), ["cursola"]);
+  // 지방 전용 진화는 기본형 간선이 없다 — 리전폼 간선만
+  assert.deepStrictEqual(dex.nextOf("corsola"), []);
+  assert.deepStrictEqual(dex.nextOf("corsola-galar").map((st) => st.to), ["cursola"]);
   // 디아루가(오리진폼)·펄기아(오리진폼) — 도감 항목은 따로이고 기본형 개체가 모습 바꾸기로 오간다 (2026-10-03 사용자 결정 "셋 다 모습 바꾸기로 통일하자"). 원시 디아루가(PMD 전용)는 넣지 않는다
   assert.deepStrictEqual([regional.dexLabel("dialga-origin", 483), regional.dexLabel("palkia-origin", 484)], ["483-1", "484-1"]);
   assert.deepStrictEqual([dex.profileOf("dialga-origin").types.join("/"), dex.profileOf("palkia-origin").types.join("/")], ["steel/dragon", "water/dragon"]);

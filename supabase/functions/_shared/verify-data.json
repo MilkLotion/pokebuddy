@@ -1,5 +1,5 @@
 {
- "hash": "6a75de830fa9ef98",
+ "hash": "35646b9839fac32a",
  "items": {
   "basic-food": {
    "price": null,
@@ -463,9 +463,6 @@
   "corphish": [
    "crawdaunt"
   ],
-  "corsola": [
-   "cursola"
-  ],
   "corsola-galar": [
    "cursola"
   ],
@@ -648,9 +645,6 @@
   "exeggcute": [
    "exeggutor",
    "exeggutor-alola"
-  ],
-  "farfetchd": [
-   "sirfetchd"
   ],
   "farfetchd-galar": [
    "sirfetchd"
@@ -939,9 +933,6 @@
   "lillipup": [
    "herdier"
   ],
-  "linoone": [
-   "obstagoon"
-  ],
   "linoone-galar": [
    "obstagoon"
   ],
@@ -1018,8 +1009,7 @@
    "melmetal"
   ],
   "meowth": [
-   "persian",
-   "perrserker"
+   "persian"
   ],
   "meowth-alola": [
    "persian-alola"
@@ -1057,9 +1047,6 @@
   ],
   "morgrem": [
    "grimmsnarl"
-  ],
-  "mr-mime": [
-   "mr-rime"
   ],
   "mr-mime-galar": [
    "mr-rime"
@@ -1267,9 +1254,6 @@
   "quilladin": [
    "chesnaught"
   ],
-  "qwilfish": [
-   "overqwil"
-  ],
   "qwilfish-hisui": [
    "overqwil"
   ],
@@ -1460,8 +1444,7 @@
    "jynx"
   ],
   "sneasel": [
-   "weavile",
-   "sneasler"
+   "weavile"
   ],
   "sneasel-hisui": [
    "sneasler"
@@ -1723,8 +1706,7 @@
    "dubwool"
   ],
   "wooper": [
-   "quagsire",
-   "clodsire"
+   "quagsire"
   ],
   "wooper-paldea": [
    "clodsire"
@@ -1737,8 +1719,7 @@
    "wobbuffet"
   ],
   "yamask": [
-   "cofagrigus",
-   "runerigus"
+   "cofagrigus"
   ],
   "yamask-galar": [
    "runerigus"

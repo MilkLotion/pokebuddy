@@ -185,7 +185,7 @@ function seed(): SaveV3 {
   assert.equal(base?.form, undefined, "기본형에는 폼 순번이 없다");
   assert.equal(a?.methods, "피카츄에서 진화 (지도)", "지도 간선 결과는 얻는 방법에 지도를 적는다");
   assert.equal(base?.methods, "피카츄에서 진화", "기본형 결과는 지도 없이");
-  assert.equal(dexDetail(s, "perrserker")?.methods, "나옹에서 진화", "지방 전용 진화는 지도 간선이 아니다");
+  assert.equal(dexDetail(s, "perrserker")?.methods, "가라르 나옹에서 진화", "지방 전용 진화는 리전폼에서만 — 지도 간선이 아니다");
   // 가라르 나옹 — 진화는 나이킹 하나. 기본형 간선(페르시온)을 받지 않는다
   assert.equal(dexDetail(s, "meowth-galar")?.evolution, "Lv.28에서 나이킹으로 진화");
   process.stdout.write("(10b) 리전폼 상세  ok\n");

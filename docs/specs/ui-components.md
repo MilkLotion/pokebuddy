@@ -166,7 +166,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 브랜드의 로고는 `assets/logo/src/logo.svg` 를 인라인 SVG 로 넣는다. 창의 CSP 가 파일 그림을 막기 때문이다(2026-09-28 사용자 결정).
 사용 화면: 설정창 모든 탭, WF-01~WF-05, WF-01b.
 판정: `App Header`에 업적·설정 아이콘 자리를 더한다. 기존 설정 탭 진입은 아이콘으로 옮긴다.
-Figma: `App Header` `154:1017`의 브랜드 `App Brand` `150:145`는 로고 `Brand Mark` 20×20과 `PokeBuddy` 글자다. 업적·설정·유저 버튼은 탭 줄 `Primary Navigation` `208:542`의 `header-icons`에 있다. 코드도 탭 줄(`nav`)에 둔다. 버튼은 노출한 인스턴스다. 인스턴스에서 dot와 열림 상태를 바꾼다. 상태 예시는 `295:3297`이다.
+Figma: `App Header` `154:1017`의 브랜드 `App Brand` `150:145`는 로고 `Brand Mark` 20×20과 `PokeBuddy` 글자다. 업적·우편함·유저·설정 버튼은 탭 줄 `Primary Navigation` `208:542`의 `header-icons`에 이 순서로 있다(2026-10-07 순서 변경, `src/renderer/manage.html` `nav-actions`). 코드도 탭 줄(`nav`)에 둔다. 버튼은 노출한 인스턴스다. 인스턴스에서 dot와 열림 상태를 바꾼다. 상태 예시는 `295:3297`이다.
 보유 포인트 왼쪽에 C-27 저장 표시(`save-indicator`)를 두었다. `Show Save Indicator` 속성(기본 꺼짐)으로 켠다. 로그인한 계정과 익명 계정에서 켠다. 상태는 노출한 `save-indicator` 인스턴스의 `State`로 고른다.
 
 ### C-02 헤더 아이콘 버튼

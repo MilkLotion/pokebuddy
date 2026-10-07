@@ -456,6 +456,13 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const galar = seed({ species: "meowth-galar", level: 28 });
   assert.deepStrictEqual(evolveCandidates(galar, "p1", "day").map((c) => c.to), ["perrserker"]);
   assert.equal(evolvePet(galar, "p1", "day").to, "perrserker");
+  // 지방 전용 진화는 리전폼에서만 — 일반 포푸니는 지도가 있어도 마닐라로만 간다 (2026-10-07 사용자 결정)
+  const sneasel = seed({ species: "sneasel", affinity: 999 }, { "region-map": 1 });
+  assert.deepStrictEqual(evolveCandidates(sneasel, "p1", "day").map((c) => c.to), ["weavile"]);
+  const hisuiSneasel = seed({ species: "sneasel-hisui", affinity: 999 });
+  assert.deepStrictEqual(evolveCandidates(hisuiSneasel, "p1", "day").map((c) => c.to), ["sneasler"]);
+  assert.deepStrictEqual(evolveCandidates(seed({ species: "farfetchd", affinity: 999 }), "p1", "day"), [], "일반 파오리는 창파나이트로 가지 않는다");
+  assert.deepStrictEqual(evolveCandidates(seed({ species: "meowth", level: 28 }), "p1", "day").map((c) => c.to), ["persian"]);
   // 리전폼의 다음 진화에는 지도가 필요 없다
   const vulpix = seed({ species: "vulpix-alola" }, { "ice-stone": 1, "region-map": 1 });
   const v = evolvePet(vulpix, "p1", "day");

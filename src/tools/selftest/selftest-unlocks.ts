@@ -125,7 +125,7 @@ process.stdout.write("(7) 잠만보 · 먹고자 진화로 해금  ok\n");
   }
   assert.deepStrictEqual(rules["raichu-alola"], { evolve: { from: "pikachu", affinity: 500 } }, "지도 진화 결과는 진화 규칙");
   assert.deepStrictEqual(rules["ninetales-alola"], { evolve: { from: "vulpix-alola", affinity: 500 } }, "리전폼 경로");
-  assert.deepStrictEqual(rules["perrserker"], { evolve: { from: "meowth", affinity: 500 } }, "같은 결과면 기본형 출발 규칙");
+  assert.deepStrictEqual(rules["perrserker"], { evolve: { from: "meowth-galar", affinity: 500 } }, "지방 전용 진화는 리전폼 출발 규칙");
   assert.equal(rules["articuno-galar"], undefined, "전설 리전폼은 규칙이 없다");
   for (const s of dexSlugs) if (s.includes("-alola") || s.includes("-galar") || s.includes("-hisui") || s.includes("-paldea")) assert.ok(r.obtainable.has(s), `얻을 수 있다 ${s}`);
 }
