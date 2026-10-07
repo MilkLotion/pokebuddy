@@ -3,9 +3,11 @@
 //   data/items.json·evo.json 등     → supabase/functions/_shared/verify-data.json
 // 수치는 게임 규칙표에서 읽는다 — 규칙이 바뀌면 이 스크립트를 다시 돌리고 결과를 함께 커밋한다.
 // selftest-verify 가 복사본과 데이터가 지금 규칙과 같은지 본다.
+// verify-data.json 의 hash 는 규칙 복사본과 데이터의 지문이다 — 운영 upload-save 가 GET 으로 돌려주고, 설치 파일을 만들기 전에 대조한다(scripts/check-verify-deploy.cjs)
 //   node dist/tools/data/build-verify.js          만들기 (npm run verify:build)
 //   node dist/tools/data/build-verify.js --check  다르면 종료 코드 1 (만들지 않는다)
 // (예전 scripts/build-verify.cjs. 규칙표를 이름으로 읽으므로 타입 검사를 받게 src/tools 로 옮겼다)
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { MINT_REFUND_EACH } from "../../bag/mint";
@@ -171,9 +173,12 @@ export function buildVerifyFiles(): Record<string, string> {
       slackMs: CLOCK_RULES.saveMs + TIME_RULES.maxElapsedMs + 15_000,
     },
   };
+  const rulesText = `// 생성 파일 — src/verify/save-rules.ts 복사본. 고치지 말고 npm run verify:build 를 돌린다\n${lf(fs.readFileSync(path.join(root, "src/verify/save-rules.ts"), "utf8"))}`;
+  // 지문 — 규칙 복사본과 데이터 본문(hash 칸 빼고). 둘 중 하나만 바뀌어도 달라진다
+  const hash = crypto.createHash("sha256").update(rulesText).update(JSON.stringify(data)).digest("hex").slice(0, 16);
   return {
-    "save-rules.ts": `// 생성 파일 — src/verify/save-rules.ts 복사본. 고치지 말고 npm run verify:build 를 돌린다\n${lf(fs.readFileSync(path.join(root, "src/verify/save-rules.ts"), "utf8"))}`,
-    "verify-data.json": `${JSON.stringify(data, null, 1)}\n`,
+    "save-rules.ts": rulesText,
+    "verify-data.json": `${JSON.stringify({ hash, ...data }, null, 1)}\n`,
   };
 }
 

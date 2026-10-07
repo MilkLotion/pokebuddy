@@ -162,7 +162,9 @@
 | 관찰 모드 | `verify_mode = observe`(기본). 위반이 있어도 받는다. `cloud_private.save_violations`에 적고 `trust`를 `unverified`로 둔다. 위반 없는 올리기는 `trust`를 되돌리지 않는다 |
 | 거부 모드 | `verify_mode = enforce`. 위반을 적고 계정을 이용 정지한 뒤 `CLOUD_SAVE_REJECTED`(409)를 돌려준다. 앱은 정지와 같게 멈춘다 |
 | 권한 | `accept_save`·`save_verify_context`·`reject_save`·`admin_*`는 service_role 전용이다 |
-| 규칙 복사본 | Edge Function(Deno)은 `supabase/functions/_shared/save-rules.ts`·`verify-data.json`을 쓴다. `node dist/tools/data/build-verify.js`(빌드 뒤)가 `src/verify/save-rules.ts`와 `data/`·규칙표에서 만든다. `selftest-verify`가 최신인지 본다 |
+| 규칙 복사본 | Edge Function(Deno)은 `supabase/functions/_shared/save-rules.ts`·`verify-data.json`을 쓴다. `node dist/tools/data/build-verify.js`(빌드 뒤)가 `src/verify/save-rules.ts`와 `data/`·규칙표에서 만든다. `selftest-verify`가 최신인지 본다. `verify-data.json`의 `hash`는 규칙 복사본과 데이터의 지문이다. `upload-save`는 GET 에 `{ hash }`만 돌려준다 |
+| 배포 순서 | 운영 `upload-save`를 먼저 배포하고 앱 설치 파일을 만든다. `scripts/build-exe.cjs`는 공개용 빌드 전에 `scripts/check-verify-deploy.cjs`를 부른다. 운영 지문과 로컬 지문이 다르면 빌드를 멈춘다. 업데이트 실기 시험 빌드와 `PB_RELEASE_OUT` 확인 빌드는 대조하지 않는다 |
+| 위반 대상 | `pet` 칸에 대상을 남긴다. 개체 규칙은 개체 id, `achievement`는 업적 키, `bag`은 도구 id 다 |
 | 관리 | `admin/admin.cjs violations`(위반 목록), `verify [--mode] [--margin] [--yes]`(설정), `trust <계정> [legacy\|unverified] [--yes]`(trust 보기·바꾸기) |
 | 이용 정지 | 서버 `cloud_private.account_holds`. 거부 모드에서 `reject_save`가 위반을 적고 정지를 건다. 계정 도우미(`require_account`)·교환 도우미(`require_uid`)·편지 받기·`upload-save`가 정지된 계정을 `CLOUD_ACCOUNT_HELD`로 거절한다. `delete-account`도 정지 중이면 거절한다. 앱은 이 코드(또는 `CLOUD_SAVE_REJECTED`)를 받으면 `cloud.json`의 `accountHeld`를 켜고 맞춘 rev 를 잊은 뒤(풀리면 서버 저장을 받는다) 게임을 멈추고 정지 창을 띄운 뒤 끝난다. 서버에 닿기 전(오프라인·세션 분실)에 `accountHeld`가 켜져 있어도 같다. 기기 연결(claim)이 계정 확인을 통과하면 `accountHeld`를 지운다. 관리: `admin.cjs holds`·`hold add|release <계정> --yes` |
 | 계정 시드 | 서버 `cloud_private.account_seeds`에 계정마다 시드가 있다. 앱은 온라인이 되면 `account_seed()`로 받아 `cloud.json`의 `seed`·`seedOwner`에 둔다. 알 열기 난수는 `seededRand(seed, "egg:<알 id>")`다(`src/verify/save-rules.ts`). 검증은 열린 알마다 `rollEgg`로 다시 계산해 새 저장과 대조한다(`egg-roll`). 직전에 받은 저장보다 나중에 만든 시드는 문맥에 싣지 않는다 — 시드를 받기 전에 연 알은 대조하지 않는다. 시드는 사용자 PC 에 있어 다음 결과를 미리 계산할 수 있다. 알의 id·종류·후보를 고치면 `egg` 위반이다 |

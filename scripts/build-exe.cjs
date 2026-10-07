@@ -41,6 +41,9 @@ const productName = MAC && !TEST ? "PokeBuddy" : name;
 // PB_RELEASE_OUT — 설치 파일만 확인하는 빌드를 다른 폴더에 만든다. release/ 의 공개한 파일을 덮지 않게 (2026-09-30)
 const release = TEST && process.env.PB_UPDATE_OUT ? process.env.PB_UPDATE_OUT : process.env.PB_RELEASE_OUT || path.join(root, "release");
 const stage = path.join(release, "app");
+// 공개용 빌드(release/)는 운영 upload-save 의 규칙 데이터가 이 저장소와 같을 때만 만든다 — 앱이 먼저 나가면 정상 올리기가 위반으로 적힌다(2026-10-07)
+//   업데이트 실기 시험 빌드와 PB_RELEASE_OUT 확인 빌드는 공개하지 않으므로 보지 않는다
+if (!TEST && !process.env.PB_RELEASE_OUT) execFileSync(process.execPath, [path.join(__dirname, "check-verify-deploy.cjs")], { stdio: "inherit" });
 
 // 설치 파일에 넣지 않는 것 — npm 설치 뒤 스크립트는 npm 판에만 쓴다
 const SKIP = new Set(["scripts/postinstall.js"]);

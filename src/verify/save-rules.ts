@@ -43,6 +43,7 @@ export interface VerifyItem {
 
 // src/tools/data/build-verify.ts 가 data/ 와 규칙표에서 뽑는다
 export interface VerifyData {
+  hash?: string; // 규칙 복사본과 데이터의 지문 (src/tools/data/build-verify.ts). 배포 전 대조에만 쓴다(scripts/check-verify-deploy.cjs)
   items: Record<string, VerifyItem>;
   eggs: Record<string, number>; // 알 종류 → 값
   achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
@@ -182,7 +183,7 @@ export interface Violation {
   rule: string;
   value: number;
   limit: number;
-  pet?: string;
+  pet?: string; // 대상 — 개체 id. achievement 는 업적 키, bag 은 도구 id (DB 칸 이름은 pet)
 }
 
 type Raw = Record<string, unknown>;
@@ -400,7 +401,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (prevClaimed.has(k)) continue;
     const reward = data.achievements[k];
     if (!reward) {
-      add("achievement", 1, 0);
+      add("achievement", 1, 0, k); // 규칙 데이터에 없는 업적 — 앱이 규칙 데이터보다 먼저 나갔으면 오탐이다. 키를 남겨 가린다
       continue;
     }
     const [kind, a, b] = reward.split(":");
@@ -450,7 +451,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     const gain = pos((nextBag[id] ?? 0) - had(id));
     if (gain === 0) continue;
     const price = priceOf(id);
-    if (price == null || price <= 0) add("bag", gain, 0);
+    if (price == null || price <= 0) add("bag", gain, 0, id); // 팔지 않거나 규칙 데이터에 없는 도구 — 키를 남긴다
     else cost += gain * price;
   }
   // 새 알 — 연 알만큼은 보너스 알일 수 있고, 업적 보상 알은 값이 없다. 나머지는 싼 것부터 산 것으로 본다
