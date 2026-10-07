@@ -22,6 +22,7 @@ import { normalizeMail } from "../mail/letters.js";
 import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { BATTLE_RULES } from "../battle/rules.js";
+import { megaChoices } from "../dex/mega.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import { NOTIFY_KINDS } from "../shared/names/banners.js";
@@ -268,7 +269,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
     trade: normalizeTrade(raw.trade, seen),
     mail: normalizeMail(raw.mail),
     find: normalizeFind(raw.find),
-    battle: normalizeBattle(raw.battle, seen),
+    battle: normalizeBattle(raw.battle, pets),
     counts: normalizeCounts(raw.counts, pets, eggs, nonNeg(raw.eggSeq)),
     achRev: nonNeg(raw.achRev),
   };
@@ -316,7 +317,9 @@ function normalizeFind(raw: unknown): FindV3 {
 
 // 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/trade.md "로컬 저장과 복구")
 // 배틀 파티 — 6칸. 저장에 없는 개체와 두 번째로 나온 같은 개체는 빈 칸이 된다 (2026-10-08 에 더했다, src/battle/party.ts)
-function normalizeBattle(raw: unknown, petIds: Set<string>): BattleV3 {
+// 메가 상태는 칸에 든 개체이고 메가스톤으로 고를 수 있는 모습만 남긴다
+function normalizeBattle(raw: unknown, pets: PetV3[]): BattleV3 {
+  const petIds = new Set(pets.map((p) => p.id));
   const given = isRawObject(raw) && Array.isArray(raw.slots) ? raw.slots : [];
   const used = new Set<string>();
   const slots: (string | null)[] = [];
@@ -327,7 +330,13 @@ function normalizeBattle(raw: unknown, petIds: Set<string>): BattleV3 {
       slots.push(id);
     } else slots.push(null);
   }
-  return { slots };
+  const mega: Record<string, string> = {};
+  const rawMega = isRawObject(raw) && isRawObject(raw.mega) ? raw.mega : {};
+  for (const [id, form] of Object.entries(rawMega)) {
+    const pet = used.has(id) ? pets.find((p) => p.id === id) : undefined;
+    if (pet && typeof form === "string" && megaChoices(pet).includes(form)) mega[id] = form;
+  }
+  return Object.keys(mega).length ? { slots, mega } : { slots };
 }
 
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {

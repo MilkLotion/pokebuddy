@@ -226,7 +226,7 @@ export interface BattleDeviceDeps extends DeviceArtDeps {
 }
 
 function isBattleAction(v: unknown): v is BattleDeviceAction {
-  return isRecord(v) && v.kind === "swap" && isShortId(v.petId);
+  return isRecord(v) && (v.kind === "swap" || v.kind === "mega") && isShortId(v.petId);
 }
 
 export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen, BattleDeviceView, BattleDeviceAction> {
@@ -236,9 +236,9 @@ export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceO
     keyOf: (o) => o.slot.pet?.id ?? String(o.slot.index),
     viewOf: async (o) => {
       const types = Object.keys(o.typeArt);
-      const art = await artResolver(deps, [o.art, ...types.map((t) => o.typeArt[t] ?? null)]);
-      const { art: _art, typeArt, ...rest } = o;
-      return { ...rest, portrait: art(o.art), typeIcons: Object.fromEntries(types.map((t) => [t, art(typeArt[t] ?? null)])), volume: deps.volume() };
+      const art = await artResolver(deps, [o.art, o.megaArt, ...types.map((t) => o.typeArt[t] ?? null)]);
+      const { art: _art, typeArt, megaArt, ...rest } = o;
+      return { ...rest, portrait: art(o.art), megaIcon: art(megaArt), typeIcons: Object.fromEntries(types.map((t) => [t, art(typeArt[t] ?? null)])), volume: deps.volume() };
     },
     isAction: isBattleAction,
     cry: { of: (o) => deps.cry(o.slot.pet?.species ?? ""), volume: deps.volume },

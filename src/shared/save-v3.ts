@@ -128,6 +128,7 @@ export interface PartyV3 {
 //   - 같은 개체는 한 칸에만 든다. 개체가 저장에서 사라지면 그 칸은 빈 칸이 된다 (src/battle/party.ts dropBattlePet)
 export interface BattleV3 {
   slots: (string | null)[]; // 길이 6. 개체 식별자 또는 빈 칸
+  mega?: Record<string, string>; // 배틀 파티에서 메가 모습을 켠 개체 — 개체 식별자 → 메가 모습 슬러그(data/mega.json). 프리셋의 메가 모습과 따로다 (src/battle/party.ts setBattleMega)
 }
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────

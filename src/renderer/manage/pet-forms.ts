@@ -12,8 +12,7 @@ import { iconCache, portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, openAnyDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
-import { findPartySlot, petInView } from "./state.js";
-import { lvNature } from "./widgets.js";
+import { findPartySlot, petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
 // 받침이 있으면 "으로", 없거나 ㄹ 받침이면 "로" — "루나아라로", "코스모움으로"
@@ -64,20 +63,24 @@ export function markMega(cell: HTMLElement, pet: PetView, size: number): void {
 //   메가 모습이 둘     진화 창의 틀로 고른다 — 트리는 지금 종과 메가 모습뿐이다. 고르고 `메가진화` 로 바로 바뀐다
 //   지금 메가 모습     원래 모습으로 돌아가는 확인
 // 같은 프리셋에 메가 모습인 다른 개체가 있으면 그 개체가 원래 모습으로 돌아간다고 한 줄로 알린다
+// battle — 배틀 파티 상세 기기 창의 표식에서 열었다. 같은 창이고 바꾸는 것만 배틀 파티의 메가 상태다(battle.mega). 바탕화면의 모습은 그대로다
+// (docs/specs/adventure.md "메가진화")
 const megaDrawer = (shiny: boolean): ReturnType<typeof evoDrawer> => evoDrawer((slug, cls) => portraitOf(slug, shiny, cls));
 
-export function drawMega(petId: string, to?: string): void {
-  const pet = petInView(petId);
+export function drawMega(petId: string, to?: string, battle = false): void {
+  const slot = battle ? ui.view?.battle.slots.find((s) => s.pet?.id === petId) : undefined;
+  const pet = battle ? slot?.pet : petInView(petId);
   const mega = pet?.mega;
   if (!pet || !mega || !mega.canChange) {
     closeDialog();
     return;
   }
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
-  const where = whereText(pet);
+  const where = slot ? `배틀 파티 ${slot.index + 1}번` : whereText(pet);
   const kept = KEPT;
   const change = (species: string): void => {
-    void sendCommand("pet.form", pet.id, { species }).then((ok) => {
+    const send = battle ? sendCommand("battle.mega", pet.id, { form: species === pet.species ? null : species }) : sendCommand("pet.form", pet.id, { species });
+    void send.then((ok) => {
       if (ok) closeDialog();
     });
   };
@@ -90,23 +93,24 @@ export function drawMega(petId: string, to?: string): void {
     for (const text of lines) info.appendChild(el("div", "note", text));
     dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), actionButtonEl(label, true, false, () => change(form.species))));
   };
-  const rival = mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
+  const place = battle ? "배틀 파티에서만 바뀌어요. 바탕화면은 그대로예요" : "같은 칸에서 바뀌어요";
+  const rival = battle ? `배틀 파티에서 ${word}는 한 마리만 출전해요` : mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
 
   if (mega.on) {
     const base: FormView = { species: pet.species, name: mega.baseName, types: mega.baseTypes, typeIds: mega.baseTypeIds };
-    confirm(`${base.name}${toParticle(base.name)} 돌아갈까요?`, base, [kept, "같은 칸에서 바뀌어요"], "돌아가기");
+    confirm(`${base.name}${toParticle(base.name)} 돌아갈까요?`, base, [kept, place], "돌아가기");
     return;
   }
   const only = mega.forms.length === 1 ? mega.forms[0] : undefined;
   if (only) {
-    confirm(`${only.name}${toParticle(only.name)} ${word}할까요?`, only, [kept, "같은 칸에서 바뀌어요", ...(rival ? [rival] : [])], word);
+    confirm(`${only.name}${toParticle(only.name)} ${word}할까요?`, only, [kept, place, ...(rival ? [rival] : [])], word);
     return;
   }
 
   // 고르기 — 진화 창의 틀. 준비된 후보를 미리 고른다
   const picked = mega.forms.find((f) => f.species === to) ?? mega.forms[0];
   const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...dialogHead(word, `${pet.name} · Lv.${pet.level}`, back));
+  dialogEl.append(...(battle ? dialogHead(word, where) : dialogHead(word, `${pet.name} · Lv.${pet.level}`, back)));
   const tree: EvoNodeView = {
     slug: pet.species,
     name: pet.name,
@@ -124,7 +128,7 @@ export function drawMega(petId: string, to?: string): void {
     node.setAttribute("role", "button");
     node.tabIndex = 0;
     node.setAttribute("aria-pressed", String(picked?.species === f.species));
-    const choose = (): void => openAnyDialog({ kind: "mega", petId, to: f.species });
+    const choose = (): void => openAnyDialog({ kind: "mega", petId, to: f.species, ...(battle ? { battle: true as const } : {}) });
     node.addEventListener("click", choose);
     node.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -146,7 +150,7 @@ export function drawMega(petId: string, to?: string): void {
   const go = actionButtonEl(word, true, !picked, () => {
     if (picked) change(picked.species);
   });
-  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back.to)), go));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => (battle ? closeDialog() : openAnyDialog(back.to))), go));
 }
 
 // 확인 창 안내의 공통 줄
@@ -161,11 +165,11 @@ const usesText = (uses: readonly string[]): string => `${uses.map((name) => `${n
 // 지금 모습 → 바뀔 모습 두 카드 — 모습 바꾸기·메가진화·원래 모습·진화 확인이 같이 쓴다
 // (Figma 03 `Form Confirm Panel` `1315:47600` 의 `before-after`, 2026-10-05 사용자 결정 "이전모습 -> 다음모습 으로 … 진화처럼")
 // locked — 도감에서 해금 안 된 진화 결과. 진화 트리처럼 검은 실루엣으로 그린다
+// 카드는 초상·이름·타입만 둔다. 레벨 줄은 두지 않는다 — 바뀌지 않는 값이다 (2026-10-08 사용자 결정 "레벨만 제거", "다른 확인 창에도 동일하게")
 function formCardEl(pet: PetView, species: string, name: string, types: string[], typeIds: string[], locked = false): HTMLElement {
   const card = el("div", "nat-card");
   const tags = el("div", "tags");
   types.forEach((t, i) => tags.appendChild(typeBadgeEl(t, typeIds[i])));
-  tags.appendChild(el("span", "note", lvNature(pet.level, pet.nature)));
   card.append(portraitOf(species, pet.shiny, locked ? "portrait locked" : "portrait"), el("div", "name", name), tags);
   return card;
 }
@@ -183,7 +187,7 @@ function compareEl(pet: PetView, after: HTMLElement, uses: readonly string[] = [
 }
 
 // 모습 바꾸기 확인 — Figma `Box / Shared Form Confirm` `1315:47601`. 도구를 쓰는 모습(로토무)은 화살표와 안내에 `로토무카탈로그`
-// 안내는 세 줄이다 — 도구가 있으면 `같은 칸에서 바뀌어요` 대신 도구 줄
+// 안내는 세 줄이다 — 도구가 있으면 `같은 칸에서 바뀌어요` 대신 도구 줄.
 export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
   const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)

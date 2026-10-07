@@ -39,6 +39,7 @@ export const COMMANDS = {
   "battle.clear": { via: "tx" },
   "battle.import": { via: "tx" },
   "battle.moves": { via: "tx" },
+  "battle.mega": { via: "tx" }, // args.form — 메가 모습 슬러그. 없거나 null 이면 원래 모습
   // 박스
   "box.sort": { via: "tx" },
   "box.move": { via: "tx" },

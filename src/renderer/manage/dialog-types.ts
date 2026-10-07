@@ -30,7 +30,7 @@ export type Dialog =
   | { kind: "battle-pick"; slot: number; page: number } // 배틀 파티 칸에 넣을 개체 고르기 — page 는 고르기판 쪽(프리셋 → 박스)
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
-  | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습
+  | { kind: "mega"; petId: string; to?: string; battle?: true } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습. battle 이면 배틀 파티의 메가 상태(배틀 파티 상세 기기 창의 표식)
   | { kind: "sell-pet"; petId: string; price: number } // 포켓몬 팔기 확인 — 포켓몬 메뉴의 `팔기`
   | { kind: "sell-dup"; off?: string[] } // 중복 팔기 — 박스 머리 메뉴의 `중복 팔기`. off 는 판매에서 뺀 개체
   | { kind: "notes"; pick?: string } // 패치노트 — 설정 바닥의 `패치노트`. pick 은 왼쪽 목록에서 고른 버전

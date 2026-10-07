@@ -69,6 +69,14 @@ export interface SpeciesMoveRow {
 }
 export const speciesMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow> => loadJson<Record<string, SpeciesMoveRow>>("species-moves.json", opts);
 
+// ── data/mega-battle.json ── 메가·원시회귀 모습의 종족값 6개와 특성 (메가 모습은 종 표에 없다)
+export interface MegaBattleRow {
+  stats: number[];
+  ability: string;
+  baseAbility?: boolean; // 원작 특성이 없어 기본 종 특성을 쓴다
+}
+export const megaBattleTable = (opts?: DexOptions): Record<string, MegaBattleRow> => loadJson<Record<string, MegaBattleRow>>("mega-battle.json", opts);
+
 // ── data/move-text.ko.json ── 기술 id → 원작 한국어 설명. 설명이 없는 기술은 키가 없다
 export const moveTextTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("move-text.ko.json", opts);
 

@@ -180,6 +180,11 @@
 .form-compare .nat-card {
   align-self: stretch;
 }
+/* 카드의 타입 배지 — 가운데. 레벨 줄을 뺀 뒤 배지만 남는다 (2026-10-08 사용자 결정 "타입도 중앙정렬되게") */
+.form-compare .nat-card .tags {
+  justify-content: center;
+  margin-bottom: 0;
+}
 .compare-arrow {
   flex: none;
   display: flex;

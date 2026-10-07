@@ -340,7 +340,7 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     },
   },
   battle: {
-    note: "모험 탭 배틀 파티 — 박스에 뮤츠·루기아·세레비·미라이돈을 더하고 배틀 파티를 채운다. 루기아는 출전 불가(초전설 둘째), 6번 칸은 빈 칸 (battle-party)",
+    note: "모험 탭 배틀 파티 — 박스에 피카츄·뮤츠·루기아·세레비·미라이돈·리자몽을 더하고 배틀 파티 6칸을 채운다. 루기아·미라이돈은 출전 불가(초전설), 리자몽은 메가스톤을 지녀 메가리자몽X 를 켰다 (battle-party)",
     apply: (s, now) => {
       const add = (species: string, level: number): string => {
         const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
@@ -352,8 +352,12 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         recordDex(s, species, false);
         return pet.id;
       };
-      const ids = [add("pikachu", 30), add("mewtwo", 70), add("lugia", 70), add("celebi", 50), add("miraidon", 72)];
-      s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, ids[3]!, ids[4]!, null] };
+      const ids = [add("pikachu", 30), add("mewtwo", 70), add("lugia", 70), add("celebi", 50), add("miraidon", 72), add("charizard", 60)];
+      // 리자몽은 메가스톤을 지녔고 배틀 파티에서 메가리자몽X 를 켰다 — 메가 표식·메가 모습 확인용
+      const zard = s.pets.find((p) => p.id === ids[5])!;
+      zard.affinity = 100; // 메가스톤 조건(레벨 60·친밀도 100)을 채워야 서버 검증이 받는다 (src/verify/save-rules.ts mega)
+      zard.mega = { bondMs: 24 * 60 * 60_000, care: 70, stone: true };
+      s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, ids[3]!, ids[4]!, ids[5]!], mega: { [ids[5]!]: "charizard-mega-x" } };
     },
   },
 };

@@ -184,15 +184,17 @@ export interface BattleDeviceOpen {
   busy: string | null;
   art: string | null; // 초상 열쇠 portrait:<종>[:shiny] (src/view/device-art.ts)
   typeArt: Record<string, string>; // 기술 타입 → 흰 타입 아이콘 열쇠 type:<타입>
+  megaArt: string | null; // 메가스톤 표식 그림 열쇠 — 메가스톤을 지닌 개체만. 없으면 표식을 두지 않는다
   basis: string[]; // ? 말풍선의 능력치 기준 줄
 }
 
-export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt"> {
+export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt" | "megaArt"> {
   portrait: string | null; // data URI
+  megaIcon: string | null; // 메가스톤 표식 data URI
   typeIcons: Record<string, string | null>; // 타입 → 흰 타입 아이콘 data URI
   side: "right" | "left";
   volume: number;
 }
 
-// 기기 창에서 누른 단추 — 기술 순서 바꾸기. 순서는 개체에 저장한다 (src/battle/party.ts swapMoves)
-export type BattleDeviceAction = { kind: "swap"; petId: string };
+// 기기 창에서 누른 단추 — 기술 순서 바꾸기(개체에 저장, src/battle/party.ts swapMoves), 메가스톤 표식(설정창이 메가진화 창을 연다)
+export type BattleDeviceAction = { kind: "swap" | "mega"; petId: string };

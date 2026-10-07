@@ -4,7 +4,7 @@
 import { BATTLE_RULES } from "../battle/rules.js";
 import type { BattleDeviceInput, BattleDeviceOpen } from "../shared/model/devices.js";
 import type { Snapshot } from "../shared/model/snapshot.js";
-import { portraitArtKey, typeArtKey, type DeviceResult } from "./device-art.js";
+import { itemArtKey, portraitArtKey, typeArtKey, type DeviceResult } from "./device-art.js";
 
 // ? 말풍선 — 배틀 능력치의 기준 (2026-10-07 사용자 결정 네 줄)
 const BATTLE_BASIS_LINES: readonly string[] = [`${BATTLE_RULES.level}레벨 기준`, "노력치 없음", `개체값 6V(${BATTLE_RULES.iv})`, "도구 없음"];
@@ -24,6 +24,7 @@ export function battleDeviceModel(v: Snapshot, input: BattleDeviceInput): Device
       busy: input.busy,
       art: portraitArtKey(pet.look, pet.shiny),
       typeArt,
+      megaArt: pet.mega ? itemArtKey("key-stone") : null, // 메가스톤을 지닌 개체 — 파티 상세 기기 창과 같은 표식(키스톤)
       basis: [...BATTLE_BASIS_LINES],
     },
     input,

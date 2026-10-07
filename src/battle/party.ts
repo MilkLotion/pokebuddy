@@ -1,6 +1,7 @@
-// 배틀 파티 — 칸 넣기·빼기, 프리셋 가져오기, 기술 순서, 출전 불가 판정. 규칙은 docs/specs/adventure.md "배틀 파티", "출전 제한"
+// 배틀 파티 — 칸 넣기·빼기, 프리셋 가져오기, 기술 순서, 메가 켜기, 출전 불가 판정. 규칙은 docs/specs/adventure.md "배틀 파티", "출전 제한"
 // 개체를 옮기지 않는다. 칸에는 개체 식별자만 둔다. 개체의 자리(프리셋 칸·박스 칸)는 그대로다
 import type { DexOptions } from "../dex/data.js";
+import { megaChoices } from "../dex/mega.js";
 import { slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -8,7 +9,7 @@ import type { BattleV3, SaveV3 } from "../shared/save-v3";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
-export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset">;
+export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset" | "not-in-party" | "no-stone" | "bad-form">;
 
 type Battle = Pick<SaveV3, "battle">;
 
@@ -29,6 +30,15 @@ const isSlot = (slot: number): boolean => Number.isInteger(slot) && slot >= 0 &&
 // 배틀 파티에 든 개체인가
 export const isInBattle = (save: Battle, petId: string): boolean => battleSlots(save).includes(petId);
 
+// 칸에서 빠진 개체의 메가 상태를 지운다 — 칸을 바꾼 뒤마다 부른다
+function pruneMega(save: Battle): void {
+  const mega = save.battle?.mega;
+  if (!mega) return;
+  const ids = new Set(battleSlots(save));
+  for (const id of Object.keys(mega)) if (!ids.has(id)) delete mega[id];
+  if (!Object.keys(mega).length) delete save.battle!.mega;
+}
+
 // 칸에 개체를 넣는다. 그 칸의 개체는 빠진다. 다른 칸에 든 개체는 넣지 못한다
 export function setBattleSlot(save: Pick<SaveV3, "battle" | "pets">, slot: number, petId: string): Outcome<BattleFailure> {
   if (!isSlot(slot)) return { ok: false, reason: "bad-slot" };
@@ -36,6 +46,7 @@ export function setBattleSlot(save: Pick<SaveV3, "battle" | "pets">, slot: numbe
   const slots = slotsFor(save);
   if (slots.includes(petId)) return { ok: false, reason: "already" };
   slots[slot] = petId;
+  pruneMega(save);
   return { ok: true };
 }
 
@@ -45,6 +56,7 @@ export function clearBattleSlot(save: Battle, slot: number): Outcome<BattleFailu
   const slots = slotsFor(save);
   if (slots[slot] == null) return { ok: false, reason: "already" };
   slots[slot] = null;
+  pruneMega(save);
   return { ok: true };
 }
 
@@ -58,6 +70,7 @@ export function importPreset(save: Pick<SaveV3, "battle" | "party">, preset: num
     const s = from[i];
     slots[i] = s?.state === "pokemon" && s.petId ? s.petId : null;
   }
+  pruneMega(save);
   return { ok: true };
 }
 
@@ -75,17 +88,41 @@ export function dropMissingBattlePets(save: Pick<SaveV3, "battle" | "pets">): vo
   if (!save.battle) return;
   const ids = new Set(save.pets.map((p) => p.id));
   save.battle.slots = save.battle.slots.map((id) => (id != null && ids.has(id) ? id : null));
+  pruneMega(save);
 }
 
-// 출전 불가 — 칸마다 넘은 칸(초전설·준전설) 또는 null. 한 칸의 마릿수를 넘으면 칸 순서가 뒤인 개체가 출전 불가다
+// 배틀 파티에서 켠 메가 모습 — 없으면 null
+export const battleMegaOf = (save: Battle, petId: string): string | null => save.battle?.mega?.[petId] ?? null;
+
+// 메가 모습을 켜고 끈다 — form 이 null 이면 원래 모습. 메가스톤을 지닌 배틀 파티 개체만. 바탕화면 프리셋의 메가 모습과 따로다.
+// 다른 개체를 끄지 않는다 — 메가 칸(1마리)을 넘으면 출전 불가로 보인다 (blockedSlots)
+export function setBattleMega(save: Pick<SaveV3, "battle" | "pets">, petId: string, form: string | null, opts?: DexOptions): Outcome<BattleFailure> {
+  const pet = save.pets.find((p) => p.id === petId);
+  if (!pet) return { ok: false, reason: "no-pet" };
+  if (!isInBattle(save, petId)) return { ok: false, reason: "not-in-party" };
+  const choices = megaChoices(pet, opts);
+  if (!choices.length) return { ok: false, reason: "no-stone" };
+  if (form !== null && !choices.includes(form)) return { ok: false, reason: "bad-form" };
+  if (battleMegaOf(save, petId) === form) return { ok: false, reason: "already" };
+  const battle = save.battle!;
+  if (form === null) delete battle.mega?.[petId];
+  else battle.mega = { ...(battle.mega ?? {}), [petId]: form };
+  pruneMega(save);
+  return { ok: true };
+}
+
+// 출전 불가 — 칸마다 넘은 칸(초전설·준전설·메가) 또는 null. 한 칸의 마릿수를 넘으면 칸 순서가 뒤인 개체가 출전 불가다.
+// 한 개체가 종의 칸과 메가 칸을 함께 센다(메가레쿠쟈·원시회귀). 둘 다 넘으면 종의 칸을 알린다
 export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOptions): (BattleTier | null)[] {
-  const count: Record<BattleTier, number> = { legendary: 0, sub: 0 };
+  const count: Record<BattleTier, number> = { legendary: 0, sub: 0, mega: 0 };
   return battleSlots(save).map((id) => {
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
-    const tier = pet ? tierOf(pet.species, opts) : null;
-    if (!tier) return null;
-    count[tier] += 1;
-    return count[tier] > BATTLE_RULES.limits[tier] ? tier : null;
+    if (!pet) return null;
+    const over: BattleTier[] = [];
+    const tier = tierOf(pet.species, opts);
+    if (tier && (count[tier] += 1) > BATTLE_RULES.limits[tier]) over.push(tier);
+    if (battleMegaOf(save, pet.id) && (count.mega += 1) > BATTLE_RULES.limits.mega) over.push("mega");
+    return over[0] ?? null;
   });
 }
 

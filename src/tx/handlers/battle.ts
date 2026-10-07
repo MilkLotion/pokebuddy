@@ -1,7 +1,7 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { clearBattleSlot, importPreset, setBattleSlot, swapMoves } from "../../battle/party.js";
+import { clearBattleSlot, importPreset, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
-import { intOf, petIdOf, reasonOf, slotIndexOf } from "./args.js";
+import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
 // 칸에 개체를 넣는다 — args.slotIndex, args.petId
 export const battleSetHandler: TxHandler = (draft, args) => {
@@ -38,4 +38,15 @@ export const battleMovesHandler: TxHandler = (draft, args) => {
   const res = swapMoves(draft, petId);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, swapped: res.swapped === true } };
+};
+
+// 배틀 파티에서 메가 모습을 켜고 끈다 — args.petId, args.form(메가 모습 슬러그, null 이면 원래 모습)
+export const battleMegaHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  const raw = isArgsRecord(args) ? args.form : undefined;
+  if (!petId || (raw != null && typeof raw !== "string")) return { ok: false, reason: "bad-args" };
+  const form = typeof raw === "string" && raw ? raw : null;
+  const res = setBattleMega(draft, petId, form);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { petId, form } };
 };

@@ -3,6 +3,7 @@
 //   그 밖     ⌊(2B + IV + ⌊EV/4⌋) × L / 100⌋ + 5
 // 배틀은 레벨 50·개체값 31·노력치 0 이다. 탐험은 개체의 실제 레벨과 친밀도로 정한 개체값을 쓴다 (exploreBasis)
 import { profileOf } from "../dex/species.js";
+import { megaBattleTable } from "../dex/tables.js";
 import type { DexOptions } from "../dex/data.js";
 import { BATTLE_RULES } from "./rules.js";
 
@@ -25,9 +26,9 @@ export function realStat(base: number, index: number, basis: StatBasis = BATTLE_
   return core + basis.level + 10;
 }
 
-// 종의 종족값 6개 — 표에 없으면 null
+// 종의 종족값 6개 — 메가·원시회귀 모습이면 data/mega-battle.json. 표에 없으면 null
 export function baseStatsOf(slug: string, opts?: DexOptions): number[] | null {
-  const stats = profileOf(slug, opts).stats;
+  const stats = megaBattleTable(opts)[slug]?.stats ?? profileOf(slug, opts).stats;
   return Array.isArray(stats) && stats.length === STAT_COUNT ? [...stats] : null;
 }
 

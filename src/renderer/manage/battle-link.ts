@@ -5,6 +5,7 @@ import type { BattleDeviceAction, BattleDeviceInput } from "../../shared/model/d
 import { api } from "./api.js";
 import { sendCommand, whenSlow } from "./command.js";
 import { createDeviceLink } from "./device-link.js";
+import { openAnyDialog } from "./dialog.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 
@@ -61,6 +62,10 @@ export function stepBattle(delta: -1 | 1): void {
 export function onBattleAction(action: BattleDeviceAction): void {
   const id = petAt(shownSlot);
   if (!id || action.petId !== id) return;
+  if (action.kind === "mega") {
+    openAnyDialog({ kind: "mega", petId: id, battle: true }); // 바탕화면 파티 상세와 같은 메가진화 창 — 배틀 파티의 메가 상태를 바꾼다
+    return;
+  }
   void swapSend(action, id);
 }
 

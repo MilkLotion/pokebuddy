@@ -22,6 +22,7 @@ const frame = createDeviceFrame({ api, windowName: "battle" });
 const device = frame.device;
 const cryPlayer = createCryPlayer(() => api.cry());
 const STAGE = { w: 88, h: 88, maxScale: 2 };
+const MEGA_STONE = { w: 28, h: 28, maxScale: 2 }; // 파티 상세 기기 창과 같은 표식 (device/pet.ts)
 const SVG = "http://www.w3.org/2000/svg";
 
 // 말풍선 — 한 번에 하나. 다른 개체를 열면 닫는다
@@ -139,6 +140,17 @@ function render(v: BattleDeviceView): void {
   const stage = el("div", "stage");
   if (v.portrait) stage.appendChild(spriteCanvas(v.portrait, STAGE));
   portrait.appendChild(stage);
+  // 메가스톤 표식 — 초상 오른쪽 아래. 누르면 설정창이 메가진화 창을 연다(배틀 파티의 메가 상태). 켰으면 옅은 바탕
+  // (docs/specs/adventure.md "메가진화", Figma 03 `Battle Party Device` `Mega=Off|On`)
+  if (pet.mega) {
+    const word = pet.mega.kind === "primal" ? "원시회귀" : "메가진화";
+    const label = pet.mega.on ? "원래 모습으로" : word;
+    const stone = buttonEl(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => api.act({ kind: "mega", petId: pet.id }));
+    stone.title = label;
+    stone.setAttribute("aria-label", label);
+    if (v.megaIcon) stone.appendChild(spriteCanvas(v.megaIcon, MEGA_STONE));
+    portrait.appendChild(stone);
+  }
   entry.appendChild(portrait);
   const info = el("div", "info");
   const nameBlock = el("div", "name-block");

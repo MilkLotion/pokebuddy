@@ -7,7 +7,7 @@ import type { DexOptions } from "../dex/data.js";
 import { rootOf } from "../dex/evo.js";
 import { eggPool } from "../dex/obtain.js";
 import { profileOf } from "../dex/species.js";
-import type { BattleTier } from "./rules.js";
+import type { SpeciesTier as BattleTier } from "./rules.js";
 
 const TIER_EGGS: Readonly<Record<string, BattleTier>> = {
   legendary: "legendary",

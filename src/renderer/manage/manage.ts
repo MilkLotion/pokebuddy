@@ -243,7 +243,7 @@ registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview
 registerDialog({ kind: "battle-pick", shape: "dialog trade battle-pick", draw: (d) => drawBattlePick(d.slot, d.page) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
-registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to) });
+registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to, d.battle === true) });
 registerDialog({ kind: "sell-pet", shape: "dialog", draw: (d) => drawSellPet(d.petId, d.price) });
 registerDialog({ kind: "sell-dup", shape: "dialog sell-dup", draw: (d) => drawSellDuplicates(d.off ?? []) });
 registerDialog({ kind: "notes", shape: "dialog settings notes", draw: (d) => drawNotes(d.pick) });

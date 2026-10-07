@@ -4,7 +4,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { petMoves, speciesMoves } from "../../battle/moves";
-import { battleSlots, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle } from "../../battle/party";
+import { battleMegaOf, battleSlots, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle } from "../../battle/party";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
@@ -162,6 +162,45 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   dropMissingBattlePets(s);
   assert.equal(isInBattle(s, "p1"), false);
   assert.deepEqual(s.battle.slots.slice(0, 2), [null, "p2"]);
+}
+
+// ── 메가진화 — 배틀 파티에서 따로 켠다. 메가 칸 1마리를 넘으면 뒤 칸이 출전 불가 (다른 개체를 끄지 않는다) ──
+{
+  let save = seed(["charizard", "mewtwo", "rayquaza", "pikachu"]);
+  for (const p of save.pets.slice(0, 3)) p.mega = { bondMs: 0, care: 0, stone: true };
+  save.battle = { slots: ["p1", "p2", "p3", "p4", null, null] };
+  let n = 0;
+  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
+  const why = (args: unknown): string | null => {
+    const r = ex.run({ id: `m${(n += 1)}`, name: "battle.mega", args });
+    return r.ok ? null : r.reason;
+  };
+  assert.equal(why({ petId: "p4", form: "charizard-mega-x" }), "no-stone", "메가스톤이 없으면 못 켠다");
+  assert.equal(why({ petId: "p1", form: "mewtwo-mega-x" }), "bad-form", "다른 종의 모습");
+  assert.equal(why({ petId: "p1", form: "charizard-mega-x" }), null);
+  assert.equal(battleMegaOf(save, "p1"), "charizard-mega-x");
+  assert.equal(save.pets[0]!.mega?.on, undefined, "바탕화면 프리셋의 모습은 그대로");
+  const slot = snapshotView(save, T0).battle.slots[0]!;
+  assert.equal(slot.pet?.name, "메가리자몽X");
+  assert.deepEqual(slot.pet?.typeIds, ["fire", "dragon"]);
+  assert.deepEqual(slot.stats.map((x) => x.value), [153, 150, 131, 120, 105, 150], "메가 모습의 종족값");
+  assert.equal(slot.pet?.mega?.on, "charizard-mega-x");
+  assert.equal(slot.pet?.mega?.canChange, true);
+  assert.equal(why({ petId: "p3", form: "rayquaza-mega" }), null, "둘째 메가도 켤 수 있다");
+  assert.equal(battleMegaOf(save, "p1"), "charizard-mega-x", "앞 개체를 끄지 않는다");
+  // 뮤츠는 초전설 첫째, 레쿠쟈는 초전설 둘째·메가 둘째 — 종의 칸을 먼저 알린다
+  assert.deepEqual(blockedSlots(save), [null, null, "legendary", null, null, null]);
+  assert.equal(why({ petId: "p2", form: "mewtwo-mega-y" }), null);
+  assert.deepEqual(blockedSlots(save), [null, "mega", "legendary", null, null, null], "메가 칸은 칸 순서가 뒤인 개체가 넘는다");
+  assert.equal(snapshotView(save, T0).battle.slots[1]!.blocked, "출전 불가 · 메가진화 1마리까지");
+  assert.equal(why({ petId: "p1", form: null }), null, "원래 모습으로");
+  assert.equal(battleMegaOf(save, "p1"), null);
+  // 칸에서 빼면 메가 상태도 지운다
+  assert.ok(ex.run({ id: "m-clear", name: "battle.clear", args: { slotIndex: 1 } }).ok);
+  assert.equal(battleMegaOf(save, "p2"), null);
+  // 정규화 — 칸에 없는 개체·메가스톤 없는 개체·틀린 모습은 버린다
+  const raw = JSON.parse(JSON.stringify({ ...save, battle: { slots: save.battle!.slots, mega: { p3: "rayquaza-mega", p4: "charizard-mega-x", p9: "x", p1: "mewtwo-mega-x" } } })) as Record<string, unknown>;
+  assert.deepEqual(normalize(raw, T0)!.battle?.mega, { p3: "rayquaza-mega" });
 }
 
 process.stdout.write("통과\n");
