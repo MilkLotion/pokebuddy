@@ -32,7 +32,8 @@
 }
 /* 설정 바닥 왼쪽 — 버전·업데이트 상태와 작은 단추 (Figma 05 Screens 섹션 `930:18246`(설정)). 닫기 단추는 없다 */
 .version-foot {
-  flex: 1;
+  /* 내용 폭만 차지한다 — 남는 폭은 가운데 spacer(실패 글자 자리)가 갖는다. flex: 1 이면 spacer 와 반씩 나눠 버전 글자가 잘렸다 (2026-10-07) */
+  flex: 0 1 auto;
   min-width: 0;
   display: flex;
   align-items: center;
