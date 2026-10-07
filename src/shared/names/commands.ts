@@ -34,6 +34,11 @@ export const COMMANDS = {
   "party.keep": { via: "tx" },
   "party.preset": { via: "tx" },
   "party.preset.rename": { via: "tx" },
+  // 배틀 파티 (2026-10-08, src/battle/party.ts)
+  "battle.set": { via: "tx" },
+  "battle.clear": { via: "tx" },
+  "battle.import": { via: "tx" },
+  "battle.moves": { via: "tx" },
   // 박스
   "box.sort": { via: "tx" },
   "box.move": { via: "tx" },

@@ -138,6 +138,10 @@ function seed(): SaveV3 {
   assert.equal(portraitKey({ slug: "eevee", shiny: true }), "eevee:shiny");
   assert.equal(iconUrl("item:rare-candy"), "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/rare-candy.png");
   assert.equal(iconUrl("egg"), "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/egg.png");
+  // 타입 아이콘 — 9세대 작은 아이콘, PokeAPI 타입 번호(전기 13)
+  assert.equal(iconUrl("type:electric"), "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/small/13.png");
+  assert.equal(iconUrl("type:fairy"), "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-ix/scarlet-violet/small/18.png");
+  assert.equal(iconUrl("type:stellar"), null);
   assert.equal(iconUrl("item:../x"), null, "식별자 모양이 아니면 받지 않는다");
   assert.equal(cryUrl(25), "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/25.ogg");
   process.stdout.write("(8) 타입 키와 초상 경로  ok\n");

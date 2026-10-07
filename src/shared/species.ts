@@ -46,6 +46,7 @@ export interface SpeciesProfile {
   types: string[]; // 타입 이름 (PokeAPI 식별자)
   weightKg?: number;
   baseSpeed?: number;
+  stats?: number[]; // 종족값 6개 [HP, 공격, 방어, 특수공격, 특수방어, 스피드] — 배틀 능력치 계산 (src/battle/stats.ts)
 }
 
 // ── 해금 조건 ──────────────────────────────────────────────────────────────────

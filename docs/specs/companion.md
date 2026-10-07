@@ -255,6 +255,7 @@ preload 는 샌드박스다. 그래서 렌더러에 창마다 다리 하나(`win
 ### 도구·알 그림, 도감 설명, 울음소리
 
 - 가방·상점의 도구 그림은 PokeAPI `sprites/items/<식별자>.png` 다. 우리 도구 중 이상한사탕과 진화의 돌 10종만 있다. 없는 도구는 빈 칸이다. 돌보미집과 상점 랜덤알은 `sprites/pokemon/egg.png` 를 쓴다. 캐시는 `~/.claude/pokebuddy/sprites/`.
+- 기술 줄의 타입 아이콘은 PokeAPI `sprites/types/generation-ix/scarlet-violet/small/<번호>.png`(60 × 60) 18장이다. 번호는 PokeAPI 타입 번호다(노말 1 … 페어리 18). 초상·도구와 같이 켤 때 뒤에서 받아 `~/.claude/pokebuddy/sprites/types/` 에 캐시한다. 열쇠는 `type:<타입>` 이다(`src/main/art/sources.ts` `typeIconUrl`). 같은 그림이 `generation-ix/champions/small/` 에도 있다(2026-10-07 관찰, 바이트가 같다).
 - 도감 상세의 분류(쥐포켓몬)와 설명문은 `data/dex-text.json` 이다. `npm run data:build` 의 `build-dex-text` 가 PokeAPI CSV 로 만든다. PokeAPI 의 한국어 설명문은 898번까지만 있다. 899~1025번의 한국어 설명문은 `data/dex-text.ko.json` 에 둔다. 출처는 포켓몬코리아 공식 도감이다. `dist/tools/data/fetch-dex-ko.js` 가 이 파일을 만들고 `build-dex-text` 가 합친다. 한국어 설명문이 없는 종은 영어 설명을 보인다. 미해금 종은 보이지 않는다.
 - 포켓몬을 클릭하거나 놀아주기가 성공하면 PokeAPI cries 의 울음소리(`cries/pokemon/latest/<도감>.ogg`)를 무대에서 한 번 낸다. 놀아주기가 쉬는 시간이어도 클릭하면 운다. 같은 포켓몬은 1.5초 안에 다시 울지 않는다. 설정의 "알림 소리"가 꺼져 있으면 내지 않는다. 경로는 `.ogg` 지만 옛 종은 내용이 MP3 라 둘 다 받는다. 못 받은 울음소리는 초상과 같이 15초 뒤에 다시 청한다. 캐시는 `~/.claude/pokebuddy/cries/`.
 

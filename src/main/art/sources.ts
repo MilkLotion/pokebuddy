@@ -1,4 +1,4 @@
-// 그림·소리를 받을 주소와 캐시 파일 이름 — 초상·도구·알·울음소리·걷기 그림 (worklog/records/code-structure/design/10-main.md 1.1절 art/sources.ts)
+// 그림·소리를 받을 주소와 캐시 파일 이름 — 초상·도구·알·타입 아이콘·울음소리·걷기 그림 (worklog/records/code-structure/design/10-main.md 1.1절 art/sources.ts)
 // 받기·캐시·풀기는 각 파일이 한다(portraits·cries·overworld-art). 이 파일은 "어디서 받아 어떤 이름으로 두나"만 적는다
 // (예전 portraits.ts·cries.ts·overworld-art.ts 에 흩어져 있었다. 메인 레인 96-E 에서 모았다)
 import { megaOf } from "../../dex/mega.js";
@@ -55,11 +55,35 @@ export function itemUrl(id: string): string {
 // 도구 그림 캐시 파일 이름
 export const itemFile = (id: string): string => `items/${id}.png`;
 
-// 도구·알 그림의 열쇠 → 받을 주소. 열쇠는 "egg" 또는 "item:<식별자>" 다. 모르는 열쇠는 null
+// 타입 아이콘 — PokeAPI sprites 의 9세대(스칼렛·바이올렛) 작은 아이콘(60×60 둥근 네모). 기술 줄에 쓴다
+// 번호는 PokeAPI 타입 번호다. 2026-10-07 사용자 요청 "타입별로 아이콘있잖아 … 조사해서 세팅" (worklog/records/battle-party/battle-party.md)
+const TYPE_IDS: Readonly<Record<string, number>> = {
+  normal: 1, fighting: 2, flying: 3, poison: 4, ground: 5, rock: 6, bug: 7, ghost: 8, steel: 9,
+  fire: 10, water: 11, grass: 12, electric: 13, psychic: 14, ice: 15, dragon: 16, dark: 17, fairy: 18,
+};
+// 아이콘이 있는 타입 18종
+export const typeIconTypes = (): string[] => Object.keys(TYPE_IDS);
+// 타입 아이콘 받을 주소 — 모르는 타입은 null
+export function typeIconUrl(type: string): string | null {
+  const id = TYPE_IDS[type];
+  return id ? `${SPRITES}/types/generation-ix/scarlet-violet/small/${id}.png` : null;
+}
+// 타입 아이콘 캐시 파일 이름
+export const typeIconFile = (type: string): string => `types/${type}.png`;
+
+// 도구·알·타입 그림의 열쇠 → 받을 주소. 열쇠는 "egg", "item:<식별자>", "type:<타입>" 이다. 모르는 열쇠는 null
 export function iconUrl(key: string): string | null {
   if (key === "egg") return EGG_URL;
+  const t = /^type:([a-z]+)$/.exec(key);
+  if (t) return typeIconUrl(t[1] ?? "");
   const m = /^item:([a-z0-9-]+)$/.exec(key);
   return m ? itemUrl(m[1] ?? "") : null;
+}
+// 열쇠 → 캐시 파일 이름. iconUrl 과 같은 열쇠를 받는다
+export function iconFile(key: string): string {
+  if (key === "egg") return EGG_FILE;
+  if (key.startsWith("type:")) return typeIconFile(key.slice(5));
+  return itemFile(key.slice(5));
 }
 
 // 울음소리 — 받을 주소와 캐시 파일 이름(네 자리 번호)

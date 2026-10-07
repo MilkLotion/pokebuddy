@@ -1,0 +1,188 @@
+/* battle.html 의 창 CSS — pet.css 다음에 읽는다. 몸통·베젤·화면·초상·이름 줄은 파티 상세 기기 창과 같다
+   배틀 파티 상세 기기 — Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
+   이 파일에는 배틀에만 있는 것만 둔다: ? 단추와 말풍선, 특성 줄, 방사형 그래프, 기술 목록, 기술 순서 단추, 기술 설명 말풍선 */
+
+/* ? 단추 — 화면 오른쪽 위. 회색 원에 흰 물음표 (Figma 01 `Icon / Help` `1677:2402`) */
+.help {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #9ca3af;
+  color: var(--inverse);
+  font: 700 12px/20px var(--font-body);
+  cursor: pointer;
+}
+.help[aria-expanded="true"] {
+  background: #6b7280;
+}
+
+/* 말풍선 — ? 의 능력치 기준, 기술 칸의 기술 설명 (Figma 02 `Stat Basis Bubble` `1677:2404` · `Move Info Bubble` `1716:4833`) */
+.bubble {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  color: var(--ink);
+  font: 12px/16px var(--font-body);
+}
+.bubble strong {
+  font-weight: 700;
+}
+.bubble.basis {
+  top: 34px;
+  right: 14px;
+  width: max-content;
+}
+.bubble.basis .basis-line {
+  color: var(--muted);
+}
+.bubble.move-info {
+  top: calc(100% + 4px);
+  left: 24px;
+  width: 232px;
+}
+
+/* 특성 줄 — 이름·타입 아래 (Figma `ability · 특성`) */
+.ability {
+  display: flex;
+  gap: 6px;
+  font: 12px/16px var(--font-body);
+}
+.ability strong {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* 방사형 그래프 — 실제 능력치 6개. 가장 높은 값이 바깥 육각형에 닿는다 (Figma 02 `Stat Radar` `1706:3537`) */
+.radar {
+  position: relative;
+  width: 294px;
+  height: 192px;
+}
+.radar svg {
+  position: absolute;
+  inset: 0;
+}
+.radar .grid {
+  fill: none;
+  stroke: #dde1db;
+  stroke-width: 1;
+}
+.radar .area {
+  fill: var(--primary);
+  opacity: 0.3;
+}
+.radar .edge {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.radar .stat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  font: 12px/16px var(--font-body);
+  white-space: nowrap;
+}
+.radar .stat span {
+  color: var(--muted);
+}
+.radar .stat strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.radar .stat.center {
+  align-items: center;
+  transform: translateX(-50%);
+}
+.radar .stat.right {
+  align-items: flex-start;
+  transform: translateY(-50%);
+}
+.radar .stat.left {
+  align-items: flex-end;
+  transform: translate(-100%, -50%);
+}
+
+/* 기술 — 큰 기술 칸 아래 분류·위력·명중·쿨타임 한 줄. 두 기술 사이 가운데에 순서 바꾸기 (Figma `moves · 보유 기술`) */
+.moves {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--records);
+}
+.moves > strong {
+  font-weight: 700;
+}
+.move {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.move .pick {
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.move .pick .move-pill {
+  flex: 1;
+}
+.move .meta {
+  color: var(--ink);
+  font: 12px/16px var(--font-body);
+}
+/* 순서 바꾸기 줄 — 구분선 ─ 위아래 화살표 원 ─ 구분선. 원은 교환 화면의 교환 표시와 같은 모양 (Figma 02 `Trade Swap Mark` `1347:49286`) */
+.swap-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swap-row::before,
+.swap-row::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.swap {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.swap:hover:not(:disabled) {
+  background: var(--accent-bg);
+}
+.swap svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.swap[aria-busy="true"] svg {
+  opacity: 0.4;
+}

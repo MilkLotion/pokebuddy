@@ -107,7 +107,7 @@ pokebuddy 는 팬이 만든 비공식 앱이다. Nintendo · Creatures Inc. · G
 
 - 움직이는 그림: [PMDCollab/SpriteCollab](https://github.com/PMDCollab/SpriteCollab). 기여자들의 작품은 CC BY-NC 4.0 이다. 일부는 원작 게임에서 온 그림이고 제작자 표기가 `CHUNSOFT` 다. 제작자는 포켓몬마다 다르다. [SpriteCollab 사이트](https://sprites.pmdcollab.org)에서 포켓몬별 제작자를 본다.
 - PMDCollab 에 그림이 없는 종의 걷는 그림: [rh-hideout/pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion)(RHH)의 따라다니기 그림. 9세대 그림은 [DarkusShadow 의 묶음](https://www.deviantart.com/darkusshadow/art/Gen-9-Paldea-Pokemon-Overworld-Sprites-967776690)에서 왔고 제작자는 Darkus_Shadow · Princess-Phoenix · shaderr31 · Molfang62 · CarmaNekko · EduarPokeN · Larryturbo · TyranitarDark · Anarlaurendil 이다. 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
-- 초상·도구·알 그림: [PokeAPI sprites](https://github.com/PokeAPI/sprites)(저장소 CC0). PokeAPI 에 없는 경험사탕·민트·일부 진화 도구는 [msikma/pokesprite](https://github.com/msikma/pokesprite)(코드 MIT). 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
+- 초상·도구·알 그림과 타입 아이콘: [PokeAPI sprites](https://github.com/PokeAPI/sprites)(저장소 CC0). PokeAPI 에 없는 경험사탕·민트·일부 진화 도구는 [msikma/pokesprite](https://github.com/msikma/pokesprite)(코드 MIT). 그림 저작권은 Nintendo · Creatures · GAME FREAK 에 있다.
 - 글꼴: [Galmuri](https://github.com/quiple/galmuri)(© Lee Minseo), SIL Open Font License 1.1. 전문은 [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
 
 제작자 표시가 빠졌거나 틀렸으면 [이슈](https://github.com/MilkLotion/pokebuddy/issues)로 알려 주면 고친다.

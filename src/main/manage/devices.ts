@@ -10,13 +10,14 @@ import type { GameV3 } from "../../tx/game.js";
 import { gainOf } from "../../state/settings.js";
 import { SOUND_RULES } from "../../state/rules.js";
 import { bagDeviceModel } from "../../view/device-bag.js";
+import { battleDeviceModel } from "../../view/device-battle.js";
 import { partyDeviceModel } from "../../view/device-party.js";
 import { petDeviceModel } from "../../view/device-pet.js";
 import { shopDeviceModel } from "../../view/device-shop.js";
 import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
-import { DEVICE_SIZES, bagDeviceOf, dexDeviceOf, isBagInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
+import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import type { GameReads } from "./handlers.js";
 
@@ -35,7 +36,7 @@ export interface ManageDevices {
   reset(): void; // 설정창 문서를 (다시) 읽기 시작했다 — 렌더러의 세대 번호가 0 부터라 기기 창 번호도 맞춘다
 }
 
-type Shown = "pet" | "shop" | "bag" | "party";
+type Shown = "pet" | "shop" | "bag" | "party" | "battle";
 
 export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): ManageDevices {
   const { game, reads, send } = deps;
@@ -97,7 +98,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   });
   // 기기 창 모델의 그림 열쇠(src/view/device-art.ts) → data URI. portrait:<slug>[:shiny] 는 초상, item:<id> 는 도구 그림.
-  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/art/egg-art.ts)
+  // egg:<종류> 는 그림 받기가 그 알의 색표로 칠한다(src/main/art/egg-art.ts). type:<타입> 은 흰 타입 아이콘(src/main/art/type-icon-art.ts)
   const deviceArt: DeviceArtDeps = {
     art: async (keys) => {
       const asks = keys
@@ -107,7 +108,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
           const shiny = rest.endsWith(":shiny");
           return { key: k, ask: { slug: shiny ? rest.slice(0, -":shiny".length) : rest, shiny } };
         });
-      const items = keys.filter((k) => k.startsWith("item:") || k.startsWith("egg:"));
+      const items = keys.filter((k) => k.startsWith("item:") || k.startsWith("egg:") || k.startsWith("type:"));
       const [faces, icons] = await Promise.all([asks.length ? portraits.get(asks.map((a) => a.ask)) : {}, items.length ? portraits.icons(items) : {}]);
       const out: Record<string, string | null> = {};
       for (const a of asks) out[a.key] = (faces as Record<string, string | null>)[portraitKey(a.ask)] ?? null;
@@ -143,6 +144,16 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   });
 
+  // 배틀 파티 상세 기기 창 — 관리 창이 배틀 파티 칸을 정해 보낸다. 기술 순서 바꾸기·이전·다음은 관리 창으로 돌려보낸다
+  const battleWin = createDeviceWindow(deviceFiles("battle"), battleDeviceOf({ ...deviceArt, cry: (slug) => cries.get(slug), volume }), {
+    onStep: (delta) => send("manage:battle-step", delta),
+    onAct: (action) => send("manage:battle-act", action),
+    onClosed: (gen) => {
+      shownModel.delete("battle");
+      send("manage:battle-closed", gen);
+    },
+  });
+
   // 기기 창 띄우기 — 같은 세대 번호로 같은 모델을 이미 띄웠으면 다시 보내지 않는다
   function showDevice<M>(name: Shown, w: DeviceWindow<M>, model: M, gen: unknown): void {
     const parent = deps.parent();
@@ -174,6 +185,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:pet-open": { denied: null, run: (_e, input, gen) => openDevice("pet", petWin, isPetInput(input) ? input : null, petDeviceModel, gen) },
     "manage:shop-open": { denied: null, run: (_e, input, gen) => openDevice("shop", shopWin, isShopInput(input) ? input : null, shopDeviceModel, gen) },
     "manage:bag-open": { denied: null, run: (_e, input, gen) => openDevice("bag", bagWin, isBagInput(input) ? input : null, bagDeviceModel, gen) },
+    "manage:battle-open": { denied: null, run: (_e, input, gen) => openDevice("battle", battleWin, isBattleInput(input) ? input : null, battleDeviceModel, gen) },
     "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;
@@ -190,7 +202,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     // 설정창을 다시 읽으면(Ctrl+R 등) 고른 개체·옆 도감이 비므로 떠 있던 기기 창을 닫는다 — 남겨 두면 설정창과 어긋난다
     reset: () => {
       shownModel.clear();
-      for (const w of [petWin, dexWin, shopWin, bagWin, partyWin]) w.discard();
+      for (const w of [petWin, dexWin, shopWin, bagWin, partyWin, battleWin]) w.discard();
     },
   };
 }

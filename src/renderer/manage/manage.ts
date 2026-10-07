@@ -26,6 +26,9 @@ import { drawLetter, drawMail } from "./mail.js";
 import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from "./update-notes.js";
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
+import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
+import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
+import { drawBattlePick } from "./battle-pick.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, stepShop, syncShopDevice } from "./shop-link.js";
@@ -121,7 +124,8 @@ setShellHooks({
 document.addEventListener("click", () => {
   if (closeSettingSelect()) drawDialog();
   const partyMenu = closePartyMenu();
-  if (!partyMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  const battleMenu = closeAdventureMenu();
+  if (!partyMenu && !battleMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
   closeDexRegion();
@@ -138,6 +142,7 @@ const TAB_ICON: Record<TabId, string> = {
   dex: '<path d="M4 3.25h7.25c.97 0 1.75.78 1.75 1.75v6.25c0 .97-.78 1.75-1.75 1.75h-6.5C3.78 13 3 12.22 3 11.25V5c0-.97.78-1.75 1.75-1.75H4Z" stroke-width="1.35" stroke-linejoin="round"/><path d="M4.1 3.2 5 1.9m.6 3.7h3.9M5.6 8h4.8m-4.8 2.4h3.1" stroke-width="1.35" stroke-linecap="round"/><circle cx="4.9" cy="5.6" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="8" r=".55" fill="currentColor" stroke="none"/><circle cx="4.9" cy="10.4" r=".55" fill="currentColor" stroke="none"/>',
   shop: '<path d="M3.2 6.4h9.6v6.2H3.2V6.4Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M2.5 6.4 3.7 3.2h8.6l1.2 3.2h-11Z" stroke-width="1.25" stroke-linejoin="round"/><path d="M6.55 12.6V9.2h2.9v3.4" stroke-width="1.25" stroke-linejoin="round"/><circle cx="8" cy="4.8" r="1.1" stroke-width="1.05"/><path d="M6.9 4.8h.55m1.1 0h.55" stroke-width="1.05" stroke-linecap="round"/>',
   bag: '<path d="M12.5 5.5h-9C2.67 5.5 2 6.17 2 7v6c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5V7c0-.83-.67-1.5-1.5-1.5Z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 5.5V4a2.75 2.75 0 0 1 5.5 0v1.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  adventure: '<path d="M10.5 3.5 5.5 2l-4 1.5V14l4-1.5M5.5 2v10.5m0 0 5 1.5 4-1.5V2l-4 1.5m0 0V14" stroke-width="1.5" stroke-linejoin="round"/>', // 지도 — Figma 01 `Icon / Adventure` `1659:3`
 };
 
 // 탭 — 등록한 순서대로 탭 줄에 선다 (shell.ts). 나갈 때 그 탭의 기기 창을 닫는다
@@ -167,6 +172,14 @@ registerTab({
   draw: (v) => drawBag(v),
   leave: () => leaveBag(),
 });
+// 모험 — 배틀 파티. 배틀 파티 상세 기기 창은 다음 그리기의 syncBattleDevice 가 닫는다 (docs/specs/adventure.md "모험 탭")
+registerTab({
+  id: "adventure",
+  label: "모험",
+  icon: TAB_ICON.adventure,
+  draw: (v) => drawAdventure(v),
+  leave: () => leaveBattle(),
+});
 
 // 본문을 그리기 전 기기 창 맞추기 — 고른 것이 사라졌으면 닫는다. 순서: 파티 상세 → 상점 → 가방 → 파티
 registerBodySync(() => {
@@ -182,6 +195,7 @@ registerBodySync(() => {
   syncBagDevice();
 });
 registerBodySync(() => syncPartyDevice());
+registerBodySync(() => syncBattleDevice());
 // 본문을 그린 뒤 — 저장 실패 줄 → 검색 칸 초점 → 튜토리얼
 registerAfterDraw(() => drawSaveFailing());
 registerAfterDraw(() => restoreSearchFocus());
@@ -225,7 +239,8 @@ registerDialog({ kind: "guide", shape: "dialog settings notes", draw: (d) => dra
 registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at, d.allCaught) });
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
-registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: () => drawPresetOverview() });
+registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
+registerDialog({ kind: "battle-pick", shape: "dialog trade battle-pick", draw: (d) => drawBattlePick(d.slot, d.page) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
 registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to) });
@@ -267,6 +282,9 @@ api.onDexClosed((gen) => onDexClosed(gen));
 api.onPetStep((delta) => stepPet(delta));
 api.onPetAct((action) => onPetAction(action));
 api.onPetClosed((gen) => petLink.onClosed(gen));
+api.onBattleStep((delta) => stepBattle(delta));
+api.onBattleAct((action) => onBattleAction(action));
+api.onBattleClosed((gen) => battleLink.onClosed(gen));
 api.onShopStep((delta) => stepShop(delta));
 api.onShopAct((action) => onShopAction(action));
 api.onShopClosed((gen) => shopLink.onClosed(gen));

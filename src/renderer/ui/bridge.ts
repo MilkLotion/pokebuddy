@@ -4,7 +4,7 @@
 // - 열쇠가 preload 의 내놓는 표와 같은지는 타입으로 묶을 수 없다(preload 는 이 모듈을 가져오지 못한다). 실행 때 던지는 것으로 잡는다
 // 계약은 src/shared/ipc/ 의 창별 파일(stage·picker·manage·devices·overlays)이다
 import type { AlertBridge, BannerBridge, MenuBridge, RegionBridge, ScreensBridge } from "../../shared/ipc/overlays.js";
-import type { BagDeviceBridge, DexDeviceBridge, PartyDeviceBridge, PetDeviceBridge, ShopDeviceBridge } from "../../shared/ipc/devices.js";
+import type { BagDeviceBridge, DexDeviceBridge, PartyDeviceBridge, BattleDeviceBridge, PetDeviceBridge, ShopDeviceBridge } from "../../shared/ipc/devices.js";
 import type { ManageBridge } from "../../shared/ipc/manage.js";
 import type { PickerBridge } from "../../shared/ipc/picker.js";
 import type { StageBridge } from "../../shared/ipc/stage.js";
@@ -23,6 +23,7 @@ export interface Bridges {
   pokebuddyShop: ShopDeviceBridge; // 상점 기기 창 (shop.ts)
   pokebuddyBag: BagDeviceBridge; // 가방 기기 창 (bag.ts)
   pokebuddyParty: PartyDeviceBridge; // 파티 기기 창 — 교체 화면 (party.ts)
+  pokebuddyBattle: BattleDeviceBridge; // 배틀 파티 상세 기기 창 (battle.ts)
   pokebuddyAlert: AlertBridge; // 알림 창 (alert.ts)
 }
 

@@ -1,6 +1,6 @@
 // 기기 창 다섯의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다
 
-import type { BagDeviceAction, BagDeviceView, DexDeviceView, PartyDeviceAction, PartyDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceView, BattleDeviceAction, BattleDeviceView, DexDeviceView, PartyDeviceAction, PartyDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
 import type { BridgeOf, Invoke, Push, Send } from "./kinds.js";
 
 // 기기 창 다섯이 같은 틀이다 — 접두사(P)와 보이는 값(View)만 다르다. show 는 메인 → 렌더러, 나머지는 렌더러 → 메인
@@ -23,15 +23,18 @@ export type PetDeviceIpc = DeviceIpc<"petdev", PetDeviceView> & DeviceCryIpc<"pe
 export type ShopDeviceIpc = DeviceIpc<"shopdev", ShopDeviceView> & DeviceActIpc<"shopdev", ShopDeviceAction>;
 export type BagDeviceIpc = DeviceIpc<"bagdev", BagDeviceView> & DeviceActIpc<"bagdev", BagDeviceAction>;
 export type PartyDeviceIpc = DeviceIpc<"partydev", PartyDeviceView> & DeviceActIpc<"partydev", PartyDeviceAction>;
+export type BattleDeviceIpc = DeviceIpc<"battledev", BattleDeviceView> & DeviceCryIpc<"battledev"> & DeviceActIpc<"battledev", BattleDeviceAction>;
 
 export type DexDeviceChannel = keyof DexDeviceIpc;
 export type PetDeviceChannel = keyof PetDeviceIpc;
 export type ShopDeviceChannel = keyof ShopDeviceIpc;
 export type BagDeviceChannel = keyof BagDeviceIpc;
 export type PartyDeviceChannel = keyof PartyDeviceIpc;
+export type BattleDeviceChannel = keyof BattleDeviceIpc;
 
 export type DexDeviceBridge = BridgeOf<DexDeviceIpc>;
 export type PetDeviceBridge = BridgeOf<PetDeviceIpc>;
 export type ShopDeviceBridge = BridgeOf<ShopDeviceIpc>;
 export type BagDeviceBridge = BridgeOf<BagDeviceIpc>;
 export type PartyDeviceBridge = BridgeOf<PartyDeviceIpc>;
+export type BattleDeviceBridge = BridgeOf<BattleDeviceIpc>;

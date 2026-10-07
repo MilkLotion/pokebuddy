@@ -1,0 +1,61 @@
+/* 기술 칸 — 타입 조각 `( /` 과 이름 조각 `/ )` 두 조각. 비스듬한 변에서 틈 없이 맞닿는다. 테두리는 없다
+   설정창(모험 칸 카드의 작은 칸)과 배틀 파티 상세 기기 창(큰 칸)이 같이 읽는다. 타입 색은 type-badge.css 의 --type
+   Figma 01 `Move Pill` `1675:2330` (Size=Small 높이 18 · Large 높이 36), 규칙은 docs/specs/adventure.md "기술 칸" */
+.move-pill {
+  --h: 18px; /* 높이 */
+  --tw: 26px; /* 타입 조각 폭 */
+  --s: 6px; /* 비스듬한 변의 가로 폭 */
+  --icon: 16px;
+  display: inline-flex;
+  align-items: stretch;
+  height: var(--h);
+  min-width: 0;
+  font: 10px/1 var(--font-small);
+  color: #ffffff;
+}
+.move-pill.lg {
+  --h: 36px;
+  --tw: 56px;
+  --s: 12px;
+  --icon: 26px;
+  font: 700 12px/1 var(--font-body);
+}
+.move-pill .mp-type {
+  flex: none;
+  width: var(--tw);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: calc(var(--s) / 2);
+  background: var(--type, #9fa19f);
+  border-radius: calc(var(--h) / 2) 0 0 calc(var(--h) / 2);
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--s)) 100%, 0 100%);
+}
+.move-pill .mp-type > img,
+.move-pill .mp-icon {
+  width: var(--icon);
+  height: var(--icon);
+  image-rendering: pixelated;
+}
+.move-pill .mp-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.move-pill .mp-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  margin-left: calc(var(--s) * -1);
+  padding: 0 calc(var(--h) / 2) 0 calc(var(--s) + 3px);
+  background: #2f3947; /* Figma slate/900 */
+  border-radius: 0 calc(var(--h) / 2) calc(var(--h) / 2) 0;
+  clip-path: polygon(var(--s) 0, 100% 0, 100% 100%, 0 100%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.move-pill.lg .mp-name {
+  padding-left: calc(var(--s) + 6px);
+}

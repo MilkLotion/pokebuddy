@@ -86,6 +86,9 @@ export function portraitOf(slug: string, shiny: boolean, cls: string, text = "",
   return host;
 }
 
+// 아이콘 열쇠 — 알·도구·타입(흰 타입 아이콘). 나머지는 초상이다
+const isIconKey = (key: string): boolean => key === "egg" || key.startsWith("item:") || key.startsWith("type:");
+
 // 도구·알 그림 — PokeAPI 에 그림이 있는 것만 채운다(이상한사탕·진화의 돌·알). 없으면 Figma 처럼 빈 칸이다
 export const iconCache = new Map<string, string | null>();
 const iconWant = new Set<string>();
@@ -126,12 +129,12 @@ export async function loadArt(): Promise<void> {
     return; // 그림 없이도 창은 돈다 — 칸을 그린 뒤 하나씩 청하는 길이 남아 있다
   }
   const got: Record<string, string> = Object.fromEntries(Object.entries(art).map(([key, image]) => [key, image.uri]));
-  for (const [key, uri] of Object.entries(got)) (key === "egg" || key.startsWith("item:") ? iconCache : portraitCache).set(key, uri);
+  for (const [key, uri] of Object.entries(got)) (isIconKey(key) ? iconCache : portraitCache).set(key, uri);
   // 초상은 메인이 잰 불투명 네모(box)로 보는 네모를 먼저 정한다 — 몸이 큰 그림이 첫 프레임부터 잘리지 않는다 (portrait.ts, X15).
   // 네모가 없는 초상만 디코딩이 끝난 뒤에 잰다
   const portraits = new Set<string>();
   for (const [key, image] of Object.entries(art)) {
-    if (key === "egg" || key.startsWith("item:")) continue;
+    if (isIconKey(key)) continue;
     if (image.box) rememberPortraitBox(image.uri, image.box);
     else portraits.add(image.uri);
   }

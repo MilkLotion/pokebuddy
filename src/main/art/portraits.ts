@@ -21,9 +21,10 @@ import { PATHS } from "../../platform/paths.js";
 import { writeAtomic } from "../../platform/atomic-write.js";
 import { eggPalettes } from "../../shop/catalog.js";
 import { tintEgg } from "./egg-art.js";
+import { whitenTypeIcon } from "./type-icon-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
 import { decodePng, isPng, opaqueRectOf } from "../../platform/png.js";
-import { EGG_FILE, EGG_URL, iconUrl, itemFile, itemUrl, portraitFile, portraitUrl, type PortraitId } from "./sources.js";
+import { EGG_FILE, EGG_URL, iconFile, iconUrl, itemFile, itemUrl, portraitFile, portraitUrl, type PortraitId, typeIconFile, typeIconTypes, typeIconUrl } from "./sources.js";
 import type { ArtImage, OpaqueBox, PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -111,7 +112,7 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
   const names = (sub: string): string[] => cache.names(sub).filter((n) => n.endsWith(".png"));
   const ownMemo = new Map<string, string>(); // 앱 안 우리 그림의 data URI
   const boxMemo = new Map<string, { uri: string; box: OpaqueBox | null }>(); // 초상 열쇠 → 잰 네모(그 그림의 data URI 와 함께)
-  const isPortraitKey = (key: string): boolean => key !== "egg" && !key.startsWith("item:") && !key.startsWith("egg:");
+  const isPortraitKey = (key: string): boolean => key !== "egg" && !key.startsWith("item:") && !key.startsWith("egg:") && !key.startsWith("type:");
   const boxOfUri = (key: string, uri: string): OpaqueBox | null => {
     const known = boxMemo.get(key);
     if (known && known.uri === uri) return known.box;
@@ -132,6 +133,17 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     const png = palette ? tintEgg(Buffer.from(base.slice(base.indexOf(",") + 1), "base64"), palette) : null;
     const uri = png ? pngUri(png) : base;
     tinted.set(kind, uri);
+    return uri;
+  }
+
+  // 흰 타입 아이콘의 data URI — 원작 아이콘에서 바탕색을 뺀다(src/main/art/type-icon-art.ts). 타입마다 한 번
+  const whitened = new Map<string, string>();
+  function whiteUri(base: string, key: string): string {
+    const known = whitened.get(key);
+    if (known) return known;
+    const png = whitenTypeIcon(Buffer.from(base.slice(base.indexOf(",") + 1), "base64"));
+    const uri = png ? pngUri(png) : base;
+    whitened.set(key, uri);
     return uri;
   }
 
@@ -191,7 +203,8 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
             return;
           }
           const url = iconUrl(key);
-          out[key] = url ? await fileUri(key === "egg" ? "egg.png" : `items/${key.slice(5)}.png`, url) : null;
+          const got = url ? await fileUri(iconFile(key), url) : null;
+          out[key] = got && key.startsWith("type:") ? whiteUri(got, key) : got;
         }),
       );
       return out;
@@ -207,6 +220,10 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
       jobs.push({ rel: EGG_FILE, url: EGG_URL });
       for (const id of itemIds()) if (!ownItem(id)) jobs.push({ rel: itemFile(id), url: itemUrl(id) }); // 우리 그림이 있는 도구는 받지 않는다
       jobs.push({ rel: itemFile(MEGA_STONE_ICON.slice(5)), url: itemUrl(MEGA_STONE_ICON.slice(5)) }); // 메가스톤 표식 — 도구 목록에 없다
+      for (const type of typeIconTypes()) {
+        const url = typeIconUrl(type);
+        if (url) jobs.push({ rel: typeIconFile(type), url }); // 기술 줄의 타입 아이콘 18장
+      }
       const count = { got: 0, had: 0, missing: 0, failed: 0 };
       // 그림이 없다고(404) 확인한 주소 — 켤 때마다 다시 묻지 않게 캐시 폴더에 적어 둔다.
       // 파일 이름이 아니라 주소로 적는다 — 받을 곳을 바꾸면(경험사탕·민트 → pokesprite) 새 주소로 다시 묻는다
@@ -276,6 +293,12 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
         names("items").map(async (n) => {
           const uri = await diskUri(`items/${n}`);
           if (uri) out[`item:${n.slice(0, -4)}`] = uri;
+        }),
+      );
+      await Promise.all(
+        names("types").map(async (n) => {
+          const uri = await diskUri(`types/${n}`);
+          if (uri) out[`type:${n.slice(0, -4)}`] = whiteUri(uri, `type:${n.slice(0, -4)}`);
         }),
       );
       // 우리 그림이 받은 그림보다 먼저다

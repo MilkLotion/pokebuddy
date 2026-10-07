@@ -1,20 +1,21 @@
-/* type-badge — 창 dex·pet·manage 이 글자까지 같은 규칙. 창 CSS 앞에 읽는다 */
-.type[data-type] { color: var(--inverse); }
-.type[data-type="electric"] { background: #fac000; }
-.type[data-type="fire"] { background: #e52829; color: var(--inverse); }
-.type[data-type="flying"] { background: #81b9ef; }
-.type[data-type="bug"] { background: #91a119; }
-.type[data-type="dark"] { background: #624d4e; color: var(--inverse); }
-.type[data-type="dragon"] { background: #5060e1; color: var(--inverse); }
-.type[data-type="fairy"] { background: #ef70ef; }
-.type[data-type="fighting"] { background: #ff8000; }
-.type[data-type="ghost"] { background: #704170; color: var(--inverse); }
-.type[data-type="grass"] { background: #358722; color: var(--inverse); }
-.type[data-type="ground"] { background: #915121; color: var(--inverse); }
-.type[data-type="ice"] { background: #3dcef3; }
-.type[data-type="normal"] { background: #9fa19f; }
-.type[data-type="poison"] { background: #9141cb; color: var(--inverse); }
-.type[data-type="psychic"] { background: #d53a6c; color: var(--inverse); }
-.type[data-type="rock"] { background: #afa981; }
-.type[data-type="steel"] { background: #60a1b8; }
-.type[data-type="water"] { background: #2675db; color: var(--inverse); }
+/* type-badge — 창 dex·pet·manage 이 글자까지 같은 규칙. 창 CSS 앞에 읽는다
+   타입 색은 --type 변수로 둔다 — 타입 배지(.type)와 기술 칸의 타입 조각(styles/move-pill.css)이 같은 색을 읽는다 */
+.type[data-type] { color: var(--inverse); background: var(--type); }
+[data-type="electric"] { --type: #fac000; }
+[data-type="fire"] { --type: #e52829; }
+[data-type="flying"] { --type: #81b9ef; }
+[data-type="bug"] { --type: #91a119; }
+[data-type="dark"] { --type: #624d4e; }
+[data-type="dragon"] { --type: #5060e1; }
+[data-type="fairy"] { --type: #ef70ef; }
+[data-type="fighting"] { --type: #ff8000; }
+[data-type="ghost"] { --type: #704170; }
+[data-type="grass"] { --type: #358722; }
+[data-type="ground"] { --type: #915121; }
+[data-type="ice"] { --type: #3dcef3; }
+[data-type="normal"] { --type: #9fa19f; }
+[data-type="poison"] { --type: #9141cb; }
+[data-type="psychic"] { --type: #d53a6c; }
+[data-type="rock"] { --type: #afa981; }
+[data-type="steel"] { --type: #60a1b8; }
+[data-type="water"] { --type: #2675db; }

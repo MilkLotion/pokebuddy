@@ -5,7 +5,7 @@
 // 여기서 시계를 부르지 않는다. 지금 시각이 필요하면 받는다.
 import { localDate } from "../shared/clock.js";
 import type {
-  AchievementV3, CountsV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PetV3,
+  AchievementV3, BattleV3, CountsV3, DexV3, EggV3, FindKind, FindRecordV3, FindV3, PetV3,
   PointsV3, SaveV3, SettingsV3, TradePendingV3, TutorialState, TutorialV3, TxRecordV3,
 } from "../shared/save-v3";
 import type { LogEntry, Totals } from "../shared/save-v3";
@@ -21,6 +21,7 @@ import { MINT_ID, currentItemId, isOldMint, refundRetiredMint } from "../bag/min
 import { normalizeMail } from "../mail/letters.js";
 import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
+import { BATTLE_RULES } from "../battle/rules.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import { NOTIFY_KINDS } from "../shared/names/banners.js";
@@ -267,6 +268,7 @@ export function normalizeSave(raw: unknown, now: number): SaveV3 | null {
     trade: normalizeTrade(raw.trade, seen),
     mail: normalizeMail(raw.mail),
     find: normalizeFind(raw.find),
+    battle: normalizeBattle(raw.battle, seen),
     counts: normalizeCounts(raw.counts, pets, eggs, nonNeg(raw.eggSeq)),
     achRev: nonNeg(raw.achRev),
   };
@@ -313,6 +315,21 @@ function normalizeFind(raw: unknown): FindV3 {
 }
 
 // 친구 교환에 걸린 개체 — 개체가 없거나 모양이 깨졌으면 비운다 (worklog/records/trade/trade.md "로컬 저장과 복구")
+// 배틀 파티 — 6칸. 저장에 없는 개체와 두 번째로 나온 같은 개체는 빈 칸이 된다 (2026-10-08 에 더했다, src/battle/party.ts)
+function normalizeBattle(raw: unknown, petIds: Set<string>): BattleV3 {
+  const given = isRawObject(raw) && Array.isArray(raw.slots) ? raw.slots : [];
+  const used = new Set<string>();
+  const slots: (string | null)[] = [];
+  for (let i = 0; i < BATTLE_RULES.slots; i += 1) {
+    const id = given[i];
+    if (typeof id === "string" && petIds.has(id) && !used.has(id)) {
+      used.add(id);
+      slots.push(id);
+    } else slots.push(null);
+  }
+  return { slots };
+}
+
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
   const p = isRawObject(raw) && isRawObject(raw.pending) ? raw.pending : null;
   if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };

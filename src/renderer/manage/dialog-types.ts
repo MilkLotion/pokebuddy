@@ -1,6 +1,6 @@
 // 설정창의 탭과 대화상자 타입 — 값이 없는 파일이다. 모든 기능 파일이 읽는다
 
-export type TabId = "party" | "box" | "dex" | "shop" | "bag";
+export type TabId = "party" | "box" | "dex" | "shop" | "bag" | "adventure";
 
 // 설정 모달의 탭 · 사용자 모달의 탭
 export type SettingsTab = "general" | "display";
@@ -26,7 +26,8 @@ export type Dialog =
   | { kind: "hatched"; petId?: string; slotIndex?: number; eggId?: string; allCaught?: AllCaught; over?: "daycare"; queue?: Hatched[]; at?: number }
   | { kind: "daycare" } // 돌보미집 — 박스 넘김 줄의 집 아이콘 단추
   | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
-  | { kind: "preset-overview" } // 프리셋 전체보기 — 파티 탭 머리의 `전체보기`
+  | { kind: "preset-overview"; battle?: true } // 프리셋 전체보기 — 파티 탭 머리의 `전체보기`. battle 이면 모험 탭의 `가져오기`(기존 파티 가져오기)
+  | { kind: "battle-pick"; slot: number; page: number } // 배틀 파티 칸에 넣을 개체 고르기 — page 는 고르기판 쪽(프리셋 → 박스)
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습

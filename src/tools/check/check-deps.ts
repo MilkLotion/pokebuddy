@@ -21,7 +21,7 @@ import { ROOT, runCheck, sourceFiles } from "./baseline";
 const DOMAIN_TIER: Readonly<Record<string, number>> = {
   dex: 1,
   party: 2, box: 2,
-  bag: 3, egg: 3, shop: 3, state: 3, find: 3, mail: 3, tutorial: 3, trade: 3, motion: 3,
+  bag: 3, egg: 3, shop: 3, state: 3, find: 3, mail: 3, tutorial: 3, trade: 3, motion: 3, battle: 3,
   achievement: 4, notify: 4,
 };
 const DOMAINS = Object.keys(DOMAIN_TIER);

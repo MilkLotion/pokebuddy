@@ -20,7 +20,7 @@ flowchart LR
     main["메인 프로세스<br/>src/main"]
     stage["무대 창<br/>renderer/stage"]
     manage["설정창<br/>renderer/manage"]
-    device["기기 창 다섯<br/>renderer/device"]
+    device["기기 창 여섯<br/>renderer/device"]
     small["메뉴·배너·알림 등<br/>renderer/windows"]
   end
   cli["pokebuddy CLI<br/>src/cli"]
@@ -69,7 +69,7 @@ flowchart TB
 
 - **renderer 는 `shared` 말고 아무것도 import 하지 않는다.** 그것도 대부분 `import type` 이고, 값으로 쓰는 것은 문구·숫자 글자(`fail-text`, `count-text`, `josa`)와 메인과 같이 쓰는 몇 가지 값(`features`, `window-metrics`, `live-keys`, `device-busy`, `account-rules`)뿐이다. 화면에 필요한 값은 메인이 만들어 IPC 로 보낸다.
 - **도메인은 파일을 읽고 쓰지 않는다.** 앱에 든 읽기 전용 자료는 로더 세 곳에서만 읽는다: `dex/data.ts`(`data/*.json`), `view/i18n.ts`(문구), `view/name-table.ts`(종 이름).
-- **도메인끼리는 같은 단이나 아래 단만 import 한다.** 아래부터 `dex` → `party`·`box` → `bag`·`egg`·`shop`·`state`·`find`·`mail`·`tutorial`·`trade`·`motion` → `achievement`·`notify` 다.
+- **도메인끼리는 같은 단이나 아래 단만 import 한다.** 아래부터 `dex` → `party`·`box` → `bag`·`egg`·`shop`·`state`·`find`·`mail`·`tutorial`·`trade`·`motion`·`battle` → `achievement`·`notify` 다.
 - **`electron` 은 `main/` 만 값으로 import 한다.** 예외는 설치 때 Electron 을 받는 `cli/setup.ts` 하나다.
 - **앱 코드는 `tools/` 를 import 하지 않는다.** `verify/` 는 반대로 아무것도 import 하지 않는다. 서버 함수로 복사되는 파일이기 때문이다.
 
@@ -84,7 +84,7 @@ flowchart TB
 앱을 켜고, 창을 띄우고, 게임 코어와 바깥을 잇는다. 루트에는 진입점 `app.ts` 와 `preload.ts` 만 있고, 나머지는 하위 폴더에 일 단위로 나뉜다. `app.ts` 는 부팅 단계를 차례로 부르는 배선만 한다.
 
 - `app/` — 앱 전체에 걸친 것. 부팅 단계(`boot.ts`), 1초 시계(`clock.ts`), 명령 등록과 mailbox 연결(`commands.ts`), 1초 틱마다 하는 일(`ticks.ts`), 두 PC 규칙으로 멈추기(`halt.ts`), 동반자 잠금(`lifetime.ts`), 끄는 순서(`quit.ts`).
-- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 다섯과 오가는 길(`devices.ts`), 받은 값의 모양 검사(`requests.ts`).
+- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 여섯과 오가는 길(`devices.ts`), 받은 값의 모양 검사(`requests.ts`).
 - `stage/` — 무대. 화면마다 무대 창과 무대를 한 쌍씩 둔다(`stage-group.ts`). `stage.ts` 가 40ms 마다 프레임을 만들어 `stage-window.ts` 로 보낸다. 맨 앞 터미널을 보고 포켓몬을 보일지 정하는 `host-watch.ts`, 말풍선과 바탕화면 튜토리얼도 여기 있다.
 - `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
 - `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 항목은 `view/menus.ts` 가 만든다.
@@ -100,18 +100,18 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 - `manage/` — 설정창(아래 따로).
 - `stage/` — 무대 캔버스. 그리기 루프(`stage.ts`), 그림 시트 재생(`sprites.ts`), 끌기·클릭(`pointer.ts`).
-- `device/` — 설정창 옆에 붙는 기기 창 다섯(파티 상세, 도감, 상점, 가방, 파티 교체). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
+- `device/` — 설정창 옆에 붙는 기기 창 여섯(파티 상세, 도감, 상점, 가방, 파티 교체, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
 - `windows/` — 메뉴, 첫 포켓몬 고르기, 놀이공간 그리기, 배너, 알림, 화면 고르기.
 - `ui/` — 여러 창이 같이 쓰는 도구. 브리지(`bridge.ts`), 요소 만들기(`dom.ts`), 초상(`portrait.ts`), 코치마크(`coach.ts`), 막대(`fill-bar.ts`), 타입 배지(`type-badge.ts`).
 - `styles/` — 창 CSS. 모든 창이 `tokens.css` 를 먼저 읽는다.
 
 #### `src/renderer/manage/` — 설정창
 
-설정창은 탭 다섯, 대화상자, 기기 창 연결 다섯, 튜토리얼로 이루어진다. 이것을 기능마다 한 파일로 나눴고, 진입점 `manage.ts` 는 각 기능을 등록하고 서로 잇는 고리만 건다.
+설정창은 탭 여섯, 대화상자, 기기 창 연결 여섯, 튜토리얼로 이루어진다. 이것을 기능마다 한 파일로 나눴고, 진입점 `manage.ts` 는 각 기능을 등록하고 서로 잇는 고리만 건다.
 
 - **뼈대** — `shell.ts` 가 헤더 숫자, 탭 줄, 본문 다시 그리기를 맡고 `registerTab` 으로 탭을 받는다. 모달은 `dialog.ts` 가 하나만 띄우고 `registerDialog` 로 종류를 받는다. 명령 보내기는 `command.ts`, 1초마다 스냅샷 다시 읽기는 `live.ts`, 열기와 바로가기(알림 배너, 포켓몬 메뉴, 교환 링크에서 온 경로)는 `routes.ts`.
-- **탭** — `party-tab.ts`, `box-tab.ts`, `dex-tab.ts`, `shop-tab.ts`, `bag-tab.ts`. 탭마다 자기 상태(쪽, 검색어, 고른 칸)를 들고 있다.
-- **기기 창 연결** — `pet-link.ts`, `dex-link.ts`, `shop-link.ts`, `bag-link.ts`, `party-link.ts`. 공통 뼈대는 `device-link.ts` 로, 고른 값이나 스냅샷이 바뀔 때만 다시 열고 늦게 온 답은 버린다.
+- **탭** — `party-tab.ts`, `box-tab.ts`, `dex-tab.ts`, `shop-tab.ts`, `bag-tab.ts`, `adventure-tab.ts`. 탭마다 자기 상태(쪽, 검색어, 고른 칸)를 들고 있다.
+- **기기 창 연결** — `pet-link.ts`, `dex-link.ts`, `shop-link.ts`, `bag-link.ts`, `party-link.ts`, `battle-link.ts`. 공통 뼈대는 `device-link.ts` 로, 고른 값이나 스냅샷이 바뀔 때만 다시 열고 늦게 온 답은 버린다.
 - **대화상자** — 돌보미집(`daycare.ts`), 진화(`evolve.ts`), 메가진화·모습(`pet-forms.ts`), 우편(`mail.ts`), 교환(`trade.ts`), 설정·사용자(`settings.ts`, `account.ts`), 업적, 가이드북(`guide.ts`), 패치노트(`update-notes.ts`), 박스 순서.
 - **상태** — 모든 파일이 읽는 기둥 상태(보는 스냅샷, 탭, 열린 모달)는 `state.ts` 의 `ui` 하나다. 여러 파일이 같이 고치는 상태는 따로 묶었다: 옮기기·끌기(`box-state.ts`), 계정(`account-state.ts`), 교환(`trade-state.ts`).
 - **튜토리얼** — 문구와 단계 표는 `tutorial-steps.ts`, 코치마크 그리기와 입력 막기, OS 창 단추를 어둡게 하는 신호는 `tutorial.ts`.
@@ -148,6 +148,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 | `tutorial/` | 튜토리얼 시작 조건(`conditions.ts`)과 대기열·다시 보기(`queue.ts`). |
 | `trade/` | 친구 교환의 로컬 규칙. 서버 쪽은 `online/` 에 있다. |
 | `motion/` | 무대에서 마리 하나가 걷고 자고 반응하는 판단(`brain.ts`). |
+| `battle/` | 배틀 파티 칸, 출전 제한의 칸 판정(`tier.ts`), 실제 능력치(`stats.ts`), 보유 기술(`moves.ts`). 전투는 아직 없다. |
 | `achievement/` | 업적 정의, 진행도, 달성, 보상 받기. |
 | `notify/` | 알 준비·진화 가능 같은 알림을 줄 세운다. |
 
@@ -224,6 +225,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **헤더 아이콘의 열림 표시** — `registerDialog` 의 `headerButton` 으로 건다. 표시는 `setScrim` 이 맞춘다.
 - **명령** — `command.ts` 의 `sendCommand`. 처리 중 모양은 `setBusy`·`whenSlow`, 실패 문구는 `shared/fail-text.ts` 의 `failTextOf`.
 - **작은 부품** — `widgets.ts` 의 `chipsEl`(분류 칩), `pageHeadEl`(탭 머리), `switchEl`·`segmentedEl`·`settingRow`(설정 줄), `alertEl`(이어지는 상태 안내), `meterEl`. 격자 쪽 넘김과 보기 바꾸기는 `grid-view.ts`.
+- **개체 고르기판** — `pet-picker.ts` 의 `petPickerEl`. `◀ ▶` 로 쪽(파티·프리셋·박스)을 넘기며 6열 칸에서 고른다. 교환의 보낼 포켓몬과 배틀 파티 칸 고르기가 같이 쓴다. CSS 는 `trade.css` `.trade-pick` 이다.
 - **검색 칸** — `search.ts` 의 `findBarEl`(찾기 줄). 박스 찾기·도감·상점이 같이 쓴다. 입력을 멈추고 1초 뒤나 Enter 로 검색하고, `✕` 로 지운다. 이전·다음 결과가 필요하면 `nav` 를 켠다(박스). CSS 는 `widgets.css` `.find-bar` 다.
 - **튜토리얼** — 문구는 `tutorial-steps.ts` 의 표에 더하고, 그리기·입력 막기는 `tutorial.ts` 가 한다. 다시 보기는 `tutorial/queue.ts` 의 `REPLAYABLE_TUTORIALS` 에 넣는다.
 
@@ -236,7 +238,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 여러 창이 같이 쓰는 것
 
 - **코치마크** — `ui/coach.ts` 의 `drawCoachLayer`. 설정창, 파티 상세 기기 창, 무대가 같은 말풍선과 입력 규칙을 쓴다.
-- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`, 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`.
+- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`.
 - **글자** — 숫자와 포인트, 남은 시간은 `shared/count-text.ts`(`numberText`, `pointText`, `waitText`), 조사는 `shared/josa.ts`. 메인과 `view` 의 문구는 `view/text.ts` 의 `t` 로 `data/i18n/*.json` 에서 읽는다.
 - **알림 배너** — 문구와 목적지는 `view/banner.ts` 가 만든다. `route` 가 없는 배너는 `바로가기` 를 두지 않는다.
 - **메인의 창** — 보안 옵션은 `main/windows/options.ts`(`webPreferencesOf`, 덮개 창은 `createOverlayWindow`), 기기 창은 `device-window.ts`.

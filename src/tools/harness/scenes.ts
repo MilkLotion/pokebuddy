@@ -339,6 +339,23 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       s.bag["reins-of-unity"] = 1;
     },
   },
+  battle: {
+    note: "모험 탭 배틀 파티 — 박스에 뮤츠·루기아·세레비·미라이돈을 더하고 배틀 파티를 채운다. 루기아는 출전 불가(초전설 둘째), 6번 칸은 빈 칸 (battle-party)",
+    apply: (s, now) => {
+      const add = (species: string, level: number): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        s.pets.push(pet);
+        s.petSeq = Math.max(s.petSeq, Number(pet.id.slice(1)));
+        addToBox(s.boxes, pet.id);
+        recordDex(s, species, false);
+        return pet.id;
+      };
+      const ids = [add("pikachu", 30), add("mewtwo", 70), add("lugia", 70), add("celebi", 50), add("miraidon", 72)];
+      s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, ids[3]!, ids[4]!, null] };
+    },
+  },
 };
 
 export function applyScene(save: SaveV3, name: string, now = Date.now()): SaveV3 {

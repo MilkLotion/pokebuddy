@@ -130,6 +130,18 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 03 Organisms | `Preset Overview Panel` `1590:60879`(`Preset Row` 5개, 간격 4, 폭 510). `Page Header / Party` `1262:83118` 의 오른쪽은 `actions`(`Icon Button` 햄버거)다. `back-action`(옛 `교체`)은 숨겼다. |
 | 05 Screens | `02 파티`: `Party / Menu Open` `1603:75410`, `Party / Preset Overview · 5` `1590:63534`, `Party / Preset Overview · 2` `1590:64252`. `Tutorial / Preset 3 of 3 · 메뉴(교체)` `1260:23446` 의 구멍을 햄버거 단추로 옮겼다. `04 박스`: `Box / Find · Idle` `1590:65439`, `Box / Find · Found 2/3` `1590:65782`, `Box / Find · None` `1590:66139`. |
 
+모험 탭으로 더한 것(2026-10-08, 사용자 확정 "진행"). 규칙은 [모험](adventure.md)에 있다.
+
+| 층 | 컴포넌트 (노드, 변형) |
+|---|---|
+| 01 Atoms | `02 아이콘·표시`: `Icon / Adventure` `1659:3`(접힌 지도, 16×16), `Icon / Help` `1677:2402`(회색 원에 흰 물음표, 20×20). `04 배지·상태`: `Type Icon` `1672:2096`(`Type=Normal…Fairy` × `Style=White\|Badge\|Color`, 54변형, 16×16, 원작 타입 그림), `Move Pill` `1675:2330`(`Size=Large\|Small`, 속성 `Name`. 타입 조각 `( /` 와 이름 조각 `/  )`). |
+| 02 Molecules | `01 창 머리·탐색`: `Adventure Header` `1659:124`(`Start=Enabled\|Disabled`. 제목, 탐험·배틀 `Segmented Control`, 가져오기, 배틀 시작). `02 파티·박스`: `Adventure Slot Card` `1659:277`(`State=Ready\|Blocked\|Empty`, 속성 `Reason`. 기술 줄은 `Move Pill` Small 두 개). `04 기기 창`: `Stat Radar` `1706:3537`(`Sample=Pikachu\|Mewtwo`. 인스턴스에서 벡터를 덮어쓸 수 없어 예시마다 변형이다), `Stat Basis Bubble` `1677:2404`(`배틀 능력치 기준` 말풍선), `Move Info Bubble` `1716:4833`(기술 설명 말풍선). |
+| 03 Organisms | `04 기기 창`: `Battle Party Device` `1662:224`(배틀 파티 상세 기기 창. 그래프, 특성 줄, 기술 칸 두 개와 순서 바꾸기 단추 `Trade Swap Mark`, 오른쪽 위 `Icon / Help`). `05 대화창 본문`: `Battle Pet Picker` `1716:5299`(넣을 포켓몬 고르기판. 프리셋 넘김 줄과 `Box Slot` 6칸. 이미 배틀 파티에 든 개체는 불투명도 0.4). |
+| 04 Templates | `01 탭 틀`: `Battle Party Layout` `1662:1186`(`State=Ready\|Blocked`. 탭 줄은 `Primary Navigation` `Active=Adventure`). |
+| 05 Screens | `15 모험` `1720:73271`. 줄 1 탭: `Adventure / Battle Party` `1662:1187`, `Adventure / Battle Party · Blocked` `1662:1549`. 줄 2 모달: `Adventure / Import Preset` `1662:1955`, `Adventure / Pick Battle Pet` `1718:5386`. 줄 3 기기 창: `Adventure / Battle Party Device` `1662:3180`, `· Help` `1677:2412`, `· Move Info` `1716:4839`, `· Long Moves` `1695:69914`. |
+
+`Primary Navigation` `208:542` 의 모험 탭은 [C-03 메인 탭](#c-03-메인-탭)에 적었다.
+
 페이지 배치(2026-10-02): 01~04 페이지는 갈래별 섹션으로 묶는다. 새 컴포넌트는 맞는 섹션 안에 둔다.
 
 | 페이지 | 섹션 |
@@ -138,7 +150,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 02 Molecules | `01 창 머리·탐색`, `02 파티·박스`, `03 도감·상점·가방`, `04 기기 창`, `05 설정·입력`, `06 대화창·알림·목록` |
 | 03 Organisms | `01 창 뼈대`, `02 파티 카드`, `03 대화창·겹치는 것`, `04 기기 창`, `05 대화창 본문`, `06 놀이공간·화면 고르기` |
 | 04 Templates | `01 탭 틀`, `02 첫 실행 틀` |
-| 05 Screens | `01 첫 실행` ~ `14 바탕화면`. 섹션 안은 흐름별로 한 줄씩 둔다. 레이어 순서는 보이는 순서(위에서 아래, 왼쪽에서 오른쪽)와 같다. |
+| 05 Screens | `01 첫 실행` ~ `15 모험`. `15 모험` 은 2026-10-08 에 맨 아래에 더했다. 섹션 안은 흐름별로 한 줄씩 둔다. 레이어 순서는 보이는 순서(위에서 아래, 왼쪽에서 오른쪽)와 같다. |
 
 재구성 전과 모양이 다른 곳(2026-10-02 재검수, 재구성 전 사본과 화면별로 대조):
 
@@ -178,12 +190,13 @@ Figma: `Header Icon Button` `295:3083`. 상태는 `Default`·`Hover`·`Open`·`F
 
 ### C-03 메인 탭
 
-역할: 파티 / 박스 / 도감 / 상점 / 가방 사이를 이동한다.
+역할: 파티 / 박스 / 도감 / 상점 / 가방 / 모험 사이를 이동한다. 모험 탭의 규칙은 [모험](adventure.md)에 있다.
 교환은 탭이 아니다. 박스 탭 머리 오른쪽의 햄버거 단추가 메뉴(`박스 순서`·`교환`)를 띄우고, `교환`이 교환 모달을 연다(2026-09-30 사용자 결정 "교환 버튼을 만들고, 모달로 기존의 교환 창 띄우게.", 2026-10-02 사용자 결정 "교환도 메뉴로"). 교환이 진행 중이면 햄버거 단추 오른쪽 위에 dot 를 둔다(`Status Dot` 관례, 컬러 테두리 없음). 구현은 `src/renderer/manage/box-order.ts` `boxMenuEl`, `src/renderer/manage/trade.ts` `syncTradeDot`, `src/renderer/styles/manage/box.css` `.box-menu`·`.icon-button` 이다. Figma 04 템플릿 `Box Layout` `340:3665` 머리의 `actions`(햄버거 단추). 옛 `Box / Trade Button` `1016:1891` 은 템플릿에 합쳐 지웠다(2026-09-30). 탭 줄 `Primary Navigation` `208:542` 의 모든 변형에 교환 탭이 없다.
 상태: 탭별 선택(옅은 배경과 밑줄), 기본. 업적·설정·사용자 모달이 열려도 탭 선택은 그대로다.
 판정: `Primary Navigation`의 `Active` 변형을 `Party|Box|Pokédex|Shop|Bag`로 바꾼다. `Settings`를 뺀다. 박스 아이콘이 새로 필요하다. 선택 밑줄은 내비게이션 `114:967`의 규칙을 따른다.
 구현: 탭은 72×32 알약(반지름 10)에 16px 아이콘과 글자다. 아이콘과 글자는 탭 가운데에 둔다(좌우 여백이 같다. 두 글자면 12). 고른 탭은 옅은 배경, 굵은 글자, 가운데 60×2 밑줄(x 6, y 31.5)이다. `src/renderer/manage/manage.ts` `TAB_ICON`(탭 등록 `registerTab`), `src/renderer/manage/shell.ts` `drawTabs`, `src/renderer/styles/manage/base.css` `nav .tabs` 다(2026-09-29 코드를 Figma 에 맞춤. 2026-09-30 좌우 정렬 수정, Figma `Navigation Item` `114:137`(`State=Selected` `114:129`)·탭 줄 `Primary Navigation` `208:542`, 사용자 요청 "실제메뉴에서는 좌우정렬 안맞음").
 Figma: `Primary Navigation` `208:542`의 항목을 `파티·박스·도감·상점·가방` 순서로 바꿨다. `Active=Settings`는 인스턴스가 없어서 `Active=Box`로 바꿨다. `Icon / Box` `294:353`을 새로 만들었다.
+Figma(2026-10-08): 모든 변형의 가방 다음에 `item/모험`(`Icon / Adventure` `1659:3`)을 더했다. `Active=Adventure` `1720:71602` 를 더했다. 탭이 6개가 되어 `spacer` 는 18 이다.
 
 ### C-04 파티 칸 카드
 

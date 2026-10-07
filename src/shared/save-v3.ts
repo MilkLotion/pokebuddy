@@ -92,6 +92,7 @@ export interface PetV3 {
   forms?: string[]; // 공유 sid 계열의 고를 수 있는 종 (src/dex/forms.ts). 그 밖의 개체에는 없다
   mega?: MegaV3;
   workMs?: number; // 지금 파티에 있는 동안 받은 에이전트 작업 시간 — 작업 시간 해금이 있는 모습 바꾸기 종(로토무)만 세고 조건 값에서 멈춘다 (src/dex/forms.ts tickFormWork). 2026-10-05 에 더했다 // 메가진화 진행과 모습 (src/dex/mega.ts). 메가 모습이 있는 종이 친밀도 100 이 된 뒤에 생긴다
+  moveSwap?: true; // 보유 기술 2개의 위아래 순서를 바꿨다 (src/battle/moves.ts). 2026-10-08 에 더했다
   daily: PetDaily;
 }
 
@@ -120,6 +121,13 @@ export interface PartyV3 {
   presetNames?: string[]; // 번호 순 이름. 빈 글자면 기본 이름 "프리셋 N" 이다
   presetCount?: number; // 가진 프리셋 수
   slotCount?: number; // 모든 프리셋의 열린 칸 수 — 다음 프리셋 구매 조건에 쓴다
+}
+
+// 배틀 파티 (2026-10-08) — 규칙은 docs/specs/adventure.md "배틀 파티". 저장 형식 번호는 올리지 않는다. 없으면 빈 6칸으로 읽는다 (src/save/normalize.ts)
+//   - 개체를 옮기지 않는다. 개체의 자리(프리셋 칸·박스 칸)는 그대로이고 여기에는 식별자만 둔다
+//   - 같은 개체는 한 칸에만 든다. 개체가 저장에서 사라지면 그 칸은 빈 칸이 된다 (src/battle/party.ts dropBattlePet)
+export interface BattleV3 {
+  slots: (string | null)[]; // 길이 6. 개체 식별자 또는 빈 칸
 }
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────
@@ -265,6 +273,7 @@ export interface SaveV3 {
   trade?: { pending: TradePendingV3 | null };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/gifts.ts)
   find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/pickup.ts)
+  battle?: BattleV3; // 배틀 파티 (src/battle/party.ts)
   counts: CountsV3; // 업적이 세는 누적 값 — 새 저장과 정규화가 늘 채운다 (src/save/normalize.ts)
   achRev?: number; // 업적 목록의 판 — ACHIEVEMENT_REV 보다 작으면 다음 판정에서 달성한 업적을 조용히 기록한다
 }

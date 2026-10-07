@@ -8,12 +8,16 @@
 //   가방       가방 카드를 누르면 뜬다 (2026-10-01 사용자 "가방도 상점참고해서 개선하자", Figma 05 `Bag / Device / Use`)
 //   파티 교체  파티 탭의 `교체` 나 빈 파티 칸을 누르면 뜬다 (2026-10-02 사용자 "교체버튼을 누르면 박스화면으로 이동하고 … 창이 뜨면서 파티목록 볼 수 있게", Figma 05 `Party / Swap · Open` `1248:2567`)
 import type { DexDetail, EvoNodeView } from "../../shared/model/detail";
-import type { BagDeviceChannel, DexDeviceChannel, PartyDeviceChannel, PetDeviceChannel, ShopDeviceChannel } from "../../shared/ipc/devices";
+import type { BagDeviceChannel, BattleDeviceChannel, DexDeviceChannel, PartyDeviceChannel, PetDeviceChannel, ShopDeviceChannel } from "../../shared/ipc/devices";
 import type {
   BagDeviceAction,
   BagDeviceInput,
   BagDeviceOpen,
   BagDeviceView,
+  BattleDeviceAction,
+  BattleDeviceInput,
+  BattleDeviceOpen,
+  BattleDeviceView,
   DexDeviceView,
   PartyDeviceAction,
   PartyDeviceInput,
@@ -29,6 +33,7 @@ import type {
   ShopDeviceView,
 } from "../../shared/model/devices";
 import { PARTY_RULES } from "../../party/rules.js";
+import { BATTLE_RULES } from "../../battle/rules.js";
 import type { DeviceSpec } from "./device-window.js";
 import { INPUT_LIMITS, isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
 import { dockAt } from "./placement.js";
@@ -40,6 +45,7 @@ export const DEVICE_SIZES = {
   shop: { width: 380, height: 594 }, // Figma `Shop / Device / Tool`
   bag: { width: 380, height: 670 }, // Figma `Bag / Device / Use`
   party: { width: 380, height: 508 }, // 다른 기기 창과 같은 폭
+  battle: { width: 380, height: 674 }, // Figma 03 `Battle Party Device` `1662:224`
 } as const;
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
@@ -138,7 +144,7 @@ export interface DeviceArtDeps {
   art(keys: string[]): Promise<Record<string, string | null>>;
 }
 
-const isArtKey = (v: unknown): v is string => typeof v === "string" && /^(portrait|item|egg):/.test(v);
+const isArtKey = (v: unknown): v is string => typeof v === "string" && /^(portrait|item|egg|type):/.test(v);
 
 // 열쇠인 칸만 모아 한 번에 받는다. 열쇠가 아닌 값(설정창이 색칠한 알 그림 data URI, null)은 그대로 둔다
 async function artResolver(deps: DeviceArtDeps, values: (string | null)[]): Promise<(v: string | null) => string | null> {
@@ -213,6 +219,32 @@ export function partyDeviceOf(deps: DeviceArtDeps): DeviceSpec<PartyDeviceOpen, 
   };
 }
 
+// 배틀 파티 상세 — 그림 열쇠(초상·흰 타입 아이콘)를 풀고, 울음소리는 그 개체의 종이다
+export interface BattleDeviceDeps extends DeviceArtDeps {
+  cry(slug: string): Promise<string | null>;
+  volume(): number;
+}
+
+function isBattleAction(v: unknown): v is BattleDeviceAction {
+  return isRecord(v) && v.kind === "swap" && isShortId(v.petId);
+}
+
+export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen, BattleDeviceView, BattleDeviceAction> {
+  return {
+    channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
+    size: DEVICE_SIZES.battle,
+    keyOf: (o) => o.slot.pet?.id ?? String(o.slot.index),
+    viewOf: async (o) => {
+      const types = Object.keys(o.typeArt);
+      const art = await artResolver(deps, [o.art, ...types.map((t) => o.typeArt[t] ?? null)]);
+      const { art: _art, typeArt, ...rest } = o;
+      return { ...rest, portrait: art(o.art), typeIcons: Object.fromEntries(types.map((t) => [t, art(typeArt[t] ?? null)])), volume: deps.volume() };
+    },
+    isAction: isBattleAction,
+    cry: { of: (o) => deps.cry(o.slot.pet?.species ?? ""), volume: deps.volume },
+  };
+}
+
 // ── 설정창이 보낸 고른 값(…DeviceInput, src/shared/model/devices.ts) — 정해진 모양만 받는다 ─────────
 
 const isText = (v: unknown): v is string => typeof v === "string" && v.length <= INPUT_LIMITS.noticeChars;
@@ -233,6 +265,11 @@ export function isShopInput(v: unknown): v is ShopDeviceInput {
 export function isPartyInput(v: unknown): v is PartyDeviceInput {
   if (!isRecord(v)) return false;
   return (v.heldPetId === null || isShortId(v.heldPetId)) && isFlag(v.heldFromBox) && isText(v.notice) && isBusyKey(v.busy);
+}
+
+export function isBattleInput(v: unknown): v is BattleDeviceInput {
+  if (!isRecord(v)) return false;
+  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice) && isBusyKey(v.busy);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {

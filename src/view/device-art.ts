@@ -4,6 +4,7 @@
 //   portrait:<slug>        초상. 이로치는 portrait:<slug>:shiny
 //   item:<id>              도구 그림
 //   egg:<알 종류>           색을 바꾼 알 그림. 색표가 없으면 기본 알 그림(icon egg)이다
+//   type:<타입>            흰 타입 아이콘 — 원작 타입 아이콘에서 바탕색을 뺀 그림 (src/main/art/type-icon-art.ts)
 
 // 모델과 바로잡은 입력 — 수량을 상한으로 자르거나 없는 대상을 첫 개체로 바꾼 값. 설정창은 다음 명령에 이 입력을 쓴다
 export interface DeviceResult<M, I> {
@@ -16,6 +17,8 @@ export const portraitArtKey = (slug: string, shiny: boolean): string => `portrai
 export const itemArtKey = (id: string): string => `item:${id}`;
 
 export const eggArtKey = (kind: string): string => `egg:${kind}`;
+
+export const typeArtKey = (type: string): string => `type:${type}`;
 
 // 알 칸의 그림 — 태고의돌은 알이 아니라 돌이라 도구 그림이다(우리가 그린 그림)
 export const eggIconKey = (kind: string): string => (kind === "ancient-stone" ? itemArtKey(kind) : eggArtKey(kind));

@@ -21,6 +21,7 @@ type PetDeviceIpc = import("../shared/ipc/devices").PetDeviceIpc;
 type ShopDeviceIpc = import("../shared/ipc/devices").ShopDeviceIpc;
 type BagDeviceIpc = import("../shared/ipc/devices").BagDeviceIpc;
 type PartyDeviceIpc = import("../shared/ipc/devices").PartyDeviceIpc;
+type BattleDeviceIpc = import("../shared/ipc/devices").BattleDeviceIpc;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
@@ -108,6 +109,10 @@ const MANAGE = {
   onPartyAct: ["push", "manage:party-act"],
   onPartyStep: ["push", "manage:party-step"],
   onPartyClosed: ["push", "manage:party-closed"],
+  battleOpen: ["invoke", "manage:battle-open"],
+  onBattleStep: ["push", "manage:battle-step"],
+  onBattleAct: ["push", "manage:battle-act"],
+  onBattleClosed: ["push", "manage:battle-closed"],
   onTrade: ["push", "manage:trade"],
   copyText: ["send", "manage:copy"],
   openRights: ["send", "manage:rights"],
@@ -202,3 +207,8 @@ expose("bag.html", "pokebuddyBag", () => bridgeOf<BagDeviceIpc>(BAG));
 const PARTY = { ...deviceWire("partydev"), act: ["send", "partydev:act"] } as const satisfies WireOf<PartyDeviceIpc>;
 
 expose("party.html", "pokebuddyParty", () => bridgeOf<PartyDeviceIpc>(PARTY));
+
+// 배틀 파티 상세 기기 창 — 배틀 파티 칸 하나. 울음소리와 누른 단추(기술 순서 바꾸기)
+const BATTLE = { ...deviceWire("battledev"), cry: ["invoke", "battledev:cry"], act: ["send", "battledev:act"] } as const satisfies WireOf<BattleDeviceIpc>;
+
+expose("battle.html", "pokebuddyBattle", () => bridgeOf<BattleDeviceIpc>(BATTLE));

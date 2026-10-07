@@ -6,7 +6,7 @@
 //   pokemon.csv             포켓몬 번호 → 종 번호 · 키 · 몸무게(hg) · 기본 폼 여부
 //   pokemon_species.csv     종 번호 → 전설(is_legendary) · 환상(is_mythical) · 성장 속도 · 진화 부모 · 성비(gender_rate)
 //   growth_rates.csv        성장 속도 번호 → 식별자 (원작 경험치 타입 6종)
-//   pokemon_stats.csv       포켓몬 번호 → 종족값 (speed 와 여섯 값의 합)
+//   pokemon_stats.csv       포켓몬 번호 → 종족값 (여섯 값, speed, 여섯 값의 합)
 //   pokemon_types.csv       포켓몬 번호 → 타입 (types.csv 로 이름)
 //   pokemon_form_types.csv  폼 고유 타입 (아르세우스 폼처럼 폼마다 타입이 다른 것)
 //   pokemon_forms.csv       폼 식별자(arceus-bug · burmy-sandy) → 포켓몬 번호
@@ -31,6 +31,7 @@
 // | likes         | 타입별 LIKES — 두 타입이면 둘(중복 제거). 표에 없는 타입은 food              |
 // | growthRate    | 원작 경험치 타입 그대로. PokeAPI 이름을 원작 이름으로 바꾼다               |
 // | bst           | 종족값 여섯 값의 합                                                       |
+// | stats         | 종족값 여섯 값 [HP, 공격, 방어, 특수공격, 특수방어, 스피드] — 배틀 능력치 (docs/specs/moves.md) |
 // | stage         | 진화 사슬 뿌리부터의 거리 + 1 (1 이 진화 전)                              |
 // | rank          | 수집 난이도 1~5. 종족값 구간으로 1~4, 전설·환상은 5, 더 진화하는 종은 한 등급 낮춘다 |
 // | genderRate    | 원작 성비 그대로. 암컷 비율을 8 분의 몇으로 적는다(0 수컷만 · 8 암컷만). -1 은 무성 |
@@ -85,6 +86,7 @@ interface StoredProfile {
   weightKg?: number;
   growthRate: GrowthRate;
   bst: number;
+  stats?: number[];
   stage: number;
   rank: number;
   genderRate: number;
@@ -105,6 +107,7 @@ interface RawProfile {
   rare: boolean;
   growthRate: GrowthRate;
   bst: number;
+  stats: number[];
   stage: number;
   evolvesFurther: boolean;
   genderRate: number;
@@ -188,10 +191,18 @@ export async function build(): Promise<void> {
 
   const speedOf = new Map<string, number>();
   const bstOf = new Map<string, number>();
-  const SIX = new Set(["1", "2", "3", "4", "5", "6"]);
+  // 여섯 값의 순서 — stats.csv 식별자. 저장하는 stats 배열도 이 순서다
+  const SIX_NAMES = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"] as const;
+  const sixIndex = new Map(SIX_NAMES.map((name, i) => [must(statNames.find((r) => r.identifier === name), `stats.csv 의 ${name}`).id, i]));
+  const sixOf = new Map<string, number[]>();
   for (const r of statRows) {
     if (r.stat_id === speedStat.id) speedOf.set(r.pokemon_id, Number(r.base_stat));
-    if (SIX.has(r.stat_id)) bstOf.set(r.pokemon_id, (bstOf.get(r.pokemon_id) ?? 0) + Number(r.base_stat));
+    const i = sixIndex.get(r.stat_id);
+    if (i === undefined) continue;
+    bstOf.set(r.pokemon_id, (bstOf.get(r.pokemon_id) ?? 0) + Number(r.base_stat));
+    const six = sixOf.get(r.pokemon_id) ?? [0, 0, 0, 0, 0, 0];
+    six[i] = Number(r.base_stat);
+    sixOf.set(r.pokemon_id, six);
   }
 
   // 성장 속도 — PokeAPI 이름을 원작 경험치 타입으로
@@ -262,6 +273,7 @@ export async function build(): Promise<void> {
       rare: (sp ? sp.is_legendary === "1" || sp.is_mythical === "1" : false) || (regionalOf(key)?.special === true && singles.has(key)),
       growthRate: growthOf(sp),
       bst: bstOf.get(pokemon.id) ?? 0,
+      stats: sixOf.get(pokemon.id) ?? [],
       stage: sp ? stageOf(sp.id) : 1,
       evolvesFurther: sp ? hasChild.has(sp.id) : false,
       genderRate: sp ? Number(sp.gender_rate) : DEFAULT.genderRate,
@@ -292,6 +304,7 @@ export async function build(): Promise<void> {
       weightKg: r.weightKg,
       growthRate: r.growthRate,
       bst: r.bst,
+      stats: r.stats,
       stage: r.stage,
       rank: rankOf(r),
       genderRate: r.genderRate,

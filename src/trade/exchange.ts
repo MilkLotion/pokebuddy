@@ -16,6 +16,7 @@ import { slotsOfPreset } from "../party/presets.js";
 import { locatePet } from "../party/locate.js";
 import { newPet, nextPetId } from "../party/create.js";
 import { recordDex } from "../dex/record.js";
+import { dropMissingBattlePets } from "../battle/party.js";
 import { snapSize } from "../party/size.js";
 import type { DexOptions } from "../dex/data";
 import type { Gender, NatureId } from "../shared/species";
@@ -178,6 +179,7 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
   if (!where) return { ok: false, reason: "no-pet" };
 
   save.pets.splice(sentIndex, 1, pet);
+  dropMissingBattlePets(save); // 보낸 개체의 배틀 파티 칸은 빈 칸이 된다 — 받은 개체는 물려받지 않는다
   if (save.starterPetId === pending.petId) save.starterPetId = null;
   recordDex(save, pet.species, pet.shiny);
   save.counts.traded += 1; // 교환 업적이 센다

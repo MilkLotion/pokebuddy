@@ -11,6 +11,7 @@ import type { DexOptions } from "../dex/data";
 import { prevOf } from "../dex/evo.js";
 import { maxIdNo } from "../shared/ids.js";
 import { locatePet } from "../party/locate.js";
+import { isInBattle } from "../battle/party.js";
 import { allPresets } from "../party/presets.js";
 import { SHOP_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
@@ -27,6 +28,7 @@ export type SellPetFailure = ReasonOf<
   | "trade-locked" // 교환에 올린 개체다
   | "last-pet" // 가진 개체가 한 마리뿐이다
   | "in-preset" // 파티 프리셋에 든 개체다
+  | "in-battle" // 배틀 파티에 든 개체다
 >;
 
 export type SellPetResult = Outcome<SellPetFailure> & {
@@ -71,6 +73,8 @@ export function sellablePet(save: SaveV3, petId: string, opts?: DexOptions): { o
   if (save.pets.length <= 1) return { ok: false, reason: "last-pet" };
   // 프리셋에 든 개체는 팔지 않는다 — 적용한 프리셋(지금 파티)도 같다. 박스로 뺀 뒤 판다 (2026-10-02 사용자 결정)
   if (locatePet(save, petId)?.kind === "preset") return { ok: false, reason: "in-preset" };
+  // 배틀 파티에 든 개체도 팔지 않는다 — 배틀 파티에서 뺀 뒤 판다 (docs/specs/adventure.md "배틀 파티")
+  if (isInBattle(save, petId)) return { ok: false, reason: "in-battle" };
   return { ok: true, pet, price };
 }
 

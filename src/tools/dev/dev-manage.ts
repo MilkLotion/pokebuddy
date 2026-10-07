@@ -25,6 +25,8 @@
 // `--shop-shot <파일>` 을 주면 상점 기기 창도 PNG 로 저장한다. 상품 줄을 누른 뒤에 쓴다.
 // `--bag-shot <파일>` 을 주면 가방 기기 창도 PNG 로 저장한다. 가방 칸을 누른 뒤에 쓴다.
 // `--party-shot <파일>` 을 주면 파티 기기 창(교체 화면)도 PNG 로 저장한다. 파티 탭의 `교체` 를 누른 뒤에 쓴다.
+// `--battle-click <선택자>` 는 배틀 파티 상세 기기 창에서 그 요소를 누른다(예: .help, .move .pick). 배틀 칸을 누른 뒤에 쓴다.
+// `--battle-shot <파일>` 을 주면 배틀 파티 상세 기기 창도 PNG 로 저장한다. 모험 탭의 배틀 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
@@ -229,6 +231,7 @@ const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
   ["--shop-shot", "shop.html", "shop"],
   ["--bag-shot", "bag.html", "bag"],
   ["--party-shot", "party.html", "party"],
+  ["--battle-shot", "battle.html", "battle"],
 ];
 
 void app.whenReady().then(async () => {
@@ -419,6 +422,7 @@ void app.whenReady().then(async () => {
         if (flag === "--pet-click" && value) step = step.then(() => clickInDevice("pet.html", value));
         if (flag === "--shop-click" && value) step = step.then(() => clickInDevice("shop.html", value));
         if (flag === "--bag-click" && value) step = step.then(() => clickInDevice("bag.html", value));
+        if (flag === "--battle-click" && value) step = step.then(() => clickInDevice("battle.html", value));
         // --shop-click-text·--bag-click-text 는 상점·가방 기기 창에서 그 글자인 마지막 단추를 누른다(바닥 주 단추가 마지막) — 수량(+·최대)·구매·사용·판매를 확인할 때
         if ((flag === "--shop-click-text" || flag === "--bag-click-text") && value)
           step = step.then(() => {

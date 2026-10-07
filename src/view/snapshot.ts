@@ -36,6 +36,7 @@ import { shopList } from "./shop-list.js";
 import { eggIconKey, itemArtKey } from "./device-art.js";
 import { ceilSec } from "../shared/count-text.js";
 import { petView } from "./pet.js";
+import { battleView } from "./battle.js";
 import { riderCall } from "../party/riders.js";
 
 // 보상 종류 → 화면 문구
@@ -147,6 +148,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
       presets,
     },
     boxes,
+    battle: battleView(save, dayPart),
     eggs: { list: eggs, used: eggs.length, size: maxEggs },
     bag,
     dex: { unlocked: save.dex.unlocked.length, obtained: save.dex.obtained.length, shiny: save.dex.shinyObtained.length },

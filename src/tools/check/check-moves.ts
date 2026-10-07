@@ -1,6 +1,7 @@
 // 기술·특성 데이터 검사 — npm run build 뒤 node dist/tools/check/check-moves.js
 //
-// data/moves.json · species-moves.json · abilities.json · species-abilities.json 의 짜임새를 본다.
+// data/moves.json · species-moves.json · abilities.json · species-abilities.json · move-text.ko.json · type-chart.json
+// 과 species.defaults.json 의 종족값(stats) 짜임새를 본다.
 // 계약은 docs/specs/moves.md. 데이터는 손으로 고치므로, 고친 뒤 이 검사로 규칙 위반을 잡는다
 //
 // 보는 것:
@@ -11,6 +12,10 @@
 //   5. special 은 transform·reflect·sketch·wall·stance 중 하나이고 그에 맞는 칸 수다
 //   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다
 //   7. 종 특성은 abilities.json 에 있고, 특성은 한국어 이름과 when(now·later·none)이 있다
+//   8. 모든 종에 종족값 6개(stats)가 있다. 합은 bst, 여섯째는 baseSpeed 와 같다
+//   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
+//  10. 타입 상성표(type-chart.json)는 18 × 18 이고 배율은 0·0.5·1·2 뿐이다
+//  11. 메가 배틀 값(mega-battle.json)의 키는 mega.json 의 모습과 같다. 종족값 6개, 특성은 abilities.json 에 있다
 // 어긋남이 있으면 모두 찍고 종료 코드 1
 import fs from "node:fs";
 import path from "node:path";
@@ -56,6 +61,9 @@ interface AbilityEntry {
 
 interface SpeciesDefault {
   types: string[];
+  bst: number;
+  baseSpeed?: number;
+  stats?: number[];
 }
 
 const TYPES = new Set(["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"]);
@@ -77,6 +85,8 @@ export function moveDataFindings(): string[] {
   const speciesMoves = readTable<SpeciesMoves>("species-moves.json");
   const abilities = readTable<AbilityEntry>("abilities.json");
   const speciesAbilities = readTable<string>("species-abilities.json");
+  const moveText = readTable<string>("move-text.ko.json");
+  const typeChart = readTable<Record<string, number>>("type-chart.json");
   const bad: string[] = [];
 
   // 6 기술 표 — 특수 종만 쓰는 기술(카운터·미러코트는 받은 피해로 반사)은 위력이 없다
@@ -135,13 +145,53 @@ export function moveDataFindings(): string[] {
     if (!["now", "later", "none"].includes(a.when)) bad.push(`특성 ${id}: when ${a.when}`);
   }
   for (const [key, id] of Object.entries(speciesAbilities)) if (!abilities[id]) bad.push(`종 ${key}: 특성 ${id} 가 abilities.json 에 없음`);
+
+  // 8 종족값
+  for (const [key, sp] of Object.entries(species)) {
+    const st = sp.stats;
+    if (!st || st.length !== 6 || st.some((v) => !(Number.isInteger(v) && v > 0))) {
+      bad.push(`종 ${key}: 종족값 ${JSON.stringify(st)}`);
+      continue;
+    }
+    if (st.reduce((a, b) => a + b, 0) !== sp.bst) bad.push(`종 ${key}: 종족값 합 ${st.join("+")} ≠ bst ${sp.bst}`);
+    if (st[5] !== sp.baseSpeed) bad.push(`종 ${key}: 스피드 ${st[5]} ≠ baseSpeed ${sp.baseSpeed}`);
+  }
+
+  // 9 기술 설명 — 설명이 없는 기술은 키가 없다 (원작 한국어 문장이 없는 기술)
+  for (const [id, text] of Object.entries(moveText)) {
+    if (!moves[id]) bad.push(`기술 설명 ${id}: moves.json 에 없는 기술`);
+    if (typeof text !== "string" || !text.trim()) bad.push(`기술 설명 ${id}: 빈 설명`);
+    else if (/[\n\r\f]/.test(text)) bad.push(`기술 설명 ${id}: 줄바꿈이 남음`);
+  }
+
+  // 10 타입 상성
+  for (const atk of TYPES) {
+    const row = typeChart[atk];
+    if (!row) {
+      bad.push(`상성 ${atk}: 공격 타입 줄 없음`);
+      continue;
+    }
+    for (const def of TYPES) if (![0, 0.5, 1, 2].includes(row[def] as number)) bad.push(`상성 ${atk} → ${def}: ${row[def]}`);
+    for (const def of Object.keys(row)) if (!TYPES.has(def)) bad.push(`상성 ${atk} → ${def}: 18타입 밖`);
+  }
+  for (const atk of Object.keys(typeChart)) if (!TYPES.has(atk)) bad.push(`상성 ${atk}: 18타입 밖`);
+
+  // 11 메가 배틀 값 — 메가 모습은 종이 아니라 종 표에 없다 (src/dex/mega.ts)
+  const megaForms = readTable<Record<string, unknown>>("mega.json").forms ?? {};
+  const megaBattle = readTable<{ stats?: number[]; ability?: string }>("mega-battle.json");
+  for (const slug of Object.keys(megaForms)) if (!megaBattle[slug]) bad.push(`메가 ${slug}: 배틀 값 없음`);
+  for (const [slug, m] of Object.entries(megaBattle)) {
+    if (!megaForms[slug]) bad.push(`메가 배틀 값 ${slug}: mega.json 에 없는 모습`);
+    if (!m.stats || m.stats.length !== 6 || m.stats.some((v) => !(Number.isInteger(v) && v > 0))) bad.push(`메가 ${slug}: 종족값 ${JSON.stringify(m.stats)}`);
+    if (!m.ability || !abilities[m.ability]) bad.push(`메가 ${slug}: 특성 ${m.ability} 가 abilities.json 에 없음`);
+  }
   return bad;
 }
 
 function main(): void {
   const bad = moveDataFindings();
   const count = (file: string): number => Object.keys(readTable<unknown>(file)).length;
-  process.stdout.write(`기술 ${count("moves.json")} · 종 기술 ${count("species-moves.json")} · 특성 ${count("abilities.json")} · 종 특성 ${count("species-abilities.json")}\n`);
+  process.stdout.write(`기술 ${count("moves.json")} · 종 기술 ${count("species-moves.json")} · 특성 ${count("abilities.json")} · 종 특성 ${count("species-abilities.json")} · 기술 설명 ${count("move-text.ko.json")} · 상성 ${count("type-chart.json")}타입 · 메가 배틀 값 ${count("mega-battle.json")}\n`);
   if (bad.length) {
     for (const line of bad) process.stdout.write(`  ${line}\n`);
     process.stdout.write(`어긋남 ${bad.length}\n`);

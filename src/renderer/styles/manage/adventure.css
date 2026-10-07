@@ -1,0 +1,87 @@
+/* manage.html 의 모험 탭 — party.css 다음에 읽는다. 카드 틀(.slot)·빈 칸·옅은 선택 바탕은 파티 칸과 같다
+   Figma 05 `15 모험` `Adventure / Battle Party` `1662:1187`, 카드 02 `Adventure Slot Card` `1659:277` (docs/specs/adventure.md "모험 칸 카드") */
+
+/* 머리 — 모험 · 탐험|배틀 칩 … 가져오기 · 배틀 시작 */
+.head .segmented {
+  margin-left: 12px;
+}
+.head .segmented button:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+
+/* 카드 — 파티 카드에서 레벨·친밀도·만복도를 뺐다. 초상 120 · 이름·타입 · 기술 두 줄 (2026-10-08 카드 시안 C) */
+.battle-card {
+  display: block;
+}
+.battle-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.battle-body > .portrait {
+  flex: none;
+  width: 120px;
+  height: 120px;
+}
+.battle-body .info {
+  flex: 1;
+  min-width: 0;
+}
+/* 기술 두 줄 — 칸 폭 112(줄이 더 좁으면 줄 폭). 첫째는 왼쪽, 둘째는 오른쪽에 붙인다 */
+.battle-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.battle-moves .move-pill {
+  width: 112px;
+  max-width: 100%;
+}
+.battle-moves .move-pill:nth-child(2) {
+  align-self: flex-end;
+}
+
+/* 출전 불가 — 본문을 흐리게 하고 오른쪽 위에 빨간 점과 까닭 글자. 컬러 테두리로 강조하지 않는다 */
+.battle-card.blocked .battle-body {
+  opacity: 0.45;
+}
+.battle-blocked {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--danger-ink);
+  font: 700 10px/18px var(--font-small);
+  white-space: nowrap;
+}
+.battle-blocked::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+/* 든 칸의 우클릭 메뉴 — 박스 머리 메뉴와 같은 목록 모양(.sort-menu) */
+.battle-slot {
+  position: relative;
+}
+.battle-slot > .slot {
+  width: 100%;
+}
+.battle-menu {
+  position: absolute;
+  z-index: 3;
+  top: 40px;
+  right: 12px;
+}
+
+/* 개체 고르기 모달 — 교환의 고르기판(.trade-pick)을 그대로 쓴다 */
+.dialog.battle-pick {
+  width: 560px;
+}

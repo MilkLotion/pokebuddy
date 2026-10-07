@@ -56,7 +56,7 @@
     "dev:account": "npm run build && node dist/tools/dev/dev-test.js start --account",
     "test:e2e": "npm run build && node dist/tools/e2e/e2e-companion.js",
     "verify:build": "npm run build && node dist/tools/data/build-verify.js",
-    "data:build": "npm run build && node dist/tools/data/build-dex.js && node dist/tools/data/build-names.js && node dist/tools/data/build-species.js && node dist/tools/data/build-evo.js && node dist/tools/data/build-evo-items.js && node dist/tools/data/build-unlocks.js && node dist/tools/data/build-natures.js && node dist/tools/data/build-items.js && node dist/tools/data/build-dex-text.js",
+    "data:build": "npm run build && node dist/tools/data/build-dex.js && node dist/tools/data/build-names.js && node dist/tools/data/build-species.js && node dist/tools/data/build-evo.js && node dist/tools/data/build-evo-items.js && node dist/tools/data/build-unlocks.js && node dist/tools/data/build-natures.js && node dist/tools/data/build-items.js && node dist/tools/data/build-dex-text.js && node dist/tools/data/build-move-text.js && node dist/tools/data/build-type-chart.js && node dist/tools/data/build-mega-battle.js",
     "logo:build": "npm run build && node scripts/sync-official-logo.js"
   },
   "dependencies": {

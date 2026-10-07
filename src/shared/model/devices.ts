@@ -1,7 +1,7 @@
 // 화면 모델 — 기기 창 다섯(도감·파티 상세·상점·가방·파티 교체)이 받는 값과 돌려보내는 단추. 타입만 둔다
 
 import type { DexDetail, EvoNodeView } from "./detail.js";
-import type { PetView } from "./snapshot.js";
+import type { BattleSlotView, PetView } from "./snapshot.js";
 import type { SlotState } from "../save-v3.js";
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
@@ -166,3 +166,33 @@ export interface PetDeviceInput {
   dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다
   busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
 }
+
+// ── 배틀 파티 상세 기기 창 ─────────────────────────────────────────────────────
+// 모험 탭의 배틀 칸 카드를 누르면 뜬다. 실제 능력치(방사형 그래프)·특성·보유 기술을 보인다 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
+// 설정창은 칸 번호만 보내고(BattleDeviceInput), 메인이 지금 스냅샷으로 모델을 만든다 (src/view/device-battle.ts)
+// Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1662:224`
+export interface BattleDeviceInput {
+  slot: number; // 배틀 파티 칸 0~5
+  notice: string; // 마지막 실패 문구
+  busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
+}
+
+export interface BattleDeviceOpen {
+  slot: BattleSlotView; // 개체가 든 칸
+  caption: string; // 화면 첫 줄 — "배틀 파티 1번"
+  notice: string;
+  busy: string | null;
+  art: string | null; // 초상 열쇠 portrait:<종>[:shiny] (src/view/device-art.ts)
+  typeArt: Record<string, string>; // 기술 타입 → 흰 타입 아이콘 열쇠 type:<타입>
+  basis: string[]; // ? 말풍선의 능력치 기준 줄
+}
+
+export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt"> {
+  portrait: string | null; // data URI
+  typeIcons: Record<string, string | null>; // 타입 → 흰 타입 아이콘 data URI
+  side: "right" | "left";
+  volume: number;
+}
+
+// 기기 창에서 누른 단추 — 기술 순서 바꾸기. 순서는 개체에 저장한다 (src/battle/party.ts swapMoves)
+export type BattleDeviceAction = { kind: "swap"; petId: string };

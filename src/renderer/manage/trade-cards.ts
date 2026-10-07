@@ -3,6 +3,7 @@
 import { wrapPage } from "./grid-view.js";
 import { alertEl, lvNature } from "./widgets.js";
 import { portraitOf } from "./art-cache.js";
+import { petPickerEl } from "./pet-picker.js";
 import type { PetView } from "../../shared/model/snapshot.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
@@ -55,50 +56,30 @@ export const leftText = (ms: number): string => {
 // 파티는 파티 칸 수(6칸)만, 박스는 30칸. 칸은 정사각 64, 칸 영역은 5줄 높이로 고정해 넘겨도 창 높이가 그대로다. 단일 포켓몬 칸은 흐리게 막는다
 // 제목과 넘김을 한 줄에 둔다 — 기본 창 높이(682)에서 스크롤이 없다 (2026-10-02 사용자 결정 B안, Figma 03 `Trade Dialog` `State=Offer`)
 function tradePicker(t: TradeScreen): HTMLElement {
-  const box = el("div", "trade-pick");
   const singles = new Set(t.singles);
-  const cell = (pet: PetView): HTMLElement => {
-    const b = buttonEl("cell trade-cell");
-    b.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
-    if (pet.shiny) b.appendChild(shinyIcon(10));
-    const single = singles.has(pet.id);
-    b.disabled = single || t.myReady || t.busy;
-    if (single) {
-      b.classList.add("off");
-      b.title = "단일 포켓몬은 교환할 수 없어요";
-    }
-    b.setAttribute("aria-pressed", String(pet.id === t.myPetId));
-    b.addEventListener("click", () => void tradeSend("trade.offer", pet.id));
-    return b;
-  };
   const boxes = ui.view?.boxes ?? [];
   if (tradeUi.page > boxes.length) tradeUi.page = 0;
-  const shown = tradeUi.page === 0 ? null : boxes[tradeUi.page - 1];
-  // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다
-  const slots: (PetView | null)[] = shown ? shown.slots : (ui.view?.party.slots ?? []).map((s) => s.pet ?? null);
-  const pager = el("div", "pager trade-pager");
-  const pages = boxes.length + 1; // 파티 판 + 박스. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
-  const prev = buttonEl("", "◀");
-  prev.setAttribute("aria-label", "앞 판");
-  prev.addEventListener("click", () => {
-    tradeUi.page = wrapPage(tradeUi.page - 1, pages);
-    drawDialog();
+  // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
+  const pages = [{ name: "파티", slots: (ui.view?.party.slots ?? []).map((s) => s.pet ?? null) }, ...boxes.map((b) => ({ name: b.name, slots: b.slots }))];
+  return petPickerEl({
+    title: "보낼 포켓몬",
+    pages,
+    page: tradeUi.page,
+    setPage: (page) => {
+      tradeUi.page = page;
+      drawDialog();
+    },
+    cell: (pet) => {
+      const single = singles.has(pet.id);
+      return {
+        disabled: single || t.myReady || t.busy,
+        off: single,
+        ...(single ? { title: "단일 포켓몬은 교환할 수 없어요" } : {}),
+        pressed: pet.id === t.myPetId,
+        pick: () => void tradeSend("trade.offer", pet.id),
+      };
+    },
   });
-  const next = buttonEl("", "▶");
-  next.setAttribute("aria-label", "다음 판");
-  next.addEventListener("click", () => {
-    tradeUi.page = wrapPage(tradeUi.page + 1, pages);
-    drawDialog();
-  });
-  const used = slots.filter((p) => p != null).length;
-  pager.append(prev, el("span", "label", shown ? shown.name : "파티"), next, el("span", "used", `${used} / ${slots.length}`));
-  const head = el("div", "trade-pick-head");
-  head.append(el("strong", undefined, "보낼 포켓몬"), pager);
-  box.appendChild(head);
-  const grid = el("div", "trade-grid");
-  for (const pet of slots) grid.appendChild(pet ? cell(pet) : el("div", "cell blank trade-cell"));
-  box.appendChild(grid);
-  return box;
 }
 
 // 세로 카드 — 제목, 초상, 이름, 레벨·타입 배지 (Figma 02 `Trade Offer Card` `1345:50196`)

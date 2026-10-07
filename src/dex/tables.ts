@@ -46,6 +46,40 @@ export interface EvoItemRow {
 }
 export const evoItemTable = (opts?: DexOptions): Record<string, EvoItemRow> => loadJson<Record<string, EvoItemRow>>("evo-items.json", opts);
 
+// ── data/moves.json ── 기술 표. 규칙은 docs/specs/moves.md
+export type MoveClass = "physical" | "special" | "status";
+export interface MoveRow {
+  ko: string;
+  en?: string;
+  type: string;
+  class: MoveClass;
+  power?: number;
+  accuracy?: number | null; // null 이면 반드시 맞는다
+  priority?: number;
+  cooldown?: number; // 쿨타임(초)
+  traits?: string[];
+}
+export const moveTable = (opts?: DexOptions): Record<string, MoveRow> => loadJson<Record<string, MoveRow>>("moves.json", opts);
+
+// ── data/species-moves.json ── 종마다 기술 2개. 칸이 객체면 기술 기본값을 덮는다
+export type SpeciesMoveCell = string | ({ id: string } & Partial<MoveRow>);
+export interface SpeciesMoveRow {
+  moves: SpeciesMoveCell[];
+  special?: string;
+}
+export const speciesMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow> => loadJson<Record<string, SpeciesMoveRow>>("species-moves.json", opts);
+
+// ── data/move-text.ko.json ── 기술 id → 원작 한국어 설명. 설명이 없는 기술은 키가 없다
+export const moveTextTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("move-text.ko.json", opts);
+
+// ── data/abilities.json · data/species-abilities.json ── 특성 표와 종마다 특성 하나
+export interface AbilityRow {
+  ko: string;
+  en?: string;
+}
+export const abilityTable = (opts?: DexOptions): Record<string, AbilityRow> => loadJson<Record<string, AbilityRow>>("abilities.json", opts);
+export const speciesAbilityTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("species-abilities.json", opts);
+
 // ── data/achievements.json ──
 export type AchievementReward = "party-slot" | { pokemon: string } | { points: number } | { egg: string } | { item: string; count?: number };
 

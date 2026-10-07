@@ -2,7 +2,9 @@
 // 적용한 프리셋 줄은 옅은 바탕과 `적용 중` 글자다. 강조 테두리는 쓰지 않는다. 바닥 단추 줄은 없다.
 // 줄을 누르면 그 프리셋을 적용하고 닫는다 — 박스 순서 모달의 타일과 같은 관례. 적용한 줄은 닫기만 한다
 // Figma 05 `Party / Preset Overview · 5` `1590:63534`, 본문은 03 `Preset Overview Panel` `1590:60879`, 줄은 02 `Preset Row` `1590:60878`, 칸은 02 `Preset Cell` `1601:66627`
-// 여는 곳은 파티 탭 머리의 햄버거 메뉴 `전체보기` 다
+// 여는 곳은 파티 탭 머리의 햄버거 메뉴 `전체보기` 다.
+// 모험 탭의 `가져오기`도 이 모달을 연다(battle) — 제목은 `기존 파티 가져오기`, `적용 중` 표시는 없고, 줄을 누르면 그 프리셋을 배틀 파티로 가져온다
+// (docs/specs/adventure.md "기존 파티 가져오기", Figma 05 `15 모험` `Adventure / Import Preset` `1662:1955`)
 import type { PresetView, SlotView } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
@@ -36,7 +38,7 @@ function overviewCell(slot: SlotView): HTMLElement {
   return cell;
 }
 
-function presetRow(p: PresetView, active: boolean): HTMLButtonElement {
+function presetRow(p: PresetView, active: boolean, battle: boolean): HTMLButtonElement {
   const row = buttonEl(active ? "preset-row on" : "preset-row");
   row.setAttribute("aria-pressed", String(active));
   const head = el("div", "po-head");
@@ -47,6 +49,10 @@ function presetRow(p: PresetView, active: boolean): HTMLButtonElement {
   row.append(head, cells);
   row.addEventListener("click", () => {
     closeDialog();
+    if (battle) {
+      void sendCommand("battle.import", "", { preset: p.index }, { keepOpen: true });
+      return;
+    }
     if (active) return;
     hold.party = null; // 프리셋 넘김(stepPreset)과 같다 — 든 파티 개체를 내려놓는다
     void sendCommand("party.preset", "", { preset: p.index }, { keepOpen: true });
@@ -54,7 +60,7 @@ function presetRow(p: PresetView, active: boolean): HTMLButtonElement {
   return row;
 }
 
-export function drawPresetOverview(): void {
+export function drawPresetOverview(battle = false): void {
   const v = ui.view;
   if (!v) {
     closeDialog();
@@ -62,12 +68,12 @@ export function drawPresetOverview(): void {
   }
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "프리셋 전체보기"));
+  titles.appendChild(el("h2", undefined, battle ? "기존 파티 가져오기" : "프리셋 전체보기"));
   const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   top.append(titles, x);
   const list = el("div", "preset-list scroll");
-  for (const p of v.party.presets) list.appendChild(presetRow(p, p.index === v.party.preset.index));
+  for (const p of v.party.presets) list.appendChild(presetRow(p, !battle && p.index === v.party.preset.index, battle));
   dialogEl.append(top, list);
 }

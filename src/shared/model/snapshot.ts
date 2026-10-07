@@ -123,6 +123,31 @@ export interface PresetView {
   slots: SlotView[];
 }
 
+// 기술 한 개 — 모험 칸 카드의 작은 기술 칸과 배틀 파티 상세 기기 창이 쓴다 (src/view/battle.ts)
+export interface MoveView {
+  id: string;
+  name: string;
+  typeId: string; // 타입 키 (electric 등) — 타입 조각 색과 타입 아이콘을 고른다
+  typeName: string;
+  meta: string; // 분류·위력·명중·쿨타임 한 줄 — "물리 · 위력 120 · 명중 100 · 쿨타임 8초"
+  text: string | null; // 원작 설명 — 없는 기술은 null (말풍선에 이름만)
+}
+
+// 배틀 파티 한 칸 (docs/specs/adventure.md "배틀 파티", "출전 불가")
+export interface BattleSlotView {
+  index: number;
+  pet?: PetView; // 빈 칸이면 없다
+  moves: MoveView[]; // 개체의 기술 순서대로 (PetV3.moveSwap)
+  blocked: string | null; // 출전 불가 글자 — "출전 불가 · 초전설 1마리까지". 없으면 null
+  stats: { label: string; value: number }[]; // 실제 능력치 6개 — HP·공격·방어·스피드·특수방어·특수공격 (방사형 그래프의 꼭짓점 순서). 종족값이 없으면 빈 목록
+  ability: string | null; // 특성 이름 — 표에 없으면 null
+}
+
+export interface BattleView {
+  slots: BattleSlotView[]; // 6칸
+  canStart: boolean; // 배틀을 시작할 수 있다 — 지금은 배틀이 없어 화면이 늘 막는다
+}
+
 export interface EggView {
   id: string;
   kind: string;
@@ -243,6 +268,7 @@ export interface Snapshot {
   // presets 는 가진 프리셋 전부 — 번호 순. 적용한 프리셋도 들고 칸은 slots 와 같다 (2026-10-07 프리셋 전체보기)
   party: { slots: SlotView[]; shown: number; usable: number; preset: { index: number; count: number; max: number; name: string }; presets: PresetView[] };
   boxes: BoxView[];
+  battle: BattleView; // 배틀 파티 — 모험 탭 (2026-10-08)
   eggs: { list: EggView[]; used: number; size: number };
   bag: BagItemView[];
   dex: { unlocked: number; obtained: number; shiny: number };

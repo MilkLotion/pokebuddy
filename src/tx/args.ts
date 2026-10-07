@@ -23,6 +23,14 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
       return { preset: int(a.preset) };
     case "party.preset.rename":
       return { preset: int(a.preset), name: typeof a.name === "string" ? a.name : undefined };
+    case "battle.set":
+      return { petId: target ?? str(a.petId), slotIndex: int(a.slotIndex) };
+    case "battle.clear":
+      return { slotIndex: int(a.slotIndex) };
+    case "battle.import":
+      return { preset: int(a.preset) };
+    case "battle.moves":
+      return { petId: target ?? str(a.petId) };
     case "egg.open":
       return { eggId: target ?? str(a.eggId) };
     case "bag.use":

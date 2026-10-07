@@ -74,6 +74,7 @@ export const REASONS = [
   "trade-locked",
   "last-pet",
   "in-preset",
+  "in-battle", // 배틀 파티에 든 개체 (src/battle/party.ts)
   // 진화·모습·메가
   "no-step",
   "need-choice",

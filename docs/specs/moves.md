@@ -17,6 +17,10 @@
 | [`data/species-moves.json`](../../data/species-moves.json) | 종마다 기본 기술 2개와 특수 종 표시 |
 | [`data/abilities.json`](../../data/abilities.json) | 특성 표. 이름, 분류, 적용 시점, 오토배틀 적용안 |
 | [`data/species-abilities.json`](../../data/species-abilities.json) | 종마다 특성 하나 |
+| [`data/move-text.ko.json`](../../data/move-text.ko.json) | 기술 설명(한국어). 키는 `moves.json` 의 기술 id 다 |
+| [`data/type-chart.json`](../../data/type-chart.json) | 타입 상성표. 공격 타입 → 방어 타입 → 배율(0·0.5·1·2), 18타입 |
+| [`data/mega-battle.json`](../../data/mega-battle.json) | 메가·원시회귀 모습의 종족값 6개(`stats`)와 특성(`ability`). 키는 `data/mega.json` 의 모습이다 |
+| [`data/species.defaults.json`](../../data/species.defaults.json) `stats` | 종족값 6개. 순서는 HP·공격·방어·특수공격·특수방어·스피드다 |
 
 `moves.json` 기술 필드:
 
@@ -32,6 +36,14 @@
 | `cooldown` | 쿨타임(초) |
 | `traits` | 성질. `contact`(접촉)·`bite`(물기)·`punch`(펀치)·`sound`(소리)·`pulse`(파동)·`ballistic`(탄환)·`slicing`(베기) |
 | `effects` | 부담과 효과. `charge`(충전)·`recharge`(반동으로 쉼)·`recoil`(반동 피해 %)·`halfHp`(자기 HP 절반)·`drain`(흡수 %)·`selfDrop`(자기 능력 하락 단계)·`rampage`(난동)·`hpScale`(HP 비례 위력) |
+
+`move-text.ko.json`·`type-chart.json`·`mega-battle.json`·`stats` 는 PokeAPI CSV 에서 만든다(`npm run data:build`). 손으로 고치지 않는다.
+
+- 기술 설명은 한국어 문장이 있는 가장 최근 버전 그룹의 문장이다. 줄바꿈은 빈칸으로 바꾼다.
+- 한국어 문장이 없는 기술은 키가 없다. 9세대·레전드 아르세우스 기술이 여기에 든다.
+- 리전폼과 특수 폼은 종이라 폼의 종족값을 쓴다. 메가진화 모습은 종이 아니라서 종 표에 `stats` 가 없다.
+- 메가진화 모습의 종족값과 특성은 `mega-battle.json` 에 있다. 메가 개체는 배틀·탐험에서 이 값으로 싸운다(2026-10-08 사용자 결정).
+- PokeAPI 에 특성이 없는 메가 모습은 기본 종의 특성을 쓰고 `baseAbility` 를 적는다. 메가다크라이, 메가지가르데, 메가제라오라, 메가싸리용이다(2026-10-08 사용자 결정).
 
 `species-moves.json` 칸이 문자열이면 기술 id 다. 칸이 객체면 기술 기본값을 덮는다. 변화기 전용기는 `class`·`power`·`cooldown` 을 덮는다. 모습에 따라 타입이 바뀌는 전용기는 `type` 을 덮는다. 예: 아르세우스(불꽃)의 심판의뭉치.
 
@@ -179,6 +191,7 @@
 - 게으름(게을로·게을킹): 첫 쿨타임은 보통이다. 한 번 쓴 뒤로 기술과 평타의 쿨타임이 2배다.
 - 슬로스타트(레지기가스): 첫 기술과 첫 평타까지의 쿨타임이 5배다.
 - 날씨 특성은 보류한다. 기술 고르기에 넣지 않는다.
+- 메가 모습의 특성 7개는 2026-10-08 에 더했다(사용자 결정). 부자유친·스카이스킨·Eelevate 는 `now` 다. 시작의바다·끝의대지·델타스트림은 날씨라 `later` 다. 관통드릴은 방어 기술이 없어 `none` 이다. Eelevate 는 PokeAPI 에 한국어 이름이 없어 영어 이름을 쓴다.
 
 ### 모습이 바뀌는 종
 
@@ -208,4 +221,6 @@
 
 - `node dist/tools/check/check-moves.js` 가 데이터 짜임새를 본다. `npm run selftest` 에 들어 있다.
 - 검사는 칸 수, 칸 타입, 기술·특성 id, 이름, 위력, 쿨타임을 본다.
+- 검사는 종족값 6개(합이 `bst`), 기술 설명 키, 상성표 18 × 18 과 배율 값도 본다.
+- 검사는 `mega-battle.json` 의 키가 `mega.json` 의 모습과 같은지, 종족값 6개와 특성 id 도 본다.
 - 검사는 종 타입과 다른 칸이 전용기인지 판단하지 않는다. 다른 칸은 하나까지만 허용한다.

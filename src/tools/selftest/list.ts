@@ -34,6 +34,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("bag"),
   tool("evolve"),
   tool("mega"),
+  tool("adventure"),
   tool("achievement"),
   tool("snapshot"),
   tool("devices"),
