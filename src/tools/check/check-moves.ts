@@ -10,7 +10,7 @@
 //   3. 칸 타입 — 단일 타입은 두 칸 모두 그 타입, 두 타입은 타입마다 한 칸. 종 타입과 다른 칸(전용기)은 하나까지. 웨더볼·대지의파동은 종 특성의 날씨·필드 타입으로 본다
 //   4. 칸은 모두 공격기다. 변화기 전용기는 보류(docs/specs/moves.md "보류 기능"). 예외는 special 종(반사·킬가르도)
 //   5. special 은 transform·reflect·sketch·wall·stance 중 하나이고 그에 맞는 칸 수다
-//   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다. 능력 변화(effects.stats)는 who·stat·change(±1~3)·chance(1~100). 쿨타임은 공식 값(기대 위력 ÷ 15초, 최소 2초, 선공기 ×0.8), 급소(effects.crit)는 high·always
+//   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다. 능력 변화(effects.stats)는 who·stat·change(±1~3)·chance(1~100). 쿨타임은 공식 값(기대 위력 ÷ 15초, 최소 2초, 선공기 ×0.8), 급소(effects.crit)는 high·always. 상태 이상(effects.status)은 kind(하나 또는 목록)·chance(1~100), 풀죽음(effects.flinch)은 1~100
 //   7. 종 특성은 abilities.json 에 있고, 특성은 한국어 이름과 when(now·later·none)이 있다
 //   8. 모든 종에 종족값 6개(stats)가 있다. 합은 bst, 여섯째는 baseSpeed 와 같다
 //   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
@@ -35,7 +35,7 @@ interface MoveEntry {
   accuracy: number | null;
   priority?: number;
   cooldown?: number;
-  effects?: { stats?: StatEffect[]; crit?: string };
+  effects?: { stats?: StatEffect[]; crit?: string; status?: { kind: string | string[]; chance: number }; flinch?: number };
 }
 
 // 공격기의 능력 변화 — 맞힌 뒤 chance% 로 건다 (docs/specs/moves.md "능력 변화")
@@ -46,6 +46,8 @@ interface StatEffect {
   chance: number;
 }
 const STAT_WHO = new Set(["self", "target"]);
+// 공격기의 상태 이상 — 맞힌 뒤 chance% 로 건다. kind 가 목록이면 그중 하나 (docs/specs/moves.md "상태 이상")
+const STATUS_KINDS = new Set(["burn", "paralysis", "poison", "toxic", "freeze", "sleep", "confusion", "trap"]);
 // 찍찍베기(1~10회, 한 타마다 90% 로 이어짐)의 기대 타수
 const EXP_HITS_10 = Array.from({ length: 10 }, (_, k) => 0.9 ** (k + 1)).reduce((a, b) => a + b, 0);
 const ceil1 = (x: number): number => Math.ceil(x * 10 - 1e-9) / 10;
@@ -130,6 +132,13 @@ export function moveDataFindings(): string[] {
       if ((m.priority ?? 0) > 0) want = ceil1(want * 0.8);
       if (m.cooldown !== want) bad.push(`기술 ${id}: 쿨타임 ${m.cooldown} — 공식 ${want}`);
     }
+    const st = m.effects?.status;
+    if (st !== undefined) {
+      const kinds = Array.isArray(st.kind) ? st.kind : [st.kind];
+      if (!kinds.length || !kinds.every((k) => STATUS_KINDS.has(k)) || !(st.chance >= 1 && st.chance <= 100)) bad.push(`기술 ${id}: 상태 이상 ${JSON.stringify(st)}`);
+    }
+    const fl = m.effects?.flinch;
+    if (fl !== undefined && !(Number.isInteger(fl) && fl >= 1 && fl <= 100)) bad.push(`기술 ${id}: 풀죽음 ${fl}`);
     for (const e of m.effects?.stats ?? []) {
       const ok = STAT_WHO.has(e.who) && STAT_KEYS.has(e.stat) && Number.isInteger(e.change) && e.change !== 0 && Math.abs(e.change) <= 3 && e.chance >= 1 && e.chance <= 100;
       if (!ok) bad.push(`기술 ${id}: 능력 변화 ${JSON.stringify(e)}`);
