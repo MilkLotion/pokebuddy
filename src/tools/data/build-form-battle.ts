@@ -5,8 +5,9 @@
 // 출처: PokeAPI 저장소의 CSV (https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv)
 //   pokemon.csv        포켓몬 식별자 → 포켓몬 번호
 //   pokemon_stats.csv  포켓몬 번호 → 종족값 (stat_id 1~6 = HP·공격·방어·특수공격·특수방어·스피드)
+//   pokemon_types.csv  포켓몬 번호 → 타입 번호(slot 순서), types.csv 타입 번호 → 식별자
 //
-// 결과: { "<종 슬러그>": { "form": "<PokeAPI 모습 식별자>", "stats": [hp, atk, def, spa, spd, spe] } }
+// 결과: { "<종 슬러그>": { "form": "<PokeAPI 모습 식별자>", "stats": [hp, atk, def, spa, spd, spe], "types": ["<타입>", …] } }
 //   - 종 표(species.defaults.json)의 값은 기본 모습이다. 이 파일은 전투에서 바뀌는 다른 모습 하나다
 //   - 규칙은 docs/specs/moves.md "모습이 바뀌는 종" — 언제 바뀌는지는 엔진(src/battle/engine.ts)이 정한다
 import path from "node:path";
@@ -21,13 +22,17 @@ const FORMS: Readonly<Record<string, string>> = {
   minior: "minior-red", // 유성의 모습 → 코어의 모습 (색은 능력치가 같다)
   palafin: "palafin-hero", // 나이브폼 → 마이티폼
   terapagos: "terapagos-terastal", // 노말폼 → 테라스탈폼
+  "darmanitan-galar-standard": "darmanitan-galar-zen", // 가라르 불비달마 → 달마모드 (얼음·불꽃)
 };
 
 export async function build(): Promise<void> {
-  const [pokemonRows, statRows] = await Promise.all([
+  const [pokemonRows, statRows, typeRows, typeNames] = await Promise.all([
     csv("pokemon.csv", ["id", "identifier"]),
     csv("pokemon_stats.csv", ["pokemon_id", "stat_id", "base_stat"]),
+    csv("pokemon_types.csv", ["pokemon_id", "type_id", "slot"]),
+    csv("types.csv", ["id", "identifier"]),
   ]);
+  const typeName = new Map(typeNames.map((r) => [r.id, r.identifier]));
   const idOf = new Map(pokemonRows.map((r) => [r.identifier, r.id]));
   const sixOf = new Map<string, number[]>();
   for (const r of statRows) {
@@ -38,17 +43,22 @@ export async function build(): Promise<void> {
     sixOf.set(r.pokemon_id, six);
   }
 
-  const out: Record<string, { form: string; stats: number[] }> = {};
+  const out: Record<string, { form: string; stats: number[]; types: string[] }> = {};
   for (const [species, form] of Object.entries(FORMS)) {
     const no = must(idOf.get(form), `포켓몬 식별자 ${form}`);
     const stats = sixOf.get(no);
     if (!stats || stats.some((v) => !v)) throw new Error(`종족값이 없다: ${form} ${no}`);
-    out[species] = { form, stats };
+    const types = typeRows
+      .filter((r) => r.pokemon_id === no)
+      .sort((a, b) => Number(a.slot) - Number(b.slot))
+      .map((r) => must(typeName.get(r.type_id), `타입 번호 ${r.type_id}`));
+    if (!types.length) throw new Error(`타입이 없다: ${form} ${no}`);
+    out[species] = { form, stats, types };
   }
 
   writeLineJson(OUT, out);
   process.stdout.write(`모습 배틀 값: ${OUT} — ${Object.keys(out).length}종\n`);
-  for (const [k, v] of Object.entries(out)) process.stdout.write(`  ${k} ${v.form} ${JSON.stringify(v.stats)}\n`);
+  for (const [k, v] of Object.entries(out)) process.stdout.write(`  ${k} ${v.form} ${JSON.stringify(v.stats)} ${v.types.join("/")}\n`);
 }
 
 if (require.main === module) runBuild(build);

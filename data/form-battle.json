@@ -1,7 +1,8 @@
 {
-  "aegislash": {"form":"aegislash-blade","stats":[60,140,50,140,50,60]},
-  "wishiwashi": {"form":"wishiwashi-school","stats":[45,140,130,140,135,30]},
-  "minior": {"form":"minior-red","stats":[60,100,60,100,60,120]},
-  "palafin": {"form":"palafin-hero","stats":[100,160,97,106,87,100]},
-  "terapagos": {"form":"terapagos-terastal","stats":[95,95,110,105,110,85]}
+  "aegislash": {"form":"aegislash-blade","stats":[60,140,50,140,50,60],"types":["steel","ghost"]},
+  "wishiwashi": {"form":"wishiwashi-school","stats":[45,140,130,140,135,30],"types":["water"]},
+  "minior": {"form":"minior-red","stats":[60,100,60,100,60,120],"types":["rock","flying"]},
+  "palafin": {"form":"palafin-hero","stats":[100,160,97,106,87,100],"types":["water"]},
+  "terapagos": {"form":"terapagos-terastal","stats":[95,95,110,105,110,85],"types":["normal"]},
+  "darmanitan-galar-standard": {"form":"darmanitan-galar-zen","stats":[105,160,55,30,55,135],"types":["ice","fire"]}
 }

@@ -69,7 +69,7 @@ export function buildFighter(src: FighterSource, basis: StatBasis = BATTLE_BASIS
     ability,
     special: special && SPECIALS.has(special) ? (special as EngineFighter["special"]) : null,
     range: rangeOfMoves(moves),
-    altForm: alt ? { species: alt.form, stats: real(alt.stats) } : null,
+    altForm: alt ? { species: alt.form, stats: real(alt.stats), ...(alt.types ? { types: alt.types } : {}) } : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
   };
 }

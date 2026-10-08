@@ -21,7 +21,7 @@
 | [`data/type-chart.json`](../../data/type-chart.json) | 타입 상성표. 공격 타입 → 방어 타입 → 배율(0·0.5·1·2), 18타입 |
 | [`data/mega-battle.json`](../../data/mega-battle.json) | 메가·원시회귀 모습의 종족값 6개(`stats`)와 특성(`ability`). 키는 `data/mega.json` 의 모습이다 |
 | [`data/species.defaults.json`](../../data/species.defaults.json) `stats` | 종족값 6개. 순서는 HP·공격·방어·특수공격·특수방어·스피드다 |
-| [`data/form-battle.json`](../../data/form-battle.json) | 전투 중 모습이 바뀌는 5종의 다른 모습 종족값. 킬가르도(블레이드폼)·약어리(무리의 모습)·메테노(코어의 모습)·돌핀맨(마이티폼)·테라파고스(테라스탈폼). PokeAPI CSV 에서 만든다(`build-form-battle`) |
+| [`data/form-battle.json`](../../data/form-battle.json) | 전투 중 모습이 바뀌는 6종의 다른 모습 종족값과 타입. 킬가르도(블레이드폼)·약어리(무리의 모습)·메테노(코어의 모습)·돌핀맨(마이티폼)·테라파고스(테라스탈폼)·가라르 불비달마(달마모드, 얼음·불꽃). PokeAPI CSV 에서 만든다(`build-form-battle`) |
 
 `moves.json` 기술 필드:
 

@@ -168,6 +168,7 @@ export interface EngineMove {
 export interface EngineForm {
   species: string;
   stats: readonly number[]; // 실제 능력치 6개
+  types?: readonly string[]; // 모습의 타입이 다르면(달마모드)
 }
 
 export interface EngineFighter {
@@ -288,6 +289,8 @@ interface Unit {
   lastAim: Unit | null; // 잠복 — 기술을 마지막으로 쓴 대상
   cursedMs: number; // 저주받은바디 — 다음 쿨타임에 더할 시간
   quickHalf: boolean; // 퀵드로 — 다음 쿨타임 절반
+  hungry: boolean; // 꼬르륵스위치 — 배고픈 모양(오라휠이 악)
+  gulp: "arrokuda" | "pikachu" | null; // 그대로꿀꺽미사일 — 문 먹이
   moveHit: boolean; // 기술 피해를 받은 적이 있는가 — "HP 가득"·"첫 피해" 특성은 처음 맞는 기술에만, 평타는 무시 (moves.md "특성")
 }
 
@@ -483,6 +486,8 @@ export function runBattle(input: BattleInput): BattleResult {
       cursedMs: 0,
       quickHalf: false,
       moveHit: false,
+      hungry: false,
+      gulp: null,
     };
   }
 
@@ -649,6 +654,7 @@ export function runBattle(input: BattleInput): BattleResult {
     let type = m.type;
     let power = m.power ?? 0;
     let accuracy = m.accuracy;
+    if (m.id === "aura-wheel" && ab(u) === "hunger-switch" && u.hungry) type = "dark"; // 꼬르륵스위치 — 배고픈 모양
     if (m.id === "weather-ball" && weather && WEATHER_TYPE[weather]) {
       type = WEATHER_TYPE[weather]!;
       power = 100;
@@ -841,6 +847,7 @@ export function runBattle(input: BattleInput): BattleResult {
     if (d === "bulletproof" && m.traits.includes("ballistic")) return "plain";
     if (d === "soundproof" && m.traits.includes("sound")) return "plain";
     if (d === "wonder-guard" && eff <= 1) return "plain";
+    if (d === "wind-rider" && m.traits.includes("wind")) return { stat: [1, 1] }; // 바람타기 — 바람 기술 무효, 공격 +1
     return null;
   }
 
@@ -1009,6 +1016,13 @@ export function runBattle(input: BattleInput): BattleResult {
       if (a === "wandering-spirit") [o.ability, u.ability] = [u.ability, o.ability];
       if (o.hp <= 0 && a === "aftermath") strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 4)), t);
     }
+    // 그대로꿀꺽미사일 — 문 먹이를 뱉는다. 때린 쪽이 자기 최대 HP 1/4, 삼켰던 것이 아리코면 방어 −1(피카츄는 마비라 지금 효과 없음)
+    if (o.gulp) {
+      const prey = o.gulp;
+      o.gulp = null;
+      strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 4)), t);
+      if (prey === "arrokuda" && u.hp > 0) setStage(u, 2, -1, t, o);
+    }
     if (o.hp <= 0) {
       if (a === "innards-out") strikeBack(o, u, d, t);
       return;
@@ -1025,6 +1039,7 @@ export function runBattle(input: BattleInput): BattleResult {
       setStage(o, 5, 1, t, o);
     }
     if (a === "electromorphosis") o.electro = true;
+    if (a === "wind-power" && m.traits.includes("wind")) o.electro = true; // 풍력발전 — 다음 전기 기술 ×2
     if (a === "color-change") o.types = [type];
     if (a === "cursed-body" && rand() < 0.3) u.cursedMs += 3000;
     if (a === "cotton-down") for (const v of alive(u.side)) setStage(v, 5, -1, t, o);
@@ -1037,6 +1052,7 @@ export function runBattle(input: BattleInput): BattleResult {
     const pct = (u.hp * 100) / u.maxHp;
     if (ab(u) === "schooling" && u.base.schoolingReady && u.inAlt && pct < R.schoolingPct) toForm(u, false, t);
     else if (ab(u) === "shields-down" && !u.inAlt && pct <= R.shieldsDownPct) toForm(u, true, t);
+    else if (ab(u) === "zen-mode" && !u.inAlt && pct <= 50) toForm(u, true, t); // 달마모드 — HP 50% 이하, 판 끝까지
   }
 
   function toForm(u: Unit, alt: boolean, t: number): void {
@@ -1046,6 +1062,7 @@ export function runBattle(input: BattleInput): BattleResult {
     const src = alt ? f.stats : u.base.stats;
     u.stats = [u.stats[0]!, ...src.slice(1)];
     u.species = alt ? f.species : u.base.species;
+    if (f.types) u.types = alt ? f.types : u.base.types;
     events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species });
   }
 
@@ -1142,6 +1159,8 @@ export function runBattle(input: BattleInput): BattleResult {
     } else if (m.class !== "status" && m.power) attack(u, m, t, stacks);
 
     if (m.effects.rampage) u.busyUntil = t + R.rampageMs;
+    // 그대로꿀꺽미사일 — 파도타기·다이빙을 쓰면 먹이를 문다. HP 50% 초과면 아리코, 아니면 피카츄
+    if (ab(u) === "gulp-missile" && (m.id === "surf" || m.id === "dive") && u.hp > 0) u.gulp = u.hp * 2 > u.maxHp ? "arrokuda" : "pikachu";
 
     u.uses += 1;
     if (ab(u) === "truant") u.truant = true;
@@ -1314,6 +1333,7 @@ export function runBattle(input: BattleInput): BattleResult {
         if (u.hp <= 0) continue;
         const tick = Math.max(1, Math.floor(u.maxHp / 16));
         if (ab(u) === "speed-boost") setStage(u, 5, 1, t, u);
+        if (ab(u) === "hunger-switch") u.hungry = !u.hungry; // 배부른 모양 → 배고픈 모양 → … 5초마다
         if (ab(u) === "moody") {
           const up = [1, 2, 3, 4, 5].filter((i) => stageOf(u, i, t) < STAGE_MAX);
           if (up.length) {

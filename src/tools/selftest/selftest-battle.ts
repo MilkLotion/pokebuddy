@@ -340,6 +340,34 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.strictEqual(of(il.events, "damage").find((e) => e.side === 0)?.target, 1, "일루전은 대상에서 빠진다");
 }
 
+// ── 특성 다섯 — 바람타기·풍력발전·달마모드·꼬르륵스위치·그대로꿀꺽미사일 ──
+{
+  const wall = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const gust = mv("gust", { type: "flying", class: "special", power: 40, cooldownMs: 1000, traits: ["wind"] });
+  // 바람타기 — 바람 기술 무효, 공격 +1
+  const wr = run([unit({ moves: [gust] })], [wall({ ability: "wind-rider" })], 1, 1100, pos);
+  assert.strictEqual(of(wr.events, "damage").find((e) => e.source === "gust")!.mult, 0, "바람타기 무효");
+  assert.ok(of(wr.events, "stat").some((e) => e.side === 1 && e.stat === 1 && e.stage === 1), "바람타기 공격 +1");
+  // 달마모드 — HP 50% 이하면 얼음·불꽃 모습
+  const zen = buildFighter({ species: "darmanitan-galar-standard" })!;
+  assert.deepStrictEqual(zen.altForm?.types, ["ice", "fire"]);
+  const hard = mv("hard", { power: 150, cooldownMs: 1000 });
+  const zr = run([unit({ stats: [999, 300, 999, 1, 999, 95], moves: [hard] })], [zen], 1, 6000, pos);
+  assert.ok(of(zr.events, "form").some((e) => e.side === 1 && e.species === "darmanitan-galar-zen"), "달마모드");
+  // 꼬르륵스위치 — 5초 뒤 배고픈 모양이면 오라휠이 악
+  const wheel = mv("aura-wheel", { type: "electric", power: 110, cooldownMs: 5500 });
+  const mp = run([unit({ ability: "hunger-switch", moves: [wheel] })], [wall({ ability: "battle-armor", types: ["psychic"] })], 1, 6000, pos);
+  assert.strictEqual(of(mp.events, "damage").find((e) => e.source === "aura-wheel")!.mult, 2, "배고픈 오라휠은 악 — 에스퍼에 2배");
+  // 그대로꿀꺽미사일 — 파도타기 뒤 기술에 맞으면 때린 쪽이 1/4, 아리코면 방어 −1
+  const surf = mv("surf", { type: "water", class: "special", power: 1, cooldownMs: 1000 });
+  const poke = mv("poke", { power: 1, cooldownMs: 2000 });
+  const gm = run([unit({ ability: "gulp-missile", stats: [999, 1, 999, 1, 999, 95], moves: [surf] })], [wall({ moves: [poke] })], 1, 2100, pos);
+  const back = of(gm.events, "reflect").find((e) => e.side === 0);
+  assert.strictEqual(back?.amount, Math.floor((999 * 3) / 4), "먹이를 뱉어 1/4");
+  assert.ok(of(gm.events, "stat").some((e) => e.side === 1 && e.stat === 2 && e.stage === -1), "아리코면 방어 −1");
+}
+
 // ── 전장 — 장애물 뽑기 ──
 {
   let seed = 7;

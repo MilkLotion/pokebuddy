@@ -95,6 +95,7 @@ export const megaBattleTable = (opts?: DexOptions): Record<string, MegaBattleRow
 export interface FormBattleRow {
   form: string; // PokeAPI 모습 식별자
   stats: number[];
+  types?: string[]; // 그 모습의 타입 — 기본 모습과 다를 때 쓴다(달마모드)
 }
 export const formBattleTable = (opts?: DexOptions): Record<string, FormBattleRow> => loadJson<Record<string, FormBattleRow>>("form-battle.json", opts);
 
