@@ -69,6 +69,7 @@ export interface MoveEffects {
   halfHp?: boolean;
   drain?: number;
   stats?: { who: "self" | "target"; stat: string; change: number; chance: number }[]; // 맞힌 뒤 chance% 로 능력 변화
+  crit?: "high" | "always"; // 급소율 (docs/specs/moves.md "급소")
   rampage?: boolean;
   hpScale?: boolean;
 }

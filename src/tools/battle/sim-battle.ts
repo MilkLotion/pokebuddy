@@ -5,6 +5,7 @@
 // 풀: general = 초전설·준전설 칸을 뺀 종 중 종족값 합 400 이상 / all = 종족값 합 400 이상 전부
 // 파티: 풀에서 6마리를 무작위로 고른다(겹칠 수 있다). 출전 제한·메가는 보지 않는다
 // 집계: 판 길이 분포, 90초 도달 비율, 평타·기술 피해 몫, 마리당 기술 사용, 스피드 5분위 승률, 종별 승률 상하위
+import fs from "node:fs";
 import { runBattle, type BattleEvent, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
 import { tierOf } from "../../battle/tier";
@@ -52,6 +53,7 @@ const quintile = new Map(bySpeed.map((f, i) => [f, Math.min(4, Math.floor((i * 5
 const q = [0, 0, 0, 0, 0].map(() => ({ win: 0, n: 0 }));
 const species = new Map<string, { win: number; n: number }>();
 const byRange = new Map<number, { win: number; n: number }>();
+const byType = new Map<string, { win: number; n: number }>();
 const lens: number[] = [];
 let timeouts = 0, draws = 0, basic = 0, skill = 0, uses = 0, fighters = 0;
 
@@ -80,6 +82,12 @@ for (let i = 0; i < N; i++) {
       rr.n++;
       rr.win += won;
       byRange.set(f.range, rr);
+      for (const ty of f.types) {
+        const tr = byType.get(ty) ?? { win: 0, n: 0 };
+        tr.n++;
+        tr.win += won;
+        byType.set(ty, tr);
+      }
     }),
   );
 }
@@ -93,8 +101,13 @@ out.push(`판 길이 p10 ${at(0.1)} · p25 ${at(0.25)} · 중앙 ${at(0.5)} · p
 out.push(`90초 도달 ${pct(timeouts, N)} · 무승부 ${pct(draws, N)}`);
 out.push(`평타 피해 몫 ${pct(basic, basic + skill)} · 마리당 기술 사용 ${(uses / fighters).toFixed(1)}번`);
 out.push(`스피드 5분위 승률(느림→빠름) ${q.map((x) => pct(x.win, x.n)).join(" / ")} · 경계 ${[0.2, 0.4, 0.6, 0.8].map((x) => bySpeed[Math.floor(bySpeed.length * x)]!.stats[5]).join(", ")}`);
-out.push(`사거리별 승률: ${[...byRange.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `${k === 1 ? "근접" : "원거리"} ${pct(v.win, v.n)} (${pool.filter((f) => f.range === k).length}종)`).join(" · ")}`);
+out.push(`사거리별 승률: ${[...byRange.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `사거리 ${k} ${pct(v.win, v.n)} (${pool.filter((f) => f.range === k).length}종)`).join(" · ")}`);
+out.push(`타입별 승률: ${[...byType.entries()].map(([k, v]) => ({ k, r: v.win / v.n })).sort((a, b) => b.r - a.r).map((x) => `${x.k} ${(x.r * 100).toFixed(0)}%`).join(", ")}`);
 const ranked = [...species.entries()].filter(([, v]) => v.n >= 30).map(([k, v]) => ({ k, rate: v.win / v.n, n: v.n })).sort((a, b) => b.rate - a.rate);
 out.push(`종별 승률 상위: ${ranked.slice(0, TOP).map((x) => `${x.k} ${(x.rate * 100).toFixed(0)}%`).join(", ")}`);
 out.push(`종별 승률 하위: ${ranked.slice(-TOP).map((x) => `${x.k} ${(x.rate * 100).toFixed(0)}%`).join(", ")}`);
 process.stdout.write(out.join("\n") + "\n");
+
+// --dump <경로> — 종별 승·판 수를 JSON 으로 남긴다(분석용)
+const dump = arg("dump", "");
+if (dump) fs.writeFileSync(dump, JSON.stringify(Object.fromEntries(species)));

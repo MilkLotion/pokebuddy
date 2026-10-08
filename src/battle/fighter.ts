@@ -5,7 +5,7 @@ import { megaOf } from "../dex/mega.js";
 import { profileOf } from "../dex/species.js";
 import { formBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, typeChartTable } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
-import { ENGINE_RULES, type EngineFighter, type EngineMove } from "./engine.js";
+import { ENGINE_RULES, rangeOfMoves, type EngineFighter, type EngineMove } from "./engine.js";
 import { BATTLE_RULES } from "./rules.js";
 import { realStat, type StatBasis } from "./stats.js";
 
@@ -47,8 +47,7 @@ export function engineMoves(species: string, swap: boolean, opts?: DexOptions): 
   return swap ? out.reverse() : out;
 }
 
-// 사거리 — 종족값 특수공격이 공격보다 높으면 원거리, 같거나 낮으면 근접 (2026-10-08 사용자 결정, 메가 모습은 메가 종족값)
-export const rangeOf = (base: readonly number[]): number => (base[3]! > base[1]! ? ENGINE_RULES.rangedRange : ENGINE_RULES.meleeRange);
+
 
 // 개체 하나 → 전투 개체. 표에 종족값이 없으면 null
 export function buildFighter(src: FighterSource, basis: StatBasis = BATTLE_BASIS, opts?: DexOptions): EngineFighter | null {
@@ -60,15 +59,16 @@ export function buildFighter(src: FighterSource, basis: StatBasis = BATTLE_BASIS
   const ability = megaBattleTable(opts)[shown]?.ability ?? speciesAbilityTable(opts)[src.species] ?? null;
   const special = speciesMoveTable(opts)[src.species]?.special;
   const alt = mega ? undefined : formBattleTable(opts)[src.species];
+  const moves = engineMoves(src.species, src.moveSwap === true, opts);
   return {
     species: shown,
     types: mega ? mega.types : profileOf(src.species, opts).types,
     level: basis.level,
     stats: real(baseStats),
-    moves: engineMoves(src.species, src.moveSwap === true, opts),
+    moves,
     ability,
     special: special && SPECIALS.has(special) ? (special as EngineFighter["special"]) : null,
-    range: rangeOf(baseStats),
+    range: rangeOfMoves(moves),
     altForm: alt ? { species: alt.form, stats: real(alt.stats) } : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
   };

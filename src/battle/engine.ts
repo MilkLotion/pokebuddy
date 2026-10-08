@@ -15,9 +15,16 @@ export const ENGINE_RULES = {
   tickMs: 100,
   maxMs: 90_000, // 판 길이 상한 — 넘으면 남은 HP 비율 합으로 판정
   hpScale: 3, // 전투 HP = 실제 HP × 3 (2026-10-08 사용자 결정)
-  basicPower: 20, // 평타 위력 — 상성·자속 없음, 반드시 맞음
-  basicBaseMs: 3000, // 평타 간격 = 3초 × 100 ÷ (스피드 + 50)
-  basicSpeedOffset: 50,
+  basicPower: 10, // 평타 위력 — 상성·자속 없음, 반드시 맞음, 급소 없음
+  basicMs: 1000, // 평타 간격 — 모두 같다. 스피드와 상관없다 (2026-10-08 사용자 "평타는 고정 간격으로 해보자. 근데 난 평타는 자주 썼으면 좋겠어")
+  speedRef: 95, // 기술 쿨타임의 기준 스피드 — 일반 풀(전설급 제외, 종족값 합 400 이상) 50레벨 실제 스피드 중앙값
+  speedMulMin: 0.8, // 기술 쿨타임 × 기준 ÷ 실제 스피드, 이 범위로 자른다 (2026-10-08 사용자 "A로 하고")
+  speedMulMax: 1.2,
+  critRates: [1 / 24, 1 / 8, 1 / 2, 1] as readonly number[], // 급소율 단계 — 보통·높음·대운 높음·확정 (docs/specs/moves.md "급소")
+  critMul: 1.5,
+  immuneMul: 0, // 상성 효과 없음의 배율 — 원작대로 0 (docs/specs/moves.md "피해")
+  smartAim: 0, // 1 이면 기술을 쓸 때 사거리 안에서 상성이 가장 좋은 상대를 노린다 — 시험 값
+  sniperMul: 2.25,
   stageMs: 10_000, // 능력 변화 지속
   rampageMs: 2000, // 난동 뒤 행동 불가
   intimidateStages: -1, // 위협 — 시작할 때 상대 전체 공격 −1, 여럿이면 쌓인다
@@ -42,8 +49,14 @@ export const ENGINE_RULES = {
   fieldH: 10,
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
-  meleeRange: 1, // 근접 사거리 — 두 몸 사이 틈(대각선 포함)
-  rangedRange: 6, // 원거리 사거리 — 화면 칸 3. 특수공격이 공격보다 높은 종 (2026-10-08 사용자 "사거리 너가 얘기한대로 해보자")
+  // 사거리(두 몸 사이 틈, 대각선 포함) — 기술로 정한다: 접촉 1, 접촉 없는 물리 2, 특수 3, 파동·탄환·소리 특수 5. 두 기술 중 짧은 쪽
+  // (2026-10-08 사용자 "b로", "1,2 3,5 4개로")
+  rangeContact: 1,
+  rangePhysical: 2,
+  rangeSpecial: 3,
+  rangeFar: 5,
+  farTraits: ["pulse", "ballistic", "sound"] as readonly string[],
+  rangeDamage: { 1: 1, 2: 0.9, 3: 0.8, 5: 0.75 } as Readonly<Record<number, number>>, // 사거리별 주는 피해 배율(기술·평타) — 시작 값, 모의 대전으로 맞춘다
   obstacleSizes: [1, 1, 2] as readonly (1 | 2)[], // 장애물 — 1×1 두 개, 2×2 한 개 (2026-10-08 사용자 결정)
   obstacleX0: 4, // 장애물을 놓는 계산 칸 열 — 가운데 4열(화면 칸 2~5)
   obstacleX1: 12, // 이 열은 포함하지 않는다
@@ -57,6 +70,20 @@ export interface Obstacle extends Pos {
   size: 1 | 2;
 }
 
+// 기술 하나의 사거리 — 변화기는 null(사거리를 정하지 않는다)
+export function moveRange(m: Pick<EngineMove, "class" | "power" | "traits">): number | null {
+  if (m.class === "status" || !m.power) return null;
+  if (m.traits.includes("contact")) return ENGINE_RULES.rangeContact;
+  if (m.class === "physical") return ENGINE_RULES.rangePhysical;
+  return m.traits.some((t) => ENGINE_RULES.farTraits.includes(t)) ? ENGINE_RULES.rangeFar : ENGINE_RULES.rangeSpecial;
+}
+// 포켓몬의 사거리 — 공격기 사거리 중 짧은 쪽. 공격기가 없으면 접촉 사거리(병풍 등)
+export function rangeOfMoves(moves: readonly Pick<EngineMove, "class" | "power" | "traits">[]): number {
+  const list = moves.map(moveRange).filter((r): r is number => r !== null);
+  return list.length ? Math.min(...list) : ENGINE_RULES.rangeContact;
+}
+const rangeMul = (range: number): number => ENGINE_RULES.rangeDamage[range] ?? 1;
+
 // 처음 자리 — 각 쪽 `1 2 / 3 4 / 5 6`, 상대는 거울. 2·4·6 이 앞 열이다. 팀은 화면 가운데 3줄(위아래 빈 줄)에 선다
 export function startPos(side: Side, slot: number): Pos {
   const col = slot % 2; // 0 뒤 열, 1 앞 열
@@ -66,10 +93,11 @@ export function startPos(side: Side, slot: number): Pos {
 }
 
 // 능력 변화 단계 → 배율. 오르면 1.2·1.4, 내리면 그 역수 [스펙 미확정: 내림 배율]
-// 능력 변화 — 단계당 ±25%, 최대 ±3. 내림도 선형이다 (docs/specs/moves.md "능력 변화", 2026-10-08 사용자 "25%로 하고")
+// 능력 변화 — 단계당 25%, 최대 ±6. 오르면 1 + 0.25 × 단계, 내리면 1 ÷ (1 + 0.25 × 단계)
+// (docs/specs/moves.md "능력 변화", 2026-10-08 사용자 "25%로 하고", "6랭크까지 하는게 나을듯")
 const STAGE_STEP = 0.25;
-const STAGE_MAX = 3;
-const stageMul = (stage: number): number => 1 + STAGE_STEP * stage;
+const STAGE_MAX = 6;
+const stageMul = (stage: number): number => (stage >= 0 ? 1 + STAGE_STEP * stage : 1 / (1 + STAGE_STEP * -stage));
 // effects.stats 의 능력 이름 → 능력치 번호
 const STAT_INDEX: Readonly<Record<string, number>> = { atk: 1, def: 2, spa: 3, spd: 4, spe: 5 };
 
@@ -92,6 +120,7 @@ export interface EngineMove {
     halfHp?: boolean;
     drain?: number;
     stats?: readonly { who: "self" | "target"; stat: string; change: number; chance: number }[]; // 맞힌 뒤 chance% 로 능력 변화
+    crit?: "high" | "always"; // 급소율
     rampage?: boolean;
     hpScale?: boolean;
   };
@@ -131,11 +160,11 @@ export type Side = 0 | 1;
 export type BattleEvent =
   | { t: number; kind: "start"; obstacles: Obstacle[]; pos: [(Pos | null)[], (Pos | null)[]] }
   | { t: number; kind: "step"; side: Side; slot: number; x: number; y: number }
-  | { t: number; kind: "move"; side: Side; slot: number; move: string }
+  | { t: number; kind: "move"; side: Side; slot: number; move: string; nextAt: number } // nextAt — 다음 차례 기술이 준비되는 시각(ms)
   | { t: number; kind: "attack"; side: Side; slot: number }
-  | { t: number; kind: "charge"; side: Side; slot: number; move: string }
+  | { t: number; kind: "charge"; side: Side; slot: number; move: string; nextAt: number }
   | { t: number; kind: "miss"; side: Side; slot: number; move: string; target: number }
-  | { t: number; kind: "damage"; side: Side; slot: number; target: number; amount: number; mult: number; hp: number; source: string; hit: number }
+  | { t: number; kind: "damage"; side: Side; slot: number; target: number; amount: number; mult: number; hp: number; source: string; hit: number; crit?: true }
   | { t: number; kind: "self"; side: Side; slot: number; amount: number; hp: number; cause: "recoil" | "half-hp" | "drain" }
   | { t: number; kind: "blocked"; side: Side; slot: number; target: number; move: string }
   | { t: number; kind: "reflect"; side: Side; slot: number; target: number; amount: number; hp: number }
@@ -168,9 +197,10 @@ function mulberry32(seed: number): () => number {
 
 const ceilTick = (ms: number): number => Math.ceil(ms / ENGINE_RULES.tickMs) * ENGINE_RULES.tickMs;
 
-// 평타 간격(ms) — 실제 스피드(능력 변화 포함)로 정한다
-export const basicIntervalMs = (speed: number): number =>
-  ceilTick((ENGINE_RULES.basicBaseMs * 100) / (Math.max(1, speed) + ENGINE_RULES.basicSpeedOffset));
+// 기술 쿨타임의 스피드 배율
+// 기술 쿨타임의 스피드 배율 — 기준 ÷ 실제 스피드(능력 변화 포함), 0.8~1.2
+export const speedCooldownMul = (speed: number): number =>
+  Math.max(ENGINE_RULES.speedMulMin, Math.min(ENGINE_RULES.speedMulMax, ENGINE_RULES.speedRef / Math.max(1, speed)));
 
 interface Stage {
   stage: number;
@@ -296,6 +326,7 @@ export function runBattle(input: BattleInput): BattleResult {
   const maxMs = input.maxMs ?? R.maxMs;
   const events: BattleEvent[] = [];
   const chart = input.typeChart;
+  let curT = 0; // 지금 틱 — 쿨타임의 스피드 배율이 읽는다
 
   // ── 준비 ──
   const units: [(Unit | null)[], (Unit | null)[]] = [[], []];
@@ -385,6 +416,7 @@ export function runBattle(input: BattleInput): BattleResult {
       const picked: EngineMove[] = [];
       for (let i = 0; i < 2 && cells.length; i++) picked.push(cells.splice(Math.floor(rand() * cells.length), 1)[0]!);
       u.moves = picked;
+      u.range = rangeOfMoves(picked);
       if (picked.length) events.push({ t: 0, kind: "copy", side: u.side, slot: u.slot, from: -1, moves: picked.map((m) => m.id) });
     }
   }
@@ -429,7 +461,7 @@ export function runBattle(input: BattleInput): BattleResult {
   }
 
   function firstBasic(u: Unit): number {
-    let ms = basicIntervalMs(statNow(u, 5, 0));
+    let ms: number = R.basicMs;
     if (u.slowFirstBasic) ms *= R.slowStartMul;
     return ms;
   }
@@ -439,8 +471,17 @@ export function runBattle(input: BattleInput): BattleResult {
     let ms = m.cooldownMs;
     if (first && u.slowFirstMove) ms *= R.slowStartMul;
     if (u.truant) ms *= R.truantMul;
-    if (foeHas(u, "pressure")) ms = ceilTick(ms * R.pressureMul);
-    return ms;
+    let mul = speedCooldownMul(statNow(u, 5, curT));
+    if (foeHas(u, "pressure")) mul *= R.pressureMul;
+    return ceilTick(ms * mul);
+  }
+
+  // 급소 — 타마다. 전투무장·조가비갑옷은 맞지 않는다(확정급소도). 대운은 한 단계 위
+  function critOf(u: Unit, m: EngineMove, o: Unit): boolean {
+    if (o.base.ability === "battle-armor" || o.base.ability === "shell-armor") return false;
+    if (m.effects.crit === "always") return true;
+    const stage = Math.min(R.critRates.length - 1, (m.effects.crit === "high" ? 1 : 0) + (u.base.ability === "super-luck" ? 1 : 0));
+    return rand() < R.critRates[stage]!;
   }
 
   // 아군 특성의 기술 위력 배율 — 배터리(특수)·파워스폿은 자신 제외, 강철정신은 자신 포함, 플러스·마이너스는 짝이 있으면 자신의 특수공격
@@ -455,7 +496,11 @@ export function runBattle(input: BattleInput): BattleResult {
   // 받는 피해 배율 — 프렌드가드(자신 제외)
   const guardMul = (o: Unit): number => R.friendGuardMul ** countAlly(o, "friend-guard", false);
 
-  const typeMul = (moveType: string, defender: Unit): number => defender.types.reduce((a, d) => a * (chart[moveType]?.[d] ?? 1), 1);
+  const typeMul = (moveType: string, defender: Unit): number =>
+    defender.types.reduce((a, d) => {
+      const m = chart[moveType]?.[d] ?? 1;
+      return a * (m === 0 ? R.immuneMul : m);
+    }, 1);
 
   const foesOf = (u: Unit): Unit[] => alive(u.side === 0 ? 1 : 0);
   const inRange = (a: Pos, b: Pos, range: number): boolean => gapOf(a, b) <= range;
@@ -589,7 +634,7 @@ export function runBattle(input: BattleInput): BattleResult {
 
   // ── 행동 ──
   function doBasic(u: Unit, t: number): void {
-    let interval = basicIntervalMs(statNow(u, 5, t));
+    let interval: number = R.basicMs;
     if (u.truant) interval *= R.truantMul;
     u.nextBasic = t + interval;
     if (u.slowFirstBasic) u.slowFirstBasic = false;
@@ -598,7 +643,7 @@ export function runBattle(input: BattleInput): BattleResult {
     events.push({ t, kind: "attack", side: u.side, slot: u.slot });
     const atk = statNow(u, 1, t), spa = statNow(u, 3, t);
     const phys = atk >= spa;
-    const d = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t)) * guardMul(o) * roll()));
+    const d = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t)) * guardMul(o) * rangeMul(u.range) * roll()));
     hurt(o, d, t);
     events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: 1, hp: o.hp, source: "basic", hit: 1 });
     faintCheck(o, t);
@@ -638,14 +683,15 @@ export function runBattle(input: BattleInput): BattleResult {
     if (m.effects.charge && !u.charged) {
       u.charged = true;
       u.nextMove = t + cooldownOf(u, m, false);
-      events.push({ t, kind: "charge", side: u.side, slot: u.slot, move: m.id });
+      events.push({ t, kind: "charge", side: u.side, slot: u.slot, move: m.id, nextAt: u.nextMove });
       return;
     }
     u.charged = false;
     // 돌핀맨 — 두 기술을 한 번씩 쓴 뒤 다음 기술 전에 마이티폼
     if (u.base.ability === "zero-to-hero" && !u.inAlt && u.uses >= 2) toForm(u, true, t);
     const stacks = isSkillLinkMove(u, m) ? stacksAt(u, m, t) : 0;
-    events.push({ t, kind: "move", side: u.side, slot: u.slot, move: m.id });
+    const used: Extract<BattleEvent, { kind: "move" }> = { t, kind: "move", side: u.side, slot: u.slot, move: m.id, nextAt: t };
+    events.push(used);
 
     if (u.base.special === "stance") toForm(u, m.class !== "status", t); // 섀도볼 → 블레이드폼, 킹실드 → 실드폼
     if (m.id === "kings-shield") u.shieldUntil = t + R.shieldMs;
@@ -665,11 +711,16 @@ export function runBattle(input: BattleInput): BattleResult {
     if (u.base.special === "stance") u.nextMove = t + R.stanceStepMs;
     else u.nextMove = t + cooldownOf(u, next, false) * (m.effects.recharge ? 2 : 1);
     if (u.busyUntil > u.nextMove) u.nextMove = u.busyUntil;
+    used.nextAt = u.nextMove;
   }
 
   function attack(u: Unit, m: EngineMove, t: number, stacks: number): void {
-    const first = hitTarget(u);
+    let first = hitTarget(u);
     if (!first) return;
+    // 상성 고르기 — 사거리 안 상대 가운데 이 기술의 상성이 가장 좋은 상대. 같으면 지금 대상
+    if (R.smartAim) {
+      for (const o of foesOf(u)) if (inRange(u, o, u.range) && typeMul(m.type, o) > typeMul(m.type, first)) first = o;
+    }
     // 명중은 한 번 본다. 빗나가면 모든 타가 빗나간다
     const accuracy = m.accuracy === null ? null : m.accuracy * (hasAlly(u, "victory-star") ? R.victoryStarMul : 1);
     if (accuracy !== null && rand() * 100 >= accuracy) {
@@ -682,7 +733,7 @@ export function runBattle(input: BattleInput): BattleResult {
     let dealt = 0;
     let firstHit: Unit | null = null;
     for (let h = 1; h <= n; h++) {
-      const o = hitTarget(u);
+      const o = h === 1 ? first : hitTarget(u);
       if (!o) break;
       if (o.shieldUntil > t) {
         events.push({ t, kind: "blocked", side: u.side, slot: u.slot, target: o.slot, move: m.id });
@@ -692,12 +743,18 @@ export function runBattle(input: BattleInput): BattleResult {
       let power = m.power!;
       if (m.effects.hpScale) power = Math.max(1, Math.floor((power * u.hp) / u.maxHp));
       const mult = stab * typeMul(m.type, o) * allyMoveMul(u, m) * guardMul(o);
-      const raw = baseDamage(u.base.level, power, statNow(u, phys ? 1 : 3, t), statNow(o, phys ? 2 : 4, t));
+      const crit = critOf(u, m, o);
+      // 급소면 쓴 쪽 공격 하락과 맞는 쪽 방어 상승은 무시한다
+      const atkNow = statNow(u, phys ? 1 : 3, t), defNow = statNow(o, phys ? 2 : 4, t);
+      const atkStat = crit ? Math.max(atkNow, u.stats[phys ? 1 : 3]!) : atkNow;
+      const defStat = crit ? Math.min(defNow, o.stats[phys ? 2 : 4]!) : defNow;
+      const raw = baseDamage(u.base.level, power, atkStat, defStat);
       const typeOnly = typeMul(m.type, o);
-      const d = typeOnly === 0 ? 0 : Math.max(1, Math.floor(raw * mult * roll()));
+      const critMul = (crit ? (u.base.ability === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range);
+      const d = typeOnly === 0 ? 0 : Math.max(1, Math.floor(raw * mult * critMul * roll()));
       hurt(o, d, t);
       dealt += d;
-      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: typeOnly, hp: o.hp, source: m.id, hit: h });
+      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: typeOnly, hp: o.hp, source: m.id, hit: h, ...(crit ? { crit: true as const } : {}) });
       // 마자용 — 반사 대기 중 같은 분류의 기술을 받으면 받은 피해의 2배를 돌려준다(한 번)
       if (o.base.special === "reflect" && o.reflectUntil > t && o.reflectClass === m.class && o.hp > 0 && d > 0) {
         o.reflectUntil = -1;
@@ -747,8 +804,10 @@ export function runBattle(input: BattleInput): BattleResult {
 
   let end = done();
   let t = 0;
+  curT = 0;
   while (!end && t < maxMs) {
     t += R.tickMs;
+    curT = t;
     const acts: { u: Unit; kind: 0 | 1; pri: number; spe: number; k: number }[] = [];
     for (const u of all()) {
       if (u.hp <= 0 || !canAct(u)) continue;

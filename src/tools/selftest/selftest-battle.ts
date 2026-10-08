@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE_RULES, basicIntervalMs, rollObstacles, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos } from "../../battle/engine";
+import { ENGINE_RULES, rangeOfMoves, rollObstacles, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
 
 const chart = battleTypeChart();
@@ -18,7 +18,7 @@ const mv = (id: string, over: Partial<EngineMove> = {}): EngineMove => ({
   id, type: "normal", class: "physical", power: 50, accuracy: null, priority: 0, cooldownMs: 4000, hits: null, traits: [], effects: {}, ...over,
 });
 const unit = (over: Partial<EngineFighter> = {}): EngineFighter => ({
-  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 100], moves: [], ability: null, special: null, range: 1, ...over,
+  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 95], moves: [], ability: null, special: null, range: 1, ...over,
 });
 const of = <K extends BattleEvent["kind"]>(evs: BattleEvent[], kind: K): Extract<BattleEvent, { kind: K }>[] =>
   evs.filter((e): e is Extract<BattleEvent, { kind: K }> => e.kind === kind);
@@ -27,11 +27,12 @@ const run = (a: (EngineFighter | null)[], b: (EngineFighter | null)[], seed = 1,
   runBattle({ seed, sides: [a, b], typeChart: chart, obstacles: [], ...(maxMs ? { maxMs } : {}), ...extra });
 const at = (x: number, y: number): Pos => ({ x, y });
 
-// ── 평타 간격 ──
-assert.strictEqual(basicIntervalMs(25), 4000);
-assert.strictEqual(basicIntervalMs(50), 3000);
-assert.strictEqual(basicIntervalMs(100), 2000);
-assert.strictEqual(basicIntervalMs(200), 1200);
+// ── 평타는 1초 고정 (아래 시험), 스피드는 기술 쿨타임 ──
+// ── 기술 쿨타임의 스피드 배율 — 기준 95, 0.8~1.2 ──
+assert.strictEqual(speedCooldownMul(95), 1);
+assert.strictEqual(speedCooldownMul(190), 0.8, "빠르면 ×0.8 에서 자른다");
+assert.strictEqual(speedCooldownMul(10), 1.2, "느리면 ×1.2 에서 자른다");
+assert.ok(Math.abs(speedCooldownMul(100) - 0.95) < 1e-9);
 
 // ── 빈 쪽 ──
 assert.strictEqual(run([unit()], [null]).winner, 0, "상대가 비면 바로 이긴다");
@@ -54,8 +55,8 @@ assert.strictEqual(run([null], [null]).winner, null, "둘 다 비면 무승부")
 
 // ── 1번 → 2번 → 1번 번갈아 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("one", { power: 1 }), mv("two", { power: 1, cooldownMs: 6000 })] })];
-  const b = [unit({ stats: [999, 1, 999, 1, 999, 1] })];
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("one", { power: 1 }), mv("two", { power: 1, cooldownMs: 6000 })] })];
+  const b = [unit({ stats: [999, 1, 999, 1, 999, 95] })];
   const r = run(a, b, 1, 30_000);
   const used = of(r.events, "move").filter((e) => e.side === 0);
   assert.deepStrictEqual(used.map((e) => e.move).slice(0, 4), ["one", "two", "one", "two"]);
@@ -74,23 +75,23 @@ assert.strictEqual(run([null], [null]).winner, null, "둘 다 비면 무승부")
 
 // ── 충전 — 처음 차면 충전, 다시 차면 나간다 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("solar", { power: 1, effects: { charge: true } }), mv("x", { power: 1 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 10_000);
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("solar", { power: 1, effects: { charge: true } }), mv("x", { power: 1 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 10_000);
   assert.deepStrictEqual(of(r.events, "charge").map((e) => e.t), [4000]);
   assert.strictEqual(of(r.events, "move").find((e) => e.side === 0)?.t, 8000);
 }
 
 // ── 반동으로 쉼 — 다음 기술 쿨타임 2배 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("hyper", { power: 1, effects: { recharge: true } }), mv("x", { power: 1 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 20_000);
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("hyper", { power: 1, effects: { recharge: true } }), mv("x", { power: 1 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 20_000);
   assert.deepStrictEqual(of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t).slice(0, 2), [4000, 12000]);
 }
 
 // ── 난동 — 쓴 뒤 2초 동안 행동하지 않는다 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("outrage", { power: 1, effects: { rampage: true } }), mv("x", { power: 1, cooldownMs: 1000 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 10_000);
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("outrage", { power: 1, effects: { rampage: true } }), mv("x", { power: 1, cooldownMs: 1000 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 10_000);
   const t = of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t);
   assert.deepStrictEqual(t.slice(0, 2), [4000, 6000], "1초 쿨타임 기술도 난동 2초 뒤");
   assert.ok(!of(r.events, "attack").some((e) => e.side === 0 && e.t > 4000 && e.t < 6000), "난동 중 평타 없음");
@@ -98,11 +99,11 @@ assert.strictEqual(run([null], [null]).winner, null, "둘 다 비면 무승부")
 
 // ── 연속기 — 쓰러지면 남은 타는 가까운 상대에게 ──
 {
-  const a = [unit({ stats: [999, 300, 999, 1, 999, 1], moves: [mv("triple", { power: 60, hits: [3, 3], cooldownMs: 1000 })] })];
+  const a = [unit({ stats: [999, 300, 999, 1, 999, 95], moves: [mv("triple", { power: 60, hits: [3, 3], cooldownMs: 1000 })] })];
   const weak = unit({ stats: [1, 1, 1, 1, 1, 1] });
   // 둘 다 사거리 안 — 같은 줄의 약한 상대를 먼저 노리고, 쓰러지면 남은 타는 사거리 안의 다른 상대
   const positions = [[at(6, 4)], [at(9, 4), at(9, 6)]] as const;
-  const r = run(a, [weak, unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 1500, { positions });
+  const r = run(a, [weak, unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 1500, { positions });
   const hits = of(r.events, "damage").filter((e) => e.source === "triple");
   assert.deepStrictEqual(hits.map((e) => e.target), [0, 1, 1]);
 }
@@ -117,7 +118,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 // ── 대상 — 걸음 수로 가장 가까운 상대, 같으면 같은 줄, 그다음 번호 ──
 {
   const me = unit({ stats: [999, 1, 999, 1, 999, 100] }); // 평타 2초
-  const foe = unit({ stats: [999, 1, 999, 1, 999, 1] });
+  const foe = unit({ stats: [999, 1, 999, 1, 999, 95] });
   const first = (b: (EngineFighter | null)[], pos: Pos[], obstacles: BattleInput["obstacles"] = []) =>
     of(run([me], b, 1, 8000, { positions: [[at(2, 4)], pos], obstacles }).events, "damage").find((e) => e.side === 0)?.target;
   assert.strictEqual(first([foe, foe], [at(12, 2), at(8, 4)]), 1, "걸음 수가 적은 쪽");
@@ -137,8 +138,8 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 
 // ── 사거리 밖에서는 쿨타임이 차도 기다린다 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("one", { power: 1, cooldownMs: 100 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 5000);
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("one", { power: 1, cooldownMs: 100 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 5000);
   const firstMove = of(r.events, "move").find((e) => e.side === 0)!;
   const lastStep = of(r.events, "step").filter((e) => e.side === 0 && e.t <= firstMove.t).pop()!;
   assert.ok(firstMove.t > 100 && firstMove.t >= lastStep.t, "걸어서 닿은 뒤에 쓴다");
@@ -147,11 +148,15 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 
 // ── 사거리 — 특수공격이 공격보다 높으면 원거리(6), 아니면 근접(1). 원거리는 사거리 안에서 멈춰 쏜다 ──
 {
-  assert.strictEqual(buildFighter({ species: "alakazam" })!.range, ENGINE_RULES.rangedRange);
-  assert.strictEqual(buildFighter({ species: "machamp" })!.range, ENGINE_RULES.meleeRange);
-  assert.strictEqual(buildFighter({ species: "aegislash" })!.range, ENGINE_RULES.meleeRange, "같으면 근접");
+  assert.strictEqual(buildFighter({ species: "machamp" })!.range, 1, "접촉 기술");
+  assert.strictEqual(buildFighter({ species: "garchomp" })!.range, 2, "접촉 없는 물리(지진)");
+  assert.strictEqual(buildFighter({ species: "alakazam" })!.range, 3, "특수");
+  assert.strictEqual(buildFighter({ species: "spectrier" })!.range, 3, "두 기술 중 짧은 쪽 — 섀도볼 5, 병상첨병 3");
+  assert.strictEqual(buildFighter({ species: "lucario" })!.range, 1, "파동탄 5 와 코멧펀치 1 → 1");
+  assert.strictEqual(rangeOfMoves([mv("aura", { class: "special", traits: ["pulse"] })]), 5, "파동·탄환·소리 특수");
+  assert.strictEqual(rangeOfMoves([]), 1, "공격기가 없으면 1");
   const shooter = unit({ range: 6, stats: [999, 1, 999, 1, 999, 100] });
-  const still = unit({ stats: [999, 1, 999, 1, 999, 1] });
+  const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
   const r = run([shooter], [still], 1, 6000, { positions: [[at(0, 4)], [at(14, 4)]] });
   const hit = of(r.events, "damage").find((e) => e.side === 0)!;
   const start = of(r.events, "start")[0]!;
@@ -164,31 +169,31 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.ok(gap > 1 && gap <= 6, `원거리는 떨어져서 쏜다 (틈 ${gap})`);
 }
 
-// ── 능력 변화 — 단계당 25%, 최대 ±3, 쌓임 ──
+// ── 능력 변화 — 단계당 25%, 최대 ±6, 쌓임 ──
 {
   // 위협 둘 — 상대 공격 −2
-  const intim = unit({ ability: "intimidate", stats: [999, 1, 999, 1, 999, 1] });
+  const intim = unit({ ability: "intimidate", stats: [999, 1, 999, 1, 999, 95] });
   const r = run([intim, intim], [unit()], 1, 100);
   const st = of(r.events, "stat").filter((e) => e.side === 1 && e.stat === 1);
   assert.deepStrictEqual(st.map((e) => e.stage), [-1, -2], "위협은 상대 전체 공격 −1, 쌓인다");
   // 플라워베일 — 풀 아군은 상대가 건 하락을 막는다
-  const veil = unit({ ability: "flower-veil", types: ["grass"], stats: [999, 1, 999, 1, 999, 1] });
+  const veil = unit({ ability: "flower-veil", types: ["grass"], stats: [999, 1, 999, 1, 999, 95] });
   assert.strictEqual(of(run([intim], [veil], 1, 100).events, "stat").length, 0, "플라워베일");
   // 공격기 능력 변화 — 맞힌 뒤 target 은 맞은 첫 대상
   const drop = mv("crunch", { power: 1, cooldownMs: 1000, effects: { stats: [{ who: "target", stat: "def", change: -1, chance: 100 }, { who: "self", stat: "atk", change: 3, chance: 100 }] } });
-  const r2 = run([unit({ moves: [drop], stats: [999, 1, 999, 1, 999, 1] })], [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 6000, { positions: [[at(6, 4)], [at(8, 4)]] });
+  const r2 = run([unit({ moves: [drop], stats: [999, 1, 999, 1, 999, 95] })], [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 6000, { positions: [[at(6, 4)], [at(8, 4)]] });
   const s2 = of(r2.events, "stat");
   assert.ok(s2.some((e) => e.side === 1 && e.stat === 2 && e.stage === -1), "상대 방어 −1");
   assert.ok(s2.some((e) => e.side === 0 && e.stat === 1 && e.stage === 3), "자기 공격 +3");
-  assert.ok(!s2.some((e) => Math.abs(e.stage) > 3), "최대 ±3");
+  assert.ok(!s2.some((e) => Math.abs(e.stage) > 6), "최대 ±6");
 }
 
 // ── 프레셔 — 상대 기술 쿨타임 +10%, 평타는 그대로 ──
 {
-  const a = [unit({ stats: [999, 1, 999, 1, 999, 1], moves: [mv("a", { power: 1 })] })];
+  const a = [unit({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("a", { power: 1 })] })];
   const pos = { positions: [[at(6, 4)], [at(8, 4)]] as Pos[][] } as unknown as Partial<BattleInput>;
-  const plain = of(run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 6000, pos).events, "move").find((e) => e.side === 0)!.t;
-  const pressed = of(run(a, [unit({ ability: "pressure", stats: [999, 1, 999, 1, 999, 1] })], 1, 6000, pos).events, "move").find((e) => e.side === 0)!.t;
+  const plain = of(run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 6000, pos).events, "move").find((e) => e.side === 0)!.t;
+  const pressed = of(run(a, [unit({ ability: "pressure", stats: [999, 1, 999, 1, 999, 95] })], 1, 6000, pos).events, "move").find((e) => e.side === 0)!.t;
   assert.deepStrictEqual([plain, pressed], [4000, 4400]);
 }
 
@@ -196,11 +201,35 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 {
   const hitter = unit({ stats: [999, 200, 999, 1, 999, 100], moves: [mv("x", { power: 80, cooldownMs: 1000 })] });
   const target = unit({ stats: [999, 1, 100, 1, 100, 1] });
-  const guard = unit({ ability: "friend-guard", stats: [999, 1, 999, 1, 999, 1] });
+  const guard = unit({ ability: "friend-guard", stats: [999, 1, 999, 1, 999, 95] });
   const pos = (n: number) => ({ positions: [[at(6, 4)], [at(8, 4), ...(n ? [at(14, 8)] : [])]] as Pos[][] }) as unknown as Partial<BattleInput>;
   const dmg = (b: EngineFighter[], n: number) => of(run([hitter], b, 3, 1100, pos(n)).events, "damage").find((e) => e.source === "x")!.amount;
   const plain = dmg([target], 0), guarded = dmg([target, guard], 1);
   assert.ok(guarded < plain, `프렌드가드 ${plain} → ${guarded}`); // 난수 순서가 달라 정확히 0.75 배는 아니다
+}
+
+// ── 급소 — 확정급소는 늘, 전투무장은 막는다. 평타는 급소가 없다 ──
+{
+  const sure = unit({ stats: [999, 100, 999, 1, 999, 95], moves: [mv("flower", { power: 70, cooldownMs: 1000, effects: { crit: "always" } })] });
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const hit = (foe: EngineFighter) => of(run([sure], [foe], 1, 1100, pos).events, "damage").find((e) => e.source === "flower")!;
+  assert.strictEqual(hit(unit({ stats: [999, 1, 100, 1, 100, 95] })).crit, true, "확정급소");
+  assert.strictEqual(hit(unit({ ability: "battle-armor", stats: [999, 1, 100, 1, 100, 95] })).crit, undefined, "전투무장은 급소를 맞지 않는다");
+  const basics = of(run([unit()], [unit()], 1, 20_000, pos).events, "damage").filter((e) => e.source === "basic");
+  assert.ok(basics.length > 0 && basics.every((e) => !e.crit), "평타는 급소 없음");
+}
+
+// ── 평타는 1초마다, 스피드와 상관없다. 기술 쿨타임은 스피드로 ──
+{
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const at1 = (spe: number) => {
+    const r = run([unit({ stats: [999, 1, 999, 1, 999, spe], moves: [mv("a", { power: 1, cooldownMs: 4000 })] })], [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 6000, pos);
+    return { basic: of(r.events, "attack").filter((e) => e.side === 0).map((e) => e.t).slice(0, 3), move: of(r.events, "move").find((e) => e.side === 0)?.t };
+  };
+  assert.deepStrictEqual(at1(10).basic, [1000, 2000, 3000]);
+  assert.deepStrictEqual(at1(200).basic, [1000, 2000, 3000]);
+  assert.strictEqual(at1(200).move, 3200, "빠르면 4초 × 0.8");
+  assert.strictEqual(at1(10).move, 4800, "느리면 4초 × 1.2");
 }
 
 // ── 전장 — 장애물 뽑기 ──
@@ -227,11 +256,13 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 // ── 90초 판정 — 남은 HP 비율 합 ──
 {
   const wall = (atk: number) => unit({ stats: [999, atk, 999, 1, 999, 1] });
-  const r = run([wall(1), wall(1)], [wall(1), wall(200)], 1);
+  const r = run([wall(1), wall(1)], [wall(1), wall(999)], 1);
   assert.strictEqual(r.timeout, true);
   assert.strictEqual(r.endMs, ENGINE_RULES.maxMs);
   assert.strictEqual(r.winner, 1, "남은 HP 비율 합이 큰 쪽이 이긴다");
-  assert.strictEqual(run([wall(1)], [wall(1)], 1).winner, null, "비율 합이 같으면 무승부");
+  // 서로 닿지 못하면 둘 다 가득 — 비율 합이 같아 무승부
+  const block = [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const }));
+  assert.strictEqual(run([wall(1)], [wall(1)], 1, undefined, { obstacles: block }).winner, null, "비율 합이 같으면 무승부");
 }
 
 // ── 같은 틱에 둘 다 쓰러지면 무승부 ──
@@ -245,15 +276,15 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 
 // ── 게으름 — 한 번 쓴 뒤 쿨타임 2배 ──
 {
-  const a = [unit({ ability: "truant", stats: [999, 1, 999, 1, 999, 1], moves: [mv("a", { power: 1 }), mv("b", { power: 1 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 20_000);
+  const a = [unit({ ability: "truant", stats: [999, 1, 999, 1, 999, 95], moves: [mv("a", { power: 1 }), mv("b", { power: 1 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 20_000);
   assert.deepStrictEqual(of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t).slice(0, 2), [4000, 12000]);
 }
 
 // ── 슬로스타트 — 첫 기술 5배 ──
 {
-  const a = [unit({ ability: "slow-start", stats: [999, 1, 999, 1, 999, 1], moves: [mv("a", { power: 1 }), mv("b", { power: 1 })] })];
-  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 30_000);
+  const a = [unit({ ability: "slow-start", stats: [999, 1, 999, 1, 999, 95], moves: [mv("a", { power: 1 }), mv("b", { power: 1 })] })];
+  const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 30_000);
   assert.deepStrictEqual(of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t).slice(0, 2), [20000, 24000]);
 }
 
@@ -274,7 +305,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   const aegislash = buildFighter({ species: "aegislash" })!;
   assert.strictEqual(aegislash.special, "stance");
   assert.ok(aegislash.altForm && aegislash.altForm.stats[1]! > aegislash.stats[1]!, "블레이드폼 공격이 높다");
-  const r = run([aegislash], [unit({ stats: [999, 1, 999, 1, 999, 1] })], 1, 15_000);
+  const r = run([aegislash], [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 15_000);
   const forms = of(r.events, "form").map((e) => e.species);
   assert.ok(forms.includes("aegislash-blade") && forms.includes("aegislash"), "킬가르도 폼이 바뀐다");
   const moveTimes = of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t);
