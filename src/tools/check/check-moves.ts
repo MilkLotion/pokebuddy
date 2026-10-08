@@ -47,7 +47,7 @@ interface StatEffect {
 }
 const STAT_WHO = new Set(["self", "target"]);
 // 공격기의 상태 이상 — 맞힌 뒤 chance% 로 건다. kind 가 목록이면 그중 하나 (docs/specs/moves.md "상태 이상")
-const STATUS_KINDS = new Set(["burn", "paralysis", "poison", "toxic", "freeze", "sleep", "confusion", "trap"]);
+const STATUS_KINDS = new Set(["burn", "paralysis", "poison", "toxic", "freeze", "sleep", "confusion"]);
 // 찍찍베기(1~10회, 한 타마다 90% 로 이어짐)의 기대 타수
 const EXP_HITS_10 = Array.from({ length: 10 }, (_, k) => 0.9 ** (k + 1)).reduce((a, b) => a + b, 0);
 const ceil1 = (x: number): number => Math.ceil(x * 10 - 1e-9) / 10;
