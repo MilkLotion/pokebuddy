@@ -57,7 +57,20 @@ export interface MoveRow {
   accuracy?: number | null; // null 이면 반드시 맞는다
   priority?: number;
   cooldown?: number; // 쿨타임(초)
+  hits?: [number, number]; // 연속기의 [최소, 최대] 타수
   traits?: string[];
+  effects?: MoveEffects;
+}
+// 부담과 효과 — 뜻은 docs/specs/moves.md "부담과 효과"
+export interface MoveEffects {
+  charge?: boolean;
+  recharge?: boolean;
+  recoil?: number;
+  halfHp?: boolean;
+  drain?: number;
+  stats?: { who: "self" | "target"; stat: string; change: number; chance: number }[]; // 맞힌 뒤 chance% 로 능력 변화
+  rampage?: boolean;
+  hpScale?: boolean;
 }
 export const moveTable = (opts?: DexOptions): Record<string, MoveRow> => loadJson<Record<string, MoveRow>>("moves.json", opts);
 
@@ -76,6 +89,16 @@ export interface MegaBattleRow {
   baseAbility?: boolean; // 원작 특성이 없어 기본 종 특성을 쓴다
 }
 export const megaBattleTable = (opts?: DexOptions): Record<string, MegaBattleRow> => loadJson<Record<string, MegaBattleRow>>("mega-battle.json", opts);
+
+// ── data/form-battle.json ── 전투 중 모습이 바뀌는 종의 다른 모습 종족값 (src/tools/data/build-form-battle.ts)
+export interface FormBattleRow {
+  form: string; // PokeAPI 모습 식별자
+  stats: number[];
+}
+export const formBattleTable = (opts?: DexOptions): Record<string, FormBattleRow> => loadJson<Record<string, FormBattleRow>>("form-battle.json", opts);
+
+// ── data/type-chart.json ── 공격 타입 → 방어 타입 → 배율
+export const typeChartTable = (opts?: DexOptions): Record<string, Record<string, number>> => loadJson<Record<string, Record<string, number>>>("type-chart.json", opts);
 
 // ── data/move-text.ko.json ── 기술 id → 원작 한국어 설명. 설명이 없는 기술은 키가 없다
 export const moveTextTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("move-text.ko.json", opts);
