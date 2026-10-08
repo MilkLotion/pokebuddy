@@ -123,6 +123,34 @@ assert.strictEqual(faint?.col, 2, "기절은 마지막 프레임에서 멈춘다
 assert.strictEqual(spriteFrame(look, { ...base, facing: 6 }, 0, 300)?.row, 6, "방향 행");
 assert.strictEqual(spriteFrame({ ...look, anims: { Idle: { ...sheet(1, 100), rows: 1 } } }, { ...base, facing: 6 }, 0, 300)?.row, 0, "방향이 한 줄뿐인 시트");
 
+// ── 날씨·필드·오라 룰렛 ──
+const rSides = [[f("pelipper"), f("pikachu")], [f("tyranitar"), f("tapu-lele")]] as const;
+const rResult = runBattle({ seed: 3, sides: rSides, typeChart: battleTypeChart() });
+const rView = battleScreenModel({ sides: rSides, result: rResult, opponentName: "상대", reward: { lead: "", detail: "" } });
+assert.ok(rView.roulette, "룰렛을 준 판");
+const [weather, field, aura] = rView.roulette!;
+assert.deepStrictEqual([weather!.key, field!.key, aura!.key], ["weather", "field", "aura"], "릴 순서");
+assert.deepStrictEqual([weather!.label, field!.label, aura!.label], ["날씨", "필드", "오라"]);
+assert.strictEqual(weather!.candidates.length, 2, "날씨 후보 — 펠리퍼·마기라스");
+assert.ok(weather!.picked && weather!.candidates.some((c) => c.side === weather!.picked!.side && c.slot === weather!.picked!.slot), "뽑힌 것은 후보 안");
+assert.ok((weather!.name === "비" && weather!.type === "water") || (weather!.name === "모래바람" && weather!.type === "rock"), `날씨 이름·아이콘: ${weather!.name}`);
+assert.strictEqual(field!.name, "사이코필드");
+assert.strictEqual(field!.type, "psychic");
+assert.deepStrictEqual(aura!.candidates, [], "오라 후보 없음");
+assert.strictEqual(aura!.name, null);
+assert.ok(rView.typeIcons.psychic !== undefined, "룰렛 아이콘 타입도 열쇠에 든다");
+assert.strictEqual(rView.units[0][0]?.ability, "잔비", "특성 이름");
+const plain = battleScreenModel({ sides: [[f("pikachu")], [f("snorlax")]] as const, result: runBattle({ seed: 1, sides: [[f("pikachu")], [f("snorlax")]], typeChart: battleTypeChart() }), opponentName: "상대", reward: { lead: "", detail: "" } });
+assert.strictEqual(plain.roulette, null, "후보가 하나도 없으면 룰렛 없이 시작");
+
+// weather 이벤트 — HP 와 숫자
+const wEvent = rView.events.find((e) => e.kind === "weather");
+if (wEvent && wEvent.kind === "weather") {
+  const wt = createTimeline(rView);
+  assert.strictEqual(wt.seek(wEvent.t).units[wEvent.side][wEvent.slot]?.hp, wEvent.hp, "날씨 피해·회복 뒤 HP");
+  assert.ok(wt.pops(wEvent.t).some((p) => p.side === wEvent.side && p.slot === wEvent.slot && p.text === (wEvent.amount < 0 ? `+${-wEvent.amount}` : `-${wEvent.amount}`)), "날씨 숫자");
+}
+
 // ── 남은 시간 ──
 assert.strictEqual(clockText(90_000, 0), "1:30");
 assert.strictEqual(clockText(90_000, 42_100), "0:48");

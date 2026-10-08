@@ -108,6 +108,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
     else if (e.kind === "miss") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "miss", text: "빗나감" });
     else if (e.kind === "blocked") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "weak", text: "막음" });
     else if (e.kind === "reflect") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "super", text: `-${e.amount}` });
+    else if (e.kind === "weather" && e.amount !== 0) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: e.amount < 0 ? "heal" : "weak", text: e.amount < 0 ? `+${-e.amount}` : `-${e.amount}` });
     else if (e.kind === "self" && e.amount !== 0) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: e.amount < 0 ? "heal" : "normal", text: e.amount < 0 ? `+${-e.amount}` : `-${e.amount}` });
   }
 
@@ -205,7 +206,8 @@ export function createTimeline(view: BattleScreenView): Timeline {
         if (u) hurt(u, e.hp, e.t);
         break;
       }
-      case "self": {
+      case "self":
+      case "weather": {
         const u = unit(e.side, e.slot);
         if (u) hurt(u, e.hp, e.t);
         break;

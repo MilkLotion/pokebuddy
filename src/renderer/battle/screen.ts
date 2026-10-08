@@ -1,7 +1,7 @@
 // 배틀 창 — 메인이 보낸 판(BattleScreenView)을 시간대로 재생한다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
 // - 머리 줄(상태 등·LED·제목·✕)과 Esc 닫기는 기기 창 틀(device-frame.ts)을 쓴다. 설정창에 붙지 않아 ◀▶ 넘기기는 없다
 // - 재생 계산은 src/shared/battle-timeline.ts. 여기서는 그 상태를 DOM 에 옮긴다. 판 하나의 DOM 은 처음 한 번 만들고 프레임마다 값만 바꾼다
-import type { BattleScreenView, BattleSide, BattleUnitView } from "../../shared/model/battle-screen.js";
+import type { BattleRouletteView, BattleScreenView, BattleSide, BattleUnitView } from "../../shared/model/battle-screen.js";
 import type { MoveView } from "../../shared/model/snapshot.js";
 import { TIMELINE_RULES, clockText, createTimeline, spriteFrame, type Timeline, type UnitState } from "../../shared/battle-timeline.js";
 import type { LookSheets } from "../../shared/model/stage.js";
@@ -22,6 +22,9 @@ const frame = createDeviceFrame({
 const CELL = 28; // 계산 칸(px) — 화면 칸 56
 const START_DELAY_MS = 600; // 판을 받은 뒤 재생을 시작하기까지
 const RESULT_DELAY_MS = 600; // 판이 끝난 뒤 결과를 띄우기까지
+// 룰렛 — 칸이 위에서 아래로 돌다가 왼쪽 릴부터 차례로 멈춘다. 다 멈추면 잠깐 보인 뒤 사라지고 판이 시작된다
+const ROULETTE = { rowH: 40, rowMs: 70, spinMs: 1200, gapMs: 500, holdMs: 700 } as const;
+const rouletteMs = (reels: BattleRouletteView[]): number => ROULETTE.spinMs + ROULETTE.gapMs * (reels.length - 1) + ROULETTE.holdMs;
 
 interface CardEls {
   root: HTMLElement;
@@ -84,6 +87,91 @@ function showBubble(anchor: HTMLElement, move: MoveView): void {
 function hideBubble(): void {
   bubble?.remove();
   bubble = null;
+}
+
+// 판 표시 줄의 걸린 효과 칩 — 관련 타입 아이콘 + 이름
+function conditionEl(reel: BattleRouletteView, view: BattleScreenView): HTMLElement | null {
+  if (!reel.name) return null;
+  const chip = el("span", "condition");
+  if (reel.type) chip.appendChild(typeIconEl(reel.type, view.typeIcons));
+  chip.appendChild(document.createTextNode(reel.name));
+  return chip;
+}
+
+interface ReelEls {
+  reel: BattleRouletteView;
+  rows: HTMLElement; // 칸 띠 — translateY 로 돈다
+  result: HTMLElement;
+  stopAt: number; // 룰렛 시작부터 멈출 때까지(ms). 확정·후보 없음은 0
+}
+
+function rouletteRowEl(view: BattleScreenView, c: { side: BattleSide; slot: number }): HTMLElement {
+  const u = view.units[c.side][c.slot];
+  const row = el("div", "rl-row");
+  if (u?.portrait) {
+    const img = document.createElement("img");
+    img.className = "face";
+    img.src = u.portrait;
+    img.alt = "";
+    row.appendChild(img);
+  } else row.appendChild(el("span", "face"));
+  const text = el("div", "rl-text");
+  text.append(el("div", "rl-name", u?.name ?? ""), el("div", "rl-ability", u?.ability ?? ""));
+  row.appendChild(text);
+  return row;
+}
+
+// 룰렛 패널 — 릴 세 개. 결과 줄은 도는 동안에도 자리를 둔다 (Figma 03 `Roulette Panel`, 02 `Roulette Reel`)
+function roulettePanel(view: BattleScreenView, reels: BattleRouletteView[]): { panel: HTMLElement; els: ReelEls[] } {
+  const panel = el("div", "roulette");
+  const els = reels.map((reel, i) => {
+    const box = el("div", "rl-reel");
+    const head = el("div", "rl-head");
+    head.appendChild(el("span", "rl-label", reel.label));
+    if (reel.fixed) head.appendChild(el("span", "rl-fixed", "확정"));
+    const win = el("div", "rl-window");
+    const rows = el("div", "rl-rows");
+    win.append(el("div", "rl-band"), rows);
+    const result = el("div", "rl-result", "—");
+    if (!reel.candidates.length) {
+      win.appendChild(el("div", "rl-empty", "후보 없음"));
+      result.textContent = "없음";
+    } else {
+      // 칸 띠 — 후보를 여러 번 이어 붙여 도는 동안 끊기지 않게 한다. 멈추면 뽑힌 칸을 가운데에 둔다
+      const loop = Math.max(6, reel.candidates.length * 3);
+      for (let k = 0; k < loop + 3; k++) rows.appendChild(rouletteRowEl(view, reel.candidates[k % reel.candidates.length]!));
+    }
+    box.append(head, win, result);
+    panel.appendChild(box);
+    const spins = reel.candidates.length > 0 && !reel.fixed;
+    return { reel, rows, result, stopAt: spins ? ROULETTE.spinMs + ROULETTE.gapMs * i : 0 };
+  });
+  return { panel, els };
+}
+
+function paintReel(r: ReelEls, view: BattleScreenView, elapsed: number): void {
+  const n = r.reel.candidates.length;
+  if (!n) return;
+  const pickedAt = Math.max(0, r.reel.candidates.findIndex((c) => c.side === r.reel.picked?.side && c.slot === r.reel.picked?.slot));
+  if (elapsed < r.stopAt) {
+    // 위에서 아래로 — 띠를 아래로 민다. 위 칸이 가운데로 내려온다
+    const shift = (elapsed / ROULETTE.rowMs) * ROULETTE.rowH;
+    const span = n * ROULETTE.rowH;
+    const y = (shift % span) - span - ROULETTE.rowH * 2 + ROULETTE.rowH;
+    r.rows.style.transform = `translateY(${y}px)`;
+    r.rows.classList.add("spinning");
+    return;
+  }
+  // 멈춤 — 뽑힌 칸(띠 안의 n + pickedAt 번째)을 가운데(y 40)에
+  r.rows.classList.remove("spinning");
+  r.rows.parentElement?.classList.add("stopped"); // 가운데 칸(뽑힌 것)만 진하게
+  r.rows.style.transform = `translateY(${ROULETTE.rowH - (n + pickedAt) * ROULETTE.rowH}px)`;
+  if (r.result.dataset.done !== "1") {
+    r.result.dataset.done = "1";
+    r.result.replaceChildren();
+    if (r.reel.type) r.result.appendChild(typeIconEl(r.reel.type, view.typeIcons));
+    r.result.appendChild(document.createTextNode(r.reel.name ?? "—"));
+  }
 }
 
 function cardEl(u: BattleUnitView | null, view: BattleScreenView): CardEls | null {
@@ -343,12 +431,32 @@ function draw(view: BattleScreenView): void {
     ok.focus();
   }
 
+  // 룰렛 — 엔진이 룰렛을 준 판만. 다 멈추면 패널을 지우고 판 표시 줄에 걸린 효과 칩을 둔다
+  const reels = view.roulette;
+  const rouletteStart = performance.now() + START_DELAY_MS;
+  let roulette: { panel: HTMLElement; els: ReelEls[] } | null = null;
+  if (reels) {
+    roulette = roulettePanel(view, reels);
+    arena.appendChild(roulette.panel);
+    for (const r of roulette.els) paintReel(r, view, 0);
+  }
+  const finishRoulette = (): void => {
+    roulette?.panel.remove();
+    roulette = null;
+    conditions.replaceChildren(...(reels ?? []).map((r) => conditionEl(r, view)).filter((c): c is HTMLElement => c !== null));
+  };
+
   // 재생 — 프레임마다 흐른 시간 × 배속만큼 판 시계를 민다
   let t = 0;
-  let last = performance.now() + START_DELAY_MS;
+  let last = rouletteStart + (reels ? rouletteMs(reels) : 0);
   let resultShown = false;
   const tick = (now: number): void => {
     if (myRun !== run) return;
+    if (roulette) {
+      const elapsed = now - rouletteStart;
+      for (const r of roulette.els) paintReel(r, view, Math.max(0, elapsed));
+      if (reels && elapsed >= rouletteMs(reels)) finishRoulette();
+    }
     if (now > last) {
       t = Math.min(view.endMs + RESULT_DELAY_MS, t + (now - last) * speed);
       last = now;

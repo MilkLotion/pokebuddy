@@ -43,6 +43,8 @@ body {
 
 /* 판 표시 줄 — [걸린 효과 칩] [남은 시간] [배속]. 폭 고정이라 칩이 생겨도 시간·배속이 움직이지 않는다 */
 .hud {
+  position: relative;
+  z-index: 6; /* 위쪽 줄 포켓몬의 피해 숫자·알약이 떠올라도 남은 시간을 가리지 않는다 */
   display: grid;
   grid-template-columns: 1fr 32px 1fr;
   align-items: center;
@@ -436,4 +438,121 @@ body {
 }
 .result .r-ok:hover {
   background: var(--primary-hover);
+}
+
+/* 날씨·필드·오라 룰렛 — 전장 위 가운데 패널, 릴 세 개. 칸은 위에서 아래로 돈다. 결과 줄은 도는 동안에도 자리를 둔다
+   Figma 03 `Roulette Panel`, 02 `Roulette Reel`(128 폭, 창 128×120, 칸 40) */
+.roulette {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.rl-reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 128px;
+}
+.rl-head {
+  display: flex;
+  gap: 6px;
+  font: 700 10px/14px var(--font-small);
+  color: var(--soft);
+}
+.rl-fixed {
+  font-weight: 400;
+}
+.rl-window {
+  position: relative;
+  width: 128px;
+  height: 120px;
+  border: 1px solid #d5d2c6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.rl-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 40px;
+  height: 40px;
+  background: var(--accent);
+}
+.rl-rows {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+.rl-rows.spinning {
+  opacity: 0.5;
+}
+.rl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 8px;
+}
+.rl-row .face {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.rl-text {
+  min-width: 0;
+}
+.rl-name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rl-ability {
+  font: 10px/14px var(--font-small);
+  color: var(--soft);
+  white-space: nowrap;
+}
+.rl-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--soft);
+}
+.rl-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+  font-weight: 700;
+}
+/* 멈춘 릴 — 위아래 칸을 흐리게 덮어 가운데 칸(뽑힌 것)만 진하다 */
+.rl-window.stopped::before,
+.rl-window.stopped::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.65);
+}
+.rl-window.stopped::before {
+  top: 0;
+}
+.rl-window.stopped::after {
+  bottom: 0;
 }
