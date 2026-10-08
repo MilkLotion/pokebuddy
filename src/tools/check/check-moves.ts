@@ -7,15 +7,16 @@
 // 보는 것:
 //   1. data/species.defaults.json 의 모든 종에 종 기술·종 특성이 있고, 남는 종이 없다
 //   2. special 이 없는 종은 기술 2개다. 기술 id 는 moves.json 에 있고 한 종 안에서 겹치지 않는다
-//   3. 칸 타입 — 단일 타입은 두 칸 모두 그 타입, 두 타입은 타입마다 한 칸. 종 타입과 다른 칸(전용기)은 하나까지
-//   4. 변화기 칸은 위력을 덮어써 공격기로 쓴다. 예외는 special 종(반사·킬가르도)
+//   3. 칸 타입 — 단일 타입은 두 칸 모두 그 타입, 두 타입은 타입마다 한 칸. 종 타입과 다른 칸(전용기)은 하나까지. 웨더볼·대지의파동은 종 특성의 날씨·필드 타입으로 본다
+//   4. 칸은 모두 공격기다. 변화기 전용기는 보류(docs/specs/moves.md "보류 기능"). 예외는 special 종(반사·킬가르도)
 //   5. special 은 transform·reflect·sketch·wall·stance 중 하나이고 그에 맞는 칸 수다
-//   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다
+//   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다. 능력 변화(effects.stats)는 who·stat·change(±1~3)·chance(1~100). 쿨타임은 공식 값(기대 위력 ÷ 15초, 최소 2초, 선공기 ×0.8), 급소(effects.crit)는 high·always
 //   7. 종 특성은 abilities.json 에 있고, 특성은 한국어 이름과 when(now·later·none)이 있다
 //   8. 모든 종에 종족값 6개(stats)가 있다. 합은 bst, 여섯째는 baseSpeed 와 같다
 //   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
 //  10. 타입 상성표(type-chart.json)는 18 × 18 이고 배율은 0·0.5·1·2 뿐이다
 //  11. 메가 배틀 값(mega-battle.json)의 키는 mega.json 의 모습과 같다. 종족값 6개, 특성은 abilities.json 에 있다
+//  12. 후보(candidates)는 4개까지, 공격기, 기본 2개·서로와 겹치지 않고, 종 타입과 다른 후보는 하나까지. 특수 종에는 없다
 // 어긋남이 있으면 모두 찍고 종료 코드 1
 import fs from "node:fs";
 import path from "node:path";
@@ -34,7 +35,21 @@ interface MoveEntry {
   accuracy: number | null;
   priority?: number;
   cooldown?: number;
+  effects?: { stats?: StatEffect[]; crit?: string };
 }
+
+// 공격기의 능력 변화 — 맞힌 뒤 chance% 로 건다 (docs/specs/moves.md "능력 변화")
+interface StatEffect {
+  who: string;
+  stat: string;
+  change: number;
+  chance: number;
+}
+const STAT_WHO = new Set(["self", "target"]);
+// 찍찍베기(1~10회, 한 타마다 90% 로 이어짐)의 기대 타수
+const EXP_HITS_10 = Array.from({ length: 10 }, (_, k) => 0.9 ** (k + 1)).reduce((a, b) => a + b, 0);
+const ceil1 = (x: number): number => Math.ceil(x * 10 - 1e-9) / 10;
+const STAT_KEYS = new Set(["atk", "def", "spa", "spd", "spe"]);
 
 interface SlotOverride {
   id: string;
@@ -49,6 +64,7 @@ type Slot = string | SlotOverride;
 interface SpeciesMoves {
   moves: Slot[];
   special?: Special;
+  candidates?: string[]; // 마지막 진화체의 후보 — 기본 2개와 합쳐 6개 중 2개를 고른다
 }
 
 interface AbilityEntry {
@@ -70,6 +86,12 @@ const TYPES = new Set(["normal", "fighting", "flying", "poison", "ground", "rock
 
 // 특수 종의 칸 수 — reflect 는 카운터·미러코트, stance 는 킹실드·섀도볼
 const SPECIAL_SLOTS: Readonly<Record<Special, number>> = { transform: 0, reflect: 2, sketch: 0, wall: 0, stance: 2 };
+
+// 날씨·필드를 부르는 특성 → 바뀌는 타입. 웨더볼은 날씨, 대지의파동은 필드를 따른다
+const ENV_TYPE: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "weather-ball": { drought: "fire", "orichalcum-pulse": "fire", "desolate-land": "fire", drizzle: "water", "primordial-sea": "water", "sand-stream": "rock", "sand-spit": "rock", "snow-warning": "ice" },
+  "terrain-pulse": { "electric-surge": "electric", "hadron-engine": "electric", "grassy-surge": "grass", "seed-sower": "grass", "psychic-surge": "psychic", "misty-surge": "fairy" },
+};
 
 // _comment 줄을 뺀 표
 function readTable<T>(file: string): Record<string, T> {
@@ -100,6 +122,18 @@ export function moveDataFindings(): string[] {
     if (m.class !== "status" && !(m.power && m.power > 0) && !specialOnly.has(id)) bad.push(`기술 ${id}: 공격기인데 위력 없음`);
     if (m.class !== "status" && !(m.cooldown && m.cooldown > 0)) bad.push(`기술 ${id}: 공격기인데 쿨타임 없음`);
     if (m.hits && !(m.hits[0] >= 1 && m.hits[1] >= m.hits[0])) bad.push(`기술 ${id}: 타수 ${m.hits.join("~")}`);
+    if (m.effects?.crit !== undefined && !["high", "always"].includes(m.effects.crit)) bad.push(`기술 ${id}: 급소 ${m.effects.crit}`);
+    // 쿨타임 = 기대 위력 ÷ 15초, 최소 2초, 0.1초 올림. 선공기 ×0.8 (docs/specs/moves.md "쿨타임")
+    if (m.class !== "status" && m.power && !specialOnly.has(id)) {
+      const exp = m.power * (!m.hits ? 1 : m.hits[0] === m.hits[1] ? m.hits[0] : m.hits[1] === 10 ? EXP_HITS_10 : 3.1);
+      let want = Math.max(2, ceil1(exp / 15));
+      if ((m.priority ?? 0) > 0) want = ceil1(want * 0.8);
+      if (m.cooldown !== want) bad.push(`기술 ${id}: 쿨타임 ${m.cooldown} — 공식 ${want}`);
+    }
+    for (const e of m.effects?.stats ?? []) {
+      const ok = STAT_WHO.has(e.who) && STAT_KEYS.has(e.stat) && Number.isInteger(e.change) && e.change !== 0 && Math.abs(e.change) <= 3 && e.chance >= 1 && e.chance <= 100;
+      if (!ok) bad.push(`기술 ${id}: 능력 변화 ${JSON.stringify(e)}`);
+    }
   }
 
   // 1 종 목록
@@ -117,6 +151,7 @@ export function moveDataFindings(): string[] {
     const ids = entry.moves.map((s) => (typeof s === "string" ? s : s.id));
     for (const id of ids) if (!moves[id]) bad.push(`종 ${key}: 기술 ${id} 가 moves.json 에 없음`);
     if (new Set(ids).size !== ids.length) bad.push(`종 ${key}: 겹친 기술 ${ids.join("·")}`);
+    if (entry.special && entry.candidates?.length) bad.push(`종 ${key}: 특수 종에 후보`);
     if (entry.special) {
       if (!(entry.special in SPECIAL_SLOTS)) bad.push(`종 ${key}: special ${entry.special}`);
       else if (ids.length !== SPECIAL_SLOTS[entry.special]) bad.push(`종 ${key}: ${entry.special} 칸 ${ids.length}개`);
@@ -126,7 +161,13 @@ export function moveDataFindings(): string[] {
       bad.push(`종 ${key}: 기술 ${ids.length}개`);
       continue;
     }
-    const slotTypes = entry.moves.map((s) => (typeof s === "string" ? moves[s]?.type : (s.type ?? moves[s.id]?.type)) ?? "");
+    // 웨더볼·대지의파동은 종 특성이 부르는 날씨·필드의 타입으로 본다 (docs/specs/moves.md "날씨와 필드")
+    const slotTypes = entry.moves.map((s) => {
+      const id = typeof s === "string" ? s : s.id;
+      const envType = ENV_TYPE[id]?.[speciesAbilities[key] ?? ""];
+      if (envType) return envType;
+      return (typeof s === "string" ? moves[s]?.type : (s.type ?? moves[s.id]?.type)) ?? "";
+    });
     const off = slotTypes.filter((t) => !sp.types.includes(t)).length;
     if (off > 1) bad.push(`종 ${key}(${sp.types.join("/")}): 종 타입과 다른 칸이 ${off}개 — ${slotTypes.join("·")}`);
     if (sp.types.length === 2 && off === 0 && slotTypes[0] === slotTypes[1]) bad.push(`종 ${key}(${sp.types.join("/")}): 두 칸이 같은 타입 ${slotTypes[0]}`);
@@ -137,6 +178,17 @@ export function moveDataFindings(): string[] {
       const power = typeof s === "string" ? moves[id]?.power : (s.power ?? moves[id]?.power);
       if (cls === "status" || !(power && power > 0)) bad.push(`종 ${key}: ${id} 칸이 공격기가 아님`);
     }
+    // 12 후보 — 4개까지, 공격기, 기본 2개·서로와 겹치지 않음, 종 타입과 다른 후보는 하나까지
+    const cand = entry.candidates ?? [];
+    if (cand.length > 4) bad.push(`종 ${key}: 후보 ${cand.length}개`);
+    if (new Set([...ids, ...cand]).size !== ids.length + cand.length) bad.push(`종 ${key}: 후보가 겹침 ${cand.join("·")}`);
+    for (const id of cand) {
+      const m = moves[id];
+      if (!m) bad.push(`종 ${key}: 후보 ${id} 가 moves.json 에 없음`);
+      else if (m.class === "status" || !(m.power && m.power > 0)) bad.push(`종 ${key}: 후보 ${id} 가 공격기가 아님`);
+    }
+    const candOff = cand.filter((id) => !sp.types.includes(ENV_TYPE[id]?.[speciesAbilities[key] ?? ""] ?? moves[id]?.type ?? "")).length;
+    if (candOff > 1) bad.push(`종 ${key}: 종 타입과 다른 후보 ${candOff}개`);
   }
 
   // 7 특성
