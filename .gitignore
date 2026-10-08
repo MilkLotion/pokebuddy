@@ -22,3 +22,5 @@ release/
 
 # 관리자 CLI — 이 프로젝트 Supabase 운영용. 게임과 저장소 밖 (2026-09-27 사용자 "게임에선 아예 모르게")
 admin/
+
+.tsout-moves/
