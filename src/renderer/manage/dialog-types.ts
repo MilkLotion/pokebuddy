@@ -28,6 +28,7 @@ export type Dialog =
   | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
   | { kind: "preset-overview"; battle?: true } // 프리셋 전체보기 — 파티 탭 머리의 `전체보기`. battle 이면 모험 탭의 `가져오기`(기존 파티 가져오기)
   | { kind: "battle-pick"; slot: number; page: number } // 배틀 파티 칸에 넣을 개체 고르기 — page 는 고르기판 쪽(프리셋 → 박스)
+  | { kind: "battle-opponent" } // 랜덤 배틀 상대 고르기 — 모험 탭의 `배틀 시작`
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string; battle?: true } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습. battle 이면 배틀 파티의 메가 상태(배틀 파티 상세 기기 창의 표식)

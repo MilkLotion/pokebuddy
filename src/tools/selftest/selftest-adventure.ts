@@ -4,7 +4,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { petMoves, speciesMoves } from "../../battle/moves";
-import { battleMegaOf, battleSlots, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle } from "../../battle/party";
+import { applyBattleReward, battleMegaOf, battleSlots, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle } from "../../battle/party";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
@@ -202,6 +202,21 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   // 정규화 — 칸에 없는 개체·메가스톤 없는 개체·틀린 모습은 버린다
   const raw = JSON.parse(JSON.stringify({ ...save, battle: { slots: save.battle!.slots, mega: { p3: "rayquaza-mega", p4: "charizard-mega-x", p9: "x", p1: "mewtwo-mega-x" } } })) as Record<string, unknown>;
   assert.deepEqual(normalize(raw, T0)!.battle?.mega, { p3: "rayquaza-mega" });
+}
+
+// ── 랜덤 배틀 보상 — 포인트를 넣고 판 id 를 남긴다. 같은 판은 한 번, 값이 이상하면 거절, 최근 200개 ──
+{
+  const save = seed(["pikachu"]);
+  save.points.balance = 100;
+  assert.deepEqual(applyBattleReward(save, "b1", 500), { ok: true, applied: true });
+  assert.equal(save.points.balance, 600);
+  assert.deepEqual(applyBattleReward(save, "b1", 500), { ok: true, applied: false }, "같은 판은 한 번");
+  assert.equal(save.points.balance, 600);
+  assert.equal(applyBattleReward(save, "b2", 501).ok, false, "500 을 넘는 보상은 거절");
+  assert.equal(applyBattleReward(save, "", 10).ok, false);
+  for (let i = 0; i < 250; i++) applyBattleReward(save, `x${i}`, 10);
+  assert.equal(save.battle!.applied!.length, 200, "최근 200개만");
+  assert.equal(normalize(JSON.parse(JSON.stringify(save)), T0)!.battle?.applied?.length, 200, "정규화도 남긴다");
 }
 
 process.stdout.write("통과\n");

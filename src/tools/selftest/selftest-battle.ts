@@ -256,7 +256,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.deepStrictEqual([startOf(r2).roulette!.weather!.kind, startOf(r2).roulette!.weather!.fixed], ["heavy-rain", true]);
   assert.strictEqual(run([quiet()], [quiet()], 1, 100).events[0]!.kind === "start" && startOf(run([quiet()], [quiet()], 1, 100)).roulette, undefined, "특성이 없으면 roulette 칸 없음");
 
-  // 쾌청 — 불꽃 ×1.5, 물 ×0.5. 같은 시드에서 날씨만 바꿔 견준다
+  // 쾌청 — 불꽃 ×1.3, 물 ×0.5. 같은 시드에서 날씨만 바꿔 견준다
   const pos = { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
   const firstHit = (move: EngineMove, setter: string | null) =>
     of(run([unit({ types: ["normal"], stats: [999, 1, 999, 100, 999, 95], moves: [move] }), quiet({ ability: setter })], [quiet({ ability: "battle-armor", stats: [999, 1, 999, 1, 100, 95] })], 5, 1100, pos).events, "damage").find((e) => e.source === move.id)!.amount;
@@ -264,7 +264,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   const surf = mv("surf", { type: "water", class: "special", power: 90, cooldownMs: 1000 });
   // 급소를 막고(전투무장) 피해 폭 0.85~1 을 넣어 범위로 본다
   const f0 = firstHit(flame, null), fSun = firstHit(flame, "drought"), wSun = firstHit(surf, "drought");
-  assert.ok(fSun / f0 > 1.25 && fSun / f0 < 1.8, `쾌청 불꽃 ${f0}→${fSun}`);
+  assert.ok(fSun / f0 > 1.15 && fSun / f0 < 1.5, `쾌청 불꽃 ${f0}→${fSun}`);
   assert.ok(wSun / f0 > 0.4 && wSun / f0 < 0.6, `쾌청 물 ${f0}→${wSun}`);
   // 끝의대지 — 물 기술은 실패(피해 0)
   assert.strictEqual(firstHit(surf, "desolate-land"), 0, "끝의대지에서 물 실패");
@@ -413,6 +413,16 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   // 미스트필드 — 땅에 있는 포켓몬은 걸리지 않는다
   const misty = run([unit({ moves: [sure("burn")] }), wall({ ability: "misty-surge" })], [wall()], 1, 3000, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   assert.strictEqual(st(misty, 1).length, 0, "미스트필드");
+  // 막음(status-blocked) — 확률을 통과한 뒤 막혔을 때만. 특성이 막으면 그 특성 ability 가 먼저
+  const blockedOf = (r: ReturnType<typeof run>) => of(r.events, "status-blocked").filter((e) => e.side === 1);
+  assert.deepStrictEqual(blockedOf(misty).map((e) => [e.status, e.cause]).slice(0, 1), [["burn", "misty"]], "미스트필드 막음");
+  assert.deepStrictEqual(blockedOf(run([unit({ moves: [sure("burn")] })], [wall({ types: ["fire"] })], 1, 1100, pos)).map((e) => e.cause), ["type"], "타입 면역 막음");
+  const limber = run([unit({ moves: [sure("paralysis")] })], [wall({ ability: "limber" })], 1, 1100, pos);
+  const li = limber.events.findIndex((e) => e.kind === "ability" && e.ability === "limber");
+  const lb = limber.events.findIndex((e) => e.kind === "status-blocked");
+  assert.ok(li >= 0 && lb > li && blockedOf(limber)[0]!.cause === "ability", "특성 막음 — ability 다음 status-blocked");
+  assert.strictEqual(blockedOf(r2).length, 0, "이미 다른 주된 상태 이상이면 막음이 아니다");
+  assert.strictEqual(blockedOf(run([unit({ moves: [flinchMove] })], [wall({ ability: "inner-focus", moves: [foeMove] })], 1, 1100, pos))[0]!.status, "flinch", "정신력 막음");
   // 기분파 — 비면 물 타입
   const cast = run([wall({ ability: "forecast" }), wall({ ability: "drizzle" })], [wall({ moves: [mv("bolt", { type: "electric", class: "special", power: 40, cooldownMs: 1000 })] })], 1, 1100, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   assert.strictEqual(of(cast.events, "damage").find((e) => e.source === "bolt")!.mult, 2, "기분파 — 비에서 물 타입");
@@ -489,11 +499,60 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.strictEqual(r.timeout, false);
 }
 
-// ── 게으름 — 한 번 쓴 뒤 쿨타임 2배 ──
+// ── 게으름 — 한 번 쓴 뒤 쿨타임 ×1.5 ──
 {
   const a = [unit({ ability: "truant", stats: [999, 1, 999, 1, 999, 95], moves: [mv("a", { power: 1 }), mv("b", { power: 1 })] })];
   const r = run(a, [unit({ stats: [999, 1, 999, 1, 999, 95] })], 1, 20_000);
-  assert.deepStrictEqual(of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t).slice(0, 2), [4000, 12000]);
+  assert.deepStrictEqual(of(r.events, "move").filter((e) => e.side === 0).map((e) => e.t).slice(0, 2), [4000, 10000]);
+}
+
+// ── 특성 이벤트·능력 변화의 until·2026-10-09 값 (moves.md "특성", "엔진에서 정한 세부") ──
+{
+  const wall = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const hitWith = (move: EngineMove, me: Partial<EngineFighter>, foe: Partial<EngineFighter>, ms = 1100) =>
+    run([unit({ stats: [999, 100, 999, 100, 999, 95], moves: [move], ...me })], [wall({ ability: "battle-armor", stats: [200, 1, 100, 1, 100, 95], ...foe })], 5, ms, pos);
+  const abil = (r: ReturnType<typeof run>, side: 0 | 1) => of(r.events, "ability").filter((e) => e.side === side).map((e) => e.ability);
+  const idx = (r: ReturnType<typeof run>, pred: (e: BattleEvent) => boolean) => r.events.findIndex(pred);
+  // 10초짜리 변화는 until = 건 시각 + 10초
+  const crunch = mv("crunch3", { power: 1, cooldownMs: 1000, effects: { stats: [{ who: "target", stat: "def", change: -1, chance: 100 }] } });
+  const down = of(hitWith(crunch, {}, {}).events, "stat").find((e) => e.side === 1)!;
+  assert.strictEqual(down.until, down.t + ENGINE_RULES.stageMs, "stat until");
+  // 오기 — ability 가 결과 stat 보다 먼저
+  const df = hitWith(crunch, {}, { ability: "defiant" });
+  assert.ok(idx(df, (e) => e.kind === "ability" && e.ability === "defiant") < idx(df, (e) => e.kind === "stat" && e.side === 1 && e.stat === 1), "오기 ability 먼저");
+  assert.deepStrictEqual(abil(hitWith(crunch, {}, { ability: "clear-body" }), 1), ["clear-body"], "클리어바디 막음도 ability");
+  // 판 끝까지 단계 — until 없음. 위협(10초)과 겹치면 10초 뒤 판 끝까지 단계만 until 없이 다시 낸다
+  const sw = run([wall({ ability: "intimidate" })], [wall({ ability: "intrepid-sword" })], 1, 10_100);
+  assert.deepStrictEqual(abil(sw, 0), ["intimidate"]);
+  assert.deepStrictEqual(abil(sw, 1), ["intrepid-sword"]);
+  const atk1 = of(sw.events, "stat").filter((e) => e.side === 1 && e.stat === 1).map((e) => [e.t, e.stage, e.until ?? null]);
+  assert.deepStrictEqual(atk1, [[0, -1, 10_000], [0, 0, 10_000], [10_000, 1, null]], "위협 −1 + 불요의검 +1 → 10초 뒤 +1");
+  assert.ok(!of(run([wall({ ability: "intrepid-sword" })], [wall()], 1, 100).events, "stat").some((e) => e.until !== undefined), "불요의검만이면 until 없음");
+  // 깨어진갑옷 — 물리에 맞으면 방어 −1, 스피드 +2
+  const wa = of(hitWith(mv("hit", { power: 1, cooldownMs: 1000 }), {}, { ability: "weak-armor" }).events, "stat").filter((e) => e.side === 1);
+  assert.deepStrictEqual(wa.map((e) => [e.stat, e.stage]), [[2, -1], [5, 2]], "깨어진갑옷");
+  // 재생력 — 최대 HP 의 1/4
+  const rg = hitWith(mv("half", { power: 120, cooldownMs: 1000 }), { stats: [999, 200, 999, 1, 999, 95] }, { ability: "regenerator", stats: [200, 1, 60, 1, 60, 95] }, 5000);
+  assert.ok(of(rg.events, "self").some((e) => e.side === 1 && e.amount === -Math.floor((200 * ENGINE_RULES.hpScale) / 4)), "재생력 1/4");
+  assert.ok(abil(rg, 1).includes("regenerator"));
+  // 변색 — 맞은 기술의 타입이 되고 받는 상성에만 쓴다. 같은 타입이면 다시 내지 않는다
+  const ember = mv("ember2", { type: "fire", class: "special", power: 40, cooldownMs: 1000 });
+  const cc = hitWith(ember, {}, { ability: "color-change" }, 2100);
+  assert.deepStrictEqual(of(cc.events, "damage").filter((e) => e.source === "ember2").map((e) => e.mult), [1, 0.5], "변색 — 두 번째는 불꽃이 받는 상성");
+  assert.deepStrictEqual(abil(cc, 1), ["color-change"]);
+  // 변색은 자속을 바꾸지 않는다 — 불꽃에 맞아 바뀐 뒤에도 노말 기술 피해가 변색 없는 판과 같은 크기(자속을 잃으면 ×0.67)
+  const ccHit = (ability: string | null) =>
+    run([wall({ ability, stats: [999, 100, 999, 1, 999, 95], moves: [mv("tackle2", { power: 60, cooldownMs: 1000 })] })], [unit({ ability: "battle-armor", stats: [999, 1, 100, 100, 999, 95], moves: [mv("ember3", { type: "fire", class: "special", power: 1, cooldownMs: 500 })] })], 5, 1100, pos);
+  const tk = (r: ReturnType<typeof run>) => of(r.events, "damage").find((e) => e.source === "tackle2")!.amount;
+  const withCc = ccHit("color-change");
+  assert.ok(abil(withCc, 0).includes("color-change") && tk(withCc) / tk(ccHit(null)) > 0.8, `변색 뒤에도 노말 자속 ${tk(ccHit(null))}→${tk(withCc)}`);
+  // 협연 — 자기 쪽 아군의 능력이 처음 오르면 그 변화를 복사, 판에 한 번
+  const swords = mv("sd", { power: 1, cooldownMs: 1000, effects: { stats: [{ who: "self", stat: "atk", change: 2, chance: 100 }] } });
+  const co = run([unit({ stats: [999, 100, 999, 100, 999, 95], moves: [swords] }), wall({ ability: "costar" })], [wall()], 1, 3100, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  const copied = of(co.events, "stat").filter((e) => e.side === 0 && e.slot === 1);
+  assert.deepStrictEqual(copied.map((e) => [e.t, e.stat, e.stage]), [[1000, 1, 2]], "협연 — 처음 한 번만 +2 복사");
+  assert.deepStrictEqual(abil(co, 0), ["costar"]);
 }
 
 // ── 슬로스타트 — 첫 기술 5배 ──

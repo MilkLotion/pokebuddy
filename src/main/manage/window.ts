@@ -9,6 +9,8 @@ import { BrowserWindow } from "electron";
 import type { AccountAction, AccountReply, PatchNotesView, UpdateAction, UpdateView } from "../../shared/model/account";
 import type { DisplayView } from "../../shared/model/snapshot";
 import type { MailAction, MailReply } from "../../shared/model/mail";
+import type { BattleAction, BattleReply } from "../../shared/model/battle-net";
+import type { BattleScreenInput } from "../../view/battle-screen";
 import type { ManagePush, ManageReply, ManageRequest } from "../../shared/ipc/manage";
 import type { ManageRoute } from "../../shared/model/route";
 import type { ScreenView } from "../../shared/model/overlays";
@@ -50,6 +52,7 @@ export interface ManageServices {
   identifyScreens?: (on: boolean) => void;
   pickScreen?: () => Promise<ManageReply>;
   mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/online/mail-inbox.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
+  battle?: (req: BattleAction) => Promise<BattleReply | null>; // 랜덤 배틀 (src/online/battle-net.ts). 서버 설정이 없거나 writer 를 놓았으면 null
   petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/view/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
 }
 
@@ -72,6 +75,7 @@ export interface Manage {
   // 설정창 문서로 밀어 보낸다 — 창이나 문서가 없으면 버린다. 창을 열면 렌더러가 다시 읽는다
   send<K extends keyof ManagePush>(channel: K, ...args: ManagePush[K]): void;
   setStageCoachDim(on: boolean): void; // 바탕화면 튜토리얼 말풍선이 떴다·사라졌다 — 앱이 무대 코치를 맞출 때마다 알린다 (src/main/stage/coach.ts)
+  openBattle(input: BattleScreenInput): void; // 랜덤 배틀 판을 배틀 창으로 연다 — 설정창을 연 적이 없으면 아무것도 하지 않는다
 }
 
 export function createManage(deps: ManageDeps): Manage {
@@ -186,5 +190,9 @@ export function createManage(deps: ManageDeps): Manage {
     open,
     send: toManage,
     setStageCoachDim: (on) => setDimFrom("stage", on),
+    // 랜덤 배틀 판을 배틀 창으로 연다 — 기기 창은 설정창을 연 뒤에 생긴다
+    openBattle: (input: BattleScreenInput) => {
+      if (devices) void devices.battleScreen.open(input).catch((e: unknown) => console.error("배틀 창을 띄우지 못했다", e));
+    },
   };
 }

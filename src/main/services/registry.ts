@@ -14,6 +14,10 @@ import { createSessionStorage, sessionFile, type SessionFileStorage } from "../.
 import { pendingTradeOf } from "../../party/pet-actions";
 import type { GameV3 } from "../../tx/game";
 import { createMailInbox, type MailInbox } from "../../online/mail-inbox.js";
+import { createBattleNet, type StartData } from "../../online/battle-net.js";
+import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
+import { battleOfferView, battleRewardText } from "../../view/battle-offer.js";
+import type { BattleScreenInput } from "../../view/battle-screen.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
 import { createMainTrade, type MainTrade } from "./trade";
 import { mailScreenOf } from "../../view/mail.js";
@@ -34,6 +38,7 @@ export interface ServicesDeps {
   sendTrade(screen: TradeScreen): void;
   sendAccount(screen: AccountScreen): void;
   sendMail(screen: MailScreen): void;
+  openBattle(input: BattleScreenInput): void; // 랜덤 배틀 판을 배틀 창으로 연다
   // 온라인 기능이 앱에 알리는 일 — 멈추기·분실·알림·업데이트 필요·새로 시작
   online: Pick<MainOnlineOptions, "onSaveReplaced" | "onHalt" | "onLost" | "onNotice" | "onUpdateRequired" | "freeze" | "thaw" | "onRestart">;
 }
@@ -47,6 +52,7 @@ export interface Services {
   hold(): Promise<boolean>;
   settled(ms: number): Promise<void>;
   mail(): MailInbox | null; // 없으면 만든다
+  battle(): ReturnType<typeof createBattleNet> | null; // 랜덤 배틀 서버 호출 — 없으면 만든다
   openTradeLink(link: string): void; // 링크를 받아 두고 교환 모달을 연다. 세션이 준비되면 참가한다
   flushTradeLink(): void;
   pause(): void; // 교환·우편을 멈춘다. 온라인은 남긴다 — 확인·다시 시도에 쓴다
@@ -58,6 +64,7 @@ export function createServices(deps: ServicesDeps): Services {
   let mainTrade: MainTrade | null = null;
   let tradeScreen: TradeScreenBuilder | null = null;
   let mainMail: MailInbox | null = null;
+  let mainBattle: ReturnType<typeof createBattleNet> | null = null;
   let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
   let tradeLink: { link: string; at: number } | null = deps.firstLink ? { link: deps.firstLink, at: Date.now() } : null;
   // 세션 파일 저장소 한 벌 — 계정·클라우드(online)와 교환이 같은 메모리로 session.bin 을 본다.
@@ -197,6 +204,27 @@ export function createServices(deps: ServicesDeps): Services {
     return mainMail;
   }
 
+  // 랜덤 배틀 — 판을 받으면 보상을 넣고 배틀 창을 연다
+  function battle(): ReturnType<typeof createBattleNet> | null {
+    const on = online();
+    const g = deps.game();
+    if (!on || !g) return null;
+    if (!mainBattle) {
+      mainBattle = createBattleNet({
+        client: on.client,
+        signedIn: () => {
+          const s = on.screen();
+          return s.signedIn || !!s.anonymous; // 익명 계정도 배틀한다
+        },
+        run: (id, name, args) => (deps.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
+        onChanged: () => deps.refreshParty(),
+        offerView: battleOfferView,
+        show: (data, pick) => deps.openBattle(screenInputOf(data, pick)),
+      });
+    }
+    return mainBattle;
+  }
+
   // 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
   // 시작 확인 중에 참가하면 busy 로 거절되고 링크가 사라진다(2026-09-27 검수 R2-01)
   function flushTradeLink(): void {
@@ -228,6 +256,7 @@ export function createServices(deps: ServicesDeps): Services {
     hold,
     settled,
     mail,
+    battle,
     // 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
     openTradeLink(link) {
       tradeLink = { link, at: Date.now() };
@@ -238,6 +267,7 @@ export function createServices(deps: ServicesDeps): Services {
     pause() {
       stopTrade();
       mainMail = null;
+      mainBattle = null;
     },
     dispose() {
       stopTrade();
@@ -246,4 +276,19 @@ export function createServices(deps: ServicesDeps): Services {
       mainMail = null;
     },
   };
+}
+
+// 서버가 준 판 → 배틀 창 입력. 상대 이름은 보인 줄 번호다(상대 계정 이름은 서버가 주지 않는다)
+function screenInputOf(data: StartData, pick: number): BattleScreenInput {
+  const result: BattleResult = {
+    winner: data.result.winner,
+    timeout: data.result.timeout,
+    endMs: data.result.endMs,
+    hp: data.result.hp,
+    maxHp: data.result.maxHp,
+    obstacles: data.result.obstacles as Obstacle[],
+    events: data.events as BattleEvent[],
+  };
+  const sides = data.sides as unknown as [(EngineFighter | null)[], (EngineFighter | null)[]];
+  return { sides, result, opponentName: `상대 · ${pick}번 파티`, reward: battleRewardText(data.reward, data.result.winner) };
 }

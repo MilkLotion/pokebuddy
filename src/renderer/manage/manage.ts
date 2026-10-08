@@ -13,6 +13,7 @@ import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
 import { boxSlot, drawBox } from "./box-tab.js";
 import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
+import { drawBattleOpponent } from "./battle-opponent.js";
 import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
 import { closeSwap, onPartyAction, partyLink, syncPartyDevice } from "./party-link.js";
 import { drawGuide } from "./guide.js";
@@ -240,6 +241,7 @@ registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatc
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
+registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
 registerDialog({ kind: "battle-pick", shape: "dialog trade battle-pick", draw: (d) => drawBattlePick(d.slot, d.page) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });

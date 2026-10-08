@@ -49,6 +49,9 @@ export const SERVER_TRADE_CODES = [
 
 export const SERVER_MAIL_CODES = ["MAIL_EXPIRED", "MAIL_LOGIN_REQUIRED", "MAIL_NO_GIFTS", "MAIL_NOT_FOUND"] as const;
 
+// 랜덤 배틀 (supabase/functions/battle-offer·battle-start, 20261009100000_battle.sql)
+export const SERVER_BATTLE_CODES = ["BATTLE_BAD_ARGS", "BATTLE_COOLDOWN", "BATTLE_OFFER_GONE", "BATTLE_PARTY_INVALID", "BATTLE_TOO_FAST"] as const;
+
 // AUTH_USERNAME_RESERVED 는 앱이 AUTH_USERNAME_TAKEN 으로 바꿔 보인다 (src/online/codes.ts authCodeOf)
 export const SERVER_AUTH_CODES = [
   "AUTH_NAME_INVALID",
@@ -94,6 +97,9 @@ export type TradeCode = (typeof SERVER_TRADE_CODES)[number] | "CLOUD_ACCOUNT_HEL
 // 우편함
 export type MailCode = (typeof SERVER_MAIL_CODES)[number] | Net;
 
+// 랜덤 배틀 — 정지·로그인 코드도 온다. LOCAL 은 받은 판의 보상을 저장에 넣지 못했다
+export type BattleCode = (typeof SERVER_BATTLE_CODES)[number] | "CLOUD_ACCOUNT_HELD" | "CLOUD_LOGIN_REQUIRED" | "LOCAL" | Net;
+
 // 계정 — 가입·로그인·로그아웃·이름 바꾸기·삭제
 export type AccountCode =
   | "AUTH_USERNAME_INVALID"
@@ -118,6 +124,7 @@ export type OnlineCode =
   | (typeof SERVER_CLOUD_CODES)[number]
   | (typeof SERVER_TRADE_CODES)[number]
   | (typeof SERVER_MAIL_CODES)[number]
+  | (typeof SERVER_BATTLE_CODES)[number]
   | (typeof SERVER_AUTH_CODES)[number]
   | (typeof APP_ONLINE_CODES)[number];
 

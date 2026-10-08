@@ -9,7 +9,7 @@ import type { BattleV3, SaveV3 } from "../shared/save-v3";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
-export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset" | "not-in-party" | "no-stone" | "bad-form">;
+export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset" | "not-in-party" | "no-stone" | "bad-form" | "bad-args">;
 
 type Battle = Pick<SaveV3, "battle">;
 
@@ -129,3 +129,18 @@ export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOp
 // 배틀을 시작할 수 있는가 — 출전 불가가 없고 한 마리 이상. 배틀은 아직 없다 (탐험·배틀 단추는 누르지 못한다)
 export const canStartBattle = (save: Pick<SaveV3, "battle" | "pets">, opts?: DexOptions): boolean =>
   battleSlots(save).some((id) => id != null) && blockedSlots(save, opts).every((b) => b == null);
+
+// ── 랜덤 배틀 보상 ── 서버가 정한 판의 포인트를 넣고 판 id 를 남긴다. 같은 판은 두 번 넣지 않는다(applied: false)
+// 서버 저장 검증이 battle.applied 의 새 판 id 를 판 기록과 대조한다 (src/verify/save-rules.ts battle)
+const BATTLE_REWARD_MAX = 500; // 그날 첫 판 — docs/specs/balance.md "배틀 보상"
+const APPLIED_KEEP = 200;
+export function applyBattleReward(save: Battle & Pick<SaveV3, "points">, battleId: string, reward: number): Outcome<BattleFailure> & { applied?: boolean } {
+  if (!battleId || !Number.isInteger(reward) || reward < 0 || reward > BATTLE_REWARD_MAX) return { ok: false, reason: "bad-args" };
+  const battle = (save.battle ??= emptyBattle());
+  const applied = (battle.applied ??= []);
+  if (applied.includes(battleId)) return { ok: true, applied: false };
+  save.points.balance += reward;
+  applied.push(battleId);
+  if (applied.length > APPLIED_KEEP) applied.splice(0, applied.length - APPLIED_KEEP);
+  return { ok: true, applied: true };
+}

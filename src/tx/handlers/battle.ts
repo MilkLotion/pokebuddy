@@ -1,5 +1,5 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { clearBattleSlot, importPreset, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
+import { applyBattleReward, clearBattleSlot, importPreset, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
@@ -49,4 +49,13 @@ export const battleMegaHandler: TxHandler = (draft, args) => {
   const res = setBattleMega(draft, petId, form);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, form } };
+};
+
+// 랜덤 배틀 보상 — 서버 호출은 온라인 층(src/online/battle-net.ts)이 한다. 표면 명령이 아니다(internal) — 설정창·CLI 가 보상을 만들어 넣지 못하게
+export const battleRewardHandler: TxHandler = (draft, args) => {
+  const battleId = isArgsRecord(args) && typeof args.battleId === "string" ? args.battleId : "";
+  const reward = isArgsRecord(args) && typeof args.reward === "number" ? args.reward : -1;
+  const res = applyBattleReward(draft, battleId, reward);
+  if (!res.ok) return { ok: false, reason: res.reason };
+  return { ok: true, result: { battleId, applied: res.applied === true } };
 };

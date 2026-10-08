@@ -80,6 +80,7 @@ export const COMMANDS = {
   "trade.unlock": { via: "tx", internal: true },
   "trade.apply": { via: "tx", internal: true },
   "mail.apply": { via: "tx", internal: true },
+  "battle.reward": { via: "tx", internal: true }, // 랜덤 배틀 판의 보상 — 배틀 서버 호출(src/online/battle-net.ts)이 낸다
   "mail.read": { via: "tx", internal: true },
 } as const satisfies Record<string, CommandSpec>;
 

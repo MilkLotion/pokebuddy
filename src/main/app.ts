@@ -53,6 +53,7 @@ import { writeAtomic } from "../platform/atomic-write";
 import { readJsonFile } from "../platform/json-file";
 import { createHookUpkeep, type HookUpkeep } from "./app/hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
+import type { BattleAction } from "../shared/model/battle-net";
 import type { ManageRoute } from "../shared/model/route";
 import type { Command } from "../shared/command";
 import { createBubbles } from "./stage/bubbles";
@@ -192,6 +193,7 @@ const services = createServices({
   sendTrade: (screen) => manage.send("manage:trade", screen),
   sendAccount: (screen) => manage.send("manage:account-view", screen),
   sendMail: (screen) => manage.send("manage:mail-view", screen),
+  openBattle: (input) => manage.openBattle(input),
   online: {
     onSaveReplaced: () => {
       rt.notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
@@ -329,6 +331,7 @@ const manage = createManage({
     petMenu: (petId) => petMenu.open(petId, "manage"),
     ...(services.current() ? { account: services.current()!.act } : {}),
     ...(services.mail() ? { mail: async (req: MailAction) => (await services.mail()?.act(req)) ?? null } : {}),
+    ...(services.battle() ? { battle: async (req: BattleAction) => (await services.battle()?.act(req)) ?? null } : {}),
     ...(update.isStarted() ? { update: update.act, notes: update.notes } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {

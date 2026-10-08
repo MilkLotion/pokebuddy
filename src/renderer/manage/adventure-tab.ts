@@ -1,5 +1,5 @@
 // 설정창의 모험 탭 — 탐험·배틀 칩, 가져오기·배틀 시작, 배틀 파티 6칸 (docs/specs/adventure.md "모험 탭", "배틀 파티")
-// 탐험 칩과 배틀 시작은 누르지 못한다 — 탐험과 배틀은 아직 없다. 탭은 배틀 칩으로 열린다
+// 탐험 칩은 누르지 못한다 — 탐험은 아직 없다. 탭은 배틀 칩으로 열린다. `배틀 시작`은 상대 고르기 모달을 연다(배틀 파티가 있고 출전 불가가 없을 때)
 // 카드는 바탕화면 파티 카드에서 레벨·친밀도·만복도를 뺀 모양이다. 그 자리에 작은 기술 칸 두 줄
 // Figma 05 `15 모험` `Adventure / Battle Party` `1662:1187`, 카드는 02 `Adventure Slot Card` `1659:277`, 머리는 02 `Adventure Header` `1659:124`
 import type { BattleSlotView, Snapshot } from "../../shared/model/snapshot.js";
@@ -13,6 +13,7 @@ import { iconOf, portraitOf } from "./art-cache.js";
 import { battleShown, openBattleDevice } from "./battle-link.js";
 import { sendCommand } from "./command.js";
 import { openAnyDialog } from "./dialog.js";
+import { openBattleOpponent } from "./battle-opponent.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { pageHeadEl, segmentedEl } from "./widgets.js";
 
@@ -119,8 +120,8 @@ export function drawAdventure(v: Snapshot): void {
   const load = buttonEl("act", "가져오기");
   load.addEventListener("click", () => openAnyDialog({ kind: "preset-overview", battle: true }));
   const start = buttonEl("act primary", "배틀 시작");
-  start.disabled = true; // 배틀은 아직 없다 — 출전 불가가 없어도 막는다 (v.battle.canStart)
-  start.title = SOON;
+  start.disabled = !v.battle.canStart; // 비었거나 출전 불가가 있으면 막는다 (docs/specs/adventure.md "출전 불가")
+  start.addEventListener("click", () => openBattleOpponent(() => openAnyDialog({ kind: "battle-opponent" })));
   acts.append(load, start);
   top.appendChild(acts);
   bodyEl.appendChild(top);

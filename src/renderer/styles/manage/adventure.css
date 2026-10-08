@@ -85,3 +85,66 @@
 .dialog.battle-pick {
   width: 560px;
 }
+
+/* 랜덤 배틀 상대 고르기 — 프리셋 전체보기의 줄·칸 모양에 타입 배지와 실패 줄을 더한다 (docs/specs/adventure.md "상대 고르기")
+   줄은 늘 3개, 모달 높이는 같다. 실패 줄은 칸 자리에 회색 상자 하나 (Figma 99 `Draft / Battle Pick Row` Failed) */
+.dialog.battle-opponent .bo-list {
+  max-height: none;
+  overflow: visible;
+}
+.bo-cell {
+  height: 74px;
+  flex-direction: column;
+  gap: 2px;
+}
+.bo-cell .bo-types {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+}
+/* 타입 배지 — 흰 아이콘에 타입 색 바탕. 배틀 창 .type-icon(styles/battle-screen.css)과 같은 모양 */
+.bo-cell .bo-type {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--type, #9fa19f);
+}
+.bo-cell .bo-type img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+}
+.bo-row.failed {
+  cursor: default;
+}
+.bo-row.failed:hover {
+  background: var(--surface);
+}
+.bo-failed {
+  height: 74px;
+  display: grid;
+  place-items: center;
+  background: var(--subtle);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12px;
+}
+.dialog.battle-opponent .actions {
+  align-items: center;
+}
+.dialog.battle-opponent .bo-error {
+  flex: 1;
+  min-width: 0;
+  min-height: 16px;
+  font-size: 12px;
+  color: var(--danger, #c62828);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog.battle-opponent .bo-start {
+  width: 120px;
+}

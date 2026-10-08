@@ -6,7 +6,7 @@
 import type { FailCode } from "./names/online-codes.js";
 import { ACCOUNT_RULES as AR } from "./account-rules.js";
 
-export type FailScope = "command" | "trade" | "account" | "mail";
+export type FailScope = "command" | "trade" | "account" | "mail" | "battle";
 export type FailLang = "ko" | "en";
 
 // 빠진 값은 컴파일 오류다
@@ -137,6 +137,11 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   TRADE_PET_NOT_SYNCED: { ko: "아직 저장되지 않은 포켓몬이에요. 저장이 끝나면 다시 올려 주세요.", en: "That Pokémon isn't saved yet. Offer it again once saving finishes." },
   TRADE_PET_BUSY: { ko: "다른 교환에 올라가 있는 포켓몬이에요. 그 교환이 닫힌 뒤 다시 올리거나 다른 포켓몬을 골라 주세요.", en: "That Pokémon is in another trade. Offer it after that trade closes, or choose another one." },
   TRADE_SAVE_UNVERIFIED: { ko: "이 계정은 교환할 수 없어요. 계정 저장 확인이 필요해요.", en: "This account can't trade. The account save needs a review." },
+  BATTLE_BAD_ARGS: { ko: "배틀 요청이 올바르지 않아요.", en: "The battle request is not valid." },
+  BATTLE_COOLDOWN: { ko: "아직 다음 배틀을 할 수 없어요.", en: "You can't start the next battle yet." },
+  BATTLE_OFFER_GONE: { ko: "상대 목록이 바뀌었어요. 새로고침해 주세요.", en: "The opponent list changed. Please refresh." },
+  BATTLE_PARTY_INVALID: { ko: "배틀 파티를 확인해 주세요. 비었거나 출전 불가 포켓몬이 있어요.", en: "Check your battle party. It's empty or has a Pokémon that can't battle." },
+  BATTLE_TOO_FAST: { ko: "너무 빨라요. 잠시 뒤 다시 해 주세요.", en: "Too fast. Please try again in a moment." },
   MAIL_EXPIRED: { ko: "기간이 지나 받을 수 없어요.", en: "It has expired and can't be received." },
   MAIL_LOGIN_REQUIRED: { ko: "로그인하면 받을 수 있어요.", en: "Sign in to receive it." },
   MAIL_NO_GIFTS: { ko: "받을 선물이 없어요.", en: "There are no gifts to receive." },
@@ -168,6 +173,7 @@ const UNKNOWN: Record<FailScope, (code: string) => { text: string; detail?: stri
   trade: (code) => ({ text: "교환을 진행하지 못했어요", detail: `잠시 뒤에 다시 해 주세요 (${code})` }),
   account: (code) => ({ text: `계정 작업을 하지 못했어요 (${code})` }),
   mail: (code) => ({ text: `받지 못했어요 (${code})` }),
+  battle: (code) => ({ text: `배틀을 시작하지 못했어요 (${code})` }),
 };
 
 const isFailCode = (code: string): code is FailCode => Object.prototype.hasOwnProperty.call(FAIL_TEXT, code);
