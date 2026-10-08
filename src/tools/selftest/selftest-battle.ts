@@ -232,6 +232,49 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.strictEqual(at1(10).move, 4800, "느리면 4초 × 1.2");
 }
 
+// ── 날씨·필드·오라 — 룰렛, 원시회귀 확정, 위력 배율, 5초 피해·회복, 실패 ──
+{
+  const quiet = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const startOf = (r: ReturnType<typeof run>) => of(r.events, "start")[0]!;
+  // 룰렛 — 후보는 그 특성을 가진 칸, 뽑힌 칸은 후보 안
+  const r1 = run([quiet({ ability: "drought" }), quiet({ ability: "drizzle" })], [quiet({ ability: "sand-stream" }), quiet({ ability: "electric-surge" })], 3, 100);
+  const rl = startOf(r1).roulette!;
+  assert.strictEqual(rl.weather!.candidates.length, 3, "날씨 후보 셋");
+  assert.ok(rl.weather!.candidates.some((c) => c.side === rl.weather!.picked!.side && c.slot === rl.weather!.picked!.slot));
+  assert.strictEqual(rl.field!.kind, "electric");
+  assert.strictEqual(rl.aura, undefined, "후보가 없으면 룰렛 없음");
+  // 원시회귀는 룰렛 없이 정해진다
+  const r2 = run([quiet({ ability: "drought" }), quiet({ ability: "primordial-sea" })], [quiet({ ability: "drizzle" })], 1, 100);
+  assert.deepStrictEqual([startOf(r2).roulette!.weather!.kind, startOf(r2).roulette!.weather!.fixed], ["heavy-rain", true]);
+  assert.strictEqual(run([quiet()], [quiet()], 1, 100).events[0]!.kind === "start" && startOf(run([quiet()], [quiet()], 1, 100)).roulette, undefined, "특성이 없으면 roulette 칸 없음");
+
+  // 쾌청 — 불꽃 ×1.5, 물 ×0.5. 같은 시드에서 날씨만 바꿔 견준다
+  const pos = { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const firstHit = (move: EngineMove, setter: string | null) =>
+    of(run([unit({ types: ["normal"], stats: [999, 1, 999, 100, 999, 95], moves: [move] }), quiet({ ability: setter })], [quiet({ ability: "battle-armor", stats: [999, 1, 999, 1, 100, 95] })], 5, 1100, pos).events, "damage").find((e) => e.source === move.id)!.amount;
+  const flame = mv("flame", { type: "fire", class: "special", power: 90, cooldownMs: 1000 });
+  const surf = mv("surf", { type: "water", class: "special", power: 90, cooldownMs: 1000 });
+  // 급소를 막고(전투무장) 피해 폭 0.85~1 을 넣어 범위로 본다
+  const f0 = firstHit(flame, null), fSun = firstHit(flame, "drought"), wSun = firstHit(surf, "drought");
+  assert.ok(fSun / f0 > 1.25 && fSun / f0 < 1.8, `쾌청 불꽃 ${f0}→${fSun}`);
+  assert.ok(wSun / f0 > 0.4 && wSun / f0 < 0.6, `쾌청 물 ${f0}→${wSun}`);
+  // 끝의대지 — 물 기술은 실패(피해 0)
+  assert.strictEqual(firstHit(surf, "desolate-land"), 0, "끝의대지에서 물 실패");
+
+  // 모래바람 — 5초마다 바위·땅·강철이 아니면 1/16
+  const r3 = run([quiet({ ability: "sand-stream", types: ["rock"] }), quiet()], [quiet()], 1, 10_000, { positions: [[at(0, 0), at(0, 8)], [at(14, 0)]], obstacles: [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const })) });
+  const sand = of(r3.events, "weather").filter((e) => e.cause === "sand");
+  assert.deepStrictEqual([...new Set(sand.map((e) => e.t))], [5000, 10000]);
+  assert.ok(!sand.some((e) => e.side === 0 && e.slot === 0), "바위는 모래바람 피해 없음");
+  assert.strictEqual(sand[0]!.amount, Math.floor((999 * 3) / 16));
+
+  // 사이코필드 — 땅에 있는 상대에게 선공기는 빗나감
+  const quick = mv("quick", { power: 40, priority: 1, cooldownMs: 1000 });
+  const r4 = run([unit({ moves: [quick] }), quiet({ ability: "psychic-surge" })], [quiet()], 1, 1100, pos);
+  assert.ok(of(r4.events, "miss").some((e) => e.move === "quick"), "사이코필드 선공기 실패");
+  assert.ok(!of(r4.events, "damage").some((e) => e.source === "quick"));
+}
+
 // ── 전장 — 장애물 뽑기 ──
 {
   let seed = 7;

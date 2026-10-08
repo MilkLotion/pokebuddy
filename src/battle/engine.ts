@@ -23,7 +23,7 @@ export const ENGINE_RULES = {
   critRates: [1 / 24, 1 / 8, 1 / 2, 1] as readonly number[], // 급소율 단계 — 보통·높음·대운 높음·확정 (docs/specs/moves.md "급소")
   critMul: 1.5,
   immuneMul: 0, // 상성 효과 없음의 배율 — 원작대로 0 (docs/specs/moves.md "피해")
-  smartAim: 0, // 1 이면 기술을 쓸 때 사거리 안에서 상성이 가장 좋은 상대를 노린다 — 시험 값
+  weatherTickMs: 5000, // 모래바람 피해·그래스필드 회복 간격 — 최대 HP 의 1/16 (docs/specs/moves.md "날씨, 필드, 오라")
   sniperMul: 2.25,
   stageMs: 10_000, // 능력 변화 지속
   rampageMs: 2000, // 난동 뒤 행동 불가
@@ -61,6 +61,44 @@ export const ENGINE_RULES = {
   obstacleX0: 4, // 장애물을 놓는 계산 칸 열 — 가운데 4열(화면 칸 2~5)
   obstacleX1: 12, // 이 열은 포함하지 않는다
 } as const;
+
+// ── 날씨·필드·오라 (docs/specs/moves.md "날씨, 필드, 오라") ──
+export type WeatherKind = "sun" | "rain" | "sand" | "snow" | "none" | "harsh-sun" | "heavy-rain" | "strong-winds";
+export type FieldKind = "electric" | "grassy" | "psychic" | "misty";
+export type AuraKind = "fairy" | "dark" | "break";
+export interface SlotRef {
+  side: Side;
+  slot: number;
+}
+// 룰렛 하나 — 후보 포켓몬과 뽑힌 포켓몬. fixed 는 룰렛 없이 정해진 경우(원시회귀·델타스트림)
+export interface BattleRoulette {
+  kind: string | null;
+  candidates: SlotRef[];
+  picked: SlotRef | null;
+  fixed?: true;
+}
+const WEATHER_ABILITY: Readonly<Record<string, WeatherKind>> = {
+  drought: "sun",
+  "orichalcum-pulse": "sun",
+  drizzle: "rain",
+  "sand-stream": "sand",
+  "sand-spit": "sand",
+  "snow-warning": "snow",
+  "cloud-nine": "none",
+  "air-lock": "none",
+};
+const PRIMAL_ABILITY: Readonly<Record<string, WeatherKind>> = { "desolate-land": "harsh-sun", "primordial-sea": "heavy-rain", "delta-stream": "strong-winds" };
+const FIELD_ABILITY: Readonly<Record<string, FieldKind>> = {
+  "electric-surge": "electric",
+  "hadron-engine": "electric",
+  "grassy-surge": "grassy",
+  "seed-sower": "grassy",
+  "psychic-surge": "psychic",
+  "misty-surge": "misty",
+};
+const AURA_ABILITY: Readonly<Record<string, AuraKind>> = { "fairy-aura": "fairy", "dark-aura": "dark", "aura-break": "break" };
+const WEATHER_TYPE: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "fire", "harsh-sun": "fire", rain: "water", "heavy-rain": "water", sand: "rock", snow: "ice" };
+const FIELD_TYPE: Readonly<Record<FieldKind, string>> = { electric: "electric", grassy: "grass", psychic: "psychic", misty: "fairy" };
 
 export interface Pos {
   x: number; // 계산 칸 — 몸의 왼쪽 위
@@ -158,7 +196,8 @@ export interface BattleInput {
 export type Side = 0 | 1;
 
 export type BattleEvent =
-  | { t: number; kind: "start"; obstacles: Obstacle[]; pos: [(Pos | null)[], (Pos | null)[]] }
+  | { t: number; kind: "start"; obstacles: Obstacle[]; pos: [(Pos | null)[], (Pos | null)[]]; roulette?: { weather?: BattleRoulette; field?: BattleRoulette; aura?: BattleRoulette } }
+  | { t: number; kind: "weather"; side: Side; slot: number; amount: number; hp: number; cause: "sand" | "grassy" | "rain-dish" | "ice-body" } // amount 음수는 회복
   | { t: number; kind: "step"; side: Side; slot: number; x: number; y: number }
   | { t: number; kind: "move"; side: Side; slot: number; move: string; nextAt: number } // nextAt — 다음 차례 기술이 준비되는 시각(ms)
   | { t: number; kind: "attack"; side: Side; slot: number }
@@ -327,6 +366,12 @@ export function runBattle(input: BattleInput): BattleResult {
   const events: BattleEvent[] = [];
   const chart = input.typeChart;
   let curT = 0; // 지금 틱 — 쿨타임의 스피드 배율이 읽는다
+  // 판의 날씨·필드·오라 — 시작할 때 룰렛으로 정하고 판 끝까지 간다
+  let weather: WeatherKind | null = null;
+  let field: FieldKind | null = null;
+  let aura: AuraKind | null = null;
+  let sunny = false;
+  let rainy = false;
 
   // ── 준비 ──
   const units: [(Unit | null)[], (Unit | null)[]] = [[], []];
@@ -346,9 +391,34 @@ export function runBattle(input: BattleInput): BattleResult {
     u.x = p.x;
     u.y = p.y;
   }
+  // 날씨·필드·오라 룰렛 — 양쪽 12칸에서 그 특성을 가진 포켓몬 하나를 같은 확률로 뽑는다
+  function spin<K extends string>(table: Readonly<Record<string, K>>): { kind: K; roulette: BattleRoulette } | null {
+    const cands = all().filter((u) => u.base.ability !== null && table[u.base.ability] !== undefined);
+    if (!cands.length) return null;
+    const pick = cands[Math.floor(rand() * cands.length)]!;
+    const kind = table[pick.base.ability!]!;
+    return { kind, roulette: { kind, candidates: cands.map((c) => ({ side: c.side, slot: c.slot })), picked: { side: pick.side, slot: pick.slot } } };
+  }
+  // 원시회귀 날씨·델타스트림은 룰렛 없이 정해진다. 둘 이상이면 그것끼리 뽑는다
+  const primal = spin(PRIMAL_ABILITY);
+  const weatherSpin = primal ? { kind: primal.kind, roulette: { ...primal.roulette, fixed: true as const } } : spin(WEATHER_ABILITY);
+  const fieldSpin = spin(FIELD_ABILITY);
+  const auraSpin = spin(AURA_ABILITY);
+  weather = weatherSpin && weatherSpin.kind !== "none" ? weatherSpin.kind : null;
+  field = fieldSpin?.kind ?? null;
+  aura = auraSpin?.kind ?? null;
+  sunny = weather === "sun" || weather === "harsh-sun";
+  rainy = weather === "rain" || weather === "heavy-rain";
+  const roulette = {
+    ...(weatherSpin ? { weather: weatherSpin.roulette } : {}),
+    ...(fieldSpin ? { field: fieldSpin.roulette } : {}),
+    ...(auraSpin ? { aura: auraSpin.roulette } : {}),
+  };
+
   events.push({
     t: 0,
     kind: "start",
+    ...(Object.keys(roulette).length ? { roulette } : {}),
     obstacles: obstacles.map((o) => ({ ...o })),
     pos: [units[0].map((u) => (u ? { x: u.x, y: u.y } : null)), units[1].map((u) => (u ? { x: u.x, y: u.y } : null))],
   });
@@ -448,7 +518,94 @@ export function runBattle(input: BattleInput): BattleResult {
     return s && s.until > t ? s.stage : 0;
   }
   function statNow(u: Unit, stat: number, t: number): number {
-    return Math.max(1, Math.floor(u.stats[stat]! * stageMul(stageOf(u, stat, t))));
+    return Math.max(1, Math.floor(u.stats[stat]! * stageMul(stageOf(u, stat, t)) * conditionStatMul(u, stat)));
+  }
+
+  // 땅에 있는가 — 비행 타입과 부유는 아니다. 필드 효과는 땅에 있는 포켓몬만 받는다
+  function grounded(u: Unit): boolean {
+    return !u.types.includes("flying") && u.base.ability !== "levitate";
+  }
+
+  // 날씨·필드가 바꾸는 능력치 배율 — 모래바람 바위 특방, 눈 얼음 방어, 날씨·필드를 타는 특성
+  function conditionStatMul(u: Unit, stat: number): number {
+    let mul = 1;
+    const ab = u.base.ability;
+    if (weather === "sand" && stat === 4 && u.types.includes("rock")) mul *= 1.5;
+    if (weather === "snow" && stat === 2 && u.types.includes("ice")) mul *= 1.5;
+    if (stat === 3 && ab === "solar-power" && sunny) mul *= 1.5;
+    if (stat === 1 && ab === "orichalcum-pulse" && sunny) mul *= 1.33;
+    if (stat === 3 && ab === "hadron-engine" && field === "electric") mul *= 1.33;
+    if (stat === 2 && ab === "grass-pelt" && field === "grassy") mul *= 1.5;
+    if ((stat === 1 || stat === 4) && sunny && alive(u.side).some((v) => v.base.ability === "flower-gift")) mul *= 1.5;
+    // 고대활성(쾌청)·쿼크차지(일렉트릭필드) — HP 를 뺀 실제 능력치 중 가장 높은 하나 ×1.3. 스피드면 능력치 대신 쿨타임(weatherCooldownMul)
+    if (paradoxBoost(u) === stat && stat !== 5) mul *= 1.3;
+    return mul;
+  }
+
+  // 고대활성·쿼크차지가 올리는 능력 번호 — 발동하지 않으면 null
+  function paradoxBoost(u: Unit): number | null {
+    const ab = u.base.ability;
+    if (!((ab === "protosynthesis" && sunny) || (ab === "quark-drive" && field === "electric"))) return null;
+    let best = 1;
+    for (let i = 2; i <= 5; i++) if (u.stats[i]! > u.stats[best]!) best = i;
+    return best;
+  }
+
+  // 날씨·필드를 타는 스피드 특성 — 스피드 ×2 대신 기술 쿨타임 ×0.75. 스피드 배율 자르기와 따로 곱한다 (moves.md "특성")
+  function weatherCooldownMul(u: Unit): number {
+    const ab = u.base.ability;
+    if ((ab === "chlorophyll" && sunny) || (ab === "swift-swim" && rainy) || (ab === "sand-rush" && weather === "sand") || (ab === "slush-rush" && weather === "snow") || (ab === "surge-surfer" && field === "electric")) return 0.75;
+    if (paradoxBoost(u) === 5) return 0.85;
+    return 1;
+  }
+
+  // 날씨·필드·오라가 바꾸는 기술 — 타입(웨더볼·대지의파동), 위력, 명중, 위력 배율, 실패
+  interface MoveNow {
+    type: string;
+    power: number;
+    accuracy: number | null;
+    mul: number;
+    fail: "weather" | "field" | null;
+  }
+  function moveNow(u: Unit, m: EngineMove, o: Unit): MoveNow {
+    let type = m.type;
+    let power = m.power ?? 0;
+    let accuracy = m.accuracy;
+    if (m.id === "weather-ball" && weather && WEATHER_TYPE[weather]) {
+      type = WEATHER_TYPE[weather]!;
+      power = 100;
+    }
+    if (m.id === "terrain-pulse" && field && grounded(u)) {
+      type = FIELD_TYPE[field];
+      power = 100;
+    }
+    if (field === "electric" && m.id === "rising-voltage" && grounded(o)) power = 140;
+    if (field === "electric" && m.id === "psyblade") power = 120;
+    if (field === "psychic" && m.id === "expanding-force" && grounded(u)) power = 120;
+    if (m.id === "thunder" || m.id === "hurricane") accuracy = sunny ? 50 : rainy ? null : accuracy;
+    if (m.id === "blizzard" && weather === "snow") accuracy = null;
+    let mul = 1;
+    let fail: MoveNow["fail"] = null;
+    if (sunny && type === "fire") mul *= 1.5;
+    if (sunny && type === "water") mul *= m.id === "hydro-steam" ? 1.5 : 0.5;
+    if (rainy && type === "water") mul *= 1.5;
+    if (rainy && type === "fire") mul *= 0.5;
+    if (weather === "harsh-sun" && type === "water" && m.id !== "hydro-steam") fail = "weather";
+    if (weather === "heavy-rain" && type === "fire") fail = "weather";
+    if (weather === "sand" && u.base.ability === "sand-force" && (type === "rock" || type === "ground" || type === "steel")) mul *= 1.3;
+    if (field && field !== "misty" && grounded(u) && FIELD_TYPE[field] === type) mul *= 1.3;
+    if (field === "grassy" && grounded(o) && (m.id === "earthquake" || m.id === "bulldoze" || m.id === "magnitude")) mul *= 0.5;
+    if (field === "misty" && grounded(o) && type === "dragon") mul *= 0.5;
+    if (field === "psychic" && grounded(o) && m.priority > 0) fail = "field";
+    // 오라 — 전장 전체. 반전은 그 오라를 가진 포켓몬이 살아 있을 때만
+    if (aura === "fairy" && type === "fairy") mul *= 1.33;
+    if (aura === "dark" && type === "dark") mul *= 1.33;
+    if (aura === "break") {
+      const has = (ab: string): boolean => all().some((v) => v.hp > 0 && v.base.ability === ab);
+      if (type === "fairy" && has("fairy-aura")) mul *= 0.75;
+      if (type === "dark" && has("dark-aura")) mul *= 0.75;
+    }
+    return { type, power, accuracy, mul, fail };
   }
 
   // byFoe — 상대가 건 하락. 플라워베일 아군의 풀 타입은 막는다
@@ -473,6 +630,7 @@ export function runBattle(input: BattleInput): BattleResult {
     if (u.truant) ms *= R.truantMul;
     let mul = speedCooldownMul(statNow(u, 5, curT));
     if (foeHas(u, "pressure")) mul *= R.pressureMul;
+    mul *= weatherCooldownMul(u);
     return ceilTick(ms * mul);
   }
 
@@ -496,9 +654,11 @@ export function runBattle(input: BattleInput): BattleResult {
   // 받는 피해 배율 — 프렌드가드(자신 제외)
   const guardMul = (o: Unit): number => R.friendGuardMul ** countAlly(o, "friend-guard", false);
 
+  // 델타스트림이면 비행 타입의 약점이 없다
   const typeMul = (moveType: string, defender: Unit): number =>
     defender.types.reduce((a, d) => {
-      const m = chart[moveType]?.[d] ?? 1;
+      let m = chart[moveType]?.[d] ?? 1;
+      if (weather === "strong-winds" && d === "flying" && m > 1) m = 1;
       return a * (m === 0 ? R.immuneMul : m);
     }, 1);
 
@@ -680,7 +840,9 @@ export function runBattle(input: BattleInput): BattleResult {
   function doMove(u: Unit, t: number): void {
     const m = u.moves[u.turn % u.moves.length]!;
     // 충전 — 처음 차면 충전하고, 다시 차면 나간다
-    if (m.effects.charge && !u.charged) {
+    // 쾌청의 솔라빔·솔라블레이드, 비의 일렉트릭빔은 충전하지 않는다
+    const instant = (sunny && (m.id === "solar-beam" || m.id === "solar-blade")) || (rainy && m.id === "electro-shot");
+    if (m.effects.charge && !u.charged && !instant) {
       u.charged = true;
       u.nextMove = t + cooldownOf(u, m, false);
       events.push({ t, kind: "charge", side: u.side, slot: u.slot, move: m.id, nextAt: u.nextMove });
@@ -717,19 +879,21 @@ export function runBattle(input: BattleInput): BattleResult {
   function attack(u: Unit, m: EngineMove, t: number, stacks: number): void {
     let first = hitTarget(u);
     if (!first) return;
-    // 상성 고르기 — 사거리 안 상대 가운데 이 기술의 상성이 가장 좋은 상대. 같으면 지금 대상
-    if (R.smartAim) {
-      for (const o of foesOf(u)) if (inRange(u, o, u.range) && typeMul(m.type, o) > typeMul(m.type, first)) first = o;
+    const now0 = moveNow(u, m, first);
+    // 사이코필드 — 땅에 있는 상대에게 선공기가 실패한다
+    if (now0.fail === "field") {
+      events.push({ t, kind: "miss", side: u.side, slot: u.slot, move: m.id, target: first.slot });
+      return;
     }
     // 명중은 한 번 본다. 빗나가면 모든 타가 빗나간다
-    const accuracy = m.accuracy === null ? null : m.accuracy * (hasAlly(u, "victory-star") ? R.victoryStarMul : 1);
+    const accuracy = now0.accuracy === null ? null : now0.accuracy * (hasAlly(u, "victory-star") ? R.victoryStarMul : 1);
     if (accuracy !== null && rand() * 100 >= accuracy) {
       events.push({ t, kind: "miss", side: u.side, slot: u.slot, move: m.id, target: first.slot });
       return;
     }
     const n = hitsOf(u, m, stacks);
     const phys = m.class === "physical";
-    const stab = u.types.includes(m.type) ? 1.5 : 1;
+    const stab = u.types.includes(now0.type) ? 1.5 : 1;
     let dealt = 0;
     let firstHit: Unit | null = null;
     for (let h = 1; h <= n; h++) {
@@ -740,16 +904,17 @@ export function runBattle(input: BattleInput): BattleResult {
         if (m.traits.includes("contact")) setStage(u, 1, -1, t, true);
         break;
       }
-      let power = m.power!;
+      const now = h === 1 ? now0 : moveNow(u, m, o);
+      let power = now.power;
       if (m.effects.hpScale) power = Math.max(1, Math.floor((power * u.hp) / u.maxHp));
-      const mult = stab * typeMul(m.type, o) * allyMoveMul(u, m) * guardMul(o);
+      const mult = stab * typeMul(now.type, o) * allyMoveMul(u, { ...m, type: now.type }) * guardMul(o) * now.mul;
       const crit = critOf(u, m, o);
       // 급소면 쓴 쪽 공격 하락과 맞는 쪽 방어 상승은 무시한다
       const atkNow = statNow(u, phys ? 1 : 3, t), defNow = statNow(o, phys ? 2 : 4, t);
       const atkStat = crit ? Math.max(atkNow, u.stats[phys ? 1 : 3]!) : atkNow;
       const defStat = crit ? Math.min(defNow, o.stats[phys ? 2 : 4]!) : defNow;
       const raw = baseDamage(u.base.level, power, atkStat, defStat);
-      const typeOnly = typeMul(m.type, o);
+      const typeOnly = now.fail === "weather" ? 0 : typeMul(now.type, o);
       const critMul = (crit ? (u.base.ability === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range);
       const d = typeOnly === 0 ? 0 : Math.max(1, Math.floor(raw * mult * critMul * roll()));
       hurt(o, d, t);
@@ -819,6 +984,27 @@ export function runBattle(input: BattleInput): BattleResult {
       if (a.u.hp <= 0) continue;
       if (a.kind === 0) doMove(a.u, t);
       else doBasic(a.u, t);
+    }
+    // 날씨·필드 — 5초마다 모래바람 피해(바위·땅·강철·방진 제외), 그래스필드(땅)·젖은접시(비)·아이스바디(눈) 회복
+    if (t % R.weatherTickMs === 0) {
+      for (const u of all()) {
+        if (u.hp <= 0) continue;
+        const tick = Math.max(1, Math.floor(u.maxHp / 16));
+        if (weather === "sand" && !u.types.some((ty) => ty === "rock" || ty === "ground" || ty === "steel") && u.base.ability !== "overcoat") {
+          hurt(u, tick, t);
+          events.push({ t, kind: "weather", side: u.side, slot: u.slot, amount: tick, hp: u.hp, cause: "sand" });
+          faintCheck(u, t);
+        }
+        const heal = (cause: "grassy" | "rain-dish" | "ice-body"): void => {
+          if (u.hp <= 0 || u.hp >= u.maxHp) return;
+          const g = Math.min(tick, u.maxHp - u.hp);
+          u.hp += g;
+          events.push({ t, kind: "weather", side: u.side, slot: u.slot, amount: -g, hp: u.hp, cause });
+        };
+        if (field === "grassy" && grounded(u)) heal("grassy");
+        if (rainy && u.base.ability === "rain-dish") heal("rain-dish");
+        if (weather === "snow" && u.base.ability === "ice-body") heal("ice-body");
+      }
     }
     // 걷기 — 이번 틱에 행동하지 않은 개체. 순서는 난수로 섞는다
     const acted = new Set(acts.map((a) => a.u));
