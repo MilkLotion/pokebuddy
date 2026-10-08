@@ -149,7 +149,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 | `tutorial/` | 튜토리얼 시작 조건(`conditions.ts`)과 대기열·다시 보기(`queue.ts`). |
 | `trade/` | 친구 교환의 로컬 규칙. 서버 쪽은 `online/` 에 있다. |
 | `motion/` | 무대에서 마리 하나가 걷고 자고 반응하는 판단(`brain.ts`). |
-| `battle/` | 배틀 파티 칸, 출전 제한의 칸 판정(`tier.ts`), 실제 능력치(`stats.ts`), 보유 기술(`moves.ts`), 배틀 엔진(`engine.ts`)과 전투 개체 만들기(`fighter.ts`). `engine.ts` 는 import 가 없다 — 서버 함수로 복사하려고다. 화면과 서버 연결은 아직 없다. |
+| `battle/` | 배틀 파티 칸, 출전 제한의 칸 판정(`tier.ts`), 실제 능력치(`stats.ts`), 보유 기술(`moves.ts`), 배틀 엔진(`engine.ts`)과 전투 개체 만들기(`fighter-core.ts` 앱·서버 공용, `fighter.ts` 앱 쪽). `engine.ts` 는 import 가 없고 `fighter-core.ts` 는 엔진만 부른다 — `npm run battle:build` 가 서버 함수로 복사한다. 서버 함수는 있고 앱 연결(상대 고르기·판 요청)은 아직 없다. |
 | `achievement/` | 업적 정의, 진행도, 달성, 보상 받기. |
 | `notify/` | 알 준비·진화 가능 같은 알림을 줄 세운다. |
 

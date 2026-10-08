@@ -11,6 +11,7 @@
 //   spend       늘어난 도구·새 알의 값 ≤ 그사이 쓸 수 있었던 포인트
 //   bag         팔지 않는 도구가 출처 없이 늘었다
 //   mail        서버에서 받지 않은 편지를 넣었다
+//   battle      서버에 없는 배틀 판의 보상을 넣었다. 있는 판의 보상은 포인트 예산에 더한다 (E3, battle.applied)
 //   achievement 없는 업적을 받았다. 받은 업적의 보상(포인트·도구·알·포켓몬)은 각 예산에 더한다. 달성 조건은 보지 않는다
 //   level       레벨 1~100, 경험치 0~최대, 레벨 ≤ 경험치가 허락하는 레벨
 //   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕
@@ -104,6 +105,7 @@ export interface VerifyContext {
   received: unknown[]; // 직전 저장 뒤 끝난 교환에서 받은 제안
   receivedBefore: Record<string, unknown>; // 직전 저장 전(30일 안)에 끝난 교환 채널 → 받은 제안 — 걸려 있던 교환(trade.pending)이 풀렸을 때
   seed: string | null; // 계정 시드 (P4b) — 없으면 알 결과를 대조하지 않는다
+  battles?: Record<string, number>; // 이 사용자의 배틀 판 → 보상 포인트 (E3, cloud_private.battles). 새로 넣은 판 id 를 여기서 찾는다
 }
 
 // ── 결정적 난수 (P4b) ──────────────────────────────────────────────────────────
@@ -273,6 +275,7 @@ const claimed = (save: Raw): Set<string> => {
   return out;
 };
 const appliedOf = (save: Raw): string[] => (isObj(save.mail) ? list(save.mail.applied).map(str) : []);
+const battleAppliedOf = (save: Raw): string[] => (isObj(save.battle) ? list(save.battle.applied).map(str) : []);
 const pendingChannel = (save: Raw): string | null => {
   if (!isObj(save.trade) || !isObj(save.trade.pending)) return null;
   return str(save.trade.pending.channelId) || null;
@@ -393,6 +396,16 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     }
   }
 
+  // 배틀 보상(E3) — 새로 넣은 판 id 를 서버 판 기록과 대조한다. 우편처럼 id 로 본다
+  const prevBattles = new Set(battleAppliedOf(prev));
+  let battlePoints = 0;
+  for (const id of new Set(battleAppliedOf(next))) {
+    if (prevBattles.has(id)) continue;
+    const reward = ctx.battles?.[id];
+    if (reward === undefined) add("battle", 1, 0);
+    else battlePoints += num(reward);
+  }
+
   // 업적 — 새로 받은 업적의 보상. 포인트는 포인트 예산에, 도구는 받은 도구에, 알은 값 없이 생긴 알에, 포켓몬은 새 개체 출처에 더한다
   const prevClaimed = claimed(prev);
   let achievedPets = 0;
@@ -440,7 +453,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const petSell = (gonePets + vanishedPets) * num(r.petSellMax);
   const caught = allCaughtAllowance(prev, next, ctx.seed, data);
   const earnPerHour = (HOUR / r.pointMs) * (r.maxPartySlots * r.maxEarnFactor + num(r.otherPresetEarn));
-  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint + caught;
+  const pointAllowance = earnPerHour * hours * m + 1 + findPoints + mailPoints + achievedPoints + sell + petSell + mint + caught + battlePoints;
   add("points", balanceOf(next) - balanceOf(prev), pointAllowance);
   // 그사이 쓴 포인트의 상한 — 산 도구·알·개체의 값은 이 안이어야 한다
   const spendable = pos(balanceOf(prev) + pointAllowance - balanceOf(next));

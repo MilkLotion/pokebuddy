@@ -21,7 +21,8 @@
 | 개체 고르기 모달 | `src/renderer/manage/battle-pick.ts` (고르기판은 `pet-picker.ts`) |
 | 배틀 파티 상세 기기 창 | `src/renderer/device/battle.ts` |
 | 배틀 엔진 | `src/battle/engine.ts` `runBattle` (import 없음) |
-| 전투 개체 만들기 | `src/battle/fighter.ts` `buildFighter`·`petFighter` |
+| 전투 개체 만들기 | `src/battle/fighter-core.ts`(앱·서버 공용) `fighterFrom`·`partyOf`, 앱은 `src/battle/fighter.ts` `buildFighter`·`petFighter` |
+| 서버 | `supabase/functions/battle-offer`, `battle-start`, 표·RPC `supabase/migrations/20261009100000_battle.sql`, 서버 복사본 `npm run battle:build` → `supabase/functions/_shared/battle/` |
 | 모의 대전기 | `src/tools/battle/sim-battle.ts` |
 | 자체 검사 | `src/tools/selftest/selftest-adventure.ts`, `src/tools/selftest/selftest-battle.ts` |
 
@@ -221,6 +222,17 @@
 - 화면은 Figma 99 `Draft / 랜덤 배틀 상대 고르기` 의 5장이다(2026-10-08 사용자 "ui는 이정도면 된듯"). 코드 작업을 시작할 때 05 와 컴포넌트로 옮긴다.
 - 칸마다 포켓몬 초상과 타입을 보인다. 메가 모습을 켠 개체는 메가 모습의 초상과 타입이다.
 - 친구 배틀은 상시 서버가 필요하다. 그래서 서버를 바꿀 때 만든다.
+
+### 서버 (구현, 배포 전)
+
+2026-10-09 설계·구현이다. 운영 서버에는 아직 배포하지 않았다. 지금 서버는 Supabase 다.
+
+- 등록: 저장을 서버에 올릴 때 배틀 파티를 상대 후보로 자동 등록한다. 개체가 하나 이상이고 출전 불가가 없을 때만 등록한다. 아니면 등록을 지운다(사용자 결정 "자동등록").
+- 상대 후보는 등록된 모든 사용자의 배틀 파티다. 기한은 없다(사용자 결정 "모든 사용자의 배틀파티").
+- 후보가 3개보다 적으면 있는 만큼만 보인다. 서버가 만든 파티로 채우지 않는다(사용자 결정 "안해도됨").
+- 판정은 서버가 한다. 내 파티는 서버 저장에서, 상대 파티는 3개를 보일 때의 모습으로 만든다. 시드는 서버가 만든다.
+- 쿨타임 5분과 그날 첫 배틀(한국 시간 0시 기준)도 서버가 판정한다.
+- 보상은 서버가 판마다 기록한다. 앱은 받은 판의 포인트를 저장에 더하고 판 식별자를 남긴다. 서버 저장 검증은 그 식별자를 서버 기록과 대조해 포인트를 허용한다. 우편과 같은 방식이다.
 
 ## 배틀 엔진
 

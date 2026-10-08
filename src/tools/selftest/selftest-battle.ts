@@ -8,6 +8,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { ENGINE_RULES, rangeOfMoves, rollObstacles, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
+import { BATTLE_BASIS, BATTLE_LIMITS, partyOf } from "../../battle/fighter-core";
+import { battleData } from "../../battle/fighter";
+import { blockedSlots, canStartBattle } from "../../battle/party";
+import { emptySave } from "../../save/normalize";
+import type { SaveV3 } from "../../shared/save-v3";
+import { testPet } from "../harness/fixtures";
+import { BATTLE_RULES } from "../../battle/rules";
+import { BATTLE_OUT, buildBattleFiles } from "../data/build-battle";
 
 const chart = battleTypeChart();
 // 엔진 파일은 import 가 없어야 서버로 복사된다
@@ -408,6 +416,35 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   // 기분파 — 비면 물 타입
   const cast = run([wall({ ability: "forecast" }), wall({ ability: "drizzle" })], [wall({ moves: [mv("bolt", { type: "electric", class: "special", power: 40, cooldownMs: 1000 })] })], 1, 1100, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   assert.strictEqual(of(cast.events, "damage").find((e) => e.source === "bolt")!.mult, 2, "기분파 — 비에서 물 타입");
+}
+
+// ── 서버 복사본 — supabase/functions/_shared/battle 이 지금 엔진·코어·데이터와 같다 (npm run battle:build) ──
+{
+  const files = buildBattleFiles();
+  for (const [name, text] of Object.entries(files)) {
+    const file = path.join(BATTLE_OUT, name);
+    assert.ok(fs.existsSync(file) && fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n") === text, `서버 복사본이 낡았다: ${name} — npm run battle:build`);
+  }
+  assert.deepStrictEqual({ ...BATTLE_BASIS }, { level: BATTLE_RULES.level, iv: BATTLE_RULES.iv, ev: BATTLE_RULES.ev }, "코어의 능력치 기준이 배틀 규칙과 같다");
+}
+
+// ── 서버의 배틀 파티 읽기(partyOf) — 앱의 출전 불가 판정과 같다 ──
+{
+  assert.deepStrictEqual({ ...BATTLE_LIMITS }, { ...BATTLE_RULES.limits }, "코어의 출전 제한이 배틀 규칙과 같다");
+  const data = battleData();
+  const T = Date.now();
+  const make = (species: string[]): SaveV3 => {
+    const s = emptySave(T);
+    s.pets = species.map((sp, i) => testPet({ id: `p${i + 1}`, species: sp }, T));
+    s.battle = { slots: Array.from({ length: 6 }, (_, i) => s.pets[i]?.id ?? null) };
+    return s;
+  };
+  for (const team of [["garchomp", "lucario"], ["mewtwo", "lugia"], ["mewtwo", "celebi", "jirachi", "pikachu"], ["celebi", "jirachi", "mew"], []]) {
+    const s = make(team);
+    const read = partyOf(JSON.parse(JSON.stringify(s)), data);
+    assert.strictEqual(read.blocked, blockedSlots(s).some((b) => b !== null), `출전 불가 판정이 같다: ${team.join(",")}`);
+    assert.strictEqual(read.count > 0 && !read.blocked, canStartBattle(s), `배틀 시작 가능이 같다: ${team.join(",")}`);
+  }
 }
 
 // ── 전장 — 장애물 뽑기 ──

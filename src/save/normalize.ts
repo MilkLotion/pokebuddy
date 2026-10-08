@@ -336,7 +336,9 @@ function normalizeBattle(raw: unknown, pets: PetV3[]): BattleV3 {
     const pet = used.has(id) ? pets.find((p) => p.id === id) : undefined;
     if (pet && typeof form === "string" && megaChoices(pet).includes(form)) mega[id] = form;
   }
-  return Object.keys(mega).length ? { slots, mega } : { slots };
+  // 보상을 받은 판 id — 글자만, 최근 200개 (서버 검증이 판 기록과 대조한다)
+  const applied = isRawObject(raw) && Array.isArray(raw.applied) ? raw.applied.filter((x): x is string => typeof x === "string").slice(-200) : [];
+  return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(applied.length ? { applied } : {}) };
 }
 
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {

@@ -17,6 +17,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { verifySave, type VerifyData, type Violation } from "../_shared/save-rules.ts";
 import rulesData from "../_shared/verify-data.json" with { type: "json" };
+import { partyOf } from "../_shared/battle/fighter-core.ts";
+import { battle } from "../_shared/battle-common.ts";
 
 const data = rulesData as unknown as VerifyData;
 // 본문 상한 — 규칙을 돌리기 전에 자른다. DB 상한(압축 전 jsonb 1MiB, 20261008100000_save_size_limit.sql)보다 조금 크게.
@@ -55,6 +57,7 @@ interface Context {
   received_before: Record<string, unknown> | null; // 직전 저장 전에 끝난 교환 채널 → 받은 제안
   seed: string | null; // 계정 시드(P4b) — 있으면 열린 알의 결과를 다시 계산해 대조한다
   held: boolean | null; // 이용 정지(P4c) — 정지된 계정은 올리지 못한다
+  battles: Record<string, number> | null; // 배틀 판 → 보상(E3)
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -107,6 +110,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         received: ctx.received ?? [],
         receivedBefore: ctx.received_before ?? {},
         seed: ctx.seed ?? null,
+        battles: ctx.battles ?? {},
       }, data);
     } else if (body.op !== ctx.last_op) {
       return fail("CLOUD_REV_CONFLICT");
@@ -137,5 +141,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!code) return /invalid input syntax/i.test(res.error.message) ? fail("CLOUD_BAD_ARGS") : serverError(res.error.message);
     return fail(code);
   }
+  // 배틀 파티 자동 등록(E3) — 받아들인 저장의 배틀 파티를 상대 후보로. 비었거나 출전 불가면 지운다. 실패해도 올리기는 성공이다
+  const mine = partyOf(body.save, battle.data);
+  await admin.rpc("battle_register", { p_user: user.id, p_party: mine.count > 0 && !mine.blocked ? mine.party : null });
   return json({ rev: Number(res.data), violations: violations.length });
 });

@@ -6,6 +6,7 @@ import { profileOf } from "../dex/species.js";
 import { megaBattleTable } from "../dex/tables.js";
 import type { DexOptions } from "../dex/data.js";
 import { BATTLE_RULES } from "./rules.js";
+import { realStat } from "./fighter-core.js";
 
 const STAT_COUNT = 6; // HP, 공격, 방어, 특수공격, 특수방어, 스피드
 
@@ -17,14 +18,8 @@ export interface StatBasis {
 
 const BATTLE_BASIS: Readonly<StatBasis> = { level: BATTLE_RULES.level, iv: BATTLE_RULES.iv, ev: BATTLE_RULES.ev };
 
-// 종족값 하나 → 실제 능력치 하나. index 0 이 HP 다
-export function realStat(base: number, index: number, basis: StatBasis = BATTLE_BASIS): number {
-  const core = Math.floor(((2 * base + basis.iv + Math.floor(basis.ev / 4)) * basis.level) / 100);
-  if (index !== 0) return core + 5;
-  // 껍질몬처럼 HP 종족값이 1 인 종은 원작에서 HP 가 늘 1 이다
-  if (base === 1) return 1;
-  return core + basis.level + 10;
-}
+// 종족값 하나 → 실제 능력치 하나. index 0 이 HP 다 — 공식은 앱·서버 공용 fighter-core 에 있다
+export { realStat } from "./fighter-core.js";
 
 // 종의 종족값 6개 — 메가·원시회귀 모습이면 data/mega-battle.json. 표에 없으면 null
 export function baseStatsOf(slug: string, opts?: DexOptions): number[] | null {
