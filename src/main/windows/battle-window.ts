@@ -1,5 +1,5 @@
 // 배틀 창 — 판 하나를 재생하는 창. 기기 창처럼 새 창으로 뜨고 머리 줄(제목·✕)을 렌더러가 그린다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
-// 기기 창과 다른 점: 폭(1004)이 커서 설정창 옆에 붙이지 않는다(dockAt). 설정창 위 가운데에 띄우고, 머리 줄을 끌어 옮길 수 있다.
+// 기기 창과 다른 점: 폭(1116)이 커서 설정창 옆에 붙이지 않는다(dockAt). 설정창 위 가운데에 띄우고, 머리 줄을 끌어 옮길 수 있다.
 // 설정창을 부모로 둔다 — 설정창이 최소화되면 같이 숨고 닫히면 같이 닫힌다. 창은 하나만 둔다. 다시 열면 앞으로 오고 새 판을 보낸다
 import { BrowserWindow, type Rectangle } from "electron";
 import type { BattleScreenChannel, BattleScreenIpc } from "../../shared/ipc/battle";
@@ -15,8 +15,8 @@ const CH = {
   close: "battlescreen:close",
 } satisfies Record<string, BattleScreenChannel>;
 
-// Figma 04 `Battle Window` — 머리 줄 44 + 판 표시 줄 + 카드·전장 (99 `Draft / Battle Window · 머리 줄` 1004×428)
-const BATTLE_WINDOW_SIZE = { width: 1004, height: 428 } as const;
+// Figma 04 `Battle Window` — 머리 줄 44 + 판 표시 줄 + 카드·전장 1116×484 (2026-10-09 전장 10×6)
+const BATTLE_WINDOW_SIZE = { width: 1116, height: 484 } as const;
 
 export interface BattleWindow {
   show(parent: BrowserWindow | null, view: BattleScreenView): void; // parent 가 없으면 주 화면 가운데

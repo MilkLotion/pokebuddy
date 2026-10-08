@@ -5,8 +5,8 @@
 import type { BattleStatusKind } from "../../shared/model/battle-screen.js";
 import type { Mark } from "../../shared/battle-timeline.js";
 
-const W = 448;
-const H = 280;
+const W = 560;
+const H = 336;
 const PAD = 32;
 const BODY = 13; // 연출을 그린 몸 반높이(px) — 실제 몸 반높이 r 에 맞춰 r ÷ BODY 배로 키운다
 

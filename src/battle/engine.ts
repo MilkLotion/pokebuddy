@@ -6,8 +6,8 @@
 // 난수는 시드 하나(mulberry32)에서만 뽑는다. Math.random·시각은 쓰지 않는다
 //
 // 시간은 0.1초 틱. 한 틱에 할 행동을 모아 기술 > 평타 → 선공도 → 스피드 → 난수 순서로 한다. 행동하지 않은 개체는 그 뒤에 걷는다
-// 전장은 계산 칸 16×10(화면 칸 1 = 계산 칸 2×2). 개체는 2×2 를 차지하고 8방향으로 0.3초에 1칸 걷는다. 사거리 = 몸 사이 틈(근접 1, 원거리 6)
-// 장애물은 판의 시드로 가운데 4열에 1×1 둘과 2×2 하나를 뽑는다. 규칙은 docs/specs/moves.md "전장과 대상"
+// 전장은 계산 칸 20×12(화면 10×6, 화면 칸 1 = 계산 칸 2×2). 개체는 2×2 를 차지하고 8방향으로 0.3초에 1칸 걷는다. 사거리 = 몸 사이 틈(근접 1, 원거리 6)
+// 장애물은 없다(2026-10-09). 걷기는 다른 개체만 피한다. 규칙은 docs/specs/moves.md "전장과 대상"
 // 이번 판(E1)에 넣은 특성: 게으름·슬로스타트·스킬링크·모습이 바뀌는 5종. 나머지 특성은 무보정이다
 // 설계와 단계는 worklog/records/battle-server/battle-server.md "엔진 설계"
 
@@ -43,12 +43,13 @@ export const ENGINE_RULES = {
   skillLinkAuto: 3,
   truantMul: 1.5, // 게으름 — 한 번 쓴 뒤 쿨타임 ×1.5 (2026-10-09 사용자 결정, 켬/끔 실험)
   regeneratorDiv: 4, // 재생력 — HP 50% 아래가 처음 되면 최대 HP 의 1/4 회복 (2026-10-09 사용자 결정)
+  weatherDefMul: 1.3, // 모래바람 바위 특방·눈 얼음 방어 (2026-10-09 사용자 "제안대로 해봐", 맞춘 파티 실험, 처음 ×1.5)
   weatherBoostMul: 1.3, // 쾌청 불꽃·비 물·쾌청 하이드로스팀 — 약해지는 쪽 ×0.5 는 그대로 (2026-10-09 사용자 결정)
   slowStartMul: 5, // 슬로스타트 — 첫 기술·첫 평타까지 5배
   schoolingPct: 25, // 약어리 — HP 이 비율 미만이면 단독의 모습
   shieldsDownPct: 50, // 메테노 — HP 이 비율 이하면 코어의 모습
-  fieldW: 16, // 전장 계산 칸 — 화면 8×5
-  fieldH: 10,
+  fieldW: 20, // 전장 계산 칸 — 화면 10×6 (2026-10-09 사용자 "1안으로 진행해", 처음 8×5)
+  fieldH: 12,
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
   // 사거리(두 몸 사이 틈, 대각선 포함) — 기술로 정한다: 접촉 1, 접촉 없는 물리 2, 특수 3, 파동·탄환·소리 특수 5. 두 기술 중 짧은 쪽
@@ -59,9 +60,6 @@ export const ENGINE_RULES = {
   rangeFar: 5,
   farTraits: ["pulse", "ballistic", "sound"] as readonly string[],
   rangeDamage: { 1: 1, 2: 0.9, 3: 0.8, 5: 0.75 } as Readonly<Record<number, number>>, // 사거리별 주는 피해 배율(기술·평타) — 시작 값, 모의 대전으로 맞춘다
-  obstacleSizes: [1, 1, 2] as readonly (1 | 2)[], // 장애물 — 1×1 두 개, 2×2 한 개 (2026-10-08 사용자 결정)
-  obstacleX0: 4, // 장애물을 놓는 계산 칸 열 — 가운데 4열(화면 칸 2~5)
-  obstacleX1: 12, // 이 열은 포함하지 않는다
 } as const;
 
 // ── 날씨·필드·오라 (docs/specs/moves.md "날씨, 필드, 오라") ──
@@ -133,9 +131,11 @@ const rangeMul = (range: number): number => ENGINE_RULES.rangeDamage[range] ?? 1
 // 처음 자리 — 각 쪽 `1 2 / 3 4 / 5 6`, 상대는 거울. 2·4·6 이 앞 열이다. 팀은 화면 가운데 3줄(위아래 빈 줄)에 선다
 export function startPos(side: Side, slot: number): Pos {
   const col = slot % 2; // 0 뒤 열, 1 앞 열
-  const row = Math.floor(slot / 2) + 1;
+  const row = Math.floor(slot / 2);
   const cell = side === 0 ? col : ENGINE_RULES.fieldW / ENGINE_RULES.body - 1 - col;
-  return { x: cell * ENGINE_RULES.body, y: row * ENGINE_RULES.body };
+  // 세 줄을 세로 가운데에 — 10×6 이면 계산 칸 3(화면 칸 반)에서 시작한다
+  const top = (ENGINE_RULES.fieldH - 3 * ENGINE_RULES.body) / 2;
+  return { x: cell * ENGINE_RULES.body, y: top + row * ENGINE_RULES.body };
 }
 
 // 능력 변화 단계 → 배율. 오르면 1.2·1.4, 내리면 그 역수 [스펙 미확정: 내림 배율]
@@ -199,7 +199,7 @@ export interface BattleInput {
   sides: readonly [readonly (EngineFighter | null)[], readonly (EngineFighter | null)[]];
   typeChart: Readonly<Record<string, Readonly<Record<string, number>>>>;
   maxMs?: number;
-  obstacles?: readonly Obstacle[]; // 주면 뽑지 않고 이 장애물을 쓴다 — 자체 검사용
+  obstacles?: readonly Obstacle[]; // 자체 검사용 벽 — 판에는 장애물이 없다. 서버는 주지 않는다
   positions?: readonly [readonly (Pos | null)[], readonly (Pos | null)[]]; // 주면 처음 자리를 덮는다 — 자체 검사용
   hpScale?: number; // 주면 전투 HP 배율을 덮는다 — 모의 대전·재생 도구의 값 비교용. 서버는 주지 않는다
 }
@@ -324,7 +324,7 @@ function gapOf(a: Pos, b: Pos): number {
 
 const DIRS: readonly [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
-// 막힌 계산 칸 — 장애물만
+// 막힌 계산 칸 — 자체 검사가 준 벽만(판에는 장애물이 없다)
 function obstacleGrid(obstacles: readonly Obstacle[]): Uint8Array {
   const { fieldW: W, fieldH: H } = ENGINE_RULES;
   const g = new Uint8Array(W * H);
@@ -364,32 +364,6 @@ function walk(grid: Uint8Array, from: Pos): { dist: Int16Array; prev: Int16Array
   return { dist, prev };
 }
 
-// 장애물 뽑기 — 가운데 4열에 1×1 두 개와 2×2 한 개를 완전 무작위로. 양쪽이 서로 닿을 길이 없으면 다시 뽑는다(20번 뒤에는 없음)
-export function rollObstacles(rand: () => number): Obstacle[] {
-  const R = ENGINE_RULES;
-  for (let attempt = 0; attempt < 20; attempt++) {
-    const list: Obstacle[] = [];
-    const count = R.obstacleSizes.length;
-    const used = new Uint8Array(R.fieldW * R.fieldH);
-    for (let i = 0, tries = 0; i < count && tries < 50; tries++) {
-      const size = R.obstacleSizes[i]!;
-      const x = R.obstacleX0 + Math.floor(rand() * (R.obstacleX1 - R.obstacleX0 - size + 1));
-      const y = Math.floor(rand() * (R.fieldH - size + 1));
-      let clash = false;
-      for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) if (used[(y + dy) * R.fieldW + x + dx]) clash = true;
-      if (clash) continue;
-      for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) used[(y + dy) * R.fieldW + x + dx] = 1;
-      list.push({ x, y, size });
-      i++;
-    }
-    const grid = obstacleGrid(list);
-    const { dist } = walk(grid, startPos(0, 3));
-    const goal = startPos(1, 3);
-    if (dist[goal.y * R.fieldW + goal.x]! >= 0) return list;
-  }
-  return [];
-}
-
 const isSkillLinkMove = (u: Unit, m: EngineMove): boolean =>
   u.ability === "skill-link" && m.hits !== null && m.hits[0] === 2 && m.hits[1] === 5;
 
@@ -418,8 +392,8 @@ export function runBattle(input: BattleInput): BattleResult {
   const all = (): Unit[] => [...units[0], ...units[1]].filter((u): u is Unit => u !== null);
   const alive = (side: Side): Unit[] => units[side].filter((u): u is Unit => u !== null && u.hp > 0);
 
-  // 전장 — 장애물을 먼저 뽑고 처음 자리에 세운다
-  const obstacles: Obstacle[] = input.obstacles ? input.obstacles.map((o) => ({ ...o })) : rollObstacles(rand);
+  // 전장 — 장애물은 없다(2026-10-09 사용자 "장애물 제거"). 자체 검사가 준 벽만 쓴다
+  const obstacles: Obstacle[] = (input.obstacles ?? []).map((o) => ({ ...o }));
   const walls = obstacleGrid(obstacles);
   for (const u of all()) {
     const p = input.positions?.[u.side][u.slot] ?? startPos(u.side, u.slot);
@@ -672,8 +646,8 @@ export function runBattle(input: BattleInput): BattleResult {
   function conditionStatMul(u: Unit, stat: number): number {
     let mul = 1;
     const a0 = ab(u);
-    if (weather === "sand" && stat === 4 && u.types.includes("rock")) mul *= 1.5;
-    if (weather === "snow" && stat === 2 && u.types.includes("ice")) mul *= 1.5;
+    if (weather === "sand" && stat === 4 && u.types.includes("rock")) mul *= R.weatherDefMul;
+    if (weather === "snow" && stat === 2 && u.types.includes("ice")) mul *= R.weatherDefMul;
     if (stat === 3 && a0 === "solar-power" && sunny) mul *= 1.5;
     if (stat === 1 && a0 === "orichalcum-pulse" && sunny) mul *= 1.33;
     if (stat === 3 && a0 === "hadron-engine" && field === "electric") mul *= 1.33;
@@ -1103,7 +1077,7 @@ export function runBattle(input: BattleInput): BattleResult {
     return { at, steps };
   }
 
-  // 대상 고르기 — 장애물을 돌아가는 걸음 수로 가장 가까운 상대. 같으면 같은 줄(위아래 차이가 작은 쪽) → 번호가 작은 쪽. 닿을 길이 없는 상대는 빼다
+  // 대상 고르기 — 걸음 수로 가장 가까운 상대. 같으면 같은 줄(위아래 차이가 작은 쪽) → 번호가 작은 쪽. 닿을 길이 없는 상대는 빼다
   function pickTarget(u: Unit): Unit | null {
     const { dist } = walk(walls, u);
     let best: Unit | null = null, bestSteps = Infinity;
@@ -1158,8 +1132,26 @@ export function runBattle(input: BattleInput): BattleResult {
     }
     let route = walk(occupied, u);
     let goal = reachOf(route.dist, o, u.range).at;
+    // 대상 주위가 다른 개체로 막혔다 — 지금 닿을 수 있는 다른 상대 가운데 걸음 수가 가장 적은 쪽으로 바꾼다(같으면 번호가 작은 쪽)
+    // TFT 9.14·Underlords 가 고친 "닿지 못하는 대상을 붙잡고 서 있기"를 막는다 (2026-10-09 사용자 "A+B로 진행해")
     if (goal < 0) {
-      // 개체로 막혔다 — 장애물만 본 길에서 대상이 닿지 않으면 다른 상대
+      let best: Unit | null = null, bestSteps = Infinity, bestAt = -1;
+      for (const f of foesOf(u)) {
+        const r = reachOf(route.dist, f, u.range);
+        if (r.at >= 0 && (r.steps < bestSteps || (r.steps === bestSteps && best !== null && f.slot < best.slot))) {
+          best = f;
+          bestSteps = r.steps;
+          bestAt = r.at;
+        }
+      }
+      if (best) {
+        u.target = best;
+        o = best;
+        goal = bestAt;
+      }
+    }
+    if (goal < 0) {
+      // 개체로 막혔다 — 벽만 본 길에서 대상이 닿지 않으면 다른 상대
       const free = walk(walls, u);
       if (reachOf(free.dist, o, u.range).at < 0) {
         u.target = pickTarget(u);

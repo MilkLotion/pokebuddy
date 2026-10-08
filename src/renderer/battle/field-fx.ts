@@ -5,8 +5,8 @@
 // - 시안의 "효과 없는 장면을 (1 - mix) 만큼 덮기"는 canvas 마다 opacity = mix 로 바꿨다
 // - 끝의대지 열기 일렁임(장면 전체 일그러짐)은 DOM 위에서 같은 방식으로 할 수 없어 뺐다
 
-const W = 448;
-const H = 280;
+const W = 560;
+const H = 336;
 const FADE_MS = 600; // 룰렛 뒤 연출이 차오르는 시간
 const TICK_MS = 5000; // 모래바람 피해·그래스필드 회복 판정 간격 (docs/specs/moves.md "날씨, 필드, 오라")
 
@@ -125,8 +125,8 @@ function streakSprite(): HTMLCanvasElement {
 }
 
 // ── 필드 타원 — 가운데는 비우고 바깥에만 효과 ──
-const RX = 242;
-const RY = 151;
+const RX = 302;
+const RY = 181;
 const cornerAngle = (r: () => number): number => [0.79, Math.PI - 0.79, Math.PI + 0.79, -0.79][Math.floor(r() * 4)]! + (r() - 0.5) * 0.5; // 네 모서리 근처 — 효과가 보이는 곳
 const ringAt = (a: number, d: number): [number, number] => [W / 2 + Math.cos(a) * RX * d, H / 2 + Math.sin(a) * RY * d];
 function outerGlow(g: Ctx, rgb: string, a: number): void {

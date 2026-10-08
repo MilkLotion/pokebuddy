@@ -320,21 +320,11 @@ function draw(view: BattleScreenView): void {
     box.append(el("div", "side-name", view.sideNames[side]), grid);
     return box;
   };
-  // 전장 — 바탕·장애물은 board(둥근 모서리로 자름), 포켓몬·연출은 그 위 arena(자르지 않음 — 위쪽 끝의 머리 위 표시·알약이 잘리지 않게)
+  // 전장 — 바탕은 board(둥근 모서리로 자름), 포켓몬·연출은 그 위 arena(자르지 않음 — 위쪽 끝의 머리 위 표시·알약이 잘리지 않게). 장애물·처음 자리 표시는 없다(2026-10-09)
   const arena = el("div", "arena");
   const board = el("div", "board");
   arena.appendChild(board);
-  board.append(el("div", "zone mine"), el("div", "zone opp"));
-  const start = view.events.find((e) => e.kind === "start");
-  if (start && start.kind === "start") {
-    for (const o of start.obstacles) {
-      const ob = el("div", "obstacle");
-      ob.style.left = `${o.x * CELL}px`;
-      ob.style.top = `${o.y * CELL}px`;
-      ob.style.width = ob.style.height = `${o.size * CELL}px`;
-      board.appendChild(ob);
-    }
-  }
+
   // 날씨·필드·오라 연출 층 — 필드는 바닥 위·포켓몬 아래, 날씨·오라는 포켓몬 위·알약 아래 (field-fx.ts)
   const fxUnder = el("div", "field-layer");
   arena.appendChild(fxUnder);

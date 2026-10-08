@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE_RULES, rangeOfMoves, rollObstacles, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
+import { ENGINE_RULES, rangeOfMoves, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
 import { BATTLE_BASIS, BATTLE_LIMITS, partyOf } from "../../battle/fighter-core";
 import { battleData } from "../../battle/fighter";
@@ -30,7 +30,7 @@ const unit = (over: Partial<EngineFighter> = {}): EngineFighter => ({
 });
 const of = <K extends BattleEvent["kind"]>(evs: BattleEvent[], kind: K): Extract<BattleEvent, { kind: K }>[] =>
   evs.filter((e): e is Extract<BattleEvent, { kind: K }> => e.kind === kind);
-// 작은 판은 장애물 없이 돌린다 — 장애물은 아래 "전장" 에서 따로 본다
+// 판에는 장애물이 없다. 벽(obstacles)은 개체를 떼어 놓는 자체 검사에만 쓴다
 const run = (a: (EngineFighter | null)[], b: (EngineFighter | null)[], seed = 1, maxMs?: number, extra: Partial<BattleInput> = {}) =>
   runBattle({ seed, sides: [a, b], typeChart: chart, obstacles: [], ...(maxMs ? { maxMs } : {}), ...extra });
 const at = (x: number, y: number): Pos => ({ x, y });
@@ -117,11 +117,11 @@ assert.strictEqual(run([null], [null]).winner, null, "둘 다 비면 무승부")
 }
 
 // ── 처음 자리 — 1 2 / 3 4 / 5 6, 상대는 거울, 가운데 3줄 ──
-assert.deepStrictEqual(startPos(0, 0), at(0, 2));
-assert.deepStrictEqual(startPos(0, 1), at(2, 2), "2번은 앞 열");
-assert.deepStrictEqual(startPos(0, 5), at(2, 6));
-assert.deepStrictEqual(startPos(1, 0), at(14, 2), "상대 1번은 오른쪽 끝");
-assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
+assert.deepStrictEqual(startPos(0, 0), at(0, 3), "세 줄은 세로 가운데");
+assert.deepStrictEqual(startPos(0, 1), at(2, 3), "2번은 앞 열");
+assert.deepStrictEqual(startPos(0, 5), at(2, 7));
+assert.deepStrictEqual(startPos(1, 0), at(18, 3), "상대 1번은 오른쪽 끝");
+assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
 
 // ── 대상 — 걸음 수로 가장 가까운 상대, 같으면 같은 줄, 그다음 번호 ──
 {
@@ -139,7 +139,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
 
 // ── 길이 없으면 싸우지 못한다 ──
 {
-  const wall = [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const }));
+  const wall = [0, 2, 4, 6, 8, 10].map((y) => ({ x: 6, y, size: 2 as const }));
   const r = run([unit({ moves: [mv("tackle")] })], [unit()], 1, 5000, { obstacles: wall });
   assert.strictEqual(of(r.events, "damage").length, 0);
 }
@@ -270,7 +270,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.strictEqual(firstHit(surf, "desolate-land"), 0, "끝의대지에서 물 실패");
 
   // 모래바람 — 5초마다 바위·땅·강철이 아니면 1/16
-  const r3 = run([quiet({ ability: "sand-stream", types: ["rock"] }), quiet()], [quiet()], 1, 10_000, { positions: [[at(0, 0), at(0, 8)], [at(14, 0)]], obstacles: [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const })) });
+  const r3 = run([quiet({ ability: "sand-stream", types: ["rock"] }), quiet()], [quiet()], 1, 10_000, { positions: [[at(0, 0), at(0, 8)], [at(14, 0)]], obstacles: [0, 2, 4, 6, 8, 10].map((y) => ({ x: 6, y, size: 2 as const })) });
   const sand = of(r3.events, "weather").filter((e) => e.cause === "sand");
   assert.deepStrictEqual([...new Set(sand.map((e) => e.t))], [5000, 10000]);
   assert.ok(!sand.some((e) => e.side === 0 && e.slot === 0), "바위는 모래바람 피해 없음");
@@ -334,7 +334,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   const rg = hitWith(half, { stats: [999, 200, 999, 1, 999, 95] }, { ability: "regenerator", stats: [200, 1, 60, 1, 60, 95] }, 5000);
   assert.ok(of(rg.events, "self").some((e) => e.side === 1 && e.amount < 0), "재생력");
   // 가속 — 5초마다 스피드 +1
-  const sb = run([wall({ ability: "speed-boost" })], [wall()], 1, 10_000, { obstacles: [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const })) });
+  const sb = run([wall({ ability: "speed-boost" })], [wall()], 1, 10_000, { obstacles: [0, 2, 4, 6, 8, 10].map((y) => ({ x: 6, y, size: 2 as const })) });
   assert.deepStrictEqual(of(sb.events, "stat").filter((e) => e.side === 0 && e.stat === 5).map((e) => [e.t, e.stage]), [[5000, 1], [10000, 2]]);
   // 불요의검 — 판 시작에 공격 +1, 판 끝까지
   const is = run([wall({ ability: "intrepid-sword" })], [wall()], 1, 100);
@@ -457,25 +457,24 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   }
 }
 
-// ── 전장 — 장애물 뽑기 ──
+// ── 대상 주위가 막히면 지금 닿는 다른 상대로 바꾼다 (2026-10-09 사용자 "A+B로 진행해") ──
 {
-  let seed = 7;
-  const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
-  for (let i = 0; i < 300; i++) {
-    const list = rollObstacles(rand);
-    assert.ok(list.length === 0 || list.map((o) => o.size).sort().join() === "1,1,2", "1×1 둘과 2×2 하나");
-    const cells = new Set<string>();
-    for (const o of list) {
-      assert.ok(o.size === 1 || o.size === 2);
-      assert.ok(o.x >= ENGINE_RULES.obstacleX0 && o.x + o.size <= ENGINE_RULES.obstacleX1, "가운데 4열");
-      assert.ok(o.y >= 0 && o.y + o.size <= ENGINE_RULES.fieldH);
-      for (let dy = 0; dy < o.size; dy++) for (let dx = 0; dx < o.size; dx++) {
-        const k = `${o.x + dx},${o.y + dy}`;
-        assert.ok(!cells.has(k), "장애물끼리 겹치지 않는다");
-        cells.add(k);
-      }
-    }
-  }
+  // 상대 T(오른쪽 위 구석)는 내 쪽 셋에게 둘러싸여 빈 자리가 없다. 같은 걸음 수의 F 보다 같은 줄이라 처음 대상은 T
+  const sturdy = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const r = run(
+    [unit({ stats: [999, 100, 999, 1, 999, 95] }), sturdy(), sturdy(), sturdy()],
+    [sturdy(), sturdy()],
+    1,
+    8000,
+    { positions: [[at(0, 0), at(16, 0), at(16, 2), at(18, 2)], [at(18, 0), at(18, 10)]] } as unknown as Partial<BattleInput>,
+  );
+  assert.ok(of(r.events, "damage").some((e) => e.side === 0 && e.slot === 0 && e.target === 1), "막힌 대상 대신 F 를 때린다");
+}
+
+// ── 전장 — 장애물 없음(2026-10-09 사용자 "장애물 제거") ──
+{
+  const r = runBattle({ seed: 3, sides: [[unit()], [unit()]], typeChart: chart, maxMs: 100 });
+  assert.deepStrictEqual(r.obstacles, [], "판에 장애물이 없다");
 }
 
 // ── 90초 판정 — 남은 HP 비율 합 ──
@@ -486,7 +485,7 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.strictEqual(r.endMs, ENGINE_RULES.maxMs);
   assert.strictEqual(r.winner, 1, "남은 HP 비율 합이 큰 쪽이 이긴다");
   // 서로 닿지 못하면 둘 다 가득 — 비율 합이 같아 무승부
-  const block = [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const }));
+  const block = [0, 2, 4, 6, 8, 10].map((y) => ({ x: 6, y, size: 2 as const }));
   assert.strictEqual(run([wall(1)], [wall(1)], 1, undefined, { obstacles: block }).winner, null, "비율 합이 같으면 무승부");
 }
 

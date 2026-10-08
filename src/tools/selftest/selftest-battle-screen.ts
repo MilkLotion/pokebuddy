@@ -36,7 +36,7 @@ for (const side of view.units)
 assert.strictEqual(view.units[0][0]?.moves[0]?.name, "볼트태클", "기술 이름은 표에서");
 assert.strictEqual(view.events.length, result.events.length, "이벤트를 그대로 넘긴다");
 assert.strictEqual(view.endMs, result.endMs);
-assert.deepStrictEqual(view.field, { w: 16, h: 10, body: 2, stepMs: 300, stageMs: 10_000 });
+assert.deepStrictEqual(view.field, { w: 20, h: 12, body: 2, stepMs: 300, stageMs: 10_000 }); // 화면 10×6 (2026-10-09)
 assert.strictEqual(view.result.title, result.winner === null ? "비겼어요" : result.winner === 0 ? "이겼어요" : "졌어요");
 assert.strictEqual(view.result.lead, "+50P");
 

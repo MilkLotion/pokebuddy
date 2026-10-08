@@ -20,8 +20,8 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  width: 1004px;
-  height: 428px;
+  width: 1116px;
+  height: 484px;
   padding: 0 0 16px;
   overflow: hidden;
 }
@@ -243,13 +243,13 @@ body {
   background: var(--gauge);
 }
 
-/* 전장 — 화면 칸 56 의 8×5. 체크 무늬, 양쪽 2열에 팀 색을 옅게. Figma 03 `Battle Board`
+/* 전장 — 화면 칸 56 의 10×6(2026-10-09). 체크 무늬. Figma 03 `Battle Board`
    arena 는 포켓몬·연출을 얹는 자리다. board 만 둥근 모서리로 자른다 */
 .arena {
   position: relative;
   flex: none;
-  width: 448px;
-  height: 280px;
+  width: 560px;
+  height: 336px;
 }
 .board {
   position: absolute;
@@ -260,27 +260,6 @@ body {
   background-image: conic-gradient(rgba(230, 227, 213, 0.6) 0 25%, transparent 0 50%, rgba(230, 227, 213, 0.6) 0 75%, transparent 0);
   background-size: 112px 112px;
   background-position: 56px 0;
-}
-.board .zone {
-  position: absolute;
-  top: 56px;
-  width: 112px;
-  height: 168px;
-  opacity: 0.1;
-}
-.board .zone.mine {
-  left: 0;
-  background: var(--primary);
-}
-.board .zone.opp {
-  right: 0;
-  background: var(--opp);
-}
-.obstacle {
-  position: absolute;
-  border: 1px solid rgba(10, 87, 80, 0.5);
-  border-radius: 4px;
-  background: linear-gradient(#e6e3d5 0 45%, #d5d2c6 45%);
 }
 /* 포켓몬 — 몸(계산 칸 2×2 = 56) 가운데에 48 그림. 크기 2단계(배율 1.5) */
 .pet {
@@ -380,8 +359,8 @@ body {
   position: absolute;
   left: -32px;
   top: -32px;
-  width: 512px;
-  height: 344px;
+  width: 624px;
+  height: 400px;
   pointer-events: none;
 }
 /* 날씨·필드·오라 연출 층 — 섞기 방식별 canvas 를 겹친다(field-fx.ts). 전장 모서리에 맞춰 자른다
@@ -396,8 +375,8 @@ body {
 .field-layer .field-fx {
   position: absolute;
   inset: 0;
-  width: 448px;
-  height: 280px;
+  width: 560px;
+  height: 336px;
 }
 /* 연출 겹침층 — 기술 이름 알약과 피해 숫자 */
 .fx {
