@@ -16,8 +16,8 @@ const TIER_EGGS: Readonly<Record<string, BattleTier>> = {
   "ultra-beast": "sub",
   paradox: "sub",
 };
-// 알 후보에 없는 초전설 — 업적 보상으로만 얻는다 (data/achievements.json)
-const EXTRA: Readonly<Record<string, BattleTier>> = { arceus: "legendary" };
+// 알 후보에 없는 전설급 — 업적 보상으로만 얻는다 (data/achievements.json). 아르세우스는 초전설, 뮤(관동 도감 완성)는 준전설
+const EXTRA: Readonly<Record<string, BattleTier>> = { arceus: "legendary", mew: "sub" };
 
 let cache: { opts: DexOptions | undefined; byDex: Map<number, BattleTier> } | null = null;
 

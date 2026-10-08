@@ -31,6 +31,7 @@ function seed(species: string[]): SaveV3 {
 const tiers: [string, string | null][] = [
   ["mewtwo", "legendary"],
   ["arceus", "legendary"], // 알 후보에 없어 따로 넣는다
+  ["mew", "sub"], // 알 후보에 없는 업적 보상 — 준전설 칸
   ["giratina-origin", "legendary"], // 모습은 같은 도감 번호
   ["cosmog", "legendary"],
   ["cosmoem", "legendary"], // 진화 가족

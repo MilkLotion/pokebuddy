@@ -6,6 +6,7 @@ import type { MoveView } from "./snapshot.js";
 import type { LookSheets } from "./stage.js";
 
 export type BattleSide = 0 | 1;
+export type BattleStatusKind = "burn" | "paralysis" | "poison" | "toxic" | "freeze" | "sleep" | "confusion" | "flinch" | "trap"; // 엔진 StatusKind 와 같다
 
 export interface BattlePos {
   x: number; // 계산 칸 — 몸(2×2)의 왼쪽 위
@@ -41,6 +42,8 @@ export type BattleScreenEvent =
   | { t: number; kind: "form"; side: BattleSide; slot: number; species: string }
   | { t: number; kind: "copy"; side: BattleSide; slot: number; from: number; moves: string[] }
   | { t: number; kind: "weather"; side: BattleSide; slot: number; amount: number; hp: number; cause: "sand" | "grassy" | "rain-dish" | "ice-body" } // 5초마다 — 피해는 양수, 회복은 음수
+  | { t: number; kind: "status"; side: BattleSide; slot: number; status: BattleStatusKind; on: boolean; until?: number } // 상태 이상 걸림(on, until = 풀리는 시각)·풀림 — 화면 표시는 아직 없다
+  | { t: number; kind: "status-hp"; side: BattleSide; slot: number; amount: number; hp: number; cause: "burn" | "poison" | "toxic" | "trap" | "nightmare" | "poison-heal" | "confusion" } // 상태 이상 피해(양수)·회복(음수)
   | { t: number; kind: "faint"; side: BattleSide; slot: number }
   | { t: number; kind: "end"; winner: BattleSide | null; timeout: boolean };
 

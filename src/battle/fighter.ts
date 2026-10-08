@@ -41,7 +41,7 @@ export function engineMoves(species: string, swap: boolean, opts?: DexOptions): 
       cooldownMs: ceilTick(row.cooldown ?? 6),
       hits: row.hits ?? null,
       traits: row.traits ?? [],
-      effects: row.effects ?? {},
+      effects: (row.effects ?? {}) as EngineMove["effects"], // 상태 이상 kind 는 check-moves 가 본다
     });
   }
   return swap ? out.reverse() : out;

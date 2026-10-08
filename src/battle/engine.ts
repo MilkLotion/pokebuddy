@@ -100,6 +100,12 @@ const AURA_ABILITY: Readonly<Record<string, AuraKind>> = { "fairy-aura": "fairy"
 const WEATHER_TYPE: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "fire", "harsh-sun": "fire", rain: "water", "heavy-rain": "water", sand: "rock", snow: "ice" };
 const FIELD_TYPE: Readonly<Record<FieldKind, string>> = { electric: "electric", grassy: "grass", psychic: "psychic", misty: "fairy" };
 
+// ── 상태 이상 (docs/specs/moves.md "상태 이상") ──
+export type StatusKind = "burn" | "paralysis" | "poison" | "toxic" | "freeze" | "sleep" | "confusion" | "flinch" | "trap";
+type MajorStatus = "burn" | "paralysis" | "poison" | "toxic" | "freeze" | "sleep";
+const MAJOR: ReadonlySet<string> = new Set(["burn", "paralysis", "poison", "toxic", "freeze", "sleep"]);
+const STATUS_MS: Readonly<Record<StatusKind, number>> = { burn: 10_000, paralysis: 10_000, poison: 10_000, toxic: 10_000, freeze: 3000, sleep: 3000, confusion: 5000, flinch: 0, trap: 10_000 };
+
 export interface Pos {
   x: number; // 계산 칸 — 몸의 왼쪽 위
   y: number;
@@ -159,6 +165,8 @@ export interface EngineMove {
     drain?: number;
     stats?: readonly { who: "self" | "target"; stat: string; change: number; chance: number }[]; // 맞힌 뒤 chance% 로 능력 변화
     crit?: "high" | "always"; // 급소율
+    status?: { kind: StatusKind | readonly StatusKind[]; chance: number }; // 상태 이상 — 목록이면 하나를 뽑는다 (moves.md "상태 이상")
+    flinch?: number; // 풀죽음 확률(%)
     rampage?: boolean;
     hpScale?: boolean;
   };
@@ -199,6 +207,8 @@ export type Side = 0 | 1;
 export type BattleEvent =
   | { t: number; kind: "start"; obstacles: Obstacle[]; pos: [(Pos | null)[], (Pos | null)[]]; roulette?: { weather?: BattleRoulette; field?: BattleRoulette; aura?: BattleRoulette } }
   | { t: number; kind: "weather"; side: Side; slot: number; amount: number; hp: number; cause: "sand" | "grassy" | "rain-dish" | "ice-body" } // amount 음수는 회복
+  | { t: number; kind: "status"; side: Side; slot: number; status: StatusKind; on: boolean; until?: number } // 걸림(on, until = 풀리는 시각)·풀림
+  | { t: number; kind: "status-hp"; side: Side; slot: number; amount: number; hp: number; cause: "burn" | "poison" | "toxic" | "trap" | "nightmare" | "poison-heal" | "confusion" } // amount 음수는 회복
   | { t: number; kind: "step"; side: Side; slot: number; x: number; y: number }
   | { t: number; kind: "move"; side: Side; slot: number; move: string; nextAt: number } // nextAt — 다음 차례 기술이 준비되는 시각(ms)
   | { t: number; kind: "attack"; side: Side; slot: number }
@@ -289,6 +299,11 @@ interface Unit {
   lastAim: Unit | null; // 잠복 — 기술을 마지막으로 쓴 대상
   cursedMs: number; // 저주받은바디 — 다음 쿨타임에 더할 시간
   quickHalf: boolean; // 퀵드로 — 다음 쿨타임 절반
+  major: { kind: MajorStatus; until: number } | null; // 화상·마비·독·맹독·얼음·잠듦 — 한 번에 하나
+  confusedUntil: number;
+  trapUntil: number;
+  flinched: boolean; // 다음 기술 쿨타임 +1초
+  toxicN: number; // 맹독 — 다음 5초 피해가 n/16
   hungry: boolean; // 꼬르륵스위치 — 배고픈 모양(오라휠이 악)
   gulp: "arrokuda" | "pikachu" | null; // 그대로꿀꺽미사일 — 문 먹이
   moveHit: boolean; // 기술 피해를 받은 적이 있는가 — "HP 가득"·"첫 피해" 특성은 처음 맞는 기술에만, 평타는 무시 (moves.md "특성")
@@ -488,6 +503,11 @@ export function runBattle(input: BattleInput): BattleResult {
       moveHit: false,
       hungry: false,
       gulp: null,
+      major: null,
+      confusedUntil: -1,
+      trapUntil: -1,
+      flinched: false,
+      toxicN: 1,
     };
   }
 
@@ -541,6 +561,13 @@ export function runBattle(input: BattleInput): BattleResult {
     alive(u.side).filter((v) => ab(v) === ability && (withSelf || v !== u)).length;
   const foeHas = (u: Unit, ability: string): boolean => alive(u.side === 0 ? 1 : 0).some((v) => ab(v) === ability);
 
+  // 기분파·의태 — 날씨·필드는 판 끝까지 가므로 판 시작에 타입을 정한다
+  for (const u of all()) {
+    const FORECAST: Partial<Record<WeatherKind, string>> = { sun: "fire", "harsh-sun": "fire", rain: "water", "heavy-rain": "water", snow: "ice", sand: "normal" };
+    if (u.ability === "forecast" && weather && FORECAST[weather]) u.types = [FORECAST[weather]!];
+    if (u.ability === "mimicry" && field) u.types = [FIELD_TYPE[field]];
+  }
+
   // 트레이스 — 같은 칸 상대의 특성을 받는다(그 칸이 비거나 트레이스면 그대로)
   for (const u of all()) {
     if (u.ability !== "trace") continue;
@@ -553,7 +580,9 @@ export function runBattle(input: BattleInput): BattleResult {
   for (const u of all()) {
     if (ab(u) !== "intimidate") continue;
     for (const o of alive(u.side === 0 ? 1 : 0)) {
-      if (ab(o) === "guard-dog") setStage(o, 1, 1, 0, o);
+      const oa = ab(o);
+      if (oa === "inner-focus" || oa === "own-tempo" || oa === "oblivious" || oa === "scrappy") continue; // 위협을 받지 않는다(9세대 원작)
+      if (oa === "guard-dog") setStage(o, 1, 1, 0, o);
       else setStage(o, 1, R.intimidateStages, 0, u);
     }
   }
@@ -596,6 +625,8 @@ export function runBattle(input: BattleInput): BattleResult {
     if (stat === 1 && (a === "huge-power" || a === "pure-power")) mul *= 2;
     if (stat === 1 && (a === "hustle" || a === "gorilla-tactics")) mul *= 1.5;
     if (stat === 2 && a === "fur-coat") mul *= 2;
+    if (stat === 1 && a === "guts" && u.major) mul *= 1.5; // 근성
+    if (stat === 2 && a === "marvel-scale" && u.major) mul *= 1.5; // 이상한비늘
     if ((stat === 1 || stat === 3) && a === "defeatist" && u.hp * 2 <= u.maxHp) mul *= 0.5;
     if ((stat === 1 || stat === 3) && a === "supreme-overlord") mul *= 1 + 0.1 * Math.min(5, units[u.side].filter((v) => v && v.hp <= 0).length);
     // 재앙 특성 — 자신 외 모두
@@ -740,6 +771,9 @@ export function runBattle(input: BattleInput): BattleResult {
     if (first && a === "stall") mul *= 1.5; // 시간벌기 — 첫 기술 ×1.5
     if (a === "gale-wings" && m.type === "flying" && !u.moveHit) mul *= 0.8; // 질풍날개 — 기술에 맞기 전이면 비행 기술 선공
     if (a === "triage" && m.effects.drain) mul *= 0.8; // 힐링시프트 — 흡수 기술 선공
+    const paralyzed = u.major?.kind === "paralysis";
+    if (paralyzed && a !== "quick-feet") mul *= 1.25; // 마비
+    if (a === "quick-feet" && u.major) mul *= 0.85; // 속보
     if (u.quickHalf) {
       mul *= 0.5;
       u.quickHalf = false;
@@ -752,6 +786,7 @@ export function runBattle(input: BattleInput): BattleResult {
     const d = defAb(o, u);
     if (d === "battle-armor" || d === "shell-armor") return false;
     if (m.effects.crit === "always") return true;
+    if (ab(u) === "merciless" && (o.major?.kind === "poison" || o.major?.kind === "toxic")) return true; // 무도한행동
     const stage = Math.min(R.critRates.length - 1, (m.effects.crit === "high" ? 1 : 0) + (ab(u) === "super-luck" ? 1 : 0));
     return rand() < R.critRates[stage]!;
   }
@@ -788,6 +823,8 @@ export function runBattle(input: BattleInput): BattleResult {
     if (a === "sharpness" && has("slicing")) mul *= 1.5;
     if (a === "strong-jaw" && has("bite")) mul *= 1.5;
     if (a === "tough-claws" && has("contact")) mul *= 1.3;
+    if (a === "toxic-boost" && m.class === "physical" && (u.major?.kind === "poison" || u.major?.kind === "toxic")) mul *= 1.5; // 독폭주
+    if (a === "flare-boost" && m.class === "special" && u.major?.kind === "burn") mul *= 1.5; // 열폭주
     if (a === "punk-rock" && has("sound")) mul *= 1.3;
     if (a === "technician" && power <= 60) mul *= 1.5;
     if (a === "reckless" && (m.effects.recoil || m.effects.halfHp)) mul *= 1.2;
@@ -808,7 +845,118 @@ export function runBattle(input: BattleInput): BattleResult {
   }
   // 우격다짐이 붙는 기술 — 상대 하락이나 자기 상승이 있는 공격기
   const sheerForced = (u: Unit, m: EngineMove): boolean =>
-    ab(u) === "sheer-force" && (m.effects.stats ?? []).some((fx) => (fx.who === "target" && fx.change < 0) || (fx.who === "self" && fx.change > 0));
+    ab(u) === "sheer-force" &&
+    (!!m.effects.status || !!m.effects.flinch || (m.effects.stats ?? []).some((fx) => (fx.who === "target" && fx.change < 0) || (fx.who === "self" && fx.change > 0)));
+
+  // ── 상태 이상 ──
+  const majorOn = (u: Unit, t: number): boolean => u.major !== null && u.major.until > t;
+  const stunned = (u: Unit, t: number): boolean => majorOn(u, t) && (u.major!.kind === "freeze" || u.major!.kind === "sleep");
+
+  // 상태 이상 걸기 — 걸리면 true. src 는 건 포켓몬(특성이 걸면 그 특성 주인)
+  function applyStatus(o: Unit, kind: StatusKind, t: number, src: Unit | null): boolean {
+    if (o.hp <= 0) return false;
+    const d = src ? defAb(o, src) : ab(o);
+    if (kind === "flinch") {
+      if (d === "inner-focus") return false;
+      o.flinched = true;
+      events.push({ t, kind: "status", side: o.side, slot: o.slot, status: "flinch", on: true });
+      if (d === "steadfast") setStage(o, 5, 1, t, o);
+      return true;
+    }
+    if (field === "misty" && grounded(o)) return false;
+    if (d === "comatose" || d === "purifying-salt") return false;
+    if (MAJOR.has(kind)) {
+      if (majorOn(o, t)) return false;
+      if (d === "leaf-guard" && sunny) return false;
+      const corrosive = src && ab(src) === "corrosion";
+      if (kind === "burn" && (o.types.includes("fire") || d === "water-veil" || d === "water-bubble" || d === "thermal-exchange")) return false;
+      if (kind === "paralysis" && (o.types.includes("electric") || d === "limber")) return false;
+      if ((kind === "poison" || kind === "toxic") && (((o.types.includes("poison") || o.types.includes("steel")) && !corrosive) || d === "immunity" || hasAlly(o, "pastel-veil"))) return false;
+      if (kind === "freeze" && (o.types.includes("ice") || d === "magma-armor")) return false;
+      if (kind === "sleep" && (d === "insomnia" || d === "vital-spirit" || hasAlly(o, "sweet-veil"))) return false;
+      let ms = STATUS_MS[kind];
+      if (kind === "sleep" && d === "early-bird") ms = ms / 2;
+      if (d === "natural-cure") ms = Math.min(ms, 5000);
+      o.major = { kind: kind as MajorStatus, until: t + ms };
+      if (kind === "toxic") o.toxicN = 1;
+      events.push({ t, kind: "status", side: o.side, slot: o.slot, status: kind, on: true, until: o.major.until });
+      // 싱크로 — 화상·마비·독·맹독을 건 상대에게도
+      if (d === "synchronize" && src && src !== o && kind !== "freeze" && kind !== "sleep") applyStatus(src, kind, t, null);
+      // 독조종 — 자기가 독·맹독을 건 상대는 혼란에도
+      if (src && ab(src) === "poison-puppeteer" && (kind === "poison" || kind === "toxic")) applyStatus(o, "confusion", t, src);
+      return true;
+    }
+    if (kind === "confusion") {
+      if (d === "own-tempo") return false;
+      o.confusedUntil = t + STATUS_MS.confusion;
+      events.push({ t, kind: "status", side: o.side, slot: o.slot, status: "confusion", on: true, until: o.confusedUntil });
+      return true;
+    }
+    // 붙잡기
+    o.trapUntil = t + STATUS_MS.trap;
+    events.push({ t, kind: "status", side: o.side, slot: o.slot, status: "trap", on: true, until: o.trapUntil });
+    return true;
+  }
+
+  function cureMajor(o: Unit, t: number): void {
+    if (!o.major) return;
+    events.push({ t, kind: "status", side: o.side, slot: o.slot, status: o.major.kind, on: false });
+    o.major = null;
+  }
+
+  // 시간이 다 된 상태 이상을 푼다 — 틱마다
+  function expireStatus(t: number): void {
+    for (const u of all()) {
+      if (u.hp <= 0) continue;
+      if (u.major && u.major.until <= t) cureMajor(u, t);
+      if (u.confusedUntil > 0 && u.confusedUntil <= t) {
+        u.confusedUntil = -1;
+        events.push({ t, kind: "status", side: u.side, slot: u.slot, status: "confusion", on: false });
+      }
+      if (u.trapUntil > 0 && u.trapUntil <= t) {
+        u.trapUntil = -1;
+        events.push({ t, kind: "status", side: u.side, slot: u.slot, status: "trap", on: false });
+      }
+    }
+  }
+
+  // 상태 이상의 HP 변화 — 5초마다
+  function statusHp(u: Unit, amount: number, t: number, cause: "burn" | "poison" | "toxic" | "trap" | "nightmare" | "poison-heal" | "confusion", by: Unit | null = null): void {
+    if (amount > 0) {
+      hurt(u, amount, t, false);
+      events.push({ t, kind: "status-hp", side: u.side, slot: u.slot, amount, hp: u.hp, cause });
+      faintCheck(u, t, by);
+    } else if (u.hp < u.maxHp) {
+      const g = Math.min(-amount, u.maxHp - u.hp);
+      u.hp += g;
+      events.push({ t, kind: "status-hp", side: u.side, slot: u.slot, amount: -g, hp: u.hp, cause });
+    }
+  }
+  function statusTick(u: Unit, t: number): void {
+    const a = ab(u);
+    const guard = a === "magic-guard";
+    const part = (n: number): number => Math.max(1, Math.floor((u.maxHp * n) / 16));
+    if (u.major && u.major.until > t) {
+      const k = u.major.kind;
+      if (a === "poison-heal" && (k === "poison" || k === "toxic")) statusHp(u, -part(2), t, "poison-heal");
+      else if (!guard && k === "burn") statusHp(u, part(1), t, "burn");
+      else if (!guard && k === "poison") statusHp(u, part(2), t, "poison");
+      else if (!guard && k === "toxic") {
+        statusHp(u, part(u.toxicN), t, "toxic");
+        u.toxicN += 1;
+      }
+    }
+    if (u.hp > 0 && !guard && u.trapUntil > t) statusHp(u, part(2), t, "trap");
+    // 나이트메어 — 잠든 상대 전체가 1/8
+    if (u.hp > 0 && !guard && u.major?.kind === "sleep" && u.major.until > t && all().some((v) => v.hp > 0 && v.side !== u.side && ab(v) === "bad-dreams")) statusHp(u, part(2), t, "nightmare");
+    if (u.hp <= 0) return;
+    // 풀기 — 탈피(30%), 촉촉바디(비), 치유의마음(아군 하나 30%)
+    if (u.major && ((a === "shed-skin" && rand() < 0.3) || (a === "hydration" && rainy))) cureMajor(u, t);
+    if (a === "healer" && rand() < 0.3) {
+      const sick = alive(u.side).filter((v) => v !== u && v.major);
+      if (sick.length) cureMajor(sick[Math.floor(rand() * sick.length)]!, t);
+    }
+  }
 
   // 기술에 붙는 받는 쪽 특성 — 위력 배율. 무효는 immuneOf
   function defenderMoveMul(o: Unit, u: Unit, type: string, m: EngineMove, eff: number): number {
@@ -1015,6 +1163,10 @@ export function runBattle(input: BattleInput): BattleResult {
       if (a === "mummy" || a === "lingering-aroma") u.ability = a === "mummy" ? "mummy" : null;
       if (a === "wandering-spirit") [o.ability, u.ability] = [u.ability, o.ability];
       if (o.hp <= 0 && a === "aftermath") strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 4)), t);
+      // 접촉 기술에 맞으면 30% 로 때린 상대에게 — 정전기(마비)·불꽃몸(화상)·독가시(독)·포자(독·마비·잠듦 중 하나)
+      const contactStatus: Readonly<Record<string, readonly StatusKind[]>> = { static: ["paralysis"], "flame-body": ["burn"], "poison-point": ["poison"], "effect-spore": ["poison", "paralysis", "sleep"] };
+      const cs = a ? contactStatus[a] : undefined;
+      if (cs && u.hp > 0 && rand() < 0.3) applyStatus(u, cs[Math.floor(rand() * cs.length)]!, t, o);
     }
     // 그대로꿀꺽미사일 — 문 먹이를 뱉는다. 때린 쪽이 자기 최대 HP 1/4, 삼켰던 것이 아리코면 방어 −1(피카츄는 마비라 지금 효과 없음)
     if (o.gulp) {
@@ -1022,6 +1174,7 @@ export function runBattle(input: BattleInput): BattleResult {
       o.gulp = null;
       strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 4)), t);
       if (prey === "arrokuda" && u.hp > 0) setStage(u, 2, -1, t, o);
+      if (prey === "pikachu" && u.hp > 0) applyStatus(u, "paralysis", t, o);
     }
     if (o.hp <= 0) {
       if (a === "innards-out") strikeBack(o, u, d, t);
@@ -1098,7 +1251,8 @@ export function runBattle(input: BattleInput): BattleResult {
     // 천진 — 상대의 능력 변화를 보지 않는다
     const atk = statNow(u, 1, t, defAb(o, u) === "unaware"), spa = statNow(u, 3, t, defAb(o, u) === "unaware");
     const phys = atk >= spa;
-    const raw = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t, ab(u) === "unaware")) * guardMul(o, u) * rangeMul(u.range) * roll()));
+    const burnMul = phys && u.major?.kind === "burn" && ab(u) !== "guts" ? 0.5 : 1;
+    const raw = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t, ab(u) === "unaware")) * guardMul(o, u) * rangeMul(u.range) * burnMul * roll()));
     const d = raw;
     hurt(o, d, t, false);
     events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: 1, hp: o.hp, source: "basic", hit: 1 });
@@ -1148,12 +1302,20 @@ export function runBattle(input: BattleInput): BattleResult {
     // 돌핀맨 — 두 기술을 한 번씩 쓴 뒤 다음 기술 전에 마이티폼
     if (ab(u) === "zero-to-hero" && !u.inAlt && u.uses >= 2) toForm(u, true, t);
     const stacks = isSkillLinkMove(u, m) ? stacksAt(u, m, t) : 0;
+    // 혼란 — 1/3 로 기술이 실패하고 자신이 위력 40(물리, 상성·자속 없음) 피해. 그 기술 차례는 지나간다
+    const confusedFail = u.confusedUntil > t && rand() < 1 / 3;
+    if (confusedFail) {
+      const self = Math.max(1, Math.floor(baseDamage(u.base.level, 40, statNow(u, 1, t), statNow(u, 2, t)) * roll()));
+      statusHp(u, self, t, "confusion");
+    }
     const used: Extract<BattleEvent, { kind: "move" }> = { t, kind: "move", side: u.side, slot: u.slot, move: m.id, nextAt: t };
-    events.push(used);
+    if (!confusedFail) events.push(used);
 
     if (u.base.special === "stance") toForm(u, m.class !== "status", t); // 섀도볼 → 블레이드폼, 킹실드 → 실드폼
     if (m.id === "kings-shield") u.shieldUntil = t + R.shieldMs;
-    if (u.base.special === "reflect") {
+    if (confusedFail || u.hp <= 0) {
+      // 실패 — 효과 없이 차례만 넘긴다
+    } else if (u.base.special === "reflect") {
       u.reflectUntil = t + R.reflectMs;
       u.reflectClass = m.class;
     } else if (m.class !== "status" && m.power) attack(u, m, t, stacks);
@@ -1171,8 +1333,12 @@ export function runBattle(input: BattleInput): BattleResult {
     if (u.base.special === "stance") u.nextMove = t + R.stanceStepMs;
     else {
       if (ab(u) === "quick-draw" && rand() < 0.3) u.quickHalf = true;
-      u.nextMove = t + cooldownOf(u, next, false) * (m.effects.recharge ? 2 : 1) + u.cursedMs;
+      u.nextMove = t + cooldownOf(u, next, false) * (m.effects.recharge ? 2 : 1) + u.cursedMs + (u.flinched ? 1000 : 0);
       u.cursedMs = 0;
+      if (u.flinched) {
+        u.flinched = false;
+        events.push({ t, kind: "status", side: u.side, slot: u.slot, status: "flinch", on: false });
+      }
     }
     if (u.busyUntil > u.nextMove) u.nextMove = u.busyUntil;
     used.nextAt = u.nextMove;
@@ -1191,7 +1357,12 @@ export function runBattle(input: BattleInput): BattleResult {
     const ua = ab(u);
     let accMul = hasAlly(u, "victory-star") ? R.victoryStarMul : 1;
     if (ua === "compound-eyes") accMul *= 1.3;
-    if (ua === "keen-eye") accMul *= 1.1;
+    if (ua === "keen-eye" || ua === "illuminate") accMul *= 1.1;
+    // 감미로운꿀 — 판 시작부터 10초 동안 자기 쪽 기술의 명중 ×1.33
+    if (t < 10_000 && hasAlly(u, "supersweet-syrup")) accMul *= 1.33;
+    // 모래숨기·눈숨기 — 모래바람·눈이면 자기에게 오는 기술의 명중 ×0.8
+    const fa = defAb(first, u);
+    if ((fa === "sand-veil" && weather === "sand") || (fa === "snow-cloak" && weather === "snow")) accMul *= 0.8;
     if (ua === "hustle" && m.class === "physical") accMul *= 0.8;
     const sure = ua === "no-guard" || ab(first) === "no-guard";
     const accuracy = now0.accuracy === null || sure ? null : now0.accuracy * accMul;
@@ -1245,7 +1416,8 @@ export function runBattle(input: BattleInput): BattleResult {
       const atkStat = crit ? Math.max(atkNow, statNow(u, phys ? 1 : 3, t, true)) : atkNow;
       const defStat = crit ? Math.min(defNow, statNow(o, phys ? 2 : 4, t, true)) : defNow;
       const raw = baseDamage(u.base.level, power, atkStat, defStat);
-      const critMul = (crit ? (ua === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range);
+      const burnMul = phys && u.major?.kind === "burn" && ua !== "guts" ? 0.5 : 1; // 화상 — 물리 피해 ×0.5, 근성은 받지 않음
+      const critMul = (crit ? (ua === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range) * burnMul;
       const d = eff === 0 ? 0 : shield(o, u, Math.max(1, Math.floor(raw * mult * critMul * roll())), phys);
       hurt(o, d, t);
       o.moveHit = true;
@@ -1263,6 +1435,22 @@ export function runBattle(input: BattleInput): BattleResult {
       if (h === 1 && d > 0) firstHit = o;
       faintCheck(o, t, u);
       if (u.hp <= 0) break;
+    }
+    // 공격기의 상태 이상·풀죽음 — 피해를 준 뒤 chance% 로 맞은 첫 대상에게. 우격다짐이면 없고, 인분은 받지 않는다. 하늘의은총은 2배
+    if (dealt > 0 && firstHit && firstHit.hp > 0 && !sheerForced(u, m) && defAb(firstHit, u) !== "shield-dust") {
+      const grace = ua === "serene-grace" ? 2 : 1;
+      const st = m.effects.status;
+      if (st && rand() * 100 < st.chance * grace) {
+        const kinds = Array.isArray(st.kind) ? st.kind : [st.kind as StatusKind];
+        applyStatus(firstHit, kinds[Math.floor(rand() * kinds.length)]!, t, u);
+      }
+      if (m.effects.flinch && rand() * 100 < m.effects.flinch * grace) applyStatus(firstHit, "flinch", t, u);
+    }
+    // 쓴 쪽 특성 — 독수(접촉 30% 독)·독사슬(30% 맹독)·악취(10% 풀죽음)
+    if (dealt > 0 && firstHit && firstHit.hp > 0 && defAb(firstHit, u) !== "shield-dust") {
+      if (ua === "poison-touch" && m.traits.includes("contact") && rand() < 0.3) applyStatus(firstHit, "poison", t, u);
+      if (ua === "toxic-chain" && rand() < 0.3) applyStatus(firstHit, "toxic", t, u);
+      if (ua === "stench" && rand() < 0.1) applyStatus(firstHit, "flinch", t, u);
     }
     // 공격기의 능력 변화 — 맞힌 뒤 chance% 로. self 는 쓴 포켓몬, target 은 맞은 첫 대상
     // 우격다짐이면 그 기술의 능력 변화는 없다. 하늘의은총은 확률 2배, 인분은 상대가 거는 하락을 받지 않는다
@@ -1315,9 +1503,10 @@ export function runBattle(input: BattleInput): BattleResult {
   while (!end && t < maxMs) {
     t += R.tickMs;
     curT = t;
+    expireStatus(t); // 시간이 다 된 상태 이상은 그 틱의 행동보다 먼저 푼다
     const acts: { u: Unit; kind: 0 | 1; pri: number; spe: number; k: number }[] = [];
     for (const u of all()) {
-      if (u.hp <= 0 || !canAct(u)) continue;
+      if (u.hp <= 0 || stunned(u, t) || !canAct(u)) continue;
       if (moveReady(u, t)) acts.push({ u, kind: 0, pri: u.moves[u.turn % u.moves.length]!.priority, spe: statNow(u, 5, t), k: rand() });
       if (u.nextBasic <= t && u.busyUntil <= t) acts.push({ u, kind: 1, pri: 0, spe: statNow(u, 5, t), k: rand() });
     }
@@ -1334,6 +1523,8 @@ export function runBattle(input: BattleInput): BattleResult {
         const tick = Math.max(1, Math.floor(u.maxHp / 16));
         if (ab(u) === "speed-boost") setStage(u, 5, 1, t, u);
         if (ab(u) === "hunger-switch") u.hungry = !u.hungry; // 배부른 모양 → 배고픈 모양 → … 5초마다
+        statusTick(u, t);
+        if (u.hp <= 0) continue;
         if (ab(u) === "moody") {
           const up = [1, 2, 3, 4, 5].filter((i) => stageOf(u, i, t) < STAGE_MAX);
           if (up.length) {
@@ -1363,7 +1554,7 @@ export function runBattle(input: BattleInput): BattleResult {
     // 걷기 — 이번 틱에 행동하지 않은 개체. 순서는 난수로 섞는다
     const acted = new Set(acts.map((a) => a.u));
     const walkers = all()
-      .filter((u) => u.hp > 0 && !acted.has(u) && u.nextStep <= t && u.busyUntil <= t)
+      .filter((u) => u.hp > 0 && !acted.has(u) && u.nextStep <= t && u.busyUntil <= t && !stunned(u, t) && u.trapUntil <= t)
       .map((u) => ({ u, k: rand() }))
       .sort((a, b) => a.k - b.k);
     for (const { u } of walkers) step(u, t);

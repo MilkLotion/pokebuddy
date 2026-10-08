@@ -70,6 +70,8 @@ export interface MoveEffects {
   drain?: number;
   stats?: { who: "self" | "target"; stat: string; change: number; chance: number }[]; // 맞힌 뒤 chance% 로 능력 변화
   crit?: "high" | "always"; // 급소율 (docs/specs/moves.md "급소")
+  status?: { kind: string | string[]; chance: number }; // 상태 이상 — 목록이면 하나를 뽑는다 (docs/specs/moves.md "상태 이상")
+  flinch?: number; // 풀죽음 확률(%)
   rampage?: boolean;
   hpScale?: boolean;
 }

@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE_RULES, rangeOfMoves, rollObstacles, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos } from "../../battle/engine";
+import { ENGINE_RULES, rangeOfMoves, rollObstacles, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
 
 const chart = battleTypeChart();
@@ -366,6 +366,48 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   const back = of(gm.events, "reflect").find((e) => e.side === 0);
   assert.strictEqual(back?.amount, Math.floor((999 * 3) / 4), "먹이를 뱉어 1/4");
   assert.ok(of(gm.events, "stat").some((e) => e.side === 1 && e.stat === 2 && e.stage === -1), "아리코면 방어 −1");
+}
+
+// ── 상태 이상 — 걸림·면역·지속·5초 피해·얼음 멈춤·혼란·풀죽음·특성 ──
+{
+  const wall = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const sure = (kind: StatusKind | StatusKind[], extra: Partial<EngineMove> = {}) =>
+    mv("sure", { power: 1, cooldownMs: 1000, effects: { status: { kind, chance: 100 } }, ...extra });
+  const st = (r: ReturnType<typeof run>, side: 0 | 1) => of(r.events, "status").filter((e) => e.side === side);
+  // 화상 — 걸리고 10초 뒤 풀린다. 5초마다 1/16
+  const r1 = run([unit({ moves: [sure("burn")] })], [wall()], 1, 12_000, pos);
+  const on = st(r1, 1).find((e) => e.status === "burn" && e.on)!;
+  assert.strictEqual(on.until, on.t + 10_000);
+  assert.ok(st(r1, 1).some((e) => e.status === "burn" && !e.on && e.t === on.until), "10초 뒤 풀림");
+  assert.ok(of(r1.events, "status-hp").some((e) => e.cause === "burn" && e.amount === Math.floor((999 * 3) / 16)), "화상 1/16");
+  // 타입 면역 — 불꽃은 화상에 걸리지 않는다
+  assert.strictEqual(st(run([unit({ moves: [sure("burn")] })], [wall({ types: ["fire"] })], 1, 2000, pos), 1).length, 0);
+  // 한 번에 하나 — 이미 화상이면 마비가 걸리지 않는다
+  const r2 = run([unit({ moves: [sure("burn"), sure("paralysis")] })], [wall()], 1, 6000, pos);
+  assert.ok(!st(r2, 1).some((e) => e.status === "paralysis"), "주된 상태 이상은 하나");
+  // 얼음 — 3초 동안 평타·기술·이동이 없다
+  const r3 = run([unit({ moves: [sure("freeze")] })], [wall({ stats: [999, 1, 999, 1, 999, 95], moves: [mv("x", { power: 1, cooldownMs: 1000 })] })], 1, 6000, pos);
+  const fz = st(r3, 1).find((e) => e.status === "freeze" && e.on)!;
+  assert.ok(!r3.events.some((e) => (e.kind === "attack" || e.kind === "move" || e.kind === "step") && "side" in e && e.side === 1 && e.t > fz.t && e.t < fz.until!), "얼음 동안 멈춤");
+  // 풀죽음 — 다음 기술 쿨타임 +1초, 정신력은 받지 않는다
+  const flinchMove = mv("bite2", { power: 1, cooldownMs: 1000, effects: { flinch: 100 } });
+  const foeMove = mv("f", { power: 1, cooldownMs: 2000 });
+  const fr = run([unit({ moves: [flinchMove] })], [wall({ moves: [foeMove] })], 1, 6000, pos);
+  assert.ok(st(fr, 1).some((e) => e.status === "flinch" && e.on), "풀죽음");
+  assert.strictEqual(st(run([unit({ moves: [flinchMove] })], [wall({ ability: "inner-focus", moves: [foeMove] })], 1, 3000, pos), 1).length, 0, "정신력");
+  // 정전기 — 접촉 기술에 맞으면 30% 로 때린 상대를 마비(여러 판에서 한 번은)
+  const touch = mv("touch", { power: 1, cooldownMs: 1000, traits: ["contact"] });
+  const statics = [1, 2, 3, 4, 5, 6, 7, 8].filter((sd) => st(run([unit({ moves: [touch] })], [wall({ ability: "static" })], sd, 8000, pos), 0).some((e) => e.status === "paralysis"));
+  assert.ok(statics.length > 0, "정전기");
+  // 매직가드 — 상태 이상 피해 없음, 포이즌힐 — 독이면 회복
+  assert.ok(!of(run([unit({ moves: [sure("poison")] })], [wall({ ability: "magic-guard" })], 1, 8000, pos).events, "status-hp").length, "매직가드");
+  // 미스트필드 — 땅에 있는 포켓몬은 걸리지 않는다
+  const misty = run([unit({ moves: [sure("burn")] }), wall({ ability: "misty-surge" })], [wall()], 1, 3000, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  assert.strictEqual(st(misty, 1).length, 0, "미스트필드");
+  // 기분파 — 비면 물 타입
+  const cast = run([wall({ ability: "forecast" }), wall({ ability: "drizzle" })], [wall({ moves: [mv("bolt", { type: "electric", class: "special", power: 40, cooldownMs: 1000 })] })], 1, 1100, { positions: [[at(6, 4), at(0, 8)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  assert.strictEqual(of(cast.events, "damage").find((e) => e.source === "bolt")!.mult, 2, "기분파 — 비에서 물 타입");
 }
 
 // ── 전장 — 장애물 뽑기 ──
