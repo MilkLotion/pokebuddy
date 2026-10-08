@@ -11,7 +11,7 @@ import { moveMeta } from "./battle.js";
 import { portraitArtKey, typeArtKey } from "./device-art.js";
 import { petName, typeName } from "./text.js";
 
-// 룰렛 결과 이름과 관련 타입 아이콘 — 원시회귀·델타스트림은 특성 이름을 그대로 쓴다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
+// 룰렛 결과의 관련 타입 아이콘. 보이는 이름은 뽑힌 포켓몬의 특성 이름이고, name 은 특성 이름을 모를 때만 쓴다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
 const ROULETTE: Record<string, { name: string; type: string | null }> = {
   sun: { name: "쾌청", type: "fire" },
   rain: { name: "비", type: "water" },
@@ -35,18 +35,19 @@ const ROULETTE_LABEL = { weather: "날씨", field: "필드", aura: "오라" } as
 const screenEvent = (e: BattleEvent): BattleScreenEvent => e;
 
 // start 이벤트의 룰렛 → 릴 세 개. 엔진이 룰렛을 주지 않았으면 null
-function rouletteOf(r: BattleResult): BattleRouletteView[] | null {
+function rouletteOf(r: BattleResult, units: BattleScreenView["units"]): BattleRouletteView[] | null {
   const start = r.events.map(screenEvent).find((e) => e.kind === "start"); // 화면 이벤트 모양으로 읽는다 — 엔진이 룰렛을 아직 내지 않아도 컴파일된다
   const got = start && start.kind === "start" ? start.roulette : undefined;
   if (!got) return null;
   return (["weather", "field", "aura"] as const).map((key) => {
     const one = got[key];
     const shown = one?.kind ? ROULETTE[one.kind] : undefined;
+    const by = one?.picked ? units[one.picked.side][one.picked.slot] : null; // 뽑힌 포켓몬 — 그 특성 이름을 보인다
     return {
       key,
       kind: one?.kind ?? null,
       label: ROULETTE_LABEL[key],
-      name: shown?.name ?? null,
+      name: one?.kind ? (by?.ability ?? shown?.name ?? null) : null,
       type: shown?.type ?? null,
       fixed: one?.fixed === true,
       candidates: one?.candidates.map((c) => ({ side: c.side, slot: c.slot })) ?? [],
@@ -121,7 +122,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
   // 흰 타입 아이콘 열쇠 — 카드의 타입 칸과 기술 칸에 나오는 타입 전부
   const types = new Set<string>();
   for (const side of units) for (const u of side) if (u) { u.types.forEach((t) => types.add(t)); u.moves.forEach((m) => types.add(m.typeId)); }
-  const roulette = rouletteOf(r);
+  const roulette = rouletteOf(r, units);
   for (const reel of roulette ?? []) if (reel.type) types.add(reel.type);
   return {
     title: TEXT.title,

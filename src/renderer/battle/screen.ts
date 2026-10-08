@@ -27,6 +27,8 @@ const RESULT_DELAY_MS = 600; // 판이 끝난 뒤 결과를 띄우기까지
 // 룰렛 — 칸이 위에서 아래로 돌다가 왼쪽 릴부터 차례로 멈춘다. 다 멈추면 잠깐 보인 뒤 사라지고 판이 시작된다
 const ROULETTE = { rowH: 40, rowMs: 70, spinMs: 1200, gapMs: 500, holdMs: 700 } as const;
 const rouletteMs = (reels: BattleRouletteView[]): number => ROULETTE.spinMs + ROULETTE.gapMs * (reels.length - 1) + ROULETTE.holdMs;
+// 도는 릴 — 후보가 둘 이상이고 확정이 아니다. 후보 하나·확정·후보 없음은 처음부터 멈춰 있다
+const reelSpins = (reel: BattleRouletteView): boolean => reel.candidates.length > 1 && !reel.fixed;
 
 interface CardEls {
   root: HTMLElement;
@@ -160,7 +162,7 @@ function roulettePanel(view: BattleScreenView, reels: BattleRouletteView[]): { p
     }
     box.append(head, win, result);
     panel.appendChild(box);
-    const spins = reel.candidates.length > 0 && !reel.fixed;
+    const spins = reelSpins(reel);
     return { reel, rows, result, stopAt: spins ? ROULETTE.spinMs + ROULETTE.gapMs * i : 0 };
   });
   return { panel, els };
@@ -547,10 +549,12 @@ function draw(view: BattleScreenView): void {
   }
 
   // 룰렛 — 엔진이 룰렛을 준 판만. 다 멈추면 패널을 지우고 판 표시 줄에 걸린 효과 칩을 둔다
+  // 도는 릴이 하나도 없으면 패널 없이 바로 시작한다 — 칩과 전장 연출이 처음부터 걸려 있다
   const reels = view.roulette;
+  const spinning = (reels ?? []).some(reelSpins);
   const rouletteStart = performance.now() + START_DELAY_MS;
   let roulette: { panel: HTMLElement; els: ReelEls[] } | null = null;
-  if (reels) {
+  if (reels && spinning) {
     roulette = roulettePanel(view, reels);
     arena.appendChild(roulette.panel);
     for (const r of roulette.els) paintReel(r, view, 0);
@@ -568,10 +572,11 @@ function draw(view: BattleScreenView): void {
       if (stillFx) fieldFx?.draw(2000);
     }
   };
+  if (reels && !spinning) finishRoulette();
 
   // 재생 — 프레임마다 흐른 시간 × 배속만큼 판 시계를 민다
   let t = 0;
-  let last = rouletteStart + (reels ? rouletteMs(reels) : 0);
+  let last = rouletteStart + (reels && spinning ? rouletteMs(reels) : 0);
   let resultShown = false;
   const tick = (now: number): void => {
     if (myRun !== run) return;

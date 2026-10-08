@@ -133,8 +133,8 @@ assert.deepStrictEqual([weather!.key, field!.key, aura!.key], ["weather", "field
 assert.deepStrictEqual([weather!.label, field!.label, aura!.label], ["날씨", "필드", "오라"]);
 assert.strictEqual(weather!.candidates.length, 2, "날씨 후보 — 펠리퍼·마기라스");
 assert.ok(weather!.picked && weather!.candidates.some((c) => c.side === weather!.picked!.side && c.slot === weather!.picked!.slot), "뽑힌 것은 후보 안");
-assert.ok((weather!.name === "비" && weather!.type === "water") || (weather!.name === "모래바람" && weather!.type === "rock"), `날씨 이름·아이콘: ${weather!.name}`);
-assert.strictEqual(field!.name, "사이코필드");
+assert.ok((weather!.name === "잔비" && weather!.type === "water") || (weather!.name === "모래날림" && weather!.type === "rock"), `날씨 이름은 뽑힌 특성 이름, 아이콘은 효과 타입: ${weather!.name}`);
+assert.strictEqual(field!.name, "사이코메이커", "필드 이름도 뽑힌 특성 이름");
 assert.strictEqual(field!.type, "psychic");
 assert.strictEqual(field!.kind, "psychic", "엔진 kind — 전장 연출을 고른다");
 assert.ok(weather!.kind === "rain" || weather!.kind === "sand", `날씨 kind: ${weather!.kind}`);
