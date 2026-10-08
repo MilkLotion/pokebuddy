@@ -6,7 +6,7 @@
 // 난수는 시드 하나(mulberry32)에서만 뽑는다. Math.random·시각은 쓰지 않는다
 //
 // 시간은 0.1초 틱. 한 틱에 할 행동을 모아 기술 > 평타 → 선공도 → 스피드 → 난수 순서로 한다. 행동하지 않은 개체는 그 뒤에 걷는다
-// 전장은 계산 칸 20×12(화면 10×6, 화면 칸 1 = 계산 칸 2×2). 개체는 2×2 를 차지하고 8방향으로 0.3초에 1칸 걷는다. 사거리 = 몸 사이 틈(근접 1, 원거리 6)
+// 전장은 계산 칸 20×12(화면 10×6, 화면 칸 1 = 계산 칸 2×2). 개체는 2×2 를 차지하고 8방향으로 0.3초에 1칸 걷는다. 사거리 = 몸 사이 틈(물리 1, 특수 3)
 // 장애물은 없다(2026-10-09). 걷기는 다른 개체만 피한다. 규칙은 docs/specs/moves.md "전장과 대상"
 // 이번 판(E1)에 넣은 특성: 게으름·슬로스타트·스킬링크·모습이 바뀌는 5종. 나머지 특성은 무보정이다
 // 설계와 단계는 worklog/records/battle-server/battle-server.md "엔진 설계"
@@ -52,14 +52,11 @@ export const ENGINE_RULES = {
   fieldH: 12,
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
-  // 사거리(두 몸 사이 틈, 대각선 포함) — 기술로 정한다: 접촉 1, 접촉 없는 물리 2, 특수 3, 파동·탄환·소리 특수 5. 두 기술 중 짧은 쪽
-  // (2026-10-08 사용자 "b로", "1,2 3,5 4개로")
-  rangeContact: 1,
-  rangePhysical: 2,
+  // 사거리(두 몸 사이 틈, 대각선 포함) — 기술 분류로 정한다: 물리 1, 특수 3. 두 기술 중 짧은 쪽(쌍두형은 근접)
+  // (2026-10-09 사용자 "반영해봐" — 밸런스 격자 실험에서 가장 고른 안. 처음은 접촉 1·비접촉 물리 2·특수 3·파동·탄환·소리 5)
+  rangePhysical: 1,
   rangeSpecial: 3,
-  rangeFar: 5,
-  farTraits: ["pulse", "ballistic", "sound"] as readonly string[],
-  rangeDamage: { 1: 1, 2: 0.9, 3: 0.8, 5: 0.75 } as Readonly<Record<number, number>>, // 사거리별 주는 피해 배율(기술·평타) — 시작 값, 모의 대전으로 맞춘다
+  rangeDamage: { 1: 1, 3: 0.9 } as Readonly<Record<number, number>>, // 사거리별 주는 피해 배율(기술·평타) — 특수(사거리 3) ×0.9
 } as const;
 
 // ── 날씨·필드·오라 (docs/specs/moves.md "날씨, 필드, 오라") ──
@@ -114,17 +111,15 @@ export interface Obstacle extends Pos {
   size: 1 | 2;
 }
 
-// 기술 하나의 사거리 — 변화기는 null(사거리를 정하지 않는다)
-export function moveRange(m: Pick<EngineMove, "class" | "power" | "traits">): number | null {
+// 기술 하나의 사거리 — 물리 1, 특수 3. 변화기는 null(사거리를 정하지 않는다)
+export function moveRange(m: Pick<EngineMove, "class" | "power">): number | null {
   if (m.class === "status" || !m.power) return null;
-  if (m.traits.includes("contact")) return ENGINE_RULES.rangeContact;
-  if (m.class === "physical") return ENGINE_RULES.rangePhysical;
-  return m.traits.some((t) => ENGINE_RULES.farTraits.includes(t)) ? ENGINE_RULES.rangeFar : ENGINE_RULES.rangeSpecial;
+  return m.class === "physical" ? ENGINE_RULES.rangePhysical : ENGINE_RULES.rangeSpecial;
 }
-// 포켓몬의 사거리 — 공격기 사거리 중 짧은 쪽. 공격기가 없으면 접촉 사거리(병풍 등)
-export function rangeOfMoves(moves: readonly Pick<EngineMove, "class" | "power" | "traits">[]): number {
+// 포켓몬의 사거리 — 공격기 사거리 중 짧은 쪽(물리기 하나·특수기 하나면 1). 공격기가 없으면 1(병풍 등)
+export function rangeOfMoves(moves: readonly Pick<EngineMove, "class" | "power">[]): number {
   const list = moves.map(moveRange).filter((r): r is number => r !== null);
-  return list.length ? Math.min(...list) : ENGINE_RULES.rangeContact;
+  return list.length ? Math.min(...list) : ENGINE_RULES.rangePhysical;
 }
 const rangeMul = (range: number): number => ENGINE_RULES.rangeDamage[range] ?? 1;
 
@@ -189,7 +184,7 @@ export interface EngineFighter {
   moves: readonly EngineMove[]; // 쓰는 순서 — 개체의 기술 순서를 이미 적용한 값
   ability: string | null;
   special: "wall" | "reflect" | "sketch" | "transform" | "stance" | null;
-  range: number; // 사거리(계산 칸) — 평타와 기술이 같이 쓴다. 근접 1, 원거리 6
+  range: number; // 사거리(계산 칸) — 평타와 기술이 같이 쓴다. 물리 1, 특수 3
   altForm?: EngineForm | null; // 모습이 바뀌는 종의 다른 모습
   schoolingReady?: boolean; // 약어리 어군 해금(Lv.60) — 해금 전에는 단독의 모습으로만 싸운다
 }

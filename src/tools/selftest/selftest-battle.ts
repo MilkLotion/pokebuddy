@@ -154,14 +154,15 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(of(r.events, "step").every((e, i, list) => list.findIndex((x) => x.side === e.side && x.slot === e.slot && x.t === e.t) === i), "한 틱에 한 걸음");
 }
 
-// ── 사거리 — 특수공격이 공격보다 높으면 원거리(6), 아니면 근접(1). 원거리는 사거리 안에서 멈춰 쏜다 ──
+// ── 사거리 — 물리 기술 1, 특수 기술 3, 두 기술 중 짧은 쪽(쌍두형은 1). 원거리는 사거리 안에서 멈춰 쏜다 (2026-10-09) ──
 {
-  assert.strictEqual(buildFighter({ species: "machamp" })!.range, 1, "접촉 기술");
-  assert.strictEqual(buildFighter({ species: "garchomp" })!.range, 2, "접촉 없는 물리(지진)");
+  assert.strictEqual(buildFighter({ species: "machamp" })!.range, 1, "물리");
+  assert.strictEqual(buildFighter({ species: "garchomp" })!.range, 1, "접촉 없는 물리(지진)도 1");
   assert.strictEqual(buildFighter({ species: "alakazam" })!.range, 3, "특수");
-  assert.strictEqual(buildFighter({ species: "spectrier" })!.range, 3, "두 기술 중 짧은 쪽 — 섀도볼 5, 병상첨병 3");
-  assert.strictEqual(buildFighter({ species: "lucario" })!.range, 1, "파동탄 5 와 코멧펀치 1 → 1");
-  assert.strictEqual(rangeOfMoves([mv("aura", { class: "special", traits: ["pulse"] })]), 5, "파동·탄환·소리 특수");
+  assert.strictEqual(buildFighter({ species: "spectrier" })!.range, 3, "특수 둘 — 섀도볼·병상첨병 모두 3");
+  assert.strictEqual(buildFighter({ species: "lucario" })!.range, 1, "쌍두형 — 파동탄 3 과 코멧펀치 1 → 1");
+  assert.strictEqual(rangeOfMoves([mv("aura", { class: "special", traits: ["pulse"] })]), 3, "파동·탄환·소리도 특수 3");
+  assert.strictEqual(ENGINE_RULES.rangeDamage[3], 0.9, "특수(사거리 3) 피해 ×0.9");
   assert.strictEqual(rangeOfMoves([]), 1, "공격기가 없으면 1");
   const shooter = unit({ range: 6, stats: [999, 1, 999, 1, 999, 100] });
   const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
