@@ -457,7 +457,7 @@
   "latias": {"moves":["mist-ball","draco-meteor"],"candidates":["psychic","dragon-pulse","psyshock","aura-sphere"]},
   "latios": {"moves":["luster-purge","draco-meteor"],"candidates":["psychic-noise","dragon-pulse","psyshock","aura-sphere"]},
   "kyogre": {"moves":["origin-pulse","water-spout"],"candidates":["surf","hydro-pump","liquidation","ice-beam"]},
-  "groudon": {"moves":["precipice-blades","earthquake"],"candidates":["earth-power","high-horsepower","stomping-tantrum","fire-punch"]},
+  "groudon": {"moves":["precipice-blades","earthquake"],"candidates":["earth-power","high-horsepower","stomping-tantrum","stone-edge"]},
   "rayquaza": {"moves":["dragon-ascent","draco-meteor"],"candidates":["dragon-claw","outrage","air-slash","earthquake"]},
   "jirachi": {"moves":["doom-desire","zen-headbutt"],"candidates":["iron-head","meteor-mash","psychic","body-slam"]},
   "deoxys": {"moves":["expanding-force","psycho-boost"],"candidates":["psychic","zen-headbutt","psychic-noise","ice-beam"]},
