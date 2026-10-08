@@ -22,6 +22,7 @@ type ShopDeviceIpc = import("../shared/ipc/devices").ShopDeviceIpc;
 type BagDeviceIpc = import("../shared/ipc/devices").BagDeviceIpc;
 type PartyDeviceIpc = import("../shared/ipc/devices").PartyDeviceIpc;
 type BattleDeviceIpc = import("../shared/ipc/devices").BattleDeviceIpc;
+type BattleScreenIpc = import("../shared/ipc/battle").BattleScreenIpc;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
@@ -212,3 +213,12 @@ expose("party.html", "pokebuddyParty", () => bridgeOf<PartyDeviceIpc>(PARTY));
 const BATTLE = { ...deviceWire("battledev"), cry: ["invoke", "battledev:cry"], act: ["send", "battledev:act"] } as const satisfies WireOf<BattleDeviceIpc>;
 
 expose("battle.html", "pokebuddyBattle", () => bridgeOf<BattleDeviceIpc>(BATTLE));
+
+// 배틀 창 — 판 하나를 재생한다. 준비됨·닫기를 보내고 판을 받는다
+const BATTLE_SCREEN = {
+  ready: ["send", "battlescreen:ready"],
+  onShow: ["push", "battlescreen:show"],
+  close: ["send", "battlescreen:close"],
+} as const satisfies WireOf<BattleScreenIpc>;
+
+expose("battle-screen.html", "pokebuddyBattleScreen", () => bridgeOf<BattleScreenIpc>(BATTLE_SCREEN));

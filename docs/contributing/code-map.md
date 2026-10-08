@@ -84,9 +84,9 @@ flowchart TB
 앱을 켜고, 창을 띄우고, 게임 코어와 바깥을 잇는다. 루트에는 진입점 `app.ts` 와 `preload.ts` 만 있고, 나머지는 하위 폴더에 일 단위로 나뉜다. `app.ts` 는 부팅 단계를 차례로 부르는 배선만 한다.
 
 - `app/` — 앱 전체에 걸친 것. 부팅 단계(`boot.ts`), 1초 시계(`clock.ts`), 명령 등록과 mailbox 연결(`commands.ts`), 1초 틱마다 하는 일(`ticks.ts`), 두 PC 규칙으로 멈추기(`halt.ts`), 동반자 잠금(`lifetime.ts`), 끄는 순서(`quit.ts`).
-- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 여섯과 오가는 길(`devices.ts`), 받은 값의 모양 검사(`requests.ts`).
+- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 여섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
 - `stage/` — 무대. 화면마다 무대 창과 무대를 한 쌍씩 둔다(`stage-group.ts`). `stage.ts` 가 40ms 마다 프레임을 만들어 `stage-window.ts` 로 보낸다. 맨 앞 터미널을 보고 포켓몬을 보일지 정하는 `host-watch.ts`, 말풍선과 바탕화면 튜토리얼도 여기 있다.
-- `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
+- `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`), 판을 재생하는 배틀 창(`battle-window.ts`, 설정창 위 가운데에 뜬다), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
 - `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 항목은 `view/menus.ts` 가 만든다.
 - `services/` — 온라인, 친구 교환, OS 키 저장소, 자동 업데이트를 켜고 끈다. 묶음의 주인은 `registry.ts`.
 - `art/` — 포켓몬 그림과 울음소리를 받아 캐시한다. 받을 주소는 `sources.ts` 한 곳이다.
@@ -101,6 +101,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - `manage/` — 설정창(아래 따로).
 - `stage/` — 무대 캔버스. 그리기 루프(`stage.ts`), 그림 시트 재생(`sprites.ts`), 끌기·클릭(`pointer.ts`).
 - `device/` — 설정창 옆에 붙는 기기 창 여섯(파티 상세, 도감, 상점, 가방, 파티 교체, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
+- `battle/` — 배틀 창(`screen.ts`). 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
 - `windows/` — 메뉴, 첫 포켓몬 고르기, 놀이공간 그리기, 배너, 알림, 화면 고르기.
 - `ui/` — 여러 창이 같이 쓰는 도구. 브리지(`bridge.ts`), 요소 만들기(`dom.ts`), 초상(`portrait.ts`), 코치마크(`coach.ts`), 막대(`fill-bar.ts`), 타입 배지(`type-badge.ts`).
 - `styles/` — 창 CSS. 모든 창이 `tokens.css` 를 먼저 읽는다.

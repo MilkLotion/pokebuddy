@@ -13,6 +13,7 @@ import type { ManagePush, ManageReply, ManageRequest } from "../../shared/ipc/ma
 import type { ManageRoute } from "../../shared/model/route";
 import type { ScreenView } from "../../shared/model/overlays";
 import type { GameV3 } from "../../tx/game.js";
+import type { ArtLoader } from "../art/stage-art.js";
 import { windowIcon } from "../windows/files.js";
 import { webPreferencesOf } from "../windows/options.js";
 import { createIpcScope } from "../windows/ipc.js";
@@ -61,6 +62,8 @@ export interface ManageDeps {
   // 기본값은 없다 — 실행기를 바로 부르는 길을 창이 스스로 만들지 않는다. 개발용 실행기도 자기 길을 준다
   send(req: ManageRequest): Promise<ManageReply>;
   services(): ManageServices;
+  stageArt?: () => ArtLoader | null; // 무대 그림 불러오기 — 배틀 창의 PMD 그림. 없으면 초상으로 그린다
+  devBattleSeed?: number; // 개발 실행 전용 — 있으면 설정창을 연 뒤 이 시드의 로컬 엔진 판으로 배틀 창을 띄운다 (POKEBUDDY_DEV_BATTLE)
 }
 
 // 설정창 — 부팅 때 한 번 만든다(createManage). 창과 기기 창, 처리기 상태는 이 안에만 있다
@@ -122,6 +125,7 @@ export function createManage(deps: ManageDeps): Manage {
       parent: () => win,
       send: (channel, ...args) => toManage(channel, ...args),
       setPetCoach: (on) => setDimFrom("pet", on),
+      stageArt: () => deps.stageArt?.() ?? null,
     });
   }
 
@@ -168,6 +172,12 @@ export function createManage(deps: ManageDeps): Manage {
     win.webContents.on("did-start-loading", () => devices?.reset());
     // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다
     if (route) win.webContents.once("did-finish-load", () => toManage("manage:route", route));
+    // 개발 실행 전용 — POKEBUDDY_DEV_BATTLE=<시드> 면 설정창을 연 뒤 로컬 엔진 판으로 배틀 창을 띄운다 (src/main/manage/battle-screen.ts)
+    const devBattle = deps.devBattleSeed;
+    if (devBattle) win.webContents.once("did-finish-load", () => {
+      const save = deps.game()?.read();
+      if (save) void devices?.battleScreen.openDev(save, devBattle).catch((e: unknown) => console.error("개발용 배틀 창을 띄우지 못했다", e));
+    });
     void win.loadFile(deps.html);
     return win;
   }

@@ -59,7 +59,7 @@ import { createBubbles } from "./stage/bubbles";
 import { createCoach } from "./stage/coach";
 import { createCry } from "./stage/cry";
 import { createDebugLog, redirectOutput } from "./app/log";
-import { isDevRun, isUpdateTestBuild } from "./app/dev-run";
+import { devNumber, isDevRun, isUpdateTestBuild } from "./app/dev-run";
 import { claimSingleInstance, tradeLinkOf } from "./app/launch";
 import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
@@ -70,6 +70,9 @@ import { bootClaim, bootLifetime, bootPrefetch, bootSaveKey, bootStarter, type B
 // 전역 시계 — 1초마다 틱을 낸다 (src/main/app/clock.ts)
 const clock = createClock({ onError: (e) => log?.({ clock: "error", message: String(e) }) });
 // 부팅이 만든 핸들 한 벌 — 처음은 모두 비어 있고 부팅 단계가 채운다. 끌 때 run 의 stop 이 정리한다 (src/main/app/boot.ts Runtime)
+// 무대 그림 불러오기 — 무대를 띄운 뒤 생긴다. 배틀 창이 같은 PMD 그림을 쓴다 (src/main/manage/battle-screen.ts)
+let stageArt: ArtLoader | null = null;
+
 const rt: Runtime = {
   portraits: null,
   game: null,
@@ -312,6 +315,8 @@ const manage = createManage({
   preload: preloadFile(),
   html: rendererFile("manage.html"),
   game: () => rt.game,
+  devBattleSeed: devNumber("POKEBUDDY_DEV_BATTLE"), // 개발 실행 전용 배틀 창 (src/main/manage/battle-screen.ts)
+  stageArt: () => stageArt,
   send: async (req) => {
     if (!rt.commands) return { ok: false, reason: "not-ready" };
     const reply = await rt.commands.dispatcher.dispatch({ cmd: req.cmd as Command["cmd"], target: req.target, args: req.args, from: "settings" });
@@ -698,6 +703,7 @@ async function main(): Promise<void> {
   rt.portraits = pics;
   if (!(await bootStarter(steps, saveSource, pics, starterList, { given: config.fromEnv.has("slug") ? config.slug : null, onPicking: (on) => run.setPicking(on) }))) return;
   const { art, group } = bootStage(saveSource, pics);
+  stageArt = art;
   const watch = bootCommands(saveSource, reader, art);
   if (!(await bootClaim(steps, saveSource, group, life, refreshParty))) return;
   bootServices(saveSource);

@@ -5,6 +5,7 @@
 // 계약은 src/shared/ipc/ 의 창별 파일(stage·picker·manage·devices·overlays)이다
 import type { AlertBridge, BannerBridge, MenuBridge, RegionBridge, ScreensBridge } from "../../shared/ipc/overlays.js";
 import type { BagDeviceBridge, DexDeviceBridge, PartyDeviceBridge, BattleDeviceBridge, PetDeviceBridge, ShopDeviceBridge } from "../../shared/ipc/devices.js";
+import type { BattleScreenBridge } from "../../shared/ipc/battle.js";
 import type { ManageBridge } from "../../shared/ipc/manage.js";
 import type { PickerBridge } from "../../shared/ipc/picker.js";
 import type { StageBridge } from "../../shared/ipc/stage.js";
@@ -24,6 +25,7 @@ export interface Bridges {
   pokebuddyBag: BagDeviceBridge; // 가방 기기 창 (bag.ts)
   pokebuddyParty: PartyDeviceBridge; // 파티 기기 창 — 교체 화면 (party.ts)
   pokebuddyBattle: BattleDeviceBridge; // 배틀 파티 상세 기기 창 (battle.ts)
+  pokebuddyBattleScreen: BattleScreenBridge; // 배틀 창 — 판 재생 (battle/screen.ts)
   pokebuddyAlert: AlertBridge; // 알림 창 (alert.ts)
 }
 

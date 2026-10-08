@@ -16,9 +16,11 @@ import { petDeviceModel } from "../../view/device-pet.js";
 import { shopDeviceModel } from "../../view/device-shop.js";
 import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
+import type { ArtLoader } from "../art/stage-art.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
 import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
+import { wireBattleScreen, type BattleScreen } from "./battle-screen.js";
 import type { GameReads } from "./handlers.js";
 
 export interface ManageDevicesDeps {
@@ -28,10 +30,12 @@ export interface ManageDevicesDeps {
   html: string; // 설정창 문서 — 기기 창 문서는 같은 폴더의 <이름>.html
   parent(): BrowserWindow | null; // 기기 창이 붙을 설정창. 없으면 띄우지 않는다
   send<K extends keyof ManagePush>(channel: K, ...args: ManagePush[K]): void; // 설정창으로 밀어 보낸다
+  stageArt(): ArtLoader | null; // 무대 그림 불러오기 — 배틀 창의 PMD 그림
   setPetCoach(on: boolean): void; // 파티 상세 기기 창의 코치마크 — 설정창 창 단추 자리도 함께 어둡게 한다
 }
 
 export interface ManageDevices {
+  battleScreen: BattleScreen; // 배틀 창 — 판 재생. 기기 창과 같은 그림 풀기를 쓴다 (src/main/manage/battle-screen.ts)
   forget(): void; // 설정창이 닫혔다 — 마지막으로 띄운 모델을 잊는다
   reset(): void; // 설정창 문서를 (다시) 읽기 시작했다 — 렌더러의 세대 번호가 0 부터라 기기 창 번호도 맞춘다
 }
@@ -117,6 +121,8 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   };
   // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
+  const battleScreen = wireBattleScreen({ preload: deps.preload, html: deps.html, parent: deps.parent, art: deviceArt.art, stageArt: deps.stageArt });
+
   const shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:shop-step", delta),
     onAct: (action) => send("manage:shop-act", action),
@@ -198,11 +204,13 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   });
 
   return {
+    battleScreen,
     forget: () => shownModel.clear(),
     // 설정창을 다시 읽으면(Ctrl+R 등) 고른 개체·옆 도감이 비므로 떠 있던 기기 창을 닫는다 — 남겨 두면 설정창과 어긋난다
     reset: () => {
       shownModel.clear();
       for (const w of [petWin, dexWin, shopWin, bagWin, partyWin, battleWin]) w.discard();
+      battleScreen.close();
     },
   };
 }

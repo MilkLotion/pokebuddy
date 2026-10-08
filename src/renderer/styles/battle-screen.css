@@ -1,0 +1,439 @@
+/* battle-screen.html 의 창 CSS — 공용 CSS(tokens·device·type-badge·move-pill) 다음에 읽는다
+   배틀 창 — Figma 04 `Battle Window`(99 `Draft / Battle Window · 머리 줄`), 05 `16 배틀`. 규칙은 docs/specs/ui-components.md "배틀 창으로 더한 것"
+   머리 줄은 기기 창 틀(device-frame.ts)의 것을 쓴다. 설정창에 붙지 않으므로 경첩은 숨긴다 */
+:root {
+  --ink: #3b2c31;
+  --bar-ink: #074540; /* teal/900 — 바 바탕·테두리, 피해 숫자 테두리 */
+  --mine: #6ad06a; /* lime/400 — 내 쪽 HP */
+  --opp: #dc2626; /* red/600 — 상대 HP */
+  --chip: #fbfaf6; /* cream/50 — 깎인 몫 */
+  --gauge: #ffd84a; /* yellow/400 — 다음 기술 쿨타임 */
+  --cell: 28px; /* 계산 칸 — 화면 칸 56 */
+}
+html,
+body {
+  background: var(--canvas);
+}
+.device.battle-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 1004px;
+  height: 428px;
+  padding: 0 0 16px;
+  overflow: hidden;
+}
+.battle-screen .hinge {
+  display: none;
+}
+.battle-screen .top {
+  align-self: stretch;
+  padding: 7px 16px 7px 12px;
+  background: var(--primary);
+}
+.light {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #8fe0d6;
+  box-shadow: 0 0 0 3px #ffffff;
+}
+
+/* 판 표시 줄 — [걸린 효과 칩] [남은 시간] [배속]. 폭 고정이라 칩이 생겨도 시간·배속이 움직이지 않는다 */
+.hud {
+  display: grid;
+  grid-template-columns: 1fr 32px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 644px;
+  height: 44px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.hud .conditions {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+.hud .clock {
+  font-weight: 700;
+  text-align: center;
+}
+.hud .speed {
+  justify-self: end;
+  display: flex;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--accent);
+}
+.hud .speed button {
+  width: 48px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--soft);
+  cursor: pointer;
+}
+.hud .speed button.on {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+.condition {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 2px;
+  border-radius: 6px;
+  background: var(--accent);
+  font: 700 10px/14px var(--font-small);
+}
+
+/* 몸통 — [내 카드 2×3] [전장] [상대 카드 2×3] */
+.body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 246px;
+}
+.side-name {
+  font-weight: 700;
+}
+.cards {
+  display: grid;
+  grid-template-columns: 120px 120px;
+  gap: 6px;
+}
+
+/* 카드 — 초상·이름·타입, HP 와 %, 기술 두 개(타입 칸 + 쿨타임). Figma 02 `Battle Card` */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 88px;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+.card.acting {
+  background: var(--accent);
+}
+.card.empty {
+  background: transparent;
+}
+.card .who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.card .face {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.card .name-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.card .name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card .types {
+  display: flex;
+  gap: 2px;
+}
+.card.fainted .who,
+.card.fainted .moves {
+  opacity: 0.4;
+}
+.card .hp-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card .hp-text {
+  flex: none;
+  width: 28px;
+  font: 10px/14px var(--font-small);
+  color: var(--soft);
+  text-align: right;
+}
+.card .moves {
+  display: flex;
+  gap: 6px;
+}
+.card .move {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.card .move.later {
+  opacity: 0.45;
+}
+.card .move .bar {
+  flex: 1;
+}
+
+/* 타입 칸 — 흰 타입 아이콘을 타입 색 바탕에 (Figma 01 `Type Icon` Style=Badge 16×16) */
+.type-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--type, #9fa19f);
+}
+.type-icon img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+}
+
+/* 바 — 짙은 바탕과 테두리, 채움, 깎인 몫. HP(높이 5)와 쿨타임(높이 2)이 같이 쓴다. Figma 01 `Battle HP`·`Battle Cooldown` */
+.bar {
+  position: relative;
+  height: 5px;
+  outline: 1px solid var(--bar-ink);
+  background: rgba(7, 69, 64, 0.75);
+  overflow: hidden;
+}
+.bar.cool {
+  height: 2px;
+}
+.bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+.bar > .chip {
+  background: var(--chip);
+}
+.bar > .fill {
+  background: var(--mine);
+}
+.bar.opp > .fill {
+  background: var(--opp);
+}
+.bar.cool > .fill {
+  background: var(--gauge);
+}
+
+/* 전장 — 화면 칸 56 의 8×5. 체크 무늬, 양쪽 2열에 팀 색을 옅게. Figma 03 `Battle Board`
+   arena 는 포켓몬·연출을 얹는 자리다. board 만 둥근 모서리로 자른다 */
+.arena {
+  position: relative;
+  flex: none;
+  width: 448px;
+  height: 280px;
+}
+.board {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f5f3ea;
+  background-image: conic-gradient(rgba(230, 227, 213, 0.6) 0 25%, transparent 0 50%, rgba(230, 227, 213, 0.6) 0 75%, transparent 0);
+  background-size: 112px 112px;
+  background-position: 56px 0;
+}
+.board .zone {
+  position: absolute;
+  top: 56px;
+  width: 112px;
+  height: 168px;
+  opacity: 0.1;
+}
+.board .zone.mine {
+  left: 0;
+  background: var(--primary);
+}
+.board .zone.opp {
+  right: 0;
+  background: var(--opp);
+}
+.obstacle {
+  position: absolute;
+  border: 1px solid rgba(10, 87, 80, 0.5);
+  border-radius: 4px;
+  background: linear-gradient(#e6e3d5 0 45%, #d5d2c6 45%);
+}
+/* 포켓몬 — 몸(계산 칸 2×2 = 56) 가운데에 48 그림. 크기 2단계(배율 1.5) */
+.pet {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  will-change: transform;
+}
+.pet .sprite {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+/* PMD 그림 — 칸 크기·자리는 렌더러가 정한다(시트 칸 × 배율, 몸 가운데) */
+.pet .sprite.pmd {
+  width: auto;
+  height: auto;
+  pointer-events: none;
+}
+.pet.fainted .sprite {
+  opacity: 0.3;
+  transition: opacity 0.4s;
+}
+.pet.fainted .overhead {
+  display: none;
+}
+/* 머리 위 표시 — HP(팀 색) + 다음 기술 쿨타임. 능력 변화·충전 칩은 그때만. Figma 02 `Battle Overhead` 폭 36 */
+.overhead {
+  position: absolute;
+  left: 10px;
+  top: -6px;
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.overhead .tags {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+.overhead .tag {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--bar-ink);
+  color: #ffffff;
+  font: 700 10px/14px var(--font-small);
+  white-space: nowrap;
+}
+/* 연출 겹침층 — 기술 이름 알약과 피해 숫자 */
+.fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx .cast {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.fx .pop {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font: 700 12px/18px var(--font-body);
+  color: var(--chip);
+  white-space: nowrap;
+  text-shadow:
+    2px 0 0 var(--bar-ink),
+    -2px 0 0 var(--bar-ink),
+    0 2px 0 var(--bar-ink),
+    0 -2px 0 var(--bar-ink),
+    2px 2px 0 var(--bar-ink),
+    -2px -2px 0 var(--bar-ink),
+    2px -2px 0 var(--bar-ink),
+    -2px 2px 0 var(--bar-ink);
+}
+.fx .pop.super {
+  font: 700 24px/32px var(--font-body);
+  color: var(--gauge);
+}
+.fx .pop.weak,
+.fx .pop.miss {
+  color: #d5d2c6;
+}
+.fx .pop.heal {
+  color: #8fe0d6;
+}
+
+/* 기술 호버 — 기술 이름과 배틀 수치. Figma 02 `Move Info Bubble` */
+.move-bubble {
+  position: absolute;
+  z-index: 5;
+  width: 234px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(26, 51, 48, 0.12);
+  pointer-events: none;
+}
+.move-bubble .mb-name {
+  font-weight: 700;
+}
+.move-bubble .mb-meta {
+  color: var(--soft);
+}
+
+/* 결과 — 가림막과 대화상자. Figma `Dialog` Compact */
+.result-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--scrim);
+}
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 440px;
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.result .r-title {
+  font: 15px/22px var(--font-large);
+}
+.result .r-lead {
+  font-weight: 700;
+}
+.result .r-detail {
+  color: var(--soft);
+}
+.result .r-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+.result .r-ok {
+  width: 120px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--inverse);
+  font-weight: 700;
+  cursor: pointer;
+}
+.result .r-ok:hover {
+  background: var(--primary-hover);
+}
