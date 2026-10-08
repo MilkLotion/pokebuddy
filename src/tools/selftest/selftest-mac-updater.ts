@@ -254,6 +254,34 @@ async function engineChecks(): Promise<void> {
     manual.openDownload();
     assert.deepEqual(opened, [`${url}Pb-0.9.0-arm64.dmg`]);
     process.stdout.write("(13) dmg 안 실행 — 알리기만, 받기는 dmg 주소  ok\n");
+
+    // (14) 준비된 뒤 다시 확인 — 같은 버전이면 다시 받지 않고, 더 새 버전이면 그것을 받아 준비한다
+    const reHome = path.join(dir, "home-recheck");
+    let reQuitHook: (() => void) | null = null;
+    const re = new MacUpdater({
+      version: "0.8.0", resourcesPath: res, exePath: path.join(installed, "Contents", "MacOS", "Pb"), arch: "arm64", home: reHome, pid: 999_999,
+      quit: () => undefined, onWillQuit: (fn) => { reQuitHook = fn; }, openExternal: () => undefined,
+      startInstaller: () => undefined,
+    });
+    const reEvents: string[] = [];
+    for (const e of ["update-available", "update-downloaded", "error"]) re.on(e, (p) => reEvents.push(`${e}:${(p as { version?: string } | undefined)?.version ?? ""}`));
+    await re.checkForUpdates();
+    await until(() => reEvents.length >= 2, "0.9.0 받기");
+    const zipHits = (): number => hits.filter((h) => h.endsWith(".zip")).length;
+    const before = zipHits();
+    await re.checkForUpdates();
+    assert.equal(zipHits(), before, "같은 버전이면 다시 받지 않는다");
+    const built2 = fakeApp(path.join(dir, "build2"), "Pb", "0.9.1");
+    const zip2 = path.join(feed, "Pb-0.9.1-arm64-mac.zip");
+    assert.equal(spawnSync("/usr/bin/ditto", ["-c", "-k", "--keepParent", built2, zip2]).status, 0);
+    const sha2 = createHash("sha512").update(fs.readFileSync(zip2)).digest("base64");
+    fs.writeFileSync(path.join(feed, "latest-mac.yml"), `version: 0.9.1\nfiles:\n  - url: Pb-0.9.1-arm64-mac.zip\n    sha512: ${sha2}\n    size: ${fs.statSync(zip2).size}\n`);
+    await re.checkForUpdates();
+    await until(() => reEvents.length >= 4, "0.9.1 받기");
+    assert.deepEqual(reEvents, ["update-available:0.9.0", "update-downloaded:0.9.0", "update-available:0.9.1", "update-downloaded:0.9.1"]);
+    assert.equal(marker(path.join(reHome, "Library", "Caches", "pb-test-updater", "extract", "Pb.app"), "Pb"), "version 0.9.1", "캐시에 새 버전");
+    assert.ok(reQuitHook != null);
+    process.stdout.write("(14) 준비된 뒤 다시 확인 — 같은 버전은 그대로, 새 버전은 받아 준비  ok\n");
   } finally {
     server.close();
   }
@@ -271,7 +299,7 @@ async function main(): Promise<void> {
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }
-  process.stdout.write("selftest-mac-updater: 통과 (목록·파일 고르기·주소·버전·수동 판정·받기·sha512·도우미 교체·되돌리기)\n");
+  process.stdout.write("selftest-mac-updater: 통과 (목록·파일 고르기·주소·버전·수동 판정·받기·sha512·도우미 교체·되돌리기·준비된 뒤 다시 확인)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

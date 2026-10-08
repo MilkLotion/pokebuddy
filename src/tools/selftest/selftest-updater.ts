@@ -140,7 +140,40 @@ async function main(): Promise<void> {
   }
   process.stdout.write("(8) 설정창을 열 때 — 10분 간격  ok\n");
 
-  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동·업데이트 필요·설정창 열 때)\n");
+  // (9) 준비된 뒤에도 다시 확인한다 — 같은 버전이면 준비됨 그대로, 더 새 버전이면 그것을 받아 다시 시작 때 최신이 깔린다
+  {
+    const fake9 = new FakeUpdater();
+    const seen9: UpdateView["status"][] = [];
+    const up9 = createAppUpdater({ version: "0.17.0", enabled: true, updater: fake9, onView: (v) => seen9.push(v.status), beforeInstall: async () => undefined, setTimer: () => 0, clearTimer: () => undefined });
+    await up9.check();
+    fake9.emit("update-available", { version: "0.17.1" });
+    fake9.emit("update-downloaded", { version: "0.17.1" });
+    assert.deepEqual({ s: up9.view().status, n: up9.view().next }, { s: "ready", n: "0.17.1" });
+    seen9.length = 0;
+    await up9.check();
+    assert.equal(fake9.checks, 2, "준비된 뒤에도 확인한다");
+    fake9.emit("update-available", { version: "0.17.1" });
+    fake9.emit("download-progress", { percent: 100 });
+    fake9.emit("update-downloaded", { version: "0.17.1" });
+    assert.ok(seen9.every((s) => s === "ready"), `같은 버전이면 준비됨이 깜빡이지 않는다: ${seen9.join(",")}`);
+    fake9.emit("update-not-available");
+    assert.equal(up9.view().status, "ready", "최신 알림이 준비됨을 덮지 않는다");
+    fake9.fail = true;
+    await up9.check();
+    assert.equal(up9.view().status, "ready", "확인 실패가 준비됨을 덮지 않는다");
+    fake9.fail = false;
+    await up9.check();
+    fake9.emit("update-available", { version: "0.18.0" });
+    assert.deepEqual({ s: up9.view().status, n: up9.view().next }, { s: "downloading", n: "0.18.0" }, "더 새 버전이면 받는다");
+    assert.equal(await up9.install(), false, "받는 동안은 다시 시작하지 않는다");
+    fake9.emit("update-downloaded", { version: "0.18.0" });
+    assert.deepEqual({ s: up9.view().status, n: up9.view().next }, { s: "ready", n: "0.18.0" });
+    assert.equal(await up9.install(), true);
+    assert.deepEqual(fake9.installed, [false, true]);
+  }
+  process.stdout.write("(9) 준비된 뒤 다시 확인 — 같은 버전 유지·새 버전 받기  ok\n");
+
+  process.stdout.write("selftest-updater: 통과 (꺼 둠·주기 확인·받기·준비됨·다시 시작·실패·mac 수동·업데이트 필요·설정창 열 때·준비된 뒤 다시 확인)\n");
 }
 
 main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });

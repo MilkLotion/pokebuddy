@@ -98,9 +98,17 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
   updater.on("checking-for-update", () => {
     if (view.status !== "downloading" && view.status !== "ready") set({ status: "checking", error: null });
   });
-  updater.on("update-not-available", () => set({ status: "latest", next: null, percent: null, error: null }));
-  updater.on("update-available", (p) => set({ status: "downloading", next: versionOf(p), percent: 0, error: null }));
+  updater.on("update-not-available", () => {
+    // 받아 둔 버전이 있으면 그대로 쓸 수 있다 — 릴리스가 내려가도 준비됨을 덮지 않는다
+    if (view.status !== "ready") set({ status: "latest", next: null, percent: null, error: null });
+  });
+  updater.on("update-available", (p) => {
+    // 준비된 뒤 다시 확인해 같은 버전이 왔다 — 엔진이 받아 둔 파일을 그대로 쓰니 준비됨을 유지한다(깜빡이지 않게)
+    if (view.status === "ready" && versionOf(p) === view.next) return;
+    set({ status: "downloading", next: versionOf(p), percent: 0, error: null });
+  });
   updater.on("download-progress", (p) => {
+    if (view.status === "ready") return;
     const percent = (p as { percent?: unknown } | null)?.percent;
     set({ status: "downloading", percent: typeof percent === "number" ? Math.max(0, Math.min(100, Math.floor(percent))) : view.percent });
   });
@@ -113,14 +121,17 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
 
   const now = o.now ?? Date.now;
   let checkedAt: number | null = null;
+  // 준비된 뒤에도 확인한다 — 켜 둔 동안 더 새 버전이 나오면 그것을 받아 다시 시작 때 최신이 깔리게
+  //   (2026-10-09 "업데이트를 2~3번 받아야 한다" — 처음 받은 버전에 멈춰 있었다. worklog/records/app-update/app-update.md)
+  //   준비됨은 확인하는 동안 그대로 보인다. 더 새 버전이면 update-available 이 받는 중으로 바꾼다
   const check: AppUpdater["check"] = async () => {
-    if (stopped || view.status === "downloading" || view.status === "ready") return;
+    if (stopped || view.status === "downloading") return;
     checkedAt = now();
-    set({ status: "checking", error: null });
+    if (view.status !== "ready") set({ status: "checking", error: null });
     try {
       await updater.checkForUpdates();
     } catch (e) {
-      set({ status: "error", error: e instanceof Error ? e.message.slice(0, 200) : String(e) });
+      if (view.status !== "ready") set({ status: "error", error: e instanceof Error ? e.message.slice(0, 200) : String(e) });
     }
   };
 

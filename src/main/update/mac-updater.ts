@@ -180,7 +180,8 @@ export class MacUpdater extends EventEmitter implements UpdaterLike {
   }
 
   async checkForUpdates(): Promise<unknown> {
-    if (this.busy || this.ready) return null;
+    // 준비된 뒤에도 확인한다 — 더 새 버전이 나왔으면 그것을 받는다 (src/main/update/updater.ts check)
+    if (this.busy || this.installing) return null;
     this.emit("checking-for-update");
     const cfg = this.config();
     const urls = feedUrls(cfg);
@@ -190,6 +191,8 @@ export class MacUpdater extends EventEmitter implements UpdaterLike {
       this.emit("update-not-available", { version: latest.version });
       return null;
     }
+    // 받아 둔 버전이 이미 최신이다 — 다시 받지 않는다
+    if (this.ready && compareVersions(latest.version, this.ready.version) <= 0) return null;
     // 그 자리에서 바꿀 수 없다 — 받지 않고 알리기만
     const reason = manualReason(bundleOf(this.deps.exePath), this.deps.canWrite ?? writable);
     if (reason) {
@@ -202,6 +205,8 @@ export class MacUpdater extends EventEmitter implements UpdaterLike {
     if (!zip) throw new Error(`이 Mac(${this.deps.arch})용 zip 이 목록에 없다`);
     if (!this.autoDownload) return null;
     this.busy = true;
+    // 받기가 캐시를 지운다 — 받아 둔 옛 버전은 더 쓸 수 없다. 받는 동안 끄면 끌 때 적용을 건너뛴다
+    this.ready = null;
     this.emit("update-available", { version: latest.version });
     // 받기는 기다리지 않는다 — electron-updater 처럼 확인은 곧 끝나고 받기 결과는 이벤트로 온다
     void this.download(cfg, urls.file(latest.version, zip.url), zip, latest.version)
