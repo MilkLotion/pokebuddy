@@ -187,6 +187,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   // 옮기기·팔기 — 동작을 꽂으면 켜진다. 옮기기는 모델에 있을 때만(박스 개체) 나온다
   const wired = petMenu({ name: "꼬렛", nature: null, move: { enabled: true }, sell: { enabled: true } }, { detail: () => undefined, move: () => undefined, sell: () => undefined });
   eq(wired.filter((m) => m.label === t("menu.move") || m.label === t("menu.sell")).map((m) => m.enabled), [true, true], "옮기기·팔기 — 동작이 있으면 누를 수 있다");
+  const swapRows = petMenu({ name: "꼬렛", nature: null, swap: { enabled: true } }, {}).filter((m) => m.label === t("menu.swap"));
+  eq(swapRows.map((m) => m.enabled), [false], "교체 — 동작이 없으면 흐리다");
   const party = petMenu({ name: "이브이", nature: null, ball: { enabled: true, hidden: true }, sell: { enabled: true } }, { ball: () => undefined, detail: () => undefined });
   eq(party.some((m) => m.label === t("menu.form") || m.label === t("menu.move")), false, "파티 일반 개체 — 모습 바꾸기·옮기기가 없다");
   eq(party.find((m) => m.label === t("menu.sell"))?.enabled, false, "팔기 — 동작이 없으면 흐리다");

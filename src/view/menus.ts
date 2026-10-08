@@ -27,6 +27,7 @@ export interface PetMenuModel {
   formsCatalog?: boolean; // 도구를 쓰는 묶음(로토무) — 말풍선 머리가 `모습 바꾸기 · 카탈로그 1개를 써요`, 맨 아래 줄이 `로토무 · 원래대로`
   formsItem?: string; // 한 방향 묶음(플라엣테·다투곰)의 도구 이름 — 말풍선 머리가 `모습 바꾸기 · 영원의 꽃 1개를 써요`, 줄은 바뀔 모습 하나다 (2026-10-08)
   move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체에만 둔다
+  swap?: { enabled: boolean }; // 교체 줄 — 관리 창에서 연 메뉴(파티·박스 개체)에만 둔다
   sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
 }
 export interface PetMenuForm {
@@ -55,6 +56,7 @@ export interface PetMenuActions {
   detail?(): void; // 그 포켓몬의 개체 상세를 연다
   form?(species: string): void; // 모습 말풍선에서 고른 모습 — 바꾸기 확인 창을 띄운다
   move?(): void; // 옮기기 — 관리 창의 박스 탭에서 그 개체를 든다. 동작이 없으면 줄이 흐리다
+  swap?(): void; // 교체 — 관리 창이 교체 화면을 열고 그 개체를 든다. 동작이 없으면 줄이 흐리다
   sell?(): void; // 팔기 — 관리 창이 확인 창을 띄운다. 동작이 없으면 줄이 흐리다
 }
 
@@ -65,8 +67,9 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 // 포켓몬 메뉴 — 무대의 우클릭과 관리 창의 파티 카드·박스 칸 누르기가 같은 메뉴를 쓴다 (2026-10-02 사용자 결정)
 // 그 포켓몬 관련 항목만 둔다 — 잠시 숨기기(전체)·종료는 트레이에만 (2026-09-28 사용자 결정)
 // 첫 항목은 이름·상태 두 줄이다 (sublabel 이 둘째 줄). 못 하는 항목은 흐리게만 둔다 — 이유는 적지 않는다 (Figma `Context Menu` `338:738`)
-// 묶음: 이름·상태 / 옮기기 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기 (Figma `Context Menu` `338:738`)
+// 묶음: 이름·상태 / 옮기기·교체 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기 (Figma `Context Menu` `338:738`)
 // 옮기기는 이름·상태 바로 아래에 두고 그 아래에 구분선을 둔다 (2026-10-02 사용자 결정 "옮기기를 포켓몬이름,상태 바로 아래로 옮기고 밑줄")
+// 교체는 옮기기 아래에 둔다. 파티 개체는 옮기기가 없어 교체 한 줄이다 (2026-10-09 사용자 "파티,박스에 우클릭 메뉴에 교체 추가", Figma `Show Swap`)
 // 볼에 넣기와 상세 보기 사이에는 구분선을 두지 않는다 (2026-10-02 사용자 결정 "구분선 없애자")
 // 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다. 옮기기는 박스 개체에만, 팔기는 파티·박스 모두에 있다.
 // 모습 바꾸기는 누르는 동작이 없고 하위 줄(submenu)만 있다 — 눌러도 메뉴가 닫히지 않고 옆에 말풍선으로 뜬다.
@@ -80,7 +83,9 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
   return [
     { label: petLine(model), ...(model.status ? { sublabel: model.status } : {}), enabled: false },
     { type: "separator" },
-    ...(model.move ? [{ label: t("menu.move"), enabled: model.move.enabled && !!act.move, click: () => act.move?.() }, { type: "separator" as const }] : []),
+    ...(model.move ? [{ label: t("menu.move"), enabled: model.move.enabled && !!act.move, click: () => act.move?.() }] : []),
+    ...(model.swap ? [{ label: t("menu.swap"), enabled: model.swap.enabled && !!act.swap, click: () => act.swap?.() }] : []),
+    ...(model.move || model.swap ? [{ type: "separator" as const }] : []),
     ...(model.feed ? [{ label: t("menu.feed"), enabled: model.feed.enabled, click: () => act.feed?.() }] : []),
     ...(model.play ? [{ label: t("menu.play"), enabled: model.play.enabled, click: () => act.play?.() }] : []),
     ...(act.ball ? [{ label: t(model.ball?.hidden ? "menu.unball" : "menu.ball"), enabled: model.ball?.enabled !== false, click: () => act.ball?.() }] : []),
@@ -197,6 +202,8 @@ export function petMenuOf(
     ...(shiftRuleOf(pet.species)?.oneWay ? { formsItem: itemName(shiftRuleOf(pet.species)!.item) } : {}),
     // 옮기기는 박스 개체에만 있다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
     ...(slot ? {} : { move: { enabled: true } }),
+    // 교체는 관리 창에서 연 메뉴에만 있다 — 무대의 포켓몬은 파티 개체라 교체 화면으로 가는 길을 두지 않는다
+    ...(o.origin === "manage" ? { swap: { enabled: true } } : {}),
     sell: { enabled: sale.ok },
   };
   // 첫 돌봄 튜토리얼 중이면 우클릭 메뉴에서 고른 돌봄이 튜토리얼을 끝낸다 — 다른 곳의 돌봄은 끝내지 않는다 (src/tutorial/conditions.ts onlyAtStart).

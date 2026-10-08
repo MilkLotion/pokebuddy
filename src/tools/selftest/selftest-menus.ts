@@ -45,6 +45,8 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.deepEqual([r.model.feed, r.model.play], [{ enabled: true }, { enabled: true }]);
   assert.deepEqual(r.model.ball, { enabled: true, hidden: false });
   assert.equal(r.model.move, undefined, "옮기기는 박스 개체에만");
+  assert.deepEqual(r.model.swap, { enabled: true }, "관리 창 메뉴의 파티 개체 — 교체");
+  assert.equal(menuOf(seed(), "p1", "stage")?.model.swap, undefined, "무대 메뉴에는 교체가 없다");
   assert.deepEqual([r.inSave, r.hidden, r.firstCare], [true, false, null]);
 }
 
@@ -65,6 +67,11 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const r = menuOf(seed(), "p3");
   assert.ok(r);
   assert.deepEqual([r.model.feed, r.model.play, r.model.ball, r.model.move], [{ enabled: false }, { enabled: false }, { enabled: false, hidden: false }, { enabled: true }]);
+  assert.deepEqual(r.model.swap, { enabled: true }, "박스 개체 — 옮기기와 교체");
+  const rows = petMenu(r.model, { move: () => undefined, swap: () => undefined, sell: () => undefined }).map((m) => m.label ?? m.type);
+  assert.deepEqual(rows.slice(1, 5), ["separator", t("menu.move"), t("menu.swap"), "separator"], "이름·상태 / 옮기기·교체 / 구분선 (Figma `Context Menu` Show Swap)");
+  const partyRows = petMenu(menuOf(seed(), "p1")!.model, { swap: () => undefined }).map((m) => m.label ?? m.type);
+  assert.deepEqual(partyRows.slice(1, 4), ["separator", t("menu.swap"), "separator"], "파티 개체 — 교체 한 줄 뒤 구분선");
   assert.equal(petMenuOf(seed(), "p3", { origin: "stage", stagePet: null, formIcons: {}, now: Date.now() }), null);
   assert.equal(menuOf(seed(), "없음"), null);
 }

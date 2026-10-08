@@ -24,6 +24,7 @@
   "menu.form.title.item": "모습 바꾸기 · {item} 1개를 써요",
   "menu.form.back": "원래대로",
   "menu.move": "옮기기",
+  "menu.swap": "교체",
   "menu.sell": "팔기",
   "menu.later": "{what} · {when}",
   "bored.none": "보통",

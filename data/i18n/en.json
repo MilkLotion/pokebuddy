@@ -24,6 +24,7 @@
   "menu.form.title.item": "Change form · uses 1 {item}",
   "menu.form.back": "Revert",
   "menu.move": "Move",
+  "menu.swap": "Swap",
   "menu.sell": "Sell",
   "menu.later": "{what} · {when}",
   "bored.none": "okay",

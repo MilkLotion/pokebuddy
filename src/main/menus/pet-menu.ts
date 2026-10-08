@@ -1,4 +1,4 @@
-// 포켓몬 메뉴 — 이름·상태 / 옮기기 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기. 앱 전체 조작은 트레이가 맡는다
+// 포켓몬 메뉴 — 이름·상태 / 옮기기·교체 / 밥 주기·놀아주기·볼에 넣기·상세 보기·모습 바꾸기 / 팔기. 앱 전체 조작은 트레이가 맡는다
 // (worklog/records/code-structure/design/10-main.md 3.9절 menus/pet-menu.ts)
 //
 // origin: stage 는 무대의 포켓몬 위 우클릭, manage 는 관리 창의 파티 카드·박스 칸 우클릭 (2026-10-02 사용자 결정 — 같은 메뉴를 쓴다).
@@ -54,8 +54,9 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
             ball: () => deps.run({ cmd: state.hidden ? "party.show" : "party.hide", target: id, from: "menu" }),
             // 그 포켓몬의 개체 상세를 연다 — 메뉴는 그 포켓몬 관련 기능만 둔다 (2026-09-28 사용자 결정). 무대 우클릭 메뉴에만 있다
             ...(origin === "stage" ? { detail: () => deps.openManage({ to: "pet", petId: id }) } : {}),
-            // 옮기기·팔기 — 고른 뒤의 화면(든 상태, 팔기 확인 창)은 관리 창이 그린다
+            // 옮기기·교체·팔기 — 고른 뒤의 화면(든 상태, 교체 화면, 팔기 확인 창)은 관리 창이 그린다
             move: () => deps.openManage({ to: "move", petId: id }),
+            swap: () => deps.openManage({ to: "swap", petId: id }),
             sell: () => {
               if (sale) deps.openManage({ to: "sell", petId: id, price: sale.price });
             },

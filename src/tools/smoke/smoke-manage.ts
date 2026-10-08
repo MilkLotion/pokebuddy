@@ -1103,6 +1103,21 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('#body .grid .slot.blank:not(.locked)').click(); 0`);
     await wait(400);
     assert.ok((await partyOpen()) !== null, "빈 파티 칸 — 교체 화면");
+    // 포켓몬 메뉴의 `교체` — 교체 화면을 열고 그 개체를 든 채 시작한다 (2026-10-09). 파티 개체는 파티 기기 창에서, 박스 개체는 박스 탭에서 든다
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(300);
+    await js(`window.__cmds = []; window.__cb.onRoute({ to: 'swap', petId: 'p1' }); 0`);
+    await wait(400);
+    assert.equal(await js<string>(`document.querySelector('#body .head h1').textContent`), "박스", "메뉴의 교체 — 박스 탭으로 간다");
+    assert.deepEqual((await partyOpen())?.slots.map((s) => s.held), [true, false, false, false, false, false], "메뉴의 교체(파티 개체) — 파티 기기 창에서 그 개체를 든다");
+    await js(`${tabBtn("파티")}.click()`);
+    await wait(300);
+    await js(`window.__cb.onRoute({ to: 'swap', petId: 'p2' }); 0`);
+    await wait(400);
+    assert.deepEqual(await js<unknown>(`({ ghost: document.querySelectorAll('.drag-ghost').length, from: document.querySelectorAll('#body .cell.dragging').length })`), { ghost: 0, from: 1 }, "메뉴의 교체(박스 개체) — 박스 탭에서 든다. 따라가는 칸은 없다");
+    assert.deepEqual((await partyOpen())?.slots.map((s) => s.target), [false, true, false, false, false, false], "든 동안 빈 파티 칸이 놓을 칸");
+    assert.equal((await cmds()).length, 0, "메뉴의 교체는 명령을 보내지 않는다 — 들기만 한다");
+    await shot("party-swap-menu.png");
     // 가방 — 머리 줄의 ◀ ▶ 는 앞·뒤 프리셋을 적용한다
     await js(`${tabBtn("가방")}.click()`);
     await wait(300);
