@@ -293,10 +293,18 @@ const trayMenu = createTrayMenu({
 
 // 무대 사각형 = 놀이공간 ∩ 그 화면. 모든 화면이면 화면마다 하나. 바뀔 때만 setBounds (stage-window 가 가른다)
 // 동반자는 따라갈 창 대신 놀이공간을 쓴다. 보일지는 앵커가 정한 그대로다
+// 배틀 창이 떠 있는 동안은 무대를 숨긴다. 닫히면 앵커가 정한 보임으로 돌아간다
+let stageShown = true;
+let battleHold = false;
 function onHostWatchUpdate(update: HostWatchUpdate): void {
   if (quitting() || !rt.stages) return;
   rt.stages.layout(display.lanes(), display.playArea().mode === "all");
-  rt.stages.setVisible(update.visible);
+  stageShown = update.visible;
+  rt.stages.setVisible(stageShown && !battleHold);
+}
+function holdStageForBattle(on: boolean): void {
+  battleHold = on;
+  if (!quitting()) rt.stages?.setVisible(stageShown && !battleHold);
 }
 
 
@@ -317,6 +325,7 @@ const manage = createManage({
   preload: preloadFile(),
   html: rendererFile("manage.html"),
   game: () => rt.game,
+  holdStage: holdStageForBattle,
   devBattleSeed: devNumber("POKEBUDDY_DEV_BATTLE"), // 개발 실행 전용 배틀 창 (src/main/manage/battle-screen.ts)
   stageArt: () => stageArt,
   send: async (req) => {

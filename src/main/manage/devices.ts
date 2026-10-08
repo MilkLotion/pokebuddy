@@ -32,6 +32,7 @@ export interface ManageDevicesDeps {
   send<K extends keyof ManagePush>(channel: K, ...args: ManagePush[K]): void; // 설정창으로 밀어 보낸다
   stageArt(): ArtLoader | null; // 무대 그림 불러오기 — 배틀 창의 PMD 그림
   setPetCoach(on: boolean): void; // 파티 상세 기기 창의 코치마크 — 설정창 창 단추 자리도 함께 어둡게 한다
+  holdStage?(on: boolean): void; // 배틀 창이 떠 있는 동안 바탕화면의 포켓몬을 숨긴다
 }
 
 export interface ManageDevices {
@@ -121,7 +122,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   };
   // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
-  const battleScreen = wireBattleScreen({ preload: deps.preload, html: deps.html, parent: deps.parent, art: deviceArt.art, stageArt: deps.stageArt });
+  const battleScreen = wireBattleScreen({ preload: deps.preload, html: deps.html, parent: deps.parent, art: deviceArt.art, stageArt: deps.stageArt, holdStage: deps.holdStage });
 
   const shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:shop-step", delta),

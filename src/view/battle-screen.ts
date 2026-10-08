@@ -69,6 +69,7 @@ export interface BattleScreenInput {
   sides: readonly [readonly (EngineFighter | null)[], readonly (EngineFighter | null)[]];
   result: BattleResult;
   opponentName: string; // 상대 · 2번 파티
+  looks?: Readonly<Record<string, string>>; // 종 → 무대 그림 키(이로치·성별, src/dex/look.ts appearanceOf). 없으면 종 이름 그대로
   reward: { lead: string; detail: string }; // 결과 대화상자의 보상 줄 — 보상은 서버가 정한다
 }
 

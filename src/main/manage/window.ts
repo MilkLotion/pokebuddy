@@ -66,6 +66,7 @@ export interface ManageDeps {
   send(req: ManageRequest): Promise<ManageReply>;
   services(): ManageServices;
   stageArt?: () => ArtLoader | null; // 무대 그림 불러오기 — 배틀 창의 PMD 그림. 없으면 초상으로 그린다
+  holdStage?(on: boolean): void; // 배틀 창이 떠 있는 동안 바탕화면의 포켓몬을 숨긴다 (src/main/manage/battle-screen.ts)
   devBattleSeed?: number; // 개발 실행 전용 — 있으면 설정창을 연 뒤 이 시드의 로컬 엔진 판으로 배틀 창을 띄운다 (POKEBUDDY_DEV_BATTLE)
 }
 
@@ -130,6 +131,7 @@ export function createManage(deps: ManageDeps): Manage {
       send: (channel, ...args) => toManage(channel, ...args),
       setPetCoach: (on) => setDimFrom("pet", on),
       stageArt: () => deps.stageArt?.() ?? null,
+      holdStage: (on) => deps.holdStage?.(on),
     });
   }
 

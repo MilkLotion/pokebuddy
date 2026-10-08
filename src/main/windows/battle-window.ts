@@ -34,7 +34,7 @@ function spotOver(owner: Rectangle | null): { x: number; y: number } {
   return { x, y };
 }
 
-export function createBattleWindow(files: { preload: string; html: string }): BattleWindow {
+export function createBattleWindow(files: { preload: string; html: string; onClosed?: () => void }): BattleWindow {
   let win: BrowserWindow | null = null;
   let pending: BattleScreenView | null = null; // 문서가 준비되면 보낼 판
   let ready = false;
@@ -87,6 +87,7 @@ export function createBattleWindow(files: { preload: string; html: string }): Ba
       win = null;
       ready = false;
       pending = null;
+      files.onClosed?.(); // 배틀 동안 숨긴 무대를 되돌린다 (src/main/manage/battle-screen.ts)
     });
     void w.loadFile(files.html).catch((e: unknown) => {
       console.error("배틀 창 문서를 읽지 못했다", e);
