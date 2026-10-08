@@ -1,12 +1,13 @@
 // 배틀 창 — 메인이 보낸 판(BattleScreenView)을 시간대로 재생한다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
 // - 머리 줄(상태 등·LED·제목·✕)과 Esc 닫기는 기기 창 틀(device-frame.ts)을 쓴다. 설정창에 붙지 않아 ◀▶ 넘기기는 없다
 // - 재생 계산은 src/shared/battle-timeline.ts. 여기서는 그 상태를 DOM 에 옮긴다. 판 하나의 DOM 은 처음 한 번 만들고 프레임마다 값만 바꾼다
-import type { BattleRouletteView, BattleScreenView, BattleSide, BattleUnitView } from "../../shared/model/battle-screen.js";
+import type { BattleRouletteView, BattleScreenView, BattleSide, BattleStatusKind, BattleUnitView } from "../../shared/model/battle-screen.js";
 import type { MoveView } from "../../shared/model/snapshot.js";
-import { TIMELINE_RULES, clockText, createTimeline, spriteFrame, type Timeline, type UnitState } from "../../shared/battle-timeline.js";
+import { STATUS_NAME, STAT_CHIP, TIMELINE_RULES, clockText, createTimeline, spriteFrame, type Timeline, type UnitState } from "../../shared/battle-timeline.js";
 import type { LookSheets } from "../../shared/model/stage.js";
 import { createDeviceFrame } from "../device/device-frame.js";
 import { createFieldFx, type FieldFx } from "./field-fx.js";
+import { STATUS_COLOR, createStatusFx, type StatusFxMark, type StatusFxUnit } from "./status-fx.js";
 import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
@@ -42,8 +43,23 @@ interface PetEls {
   hpFill: HTMLElement;
   hpChip: HTMLElement;
   gauge: HTMLElement;
+  gaugeBar: HTMLElement; // 쿨타임 바 바탕 — 마비 마디·얼음/잠듦 멈춤 표시
+  gaugeTail: HTMLElement; // 쿨타임 바 끝의 풀죽음 1초 몫(회색)
   tags: HTMLElement;
+  lefts: { el: HTMLElement; from: number; until: number }[]; // 능력 칩의 남은 시간 줄
+  chips: number; // 지금 보이는 칩 수 — 알약·팝 글자를 그만큼 올린다
+  overTop: number; // 머리 위 표시(HP 바)의 윗변 — 몸 칸 위에서의 px. 그림 키에 따라 다르다
 }
+
+// 머리 위 칩 하나 — 상태 이상은 색 점 + 이름, 능력 변화는 짧은 이름 + ▲▼단계와 남은 시간 줄
+interface TagSpec {
+  key: string;
+  text: string;
+  dot?: string; // 상태 색
+  arrow?: { text: string; up: boolean };
+  left?: { from: number; until: number };
+}
+const TAG_MAX = 3; // 넘으면 앞 2개와 +N
 
 let run = 0; // 판 번호 — 새 판이 오면 지난 재생을 멈춘다
 
@@ -255,10 +271,12 @@ function petEl(u: BattleUnitView, sheets: LookSheets | null, zoom: number): PetE
   const tags = el("div", "tags");
   const hp = barEl(u.side === 0 ? "mine" : "opp");
   const gauge = barEl("cool");
+  const tail = el("i", "tail");
+  gauge.root.appendChild(tail);
   over.append(tags, hp.root, gauge.root);
   over.style.top = `${overTop}px`;
   root.appendChild(over);
-  return { root, canvas, sheets, shown: "", hpFill: hp.fill, hpChip: hp.chip, gauge: gauge.fill, tags };
+  return { root, canvas, sheets, shown: "", hpFill: hp.fill, hpChip: hp.chip, gauge: gauge.fill, gaugeBar: gauge.root, gaugeTail: tail, tags, lefts: [], chips: 0, overTop };
 }
 
 const pct = (v: number): string => `${Math.max(0, Math.min(100, v * 100))}%`;
@@ -327,6 +345,7 @@ function draw(view: BattleScreenView): void {
       arena.appendChild(p.root);
     });
   }
+  const statusFx = createStatusFx(arena); // 몸 위 연출 — 포켓몬 위, 날씨·오라 층 아래 (status-fx.ts)
   const fxOver = el("div", "field-layer");
   arena.appendChild(fxOver);
   const fx = el("div", "fx");
@@ -382,25 +401,70 @@ function draw(view: BattleScreenView): void {
       pet.hpFill.style.width = pct(hp);
       pet.hpChip.style.width = pct(chip);
       pet.gauge.style.width = pct(s.fainted ? 0 : timeline.gauge(s, t));
-      const tags: string[] = [];
-      if (s.stat && t < s.stat.until) tags.push(`${s.stat.stage > 0 ? "▲" : "▼"}${Math.abs(s.stat.stage)}`);
-      if (s.charging) tags.push("충전");
-      const key = tags.join("|");
-      if (pet.tags.dataset.key !== key) {
-        pet.tags.dataset.key = key;
-        pet.tags.replaceChildren(...tags.map((x) => el("span", "tag", x)));
-      }
+      // 쿨타임 바 — 마비는 노란 마디, 얼음·잠듦은 멈춤 색, 풀죽음은 끝 1초를 회색으로
+      const major = s.major && (s.major.until === null || t < s.major.until) ? s.major.kind : null;
+      pet.gaugeBar.classList.toggle("slow", major === "paralysis");
+      pet.gaugeBar.classList.toggle("held", major === "freeze" || major === "sleep");
+      const span = s.gaugeTo !== null ? s.gaugeTo - s.gaugeFrom : 0;
+      pet.gaugeTail.style.width = s.gaugeTail > 0 && span > 0 && !s.fainted ? pct(s.gaugeTail / span) : "0%";
+      paintTags(pet, s, major, t);
     }
   }
 
-  // 연출 — 기술 알약은 그 포켓몬 위에, 피해 숫자는 맞은 포켓몬 위에서 떠오르며 사라진다
+  // 머리 위 칩 — 큰 상태 이상 → 혼란 → 풀죽음 → 능력 변화 → 충전. TAG_MAX 를 넘으면 앞 2개와 +N
+  function paintTags(pet: PetEls, s: UnitState, major: BattleStatusKind | null, t: number): void {
+    const specs: TagSpec[] = [];
+    if (major) specs.push({ key: major, text: STATUS_NAME[major] ?? major, dot: STATUS_COLOR[major] });
+    if (s.confused && (s.confused.until === null || t < s.confused.until)) specs.push({ key: "confusion", text: STATUS_NAME.confusion ?? "", dot: STATUS_COLOR.confusion });
+    if (s.flinched) specs.push({ key: "flinch", text: STATUS_NAME.flinch ?? "", dot: STATUS_COLOR.flinch });
+    for (const c of timeline.statChips(s, t)) {
+      specs.push({ key: `s${c.stat}:${c.stage}:${c.from}`, text: STAT_CHIP[c.stat] ?? "", arrow: { text: `${c.stage > 0 ? "▲" : "▼"}${Math.abs(c.stage)}`, up: c.stage > 0 }, ...(c.until !== null ? { left: { from: c.from, until: c.until } } : {}) });
+    }
+    if (s.charging) specs.push({ key: "charge", text: "충전" });
+    const shown = specs.length > TAG_MAX ? [...specs.slice(0, TAG_MAX - 1), { key: `+${specs.length - TAG_MAX + 1}`, text: `+${specs.length - TAG_MAX + 1}` }] : specs;
+    const key = shown.map((x) => x.key).join("|");
+    if (pet.tags.dataset.key !== key) {
+      pet.tags.dataset.key = key;
+      pet.lefts = [];
+      pet.tags.replaceChildren(
+        ...shown.map((x) => {
+          const tag = el("span", "tag");
+          if (x.dot) {
+            const d = el("i", "dot");
+            d.style.background = x.dot;
+            tag.appendChild(d);
+          }
+          tag.appendChild(document.createTextNode(x.text));
+          if (x.arrow) tag.appendChild(el("span", x.arrow.up ? "up" : "down", x.arrow.text));
+          if (x.left) {
+            const line = el("i", "left");
+            tag.appendChild(line);
+            pet.lefts.push({ el: line, ...x.left });
+          }
+          return tag;
+        }),
+      );
+      pet.chips = shown.length;
+    }
+    for (const l of pet.lefts) l.el.style.width = pct(1 - (t - l.from) / Math.max(1, l.until - l.from));
+  }
+
+  // 연출 — 기술·특성 알약은 그 포켓몬 위에, 피해 숫자는 맞은 포켓몬 위에서 떠오르며 사라진다
+  // 칩이 있으면 칩 줄 위로, 특성 알약이 떠 있으면 그 위로 올린다
+  const CHIP_LIFT = 16;
+  const PILL_LIFT = 17;
   function paintFx(t: number, state: ReturnType<Timeline["seek"]>): void {
     const nodes: HTMLElement[] = [];
-    const head = (side: BattleSide, slot: number): { x: number; y: number } | null => {
+    const abilities = timeline.abilities(t);
+    const head = (side: BattleSide, slot: number): { x: number; y: number; pill: number } | null => {
       const s = state.units[side][slot];
       if (!s) return null;
       const at = timeline.posOf(s, t);
-      return { x: at.x * CELL + CELL, y: at.y * CELL - 10 };
+      const pet = pets[side][slot];
+      const chips = pet?.chips ? CHIP_LIFT : 0;
+      const pill = abilities.some((a) => a.side === side && a.slot === slot) ? PILL_LIFT : 0;
+      // 머리 위 표시 윗변 — 그림이 큰 종은 더 높다. 칩이 있으면 칩 줄 위
+      return { x: at.x * CELL + CELL, y: at.y * CELL + Math.min(-10, (pet?.overTop ?? 0) - 2) - chips, pill };
     };
     for (const c of timeline.casts(t)) {
       const m = moveById.get(c.move);
@@ -408,21 +472,66 @@ function draw(view: BattleScreenView): void {
       if (!m || !h) continue;
       const pill = movePillEl(m, "small", view.typeIcons[m.typeId] ?? null);
       pill.classList.add("cast");
+      pill.classList.toggle("failed", c.failed);
       pill.style.left = `${h.x}px`;
       pill.style.top = `${h.y - 22}px`;
+      nodes.push(pill);
+    }
+    for (const a of abilities) {
+      const h = head(a.side, a.slot);
+      if (!h) continue;
+      const k = (t - a.t) / TIMELINE_RULES.abilityMs;
+      const pill = el("div", "ability", a.name);
+      pill.style.left = `${h.x + (k < 0.15 ? (1 - k / 0.15) * (a.side === 0 ? -14 : 14) : 0)}px`;
+      pill.style.top = `${h.y - 22}px`;
+      pill.style.opacity = String(k < 0.12 ? k / 0.12 : k > 0.8 ? (1 - k) / 0.2 : 1);
       nodes.push(pill);
     }
     for (const p of timeline.pops(t)) {
       const h = head(p.side, p.slot);
       if (!h) continue;
       const k = (t - p.t) / TIMELINE_RULES.popMs;
-      const n = el("div", `pop ${p.kind}`, p.text);
+      const n = el("div", `pop ${p.kind}`);
+      if (p.label) n.appendChild(el("span", "label", p.label));
+      n.appendChild(document.createTextNode(p.text));
+      if (p.status) n.style.setProperty("--st", STATUS_COLOR[p.status] ?? "");
       n.style.left = `${h.x}px`;
-      n.style.top = `${h.y - (p.kind === "super" ? 34 : 20) - k * 16}px`;
+      n.style.top = `${h.y - h.pill - (p.kind === "super" ? 34 : 20) - (p.label ? 12 : 0) - k * 16}px`;
       n.style.opacity = String(k > 0.7 ? (1 - k) / 0.3 : 1);
       nodes.push(n);
     }
     fx.replaceChildren(...nodes);
+  }
+
+  // 몸 위 연출 — 걸려 있는 동안과 순간(걸림·5초 판정·풀림·능력 꺾쇠). 움직임 줄이기면 그리지 않는다
+  function paintStatus(t: number, state: ReturnType<Timeline["seek"]>): void {
+    if (stillFx) return;
+    const units: StatusFxUnit[] = [];
+    // 몸 가운데와 반높이 — 머리 위 표시는 몸 윗변 14px 위에 있다(petEl overTop)
+    const center = (side: BattleSide, slot: number): { x: number; y: number; r: number } | null => {
+      const s = state.units[side][slot];
+      if (!s) return null;
+      const at = timeline.posOf(s, t);
+      const top = (pets[side][slot]?.overTop ?? -6) + 14;
+      return { x: at.x * CELL + CELL, y: at.y * CELL + CELL, r: Math.max(13, CELL - top) };
+    };
+    for (const side of [0, 1] as const) {
+      state.units[side].forEach((s, slot) => {
+        if (!s || s.fainted) return;
+        const c = center(side, slot);
+        if (!c) return;
+        const major = s.major && (s.major.until === null || t < s.major.until) ? s.major : null;
+        const confused = !!s.confused && (s.confused.until === null || t < s.confused.until);
+        if (!major && !confused && !s.flinched) return;
+        units.push({ ...c, major: major?.kind ?? null, majorAt: major?.at ?? 0, confused, flinched: s.flinched });
+      });
+    }
+    const marks: StatusFxMark[] = [];
+    for (const m of timeline.marks(t)) {
+      const c = center(m.side, m.slot);
+      if (c) marks.push({ ...c, kind: m.kind, status: m.status, t: m.t });
+    }
+    statusFx.draw(t, units, marks, TIMELINE_RULES.markMs);
   }
 
   function showResult(): void {
@@ -478,6 +587,7 @@ function draw(view: BattleScreenView): void {
     const state = timeline.seek(Math.min(t, view.endMs));
     const shown = Math.min(t, view.endMs);
     for (const side of [0, 1] as const) state.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, shown));
+    paintStatus(shown, state);
     paintFx(shown, state);
     if (fieldFx && !stillFx) fieldFx.draw(shown);
     const c = clockText(view.maxMs, shown);

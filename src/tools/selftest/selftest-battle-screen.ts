@@ -154,6 +154,74 @@ if (wEvent && wEvent.kind === "weather") {
   assert.ok(wt.pops(wEvent.t).some((p) => p.side === wEvent.side && p.slot === wEvent.slot && p.text === (wEvent.amount < 0 ? `+${-wEvent.amount}` : `-${wEvent.amount}`)), "날씨 숫자");
 }
 
+// ── 상태 이상·능력 변화·특성·판정 말 (docs/specs/ui-components.md "배틀 창으로 더한 것") ──
+// 손으로 만든 이벤트 — 엔진이 아직 내지 않는 이벤트(ability·status-blocked)도 같은 모양으로 본다
+{
+  const startEv = view.events[0]!;
+  const ev = (list: typeof view.events): typeof view => ({ ...view, abilityNames: { ...view.abilityNames, intimidate: "위협" }, events: [startEv, ...list] });
+  const sv = ev([
+    { t: 100, kind: "ability", side: 0, slot: 0, ability: "intimidate" },
+    { t: 100, kind: "stat", side: 1, slot: 0, stat: 1, stage: -1, until: 10_100 },
+    { t: 100, kind: "stat", side: 1, slot: 1, stat: 1, stage: -1, until: 10_100 },
+    { t: 1000, kind: "move", side: 0, slot: 1, move: "flamethrower", nextAt: 7000 },
+    { t: 1000, kind: "damage", side: 0, slot: 1, target: 2, amount: 40, mult: 2, hp: 100, source: "flamethrower", hit: 1, crit: true },
+    { t: 1000, kind: "status", side: 1, slot: 2, status: "burn", on: true, until: 11_000 },
+    { t: 1200, kind: "stat", side: 0, slot: 1, stat: 1, stage: 2, until: 11_200 },
+    { t: 1500, kind: "damage", side: 0, slot: 3, target: 3, amount: 9, mult: 0.5, hp: 200, source: "x", hit: 1 },
+    { t: 1600, kind: "reflect", side: 1, slot: 3, target: 3, amount: 12, hp: 150 },
+    { t: 1700, kind: "status-blocked", side: 1, slot: 4, status: "paralysis", cause: "misty" },
+    { t: 2000, kind: "status", side: 1, slot: 5, status: "confusion", on: true, until: 7000 },
+    { t: 2000, kind: "status", side: 1, slot: 5, status: "flinch", on: true },
+    { t: 3000, kind: "move", side: 1, slot: 5, move: "earthquake", nextAt: 9000 },
+    { t: 3000, kind: "status-hp", side: 1, slot: 5, amount: 18, hp: 300, cause: "confusion" },
+    { t: 3000, kind: "status", side: 1, slot: 5, status: "flinch", on: false },
+    { t: 4000, kind: "status", side: 0, slot: 4, status: "freeze", on: true, until: 7000 },
+    { t: 5000, kind: "status-hp", side: 1, slot: 2, amount: 26, hp: 74, cause: "burn" },
+    { t: 7000, kind: "status", side: 0, slot: 4, status: "freeze", on: false },
+  ]);
+  const st = createTimeline(sv);
+  // 특성 알약 — 이름은 abilityNames
+  assert.deepStrictEqual(st.abilities(500).map((a) => [a.side, a.slot, a.name]), [[0, 0, "위협"]], "특성 알약");
+  assert.strictEqual(st.abilities(1100).length, 0, "특성 알약은 잠깐");
+  // 위협처럼 여럿에게 한꺼번에 걸린 능력 변화는 말을 띄우지 않고 칩·꺾쇠만
+  assert.ok(!st.pops(100).some((p) => p.kind === "down"), "여럿 능력 하락은 말 없음");
+  assert.strictEqual(st.marks(100).filter((m) => m.kind === "down").length, 2, "꺾쇠는 둘 다");
+  const a1 = st.seek(1300);
+  assert.deepStrictEqual(st.statChips(a1.units[1][0]!, 1300).map((c) => [c.stat, c.stage]), [[1, -1]], "능력 칩");
+  assert.deepStrictEqual(st.statChips(a1.units[1][0]!, 10_200), [], "10초 뒤 능력 칩은 사라진다");
+  // 한 포켓몬 능력 상승은 바뀐 양을 말로
+  assert.ok(st.pops(1200).some((p) => p.side === 0 && p.slot === 1 && p.kind === "up" && p.text === "공격 ▲2"), "능력 상승 말");
+  // 판정 말
+  assert.ok(st.pops(1000).some((p) => p.text === "-40" && p.kind === "super" && p.label === "급소"), "급소가 먼저");
+  assert.ok(st.pops(1500).some((p) => p.text === "-9" && p.label === "효과 별로"), "효과 별로");
+  assert.ok(st.pops(1600).some((p) => p.side === 0 && p.slot === 3 && p.label === "반격"), "반격 피해는 때린 쪽");
+  assert.ok(st.pops(1700).some((p) => p.side === 1 && p.slot === 4 && p.text === "막음"), "상태 이상 막음");
+  // 상태 이상 — 걸림 이름(상태 색), 5초 판정 숫자, 칩 상태
+  assert.ok(st.pops(1000).some((p) => p.kind === "status" && p.status === "burn" && p.text === "화상"), "걸림 이름");
+  assert.ok(st.pops(5000).some((p) => p.kind === "status" && p.status === "burn" && p.text === "-26"), "화상 판정 숫자");
+  assert.ok(st.marks(5000).some((m) => m.kind === "tick" && m.status === "burn"), "판정 번쩍임");
+  assert.strictEqual(st.seek(5000).units[1][2]?.hp, 74, "상태 피해 뒤 HP");
+  assert.strictEqual(st.seek(2500).units[1][2]?.major?.kind, "burn", "큰 상태 이상");
+  const c1 = st.seek(2500).units[1][5]!;
+  assert.ok(c1.confused && c1.flinched, "혼란·풀죽음은 따로 겹친다");
+  // 혼란 실패 — 알약에 가로줄, 자기 피해에 혼란 말. 풀죽음을 안고 쓴 기술은 쿨타임 끝 1초가 풀죽음 몫
+  assert.ok(st.casts(3000).some((c) => c.side === 1 && c.slot === 5 && c.failed), "혼란 실패 알약");
+  assert.ok(!st.casts(1000).some((c) => c.failed), "보통 기술은 실패 아님");
+  assert.ok(st.pops(3000).some((p) => p.label === "혼란" && p.text === "-18"), "혼란 자기 피해");
+  const c2 = st.seek(3000).units[1][5]!;
+  assert.strictEqual(c2.flinched, false, "풀죽음은 다음 기술과 함께 풀린다");
+  assert.strictEqual(c2.gaugeTail, 1000, "풀죽음 1초 몫");
+  // 얼음 — 걸린 동안 대기 프레임에서 멈추고, 풀리면 다시 움직인다
+  const fz = createTimeline(sv).seek(5000).units[0][4]!;
+  const held = { ...fz, stepAt: -10_000, hitAt: -10_000, swing: null };
+  assert.strictEqual(spriteFrame(look, held, 5000, 300)?.col, spriteFrame(look, held, 5100, 300)?.col, "얼음이면 프레임이 멈춘다");
+  const nap = { ...held, major: { kind: "sleep" as const, at: 4000, until: 7000 } };
+  assert.strictEqual(spriteFrame({ ...look, anims: { ...look.anims, Sleep: sheet(2, 300) } }, nap, 5000, 300)?.anim, "Sleep", "잠듦은 Sleep 동작");
+  assert.strictEqual(spriteFrame(look, { ...held, major: { kind: "freeze", at: 4000, until: 7000 } }, 8000, 300)?.anim, "Idle", "풀린 뒤에는 움직인다");
+  assert.strictEqual(createTimeline(sv).seek(7000).units[0][4]?.major, null, "풀림");
+  assert.strictEqual(view.abilityNames.static, "정전기", "출전 개체 특성 이름표");
+}
+
 // ── 남은 시간 ──
 assert.strictEqual(clockText(90_000, 0), "1:30");
 assert.strictEqual(clockText(90_000, 42_100), "0:48");

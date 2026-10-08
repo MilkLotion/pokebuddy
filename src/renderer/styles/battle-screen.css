@@ -330,12 +330,59 @@ body {
   margin-bottom: 2px;
 }
 .overhead .tag {
+  position: relative;
   padding: 0 3px;
   border-radius: 3px;
   background: var(--bar-ink);
   color: #ffffff;
   font: 700 10px/14px var(--font-small);
   white-space: nowrap;
+}
+/* 상태 이상 칩 — 왼쪽 색 점(분류는 점으로, 칩 바탕·테두리는 칠하지 않는다) */
+.overhead .tag > .dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 3px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+/* 능력 변화 칩 — ▲ 주황, ▼ 파랑. 아래 줄이 남은 시간 */
+.overhead .tag > .up {
+  margin-left: 1px;
+  color: #ff9a5a;
+}
+.overhead .tag > .down {
+  margin-left: 1px;
+  color: #7fb6ff;
+}
+.overhead .tag > .left {
+  position: absolute;
+  left: 2px;
+  bottom: 1px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.55);
+}
+/* 쿨타임 바 — 마비는 노란 마디로 느리게, 얼음·잠듦은 멈춤 색, 풀죽음은 끝 1초 회색 */
+.bar.cool.slow > .fill {
+  background: repeating-linear-gradient(90deg, var(--gauge) 0 6px, var(--bar-ink) 6px 7px);
+}
+.bar.cool.held > .fill {
+  background: #a8cfe6;
+}
+.bar.cool > .tail {
+  left: auto;
+  right: 0;
+  background: #9a968c;
+}
+/* 몸 위 연출 canvas — 위쪽 줄의 별·Z 가 잘리지 않게 전장보다 32 넓다 (status-fx.ts) */
+.status-fx {
+  position: absolute;
+  left: -32px;
+  top: -32px;
+  width: 512px;
+  height: 344px;
+  pointer-events: none;
 }
 /* 날씨·필드·오라 연출 층 — 섞기 방식별 canvas 를 겹친다(field-fx.ts). 전장 모서리에 맞춰 자른다
    z-index·opacity·transform 을 주지 않는다 — 주면 묶음이 따로 섞여 바닥·포켓몬 위에 색 보정이 먹지 않는다 */
@@ -388,6 +435,64 @@ body {
 }
 .fx .pop.heal {
   color: #8fe0d6;
+}
+/* 상태 이상 이름·5초 판정 피해 — 그 상태 색(--st, status-fx.ts STATUS_COLOR) */
+.fx .pop.status {
+  color: var(--st);
+}
+/* 능력 변화 말 — 한 포켓몬에게만 바뀐 때. 여럿에게 한꺼번에 걸리면 띄우지 않는다 */
+.fx .pop.up,
+.fx .pop.down {
+  font-size: 10px;
+  line-height: 14px;
+  color: #ff9a5a;
+}
+.fx .pop.down {
+  color: #7fb6ff;
+}
+/* 판정 말 — 숫자 위 작은 글자(급소·효과 굉장·효과 별로·반격·혼란) */
+.fx .pop > .label {
+  display: block;
+  font: 700 10px/12px var(--font-small);
+  text-align: center;
+}
+.fx .pop.weak > .label {
+  color: #d5d2c6;
+}
+.fx .pop.super > .label {
+  color: #ffffff;
+}
+/* 특성 알약 — 기술 알약 자리. 잉크 바탕·금빛 점·흰 글자라 크림 바탕 기술 알약과 구별된다 */
+.fx .ability {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  padding: 0 7px 0 5px;
+  border-radius: 8px;
+  background: var(--bar-ink);
+  color: #ffffff;
+  font: 700 10px/16px var(--font-small);
+  white-space: nowrap;
+}
+.fx .ability::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gauge);
+}
+/* 혼란으로 실패한 기술 — 알약에 가로줄 */
+.fx .cast.failed::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 2px;
+  background: var(--bar-ink);
 }
 
 /* 기술 호버 — 기술 이름과 배틀 수치. Figma 02 `Move Info Bubble` */

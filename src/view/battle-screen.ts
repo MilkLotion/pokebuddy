@@ -106,6 +106,15 @@ function resultOf(r: BattleResult, reward: BattleScreenInput["reward"]): BattleR
   return { title, lead: reward.lead, detail: reward.detail, confirm: TEXT.confirm };
 }
 
+// 특성 알약 이름 — 출전 개체의 특성과, 판 중에 바뀐 특성(트레이스 등)이 낸 ability 이벤트의 키
+function abilityNamesOf(sides: BattleScreenInput["sides"], r: BattleResult): Record<string, string> {
+  const keys = new Set<string>();
+  for (const side of sides) for (const f of side) if (f?.ability) keys.add(f.ability);
+  for (const e of r.events.map(screenEvent)) if (e.kind === "ability") keys.add(e.ability);
+  const table = abilityTable();
+  return Object.fromEntries([...keys].map((k) => [k, table[k]?.ko ?? k]));
+}
+
 export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
   const { result: r } = input;
   const units = ([0, 1] as const).map((side) => input.sides[side].map((f, slot) => unitOf(f, side, slot, r.maxHp[side]?.[slot] ?? 0))) as BattleScreenView["units"];
@@ -123,6 +132,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
     sprites: {}, // 메인이 무대 그림 불러오기로 채운다
     zoom: SIZE_STEPS[1] ?? 1.5, // 크기 2단계 (2026-10-08 사용자 "포켓몬들은 2사이즈를 기본으로 싸우게")
     moveKinds: Object.fromEntries(units.flatMap((side) => side.flatMap((u) => u?.moves ?? [])).map((m) => [m.id, moveTable()[m.id]?.class ?? "physical"])),
+    abilityNames: abilityNamesOf(input.sides, r),
     maxMs: ENGINE_RULES.maxMs,
     endMs: r.endMs,
     events: r.events.map(screenEvent),
