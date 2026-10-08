@@ -198,6 +198,8 @@ export function createTimeline(view: BattleScreenView): Timeline {
       stageNow.set(key, { stage: e.stage, until: e.until ?? null });
       const delta = e.stage - before;
       if (delta === 0) continue;
+      // 10초짜리 변화가 끝나 판 끝까지 단계만 남았다는 정리 이벤트 — 새 변화가 아니라 칩만 바꾼다
+      if (was && was.until === e.t && e.until === undefined) continue;
       markList.push({ side: e.side, slot: e.slot, t: e.t, kind: delta > 0 ? "up" : "down", status: null });
       if ((statWho.get(e.t)?.size ?? 0) <= 1) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: delta > 0 ? "up" : "down", text: `${STAT_NAME[e.stat] ?? ""} ${delta > 0 ? "▲" : "▼"}${Math.abs(delta)}` });
     }

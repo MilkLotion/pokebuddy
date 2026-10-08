@@ -220,6 +220,16 @@ if (wEvent && wEvent.kind === "weather") {
   assert.strictEqual(spriteFrame(look, { ...held, major: { kind: "freeze", at: 4000, until: 7000 } }, 8000, 300)?.anim, "Idle", "풀린 뒤에는 움직인다");
   assert.strictEqual(createTimeline(sv).seek(7000).units[0][4]?.major, null, "풀림");
   assert.strictEqual(view.abilityNames.static, "정전기", "출전 개체 특성 이름표");
+  // 위협 −1 + 불요의검 +1 — 10초 뒤 판 끝까지 단계만 남는 정리 이벤트는 새 상승 말·꺾쇠가 아니다 (엔진 stat.until 계약)
+  const pv = ev([
+    { t: 0, kind: "stat", side: 1, slot: 1, stat: 1, stage: -1, until: 10_000 },
+    { t: 0, kind: "stat", side: 1, slot: 1, stat: 1, stage: 0, until: 10_000 },
+    { t: 10_000, kind: "stat", side: 1, slot: 1, stat: 1, stage: 1 },
+  ]);
+  const pt = createTimeline(pv);
+  assert.deepStrictEqual(pt.statChips(pt.seek(5000).units[1][1]!, 5000), [], "합이 0 이면 칩 없음");
+  assert.deepStrictEqual(pt.statChips(pt.seek(10_000).units[1][1]!, 10_000).map((c) => [c.stage, c.until]), [[1, null]], "판 끝까지 칩");
+  assert.ok(!pt.pops(10_000).some((p) => p.kind === "up") && !pt.marks(10_000).some((m) => m.kind === "up"), "정리 이벤트는 말·꺾쇠 없음");
 }
 
 // ── 남은 시간 ──
