@@ -275,6 +275,71 @@ assert.deepStrictEqual(startPos(1, 1), at(12, 2), "상대 2번도 앞 열");
   assert.ok(!of(r4.events, "damage").some((e) => e.source === "quick"));
 }
 
+// ── 특성 묶음 — 무효·능력치·맞을 때·쓰러뜨릴 때·5초 턴·판 시작·틀깨기·화학변화가스 ──
+{
+  const wall = (over: Partial<EngineFighter> = {}) => unit({ stats: [999, 1, 999, 1, 999, 95], ...over });
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const hitWith = (move: EngineMove, me: Partial<EngineFighter>, foe: Partial<EngineFighter>, ms = 1100, seed = 5) =>
+    run([unit({ stats: [999, 100, 999, 100, 999, 95], moves: [move], ...me })], [wall({ ability: "battle-armor", stats: [999, 1, 100, 1, 100, 95], ...foe })], seed, ms, pos);
+  const dmgOf = (r: ReturnType<typeof run>, id: string) => of(r.events, "damage").filter((e) => e.source === id);
+  const quake = mv("quake", { type: "ground", power: 100, cooldownMs: 1000 });
+
+  // 부유는 땅 무효, 틀깨기는 무시
+  assert.strictEqual(dmgOf(hitWith(quake, {}, { ability: "levitate" }), "quake")[0]!.amount, 0, "부유");
+  assert.ok(dmgOf(hitWith(quake, { ability: "mold-breaker" }, { ability: "levitate" }), "quake")[0]!.amount > 0, "틀깨기는 부유 무시");
+  // 저수 — 물 무효·HP 1/4 회복 (먼저 깎인 상태가 아니면 회복 이벤트 없음)
+  const splash = mv("splash", { type: "water", class: "special", power: 80, cooldownMs: 1000 });
+  assert.strictEqual(dmgOf(hitWith(splash, {}, { ability: "water-absorb" }), "splash")[0]!.mult, 0, "저수 무효");
+  // 천하장사 — 공격 ×2. 같은 시드로 견준다
+  const tackle = mv("tackle", { power: 80, cooldownMs: 1000 });
+  const a0 = dmgOf(hitWith(tackle, {}, {}), "tackle")[0]!.amount, a1 = dmgOf(hitWith(tackle, { ability: "huge-power" }, {}), "tackle")[0]!.amount;
+  assert.ok(a1 / a0 > 1.6 && a1 / a0 < 2.4, `천하장사 ${a0}→${a1}`);
+  // 멀티스케일 — HP 가득일 때 받는 피해 ×0.5
+  const m1 = dmgOf(hitWith(tackle, {}, { ability: "multiscale" }), "tackle")[0]!.amount;
+  assert.ok(m1 / a0 > 0.4 && m1 / a0 < 0.6, `멀티스케일 ${a0}→${m1}`);
+  // 배짱 — 노말로 고스트를 맞힌다
+  assert.strictEqual(dmgOf(hitWith(tackle, {}, { types: ["ghost"] }), "tackle")[0]!.amount, 0);
+  assert.ok(dmgOf(hitWith(tackle, { ability: "scrappy" }, { types: ["ghost"] }), "tackle")[0]!.amount > 0, "배짱");
+  // 옹골참 — HP 가득이면 한 방에 쓰러지지 않는다
+  const nuke = mv("nuke", { power: 250, cooldownMs: 1000 });
+  const st = hitWith(nuke, { stats: [999, 999, 999, 1, 999, 95] }, { ability: "sturdy", stats: [10, 1, 10, 1, 10, 95] });
+  assert.strictEqual(dmgOf(st, "nuke")[0]!.hp, 1, "옹골참");
+  // 부자유친 — 한 번 맞는 기술이 두 번
+  assert.strictEqual(dmgOf(hitWith(tackle, { ability: "parental-bond" }, {}), "tackle").length, 2);
+  // 우격다짐 — 상대 하락 기술 ×1.3, 그 하락은 없음
+  const crunch = mv("crunch2", { power: 80, cooldownMs: 1000, effects: { stats: [{ who: "target", stat: "def", change: -1, chance: 100 }] } });
+  const sf = hitWith(crunch, { ability: "sheer-force" }, {});
+  assert.ok(!of(sf.events, "stat").some((e) => e.side === 1 && e.stat === 2), "우격다짐은 능력 변화 없음");
+  // 청개구리 — 능력 변화 반대, 클리어바디 — 상대가 건 하락 막음
+  assert.ok(of(hitWith(crunch, {}, { ability: "contrary" }).events, "stat").some((e) => e.side === 1 && e.stat === 2 && e.stage === 1), "청개구리");
+  assert.ok(!of(hitWith(crunch, {}, { ability: "clear-body" }).events, "stat").some((e) => e.side === 1), "클리어바디");
+  // 오기 — 상대가 내리면 공격 +2
+  assert.ok(of(hitWith(crunch, {}, { ability: "defiant" }).events, "stat").some((e) => e.side === 1 && e.stat === 1 && e.stage === 2), "오기");
+  // 까칠한피부 — 접촉 기술에 맞으면 쓴 쪽이 1/8
+  const claw = mv("claw", { power: 40, cooldownMs: 1000, traits: ["contact"] });
+  assert.ok(of(hitWith(claw, {}, { ability: "rough-skin" }).events, "reflect").some((e) => e.side === 1 && e.amount === Math.floor((999 * 3) / 8)), "까칠한피부");
+  // 자기과신 — 쓰러뜨리면 공격 +1
+  const kill = hitWith(nuke, { ability: "moxie", stats: [999, 999, 999, 1, 999, 95] }, { stats: [10, 1, 10, 1, 10, 95] });
+  assert.ok(of(kill.events, "stat").some((e) => e.side === 0 && e.stat === 1 && e.stage === 1), "자기과신");
+  // 재생력 — HP 50% 아래가 처음 되면 1/3 회복
+  const half = mv("half", { power: 120, cooldownMs: 1000 });
+  const rg = hitWith(half, { stats: [999, 200, 999, 1, 999, 95] }, { ability: "regenerator", stats: [200, 1, 60, 1, 60, 95] }, 5000);
+  assert.ok(of(rg.events, "self").some((e) => e.side === 1 && e.amount < 0), "재생력");
+  // 가속 — 5초마다 스피드 +1
+  const sb = run([wall({ ability: "speed-boost" })], [wall()], 1, 10_000, { obstacles: [0, 2, 4, 6, 8].map((y) => ({ x: 6, y, size: 2 as const })) });
+  assert.deepStrictEqual(of(sb.events, "stat").filter((e) => e.side === 0 && e.stat === 5).map((e) => [e.t, e.stage]), [[5000, 1], [10000, 2]]);
+  // 불요의검 — 판 시작에 공격 +1, 판 끝까지
+  const is = run([wall({ ability: "intrepid-sword" })], [wall()], 1, 100);
+  assert.ok(of(is.events, "stat").some((e) => e.t === 0 && e.side === 0 && e.stat === 1 && e.stage === 1), "불요의검");
+  // 화학변화가스 — 위협이 걸리지 않는다
+  const gas = run([wall({ ability: "intimidate" })], [wall({ ability: "neutralizing-gas" })], 1, 100);
+  assert.strictEqual(of(gas.events, "stat").length, 0, "화학변화가스");
+  // 일루전 — 다른 대상이 있으면 고르지 않는다
+  const me = unit({ stats: [999, 1, 999, 1, 999, 95] });
+  const il = run([me], [wall({ ability: "illusion" }), wall()], 1, 4000, { positions: [[at(2, 4)], [at(8, 4), at(12, 4)]] } as unknown as Partial<BattleInput>);
+  assert.strictEqual(of(il.events, "damage").find((e) => e.side === 0)?.target, 1, "일루전은 대상에서 빠진다");
+}
+
 // ── 전장 — 장애물 뽑기 ──
 {
   let seed = 7;

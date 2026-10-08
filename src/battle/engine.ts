@@ -278,6 +278,17 @@ interface Unit {
   target: Unit | null; // 쓰러질 때까지 바꾸지 않는다
   nextStep: number;
   range: number;
+  ability: string | null; // 지금 특성 — 미라·떠도는영혼·트레이스로 바뀐다
+  perm: number[]; // 판 끝까지 가는 능력 변화(불요의검·불굴의방패·다운로드)
+  disguised: boolean; // 탈·아이스페이스가 아직 남았는가
+  flashFire: boolean; // 타오르는불꽃이 켜졌는가
+  electro: boolean; // 전기로바꾸기 — 다음 전기 기술 ×2
+  halfDone: boolean; // HP 50% 아래로 처음 떨어진 일을 처리했는가(재생력·발끈·분노의껍질)
+  illusion: boolean; // 일루전 — 첫 피해 전까지 대상이 되지 않는다
+  lastAim: Unit | null; // 잠복 — 기술을 마지막으로 쓴 대상
+  cursedMs: number; // 저주받은바디 — 다음 쿨타임에 더할 시간
+  quickHalf: boolean; // 퀵드로 — 다음 쿨타임 절반
+  moveHit: boolean; // 기술 피해를 받은 적이 있는가 — "HP 가득"·"첫 피해" 특성은 처음 맞는 기술에만, 평타는 무시 (moves.md "특성")
 }
 
 // 두 몸 사이 틈 — 대각선 포함(체비쇼프)
@@ -357,7 +368,7 @@ export function rollObstacles(rand: () => number): Obstacle[] {
 }
 
 const isSkillLinkMove = (u: Unit, m: EngineMove): boolean =>
-  u.base.ability === "skill-link" && m.hits !== null && m.hits[0] === 2 && m.hits[1] === 5;
+  u.ability === "skill-link" && m.hits !== null && m.hits[0] === 2 && m.hits[1] === 5;
 
 export function runBattle(input: BattleInput): BattleResult {
   const R = ENGINE_RULES;
@@ -366,6 +377,7 @@ export function runBattle(input: BattleInput): BattleResult {
   const events: BattleEvent[] = [];
   const chart = input.typeChart;
   let curT = 0; // 지금 틱 — 쿨타임의 스피드 배율이 읽는다
+  let gasAlive = false; // 화학변화가스 포켓몬이 살아 있는가 — ab() 가 읽는다
   // 판의 날씨·필드·오라 — 시작할 때 룰렛으로 정하고 판 끝까지 간다
   let weather: WeatherKind | null = null;
   let field: FieldKind | null = null;
@@ -393,10 +405,10 @@ export function runBattle(input: BattleInput): BattleResult {
   }
   // 날씨·필드·오라 룰렛 — 양쪽 12칸에서 그 특성을 가진 포켓몬 하나를 같은 확률로 뽑는다
   function spin<K extends string>(table: Readonly<Record<string, K>>): { kind: K; roulette: BattleRoulette } | null {
-    const cands = all().filter((u) => u.base.ability !== null && table[u.base.ability] !== undefined);
+    const cands = all().filter((u) => { const a = ab(u); return a !== null && table[a] !== undefined; });
     if (!cands.length) return null;
     const pick = cands[Math.floor(rand() * cands.length)]!;
-    const kind = table[pick.base.ability!]!;
+    const kind = table[ab(pick)!]!;
     return { kind, roulette: { kind, candidates: cands.map((c) => ({ side: c.side, slot: c.slot })), picked: { side: pick.side, slot: pick.slot } } };
   }
   // 원시회귀 날씨·델타스트림은 룰렛 없이 정해진다. 둘 이상이면 그것끼리 뽑는다
@@ -460,6 +472,17 @@ export function runBattle(input: BattleInput): BattleResult {
       target: null,
       nextStep: R.stepMs,
       range: f.range,
+      ability: f.ability,
+      perm: [0, 0, 0, 0, 0, 0],
+      disguised: f.ability === "disguise" || f.ability === "ice-face",
+      flashFire: false,
+      electro: false,
+      halfDone: false,
+      illusion: f.ability === "illusion",
+      lastAim: null,
+      cursedMs: 0,
+      quickHalf: false,
+      moveHit: false,
     };
   }
 
@@ -491,18 +514,56 @@ export function runBattle(input: BattleInput): BattleResult {
     }
   }
 
+  // 지금 특성 — 화학변화가스 포켓몬이 살아 있으면 다른 포켓몬의 특성은 없다
+  function ab(u: Unit): string | null {
+    if (gasAlive && u.ability !== "neutralizing-gas") return null;
+    return u.ability;
+  }
+  // 받는 쪽 특성 — 쓴 쪽이 틀깨기·테라볼티지·터보블레이즈면 막는 특성을 무시한다(스펙터가드·프리즘아머는 무시하지 못한다)
+  const MOLD = new Set(["mold-breaker", "teravolt", "turboblaze"]);
+  const UNBREAKABLE = new Set(["shadow-shield", "prism-armor", "full-metal-body"]);
+  function defAb(o: Unit, by: Unit | null): string | null {
+    const a = ab(o);
+    if (a && by && by !== o && MOLD.has(ab(by) ?? "") && !UNBREAKABLE.has(a)) return null;
+    return a;
+  }
+
   // 특성 — 자기 쪽 살아 있는 아군(self 포함 여부는 부르는 쪽이 정한다)
   function hasAlly(u: Unit, ability: string, withSelf = true): boolean {
-    return alive(u.side).some((v) => v.base.ability === ability && (withSelf || v !== u));
+    return alive(u.side).some((v) => ab(v) === ability && (withSelf || v !== u));
   }
   const countAlly = (u: Unit, ability: string, withSelf: boolean): number =>
-    alive(u.side).filter((v) => v.base.ability === ability && (withSelf || v !== u)).length;
-  const foeHas = (u: Unit, ability: string): boolean => alive(u.side === 0 ? 1 : 0).some((v) => v.base.ability === ability);
+    alive(u.side).filter((v) => ab(v) === ability && (withSelf || v !== u)).length;
+  const foeHas = (u: Unit, ability: string): boolean => alive(u.side === 0 ? 1 : 0).some((v) => ab(v) === ability);
 
-  // 위협 — 판이 시작되면 상대 전체 공격 −1. 위협 개체 수만큼 쌓인다
+  // 트레이스 — 같은 칸 상대의 특성을 받는다(그 칸이 비거나 트레이스면 그대로)
   for (const u of all()) {
-    if (u.base.ability !== "intimidate") continue;
-    for (const o of alive(u.side === 0 ? 1 : 0)) setStage(o, 1, R.intimidateStages, 0, true);
+    if (u.ability !== "trace") continue;
+    const src = units[u.side === 0 ? 1 : 0][u.slot];
+    if (src && src.ability && src.ability !== "trace") u.ability = src.ability;
+  }
+  gasAlive = all().some((v) => v.ability === "neutralizing-gas");
+
+  // 위협 — 판이 시작되면 상대 전체 공격 −1. 위협 개체 수만큼 쌓인다. 번견은 대신 공격 +1
+  for (const u of all()) {
+    if (ab(u) !== "intimidate") continue;
+    for (const o of alive(u.side === 0 ? 1 : 0)) {
+      if (ab(o) === "guard-dog") setStage(o, 1, 1, 0, o);
+      else setStage(o, 1, R.intimidateStages, 0, u);
+    }
+  }
+  // 판 시작에 자기 능력만 올리는 특성은 판 끝까지 간다
+  for (const u of all()) {
+    const a = ab(u);
+    if (a === "intrepid-sword") u.perm[1] = u.perm[1]! + 1;
+    if (a === "dauntless-shield") u.perm[2] = u.perm[2]! + 1;
+    if (a === "download") {
+      const foes = alive(u.side === 0 ? 1 : 0);
+      const def = foes.reduce((x, o) => x + o.stats[2]!, 0), spd = foes.reduce((x, o) => x + o.stats[4]!, 0);
+      const k = def < spd ? 1 : 3;
+      u.perm[k] = u.perm[k]! + 1;
+    }
+    for (let i = 1; i <= 5; i++) if (u.perm[i]) events.push({ t: 0, kind: "stat", side: u.side, slot: u.slot, stat: i, stage: u.perm[i]! });
   }
 
   // 첫 시계
@@ -515,28 +576,45 @@ export function runBattle(input: BattleInput): BattleResult {
   // ── 값 ──
   function stageOf(u: Unit, stat: number, t: number): number {
     const s = u.stages.get(stat);
-    return s && s.until > t ? s.stage : 0;
+    const temp = s && s.until > t ? s.stage : 0;
+    return Math.max(-STAGE_MAX, Math.min(STAGE_MAX, temp + (u.perm[stat] ?? 0)));
   }
-  function statNow(u: Unit, stat: number, t: number): number {
-    return Math.max(1, Math.floor(u.stats[stat]! * stageMul(stageOf(u, stat, t)) * conditionStatMul(u, stat)));
+  // noStage — 천진(상대 능력 변화 무시)
+  function statNow(u: Unit, stat: number, t: number, noStage = false): number {
+    return Math.max(1, Math.floor(u.stats[stat]! * (noStage ? 1 : stageMul(stageOf(u, stat, t))) * conditionStatMul(u, stat) * abilityStatMul(u, stat)));
+  }
+
+  // 특성의 능력치 배율 — 평타에도 붙는다(moves.md "특성")
+  function abilityStatMul(u: Unit, stat: number): number {
+    const a = ab(u);
+    let mul = 1;
+    if (stat === 1 && (a === "huge-power" || a === "pure-power")) mul *= 2;
+    if (stat === 1 && (a === "hustle" || a === "gorilla-tactics")) mul *= 1.5;
+    if (stat === 2 && a === "fur-coat") mul *= 2;
+    if ((stat === 1 || stat === 3) && a === "defeatist" && u.hp * 2 <= u.maxHp) mul *= 0.5;
+    if ((stat === 1 || stat === 3) && a === "supreme-overlord") mul *= 1 + 0.1 * Math.min(5, units[u.side].filter((v) => v && v.hp <= 0).length);
+    // 재앙 특성 — 자신 외 모두
+    const RUIN: Readonly<Record<string, number>> = { "tablets-of-ruin": 1, "sword-of-ruin": 2, "vessel-of-ruin": 3, "beads-of-ruin": 4 };
+    for (const [ruin, s2] of Object.entries(RUIN)) if (s2 === stat && a !== ruin && all().some((v) => v !== u && v.hp > 0 && ab(v) === ruin)) mul *= 0.75;
+    return mul;
   }
 
   // 땅에 있는가 — 비행 타입과 부유는 아니다. 필드 효과는 땅에 있는 포켓몬만 받는다
   function grounded(u: Unit): boolean {
-    return !u.types.includes("flying") && u.base.ability !== "levitate";
+    return !u.types.includes("flying") && ab(u) !== "levitate";
   }
 
   // 날씨·필드가 바꾸는 능력치 배율 — 모래바람 바위 특방, 눈 얼음 방어, 날씨·필드를 타는 특성
   function conditionStatMul(u: Unit, stat: number): number {
     let mul = 1;
-    const ab = u.base.ability;
+    const a0 = ab(u);
     if (weather === "sand" && stat === 4 && u.types.includes("rock")) mul *= 1.5;
     if (weather === "snow" && stat === 2 && u.types.includes("ice")) mul *= 1.5;
-    if (stat === 3 && ab === "solar-power" && sunny) mul *= 1.5;
-    if (stat === 1 && ab === "orichalcum-pulse" && sunny) mul *= 1.33;
-    if (stat === 3 && ab === "hadron-engine" && field === "electric") mul *= 1.33;
-    if (stat === 2 && ab === "grass-pelt" && field === "grassy") mul *= 1.5;
-    if ((stat === 1 || stat === 4) && sunny && alive(u.side).some((v) => v.base.ability === "flower-gift")) mul *= 1.5;
+    if (stat === 3 && a0 === "solar-power" && sunny) mul *= 1.5;
+    if (stat === 1 && a0 === "orichalcum-pulse" && sunny) mul *= 1.33;
+    if (stat === 3 && a0 === "hadron-engine" && field === "electric") mul *= 1.33;
+    if (stat === 2 && a0 === "grass-pelt" && field === "grassy") mul *= 1.5;
+    if ((stat === 1 || stat === 4) && sunny && alive(u.side).some((v) => ab(v) === "flower-gift")) mul *= 1.5;
     // 고대활성(쾌청)·쿼크차지(일렉트릭필드) — HP 를 뺀 실제 능력치 중 가장 높은 하나 ×1.3. 스피드면 능력치 대신 쿨타임(weatherCooldownMul)
     if (paradoxBoost(u) === stat && stat !== 5) mul *= 1.3;
     return mul;
@@ -544,8 +622,8 @@ export function runBattle(input: BattleInput): BattleResult {
 
   // 고대활성·쿼크차지가 올리는 능력 번호 — 발동하지 않으면 null
   function paradoxBoost(u: Unit): number | null {
-    const ab = u.base.ability;
-    if (!((ab === "protosynthesis" && sunny) || (ab === "quark-drive" && field === "electric"))) return null;
+    const a0 = ab(u);
+    if (!((a0 === "protosynthesis" && sunny) || (a0 === "quark-drive" && field === "electric"))) return null;
     let best = 1;
     for (let i = 2; i <= 5; i++) if (u.stats[i]! > u.stats[best]!) best = i;
     return best;
@@ -553,8 +631,8 @@ export function runBattle(input: BattleInput): BattleResult {
 
   // 날씨·필드를 타는 스피드 특성 — 스피드 ×2 대신 기술 쿨타임 ×0.75. 스피드 배율 자르기와 따로 곱한다 (moves.md "특성")
   function weatherCooldownMul(u: Unit): number {
-    const ab = u.base.ability;
-    if ((ab === "chlorophyll" && sunny) || (ab === "swift-swim" && rainy) || (ab === "sand-rush" && weather === "sand") || (ab === "slush-rush" && weather === "snow") || (ab === "surge-surfer" && field === "electric")) return 0.75;
+    const a0 = ab(u);
+    if ((a0 === "chlorophyll" && sunny) || (a0 === "swift-swim" && rainy) || (a0 === "sand-rush" && weather === "sand") || (a0 === "slush-rush" && weather === "snow") || (a0 === "surge-surfer" && field === "electric")) return 0.75;
     if (paradoxBoost(u) === 5) return 0.85;
     return 1;
   }
@@ -592,7 +670,7 @@ export function runBattle(input: BattleInput): BattleResult {
     if (rainy && type === "fire") mul *= 0.5;
     if (weather === "harsh-sun" && type === "water" && m.id !== "hydro-steam") fail = "weather";
     if (weather === "heavy-rain" && type === "fire") fail = "weather";
-    if (weather === "sand" && u.base.ability === "sand-force" && (type === "rock" || type === "ground" || type === "steel")) mul *= 1.3;
+    if (weather === "sand" && ab(u) === "sand-force" && (type === "rock" || type === "ground" || type === "steel")) mul *= 1.3;
     if (field && field !== "misty" && grounded(u) && FIELD_TYPE[field] === type) mul *= 1.3;
     if (field === "grassy" && grounded(o) && (m.id === "earthquake" || m.id === "bulldoze" || m.id === "magnitude")) mul *= 0.5;
     if (field === "misty" && grounded(o) && type === "dragon") mul *= 0.5;
@@ -601,44 +679,74 @@ export function runBattle(input: BattleInput): BattleResult {
     if (aura === "fairy" && type === "fairy") mul *= 1.33;
     if (aura === "dark" && type === "dark") mul *= 1.33;
     if (aura === "break") {
-      const has = (ab: string): boolean => all().some((v) => v.hp > 0 && v.base.ability === ab);
+      const has = (name: string): boolean => all().some((v) => v.hp > 0 && ab(v) === name);
       if (type === "fairy" && has("fairy-aura")) mul *= 0.75;
       if (type === "dark" && has("dark-aura")) mul *= 0.75;
     }
     return { type, power, accuracy, mul, fail };
   }
 
-  // byFoe — 상대가 건 하락. 플라워베일 아군의 풀 타입은 막는다
-  function setStage(u: Unit, stat: number, delta: number, t: number, byFoe = false): void {
-    if (byFoe && delta < 0 && u.types.includes("grass") && hasAlly(u, "flower-veil")) return;
-    const cur = stageOf(u, stat, t);
-    const stage = Math.max(-STAGE_MAX, Math.min(STAGE_MAX, cur + delta));
-    u.stages.set(stat, { stage, until: t + R.stageMs });
-    events.push({ t, kind: "stat", side: u.side, slot: u.slot, stat, stage });
+  // src — 능력 변화를 건 포켓몬. 상대가 건 하락은 플라워베일·클리어바디·하얀연기·메탈프로텍트·부풀린가슴·괴력집게·미러아머로 막는다
+  function setStage(u: Unit, stat: number, delta: number, t: number, src: Unit | null = null): void {
+    const a = ab(u);
+    if (a === "contrary") delta = -delta;
+    if (a === "simple") delta *= 2;
+    const byFoe = src !== null && src.side !== u.side;
+    if (byFoe && delta < 0) {
+      const d = defAb(u, src);
+      if (u.types.includes("grass") && hasAlly(u, "flower-veil")) return;
+      if (d === "clear-body" || d === "full-metal-body" || d === "white-smoke") return;
+      if ((d === "big-pecks" && stat === 2) || (d === "hyper-cutter" && stat === 1)) return;
+      if (d === "mirror-armor") {
+        if (src.hp > 0) setStage(src, stat, delta, t, null);
+        return;
+      }
+    }
+    const temp = u.stages.get(stat);
+    const cur = temp && temp.until > t ? temp.stage : 0;
+    const next = Math.max(-STAGE_MAX, Math.min(STAGE_MAX, cur + delta));
+    u.stages.set(stat, { stage: next, until: t + R.stageMs });
+    events.push({ t, kind: "stat", side: u.side, slot: u.slot, stat, stage: stageOf(u, stat, t) });
+    // 오기·승기 — 상대가 능력을 내리면 공격·특수공격 +2
+    if (byFoe && delta < 0 && u.hp > 0) {
+      if (a === "defiant") setStage(u, 1, 2, t, u);
+      if (a === "competitive") setStage(u, 3, 2, t, u);
+    }
   }
 
   function firstBasic(u: Unit): number {
     let ms: number = R.basicMs;
     if (u.slowFirstBasic) ms *= R.slowStartMul;
+    if (u.ability === "stall") ms = ceilTick(ms * 1.5);
     return ms;
   }
 
-  // 기술 하나의 쿨타임 — 게으름·슬로스타트·반동으로 쉼을 곱한다
+  // 기술 하나의 쿨타임 — 게으름·슬로스타트·반동으로 쉼·스피드·프레셔·날씨·쿨타임 특성
   function cooldownOf(u: Unit, m: EngineMove, first: boolean): number {
     let ms = m.cooldownMs;
+    const a = ab(u);
     if (first && u.slowFirstMove) ms *= R.slowStartMul;
     if (u.truant) ms *= R.truantMul;
     let mul = speedCooldownMul(statNow(u, 5, curT));
     if (foeHas(u, "pressure")) mul *= R.pressureMul;
     mul *= weatherCooldownMul(u);
+    if (first && a === "prankster") mul *= 0.5; // 짓궂은마음 — 첫 기술 쿨타임 절반
+    if (first && a === "stall") mul *= 1.5; // 시간벌기 — 첫 기술 ×1.5
+    if (a === "gale-wings" && m.type === "flying" && !u.moveHit) mul *= 0.8; // 질풍날개 — 기술에 맞기 전이면 비행 기술 선공
+    if (a === "triage" && m.effects.drain) mul *= 0.8; // 힐링시프트 — 흡수 기술 선공
+    if (u.quickHalf) {
+      mul *= 0.5;
+      u.quickHalf = false;
+    }
     return ceilTick(ms * mul);
   }
 
   // 급소 — 타마다. 전투무장·조가비갑옷은 맞지 않는다(확정급소도). 대운은 한 단계 위
   function critOf(u: Unit, m: EngineMove, o: Unit): boolean {
-    if (o.base.ability === "battle-armor" || o.base.ability === "shell-armor") return false;
+    const d = defAb(o, u);
+    if (d === "battle-armor" || d === "shell-armor") return false;
     if (m.effects.crit === "always") return true;
-    const stage = Math.min(R.critRates.length - 1, (m.effects.crit === "high" ? 1 : 0) + (u.base.ability === "super-luck" ? 1 : 0));
+    const stage = Math.min(R.critRates.length - 1, (m.effects.crit === "high" ? 1 : 0) + (ab(u) === "super-luck" ? 1 : 0));
     return rand() < R.critRates[stage]!;
   }
 
@@ -648,17 +756,100 @@ export function runBattle(input: BattleInput): BattleResult {
     if (m.class === "special") mul *= R.batteryMul ** countAlly(u, "battery", false);
     mul *= R.powerSpotMul ** countAlly(u, "power-spot", false);
     if (m.type === "steel") mul *= R.steelySpiritMul ** countAlly(u, "steely-spirit", true);
-    if (m.class === "special" && (u.base.ability === "plus" || u.base.ability === "minus") && alive(u.side).some((v) => v !== u && (v.base.ability === "plus" || v.base.ability === "minus"))) mul *= R.plusMinusMul;
+    if (m.class === "special" && (ab(u) === "plus" || ab(u) === "minus") && alive(u.side).some((v) => v !== u && (ab(v) === "plus" || ab(v) === "minus"))) mul *= R.plusMinusMul;
     return mul;
   }
-  // 받는 피해 배율 — 프렌드가드(자신 제외)
-  const guardMul = (o: Unit): number => R.friendGuardMul ** countAlly(o, "friend-guard", false);
+  // 받는 피해 배율(평타에도) — 프렌드가드(자신 제외, 틈새포착은 무시)
+  const guardMul = (o: Unit, by: Unit): number => (ab(by) === "infiltrator" ? 1 : R.friendGuardMul ** countAlly(o, "friend-guard", false));
 
-  // 델타스트림이면 비행 타입의 약점이 없다
-  const typeMul = (moveType: string, defender: Unit): number =>
+  // 기술에 붙는 쓴 쪽 특성 — 타입 바꾸기와 위력 배율 (moves.md "특성")
+  const ATE: Readonly<Record<string, string>> = { aerilate: "flying", pixilate: "fairy", refrigerate: "ice", galvanize: "electric" };
+  function attackerMove(u: Unit, m: EngineMove, type: string, power: number): { type: string; mul: number; stab: number } {
+    const a = ab(u);
+    let mul = 1;
+    if (a && ATE[a] && type === "normal") {
+      type = ATE[a]!;
+      mul *= 1.2;
+    }
+    if (a === "normalize") {
+      type = "normal";
+      mul *= 1.2;
+    }
+    if (a === "liquid-voice" && m.traits.includes("sound")) type = "water";
+    const has = (t: string): boolean => m.traits.includes(t);
+    if (a === "iron-fist" && has("punch")) mul *= 1.2;
+    if (a === "mega-launcher" && has("pulse")) mul *= 1.5;
+    if (a === "sharpness" && has("slicing")) mul *= 1.5;
+    if (a === "strong-jaw" && has("bite")) mul *= 1.5;
+    if (a === "tough-claws" && has("contact")) mul *= 1.3;
+    if (a === "punk-rock" && has("sound")) mul *= 1.3;
+    if (a === "technician" && power <= 60) mul *= 1.5;
+    if (a === "reckless" && (m.effects.recoil || m.effects.halfHp)) mul *= 1.2;
+    if (a === "water-bubble" && type === "water") mul *= 2;
+    if (a === "transistor" && type === "electric") mul *= 1.3;
+    if (a === "dragons-maw" && type === "dragon") mul *= 1.5;
+    if (a === "steelworker" && type === "steel") mul *= 1.5;
+    if (a === "rocky-payload" && type === "rock") mul *= 1.5;
+    if (u.hp * 3 <= u.maxHp) {
+      const pinch: Readonly<Record<string, string>> = { blaze: "fire", overgrow: "grass", torrent: "water", swarm: "bug" };
+      if (a && pinch[a] === type) mul *= 1.5;
+    }
+    if (u.flashFire && type === "fire") mul *= 1.5;
+    if (u.electro && type === "electric") mul *= 2;
+    if (a === "sheer-force" && sheerForced(u, m)) mul *= 1.3;
+    const stab = u.types.includes(type) || a === "libero" || a === "protean" ? (a === "adaptability" ? 2 : 1.5) : 1;
+    return { type, mul, stab };
+  }
+  // 우격다짐이 붙는 기술 — 상대 하락이나 자기 상승이 있는 공격기
+  const sheerForced = (u: Unit, m: EngineMove): boolean =>
+    ab(u) === "sheer-force" && (m.effects.stats ?? []).some((fx) => (fx.who === "target" && fx.change < 0) || (fx.who === "self" && fx.change > 0));
+
+  // 기술에 붙는 받는 쪽 특성 — 위력 배율. 무효는 immuneOf
+  function defenderMoveMul(o: Unit, u: Unit, type: string, m: EngineMove, eff: number): number {
+    const d = defAb(o, u);
+    let mul = 1;
+    const contact = m.traits.includes("contact") && ab(u) !== "long-reach";
+    if (d === "ice-scales" && m.class === "special") mul *= 0.5;
+    if (d === "fluffy" && contact) mul *= 0.5;
+    if (d === "fluffy" && type === "fire") mul *= 2;
+    if ((d === "filter" || d === "solid-rock" || d === "prism-armor") && eff > 1) mul *= 0.75;
+    if (d === "thick-fat" && (type === "fire" || type === "ice")) mul *= 0.5;
+    if ((d === "heatproof" || d === "water-bubble") && type === "fire") mul *= 0.5;
+    if (d === "purifying-salt" && type === "ghost") mul *= 0.5;
+    if (d === "punk-rock" && m.traits.includes("sound")) mul *= 0.5;
+    if (d === "dry-skin" && type === "fire") mul *= 1.25;
+    // 멀티스케일·스펙터가드 — 처음 맞는 기술만 ×0.5
+    if ((d === "multiscale" || d === "shadow-shield") && !o.moveHit) mul *= 0.5;
+    return mul;
+  }
+
+  // 특성 무효 — 무효면 무엇이 일어나는지. null 이면 맞는다
+  type Absorb = { heal?: true; stat?: [number, number]; flash?: true } | "plain";
+  function immuneOf(o: Unit, u: Unit, type: string, m: EngineMove, eff: number): Absorb | null {
+    const d = defAb(o, u);
+    if (!d) return null;
+    if ((d === "levitate" || d === "eelevate") && type === "ground") return "plain";
+    if (d === "earth-eater" && type === "ground") return { heal: true };
+    if ((d === "volt-absorb") && type === "electric") return { heal: true };
+    if ((d === "water-absorb" || d === "dry-skin") && type === "water") return { heal: true };
+    if (d === "lightning-rod" && type === "electric") return { stat: [3, 1] };
+    if (d === "storm-drain" && type === "water") return { stat: [3, 1] };
+    if (d === "motor-drive" && type === "electric") return { stat: [5, 1] };
+    if (d === "sap-sipper" && type === "grass") return { stat: [1, 1] };
+    if (d === "flash-fire" && type === "fire") return { flash: true };
+    if (d === "well-baked-body" && type === "fire") return { stat: [2, 2] };
+    if (d === "bulletproof" && m.traits.includes("ballistic")) return "plain";
+    if (d === "soundproof" && m.traits.includes("sound")) return "plain";
+    if (d === "wonder-guard" && eff <= 1) return "plain";
+    return null;
+  }
+
+  // 델타스트림이면 비행 타입의 약점이 없다. 배짱·심안은 노말·격투로 고스트를 맞힌다
+  const typeMul = (moveType: string, defender: Unit, by: Unit | null = null): number =>
     defender.types.reduce((a, d) => {
       let m = chart[moveType]?.[d] ?? 1;
       if (weather === "strong-winds" && d === "flying" && m > 1) m = 1;
+      if (d === "ghost" && m === 0 && by && (ab(by) === "scrappy" || ab(by) === "minds-eye") && (moveType === "normal" || moveType === "fighting")) m = 1;
       return a * (m === 0 ? R.immuneMul : m);
     }, 1);
 
@@ -683,7 +874,10 @@ export function runBattle(input: BattleInput): BattleResult {
   function pickTarget(u: Unit): Unit | null {
     const { dist } = walk(walls, u);
     let best: Unit | null = null, bestSteps = Infinity;
-    for (const o of foesOf(u)) {
+    const foes = foesOf(u);
+    const hidden = foes.filter((o) => o.illusion && ab(o) === "illusion");
+    for (const o of foes) {
+      if (hidden.includes(o) && hidden.length < foes.length) continue;
       const { steps } = reachOf(dist, o, u.range);
       if (steps === Infinity) continue;
       const better =
@@ -761,9 +955,79 @@ export function runBattle(input: BattleInput): BattleResult {
   }
   const roll = (): number => (85 + Math.floor(rand() * 16)) / 100;
 
-  function hurt(target: Unit, amount: number, t: number): void {
+  // byMove — 기술 피해면 일루전을 벗긴다(평타는 아님)
+  function hurt(target: Unit, amount: number, t: number, byMove = true): void {
+    const before = target.hp;
     target.hp = Math.max(0, target.hp - amount);
     checkForm(target, t);
+    if (amount > 0 && byMove) target.illusion = false;
+    // HP 50% 아래로 처음 떨어질 때 — 재생력(1/3 회복, 한 번), 발끈(특수공격 +1), 분노의껍질(공격·특수공격 +1, 방어 −1)
+    if (target.hp > 0 && !target.halfDone && before * 2 > target.maxHp && target.hp * 2 <= target.maxHp) {
+      target.halfDone = true;
+      const a = ab(target);
+      if (a === "regenerator") {
+        const g = Math.min(Math.floor(target.maxHp / 3), target.maxHp - target.hp);
+        target.hp += g;
+        events.push({ t, kind: "self", side: target.side, slot: target.slot, amount: -g, hp: target.hp, cause: "drain" });
+      }
+      if (a === "berserk") setStage(target, 3, 1, t, target);
+      if (a === "anger-shell") {
+        setStage(target, 1, 1, t, target);
+        setStage(target, 3, 1, t, target);
+        setStage(target, 2, -1, t, target);
+      }
+    }
+  }
+
+  // 맞는 쪽(기술만) — 탈·아이스페이스(첫 기술 피해 무효), 옹골참(처음 맞는 기술로는 1 남김). 평타로 깎여도 조건은 남는다
+  function shield(o: Unit, u: Unit, d: number, phys: boolean): number {
+    const a = defAb(o, u);
+    if (d > 0 && o.disguised && (a === "disguise" || (a === "ice-face" && phys))) {
+      o.disguised = false;
+      return 0;
+    }
+    if (a === "sturdy" && !o.moveHit && d >= o.hp) return o.hp - 1;
+    return d;
+  }
+
+  // 반격 피해 — 철가시·까칠한피부·유폭·내용물분출. reflect 이벤트로 낸다. 매직가드는 받지 않는다
+  function strikeBack(o: Unit, u: Unit, amount: number, t: number): void {
+    if (amount <= 0 || u.hp <= 0 || ab(u) === "magic-guard") return;
+    hurt(u, amount, t);
+    events.push({ t, kind: "reflect", side: o.side, slot: o.slot, target: u.slot, amount, hp: u.hp });
+    faintCheck(u, t, o);
+  }
+
+  // 기술에 맞은 뒤 — "맞으면" 발동하는 특성(기술에만, moves.md "특성")
+  function onHit(o: Unit, u: Unit, m: EngineMove, type: string, d: number, crit: boolean, t: number): void {
+    const a = defAb(o, u);
+    const contact = m.traits.includes("contact") && ab(u) !== "long-reach";
+    if (contact) {
+      if (a === "iron-barbs" || a === "rough-skin") strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 8)), t);
+      if ((a === "gooey" || a === "tangling-hair") && u.hp > 0) setStage(u, 5, -1, t, o);
+      if (a === "mummy" || a === "lingering-aroma") u.ability = a === "mummy" ? "mummy" : null;
+      if (a === "wandering-spirit") [o.ability, u.ability] = [u.ability, o.ability];
+      if (o.hp <= 0 && a === "aftermath") strikeBack(o, u, Math.max(1, Math.floor(u.maxHp / 4)), t);
+    }
+    if (o.hp <= 0) {
+      if (a === "innards-out") strikeBack(o, u, d, t);
+      return;
+    }
+    if (a === "anger-point" && crit) setStage(o, 1, 6, t, o);
+    if (a === "stamina") setStage(o, 2, 1, t, o);
+    if (a === "justified" && type === "dark") setStage(o, 1, 1, t, o);
+    if (a === "rattled" && (type === "dark" || type === "ghost" || type === "bug")) setStage(o, 5, 1, t, o);
+    if (a === "steam-engine" && (type === "water" || type === "fire")) setStage(o, 5, 2, t, o);
+    if (a === "thermal-exchange" && type === "fire") setStage(o, 1, 1, t, o);
+    if (a === "water-compaction" && type === "water") setStage(o, 2, 2, t, o);
+    if (a === "weak-armor" && m.class === "physical") {
+      setStage(o, 2, -1, t, o);
+      setStage(o, 5, 1, t, o);
+    }
+    if (a === "electromorphosis") o.electro = true;
+    if (a === "color-change") o.types = [type];
+    if (a === "cursed-body" && rand() < 0.3) u.cursedMs += 3000;
+    if (a === "cotton-down") for (const v of alive(u.side)) setStage(v, 5, -1, t, o);
   }
 
   // 모습 바뀜 — HP 조건
@@ -771,8 +1035,8 @@ export function runBattle(input: BattleInput): BattleResult {
     const f = u.base.altForm;
     if (!f || u.hp <= 0) return;
     const pct = (u.hp * 100) / u.maxHp;
-    if (u.base.ability === "schooling" && u.base.schoolingReady && u.inAlt && pct < R.schoolingPct) toForm(u, false, t);
-    else if (u.base.ability === "shields-down" && !u.inAlt && pct <= R.shieldsDownPct) toForm(u, true, t);
+    if (ab(u) === "schooling" && u.base.schoolingReady && u.inAlt && pct < R.schoolingPct) toForm(u, false, t);
+    else if (ab(u) === "shields-down" && !u.inAlt && pct <= R.shieldsDownPct) toForm(u, true, t);
   }
 
   function toForm(u: Unit, alt: boolean, t: number): void {
@@ -785,10 +1049,23 @@ export function runBattle(input: BattleInput): BattleResult {
     events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species });
   }
 
-  function faintCheck(u: Unit, t: number): void {
+  // by — 쓰러뜨린 포켓몬(알 때). 자기과신·백의울음·흑의울음·비스트부스트·Eelevate, 소울하트는 누가 쓰러져도
+  function faintCheck(u: Unit, t: number, by: Unit | null = null): void {
     if (u.hp <= 0 && !u.fainted) {
       u.fainted = true;
       events.push({ t, kind: "faint", side: u.side, slot: u.slot });
+      if (u.ability === "neutralizing-gas") gasAlive = all().some((v) => v.hp > 0 && v.ability === "neutralizing-gas");
+      if (by && by.hp > 0 && by.side !== u.side) {
+        const a = ab(by);
+        if (a === "moxie" || a === "chilling-neigh") setStage(by, 1, 1, t, by);
+        if (a === "grim-neigh") setStage(by, 3, 1, t, by);
+        if (a === "beast-boost" || a === "eelevate") {
+          let best = 1;
+          for (let i = 2; i <= 5; i++) if (by.stats[i]! > by.stats[best]!) best = i;
+          setStage(by, best, 1, t, by);
+        }
+      }
+      for (const v of all()) if (v.hp > 0 && ab(v) === "soul-heart") setStage(v, 3, 1, t, v);
     }
   }
 
@@ -801,12 +1078,14 @@ export function runBattle(input: BattleInput): BattleResult {
     const o = hitTarget(u);
     if (!o) return;
     events.push({ t, kind: "attack", side: u.side, slot: u.slot });
-    const atk = statNow(u, 1, t), spa = statNow(u, 3, t);
+    // 천진 — 상대의 능력 변화를 보지 않는다
+    const atk = statNow(u, 1, t, defAb(o, u) === "unaware"), spa = statNow(u, 3, t, defAb(o, u) === "unaware");
     const phys = atk >= spa;
-    const d = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t)) * guardMul(o) * rangeMul(u.range) * roll()));
-    hurt(o, d, t);
+    const raw = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t, ab(u) === "unaware")) * guardMul(o, u) * rangeMul(u.range) * roll()));
+    const d = raw;
+    hurt(o, d, t, false);
     events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: 1, hp: o.hp, source: "basic", hit: 1 });
-    faintCheck(o, t);
+    faintCheck(o, t, u);
   }
 
   function hitsOf(u: Unit, m: EngineMove, stacks: number): number {
@@ -850,7 +1129,7 @@ export function runBattle(input: BattleInput): BattleResult {
     }
     u.charged = false;
     // 돌핀맨 — 두 기술을 한 번씩 쓴 뒤 다음 기술 전에 마이티폼
-    if (u.base.ability === "zero-to-hero" && !u.inAlt && u.uses >= 2) toForm(u, true, t);
+    if (ab(u) === "zero-to-hero" && !u.inAlt && u.uses >= 2) toForm(u, true, t);
     const stacks = isSkillLinkMove(u, m) ? stacksAt(u, m, t) : 0;
     const used: Extract<BattleEvent, { kind: "move" }> = { t, kind: "move", side: u.side, slot: u.slot, move: m.id, nextAt: t };
     events.push(used);
@@ -865,13 +1144,17 @@ export function runBattle(input: BattleInput): BattleResult {
     if (m.effects.rampage) u.busyUntil = t + R.rampageMs;
 
     u.uses += 1;
-    if (u.base.ability === "truant") u.truant = true;
+    if (ab(u) === "truant") u.truant = true;
     if (u.slowFirstMove) u.slowFirstMove = false;
     if (isSkillLinkMove(u, m)) u.stackSince = t;
     u.turn += 1;
     const next = u.moves[u.turn % u.moves.length]!;
     if (u.base.special === "stance") u.nextMove = t + R.stanceStepMs;
-    else u.nextMove = t + cooldownOf(u, next, false) * (m.effects.recharge ? 2 : 1);
+    else {
+      if (ab(u) === "quick-draw" && rand() < 0.3) u.quickHalf = true;
+      u.nextMove = t + cooldownOf(u, next, false) * (m.effects.recharge ? 2 : 1) + u.cursedMs;
+      u.cursedMs = 0;
+    }
     if (u.busyUntil > u.nextMove) u.nextMove = u.busyUntil;
     used.nextAt = u.nextMove;
   }
@@ -885,41 +1168,72 @@ export function runBattle(input: BattleInput): BattleResult {
       events.push({ t, kind: "miss", side: u.side, slot: u.slot, move: m.id, target: first.slot });
       return;
     }
-    // 명중은 한 번 본다. 빗나가면 모든 타가 빗나간다
-    const accuracy = now0.accuracy === null ? null : now0.accuracy * (hasAlly(u, "victory-star") ? R.victoryStarMul : 1);
+    // 명중은 한 번 본다. 빗나가면 모든 타가 빗나간다. 노가드는 쓴 쪽이나 맞는 쪽이면 반드시 맞는다
+    const ua = ab(u);
+    let accMul = hasAlly(u, "victory-star") ? R.victoryStarMul : 1;
+    if (ua === "compound-eyes") accMul *= 1.3;
+    if (ua === "keen-eye") accMul *= 1.1;
+    if (ua === "hustle" && m.class === "physical") accMul *= 0.8;
+    const sure = ua === "no-guard" || ab(first) === "no-guard";
+    const accuracy = now0.accuracy === null || sure ? null : now0.accuracy * accMul;
     if (accuracy !== null && rand() * 100 >= accuracy) {
       events.push({ t, kind: "miss", side: u.side, slot: u.slot, move: m.id, target: first.slot });
       return;
     }
-    const n = hitsOf(u, m, stacks);
+    // 부자유친 — 한 번 맞는 기술이 두 번 맞고, 두 번째는 위력 25%
+    const parental = ua === "parental-bond" && !m.hits;
+    const n = hitsOf(u, m, stacks) + (parental ? 1 : 0);
     const phys = m.class === "physical";
-    const stab = u.types.includes(now0.type) ? 1.5 : 1;
+    // 잠복 — 대상을 새로 정한 뒤 그 대상에게 쓰는 첫 기술 ×2
+    const stake = ua === "stakeout" && u.lastAim !== first ? 2 : 1;
+    u.lastAim = first;
     let dealt = 0;
     let firstHit: Unit | null = null;
     for (let h = 1; h <= n; h++) {
       const o = h === 1 ? first : hitTarget(u);
       if (!o) break;
-      if (o.shieldUntil > t) {
+      if (o.shieldUntil > t && !(ua === "unseen-fist" && m.traits.includes("contact"))) {
         events.push({ t, kind: "blocked", side: u.side, slot: u.slot, target: o.slot, move: m.id });
-        if (m.traits.includes("contact")) setStage(u, 1, -1, t, true);
+        if (m.traits.includes("contact")) setStage(u, 1, -1, t, o);
         break;
       }
       const now = h === 1 ? now0 : moveNow(u, m, o);
       let power = now.power;
       if (m.effects.hpScale) power = Math.max(1, Math.floor((power * u.hp) / u.maxHp));
-      const mult = stab * typeMul(now.type, o) * allyMoveMul(u, { ...m, type: now.type }) * guardMul(o) * now.mul;
+      if (parental && h === n) power = Math.max(1, Math.floor(power / 4));
+      const am = attackerMove(u, m, now.type, power);
+      const type = am.type;
+      const eff = now.fail === "weather" ? 0 : typeMul(type, o, u) * (ab(u) === "tinted-lens" && typeMul(type, o, u) < 1 && typeMul(type, o, u) > 0 ? 2 : 1);
+      // 특성 무효 — 흡수·마중물·타오르는불꽃 등. 피해 0, 상성 0 으로 낸다
+      const absorb = eff === 0 ? null : immuneOf(o, u, type, m, eff);
+      if (absorb) {
+        events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: 0, mult: 0, hp: o.hp, source: m.id, hit: h });
+        if (absorb !== "plain") {
+          if (absorb.heal && o.hp < o.maxHp) {
+            const g = Math.min(Math.floor(o.maxHp / 4), o.maxHp - o.hp);
+            o.hp += g;
+            events.push({ t, kind: "self", side: o.side, slot: o.slot, amount: -g, hp: o.hp, cause: "drain" });
+          }
+          if (absorb.stat) setStage(o, absorb.stat[0], absorb.stat[1], t, o);
+          if (absorb.flash) o.flashFire = true;
+        }
+        break;
+      }
+      const mult = am.stab * eff * allyMoveMul(u, { ...m, type }) * guardMul(o, u) * now.mul * am.mul * defenderMoveMul(o, u, type, m, eff) * stake;
       const crit = critOf(u, m, o);
-      // 급소면 쓴 쪽 공격 하락과 맞는 쪽 방어 상승은 무시한다
-      const atkNow = statNow(u, phys ? 1 : 3, t), defNow = statNow(o, phys ? 2 : 4, t);
-      const atkStat = crit ? Math.max(atkNow, u.stats[phys ? 1 : 3]!) : atkNow;
-      const defStat = crit ? Math.min(defNow, o.stats[phys ? 2 : 4]!) : defNow;
+      // 급소면 쓴 쪽 공격 하락과 맞는 쪽 방어 상승은 무시한다. 천진은 상대의 능력 변화를 보지 않는다
+      const atkNow = statNow(u, phys ? 1 : 3, t, defAb(o, u) === "unaware"), defNow = statNow(o, phys ? 2 : 4, t, ab(u) === "unaware");
+      const atkStat = crit ? Math.max(atkNow, statNow(u, phys ? 1 : 3, t, true)) : atkNow;
+      const defStat = crit ? Math.min(defNow, statNow(o, phys ? 2 : 4, t, true)) : defNow;
       const raw = baseDamage(u.base.level, power, atkStat, defStat);
-      const typeOnly = now.fail === "weather" ? 0 : typeMul(now.type, o);
-      const critMul = (crit ? (u.base.ability === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range);
-      const d = typeOnly === 0 ? 0 : Math.max(1, Math.floor(raw * mult * critMul * roll()));
+      const critMul = (crit ? (ua === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range);
+      const d = eff === 0 ? 0 : shield(o, u, Math.max(1, Math.floor(raw * mult * critMul * roll())), phys);
       hurt(o, d, t);
+      o.moveHit = true;
       dealt += d;
-      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: typeOnly, hp: o.hp, source: m.id, hit: h, ...(crit ? { crit: true as const } : {}) });
+      if (type === "electric" && u.electro && d > 0) u.electro = false;
+      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: eff, hp: o.hp, source: m.id, hit: h, ...(crit ? { crit: true as const } : {}) });
+      if (d > 0) onHit(o, u, m, type, d, crit, t);
       // 마자용 — 반사 대기 중 같은 분류의 기술을 받으면 받은 피해의 2배를 돌려준다(한 번)
       if (o.base.special === "reflect" && o.reflectUntil > t && o.reflectClass === m.class && o.hp > 0 && d > 0) {
         o.reflectUntil = -1;
@@ -928,31 +1242,40 @@ export function runBattle(input: BattleInput): BattleResult {
         events.push({ t, kind: "reflect", side: o.side, slot: o.slot, target: u.slot, amount: back, hp: u.hp });
       }
       if (h === 1 && d > 0) firstHit = o;
-      faintCheck(o, t);
+      faintCheck(o, t, u);
       if (u.hp <= 0) break;
     }
     // 공격기의 능력 변화 — 맞힌 뒤 chance% 로. self 는 쓴 포켓몬, target 은 맞은 첫 대상
-    for (const fx of m.effects.stats ?? []) {
+    // 우격다짐이면 그 기술의 능력 변화는 없다. 하늘의은총은 확률 2배, 인분은 상대가 거는 하락을 받지 않는다
+    for (const fx of sheerForced(u, m) ? [] : (m.effects.stats ?? [])) {
       const idx = STAT_INDEX[fx.stat];
       if (idx === undefined || dealt <= 0) continue;
       const who = fx.who === "self" ? u : firstHit;
       if (!who || who.hp <= 0) continue;
-      if (fx.chance < 100 && rand() * 100 >= fx.chance) continue;
-      setStage(who, idx, fx.change, t, fx.who === "target");
+      if (fx.who === "target" && defAb(who, u) === "shield-dust") continue;
+      const chance = ua === "serene-grace" ? fx.chance * 2 : fx.chance;
+      if (chance < 100 && rand() * 100 >= chance) continue;
+      setStage(who, idx, fx.change, t, fx.who === "target" ? u : u);
     }
     if (dealt > 0 && u.hp > 0) {
-      if (m.effects.recoil && u.base.ability !== "rock-head") {
+      if (m.effects.recoil && ua !== "rock-head" && ua !== "magic-guard") {
         const r = Math.max(1, Math.floor((dealt * m.effects.recoil) / 100));
         hurt(u, r, t);
         events.push({ t, kind: "self", side: u.side, slot: u.slot, amount: r, hp: u.hp, cause: "recoil" });
       }
       if (m.effects.drain) {
         const g = Math.floor((dealt * m.effects.drain) / 100);
-        u.hp = Math.min(u.maxHp, u.hp + g);
-        events.push({ t, kind: "self", side: u.side, slot: u.slot, amount: -g, hp: u.hp, cause: "drain" });
+        // 해감액 — 흡수한 만큼 피해를 받는다
+        if (firstHit && defAb(firstHit, u) === "liquid-ooze") {
+          hurt(u, g, t);
+          events.push({ t, kind: "self", side: u.side, slot: u.slot, amount: g, hp: u.hp, cause: "drain" });
+        } else {
+          u.hp = Math.min(u.maxHp, u.hp + g);
+          events.push({ t, kind: "self", side: u.side, slot: u.slot, amount: -g, hp: u.hp, cause: "drain" });
+        }
       }
     }
-    if (m.effects.halfHp && u.hp > 0) {
+    if (m.effects.halfHp && u.hp > 0 && ua !== "magic-guard") {
       const l = Math.floor(u.maxHp / 2);
       hurt(u, l, t);
       events.push({ t, kind: "self", side: u.side, slot: u.slot, amount: l, hp: u.hp, cause: "half-hp" });
@@ -990,11 +1313,22 @@ export function runBattle(input: BattleInput): BattleResult {
       for (const u of all()) {
         if (u.hp <= 0) continue;
         const tick = Math.max(1, Math.floor(u.maxHp / 16));
-        if (weather === "sand" && !u.types.some((ty) => ty === "rock" || ty === "ground" || ty === "steel") && u.base.ability !== "overcoat") {
+        if (ab(u) === "speed-boost") setStage(u, 5, 1, t, u);
+        if (ab(u) === "moody") {
+          const up = [1, 2, 3, 4, 5].filter((i) => stageOf(u, i, t) < STAGE_MAX);
+          if (up.length) {
+            const a = up[Math.floor(rand() * up.length)]!;
+            setStage(u, a, 2, t, u);
+            const down = [1, 2, 3, 4, 5].filter((i) => i !== a && stageOf(u, i, t) > -STAGE_MAX);
+            if (down.length) setStage(u, down[Math.floor(rand() * down.length)]!, -1, t, u);
+          }
+        }
+        if (weather === "sand" && !u.types.some((ty) => ty === "rock" || ty === "ground" || ty === "steel") && ab(u) !== "overcoat" && ab(u) !== "magic-guard") {
           hurt(u, tick, t);
           events.push({ t, kind: "weather", side: u.side, slot: u.slot, amount: tick, hp: u.hp, cause: "sand" });
           faintCheck(u, t);
         }
+        if (u.hp <= 0) continue;
         const heal = (cause: "grassy" | "rain-dish" | "ice-body"): void => {
           if (u.hp <= 0 || u.hp >= u.maxHp) return;
           const g = Math.min(tick, u.maxHp - u.hp);
@@ -1002,8 +1336,8 @@ export function runBattle(input: BattleInput): BattleResult {
           events.push({ t, kind: "weather", side: u.side, slot: u.slot, amount: -g, hp: u.hp, cause });
         };
         if (field === "grassy" && grounded(u)) heal("grassy");
-        if (rainy && u.base.ability === "rain-dish") heal("rain-dish");
-        if (weather === "snow" && u.base.ability === "ice-body") heal("ice-body");
+        if (rainy && ab(u) === "rain-dish") heal("rain-dish");
+        if (weather === "snow" && ab(u) === "ice-body") heal("ice-body");
       }
     }
     // 걷기 — 이번 틱에 행동하지 않은 개체. 순서는 난수로 섞는다
