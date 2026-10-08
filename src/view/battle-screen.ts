@@ -44,6 +44,7 @@ function rouletteOf(r: BattleResult): BattleRouletteView[] | null {
     const shown = one?.kind ? ROULETTE[one.kind] : undefined;
     return {
       key,
+      kind: one?.kind ?? null,
       label: ROULETTE_LABEL[key],
       name: shown?.name ?? null,
       type: shown?.type ?? null,

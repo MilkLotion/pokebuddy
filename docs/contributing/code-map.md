@@ -101,7 +101,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - `manage/` — 설정창(아래 따로).
 - `stage/` — 무대 캔버스. 그리기 루프(`stage.ts`), 그림 시트 재생(`sprites.ts`), 끌기·클릭(`pointer.ts`).
 - `device/` — 설정창 옆에 붙는 기기 창 여섯(파티 상세, 도감, 상점, 가방, 파티 교체, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
-- `battle/` — 배틀 창(`screen.ts`). 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
+- `battle/` — 배틀 창(`screen.ts`)과 전장의 날씨·필드·오라 연출(`field-fx.ts`, 섞기 방식별 canvas 를 CSS 로 겹친다). 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
 - `windows/` — 메뉴, 첫 포켓몬 고르기, 놀이공간 그리기, 배너, 알림, 화면 고르기.
 - `ui/` — 여러 창이 같이 쓰는 도구. 브리지(`bridge.ts`), 요소 만들기(`dom.ts`), 초상(`portrait.ts`), 코치마크(`coach.ts`), 막대(`fill-bar.ts`), 타입 배지(`type-badge.ts`).
 - `styles/` — 창 CSS. 모든 창이 `tokens.css` 를 먼저 읽는다.

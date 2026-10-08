@@ -135,10 +135,10 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 층 | 컴포넌트 (노드, 변형) |
 |---|---|
 | 01 Atoms | `02 아이콘·표시`: `Icon / Adventure` `1659:3`(접힌 지도, 16×16), `Icon / Help` `1677:2402`(회색 원에 흰 물음표, 20×20). `04 배지·상태`: `Type Icon` `1672:2096`(`Type=Normal…Fairy` × `Style=White\|Badge\|Color`, 54변형, 16×16, 원작 타입 그림), `Move Pill` `1675:2330`(`Size=Large\|Small`, 속성 `Name`. 타입 조각 `( /` 와 이름 조각 `/  )`). |
-| 02 Molecules | `01 창 머리·탐색`: `Adventure Header` `1659:124`(`Start=Enabled\|Disabled`. 제목, 탐험·배틀 `Segmented Control`, 가져오기, 배틀 시작). `02 파티·박스`: `Adventure Slot Card` `1659:277`(`State=Ready\|Blocked\|Empty`, 속성 `Reason`. 기술 줄은 `Move Pill` Small 두 개). `04 기기 창`: `Stat Radar` `1706:3537`(`Sample=Pikachu\|Mewtwo`. 인스턴스에서 벡터를 덮어쓸 수 없어 예시마다 변형이다), `Stat Basis Bubble` `1677:2404`(`배틀 능력치 기준` 말풍선), `Move Info Bubble` `1716:4833`(기술 설명 말풍선). |
-| 03 Organisms | `04 기기 창`: `Battle Party Device` `1662:224`(배틀 파티 상세 기기 창. 그래프, 특성 줄, 기술 칸 두 개와 순서 바꾸기 단추 `Trade Swap Mark`, 오른쪽 위 `Icon / Help`). `05 대화창 본문`: `Battle Pet Picker` `1716:5299`(넣을 포켓몬 고르기판. 프리셋 넘김 줄과 `Box Slot` 6칸. 이미 배틀 파티에 든 개체는 불투명도 0.4). |
+| 02 Molecules | `01 창 머리·탐색`: `Adventure Header` `1659:124`(`Start=Enabled\|Disabled`. 제목, 탐험·배틀 `Segmented Control`, 가져오기, 배틀 시작). `02 파티·박스`: `Adventure Slot Card` `1659:277`(`State=Ready\|Blocked\|Empty`, 속성 `Reason`. 기술 줄은 `Move Pill` Small 두 개), 상대 고르기의 `Battle Pick Cell` `1771:87936`(`State=Pokemon\|Empty`. 초상과 타입 배지)·`Battle Pick Row` `1771:88109`(`State=Default\|Selected\|Failed`. 상대 한 줄). `04 기기 창`: `Stat Radar` `1706:3537`(`Sample=Pikachu\|Mewtwo`. 인스턴스에서 벡터를 덮어쓸 수 없어 예시마다 변형이다), `Stat Basis Bubble` `1677:2404`(`배틀 능력치 기준` 말풍선), `Move Info Bubble` `1716:4833`(기술 설명 말풍선). |
+| 03 Organisms | `04 기기 창`: `Battle Party Device` `1662:224`(배틀 파티 상세 기기 창. 그래프, 특성 줄, 기술 칸 두 개와 순서 바꾸기 단추 `Trade Swap Mark`, 오른쪽 위 `Icon / Help`). `05 대화창 본문`: `Battle Pet Picker` `1716:5299`(넣을 포켓몬 고르기판. 프리셋 넘김 줄과 `Box Slot` 6칸. 이미 배틀 파티에 든 개체는 불투명도 0.4). `02 파티 카드`: `Battle Pick Panel` `1771:88660`(`State=Default\|Selected\|Few\|Empty`. 상대 고르기 본문). |
 | 04 Templates | `01 탭 틀`: `Battle Party Layout` `1662:1186`(`State=Ready\|Blocked`. 탭 줄은 `Primary Navigation` `Active=Adventure`). |
-| 05 Screens | `15 모험` `1720:73271`. 줄 1 탭: `Adventure / Battle Party` `1662:1187`, `Adventure / Battle Party · Blocked` `1662:1549`. 줄 2 모달: `Adventure / Import Preset` `1662:1955`, `Adventure / Pick Battle Pet` `1718:5386`. 줄 3 기기 창: `Adventure / Battle Party Device` `1662:3180`, `· Help` `1677:2412`, `· Move Info` `1716:4839`, `· Long Moves` `1695:69914`. |
+| 05 Screens | `15 모험` `1720:73271`. 줄 1 탭: `Adventure / Battle Party` `1662:1187`, `Adventure / Battle Party · Blocked` `1662:1549`. 줄 2 모달: `Adventure / Import Preset` `1662:1955`, `Adventure / Pick Battle Pet` `1718:5386`. 줄 3 기기 창: `Adventure / Battle Party Device` `1662:3180`, `· Help` `1677:2412`, `· Move Info` `1716:4839`, `· Long Moves` `1695:69914`. 줄 2 오른쪽 상대 고르기 모달(2026-10-09 99 에서 옮김): `Adventure / Battle Pick · 기본` `1771:88661`, `· 선택` `1771:89216`, `· 쿨타임` `1771:89770`, `· 후보 2개` `1771:90325`, `· 후보 없음` `1771:90821`. |
 
 `Primary Navigation` `208:542` 의 모험 탭은 [C-03 메인 탭](#c-03-메인-탭)에 적었다.
 
@@ -151,6 +151,11 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 - 릴 상태는 도는 중(결과 `—`), 멈춤(결과는 관련 타입 아이콘과 이름), 확정(원시회귀 날씨·델타스트림, 머리에 `확정`), 후보 없음(`후보 없음`, 결과 `없음`)이다. 멈춘 뒤 걸린 효과는 판 표시 줄의 칩으로 판 끝까지 보인다.
 - 원시회귀 날씨와 델타스트림의 표시 이름은 특성 이름(`시작의바다`·`끝의대지`·`델타스트림`)이다. 관련 타입 아이콘: 쾌청 불꽃, 비 물, 모래바람 바위, 눈 얼음, 일렉트릭필드 전기, 그래스필드 풀, 사이코필드 에스퍼, 미스트필드 페어리, 페어리오라 페어리, 다크오라 악. 날씨 없음은 아이콘이 없다.
 - 전장은 화면 칸 56px 의 8×5(448×280)다. 포켓몬은 크기 2단계(배율 1.5)로 그린다.
+- 룰렛이 멈춘 뒤 판이 끝날 때까지 전장에 걸린 날씨·필드·오라의 상시 연출을 그린다(2026-10-09 사용자 "9판 기준 코드로"). 연출은 처음 0.6초에 걸쳐 차오르고, 배속을 따라 빨라진다. OS 의 움직임 줄이기가 켜져 있으면 한 장면만 그리고 멈춘다.
+  - 필드는 바닥 위·포켓몬 아래에 그린다. 전장 가운데의 가로로 긴 타원(가로 반지름 242, 세로 반지름 151) 안은 비우고, 타원 바깥에만 필드 색과 효과를 둔다. 타원 테두리는 선 없이 아주 옅은 그라데이션 띠로 이어 준다. 그래스필드는 녹색과 날리는 이파리, 사이코필드는 핑크·보라 펄스가 바깥으로 퍼짐, 일렉트릭필드는 노란 전기가 바깥으로 튐, 미스트필드는 코랄핑크·연핑크가 바깥에서 일렁임이다.
+  - 날씨는 포켓몬 위에 전장 전체 색 보정과 입자로 그린다. 모래바람은 왼쪽에서 오른쪽으로만 흐른다. 끝의대지·시작의바다는 쾌청·비보다 짙고, 시작의바다는 번개가 번쩍인다. 델타스트림은 에메랄드 바람결이다.
+  - 오라는 포켓몬 위, 전장 가장자리에 그린다. 페어리오라는 분홍 가장자리와 분홍 별, 다크오라는 어두운 보라 가장자리와 연기, 오라 반전은 두 색이 번갈아 바뀌고 가운데에서 반전 고리가 퍼진다.
+  - 세기는 효과마다 정해 둔 값(필드 0.8, 날씨 0.5~0.75, 오라 0.4~0.7)이다. 끝의대지의 열기 일렁임은 시안에 있으나 앱에서는 그리지 않는다.
 - 포켓몬 머리 위에는 HP 바(팀 색, 맞으면 깎인 몫을 잠깐 남김)와 다음 차례 기술의 쿨타임 바를 둔다. 능력 변화(`▲1`)와 `충전` 은 그 상태일 때만 칩으로 둔다.
 - 기술을 쓰면 그 포켓몬 위에 기술 이름 `Move Pill` 을 잠깐 띄운다. 피해 숫자는 맞은 포켓몬 위에 떠올랐다 사라진다. 보통·효과 굉장·효과 별로·`빗나감`·흡수(`+n`)를 색과 크기로 나눈다.
 - 기절하면 머리 위 표시를 지우고 그림을 흐리게 한다.

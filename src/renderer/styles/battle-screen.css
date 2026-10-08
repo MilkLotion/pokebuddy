@@ -337,6 +337,21 @@ body {
   font: 700 10px/14px var(--font-small);
   white-space: nowrap;
 }
+/* 날씨·필드·오라 연출 층 — 섞기 방식별 canvas 를 겹친다(field-fx.ts). 전장 모서리에 맞춰 자른다
+   z-index·opacity·transform 을 주지 않는다 — 주면 묶음이 따로 섞여 바닥·포켓몬 위에 색 보정이 먹지 않는다 */
+.field-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.field-layer .field-fx {
+  position: absolute;
+  inset: 0;
+  width: 448px;
+  height: 280px;
+}
 /* 연출 겹침층 — 기술 이름 알약과 피해 숫자 */
 .fx {
   position: absolute;

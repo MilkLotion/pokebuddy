@@ -6,6 +6,7 @@ import type { MoveView } from "../../shared/model/snapshot.js";
 import { TIMELINE_RULES, clockText, createTimeline, spriteFrame, type Timeline, type UnitState } from "../../shared/battle-timeline.js";
 import type { LookSheets } from "../../shared/model/stage.js";
 import { createDeviceFrame } from "../device/device-frame.js";
+import { createFieldFx, type FieldFx } from "./field-fx.js";
 import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
@@ -314,6 +315,9 @@ function draw(view: BattleScreenView): void {
       board.appendChild(ob);
     }
   }
+  // 날씨·필드·오라 연출 층 — 필드는 바닥 위·포켓몬 아래, 날씨·오라는 포켓몬 위·알약 아래 (field-fx.ts)
+  const fxUnder = el("div", "field-layer");
+  arena.appendChild(fxUnder);
   const pets: [(PetEls | null)[], (PetEls | null)[]] = [[], []];
   for (const side of [0, 1] as const) {
     view.units[side].forEach((u, slot) => {
@@ -323,6 +327,8 @@ function draw(view: BattleScreenView): void {
       arena.appendChild(p.root);
     });
   }
+  const fxOver = el("div", "field-layer");
+  arena.appendChild(fxOver);
   const fx = el("div", "fx");
   arena.appendChild(fx);
   body.append(sideEl(0), arena, sideEl(1));
@@ -440,10 +446,18 @@ function draw(view: BattleScreenView): void {
     arena.appendChild(roulette.panel);
     for (const r of roulette.els) paintReel(r, view, 0);
   }
+  // 룰렛이 멈춘 뒤 판이 끝날 때까지 — OS 움직임 줄이기가 켜져 있으면 한 장면만 그리고 멈춘다
+  let fieldFx: FieldFx | null = null;
+  const stillFx = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const kindOf = (key: BattleRouletteView["key"]): string | null => reels?.find((r) => r.key === key)?.kind ?? null;
   const finishRoulette = (): void => {
     roulette?.panel.remove();
     roulette = null;
     conditions.replaceChildren(...(reels ?? []).map((r) => conditionEl(r, view)).filter((c): c is HTMLElement => c !== null));
+    if (reels) {
+      fieldFx = createFieldFx(fxUnder, fxOver, { weather: kindOf("weather"), field: kindOf("field"), aura: kindOf("aura") });
+      if (stillFx) fieldFx?.draw(2000);
+    }
   };
 
   // 재생 — 프레임마다 흐른 시간 × 배속만큼 판 시계를 민다
@@ -465,6 +479,7 @@ function draw(view: BattleScreenView): void {
     const shown = Math.min(t, view.endMs);
     for (const side of [0, 1] as const) state.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, shown));
     paintFx(shown, state);
+    if (fieldFx && !stillFx) fieldFx.draw(shown);
     const c = clockText(view.maxMs, shown);
     if (clock.textContent !== c) clock.textContent = c;
     if (t >= view.endMs + RESULT_DELAY_MS && !resultShown) {

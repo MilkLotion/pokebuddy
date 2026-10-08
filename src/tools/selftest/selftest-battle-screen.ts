@@ -136,8 +136,11 @@ assert.ok(weather!.picked && weather!.candidates.some((c) => c.side === weather!
 assert.ok((weather!.name === "비" && weather!.type === "water") || (weather!.name === "모래바람" && weather!.type === "rock"), `날씨 이름·아이콘: ${weather!.name}`);
 assert.strictEqual(field!.name, "사이코필드");
 assert.strictEqual(field!.type, "psychic");
+assert.strictEqual(field!.kind, "psychic", "엔진 kind — 전장 연출을 고른다");
+assert.ok(weather!.kind === "rain" || weather!.kind === "sand", `날씨 kind: ${weather!.kind}`);
 assert.deepStrictEqual(aura!.candidates, [], "오라 후보 없음");
 assert.strictEqual(aura!.name, null);
+assert.strictEqual(aura!.kind, null);
 assert.ok(rView.typeIcons.psychic !== undefined, "룰렛 아이콘 타입도 열쇠에 든다");
 assert.strictEqual(rView.units[0][0]?.ability, "잔비", "특성 이름");
 const plain = battleScreenModel({ sides: [[f("pikachu")], [f("snorlax")]] as const, result: runBattle({ seed: 1, sides: [[f("pikachu")], [f("snorlax")]], typeChart: battleTypeChart() }), opponentName: "상대", reward: { lead: "", detail: "" } });

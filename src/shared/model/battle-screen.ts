@@ -63,6 +63,7 @@ export interface BattleUnitView {
 // 룰렛 릴 하나 — 판 표시 줄 칩과 룰렛 패널이 같이 쓴다. 후보가 없으면 candidates 가 비고 name 은 null
 export interface BattleRouletteView {
   key: "weather" | "field" | "aura";
+  kind: string | null; // 엔진 kind(sun·psychic·fairy …) — 전장 연출을 고른다. 후보가 없으면 null
   label: string; // 날씨 · 필드 · 오라
   name: string | null; // 걸린 효과 — 비 · 사이코필드 · 시작의바다 …
   type: string | null; // 관련 타입 아이콘 (docs/specs/ui-components.md "배틀 창으로 더한 것")
