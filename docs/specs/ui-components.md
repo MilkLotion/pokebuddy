@@ -180,7 +180,7 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 
 | 층 | 컴포넌트 (노드, 변형) |
 |---|---|
-| 01 Atoms | `04 배지·상태`: `Battle Pop` `1779:75410`(`Effect=Normal\|Super\|Weak\|Miss\|Heal`, 짙은 테두리 글자), `Battle Condition` `1796:3712`(걸린 효과 칩, 관련 타입 아이콘 + 이름). `05 초상·막대·선`: `Battle HP` `1779:76152`(`Side=Mine\|Opponent` × `Fill=100\|70\|40\|15\|0`, `Show Chip`. 내 쪽 `lime/400`, 상대 `red/600`), `Battle Cooldown` `1779:76173`(`Fill=0\|25\|50\|75\|100`, `yellow/400`), `Battle Obstacle` `1779:75729`(`Size=Small\|Large`, 28·56). 바 길이는 인스턴스에서 크기를 덮어쓸 수 없어 변형으로 고른다. |
+| 01 Atoms | `04 배지·상태`: `Battle Pop` `1779:75410`(`Effect=Normal\|Super\|Weak\|Miss\|Heal`, 짙은 테두리 글자), `Battle Condition` `1796:3712`(걸린 효과 칩, 관련 타입 아이콘 + 이름). `05 초상·막대·선`: `Battle HP` `1779:76152`(`Side=Mine\|Opponent` × `Fill=100\|70\|40\|15\|0`, `Show Chip`. 내 쪽 `lime/400`, 상대 `red/600`), `Battle Cooldown` `1779:76173`(`Fill=0\|25\|50\|75\|100`, `yellow/400`). 바 길이는 인스턴스에서 크기를 덮어쓸 수 없어 변형으로 고른다. |
 | 02 Molecules | `01 창 머리·탐색`: `Battle HUD` `1796:3717`(644 고정, 칩 `condition/weather·field·aura`). `02 파티·박스`: `Battle Overhead` `1779:75399`(`Side=Mine\|Opponent`, `Show Stat`, `Show Charge`. 폭 36), `Battle Card` `1787:6696`(`State=Ready\|Acting\|Hit\|Fainted`), `Roulette Row` `1796:3392`(후보 한 칸 128×40), `Roulette Reel` `1796:3563`(`State=Spinning\|Stopped\|Fixed\|Empty`, 네 상태 같은 높이). |
 | 03 Organisms | `01 창 뼈대`: `Battle Board` `1779:75730`(560×336, 10×6 체크 무늬). `02 파티 카드`: `Battle Side` `1787:7914`(`Side=Mine\|Opponent`, 카드 2×3). `03 대화창·겹치는 것`: `Roulette Panel` `1796:3564`(릴 세 개). |
 | 04 Templates | `01 탭 틀`: `Battle Window` `1787:9967`(1116×484). 맨 위 `head` 는 청록 띠에 02 `Device Top`(상태 등·LED 셋·제목·✕)이다. |
