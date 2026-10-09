@@ -35,7 +35,7 @@ interface MoveEntry {
   accuracy: number | null;
   priority?: number;
   cooldown?: number;
-  effects?: { stats?: StatEffect[]; crit?: string; status?: { kind: string | string[]; chance: number }; flinch?: number };
+  effects?: { stats?: StatEffect[]; crit?: string; status?: { kind: string | string[]; chance: number }; flinch?: number; charge?: boolean; recharge?: boolean; halfHp?: boolean };
 }
 
 // 공격기의 능력 변화 — 맞힌 뒤 chance% 로 건다 (docs/specs/moves.md "능력 변화")
@@ -103,6 +103,21 @@ function readTable<T>(file: string): Record<string, T> {
   return out;
 }
 
+// 두 타입 종이지만 두 칸이 같은 타입인 종 — 한 타입의 공격기가 무거운 기술(충전·반동으로 쉼·자기 HP 절반)뿐이라 다른 자기 타입에서 골랐다 (docs/specs/moves.md "처음 값을 정한 순서")
+const HEAVY_FILL = new Set(["landorus", "landorus-therian", "enamorus"]);
+// 기본 2개에 무거운 기술을 그대로 둔 종 — 그 종 타입에 무겁지 않은 공격기가 없다
+const HEAVY_KEEP = new Set(["meltan"]);
+// 무거운 기술 — 충전·반동으로 쉼·자기 HP 절반. 종 특성이 부르는 날씨로 충전이 없어지면 무겁지 않다
+const SUN_ABILITIES = new Set(["drought", "desolate-land", "orichalcum-pulse"]);
+const RAIN_ABILITIES = new Set(["drizzle", "primordial-sea"]);
+function heavyFor(id: string, ability: string, m: MoveEntry | undefined): boolean {
+  const e = m?.effects;
+  if (!e) return false;
+  if (e.recharge || e.halfHp) return true;
+  if (!e.charge) return false;
+  if ((id === "solar-beam" || id === "solar-blade") && SUN_ABILITIES.has(ability)) return false;
+  return !(id === "electro-shot" && RAIN_ABILITIES.has(ability));
+}
 export function moveDataFindings(): string[] {
   const species = readTable<SpeciesDefault>("species.defaults.json");
   const moves = readTable<MoveEntry>("moves.json");
@@ -180,7 +195,9 @@ export function moveDataFindings(): string[] {
     });
     const off = slotTypes.filter((t) => !sp.types.includes(t)).length;
     if (off > 1) bad.push(`종 ${key}(${sp.types.join("/")}): 종 타입과 다른 칸이 ${off}개 — ${slotTypes.join("·")}`);
-    if (sp.types.length === 2 && off === 0 && slotTypes[0] === slotTypes[1]) bad.push(`종 ${key}(${sp.types.join("/")}): 두 칸이 같은 타입 ${slotTypes[0]}`);
+    if (sp.types.length === 2 && off === 0 && slotTypes[0] === slotTypes[1] && !HEAVY_FILL.has(key)) bad.push(`종 ${key}(${sp.types.join("/")}): 두 칸이 같은 타입 ${slotTypes[0]}`);
+    const heavyIds = entry.moves.map((x) => (typeof x === "string" ? x : x.id)).filter((id) => heavyFor(id, speciesAbilities[key] ?? "", moves[id]));
+    if (heavyIds.length && !HEAVY_KEEP.has(key)) bad.push(`종 ${key}: 기본 2개에 무거운 기술 ${heavyIds.join("·")}`);
     if (sp.types.length === 1 && off === 0 && slotTypes.some((t) => t !== sp.types[0])) bad.push(`종 ${key}: 칸 타입 ${slotTypes.join("·")}`);
     for (const s of entry.moves) {
       const id = typeof s === "string" ? s : s.id;
