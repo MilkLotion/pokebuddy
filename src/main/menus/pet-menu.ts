@@ -33,7 +33,7 @@ export interface PetMenuDeps {
 
 export interface PetMenu {
   open(petId: string, origin?: MenuOrigin): void;
-  openBattle(slot: number): void; // 모험 탭 배틀 파티 칸의 우클릭 — 바꾸기·빼기
+  openBattle(slot: number): void; // 모험 탭 배틀 파티 칸의 우클릭 — 바꾸기·빼기·모습 바꾸기
 }
 
 export function createPetMenu(deps: PetMenuDeps): PetMenu {
@@ -83,13 +83,34 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
 
   return {
     openBattle(slot) {
-      const model = battleMenuOf(deps.read(), slot);
-      if (!model) return;
-      const items = battleMenu(model, {
-        change: () => deps.openManage({ to: "battle-pick", slot }),
-        clear: () => deps.run({ cmd: "battle.clear", args: { slotIndex: slot }, from: "menu" }),
-      });
-      openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
+      const show = (icons: Record<string, string>): void => {
+        const save = deps.read();
+        const model = battleMenuOf(save, slot, icons);
+        const petId = save?.battle?.slots?.[slot] ?? null;
+        if (!model || !petId) return;
+        const items = battleMenu(model, {
+          change: () => deps.openManage({ to: "battle-pick", slot }),
+          clear: () => deps.run({ cmd: "battle.clear", args: { slotIndex: slot }, from: "menu" }),
+          form: (species) => deps.run({ cmd: "battle.form", target: petId, args: { species }, from: "menu" }),
+        });
+        openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
+      };
+      // 모습 말풍선의 초상 — 포켓몬 메뉴와 같이 잠깐만 기다린다
+      const forms = battleMenuOf(deps.read(), slot)?.forms ?? [];
+      const pet = deps.read()?.pets.find((p) => p.id === deps.read()?.battle?.slots?.[slot]);
+      const art = deps.portraits();
+      if (forms.length < 2 || !art || !pet) {
+        show({});
+        return;
+      }
+      const asks = forms.map((f) => ({ slug: f.species, shiny: pet.shiny }));
+      const none: Record<string, string> = {};
+      const got = art.get(asks).then(
+        (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
+        () => none,
+      );
+      const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), PET_MENU_RULES.formIconWaitMs));
+      void Promise.race([got, late]).then(show);
     },
     open(id, origin = "stage") {
       const save = deps.read();

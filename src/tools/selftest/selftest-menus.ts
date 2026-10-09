@@ -7,7 +7,7 @@
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
+import { battleMenu, battleMenuOf, petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
 import { menuView } from "../../view/menu-view";
 import { boredText, t } from "../../view/text";
 
@@ -161,4 +161,20 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).some((m) => m.label === t("menu.form")), false, "바뀐 개체에는 모습 바꾸기 줄이 없다");
 }
 
-process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금)\n");
+// (8) 배틀 파티 칸 메뉴 — 바꾸기·빼기, 모습이 있으면 모습 바꾸기(배틀 파티 모습만, 도구 없음). 짝이 없는 모습은 흐리다. 한 방향 묶음은 줄이 없다
+//     (2026-10-09 사용자 결정 "우클릭메뉴에 모습바꾸기같은거 넣어야해", "기존에 해금했으면 되게")
+{
+  const s = seed();
+  s.pets.push(pet({ id: "p6", species: "kyurem", level: 60 }), pet({ id: "p7", species: "floette", level: 30 }), pet({ id: "p8", species: "zekrom", level: 60 }));
+  s.battle = { ...(s.battle ?? {}), slots: ["p6", "p7", null, null, null, null] } as SaveV3["battle"];
+  const noop = { change: () => undefined, clear: () => undefined, form: () => undefined };
+  const k = battleMenu(battleMenuOf(s, 0)!, noop);
+  assert.deepEqual(k.filter((m) => m.type !== "separator").map((m) => m.label).slice(1), [t("menu.battle.change"), t("menu.battle.clear"), t("menu.form")], "바꾸기·빼기·모습 바꾸기");
+  const kRows = (k.find((m) => m.label === t("menu.form"))?.submenu ?? []) as { label?: string; enabled?: boolean; sublabel?: string }[];
+  assert.deepEqual(kRows.map((r) => [r.label, r.sublabel, r.enabled]), [["큐레무", t("menu.form.now"), false], ["블랙큐레무", t("menu.form.go"), true], ["화이트큐레무", t("menu.form.go"), false]], "제크로무가 있으면 블랙큐레무만, 레시라무가 없어 화이트는 흐리다");
+  s.battle!.forms = { p6: "kyurem-black" };
+  assert.equal(battleMenuOf(s, 0)!.name, "블랙큐레무", "이름은 배틀 파티의 모습");
+  assert.equal(battleMenu(battleMenuOf(s, 1)!, noop).some((m) => m.label === t("menu.form")), false, "한 방향 묶음(플라엣테)은 도구를 써야 해서 줄이 없다");
+}
+
+process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금·배틀 파티 칸)\n");

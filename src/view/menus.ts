@@ -6,7 +6,8 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
-import { formsOf, isFormLocked, riderMissing, shiftRuleOf } from "../dex/forms.js";
+import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
+import { battleSpeciesOf } from "../battle/party.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
 import { boredStepOf, zoneOf } from "../state/time.js";
@@ -111,31 +112,72 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
   ];
 }
 
-// 배틀 파티 칸 메뉴 — 이름·칸 / 바꾸기·빼기. 포켓몬 메뉴와 같은 메뉴 창에 커서 자리로 뜬다
-// (2026-10-09 사용자 결정 "2번으로 진행", 메뉴 구성은 바꾸기·빼기만 "1. 아니", Figma 99 `Adventure / Battle Party · Context Menu` `1821:818`)
+// 배틀 파티 칸 메뉴 — 이름·칸 / 바꾸기·빼기·모습 바꾸기. 포켓몬 메뉴와 같은 메뉴 창에 커서 자리로 뜬다
+// (2026-10-09 사용자 결정 "2번으로 진행", "우클릭메뉴에 모습바꾸기같은거 넣어야해", Figma 05 `Adventure / Battle Party · Context Menu` `1821:818`)
 export interface BattleMenuModel {
   name: string;
   nature: string | null;
   status: string; // 둘째 줄 — "배틀 파티 1번 칸"
+  forms?: PetMenuForm[]; // 배틀 파티 모습 — 둘 이상이면 `모습 바꾸기` 줄과 말풍선. current 는 배틀 파티의 지금 모습(battle.forms)
+  formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 작업 시간) — 줄만 흐리게
 }
 export interface BattleMenuActions {
   change(): void; // 바꾸기 — 관리 창이 개체 고르기 모달을 연다
   clear(): void; // 빼기 — 그 칸을 빈 칸으로
+  form(species: string): void; // 모습 말풍선에서 고른 모습 — 배틀 파티 모습만 바꾼다(battle.form). 도구를 쓰지 않아 확인 창 없이 바로 바꾼다
 }
 export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): MenuItemConstructorOptions[] {
+  const forms = model.forms && model.forms.length > 1 ? model.forms : null;
+  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current || f.noItem));
   return [
     { label: petLine(model), sublabel: model.status, enabled: false },
     { type: "separator" },
     { label: t("menu.battle.change"), click: () => act.change() },
     { label: t("menu.battle.clear"), click: () => act.clear() },
+    ...(forms && formsOff ? [{ label: t("menu.form"), enabled: false, click: () => undefined }] : []),
+    ...(forms && !formsOff
+      ? [
+          {
+            label: t("menu.form"),
+            toolTip: t("menu.form.title"),
+            submenu: forms.map((f) => ({
+              label: f.name,
+              sublabel: t(f.current ? "menu.form.now" : "menu.form.go"),
+              enabled: !f.current && !f.noItem,
+              ...(f.portrait ? { icon: f.portrait } : {}),
+              click: () => act.form(f.species),
+            })),
+          },
+        ]
+      : []),
   ];
 }
+
+// 배틀 파티의 모습 줄 — 원래 모습 바꾸기의 모습(formsOf) 가운데 도구 없이 오갈 수 있는 것. 한 방향 묶음(영원의 꽃 등)은 도구를 써야 얻으므로 지금 종만 둔다
+// 말(버드렉스)·짝(큐레무)이 없으면 그 줄이 흐리다 (2026-10-09 사용자 결정 "배틀 파티의 모습 바꾸기에는 기존에 해금했으면 되게")
+function battleForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): PetMenuForm[] {
+  const now = battleSpeciesOf(save, pet);
+  const list = shiftRuleOf(pet.species)?.oneWay ? [pet.species] : formsOf(pet);
+  return list.map((slug) => ({
+    species: slug,
+    name: petName(slug),
+    current: slug === now,
+    ...(icons[slug] ? { portrait: icons[slug] } : {}),
+    ...(riderMissing(save, slug) || partnerMissing(save, slug) ? { noItem: true } : {}),
+  }));
+}
 // 배틀 파티 칸의 메뉴 값 — 빈 칸이거나 개체가 없으면 null
-export function battleMenuOf(save: SaveV3 | null, slot: number): BattleMenuModel | null {
+export function battleMenuOf(save: SaveV3 | null, slot: number, icons: Record<string, string> = {}): BattleMenuModel | null {
   const petId = save?.battle?.slots?.[slot] ?? null;
-  const pet = petId ? (save?.pets.find((p) => p.id === petId) ?? null) : null;
-  if (!pet) return null;
-  return { name: petName(pet.species), nature: pet.nature ? natureName(pet.nature) : null, status: t("menu.battle.slot", { n: String(slot + 1) }) };
+  const pet = save && petId ? (save.pets.find((p) => p.id === petId) ?? null) : null;
+  if (!save || !pet) return null;
+  return {
+    name: petName(battleSpeciesOf(save, pet)),
+    nature: pet.nature ? natureName(pet.nature) : null,
+    status: t("menu.battle.slot", { n: String(slot + 1) }),
+    forms: battleForms(save, pet, icons),
+    ...(isFormLocked(pet) ? { formsLocked: true } : {}),
+  };
 }
 
 // 튜토리얼이 고르게 할 항목만 남기고 나머지 누르는 항목을 흐리게(사용 안 함) 둔다. 이름·상태 줄은 그대로다.
