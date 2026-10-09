@@ -2,6 +2,7 @@
 // 설계: worklog/records/battle-server/battle-server.md "E3 서버 설계", 규칙: docs/specs/adventure.md "서버", balance.md "배틀 보상"
 //   준비: Docker Desktop, `npx supabase start`, `npx supabase functions serve`(함수 셋: upload-save·battle-offer·battle-start). 빌드: `npm run build`
 //   실행: node dist/tools/e2e/e2e-battle.js   (DB 를 비우고 시작한다 — 로컬 DB 에만 쓴다)
+//   DB 초기화가 서버 함수 컨테이너를 내릴 때가 있다 — 그러면 `npx supabase db reset` 뒤 functions serve 를 띄우고 E2E_KEEP_DB=1 로 돌린다
 //   앱 창은 띄우지 않는다. 앱이 부를 함수를 supabase-js 로 그대로 부른다
 import assert from "node:assert/strict";
 import { execSync } from "node:child_process";
@@ -64,7 +65,7 @@ async function upload(p: Player, save: SaveV3): Promise<Json> {
 
 async function run(): Promise<void> {
   const local = localServer();
-  execSync("npx supabase db reset", { cwd: root, stdio: "ignore", timeout: 300_000 });
+  if (process.env.E2E_KEEP_DB !== "1") execSync("npx supabase db reset", { cwd: root, stdio: "ignore", timeout: 300_000 });
   checks.push("로컬 Supabase 확인과 DB 초기화");
 
   const [a, b, c, d] = await Promise.all(["A", "B", "C", "D"].map((n) => player(n, local.url, local.key)));

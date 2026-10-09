@@ -8,7 +8,8 @@ import { tableName } from "./name-table.js";
 
 const ROWS = 3;
 
-function slotOf(s: { species: string; form: string | null; types: string[]; shiny?: boolean } | null): BattlePickSlotView | null {
+// 칸 하나 — 친선 배틀의 양쪽 배틀 파티 줄도 쓴다 (src/view/friendly-battle.ts)
+export function slotOf(s: { species: string; form: string | null; types: string[]; shiny?: boolean } | null): BattlePickSlotView | null {
   if (!s) return null;
   const shown = s.form ?? s.species;
   const mega = s.form ? megaOf(s.form) : null;

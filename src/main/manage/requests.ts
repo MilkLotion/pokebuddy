@@ -6,6 +6,7 @@ import type { AccountAction, UpdateAction } from "../../shared/model/account";
 import type { AgentAction } from "../../shared/model/agents";
 import type { MailAction } from "../../shared/model/mail";
 import type { BattleAction } from "../../shared/model/battle-net";
+import type { FriendlyAction } from "../../shared/model/friendly";
 import type { PortraitAsk } from "../../shared/model/snapshot";
 import type { ManageRequest } from "../../shared/ipc/manage";
 import { hasCommandFlag } from "../../shared/names/commands.js";
@@ -69,6 +70,15 @@ export function parseBattleAction(v: unknown): BattleAction | null {
   if (v.action === "record") return { action: "record" };
   if (v.action === "start" && typeof v.offerId === "string" && /^[0-9a-f-]{36}$/i.test(v.offerId) && typeof v.pick === "number" && Number.isInteger(v.pick) && v.pick >= 1 && v.pick <= 3)
     return { action: "start", offerId: v.offerId, pick: v.pick };
+  return null;
+}
+
+// 친선 배틀 — 정한 다섯 동작만. 링크는 짧은 글자만(토큰은 src/trade/link.ts tokenOf 가 다시 본다)
+export function parseFriendlyAction(v: unknown): FriendlyAction | null {
+  if (!isObj(v)) return null;
+  if (v.action === "view" || v.action === "create" || v.action === "leave") return { action: v.action };
+  if (v.action === "join" && typeof v.link === "string" && v.link.length <= 512) return { action: "join", link: v.link };
+  if (v.action === "ready" && typeof v.ready === "boolean") return { action: "ready", ready: v.ready };
   return null;
 }
 

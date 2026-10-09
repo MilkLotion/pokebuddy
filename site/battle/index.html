@@ -1,0 +1,163 @@
+<!doctype html>
+<!--
+  친선 배틀 링크의 정적 페이지 — https://milklotion.github.io/pokebuddy/battle#<토큰> (교환 페이지 site/trade/index.html 과 같은 꼴)
+  규칙: docs/specs/adventure.md "친선 배틀". 토큰은 # 뒤에 있어 페이지 서버 기록에 남지 않는다.
+  페이지를 열면 바로 pokebuddy://battle/<토큰> 으로 설치한 앱을 연다. 앱이 열리지 않으면 다시 누르는 단추, 설치 링크, 링크를 앱에 붙여 넣는 길을 보인다.
+  외부 스크립트·글꼴·추적을 쓰지 않는다
+-->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>pokebuddy 친선 배틀</title>
+<style>
+  :root {
+    --bg: #f0efea;
+    --surface: #ffffff;
+    --line: #dcdcd4;
+    --text: #1a3330;
+    --muted: #4a6663;
+    --primary: #13786b;
+    --primary-text: #ffffff;
+    --danger: #d8332f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141c1b;
+      --surface: #1d2927;
+      --line: #2f3d3b;
+      --text: #e6eeec;
+      --muted: #9fb3b0;
+      --primary: #2aa593;
+      --primary-text: #0b1413;
+      --danger: #ff6b66;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 16px;
+    padding: 24px 16px;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  h1 { margin: 0; font-size: 22px; }
+  p { margin: 0; color: var(--muted); }
+  .open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--primary-text);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  a:not(.open) { color: var(--primary); }
+  summary { color: var(--muted); cursor: pointer; }
+  .more { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+  .copy { display: flex; gap: 8px; }
+  .copy input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+  .copy button {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  code { font-size: 13px; word-break: break-all; }
+  .bad { color: var(--danger); }
+  /* 권리 고지 — 카드 아래 작은 글. 규칙: docs/design.md 제품과 실행 "권리와 배포" */
+  footer { width: 100%; max-width: 440px; text-align: center; }
+  footer p { font-size: 12px; line-height: 1.5; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>친선 배틀</h1>
+  <section id="ok" hidden>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <p>앱을 여는 중이에요. 브라우저가 물으면 <strong>열기</strong>를 눌러 주세요. 링크는 만든 뒤 10분 동안, 한 사람만 쓸 수 있어요.</p>
+      <a class="open" id="open" href="#">앱에서 열기</a>
+      <p>앱이 없으면 <a href="https://github.com/MilkLotion/pokebuddy/releases/latest">설치</a>한 뒤 이 링크를 다시 눌러 주세요.</p>
+      <details>
+        <summary>앱이 열리지 않아요</summary>
+        <div class="more">
+          <p>아래 링크를 복사해 앱의 모험 탭 → <strong>친선 배틀</strong> → <strong>링크로 참가</strong> 칸에 붙여 넣어 주세요.</p>
+          <div class="copy">
+            <input id="link" readonly aria-label="친선 배틀 링크">
+            <button id="copy" type="button">복사</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+  <section id="bad" hidden>
+    <p class="bad">친선 배틀 링크가 올바르지 않아요. 친구에게 링크를 다시 받아 주세요.</p>
+  </section>
+</main>
+<footer>
+  <p>pokebuddy 는 팬이 만든 비공식 앱이에요. Nintendo · Creatures Inc. · GAME FREAK inc. · The Pokémon Company 와 제휴하지 않았어요.</p>
+  <p>포켓몬의 권리는 Nintendo · Creatures Inc. · GAME FREAK inc. 에 있어요. <a href="https://github.com/MilkLotion/pokebuddy#라이선스">그림 출처와 라이선스</a></p>
+</footer>
+<script>
+  (function () {
+    var token = "";
+    try { token = decodeURIComponent(location.hash.slice(1)); } catch (e) { token = ""; } // 깨진 % 표기는 잘못된 링크로 본다
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) {
+      document.getElementById("bad").hidden = false;
+      return;
+    }
+    var link = location.origin + location.pathname + "#" + token;
+    var deep = "pokebuddy://battle/" + token;
+    document.getElementById("ok").hidden = false;
+    document.getElementById("open").href = deep;
+    document.getElementById("link").value = link;
+    document.getElementById("copy").addEventListener("click", function () {
+      var input = document.getElementById("link");
+      var done = function () { document.getElementById("copy").textContent = "복사됨"; };
+      if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, function () { input.select(); });
+      else { input.select(); document.execCommand("copy"); done(); }
+    });
+    // 페이지를 열면 바로 앱으로 넘긴다 — 단추는 브라우저가 막았을 때 다시 누르는 길
+    location.href = deep;
+  })();
+</script>
+</body>
+</html>

@@ -90,10 +90,13 @@ export function drawAdventure(v: Snapshot): void {
   const acts = el("div", "head-acts");
   const load = buttonEl("act", "가져오기");
   load.addEventListener("click", () => openAnyDialog({ kind: "preset-overview", battle: true }));
+  // 친선 배틀 — 가져오기와 배틀 시작 사이 (Figma 01 `Adventure Header` 1659:124, 2026-10-10 사용자 확정). 배틀 파티와 상관없이 연다 — 준비할 때 출전 불가를 본다
+  const friendly = buttonEl("act", "친선 배틀");
+  friendly.addEventListener("click", () => openAnyDialog({ kind: "friendly" }));
   const start = buttonEl("act primary", "배틀 시작");
   start.disabled = !v.battle.canStart; // 비었거나 출전 불가가 있으면 막는다 (docs/specs/adventure.md "출전 불가")
   start.addEventListener("click", () => openBattleOpponent(() => openAnyDialog({ kind: "battle-opponent" })));
-  acts.append(load, start);
+  acts.append(load, friendly, start);
   top.appendChild(acts);
   bodyEl.appendChild(top);
   const grid = el("div", "grid");

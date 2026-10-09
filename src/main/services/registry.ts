@@ -15,8 +15,14 @@ import { pendingTradeOf } from "../../party/pet-actions";
 import type { GameV3 } from "../../tx/game";
 import { createMailInbox, type MailInbox } from "../../online/mail-inbox.js";
 import { createBattleNet, type StartData } from "../../online/battle-net.js";
+import { createFriendlySession, type FriendlySession } from "../../online/friendly-session.js";
+import { onlineConfig } from "../../online/config.js";
+import { friendlyLinkBase } from "../../trade/link.js";
+import type { FriendlyScreen } from "../../shared/model/friendly";
+import { friendlyScreenInput } from "../../view/friendly-battle.js";
+import { devEnv } from "../app/dev-run.js";
 import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
-import { battleOfferView, battleRewardText } from "../../view/battle-offer.js";
+import { battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
 import type { BattleScreenInput } from "../../view/battle-screen.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
 import { createMainTrade, type MainTrade } from "./trade";
@@ -38,7 +44,10 @@ export interface ServicesDeps {
   sendTrade(screen: TradeScreen): void;
   sendAccount(screen: AccountScreen): void;
   sendMail(screen: MailScreen): void;
-  openBattle(input: BattleScreenInput): void; // 랜덤 배틀 판을 배틀 창으로 연다
+  openBattle(input: BattleScreenInput): void; // 랜덤 배틀·친선 배틀 판을 배틀 창으로 연다
+  firstFriendlyLink: string | null; // 친선 배틀 링크로 처음 켜졌으면 그 링크
+  openFriendly(): void; // 친선 배틀 모달을 연다
+  sendFriendly(screen: FriendlyScreen): void;
   // 온라인 기능이 앱에 알리는 일 — 멈추기·분실·알림·업데이트 필요·새로 시작
   online: Pick<MainOnlineOptions, "onSaveReplaced" | "onHalt" | "onLost" | "onNotice" | "onUpdateRequired" | "freeze" | "thaw" | "onRestart">;
 }
@@ -53,6 +62,8 @@ export interface Services {
   settled(ms: number): Promise<void>;
   mail(): MailInbox | null; // 없으면 만든다
   battle(): ReturnType<typeof createBattleNet> | null; // 랜덤 배틀 서버 호출 — 없으면 만든다
+  friendly(): FriendlySession | null; // 친선 배틀 세션 — 없으면 만들고 열린 채널에 이어 붙는다
+  openFriendlyLink(link: string): void; // 친선 배틀 링크로 참가하고 모달을 연다. 세션이 아직 없으면 받아 두었다가 참가한다
   openTradeLink(link: string): void; // 링크를 받아 두고 교환 모달을 연다. 세션이 준비되면 참가한다
   flushTradeLink(): void;
   pause(): void; // 교환·우편을 멈춘다. 온라인은 남긴다 — 확인·다시 시도에 쓴다
@@ -65,6 +76,8 @@ export function createServices(deps: ServicesDeps): Services {
   let tradeScreen: TradeScreenBuilder | null = null;
   let mainMail: MailInbox | null = null;
   let mainBattle: ReturnType<typeof createBattleNet> | null = null;
+  let mainFriendly: FriendlySession | null = null;
+  let friendlyLink: string | null = deps.firstFriendlyLink; // 세션이 생기기 전에 받은 친선 배틀 링크
   let tradeStarted: Promise<void> = Promise.resolve(); // 교환 세션의 시작 확인 — 끝나기 전의 참가는 busy 로 거절된다
   let tradeLink: { link: string; at: number } | null = deps.firstLink ? { link: deps.firstLink, at: Date.now() } : null;
   // 세션 파일 저장소 한 벌 — 계정·클라우드(online)와 교환이 같은 메모리로 session.bin 을 본다.
@@ -225,6 +238,38 @@ export function createServices(deps: ServicesDeps): Services {
     return mainBattle;
   }
 
+  // 친선 배틀 — 판을 받으면 서버가 정한 시각에 배틀 창을 연다. 로그인 계정만 서버에 보낸다(세션이 먼저 거른다)
+  function friendly(): FriendlySession | null {
+    const on = online();
+    if (!on || !deps.game()) return null;
+    if (!mainFriendly) {
+      const config = onlineConfig(undefined, devEnv());
+      mainFriendly = createFriendlySession({
+        client: on.client,
+        signedIn: () => on.screen().signedIn,
+        beforeReady: () => on.flush(), // 준비 직전 저장 올리기 — 서버 저장의 배틀 파티로 싸운다
+        linkBase: friendlyLinkBase(config.linkBase),
+        slotView: slotOf,
+        onScreen: (screen) => deps.sendFriendly(screen),
+        // 친구가 준비해 판이 시작되면 설정창이 닫혀 있을 수 있다 — 배틀 창은 설정창을 연 뒤에만 뜨므로 친선 배틀 모달을 먼저 연다(결과 뒤 만남 화면으로 돌아온다)
+        onBattle: (b, role, name, delayMs) => {
+          setTimeout(() => {
+            deps.openFriendly();
+            deps.openBattle(friendlyScreenInput(b, role, name));
+          }, Math.max(0, delayMs));
+        },
+      });
+      const s = mainFriendly;
+      void s.start().then(() => {
+        if (!friendlyLink) return;
+        const link = friendlyLink;
+        friendlyLink = null;
+        void s.openLink(link);
+      });
+    }
+    return mainFriendly;
+  }
+
   // 받아 둔 교환 링크로 참가한다 — 교환 세션이 있고 시작 확인이 끝난 뒤. 명령 처리(ctx.trade)에서는 부르지 않는다
   // 시작 확인 중에 참가하면 busy 로 거절되고 링크가 사라진다(2026-09-27 검수 R2-01)
   function flushTradeLink(): void {
@@ -257,6 +302,16 @@ export function createServices(deps: ServicesDeps): Services {
     settled,
     mail,
     battle,
+    friendly,
+    openFriendlyLink(link) {
+      deps.openFriendly();
+      const s = mainFriendly ?? null;
+      if (s) void s.openLink(link);
+      else {
+        friendlyLink = link;
+        friendly();
+      }
+    },
     // 교환 세션이 아직 없으면(준비 전·reader) 생길 때 참가한다
     openTradeLink(link) {
       tradeLink = { link, at: Date.now() };
@@ -268,9 +323,13 @@ export function createServices(deps: ServicesDeps): Services {
       stopTrade();
       mainMail = null;
       mainBattle = null;
+      mainFriendly?.stop();
+      mainFriendly = null;
     },
     dispose() {
       stopTrade();
+      mainFriendly?.stop();
+      mainFriendly = null;
       mainOnline?.dispose();
       mainOnline = null;
       mainMail = null;

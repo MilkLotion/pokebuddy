@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ROOT } from "./baseline";
 
-const PREFIX = /^(CLOUD|AUTH|TRADE|MAIL|BATTLE)_[A-Z0-9_]+$/;
+const PREFIX = /^(CLOUD|AUTH|TRADE|MAIL|BATTLE|FRIENDLY)_[A-Z0-9_]+$/;
 
 function filesUnder(dir: string, ext: RegExp): string[] {
   const out: string[] = [];

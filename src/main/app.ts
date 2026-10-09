@@ -54,6 +54,7 @@ import { readJsonFile } from "../platform/json-file";
 import { createHookUpkeep, type HookUpkeep } from "./app/hook-upkeep";
 import type { MailAction } from "../shared/model/mail";
 import type { BattleAction } from "../shared/model/battle-net";
+import type { FriendlyAction } from "../shared/model/friendly";
 import type { ManageRoute } from "../shared/model/route";
 import type { Command } from "../shared/command";
 import { createBubbles } from "./stage/bubbles";
@@ -61,7 +62,7 @@ import { createCoach } from "./stage/coach";
 import { createCry } from "./stage/cry";
 import { createDebugLog, redirectOutput } from "./app/log";
 import { devNumber, isDevRun, isUpdateTestBuild } from "./app/dev-run";
-import { claimSingleInstance, tradeLinkOf } from "./app/launch";
+import { claimSingleInstance, friendlyLinkOf, tradeLinkOf } from "./app/launch";
 import { createDisplayState } from "./app/display-state";
 import { createPower } from "./app/power";
 import { createTicks } from "./app/ticks";
@@ -119,6 +120,7 @@ if (process.platform === "win32") app.setAppUserModelId(updateTestBuild ? "io.gi
 // 처리기는 이벤트가 올 때 부른다 — 아래에 정의한 함수를 화살표로 감싸 넘긴다
 const duplicate = !claimSingleInstance({
   onTradeLink: (link) => services.openTradeLink(link),
+  onFriendlyLink: (link) => services.openFriendlyLink(link),
   onOpen: (route) => openManageWindow(route),
 });
 
@@ -194,6 +196,9 @@ const services = createServices({
   sendAccount: (screen) => manage.send("manage:account-view", screen),
   sendMail: (screen) => manage.send("manage:mail-view", screen),
   openBattle: (input) => manage.openBattle(input),
+  firstFriendlyLink: friendlyLinkOf(process.argv),
+  openFriendly: () => openManageWindow({ to: "friendly" }),
+  sendFriendly: (screen) => manage.send("manage:friendly-view", screen),
   online: {
     onSaveReplaced: () => {
       rt.notifier?.settle(); // 다른 PC 에서 쌓인 미처리 상태를 배너로 쏟지 않는다 — 다음 틱보다 먼저 (src/notify/queue.ts settle)
@@ -342,6 +347,7 @@ const manage = createManage({
     ...(services.current() ? { account: services.current()!.act } : {}),
     ...(services.mail() ? { mail: async (req: MailAction) => (await services.mail()?.act(req)) ?? null } : {}),
     ...(services.battle() ? { battle: async (req: BattleAction) => (await services.battle()?.act(req)) ?? null } : {}),
+    ...(services.friendly() ? { friendly: async (req: FriendlyAction) => (await services.friendly()?.act(req)) ?? null } : {}),
     ...(update.isStarted() ? { update: update.act, notes: update.notes } : {}),
     // 설정의 `영역 그리기` — 그린 영역을 저장하면 영역 지정으로 바뀐다. 취소하면 아무것도 바꾸지 않는다
     drawRegion: async () => {
@@ -436,6 +442,7 @@ const ticks = createTicks({
   slow: () => {
     rt.hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
     // 받은 배틀 결과 — 서버는 10분마다 한 번 읽는다. 다른 배너가 보이는 중이면 다음 틱에 띄운다 (src/online/battle-net.ts checkReceived)
+    if (saveParty()?.isWriter()) void services.friendly()?.start(); // 열린 친선 배틀 채널에 이어 붙는다 — 켤 때 로그인이 늦으면 여기서 (src/online/friendly-session.ts start)
     if (saveParty()?.isWriter()) void services.battle()?.checkReceived((u) => rt.notifier?.showOnce(battleResultBanner(u)) ?? false);
     display.sync("all");
   },

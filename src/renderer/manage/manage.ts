@@ -15,6 +15,7 @@ import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
 import { drawBattleOpponent } from "./battle-opponent.js";
 import { drawBattleRecord, loadBattleRecord } from "./battle-record.js";
+import { drawFriendly, loadFriendly } from "./friendly-battle.js";
 import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
 import { drawGuide } from "./guide.js";
 import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
@@ -256,6 +257,7 @@ registerDialog({ kind: "notes-new", shape: "dialog settings notes-new", draw: (d
 registerDialog({ kind: "mail", shape: "dialog settings mail", headerButton: "open-mail", draw: () => drawMail() });
 registerDialog({ kind: "letter", shape: "dialog settings mail", draw: (d) => drawLetter(d.id) });
 registerDialog({ kind: "trade", shape: "dialog trade", draw: () => drawTradeDialog() });
+registerDialog({ kind: "friendly", shape: "dialog trade friendly", draw: () => drawFriendly(), enter: () => loadFriendly() });
 
 // ── 헤더 단추 · 가림막 · Esc ─────────────────────────────────────────────────────
 

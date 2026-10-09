@@ -7,6 +7,7 @@
 //   BATTLE_TOO_FAST       429 — 새로고침이 1초에 두 번
 //   BATTLE_BAD_ARGS       400 — 요청 모양이 틀렸다
 //   CLOUD_ACCOUNT_HELD    403 — 이용 정지
+//   FRIENDLY_*            친선 배틀(friendly-battle) — 링크·채널·준비 오류. 상태는 아래 표
 //   AUTH_TOKEN 401 · CLOUD_LOGIN_REQUIRED 401 · SERVER_BUSY 503 · SERVER_ERROR 500 — upload-save 와 같다
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { BattleData } from "./battle/fighter-core.ts";
@@ -25,9 +26,21 @@ const STATUS: Readonly<Record<string, number>> = {
   BATTLE_TOO_FAST: 429,
   CLOUD_ACCOUNT_HELD: 403,
   CLOUD_LOGIN_REQUIRED: 401,
+  FRIENDLY_LOGIN_REQUIRED: 403,
+  FRIENDLY_BAD_ARGS: 400,
+  FRIENDLY_VERSION_MISMATCH: 409,
+  FRIENDLY_RATE_LIMITED: 429,
+  FRIENDLY_LINK_INVALID: 404,
+  FRIENDLY_LINK_EXPIRED: 410,
+  FRIENDLY_LINK_USED: 409,
+  FRIENDLY_OWN_LINK: 409,
+  FRIENDLY_NOT_FOUND: 404,
+  FRIENDLY_CLOSED: 409,
+  FRIENDLY_RUNNING: 409,
+  FRIENDLY_PARTY_INVALID: 400,
 };
 export const fail = (code: string, extra: Record<string, unknown> = {}): Response => json({ error: code, ...extra }, STATUS[code] ?? 400);
-export const codeOf = (message: string): string | null => /((?:BATTLE|CLOUD)_[A-Z_]+)/.exec(message)?.[1] ?? null;
+export const codeOf = (message: string): string | null => /((?:BATTLE|CLOUD|FRIENDLY)_[A-Z_]+)/.exec(message)?.[1] ?? null;
 
 // 본인 확인 — 서비스 롤 클라이언트와 사용자 id. 실패면 응답
 export async function whoAmI(req: Request): Promise<{ admin: SupabaseClient; user: string } | Response> {

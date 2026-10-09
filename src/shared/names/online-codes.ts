@@ -51,6 +51,11 @@ export const SERVER_MAIL_CODES = ["MAIL_EXPIRED", "MAIL_LOGIN_REQUIRED", "MAIL_N
 
 // 랜덤 배틀 (supabase/functions/battle-offer·battle-start, 20261009100000_battle.sql)
 export const SERVER_BATTLE_CODES = ["BATTLE_BAD_ARGS", "BATTLE_COOLDOWN", "BATTLE_OFFER_GONE", "BATTLE_PARTY_INVALID", "BATTLE_TOO_FAST"] as const;
+// 친선 배틀 — supabase/functions/friendly-battle · 20261010120000_friendly_battle.sql
+export const SERVER_FRIENDLY_CODES = [
+  "FRIENDLY_BAD_ARGS", "FRIENDLY_CLOSED", "FRIENDLY_LINK_EXPIRED", "FRIENDLY_LINK_INVALID", "FRIENDLY_LINK_USED", "FRIENDLY_LOGIN_REQUIRED",
+  "FRIENDLY_NOT_FOUND", "FRIENDLY_OWN_LINK", "FRIENDLY_PARTY_INVALID", "FRIENDLY_RATE_LIMITED", "FRIENDLY_RUNNING", "FRIENDLY_VERSION_MISMATCH",
+] as const;
 
 // AUTH_USERNAME_RESERVED 는 앱이 AUTH_USERNAME_TAKEN 으로 바꿔 보인다 (src/online/codes.ts authCodeOf)
 export const SERVER_AUTH_CODES = [
@@ -125,6 +130,7 @@ export type OnlineCode =
   | (typeof SERVER_TRADE_CODES)[number]
   | (typeof SERVER_MAIL_CODES)[number]
   | (typeof SERVER_BATTLE_CODES)[number]
+  | (typeof SERVER_FRIENDLY_CODES)[number]
   | (typeof SERVER_AUTH_CODES)[number]
   | (typeof APP_ONLINE_CODES)[number];
 

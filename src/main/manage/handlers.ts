@@ -17,7 +17,7 @@ import { snapshotOfGame } from "../../view/snapshot.js";
 import { artServices } from "../art/services.js";
 import { isShortId } from "../windows/input.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
-import { isInternalCommand, parseAccountAction, parseAgentRequest, parseBattleAction, parseCommand, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
+import { isInternalCommand, parseAccountAction, parseAgentRequest, parseBattleAction, parseCommand, parseFriendlyAction, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
 import type { ManageServices } from "./window.js";
 
 // 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
@@ -184,6 +184,15 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
         const mail = svc().mail;
         const action = mail ? parseMailAction(req) : null;
         return mail && action ? mail(action) : null;
+      },
+    },
+    // 친선 배틀 — 동작 모양만 본다. 판정·보상 값은 렌더러에서 받지 않는다
+    "manage:friendly": {
+      denied: null,
+      run: async (_e, req) => {
+        const friendly = svc().friendly;
+        const action = friendly ? parseFriendlyAction(req) : null;
+        return friendly && action ? friendly(action) : null;
       },
     },
     // 랜덤 배틀 — 상대 받기와 한 판. offerId 는 uuid, pick 은 1~3 만. 보상 값은 렌더러에서 받지 않는다

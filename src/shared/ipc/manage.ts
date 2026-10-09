@@ -7,6 +7,7 @@ import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
 import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { BattleAction, BattleReply } from "../model/battle-net.js";
+import type { FriendlyAction, FriendlyScreen } from "../model/friendly.js";
 import type { ScreenView } from "../model/overlays.js";
 import type { ManageRoute } from "../model/route.js";
 import type { ArtImage, PortraitAsk, Snapshot } from "../model/snapshot.js";
@@ -57,6 +58,8 @@ export type ManageCoreIpc = {
   "manage:mail": Invoke<"mail", [req: MailAction], MailReply | null>; // 우편함 — 서버 설정이 없으면 null
   "manage:mail-view": Push<"onMail", [screen: MailScreen]>; // 목록·받기 상태가 바뀌었다
   "manage:battle": Invoke<"randomBattle", [req: BattleAction], BattleReply | null>; // 랜덤 배틀 — 상대 3개·한 판. 서버 설정이 없으면 null
+  "manage:friendly": Invoke<"friendly", [req: FriendlyAction], FriendlyScreen | null>; // 친선 배틀 — 링크·참가·준비·나가기. 서버 설정이 없으면 null
+  "manage:friendly-view": Push<"onFriendly", [screen: FriendlyScreen]>; // 친선 배틀 상태가 바뀌었다(친구 참가·준비·닫힘)
   "manage:update": Invoke<"update", [action: UpdateAction], UpdateView | null>; // 업데이트가 연결되지 않았으면 null
   "manage:update-view": Push<"onUpdate", [view: UpdateView]>; // 버전·업데이트 상태가 바뀌었다
   "manage:notes": Invoke<"notes", [action: "list" | "seen"], PatchNotesView | null>; // seen 은 안 본 노트를 띄웠다고 알린다

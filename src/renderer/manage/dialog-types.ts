@@ -40,4 +40,5 @@ export type Dialog =
   | { kind: "notes-new"; version: string } // 업데이트 뒤 처음 켤 때 한 번 — 그 버전만
   | { kind: "mail" } // 우편함 — 헤더 봉투 단추
   | { kind: "letter"; id: string } // 우편함의 편지 한 통
-  | { kind: "trade" }; // 친구 교환 — 박스 머리 메뉴의 `교환`
+  | { kind: "trade" } // 친구 교환 — 박스 머리 메뉴의 `교환`
+  | { kind: "friendly" }; // 친선 배틀 — 모험 탭 머리의 `친선 배틀`·친선 배틀 링크

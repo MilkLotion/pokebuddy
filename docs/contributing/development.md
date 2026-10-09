@@ -376,6 +376,23 @@ node dist/tools/dev/dev-test.js stop --account        # 내린다
 3. 관리자 CLI 의 `save put --home <시험 계정 HOME>` 으로 바꿀 내용을 본다. `--yes` 를 붙여 서버 저장에 쓴다. 이 명령은 익명 계정만 받는다. 관리자 키(`admin/.env.local`)가 필요하다.
 4. `npm run dev:account` 로 띄운다. 앱은 서버 저장을 받아 잇는다.
 
+### 로그인 시험 계정 둘
+
+교환·친선 배틀처럼 로그인 계정 두 개가 필요한 실기는 고정 시험 계정 둘을 쓴다(2026-10-10 사용자 "고정계정들로 다른 세션들이 작업할때 쓸 수 있게").
+
+- 아이디는 `pbtest_a`(표시 이름 `시험A`)와 `pbtest_b`(`시험B`)다. 비밀번호는 저장소의 `.claude/test-members/accounts.json` 에 있다. `.claude/` 는 git 이 추적하지 않는다. 지우지 않는다.
+- 운영 서버와 로컬 Supabase 에 같은 아이디가 따로 있다. 시험 HOME 은 `.claude/test-members/<prod|local>/<a|b>` 다.
+- `ensure` 가 두 계정에 로그인한다. 계정이 없으면 가입한다. 로그인 세션을 시험 HOME 에 넣고, 저장이 없으면 배틀을 시작할 수 있는 저장을 만든다. 로컬 DB 를 초기화한 뒤에는 `ensure --local` 을 다시 한다.
+- 앱은 `start` 로 띄운다. 로그인한 상태로 뜬다. 두 계정을 함께 띄울 수 있다.
+
+```powershell
+node dist/tools/dev/dev-members.js ensure            # 운영 서버
+node dist/tools/dev/dev-members.js ensure --local    # 로컬 Supabase
+node dist/tools/dev/dev-members.js start a --local   # 시험A 로 앱을 띄운다
+node dist/tools/dev/dev-members.js stop a --local
+node dist/tools/dev/dev-members.js show --local
+```
+
 ## 배포
 
 

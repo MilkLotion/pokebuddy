@@ -121,6 +121,8 @@ const MANAGE = {
   mail: ["invoke", "manage:mail"],
   onMail: ["push", "manage:mail-view"],
   randomBattle: ["invoke", "manage:battle"],
+  friendly: ["invoke", "manage:friendly"],
+  onFriendly: ["push", "manage:friendly-view"],
   onClock: ["push", "manage:clock"], // 앱 전역 1초 시계 (src/main/app/clock.ts)
 } as const satisfies WireOf<ManageIpc>;
 

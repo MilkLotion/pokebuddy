@@ -566,7 +566,8 @@ function draw(view: BattleScreenView): void {
     const ok = buttonEl("r-ok", view.result.confirm, () => api.close());
     const foot = el("div", "r-foot");
     foot.appendChild(ok);
-    box.append(el("div", "r-title", view.result.title), el("div", "r-lead", view.result.lead), el("div", "r-detail", view.result.detail), foot);
+    // 보상 줄이 없는 판(친선 배틀)은 그 줄을 두지 않는다
+    box.append(el("div", "r-title", view.result.title), ...(view.result.lead ? [el("div", "r-lead", view.result.lead)] : []), el("div", "r-detail", view.result.detail), foot);
     scrim.appendChild(box);
     device.appendChild(scrim);
     ok.focus();

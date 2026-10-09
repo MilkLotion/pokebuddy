@@ -6,7 +6,7 @@
 import type { FailCode } from "./names/online-codes.js";
 import { ACCOUNT_RULES as AR } from "./account-rules.js";
 
-export type FailScope = "command" | "trade" | "account" | "mail" | "battle";
+export type FailScope = "command" | "trade" | "account" | "mail" | "battle" | "friendly";
 export type FailLang = "ko" | "en";
 
 // 빠진 값은 컴파일 오류다
@@ -144,6 +144,19 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   BATTLE_OFFER_GONE: { ko: "상대 목록이 바뀌었어요. 새로고침해 주세요.", en: "The opponent list changed. Please refresh." },
   BATTLE_PARTY_INVALID: { ko: "배틀 파티를 확인해 주세요. 비었거나 출전 불가 포켓몬이 있어요.", en: "Check your battle party. It's empty or has a Pokémon that can't battle." },
   BATTLE_TOO_FAST: { ko: "너무 빨라요. 잠시 뒤 다시 해 주세요.", en: "Too fast. Please try again in a moment." },
+  // 친선 배틀 — 첫 문장이 배너 제목, 나머지가 설명 (Figma 05 `15 모험` 오류 1879:7874·주석 1879:8591)
+  FRIENDLY_BAD_ARGS: { ko: "친선 배틀 요청이 올바르지 않아요.", en: "The friendly battle request is not valid." },
+  FRIENDLY_CLOSED: { ko: "친구가 친선 배틀을 닫았어요. 새 링크로 다시 시작해 주세요.", en: "Your friend closed the friendly battle. Start again with a new link." },
+  FRIENDLY_LINK_EXPIRED: { ko: "링크가 만료됐어요. 참가 전 10분이 지났어요. 친구에게 새 링크를 받아 주세요.", en: "The link expired. The 10 minutes to join have passed. Get a new link from your friend." },
+  FRIENDLY_LINK_INVALID: { ko: "링크를 찾지 못했어요. 링크를 다시 확인해 주세요.", en: "Couldn't find that link. Please check the link again." },
+  FRIENDLY_LINK_USED: { ko: "이미 사용된 링크예요. 다른 사람이 먼저 참가했어요.", en: "That link was already used. Someone else joined first." },
+  FRIENDLY_LOGIN_REQUIRED: { ko: "친선 배틀은 로그인해야 할 수 있어요.", en: "You need to sign in for friendly battles." },
+  FRIENDLY_NOT_FOUND: { ko: "친선 배틀을 찾지 못했어요. 새 링크로 다시 시작해 주세요.", en: "Couldn't find the friendly battle. Start again with a new link." },
+  FRIENDLY_OWN_LINK: { ko: "내가 만든 링크예요. 친구에게 보내 주세요.", en: "That's your own link. Send it to your friend." },
+  FRIENDLY_PARTY_INVALID: { ko: "출전할 수 없는 포켓몬이 있어요.", en: "Your battle party has a Pokémon that can't battle." },
+  FRIENDLY_RATE_LIMITED: { ko: "링크를 너무 많이 만들었어요. 잠시 뒤 다시 해 주세요.", en: "Too many links. Please try again later." },
+  FRIENDLY_RUNNING: { ko: "판을 준비하고 있어요. 잠시 기다려 주세요.", en: "The battle is being prepared. Please wait a moment." },
+  FRIENDLY_VERSION_MISMATCH: { ko: "앱 버전이 달라요. 두 사람 모두 앱을 업데이트해 주세요.", en: "Your app versions differ. Both of you should update the app." },
   MAIL_EXPIRED: { ko: "기간이 지나 받을 수 없어요.", en: "It has expired and can't be received." },
   MAIL_LOGIN_REQUIRED: { ko: "로그인하면 받을 수 있어요.", en: "Sign in to receive it." },
   MAIL_NO_GIFTS: { ko: "받을 선물이 없어요.", en: "There are no gifts to receive." },
@@ -169,6 +182,11 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   SAVE_BACKUP_FAILED: { ko: "이 PC 저장을 백업하지 못해 새로 시작하지 않았어요.", en: "Didn't start fresh because this PC's save couldn't be backed up." },
 };
 
+const FRIENDLY_NETWORK: Record<FailLang, string> = {
+  ko: "서버에 연결할 수 없어요. 친선 배틀 밖의 게임은 그대로 할 수 있어요.",
+  en: "Can't reach the server. The rest of the game works as usual.",
+};
+
 // 표에 없는 글자가 왔을 때 — 자리마다 지금 모양
 const UNKNOWN: Record<FailScope, (code: string) => { text: string; detail?: string }> = {
   command: (code) => ({ text: code }),
@@ -176,6 +194,7 @@ const UNKNOWN: Record<FailScope, (code: string) => { text: string; detail?: stri
   account: (code) => ({ text: `계정 작업을 하지 못했어요 (${code})` }),
   mail: (code) => ({ text: `받지 못했어요 (${code})` }),
   battle: (code) => ({ text: `배틀을 시작하지 못했어요 (${code})` }),
+  friendly: (code) => ({ text: "친선 배틀을 진행하지 못했어요", detail: `잠시 뒤에 다시 해 주세요 (${code})` }),
 };
 
 const isFailCode = (code: string): code is FailCode => Object.prototype.hasOwnProperty.call(FAIL_TEXT, code);
@@ -185,8 +204,9 @@ const isFailCode = (code: string): code is FailCode => Object.prototype.hasOwnPr
 export function failTextOf(code: FailCode | string, scope: FailScope, lang: FailLang = "ko", detail?: string): { text: string; detail?: string } {
   if (!isFailCode(code)) return UNKNOWN[scope](code);
   if (code === "UNKNOWN" && detail) return UNKNOWN[scope](detail);
-  const text = FAIL_TEXT[code][lang];
-  if (scope !== "trade") return { text };
+  // 친선 배틀의 연결 실패는 다른 게임은 그대로라는 설명을 붙인다 (Figma 주석 1879:8591)
+  const text = scope === "friendly" && code === "NETWORK" ? FRIENDLY_NETWORK[lang] : FAIL_TEXT[code][lang];
+  if (scope !== "trade" && scope !== "friendly") return { text };
   const cut = text.search(/[.?!] /);
   const head = (cut < 0 ? text : text.slice(0, cut + 1)).replace(/[.]$/, "");
   const rest = cut < 0 ? "" : text.slice(cut + 2).replace(/[.]$/, "");

@@ -73,6 +73,7 @@ export interface BattleScreenInput {
   opponentName: string; // 상대 · 2번 파티
   looks?: readonly [readonly (BattleLook | null)[], readonly (BattleLook | null)[]]; // 칸마다 이로치·성별 — 그림 키는 src/dex/look.ts appearanceOf. 없으면 기본 그림
   reward: { lead: string; detail: string }; // 결과 대화상자의 보상 줄 — 보상은 서버가 정한다
+  title?: string; // 머리 줄 제목 — 없으면 `랜덤 배틀`. 친선 배틀은 `친선 배틀` (src/view/friendly-battle.ts)
 }
 
 // 엔진 기술 → 기술 칸 값. 이름·설명은 표에서 읽고, 수치 글자는 배틀 파티 상세와 같은 moveMeta 다
@@ -134,7 +135,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
   const roulette = rouletteOf(r, units);
   for (const reel of roulette ?? []) if (reel.type) types.add(reel.type);
   return {
-    title: TEXT.title,
+    title: input.title ?? TEXT.title,
     sideNames: [TEXT.mine, input.opponentName],
     units,
     typeIcons: Object.fromEntries([...types].map((t) => [t, typeArtKey(t)])),

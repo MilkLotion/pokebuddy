@@ -79,8 +79,8 @@ function remainText(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} 남음`;
 }
 
-// 칸 — 초상과 타입 배지 1~2개. 이름은 title 과 읽어 주는 이름에만
-function pickCell(slot: BattlePickSlotView | null): HTMLElement {
+// 칸 — 초상과 타입 배지 1~2개. 이름은 title 과 읽어 주는 이름에만. 친선 배틀의 양쪽 줄도 쓴다 (friendly-battle.ts)
+export function pickCell(slot: BattlePickSlotView | null): HTMLElement {
   const cell = el("div", "po-cell bo-cell");
   if (!slot) {
     cell.classList.add("blank");

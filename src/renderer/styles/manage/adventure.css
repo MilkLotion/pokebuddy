@@ -241,3 +241,75 @@
 .dialog.battle-record .actions .act.primary {
   width: 120px;
 }
+
+/* 친선 배틀 만남 — 양쪽 배틀 파티 줄과 준비 표시, 바닥 줄 (Figma 02 `Friendly Battle Side` 1879:4771, 01 `Ready Mark` 1879:4594)
+   틀은 교환 모달(.dialog.trade), 줄과 칸은 상대 고르기(.bo-row·.bo-cell). 준비한 줄은 옅은 바탕만 쓴다(강조 테두리 없음) */
+.fb-row {
+  cursor: default;
+}
+.fb-row.on {
+  background: var(--accent-bg);
+}
+.fb-row .po-head {
+  justify-content: space-between;
+}
+.fb-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.fb-ready::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--disabled);
+}
+.fb-ready.on {
+  color: var(--ink);
+}
+.fb-ready.on::before {
+  background: var(--success);
+}
+.dialog.friendly .actions {
+  align-items: center;
+}
+.dialog.friendly .fb-error {
+  flex: 1;
+  min-width: 0;
+  min-height: 16px;
+  font-size: 12px;
+  color: var(--danger, #c62828);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialog.friendly .fb-error:not(:empty)::before {
+  content: "● ";
+}
+.dialog.friendly .fb-go {
+  width: 120px;
+}
+/* 두 줄 사이 VS — 높이 24, 옅은 선 사이에 청록 알약 (Figma 02 `VS Divider` 1887:109999) */
+.fb-vs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+}
+.fb-vs i {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.fb-vs span {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--inverse);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
