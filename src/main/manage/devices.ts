@@ -11,14 +11,13 @@ import { gainOf } from "../../state/settings.js";
 import { SOUND_RULES } from "../../state/rules.js";
 import { bagDeviceModel } from "../../view/device-bag.js";
 import { battleDeviceModel } from "../../view/device-battle.js";
-import { partyDeviceModel } from "../../view/device-party.js";
 import { petDeviceModel } from "../../view/device-pet.js";
 import { shopDeviceModel } from "../../view/device-shop.js";
 import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
 import type { ArtLoader } from "../art/stage-art.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
-import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPartyInput, isPetInput, isShopInput, partyDeviceOf, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
+import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPetInput, isShopInput, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import { wireBattleScreen, type BattleScreen } from "./battle-screen.js";
 import type { GameReads } from "./handlers.js";
@@ -144,15 +143,6 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
       send("manage:bag-closed", gen);
     },
   });
-  // 파티 기기 창(교체 화면) — 관리 창이 지금 프리셋의 칸을 정해 보낸다. 누른 칸·칩은 관리 창으로 돌려보낸다
-  const partyWin = createDeviceWindow(deviceFiles("party"), partyDeviceOf(deviceArt), {
-    onStep: (delta) => send("manage:party-step", delta),
-    onAct: (action) => send("manage:party-act", action),
-    onClosed: (gen) => {
-      shownModel.delete("party");
-      send("manage:party-closed", gen);
-    },
-  });
 
   // 배틀 파티 상세 기기 창 — 관리 창이 배틀 파티 칸을 정해 보낸다. 기술 순서 바꾸기·이전·다음은 관리 창으로 돌려보낸다
   const battleWin = createDeviceWindow(deviceFiles("battle"), battleDeviceOf({ ...deviceArt, cry: (slug) => cries.get(slug), volume }), {
@@ -187,11 +177,10 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     return r.input;
   }
 
-  // 파티 상세·상점·가방·파티 교체의 모델은 메인이 만든다 — 설정창은 고른 값(…DeviceInput)만 보낸다 (src/view/device-*.ts).
+  // 파티 상세·상점·가방·배틀 파티 상세의 모델은 메인이 만든다 — 설정창은 고른 값(…DeviceInput)만 보낸다 (src/view/device-*.ts).
   // 지금 저장의 화면 값(스냅샷)으로 만든다. 설정창은 다음 명령에 바로잡은 입력을 쓴다.
   // 여는 요청에는 관리 창이 마지막으로 받은 세대 번호(gen)가 실려 온다 — 낡은 번호면 기기 창이 버린다 (src/main/windows/device-gen.ts)
   wireIpc<ManageDeviceLinkIpc>(scope, {
-    "manage:party-open": { denied: null, run: (_e, input, gen) => openDevice("party", partyWin, isPartyInput(input) ? input : null, partyDeviceModel, gen) },
     "manage:pet-open": { denied: null, run: (_e, input, gen) => openDevice("pet", petWin, isPetInput(input) ? input : null, petDeviceModel, gen) },
     "manage:shop-open": { denied: null, run: (_e, input, gen) => openDevice("shop", shopWin, isShopInput(input) ? input : null, shopDeviceModel, gen) },
     "manage:bag-open": { denied: null, run: (_e, input, gen) => openDevice("bag", bagWin, isBagInput(input) ? input : null, bagDeviceModel, gen) },
@@ -213,7 +202,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     // 설정창을 다시 읽으면(Ctrl+R 등) 고른 개체·옆 도감이 비므로 떠 있던 기기 창을 닫는다 — 남겨 두면 설정창과 어긋난다
     reset: () => {
       shownModel.clear();
-      for (const w of [petWin, dexWin, shopWin, bagWin, partyWin, battleWin]) w.discard();
+      for (const w of [petWin, dexWin, shopWin, bagWin, battleWin]) w.discard();
       battleScreen.close();
     },
   };

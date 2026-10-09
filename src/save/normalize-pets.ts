@@ -171,6 +171,7 @@ export function normalizeParty(raw: unknown, petIds: Set<string>, placed: Set<st
 }
 
 export function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<string>): BoxV3[] {
+  const { nameMax } = BOX_RULES;
   const list = Array.isArray(raw) ? raw : [];
   const out: BoxV3[] = [];
   for (const b of list) {
@@ -180,7 +181,8 @@ export function normalizeBoxes(raw: unknown, petIds: Set<string>, placed: Set<st
     // 이름 — 기본 이름은 저장하지 않고("") 화면이 자리 번호로 보인다(src/box/boxes.ts boxName, 파티 프리셋과 같은 규칙).
     // 옛 저장이 채워 둔 "박스 N" 은 그 자리의 기본 이름과 같을 때만 비운다. 자리와 다른 "박스 N" 은 사용자가 지은 이름으로 보고 둔다
     // (94-same-feature-diffs.md 9-5-5)
-    const name = str(b.name);
+    // 이름 상한(BOX_RULES.nameMax)을 넘는 옛 이름은 자른다 (2026-10-09 12 → 8)
+    const name = [...str(b.name).trim()].slice(0, nameMax).join("");
     const box = newBox(id, name === defaultBoxName(out.length) ? "" : name);
     const slots = Array.isArray(b.slots) ? b.slots : [];
     for (let i = 0; i < box.slots.length; i++) {

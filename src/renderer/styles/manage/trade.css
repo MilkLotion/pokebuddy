@@ -195,50 +195,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* 제안·확정 화면 — 왼쪽 보낼 포켓몬(414), 오른쪽 두 카드(134). 기본 창 높이(682)에서 스크롤이 없다
+/* 제안·확정 화면 — 왼쪽 포켓몬 고르기 판(462, pet-box-panel.css), 오른쪽 두 카드(104). 기본 창 높이(682)에서 스크롤이 없다 (2026-10-09 판을 공통으로)
    (2026-10-02 사용자 결정 B안, Figma 03 `Trade Dialog` `State=Offer` `1344:5372`·`State=Blocked` `1344:5552`) */
 .trade-body {
   display: flex;
   align-items: stretch;
   gap: 12px;
   margin-bottom: 14px;
-}
-.trade-pick {
-  flex: none;
-  width: 414px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.trade-pick-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-}
-/* 넘김 — ◀ [이름] ▶ 칸 수. 이름 칸과 칸 수 칸은 폭 고정이라 넘겨도 ◀·▶ 가 움직이지 않는다 */
-.trade-pick-head .trade-pager {
-  margin: 0 0 0 auto;
-  gap: 8px;
-}
-.trade-pager .label {
-  width: 168px;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.trade-pager .used {
-  width: 52px;
-}
-/* 보낼 포켓몬 격자 — 6열 정사각 64, 칸 영역은 5줄 높이(64×5 + 6×4)로 고정. 파티 판(6칸)으로 넘겨도 창 높이가 그대로다 */
-.trade-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 64px);
-  grid-auto-rows: 64px;
-  align-content: start;
-  gap: 6px;
-  height: 344px;
 }
 /* 오른쪽 두 카드 — 같은 높이로 나눠 선다. 교환 표시는 두 카드 사이 가운데에 걸친다 */
 .trade-sides {
@@ -366,9 +329,10 @@
 }
 /* 교환 모달 — 폭 600, 머리 "친구 교환" + ✕, 본문은 안에서 스크롤. Figma 05 `930:18244` 의 `Trade / … · 교환 모달`(Base `1036:23257` 등).
    창 폭 640 에서 가림막 안쪽 여백(24)보다 넓어 좌우 20 으로 맞춘다(flex: none 이라 줄지 않고 가운데 선다) */
+/* 폭 628 — 왼쪽 포켓몬 고르기 판 462 + 카드 104 (2026-10-09 공통 판으로 바꾸며 600 → 628, Figma `Trade / Offer · Pet Box Panel`) */
 .dialog.trade {
   flex: none;
-  width: min(600px, calc(100vw - 40px));
+  width: min(628px, calc(100vw - 12px));
   box-sizing: border-box;
   overflow: hidden;
   display: flex;
@@ -402,23 +366,6 @@
 }
 .dialog.trade .trade-row .trade-acts {
   margin-top: 0;
-}
-/* 보낼 포켓몬 칸 — 정사각 64, 초상 28 (Figma `Box Slot` `Size=Compact` 를 64×64 로) */
-.trade-cell {
-  aspect-ratio: auto;
-  height: 64px;
-  padding: 0 2px;
-  min-width: 0;
-}
-.trade-cell .dot {
-  width: 28px;
-  height: 28px;
-}
-.trade-cell:disabled {
-  cursor: default;
-}
-.trade-cell.off {
-  opacity: 0.4;
 }
 .trade-place {
   display: flex;

@@ -35,6 +35,7 @@ export const REASONS = [
   "not-pokemon",
   "not-in-box",
   "not-in-party",
+  "not-in-preset", // 적용하지 않은 다른 프리셋에 없다 (party.pull)
   "slot-not-empty",
   "slot-locked",
   "no-empty-slot",

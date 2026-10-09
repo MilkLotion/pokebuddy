@@ -15,7 +15,6 @@ import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
 import { drawBattleOpponent } from "./battle-opponent.js";
 import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
-import { closeSwap, onPartyAction, partyLink, syncPartyDevice } from "./party-link.js";
 import { drawGuide } from "./guide.js";
 import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
 import { boxUi, hold } from "./box-state.js";
@@ -29,7 +28,8 @@ import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { drawAdventure } from "./adventure-tab.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
-import { drawBattlePick } from "./battle-pick.js";
+import { drawBattlePick, startBattlePick } from "./battle-pick.js";
+import { drawSwap, startSwap } from "./party-swap.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, stepShop, syncShopDevice } from "./shop-link.js";
@@ -147,8 +147,7 @@ const TAB_ICON: Record<TabId, string> = {
 
 // 탭 — 등록한 순서대로 탭 줄에 선다 (shell.ts). 나갈 때 그 탭의 기기 창을 닫는다
 registerTab({ id: "party", label: "파티", icon: TAB_ICON.party, draw: (v) => drawParty(v) });
-// 교체 화면은 박스 탭을 나가면 끝난다 — 다음 그리기의 syncPartyDevice 가 파티 기기 창을 닫는다
-registerTab({ id: "box", label: "박스", icon: TAB_ICON.box, draw: (v) => drawBox(v), leave: () => closeSwap() });
+registerTab({ id: "box", label: "박스", icon: TAB_ICON.box, draw: (v) => drawBox(v) });
 registerTab({
   id: "dex",
   label: "도감",
@@ -194,7 +193,6 @@ registerBodySync(() => {
   dropGoneBagPick(); // 다 쓰거나 팔았다
   syncBagDevice();
 });
-registerBodySync(() => syncPartyDevice());
 registerBodySync(() => syncBattleDevice());
 // 본문을 그린 뒤 — 저장 실패 줄 → 검색 칸 초점 → 튜토리얼
 registerAfterDraw(() => drawSaveFailing());
@@ -241,7 +239,8 @@ registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDayca
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
-registerDialog({ kind: "battle-pick", shape: "dialog trade battle-pick", draw: (d) => drawBattlePick(d.slot, d.page) });
+registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus)) });
+registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
 registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to, d.battle === true) });
@@ -292,9 +291,6 @@ api.onShopClosed((gen) => shopLink.onClosed(gen));
 api.onBagStep((delta) => stepBag(delta));
 api.onBagAct((action) => onBagAction(action));
 api.onBagClosed((gen) => bagLink.onClosed(gen));
-api.onPartyAct((action) => onPartyAction(action));
-api.onPartyStep((delta) => stepPreset(delta));
-api.onPartyClosed((gen) => partyLink.onClosed(gen));
 api.onRoute((route) => void firstDraw.then(() => refreshView()).then(() => goTo(route)));
 // 시간이 흐르면 만복도·쿨타임·알 준비가 바뀐다. 앱 전역 1초 시계(`manage:clock`)마다 다시 읽는다 (clockTick)
 api.onClock?.(() => void clockTick());

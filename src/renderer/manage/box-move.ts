@@ -43,7 +43,7 @@ export function startHold(petId: string): void {
     boxUi.menuOpen = false;
     boxUi.renaming = false;
     boxUi.note = "";
-    hold.box = { petId, boxId: box.id, slot, ghost: !hold.swap };
+    hold.box = { petId, boxId: box.id, slot, ghost: true };
     redrawBody();
     return;
   }
@@ -58,9 +58,8 @@ export function endHold(): void {
 }
 
 function cancelHold(): void {
-  if (!hold.box && !hold.party) return;
+  if (!hold.box) return;
   endHold();
-  hold.party = null;
   redrawBody();
 }
 
@@ -98,12 +97,12 @@ window.addEventListener("pointermove", (e) => {
 });
 // 칸과 ◀·▶ 밖을 누르면 취소한다 — 칸과 ◀·▶ 는 제 처리기가 먼저 돈다
 document.addEventListener("click", (e) => {
-  if (!hold.box && !hold.party) return;
+  if (!hold.box) return;
   if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
   cancelHold();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (hold.box || hold.party)) cancelHold();
+  if (e.key === "Escape" && hold.box) cancelHold();
 });
 
 // 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)

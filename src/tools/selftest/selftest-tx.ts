@@ -257,6 +257,26 @@ function seedBox(): SaveV3 {
   process.stdout.write("(10d) 보관 · 고른 박스 빈 칸으로  ok\n");
 }
 
+// (10d-2) 다른 프리셋에서 데려오기 — 빈 칸이면 옮기고, 개체 칸이면 맞바꾼다(나간 개체는 그 프리셋 칸으로). 잠긴 칸은 받지 않는다
+//       (2026-10-09 사용자 "다른 프리셋에서도 끌어오기", 교체 모달)
+{
+  const f = fake(seedBox());
+  // p3 를 박스에서 빼 둘째 프리셋의 첫 칸에 둔다
+  const box = f.state.boxes[0]!;
+  box.slots[box.slots.indexOf("p3")] = null;
+  f.state.party.presets = [null, [{ state: "pokemon", petId: "p3", hidden: true }, { state: "empty" }, { state: "locked" }, { state: "locked" }, { state: "locked" }, { state: "locked" }]];
+  f.state.party.presetCount = 2;
+  const tx = createExecutor(f.ports, HANDLERS);
+  const lockedAt = f.state.party.slots.findIndex((s) => s.state === "locked");
+  if (lockedAt >= 0) assert.equal(tx.run({ id: "r0", name: "party.pull", args: { petId: "p3", slotIndex: lockedAt } }).ok, false, "잠긴 칸은 받지 않는다");
+  assert.equal(tx.run({ id: "r1", name: "party.pull", args: { petId: "p3", slotIndex: 0 } }).ok, true);
+  assert.deepEqual(f.state.party.slots[0], { state: "pokemon", petId: "p3", hidden: false }, "들어온 개체는 꺼낸 상태");
+  assert.deepEqual(f.state.party.presets?.[1]?.[0], { state: "pokemon", petId: "p1", hidden: false }, "나간 개체는 그 프리셋 칸으로");
+  const gone = tx.run({ id: "r2", name: "party.pull", args: { petId: "p2", slotIndex: 0 } });
+  assert.equal(gone.ok === false && gone.reason, "not-in-preset", "다른 프리셋에 없는 개체");
+  process.stdout.write("(10e) 다른 프리셋에서 데려오기  ok\n");
+}
+
 // (10e) 박스 개체는 돌보지 않는다 — 밥 주기·놀아주기 거절, 값은 그대로 (2026-09-30 사용자 "박스에선 막고")
 {
   const f = fake(seedBox());

@@ -21,7 +21,7 @@ import { bodyEl, redrawBody } from "./shell.js";
 import { pageHeadEl, segmentedEl } from "./widgets.js";
 
 const SOON = "아직 준비 중이에요";
-const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot, page: 0 });
+const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot });
 
 function petCard(slot: BattleSlotView): HTMLElement {
   const pet = slot.pet!;

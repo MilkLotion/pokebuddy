@@ -4,7 +4,7 @@ import { boxUi, hold } from "./box-state.js";
 import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
-import { openSwap } from "./party-link.js";
+import { openSwap } from "./party-swap.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { loadTrade, tradeInProgress } from "./trade-state.js";
@@ -30,7 +30,7 @@ export function boxMenuEl(): HTMLElement {
     },
     items: [
       // 교체는 파티 탭 메뉴의 `교체` 와 같은 교체 화면을 연다 (2026-10-04 사용자 결정 "박스에도 교체 추가. 햄버거 버튼에 교체 추가", Figma `Dropdown Menu` Kind=Box `1362:95`)
-      ["교체", openSwap],
+      ["교체", () => openSwap()],
       ["박스 순서", () => openAnyDialog({ kind: "box-order" })],
       [
         "교환",

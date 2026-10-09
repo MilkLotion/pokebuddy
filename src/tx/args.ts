@@ -16,6 +16,7 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
       return { petId: target ?? str(a.petId), ...(a.toBoxId !== undefined ? { toBoxId: str(a.toBoxId) } : {}), ...(a.toSlot !== undefined ? { toSlot: int(a.toSlot) } : {}) };
     case "party.place":
     case "party.swap":
+    case "party.pull":
       return { petId: target ?? str(a.petId), slotIndex: int(a.slotIndex) };
     case "party.move":
       return { petId: target ?? str(a.petId), toSlot: int(a.toSlot) };

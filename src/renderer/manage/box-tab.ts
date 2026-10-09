@@ -11,7 +11,6 @@ import { drawHoldGhost, dropZone, endHold, startDrag, startHold } from "./box-mo
 import { requestCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { refreshView } from "./live.js";
-import { swapSend } from "./party-link.js";
 import { askPetMenu } from "./pet-menu.js";
 import { openPet } from "./routes.js";
 import { daycareOpenButton, hiddenHatchIds } from "./daycare.js";
@@ -120,17 +119,7 @@ export function drawBox(v: Snapshot): void {
   pager.append(daycareOpenButton(v), boxSortEl(box));
   bodyEl.appendChild(pager);
 
-  const grid = el("div", boxHeld || hold.party ? "box-grid holding" : "box-grid");
-  // 교체 화면에서 파티 기기 창의 개체를 든 채 박스 칸을 눌렀다 — 빈 칸이면 그 칸에 보관하고, 개체 칸이면 맞바꾼다
-  const dropParty = (slot: number, pet: PetView | null): void => {
-    const held = hold.party;
-    if (!held) return;
-    hold.party = null;
-    const at = findPartySlot(held);
-    if (!pet) void swapSend("party.keep", held, { toBoxId: box.id, toSlot: slot });
-    else if (at != null) void swapSend("party.swap", pet.id, { slotIndex: at });
-    else redrawBody();
-  };
+  const grid = el("div", boxHeld ? "box-grid holding" : "box-grid");
   // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
   const dropHold = (toSlot: number): void => {
     const h = hold.box;
@@ -157,17 +146,16 @@ export function drawBox(v: Snapshot): void {
     if (!pet) {
       const blank = el("div", "cell tall blank");
       blank.dataset.hold = "";
-      blank.addEventListener("click", () => (hold.box ? dropHold(slot) : dropParty(slot, null)));
+      blank.addEventListener("click", () => {
+        if (hold.box) dropHold(slot);
+      });
       dropZone(blank, onDrop);
       grid.appendChild(blank);
       return;
     }
-    // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다).
-    // 교체 화면에서는 좌클릭이 상세 대신 그 개체를 든다 (2026-10-02 사용자 결정 "박스칸을 누르면 바로 옮기기 한것처럼")
+    // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다)
     const cell = boxSlot(pet, () => {
       if (hold.box) dropHold(slot);
-      else if (hold.party) dropParty(slot, pet);
-      else if (hold.swap) startHold(pet.id);
       else openPet(pet.id);
     });
     cell.addEventListener("contextmenu", (e) => {

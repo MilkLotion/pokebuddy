@@ -8,7 +8,7 @@
 //   가방       가방 카드를 누르면 뜬다 (2026-10-01 사용자 "가방도 상점참고해서 개선하자", Figma 05 `Bag / Device / Use`)
 //   파티 교체  파티 탭의 `교체` 나 빈 파티 칸을 누르면 뜬다 (2026-10-02 사용자 "교체버튼을 누르면 박스화면으로 이동하고 … 창이 뜨면서 파티목록 볼 수 있게", Figma 05 `Party / Swap · Open` `1248:2567`)
 import type { DexDetail, EvoNodeView } from "../../shared/model/detail";
-import type { BagDeviceChannel, BattleDeviceChannel, DexDeviceChannel, PartyDeviceChannel, PetDeviceChannel, ShopDeviceChannel } from "../../shared/ipc/devices";
+import type { BagDeviceChannel, BattleDeviceChannel, DexDeviceChannel, PetDeviceChannel, ShopDeviceChannel } from "../../shared/ipc/devices";
 import type {
   BagDeviceAction,
   BagDeviceInput,
@@ -19,10 +19,6 @@ import type {
   BattleDeviceOpen,
   BattleDeviceView,
   DexDeviceView,
-  PartyDeviceAction,
-  PartyDeviceInput,
-  PartyDeviceOpen,
-  PartyDeviceView,
   PetDeviceAction,
   PetDeviceInput,
   PetDeviceOpen,
@@ -44,7 +40,6 @@ export const DEVICE_SIZES = {
   pet: { width: 380, height: 682 }, // Figma `A안 · 파티 상세 기기`
   shop: { width: 380, height: 594 }, // Figma `Shop / Device / Tool`
   bag: { width: 380, height: 670 }, // Figma `Bag / Device / Use`
-  party: { width: 380, height: 508 }, // 다른 기기 창과 같은 폭
   battle: { width: 380, height: 674 }, // Figma 03 `Battle Party Device` `1662:224`
 } as const;
 
@@ -198,27 +193,6 @@ export function bagDeviceOf(deps: DeviceArtDeps): DeviceSpec<BagDeviceOpen, BagD
   };
 }
 
-function isPartyAction(v: unknown): v is PartyDeviceAction {
-  if (!isRecord(v)) return false;
-  const a = v;
-  if (a.kind !== "slot" && a.kind !== "preset") return false;
-  return isIndexBelow(a.index, PARTY_RULES.total); // 파티 칸은 늘 여섯 (src/party/rules.ts)
-}
-
-export function partyDeviceOf(deps: DeviceArtDeps): DeviceSpec<PartyDeviceOpen, PartyDeviceView, PartyDeviceAction> {
-  return {
-    channels: { show: "partydev:show", size: "partydev:size", step: "partydev:step", close: "partydev:close", act: "partydev:act" } satisfies Record<string, PartyDeviceChannel>,
-    size: DEVICE_SIZES.party,
-    // 창은 하나다 — 열쇠가 늘 같아 내용을 다시 보내도 초점을 빼앗지 않는다
-    keyOf: () => "party",
-    viewOf: async (o) => {
-      const art = await artResolver(deps, o.slots.map((s) => s.art));
-      return { ...o, slots: o.slots.map((s) => ({ ...s, art: art(s.art) })) };
-    },
-    isAction: isPartyAction,
-  };
-}
-
 // 배틀 파티 상세 — 그림 열쇠(초상·흰 타입 아이콘)를 풀고, 울음소리는 그 개체의 종이다
 export interface BattleDeviceDeps extends DeviceArtDeps {
   cry(slug: string): Promise<string | null>;
@@ -260,11 +234,6 @@ export function isBagInput(v: unknown): v is BagDeviceInput {
 export function isShopInput(v: unknown): v is ShopDeviceInput {
   if (!isRecord(v)) return false;
   return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy);
-}
-
-export function isPartyInput(v: unknown): v is PartyDeviceInput {
-  if (!isRecord(v)) return false;
-  return (v.heldPetId === null || isShortId(v.heldPetId)) && isFlag(v.heldFromBox) && isText(v.notice) && isBusyKey(v.busy);
 }
 
 export function isBattleInput(v: unknown): v is BattleDeviceInput {

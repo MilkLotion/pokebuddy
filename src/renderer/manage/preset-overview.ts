@@ -10,7 +10,6 @@ import { buttonEl, el } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
-import { hold } from "./box-state.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl } from "./dialog.js";
 import { ui } from "./state.js";
@@ -54,7 +53,6 @@ function presetRow(p: PresetView, active: boolean, battle: boolean): HTMLButtonE
       return;
     }
     if (active) return;
-    hold.party = null; // 프리셋 넘김(stepPreset)과 같다 — 든 파티 개체를 내려놓는다
     void sendCommand("party.preset", "", { preset: p.index }, { keepOpen: true });
   });
   return row;

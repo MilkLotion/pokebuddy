@@ -101,9 +101,8 @@ export function drawTutorial(): void {
     drawGuideStep("trade"); // 교환 모달을 처음 열 때
   } else if (ui.view && !ui.dialog && ui.tab === "dex" && screenTut("dex")) {
     drawGuideStep("dex"); // 도감 탭을 처음 열 때
-  } else if (ui.view && !ui.dialog && !ui.detailPet && !hold.box && !hold.swap && ui.tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
-    // 박스 탭을 처음 열 때 — 지금 박스에 개체가 있을 때만. 부화 튜토리얼 차례면 그것이 먼저다(같은 탭의 돌보미집 단추를 밝힌다).
-    // 교체 화면(hold.swap)에서는 띄우지 않는다 — 칸 좌클릭이 상세가 아니라 들기라 1단계 문구와 다르다
+  } else if (ui.view && !ui.dialog && !ui.detailPet && !hold.box && ui.tab === "box" && screenTut("box") && id !== "hatch" && firstBoxPet()) {
+    // 박스 탭을 처음 열 때 — 지금 박스에 개체가 있을 때만. 부화 튜토리얼 차례면 그것이 먼저다(같은 탭의 돌보미집 단추를 밝힌다)
     drawGuideStep("box");
   } else if (ui.view && ui.dialog?.kind === "settings" && ui.dialog.tab === "display" && ui.view.areaTutorial) {
     // 설정 › 화면 — 줄마다 설명하고 직접 해 보게 한다. 바탕화면의 놀이공간 튜토리얼을 옮겨 왔다

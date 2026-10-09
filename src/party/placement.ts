@@ -22,6 +22,7 @@ export type PlacementFailure = ReasonOf<
   | "box-full" // 모든 박스가 가득 찼다
   | "not-in-party" // 파티에 없다
   | "same-slot" // 지금 칸으로 옮기려 했다 — 박스 옮기기와 같다 (docs/specs/game.md box.order)
+  | "not-in-preset" // 적용하지 않은 다른 프리셋에 없다
 >;
 
 export type PlacementResult = Outcome<PlacementFailure> & {
@@ -84,6 +85,25 @@ export function movePartySlot(save: SaveV3, petId: string, toSlot: number): Plac
   save.party.slots[from] = target;
   save.party.slots[toSlot] = source;
   return { ok: true, slotIndex: toSlot };
+}
+
+// 다른 프리셋의 개체를 지금 파티 칸으로 데려온다 — 교체 모달의 파티 프리셋 쪽에서 끌어 놓기 (2026-10-09 사용자 "다른 프리셋에서도 끌어오기")
+// 빈 칸이면 옮기고 그 프리셋 칸은 빈 칸이 된다. 개체 칸이면 맞바꾼다 — 나간 개체는 들어온 개체가 있던 프리셋 칸으로 간다(박스 맞바꾸기와 같은 규칙).
+// 들어온 개체는 꺼낸 상태로 시작한다. 잠긴 칸에는 넣지 않는다
+export function pullFromPreset(save: SaveV3, petId: string, slotIndex: number): PlacementResult {
+  if (!hasPet(save, petId)) return { ok: false, reason: "no-pet" };
+  const presets = save.party.presets ?? [];
+  const from = presets.findIndex((slots) => slots?.some((s) => s.state === "pokemon" && s.petId === petId));
+  const fromSlots = from >= 0 ? presets[from] : null;
+  if (!fromSlots) return { ok: false, reason: "not-in-preset" };
+  const target = save.party.slots[slotIndex];
+  if (!target) return { ok: false, reason: "bad-slot" };
+  if (target.state === "locked") return { ok: false, reason: "slot-locked" };
+  const at = fromSlots.findIndex((s) => s.state === "pokemon" && s.petId === petId);
+  const out = target.state === "pokemon" ? target.petId : undefined;
+  fromSlots[at] = out ? { state: "pokemon", petId: out, hidden: false } : { state: "empty" };
+  save.party.slots[slotIndex] = { state: "pokemon", petId, hidden: false };
+  return { ok: true, slotIndex, ...(out ? { movedOut: out } : {}) };
 }
 
 // 파티 개체를 박스에 보관한다. 칸은 빈 칸이 된다.

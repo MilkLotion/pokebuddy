@@ -20,7 +20,6 @@ type DexDeviceIpc = import("../shared/ipc/devices").DexDeviceIpc;
 type PetDeviceIpc = import("../shared/ipc/devices").PetDeviceIpc;
 type ShopDeviceIpc = import("../shared/ipc/devices").ShopDeviceIpc;
 type BagDeviceIpc = import("../shared/ipc/devices").BagDeviceIpc;
-type PartyDeviceIpc = import("../shared/ipc/devices").PartyDeviceIpc;
 type BattleDeviceIpc = import("../shared/ipc/devices").BattleDeviceIpc;
 type BattleScreenIpc = import("../shared/ipc/battle").BattleScreenIpc;
 
@@ -107,10 +106,6 @@ const MANAGE = {
   onBagStep: ["push", "manage:bag-step"],
   onBagAct: ["push", "manage:bag-act"],
   onBagClosed: ["push", "manage:bag-closed"],
-  partyOpen: ["invoke", "manage:party-open"],
-  onPartyAct: ["push", "manage:party-act"],
-  onPartyStep: ["push", "manage:party-step"],
-  onPartyClosed: ["push", "manage:party-closed"],
   battleOpen: ["invoke", "manage:battle-open"],
   onBattleStep: ["push", "manage:battle-step"],
   onBattleAct: ["push", "manage:battle-act"],
@@ -207,9 +202,7 @@ const BAG = { ...deviceWire("bagdev"), act: ["send", "bagdev:act"] } as const sa
 expose("bag.html", "pokebuddyBag", () => bridgeOf<BagDeviceIpc>(BAG));
 
 // 파티 기기 창(교체 화면) — 지금 프리셋의 파티 칸과 프리셋 칩. 누른 칸·칩
-const PARTY = { ...deviceWire("partydev"), act: ["send", "partydev:act"] } as const satisfies WireOf<PartyDeviceIpc>;
 
-expose("party.html", "pokebuddyParty", () => bridgeOf<PartyDeviceIpc>(PARTY));
 
 // 배틀 파티 상세 기기 창 — 배틀 파티 칸 하나. 울음소리와 누른 단추(기술 순서 바꾸기)
 const BATTLE = { ...deviceWire("battledev"), cry: ["invoke", "battledev:cry"], act: ["send", "battledev:act"] } as const satisfies WireOf<BattleDeviceIpc>;

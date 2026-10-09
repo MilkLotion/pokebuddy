@@ -18,7 +18,7 @@
 | 칸 넣기·빼기·가져오기·기술 순서·출전 불가 | `src/battle/party.ts` |
 | 화면 값 | `src/view/battle.ts`, `src/view/device-battle.ts` |
 | 모험 탭 | `src/renderer/manage/adventure-tab.ts` |
-| 개체 고르기 모달 | `src/renderer/manage/battle-pick.ts` (고르기판은 `pet-picker.ts`) |
+| 배틀 파티 교체 모달 | `src/renderer/manage/battle-pick.ts` (판은 `pet-box-panel.ts`) |
 | 배틀 파티 상세 기기 창 | `src/renderer/device/battle.ts` |
 | 배틀 엔진 | `src/battle/engine.ts` `runBattle` (import 없음) |
 | 전투 개체 만들기 | `src/battle/fighter-core.ts`(앱·서버 공용) `fighterFrom`·`partyOf`, 앱은 `src/battle/fighter.ts` `buildFighter`·`petFighter` |
@@ -85,11 +85,14 @@
 - 배틀 파티에 든 개체는 팔지 않는다. 판매 거절 까닭은 `in-battle` 이다. 중복 팔기 후보에서도 빠진다.
 - 개체가 저장에서 사라지면(교환으로 보냄) 그 칸은 빈 칸이 된다. 교환으로 받은 개체는 그 칸을 물려받지 않는다.
 
-### 개체 고르기
+### 배틀 파티 교체
 
-- 개체 고르기 모달은 교환의 보낼 포켓몬 고르기판과 같은 부품이다.
-- `◀ ▶` 로 파티 프리셋(번호 순)과 박스를 넘기고, 6열 칸에서 개체를 골라 그 칸에 넣는다.
-- 다른 칸에 이미 든 개체는 흐리고 고르지 못한다. 그 칸에 든 개체는 고른 칸으로 보인다.
+- 빈 칸을 누르거나 칸 메뉴의 `바꾸기`를 누르면 배틀 파티 교체 모달이 열린다(2026-10-09 사용자 "지금 모달에선 프리셋모음 + 박스들 … 그 우측엔 현재 파티 캐릭터들", Figma 05 `15 모험` `Adventure / Battle Swap`).
+- 왼쪽은 포켓몬 고르기 판이고, 파티 교체·친구 교환과 같은 부품이다([포켓몬 고르기 판](ui-components.md#포켓몬-고르기-판)). 오른쪽은 배틀 파티 6칸 세로 한 줄이다. 아래 줄은 `모두 빼기`·`완료`다.
+- 판의 개체를 끌어 칸에 놓으면 그 칸에 넣는다(`battle.set`). 칸을 다른 칸에 놓으면 옮기거나 맞바꾼다(`battle.move`). 칸을 판에 놓으면 뺀다(`battle.clear`).
+- 판의 개체를 누르면 고른 칸에 넣는다. 고른 칸은 톤 바탕이고, 처음은 모달을 연 칸이다. 오른쪽 칸을 누르면 그 칸을 고른다.
+- 다른 칸에 이미 든 개체는 판에서 흐리고 고르지 못한다. 끌어 놓을 때마다 바로 저장한다.
+- `모두 빼기`는 여섯 칸을 차례로 비운다. `완료`는 모달을 닫는다(사용자 "모두 박스로, 모두 빼기, 완료 + 검색").
 
 ### 기존 파티 가져오기
 

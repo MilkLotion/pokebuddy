@@ -44,9 +44,10 @@
 .pager.box-pager {
   gap: 8px;
 }
+/* 이름 칸 — 8글자 폭 고정 (2026-10-09 12 → 8, Figma `Box Toolbar` `box-name-cell · 8글자 폭 고정`) */
 .pager .box-name-cell {
   flex: none;
-  width: 168px;
+  width: 112px;
   display: flex;
   align-items: center;
   justify-content: center;

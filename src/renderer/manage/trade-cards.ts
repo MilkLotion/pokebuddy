@@ -1,9 +1,8 @@
 // 설정창 교환의 카드 그리기 — 개체 한 줄·상태 글자·카드 머리, 보낼 포켓몬 고르기, 제안·확정 화면, 완료 화면 (P10n 나누기)
 // Figma 05 Screens 섹션 `930:18244`(교환) — Offer `1036:22673`·Blocked `1036:22381`·Done `1036:22089`. 상태는 trade-state.ts
-import { wrapPage } from "./grid-view.js";
 import { alertEl, lvNature } from "./widgets.js";
 import { portraitOf } from "./art-cache.js";
-import { petPickerEl } from "./pet-picker.js";
+import { petBoxPanelEl } from "./pet-box-panel.js";
 import type { PetView } from "../../shared/model/snapshot.js";
 import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
@@ -52,23 +51,15 @@ export const leftText = (ms: number): string => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-// 보낼 포켓몬 고르기 — 박스처럼 `◀ ▶` 로 파티 → 박스 1 → 박스 2 … 를 넘긴다 (2026-10-01 사용자 결정 "파티+박스 를 < > 로 옮기면서").
-// 파티는 파티 칸 수(6칸)만, 박스는 30칸. 칸은 정사각 64, 칸 영역은 5줄 높이로 고정해 넘겨도 창 높이가 그대로다. 단일 포켓몬 칸은 흐리게 막는다
-// 제목과 넘김을 한 줄에 둔다 — 기본 창 높이(682)에서 스크롤이 없다 (2026-10-02 사용자 결정 B안, Figma 03 `Trade Dialog` `State=Offer`)
+// 보낼 포켓몬 고르기 — 배틀 파티 교체·파티 교체와 같은 포켓몬 고르기 판(pet-box-panel.ts). 첫 쪽은 파티 프리셋, 다음 쪽부터 박스
+// (2026-10-09 사용자 "교환에서 우측만 다르지 이 box-panel 은 같은거 써야", Figma 05 `Trade / Offer · Pet Box Panel`). 단일 포켓몬 칸은 흐리게 막는다
 function tradePicker(t: TradeScreen): HTMLElement {
   const singles = new Set(t.singles);
-  const boxes = ui.view?.boxes ?? [];
-  if (tradeUi.page > boxes.length) tradeUi.page = 0;
-  // 파티 판은 칸 순서대로 — 빈 칸·잠긴 칸은 빈 칸으로 그린다. 끝에서 한 번 더 넘기면 반대쪽 끝으로 돈다
-  const pages = [{ name: "파티", slots: (ui.view?.party.slots ?? []).map((s) => s.pet ?? null) }, ...boxes.map((b) => ({ name: b.name, slots: b.slots }))];
-  return petPickerEl({
-    title: "보낼 포켓몬",
-    pages,
-    page: tradeUi.page,
-    setPage: (page) => {
-      tradeUi.page = page;
-      drawDialog();
-    },
+  const v = ui.view;
+  if (!v) return el("div");
+  return petBoxPanelEl({
+    key: "trade",
+    view: v,
     cell: (pet) => {
       const single = singles.has(pet.id);
       return {

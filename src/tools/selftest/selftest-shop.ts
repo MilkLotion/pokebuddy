@@ -201,7 +201,7 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(8b) 파티 프리셋 · 1000P 고정 · 칸 조건 · 다섯 개까지  ok\n");
 }
 
-// (8c) 프리셋 명령 — 적용과 이름 바꾸기. 이름은 12자까지, 비우면 기본 이름
+// (8c) 프리셋 명령 — 적용과 이름 바꾸기. 이름은 8자까지(박스 이름과 같다), 비우면 기본 이름
 {
   let state: SaveV3 | null = seed(0);
   state.pets.push(newPet({ id: "p1", species: "bulbasaur", shiny: false, nature: "hardy", gender: "male", now: T0 }));
@@ -230,7 +230,7 @@ function seed(points: number): SaveV3 {
   assert.equal(presetName(state!, 1), "탐험용");
   assert.equal(presetName(state!, 0), "프리셋 1", "다른 프리셋의 이름은 그대로");
   run("pn-2", "party.preset.rename", { preset: 0, name: "가나다라마바사아자차카타파하" });
-  assert.equal(presetName(state!, 0), "가나다라마바사아자차카타", "12자까지");
+  assert.equal(presetName(state!, 0), "가나다라마바사아", "8자까지");
   run("pn-3", "party.preset.rename", { preset: 0, name: "   " });
   assert.equal(presetName(state!, 0), "프리셋 1", "비우면 기본 이름");
   assert.equal(reason("pn-4", "party.preset.rename", { preset: 4, name: "x" }), "no-preset");

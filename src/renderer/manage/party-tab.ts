@@ -10,7 +10,7 @@ import { hold } from "./box-state.js";
 import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
-import { openSwap } from "./party-link.js";
+import { openSwap } from "./party-swap.js";
 import { askPetMenu } from "./pet-menu.js";
 import { openAnyDialog } from "./dialog.js";
 import { openPet } from "./routes.js";
@@ -112,7 +112,7 @@ function blankCard(slot: SlotView): HTMLElement {
   }
   // 문구는 Figma `Party Slot` state/empty 의 "박스에서 배치"
   card.append(blankIcon(false), el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
-  card.addEventListener("click", openSwap);
+  card.addEventListener("click", () => openSwap());
   return card;
 }
 
@@ -160,11 +160,10 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
 }
 
 // 앞·뒤 프리셋을 적용한다 — 가진 프리셋 안에서 끝과 끝이 이어져 돈다. 바탕화면의 파티도 바뀐다.
-// 파티 탭 머리 줄, 가방 기기 창의 파티 줄, 파티 기기 창의 방향키가 같이 쓴다 (2026-10-02 사용자 결정)
+// 파티 탭 머리 줄, 가방 기기 창의 파티 줄이 같이 쓴다 (2026-10-02 사용자 결정)
 export function stepPreset(delta: -1 | 1): void {
   const p = ui.view?.party.preset;
   if (!p || p.count < 2) return;
-  hold.party = null;
   void sendCommand("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
 }
 
@@ -203,7 +202,7 @@ export function drawParty(v: Snapshot): void {
         redrawBody();
       },
       items: [
-        ["교체", openSwap],
+        ["교체", () => openSwap()],
         ["전체보기", () => openAnyDialog({ kind: "preset-overview" })],
       ],
     }),

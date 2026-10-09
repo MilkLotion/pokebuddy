@@ -4,7 +4,7 @@ import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
-import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, PartyDeviceAction, PartyDeviceInput, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { BattleAction, BattleReply } from "../model/battle-net.js";
 import type { ScreenView } from "../model/overlays.js";
@@ -85,10 +85,6 @@ export type ManageDeviceLinkIpc = {
   "manage:bag-step": Push<"onBagStep", [delta: -1 | 1]>;
   "manage:bag-act": Push<"onBagAct", [action: BagDeviceAction]>;
   "manage:bag-closed": Push<"onBagClosed", [gen: number]>;
-  "manage:party-open": Invoke<"partyOpen", [input: PartyDeviceInput | null, gen?: number], PartyDeviceInput | null>; // 파티 기기 창(교체 화면)
-  "manage:party-act": Push<"onPartyAct", [action: PartyDeviceAction]>; // 누른 칸·칩
-  "manage:party-step": Push<"onPartyStep", [delta: -1 | 1]>; // 방향키 — 앞·뒤 프리셋
-  "manage:party-closed": Push<"onPartyClosed", [gen: number]>;
   "manage:battle-open": Invoke<"battleOpen", [input: BattleDeviceInput | null, gen?: number], BattleDeviceInput | null>; // 배틀 파티 상세 기기 창
   "manage:battle-step": Push<"onBattleStep", [delta: -1 | 1]>; // 이전·다음 — 배틀 파티의 개체가 든 칸 순서
   "manage:battle-act": Push<"onBattleAct", [action: BattleDeviceAction]>; // 기술 순서 바꾸기

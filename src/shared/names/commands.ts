@@ -32,6 +32,7 @@ export const COMMANDS = {
   "party.swap": { via: "tx" },
   "party.move": { via: "tx" },
   "party.keep": { via: "tx" },
+  "party.pull": { via: "tx" }, // args.slotIndex — 다른 프리셋의 개체를 지금 파티 칸으로. 칸에 개체가 있으면 맞바꾼다 (교체 모달)
   "party.preset": { via: "tx" },
   "party.preset.rename": { via: "tx" },
   // 배틀 파티 (2026-10-08, src/battle/party.ts)

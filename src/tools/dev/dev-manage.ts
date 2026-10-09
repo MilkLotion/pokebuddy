@@ -24,7 +24,6 @@
 // `--pet-shot <파일>` 을 주면 파티 상세 기기 창도 PNG 로 저장한다. `--detail` 이나 칸을 누른 뒤에 쓴다.
 // `--shop-shot <파일>` 을 주면 상점 기기 창도 PNG 로 저장한다. 상품 줄을 누른 뒤에 쓴다.
 // `--bag-shot <파일>` 을 주면 가방 기기 창도 PNG 로 저장한다. 가방 칸을 누른 뒤에 쓴다.
-// `--party-shot <파일>` 을 주면 파티 기기 창(교체 화면)도 PNG 로 저장한다. 파티 탭의 `교체` 를 누른 뒤에 쓴다.
 // `--battle-click <선택자>` 는 배틀 파티 상세 기기 창에서 그 요소를 누른다(예: .help, .move .pick). 배틀 칸을 누른 뒤에 쓴다.
 // `--battle-shot <파일>` 을 주면 배틀 파티 상세 기기 창도 PNG 로 저장한다. 모험 탭의 배틀 칸을 누른 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
@@ -224,13 +223,12 @@ async function dragIn(wc: WebContents, from: string, to: string, release: boolea
   await new Promise((r) => setTimeout(r, 800));
 }
 
-// 기기 창 찍기 — 앞의 것이 끝난 뒤 차례로 찍는다(pet → dex → shop → bag → party)
+// 기기 창 찍기 — 앞의 것이 끝난 뒤 차례로 찍는다(pet → dex → shop → bag → battle)
 const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
   ["--pet-shot", "pet.html", "pet"],
   ["--dex-shot", "dex.html", "dex"],
   ["--shop-shot", "shop.html", "shop"],
   ["--bag-shot", "bag.html", "bag"],
-  ["--party-shot", "party.html", "party"],
   ["--battle-shot", "battle.html", "battle"],
 ];
 

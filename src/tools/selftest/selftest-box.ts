@@ -110,11 +110,11 @@ check(() => {
   assert.strictEqual(s.boxes[0]!.slots[0], "p1", "실패하면 그대로");
 });
 
-// ── 이름 — 공백을 지우고 12자로 자른다. 비우면 기본 이름 ──
+// ── 이름 — 공백을 지우고 8자로 자른다(2026-10-09 12 → 8). 비우면 기본 이름 ──
 check(() => {
   const s = seed();
   assert.strictEqual(renameBox(s.boxes[0]!, "  내 박스  ", 0), "내 박스");
-  assert.strictEqual(BOX_RULES.nameMax, 12, "이름은 12자까지 (2026-10-01 사용자 결정)");
+  assert.strictEqual(BOX_RULES.nameMax, 8, "이름은 8자까지 (2026-10-09 사용자 \"박스 이름입력을 8칸으로 줄여보자\")");
   assert.strictEqual(renameBox(s.boxes[0]!, "가".repeat(BOX_RULES.nameMax + 3), 0), "가".repeat(BOX_RULES.nameMax));
   assert.strictEqual(renameBox(s.boxes[1]!, "   ", 1), "박스 2", "비우면 기본 이름");
   assert.strictEqual(s.boxes[1]!.name, "", "기본 이름은 저장하지 않는다 — 프리셋과 같다 (94 항목 9-5-5)");

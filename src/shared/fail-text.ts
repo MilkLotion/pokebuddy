@@ -38,6 +38,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   "not-pokemon": { ko: "그 칸에 개체가 없어요.", en: "There's no Pokémon in that slot." },
   "not-in-box": { ko: "박스에 없어요.", en: "It's not in the box." },
   "not-in-party": { ko: "파티에 없어요.", en: "It's not in the party." },
+  "not-in-preset": { ko: "다른 프리셋에 없어요.", en: "It's not in another preset." },
   "slot-not-empty": { ko: "그 칸이 이미 차 있어요.", en: "That slot is already taken." },
   "slot-locked": { ko: "잠긴 칸이에요.", en: "That slot is locked." },
   "no-empty-slot": { ko: "파티에 빈 칸이 없어요.", en: "There's no empty party slot." },

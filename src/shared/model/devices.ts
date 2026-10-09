@@ -98,33 +98,6 @@ export interface BagDeviceView extends BagDeviceOpen {
 
 export type BagDeviceAction = { itemId: string } & ({ kind: "mode"; mode: "use" | "sell" } | { kind: "target"; petId: string } | { kind: "qty"; qty: number } | { kind: "go" } | { kind: "preset"; delta: -1 | 1 });
 
-// 파티 기기 창 — 교체 화면. 박스 탭 옆에 붙어 지금 프리셋의 파티 칸과 프리셋 칩을 보인다
-// (src/main/windows/devices.ts partyDeviceOf, Figma 05 `Party / Swap · Open` `1248:2567`, 2026-10-02 사용자 결정).
-// 칸과 칩을 누르면 관리 창으로 돌아가 관리 창이 명령을 보낸다. 눌러서 들고 눌러서 놓는다 — 포켓몬 메뉴의 `옮기기` 와 같다
-export interface PartyDeviceSlot {
-  index: number;
-  state: SlotState;
-  name: string; // 개체 이름. 개체가 없으면 빈 글자
-  level: string; // "Lv.12". 개체가 없으면 빈 글자
-  art: string | null; // 초상 data URI
-  held: boolean; // 이 칸의 개체를 들었다 — 흐리게
-  target: boolean; // 든 것을 놓을 수 있는 칸 — 옅은 바탕
-}
-
-export interface PartyDeviceOpen {
-  name: string; // 프리셋 이름
-  slots: PartyDeviceSlot[];
-  presets: { index: number; owned: boolean; active: boolean }[]; // 늘 max 개. 사지 않은 프리셋은 자물쇠 칩
-  notice: string; // 마지막 실패 문구. 머리 줄의 이름 옆 자리에 보인다 — 줄을 끼우지 않는다
-  busy: string | null; // 처리 중인 칸·칩의 열쇠(src/shared/device-busy.ts partyBusyKey) — 그것만 점 세 개
-}
-
-export interface PartyDeviceView extends PartyDeviceOpen {
-  side: "right" | "left";
-}
-
-export type PartyDeviceAction = { kind: "slot"; index: number } | { kind: "preset"; index: number };
-
 // 성공한 명령의 결과 두 줄 — 기기 창의 초록 상자 (src/view/result-lines.ts)
 export interface ResultLine {
   lead: string;
@@ -151,13 +124,6 @@ export interface ShopDeviceInput {
   notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
   done: ResultLine | null; // 방금 산 결과 — 합계 상자가 초록
   busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
-}
-
-export interface PartyDeviceInput {
-  heldPetId: string | null; // 파티 기기 창에서 든 파티 개체. 파티에서 빠졌으면 놓는다
-  heldFromBox: boolean; // 박스 개체를 들었다 — 빈 칸이 놓을 칸이 된다
-  notice: string; // 마지막 교체 실패 — 머리 줄의 이름 옆 자리
-  busy: string | null; // 0.3초 넘게 답이 없는 칸·칩의 열쇠. 없으면 null
 }
 
 export interface PetDeviceInput {

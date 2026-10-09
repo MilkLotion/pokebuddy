@@ -16,9 +16,8 @@ export interface TradeUi {
   loading: boolean; // trade.status 를 읽는 중
   input: string; // 링크로 참가 칸에 붙여 넣은 글자
   copied: boolean; // 링크 복사 직후 — 단추 글자를 바꾼다
-  page: number; // 보낼 포켓몬 넘김 — 0 은 파티, 1 부터 박스 1, 박스 2 …
 }
-export const tradeUi: TradeUi = { screen: null, loading: false, input: "", copied: false, page: 0 };
+export const tradeUi: TradeUi = { screen: null, loading: false, input: "", copied: false };
 
 // 닫힌 이유 — 친구가 나갔거나 링크가 만료됐다. 열쇠는 서버의 닫힘 이유 한 벌(shared/names/online-codes.ts)이다
 const TRADE_CLOSED: Record<TradeCloseReason, [string, string]> = {

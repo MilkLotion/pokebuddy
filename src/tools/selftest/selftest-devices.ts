@@ -8,9 +8,8 @@ import { candyMax, candyResult } from "../../bag/preview";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import type { BagDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
-import { partyBusyKey, petBusyKey } from "../../shared/device-busy";
+import { petBusyKey } from "../../shared/device-busy";
 import { bagDeviceModel } from "../../view/device-bag";
-import { partyDeviceModel } from "../../view/device-party";
 import { petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
@@ -165,20 +164,6 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(shopDeviceModel(v, shopIn("없는상품")), null);
 }
 
-// (7) 파티 교체 — 든 개체가 파티에서 빠졌으면 놓고, 박스 개체를 든 동안 빈 칸이 놓을 칸이다
-{
-  const gone = partyDeviceModel(v, { heldPetId: "p3", heldFromBox: false, notice: "", busy: null });
-  assert.equal(gone.input.heldPetId, null);
-  assert.ok(gone.model.slots.every((s) => !s.target), "든 것이 없으면 놓을 칸이 없다");
-  assert.equal(gone.model.busy, null);
-  const held = partyDeviceModel(v, { heldPetId: "p1", heldFromBox: false, notice: "실패", busy: partyBusyKey({ kind: "preset", index: 1 }) });
-  assert.equal(held.model.busy, "preset:1", "처리 중 열쇠는 그대로 모델로 간다 (94 2-1)");
-  assert.notEqual(partyBusyKey({ kind: "slot", index: 1 }), partyBusyKey({ kind: "preset", index: 1 }), "칸과 칩의 열쇠는 다르다");
-  assert.deepEqual(held.model.slots.slice(0, 3).map((s) => [s.state, s.held, s.target, s.art]), [["pokemon", true, false, "portrait:pikachu"], ["pokemon", false, false, "portrait:charmander:shiny"], ["locked", false, false, null]]);
-  assert.equal(held.model.notice, "실패");
-  assert.equal(held.model.presets.length, v.party.preset.max);
-}
-
 // (8) 파티 상세 — 자리 글자, 튜토리얼은 파티 개체만
 {
   const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", dexOpen: false, busy: null })?.model;
@@ -255,4 +240,4 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(tintEgg(base, palette.slice(1)), null, "색표 길이가 다르면 칠하지 않는다");
 }
 
-process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 교체·파티 상세·결과 줄·그림 열쇠·알 색칠)\n");
+process.stdout.write("selftest-devices: 통과 (사탕 미리보기·가방 사용·막힘과 결과·판매·빈 파티·상점·파티 상세·결과 줄·그림 열쇠·알 색칠)\n");

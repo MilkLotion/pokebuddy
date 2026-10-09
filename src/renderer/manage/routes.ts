@@ -5,11 +5,10 @@ import { loadAccount } from "./account.js";
 import { resetAchievementTab } from "./achievements.js";
 import { loadAgents } from "./agents.js";
 import { startHold } from "./box-move.js";
-import { hold } from "./box-state.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl, openDialog, setScrim } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
-import { openSwap } from "./party-link.js";
+import { openSwap } from "./party-swap.js";
 import { redrawBody, setTab } from "./shell.js";
 import { findPartySlot, petInView, ui } from "./state.js";
 import { loadTrade } from "./trade-state.js";
@@ -64,16 +63,12 @@ export function goTo(route: ManageRoute): void {
   } else if (route.to === "move") {
     startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
   } else if (route.to === "swap") {
-    // 포켓몬 메뉴의 `교체` — 교체 화면을 열고 그 개체를 든 채 시작한다 (2026-10-09 사용자 "파티,박스에 우클릭 메뉴에 교체 추가").
-    // 파티 개체는 파티 기기 창에서, 박스 개체는 박스 탭에서 든다. 그다음은 머리 메뉴의 `교체` 로 연 화면과 같다
+    // 포켓몬 메뉴의 `교체` — 교체 모달을 열고 그 개체를 찾아 둔다 (2026-10-09 사용자 "파티,박스에 우클릭 메뉴에 교체 추가").
+    // 파티 개체면 그 칸을 고르고, 박스·다른 프리셋 개체면 판을 그 쪽으로 넘겨 그 칸을 강조한다 (party-swap.ts startSwap)
     if (!petInView(route.petId)) return;
-    openSwap();
-    if (findPartySlot(route.petId) != null) {
-      hold.party = route.petId;
-      redrawBody();
-    } else startHold(route.petId);
+    openSwap(route.petId);
   } else if (route.to === "battle-pick") {
-    openDialogOrPet({ kind: "battle-pick", slot: route.slot, page: 0 }); // 배틀 파티 칸 메뉴의 `바꾸기` — 개체 고르기 모달
+    openDialogOrPet({ kind: "battle-pick", slot: route.slot }); // 배틀 파티 칸 메뉴의 `바꾸기` — 개체 고르기 모달
   } else if (route.to === "sell") {
     if (petInView(route.petId)) openDialogOrPet({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {

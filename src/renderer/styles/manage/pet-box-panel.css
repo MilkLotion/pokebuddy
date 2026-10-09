@@ -1,0 +1,203 @@
+/* 포켓몬 고르기 판과 교체 모달 — 배틀 파티 교체·파티 교체·친구 교환이 같이 쓴다 (src/renderer/manage/pet-box-panel.ts)
+   Figma 03 `Pet Box Panel`(Page=Presets|Box), 05 `Adventure / Battle Swap`·`Party / Swap Modal`·`Trade / Offer · Pet Box Panel` (2026-10-09)
+   판 462×474 — 안쪽 12, 칸 68×66(박스)·68×54(프리셋), 줄 간격 6·5. 쪽을 넘겨도 크기가 같다 */
+.pet-box-panel {
+  flex: none;
+  width: 462px;
+  height: 474px;
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 머리 — ◀ 이름(8글자 폭) ▶ 와 찾기 줄 */
+.pp-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+}
+.pp-pager {
+  flex: none;
+  gap: 8px;
+  margin: 0; /* 박스 탭 .pager 의 아래 여백(16)을 지운다 — 남기면 찾기 줄과 세로 자리가 어긋난다 */
+}
+/* ◀ ▶ 와 찾기 줄은 같은 높이 32 (2026-10-09 사용자 "박스 이동 칸이랑 검색이랑 높이 안맞잖아") */
+.pp-pager > button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+.pp-pager .label {
+  width: 112px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.pp-find {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  box-sizing: border-box;
+}
+/* 박스 쪽 — 6×5 */
+.pp-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 68px);
+  grid-auto-rows: 66px;
+  gap: 6px;
+}
+.pp-cell {
+  aspect-ratio: auto;
+  min-width: 0;
+  height: 66px;
+  padding: 0 2px;
+  position: relative;
+}
+.pp-cell .dot {
+  width: 28px;
+  height: 28px;
+}
+.pp-cell .shiny {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+}
+.pp-cell:disabled {
+  cursor: default;
+}
+.pp-cell.off {
+  opacity: 0.4;
+}
+/* 찾기의 지금 결과 — 옅은 바탕만 (박스 탭 .cell.found 와 같다) */
+.pp-cell.found {
+  background: var(--accent-bg);
+}
+/* 프리셋 쪽 — 한 줄이 프리셋 하나. 이름 작게, 칸은 그림과 이름(레벨 없음) */
+.pp-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pp-line-name {
+  height: 16px;
+  margin-bottom: 2px;
+  font-family: var(--font-small);
+  font-size: 11px;
+  color: var(--soft);
+}
+.pp-line-cells {
+  display: grid;
+  grid-template-columns: repeat(6, 68px);
+  grid-auto-rows: 54px;
+  gap: 6px;
+}
+.pp-cell.short {
+  height: 54px;
+}
+.pp-blank {
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+}
+.pp-blank.locked {
+  background: var(--unknown);
+  border-color: var(--unknown);
+}
+.pp-blank .blank-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent-bg);
+  display: grid;
+  place-items: center;
+}
+.pp-blank .blank-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+/* 교체 모달 — 왼쪽 판, 오른쪽 판(세로 6칸), 아래 단추 줄 */
+.dialog.swap {
+  flex: none;
+  width: min(608px, calc(100vw - 32px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog.swap .settings-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dialog.swap .titles {
+  flex: 1;
+  min-width: 0;
+}
+.dialog.swap .titles h2 {
+  margin: 0;
+}
+.swap-body {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.swap-side {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--accent-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.swap-side-name {
+  font-weight: 600;
+  height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swap-side-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.swap-side .pp-cell {
+  width: 100%;
+}
+/* 고른 칸 — 톤 바탕만(색 테두리로 강조하지 않는다). 판 바탕이 옅은 초록이라 한 단계 진하게 */
+.swap-side .pp-cell[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface));
+}
+.swap-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swap-acts .spacer {
+  flex: 1;
+}
+/* 끄는 중 놓을 칸 — 박스·파티 끌기와 같은 옅은 바탕 */
+.pet-box-panel.drop-on,
+.pp-cell.drop-on,
+.pp-blank.drop-on {
+  background: var(--accent-bg);
+}
+/* 파티 교체의 잠긴 칸 — 다른 칸과 같은 높이 */
+.swap-side .swap-locked {
+  height: 66px;
+}

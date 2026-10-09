@@ -9,7 +9,7 @@ import { battleClearHandler, battleFormHandler, battleImportHandler, battleMegaH
 import { boxMoveHandler, boxOrderHandler, boxRenameHandler, boxSortHandler } from "./handlers/box.js";
 import { buyHandler, openHandler, sellHandler, sellPetHandler, sellPetsHandler, useHandler } from "./handlers/items.js";
 import { mailApplyHandler, mailReadHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
-import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, swapHandler, visibilityHandler } from "./handlers/party.js";
+import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, pullHandler, swapHandler, visibilityHandler } from "./handlers/party.js";
 import { evolveHandler, feedHandler, formHandler, homeHandler, playHandler, starterHandler } from "./handlers/pet.js";
 import { claimHandler, settingsHandler, tutorialHandler } from "./handlers/progress.js";
 
@@ -25,6 +25,7 @@ const TX_COMMANDS = {
   "party.swap": { handler: swapHandler },
   "party.move": { handler: moveHandler },
   "party.keep": { handler: keepHandler },
+  "party.pull": { handler: pullHandler },
   "party.preset": { handler: presetApplyHandler },
   "party.preset.rename": { handler: presetRenameHandler },
   "battle.set": { handler: battleSetHandler },

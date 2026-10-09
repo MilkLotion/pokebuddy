@@ -1,5 +1,5 @@
 // 파티 처리기 — 꺼내기·숨기기·배치·맞바꾸기·옮기기·박스로 보내기·프리셋
-import { keepInBox, movePartySlot, placeInParty, swapWithBox } from "../../party/placement.js";
+import { keepInBox, movePartySlot, placeInParty, pullFromPreset, swapWithBox } from "../../party/placement.js";
 import { setHidden, shownCount } from "../../party/visibility.js";
 import { applyPreset, presetName, renamePreset } from "../../party/presets.js";
 import type { TxHandler } from "../executor";
@@ -44,6 +44,16 @@ export const moveHandler: TxHandler = (draft, args) => {
   const res = movePartySlot(draft, petId, toSlot);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, slotIndex: res.slotIndex } };
+};
+
+// 다른 프리셋의 개체를 지금 파티 칸으로 — args.slotIndex. 칸에 개체가 있으면 맞바꾼다
+export const pullHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  const slotIndex = slotIndexOf(args);
+  if (!petId || slotIndex == null) return { ok: false, reason: "bad-args" };
+  const res = pullFromPreset(draft, petId, slotIndex);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { petId, slotIndex: res.slotIndex, movedOut: res.movedOut, hidden: false } };
 };
 
 // 파티 개체를 박스에 보관한다 — toBoxId·toSlot 을 주면 그 박스 빈 칸에

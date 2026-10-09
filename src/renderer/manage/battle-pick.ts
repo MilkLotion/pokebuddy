@@ -1,55 +1,112 @@
-// 배틀 파티 칸에 넣을 개체 고르기 모달 — 교환의 보낼 포켓몬 고르기판(pet-picker.ts)을 같이 쓴다.
-// 쪽은 파티 프리셋(번호 순) → 박스 1 → 박스 2 … 다. 다른 칸에 이미 든 개체는 흐리고 고르지 못한다 (docs/specs/adventure.md "배틀 파티")
-// Figma 05 `15 모험` `Adventure / Pick Battle Pet` `1718:5386`, 본문은 03 `Battle Pet Picker` `1716:5299`
-import { el } from "../ui/dom.js";
+// 배틀 파티 교체 모달 — 왼쪽은 포켓몬 고르기 판(pet-box-panel.ts, 파티 교체·교환과 같다), 오른쪽은 배틀 파티 6칸 세로 한 줄
+// (2026-10-09 사용자 "프리셋모음 + 박스들 … 그 우측엔 현재 파티 캐릭터들", "1x6 이라니까? 가로1 세로6칸", Figma 05 `15 모험` `Adventure / Battle Swap`)
+// 여는 곳: 모험 탭의 빈 칸, 칸 우클릭 메뉴의 `바꾸기`. 연 칸이 고른 칸(옅은 바탕)이다. 오른쪽 칸을 누르면 그 칸을 고른다
+//   판의 개체를 누르면        고른 칸에 넣는다(battle.set). 칸에 개체가 있으면 바꾼다
+//   판의 개체를 끌어 칸에     그 칸에 넣는다
+//   칸을 끌어 다른 칸에       옮기거나 맞바꾼다(battle.move)
+//   칸을 끌어 판에            뺀다(battle.clear)
+//   모두 빼기 · 완료          6칸을 비운다 · 닫는다 (사용자 "모두 박스로, 모두 빼기, 완료 + 검색")
+// 다른 칸에 든 개체는 판에서 흐리고 고르지 못한다. 끌어 놓을 때마다 바로 저장한다
+import type { BattleSlotView, PetView } from "../../shared/model/snapshot.js";
+import { buttonEl, el } from "../ui/dom.js";
+import { shinyIcon } from "../ui/shiny-icon.js";
+import { portraitOf } from "./art-cache.js";
+import { hold } from "./box-state.js";
+import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
-import { closeDialog, dialogEl, openAnyDialog } from "./dialog.js";
-import { petPickerEl, type PickerPage } from "./pet-picker.js";
+import { actionButtonEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
+import { petBoxPanelEl, resetPanel } from "./pet-box-panel.js";
 import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
 
-export function drawBattlePick(slot: number, page: number): void {
+const PANEL_KEY = "battle-swap";
+let target = 0; // 고른 칸 — 판의 개체를 누르면 여기에 넣는다
+
+// 모달을 새로 열 때 — 판은 첫 쪽, 고른 칸은 연 칸 (registerDialog 의 enter)
+export function startBattlePick(slot: number): void {
+  resetPanel(PANEL_KEY);
+  target = slot;
+}
+
+const send = (cmd: string, args: Record<string, unknown>): void => {
+  void sendCommand(cmd, "", args, { keepOpen: true });
+};
+
+function slotCell(s: BattleSlotView): HTMLElement {
+  const pet = s.pet;
+  const cell = buttonEl(pet ? "cell pp-cell bs-slot" : "cell blank pp-cell bs-slot");
+  cell.setAttribute("aria-pressed", String(s.index === target));
+  cell.setAttribute("aria-label", `배틀 파티 ${s.index + 1}번 칸`);
+  if (pet) {
+    cell.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
+    if (pet.shiny) cell.appendChild(shinyIcon(10));
+    cell.title = `${pet.name} Lv.${pet.level}`;
+    cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { battleSlot: s.index }));
+    cell.addEventListener("dragstart", (e) => e.preventDefault()); // 그림의 브라우저 기본 끌기를 막는다
+  }
+  cell.addEventListener("click", () => {
+    target = s.index;
+    drawDialog();
+  });
+  // 놓기 — 판에서 끈 개체는 넣고, 다른 칸에서 끈 개체는 옮긴다
+  dropZone(cell, () => {
+    const from = hold.drag;
+    if (from && "pickPet" in from) send("battle.set", { slotIndex: s.index, petId: from.pickPet });
+    else if (from && "battleSlot" in from && from.battleSlot !== s.index) send("battle.move", { slotIndex: from.battleSlot, toSlot: s.index });
+  });
+  return cell;
+}
+
+export function drawBattlePick(): void {
   const v = ui.view;
   if (!v) {
     closeDialog();
     return;
   }
-  const pages: PickerPage[] = [
-    ...v.party.presets.map((p) => ({ name: p.name, slots: p.slots.map((s) => s.pet ?? null) })),
-    ...v.boxes.map((b) => ({ name: b.name, slots: b.slots })),
-  ];
   const inBattle = new Map<string, number>();
   for (const s of v.battle.slots) if (s.pet) inBattle.set(s.pet.id, s.index);
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, `배틀 파티 ${slot + 1}번 칸`));
+  titles.appendChild(el("h2", undefined, "배틀 파티 교체"));
   const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
   x.addEventListener("click", closeDialog);
   top.append(titles, x);
-  const picker = petPickerEl({
-    title: "넣을 포켓몬",
-    pages,
-    page: Math.min(page, pages.length - 1),
-    setPage: (p) => openAnyDialog({ kind: "battle-pick", slot, page: p }),
-    cell: (pet) => {
+  const panel = petBoxPanelEl({
+    key: PANEL_KEY,
+    view: v,
+    cell: (pet: PetView) => {
       const at = inBattle.get(pet.id);
-      const here = at === slot;
-      const other = at != null && !here;
+      const other = at != null;
       return {
         disabled: other || ui.busy,
         off: other,
         ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : {}),
-        pressed: here,
-        pick: () => {
-          if (here) {
-            closeDialog();
-            return;
-          }
-          void sendCommand("battle.set", "", { slotIndex: slot, petId: pet.id }).then((ok) => ok && closeDialog());
-        },
+        pick: () => send("battle.set", { slotIndex: target, petId: pet.id }),
+        drag: { pickPet: pet.id },
       };
     },
+    // 칸을 끌어 판에 놓으면 뺀다
+    dropAnywhere: () => () => {
+      const from = hold.drag;
+      if (from && "battleSlot" in from) send("battle.clear", { slotIndex: from.battleSlot });
+    },
   });
-  dialogEl.append(top, picker);
+  const side = el("div", "swap-side");
+  side.appendChild(el("div", "swap-side-name", "배틀 파티"));
+  const slots = el("div", "swap-side-slots");
+  for (const s of v.battle.slots) slots.appendChild(slotCell(s));
+  side.appendChild(slots);
+  const body = el("div", "swap-body");
+  body.append(panel, side);
+  const filled = v.battle.slots.filter((s) => s.pet).map((s) => s.index);
+  const clearAll = actionButtonEl("모두 빼기", false, filled.length === 0 || ui.busy, () => {
+    void (async () => {
+      for (const slot of filled) if (!(await sendCommand("battle.clear", "", { slotIndex: slot }, { keepOpen: true }))) break;
+    })();
+  });
+  const done = actionButtonEl("완료", true, false, closeDialog);
+  const acts = el("div", "swap-acts");
+  acts.append(clearAll, el("span", "spacer"), done);
+  dialogEl.append(top, body, acts);
 }

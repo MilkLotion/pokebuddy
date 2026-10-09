@@ -112,7 +112,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 - **뼈대** — `shell.ts` 가 헤더 숫자, 탭 줄, 본문 다시 그리기를 맡고 `registerTab` 으로 탭을 받는다. 모달은 `dialog.ts` 가 하나만 띄우고 `registerDialog` 로 종류를 받는다. 명령 보내기는 `command.ts`, 1초마다 스냅샷 다시 읽기는 `live.ts`, 열기와 바로가기(알림 배너, 포켓몬 메뉴, 교환 링크에서 온 경로)는 `routes.ts`.
 - **탭** — `party-tab.ts`, `box-tab.ts`, `dex-tab.ts`, `shop-tab.ts`, `bag-tab.ts`, `adventure-tab.ts`. 탭마다 자기 상태(쪽, 검색어, 고른 칸)를 들고 있다.
-- **기기 창 연결** — `pet-link.ts`, `dex-link.ts`, `shop-link.ts`, `bag-link.ts`, `party-link.ts`, `battle-link.ts`. 공통 뼈대는 `device-link.ts` 로, 고른 값이나 스냅샷이 바뀔 때만 다시 열고 늦게 온 답은 버린다.
+- **기기 창 연결** — `pet-link.ts`, `dex-link.ts`, `shop-link.ts`, `bag-link.ts`, `battle-link.ts`. 공통 뼈대는 `device-link.ts` 로, 고른 값이나 스냅샷이 바뀔 때만 다시 열고 늦게 온 답은 버린다.
 - **대화상자** — 돌보미집(`daycare.ts`), 진화(`evolve.ts`), 메가진화·모습(`pet-forms.ts`), 우편(`mail.ts`), 교환(`trade.ts`), 설정·사용자(`settings.ts`, `account.ts`), 업적, 가이드북(`guide.ts`), 패치노트(`update-notes.ts`), 박스 순서.
 - **상태** — 모든 파일이 읽는 기둥 상태(보는 스냅샷, 탭, 열린 모달)는 `state.ts` 의 `ui` 하나다. 여러 파일이 같이 고치는 상태는 따로 묶었다: 옮기기·끌기(`box-state.ts`), 계정(`account-state.ts`), 교환(`trade-state.ts`).
 - **튜토리얼** — 문구와 단계 표는 `tutorial-steps.ts`, 코치마크 그리기와 입력 막기, OS 창 단추를 어둡게 하는 신호는 `tutorial.ts`.
@@ -226,7 +226,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **헤더 아이콘의 열림 표시** — `registerDialog` 의 `headerButton` 으로 건다. 표시는 `setScrim` 이 맞춘다.
 - **명령** — `command.ts` 의 `sendCommand`. 처리 중 모양은 `setBusy`·`whenSlow`, 실패 문구는 `shared/fail-text.ts` 의 `failTextOf`.
 - **작은 부품** — `widgets.ts` 의 `chipsEl`(분류 칩), `pageHeadEl`(탭 머리), `switchEl`·`segmentedEl`·`settingRow`(설정 줄), `alertEl`(이어지는 상태 안내), `meterEl`. 격자 쪽 넘김과 보기 바꾸기는 `grid-view.ts`.
-- **개체 고르기판** — `pet-picker.ts` 의 `petPickerEl`. `◀ ▶` 로 쪽(파티·프리셋·박스)을 넘기며 6열 칸에서 고른다. 교환의 보낼 포켓몬과 배틀 파티 칸 고르기가 같이 쓴다. CSS 는 `trade.css` `.trade-pick` 이다.
+- **포켓몬 고르기 판** — `pet-box-panel.ts` 의 `petBoxPanelEl`. 첫 쪽은 파티 프리셋(한 줄이 프리셋 하나), 다음 쪽부터 박스(6×5)다. `◀ 이름 ▶` 옆에 찾기 줄(`search.ts` `findBarEl`)이 있다. 파티 교체(`party-swap.ts`)·배틀 파티 교체(`battle-pick.ts`)·친구 교환(`trade-cards.ts`)이 같이 쓰고, 누르기·끌기·놓기는 쓰는 곳이 `cell`·`drop` 으로 정한다. CSS 는 `pet-box-panel.css` 다.
 - **검색 칸** — `search.ts` 의 `findBarEl`(찾기 줄). 박스 찾기·도감·상점이 같이 쓴다. 입력을 멈추고 1초 뒤나 Enter 로 검색하고, `✕` 로 지운다. 이전·다음 결과가 필요하면 `nav` 를 켠다(박스). CSS 는 `widgets.css` `.find-bar` 다.
 - **튜토리얼** — 문구는 `tutorial-steps.ts` 의 표에 더하고, 그리기·입력 막기는 `tutorial.ts` 가 한다. 다시 보기는 `tutorial/queue.ts` 의 `REPLAYABLE_TUTORIALS` 에 넣는다.
 
