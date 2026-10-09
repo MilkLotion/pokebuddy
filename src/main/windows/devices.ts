@@ -54,7 +54,7 @@ export interface DexDeviceOpen {
 export interface DexDeviceDeps {
   detail(slug: string): DexDetail | null;
   tree(slug: string): EvoNodeView | null; // 진화 트리 — 상점 구매 창과 같다 (2026-09-30 사용자 결정 도감 상세 A안)
-  portrait(slug: string): Promise<string | null>;
+  portrait(slug: string, shiny?: boolean): Promise<string | null>;
   portraits(slugs: string[]): Promise<Record<string, string>>; // 트리 종들의 그림을 한 번에
   cry(slug: string): Promise<string | null>;
   volume(): number; // 울음소리 음량 0~1
@@ -76,9 +76,11 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         n.children.forEach(walk);
       };
       if (tree) walk(tree);
-      return Promise.all([deps.portrait(o.slug), shown.length ? deps.portraits(shown) : Promise.resolve({})]).then(([portrait, treePortraits]) => ({
+      // 이로치를 얻은 종은 이로치 초상도 보낸다 — 기기 창의 이로치 단추가 바꿔 그린다
+      return Promise.all([deps.portrait(o.slug), detail.shiny ? deps.portrait(o.slug, true) : Promise.resolve(null), shown.length ? deps.portraits(shown) : Promise.resolve({})]).then(([portrait, shinyPortrait, treePortraits]) => ({
         detail,
         portrait,
+        shinyPortrait,
         volume: deps.volume(),
         tree,
         treePortraits,

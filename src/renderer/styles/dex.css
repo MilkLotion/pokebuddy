@@ -91,6 +91,32 @@
 }
 .stage {
   overflow: hidden;
+  position: relative;
+}
+/* 이로치 보기 단추 — 초상 칸 오른쪽 위 28 원. 끔은 흰 바탕에 흐린 표식, 켬은 옅은 노랑 바탕 (2026-10-09 사용자 "d0으로 하자", Figma 05 `Dex / Device / Shiny Off|On`).
+   색 테두리로 강조하지 않는다 */
+.stage .shiny-toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.stage .shiny-toggle svg {
+  opacity: 0.35;
+}
+.stage .shiny-toggle.on {
+  background: #fdf3e1;
+}
+.stage .shiny-toggle.on svg {
+  opacity: 1;
 }
 /* 도트 그림 — 빈 테두리를 잘라 정수 배로 키운 캔버스 (ui/portrait.ts spriteCanvas) */
 .stage canvas {

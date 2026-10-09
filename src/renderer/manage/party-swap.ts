@@ -119,7 +119,7 @@ export function drawSwap(): void {
       const mine = at.kind === "preset" && at.preset === active;
       const slot = slotOf(target);
       return {
-        disabled: mine || ui.busy,
+        disabled: mine, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
         off: mine,
         ...(mine ? { title: `${pet.name} · 지금 파티에 있어요` } : {}),
         pick: () => {
@@ -153,7 +153,7 @@ export function drawSwap(): void {
   const body = el("div", "swap-body");
   body.append(panel, side);
   const pets = v.party.slots.flatMap((s) => (s.pet ? [s.pet.id] : []));
-  const keepAll = actionButtonEl("모두 박스로", false, pets.length === 0 || ui.busy, () => {
+  const keepAll = actionButtonEl("모두 박스로", false, pets.length === 0, () => {
     void (async () => {
       for (const id of pets) if (!(await sendCommand("party.keep", id, {}, { keepOpen: true }))) break;
     })();

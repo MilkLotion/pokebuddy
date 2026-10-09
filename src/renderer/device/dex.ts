@@ -7,6 +7,7 @@ import { RADIAL, RADIAL_MIN, evoDrawer } from "../ui/evo-tree.js";
 import { portraitImg, spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { createCryPlayer } from "../ui/cry.js";
+import { shinyIcon } from "../ui/shiny-icon.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { createDeviceFrame } from "./device-frame.js";
 import { pairsEl } from "./item-face.js";
@@ -26,8 +27,19 @@ const STAGE = { w: 150, h: 124, maxScale: 2 };
 // 울음소리 — 음량은 설정의 소리 크기를 곱한 값(메인이 준다)
 const cryPlayer = createCryPlayer(() => api.cry());
 
+// 이로치 보기 — 이로치를 얻은 종만 초상 칸 오른쪽 위에 둥근 단추. 켜면 이로치 초상, 끄면 기본 초상. 종이 바뀌면 끈다
+// (2026-10-09 사용자 "이로치 얻은종만 버튼생기게", 단추 모양 "d0으로 하자", Figma 05 `Dex / Device / Shiny Off|On`)
+let shinyOn = false;
+let shinySlug = "";
+let lastView: DexDeviceView | null = null;
+
 function render(v: DexDeviceView): void {
   const d = v.detail;
+  lastView = v;
+  if (d.slug !== shinySlug) {
+    shinySlug = d.slug;
+    shinyOn = false;
+  }
   cryPlayer.setVolume(v.volume);
   const locked = d.state === "locked";
   frame.beginDraw(v.side, "도감", locked ? "locked" : undefined);
@@ -40,7 +52,18 @@ function render(v: DexDeviceView): void {
 
   const entry = el("div", "entry");
   const stage = el("div", "stage");
-  if (v.portrait) stage.appendChild(spriteCanvas(v.portrait, STAGE));
+  const shown = shinyOn && v.shinyPortrait ? v.shinyPortrait : v.portrait;
+  if (shown) stage.appendChild(spriteCanvas(shown, STAGE));
+  if (v.shinyPortrait && !locked) {
+    const toggle = buttonEl(shinyOn ? "shiny-toggle on" : "shiny-toggle", "", () => {
+      shinyOn = !shinyOn;
+      if (lastView) render(lastView);
+    });
+    toggle.appendChild(shinyIcon(16, shinyOn ? "이로치 모습 끄기" : "이로치 모습 보기"));
+    toggle.setAttribute("aria-pressed", String(shinyOn));
+    toggle.title = shinyOn ? "기본 모습 보기" : "이로치 모습 보기";
+    stage.appendChild(toggle);
+  }
   entry.appendChild(stage);
   const info = el("div", "info");
   info.appendChild(el("div", undefined, locked ? UNKNOWN : d.genus || " "));

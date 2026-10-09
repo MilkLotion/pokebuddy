@@ -79,7 +79,7 @@ export function drawBattlePick(): void {
       const at = inBattle.get(pet.id);
       const other = at != null;
       return {
-        disabled: other || ui.busy,
+        disabled: other, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
         off: other,
         ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : {}),
         pick: () => send("battle.set", { slotIndex: target, petId: pet.id }),
@@ -100,7 +100,7 @@ export function drawBattlePick(): void {
   const body = el("div", "swap-body");
   body.append(panel, side);
   const filled = v.battle.slots.filter((s) => s.pet).map((s) => s.index);
-  const clearAll = actionButtonEl("모두 빼기", false, filled.length === 0 || ui.busy, () => {
+  const clearAll = actionButtonEl("모두 빼기", false, filled.length === 0, () => {
     void (async () => {
       for (const slot of filled) if (!(await sendCommand("battle.clear", "", { slotIndex: slot }, { keepOpen: true }))) break;
     })();

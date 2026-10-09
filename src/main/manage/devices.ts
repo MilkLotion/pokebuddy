@@ -59,8 +59,9 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
   const dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
     detail: (slug) => detailOf(slug),
-    portrait: async (slug) => {
-      return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
+    portrait: async (slug, shiny = false) => {
+      const ask = { slug, shiny };
+      return (await portraits.get([ask]))[portraitKey(ask)] ?? null;
     },
     tree: (slug) => {
       // 메가·원시회귀 칸은 기본 종 → 메가 모습 한 단계 (src/view/dex-detail.ts megaDetail)

@@ -9,6 +9,7 @@ import type { SlotState } from "../save-v3.js";
 export interface DexDeviceView {
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
+  shinyPortrait: string | null; // 이로치 초상 — 이로치를 얻은 종만(detail.shiny). 초상 칸 오른쪽 위 단추로 켜고 끈다 (2026-10-09 사용자 결정, Figma 05 `Dex / Device / Shiny`)
   side: "right" | "left"; // 관리 창의 어느 쪽에 붙었나 — 경첩 면을 관리 창 쪽에 그린다
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
   // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 검은 실루엣으로 그린다. 사슬이 없으면 null

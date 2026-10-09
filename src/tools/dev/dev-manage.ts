@@ -421,6 +421,7 @@ void app.whenReady().then(async () => {
         if (flag === "--shop-click" && value) step = step.then(() => clickInDevice("shop.html", value));
         if (flag === "--bag-click" && value) step = step.then(() => clickInDevice("bag.html", value));
         if (flag === "--battle-click" && value) step = step.then(() => clickInDevice("battle.html", value));
+        if (flag === "--dex-click" && value) step = step.then(() => clickInDevice("dex.html", value));
         // --shop-click-text·--bag-click-text 는 상점·가방 기기 창에서 그 글자인 마지막 단추를 누른다(바닥 주 단추가 마지막) — 수량(+·최대)·구매·사용·판매를 확인할 때
         if ((flag === "--shop-click-text" || flag === "--bag-click-text") && value)
           step = step.then(() => {
