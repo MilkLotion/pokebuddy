@@ -19,14 +19,18 @@
 .dialog.move-pick .titles h2 {
   margin: 0;
 }
+/* 본문 높이 고정 — 기술 6개 목록 높이(이름 줄 18 + 줄 66 × 6 + 사이 4 × 6). 상세 칸 길이나 진화 전 종(목록 2개)으로 모달이 커지거나 움직이지 않게 */
 .mp-body {
   display: flex;
   align-items: stretch;
   gap: 16px;
+  height: 438px;
 }
 .mp-list {
   flex: none;
   width: 300px;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -34,6 +38,7 @@
 .mp-side {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -74,11 +79,13 @@
 .mp-option.used .mp-meta-text {
   opacity: 0.45;
 }
+/* 정보 줄·칸 번호는 줄 높이 16 — 한 줄이 Figma 와 같은 66 이어야 본문 높이 438 에 6줄이 꼭 맞는다 */
 .mp-meta {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--muted);
+  font: 12px/16px var(--font-body);
 }
 .mp-meta-text {
   flex: 1;
@@ -92,6 +99,7 @@
 }
 .mp-slot-no {
   color: var(--muted);
+  font: 12px/16px var(--font-body);
 }
 /* 순서 바꾸기 — 지름 28 원, 위아래 화살표. 기기 창의 순서 바꾸기·교환 표시와 같은 모양 (Figma 02 `Trade Swap Mark`) */
 .mp-swap-row {
@@ -120,15 +128,61 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.mp-desc {
+/* 기술 상세 — 남은 자리를 채우고 넘치면 칸 안에서 스크롤 (Figma 03 `Move Pick Body` `detail · 기술 상세`) */
+.mp-detail {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 12px;
   border-radius: 10px;
   background: var(--canvas);
 }
+.mp-detail > * {
+  flex: none;
+}
+.mp-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mp-kind {
+  color: var(--muted);
+  font: 12px/16px var(--font-body);
+}
+.mp-stats {
+  display: flex;
+  gap: 6px;
+}
+.mp-stat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  font: 12px/16px var(--font-body);
+}
+.mp-stat span {
+  color: var(--muted);
+}
+.mp-stat strong {
+  font-weight: 700;
+}
+.mp-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: 12px/16px var(--font-body);
+}
+.mp-rule {
+  height: 1px;
+  background: var(--line);
+}
 .mp-desc-text {
   color: var(--muted);
+  font: 12px/16px var(--font-body);
 }

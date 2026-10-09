@@ -15,7 +15,7 @@ import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/command-table";
 import { snapshotView } from "../../view/snapshot";
-import { moveMeta } from "../../view/battle";
+import { moveDetail, moveEffects, moveMeta } from "../../view/battle";
 import { testPet } from "../harness/fixtures";
 
 const T0 = new Date(2026, 9, 8, 10, 0, 0).getTime();
@@ -68,6 +68,35 @@ assert.ok(volt[0]!.text && volt[0]!.text.includes("돌진"), "기술 설명");
 assert.equal(moveMeta(volt[0]!), "물리 · 위력 120 · 명중 100 · 쿨타임 8초");
 assert.equal(speciesMoves("kadabra")[0]!.class, "special", "객체 칸은 기본값을 덮는다");
 assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 null");
+
+// ── 기술 상세 — 기술 바꾸기 모달 (docs/specs/adventure.md "기술 바꾸기") ──
+{
+  const d = moveDetail(volt[0]!, ["electric"], "static");
+  assert.equal(d.kind, "물리 · 근접 · 접촉");
+  assert.deepEqual(d.stats, [{ label: "위력", value: "120" }, { label: "명중", value: "100" }, { label: "쿨타임", value: "8초" }]);
+  assert.deepEqual(d.effects, ["자기 타입 기술이라 위력 1.5배", "10% 확률로 상대를 마비", "준 피해의 33% 를 자신도 받음"]);
+  assert.equal(moveDetail(volt[1]!, ["electric"], null).kind, "특수 · 원거리", "특수는 원거리, 접촉 없음");
+  assert.deepEqual(moveEffects(volt[0]!, ["water"], null).slice(0, 1), ["10% 확률로 상대를 마비"], "다른 타입이면 자기 타입 줄이 없다");
+  assert.equal(moveEffects(volt[0]!, ["electric"], "adaptability")[0], "자기 타입 기술이라 위력 2배", "적응력");
+  const base = { id: "x", name: "x", type: "normal", class: "physical" as const, power: 50, accuracy: null, cooldown: 3, text: null };
+  assert.equal(moveDetail(base, [], null).stats[1]!.value, "반드시", "명중 없음");
+  assert.deepEqual(
+    moveEffects({ ...base, effects: { stats: [{ who: "self", stat: "def", change: -1, chance: 100 }, { who: "self", stat: "spd", change: -1, chance: 100 }] } }, [], null),
+    ["쓴 뒤 자기 방어·특수방어 1단계 하락 (10초)"],
+    "같은 대상·확률·단계는 한 줄",
+  );
+  assert.deepEqual(moveEffects({ ...base, effects: { stats: [{ who: "target", stat: "spd", change: -1, chance: 20 }] } }, [], null), ["20% 확률로 상대 특수방어 1단계 하락 (10초)"]);
+  assert.deepEqual(moveEffects({ ...base, effects: { status: { kind: ["burn", "paralysis", "freeze"], chance: 20 } } }, [], null), ["20% 확률로 상대를 화상·마비·얼음 중 하나로"]);
+  assert.deepEqual(moveEffects({ ...base, hits: [2, 5], priority: 1, effects: { charge: true, recharge: true, drain: 50, crit: "high", flinch: 30 } }, [], null), [
+    "2~5번 맞음",
+    "선공 기술 — 쿨타임이 짧고, 같이 차면 먼저 나감",
+    "처음 쿨타임이 차면 충전하고, 다시 차면 공격",
+    "30% 확률로 상대 풀죽음",
+    "준 피해의 50% 만큼 회복",
+    "급소에 잘 맞음",
+    "쓴 뒤 다음 기술 쿨타임 2배",
+  ]);
+}
 
 // ── 출전 불가 — 칸 순서가 뒤인 개체 ──
 {

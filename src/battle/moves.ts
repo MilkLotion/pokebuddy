@@ -1,7 +1,7 @@
 // 종의 보유 기술 — data/species-moves.json 의 칸을 data/moves.json 의 값으로 푼다. 칸이 객체면 기본값을 덮는다 (docs/specs/moves.md)
 // 개체마다 위아래 순서를 바꿀 수 있다(PetV3.moveSwap). 마지막 진화체는 기본 2개 + 후보 4개 가운데 2개를 골라 둔다(PetV3.moves, 2026-10-10)
 import type { DexOptions } from "../dex/data.js";
-import { moveTable, moveTextTable, speciesMoveTable, type MoveClass, type SpeciesMoveCell } from "../dex/tables.js";
+import { moveTable, moveTextTable, speciesMoveTable, type MoveClass, type MoveEffects, type SpeciesMoveCell } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
 
 export interface MoveInfo {
@@ -13,6 +13,10 @@ export interface MoveInfo {
   accuracy: number | null; // null 이면 반드시 맞는다
   cooldown: number | null; // 초
   text: string | null; // 원작 설명. 없는 기술은 null
+  priority?: number; // 원작 선공도
+  hits?: [number, number]; // 연속기의 [최소, 최대] 타수
+  traits?: string[]; // 성질 — contact(접촉) 등
+  effects?: MoveEffects; // 부담과 효과 (docs/specs/moves.md "부담과 효과")
 }
 
 // 종의 기술 — 표 순서. 표에 없는 종이나 기술은 빠진다
@@ -45,6 +49,10 @@ function movesFrom(cells: readonly SpeciesMoveCell[], opts?: DexOptions): MoveIn
       accuracy: row.accuracy ?? null,
       cooldown: row.cooldown ?? null,
       text: texts[id] ?? null,
+      ...(row.priority ? { priority: row.priority } : {}),
+      ...(row.hits ? { hits: row.hits } : {}),
+      ...(row.traits ? { traits: row.traits } : {}),
+      ...(row.effects ? { effects: row.effects } : {}),
     });
   }
   return out;

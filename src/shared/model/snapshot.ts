@@ -131,6 +131,14 @@ export interface MoveView {
   typeName: string;
   meta: string; // 분류·위력·명중·쿨타임 한 줄 — "물리 · 위력 120 · 명중 100 · 쿨타임 8초"
   text: string | null; // 원작 설명 — 없는 기술은 null (말풍선에 이름만)
+  detail?: MoveDetail; // 기술 바꾸기 모달의 상세 칸 — 배틀 파티 화면 값만 채운다
+}
+
+// 기술 상세 — 기술 바꾸기 모달 오른쪽 아래 칸 (docs/specs/adventure.md "기술 바꾸기", 효과 문구는 docs/specs/moves.md "부담과 효과")
+export interface MoveDetail {
+  kind: string; // "물리 · 근접 · 접촉" — 분류, 사거리(물리 근접·특수 원거리), 접촉
+  stats: { label: string; value: string }[]; // 위력·명중·쿨타임 세 칸. 변화기는 위력이 없다
+  effects: string[]; // 효과 줄 — 자기 타입, 상태 이상·풀죽음, 반동·흡수, 급소, 능력 변화 등. 없으면 빈 목록
 }
 
 // 배틀 파티 한 칸 (docs/specs/adventure.md "배틀 파티", "출전 불가")
