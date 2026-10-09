@@ -91,7 +91,8 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   s.battle = { slots: ["p1", null, null, null, null, null] };
   const slot = snapshotView(s, T0).battle.slots[0]!;
   assert.deepEqual(slot.stats.map((x) => `${x.label} ${x.value}`), ["HP 110", "공격 75", "방어 60", "스피드 110", "특수방어 70", "특수공격 70"], "그래프 꼭짓점 순서");
-  assert.equal(slot.ability, "정전기");
+  assert.equal(slot.ability?.name, "정전기");
+  assert.ok(slot.ability?.text, "특성 화면 설명");
   assert.deepEqual(slot.moves.map((m) => m.name), ["볼트태클", "10만볼트"]);
   assert.equal(snapshotView(s, T0).battle.slots[1]!.pet, undefined, "빈 칸");
 }

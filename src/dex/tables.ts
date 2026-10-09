@@ -116,6 +116,7 @@ export const moveTextTable = (opts?: DexOptions): Record<string, string> => load
 export interface AbilityRow {
   ko: string;
   en?: string;
+  text: string; // 화면 설명 — 이 게임에서의 동작을 짧게 (배틀 파티 상세 기기 창 말풍선)
 }
 export const abilityTable = (opts?: DexOptions): Record<string, AbilityRow> => loadJson<Record<string, AbilityRow>>("abilities.json", opts);
 export const speciesAbilityTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("species-abilities.json", opts);

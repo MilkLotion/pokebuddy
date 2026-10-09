@@ -1,6 +1,7 @@
 // 배틀 파티 상세 기기 창 — 메인이 만들어 보낸 배틀 파티 칸 하나를 그린다 (src/view/device-battle.ts, docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
 //   화면  `배틀 파티 N번`·? 단추 → 초상·이름·타입·특성 → 실제 능력치 방사형 그래프
+//   특성 줄을 누르면 그 아래에 특성 설명 말풍선(Figma 05 `Adventure / Battle Party Device · Ability Info` `1896:984`)
 //   흰 판 기술 두 개(큰 기술 칸 + 분류·위력·명중·쿨타임). 사이 가운데에 순서 바꾸기
 // 레벨은 보이지 않는다 — 배틀은 50레벨로 계산한다. ? 를 누르면 능력치 기준을 말풍선으로 보인다
 // 기술 칸을 누르면 관리 창이 기술 바꾸기 모달을 연다(renderer/manage/move-pick.ts, 2026-10-10). 기술 설명은 모달에서 본다
@@ -27,12 +28,13 @@ const STAGE = { w: 88, h: 88, maxScale: 2 };
 const MEGA_STONE = { w: 28, h: 28, maxScale: 2 }; // 파티 상세 기기 창과 같은 표식 (device/pet.ts)
 const SVG = "http://www.w3.org/2000/svg";
 
-// ? 말풍선 — 다른 개체를 열면 닫는다
-let open: "basis" | null = null;
+// 말풍선 — ? 의 능력치 기준, 특성 줄의 특성 설명. 한 번에 하나만 열고, 다른 개체를 열면 닫는다
+type Bubble = "basis" | "ability";
+let open: Bubble | null = null;
 let shownPetId = "";
 let last: BattleDeviceView | null = null;
 
-const toggle = (what: "basis"): void => {
+const toggle = (what: Bubble): void => {
   open = open === what ? null : what;
   if (last) render(last);
 };
@@ -149,12 +151,21 @@ function render(v: BattleDeviceView): void {
   const types = el("div", "types");
   pet.types.forEach((t, i) => types.appendChild(typeBadgeEl(t, pet.typeIds[i])));
   info.appendChild(types);
-  // [스펙 미확정] 특성 줄 — 특성을 어떻게 다룰지 정리한 뒤 다시 정한다. 그때까지 보이지 않는다 (모델의 slot.ability 는 그대로 둔다)
-  // if (slot.ability) {
-  //   const ability = el("div", "ability");
-  //   ability.append(el("strong", undefined, "특성"), el("span", undefined, slot.ability));
-  //   info.appendChild(ability);
-  // }
+  // 특성 줄 — 누르면 아래에 특성 이름과 이 게임에서의 동작을 말풍선으로 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
+  if (slot.ability) {
+    const row = el("div", "ability-row");
+    const ability = buttonEl("ability", "", () => toggle("ability"));
+    ability.append(el("strong", undefined, "특성"), el("span", undefined, slot.ability.name));
+    ability.setAttribute("aria-label", `특성 ${slot.ability.name} 설명`);
+    ability.setAttribute("aria-expanded", String(open === "ability"));
+    row.appendChild(ability);
+    if (open === "ability") {
+      const bubble = el("div", "bubble ability-info");
+      bubble.append(el("strong", undefined, slot.ability.name), el("div", "ability-text", slot.ability.text));
+      row.appendChild(bubble);
+    }
+    info.appendChild(row);
+  }
   entry.appendChild(info);
   screen.appendChild(entry);
   if (slot.stats.length) screen.appendChild(radarEl(slot.stats));

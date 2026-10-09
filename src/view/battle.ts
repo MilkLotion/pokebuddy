@@ -30,10 +30,11 @@ export const moveView = (m: MoveInfo): MoveView => ({ id: m.id, name: m.name, ty
 // 출전 불가 글자
 export const blockedText = (tier: BattleTier): string => `출전 불가 · ${TIER_TEXT[tier]} ${BATTLE_RULES.limits[tier]}마리까지`;
 
-// 특성 이름 — 메가 모습이면 data/mega-battle.json. 표에 없으면 null
-function abilityName(species: string): string | null {
+// 특성 이름과 화면 설명 — 메가 모습이면 data/mega-battle.json. 표에 없으면 null
+function abilityOf(species: string): { name: string; text: string } | null {
   const id = megaBattleTable()[species]?.ability ?? speciesAbilityTable()[species];
-  return id ? (abilityTable()[id]?.ko ?? null) : null;
+  const row = id ? abilityTable()[id] : undefined;
+  return row ? { name: row.ko, text: row.text } : null;
 }
 
 // shown — 배틀에서 싸우는 모습. 메가를 켰으면 그 메가 모습, 아니면 기본 종
@@ -68,7 +69,7 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
       options: moveOptions(asPet.species).map(moveView),
       blocked: tier ? blockedText(tier) : null,
       stats: statRows(shown),
-      ability: abilityName(shown),
+      ability: abilityOf(shown),
     };
   });
   return { slots, canStart: canStartBattle(save) };

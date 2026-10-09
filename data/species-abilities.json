@@ -1,5 +1,5 @@
 {
-  "_comment": "종 특성 — 종마다 하나. 처음 값은 Smogon 사용 통계 1위(2026-09). 1위가 효과 없는 특성(when none)이거나 변환자재·리베로면 다음 순위 중 효과 있는 특성. 밸런스 패치는 이 파일을 고친다. 지금은 화면에 보이지 않는다. 규칙은 docs/specs/moves.md",
+  "_comment": "종 특성 — 종마다 하나. 처음 값은 Smogon 사용 통계 1위(2026-09). 1위가 효과 없는 특성(when none)이거나 변환자재·리베로면 다음 순위 중 효과 있는 특성. 밸런스 패치는 이 파일을 고친다. 배틀 파티 상세 기기 창에 보인다. 규칙은 docs/specs/moves.md",
   "bulbasaur": "overgrow",
   "ivysaur": "overgrow",
   "venusaur": "chlorophyll",

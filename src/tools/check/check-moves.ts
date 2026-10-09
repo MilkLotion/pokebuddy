@@ -11,7 +11,7 @@
 //   4. 칸은 모두 공격기다. 변화기 전용기는 보류(docs/specs/moves.md "보류 기능"). 예외는 special 종(반사·킬가르도)
 //   5. special 은 transform·reflect·sketch·wall·stance 중 하나이고 그에 맞는 칸 수다
 //   6. moves.json 의 기술은 한국어·영어 이름, 타입, 분류가 있다. 공격기는 위력과 쿨타임이 있다. 능력 변화(effects.stats)는 who·stat·change(±1~3)·chance(1~100). 쿨타임은 공식 값(기대 위력 ÷ 15초, 최소 2초, 선공기 ×0.8), 급소(effects.crit)는 high·always. 상태 이상(effects.status)은 kind(하나 또는 목록)·chance(1~100), 풀죽음(effects.flinch)은 1~100
-//   7. 종 특성은 abilities.json 에 있고, 특성은 한국어 이름과 when(now·later·none)이 있다
+//   7. 종 특성은 abilities.json 에 있고, 특성은 한국어 이름, when(now·later·none), 화면 설명(text, 빈 문자열 아님·줄바꿈 없음)이 있다
 //   8. 모든 종에 종족값 6개(stats)가 있다. 합은 bst, 여섯째는 baseSpeed 와 같다
 //   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
 //  10. 타입 상성표(type-chart.json)는 18 × 18 이고 배율은 0·0.5·1·2 뿐이다
@@ -75,6 +75,7 @@ interface AbilityEntry {
   group: string;
   when: "now" | "later" | "none";
   rule: string;
+  text: string;
 }
 
 interface SpeciesDefault {
@@ -222,6 +223,7 @@ export function moveDataFindings(): string[] {
   for (const [id, a] of Object.entries(abilities)) {
     if (!a.ko) bad.push(`특성 ${id}: 한국어 이름 없음`);
     if (!["now", "later", "none"].includes(a.when)) bad.push(`특성 ${id}: when ${a.when}`);
+    if (!a.text || a.text.includes("\n")) bad.push(`특성 ${id}: 화면 설명(text) 없음 또는 줄바꿈`);
   }
   for (const [key, id] of Object.entries(speciesAbilities)) if (!abilities[id]) bad.push(`종 ${key}: 특성 ${id} 가 abilities.json 에 없음`);
 
