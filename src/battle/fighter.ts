@@ -5,6 +5,7 @@ import type { DexOptions } from "../dex/data.js";
 import { isMetaKey } from "../dex/data.js";
 import { megaSlugs, megaOf } from "../dex/mega.js";
 import { regionalTable } from "../dex/regional.js";
+import { SHIFT_RULES } from "../dex/rules.js";
 import { profileOf } from "../dex/species.js";
 import { formBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
@@ -47,7 +48,8 @@ export function battleData(opts?: DexOptions): BattleData {
   const forms: BattleData["forms"] = {};
   for (const [slug, v] of Object.entries(formBattleTable(opts))) if (!isMetaKey(slug)) forms[slug] = v;
   const shift: BattleData["shift"] = {};
-  for (const [base, list] of Object.entries(regionalTable(opts).shift)) if (!isMetaKey(base) && Array.isArray(list)) shift[base] = list.filter((s): s is string => typeof s === "string");
+  // 한 방향 묶음(도구로 한 번 얻는 모습)은 뺀다 — 배틀 파티가 따로 모습을 가질 수 없다 (src/battle/party.ts battleShiftable)
+  for (const [base, list] of Object.entries(regionalTable(opts).shift)) if (!isMetaKey(base) && Array.isArray(list) && !SHIFT_RULES[base]?.oneWay) shift[base] = list.filter((s): s is string => typeof s === "string");
   const data: BattleData = { species, moves, mega, forms, shift, typeChart: typeChartTable(opts) };
   if (!opts) cached = data;
   return data;

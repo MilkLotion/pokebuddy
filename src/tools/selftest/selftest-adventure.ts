@@ -256,6 +256,18 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   save.pets.push(testPet({ id: "p10", species: "zekrom" }, T0));
   assert.equal(why({ petId: "p9", species: "kyurem-black" }), null, "제크로무가 있으면");
   assert.ok(save.pets.some((p) => p.species === "zekrom"), "짝은 그대로");
+  // 한 방향 묶음(도구로 한 번 얻는 모습) — 배틀 파티도 도구 없이 바꾸지 못한다. 들어올 때도 적지 않는다
+  save.pets.push(testPet({ id: "p11", species: "floette" }, T0), testPet({ id: "p12", species: "floette-eternal" }, T0));
+  assert.ok(setBattleSlot(save, 5, "p11").ok);
+  assert.equal(why({ petId: "p11", species: "floette-eternal" }), "bad-form", "영원의 꽃은 도구로만");
+  assert.equal(save.battle?.forms?.p11, undefined, "한 방향 묶음은 들어올 때 적지 않는다");
+  assert.ok(setBattleSlot(save, 5, "p12").ok);
+  assert.equal(why({ petId: "p12", species: "floette" }), "bad-form", "되돌리지도 못한다");
+  const forged = JSON.parse(JSON.stringify(save)) as SaveV3;
+  forged.battle!.forms = { ...(forged.battle!.forms ?? {}), p11: "floette-eternal" };
+  forged.battle!.slots[5] = "p11";
+  assert.equal(battleSpeciesOf(forged, forged.pets.find((p) => p.id === "p11")!), "floette", "저장을 고쳐도 지금 종");
+  assert.equal(partyOf(forged, battleData()).party[5]?.species, "floette", "서버도 지금 종");
   // 해금 — 원래 모습 바꾸기와 같다. 로토무는 작업 시간이 모자라면 form-locked (2026-10-09 사용자 "기존에 해금했으면 되게")
   const rotomWork = save.pets[0]!.workMs;
   save.pets[0]!.workMs = 0;

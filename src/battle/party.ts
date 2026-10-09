@@ -2,7 +2,7 @@
 // 개체를 옮기지 않는다. 칸에는 개체 식별자만 둔다. 개체의 자리(프리셋 칸·박스 칸)는 그대로다
 import type { DexOptions } from "../dex/data.js";
 import { megaChoices } from "../dex/mega.js";
-import { formsOf, isFormLocked, partnerMissing, riderMissing } from "../dex/forms.js";
+import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
 import { shiftGroupOf } from "../dex/regional.js";
 import { slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
@@ -52,14 +52,18 @@ function takeLook(save: Pick<SaveV3, "battle" | "pets">, petId: string, opts?: D
   const on = pet.mega?.on;
   if (on && megaChoices(pet, opts).includes(on)) battle.mega = { ...(battle.mega ?? {}), [petId]: on };
   else if (battle.mega) delete battle.mega[petId];
-  if (shiftGroupOf(pet.species, opts).length) battle.forms = { ...(battle.forms ?? {}), [petId]: pet.species };
+  if (battleShiftable(pet.species, opts)) battle.forms = { ...(battle.forms ?? {}), [petId]: pet.species };
   else if (battle.forms) delete battle.forms[petId];
 }
 
-// 배틀에서 싸우는 종 — 들어올 때 적은 모습 바꾸기 종. 같은 모습 묶음이 아니면(진화 등) 지금 종
+// 배틀 파티가 따로 모습을 가질 수 있는 종 — 모습 바꾸기 묶음이 있고 한 방향 묶음(도구로 한 번 얻는 모습 — 영원의 꽃·붉은 달·지우의모자)이 아니다
+// 한 방향 묶음은 도구를 써야 얻는 모습이라 배틀 파티도 개체의 지금 종을 쓴다 (2026-10-09 ability-261008 확인 — 사용자 "기존에 해금했으면")
+export const battleShiftable = (species: string, opts?: DexOptions): boolean => shiftGroupOf(species, opts).length > 0 && !shiftRuleOf(species, opts)?.oneWay;
+
+// 배틀에서 싸우는 종 — 들어올 때 적은 모습 바꾸기 종. 같은 모습 묶음이 아니면(진화 등)·한 방향 묶음이면 지금 종
 export function battleSpeciesOf(save: Battle, pet: Pick<PetV3, "id" | "species">, opts?: DexOptions): string {
   const kept = save.battle?.forms?.[pet.id];
-  return kept && shiftGroupOf(pet.species, opts).includes(kept) ? kept : pet.species;
+  return kept && battleShiftable(pet.species, opts) && shiftGroupOf(pet.species, opts).includes(kept) ? kept : pet.species;
 }
 
 // 칸에 개체를 넣는다. 그 칸의 개체는 빠진다. 다른 칸에 든 개체는 넣지 못한다
@@ -153,7 +157,7 @@ export function setBattleForm(save: Pick<SaveV3, "battle" | "pets">, petId: stri
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (!isInBattle(save, petId)) return { ok: false, reason: "not-in-party" };
-  if (!shiftGroupOf(pet.species, opts).includes(species) || !formsOf(pet, opts).includes(species)) return { ok: false, reason: "bad-form" };
+  if (!battleShiftable(pet.species, opts) || !shiftGroupOf(pet.species, opts).includes(species) || !formsOf(pet, opts).includes(species)) return { ok: false, reason: "bad-form" };
   if (isFormLocked(pet, opts)) return { ok: false, reason: "form-locked" };
   if (battleSpeciesOf(save, pet, opts) === species) return { ok: false, reason: "already" };
   if (riderMissing(save, species, opts)) return { ok: false, reason: "no-rider" };
