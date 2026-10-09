@@ -190,7 +190,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
     } else if (e.kind === "status-hp" && e.amount !== 0) {
       const status = e.cause === "burn" || e.cause === "poison" || e.cause === "toxic" || e.cause === "confusion" ? e.cause : null;
       if (e.amount < 0) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: "heal", text: `+${-e.amount}` });
-      else popList.push({ side: e.side, slot: e.slot, t: e.t, kind: status ? "status" : "normal", text: `-${e.amount}`, ...(status ? { status } : {}), ...(e.cause === "confusion" ? { label: STATUS_NAME.confusion ?? "혼란" } : {}) });
+      else popList.push({ side: e.side, slot: e.slot, t: e.t, kind: status ? "status" : "normal", text: `-${e.amount}`, ...(status ? { status } : {}) }); // 혼란 자기 피해도 숫자만 — 판정 말 없음 (2026-10-09)
       if (status && e.cause !== "confusion") markList.push({ side: e.side, slot: e.slot, t: e.t, kind: "tick", status });
     } else if (e.kind === "stat") {
       const key = `${e.side}:${e.slot}:${e.stat}`;
@@ -249,11 +249,12 @@ export function createTimeline(view: BattleScreenView): Timeline {
 
   const unit = (side: BattleSide, slot: number): UnitState | null => state.units[side]?.[slot] ?? null;
 
-  function hurt(u: UnitState, hp: number, t: number): void {
+  // flinch 가 false 면 맞는 동작(Hurt) 없이 HP 만 준다 — 혼란 자기 피해
+  function hurt(u: UnitState, hp: number, t: number, flinch = true): void {
     if (hp < u.hp) {
       u.chipHp = t < u.chipUntil ? Math.max(u.chipHp, u.hp) : u.hp;
       u.chipUntil = t + TIMELINE_RULES.chipMs;
-      u.hitAt = t;
+      if (flinch) u.hitAt = t;
     }
     u.hp = hp;
   }
@@ -342,7 +343,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
       }
       case "status-hp": {
         const u = unit(e.side, e.slot);
-        if (u) hurt(u, e.hp, e.t);
+        if (u) hurt(u, e.hp, e.t, e.cause !== "confusion"); // 혼란 자기 피해는 피해만 — 맞는 동작 없음 (2026-10-09 사용자 "그냥 데미지만 들어가도 될거같아")
         break;
       }
       case "faint": {

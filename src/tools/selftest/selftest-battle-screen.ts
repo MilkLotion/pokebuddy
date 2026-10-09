@@ -207,7 +207,9 @@ if (wEvent && wEvent.kind === "weather") {
   // 혼란 실패 — 알약에 가로줄, 자기 피해에 혼란 말. 풀죽음을 안고 쓴 기술은 쿨타임 끝 1초가 풀죽음 몫
   assert.ok(st.casts(3000).some((c) => c.side === 1 && c.slot === 5 && c.failed), "혼란 실패 알약");
   assert.ok(!st.casts(1000).some((c) => c.failed), "보통 기술은 실패 아님");
-  assert.ok(st.pops(3000).some((p) => p.label === "혼란" && p.text === "-18"), "혼란 자기 피해");
+  // 혼란 자기 피해는 숫자만 — 판정 말·맞는 동작 없음 (2026-10-09 사용자 "그냥 데미지만 들어가도 될거같아")
+  assert.ok(st.pops(3000).some((p) => p.status === "confusion" && p.text === "-18" && p.label === undefined), "혼란 자기 피해 숫자");
+  assert.strictEqual(st.seek(3000).units[1][5]!.hitAt, -Infinity, "혼란 자기 피해에는 맞는 동작이 없다");
   const c2 = st.seek(3000).units[1][5]!;
   assert.strictEqual(c2.flinched, false, "풀죽음은 다음 기술과 함께 풀린다");
   assert.strictEqual(c2.gaugeTail, 1000, "풀죽음 1초 몫");

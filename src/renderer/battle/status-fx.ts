@@ -193,27 +193,6 @@ function ice(g: Ctx, x: number, y: number, grow: number): void {
   g.stroke();
   g.restore();
 }
-// 얼음이 풀릴 때 — 조각이 바깥으로 흩어진다
-function shatter(g: Ctx, x: number, y: number, k: number): void {
-  ICE.forEach(([px, py], i) => {
-    const [qx, qy] = ICE[(i + 1) % ICE.length]!;
-    const d = k * 18;
-    const mx = (px + qx) / 2;
-    const my = (py + qy) / 2;
-    g.globalAlpha = 1 - k;
-    g.fillStyle = "rgba(190,235,255,0.85)";
-    g.beginPath();
-    g.moveTo(x + mx * 0.3 + (mx / 15) * d, y + my * 0.3 + (my / 15) * d);
-    g.lineTo(x + px + (px / 15) * d, y + py + (py / 15) * d);
-    g.lineTo(x + qx + (qx / 15) * d, y + qy + (qy / 15) * d);
-    g.closePath();
-    g.fill();
-    g.strokeStyle = "#3a8ab0";
-    g.lineWidth = 0.8;
-    g.stroke();
-  });
-  g.globalAlpha = 1;
-}
 function zzz(g: Ctx, x: number, y: number, t: number): void {
   g.textAlign = "center";
   g.textBaseline = "middle";
@@ -337,8 +316,8 @@ export function createStatusFx(host: HTMLElement): StatusFx {
           else if (m.kind === "tick") pulse(g, 0, 0, rgb, k);
           else if (m.kind === "up" || m.kind === "down") chevrons(g, 0, 0, m.kind === "up", k);
           else if (m.kind === "off") {
-            if (m.status === "freeze") shatter(g, 0, 0, k);
-            else if (m.status === "confusion") stars(g, 0, 0, t, k);
+            if (m.status === "freeze") return; // 얼음은 덩어리만 사라진다 — 풀림 연출 없음 (2026-10-09 사용자 "그냥 얼음 없어지게만 해줘")
+            if (m.status === "confusion") stars(g, 0, 0, t, k);
             else if (m.status !== "flinch") lighter(g, () => dot(g, "255,255,255", 0, -4, 16 + k * 8, 0.5 * (1 - k))); // 풀죽음은 다음 기술과 함께 조용히 풀린다
           }
         });
