@@ -10,13 +10,7 @@ export interface DexEntry {
   name: string;
   state: DexState;
   shiny: boolean;
-  mega?: DexMegaMark; // 메가진화하는 종의 해금·획득 칸만 — 얻음 표식 옆에 메가스톤 표식 (2026-10-08 사용자 결정 "추천대로해보자")
-}
-
-// 도감 칸의 메가스톤 표식 — opened 는 내 개체에 메가스톤이 생긴 적이 있는 종(진한 표식), 아니면 흐린 표식
-export interface DexMegaMark {
-  opened: boolean;
-  kind: "mega" | "primal"; // 원시회귀는 툴팁 문구만 다르다
+  tag?: string; // 메가·원시회귀 칸의 꼬리표 — `#0006-MX` 의 `MX` (src/dex/mega.ts megaTagOf). 칸은 기본 종 바로 뒤 (2026-10-09 사용자 결정 "메가진화도 저기에 도감으로 넣자")
 }
 
 // 도감 상세 — 칸을 누를 때 한 종만 따로 읽는다. 문구는 화면이 그대로 쓴다 (Figma Dex / Base 상세 패널)
@@ -24,6 +18,7 @@ export interface DexDetail {
   slug: string;
   dex: number;
   form?: number; // 리전폼의 폼 순번 — `No.026-1`
+  tag?: string; // 메가·원시회귀의 꼬리표 — `No.006-MX`
   name: string; // 미해금이면 "???"
   state: DexState;
   types: string[]; // 미해금이면 비어 있다
@@ -37,6 +32,7 @@ export interface DexDetail {
   flavor: string; // 공식 도감 설명문. 한국어가 없으면 영어. 미해금이면 빈 문자열
   height: string; // "1.1m". 미해금이면 빈 문자열
   weight: string; // "19.0kg". 미해금이면 빈 문자열
+  megaTree?: EvoNodeView; // 메가·원시회귀 칸만 — 기본 종 → 메가 모습 한 단계(조건 `메가스톤`). 도감 기기 창의 진화 칸이 상점 사슬 대신 쓴다
   mega?: { label: string; names: string }; // 얻은 종이 메가진화하는 종일 때만 — 줄 머리(`메가진화`·`원시회귀`)와 메가 모습의 이름(`메가리자몽X · 메가리자몽Y`).
   // 로토무(작업 시간 조건이 있는 모습 바꾸기 종)도 같은 줄 자리를 쓴다 — `모습 바꾸기` · `다섯 모습(에이전트 작업 50시간)` (src/view/dex-detail.ts shiftLine)
 }

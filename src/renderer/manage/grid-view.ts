@@ -59,7 +59,8 @@ export function inDexRegion(regionId: string, dex: number, formRegion?: string):
 }
 
 // 도감 표시 번호 — `#0026`, 리전폼이면 `#0026-1` (src/dex/regional.ts dexLabel 과 같은 모양)
-export const dexNoText = (dex: number, form: number | undefined, pad: number): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}`;
+// 메가·원시회귀 칸은 꼬리표를 붙인다 — `#0006-MX` (2026-10-09)
+export const dexNoText = (dex: number, form: number | undefined, pad: number, tag?: string): string => `${String(dex).padStart(pad, "0")}${form ? `-${form}` : ""}${tag ? `-${tag}` : ""}`;
 
 // 격자 넘김 줄 — 박스 넘김 줄(.pager)과 같은 ◀ ▶. 가운데에 `쪽 / 전체`
 export function gridPager(page: number, pages: number, go: (page: number) => void): HTMLElement {

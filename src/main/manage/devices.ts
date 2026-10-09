@@ -64,6 +64,9 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
       return (await portraits.get([{ slug, shiny: false }]))[slug] ?? null;
     },
     tree: (slug) => {
+      // 메가·원시회귀 칸은 기본 종 → 메가 모습 한 단계 (src/view/dex-detail.ts megaDetail)
+      const mega = detailOf(slug)?.megaTree;
+      if (mega) return mega;
       const detail = shopDetailOf(slug); // 상점 구매 창의 포켓몬 상세와 같은 사슬 (src/view/shop-detail.ts)
       return detail?.kind === "pokemon" ? detail.tree : null;
     },

@@ -185,7 +185,7 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = dexList(game.read()!);
-    assert.equal(rows.length, 1124, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 42 — 리전폼과 특수 폼은 다른 종이라 따로 보인다. 겉모습(안농 B 등)은 칸이 없다 (2026-10-09 공식 도감 기준)");
+    assert.equal(rows.length, 1184, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 42 + 메가·원시회귀 60 — 리전폼·특수 폼·메가는 따로 보인다. 겉모습(안농 B 등)은 칸이 없다 (2026-10-09 공식 도감 기준)");
     assert.ok(!rows.some((r) => r.slug === "unown-b" || r.slug === "arceus-fire"), "겉모습은 기본 종 칸 하나");
     assert.deepStrictEqual(rows.filter((r) => r.dex === 351).map((r) => [r.slug, r.form, r.region]), [["castform", undefined, undefined], ["castform-sunny", 1, "hoenn"], ["castform-rainy", 2, "hoenn"], ["castform-snowy", 3, "hoenn"]], "전투 모습도 칸이 있다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
@@ -193,14 +193,14 @@ try {
     let prevForm = 0;
     for (const row of rows) {
       const form = row.form ?? 0;
-      assert.ok(row.dex > prev || (row.dex === prev && form > prevForm), `도감 번호, 그다음 폼 순번으로 늘어난다 (${row.slug})`);
+      assert.ok(row.dex > prev || (row.dex === prev && (form > prevForm || (form === 0 && row.tag !== undefined))), `도감 번호, 그다음 메가, 그다음 폼 순번으로 늘어난다 (${row.slug})`);
       prev = row.dex;
       prevForm = form;
     }
     const meowths = rows.filter((r) => r.dex === 52).map((r) => [r.slug, r.form, r.region]);
     assert.deepStrictEqual(meowths, [["meowth", undefined, undefined], ["meowth-alola", 1, "alola"], ["meowth-galar", 2, "galar"]], "같은 번호는 기본형 → 폼 순번");
     // 특수 폼 — 기본형 다음 칸, 도감 지방 칸은 항목의 지방
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 670).map((r) => [r.slug, r.form, r.region]), [["floette", undefined, undefined], ["floette-eternal", 1, "kalos"]]);
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 670).map((r) => [r.slug, r.form, r.region]), [["floette", undefined, undefined], ["floette-eternal", 1, "kalos"], ["floette-mega", undefined, undefined]], "메가플라엣테는 플라엣테(영원의 꽃) 바로 뒤");
     assert.deepStrictEqual(rows.filter((r) => r.dex === 901).map((r) => [r.slug, r.form, r.region]), [["ursaluna", undefined, undefined], ["ursaluna-bloodmoon", 1, "paldea"]]);
     assert.deepStrictEqual(rows.filter((r) => r.dex === 745).map((r) => [r.slug, r.form, r.region]), [["lycanroc", undefined, undefined], ["lycanroc-midnight", 1, "alola"], ["lycanroc-dusk", 2, "alola"]]);
     assert.deepStrictEqual(rows.filter((r) => r.dex === 172).map((r) => [r.slug, r.form, r.region]), [["pichu", undefined, undefined], ["pichu-spiky-eared", 1, "johto"]]);

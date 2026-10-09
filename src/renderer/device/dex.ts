@@ -35,7 +35,7 @@ function render(v: DexDeviceView): void {
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
   const bar = el("div", "bar");
-  bar.append(el("span", undefined, `No.${String(d.dex).padStart(3, "0")}${d.form ? `-${d.form}` : ""}`), el("span", undefined, d.name), el("span", "state", STATE_WORD[d.state] ?? d.state));
+  bar.append(el("span", undefined, `No.${String(d.dex).padStart(3, "0")}${d.form ? `-${d.form}` : ""}${d.tag ? `-${d.tag}` : ""}`), el("span", undefined, d.name), el("span", "state", STATE_WORD[d.state] ?? d.state));
   screen.appendChild(bar);
 
   const entry = el("div", "entry");

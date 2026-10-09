@@ -269,14 +269,21 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(c?.look, "pikachu");
   s.dex.unlocked = ["venusaur", "groudon", "floette"];
   const dex = dexList(s);
-  const megaOfDex = (slug: string) => dex.find((d) => d.slug === slug)?.mega;
-  assert.deepStrictEqual(megaOfDex("charizard"), { opened: true, kind: "mega" }, "메가스톤이 생긴 종은 진한 표식");
-  assert.deepStrictEqual(megaOfDex("venusaur"), { opened: false, kind: "mega" }, "해금만 한 종도 흐린 표식");
-  assert.deepStrictEqual(megaOfDex("groudon"), { opened: false, kind: "primal" });
-  assert.equal(megaOfDex("blastoise"), undefined, "미해금 칸에는 없다");
-  assert.equal(megaOfDex("pikachu"), undefined, "메가진화하지 않는 종");
-  assert.equal(megaOfDex("floette"), undefined, "일반 플라엣테는 메가진화하지 않는다");
-  assert.equal(dex.some((d) => megaOf(d.slug) !== null), false, "메가 모습은 도감 항목이 아니다");
+  // 메가·원시회귀는 도감 칸이다 — 기본 종 바로 뒤, 메가스톤이 생기면 획득 (2026-10-09 사용자 결정 "메가진화도 저기에 도감으로 넣자", "메가스톤이 생기면")
+  const at = (slug: string) => dex.findIndex((d) => d.slug === slug);
+  const row = (slug: string) => dex.find((d) => d.slug === slug);
+  assert.deepStrictEqual([at("charizard-mega-x"), at("charizard-mega-y")], [at("charizard") + 1, at("charizard") + 2], "리자몽 바로 뒤에 X → Y");
+  assert.deepStrictEqual([row("charizard-mega-x")?.tag, row("charizard-mega-x")?.state, row("charizard-mega-y")?.state], ["MX", "obtained", "obtained"], "메가스톤이 생기면 두 모습 다 획득");
+  assert.deepStrictEqual([row("venusaur-mega")?.tag, row("venusaur-mega")?.state, row("venusaur-mega")?.name], ["M", "locked", "메가이상해꽃"], "메가스톤이 없으면 미해금");
+  assert.equal(row("groudon-primal")?.tag, "P", "원시회귀는 P");
+  assert.equal(row("charizard")?.tag, undefined, "기본 종 칸에는 꼬리표가 없다");
+  assert.ok(at("slowbro-mega") < at("slowbro-galar"), "같은 번호는 기본형 → 메가 → 리전폼");
+  assert.equal(dex.filter((d) => megaOf(d.slug) !== null).length, megaSlugs().length, "메가 모습 전부");
+  // 메가 칸의 상세 — 기본 종 → 메가 모습 한 단계 진화 칸
+  const md = dexDetail(s, "charizard-mega-x");
+  assert.deepStrictEqual([md?.tag, md?.state, md?.name, md?.typeIds], ["MX", "obtained", "메가리자몽X", ["fire", "dragon"]]);
+  assert.deepStrictEqual([md?.megaTree?.slug, md?.megaTree?.children[0]?.slug, md?.megaTree?.children[0]?.need], ["charizard", "charizard-mega-x", "메가스톤"]);
+  assert.equal(dexDetail(s, "venusaur-mega")?.name, "???", "메가스톤이 없으면 이름을 숨긴다");
   // 도감 상세 — 얻은 종에만 메가진화 줄. 메가스톤이 없어도 보인다. 해금만 한 종과 메가진화하지 않는 종에는 없다
   s.dex.obtained = ["charizard", "pikachu", "groudon"];
   s.dex.unlocked = ["gengar"];

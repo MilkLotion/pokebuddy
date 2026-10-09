@@ -209,6 +209,9 @@ export function matchesDex(row: DexEntry, q: string): boolean {
   if (/^\d+$/.test(q)) return String(row.dex).startsWith(String(Number(q)));
   const m = /^(\d+)-(\d+)$/.exec(q);
   if (m) return row.dex === Number(m[1]) && row.form === Number(m[2]);
+  // 메가 꼬리표 — `6-mx` (2026-10-09)
+  const t = /^(\d+)-([a-z]+)$/i.exec(q);
+  if (t) return row.dex === Number(t[1]) && row.tag?.toLowerCase() === t[2]?.toLowerCase();
   // 미해금 종은 이름이 숨겨져 있다 — 이름으로 찾으면 무엇인지 드러나므로 번호로만 찾는다
   return row.state !== "locked" && matchesName(row.name, q);
 }

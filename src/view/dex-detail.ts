@@ -23,7 +23,7 @@ import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
 import { hatchBaseOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
 import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
-import { megaFormsOf, megaOf } from "../dex/mega.js";
+import { megaFormsOf, megaOf, megaTagOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
 import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
 import { pointText } from "../shared/count-text.js";
@@ -68,7 +68,44 @@ function shiftLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<Dex
   return { mega: { label: "모습 바꾸기", names: `${COUNT_WORDS[n] ?? n} 모습${shiftNeedText(slug, opts)}` } };
 }
 
+// 메가·원시회귀 칸의 상세 — 기본 종에 메가스톤이 생긴 적이 있으면 획득, 아니면 미해금 (2026-10-09 시안 99 `도감 메가 칸 시안` 상세 기기)
+// 분류·설명·키·몸무게는 기본 종 것이다. 진화 칸은 기본 종 → 메가 모습 한 단계다
+function megaDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
+  const form = megaOf(slug, opts);
+  const dex = form ? profileOf(form.base, opts).dex : undefined;
+  if (!form || !dex) return null;
+  const obtained = (save.dex.megaOpened ?? []).includes(form.base);
+  const base = petName(form.base);
+  const way = form.kind === "primal" ? "원시회귀" : "메가진화";
+  const types = obtained ? (form.types ?? profileOf(form.base, opts).types) : [];
+  const baseKnown = hasObtained(save, form.base) || hasUnlocked(save, form.base);
+  return {
+    slug,
+    dex,
+    tag: megaTagOf(slug, opts) ?? "M",
+    name: obtained ? petName(slug) : "???",
+    state: obtained ? "obtained" : "locked",
+    types: types.map((t) => typeName(t)),
+    typeIds: [...types],
+    shiny: false,
+    owned: save.pets.filter((p) => p.species === form.base && p.mega?.stone === true).length,
+    methods: `${baseKnown ? base : "???"}의 ${way}(메가스톤)`,
+    evolution: obtained ? "더 진화하지 않아요" : "???",
+    gimmick: "없음",
+    megaTree: {
+      slug: form.base,
+      name: baseKnown ? base : "???",
+      locked: !baseKnown,
+      current: false,
+      children: [{ slug, name: obtained ? petName(slug) : "???", locked: !obtained, current: true, need: "메가스톤", children: [] }],
+    },
+    ...officialText(obtained ? textOf(form.base, dex, opts) : undefined),
+    ...bodySize(obtained ? textOf(form.base, dex, opts) : undefined),
+  };
+}
+
 export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDetail | null {
+  if (megaOf(slug, opts)) return megaDetail(save, slug, opts);
   const row = profileOf(slug, opts);
   if (!row.dex) return null;
   const obtained = hasObtained(save, slug);

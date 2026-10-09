@@ -61,6 +61,16 @@ export function megaOf(slug: string, opts?: DexOptions): MegaForm | null {
 // 모습 슬러그 전부 — 표 순서
 export const megaSlugs = (opts?: DexOptions): string[] => Object.keys(megaTable(opts).forms).filter((k) => !isMetaKey(k));
 
+// 도감 칸의 꼬리표 — 메가 하나는 M, X·Y 가 있으면 MX·MY, 원시회귀는 P. 메가 모습이 아니면 null
+// (#0006-MX, 2026-10-09 시안 99 `도감 메가 칸 시안` — 사용자 "그렇게 진행")
+export function megaTagOf(slug: string, opts?: DexOptions): string | null {
+  const form = megaOf(slug, opts);
+  if (!form) return null;
+  if (form.kind === "primal") return "P";
+  const xy = /-mega-([xy])$/.exec(slug);
+  return xy ? `M${(xy[1] ?? "").toUpperCase()}` : "M";
+}
+
 // 그 종의 메가 모습 — 표 순서. 없으면 빈 목록 (리자몽·뮤츠는 둘)
 export const megaFormsOf = (species: string, opts?: DexOptions): string[] => megaSlugs(opts).filter((slug) => megaTable(opts).forms[slug]?.base === species);
 

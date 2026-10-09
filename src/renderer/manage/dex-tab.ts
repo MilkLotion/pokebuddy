@@ -8,7 +8,6 @@ import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
 import { openDexPick, resendDex } from "./dex-link.js";
 import { DEX_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
-import { megaMark } from "./pet-forms.js";
 import { findBarEl, matchesDex, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
@@ -78,7 +77,7 @@ function dexCell(row: DexEntry): HTMLElement {
   cell.setAttribute("aria-pressed", String(row.slug === dexPick));
   cell.addEventListener("click", () => pickDex(row.slug));
   // 미해금 종은 그림을 검은 실루엣으로 보인다 — CSS .dex-cell.locked .art (2026-09-27 사용자 결정 "모든 미해금에 다 하자")
-  cell.append(portraitOf(row.slug, false, "dot", "", true), el("div", "who", row.state === "locked" ? "???" : row.name), el("div", "no", `#${dexNoText(row.dex, row.form, 4)}`));
+  cell.append(portraitOf(row.slug, false, "dot", "", true), el("div", "who", row.state === "locked" ? "???" : row.name), el("div", "no", `#${dexNoText(row.dex, row.form, 4, row.tag)}`));
   if (row.state === "obtained") {
     const got = el("span", "got");
     got.title = "획득";
@@ -86,14 +85,6 @@ function dexCell(row: DexEntry): HTMLElement {
     got.setAttribute("aria-label", got.title);
     cell.appendChild(got);
     if (row.shiny) cell.appendChild(shinyIcon(10, "이로치 획득"));
-  }
-  // 메가스톤 — 메가진화하는 종의 해금·획득 칸. 얻음 표식(볼) 오른쪽에 같은 크기 12 로, 해금 칸도 같은 자리 (2026-10-08 사용자 결정 "추천대로해보자")
-  // 메가스톤이 생긴 적이 있으면 진한 표식, 아니면 흐린 표식 (Figma 02 `Species Card` `Mega=Opened|Possible`)
-  if (row.mega) {
-    const mark = row.mega.opened ? megaMark(12, "메가스톤 획득") : megaMark(12, row.mega.kind === "primal" ? "원시회귀" : "메가진화");
-    if (!row.mega.opened) mark.classList.add("dim");
-    cell.classList.add("has-mega");
-    cell.appendChild(mark);
   }
   return cell;
 }
