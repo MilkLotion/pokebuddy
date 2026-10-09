@@ -1,5 +1,5 @@
 {
- "hash": "5ca0d165c514e60e",
+ "hash": "bbe27e696ad3939e",
  "items": {
   "basic-food": {
    "price": null,
@@ -67,7 +67,7 @@
    "amount": 0
   },
   "ash-cap": {
-   "price": 3000,
+   "price": null,
    "effect": "form",
    "amount": 0
   },
@@ -267,6 +267,7 @@
   "work-300h": "egg:mythical",
   "work-500h": "points:1000",
   "work-1000h": "egg:legendary",
+  "greninja-party-100h": "item:ash-cap:1",
   "streak-7": "points:200",
   "streak-30": "points:1000",
   "trade-1": "points:300"
@@ -5323,6 +5324,7 @@
   "megaLevel": 60,
   "megaBondMs": 86400000,
   "megaCare": 70,
+  "petPartyMs": 360000000,
   "megaCareMax": 100,
   "careCountPerHour": 12,
   "megaAffinity": 100,

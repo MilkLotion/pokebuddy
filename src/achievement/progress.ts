@@ -68,6 +68,7 @@ function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number
     case "trade": return save.counts.traded;
     case "shown": return shownCount(save);
     case "party": return partyCount(save);
+    case "pet-party": return Math.floor(Math.max(0, ...save.pets.filter((p) => p.species === cond.species).map((p) => p.partyMs ?? 0)) / 3600_000);
     default: return null;
   }
 }
@@ -78,6 +79,7 @@ function goalOf(cond: AchievementCond): number {
     case "region": return cond.to - cond.from + 1;
     case "species": return cond.species.length;
     case "work": return cond.hours;
+    case "pet-party": return cond.hours;
     case "streak": return cond.days;
     case "level": return cond.level;
     case "affinity": return cond.value;
@@ -85,7 +87,7 @@ function goalOf(cond: AchievementCond): number {
   }
 }
 
-const UNIT: Partial<Record<AchievementCond["kind"], string>> = { work: "시간", streak: "일" };
+const UNIT: Partial<Record<AchievementCond["kind"], string>> = { work: "시간", "pet-party": "시간", streak: "일" };
 // 진행도를 보이지 않는 조건 — 한 번에 채우는 조건과 옛 업적의 조건
 const NO_PROGRESS: readonly AchievementCond["kind"][] = ["level", "affinity", "shown", "party", "agent"];
 

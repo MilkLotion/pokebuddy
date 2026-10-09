@@ -19,6 +19,7 @@
 //   trade     끝난 교환 횟수 counts.traded ≥ count
 //   shown     파티의 개체를 count 마리 이상 동시에 꺼냈다. 숨긴 채 배치만 한 것은 아니다
 //   party     파티 칸에 든 포켓몬 수 ≥ count. 숨긴 개체도 센다
+//   pet-party 그 종의 개체 하나가 파티에서 보낸 시간 PetV3.partyMs ≥ hours. 메가스톤의 파티 시간처럼 흐른 시간을 센다 (src/dex/forms.ts tickPartyTime)
 // 옛 업적 네 개(show-two · starter-final · work-100h · party-three)는 키와 뜻을 그대로 둔다. 이미 달성·수령한 저장을 그대로 인정한다.
 //   starter-final 의 키는 옛 조건(첫 포켓몬 최종 진화)의 이름이다 (2026-09-27)
 // 보상은 다섯 종류다

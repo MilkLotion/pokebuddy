@@ -67,6 +67,10 @@
   "work-300h": { "ko": "함께 300시간 일하기", "en": "300 Hours Together", "group": "together", "cond": { "kind": "work", "hours": 300 }, "reward": { "egg": "mythical" } },
   "work-500h": { "ko": "함께 500시간 일하기", "en": "500 Hours Together", "group": "together", "cond": { "kind": "work", "hours": 500 }, "reward": { "points": 1000 } },
   "work-1000h": { "ko": "함께 1000시간 일하기", "en": "1000 Hours Together", "group": "together", "cond": { "kind": "work", "hours": 1000 }, "reward": { "egg": "legendary" } },
+  "greninja-party-100h": {
+    "_comment": "지우의모자는 상점에서 팔지 않고 이 업적으로만 준다 (2026-10-09 사용자 \"지우의 모자를 업적에서 개굴닌자 파티100시간 으로 수정\", 시간은 파티에서 보낸 시간)",
+    "ko": "개굴닌자와 파티에서 100시간", "en": "100 Hours with Greninja", "group": "together", "cond": { "kind": "pet-party", "species": "greninja", "hours": 100 }, "reward": { "item": "ash-cap", "count": 1 }
+  },
   "streak-7": { "ko": "7일 연속 함께하기", "en": "7 Days in a Row", "group": "together", "cond": { "kind": "streak", "days": 7 }, "reward": { "points": 200 } },
   "streak-30": { "ko": "30일 연속 함께하기", "en": "30 Days in a Row", "group": "together", "cond": { "kind": "streak", "days": 30 }, "reward": { "points": 1000 } },
   "trade-1": { "ko": "첫 교환", "en": "First Trade", "group": "together", "cond": { "kind": "trade", "count": 1 }, "reward": { "points": 300 } }

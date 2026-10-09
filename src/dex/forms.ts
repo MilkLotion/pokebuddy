@@ -22,6 +22,7 @@ import { partnerOf, riderOf, shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
 import { SHIFT_RULES, type ShiftRule } from "./rules.js";
+import { achievementTable } from "./tables.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
@@ -101,6 +102,26 @@ export function tickFormWork(pet: PetV3, workMs: number, opts?: DexOptions): voi
   const rule = shiftRuleOf(pet.species, opts);
   if (!rule || (pet.workMs ?? 0) >= rule.workMs) return;
   pet.workMs = Math.min(rule.workMs, (pet.workMs ?? 0) + workMs);
+}
+
+// 파티 시간 업적(pet-party)의 종 → 기준 시간(ms). 같은 종이 둘이면 큰 쪽
+export function partyGoalsMs(opts?: DexOptions): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const def of Object.values(achievementTable(opts))) {
+    const c = def?.cond;
+    if (c?.kind !== "pet-party") continue;
+    out[c.species] = Math.max(out[c.species] ?? 0, c.hours * 3600_000);
+  }
+  return out;
+}
+
+// 개체가 파티에서 보낸 시간 — 시간 적용이 지금 파티 칸 개체마다 부른다. 파티 시간 업적의 종만 세고 기준에서 멈춘다.
+// 메가스톤의 파티 시간과 같이 흐른 시간을 그대로 센다(버프 배율 없음) (2026-10-09 사용자 결정 "파티에서 보낸 시간")
+export function tickPartyTime(pet: PetV3, elapsedMs: number, opts?: DexOptions): void {
+  if (elapsedMs <= 0) return;
+  const goal = partyGoalsMs(opts)[pet.species];
+  if (!goal || (pet.partyMs ?? 0) >= goal) return;
+  pet.partyMs = Math.min(goal, (pet.partyMs ?? 0) + elapsedMs);
 }
 
 // 진화한 직후에 부른다 — 이전 종을 남기고, 갈래 진화면 다른 결과 종도 함께 준다(도감 획득 기록 포함).

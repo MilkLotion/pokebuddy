@@ -28,6 +28,7 @@
 //   mega        메가스톤을 지닌 개체는 친밀도·레벨 조건을 채워야 한다. 메가 모습은 메가스톤이 있고 그 종의 모습이어야 한다 (src/dex/mega.ts).
 //               새로 메가스톤이 생긴 개체는 파티 시간·돌봄 횟수 조건도 채워야 한다
 //   mega-bond   메가 파티 시간(mega.bondMs) 증가 ≤ 틈, 조건 값 이하
+//   pet-party   개체 파티 시간(partyMs) 증가 ≤ 틈, 파티 시간 업적의 기준 이하 (src/dex/forms.ts tickPartyTime)
 //   mega-care   메가 돌봄 횟수(mega.care) 증가 ≤ 밥 주기·놀아주기 쿨타임 횟수 + 장난감, 조건 값 이하
 //   identity    기존 개체의 성격·성별 변경
 //   shiny       새 이로치는 알·줍기·교환·모습이 바뀌는 약에서만
@@ -81,6 +82,7 @@ export interface VerifyData {
     megaLevel?: number; // 메가스톤 조건의 레벨 (src/save/rules.ts MEGA_RULES)
     megaAffinity?: number; // 메가스톤 조건의 친밀도
     megaBondMs?: number; // 메가스톤 조건의 파티 시간 (MEGA_RULES.bondMs). 없으면 mega-bond 를 보지 않는다
+    petPartyMs?: number; // 파티 시간 업적(pet-party)의 가장 큰 기준. 없으면 pet-party 를 보지 않는다
     megaCare?: number; // 메가스톤 조건의 돌봄 횟수 (MEGA_RULES.care). 없으면 mega-care 를 보지 않는다
     megaCareMax?: number; // 돌봄 횟수의 상한 — 조건을 내려도 옛 앱·옛 저장이 센 값까지 받는다. 없으면 megaCare
     careCountPerHour?: number; // 밥 주기·놀아주기 쿨타임 기준 한 시간 최대 횟수 — 장난감은 따로 센다
@@ -228,6 +230,7 @@ interface Pet {
   megaBond: number; // 친밀도 100 뒤 파티에서 보낸 시간(ms)
   megaCare: number; // 친밀도 100 뒤 돌봄 횟수
   workMs: number; // 지금 파티에서 받은 에이전트 작업 시간(ms) — 로토무 모습 바꾸기 해금
+  partyMs: number; // 파티에서 보낸 시간(ms) — 개굴닌자 파티 시간 업적
 }
 
 const petOf = (v: unknown): Pet | null => {
@@ -248,6 +251,7 @@ const petOf = (v: unknown): Pet | null => {
     megaBond: isObj(v.mega) ? num(v.mega.bondMs) : 0,
     megaCare: isObj(v.mega) ? num(v.mega.care) : 0,
     workMs: num(v.workMs),
+    partyMs: num(v.partyMs),
   };
 };
 
@@ -598,6 +602,15 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     for (const [item, n] of Object.entries(changed)) {
       const price = data.items[item]?.price ?? 0;
       add("form-item", n, pos(had(item) - (nextBag[item] ?? 0)) + (price ? Math.floor(leftover / price) : 0));
+    }
+  }
+
+  // pet-party — 파티 시간 업적의 개체 시간. 종이 바뀌어도(지우의모자) 값은 남으므로 가장 큰 기준과 견준다
+  if (r.petPartyMs != null) {
+    for (const p of nextPets) {
+      const q = same.find((x) => x.p.id === p.id)?.q;
+      add("pet-party", pos(p.partyMs - (q?.partyMs ?? 0)), hours * HOUR * m, p.id);
+      add("pet-party", p.partyMs, r.petPartyMs, p.id);
     }
   }
 

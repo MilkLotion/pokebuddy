@@ -630,6 +630,27 @@ out("0 supabase/functions/_shared 가 최신");
   out("15 메가 — 파티 시간·돌봄 횟수·새 메가스톤");
 }
 
+// 15b. 개굴닌자 파티 시간 — 개체 파티 시간(partyMs)의 증가는 틈 이하, 값은 업적 기준(100시간) 이하. 지우의모자로 종이 바뀌어도 값은 남는다
+{
+  const mk = (partyMs: number, species = "greninja"): PetV3 => pet("p2", species, { partyMs });
+  const pair = (a: PetV3, b: PetV3): { prev: SaveV3; next: SaveV3 } => {
+    const prev = base(); prev.pets.push(a);
+    const next = clone(prev); next.pets[1] = b;
+    return { prev, next };
+  };
+  assert.equal(data.rules.petPartyMs, 100 * HOUR, "검증 데이터의 기준 — 업적표에서");
+  const ok = pair(mk(0), mk(HOUR));
+  assert.deepEqual(rules(ok.prev, ok.next, ctx(HOUR)), [], "한 시간 틈에 한 시간");
+  const fast = pair(mk(0), mk(5 * HOUR));
+  assert.deepEqual(rules(fast.prev, fast.next, ctx(HOUR)), ["pet-party"], "틈보다 빨리 늘었다");
+  const over = pair(mk(100 * HOUR), mk(101 * HOUR));
+  assert.deepEqual(rules(over.prev, over.next, ctx(HOUR)), ["pet-party"], "100시간을 넘을 수 없다");
+  const kept = pair(mk(100 * HOUR), mk(100 * HOUR, "greninja-battle-bond"));
+  kept.prev.bag["ash-cap"] = 1;
+  assert.ok(!rules(kept.prev, kept.next, ctx(HOUR)).includes("pet-party"), "유대변화로 바뀌어도 값은 그대로");
+  out("15b 개굴닌자 파티 시간");
+}
+
 // 16. 버드렉스의 말 — 유대의고삐로 부른 말은 쓴 고삐 수까지 새 개체 출처다. 백마·흑마 모습은 그 말이 있어야 한다 (data/regional.json riders, 2026-10-07 사용자 결정)
 {
   const owner = base();

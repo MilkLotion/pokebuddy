@@ -142,7 +142,8 @@ export type AchievementCond =
   | { kind: "streak"; days: number }
   | { kind: "trade"; count: number }
   | { kind: "shown"; count: number }
-  | { kind: "party"; count: number };
+  | { kind: "party"; count: number }
+  | { kind: "pet-party"; species: string; hours: number };
 
 export interface AchievementDef {
   ko: string;

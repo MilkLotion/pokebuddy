@@ -21,7 +21,8 @@ import { achievementDefs, GROUPS, rewardEgg, rewardItem, rewardPoints, rewardPok
 import { evaluateAchievements } from "../../achievement/evaluate";
 import { isAchieved, progressOf } from "../../achievement/progress";
 import { ACHIEVEMENT_RULES } from "../../achievement/rules";
-import { isSinglePet } from "../../dex/forms";
+import { isSinglePet, tickPartyTime } from "../../dex/forms";
+import { applyTime } from "../../state/time";
 import { eggPool, rewardSpecies, singleSpecies } from "../../dex/obtain";
 import { EGG_RULES } from "../../egg/rules";
 import { pendingOf } from "../../notify/pending";
@@ -45,10 +46,10 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 43개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
+// (1) 업적 44개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = achievementDefs();
-  assert.equal(list.length, 43);
+  assert.equal(list.length, 44); // 2026-10-09 개굴닌자 파티 시간(지우의모자) 더함
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
@@ -58,7 +59,7 @@ function seed(): SaveV3 {
     assert.equal(kinds.filter(Boolean).length, 1, `보상은 한 종류 ${id}`);
   }
   const byGroup = Object.fromEntries(GROUPS.map((g) => [g, list.filter(([, d]) => d.group === g).length]));
-  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 12 });
+  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 13 });
   const old = ["show-two", "starter-final", "work-100h", "party-three"];
   const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
@@ -693,6 +694,30 @@ function seed(): SaveV3 {
   assert.ok(openEgg(e, eggId, T0, () => 0.99).ok);
   assert.equal(e.counts?.hatched, 1);
   process.stdout.write("(17) 이어진 날 · 부화 횟수  ok\n");
+}
+
+// (18) 개굴닌자 파티 시간 — 파티 칸의 개굴닌자만 흐른 시간을 세고 100시간에서 멈춘다. 받으면 지우의모자 하나
+// (2026-10-09 사용자 "지우의 모자를 업적에서 개굴닌자 파티100시간 으로 수정", 시간은 파티에서 보낸 시간)
+{
+  const HOUR = 3600_000;
+  const s = seed();
+  s.pets[0]!.species = "greninja";
+  s.pets.push(pet({ id: "p2", species: "greninja" })); // 박스 — 세지 않는다
+  applyTime(s, 3 * HOUR, T0 + 3 * HOUR);
+  assert.equal(s.pets[0]!.partyMs, 3 * HOUR, "파티의 개굴닌자 — 숨겨도 흐른 시간");
+  assert.equal(s.pets[1]!.partyMs, undefined, "박스의 개굴닌자는 세지 않는다");
+  assert.deepStrictEqual(progressOf(s, "greninja-party-100h"), { now: 3, goal: 100, unit: "시간" });
+  const frog = pet({ id: "p3", species: "frogadier" });
+  tickPartyTime(frog, HOUR);
+  assert.equal(frog.partyMs, undefined, "개굴반토는 세지 않는다");
+  tickPartyTime(s.pets[0]!, 200 * HOUR);
+  assert.equal(s.pets[0]!.partyMs, 100 * HOUR, "100시간에서 멈춘다");
+  assert.equal(isAchieved(s, "greninja-party-100h"), true);
+  s.achievements["greninja-party-100h"] = { achievedAt: T0, claimedAt: null };
+  assert.deepStrictEqual(claimAchievement(s, "greninja-party-100h", T0 + 1, undefined, () => 0.5).item, { id: "ash-cap", count: 1 });
+  assert.equal(s.bag["ash-cap"], 1);
+  assert.equal(normalize(structuredClone(s), T0)!.pets[0]!.partyMs, 100 * HOUR, "저장을 다시 읽어도 남는다");
+  process.stdout.write("(18) 개굴닌자 파티 시간 · 지우의모자 보상  ok\n");
 }
 
 process.stdout.write("selftest-achievement: 통과 (업적 목록·조건·진행도·보상 종류·수령·조용한 첫 판정·이어진 날·튜토리얼·대기열·다시 보기·돌봄 누적)\n");

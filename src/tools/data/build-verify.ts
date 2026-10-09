@@ -13,6 +13,7 @@ import path from "node:path";
 import { MINT_REFUND_EACH } from "../../bag/mint";
 import { BAG_RULES } from "../../bag/rules";
 import { nextOf } from "../../dex/evo";
+import { partyGoalsMs } from "../../dex/forms";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { megaOf, megaSlugs } from "../../dex/mega";
 import { inRandomEgg } from "../../dex/obtain";
@@ -169,6 +170,7 @@ export function buildVerifyFiles(): Record<string, string> {
       megaLevel: MEGA_RULES.level,
       megaBondMs: MEGA_RULES.bondMs,
       megaCare: MEGA_RULES.care,
+      petPartyMs: Math.max(0, ...Object.values(partyGoalsMs())),
       megaCareMax: Math.max(MEGA_RULES.care, MEGA_CARE_BEFORE),
       careCountPerHour: 3_600_000 / BAG_RULES.feedCooldownMs + 3_600_000 / CARE_RULES.playCooldownMs,
       megaAffinity: MEGA_RULES.affinity,

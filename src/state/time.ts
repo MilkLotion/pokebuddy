@@ -15,7 +15,7 @@
 // 포인트만 예외다. 적립 속도가 친밀도·만복도·심심함·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
 // 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
 import { tickMega } from "../dex/mega.js";
-import { tickFormWork } from "../dex/forms.js";
+import { tickFormWork, tickPartyTime } from "../dex/forms.js";
 import { BOREDOM_RULES, TIME_RULES } from "./rules.js";
 import { PET_RULES } from "../party/rules.js";
 import { activePreset, allPresets } from "../party/presets.js";
@@ -179,6 +179,7 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
     tickBuffs(pet, elapsed);
     tickMega(pet, elapsed); // 친밀도 100 뒤 파티에서 보낸 시간 — 메가진화 조건 (src/dex/mega.ts)
     tickFormWork(pet, work); // 파티에서 받은 작업 시간 — 로토무 모습 바꾸기 해금 (src/dex/forms.ts)
+    tickPartyTime(pet, elapsed); // 파티에서 보낸 시간 — 개굴닌자 파티 시간 업적 (src/dex/forms.ts)
 
     const after = zoneOf(pet.fullness);
     if (after !== before && NOTIFY_ZONES.includes(after)) events.hungerEnter.push({ petId: pet.id, zone: after });
