@@ -69,6 +69,8 @@ export function goTo(route: ManageRoute): void {
     openSwap(route.petId);
   } else if (route.to === "battle-pick") {
     openDialogOrPet({ kind: "battle-pick", slot: route.slot }); // 배틀 파티 칸 메뉴의 `바꾸기` — 개체 고르기 모달
+  } else if (route.to === "battle-record") {
+    openDialogOrPet({ kind: "battle-record" }); // 받은 판 알림 배너의 `보기` — 배틀 기록 모달
   } else if (route.to === "sell") {
     if (petInView(route.petId)) openDialogOrPet({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {

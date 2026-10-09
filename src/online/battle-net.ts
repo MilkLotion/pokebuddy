@@ -5,8 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCode } from "../shared/names/online-codes.js";
 import { SERVER_BATTLE_CODES } from "../shared/names/online-codes.js";
 import type { TxResult } from "../shared/command";
-import type { BattleLook, BattleReply } from "../shared/model/battle-net.js";
-import { isUnreachable, readFunctionError } from "./server-call.js";
+import type { BattleAction, BattleLook, BattleRecordData, BattleReply } from "../shared/model/battle-net.js";
+import { callRpc, isNetworkMessage, isUnreachable, readFunctionError } from "./server-call.js";
 
 // battle-offer 의 답 — 칸은 { species, form, types } 또는 null
 export interface OfferData {
@@ -32,13 +32,52 @@ export interface BattleNetDeps {
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
   show: (data: StartData, pick: number) => void; // 배틀 창을 연다
+  now?: () => number; // 받은 판 확인 간격을 재는 시계 — 자체 시험이 바꾼다
 }
+
+// 받은 판 확인 간격 — 서버 읽기 한 번. 배너를 띄우지 못했으면(다른 배너가 보이는 중) 다시 읽지 않고 다음 틱에 같은 값을 띄운다
+export const RECEIVED_CHECK_MS = 10 * 60_000;
 
 type Call<T> = { ok: true; data: T } | { ok: false; code: BattleCode; detail?: string; remainMs?: number };
 const KNOWN = new Set<string>([...SERVER_BATTLE_CODES, "CLOUD_ACCOUNT_HELD", "CLOUD_LOGIN_REQUIRED"]);
 
-export function createBattleNet(d: BattleNetDeps): { act: (a: { action: "offer" } | { action: "start"; offerId: string; pick: number }) => Promise<BattleReply> } {
+export interface BattleNet {
+  act: (a: BattleAction) => Promise<BattleReply>;
+  // 받은 판 알림 — 지난 알림 뒤 받은 판이 있으면 show 로 한 번 띄우고, 띄웠으면 서버에 본 시각을 적는다. 시간 틱(15초)마다 불러도 서버는 간격마다 한 번 읽는다
+  checkReceived: (show: (unseen: BattleRecordData["unseen"]) => boolean) => Promise<void>;
+}
+
+export function createBattleNet(d: BattleNetDeps): BattleNet {
   let busy = false;
+  let lastCheck = -Infinity;
+  let held: BattleRecordData["unseen"] | null = null; // 읽었지만 아직 띄우지 못한 알림
+  const now = d.now ?? Date.now;
+
+  async function record(): Promise<{ ok: true; data: BattleRecordData } | { ok: false; code: BattleCode; detail?: string }> {
+    const r = await callRpc<BattleRecordData, BattleCode>(d.client, "battle_record_view", undefined, (e) => {
+      const m = e?.message ?? "";
+      if (m.includes("CLOUD_LOGIN_REQUIRED")) return { code: "CLOUD_LOGIN_REQUIRED" };
+      return isNetworkMessage(m) ? { code: "NETWORK" } : { code: "UNKNOWN", detail: m };
+    });
+    return r;
+  }
+
+  async function checkReceived(show: (unseen: BattleRecordData["unseen"]) => boolean): Promise<void> {
+    if (!d.signedIn()) return;
+    if (!held) {
+      if (now() - lastCheck < RECEIVED_CHECK_MS) return;
+      lastCheck = now();
+      const r = await record();
+      if (!r.ok) return;
+      const u = r.data.unseen;
+      if (!u.until || u.wins + u.losses + u.draws === 0) return;
+      held = u;
+    }
+    if (!show(held)) return;
+    const until = held.until;
+    held = null;
+    await callRpc(d.client, "battle_record_seen", { p_until: until }, (e) => ({ code: "UNKNOWN", detail: e?.message ?? "" }));
+  }
 
   async function call<T>(fn: string, body: Record<string, unknown>): Promise<Call<T>> {
     try {
@@ -54,8 +93,13 @@ export function createBattleNet(d: BattleNetDeps): { act: (a: { action: "offer" 
     }
   }
 
-  async function act(a: { action: "offer" } | { action: "start"; offerId: string; pick: number }): Promise<BattleReply> {
+  async function act(a: BattleAction): Promise<BattleReply> {
     if (!d.signedIn()) return { ok: false, code: "CLOUD_LOGIN_REQUIRED" };
+    if (a.action === "record") {
+      // 읽기만 한다 — 상대 받기·판과 겹쳐도 된다
+      const r = await record();
+      return r.ok ? { ok: true, code: null, record: r.data } : fail(r);
+    }
     if (busy) return { ok: false, code: "BATTLE_TOO_FAST" };
     busy = true;
     try {
@@ -76,7 +120,7 @@ export function createBattleNet(d: BattleNetDeps): { act: (a: { action: "offer" 
     }
   }
 
-  return { act };
+  return { act, checkReceived };
 }
 
 const fail = (r: { code: BattleCode; detail?: string; remainMs?: number }): BattleReply => ({

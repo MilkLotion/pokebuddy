@@ -129,3 +129,115 @@
 .dialog.battle-opponent .bo-start {
   width: 120px;
 }
+
+/* 배틀 기록 — 상대 고르기의 `내 전적` 줄과 배틀 기록 모달 (docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기")
+   Figma 02 `Battle Record Bar` 1870:12831(36 높이), `Battle Record Summary` 1870:12805(80 높이), `Battle Record Row` 1870:12830(40 높이), 01 `Battle Result Chip` 1870:12804 */
+.br-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.br-label {
+  color: var(--muted);
+}
+.br-bar .br-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.br-go {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--primary);
+  cursor: pointer;
+}
+.br-summaries {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.br-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: 80px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.br-summary .br-value {
+  color: var(--ink);
+}
+.br-list-title {
+  margin-bottom: -4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* 최근 8줄 — 줄이 모자라도 자리는 8줄 그대로 */
+.br-list {
+  height: 320px;
+}
+.br-row,
+.br-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.br-empty {
+  color: var(--muted);
+}
+.br-chip {
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.br-chip.win {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.br-chip.lose {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+.br-chip.draw {
+  background: var(--subtle);
+  color: var(--muted);
+}
+.br-kind {
+  color: var(--ink);
+}
+.br-when {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+}
+.br-length {
+  color: var(--muted);
+}
+.br-point {
+  width: 56px;
+  text-align: right;
+  color: var(--ink);
+}
+.dialog.battle-record .actions .act.primary {
+  width: 120px;
+}

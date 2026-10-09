@@ -67,3 +67,21 @@ export function bannerOf(save: SaveV3, key: string): BannerView | null {
   if (!def) return null;
   return { key, kind: "achievement", title: t("banner.achievement"), target: achievementName(def), go, route: { to: "achievements", id: k.target } };
 }
+
+// 받은 배틀 결과 — 지난 알림 뒤 남이 내 배틀 파티를 상대로 고른 판의 승패. 0 인 칸은 뺀다(`내 배틀 파티 2승 1패`). `보기` 는 배틀 기록 모달
+// (docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기", Figma `Notification Banner` `Type=Battle` 1870:14030). 줄 밖에서 한 번 띄운다
+export function battleResultBanner(unseen: { wins: number; losses: number; draws: number; until: string | null }): BannerView {
+  const parts = [
+    unseen.wins ? t("banner.battleWin", { n: unseen.wins }) : "",
+    unseen.losses ? t("banner.battleLose", { n: unseen.losses }) : "",
+    unseen.draws ? t("banner.battleDraw", { n: unseen.draws }) : "",
+  ].filter(Boolean);
+  return {
+    key: `battle:${unseen.until ?? ""}`,
+    kind: "battle",
+    title: t("banner.battle"),
+    target: t("banner.battleBody", { score: parts.join(" ") }),
+    go: t("banner.view"),
+    route: { to: "battle-record" },
+  };
+}

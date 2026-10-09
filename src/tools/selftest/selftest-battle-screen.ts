@@ -10,6 +10,10 @@ import { clockText, createTimeline, popKindOf, rowOf, spriteFrame } from "../../
 import type { LookSheets, SpriteSheet } from "../../shared/model/stage";
 import { battleScreenArtKeys, battleScreenModel, withBattleScreenArt } from "../../view/battle-screen";
 import { battleRewardText } from "../../view/battle-offer";
+import { recordBarText, recordRowText, summaryRateText } from "../../shared/battle-record-text";
+import { battleResultBanner } from "../../view/banner";
+import { createBattleNet, RECEIVED_CHECK_MS } from "../../online/battle-net";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const f = (species: string): EngineFighter => {
   const out = buildFighter({ species });
@@ -260,4 +264,51 @@ assert.deepStrictEqual(battleRewardText(500), { lead: "오늘의 첫 배틀 +500
 assert.strictEqual(battleRewardText(50).lead, "+50P");
 assert.strictEqual(battleRewardText(10).lead, "+10P");
 
-console.log("selftest-battle-screen 통과");
+// 배틀 기록 문구 — 내 전적 줄·요약 카드·최근 줄·받은 판 배너 (2026-10-10 사용자 확정 "이렇게 진행", docs/specs/adventure.md "배틀 기록")
+assert.strictEqual(recordBarText({ wins: 12, losses: 8, draws: 1 }), "12승 8패 1무 · 승률 57%");
+assert.strictEqual(summaryRateText({ wins: 5, losses: 3, draws: 0 }), "승률 63% · 8판");
+assert.strictEqual(summaryRateText({ wins: 0, losses: 0, draws: 0 }), "승률 — · 0판", "판이 없으면 승률 —");
+{
+  const at = new Date(2026, 9, 9, 14, 10).toISOString();
+  assert.deepStrictEqual(recordRowText({ at, mine: true, result: "win", reward: 500, endMs: 92_000 }), { result: "승", kind: "건 배틀", when: "10월 9일 14:10", length: "1:32", point: "+500P" });
+  assert.deepStrictEqual(recordRowText({ at, mine: false, result: "draw", reward: null, endMs: 180_000 }).point, "—", "받은 배틀은 포인트 자리가 —");
+}
+{
+  const b = battleResultBanner({ wins: 2, losses: 1, draws: 0, until: "2026-10-10T00:00:00Z" });
+  assert.strictEqual(b.kind, "battle");
+  assert.strictEqual(b.title, "배틀 결과");
+  assert.strictEqual(b.target, "내 배틀 파티 2승 1패", "0 인 칸은 뺀다");
+  assert.strictEqual(b.go, "보기");
+  assert.deepStrictEqual(b.route, { to: "battle-record" });
+}
+
+// 받은 판 확인 — 간격마다 한 번 읽고, 띄우지 못했으면 다시 읽지 않고 다음에 띄운다. 띄운 뒤에만 본 시각을 적는다
+void (async () => {
+  let clock = 0;
+  const calls: string[] = [];
+  let unseen = { wins: 1, losses: 0, draws: 0, until: "2026-10-10T01:00:00Z" };
+  const client = {
+    rpc: async (fn: string, args?: Record<string, unknown>) => {
+      calls.push(args ? `${fn}:${String(args.p_until)}` : fn);
+      return fn === "battle_record_view" ? { data: { mine: { wins: 0, losses: 0, draws: 0 }, def: { wins: 1, losses: 0, draws: 0 }, recent: [], unseen }, error: null } : { data: null, error: null };
+    },
+  } as unknown as SupabaseClient;
+  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }), show: () => {}, now: () => clock });
+  let shown = 0;
+  await net.checkReceived(() => false);
+  assert.deepStrictEqual(calls, ["battle_record_view"], "다른 배너가 보이는 중 — 적지 않는다");
+  await net.checkReceived(() => (shown++, true));
+  assert.deepStrictEqual(calls, ["battle_record_view", "battle_record_seen:2026-10-10T01:00:00Z"], "다시 읽지 않고 띄운 뒤 본 시각을 적는다");
+  await net.checkReceived(() => (shown++, true));
+  assert.strictEqual(calls.length, 2, "간격 안에는 읽지 않는다");
+  clock += RECEIVED_CHECK_MS;
+  unseen = { wins: 0, losses: 0, draws: 0, until: null as unknown as string };
+  await net.checkReceived(() => (shown++, true));
+  assert.strictEqual(shown, 1, "새로 받은 판이 없으면 띄우지 않는다");
+  const rec = await net.act({ action: "record" });
+  assert.ok(rec.ok && rec.record?.def.wins === 1, "record 동작은 기록을 돌려준다");
+  console.log("selftest-battle-screen 통과");
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

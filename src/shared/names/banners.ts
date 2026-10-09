@@ -9,15 +9,16 @@
 //   find         줍기 — 대상 그림 없이 문구 두 줄 (src/find/pickup.ts)
 //   mega         메가스톤이 생겼다 (src/dex/mega.ts)
 //   notice       대상 그림 없이 안내 문구 두 줄 (src/agents/notice.ts). 줄 밖에서 한 번 띄운다
-const BANNER_KINDS = ["hatch", "evolve", "achievement", "notice", "find", "mega"] as const;
+//   battle       받은 배틀 결과 — 지도 아이콘과 `내 배틀 파티 2승 1패` (src/online/battle-net.ts checkReceived). 줄 밖에서 한 번 띄운다
+const BANNER_KINDS = ["hatch", "evolve", "achievement", "notice", "find", "mega", "battle"] as const;
 
 export type BannerKind = (typeof BANNER_KINDS)[number];
 
-// 알림 줄에 서는 종류 — notice 는 줄 밖이다 (src/notify/queue.ts)
-export type QueuedBannerKind = Exclude<BannerKind, "notice">;
+// 알림 줄에 서는 종류 — notice·battle 은 줄 밖이다 (src/notify/queue.ts)
+export type QueuedBannerKind = Exclude<BannerKind, "notice" | "battle">;
 
 // 설정에서 끌 수 있는 알림 — 부화·진화·업적·줍기 (2026-10-05 사용자 결정, docs/specs/game.md "알림 끄기").
 // 메가스톤 배너는 진화를 따른다 — 같은 성장 소식이다 (제안)
 export const NOTIFY_KINDS = ["hatch", "evolve", "achievement", "find"] as const;
 export type NotifyKind = (typeof NOTIFY_KINDS)[number];
-export const notifyKindOf = (kind: BannerKind): NotifyKind | null => (kind === "mega" ? "evolve" : kind === "notice" ? null : kind);
+export const notifyKindOf = (kind: BannerKind): NotifyKind | null => (kind === "mega" ? "evolve" : kind === "notice" || kind === "battle" ? null : kind);

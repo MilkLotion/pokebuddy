@@ -80,6 +80,12 @@ body {
   line-height: 14px;
   font-weight: 600;
 }
+/* 받은 배틀 결과 — 둥근 네모 안의 지도 아이콘 (Figma `Notification Banner` `Type=Battle` 1870:14030) */
+.target.battle {
+  background: var(--subtle);
+  border-radius: 8px;
+  color: var(--muted);
+}
 /* 부화 — 알 윤곽 */
 .target.hatch::before {
   content: "";

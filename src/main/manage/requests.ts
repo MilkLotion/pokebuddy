@@ -66,6 +66,7 @@ export function parseMailAction(v: unknown): MailAction | null {
 export function parseBattleAction(v: unknown): BattleAction | null {
   if (!isObj(v)) return null;
   if (v.action === "offer") return { action: "offer" };
+  if (v.action === "record") return { action: "record" };
   if (v.action === "start" && typeof v.offerId === "string" && /^[0-9a-f-]{36}$/i.test(v.offerId) && typeof v.pick === "number" && Number.isInteger(v.pick) && v.pick >= 1 && v.pick <= 3)
     return { action: "start", offerId: v.offerId, pick: v.pick };
   return null;

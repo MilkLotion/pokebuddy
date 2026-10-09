@@ -14,6 +14,7 @@ import { boxSlot, drawBox } from "./box-tab.js";
 import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
 import { drawBattleOpponent } from "./battle-opponent.js";
+import { drawBattleRecord, loadBattleRecord } from "./battle-record.js";
 import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
 import { drawGuide } from "./guide.js";
 import { closeSettingSelect, drawSettings, drawUser, syncIdentify } from "./settings.js";
@@ -239,6 +240,7 @@ registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDayca
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
+registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: (d) => drawBattleRecord(d.back), enter: () => void loadBattleRecord() });
 registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus)) });
 registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });

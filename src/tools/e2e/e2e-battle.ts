@@ -137,6 +137,21 @@ async function run(): Promise<void> {
   assert.deepEqual([bw, bl, bd], [al, aw, ad], "B 받은 판은 A 의 거울");
   checks.push(`승무패: A 건 판 ${aw}/${al}/${ad}, B 받은 판 ${bw}/${bl}/${bd}`);
 
+  // 배틀 기록 보이기 — 앱이 직접 부르는 함수 (supabase/migrations/20261010110000_battle_record_view.sql). A 는 건 판 2, B 는 받은 판 2
+  const viewA = (await a!.client.rpc("battle_record_view")).data as Json;
+  assert.equal(viewA.recent.length, 2);
+  assert.ok(viewA.recent.every((r: Json) => r.mine === true), "A 의 최근 판은 건 배틀");
+  assert.equal(viewA.recent[0].reward, second.body.reward, "새 판이 앞");
+  assert.equal(viewA.unseen.wins + viewA.unseen.losses + viewA.unseen.draws, 0, "A 는 받은 판이 없다");
+  const viewB = (await b!.client.rpc("battle_record_view")).data as Json;
+  assert.ok(viewB.recent.every((r: Json) => r.mine === false && r.reward === null), "B 의 최근 판은 받은 배틀, 포인트 없음");
+  assert.equal(viewB.unseen.wins + viewB.unseen.losses + viewB.unseen.draws, 2, "알림 전 받은 판 2");
+  assert.equal((await b!.client.rpc("battle_record_seen", { p_until: viewB.unseen.until })).error, null);
+  const afterB = (await b!.client.rpc("battle_record_view")).data as Json;
+  assert.equal(afterB.unseen.wins + afterB.unseen.losses + afterB.unseen.draws, 0, "본 뒤에는 0");
+  assert.deepEqual(afterB.def, viewB.def, "승무패는 그대로");
+  checks.push("배틀 기록 보이기: 내 판·받은 판 최근 줄, 받은 판 알림 수와 본 시각");
+
   // 판 내용 받기·정리 — 관리자 함수. 정리한 뒤에도 장부 줄은 남아 아래 저장 검증이 보상 id 를 찾는다
   assert.equal(sql(`select jsonb_array_length(public.admin_battle_archive_take(10))`), "2", "받을 판 2");
   assert.equal(sql(`select public.admin_battle_archive_done(array(select id from cloud_private.battles))`), "2");

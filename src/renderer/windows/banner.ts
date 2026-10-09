@@ -44,6 +44,8 @@ function chime(gain: number): void {
   }
 }
 
+const MAP_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M10.5 3.5 5.5 2l-4 1.5V14l4-1.5M5.5 2v10.5m0 0 5 1.5 4-1.5V2l-4 1.5m0 0V14" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+
 api.onShow((view: BannerView) => {
   key = view.key;
   chime(view.chime ?? 0);
@@ -51,6 +53,8 @@ api.onShow((view: BannerView) => {
   titleEl.title = view.title;
   targetEl.className = `target ${view.kind}`;
   targetEl.textContent = view.kind === "achievement" ? "A" : "";
+  // 받은 배틀 결과 — 지도 아이콘(Figma 01 `Icon / Adventure` 1659:3, 설정창 모험 탭 아이콘과 같은 선)
+  if (view.kind === "battle") targetEl.innerHTML = MAP_ICON;
   nameEl.textContent = view.target;
   nameEl.title = view.target;
   // 안내(notice)·줍기(find)는 대상 그림 없이 문구를 두 줄까지 보인다 — 한 줄 말줄임이면 문구가 잘린다

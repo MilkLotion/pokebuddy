@@ -48,7 +48,7 @@ import { createTrayMenu } from "./menus/tray-menu";
 import { gainOf } from "../state/settings";
 import { SOUND_RULES } from "../state/rules";
 import { createNotifier, type Notifier } from "../notify/notifier";
-import { bannerOf } from "../view/banner";
+import { battleResultBanner, bannerOf } from "../view/banner";
 import { writeAtomic } from "../platform/atomic-write";
 import { readJsonFile } from "../platform/json-file";
 import { createHookUpkeep, type HookUpkeep } from "./app/hook-upkeep";
@@ -435,6 +435,8 @@ const ticks = createTicks({
   // 15초마다 — 남은 한 번 알림, 저장 설정(놀이공간·잠들기 기준·로그인 시 시작) 다시 읽기
   slow: () => {
     rt.hookUpkeep?.tick(); // 남은 한 번 알림이 있고 다른 배너가 없으면 띄운다
+    // 받은 배틀 결과 — 서버는 10분마다 한 번 읽는다. 다른 배너가 보이는 중이면 다음 틱에 띄운다 (src/online/battle-net.ts checkReceived)
+    if (saveParty()?.isWriter()) void services.battle()?.checkReceived((u) => rt.notifier?.showOnce(battleResultBanner(u)) ?? false);
     display.sync("all");
   },
   log,

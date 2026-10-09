@@ -30,6 +30,7 @@ export type Dialog =
   | { kind: "swap"; focus?: string } // 파티 교체 — focus 는 포켓몬 메뉴의 `교체` 로 연 개체 (party-swap.ts)
   | { kind: "battle-pick"; slot: number } // 배틀 파티 교체 — slot 은 연 칸(처음 고른 칸). 판의 쪽·찾기는 pet-box-panel.ts 가 든다
   | { kind: "battle-opponent" } // 랜덤 배틀 상대 고르기 — 모험 탭의 `배틀 시작`
+  | { kind: "battle-record"; back?: "battle-opponent" } // 배틀 기록 — 상대 고르기의 `기록 보기 ›`·받은 판 알림 배너. back 이면 `닫기` 가 상대 고르기로 돌아간다
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string; battle?: true } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습. battle 이면 배틀 파티의 메가 상태(배틀 파티 상세 기기 창의 표식)

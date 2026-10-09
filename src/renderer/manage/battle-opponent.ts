@@ -7,6 +7,7 @@ import { failTextOf } from "../../shared/fail-text.js";
 import type { BattleOfferView, BattlePickSlotView, BattleReply } from "../../shared/model/battle-net.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { api } from "./api.js";
+import { battleRecordBarEl, loadBattleRecord } from "./battle-record.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
@@ -32,6 +33,7 @@ export function openBattleOpponent(show: () => void): void {
   st.error = "";
   show();
   void refresh();
+  void loadBattleRecord(); // 파티 목록 위 `내 전적` 줄 (battle-record.ts)
 }
 
 async function refresh(): Promise<void> {
@@ -140,7 +142,7 @@ export function drawBattleOpponent(): void {
   again.classList.add("bo-refresh");
   const cancel = actionButtonEl("취소", false, false, closeDialog);
   const row = actionsRowEl(again, el("div", "bo-error", st.error), cancel, go);
-  dialogEl.append(top, list, row);
+  dialogEl.append(top, battleRecordBarEl(), list, row);
 }
 
 // 쿨타임 글자를 1초마다 바꾼다 — 모달이 열려 있고 쿨타임이 남았을 때만

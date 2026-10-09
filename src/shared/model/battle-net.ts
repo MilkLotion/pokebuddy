@@ -22,7 +22,27 @@ export interface BattleOfferView {
   cooldownMs: number; // 남은 쿨타임. 0 이면 시작할 수 있다
 }
 
-export type BattleAction = { action: "offer" } | { action: "start"; offerId: string; pick: number };
+// 배틀 기록 — 서버 battle_record_view (supabase/migrations/20261010110000_battle_record_view.sql). 규칙 docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기"
+export interface BattleTally {
+  wins: number;
+  losses: number;
+  draws: number;
+}
+export interface BattleRecordRow {
+  at: string; // 판 시각(ISO)
+  mine: boolean; // 건 판이면 true, 받은 판(남이 내 배틀 파티를 고른 판)이면 false
+  result: "win" | "lose" | "draw"; // 내 쪽에서 본 결과
+  reward: number | null; // 받은 포인트 — 받은 판은 null
+  endMs: number; // 판 길이
+}
+export interface BattleRecordData {
+  mine: BattleTally; // 건 판
+  def: BattleTally; // 받은 판
+  recent: BattleRecordRow[]; // 최근 8판, 새 판이 앞
+  unseen: BattleTally & { until: string | null }; // 지난 알림 뒤 받은 판 — until 은 그 가운데 마지막 판 시각
+}
+
+export type BattleAction = { action: "offer" } | { action: "start"; offerId: string; pick: number } | { action: "record" };
 
 export interface BattleReply {
   ok: boolean;
@@ -31,4 +51,5 @@ export interface BattleReply {
   remainMs?: number; // BATTLE_COOLDOWN 이면 남은 쿨타임
   offer?: BattleOfferView; // offer 의 답
   reward?: number; // start 의 답 — 받은 포인트
+  record?: BattleRecordData; // record 의 답
 }
