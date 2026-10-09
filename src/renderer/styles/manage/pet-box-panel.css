@@ -74,6 +74,14 @@
 .pp-cell.off {
   opacity: 0.4;
 }
+/* 가리킨 칸 — 박스 탭 칸(Figma `Box Slot` State=Hover)과 같은 옅은 바탕. 박스 쪽·프리셋 쪽 모두.
+   판을 쓰는 세 모달(파티 교체·배틀 파티 교체·친구 교환)이 이 한 곳으로 같이 갖는다 — 모달 CSS 에 따로 두지 않는다.
+   (2026-10-10 사용자 "이 호버스타일이 왜 계속 빠지지?" — 박스 탭 호버가 .box-grid 에만 걸려 있어, 칸을 새로 그린 판에서 빠졌다) */
+.pp-cell:not(:disabled):not(.blank):hover,
+.pp-cell.blank.pickable:hover,
+.pp-blank.pickable:hover {
+  background: var(--accent-bg);
+}
 /* 찾기의 지금 결과 — 옅은 바탕만 (박스 탭 .cell.found 와 같다) */
 .pp-cell.found {
   background: var(--accent-bg);
@@ -178,6 +186,10 @@
 }
 .swap-side .pp-cell {
   width: 100%;
+}
+/* 오른쪽 판의 가리킨 칸 — 판 바탕(--accent-bg ≈ 주색 8%)보다 진하고 고른 칸(16%)보다 옅은 12%. 빈 칸도 누르면 고르니 같이 */
+.swap-side .pp-cell:not(:disabled):not([aria-pressed="true"]):hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
 }
 /* 고른 칸 — 톤 바탕만(색 테두리로 강조하지 않는다). 판 바탕이 옅은 초록이라 한 단계 진하게 */
 .swap-side .pp-cell[aria-pressed="true"] {

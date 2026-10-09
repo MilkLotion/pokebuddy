@@ -1,20 +1,18 @@
 // 파티 교체 모달 — 왼쪽은 포켓몬 고르기 판(pet-box-panel.ts, 배틀 파티 교체·교환과 같다), 오른쪽은 지금 프리셋의 파티 6칸 세로 한 줄
 // (2026-10-09 사용자 "기존에 교체하면 박스로 이동 + 교체기기가 뜨던거였잖아. 원래 이느낌이아니었거든", Figma 05 `02 파티` `Party / Swap Modal`)
 // 여는 곳: 파티 탭 머리 메뉴의 `교체`, 빈 파티 칸, 박스 머리 메뉴의 `교체`, 포켓몬 메뉴의 `교체`(그 개체를 찾아 둔다). 고치는 프리셋은 파티 탭에서 고른 프리셋이다
-//   박스 개체를 파티 칸에       빈 칸이면 배치(party.place), 개체 칸이면 맞바꾼다(party.swap)
-//   다른 프리셋 개체를 파티 칸에  데려온다(party.pull) — 개체 칸이면 맞바꾼다 (사용자 "다른 프리셋에서도 끌어오기")
-//   파티 칸을 다른 파티 칸에     옮기거나 맞바꾼다(party.move)
-//   파티 칸을 박스 칸에          빈 칸이면 보관(party.keep, 그 칸), 개체 칸이면 맞바꾼다. 판의 다른 곳이면 앞 박스의 첫 빈 칸에 보관
-//   판의 개체를 누르면           고른 파티 칸(옅은 바탕)에 넣는다. 오른쪽 칸을 누르면 그 칸을 고른다
+//   오른쪽 칸을 누르면          그 칸을 고른다(톤 바탕). 처음은 첫 빈 칸이다
+//   판의 개체를 누르면           고른 파티 칸에 넣는다 — 박스 개체는 빈 칸이면 배치(party.place), 개체 칸이면 맞바꾼다(party.swap).
+//                               다른 프리셋 개체는 데려온다(party.pull, 사용자 "다른 프리셋에서도 끌어오기")
+//   박스의 빈 칸을 누르면        고른 파티 칸의 개체를 그 칸에 보관한다(party.keep). 고른 칸이 비었으면 누를 수 없다
 //   모두 박스로 · 완료           지금 파티를 모두 보관한다 · 닫는다 (사용자 "모두 박스로, 모두 빼기, 완료 + 검색")
-// 지금 프리셋에 든 개체는 판의 프리셋 쪽에서 흐리고 고르지 못한다. 끌어 놓을 때마다 바로 저장한다
+// 끌어 놓기는 없다 — 누르기로만 바꾼다(2026-10-10 사용자 "파티교체에 드래그드랍 막고"). 파티 칸 순서는 파티 탭에서 끌어 바꾼다
+// 지금 프리셋에 든 개체는 판의 프리셋 쪽에서 흐리고 고르지 못한다. 바꿀 때마다 바로 저장한다
 import type { PetView, SlotView, Snapshot } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { lockIconEl } from "../ui/line-icons.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
-import { hold } from "./box-state.js";
-import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import { focusPanel, panelPages, petBoxPanelEl, resetPanel, type PanelAt } from "./pet-box-panel.js";
@@ -82,17 +80,11 @@ function slotCell(v: Snapshot, s: SlotView): HTMLElement {
     cell.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
     if (pet.shiny) cell.appendChild(shinyIcon(10));
     cell.title = `${pet.name} Lv.${pet.level}`;
-    cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { partyPet: pet.id }));
-    cell.addEventListener("dragstart", (e) => e.preventDefault());
+    cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
   }
   cell.addEventListener("click", () => {
     target = s.index;
     drawDialog();
-  });
-  dropZone(cell, () => {
-    const from = hold.drag;
-    if (from && "pickPet" in from) bring(v, from.pickPet, s);
-    else if (from && "partyPet" in from && from.partyPet !== pet?.id) send("party.move", from.partyPet, { toSlot: s.index });
   });
   return cell;
 }
@@ -125,24 +117,12 @@ export function drawSwap(): void {
         pick: () => {
           if (slot) bring(v, pet.id, slot);
         },
-        drag: { pickPet: pet.id },
       };
     },
-    // 파티 칸을 박스 칸에 놓으면 보관(빈 칸)·맞바꾸기(개체 칸). 프리셋 쪽 칸에는 놓지 않는다
-    drop: (at, pet) =>
-      at.kind === "box"
-        ? () => {
-            const from = hold.drag;
-            if (!from || !("partyPet" in from)) return;
-            const slot = v.party.slots.find((s) => s.pet?.id === from.partyPet);
-            if (pet && slot) send("party.swap", pet.id, { slotIndex: slot.index });
-            else if (!pet) send("party.keep", from.partyPet, { toBoxId: at.boxId, toSlot: at.slot });
-          }
-        : null,
-    // 판의 다른 곳에 놓으면 앞 박스의 첫 빈 칸에 보관
-    dropAnywhere: () => () => {
-      const from = hold.drag;
-      if (from && "partyPet" in from) send("party.keep", from.partyPet, {});
+    // 고른 칸에 개체가 있으면 박스의 빈 칸을 눌러 그 칸에 보관 (2026-10-10 사용자 "우측프리셋에 있는 포켓몬을 누르고 박스의 빈칸을 눌러도 빈칸으로 안가져")
+    blank: (at) => {
+      const pet = slotOf(target)?.pet;
+      return at.kind === "box" && pet ? () => send("party.keep", pet.id, { toBoxId: at.boxId, toSlot: at.slot }) : null;
     },
   });
   const side = el("div", "swap-side");

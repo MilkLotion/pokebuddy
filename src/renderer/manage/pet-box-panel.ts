@@ -37,6 +37,7 @@ export interface PetBoxPanel {
   view: Snapshot;
   cell: (pet: PetView, at: PanelAt) => PanelCell;
   drop?: (at: PanelAt, pet: PetView | null) => (() => void) | null; // 끈 것을 이 칸에 놓을 때 — null 이면 놓을 수 없는 칸
+  blank?: (at: PanelAt) => (() => void) | null; // 빈 칸을 누를 때 — null 이면 누를 수 없는 칸(파티 교체의 고른 칸 개체 보관 등)
   dropAnywhere?: () => (() => void) | null; // 판 어디에 놓아도 되는 끌기(배틀 파티 칸 → 판 = 빼기)
 }
 
@@ -168,7 +169,14 @@ function petCell(p: PetBoxPanel, pet: PetView, at: PanelAt, found: boolean, with
 }
 
 function blankCell(p: PetBoxPanel, at: PanelAt, locked: boolean, preset: boolean): HTMLElement {
-  const cell = el("div", preset ? `pp-blank ${locked ? "locked" : "blank"}` : "cell blank pp-cell");
+  const cls = preset ? `pp-blank ${locked ? "locked" : "blank"}` : "cell blank pp-cell";
+  // 누를 수 있는 빈 칸은 단추로 — 가리키면 다른 칸과 같은 옅은 바탕(.pickable)
+  const pick = locked ? null : (p.blank?.(at) ?? null);
+  const cell = pick ? buttonEl(`${cls} pickable`) : el("div", cls);
+  if (pick) {
+    cell.addEventListener("click", pick);
+    cell.setAttribute("aria-label", "이 빈 칸에 보관");
+  }
   if (preset) {
     const icon = el("span", "blank-icon");
     icon.appendChild(locked ? lockIconEl() : plusIconEl());
