@@ -103,6 +103,14 @@ out.push(`평타 피해 몫 ${pct(basic, basic + skill)} · 마리당 기술 사
 out.push(`스피드 5분위 승률(느림→빠름) ${q.map((x) => pct(x.win, x.n)).join(" / ")} · 경계 ${[0.2, 0.4, 0.6, 0.8].map((x) => bySpeed[Math.floor(bySpeed.length * x)]!.stats[5]).join(", ")}`);
 out.push(`사거리별 승률: ${[...byRange.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `사거리 ${k} ${pct(v.win, v.n)} (${pool.filter((f) => f.range === k).length}종)`).join(" · ")}`);
 out.push(`타입별 승률: ${[...byType.entries()].map(([k, v]) => ({ k, r: v.win / v.n })).sort((a, b) => b.r - a.r).map((x) => `${x.k} ${(x.r * 100).toFixed(0)}%`).join(", ")}`);
+// 종 쏠림 — 종족값 합 직선을 뺀 종 승률 잔차의 표준편차(표본 30 이상, 판 수 가중). 밸런스 지표 (worklog/records/battle-balance)
+const fit = [...species.entries()].filter(([, v]) => v.n >= 30).map(([k, v]) => ({ x: profileOf(k).bst ?? 0, y: v.win / v.n, w: v.n }));
+const fw = fit.reduce((a, r) => a + r.w, 0);
+const fx = fit.reduce((a, r) => a + r.w * r.x, 0) / fw;
+const fy = fit.reduce((a, r) => a + r.w * r.y, 0) / fw;
+const slope = fit.reduce((a, r) => a + r.w * (r.x - fx) * (r.y - fy), 0) / fit.reduce((a, r) => a + r.w * (r.x - fx) ** 2, 0);
+const resid = Math.sqrt(fit.reduce((a, r) => a + r.w * (r.y - fy - slope * (r.x - fx)) ** 2, 0) / fw);
+out.push(`종 쏠림: 종족값 보정 잔차 표준편차 ${(resid * 100).toFixed(2)}%p · 종족값 합 100 당 ${(slope * 10000).toFixed(1)}%p`);
 const ranked = [...species.entries()].filter(([, v]) => v.n >= 30).map(([k, v]) => ({ k, rate: v.win / v.n, n: v.n })).sort((a, b) => b.rate - a.rate);
 out.push(`종별 승률 상위: ${ranked.slice(0, TOP).map((x) => `${x.k} ${(x.rate * 100).toFixed(0)}%`).join(", ")}`);
 out.push(`종별 승률 하위: ${ranked.slice(-TOP).map((x) => `${x.k} ${(x.rate * 100).toFixed(0)}%`).join(", ")}`);

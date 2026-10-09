@@ -125,10 +125,11 @@ export function moveDataFindings(): string[] {
     if (m.class !== "status" && !(m.cooldown && m.cooldown > 0)) bad.push(`기술 ${id}: 공격기인데 쿨타임 없음`);
     if (m.hits && !(m.hits[0] >= 1 && m.hits[1] >= m.hits[0])) bad.push(`기술 ${id}: 타수 ${m.hits.join("~")}`);
     if (m.effects?.crit !== undefined && !["high", "always"].includes(m.effects.crit)) bad.push(`기술 ${id}: 급소 ${m.effects.crit}`);
-    // 쿨타임 = 기대 위력 ÷ 15초, 최소 2초, 0.1초 올림. 선공기 ×0.8 (docs/specs/moves.md "쿨타임")
+    // 쿨타임 = 기대 위력 ÷ 15초 × 0.9^자기 하락 단계, 최소 2초, 0.1초 올림. 선공기 ×0.8 (docs/specs/moves.md "쿨타임")
     if (m.class !== "status" && m.power && !specialOnly.has(id)) {
       const exp = m.power * (!m.hits ? 1 : m.hits[0] === m.hits[1] ? m.hits[0] : m.hits[1] === 10 ? EXP_HITS_10 : 3.1);
-      let want = Math.max(2, ceil1(exp / 15));
+      const selfDrop = (m.effects?.stats ?? []).filter((s) => s.who === "self" && s.change < 0).reduce((a, s) => a - s.change, 0);
+      let want = Math.max(2, ceil1((exp / 15) * 0.9 ** selfDrop));
       if ((m.priority ?? 0) > 0) want = ceil1(want * 0.8);
       if (m.cooldown !== want) bad.push(`기술 ${id}: 쿨타임 ${m.cooldown} — 공식 ${want}`);
     }
