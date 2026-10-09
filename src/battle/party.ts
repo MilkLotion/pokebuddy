@@ -182,7 +182,7 @@ export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOp
   });
 }
 
-// 배틀을 시작할 수 있는가 — 출전 불가가 없고 한 마리 이상. 배틀은 아직 없다 (탐험·배틀 단추는 누르지 못한다)
+// 배틀을 시작할 수 있는가 — 출전 불가가 없고 한 마리 이상
 export const canStartBattle = (save: Pick<SaveV3, "battle" | "pets">, opts?: DexOptions): boolean =>
   battleSlots(save).some((id) => id != null) && blockedSlots(save, opts).every((b) => b == null);
 

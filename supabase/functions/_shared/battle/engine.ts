@@ -1268,7 +1268,7 @@ export function runBattle(input: BattleInput): BattleResult {
         applyStatus(u, cs[Math.floor(rand() * cs.length)]!, t, o);
       }
     }
-    // 그대로꿀꺽미사일 — 문 먹이를 뱉는다. 때린 쪽이 자기 최대 HP 1/4, 삼켰던 것이 아리코면 방어 −1(피카츄는 마비라 지금 효과 없음)
+    // 그대로꿀꺽미사일 — 문 먹이를 뱉는다. 때린 쪽이 자기 최대 HP 1/4, 삼켰던 것이 아리코면 방어 −1, 피카츄면 마비
     if (o.gulp) {
       const prey = o.gulp;
       o.gulp = null;

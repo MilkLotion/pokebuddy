@@ -94,7 +94,7 @@
   "heatproof": {"ko":"내열","en":"Heatproof","group":"방어","when":"now","rule":"받는 불꽃 피해 ×0.5"},
   "heavy-metal": {"ko":"헤비메탈","en":"Heavy Metal","group":"전투 밖","when":"none","rule":"무게 2배 (효과 없음)"},
   "honey-gather": {"ko":"꿀모으기","en":"Honey Gather","group":"전투 밖","when":"none","rule":"꿀 줍기 (효과 없음)"},
-  "hospitality": {"ko":"대접","en":"Hospitality","group":"아군","when":"now","rule":"등장할 때 아군 HP 1/4 회복"},
+  "hospitality": {"ko":"대접","en":"Hospitality","group":"아군","when":"none","rule":"등장할 때 아군 HP 1/4 회복 (판 시작에 HP 가 가득해 효과 없음)"},
   "huge-power": {"ko":"천하장사","en":"Huge Power","group":"결정력","when":"now","rule":"공격 ×2"},
   "hunger-switch": {"ko":"꼬르륵스위치","en":"Hunger Switch","group":"모습","when":"now","rule":"배부른 모양으로 시작해 5초마다 배고픈 모양과 번갈아 바뀐다. 배고픈 모양이면 오라휠이 악 타입 (1턴 = 5초)"},
   "hustle": {"ko":"의욕","en":"Hustle","group":"결정력","when":"now","rule":"공격 ×1.5, 물리 기술 명중률 ×0.8"},
