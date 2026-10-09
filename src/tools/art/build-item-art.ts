@@ -277,6 +277,42 @@ function bondCord() {
   return save("bond-cord", img);
 }
 
+// 지우의모자 — 빨간 야구모자, 흰 앞판에 초록 무늬, 앞(왼쪽 아래)으로 뻗은 챙. 개굴닌자에게 쓰면 유대변화 (2026-10-09 사용자 "이거 참고해서 도구 만들어" — 지우 모자 사진)
+function ashCap() {
+  const img = blank();
+  const R = ["#ff9aa0", "#f04a54", "#d42c38", "#a41a26", "#741018"].map(hex); // 빨강 밝음→어둠
+  const WT = ["#ffffff", "#f6f4ef", "#dedad2", "#bcb6ac", "#948e84"].map(hex); // 앞판 흰색
+  const G = ["#86e28e", "#34b04c", "#1c7a32"].map(hex); // 무늬 초록
+  const inside = (x: number, y: number, cx: number, cy: number, rx: number, ry: number) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry; return dx * dx + dy * dy <= 1; };
+  const cx = 17.5, cy = 15.5, rx = 10, ry = 9.6;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    // 챙 — 납작한 타원의 아래쪽. 위는 빨강, 아래로 갈수록 그늘
+    if (inside(x, y, 11.5, 21.6, 10, 4) && y >= 18) put(img, x, y, R[y <= 19 ? 1 : y <= 21 ? 2 : y <= 22 ? 3 : 4]!, "brim");
+    // 모자 몸통 — 둥근 돔, 아래는 챙에 걸쳐 자른다. 앞판(흰색)은 왼쪽 앞, 나머지는 빨강
+    if (inside(x, y, cx, cy, rx, ry) && y <= 19) {
+      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry;
+      const front = inside(x, y, 14.2, 15, 7, 8.4);
+      put(img, x, y, lumpTone(nx, ny, front ? WT : R), front ? "front" : "crown");
+    }
+  }
+  // 챙과 몸통 사이 그늘 줄
+  for (let x = 2; x <= 20; x++) if (at(img, x, 19)) put(img, x, 19, R[3]!, "brim");
+  // 꼭지 단추
+  put(img, 17, 5, R[2]!, "crown");
+  put(img, 18, 5, R[3]!, "crown");
+  // 무늬 — 앞판의 초록 "<"
+  const logo: Pt[] = [[16, 10], [15, 10], [14, 11], [13, 11], [12, 12], [11, 12], [11, 13], [12, 13], [12, 14], [13, 14], [14, 14], [15, 14], [16, 14], [17, 14]];
+  for (const [x, y] of logo) put(img, x, y, G[1]!, "logo");
+  for (const [x, y] of [[15, 11], [13, 12], [13, 15], [14, 15], [15, 15], [16, 15]] satisfies Pt[]) put(img, x, y, G[2]!, "logo");
+  for (const [x, y] of [[16, 10], [14, 11]] satisfies Pt[]) put(img, x, y, G[0]!, "logo");
+  // 광
+  for (const [x, y] of [[10, 9], [11, 8], [10, 10]] satisfies Pt[]) if (at(img, x, y)) put(img, x, y, WT[0]!, "front");
+  const mats = { crown: { line: hex("#4e0a12"), rim: R[2]! }, brim: { line: hex("#4e0a12"), rim: R[2]! }, front: { line: hex("#5e584e"), rim: WT[2]! }, logo: { line: hex("#0e3c18"), rim: null } };
+  rimLight(img, mats, cx, cy);
+  outline(img, mats, cx, cy);
+  return save("ash-cap", img);
+}
+
 // ── 무대 말풍선 아이콘 — 도구가 아니라 말풍선에 넣는 그림이다 (2026-09-29 사용자 결정 "말풍선에 아이콘들 넣어") ──
 
 // 만화 고기 — 뼈 달린 고깃덩이. 오른쪽 위로 기운 붉은 갈색 살, 양끝에 두 알 뼈 머리
@@ -406,6 +442,7 @@ const ALL: Record<string, () => Img> = {
   "premium-food": premiumFood,
   "toy": toy,
   "bond-cord": bondCord,
+  "ash-cap": ashCap,
   "region-map": regionMap,
   "meat": meat,
   "coin": coin,
