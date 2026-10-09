@@ -627,6 +627,10 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.strictEqual(garchomp.moves.length, 2);
   const swapped = buildFighter({ species: "garchomp", moveSwap: true })!;
   assert.deepStrictEqual(swapped.moves.map((m) => m.id), [...garchomp.moves.map((m) => m.id)].reverse(), "기술 순서 바꾸기");
+  // 고른 기술 — 그 종의 기본 2개 + 후보 안이면 그 순서로 싸운다. 아니면 기본 2개 (PetV3.moves, 2026-10-10)
+  assert.deepStrictEqual(buildFighter({ species: "raichu", moves: ["surf", "thunder"], moveSwap: true })!.moves.map((m) => m.id), ["surf", "thunder"]);
+  assert.deepStrictEqual(buildFighter({ species: "raichu", moves: ["surf", "flamethrower"] })!.moves.map((m) => m.id), buildFighter({ species: "raichu" })!.moves.map((m) => m.id), "쓸 수 없는 기술이면 기본 2개");
+  assert.deepStrictEqual(petFighter({ species: "raichu", moves: ["thunder", "surf"], level: 50 }, null)!.moves.map((m) => m.id), ["thunder", "surf"]);
 
   const mega = petFighter({ species: "garchomp", level: 60 }, "garchomp-mega")!;
   assert.strictEqual(mega.species, "garchomp-mega");

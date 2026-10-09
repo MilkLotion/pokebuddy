@@ -1,0 +1,134 @@
+/* 기술 바꾸기 모달 — 왼쪽 기술 목록, 오른쪽 사용 중인 기술 2칸·순서 바꾸기·설명 (renderer/manage/move-pick.ts, Figma 05 `15 모험` `Adventure / Move Pick`) */
+.dialog.move-pick {
+  flex: none;
+  width: min(608px, calc(100vw - 32px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dialog.move-pick .settings-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dialog.move-pick .titles {
+  flex: 1;
+  min-width: 0;
+}
+.dialog.move-pick .titles h2 {
+  margin: 0;
+}
+.mp-body {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+.mp-list {
+  flex: none;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mp-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mp-label {
+  color: var(--muted);
+}
+/* 목록 한 줄·사용 중인 기술 칸 — 옅은 바탕 칸. 고른 칸·놓을 칸은 톤 바탕만(색 테두리로 강조하지 않는다) */
+.mp-option,
+.mp-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--canvas);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mp-option:hover,
+.mp-slot:hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--canvas));
+}
+.mp-slot[aria-pressed="true"],
+.mp-slot.drop-on {
+  background: var(--accent-bg);
+}
+.mp-option .move-pill,
+.mp-slot .move-pill {
+  width: 100%;
+}
+/* 쓰는 중인 기술 — 칸과 정보 줄을 흐리게, `사용 중` 은 그대로 */
+.mp-option.used .move-pill,
+.mp-option.used .mp-meta-text {
+  opacity: 0.45;
+}
+.mp-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.mp-meta-text {
+  flex: 1;
+  min-width: 0;
+}
+.mp-in-use {
+  font-weight: 600;
+}
+.mp-note {
+  color: var(--muted);
+}
+.mp-slot-no {
+  color: var(--muted);
+}
+/* 순서 바꾸기 — 지름 28 원, 위아래 화살표. 기기 창의 순서 바꾸기·교환 표시와 같은 모양 (Figma 02 `Trade Swap Mark`) */
+.mp-swap-row {
+  display: flex;
+  justify-content: center;
+}
+.mp-swap {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.mp-swap:hover {
+  background: var(--accent-bg);
+}
+.mp-swap svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mp-desc {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--canvas);
+}
+.mp-desc-text {
+  color: var(--muted);
+}

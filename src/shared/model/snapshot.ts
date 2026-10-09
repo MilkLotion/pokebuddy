@@ -137,7 +137,8 @@ export interface MoveView {
 export interface BattleSlotView {
   index: number;
   pet?: PetView; // 빈 칸이면 없다
-  moves: MoveView[]; // 개체의 기술 순서대로 (PetV3.moveSwap)
+  moves: MoveView[]; // 개체의 기술 순서대로 (PetV3.moves·moveSwap)
+  options?: MoveView[]; // 고를 수 있는 기술 — 기본 2개 뒤에 후보 4개. 진화 전 종은 기본 2개뿐 (기술 바꾸기 모달). 빈 칸이면 없다
   blocked: string | null; // 출전 불가 글자 — "출전 불가 · 초전설 1마리까지". 없으면 null
   stats: { label: string; value: number }[]; // 실제 능력치 6개 — HP·공격·방어·스피드·특수방어·특수공격 (방사형 그래프의 꼭짓점 순서). 종족값이 없으면 빈 목록
   ability: string | null; // 특성 이름 — 표에 없으면 null

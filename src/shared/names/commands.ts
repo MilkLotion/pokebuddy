@@ -41,6 +41,7 @@ export const COMMANDS = {
   "battle.move": { via: "tx" }, // args.slotIndex → args.toSlot. 놓은 칸에 개체가 있으면 맞바꾼다
   "battle.import": { via: "tx" },
   "battle.moves": { via: "tx" },
+  "battle.pick": { via: "tx" }, // args.moves — 고른 기술 id 2개, 순서대로. 그 개체의 기본 2개 + 후보 가운데 (기술 바꾸기 모달)
   "battle.mega": { via: "tx" }, // args.form — 메가 모습 슬러그. 없거나 null 이면 원래 모습
   "battle.form": { via: "tx" }, // args.species — 그 개체의 모습 묶음 안의 종. 배틀 파티의 모습만 바꾼다
   // 박스

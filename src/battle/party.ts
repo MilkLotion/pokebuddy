@@ -1,4 +1,4 @@
-// 배틀 파티 — 칸 넣기·빼기, 프리셋 가져오기, 기술 순서, 메가 켜기, 출전 불가 판정. 규칙은 docs/specs/adventure.md "배틀 파티", "출전 제한"
+// 배틀 파티 — 칸 넣기·빼기, 프리셋 가져오기, 기술 순서·고르기, 메가 켜기, 출전 불가 판정. 규칙은 docs/specs/adventure.md "배틀 파티", "출전 제한"
 // 개체를 옮기지 않는다. 칸에는 개체 식별자만 둔다. 개체의 자리(프리셋 칸·박스 칸)는 그대로다
 import type { DexOptions } from "../dex/data.js";
 import { megaChoices } from "../dex/mega.js";
@@ -8,6 +8,7 @@ import { slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
+import { moveOptions, pickedIn } from "./moves.js";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
@@ -114,12 +115,30 @@ export function importPreset(save: Pick<SaveV3, "battle" | "party" | "pets">, pr
 }
 
 // 개체의 기술 위아래 순서를 바꾼다 — 개체에 저장한다 (어디서 보든 같은 순서)
-export function swapMoves(save: Pick<SaveV3, "pets">, petId: string): Outcome<BattleFailure> & { swapped?: boolean } {
+// 고른 기술(PetV3.moves)이 있으면 그 2개를 맞바꾼다. 배틀 파티의 모습에서 쓸 수 없는 값이면 지우고 기본 2개의 순서(moveSwap)를 바꾼다
+export function swapMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, opts?: DexOptions): Outcome<BattleFailure> & { swapped?: boolean } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
+  if (pet.moves && pickedIn(moveOptions(battleSpeciesOf(save, pet, opts), opts), pet.moves)) {
+    pet.moves = [pet.moves[1], pet.moves[0]];
+    return { ok: true, swapped: true };
+  }
+  delete pet.moves;
   if (pet.moveSwap) delete pet.moveSwap;
   else pet.moveSwap = true;
   return { ok: true, swapped: pet.moveSwap === true };
+}
+
+// 개체의 기술 2개를 고른다 — 배틀 파티의 모습(battleSpeciesOf)의 기본 2개 + 후보 가운데 서로 다른 2개, 순서대로. 개체에 저장한다
+// 기술 바꾸기 모달이 쓴다 (docs/specs/adventure.md "보유 기술"). 쓸 수 없는 기술이면 bad-args
+export function setMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, moves: readonly string[], opts?: DexOptions): Outcome<BattleFailure> {
+  const pet = save.pets.find((p) => p.id === petId);
+  if (!pet) return { ok: false, reason: "no-pet" };
+  const picked = pickedIn(moveOptions(battleSpeciesOf(save, pet, opts), opts), moves);
+  if (!picked) return { ok: false, reason: "bad-args" };
+  pet.moves = [picked[0]!.id, picked[1]!.id];
+  delete pet.moveSwap;
+  return { ok: true };
 }
 
 // 저장에서 사라진 개체를 칸에서 뺀다 — 교환으로 보낸 개체 등. 읽을 때(정규화)도 부른다

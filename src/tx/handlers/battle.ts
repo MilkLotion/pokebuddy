@@ -1,5 +1,5 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleForm, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
+import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleForm, setBattleMega, setBattleSlot, setMoves, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
@@ -48,6 +48,16 @@ export const battleMovesHandler: TxHandler = (draft, args) => {
   const res = swapMoves(draft, petId);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, swapped: res.swapped === true } };
+};
+
+// 개체의 기술 2개를 고른다 — args.petId, args.moves(기술 id 2개, 순서대로)
+export const battlePickMovesHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  const raw = isArgsRecord(args) ? args.moves : undefined;
+  if (!petId || !Array.isArray(raw) || raw.length !== 2 || !raw.every((m): m is string => typeof m === "string")) return { ok: false, reason: "bad-args" };
+  const res = setMoves(draft, petId, raw);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { petId, moves: raw } };
 };
 
 // 배틀 파티에서 메가 모습을 켜고 끈다 — args.petId, args.form(메가 모습 슬러그, null 이면 원래 모습)

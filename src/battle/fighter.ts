@@ -33,6 +33,7 @@ export function battleData(opts?: DexOptions): BattleData {
       ability: abilities[slug] ?? null,
       ...(sm?.special ? { special: sm.special } : {}),
       moves: (sm?.moves ?? []) as BattleData["species"][string]["moves"],
+      ...(sm?.candidates?.length ? { picks: [...sm.candidates] } : {}),
       tier: tierOf(slug, opts),
     };
   }
@@ -63,7 +64,7 @@ export const buildFighter = (src: FighterSource, basis: StatBasis = BATTLE_BASIS
   fighterFrom(battleData(opts), src, basis);
 
 // 배틀 파티의 개체 하나 → 전투 개체 (50레벨·6V). form 은 배틀 파티에서 켠 메가 모습
-export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "level">, form: string | null, opts?: DexOptions): EngineFighter | null =>
-  buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, level: pet.level }, BATTLE_BASIS, opts);
+export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "level">, form: string | null, opts?: DexOptions): EngineFighter | null =>
+  buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, ...(pet.moves ? { moves: [...pet.moves] } : {}), level: pet.level }, BATTLE_BASIS, opts);
 
 export const battleTypeChart = (opts?: DexOptions): Record<string, Record<string, number>> => battleData(opts).typeChart;

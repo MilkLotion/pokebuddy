@@ -66,6 +66,10 @@ export function onBattleAction(action: BattleDeviceAction): void {
     openAnyDialog({ kind: "mega", petId: id, battle: true }); // 바탕화면 파티 상세와 같은 메가진화 창 — 배틀 파티의 메가 상태를 바꾼다
     return;
   }
+  if (action.kind === "moves") {
+    openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 누른 칸을 고른 채로 연다
+    return;
+  }
   void swapSend(action, id);
 }
 

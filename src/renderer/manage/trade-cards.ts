@@ -8,6 +8,7 @@ import type { TradeCardView, TradeScreen } from "../../shared/model/trade.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { josa } from "../../shared/josa.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { swapIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { actionButtonEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
@@ -101,18 +102,7 @@ function tradeSide(title: string, card: TradeCardView | null, state: TradeSideSt
 // 두 카드 사이의 교환 표시 — 위아래 화살표. 두 사람이 모두 확정하면 주색 바탕 (Figma 02 `Trade Swap Mark` `1347:49286`)
 function tradeSwapMark(on: boolean): HTMLElement {
   const mark = el("div", on ? "trade-swap on" : "trade-swap");
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("width", "16");
-  svg.setAttribute("height", "16");
-  svg.setAttribute("aria-hidden", "true");
-  for (const d of ["M5 13 V3", "M2 6 L5 3 L8 6", "M11 3 V13", "M8 10 L11 13 L14 10"]) {
-    const p = document.createElementNS(NS, "path");
-    p.setAttribute("d", d);
-    svg.appendChild(p);
-  }
-  mark.appendChild(svg);
+  mark.appendChild(swapIconEl());
   return mark;
 }
 

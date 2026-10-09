@@ -163,5 +163,6 @@ export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeAr
   volume: number;
 }
 
-// 기기 창에서 누른 단추 — 기술 순서 바꾸기(개체에 저장, src/battle/party.ts swapMoves), 메가스톤 표식(설정창이 메가진화 창을 연다)
-export type BattleDeviceAction = { kind: "swap" | "mega"; petId: string };
+// 기기 창에서 누른 단추 — 기술 순서 바꾸기(개체에 저장, src/battle/party.ts swapMoves), 메가스톤 표식(설정창이 메가진화 창을 연다),
+// 기술 칸(설정창이 기술 바꾸기 모달을 연다 — slot 은 누른 칸 0·1)
+export type BattleDeviceAction = { kind: "swap" | "mega"; petId: string } | { kind: "moves"; petId: string; slot: number };

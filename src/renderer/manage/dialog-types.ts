@@ -28,6 +28,7 @@ export type Dialog =
   | { kind: "box-order" } // 박스 순서 — 박스 머리 메뉴의 `박스 순서`
   | { kind: "preset-overview"; battle?: true } // 프리셋 전체보기 — 파티 탭 머리의 `전체보기`. battle 이면 모험 탭의 `가져오기`(기존 파티 가져오기)
   | { kind: "swap"; focus?: string } // 파티 교체 — focus 는 포켓몬 메뉴의 `교체` 로 연 개체 (party-swap.ts)
+  | { kind: "move-pick"; petId: string; slot: number } // 기술 바꾸기 — slot 은 처음 고른 사용 중인 기술 칸(0·1). 배틀 파티 상세 기기 창의 기술 칸이 연다
   | { kind: "battle-pick"; slot: number } // 배틀 파티 교체 — slot 은 연 칸(처음 고른 칸). 판의 쪽·찾기는 pet-box-panel.ts 가 든다
   | { kind: "battle-opponent" } // 랜덤 배틀 상대 고르기 — 모험 탭의 `배틀 시작`
   | { kind: "battle-record"; back?: "battle-opponent" } // 배틀 기록 — 상대 고르기의 `기록 보기 ›`·받은 판 알림 배너. back 이면 `닫기` 가 상대 고르기로 돌아간다

@@ -94,6 +94,7 @@ export interface PetV3 {
   workMs?: number; // 지금 파티에 있는 동안 받은 에이전트 작업 시간 — 작업 시간 해금이 있는 모습 바꾸기 종(로토무)만 세고 조건 값에서 멈춘다 (src/dex/forms.ts tickFormWork). 2026-10-05 에 더했다 // 메가진화 진행과 모습 (src/dex/mega.ts). 메가 모습이 있는 종이 친밀도 100 이 된 뒤에 생긴다
   partyMs?: number; // 파티에서 보낸 시간 — 파티 시간 업적(pet-party)의 종만 세고 업적 기준에서 멈춘다 (src/dex/forms.ts tickPartyTime). 2026-10-09 에 더했다
   moveSwap?: true; // 보유 기술 2개의 위아래 순서를 바꿨다 (src/battle/moves.ts). 2026-10-08 에 더했다
+  moves?: [string, string]; // 고른 기술 2개, 순서대로 — 그 종의 기본 2개 + 후보 4개 가운데. 있으면 moveSwap 대신 쓴다. 진화하면 지운다 (src/battle/moves.ts). 2026-10-10 에 더했다
   daily: PetDaily;
 }
 

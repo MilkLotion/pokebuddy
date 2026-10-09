@@ -27,6 +27,14 @@ export const plusIconEl = (): SVGSVGElement => lineIconEl(["M8 3.64v8.72M3.64 8h
 
 export const closeIconEl = (): SVGSVGElement => lineIconEl(["M4 4l8 8", "M12 4l-8 8"]);
 
+// 위아래 화살표 — 순서 바꾸기·교환 표시. 배틀 파티 상세 기기 창, 기술 바꾸기 모달, 교환 화면이 같이 쓴다 (Figma 02 `Trade Swap Mark` `1347:49286`)
+export const swapIconEl = (): SVGSVGElement => {
+  const svg = lineIconEl(["M5 13 V3", "M2 6 L5 3 L8 6", "M11 3 V13", "M8 10 L11 13 L14 10"]);
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  return svg;
+};
+
 // 위·아래 꺽쇠 — 박스 찾기 줄의 이전·다음 결과. 닫기와 같은 선이다 (Figma 01 `Icon / Chevron Up` `1590:60740`·`Icon / Chevron Down` `1590:60742`)
 export const chevronUpIconEl = (): SVGSVGElement => lineIconEl(["M4 10l4-4 4 4"]);
 export const chevronDownIconEl = (): SVGSVGElement => lineIconEl(["M4 6l4 4 4-4"]);

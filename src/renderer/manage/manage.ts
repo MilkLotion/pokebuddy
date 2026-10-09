@@ -30,6 +30,7 @@ import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { drawAdventure } from "./adventure-tab.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
+import { drawMovePick, startMovePick } from "./move-pick.js";
 import { drawSwap, startSwap } from "./party-swap.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
@@ -243,6 +244,7 @@ registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview
 registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: (d) => drawBattleRecord(d.back), enter: () => void loadBattleRecord() });
 registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus)) });
 registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
+registerDialog({ kind: "move-pick", shape: "dialog move-pick", draw: () => drawMovePick(), enter: (d, prev) => (prev?.kind === "move-pick" ? undefined : startMovePick(d.petId, d.slot)) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });
 registerDialog({ kind: "form", shape: "dialog", draw: (d) => drawForm(d.petId, d.to) });
 registerDialog({ kind: "mega", shape: "dialog", draw: (d) => drawMega(d.petId, d.to, d.battle === true) });

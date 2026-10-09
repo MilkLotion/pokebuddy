@@ -81,6 +81,7 @@ export const moveTable = (opts?: DexOptions): Record<string, MoveRow> => loadJso
 export type SpeciesMoveCell = string | ({ id: string } & Partial<MoveRow>);
 export interface SpeciesMoveRow {
   moves: SpeciesMoveCell[];
+  candidates?: string[]; // 후보 4개 — 마지막 진화체만 (docs/specs/moves.md "기술 고르기")
   special?: string;
 }
 export const speciesMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow> => loadJson<Record<string, SpeciesMoveRow>>("species-moves.json", opts);

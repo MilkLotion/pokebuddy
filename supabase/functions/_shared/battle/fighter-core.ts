@@ -23,6 +23,7 @@ export interface BattleSpeciesRow {
   ability: string | null;
   special?: string;
   moves: (string | ({ id: string } & Partial<BattleMoveRow>))[]; // 기본 기술 2개 — 칸이 객체면 기술 기본값을 덮는다
+  picks?: string[]; // 후보 기술 — 개체가 기본 2개 대신 고를 수 있는 기술 (data/species-moves.json candidates). 마지막 진화체만 있다
   tier?: "legendary" | "sub" | null; // 출전 제한의 칸
 }
 export interface BattleMegaRow {
@@ -58,6 +59,7 @@ export interface FighterSource {
   species: string; // 기본 종
   form?: string | null; // 배틀에서 켠 메가 모습 슬러그
   moveSwap?: boolean;
+  moves?: string[]; // 개체가 고른 기술 2개, 순서대로 (PetV3.moves). 그 종의 기본 2개 + 후보 안이 아니면 버리고 기본 2개를 쓴다. 옛 등록에는 없다
   level?: number; // 개체의 실제 레벨 — 약어리 어군 해금에 쓴다. 없으면 해금 전
   shiny?: boolean; // 그림만 — 이로치. 전투 값에는 쓰지 않는다 (배틀 창 그림, 2026-10-09)
   gender?: string; // 그림만 — 성별(male·female·unknown). 성별 그림이 따로 있는 종만 다르게 보인다
@@ -79,10 +81,24 @@ export function realStat(base: number, index: number, basis: StatBasis = BATTLE_
 
 const ceilTick = (sec: number): number => Math.ceil((sec * 1000) / ENGINE_RULES.tickMs) * ENGINE_RULES.tickMs;
 
+// 개체가 고른 기술 2개가 그 종에서 쓸 수 있는가 — 기본 2개 + 후보 안의 서로 다른 2개. 특수 종(병풍·킬가르도 등)은 고르지 않는다
+export function validPicks(row: BattleSpeciesRow | undefined, chosen: readonly unknown[] | null | undefined): [string, string] | null {
+  if (!row || row.special || !Array.isArray(chosen) || chosen.length !== 2) return null;
+  const [a, b] = chosen;
+  if (typeof a !== "string" || typeof b !== "string" || a === b) return null;
+  const ids = new Set([...row.moves.map((c) => (typeof c === "string" ? c : c.id)), ...(row.picks ?? [])]);
+  return ids.has(a) && ids.has(b) ? [a, b] : null;
+}
+
 // 종의 기술 2개 — 칸이 객체면 기본값을 덮는다. 표에 없는 기술은 빠진다
-export function movesOf(data: BattleData, species: string, swap: boolean): EngineMove[] {
+// chosen 이 그 종에서 쓸 수 있으면 그 2개를 그 순서로 쓴다. 아니면 기본 2개이고, swap 이면 거꾸로다
+export function movesOf(data: BattleData, species: string, swap: boolean, chosen?: readonly unknown[] | null): EngineMove[] {
   const out: EngineMove[] = [];
-  for (const cell of data.species[species]?.moves ?? []) {
+  const sp = data.species[species];
+  const cells = sp?.moves ?? [];
+  const picked = validPicks(sp, chosen);
+  const list = picked ? picked.map((id) => cells.find((c) => (typeof c === "string" ? c : c.id) === id) ?? id) : cells;
+  for (const cell of list) {
     const id = typeof cell === "string" ? cell : cell.id;
     const base = data.moves[id];
     if (!base) continue;
@@ -100,7 +116,7 @@ export function movesOf(data: BattleData, species: string, swap: boolean): Engin
       effects: (row.effects ?? {}) as EngineMove["effects"],
     });
   }
-  return swap ? out.reverse() : out;
+  return swap && !picked ? out.reverse() : out;
 }
 
 // 개체 하나 → 전투 개체. 표에 종이나 종족값이 없으면 null
@@ -113,7 +129,7 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
   if (!Array.isArray(baseStats) || baseStats.length !== 6) return null;
   const real = (six: readonly number[]): number[] => six.map((b, i) => realStat(b, i, basis));
   const alt = mega ? undefined : data.forms[src.species];
-  const moves = movesOf(data, src.species, src.moveSwap === true);
+  const moves = movesOf(data, src.species, src.moveSwap === true, src.moves);
   return {
     species: shown,
     types: mega ? mega.types : sp.types,
@@ -185,7 +201,8 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
     const tier = tierFrom(data, species);
     if (tier && (count[tier] += 1) > BATTLE_LIMITS[tier]) blocked = true;
     if (form && (count.mega += 1) > BATTLE_LIMITS.mega) blocked = true;
-    return { species, form, moveSwap: pet.moveSwap === true, level: typeof pet.level === "number" ? pet.level : 1, shiny: pet.shiny === true, ...(typeof pet.gender === "string" ? { gender: pet.gender } : {}) };
+    const picked = validPicks(data.species[species], Array.isArray(pet.moves) ? pet.moves : null);
+    return { species, form, moveSwap: pet.moveSwap === true, ...(picked ? { moves: picked } : {}), level: typeof pet.level === "number" ? pet.level : 1, shiny: pet.shiny === true, ...(typeof pet.gender === "string" ? { gender: pet.gender } : {}) };
   });
   return { party, count: n, blocked };
 }

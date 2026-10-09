@@ -155,6 +155,7 @@ export function evolvePet(save: SaveV3, petId: string, dayPart: DayPart, choice?
   const from = pet.species;
   pet.evolved.push(from);
   pet.species = picked.to;
+  delete pet.moves; // 고른 기술은 진화 전 종의 것 — 진화하면 새 종의 기본 2개를 쓴다 (docs/specs/moves.md "기술 고르기")
   pet.stage += 1;
   save.counts.evolved += 1; // 진화 업적이 센다
 

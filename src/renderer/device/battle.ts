@@ -2,7 +2,8 @@
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
 //   화면  `배틀 파티 N번`·? 단추 → 초상·이름·타입·특성 → 실제 능력치 방사형 그래프
 //   흰 판 기술 두 개(큰 기술 칸 + 분류·위력·명중·쿨타임). 사이 가운데에 순서 바꾸기
-// 레벨은 보이지 않는다 — 배틀은 50레벨로 계산한다. ? 를 누르면 능력치 기준, 기술 칸을 누르면 기술 설명을 말풍선으로 보인다
+// 레벨은 보이지 않는다 — 배틀은 50레벨로 계산한다. ? 를 누르면 능력치 기준을 말풍선으로 보인다
+// 기술 칸을 누르면 관리 창이 기술 바꾸기 모달을 연다(renderer/manage/move-pick.ts, 2026-10-10). 기술 설명은 모달에서 본다
 // 순서 바꾸기는 관리 창에 돌려보낸다(battle.moves 명령). 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다
 import type { BattleDeviceView } from "../../shared/model/devices.js";
 import type { BattleSlotView, MoveView } from "../../shared/model/snapshot.js";
@@ -11,6 +12,7 @@ import { needBridge } from "../ui/bridge.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { genderIcon } from "../ui/gender-icon.js";
+import { swapIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
 import { spriteCanvas } from "../ui/portrait.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
@@ -25,12 +27,12 @@ const STAGE = { w: 88, h: 88, maxScale: 2 };
 const MEGA_STONE = { w: 28, h: 28, maxScale: 2 }; // 파티 상세 기기 창과 같은 표식 (device/pet.ts)
 const SVG = "http://www.w3.org/2000/svg";
 
-// 말풍선 — 한 번에 하나. 다른 개체를 열면 닫는다
-let open: "basis" | number | null = null; // basis 는 ? 말풍선, 숫자는 그 순번 기술의 설명
+// ? 말풍선 — 다른 개체를 열면 닫는다
+let open: "basis" | null = null;
 let shownPetId = "";
 let last: BattleDeviceView | null = null;
 
-const toggle = (what: "basis" | number): void => {
+const toggle = (what: "basis"): void => {
   open = open === what ? null : what;
   if (last) render(last);
 };
@@ -78,34 +80,14 @@ function radarEl(stats: BattleSlotView["stats"]): HTMLElement {
   return box;
 }
 
-// 위아래 화살표 — 교환 화면의 교환 표시와 같은 그림 (renderer/manage/trade-cards.ts tradeSwapMark)
-function swapSvg(): SVGElement {
-  const svg = document.createElementNS(SVG, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("width", "16");
-  svg.setAttribute("height", "16");
-  svg.setAttribute("aria-hidden", "true");
-  for (const d of ["M5 13 V3", "M2 6 L5 3 L8 6", "M11 3 V13", "M8 10 L11 13 L14 10"]) {
-    const p = document.createElementNS(SVG, "path");
-    p.setAttribute("d", d);
-    svg.appendChild(p);
-  }
-  return svg;
-}
-
-function moveEl(m: MoveView, i: number, icon: string | null): HTMLElement {
+// 기술 한 개 — 누르면 기술 바꾸기 모달(그 칸을 고른 채로)
+function moveEl(m: MoveView, i: number, icon: string | null, petId: string): HTMLElement {
   const box = el("div", "move");
-  const pick = buttonEl("pick", "", () => toggle(i));
+  const pick = buttonEl("pick", "", () => api.act({ kind: "moves", petId, slot: i }));
   pick.appendChild(movePillEl(m, "large", icon));
-  pick.setAttribute("aria-expanded", String(open === i));
-  pick.setAttribute("aria-label", `${m.name} 설명 보기`);
+  pick.setAttribute("aria-label", `${i + 1}번 기술 ${m.name} 바꾸기`);
+  pick.title = "기술 바꾸기";
   box.append(pick, el("div", "meta", m.meta));
-  if (open === i) {
-    const bubble = el("div", "bubble move-info");
-    bubble.appendChild(el("strong", undefined, m.name));
-    if (m.text) bubble.appendChild(el("div", undefined, m.text)); // 설명이 없는 기술은 이름만
-    box.appendChild(bubble);
-  }
   return box;
 }
 
@@ -185,14 +167,14 @@ function render(v: BattleDeviceView): void {
     if (i === 1) {
       const row = el("div", "swap-row");
       const swap = buttonEl("swap", "", () => api.act({ kind: "swap", petId: pet.id }));
-      swap.appendChild(swapSvg());
+      swap.appendChild(swapIconEl());
       swap.title = "기술 순서 바꾸기";
       swap.setAttribute("aria-label", "기술 순서 바꾸기");
       if (v.busy === battleBusyKey({ kind: "swap", petId: pet.id })) swap.setAttribute("aria-busy", "true");
       row.appendChild(swap);
       moves.appendChild(row);
     }
-    moves.appendChild(moveEl(m, i, v.typeIcons[m.typeId] ?? null));
+    moves.appendChild(moveEl(m, i, v.typeIcons[m.typeId] ?? null, pet.id));
   });
   device.appendChild(moves);
 

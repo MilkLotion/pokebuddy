@@ -20,7 +20,7 @@ flowchart LR
     main["메인 프로세스<br/>src/main"]
     stage["무대 창<br/>renderer/stage"]
     manage["설정창<br/>renderer/manage"]
-    device["기기 창 여섯<br/>renderer/device"]
+    device["기기 창 다섯<br/>renderer/device"]
     small["메뉴·배너·알림 등<br/>renderer/windows"]
   end
   cli["pokebuddy CLI<br/>src/cli"]
@@ -84,7 +84,7 @@ flowchart TB
 앱을 켜고, 창을 띄우고, 게임 코어와 바깥을 잇는다. 루트에는 진입점 `app.ts` 와 `preload.ts` 만 있고, 나머지는 하위 폴더에 일 단위로 나뉜다. `app.ts` 는 부팅 단계를 차례로 부르는 배선만 한다.
 
 - `app/` — 앱 전체에 걸친 것. 부팅 단계(`boot.ts`), 1초 시계(`clock.ts`), 명령 등록과 mailbox 연결(`commands.ts`), 1초 틱마다 하는 일(`ticks.ts`), 두 PC 규칙으로 멈추기(`halt.ts`), 동반자 잠금(`lifetime.ts`), 끄는 순서(`quit.ts`).
-- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 여섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
+- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 다섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
 - `stage/` — 무대. 화면마다 무대 창과 무대를 한 쌍씩 둔다(`stage-group.ts`). `stage.ts` 가 40ms 마다 프레임을 만들어 `stage-window.ts` 로 보낸다. 맨 앞 터미널을 보고 포켓몬을 보일지 정하는 `host-watch.ts`, 말풍선과 바탕화면 튜토리얼도 여기 있다.
 - `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`), 판을 재생하는 배틀 창(`battle-window.ts`, 설정창 위 가운데에 뜬다), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
 - `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 항목은 `view/menus.ts` 가 만든다.
@@ -100,7 +100,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 - `manage/` — 설정창(아래 따로).
 - `stage/` — 무대 캔버스. 그리기 루프(`stage.ts`), 그림 시트 재생(`sprites.ts`), 끌기·클릭(`pointer.ts`).
-- `device/` — 설정창 옆에 붙는 기기 창 여섯(파티 상세, 도감, 상점, 가방, 파티 교체, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
+- `device/` — 설정창 옆에 붙는 기기 창 다섯(파티 상세, 도감, 상점, 가방, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
 - `battle/` — 배틀 창(`screen.ts`)과 전장의 날씨·필드·오라 연출(`field-fx.ts`, 섞기 방식별 canvas 를 CSS 로 겹친다), 포켓몬 몸 위의 상태 이상·능력 변화 연출(`status-fx.ts`, canvas 한 장). 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
 - `windows/` — 메뉴, 첫 포켓몬 고르기, 놀이공간 그리기, 배너, 알림, 화면 고르기.
 - `ui/` — 여러 창이 같이 쓰는 도구. 브리지(`bridge.ts`), 요소 만들기(`dom.ts`), 초상(`portrait.ts`), 코치마크(`coach.ts`), 막대(`fill-bar.ts`), 타입 배지(`type-badge.ts`).
@@ -108,7 +108,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 #### `src/renderer/manage/` — 설정창
 
-설정창은 탭 여섯, 대화상자, 기기 창 연결 여섯, 튜토리얼로 이루어진다. 이것을 기능마다 한 파일로 나눴고, 진입점 `manage.ts` 는 각 기능을 등록하고 서로 잇는 고리만 건다.
+설정창은 탭 여섯, 대화상자, 기기 창 연결 다섯, 튜토리얼로 이루어진다. 이것을 기능마다 한 파일로 나눴고, 진입점 `manage.ts` 는 각 기능을 등록하고 서로 잇는 고리만 건다.
 
 - **뼈대** — `shell.ts` 가 헤더 숫자, 탭 줄, 본문 다시 그리기를 맡고 `registerTab` 으로 탭을 받는다. 모달은 `dialog.ts` 가 하나만 띄우고 `registerDialog` 로 종류를 받는다. 명령 보내기는 `command.ts`, 1초마다 스냅샷 다시 읽기는 `live.ts`, 열기와 바로가기(알림 배너, 포켓몬 메뉴, 교환 링크에서 온 경로)는 `routes.ts`.
 - **탭** — `party-tab.ts`, `box-tab.ts`, `dex-tab.ts`, `shop-tab.ts`, `bag-tab.ts`, `adventure-tab.ts`. 탭마다 자기 상태(쪽, 검색어, 고른 칸)를 들고 있다.
@@ -239,7 +239,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 여러 창이 같이 쓰는 것
 
 - **코치마크** — `ui/coach.ts` 의 `drawCoachLayer`. 설정창, 파티 상세 기기 창, 무대가 같은 말풍선과 입력 규칙을 쓴다.
-- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`.
+- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`. 선 아이콘(+·자물쇠·✕·꺽쇠·위아래 화살표)은 `ui/line-icons.ts` 다. 순서 바꾸기·교환 표시의 위아래 화살표는 `swapIconEl` 하나를 배틀 파티 상세 기기 창, 기술 바꾸기 모달, 교환 화면이 같이 쓴다.
 - **글자** — 숫자와 포인트, 남은 시간은 `shared/count-text.ts`(`numberText`, `pointText`, `waitText`), 조사는 `shared/josa.ts`. 메인과 `view` 의 문구는 `view/text.ts` 의 `t` 로 `data/i18n/*.json` 에서 읽는다.
 - **알림 배너** — 문구와 목적지는 `view/banner.ts` 가 만든다. `route` 가 없는 배너는 `바로가기` 를 두지 않는다.
 - **메인의 창** — 보안 옵션은 `main/windows/options.ts`(`webPreferencesOf`, 덮개 창은 `createOverlayWindow`), 기기 창은 `device-window.ts`.

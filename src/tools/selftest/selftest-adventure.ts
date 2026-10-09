@@ -3,8 +3,8 @@
 // 테스트 프레임워크 없이 assert 만. 계약은 docs/specs/adventure.md "배틀 파티", "출전 제한", "실제 능력치"
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { petMoves, speciesMoves } from "../../battle/moves";
-import { applyBattleReward, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot } from "../../battle/party";
+import { moveOptions, petMoves, speciesMoves } from "../../battle/moves";
+import { applyBattleReward, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot, setMoves } from "../../battle/party";
 import { battleData } from "../../battle/fighter";
 import { lookOfSource, partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
@@ -131,6 +131,17 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.ok(run("battle.moves", { petId: "p1" }).ok);
   assert.equal(save.pets[0]!.moveSwap, undefined);
 
+  // 기술 고르기 — 진화 전 종(피카츄)은 기본 2개뿐이라 순서만 고를 수 있다 (기술 바꾸기 모달, 2026-10-10)
+  assert.ok(run("battle.pick", { petId: "p1", moves: ["thunderbolt", "volt-tackle"] }).ok);
+  assert.deepEqual(save.pets[0]!.moves, ["thunderbolt", "volt-tackle"]);
+  assert.deepEqual(petMoves(save.pets[0]!).map((m) => m.name), ["10만볼트", "볼트태클"]);
+  assert.equal(why("battle.pick", { petId: "p1", moves: ["thunder", "volt-tackle"] }), "bad-args", "후보가 없는 종은 기본 2개 밖을 고르지 못한다");
+  assert.equal(why("battle.pick", { petId: "p1", moves: ["thunderbolt", "thunderbolt"] }), "bad-args", "같은 기술 두 번");
+  assert.equal(why("battle.pick", { petId: "p1", moves: ["thunderbolt"] }), "bad-args");
+  assert.ok(run("battle.moves", { petId: "p1" }).ok);
+  assert.deepEqual(save.pets[0]!.moves, ["volt-tackle", "thunderbolt"], "고른 기술이 있으면 그 둘을 맞바꾼다");
+  delete save.pets[0]!.moves;
+
   // 판매 — 배틀 파티에 든 개체는 팔지 않는다
   const sale = sellablePet(save, "p1");
   assert.equal(sale.ok, false);
@@ -165,6 +176,36 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.equal(back.pets[0]!.moveSwap, true);
   delete raw.battle;
   assert.deepEqual(normalize(raw, T0)!.battle?.slots, [null, null, null, null, null, null]);
+}
+
+// ── 기술 고르기 — 마지막 진화체는 기본 2개 + 후보 4개 가운데 2개. 배틀 파티 판정·정규화·진화까지 ──
+{
+  const s = seed(["raichu"]);
+  s.battle = { slots: ["p1", null, null, null, null, null] };
+  const pet = s.pets[0]!;
+  assert.equal(moveOptions("raichu").length, 6, "기본 2개 + 후보 4개");
+  assert.equal(moveOptions("pikachu").length, 2, "진화 전 종은 기본 2개");
+  assert.ok(setMoves(s, "p1", ["thunder", "surf"]).ok);
+  assert.deepEqual(petMoves(pet).map((m) => m.id), ["thunder", "surf"]);
+  assert.equal(setMoves(s, "p1", ["thunder", "flamethrower"]).ok, false, "그 종의 6개 밖");
+  pet.moveSwap = true;
+  assert.deepEqual(petMoves(pet).map((m) => m.id), ["thunder", "surf"], "고른 기술이 있으면 moveSwap 은 보지 않는다");
+  delete pet.moveSwap;
+  assert.deepEqual(snapshotView(s, T0).battle.slots[0]!.options?.map((m) => m.id), moveOptions("raichu").map((m) => m.id), "화면 값의 고를 수 있는 기술");
+  // 서버가 읽는 배틀 파티 — 고른 기술을 싣고, 쓸 수 없는 값이면 싣지 않는다(기본 2개로 싸운다)
+  const data = battleData();
+  assert.deepEqual(partyOf(JSON.parse(JSON.stringify(s)), data).party[0]?.moves, ["thunder", "surf"]);
+  const bad = JSON.parse(JSON.stringify(s)) as SaveV3;
+  bad.pets[0]!.moves = ["thunder", "flamethrower"];
+  assert.equal(partyOf(bad, data).party[0]?.moves, undefined, "쓸 수 없는 기술은 버린다");
+  // 정규화 — 모양이 맞으면 남기고, 같은 기술 두 번은 버린다
+  const raw = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+  assert.deepEqual(normalize(raw, T0)!.pets[0]!.moves, ["thunder", "surf"]);
+  (raw.pets as PetV3[])[0]!.moves = ["thunder", "thunder"];
+  assert.equal(normalize(raw, T0)!.pets[0]!.moves, undefined);
+  // 쓸 수 없는 값이면 기본 2개 — 저장에 남은 낡은 값(다른 종의 기술)
+  pet.moves = ["flamethrower", "surf"];
+  assert.deepEqual(petMoves(pet).map((m) => m.id), speciesMoves("raichu").map((m) => m.id));
 }
 
 // ── 개체가 사라지면 칸에서 빠진다 (교환으로 보낸 개체) ──

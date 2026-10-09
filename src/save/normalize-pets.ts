@@ -66,6 +66,13 @@ function normalizeBuffs(raw: unknown): BuffV3[] {
 }
 
 // 메가진화 칸 — 모양이 아니면 null. 규칙에 맞는지는 보지 않는다 (src/dex/mega.ts settleMega 가 푼다)
+// 고른 기술 — 서로 다른 기술 id 2개. 모양이 틀리면 null (그 종의 6개 안인지는 src/battle/moves.ts 가 본다)
+function pickedMoves(raw: unknown): [string, string] | null {
+  if (!Array.isArray(raw) || raw.length !== 2) return null;
+  const [a, b] = raw;
+  return typeof a === "string" && typeof b === "string" && a && b && a !== b ? [a, b] : null;
+}
+
 function megaOf(raw: unknown): MegaV3 | null {
   if (!isRawObject(raw)) return null;
   return {
@@ -116,6 +123,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     ...(typeof raw.workMs === "number" && Number.isFinite(raw.workMs) && raw.workMs > 0 ? { workMs: Math.round(raw.workMs) } : {}), // 2026-10-05 에 더했다. 로토무 모습 바꾸기 해금
     ...(megaOf(raw.mega) ? { mega: megaOf(raw.mega)! } : {}), // 2026-10-02 에 더했다. 메가진화 진행과 모습
     ...(raw.moveSwap === true ? { moveSwap: true as const } : {}), // 2026-10-08 에 더했다. 보유 기술 위아래 순서 (src/battle/moves.ts)
+    ...(pickedMoves(raw.moves) ? { moves: pickedMoves(raw.moves)! } : {}), // 2026-10-10 에 더했다. 고른 기술 2개 — 종의 6개 안인지는 쓰는 곳(src/battle/moves.ts)이 본다
     daily: normalizeDaily(raw.daily, date),
   };
 }
