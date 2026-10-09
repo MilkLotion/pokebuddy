@@ -129,6 +129,22 @@ async function run(): Promise<void> {
   sql(`delete from cloud_private.settings where key = 'battle_cooldown_sec'`);
   checks.push(`다음 판 ${second.body.reward}P (승자 ${second.body.result.winner}), 쓴 offer 는 BATTLE_OFFER_GONE`);
 
+  // 승무패 — A 는 건 판 2, B 는 받은 판 2. 건 쪽 승 = 받은 쪽 패 (supabase/migrations/20261010100000_battle_archive.sql)
+  const stat = (id: string): number[] => sql(`select concat_ws(',', wins, losses, draws, def_wins, def_losses, def_draws) from cloud_private.battle_stats where user_id = '${id}'`).split(",").map(Number);
+  const [aw, al, ad] = stat(a!.id);
+  const [, , , bw, bl, bd] = stat(b!.id);
+  assert.equal(aw! + al! + ad!, 2, "A 건 판 2");
+  assert.deepEqual([bw, bl, bd], [al, aw, ad], "B 받은 판은 A 의 거울");
+  checks.push(`승무패: A 건 판 ${aw}/${al}/${ad}, B 받은 판 ${bw}/${bl}/${bd}`);
+
+  // 판 내용 받기·정리 — 관리자 함수. 정리한 뒤에도 장부 줄은 남아 아래 저장 검증이 보상 id 를 찾는다
+  assert.equal(sql(`select jsonb_array_length(public.admin_battle_archive_take(10))`), "2", "받을 판 2");
+  assert.equal(sql(`select public.admin_battle_archive_done(array(select id from cloud_private.battles))`), "2");
+  assert.equal(sql(`select count(*) from cloud_private.battle_events`), "0", "이벤트는 지웠다");
+  assert.equal(sql(`select count(*) from cloud_private.battles where sides is null and archived_at is not null`), "2", "장부 줄은 남는다");
+  assert.equal(sql(`select jsonb_array_length(public.admin_battle_archive_take(10))`), "0", "다시 받을 판 없음");
+  checks.push("판 내용 받기·정리: 이벤트·양쪽 파티만 지우고 장부 줄은 남김");
+
   // 저장 검증 — 판 id 를 넣으면 보상만큼 포인트가 늘어도 위반이 아니다. 없는 id 와 id 없는 포인트는 위반
   const base = saveWith(["garchomp", "lucario", "gengar"]);
   const withReward: SaveV3 = { ...base, points: { ...base.points, balance: 560 }, battle: { ...base.battle!, applied: [first.body.battleId, second.body.battleId] } };
