@@ -482,13 +482,15 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.deepStrictEqual(formAt0(buildFighter({ species: "castform" })!), ["castform-sunny"], "쾌청이면 캐스퐁 태양의 모습");
   assert.deepStrictEqual(formAt0(buildFighter({ species: "cherrim" })!), ["cherrim-sunshine"], "쾌청이면 체리꼬 포지폼");
   assert.deepStrictEqual(of(run([buildFighter({ species: "castform" })!], [sturdy], 1, 100).events, "form").length, 0, "날씨가 없으면 그대로");
-  const darm = { ...buildFighter({ species: "darmanitan" })!, ability: "zen-mode" };
+  const darm = buildFighter({ species: "darmanitan" })!;
+  assert.strictEqual(darm.ability, "zen-mode", "하나 불비달마 특성은 달마모드");
   assert.strictEqual(darm.altForm?.species, "darmanitan-zen");
   const hitter = unit({ stats: [999, 400, 999, 1, 999, 95], moves: [mv("smash", { power: 120, cooldownMs: 1000 })] });
   const zr = run([darm], [hitter], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   assert.ok(of(zr.events, "form").some((e) => e.side === 0 && e.species === "darmanitan-zen"), "HP 50% 이하면 달마모드");
   // 스웜체인지 — HP 50% 이하면 퍼펙트폼, 최대 HP 가 늘고 늘어난 만큼 회복 (2026-10-09)
-  const zyg = { ...buildFighter({ species: "zygarde" })!, ability: "power-construct" };
+  const zyg = buildFighter({ species: "zygarde" })!;
+  assert.strictEqual(zyg.ability, "power-construct", "지가르데 특성은 스웜체인지");
   assert.strictEqual(zyg.altForm?.species, "zygarde-complete");
   const pc = run([zyg], [hitter], 1, 30_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   const turned = of(pc.events, "form").find((e) => e.side === 0 && e.species === "zygarde-complete");
@@ -498,7 +500,12 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.strictEqual(pc.maxHp[0][0], zyg.stats[0]! * ENGINE_RULES.hpScale, "결과의 최대 HP 는 판 시작 값");
   assert.ok((turned!.maxHp ?? 0) > pc.maxHp[0][0]!, "form 이벤트가 늘어난 최대 HP 를 싣는다");
   assert.ok(!after || after.hp + after.amount > before.hp, "늘어난 만큼 HP 도 늘었다");
-  // 유대변화 — 상대를 쓰러뜨리면 지우개굴닌자 (판에 한 번)
+  // 유대변화 — 상대를 쓰러뜨리면 지우개굴닌자 (판에 한 번). 실제 종: 지우의모자를 쓴 개굴닌자(greninja-battle-bond)
+  const realBond = buildFighter({ species: "greninja-battle-bond" })!;
+  assert.strictEqual(realBond.ability, "battle-bond");
+  assert.strictEqual(realBond.altForm?.species, "greninja-ash");
+  assert.strictEqual(buildFighter({ species: "greninja" })!.ability, "torrent", "기본 개굴닌자는 급류");
+  assert.strictEqual(buildFighter({ species: "greninja" })!.altForm, null, "기본 개굴닌자는 변신하지 않는다");
   const bond: EngineFighter = { ...unit({ stats: [999, 400, 999, 400, 999, 95], moves: [mv("cut2", { power: 120, cooldownMs: 1000 })] }), ability: "battle-bond", altForm: { species: "greninja-ash", stats: [999, 600, 999, 600, 999, 140], types: ["water", "dark"] } };
   const weak = unit({ stats: [10, 1, 10, 1, 10, 95] });
   const bb = run([bond], [weak, weak], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4), at(8, 8)]] } as unknown as Partial<BattleInput>);

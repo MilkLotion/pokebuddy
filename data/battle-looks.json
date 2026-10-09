@@ -1,15 +1,10 @@
 {
-  "_comment": "전투 중에만 보이는 모습의 PMD SpriteCollab 폼 경로 — 무대·배틀 창 그림(src/main/art/stage-art.ts pmdSources)이 읽는다. 키는 엔진이 form 이벤트로 내는 종 슬러그(data/form-battle.json 의 form, 캐스퐁·체리꼬는 src/battle/engine.ts). 경로는 SpriteCollab tracker.json 으로 확인했다(2026-10-09). 가라르 불비달마 달마모드(0555/0003)·지우개굴닌자(0658/0001, 초상만)는 걷기 그림이 아직 없어 뺐다 — 기본 그림으로 선다",
-  "meloetta-pirouette": "0648/0001",
+  "_comment": "전투 중에만 보이고 도감 칸이 없는 모습의 PMD SpriteCollab 폼 경로 — 무대·배틀 창 그림(src/main/art/stage-art.ts pmdSources)이 읽는다. 키는 엔진이 form 이벤트로 내는 종 슬러그(data/form-battle.json 의 form, 체리꼬는 src/battle/engine.ts). 도감 칸이 있는 모습(캐스퐁 날씨 모습·메로엣타 스텝폼·불비달마 달마모드)은 data/regional.json forms 의 pmd 가 정본이라 여기 두지 않는다. 경로는 SpriteCollab tracker.json 으로 확인했다(2026-10-09). 가라르 불비달마 달마모드(0555/0003)·지우개굴닌자(0658/0001, 초상만)는 걷기 그림이 아직 없다 — 기본 그림으로 선다",
   "aegislash-blade": "0681/0001",
   "wishiwashi-school": "0746/0001",
   "minior-red": "0774/0001",
   "palafin-hero": "0964/0001",
   "terapagos-terastal": "1024/0001",
-  "darmanitan-zen": "0555/0001",
-  "castform-sunny": "0351/0001",
-  "castform-rainy": "0351/0002",
-  "castform-snowy": "0351/0003",
   "cherrim-sunshine": "0421/0001",
   "zygarde-complete": "0718/0002"
 }

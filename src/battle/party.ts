@@ -2,7 +2,7 @@
 // 개체를 옮기지 않는다. 칸에는 개체 식별자만 둔다. 개체의 자리(프리셋 칸·박스 칸)는 그대로다
 import type { DexOptions } from "../dex/data.js";
 import { megaChoices } from "../dex/mega.js";
-import { formsOf, isFormLocked, riderMissing } from "../dex/forms.js";
+import { formsOf, isFormLocked, partnerMissing, riderMissing } from "../dex/forms.js";
 import { shiftGroupOf } from "../dex/regional.js";
 import { slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
@@ -11,7 +11,7 @@ import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
-export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset" | "not-in-party" | "no-stone" | "bad-form" | "bad-args" | "form-locked" | "no-rider">;
+export type BattleFailure = ReasonOf<"no-pet" | "bad-slot" | "already" | "no-preset" | "not-in-party" | "no-stone" | "bad-form" | "bad-args" | "form-locked" | "no-rider" | "no-partner">;
 
 type Battle = Pick<SaveV3, "battle">;
 
@@ -147,7 +147,7 @@ export function setBattleMega(save: Pick<SaveV3, "battle" | "pets">, petId: stri
 }
 
 // 배틀 파티의 모습 바꾸기 — 그 개체의 모습 묶음(shiftGroupOf) 안의 종으로 배틀 파티의 모습만 바꾼다. 개체의 종(파티·바탕화면)은 그대로다
-// 원래 모습 바꾸기(src/dex/forms.ts setForm)의 조건을 같이 본다 — 고를 수 있는 모습(formsOf, 한 방향 묶음 포함), 해금(작업 시간), 말(버드렉스).
+// 원래 모습 바꾸기(src/dex/forms.ts setForm)의 조건을 같이 본다 — 고를 수 있는 모습(formsOf, 한 방향 묶음 포함), 해금(작업 시간), 말(버드렉스), 짝(큐레무 — 제크로무·레시라무 개체).
 // 도구(로토무카탈로그)는 쓰지 않는다 (2026-10-09 사용자 "배틀 파티의 모습 바꾸기에는 기존에 해금했으면 되게 할거야")
 export function setBattleForm(save: Pick<SaveV3, "battle" | "pets">, petId: string, species: string, opts?: DexOptions): Outcome<BattleFailure> {
   const pet = save.pets.find((p) => p.id === petId);
@@ -157,6 +157,7 @@ export function setBattleForm(save: Pick<SaveV3, "battle" | "pets">, petId: stri
   if (isFormLocked(pet, opts)) return { ok: false, reason: "form-locked" };
   if (battleSpeciesOf(save, pet, opts) === species) return { ok: false, reason: "already" };
   if (riderMissing(save, species, opts)) return { ok: false, reason: "no-rider" };
+  if (partnerMissing(save, species, opts)) return { ok: false, reason: "no-partner" };
   const battle = save.battle!;
   battle.forms = { ...(battle.forms ?? {}), [petId]: species };
   return { ok: true };

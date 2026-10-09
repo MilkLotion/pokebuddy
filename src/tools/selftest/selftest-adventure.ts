@@ -248,6 +248,14 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.equal(why({ petId: "p1", species: "pikachu" }), "bad-form", "묶음 밖의 종");
   assert.equal(why({ petId: "p3", species: "raichu" }), "bad-form", "묶음이 없는 종");
   assert.equal(why({ petId: "p1" }), "bad-args");
+  // 짝 — 큐레무 블랙은 제크로무 개체가 있어야 한다(원래 모습 바꾸기와 같다, 짝은 그대로 따로 쓰인다)
+  const kyu = testPet({ id: "p9", species: "kyurem" }, T0);
+  save.pets.push(kyu);
+  assert.ok(setBattleSlot(save, 4, "p9").ok);
+  assert.equal(why({ petId: "p9", species: "kyurem-black" }), "no-partner", "제크로무가 없으면");
+  save.pets.push(testPet({ id: "p10", species: "zekrom" }, T0));
+  assert.equal(why({ petId: "p9", species: "kyurem-black" }), null, "제크로무가 있으면");
+  assert.ok(save.pets.some((p) => p.species === "zekrom"), "짝은 그대로");
   // 해금 — 원래 모습 바꾸기와 같다. 로토무는 작업 시간이 모자라면 form-locked (2026-10-09 사용자 "기존에 해금했으면 되게")
   const rotomWork = save.pets[0]!.workMs;
   save.pets[0]!.workMs = 0;
