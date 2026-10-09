@@ -2,10 +2,11 @@
 // 개체를 옮기지 않는다. 칸에는 개체 식별자만 둔다. 개체의 자리(프리셋 칸·박스 칸)는 그대로다
 import type { DexOptions } from "../dex/data.js";
 import { megaChoices } from "../dex/mega.js";
+import { shiftGroupOf } from "../dex/regional.js";
 import { slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
-import type { BattleV3, SaveV3 } from "../shared/save-v3";
+import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
@@ -30,13 +31,34 @@ const isSlot = (slot: number): boolean => Number.isInteger(slot) && slot >= 0 &&
 // 배틀 파티에 든 개체인가
 export const isInBattle = (save: Battle, petId: string): boolean => battleSlots(save).includes(petId);
 
-// 칸에서 빠진 개체의 메가 상태를 지운다 — 칸을 바꾼 뒤마다 부른다
+// 칸에서 빠진 개체의 메가 상태·모습을 지운다 — 칸을 바꾼 뒤마다 부른다
 function pruneMega(save: Battle): void {
-  const mega = save.battle?.mega;
-  if (!mega) return;
   const ids = new Set(battleSlots(save));
-  for (const id of Object.keys(mega)) if (!ids.has(id)) delete mega[id];
-  if (!Object.keys(mega).length) delete save.battle!.mega;
+  for (const key of ["mega", "forms"] as const) {
+    const map = save.battle?.[key];
+    if (!map) continue;
+    for (const id of Object.keys(map)) if (!ids.has(id)) delete map[id];
+    if (!Object.keys(map).length) delete save.battle![key];
+  }
+}
+
+// 배틀 파티에 들어올 때의 모습을 적는다 — 그때의 메가 모습(pet.mega.on)과 모습 바꾸기 종(로토무 등). 그 뒤 파티에서 모습을 바꿔도 배틀 파티는 그대로다
+// (2026-10-09 사용자 "가져오기시에만 동기화였어") — 칸 넣기(battle.set)와 프리셋 가져오기(battle.import)가 부른다
+function takeLook(save: Pick<SaveV3, "battle" | "pets">, petId: string, opts?: DexOptions): void {
+  const pet = save.pets.find((p) => p.id === petId);
+  const battle = save.battle;
+  if (!pet || !battle) return;
+  const on = pet.mega?.on;
+  if (on && megaChoices(pet, opts).includes(on)) battle.mega = { ...(battle.mega ?? {}), [petId]: on };
+  else if (battle.mega) delete battle.mega[petId];
+  if (shiftGroupOf(pet.species, opts).length) battle.forms = { ...(battle.forms ?? {}), [petId]: pet.species };
+  else if (battle.forms) delete battle.forms[petId];
+}
+
+// 배틀에서 싸우는 종 — 들어올 때 적은 모습 바꾸기 종. 같은 모습 묶음이 아니면(진화 등) 지금 종
+export function battleSpeciesOf(save: Battle, pet: Pick<PetV3, "id" | "species">, opts?: DexOptions): string {
+  const kept = save.battle?.forms?.[pet.id];
+  return kept && shiftGroupOf(pet.species, opts).includes(kept) ? kept : pet.species;
 }
 
 // 칸에 개체를 넣는다. 그 칸의 개체는 빠진다. 다른 칸에 든 개체는 넣지 못한다
@@ -46,6 +68,7 @@ export function setBattleSlot(save: Pick<SaveV3, "battle" | "pets">, slot: numbe
   const slots = slotsFor(save);
   if (slots.includes(petId)) return { ok: false, reason: "already" };
   slots[slot] = petId;
+  takeLook(save, petId);
   pruneMega(save);
   return { ok: true };
 }
@@ -72,7 +95,7 @@ export function moveBattleSlot(save: Battle, from: number, to: number): Outcome<
 
 // 파티 프리셋 하나를 가져온다 — 프리셋의 칸 순서대로 6칸을 덮어쓴다. 빈 칸·잠긴 칸은 빈 칸이 된다.
 // 출전 제한을 넘는 개체도 그대로 넣는다 (출전 불가로 보인다)
-export function importPreset(save: Pick<SaveV3, "battle" | "party">, preset: number): Outcome<BattleFailure> {
+export function importPreset(save: Pick<SaveV3, "battle" | "party" | "pets">, preset: number): Outcome<BattleFailure> {
   const from = slotsOfPreset(save, preset);
   if (!from) return { ok: false, reason: "no-preset" };
   const slots = slotsFor(save);
@@ -80,6 +103,7 @@ export function importPreset(save: Pick<SaveV3, "battle" | "party">, preset: num
     const s = from[i];
     slots[i] = s?.state === "pokemon" && s.petId ? s.petId : null;
   }
+  for (const id of slots) if (id) takeLook(save, id);
   pruneMega(save);
   return { ok: true };
 }
@@ -121,6 +145,19 @@ export function setBattleMega(save: Pick<SaveV3, "battle" | "pets">, petId: stri
   return { ok: true };
 }
 
+// 배틀 파티의 모습 바꾸기 — 그 개체의 모습 묶음(shiftGroupOf) 안의 종으로 배틀 파티의 모습만 바꾼다. 개체의 종(파티·바탕화면)은 그대로다
+// 도구·해금(로토무카탈로그·작업 시간)은 보지 않는다 — 배틀 파티의 모습은 그 개체가 고를 수 있는 모습 가운데 고르는 표시다 [스펙 미확정]
+export function setBattleForm(save: Pick<SaveV3, "battle" | "pets">, petId: string, species: string, opts?: DexOptions): Outcome<BattleFailure> {
+  const pet = save.pets.find((p) => p.id === petId);
+  if (!pet) return { ok: false, reason: "no-pet" };
+  if (!isInBattle(save, petId)) return { ok: false, reason: "not-in-party" };
+  if (!shiftGroupOf(pet.species, opts).includes(species)) return { ok: false, reason: "bad-form" };
+  if (battleSpeciesOf(save, pet, opts) === species) return { ok: false, reason: "already" };
+  const battle = save.battle!;
+  battle.forms = { ...(battle.forms ?? {}), [petId]: species };
+  return { ok: true };
+}
+
 // 출전 불가 — 칸마다 넘은 칸(초전설·준전설·메가) 또는 null. 한 칸의 마릿수를 넘으면 칸 순서가 뒤인 개체가 출전 불가다.
 // 한 개체가 종의 칸과 메가 칸을 함께 센다(메가레쿠쟈·원시회귀). 둘 다 넘으면 종의 칸을 알린다
 export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOptions): (BattleTier | null)[] {
@@ -129,7 +166,7 @@ export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOp
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
     if (!pet) return null;
     const over: BattleTier[] = [];
-    const tier = tierOf(pet.species, opts);
+    const tier = tierOf(battleSpeciesOf(save, pet, opts), opts);
     if (tier && (count[tier] += 1) > BATTLE_RULES.limits[tier]) over.push(tier);
     if (battleMegaOf(save, pet.id) && (count.mega += 1) > BATTLE_RULES.limits.mega) over.push("mega");
     return over[0] ?? null;

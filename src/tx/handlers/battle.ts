@@ -1,5 +1,5 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
+import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleForm, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
@@ -59,6 +59,16 @@ export const battleMegaHandler: TxHandler = (draft, args) => {
   const res = setBattleMega(draft, petId, form);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { petId, form } };
+};
+
+// 배틀 파티의 모습 바꾸기 — args.petId, args.species(그 개체의 모습 묶음 안의 종). 개체의 종은 그대로다
+export const battleFormHandler: TxHandler = (draft, args) => {
+  const petId = petIdOf(args);
+  const species = isArgsRecord(args) && typeof args.species === "string" ? args.species : "";
+  if (!petId || !species) return { ok: false, reason: "bad-args" };
+  const res = setBattleForm(draft, petId, species);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { petId, species } };
 };
 
 // 랜덤 배틀 보상 — 서버 호출은 온라인 층(src/online/battle-net.ts)이 한다. 표면 명령이 아니다(internal) — 설정창·CLI 가 보상을 만들어 넣지 못하게

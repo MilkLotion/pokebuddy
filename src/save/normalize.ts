@@ -23,6 +23,7 @@ import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { BATTLE_RULES } from "../battle/rules.js";
 import { megaChoices } from "../dex/mega.js";
+import { shiftGroupOf } from "../dex/regional.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
 import { SETTING_CHOICES } from "../state/settings.js";
 import { NOTIFY_KINDS } from "../shared/names/banners.js";
@@ -336,9 +337,16 @@ function normalizeBattle(raw: unknown, pets: PetV3[]): BattleV3 {
     const pet = used.has(id) ? pets.find((p) => p.id === id) : undefined;
     if (pet && typeof form === "string" && megaChoices(pet).includes(form)) mega[id] = form;
   }
+  // 칸에 들어올 때 적은 모습 바꾸기 종 — 칸에 든 개체이고 그 개체의 모습 묶음 안의 종만 남긴다 (2026-10-09)
+  const forms: Record<string, string> = {};
+  const rawForms = isRawObject(raw) && isRawObject(raw.forms) ? raw.forms : {};
+  for (const [id, slug] of Object.entries(rawForms)) {
+    const pet = used.has(id) ? pets.find((p) => p.id === id) : undefined;
+    if (pet && typeof slug === "string" && shiftGroupOf(pet.species).includes(slug)) forms[id] = slug;
+  }
   // 보상을 받은 판 id — 글자만, 최근 200개 (서버 검증이 판 기록과 대조한다)
   const applied = isRawObject(raw) && Array.isArray(raw.applied) ? raw.applied.filter((x): x is string => typeof x === "string").slice(-200) : [];
-  return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(applied.length ? { applied } : {}) };
+  return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(Object.keys(forms).length ? { forms } : {}), ...(applied.length ? { applied } : {}) };
 }
 
 function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {

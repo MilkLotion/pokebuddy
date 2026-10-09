@@ -175,6 +175,8 @@ export interface EngineForm {
   species: string;
   stats: readonly number[]; // 실제 능력치 6개
   types?: readonly string[]; // 모습의 타입이 다르면(달마모드)
+  moves?: readonly EngineMove[]; // 모습이 자기 기술을 쓰면(메로엣타 스텝폼) — 바뀌면 기술과 사거리도 바뀐다
+  range?: number;
 }
 
 export interface EngineFighter {
@@ -1326,6 +1328,11 @@ export function runBattle(input: BattleInput): BattleResult {
     u.stats = [u.stats[0]!, ...src.slice(1)];
     u.species = alt ? f.species : u.base.species;
     if (f.types) u.types = alt ? f.types : u.base.types;
+    // 자기 기술을 쓰는 모습(메로엣타) — 기술과 사거리도 바꾼다. 차례 번호는 그대로라 다음 차례는 새 기술 칸의 같은 자리다
+    if (f.moves?.length) {
+      u.moves = alt ? [...f.moves] : [...u.base.moves];
+      u.range = alt ? (f.range ?? u.base.range) : u.base.range;
+    }
     events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species });
   }
 
@@ -1439,6 +1446,8 @@ export function runBattle(input: BattleInput): BattleResult {
     } else if (m.class !== "status" && m.power) attack(u, m, t, stacks);
 
     if (m.effects.rampage) u.busyUntil = t + R.rampageMs;
+    // 메로엣타 — 루미나코러스(relic-song)를 쓰면 보이스폼 ↔ 스텝폼 (2026-10-09 사용자 "메로엣타 모습바꾸기가 안되던데")
+    if (m.id === "relic-song" && u.base.altForm && u.base.altForm.moves?.length && u.hp > 0 && !confusedFail) toForm(u, !u.inAlt, t);
     // 그대로꿀꺽미사일 — 파도타기·다이빙을 쓰면 먹이를 문다. HP 50% 초과면 아리코, 아니면 피카츄
     if (ab(u) === "gulp-missile" && (m.id === "surf" || m.id === "dive") && u.hp > 0) u.gulp = u.hp * 2 > u.maxHp ? "arrokuda" : "pikachu";
 

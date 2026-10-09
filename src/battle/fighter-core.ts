@@ -34,12 +34,14 @@ export interface BattleFormRow {
   form: string;
   stats: number[];
   types?: string[];
+  ownMoves?: true; // 그 모습이 자기 기술을 쓴다(메로엣타 스텝폼)
 }
 export interface BattleData {
   species: Record<string, BattleSpeciesRow>;
   moves: Record<string, BattleMoveRow>;
   mega: Record<string, BattleMegaRow>; // 메가·원시회귀 모습
   forms: Record<string, BattleFormRow>; // 전투 중 모습이 바뀌는 종의 다른 모습
+  shift: Record<string, string[]>; // 모습 바꾸기 묶음 — 기본 종 → 다른 모습들(로토무 등). 배틀 파티가 적은 모습(battle.forms)을 검사한다
   typeChart: Record<string, Record<string, number>>;
 }
 
@@ -115,8 +117,19 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
     ability: mega ? mega.ability : sp.ability,
     special: sp.special && SPECIALS.has(sp.special) ? (sp.special as EngineFighter["special"]) : null,
     range: rangeOfMoves(moves),
-    altForm: alt ? { species: alt.form, stats: real(alt.stats), ...(alt.types ? { types: alt.types } : {}) } : null,
+    altForm: alt ? altFormOf(data, alt, real, src.moveSwap === true) : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
+  };
+}
+
+// 전투 중 바뀌는 다른 모습 — 자기 기술을 쓰는 모습(메로엣타)은 그 모습 칸의 기술과 사거리를 함께 싣는다
+function altFormOf(data: BattleData, alt: BattleFormRow, real: (six: readonly number[]) => number[], swap: boolean): NonNullable<EngineFighter["altForm"]> {
+  const own = alt.ownMoves ? movesOf(data, alt.form, swap) : [];
+  return {
+    species: alt.form,
+    stats: real(alt.stats),
+    ...(alt.types ? { types: alt.types } : {}),
+    ...(own.length ? { moves: own, range: rangeOfMoves(own) } : {}),
   };
 }
 
@@ -136,12 +149,19 @@ export interface PartyRead {
 
 const isRec = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+// 모습 바꾸기 묶음 — 그 종이 든 묶음(기본 종 포함). 없으면 빈 목록 (src/dex/regional.ts shiftGroupOf 와 같다)
+function shiftGroup(data: BattleData, slug: string): string[] {
+  for (const [base, list] of Object.entries(data.shift ?? {})) if (base === slug || list.includes(slug)) return [base, ...list];
+  return [];
+}
+
 export function partyOf(save: unknown, data: BattleData): PartyRead {
   const empty: PartyRead = { party: Array.from({ length: BATTLE_SLOTS }, () => null), count: 0, blocked: false };
   if (!isRec(save) || !isRec(save.battle) || !Array.isArray(save.battle.slots) || !Array.isArray(save.pets)) return empty;
   const pets = new Map<string, Record<string, unknown>>();
   for (const p of save.pets) if (isRec(p) && typeof p.id === "string") pets.set(p.id, p);
   const mega = isRec(save.battle.mega) ? save.battle.mega : {};
+  const forms = isRec(save.battle.forms) ? save.battle.forms : {};
   const count = { legendary: 0, sub: 0, mega: 0 };
   let blocked = false;
   let n = 0;
@@ -149,13 +169,17 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
     const id = (save.battle as { slots: unknown[] }).slots[i];
     const pet = typeof id === "string" ? pets.get(id) : undefined;
     if (!pet || typeof pet.species !== "string" || !data.species[pet.species]) return null;
+    // 배틀 파티의 모습 — 칸에 들어올 때 적은 모습 바꾸기 종. 같은 묶음이 아니면 지금 종 (src/battle/party.ts battleSpeciesOf 와 같다)
+    const keptRaw = forms[id as string];
+    const group = shiftGroup(data, pet.species);
+    const species = typeof keptRaw === "string" && group.includes(keptRaw) && data.species[keptRaw] ? keptRaw : pet.species;
     const formRaw = mega[id as string];
     const form = typeof formRaw === "string" && data.mega[formRaw]?.base === pet.species ? formRaw : null;
     n++;
-    const tier = tierFrom(data, pet.species);
+    const tier = tierFrom(data, species);
     if (tier && (count[tier] += 1) > BATTLE_LIMITS[tier]) blocked = true;
     if (form && (count.mega += 1) > BATTLE_LIMITS.mega) blocked = true;
-    return { species: pet.species, form, moveSwap: pet.moveSwap === true, level: typeof pet.level === "number" ? pet.level : 1 };
+    return { species, form, moveSwap: pet.moveSwap === true, level: typeof pet.level === "number" ? pet.level : 1 };
   });
   return { party, count: n, blocked };
 }

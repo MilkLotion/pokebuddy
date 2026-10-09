@@ -35,6 +35,8 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
       return { petId: target ?? str(a.petId) };
     case "battle.mega":
       return { petId: target ?? str(a.petId), form: str(a.form) ?? null };
+    case "battle.form":
+      return { petId: target ?? str(a.petId), species: str(a.species) };
     case "egg.open":
       return { eggId: target ?? str(a.eggId) };
     case "bag.use":

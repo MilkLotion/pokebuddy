@@ -4,6 +4,7 @@
 import type { DexOptions } from "../dex/data.js";
 import { isMetaKey } from "../dex/data.js";
 import { megaSlugs, megaOf } from "../dex/mega.js";
+import { regionalTable } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
 import { formBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
@@ -45,7 +46,9 @@ export function battleData(opts?: DexOptions): BattleData {
   }
   const forms: BattleData["forms"] = {};
   for (const [slug, v] of Object.entries(formBattleTable(opts))) if (!isMetaKey(slug)) forms[slug] = v;
-  const data: BattleData = { species, moves, mega, forms, typeChart: typeChartTable(opts) };
+  const shift: BattleData["shift"] = {};
+  for (const [base, list] of Object.entries(regionalTable(opts).shift)) if (!isMetaKey(base) && Array.isArray(list)) shift[base] = list.filter((s): s is string => typeof s === "string");
+  const data: BattleData = { species, moves, mega, forms, shift, typeChart: typeChartTable(opts) };
   if (!opts) cached = data;
   return data;
 }

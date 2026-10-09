@@ -4,7 +4,9 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { petMoves, speciesMoves } from "../../battle/moves";
-import { applyBattleReward, battleMegaOf, battleSlots, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle } from "../../battle/party";
+import { applyBattleReward, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot } from "../../battle/party";
+import { battleData } from "../../battle/fighter";
+import { partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
@@ -214,6 +216,44 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.deepEqual(normalize(raw, T0)!.battle?.mega, { p3: "rayquaza-mega" });
 }
 
+// ── 배틀 파티에 들어올 때의 모습만 옮겨 적는다 — 그 뒤 파티의 모습 바꾸기·메가는 배틀 파티에 닿지 않는다 (2026-10-09 사용자 "가져오기시에만 동기화였어") ──
+{
+  let save = seed(["rotom", "charizard", "pikachu"]);
+  save.pets[0]!.species = "rotom-wash";
+  save.pets[1]!.mega = { bondMs: 0, care: 0, stone: true, on: "charizard-mega-x" };
+  save.battle = { slots: [null, null, null, null, null, null] };
+  assert.ok(setBattleSlot(save, 0, "p1").ok && setBattleSlot(save, 1, "p2").ok && setBattleSlot(save, 2, "p3").ok);
+  assert.deepEqual(save.battle.forms, { p1: "rotom-wash" }, "모습 바꾸기 종을 적는다 — 묶음이 없는 종(피카츄)은 적지 않는다");
+  assert.equal(battleMegaOf(save, "p2"), "charizard-mega-x", "그때의 메가 모습을 옮겨 적는다");
+  // 파티에서 모습을 바꿔도 배틀 파티는 그대로
+  save.pets[0]!.species = "rotom-heat";
+  delete save.pets[1]!.mega!.on;
+  assert.equal(battleSpeciesOf(save, save.pets[0]!), "rotom-wash");
+  assert.equal(battleMegaOf(save, "p2"), "charizard-mega-x");
+  assert.equal(snapshotView(save, T0).battle.slots[0]!.pet?.species, "rotom-wash", "화면도 배틀 파티의 모습");
+  assert.equal(partyOf(JSON.parse(JSON.stringify(save)), battleData()).party[0]?.species, "rotom-wash", "서버의 파티 읽기도 같다");
+  // 배틀 파티의 모습 바꾸기(battle.form) — 개체의 종은 그대로
+  let n = 0;
+  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
+  const why = (args: unknown): string | null => {
+    const r = ex.run({ id: `f${(n += 1)}`, name: "battle.form", args });
+    return r.ok ? null : r.reason;
+  };
+  assert.equal(why({ petId: "p1", species: "rotom-fan" }), null);
+  assert.equal(battleSpeciesOf(save, save.pets[0]!), "rotom-fan");
+  assert.equal(save.pets[0]!.species, "rotom-heat", "개체의 종은 그대로");
+  assert.equal(why({ petId: "p1", species: "rotom-fan" }), "already");
+  assert.equal(why({ petId: "p1", species: "pikachu" }), "bad-form", "묶음 밖의 종");
+  assert.equal(why({ petId: "p3", species: "raichu" }), "bad-form", "묶음이 없는 종");
+  assert.equal(why({ petId: "p1" }), "bad-args");
+  // 다른 개체가 그 종으로 들어오면 — 묶음이 다르면 지금 종으로 본다
+  const fake = JSON.parse(JSON.stringify(save)) as SaveV3;
+  fake.battle!.forms = { p1: "rotom-fan", p3: "mewtwo" };
+  assert.equal(partyOf(fake, battleData()).party[2]?.species, "pikachu", "서버는 묶음 밖의 값을 쓰지 않는다");
+  // 정규화 — 칸에 든 개체이고 그 개체의 묶음 안의 종만 남긴다
+  const raw = JSON.parse(JSON.stringify({ ...save, battle: { ...save.battle, forms: { p1: "rotom-mow", p3: "mewtwo", p9: "rotom" } } })) as Record<string, unknown>;
+  assert.deepEqual(normalize(raw, T0)!.battle?.forms, { p1: "rotom-mow" });
+}
 // ── 랜덤 배틀 보상 — 포인트를 넣고 판 id 를 남긴다. 같은 판은 한 번, 값이 이상하면 거절, 최근 200개 ──
 {
   const save = seed(["pikachu"]);

@@ -98,6 +98,7 @@ export interface FormBattleRow {
   form: string; // PokeAPI 모습 식별자
   stats: number[];
   types?: string[]; // 그 모습의 타입 — 기본 모습과 다를 때 쓴다(달마모드)
+  ownMoves?: true; // 그 모습이 자기 기술 2개(species-moves.json 의 그 모습 칸)를 쓴다(메로엣타)
 }
 export const formBattleTable = (opts?: DexOptions): Record<string, FormBattleRow> => loadJson<Record<string, FormBattleRow>>("form-battle.json", opts);
 

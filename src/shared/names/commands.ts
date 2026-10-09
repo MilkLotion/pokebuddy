@@ -41,6 +41,7 @@ export const COMMANDS = {
   "battle.import": { via: "tx" },
   "battle.moves": { via: "tx" },
   "battle.mega": { via: "tx" }, // args.form — 메가 모습 슬러그. 없거나 null 이면 원래 모습
+  "battle.form": { via: "tx" }, // args.species — 그 개체의 모습 묶음 안의 종. 배틀 파티의 모습만 바꾼다
   // 박스
   "box.sort": { via: "tx" },
   "box.move": { via: "tx" },

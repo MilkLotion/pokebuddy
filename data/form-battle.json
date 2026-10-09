@@ -4,5 +4,6 @@
   "minior": {"form":"minior-red","stats":[60,100,60,100,60,120],"types":["rock","flying"]},
   "palafin": {"form":"palafin-hero","stats":[100,160,97,106,87,100],"types":["water"]},
   "terapagos": {"form":"terapagos-terastal","stats":[95,95,110,105,110,85],"types":["normal"]},
-  "darmanitan-galar-standard": {"form":"darmanitan-galar-zen","stats":[105,160,55,30,55,135],"types":["ice","fire"]}
+  "darmanitan-galar-standard": {"form":"darmanitan-galar-zen","stats":[105,160,55,30,55,135],"types":["ice","fire"]},
+  "meloetta": {"form":"meloetta-pirouette","stats":[100,128,90,77,77,128],"types":["normal","fighting"],"ownMoves":true}
 }

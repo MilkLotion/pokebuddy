@@ -1,7 +1,7 @@
 // 배틀 파티 화면 값 — 모험 탭의 배틀 칸 카드와 배틀 파티 상세 기기 창이 쓴다 (docs/specs/adventure.md)
 // 저장을 읽기만 한다
 import { petMoves, type MoveInfo } from "../battle/moves.js";
-import { battleMegaOf, battleSlots, blockedSlots, canStartBattle } from "../battle/party.js";
+import { battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { realStatsOf } from "../battle/stats.js";
 import { abilityTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
@@ -57,12 +57,14 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
     if (!pet) return { index, moves: [], blocked: null, stats: [], ability: null };
     const tier = blocked[index];
+    // 칸에 들어올 때 적은 모습 바꾸기 종으로 본다(로토무 등) — 그 뒤 파티의 모습 바꾸기와 따로다
+    const asPet: PetV3 = { ...pet, species: battleSpeciesOf(save, pet) };
     const form = battleMegaOf(save, pet.id);
-    const shown = form ?? pet.species;
+    const shown = form ?? asPet.species;
     return {
       index,
-      pet: battlePetView(save, pet, form, dayPart),
-      moves: petMoves(pet).map(moveView),
+      pet: battlePetView(save, asPet, form, dayPart),
+      moves: petMoves(asPet).map(moveView),
       blocked: tier ? blockedText(tier) : null,
       stats: statRows(shown),
       ability: abilityName(shown),

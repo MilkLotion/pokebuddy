@@ -14,6 +14,8 @@ import path from "node:path";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
 
 const OUT = path.join(DATA_DIR, "form-battle.json");
+// 다른 모습이 자기 기술 2개(species-moves.json 의 그 모습 칸)를 쓰는 종 — 표에 ownMoves: true 로 적는다
+const OWN_MOVES: ReadonlySet<string> = new Set(["meloetta"]);
 
 // 종 슬러그 → 다른 모습의 PokeAPI 식별자
 const FORMS: Readonly<Record<string, string>> = {
@@ -23,6 +25,7 @@ const FORMS: Readonly<Record<string, string>> = {
   palafin: "palafin-hero", // 나이브폼 → 마이티폼
   terapagos: "terapagos-terastal", // 노말폼 → 테라스탈폼
   "darmanitan-galar-standard": "darmanitan-galar-zen", // 가라르 불비달마 → 달마모드 (얼음·불꽃)
+  meloetta: "meloetta-pirouette", // 보이스폼 → 스텝폼 — 엔진은 루미나코러스(relic-song)를 쓸 때마다 오간다 (2026-10-09)
 };
 
 export async function build(): Promise<void> {
@@ -43,7 +46,7 @@ export async function build(): Promise<void> {
     sixOf.set(r.pokemon_id, six);
   }
 
-  const out: Record<string, { form: string; stats: number[]; types: string[] }> = {};
+  const out: Record<string, { form: string; stats: number[]; types: string[]; ownMoves?: true }> = {};
   for (const [species, form] of Object.entries(FORMS)) {
     const no = must(idOf.get(form), `포켓몬 식별자 ${form}`);
     const stats = sixOf.get(no);
@@ -53,7 +56,7 @@ export async function build(): Promise<void> {
       .sort((a, b) => Number(a.slot) - Number(b.slot))
       .map((r) => must(typeName.get(r.type_id), `타입 번호 ${r.type_id}`));
     if (!types.length) throw new Error(`타입이 없다: ${form} ${no}`);
-    out[species] = { form, stats, types };
+    out[species] = { form, stats, types, ...(OWN_MOVES.has(species) ? { ownMoves: true as const } : {}) };
   }
 
   writeLineJson(OUT, out);

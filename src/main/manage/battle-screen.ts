@@ -7,7 +7,7 @@ import path from "node:path";
 import type { BrowserWindow } from "electron";
 import { runBattle, type EngineFighter } from "../../battle/engine.js";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter.js";
-import { battleMegaOf, battleSlots } from "../../battle/party.js";
+import { battleMegaOf, battleSlots, battleSpeciesOf } from "../../battle/party.js";
 import { tierOf } from "../../battle/tier.js";
 import { isMetaKey } from "../../dex/data.js";
 import { appearanceOf } from "../../dex/look.js";
@@ -86,7 +86,7 @@ function myLooks(save: SaveV3, mine: readonly (EngineFighter | null)[]): Record<
 function myFighters(save: SaveV3, pick: () => EngineFighter): (EngineFighter | null)[] {
   const slots = battleSlots(save).map((id) => {
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
-    return pet ? petFighter(pet, battleMegaOf(save, pet.id)) : null;
+    return pet ? petFighter({ ...pet, species: battleSpeciesOf(save, pet) }, battleMegaOf(save, pet.id)) : null;
   });
   return slots.some((f) => f) ? slots : Array.from({ length: 6 }, pick);
 }

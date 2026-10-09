@@ -458,6 +458,22 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   }
 }
 
+// ── 메로엣타 — 루미나코러스를 쓰면 보이스폼 ↔ 스텝폼, 스텝폼은 자기 기술(인파이트)·사거리 1 (2026-10-09) ──
+{
+  const mel = buildFighter({ species: "meloetta" })!;
+  assert.deepStrictEqual(mel.moves.map((m) => m.id), ["relic-song", "psychic"]);
+  assert.strictEqual(mel.altForm?.species, "meloetta-pirouette");
+  assert.deepStrictEqual(mel.altForm?.moves?.map((m) => m.id), ["relic-song", "close-combat"], "스텝폼 기술");
+  assert.strictEqual(mel.range, 3);
+  assert.strictEqual(mel.altForm?.range, 1, "스텝폼은 쌍두형이라 1");
+  const sturdy = unit({ stats: [999, 1, 999, 1, 999, 95] });
+  const r = run([mel], [sturdy], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  const forms = of(r.events, "form").filter((e) => e.side === 0).map((e) => e.species);
+  assert.deepStrictEqual(forms.slice(0, 2), ["meloetta-pirouette", "meloetta"], "루미나코러스마다 오간다");
+  const firstForm = of(r.events, "form").find((e) => e.side === 0)!.t;
+  assert.ok(of(r.events, "move").some((e) => e.side === 0 && e.move === "close-combat" && e.t > firstForm), "스텝폼은 인파이트를 쓴다");
+}
+
 // ── 대상 주위가 막히면 지금 닿는 다른 상대로 바꾼다 (2026-10-09 사용자 "A+B로 진행해") ──
 {
   // 상대 T(오른쪽 위 구석)는 내 쪽 셋에게 둘러싸여 빈 자리가 없다. 같은 걸음 수의 F 보다 같은 줄이라 처음 대상은 T

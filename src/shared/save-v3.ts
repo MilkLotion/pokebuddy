@@ -129,7 +129,8 @@ export interface PartyV3 {
 export interface BattleV3 {
   slots: (string | null)[]; // 길이 6. 개체 식별자 또는 빈 칸
   applied?: string[]; // 보상을 받은 랜덤 배틀 판 id — 서버 검증이 판 기록과 대조한다(우편의 applied 와 같은 방식, 최근 200개). 2026-10-09 에 더했다
-  mega?: Record<string, string>; // 배틀 파티에서 메가 모습을 켠 개체 — 개체 식별자 → 메가 모습 슬러그(data/mega.json). 프리셋의 메가 모습과 따로다 (src/battle/party.ts setBattleMega)
+  mega?: Record<string, string>; // 배틀 파티에서 메가 모습을 켠 개체 — 개체 식별자 → 메가 모습 슬러그(data/mega.json). 프리셋의 메가 모습과 따로다 (src/battle/party.ts setBattleMega). 칸에 들어올 때 개체의 메가 모습을 옮겨 적는다
+  forms?: Record<string, string>; // 칸에 들어올 때의 모습 바꾸기 종(로토무 등) — 개체 식별자 → 종 슬러그. 그 뒤 파티에서 바꿔도 그대로다 (src/battle/party.ts takeLook). 2026-10-09 에 더했다
 }
 
 // ── 박스 ───────────────────────────────────────────────────────────────────────

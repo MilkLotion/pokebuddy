@@ -26,11 +26,11 @@ const st: PickState = { offer: null, selected: null, busy: false, error: "", coo
 const errorOf = (r: BattleReply | null): string => (!r ? "서버에 연결하지 못했어요." : r.code ? failTextOf(r.code, "battle", "ko", r.detail).text : "");
 
 // 모달을 열 때 — 상대 3개를 받는다
-export function openBattleOpponent(open: () => void): void {
+export function openBattleOpponent(show: () => void): void {
   st.offer = null;
   st.selected = null;
   st.error = "";
-  open();
+  show();
   void refresh();
 }
 
