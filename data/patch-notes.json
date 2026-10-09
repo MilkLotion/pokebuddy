@@ -2,6 +2,13 @@
   "_comment": "관리 창 패치노트 (src/main/update/patch-notes.ts). 새 버전이 맨 앞. 릴리스 때 GitHub Release 본문의 '새 기능·바뀐 것·고친 것'을 한 줄씩 짧게 옮긴다. date 는 릴리스 날짜(YYYY-MM-DD)",
   "notes": [
     {
+      "version": "0.19.1",
+      "date": "2026-10-10",
+      "lines": [
+        "배틀 파티 상세에서 포켓몬의 특성을 볼 수 있어요. 특성을 누르면 배틀에서 어떻게 동작하는지 알려 줘요"
+      ]
+    },
+    {
       "version": "0.19.0",
       "date": "2026-10-10",
       "lines": [
