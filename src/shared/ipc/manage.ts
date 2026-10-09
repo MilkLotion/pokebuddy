@@ -39,6 +39,7 @@ export type ManageCoreIpc = {
   "manage:shop-detail": Invoke<"shopDetail", [productId: string], ShopDetail | null>; // 상점 구매 창의 상세 — 포켓몬 진화 트리, 진화용 도구의 대상
   "manage:agents": Invoke<"agents", [req?: { name: string; action: AgentAction }], AgentReply>; // 인자가 없으면 읽기만 한다
   "manage:route": Push<"onRoute", [route: ManageRoute]>; // 알림 배너의 `바로가기` 가 설정창을 어디로 옮길지 알린다
+  "manage:battle-menu": Invoke<"battleMenu", [slot: number], boolean>; // 배틀 파티 칸을 우클릭했다 — 메인이 커서 자리에 바꾸기·빼기 메뉴를 띄운다
   "manage:pet-menu": Invoke<"petMenu", [petId: string], boolean>; // 파티 카드·박스 칸을 눌렀다 — 메인이 커서 자리에 포켓몬 메뉴를 띄운다. 띄울 길이 없으면 false
   "manage:draw-region": Invoke<"drawRegion", [], ManageReply>; // 설정의 `영역 그리기` — 영역 그리기 창을 열고 끝나면 답한다. 적용하면 ok, 취소하면 reason "cancelled"
   "manage:screens": Invoke<"screens", [], ScreenView[]>; // 지금 화면 목록 — 번호 순. 화면을 모르면(개발 실행기 등) 빈 목록

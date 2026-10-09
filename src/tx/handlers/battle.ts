@@ -1,5 +1,5 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { applyBattleReward, clearBattleSlot, importPreset, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
+import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleMega, setBattleSlot, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
@@ -20,6 +20,16 @@ export const battleClearHandler: TxHandler = (draft, args) => {
   const res = clearBattleSlot(draft, slotIndex);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
   return { ok: true, result: { slotIndex } };
+};
+
+// 칸을 옮긴다 — args.slotIndex(끈 칸), args.toSlot(놓은 칸). 놓은 칸에 개체가 있으면 맞바꾼다
+export const battleMoveHandler: TxHandler = (draft, args) => {
+  const slotIndex = slotIndexOf(args);
+  const toSlot = intOf(args, "toSlot");
+  if (slotIndex == null || toSlot == null) return { ok: false, reason: "bad-args" };
+  const res = moveBattleSlot(draft, slotIndex, toSlot);
+  if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  return { ok: true, result: { slotIndex, toSlot } };
 };
 
 // 파티 프리셋을 가져온다 — args.preset

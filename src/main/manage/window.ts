@@ -53,6 +53,7 @@ export interface ManageServices {
   pickScreen?: () => Promise<ManageReply>;
   mail?: (req: MailAction) => Promise<MailReply | null>; // 우편함 (src/online/mail-inbox.ts). 없으면 봉투 단추를 숨긴다. writer 를 놓았으면 null
   battle?: (req: BattleAction) => Promise<BattleReply | null>; // 랜덤 배틀 (src/online/battle-net.ts). 서버 설정이 없거나 writer 를 놓았으면 null
+  battleMenu?: (slot: number) => void; // 배틀 파티 칸 우클릭 메뉴 (src/view/menus.ts battleMenu)
   petMenu?: (petId: string) => void; // 파티 카드·박스 칸을 누르면 띄우는 포켓몬 메뉴 (src/view/menus.ts petMenu). 없으면 렌더러가 바로 개체 상세를 연다
 }
 

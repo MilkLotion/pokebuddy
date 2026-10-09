@@ -338,6 +338,7 @@ const manage = createManage({
   services: () => ({
     display: () => display.view(),
     petMenu: (petId) => petMenu.open(petId, "manage"),
+    battleMenu: (slot) => petMenu.openBattle(slot),
     ...(services.current() ? { account: services.current()!.act } : {}),
     ...(services.mail() ? { mail: async (req: MailAction) => (await services.mail()?.act(req)) ?? null } : {}),
     ...(services.battle() ? { battle: async (req: BattleAction) => (await services.battle()?.act(req)) ?? null } : {}),

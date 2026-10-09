@@ -27,7 +27,7 @@ import { drawLetter, drawMail } from "./mail.js";
 import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from "./update-notes.js";
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
-import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
+import { drawAdventure } from "./adventure-tab.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick } from "./battle-pick.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
@@ -125,8 +125,7 @@ setShellHooks({
 document.addEventListener("click", () => {
   if (closeSettingSelect()) drawDialog();
   const partyMenu = closePartyMenu();
-  const battleMenu = closeAdventureMenu();
-  if (!partyMenu && !battleMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  if (!partyMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
   closeDexRegion();

@@ -83,6 +83,7 @@ const MANAGE = {
   agents: ["invoke", "manage:agents"],
   onRoute: ["push", "manage:route"],
   petMenu: ["invoke", "manage:pet-menu"],
+  battleMenu: ["invoke", "manage:battle-menu"],
   drawRegion: ["invoke", "manage:draw-region"],
   screens: ["invoke", "manage:screens"],
   identifyScreens: ["send", "manage:identify-screens"],

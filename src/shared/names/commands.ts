@@ -37,6 +37,7 @@ export const COMMANDS = {
   // 배틀 파티 (2026-10-08, src/battle/party.ts)
   "battle.set": { via: "tx" },
   "battle.clear": { via: "tx" },
+  "battle.move": { via: "tx" }, // args.slotIndex → args.toSlot. 놓은 칸에 개체가 있으면 맞바꾼다
   "battle.import": { via: "tx" },
   "battle.moves": { via: "tx" },
   "battle.mega": { via: "tx" }, // args.form — 메가 모습 슬러그. 없거나 null 이면 원래 모습

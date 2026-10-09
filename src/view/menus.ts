@@ -111,6 +111,33 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
   ];
 }
 
+// 배틀 파티 칸 메뉴 — 이름·칸 / 바꾸기·빼기. 포켓몬 메뉴와 같은 메뉴 창에 커서 자리로 뜬다
+// (2026-10-09 사용자 결정 "2번으로 진행", 메뉴 구성은 바꾸기·빼기만 "1. 아니", Figma 99 `Adventure / Battle Party · Context Menu` `1821:818`)
+export interface BattleMenuModel {
+  name: string;
+  nature: string | null;
+  status: string; // 둘째 줄 — "배틀 파티 1번 칸"
+}
+export interface BattleMenuActions {
+  change(): void; // 바꾸기 — 관리 창이 개체 고르기 모달을 연다
+  clear(): void; // 빼기 — 그 칸을 빈 칸으로
+}
+export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): MenuItemConstructorOptions[] {
+  return [
+    { label: petLine(model), sublabel: model.status, enabled: false },
+    { type: "separator" },
+    { label: t("menu.battle.change"), click: () => act.change() },
+    { label: t("menu.battle.clear"), click: () => act.clear() },
+  ];
+}
+// 배틀 파티 칸의 메뉴 값 — 빈 칸이거나 개체가 없으면 null
+export function battleMenuOf(save: SaveV3 | null, slot: number): BattleMenuModel | null {
+  const petId = save?.battle?.slots?.[slot] ?? null;
+  const pet = petId ? (save?.pets.find((p) => p.id === petId) ?? null) : null;
+  if (!pet) return null;
+  return { name: petName(pet.species), nature: pet.nature ? natureName(pet.nature) : null, status: t("menu.battle.slot", { n: String(slot + 1) }) };
+}
+
 // 튜토리얼이 고르게 할 항목만 남기고 나머지 누르는 항목을 흐리게(사용 안 함) 둔다. 이름·상태 줄은 그대로다.
 // 첫 돌봄 2/2 가 쓴다 (Figma `579:17015`, worklog/records/game-runtime/game-runtime.md "첫 돌봄 튜토리얼의 피드백")
 export function lockExcept(template: MenuItemConstructorOptions[], keep: readonly string[]): MenuItemConstructorOptions[] {

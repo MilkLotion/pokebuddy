@@ -67,20 +67,6 @@
   background: var(--danger);
 }
 
-/* 든 칸의 우클릭 메뉴 — 박스 머리 메뉴와 같은 목록 모양(.sort-menu) */
-.battle-slot {
-  position: relative;
-}
-.battle-slot > .slot {
-  width: 100%;
-}
-.battle-menu {
-  position: absolute;
-  z-index: 3;
-  top: 40px;
-  right: 12px;
-}
-
 /* 개체 고르기 모달 — 교환의 고르기판(.trade-pick)을 그대로 쓴다 */
 .dialog.battle-pick {
   width: 560px;

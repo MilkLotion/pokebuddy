@@ -9,7 +9,7 @@ import { formsOf, isFormLocked } from "../../dex/forms";
 import type { Command } from "../../shared/command";
 import type { ManageRoute } from "../../shared/model/route";
 import type { SaveV3 } from "../../shared/save-v3";
-import { lockExcept, petMenu, petMenuOf } from "../../view/menus";
+import { battleMenu, battleMenuOf, lockExcept, petMenu, petMenuOf } from "../../view/menus";
 import { openMenu } from "./menu-window";
 import { portraitKey, type Portraits } from "../art/portraits";
 import type { PartyPet } from "../../view/party-pet";
@@ -33,6 +33,7 @@ export interface PetMenuDeps {
 
 export interface PetMenu {
   open(petId: string, origin?: MenuOrigin): void;
+  openBattle(slot: number): void; // 모험 탭 배틀 파티 칸의 우클릭 — 바꾸기·빼기
 }
 
 export function createPetMenu(deps: PetMenuDeps): PetMenu {
@@ -81,6 +82,15 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
   }
 
   return {
+    openBattle(slot) {
+      const model = battleMenuOf(deps.read(), slot);
+      if (!model) return;
+      const items = battleMenu(model, {
+        change: () => deps.openManage({ to: "battle-pick", slot }),
+        clear: () => deps.run({ cmd: "battle.clear", args: { slotIndex: slot }, from: "menu" }),
+      });
+      openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
+    },
     open(id, origin = "stage") {
       const save = deps.read();
       const pet = save?.pets.find((row) => row.id === id) ?? null;

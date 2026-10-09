@@ -60,6 +60,16 @@ export function clearBattleSlot(save: Battle, slot: number): Outcome<BattleFailu
   return { ok: true };
 }
 
+// 칸을 옮긴다 — 개체 칸을 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다 (파티 탭의 끌어 놓기와 같다)
+export function moveBattleSlot(save: Battle, from: number, to: number): Outcome<BattleFailure> {
+  if (!isSlot(from) || !isSlot(to)) return { ok: false, reason: "bad-slot" };
+  if (from === to) return { ok: false, reason: "already" };
+  const slots = slotsFor(save);
+  if (slots[from] == null) return { ok: false, reason: "no-pet" };
+  [slots[from], slots[to]] = [slots[to] ?? null, slots[from] ?? null];
+  return { ok: true };
+}
+
 // 파티 프리셋 하나를 가져온다 — 프리셋의 칸 순서대로 6칸을 덮어쓴다. 빈 칸·잠긴 칸은 빈 칸이 된다.
 // 출전 제한을 넘는 개체도 그대로 넣는다 (출전 불가로 보인다)
 export function importPreset(save: Pick<SaveV3, "battle" | "party">, preset: number): Outcome<BattleFailure> {

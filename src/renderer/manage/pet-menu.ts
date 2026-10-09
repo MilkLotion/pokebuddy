@@ -15,6 +15,11 @@ export function askPetMenu(petId: string): void {
   void api.petMenu(petId).catch(() => undefined);
 }
 
+// 배틀 파티 칸의 우클릭 — 메인이 바꾸기·빼기 메뉴를 커서 자리에 띄운다 (src/main/menus/pet-menu.ts openBattle)
+export function askBattleMenu(slot: number): void {
+  void api.battleMenu(slot).catch(() => undefined);
+}
+
 // 포켓몬 팔기 확인 — 되돌릴 수 없어 확인을 받는다. 판매가는 메뉴를 띄울 때 메인이 잰 값이다 (src/shop/sell-pet.ts, Figma 05 `Box / Sell Confirm`)
 export function drawSellPet(petId: string, price: number): void {
   const pet = petInView(petId);

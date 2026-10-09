@@ -114,6 +114,16 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
         return true;
       },
     },
+    // 배틀 파티 칸 메뉴 — 칸 번호(0~5)만 받는다
+    "manage:battle-menu": {
+      denied: false,
+      run: (_e, slot) => {
+        const battleMenu = svc().battleMenu;
+        if (!battleMenu || !Number.isInteger(slot) || (slot as number) < 0 || (slot as number) > 5) return false;
+        battleMenu(slot as number);
+        return true;
+      },
+    },
     "manage:draw-region": {
       denied: DENIED,
       run: async () => {

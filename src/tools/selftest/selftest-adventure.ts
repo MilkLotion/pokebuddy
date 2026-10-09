@@ -111,6 +111,16 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.ok(run("battle.clear", { slotIndex: 1 }).ok);
   assert.equal(battleSlots(save)[1], null);
   assert.equal(why("battle.clear", { slotIndex: 1 }), "already");
+  // 칸 옮기기 — 빈 칸이면 옮기고, 개체 칸이면 맞바꾼다 (끌어 놓기)
+  assert.ok(run("battle.move", { slotIndex: 0, toSlot: 3 }).ok);
+  assert.deepEqual(battleSlots(save).slice(0, 4), [null, null, null, "p1"], "빈 칸으로 옮긴다");
+  assert.ok(run("battle.set", { slotIndex: 0, petId: "p2" }).ok);
+  assert.ok(run("battle.move", { slotIndex: 3, toSlot: 0 }).ok);
+  assert.deepEqual(battleSlots(save).slice(0, 4), ["p1", null, null, "p2"], "개체 칸이면 맞바꾼다");
+  assert.equal(why("battle.move", { slotIndex: 1, toSlot: 2 }), "no-pet", "빈 칸은 끌지 못한다");
+  assert.equal(why("battle.move", { slotIndex: 0, toSlot: 0 }), "already");
+  assert.equal(why("battle.move", { slotIndex: 0, toSlot: 6 }), "bad-slot");
+  assert.ok(run("battle.clear", { slotIndex: 3 }).ok);
 
   // 기술 순서 — 개체에 저장한다
   assert.ok(run("battle.moves", { petId: "p1" }).ok);

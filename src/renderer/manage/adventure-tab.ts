@@ -11,44 +11,17 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { battleShown, openBattleDevice } from "./battle-link.js";
+import { dropZone, startDrag } from "./box-move.js";
+import { hold } from "./box-state.js";
 import { sendCommand } from "./command.js";
 import { openAnyDialog } from "./dialog.js";
 import { openBattleOpponent } from "./battle-opponent.js";
+import { askBattleMenu } from "./pet-menu.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { pageHeadEl, segmentedEl } from "./widgets.js";
 
 const SOON = "아직 준비 중이에요";
-let menuSlot: number | null = null; // 우클릭 메뉴가 열린 칸
-
-// 바깥을 눌렀다 — 열린 메뉴를 닫는다. 닫았으면 참 (manage.ts 의 바깥 누르기)
-export function closeAdventureMenu(): boolean {
-  if (menuSlot == null) return false;
-  menuSlot = null;
-  return true;
-}
-
 const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot, page: 0 });
-
-// 든 칸의 우클릭 메뉴 — 바꾸기·빼기
-function slotMenu(slot: number): HTMLElement {
-  const menu = el("div", "sort-menu battle-menu");
-  menu.setAttribute("role", "menu");
-  const item = (label: string, run: () => void): HTMLElement => {
-    const b = buttonEl("sort-item", label);
-    b.setAttribute("role", "menuitem");
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      menuSlot = null;
-      run();
-    });
-    return b;
-  };
-  menu.append(
-    item("바꾸기", () => pickSlot(slot)),
-    item("빼기", () => void sendCommand("battle.clear", "", { slotIndex: slot })),
-  );
-  return menu;
-}
 
 function petCard(slot: BattleSlotView): HTMLElement {
   const pet = slot.pet!;
@@ -83,9 +56,7 @@ function petCard(slot: BattleSlotView): HTMLElement {
   card.addEventListener("click", () => openBattleDevice(slot.index));
   card.addEventListener("contextmenu", (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    menuSlot = slot.index;
-    redrawBody();
+    askBattleMenu(slot.index);
   });
   return card;
 }
@@ -128,11 +99,16 @@ export function drawAdventure(v: Snapshot): void {
   const grid = el("div", "grid");
   for (const slot of v.battle.slots) {
     const card = slot.pet ? petCard(slot) : blankCard(slot);
-    if (slot.pet && menuSlot === slot.index) {
-      const wrap = el("div", "battle-slot");
-      wrap.append(card, slotMenu(slot.index));
-      grid.appendChild(wrap);
-    } else grid.appendChild(card);
+    // 칸 옮기기 — 파티 탭과 같은 포인터 끌기(startDrag). 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다
+    dropZone(card, () => {
+      const from = hold.drag;
+      if (from && "battleSlot" in from && from.battleSlot !== slot.index) void sendCommand("battle.move", "", { slotIndex: from.battleSlot, toSlot: slot.index });
+    });
+    if (slot.pet) {
+      card.addEventListener("pointerdown", (e) => startDrag(e, card, { battleSlot: slot.index }));
+      card.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
+    }
+    grid.appendChild(card);
   }
   bodyEl.appendChild(grid);
 }

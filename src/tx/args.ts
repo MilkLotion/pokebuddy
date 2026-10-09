@@ -27,6 +27,8 @@ export function argsFromCommand(command: Command): Record<string, unknown> {
       return { petId: target ?? str(a.petId), slotIndex: int(a.slotIndex) };
     case "battle.clear":
       return { slotIndex: int(a.slotIndex) };
+    case "battle.move":
+      return { slotIndex: int(a.slotIndex), toSlot: int(a.toSlot) };
     case "battle.import":
       return { preset: int(a.preset) };
     case "battle.moves":

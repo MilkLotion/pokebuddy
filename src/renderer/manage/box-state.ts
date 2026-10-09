@@ -4,7 +4,7 @@
 
 // 끄는 중인 칸 — 끄는 동안 주기적 새로 그리기를 쉰다. 박스 칸이면 박스·칸 번호, 파티 칸이면 개체 ID
 // 박스 순서 모달의 타일이면 박스 ID
-export type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string };
+export type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string } | { battleSlot: number };
 
 export interface HoldState {
   // 옮기기로 든 개체 — 든 동안 원래 칸은 흐리다. ghost 가 참이면 커서를 따라가는 칸도 띄운다.
