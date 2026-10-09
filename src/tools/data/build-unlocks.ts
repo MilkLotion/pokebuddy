@@ -31,7 +31,7 @@ import { starterSlugs, unlockRules } from "../../dex/unlocks";
 import type { UnlockRule } from "../../shared/species";
 import type { EvoTable } from "./build-evo";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
-import { isRegional, regionalTable } from "../../dex/regional";
+import { isRegional, lookFormOf, regionalTable } from "../../dex/regional";
 import { fixedEggs, rewardSpecies } from "../../dex/obtain";
 
 const EVO = path.join(DATA_DIR, "evo.json");
@@ -100,6 +100,8 @@ export function build(evo: EvoTable, babies: Set<string>, starterSlugs: string[]
     const idx = Math.min(stageOf(from), RULES.affinityByStage.length - 1);
     const affinity = must(RULES.affinityByStage[idx], `단계 ${idx} 의 affinity`);
     for (const s of steps) {
+      // 도감 칸 없는 겉모습(바라철록 여름의 모습)은 해금 규칙이 없다 — 도감에는 기본 종으로 적는다 (data/regional.json looks)
+      if (lookFormOf(s.to)) continue;
       const rule: EvolveRule = { from, affinity };
       if (s.when) rule.when = s.when;
       evolves.push([s.to, rule]);

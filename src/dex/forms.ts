@@ -18,7 +18,7 @@
 //            (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
-import { riderOf, shiftGroupOf } from "./regional.js";
+import { partnerOf, riderOf, shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
 import { SHIFT_RULES, type ShiftRule } from "./rules.js";
@@ -26,7 +26,7 @@ import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
-export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already" | "no-item" | "no-rider">;
+export type FormFailure = ReasonOf<"no-pet" | "not-shared" | "bad-form" | "form-locked" | "already" | "no-item" | "no-rider" | "no-partner">;
 
 export type FormResult = Outcome<FormFailure> & {
   petId?: string;
@@ -88,6 +88,13 @@ export function riderMissing(save: Pick<SaveV3, "pets">, to: string, opts?: DexO
   return horse != null && !save.pets.some((p) => p.species === horse);
 }
 
+// 그 모습에 있어야 하는 짝이 저장에 없는가 — 블랙큐레무는 제크로무, 화이트큐레무는 레시라무 개체가 있어야 한다. 짝은 쓰지 않고 묶지도 않는다
+// (2026-10-09 사용자 결정 "상점에서 뭐 구할수있고 그런게 아니라 직접 알에서 둘 다 구해야 모습바뀌게", data/regional.json partners)
+export function partnerMissing(save: Pick<SaveV3, "pets">, to: string, opts?: DexOptions): boolean {
+  const mate = partnerOf(to, opts);
+  return mate != null && !save.pets.some((p) => p.species === mate);
+}
+
 // 개체 작업 시간 — 시간 적용이 지금 파티 칸 개체마다 부른다. 규칙이 있는 묶음의 개체만 세고 조건 값에서 멈춘다
 export function tickFormWork(pet: PetV3, workMs: number, opts?: DexOptions): void {
   if (workMs <= 0) return;
@@ -119,6 +126,7 @@ export function setForm(save: SaveV3, petId: string, species: unknown, opts?: De
   if (isFormLocked(pet, opts)) return { ok: false, reason: "form-locked" };
   if (species === pet.species) return { ok: false, reason: "already" };
   if (riderMissing(save, species, opts)) return { ok: false, reason: "no-rider" };
+  if (partnerMissing(save, species, opts)) return { ok: false, reason: "no-partner" };
   const item = formItemOf(pet, species, opts);
   if (item && (save.bag[item] ?? 0) < 1) return { ok: false, reason: "no-item" };
   if (item) {

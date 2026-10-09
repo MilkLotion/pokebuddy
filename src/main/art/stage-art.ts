@@ -9,7 +9,7 @@ import { SIZE_STEPS, snapSize } from "../../party/size.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../../shared/model/stage";
 import type { Paths } from "../../platform/paths";
 import { profileOf } from "../../dex/species";
-import { genderLookInfo, regionalOf } from "../../dex/regional";
+import { genderLookInfo, lookFormOf, regionalOf } from "../../dex/regional";
 import { megaOf } from "../../dex/mega";
 import { battleLookTable } from "../../dex/tables";
 import { dexFolderOf, lookOf } from "../../dex/look";
@@ -98,13 +98,15 @@ export function pmdSources(look: string): PmdSource[] {
   if (battle) return [...(shiny ? [{ slug, spritePath: `${battle}/0001` }] : []), { slug, spritePath: battle }, ...(base ? [{ slug, spritePath: shiny ? `${base}/0000/0001` : base }] : [])];
   // PMD 그림이 없고 걷기 그림 폴더가 있는 특수 폼(버드렉스(백마 탄 모습)) — 기본형 PMD 로 떨어지지 않게 빈 목록. 걷기 대체 그림으로 넘어간다 (data/regional.json overworld)
   if (regionalOf(slug)?.overworld && !regionalOf(slug)?.pmd) return [];
-  const form = regionalOf(slug)?.pmd;
+  // 도감 칸 없는 겉모습(안농 B · 사철록 계절)도 폼 폴더가 먼저다 (data/regional.json looks)
+  const lookForm = lookFormOf(slug);
+  const form = regionalOf(slug)?.pmd ?? lookForm?.pmd;
   const out: PmdSource[] = [];
   if (form) out.push({ slug, spritePath: shiny ? `${form}/0001` : form });
   if (form && shiny) out.push({ slug, spritePath: form });
   if (shiny) {
     if (base) out.push({ slug, spritePath: `${base}/0000/0001` });
-  } else out.push(regionalOf(slug) && base ? { slug, spritePath: base } : { slug });
+  } else out.push((regionalOf(slug) || lookForm) && base ? { slug, spritePath: base } : { slug });
   return out;
 }
 

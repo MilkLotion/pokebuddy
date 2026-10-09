@@ -147,6 +147,10 @@ export async function check(): Promise<void> {
       if (s.map) {
         other = (evo[from] ?? []).find((e) => !e.map && table.forms[s.to]?.base === e.to)?.need;
         source = "기본형 간선";
+      } else if (table.looks[from]) {
+        // 겉모습 → 겉모습(사철록 여름의 모습 → 바라철록 여름의 모습) — PokeAPI 에 모습별 행이 없다. 기본 종끼리의 간선과 같아야 한다
+        other = (evo[table.looks[from]?.base ?? ""] ?? []).find((e) => e.to === table.looks[s.to]?.base)?.need;
+        source = "기본 종 간선";
       } else if (table.forms[s.to]) {
         other = needOfRows(evoRows.filter((r) => r.evolved_pokemon_form_id && formName.get(r.evolved_pokemon_form_id) === s.to));
         source = "PokeAPI 폼 행";

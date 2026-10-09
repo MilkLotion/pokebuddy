@@ -21,7 +21,7 @@ import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { hatchBaseOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
+import { hatchBaseOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
 import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
 import { megaFormsOf, megaOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
@@ -47,6 +47,14 @@ function shiftNeedText(slug: string, opts?: DexOptions): string {
   const rule = shiftRuleOf(slug, opts);
   if (rule == null) return "";
   return rule.workMs > 0 ? `(파티에서 작업 ${rule.workMs / 3_600_000}시간 · ${itemName(rule.item)})` : `(${itemName(rule.item)})`;
+}
+
+// 짝이 있어야 하는 모습(블랙큐레무 — 제크로무) — "(제크로무가 있어야)". 짝이 없으면 빈 글자 (data/regional.json partners)
+function partnerText(slug: string, opts?: DexOptions): string {
+  const mate = partnerOf(slug, opts);
+  if (!mate) return "";
+  const name = petName(mate);
+  return `(${name}${josa(name, "이/가")} 있어야)`;
 }
 
 // 모습 바꾸기 줄 — 작업 시간 조건이 있는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
@@ -76,7 +84,12 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼)·로토무의 다섯 모습). 작업 시간 조건이 있으면 괄호로 붙인다
   const shiftForm = regionalOf(slug, opts);
   // 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달), get tool)도 같다 — "플라엣테의 모습 바꾸기(영원의 꽃)"
-  if (shiftForm?.get === "shift" || shiftForm?.get === "tool") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}`);
+  if (shiftForm?.get === "shift" || shiftForm?.get === "tool") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}${partnerText(slug, opts)}`);
+  // 전투 중에만 바뀌는 모습(메로엣타(스텝폼)) — 기본 종을 얻으면 함께 기록된다 (2026-10-09 사용자 결정 "메로엣타를 얻으면 같이")
+  if (shiftForm?.get === "battle") {
+    const base = petName(shiftForm.base);
+    methods.push(`${base}${josa(base, "을/를")} 얻으면 함께`);
+  }
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);

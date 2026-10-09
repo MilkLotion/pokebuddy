@@ -152,7 +152,7 @@ out("0 supabase/functions/_shared 가 최신");
   const burmy = base();
   burmy.pets[0] = { ...burmy.pets[0]!, species: "burmy-sandy" };
   const moth = clone(burmy);
-  moth.pets[0] = { ...moth.pets[0]!, species: "wormadam" };
+  moth.pets[0] = { ...moth.pets[0]!, species: "wormadam-sandy" }; // 2026-10-09 모습별 간선 — 모래땅도롱은 모래땅도롱으로 진화한다
   assert.deepEqual(rules(burmy, moth, ctx(HOUR)).filter((r) => r !== "level"), [], "모습 슬러그의 진화");
   const jump = clone(prev);
   jump.pets[0] = { ...jump.pets[0]!, species: "mewtwo" };
@@ -523,8 +523,8 @@ out("0 supabase/functions/_shared 가 최신");
 // 14. 로토무 모습 — 개체 작업 시간 2시간, 바꿀 때마다 로토무카탈로그 1개 (src/dex/rules.ts SHIFT_RULES, 2026-10-05 사용자 결정)
 {
   const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
-  // 로토무와 한 방향 묶음(플라엣테·다투곰, 2026-10-08)만 규칙이 있다
-  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM, "floette", "floette-eternal", "ursaluna", "ursaluna-bloodmoon"].sort(), "규칙이 있는 묶음");
+  // 로토무와 한 방향 묶음(플라엣테·다투곰 2026-10-08, 개굴닌자 2026-10-09)만 규칙이 있다
+  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM, "floette", "floette-eternal", "ursaluna", "ursaluna-bloodmoon", "greninja", "greninja-battle-bond"].sort(), "규칙이 있는 묶음");
   assert.deepEqual(data.shiftRules?.["floette-eternal"], { base: "floette", workMs: 0, item: "eternal-flower", oneWay: true });
   assert.deepEqual(data.shiftRules?.["rotom-heat"], { base: "rotom", workMs: 7_200_000, item: "rotom-catalog" });
   const at = (workMs: number, catalogs: number): { prev: SaveV3; next: SaveV3 } => {

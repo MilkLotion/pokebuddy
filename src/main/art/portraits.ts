@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { profileOf, speciesSlugs } from "../../dex/species.js";
-import { genderLookInfo, regionalOf } from "../../dex/regional.js";
+import { genderLookInfo, lookFormOf, regionalOf } from "../../dex/regional.js";
 import { megaOf } from "../../dex/mega.js";
 import { loadJson, isMetaKey } from "../../dex/data.js";
 import { PATHS } from "../../platform/paths.js";
@@ -66,7 +66,8 @@ export function portraitIds(slug: string): PortraitId[] {
   if (byGender) return [...new Set<PortraitId>([byGender.pokemonId, ...portraitIds(byGender.species)])];
   const mega = megaOf(slug);
   const dex = profileOf(mega?.base ?? slug).dex;
-  const regional = mega ? null : regionalOf(slug);
+  // 도감 칸 없는 겉모습(안농 B · 아르세우스 타입)도 리전폼처럼 표의 초상 이름·번호를 쓴다 (data/regional.json looks)
+  const regional = mega ? null : (regionalOf(slug) ?? lookFormOf(slug));
   const form = mega?.pokemonId ?? regional?.pokemonId;
   const named = regional?.portrait && /^[a-z0-9-]+$/.test(regional.portrait) ? [regional.portrait] : [];
   return [...new Set<PortraitId>([...named, ...[form, dex].filter((n): n is number => typeof n === "number" && n > 0)])];

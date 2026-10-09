@@ -16,6 +16,7 @@ import { gameDayPart } from "../../shared/clock";
 const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
 import { formsOf, isFormLocked, tickFormWork, isSinglePet, setForm } from "../../dex/forms";
 import { SHIFT_RULES } from "../../dex/rules";
+import { recordDex } from "../../dex/record";
 import { callRider, riderCall } from "../../party/riders";
 import { snapshotView } from "../../view/snapshot";
 import { dexDetail } from "../../view/dex-detail";
@@ -262,6 +263,30 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(c.pets.length, 3, "말은 쓰지 않는다");
   assert.ok(isSinglePet(cp), "단일 포켓몬");
   process.stdout.write("(12c-2) 자시안·자마젠타·버드렉스 모습 바꾸기  ok\n");
+}
+
+// (12c-2b) 전설 모습 바꾸기·큐레무 짝·도감 기록 (2026-10-09 사용자 결정, worklog/records/form-reach)
+{
+  const sh = seed({ species: "shaymin", level: 50 });
+  assert.deepStrictEqual(formsOf(sh.pets[0] as PetV3), ["shaymin", "shaymin-sky"], "쉐이미는 스카이폼과 조건 없이 오간다");
+  assert.equal(setForm(sh, "p1", "shaymin-sky").ok, true);
+  assert.ok(sh.dex.obtained.includes("shaymin-sky"), "도감 칸이 있는 모습은 그 칸에 얻음");
+  assert.equal(formsOf(seed({ species: "arceus", level: 50 }).pets[0] as PetV3).length, 18, "아르세우스 17 타입");
+  const ar = seed({ species: "arceus", level: 50 });
+  assert.equal(setForm(ar, "p1", "arceus-fire").ok, true);
+  assert.ok(!ar.dex.obtained.includes("arceus-fire") && ar.dex.obtained.includes("arceus"), "겉모습은 기본 종 칸으로 적는다");
+  const k = seed({ species: "kyurem", level: 50 });
+  assert.deepStrictEqual(setForm(k, "p1", "kyurem-black"), { ok: false, reason: "no-partner" }, "제크로무가 없으면 블랙큐레무 불가");
+  k.pets.push({ ...(seed({ species: "zekrom", level: 5 }).pets[0] as PetV3), id: "p2" });
+  assert.equal(setForm(k, "p1", "kyurem-black").ok, true, "제크로무가 있으면 된다");
+  assert.equal(setForm(k, "p1", "kyurem-white").reason, "no-partner", "레시라무는 아직 없다");
+  assert.equal(k.pets.length, 2, "짝은 쓰지 않는다");
+  const m = seed({ species: "pikachu", level: 5 });
+  recordDex(m, "meloetta", false);
+  assert.ok(m.dex.obtained.includes("meloetta-pirouette"), "메로엣타를 얻으면 스텝폼도 함께");
+  recordDex(m, "unown-question", true);
+  assert.ok(m.dex.obtained.includes("unown") && m.dex.shinyObtained.includes("unown") && !m.dex.obtained.includes("unown-question"), "안농 ? 는 안농 칸");
+  process.stdout.write("(12c-2b) 전설 모습·큐레무 짝·도감 기록  ok\n");
 }
 
 // (12c-3) 유대의고삐로 말 부르기 — 버드렉스 계열이 있을 때만, 아직 없는 말만, 고삐 1개 소모, 박스로 (src/party/riders.ts, 2026-10-07 사용자 결정)

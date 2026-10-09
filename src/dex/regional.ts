@@ -9,14 +9,16 @@ import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import type { EvoStep } from "./evo";
 import type { EvoNeed } from "../shared/species";
 
-// 도감의 지방 칸 — johto · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 기라티나(오리진폼) · 배쓰나이(청색근의 모습) · 플라엣테(영원의 꽃))만 쓴다
-export type RegionId = "johto" | "sinnoh" | "unova" | "kalos" | "alola" | "galar" | "hisui" | "paldea";
+// 도감의 지방 칸 — johto · hoenn · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 캐스퐁(태양의 모습) · 기라티나(오리진폼) · 배쓰나이(청색근의 모습) · 플라엣테(영원의 꽃))만 쓴다
+export type RegionId = "johto" | "hoenn" | "sinnoh" | "unova" | "kalos" | "alola" | "galar" | "hisui" | "paldea";
 
 // 얻는 방법 — map 지도 진화 결과 · base 다른 종과 같은 규칙의 진화 전 종 · path 리전폼이 진화해 얻는 종
 //   branch 기본형 종에서 지도 없이 진화해 얻는 특수 폼(루가루암(한밤중의 모습)) · gift 우편으로만 받는 특수 폼(피츄(삐쭉귀)) — 단일 포켓몬이다
 //   variant 알에서 기본형 대신 나오는 특수 폼(배쓰나이(백색근의 모습)) — 표의 hatch 가 확률을 정한다
 //   shift 기본형 개체가 모습 바꾸기로 오가는 특수 폼(기라티나(오리진폼) · 자시안(검왕) · 버드렉스(백마 탄 모습)) — 표의 shift 가 짝을 정한다
-export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift" | "tool";
+//   battle 전투 중에만 바뀌는 특수 폼(메로엣타(스텝폼) · 캐스퐁(태양의 모습) · 불비달마(달마모드)) — 기본 종을 얻으면 도감에 함께 얻음으로 남는다
+//          (2026-10-09 사용자 결정 "메로엣타를 얻으면 같이", src/dex/record.ts recordDex)
+export type RegionalGet = "map" | "base" | "path" | "branch" | "gift" | "variant" | "shift" | "tool" | "battle";
 
 export interface RegionalForm {
   base: string; // 같은 도감 번호의 기본 종
@@ -32,6 +34,14 @@ export interface RegionalForm {
   special?: true; // 특수 폼 — 지방 모습이 아니다
 }
 
+// 도감 칸 없는 겉모습 — 종 데이터는 따로 있지만 도감에는 기본 종으로 적는다 (2026-10-09 사용자 결정 "공식기준으로 하자" — 위키 전국도감에 한 줄인 종)
+export interface LookForm {
+  base: string; // 도감 칸의 기본 종
+  pokemonId?: number; // PokeAPI pokemon.csv id — 따로 번호가 있는 모습만(케르디오(각오의 모습))
+  portrait?: string; // 초상 파일 이름(`201-b`) — 번호가 없는 모습
+  pmd?: string; // PMD SpriteCollab 폼 경로(`0201/0001`). 없으면 기본형 그림
+}
+
 // 알에서 한 종이 나올 때 대신 나오는 모습 — [슬러그, 가중치]. 기본형 자신도 목록에 든다
 export type HatchVariants = [string, number][];
 
@@ -41,6 +51,8 @@ export interface RegionalTable {
   hatch: Record<string, HatchVariants>;
   shift: Record<string, string[]>; // 기본 종 → 모습 바꾸기로 오가는 모습들
   riders: Record<string, string>; // 모습 → 그 모습이 되려면 저장에 있어야 하는 말 (버드렉스(백마 탄 모습) → 블리자포스, src/party/riders.ts)
+  partners: Record<string, string>; // 모습 → 그 모습이 되려면 저장에 있어야 하는 짝 (블랙큐레무 → 제크로무). 짝은 따로 쓰이고 묶이지 않는다
+  looks: Record<string, LookForm>; // 도감 칸 없이 그림만 다른 모습 (안농 B · 아르세우스 타입 · 사철록 계절) — 도감은 기본 종 칸 하나다
   gender: Record<string, Partial<Record<"male" | "female", GenderLook>>>; // 종 → 성별 → 그 성별의 그림
 }
 
@@ -59,7 +71,7 @@ export const REGION_MAP = "region-map";
 //   이런 간선은 돌을 보지도 쓰지도 않는다. 화면도 "지도" 하나만 적는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
 export const needIsMap = (need: EvoNeed | undefined): boolean => need?.kind === "item" && need.item === REGION_MAP;
 
-const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, gender: {} };
+const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {} };
 const tables = new Map<string, RegionalTable>();
 
 // 표 전체 — 파일이 없거나 깨졌으면 빈 표
@@ -70,7 +82,7 @@ export function regionalTable(opts?: DexOptions): RegionalTable {
   let table = EMPTY;
   try {
     const raw = loadJson<Partial<RegionalTable>>("regional.json", opts);
-    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, gender: raw.gender ?? {} };
+    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, partners: raw.partners ?? {}, looks: raw.looks ?? {}, gender: raw.gender ?? {} };
   } catch {
     table = EMPTY;
   }
@@ -109,6 +121,32 @@ export function riderOf(form: string, opts?: DexOptions): string | null {
   const key = normalizeSlug(form);
   const horse = isMetaKey(key) ? undefined : regionalTable(opts).riders[key];
   return typeof horse === "string" ? horse : null;
+}
+
+// 이 모습이 되려면 저장에 있어야 하는 짝 — 블랙큐레무 → 제크로무. 없으면 null (data/regional.json 의 partners)
+// 짝은 말과 달리 부르는 도구가 없고 묶이지도 않는다 — 알에서 직접 얻는다 (2026-10-09 사용자 결정)
+export function partnerOf(form: string, opts?: DexOptions): string | null {
+  const key = normalizeSlug(form);
+  const mate = isMetaKey(key) ? undefined : regionalTable(opts).partners[key];
+  return typeof mate === "string" ? mate : null;
+}
+
+// 도감 칸 없는 겉모습 — 아니면 null (data/regional.json 의 looks)
+export function lookFormOf(slug: string, opts?: DexOptions): LookForm | null {
+  const key = normalizeSlug(slug);
+  if (isMetaKey(key)) return null;
+  return regionalTable(opts).looks[key] ?? null;
+}
+
+// 도감에 적는 종 — 겉모습이면 기본 종, 아니면 그대로 (안농 B → 안농)
+export const dexSlugOf = (slug: string, opts?: DexOptions): string => lookFormOf(slug, opts)?.base ?? normalizeSlug(slug);
+
+// 전투 중에만 바뀌는 모습 — 기본 종을 얻으면 도감에 함께 남는다 (메로엣타 → 메로엣타(스텝폼)). 없으면 빈 목록
+export function battleFormsOf(base: string, opts?: DexOptions): string[] {
+  const key = normalizeSlug(base);
+  return Object.entries(regionalTable(opts).forms)
+    .filter(([slug, f]) => !isMetaKey(slug) && f.get === "battle" && f.base === key)
+    .map(([slug]) => slug);
 }
 
 // 이 종(모습 바꾸기 묶음 전체)이 부를 수 있는 말 — 버드렉스 계열이면 블리자포스·레이스포스, 아니면 빈 목록

@@ -173,7 +173,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profileOf("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.speciesSlugs().length, 1182, "표의 종 수 — PokeAPI 종 1025 + 폼 78 + 리전폼 57 + 특수 폼 22 (배쓰나이(청색근의 모습)·기라티나(오리진폼)·로토무의 다섯 모습은 폼에서 특수 폼으로 옮겼다)");
+  assert.strictEqual(dex.speciesSlugs().length, 1185, "표의 종 수 — PokeAPI 종 1025 + 폼 160 (리전폼·특수 폼·겉모습 포함). 2026-10-09 개굴닌자(유대변화)·지우개굴닌자·지가르데 퍼펙트폼 3을 더했다");
   assert.ok(!dex.speciesSlugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.speciesSlugs()) {
@@ -212,11 +212,13 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual(dex.lineOf("ditto"), ["ditto"], "사슬에 없는 종은 자기만");
   assert.deepStrictEqual(dex.lineOf("not-a-mon"), ["not-a-mon"]);
   // 폼 — 같은 도감번호는 사슬의 모습으로 붙는다. 특수 폼(로토무의 다섯 모습 — 2026-10-04 폼에서 옮김)은 다른 종이라 붙지 않는다
-  const deoxys = dex.lineOf("deoxys");
-  assert.deepStrictEqual(deoxys, ["deoxys", "deoxys-attack", "deoxys-defense", "deoxys-speed"], "테오키스 폼");
-  assert.deepStrictEqual(dex.lineOf("deoxys-speed"), deoxys, "폼에서 봐도 같은 목록");
+  // 도감 칸 없는 겉모습(케르디오(각오의 모습))은 모습으로 붙는다. 테오키스 폼은 2026-10-09 도감 칸이 생겨 특수 폼이 됐다 (worklog/records/form-reach)
+  const keldeo = dex.lineOf("keldeo");
+  assert.deepStrictEqual(keldeo, ["keldeo", "keldeo-resolute"], "케르디오 폼");
+  assert.deepStrictEqual(dex.lineOf("keldeo-resolute"), keldeo, "폼에서 봐도 같은 목록");
   assert.deepStrictEqual(dex.lineOf("rotom"), ["rotom"], "특수 폼은 사슬에 붙지 않는다(기라티나(오리진폼)와 같다)");
-  assert.deepStrictEqual(dex.lineOf("deoxys-attack")[0], "deoxys");
+  assert.deepStrictEqual(dex.lineOf("deoxys"), ["deoxys"], "테오키스 폼도 특수 폼");
+  assert.deepStrictEqual(dex.lineOf("keldeo-resolute")[0], "keldeo");
 
   assert.strictEqual(dex.evoStageOf("eevee"), 0);
   assert.strictEqual(dex.evoStageOf("umbreon"), 1);
@@ -249,13 +251,15 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "urshifu-rapid-strike:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool"],
-    "특수 폼 22종과 얻는 방법",
+    ["pichu-spiky-eared:gift", "castform-sunny:battle", "castform-rainy:battle", "castform-snowy:battle", "deoxys-attack:shift", "deoxys-defense:shift", "deoxys-speed:shift", "burmy-sandy:variant", "burmy-trash:variant", "wormadam-sandy:path", "wormadam-trash:path", "shellos-east:variant", "gastrodon-east:path", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "shaymin-sky:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "darmanitan-zen:battle", "tornadus-therian:shift", "thundurus-therian:shift", "landorus-therian:shift", "kyurem-black:shift", "kyurem-white:shift", "meloetta-pirouette:battle", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "urshifu-rapid-strike:branch", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool"],
+    "특수 폼 42종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
   const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);
-  assert.strictEqual(edges.filter((e) => !specialEdge(e)).length, 38, "리전폼 간선 38개");
-  assert.strictEqual(edges.filter(specialEdge).length, 5, "특수 폼 간선 5개");
+  const lookEdge = (e: { from: string; to: string }): boolean => table.looks[e.from] != null; // 겉모습 간선 — 사철록 계절 → 바라철록 계절 (2026-10-09)
+  assert.strictEqual(edges.filter((e) => !specialEdge(e) && !lookEdge(e)).length, 38, "리전폼 간선 38개");
+  assert.strictEqual(edges.filter(specialEdge).length, 10, "특수 폼 간선 10개(도롱충이 모습 4 · 깝질무 동쪽 1 포함)");
+  assert.strictEqual(edges.filter(lookEdge).length, 3, "겉모습 간선 3개");
   const count = (get: string): number => forms.filter(([, f]) => f.get === get && !f.special).length;
   assert.deepStrictEqual([count("map"), count("base"), count("path")], [12, 28, 17]);
   const names = require(path.join(__dirname, "..", "..", "..", "data", "names.json")) as Record<string, { ko: string; en: string }>;
@@ -267,7 +271,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
     assert.strictEqual(names[slug]?.ko, f.ko, `${slug} 이름표`);
     assert.match(regional.dexLabel(slug, p.dex), /^\d+-\d+$/, `${slug} 표시 번호`);
     if (f.pmd) assert.match(f.pmd, /^\d{4}\/\d{4}$/, `${slug} PMD 경로`);
-    assert.strictEqual(dex.evoStageOf(slug) === 0, f.get === "base" || f.get === "gift" || f.get === "variant" || f.get === "shift" || f.get === "tool", `${slug} 진화 전 종은 base · gift · variant · shift · tool 뿐`);
+    assert.strictEqual(dex.evoStageOf(slug) === 0, f.get === "base" || f.get === "gift" || f.get === "variant" || f.get === "shift" || f.get === "tool" || f.get === "battle", `${slug} 진화 전 종은 base · gift · variant · shift · tool · battle 뿐`);
   }
   for (const e of edges) {
     assert.ok(dex.hasProfile(e.from) && dex.hasProfile(e.to), `${e.from}→${e.to} 도감표`);
@@ -380,7 +384,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([names["dialga"]?.ko, names["magearna"]?.ko, names["magearna-original"]?.ko], ["디아루가", "마기아나", "마기아나(500년 전의 색)"], "공식 도감에 모습 이름이 없는 기본형은 종 이름 그대로");
   assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
-  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, gender: {} });
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {} });
   out("리전폼 ok");
 }
 

@@ -34,6 +34,20 @@ const OVERRIDES: Record<string, NameEntry> = {
   lycanroc: { ko: "루가루암(한낮의 모습)", en: "Lycanroc (Midday Form)" },
   toxtricity: { ko: "스트린더(하이한 모습)", en: "Toxtricity (Amped Form)" },
   urshifu: { ko: "우라오스(일격의 태세)", en: "Urshifu (Single Strike Style)" },
+  // 2026-10-09 위키 전국도감에 따로 줄이 있는 모습을 더하며 기본형 이름도 같은 규칙으로 적는다 (worklog/records/form-reach)
+  deoxys: { ko: "테오키스(노말폼)", en: "Deoxys (Normal Forme)" },
+  burmy: { ko: "도롱충이(초목도롱)", en: "Burmy (Plant Cloak)" },
+  wormadam: { ko: "도롱마담(초목도롱)", en: "Wormadam (Plant Cloak)" },
+  shellos: { ko: "깝질무(서쪽바다의 모습)", en: "Shellos (West Sea)" },
+  gastrodon: { ko: "트리토돈(서쪽바다의 모습)", en: "Gastrodon (West Sea)" },
+  shaymin: { ko: "쉐이미(랜드폼)", en: "Shaymin (Land Forme)" },
+  darmanitan: { ko: "불비달마(노말모드)", en: "Darmanitan (Standard Mode)" },
+  tornadus: { ko: "토네로스(화신폼)", en: "Tornadus (Incarnate Forme)" },
+  thundurus: { ko: "볼트로스(화신폼)", en: "Thundurus (Incarnate Forme)" },
+  landorus: { ko: "랜드로스(화신폼)", en: "Landorus (Incarnate Forme)" },
+  meloetta: { ko: "메로엣타(보이스폼)", en: "Meloetta (Aria Forme)" },
+  // 지우의모자로 바뀐 개굴닌자 — 공식 도감 항목이 아니어서 특성 이름을 괄호에 적는다 (2026-10-09, battle-261008 요청)
+  "greninja-battle-bond": { ko: "개굴닌자(유대변화)", en: "Greninja (Battle Bond)" },
 };
 
 export async function build(): Promise<void> {

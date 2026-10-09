@@ -82,6 +82,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   "bad-form": { ko: "고를 수 없는 모습이에요.", en: "That form can't be chosen." },
   "form-locked": { ko: "아직 열리지 않은 모습이에요.", en: "That form isn't unlocked yet." },
   "no-rider": { ko: "그 모습이 되려면 말이 있어야 해요.", en: "That form needs its steed." },
+  "no-partner": { ko: "그 모습이 되려면 짝 포켓몬이 있어야 해요.", en: "That form needs its partner Pokémon." },
   "not-rider-owner": { ko: "버드렉스가 있어야 쓸 수 있어요.", en: "You need a Calyrex to use this." },
   "no-stone": { ko: "메가스톤이 없어요.", en: "It has no Mega Stone." },
   "art-missing": { ko: "바뀔 모습의 그림을 받지 못했어요. 잠시 뒤 다시 해 주세요.", en: "Couldn't get the new form's art. Please try again later." },

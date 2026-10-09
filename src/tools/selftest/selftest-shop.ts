@@ -512,11 +512,11 @@ function seed(points: number): SaveV3 {
   assert.equal(list.find((i) => i.id === "rotom-catalog")?.category, "evolution", "카탈로그는 진화 탭");
   assert.equal(list.filter((i) => i.category === "tool").some((i) => i.id === "rotom-catalog"), false, "도구 탭에는 없다");
   assert.deepEqual(evo.slice(0, 3), ["빈 기술머신", "연결의끈", "지도"], "우리 도구가 맨 위 — 가나다순");
-  assert.deepEqual(evo.slice(3, 5), ["붉은 달", "영원의 꽃"], "우리 모습 도구는 우리 진화 도구 바로 아래 — 가나다순 (2026-10-08)");
+  assert.deepEqual(evo.slice(3, 6), ["붉은 달", "영원의 꽃", "지우의모자"], "우리 모습 도구는 우리 진화 도구 바로 아래 — 가나다순 (2026-10-08, 지우의모자 2026-10-09)");
   assert.deepEqual(list.filter((i) => i.id === "eternal-flower" || i.id === "red-moon").map((i) => [i.note, i.price, i.about?.where]), [["다투곰", 3000, "다투곰"], ["플라엣테", 3000, "플라엣테"]], "설명·쓰는 곳은 쓰는 종 이름만, 3000P");
-  assert.deepEqual(evo.slice(5, 11), ["달의돌", "리프의돌", "물의돌", "불꽃의돌", "천둥의돌", "태양의돌"], "1세대 가나다순, 그다음 2세대");
-  assert.deepEqual(evo.slice(11, 15), ["각성의돌", "로토무카탈로그", "빛의돌", "어둠의돌"], "4세대 — 카탈로그는 플라티나");
-  assert.equal(evo[15], "얼음의돌", "7세대");
+  assert.deepEqual(evo.slice(6, 12), ["달의돌", "리프의돌", "물의돌", "불꽃의돌", "천둥의돌", "태양의돌"], "1세대 가나다순, 그다음 2세대");
+  assert.deepEqual(evo.slice(12, 16), ["각성의돌", "로토무카탈로그", "빛의돌", "어둠의돌"], "4세대 — 카탈로그는 플라티나");
+  assert.equal(evo[16], "얼음의돌", "7세대");
   assert.deepEqual(evo.slice(-5), ["꿀맛사과", "범작찻잔", "복합금속", "저주받은갑옷", "축복받은갑옷"], "9세대가 맨 아래");
   assert.equal(list.find((i) => i.id === "rotom-catalog")?.about?.where, "로토무 · 모습 바꾸기", "카탈로그 쓰는 곳");
   process.stdout.write("(15) 진화 탭 · 카탈로그 · 원작 세대순 · 같은 세대 가나다순  ok\n");

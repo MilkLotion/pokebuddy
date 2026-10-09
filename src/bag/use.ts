@@ -10,6 +10,7 @@ import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
 import { BAG_RULES } from "./rules.js";
 import { recordShiny } from "../dex/record.js";
+import { dexSlugOf } from "../dex/regional.js";
 import { PET_RULES } from "../party/rules.js";
 import { isInParty } from "../party/locate.js";
 import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
@@ -139,7 +140,7 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
     case "shiny-on": {
       if (pet.shiny) return { ok: false, reason: "already-shiny" }; // 약마다 다른 까닭 (94 항목 9-3-3)
       pet.shiny = true;
-      recordShiny(save, pet.species);
+      recordShiny(save, dexSlugOf(pet.species, opts));
       return done({ shiny: true });
     }
     case "shiny-off": {

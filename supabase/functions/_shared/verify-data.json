@@ -1,5 +1,5 @@
 {
- "hash": "8a133076f4f55e99",
+ "hash": "5ca0d165c514e60e",
  "items": {
   "basic-food": {
    "price": null,
@@ -62,6 +62,11 @@
    "amount": 0
   },
   "eternal-flower": {
+   "price": 3000,
+   "effect": "form",
+   "amount": 0
+  },
+  "ash-cap": {
    "price": 3000,
    "effect": "form",
    "amount": 0
@@ -383,11 +388,11 @@
    "mothim"
   ],
   "burmy-sandy": [
-   "wormadam",
+   "wormadam-sandy",
    "mothim"
   ],
   "burmy-trash": [
-   "wormadam",
+   "wormadam-trash",
    "mothim"
   ],
   "cacnea": [
@@ -534,16 +539,16 @@
    "sawsbuck"
   ],
   "deerling-autumn": [
-   "sawsbuck"
+   "sawsbuck-autumn"
   ],
   "deerling-spring": [
    "sawsbuck"
   ],
   "deerling-summer": [
-   "sawsbuck"
+   "sawsbuck-summer"
   ],
   "deerling-winter": [
-   "sawsbuck"
+   "sawsbuck-winter"
   ],
   "deino": [
    "zweilous"
@@ -1377,7 +1382,7 @@
    "gastrodon"
   ],
   "shellos-east": [
-   "gastrodon"
+   "gastrodon-east"
   ],
   "shelmet": [
    "accelgor"
@@ -1950,6 +1955,10 @@
   "calyrex-shadow"
  ],
  "riderItem": "reins-of-unity",
+ "partners": {
+  "kyurem-black": "zekrom",
+  "kyurem-white": "reshiram"
+ },
  "shiftRules": {
   "rotom": {
    "base": "rotom",
@@ -2003,6 +2012,18 @@
    "base": "ursaluna",
    "workMs": 0,
    "item": "red-moon",
+   "oneWay": true
+  },
+  "greninja": {
+   "base": "greninja",
+   "workMs": 0,
+   "item": "ash-cap",
+   "oneWay": true
+  },
+  "greninja-battle-bond": {
+   "base": "greninja",
+   "workMs": 0,
+   "item": "ash-cap",
    "oneWay": true
   }
  },
@@ -2432,6 +2453,8 @@
   "greavard": "medium-slow",
   "greedent": "medium-fast",
   "greninja": "medium-slow",
+  "greninja-ash": "medium-slow",
+  "greninja-battle-bond": "medium-slow",
   "grimer": "medium-fast",
   "grimer-alola": "medium-fast",
   "grimmsnarl": "medium-fast",
@@ -3188,7 +3211,8 @@
   "zorua-hisui": "medium-slow",
   "zubat": "medium-fast",
   "zweilous": "slow",
-  "zygarde": "slow"
+  "zygarde": "slow",
+  "zygarde-complete": "slow"
  },
  "expTable": {
   "fast": [
@@ -4266,6 +4290,8 @@
   "great-tusk": 4,
   "greedent": 2,
   "greninja": 3,
+  "greninja-ash": 4,
+  "greninja-battle-bond": 3,
   "grimmsnarl": 3,
   "groudon": 5,
   "grumpig": 2,
@@ -4670,7 +4696,8 @@
   "zeraora": 5,
   "zoroark": 3,
   "zoroark-hisui": 3,
-  "zygarde": 5
+  "zygarde": 5,
+  "zygarde-complete": 5
  },
  "rankWeight": {
   "1": 100,
@@ -4693,6 +4720,162 @@
    [
     "basculin-white-striped",
     10
+   ]
+  ],
+  "burmy": [
+   [
+    "burmy",
+    1
+   ],
+   [
+    "burmy-sandy",
+    1
+   ],
+   [
+    "burmy-trash",
+    1
+   ]
+  ],
+  "shellos": [
+   [
+    "shellos",
+    1
+   ],
+   [
+    "shellos-east",
+    1
+   ]
+  ],
+  "deerling": [
+   [
+    "deerling",
+    1
+   ],
+   [
+    "deerling-summer",
+    1
+   ],
+   [
+    "deerling-autumn",
+    1
+   ],
+   [
+    "deerling-winter",
+    1
+   ]
+  ],
+  "unown": [
+   [
+    "unown",
+    1
+   ],
+   [
+    "unown-b",
+    1
+   ],
+   [
+    "unown-c",
+    1
+   ],
+   [
+    "unown-d",
+    1
+   ],
+   [
+    "unown-e",
+    1
+   ],
+   [
+    "unown-f",
+    1
+   ],
+   [
+    "unown-g",
+    1
+   ],
+   [
+    "unown-h",
+    1
+   ],
+   [
+    "unown-i",
+    1
+   ],
+   [
+    "unown-j",
+    1
+   ],
+   [
+    "unown-k",
+    1
+   ],
+   [
+    "unown-l",
+    1
+   ],
+   [
+    "unown-m",
+    1
+   ],
+   [
+    "unown-n",
+    1
+   ],
+   [
+    "unown-o",
+    1
+   ],
+   [
+    "unown-p",
+    1
+   ],
+   [
+    "unown-q",
+    1
+   ],
+   [
+    "unown-r",
+    1
+   ],
+   [
+    "unown-s",
+    1
+   ],
+   [
+    "unown-t",
+    1
+   ],
+   [
+    "unown-u",
+    1
+   ],
+   [
+    "unown-v",
+    1
+   ],
+   [
+    "unown-w",
+    1
+   ],
+   [
+    "unown-x",
+    1
+   ],
+   [
+    "unown-y",
+    1
+   ],
+   [
+    "unown-z",
+    1
+   ],
+   [
+    "unown-exclamation",
+    1
+   ],
+   [
+    "unown-question",
+    1
    ]
   ]
  },

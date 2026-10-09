@@ -125,6 +125,9 @@ export function buildVerifyFiles(): Record<string, string> {
       if (Array.isArray(list) && list.includes(form)) for (const slug of [base, ...list]) if (typeof slug === "string") riderOwners.add(slug);
     }
   }
+  // 큐레무의 짝 — 모습 → 있어야 하는 짝(data/regional.json partners)
+  const partners: Record<string, string> = {};
+  for (const [form, mate] of Object.entries((regional.partners ?? {}) as Record<string, unknown>)) if (!form.startsWith("_") && typeof mate === "string") partners[form] = mate;
   const data = {
     items,
     eggs,
@@ -134,6 +137,7 @@ export function buildVerifyFiles(): Record<string, string> {
     riders,
     riderOwners: [...riderOwners].sort(),
     riderItem: RIDER_ITEM,
+    partners,
     shiftRules,
     growth,
     expTable,

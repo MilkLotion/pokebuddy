@@ -18,6 +18,7 @@
 //   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감
 //   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수. 유대의고삐로 부른 말(블리자포스·레이스포스)은 그사이 줄어든 고삐 수까지 출처로 센다
 //   rider       새로 생긴 말은 새 저장에 버드렉스 계열 개체가 있어야 한다. 백마·흑마 모습 개체는 그 말 개체가 있어야 한다 (data/regional.json riders)
+//   partner     블랙·화이트큐레무 개체는 그 짝(제크로무·레시라무) 개체가 있어야 한다 (data/regional.json partners)
 //   pet-id      사라진 id 가 다시 나타나거나, 새 id 가 이전 번호(petSeq) 이하
 //   species     기존 개체의 종 변경은 진화 간선·forms 안에서만. 한 방향 모습(플라엣테(영원의 꽃))에서 기본 종으로는 안 된다
 //   form-work   개체 작업 시간(PetV3.workMs)의 증가 ≤ 계정 작업 시간 증가, 조건 값 이하 (src/dex/forms.ts tickFormWork)
@@ -53,6 +54,7 @@ export interface VerifyData {
   riders?: Record<string, string>; // 모습 → 그 모습에 있어야 하는 말 (data/regional.json riders). 없으면 rider 규칙과 말 부르기 몫을 보지 않는다
   riderOwners?: string[]; // 말을 부를 수 있는 종 — 버드렉스와 그 모습들
   riderItem?: string; // 말 부르기 도구(유대의고삐)
+  partners?: Record<string, string>; // 모습 → 그 모습에 있어야 하는 짝 (data/regional.json partners). 없으면 partner 규칙을 보지 않는다
   shiftRules?: Record<string, { base: string; workMs: number; item: string; oneWay?: true }>; // 규칙이 있는 모습 바꾸기 묶음의 종(기본 종 포함) → 규칙 (src/dex/rules.ts SHIFT_RULES). 없으면 form-* 규칙을 보지 않는다
   growth: Record<string, string>; // 종 → 성장 곡선 이름
   expTable: Record<string, number[]>; // 성장 곡선 → [레벨 1..100 의 누적 경험치] (src/dex/growth.ts expForLevel)
@@ -635,6 +637,13 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     for (const p of nextPets) {
       const horse = data.riders[p.species];
       if (horse && !nextPets.some((q) => q.species === horse)) add("rider", 1, 0, p.id);
+    }
+  }
+  // partner — 블랙·화이트큐레무는 짝 개체가 저장에 있어야 한다. 짝은 묶이지 않는다 (2026-10-09 사용자 결정)
+  if (data.partners) {
+    for (const p of nextPets) {
+      const mate = data.partners[p.species];
+      if (mate && !nextPets.some((q) => q.species === mate)) add("partner", 1, 0, p.id);
     }
   }
   add("shiny", fresh.filter((p) => p.shiny).length, opened + vanished + findPets + traded + boughtAndOpened);

@@ -29,6 +29,8 @@ export const SHIFT_RULES: Readonly<Record<string, ShiftRule>> = {
   rotom: { workMs: 2 * 60 * 60_000, item: "rotom-catalog" },
   floette: { workMs: 0, item: "eternal-flower", oneWay: true },
   ursaluna: { workMs: 0, item: "red-moon", oneWay: true },
+  // 개굴닌자 → 개굴닌자(유대변화) — 지우의모자 하나로 한 번, 특성만 유대변화가 된다 (2026-10-09 사용자 결정 "지우의모자 추가하고, 그걸 써야 특성이 유대변화로 되게. 기본은 급류", "모습 도구로 1회")
+  greninja: { workMs: 0, item: "ash-cap", oneWay: true },
 };
 
 // 버드렉스의 말 부르기 도구 — 버드렉스가 있으면 가방 기기 창에서 하나 쓰고, 블리자포스·레이스포스 가운데 고른 말이 박스로 온다
