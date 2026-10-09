@@ -5,5 +5,8 @@
   "palafin": {"form":"palafin-hero","stats":[100,160,97,106,87,100],"types":["water"]},
   "terapagos": {"form":"terapagos-terastal","stats":[95,95,110,105,110,85],"types":["normal"]},
   "darmanitan-galar-standard": {"form":"darmanitan-galar-zen","stats":[105,160,55,30,55,135],"types":["ice","fire"]},
+  "darmanitan": {"form":"darmanitan-zen","stats":[105,30,105,140,105,55],"types":["fire","psychic"]},
+  "greninja-battle-bond": {"form":"greninja-ash","stats":[72,145,67,153,71,132],"types":["water","dark"]},
+  "zygarde": {"form":"zygarde-complete","stats":[216,100,121,91,95,85],"types":["dragon","ground"]},
   "meloetta": {"form":"meloetta-pirouette","stats":[100,128,90,77,77,128],"types":["normal","fighting"],"ownMoves":true}
 }

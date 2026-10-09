@@ -51,6 +51,8 @@ interface PetEls {
   lefts: { el: HTMLElement; from: number; until: number }[]; // 능력 칩의 남은 시간 줄
   chips: number; // 지금 보이는 칩 수 — 알약·팝 글자를 그만큼 올린다
   overTop: number; // 머리 위 표시(HP 바)의 윗변 — 몸 칸 위에서의 px. 그림 키에 따라 다르다
+  over: HTMLElement; // 머리 위 표시 — 모습이 바뀌면 윗변을 다시 둔다
+  species: string; // 지금 그리는 모습 — form 이벤트로 바뀐다
 }
 
 // 머리 위 칩 하나 — 상태 이상은 색 점 + 이름, 능력 변화는 짧은 이름 + ▲▼단계와 남은 시간 줄
@@ -278,7 +280,24 @@ function petEl(u: BattleUnitView, sheets: LookSheets | null, zoom: number): PetE
   over.append(tags, hp.root, gauge.root);
   over.style.top = `${overTop}px`;
   root.appendChild(over);
-  return { root, canvas, sheets, shown: "", hpFill: hp.fill, hpChip: hp.chip, gauge: gauge.fill, gaugeBar: gauge.root, gaugeTail: tail, tags, lefts: [], chips: 0, overTop };
+  return { root, canvas, sheets, shown: "", hpFill: hp.fill, hpChip: hp.chip, gauge: gauge.fill, gaugeBar: gauge.root, gaugeTail: tail, tags, lefts: [], chips: 0, overTop, over, species: u.species };
+}
+
+// 모습이 바뀌면(form 이벤트 — 킬가르도·메로엣타·약어리·캐스퐁 등) 그 모습의 PMD 그림으로 바꾼다. 그림이 없으면 지금 그림 그대로
+function setPetLook(pet: PetEls, species: string, sheets: LookSheets | null, zoom: number): void {
+  pet.species = species;
+  if (!sheets || !pet.canvas) return;
+  pet.sheets = sheets;
+  pet.shown = "";
+  pet.canvas.width = Math.round(sheets.cell.w * zoom);
+  pet.canvas.height = Math.round(sheets.cell.h * zoom);
+  pet.canvas.style.left = `${Math.round(CELL - pet.canvas.width / 2)}px`;
+  pet.canvas.style.top = `${Math.round(CELL - pet.canvas.height / 2)}px`;
+  const ctx = pet.canvas.getContext("2d");
+  if (ctx) ctx.imageSmoothingEnabled = false;
+  for (const sh of Object.values(sheets.anims)) sheetImage(sh.dataUrl);
+  pet.overTop = Math.round(CELL - (sheets.body.h * zoom) / 2 - 14);
+  pet.over.style.top = `${pet.overTop}px`;
 }
 
 const pct = (v: number): string => `${Math.max(0, Math.min(100, v * 100))}%`;
@@ -337,6 +356,20 @@ function draw(view: BattleScreenView): void {
       arena.appendChild(p.root);
     });
   }
+  // 모습 바뀜 — 칸마다 form 이벤트(시각순). t 시점의 모습은 그때까지의 마지막 form, 없으면 처음 모습(되감기에도 맞다)
+  const formLog = new Map<string, { t: number; species: string }[]>();
+  for (const e of view.events) {
+    if (e.kind !== "form") continue;
+    const key = `${e.side}:${e.slot}`;
+    formLog.set(key, [...(formLog.get(key) ?? []), { t: e.t, species: e.species }]);
+  }
+  const lookAt = (side: 0 | 1, slot: number, t: number): string | null => {
+    const list = formLog.get(`${side}:${slot}`);
+    if (!list) return null;
+    let shown = view.units[side][slot]?.species ?? null;
+    for (const x of list) if (x.t <= t) shown = x.species;
+    return shown;
+  };
   const statusFx = createStatusFx(arena); // 몸 위 연출 — 포켓몬 위, 날씨·오라 층 아래 (status-fx.ts)
   const fxOver = el("div", "field-layer");
   arena.appendChild(fxOver);
@@ -353,8 +386,8 @@ function draw(view: BattleScreenView): void {
   function paintUnit(side: BattleSide, slot: number, s: UnitState, t: number): void {
     const u = view.units[side][slot];
     if (!u) return;
-    const hp = u.maxHp > 0 ? s.hp / u.maxHp : 0;
-    const chip = !s.fainted && t < s.chipUntil && u.maxHp > 0 ? s.chipHp / u.maxHp : hp; // 기절하면 깎인 몫을 남기지 않는다
+    const hp = s.maxHp > 0 ? s.hp / s.maxHp : 0;
+    const chip = !s.fainted && t < s.chipUntil && s.maxHp > 0 ? s.chipHp / s.maxHp : hp; // 기절하면 깎인 몫을 남기지 않는다
     const card = cards[side][slot];
     if (card) {
       card.hpFill.style.width = pct(hp);
@@ -371,6 +404,8 @@ function draw(view: BattleScreenView): void {
     }
     const pet = pets[side][slot];
     if (pet) {
+      const look = lookAt(side, slot, t);
+      if (look && look !== pet.species) setPetLook(pet, look, view.sprites[look] ?? null, view.zoom);
       const at = timeline.posOf(s, t);
       pet.root.style.transform = `translate(${at.x * CELL}px, ${at.y * CELL}px)`;
       pet.root.classList.toggle("fainted", s.fainted);

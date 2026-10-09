@@ -41,7 +41,7 @@ export type BattleScreenEvent =
   | { t: number; kind: "stat"; side: BattleSide; slot: number; stat: number; stage: number; until?: number } // stage — 그 능력의 지금 단계. until — 10초짜리 변화가 끝나는 시각, 판 끝까지 가는 단계만이면 없다
   | { t: number; kind: "ability"; side: BattleSide; slot: number; ability: string } // 특성이 효과를 낸 순간 — 결과 이벤트보다 먼저 같은 t. ability 는 abilities.json 키
   | { t: number; kind: "status-blocked"; side: BattleSide; slot: number; status: BattleStatusKind; cause: "misty" | "ability" | "type" } // 상태 이상을 막음 — chance 를 통과했을 때만
-  | { t: number; kind: "form"; side: BattleSide; slot: number; species: string }
+  | { t: number; kind: "form"; side: BattleSide; slot: number; species: string; maxHp?: number } // maxHp — 모습이 바뀌며 최대 HP 가 달라짐(스웜체인지)
   | { t: number; kind: "copy"; side: BattleSide; slot: number; from: number; moves: string[] }
   | { t: number; kind: "weather"; side: BattleSide; slot: number; amount: number; hp: number; cause: "sand" | "grassy" | "rain-dish" | "ice-body" } // 5초마다 — 피해는 양수, 회복은 음수
   | { t: number; kind: "status"; side: BattleSide; slot: number; status: BattleStatusKind; on: boolean; until?: number } // 상태 이상 걸림(on, until = 풀리는 시각)·풀림

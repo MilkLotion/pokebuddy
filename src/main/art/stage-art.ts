@@ -11,6 +11,7 @@ import type { Paths } from "../../platform/paths";
 import { profileOf } from "../../dex/species";
 import { genderLookInfo, regionalOf } from "../../dex/regional";
 import { megaOf } from "../../dex/mega";
+import { battleLookTable } from "../../dex/tables";
 import { dexFolderOf, lookOf } from "../../dex/look";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
@@ -92,6 +93,9 @@ export function pmdSources(look: string): PmdSource[] {
   const mega = megaOf(slug);
   // 메가 모습(src/dex/mega.ts) — 폼 폴더만 본다. 이로치는 `<폼>/0001` → 폼 보통. 폴더가 없으면 빈 목록이라 걷기 대체 그림으로 넘어간다
   if (mega) return mega.pmd ? (shiny ? [{ slug, spritePath: `${mega.pmd}/0001` }, { slug, spritePath: mega.pmd }] : [{ slug, spritePath: mega.pmd }]) : [];
+  // 전투 중에만 보이는 모습(메로엣타 스텝폼·킬가르도 블레이드폼·캐스퐁 날씨 모습 등) — 폼 폴더, 없으면 기본형 (data/battle-looks.json)
+  const battle = slug.startsWith("_") ? undefined : battleLookTable()[slug];
+  if (battle) return [...(shiny ? [{ slug, spritePath: `${battle}/0001` }] : []), { slug, spritePath: battle }, ...(base ? [{ slug, spritePath: shiny ? `${base}/0000/0001` : base }] : [])];
   // PMD 그림이 없고 걷기 그림 폴더가 있는 특수 폼(버드렉스(백마 탄 모습)) — 기본형 PMD 로 떨어지지 않게 빈 목록. 걷기 대체 그림으로 넘어간다 (data/regional.json overworld)
   if (regionalOf(slug)?.overworld && !regionalOf(slug)?.pmd) return [];
   const form = regionalOf(slug)?.pmd;

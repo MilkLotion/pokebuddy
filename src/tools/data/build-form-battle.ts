@@ -25,6 +25,9 @@ const FORMS: Readonly<Record<string, string>> = {
   palafin: "palafin-hero", // 나이브폼 → 마이티폼
   terapagos: "terapagos-terastal", // 노말폼 → 테라스탈폼
   "darmanitan-galar-standard": "darmanitan-galar-zen", // 가라르 불비달마 → 달마모드 (얼음·불꽃)
+  "greninja-battle-bond": "greninja-ash", // 유대변화 개굴닌자 → 지우개굴닌자 — 상대를 쓰러뜨리면 (2026-10-09, 지우의모자로 유대변화)
+  zygarde: "zygarde-complete", // 지가르데 50% → 퍼펙트폼 — 스웜체인지, HP 50% 이하 (2026-10-09)
+  darmanitan: "darmanitan-zen", // 하나 불비달마 → 달마모드 (불꽃·에스퍼) — 특성 달마모드는 species-abilities.json (2026-10-09 사용자 "줘야지")
   meloetta: "meloetta-pirouette", // 보이스폼 → 스텝폼 — 엔진은 루미나코러스(relic-song)를 쓸 때마다 오간다 (2026-10-09)
 };
 

@@ -95,6 +95,8 @@ const FIELD_ABILITY: Readonly<Record<string, FieldKind>> = {
 };
 const AURA_ABILITY: Readonly<Record<string, AuraKind>> = { "fairy-aura": "fairy", "dark-aura": "dark", "aura-break": "break" };
 const WEATHER_TYPE: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "fire", "harsh-sun": "fire", rain: "water", "heavy-rain": "water", sand: "rock", snow: "ice" };
+// 캐스퐁의 날씨 모습 — 모래바람은 기본 모습(노말)이다
+const CASTFORM_LOOK: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "castform-sunny", "harsh-sun": "castform-sunny", rain: "castform-rainy", "heavy-rain": "castform-rainy", snow: "castform-snowy" };
 const FIELD_TYPE: Readonly<Record<FieldKind, string>> = { electric: "electric", grassy: "grass", psychic: "psychic", misty: "fairy" };
 
 // ── 상태 이상 (docs/specs/moves.md "상태 이상") ──
@@ -220,7 +222,7 @@ export type BattleEvent =
   | { t: number; kind: "stat"; side: Side; slot: number; stat: number; stage: number; until?: number } // until — 10초짜리 변화가 끝나는 시각. 판 끝까지 가는 단계(불요의검·불굴의방패·다운로드)만이면 없다
   | { t: number; kind: "ability"; side: Side; slot: number; ability: string } // 특성이 효과를 낸 순간 — 결과 이벤트(stat·self·form·damage 등)보다 먼저, 같은 t
   | { t: number; kind: "status-blocked"; side: Side; slot: number; status: StatusKind; cause: "misty" | "ability" | "type" } // 상태 이상을 막았다 — 기술·특성의 확률을 통과했을 때만. 이미 다른 주된 상태 이상이 걸려 못 거는 경우는 내지 않는다
-  | { t: number; kind: "form"; side: Side; slot: number; species: string }
+  | { t: number; kind: "form"; side: Side; slot: number; species: string; maxHp?: number } // maxHp — 모습이 바뀌며 최대 HP 가 달라졌을 때(스웜체인지)
   | { t: number; kind: "copy"; side: Side; slot: number; from: number; moves: string[] }
   | { t: number; kind: "faint"; side: Side; slot: number }
   | { t: number; kind: "end"; winner: Side | null; timeout: boolean };
@@ -386,6 +388,8 @@ export function runBattle(input: BattleInput): BattleResult {
       units[side][slot] = f ? makeUnit(f, side, slot) : null;
     });
   }
+  // 판 시작의 최대 HP — 결과의 maxHp (판 중에 늘어도 그대로)
+  const startMaxHp: [number[], number[]] = [units[0].map((u) => u?.maxHp ?? 0), units[1].map((u) => u?.maxHp ?? 0)];
   const all = (): Unit[] => [...units[0], ...units[1]].filter((u): u is Unit => u !== null);
   const alive = (side: Side): Unit[] => units[side].filter((u): u is Unit => u !== null && u.hp > 0);
 
@@ -550,6 +554,18 @@ export function runBattle(input: BattleInput): BattleResult {
     if (u.ability === "forecast" && weather && FORECAST[weather]) {
       abilityFx(u, "forecast", 0);
       u.types = [FORECAST[weather]!];
+      // 캐스퐁 날씨 모습 — 능력치가 같아 그림만 바꾼다 (2026-10-09 모습 변화 검수)
+      const look = u.base.species === "castform" ? CASTFORM_LOOK[weather] : undefined;
+      if (look) {
+        u.species = look;
+        events.push({ t: 0, kind: "form", side: u.side, slot: u.slot, species: look });
+      }
+    }
+    // 체리꼬 — 쾌청이면 포지폼. 능력치가 같아 그림만 바꾼다(플라워기프트 배율은 conditionStatMul)
+    if (u.ability === "flower-gift" && sunny && u.base.species === "cherrim") {
+      abilityFx(u, "flower-gift", 0);
+      u.species = "cherrim-sunshine";
+      events.push({ t: 0, kind: "form", side: u.side, slot: u.slot, species: u.species });
     }
     if (u.ability === "mimicry" && field) {
       abilityFx(u, "mimicry", 0);
@@ -1312,8 +1328,8 @@ export function runBattle(input: BattleInput): BattleResult {
     if (!f || u.hp <= 0) return;
     const pct = (u.hp * 100) / u.maxHp;
     const a = ab(u);
-    // 달마모드 — HP 50% 이하, 판 끝까지
-    const to = a === "schooling" && u.base.schoolingReady && u.inAlt && pct < R.schoolingPct ? false : (a === "shields-down" && !u.inAlt && pct <= R.shieldsDownPct) || (a === "zen-mode" && !u.inAlt && pct <= 50) ? true : null;
+    // 달마모드·스웜체인지 — HP 50% 이하, 판 끝까지 (스웜체인지는 2026-10-09 사용자 "2번으로 넣어줘")
+    const to = a === "schooling" && u.base.schoolingReady && u.inAlt && pct < R.schoolingPct ? false : (a === "shields-down" && !u.inAlt && pct <= R.shieldsDownPct) || ((a === "zen-mode" || a === "power-construct") && !u.inAlt && pct <= 50) ? true : null;
     if (to === null) return;
     abilityFx(u, a!, t);
     toForm(u, to, t);
@@ -1327,12 +1343,20 @@ export function runBattle(input: BattleInput): BattleResult {
     u.stats = [u.stats[0]!, ...src.slice(1)];
     u.species = alt ? f.species : u.base.species;
     if (f.types) u.types = alt ? f.types : u.base.types;
+    // 스웜체인지 — 퍼펙트폼은 최대 HP 가 늘고, 늘어난 만큼 지금 HP 도 는다(원작). 한 방향이다
+    const grew = alt && ab(u) === "power-construct";
+    if (grew) {
+      const grown = Math.max(u.maxHp, Math.floor(f.stats[0]! * (input.hpScale ?? R.hpScale)));
+      u.hp += grown - u.maxHp;
+      u.maxHp = grown;
+      u.stats = [f.stats[0]!, ...u.stats.slice(1)];
+    }
     // 자기 기술을 쓰는 모습(메로엣타) — 기술과 사거리도 바꾼다. 차례 번호는 그대로라 다음 차례는 새 기술 칸의 같은 자리다
     if (f.moves?.length) {
       u.moves = alt ? [...f.moves] : [...u.base.moves];
       u.range = alt ? (f.range ?? u.base.range) : u.base.range;
     }
-    events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species });
+    events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species, ...(grew ? { maxHp: u.maxHp } : {}) });
   }
 
   // by — 쓰러뜨린 포켓몬(알 때). 자기과신·백의울음·흑의울음·비스트부스트·Eelevate, 소울하트는 누가 쓰러져도
@@ -1344,6 +1368,11 @@ export function runBattle(input: BattleInput): BattleResult {
       if (by && by.hp > 0 && by.side !== u.side) {
         const a = ab(by);
         if (a === "moxie" || a === "chilling-neigh" || a === "grim-neigh" || a === "beast-boost" || a === "eelevate") abilityFx(by, a, t);
+        // 유대변화 — 상대를 쓰러뜨리면 지우개굴닌자가 된다. 판에 한 번 (2026-10-09 사용자 "지우의모자")
+        if (a === "battle-bond" && !by.inAlt && by.base.altForm) {
+          abilityFx(by, a, t);
+          toForm(by, true, t);
+        }
         if (a === "moxie" || a === "chilling-neigh") setStage(by, 1, 1, t, by);
         if (a === "grim-neigh") setStage(by, 3, 1, t, by);
         if (a === "beast-boost" || a === "eelevate") {
@@ -1702,7 +1731,8 @@ export function runBattle(input: BattleInput): BattleResult {
   }
 
   const hp: [number[], number[]] = [units[0].map((u) => u?.hp ?? 0), units[1].map((u) => u?.hp ?? 0)];
-  const maxHp: [number[], number[]] = [units[0].map((u) => u?.maxHp ?? 0), units[1].map((u) => u?.maxHp ?? 0)];
+  // 최대 HP 는 판 시작 값이다 — 판 중에 늘면(스웜체인지) form 이벤트의 maxHp 로 알린다
+  const maxHp: [number[], number[]] = startMaxHp;
   let winner: Side | null;
   let timeout = false;
   if (end) winner = end.winner;

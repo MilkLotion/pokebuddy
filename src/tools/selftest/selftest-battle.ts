@@ -474,6 +474,39 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(of(r.events, "move").some((e) => e.side === 0 && e.move === "close-combat" && e.t > firstForm), "스텝폼은 인파이트를 쓴다");
 }
 
+// ── 판 시작 그림 모습 — 캐스퐁 날씨폼·체리꼬 포지폼, 하나 불비달마 달마모드 (2026-10-09 모습 변화 검수) ──
+{
+  const sun = unit({ ability: "drought", stats: [999, 1, 999, 1, 999, 95] });
+  const sturdy = unit({ stats: [999, 1, 999, 1, 999, 95] });
+  const formAt0 = (f: EngineFighter) => of(run([f, sun], [sturdy], 1, 100).events, "form").filter((e) => e.side === 0 && e.slot === 0 && e.t === 0).map((e) => e.species);
+  assert.deepStrictEqual(formAt0(buildFighter({ species: "castform" })!), ["castform-sunny"], "쾌청이면 캐스퐁 태양의 모습");
+  assert.deepStrictEqual(formAt0(buildFighter({ species: "cherrim" })!), ["cherrim-sunshine"], "쾌청이면 체리꼬 포지폼");
+  assert.deepStrictEqual(of(run([buildFighter({ species: "castform" })!], [sturdy], 1, 100).events, "form").length, 0, "날씨가 없으면 그대로");
+  const darm = { ...buildFighter({ species: "darmanitan" })!, ability: "zen-mode" };
+  assert.strictEqual(darm.altForm?.species, "darmanitan-zen");
+  const hitter = unit({ stats: [999, 400, 999, 1, 999, 95], moves: [mv("smash", { power: 120, cooldownMs: 1000 })] });
+  const zr = run([darm], [hitter], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  assert.ok(of(zr.events, "form").some((e) => e.side === 0 && e.species === "darmanitan-zen"), "HP 50% 이하면 달마모드");
+  // 스웜체인지 — HP 50% 이하면 퍼펙트폼, 최대 HP 가 늘고 늘어난 만큼 회복 (2026-10-09)
+  const zyg = { ...buildFighter({ species: "zygarde" })!, ability: "power-construct" };
+  assert.strictEqual(zyg.altForm?.species, "zygarde-complete");
+  const pc = run([zyg], [hitter], 1, 30_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+  const turned = of(pc.events, "form").find((e) => e.side === 0 && e.species === "zygarde-complete");
+  assert.ok(turned, "퍼펙트폼");
+  const before = of(pc.events, "damage").filter((e) => e.target === 0 && e.side === 1 && e.t <= turned!.t).pop()!;
+  const after = pc.events.find((e) => e.t >= turned!.t && e.kind === "damage" && e.side === 1 && e.target === 0) as Extract<BattleEvent, { kind: "damage" }> | undefined;
+  assert.strictEqual(pc.maxHp[0][0], zyg.stats[0]! * ENGINE_RULES.hpScale, "결과의 최대 HP 는 판 시작 값");
+  assert.ok((turned!.maxHp ?? 0) > pc.maxHp[0][0]!, "form 이벤트가 늘어난 최대 HP 를 싣는다");
+  assert.ok(!after || after.hp + after.amount > before.hp, "늘어난 만큼 HP 도 늘었다");
+  // 유대변화 — 상대를 쓰러뜨리면 지우개굴닌자 (판에 한 번)
+  const bond: EngineFighter = { ...unit({ stats: [999, 400, 999, 400, 999, 95], moves: [mv("cut2", { power: 120, cooldownMs: 1000 })] }), ability: "battle-bond", altForm: { species: "greninja-ash", stats: [999, 600, 999, 600, 999, 140], types: ["water", "dark"] } };
+  const weak = unit({ stats: [10, 1, 10, 1, 10, 95] });
+  const bb = run([bond], [weak, weak], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4), at(8, 8)]] } as unknown as Partial<BattleInput>);
+  const ash = of(bb.events, "form").filter((e) => e.side === 0);
+  assert.deepStrictEqual(ash.map((e) => e.species), ["greninja-ash"], "첫 쓰러뜨림 뒤 한 번");
+  assert.ok(ash[0]!.t >= of(bb.events, "faint").find((e) => e.side === 1)!.t);
+}
+
 // ── 대상 주위가 막히면 지금 닿는 다른 상대로 바꾼다 (2026-10-09 사용자 "A+B로 진행해") ──
 {
   // 상대 T(오른쪽 위 구석)는 내 쪽 셋에게 둘러싸여 빈 자리가 없다. 같은 걸음 수의 F 보다 같은 줄이라 처음 대상은 T

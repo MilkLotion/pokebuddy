@@ -66,6 +66,7 @@ export interface UnitState {
   to: BattlePos; // 도착 칸
   stepAt: number; // 걷기 시작 시각
   hp: number;
+  maxHp: number; // 지금 최대 HP — 처음은 판 시작 값, 스웜체인지면 form 이벤트로 늘어난다
   chipHp: number; // 깎이기 전 HP — chipUntil 까지 보인다
   chipUntil: number;
   fainted: boolean;
@@ -220,6 +221,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
           to: at,
           stepAt: 0,
           hp: u.maxHp,
+          maxHp: u.maxHp,
           chipHp: u.maxHp,
           chipUntil: 0,
           fainted: false,
@@ -282,6 +284,12 @@ export function createTimeline(view: BattleScreenView): Timeline {
           u.gaugeTail = u.flinched ? TIMELINE_RULES.flinchMs : 0;
           u.swing = { at: e.t, kind: view.moveKinds[e.move] === "special" ? "special" : "physical" };
         }
+        break;
+      }
+      case "form": {
+        // 모습 바뀜 — 그림은 렌더러가 form 이벤트로 바꾼다. 최대 HP 가 늘면(스웜체인지) 여기서 따른다
+        const u = unit(e.side, e.slot);
+        if (u && e.maxHp) u.maxHp = e.maxHp;
         break;
       }
       case "attack": {

@@ -102,6 +102,9 @@ export interface FormBattleRow {
 }
 export const formBattleTable = (opts?: DexOptions): Record<string, FormBattleRow> => loadJson<Record<string, FormBattleRow>>("form-battle.json", opts);
 
+// ── data/battle-looks.json ── 전투 중에만 보이는 모습 → PMD SpriteCollab 폼 경로(무대·배틀 창 그림)
+export const battleLookTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("battle-looks.json", opts);
+
 // ── data/type-chart.json ── 공격 타입 → 방어 타입 → 배율
 export const typeChartTable = (opts?: DexOptions): Record<string, Record<string, number>> => loadJson<Record<string, Record<string, number>>>("type-chart.json", opts);
 

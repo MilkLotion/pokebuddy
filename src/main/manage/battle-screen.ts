@@ -97,7 +97,8 @@ export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
   async function open(input: BattleScreenInput): Promise<void> {
     const model = battleScreenModel(input);
     const loader = deps.stageArt();
-    const species = [...new Set(model.units.flatMap((side) => side.flatMap((u) => (u ? [u.species] : []))))];
+    // 처음 모습과 판 중에 바뀌는 모습(form 이벤트 — 메로엣타 스텝폼·킬가르도 블레이드폼 등)의 그림을 함께 받는다
+    const species = [...new Set([...model.units.flatMap((side) => side.flatMap((u) => (u ? [u.species] : []))), ...model.events.flatMap((e) => (e.kind === "form" ? [e.species] : []))])];
     // 초상·타입 아이콘과 PMD 묶음을 함께 받는다. PMD 를 못 받은 종은 null — 렌더러가 초상으로 그린다
     const [art, looks] = await Promise.all([
       deps.art(battleScreenArtKeys(model)),
