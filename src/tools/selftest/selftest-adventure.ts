@@ -6,7 +6,7 @@ import assert from "node:assert";
 import { petMoves, speciesMoves } from "../../battle/moves";
 import { applyBattleReward, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot } from "../../battle/party";
 import { battleData } from "../../battle/fighter";
-import { partyOf } from "../../battle/fighter-core";
+import { lookOfSource, partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
@@ -232,6 +232,7 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   assert.equal(battleMegaOf(save, "p2"), "charizard-mega-x");
   assert.equal(snapshotView(save, T0).battle.slots[0]!.pet?.species, "rotom-wash", "화면도 배틀 파티의 모습");
   assert.equal(partyOf(JSON.parse(JSON.stringify(save)), battleData()).party[0]?.species, "rotom-wash", "서버의 파티 읽기도 같다");
+  assert.deepEqual(lookOfSource(partyOf(JSON.parse(JSON.stringify(save)), battleData()).party[0]!), { shiny: save.pets[0]!.shiny, gender: save.pets[0]!.gender }, "서버의 파티 읽기는 그림 값(이로치·성별)도 싣는다");
   // 배틀 파티의 모습 바꾸기(battle.form) — 개체의 종은 그대로
   let n = 0;
   const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);

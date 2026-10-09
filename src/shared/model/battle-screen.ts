@@ -54,6 +54,8 @@ export interface BattleUnitView {
   side: BattleSide;
   slot: number;
   species: string; // 보이는 모습(메가 포함)
+  look: string; // 그림 키 — 이로치·성별(src/dex/look.ts). sprites 의 열쇠
+  formLooks: Record<string, string>; // 판 중에 바뀌는 모습(form 이벤트 종) → 그림 키. 같은 이로치·성별
   name: string;
   types: string[];
   portrait: string | null; // data URI

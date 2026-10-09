@@ -5,13 +5,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCode } from "../shared/names/online-codes.js";
 import { SERVER_BATTLE_CODES } from "../shared/names/online-codes.js";
 import type { TxResult } from "../shared/command";
-import type { BattleReply } from "../shared/model/battle-net.js";
+import type { BattleLook, BattleReply } from "../shared/model/battle-net.js";
 import { isUnreachable, readFunctionError } from "./server-call.js";
 
 // battle-offer 의 답 — 칸은 { species, form, types } 또는 null
 export interface OfferData {
   offerId: string;
-  picks: { slot: number; party: ({ species: string; form: string | null; types: string[] } | null)[] }[];
+  picks: { slot: number; party: ({ species: string; form: string | null; types: string[]; shiny?: boolean } | null)[] }[];
   cooldownMs: number;
 }
 // battle-start 의 답 — 엔진 결과·이벤트·두 쪽 전투 개체(모양은 src/battle/engine.ts)
@@ -21,6 +21,7 @@ export interface StartData {
   result: { winner: 0 | 1 | null; timeout: boolean; endMs: number; hp: [number[], number[]]; maxHp: [number[], number[]]; obstacles: unknown[] };
   events: unknown[];
   sides: [unknown[], unknown[]];
+  looks?: [(BattleLook | null)[], (BattleLook | null)[]]; // 칸마다 이로치·성별 — 옛 서버면 없다
   dataHash: string;
 }
 

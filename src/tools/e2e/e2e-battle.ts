@@ -70,7 +70,9 @@ async function run(): Promise<void> {
   const [a, b, c, d] = await Promise.all(["A", "B", "C", "D"].map((n) => player(n, local.url, local.key)));
   // A·B·C 는 배틀 파티가 있고, D 는 비었다. C 는 초전설 둘이라 출전 불가 — 등록되지 않는다
   await upload(a!, saveWith(["garchomp", "lucario", "gengar"]));
-  await upload(b!, saveWith(["dragonite", "scizor", "alakazam", "snorlax"]));
+  const bSave = saveWith(["dragonite", "scizor", "alakazam", "snorlax"]);
+  bSave.pets[0]!.shiny = true; // 그림 값 — 상대 칸과 판 응답의 looks 가 이로치를 싣는지
+  await upload(b!, bSave);
   await upload(c!, saveWith(["mewtwo", "lugia", "pikachu"]));
   const dSave = saveWith(["pikachu"]);
   dSave.battle = { slots: Array.from({ length: 6 }, () => null) }; // 포켓몬은 있지만 배틀 파티는 비었다
@@ -85,9 +87,9 @@ async function run(): Promise<void> {
   assert.equal(offerA.body.picks.length, 1, "A 의 후보는 B 하나");
   const party = offerA.body.picks[0].party as Json[];
   assert.equal(party.filter(Boolean).length, 4);
-  assert.deepEqual(party[0], { species: "dragonite", form: null, types: ["dragon", "flying"] }, "칸에는 종·모습·타입만");
+  assert.deepEqual(party[0], { species: "dragonite", form: null, types: ["dragon", "flying"], shiny: true }, "칸에는 종·모습·타입·이로치만");
   assert.ok(!JSON.stringify(offerA.body).includes(b!.id), "상대 계정 id 는 주지 않는다");
-  checks.push("battle-offer: 자기 제외, 있는 만큼, 종·모습·타입만, 계정 id 없음");
+  checks.push("battle-offer: 자기 제외, 있는 만큼, 종·모습·타입·이로치만, 계정 id 없음");
   assert.equal((await call(a!, "battle-offer")).body.error, "BATTLE_TOO_FAST", "1초에 한 번");
   checks.push("battle-offer 1초에 한 번 (BATTLE_TOO_FAST)");
   assert.equal((await call(d!, "battle-offer")).body.error, "BATTLE_PARTY_INVALID");
@@ -106,8 +108,10 @@ async function run(): Promise<void> {
   assert.equal(first.body.sides[0].filter(Boolean).length, 3);
   assert.equal(first.body.sides[1].filter(Boolean).length, 4);
   assert.match(first.body.dataHash, /^[0-9a-f]{16}$/);
+  assert.equal(first.body.looks?.[1]?.[0]?.shiny, true, "looks: 상대 첫 칸은 이로치");
+  assert.equal(first.body.looks?.[0]?.[0]?.shiny, false, "looks: 내 첫 칸은 보통");
   assert.equal(sql(`select count(*) from cloud_private.battle_events`), "1");
-  checks.push(`battle-start: 판 ${first.body.result.endMs}ms, 이벤트 ${first.body.events.length}개, 그날 첫 판 500P, 판·이벤트 기록`);
+  checks.push(`battle-start: 판 ${first.body.result.endMs}ms, 이벤트 ${first.body.events.length}개, 그날 첫 판 500P, 판·이벤트 기록, 칸별 그림 값(looks)`);
   // 쿨타임 5분
   await new Promise((r) => setTimeout(r, 1100));
   const offer2 = (await call(a!, "battle-offer")).body;

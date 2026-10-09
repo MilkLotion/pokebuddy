@@ -351,7 +351,7 @@ function draw(view: BattleScreenView): void {
   for (const side of [0, 1] as const) {
     view.units[side].forEach((u, slot) => {
       if (!u) return;
-      const p = petEl(u, view.sprites[u.species] ?? null, view.zoom);
+      const p = petEl(u, view.sprites[u.look] ?? null, view.zoom);
       pets[side][slot] = p;
       arena.appendChild(p.root);
     });
@@ -405,7 +405,7 @@ function draw(view: BattleScreenView): void {
     const pet = pets[side][slot];
     if (pet) {
       const look = lookAt(side, slot, t);
-      if (look && look !== pet.species) setPetLook(pet, look, view.sprites[look] ?? null, view.zoom);
+      if (look && look !== pet.species) setPetLook(pet, look, view.sprites[u.formLooks[look] ?? u.look] ?? null, view.zoom);
       const at = timeline.posOf(s, t);
       pet.root.style.transform = `translate(${at.x * CELL}px, ${at.y * CELL}px)`;
       pet.root.classList.toggle("fainted", s.fainted);

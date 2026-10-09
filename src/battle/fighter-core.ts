@@ -58,7 +58,12 @@ export interface FighterSource {
   form?: string | null; // 배틀에서 켠 메가 모습 슬러그
   moveSwap?: boolean;
   level?: number; // 개체의 실제 레벨 — 약어리 어군 해금에 쓴다. 없으면 해금 전
+  shiny?: boolean; // 그림만 — 이로치. 전투 값에는 쓰지 않는다 (배틀 창 그림, 2026-10-09)
+  gender?: string; // 그림만 — 성별(male·female·unknown). 성별 그림이 따로 있는 종만 다르게 보인다
 }
+
+// 칸의 그림 값 — 이로치·성별. 판 응답(looks)과 상대 고르기 칸이 쓴다. 옛 등록에는 없어 기본 그림이다
+export const lookOfSource = (s: FighterSource | null): { shiny: boolean; gender?: string } | null => (s ? { shiny: s.shiny === true, ...(typeof s.gender === "string" ? { gender: s.gender } : {}) } : null);
 
 const SPECIALS = new Set(["wall", "reflect", "sketch", "transform", "stance"]);
 const SCHOOLING_LEVEL = 60; // 약어리 어군 해금 레벨 (docs/specs/moves.md "모습이 바뀌는 종")
@@ -179,7 +184,7 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
     const tier = tierFrom(data, species);
     if (tier && (count[tier] += 1) > BATTLE_LIMITS[tier]) blocked = true;
     if (form && (count.mega += 1) > BATTLE_LIMITS.mega) blocked = true;
-    return { species, form, moveSwap: pet.moveSwap === true, level: typeof pet.level === "number" ? pet.level : 1 };
+    return { species, form, moveSwap: pet.moveSwap === true, level: typeof pet.level === "number" ? pet.level : 1, shiny: pet.shiny === true, ...(typeof pet.gender === "string" ? { gender: pet.gender } : {}) };
   });
   return { party, count: n, blocked };
 }

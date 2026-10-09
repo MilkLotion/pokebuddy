@@ -10,9 +10,9 @@ import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter.
 import { battleMegaOf, battleSlots, battleSpeciesOf } from "../../battle/party.js";
 import { tierOf } from "../../battle/tier.js";
 import { isMetaKey } from "../../dex/data.js";
-import { appearanceOf } from "../../dex/look.js";
 import { profileOf } from "../../dex/species.js";
 import { speciesMoveTable, speciesTable } from "../../dex/tables.js";
+import type { BattleLook } from "../../shared/model/battle-net.js";
 import type { SaveV3 } from "../../shared/save-v3";
 import { battleScreenArtKeys, battleScreenModel, withBattleScreenArt, type BattleScreenInput } from "../../view/battle-screen.js";
 import type { LookSheets } from "../../shared/model/stage";
@@ -71,15 +71,12 @@ function devFoes(seed: number): EngineFighter[] | null {
   }
 }
 
-// 내 쪽 무대 그림 키 — 이로치·성별을 개체에서 읽는다. 메가는 전투 종(메가 모습) 그대로
-function myLooks(save: SaveV3, mine: readonly (EngineFighter | null)[]): Record<string, string> {
-  const out: Record<string, string> = {};
-  battleSlots(save).forEach((id, i) => {
+// 내 쪽 그림 값 — 칸마다 개체의 이로치·성별. 그림 키는 화면 값(src/view/battle-screen.ts)이 정한다
+function myLooks(save: SaveV3, mine: readonly (EngineFighter | null)[]): (BattleLook | null)[] {
+  return battleSlots(save).map((id, i) => {
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
-    const f = mine[i];
-    if (pet && f) out[f.species] = appearanceOf({ species: f.species, shiny: pet.shiny, gender: pet.gender });
+    return pet && mine[i] ? { shiny: pet.shiny, gender: pet.gender } : null;
   });
-  return out;
 }
 
 // 내 쪽 — 저장의 배틀 파티. 비었으면 풀에서 뽑는다
@@ -97,12 +94,12 @@ export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
   async function open(input: BattleScreenInput): Promise<void> {
     const model = battleScreenModel(input);
     const loader = deps.stageArt();
-    // 처음 모습과 판 중에 바뀌는 모습(form 이벤트 — 메로엣타 스텝폼·킬가르도 블레이드폼 등)의 그림을 함께 받는다
-    const species = [...new Set([...model.units.flatMap((side) => side.flatMap((u) => (u ? [u.species] : []))), ...model.events.flatMap((e) => (e.kind === "form" ? [e.species] : []))])];
+    // 칸마다 그림 키 — 처음 모습과 판 중에 바뀌는 모습(form 이벤트 — 메로엣타 스텝폼·킬가르도 블레이드폼 등). 이로치·성별이 칸마다 다르다
+    const species = [...new Set(model.units.flatMap((side) => side.flatMap((u) => (u ? [u.look, ...Object.values(u.formLooks)] : []))))];
     // 초상·타입 아이콘과 PMD 묶음을 함께 받는다. PMD 를 못 받은 종은 null — 렌더러가 초상으로 그린다
     const [art, looks] = await Promise.all([
       deps.art(battleScreenArtKeys(model)),
-      Promise.all(species.map(async (s): Promise<[string, LookSheets | null]> => [s, loader ? ((await loader.loadLook(input.looks?.[s] ?? s).catch(() => null))?.sheets ?? null) : null])),
+      Promise.all(species.map(async (s): Promise<[string, LookSheets | null]> => [s, loader ? ((await loader.loadLook(s).catch(() => null))?.sheets ?? null) : null])),
     ]);
     deps.holdStage?.(true);
     win.show(deps.parent(), { ...withBattleScreenArt(model, art), sprites: Object.fromEntries(looks) });
@@ -117,7 +114,7 @@ export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
       const sides = [myFighters(save, pick), devFoes(seed) ?? Array.from({ length: 6 }, pick)] as const;
       const result = runBattle({ seed, sides, typeChart: battleTypeChart() });
       const reward = result.winner === 0 ? "+50P" : result.winner === 1 ? "+10P" : "+10P";
-      await open({ sides, result, looks: myLooks(save, sides[0]), opponentName: "상대 · 2번 파티", reward: { lead: reward, detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." } });
+      await open({ sides, result, looks: [myLooks(save, sides[0]), sides[1].map(() => null)], opponentName: "상대 · 2번 파티", reward: { lead: reward, detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." } });
     },
     close: () => win.close(),
   };

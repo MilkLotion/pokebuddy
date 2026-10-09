@@ -238,4 +238,18 @@ assert.strictEqual(clockText(90_000, 42_100), "0:48");
 assert.strictEqual(clockText(90_000, 89_500), "0:01");
 assert.strictEqual(clockText(90_000, 95_000), "0:00");
 
+// 칸마다 그림 키 — 같은 종이 양쪽에 있어도 이로치·성별이 칸마다 따로다. 판 중에 바뀌는 모습도 그 칸의 이로치를 따른다 (2026-10-09)
+{
+  const mel = buildFighter({ species: "meloetta" })!;
+  const lSides: [(EngineFighter | null)[], (EngineFighter | null)[]] = [[mel], [buildFighter({ species: "meloetta" })!]];
+  const lResult = runBattle({ seed: 3, sides: lSides, typeChart: battleTypeChart(), maxMs: 30_000, positions: [[{ x: 6, y: 4 }], [{ x: 8, y: 4 }]] });
+  const lView = battleScreenModel({ sides: lSides, result: lResult, looks: [[{ shiny: true, gender: "unknown" }], [null]], opponentName: "상대", reward: { lead: "", detail: "" } });
+  const [me, foe] = [lView.units[0][0]!, lView.units[1][0]!];
+  assert.strictEqual(me.look, "meloetta:shiny", "내 쪽 이로치");
+  assert.strictEqual(foe.look, "meloetta", "상대는 보통 — 같은 종이어도 칸마다 따로");
+  assert.ok(me.portrait === null || me.portrait.includes("shiny"), "카드 초상도 이로치 열쇠");
+  if (lResult.events.some((e) => e.kind === "form" && e.side === 0)) assert.strictEqual(me.formLooks["meloetta-pirouette"], "meloetta-pirouette:shiny", "스텝폼도 그 칸의 이로치");
+  assert.deepStrictEqual(Object.keys(foe.formLooks).every((k) => !foe.formLooks[k]!.endsWith(":shiny")), true);
+}
+
 console.log("selftest-battle-screen 통과");

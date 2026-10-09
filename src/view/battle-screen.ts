@@ -3,7 +3,9 @@
 // 엔진 이벤트를 화면 모델 이벤트로 그대로 넘긴다 — 모양이 어긋나면 여기서 컴파일 오류가 난다
 import type { BattleEvent, BattleResult, EngineFighter } from "../battle/engine.js";
 import { ENGINE_RULES } from "../battle/engine.js";
+import { appearanceOf } from "../dex/look.js";
 import { abilityTable, moveTable } from "../dex/tables.js";
+import type { BattleLook } from "../shared/model/battle-net.js";
 import { SIZE_STEPS } from "../party/size.js";
 import type { BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView } from "../shared/model/battle-screen";
 import type { MoveView } from "../shared/model/snapshot";
@@ -69,7 +71,7 @@ export interface BattleScreenInput {
   sides: readonly [readonly (EngineFighter | null)[], readonly (EngineFighter | null)[]];
   result: BattleResult;
   opponentName: string; // 상대 · 2번 파티
-  looks?: Readonly<Record<string, string>>; // 종 → 무대 그림 키(이로치·성별, src/dex/look.ts appearanceOf). 없으면 종 이름 그대로
+  looks?: readonly [readonly (BattleLook | null)[], readonly (BattleLook | null)[]]; // 칸마다 이로치·성별 — 그림 키는 src/dex/look.ts appearanceOf. 없으면 기본 그림
   reward: { lead: string; detail: string }; // 결과 대화상자의 보상 줄 — 보상은 서버가 정한다
 }
 
@@ -88,15 +90,19 @@ function moveViewOf(id: string): MoveView | null {
   };
 }
 
-function unitOf(f: EngineFighter | null, side: 0 | 1, slot: number, maxHp: number): BattleUnitView | null {
+// 칸 — look 은 그 개체의 그림 키(이로치·성별), formLooks 는 판 중에 바뀌는 모습의 그림 키(같은 이로치·성별). 같은 종이 양쪽에 있어도 칸마다 따로다
+function unitOf(f: EngineFighter | null, side: 0 | 1, slot: number, maxHp: number, look: BattleLook | null, forms: readonly string[]): BattleUnitView | null {
   if (!f) return null;
+  const keyOf = (species: string): string => appearanceOf({ species, shiny: look?.shiny === true, ...(look?.gender ? { gender: look.gender } : {}) });
   return {
     side,
     slot,
     species: f.species,
+    look: keyOf(f.species),
+    formLooks: Object.fromEntries(forms.map((s) => [s, keyOf(s)])),
     name: petName(f.species),
     types: [...f.types],
-    portrait: portraitArtKey(f.species, false),
+    portrait: portraitArtKey(f.species, look?.shiny === true),
     moves: f.moves.map((m) => moveViewOf(m.id)).filter((m): m is MoveView => m !== null),
     ability: f.ability ? (abilityTable()[f.ability]?.ko ?? null) : null,
     maxHp,
@@ -119,7 +125,9 @@ function abilityNamesOf(sides: BattleScreenInput["sides"], r: BattleResult): Rec
 
 export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
   const { result: r } = input;
-  const units = ([0, 1] as const).map((side) => input.sides[side].map((f, slot) => unitOf(f, side, slot, r.maxHp[side]?.[slot] ?? 0))) as BattleScreenView["units"];
+  // 칸마다 판 중에 바뀌는 모습(form 이벤트의 종)
+  const formsAt = (side: 0 | 1, slot: number): string[] => [...new Set(r.events.map(screenEvent).flatMap((e) => (e.kind === "form" && e.side === side && e.slot === slot ? [e.species] : [])))];
+  const units = ([0, 1] as const).map((side) => input.sides[side].map((f, slot) => unitOf(f, side, slot, r.maxHp[side]?.[slot] ?? 0, input.looks?.[side]?.[slot] ?? null, formsAt(side, slot)))) as BattleScreenView["units"];
   // 흰 타입 아이콘 열쇠 — 카드의 타입 칸과 기술 칸에 나오는 타입 전부
   const types = new Set<string>();
   for (const side of units) for (const u of side) if (u) { u.types.forEach((t) => types.add(t)); u.moves.forEach((m) => types.add(m.typeId)); }

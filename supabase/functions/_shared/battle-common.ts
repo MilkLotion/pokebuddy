@@ -55,16 +55,17 @@ export interface BattleContext {
   cooldown_ms: number;
 }
 
-// 화면에 보일 칸 — 종·모습·타입. 상대의 다른 정보는 주지 않는다
+// 화면에 보일 칸 — 종·모습·타입·이로치. 상대의 다른 정보는 주지 않는다
 export interface SlotView {
   species: string;
   form: string | null;
   types: string[];
+  shiny: boolean; // 초상 그림 — 옛 등록에는 없어 false
 }
-export function slotView(src: { species: string; form?: string | null } | null): SlotView | null {
+export function slotView(src: { species: string; form?: string | null; shiny?: boolean } | null): SlotView | null {
   if (!src) return null;
   const mega = src.form ? battle.data.mega[src.form] : undefined;
   const sp = battle.data.species[src.species];
   if (!sp) return null;
-  return { species: src.species, form: mega ? src.form! : null, types: mega ? mega.types : sp.types };
+  return { species: src.species, form: mega ? src.form! : null, types: mega ? mega.types : sp.types, shiny: src.shiny === true };
 }

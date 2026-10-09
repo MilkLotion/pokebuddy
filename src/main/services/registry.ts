@@ -290,5 +290,5 @@ function screenInputOf(data: StartData, pick: number): BattleScreenInput {
     events: data.events as BattleEvent[],
   };
   const sides = data.sides as unknown as [(EngineFighter | null)[], (EngineFighter | null)[]];
-  return { sides, result, opponentName: `상대 · ${pick}번 파티`, reward: battleRewardText(data.reward, data.result.winner) };
+  return { sides, result, ...(data.looks ? { looks: data.looks } : {}), opponentName: `상대 · ${pick}번 파티`, reward: battleRewardText(data.reward, data.result.winner) };
 }
