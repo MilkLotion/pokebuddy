@@ -15,8 +15,7 @@ export type Dialog =
   | { kind: "pet"; petId: string }
   | { kind: "evolve"; petId: string; to?: string } // 진화 창 — to 는 고른 후보
   | { kind: "evolve-confirm"; petId: string; to: string } // 진화 확인 — 진화 창의 `진화` 가 연다. `취소` 는 진화 창으로
-  | { kind: "nature"; petId: string; pick?: string; itemId?: string } // 성격 변경 — pick 은 고른 성격, itemId 는 가방의 민트로 왔을 때
-  | { kind: "nature-target"; itemId: string } // 가방의 민트 — 성격을 바꿀 개체를 고른다
+  | { kind: "nature"; petId: string; pick?: string } // 성격 변경 — pick 은 고른 성격. 가방의 민트로 대상을 고르던 창은 2026-10-10 지웠다(여는 곳 없음)
   | { kind: "achievements" }
   | { kind: "settings"; tab: SettingsTab }
   | { kind: "user"; tab: UserTab } // 사용자 — 계정·연결 (헤더 유저 아이콘)
@@ -31,7 +30,7 @@ export type Dialog =
   | { kind: "move-pick"; petId: string; slot: number } // 기술 바꾸기 — slot 은 처음 고른 사용 중인 기술 칸(0·1). 배틀 파티 상세 기기 창의 기술 칸이 연다
   | { kind: "battle-pick"; slot: number } // 배틀 파티 교체 — slot 은 연 칸(처음 고른 칸). 판의 쪽·찾기는 pet-box-panel.ts 가 든다
   | { kind: "battle-opponent" } // 랜덤 배틀 상대 고르기 — 모험 탭의 `배틀 시작`
-  | { kind: "battle-record"; back?: "battle-opponent" } // 배틀 기록 — 상대 고르기의 `기록 보기 ›`·받은 판 알림 배너. back 이면 `닫기` 가 상대 고르기로 돌아간다
+  | { kind: "battle-record" } // 배틀 기록 — 상대 고르기의 `기록 보기 ›`(하위 모달 — 물러나면 상대 고르기로)·받은 판 알림 배너
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인
   | { kind: "mega"; petId: string; to?: string; battle?: true } // 메가진화 — 확인(모습 하나)·고르기(모습 둘)·원래 모습으로. to 는 고른 모습. battle 이면 배틀 파티의 메가 상태(배틀 파티 상세 기기 창의 표식)

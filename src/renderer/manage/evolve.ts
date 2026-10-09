@@ -6,8 +6,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, drawDialog, openAnyDialog } from "./dialog.js";
-import type { Dialog } from "./dialog-types.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import { petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
@@ -48,8 +47,7 @@ export function drawEvolve(petId: string, to?: string): void {
   const list = pet.evolutions;
   const ready = list.filter((c) => c.ready);
   const picked = list.find((c) => c.to === to && c.ready) ?? ready[0];
-  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...dialogHead("진화", `${pet.name} · Lv.${pet.level}`, back));
+  dialogEl.append(...dialogHead("진화", `${pet.name} · Lv.${pet.level}`, { close: true }));
 
   const tree = evoTreeOf(pet.species);
   if (tree) {
@@ -111,8 +109,8 @@ export function drawEvolve(petId: string, to?: string): void {
   }
 
   const go = actionButtonEl("진화", true, !picked, () => {
-    if (picked) openAnyDialog({ kind: "evolve-confirm", petId, to: picked.to });
+    if (picked) openSubDialog({ kind: "evolve-confirm", petId, to: picked.to }); // 진화 창의 하위 모달 — 물러나면(취소·Esc·가림막) 고른 후보 그대로 진화 창으로
   });
   // 단추는 다른 확인 창처럼 오른쪽에 `취소`·`진화` (Figma 05 `Party / Detail Device / Evolution Confirm` `1126:23890`, 2026-09-30 점검)
-  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back.to)), go));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go)); // 개체 상세 기기 창에서 열었다 — 닫으면 그 창이 그대로 있다
 }

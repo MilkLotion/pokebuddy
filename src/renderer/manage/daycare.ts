@@ -8,7 +8,7 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { lastReplyOf, sendCommand } from "./command.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openAnyDialog, scrimEl } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, drawDialog, openAnyDialog, openSubDialog, scrimEl } from "./dialog.js";
 import type { AllCaught, Hatched } from "./dialog-types.js";
 import { redrawBody } from "./shell.js";
 import { petInView, ui } from "./state.js";
@@ -131,7 +131,7 @@ async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
   beginHatch();
   try {
     const got = await openEgg(eggId);
-    if (got) openAnyDialog({ kind: "hatched", ...got, ...(over ? { over } : {}) });
+    if (got) (over ? openSubDialog : openAnyDialog)({ kind: "hatched", ...got, ...(over ? { over } : {}) }); // 돌보미집 위의 하위 모달 — 물러나면 돌보미집으로
   } finally {
     endHatch();
   }
@@ -156,7 +156,7 @@ async function openAllEggs(): Promise<void> {
     openingAll = false;
   }
   const first = queue[0];
-  if (first) openAnyDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
+  if (first) openSubDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
   else drawDialog(); // 단추의 흐림을 되돌린다
   endHatch();
 }
@@ -197,13 +197,12 @@ export function drawHatched(petId?: string, eggId?: string, over?: "daycare", qu
     if (pet.shiny) name.appendChild(shinyIcon(16));
     card.append(portraitOf(pet.look, pet.shiny, "portrait"), name, tags);
   }
-  // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. ✕·Esc·바깥 누르기는 남은 결과를 건너뛴다(dismiss)
+  // 모두 열기의 결과는 `다음 (1 / N)` 으로 넘기고 마지막만 `확인 (N / N)` 이다. Esc·바깥 누르기는 남은 결과를 건너뛰고 돌보미집으로 물러난다(dismissDialog)
   const next = queue?.[at + 1];
   const count = queue ? ` (${at + 1} / ${queue.length})` : "";
   const done = actionButtonEl(`${next ? "다음" : "확인"}${count}`, true, false, () => {
     if (next && queue) openAnyDialog({ kind: "hatched", ...next, ...(over ? { over } : {}), queue, at: at + 1 });
-    else if (over) openAnyDialog({ kind: "daycare" });
-    else closeDialog();
+    else dismissDialog(); // 돌보미집 위면 돌보미집으로, 아니면 닫는다
     if (next || !over) redrawBody(); // 확인한 개체를 박스에 보인다 (hiddenHatchIds). 돌보미집으로 돌아가는 `확인`은 drawUnder 가 다시 그린다
   });
   done.dataset.confirm = ""; // Space·Enter 가 누르는 단추 (manage.ts 의 keydown)

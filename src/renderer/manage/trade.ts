@@ -12,7 +12,7 @@ import { liveInputEl } from "./search.js";
 import { alertEl, dialogCloseEl } from "./widgets.js";
 import type { TradeScreen } from "../../shared/model/trade.js";
 import { el } from "../ui/dom.js";
-import { actionButtonEl, closeDialog, dialogEl, openAnyDialog } from "./dialog.js";
+import { actionButtonEl, closeDialog, dialogEl, openAnyDialog, openSubDialog } from "./dialog.js";
 import { failTextOf } from "../../shared/fail-text.js";
 import { loadTrade, redrawTrade, TRADE_LOCAL, tradeClosedText, tradeSend, tradeUi } from "./trade-state.js";
 import { drawTradeDone, drawTradeOffer, leftText, tradeCardHead, tradeState } from "./trade-cards.js";
@@ -143,7 +143,7 @@ function drawTradeLogin(out: HTMLElement): void {
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("교환은 로그인해야 할 수 있어요"));
   const acts = el("div", "trade-acts");
-  acts.appendChild(actionButtonEl("로그인", true, false, () => openAnyDialog({ kind: "user", tab: "account" })));
+  acts.appendChild(actionButtonEl("로그인", true, false, () => openSubDialog({ kind: "user", tab: "account" }))); // 로그인하러 잠깐 간다 — 사용자 모달을 닫으면 교환으로 돌아온다
   card.appendChild(acts);
   out.appendChild(card);
 }

@@ -5,7 +5,7 @@ import type { PatchNotesView, UpdateView } from "../../shared/model/account.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { api } from "./api.js";
 import { setBusy } from "./command.js";
-import { actionButtonEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
+import { actionButtonEl, closeDialog, dialogEl, dismissDialog, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
 
@@ -56,7 +56,7 @@ export function versionFoot(): HTMLElement {
     else if (upd.status === "manual") box.appendChild(smallButton("받기", true, () => void updateSend("install")));
     else if (upd.status === "error") box.appendChild(smallButton("다시 확인", false, () => void updateSend("check")));
   }
-  if (patch?.notes.length) box.appendChild(smallButton("패치노트", false, () => openAnyDialog({ kind: "notes" })));
+  if (patch?.notes.length) box.appendChild(smallButton("패치노트", false, () => openSubDialog({ kind: "notes" }))); // 설정의 하위 모달 — 물러나면 설정으로
   return box;
 }
 
@@ -133,7 +133,7 @@ export function notesHead(title: string, sub: string, onClose: () => void): HTML
 export function drawNotes(pick?: string): void {
   const notes = patch?.notes ?? [];
   const current = pick ?? notes[0]?.version ?? "";
-  dialogEl.appendChild(notesHead("패치노트", "버전마다 바뀐 것", () => openAnyDialog({ kind: "settings", tab: "general" })));
+  dialogEl.appendChild(notesHead("패치노트", "버전마다 바뀐 것", dismissDialog)); // ✕ 는 Esc·가림막과 같다 — 설정으로 돌아간다
   const body = el("div", "notes-body");
   const list = el("div", "notes-list scroll");
   for (const n of notes) {

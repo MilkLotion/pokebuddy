@@ -2,7 +2,7 @@
 import type { AchievementView } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { sendCommand } from "./command.js";
-import { actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, drawDialog, resetDialogScroll } from "./dialog.js";
+import { closeDialog, dialogEl, dialogHead, drawDialog, resetDialogScroll } from "./dialog.js";
 import { ui } from "./state.js";
 import { chipsEl } from "./widgets.js";
 
@@ -61,7 +61,7 @@ export function drawAchievements(): void {
     return;
   }
   const list = ui.view.achievements.list;
-  dialogEl.append(...dialogHead("업적", `달성 ${ui.view.achievements.total} / ${list.length} · 미수령 ${ui.view.achievements.unclaimed}`));
+  dialogEl.append(...dialogHead("업적", `달성 ${ui.view.achievements.total} / ${list.length} · 미수령 ${ui.view.achievements.unclaimed}`, { close: true }));
   dialogEl.appendChild(
     chipsEl(ACHIEVEMENT_TABS, achievementTab, (id) => {
       achievementTab = id;
@@ -75,6 +75,5 @@ export function drawAchievements(): void {
     .filter(({ a }) => achievementTab === "all" || a.group === achievementTab)
     .sort((x, y) => ACHIEVEMENT_ORDER[x.a.state] - ACHIEVEMENT_ORDER[y.a.state] || x.i - y.i);
   for (const { a } of rows) scroll.appendChild(achievementRow(a));
-  dialogEl.appendChild(scroll);
-  dialogEl.appendChild(actionsRowEl(closeButton()));
+  dialogEl.appendChild(scroll); // 바닥 `닫기` 는 두지 않는다 — ✕·Esc·가림막으로 닫는다(C-13 5번)
 }

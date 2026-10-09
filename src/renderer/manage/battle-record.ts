@@ -8,7 +8,7 @@ import { recordBarText, recordRowText, summaryRateText, tallyText } from "../../
 import type { BattleRecordData, BattleTally } from "../../shared/model/battle-net.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { api } from "./api.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openDialog } from "./dialog.js";
+import { dialogEl, dismissDialog, drawDialog, openSubDialog } from "./dialog.js";
 import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
 
@@ -39,7 +39,7 @@ export function battleRecordBarEl(): HTMLElement {
   bar.appendChild(el("span", "br-label", "내 전적"));
   bar.appendChild(el("span", "br-value", data ? recordBarText(data.mine) : failed ? FAILED : LOADING));
   const go = buttonEl("br-go", "기록 보기 ›");
-  go.addEventListener("click", () => openDialog({ kind: "battle-record", back: "battle-opponent" }));
+  go.addEventListener("click", () => openSubDialog({ kind: "battle-record" })); // 상대 고르기의 하위 모달 — 물러나면 상대 고르기로
   bar.appendChild(go);
   return bar;
 }
@@ -63,9 +63,9 @@ function rowEl(r: BattleRecordData["recent"][number]): HTMLElement {
   return row;
 }
 
-export function drawBattleRecord(back?: "battle-opponent"): void {
+export function drawBattleRecord(): void {
   // 닫기·✕ — 상대 고르기에서 왔으면 그 모달로 돌아간다(고른 줄·쿨타임은 그대로)
-  const leave = (): void => (back ? openDialog({ kind: back }) : closeDialog());
+  const leave = dismissDialog; // ✕·닫기는 Esc·가림막과 같다 — 상대 고르기에서 열었으면 상대 고르기로, 배너에서 열었으면 닫는다
   const top = el("div", "settings-head");
   const titles = el("div", "titles");
   titles.appendChild(el("h2", undefined, "배틀 기록"));
@@ -79,5 +79,5 @@ export function drawBattleRecord(back?: "battle-opponent"): void {
   const recent = data?.recent.slice(0, ROWS) ?? [];
   for (const r of recent) list.appendChild(rowEl(r));
   if (data && !recent.length) list.appendChild(el("div", "br-empty", "아직 배틀이 없어요"));
-  dialogEl.append(top, summary, el("div", "br-list-title", "최근 배틀"), list, actionsRowEl(el("span", "spacer"), actionButtonEl("닫기", true, false, leave)));
+  dialogEl.append(top, summary, el("div", "br-list-title", "최근 배틀"), list); // 바닥 `닫기` 는 두지 않는다 — ✕·Esc·가림막으로 물러난다(C-13 5번)
 }

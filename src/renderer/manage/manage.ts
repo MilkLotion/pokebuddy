@@ -39,7 +39,8 @@ import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } f
 import { onDexClosed, setDexLinkHooks } from "./dex-link.js";
 import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
-import { drawNature, drawNatureTarget } from "./nature.js";
+import { drawNature } from "./nature.js";
+import { accountUi } from "./account-state.js";
 import { drawEvolveConfirm, drawForm, drawMega } from "./pet-forms.js";
 import { restoreSearchFocus, typingSearch } from "./search.js";
 import { alertEl } from "./widgets.js";
@@ -219,8 +220,7 @@ function drawSaveFailing(): void {
 // 폭: 고르기는 격자가 들어가서 넓고, 목록은 길어서 안에서 스크롤한다
 registerDialog({ kind: "evolve", shape: "dialog", draw: (d) => drawEvolve(d.petId, d.to) });
 registerDialog({ kind: "evolve-confirm", shape: "dialog", draw: (d) => drawEvolveConfirm(d.petId, d.to) });
-registerDialog({ kind: "nature", shape: "dialog", draw: (d) => drawNature(d.petId, d.pick, d.itemId) });
-registerDialog({ kind: "nature-target", shape: "dialog", draw: (d) => drawNatureTarget(d.itemId) });
+registerDialog({ kind: "nature", shape: "dialog", draw: (d) => drawNature(d.petId, d.pick) });
 // 칩을 바꿔도 창 높이가 그대로다 — 줄 수가 달라도 대화상자가 움직이지 않는다
 registerDialog({ kind: "achievements", shape: "dialog tall steady", headerButton: "open-achievements", draw: () => drawAchievements() });
 registerDialog({
@@ -234,14 +234,15 @@ registerDialog({
     if (d.tab === "display" && !(prev?.kind === "settings" && prev.tab === "display")) restartAreaTutorial();
   },
 });
-registerDialog({ kind: "user", shape: "dialog settings", headerButton: "open-user", draw: (d) => drawUser(d.tab) });
+// 사용자 모달을 떠나면 로그아웃·삭제 확인 덧창을 지운다 — 다시 열었을 때 확인 창이 그대로 떠 있지 않게 (C-13 닫기 규칙)
+registerDialog({ kind: "user", shape: "dialog settings", headerButton: "open-user", draw: (d) => drawUser(d.tab), leave: () => (accountUi.confirm = null) });
 registerDialog({ kind: "guide", shape: "dialog settings notes", draw: (d) => drawGuide(d.pick) });
 registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatched(d.petId, d.eggId, d.over, d.queue, d.at, d.allCaught) });
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
-registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: (d) => drawBattleRecord(d.back), enter: () => void loadBattleRecord() });
+registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: () => drawBattleRecord(), enter: () => void loadBattleRecord() });
 registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus)) });
 registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
 registerDialog({ kind: "move-pick", shape: "dialog move-pick", draw: () => drawMovePick(), enter: (d, prev) => (prev?.kind === "move-pick" ? undefined : startMovePick(d.petId, d.slot)) });

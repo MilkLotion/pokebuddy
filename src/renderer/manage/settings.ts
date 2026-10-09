@@ -8,7 +8,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { api } from "./api.js";
 import { agentRows, drawAgents, loadAgents } from "./agents.js";
 import { runLocked, sendCommand } from "./command.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import type { SettingsTab, UserTab } from "./dialog-types.js";
 import { ui } from "./state.js";
 import { chipsEl, dialogCloseEl, segmentedEl, settingRow, switchEl } from "./widgets.js";
@@ -162,7 +162,7 @@ function drawGeneral(scroll: HTMLElement): void {
   const onKinds = kinds.map((k) => k.id).filter((id) => !s.notifyOff.includes(id));
   scroll.appendChild(settingRow("알림", "끈 알림은 배너로 띄우지 않아요", chipsEl(kinds, onKinds, (id) => setSetting("notify", { kind: id, on: s.notifyOff.includes(id) }))));
   const guide = buttonEl("act", "열기 ›");
-  guide.addEventListener("click", () => openAnyDialog({ kind: "guide" }));
+  guide.addEventListener("click", () => openSubDialog({ kind: "guide" })); // 설정의 하위 모달 — 물러나면 설정으로
   scroll.appendChild(settingRow("가이드북", undefined, guide));
 }
 

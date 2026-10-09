@@ -6,7 +6,7 @@ import { resetAchievementTab } from "./achievements.js";
 import { loadAgents } from "./agents.js";
 import { startHold } from "./box-move.js";
 import { sendCommand } from "./command.js";
-import { closeDialog, dialogEl, openDialog, setScrim } from "./dialog.js";
+import { closeDialog, dialogEl, openDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
 import { openSwap } from "./party-swap.js";
 import { redrawBody, setTab } from "./shell.js";
@@ -19,9 +19,7 @@ import { coachIdOf } from "./tutorial.js";
 export function openDialogOrPet(next: Dialog): void {
   if (next.kind === "pet") {
     if (coachIdOf() === "evolution") void sendCommand("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
-    ui.dialog = null;
-    ui.notice = "";
-    setScrim(false);
+    closeDialog(); // 부모 스택·떠나는 모달의 정리도 함께 (dialog.ts)
     setTab(findPartySlot(next.petId) != null ? "party" : "box");
     ui.detailPet = next.petId;
     redrawBody();

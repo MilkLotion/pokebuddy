@@ -7,23 +7,21 @@ import { numberText } from "../../shared/count-text.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
-import { actionButtonEl, actionsRowEl, closeButton, closeDialog, dialogEl, dialogHead, openAnyDialog } from "./dialog.js";
-import type { Dialog } from "./dialog-types.js";
-import { boxPets, findPartySlot, partyPets, petInView, ui } from "./state.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, openAnyDialog } from "./dialog.js";
+import { findPartySlot, petInView, ui } from "./state.js";
 
 const MINT = "mint";
 
-export function drawNature(petId: string, pick: string | undefined, itemId: string | undefined): void {
+export function drawNature(petId: string, pick: string | undefined): void {
   const pet = petInView(petId);
   if (!pet || !ui.view) {
     closeDialog();
     return;
   }
   const picked = ui.view.natures.find((n) => n.id === pick && n.id !== pet.natureId);
-  const back: { label: string; to: Dialog } = itemId ? { label: "대상", to: { kind: "nature-target", itemId } } : { label: pet.name, to: { kind: "pet", petId } };
   const slot = findPartySlot(petId);
-  dialogEl.append(...dialogHead("성격을 바꿀까요?", `${pet.name} Lv.${pet.level} · ${slot != null ? `파티 ${slot + 1}번` : "박스"}`, back));
-  const redraw = (next: string): void => openAnyDialog({ kind: "nature", petId, ...(itemId ? { itemId } : {}), pick: next });
+  dialogEl.append(...dialogHead("성격을 바꿀까요?", `${pet.name} Lv.${pet.level} · ${slot != null ? `파티 ${slot + 1}번` : "박스"}`, { close: true }));
+  const redraw = (next: string): void => openAnyDialog({ kind: "nature", petId, pick: next });
 
   const before = el("div", "nat-card");
   before.append(portraitOf(pet.look, pet.shiny, "portrait"), el("div", "name", pet.name), el("div", "note", pet.nature), el("div", "note", "지금"));
@@ -71,14 +69,5 @@ export function drawNature(petId: string, pick: string | undefined, itemId: stri
       if (ok) openAnyDialog({ kind: "pet", petId });
     });
   });
-  dialogEl.appendChild(actionsRowEl(change, actionButtonEl("취소", false, false, () => openAnyDialog(back.to))));
-}
-
-// 가방의 민트 — 성격을 바꿀 개체를 고른다. 파티와 박스 개체 모두 대상이다. 성격은 다음 창에서 고른다
-export function drawNatureTarget(itemId: string): void {
-  const item = ui.view?.bag.find((b) => b.id === itemId);
-  const pets = [...partyPets(), ...boxPets()];
-  dialogEl.append(...dialogHead(item ? item.name : itemId, pets.length ? "누구의 성격을 바꿀까요?" : "성격을 바꿀 포켓몬이 없어요."));
-  const acts = pets.map((p) => actionButtonEl(`${p.name} (${p.nature})`, false, false, () => openAnyDialog({ kind: "nature", petId: p.id, itemId })));
-  dialogEl.appendChild(actionsRowEl(...acts, closeButton()));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), change)); // 단추 순서는 다른 모달과 같다(C-13 7번). 개체 상세 기기 창에서 열었다 — 닫으면 그 창이 그대로 있다
 }

@@ -10,8 +10,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { api } from "./api.js";
 import { iconCache, portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, openAnyDialog } from "./dialog.js";
-import type { Dialog } from "./dialog-types.js";
+import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, openAnyDialog } from "./dialog.js";
 import { findPartySlot, petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
@@ -109,8 +108,7 @@ export function drawMega(petId: string, to?: string, battle = false): void {
 
   // 고르기 — 진화 창의 틀. 준비된 후보를 미리 고른다
   const picked = mega.forms.find((f) => f.species === to) ?? mega.forms[0];
-  const back: { label: string; to: Dialog } = { label: pet.name, to: { kind: "pet", petId } };
-  dialogEl.append(...(battle ? dialogHead(word, where) : dialogHead(word, `${pet.name} · Lv.${pet.level}`, back)));
+  dialogEl.append(...dialogHead(word, battle ? where : `${pet.name} · Lv.${pet.level}`, { close: true }));
   const tree: EvoNodeView = {
     slug: pet.species,
     name: pet.name,
@@ -150,7 +148,7 @@ export function drawMega(petId: string, to?: string, battle = false): void {
   const go = actionButtonEl(word, true, !picked, () => {
     if (picked) change(picked.species);
   });
-  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => (battle ? closeDialog() : openAnyDialog(back.to))), go));
+  dialogEl.appendChild(actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go)); // 기기 창에서 열었다 — 닫으면 그 창이 그대로 있다
 }
 
 // 확인 창 안내의 공통 줄
@@ -224,7 +222,6 @@ export function drawEvolveConfirm(petId: string, to: string): void {
     closeDialog();
     return;
   }
-  const back: Dialog = { kind: "evolve", petId, to };
   dialogEl.append(...dialogHead(`${c.name}${toParticle(c.name)} 진화할까요?`, ""));
   const row = compareEl(pet, formCardEl(pet, c.to, c.name, c.types, c.typeIds, !c.known), c.uses);
   const info = el("div", "info-box");
@@ -238,5 +235,5 @@ export function drawEvolveConfirm(petId: string, to: string): void {
       if (ok) openAnyDialog({ kind: "pet", petId });
     });
   });
-  dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, () => openAnyDialog(back)), go));
+  dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, dismissDialog), go)); // 진화 창으로 — Esc·가림막과 같다
 }

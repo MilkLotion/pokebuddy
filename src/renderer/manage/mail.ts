@@ -9,7 +9,7 @@ import { josa } from "../../shared/josa.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { api } from "./api.js";
 import { iconOf, portraitOf } from "./art-cache.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openDialog } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, dialogEl, dismissDialog, drawDialog, openDialog, openSubDialog } from "./dialog.js";
 import { refreshView } from "./live.js";
 import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
@@ -81,20 +81,14 @@ function envelope(cls: string): SVGSVGElement {
   return svg;
 }
 
-// 모달 머리 — 제목(편지면 ‹ 돌아가기)과 오른쪽 위 닫기
-function mailHead(title: string, back: boolean): void {
+// 모달 머리 — 제목과 오른쪽 위 ✕. 편지는 우편함의 하위 모달이라 ✕ 가 우편함으로 돌아간다(C-13 닫기 규칙). ‹ 돌아가기는 두지 않는다
+function mailHead(title: string): void {
   const head = el("div", "settings-head");
   const titles = el("div", "titles mail-titles");
-  if (back) {
-    const b = buttonEl("back", "‹");
-    b.setAttribute("aria-label", "우편함으로");
-    b.addEventListener("click", () => openDialog({ kind: "mail" }));
-    titles.appendChild(b);
-  }
   titles.appendChild(el("h2", undefined, title));
   const x = dialogCloseEl();
   x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
+  x.addEventListener("click", dismissDialog);
   head.append(titles, x);
   dialogEl.appendChild(head);
 }
@@ -120,7 +114,7 @@ function mailRow(l: MailLetterView): HTMLElement {
 }
 
 function openLetter(id: string): void {
-  openDialog({ kind: "letter", id });
+  openSubDialog({ kind: "letter", id }); // 우편함의 하위 모달 — 물러나면 우편함으로
   const l = mailView?.letters.find((x) => x.id === id);
   if (l && !l.read)
     void api
@@ -130,7 +124,7 @@ function openLetter(id: string): void {
 }
 
 export function drawMail(): void {
-  mailHead("우편함", false);
+  mailHead("우편함");
   const scroll = el("div", "scroll mail-list");
   const letters = mailView?.letters ?? [];
   if (!letters.length) {
@@ -178,7 +172,7 @@ function giftFoot(l: MailLetterView): HTMLElement {
   const left = el("span", "spacer gift-note", note);
   left.title = note;
   const items: HTMLElement[] = [left];
-  if (needLogin) items.push(actionButtonEl("로그인", false, false, () => openDialog({ kind: "user", tab: "account" })));
+  if (needLogin) items.push(actionButtonEl("로그인", false, false, () => openSubDialog({ kind: "user", tab: "account" }))); // 로그인하러 잠깐 간다 — 사용자 모달을 닫으면 편지로 돌아온다
   const blocked = done || !signedIn || mailExpired(l) || l.unsupported || busy;
   items.push(
     actionButtonEl(done ? "받음" : busy ? "받는 중" : "받기", true, blocked, () => {
@@ -201,7 +195,7 @@ export function drawLetter(id: string): void {
     openDialog({ kind: "mail" });
     return;
   }
-  mailHead(l.title, true);
+  mailHead(l.title);
   const scroll = el("div", "scroll mail-letter");
   scroll.append(el("div", "mail-meta", mailMeta(l)), el("div", "mail-body", l.body));
   const gift = l.gifts.length > 0 || l.unsupported;

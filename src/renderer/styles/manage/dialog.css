@@ -12,7 +12,17 @@
   margin: 0 -20px;
   padding: 0 20px;
 }
-/* 모달 제목 줄 — 돌아가기와 제목을 한 줄에 둔다 */
+/* ✕ 가 있는 제목 머리 — 왼쪽 제목·부제, 오른쪽 위 ✕ (진화·메가진화 고르기·성격·업적) */
+.dialog .dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dialog .dialog-head .titles {
+  flex: 1;
+  min-width: 0;
+}
+/* 모달 제목 줄 */
 .dialog .title-row {
   display: flex;
   align-items: center;

@@ -1,8 +1,11 @@
 // 설정창의 모달 — 하나만 뜬다. 어느 모달인지는 ui.dialog 하나가 가진다
+// - 닫는 규칙(docs/specs/ui-components.md C-13 "닫기 규칙"): ✕·Esc·가림막은 모두 한 단계 물러나기(dismissDialog)다.
+//   다른 모달 안에서 연 모달(하위 모달)은 openSubDialog 로 열고, 물러나면 부모 모달로 돌아간다. 부모는 여기 스택이 기억한다
 // - 모달 종류마다 registerDialog 로 폭(shape)·헤더 열림 표시·그리기·들어올 때 할 일을 등록한다
 // - 여닫기, 가림막, 다시 그릴 때의 스크롤 되돌리기, 바닥 단추 줄의 실패 글자, 입력 중 미루기
 // - 아직 나뉘지 않은 쪽(검색·돌보미집 겹침·설정의 화면 표시·튜토리얼·경고 배너)은 설정창이 setDialogHooks 로 걸어 준다
 import { buttonEl, el, needEl } from "../ui/dom.js";
+import { closeIconEl } from "../ui/line-icons.js";
 import type { Dialog } from "./dialog-types.js";
 import { ui } from "./state.js";
 
@@ -18,6 +21,7 @@ export interface DialogModule<K extends DialogKind> {
   headerButton?: string; // 이 모달이 떠 있는 동안 열림 표시를 달 헤더 아이콘의 id
   draw(d: DialogOf<K>): void;
   enter?(d: DialogOf<K>, prev: Dialog | null): void; // 들어올 때 — 지난 모달(prev)과 견줘 상태를 처음으로 돌린다
+  leave?(): void; // 이 모달을 떠날 때(닫기·다른 모달로) — 모달 안의 덧창 같은 상태를 지운다
 }
 const modules = new Map<DialogKind, DialogModule<DialogKind>>();
 export function registerDialog<K extends DialogKind>(m: DialogModule<K>): void {
@@ -69,8 +73,10 @@ export function resetDialogScroll(): void {
 }
 
 // 헤더 아이콘의 열림 표시 — 그 아이콘이 여는 모달이 떠 있는 동안 진한 배경 (docs/specs/ui-components.md C-02, Figma `Header Icon Button` `State=Open`)
+// 하위 모달이 떠 있어도 부모 모달의 아이콘은 켜 둔다(설정 → 패치노트·가이드북, 우편함 → 편지)
 function markHeaderOpen(): void {
-  for (const m of modules.values()) if (m.headerButton) document.getElementById(m.headerButton)?.classList.toggle("open", ui.dialog?.kind === m.kind);
+  const shown = ui.dialog ? [ui.dialog.kind, ...parents.map((p) => p.kind)] : [];
+  for (const m of modules.values()) if (m.headerButton) document.getElementById(m.headerButton)?.classList.toggle("open", shown.includes(m.kind));
 }
 
 // 이번 그리기에서 대화상자 안의 상자가 오류를 이미 보였나 — 그러면 바닥 줄에 또 보이지 않는다
@@ -128,26 +134,55 @@ export function drawDialog(): void {
   h.afterDraw();
 }
 
+// 하위 모달의 부모들 — 바깥 것부터. 하위 모달에서 물러나면 마지막 것으로 돌아간다
+let parents: Dialog[] = [];
+
+// 떠나는 모달의 정리 고리를 부른다 — 같은 모달 안에서 값만 바뀌면(탭·고른 항목) 떠나는 것이 아니다
+function leaveCurrent(next: Dialog | null): void {
+  const cur = ui.dialog;
+  if (cur && cur.kind !== next?.kind) moduleOf(cur.kind).leave?.();
+}
+
 // 모달을 연다 — 다른 모달로 갈 때는 지난 실패 문구를 지운다. 구매 창의 부족 안내처럼 그 화면이 다시 만드는 것은 남는다
+// 다른 모달로 바꾸면 부모 스택을 비운다. 같은 모달 안에서 값만 바꾸면(패치노트의 버전 고르기 등) 부모를 그대로 둔다
 // 개체 상세(`pet`)는 모달이 아니다 — routes.ts openDialogOrPet 이 먼저 가른다
 export function openDialog(next: Dialog): void {
+  if (ui.dialog?.kind !== next.kind) parents = [];
+  leaveCurrent(next);
   moduleOf(next.kind).enter?.(next, ui.dialog);
   ui.dialog = next;
   ui.notice = "";
   drawDialog();
 }
 
+// 하위 모달을 연다 — 지금 모달을 부모로 기억한다. 물러나면(✕·Esc·가림막·확인 창의 취소) 부모로 돌아간다
+export function openSubDialog(next: Dialog): void {
+  const stack = ui.dialog ? [...parents, ui.dialog] : [];
+  openDialog(next);
+  parents = stack;
+  markHeaderOpen();
+}
+
 export function closeDialog(): void {
+  leaveCurrent(null);
+  parents = [];
   ui.dialog = null;
   ui.notice = "";
   setScrim(false);
   hooksOf().afterEmpty();
 }
 
-// 모달 닫기 — 돌보미집 위에 겹친 부화 결과는 닫으면 돌보미집으로 돌아간다(✕·Esc·바깥 누르기 모두)
+// 한 단계 물러나기 — ✕·Esc·가림막 누르기·확인 창의 취소. 하위 모달이면 부모로, 아니면 닫는다
 export function dismissDialog(): void {
-  if (ui.dialog?.kind === "hatched" && ui.dialog.over) openDialog({ kind: ui.dialog.over });
-  else closeDialog();
+  const back = parents[parents.length - 1];
+  if (!back) {
+    closeDialog();
+    return;
+  }
+  const rest = parents.slice(0, -1);
+  openDialog(back);
+  parents = rest;
+  markHeaderOpen();
 }
 
 export function actionButtonEl(label: string, primary: boolean, disabled: boolean, run: () => void): HTMLButtonElement {
@@ -163,20 +198,23 @@ export function actionsRowEl(...items: HTMLElement[]): HTMLElement {
   return box;
 }
 
-// 제목 줄 — `back` 을 주면 돌아가기를 앞에 둔다. 모달을 겹치지 않고 안에서 화면을 바꾼다.
-// 돌아갈 곳이 개체 상세(pet)일 수 있어 설정창의 openAny 고리(routes.ts openDialogOrPet)로 연다
-export function dialogHead(title: string, sub: string, back?: { label: string; to: Dialog }): HTMLElement[] {
+// 제목 줄 — 제목과 부제. close 면 오른쪽 위에 ✕ 를 둔다(한 단계 물러나기, C-13 닫기 규칙 4번).
+// 확인 창·결과 창은 ✕ 를 두지 않는다 — `취소`·`확인` 이 물러나기다. `‹ 돌아가기` 는 두지 않는다(2026-10-10)
+export function dialogHead(title: string, sub: string, opts?: { close?: boolean }): HTMLElement[] {
   const row = el("div", "title-row");
-  if (back) {
-    const b = buttonEl("back", `‹ ${back.label}`);
-    b.addEventListener("click", () => openAnyDialog(back.to));
-    row.appendChild(b);
-  }
   row.appendChild(el("h2", undefined, title));
-  return sub ? [row, el("div", "sub", sub)] : [row];
+  const lines = sub ? [row, el("div", "sub", sub)] : [row];
+  if (!opts?.close) return lines;
+  const head = el("div", "dialog-head");
+  const titles = el("div", "titles");
+  titles.append(...lines);
+  const x = buttonEl("dialog-close");
+  x.appendChild(closeIconEl());
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", dismissDialog);
+  head.append(titles, x);
+  return [head];
 }
-
-export const closeButton = (label = "닫기"): HTMLButtonElement => actionButtonEl(label, false, false, closeDialog);
 
 // 개체 상세(pet)일 수도 있는 곳으로 간다 — 대화상자 안의 `취소`·돌아가기가 연 곳으로 되돌아갈 때. 모달만 열 때는 openDialog
 export function openAnyDialog(next: Dialog): void {

@@ -2,7 +2,7 @@
 // Figma `Guidebook Panel` `1459:56271`·05 `Settings / Guidebook` `1461:902`. 규칙은 docs/specs/game.md "튜토리얼과 가이드북"
 import { buttonEl, el } from "../ui/dom.js";
 import { sendCommand } from "./command.js";
-import { actionButtonEl, closeDialog, dialogEl, openAnyDialog } from "./dialog.js";
+import { actionButtonEl, closeDialog, dialogEl, dismissDialog, openAnyDialog } from "./dialog.js";
 import type { TabId } from "./dialog-types.js";
 import { goTo, openDialogOrPet } from "./routes.js";
 import { redrawBody, setTab } from "./shell.js";
@@ -124,7 +124,7 @@ function guideDetail(pick: string): HTMLElement {
 // ✕ 는 설정으로 돌아간다 — 설정에서 열었다
 export function drawGuide(pick?: string): void {
   const current = pick ?? GUIDE[0]!.title;
-  dialogEl.appendChild(notesHead("가이드북", "궁금한 것을 고르세요", () => openAnyDialog({ kind: "settings", tab: "general" })));
+  dialogEl.appendChild(notesHead("가이드북", "궁금한 것을 고르세요", dismissDialog)); // ✕ 는 Esc·가림막과 같다 — 설정으로 돌아간다
   const body = el("div", "notes-body");
   const list = el("div", "notes-list scroll");
   const item = (key: string, label: string): void => {
