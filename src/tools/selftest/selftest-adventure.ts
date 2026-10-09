@@ -239,13 +239,20 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
     const r = ex.run({ id: `f${(n += 1)}`, name: "battle.form", args });
     return r.ok ? null : r.reason;
   };
+  save.pets[0]!.workMs = 10 ** 12; // 로토무 모습 바꾸기 해금(작업 시간)
   assert.equal(why({ petId: "p1", species: "rotom-fan" }), null);
   assert.equal(battleSpeciesOf(save, save.pets[0]!), "rotom-fan");
+  assert.equal(save.bag["rotom-catalog"] ?? 0, 0, "도구는 쓰지 않는다(없어도 된다)");
   assert.equal(save.pets[0]!.species, "rotom-heat", "개체의 종은 그대로");
   assert.equal(why({ petId: "p1", species: "rotom-fan" }), "already");
   assert.equal(why({ petId: "p1", species: "pikachu" }), "bad-form", "묶음 밖의 종");
   assert.equal(why({ petId: "p3", species: "raichu" }), "bad-form", "묶음이 없는 종");
   assert.equal(why({ petId: "p1" }), "bad-args");
+  // 해금 — 원래 모습 바꾸기와 같다. 로토무는 작업 시간이 모자라면 form-locked (2026-10-09 사용자 "기존에 해금했으면 되게")
+  const rotomWork = save.pets[0]!.workMs;
+  save.pets[0]!.workMs = 0;
+  assert.equal(why({ petId: "p1", species: "rotom-mow" }), "form-locked");
+  save.pets[0]!.workMs = rotomWork;
   // 다른 개체가 그 종으로 들어오면 — 묶음이 다르면 지금 종으로 본다
   const fake = JSON.parse(JSON.stringify(save)) as SaveV3;
   fake.battle!.forms = { p1: "rotom-fan", p3: "mewtwo" };
