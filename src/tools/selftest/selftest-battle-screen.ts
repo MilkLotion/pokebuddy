@@ -9,6 +9,7 @@ import { battleTypeChart, buildFighter } from "../../battle/fighter";
 import { clockText, createTimeline, popKindOf, rowOf, spriteFrame } from "../../shared/battle-timeline";
 import type { LookSheets, SpriteSheet } from "../../shared/model/stage";
 import { battleScreenArtKeys, battleScreenModel, withBattleScreenArt } from "../../view/battle-screen";
+import { battleRewardText } from "../../view/battle-offer";
 
 const f = (species: string): EngineFighter => {
   const out = buildFighter({ species });
@@ -173,8 +174,8 @@ if (wEvent && wEvent.kind === "weather") {
     { t: 2000, kind: "status", side: 1, slot: 5, status: "confusion", on: true, until: 7000 },
     { t: 2000, kind: "status", side: 1, slot: 5, status: "flinch", on: true },
     { t: 3000, kind: "move", side: 1, slot: 5, move: "earthquake", nextAt: 9000 },
-    { t: 3000, kind: "status-hp", side: 1, slot: 5, amount: 18, hp: 300, cause: "confusion" },
     { t: 3000, kind: "status", side: 1, slot: 5, status: "flinch", on: false },
+    { t: 3500, kind: "status-hp", side: 1, slot: 5, amount: 18, hp: 300, cause: "confusion" }, // 혼란 실패 — 엔진은 그 차례의 move 를 내지 않는다
     { t: 4000, kind: "status", side: 0, slot: 4, status: "freeze", on: true, until: 7000 },
     { t: 5000, kind: "status-hp", side: 1, slot: 2, amount: 26, hp: 74, cause: "burn" },
     { t: 7000, kind: "status", side: 0, slot: 4, status: "freeze", on: false },
@@ -204,12 +205,12 @@ if (wEvent && wEvent.kind === "weather") {
   assert.strictEqual(st.seek(2500).units[1][2]?.major?.kind, "burn", "큰 상태 이상");
   const c1 = st.seek(2500).units[1][5]!;
   assert.ok(c1.confused && c1.flinched, "혼란·풀죽음은 따로 겹친다");
-  // 혼란 실패 — 알약에 가로줄, 자기 피해에 혼란 말. 풀죽음을 안고 쓴 기술은 쿨타임 끝 1초가 풀죽음 몫
-  assert.ok(st.casts(3000).some((c) => c.side === 1 && c.slot === 5 && c.failed), "혼란 실패 알약");
-  assert.ok(!st.casts(1000).some((c) => c.failed), "보통 기술은 실패 아님");
+  // 풀죽음을 안고 쓴 기술은 쿨타임 끝 1초가 풀죽음 몫. 혼란으로 실패한 차례는 알약이 없다(가로줄은 2026-10-09 뺌)
+  assert.ok(st.casts(3000).some((c) => c.side === 1 && c.slot === 5), "기술 알약");
+  assert.ok(!st.casts(3500).some((c) => c.t === 3500), "혼란 실패 차례에는 알약이 없다");
   // 혼란 자기 피해는 숫자만 — 판정 말·맞는 동작 없음 (2026-10-09 사용자 "그냥 데미지만 들어가도 될거같아")
-  assert.ok(st.pops(3000).some((p) => p.status === "confusion" && p.text === "-18" && p.label === undefined), "혼란 자기 피해 숫자");
-  assert.strictEqual(st.seek(3000).units[1][5]!.hitAt, -Infinity, "혼란 자기 피해에는 맞는 동작이 없다");
+  assert.ok(st.pops(3500).some((p) => p.status === "confusion" && p.text === "-18" && p.label === undefined), "혼란 자기 피해 숫자");
+  assert.strictEqual(st.seek(3500).units[1][5]!.hitAt, -Infinity, "혼란 자기 피해에는 맞는 동작이 없다");
   const c2 = st.seek(3000).units[1][5]!;
   assert.strictEqual(c2.flinched, false, "풀죽음은 다음 기술과 함께 풀린다");
   assert.strictEqual(c2.gaugeTail, 1000, "풀죽음 1초 몫");
@@ -253,5 +254,10 @@ assert.strictEqual(clockText(90_000, 95_000), "0:00");
   if (lResult.events.some((e) => e.kind === "form" && e.side === 0)) assert.strictEqual(me.formLooks["meloetta-pirouette"], "meloetta-pirouette:shiny", "스텝폼도 그 칸의 이로치");
   assert.deepStrictEqual(Object.keys(foe.formLooks).every((k) => !foe.formLooks[k]!.endsWith(":shiny")), true);
 }
+
+// 결과 대화상자 보상 줄 — 오늘의 첫 배틀만 이름, 그 뒤 판은 포인트만 (2026-10-09 사용자 "오늘의 첫 배틀 +500p", "+50p", "+10p")
+assert.deepStrictEqual(battleRewardText(500), { lead: "오늘의 첫 배틀 +500P", detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." });
+assert.strictEqual(battleRewardText(50).lead, "+50P");
+assert.strictEqual(battleRewardText(10).lead, "+10P");
 
 console.log("selftest-battle-screen 통과");

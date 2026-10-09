@@ -463,16 +463,6 @@ body {
   border-radius: 50%;
   background: var(--gauge);
 }
-/* 혼란으로 실패한 기술 — 알약에 가로줄 */
-.fx .cast.failed::after {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 50%;
-  height: 2px;
-  background: var(--bar-ink);
-}
 
 /* 기술 호버 — 기술 이름과 배틀 수치. Figma 02 `Move Info Bubble` */
 .move-bubble {

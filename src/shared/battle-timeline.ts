@@ -33,7 +33,6 @@ export interface Cast {
   slot: number;
   t: number;
   move: string; // 기술 id
-  failed: boolean; // 혼란으로 실패 — 알약에 가로줄
 }
 
 // 특성 알약 — 특성이 효과를 낸 포켓몬 머리 위
@@ -170,15 +169,8 @@ export function createTimeline(view: BattleScreenView): Timeline {
   const stageNow = new Map<string, { stage: number; until: number | null }>(); // 능력 칸별 지금 단계 — 바뀐 양을 셈한다
   for (let i = 0; i < events.length; i++) {
     const e = events[i]!;
-    if (e.kind === "move") {
-      // 혼란 실패 — 같은 시각에 그 포켓몬의 혼란 자기 피해가 뒤따른다
-      let failed = false;
-      for (let j = i + 1; j < events.length && events[j]!.t === e.t; j++) {
-        const x = events[j]!;
-        if (x.kind === "status-hp" && x.cause === "confusion" && x.side === e.side && x.slot === e.slot) failed = true;
-      }
-      castList.push({ side: e.side, slot: e.slot, t: e.t, move: e.move, failed });
-    } else if (e.kind === "damage") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: popKindOf(e.mult, e.crit === true), text: e.mult === 0 ? "효과 없음" : `-${e.amount}`, ...judgeLabel(e.mult, e.crit === true) });
+    if (e.kind === "move") castList.push({ side: e.side, slot: e.slot, t: e.t, move: e.move }); // 혼란으로 실패한 차례는 엔진이 move 를 내지 않아 알약이 없다
+    else if (e.kind === "damage") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: popKindOf(e.mult, e.crit === true), text: e.mult === 0 ? "효과 없음" : `-${e.amount}`, ...judgeLabel(e.mult, e.crit === true) });
     else if (e.kind === "miss") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "miss", text: "빗나감" });
     else if (e.kind === "blocked") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "weak", text: "막음" });
     else if (e.kind === "reflect") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "normal", text: `-${e.amount}`, label: "반격" });

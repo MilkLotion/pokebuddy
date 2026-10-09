@@ -499,7 +499,6 @@ function draw(view: BattleScreenView): void {
       if (!m || !h) continue;
       const pill = movePillEl(m, "small", view.typeIcons[m.typeId] ?? null);
       pill.classList.add("cast");
-      pill.classList.toggle("failed", c.failed);
       pill.style.left = `${h.x}px`;
       pill.style.top = `${h.y - 22}px`;
       nodes.push(pill);

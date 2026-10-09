@@ -23,9 +23,8 @@ export function battleOfferView(data: OfferData): BattleOfferView {
   return { offerId: data.offerId, rows, cooldownMs: data.cooldownMs };
 }
 
-// 배틀 창 결과 대화상자의 보상 줄 — Figma 05 `16 배틀` 결과 1791:10820: lead `그날 첫 배틀 +500P`, detail `다음 랜덤 배틀은 5분 뒤에 할 수 있어요.`
-// 이긴 판·진 판의 보상 이름은 [스펙 미확정] — `승리 보상`·`참가 보상` 으로 둔다
-export function battleRewardText(reward: number, winner: 0 | 1 | null): { lead: string; detail: string } {
-  const what = reward >= 500 ? "그날 첫 배틀" : winner === 0 ? "승리 보상" : "참가 보상";
-  return { lead: `${what} +${reward}P`, detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." };
+// 배틀 창 결과 대화상자의 보상 줄 — Figma 05 `16 배틀` 결과 1791:10820. detail `다음 랜덤 배틀은 5분 뒤에 할 수 있어요.`
+// lead 는 오늘의 첫 배틀만 이름을 붙이고, 그 뒤 판은 포인트만 (2026-10-09 사용자 "오늘의 첫 배틀 +500p", "+50p", "+10p")
+export function battleRewardText(reward: number): { lead: string; detail: string } {
+  return { lead: reward >= 500 ? `오늘의 첫 배틀 +${reward}P` : `+${reward}P`, detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." };
 }
