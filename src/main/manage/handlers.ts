@@ -24,7 +24,7 @@ import type { ManageServices } from "./window.js";
 // 웹 가이드 — docs/guide.md 를 GitHub Pages 로 올린 쪽(scripts/build-guide-site.cjs). 탭마다 그 팁의 절로 연다. 모르는 이름이면 첫머리
 // 앵커는 guide.md 제목을 빌드 스크립트의 slug 로 바꾼 것이다 — 제목을 바꾸면 여기도 바꾼다
 const GUIDE_URL = "https://milklotion.github.io/pokebuddy/guide/";
-const GUIDE_ANCHOR: Readonly<Record<string, string>> = { party: "포인트-모으기", box: "파티와-박스", dex: "도감과-업적", shop: "포인트-모으기", bag: "포인트-모으기", adventure: "배틀-파티-짜기" };
+const GUIDE_ANCHOR: Readonly<Record<string, string>> = { party: "포인트가-들어오는-곳", box: "파티와-박스", dex: "도감과-업적", shop: "포인트-모으기", bag: "포인트-모으기", adventure: "배틀-파티-짜기" };
 const guideUrl = (topic: unknown): string => {
   const anchor = typeof topic === "string" && Object.hasOwn(GUIDE_ANCHOR, topic) ? GUIDE_ANCHOR[topic] : undefined;
   return anchor ? `${GUIDE_URL}#${encodeURIComponent(anchor)}` : GUIDE_URL;

@@ -1,6 +1,6 @@
 // 웹 가이드 만들기 — docs/guide.md 하나를 정적 HTML 한 쪽으로 바꾼다. GitHub Pages 배포(.github/workflows/pages.yml)가 돌린다
 // - 원본은 docs/guide.md 하나뿐이다. 웹 가이드만 고치지 않는다 (2026-10-10 사용자 "설치부터 전부")
-// - guide.md 가 쓰는 마크다운만 다룬다: 제목 #~###, 문단, 목록(-, 1. 두 칸 들여쓰기), 표, 그림, 인라인 코드·링크·굵게, HTML 주석
+// - guide.md 가 쓰는 마크다운만 다룬다: 제목 #~####(목차에는 ##·### 만), 문단, 목록(-, 1. 두 칸 들여쓰기), 표, 그림, 인라인 코드·링크·굵게, HTML 주석
 // - 상대 링크(specs/…·contributing/…·../README.md)는 GitHub 저장소 주소로, 그림은 출력 폴더 images/ 로 복사한다
 // - 새 패키지 없이 node 기본 모듈만 쓴다
 // 실행: node scripts/build-guide-site.cjs [출력 폴더, 기본 site/guide]
@@ -60,14 +60,14 @@ function render(md) {
   while (i < lines.length) {
     const line = lines[i];
     if (!line.trim()) { i += 1; continue; }
-    const h = /^(#{1,3})\s+(.*)$/.exec(line);
+    const h = /^(#{1,4})\s+(.*)$/.exec(line);
     if (h) {
       const level = h[1].length;
       const text = h[2].trim();
       if (level === 1) title = text;
       else {
         const id = slug(text);
-        toc.push({ level, text, id });
+        if (level <= 3) toc.push({ level, text, id });
         out.push(`<h${level} id="${esc(id)}">${inline(text)}</h${level}>`);
       }
       i += 1;
@@ -86,7 +86,7 @@ function render(md) {
     // 목록 — 들여쓰기 두 칸마다 한 단계. 이어지는 줄은 앞 항목에 붙인다
     if (/^\s*(-|\d+\.)\s+/.test(line)) {
       const stack = [];
-      while (i < lines.length && lines[i].trim() && !/^#{1,3}\s/.test(lines[i]) && !lines[i].trim().startsWith('|')) {
+      while (i < lines.length && lines[i].trim() && !/^#{1,4}\s/.test(lines[i]) && !lines[i].trim().startsWith('|')) {
         const m = /^(\s*)(-|\d+\.)\s+(.*)$/.exec(lines[i]);
         if (!m) {
           out.push(` ${inline(lines[i].trim())}`);
@@ -114,7 +114,7 @@ function render(md) {
     }
     // 문단 — 빈 줄·제목·목록·표 앞까지 이어 붙인다
     const para = [];
-    while (i < lines.length && lines[i].trim() && !/^#{1,3}\s/.test(lines[i]) && !/^\s*(-|\d+\.)\s+/.test(lines[i]) && !lines[i].trim().startsWith('|')) para.push(lines[i++].trim());
+    while (i < lines.length && lines[i].trim() && !/^#{1,4}\s/.test(lines[i]) && !/^\s*(-|\d+\.)\s+/.test(lines[i]) && !lines[i].trim().startsWith('|')) para.push(lines[i++].trim());
     out.push(`<p>${inline(para.join(' '))}</p>`);
   }
   return { title, toc, body: out.join('\n') };
@@ -156,6 +156,7 @@ header.top h1 { margin: 0 0 4px; font-size: 28px; }
 header.top p { margin: 0; color: var(--sub); }
 h2 { margin: 48px 0 12px; padding-top: 8px; font-size: 22px; border-top: 1px solid var(--line); }
 h3 { margin: 28px 0 8px; font-size: 17px; }
+h4 { margin: 20px 0 6px; font-size: 15px; }
 p, li { word-break: keep-all; overflow-wrap: anywhere; }
 ul, ol { padding-left: 22px; }
 li { margin: 4px 0; }
