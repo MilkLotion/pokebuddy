@@ -10,7 +10,7 @@ import { DEFAULT_DATA_DIR } from "../../dex/data";
 import { unlockByRules } from "../../dex/unlocks";
 import { evolveCandidates, canEvolve, evolvePet, missingKey, type Candidate } from "../../dex/evolve";
 import { evolveAllowed } from "../../party/pet-actions";
-import { gameDayLeftMs, gameDayPart } from "../../shared/clock";
+import { gameDayLeftMs, gameDayPart, gameDayProgress } from "../../shared/clock";
 
 // 못 채운 조건을 `kind:값` 으로 쓰고 `|` 로 잇는다 — 단언을 짧게 적으려고. 채웠으면 undefined
 const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
@@ -51,6 +51,8 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(gameDayLeftMs(at(3)), 8 * 60_000, "3분 → 11분까지 8분");
   assert.equal(gameDayLeftMs(at(10, 30)), 30_000, "10분 30초 → 11분까지 30초");
   assert.equal(gameDayLeftMs(at(55)), 5 * 60_000, "55분 → 다음 시 0분까지 5분");
+  // 지난 몫 — 앱 머리 낮·밤 게이지. 0~10분은 11분, 51~59분은 9분 길이다
+  assert.deepEqual([at(0), at(5, 30), at(11), at(16), at(51)].map((t) => Math.round(gameDayProgress(t) * 100)), [0, 50, 0, 50, 0]);
   process.stdout.write("(1) 게임 시간 · 10분마다 낮밤  ok\n");
 }
 

@@ -13,6 +13,15 @@ export const gameDayPart = (now: number): "day" | "night" => {
   const m = new Date(now).getMinutes();
   return m > 0 && Math.floor((m - 1) / 10) % 2 === 1 ? "night" : "day";
 };
+// 지금 시간대에서 지난 몫(0~1) — 앱 머리의 낮·밤 게이지가 띠를 이만큼 채운다 (src/renderer/manage/day-gauge.ts)
+//   한 시간대의 길이는 시작 분부터 다음 바뀌는 분까지다(0~10분은 11분, 51~59분은 9분)
+export function gameDayProgress(now: number): number {
+  const d = new Date(now);
+  const inHour = d.getMinutes() * 60_000 + d.getSeconds() * 1000 + d.getMilliseconds();
+  const next = GAME_DAY_SWITCH.find((min) => min * 60_000 > inHour) ?? 60;
+  const start = [0, ...GAME_DAY_SWITCH].filter((min) => min < next).pop() ?? 0;
+  return Math.min(1, Math.max(0, (inHour - start * 60_000) / ((next - start) * 60_000)));
+}
 // 다음에 낮·밤이 바뀌기까지 남은 시간(ms) — 파티 상세 진화 줄의 "8분 뒤 밤" (src/view/pet.ts)
 export function gameDayLeftMs(now: number): number {
   const d = new Date(now);

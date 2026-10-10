@@ -103,6 +103,13 @@ header {
 /* 보유 포인트 칩 — 동전 모양 P 와 숫자.
    P 는 글꼴이 아니라 7×10 도트 도형이다 — 글꼴 글자는 원 안에서 왼쪽으로 쏠려 보였다.
    2026-09-27 사용자 선택 C (Figma `99 · 시안 (테스트)` "포인트 동전 도트 P 시안" `527:2528`) */
+/* 낮·밤 반원 게이지 — 포인트 알약 왼쪽 8 (Figma 02 `Day Gauge` 40×24). 머리 gap 12 에서 4 를 뺀다. 그림은 src/renderer/manage/day-gauge.ts 의 SVG */
+.day-gauge {
+  display: flex;
+  width: 40px;
+  height: 24px;
+  margin-right: -4px;
+}
 .point-chip {
   display: flex;
   align-items: center;

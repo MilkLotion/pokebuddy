@@ -6,9 +6,11 @@ import type { Snapshot } from "../../shared/model/snapshot.js";
 import { numberText } from "../../shared/count-text.js";
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import type { TabId } from "./dialog-types.js";
+import { drawDayGauge } from "./day-gauge.js";
 import { ui } from "./state.js";
 
 const pointsEl = needEl("points", HTMLElement, "manage");
+const dayGaugeEl = needEl("day-gauge", HTMLElement, "manage"); // 낮·밤 반원 게이지 (day-gauge.ts)
 const tabsEl = needEl("tabs", HTMLElement, "manage");
 export const bodyEl = needEl("body", HTMLElement, "manage");
 const achDotEl = needEl("achievements-dot", HTMLElement, "manage");
@@ -107,6 +109,7 @@ function drawBody(): void {
     return;
   }
   pointsEl.textContent = numberText(ui.view.points);
+  drawDayGauge(dayGaugeEl, ui.view.day);
   achDotEl.hidden = ui.view.achievements.unclaimed === 0;
   for (const sync of bodySyncs) sync(); // 기기 창 — 고른 것이 사라졌으면 닫는다
   const tab = tabs.find((t) => t.id === ui.tab);

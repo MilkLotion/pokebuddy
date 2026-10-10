@@ -275,6 +275,8 @@ export interface SettingsView {
 
 export interface Snapshot {
   points: number;
+  // 게임 시간 — 앱 머리 포인트 왼쪽의 낮·밤 반원 게이지 (2026-10-11 사용자 "반원게이지모양으로 밤낮표기", Figma 02 `Day Gauge` `1954:2696`)
+  day: { part: "day" | "night"; progress: number; leftMs: number }; // progress 는 지금 시간대에서 지난 몫(0~1), leftMs 는 바뀌기까지 남은 시간
   // preset 은 지금 적용한 파티 프리셋 — 번호(0 부터), 가진 수, 최대 수, 이름 (src/party/presets.ts)
   // presets 는 가진 프리셋 전부 — 번호 순. 적용한 프리셋도 들고 칸은 slots 와 같다 (2026-10-07 프리셋 전체보기)
   party: { slots: SlotView[]; shown: number; usable: number; preset: { index: number; count: number; max: number; name: string }; presets: PresetView[] };

@@ -30,7 +30,7 @@ import type { PartySlotV3 } from "../shared/save-v3";
 import { unclaimedAchievementIds } from "../dex/tables.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial, replayableNow } from "../tutorial/queue.js";
-import { gameDayLeftMs, gameDayPart } from "../shared/clock.js";
+import { gameDayLeftMs, gameDayPart, gameDayProgress } from "../shared/clock.js";
 import { itemAbout } from "./bag.js";
 import { shopList } from "./shop-list.js";
 import { eggIconKey, itemArtKey } from "./device-art.js";
@@ -141,6 +141,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
 
   return {
     points: save.points.balance,
+    day: { part: dayPart, progress: gameDayProgress(now), leftMs: dayLeftMs },
     party: {
       slots,
       shown: slots.filter((s) => s.pet && !s.pet.hidden).length,
