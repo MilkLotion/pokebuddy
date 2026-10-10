@@ -598,6 +598,7 @@ button.is-busy:not(.cell)::after,
 .sort-toggle:not(:disabled):hover,
 button.icon-button:not(:disabled):hover,
 .sell-dup-grid .cell:not(.selected):hover,
+.battle-mode:not(:disabled):hover,
 button.act:not(.primary):not(:disabled):hover {
   background: var(--canvas);
 }

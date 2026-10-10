@@ -18,7 +18,7 @@ import { openAnyDialog } from "./dialog.js";
 import { openBattleOpponent } from "./battle-opponent.js";
 import { askBattleMenu } from "./pet-menu.js";
 import { bodyEl, redrawBody } from "./shell.js";
-import { pageHeadEl, segmentedEl } from "./widgets.js";
+import { headMenuEl, pageHeadEl, segmentedEl } from "./widgets.js";
 
 const SOON = "아직 준비 중이에요";
 const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot });
@@ -71,6 +71,14 @@ function blankCard(slot: BattleSlotView): HTMLElement {
   return card;
 }
 
+// 머리 메뉴(가져오기·교체) — 박스·파티 탭 머리 메뉴와 같은 부품. 바깥을 누르면 닫는다(manage.ts)
+let menuOpen = false;
+export function closeAdventureMenu(): boolean {
+  if (!menuOpen) return false;
+  menuOpen = false;
+  return true;
+}
+
 export function drawAdventure(v: Snapshot): void {
   const top = pageHeadEl("모험");
   const mode = segmentedEl(
@@ -87,16 +95,31 @@ export function drawAdventure(v: Snapshot): void {
     explore.title = SOON;
   }
   top.appendChild(mode);
+  // 머리 오른쪽 — `배틀 시작`(랜덤·친선을 고르는 모달)과 햄버거 메뉴(가져오기·교체)
+  // (2026-10-10 사용자 "모험에서 햄버거버튼 추가하고, 가져오기 교체 를 추가. 배틀시작을 누르면 랜덤배틀 친선배틀 고르는 모달이 나오게", Figma 01 `Adventure Header` 1659:124)
+  // 배틀 시작은 늘 누를 수 있다 — 출전 불가면 고르기 모달에서 랜덤 배틀 줄만 막는다(친선 배틀은 준비 화면이 출전 불가를 보인다)
   const acts = el("div", "head-acts");
-  const load = buttonEl("act", "가져오기");
-  load.addEventListener("click", () => openAnyDialog({ kind: "preset-overview", battle: true }));
-  // 친선 배틀 — 가져오기와 배틀 시작 사이 (Figma 01 `Adventure Header` 1659:124, 2026-10-10 사용자 확정). 배틀 파티와 상관없이 연다 — 준비할 때 출전 불가를 본다
-  const friendly = buttonEl("act", "친선 배틀");
-  friendly.addEventListener("click", () => openAnyDialog({ kind: "friendly" }));
   const start = buttonEl("act primary", "배틀 시작");
-  start.disabled = !v.battle.canStart; // 비었거나 출전 불가가 있으면 막는다 (docs/specs/adventure.md "출전 불가")
-  start.addEventListener("click", () => openBattleOpponent(() => openAnyDialog({ kind: "battle-opponent" })));
-  acts.append(load, friendly, start);
+  start.addEventListener("click", () => openAnyDialog({ kind: "battle-start" }));
+  const firstEmpty = v.battle.slots.find((s) => !s.pet)?.index ?? null;
+  const menu = headMenuEl({
+    cls: "adventure-menu",
+    label: "모험 메뉴",
+    open: menuOpen,
+    toggle: () => {
+      menuOpen = !menuOpen;
+      redrawBody();
+    },
+    pick: () => {
+      menuOpen = false;
+      redrawBody();
+    },
+    items: [
+      ["가져오기", () => openAnyDialog({ kind: "preset-overview", battle: true })],
+      ["교체", () => openAnyDialog({ kind: "battle-pick", slot: firstEmpty })], // 첫 빈 칸을 고른 채, 없으면 고른 칸 없이
+    ],
+  });
+  acts.append(start, menu);
   top.appendChild(acts);
   bodyEl.appendChild(top);
   // 우클릭 `옮기기` 로 든 배틀 파티 칸 — 원래 칸은 흐리고, 놓을 칸을 누르면 끌어 놓기와 같은 battle.move (2026-10-10 사용자 결정, 파티 탭과 같은 모습)

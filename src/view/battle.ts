@@ -32,11 +32,10 @@ const STAT_NAME: Readonly<Record<string, string>> = { atk: "공격", def: "방�
 const RANGE_TEXT: Readonly<Record<MoveInfo["class"], string | null>> = { physical: "근접", special: "원거리", status: null };
 
 // 효과 줄 — 문구는 docs/specs/moves.md "부담과 효과"·"능력 변화"(10초)·"급소"·"연속기" 를 따른다
-//   types·abilityId — 배틀에서 싸우는 모습의 타입과 특성. 자기 타입이면 위력 1.5배(적응력은 2배)
-export function moveEffects(m: MoveInfo, types: readonly string[], abilityId: string | null): string[] {
+//   자기 타입 위력 줄은 두지 않는다(2026-10-10 사용자 "\"· 자기 타입 기술이라 위력 1.5배\" 제거")
+export function moveEffects(m: MoveInfo): string[] {
   const out: string[] = [];
   const e = m.effects ?? {};
-  if (m.class !== "status" && types.includes(m.type)) out.push(`자기 타입 기술이라 위력 ${abilityId === "adaptability" ? 2 : 1.5}배`);
   if (m.hits) out.push(m.hits[0] === m.hits[1] ? `${m.hits[0]}번 맞음` : `${m.hits[0]}~${m.hits[1]}번 맞음`);
   if (m.priority) out.push("선공 기술 — 쿨타임이 짧고, 같이 차면 먼저 나감");
   if (e.charge) out.push("처음 쿨타임이 차면 충전하고, 다시 차면 공격");
@@ -70,13 +69,13 @@ export function moveEffects(m: MoveInfo, types: readonly string[], abilityId: st
 }
 
 // 기술 상세 — 기술 바꾸기 모달 오른쪽 아래 칸
-export function moveDetail(m: MoveInfo, types: readonly string[], abilityId: string | null): MoveDetail {
+export function moveDetail(m: MoveInfo): MoveDetail {
   const kind = [CLASS_TEXT[m.class], RANGE_TEXT[m.class], m.traits?.includes("contact") ? "접촉" : null].filter((x): x is string => !!x).join(" · ");
   const stats: MoveDetail["stats"] = [];
   if (m.power != null) stats.push({ label: "위력", value: String(m.power) });
   stats.push({ label: "명중", value: m.accuracy == null ? "반드시" : String(m.accuracy) });
   if (m.cooldown != null) stats.push({ label: "쿨타임", value: `${m.cooldown}초` });
-  return { kind, stats, effects: moveEffects(m, types, abilityId) };
+  return { kind, stats, effects: moveEffects(m) };
 }
 
 // 출전 불가 글자
@@ -118,8 +117,7 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
     const form = battleMegaOf(save, pet.id);
     const shown = form ?? asPet.species;
     const view = battlePetView(save, asPet, form, dayPart);
-    const abilityId = abilityIdOf(shown);
-    const withDetail = (m: MoveInfo): MoveView => ({ ...moveView(m), detail: moveDetail(m, view.typeIds, abilityId) });
+    const withDetail = (m: MoveInfo): MoveView => ({ ...moveView(m), detail: moveDetail(m) });
     return {
       index,
       pet: view,

@@ -71,23 +71,21 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
 
 // ── 기술 상세 — 기술 바꾸기 모달 (docs/specs/adventure.md "기술 바꾸기") ──
 {
-  const d = moveDetail(volt[0]!, ["electric"], "static");
+  const d = moveDetail(volt[0]!);
   assert.equal(d.kind, "물리 · 근접 · 접촉");
   assert.deepEqual(d.stats, [{ label: "위력", value: "120" }, { label: "명중", value: "100" }, { label: "쿨타임", value: "8초" }]);
-  assert.deepEqual(d.effects, ["자기 타입 기술이라 위력 1.5배", "10% 확률로 상대를 마비", "준 피해의 33% 를 자신도 받음"]);
-  assert.equal(moveDetail(volt[1]!, ["electric"], null).kind, "특수 · 원거리", "특수는 원거리, 접촉 없음");
-  assert.deepEqual(moveEffects(volt[0]!, ["water"], null).slice(0, 1), ["10% 확률로 상대를 마비"], "다른 타입이면 자기 타입 줄이 없다");
-  assert.equal(moveEffects(volt[0]!, ["electric"], "adaptability")[0], "자기 타입 기술이라 위력 2배", "적응력");
+  assert.deepEqual(d.effects, ["10% 확률로 상대를 마비", "준 피해의 33% 를 자신도 받음"], "자기 타입 위력 줄은 없다(2026-10-10)");
+  assert.equal(moveDetail(volt[1]!).kind, "특수 · 원거리", "특수는 원거리, 접촉 없음");
   const base = { id: "x", name: "x", type: "normal", class: "physical" as const, power: 50, accuracy: null, cooldown: 3, text: null };
-  assert.equal(moveDetail(base, [], null).stats[1]!.value, "반드시", "명중 없음");
+  assert.equal(moveDetail(base).stats[1]!.value, "반드시", "명중 없음");
   assert.deepEqual(
-    moveEffects({ ...base, effects: { stats: [{ who: "self", stat: "def", change: -1, chance: 100 }, { who: "self", stat: "spd", change: -1, chance: 100 }] } }, [], null),
+    moveEffects({ ...base, effects: { stats: [{ who: "self", stat: "def", change: -1, chance: 100 }, { who: "self", stat: "spd", change: -1, chance: 100 }] } }),
     ["쓴 뒤 자기 방어·특수방어 1단계 하락 (10초)"],
     "같은 대상·확률·단계는 한 줄",
   );
-  assert.deepEqual(moveEffects({ ...base, effects: { stats: [{ who: "target", stat: "spd", change: -1, chance: 20 }] } }, [], null), ["20% 확률로 상대 특수방어 1단계 하락 (10초)"]);
-  assert.deepEqual(moveEffects({ ...base, effects: { status: { kind: ["burn", "paralysis", "freeze"], chance: 20 } } }, [], null), ["20% 확률로 상대를 화상·마비·얼음 중 하나로"]);
-  assert.deepEqual(moveEffects({ ...base, hits: [2, 5], priority: 1, effects: { charge: true, recharge: true, drain: 50, crit: "high", flinch: 30 } }, [], null), [
+  assert.deepEqual(moveEffects({ ...base, effects: { stats: [{ who: "target", stat: "spd", change: -1, chance: 20 }] } }), ["20% 확률로 상대 특수방어 1단계 하락 (10초)"]);
+  assert.deepEqual(moveEffects({ ...base, effects: { status: { kind: ["burn", "paralysis", "freeze"], chance: 20 } } }), ["20% 확률로 상대를 화상·마비·얼음 중 하나로"]);
+  assert.deepEqual(moveEffects({ ...base, hits: [2, 5], priority: 1, effects: { charge: true, recharge: true, drain: 50, crit: "high", flinch: 30 } }), [
     "2~5번 맞음",
     "선공 기술 — 쿨타임이 짧고, 같이 차면 먼저 나감",
     "처음 쿨타임이 차면 충전하고, 다시 차면 공격",

@@ -28,9 +28,10 @@ import { drawLetter, drawMail } from "./mail.js";
 import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from "./update-notes.js";
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
-import { drawAdventure } from "./adventure-tab.js";
+import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
+import { drawBattleStart } from "./battle-start.js";
 import { drawMovePick, startMovePick } from "./move-pick.js";
 import { drawSwap, startSwap } from "./party-swap.js";
 import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
@@ -129,7 +130,8 @@ setShellHooks({
 document.addEventListener("click", () => {
   if (closeSettingSelect()) drawDialog();
   const partyMenu = closePartyMenu();
-  if (!partyMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  const adventureMenu = closeAdventureMenu();
+  if (!partyMenu && !adventureMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
   closeDexRegion();
@@ -242,6 +244,7 @@ registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatc
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
+registerDialog({ kind: "battle-start", shape: "dialog battle-start", draw: () => drawBattleStart() });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
 registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: () => drawBattleRecord(), enter: () => void loadBattleRecord() });
 registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus, d.slot)) });

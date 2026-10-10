@@ -21,7 +21,7 @@ const PANEL_KEY = "battle-swap";
 let target: number | null = null; // 고른 칸 — 판의 개체를 누르면 여기에 넣는다. 없으면 판은 누를 수 없다
 
 // 모달을 새로 열 때 — 판은 첫 쪽, 고른 칸은 연 칸 (registerDialog 의 enter)
-export function startBattlePick(slot: number): void {
+export function startBattlePick(slot: number | null): void {
   resetPanel(PANEL_KEY);
   target = slot;
 }

@@ -1,9 +1,22 @@
 /* manage.html 의 모험 탭 — party.css 다음에 읽는다. 카드 틀(.slot)·빈 칸·옅은 선택 바탕은 파티 칸과 같다
    Figma 05 `15 모험` `Adventure / Battle Party` `1662:1187`, 카드 02 `Adventure Slot Card` `1659:277` (docs/specs/adventure.md "모험 칸 카드") */
 
-/* 머리 — 모험 · 탐험|배틀 칩 … 가져오기 · 배틀 시작 */
+/* 머리 — 모험 · 탐험|배틀 칩 … 배틀 시작 · 햄버거(가져오기·교체) */
+/* 배틀 시작 — Figma `Button` Size=Small 그대로: 폭 120 고정, 높이 32, 옆 여백 12, 글자 12px 세미볼드. 옆 햄버거(32×32)와 높이가 같다.
+   (2026-10-10 사용자 "배틀시작 버튼이 좀 큰데?" — 일반 단추 값(위아래 7·옆 14, 내용 폭)으로 그려지고 있었다) */
+.head .head-acts button.act {
+  width: 120px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.head .head-acts .adventure-menu {
+  margin-left: 0;
+}
 .head .segmented {
   margin-left: 12px;
+  align-self: center; /* 파티 탭 넘김 줄(.preset-pager)처럼 가운데 — 제목 기준선에 맞추면 칩이 3px 내려가 머리 줄이 높아지고, 파티↔모험을 오갈 때 격자가 오르내렸다(2026-10-10 사용자 "레이아웃 움직이는느낌") */
 }
 .head .segmented button:disabled {
   color: var(--disabled);
@@ -312,4 +325,44 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
+}
+
+/* 배틀 고르기 모달 — 폭 440(Dialog Compact), 랜덤 배틀·친선 배틀 두 줄. 줄은 흰 바탕·중립 1px 테두리·radius 12, 이름과 한 줄.
+   막힌 줄은 흐린 글자 (2026-10-10, Figma 03 `Battle Mode Row`·`Battle Mode Body`, 05 `Adventure / 배틀 고르기`) */
+.dialog.battle-start {
+  width: min(440px, calc(100vw - 40px));
+}
+.battle-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.battle-mode {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.battle-mode strong {
+  font-weight: 600;
+}
+.battle-mode span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.battle-mode:disabled {
+  cursor: default;
+}
+.battle-mode:disabled strong,
+.battle-mode:disabled span {
+  color: var(--disabled);
 }
