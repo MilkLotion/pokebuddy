@@ -8,6 +8,7 @@ import { iconOf } from "./art-cache.js";
 import { bagPickOf, clearBagResult, pickBag } from "./bag-link.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { chipsEl, pageHeadEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 
 // 가방 분류 — 상점(SHOP_TABS)의 도구 분류와 같다. data/items.json 의 도구는 `도구`, data/evo-items.json 의 진화용 도구는 `진화`.
 // `전체` 는 두지 않고 첫 탭 `도구` 를 연다 (2026-09-30 사용자 결정 "상점이랑 가방이랑 아이템분류가 달라. 가방쪽이 안맞는거같애.")
@@ -38,7 +39,9 @@ function bagCard(item: BagItemView): HTMLElement {
 }
 
 export function drawBag(v: Snapshot): void {
-  bodyEl.appendChild(pageHeadEl("가방"));
+  const head = pageHeadEl("가방");
+  addTabTip(head, "bag");
+  bodyEl.appendChild(head);
   if (!v.bag.length) {
     bodyEl.appendChild(el("div", "empty-note", "가방이 비었습니다."));
     return;

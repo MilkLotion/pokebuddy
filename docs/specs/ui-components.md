@@ -596,3 +596,14 @@ Figma: 기기는 `Bag Device` `1262:78407`(`State=Use|Sell|Evolution`)이다. �
 교체 모달: 오른쪽 판은 옅은 초록 바탕에 이름과 6칸 세로 한 줄이다. 아래 줄은 왼쪽 보조 단추(`모두 박스로`·`모두 빼기`)와 오른쪽 `완료` 다. 모달 폭은 608(교환 628)이다.
 구현은 `src/renderer/manage/pet-box-panel.ts` `petBoxPanelEl`, 모달은 `party-swap.ts`·`battle-pick.ts`·`trade-cards.ts`, CSS 는 `pet-box-panel.css` 다.
 Figma: 03 섹션 `교체 모달 (2026-10-09)` 의 `Pet Box Panel`(`Page=Presets|Box`), `Party Swap Body`, `Battle Swap Body`, `Battle Swap Body · Search`. 교환은 03 `Trade Dialog` 의 `State=Offer|Blocked|Offer Empty|Offer Error` 가 이 판을 쓴다(모달 폭 628, 카드 열은 남는 폭). 화면은 05 `02 파티` `Party / Swap Modal` `1840:6288`, `15 모험` `Adventure / Battle Swap` `1840:7200`·`Adventure / Battle Swap · Search` `1852:8301`, `08 교환` 의 `Trade / Offer · 교환 모달` 등이다. 옛 `Party / Swap · Open|Holding|Preset 2`·`Adventure / Pick Battle Pet` 은 2026-10-09 지웠다.
+
+### 탭 팁
+
+역할: 그 탭에서 알아 두면 좋은 팁을 탭 안에서 바로 보인다(2026-10-10 사용자 "타이틀 옆에 작게 팁 아이콘만들고 그걸 누르면 보이게", "이런느낌으로 다른데 더 팁적을거있으면 적어도 좋아").
+자리: 여섯 탭(파티·박스·도감·상점·가방·모험) 머리의 제목 바로 오른쪽에 16 크기 `?` 단추를 둔다. 배틀 파티 상세 기기 창의 `?` 와 같은 회색 원이다.
+말풍선: `?` 를 누르면 머리 아래, 제목 왼쪽 끝에 맞춰 280 폭 말풍선이 뜬다. 위에서부터 굵은 제목(`파티 팁` 등), 팁 세 줄, `웹 가이드에서 더 보기` 다. 모양은 기기 창의 기술·특성 말풍선과 같다.
+문구: 해요체이고 숫자를 적지 않는다. 밸런스 값이 바뀌어도 어긋나지 않게 하려고다. 수치가 든 자세한 팁은 [설명서](../guide.md#팁)와 그것을 올린 웹 가이드에 둔다.
+웹 가이드: `웹 가이드에서 더 보기` 는 기본 브라우저로 웹 가이드의 그 탭에 맞는 절을 연다. 렌더러는 탭 이름만 보낸다. 주소는 메인에 고정돼 있다(`manage:guide`).
+닫기: `?` 다시 누르기, 바깥 누르기, Esc(모달이 없을 때), 탭 바꾸기. 말풍선 안을 눌러도 닫지 않는다.
+구현은 `src/renderer/manage/tab-tips.ts` `addTabTip`(문구 `TIPS`), `src/main/manage/handlers.ts` `GUIDE_ANCHOR`, CSS 는 `src/renderer/styles/bubble.css`(기기 창과 공용)·`src/renderer/styles/manage/widgets.css` `.tab-help`·`.tab-tip` 이다.
+Figma: 01 `Icon / Help` `1677:2402`, 02 `Tip Bubble` `1933:99808`, 05 `02 파티` `Party / Base · 팁 말풍선` `1933:102416`, `15 모험` `Adventure / Battle Party · 팁 말풍선` `1933:102714`. 두 화면의 `?`·말풍선은 화면 위에 얹은 것이고 탭 머리 컴포넌트에는 아직 없다.

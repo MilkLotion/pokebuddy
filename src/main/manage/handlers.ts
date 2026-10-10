@@ -21,6 +21,14 @@ import { isInternalCommand, parseAccountAction, parseAgentRequest, parseBattleAc
 import type { ManageServices } from "./window.js";
 
 // 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
+// 웹 가이드 — docs/guide.md 를 GitHub Pages 로 올린 쪽(scripts/build-guide-site.cjs). 탭마다 그 팁의 절로 연다. 모르는 이름이면 첫머리
+// 앵커는 guide.md 제목을 빌드 스크립트의 slug 로 바꾼 것이다 — 제목을 바꾸면 여기도 바꾼다
+const GUIDE_URL = "https://milklotion.github.io/pokebuddy/guide/";
+const GUIDE_ANCHOR: Readonly<Record<string, string>> = { party: "포인트-모으기", box: "파티와-박스", dex: "도감과-업적", shop: "포인트-모으기", bag: "포인트-모으기", adventure: "배틀-파티-짜기" };
+const guideUrl = (topic: unknown): string => {
+  const anchor = typeof topic === "string" && Object.hasOwn(GUIDE_ANCHOR, topic) ? GUIDE_ANCHOR[topic] : undefined;
+  return anchor ? `${GUIDE_URL}#${encodeURIComponent(anchor)}` : GUIDE_URL;
+};
 const RIGHTS_URL = `https://github.com/MilkLotion/pokebuddy#${encodeURIComponent("라이선스")}`;
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
@@ -159,6 +167,10 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
     // 디스크에 있는 그림 전부 — 관리 창이 첫 화면 전에 한 번 부른다.
     // 초상은 불투명 네모를 함께 싣는다 — 관리 창이 첫 그림부터 보는 네모를 정한다 (X15, src/main/art/portraits.ts allImages)
     "manage:art": { denied: {}, run: () => portraits.allImages() },
+    // 웹 가이드 — 탭 이름만 받는다. 정해 둔 주소만 기본 브라우저로 연다
+    "manage:guide": (_e, topic) => {
+      void shell.openExternal(guideUrl(topic));
+    },
     // 저작권 안내 — 인자를 받지 않는다. 정해 둔 주소만 기본 브라우저로 연다
     "manage:rights": () => {
       void shell.openExternal(RIGHTS_URL);

@@ -52,6 +52,7 @@ export type ManageCoreIpc = {
   "manage:art": Invoke<"art", [], Record<string, ArtImage>>; // 디스크에 이미 있는 초상·도구·알 그림 전부 — 창을 열 때 한 번 받아 첫 화면부터 그림을 채운다. 초상은 보는 네모를 정할 불투명 영역(box)을 함께 싣는다(X15)
   "manage:trade": Push<"onTrade", [screen: TradeScreen]>; // 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과)
   "manage:copy": Send<"copyText", [text: string]>; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
+  "manage:guide": Send<"openGuide", [topic: string]>; // 탭 팁 말풍선의 `웹 가이드에서 더 보기` — 탭 이름만 보낸다. 주소와 절 앵커는 메인에 고정돼 있다
   "manage:rights": Send<"openRights", []>; // 설정 바닥의 `저작권 안내` — 주소는 메인에 고정돼 있다. 렌더러는 주소를 넘기지 않는다
   "manage:account": Invoke<"account", [req: AccountAction], AccountReply | null>; // 계정 기능이 없거나 요청 모양이 틀리면 null(렌더러는 이미 null 을 다룬다)
   "manage:account-view": Push<"onAccount", [screen: AccountScreen]>; // 계정·저장 상태가 바뀌었다

@@ -15,6 +15,7 @@ import { bodyEl, redrawBody } from "./shell.js";
 import { pickShop, shopPickOf } from "./shop-link.js";
 import { ui } from "./state.js";
 import { chipsEl, dialogCloseEl, pageHeadEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 
 // 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
 const SHOP_TABS = [
@@ -96,7 +97,9 @@ function shopGrid(items: ShopItemView[]): HTMLElement {
 }
 
 export function drawShop(v: Snapshot): void {
-  bodyEl.appendChild(pageHeadEl("상점"));
+  const head = pageHeadEl("상점");
+  addTabTip(head, "shop");
+  bodyEl.appendChild(head);
   bodyEl.appendChild(
     chipsEl(SHOP_TABS, shopFilter, (id) => {
       shopFilter = id;

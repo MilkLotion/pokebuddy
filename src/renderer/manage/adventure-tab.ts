@@ -19,6 +19,7 @@ import { openBattleOpponent } from "./battle-opponent.js";
 import { askBattleMenu } from "./pet-menu.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { headMenuEl, pageHeadEl, segmentedEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 
 const SOON = "아직 준비 중이에요";
 const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot });
@@ -81,6 +82,7 @@ export function closeAdventureMenu(): boolean {
 
 export function drawAdventure(v: Snapshot): void {
   const top = pageHeadEl("모험");
+  addTabTip(top, "adventure");
   const mode = segmentedEl(
     [
       { id: "explore", label: "탐험" },

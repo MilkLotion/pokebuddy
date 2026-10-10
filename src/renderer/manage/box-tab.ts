@@ -18,6 +18,7 @@ import { markMega } from "./pet-forms.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { findPartySlot, ui } from "./state.js";
 import { boxNameCell, pageHeadEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 import { boxMenuEl } from "./box-order.js";
 import { boxFindEl } from "./box-find.js";
 
@@ -66,6 +67,7 @@ export function drawBox(v: Snapshot): void {
   const unseen = hiddenHatchIds(v); // 부화 결과 창에서 아직 확인하지 않은 개체 — 빈 칸으로 그리고 보관 수에서 뺀다
   const kept = v.boxes.reduce((sum, b) => sum + b.used, 0) - unseen.size;
   const top = pageHeadEl("박스", `보관 ${kept}마리 · 박스 ${v.boxes.length}개`); // 박스를 사서 늘리므로 박스 수도 적는다 (2026-10-02 사용자 결정 "박스 수도 타이틀에 표기")
+  addTabTip(top, "box");
   // 박스 명령이 실패하면 부제 자리의 글자만 바꾼다 — 빨간 점과 이유. 격자는 움직이지 않는다
   const sub = top.querySelector(".sub");
   if (boxUi.note && sub) {

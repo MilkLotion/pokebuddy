@@ -17,6 +17,7 @@ import { openPet } from "./routes.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { boxNameCell, headMenuEl, meterEl, pageHeadEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
 let presetRenaming = false;
@@ -173,6 +174,7 @@ export function drawParty(v: Snapshot): void {
   // 머리 줄 — 파티 ◀ [프리셋 이름] ▶ … 교체. 넘김은 박스 넘김 줄과 같은 부품이다. 누르면 바로 그 프리셋을 적용한다.
   // 마릿수·칸 수 부제는 두지 않는다 (2026-10-02 사용자 결정 "프리셋이름만 보여줘도 될거같아", Figma 05 `Party / Base` `217:1705`)
   const top = pageHeadEl("파티");
+  addTabTip(top, "party");
   const preset = v.party.preset;
   const pager = el("div", "pager box-pager preset-pager");
   const prev = buttonEl("", "◀");

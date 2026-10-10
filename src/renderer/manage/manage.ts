@@ -29,6 +29,7 @@ import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
+import { closeTabTip } from "./tab-tips.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
 import { drawBattleStart } from "./battle-start.js";
@@ -120,6 +121,7 @@ setShellHooks({
     ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 그리기의 syncPetDevice 가 기기 창을 닫는다
     if (hold.box) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
     stopPresetRename();
+    closeTabTip(); // 탭 팁 말풍선은 탭을 떠나면 닫는다
   },
   afterTabChange: () => {
     clearBagResult(); // 가방 결과 줄은 탭을 떠나면 지운다
@@ -131,7 +133,8 @@ document.addEventListener("click", () => {
   if (closeSettingSelect()) drawDialog();
   const partyMenu = closePartyMenu();
   const adventureMenu = closeAdventureMenu();
-  if (!partyMenu && !adventureMenu && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
+  const tabTip = closeTabTip();
+  if (!partyMenu && !adventureMenu && !tabTip && !boxUi.sortOpen && !boxUi.menuOpen && !isDexRegionOpen() && !isShopRegionOpen()) return;
   boxUi.sortOpen = false;
   boxUi.menuOpen = false;
   closeDexRegion();
@@ -273,6 +276,7 @@ scrimEl.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.dialog) dismissDialog();
+  else if (e.key === "Escape" && closeTabTip()) redrawBody(); // 모달이 없을 때 Esc 는 탭 팁 말풍선을 닫는다
   // 부화 결과 창 — Space·Enter 는 `확인` 을 누른 것과 같다 (2026-10-02 사용자 결정). 누르고 있는 동안의 반복은 받지 않는다.
   // 단추에 포커스가 있을 때 브라우저가 한 번 더 누르지 않게 기본 동작을 막는다
   if (ui.dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {

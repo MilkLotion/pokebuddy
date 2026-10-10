@@ -12,6 +12,7 @@ import { findBarEl, matchesDex, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { chipsEl, pageHeadEl } from "./widgets.js";
+import { addTabTip } from "./tab-tips.js";
 
 export interface DexTabHooks {
   onPicked(): void; // 칸을 눌렀다 — 도감 튜토리얼의 목표 행동
@@ -134,7 +135,9 @@ export function stepDex(delta: -1 | 1): void {
 }
 
 export function drawDex(v: Snapshot): void {
-  bodyEl.appendChild(pageHeadEl("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`));
+  const head = pageHeadEl("도감", `획득 ${v.dex.obtained} · 해금 ${v.dex.unlocked} · 이로치 ${v.dex.shiny}`);
+  addTabTip(head, "dex");
+  bodyEl.appendChild(head);
   // 지방·이름·번호 검색 — 등록 상태 칩과 함께 적용한다
   const bar = el("div", "search-row");
   bar.appendChild(dexRegionEl());

@@ -2,43 +2,14 @@
    배틀 파티 상세 기기 — Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
    이 파일에는 배틀에만 있는 것만 둔다: ? 단추와 말풍선, 특성 줄, 방사형 그래프, 기술 목록, 기술 순서 단추, 기술 설명 말풍선 */
 
-/* ? 단추 — 화면 오른쪽 위. 회색 원에 흰 물음표 (Figma 01 `Icon / Help` `1677:2402`) */
+/* ? 단추 — 화면 오른쪽 위. 모양은 styles/bubble.css */
 .help {
   position: absolute;
   top: 10px;
   right: 14px;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: #9ca3af;
-  color: var(--inverse);
-  font: 700 12px/20px var(--font-body);
-  cursor: pointer;
-}
-.help[aria-expanded="true"] {
-  background: #6b7280;
 }
 
-/* 말풍선 — ? 의 능력치 기준, 특성 줄의 특성 설명 (Figma 02 `Stat Basis Bubble` `1677:2404` · `Move Info Bubble` `1716:4833`) */
-.bubble {
-  position: absolute;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  color: var(--ink);
-  font: 12px/16px var(--font-body);
-}
-.bubble strong {
-  font-weight: 700;
-}
+/* 말풍선 — ? 의 능력치 기준, 특성 줄의 특성 설명. 모양은 styles/bubble.css, 여기는 자리만 */
 .bubble.basis {
   top: 34px;
   right: 14px;

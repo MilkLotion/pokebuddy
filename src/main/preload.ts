@@ -112,6 +112,7 @@ const MANAGE = {
   onBattleClosed: ["push", "manage:battle-closed"],
   onTrade: ["push", "manage:trade"],
   copyText: ["send", "manage:copy"],
+  openGuide: ["send", "manage:guide"],
   openRights: ["send", "manage:rights"],
   account: ["invoke", "manage:account"],
   onAccount: ["push", "manage:account-view"],
