@@ -12,6 +12,7 @@ import { webPreferencesOf } from "./options.js";
 const CH = {
   ready: "battlescreen:ready",
   show: "battlescreen:show",
+  loading: "battlescreen:loading",
   close: "battlescreen:close",
 } satisfies Record<string, BattleScreenChannel>;
 
@@ -20,6 +21,8 @@ const BATTLE_WINDOW_SIZE = { width: 1116, height: 484 } as const;
 
 export interface BattleWindow {
   show(parent: BrowserWindow | null, view: BattleScreenView): void; // parent 가 없으면 주 화면 가운데
+  loading(parent: BrowserWindow | null, title: string): void; // 판을 받기 전 준비 중 모습으로 띄운다 — 같은 크기라 판이 와도 창이 움직이지 않는다
+  isOpen(): boolean;
   close(): void;
 }
 
@@ -37,6 +40,7 @@ function spotOver(owner: Rectangle | null): { x: number; y: number } {
 export function createBattleWindow(files: { preload: string; html: string; onClosed?: () => void }): BattleWindow {
   let win: BrowserWindow | null = null;
   let pending: BattleScreenView | null = null; // 문서가 준비되면 보낼 판
+  let pendingLoading: string | null = null; // 문서가 준비되면 보낼 준비 중 제목 — 판이 오면 지운다
   let ready = false;
 
   const alive = (): BrowserWindow | null => (win && !win.isDestroyed() && !win.webContents.isDestroyed() ? win : null);
@@ -45,8 +49,9 @@ export function createBattleWindow(files: { preload: string; html: string; onClo
 
   function send(): void {
     const w = alive();
-    if (!w || !ready || !pending) return;
-    w.webContents.send(CH.show, pending);
+    if (!w || !ready || (!pending && pendingLoading == null)) return;
+    if (pending) w.webContents.send(CH.show, pending);
+    else w.webContents.send(CH.loading, pendingLoading);
     if (!w.isVisible()) w.show();
     w.focus();
     w.webContents.focus();
@@ -87,6 +92,7 @@ export function createBattleWindow(files: { preload: string; html: string; onClo
       win = null;
       ready = false;
       pending = null;
+      pendingLoading = null;
       files.onClosed?.(); // 배틀 동안 숨긴 무대를 되돌린다 (src/main/manage/battle-screen.ts)
     });
     void w.loadFile(files.html).catch((e: unknown) => {
@@ -99,9 +105,17 @@ export function createBattleWindow(files: { preload: string; html: string; onClo
   return {
     show(parent, view) {
       pending = view;
+      pendingLoading = null;
       if (!alive()) win = create(parent);
       send();
     },
+    loading(parent, title) {
+      pending = null;
+      pendingLoading = title;
+      if (!alive()) win = create(parent);
+      send();
+    },
+    isOpen: () => !!alive(),
     close() {
       alive()?.close();
     },

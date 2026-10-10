@@ -7,6 +7,7 @@ import type { BridgeOf, Push, Send } from "./kinds.js";
 export type BattleScreenIpc = {
   "battlescreen:ready": Send<"ready", []>; // 문서를 읽었다 — 메인이 판을 보낸다
   "battlescreen:show": Push<"onShow", [view: BattleScreenView]>; // 재생할 판
+  "battlescreen:loading": Push<"onLoading", [title: string]>; // 판을 받기 전 — 준비 중 모습(제목만). 판이 오면 onShow 가 바꾼다
   "battlescreen:close": Send<"close", []>; // 머리 줄 ✕·Esc
 };
 

@@ -215,6 +215,7 @@ expose("battle.html", "pokebuddyBattle", () => bridgeOf<BattleDeviceIpc>(BATTLE)
 const BATTLE_SCREEN = {
   ready: ["send", "battlescreen:ready"],
   onShow: ["push", "battlescreen:show"],
+  onLoading: ["push", "battlescreen:loading"],
   close: ["send", "battlescreen:close"],
 } as const satisfies WireOf<BattleScreenIpc>;
 

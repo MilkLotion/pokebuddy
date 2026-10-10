@@ -45,6 +45,8 @@ export interface ServicesDeps {
   sendAccount(screen: AccountScreen): void;
   sendMail(screen: MailScreen): void;
   openBattle(input: BattleScreenInput): void; // 랜덤 배틀·친선 배틀 판을 배틀 창으로 연다
+  prepareBattle(title: string): void; // 판을 받기 전 — 포켓몬을 숨기고 배틀 창을 준비 중으로 (2026-10-10)
+  cancelBattle(): void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다
   firstFriendlyLink: string | null; // 친선 배틀 링크로 처음 켜졌으면 그 링크
   openFriendly(): void; // 친선 배틀 모달을 연다
   sendFriendly(screen: FriendlyScreen): void;
@@ -233,6 +235,8 @@ export function createServices(deps: ServicesDeps): Services {
         onChanged: () => deps.refreshParty(),
         offerView: battleOfferView,
         show: (data, pick) => deps.openBattle(screenInputOf(data, pick)),
+        prepare: () => deps.prepareBattle("랜덤 배틀"),
+        cancel: () => deps.cancelBattle(),
       });
     }
     return mainBattle;
@@ -252,11 +256,11 @@ export function createServices(deps: ServicesDeps): Services {
         slotView: slotOf,
         onScreen: (screen) => deps.sendFriendly(screen),
         // 친구가 준비해 판이 시작되면 설정창이 닫혀 있을 수 있다 — 배틀 창은 설정창을 연 뒤에만 뜨므로 친선 배틀 모달을 먼저 연다(결과 뒤 만남 화면으로 돌아온다)
+        // 판을 받은 즉시 포켓몬을 숨기고 준비 중 창을 띄운다 — 시작 시각까지 기다리는 동안도 준비 중이다 (2026-10-10)
         onBattle: (b, role, name, delayMs) => {
-          setTimeout(() => {
-            deps.openFriendly();
-            deps.openBattle(friendlyScreenInput(b, role, name));
-          }, Math.max(0, delayMs));
+          deps.openFriendly();
+          deps.prepareBattle("친선 배틀");
+          setTimeout(() => deps.openBattle(friendlyScreenInput(b, role, name)), Math.max(0, delayMs));
         },
       });
       const s = mainFriendly;

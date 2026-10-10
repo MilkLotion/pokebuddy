@@ -196,6 +196,8 @@ const services = createServices({
   sendAccount: (screen) => manage.send("manage:account-view", screen),
   sendMail: (screen) => manage.send("manage:mail-view", screen),
   openBattle: (input) => manage.openBattle(input),
+  prepareBattle: (title) => manage.prepareBattle(title),
+  cancelBattle: () => manage.cancelBattle(),
   firstFriendlyLink: friendlyLinkOf(process.argv),
   openFriendly: () => openManageWindow({ to: "friendly" }),
   sendFriendly: (screen) => manage.send("manage:friendly-view", screen),

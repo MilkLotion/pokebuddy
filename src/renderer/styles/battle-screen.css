@@ -645,3 +645,40 @@ body {
 .rl-window.stopped::after {
   bottom: 0;
 }
+
+/* 준비 중 — 머리 줄 아래 전체(440). 가운데 글자와 처리 중 점 셋(기기 창 처리 중과 같은 점, device.css busy-dots)
+   (2026-10-10, Figma 04 `Battle Loading`, 05 `Battle / Window · 준비 중`) */
+.bs-loading {
+  height: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ink);
+  font: 600 12px/18px var(--font-body);
+}
+.bs-loading-dots {
+  position: relative;
+  width: 18px;
+  height: 4px;
+}
+.bs-loading-dots::after {
+  --on: var(--ink);
+  --off: color-mix(in srgb, var(--ink) 35%, transparent);
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--on);
+  box-shadow: -7px 0 0 var(--off), 7px 0 0 var(--off);
+  animation: busy-dots 0.9s step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bs-loading-dots::after {
+    animation: none;
+  }
+}

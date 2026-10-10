@@ -80,6 +80,8 @@ export interface Manage {
   send<K extends keyof ManagePush>(channel: K, ...args: ManagePush[K]): void;
   setStageCoachDim(on: boolean): void; // 바탕화면 튜토리얼 말풍선이 떴다·사라졌다 — 앱이 무대 코치를 맞출 때마다 알린다 (src/main/stage/coach.ts)
   openBattle(input: BattleScreenInput): void; // 랜덤 배틀 판을 배틀 창으로 연다 — 설정창을 연 적이 없으면 아무것도 하지 않는다
+  prepareBattle(title: string): void; // 판을 받기 전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다
+  cancelBattle(): void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다
 }
 
 export function createManage(deps: ManageDeps): Manage {
@@ -197,7 +199,13 @@ export function createManage(deps: ManageDeps): Manage {
     setStageCoachDim: (on) => setDimFrom("stage", on),
     // 랜덤 배틀 판을 배틀 창으로 연다 — 기기 창은 설정창을 연 뒤에 생긴다
     openBattle: (input: BattleScreenInput) => {
-      if (devices) void devices.battleScreen.open(input).catch((e: unknown) => console.error("배틀 창을 띄우지 못했다", e));
+      if (!devices) return;
+      void devices.battleScreen.open(input).catch((e: unknown) => {
+        console.error("배틀 창을 띄우지 못했다", e);
+        devices?.battleScreen.cancel(); // 준비 중 창이 남지 않게 — 포켓몬을 되돌린다
+      });
     },
+    prepareBattle: (title: string) => devices?.battleScreen.prepare(title),
+    cancelBattle: () => devices?.battleScreen.cancel(),
   };
 }

@@ -307,6 +307,36 @@ void (async () => {
   assert.strictEqual(shown, 1, "새로 받은 판이 없으면 띄우지 않는다");
   const rec = await net.act({ action: "record" });
   assert.ok(rec.ok && rec.record?.def.wins === 1, "record 동작은 기록을 돌려준다");
+
+  // 판 요청 — 요청 직전에 준비 중(prepare), 실패면 닫고(cancel) 판을 띄우지 않는다. 성공이면 같은 창에 판(show) (2026-10-10)
+  const steps: string[] = [];
+  let startOk = false;
+  const startClient = {
+    functions: {
+      invoke: async () => {
+        if (!startOk) throw new Error("연결 끊김");
+        return { data: { battleId: "b1", reward: { points: 50 } }, error: null };
+      },
+    },
+  } as unknown as SupabaseClient;
+  const startNet = createBattleNet({
+    client: startClient,
+    signedIn: () => true,
+    run: () => ({ ok: true, result: null, replayed: false }),
+    onChanged: () => {},
+    offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }),
+    show: () => steps.push("show"),
+    prepare: () => steps.push("prepare"),
+    cancel: () => steps.push("cancel"),
+  });
+  const failed = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
+  assert.ok(!failed.ok, "판을 받지 못했다");
+  assert.deepStrictEqual(steps, ["prepare", "cancel"], "실패 — 준비 중을 띄웠다가 닫고, 판은 띄우지 않는다");
+  steps.length = 0;
+  startOk = true;
+  const okRes = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
+  assert.ok(okRes.ok, "판을 받았다");
+  assert.deepStrictEqual(steps, ["prepare", "show"], "성공 — 준비 중 뒤 같은 창에 판");
   console.log("selftest-battle-screen 통과");
 })().catch((e) => {
   console.error(e);

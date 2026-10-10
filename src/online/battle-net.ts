@@ -32,6 +32,8 @@ export interface BattleNetDeps {
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
   show: (data: StartData, pick: number) => void; // 배틀 창을 연다
+  prepare?: () => void; // 판을 요청하기 직전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다 (2026-10-10)
+  cancel?: () => void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다. 실패 문구는 상대 고르기 모달이 보인다
   now?: () => number; // 받은 판 확인 간격을 재는 시계 — 자체 시험이 바꾼다
 }
 
@@ -108,8 +110,12 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
         if (!r.ok) return fail(r);
         return { ok: true, code: null, offer: d.offerView(r.data) };
       }
+      d.prepare?.(); // call 은 예외를 실패 답으로 바꾼다 — 실패면 아래에서 닫는다
       const r = await call<StartData>("battle-start", { offerId: a.offerId, pick: a.pick });
-      if (!r.ok) return fail(r);
+      if (!r.ok) {
+        d.cancel?.();
+        return fail(r);
+      }
       // 보상을 넣는다 — 거래 id 가 판 id 라 같은 판은 한 번만 들어간다. 넣지 못해도 판은 보여 준다
       const put = d.run(`battle-reward:${r.data.battleId}`, "battle.reward", { battleId: r.data.battleId, reward: r.data.reward });
       if (put.ok) d.onChanged();

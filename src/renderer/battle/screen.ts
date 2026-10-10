@@ -316,7 +316,8 @@ function draw(view: BattleScreenView): void {
   const clock = el("div", "clock", clockText(view.maxMs, 0));
   const speedBox = el("div", "speed");
   const speedButtons = [1, 2].map((s) => {
-    const b = buttonEl(s === 1 ? "on" : "", `${s}배`, () => {
+    // 글자는 x1·x2 (2026-10-10 사용자 "1배, 2배 말고 x1, x2", Figma 02 `Battle HUD` 1920:26)
+    const b = buttonEl(s === 1 ? "on" : "", `x${s}`, () => {
       speed = s;
       speedButtons.forEach((x, i) => x.classList.toggle("on", i + 1 === s));
     });
@@ -634,5 +635,19 @@ function draw(view: BattleScreenView): void {
   requestAnimationFrame(tick);
 }
 
+// 준비 중 — 판을 받기 전. 머리 줄 제목과 가운데 `배틀을 준비하고 있어요` + 처리 중 점 셋. 판이 오면 draw 가 같은 창을 바꾼다
+// (2026-10-10 사용자 "포켓몬들사라지고 로딩하고 배틀시작으로", Figma 04 `Battle Loading`, 05 `Battle / Window · 준비 중`)
+function drawLoading(title: string): void {
+  run += 1; // 지난 재생을 멈춘다
+  hideBubble();
+  frame.beginDraw("right", title, "battle-screen");
+  const box = el("div", "bs-loading");
+  box.setAttribute("role", "status");
+  box.append(el("strong", undefined, "배틀을 준비하고 있어요"), el("span", "bs-loading-dots"));
+  frame.device.appendChild(box);
+  frame.endDraw();
+}
+
 frame.showWith<BattleScreenView>((cb) => api.onShow(cb), draw);
+frame.showWith<string>((cb) => api.onLoading(cb), drawLoading);
 api.ready();

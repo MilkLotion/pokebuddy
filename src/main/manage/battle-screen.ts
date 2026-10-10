@@ -29,6 +29,10 @@ export interface BattleScreenDeps {
 }
 
 export interface BattleScreen {
+  // 판을 받기 전 — 바탕화면 포켓몬을 먼저 숨기고 배틀 창을 준비 중 모습으로 띄운다 (2026-10-10 사용자 "포켓몬들사라지고 로딩하고 배틀시작으로")
+  prepare(title: string): void;
+  // 판을 받지 못했다 — 준비 중 창을 닫는다. 창이 닫히면 숨긴 포켓몬이 돌아온다(onClosed)
+  cancel(): void;
   open(input: BattleScreenInput): Promise<void>;
   openDev(save: SaveV3, seed: number): Promise<void>; // 개발 실행 전용
   close(): void;
@@ -89,25 +93,71 @@ function myFighters(save: SaveV3, pick: () => EngineFighter): (EngineFighter | n
 }
 
 export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
-  const win = createBattleWindow({ preload: deps.preload, html: path.join(path.dirname(deps.html), "battle-screen.html"), onClosed: () => deps.holdStage?.(false) });
+  // waiting — 준비 중 창을 띄우고 판을 기다리는 중. 그 사이 사용자가 창을 닫으면 dropped — 판이 와도 다시 열지 않는다
+  let waiting = false;
+  let dropped = false;
+  const win = createBattleWindow({
+    preload: deps.preload,
+    html: path.join(path.dirname(deps.html), "battle-screen.html"),
+    onClosed: () => {
+      if (waiting) dropped = true;
+      deps.holdStage?.(false);
+    },
+  });
+
+  function prepare(title: string): void {
+    waiting = true;
+    dropped = false;
+    deps.holdStage?.(true);
+    win.loading(deps.parent(), title);
+  }
+
+  function cancel(): void {
+    waiting = false;
+    dropped = false;
+    if (win.isOpen()) win.close();
+    else deps.holdStage?.(false);
+  }
 
   async function open(input: BattleScreenInput): Promise<void> {
+    const prepared = waiting;
+    if (prepared && dropped) {
+      // 준비 중에 사용자가 창을 닫았다 — 판은 서버·기록에 남고 창은 다시 열지 않는다
+      waiting = false;
+      dropped = false;
+      return;
+    }
     const model = battleScreenModel(input);
     const loader = deps.stageArt();
     // 칸마다 그림 키 — 처음 모습과 판 중에 바뀌는 모습(form 이벤트 — 메로엣타 스텝폼·킬가르도 블레이드폼 등). 이로치·성별이 칸마다 다르다
     const species = [...new Set(model.units.flatMap((side) => side.flatMap((u) => (u ? [u.look, ...Object.values(u.formLooks)] : []))))];
     // 초상·타입 아이콘과 PMD 묶음을 함께 받는다. PMD 를 못 받은 종은 null — 렌더러가 초상으로 그린다
+    // 그림을 받지 못하면 빈 그림으로 그린다 — 렌더러가 초상·이름으로 대신한다. 준비 중 창이 멈춘 채 남지 않게
     const [art, looks] = await Promise.all([
-      deps.art(battleScreenArtKeys(model)),
+      deps.art(battleScreenArtKeys(model)).catch((e: unknown) => {
+        console.error("배틀 창 그림을 받지 못했다", e);
+        return {} as Record<string, string | null>;
+      }),
       Promise.all(species.map(async (s): Promise<[string, LookSheets | null]> => [s, loader ? ((await loader.loadLook(s).catch(() => null))?.sheets ?? null) : null])),
     ]);
+    waiting = false;
+    if (prepared && dropped) {
+      dropped = false;
+      return; // 그림을 받는 사이에 닫았다
+    }
     deps.holdStage?.(true);
     win.show(deps.parent(), { ...withBattleScreenArt(model, art), sprites: Object.fromEntries(looks) });
   }
 
   return {
+    prepare,
+    cancel,
     open,
     async openDev(save, seed) {
+      // 실제 판과 같은 흐름 — 준비 중 창을 먼저 띄우고 판을 연다. POKEBUDDY_DEV_BATTLE_WAIT(ms)만큼 서버를 기다리는 척한다(준비 중 화면 확인용)
+      prepare("랜덤 배틀");
+      const wait = Number(process.env.POKEBUDDY_DEV_BATTLE_WAIT ?? 0);
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       const rand = mulberry32(seed * 7919);
       const pool = devPool();
       const pick = (): EngineFighter => pool[Math.floor(rand() * pool.length)]!;
