@@ -85,6 +85,10 @@ export function pointParts(pet: PetV3): { kind: PointPartKind; percent: number }
 export const pointPercent = (pet: PetV3): number =>
   Math.max(TIME_RULES.pointFloorPercent, 100 + pointParts(pet).reduce((sum, part) => sum + part.percent, 0));
 
+// 이 개체가 1P 를 얻는 간격(ms) — applyTime 의 가중 시간 식(흐른 시간 × (100 + 친밀도) × 적립 배율 / 10000)을 거꾸로 푼 값
+// 파티 상세 기기 창 `포인트 적립` 줄이 "38초마다 1P" 로 보인다 (2026-10-10 사용자 "D로 진행", src/view/device-pet.ts careLineOf)
+export const pointIntervalMs = (pet: PetV3): number => Math.round((TIME_RULES.pointGainMs * 10_000) / ((100 + pet.affinity) * pointPercent(pet)));
+
 // 남은 시간을 줄인다. 0 아래로 내려가지 않는다
 const countDown = (remain: number, elapsed: number): number => Math.max(0, remain - elapsed);
 

@@ -5,7 +5,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
-import { affinityPercent, boredStepOf, buffPercent, pointPercent, zoneOf } from "../../state/time";
+import { affinityPercent, boredStepOf, buffPercent, pointIntervalMs, pointPercent, zoneOf } from "../../state/time";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { TIME_RULES } from "../../state/rules";
@@ -248,6 +248,11 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   assert.equal(earn({ affinity: 100, boredom: 60 }), 18, "심심해 −10%");
   assert.equal(earn({ affinity: 100, boredom: 90 }), 16, "지루해 −20%");
   assert.equal(earn({ affinity: 100, fullness: 10, boredom: 90 }), 4, "매우 배고픔 + 지루해 = 20%");
+  // 1P 간격 — 120초 ÷ (1 + 친밀도/100) ÷ 배율. 파티 상세 `포인트 적립` 줄이 보인다 (2026-10-10)
+  assert.deepEqual(
+    [pet({ affinity: 0 }), pet({ affinity: 50 }), pet({ affinity: 100 }), pet({ affinity: 100, buffs: long }), pet({ affinity: 100, buffs: [...food, ...long] }), pet({ affinity: 100, fullness: 10 })].map(pointIntervalMs),
+    [120_000, 80_000, 60_000, 37_500, 27_273, 150_000],
+  );
   assert.equal(earn({ affinity: 100, fullness: 30, buffs: long }), 26, "신남이 배고픔을 메운다 — 100 + 60 − 30");
   assert.equal(earn({ affinity: 0, buffs: food }), 16, "친밀도 0 도 버프를 받는다 — 10P × 1.6");
   const working = seed({ affinity: 100 });

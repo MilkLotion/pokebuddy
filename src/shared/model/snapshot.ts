@@ -74,6 +74,7 @@ export interface PetView {
 export interface CareView {
   bonus: number; // 합(백분율) — 버프는 +, 손해는 −. 바닥(−90)에서 멈춘다. 0 이면 기본 속도다
   parts: { kind: string; name: string; bonus: number }[]; // 내역 — kind 는 버프 종류·만복도 구간(hungry·starving)·심심함 단계(bored·tired). name 은 화면 이름
+  intervalMs: number; // 이 개체가 지금 파티에서 1P 를 얻는 간격 (src/state/time.ts pointIntervalMs)
 }
 
 // 메가진화 — 파티 상세 기기 창의 메가스톤 표식과 확인·고르기 창이 쓴다

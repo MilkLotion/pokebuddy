@@ -10,7 +10,7 @@ import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import type { BagDeviceInput, ShopDeviceInput } from "../../shared/model/devices";
 import { petBusyKey } from "../../shared/device-busy";
 import { bagDeviceModel } from "../../view/device-bag";
-import { petDeviceModel } from "../../view/device-pet";
+import { everyText, petDeviceModel } from "../../view/device-pet";
 import { shopDeviceModel } from "../../view/device-shop";
 import { resultLineOf } from "../../view/result-lines";
 import { EGG_SOURCE, tintEgg } from "../../main/art/egg-art";
@@ -185,7 +185,9 @@ const bag = (over: Partial<BagDeviceInput>) => {
   assert.equal(where("없음"), undefined, "없는 개체면 닫는다");
   // 포인트 적립 줄과 막대 글자 — 박스 개체는 적립 없음, 친밀도 100 전은 기본
   assert.deepEqual(where("p3")?.careLine, { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" });
-  assert.deepEqual(where("p1")?.careLine, { title: "포인트 적립 기본", desc: "배고프거나 심심하면 느리게 쌓여요" });
+  assert.deepEqual(where("p1")?.careLine, { title: "포인트 적립 기본", desc: `배고프거나 심심하면 느리게 쌓여요 · ${everyText(v.party.slots[0]!.pet!.care.intervalMs)}` });
+  // 간격 글자 — 초 반올림, 60초부터 분 (2026-10-10 사용자 "D로 진행")
+  assert.deepEqual([37_500, 59_400, 60_000, 80_000, 150_000, 27_273, 300].map(everyText), ["38초마다 1P", "59초마다 1P", "1분마다 1P", "1분 20초마다 1P", "2분 30초마다 1P", "27초마다 1P", "1초마다 1P"]);
   const p1 = v.party.slots[0]?.pet;
   assert.deepEqual(where("p1")?.bars, { affinity: `${p1?.affinity}`, fullness: `55 · ${p1?.zoneText}`, boredom: `${p1?.boredom} · ${p1?.boredWord}` });
 }

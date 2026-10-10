@@ -12,6 +12,7 @@ import { waitText } from "../../shared/count-text";
 import { BOX_RULES } from "../../box/rules";
 import { EGG_RULES } from "../../egg/rules";
 import { PARTY_RULES } from "../../party/rules";
+import { pointIntervalMs } from "../../state/time";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
 
@@ -76,15 +77,19 @@ function seed(): SaveV3 {
   const s = seed();
   const [p1, p2] = s.pets;
   assert.ok(p1 && p2);
-  assert.deepStrictEqual(snapshotView(s, T0).party.slots[0]?.pet?.care, { bonus: 0, parts: [] }, "버프·손해가 없으면 0");
+  // 내역만 견준다 — 1P 간격(intervalMs)은 아래에서 따로 본다
+  const mix = (c: { bonus: number; parts: unknown[] } | undefined) => c && { bonus: c.bonus, parts: c.parts };
+  const first = snapshotView(s, T0).party.slots[0]?.pet?.care;
+  assert.deepStrictEqual(mix(first), { bonus: 0, parts: [] }, "버프·손해가 없으면 0");
+  assert.equal(first?.intervalMs, pointIntervalMs(p1), "1P 간격은 state/time.ts pointIntervalMs 와 같다");
   Object.assign(p1, { boredom: 60, buffs: [{ kind: "long-play", remainMs: MIN }, { kind: "premium-food", remainMs: MIN }] });
   Object.assign(p2, { buffs: [] }); // 시험 저장의 둘째 개체는 든든함이 있다 — 손해만 보려고 지운다
   const v = snapshotView(s, T0);
-  assert.deepStrictEqual(v.party.slots[0]?.pet?.care, {
+  assert.deepStrictEqual(mix(v.party.slots[0]?.pet?.care), {
     bonus: 110,
     parts: [{ kind: "premium-food", name: "든든함", bonus: 60 }, { kind: "long-play", name: "신남", bonus: 60 }, { kind: "bored", name: "심심해", bonus: -10 }],
   }, "든든함 · 신남 · 심심해 순서 — 저장 순서와 상관없다");
-  assert.deepStrictEqual(v.party.slots[1]?.pet?.care, { bonus: -30, parts: [{ kind: "hungry", name: "배고픔", bonus: -30 }] }, "만복도 30 은 배고픔 −30");
+  assert.deepStrictEqual(mix(v.party.slots[1]?.pet?.care), { bonus: -30, parts: [{ kind: "hungry", name: "배고픔", bonus: -30 }] }, "만복도 30 은 배고픔 −30");
   process.stdout.write("(3b) 포인트 적립 배율 내역  ok\n");
 }
 

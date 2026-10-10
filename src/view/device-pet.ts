@@ -11,15 +11,27 @@ import { snapshotPet } from "./result-lines.js";
 //   박스 개체          적립하지 않는다
 //   버프·손해 없음     기본 속도. 놀아주면 빨라지고 배고프거나 심심하면 느려진다고 알린다
 //   그 밖              합(+30%, −50%)과 내역(버프 +, 배고픔·심심함 −). 2026-10-05 돌봄 개편 — 친밀도와 상관없다
+//   파티 개체는 설명 끝에 " · 38초마다 1P" 를 붙인다 (2026-10-10 사용자 "D로 진행", Figma 05 `Party / Detail Device / Care Bonus · 적립 간격`)
+
+// 간격 글자 — 초는 반올림. 60초 미만 "38초마다 1P", 그 이상 "1분 20초마다 1P", 딱 떨어지면 "2분마다 1P"
+export function everyText(ms: number): string {
+  const sec = Math.max(1, Math.round(ms / 1000));
+  if (sec < 60) return `${sec}초마다 1P`;
+  const min = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return rest ? `${min}분 ${rest}초마다 1P` : `${min}분마다 1P`;
+}
+
 function careLineOf(pet: PetView, inParty: boolean): PetDeviceOpen["careLine"] {
   const care = pet.care;
   // 다른 프리셋도 0.2배로 쌓으므로 "파티나 프리셋" 이다 (2026-10-05, Figma 05 `Party / Detail Device / Box Pokemon`)
   if (!inParty) return { title: "포인트 적립 없음", desc: "파티나 프리셋에 있을 때만 포인트가 쌓여요" };
   // 제목은 합, 설명은 내역 — 버프는 +, 손해는 − (2026-10-05 사용자 결정 "-30% -60%로 보기편하게", 2026-10-04 "+% 하나")
-  if (!care.parts.length) return { title: "포인트 적립 기본", desc: "배고프거나 심심하면 느리게 쌓여요" };
+  const every = everyText(care.intervalMs);
+  if (!care.parts.length) return { title: "포인트 적립 기본", desc: `배고프거나 심심하면 느리게 쌓여요 · ${every}` };
   const signed = (n: number): string => (n > 0 ? `+${n}%` : n < 0 ? `−${-n}%` : "±0%");
   const parts = care.parts.map((p) => `${p.name} ${signed(p.bonus)}`);
-  return { title: care.bonus === 0 ? "포인트 적립 기본" : `포인트 적립 ${signed(care.bonus)}`, desc: parts.join(" · ") };
+  return { title: care.bonus === 0 ? "포인트 적립 기본" : `포인트 적립 ${signed(care.bonus)}`, desc: [...parts, every].join(" · ") };
 }
 
 // 막대 글자 — 친밀도 · 만복도(구간) · 심심함(단계)

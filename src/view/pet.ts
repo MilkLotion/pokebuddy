@@ -8,7 +8,7 @@ import { MEGA_RULES } from "../dex/rules.js";
 import { locatePet } from "../party/locate.js";
 import { sizeLevelOf } from "../party/size.js";
 import { growthOf, progressTo } from "../dex/growth.js";
-import { activeBuffs, boredStepOf, pointParts, pointPercent, zoneOf, type BoredStep } from "../state/time.js";
+import { activeBuffs, boredStepOf, pointIntervalMs, pointParts, pointPercent, zoneOf, type BoredStep } from "../state/time.js";
 import { BOREDOM_RULES, TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
@@ -193,5 +193,5 @@ function careView(pet: PetV3): CareView {
   const parts = pointParts(pet)
     .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
     .map((p) => ({ kind: p.kind, name: nameOf(p.kind), bonus: p.percent }));
-  return { bonus: pointPercent(pet) - 100, parts };
+  return { bonus: pointPercent(pet) - 100, parts, intervalMs: pointIntervalMs(pet) };
 }
