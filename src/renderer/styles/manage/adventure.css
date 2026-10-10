@@ -332,11 +332,12 @@
 .dialog.battle-start {
   width: min(440px, calc(100vw - 40px));
 }
+/* 부제(.sub 아래 14) 다음 2 — 부제와 첫 줄 사이가 Figma 05 `Adventure / 배틀 고르기` 의 16 이다. 부제는 늘 있다(2026-10-11 배틀 능력치 기준) */
 .battle-modes {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: 2px;
 }
 .battle-mode {
   appearance: none;

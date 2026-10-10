@@ -359,7 +359,18 @@ function draw(view: BattleScreenView): void {
   }
   // 모습 바뀜 — 칸마다 form 이벤트(시각순). t 시점의 모습은 그때까지의 마지막 form, 없으면 처음 모습(되감기에도 맞다)
   const formLog = new Map<string, { t: number; species: string }[]>();
+  // 메타몽 변신 — copy 이벤트(from 은 상대 쪽 칸)도 모습 바뀜으로 본다. 그림은 그 상대 칸의 그림 키다(이미 받은 그림)
+  // (2026-10-11 사용자 "메타몽 변신안함" — 엔진은 능력치·타입·기술을 따라 했지만 화면은 form 만 보아 그림이 메타몽 그대로였다)
+  const copyKey = new Map<string, string>(); // "side:slot" → 따라 한 상대의 그림 키
   for (const e of view.events) {
+    if (e.kind === "copy" && e.from >= 0) {
+      const src = view.units[e.side === 0 ? 1 : 0][e.from];
+      if (!src) continue;
+      const key = `${e.side}:${e.slot}`;
+      copyKey.set(key, src.look);
+      formLog.set(key, [...(formLog.get(key) ?? []), { t: e.t, species: src.species }]);
+      continue;
+    }
     if (e.kind !== "form") continue;
     const key = `${e.side}:${e.slot}`;
     formLog.set(key, [...(formLog.get(key) ?? []), { t: e.t, species: e.species }]);
@@ -406,7 +417,7 @@ function draw(view: BattleScreenView): void {
     const pet = pets[side][slot];
     if (pet) {
       const look = lookAt(side, slot, t);
-      if (look && look !== pet.species) setPetLook(pet, look, view.sprites[u.formLooks[look] ?? u.look] ?? null, view.zoom);
+      if (look && look !== pet.species) setPetLook(pet, look, view.sprites[u.formLooks[look] ?? copyKey.get(`${side}:${slot}`) ?? u.look] ?? null, view.zoom);
       const at = timeline.posOf(s, t);
       pet.root.style.transform = `translate(${at.x * CELL}px, ${at.y * CELL}px)`;
       pet.root.classList.toggle("fainted", s.fainted);

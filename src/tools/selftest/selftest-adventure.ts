@@ -9,6 +9,7 @@ import { battleData } from "../../battle/fighter";
 import { lookOfSource, partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
+import { BATTLE_RULES } from "../../battle/rules";
 import { emptySave as empty, normalizeSave as normalize } from "../../save/normalize";
 import { sellablePet } from "../../shop/sell-pet";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
@@ -95,6 +96,9 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
     "쓴 뒤 다음 기술 쿨타임 2배",
   ]);
 }
+
+// ── 화면 문구의 배틀 능력치 기준 — 탭 팁 첫 줄(renderer/manage/tab-tips.ts)과 배틀 고르기 부제(battle-start.ts)가 "50레벨·6V" 를 글자로 적는다. 규칙이 바뀌면 두 문구를 같이 고친다 (2026-10-11)
+assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준이 바뀌면 탭 팁·배틀 고르기 문구를 같이 고친다");
 
 // ── 배틀 문 — 첫 프리셋 6칸이 모두 열려야 배틀한다. 다른 프리셋·적용 여부와 상관없다 ──
 {

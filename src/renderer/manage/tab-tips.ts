@@ -52,7 +52,8 @@ const TIPS: Record<TabId, { title: string; lines: string[] }> = {
   },
   adventure: {
     title: "배틀 팁",
-    lines: ["6칸을 모두 채워요", "단단한 포켓몬은 오른쪽 열(앞 열)에 둬요", "기술을 직접 고르고 메가진화를 켜요"],
+    // 첫 줄은 배틀 능력치 기준 — 배틀 상세 기기 창의 ? 에만 있어 보기 어려웠다(2026-10-11 사용자 "배틀 자동보정 정보가 상세기기에만 있어서 보기어려움" → "b+c 같이"). 이 줄만 숫자를 적는다(src/battle/rules.ts BATTLE_RULES 와 맞춘다)
+    lines: ["모두 50레벨·6V·노력치·도구 없이 싸워요", "6칸을 채우고 단단한 포켓몬은 오른쪽 열에 둬요", "기술을 직접 고르고 메가진화를 켜요"],
   },
 };
 
@@ -85,7 +86,7 @@ export function addTabTip(head: HTMLElement, tab: TabId): void {
   bubble.setAttribute("role", "note");
   bubble.addEventListener("click", (e) => e.stopPropagation()); // 말풍선 안을 눌러도 닫지 않는다
   bubble.appendChild(el("strong", undefined, tip.title));
-  for (const line of tip.lines) bubble.appendChild(el("div", "tip-line", line));
+  for (const line of tip.lines) bubble.appendChild(el("div", "tip-line", `· ${line}`)); // 줄마다 점 — 배틀 상세의 능력치 기준 말풍선과 같은 꼴 (2026-10-11 사용자 "팁에 각 줄에 점이 있으면 좋겠음")
   const more = buttonEl("tip-more", "웹 가이드에서 더 보기");
   more.addEventListener("click", () => api.openGuide(tab));
   bubble.appendChild(more);

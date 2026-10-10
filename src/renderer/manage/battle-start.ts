@@ -35,5 +35,6 @@ export function drawBattleStart(): void {
     modeRow("랜덤 배틀", why ?? "다른 사용자의 배틀 파티와 싸워요 · 보상 · 5분에 한 번", gate != null || !v.battle.canStart, () => openBattleOpponent(() => openAnyDialog({ kind: "battle-opponent" }))),
     modeRow("친선 배틀", gate != null ? gateText(gate) : "링크로 친구를 불러 한 판 · 보상 없음", gate != null, () => openAnyDialog({ kind: "friendly" })),
   );
-  dialogEl.append(...dialogHead("배틀 시작", "", { close: true }), list);
+  // 부제는 배틀 능력치 기준 — 탭 팁 첫 줄과 같은 말 (2026-10-11 사용자 "b+c 같이", Figma 05 `Adventure / 배틀 고르기`). 숫자는 src/battle/rules.ts BATTLE_RULES 와 맞춘다
+  dialogEl.append(...dialogHead("배틀 시작", "모두 50레벨 · 6V · 노력치·도구 없이 싸워요", { close: true }), list);
 }
