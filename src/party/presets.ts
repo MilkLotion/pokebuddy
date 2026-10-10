@@ -60,12 +60,24 @@ export function renamePreset(save: Party, index: number, name: string): Outcome<
   return { ok: true, name: presetName(save, index) };
 }
 
-// 적용한 프리셋에서 상점으로 여는 칸 — 남은 수와 전체 수. 첫 프리셋은 shopUnlock 칸, 나머지는 잠긴 칸 전부다
-export function shopSlots(save: Party): { left: number; total: number; bought: number } {
+// 상점 파티 칸을 열 프리셋 — 적용한 프리셋에 상점으로 열 칸이 남았으면 그 프리셋, 아니면 남은 프리셋 가운데 앞 번호. 다 열었으면 null
+// (2026-10-10 사용자 "바로바로 남은 프리셋의 빈칸 늘어나게" — 그 전에는 적용한 프리셋만 열어 프리셋을 바꿔 가며 샀다)
+const shopLocked = (slots: PartySlotV3[] | null): number => (slots ?? []).filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
+export function shopSlotPreset(save: Party): number | null {
+  const active = activePreset(save);
+  if (shopLocked(slotsOfPreset(save, active)) > 0) return active;
+  for (let i = 0; i < presetCount(save); i += 1) if (shopLocked(slotsOfPreset(save, i)) > 0) return i;
+  return null;
+}
+
+// 상점으로 여는 칸 — 칸을 열 프리셋(shopSlotPreset)의 남은 수와 전체 수. 다 열었으면 적용한 프리셋으로 센다
+// 전체 수: 첫 프리셋은 shopUnlock 칸, 나머지는 처음 열린 칸을 뺀 전부다
+export function shopSlots(save: Party): { preset: number; left: number; total: number; bought: number } {
   const { total: all, openAtStart, shopUnlock } = PARTY_RULES;
-  const total = activePreset(save) === 0 ? shopUnlock : all - openAtStart;
-  const left = save.party.slots.filter((s) => s.state === "locked" && s.unlockBy === "shop").length;
-  return { left, total, bought: Math.max(0, total - left) };
+  const preset = shopSlotPreset(save) ?? activePreset(save);
+  const total = preset === 0 ? shopUnlock : all - openAtStart;
+  const left = shopLocked(slotsOfPreset(save, preset));
+  return { preset, left, total, bought: Math.max(0, total - left) };
 }
 
 // 프리셋을 하나 더 살 수 있는가 — 가진 프리셋의 칸을 모두 열어야 한다 (2개면 12칸, 3개면 18칸)

@@ -14,7 +14,7 @@ import { hasUnlocked } from "../dex/record.js";
 import { addNewPet, checkNewPetRoom } from "../party/create.js";
 import { addItem, bagRoomOf } from "../bag/items.js";
 import { openSlot, presetSlots } from "../party/slots.js";
-import { addPreset, countParty, presetBuyable, presetCount, shopSlots } from "../party/presets.js";
+import { activePreset, addPreset, countParty, presetBuyable, presetCount, shopSlotPreset, shopSlots, slotsOfPreset } from "../party/presets.js";
 import type { Rand } from "../shared/rand.js";
 import { SHOP_RULES } from "./rules.js";
 import type { SaveV3 } from "../shared/save-v3";
@@ -90,7 +90,7 @@ export function buyStateOf(save: SaveV3, productId: string, opts?: DexOptions): 
   }
   const slot = productId === "party-slot";
   const product = slot ? null : findProduct(productId, opts);
-  const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 적용한 프리셋의 칸이다
+  const price = slot ? slotPrice(shopSlots(save).left) : product?.price ?? null; // 파티 칸은 shopSlotPreset 이 고른 프리셋의 칸이다
   if (price === null) return { price, many: false, room: 0, reason: slot ? "no-locked-slot" : "no-product" };
   const many = product?.kind === "egg" || product?.kind === "tool";
   const byPoints = price > 0 ? Math.floor(save.points.balance / price) : Number.MAX_SAFE_INTEGER;
@@ -128,9 +128,11 @@ export function buyProduct(save: SaveV3, productId: string, now: number, rand: R
   const done: BuyResult = { ok: true, spent: price, balance: save.points.balance };
 
   if (slot) {
-    const i = openSlot(save.party.slots, "shop"); // 칸 +1 — 첫 잠긴 칸을 연다
+    // 칸 +1 — 고른 프리셋의 첫 잠긴 칸을 연다. 적용하지 않은 프리셋이면 slotIndex 를 돌려주지 않는다(파티 탭의 칸이 아니다)
+    const preset = shopSlotPreset(save) ?? activePreset(save);
+    const i = openSlot(slotsOfPreset(save, preset) ?? save.party.slots, "shop");
     countParty(save);
-    return { ...done, slotIndex: i };
+    return { ...done, ...(preset === activePreset(save) ? { slotIndex: i } : {}) };
   }
 
   if (product?.kind === "egg") {

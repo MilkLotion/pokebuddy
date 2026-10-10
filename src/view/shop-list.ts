@@ -15,7 +15,7 @@ import { canGiveEgg, eggRoomOf } from "../egg/pool.js";
 import { bagRoomOf, evoOrder, isEvoItem, isFormTool } from "../bag/items.js";
 import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/model/snapshot";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
-import { activePreset, presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
+import { presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
 import { boxBuyable } from "../box/slots.js";
 import { formWhere, itemAbout } from "./bag.js";
 import { shiftOfItem } from "../dex/forms.js";
@@ -127,10 +127,11 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   }
   for (const row of evoRows.sort((a, b) => evoOrder(a, b, opts))) add(row);
 
-  // 파티 칸 — 늘 같은 값. 적용한 프리셋의 칸을 연다. 프리셋마다 따로 산다 (2026-10-02 사용자 결정)
+  // 파티 칸 — 늘 같은 값. 적용한 프리셋에 남은 칸이 없으면 남은 프리셋의 칸을 바로 연다 (2026-10-02 사용자 결정, 2026-10-10 "바로바로 남은 프리셋의 빈칸 늘어나게")
+  // 이름은 이번에 칸이 열릴 프리셋이다
   const slots = shopSlots(save);
   const price = slotPrice(slots.left);
-  const here = presetName(save, activePreset(save));
+  const here = presetName(save, slots.preset);
   add({
     id: "party-slot",
     name: "파티 칸 +1",

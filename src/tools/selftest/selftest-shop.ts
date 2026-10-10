@@ -125,31 +125,42 @@ function seed(points: number): SaveV3 {
   process.stdout.write("(7) 도구 · 가방에 쌓인다  ok\n");
 }
 
-// (8) 파티 칸은 늘 500P 이고 프리셋마다 따로 산다. 첫 프리셋은 두 칸, 나머지 프리셋은 네 칸까지다 (2026-10-02 사용자 결정)
+// (8) 파티 칸은 늘 500P 이고 프리셋마다 칸이 따로다. 첫 프리셋은 두 칸, 나머지 프리셋은 네 칸까지다 (2026-10-02 사용자 결정)
+//     적용한 프리셋의 칸을 먼저 열고, 다 열면 남은 프리셋의 칸을 앞 번호부터 바로 연다 (2026-10-10 사용자 "바로바로 남은 프리셋의 빈칸 늘어나게")
 {
   const s = seed(10_000);
+  assert.deepStrictEqual(shopSlots(s), { preset: 0, left: 2, total: 2, bought: 0 });
   const first = buyProduct(s, "party-slot", T0, rand);
   assert.equal(first.spent, 500);
-  const second = buyProduct(s, "party-slot", T0, rand);
-  assert.equal(second.spent, 500);
-  const third = buyProduct(s, "party-slot", T0, rand);
-  assert.equal(third.reason, "no-locked-slot");
+  assert.equal(first.slotIndex, PARTY_RULES.openAtStart, "적용한 프리셋의 칸이면 연 칸 번호");
+  assert.equal(buyProduct(s, "party-slot", T0, rand).spent, 500);
   const open = s.party.slots.filter((x) => x.state === "empty").length;
   assert.equal(open, PARTY_RULES.openAtStart + PARTY_RULES.shopUnlock);
   const left = s.party.slots.filter((x) => x.state === "locked" && x.unlockBy === "achievement").length;
   assert.equal(left, 2, "업적으로 여는 칸은 남는다");
-  assert.equal(s.party.slotCount, 4 + 2, "열린 칸 수 — 첫 프리셋 4 + 둘째 프리셋 2");
-  assert.deepStrictEqual(shopSlots(s), { left: 0, total: 2, bought: 2 });
-
-  // 둘째 프리셋을 적용하면 그 프리셋의 칸을 산다 — 첫 프리셋에서 산 칸은 따라오지 않는다
-  assert.deepStrictEqual(applyPreset(s, 1), { ok: true });
-  assert.deepStrictEqual(shopSlots(s), { left: 4, total: 4, bought: 0 });
-  for (let i = 0; i < 4; i += 1) assert.equal(buyProduct(s, "party-slot", T0, rand).spent, 500);
-  assert.equal(buyProduct(s, "party-slot", T0, rand).reason, "no-locked-slot");
-  assert.ok(s.party.slots.every((x) => x.state === "empty"), "둘째 프리셋은 여섯 칸 모두 상점으로 연다");
-  assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked").length, 2, "첫 프리셋의 잠금은 그대로");
+  // 첫 프리셋에서 상점으로 열 칸이 끝났다 — 다음 구매는 프리셋을 바꾸지 않고 둘째 프리셋의 칸을 연다
+  assert.deepStrictEqual(shopSlots(s), { preset: 1, left: 4, total: 4, bought: 0 });
+  const other = buyProduct(s, "party-slot", T0, rand);
+  assert.equal(other.spent, 500);
+  assert.equal(other.slotIndex, undefined, "적용하지 않은 프리셋의 칸이면 칸 번호를 주지 않는다");
+  assert.equal(activePreset(s), 0, "프리셋은 그대로");
+  assert.equal(slotsOfPreset(s, 1)?.filter((x) => x.state === "empty").length, PARTY_RULES.openAtStart + 1);
+  for (let i = 0; i < 3; i += 1) assert.equal(buyProduct(s, "party-slot", T0, rand).spent, 500);
+  assert.ok(slotsOfPreset(s, 1)?.every((x) => x.state === "empty"), "둘째 프리셋은 여섯 칸 모두 상점으로 연다");
+  assert.equal(buyProduct(s, "party-slot", T0, rand).reason, "no-locked-slot", "남은 칸이 없으면 거절");
+  assert.equal(slotsOfPreset(s, 0)?.filter((x) => x.state === "locked").length, 2, "첫 프리셋의 업적 칸은 그대로");
   assert.equal(s.party.slotCount, 4 + 6);
-  process.stdout.write("(8) 파티 칸 · 500P 고정 · 프리셋마다 따로  ok\n");
+  assert.deepStrictEqual(shopSlots(s), { preset: 0, left: 0, total: 2, bought: 2 });
+
+  // 둘째 프리셋을 적용한 중에도 같다 — 적용한 프리셋에 남은 칸이 있으면 그 칸을 먼저 연다
+  const t = seed(10_000);
+  assert.deepStrictEqual(applyPreset(t, 1), { ok: true });
+  assert.deepStrictEqual(shopSlots(t), { preset: 1, left: 4, total: 4, bought: 0 });
+  for (let i = 0; i < 4; i += 1) assert.equal(typeof buyProduct(t, "party-slot", T0, rand).slotIndex, "number");
+  assert.deepStrictEqual(shopSlots(t), { preset: 0, left: 2, total: 2, bought: 0 }, "둘째를 다 열면 첫 프리셋");
+  assert.equal(buyProduct(t, "party-slot", T0, rand).slotIndex, undefined);
+  assert.equal(slotsOfPreset(t, 0)?.filter((x) => x.state === "empty").length, PARTY_RULES.openAtStart + 1);
+  process.stdout.write("(8) 파티 칸 · 500P 고정 · 남은 프리셋을 바로 연다  ok\n");
 }
 
 // (8b) 파티 프리셋 — 1000P 고정. 가진 프리셋의 칸을 모두 열어야 산다. 다섯 개까지다 (2026-10-02 사용자 결정)
