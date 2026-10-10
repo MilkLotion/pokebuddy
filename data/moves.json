@@ -420,6 +420,7 @@
   "water-gun": {"ko":"물대포","en":"Water Gun","type":"water","class":"special","power":40,"accuracy":100,"cooldown":2.7},
   "water-pledge": {"ko":"물의맹세","en":"Water Pledge","type":"water","class":"special","power":80,"accuracy":100,"cooldown":5.4},
   "water-pulse": {"ko":"물의파동","en":"Water Pulse","type":"water","class":"special","power":60,"accuracy":100,"cooldown":4,"traits":["pulse"],"effects":{"status":{"kind":"confusion","chance":20}}},
+  "water-shuriken": {"ko":"물수리검","en":"Water Shuriken","type":"water","class":"special","power":15,"hits":[2,5],"accuracy":100,"priority":1,"cooldown":2.5},
   "water-spout": {"ko":"해수스파우팅","en":"Water Spout","type":"water","class":"special","power":150,"accuracy":100,"cooldown":10,"effects":{"hpScale":true}},
   "waterfall": {"ko":"폭포오르기","en":"Waterfall","type":"water","class":"physical","power":80,"accuracy":100,"cooldown":5.4,"traits":["contact"],"effects":{"flinch":20}},
   "wave-crash": {"ko":"웨이브태클","en":"Wave Crash","type":"water","class":"physical","power":120,"accuracy":100,"cooldown":8,"traits":["contact"]},
