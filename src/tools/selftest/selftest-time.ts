@@ -92,22 +92,25 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const care = seed({ affinity: 100, buffs: [{ kind: "premium-food", remainMs: 2 * HOUR }] });
   care.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
   applyTime(care, 20 * MIN, T0 + 20 * MIN);
-  assert.equal(care.points.balance, 32, "볼 안도 버프를 받는다 — 든든함 +60%");
+  assert.equal(care.points.balance, 36, "볼 안도 버프를 받는다 — 든든함 포인트 +80%");
   process.stdout.write("(6) 숨김 · 적립은 이어진다  ok\n");
 }
 
-// (7) 버프는 더한다. 든든함 +60 · 신남 +60 (2026-10-05 돌봄 개편, 놀아주기 신남은 "b로 하자" 로 없앴다)
+// (7) 친밀도 버프는 더한다. 든든함 +20 · 신남 +150 (2026-10-11 도구 역할 나누기, 그 전에는 둘 다 +60. 놀아주기 신남은 2026-10-05 "b로 하자" 로 없앴다)
 {
   assert.equal(buffPercent([]), 100);
-  assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }]), 160);
-  assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }]), 160);
-  assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 220);
-  assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 160, "같은 버프는 겹치지 않는다");
+  assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }]), 120);
+  assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }]), 250);
+  assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 270);
+  assert.equal(buffPercent([{ kind: "long-play", remainMs: MIN }, { kind: "long-play", remainMs: MIN }]), 250, "같은 버프는 겹치지 않는다");
   assert.equal(buffPercent([{ kind: "long-play", remainMs: 0 }]), 100, "끝난 버프는 세지 않는다");
   const s = seed({ buffs: [{ kind: "premium-food", remainMs: HOUR }] });
   applyTime(s, 30 * MIN, T0 + 30 * MIN);
-  assert.equal(s.pets[0]?.affinity, 4, "1.6배로 쌓인다 — 30분 × 1.6 = 48분");
+  assert.equal(s.pets[0]?.affinity, 3, "든든함은 1.2배로 쌓인다 — 30분 × 1.2 = 36분");
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, HOUR - 30 * MIN, "남은 시간이 준다");
+  const toy = seed({ buffs: [{ kind: "long-play", remainMs: HOUR }] });
+  applyTime(toy, 30 * MIN, T0 + 30 * MIN);
+  assert.equal(toy.pets[0]?.affinity, 7, "신남은 2.5배로 쌓인다 — 30분 × 2.5 = 75분");
   process.stdout.write("(7) 버프 · 더하고 시간이 준다  ok\n");
 }
 
@@ -239,10 +242,10 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const food = [{ kind: "premium-food" as const, remainMs: 2 * HOUR }];
   const long = [{ kind: "long-play" as const, remainMs: 2 * HOUR }];
   assert.equal(earn({ affinity: 100 }), 20, "기본");
-  assert.equal(earn({ affinity: 100, buffs: food }), 32, "든든함 +60%");
-  assert.equal(earn({ affinity: 100, buffs: long }), 32, "신남 +60%");
-  assert.equal(earn({ affinity: 100, buffs: [...food, ...long] }), 44, "더한다 — 100 + 60 + 60");
-  assert.equal(pointPercent(pet({ affinity: 100, buffs: [...food, ...long] })), 220, "최대 220");
+  assert.equal(earn({ affinity: 100, buffs: food }), 36, "든든함 포인트 +80%");
+  assert.equal(earn({ affinity: 100, buffs: long }), 26, "신남 포인트 +30%");
+  assert.equal(earn({ affinity: 100, buffs: [...food, ...long] }), 42, "더한다 — 100 + 80 + 30");
+  assert.equal(pointPercent(pet({ affinity: 100, buffs: [...food, ...long] })), 210, "최대 210");
   assert.equal(earn({ affinity: 100, fullness: 30 }), 14, "배고픔 −30%");
   assert.equal(earn({ affinity: 100, fullness: 10 }), 8, "매우 배고픔 −60%");
   assert.equal(earn({ affinity: 100, boredom: 60 }), 18, "심심해 −10%");
@@ -251,17 +254,17 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   // 1P 간격 — 120초 ÷ (1 + 친밀도/100) ÷ 배율. 파티 상세 `포인트 적립` 줄이 보인다 (2026-10-10)
   assert.deepEqual(
     [pet({ affinity: 0 }), pet({ affinity: 50 }), pet({ affinity: 100 }), pet({ affinity: 100, buffs: long }), pet({ affinity: 100, buffs: [...food, ...long] }), pet({ affinity: 100, fullness: 10 })].map(pointIntervalMs),
-    [120_000, 80_000, 60_000, 37_500, 27_273, 150_000],
+    [120_000, 80_000, 60_000, 46_154, 28_571, 150_000],
   );
-  assert.equal(earn({ affinity: 100, fullness: 30, buffs: long }), 26, "신남이 배고픔을 메운다 — 100 + 60 − 30");
-  assert.equal(earn({ affinity: 0, buffs: food }), 16, "친밀도 0 도 버프를 받는다 — 10P × 1.6");
+  assert.equal(earn({ affinity: 100, fullness: 30, buffs: long }), 20, "신남이 배고픔을 메운다 — 100 + 30 − 30");
+  assert.equal(earn({ affinity: 0, buffs: food }), 18, "친밀도 0 도 버프를 받는다 — 10P × 1.8");
   const working = seed({ affinity: 100 });
   applyTime(working, 20 * MIN, T0 + 20 * MIN, { workMs: 20 * MIN });
   assert.equal(working.points.balance, 20, "작업해도 포인트는 같다");
   process.stdout.write("(17) 포인트 적립 배율 · 버프와 손해를 더한다  ok\n");
 }
 
-// (18) 다른 프리셋 — 포인트만 0.2배, 버프·손해 없음. 나머지 시간은 멈춘다 (2026-10-05 사용자 결정 "프리셋의 포켓몬들은 0.2배")
+// (18) 다른 프리셋 — 포인트만 0.2배 + 친밀도 ÷ 1000, 버프·손해 없음. 나머지 시간은 멈춘다 (2026-10-05 사용자 결정 "프리셋의 포켓몬들은 0.2배", 2026-10-11 친밀도 반영)
 {
   const other = (over: Partial<PetV3> = {}): SaveV3 => {
     const s = empty(T0);
@@ -274,7 +277,7 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const food = [{ kind: "premium-food" as const, remainMs: 2 * HOUR }];
   const a = other({ affinity: 100, boredom: 90, fullness: 30, buffs: food });
   applyTime(a, 20 * MIN, T0 + 20 * MIN);
-  assert.equal(a.points.balance, 4, "친밀도 100 은 20분 20P × 0.2 — 버프·손해 없음");
+  assert.equal(a.points.balance, 6, "친밀도 100 은 20분 20P × 0.3 — 버프·손해 없음");
   assert.equal(a.pets[0]?.fullness, 30, "만복도는 멈춘다");
   assert.equal(a.pets[0]?.boredom, 90, "심심함은 멈춘다");
   assert.equal(a.pets[0]?.buffs[0]?.remainMs, 2 * HOUR, "버프 시간은 멈춘다");
@@ -282,6 +285,9 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   applyTime(b, HOUR, T0 + HOUR, { workMs: HOUR });
   assert.equal(b.points.balance, 6, "한 시간 30P × 0.2 — 작업해도 같다");
   assert.equal(b.pets[0]?.affinity, 0, "친밀도는 멈춘다");
+  const half = other({ affinity: 50 });
+  applyTime(half, HOUR, T0 + HOUR);
+  assert.equal(half.points.balance, 11, "친밀도 50 은 한 시간 45P × 0.25");
   // 박스는 그대로 0 — 프리셋에 없는 개체
   const box = empty(T0);
   box.pets.push(pet({ id: "p3", affinity: 100 }));

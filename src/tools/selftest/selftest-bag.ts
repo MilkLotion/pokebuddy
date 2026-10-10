@@ -347,15 +347,15 @@ process.stdout.write("selftest-bag: 돌봄 통과 (밥·놀이·쿨타임)\n");
   process.stdout.write("(19) 놀아주기 심심함 −50 · 버프 없음 · 옛 저장  ok\n");
 }
 
-// (20) 심심함 — 시간당 +30 으로 쌓이고, 장난감 신남이 남은 동안은 쌓이지 않는다
+// (20) 심심함 — 시간당 +30 으로 쌓인다. 장난감 신남 동안에도 쌓인다 (2026-10-11 사용자 "신남버프는 남아있는데, 심심함은 오르게")
 {
   const s = seed();
   applyTimeForTest(s, 60 * 60_000);
   assert.equal(s.pets[0]?.boredom, 30, "1시간에 +30");
   const toyed = seed({ buffs: [{ kind: "long-play", remainMs: 2 * 60 * 60_000 }] });
   applyTimeForTest(toyed, 60 * 60_000);
-  assert.equal(toyed.pets[0]?.boredom, 0, "장난감 신남 동안 쌓이지 않는다");
-  process.stdout.write("(20) 심심함 증가 · 장난감 동안 멈춤  ok\n");
+  assert.equal(toyed.pets[0]?.boredom, 30, "장난감 신남 동안에도 쌓인다");
+  process.stdout.write("(20) 심심함 증가 · 장난감 동안에도  ok\n");
 }
 
 // (21) 든든함(프리미엄먹이)이 남은 동안 만복도가 줄지 않는다

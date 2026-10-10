@@ -58,17 +58,18 @@ out("0 supabase/functions/_shared 가 최신");
   out("1 정상 진행 — 위반 없음");
 }
 
-// 2. 포인트 — 한 시간 1,080P(적용한 프리셋 6마리 × 친밀도 2 × 적립 배율 2.2 + 다른 프리셋 24마리 × 친밀도 2 × 0.2. 2026-10-05 돌봄 개편, 그 전 1,296P),
+// 2. 포인트 — 한 시간 1,224P(적용한 프리셋 6마리 × 친밀도 2 × 적립 배율 2.2(옛 앱) + 다른 프리셋 24마리 × 친밀도 2 × 0.3. 2026-10-11 다른 프리셋 친밀도 반영, 그 전 1,080P · 2026-10-05 전 1,296P),
 //    짧은 틈의 지연 여유, 99999, 우편, 72시간
 {
   const prev = base();
-  assert.equal(data.rules.otherPresetEarn, 9.6, "다른 프리셋 24마리 × 친밀도 2 × 0.2");
+  assert.equal(data.rules.otherPresetEarn, 14.4, "다른 프리셋 24마리 × 친밀도 2 × 0.3");
+  assert.equal(data.rules.maxEarnFactor, 4.4, "포인트 적립 배율 최대는 옛 앱의 2.2 아래로 내리지 않는다");
   const ok = clone(prev);
-  ok.points.balance += 1150;
-  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 1,150P 는 상한 안(지연 여유 포함)");
+  ok.points.balance += 1300;
+  assert.deepEqual(rules(prev, ok, ctx(HOUR)), [], "한 시간 1,300P 는 상한 안(지연 여유 포함)");
   const tooFast = clone(prev);
-  tooFast.points.balance += 1250;
-  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 1,250P 는 위반");
+  tooFast.points.balance += 1400;
+  assert.deepEqual(rules(prev, tooFast, ctx(HOUR)), ["points"], "한 시간 1,400P 는 위반");
   const quick = clone(prev);
   quick.points.balance += 15; // 파일 쓰기 지연(시간당 1,080P 의 61초 몫 약 18P 안) — 서버 틈은 1초인데 저장은 15초 뒤진 상태에서 온다
   assert.deepEqual(rules(prev, quick, ctx(1_000)), [], "짧은 틈의 지연 여유");
@@ -76,7 +77,7 @@ out("0 supabase/functions/_shared 가 최신");
   over.points.balance = 99_999;
   assert.deepEqual(rules(prev, over, ctx(HOUR)), ["points"], "99999 는 위반");
   const long = clone(prev);
-  long.points.balance += 1080 * 72;
+  long.points.balance += 1224 * 72;
   assert.deepEqual(rules(prev, long, ctx(72 * HOUR)), [], "72시간 진행");
   out("2 포인트 — 상한·지연 여유·99999·72시간");
 }
@@ -610,8 +611,13 @@ out("0 supabase/functions/_shared 가 최신");
   care.prev.points.balance = 0;
   care.next.points.balance = 0;
   assert.deepEqual(rules(care.prev, care.next, ctx(60_000)), ["mega-care"], "돌봄 횟수가 쿨타임·장난감보다 많다");
-  care.prev.bag.toy = 40;
+  // 장난감은 한 번에 놀아주기 2회로 센다 (2026-10-11 MEGA_RULES.toyCare) — 가진 장난감과 틈에 번 포인트로 살 수 있는 장난감을 합쳐 2배로 센다. 이 틈에서는 가진 장난감 8개부터 통과한다
+  care.prev.bag.toy = 7;
   delete care.next.bag.toy;
+  assert.deepEqual(rules(care.prev, care.next, ctx(60_000)), ["mega-care"], "장난감 7개로는 모자란다");
+  care.prev.bag.toy = 8;
+  assert.deepEqual(rules(care.prev, care.next, ctx(60_000)).includes("mega-care"), false, "장난감 8개면 통과 — 1회로 세면 모자란다");
+  care.prev.bag.toy = 40;
   assert.deepEqual(rules(care.prev, care.next, ctx(60_000)).includes("mega-care"), false, "장난감 40개를 썼으면 통과");
   const stone = pair(mk(24 * HOUR - HOUR, 99), mk(24 * HOUR, 100, true));
   assert.deepEqual(rules(stone.prev, stone.next, ctx(HOUR)), [], "조건을 채운 새 메가스톤");

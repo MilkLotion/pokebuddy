@@ -56,7 +56,7 @@ export interface PetView {
   playBlock: "cooldown" | null; // 놀아주기를 막는 까닭 (src/state/care-block.ts playBlock)
   feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
   playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 3분" (밥 주기와 같은 꼴, 94 항목 5-1)
-  longPlay: boolean; // 신남(장난감)이 켜져 있다 — 그동안 심심함이 쌓이지 않는다
+  longPlay: boolean; // 신남(장난감)이 켜져 있다
   buffs: ViewBuff[]; // 켜진 버프만 — buffNames 와 같은 순서
   buffNames: string[]; // 켜진 버프의 화면 이름 — 든든함 · 신남 순서
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다

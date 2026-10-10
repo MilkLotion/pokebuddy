@@ -1,5 +1,5 @@
 {
- "hash": "ff5dc327555599b2",
+ "hash": "f9a133a278940b5f",
  "items": {
   "basic-food": {
    "price": null,
@@ -5315,7 +5315,7 @@
   "pointMs": 120000,
   "maxPartySlots": 6,
   "maxEarnFactor": 4.4,
-  "otherPresetEarn": 9.6,
+  "otherPresetEarn": 14.4,
   "findPointsMax": 10,
   "mintRefund": 100,
   "sellRatio": 0.6,
@@ -5326,9 +5326,10 @@
   "megaCare": 30,
   "petPartyMs": 360000000,
   "megaCareMax": 100,
+  "megaToyCare": 2,
   "careCountPerHour": 12,
   "megaAffinity": 100,
-  "affinityPerHour": 13.200000000000001,
+  "affinityPerHour": 16.200000000000003,
   "carePerHour": 66,
   "careOnce": 11,
   "toyAffinity": 5,

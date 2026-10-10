@@ -57,8 +57,8 @@ export function activeBuffs(buffs: BuffV3[]): BuffKind[] {
   return [...new Set(buffs.filter((b) => b.remainMs > 0).map((b) => b.kind))];
 }
 
-// 버프의 추가 배율을 더한다. 기준 100 에 든든함 +60, 신남 +60
-export const buffPercent = (buffs: BuffV3[]): number => 100 + activeBuffs(buffs).reduce((sum, kind) => sum + (TIME_RULES.buffBonusPercent[kind] ?? 0), 0);
+// 친밀도 속도의 버프 배율 — 기준 100 에 든든함 +20, 신남 +150 을 더한다 (포인트는 pointParts 가 TIME_RULES.buffPointPercent 를 쓴다)
+export const buffPercent = (buffs: BuffV3[]): number => 100 + activeBuffs(buffs).reduce((sum, kind) => sum + (TIME_RULES.buffAffinityPercent[kind] ?? 0), 0);
 
 // 친밀도 증가 배율(백분율) — 버프를 더한 값에 만복도 구간의 디버프를 곱한다 (2026-10-05 "친밀도 오르는 비율은 기존처럼 유지")
 export const affinityPercent = (pet: PetV3): number =>
@@ -70,7 +70,7 @@ export type PointPartKind = BuffKind | "hungry" | "starving" | BoredStep;
 export function pointParts(pet: PetV3): { kind: PointPartKind; percent: number }[] {
   const parts: { kind: PointPartKind; percent: number }[] = [];
   for (const kind of activeBuffs(pet.buffs)) {
-    const percent = TIME_RULES.buffBonusPercent[kind] ?? 0;
+    const percent = TIME_RULES.buffPointPercent[kind] ?? 0;
     if (percent > 0) parts.push({ kind, percent });
   }
   const zone = zoneOf(pet.fullness);
@@ -88,6 +88,9 @@ export const pointPercent = (pet: PetV3): number =>
 // 이 개체가 1P 를 얻는 간격(ms) — applyTime 의 가중 시간 식(흐른 시간 × (100 + 친밀도) × 적립 배율 / 10000)을 거꾸로 푼 값
 // 파티 상세 기기 창 `포인트 적립` 줄이 "38초마다 1P" 로 보인다 (2026-10-10 사용자 "D로 진행", src/view/device-pet.ts careLineOf)
 export const pointIntervalMs = (pet: PetV3): number => Math.round((TIME_RULES.pointGainMs * 10_000) / ((100 + pet.affinity) * pointPercent(pet)));
+
+// 적용하지 않은 프리셋 개체의 적립 배율(백분율) — 20 + 친밀도 ÷ 10. 버프·손해는 받지 않는다 (docs/specs/balance.md "적립 배율")
+export const otherPresetPercent = (affinity: number): number => TIME_RULES.otherPresetPointPercent + affinity / TIME_RULES.otherPresetAffinityDiv;
 
 // 남은 시간을 줄인다. 0 아래로 내려가지 않는다
 const countDown = (remain: number, elapsed: number): number => Math.max(0, remain - elapsed);
@@ -136,9 +139,9 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
   let pointWeighted = 0;
 
   for (const pet of save.pets) {
-    // 다른 프리셋 — 포인트만 0.2배로 쌓는다. 버프·손해는 받지 않는다(멈춘 버프·게이지가 계속 남기 때문)
+    // 다른 프리셋 — 포인트만 친밀도에 따른 배율(20~30%)로 쌓는다. 버프·손해는 받지 않는다(멈춘 버프·게이지가 계속 남기 때문)
     if (others.has(pet.id)) {
-      pointWeighted += Math.round((elapsed * (100 + pet.affinity) * TIME_RULES.otherPresetPointPercent) / 10_000);
+      pointWeighted += Math.round((elapsed * (100 + pet.affinity) * otherPresetPercent(pet.affinity)) / 10_000);
       continue;
     }
     if (!inParty.has(pet.id)) continue;
@@ -157,14 +160,12 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
       }
     }
 
-    // 심심함 — 흐른 시간에 에이전트 작업 시간을 한 번 더 더해 쌓는다. 장난감 신남(long-play)이 남은 동안은 쌓이지 않는다
-    if (!hasBuff(pet, "long-play")) {
-      pet.boredomProgressMs += elapsed + work;
-      const rise = Math.floor(pet.boredomProgressMs / BOREDOM_RULES.riseMs);
-      if (rise > 0) {
-        pet.boredomProgressMs -= rise * BOREDOM_RULES.riseMs;
-        pet.boredom = Math.min(PET_RULES.statMax, pet.boredom + rise);
-      }
+    // 심심함 — 흐른 시간에 에이전트 작업 시간을 한 번 더 더해 쌓는다. 장난감 신남 동안에도 쌓인다 (2026-10-11 사용자 "신남버프는 남아있는데, 심심함은 오르게")
+    pet.boredomProgressMs += elapsed + work;
+    const rise = Math.floor(pet.boredomProgressMs / BOREDOM_RULES.riseMs);
+    if (rise > 0) {
+      pet.boredomProgressMs -= rise * BOREDOM_RULES.riseMs;
+      pet.boredom = Math.min(PET_RULES.statMax, pet.boredom + rise);
     }
 
     // 친밀도 — 버프와 디버프를 반영한 가중 시간으로 쌓는다. 줄어든 만복도를 기준으로 본다

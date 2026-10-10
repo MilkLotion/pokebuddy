@@ -21,9 +21,10 @@ import { MEGA_RULES, RIDER_ITEM, SHIFT_RULES } from "../../dex/rules";
 import { speciesSlugs } from "../../dex/species";
 import { EGG_RULES } from "../../egg/rules";
 import { FIND_RULES } from "../../find/rules";
-import { PARTY_RULES } from "../../party/rules";
+import { PARTY_RULES, PET_RULES } from "../../party/rules";
 import { SHOP_RULES, evoItemPriceOf } from "../../shop/rules";
 import { CARE_RULES, TIME_RULES } from "../../state/rules";
+import { otherPresetPercent } from "../../state/time";
 import { CLOCK_RULES } from "../../main/app/clock";
 import { writeTextIfChanged } from "./write-text";
 
@@ -38,6 +39,8 @@ const lf = (t: string): string => t.replace(/\r\n/g, "\n");
 // 메가스톤 돌봄 조건의 옛 값 — 2026-10-08 100 → 70, 2026-10-11 놀아주기 30 으로 내렸다. 옛 앱·옛 저장에 31~100 이 있다.
 // 서버의 돌봄 횟수 상한(mega-care)은 이 값까지 받는다. 새 메가스톤 판정(mega)은 지금 조건(MEGA_RULES.care)을 쓴다
 const MEGA_CARE_BEFORE = MEGA_RULES.careMax;
+// 옛 앱의 포인트 적립 배율 최대 — 2026-10-05 ~ 10-11 든든함 +60 · 신남 +60. 서버 상한(maxEarnFactor)은 이보다 낮추지 않는다
+const LEGACY_POINT_TOP = 220;
 
 export function buildVerifyFiles(): Record<string, string> {
   const items: Record<string, { price: number | null; effect: unknown; amount: number }> = {};
@@ -99,9 +102,11 @@ export function buildVerifyFiles(): Record<string, string> {
   // 이상한사탕 — 한 레벨 간격의 최대
   let rareCandyExp = 0;
   for (const r of rates) for (let l = 1; l < 100; l++) rareCandyExp = Math.max(rareCandyExp, expTable[r]![l]! - expTable[r]![l - 1]!);
-  // 친밀도 시간 적립 최대 — 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
-  const buffTop = 100 + TIME_RULES.buffBonusPercent["premium-food"] + TIME_RULES.buffBonusPercent["long-play"];
-  const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (buffTop / 100);
+  // 친밀도 시간 적립 최대 — 친밀도 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
+  const affinityTop = 100 + TIME_RULES.buffAffinityPercent["premium-food"] + TIME_RULES.buffAffinityPercent["long-play"];
+  const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (affinityTop / 100);
+  // 포인트 적립 배율 최대 — 포인트 버프 합. 옛 앱(2026-10-05 ~ 10-11, 둘 다 +60 으로 220)의 저장도 받도록 그보다 낮추지 않는다
+  const pointTop = Math.max(LEGACY_POINT_TOP, 100 + TIME_RULES.buffPointPercent["premium-food"] + TIME_RULES.buffPointPercent["long-play"]);
   // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩. 프리미엄먹이(+8)는 밥 주기 쿨타임을 같이 쓰므로 밥 몫의 최대로 센다 (2026-10-05 돌봄 개편)
   const feedTop = Math.max(BAG_RULES.feedAffinity, BAG_RULES.premiumAffinity);
   const carePerHour = (3_600_000 / BAG_RULES.feedCooldownMs) * feedTop + (3_600_000 / CARE_RULES.playCooldownMs) * BAG_RULES.playAffinity;
@@ -157,9 +162,9 @@ export function buildVerifyFiles(): Record<string, string> {
       pointMs: TIME_RULES.pointGainMs,
       maxPartySlots: PARTY_RULES.total,
       // 친밀도 배율(2) × 포인트 적립 배율 최대(100 + 든든함 + 신남) — src/state/time.ts pointPercent. 손해는 줄이기만 한다 (2026-10-05 돌봄 개편, 그 전에는 기분 최고까지 2.8)
-      maxEarnFactor: (2 * buffTop) / 100,
-      // 다른 프리셋 — (최대 프리셋 수 − 1) × 6마리 × 친밀도 배율(2) × 적립 배율. 버프·손해는 받지 않는다 (src/state/time.ts applyTime)
-      otherPresetEarn: ((PARTY_RULES.presets.max - 1) * PARTY_RULES.total * 2 * TIME_RULES.otherPresetPointPercent) / 100,
+      maxEarnFactor: (2 * pointTop) / 100,
+      // 다른 프리셋 — (최대 프리셋 수 − 1) × 6마리 × 친밀도 배율(2) × 적립 배율 최대(친밀도 100). 버프·손해는 받지 않는다 (src/state/time.ts otherPresetPercent)
+      otherPresetEarn: ((PARTY_RULES.presets.max - 1) * PARTY_RULES.total * 2 * otherPresetPercent(PET_RULES.statMax)) / 100,
       findPointsMax: FIND_RULES.points.max,
       mintRefund: MINT_REFUND_EACH,
       sellRatio: SHOP_RULES.sellRate,
@@ -172,6 +177,7 @@ export function buildVerifyFiles(): Record<string, string> {
       megaCare: MEGA_RULES.care,
       petPartyMs: Math.max(0, ...Object.values(partyGoalsMs())),
       megaCareMax: Math.max(MEGA_RULES.care, MEGA_CARE_BEFORE),
+      megaToyCare: MEGA_RULES.toyCare,
       careCountPerHour: 3_600_000 / BAG_RULES.feedCooldownMs + 3_600_000 / CARE_RULES.playCooldownMs,
       megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,

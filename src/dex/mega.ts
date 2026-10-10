@@ -109,10 +109,11 @@ export function tickMega(pet: PetV3, elapsedMs: number, opts?: DexOptions): void
 }
 
 // 친밀도 100 뒤 놀아주기 한 번 — 놀아주기·장난감이 성공한 뒤 부른다. 밥 주기는 세지 않는다 (2026-10-11)
-export function countCare(pet: PetV3, opts?: DexOptions): void {
+// times — 한 번에 세는 횟수. 장난감은 MEGA_RULES.toyCare(2)
+export function countCare(pet: PetV3, opts?: DexOptions, times = 1): void {
   if (!counting(pet, opts)) return;
   const mega = (pet.mega ??= { bondMs: 0, care: 0 });
-  mega.care = Math.min(MEGA_RULES.care, mega.care + 1);
+  mega.care = Math.min(MEGA_RULES.care, mega.care + times);
 }
 
 // 조건을 모두 채운 개체에 메가스톤을 준다. 새로 받은 개체의 식별자를 돌려준다. 종을 도감 기록에 적는다

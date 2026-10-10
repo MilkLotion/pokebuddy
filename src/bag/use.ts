@@ -5,6 +5,7 @@
 // 진화용 도구는 여기서 다루지 않는다. 진화는 따로 계약이 있다.
 import type { DexOptions } from "../dex/data.js";
 import { countCare } from "../dex/mega.js";
+import { MEGA_RULES } from "../dex/rules.js";
 import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { isNatureId } from "../dex/natures.js";
 import { MINT_ID, MINT_RETIRED } from "./mint.js";
@@ -91,7 +92,7 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       pet.fullnessProgressMs = 0;
       pet.feedCooldownMs = BAG_RULES.feedCooldownMs;
       if (item.effect === "fullness-full-buff") {
-        // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(그동안 만복도가 줄지 않는다) + 친밀도 +8 (2026-10-05 사용자 결정 — 돌봄 개편)
+        // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(포인트 +80%·친밀도 +20%, 그동안 만복도가 줄지 않는다) + 친밀도 +8 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기)
         setBuff(pet, "premium-food");
         addAffinity(pet, BAG_RULES.premiumAffinity - BAG_RULES.feedAffinity); // 아래 밥 주기 몫(+2)과 합쳐 +8
         // 프리미엄먹이는 밥 주기 누적 기록에 든다(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6). 메가진화 조건에는 세지 않는다 — 2026-10-11 놀아주기 30회로 바꿈.
@@ -103,14 +104,14 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       return done({ fullness: pet.fullness });
     }
     case "play-buff": {
-      // 장난감 — 심심함 0 + 신남 +60% 2시간(그동안 심심함이 쌓이지 않는다) + 친밀도 +5 (2026-10-05 사용자 결정 — 돌봄 개편)
+      // 장난감 — 심심함 0 + 신남 2시간(포인트 +30%·친밀도 +150%, 심심함은 다시 쌓인다) + 친밀도 +5 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기)
       setBuff(pet, "long-play");
       addAffinity(pet, BAG_RULES.toyAffinity);
       pet.boredom = 0;
       pet.boredomProgressMs = 0;
       pet.daily.plays += 1;
-      // 장난감은 놀아주기 횟수에 든다 — 메가진화 조건의 놀아주기 30회에도 센다 (2026-10-04 사용자 결정 "센다", 94 항목 9-3-6)
-      countCare(pet, opts);
+      // 장난감은 놀아주기 횟수에 든다 — 메가진화 조건의 놀아주기 30회에는 한 번에 2회로 센다 (2026-10-04 사용자 결정 "센다", 2026-10-11 "2오르게")
+      countCare(pet, opts, MEGA_RULES.toyCare);
       save.totals.played += 1;
       return done({});
     }

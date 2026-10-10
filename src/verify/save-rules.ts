@@ -84,6 +84,7 @@ export interface VerifyData {
     petPartyMs?: number; // 파티 시간 업적(pet-party)의 가장 큰 기준. 없으면 pet-party 를 보지 않는다
     megaCare?: number; // 메가스톤 조건의 돌봄 횟수 (MEGA_RULES.care). 없으면 mega-care 를 보지 않는다
     megaCareMax?: number; // 돌봄 횟수의 상한 — 조건을 내려도 옛 앱·옛 저장이 센 값까지 받는다. 없으면 megaCare
+    megaToyCare?: number; // 장난감 한 번이 세는 놀아주기 횟수 (MEGA_RULES.toyCare). 없으면 1
     careCountPerHour?: number; // 밥 주기·놀아주기 쿨타임 기준 한 시간 최대 횟수 — 장난감은 따로 센다
     affinityPerHour: number; // 시간 적립 최대(버프 반영)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
@@ -630,7 +631,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
       // 새 메가스톤 — 받은 개체는 제안이 메가스톤을 지녔거나 같은 틈에 조건을 채웠어야 한다. 그 밖은 조건을 채웠어야 한다
       if (p.megaStone && fresh && !(o?.megaStone) && (p.megaBond < r.megaBondMs || p.megaCare < r.megaCare)) add("mega", 1, 0, p.id);
     }
-    add("mega-care", careOver, toyBudget); // 쿨타임을 넘는 몫은 장난감으로 놀아 줬어야 한다 — 장난감은 모든 개체가 함께 쓴다
+    add("mega-care", careOver, toyBudget * (r.megaToyCare ?? 1)); // 쿨타임을 넘는 몫은 장난감으로 놀아 줬어야 한다 — 장난감은 모든 개체가 함께 쓰고, 한 번에 megaToyCare 회로 센다
   }
 
   // new-pets · pet-id · shiny(새 개체)

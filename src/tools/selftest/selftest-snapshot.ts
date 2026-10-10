@@ -86,8 +86,8 @@ function seed(): SaveV3 {
   Object.assign(p2, { buffs: [] }); // 시험 저장의 둘째 개체는 든든함이 있다 — 손해만 보려고 지운다
   const v = snapshotView(s, T0);
   assert.deepStrictEqual(mix(v.party.slots[0]?.pet?.care), {
-    bonus: 110,
-    parts: [{ kind: "premium-food", name: "든든함", bonus: 60 }, { kind: "long-play", name: "신남", bonus: 60 }, { kind: "bored", name: "심심해", bonus: -10 }],
+    bonus: 100,
+    parts: [{ kind: "premium-food", name: "든든함", bonus: 80 }, { kind: "long-play", name: "신남", bonus: 30 }, { kind: "bored", name: "심심해", bonus: -10 }],
   }, "든든함 · 신남 · 심심해 순서 — 저장 순서와 상관없다");
   assert.deepStrictEqual(mix(v.party.slots[1]?.pet?.care), { bonus: -30, parts: [{ kind: "hungry", name: "배고픔", bonus: -30 }] }, "만복도 30 은 배고픔 −30");
   process.stdout.write("(3b) 포인트 적립 배율 내역  ok\n");
