@@ -94,9 +94,8 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
         // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(그동안 만복도가 줄지 않는다) + 친밀도 +8 (2026-10-05 사용자 결정 — 돌봄 개편)
         setBuff(pet, "premium-food");
         addAffinity(pet, BAG_RULES.premiumAffinity - BAG_RULES.feedAffinity); // 아래 밥 주기 몫(+2)과 합쳐 +8
-        // 프리미엄먹이는 밥 주기 횟수에 든다 — 메가진화 조건의 돌봄 횟수와 누적 기록(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6).
+        // 프리미엄먹이는 밥 주기 누적 기록에 든다(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6). 메가진화 조건에는 세지 않는다 — 2026-10-11 놀아주기 30회로 바꿈.
         // 기본먹이는 밥 주기 명령(src/state/care.ts feedPet)이 센다 — 같은 길을 지나 여기서 세면 두 번이 된다
-        countCare(pet, opts);
         save.totals.fed += 1;
       }
       addAffinity(pet, BAG_RULES.feedAffinity);
@@ -110,7 +109,7 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
       pet.boredom = 0;
       pet.boredomProgressMs = 0;
       pet.daily.plays += 1;
-      // 장난감은 놀아주기 횟수에 든다 (2026-10-04 사용자 결정 "센다", 94 항목 9-3-6)
+      // 장난감은 놀아주기 횟수에 든다 — 메가진화 조건의 놀아주기 30회에도 센다 (2026-10-04 사용자 결정 "센다", 94 항목 9-3-6)
       countCare(pet, opts);
       save.totals.played += 1;
       return done({});

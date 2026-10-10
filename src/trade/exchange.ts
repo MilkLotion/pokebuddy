@@ -17,6 +17,8 @@ import { locatePet } from "../party/locate.js";
 import { newPet, nextPetId } from "../party/create.js";
 import { recordDex } from "../dex/record.js";
 import { dropMissingBattlePets } from "../battle/party.js";
+import { megaFormsOf } from "../dex/mega.js";
+import { MEGA_RULES } from "../dex/rules.js";
 import { snapSize } from "../party/size.js";
 import type { DexOptions } from "../dex/data";
 import type { Gender, NatureId } from "../shared/species";
@@ -38,6 +40,9 @@ export interface TradePet {
   mood?: number;
   stage: number;
   evolved: string[];
+  // 메가스톤 — 지닌 개체만. 진행(파티 시간·돌봄 횟수)도 함께 옮겨 받는 쪽 서버 검증이 새 메가스톤으로 보지 않게 한다. 모습(on)은 옮기지 않는다 — 원래 모습으로 받는다
+  // (2026-10-11 사용자 "고유개체에 메가진화했냐안했냐로 … 교환해도 유지되게" → B안 "그렇게 진행"). 옛 판 앱은 이 값을 모른다 — 메가스톤 없이 받는다
+  mega?: { stone: true; bondMs: number; care: number };
 }
 
 export type OfferFailure = ReasonOf<"no-pet" | "single" | "locked">;
@@ -76,6 +81,7 @@ export function offerOf(pet: PetV3): TradePet {
     mood: TRADE_LEGACY_MOOD,
     stage: pet.stage,
     evolved: [...pet.evolved],
+    ...(pet.mega?.stone === true ? { mega: { stone: true as const, bondMs: pet.mega.bondMs, care: pet.mega.care } } : {}),
   };
 }
 
@@ -108,11 +114,17 @@ export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; p
   // 레벨과 경험치가 어긋나면 레벨을 믿고 경험치를 그 레벨의 시작으로 맞춘다
   const rate = growthOf(species, opts);
   const exp = levelFor(rate, raw.exp) === raw.level ? raw.exp : expForLevel(rate, raw.level);
+  // 메가스톤 — 메가 모습이 있는 종이고 조건(레벨·친밀도)을 채웠을 때만 받는다. 모양이 틀리면 메가스톤 없이 받는다(교환 자체는 막지 않는다)
+  const m = raw.mega;
+  const mega = isObj(m) && m.stone === true && intIn(m.bondMs, 0, MEGA_RULES.bondMs) && intIn(m.care, 0, MEGA_RULES.careMax)
+    && megaFormsOf(species, opts).length > 0 && raw.level >= MEGA_RULES.level && (raw.affinity as number) >= MEGA_RULES.affinity
+    ? { stone: true as const, bondMs: m.bondMs, care: m.care } : undefined;
   return {
     ok: true,
     pet: {
       species, shiny: raw.shiny, nature: raw.nature as NatureId, ...(gender ? { gender } : {}), size: snapSize(raw.size), level: raw.level, exp, // 크기는 도트 배율 — 가장 가까운 단계로 맞춘다
       affinity: raw.affinity, fullness: raw.fullness, stage: raw.stage, evolved: [...(evolved as string[])],
+      ...(mega ? { mega } : {}),
     },
   };
 }
@@ -158,6 +170,7 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
     ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, gender: got.gender ?? legacyGender({ id, species: got.species, since: now }, opts), now }),
     size: got.size, level: got.level, exp: got.exp, affinity: got.affinity,
     fullness: got.fullness, stage: got.stage, evolved: [...got.evolved],
+    ...(got.mega ? { mega: { bondMs: got.mega.bondMs, care: got.mega.care, stone: true } } : {}), // 원래 모습으로 받는다 — on 은 두지 않는다
   };
 
   // 받은 개체는 보낸 개체의 자리를 물려받는다 — 적용한 프리셋(파티), 다른 프리셋, 박스 (src/party/presets.ts locatePet)
@@ -182,6 +195,7 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
   dropMissingBattlePets(save); // 보낸 개체의 배틀 파티 칸은 빈 칸이 된다 — 받은 개체는 물려받지 않는다
   if (save.starterPetId === pending.petId) save.starterPetId = null;
   recordDex(save, pet.species, pet.shiny);
+  if (pet.mega?.stone) { const opened = (save.dex.megaOpened ??= []); if (!opened.includes(pet.species)) opened.push(pet.species); } // 받은 쪽 도감에도 메가스톤을 적는다 (src/dex/mega.ts settleMega 와 같은 기록)
   save.counts.traded += 1; // 교환 업적이 센다
   save.trade = { pending: null };
   return { ok: true, applied: true, newPetId: id, where };

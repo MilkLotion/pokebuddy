@@ -81,7 +81,7 @@ function drawGoal(portrait: HTMLElement, stone: HTMLElement, goal: NonNullable<P
     ["친밀도", goal.affinity, (n) => String(n)],
     ["레벨", goal.level, (n) => `Lv.${n}`],
     ["파티에서 함께", goal.hours, (n) => `${n}`],
-    ["밥 주기·놀아주기", goal.care, (n) => `${n}`],
+    ["놀아주기", goal.care, (n) => `${n}`],
   ];
   const unit = ["", "", "시간", "회"];
   rows.forEach(([label, [now, need], show], i) => {

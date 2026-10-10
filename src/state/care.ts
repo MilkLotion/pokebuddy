@@ -63,20 +63,19 @@ export function checkCare(save: SaveV3, petId: string, kind: CareKind): { ok: tr
 
 export type FeedResult = Outcome<UseFailure | ReasonOf<"not-in-party">> & Omit<UseResult, "ok" | "reason">;
 
-// 밥 주기 명령 — 파티 개체만. 메가진화 조건의 돌봄 횟수와 누적 기록(첫 돌봄 튜토리얼이 "이미 돌봤다"를 본다)을 센다
+// 밥 주기 명령 — 파티 개체만. 누적 기록(첫 돌봄 튜토리얼이 "이미 돌봤다"를 본다)을 센다
 export function feedPet(save: SaveV3, petId: string, opts?: DexOptions): FeedResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (pet && !isInParty(save, petId)) return { ok: false, reason: "not-in-party" };
   const res = applyFeed(save, petId, opts);
   if (!res.ok || !pet) return res;
-  countCare(pet, opts);
-  save.totals.fed += 1;
+  save.totals.fed += 1; // 밥 주기는 메가진화 조건에 세지 않는다 (2026-10-11 놀아주기 30회로 바꿈, src/dex/rules.ts MEGA_RULES.care)
   return res;
 }
 
 export type PlayWithResult = Outcome<PlayFailure | ReasonOf<"not-in-party">> & Omit<PlayResult, "ok" | "reason">;
 
-// 놀아주기 명령 — 파티 개체만. 돌봄 횟수와 누적 기록을 센다
+// 놀아주기 명령 — 파티 개체만. 메가진화 조건의 놀아주기 횟수와 누적 기록을 센다
 export function playWithPet(save: SaveV3, petId: string, opts?: DexOptions): PlayWithResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (pet && !isInParty(save, petId)) return { ok: false, reason: "not-in-party" };

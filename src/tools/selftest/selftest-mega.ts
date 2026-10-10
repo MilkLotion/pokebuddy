@@ -222,14 +222,14 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
 
 // (8) 명령 — pet.form 이 메가 모습을 켜고 끈다. 박스에 보관하면 같은 거래에서 풀린다. 돌봄이 횟수를 센다
 {
-  let save: SaveV3 = seed(pet({ mega: { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care - 2 } }));
+  let save: SaveV3 = seed(pet({ mega: { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care - 1 } }));
   let n = 0;
   const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
   const run = (name: string, args: unknown) => ex.run({ id: `t${(n += 1)}`, name, args });
   assert.equal(run("pet.form", { petId: "p1", species: "charizard-mega-x" }).ok, false, "메가스톤이 없으면 거절");
   save.pets[0]!.fullness = 50;
   assert.ok(run("feed", { petId: "p1" }).ok);
-  assert.equal(save.pets[0]?.mega?.care, MEGA_RULES.care - 1);
+  assert.equal(save.pets[0]?.mega?.care, MEGA_RULES.care - 1, "밥 주기는 세지 않는다 — 놀아주기 30회 (2026-10-11)");
   assert.equal(save.pets[0]?.mega?.stone, undefined);
   assert.ok(run("play", { petId: "p1" }).ok);
   assert.equal(save.pets[0]?.mega?.stone, true, "횟수를 채운 거래에서 메가스톤이 생긴다");
@@ -298,7 +298,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
 // (9b) 조건 말풍선 — 메가진화하는 종인데 메가스톤이 없는 개체만 조건과 진행을 받는다. 시간은 시간 단위 내림
 {
   const s = seed(
-    pet({ affinity: 100, level: 62, mega: { bondMs: 13.9 * 60 * 60_000, care: 42 } }),
+    pet({ affinity: 100, level: 62, mega: { bondMs: 13.9 * 60 * 60_000, care: 12 } }),
     pet({ id: "p2", species: "gengar", evolved: [], mega: { ...full, stone: true } }),
     pet({ id: "p3", species: "pikachu", evolved: [] }),
     pet({ id: "p4", species: "groudon", evolved: [], affinity: 30, level: 10 }),
@@ -306,7 +306,7 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   );
   const pets = snapshotView(s, T0).party.slots.map((x) => x.pet);
   const goalOf = (id: string) => pets.find((p) => p?.id === id)?.megaGoal;
-  assert.deepStrictEqual(goalOf("p1"), { kind: "mega", affinity: [100, MEGA_RULES.affinity], level: [62, MEGA_RULES.level], hours: [13, 24], care: [42, MEGA_RULES.care] });
+  assert.deepStrictEqual(goalOf("p1"), { kind: "mega", affinity: [100, MEGA_RULES.affinity], level: [62, MEGA_RULES.level], hours: [13, 24], care: [12, MEGA_RULES.care] });
   assert.equal(goalOf("p2"), undefined, "메가스톤을 지니면 조건 대신 메가진화 표식");
   assert.equal(goalOf("p3"), undefined, "메가진화하지 않는 종");
   assert.deepStrictEqual(goalOf("p4"), { kind: "primal", affinity: [30, 100], level: [10, 60], hours: [0, 24], care: [0, MEGA_RULES.care] }, "친밀도 100 전에는 시간·횟수가 0");
@@ -314,10 +314,10 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   process.stdout.write("(9b) 조건 말풍선 — 조건과 진행  ok\n");
 }
 
-// (9c) 조건을 100 → 70 으로 내렸다(2026-10-08) — 그 전에 센 71~99 회는 조건을 채운 것으로 본다. 진행 표시는 조건 값까지
+// (9c) 조건을 100 → 70(2026-10-08) → 놀아주기 30(2026-10-11)으로 내렸다 — 그 전에 센 31~100 회는 조건을 채운 것으로 본다. 진행 표시는 조건 값까지
 {
   const s = seed(pet({ affinity: 100, level: 62, mega: { bondMs: 0, care: 85 } }));
-  assert.deepStrictEqual(snapshotView(s, T0).party.slots[0]?.pet?.megaGoal?.care, [MEGA_RULES.care, MEGA_RULES.care], "85회는 70 / 70 으로 보인다");
+  assert.deepStrictEqual(snapshotView(s, T0).party.slots[0]?.pet?.megaGoal?.care, [MEGA_RULES.care, MEGA_RULES.care], "85회는 30 / 30 으로 보인다");
   s.pets[0]!.mega!.bondMs = MEGA_RULES.bondMs;
   assert.deepStrictEqual(grantStones(s), ["p1"], "시간을 채우면 85회로 메가스톤");
   process.stdout.write("(9c) 조건을 내리기 전에 센 횟수  ok\n");

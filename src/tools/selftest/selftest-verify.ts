@@ -627,7 +627,22 @@ out("0 supabase/functions/_shared 가 최신");
   assert.deepEqual(rules(early.prev, early.next, ctx(HOUR)), ["mega"], "파티 24시간 전에 생긴 메가스톤은 위반");
   const old = pair(mk(0, 0, true), mk(0, 0, true));
   assert.deepEqual(rules(old.prev, old.next, ctx(HOUR)), [], "이미 있던 메가스톤은 보지 않는다");
-  out("15 메가 — 파티 시간·돌봄 횟수·새 메가스톤");
+  // 교환으로 받은 메가스톤 — 제안이 메가스톤과 진행을 지녔으면 그 값에서 센다. 제안에 없으면 새 메가스톤 조건을 본다 (2026-10-11, src/trade/exchange.ts TradePet.mega)
+  const gengarExp = expForLevel(data.growth.gengar as Parameters<typeof expForLevel>[0], 70);
+  const megaOffer = { species: "gengar", shiny: false, nature: "hardy", gender: "male", size: 1, level: 70, exp: gengarExp, affinity: 100, fullness: 100, stage: 0, evolved: [], mega: { stone: true, bondMs: 24 * HOUR, care: MEGA_RULES.care } };
+  const tradedPrev = base();
+  const tradedMega = clone(tradedPrev);
+  tradedMega.pets.push(pet("p2", "gengar", { level: 70, exp: gengarExp, affinity: 100, mega: { bondMs: 24 * HOUR, care: MEGA_RULES.care, stone: true } }));
+  assert.deepEqual(rules(tradedPrev, tradedMega, ctx(60_000, { received: [megaOffer] })), [], "메가스톤을 지닌 제안을 받은 개체");
+  const { mega: _drop, ...plainMegaOffer } = megaOffer;
+  // 제안에 메가스톤이 없으면 진행이 0 에서 한 틈에 조건 값까지 늘어난 것이다 — mega-bond·mega-care 로 잡힌다
+  const noStone = rules(tradedPrev, tradedMega, ctx(60_000, { received: [plainMegaOffer] }));
+  assert.ok(noStone.includes("mega-bond"), `제안에 없던 메가스톤과 진행은 위반: ${noStone.join(",")}`);
+  // 진행 없이 메가스톤만 붙였으면 새 메가스톤 조건(mega)으로 잡힌다
+  const bare = clone(tradedPrev);
+  bare.pets.push(pet("p2", "gengar", { level: 70, exp: gengarExp, affinity: 100, mega: { bondMs: 0, care: 0, stone: true } }));
+  assert.ok(rules(tradedPrev, bare, ctx(60_000, { received: [plainMegaOffer] })).includes("mega"), "제안에 없던 메가스톤만 붙임은 위반");
+  out("15 메가 — 파티 시간·돌봄 횟수·새 메가스톤·교환으로 받은 메가스톤");
 }
 
 // 15b. 개굴닌자 파티 시간 — 개체 파티 시간(partyMs)의 증가는 틈 이하, 값은 업적 기준(100시간) 이하. 지우의모자로 종이 바뀌어도 값은 남는다

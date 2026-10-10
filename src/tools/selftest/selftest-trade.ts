@@ -211,4 +211,30 @@ const eevee: TradePet = {
   process.stdout.write("(9) 개체 지문·규약  ok\n");
 }
 
-process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령·개발 실행 판정·개체 지문)\n");
+// (10) 메가스톤은 교환을 따라간다 — 진행과 함께 옮기고, 받은 쪽은 원래 모습·도감 기록. 조건 밖이면 메가스톤 없이 받는다 (2026-10-11 사용자 "교환해도 유지되게")
+{
+  const s = seed();
+  const p1 = s.pets[0]!;
+  p1.species = "charizard"; p1.level = 70; p1.affinity = 100;
+  p1.mega = { bondMs: 90_000_000, care: 80, stone: true, on: "charizard-mega-x" };
+  const snap = offerOf(p1);
+  assert.deepStrictEqual(snap.mega, { stone: true, bondMs: 90_000_000, care: 80 }, "메가스톤과 진행을 싣고 모습은 싣지 않는다");
+  assert.equal(offerOf(s.pets[1]!).mega, undefined, "메가스톤이 없으면 싣지 않는다");
+  const megaOffer: TradePet = { species: "charizard", shiny: false, nature: "calm", size: 1, level: 70, exp: 0, affinity: 100, fullness: 80, stage: 2, evolved: ["charmander", "charmeleon"], mega: { stone: true, bondMs: 86_400_000, care: 70 } };
+  const ok = validateReceived(megaOffer);
+  assert.ok(ok.ok && ok.pet.mega?.stone === true, "조건을 채운 메가스톤은 받는다");
+  const low = validateReceived({ ...megaOffer, level: 50 });
+  assert.ok(low.ok && low.pet.mega === undefined, "레벨 조건 밖이면 메가스톤 없이 받는다");
+  const noForm = validateReceived({ ...eevee, mega: { stone: true, bondMs: 0, care: 0 } });
+  assert.ok(noForm.ok && noForm.pet.mega === undefined, "메가 모습이 없는 종은 메가스톤 없이 받는다");
+  const r = seed();
+  lockTrade(r, "ch1", "p1", 1);
+  const res = applyTrade(r, "ch1", megaOffer, T0 + 5000);
+  if (!res.ok || !res.applied) throw new Error("반영 실패");
+  const got = r.pets.find((p) => p.id === res.newPetId)!;
+  assert.deepStrictEqual(got.mega, { bondMs: 86_400_000, care: 70, stone: true }, "받은 개체는 메가스톤을 지니고 원래 모습이다");
+  assert.ok(r.dex.megaOpened?.includes("charizard"), "받은 쪽 도감에 메가스톤을 적는다");
+  process.stdout.write("(10) 메가스톤은 교환을 따라간다  ok\n");
+}
+
+process.stdout.write("selftest-trade: 통과 (올리기·받기 검사·잠금·반영·저장 읽기·거래 명령·개발 실행 판정·개체 지문·메가스톤)\n");

@@ -620,12 +620,16 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     let careOver = 0;
     for (const p of nextPets) {
       const q = same.find((x) => x.p.id === p.id)?.q;
-      add("mega-bond", pos(p.megaBond - (q?.megaBond ?? 0)), hours * HOUR * m, p.id);
+      // 교환으로 받은 개체는 제안의 메가 진행에서 센다 — 메가스톤이 진행과 함께 교환을 따라온다 (2026-10-11, src/trade/exchange.ts TradePet.mega)
+      const o = tradedFrom.get(p.id);
+      const base = q ?? o;
+      add("mega-bond", pos(p.megaBond - (base?.megaBond ?? 0)), hours * HOUR * m, p.id);
       add("mega-bond", p.megaBond, r.megaBondMs, p.id);
       add("mega-care", p.megaCare, r.megaCareMax ?? r.megaCare, p.id);
-      careOver += pos(p.megaCare - (q?.megaCare ?? 0) - careCap);
+      careOver += pos(p.megaCare - (base?.megaCare ?? 0) - careCap);
       const fresh = !q || !q.megaStone;
-      if (p.megaStone && fresh && !tradedFrom.has(p.id) && (p.megaBond < r.megaBondMs || p.megaCare < r.megaCare)) add("mega", 1, 0, p.id);
+      // 새 메가스톤 — 받은 개체는 제안이 메가스톤을 지녔거나 같은 틈에 조건을 채웠어야 한다. 그 밖은 조건을 채웠어야 한다
+      if (p.megaStone && fresh && !(o?.megaStone) && (p.megaBond < r.megaBondMs || p.megaCare < r.megaCare)) add("mega", 1, 0, p.id);
     }
     add("mega-care", careOver, toyBudget); // 쿨타임을 넘는 몫은 장난감으로 놀아 줬어야 한다 — 장난감은 모든 개체가 함께 쓴다
   }

@@ -108,7 +108,7 @@ export function tickMega(pet: PetV3, elapsedMs: number, opts?: DexOptions): void
   mega.bondMs = Math.min(MEGA_RULES.bondMs, mega.bondMs + elapsedMs);
 }
 
-// 친밀도 100 뒤 밥 주기·놀아주기 한 번 — 돌봄 명령이 성공한 뒤 부른다
+// 친밀도 100 뒤 놀아주기 한 번 — 놀아주기·장난감이 성공한 뒤 부른다. 밥 주기는 세지 않는다 (2026-10-11)
 export function countCare(pet: PetV3, opts?: DexOptions): void {
   if (!counting(pet, opts)) return;
   const mega = (pet.mega ??= { bondMs: 0, care: 0 });
