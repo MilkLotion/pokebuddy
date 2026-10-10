@@ -120,14 +120,19 @@ export function drawTradeDialog(): void {
     out.appendChild(el("div", "empty-note", "교환을 쓸 수 없어요."));
     return;
   }
-  // 오류·닫힘 배너 — 같은 자리에 제목과 문구만 바뀐다. 제안·확정 화면은 배너 대신 바닥 줄에 한 줄로 보인다
+  // 오류 배너 — 시작·완료 화면은 모달 아래쪽에 떠 있다(자리를 밀지 않는다, 2026-10-10 조작 점검 공통 원인 1). 제안·확정 화면은 바닥 줄에 한 줄로 보인다.
+  // 닫힘 배너는 그 상태인 동안 늘 보이는 안내라 본문 맨 위에 둔다
   const err = t.error;
   const fail: [string, string] | null = !err
     ? null
     : err.code === "LOCAL"
       ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"]
       : ((f) => [f.text, f.detail ?? ""] as [string, string])(failTextOf(err.code, "trade"));
-  if (fail && t.phase !== "trading") out.appendChild(alertEl("bad", fail[0], fail[1]));
+  if (fail && t.phase !== "trading") {
+    const banner = alertEl("bad", fail[0], fail[1]);
+    banner.classList.add("float");
+    out.appendChild(banner);
+  }
   else if (!fail && t.phase === "closed") {
     const text = tradeClosedText(t.closedReason) ?? ["교환이 닫혔어요", "새 링크로 다시 시작해 주세요"];
     out.appendChild(alertEl("bad", text[0], text[1]));

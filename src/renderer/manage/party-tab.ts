@@ -7,7 +7,7 @@ import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { portraitOf } from "./art-cache.js";
 import { hold } from "./box-state.js";
-import { dropZone, startDrag } from "./box-move.js";
+import { drawSlotGhost, dropZone, endHold, PET_GHOST_SIZE, petGhostOf, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { openSwap } from "./party-swap.js";
@@ -139,7 +139,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
     presetRenaming = false;
     const name = input.value;
     if (document.activeElement === input) input.blur(); // 포커스가 남아 있으면 다시 그리기가 미뤄져(typingSearch) 입력칸이 그대로 남는다
-    if (save && name.trim() !== preset.name) void sendCommand("party.preset.rename", "", { preset: preset.index, name });
+    if (save && name.trim() !== preset.name) void sendCommand("party.preset.rename", "", { preset: preset.index, name }, { tab: true });
     else redrawBody();
   };
   input.addEventListener("keydown", (e) => {
@@ -164,7 +164,7 @@ function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
 export function stepPreset(delta: -1 | 1): void {
   const p = ui.view?.party.preset;
   if (!p || p.count < 2) return;
-  void sendCommand("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true });
+  void sendCommand("party.preset", "", { preset: wrapPage(p.index + delta, p.count) }, { keepOpen: true, tab: true });
 }
 
 // 파티 칸 옮기기 — 개체 칸을 끌어 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다. 잠긴 칸에는 놓지 않는다.
@@ -209,13 +209,30 @@ export function drawParty(v: Snapshot): void {
   );
   top.appendChild(acts);
   bodyEl.appendChild(top);
-  const grid = el("div", "grid");
+  // 우클릭 `옮기기` 로 든 파티 칸 — 원래 칸은 흐리고, 놓을 칸을 누르면 끌어 놓기와 같은 party.move (2026-10-10 사용자 결정, Figma 05 `Party / Move Hold`)
+  const held = hold.slot?.kind === "party" ? hold.slot : null;
+  const grid = el("div", held ? "grid holding" : "grid");
   for (const slot of v.party.slots) {
     const card = slot.pet ? petCard(slot.pet) : blankCard(slot);
+    if (held && slot.state !== "locked") {
+      card.dataset.hold = ""; // 바깥 누르기 취소에서 뺀다 (box-move.ts)
+      if (slot.pet?.id === held.petId) card.classList.add("dragging");
+      // 칸의 원래 누르기(상세·교체 열기)보다 먼저 받는다
+      card.addEventListener(
+        "click",
+        (e) => {
+          e.stopImmediatePropagation();
+          endHold();
+          if (slot.pet?.id === held.petId) redrawBody();
+          else void sendCommand("party.move", held.petId, { toSlot: slot.index }, { busyOn: card, tab: true });
+        },
+        { capture: true },
+      );
+    }
     if (slot.state !== "locked") {
       dropZone(card, () => {
         const from = hold.drag;
-        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index }, { busyOn: card });
+        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index }, { busyOn: card, tab: true });
       });
     }
     if (slot.pet) {
@@ -226,4 +243,6 @@ export function drawParty(v: Snapshot): void {
     grid.appendChild(card);
   }
   bodyEl.appendChild(grid);
+  const ghost = held ? petGhostOf(held.petId) : null;
+  if (ghost) drawSlotGhost(grid.querySelector<HTMLElement>(".slot.dragging"), ghost, PET_GHOST_SIZE);
 }

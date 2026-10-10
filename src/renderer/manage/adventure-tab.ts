@@ -11,7 +11,7 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { battleShown, openBattleDevice } from "./battle-link.js";
-import { dropZone, startDrag } from "./box-move.js";
+import { drawSlotGhost, dropZone, endHold, PET_GHOST_SIZE, petGhostOf, startDrag } from "./box-move.js";
 import { hold } from "./box-state.js";
 import { sendCommand } from "./command.js";
 import { openAnyDialog } from "./dialog.js";
@@ -99,13 +99,29 @@ export function drawAdventure(v: Snapshot): void {
   acts.append(load, friendly, start);
   top.appendChild(acts);
   bodyEl.appendChild(top);
-  const grid = el("div", "grid");
+  // 우클릭 `옮기기` 로 든 배틀 파티 칸 — 원래 칸은 흐리고, 놓을 칸을 누르면 끌어 놓기와 같은 battle.move (2026-10-10 사용자 결정, 파티 탭과 같은 모습)
+  const held = hold.slot?.kind === "battle" ? hold.slot : null;
+  const grid = el("div", held ? "grid holding" : "grid");
   for (const slot of v.battle.slots) {
     const card = slot.pet ? petCard(slot) : blankCard(slot);
+    if (held) {
+      card.dataset.hold = "";
+      if (slot.index === held.slot) card.classList.add("dragging");
+      card.addEventListener(
+        "click",
+        (e) => {
+          e.stopImmediatePropagation();
+          endHold();
+          if (slot.index === held.slot) redrawBody();
+          else void sendCommand("battle.move", "", { slotIndex: held.slot, toSlot: slot.index }, { busyOn: card, tab: true });
+        },
+        { capture: true },
+      );
+    }
     // 칸 옮기기 — 파티 탭과 같은 포인터 끌기(startDrag). 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다
     dropZone(card, () => {
       const from = hold.drag;
-      if (from && "battleSlot" in from && from.battleSlot !== slot.index) void sendCommand("battle.move", "", { slotIndex: from.battleSlot, toSlot: slot.index }, { busyOn: card });
+      if (from && "battleSlot" in from && from.battleSlot !== slot.index) void sendCommand("battle.move", "", { slotIndex: from.battleSlot, toSlot: slot.index }, { busyOn: card, tab: true });
     });
     if (slot.pet) {
       card.addEventListener("pointerdown", (e) => startDrag(e, card, { battleSlot: slot.index }));
@@ -114,4 +130,6 @@ export function drawAdventure(v: Snapshot): void {
     grid.appendChild(card);
   }
   bodyEl.appendChild(grid);
+  const ghost = held ? petGhostOf(held.petId) : null;
+  if (ghost) drawSlotGhost(grid.querySelector<HTMLElement>(".slot.dragging"), ghost, PET_GHOST_SIZE);
 }

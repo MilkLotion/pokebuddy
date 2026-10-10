@@ -585,3 +585,41 @@ button.is-busy:not(.cell)::after,
 .search-row .find-bar {
   flex: 1;
 }
+
+/* 가리킴(호버) — 누를 수 있는 칸·카드·단추는 가리키면 한 단계 진한 중립 바탕(--canvas).
+   고름·찾음·놓을 칸은 초록 톤(--accent-bg)이라 서로 나뉜다. 화면마다 따로 두지 않는다 — 새 칸·카드·단추도 여기에 더한다
+   (2026-10-10 사용자 확인 "진행해봐", Figma 00 `호버·고름 기준`, worklog/records/interaction-audit 공통 원인 4) */
+.slot:not(.locked):not(.selected):not(.dragging):not(:disabled):hover,
+.bag-card:not([aria-pressed="true"]):hover,
+.row-card:not([aria-pressed="true"]):not(:disabled):hover,
+.dex-cell.shop-cell:not([aria-pressed="true"]):hover,
+.box-tile:not(.on):not(.dragging):hover,
+.pager button:not(:disabled):hover,
+.sort-toggle:not(:disabled):hover,
+button.icon-button:not(:disabled):hover,
+.sell-dup-grid .cell:not(.selected):hover,
+button.act:not(.primary):not(:disabled):hover {
+  background: var(--canvas);
+}
+
+/* 떠 있는 실패 배너 — 바닥 단추 줄이 없는 모달은 그 아래쪽 안, 탭 화면은 창 아래쪽. 자리를 밀지 않는다
+   (2026-10-10 사용자 확인, Figma 05 `Party / 실패 배너` · `Box / Daycare Modal · 실패`) */
+.dialog:has(.alert.float) {
+  position: relative;
+}
+.alert.float {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  margin: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.alert.float.tab-fail {
+  position: fixed;
+  left: 20px;
+  right: 20px;
+  bottom: 16px;
+  z-index: 40;
+}

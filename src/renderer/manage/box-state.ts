@@ -8,13 +8,18 @@
 // 기술 바꾸기 모달(move-pick.ts)에서 끈 목록의 기술은 pickMove, 사용 중인 기술 칸은 moveSlot
 export type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string } | { battleSlot: number };
 
+// 우클릭 `옮기기` 로 든 칸 — 파티 탭의 파티 칸, 모험 탭의 배틀 파티 칸, 박스 순서 모달의 박스 타일 (2026-10-10 사용자 결정 "우클릭 `옮기기` 로 들기").
+// 박스 탭의 든 개체(hold.box)와 같이 원래 칸은 흐리고 커서를 따라가는 칸을 띄운다. 놓을 칸을 누르면 끌어 놓기와 같은 명령을 보낸다
+export type HeldSlot = { kind: "party"; petId: string } | { kind: "battle"; slot: number; petId: string } | { kind: "tile"; boxId: string };
+
 export interface HoldState {
   // 포켓몬 메뉴의 `옮기기` 로 든 개체 — 든 동안 원래 칸은 흐리고, 커서를 따라가는 칸을 띄운다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고")
   // 박스 탭 + 파티 기기 창의 옛 교체 화면은 2026-10-09 교체 모달(party-swap.ts)로 바꾸며 지웠다
   box: { petId: string; boxId: string; slot: number; ghost: boolean } | null;
+  slot: HeldSlot | null;
   drag: DragFrom | null;
 }
-export const hold: HoldState = { box: null, drag: null };
+export const hold: HoldState = { box: null, slot: null, drag: null };
 
 export interface BoxUi {
   page: number; // 보고 있는 박스

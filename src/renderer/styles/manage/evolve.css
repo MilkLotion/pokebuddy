@@ -128,7 +128,10 @@
 .evo-node.pick {
   cursor: pointer;
 }
-.evo-node.pick:hover,
+.evo-node.pick:not(.picked):hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--canvas)); /* 가리킴은 중립 — 고른 후보(초록)와 나뉜다(2026-10-10 호버·고름 기준) */
+}
+
 .evo-node.picked {
   background: var(--accent-bg);
 }

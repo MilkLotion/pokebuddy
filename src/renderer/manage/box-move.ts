@@ -4,8 +4,8 @@
 // 명령은 끌어 놓기와 같은 box.move 다
 // 든 것·끄는 것의 상태는 box-state.ts(파티 탭·교체 화면도 읽는다). 놓을 곳의 처리는 부르는 쪽이 dropZone 으로 준다
 import type { PetView } from "../../shared/model/snapshot.js";
-import { boxUi, hold, type DragFrom } from "./box-state.js";
-import { closeDialog } from "./dialog.js";
+import { boxUi, hold, type DragFrom, type HeldSlot } from "./box-state.js";
+import { closeDialog, drawDialog } from "./dialog.js";
 import { redrawBody, setTab } from "./shell.js";
 import { petInView, ui } from "./state.js";
 
@@ -49,18 +49,35 @@ export function startHold(petId: string): void {
   }
 }
 
+// 우클릭 `옮기기` 로 칸을 든다 — 파티 탭·모험 탭·박스 순서 모달. 박스 탭의 든 개체와 같은 모습(원래 칸 흐림, 커서를 따라가는 칸)
+export function startSlotHold(next: HeldSlot, tab?: "party" | "adventure"): void {
+  endHold();
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  if (tab) {
+    if (ui.dialog) closeDialog();
+    setTab(tab);
+    ui.detailPet = null;
+  }
+  hold.slot = next;
+  redrawBody();
+  if (next.kind === "tile") drawDialog();
+}
+
 // 든 것을 내려놓는다 — 다시 그리지는 않는다
 export function endHold(): void {
   hold.box = null;
+  hold.slot = null;
   holdAt = null;
   holdGhost?.remove();
   holdGhost = null;
 }
 
 function cancelHold(): void {
-  if (!hold.box) return;
+  if (!hold.box && !hold.slot) return;
+  const tile = hold.slot?.kind === "tile";
   endHold();
   redrawBody();
+  if (tile) drawDialog();
 }
 
 // 커서를 따라가는 칸 — 끌기의 반투명 사본과 같은 모습. 커서 자리를 아직 모르면(메뉴 창에서 막 넘어왔다) 원래 칸 옆에 둔다.
@@ -84,6 +101,28 @@ export function drawHoldGhost(grid: HTMLElement, petId: string): void {
   placeHoldGhost();
 }
 
+// 개체의 따라가는 칸 — 박스 칸과 같은 모습(끌기의 반투명 사본과 같다). 박스 칸 크기
+export const PET_GHOST_SIZE = { w: 95, h: 86 } as const;
+export function petGhostOf(petId: string): (() => HTMLElement) | null {
+  const pet = petInView(petId);
+  return pet ? () => hooksOf().ghostCell(pet) : null;
+}
+
+// 든 칸의 커서를 따라가는 칸 — from 은 든 칸(흐린 원래 칸), make 는 따라가는 칸의 모습. 크기는 size(없으면 from 의 크기)
+export function drawSlotGhost(from: HTMLElement | null, make: () => HTMLElement, size?: { w: number; h: number }): void {
+  if (!from) return;
+  if (!holdGhost) {
+    holdGhost = make();
+    holdGhost.classList.add("drag-ghost");
+    document.body.appendChild(holdGhost);
+  }
+  const rect = from.getBoundingClientRect();
+  holdGhost.style.width = `${size?.w ?? rect.width}px`;
+  holdGhost.style.height = `${size?.h ?? rect.height}px`;
+  if (!holdAt) holdAt = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  placeHoldGhost();
+}
+
 function placeHoldGhost(): void {
   if (!holdGhost || !holdAt) return;
   holdGhost.style.left = `${holdAt.x - holdGhost.offsetWidth / 2 + 12}px`;
@@ -91,18 +130,18 @@ function placeHoldGhost(): void {
 }
 
 window.addEventListener("pointermove", (e) => {
-  if (!hold.box?.ghost) return;
+  if (!hold.box?.ghost && !hold.slot) return;
   holdAt = { x: e.clientX, y: e.clientY };
   placeHoldGhost();
 });
 // 칸과 ◀·▶ 밖을 누르면 취소한다 — 칸과 ◀·▶ 는 제 처리기가 먼저 돈다
 document.addEventListener("click", (e) => {
-  if (!hold.box) return;
+  if (!hold.box && !hold.slot) return;
   if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
   cancelHold();
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && hold.box) cancelHold();
+  if (e.key === "Escape" && (hold.box || hold.slot)) cancelHold();
 });
 
 // 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)

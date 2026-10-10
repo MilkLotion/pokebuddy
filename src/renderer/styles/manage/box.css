@@ -118,13 +118,24 @@ button.icon-button,
 .head .head-menu {
   position: relative;
 }
-.head .head-menu .sort-menu {
+/* 박스 순서 모달의 타일 우클릭 메뉴 — 같은 줄 모양, 커서 자리에 뜬다(2026-10-10, Figma 03 `Box Tile Menu`) */
+.tile-menu {
+  position: fixed;
+  z-index: 8;
+  width: 124px;
+}
+.tile-menu .sort-menu {
+  top: 0;
+}
+.head .head-menu .sort-menu,
+.tile-menu .sort-menu {
   left: auto;
   right: 0;
   width: 124px;
   box-sizing: border-box;
 }
-.head .head-menu .sort-item {
+.head .head-menu .sort-item,
+.tile-menu .sort-item {
   appearance: none;
   font: inherit;
   font-size: 12px;
@@ -141,7 +152,8 @@ button.icon-button,
   text-align: left;
   cursor: pointer;
 }
-.head .head-menu .sort-item:hover {
+.head .head-menu .sort-item:hover,
+.tile-menu .sort-item:hover {
   background: var(--accent-bg);
 }
 /* 박스 순서 모달 — 폭 560, 타일 한 줄 4개(간격 6). 타일은 이름과 사용 칸 수. 이름은 한 줄이고 넘치면 끝을 줄인다.
@@ -274,9 +286,9 @@ button.icon-button,
   border-style: dashed;
   cursor: default;
 }
-/* 가리킨 칸 — 교체 기기의 가리킨 칸과 같은 옅은 바탕. 테두리는 그대로다 (Figma `Box Slot` State=Hover) */
-.box-grid .cell:not(.blank):hover {
-  background: var(--accent-bg);
+/* 가리킨 칸 — 중립 회색. 고른 칸(.selected)·찾은 칸(.found)의 초록과 나뉜다. 테두리는 그대로다 (Figma `Box Slot` State=Hover, 2026-10-10 호버·고름 기준) */
+.box-grid .cell:not(.blank):not(.selected):not(.found):hover {
+  background: var(--canvas);
 }
 /* 박스 칸 초상 — Figma `Portrait` Medium 40 */
 .cell .dot {
@@ -344,11 +356,14 @@ button.icon-button,
 .cell.tall.family {
   gap: 2px;
 }
-/* 옮기기로 든 동안 — 놓을 칸은 옅은 바탕 (끌기의 .drop-on 과 같다) */
-.box-grid.holding .cell {
+/* 옮기기로 든 동안 — 놓을 칸은 옅은 바탕 (끌기의 .drop-on 과 같다). 파티 탭·모험 탭의 든 칸(.grid.holding)도 같다(2026-10-10).
+   가리킴(호버) 공통 규칙(중립 회색)보다 앞서도록 선택자를 더 좁게 쓴다 */
+.box-grid.holding .cell,
+.grid.holding .slot:not(.locked) {
   cursor: pointer;
 }
-.box-grid.holding .cell:not(.dragging):hover {
+.box-grid.holding .cell.cell:not(.dragging):hover,
+.grid.holding .slot:not(.dragging):not(.locked):not(.selected):not(:disabled):hover {
   background: var(--accent-bg);
 }
 /* 중복 팔기 모달 — Figma 05 `Box / Sell Duplicates`, 03 `Sell Duplicates Body` (2026-10-05). 폭 560, 안내 한 줄, 후보 칸 5열(Box Slot Compact 86×66),

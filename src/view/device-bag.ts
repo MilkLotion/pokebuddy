@@ -162,9 +162,12 @@ export function bagDeviceModel(v: Snapshot, given: BagDeviceInput): DeviceResult
     input.sellQty = Math.max(1, Math.min(input.sellQty, cap));
     const earned = each * input.sellQty;
     const percent = Math.round((item.sellRate ?? 0) * 100);
+    // 판 결과 — 합계 상자를 초록 결과로(사용·구매와 같다, 2026-10-10 사용자 확인)
     const preview = input.notice
       ? { lead: "팔지 못했어요", line: input.notice, tone: "bad" as const }
-      : { lead: `받는 포인트 ${pointText(earned)}`, line: `1개 ${pointText(each)} (구매가의 ${percent}%) · 판매 후 ${pointText(v.points + earned)}`, tone: "" as const };
+      : input.result
+        ? { lead: input.result.lead, line: input.result.line, tone: "ok" as const }
+        : { lead: `받는 포인트 ${pointText(earned)}`, line: `1개 ${pointText(each)} (구매가의 ${percent}%) · 판매 후 ${pointText(v.points + earned)}`, tone: "" as const };
     return {
       input,
       model: {

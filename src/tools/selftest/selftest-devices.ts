@@ -214,7 +214,8 @@ const bag = (over: Partial<BagDeviceInput>) => {
   }));
   assert.equal(egg?.lead, "랜덤알 2개를 샀어요");
   assert.match(egg?.line ?? "", /^보유 1,000P · 돌보미집 2 \/ \d+$/);
-  assert.equal(resultLineOf({ cmd: "bag.sell", target: "toy" }, v, v), null, "판매는 결과 줄이 없다");
+  // 판매도 결과 줄 — 사용·구매와 같다 (2026-10-10, Figma 05 `Bag / Device / Sell · 결과`)
+  assert.deepEqual(resultLineOf({ cmd: "bag.sell", target: "toy" }, v, v), { lead: "장난감 1개를 팔았어요", line: "+12P · 보유 1,240P" }, "판매 결과 줄");
   assert.equal(resultLineOf({ cmd: "bag.use", target: "없는도구", args: { petId: "p1" } }, v, v), null);
 }
 

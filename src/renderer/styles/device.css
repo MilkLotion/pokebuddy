@@ -113,3 +113,12 @@ button[aria-busy="true"]::after {
     animation: none;
   }
 }
+
+/* 가리킴(호버) — 기기 창의 눌리는 작은 단추(수량 −·+·최대, 사용|판매, 파티 줄 초상, 크기)는 바탕에 글자색을 조금 섞은 중립 톤.
+   고른 것(aria-pressed)은 각 창의 톤 그대로 (2026-10-10 사용자 확인, Figma 00 `호버·고름 기준`, worklog/records/interaction-audit) */
+.qty button:not(:disabled):hover,
+.seg button:not([aria-pressed="true"]):not(:disabled):hover,
+.party button:not([aria-pressed="true"]):not(:disabled):hover,
+.size:not([aria-pressed="true"]):not(:disabled):hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+}

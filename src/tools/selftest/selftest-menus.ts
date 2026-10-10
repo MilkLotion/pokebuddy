@@ -37,14 +37,15 @@ function seed(): SaveV3 {
 
 const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") => petMenuOf(s, id, { origin, stagePet: origin === "stage" ? s.pets.find((p) => p.id === id) ?? null : null, formIcons: {}, now: Date.now() });
 
-// (1) 파티에 나온 개체 — 상태 줄, 돌봄 켜짐, 볼에 넣기, 옮기기 없음
+// (1) 파티에 나온 개체 — 상태 줄, 돌봄 켜짐, 볼에 넣기. 옮기기는 관리 창에서 연 메뉴에만(2026-10-10)
 {
   const r = menuOf(seed(), "p1");
   assert.ok(r);
   assert.equal(r.model.status, `${t("zone.normal")} · ${boredText(null)}`, "상태 줄은 구간 낱말 · 심심함 단계 말");
   assert.deepEqual([r.model.feed, r.model.play], [{ enabled: true }, { enabled: true }]);
   assert.deepEqual(r.model.ball, { enabled: true, hidden: false });
-  assert.equal(r.model.move, undefined, "옮기기는 박스 개체에만");
+  assert.deepEqual(r.model.move, { enabled: true }, "관리 창에서 연 파티 개체 메뉴 — 옮기기(파티 칸 순서 누르기로)");
+  assert.equal(menuOf(seed(), "p1", "stage")?.model.move, undefined, "무대에서 연 파티 개체 메뉴에는 옮기기가 없다");
   assert.deepEqual(r.model.swap, { enabled: true }, "관리 창 메뉴의 파티 개체 — 교체");
   assert.equal(menuOf(seed(), "p1", "stage")?.model.swap, undefined, "무대 메뉴에는 교체가 없다");
   assert.deepEqual([r.inSave, r.hidden, r.firstCare], [true, false, null]);
@@ -70,8 +71,8 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.deepEqual(r.model.swap, { enabled: true }, "박스 개체 — 옮기기와 교체");
   const rows = petMenu(r.model, { move: () => undefined, swap: () => undefined, sell: () => undefined }).map((m) => m.label ?? m.type);
   assert.deepEqual(rows.slice(1, 5), ["separator", t("menu.move"), t("menu.swap"), "separator"], "이름·상태 / 옮기기·교체 / 구분선 (Figma `Context Menu` Show Swap)");
-  const partyRows = petMenu(menuOf(seed(), "p1")!.model, { swap: () => undefined }).map((m) => m.label ?? m.type);
-  assert.deepEqual(partyRows.slice(1, 4), ["separator", t("menu.swap"), "separator"], "파티 개체 — 교체 한 줄 뒤 구분선");
+  const partyRows = petMenu(menuOf(seed(), "p1")!.model, { move: () => undefined, swap: () => undefined }).map((m) => m.label ?? m.type);
+  assert.deepEqual(partyRows.slice(1, 5), ["separator", t("menu.move"), t("menu.swap"), "separator"], "관리 창의 파티 개체 — 옮기기·교체 뒤 구분선 (2026-10-10)");
   assert.equal(petMenuOf(seed(), "p3", { origin: "stage", stagePet: null, formIcons: {}, now: Date.now() }), null);
   assert.equal(menuOf(seed(), "없음"), null);
 }
@@ -167,9 +168,9 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const s = seed();
   s.pets.push(pet({ id: "p6", species: "kyurem", level: 60 }), pet({ id: "p7", species: "floette", level: 30 }), pet({ id: "p8", species: "zekrom", level: 60 }));
   s.battle = { ...(s.battle ?? {}), slots: ["p6", "p7", null, null, null, null] } as SaveV3["battle"];
-  const noop = { change: () => undefined, clear: () => undefined, form: () => undefined };
+  const noop = { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined };
   const k = battleMenu(battleMenuOf(s, 0)!, noop);
-  assert.deepEqual(k.filter((m) => m.type !== "separator").map((m) => m.label).slice(1), [t("menu.battle.change"), t("menu.battle.clear"), t("menu.form")], "바꾸기·빼기·모습 바꾸기");
+  assert.deepEqual(k.filter((m) => m.type !== "separator").map((m) => m.label).slice(1), [t("menu.move"), t("menu.battle.change"), t("menu.battle.clear"), t("menu.form")], "옮기기·바꾸기·빼기·모습 바꾸기");
   const kRows = (k.find((m) => m.label === t("menu.form"))?.submenu ?? []) as { label?: string; enabled?: boolean; sublabel?: string }[];
   assert.deepEqual(kRows.map((r) => [r.label, r.sublabel, r.enabled]), [["큐레무", t("menu.form.now"), false], ["블랙큐레무", t("menu.form.go"), true], ["화이트큐레무", t("menu.form.go"), false]], "제크로무가 있으면 블랙큐레무만, 레시라무가 없어 화이트는 흐리다");
   s.battle!.forms = { p6: "kyurem-black" };

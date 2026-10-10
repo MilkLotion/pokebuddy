@@ -170,8 +170,12 @@ async function sellBag(id: string): Promise<void> {
   const item = ui.view?.bag.find((i) => i.id === id);
   if (!item || item.sellPrice === undefined || bagSending) return;
   const count = sellQty; // 메인이 보유 수까지로 바로잡은 수량
+  bagResult = "";
   const ok = await bagSend("bag.sell", id, count > 1 ? { count } : {});
   if (ok) {
+    // 판 결과 두 줄 — 사용과 같이 메인이 답에 싣는다 (src/view/result-lines.ts)
+    bagResult = lastReplyOf()?.result?.lead ?? "";
+    bagResultNote = lastReplyOf()?.result?.line ?? "";
     sellQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
   }

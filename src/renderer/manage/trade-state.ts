@@ -7,7 +7,8 @@ import type { TradeScreen } from "../../shared/model/trade.js";
 import type { TradeCloseReason } from "../../shared/names/online-codes.js";
 import type { Reason } from "../../shared/names/reasons.js";
 import { bodyEl, redrawBody } from "./shell.js";
-import { drawDialog } from "./dialog.js";
+import { busyAfterRedraw } from "./command.js";
+import { dialogEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
 
 // 교환 모달의 상태 — 카드 그리기·모달 틀이 같이 읽고 쓴다. 다른 파일의 let 은 고칠 수 없어(ESM) 객체 하나로 둔다 (box-state.ts 와 같은 방식)
@@ -81,6 +82,7 @@ const TRADE_OFF: TradeScreen = {
 
 export async function tradeSend(cmd: string, target?: string, args?: Record<string, unknown>): Promise<ManageReply> {
   const before = tradeUi.screen?.received?.petId ?? null;
+  const unbusy = busyAfterRedraw(dialogEl); // 누른 단추에 처리 중 점 — 아래 다시 그리기로 단추가 새로 생긴다
   if (tradeUi.screen) {
     tradeUi.screen = { ...tradeUi.screen, busy: true };
     redrawTrade();
@@ -92,6 +94,7 @@ export async function tradeSend(cmd: string, target?: string, args?: Record<stri
     console.error("교환 명령을 보내지 못했다", e);
     reply = { ok: false, reason: "error" };
   }
+  unbusy();
   tradeUi.screen = tradeOf(reply);
   // 거절(진행 중인 교환 등)은 보기에 남지 않는다 — 배너로 보인다
   if (!reply.ok && !tradeUi.screen.error && tradeUi.screen.available) tradeUi.screen = { ...tradeUi.screen, error: { code: reply.reason, ...(typeof reply.detail === "string" ? { detail: reply.detail } : {}) } };

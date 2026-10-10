@@ -89,6 +89,7 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
         const petId = save?.battle?.slots?.[slot] ?? null;
         if (!model || !petId) return;
         const items = battleMenu(model, {
+          move: () => deps.openManage({ to: "battle-move", slot }),
           change: () => deps.openManage({ to: "battle-pick", slot }),
           clear: () => deps.run({ cmd: "battle.clear", args: { slotIndex: slot }, from: "menu" }),
           form: (species) => deps.run({ cmd: "battle.form", target: petId, args: { species }, from: "menu" }),

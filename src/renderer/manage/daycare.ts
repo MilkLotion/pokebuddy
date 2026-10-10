@@ -138,7 +138,8 @@ async function openEggAndShow(eggId: string, over?: "daycare"): Promise<void> {
 }
 
 // 모두 열기 — 준비된 알을 칸 순서대로 하나씩 연다(알마다 egg.open 하나). 다 연 뒤 결과를 하나씩 보인다.
-// 여는 중에 실패하면 거기서 멈추고 그때까지 연 결과만 보인다. 하나도 못 열면 실패 문구가 돌보미집 모달에 남는다
+// 여는 중에 실패하면 거기서 멈추고 그때까지 연 결과만 보인다 — 멈춘 까닭은 첫 결과 창의 바닥 줄에 남긴다(결과 창을 열면 지워지던 것, 2026-10-10 조작 점검 F).
+// 하나도 못 열면 실패 문구가 돌보미집 모달에 남는다
 async function openAllEggs(): Promise<void> {
   if (openingAll || !ui.view) return;
   const ids = ui.view.eggs.list.filter((e) => e.ready).map((e) => e.id);
@@ -146,18 +147,27 @@ async function openAllEggs(): Promise<void> {
   openingAll = true;
   beginHatch();
   const queue: Hatched[] = [];
+  let stopped = "";
   try {
     for (const id of ids) {
       const got = await openEgg(id);
-      if (!got) break;
+      if (!got) {
+        stopped = ui.notice;
+        break;
+      }
       queue.push(got);
     }
   } finally {
     openingAll = false;
   }
   const first = queue[0];
-  if (first) openSubDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
-  else drawDialog(); // 단추의 흐림을 되돌린다
+  if (first) {
+    openSubDialog({ kind: "hatched", ...first, over: "daycare", ...(queue.length > 1 ? { queue, at: 0 } : {}) });
+    if (stopped) {
+      ui.notice = `${queue.length}개만 열었어요 · ${stopped}`;
+      drawDialog();
+    }
+  } else drawDialog(); // 단추의 흐림을 되돌린다
   endHatch();
 }
 

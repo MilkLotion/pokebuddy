@@ -1,6 +1,6 @@
 // 성공한 명령의 결과 줄 — 가방 사용·상점 구매 뒤 기기 창의 초록 상자에 보이는 두 줄 { lead, line }.
 // 거래 앞뒤 화면 값(스냅샷)을 견준다. 설정창의 명령 처리기(src/main/manage/window.ts)가 성공 답에 붙인다.
-// 결과 줄이 없는 명령은 null 이다(가방 판매는 결과 상자를 쓰지 않는다 — 판매 쪽은 받는 포인트가 미리보기에 있다)
+// 결과 줄이 없는 명령은 null 이다. 가방 판매도 2026-10-10 부터 결과 줄이 있다(사용·구매와 같게, Figma 05 `Bag / Device / Sell · 결과`)
 import type { ResultLine } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
@@ -57,6 +57,11 @@ export function resultLineOf(req: { cmd: string; target?: string; args?: unknown
     const pet = petId ? snapshotPet(before, petId) : null;
     if (!item || !pet) return null;
     return { lead: usedLead(item, pet, snapshotPet(after, pet.id)), line: `${item.name} ${numberText(count)}개를 썼어요` };
+  }
+  if (req.cmd === "bag.sell") {
+    const item = before.bag.find((i) => i.id === req.target);
+    if (!item || item.sellPrice === undefined) return null;
+    return { lead: `${item.name} ${numberText(count)}개를 팔았어요`, line: `+${pointText(item.sellPrice * count)} · 보유 ${pointText(after.points)}` };
   }
   if (req.cmd === "shop.buy") {
     const item = before.shop.find((i) => i.id === req.target);

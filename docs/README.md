@@ -22,6 +22,7 @@
 | [specs/modules.md](specs/modules.md) | 모듈 책임과 경계, 저장 구조, 명령 계약 |
 | [specs/companion.md](specs/companion.md) | 동반자 동작 — 따르는 창, CLI 상태 연동, buddy, 무대 창, 그림 |
 | [specs/ui-components.md](specs/ui-components.md) | 화면에서 반복되는 UI 컴포넌트 계약 |
+| [specs/interactions.md](specs/interactions.md) | 조작 계약 — 교체·옮기기·고르기·아이템 사용의 입력, 상태 표시, 결과·실패 자리 |
 | [contributing/code-map.md](contributing/code-map.md) | 코드 지도 — 폴더마다 넣는 것, 의존 규칙, 같은 기능이 쓰는 공통 코드 |
 | [contributing/development.md](contributing/development.md) | 저장소 실행, CLI 명령, 시험, 빌드와 릴리스 |
 | [contributing/workflow.md](contributing/workflow.md) | 작업 절차 |

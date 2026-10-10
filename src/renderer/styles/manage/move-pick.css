@@ -62,9 +62,14 @@
   text-align: left;
   cursor: pointer;
 }
-.mp-option:hover,
-.mp-slot:hover {
-  background: color-mix(in srgb, var(--primary) 8%, var(--canvas));
+/* 가리킴은 중립 — 고른 칸(초록)과 나뉜다 (2026-10-10 호버·고름 기준) */
+.mp-option:not([aria-current="true"]):hover,
+.mp-slot:not([aria-pressed="true"]):hover {
+  background: color-mix(in srgb, var(--ink) 6%, var(--canvas));
+}
+/* 지금 상세 칸에 보이는 목록 줄 — 중립 톤. 고른 칸의 초록과 다르다 (2026-10-10 사용자 확인, Figma 05 `Adventure / Move Pick · 보는 줄`) */
+.mp-option[aria-current="true"] {
+  background: var(--line);
 }
 .mp-slot[aria-pressed="true"],
 .mp-slot.drop-on {

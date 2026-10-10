@@ -64,7 +64,7 @@ setCommandHooks({
 setDialogHooks({
   isTyping: (root) => typingSearch(root),
   drawUnder: () => drawUnder(),
-  alertEl: (text) => alertEl("bad", "", text),
+  alertEl: (text, onClose) => alertEl("bad", text, "", onClose),
   afterDraw: () => {
     restoreSearchFocus();
     syncIdentify();

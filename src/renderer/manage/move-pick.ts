@@ -63,7 +63,7 @@ function optionEl(slot: BattleSlotView, m: MoveView): HTMLElement {
   if (used) meta.appendChild(el("span", "mp-in-use", "사용 중"));
   row.appendChild(meta);
   row.setAttribute("aria-label", target == null ? `${m.name} 상세 보기` : `${m.name}을 ${target + 1}번 칸에`);
-  row.setAttribute("aria-current", String(m.id === shown));
+  row.setAttribute("aria-current", String(m.id === (shown ?? slot.moves[opened]?.id))); // 지금 상세 칸에 보이는 줄
   row.addEventListener("click", () => {
     shown = m.id;
     if (target != null) put(slot, target, m.id);

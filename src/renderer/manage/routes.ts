@@ -4,7 +4,7 @@ import type { ManageRoute } from "../../shared/model/route.js";
 import { loadAccount } from "./account.js";
 import { resetAchievementTab } from "./achievements.js";
 import { loadAgents } from "./agents.js";
-import { startHold } from "./box-move.js";
+import { startHold, startSlotHold } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl, openDialog } from "./dialog.js";
 import type { Dialog } from "./dialog-types.js";
@@ -59,7 +59,13 @@ export function goTo(route: ManageRoute): void {
     // 포켓몬 메뉴의 모습 말풍선에서 고른 모습 — 바꾸기 확인 창. 고를 수 없는 모습이면 drawForm 이 창을 닫는다
     if (petInView(route.petId)) openDialogOrPet({ kind: "form", petId: route.petId, to: route.species });
   } else if (route.to === "move") {
-    startHold(route.petId); // 포켓몬 메뉴의 `옮기기` — 박스 탭에서 그 개체를 든다
+    // 포켓몬 메뉴의 `옮기기` — 박스 개체는 박스 탭에서, 파티 개체는 파티 탭에서 그 개체를 든다(2026-10-10)
+    if (findPartySlot(route.petId) != null) startSlotHold({ kind: "party", petId: route.petId }, "party");
+    else startHold(route.petId);
+  } else if (route.to === "battle-move") {
+    // 배틀 파티 칸 메뉴의 `옮기기` — 모험 탭에서 그 칸을 든다(2026-10-10)
+    const petId = ui.view?.battle.slots[route.slot]?.pet?.id;
+    if (petId) startSlotHold({ kind: "battle", slot: route.slot, petId }, "adventure");
   } else if (route.to === "swap") {
     // 포켓몬 메뉴의 `교체` — 교체 모달을 열고 그 개체를 찾아 둔다 (2026-10-09 사용자 "파티,박스에 우클릭 메뉴에 교체 추가").
     // 파티 개체면 그 칸을 고르고, 박스·다른 프리셋 개체면 판을 그 쪽으로 넘겨 그 칸을 강조한다 (party-swap.ts startSwap)

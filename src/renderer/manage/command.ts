@@ -3,7 +3,7 @@
 import type { ManageReply } from "../../shared/ipc/manage.js";
 import { api } from "./api.js";
 import { failTextOf } from "../../shared/fail-text.js";
-import { closeDialog, drawDialog } from "./dialog.js";
+import { closeDialog, drawDialog, openFailBanner } from "./dialog.js";
 import { ui } from "./state.js";
 
 export interface CommandHooks {
@@ -82,6 +82,22 @@ export function busyLater(on?: HTMLElement): () => void {
   };
 }
 
+// 보내는 동안 화면을 다시 그리는 곳(교환)의 처리 중 — 방금 누른 단추를 이름(칸의 개체 또는 글자)으로 기억했다가,
+// 다시 그린 root 에서 같은 단추를 찾아 BUSY_AFTER_MS 뒤 점을 단다. 돌려주는 함수를 부르면 예약을 거둔다 (2026-10-10 조작 점검 공통 원인 3)
+export function busyAfterRedraw(root: HTMLElement): () => void {
+  const b = pressed && Date.now() - pressed.at < PRESS_FRESH_MS ? pressed.button : null;
+  if (!b) return () => {};
+  const pet = b.dataset.pet;
+  const text = b.textContent?.trim() ?? "";
+  const timer = setTimeout(() => {
+    const again = pet
+      ? root.querySelector<HTMLElement>(`button[data-pet="${CSS.escape(pet)}"]`)
+      : [...root.querySelectorAll<HTMLButtonElement>("button")].find((x) => x.textContent?.trim() === text);
+    if (again) setBusy(again, true);
+  }, BUSY_AFTER_MS);
+  return () => clearTimeout(timer);
+}
+
 // 기기 창의 단추처럼 이 창에 없는 것의 처리 중 — 답이 BUSY_AFTER_MS 안에 오지 않으면 onSlow 를 부른다. 돌려주는 함수를 부르면 예약을 거둔다
 export function whenSlow(onSlow: () => void): () => void {
   const timer = setTimeout(onSlow, BUSY_AFTER_MS);
@@ -90,7 +106,8 @@ export function whenSlow(onSlow: () => void): () => void {
 
 // 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
 // opts.busyOn — 처리 중 점을 달 요소(끌어 놓은 칸 등). 없으면 방금 누른 단추
-export async function sendCommand(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean; busyOn?: HTMLElement } = {}): Promise<boolean> {
+// opts.tab — 탭 화면에서 보낸 조작. 모달이 없으면 실패를 떠 있는 실패 배너로 보인다(기기 창에서 보낸 조작은 기기 창 자리 줄이 보인다)
+export async function sendCommand(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean; busyOn?: HTMLElement; tab?: boolean } = {}): Promise<boolean> {
   const h = hooksOf();
   if (ui.busy) return false;
   ui.busy = true;
@@ -107,6 +124,10 @@ export async function sendCommand(cmd: string, target: string, extra: Record<str
 
   if (!reply.ok) {
     ui.notice = failTextOf(reply.reason, "command").text;
+    if (opts.tab && !ui.dialog) {
+      openFailBanner(ui.notice);
+      ui.notice = "";
+    }
     drawDialog();
     return false;
   }

@@ -26,7 +26,7 @@ const RIGHTS_URL = `https://github.com/MilkLotion/pokebuddy#${encodeURIComponent
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
 // 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
-const RESULT_COMMANDS = new Set(["bag.use", "shop.buy"]);
+const RESULT_COMMANDS = new Set(["bag.use", "bag.sell", "shop.buy"]);
 
 // 화면 읽기 — 저장을 읽어 화면 값을 바로 만든다(실행기는 쓰기만 맡는다). 저장이 없으면 빈 값. 기기 창도 같은 것을 쓴다
 export interface GameReads {

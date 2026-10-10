@@ -37,7 +37,7 @@ function moduleOf(kind: DialogKind): DialogModule<DialogKind> {
 export interface DialogHooks {
   isTyping(root: HTMLElement): boolean; // 그 영역의 검색 칸에 입력 중인가 — 그러면 다시 그리기를 미룬다
   drawUnder(): void; // 겹친 모달의 뒤(돌보미집 위의 부화 결과)
-  alertEl(text: string): HTMLElement; // 단추 줄이 없는 모달의 실패 줄
+  alertEl(text: string, onClose?: () => void): HTMLElement; // 실패 배너 — 단추 줄이 없는 모달·탭 화면에 떠 있는 것
   afterDraw(): void; // 다 그린 뒤 — 검색 칸 초점 되돌리기, 화면 표시, 튜토리얼
   afterEmpty(): void; // 모달이 없어졌다 — 화면 표시
   onScrimChanged(): void; // 가림막이 켜지거나 꺼졌다 — 코치마크를 감추거나 다시 그린다
@@ -116,7 +116,7 @@ export function drawDialog(): void {
   m.draw(ui.dialog);
 
   // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 05 `Dialog · 실패 (바닥 단추 줄 빈자리)` `1126:24745`).
-  // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
+  // 단추 줄이 없는 대화상자는 아래쪽 안에 떠 있는 실패 배너 — 자리를 밀지 않는다 (2026-10-10 사용자 확인, Figma 05 `Box / Daycare Modal · 실패`)
   if (ui.notice && !noticeInline) {
     // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다. 교체·고르기 모달의 바닥 줄(.swap-acts)도 바닥 줄이다 — 빠지면 실패가 새 줄로 붙어 모달이 흔들린다
     // (2026-10-10 조작 점검 공통 원인 1, worklog/records/interaction-audit)
@@ -129,7 +129,11 @@ export function drawDialog(): void {
       // 남는 폭에만 선다 — spacer 가 있으면 그 안(보조 단추 뒤, Figma `Dialog` `footer › spacer › error-notice`), 없으면 줄 끝. 단추 자리는 그대로
       const spacer = row.querySelector(":scope > .spacer");
       (spacer ?? row).appendChild(err);
-    } else dialogEl.appendChild(h.alertEl(ui.notice));
+    } else {
+      const banner = h.alertEl(ui.notice);
+      banner.classList.add("float");
+      dialogEl.appendChild(banner);
+    }
   }
   const scroll = dialogEl.querySelector<HTMLElement>(".scroll");
   if (scroll && keep) scroll.scrollTop = keep;
@@ -172,6 +176,24 @@ export function closeDialog(): void {
   ui.notice = "";
   setScrim(false);
   hooksOf().afterEmpty();
+}
+
+// 탭 화면(모달 없는 곳)의 실패 — 창 아래쪽에 떠 있는 실패 배너. 자리를 밀지 않고 4초 뒤 사라진다. ✕ 로도 닫는다
+// (2026-10-10 사용자 확인, Figma 05 `Party / 실패 배너`, worklog/records/interaction-audit 공통 원인 2). 박스 탭은 부제 자리(box-tab.ts)
+let failBanner: HTMLElement | null = null;
+let failTimer: ReturnType<typeof setTimeout> | null = null;
+export function openFailBanner(text: string): void {
+  const close = (): void => {
+    failBanner?.remove();
+    failBanner = null;
+    if (failTimer) clearTimeout(failTimer);
+    failTimer = null;
+  };
+  close();
+  failBanner = hooksOf().alertEl(text, close);
+  failBanner.classList.add("float", "tab-fail");
+  document.body.appendChild(failBanner);
+  failTimer = setTimeout(close, 4000);
 }
 
 // 기기 창이 다른 개체로 넘어갔다 — 앞 개체에 묶인 모달(진화·모습·메가·기술 바꾸기·팔기 등)은 닫는다.
