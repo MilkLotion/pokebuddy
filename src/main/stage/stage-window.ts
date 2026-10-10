@@ -177,7 +177,10 @@ export function createStageWindow(opts: StageWindowOptions): StageWindow {
   function setPassing(on: boolean): void {
     if (!alive() || on === passing) return;
     passing = on;
-    win!.setIgnoreMouseEvents(on, { forward: true });
+    // Windows 는 forward 를 끈다 — forward 는 시스템 전체 저수준 마우스 후크(WH_MOUSE_LL)를 메인 스레드에 건다.
+    //   투명 기기 창을 다시 그리는 동안 후크 답이 밀려 커서가 끊겼다(2026-10-10 사용자 "상점 상세 기기랑, 가방 물건 상세 기기에 마우스 올라가면 엄청 버벅거리는거같아", "커서가 끊기며 움직임").
+    //   통과 중 커서 밑 판정은 hoverTick 이 메인에서 커서를 직접 본다 — 넘겨받는 마우스 이벤트에 기대지 않는다(worklog/records/device-hover/device-hover.md)
+    win!.setIgnoreMouseEvents(on, { forward: process.platform !== "win32" });
     log?.({ passing: on });
   }
 
