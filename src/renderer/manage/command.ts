@@ -64,15 +64,16 @@ document.addEventListener("click", (e) => {
   pressed = button ? { button, at: Date.now() } : null;
 }, true);
 
-export function setBusy(target: HTMLButtonElement, on: boolean): void {
+export function setBusy(target: HTMLElement, on: boolean): void {
   target.classList.toggle("is-busy", on);
   if (on) target.setAttribute("aria-busy", "true");
   else target.removeAttribute("aria-busy");
 }
 
-// 방금 누른 단추에 처리 중을 예약한다. 돌려주는 함수를 부르면 예약을 거두고 표시를 뗀다
-function busyLater(): () => void {
-  const target = pressed && Date.now() - pressed.at < PRESS_FRESH_MS ? pressed.button : null;
+// 방금 누른 단추에 처리 중을 예약한다. 돌려주는 함수를 부르면 예약을 거두고 표시를 뗀다.
+// on 을 주면 그 요소에 단다 — 끌어 놓기는 click 이 없어 누른 단추를 모른다(놓은 칸을 넘긴다, 2026-10-10 조작 점검 공통 원인 3)
+export function busyLater(on?: HTMLElement): () => void {
+  const target = on ?? (pressed && Date.now() - pressed.at < PRESS_FRESH_MS ? pressed.button : null);
   if (!target) return () => {};
   const timer = setTimeout(() => setBusy(target, true), BUSY_AFTER_MS);
   return () => {
@@ -88,11 +89,12 @@ export function whenSlow(onSlow: () => void): () => void {
 }
 
 // 성공하면 true. 여러 번 보내는 쪽이 중간에 멈출 수 있게 돌려준다
-export async function sendCommand(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean } = {}): Promise<boolean> {
+// opts.busyOn — 처리 중 점을 달 요소(끌어 놓은 칸 등). 없으면 방금 누른 단추
+export async function sendCommand(cmd: string, target: string, extra: Record<string, unknown> = {}, opts: { keepOpen?: boolean; busyOn?: HTMLElement } = {}): Promise<boolean> {
   const h = hooksOf();
   if (ui.busy) return false;
   ui.busy = true;
-  const unbusy = busyLater();
+  const unbusy = busyLater(opts.busyOn);
   let reply: ManageReply;
   try {
     reply = await requestCommand(cmd, target, extra);

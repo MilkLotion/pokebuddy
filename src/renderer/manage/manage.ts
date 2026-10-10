@@ -244,7 +244,7 @@ registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () 
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
 registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: () => drawBattleRecord(), enter: () => void loadBattleRecord() });
-registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus)) });
+registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus, d.slot)) });
 registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
 registerDialog({ kind: "move-pick", shape: "dialog move-pick", draw: () => drawMovePick(), enter: (d, prev) => (prev?.kind === "move-pick" ? undefined : startMovePick(d.petId, d.slot)) });
 registerDialog({ kind: "pool", shape: "dialog daycare egg-pool", draw: (d) => drawPool(d.productId, d.page) });

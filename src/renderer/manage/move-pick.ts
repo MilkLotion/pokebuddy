@@ -4,7 +4,7 @@
 //   오른쪽 사용 중인 기술  1번·2번 칸, 사이에 순서 바꾸기(battle.moves), 아래에 기술 상세(타입·분류·위력·명중·쿨타임·효과·원작 설명)
 //   내 칸을 누르면        그 칸을 고른다(톤 바탕). 같은 칸을 다시 누르면 푼다. 처음은 고른 칸이 없다
 //   목록의 기술을 누르면   고른 칸이 없으면 상세만 바꾼다. 있으면 그 칸을 바꾸고(battle.pick, 다른 칸의 기술이면 순서 바꾸기) 고르기를 푼다
-//   목록의 기술을 끌어 칸에  그 칸을 그 기술로 바꾼다. 칸을 다른 칸에 끌어 놓으면 순서를 바꾼다
+// 끌어 놓기는 없다 — 교체·고르기 모달은 누르기만(2026-10-10 사용자 결정, worklog/records/interaction-audit). 순서는 가운데 순서 바꾸기 단추
 // (2026-10-10 사용자 "사용중인기술을 누르고 목록에서 눌러야 바뀌게. 1번 바뀌면 사용중인기술 클릭한거 해제.(목록 눌러도 설명보이게)", Figma 05 `Adventure / Move Pick`·`· Slot Picked`)
 // 본문 높이는 고정이다 — 상세 칸이 남은 자리를 채우고 넘치면 칸 안에서 스크롤한다(기술마다 모달 크기가 바뀌지 않게)
 // 바꿀 때마다 바로 저장한다. `완료` 는 닫는다
@@ -14,8 +14,6 @@ import { swapIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { iconOf } from "./art-cache.js";
-import { hold } from "./box-state.js";
-import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
@@ -36,17 +34,24 @@ export function startMovePick(id: string, slot: number): void {
 
 const pill = (m: MoveView): HTMLElement => movePillEl(m, "large", iconOf(`type:${m.typeId}`, "mp-icon"));
 
-// 고른 칸(at)을 기술 id 로 바꾼다 — 다른 칸의 기술이면 순서 바꾸기
+// 고른 칸(at)을 기술 id 로 바꾼다 — 다른 칸의 기술이면 순서 바꾸기. 성공하면 고르기를 푼다(실패하면 그대로 두어 다시 누를 수 있게)
 function put(slot: BattleSlotView, at: number, id: string): void {
   const cur = slot.moves.map((m) => m.id);
-  if (cur.length < 2 || cur[at] === id) return;
-  if (cur[1 - at] === id) {
-    void sendCommand("battle.moves", petId, {}, { keepOpen: true });
+  if (cur.length < 2) return;
+  if (cur[at] === id) {
+    target = null; // 이미 그 칸의 기술 — 바꿀 것 없이 고르기만 푼다
+    drawDialog();
     return;
   }
   const next = [...cur];
   next[at] = id;
-  void sendCommand("battle.pick", petId, { moves: next }, { keepOpen: true });
+  void (async () => {
+    const ok = cur[1 - at] === id ? await sendCommand("battle.moves", petId, {}, { keepOpen: true }) : await sendCommand("battle.pick", petId, { moves: next }, { keepOpen: true });
+    if (ok) {
+      target = null;
+      drawDialog();
+    }
+  })();
 }
 
 function optionEl(slot: BattleSlotView, m: MoveView): HTMLElement {
@@ -61,16 +66,10 @@ function optionEl(slot: BattleSlotView, m: MoveView): HTMLElement {
   row.setAttribute("aria-current", String(m.id === shown));
   row.addEventListener("click", () => {
     shown = m.id;
-    if (target != null) {
-      put(slot, target, m.id);
-      target = null;
-    }
+    if (target != null) put(slot, target, m.id);
     drawDialog();
   });
-  if (!used) {
-    row.addEventListener("pointerdown", (e) => startDrag(e, row, { pickMove: m.id }));
-    row.addEventListener("dragstart", (e) => e.preventDefault()); // 그림의 브라우저 기본 끌기를 막는다
-  }
+  row.addEventListener("dragstart", (e) => e.preventDefault()); // 그림의 브라우저 기본 끌기를 막는다
   return row;
 }
 
@@ -85,17 +84,7 @@ function slotEl(slot: BattleSlotView, at: number): HTMLElement {
     shown = m.id;
     drawDialog();
   });
-  cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { moveSlot: at }));
   cell.addEventListener("dragstart", (e) => e.preventDefault());
-  // 놓기 — 목록의 기술은 이 칸에 넣고, 다른 칸은 순서를 바꾼다
-  dropZone(cell, () => {
-    const from = hold.drag;
-    if (from && "pickMove" in from) {
-      target = null;
-      shown = from.pickMove;
-      put(slot, at, from.pickMove);
-    } else if (from && "moveSlot" in from && from.moveSlot !== at) void sendCommand("battle.moves", petId, {}, { keepOpen: true });
-  });
   return cell;
 }
 

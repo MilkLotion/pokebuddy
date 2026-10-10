@@ -118,7 +118,9 @@ export function drawDialog(): void {
   // 실패는 바닥 단추 줄의 빈자리에 빨간 점과 글자로 — 대화상자 끝에 줄을 끼우지 않는다 (2026-09-30 사용자 결정, Figma 05 `Dialog · 실패 (바닥 단추 줄 빈자리)` `1126:24745`).
   // 단추 줄이 없는 대화상자만 예전처럼 경고 줄을 둔다
   if (ui.notice && !noticeInline) {
-    const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions"); // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다
+    // 바닥 줄만 — 연결 줄 단추 묶음(.actions)은 뺀다. 교체·고르기 모달의 바닥 줄(.swap-acts)도 바닥 줄이다 — 빠지면 실패가 새 줄로 붙어 모달이 흔들린다
+    // (2026-10-10 조작 점검 공통 원인 1, worklog/records/interaction-audit)
+    const rows = dialogEl.querySelectorAll<HTMLElement>(":scope > .actions, :scope > .swap-acts");
     const row = rows[rows.length - 1];
     if (row) {
       const err = el("div", "footer-error");
@@ -170,6 +172,23 @@ export function closeDialog(): void {
   ui.notice = "";
   setScrim(false);
   hooksOf().afterEmpty();
+}
+
+// 기기 창이 다른 개체로 넘어갔다 — 앞 개체에 묶인 모달(진화·모습·메가·기술 바꾸기·팔기 등)은 닫는다.
+// 기기 창은 가림막이 덮지 못해, 모달은 A 를 다루는데 기기 창은 B 를 보이던 일을 막는다(2026-10-10 조작 점검 공통 원인 8).
+// 지난 실패 문구도 지운다 — 앞 개체의 실패가 다음 개체의 자리 줄에 남지 않게
+export function leavePet(nextPetId: string): void {
+  ui.notice = "";
+  const d = ui.dialog;
+  if (d && d.kind !== "hatched" && "petId" in d && d.petId && d.petId !== nextPetId) closeDialog();
+}
+
+// 그리는 중에 대상이 사라져 닫는다 — 방금 실패한 문구는 남겨 기기 창 자리 줄에 보이게 한다
+// (실패 뒤 후보가 사라져 모달이 말없이 닫히던 것, 2026-10-10 조작 점검 공통 원인 2)
+export function closeDialogKeepNotice(): void {
+  const notice = ui.notice;
+  closeDialog();
+  ui.notice = notice;
 }
 
 // 한 단계 물러나기 — ✕·Esc·가림막 누르기·확인 창의 취소. 하위 모달이면 부모로, 아니면 닫는다

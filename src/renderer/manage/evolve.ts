@@ -6,7 +6,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { evoDrawer, RADIAL, RADIAL_MIN } from "../ui/evo-tree.js";
 import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeDialog, closeDialogKeepNotice, dialogEl, dialogHead, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import { petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
@@ -40,7 +40,7 @@ const evolveDrawer = evoDrawer((slug, cls) => portraitOf(slug, false, cls));
 export function drawEvolve(petId: string, to?: string): void {
   const pet = petInView(petId);
   if (!pet) {
-    closeDialog();
+    closeDialogKeepNotice();
     return;
   }
   // 후보는 전부 — 조건을 못 채운 후보(지도 간선 포함)는 흐리게 누를 수 없게 둔다. 가방에서 오는 길은 없앴다(2026-10-01 진화용 도구 사용 없음)

@@ -5,14 +5,13 @@
 //   머리     `◀ 이름 ▶` 오른쪽에 찾기 줄(박스 탭과 같은 search.ts findBarEl). 이름 칸은 8글자 폭 (사용자 "검색은 < 박스1 > 옆에", "박스 이름입력을 8칸으로")
 //   찾기     박스 탭 찾기(box-find.ts)와 같다 — 1초 뒤나 Enter 로 찾고, 결과가 있는 쪽으로 넘겨 그 칸만 옅은 바탕. ^ v 는 쪽을 넘나든다.
 //            박스 탭과 달리 프리셋의 개체도 찾는다
-//   칸       누르기·끌기·놓기는 쓰는 곳이 정한다(cell·drop). 부화 결과를 아직 확인하지 않은 개체는 빈 칸으로 그린다
+//   칸       누르기만 — 개체 칸(cell.pick)과 빈 칸(blank)을 누를 때 할 일은 쓰는 곳이 정한다. 끌어 놓기는 없다
+//            (2026-10-10 사용자 결정 "교체·고르기 모달은 누르기만", worklog/records/interaction-audit). 부화 결과를 아직 확인하지 않은 개체는 빈 칸으로 그린다
 import type { PetView, PresetView, Snapshot } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { lockIconEl, plusIconEl } from "../ui/line-icons.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
-import type { DragFrom } from "./box-state.js";
-import { dropZone, startDrag } from "./box-move.js";
 import { hiddenHatchIds } from "./daycare.js";
 import { drawDialog } from "./dialog.js";
 import { wrapPage } from "./grid-view.js";
@@ -29,16 +28,14 @@ export interface PanelCell {
   title?: string;
   pressed?: boolean; // 고른 개체 — 교환에 내놓은 개체 등. 톤 바탕
   pick?: () => void; // 누르면
-  drag?: DragFrom; // 끌 수 있으면 끄는 곳의 이름
 }
 
 export interface PetBoxPanel {
   key: string; // 쪽·찾기 상태와 찾기 칸 글자를 기억하는 열쇠 — 모달마다 다르다
   view: Snapshot;
   cell: (pet: PetView, at: PanelAt) => PanelCell;
-  drop?: (at: PanelAt, pet: PetView | null) => (() => void) | null; // 끈 것을 이 칸에 놓을 때 — null 이면 놓을 수 없는 칸
   blank?: (at: PanelAt) => (() => void) | null; // 빈 칸을 누를 때 — null 이면 누를 수 없는 칸(파티 교체의 고른 칸 개체 보관 등)
-  dropAnywhere?: () => (() => void) | null; // 판 어디에 놓아도 되는 끌기(배틀 파티 칸 → 판 = 빼기)
+  blankLabel?: string; // 누를 수 있는 빈 칸의 이름(title·aria-label) — "이 빈 칸에 보관" 등
 }
 
 interface PanelState {
@@ -160,11 +157,7 @@ function petCell(p: PetBoxPanel, pet: PetView, at: PanelAt, found: boolean, with
   b.setAttribute("aria-pressed", String(c.pressed === true));
   b.title = c.title ?? `${pet.name} Lv.${pet.level}`;
   if (c.pick) b.addEventListener("click", c.pick);
-  const drag = c.drag;
-  if (drag && !b.disabled) b.addEventListener("pointerdown", (e) => startDrag(e, b, drag));
-  b.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다 — 막지 않으면 포인터 끌기가 끊긴다
-  const drop = p.drop?.(at, pet);
-  if (drop) dropZone(b, drop);
+  b.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
   return b;
 }
 
@@ -175,7 +168,9 @@ function blankCell(p: PetBoxPanel, at: PanelAt, locked: boolean, preset: boolean
   const cell = pick ? buttonEl(`${cls} pickable`) : el("div", cls);
   if (pick) {
     cell.addEventListener("click", pick);
-    cell.setAttribute("aria-label", "이 빈 칸에 보관");
+    const label = p.blankLabel ?? "이 빈 칸 누르기";
+    cell.setAttribute("aria-label", label);
+    cell.title = label;
   }
   if (preset) {
     const icon = el("span", "blank-icon");
@@ -183,8 +178,6 @@ function blankCell(p: PetBoxPanel, at: PanelAt, locked: boolean, preset: boolean
     cell.appendChild(icon);
     cell.title = locked ? "잠긴 칸" : "빈 칸";
   }
-  const drop = locked ? null : p.drop?.(at, null);
-  if (drop) dropZone(cell, drop);
   return cell;
 }
 
@@ -235,7 +228,5 @@ export function petBoxPanelEl(p: PetBoxPanel): HTMLElement {
     });
     panel.appendChild(grid);
   }
-  const anywhere = p.dropAnywhere?.();
-  if (anywhere) dropZone(panel, anywhere);
   return panel;
 }

@@ -10,7 +10,7 @@ import { typeBadgeEl } from "../ui/type-badge.js";
 import { api } from "./api.js";
 import { iconCache, portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
-import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismissDialog, openAnyDialog } from "./dialog.js";
+import { actionButtonEl, actionsRowEl, closeDialog, closeDialogKeepNotice, dialogEl, dialogHead, dismissDialog, openAnyDialog } from "./dialog.js";
 import { findPartySlot, petInView, ui } from "./state.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
@@ -71,7 +71,7 @@ export function drawMega(petId: string, to?: string, battle = false): void {
   const pet = battle ? slot?.pet : petInView(petId);
   const mega = pet?.mega;
   if (!pet || !mega || !mega.canChange) {
-    closeDialog();
+    closeDialogKeepNotice();
     return;
   }
   const word = mega.kind === "primal" ? "원시회귀" : "메가진화";
@@ -191,7 +191,7 @@ export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
   const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
   if (!pet || !form) {
-    closeDialog();
+    closeDialogKeepNotice();
     return;
   }
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
@@ -219,7 +219,7 @@ export function drawEvolveConfirm(petId: string, to: string): void {
   const c: EvolutionView | undefined = pet?.evolutions.find((x) => x.to === to && x.ready);
   // 후보가 없으면 닫는다 — 진화가 끝나 새 스냅샷으로 다시 그릴 때도 여기로 온다(진화 창으로 돌리면 진화 뒤 종의 진화 창이 남는다)
   if (!pet || !c) {
-    closeDialog();
+    closeDialogKeepNotice();
     return;
   }
   dialogEl.append(...dialogHead(`${c.name}${toParticle(c.name)} 진화할까요?`, ""));

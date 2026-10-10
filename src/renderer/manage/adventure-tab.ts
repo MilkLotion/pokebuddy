@@ -105,7 +105,7 @@ export function drawAdventure(v: Snapshot): void {
     // 칸 옮기기 — 파티 탭과 같은 포인터 끌기(startDrag). 빈 칸에 놓으면 옮기고, 개체 칸에 놓으면 맞바꾼다
     dropZone(card, () => {
       const from = hold.drag;
-      if (from && "battleSlot" in from && from.battleSlot !== slot.index) void sendCommand("battle.move", "", { slotIndex: from.battleSlot, toSlot: slot.index });
+      if (from && "battleSlot" in from && from.battleSlot !== slot.index) void sendCommand("battle.move", "", { slotIndex: from.battleSlot, toSlot: slot.index }, { busyOn: card });
     });
     if (slot.pet) {
       card.addEventListener("pointerdown", (e) => startDrag(e, card, { battleSlot: slot.index }));

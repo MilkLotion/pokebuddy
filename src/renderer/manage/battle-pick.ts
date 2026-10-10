@@ -1,18 +1,16 @@
 // 배틀 파티 교체 모달 — 왼쪽은 포켓몬 고르기 판(pet-box-panel.ts, 파티 교체·교환과 같다), 오른쪽은 배틀 파티 6칸 세로 한 줄
 // (2026-10-09 사용자 "프리셋모음 + 박스들 … 그 우측엔 현재 파티 캐릭터들", "1x6 이라니까? 가로1 세로6칸", Figma 05 `15 모험` `Adventure / Battle Swap`)
-// 여는 곳: 모험 탭의 빈 칸, 칸 우클릭 메뉴의 `바꾸기`. 연 칸이 고른 칸(옅은 바탕)이다. 오른쪽 칸을 누르면 그 칸을 고른다
-//   판의 개체를 누르면        고른 칸에 넣는다(battle.set). 칸에 개체가 있으면 바꾼다
-//   판의 개체를 끌어 칸에     그 칸에 넣는다
-//   칸을 끌어 다른 칸에       옮기거나 맞바꾼다(battle.move)
-//   칸을 끌어 판에            뺀다(battle.clear)
+// 여는 곳: 모험 탭의 빈 칸, 칸 우클릭 메뉴의 `바꾸기`. 연 칸이 고른 칸(톤 바탕)이다
+//   오른쪽 칸을 누르면        그 칸을 고른다. 같은 칸을 다시 누르면 푼다
+//   판의 개체를 누르면        고른 칸에 넣는다(battle.set). 칸에 개체가 있으면 바꾼다. 바꾸면 고르기가 풀린다
+//   판의 박스 빈 칸을 누르면   고른 칸의 개체를 뺀다(battle.clear) — 파티 교체의 "박스 빈 칸에 보관"과 같은 자리
 //   모두 빼기 · 완료          6칸을 비운다 · 닫는다 (사용자 "모두 박스로, 모두 빼기, 완료 + 검색")
-// 다른 칸에 든 개체는 판에서 흐리고 고르지 못한다. 끌어 놓을 때마다 바로 저장한다
+// 끌어 놓기는 없다 — 교체·고르기 모달은 누르기만(2026-10-10 사용자 결정, worklog/records/interaction-audit). 칸 순서는 모험 탭에서 끌거나 우클릭 `옮기기`
+// 고른 칸이 없으면 판의 개체는 누를 수 없다. 다른 칸에 든 개체는 판에서 흐리고 고르지 못한다. 바꿀 때마다 바로 저장한다
 import type { BattleSlotView, PetView } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
-import { hold } from "./box-state.js";
-import { dropZone, startDrag } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { petBoxPanelEl, resetPanel } from "./pet-box-panel.js";
@@ -20,7 +18,7 @@ import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
 
 const PANEL_KEY = "battle-swap";
-let target = 0; // 고른 칸 — 판의 개체를 누르면 여기에 넣는다
+let target: number | null = null; // 고른 칸 — 판의 개체를 누르면 여기에 넣는다. 없으면 판은 누를 수 없다
 
 // 모달을 새로 열 때 — 판은 첫 쪽, 고른 칸은 연 칸 (registerDialog 의 enter)
 export function startBattlePick(slot: number): void {
@@ -28,8 +26,14 @@ export function startBattlePick(slot: number): void {
   target = slot;
 }
 
-const send = (cmd: string, args: Record<string, unknown>): void => {
-  void sendCommand(cmd, "", args, { keepOpen: true });
+// 고른 칸을 바꾼다 — 성공하면 고르기를 푼다(실패하면 그대로 두어 다시 누를 수 있게)
+const change = (cmd: string, args: Record<string, unknown>): void => {
+  void (async () => {
+    if (await sendCommand(cmd, "", args, { keepOpen: true })) {
+      target = null;
+      drawDialog();
+    }
+  })();
 };
 
 function slotCell(s: BattleSlotView): HTMLElement {
@@ -41,18 +45,11 @@ function slotCell(s: BattleSlotView): HTMLElement {
     cell.append(portraitOf(pet.look, pet.shiny, "dot"), el("div", "who", pet.name), el("div", "note", `Lv.${pet.level}`));
     if (pet.shiny) cell.appendChild(shinyIcon(10));
     cell.title = `${pet.name} Lv.${pet.level}`;
-    cell.addEventListener("pointerdown", (e) => startDrag(e, cell, { battleSlot: s.index }));
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 그림의 브라우저 기본 끌기를 막는다
   }
   cell.addEventListener("click", () => {
-    target = s.index;
+    target = target === s.index ? null : s.index;
     drawDialog();
-  });
-  // 놓기 — 판에서 끈 개체는 넣고, 다른 칸에서 끈 개체는 옮긴다
-  dropZone(cell, () => {
-    const from = hold.drag;
-    if (from && "pickPet" in from) send("battle.set", { slotIndex: s.index, petId: from.pickPet });
-    else if (from && "battleSlot" in from && from.battleSlot !== s.index) send("battle.move", { slotIndex: from.battleSlot, toSlot: s.index });
   });
   return cell;
 }
@@ -79,17 +76,19 @@ export function drawBattlePick(): void {
       const at = inBattle.get(pet.id);
       const other = at != null;
       return {
-        disabled: other, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
+        disabled: other || target == null, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
         off: other,
-        ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : {}),
-        pick: () => send("battle.set", { slotIndex: target, petId: pet.id }),
-        drag: { pickPet: pet.id },
+        ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : target == null ? { title: `${pet.name} · 오른쪽에서 넣을 칸을 먼저 누르세요` } : {}),
+        pick: () => {
+          if (target != null) change("battle.set", { slotIndex: target, petId: pet.id });
+        },
       };
     },
-    // 칸을 끌어 판에 놓으면 뺀다
-    dropAnywhere: () => () => {
-      const from = hold.drag;
-      if (from && "battleSlot" in from) send("battle.clear", { slotIndex: from.battleSlot });
+    // 고른 칸에 개체가 있으면 박스의 빈 칸을 눌러 뺀다 (파티 교체의 보관과 같은 자리)
+    blankLabel: "고른 칸의 포켓몬을 배틀 파티에서 빼기",
+    blank: (at) => {
+      const slot = target;
+      return at.kind === "box" && slot != null && v.battle.slots[slot]?.pet ? () => change("battle.clear", { slotIndex: slot }) : null;
     },
   });
   const side = el("div", "swap-side");

@@ -82,7 +82,7 @@ function radarEl(stats: BattleSlotView["stats"]): HTMLElement {
   return box;
 }
 
-// 기술 한 개 — 누르면 기술 바꾸기 모달(그 칸을 고른 채로)
+// 기술 한 개 — 누르면 기술 바꾸기 모달(고른 칸 없이 열고 상세 칸에 이 기술)
 function moveEl(m: MoveView, i: number, icon: string | null, petId: string): HTMLElement {
   const box = el("div", "move");
   const pick = buttonEl("pick", "", () => api.act({ kind: "moves", petId, slot: i }));

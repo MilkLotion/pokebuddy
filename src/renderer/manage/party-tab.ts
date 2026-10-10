@@ -112,7 +112,7 @@ function blankCard(slot: SlotView): HTMLElement {
   }
   // 문구는 Figma `Party Slot` state/empty 의 "박스에서 배치"
   card.append(blankIcon(false), el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
-  card.addEventListener("click", () => openSwap());
+  card.addEventListener("click", () => openSwap(undefined, slot.index)); // 누른 빈 칸을 고른 채로 연다
   return card;
 }
 
@@ -215,7 +215,7 @@ export function drawParty(v: Snapshot): void {
     if (slot.state !== "locked") {
       dropZone(card, () => {
         const from = hold.drag;
-        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index });
+        if (from && "partyPet" in from && from.partyPet !== slot.pet?.id) void sendCommand("party.move", from.partyPet, { toSlot: slot.index }, { busyOn: card });
       });
     }
     if (slot.pet) {

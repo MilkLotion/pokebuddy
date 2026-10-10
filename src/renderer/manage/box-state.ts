@@ -6,7 +6,7 @@
 // 박스 순서 모달의 타일이면 박스 ID
 // 포켓몬 고르기 판(pet-box-panel.ts)에서 끈 개체는 pickPet — 어디(프리셋·박스)에서 왔는지는 놓는 쪽이 개체로 찾는다
 // 기술 바꾸기 모달(move-pick.ts)에서 끈 목록의 기술은 pickMove, 사용 중인 기술 칸은 moveSlot
-export type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string } | { battleSlot: number } | { pickPet: string } | { pickMove: string } | { moveSlot: number };
+export type DragFrom = { boxId: string; slot: number } | { partyPet: string } | { box: string } | { battleSlot: number };
 
 export interface HoldState {
   // 포켓몬 메뉴의 `옮기기` 로 든 개체 — 든 동안 원래 칸은 흐리고, 커서를 따라가는 칸을 띄운다 (2026-10-01 사용자 결정 "실제 게임처럼 마우스에 들리고")

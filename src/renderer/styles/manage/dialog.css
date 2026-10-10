@@ -106,7 +106,8 @@
   font-size: 12px;
   color: var(--danger-ink);
 }
-.actions > .spacer:has(> .footer-error) {
+.actions > .spacer:has(> .footer-error),
+.swap-acts > .spacer:has(> .footer-error) {
   display: flex;
   align-items: center;
   min-width: 0;

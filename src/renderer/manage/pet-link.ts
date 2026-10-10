@@ -8,7 +8,7 @@ import { boxUi } from "./box-state.js";
 import { sendCommand, whenSlow } from "./command.js";
 import { closeDexBeside, syncDexBeside, toggleDexBeside } from "./dex-link.js";
 import { createDeviceLink } from "./device-link.js";
-import { openAnyDialog } from "./dialog.js";
+import { leavePet, openAnyDialog } from "./dialog.js";
 import { redrawBody } from "./shell.js";
 import { boxPets, findPartySlot, partyPets, petInView, ui } from "./state.js";
 
@@ -47,6 +47,7 @@ export function stepPet(delta: -1 | 1): void {
   const at = list.findIndex((p) => p.id === ui.detailPet);
   const next = list[(at + delta + list.length) % list.length];
   if (!next) return;
+  leavePet(next.id);
   ui.detailPet = next.id;
   // 다음 개체가 다른 박스에 있으면 박스 탭도 그 박스로 넘긴다 — 도감 넘기기가 쪽을 따라가는 것과 같다 (dex-tab.ts stepDex)
   const box = ui.view?.boxes.findIndex((b) => b.slots.some((p) => p?.id === next.id)) ?? -1;

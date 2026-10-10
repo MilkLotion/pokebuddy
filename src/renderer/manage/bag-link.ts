@@ -79,13 +79,14 @@ export function syncBagDevice(): void {
 
 // 이전·다음 — 지금 분류 탭의 도구 순서로 돈다. 넘기면 갈래·수량·결과는 처음으로
 export function stepBag(delta: -1 | 1): void {
-  if (!bagPick || !ui.view) return;
+  if (!bagPick || !ui.view || bagSending) return; // 보내는 중에 넘기면 답의 결과가 다른 도구에 붙는다
   const list = hooksOf().stepRows(ui.view.bag);
   if (list.length < 2) return;
   const at = list.findIndex((i) => i.id === bagPick);
   const next = list[(at + delta + list.length) % list.length];
   if (!next) return;
   pickBag(next.id);
+  document.querySelector<HTMLElement>('.bag-card[aria-pressed="true"]')?.scrollIntoView({ block: "nearest" }); // 상점 넘기기와 같다
 }
 
 // 기기 창에서 누른 단추 — 기기 창이 다른 도구를 보이던 때 누른 것은 버린다

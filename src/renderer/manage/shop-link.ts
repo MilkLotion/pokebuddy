@@ -69,7 +69,7 @@ export function syncShopDevice(): void {
 
 // 이전·다음 — 지금 탭(분류)의 상품 순서로 돈다. 포켓몬 탭은 지방·검색으로 좁힌 순서
 export function stepShop(delta: -1 | 1): void {
-  if (!shopPick || !ui.view) return;
+  if (!shopPick || !ui.view || shopSending) return; // 보내는 중에 넘기면 답의 결과가 다른 상품에 붙는다
   const list = hooksOf().stepRows(ui.view.shop);
   if (list.length < 2) return;
   const at = list.findIndex((i) => i.id === shopPick);
@@ -80,7 +80,8 @@ export function stepShop(delta: -1 | 1): void {
   shopNotice = "";
   shopDone = null;
   redrawBody();
-  bodyEl.querySelector<HTMLElement>('#body [aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
+  // 고른 상품 칸으로 — 분류 칩도 aria-pressed 를 써서 넓게 찾으면 칩으로 간다(2026-10-10 조작 점검 D)
+  bodyEl.querySelector<HTMLElement>('.row-card[aria-pressed="true"], .shop-cell[aria-pressed="true"]')?.scrollIntoView({ block: "nearest" });
 }
 
 // 기기 창에서 누른 단추 — 기기 창이 다른 상품을 보이던 때 누른 것은 버린다

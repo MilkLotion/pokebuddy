@@ -46,14 +46,18 @@ function presetRow(p: PresetView, active: boolean, battle: boolean): HTMLButtonE
   const cells = el("div", "po-cells");
   for (const s of p.slots) cells.appendChild(overviewCell(s));
   row.append(head, cells);
+  // 보낸 뒤 성공하면 닫는다 — 먼저 닫으면 처리 중 점을 달 줄이 없고 실패 문구도 보일 곳이 없다(2026-10-10 조작 점검 공통 원인 2·3)
   row.addEventListener("click", () => {
-    closeDialog();
-    if (battle) {
-      void sendCommand("battle.import", "", { preset: p.index }, { keepOpen: true });
+    if (!battle && active) {
+      closeDialog();
       return;
     }
-    if (active) return;
-    void sendCommand("party.preset", "", { preset: p.index }, { keepOpen: true });
+    void (async () => {
+      const ok = battle
+        ? await sendCommand("battle.import", "", { preset: p.index }, { keepOpen: true, busyOn: row })
+        : await sendCommand("party.preset", "", { preset: p.index }, { keepOpen: true, busyOn: row });
+      if (ok) closeDialog();
+    })();
   });
   return row;
 }

@@ -5,7 +5,7 @@ import type { BattleDeviceAction, BattleDeviceInput } from "../../shared/model/d
 import { api } from "./api.js";
 import { sendCommand, whenSlow } from "./command.js";
 import { createDeviceLink } from "./device-link.js";
-import { openAnyDialog } from "./dialog.js";
+import { leavePet, openAnyDialog } from "./dialog.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 
@@ -55,6 +55,8 @@ export function stepBattle(delta: -1 | 1): void {
   if (filled.length < 2) return;
   const at = filled.indexOf(shownSlot);
   shownSlot = filled[(at + delta + filled.length) % filled.length] ?? shownSlot;
+  const next = petAt(shownSlot);
+  if (next) leavePet(next);
   redrawBody();
 }
 
@@ -67,7 +69,7 @@ export function onBattleAction(action: BattleDeviceAction): void {
     return;
   }
   if (action.kind === "moves") {
-    openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 누른 칸을 고른 채로 연다
+    openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 고른 칸 없이 열고, 상세 칸에 누른 칸의 기술을 보인다
     return;
   }
   void swapSend(action, id);

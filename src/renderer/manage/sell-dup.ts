@@ -19,7 +19,8 @@ export function drawSellDuplicates(off: string[]): void {
     body.appendChild(el("p", "hint", "팔 수 있는 중복 포켓몬이 없어요."));
   } else {
     body.appendChild(el("p", "hint", "같은 종에서 한 마리씩 남기고 골랐어요. 칸을 누르면 판매에서 빠져요."));
-    const grid = el("div", "sell-dup-grid");
+    // scroll — 칸을 누를 때마다 모달을 다시 그려도 스크롤 자리를 잇는다(drawDialog 가 .scroll 을 찾는다, 2026-10-10 조작 점검 B)
+    const grid = el("div", "sell-dup-grid scroll");
     for (const c of list) {
       const pet = petInView(c.petId);
       if (!pet) continue;

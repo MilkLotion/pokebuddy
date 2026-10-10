@@ -8,7 +8,7 @@ import { shinyIcon } from "../ui/shiny-icon.js";
 import { portraitOf } from "./art-cache.js";
 import { boxUi, hold } from "./box-state.js";
 import { drawHoldGhost, dropZone, endHold, startDrag, startHold } from "./box-move.js";
-import { requestCommand } from "./command.js";
+import { busyLater, requestCommand } from "./command.js";
 import { wrapPage } from "./grid-view.js";
 import { refreshView } from "./live.js";
 import { askPetMenu } from "./pet-menu.js";
@@ -121,7 +121,7 @@ export function drawBox(v: Snapshot): void {
 
   const grid = el("div", boxHeld ? "box-grid holding" : "box-grid");
   // 든 개체를 이 칸에 놓는다 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 제자리면 그냥 내려놓는다
-  const dropHold = (toSlot: number): void => {
+  const dropHold = (toSlot: number, at: HTMLElement): void => {
     const h = hold.box;
     if (!h) return;
     endHold();
@@ -129,7 +129,7 @@ export function drawBox(v: Snapshot): void {
       redrawBody();
       return;
     }
-    void boxCommand("box.move", h.boxId, { slot: h.slot, toBoxId: box.id, toSlot }, () => unsorted(h.boxId, box.id));
+    void boxCommand("box.move", h.boxId, { slot: h.slot, toBoxId: box.id, toSlot }, () => unsorted(h.boxId, box.id), at);
   };
   box.slots.forEach((pet, slot) => {
     // 확인 전 부화 개체 — 부화 결과 창이 덮고 있어 누를 수 없다. 모습만 빈 칸이다
@@ -138,24 +138,24 @@ export function drawBox(v: Snapshot): void {
       return;
     }
     // 칸 옮기기 — 빈 칸이면 옮기고 개체 칸이면 맞바꾼다. 놓을 칸은 옅은 바탕으로 보인다(테두리 강조는 쓰지 않는다)
-    const onDrop = (): void => {
+    const onDrop = (at: HTMLElement) => (): void => {
       const from = hold.drag;
       if (!from || !("boxId" in from) || (from.boxId === box.id && from.slot === slot)) return;
-      void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id));
+      void boxCommand("box.move", from.boxId, { slot: from.slot, toBoxId: box.id, toSlot: slot }, () => unsorted(from.boxId, box.id), at);
     };
     if (!pet) {
       const blank = el("div", "cell tall blank");
       blank.dataset.hold = "";
       blank.addEventListener("click", () => {
-        if (hold.box) dropHold(slot);
+        if (hold.box) dropHold(slot, blank);
       });
-      dropZone(blank, onDrop);
+      dropZone(blank, onDrop(blank));
       grid.appendChild(blank);
       return;
     }
     // 좌클릭은 개체 상세, 우클릭은 포켓몬 메뉴. 든 개체가 있으면 좌클릭이 이 칸과 맞바꾼다(우클릭은 아무것도 하지 않는다)
-    const cell = boxSlot(pet, () => {
-      if (hold.box) dropHold(slot);
+    const cell: HTMLElement = boxSlot(pet, () => {
+      if (hold.box) dropHold(slot, cell);
       else openPet(pet.id);
     });
     cell.addEventListener("contextmenu", (e) => {
@@ -171,7 +171,7 @@ export function drawBox(v: Snapshot): void {
       if (!hold.box) startDrag(e, cell, { boxId: box.id, slot });
     });
     cell.addEventListener("dragstart", (e) => e.preventDefault()); // 칸 안 그림의 브라우저 기본 끌기를 막는다
-    dropZone(cell, onDrop);
+    dropZone(cell, onDrop(cell));
     grid.appendChild(cell);
   });
   bodyEl.appendChild(grid);
@@ -261,9 +261,11 @@ function unsorted(...boxIds: string[]): void {
 }
 
 // 박스 명령 — 대화상자 밖에서 보낸다. 실패하면 박스 줄 아래에 이유를 한 줄 보인다. 성공하면 onOk 를 먼저 부르고 다시 그린다
-async function boxCommand(cmd: string, target: string, extra: Record<string, unknown>, onOk?: () => void): Promise<void> {
+// busyOn — 처리 중 점을 달 칸(놓은 칸). 없으면 방금 누른 단추 (2026-10-10 조작 점검 공통 원인 3 — 박스 명령에 처리 중이 없었다)
+async function boxCommand(cmd: string, target: string, extra: Record<string, unknown>, onOk?: () => void, busyOn?: HTMLElement): Promise<void> {
   if (ui.busy) return;
   ui.busy = true;
+  const unbusy = busyLater(busyOn);
   let reply: ManageReply;
   try {
     reply = await requestCommand(cmd, target, extra);
@@ -271,6 +273,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
     await refreshView();
   } finally {
     ui.busy = false;
+    unbusy();
   }
   boxUi.note = reply.ok ? "" : failTextOf(reply.reason, "command").text;
   redrawBody();

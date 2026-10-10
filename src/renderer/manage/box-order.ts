@@ -76,7 +76,7 @@ export function drawBoxOrder(): void {
     tile.addEventListener("dragstart", (e) => e.preventDefault());
     dropZone(tile, () => {
       const from = hold.drag;
-      if (from && "box" in from && from.box !== box.id) void orderBox(from.box, i);
+      if (from && "box" in from && from.box !== box.id) void orderBox(from.box, i, tile);
     });
     grid.appendChild(tile);
   });
@@ -84,9 +84,9 @@ export function drawBoxOrder(): void {
 }
 
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다
-async function orderBox(boxId: string, to: number): Promise<void> {
+async function orderBox(boxId: string, to: number, busyOn?: HTMLElement): Promise<void> {
   const shown = ui.view?.boxes[boxUi.page]?.id;
-  await sendCommand("box.order", boxId, { to });
+  await sendCommand("box.order", boxId, { to }, busyOn ? { busyOn } : {});
   const at = ui.view?.boxes.findIndex((b) => b.id === shown) ?? -1;
   if (at >= 0 && at !== boxUi.page) {
     boxUi.page = at;

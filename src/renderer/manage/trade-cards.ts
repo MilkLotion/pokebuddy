@@ -66,9 +66,13 @@ function tradePicker(t: TradeScreen): HTMLElement {
       return {
         disabled: single || t.myReady || t.busy,
         off: single,
-        ...(single ? { title: "단일 포켓몬은 교환할 수 없어요" } : {}),
+        // 확정한 동안 판이 막힌 까닭을 칸 이름에 — 눌러도 반응이 없어 보이던 것(2026-10-10 조작 점검 F)
+        ...(single ? { title: "단일 포켓몬은 교환할 수 없어요" } : t.myReady ? { title: `${pet.name} · 확정을 취소하면 바꿀 수 있어요` } : {}),
         pressed: pet.id === t.myPetId,
-        pick: () => void tradeSend("trade.offer", pet.id),
+        // 이미 내놓은 개체를 다시 누르면 보내지 않는다 — 같은 제안을 또 올리지 않게
+        pick: () => {
+          if (pet.id !== t.myPetId) void tradeSend("trade.offer", pet.id);
+        },
       };
     },
   });
