@@ -1,7 +1,7 @@
 // 배틀 파티 화면 값 — 모험 탭의 배틀 칸 카드와 배틀 파티 상세 기기 창이 쓴다 (docs/specs/adventure.md)
 // 저장을 읽기만 한다
 import { moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
-import { battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
+import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { realStatsOf } from "../battle/stats.js";
 import { abilityTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
@@ -128,5 +128,5 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
       ability: abilityOf(shown),
     };
   });
-  return { slots, canStart: canStartBattle(save) };
+  return { slots, canStart: canStartBattle(save), gate: battleGate(save) };
 }

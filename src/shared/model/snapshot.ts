@@ -154,7 +154,8 @@ export interface BattleSlotView {
 
 export interface BattleView {
   slots: BattleSlotView[]; // 6칸
-  canStart: boolean; // 배틀을 시작할 수 있다 — 지금은 배틀이 없어 화면이 늘 막는다
+  canStart: boolean; // 배틀 파티로 배틀을 시작할 수 있다 — 한 마리 이상이고 출전 불가가 없다. 서버 판정과 같은 뜻이다
+  gate: string | null; // 첫 프리셋의 칸이 덜 열려 배틀을 막으면 그 프리셋 이름 (src/battle/party.ts battleGate). 열렸으면 null
 }
 
 export interface EggView {

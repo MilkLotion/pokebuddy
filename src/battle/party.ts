@@ -4,7 +4,7 @@ import type { DexOptions } from "../dex/data.js";
 import { megaChoices } from "../dex/mega.js";
 import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
 import { shiftGroupOf } from "../dex/regional.js";
-import { slotsOfPreset } from "../party/presets.js";
+import { presetName, slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
@@ -199,6 +199,15 @@ export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOp
     if (battleMegaOf(save, pet.id) && (count.mega += 1) > BATTLE_RULES.limits.mega) over.push("mega");
     return over[0] ?? null;
   });
+}
+
+// 배틀 문 — 첫 프리셋(새 게임에 주는 프리셋)의 6칸이 모두 열려야 배틀(랜덤·친선)을 한다. 다른 프리셋은 보지 않는다
+// (2026-10-10 사용자 "배틀은 한 프리셋(기본제공) 되는거 6칸 다 뚫어야 할 수 있게 제한"). 서버는 검사하지 않는다 — 앱 화면이 막는다
+// 막혔으면 첫 프리셋 이름, 열렸으면 null
+export function battleGate(save: Pick<SaveV3, "party">): string | null {
+  const slots = slotsOfPreset(save, 0);
+  const open = !!slots && slots.every((s) => s.state !== "locked");
+  return open ? null : presetName(save, 0);
 }
 
 // 배틀을 시작할 수 있는가 — 출전 불가가 없고 한 마리 이상

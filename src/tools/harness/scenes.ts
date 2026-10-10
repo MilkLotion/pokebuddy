@@ -339,6 +339,15 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       s.bag["reins-of-unity"] = 1;
     },
   },
+  "battle-open": {
+    note: "배틀 문 열기 — 첫 프리셋의 잠긴 칸을 모두 빈 칸으로 연다(docs/specs/adventure.md 배틀 문). 적용한 프리셋이 첫 프리셋이 아니면 presets[0] 을 연다",
+    apply: (s) => {
+      const first = (s.party.active ?? 0) === 0 ? s.party.slots : s.party.presets?.[0];
+      first?.forEach((slot, i) => {
+        if (slot.state === "locked") first[i] = { state: "empty" };
+      });
+    },
+  },
   battle: {
     note: "모험 탭 배틀 파티 — 박스에 피카츄·뮤츠·루기아·세레비·미라이돈·리자몽을 더하고 배틀 파티 6칸을 채운다. 루기아·미라이돈은 출전 불가(초전설), 리자몽은 메가스톤을 지녀 메가리자몽X 를 켰다 (battle-party)",
     apply: (s, now) => {

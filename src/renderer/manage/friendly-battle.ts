@@ -9,6 +9,7 @@ import type { FriendlyAction, FriendlyScreen } from "../../shared/model/friendly
 import { el } from "../ui/dom.js";
 import { api } from "./api.js";
 import { pickCell } from "./battle-opponent.js";
+import { gateText } from "./battle-start.js";
 import { actionButtonEl, dialogEl, dismissDialog, drawDialog, openSubDialog } from "./dialog.js";
 import { liveInputEl } from "./search.js";
 import { ui } from "./state.js";
@@ -136,11 +137,14 @@ function drawMeet(f: FriendlyScreen, out: HTMLElement): void {
   vs.append(el("i"), el("span", undefined, "VS"), el("i"));
   list.append(sideRow("나", f.mine, f.myReady), vs, sideRow(f.friendName ?? "친구", f.friend, f.friendReady));
   out.appendChild(list);
-  // 바닥 줄 — 실패와 출전 불가는 배너 대신 왼쪽 한 줄 글자. 단추 자리는 그대로다
-  const err = f.error ? failTextOf(f.error.code, "friendly").text : f.myBlocked ? "출전할 수 없는 포켓몬이 있어요" : "";
+  // 바닥 줄 — 실패·배틀 문·출전 불가는 배너 대신 왼쪽 한 줄 글자. 단추 자리는 그대로다
+  // 배틀 문: 첫 프리셋 6칸이 덜 열렸으면 `준비` 를 막는다(링크로 켜도 이 화면이라 여기서도 막는다, 2026-10-10)
+  const gate = ui.view?.battle.gate ?? null;
+  const stop = f.myBlocked || gate != null;
+  const err = f.error ? failTextOf(f.error.code, "friendly").text : gate != null ? gateText(gate) : f.myBlocked ? "출전할 수 없는 포켓몬이 있어요" : "";
   const note = el("div", "fb-error", err);
   const leave = actionButtonEl("나가기", false, f.busy, () => void send({ action: "leave" }));
-  const ready = actionButtonEl(f.myReady ? "준비 취소" : "준비", !f.myReady, f.busy || f.running || (!f.myReady && f.myBlocked), () => void send({ action: "ready", ready: !f.myReady }));
+  const ready = actionButtonEl(f.myReady ? "준비 취소" : "준비", !f.myReady, f.busy || f.running || (!f.myReady && stop), () => void send({ action: "ready", ready: !f.myReady }));
   ready.classList.add("fb-go");
   const acts = el("div", "actions");
   acts.append(note, leave, ready);

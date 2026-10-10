@@ -4,7 +4,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { moveOptions, petMoves, speciesMoves } from "../../battle/moves";
-import { applyBattleReward, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot, setMoves } from "../../battle/party";
+import { applyBattleReward, battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot, setMoves } from "../../battle/party";
 import { battleData } from "../../battle/fighter";
 import { lookOfSource, partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
@@ -94,6 +94,30 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
     "급소에 잘 맞음",
     "쓴 뒤 다음 기술 쿨타임 2배",
   ]);
+}
+
+// ── 배틀 문 — 첫 프리셋 6칸이 모두 열려야 배틀한다. 다른 프리셋·적용 여부와 상관없다 ──
+{
+  const s = seed(["pikachu"]);
+  assert.equal(battleGate(s), "프리셋 1"); // 새 게임은 2칸
+  assert.equal(snapshotView(s, T0).battle.gate, "프리셋 1");
+  for (const slot of s.party.slots) if (slot.state === "locked") slot.state = "empty";
+  assert.equal(battleGate(s), null);
+  assert.equal(snapshotView(s, T0).battle.gate, null);
+  s.party.presetNames = ["메인"];
+  s.party.slots[5]!.state = "locked";
+  assert.equal(battleGate(s), "메인");
+  // 다른 프리셋을 적용해도 첫 프리셋(presets[0])을 본다
+  const first = s.party.slots;
+  const second = (s.party.presets ?? [])[1];
+  if (second) {
+    s.party.presets = [first, null];
+    s.party.slots = second;
+    s.party.active = 1;
+    assert.equal(battleGate(s), "메인");
+    first[5]!.state = "empty";
+    assert.equal(battleGate(s), null);
+  }
 }
 
 // ── 출전 불가 — 칸 순서가 뒤인 개체 ──
