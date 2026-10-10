@@ -5,7 +5,7 @@
   "aftermath": {"ko":"유폭","en":"Aftermath","group":"쓰러뜨림","when":"now","rule":"접촉 기술로 쓰러지면 상대 HP 1/4 피해","text":"접촉 기술에 쓰러지면 때린 상대에게 HP 1/4 피해"},
   "air-lock": {"ko":"에어록","en":"Air Lock","group":"날씨","when":"now","rule":"날씨 룰렛 후보 — 뽑히면 그 판은 날씨 없음","text":"뽑히면 판 내내 날씨 없음"},
   "analytic": {"ko":"애널라이즈","en":"Analytic","group":"스피드","when":"none","rule":"마지막에 움직이면 ×1.3 (제안: 효과 없음)","text":"이 게임에서는 효과 없음"},
-  "anger-point": {"ko":"분노의경혈","en":"Anger Point","group":"방어","when":"now","rule":"기술 급소에 맞으면 공격 +6단계","text":"기술 급소에 맞으면 공격 6단계 상승 (10초)"},
+  "anger-point": {"ko":"분노의경혈","en":"Anger Point","group":"방어","when":"now","rule":"기술 급소에 맞으면 공격 최대 단계(+3)","text":"기술 급소에 맞으면 공격 3단계(최대) 상승 (10초)"},
   "anger-shell": {"ko":"분노의껍질","en":"Anger Shell","group":"HP조건","when":"now","rule":"HP 50% 아래로 떨어지면 공격·특수공격 상승, 방어 하락 (시간제 능력 변화)","text":"HP 절반 아래가 되면 공격·특수공격 상승, 방어 하락 (1단계, 10초)"},
   "anticipation": {"ko":"위험예지","en":"Anticipation","group":"전투 밖","when":"none","rule":"위험 알림 (효과 없음)","text":"이 게임에서는 효과 없음"},
   "arena-trap": {"ko":"개미지옥","en":"Arena Trap","group":"교체","when":"none","rule":"상대 교체 막기 (교대 없음 → 효과 없음)","text":"이 게임에서는 효과 없음"},

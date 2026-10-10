@@ -178,7 +178,7 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(gap > 1 && gap <= 6, `원거리는 떨어져서 쏜다 (틈 ${gap})`);
 }
 
-// ── 능력 변화 — 단계당 25%, 최대 ±6, 쌓임 ──
+// ── 능력 변화 — 단계당 25%, 최대 ±3(2026-10-10), 쌓임 ──
 {
   // 위협 둘 — 상대 공격 −2
   const intim = unit({ ability: "intimidate", stats: [999, 1, 999, 1, 999, 95] });
@@ -194,7 +194,8 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   const s2 = of(r2.events, "stat");
   assert.ok(s2.some((e) => e.side === 1 && e.stat === 2 && e.stage === -1), "상대 방어 −1");
   assert.ok(s2.some((e) => e.side === 0 && e.stat === 1 && e.stage === 3), "자기 공격 +3");
-  assert.ok(!s2.some((e) => Math.abs(e.stage) > 6), "최대 ±6");
+  assert.ok(!s2.some((e) => Math.abs(e.stage) > 3), "최대 ±3");
+  assert.strictEqual(Math.max(...s2.filter((e) => e.side === 0 && e.stat === 1).map((e) => e.stage)), 3, "+3 을 거듭 걸어도 +3 에서 멈춘다");
 }
 
 // ── 프레셔 — 상대 기술 쿨타임 +10%, 평타는 그대로 ──

@@ -136,10 +136,10 @@ export function startPos(side: Side, slot: number): Pos {
 }
 
 // 능력 변화 단계 → 배율. 오르면 1.2·1.4, 내리면 그 역수 [스펙 미확정: 내림 배율]
-// 능력 변화 — 단계당 25%, 최대 ±6. 오르면 1 + 0.25 × 단계, 내리면 1 ÷ (1 + 0.25 × 단계)
-// (docs/specs/moves.md "능력 변화", 2026-10-08 사용자 "25%로 하고", "6랭크까지 하는게 나을듯")
+// 능력 변화 — 단계당 25%, 최대 ±3. 오르면 1 + 0.25 × 단계, 내리면 1 ÷ (1 + 0.25 × 단계)
+// (docs/specs/moves.md "능력 변화", 2026-10-08 사용자 "25%로 하고", 2026-10-10 사용자 "배틀 랭크업 6에서 3으로 제한")
 const STAGE_STEP = 0.25;
-const STAGE_MAX = 6;
+const STAGE_MAX = 3;
 const stageMul = (stage: number): number => (stage >= 0 ? 1 + STAGE_STEP * stage : 1 / (1 + STAGE_STEP * -stage));
 // effects.stats 의 능력 이름 → 능력치 번호
 const STAT_INDEX: Readonly<Record<string, number>> = { atk: 1, def: 2, spa: 3, spd: 4, spe: 5 };
@@ -1285,7 +1285,7 @@ export function runBattle(input: BattleInput): BattleResult {
     }
     // 맞은 쪽의 능력 변화 특성 — 조건이 맞으면 ability 를 먼저 낸다
     const statFx: [boolean, () => void][] = [
-      [a === "anger-point" && crit, () => setStage(o, 1, 6, t, o)],
+      [a === "anger-point" && crit, () => setStage(o, 1, STAGE_MAX, t, o)], // 원작 +6 — 최대 단계까지
       [a === "stamina", () => setStage(o, 2, 1, t, o)],
       [a === "justified" && type === "dark", () => setStage(o, 1, 1, t, o)],
       [a === "rattled" && (type === "dark" || type === "ghost" || type === "bug"), () => setStage(o, 5, 1, t, o)],
