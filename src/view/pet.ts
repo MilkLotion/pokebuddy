@@ -36,9 +36,15 @@ function missingText(m: EvoMissing): string {
   if (m.kind === "time") return m.when === "night" ? "밤에만" : "낮에만";
   return m.gender === "female" ? "암컷만" : "수컷만";
 }
-function needText(lacks: readonly EvoMissing[]): string | undefined {
+// 시간대 조건이 모자라면 지금 시간대와 바뀌기까지 남은 분을 붙인다 — "밤에 진화(현재 : 낮 · 8분 뒤 밤)" (2026-10-11 사용자 "b처럼 밤에 진화(현재 : 낮 · 8분 뒤 밤) 이건 좋은거같아")
+// dayLeftMs 가 없으면(배틀 화면 값 등) 예전처럼 "밤에만"
+function needText(lacks: readonly EvoMissing[], dayPart?: DayPart, dayLeftMs?: number): string | undefined {
   if (!lacks.length) return undefined;
-  if (lacks.length > 1) return `${lacks.map((m) => missingText(m).replace(/ 필요$/, "")).join("·")} 필요`;
+  const time = lacks.find((m) => m.kind === "time");
+  const clock = time && dayPart && dayLeftMs != null
+    ? `(현재 : ${dayPart === "night" ? "밤" : "낮"} · ${Math.max(1, Math.ceil(dayLeftMs / 60_000))}분 뒤 ${dayPart === "night" ? "낮" : "밤"})` : null;
+  if (lacks.length > 1) return `${lacks.map((m) => missingText(m).replace(/ 필요$/, "")).join("·")} 필요${clock ?? ""}`;
+  if (time && clock && time.kind === "time") return `${time.when === "night" ? "밤" : "낮"}에 진화${clock}`;
   return missingText(lacks[0]!);
 }
 
@@ -46,7 +52,7 @@ function needText(lacks: readonly EvoMissing[]): string | undefined {
 // 도감에서 해금 안 된 결과 종은 이름을 "???" 로 준다 — 도감 기기 창과 같이 가리고 조건만 보인다. 진화가 처음 보는 순간이다
 // (2026-10-01 사용자 결정 "추천대로하자", Figma 05 `1126:23890`)
 // 교환에 걸린 개체는 조건을 채워도 준비되지 않은 것으로 보이고, 까닭은 실패 문구표의 trade-locked 제목이다 (94 항목 9-5-1)
-function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView[] {
+function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart, dayLeftMs?: number): EvolutionView[] {
   const known = (slug: string): boolean => isKnownSpecies(save, slug);
   const locked = !checkPetFree(save, pet.id, "evolve").ok;
   return evolveCandidates(save, pet.id, dayPart).map((c) => ({
@@ -58,7 +64,7 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart): EvolutionView
     types: known(c.to) ? profileOf(c.to).types.map((x) => typeName(x)) : [],
     typeIds: known(c.to) ? [...profileOf(c.to).types] : [],
     ready: c.ready && !locked,
-    ...(c.ready && !locked ? {} : { need: locked && c.ready ? failTextOf("trade-locked", "trade").text : needText(c.lacks) }),
+    ...(c.ready && !locked ? {} : { need: locked && c.ready ? failTextOf("trade-locked", "trade").text : needText(c.lacks, dayPart, dayLeftMs) }),
     ...(c.need.kind === "item" ? { item: c.need.item } : {}),
     ...(c.map ? { map: true as const } : {}),
     ...(c.lacks.some((m) => m.kind === "gender") ? { genderBlocked: true as const } : {}),
@@ -134,7 +140,8 @@ function debuffsOf(pet: PetV3): PetView["debuffs"] {
   return out;
 }
 
-export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart): PetView {
+// dayLeftMs — 다음에 낮·밤이 바뀌기까지 남은 시간. 있으면 진화 줄의 시간대 조건에 지금 시간대를 붙인다 (src/shared/clock.ts gameDayLeftMs)
+export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayPart, dayLeftMs?: number): PetView {
   const rate = growthOf(pet.species);
   const { percent } = progressTo(rate, pet.exp);
   const shown = formView(shownSpecies(pet)); // 메가 모습이면 그 이름·타입·그림이다. species 는 그대로다
@@ -176,7 +183,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
       return hit ? [{ kind, name: t(`buff.${kind}`), remainMin: ceilMin(hit.remainMs), text: buffText({ name: t(`buff.${kind}`), remainMin: ceilMin(hit.remainMs) }) }] : [];
     }),
     buffNames: BUFF_ORDER.filter((kind) => activeBuffs(pet.buffs).includes(kind)).map((kind) => t(`buff.${kind}`)),
-    evolutions: evolutionsOf(save, pet, dayPart),
+    evolutions: evolutionsOf(save, pet, dayPart, dayLeftMs),
     ...formsView(save, pet),
     ...megaView(save, pet),
     ...megaGoalView(pet),

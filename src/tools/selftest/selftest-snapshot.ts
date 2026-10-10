@@ -250,11 +250,12 @@ function seed(): SaveV3 {
   assert.deepStrictEqual(byTo(evo, "espeon")?.uses, [], "친밀도 진화는 도구가 없다");
   assert.equal(byTo(evo, "vaporeon")?.need, "물의돌 필요", "없는 돌은 모자란 조건");
   assert.equal(byTo(evo, "espeon")?.need, "친밀도 65 필요");
-  assert.equal(byTo(evo, "umbreon")?.need, "밤에만", "낮에는 밤 조건을 알린다");
-  const night = snapshotView(s, T0 + 30 * MIN); // 30분 — 밤
+  // 시간대 조건 — 지금 시간대와 바뀌기까지 남은 분을 붙인다 (2026-10-11 사용자 "밤에 진화(현재 : 낮 · 8분 뒤 밤)", 10분마다 낮밤)
+  assert.equal(byTo(evo, "umbreon")?.need, "밤에 진화(현재 : 낮 · 11분 뒤 밤)", "낮에는 밤 조건을 알린다 — 10시 0분, 11분에 밤");
+  const night = snapshotView(s, T0 + 15 * MIN); // 15분 — 밤(11~20분)
   const nightEvo = night.party.slots[0]?.pet?.evolutions ?? [];
   assert.equal(byTo(nightEvo, "umbreon")?.need, "친밀도 65 필요", "밤에는 친밀도가 모자란 것만 남는다");
-  assert.equal(byTo(nightEvo, "espeon")?.need, "낮에만");
+  assert.equal(byTo(nightEvo, "espeon")?.need, "낮에 진화(현재 : 밤 · 6분 뒤 낮)", "15분 — 21분에 낮");
   assert.deepStrictEqual(day.party.slots[1]?.pet?.evolutions, [], "최종 단계는 후보가 없다");
   // 교환에 올린 개체는 조건을 채워도 준비되지 않았고, 까닭은 trade-locked 문구다 (94 항목 9-5-1)
   s.trade = { pending: { channelId: "c1", petId: "p1", offerRev: 1, received: null } };

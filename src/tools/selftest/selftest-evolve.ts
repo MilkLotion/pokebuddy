@@ -10,7 +10,7 @@ import { DEFAULT_DATA_DIR } from "../../dex/data";
 import { unlockByRules } from "../../dex/unlocks";
 import { evolveCandidates, canEvolve, evolvePet, missingKey, type Candidate } from "../../dex/evolve";
 import { evolveAllowed } from "../../party/pet-actions";
-import { gameDayPart } from "../../shared/clock";
+import { gameDayLeftMs, gameDayPart } from "../../shared/clock";
 
 // 못 채운 조건을 `kind:값` 으로 쓰고 `|` 로 잇는다 — 단언을 짧게 적으려고. 채웠으면 undefined
 const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.ready ? c.lacks.map(missingKey).join("|") : undefined);
@@ -41,15 +41,17 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   return s;
 }
 
-// (1) 게임 시간은 30분마다 낮과 밤이 바뀐다
+// (1) 게임 시간은 10분마다 낮과 밤이 바뀐다 — 0~10·21~30·41~50 낮, 11~20·31~40·51~59 밤 (2026-10-11)
 {
-  const at = (min: number): number => new Date(2026, 8, 24, 10, min, 0).getTime();
-  assert.equal(gameDayPart(at(0)), "day");
-  assert.equal(gameDayPart(at(29)), "day");
-  assert.equal(gameDayPart(at(30)), "night");
-  assert.equal(gameDayPart(at(59)), "night");
+  const at = (min: number, sec = 0): number => new Date(2026, 8, 24, 10, min, sec).getTime();
+  const parts = [0, 10, 11, 20, 21, 30, 31, 40, 41, 50, 51, 59].map((m) => gameDayPart(at(m)));
+  assert.deepEqual(parts, ["day", "day", "night", "night", "day", "day", "night", "night", "day", "day", "night", "night"]);
   assert.equal(gameDayPart(new Date(2026, 8, 24, 3, 5, 0).getTime()), "day", "새벽 3시 5분도 낮이다");
-  process.stdout.write("(1) 게임 시간 · 30분마다 낮밤  ok\n");
+  // 남은 시간 — 다음 바뀌는 분(11·21·31·41·51·60)까지
+  assert.equal(gameDayLeftMs(at(3)), 8 * 60_000, "3분 → 11분까지 8분");
+  assert.equal(gameDayLeftMs(at(10, 30)), 30_000, "10분 30초 → 11분까지 30초");
+  assert.equal(gameDayLeftMs(at(55)), 5 * 60_000, "55분 → 다음 시 0분까지 5분");
+  process.stdout.write("(1) 게임 시간 · 10분마다 낮밤  ok\n");
 }
 
 // (2) 레벨 조건 — 못 채우면 이유를 알려준다

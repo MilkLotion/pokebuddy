@@ -58,8 +58,8 @@ function pet(species: string, affinity: number, extra: Partial<Pet> = {}): Pet {
   };
 }
 
-const DAY = T0 + 10 * 60_000; // 게임 시간 낮 (매시 0~29분)
-const NIGHT = T0 + 40 * 60_000; // 게임 시간 밤 (매시 30~59분)
+const DAY = T0 + 10 * 60_000; // 게임 시간 낮 (매시 0~10분)
+const NIGHT = T0 + 40 * 60_000; // 게임 시간 밤 (매시 31~40분)
 
 function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {}): World {
   return {

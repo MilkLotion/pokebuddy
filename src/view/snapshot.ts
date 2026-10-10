@@ -30,7 +30,7 @@ import type { PartySlotV3 } from "../shared/save-v3";
 import { unclaimedAchievementIds } from "../dex/tables.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial, replayableNow } from "../tutorial/queue.js";
-import { gameDayPart } from "../shared/clock.js";
+import { gameDayLeftMs, gameDayPart } from "../shared/clock.js";
 import { itemAbout } from "./bag.js";
 import { shopList } from "./shop-list.js";
 import { eggIconKey, itemArtKey } from "./device-art.js";
@@ -70,6 +70,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
   const boxSize = BOX_RULES.size;
   const maxEggs = EGG_RULES.maxEggs;
   const dayPart = gameDayPart(now);
+  const dayLeftMs = gameDayLeftMs(now);
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 
   const slotViews = (list: PartySlotV3[]): SlotView[] =>
@@ -77,7 +78,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
       if (s.state !== "pokemon" || !s.petId) return { index, state: s.state };
       const pet = byId.get(s.petId);
       if (!pet) return { index, state: "empty" };
-      return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart) };
+      return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart, dayLeftMs) };
     });
   const slots = slotViews(save.party.slots);
   // 가진 프리셋 전부 — 적용한 프리셋은 위의 slots 를 그대로 쓴다
@@ -91,7 +92,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     size: boxSize,
     slots: b.slots.map((id) => {
       const pet = id ? byId.get(id) : undefined;
-      return pet ? petView(save, pet, true, dayPart) : null;
+      return pet ? petView(save, pet, true, dayPart, dayLeftMs) : null;
     }),
   }));
 

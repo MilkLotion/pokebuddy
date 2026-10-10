@@ -7,7 +7,7 @@
 //   bond     `of` 종을 가진 마리의 친밀도 ≥ affinity
 //   time     지금 게임 시간대 = day | night
 //   event    오늘(로컬) = "MM-DD"
-// 시간대는 게임 시간 — 30분마다 낮과 밤이 바뀐다. 진화와 같은 기준이다 (src/shared/clock.ts gameDayPart)
+// 시간대는 게임 시간 — 10분마다 낮과 밤이 바뀐다. 진화와 같은 기준이다 (src/shared/clock.ts gameDayPart)
 // 상점 가격 조건(shop)은 2026-09-29 뺐다 — 종 가격은 상점이 수집 난이도로 정한다 (src/shop/catalog.ts speciesPrice)
 // 파티(party)·작업 시간(work)·연속 교감(streak) 조건도 2026-09-29 뺐다 — 메타몽·라프라스는 업적 보상(src/achievement/evaluate.ts),
 // 럭키는 핑복 진화로 얻는다 (사용자 결정)
