@@ -1,10 +1,10 @@
-# 친구 교환 링크 페이지 배포 — site/ 만 GitHub Pages 에 올린다. 액션은 커밋 SHA 로 고정한다(태그가 옮겨져도 바뀌지 않게) (worklog/records/trade/trade.md "링크")
+# GitHub Pages 배포 — site/ 와 웹 가이드(docs/guide.md → site/guide/, scripts/build-guide-site.cjs)를 올린다. 액션은 커밋 SHA 로 고정한다(태그가 옮겨져도 바뀌지 않게) (worklog/records/trade/trade.md "링크")
 name: pages
 
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml"]
+    paths: ["site/**", "docs/guide.md", "docs/images/**", "scripts/build-guide-site.cjs", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: node scripts/build-guide-site.cjs site/guide
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

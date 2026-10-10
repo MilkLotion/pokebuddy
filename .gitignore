@@ -24,3 +24,5 @@ release/
 admin/
 
 .tsout-moves/
+# 웹 가이드 — Pages 배포가 docs/guide.md 로 만든다 (scripts/build-guide-site.cjs)
+site/guide/
