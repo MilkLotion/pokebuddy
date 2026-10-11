@@ -3,13 +3,29 @@
 //   1. 본인 확인 → 정지 계정·쿨타임(5분) 먼저 거부
 //   2. 내 파티는 지금 서버 저장에서, 상대 파티는 보인 3개에 고정한 모습으로 전투 개체를 만든다
 //   3. 시드는 서버가 만든다. 엔진(_shared/battle/engine.ts)을 돌린다
-//   4. battle_record 가 쿨타임·offer 를 다시 보고(동시 요청), 보상(그날 첫 판 500 / 이기면 50 / 지거나 비기면 10)을 정해 판과 이벤트를 남긴다
-//   5. { battleId, reward, result, events, sides, looks, dataHash } — 앱은 이벤트를 재생하고, 보상을 저장에 더하고 battleId 를 남긴다
-import { runBattle, type EngineFighter } from "../_shared/battle/engine.ts";
+//   4. 판 요약(양쪽 칸의 종·모습·이로치와 준 피해·받은 피해·싸운 시간)을 만든다 — 관리자 정리 뒤에도 남아 배틀 상세가 읽는다(docs/specs/adventure.md "배틀 기록")
+//   5. battle_record 가 쿨타임·offer 를 다시 보고(동시 요청), 보상(그날 첫 판 500 / 이기면 50 / 지거나 비기면 10)을 정해 판과 이벤트를 남긴다
+//   6. { battleId, reward, result, events, sides, looks, dataHash } — 앱은 이벤트를 재생하고, 보상을 저장에 더하고 battleId 를 남긴다
+import { damageLog, damageTally, runBattle, type EngineFighter } from "../_shared/battle/engine.ts";
 import { fighterFrom, lookOfSource, partyOf, type FighterSource } from "../_shared/battle/fighter-core.ts";
 import { battle, codeOf, fail, json, whoAmI, type BattleContext } from "../_shared/battle-common.ts";
 
 const fighters = (party: (FighterSource | null)[]): (EngineFighter | null)[] => party.map((s) => (s ? fighterFrom(battle.data, s) : null));
+
+// 판 요약 — 칸마다 { species, form, shiny, dealt, taken, activeMs }, 빈 칸은 null. 앞이 건 쪽(user_id)이다
+function summaryOf(parties: [(FighterSource | null)[], (FighterSource | null)[]], result: ReturnType<typeof runBattle>): unknown {
+  const tally = damageTally(damageLog(result.events, result.maxHp), result.maxHp, result.endMs);
+  return {
+    v: 1,
+    endMs: result.endMs,
+    sides: parties.map((party, side) =>
+      party.map((s, slot) => {
+        const d = tally[side as 0 | 1][slot];
+        return s && d ? { species: s.species, form: s.form ?? null, shiny: s.shiny === true, dealt: d.dealt, taken: d.taken, activeMs: d.activeMs } : null;
+      }),
+    ),
+  };
+}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   const me = await whoAmI(req);
@@ -55,6 +71,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     p_data_hash: battle.hash,
     p_sides: [mine.party, chosen.party],
     p_events: result.events,
+    p_summary: summaryOf([mine.party, chosen.party], result),
   });
   if (rec.error) {
     const code = codeOf(rec.error.message);

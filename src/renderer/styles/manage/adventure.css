@@ -251,6 +251,29 @@
   text-align: right;
   color: var(--ink);
 }
+/* 판 요약이 있는 줄 — 눌러 배틀 상세를 연다. 단추 기본 모양을 지우고 줄 모양 그대로 */
+.br-row.go {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 8px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.br-row.go:hover {
+  background: var(--subtle);
+}
+/* 배틀 상세 — 기록 줄 아래 나·상대 DPS 표(ui/dps-table.ts). 불러오는 동안에도 표 두 개 높이를 둔다 */
+.bd-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 316px;
+}
 .dialog.battle-record .actions .act.primary {
   width: 120px;
 }

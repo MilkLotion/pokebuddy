@@ -17,7 +17,8 @@ const CH = {
 } satisfies Record<string, BattleScreenChannel>;
 
 // Figma 04 `Battle Window` — 머리 줄 44 + 판 표시 줄 + 카드·전장 1116×484 (2026-10-09 전장 10×6)
-const BATTLE_WINDOW_SIZE = { width: 1116, height: 484 } as const;
+// 아래에 나·상대 DPS 표를 붙여 615 (2026-10-12 사용자 "배틀에서의dps표를 화면밑에 확장하자", Figma 04 `Battle Window` 1787:9967)
+const BATTLE_WINDOW_SIZE = { width: 1116, height: 615 } as const;
 
 export interface BattleWindow {
   show(parent: BrowserWindow | null, view: BattleScreenView): void; // parent 가 없으면 주 화면 가운데

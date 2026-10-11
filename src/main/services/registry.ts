@@ -22,7 +22,7 @@ import type { FriendlyScreen } from "../../shared/model/friendly";
 import { friendlyScreenInput } from "../../view/friendly-battle.js";
 import { devEnv } from "../app/dev-run.js";
 import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
-import { battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
+import { battleDetailView, battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
 import type { BattleScreenInput } from "../../view/battle-screen.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
 import { createMainTrade, type MainTrade } from "./trade";
@@ -234,6 +234,7 @@ export function createServices(deps: ServicesDeps): Services {
         run: (id, name, args) => (deps.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
         onChanged: () => deps.refreshParty(),
         offerView: battleOfferView,
+        detailView: battleDetailView,
         show: (data, pick) => deps.openBattle(screenInputOf(data, pick)),
         beforeSend: () => on.flush(), // 바꾼 배틀 파티를 서버 저장에 먼저 올린다 — 주기 저장(2분)을 기다리면 이전 파티로 싸운다
         prepare: () => deps.prepareBattle("랜덤 배틀"),

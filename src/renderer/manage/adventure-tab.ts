@@ -72,7 +72,7 @@ function blankCard(slot: BattleSlotView): HTMLElement {
   return card;
 }
 
-// 머리 메뉴(가져오기·교체) — 박스·파티 탭 머리 메뉴와 같은 부품. 바깥을 누르면 닫는다(manage.ts)
+// 머리 메뉴(가져오기·교체·내 전적) — 박스·파티 탭 머리 메뉴와 같은 부품. 바깥을 누르면 닫는다(manage.ts)
 let menuOpen = false;
 export function closeAdventureMenu(): boolean {
   if (!menuOpen) return false;
@@ -119,6 +119,7 @@ export function drawAdventure(v: Snapshot): void {
     items: [
       ["가져오기", () => openAnyDialog({ kind: "preset-overview", battle: true })],
       ["교체", () => openAnyDialog({ kind: "battle-pick", slot: firstEmpty })], // 첫 빈 칸을 고른 채, 없으면 고른 칸 없이
+      ["내 전적", () => openAnyDialog({ kind: "battle-record" })], // 배틀 기록 모달 (2026-10-12 사용자 "배틀탭의 메뉴에 내 전적보기 추가")
     ],
   });
   acts.append(start, menu);

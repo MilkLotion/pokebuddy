@@ -5,6 +5,7 @@
 // 사용자의 저장(~/.claude/pokebuddy)과 CLI 설정은 건드리지 않는다. HOME 도 임시 폴더로 바꾼다 — 설정의 "연결" 이 훅을 쓰기 때문이다.
 // `--shot <파일>` 을 주면 창을 그려 PNG 로 저장하고 끝낸다. 화면을 눈으로 확인할 때 쓴다.
 // `--tab <파티|박스|도감|상점|가방>` 을 주면 그 탭을 눌러 놓고 찍는다.
+// `--fake-battle-record` 를 주면 랜덤 배틀 서버 대신 예시 배틀 기록·배틀 상세를 답한다(내 전적·배틀 상세 화면 확인용).
 // `--detail` 을 주면 첫 칸을 눌러 개체 상세까지 찍는다.
 // `--click <선택자>` 를 주면 그 요소를 한 번 눌러 놓고 찍는다. 여러 번 주면 순서대로 누른다.
 // `--context <선택자>` 를 주면 그 요소에 우클릭을 보낸다(창 안의 우클릭 메뉴). `--click` 과 적은 순서대로 한다.
@@ -369,6 +370,37 @@ void app.whenReady().then(async () => {
         }),
       }
     : {};
+  // --fake-battle-record — 예시 기록 3판(이름 있는 건 판, 익명 받은 판, 요약 없는 옛 판)과 첫 판의 상세
+  const battleOpt = hasFlag("--fake-battle-record")
+    ? {
+        battle: async (a: { action: string; id?: string }) => {
+          const { battleDetailView } = require("../../view/battle-offer") as typeof import("../../view/battle-offer");
+          const at = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+          const recent = [
+            { id: "20000000-0000-0000-0000-000000000001", name: "지우", detail: true, at: at(5), mine: true, result: "win", reward: 500, endMs: 92_000 },
+            { id: "20000000-0000-0000-0000-000000000002", name: null, detail: true, at: at(40), mine: false, result: "lose", reward: null, endMs: 125_000 },
+            { id: "20000000-0000-0000-0000-000000000003", name: "이슬", detail: false, at: at(300), mine: true, result: "draw", reward: 10, endMs: 180_000 },
+          ];
+          if (a.action === "record") return { ok: true, code: null, record: { mine: { wins: 12, losses: 8, draws: 1 }, def: { wins: 5, losses: 3, draws: 0 }, recent, unseen: { wins: 0, losses: 0, draws: 0, until: null } } };
+          if (a.action === "detail") {
+            const slot = (species: string, dealt: number, taken: number, activeMs = 92_000) => ({ species, form: null, shiny: false, dealt, taken, activeMs });
+            const row = recent.find((r) => r.id === a.id)!;
+            return {
+              ok: true,
+              code: null,
+              battle: battleDetailView({
+                id: row.id, at: row.at, mine: row.mine, result: row.result as "win", reward: row.reward, endMs: row.endMs, name: row.name,
+                sides: [
+                  [slot("pikachu", 1840, 1120), slot("charizard", 2310, 1460), slot("garchomp", 3020, 1280), slot("lucario", 1560, 1390), slot("gengar", 980, 1050, 64_000), slot("gyarados", 640, 1200, 46_000)],
+                  [slot("dragonite", 1720, 1980), slot("metagross", 1450, 2060), slot("sylveon", 1330, 1700), slot("tyranitar", 1100, 1820), slot("snorlax", 900, 2140), slot("umbreon", 610, 1650)],
+                ],
+              }),
+            };
+          }
+          return { ok: false, code: "NETWORK" };
+        },
+      }
+    : {};
   manage = createManage({
     preload: paths.preloadFile(),
     html: paths.rendererFile("manage.html"),
@@ -378,6 +410,7 @@ void app.whenReady().then(async () => {
       ...mailOpt,
       ...updateOpt,
       ...notesOpt,
+      ...battleOpt,
       drawRegion,
       screens,
       identifyScreens: (on: boolean) => picker.identify(on),

@@ -4,13 +4,13 @@
 // 엔진 판(실제 종) → 화면 모델(src/view/battle-screen.ts) → 재생 계산(src/shared/battle-timeline.ts)을 본다
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
-import { runBattle, type EngineFighter } from "../../battle/engine";
+import { damageLog, damageTally, runBattle, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
 import { clockText, createTimeline, popKindOf, rowOf, spriteFrame } from "../../shared/battle-timeline";
 import type { LookSheets, SpriteSheet } from "../../shared/model/stage";
 import { battleScreenArtKeys, battleScreenModel, withBattleScreenArt } from "../../view/battle-screen";
-import { battleRewardText } from "../../view/battle-offer";
-import { recordBarText, recordRowText, summaryRateText } from "../../shared/battle-record-text";
+import { battleDetailView, battleRewardText } from "../../view/battle-offer";
+import { dpsOf, recordBarText, recordKindText, recordRowText, sortDps, summaryRateText } from "../../shared/battle-record-text";
 import { battleResultBanner } from "../../view/banner";
 import { createBattleNet, RECEIVED_CHECK_MS } from "../../online/battle-net";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -272,6 +272,36 @@ assert.strictEqual(summaryRateText({ wins: 0, losses: 0, draws: 0 }), "승률 �
   const at = new Date(2026, 9, 9, 14, 10).toISOString();
   assert.deepStrictEqual(recordRowText({ at, mine: true, result: "win", reward: 500, endMs: 92_000 }), { result: "승", kind: "건 배틀", when: "10월 9일 14:10", length: "1:32", point: "+500P" });
   assert.deepStrictEqual(recordRowText({ at, mine: false, result: "draw", reward: null, endMs: 180_000 }).point, "—", "받은 배틀은 포인트 자리가 —");
+  // 상대 이름 — 익명 계정은 `익명 트레이너`, 옛 서버(이름 칸 없음)는 이름 없이 (2026-10-12)
+  assert.strictEqual(recordKindText({ mine: true, name: "지우" }), "지우에게 건 배틀");
+  assert.strictEqual(recordKindText({ mine: false, name: null }), "익명 트레이너에게 받은 배틀");
+  assert.strictEqual(recordKindText({ mine: true }), "건 배틀");
+}
+
+// DPS 표 — 엔진 피해 집계·화면 모델·판 요약이 같은 값을 낸다 (2026-10-12)
+{
+  assert.strictEqual(dpsOf(1840, 92_000), 20);
+  assert.strictEqual(dpsOf(500, 0), 0, "싸운 시간이 0 이면 0");
+  const rows = [5, 33, 20].map((dps, i) => ({ species: "pikachu", shiny: false, name: String(i), dealt: dps * 10, taken: 0, dps }));
+  assert.deepStrictEqual(sortDps(rows).map((r) => r.dps), [33, 20, 5], "DPS 높은 순");
+  const log = damageLog(result.events, result.maxHp);
+  const tally = damageTally(log, result.maxHp, result.endMs);
+  const sum = (side: 0 | 1, k: "dealt" | "taken"): number => tally[side].reduce((a, u) => a + (u?.[k] ?? 0), 0);
+  assert.ok(sum(0, "dealt") > 0, "피해가 났다");
+  assert.strictEqual(sum(0, "dealt"), sum(1, "taken"), "내 쪽이 준 피해 = 상대가 받은 피해");
+  assert.strictEqual(sum(1, "dealt"), sum(0, "taken"));
+  tally[1].forEach((u, slot) => u && assert.ok(u.taken <= result.maxHp[1][slot]!, "받은 피해는 실제로 깎인 HP 다 — 회복이 없는 판에서 최대 HP 이하"));
+  const last = view.damage.steps.at(-1)!;
+  for (const side of [0, 1] as const) tally[side].forEach((u, slot) => assert.strictEqual(last.dealt[side][slot], u?.dealt ?? 0, "화면 모델의 마지막 단계 = 판 끝 집계"));
+  const faint = log.faints[0];
+  if (faint) assert.strictEqual(damageTally(log, result.maxHp, result.endMs)[faint.side][faint.slot]!.activeMs, faint.t, "기절한 칸은 기절 시각까지 싸웠다");
+  // 배틀 상세 — 요약의 칸에 이름을 더하고 DPS 높은 순, 요약이 없는 판은 sides null
+  const slot = (species: string, dealt: number, activeMs: number) => ({ species, form: null, shiny: false, dealt, taken: 10, activeMs });
+  const d = battleDetailView({ id: "b", at: "2026-10-12T00:00:00Z", mine: false, result: "win", reward: null, endMs: 92_000, name: null, sides: [[slot("pikachu", 920, 92_000), null], [slot("charizard", 2760, 92_000), slot("gengar", 4600, 46_000)]] });
+  assert.deepStrictEqual(d.sides?.[0].map((r) => [r.name, r.dps]), [["피카츄", 10]]);
+  assert.deepStrictEqual(d.sides?.[1].map((r) => r.name), ["팬텀", "리자몽"], "DPS 높은 순 — 기절해 짧게 싸운 팬텀(100)이 앞");
+  assert.strictEqual(d.row.detail, true);
+  assert.strictEqual(battleDetailView({ id: "b", at: "x", mine: true, result: "lose", reward: 10, endMs: 1, name: "지우", sides: null }).sides, null);
 }
 {
   const b = battleResultBanner({ wins: 2, losses: 1, draws: 0, until: "2026-10-10T00:00:00Z" });
@@ -293,7 +323,7 @@ void (async () => {
       return fn === "battle_record_view" ? { data: { mine: { wins: 0, losses: 0, draws: 0 }, def: { wins: 1, losses: 0, draws: 0 }, recent: [], unseen }, error: null } : { data: null, error: null };
     },
   } as unknown as SupabaseClient;
-  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }), show: () => {}, now: () => clock });
+  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }), detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }), show: () => {}, now: () => clock });
   let shown = 0;
   await net.checkReceived(() => false);
   assert.deepStrictEqual(calls, ["battle_record_view"], "다른 배너가 보이는 중 — 적지 않는다");
@@ -327,6 +357,7 @@ void (async () => {
     run: () => ({ ok: true, result: null, replayed: false }),
     onChanged: () => {},
     offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }),
+    detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }),
     show: () => steps.push("show"),
     prepare: () => steps.push("prepare"),
     cancel: () => steps.push("cancel"),

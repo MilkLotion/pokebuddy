@@ -21,7 +21,7 @@ body {
   align-items: center;
   gap: 12px;
   width: 1116px;
-  height: 484px;
+  height: 615px; /* 판 484 + 아래 DPS 표 (2026-10-12) */
   padding: 0 0 16px;
   overflow: hidden;
 }
@@ -101,6 +101,20 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+/* 아래 DPS 표 — 내 표는 내 카드 아래, 상대 표는 상대 카드 아래. 폭은 몸통(1084)과 같다 (ui/dps-table.ts) */
+.dps-panel {
+  display: flex;
+  gap: 16px;
+  width: 1084px;
+}
+.dps-panel .dps-table {
+  flex: 1 1 0;
+}
+.dps-pic .dps-face {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 .side {
   display: flex;
@@ -484,9 +498,12 @@ body {
 }
 
 /* 결과 — 가림막과 대화상자. Figma `Dialog` Compact */
+/* 결과 가림막은 판(머리 줄부터 카드·전장 아래 끝까지)만 덮는다 — 아래 DPS 표의 최종 값이 보인다 (Figma 05 `16 배틀` `Battle / Window · 결과` 1791:10820)
+   454 = 머리 줄 44 + 12 + 판 표시 줄 44 + 12 + 몸통 336 + 표와의 틈 절반 6 */
 .result-scrim {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
+  height: 454px;
   z-index: 10;
   display: flex;
   align-items: center;

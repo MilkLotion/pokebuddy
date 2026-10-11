@@ -2,7 +2,8 @@
 // 규칙은 docs/specs/adventure.md "상대 고르기" — 후보가 모자란 줄은 실패 줄(party: null)
 import { megaOf } from "../dex/mega.js";
 import type { OfferData } from "../online/battle-net.js";
-import type { BattleOfferView, BattlePickSlotView } from "../shared/model/battle-net.js";
+import { dpsOf, sortDps } from "../shared/battle-record-text.js";
+import type { BattleDetailData, BattleDetailSlot, BattleDetailView, BattleDpsRow, BattleOfferView, BattlePickSlotView } from "../shared/model/battle-net.js";
 import { portraitArtKey } from "./device-art.js";
 import { tableName } from "./name-table.js";
 
@@ -28,4 +29,14 @@ export function battleOfferView(data: OfferData): BattleOfferView {
 // lead 는 오늘의 첫 배틀만 이름을 붙이고, 그 뒤 판은 포인트만 (2026-10-09 사용자 "오늘의 첫 배틀 +500p", "+50p", "+10p")
 export function battleRewardText(reward: number): { lead: string; detail: string } {
   return { lead: reward >= 500 ? `오늘의 첫 배틀 +${reward}P` : `+${reward}P`, detail: "다음 랜덤 배틀은 5분 뒤에 할 수 있어요." };
+}
+
+// 배틀 상세의 화면 값 — 서버 요약의 칸에 이름을 더하고 DPS 를 셈한다. 요약이 없는 판은 sides null
+export function battleDetailView(data: BattleDetailData): BattleDetailView {
+  const rowOf = (s: BattleDetailSlot): BattleDpsRow => {
+    const view = slotOf({ species: s.species, form: s.form, types: [], shiny: s.shiny })!;
+    return { species: view.species, shiny: s.shiny, name: view.name, dealt: s.dealt, taken: s.taken, dps: dpsOf(s.dealt, s.activeMs) };
+  };
+  const sides = data.sides ? (data.sides.map((side) => sortDps(side.flatMap((s) => (s ? [rowOf(s)] : [])))) as [BattleDpsRow[], BattleDpsRow[]]) : null;
+  return { row: { id: data.id, name: data.name, detail: !!data.sides, at: data.at, mine: data.mine, result: data.result, reward: data.reward, endMs: data.endMs }, sides };
 }

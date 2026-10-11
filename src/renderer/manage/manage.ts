@@ -14,7 +14,7 @@ import { boxSlot, drawBox } from "./box-tab.js";
 import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
 import { drawBattleOpponent } from "./battle-opponent.js";
-import { drawBattleRecord, loadBattleRecord } from "./battle-record.js";
+import { drawBattleDetail, drawBattleRecord, loadBattleDetail, loadBattleRecord } from "./battle-record.js";
 import { drawFriendly, loadFriendly } from "./friendly-battle.js";
 import { closePartyMenu, drawParty, stepPreset, stopPresetRename } from "./party-tab.js";
 import { drawGuide } from "./guide.js";
@@ -250,6 +250,7 @@ registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview
 registerDialog({ kind: "battle-start", shape: "dialog battle-start", draw: () => drawBattleStart() });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
 registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: () => drawBattleRecord(), enter: () => void loadBattleRecord() });
+registerDialog({ kind: "battle-detail", shape: "dialog daycare preset-overview battle-record battle-detail", draw: (d) => drawBattleDetail(d.id), enter: (d) => void loadBattleDetail(d.id) });
 registerDialog({ kind: "swap", shape: "dialog swap party-swap", draw: () => drawSwap(), enter: (d, prev) => (prev?.kind === "swap" ? undefined : startSwap(d.focus, d.slot)) });
 registerDialog({ kind: "battle-pick", shape: "dialog swap battle-pick", draw: () => drawBattlePick(), enter: (d, prev) => (prev?.kind === "battle-pick" ? undefined : startBattlePick(d.slot)) });
 registerDialog({ kind: "move-pick", shape: "dialog move-pick", draw: () => drawMovePick(), enter: (d, prev) => (prev?.kind === "move-pick" ? undefined : startMovePick(d.petId, d.slot)) });

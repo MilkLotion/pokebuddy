@@ -239,7 +239,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 여러 창이 같이 쓰는 것
 
 - **코치마크** — `ui/coach.ts` 의 `drawCoachLayer`. 설정창, 파티 상세 기기 창, 무대가 같은 말풍선과 입력 규칙을 쓴다.
-- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`. 선 아이콘(+·자물쇠·✕·꺽쇠·위아래 화살표)은 `ui/line-icons.ts` 다. 순서 바꾸기·교환 표시의 위아래 화살표는 `swapIconEl` 하나를 배틀 파티 상세 기기 창, 기술 바꾸기 모달, 교환 화면이 같이 쓴다.
+- **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), DPS 표는 `ui/dps-table.ts`(`styles/dps-table.css`, 배틀 창 아래 표와 설정창 배틀 상세가 같이 쓴다), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`. 선 아이콘(+·자물쇠·✕·꺽쇠·위아래 화살표)은 `ui/line-icons.ts` 다. 순서 바꾸기·교환 표시의 위아래 화살표는 `swapIconEl` 하나를 배틀 파티 상세 기기 창, 기술 바꾸기 모달, 교환 화면이 같이 쓴다.
 - **글자** — 숫자와 포인트, 남은 시간은 `shared/count-text.ts`(`numberText`, `pointText`, `waitText`), 조사는 `shared/josa.ts`. 메인과 `view` 의 문구는 `view/text.ts` 의 `t` 로 `data/i18n/*.json` 에서 읽는다.
 - **알림 배너** — 문구와 목적지는 `view/banner.ts` 가 만든다. `route` 가 없는 배너는 `바로가기` 를 두지 않는다.
 - **메인의 창** — 보안 옵션은 `main/windows/options.ts`(`webPreferencesOf`, 덮개 창은 `createOverlayWindow`), 기기 창은 `device-window.ts`.

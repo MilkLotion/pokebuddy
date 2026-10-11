@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCode } from "../shared/names/online-codes.js";
 import { SERVER_BATTLE_CODES } from "../shared/names/online-codes.js";
 import type { TxResult } from "../shared/command";
-import type { BattleAction, BattleLook, BattleRecordData, BattleReply } from "../shared/model/battle-net.js";
+import type { BattleAction, BattleDetailData, BattleDetailView, BattleLook, BattleRecordData, BattleReply } from "../shared/model/battle-net.js";
 import { callRpc, isNetworkMessage, isUnreachable, readFunctionError } from "./server-call.js";
 
 // battle-offer 의 답 — 칸은 { species, form, types } 또는 null
@@ -31,6 +31,7 @@ export interface BattleNetDeps {
   run: (id: string, name: string, args: unknown) => TxResult; // 보상 거래 — writer 가 아니면 실패
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
+  detailView: (data: BattleDetailData) => BattleDetailView; // 배틀 상세 — 칸 값에 이름을 더하고 DPS 를 셈한다(view 층)
   show: (data: StartData, pick: number) => void; // 배틀 창을 연다
   beforeSend?: () => Promise<void>; // 상대 받기·판 요청 직전 저장 올리기 — 서버가 서버 저장의 배틀 파티를 읽는다. 친선 배틀의 beforeReady 와 같다
   prepare?: () => void; // 판을 요청하기 직전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다 (2026-10-10)
@@ -102,6 +103,15 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
       // 읽기만 한다 — 상대 받기·판과 겹쳐도 된다
       const r = await record();
       return r.ok ? { ok: true, code: null, record: r.data } : fail(r);
+    }
+    if (a.action === "detail") {
+      // 판 하나의 요약 — 읽기만 한다. 남의 판·없는 판은 null (supabase/migrations/20261012100000_battle_history.sql battle_detail)
+      const r = await callRpc<BattleDetailData | null, BattleCode>(d.client, "battle_detail", { p_battle: a.id }, (e) => {
+        const m = e?.message ?? "";
+        if (m.includes("CLOUD_LOGIN_REQUIRED")) return { code: "CLOUD_LOGIN_REQUIRED" };
+        return isNetworkMessage(m) ? { code: "NETWORK" } : { code: "UNKNOWN", detail: m };
+      });
+      return r.ok ? { ok: true, code: null, battle: r.data ? d.detailView(r.data) : null } : fail(r);
     }
     if (busy) return { ok: false, code: "BATTLE_TOO_FAST" };
     busy = true;

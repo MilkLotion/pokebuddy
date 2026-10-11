@@ -1,13 +1,16 @@
-// 배틀 기록 — 상대 고르기 모달의 `내 전적` 줄과 배틀 기록 모달
+// 배틀 기록 — 상대 고르기 모달의 `내 전적` 줄, 배틀 기록 모달, 배틀 상세 모달
 // 규칙 docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기"(2026-10-10 사용자 확정 "이렇게 진행").
-// Figma 05 `15 모험` `Adventure / Battle Pick · 전적` 1870:12835·`Adventure / Battle Record` 1870:13392,
+// Figma 05 `15 모험` `Adventure / Battle Pick · 전적` 1870:12835·`Adventure / Battle Record` 1959:103319·`Adventure / Battle Detail` 1959:103338,
 //   부품 01 `Battle Result Chip` 1870:12804, 02 `Battle Record Summary` 1870:12805·`Battle Record Bar` 1870:12831·`Battle Record Row` 1870:12830
-// 값은 서버 battle_record_view(메인 api.randomBattle({ action: "record" }) → src/online/battle-net.ts). 지난 판 다시 보기·상대 파티 보기는 없다
+// 값은 서버 battle_record_view(메인 api.randomBattle({ action: "record" }) → src/online/battle-net.ts). 지난 판 다시 보기는 없다
+// 배틀 상세 — 줄을 누르면 그 판의 양쪽 파티 DPS 표(서버 battle_detail 의 판 요약). 2026-10-12 사용자 "상대파티 보기 (해당 배틀때)도 추가", Figma 05 `Adventure / Battle Detail` 1959:103338
 // 불러오기 전과 실패 때도 줄·카드 자리는 그대로 두고 글자만 바꾼다(레이아웃이 움직이지 않게)
-import { recordBarText, recordRowText, summaryRateText, tallyText } from "../../shared/battle-record-text.js";
-import type { BattleRecordData, BattleTally } from "../../shared/model/battle-net.js";
+import { ANONYMOUS_NAME, recordBarText, recordRowText, summaryRateText, tallyText } from "../../shared/battle-record-text.js";
+import type { BattleDetailView, BattleRecordData, BattleRecordRow, BattleTally } from "../../shared/model/battle-net.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { dpsTableEl } from "../ui/dps-table.js";
 import { api } from "./api.js";
+import { portraitOf } from "./art-cache.js";
 import { dialogEl, dismissDialog, drawDialog, openSubDialog } from "./dialog.js";
 import { ui } from "./state.js";
 import { dialogCloseEl } from "./widgets.js";
@@ -50,9 +53,13 @@ function summaryEl(label: string, t: BattleTally | null): HTMLElement {
   return card;
 }
 
-function rowEl(r: BattleRecordData["recent"][number]): HTMLElement {
+// 최근 배틀 한 줄 — 판 요약이 있는 줄은 눌러 배틀 상세를 연다(하위 모달 — 물러나면 배틀 기록으로)
+function rowEl(r: BattleRecordRow, open = true): HTMLElement {
   const v = recordRowText(r);
-  const row = el("div", "br-row");
+  const id = r.id;
+  const go = open && !!id && r.detail === true;
+  const row = go ? buttonEl("br-row go") : el("div", "br-row");
+  if (go && id) row.addEventListener("click", () => openSubDialog({ kind: "battle-detail", id }));
   row.append(
     el("span", `br-chip ${r.result}`, v.result),
     el("span", "br-kind", v.kind),
@@ -61,6 +68,39 @@ function rowEl(r: BattleRecordData["recent"][number]): HTMLElement {
     el("span", "br-point", v.point),
   );
   return row;
+}
+
+// ── 배틀 상세 ── 판 하나를 서버에서 읽는다. 불러오기 전과 실패 때도 표 자리는 그대로 두고 글자만 바꾼다
+let detail: { id: string; view: BattleDetailView | null; failed: boolean } | null = null;
+
+export async function loadBattleDetail(id: string): Promise<void> {
+  if (detail?.id === id && detail.view) return;
+  detail = { id, view: null, failed: false };
+  const r = await api.randomBattle({ action: "detail", id }).catch(() => null);
+  if (detail?.id !== id) return;
+  detail = { id, view: r?.ok ? (r.battle ?? null) : null, failed: !r?.ok || !r.battle };
+  if (ui.dialog?.kind === "battle-detail") drawDialog();
+}
+
+export function drawBattleDetail(id: string): void {
+  const top = el("div", "settings-head");
+  const titles = el("div", "titles");
+  titles.appendChild(el("h2", undefined, "배틀 상세"));
+  const x = dialogCloseEl();
+  x.setAttribute("aria-label", "닫기");
+  x.addEventListener("click", dismissDialog);
+  top.append(titles, x);
+  const view = detail?.id === id ? detail.view : null;
+  // 기록 줄 — 받은 값이 없으면 배틀 기록의 같은 줄
+  const row = view?.row ?? data?.recent.find((r) => r.id === id) ?? null;
+  const head = row ? rowEl(row, false) : el("div", "br-row");
+  const body = el("div", "bd-tables");
+  if (view?.sides) {
+    const pic = (r: { species: string; shiny: boolean }): HTMLElement => portraitOf(r.species, r.shiny, "dot");
+    const other = `상대 · ${view.row.name ?? ANONYMOUS_NAME}`;
+    body.append(dpsTableEl("나", view.sides[0], pic), dpsTableEl(other, view.sides[1], pic));
+  } else body.appendChild(el("div", "br-empty", view ? "이 판은 DPS 기록이 없어요" : detail?.id === id && detail.failed ? FAILED : LOADING));
+  dialogEl.append(top, head, body);
 }
 
 export function drawBattleRecord(): void {

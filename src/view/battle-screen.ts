@@ -2,12 +2,12 @@
 // 그림은 열쇠(portrait:·type:)로 둔다. 메인이 받아서 data URI 로 바꾼다 (src/main/manage/battle-screen.ts)
 // 엔진 이벤트를 화면 모델 이벤트로 그대로 넘긴다 — 모양이 어긋나면 여기서 컴파일 오류가 난다
 import type { BattleEvent, BattleResult, EngineFighter } from "../battle/engine.js";
-import { ENGINE_RULES } from "../battle/engine.js";
+import { damageLog, ENGINE_RULES } from "../battle/engine.js";
 import { appearanceOf } from "../dex/look.js";
 import { abilityTable, moveTable } from "../dex/tables.js";
 import type { BattleLook } from "../shared/model/battle-net.js";
 import { SIZE_STEPS } from "../party/size.js";
-import type { BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView } from "../shared/model/battle-screen";
+import type { BattleDamageView, BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView } from "../shared/model/battle-screen";
 import type { MoveView } from "../shared/model/snapshot";
 import { moveMeta } from "./battle.js";
 import { portraitArtKey, typeArtKey } from "./device-art.js";
@@ -124,6 +124,24 @@ function abilityNamesOf(sides: BattleScreenInput["sides"], r: BattleResult): Rec
   return Object.fromEntries([...keys].map((k) => [k, table[k]?.ko ?? k]));
 }
 
+// 창 아래 DPS 표 값 — 피해가 난 시각마다 누적 값을 한 단계로 남긴다(같은 시각은 한 단계)
+function damageOf(r: BattleResult): BattleDamageView {
+  const log = damageLog(r.events, r.maxHp);
+  const dealt: [number[], number[]] = [r.maxHp[0].map(() => 0), r.maxHp[1].map(() => 0)];
+  const taken: [number[], number[]] = [r.maxHp[0].map(() => 0), r.maxHp[1].map(() => 0)];
+  const steps: BattleDamageView["steps"] = [];
+  for (const h of log.hits) {
+    dealt[h.by[0]][h.by[1]] = (dealt[h.by[0]][h.by[1]] ?? 0) + h.amount;
+    taken[h.to[0]][h.to[1]] = (taken[h.to[0]][h.to[1]] ?? 0) + h.amount;
+    const step = { t: h.t, dealt: [[...dealt[0]], [...dealt[1]]] as [number[], number[]], taken: [[...taken[0]], [...taken[1]]] as [number[], number[]] };
+    if (steps.at(-1)?.t === h.t) steps[steps.length - 1] = step;
+    else steps.push(step);
+  }
+  const faints: BattleDamageView["faints"] = [r.maxHp[0].map(() => null), r.maxHp[1].map(() => null)];
+  for (const f of log.faints) if (faints[f.side][f.slot] === null) faints[f.side][f.slot] = f.t;
+  return { steps, faints };
+}
+
 export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
   const { result: r } = input;
   // 칸마다 판 중에 바뀌는 모습(form 이벤트의 종)
@@ -149,6 +167,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
     events: r.events.map(screenEvent),
     roulette,
     result: resultOf(r, input.reward),
+    damage: damageOf(r),
   };
 }
 

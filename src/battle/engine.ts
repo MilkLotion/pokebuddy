@@ -1760,3 +1760,59 @@ export function runBattle(input: BattleInput): BattleResult {
   events.push({ t, kind: "end", winner, timeout });
   return { winner, timeout, endMs: t, hp, maxHp, obstacles, events };
 }
+
+// ── 피해 집계 ── DPS 표(배틀 창 아래·배틀 상세)와 서버의 판 요약이 같이 쓴다. DPS 셈은 src/shared/battle-record-text.ts dpsOf (docs/specs/adventure.md "DPS 표")
+// 기술·평타 피해(damage)와 반격(reflect)만 센다. 상태 이상·날씨·반동 피해는 넣지 않는다
+// 양은 실제로 깎인 HP 다 — 남은 HP 보다 큰 피해는 남은 HP 만큼만 센다
+
+export interface DamageHit {
+  t: number;
+  by: [Side, number]; // 준 쪽 칸
+  to: [Side, number]; // 맞은 쪽 칸
+  amount: number;
+}
+
+export interface DamageTally {
+  dealt: number;
+  taken: number;
+  activeMs: number; // 싸운 시간 — 판 시작부터 기절 또는 집계 시각까지
+}
+
+// 피해 목록과 기절 시각 — 판 결과의 이벤트와 최대 HP 로 만든다
+export function damageLog(events: readonly BattleEvent[], maxHp: readonly [readonly number[], readonly number[]]): { hits: DamageHit[]; faints: { t: number; side: Side; slot: number }[] } {
+  const hp = [maxHp[0].map((v) => v), maxHp[1].map((v) => v)];
+  const hits: DamageHit[] = [];
+  const faints: { t: number; side: Side; slot: number }[] = [];
+  const other = (s: Side): Side => (s === 0 ? 1 : 0);
+  for (const e of events) {
+    if (e.kind === "damage" || e.kind === "reflect") {
+      const to = other(e.side);
+      const before = hp[to]![e.target] ?? 0;
+      const amount = Math.max(0, Math.min(e.amount, before));
+      hp[to]![e.target] = e.hp;
+      if (amount > 0) hits.push({ t: e.t, by: [e.side, e.slot], to: [to, e.target], amount });
+    } else if (e.kind === "weather" || e.kind === "status-hp" || e.kind === "self") {
+      hp[e.side]![e.slot] = e.hp;
+    } else if (e.kind === "form" && e.maxHp !== undefined) {
+      hp[e.side]![e.slot] = (hp[e.side]![e.slot] ?? 0) + Math.max(0, e.maxHp - (maxHp[e.side][e.slot] ?? 0));
+    } else if (e.kind === "faint") faints.push({ t: e.t, side: e.side, slot: e.slot });
+  }
+  return { hits, faints };
+}
+
+// 칸마다 합계 — upto 시각까지. 빈 칸(최대 HP 0)은 null
+export function damageTally(log: ReturnType<typeof damageLog>, maxHp: readonly [readonly number[], readonly number[]], upto: number): [(DamageTally | null)[], (DamageTally | null)[]] {
+  const out = ([0, 1] as const).map((side) => maxHp[side].map((m) => (m > 0 ? { dealt: 0, taken: 0, activeMs: upto } : null))) as [(DamageTally | null)[], (DamageTally | null)[]];
+  for (const h of log.hits) {
+    if (h.t > upto) break;
+    const by = out[h.by[0]][h.by[1]];
+    const to = out[h.to[0]][h.to[1]];
+    if (by) by.dealt += h.amount;
+    if (to) to.taken += h.amount;
+  }
+  for (const f of log.faints) {
+    const u = out[f.side][f.slot];
+    if (u && f.t <= upto) u.activeMs = Math.min(u.activeMs, f.t);
+  }
+  return out;
+}

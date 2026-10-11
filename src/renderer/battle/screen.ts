@@ -1,6 +1,8 @@
 // 배틀 창 — 메인이 보낸 판(BattleScreenView)을 시간대로 재생한다 (docs/specs/ui-components.md "배틀 창으로 더한 것")
 // - 머리 줄(상태 등·LED·제목·✕)과 Esc 닫기는 기기 창 틀(device-frame.ts)을 쓴다. 설정창에 붙지 않아 ◀▶ 넘기기는 없다
 // - 재생 계산은 src/shared/battle-timeline.ts. 여기서는 그 상태를 DOM 에 옮긴다. 판 하나의 DOM 은 처음 한 번 만들고 프레임마다 값만 바꾼다
+import { dpsOf } from "../../shared/battle-record-text.js";
+import type { BattleDpsRow } from "../../shared/model/battle-net.js";
 import type { BattleRouletteView, BattleScreenView, BattleSide, BattleStatusKind, BattleUnitView } from "../../shared/model/battle-screen.js";
 import type { MoveView } from "../../shared/model/snapshot.js";
 import { STATUS_NAME, STAT_CHIP, TIMELINE_RULES, clockText, createTimeline, spriteFrame, type Timeline, type UnitState } from "../../shared/battle-timeline.js";
@@ -10,6 +12,7 @@ import { createFieldFx, type FieldFx } from "./field-fx.js";
 import { STATUS_COLOR, createStatusFx, type StatusFxMark, type StatusFxUnit } from "./status-fx.js";
 import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { dpsTableEl } from "../ui/dps-table.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
 import { movePillEl } from "../ui/move-pill.js";
 
@@ -388,8 +391,51 @@ function draw(view: BattleScreenView): void {
   const fx = el("div", "fx");
   arena.appendChild(fx);
   body.append(sideEl(0), arena, sideEl(1));
-  device.append(hud, body);
+  // 아래 DPS 표 — 재생 시각까지의 누적 피해. 값이 바뀔 때만 다시 그린다 (2026-10-12 사용자 "배틀에서의dps표를 화면밑에 확장하자")
+  const dpsPanel = el("div", "dps-panel");
+  device.append(hud, body, dpsPanel);
   frame.endDraw();
+
+  let dpsKey = "";
+  function paintDps(t: number): void {
+    const steps = view.damage.steps;
+    let lo = 0;
+    let hi = steps.length - 1;
+    let at = -1; // t 이하의 마지막 단계
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (steps[mid]!.t <= t) {
+        at = mid;
+        lo = mid + 1;
+      } else hi = mid - 1;
+    }
+    const step = at >= 0 ? steps[at]! : null;
+    const faces = new Map<BattleDpsRow, BattleUnitView>();
+    const sides = ([0, 1] as const).map((side) =>
+      view.units[side].flatMap((u, slot) => {
+        if (!u) return [];
+        const fainted = view.damage.faints[side][slot];
+        const activeMs = fainted !== null && fainted !== undefined && fainted <= t ? fainted : t;
+        const dealt = step?.dealt[side][slot] ?? 0;
+        const row: BattleDpsRow = { species: u.species, shiny: false, name: u.name, dealt, taken: step?.taken[side][slot] ?? 0, dps: dpsOf(dealt, activeMs) };
+        faces.set(row, u);
+        return [row];
+      }),
+    );
+    const key = sides.map((rows) => rows.map((r) => `${r.dealt}/${r.taken}/${r.dps}`).join(",")).join("|");
+    if (key === dpsKey) return;
+    dpsKey = key;
+    const face = (r: BattleDpsRow): HTMLElement => {
+      const uri = faces.get(r)?.portrait;
+      if (!uri) return el("span", "dps-face");
+      const img = document.createElement("img");
+      img.className = "dps-face";
+      img.src = uri;
+      img.alt = "";
+      return img;
+    };
+    dpsPanel.replaceChildren(dpsTableEl(view.sideNames[0], sides[0]!, face), dpsTableEl(view.sideNames[1], sides[1]!, face));
+  }
 
   // 기술 이름 → 기술 칸 값 (기술 알약)
   const moveById = new Map<string, MoveView>();
@@ -631,6 +677,7 @@ function draw(view: BattleScreenView): void {
     for (const side of [0, 1] as const) state.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, shown));
     paintStatus(shown, state);
     paintFx(shown, state);
+    paintDps(shown);
     if (fieldFx && !stillFx) fieldFx.draw(shown);
     const c = clockText(view.maxMs, shown);
     if (clock.textContent !== c) clock.textContent = c;
@@ -643,6 +690,7 @@ function draw(view: BattleScreenView): void {
   // 첫 자리를 그린 뒤 시작한다
   const first = timeline.seek(0);
   for (const side of [0, 1] as const) first.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, 0));
+  paintDps(0);
   requestAnimationFrame(tick);
 }
 

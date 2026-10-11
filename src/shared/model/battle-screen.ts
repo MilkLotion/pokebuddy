@@ -99,4 +99,11 @@ export interface BattleScreenView {
   events: BattleScreenEvent[]; // 시각 순서
   roulette: BattleRouletteView[] | null; // 릴 세 개(날씨·필드·오라). 엔진이 룰렛을 주지 않은 판은 null — 룰렛 없이 시작한다
   result: BattleResultView;
+  damage: BattleDamageView; // 창 아래 DPS 표 — 재생 시각까지의 누적 피해를 꺼낸다
+}
+
+// DPS 표 값 — 피해가 난 시각마다 양쪽 칸의 누적 준 피해·받은 피해, 칸마다 기절 시각(없으면 null). 셈은 src/battle/engine.ts damageLog
+export interface BattleDamageView {
+  steps: { t: number; dealt: [number[], number[]]; taken: [number[], number[]] }[];
+  faints: [(number | null)[], (number | null)[]];
 }

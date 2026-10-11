@@ -1,0 +1,72 @@
+/* DPS 표 — 배틀 창 아래 표와 설정창 배틀 상세가 같이 읽는다. 마크업은 ui/dps-table.ts
+   Figma 03 `Battle DPS Table` 1959:20·02 `Battle DPS Row` 1959:19 (줄 높이 28, 초상 24, 칸 폭 준 피해 44 · DPS 28 · 받은 피해 64, 칸 사이 4 — 설정창 배틀 상세의 좁은 열에서 다섯 글자 이름이 들어가게) */
+.dps-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dps-side {
+  font: 700 12px/18px var(--font-body);
+  color: var(--ink);
+}
+.dps-cols {
+  display: flex;
+  gap: 12px;
+}
+.dps-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.dps-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 4px;
+  font: 12px/18px var(--font-body);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.dps-row.dps-head {
+  height: 30px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted, var(--soft));
+}
+.dps-pic {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dps-pic img,
+.dps-pic canvas {
+  max-width: 24px;
+  max-height: 24px;
+  image-rendering: pixelated;
+}
+.dps-name {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dps-num {
+  flex: none;
+  width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.dps-num.dps {
+  width: 28px;
+  font-weight: 700;
+}
+.dps-num.taken {
+  width: 64px;
+  color: var(--muted, var(--soft));
+}
+.dps-row.dps-head .dps-num.dps {
+  font-weight: 400;
+}
