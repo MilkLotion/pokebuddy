@@ -235,6 +235,7 @@ export function createServices(deps: ServicesDeps): Services {
         onChanged: () => deps.refreshParty(),
         offerView: battleOfferView,
         show: (data, pick) => deps.openBattle(screenInputOf(data, pick)),
+        beforeSend: () => on.flush(), // 바꾼 배틀 파티를 서버 저장에 먼저 올린다 — 주기 저장(2분)을 기다리면 이전 파티로 싸운다
         prepare: () => deps.prepareBattle("랜덤 배틀"),
         cancel: () => deps.cancelBattle(),
       });

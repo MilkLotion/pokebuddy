@@ -32,6 +32,7 @@ export interface BattleNetDeps {
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
   show: (data: StartData, pick: number) => void; // 배틀 창을 연다
+  beforeSend?: () => Promise<void>; // 상대 받기·판 요청 직전 저장 올리기 — 서버가 서버 저장의 배틀 파티를 읽는다. 친선 배틀의 beforeReady 와 같다
   prepare?: () => void; // 판을 요청하기 직전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다 (2026-10-10)
   cancel?: () => void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다. 실패 문구는 상대 고르기 모달이 보인다
   now?: () => number; // 받은 판 확인 간격을 재는 시계 — 자체 시험이 바꾼다
@@ -106,11 +107,13 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
     busy = true;
     try {
       if (a.action === "offer") {
+        await d.beforeSend?.().catch(() => undefined); // 올리지 못해도 서버 저장의 배틀 파티로 판정한다
         const r = await call<OfferData>("battle-offer", {});
         if (!r.ok) return fail(r);
         return { ok: true, code: null, offer: d.offerView(r.data) };
       }
       d.prepare?.(); // call 은 예외를 실패 답으로 바꾼다 — 실패면 아래에서 닫는다
+      await d.beforeSend?.().catch(() => undefined);
       const r = await call<StartData>("battle-start", { offerId: a.offerId, pick: a.pick });
       if (!r.ok) {
         d.cancel?.();

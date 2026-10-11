@@ -313,7 +313,9 @@ void (async () => {
   let startOk = false;
   const startClient = {
     functions: {
-      invoke: async () => {
+      invoke: async (fn: string) => {
+        steps.push(fn);
+        if (fn === "battle-offer") return { data: { offerId: "o1", picks: [], cooldownMs: 0 }, error: null };
         if (!startOk) throw new Error("연결 끊김");
         return { data: { battleId: "b1", reward: { points: 50 } }, error: null };
       },
@@ -328,15 +330,20 @@ void (async () => {
     show: () => steps.push("show"),
     prepare: () => steps.push("prepare"),
     cancel: () => steps.push("cancel"),
+    beforeSend: async () => void steps.push("upload"),
   });
+  // 바꾼 배틀 파티로 싸운다 — 상대 받기·판 요청 직전에 저장을 올린다 (2026-10-11 사용자 "배틀파티를 바꾸고 배틀하러 갔는데, 이전파티로 유지되어있어")
+  await startNet.act({ action: "offer" });
+  assert.deepStrictEqual(steps, ["upload", "battle-offer"], "상대 받기 직전에 올린다");
+  steps.length = 0;
   const failed = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
   assert.ok(!failed.ok, "판을 받지 못했다");
-  assert.deepStrictEqual(steps, ["prepare", "cancel"], "실패 — 준비 중을 띄웠다가 닫고, 판은 띄우지 않는다");
+  assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "cancel"], "실패 — 준비 중을 띄우고 올린 뒤 요청, 실패면 닫고 판은 띄우지 않는다");
   steps.length = 0;
   startOk = true;
   const okRes = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
   assert.ok(okRes.ok, "판을 받았다");
-  assert.deepStrictEqual(steps, ["prepare", "show"], "성공 — 준비 중 뒤 같은 창에 판");
+  assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "show"], "성공 — 준비 중·올리기·요청 뒤 같은 창에 판");
   console.log("selftest-battle-screen 통과");
 })().catch((e) => {
   console.error(e);
