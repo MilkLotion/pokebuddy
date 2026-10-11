@@ -442,7 +442,7 @@ export function runBattle(input: BattleInput): BattleResult {
       side,
       slot,
       base: f,
-      species: startAlt && f.altForm ? f.altForm.species : f.species,
+      species: startAlt && f.altForm && f.ability !== "tera-shift" ? f.altForm.species : f.species, // 테라체인지는 판 시작 이벤트로 바꾼다
       types: f.types,
       stats,
       moves: [...f.moves],
@@ -571,6 +571,18 @@ export function runBattle(input: BattleInput): BattleResult {
       abilityFx(u, "mimicry", 0);
       u.hitTypes = [FIELD_TYPE[field]];
     }
+  }
+
+  // 테라체인지 — 판 시작에 테라스탈폼 모습을 보이고 특성이 테라셸이 된다. 능력치는 처음부터 테라스탈폼이다(makeUnit)
+  // 테라셸 — 테라스탈폼 개체는 처음부터 테라셸이다. 판 시작에 알린다 (2026-10-11 사용자 "일반폼으로 배틀을 시작하면 테라스탈폼 변경되고, 테라셀 특성 발동. 테라스탈폼으로 배틀을 시작하면 바로 테라셀 발동.")
+  for (const u of all()) {
+    if (u.ability === "tera-shift" && u.inAlt && u.base.altForm) {
+      abilityFx(u, "tera-shift", 0);
+      u.species = u.base.altForm.species;
+      events.push({ t: 0, kind: "form", side: u.side, slot: u.slot, species: u.species });
+      u.ability = "tera-shell";
+    }
+    if (u.ability === "tera-shell") abilityFx(u, "tera-shell", 0);
   }
 
   // 트레이스 — 같은 칸 상대의 특성을 받는다(그 칸이 비거나 트레이스면 그대로)
@@ -1039,6 +1051,8 @@ export function runBattle(input: BattleInput): BattleResult {
     if (d === "dry-skin" && type === "fire") mul *= 1.25;
     // 멀티스케일·스펙터가드 — 처음 맞는 기술만 ×0.5
     if ((d === "multiscale" || d === "shadow-shield") && !o.moveHit) mul *= 0.5;
+    // 테라셸 — 처음 맞는 기술은 상성이 ×0.5 가 된다(무효는 immuneOf 가 먼저 거른다). 평타는 무시 (moves.md "특성")
+    if (d === "tera-shell" && !o.moveHit && eff > 0) mul *= 0.5 / eff;
     return mul;
   }
 
@@ -1568,6 +1582,7 @@ export function runBattle(input: BattleInput): BattleResult {
         }
         break;
       }
+      const shownEff = defAb(o, u) === "tera-shell" && !o.moveHit && eff > 0 ? 0.5 : eff; // 테라셸이 걸린 타는 상성 ×0.5 로 보인다
       const mult = am.stab * eff * allyMoveMul(u, { ...m, type }) * guardMul(o, u) * now.mul * am.mul * defenderMoveMul(o, u, type, m, eff) * stake;
       const crit = critOf(u, m, o);
       // 급소면 쓴 쪽 공격 하락과 맞는 쪽 방어 상승은 무시한다. 천진은 상대의 능력 변화를 보지 않는다
@@ -1582,7 +1597,7 @@ export function runBattle(input: BattleInput): BattleResult {
       o.moveHit = true;
       dealt += d;
       if (type === "electric" && u.electro && d > 0) u.electro = false;
-      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: eff, hp: o.hp, source: m.id, hit: h, ...(crit ? { crit: true as const } : {}) });
+      events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: shownEff, hp: o.hp, source: m.id, hit: h, ...(crit ? { crit: true as const } : {}) });
       if (d > 0) onHit(o, u, m, type, d, crit, t);
       // 마자용 — 반사 대기 중 같은 분류의 기술을 받으면 받은 피해의 2배를 돌려준다(한 번)
       if (o.base.special === "reflect" && o.reflectUntil > t && o.reflectClass === m.class && o.hp > 0 && d > 0) {

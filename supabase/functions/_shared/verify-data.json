@@ -1,5 +1,5 @@
 {
- "hash": "f9a133a278940b5f",
+ "hash": "ebcd26ce0587ec3c",
  "items": {
   "basic-food": {
    "price": null,
@@ -3036,6 +3036,7 @@
   "tentacruel": "slow",
   "tepig": "medium-slow",
   "terapagos": "slow",
+  "terapagos-terastal": "slow",
   "terrakion": "slow",
   "thievul": "fast",
   "throh": "medium-fast",
@@ -4611,6 +4612,7 @@
   "tauros-paldea-combat-breed": 2,
   "tentacruel": 3,
   "terapagos": 5,
+  "terapagos-terastal": 5,
   "terrakion": 5,
   "thievul": 2,
   "throh": 2,

@@ -307,6 +307,18 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   // 멀티스케일 — HP 가득일 때 받는 피해 ×0.5
   const m1 = dmgOf(hitWith(tackle, {}, { ability: "multiscale" }), "tackle")[0]!.amount;
   assert.ok(m1 / a0 > 0.4 && m1 / a0 < 0.6, `멀티스케일 ${a0}→${m1}`);
+  // 테라셸 — 처음 맞는 기술은 상성 ×0.5(보통·굉장 모두), 무효는 그대로, 두 번째 기술부터는 원래 상성 (2026-10-11)
+  const kick = mv("kick", { type: "fighting", power: 80, cooldownMs: 1000 });
+  const shell = { ability: "tera-shell", types: ["normal"] };
+  const ts1 = dmgOf(hitWith(tackle, {}, shell), "tackle")[0]!;
+  assert.strictEqual(ts1.mult, 0.5, "테라셸 — 보통 상성이 ×0.5 로 보인다");
+  assert.ok(ts1.amount / a0 > 0.4 && ts1.amount / a0 < 0.6, `테라셸 보통 ${a0}→${ts1.amount}`);
+  const k0 = dmgOf(hitWith(kick, {}, { types: ["normal"] }), "kick")[0]!, k1 = dmgOf(hitWith(kick, {}, shell), "kick")[0]!;
+  assert.strictEqual(k0.mult, 2);
+  assert.strictEqual(k1.mult, 0.5, "테라셸 — 굉장한 상성도 ×0.5");
+  assert.ok(k1.amount / k0.amount > 0.2 && k1.amount / k0.amount < 0.3, `테라셸 굉장 ${k0.amount}→${k1.amount}`);
+  assert.strictEqual(dmgOf(hitWith(mv("hex2", { type: "ghost", power: 80, cooldownMs: 1000 }), {}, shell), "hex2")[0]!.amount, 0, "테라셸 — 무효는 그대로");
+  assert.strictEqual(dmgOf(hitWith(tackle, {}, shell, 2100), "tackle")[1]?.mult, 1, "테라셸 — 두 번째 기술부터 원래 상성");
   // 배짱 — 노말로 고스트를 맞힌다
   assert.strictEqual(dmgOf(hitWith(tackle, {}, { types: ["ghost"] }), "tackle")[0]!.amount, 0);
   assert.ok(dmgOf(hitWith(tackle, { ability: "scrappy" }, { types: ["ghost"] }), "tackle")[0]!.amount > 0, "배짱");
@@ -489,6 +501,19 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   const hitter = unit({ stats: [999, 400, 999, 1, 999, 95], moves: [mv("smash", { power: 120, cooldownMs: 1000 })] });
   const zr = run([darm], [hitter], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   assert.ok(of(zr.events, "form").some((e) => e.side === 0 && e.species === "darmanitan-zen"), "HP 50% 이하면 달마모드");
+  // 테라체인지 — 판 시작에 테라스탈폼이 되고 특성이 테라셸로 바뀐다. 테라스탈폼 개체는 처음부터 테라셸 (2026-10-11)
+  const tera = buildFighter({ species: "terapagos" })!;
+  assert.strictEqual(tera.ability, "tera-shift");
+  assert.strictEqual(tera.altForm?.species, "terapagos-terastal");
+  const tr = run([tera], [sturdy], 1, 100);
+  const t0 = tr.events.flatMap((e) => (e.t !== 0 ? [] : e.kind === "ability" && e.side === 0 ? [e.ability] : e.kind === "form" && e.side === 0 ? [e.species] : []));
+  assert.deepStrictEqual(t0, ["tera-shift", "terapagos-terastal", "tera-shell"], "테라체인지 → 테라스탈폼 → 테라셸");
+  const terastal = buildFighter({ species: "terapagos-terastal" })!;
+  assert.strictEqual(terastal.ability, "tera-shell", "테라스탈폼 특성은 테라셸");
+  assert.deepStrictEqual(terastal.stats, tera.altForm!.stats, "두 모습의 판 능력치가 같다");
+  const ts = run([terastal], [sturdy], 1, 100);
+  assert.ok(of(ts.events, "ability").some((e) => e.side === 0 && e.t === 0 && e.ability === "tera-shell"), "테라스탈폼은 바로 테라셸");
+  assert.ok(!of(ts.events, "form").some((e) => e.side === 0), "테라스탈폼은 모습이 바뀌지 않는다");
   // 스웜체인지 — HP 50% 이하면 퍼펙트폼, 최대 HP 가 늘고 늘어난 만큼 회복 (2026-10-09)
   const zyg = buildFighter({ species: "zygarde" })!;
   assert.strictEqual(zyg.ability, "power-construct", "지가르데 특성은 스웜체인지");

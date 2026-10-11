@@ -185,7 +185,7 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = dexList(game.read()!);
-    assert.equal(rows.length, 1184, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 42 + 메가·원시회귀 60 — 리전폼·특수 폼·메가는 따로 보인다. 겉모습(안농 B 등)은 칸이 없다 (2026-10-09 공식 도감 기준)");
+    assert.equal(rows.length, 1185, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 43 + 메가·원시회귀 60 — 리전폼·특수 폼·메가는 따로 보인다. 겉모습(안농 B 등)은 칸이 없다 (2026-10-09 공식 도감 기준)");
     assert.ok(!rows.some((r) => r.slug === "unown-b" || r.slug === "arceus-fire"), "겉모습은 기본 종 칸 하나");
     assert.deepStrictEqual(rows.filter((r) => r.dex === 351).map((r) => [r.slug, r.form, r.region]), [["castform", undefined, undefined], ["castform-sunny", 1, "hoenn"], ["castform-rainy", 2, "hoenn"], ["castform-snowy", 3, "hoenn"]], "전투 모습도 칸이 있다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");

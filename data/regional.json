@@ -109,7 +109,8 @@
     "urshifu-rapid-strike": {"base":"urshifu","region":"galar","no":1,"pokemonId":10191,"pmd":"0892/0001","ko":"우라오스(연격의 태세)","en":"Urshifu (Rapid Strike Style)","get":"branch","special":true},
     "calyrex-ice": {"base":"calyrex","region":"galar","no":1,"pokemonId":10193,"overworld":"calyrex/ice","ko":"버드렉스(백마 탄 모습)","en":"Calyrex (Ice Rider)","get":"shift","special":true},
     "calyrex-shadow": {"base":"calyrex","region":"galar","no":2,"pokemonId":10194,"overworld":"calyrex/shadow","ko":"버드렉스(흑마 탄 모습)","en":"Calyrex (Shadow Rider)","get":"shift","special":true},
-    "ursaluna-bloodmoon": {"base":"ursaluna","region":"paldea","no":1,"pokemonId":10272,"pmd":"0901/0001","ko":"다투곰(붉은 달)","en":"Ursaluna (Bloodmoon)","get":"tool","special":true}
+    "ursaluna-bloodmoon": {"base":"ursaluna","region":"paldea","no":1,"pokemonId":10272,"pmd":"0901/0001","ko":"다투곰(붉은 달)","en":"Ursaluna (Bloodmoon)","get":"tool","special":true},
+    "terapagos-terastal": {"base":"terapagos","region":"paldea","no":1,"pokemonId":10276,"pmd":"1024/0001","ko":"테라파고스(테라스탈폼)","en":"Terapagos (Terastal Form)","get":"shift","special":true}
   },
   "edges": {
     "pikachu": [{"to":"raichu-alola","need":{"kind":"item","item":"thunder-stone"},"map":true}],
@@ -186,7 +187,8 @@
     "keldeo": ["keldeo-resolute"],
     "greninja": ["greninja-battle-bond"],
     "arceus": ["arceus-bug", "arceus-dark", "arceus-dragon", "arceus-electric", "arceus-fighting", "arceus-fire", "arceus-flying", "arceus-ghost", "arceus-grass", "arceus-ground", "arceus-ice", "arceus-poison", "arceus-psychic", "arceus-rock", "arceus-steel", "arceus-water", "arceus-fairy"],
-    "genesect": ["genesect-douse", "genesect-shock", "genesect-burn", "genesect-chill"]
+    "genesect": ["genesect-douse", "genesect-shock", "genesect-burn", "genesect-chill"],
+    "terapagos": ["terapagos-terastal"]
   },
   "riders": {
     "calyrex-ice": "glastrier",

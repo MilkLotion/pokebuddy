@@ -1184,5 +1184,6 @@
   "iron-boulder": {"moves":["mighty-cleave","zen-headbutt"],"candidates":["psycho-cut","stone-edge","rock-blast","close-combat"]},
   "iron-crown": {"moves":["tachyon-cutter","psychic-noise"],"candidates":["psyshock","psychic","flash-cannon","focus-blast"]},
   "terapagos": {"moves":["tera-starstorm","tri-attack"],"candidates":["body-slam","double-edge","hyper-beam","ice-beam"]},
+  "terapagos-terastal": {"moves":["tera-starstorm","tri-attack"],"candidates":["body-slam","double-edge","hyper-beam","ice-beam"]},
   "pecharunt": {"moves":["malignant-chain","shadow-ball"],"candidates":["poltergeist","gunk-shot","sludge-bomb","foul-play"]}
 }

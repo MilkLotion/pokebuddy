@@ -173,7 +173,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profileOf("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.speciesSlugs().length, 1185, "표의 종 수 — PokeAPI 종 1025 + 폼 160 (리전폼·특수 폼·겉모습 포함). 2026-10-09 개굴닌자(유대변화)·지우개굴닌자·지가르데 퍼펙트폼 3을 더했다");
+  assert.strictEqual(dex.speciesSlugs().length, 1186, "표의 종 수 — PokeAPI 종 1025 + 폼 161 (리전폼·특수 폼·겉모습 포함). 2026-10-09 개굴닌자(유대변화)·지우개굴닌자·지가르데 퍼펙트폼 3을, 2026-10-11 테라파고스(테라스탈폼) 1을 더했다");
   assert.ok(!dex.speciesSlugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.speciesSlugs()) {
@@ -251,8 +251,8 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "castform-sunny:battle", "castform-rainy:battle", "castform-snowy:battle", "deoxys-attack:shift", "deoxys-defense:shift", "deoxys-speed:shift", "burmy-sandy:variant", "burmy-trash:variant", "wormadam-sandy:path", "wormadam-trash:path", "shellos-east:variant", "gastrodon-east:path", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "shaymin-sky:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "darmanitan-zen:battle", "tornadus-therian:shift", "thundurus-therian:shift", "landorus-therian:shift", "kyurem-black:shift", "kyurem-white:shift", "meloetta-pirouette:battle", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "urshifu-rapid-strike:branch", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool"],
-    "특수 폼 42종과 얻는 방법",
+    ["pichu-spiky-eared:gift", "castform-sunny:battle", "castform-rainy:battle", "castform-snowy:battle", "deoxys-attack:shift", "deoxys-defense:shift", "deoxys-speed:shift", "burmy-sandy:variant", "burmy-trash:variant", "wormadam-sandy:path", "wormadam-trash:path", "shellos-east:variant", "gastrodon-east:path", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "shaymin-sky:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "darmanitan-zen:battle", "tornadus-therian:shift", "thundurus-therian:shift", "landorus-therian:shift", "kyurem-black:shift", "kyurem-white:shift", "meloetta-pirouette:battle", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "urshifu-rapid-strike:branch", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool", "terapagos-terastal:shift"],
+    "특수 폼 43종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
   const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);
