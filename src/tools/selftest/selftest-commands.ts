@@ -15,13 +15,14 @@ import { emptySave as emptyV3 } from "../../save/normalize";
 import { sendToWriter as send } from "../../save/command-channel";
 import type { Command } from "../../shared/command";
 import { makeTmp } from "../harness/tmp-dir";
+import { dataHomeOf } from "../../platform/paths";
 
 const T = new Date(2026, 8, 18, 12).getTime();
 
 async function main(): Promise<void> {
   // ── 실제 앱 경로 (저장 v3) — 명령이 거래 실행기를 거쳐 파일까지 간다 ──
   const dir = makeTmp("v3");
-  const gameDir = path.join(dir, ".claude", "pokebuddy");
+  const gameDir = dataHomeOf(dir);
   const paths = { save: path.join(gameDir, "save.json"), saveLock: path.join(gameDir, "save.lock"), companionLock: path.join(gameDir, "companion.lock"), mailbox: path.join(gameDir, "mailbox") };
   fs.mkdirSync(gameDir, { recursive: true });
 

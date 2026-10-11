@@ -1,5 +1,5 @@
 // 펫 상태 기록 — CLI LLM(claude·codex·gemini)의 훅 이벤트를 세션별 상태 파일로 남김 (pokebuddy 의 펫이 읽음)
-// - 펫을 쓰지 않으면(~/.claude/pokebuddy 폴더 없음) 즉시 종료
+// - 펫을 쓰지 않으면(데이터 폴더 없음) 즉시 종료
 // - 조상 프로세스(훅 → CLI → 터미널 셸)를 함께 적어, 펫이 자기 터미널 세션만 따라가게 함
 // - stdout·stderr 출력 없음: claude 는 SessionStart·UserPromptSubmit 의 stdout 을 대화 컨텍스트로 넣고,
 //   gemini 는 stdout(비면 stderr)을 훅 결과로 읽는다
@@ -47,8 +47,29 @@ type EventEntry = Mapping | ((data: HookInput) => Mapping | null);
 
 type BaseRecord = Omit<HookStateRecord, "promptAt" | "usage" | "usageOffset" | "usageBase" | "usageAt">;
 
-const POKEBUDDY_DIR = path.join(os.homedir(), ".claude", "pokebuddy");
-const STATE_DIR = path.join(POKEBUDDY_DIR, "state");
+// 데이터 폴더 — src/platform/paths.ts dataHomeOf·findDataHome 과 같은 계산(이 파일은 다른 모듈을 부르지 못한다).
+// 새 자리가 비었고 옛 자리(~/.claude/pokebuddy, 0.19.5 까지)에 무언가 있으면 옛 자리 — 앱이 아직 옮기지 못한 동안이다. 둘 다 없으면 null
+function dataDir(): string | null {
+  const home = os.homedir();
+  const next =
+    process.platform === "win32"
+      ? path.join(home, "AppData", "Roaming", "pokebuddy")
+      : process.platform === "darwin"
+        ? path.join(home, "Library", "Application Support", "pokebuddy")
+        : path.join(home, ".config", "pokebuddy");
+  const used = (dir: string): boolean => {
+    try {
+      return fs.readdirSync(dir).length > 0;
+    } catch {
+      return false;
+    }
+  };
+  if (used(next)) return next;
+  const old = path.join(home, ".claude", "pokebuddy");
+  return used(old) ? old : null;
+}
+const POKEBUDDY_DIR = dataDir();
+const STATE_DIR = path.join(POKEBUDDY_DIR ?? "", "state");
 const STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ZERO_USAGE: Readonly<Usage> = { in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
 
@@ -219,8 +240,8 @@ process.stdin.on("data", (chunk: string | Buffer) => {
 });
 process.stdin.on("end", () => {
   try {
-    // 펫을 한 번도 설정한 적 없으면(~/.claude/pokebuddy 없음) 아무것도 하지 않음
-    if (!fs.existsSync(POKEBUDDY_DIR)) return process.exit(0);
+    // 펫을 한 번도 설정한 적 없으면(데이터 폴더 없음) 아무것도 하지 않음
+    if (!POKEBUDDY_DIR) return process.exit(0);
 
     const parsed: unknown = JSON.parse(input);
     const data: HookInput = isObj(parsed) ? (parsed as HookInput) : {};

@@ -10,6 +10,7 @@ import { newPet } from "../../party/create";
 import { emptySave as empty } from "../../save/normalize";
 import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
+import { dataHomeOf } from "../../platform/paths";
 
 export const root = path.resolve(__dirname, "..", "..", "..");
 // 앱 프로세스에 `--require` 로 싣는 관측기 — 경로가 고정된 JS 다
@@ -107,7 +108,7 @@ export function makeApp(name: string, server: Server, pets: PetSpec[], extraEnv:
   env.POKEBUDDY_TRADE_RETRY_MS = "2000";
   Object.assign(env, extraEnv);
 
-  const data = path.join(dir, ".claude", "pokebuddy");
+  const data = dataHomeOf(dir);
   fs.mkdirSync(data, { recursive: true });
   if (!opts.fresh) {
     const save = empty(Date.now());

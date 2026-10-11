@@ -1,6 +1,6 @@
 // pokebuddy setup / uninstall — 남의 컴퓨터에 설치하는 부분이라 가장 조심스럽게 다룬다.
 //
-//   1. 펫 데이터 폴더   ~/.claude/pokebuddy — 훅은 이 폴더가 없으면 아무것도 안 한다
+//   1. 펫 데이터 폴더   PATHS.home(OS 앱 데이터 자리, src/platform/paths.ts) — 훅은 이 폴더가 없으면 아무것도 안 한다
 //   2. 상태 훅         dist/hooks/pokebuddy-state.js(TS 빌드 산출물)를 ~/.claude/scripts/hooks/pokebuddy-state.cjs 로 복사.
 //                      CLI 마다 이벤트 등록은 하지 않는다 — 설정창 → 사용자 → 연결 탭의 버튼(connectCli)으로만 한다 (2026-09-28 사용자 결정).
 //                      setup 은 옛 이름(termimon·pkmon) 등록 걷기만 계속한다
@@ -353,12 +353,13 @@ export function runUninstall({ dryRun = false, purge = false, editor = true }: {
   if (purge) {
     say(`펫 데이터      ${PATHS.home}  ${dryRun ? "지울 예정" : "지움"} (설정·위치·그림 캐시)`);
     if (!dryRun) fs.rmSync(PATHS.home, { recursive: true, force: true });
-    for (const old of PATHS.legacyHomes.filter((dir) => fs.existsSync(dir))) {
+    // 0.19.5 까지의 자리 — 앱이 옮긴 뒤 옛 버전을 다시 깔았으면 새로 생겨 남는다
+    for (const old of [PATHS.claudeHome, ...PATHS.legacyHomes].filter((dir) => dir !== PATHS.home && fs.existsSync(dir))) {
       say(`옛 데이터      ${old}  ${dryRun ? "지울 예정" : "지움"}`);
       if (!dryRun) fs.rmSync(old, { recursive: true, force: true });
     }
   } else {
     say(`펫 데이터      ${PATHS.home}  남김 (설정·위치·그림 캐시까지 지우려면 --purge)`);
-    for (const old of PATHS.legacyHomes.filter((dir) => fs.existsSync(dir))) say(`옛 데이터      ${old}  남김 (--purge 면 함께 지운다)`);
+    for (const old of [PATHS.claudeHome, ...PATHS.legacyHomes].filter((dir) => dir !== PATHS.home && fs.existsSync(dir))) say(`옛 데이터      ${old}  남김 (--purge 면 함께 지운다)`);
   }
 }

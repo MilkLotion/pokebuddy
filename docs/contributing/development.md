@@ -47,19 +47,19 @@ pokebuddy companion
 - `npm install` 이 Electron(약 100MB)까지 받는다. mac 창 추적 헬퍼는 패키지에 미리 빌드돼 있다(universal).
 - `pokebuddy setup` 은 처음 한 번만 하면 된다. 하는 일은 다음과 같다:
   - Electron 확인 — 실행 파일이 없으면 받는다
-  - 펫 데이터 폴더 `~/.claude/pokebuddy` 생성
+  - [저장 폴더](../specs/modules.md#저장-폴더) 생성
   - 상태 훅 파일 준비 — `~/.claude/scripts/hooks/pokebuddy-state.cjs` 를 복사한다. **CLI 마다 훅을 등록하지는 않는다** (2026-09-28 사용자 결정).
     CLI 연결은 설정창 → 사용자 → `연결` 탭의 버튼으로 CLI 마다 한다. 이미 등록된 훅은 건드리지 않는다
   - 옛 이름 훅 정리 — 예전 이름(termimon·pkmon)으로 등록된 훅이 있으면 걷는다. 바꾸기 전에 백업을 남긴다
   - 옛 에디터 확장 제거 — 예전 버전이 VS Code 계열 에디터에 설치한 확장(`local.pokebuddy-active-terminal`, 옛 이름 `local.termimon-active-terminal` · `local.pkmon-active-terminal`)이 있으면 지운다. setup 은 에디터 CLI 를 PATH 나 앱 안에서 찾는다. 열려 있는 에디터 창은 다시 불러와야 적용된다
-  - 옛 확장 기록 제거 — `~/.claude/pokebuddy/cli.json` 과 `~/.claude/pokebuddy/windows/` 가 남아 있으면 지운다
+  - 옛 확장 기록 제거 — 저장 폴더의 `cli.json` 과 `windows/` 가 남아 있으면 지운다
 - 무엇을 바꿀지 먼저 보려면 `pokebuddy setup --dry-run` 을 쓴다. 에디터를 건드리지 않으려면 `--no-editor` 를 쓴다.
 
 지우기:
 
 ```bash
 pokebuddy uninstall            # 훅 등록·훅 파일·옛 에디터 확장과 그 기록 제거 (설정·저장·그림 캐시는 남김)
-pokebuddy uninstall --purge    # ~/.claude/pokebuddy 까지
+pokebuddy uninstall --purge    # 저장 폴더와 남은 옛 자리(~/.claude/pokebuddy)까지
 npm uninstall -g pokebuddy
 ```
 
@@ -72,7 +72,7 @@ npm 에 있는 `termimon` 패키지는 이름만 같은 다른 프로젝트(터�
 
 | 옛 흔적 | setup 이 하는 일 |
 |---|---|
-| 데이터 폴더 `~/.claude/termimon` · `~/.claude/pkmon` | 설정(`config.json`)과 그림 캐시(`pmd/`)를 `~/.claude/pokebuddy` 로 가져온다. 그 뒤 옛 폴더를 지운다. 둘 다 있으면 항목마다 `termimon` 쪽을 먼저 쓴다. 새 폴더에 없는 것이 있으면 남긴다 |
+| 데이터 폴더 `~/.claude/termimon` · `~/.claude/pkmon` | 설정(`config.json`)과 그림 캐시(`pmd/`)를 저장 폴더로 가져온다. 그 뒤 옛 폴더를 지운다. 둘 다 있으면 항목마다 `termimon` 쪽을 먼저 쓴다. 새 폴더에 없는 것이 있으면 남긴다 |
 | 훅 등록 `termimon-state.cjs` · `pkmon-state.cjs` | CLI 마다 옛 등록을 걷는다. `pokebuddy-state.cjs` 로 다시 등록한다. 같은 묶음의 다른 훅은 남긴다 |
 | 훅 파일 `~/.claude/scripts/hooks/` 의 위 두 파일 | 옛 등록을 다 걷었을 때만 지운다 |
 | 에디터 확장 `local.termimon-active-terminal` · `local.pkmon-active-terminal` | 설치돼 있으면 제거한다. 열려 있는 창을 다시 불러오면 옛 확장이 멈춘다 |
@@ -132,7 +132,7 @@ npm 이 만든 `pokebuddy.ps1` 이 실행 정책에 걸린 것이다. `pokebuddy
 | `POKEBUDDY_BUDDY` | `buddy=` |
 | `POKEBUDDY_CLICK_THROUGH` | `click=` |
 | `POKEBUDDY_LANG` | 화면 문구 언어 (`ko` · `en`) |
-| `POKEBUDDY_DEBUG=1` | 판정 로그를 `~/.claude/pokebuddy/debug-companion.log` 에 남긴다 |
+| `POKEBUDDY_DEBUG=1` | 판정 로그를 저장 폴더의 `debug-companion.log` 에 남긴다 |
 | `POKEBUDDY_SLUG` | 개발 실행(`npm start`)의 첫 스타터. `pokebuddy companion` 은 이 값을 넘기지 않는다 |
 
 교환·계정·클라우드 저장 서버를 바꾸는 `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY` 와 시험용 `POKEBUDDY_TRADE_*`·`POKEBUDDY_CLOUD_*` 는 저장소에서 직접 띄운 개발 실행에서만 읽는다. exe 설치본과 npm 설치본은 무시한다. 판정 기준은 앱 폴더에 `src/main/app.ts` 원본이 있는가다(`src/platform/dev-run.ts` `isRepoRun`). 설치본에는 이 파일이 들어가지 않는다.
@@ -186,7 +186,7 @@ pokebuddy game --help
 
 
 게임 설정(놀이공간·로그인 시 시작·알림 소리 등)은 설정창의 설정에서 바꾼다. 이 값은 저장(`save.json`)에 있다.
-그 밖의 시작 값은 **`~/.claude/pokebuddy/config.json` 한 파일**에 둔다. 앱은 이 파일에 쓰지 않는다. 바꾸려면 사용자가 직접 만든다.
+그 밖의 시작 값은 **저장 폴더의 `config.json` 한 파일**에 둔다. 앱은 이 파일에 쓰지 않는다. 바꾸려면 사용자가 직접 만든다.
 설정을 프로그램 폴더가 아니라 홈 폴더에 두는 이유가 있다. npm 으로 업데이트해도 설정이 지워지지 않아야 하기 때문이다.
 (예전 버전이 프로그램 폴더에 두던 `pkmon.config.json` 은 처음 실행할 때 이리로 복사해 온다. 형식은 저장소의 `pokebuddy.config.example.json` 을 참고한다)
 경로는 `src/platform/paths.ts`, 기본값과 설정 읽기는 `src/platform/user-config.ts` 한 곳에 있다. 앱(`src/main/`)과 명령(`src/cli/`)이 모두 그것을 쓴다.
@@ -229,7 +229,7 @@ POKEBUDDY_DEBUG=1 pokebuddy companion               # bash · zsh
 $env:POKEBUDDY_DEBUG=1; pokebuddy companion         # PowerShell
 ```
 
-로그는 `~/.claude/pokebuddy/debug-companion.log` 에 쌓인다. 명령이 이 경로를 알려 준다.
+로그는 저장 폴더의 `debug-companion.log` 에 쌓인다. 명령이 이 경로를 알려 준다.
 
 폴링마다 `{want, visible, front, host, pids, state, target}` 를 찍는다.
 `front` 는 맨 앞 창 번호다. `host` 는 `hook` · `known` · `null` 중 하나다. `pids` 는 따르는 창 주인 pid 다. `target` 은 마지막으로 따른 터미널 창이다(`fake: true` 면 아직 터미널 창을 못 본 것이다).
@@ -253,9 +253,9 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `dist/tools/e2e/e2e-companion.js` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다
-- 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 아래 `.claude/pokebuddy/save.json` 을 저장 v3 로 만든다.
+- 실기 확인용 저장은 다음 명령으로 만든다 — `node dist/tools/dev/dev-save.js <HOME> <종>[,<종>…] [--same-home]` 이 그 HOME 의 저장 폴더(Windows 는 `AppData/Roaming/pokebuddy`)에 `save.json` 을 저장 v3 로 만든다.
   마리는 60px 씩 벌려 둔다. `--same-home` 이면 전부 기본 집이다(겹침 확인). 진짜 저장은 건드리지 않는다
-- 시험 중 동반자를 끝낼 때는 프로세스를 죽이지 않는다. `~/.claude/pokebuddy/companion.lock` 을 지운다(`pokebuddy companion stop` 과 같다)
+- 시험 중 동반자를 끝낼 때는 프로세스를 죽이지 않는다. 저장 폴더의 `companion.lock` 을 지운다(`pokebuddy companion stop` 과 같다)
 
 ## 시험용 HOME 에서 실기 확인
 
@@ -335,7 +335,7 @@ node dist/tools/dev/dev-test.js stop
 창 확인(Windows):
 
 - 설정창은 같은 HOME 으로 앱을 한 번 더 실행하면 열린다(`src/main/app/launch.ts` second-instance). 두 번째 프로세스는 바로 끝난다.
-- `scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <폴더>` 가 그 앱의 창만 찍는다(`PrintWindow`). pid 는 시험 HOME 의 `.claude/pokebuddy/save.lock` 첫 줄이다. `-List` 는 창 핸들과 사각형만 보인다. `-Restore` 는 최소화된 창을 포커스 없이 되살린다.
+- `scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <폴더>` 가 그 앱의 창만 찍는다(`PrintWindow`). pid 는 시험 HOME 의 저장 폴더(`AppData/Roaming/pokebuddy`)에 있는 `save.lock` 첫 줄이다. `-List` 는 창 핸들과 사각형만 보인다. `-Restore` 는 최소화된 창을 포커스 없이 되살린다.
 - `scripts/dev-winclick.ps1 -Hwnd <핸들> -X <x> -Y <y>` 가 창에 클릭 메시지를 보낸다(`PostMessage`). 마우스는 움직이지 않는다. 좌표는 찍은 그림에서 읽는다. 설정창은 보이지 않는 왼쪽 테두리 8 px 을 x 에서 뺀다. 화면 배율 100% 기준이다.
 - 화면 전체를 캡처하지 않는다. 사용자의 다른 앱이 찍힌다. 무대의 포켓몬은 작은 사각형만 찍는다.
 - 다른 창에 가려진 창은 그리기를 멈춘다. 이때 `dev-winshot` 은 옛 그림이나 검은 그림을 준다. 가려져도 그리게 하려면 앱을 `--disable-features=CalculateNativeWinOcclusion` 으로 띄운다. `dev-test.js start` 대신 저장소에서 `npx electron --disable-features=CalculateNativeWinOcclusion .` 을 실행한다. `HOME`·`USERPROFILE` 을 시험 HOME 으로, `POKEBUDDY_SAVE_CRYPT=off` 를 함께 준다. 설정창을 여는 두 번째 실행에도 같은 값을 준다. 내릴 때는 `dev-test.js stop` 을 쓴다.

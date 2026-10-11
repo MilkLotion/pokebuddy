@@ -3,7 +3,7 @@
 // 출처는 https://github.com/PokeAPI/sprites 다(저장소 CC0, 그림 저작권은 The Pokémon Company). 2026-09-25 사용자 지시로 PMD 초상에서 바꿨다.
 // 저장소에는 넣지 않고 받는 사람 컴퓨터에 캐시한다 (docs/specs/companion.md "설정창의 초상").
 // 경로: sprites/pokemon/<도감>.png, 이로치는 sprites/pokemon/shiny/<도감>.png. 이로치 그림이 없으면 보통 그림을 쓴다.
-// 캐시: ~/.claude/pokebuddy/sprites/<4자리>.png · <4자리>-shiny.png. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
+// 캐시: <데이터 폴더>/sprites/<4자리>.png · <4자리>-shiny.png. 못 받은 종은 이 프로세스가 끝날 때까지 다시 받지 않는다.
 // 리전폼(src/dex/regional.ts)은 도감 번호 대신 PokeAPI 포켓몬 번호(10100 — 알로라 라이츄)로 받는다. 파일은 10100.png 라 4자리 파일과 겹치지 않는다.
 // 리전폼 그림을 못 받으면 기본형 번호 그림을 쓴다.
 // 도구·알 그림(icons)도 같은 저장소에서 받는다: sprites/items/<식별자>.png, sprites/pokemon/egg.png. 없으면(404) 빈 칸이다.

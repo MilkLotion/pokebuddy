@@ -170,7 +170,7 @@ async function main() {
       shortcutName: TEST ? name : "PokeBuddy", // 바탕 화면·시작 메뉴·점프 목록 앱 이름 줄. 설치 폴더·실행 파일 이름은 pkg.name 그대로
       createDesktopShortcut: !TEST,
       createStartMenuShortcut: !TEST,
-      deleteAppDataOnUninstall: false, // 저장(~/.claude/pokebuddy)은 지우지 않는다
+      deleteAppDataOnUninstall: false, // 저장은 지우지 않는다 — 데이터 폴더가 %APPDATA%/pokebuddy 라 true 면 제거 때 저장이 지워진다 (src/platform/paths.ts)
       // 제거할 때 CLI 훅 등록을 걷는다(업데이트 때는 건너뜀). 업데이트 시험 빌드에는 넣지 않는다 — 시험 앱을 지울 때 사용자의 실제 훅을 걷으면 안 된다
       ...(TEST ? {} : { include: path.join(root, "scripts", "installer.nsh") }),
       artifactName: "${productName}-Setup-${version}.${ext}",

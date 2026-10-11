@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { liveLockOwner } from "./pid-lock.js";
 
 export interface Paths {
   project: string;
@@ -12,6 +13,7 @@ export interface Paths {
   lastError: string; // 펫이 못 떴을 때의 이유 — 펫 출력은 버려지므로 여기 남긴다
   electronData: string;
   home: string;
+  claudeHome: string; // 옛 자리(<홈>/.claude/pokebuddy) — 옮기지 못했으면 home 과 같다. uninstall --purge 가 남은 것을 지운다
   state: string; // 훅이 세션 상태를 적는 곳
   pmd: string; // PMD 스프라이트 묶음 캐시
   overworld: string; // 걷기 대체 그림 캐시 (src/main/art/overworld-art.ts)
@@ -36,7 +38,78 @@ function updateTestHome(): string | null {
   }
 }
 const USER_HOME = updateTestHome() ?? os.homedir();
-const POKEBUDDY_HOME = path.join(USER_HOME, ".claude", "pokebuddy");
+
+// ── 데이터 폴더 ───────────────────────────────────────────────────────────────
+// OS 의 앱 데이터 자리. 0.19.5 까지는 <홈>/.claude/pokebuddy 였다 (worklog/records/data-home/data-home.md)
+// 홈에서 계산한다 — APPDATA 를 보면 HOME·USERPROFILE 만 바꾼 자체 시험이 사용자의 진짜 폴더에 쓴다
+export function dataHomeOf(userHome: string, platform: NodeJS.Platform | string = process.platform): string {
+  if (platform === "win32") return path.join(userHome, "AppData", "Roaming", "pokebuddy");
+  if (platform === "darwin") return path.join(userHome, "Library", "Application Support", "pokebuddy");
+  return path.join(userHome, ".config", "pokebuddy");
+}
+// 옛 자리 — 새 자리가 없을 때만 본다
+export const claudeDataHomeOf = (userHome: string): string => path.join(userHome, ".claude", "pokebuddy");
+
+// 폴더에 무언가 있나 — 빈 새 자리는 없는 것으로 본다. 무엇이 빈 폴더를 먼저 만들어도 옛 자리를 버리지 않게
+function hasEntries(dir: string): boolean {
+  try {
+    return fs.readdirSync(dir).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// 지금 쓰는 데이터 폴더 — 옮기지 않고 찾기만 한다. 새 자리가 비었고 옛 자리에 무언가 있으면 옛 자리. 시험·개발 도구가 쓴다
+export function findDataHome(userHome: string, platform: NodeJS.Platform | string = process.platform, used: (dir: string) => boolean = hasEntries): string {
+  const next = dataHomeOf(userHome, platform);
+  const old = claudeDataHomeOf(userHome);
+  return !used(next) && used(old) ? old : next;
+}
+
+export interface DataHomeOptions {
+  userHome: string;
+  platform?: NodeJS.Platform | string;
+  migrate: boolean; // 옛 자리를 옮겨도 되는 프로세스인가 — 앱 메인만
+  busy?: (oldHome: string) => boolean; // 옛 자리를 쓰는 프로세스가 떠 있다
+  used?: (dir: string) => boolean; // 폴더에 무언가 있다 — 자체 시험은 가짜를 넘긴다
+  move?: (from: string, to: string) => void;
+}
+
+// 데이터 폴더를 정한다. 옛 자리만 있으면 통째로 옮긴다 — save.key 와 electron/Local State(Windows 저장 키)가 같이 움직여야 저장을 푼다.
+// 옮기지 못하면(떠 있는 옛 앱·EPERM·EXDEV) 이번 실행은 옛 자리를 쓰고 다음 실행에 다시 옮긴다
+export function pickDataHome(o: DataHomeOptions): string {
+  const used = o.used ?? hasEntries;
+  const next = dataHomeOf(o.userHome, o.platform);
+  const old = claudeDataHomeOf(o.userHome);
+  if (used(next) || !used(old)) return next;
+  if (!o.migrate || o.busy?.(old)) return old;
+  try {
+    (o.move ?? moveDir)(old, next);
+    return next;
+  } catch {
+    // 동시에 뜬 다른 프로세스가 먼저 옮겼으면 새 자리에 있다
+    return used(next) || !used(old) ? next : old;
+  }
+}
+
+// 폴더 하나를 이름 바꾸기로 옮긴다. 빈 새 자리가 있으면 먼저 지운다 — Windows 는 있는 폴더 자리로 이름을 바꾸지 못한다
+function moveDir(from: string, to: string): void {
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  if (fs.existsSync(to)) fs.rmdirSync(to); // 비었을 때만 지워진다 — 무언가 있으면 예외로 멈춘다
+  fs.renameSync(from, to);
+}
+
+// 옛 자리의 잠금 pid 가 살아 있나 — 동반자(companion.lock)·저장 writer(save.lock).
+// mac 은 열린 파일이 있어도 이름 바꾸기가 성공한다. 떠 있는 옛 앱이 옛 자리에 계속 쓰면 판이 둘로 갈린다
+export const oldHomeBusy = (oldHome: string): boolean =>
+  ["companion.lock", "save.lock"].some((name) => liveLockOwner(path.join(oldHome, name)) !== null);
+
+// 앱을 켠 Electron 메인인가 — src/main/app.ts 의 첫 import(src/main/app/main-mark.ts)가 남긴 표시를 본다.
+// CLI·도구(node)와 Electron 으로 도는 시험 도구(src/tools/dev·smoke)는 옮기지 않는다 — 진짜 홈을 읽은 채 불러와도 사용자의 폴더를 옮기지 않게
+const isAppMain = (): boolean =>
+  (process as { type?: string }).type === "browser" && (globalThis as Record<symbol, unknown>)[Symbol.for("pokebuddy.appMain")] === true;
+
+const POKEBUDDY_HOME = pickDataHome({ userHome: USER_HOME, migrate: isAppMain(), busy: oldHomeBusy });
 
 export const PATHS: Paths = {
   project: PROJECT_DIR,
@@ -49,6 +122,7 @@ export const PATHS: Paths = {
   lastError: path.join(POKEBUDDY_HOME, "last-error.json"),
   electronData: path.join(POKEBUDDY_HOME, "electron"), // Electron 캐시·세션 — uninstall --purge 로 같이 지워지게 홈 아래에
   home: POKEBUDDY_HOME,
+  claudeHome: claudeDataHomeOf(USER_HOME),
   state: path.join(POKEBUDDY_HOME, "state"),
   pmd: path.join(POKEBUDDY_HOME, "pmd"), // CC BY-NC — 저장소엔 넣지 않는다
   overworld: path.join(POKEBUDDY_HOME, "overworld"), // pokeemerald-expansion, 저장소엔 넣지 않는다

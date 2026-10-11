@@ -16,8 +16,9 @@ delete process.env.CLAUDE_CONFIG_DIR;
 // HOME 을 바꾼 뒤에 읽는다 — ES import 는 맨 위로 끌어올려진다
 import check = require("../../agents/check");
 import registry = require("../../agents/registry");
+import paths = require("../../platform/paths");
 
-const stateDir = path.join(home, ".claude", "pokebuddy", "state");
+const stateDir = path.join(paths.dataHomeOf(home), "state");
 
 async function main(): Promise<void> {
   fs.mkdirSync(stateDir, { recursive: true });

@@ -1,4 +1,4 @@
-// 실기 확인 전용 — 진짜 저장(~/.claude/pokebuddy)과 떨어진 시험용 HOME 에서 동반자를 띄우고, 확인할 장면에 맞게 저장을 고친다
+// 실기 확인 전용 — 진짜 저장(데이터 폴더)과 떨어진 시험용 HOME 에서 동반자를 띄우고, 확인할 장면에 맞게 저장을 고친다
 //   node dist/tools/dev/dev-test.js start [--fresh]     시험용 HOME 으로 동반자 실행 (--fresh 면 HOME 을 비우고 첫 포켓몬 선택부터)
 //   node dist/tools/dev/dev-test.js stop                시험 동반자 종료 — companion.lock 을 지우면 스스로 저장하고 끝난다
 //   node dist/tools/dev/dev-test.js scene <장면>        저장을 그 장면으로 고친다 — 앱이 꺼져 있어야 한다(저장은 앱 하나만 쓴다)
@@ -17,6 +17,7 @@ import { emptySave as empty } from "../../save/normalize";
 import { PARTY_RULES } from "../../party/rules";
 import { TUTORIALS } from "../../tutorial/conditions";
 import { applyScene, SCENES } from "../harness/scenes";
+import { findDataHome } from "../../platform/paths";
 
 // 장면(SCENES·applyScene)은 공용 틀 src/tools/harness/scenes.ts 에 있다
 const DEV_TEST_RULES = {
@@ -29,7 +30,8 @@ export const testHome = (): string => path.resolve(process.env.POKEBUDDY_TEST_HO
 // 임시 폴더가 비워지면 익명 계정의 세션을 잃으므로 임시 폴더에는 두지 않는다.
 // worktree 에서 돌릴 때는 POKEBUDDY_ACCOUNT_HOME 으로 저장소의 폴더를 준다 — 주지 않으면 그 worktree 아래를 본다
 export const accountHome = (): string => path.resolve(process.env.POKEBUDDY_ACCOUNT_HOME || path.join(PROJECT, ".claude", "dev-account"));
-const dataDir = (home: string): string => path.join(home, ".claude", "pokebuddy");
+// 앱이 옛 자리(.claude/pokebuddy)를 옮기기 전이면 옛 자리 (src/platform/paths.ts)
+const dataDir = (home: string): string => findDataHome(home);
 const saveFile = (home: string): string => path.join(dataDir(home), "save.json");
 
 function alive(pid: number): boolean {

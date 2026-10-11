@@ -1,6 +1,6 @@
-// 실기 확인 전용 — 지정 HOME 아래 .claude/pokebuddy/save.json 을 저장 v3 로 만든다 (마리 수만큼, 집은 60px 씩 벌림 또는 --same-home 이면 전부 기본값)
+// 실기 확인 전용 — 지정 HOME 의 데이터 폴더(src/platform/paths.ts)에 save.json 을 저장 v3 로 만든다 (마리 수만큼, 집은 60px 씩 벌림 또는 --same-home 이면 전부 기본값)
 //   node dist/tools/dev/dev-save.js <HOME> <종>[,<종>…] [--same-home]
-// 앞에서부터 파티 칸에 꺼내 놓는다. 잠긴 칸도 연다. 파티 칸 수(6)를 넘는 마리는 자른다. 진짜 ~/.claude/pokebuddy/ 는 건드리지 않는다 — HOME 을 꼭 준다
+// 앞에서부터 파티 칸에 꺼내 놓는다. 잠긴 칸도 연다. 파티 칸 수(6)를 넘는 마리는 자른다. 진짜 데이터 폴더는 건드리지 않는다 — HOME 을 꼭 준다
 import fs from "node:fs";
 import path from "node:path";
 import { rollGender } from "../../dex/gender";
@@ -11,6 +11,7 @@ import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { recordDex } from "../../dex/record";
 import { PARTY_RULES, PET_RULES } from "../../party/rules";
+import { findDataHome } from "../../platform/paths";
 
 export interface DevSaveOptions {
   sameHome?: boolean;
@@ -22,7 +23,7 @@ export interface DevSaveOptions {
 export const DEV_SAVE_RULES = { spreadPx: 60 };
 
 // HOME → save.json 경로 (src/platform/paths.ts PATHS 와 같은 규칙)
-export const devSaveFile = (home: string): string => path.join(home, ".claude", "pokebuddy", "save.json");
+export const devSaveFile = (home: string): string => path.join(findDataHome(path.resolve(home)), "save.json");
 
 export function devSaveState(speciesList: string[], opts: DevSaveOptions = {}): SaveV3 {
   const now = opts.now ?? Date.now();
@@ -60,8 +61,8 @@ function main(argv: string[]): void {
   }
   const { file, save } = devSave(path.resolve(home), species.split(","), { sameHome });
   process.stdout.write(`${file}\n${save.pets.map((p) => `${p.id} ${p.species} ${p.nature} home=${p.home.dx},${p.home.dy}`).join("\n")}\n`);
-  if (!fs.existsSync(path.join(path.resolve(home), ".claude", "pokebuddy", "pmd"))) {
-    process.stderr.write("참고: pmd 캐시가 없다 — 실기에서 그림을 네트워크로 받는다 (~/.claude/pokebuddy/pmd/*.zip 을 복사해 두면 빠르다)\n");
+  if (!fs.existsSync(path.join(findDataHome(path.resolve(home)), "pmd"))) {
+    process.stderr.write("참고: pmd 캐시가 없다 — 실기에서 그림을 네트워크로 받는다 (내 데이터 폴더의 pmd/*.zip 을 복사해 두면 빠르다)\n");
   }
 }
 

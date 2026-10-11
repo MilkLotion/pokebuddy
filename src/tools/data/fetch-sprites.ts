@@ -6,7 +6,7 @@
 //   초상    sprites/pokemon/<도감>.png · sprites/pokemon/shiny/<도감>.png  (data/dex.json 의 도감 번호 전부)
 //   도구    sprites/items/<식별자>.png  (data/items.json · data/evo-items.json 의 키 중 그림이 있는 것)
 //   알      sprites/pokemon/egg.png
-// 결과: .cache/sprites/ — 앱의 캐시(~/.claude/pokebuddy/sprites/)와 같은 이름이다 (src/main/art/portraits.ts)
+// 결과: .cache/sprites/ — 앱의 캐시(<데이터 폴더>/sprites/)와 같은 이름이다 (src/main/art/portraits.ts)
 //   <4자리>.png · <4자리>-shiny.png · items/<식별자>.png · egg.png
 // 이미 받은 파일은 건너뛴다. 저장소에는 넣지 않는다(.gitignore)
 // (예전 scripts/fetch-sprites.cjs. 타입 검사를 받게 src/tools 로 옮겼다)

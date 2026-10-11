@@ -18,6 +18,7 @@ import { newPet } from "../../party/create";
 import { emptySave as empty } from "../../save/normalize";
 import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
+import { dataHomeOf, findDataHome } from "../../platform/paths";
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — 디버거·관측기의 JSON 을 그대로 읽는다
 interface Home {
@@ -41,7 +42,7 @@ const work = makeTmp('update-e2e');
 const KEEP = process.env.PB_E2E_UPDATE_BUILDS ? path.resolve(process.env.PB_E2E_UPDATE_BUILDS) : null;
 const HOME = path.join(KEEP ?? work, 'home');
 // 사용자의 동반자 lock — 시험 동안 바뀌면 시험 앱이 사용자의 홈을 쓴 것이다
-const USER_LOCK = path.join(os.homedir(), '.claude', 'pokebuddy', 'companion.lock');
+const USER_LOCK = path.join(findDataHome(os.homedir()), 'companion.lock');
 const userLockMark = () => (fs.existsSync(USER_LOCK) ? `${fs.statSync(USER_LOCK).mtimeMs}:${fs.readFileSync(USER_LOCK, 'utf8')}` : 'none');
 const UPDATER_CACHE = path.join(process.env.LOCALAPPDATA ?? path.join(os.homedir(), 'AppData', 'Local'), `${NAME}-updater`);
 const shots = path.join(work, 'shots');
@@ -107,7 +108,7 @@ function feedServer(dirs: string[]): Promise<{ server: http.Server; log: { name:
 function makeHome(): Home {
   const home = HOME;
   fs.rmSync(home, { recursive: true, force: true });
-  const data = path.join(home, '.claude', 'pokebuddy');
+  const data = dataHomeOf(home);
   fs.mkdirSync(data, { recursive: true });
   const save = empty(Date.now());
   save.pets.push(newPet({ id: 'u1', species: 'pichu', shiny: false, nature: 'hardy', now: Date.now() } as Parameters<typeof newPet>[0]));
@@ -301,7 +302,7 @@ async function main(): Promise<void> {
     await until(async () => (await foot()).includes(`pokebuddy ${NEW}`), '새 버전 글자');
     await shot('3-settings-new.png');
     assert.equal(userLockMark(), userLockBefore, '사용자의 동반자 lock 이 그대로다 — 시험 앱이 사용자의 홈을 쓰지 않았다');
-    checks.push(`(5) 사용자의 홈(~/.claude/pokebuddy)의 companion.lock 그대로`);
+    checks.push(`(5) 사용자의 데이터 폴더의 companion.lock 그대로`);
     checks.push(`(6) 업데이트 뒤 패치노트 "${title}" 한 번, notes-seen.json ${NEW}, 저장 암호화(PBS1·save.key·평문 백업) 뒤 유지(1234P·u1), 설정 바닥 "${(await foot()).split('\n')[0]}"`);
   } finally {
     // 끄고 지운다 — 시험 앱이 남으면 다음 실행이 막힌다

@@ -2,7 +2,7 @@
 //
 // 순수 부분만: layout(집·자리·산책 범위·가두기·무대 교집합) · art.zoomOf · party(저장 v3 · 첫 실행 · 옛 저장 사본 · writer/reader · 잠금 상실) ·
 // menus(항목 순서·라벨 키) · anchor 상태기(가짜 헬퍼로 2회 연속 확정 · 표시 디바운스) · 계약 타입 대입(StageFrame 표본).
-// 임시 폴더에서만 돌고 끝나면 지운다 — 사용자의 ~/.claude/pokebuddy/ 는 건드리지 않는다. 끝에 "통과 (N건)"
+// 임시 폴더에서만 돌고 끝나면 지운다 — 사용자의 데이터 폴더는 건드리지 않는다. 끝에 "통과 (N건)"
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import fs from "node:fs";

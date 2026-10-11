@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { homeEnv } from "../harness/home-env";
 import { makeTmp } from "../harness/tmp-dir";
+import { dataHomeOf } from "../../platform/paths";
 
 type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any — 앱이 쓴 JSON 을 시험이 그대로 읽는다
 
@@ -26,7 +27,7 @@ env.POKEBUDDY_ONLINE = "off";
 env.POKEBUDDY_SAVE_CRYPT = "off";
 // 세션용 환경이 남아 있어도 첫 선택창을 생략하면 안 됨.
 env.POKEBUDDY_SLUG = "pikachu";
-const data = path.join(dir, ".claude", "pokebuddy");
+const data = dataHomeOf(dir);
 const saveFile = path.join(data, "save.json");
 const lock = path.join(data, "companion.lock");
 const checks: string[] = [];

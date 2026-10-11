@@ -1,7 +1,7 @@
 // 온라인 세션 파일 저장소 — supabase-js 의 세션(토큰)을 파일에 둔다. 계정·교환·클라우드 저장이 같은 세션을 본다
 // 설계는 worklog/records/trade/trade.md "세션 저장", 세션 파일 상태는 worklog-mac/records/cloud-authority/design-p2.md 2절·12절 Q3
 //
-// 세션은 키 저장소로 암호화해 ~/.claude/pokebuddy/online/session.bin 에 둔다.
+// 세션은 키 저장소로 암호화해 <데이터 폴더>/online/session.bin 에 둔다.
 // 암호화를 쓸 수 없는 환경(키 저장소 없음)이면 같은 폴더의 session.json 에 평문으로 둔다 — 권한 0600(Q3)
 // 암호화가 한 번 실패해도 평문으로 둔다. 두 파일이 다 있으면 더 나중에 쓴 쪽을 읽는다(W5)
 // Electron 을 모른다 — 키 저장소(KeyVault)를 받아서 쓴다
@@ -14,7 +14,7 @@ import { moveFile, stampOf } from "../platform/move-file.js";
 import { PATHS } from "../platform/paths.js";
 import type { SessionStorage } from "./client.js";
 
-// 세션 파일 자리 — ~/.claude/pokebuddy/online/session.bin
+// 세션 파일 자리 — <데이터 폴더>/online/session.bin
 export const sessionFile = (): string => path.join(PATHS.home, "online", "session.bin");
 
 // 세션 파일 상태 — 첫 읽기 뒤에 정해진다
@@ -51,7 +51,7 @@ export function createSessionStorage(o: { file: string; vault: KeyVault }): Sess
     for (const [k, v] of Object.entries(obj)) if (typeof v === "string" && !memory.has(k)) memory.set(k, v);
   };
   // 평문 파일 — 원자적 쓰기(tmp 를 0600 으로 만들어 rename)라 쓰는 도중에 죽어도 반쪽 파일이 남지 않는다.
-  // Windows 는 권한 비트가 거의 뜻이 없다(읽기 전용만 반영) — 대신 사용자 프로필 폴더(~/.claude)라 다른 사용자 계정은 기본 ACL 로 막힌다
+  // Windows 는 권한 비트가 거의 뜻이 없다(읽기 전용만 반영) — 대신 사용자 프로필 폴더(AppData) 아래라 다른 사용자 계정은 기본 ACL 로 막힌다
   // (예전에는 저장과 달리 바로 덮어썼다 — worklog/records/code-structure/design/94-same-feature-diffs.md 5-6)
   const writePlain = async (): Promise<void> => {
     if (!writeAtomic(plainFile, JSON.stringify(Object.fromEntries(memory)), { mode: 0o600 })) throw new Error("세션 평문 파일을 쓰지 못했다");

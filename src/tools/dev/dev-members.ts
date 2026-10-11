@@ -18,6 +18,7 @@ import { createOnlineClient, type SessionStorage } from "../../online/client";
 import { internalEmail } from "../../online/account";
 import { onlineConfig } from "../../online/config";
 import { localServer } from "../e2e/apps";
+import { findDataHome } from "../../platform/paths";
 
 const PROJECT = path.join(__dirname, "..", "..", "..");
 const ROOT = path.join(PROJECT, ".claude", "test-members");
@@ -46,7 +47,8 @@ const serverOf = (local: boolean): { url: string; key: string; tag: string } => 
   return { url: c.url, key: c.publishableKey, tag: "prod" };
 };
 const homeOf = (tag: string, who: Who): string => path.join(ROOT, tag, who);
-const dataDir = (home: string): string => path.join(home, ".claude", "pokebuddy");
+// 앱이 옛 자리(.claude/pokebuddy)를 옮기기 전이면 옛 자리 (src/platform/paths.ts)
+const dataDir = (home: string): string => findDataHome(home);
 
 // 로그인하거나, 없으면 아이디로 가입한다. 세션 저장소 내용을 돌려준다
 async function signIn(server: { url: string; key: string }, m: Member): Promise<{ store: Record<string, string>; userId: string }> {

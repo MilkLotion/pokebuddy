@@ -1,7 +1,7 @@
 // src/terminal 자체 확인 — npm run build 뒤 node dist/tools/selftest/selftest-terminal.js (npm run selftest 가 차례로 돈다)
 //
 // 테스트 프레임워크 없이 assert 만. 파일은 임시 폴더에서만 —
-// 사용자의 ~/.claude/pokebuddy/ 는 건드리지 않는다. 헬퍼는 node 스크립트로 흉내 낸다 (빈 줄마다 한 줄 답).
+// 사용자의 데이터 폴더는 건드리지 않는다. 헬퍼는 node 스크립트로 흉내 낸다 (빈 줄마다 한 줄 답).
 // 끝에 "통과 (N건)" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { spawn } from "node:child_process";

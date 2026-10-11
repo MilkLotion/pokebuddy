@@ -69,6 +69,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("session"),
   tool("session-storage"),
   tool("pid-lock"),
+  tool("data-home"),
   tool("account", "server"),
   tool("cloud", "server"),
   tool("github"),

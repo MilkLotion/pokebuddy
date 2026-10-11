@@ -107,7 +107,7 @@ export const legacyHookTargets = (): string[] => LEGACY_HOOK_NAMES.map((name) =>
 // 훅을 등록할 CLI — 설정 파일 모양이 셋 다 { hooks: { 이벤트: [{ matcher?, hooks: [{ type: "command", command, … }] }] } } 다.
 //   events   이벤트 → matcher (undefined 면 넣지 않는다 — 모든 경우에 맞는다)
 //   handler  우리 훅 한 항목. 타임아웃 단위가 CLI 마다 다르다 (claude·codex 초, gemini ms)
-//   always   설정 폴더가 없어도 등록한다 — 펫 데이터가 ~/.claude 아래라 claude 만
+//   always   설정 폴더가 없어도 등록한다 — claude 만. 펫 데이터가 ~/.claude 아래였던 0.19.5 까지의 규칙이다 [리팩토링 대상]
 // 표시 이름의 원본은 src/shared/names/agents.ts 다 — 연결 상태(hookInstalled 의 clis[].name)와 연결 탭이 같은 글자를 쓴다
 const labelOf = (cli: AgentName): string => AGENTS.find((a) => a.name === cli)?.label ?? cli;
 

@@ -1,6 +1,6 @@
 # Capture the windows of ONE process with PrintWindow. Windows only. ASCII only (PowerShell 5.1 misreads UTF-8 without BOM).
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-winshot.ps1 -ProcId <pid> -OutDir <dir> [-List] [-Restore] [-MaxWidth 1900]
-#   -ProcId   main process id of the test app: first line of <test HOME>/.claude/pokebuddy/save.lock
+#   -ProcId   main process id of the test app: first line of <test HOME>/AppData/Roaming/pokebuddy/save.lock
 #   -List     print handle, title and rectangle only
 #   -Restore  bring a minimized window back without focus (SW_SHOWNOACTIVATE) before the capture
 #   -MaxWidth windows at least this wide (the stage) are skipped

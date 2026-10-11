@@ -8,6 +8,7 @@ import { parseArgs as parseCliArgs } from "../../cli/args";
 import { makeTmp } from "../harness/tmp-dir";
 import { claimLock, isLockReady } from "../../platform/pid-lock";
 import { clearLastError, readLastError } from "../../platform/last-error";
+import { dataHomeOf } from "../../platform/paths";
 
 interface Parsed {
   kind: string;
@@ -45,7 +46,7 @@ assert.equal(parseArgs(["companion", "stop"]).stop, true); checks++;
 assert.equal(parseArgs(["companion", "stop", "--help"]).kind, "help"); checks++;
 
 // 실제 동반자 대신 이 검사 프로세스의 PID를 임시 잠금에 기록. 잘못된 종료의 부작용 확인.
-const lock = path.join(home, ".claude", "pokebuddy", "companion.lock");
+const lock = path.join(dataHomeOf(home), "companion.lock");
 fs.mkdirSync(path.dirname(lock), { recursive: true });
 const content = `${process.pid}\nready\n`;
 fs.writeFileSync(lock, content);
@@ -70,7 +71,7 @@ assert.equal(fs.readFileSync(lock, "utf8"), content, "잡지 못하면 잠금을
 fs.rmSync(lock);
 
 // 동반자 실패 기록 — run·status·지우기가 같은 읽기(readLastError)를 쓴다. 깨진 기록은 없는 것, BOM 은 벗긴다 (94 항목 5-8)
-const errFile = path.join(home, ".claude", "pokebuddy", "last-error.json");
+const errFile = path.join(dataHomeOf(home), "last-error.json");
 fs.writeFileSync(errFile, JSON.stringify({ slug: "eevee" }));
 assert.equal(readLastError(errFile), null, "모양이 틀린 기록은 없는 것"); checks++;
 clearLastError({ lastError: errFile }, "eevee");

@@ -54,7 +54,7 @@
 클라우드 저장 올리기는 Edge Function `supabase/functions/upload-save`를 거친다(`src/online/cloud.ts`). 앱이 `upload_save` RPC 를 직접 부르면 `CLOUD_UPDATE_REQUIRED`다. 저장 하나의 상한은 압축 전 jsonb 1MiB 다. 넘으면 `CLOUD_TOO_LARGE`다(`supabase/migrations/20261008100000_save_size_limit.sql`). 검증은 아래 [서버 저장 검증](#서버-저장-검증)을 따른다.
 부팅하면 `src/main/services/online.ts`가 세션을 확인한다. 세션이 있으면 그 계정(익명·로그인)으로 클라우드 저장을 켠다. 세션이 없고 `cloud.json`의 `owner`도 없으면 익명 계정을 만든다. 세션이 없는데 `owner`가 있으면 저장 정보 분실로 보고 앱이 분실 창을 띄운다. 망 오류로 확인하지 못하면 분실로 보지 않고 60초 뒤 다시 확인한다.
 로그아웃·계정 삭제·분실 창 `처음부터`는 `save.json`을 `save.json.<signout|delete|fresh>-<시각>.bak`으로 옮기고 `cloud.json`을 비운 뒤 앱을 다시 켠다. 백업하지 못하면 새로 시작하지 않는다(`SAVE_BACKUP_FAILED`).
-세션 저장 `createSessionStorage`(`src/online/session-storage.ts`)는 `~/.claude/pokebuddy/online/session.bin`을 OS 키 저장소로 암호화한다. 키 저장소는 메인이 Electron `safeStorage`로 채운다(`src/main/services/vault.ts`). 저장 키도 같은 키 저장소를 쓴다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>.bak`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
+세션 저장 `createSessionStorage`(`src/online/session-storage.ts`)는 [저장 폴더](#저장-폴더)의 `online/session.bin`을 OS 키 저장소로 암호화한다. 키 저장소는 메인이 Electron `safeStorage`로 채운다(`src/main/services/vault.ts`). 저장 키도 같은 키 저장소를 쓴다. 풀지 못한 파일은 첫 쓰기 전에 `session.bin.unreadable-<시각>.bak`으로 옮긴다. 암호화를 쓸 수 없는 환경이면 같은 폴더의 `session.json`(권한 0600)에 평문으로 둔다.
 앱 업데이트는 `src/main/update/updater.ts`가 맡는다. `electron-updater`로 GitHub Release 의 `latest.yml`을 보고 새 버전을 받는다. Windows 설치본과 Mac 앱에서 켠다. Windows 는 `electron-updater`, Mac 은 자체 엔진 `src/main/update/mac-updater.ts` 다. Mac 앱은 ad-hoc 서명이라 electron-updater 의 mac 설치기(Squirrel.Mac)를 쓸 수 없다. 두 엔진은 같은 이벤트를 내고 화면 흐름은 하나다. 새 버전이 준비된 뒤(`ready`)에도 주기 확인과 설정창을 열 때의 확인은 계속한다. 확인하는 동안 `다시 시작`은 그대로 보인다. 같은 버전이면 다시 받지 않는다. 더 새 버전이 있으면 그 버전을 받고, 받는 동안은 `다시 시작`을 쓸 수 없다. 받는 도중에 앱을 끄면 이번 종료에서는 업데이트를 적용하지 않는다. 서버가 이 앱 버전을 거절하면(`CLOUD_UPDATE_REQUIRED`) 앱은 주기를 기다리지 않고 실행마다 한 번 바로 확인한다(`urgentStep`). 새 버전이 준비되면(`ready`·`manual`) `새 버전으로 바꿔야 해요` 알림 창을 실행마다 한 번 띄운다(`src/main/app/halt-dialog.ts` `askUpdateRequired`). `지금 다시 시작`(mac 수동은 `받기`)은 설정의 `다시 시작`과 같다. `나중에`(Esc)는 닫기만 하고 게임을 멈추지 않는다.
 두 PC 멈춤·저장 정보 분실·저장 잠김·이용 정지·업데이트 필요 창은 게임 디자인의 알림 창으로 띄운다(`src/main/windows/alert-window.ts`, `src/renderer/alert.html`). 테두리 없는 항상 위 창이 주 화면 가운데 위쪽에 뜬다. 단추 답·Esc(취소 단추)·시간 초과·밖에서 닫기의 뜻은 `src/main/app/halt-dialog.ts`가 정한다. 단추에는 처음 포커스를 두지 않아 Enter 로는 답하지 않는다(OS 대화상자는 Enter 가 0 번 단추였다). 알림 창이 3초 안에 그려지지 않거나 렌더러가 죽으면 OS 대화상자로 띄운다(`src/main/windows/alert-ask.ts`). 창의 글자는 `src/view/halt.ts`가 만든다. 보이기 전에 밖에서 닫히면(앱 종료) 닫힘으로 끝낸다.
 패치노트는 `src/main/update/patch-notes.ts`가 `data/patch-notes.json`에서 읽는다. 업데이트 뒤 처음 띄울 버전은 `save.json`과 같은 폴더의 `notes-seen.json`(`seen`: 마지막으로 띄운 버전)으로 가린다.
@@ -129,6 +129,25 @@
 
 옛 `cloud.json` 의 `offlineDirty` 는 읽지 않는다. 옛 파일에 `owner` 가 없으면 `userId` 를 `owner` 로 본다. 옛 파일에 `ownerKind` 가 없으면 `member` 로 본다.
 받은 서버 저장으로 로컬 저장을 바꾸기 전 `save.json.cloud-<시각>.bak`을 남긴다.
+
+### 저장 폴더
+
+저장·설정·키·받은 그림은 한 폴더에 둔다. 자리는 `src/platform/paths.ts` 의 `dataHomeOf` 가 사용자 홈에서 계산한다. `APPDATA` 같은 환경 변수는 보지 않는다.
+
+| OS | 저장 폴더 |
+|---|---|
+| Windows | `<홈>/AppData/Roaming/pokebuddy` |
+| macOS | `<홈>/Library/Application Support/pokebuddy` |
+| 그 밖 | `<홈>/.config/pokebuddy` |
+
+0.19.5 까지의 자리는 `<홈>/.claude/pokebuddy` 다. 프로세스가 `paths.ts` 를 처음 읽을 때 자리를 한 번 정한다(`pickDataHome`).
+
+1. 새 자리에 파일이 있으면 새 자리를 쓴다.
+2. 옛 자리에 파일이 없으면 새 자리를 쓴다.
+3. 새 자리가 비었고 옛 자리에 파일이 있으면, 앱 메인 프로세스가 옛 폴더를 이름 바꾸기 한 번으로 새 자리에 옮긴다. 앱 메인은 `src/main/app.ts` 의 첫 import(`src/main/app/main-mark.ts`)가 표시한다. 옛 자리의 `companion.lock` 이나 `save.lock` 의 pid 가 살아 있으면 옮기지 않는다.
+4. 옮기지 않거나 옮기지 못하면 이번 실행은 옛 자리를 쓴다. 다음 실행에 다시 옮긴다. CLI 와 시험 도구는 옮기지 않는다.
+
+폴더를 통째로 옮긴다. `save.key` 와 `electron/Local State`(Windows `safeStorage` 키)가 함께 움직여야 저장을 푼다. 상태 훅(`src/hooks/pokebuddy-state.ts`)은 같은 순서로 폴더를 찾는다. 두 자리가 모두 비었으면 훅은 아무것도 하지 않는다. 설치 파일의 `deleteAppDataOnUninstall` 은 `false` 다. Windows 저장 폴더가 Electron 기본 앱 데이터 자리와 같기 때문이다.
 
 ### 저장 파일 암호화
 

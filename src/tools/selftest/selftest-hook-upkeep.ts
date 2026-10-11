@@ -18,6 +18,7 @@ delete process.env.CLAUDE_CONFIG_DIR;
 import registry = require("../../agents/registry");
 import notice = require("../../agents/notice");
 import upkeep = require("../../main/app/hook-upkeep");
+import paths = require("../../platform/paths");
 import { okCounter, printLine as say } from "../harness/report";
 
 const checks = okCounter();
@@ -29,7 +30,7 @@ type HookFile = { hooks?: Record<string, Array<{ matcher?: string; hooks?: HookE
 const hookFile = path.join(home, ".claude", "scripts", "hooks", "pokebuddy-state.cjs");
 const codexFile = path.join(home, ".codex", "hooks.json");
 const geminiDir = path.join(home, ".gemini");
-const noticesFile = path.join(home, ".claude", "pokebuddy", "notices.json");
+const noticesFile = path.join(paths.dataHomeOf(home), "notices.json");
 const ours = `node "${hookFile}" --cli codex`;
 const other = { type: "command", command: "echo 남의 훅" };
 const readJson = (file: string): HookFile => JSON.parse(fs.readFileSync(file, "utf8")) as HookFile;

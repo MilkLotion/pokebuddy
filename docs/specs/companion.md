@@ -44,7 +44,7 @@ Windows 프로세스 표는 읽지 않는다. 조상 체인은 훅이 세션 시
 
 ### 수명과 충돌
 
-- 동반자는 기기당 하나만 뜬다. Electron 단일 인스턴스 잠금과 `~/.claude/pokebuddy/companion.lock`(`pid` 한 줄, 창을 만들면 `ready`)로 막는다.
+- 동반자는 기기당 하나만 뜬다. Electron 단일 인스턴스 잠금과 [저장 폴더](modules.md#저장-폴더)의 `companion.lock`(`pid` 한 줄, 창을 만들면 `ready`)로 막는다.
 - CLI 는 파일 존재가 아니라 안에 적힌 pid 의 생존으로 "떠 있나"를 판정한다. 크래시가 남긴 lock 에 막히지 않기 위해서다.
 - 동반자는 1초마다, 그리고 폴더 감시로 lock 파일을 확인한다. `pokebuddy companion stop` 이 이 파일을 지우면 동반자는 스스로 끝난다.
 - 트레이 메뉴의 `종료` 로도 끝난다.
@@ -121,7 +121,7 @@ CLI 마다 다른 점:
 
 codex 의 API 오류로 끝난 턴과 gemini 의 API 오류는 따로 알리는 이벤트가 없다. 그래서 `failed` 로 보이지 않는다.
 
-훅은 세션마다 `~/.claude/pokebuddy/state/<세션>.json` 에 상태를 남긴다. 자기를 띄운 프로세스 조상
+훅은 세션마다 [저장 폴더](modules.md#저장-폴더)의 `state/<세션>.json` 에 상태를 남긴다. 자기를 띄운 프로세스 조상
 (훅 → CLI → 터미널 셸 → 터미널 앱)도 함께 적는다. 동반자는 **맨 앞 창 주인이 조상에 있는 기록**만 따른다.
 그래서 다른 터미널 앱에서 띄운 CLI 의 상태는 섞이지 않는다. 같은 앱 안의 여러 CLI 는 최신 기록을 따른다.
 Windows 는 조상을 구하는 데 PowerShell 을 띄워야 한다(수백 ms). 그래서 세션 시작 때 한 번만 구한다. 이후 이벤트는 그 기록을 이어 쓴다.
@@ -250,14 +250,14 @@ preload 는 샌드박스다. 그래서 렌더러에 창마다 다리 하나(`win
 
 ### 설정창의 초상
 
-설정창과 첫 포켓몬 선택 창의 원형 초상은 [PokeAPI sprites](https://github.com/PokeAPI/sprites) 의 기본 그림(`sprites/pokemon/<도감>.png`, 96 × 96)이다. 이로치는 `sprites/pokemon/shiny/<도감>.png` 를 쓰고, 없으면 보통 그림을 쓴다. 저장소는 CC0 이고 그림 저작권은 The Pokémon Company 에 있다. 둘레 여백은 잘라 원을 채운다. 설치 파일에는 그림을 넣지 않는다. 저작권 때문에 공개 릴리스로 재배포하지 않는다. 동반자가 켜질 때 빠진 초상(보통·이로치)·도구·알 그림을 뒤에서 모두 받아 `~/.claude/pokebuddy/sprites/` 에 캐시한다. 첫 실행이면 첫 포켓몬을 고르는 동안 받는다. 약 2천 장, 2MB 이고 이 개발 PC 에서 15초 안팎이었다. 그림이 없는 도구(404)는 `missing.json` 에 적어 다시 묻지 않는다. 설정창은 열 때 디스크에 있는 그림을 한 번에 모두 읽은 뒤 첫 화면을 그린다. 그래서 상점·상세에 들어가면 그림이 바로 보인다. 저장소 실행은 `dist/tools/data/fetch-sprites.js` 가 받아 둔 `.cache/sprites/` 도 앱 안 그림으로 쓴다. 받지 못하면 빈 원이 남는다. 못 받은 그림은 15초 뒤에 다시 청한다. 미해금 도감 칸은 그림을 보이지 않는다(`src/main/art/portraits.ts`).
+설정창과 첫 포켓몬 선택 창의 원형 초상은 [PokeAPI sprites](https://github.com/PokeAPI/sprites) 의 기본 그림(`sprites/pokemon/<도감>.png`, 96 × 96)이다. 이로치는 `sprites/pokemon/shiny/<도감>.png` 를 쓰고, 없으면 보통 그림을 쓴다. 저장소는 CC0 이고 그림 저작권은 The Pokémon Company 에 있다. 둘레 여백은 잘라 원을 채운다. 설치 파일에는 그림을 넣지 않는다. 저작권 때문에 공개 릴리스로 재배포하지 않는다. 동반자가 켜질 때 빠진 초상(보통·이로치)·도구·알 그림을 뒤에서 모두 받아 저장 폴더의 `sprites/` 에 캐시한다. 첫 실행이면 첫 포켓몬을 고르는 동안 받는다. 약 2천 장, 2MB 이고 이 개발 PC 에서 15초 안팎이었다. 그림이 없는 도구(404)는 `missing.json` 에 적어 다시 묻지 않는다. 설정창은 열 때 디스크에 있는 그림을 한 번에 모두 읽은 뒤 첫 화면을 그린다. 그래서 상점·상세에 들어가면 그림이 바로 보인다. 저장소 실행은 `dist/tools/data/fetch-sprites.js` 가 받아 둔 `.cache/sprites/` 도 앱 안 그림으로 쓴다. 받지 못하면 빈 원이 남는다. 못 받은 그림은 15초 뒤에 다시 청한다. 미해금 도감 칸은 그림을 보이지 않는다(`src/main/art/portraits.ts`).
 
 ### 도구·알 그림, 도감 설명, 울음소리
 
-- 가방·상점의 도구 그림은 PokeAPI `sprites/items/<식별자>.png` 다. 우리 도구 중 이상한사탕과 진화의 돌 10종만 있다. 없는 도구는 빈 칸이다. 돌보미집과 상점 랜덤알은 `sprites/pokemon/egg.png` 를 쓴다. 캐시는 `~/.claude/pokebuddy/sprites/`.
-- 기술 줄의 타입 아이콘은 PokeAPI `sprites/types/generation-ix/scarlet-violet/small/<번호>.png`(60 × 60) 18장이다. 번호는 PokeAPI 타입 번호다(노말 1 … 페어리 18). 초상·도구와 같이 켤 때 뒤에서 받아 `~/.claude/pokebuddy/sprites/types/` 에 캐시한다. 열쇠는 `type:<타입>` 이다(`src/main/art/sources.ts` `typeIconUrl`). 같은 그림이 `generation-ix/champions/small/` 에도 있다(2026-10-07 관찰, 바이트가 같다).
+- 가방·상점의 도구 그림은 PokeAPI `sprites/items/<식별자>.png` 다. 우리 도구 중 이상한사탕과 진화의 돌 10종만 있다. 없는 도구는 빈 칸이다. 돌보미집과 상점 랜덤알은 `sprites/pokemon/egg.png` 를 쓴다. 캐시는 저장 폴더의 `sprites/`.
+- 기술 줄의 타입 아이콘은 PokeAPI `sprites/types/generation-ix/scarlet-violet/small/<번호>.png`(60 × 60) 18장이다. 번호는 PokeAPI 타입 번호다(노말 1 … 페어리 18). 초상·도구와 같이 켤 때 뒤에서 받아 저장 폴더의 `sprites/types/` 에 캐시한다. 열쇠는 `type:<타입>` 이다(`src/main/art/sources.ts` `typeIconUrl`). 같은 그림이 `generation-ix/champions/small/` 에도 있다(2026-10-07 관찰, 바이트가 같다).
 - 도감 상세의 분류(쥐포켓몬)와 설명문은 `data/dex-text.json` 이다. `npm run data:build` 의 `build-dex-text` 가 PokeAPI CSV 로 만든다. PokeAPI 의 한국어 설명문은 898번까지만 있다. 899~1025번의 한국어 설명문은 `data/dex-text.ko.json` 에 둔다. 출처는 포켓몬코리아 공식 도감이다. `dist/tools/data/fetch-dex-ko.js` 가 이 파일을 만들고 `build-dex-text` 가 합친다. 한국어 설명문이 없는 종은 영어 설명을 보인다. 미해금 종은 보이지 않는다.
-- 포켓몬을 클릭하거나 놀아주기가 성공하면 PokeAPI cries 의 울음소리(`cries/pokemon/latest/<도감>.ogg`)를 무대에서 한 번 낸다. 놀아주기가 쉬는 시간이어도 클릭하면 운다. 같은 포켓몬은 1.5초 안에 다시 울지 않는다. 설정의 "알림 소리"가 꺼져 있으면 내지 않는다. 경로는 `.ogg` 지만 옛 종은 내용이 MP3 라 둘 다 받는다. 못 받은 울음소리는 초상과 같이 15초 뒤에 다시 청한다. 캐시는 `~/.claude/pokebuddy/cries/`.
+- 포켓몬을 클릭하거나 놀아주기가 성공하면 PokeAPI cries 의 울음소리(`cries/pokemon/latest/<도감>.ogg`)를 무대에서 한 번 낸다. 놀아주기가 쉬는 시간이어도 클릭하면 운다. 같은 포켓몬은 1.5초 안에 다시 울지 않는다. 설정의 "알림 소리"가 꺼져 있으면 내지 않는다. 경로는 `.ogg` 지만 옛 종은 내용이 MP3 라 둘 다 받는다. 못 받은 울음소리는 초상과 같이 15초 뒤에 다시 청한다. 캐시는 저장 폴더의 `cries/`.
 
 ### PMD 를 쓰는 이유
 
@@ -266,13 +266,13 @@ PMDCollab 은 종마다 동작이 따로 있는 거의 유일한 오픈 스프�
 관찰(2026-10-03, SpriteCollab `tracker.json`): 스프라이트가 있는 폼은 3,340개다. 그 가운데 666개는 제작자 표기가 `CHUNSOFT` 다. 이 그림은 원작 게임에서 온 그림이다. 나머지는 기여자의 작품이고 CC BY-NC 4.0 이다.
 무대는 캔버스 하나에 동작마다 시트를 미리 풀어 둔다. 그 시트로 그린다.
 
-- `https://spriteserver.pmdcollab.org/assets/<도감4자리>/sprites.zip` 을 받는다. `~/.claude/pokebuddy/pmd/` 에 캐시한다.
+- `https://spriteserver.pmdcollab.org/assets/<도감4자리>/sprites.zip` 을 받는다. 저장 폴더의 `pmd/` 에 캐시한다.
   풀지 않고 메모리에서 읽는다(`src/main/art/pmd-load.ts` · `src/main/art/pmd.ts`, 무대 쪽 감싸기는 `src/main/art/stage-art.ts`). 같은 종 여러 마리는 한 번만 받는다. 시트를 같이 쓴다
 - 스프라이트가 없는 종은 404 가 아니라 **200 + 빈 ZIP** 을 준다. 크기·내용을 검사한다. 그래서 캐시에 눌러앉지 않는다
 - 저작자 목록(`credits.txt`)은 ZIP 에 없다. 그래서 GitHub 에서 따로 받는다. ZIP 과 동시에 받는다. `pokebuddy status <포켓몬>` 이 보여 준다
 - 가진 개체 전부의 ZIP 을 뒤에서 하나씩 캐시에 받아 둔다(`src/main/art/stage-art.ts` `prefetch`). 메모리에는 올리지 않는다. 한 모습은 실행마다 한 번만 시도한다. 저장이 바뀌면 새 개체의 종을 더 받는다
 - PMD 그림을 못 받은 종은 대체 그림으로 무대에 나온다. 관찰(2026-10-02): 리전폼을 뺀 등장 종 890종 중 35종이 PMD 그림이 없다. 예: 탄동·탄차곤·석탄산·모으령.
-  - 먼저 걷기 대체 그림을 쓴다(`src/main/art/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_SOURCE.ref`, `src/main/art/sources.ts`)로 고정해 받는다. 캐시는 `~/.claude/pokebuddy/overworld/` 다.
+  - 먼저 걷기 대체 그림을 쓴다(`src/main/art/overworld-art.ts`). 출처는 pokeemerald-expansion 의 따라다니기 그림 `graphics/pokemon/<이름>/overworld.png` 다. 릴리스 태그(`OVERWORLD_SOURCE.ref`, `src/main/art/sources.ts`)로 고정해 받는다. 캐시는 저장 폴더의 `overworld/` 다.
   - 걷기 시트는 정사각 칸 6개다. 정면·뒤·왼쪽이 2칸씩이다. 오른쪽은 왼쪽 칸을 좌우로 뒤집는다. 칸이 8개인 시트는 오른쪽 전용 칸을 쓴다. 팔레트 0번 색이 배경이라 지운다.
   - 색은 `overworld_normal.pal` 의 같은 번호 색으로 칠한다. 이로치는 `overworld_shiny.pal` 이다. 팔레트 파일을 못 받으면 PNG 에 든 색이다.
   - 동작은 `Idle`·`Walk` 두 개다. `Walk` 는 두 칸을 0.2초씩 돈다. `Idle` 은 첫 칸을 1도트 들썩인다.

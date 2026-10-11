@@ -2,6 +2,8 @@
 // 동반자 하나로 돈다 — 기기당 하나, 항상 위. 놀이공간(화면 전체·영역)에 머물고, 맨 앞 터미널 창의 에이전트 상태를 따른다 (terminal/front).
 // 트레이로 끝낸다. 세션 펫·창 펫 모드는 2026-09-27 에 지웠다 (worklog/records/game-runtime/game-runtime.md "세션·창 모드 삭제")
 // 설정·경로는 src/platform/paths.ts·user-config.ts 에서 읽음. 육성과 해금은 writer만 갱신
+// 맨 처음 import — paths.ts 가 읽히기 전에 앱 메인 표시를 남긴다. 옛 데이터 폴더를 옮기는 조건이다 (src/main/app/main-mark.ts)
+import "./app/main-mark";
 import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";

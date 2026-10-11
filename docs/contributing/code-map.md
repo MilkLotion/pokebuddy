@@ -27,7 +27,7 @@ flowchart LR
   agent["에이전트 CLI<br/>Claude Code·Codex·Gemini"]
   hook["훅 스크립트<br/>src/hooks"]
   helper["창 위치 헬퍼<br/>helpers/winbounds"]
-  disk[("~/.claude/pokebuddy<br/>save.json · mailbox/ · state/")]
+  disk[("저장 폴더<br/>save.json · mailbox/ · state/")]
   server[("Supabase")]
   cdn[("그림·소리 원본<br/>PMD·PokeAPI")]
 

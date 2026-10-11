@@ -3,7 +3,7 @@
 //   준비: `npm run build`. 시험 빌드 두 개(zip, 이 Mac 아키텍처만)를 만드느라 몇 분 걸린다. mac 에서만
 //   실행: node dist/tools/e2e/e2e-update-mac.js
 //   시험 빌드는 다른 appId·이름(pokebuddy-update-test.app)이라 사용자의 앱과 섞이지 않는다. 링크·로그인 시 시작을 등록하지 않고
-//   저장은 빌드에 박힌 임시 홈에 둔다(scripts/build-exe.cjs PB_UPDATE_TEST). 키체인은 쓰지 않는다(--use-mock-keychain). 사용자의 /Applications/PokeBuddy.app 과 ~/.claude/pokebuddy 는 건드리지 않는다.
+//   저장은 빌드에 박힌 임시 홈에 둔다(scripts/build-exe.cjs PB_UPDATE_TEST). 키체인은 쓰지 않는다(--use-mock-keychain). 사용자의 /Applications/PokeBuddy.app 과 데이터 폴더는 건드리지 않는다.
 //   관리 창 조작은 --inspect 디버거로 scripts/e2e/manage-observer.cjs 를 실어 한다. 끝나면 시험 프로세스를 내리고 임시 폴더를 지운다
 //   확인: 설정 바닥이 받는 중 → 준비됨, `다시 시작` → 같은 자리의 앱이 N+1 로 바뀌어 다시 켜짐, 저장 유지, 업데이트 뒤 첫 패치노트 한 번
 import assert from "node:assert/strict";
@@ -13,6 +13,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { makeTmp } from "../harness/tmp-dir";
+import { dataHomeOf, findDataHome } from "../../platform/paths";
 
 const root = path.join(__dirname, "..", "..", "..");
 const PORT = 48322; // 빌드에 박히는 공급 주소 — 바꾸면 두 빌드를 다시 만든다
@@ -31,7 +32,7 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 
 // 사용자의 것 — 시험 전후가 같아야 한다
 const USER_APP = "/Applications/PokeBuddy.app";
-const USER_LOCK = path.join(os.homedir(), ".claude", "pokebuddy", "companion.lock");
+const USER_LOCK = path.join(findDataHome(os.homedir()), "companion.lock");
 const mark = (file: string): string => (fs.existsSync(file) ? `${fs.statSync(file).mtimeMs}` : "none");
 const userMark = (): string => `${mark(USER_APP)}|${mark(path.join(USER_APP, "Contents", "Info.plist"))}|${mark(USER_LOCK)}`;
 // 업데이트 캐시 — 앱의 HOME 을 바꾸지 않으므로 진짜 ~/Library/Caches 아래 시험 이름 폴더다. 끝나면 지운다
@@ -89,7 +90,7 @@ interface Home { home: string; data: string; env: NodeJS.ProcessEnv; cliEnv: Nod
 // 임시 HOME 과 저장 — 튜토리얼은 건너뛴 파티 한 마리
 function makeHome(): Home {
   fs.rmSync(HOME, { recursive: true, force: true });
-  const data = path.join(HOME, ".claude", "pokebuddy");
+  const data = dataHomeOf(HOME);
   fs.mkdirSync(data, { recursive: true });
   const { emptySave: empty } = require(path.join(root, "dist/save/normalize.js")) as { emptySave: (now: number) => Record<string, unknown> & { pets: unknown[]; party: { slots: unknown[] }; points: { balance: number } } };
   const { newPet } = require(path.join(root, "dist/party/create.js")) as { newPet: (o: Record<string, unknown>) => unknown };
@@ -270,7 +271,7 @@ async function main(): Promise<void> {
     await shot("3-settings-new.png");
     checks.push(`(5) 업데이트 뒤 패치노트 "${title}" 한 번, notes-seen.json ${NEW}, 저장 유지(1234P·u1), 설정 바닥 "${(await foot()).split("\n")[0]}"`);
     assert.equal(userMark(), userBefore, "사용자의 /Applications/PokeBuddy.app·companion.lock 이 그대로다");
-    checks.push("(6) 사용자의 /Applications/PokeBuddy.app 과 ~/.claude/pokebuddy/companion.lock 그대로");
+    checks.push("(6) 사용자의 /Applications/PokeBuddy.app 과 데이터 폴더의 companion.lock 그대로");
   } finally {
     await stopApp(home).catch(() => undefined);
     for (const pid of appPids()) {
