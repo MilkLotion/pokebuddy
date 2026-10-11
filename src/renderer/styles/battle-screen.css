@@ -498,12 +498,10 @@ body {
 }
 
 /* 결과 — 가림막과 대화상자. Figma `Dialog` Compact */
-/* 결과 가림막은 판(머리 줄부터 카드·전장 아래 끝까지)만 덮는다 — 아래 DPS 표의 최종 값이 보인다 (Figma 05 `16 배틀` `Battle / Window · 결과` 1791:10820)
-   454 = 머리 줄 44 + 12 + 판 표시 줄 44 + 12 + 몸통 336 + 표와의 틈 절반 6 */
+/* 결과 가림막은 아래 DPS 표까지 창 전체를 덮는다 (2026-10-12 사용자 "밑에가 모달에 안가려져", Figma 05 `16 배틀` `Battle / Window · 결과` 1791:10820) */
 .result-scrim {
   position: absolute;
-  inset: 0 0 auto;
-  height: 454px;
+  inset: 0;
   z-index: 10;
   display: flex;
   align-items: center;
