@@ -51,7 +51,6 @@ function rouletteOf(r: BattleResult, units: BattleScreenView["units"]): BattleRo
       label: ROULETTE_LABEL[key],
       name: one?.kind ? (by?.ability ?? shown?.name ?? null) : null,
       type: shown?.type ?? null,
-      fixed: one?.fixed === true,
       candidates: one?.candidates.map((c) => ({ side: c.side, slot: c.slot })) ?? [],
       picked: one?.picked ? { side: one.picked.side, slot: one.picked.slot } : null,
     };

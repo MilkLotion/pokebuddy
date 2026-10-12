@@ -2,6 +2,7 @@
 // 저장을 읽기만 한다
 import { moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
 import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
+import { AURA_ABILITY, FIELD_ABILITY, WEATHER_ABILITY } from "../battle/engine.js";
 import { rouletteTickets } from "../battle/fighter-core.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { realStatsOf } from "../battle/stats.js";
@@ -92,15 +93,16 @@ export const blockedText = (tier: BattleTier): string => `출전 불가 · ${TIE
 // 특성 id — 메가 모습이면 data/mega-battle.json. 표에 없으면 null
 const abilityIdOf = (species: string): string | null => megaBattleTable()[species]?.ability ?? speciesAbilityTable()[species] ?? null;
 
-// 날씨·필드·오라를 부르는 특성의 묶음(abilities.json group) → 룰렛 이름. 설명 끝에 그 개체의 룰렛 칸 수를 붙인다 (docs/specs/moves.md "날씨, 필드, 오라")
-const ROULETTE_GROUP: Readonly<Record<string, string>> = { 날씨: "날씨", 필드: "필드", 전장: "오라" };
+// 날씨·필드·오라 룰렛에 드는 특성이면 그 룰렛 이름. 엔진의 룰렛 표로 판정한다(abilities.json 의 group 은 위협·재앙 특성도 `전장` 이라 쓰지 않는다)
+// 설명 끝에 그 개체의 룰렛 칸 수를 붙인다 (docs/specs/moves.md "날씨, 필드, 오라")
+const rouletteOf = (ability: string): string | null => (ability in WEATHER_ABILITY ? "날씨" : ability in FIELD_ABILITY ? "필드" : ability in AURA_ABILITY ? "오라" : null);
 
 // 특성 이름과 화면 설명. 표에 없으면 null. shown 은 싸우는 모습(메가 포함), base 는 그 기본 종
 function abilityOf(shown: string, base: string): { name: string; text: string } | null {
   const id = abilityIdOf(shown);
   const row = id ? abilityTable()[id] : undefined;
   if (!row) return null;
-  const reel = ROULETTE_GROUP[row.group ?? ""];
+  const reel = rouletteOf(id!);
   const tickets = rouletteTickets(shown !== base, !!tierOf(base));
   return { name: row.ko, text: reel ? `${row.text} (${reel}우선도+${tickets})` : row.text };
 }

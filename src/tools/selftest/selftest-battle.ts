@@ -263,9 +263,15 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   // 개체의 칸 수 — 일반 1, 메가 2, 전설급(초전설·준전설) 2, 메가이면서 전설급 3
   const tk = (src: Parameters<typeof buildFighter>[0]) => buildFighter(src)!.tickets;
   assert.deepStrictEqual([tk({ species: "charizard" }), tk({ species: "charizard", form: "charizard-mega-y" }), tk({ species: "kyogre" }), tk({ species: "raikou" }), tk({ species: "kyogre", form: "kyogre-primal" }), tk({ species: "rayquaza", form: "rayquaza-mega" })], [1, 2, 2, 2, 3, 3], "룰렛 칸 수");
-  // 원시회귀는 룰렛 없이 정해진다
-  const r2 = run([quiet({ ability: "drought" }), quiet({ ability: "primordial-sea" })], [quiet({ ability: "drizzle" })], 1, 100);
-  assert.deepStrictEqual([startOf(r2).roulette!.weather!.kind, startOf(r2).roulette!.weather!.fixed], ["heavy-rain", true]);
+  // 원시회귀·델타스트림도 날씨 룰렛 후보다 — 메가이면서 전설급이라 3칸이고, 후보가 혼자면 바로 정해진다
+  const r2 = run([quiet({ ability: "primordial-sea" })], [quiet()], 1, 100);
+  assert.deepStrictEqual([startOf(r2).roulette!.weather!.kind, startOf(r2).roulette!.weather!.candidates.length], ["heavy-rain", 1]);
+  let deltaWins = 0;
+  for (let sd = 1; sd <= 600; sd++) {
+    const w = startOf(run([quiet({ ability: "delta-stream", tickets: 3 }), quiet({ ability: "drought", tickets: 2 })], [quiet()], sd, 100)).roulette!.weather!;
+    if (w.kind === "strong-winds") deltaWins++;
+  }
+  assert.ok(deltaWins > 330 && deltaWins < 390, `델타스트림 3칸 대 가뭄 2칸은 3 대 2 로 뽑힌다 (${deltaWins}/600)`);
   assert.strictEqual(run([quiet()], [quiet()], 1, 100).events[0]!.kind === "start" && startOf(run([quiet()], [quiet()], 1, 100)).roulette, undefined, "특성이 없으면 roulette 칸 없음");
 
   // 쾌청 — 불꽃 ×1.3, 물 ×0.5. 같은 시드에서 날씨만 바꿔 견준다

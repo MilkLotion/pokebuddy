@@ -572,9 +572,6 @@ body {
   font: 700 10px/14px var(--font-small);
   color: var(--soft);
 }
-.rl-fixed {
-  font-weight: 400;
-}
 .rl-window {
   position: relative;
   width: 128px;

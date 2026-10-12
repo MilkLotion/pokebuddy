@@ -167,6 +167,7 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   assert.ok(text("tapu-koko").endsWith("(필드우선도+2)"), "준전설 필드 +2");
   assert.ok(text("rayquaza", "rayquaza-mega").endsWith("(날씨우선도+3)"), "메가이면서 전설급 +3");
   assert.ok(!text("pikachu").includes("우선도"), "룰렛과 상관없는 특성은 그대로");
+  for (const sp of ["chi-yu", "gyarados", "raikou", "wo-chien"]) assert.ok(!text(sp).includes("우선도"), `${sp}: 재앙·위협·프레셔는 룰렛 특성이 아니다`);
 }
 
 // ── 명령 ──

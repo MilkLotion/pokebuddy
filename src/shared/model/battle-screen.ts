@@ -23,7 +23,6 @@ export interface BattleRoulette {
   kind: string | null;
   candidates: { side: BattleSide; slot: number }[];
   picked: { side: BattleSide; slot: number } | null;
-  fixed?: true; // 원시회귀·델타스트림처럼 룰렛 없이 정해졌다
 }
 
 // 엔진 BattleEvent 와 같은 모양 (src/battle/engine.ts). nextAt(다음 기술이 준비되는 시각)은 엔진이 줄 때만 있다 — 없으면 다음 기술을 쓴 시각까지로 어림한다
@@ -71,7 +70,6 @@ export interface BattleRouletteView {
   label: string; // 날씨 · 필드 · 오라
   name: string | null; // 걸린 효과 — 비 · 사이코필드 · 시작의바다 …
   type: string | null; // 관련 타입 아이콘 (docs/specs/ui-components.md "배틀 창으로 더한 것")
-  fixed: boolean; // 룰렛 없이 정해졌다
   candidates: { side: BattleSide; slot: number }[];
   picked: { side: BattleSide; slot: number } | null;
 }

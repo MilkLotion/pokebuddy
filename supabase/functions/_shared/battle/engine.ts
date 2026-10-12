@@ -68,25 +68,26 @@ export interface SlotRef {
   side: Side;
   slot: number;
 }
-// 룰렛 하나 — 후보 포켓몬과 뽑힌 포켓몬. candidates 는 칸 수만큼 되풀이한다(메가 2칸이면 두 번). 후보가 한 마리뿐이면 한 번만 적는다. fixed 는 룰렛 없이 정해진 경우(원시회귀·델타스트림)
+// 룰렛 하나 — 후보 포켓몬과 뽑힌 포켓몬. candidates 는 칸 수만큼 되풀이한다(메가 2칸이면 두 번). 후보가 한 마리뿐이면 한 번만 적는다
 export interface BattleRoulette {
   kind: string | null;
   candidates: SlotRef[];
   picked: SlotRef | null;
-  fixed?: true;
 }
-const WEATHER_ABILITY: Readonly<Record<string, WeatherKind>> = {
+export const WEATHER_ABILITY: Readonly<Record<string, WeatherKind>> = {
   drought: "sun",
   "orichalcum-pulse": "sun",
   drizzle: "rain",
   "sand-stream": "sand",
   "sand-spit": "sand",
   "snow-warning": "snow",
+  "desolate-land": "harsh-sun",
+  "primordial-sea": "heavy-rain",
+  "delta-stream": "strong-winds",
   "cloud-nine": "none",
   "air-lock": "none",
 };
-const PRIMAL_ABILITY: Readonly<Record<string, WeatherKind>> = { "desolate-land": "harsh-sun", "primordial-sea": "heavy-rain", "delta-stream": "strong-winds" };
-const FIELD_ABILITY: Readonly<Record<string, FieldKind>> = {
+export const FIELD_ABILITY: Readonly<Record<string, FieldKind>> = {
   "electric-surge": "electric",
   "hadron-engine": "electric",
   "grassy-surge": "grassy",
@@ -94,7 +95,7 @@ const FIELD_ABILITY: Readonly<Record<string, FieldKind>> = {
   "psychic-surge": "psychic",
   "misty-surge": "misty",
 };
-const AURA_ABILITY: Readonly<Record<string, AuraKind>> = { "fairy-aura": "fairy", "dark-aura": "dark", "aura-break": "break" };
+export const AURA_ABILITY: Readonly<Record<string, AuraKind>> = { "fairy-aura": "fairy", "dark-aura": "dark", "aura-break": "break" };
 const WEATHER_TYPE: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "fire", "harsh-sun": "fire", rain: "water", "heavy-rain": "water", sand: "rock", snow: "ice" };
 // 캐스퐁의 날씨 모습 — 모래바람은 기본 모습(노말)이다
 const CASTFORM_LOOK: Readonly<Partial<Record<WeatherKind, string>>> = { sun: "castform-sunny", "harsh-sun": "castform-sunny", rain: "castform-rainy", "heavy-rain": "castform-rainy", snow: "castform-snowy" };
@@ -416,9 +417,7 @@ export function runBattle(input: BattleInput): BattleResult {
     const shown = cands.length === 1 ? cands : reel;
     return { kind, roulette: { kind, candidates: shown.map((c) => ({ side: c.side, slot: c.slot })), picked: { side: pick.side, slot: pick.slot } } };
   }
-  // 원시회귀 날씨·델타스트림은 룰렛 없이 정해진다. 둘 이상이면 그것끼리 뽑는다
-  const primal = spin(PRIMAL_ABILITY);
-  const weatherSpin = primal ? { kind: primal.kind, roulette: { ...primal.roulette, fixed: true as const } } : spin(WEATHER_ABILITY);
+  const weatherSpin = spin(WEATHER_ABILITY);
   const fieldSpin = spin(FIELD_ABILITY);
   const auraSpin = spin(AURA_ABILITY);
   weather = weatherSpin && weatherSpin.kind !== "none" ? weatherSpin.kind : null;

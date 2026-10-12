@@ -31,7 +31,7 @@ const RESULT_DELAY_MS = 600; // 판이 끝난 뒤 결과를 띄우기까지
 const ROULETTE = { rowH: 40, rowMs: 70, spinMs: 1200, gapMs: 500, holdMs: 700 } as const;
 const rouletteMs = (reels: BattleRouletteView[]): number => ROULETTE.spinMs + ROULETTE.gapMs * (reels.length - 1) + ROULETTE.holdMs;
 // 도는 릴 — 후보가 둘 이상이고 확정이 아니다. 후보 하나·확정·후보 없음은 처음부터 멈춰 있다
-const reelSpins = (reel: BattleRouletteView): boolean => reel.candidates.length > 1 && !reel.fixed;
+const reelSpins = (reel: BattleRouletteView): boolean => reel.candidates.length > 1;
 
 interface CardEls {
   root: HTMLElement;
@@ -152,7 +152,6 @@ function roulettePanel(view: BattleScreenView, reels: BattleRouletteView[]): { p
     const box = el("div", "rl-reel");
     const head = el("div", "rl-head");
     head.appendChild(el("span", "rl-label", reel.label));
-    if (reel.fixed) head.appendChild(el("span", "rl-fixed", "확정"));
     const win = el("div", "rl-window");
     const rows = el("div", "rl-rows");
     win.append(el("div", "rl-band"), rows);
