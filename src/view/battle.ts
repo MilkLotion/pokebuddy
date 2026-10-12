@@ -2,8 +2,10 @@
 // 저장을 읽기만 한다
 import { moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
 import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
+import { rouletteTickets } from "../battle/fighter-core.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { realStatsOf } from "../battle/stats.js";
+import { tierOf } from "../battle/tier.js";
 import { abilityTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
 import { STATUS_NAME } from "../shared/battle-timeline.js";
 import type { DayPart } from "../shared/species";
@@ -31,6 +33,9 @@ export const moveView = (m: MoveInfo): MoveView => ({ id: m.id, name: m.name, ty
 const STAT_NAME: Readonly<Record<string, string>> = { atk: "공격", def: "방어", spa: "특수공격", spd: "특수방어", spe: "스피드" };
 const RANGE_TEXT: Readonly<Record<MoveInfo["class"], string | null>> = { physical: "근접", special: "원거리", status: null };
 
+// 날씨로 충전이 없어지는 기술 — 엔진 doMove 의 `instant` 와 같다(쾌청·끝의대지에서 솔라빔·솔라블레이드, 비·시작의바다에서 일렉트로빔). 값을 바꾸면 엔진도 같이 고친다
+const NO_CHARGE_WEATHER: Readonly<Record<string, string>> = { "solar-beam": "쾌청이면", "solar-blade": "쾌청이면", "electro-shot": "비가 오면" };
+
 // 효과 줄 — 문구는 docs/specs/moves.md "부담과 효과"·"능력 변화"(10초)·"급소"·"연속기" 를 따른다
 //   자기 타입 위력 줄은 두지 않는다(2026-10-10 사용자 "\"· 자기 타입 기술이라 위력 1.5배\" 제거")
 export function moveEffects(m: MoveInfo): string[] {
@@ -38,7 +43,10 @@ export function moveEffects(m: MoveInfo): string[] {
   const e = m.effects ?? {};
   if (m.hits) out.push(m.hits[0] === m.hits[1] ? `${m.hits[0]}번 맞음` : `${m.hits[0]}~${m.hits[1]}번 맞음`);
   if (m.priority) out.push("선공 기술 — 쿨타임이 짧고, 같이 차면 먼저 나감");
-  if (e.charge) out.push("처음 쿨타임이 차면 충전하고, 다시 차면 공격");
+  if (e.charge) {
+    const sky = NO_CHARGE_WEATHER[m.id];
+    out.push(sky ? `처음 쿨타임이 차면 충전하고, 다시 차면 공격 (${sky} 충전 없이 바로 공격)` : "처음 쿨타임이 차면 충전하고, 다시 차면 공격");
+  }
   if (e.status) {
     const kinds = ([] as string[]).concat(e.status.kind).map((k) => STATUS_NAME[k as keyof typeof STATUS_NAME] ?? k);
     const what = kinds.length > 1 ? `${kinds.join("·")} 중 하나로` : kinds[0]!;
@@ -84,11 +92,17 @@ export const blockedText = (tier: BattleTier): string => `출전 불가 · ${TIE
 // 특성 id — 메가 모습이면 data/mega-battle.json. 표에 없으면 null
 const abilityIdOf = (species: string): string | null => megaBattleTable()[species]?.ability ?? speciesAbilityTable()[species] ?? null;
 
-// 특성 이름과 화면 설명. 표에 없으면 null
-function abilityOf(species: string): { name: string; text: string } | null {
-  const id = abilityIdOf(species);
+// 날씨·필드·오라를 부르는 특성의 묶음(abilities.json group) → 룰렛 이름. 설명 끝에 그 개체의 룰렛 칸 수를 붙인다 (docs/specs/moves.md "날씨, 필드, 오라")
+const ROULETTE_GROUP: Readonly<Record<string, string>> = { 날씨: "날씨", 필드: "필드", 전장: "오라" };
+
+// 특성 이름과 화면 설명. 표에 없으면 null. shown 은 싸우는 모습(메가 포함), base 는 그 기본 종
+function abilityOf(shown: string, base: string): { name: string; text: string } | null {
+  const id = abilityIdOf(shown);
   const row = id ? abilityTable()[id] : undefined;
-  return row ? { name: row.ko, text: row.text } : null;
+  if (!row) return null;
+  const reel = ROULETTE_GROUP[row.group ?? ""];
+  const tickets = rouletteTickets(shown !== base, !!tierOf(base));
+  return { name: row.ko, text: reel ? `${row.text} (${reel}우선도+${tickets})` : row.text };
 }
 
 // shown — 배틀에서 싸우는 모습. 메가를 켰으면 그 메가 모습, 아니면 기본 종
@@ -125,7 +139,7 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
       options: moveOptions(asPet.species).map(withDetail),
       blocked: tier ? blockedText(tier) : null,
       stats: statRows(shown),
-      ability: abilityOf(shown),
+      ability: abilityOf(shown, asPet.species),
     };
   });
   return { slots, canStart: canStartBattle(save), gate: battleGate(save) };

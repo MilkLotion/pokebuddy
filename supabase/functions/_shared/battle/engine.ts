@@ -68,7 +68,7 @@ export interface SlotRef {
   side: Side;
   slot: number;
 }
-// 룰렛 하나 — 후보 포켓몬과 뽑힌 포켓몬. fixed 는 룰렛 없이 정해진 경우(원시회귀·델타스트림)
+// 룰렛 하나 — 후보 포켓몬과 뽑힌 포켓몬. candidates 는 칸 수만큼 되풀이한다(메가 2칸이면 두 번). 후보가 한 마리뿐이면 한 번만 적는다. fixed 는 룰렛 없이 정해진 경우(원시회귀·델타스트림)
 export interface BattleRoulette {
   kind: string | null;
   candidates: SlotRef[];
@@ -192,6 +192,7 @@ export interface EngineFighter {
   range: number; // 사거리(계산 칸) — 평타와 기술이 같이 쓴다. 물리 1, 특수 3
   altForm?: EngineForm | null; // 모습이 바뀌는 종의 다른 모습
   schoolingReady?: boolean; // 약어리 어군 해금(Lv.60) — 해금 전에는 단독의 모습으로만 싸운다
+  tickets?: number; // 날씨·필드·오라 룰렛 칸 수 — 일반 1, 메가 2, 전설급 2, 메가이면서 전설급 3. 없으면 1
 }
 
 export interface BattleInput {
@@ -402,13 +403,18 @@ export function runBattle(input: BattleInput): BattleResult {
     u.x = p.x;
     u.y = p.y;
   }
-  // 날씨·필드·오라 룰렛 — 양쪽 12칸에서 그 특성을 가진 포켓몬 하나를 같은 확률로 뽑는다
+  // 날씨·필드·오라 룰렛 — 양쪽 12칸에서 그 특성을 가진 포켓몬 하나를 뽑는다. 칸 수(tickets)만큼 룰렛에 들어간다 (docs/specs/moves.md "날씨, 필드, 오라")
   function spin<K extends string>(table: Readonly<Record<string, K>>): { kind: K; roulette: BattleRoulette } | null {
     const cands = all().filter((u) => { const a = ab(u); return a !== null && table[a] !== undefined; });
     if (!cands.length) return null;
-    const pick = cands[Math.floor(rand() * cands.length)]!;
+    // 칸 띠 — 돌려 가며 한 칸씩 넣어 같은 포켓몬이 붙지 않게 한다
+    const reel: Unit[] = [];
+    const most = Math.max(...cands.map((c) => c.base.tickets ?? 1));
+    for (let r = 0; r < most; r++) for (const c of cands) if ((c.base.tickets ?? 1) > r) reel.push(c);
+    const pick = reel[Math.floor(rand() * reel.length)]!;
     const kind = table[ab(pick)!]!;
-    return { kind, roulette: { kind, candidates: cands.map((c) => ({ side: c.side, slot: c.slot })), picked: { side: pick.side, slot: pick.slot } } };
+    const shown = cands.length === 1 ? cands : reel;
+    return { kind, roulette: { kind, candidates: shown.map((c) => ({ side: c.side, slot: c.slot })), picked: { side: pick.side, slot: pick.slot } } };
   }
   // 원시회귀 날씨·델타스트림은 룰렛 없이 정해진다. 둘 이상이면 그것끼리 뽑는다
   const primal = spin(PRIMAL_ABILITY);

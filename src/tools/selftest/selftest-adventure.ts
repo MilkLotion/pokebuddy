@@ -86,6 +86,9 @@ assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 n
   );
   assert.deepEqual(moveEffects({ ...base, effects: { stats: [{ who: "target", stat: "spd", change: -1, chance: 20 }] } }), ["20% 확률로 상대 특수방어 1단계 하락 (10초)"]);
   assert.deepEqual(moveEffects({ ...base, effects: { status: { kind: ["burn", "paralysis", "freeze"], chance: 20 } } }), ["20% 확률로 상대를 화상·마비·얼음 중 하나로"]);
+  assert.deepEqual(moveEffects({ ...base, id: "solar-beam", effects: { charge: true } }), ["처음 쿨타임이 차면 충전하고, 다시 차면 공격 (쾌청이면 충전 없이 바로 공격)"], "솔라빔은 쾌청에서 충전이 없다");
+  assert.deepEqual(moveEffects({ ...base, id: "electro-shot", effects: { charge: true } }), ["처음 쿨타임이 차면 충전하고, 다시 차면 공격 (비가 오면 충전 없이 바로 공격)"], "일렉트로빔은 비에서 충전이 없다");
+  assert.deepEqual(moveEffects({ ...base, id: "fly", effects: { charge: true } }), ["처음 쿨타임이 차면 충전하고, 다시 차면 공격"], "다른 충전기는 날씨와 상관없다");
   assert.deepEqual(moveEffects({ ...base, hits: [2, 5], priority: 1, effects: { charge: true, recharge: true, drain: 50, crit: "high", flinch: 30 } }), [
     "2~5번 맞음",
     "선공 기술 — 쿨타임이 짧고, 같이 차면 먼저 나감",
@@ -150,6 +153,20 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   assert.ok(slot.ability?.text, "특성 화면 설명");
   assert.deepEqual(slot.moves.map((m) => m.name), ["볼트태클", "10만볼트"]);
   assert.equal(snapshotView(s, T0).battle.slots[1]!.pet, undefined, "빈 칸");
+}
+
+// ── 날씨·필드·오라 특성 설명에 룰렛 칸 수(우선도)를 붙인다 — 일반 1, 메가 2, 전설급 2, 메가이면서 전설급 3 ──
+{
+  const text = (species: string, mega?: string): string => {
+    const s = seed([species]);
+    s.battle = { slots: ["p1", null, null, null, null, null], ...(mega ? { mega: { p1: mega } } : {}) };
+    return snapshotView(s, T0).battle.slots[0]!.ability!.text;
+  };
+  assert.ok(text("ninetales").endsWith("(날씨우선도+1)"), "일반 날씨 특성 +1");
+  assert.ok(text("groudon").endsWith("(날씨우선도+2)"), "전설급 +2");
+  assert.ok(text("tapu-koko").endsWith("(필드우선도+2)"), "준전설 필드 +2");
+  assert.ok(text("rayquaza", "rayquaza-mega").endsWith("(날씨우선도+3)"), "메가이면서 전설급 +3");
+  assert.ok(!text("pikachu").includes("우선도"), "룰렛과 상관없는 특성은 그대로");
 }
 
 // ── 명령 ──

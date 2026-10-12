@@ -253,6 +253,16 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(rl.weather!.candidates.some((c) => c.side === rl.weather!.picked!.side && c.slot === rl.weather!.picked!.slot));
   assert.strictEqual(rl.field!.kind, "electric");
   assert.strictEqual(rl.aura, undefined, "후보가 없으면 룰렛 없음");
+  // 룰렛 칸 수 — 메가·전설급은 칸이 늘어난다. 칸은 돌려 가며 넣고, 후보가 한 마리뿐이면 칸 수와 상관없이 한 번만 적는다
+  const two = run([quiet({ ability: "drought", tickets: 2 }), quiet({ ability: "drizzle" })], [quiet()], 3, 100);
+  assert.deepStrictEqual(startOf(two).roulette!.weather!.candidates, [{ side: 0, slot: 0 }, { side: 0, slot: 1 }, { side: 0, slot: 0 }], "칸 수만큼 되풀이한다");
+  assert.strictEqual(startOf(run([quiet({ ability: "drought", tickets: 3 })], [quiet()], 3, 100)).roulette!.weather!.candidates.length, 1, "후보 한 마리면 한 번만");
+  let firstWins = 0;
+  for (let sd = 1; sd <= 600; sd++) if (startOf(run([quiet({ ability: "drought", tickets: 2 }), quiet({ ability: "drizzle" })], [quiet()], sd, 100)).roulette!.weather!.picked!.slot === 0) firstWins++;
+  assert.ok(firstWins > 340 && firstWins < 460, `2칸 대 1칸은 2 대 1 로 뽑힌다 (${firstWins}/600)`);
+  // 개체의 칸 수 — 일반 1, 메가 2, 전설급(초전설·준전설) 2, 메가이면서 전설급 3
+  const tk = (src: Parameters<typeof buildFighter>[0]) => buildFighter(src)!.tickets;
+  assert.deepStrictEqual([tk({ species: "charizard" }), tk({ species: "charizard", form: "charizard-mega-y" }), tk({ species: "kyogre" }), tk({ species: "raikou" }), tk({ species: "kyogre", form: "kyogre-primal" }), tk({ species: "rayquaza", form: "rayquaza-mega" })], [1, 2, 2, 2, 3, 3], "룰렛 칸 수");
   // 원시회귀는 룰렛 없이 정해진다
   const r2 = run([quiet({ ability: "drought" }), quiet({ ability: "primordial-sea" })], [quiet({ ability: "drizzle" })], 1, 100);
   assert.deepStrictEqual([startOf(r2).roulette!.weather!.kind, startOf(r2).roulette!.weather!.fixed], ["heavy-rain", true]);

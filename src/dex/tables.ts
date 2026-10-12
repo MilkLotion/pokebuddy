@@ -117,6 +117,7 @@ export interface AbilityRow {
   ko: string;
   en?: string;
   text: string; // 화면 설명 — 이 게임에서의 동작을 짧게 (배틀 파티 상세 기기 창 말풍선)
+  group?: string; // 묶음 — 날씨·필드·전장(오라)은 룰렛에 든다
 }
 export const abilityTable = (opts?: DexOptions): Record<string, AbilityRow> => loadJson<Record<string, AbilityRow>>("abilities.json", opts);
 export const speciesAbilityTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("species-abilities.json", opts);

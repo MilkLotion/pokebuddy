@@ -67,6 +67,9 @@ export interface FighterSource {
 // 칸의 그림 값 — 이로치·성별. 판 응답(looks)과 상대 고르기 칸이 쓴다. 옛 등록에는 없어 기본 그림이다
 export const lookOfSource = (s: FighterSource | null): { shiny: boolean; gender?: string } | null => (s ? { shiny: s.shiny === true, ...(typeof s.gender === "string" ? { gender: s.gender } : {}) } : null);
 
+// 날씨·필드·오라 룰렛 칸 수 — 일반 1, 메가(원시회귀 포함) +1, 전설급(초전설·준전설) +1. src/view/battle.ts 가 특성 설명에도 쓴다
+export const rouletteTickets = (mega: boolean, legendary: boolean): number => 1 + (mega ? 1 : 0) + (legendary ? 1 : 0);
+
 const SPECIALS = new Set(["wall", "reflect", "sketch", "transform", "stance"]);
 const SCHOOLING_LEVEL = 60; // 약어리 어군 해금 레벨 (docs/specs/moves.md "모습이 바뀌는 종")
 
@@ -140,6 +143,7 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
     range: rangeOfMoves(moves),
     altForm: alt ? altFormOf(data, alt, real, src.moveSwap === true) : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
+    tickets: rouletteTickets(!!mega, !!sp.tier),
   };
 }
 
