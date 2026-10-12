@@ -93,13 +93,13 @@ function buffWarn(pet: PetView, item: BagItemView): BagDeviceOpen["preview"] | n
   return { lead: `${pet.name} · ${item.name} ${waitText(hit.remainMin * 60)} 남음`, line: "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", tone: "warn" };
 }
 
-// 강화 도구의 둘째 줄 — "신남 2시간 · 경험치 +150% · 포인트 +30%". 그 도구가 힘을 주는 쪽을 먼저 쓴다 (2026-10-11 사용자 "굳이 시안만들지말고 바로 변경")
+// 강화 도구의 둘째 줄 — "신남 2시간(경험치 +150% · 포인트 +30%), 친밀도 +5". 그 도구가 힘을 주는 쪽을 먼저 쓴다. 상점·가방의 효과 글자(data/items.json effectText)와 같다 (2026-10-12 사용자 지정) (2026-10-11 사용자 "굳이 시안만들지말고 바로 변경")
 // 시간 경험치 배율이 친밀도 배율을 이어받아 문구가 `경험치` 로 바뀌었다 (2026-10-12)
-const buffLine = (kind: "premium-food" | "long-play"): string => {
+const buffLine = (kind: "premium-food" | "long-play", affinity: number): string => {
   const point = `포인트 +${TIME_RULES.buffPointPercent[kind]}%`;
   const exp = `경험치 +${TIME_RULES.buffExpPercent[kind]}%`;
   const [first, second] = TIME_RULES.buffExpPercent[kind] > TIME_RULES.buffPointPercent[kind] ? [exp, point] : [point, exp];
-  return `${t(`buff.${kind}`)} ${waitText(BAG_RULES.buffMs[kind] / 1000)} · ${first} · ${second}`;
+  return `${t(`buff.${kind}`)} ${waitText(BAG_RULES.buffMs[kind] / 1000)}(${first} · ${second}), 친밀도 +${affinity}`;
 };
 
 // 미리보기 — 첫 줄과 덧붙는 줄
@@ -117,9 +117,9 @@ function bagPreview(v: Snapshot, pet: PetView, item: BagItemView, qty: number): 
     // 버프 효과는 "+N%" 꼴 하나 — 포인트 적립 줄과 같다 (2026-10-04 사용자 결정 "+% 하나", 94 항목 9-3-2).
     // 강화 도구는 게이지 변화와 버프·친밀도 한 줄 (2026-10-05 돌봄 개편, Figma 05 `Bag / Device / Use · 장난감`·`· 프리미엄먹이`). 결과 상자는 두 줄이라 "2시간 동안 …" 셋째 줄은 두지 않는다
     case "fullness-full-buff":
-      return [`만복도 ${Math.round(pet.fullness)} → 100 · 친밀도 +${BAG_RULES.premiumAffinity}`, buffLine("premium-food")];
+      return [`만복도 ${Math.round(pet.fullness)} → 100`, buffLine("premium-food", BAG_RULES.premiumAffinity)];
     case "play-buff":
-      return [`심심함 ${Math.round(pet.boredom)} → 0 · 친밀도 +${BAG_RULES.toyAffinity}`, buffLine("long-play")];
+      return [`심심함 ${Math.round(pet.boredom)} → 0`, buffLine("long-play", BAG_RULES.toyAffinity)];
     case "shiny-on":
       return ["이로치로 바뀌어요", "돌아오는 약으로 되돌릴 수 있어요"];
     case "shiny-off":
