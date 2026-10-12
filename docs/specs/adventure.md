@@ -24,6 +24,7 @@
 | 전투 개체 만들기 | `src/battle/fighter-core.ts`(앱·서버 공용) `fighterFrom`·`partyOf`, 앱은 `src/battle/fighter.ts` `buildFighter`·`petFighter` |
 | 서버 | `supabase/functions/battle-offer`, `battle-start`, 표·RPC `supabase/migrations/20261009100000_battle.sql`, 서버 복사본 `npm run battle:build` → `supabase/functions/_shared/battle/` |
 | 모의 대전기 | `src/tools/battle/sim-battle.ts` |
+| 팀 탐색기 | `src/tools/battle/team-search.ts` |
 | 자체 검사 | `src/tools/selftest/selftest-adventure.ts`, `src/tools/selftest/selftest-battle.ts` |
 
 ## 모험 탭
@@ -352,6 +353,17 @@
 - 종 쏠림은 종 승률에서 종족값 합 직선을 뺀 잔차의 표준편차다(표본 30판 이상, 판 수 가중). 종족값 합이 높은 종이 이기는 몫을 빼고 남은 쏠림을 본다. 밸런스를 고칠 때 이 값과 묶음별 잔차를 본다(2026-10-10 사용자 결정 "제안한대로 진행해봐"). 판 수가 적으면 표본 잡음이 커서 값이 커진다. 고치기 전과 뒤는 같은 풀·판 수·시드로 견준다.
 - 평타 간격, 피해 공식, 스피드를 기술 쿨타임에 쓸지는 모의 대전 결과로 정한다.
 - 실행: `npm run build` 뒤 `node dist/tools/battle/sim-battle.js --n 3000`. `--pool all` 은 전설급을 넣는다.
+
+### 팀 탐색기
+
+- 팀 탐색기는 중심 포켓몬(메가 포함)을 정하면 출전 제한 안에서 강한 6마리 조합을 찾는 개발 도구다. 앱과 서버에 들어가지 않는다.
+- 실행: `npm run build` 뒤 `node dist/tools/battle/team-search.js --anchor rayquaza-mega --records <기록.json> --out <결과.json>`. `--quick` 은 후보와 반복을 줄인 빠른 모드다. 빠른 모드는 약 6분, 전체 모드는 더 오래 걸린다.
+- `--save <계정 저장.json>` 은 후보를 그 계정의 보유 종과 진화 뒤 형태, 열린 메가로 좁힌다(관리자 CLI `save` 로 받은 파일). `--as-is` 는 지금 형태만 쓴다. 이때 `--anchor` 를 생략하면 중심 없이 찾고, 결과에 그 계정의 지금 배틀 파티를 비교로 보인다.
+- 단계는 후보 재기, 상대 강팀 만들기, 중심 팀 올라 타기, 최선 응수 라운드, 자리·기술 다듬기, 검증이다. 검증은 학습에 쓰지 않은 시드와 새로 만든 강팀으로 한다.
+- 출전 제한(초전설 1·준전설 2·메가 1), 같은 종 중복 금지, 전투 중에만 나오는 모습 제외를 지킨다.
+- 레이스포스·글래스트리는 지금 출전 제한 칸이 비어 있다. 기본은 이 둘을 준전설 칸으로 본다. `--no-tier-fix` 는 지금 규칙 그대로 잰다. 이 둘의 칸은 [스펙 미확정]이다.
+- 같은 시드와 같은 데이터면 결과가 같다. 출력 첫 줄에 데이터 지문이 있다.
+- 자동 전투는 결과가 0%와 100%로 갈린다. 어떤 팀에도 그 팀만 노린 응수 팀이 있다. 추천 팀은 학습에 쓰지 않은 강팀에 이기는 비율로 고른다.
 
 ## 배틀 기록
 
