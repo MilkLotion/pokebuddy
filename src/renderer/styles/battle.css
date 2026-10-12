@@ -1,23 +1,8 @@
 /* battle.html 의 창 CSS — pet.css 다음에 읽는다. 몸통·베젤·화면·초상·이름 줄은 파티 상세 기기 창과 같다
    배틀 파티 상세 기기 — Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
-   이 파일에는 배틀에만 있는 것만 둔다: ? 단추와 말풍선, 특성 줄, 방사형 그래프, 기술 목록, 기술 순서 단추, 기술 설명 말풍선 */
+   이 파일에는 배틀에만 있는 것만 둔다: 특성 줄, 방사형 그래프, 기술 목록, 기술 순서 단추, 기술 설명 말풍선 */
 
-/* ? 단추 — 화면 오른쪽 위. 모양은 styles/bubble.css */
-.help {
-  position: absolute;
-  top: 10px;
-  right: 14px;
-}
-
-/* 말풍선 — ? 의 능력치 기준, 특성 줄의 특성 설명. 모양은 styles/bubble.css, 여기는 자리만 */
-.bubble.basis {
-  top: 34px;
-  right: 14px;
-  width: max-content;
-}
-.bubble.basis .basis-line {
-  color: var(--muted);
-}
+/* 말풍선 — 특성 줄의 특성 설명. 모양은 styles/bubble.css, 여기는 자리만 */
 /* 특성 설명 — 특성 줄 바로 아래, 글자 왼쪽이 "특성" 과 맞도록 안쪽 여백만큼 왼쪽으로 (Figma `Ability Info` `1896:984`) */
 .bubble.ability-info {
   top: calc(100% + 4px);

@@ -148,7 +148,7 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   const s = seed(["pikachu"]);
   s.battle = { slots: ["p1", null, null, null, null, null] };
   const slot = snapshotView(s, T0).battle.slots[0]!;
-  assert.deepEqual(slot.stats.map((x) => `${x.label} ${x.value}`), ["HP 110", "공격 75", "방어 60", "스피드 110", "특수방어 70", "특수공격 70"], "그래프 꼭짓점 순서");
+  assert.deepEqual(slot.stats.map((x) => `${x.label} ${x.value}`), ["HP 35", "공격 55", "방어 40", "스피드 90", "특수방어 50", "특수공격 50"], "그래프 꼭짓점 순서 — 종족값(2026-10-12)");
   assert.equal(slot.ability?.name, "정전기");
   assert.ok(slot.ability?.text, "특성 화면 설명");
   assert.deepEqual(slot.moves.map((m) => m.name), ["볼트태클", "10만볼트"]);
@@ -311,7 +311,7 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   const slot = snapshotView(save, T0).battle.slots[0]!;
   assert.equal(slot.pet?.name, "메가리자몽X");
   assert.deepEqual(slot.pet?.typeIds, ["fire", "dragon"]);
-  assert.deepEqual(slot.stats.map((x) => x.value), [153, 150, 131, 120, 105, 150], "메가 모습의 종족값");
+  assert.deepEqual(slot.stats.map((x) => x.value), [78, 130, 111, 100, 85, 130], "메가 모습의 종족값");
   assert.equal(slot.pet?.mega?.on, "charizard-mega-x");
   assert.equal(slot.pet?.mega?.canChange, true);
   assert.equal(why({ petId: "p3", form: "rayquaza-mega" }), null, "둘째 메가도 켤 수 있다");

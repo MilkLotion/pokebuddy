@@ -5,7 +5,7 @@ import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, c
 import { AURA_ABILITY, FIELD_ABILITY, WEATHER_ABILITY } from "../battle/engine.js";
 import { rouletteTickets } from "../battle/fighter-core.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
-import { realStatsOf } from "../battle/stats.js";
+import { baseStatsOf } from "../battle/stats.js";
 import { tierOf } from "../battle/tier.js";
 import { abilityTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
 import { STATUS_NAME } from "../shared/battle-timeline.js";
@@ -108,9 +108,10 @@ function abilityOf(shown: string, base: string): { name: string; text: string } 
 }
 
 // shown — 배틀에서 싸우는 모습. 메가를 켰으면 그 메가 모습, 아니면 기본 종
+// 방사형 그래프는 종족값을 보인다. 배틀 계산은 이 값이 아니라 50레벨 실제 능력치다 (2026-10-12 사용자 "저 방사형에 보이는건 종족값으로 보이고, 실제 내부 배틀계산은 50기준으로하자")
 function statRows(shown: string): { label: string; value: number }[] {
-  const real = realStatsOf(shown);
-  return real ? STAT_ORDER.map(([label, i]) => ({ label, value: real[i]! })) : [];
+  const base = baseStatsOf(shown);
+  return base ? STAT_ORDER.map(([label, i]) => ({ label, value: base[i]! })) : [];
 }
 
 // 배틀에서 보이는 개체 — 배틀 파티의 메가 상태로 이름·타입·초상을 바꾼다. 프리셋의 메가 모습은 쓰지 않는다.

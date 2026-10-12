@@ -135,7 +135,7 @@ export interface PetDeviceInput {
 }
 
 // ── 배틀 파티 상세 기기 창 ─────────────────────────────────────────────────────
-// 모험 탭의 배틀 칸 카드를 누르면 뜬다. 실제 능력치(방사형 그래프)·특성·보유 기술을 보인다 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
+// 모험 탭의 배틀 칸 카드를 누르면 뜬다. 종족값(방사형 그래프)·특성·보유 기술을 보인다 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // 설정창은 칸 번호만 보내고(BattleDeviceInput), 메인이 지금 스냅샷으로 모델을 만든다 (src/view/device-battle.ts)
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1662:224`
 export interface BattleDeviceInput {
@@ -152,7 +152,6 @@ export interface BattleDeviceOpen {
   art: string | null; // 초상 열쇠 portrait:<종>[:shiny] (src/view/device-art.ts)
   typeArt: Record<string, string>; // 기술 타입 → 흰 타입 아이콘 열쇠 type:<타입>
   megaArt: string | null; // 메가스톤 표식 그림 열쇠 — 메가스톤을 지닌 개체만. 없으면 표식을 두지 않는다
-  basis: string[]; // ? 말풍선의 능력치 기준 줄
 }
 
 export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt" | "megaArt"> {

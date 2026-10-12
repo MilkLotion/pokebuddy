@@ -1,9 +1,9 @@
 // 배틀 파티 상세 기기 창 — 메인이 만들어 보낸 배틀 파티 칸 하나를 그린다 (src/view/device-battle.ts, docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
-//   화면  `배틀 파티 N번`·? 단추 → 초상·이름·타입·특성 → 실제 능력치 방사형 그래프
+//   화면  `배틀 파티 N번` → 초상·이름·타입·특성 → 종족값 방사형 그래프
 //   특성 줄을 누르면 그 아래에 특성 설명 말풍선(Figma 05 `Adventure / Battle Party Device · Ability Info` `1896:984`)
 //   흰 판 기술 두 개(큰 기술 칸 + 분류·위력·명중·쿨타임). 사이 가운데에 순서 바꾸기
-// 레벨은 보이지 않는다 — 배틀은 50레벨로 계산한다. ? 를 누르면 능력치 기준을 말풍선으로 보인다
+// 레벨은 보이지 않는다 — 배틀은 50레벨로 계산한다. 능력치 기준(50레벨·6V·노력치·도구 없음)은 모험 탭 팁과 배틀 시작 모달이 말한다(2026-10-12 사용자 "상세기기 (?)에는 50레벨 기준을 없애도 되겠다")
 // 기술 칸을 누르면 관리 창이 기술 바꾸기 모달을 연다(renderer/manage/move-pick.ts, 2026-10-10). 기술 설명은 모달에서 본다
 // 순서 바꾸기는 관리 창에 돌려보낸다(battle.moves 명령). 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다
 import type { BattleDeviceView } from "../../shared/model/devices.js";
@@ -28,8 +28,8 @@ const STAGE = { w: 88, h: 88, maxScale: 2 };
 const MEGA_STONE = { w: 28, h: 28, maxScale: 2 }; // 파티 상세 기기 창과 같은 표식 (device/pet.ts)
 const SVG = "http://www.w3.org/2000/svg";
 
-// 말풍선 — ? 의 능력치 기준, 특성 줄의 특성 설명. 한 번에 하나만 열고, 다른 개체를 열면 닫는다
-type Bubble = "basis" | "ability";
+// 말풍선 — 특성 줄의 특성 설명. 다른 개체를 열면 닫는다
+type Bubble = "ability";
 let open: Bubble | null = null;
 let shownPetId = "";
 let last: BattleDeviceView | null = null;
@@ -57,7 +57,7 @@ function svgEl(tag: string, cls: string, d: string): SVGElement {
 function radarEl(stats: BattleSlotView["stats"]): HTMLElement {
   const box = el("div", "radar");
   box.setAttribute("role", "img");
-  box.setAttribute("aria-label", `실제 능력치 ${stats.map((s) => `${s.label} ${s.value}`).join(", ")}`);
+  box.setAttribute("aria-label", `종족값 ${stats.map((s) => `${s.label} ${s.value}`).join(", ")}`);
   const svg = document.createElementNS(SVG, "svg");
   svg.setAttribute("width", String(R.w));
   svg.setAttribute("height", String(R.h));
@@ -109,16 +109,6 @@ function render(v: BattleDeviceView): void {
   const where = el("div", v.notice ? "where bad" : "where", v.notice || v.caption);
   if (v.notice) where.title = v.notice;
   screen.appendChild(where);
-  const help = buttonEl("help", "?", () => toggle("basis"));
-  help.setAttribute("aria-label", "능력치 기준");
-  help.setAttribute("aria-expanded", String(open === "basis"));
-  screen.appendChild(help);
-  if (open === "basis") {
-    const bubble = el("div", "bubble basis");
-    bubble.appendChild(el("strong", undefined, "배틀 능력치 기준"));
-    for (const line of v.basis) bubble.appendChild(el("div", "basis-line", `· ${line}`));
-    screen.appendChild(bubble);
-  }
   const entry = el("div", "entry");
   const portrait = el("div", "portrait");
   const stage = el("div", "stage");
