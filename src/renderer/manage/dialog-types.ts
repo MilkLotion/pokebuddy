@@ -31,7 +31,7 @@ export type Dialog =
   | { kind: "battle-pick"; slot: number | null } // 배틀 파티 교체 — slot 은 연 칸(처음 고른 칸, 머리 메뉴 `교체` 는 첫 빈 칸·없으면 null). 판의 쪽·찾기는 pet-box-panel.ts 가 든다
   | { kind: "battle-start" } // 배틀 고르기 — 모험 탭의 `배틀 시작`. 랜덤 배틀·친선 배틀 (battle-start.ts)
   | { kind: "battle-opponent" } // 랜덤 배틀 상대 고르기 — 모험 탭의 `배틀 시작`
-  | { kind: "battle-record" } // 배틀 기록 — 모험 탭 머리 메뉴 `내 전적`·상대 고르기의 `기록 보기 ›`(하위 모달 — 물러나면 상대 고르기로)·받은 판 알림 배너
+  | { kind: "battle-record" } // 배틀 기록 — 모험 탭 머리 메뉴 `내 전적`·상대 고르기의 `기록 보기 ›`(하위 모달 — 물러나면 상대 고르기로)
   | { kind: "battle-detail"; id: string } // 배틀 상세 — 배틀 기록의 줄(하위 모달 — 물러나면 배틀 기록으로). 양쪽 파티 DPS 표
   | { kind: "pool"; productId: string; page: number } // 알에서 나오는 포켓몬 — 상점 기기 창의 `나오는 포켓몬` 줄
   | { kind: "form"; petId: string; to: string } // 공유 sid 계열의 모습 바꾸기 확인

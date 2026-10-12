@@ -441,7 +441,7 @@ Figma: `Toggle` `299:3593`을 새로 만들었다. 변형은 `Value=On|Off`와 `
 줍기 배너: 제목 `줍기`, 두 줄 문구, `바로가기`로 구성한다. 대상 그림 자리는 없다. 문구가 한 줄을 넘으면 말줄임 대신 둘째 줄로 내린다. 문구와 `바로가기`의 이동 대상은 [줍기](game.md#줍기)를 따른다. 이 배치는 제안이다. 사용자가 확인하기 전이다.
 배너는 뜬 뒤 3초가 지나면 사라진다 (2026-09-30 사용자 결정 "시간은 3초로 늘리고, 모든 알림은 생성되고 3초뒤에 사라지게 해"). 커서가 배너 위에 있어도 멈추지 않는다. 옛 2초와 커서 멈춤은 이 결정으로 바뀌었다. 창 크기(296 × 98, 배너 280 × 82)는 그대로다. 주 화면을 기준으로 띄운다. 구현은 `src/renderer/banner.html`, `src/renderer/windows/banner.ts` 다.
 메가스톤 배너(`mega`)는 진화 배너와 같은 모양이다. 제목은 `메가스톤 획득`·`메가진화 가능`·`원시회귀 가능` 이다. Figma 변형은 `Type=Mega` `1318:63010`, 화면은 05 `Playground / Banner Mega` `1319:51290` 이다.
-Figma: `Notification Banner` `338:732`(`Type=Achievement|Hatch|Evolution|Find|Battle`). 받은 배틀 결과 배너 `Type=Battle` `1870:14030` 은 2026-10-10 더했다(지도 아이콘, `보기`). 줍기 배너 `Type=Find` `970:20323` 와 05 `Playground / Banner Find` `970:20336` 은 2026-09-30 더했다. 각 변형의 제목 줄 `title-row` 에 `✕` 가 있다(2026-09-30 반영).
+Figma: `Notification Banner` `338:732`(`Type=Achievement|Hatch|Evolution|Find`). 받은 배틀 결과 배너(`Type=Battle` `1870:14030`)는 2026-10-12 없앴다. Figma 변형은 정리 대상이다. 줍기 배너 `Type=Find` `970:20323` 와 05 `Playground / Banner Find` `970:20336` 은 2026-09-30 더했다. 각 변형의 제목 줄 `title-row` 에 `✕` 가 있다(2026-09-30 반영).
 
 ### C-20 아이콘 말풍선
 

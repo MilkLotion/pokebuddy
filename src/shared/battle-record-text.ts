@@ -1,4 +1,4 @@
-// 배틀 기록 문구 — 상대 고르기의 `내 전적` 줄, 배틀 기록 모달, 받은 판 알림 배너가 같은 셈을 쓴다
+// 배틀 기록 문구 — 상대 고르기의 `내 전적` 줄, 배틀 기록 모달이 같은 셈을 쓴다
 // 규칙 docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기"(2026-10-10 사용자 확정 "이렇게 진행"), Figma 05 `15 모험` `Adventure / Battle Record` 1870:13392
 import type { BattleDpsRow, BattleRecordRow, BattleTally } from "./model/battle-net.js";
 

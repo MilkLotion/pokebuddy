@@ -76,8 +76,7 @@ export function goTo(route: ManageRoute): void {
   } else if (route.to === "friendly") {
     openDialogOrPet({ kind: "friendly" }); // 친선 배틀 링크로 켰다 — 친선 배틀 모달
   } else if (route.to === "battle-record") {
-    openDialogOrPet({ kind: "battle-record" }); // 받은 판 알림 배너의 `보기` — 배틀 기록 모달
-  } else if (route.to === "sell") {
+    openDialogOrPet({ kind: "battle-record" });  } else if (route.to === "sell") {
     if (petInView(route.petId)) openDialogOrPet({ kind: "sell-pet", petId: route.petId, price: route.price }); // 포켓몬 메뉴의 `팔기` — 확인 창
   } else if (route.to === "account") {
     ui.detailPet = null;

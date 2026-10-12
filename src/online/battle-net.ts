@@ -36,26 +36,17 @@ export interface BattleNetDeps {
   beforeSend?: () => Promise<void>; // 상대 받기·판 요청 직전 저장 올리기 — 서버가 서버 저장의 배틀 파티를 읽는다. 친선 배틀의 beforeReady 와 같다
   prepare?: () => void; // 판을 요청하기 직전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다 (2026-10-10)
   cancel?: () => void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다. 실패 문구는 상대 고르기 모달이 보인다
-  now?: () => number; // 받은 판 확인 간격을 재는 시계 — 자체 시험이 바꾼다
 }
-
-// 받은 판 확인 간격 — 서버 읽기 한 번. 배너를 띄우지 못했으면(다른 배너가 보이는 중) 다시 읽지 않고 다음 틱에 같은 값을 띄운다
-export const RECEIVED_CHECK_MS = 10 * 60_000;
 
 type Call<T> = { ok: true; data: T } | { ok: false; code: BattleCode; detail?: string; remainMs?: number };
 const KNOWN = new Set<string>([...SERVER_BATTLE_CODES, "CLOUD_ACCOUNT_HELD", "CLOUD_LOGIN_REQUIRED"]);
 
 export interface BattleNet {
   act: (a: BattleAction) => Promise<BattleReply>;
-  // 받은 판 알림 — 지난 알림 뒤 받은 판이 있으면 show 로 한 번 띄우고, 띄웠으면 서버에 본 시각을 적는다. 시간 틱(15초)마다 불러도 서버는 간격마다 한 번 읽는다
-  checkReceived: (show: (unseen: BattleRecordData["unseen"]) => boolean) => Promise<void>;
 }
 
 export function createBattleNet(d: BattleNetDeps): BattleNet {
   let busy = false;
-  let lastCheck = -Infinity;
-  let held: BattleRecordData["unseen"] | null = null; // 읽었지만 아직 띄우지 못한 알림
-  const now = d.now ?? Date.now;
 
   async function record(): Promise<{ ok: true; data: BattleRecordData } | { ok: false; code: BattleCode; detail?: string }> {
     const r = await callRpc<BattleRecordData, BattleCode>(d.client, "battle_record_view", undefined, (e) => {
@@ -64,23 +55,6 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
       return isNetworkMessage(m) ? { code: "NETWORK" } : { code: "UNKNOWN", detail: m };
     });
     return r;
-  }
-
-  async function checkReceived(show: (unseen: BattleRecordData["unseen"]) => boolean): Promise<void> {
-    if (!d.signedIn()) return;
-    if (!held) {
-      if (now() - lastCheck < RECEIVED_CHECK_MS) return;
-      lastCheck = now();
-      const r = await record();
-      if (!r.ok) return;
-      const u = r.data.unseen;
-      if (!u.until || u.wins + u.losses + u.draws === 0) return;
-      held = u;
-    }
-    if (!show(held)) return;
-    const until = held.until;
-    held = null;
-    await callRpc(d.client, "battle_record_seen", { p_until: until }, (e) => ({ code: "UNKNOWN", detail: e?.message ?? "" }));
   }
 
   async function call<T>(fn: string, body: Record<string, unknown>): Promise<Call<T>> {
@@ -139,7 +113,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
     }
   }
 
-  return { act, checkReceived };
+  return { act };
 }
 
 const fail = (r: { code: BattleCode; detail?: string; remainMs?: number }): BattleReply => ({
