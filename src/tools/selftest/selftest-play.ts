@@ -170,16 +170,16 @@ function seedPet(): SaveV3 {
   let state: SaveV3 | null = seedPet();
   state.points.balance = 100;
   const ex = createExecutor({ read: () => structuredClone(state), write: (s) => ((state = s), true), now: () => T0, rand: () => 0.5 }, HANDLERS);
-  const ok3 = ex.run({ id: "buy-3", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  const ok3 = ex.run({ id: "buy-3", name: "shop.buy", args: { productId: "toy", count: 3 } });
   assert.ok(ok3.ok, JSON.stringify(ok3));
-  assert.equal(state?.bag["exp-candy-xs"], 3, "세 개가 가방에");
+  assert.equal(state?.bag["toy"], 3, "세 개가 가방에");
   assert.equal(state?.points.balance, 40, "60P 를 한 번에 쓴다");
-  const short = ex.run({ id: "buy-9", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  const short = ex.run({ id: "buy-9", name: "shop.buy", args: { productId: "toy", count: 3 } });
   assert.equal(short.ok, false, "40P 로 세 개(60P)는 못 산다");
-  assert.equal(state?.bag["exp-candy-xs"], 3, "모자라면 하나도 사지 않는다");
+  assert.equal(state?.bag["toy"], 3, "모자라면 하나도 사지 않는다");
   assert.equal(state?.points.balance, 40);
   for (const count of [0, -1, 1.5, "2"]) {
-    const bad = ex.run({ id: `buy-bad-${String(count)}`, name: "shop.buy", args: { productId: "exp-candy-xs", count } });
+    const bad = ex.run({ id: `buy-bad-${String(count)}`, name: "shop.buy", args: { productId: "toy", count } });
     assert.equal(bad.ok, false, `수량 ${String(count)} 거절`);
   }
   state.points.balance = 100_000;
@@ -211,14 +211,14 @@ function seedPet(): SaveV3 {
   state.dex.obtained = [];
   // 가방 최대 999 — 가진 개수를 넘겨 사지 못한다. 넘치는 묶음은 하나도 사지 않는다
   state.points.balance = 100_000;
-  state.bag["exp-candy-xs"] = 997;
-  const over = ex.run({ id: "buy-over", name: "shop.buy", args: { productId: "exp-candy-xs", count: 3 } });
+  state.bag["toy"] = 997;
+  const over = ex.run({ id: "buy-over", name: "shop.buy", args: { productId: "toy", count: 3 } });
   assert.equal(over.ok, false, "997 + 3 은 999 를 넘는다");
-  assert.equal(state?.bag["exp-candy-xs"], 997, "넘치면 하나도 사지 않는다");
-  const fit = ex.run({ id: "buy-fit", name: "shop.buy", args: { productId: "exp-candy-xs", count: 2 } });
+  assert.equal(state?.bag["toy"], 997, "넘치면 하나도 사지 않는다");
+  const fit = ex.run({ id: "buy-fit", name: "shop.buy", args: { productId: "toy", count: 2 } });
   assert.ok(fit.ok, JSON.stringify(fit));
-  assert.equal(state?.bag["exp-candy-xs"], 999, "999 까지는 산다");
-  const full = ex.run({ id: "buy-full", name: "shop.buy", args: { productId: "exp-candy-xs" } });
+  assert.equal(state?.bag["toy"], 999, "999 까지는 산다");
+  const full = ex.run({ id: "buy-full", name: "shop.buy", args: { productId: "toy" } });
   assert.equal(full.ok ? "ok" : full.reason, "bag-full", "가득 차면 bag-full");
   process.stdout.write("(7) 여러 개 구매 · 알 여러 개 · 가방 최대 999  ok\n");
 }
@@ -237,7 +237,7 @@ function seedPet(): SaveV3 {
     fs.mkdirSync(block);
     game.tick(); // 1번째 실패 — 메모리 진행은 들고 있다 (src/tx/game.ts)
     assert.equal(game.saveFailing(), false, "한 번 실패로는 안내하지 않는다");
-    assert.equal(game.send({ cmd: "shop.buy", target: "exp-candy-xs" }, "settings").reason, "save-failed", "2번째 실패");
+    assert.equal(game.send({ cmd: "shop.buy", target: "toy" }, "settings").reason, "save-failed", "2번째 실패");
     assert.equal(snapshotOfGame(game)?.saveFailing, undefined, "두 번까지는 안내하지 않는다");
     game.tick();
     assert.equal(game.saveFailing(), true, "3번 이어서 실패");

@@ -37,6 +37,9 @@ function seed(points: number): SaveV3 {
   assert.equal(eggPrice("random"), 120, "랜덤알");
   assert.equal(eggPrice("ancient-stone"), 200, "태고의돌");
   assert.equal(toolPrice("exp-candy-xl"), 320);
+  assert.equal(toolPrice("exp-candy-l"), 160);
+  assert.deepStrictEqual(["exp-candy-xs", "exp-candy-s", "exp-candy-m"].map((id) => findProduct(id)), [null, null, null], "XS·S·M 은 사지 못한다");
+  assert.equal(toolPrice("exp-candy-xs"), 20, "가격은 남겨 가방의 것을 팔 수 있다");
   assert.equal(toolPrice("normal-potion"), 0, "돌아오는 약은 0P");
   assert.equal(toolPrice("basic-food"), null, "기본먹이는 팔지 않는다");
   assert.equal(toolPrice("thunder-stone"), SHOP_RULES.evoItemPrice, "진화용 도구는 공통 가격");
@@ -116,10 +119,10 @@ function seed(points: number): SaveV3 {
 // (7) 도구는 가방에 쌓인다
 {
   const s = seed(1000);
-  buyProduct(s, "exp-candy-s", T0, rand);
-  buyProduct(s, "exp-candy-s", T0, rand);
-  assert.equal(s.bag["exp-candy-s"], 2);
-  assert.equal(s.points.balance, 1000 - 80);
+  buyProduct(s, "exp-candy-l", T0, rand);
+  buyProduct(s, "exp-candy-l", T0, rand);
+  assert.equal(s.bag["exp-candy-l"], 2);
+  assert.equal(s.points.balance, 1000 - 320);
   buyProduct(s, "thunder-stone", T0, rand);
   assert.equal(s.bag["thunder-stone"], 1);
   process.stdout.write("(7) 도구 · 가방에 쌓인다  ok\n");
@@ -207,7 +210,10 @@ function seed(points: number): SaveV3 {
   // 도구 상품의 설명은 효과 한 줄 — 기기 창 `효과` 줄과 같다 (2026-10-05)
   const tools = list.filter((i) => i.category === "tool");
   assert.ok(tools.length > 0 && tools.every((i) => i.note !== ""), "도구 상품은 모두 설명이 있다");
-  assert.equal(tools.find((i) => i.id === "exp-candy-s")?.note, "경험치 +800");
+  assert.equal(tools.find((i) => i.id === "exp-candy-l")?.note, "경험치 +10,000");
+  // 경험사탕 XS·S·M 은 상점에서 뺐다 (2026-10-12 사용자 "l, xl남기고 나머진 폐기"). 이상한사탕·L·XL 은 판다
+  assert.deepStrictEqual(["exp-candy-xs", "exp-candy-s", "exp-candy-m"].filter((id) => tools.some((i) => i.id === id)), [], "XS·S·M 은 목록에 없다");
+  assert.deepStrictEqual(["exp-candy-l", "exp-candy-xl", "rare-candy"].filter((id) => !tools.some((i) => i.id === id)), [], "L·XL·이상한사탕은 목록에 있다");
   assert.equal(tools.find((i) => i.id === "rare-candy")?.note, "레벨 +1");
   process.stdout.write("(8b) 파티 프리셋 · 1000P 고정 · 칸 조건 · 다섯 개까지  ok\n");
 }

@@ -18,7 +18,8 @@ import type { BuffKind, PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 import { itemOf } from "./items.js";
-import { feedBlock } from "../state/care-block.js";
+import { feedBlock, playBlock } from "../state/care-block.js";
+import { CARE_RULES } from "../state/rules.js";
 
 export type UseFailure = ReasonOf<
   | "no-item" // 그런 도구가 없다
@@ -85,26 +86,29 @@ export function useItem(save: SaveV3, itemId: string, petId: string, args: { nat
   switch (item.effect) {
     case "fullness":
     case "fullness-full-buff": {
-      // 배부름·쿨타임 판정은 src/state/care-block.ts feedBlock 하나 — 두 먹이가 같이 쓴다. 배부를 때 프리미엄먹이를 쓰게 두면 친밀도 +8 을 쿨타임마다 얻어서 막는다 (2026-10-05)
+      // 배부름·쿨타임 판정은 src/state/care-block.ts feedBlock 하나 — 두 먹이가 같이 쓴다. 배부를 때 프리미엄먹이를 쓰게 두면 친밀도를 쿨타임마다 얻어서 막는다 (2026-10-05)
       const blocked = feedBlock(pet);
       if (blocked) return { ok: false, reason: blocked };
       pet.fullness = item.effect === "fullness-full-buff" ? PET_RULES.statMax : Math.min(PET_RULES.statMax, pet.fullness + item.amount);
       pet.fullnessProgressMs = 0;
       pet.feedCooldownMs = BAG_RULES.feedCooldownMs;
       if (item.effect === "fullness-full-buff") {
-        // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(포인트 +80%·친밀도 +20%, 그동안 만복도가 줄지 않는다) + 친밀도 +8 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기)
+        // 프리미엄먹이 — 만복도 가득 + 든든함 2시간(포인트 +80%·경험치 +20%, 그동안 만복도가 줄지 않는다) + 친밀도 +2 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기, 2026-10-12 +8 → +2)
         setBuff(pet, "premium-food");
-        addAffinity(pet, BAG_RULES.premiumAffinity - BAG_RULES.feedAffinity); // 아래 밥 주기 몫(+2)과 합쳐 +8
+        addAffinity(pet, BAG_RULES.premiumAffinity);
         // 프리미엄먹이는 밥 주기 누적 기록에 든다(2026-10-04 사용자 결정 "센다", 94 항목 9-3-6). 메가진화 조건에는 세지 않는다 — 2026-10-11 놀아주기 30회로 바꿈.
         // 기본먹이는 밥 주기 명령(src/state/care.ts feedPet)이 센다 — 같은 길을 지나 여기서 세면 두 번이 된다
         save.totals.fed += 1;
       }
-      addAffinity(pet, BAG_RULES.feedAffinity);
       pet.daily.feeds += 1;
       return done({ fullness: pet.fullness });
     }
     case "play-buff": {
-      // 장난감 — 심심함 0 + 신남 2시간(포인트 +30%·친밀도 +150%, 심심함은 다시 쌓인다) + 친밀도 +5 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기)
+      // 장난감도 놀아주기 쿨타임(10분)을 같이 쓴다 — 쓰면 놀아주기가, 놀아주면 장난감이 10분 막힌다 (2026-10-12 사용자 "놀아주기랑 시간 공유하는거로 하자")
+      const playBlocked = playBlock(pet);
+      if (playBlocked) return { ok: false, reason: playBlocked };
+      pet.playCooldownMs = CARE_RULES.playCooldownMs;
+      // 장난감 — 심심함 0 + 신남 2시간(포인트 +30%·경험치 +150%, 심심함은 다시 쌓인다) + 친밀도 +5 (2026-10-05 돌봄 개편, 2026-10-11 도구 역할 나누기)
       setBuff(pet, "long-play");
       addAffinity(pet, BAG_RULES.toyAffinity);
       pet.boredom = 0;

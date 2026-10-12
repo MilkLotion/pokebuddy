@@ -15,8 +15,8 @@
 //   battle      서버에 없는 배틀 판의 보상을 넣었다. 있는 판의 보상은 포인트 예산에 더한다 (E3, battle.applied)
 //   achievement 없는 업적을 받았다. 받은 업적의 보상(포인트·도구·알·포켓몬)은 각 예산에 더한다. 달성 조건은 보지 않는다
 //   level       레벨 1~100, 경험치 0~최대, 레벨 ≤ 경험치가 허락하는 레벨
-//   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕
-//   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감
+//   exp         경험치 증가 합 ≤ 쓴 사탕 + 살 수 있었던 사탕 + 시간 경험치(파티 칸 수 × 시간당 최대 × 틈)
+//   affinity    친밀도는 줄지 않고, 증가 ≤ 시간·돌봄 상한 + 장난감 (시간 상한은 옛 앱 호환으로 그대로)
 //   new-pets    새 개체 수(같은 틈에 얻어서 판 개체 포함) ≤ 출처 수. 유대의고삐로 부른 말(블리자포스·레이스포스)은 그사이 줄어든 고삐 수까지 출처로 센다
 //   rider       새로 생긴 말은 새 저장에 버드렉스 계열 개체가 있어야 한다. 백마·흑마 모습 개체는 그 말 개체가 있어야 한다 (data/regional.json riders)
 //   partner     블랙·화이트큐레무 개체는 그 짝(제크로무·레시라무) 개체가 있어야 한다 (data/regional.json partners)
@@ -87,7 +87,8 @@ export interface VerifyData {
     megaCareMax?: number; // 돌봄 횟수의 상한 — 조건을 내려도 옛 앱·옛 저장이 센 값까지 받는다. 없으면 megaCare
     megaToyCare?: number; // 장난감 한 번이 세는 놀아주기 횟수 (MEGA_RULES.toyCare). 없으면 1
     careCountPerHour?: number; // 밥 주기·놀아주기 쿨타임 기준 한 시간 최대 횟수 — 장난감은 따로 센다
-    affinityPerHour: number; // 시간 적립 최대(버프 반영)
+    affinityPerHour: number; // 시간 적립 최대(버프 반영) — 옛 앱의 상한을 그대로 둔다. 새 앱은 친밀도를 시간으로 올리지 않는다
+    expPerHour?: number; // 개체 하나가 시간으로 받는 경험치 최대(버프 반영, TIME_RULES.expPerGain). 없으면 0(옛 데이터)
     carePerHour: number; // 밥·놀기 쿨타임 기준 최대
     careOnce: number; // 밥 한 번 + 놀기 한 번 — 짧은 틈에도 한 번씩은 할 수 있다
     toyAffinity: number;
@@ -545,7 +546,9 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   }
   const expGain = same.reduce((s, x) => s + pos(x.p.exp - x.q.exp), 0) + grown.reduce((s, p) => s + pos(p.exp), 0)
     + fresh.reduce((s, p) => s + pos(p.exp - (tradedFrom.get(p.id)?.exp ?? p.exp)), 0);
-  add("exp", expGain, (candy + leftover * expPerPoint) * m);
+  // 시간 경험치 — 파티 칸 수 × 개체 하나의 시간당 최대 × 틈 (2026-10-12 시간 보상이 친밀도에서 경험치로 바뀜). 박스·다른 프리셋은 받지 않으므로 칸 수가 상한이다
+  const timeExp = r.maxPartySlots * num(r.expPerHour) * hours * m;
+  add("exp", expGain, (candy + leftover * expPerPoint) * m + timeExp);
 
   // affinity — 시간·돌봄 상한을 넘는 몫은 장난감으로 올렸어야 한다. 장난감은 모든 개체가 함께 쓴다
   let toyBudget = 0;

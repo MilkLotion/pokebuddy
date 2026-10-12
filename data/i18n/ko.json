@@ -120,7 +120,7 @@
   "zone.normal": "보통",
   "zone.hungry": "배고픔",
   "zone.starving": "매우 배고픔",
-  "debuff.note": "포인트 −{point}% · 친밀도 증가량 −{percent}%",
+  "debuff.note": "포인트 −{point}% · 경험치 증가량 −{percent}%",
   "debuff.noteBored": "포인트 −{point}%",
   "gender.male": "수컷",
   "gender.female": "암컷",

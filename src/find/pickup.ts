@@ -14,6 +14,7 @@ import { addItem, isFormTool } from "../bag/items.js";
 import { addNewPet } from "../party/create.js"; // 새 개체 배치 — 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 상점 구매·업적 보상과 같다
 import { FIND_RULES } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
+import { SHOP_RETIRED_CANDIES } from "../bag/rules.js";
 import { inRandomEgg } from "../dex/obtain.js";
 import type { FindRecordV3, FindV3, SaveV3 } from "../shared/save-v3";
 import { isCaredFor, KINDS, rollHits } from "./roll.js";
@@ -42,6 +43,7 @@ export function itemCandidates(opts?: DexOptions): ItemCandidate[] {
   for (const [id, e] of Object.entries(table)) {
     if (id.startsWith("_") || e == null || typeof e !== "object") continue;
     if (MINT_RETIRED && id === MINT_ID) continue;
+    if (SHOP_RETIRED_CANDIES.includes(id)) continue; // 상점에서 뺀 경험사탕 XS·S·M 은 줍기로도 얻지 않는다 (2026-10-12 사용자 "폐기")
     if (isFormTool(e.effect)) continue;
     const price = e.price;
     if (typeof price !== "number" || price <= 0 || price > FIND_RULES.itemMaxPrice) continue;

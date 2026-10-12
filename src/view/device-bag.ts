@@ -71,6 +71,9 @@ function bagBlocked(pet: PetView, item: BagItemView): string | null {
       // 두 먹이 모두 밥 주기 판정 하나를 본다 (src/state/care-block.ts feedBlock → PetView.feedBlock)
       if (pet.feedBlock === "full") return failText("full");
       return pet.feedBlock === "cooldown" ? `${failText("cooldown")} ${waitText(pet.feedInSec)} 남았어요.` : null;
+    case "play-buff":
+      // 장난감은 놀아주기와 쿨타임을 같이 쓴다 (src/state/care-block.ts playBlock → PetView.playBlock)
+      return pet.playBlock === "cooldown" ? `${failText("cooldown")} ${waitText(pet.playInSec)} 남았어요.` : null;
     case "shiny-on":
       return pet.shiny ? failText("already-shiny") : null;
     case "shiny-off":
@@ -90,11 +93,12 @@ function buffWarn(pet: PetView, item: BagItemView): BagDeviceOpen["preview"] | n
   return { lead: `${pet.name} · ${item.name} ${waitText(hit.remainMin * 60)} 남음`, line: "쓰면 남은 시간은 사라지고 2시간으로 바뀌어요", tone: "warn" };
 }
 
-// 강화 도구의 둘째 줄 — "신남 2시간 · 친밀도 +150% · 포인트 +30%". 그 도구가 힘을 주는 쪽을 먼저 쓴다 (2026-10-11 사용자 "굳이 시안만들지말고 바로 변경")
+// 강화 도구의 둘째 줄 — "신남 2시간 · 경험치 +150% · 포인트 +30%". 그 도구가 힘을 주는 쪽을 먼저 쓴다 (2026-10-11 사용자 "굳이 시안만들지말고 바로 변경")
+// 시간 경험치 배율이 친밀도 배율을 이어받아 문구가 `경험치` 로 바뀌었다 (2026-10-12)
 const buffLine = (kind: "premium-food" | "long-play"): string => {
   const point = `포인트 +${TIME_RULES.buffPointPercent[kind]}%`;
-  const affinity = `친밀도 +${TIME_RULES.buffAffinityPercent[kind]}%`;
-  const [first, second] = TIME_RULES.buffAffinityPercent[kind] > TIME_RULES.buffPointPercent[kind] ? [affinity, point] : [point, affinity];
+  const exp = `경험치 +${TIME_RULES.buffExpPercent[kind]}%`;
+  const [first, second] = TIME_RULES.buffExpPercent[kind] > TIME_RULES.buffPointPercent[kind] ? [exp, point] : [point, exp];
   return `${t(`buff.${kind}`)} ${waitText(BAG_RULES.buffMs[kind] / 1000)} · ${first} · ${second}`;
 };
 

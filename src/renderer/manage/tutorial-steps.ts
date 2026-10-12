@@ -66,9 +66,9 @@ export const GUIDES: Record<string, Guide> = {
   growth: {
     name: "성장", tab: "party", go: "파티로 가기",
     steps: [
-      { title: "친밀도는 함께한 시간만큼 올라요", body: "밥 주기·놀아주기로 더 올라요. 높을수록 포인트가 빨리 쌓여요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:first-child") ?? null },
-      { title: "배고프면 친밀도가 덜 올라요", body: "만복도는 시간이 지나면 줄어요. 밥을 주면 채워져요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:last-child") ?? null },
-      { title: "레벨은 사탕으로 올려요", body: "경험치는 친밀도와 따로 쌓여요. 가방의 경험사탕을 써요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".top") ?? null },
+      { title: "친밀도는 놀아주면 올라요", body: "놀아주기와 장난감으로 올라요. 높을수록 포인트가 빨리 쌓여요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:first-child") ?? null },
+      { title: "배고프면 경험치가 덜 올라요", body: "만복도는 시간이 지나면 줄어요. 밥을 주면 채워져요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".meters > .meter:last-child") ?? null },
+      { title: "레벨은 시간이 지나면 올라요", body: "파티에 있는 동안 경험치가 저절로 쌓여요. 경험사탕으로 더 빨리 올릴 수 있어요.", target: () => firstPetCard()?.querySelector<HTMLElement>(".top") ?? null },
     ],
   },
   points: {
@@ -104,7 +104,7 @@ export const GUIDES: Record<string, Guide> = {
     // 도구를 눌러 가방 기기 창이 뜨면 2단계, 닫으면 1단계로 돌아간다 (2026-10-01 가방 기기 창)
     step: () => (bagPickOf() ? 1 : 0),
     steps: [
-      { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 먹이와 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
+      { title: "쓸 도구를 골라요", body: "경험사탕은 레벨을, 장난감은 친밀도를 올려요.", target: () => bodyEl.querySelector<HTMLElement>(".bag-grid"), tryIt: true },
       {
         title: "옆 창에서 파티 포켓몬을 고르고 사용을 눌러요",
         body: "여러 개를 한 번에 쓸 수 있어요. 진화용 도구는 파티 상세의 진화 줄에서 써요.",

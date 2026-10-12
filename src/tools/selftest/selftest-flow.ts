@@ -162,10 +162,14 @@ try {
   process.stdout.write("(9) SC-02 · 밥 주기와 쿨타임  ok\n");
 
   // ── SC-06 사탕으로 레벨을 올린다 ─────────────────────────────────────────
-  w.ok("buy2", "shop.buy", { productId: "exp-candy-m" });
-  const leveled = w.ok("use1", "bag.use", { itemId: "exp-candy-m", petId: "p1" });
+  // 상점의 경험사탕은 L·XL 뿐이다(2026-10-12) — 값이 160P 라 포인트를 채워 둔다
+  const funded = w.save();
+  funded.points.balance = Math.max(funded.points.balance, 200);
+  assert.equal(store.writeSave(file, funded), true);
+  w.ok("buy2", "shop.buy", { productId: "exp-candy-l" });
+  const leveled = w.ok("use1", "bag.use", { itemId: "exp-candy-l", petId: "p1" });
   assert.ok(Number(leveled.level) > 1, "레벨이 올랐다");
-  assert.equal(w.save().bag["exp-candy-m"], undefined, "사탕을 다 썼다");
+  assert.equal(w.save().bag["exp-candy-l"], undefined, "사탕을 다 썼다");
   process.stdout.write("(10) SC-06 · 경험사탕으로 레벨 상승  ok\n");
 
   // ── SC-07 박스에 보관하고 다시 배치한다 ──────────────────────────────────

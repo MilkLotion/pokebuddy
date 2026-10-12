@@ -53,7 +53,8 @@ export interface PetView {
   hidden: boolean;
   feedBlock: "full" | "cooldown" | null; // 밥 주기를 막는 까닭 — 없으면 null. 판정은 src/state/care-block.ts feedBlock 하나
   feedInSec: number;
-  playBlock: "cooldown" | null; // 놀아주기를 막는 까닭 (src/state/care-block.ts playBlock)
+  playBlock: "cooldown" | null; // 놀아주기·장난감을 막는 까닭 (src/state/care-block.ts playBlock)
+  playInSec: number; // 놀아주기·장난감 쿨타임 남은 초 — 둘이 쿨타임을 같이 쓴다
   feedText: string; // 밥 주기 단추 글자 — "밥 주기" · "밥 주기 · 3분" · "밥 주기 · 배부름". 박스 개체는 화면이 "밥 주기" 로 둔다
   playText: string; // 놀아주기 단추 글자 — "놀아주기" · "놀아주기 · 3분" (밥 주기와 같은 꼴, 94 항목 5-1)
   longPlay: boolean; // 신남(장난감)이 켜져 있다

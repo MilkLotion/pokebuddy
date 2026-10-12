@@ -5,10 +5,11 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
-import { affinityPercent, boredStepOf, buffPercent, pointIntervalMs, pointPercent, zoneOf } from "../../state/time";
+import { boredStepOf, buffPercent, expPercent, pointIntervalMs, pointPercent, zoneOf } from "../../state/time";
 import { applyTimeAndSettle as applyTime } from "../../tx/tick"; // 시간 적용 + 후처리 사슬 — 옛 applyTime 과 같은 동작
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { TIME_RULES } from "../../state/rules";
+import { expForLevel, growthOf, levelFor } from "../../dex/growth";
 import { applyPreset } from "../../party/presets";
 import { T0 } from "../harness/clock"; // 2026-09-24 10:00 로컬 — 게임 시간 낮
 import { testPet } from "../harness/fixtures";
@@ -43,18 +44,27 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   const short = seed();
   for (let i = 0; i < 60; i++) applyTime(short, MIN, T0 + (i + 1) * MIN);
   assert.equal(short.pets[0]?.fullness, long.pets[0]?.fullness, "만복도가 같다");
+  assert.equal(short.pets[0]?.exp, long.pets[0]?.exp, "경험치가 같다");
+  assert.equal(long.pets[0]?.exp, 6000, "1시간에 6,000");
   assert.equal(short.pets[0]?.affinity, long.pets[0]?.affinity, "친밀도가 같다");
-  // 포인트는 친밀도에 따라 속도가 달라진다. 틱을 나누면 오른 친밀도가 더 빨리 반영되어 1 차이까지 난다
+  // 포인트는 친밀도에 따라 속도가 달라진다. 시간으로는 친밀도가 오르지 않아 같지만 반올림으로 1 차이까지 난다
   assert.ok(Math.abs(short.points.balance - long.points.balance) <= 1, "포인트 차이는 1 이하");
   process.stdout.write("(2) 부분 진행 · 틱을 나눠도 같다  ok\n");
 }
 
-// (3) 친밀도는 10분에 1. 배부른 구간에서는 배율이 없다
+// (3) 경험치는 10분에 1,000 (2026-10-12 사용자 "10분 1000으로 확정해보자"). 친밀도는 시간으로 오르지 않는다. 배부른 구간에서는 배율이 없다
 {
   const s = seed();
   applyTime(s, 30 * MIN, T0 + 30 * MIN);
-  assert.equal(s.pets[0]?.affinity, 3, "30분에 3");
-  process.stdout.write("(3) 친밀도 · 10분에 1  ok\n");
+  assert.equal(s.pets[0]?.exp, 3000, "30분에 3,000");
+  assert.equal(s.pets[0]?.affinity, 0, "친밀도는 시간으로 오르지 않는다");
+  assert.equal(s.pets[0]?.level, levelFor(growthOf(s.pets[0]!.species), 3000), "레벨을 다시 센다");
+  const top = expForLevel(growthOf("pikachu"), 100);
+  const maxed = seed({ species: "pikachu", level: 100, exp: top });
+  applyTime(maxed, 30 * MIN, T0 + 30 * MIN);
+  assert.equal(maxed.pets[0]?.level, 100, "100레벨은 그대로");
+  assert.equal(maxed.pets[0]?.exp, top, "100레벨은 경험치가 더 오르지 않는다");
+  process.stdout.write("(3) 경험치 · 10분에 1,000  ok\n");
 }
 
 // (4) 포인트는 2분에 1. 친밀도가 100 이면 두 배
@@ -76,6 +86,7 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   if (box) box.slots[0] = "p1";
   applyTime(s, 4 * HOUR, T0 + 4 * HOUR);
   assert.equal(s.pets[0]?.fullness, 100, "만복도가 그대로");
+  assert.equal(s.pets[0]?.exp, 0, "경험치가 그대로");
   assert.equal(s.pets[0]?.affinity, 0, "친밀도가 그대로");
   assert.equal(s.points.balance, 0, "적립도 멈춘다");
   process.stdout.write("(5) 박스 보관 · 시간이 멈춘다  ok\n");
@@ -87,7 +98,7 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
   applyTime(s, 20 * MIN, T0 + 20 * MIN);
   assert.equal(s.points.balance, 10, "숨겨도 적립한다 (2026-10-05 사용자 결정 숨김은 정배)");
-  assert.equal(s.pets[0]?.affinity, 2, "친밀도는 그대로 쌓인다");
+  assert.equal(s.pets[0]?.exp, 2000, "경험치는 그대로 쌓인다");
   assert.equal(s.pets[0]?.fullness, 87, "만복도도 그대로 준다");
   const care = seed({ affinity: 100, buffs: [{ kind: "premium-food", remainMs: 2 * HOUR }] });
   care.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
@@ -96,7 +107,7 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(6) 숨김 · 적립은 이어진다  ok\n");
 }
 
-// (7) 친밀도 버프는 더한다. 든든함 +20 · 신남 +150 (2026-10-11 도구 역할 나누기, 그 전에는 둘 다 +60. 놀아주기 신남은 2026-10-05 "b로 하자" 로 없앴다)
+// (7) 경험치 버프는 더한다. 든든함 +20 · 신남 +150 (2026-10-11 도구 역할 나누기, 그 전에는 둘 다 +60. 놀아주기 신남은 2026-10-05 "b로 하자" 로 없앴다)
 {
   assert.equal(buffPercent([]), 100);
   assert.equal(buffPercent([{ kind: "premium-food", remainMs: MIN }]), 120);
@@ -106,15 +117,15 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   assert.equal(buffPercent([{ kind: "long-play", remainMs: 0 }]), 100, "끝난 버프는 세지 않는다");
   const s = seed({ buffs: [{ kind: "premium-food", remainMs: HOUR }] });
   applyTime(s, 30 * MIN, T0 + 30 * MIN);
-  assert.equal(s.pets[0]?.affinity, 3, "든든함은 1.2배로 쌓인다 — 30분 × 1.2 = 36분");
+  assert.equal(s.pets[0]?.exp, 3000, "든든함은 1.2배로 쌓인다 — 30분 × 1.2 = 36분");
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, HOUR - 30 * MIN, "남은 시간이 준다");
   const toy = seed({ buffs: [{ kind: "long-play", remainMs: HOUR }] });
   applyTime(toy, 30 * MIN, T0 + 30 * MIN);
-  assert.equal(toy.pets[0]?.affinity, 7, "신남은 2.5배로 쌓인다 — 30분 × 2.5 = 75분");
+  assert.equal(toy.pets[0]?.exp, 7000, "신남은 2.5배로 쌓인다 — 30분 × 2.5 = 75분");
   process.stdout.write("(7) 버프 · 더하고 시간이 준다  ok\n");
 }
 
-// (8) 배고픔 구간은 친밀도 증가를 깎는다
+// (8) 배고픔 구간은 경험치 증가를 깎는다
 {
   assert.equal(zoneOf(100), "full");
   assert.equal(zoneOf(60), "full");
@@ -123,8 +134,8 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   assert.equal(zoneOf(39), "hungry");
   assert.equal(zoneOf(15), "hungry");
   assert.equal(zoneOf(14), "starving");
-  assert.equal(affinityPercent(pet({ fullness: 30 })), TIME_RULES.zonePercent.hungry);
-  assert.equal(affinityPercent(pet({ fullness: 5 })), TIME_RULES.zonePercent.starving);
+  assert.equal(expPercent(pet({ fullness: 30 })), TIME_RULES.zonePercent.hungry);
+  assert.equal(expPercent(pet({ fullness: 5 })), TIME_RULES.zonePercent.starving);
   process.stdout.write("(8) 만복도 구간과 디버프  ok\n");
 }
 
@@ -176,14 +187,14 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(12) 흐른 시간 0  ok\n");
 }
 
-// (13) 에이전트 작업 시간 — 누적만 센다. 친밀도·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고")
+// (13) 에이전트 작업 시간 — 누적만 센다. 경험치·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고")
 {
   const base = seed();
   applyTime(base, HOUR, T0 + HOUR);
   const working = seed();
   applyTime(working, HOUR, T0 + HOUR, { workMs: HOUR });
-  assert.equal(base.pets[0]?.affinity, 6, "기본은 1시간에 친밀도 6");
-  assert.equal(working.pets[0]?.affinity, 6, "작업해도 친밀도는 같다");
+  assert.equal(base.pets[0]?.exp, 6000, "기본은 1시간에 경험치 6,000");
+  assert.equal(working.pets[0]?.exp, 6000, "작업해도 경험치는 같다");
   assert.equal(working.points.balance, base.points.balance, "포인트도 같다");
   assert.equal(working.pets[0]?.daily.work, 0, "옛 작업 적립 칸은 쌓지 않는다");
   assert.equal(working.totals.workMs, HOUR, "누적 작업 시간은 센다 — 업적·로토무");

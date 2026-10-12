@@ -13,5 +13,5 @@ export type PlayBlock = "cooldown";
 export const feedBlock = (pet: Pick<PetV3, "fullness" | "feedCooldownMs">): FeedBlock | null =>
   pet.fullness >= PET_RULES.statMax ? "full" : pet.feedCooldownMs > 0 ? "cooldown" : null;
 
-// 놀아주기 — 쿨타임뿐이다. 장난감은 쿨타임이 없다
+// 놀아주기 — 쿨타임뿐이다. 장난감도 이 쿨타임을 같이 쓴다 (2026-10-12 사용자 "장난감 쿨타임을 둬야겠네", "놀아주기랑 시간 공유하는거로 하자")
 export const playBlock = (pet: Pick<PetV3, "playCooldownMs">): PlayBlock | null => (pet.playCooldownMs > 0 ? "cooldown" : null);

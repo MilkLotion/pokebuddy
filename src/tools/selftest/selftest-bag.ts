@@ -101,7 +101,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 90, "만복도 +40 (2026-10-05 돌봄 개편)");
   assert.equal(s.pets[0]?.feedCooldownMs, BAG_RULES.feedCooldownMs);
-  assert.equal(s.pets[0]?.affinity, BAG_RULES.feedAffinity);
+  assert.equal(s.pets[0]?.affinity, 0, "기본먹이는 친밀도를 올리지 않는다 (2026-10-12 사용자 \"밥주기는 안오르고\")");
   assert.equal(s.bag["basic-food"], undefined, "재고를 세지 않는다");
   const again = useItem(s, "basic-food", "p1");
   assert.equal(again.reason, "cooldown", "쿨타임 중에는 거절");
@@ -120,13 +120,14 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(6) 만복도 가득  ok\n");
 }
 
-// (7) 프리미엄먹이는 가득 채우고 든든함을 건다. 친밀도 +8 (2026-10-05 돌봄 개편)
+// (7) 프리미엄먹이는 가득 채우고 든든함을 건다. 친밀도 +2 (2026-10-05 돌봄 개편, 2026-10-12 +8 → +2)
 {
   const s = seed({ fullness: 10 }, { "premium-food": 2 });
   const res = useItem(s, "premium-food", "p1");
   assert.equal(res.ok, true);
   assert.equal(s.pets[0]?.fullness, 100);
-  assert.equal(s.pets[0]?.affinity, BAG_RULES.premiumAffinity, "친밀도 +8");
+  assert.equal(s.pets[0]?.affinity, BAG_RULES.premiumAffinity, "친밀도 +2");
+  assert.equal(BAG_RULES.premiumAffinity, 2);
   assert.equal(s.pets[0]?.buffs[0]?.kind, "premium-food");
   assert.equal(s.pets[0]?.buffs[0]?.remainMs, BAG_RULES.buffMs["premium-food"]);
   assert.equal(s.bag["premium-food"], 1, "하나 줄었다");
@@ -148,6 +149,21 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual([s.totals.fed, s.totals.played], [0, 1], "장난감은 놀아주기 횟수에 든다 (94 항목 9-3-6)");
   assert.equal(useItem(s, "toy", "p1").reason, "none-left");
   process.stdout.write("(8) 장난감 · 신남 · 갱신과 소진  ok\n");
+}
+
+// (8b) 장난감은 놀아주기 쿨타임(10분)을 같이 쓴다 (2026-10-12 사용자 "놀아주기랑 시간 공유하는거로 하자")
+{
+  const s = seed({ boredom: 70 }, { toy: 3 });
+  assert.equal(useItem(s, "toy", "p1").ok, true);
+  assert.equal(s.pets[0]?.playCooldownMs, CARE_RULES.playCooldownMs, "쓰면 놀아주기 쿨타임이 시작된다");
+  assert.equal(useItem(s, "toy", "p1").reason, "cooldown", "쿨타임 중에는 장난감도 막힌다");
+  assert.equal(s.bag.toy, 2, "막히면 재고를 쓰지 않는다");
+  assert.equal(s.pets[0]?.affinity, BAG_RULES.toyAffinity, "막히면 친밀도가 오르지 않는다");
+  assert.equal(applyPlay(s, "p1").reason, "cooldown", "장난감을 쓰면 놀아주기도 막힌다");
+  s.pets[0]!.playCooldownMs = 0;
+  assert.equal(applyPlay(s, "p1").ok, true);
+  assert.equal(useItem(s, "toy", "p1").reason, "cooldown", "놀아주면 장난감도 막힌다");
+  process.stdout.write("(8b) 장난감 · 놀아주기와 쿨타임을 같이 쓴다  ok\n");
 }
 
 // (9) 경험사탕은 경험치를 올리고 레벨을 다시 읽는다

@@ -91,7 +91,8 @@ try {
     assert.ok(near(1 / (perDay * shareOf("pokemon")), 11.9, 0.1), "1마리 포켓몬 약 12일에 1번");
     const ids = itemCandidates().map((c) => c.id);
     // 성격민트는 2026-09-30 은퇴해 후보에서 빠진다 (src/bag/mint.ts MINT_RETIRED)
-    const base = ["premium-food", "toy", "exp-candy-xs", "exp-candy-s", "exp-candy-m", "exp-candy-l", "rare-candy"];
+    // 경험사탕 XS·S·M 도 상점에서 빼며 후보에서 뺐다 (2026-10-12 사용자 "폐기", src/bag/rules.ts SHOP_RETIRED_CANDIES)
+    const base = ["premium-food", "toy", "exp-candy-l", "rare-candy"];
     assert.deepEqual(ids, MINT_RETIRED ? base : [...base, "mint"], "상점가 0 초과 200 이하. 민트는 한 종류");
     if (!MINT_RETIRED) assert.ok(near(itemCandidates().find((c) => c.id === "mint")?.weight ?? 0, 1 / 100, 1e-12), "민트 가중치 1/100");
     // 모습 도구는 값과 상관없이 줍기 후보가 아니다 (2026-10-07 사용자 "유대의고삐는 줍기에서 안 뜨게")
@@ -258,7 +259,7 @@ try {
   {
     const s = seed();
     const pts = findOne(s, "p1", T0, seq(K_POINTS, 0.999))!;
-    const item = findOne(s, "p1", T0, seq(K_ITEM, 0.2))!;
+    const item = findOne(s, "p1", T0, seq(K_ITEM, 0.5))!;
     const mon = findOne(s, "p1", T0, seq(K_POKEMON, 0, 0.9, 0))!;
     assert.deepEqual(
       pendingOf(s, T0).filter((p) => p.kind === "find").map((p) => p.key),
@@ -289,10 +290,10 @@ try {
     assert.deepEqual(later.queue.map((q) => q.key), ["find:f4"], "새로 주운 것만 줄에 선다");
 
     // 라틴 글자로 끝나는 이름의 조사 — M·N 은 받침 있음, L·R 은 ㄹ 받침 (검수 C7)
-    // 경험사탕M 자리 — 민트가 은퇴해 후보에서 빠지면 누적 가중치가 바뀐다(M 구간 약 0.83~0.92)
-    const candyM = findOne(s, "p1", T0, seq(K_ITEM, MINT_RETIRED ? 0.87 : 0.8))!;
-    assert.equal(candyM.ref, "exp-candy-m");
-    assert.equal(bannerOf(s, `find:${candyM.id}`)?.target, "피카츄가 경험사탕M을 주웠어요");
+    // 경험사탕L 자리 — 후보가 바뀌면 누적 가중치가 바뀐다(L 구간 약 0.86~0.94)
+    const candyL = findOne(s, "p1", T0, seq(K_ITEM, 0.9))!;
+    assert.equal(candyL.ref, "exp-candy-l");
+    assert.equal(bannerOf(s, `find:${candyL.id}`)?.target, "피카츄가 경험사탕L을 주웠어요");
     assert.deepEqual(["경험사탕M", "경험사탕S", "경험사탕XL", "경험사탕L", "N", "r"].map((w) => josa(w, "을/를")), ["을", "를", "을", "을", "을", "을"]);
     assert.deepEqual(["경험사탕L", "R", "경험사탕M", "경험사탕S"].map((w) => josa(w, "으로/로")), ["로", "로", "으로", "로"]);
     // 데려온 포켓몬이 사라졌으면 배너를 건너뛴다

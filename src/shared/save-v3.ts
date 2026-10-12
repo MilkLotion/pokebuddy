@@ -76,7 +76,7 @@ export interface PetV3 {
   level: number; // 1~100
   exp: number; // 누적 경험치. 레벨은 종의 성장 곡선으로 읽는다
   affinity: number; // 친밀도 0~100, 누적이며 줄지 않는다
-  affinityProgressMs: number; // 다음 친밀도 1 까지의 부분 진행. 버프와 디버프를 반영한 가중 시간
+  affinityProgressMs: number; // 다음 시간 경험치(1,000)까지의 부분 진행. 버프와 디버프를 반영한 가중 시간. 2026-10-12 전에는 친밀도 1 까지의 진행이었다(이름은 저장 호환으로 그대로)
   fullness: number; // 만복도 0~100. 높을수록 배부르다
   fullnessProgressMs: number; // 다음 만복도 1 감소까지의 부분 진행
   boredom: number; // 심심함 0~100. 높을수록 심심하다. 일한 시간만큼 쌓이고 놀아주면 준다 (2026-10-05 — 기분을 대신한다)

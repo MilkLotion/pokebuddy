@@ -88,9 +88,9 @@ async function main(): Promise<void> {
 
     // mailbox 왕복 — CLI·확장의 요청이 writer 에 닿는다
     commands.setWriter(true);
-    const bought = await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" });
+    const bought = await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-l", from: "cli" });
     assert.ok(bought.ok, "mailbox → dispatcher → 실행기");
-    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 1);
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-l"], 1);
 
     // 실제 CLI → 임시 HOME mailbox 왕복
     const child = await promisify(execFile)(process.execPath, [path.resolve(__dirname, "../../../bin/pokebuddy"), "game", "snapshot"], {
@@ -101,20 +101,20 @@ async function main(): Promise<void> {
     assert.equal(snapshot.points, party.save()!.points.balance);
 
     // 같은 요청 식별자는 한 번만 반영한다
-    const once = await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", args: { reqId: "same" }, from: "cli" });
-    const again = await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", args: { reqId: "same" }, from: "cli" });
+    const once = await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-l", args: { reqId: "same" }, from: "cli" });
+    const again = await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-l", args: { reqId: "same" }, from: "cli" });
     assert.ok(once.ok && again.ok);
     assert.equal(again.replayed, true, "두 번째는 재생");
-    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], 2, "한 번만 늘었다");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-l"], 2, "한 번만 늘었다");
 
     // 멈춘 동안 — 처리기로 보내지 않고 거른다. 직접 부름·mailbox 모두 같은 통로라 함께 막힌다. 열어 둔 명령은 지난다
     frozen = true;
-    const bagBefore = store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"];
-    assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", from: "settings" })).reason, "halted", "멈춘 동안 저장 명령은 halted");
-    assert.equal((await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-xs", from: "cli" })).reason, "halted", "mailbox 로 온 명령도 halted");
+    const bagBefore = store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-l"];
+    assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-l", from: "settings" })).reason, "halted", "멈춘 동안 저장 명령은 halted");
+    assert.equal((await send(paths.mailbox, { cmd: "shop.buy", target: "exp-candy-l", from: "cli" })).reason, "halted", "mailbox 로 온 명령도 halted");
     assert.equal((await commands.click("p1")).reason, "halted", "무대 클릭(놀아주기)도 halted");
     assert.ok((await commands.dispatcher.dispatch({ cmd: "snapshot", from: "cli" })).ok, "열어 둔 명령은 지난다");
-    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-xs"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
+    assert.equal(store.readSave(paths.save, { repair: false }).state!.bag["exp-candy-l"], bagBefore, "멈춘 동안 저장이 바뀌지 않는다");
     frozen = false;
 
     // 숨기기·보이기도 target 이 없으면 args.petId 를 본다 — 다른 개체 명령과 같은 규칙 (94 문서 4-12)
@@ -153,7 +153,7 @@ async function main(): Promise<void> {
     // 잠금을 잃으면 남의 저장에 쓰지 않는다. 자기 mailbox 로 되보내지도 않는다
     const beforeLost = structuredClone(party.save());
     fs.writeFileSync(paths.saveLock, String(process.pid + 1000000));
-    assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-xs", from: "cli" })).reason, "not-writer");
+    assert.equal((await commands.dispatcher.dispatch({ cmd: "shop.buy", target: "exp-candy-l", from: "cli" })).reason, "not-writer");
     assert.deepEqual(party.save(), beforeLost, "잠금 상실 시 변경 없음");
     fs.writeFileSync(paths.saveLock, String(process.pid));
   } finally {

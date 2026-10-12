@@ -3,10 +3,10 @@
 // 순서는 시간 적용 → 값 변경 → 상태 판정 → 배너다. 여기서는 값 변경을 하고 배너 거리를 돌려준다. 상태 판정은 src/tx/settle.ts
 // 흐르는 시간은 부르는 쪽이 준다. PC 잠금·절전·앱 종료 중에는 시간이 흐르지 않는다.
 // 에이전트가 작업한 시간(workMs)도 부르는 쪽이 준다. 작업 시간 누적(totals.workMs)에 더하고, 심심함을 한 번 더 쌓는다(일할수록 심심해진다).
-// 작업 시간으로 친밀도·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고", docs/specs/balance.md "에이전트 작업 시간")
+// 작업 시간으로 경험치·포인트를 더 쌓지 않는다 (2026-10-05 사용자 결정 "cli 적립2배는 없애고", docs/specs/balance.md "에이전트 작업 시간")
 //
 // 값 변경 대상
-//   파티에 있는 개체   만복도 감소, 심심함 증가, 친밀도 획득, 포인트 적립, 쿨타임, 버프 잔여 시간. 숨겨도 같다
+//   파티에 있는 개체   만복도 감소, 심심함 증가, 경험치 획득(친밀도는 시간으로 오르지 않는다), 포인트 적립, 쿨타임, 버프 잔여 시간. 숨겨도 같다
 //   다른 프리셋 개체   포인트 적립만 — 0.2배, 버프·손해 없음. 나머지 시간은 멈춘다 (docs/specs/balance.md "적립 배율")
 //   박스에 있는 개체   아무것도 하지 않는다. 박스 보관은 시간을 멈춘다
 //   알                 준비 남은 시간, 돌봄 쿨타임
@@ -14,6 +14,7 @@
 // 부분 진행은 ms 정수로 쌓는다. 그래서 짧은 틱을 여러 번 돌려도 긴 틱 한 번과 결과가 같다.
 // 포인트만 예외다. 적립 속도가 친밀도·만복도·심심함·버프에 달려 있는데 이 값들은 구간 안에서도 바뀐다.
 // 구간 시작 시점의 값으로 셈해서 소급을 막는다. 그래서 틱을 잘게 나누면 포인트가 조금 더 정확해진다.
+import { expForLevel, growthOf, levelFor, MAX_LEVEL } from "../dex/growth.js";
 import { tickMega } from "../dex/mega.js";
 import { tickFormWork, tickPartyTime } from "../dex/forms.js";
 import { BOREDOM_RULES, TIME_RULES } from "./rules.js";
@@ -32,7 +33,7 @@ export interface TimeEvents {
   hatchReady: string[]; // 이번에 준비가 끝난 알
   hungerEnter: HungerEnter[]; // 배고픔·매우 배고픔 구간에 들어간 개체
   pointsGained: number;
-  affinityGained: { petId: string; gained: number }[];
+  expGained: { petId: string; gained: number }[]; // 시간 경험치로 오른 양
 }
 
 export const zoneOf = (fullness: number): FullnessZone => {
@@ -57,12 +58,19 @@ export function activeBuffs(buffs: BuffV3[]): BuffKind[] {
   return [...new Set(buffs.filter((b) => b.remainMs > 0).map((b) => b.kind))];
 }
 
-// 친밀도 속도의 버프 배율 — 기준 100 에 든든함 +20, 신남 +150 을 더한다 (포인트는 pointParts 가 TIME_RULES.buffPointPercent 를 쓴다)
-export const buffPercent = (buffs: BuffV3[]): number => 100 + activeBuffs(buffs).reduce((sum, kind) => sum + (TIME_RULES.buffAffinityPercent[kind] ?? 0), 0);
+// 시간 경험치 속도의 버프 배율 — 기준 100 에 든든함 +20, 신남 +150 을 더한다 (포인트는 pointParts 가 TIME_RULES.buffPointPercent 를 쓴다)
+export const buffPercent = (buffs: BuffV3[]): number => 100 + activeBuffs(buffs).reduce((sum, kind) => sum + (TIME_RULES.buffExpPercent[kind] ?? 0), 0);
 
-// 친밀도 증가 배율(백분율) — 버프를 더한 값에 만복도 구간의 디버프를 곱한다 (2026-10-05 "친밀도 오르는 비율은 기존처럼 유지")
-export const affinityPercent = (pet: PetV3): number =>
+// 시간 경험치 증가 배율(백분율) — 버프를 더한 값에 만복도 구간의 디버프를 곱한다 (2026-10-05 "친밀도 오르는 비율은 기존처럼 유지" — 그 배율을 시간 경험치가 이어받았다)
+export const expPercent = (pet: PetV3): number =>
   Math.round((buffPercent(pet.buffs) * TIME_RULES.zonePercent[zoneOf(pet.fullness)]) / 100);
+
+// 경험치를 더한다 — 100레벨의 경험치를 넘지 않고, 레벨을 다시 셈한다. 진화는 하지 않는다 (사탕과 같다, src/bag/use.ts exp)
+function addExp(pet: PetV3, amount: number): void {
+  const rate = growthOf(pet.species);
+  pet.exp = Math.min(expForLevel(rate, MAX_LEVEL), pet.exp + amount);
+  pet.level = levelFor(rate, pet.exp);
+}
 
 // 포인트 적립 배율의 내역 — 켜진 버프(+), 만복도 구간·심심함 단계의 손해(−). 파티 상세 기기 창의 `포인트 적립` 줄이 보인다 (src/view/pet.ts)
 // 친밀도와 상관없이 건다 (2026-10-05 사용자 결정 — 돌봄 개편, 그 전의 "친밀도 100 일 때만 돌봄 보너스" 를 대신한다)
@@ -127,13 +135,13 @@ export interface TimeInput {
 export const elapsedSince = (save: Pick<SaveV3, "lastTickAt">, now: number): number => Math.min(TIME_RULES.maxElapsedMs, Math.max(0, now - save.lastTickAt));
 
 export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: TimeInput = {}): TimeEvents {
-  const events: TimeEvents = { hatchReady: [], hungerEnter: [], pointsGained: 0, affinityGained: [] };
+  const events: TimeEvents = { hatchReady: [], hungerEnter: [], pointsGained: 0, expGained: [] };
   const elapsed = Math.max(0, Math.round(elapsedMs));
   save.lastTickAt = now;
   if (elapsed === 0) return events;
   const work = Math.min(elapsed, Math.max(0, Math.round(input.workMs ?? 0)));
 
-  const { fullnessDropMs, affinityGainMs, pointGainMs } = TIME_RULES;
+  const { fullnessDropMs, expGainMs, expPerGain, pointGainMs } = TIME_RULES;
   const inParty = new Set(partyPetIds(save));
   const others = otherPresetPetIds(save);
   let pointWeighted = 0;
@@ -168,15 +176,17 @@ export function applyTime(save: SaveV3, elapsedMs: number, now: number, input: T
       pet.boredom = Math.min(PET_RULES.statMax, pet.boredom + rise);
     }
 
-    // 친밀도 — 버프와 디버프를 반영한 가중 시간으로 쌓는다. 줄어든 만복도를 기준으로 본다
-    const percent = affinityPercent(pet);
-    pet.affinityProgressMs += Math.round((elapsed * percent) / 100);
-    const gain = Math.floor(pet.affinityProgressMs / affinityGainMs);
-    if (gain > 0) {
-      pet.affinityProgressMs -= gain * affinityGainMs;
-      const next = Math.min(PET_RULES.statMax, pet.affinity + gain);
-      if (next !== pet.affinity) events.affinityGained.push({ petId: pet.id, gained: next - pet.affinity });
-      pet.affinity = next;
+    // 경험치 — 버프와 디버프를 반영한 가중 시간으로 쌓는다. 줄어든 만복도를 기준으로 본다. 100레벨이면 쌓지 않는다
+    // 친밀도는 시간으로 오르지 않는다 (2026-10-12 사용자 결정). 부분 진행은 affinityProgressMs 에 둔다(저장 호환)
+    if (pet.level < MAX_LEVEL) {
+      pet.affinityProgressMs += Math.round((elapsed * expPercent(pet)) / 100);
+      const gain = Math.floor(pet.affinityProgressMs / expGainMs);
+      if (gain > 0) {
+        pet.affinityProgressMs -= gain * expGainMs;
+        const before = pet.exp;
+        addExp(pet, gain * expPerGain);
+        if (pet.exp !== before) events.expGained.push({ petId: pet.id, gained: pet.exp - before });
+      }
     }
 
     pet.feedCooldownMs = countDown(pet.feedCooldownMs, elapsed);

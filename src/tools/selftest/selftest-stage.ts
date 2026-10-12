@@ -548,7 +548,14 @@ async function stageRuntimeTests(): Promise<void> {
     eq(animations, 2, "쿨타임이면 놀이 연출이 없다");
 
     // 가방 도구 — 장난감은 놀아주기와 같은 반응, 그 밖의 도구(이상한사탕)는 새 반응이 없다 (docs/specs/game.md "가방 도구 사용 결과")
-    ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "toy", args: { petId: "p1" }, from: "menu" })).ok, "쿨타임이어도 장난감은 쓴다");
+    // 장난감도 놀아주기 쿨타임을 같이 쓴다 — 쿨타임이면 막고 연출·재고를 건드리지 않는다 (2026-10-12 사용자 "놀아주기랑 시간 공유하는거로 하자")
+    const toyBlocked = await commands.dispatcher.dispatch({ cmd: "bag.use", target: "toy", args: { petId: "p1" }, from: "menu" });
+    eq(toyBlocked.reason, "cooldown", "놀아주기 쿨타임이면 장난감도 막힌다");
+    eq(animations, 2, "막힌 장난감은 연출하지 않는다");
+    const cooled = store.readSave(commandPaths.save, { repair: false }).state!;
+    cooled.pets[0]!.playCooldownMs = 0;
+    ok(store.writeSave(commandPaths.save, cooled), "쿨타임을 끝낸 저장");
+    ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "toy", args: { petId: "p1" }, from: "menu" })).ok, "쿨타임이 끝나면 장난감을 쓴다");
     eq([animations, lastCare], [3, "play"], "장난감은 놀아주기 연출");
     ok((await commands.dispatcher.dispatch({ cmd: "bag.use", target: "rare-candy", args: { petId: "p1" }, from: "menu" })).ok, "이상한사탕 사용");
     eq(animations, 3, "이상한사탕은 무대 연출이 없다");

@@ -15,6 +15,7 @@ import { canGiveEgg, eggRoomOf } from "../egg/pool.js";
 import { bagRoomOf, evoOrder, isEvoItem, isFormTool } from "../bag/items.js";
 import type { EggPoolView, ItemAbout, ShopAbout, ShopItemView } from "../shared/model/snapshot";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
+import { SHOP_RETIRED_CANDIES } from "../bag/rules.js";
 import { presetBuyable, presetCount, presetName, shopSlots } from "../party/presets.js";
 import { boxBuyable } from "../box/slots.js";
 import { formWhere, itemAbout } from "./bag.js";
@@ -99,6 +100,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   for (const [id, item] of Object.entries(itemTable(opts))) {
     if (isMetaKey(id) || item.price === null) continue;
     if (MINT_RETIRED && id === MINT_ID) continue; // 성격민트 은퇴 (src/bag/mint.ts)
+    if (SHOP_RETIRED_CANDIES.includes(id)) continue; // 경험사탕 XS·S·M — 상점에서 뺐다 (src/bag/rules.ts)
     if (isFormTool(item.effect)) continue; // 모습 도구(로토무카탈로그·유대의고삐)는 진화 탭 — 아래 진화용 도구와 같이 늘어놓는다
     // 상점의 쓰는 곳은 어디서 쓰는지까지 — 가방은 파티 개체에게만 쓴다 (2026-10-01 사용자 결정 "파티를 기준으로만 사용할 수 있게 하자")
     const about: ShopAbout = { ...(itemAbout(save, id, opts) as ItemAbout), spec: owned(id), where: "가방 › 사용 · 파티 포켓몬" };

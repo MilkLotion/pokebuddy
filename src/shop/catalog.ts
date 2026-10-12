@@ -15,6 +15,7 @@ import { rankOf } from "../dex/species.js";
 import { eggTable, evoItemTable, itemTable } from "../dex/tables.js";
 import { SHOP_RULES, evoItemPriceOf } from "./rules.js";
 import { MINT_ID, MINT_RETIRED } from "../bag/mint.js";
+import { SHOP_RETIRED_CANDIES } from "../bag/rules.js";
 
 export type ProductKind = "egg" | "tool" | "party-slot" | "species";
 
@@ -91,7 +92,8 @@ export function findProduct(id: string, opts?: DexOptions): Product | null {
   const price = eggPrice(id, opts);
   if (price !== null) return { id, ko: eggName(id, opts) ?? id, price, kind: "egg", ref: id };
 
-  const tool = toolPrice(id, opts);
+  // 경험사탕 XS·S·M 은 사지 못한다 — 가격은 남겨 가방의 것을 팔 수 있다 (src/bag/rules.ts SHOP_RETIRED_CANDIES, 2026-10-12)
+  const tool = SHOP_RETIRED_CANDIES.includes(id) ? null : toolPrice(id, opts);
   if (tool !== null) return { id, ko: toolName(id, opts) ?? id, price: tool, kind: "tool", ref: id };
 
   const species = speciesPrice(id, opts);

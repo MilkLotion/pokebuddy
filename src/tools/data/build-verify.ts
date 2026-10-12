@@ -41,6 +41,9 @@ const lf = (t: string): string => t.replace(/\r\n/g, "\n");
 const MEGA_CARE_BEFORE = MEGA_RULES.careMax;
 // 옛 앱의 포인트 적립 배율 최대 — 2026-10-05 ~ 10-11 든든함 +60 · 신남 +60. 서버 상한(maxEarnFactor)은 이보다 낮추지 않는다
 const LEGACY_POINT_TOP = 220;
+// 옛 앱(2026-10-12 전)의 친밀도 규칙 — 시간 적립 시간당 6 × 버프 합 2.7, 밥 몫 최대(프리미엄먹이) +8. 옛 앱이 올린 저장을 위반으로 보지 않게 서버 상한은 이보다 낮추지 않는다
+const LEGACY_AFFINITY_PER_HOUR = 16.2;
+const LEGACY_FEED_AFFINITY = 8;
 
 export function buildVerifyFiles(): Record<string, string> {
   const items: Record<string, { price: number | null; effect: unknown; amount: number }> = {};
@@ -102,13 +105,16 @@ export function buildVerifyFiles(): Record<string, string> {
   // 이상한사탕 — 한 레벨 간격의 최대
   let rareCandyExp = 0;
   for (const r of rates) for (let l = 1; l < 100; l++) rareCandyExp = Math.max(rareCandyExp, expTable[r]![l]! - expTable[r]![l - 1]!);
-  // 친밀도 시간 적립 최대 — 친밀도 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
-  const affinityTop = 100 + TIME_RULES.buffAffinityPercent["premium-food"] + TIME_RULES.buffAffinityPercent["long-play"];
-  const affinityPerHour = (3_600_000 / TIME_RULES.affinityGainMs) * (affinityTop / 100);
+  // 시간 경험치 최대(개체 하나) — 경험치 버프 합(든든함+신남). 작업 시간은 더 쌓지 않는다 (2026-10-05 작업 2배 제거)
+  const expTop = 100 + TIME_RULES.buffExpPercent["premium-food"] + TIME_RULES.buffExpPercent["long-play"];
+  const expPerHour = ((3_600_000 / TIME_RULES.expGainMs) * TIME_RULES.expPerGain * expTop) / 100;
+  // 친밀도 시간 적립 — 2026-10-12 에 앱이 시간으로 올리지 않게 됐다. 옛 앱(10분에 1, 버프 합 270%)의 저장도 받도록 옛 상한을 그대로 둔다 [리팩토링 대상: 옛 앱이 없어지면 0]
+  const affinityPerHour = LEGACY_AFFINITY_PER_HOUR;
   // 포인트 적립 배율 최대 — 포인트 버프 합. 옛 앱(2026-10-05 ~ 10-11, 둘 다 +60 으로 220)의 저장도 받도록 그보다 낮추지 않는다
   const pointTop = Math.max(LEGACY_POINT_TOP, 100 + TIME_RULES.buffPointPercent["premium-food"] + TIME_RULES.buffPointPercent["long-play"]);
-  // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩. 프리미엄먹이(+8)는 밥 주기 쿨타임을 같이 쓰므로 밥 몫의 최대로 센다 (2026-10-05 돌봄 개편)
-  const feedTop = Math.max(BAG_RULES.feedAffinity, BAG_RULES.premiumAffinity);
+  // 돌봄 — 밥·놀기를 쿨타임마다 한 번씩. 프리미엄먹이는 밥 주기 쿨타임을 같이 쓰므로 밥 몫으로 센다 (2026-10-05 돌봄 개편, 2026-10-12 +8 → +2, 기본먹이는 0)
+  // 옛 앱(기본먹이 +2, 프리미엄먹이 +8)의 저장도 받도록 옛 값 아래로 내리지 않는다 [리팩토링 대상: 옛 앱이 없어지면 내린다]
+  const feedTop = Math.max(LEGACY_FEED_AFFINITY, BAG_RULES.premiumAffinity);
   const carePerHour = (3_600_000 / BAG_RULES.feedCooldownMs) * feedTop + (3_600_000 / CARE_RULES.playCooldownMs) * BAG_RULES.playAffinity;
   // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
   const megaForms: Record<string, string[]> = {};
@@ -181,6 +187,7 @@ export function buildVerifyFiles(): Record<string, string> {
       careCountPerHour: 3_600_000 / BAG_RULES.feedCooldownMs + 3_600_000 / CARE_RULES.playCooldownMs,
       megaAffinity: MEGA_RULES.affinity,
       affinityPerHour,
+      expPerHour,
       carePerHour,
       careOnce: feedTop + BAG_RULES.playAffinity,
       toyAffinity: BAG_RULES.toyAffinity, // 장난감 하나가 바로 올리는 친밀도 (2026-10-05 +5)

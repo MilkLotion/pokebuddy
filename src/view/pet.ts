@@ -127,7 +127,7 @@ function megaGoalView(pet: PetV3): { megaGoal?: MegaGoalView } {
 // 만복도 구간 낱말 — 파티 칸·파티 상세 기기 창·포켓몬 메뉴가 같이 쓴다. 글자는 언어 파일의 zone.* 다
 const zoneText = (zone: FullnessZone): string => t(`zone.${zone}`);
 
-// 디버프 배지 — 배고픔(구간 낱말, 포인트·친밀도 증가량 감소율), 그다음 심심함(단계 말, 포인트 감소율). 색은 1단계 warning, 2단계 danger
+// 디버프 배지 — 배고픔(구간 낱말, 포인트·경험치 증가량 감소율), 그다음 심심함(단계 말, 포인트 감소율). 색은 1단계 warning, 2단계 danger
 // (docs/specs/balance.md "만복도와 돌봄"·"심심함", 2026-10-05 사용자 결정 — 심심해·지루해 배지 "그 2개도")
 const DEBUFF_TONE: Partial<Record<FullnessZone | BoredStep, "warning" | "danger">> = { hungry: "warning", starving: "danger", bored: "warning", tired: "danger" };
 function debuffsOf(pet: PetV3): PetView["debuffs"] {
@@ -173,6 +173,7 @@ export function petView(save: SaveV3, pet: PetV3, hidden: boolean, dayPart: DayP
     feedBlock: feedBlock(pet),
     feedInSec: ceilSec(pet.feedCooldownMs),
     playBlock: playBlock(pet),
+    playInSec: ceilSec(pet.playCooldownMs),
     // 단추 글자 — 막는 까닭을 그대로 쓴다 (src/state/care-block.ts)
     feedText: feedBlock(pet) === "full" ? "밥 주기 · 배부름" : feedBlock(pet) === "cooldown" ? `밥 주기 · ${waitText(ceilSec(pet.feedCooldownMs))}` : "밥 주기",
     playText: playBlock(pet) ? `놀아주기 · ${waitText(ceilSec(pet.playCooldownMs))}` : "놀아주기",
