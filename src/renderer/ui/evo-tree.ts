@@ -25,7 +25,8 @@ export const RADIAL: RadialSize = { width: 390, height: 256, radius: 98, arrowFr
 export type PortraitFn = (slug: string, cls: string) => HTMLElement;
 
 // lockedName — 미해금 종의 이름 대신 쓸 글자. 도감 기기 창은 "???" (2026-09-30 사용자 "해금안되어있으면 ??? 로"). 없으면 이름 그대로
-export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = {}) {
+// onPick — 있으면 지금 종이 아닌 칸을 눌러 그 종을 고를 수 있다. 도감 기기 창이 그 종의 상세로 바꾼다 (2026-10-13 사용자 "도감기기상세에서 진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게 해봐")
+export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string; onPick?: (slug: string) => void } = {}) {
   // 화살표 — 오른쪽을 가리킨다. 폭은 부르는 쪽이 정한다
   function evoArrow(width: number): SVGSVGElement {
     const svg = document.createElementNS(SVG_NS, "svg");
@@ -48,6 +49,20 @@ export function evoDrawer(portrait: PortraitFn, opts: { lockedName?: string } = 
     const box = el("div", node.current ? "evo-node current" : "evo-node");
     box.dataset.slug = node.slug; // 진화 창이 후보 노드를 찾아 누를 수 있게 한다 (src/renderer/manage/evolve.ts drawEvolve)
     const name = node.locked && opts.lockedName ? opts.lockedName : node.name;
+    const pick = opts.onPick;
+    if (pick && !node.current) {
+      box.classList.add("pickable");
+      box.tabIndex = 0;
+      box.setAttribute("role", "button");
+      box.setAttribute("aria-label", `${name} 상세 보기`);
+      box.addEventListener("click", () => pick(node.slug));
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          pick(node.slug);
+        }
+      });
+    }
     box.append(evoPortrait(node.slug, node.locked, "portrait"), el("div", "evo-name", name));
     if (withNeed && node.need) box.appendChild(el("div", "evo-need", node.need));
     return box;

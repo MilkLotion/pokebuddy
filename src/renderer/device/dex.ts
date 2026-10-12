@@ -1,5 +1,6 @@
 // 도감 기기 창 — 메인이 준 한 종의 항목을 그린다 (src/main/dex-window.ts). Figma `99 · 시안` `579:17691`
 // 그린 뒤 높이를 알려 창 높이를 내용에 맞춘다. 이전·다음·닫기는 메인에 보내고, 울음소리는 받아서 여기서 튼다.
+// 진화 트리의 종을 누르면 설정창이 그 종의 상세로 바꾼다(2026-10-13)
 // 미해금 종은 그림을 검은 실루엣으로 칠하고, 이름·분류·타입·키·몸무게를 ??? 로 둔다
 import type { DexDeviceView } from "../../shared/model/devices.js";
 import { needBridge } from "../ui/bridge.js";
@@ -119,7 +120,7 @@ function evolutionCard(v: DexDeviceView): HTMLElement {
     const uri = v.treePortraits[slug];
     if (uri) box.appendChild(portraitImg(uri, "art"));
     return box;
-  }, { lockedName: "???" });
+  }, { lockedName: "???", onPick: (slug) => api.act({ kind: "pick", slug }) });
   if (!tree.children.length) card.appendChild(el("div", "evo-none", "진화하지 않는 포켓몬이에요"));
   else card.appendChild(tree.children.length >= RADIAL_MIN ? draw.evoRadial(tree, DEX_RADIAL) : draw.evoTree(tree));
   return card;

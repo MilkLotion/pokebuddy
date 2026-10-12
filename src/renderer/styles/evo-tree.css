@@ -30,6 +30,15 @@
 .evo-node.current .evo-name {
   font-weight: 700;
 }
+/* 누를 수 있는 칸 — 도감 기기 창의 진화 트리에서 지금 종이 아닌 칸. 톤 배경만 바꾼다 (색 테두리 강조는 쓰지 않는다) */
+.evo-node.pickable {
+  cursor: pointer;
+}
+.evo-node.pickable:hover,
+.evo-node.pickable:focus-visible {
+  background: var(--canvas);
+  outline: none;
+}
 /* 갈래 — 위아래 사이 8 (Figma `Evolution Dialog` evo-kids, 94 4-10) */
 .evo-kids {
   display: flex;

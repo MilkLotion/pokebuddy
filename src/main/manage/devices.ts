@@ -83,6 +83,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     volume,
   }), {
     onStep: (delta) => send("manage:dex-step", delta),
+    onAct: (action) => send("manage:dex-act", action),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
     onClosed: (gen) => send("manage:dex-closed", gen),
   });

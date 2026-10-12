@@ -3,11 +3,13 @@
 // - 옆 도감: 파티 상세의 `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
 //   (2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까", Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
 // - 창을 보내는 일은 파티 상세 기기 창 맞추기(syncPetDevice)가 한다 — 여기는 상태와 여닫기만
+import type { DexDeviceAction } from "../../shared/model/devices.js";
 import { api } from "./api.js";
 
 export interface DexLinkHooks {
   pickClosed(): void; // 창이 닫혔다 — 도감 탭의 고른 칸을 비운다
   besideChanged(): void; // 옆 도감을 켜거나 껐다, 또는 새 세대 번호로 다시 열어야 한다 — 파티 상세 기기 창을 맞춘다
+  picked(slug: string): void; // 기기 창의 진화 트리에서 종을 눌렀다 — 도감 탭이 그 종을 고른다
 }
 let hooks: DexLinkHooks | null = null;
 export function setDexLinkHooks(next: DexLinkHooks): void {
@@ -26,6 +28,18 @@ let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫
 // 도감 탭에서 고른 종을 띄운다. null 이면 닫는다
 export function openDexPick(slug: string | null): void {
   api.dexOpen(slug ? { slug, beside: false } : null, dexGen);
+}
+
+// 도감 기기 창에서 한 일 — 진화 트리의 종을 눌러 그 종의 상세로 바꾼다 (2026-10-13 사용자 "진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게")
+// 옆 도감이면 그 종을 그대로 보내고, 도감 탭에서 연 창이면 탭이 그 종을 고른다
+export function onDexAction(action: DexDeviceAction): void {
+  if (action.kind !== "pick") return;
+  if (dexBeside) {
+    api.dexOpen({ slug: action.slug, beside: true }, dexGen);
+    dexBesideSent = action.slug;
+    return;
+  }
+  hooksOf().picked(action.slug);
 }
 
 // 파티 상세 기기 창을 보내기 전 — 옆 도감이 켜 있으면 그 종을 먼저 보낸다(같은 종이면 다시 보내지 않는다). 켜 있는지 돌려준다

@@ -96,6 +96,7 @@ const MANAGE = {
   onDexClosed: ["push", "manage:dex-closed"],
   petOpen: ["invoke", "manage:pet-open"],
   onPetStep: ["push", "manage:pet-step"],
+  onDexAct: ["push", "manage:dex-act"],
   onPetAct: ["push", "manage:pet-act"],
   onPetClosed: ["push", "manage:pet-closed"],
   shopOpen: ["invoke", "manage:shop-open"],
@@ -184,8 +185,8 @@ const deviceWire = <P extends string>(prefix: P) =>
     close: ["send", `${prefix}:close`],
   }) as const;
 
-// 도감 기기 창 — 한 종의 항목. 울음소리를 부른다
-const DEX = { ...deviceWire("dexdev"), cry: ["invoke", "dexdev:cry"] } as const satisfies WireOf<DexDeviceIpc>;
+// 도감 기기 창 — 한 종의 항목. 울음소리와 진화 트리에서 누른 종을 부른다
+const DEX = { ...deviceWire("dexdev"), cry: ["invoke", "dexdev:cry"], act: ["send", "dexdev:act"] } as const satisfies WireOf<DexDeviceIpc>;
 
 expose("dex.html", "pokebuddyDex", () => bridgeOf<DexDeviceIpc>(DEX));
 

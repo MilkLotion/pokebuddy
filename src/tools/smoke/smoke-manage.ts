@@ -562,6 +562,14 @@ void app.whenReady().then(async () => {
     const dexSlug = await js<string>(`(() => { const c = document.querySelector('#body .dex-cell'); c.click(); return c.dataset.slug; })()`);
     await wait(100);
     assert.equal(await js<string | null>(`window.__dexOpen`), dexSlug, "도감 칸을 누르면 도감 기기 창");
+    // 기기 창의 진화 트리에서 다른 종을 누르면 그 종의 상세로 바뀌고 격자의 고른 칸이 따라간다 (2026-10-13)
+    const treeSlug = await js<string>(`(() => { const cells = [...document.querySelectorAll('#body .dex-cell')]; return cells[1].dataset.slug; })()`);
+    await js(`window.__cb.onDexAct({ kind: 'pick', slug: '${treeSlug}' }); 0`);
+    await wait(100);
+    assert.equal(await js<string | null>(`window.__dexOpen`), treeSlug, "진화 트리의 종을 누르면 그 종의 도감 기기 창으로");
+    assert.equal(await js<string | null>(`document.querySelector('#body .dex-cell[aria-pressed="true"]')?.dataset.slug ?? null`), treeSlug, "격자의 고른 칸이 따라간다");
+    await js(`window.__cb.onDexAct({ kind: 'pick', slug: '${dexSlug}' }); 0`); // 아래 확인을 위해 처음 종으로 되돌린다
+    await wait(100);
     await js(`${tabBtn("도감")}.click()`);
     await wait(100);
     assert.equal(await js<string | null>(`window.__dexOpen`), dexSlug, "같은 탭을 다시 누르면 닫지 않는다");
@@ -597,6 +605,10 @@ void app.whenReady().then(async () => {
     assert.equal(await js<boolean>(`window.__petOpen.dexOpen`), true, "도감 보기 — 줄이 열린 표시");
     assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 보기 — 그 종의 도감 기기 창");
     assert.equal(await js<boolean>(`window.__dexBeside`), true, "도감 보기 — 파티 상세 옆에 붙인다");
+    await js(`window.__cb.onDexAct({ kind: 'pick', slug: 'pikachu' }); 0`);
+    await wait(100);
+    assert.equal(await js<string | null>(`window.__dexOpen`), "pikachu", "옆 도감에서도 진화 트리의 종을 누르면 그 종으로");
+    assert.equal(await js<boolean>(`window.__dexBeside`), true, "옆 도감은 옆에 붙은 채로");
     assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`), 0, "관리 창은 파티 탭 그대로");
     const partyPetIds = await js<string[]>(`[...document.querySelectorAll('#body .slot[data-pet]')].map((s) => s.dataset.pet)`);
     if (partyPetIds.length > 1) {

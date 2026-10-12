@@ -80,6 +80,18 @@ function seed(): SaveV3 {
   process.stdout.write("(4) 미해금 · 태고의돌  ok\n");
 }
 
+// (4b) 입수처의 앞 단계 종 이름 — 그 종을 발견하지 못했으면 ???, 발견했으면 이름 (2026-10-13 사용자 "입수처에도 기존포켓몬 발견못했으면 ???에서 진화로")
+{
+  const s = seed();
+  assert.equal(dexDetail(s, "venusaur")?.methods, "???에서 진화", "이상해풀을 모르면 ???");
+  s.dex.unlocked.push("ivysaur");
+  assert.equal(dexDetail(s, "venusaur")?.methods, "이상해풀에서 진화", "이상해풀을 해금하면 이름");
+  const t = seed();
+  t.dex.obtained.push("ivysaur");
+  assert.equal(dexDetail(t, "venusaur")?.methods, "이상해풀에서 진화", "이상해풀을 얻었어도 이름");
+  process.stdout.write("(4b) 입수처 · 앞 단계 종 이름은 발견 뒤에  ok\n");
+}
+
 // (4b) 해금한 화석 종도 랜덤알은 붙지 않는다 — 화석은 태고의돌과 상점으로 얻는다 (2026-09-29 사용자 결정)
 {
   const s = seed();
@@ -119,11 +131,14 @@ function seed(): SaveV3 {
 
 // (7) 잠만보는 먹고자 진화로만 얻는다 — 상점 줄이 없다 (2026-09-29 사용자 결정). 모르는 종은 null
 {
-  assert.equal(dexDetail(seed(), "snorlax")?.methods, "먹고자에서 진화");
+  const known = seed();
+  known.dex.unlocked.push("munchlax", "happiny"); // 앞 단계 종을 발견했어야 이름이 보인다 (2026-10-13)
+  assert.equal(dexDetail(known, "snorlax")?.methods, "먹고자에서 진화");
+  assert.equal(dexDetail(seed(), "snorlax")?.methods, "???에서 진화", "앞 단계를 모르면 ???");
   assert.equal(dexDetail(seed(), "cosmog")?.methods.includes("상점"), false, "단일 포켓몬 알의 종은 팔지 않는다");
   assert.equal(dexDetail(seed(), "lapras")?.methods, "업적 보상(함께 100시간 일하기)", "라프라스는 업적 보상 (2026-09-29 사용자 결정)");
   assert.equal(dexDetail(seed(), "ditto")?.methods, "업적 보상(파티 세 마리 모으기)");
-  assert.equal(dexDetail(seed(), "chansey")?.methods, "핑복에서 진화", "럭키는 핑복 진화");
+  assert.equal(dexDetail(known, "chansey")?.methods, "핑복에서 진화", "럭키는 핑복 진화");
   assert.equal(dexDetail(seed(), "없는종"), null);
   process.stdout.write("(7) 잠만보 · 진화만, 모르는 종  ok\n");
 }
@@ -179,7 +194,7 @@ function seed(): SaveV3 {
 // (10b) 리전폼 — 폼 순번, 폼 타입·키·몸무게, 설명문은 기본형 것 (data/regional.json · data/dex-text.json)
 {
   const s = seed();
-  s.dex.unlocked.push("raichu", "raichu-alola", "meowth-galar");
+  s.dex.unlocked.push("raichu", "raichu-alola", "meowth-galar", "pikachu"); // 앞 단계 종(피카츄·가라르 나옹)을 발견했어야 입수처에 이름이 보인다 (2026-10-13)
   const a = dexDetail(s, "raichu-alola");
   const base = dexDetail(s, "raichu");
   assert.deepStrictEqual([a?.dex, a?.form, a?.name], [26, 1, "알로라 라이츄"]);
@@ -279,6 +294,8 @@ function seed(): SaveV3 {
 // (13) 로토무의 모습 바꾸기 — 다섯 모습의 입수 방법에 조건을 괄호로, 얻은 로토무의 기록 칸에 `모습 바꾸기` 줄(메가진화 줄 자리). 쌓인 시간은 적지 않는다
 {
   const s = seed();
+  assert.equal(dexDetail(s, "rotom-heat")?.methods, "???의 모습 바꾸기(파티에서 작업 2시간 · 로토무카탈로그)", "기본 종을 모르면 ???");
+  s.dex.unlocked.push("rotom", "giratina", "giratina-altered", "zacian", "calyrex");
   assert.equal(dexDetail(s, "rotom-heat")?.methods, "로토무의 모습 바꾸기(파티에서 작업 2시간 · 로토무카탈로그)");
   assert.equal(dexDetail(s, "rotom-heat")?.form, 1);
   assert.equal(dexDetail(s, "rotom-mow")?.form, 5);

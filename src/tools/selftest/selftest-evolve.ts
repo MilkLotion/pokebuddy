@@ -407,6 +407,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(setForm(s, "p1", "floette").reason, "not-shared", "원래 모습으로 돌아가지 않는다");
   assert.equal(isSinglePet(p), false, "바뀐 개체도 일반 포켓몬");
   // 도감 입수처 — "플라엣테의 모습 바꾸기(영원의 꽃)". 기본 종의 "모습 바꾸기" 기록 줄은 작업 시간 조건이 있는 로토무에만 있다
+  s.dex.unlocked.push("floette"); // 기본 종을 발견했어야 이름이 보인다 (2026-10-13)
   assert.ok(dexDetail(s, "floette-eternal")?.methods.includes("플라엣테의 모습 바꾸기(영원의 꽃)"), "도감 입수처");
   assert.equal(dexDetail(s, "floette")?.mega, undefined, "플라엣테에는 모습 바꾸기 기록 줄이 없다");
   // 확인 창 — 넷째 줄을 켜는 표시(oneWay)

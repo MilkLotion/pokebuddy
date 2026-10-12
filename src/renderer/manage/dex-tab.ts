@@ -116,6 +116,22 @@ const dexRegionEl = (): HTMLElement =>
     dexPageNo = 0;
   });
 
+// 기기 창의 진화 트리에서 누른 종을 고른다 — 격자의 고른 칸이 따라 바뀐다. 그 종이 지금 격자에 없으면 기기 창만 바뀐다 (2026-10-13)
+export function pickDexFromDevice(slug: string): void {
+  if (slug === dexPick) return;
+  dexPick = slug;
+  openDexPick(dexPick);
+  const at = dexShown().findIndex((r) => r.slug === slug);
+  if (at >= 0 && dexView === "grid" && ui.tab === "dex") {
+    const page = Math.floor(at / DEX_PAGE);
+    if (page !== dexPageNo) {
+      dexPageNo = page;
+      redrawBody();
+    }
+  }
+  markDexPick();
+}
+
 export function stepDex(delta: -1 | 1): void {
   const rows = dexShown();
   if (!rows.length) return;

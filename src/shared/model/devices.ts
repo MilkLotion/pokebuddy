@@ -40,6 +40,9 @@ export interface PetDeviceView extends PetDeviceOpen {
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
 }
 
+// 도감 기기 창에서 한 일 — 진화 트리의 종을 눌렀다. 관리 창이 그 종의 상세로 바꾼다 (2026-10-13 사용자 "도감기기상세에서 진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게 해봐")
+export type DexDeviceAction = { kind: "pick"; slug: string };
+
 // 기기 창에서 누른 단추. 명령은 관리 창의 명령 경로로, 대화상자는 관리 창에서 연다
 // petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)
 export type PetDeviceAction = { petId: string } & (

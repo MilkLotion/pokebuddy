@@ -19,6 +19,7 @@ import type {
   BattleDeviceOpen,
   BattleDeviceView,
   DexDeviceView,
+  DexDeviceAction,
   PetDeviceAction,
   PetDeviceInput,
   PetDeviceOpen,
@@ -60,9 +61,16 @@ export interface DexDeviceDeps {
   volume(): number; // 울음소리 음량 0~1
 }
 
-export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexDeviceView> {
+// 렌더러가 보낸 값은 믿지 않는다 — 종 식별자는 짧은 글자만
+function isDexAction(v: unknown): v is DexDeviceAction {
+  const a = v as { kind?: unknown; slug?: unknown } | null;
+  return !!a && a.kind === "pick" && typeof a.slug === "string" && /^[a-z0-9-]{1,64}$/.test(a.slug);
+}
+
+export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexDeviceView, DexDeviceAction> {
   return {
-    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close" } satisfies Record<string, DexDeviceChannel>,
+    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close", act: "dexdev:act" } satisfies Record<string, DexDeviceChannel>,
+    isAction: isDexAction,
     size: DEVICE_SIZES.dex,
     keyOf: (o) => o.slug,
     viewOf(o) {

@@ -39,8 +39,8 @@ import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBag
 import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, stepShop, syncShopDevice } from "./shop-link.js";
 import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
-import { onDexClosed, setDexLinkHooks } from "./dex-link.js";
-import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, setDexTabHooks, stepDex } from "./dex-tab.js";
+import { onDexAction, onDexClosed, setDexLinkHooks } from "./dex-link.js";
+import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, pickDexFromDevice, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature } from "./nature.js";
 import { accountUi } from "./account-state.js";
@@ -86,6 +86,7 @@ setDexTabHooks({
 setDexLinkHooks({
   pickClosed: () => clearDexPick(),
   besideChanged: () => syncPetDevice(),
+  picked: (slug) => pickDexFromDevice(slug),
 });
 
 // 상점 기기 창의 이전·다음 — 상점 탭이 보이는 순서로 돈다
@@ -293,6 +294,7 @@ void firstDraw.then(loadUpdate).then(openUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
 void firstDraw.then(loadTrade);
 api.onDexStep((delta) => stepDex(delta));
+api.onDexAct((action) => onDexAction(action));
 api.onDexClosed((gen) => onDexClosed(gen));
 api.onPetStep((delta) => stepPet(delta));
 api.onPetAct((action) => onPetAction(action));

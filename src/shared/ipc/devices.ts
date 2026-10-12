@@ -1,6 +1,6 @@
 // 기기 창 다섯의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다
 
-import type { BagDeviceAction, BagDeviceView, BattleDeviceAction, BattleDeviceView, DexDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceView, BattleDeviceAction, BattleDeviceView, DexDeviceAction, DexDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
 import type { BridgeOf, Invoke, Push, Send } from "./kinds.js";
 
 // 기기 창 다섯이 같은 틀이다 — 접두사(P)와 보이는 값(View)만 다르다. show 는 메인 → 렌더러, 나머지는 렌더러 → 메인
@@ -18,7 +18,7 @@ export type DeviceCoachIpc<P extends string> = { [K in `${P}:coach`]: Send<"coac
 // 지금 종의 울음소리 data URI (못 받으면 null)
 export type DeviceCryIpc<P extends string> = { [K in `${P}:cry`]: Invoke<"cry", [], string | null> };
 
-export type DexDeviceIpc = DeviceIpc<"dexdev", DexDeviceView> & DeviceCryIpc<"dexdev">;
+export type DexDeviceIpc = DeviceIpc<"dexdev", DexDeviceView> & DeviceCryIpc<"dexdev"> & DeviceActIpc<"dexdev", DexDeviceAction>;
 export type PetDeviceIpc = DeviceIpc<"petdev", PetDeviceView> & DeviceCryIpc<"petdev"> & DeviceActIpc<"petdev", PetDeviceAction> & DeviceCoachIpc<"petdev">;
 export type ShopDeviceIpc = DeviceIpc<"shopdev", ShopDeviceView> & DeviceActIpc<"shopdev", ShopDeviceAction>;
 export type BagDeviceIpc = DeviceIpc<"bagdev", BagDeviceView> & DeviceActIpc<"bagdev", BagDeviceAction>;

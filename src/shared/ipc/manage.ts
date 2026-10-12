@@ -4,7 +4,7 @@ import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
-import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, DexDeviceAction, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { BattleAction, BattleReply } from "../model/battle-net.js";
 import type { FriendlyAction, FriendlyScreen } from "../model/friendly.js";
@@ -79,6 +79,7 @@ export type ManageDeviceLinkIpc = {
   "manage:dex-closed": Push<"onDexClosed", [gen: number]>;
   "manage:pet-open": Invoke<"petOpen", [input: PetDeviceInput | null, gen?: number], PetDeviceInput | null>;
   "manage:pet-step": Push<"onPetStep", [delta: -1 | 1]>;
+  "manage:dex-act": Push<"onDexAct", [action: DexDeviceAction]>;
   "manage:pet-act": Push<"onPetAct", [action: PetDeviceAction]>;
   "manage:pet-closed": Push<"onPetClosed", [gen: number]>;
   "manage:shop-open": Invoke<"shopOpen", [input: ShopDeviceInput | null, gen?: number], ShopDeviceInput | null>;

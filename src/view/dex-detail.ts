@@ -49,11 +49,14 @@ function shiftNeedText(slug: string, opts?: DexOptions): string {
   return rule.workMs > 0 ? `(파티에서 작업 ${rule.workMs / 3_600_000}시간 · ${itemName(rule.item)})` : `(${itemName(rule.item)})`;
 }
 
+// 입수처에 적는 다른 종의 이름 — 그 종을 아직 발견(해금·획득)하지 못했으면 `???` 다 (2026-10-13 사용자 "입수처에도 기존포켓몬 발견못했으면 ???에서 진화로")
+const knownName = (save: SaveV3, slug: string): string => (hasObtained(save, slug) || hasUnlocked(save, slug) ? petName(slug) : "???");
+
 // 짝이 있어야 하는 모습(블랙큐레무 — 제크로무) — "(제크로무가 있어야)". 짝이 없으면 빈 글자 (data/regional.json partners)
-function partnerText(slug: string, opts?: DexOptions): string {
+function partnerText(save: SaveV3, slug: string, opts?: DexOptions): string {
   const mate = partnerOf(slug, opts);
   if (!mate) return "";
-  const name = petName(mate);
+  const name = knownName(save, mate);
   return `(${name}${josa(name, "이/가")} 있어야)`;
 }
 
@@ -115,16 +118,16 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   const methods: string[] = [];
   if (unlockRules(opts)[slug]?.starter) methods.push("첫 선택 후보");
   const prev = prevOf(slug, opts);
-  if (prev) methods.push(`${petName(prev)}에서 진화${nextOf(prev, opts).some((s) => s.to === slug && s.map) ? MAP_MARK : ""}`);
+  if (prev) methods.push(`${knownName(save, prev)}에서 진화${nextOf(prev, opts).some((s) => s.to === slug && s.map) ? MAP_MARK : ""}`);
   const random = eggName("random", opts) ?? "랜덤알";
   if (inRandomEgg(slug, opts)) methods.push(unlocked ? random : `${random}(해금 후)`);
   // 모습 바꾸기로만 얻는 모습(기라티나(오리진폼)·로토무의 다섯 모습). 작업 시간 조건이 있으면 괄호로 붙인다
   const shiftForm = regionalOf(slug, opts);
   // 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달), get tool)도 같다 — "플라엣테의 모습 바꾸기(영원의 꽃)"
-  if (shiftForm?.get === "shift" || shiftForm?.get === "tool") methods.push(`${petName(shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}${partnerText(slug, opts)}`);
+  if (shiftForm?.get === "shift" || shiftForm?.get === "tool") methods.push(`${knownName(save, shiftForm.base)}의 모습 바꾸기${shiftNeedText(slug, opts)}${partnerText(save, slug, opts)}`);
   // 전투 중에만 바뀌는 모습(메로엣타(스텝폼)) — 기본 종을 얻으면 함께 기록된다 (2026-10-09 사용자 결정 "메로엣타를 얻으면 같이")
   if (shiftForm?.get === "battle") {
-    const base = petName(shiftForm.base);
+    const base = knownName(save, shiftForm.base);
     methods.push(`${base}${josa(base, "을/를")} 얻으면 함께`);
   }
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
