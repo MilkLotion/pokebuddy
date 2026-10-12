@@ -2,6 +2,13 @@
   "_comment": "관리 창 패치노트 (src/main/update/patch-notes.ts). 새 버전이 맨 앞. 릴리스 때 GitHub Release 본문의 '새 기능·바뀐 것·고친 것'을 한 줄씩 짧게 옮긴다. date 는 릴리스 날짜(YYYY-MM-DD)",
   "notes": [
     {
+      "version": "0.19.8",
+      "date": "2026-10-12",
+      "lines": [
+        "다른 사람이 내 배틀 파티와 싸운 결과를 알리던 배틀 결과 알림을 없앴어요. 받은 판은 내 전적에서 봐요"
+      ]
+    },
+    {
       "version": "0.19.7",
       "date": "2026-10-12",
       "lines": [
