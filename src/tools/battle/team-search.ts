@@ -1,6 +1,6 @@
 // 팀 탐색기 — 중심 포켓몬(메가 포함)을 정하면 출전 제한 안에서 강한 6마리 조합을 모의 대전으로 찾는다. 개발 도구이며 앱·서버에 들어가지 않는다 (docs/specs/adventure.md "모의 대전기")
 //
-//   npm run build && node dist/tools/battle/team-search.js --anchor rayquaza-mega [--quick] [--records <기록.json>] [--workers N] [--seed 1] [--no-tier-fix] [--out <결과.json>]
+//   npm run build && node dist/tools/battle/team-search.js --anchor rayquaza-mega[,wo-chien …] [--quick] [--records <기록.json>] [--workers N] [--seed 1] [--no-tier-fix] [--out <결과.json>]
 //   계정 기준: --save <관리자 저장 내보내기.json> [--anchor …] [--as-is] — 보유 종과 진화 뒤 형태(--as-is 면 지금 형태만), 열린 메가로 후보를 좁힌다. --anchor 를 안 주면 중심 없이 찾는다
 //
 // 단계: ① 후보 하나씩 재기 → ② 레쿠쟈 없는 강팀(상대 장) 만들기 → ③ 중심 팀 올라 타기 → ④ 최선 응수로 상대 장 키우기 → ⑤ 자리·기술 다듬기 → ⑥ 새 시드·새 강팀으로 검증
@@ -213,11 +213,16 @@ async function main(): Promise<void> {
       return sp ? [{ species: sp, ...(save.battle?.mega?.[id!] ? { form: save.battle.mega[id!]! } : {}) }] : [];
     });
   }
-  const anchorKey = arg("anchor", savePath ? "" : "rayquaza-mega");
-  const mega = anchorKey ? megaOf(anchorKey) : null;
-  const anchor: Src | null = anchorKey ? (mega ? { species: mega.base, form: anchorKey } : { species: anchorKey }) : null;
-  if (anchor && !speciesTable()[anchor.species]) throw new Error(`알 수 없는 중심 포켓몬: ${anchorKey}`);
-  if (anchor && battleOnly.has(anchor.species)) throw new Error(`전투 중에만 나오는 모습이라 중심으로 쓸 수 없다: ${anchorKey}`);
+  // 중심은 쉼표로 여럿 줄 수 있다(예: wo-chien,rayquaza-mega) — 모두 팀에 넣고 고정한다
+  const anchorKeys = arg("anchor", savePath ? "" : "rayquaza-mega").split(",").map((k) => k.trim()).filter(Boolean);
+  const anchors: Src[] = anchorKeys.map((key) => {
+    const m = megaOf(key);
+    const a: Src = m ? { species: m.base, form: key } : { species: key };
+    if (!speciesTable()[a.species]) throw new Error(`알 수 없는 중심 포켓몬: ${key}`);
+    if (battleOnly.has(a.species)) throw new Error(`전투 중에만 나오는 모습이라 중심으로 쓸 수 없다: ${key}`);
+    return a;
+  });
+  const anchorSp = new Set(anchors.map((a) => a.species));
   const inPool = (slug: string): boolean => !allowed || allowed.has(slug);
 
   // 기록 파티(고유)
@@ -238,7 +243,7 @@ async function main(): Promise<void> {
   }
 
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify([speciesMoveTable(), moveTable(), abilityTable()])).digest("hex").slice(0, 12);
-  say(`팀 탐색 — 중심 ${anchor ? labelOf(anchor) : "없음"}${allowed ? ` · 계정 풀 ${allowed.size}종${asIs ? "(지금 형태)" : "(진화 뒤 포함)"}` : ""} · 기록 파티 ${records.length}개 · 코어 ${workers} · ${quick ? "빠른 모드" : "전체 모드"} · 시드 ${seed} · 레이스포스·글래스트리 ${tierFix ? "준전설 칸으로 봄" : "현재 규칙 그대로"} · 데이터 지문 ${fingerprint}`);
+  say(`팀 탐색 — 중심 ${anchors.length ? anchors.map(labelOf).join(" + ") : "없음"}${allowed ? ` · 계정 풀 ${allowed.size}종${asIs ? "(지금 형태)" : "(진화 뒤 포함)"}` : ""} · 기록 파티 ${records.length}개 · 코어 ${workers} · ${quick ? "빠른 모드" : "전체 모드"} · 시드 ${seed} · 레이스포스·글래스트리 ${tierFix ? "준전설 칸으로 봄" : "현재 규칙 그대로"} · 데이터 지문 ${fingerprint}`);
 
   const pool = new Pool(workers, { records, tierFix });
   const rand = mulberry32(seed * 7919);
@@ -259,14 +264,15 @@ async function main(): Promise<void> {
     }
     return leg <= 1 && sub <= 2 && mg <= 1;
   };
+  if (anchors.length && !ok(anchors)) throw new Error("중심끼리 출전 제한(초전설 1·준전설 2·메가 1·중복 없음)에 걸린다");
 
   // ① 후보 하나씩 재기 — [후보, 중심, 무작위 4] 를 기록·무작위 상대와
   const poolRand = eligible.filter((s) => bstOf(s) >= 400 && !tier(s));
   const randSp = (): Src => ({ species: poolRand[Math.floor(rand() * poolRand.length)]! });
-  const candidates = eligible.filter((s) => bstOf(s) >= 380 && tier(s) !== "legendary" && s !== anchor?.species && inPool(s));
+  const candidates = eligible.filter((s) => bstOf(s) >= 380 && tier(s) !== "legendary" && !anchorSp.has(s) && inPool(s));
   phase(`① 후보 ${candidates.length}종 재는 중`);
   const screenTeams: Team[] = [];
-  for (const c of candidates) for (let r = 0; r < cfg.screenReps; r++) screenTeams.push(anchor ? [{ species: c }, anchor, randSp(), randSp(), randSp(), randSp()] : [{ species: c }, randSp(), randSp(), randSp(), randSp(), randSp()]);
+  for (const c of candidates) for (let r = 0; r < cfg.screenReps; r++) screenTeams.push([{ species: c }, ...anchors, ...Array.from({ length: 5 - anchors.length }, randSp)]);
   const screenRates = await pool.rates(screenTeams, { reps: 1, nrand: 15, real: true, seed: 100 });
   const score = new Map<string, number>();
   candidates.forEach((c, i) => {
@@ -277,20 +283,20 @@ async function main(): Promise<void> {
   const shortlist = [...candidates].sort((a, b) => score.get(b)! - score.get(a)!).slice(0, cfg.shortN);
   const speciesC: Team = shortlist.map((s) => ({ species: s }));
   // 일반 팀용 후보 — 짧은 목록 + 초전설(종족값 합 580 이상) + 메가
-  const legends: Team = eligible.filter((s) => tier(s) === "legendary" && s !== anchor?.species && bstOf(s) >= 580 && inPool(s)).map((s) => ({ species: s }));
+  const legends: Team = eligible.filter((s) => tier(s) === "legendary" && !anchorSp.has(s) && bstOf(s) >= 580 && inPool(s)).map((s) => ({ species: s }));
   const megas: Team = megaSlugs()
-    .filter((k) => k !== anchorKey)
+    .filter((k) => !anchorKeys.includes(k))
     .map((k) => ({ species: megaOf(k)!.base, form: k }))
-    .filter((s) => eligible.includes(s.species) && s.species !== anchor?.species && inPool(s.species) && (!megaOpen || megaOpen.has(s.species)));
+    .filter((s) => eligible.includes(s.species) && !anchorSp.has(s.species) && inPool(s.species) && (!megaOpen || megaOpen.has(s.species)));
   const genericC: Team = [...speciesC, ...legends, ...megas];
 
-  const climb = async (start: Team, cands: Team, opts: EvalOpts, lock: number, margin: number): Promise<{ team: Team; score: number }> => {
+  const climb = async (start: Team, cands: Team, opts: EvalOpts, locks: number[], margin: number): Promise<{ team: Team; score: number }> => {
     let team = start;
     let cur = await pool.rate(team, opts);
     for (let pass = 0; pass < cfg.passes; pass++) {
       let improved = false;
       for (let i = 0; i < 6; i++) {
-        if (i === lock) continue;
+        if (locks.includes(i)) continue;
         const trials: Team[] = [];
         for (const c of cands) {
           const t = team.map((x) => ({ ...x }));
@@ -318,19 +324,20 @@ async function main(): Promise<void> {
   };
   const randomTeam = (cands: Team, withAnchor: boolean): Team => {
     for (;;) {
-      const t: Team = Array.from({ length: withAnchor && anchor ? 5 : 6 }, () => ({ ...cands[Math.floor(rand() * cands.length)]! }));
-      if (withAnchor && anchor) t.splice(1, 0, { ...anchor });
+      const n = withAnchor ? anchors.length : 0;
+      const t: Team = Array.from({ length: 6 - n }, () => ({ ...cands[Math.floor(rand() * cands.length)]! }));
+      if (withAnchor) anchors.forEach((a, i) => t.splice(1 + i, 0, { ...a }));
       if (ok(t)) return t;
     }
   };
-  const lockOf = (t: Team): number => (anchor ? t.findIndex((x) => x.species === anchor.species) : -1);
-  const mineC = anchor ? speciesC : genericC;
+  const lockOf = (t: Team): number[] => anchors.map((a) => t.findIndex((x) => x.species === a.species));
+  const mineC = anchors.length ? speciesC : genericC;
 
   // ② 상대 장 — 중심 없이 만든 강팀
   phase(`② 상대 강팀 ${cfg.metas}개 만드는 중`);
   const field: Team[] = [];
   for (let m = 0; m < cfg.metas; m++) {
-    const r = await climb(randomTeam(genericC, false), genericC, { reps: 1, nrand: 20, real: true, extra: field.slice(-8), extraReps: 3, seed: 60_000 + m * 17 }, -1, 0.01);
+    const r = await climb(randomTeam(genericC, false), genericC, { reps: 1, nrand: 20, real: true, extra: field.slice(-8), extraReps: 3, seed: 60_000 + m * 17 }, [], 0.01);
     field.push(r.team);
   }
 
@@ -338,13 +345,13 @@ async function main(): Promise<void> {
   phase(`③ 중심 팀 ${cfg.starts}개 올라 타는 중`);
   const anchorOpts = (s: number): EvalOpts => ({ reps: 2, nrand: 30, real: true, extra: field, extraReps: 4, seed: s });
   let mine: Team[] = [];
-  for (let s = 0; s < cfg.starts; s++) mine.push((await climb(randomTeam(mineC, !!anchor), mineC, anchorOpts(80_000), anchor ? 1 : -1, 0.006)).team);
+  for (let s = 0; s < cfg.starts; s++) mine.push((await climb(randomTeam(mineC, anchors.length > 0), mineC, anchorOpts(80_000), anchors.map((_, i) => 1 + i), 0.006)).team);
 
   // ④ 최선 응수로 상대 장 키우기
   for (let r = 0; r < cfg.rounds; r++) {
     phase(`④ 최선 응수 라운드 ${r + 1}/${cfg.rounds}`);
     const bestNow = mine[0]!;
-    const counter = await climb(field[field.length - 1]!.map((x) => ({ ...x })), genericC, { reps: 1, nrand: 10, real: false, extra: [bestNow, bestNow, ...field.slice(-3)], extraReps: 6, seed: 40_000 + r * 555 }, -1, 0.01);
+    const counter = await climb(field[field.length - 1]!.map((x) => ({ ...x })), genericC, { reps: 1, nrand: 10, real: false, extra: [bestNow, bestNow, ...field.slice(-3)], extraReps: 6, seed: 40_000 + r * 555 }, [], 0.01);
     field.push(counter.team);
     const next: Team[] = [];
     for (const t of mine) next.push((await climb(t, mineC, anchorOpts(80_000 + r), lockOf(t), 0.006)).team);
@@ -409,7 +416,7 @@ async function main(): Promise<void> {
   // ⑥ 검증 — 새 시드, 새로 만든 강팀(학습에 안 쓴 상대), 최선 응수
   phase(`⑥ 검증: 새 강팀 ${cfg.holdouts}개 만드는 중`);
   const holdout: Team[] = [];
-  for (let h = 0; h < cfg.holdouts; h++) holdout.push((await climb(randomTeam(genericC, false), genericC, { reps: 2, nrand: 40, real: true, seed: 700_000 + h }, -1, 0.01)).team);
+  for (let h = 0; h < cfg.holdouts; h++) holdout.push((await climb(randomTeam(genericC, false), genericC, { reps: 2, nrand: 40, real: true, seed: 700_000 + h }, [], 0.01)).team);
   const measure = async (team: Team) => {
     const real = records.length ? await pool.eval(team, { reps: cfg.valReps, nrand: 0, real: true, seed: 5_550_000 }) : { w: 0, n: 0 };
     const rnd = await pool.eval(team, { reps: 0, nrand: cfg.valRand, real: false, seed: 5_560_000 });
@@ -424,7 +431,7 @@ async function main(): Promise<void> {
     let br = 0;
     let brTeam: Team = [];
     for (let b = 0; b < cfg.brStarts; b++) {
-      const r = await climb(field[field.length - 1 - b]!.map((x) => ({ ...x })), genericC, { reps: 0, nrand: 0, real: false, extra: [team], extraReps: 10, seed: 123_000 }, -1, 0.01);
+      const r = await climb(field[field.length - 1 - b]!.map((x) => ({ ...x })), genericC, { reps: 0, nrand: 0, real: false, extra: [team], extraReps: 10, seed: 123_000 }, [], 0.01);
       if (r.score > br) {
         br = r.score;
         brTeam = r.team;
@@ -435,7 +442,7 @@ async function main(): Promise<void> {
   results.sort((a, b) => b.rank - a.rank);
 
   // 기록 속 같은 중심 파티(비교용)
-  const baselines = anchor ? records.filter((t) => t.some((s) => s.species === anchor.species && (s.form ?? null) === (anchor.form ?? null))) : ownParty.length ? [ownParty] : [];
+  const baselines = anchors.length ? records.filter((t) => anchors.every((a) => t.some((s) => s.species === a.species && (s.form ?? null) === (a.form ?? null)))) : ownParty.length ? [ownParty] : [];
   const baseRows = [];
   for (const t of baselines.slice(0, 5)) baseRows.push({ team: t, ...(await measure(t)) });
   pool.close();
@@ -455,14 +462,14 @@ async function main(): Promise<void> {
     if (r.bestResponseTeam.length) say(`  최선 응수: ${teamLabel(r.bestResponseTeam)}`);
   });
   if (baseRows.length) {
-    say(anchor ? `\n기록 속 같은 중심 파티(비교)` : `\n지금 계정의 배틀 파티(비교)`);
+    say(anchors.length ? `\n기록 속 같은 중심 파티(비교)` : `\n지금 계정의 배틀 파티(비교)`);
     for (const b of baseRows) say(`  기록 ${pct(b.records)} · 메타 ${pct(b.meta)} · 새 강팀 ${pct(b.holdout)}  ${teamLabel(b.team)}`);
   }
   say(`\n읽는 법: 자동 전투라 결과가 0%·100% 로 갈린다. 어떤 팀에도 그 팀만 노린 응수 팀이 있다. 상대 장에 없던 강팀에 얼마나 이기는지(새 강팀)를 본다.`);
   const out = arg("out", "");
   if (out) {
     fs.mkdirSync(path.dirname(path.resolve(out)), { recursive: true });
-    fs.writeFileSync(out, JSON.stringify({ anchor: anchorKey, seed, quick, tierFix, fingerprint, results, baselines: baseRows }, null, 2));
+    fs.writeFileSync(out, JSON.stringify({ anchor: anchorKeys.join(","), seed, quick, tierFix, fingerprint, results, baselines: baseRows }, null, 2));
     say(`결과 파일: ${out}`);
   }
 }
