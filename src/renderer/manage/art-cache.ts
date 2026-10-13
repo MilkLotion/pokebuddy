@@ -8,11 +8,20 @@
 import type { ArtImage, PortraitAsk } from "../../shared/model/snapshot.js";
 import { el } from "../ui/dom.js";
 import { portraitImg, rememberPortrait, rememberPortraitBox } from "../ui/portrait.js";
+import { ART_ASK_LIMITS } from "../../shared/art-limits.js";
 import { api } from "./api.js";
 
 const portraitCache = new Map<string, string | null>();
 const portraitWant = new Map<string, PortraitAsk>();
+const portraitAsked = new Set<string>(); // 보내고 답을 기다리는 열쇠 — 그사이 다시 그려도 또 청하지 않는다 (worklog/records/perf-refactor 4-3, G43-2)
 let portraitTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 메인이 한 번에 받는 상한으로 나눈다 — 넘친 열쇠는 답에 없어 다시 그릴 때마다 또 청했다 (G43-1)
+function chunks<T>(list: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
 
 function paintPortrait(host: HTMLElement, uri: string, cls = "art"): void {
   if (host.classList.contains("has-art")) return;
@@ -33,21 +42,25 @@ function askPortraits(): void {
   if (portraitTimer) return;
   portraitTimer = setTimeout(() => {
     portraitTimer = null;
-    const asks = [...portraitWant.values()];
+    const asks = [...portraitWant.entries()];
     portraitWant.clear();
-    if (!asks.length) return;
-    void api.portraits(asks).then((got) => {
-      for (const [key, uri] of Object.entries(got)) portraitCache.set(key, uri);
-      for (const host of document.querySelectorAll<HTMLElement>("[data-portrait]")) {
-        const uri = portraitCache.get(host.dataset.portrait ?? "");
-        if (uri) paintPortrait(host, uri);
-      }
-    });
+    for (const part of chunks(asks, ART_ASK_LIMITS.portraits)) {
+      for (const [key] of part) portraitAsked.add(key);
+      void api.portraits(part.map(([, ask]) => ask)).then((got) => {
+        for (const [key, uri] of Object.entries(got)) portraitCache.set(key, uri);
+        for (const host of document.querySelectorAll<HTMLElement>("[data-portrait]")) {
+          const uri = portraitCache.get(host.dataset.portrait ?? "");
+          if (uri) paintPortrait(host, uri);
+        }
+      }).finally(() => {
+        for (const [key] of part) portraitAsked.delete(key); // 답에 없던 열쇠는 다음에 다시 청한다
+      });
+    }
   }, 30);
 }
 
 function wantPortrait(key: string): void {
-  if (portraitCache.has(key)) return;
+  if (portraitCache.has(key) || portraitAsked.has(key)) return;
   const [slug = "", shiny] = key.split(":");
   portraitWant.set(key, { slug, shiny: shiny === "shiny" });
   askPortraits();
@@ -92,6 +105,7 @@ const isIconKey = (key: string): boolean => key === "egg" || key.startsWith("ite
 // 도구·알 그림 — PokeAPI 에 그림이 있는 것만 채운다(이상한사탕·진화의 돌·알). 없으면 Figma 처럼 빈 칸이다
 export const iconCache = new Map<string, string | null>();
 const iconWant = new Set<string>();
+const iconAsked = new Set<string>(); // 보내고 답을 기다리는 열쇠
 let iconTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function iconOf(key: string | null, cls: string): HTMLElement {
@@ -100,19 +114,24 @@ export function iconOf(key: string | null, cls: string): HTMLElement {
   host.dataset.icon = key;
   const uri = iconCache.get(key);
   if (uri) paintPortrait(host, uri, "icon-art");
-  else if (uri === undefined) {
+  else if (uri === undefined && !iconAsked.has(key)) {
     iconWant.add(key);
     iconTimer ??= setTimeout(() => {
       iconTimer = null;
       const keys = [...iconWant];
       iconWant.clear();
-      void api.icons(keys).then((got) => {
-        for (const [k, u] of Object.entries(got)) iconCache.set(k, u);
-        for (const h of document.querySelectorAll<HTMLElement>("[data-icon]")) {
-          const u = iconCache.get(h.dataset.icon ?? "");
-          if (u) paintPortrait(h, u, "icon-art");
-        }
-      });
+      for (const part of chunks(keys, ART_ASK_LIMITS.icons)) {
+        for (const k of part) iconAsked.add(k);
+        void api.icons(part).then((got) => {
+          for (const [k, u] of Object.entries(got)) iconCache.set(k, u);
+          for (const h of document.querySelectorAll<HTMLElement>("[data-icon]")) {
+            const u = iconCache.get(h.dataset.icon ?? "");
+            if (u) paintPortrait(h, u, "icon-art");
+          }
+        }).finally(() => {
+          for (const k of part) iconAsked.delete(k);
+        });
+      }
     }, 30);
   }
   return host;

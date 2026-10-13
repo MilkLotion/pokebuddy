@@ -1,7 +1,4 @@
 # runtime 검사의 기준 목록 — 리팩토링 전부터 있던 어긋남. 줄어들기만 해야 한다 (node dist/tools/check/check-runtime.js --update-baseline)
-device-redraw: src/renderer/device/bag.ts
-device-redraw: src/renderer/device/dex.ts
-device-redraw: src/renderer/device/shop.ts
 link-stamp: src/renderer/manage/bag-link.ts:54
 link-stamp: src/renderer/manage/battle-link.ts:23
 link-stamp: src/renderer/manage/pet-link.ts:18

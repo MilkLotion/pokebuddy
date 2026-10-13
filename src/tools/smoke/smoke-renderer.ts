@@ -76,6 +76,26 @@ void app.whenReady().then(async () => {
     const overlapShot = path.join(dir, "overlap.png");
     fs.writeFileSync(overlapShot, (await win.webContents.capturePage()).toPNG());
     process.stdout.write(`겹침 화면 통과: 픽셀·투명 부분·히트·우클릭 · ${overlapShot}\n`);
+    // 같은 프레임이 와도 다시 칠하지 않는다 — 움직임 프레임(1초짜리)이 넘어갈 때만 칠한다 (worklog/records/perf-refactor 4-4).
+    // 메인은 바뀐 것이 없으면 보내지 않지만, 1초에 한 번 다시 보내는 것과 예전 40ms 전송을 흉내 내 1초 동안 25번 보낸다
+    const repaint = await win.webContents.executeJavaScript(`(async () => {
+      const ctx = document.getElementById('stage').getContext('2d');
+      const clear = ctx.clearRect.bind(ctx);
+      let paints = 0;
+      ctx.clearRect = (...a) => { paints += 1; return clear(...a); };
+      const pets = [
+        { id: 'first', look: 'red', zoom: 2, x: 100, y: 100, play: null, held: true },
+        { id: 'last', look: 'blue', zoom: 2, x: 100, y: 100, play: null, held: false }
+      ];
+      for (let i = 0; i < 25; i += 1) {
+        window.stageTest.callbacks.frame({ at: 1000 + i * 40, state: 'idle', pets });
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      ctx.clearRect = clear;
+      return paints;
+    })()`) as number;
+    assert.ok(repaint <= 3, `같은 프레임 25번에 다시 칠하기 ${repaint}번 — 3번 이하여야 한다`);
+    process.stdout.write(`같은 프레임 다시 칠하기 통과: 25번 받고 ${repaint}번 칠함\n`);
     // 튜토리얼 말풍선 — 말풍선 위에서는 "coach" 로 답해 클릭을 받고, 버튼은 완료·스킵을 보낸다. 막은 클릭을 막지 않는다
     const coach = await win.webContents.executeJavaScript(`(async () => {
       const fixture = window.stageTest;

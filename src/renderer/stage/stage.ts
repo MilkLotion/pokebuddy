@@ -69,8 +69,13 @@ function resize(size: Size) {
 }
 
 // 프레임 반영 — 마리마다 Animator 를 맞추고, 사라진 마리의 것은 버린다. look 이 바뀐 마리는 새로 만든다
+// 마리 값이 지난 프레임과 같고 움직임도 그대로면 다시 칠하지 않는다 — 움직임 프레임이 넘어갈 때는 tick 이 칠한다 (worklog/records/perf-refactor 4-4)
+let frameKey = "";
 function syncFrame(f: StageFrame, now: number) {
   frame = f;
+  const key = JSON.stringify([f.state, f.pets]);
+  let changed = key !== frameKey;
+  frameKey = key;
   const seen = new Set<string>();
   for (const pet of f.pets) {
     seen.add(pet.id);
@@ -78,11 +83,16 @@ function syncFrame(f: StageFrame, now: number) {
     if (!a || a.look !== pet.look) {
       a = new Animator(store, pet.look);
       animators.set(pet.id, a);
+      changed = true;
     }
-    a.update(pet, f.state, now);
+    if (a.update(pet, f.state, now)) changed = true;
   }
-  for (const id of animators.keys()) if (!seen.has(id)) animators.delete(id);
-  dirty = true;
+  for (const id of animators.keys()) {
+    if (seen.has(id)) continue;
+    animators.delete(id);
+    changed = true;
+  }
+  if (changed) dirty = true;
 }
 
 // 히트가 볼 것 — 그 마리가 지금 그려진 프레임과 시트 알파

@@ -1,13 +1,15 @@
 // 렌더러가 보낸 값의 검사 — 창이 받는 값은 믿지 않는다. 정해진 모양만 넘긴다 (worklog/records/code-structure/design/10-main.md 3.3절)
 // Electron 을 모른다 — 자체 검사가 직접 부른다. 액션 종류를 가르는 본문(창마다 다른 isAction)은 그 창 파일에 남는다
 
+import { ART_ASK_LIMITS } from "../../shared/art-limits.js";
+
 // 받는 값의 상한 — 지금까지 창 파일마다 숫자로 적던 것
 export const INPUT_LIMITS = {
   idChars: 80, // 식별자 글자 수 (개체·도구·상품)
   qty: 999, // 수량
   copyChars: 2000, // 복사할 글자
-  portraitAsks: 300, // 초상 요청 한 번의 개수 — 도감 한 화면 분량
-  iconKeys: 200, // 도구·알 그림 요청 한 번의 개수
+  portraitAsks: ART_ASK_LIMITS.portraits, // 초상 요청 한 번의 개수 — 설정창이 이 크기로 나눠 보낸다
+  iconKeys: ART_ASK_LIMITS.icons, // 도구·알 그림 요청 한 번의 개수
   deviceHeight: { min: 200, max: 1200 }, // 기기 창 높이
   noticeChars: 500, // 기기 창 입력의 안내·결과 글자
 } as const;

@@ -67,7 +67,7 @@ flowchart TB
 
 화살표는 import 방향이다. 위에서 아래로만 import 하고, 이 규칙은 `src/tools/check/check-deps.ts` 의 `LAYERS` 가 검사한다(자체 검사 첫 번째 항목). 꼭 알아야 할 금지 사항은 아래와 같다.
 
-- **renderer 는 `shared` 말고 아무것도 import 하지 않는다.** 그것도 대부분 `import type` 이고, 값으로 쓰는 것은 문구·숫자 글자(`fail-text`, `count-text`, `josa`)와 메인과 같이 쓰는 몇 가지 값(`features`, `window-metrics`, `live-keys`, `device-busy`, `account-rules`)뿐이다. 화면에 필요한 값은 메인이 만들어 IPC 로 보낸다.
+- **renderer 는 `shared` 말고 아무것도 import 하지 않는다.** 그것도 대부분 `import type` 이고, 값으로 쓰는 것은 문구·숫자 글자(`fail-text`, `count-text`, `josa`)와 메인과 같이 쓰는 몇 가지 값(`features`, `window-metrics`, `live-keys`, `device-busy`, `account-rules`, `art-limits`)뿐이다. 화면에 필요한 값은 메인이 만들어 IPC 로 보낸다.
 - **도메인은 파일을 읽고 쓰지 않는다.** 앱에 든 읽기 전용 자료는 로더 세 곳에서만 읽는다: `dex/data.ts`(`data/*.json`), `view/i18n.ts`(문구), `view/name-table.ts`(종 이름).
 - **도메인끼리는 같은 단이나 아래 단만 import 한다.** 아래부터 `dex` → `party`·`box` → `bag`·`egg`·`shop`·`state`·`find`·`mail`·`tutorial`·`trade`·`motion`·`battle` → `achievement`·`notify` 다.
 - **`electron` 은 `main/` 만 값으로 import 한다.** 예외는 설치 때 Electron 을 받는 `cli/setup.ts` 하나다.

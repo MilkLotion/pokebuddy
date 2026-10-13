@@ -102,8 +102,18 @@ export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
   }
 
   function showWith<V>(subscribe: (cb: (view: V) => void) => void, draw: (view: V) => void): void {
-    // 글꼴을 읽은 뒤에 재야 높이가 맞는다
-    subscribe((view) => void fontsReady.then(() => draw(view)));
+    // 글꼴을 읽은 뒤에 재야 높이가 맞는다.
+    // 지난번에 그린 것과 같은 값이면 그리지 않는다 — 다시 그리면 초상이 새 canvas 에서 시작하고 수량 칸 입력이 사라진다 (실행 규칙 R4, worklog/records/perf-refactor 4-1).
+    // 창 안의 조작(넘기기·말풍선)은 draw 를 직접 부르므로 이 비교를 거치지 않는다
+    let shown = "";
+    subscribe((view) =>
+      void fontsReady.then(() => {
+        const key = JSON.stringify(view);
+        if (key === shown) return;
+        shown = key;
+        draw(view);
+      }),
+    );
   }
 
   return { device, fontsReady, beginDraw, controlsEl, endDraw, showWith };

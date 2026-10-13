@@ -15,6 +15,7 @@ import type { StageWindow } from "./stage-window";
 
 // 작업 상태가 바뀐 뒤 마리마다 반응하기까지 최대 지연 — 0~이 값 사이에서 무작위
 const REACT_SPREAD_MS = 1200;
+const STAGE_FRAME_RESEND_MS = 1000; // 같은 프레임이어도 이 간격마다 한 번은 보낸다 — 새로 만든 무대 창이 첫 프레임을 받게
 
 export interface StageOptions {
   buddyMode: "on" | "calm" | "off"; // off 면 움직임 없이 집에 서 있다 (상태 동작만)
@@ -95,6 +96,8 @@ export function createStage(opts: StageOptions): Stage {
   const sentLooks = new Set<string>();
   const icons = new Map<string, string>(); // 렌더러에 보낸 말풍선 아이콘 — 렌더러가 다시 뜨면 다시 보낸다
   let last: StageFrame | null = null;
+  let lastSentKey = ""; // 마지막으로 보낸 프레임의 값(시각 제외)
+  let lastSentAt = -Infinity;
   const sleepSetting = (): number | null => opts.sleepAfterMin?.() ?? null;
   let sleepMin = sleepSetting(); // 마리들에 넣은 잠들기 기준 — 설정과 다르면 틱이 다시 넣는다
 
@@ -297,7 +300,14 @@ export function createStage(opts: StageOptions): Stage {
           ...(p.care?.action === "feed" ? { berry: { x: p.care.target.x + p.body.w / 2, y: p.care.target.y + p.body.h - 4 } } : {}) })),
       };
       last = frame;
-      if (visible) win.sendFrame(frame);
+      // 바뀐 것이 없으면 보내지 않는다 — 마리가 멈춰 있어도 40ms 마다 보내 렌더러가 매번 다시 칠했다(worklog/records/perf-refactor 4-4).
+      // 창을 새로 만들었을 때 첫 프레임을 놓치지 않게 1초에 한 번은 보낸다
+      const sentKey = JSON.stringify([frame.state, frame.pets]);
+      if (visible && (sentKey !== lastSentKey || t - lastSentAt >= STAGE_FRAME_RESEND_MS)) {
+        lastSentKey = sentKey;
+        lastSentAt = t;
+        win.sendFrame(frame);
+      }
     },
 
     // 포인터로 마리를 만졌다 — 렌더러는 무대 안 좌표만 알려 주고, 옮기기·반응·저장은 여기서 한다

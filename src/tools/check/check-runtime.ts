@@ -5,7 +5,8 @@
 //
 // 보는 것
 //   link-stamp      설정창의 기기 창 연결이 `stamp: () => ui.view` 로 비교한다. ui.view 는 1초마다 새 객체라 매초 다시 보낸다 (R2)
-//   device-redraw   모델을 받는 기기 창(api.onShow 를 쓰는 파일)이 모양 비교(structureOf) 없이 그린다. 모델이 올 때마다 통째로 다시 만든다 (R4)
+//   device-redraw   모델을 받는 기기 창(api.onShow 를 쓰는 파일)이 비교 없이 그린다. 모델이 올 때마다 통째로 다시 만든다 (R4).
+//                   모양 비교(structureOf)나 공통 받기(frame.showWith — 같은 값이면 그리지 않는다, src/renderer/device/device-frame.ts)를 쓰면 비교한 것으로 본다
 // 지금 있는 것은 기준 목록(src/tools/check/baseline/runtime.txt)에 있다. 종류별 수가 늘면 실패한다
 import fs from "node:fs";
 import path from "node:path";
@@ -32,7 +33,7 @@ export function findRuntime(root: string = ROOT): string[] {
   for (const name of tsFiles(root, DEVICE_DIR)) {
     if (name === FRAME) continue;
     const text = fs.readFileSync(path.join(root, DEVICE_DIR, name), "utf8");
-    if (/\bonShow\b/.test(text) && !/\bstructureOf\b/.test(text)) found.push(`device-redraw: ${slash(path.join(DEVICE_DIR, name))}`);
+    if (/\bonShow\b/.test(text) && !/\bstructureOf\b|\bframe\.showWith\b/.test(text)) found.push(`device-redraw: ${slash(path.join(DEVICE_DIR, name))}`);
   }
   return found;
 }
