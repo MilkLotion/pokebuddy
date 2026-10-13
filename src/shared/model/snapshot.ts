@@ -301,6 +301,7 @@ export interface Snapshot {
   // 포켓몬 표시·클릭 통과 — 저장이 아니라 이 앱 프로세스의 창 상태다. 앱이 채운다. 없으면 설정에 두 줄을 두지 않는다
   display?: DisplayView;
   saveFailing?: boolean; // 저장이 이어서 3번 실패했다 — 모든 탭 위쪽에 안내를 띄운다 (src/tx/game.ts)
+  seq?: number; // 메인이 매긴 순번 — 늦게 온 스냅샷을 가린다 (src/main/manage/game-reads.ts, src/renderer/manage/view-gate.ts)
 }
 
 export interface DisplayView {

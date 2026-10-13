@@ -11,6 +11,8 @@
 //   long task          PerformanceObserver("longtask") — 50ms 를 넘은 일의 수와 합. 숨긴 창에서는 잡히지 않을 수 있다
 //   멈춤               20ms 간격 타이머가 늦게 울린 만큼 — 렌더러가 다른 일로 막힌 시간(stallMs 합, stallMax 가장 긴 것)
 //   기기 창 전송       가짜 preload 의 petOpen 호출 수 (설정창 → 메인 "manage:pet-open")
+//   배틀 창           숨긴 배틀 파티 상세 기기 창(battle.html)에 1초마다 지금 모델을 보낸다 — 다시 그린 수(#device 갈아 끼우기)와
+//                    다시 그린 직후 아직 칠하지 않은(폭 0) 초상 canvas 수. 배틀 0번 칸은 밥 쿨타임·버프가 있는 파티 개체다
 // 메인 쪽은 실제 게임이다 — 1초마다 manage:snapshot 과 같은 처리(src/main/manage/game-reads.ts snapshotReply)로 스냅샷을 준다
 // 결과는 JSON 한 줄로 찍는다. 판정은 하지 않는다(기준선 기록용). 끝나면 종료 코드 0
 import { app, BrowserWindow, ipcMain } from "electron";
@@ -21,6 +23,7 @@ import { emptySave } from "../../save/normalize";
 import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { petDeviceModel } from "../../view/device-pet";
+import { battleDeviceModel } from "../../view/device-battle";
 import type { PetDeviceInput } from "../../shared/model/devices";
 import type { Snapshot } from "../../shared/model/snapshot";
 import { CLOCK_RULES } from "../../main/app/clock";
@@ -37,6 +40,13 @@ const dir = makeTmp("smoke-perf");
 const file = path.join(dir, "save.json");
 const start = Date.now();
 const save = applyScene(emptySave(start), SCENE, start);
+// 배틀 0번 칸 — 밥 쿨타임과 버프가 있는 파티 개체(시간이 흐르면 개체 값이 매초 바뀐다)
+const partyPet = save.party.slots.find((sl) => sl.state === "pokemon");
+const battlePet = save.pets.find((p) => partyPet?.state === "pokemon" && p.id === partyPet.petId);
+if (!battlePet) throw new Error("파티 개체가 없다");
+battlePet.feedCooldownMs = 10 * 60_000;
+battlePet.buffs = [{ kind: "premium-food", remainMs: 45 * 60_000 }];
+save.battle = { slots: [battlePet.id, null, null, null, null, null] };
 save.lastTickAt = start;
 if (!writeSave(file, save)) throw new Error("시험 저장을 쓰지 못했다");
 const game = createGame({ file, now: Date.now, flushMs: CLOCK_RULES.saveMs, petName });
@@ -84,6 +94,12 @@ window.pokebuddyManage = new Proxy({}, {
 `,
 );
 
+// 배틀 창의 가짜 preload — 받기(onShow)는 window.__show 에 둔다
+const battlePreload = path.join(dir, "battle-fixture.cjs");
+fs.writeFileSync(battlePreload, `window.pokebuddyBattle = { onShow: (cb) => { window.__show = cb; }, size() {}, step() {}, close() {}, act() {}, cry: async () => null };`);
+// 초상 자리에 넣을 그림 — 저장소의 도구 그림 하나(96 이하 PNG)
+const PORTRAIT = `data:image/png;base64,${fs.readFileSync(path.resolve(__dirname, "../../../assets/items/ash-cap.png")).toString("base64")}`;
+
 app.setPath("userData", path.join(dir, "user-data"));
 app.disableHardwareAcceleration();
 
@@ -123,7 +139,33 @@ void app.whenReady().then(async () => {
     await js(`document.querySelector('#body .slot[data-pet]')?.click(); 0`);
     await wait(500);
     await phase("petDevice");
-    // (3) 오래 켜 둘 때 — 1분마다 렌더러 힙과 메인 힙
+    // (3) 배틀 창 — 1초마다 지금 모델을 보낸다(설정창 연결이 매초 다시 보내는 것과 같다). 메인의 같은 모델 거르기는 쓰지 않는다
+    const bw = new BrowserWindow({ width: 360, height: 700, show: false, webPreferences: { preload: battlePreload, contextIsolation: false, sandbox: false, offscreen: true, backgroundThrottling: false } });
+    await bw.loadFile(path.resolve(__dirname, "../../../src/renderer/battle.html"));
+    await wait(800);
+    const bjs = <T>(code: string): Promise<T> => bw.webContents.executeJavaScript(code) as Promise<T>;
+    await bjs(`(() => { window.__b = { renders: 0, blank: 0 }; new MutationObserver(() => { window.__b.renders += 1; window.__b.blank += [...document.querySelectorAll(".stage canvas")].filter((c) => c.width === 0).length; }).observe(document.getElementById("device"), { childList: true }); return 0; })()`);
+    const battleView = (notice = ""): unknown => {
+      const r = battleDeviceModel(snapshotReply(game, reads)!, { slot: 0, notice, busy: null });
+      if (!r) throw new Error("배틀 모델이 없다");
+      const { art: _a, typeArt: _t, megaArt: _m, ...rest } = r.model;
+      return { ...rest, portrait: PORTRAIT, megaIcon: null, typeIcons: {}, side: "right", volume: 0 };
+    };
+    for (let i = 0; i < SECONDS; i += 1) {
+      await bjs(`window.__show(${JSON.stringify(battleView())}); 0`);
+      await wait(1000);
+    }
+    const sameModel = await bjs<{ renders: number; blank: number }>(`(() => { const r = { ...window.__b }; window.__b = { renders: 0, blank: 0 }; return r; })()`);
+    // 모양이 바뀌는 모델(실패 문구) — 다시 그려도 한 번 읽은 초상은 바로 칠한다(캐시)
+    for (let i = 0; i < 3; i += 1) {
+      await bjs(`window.__show(${JSON.stringify(battleView(`실패 ${i}`))}); 0`);
+      await wait(300);
+    }
+    const changed = await bjs<{ renders: number; blank: number }>(`({ ...window.__b })`);
+    result.battle = { sends: SECONDS, sameModel, changed: { sends: 3, ...changed } };
+    bw.destroy();
+
+    // (4) 오래 켜 둘 때 — 1분마다 렌더러 힙과 메인 힙
     if (MINUTES > 0) {
       const heap: { min: number; rendererMB: unknown; mainMB: number }[] = [];
       for (let m = 1; m <= MINUTES; m += 1) {

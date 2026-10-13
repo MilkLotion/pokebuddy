@@ -26,6 +26,7 @@ export interface ManageRequest {
 export type ManageReply = CommandResult & {
   screen?: TradeScreen; // trade.* 명령의 결과 — 교환 모달이 그리는 값
   result?: ResultLine; // bag.use·shop.buy 가 성공했을 때 기기 창의 결과 두 줄 (src/view/result-lines.ts)
+  view?: Snapshot | null; // 명령 뒤의 스냅샷 — 설정창은 답 뒤에 스냅샷을 다시 부르지 않는다 (실행 규칙 R3)
 };
 
 // 설정창의 계약 — 메인이 두 곳에서 걸기 때문에 둘로 적는다

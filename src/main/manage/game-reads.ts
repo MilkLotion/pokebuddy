@@ -34,15 +34,23 @@ export function gameReads(game: GameV3): GameReads {
   };
 }
 
-// `manage:snapshot` — 본 값이 지금 값이 되도록 먼저 시간을 적용한다. display 는 화면 배치 값(창이 있을 때만)
-export function snapshotReply(game: GameV3, reads: GameReads, display?: () => Snapshot["display"]): Snapshot | null {
-  game.tick();
-  const view = reads.snapshot();
-  return view && display ? { ...view, display: display() } : view;
+// 설정창에 보내는 스냅샷 — 화면 배치 값(display, 창이 있을 때만)과 순번을 붙인다. 순번은 이 프로세스에서 늘기만 한다.
+// 설정창은 이미 받은 것보다 낮은 순번을 버린다 (실행 규칙 R2, src/renderer/manage/view-gate.ts)
+let seq = 0;
+function sealed(view: Snapshot | null, display?: () => Snapshot["display"]): Snapshot | null {
+  if (!view) return view;
+  seq += 1;
+  return display ? { ...view, display: display(), seq } : { ...view, seq };
 }
 
-// `manage:command` — 요청 모양을 보고, 흐른 시간을 먼저 적용한 뒤 명령을 보낸다
-export async function commandReply(game: GameV3, reads: GameReads, send: (req: ManageRequest) => Promise<ManageReply>, raw: unknown): Promise<ManageReply> {
+// `manage:snapshot` — 본 값이 지금 값이 되도록 먼저 시간을 적용한다
+export function snapshotReply(game: GameV3, reads: GameReads, display?: () => Snapshot["display"]): Snapshot | null {
+  game.tick();
+  return sealed(reads.snapshot(), display);
+}
+
+// `manage:command` — 요청 모양을 보고, 흐른 시간을 먼저 적용한 뒤 명령을 보낸다. 답에 명령 뒤의 스냅샷(view)을 싣는다(실행 규칙 R3)
+export async function commandReply(game: GameV3, reads: GameReads, send: (req: ManageRequest) => Promise<ManageReply>, raw: unknown, display?: () => Snapshot["display"]): Promise<ManageReply> {
   const req = parseCommand(raw);
   if (!req) return { ok: false, reason: "bad-request" };
   // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
@@ -53,5 +61,6 @@ export async function commandReply(game: GameV3, reads: GameReads, send: (req: M
   const reply = await send(req);
   const after = reply.ok && before ? reads.snapshot() : null;
   const result = before && after ? resultLineOf(req, before, after) : null;
-  return result ? { ...reply, result } : reply;
+  const view = sealed(after ?? reads.snapshot(), display);
+  return result ? { ...reply, result, view } : { ...reply, view };
 }

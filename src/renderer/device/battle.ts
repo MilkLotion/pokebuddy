@@ -13,6 +13,7 @@ import { needBridge } from "../ui/bridge.js";
 import { createCryPlayer } from "../ui/cry.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { genderIcon } from "../ui/gender-icon.js";
+import { structureOf } from "../ui/live-draw.js";
 import { swapIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
 import { spriteCanvas } from "../ui/portrait.js";
@@ -184,6 +185,17 @@ function render(v: BattleDeviceView): void {
   frame.endDraw();
 }
 
+// 같은 모델이면 다시 그리지 않는다 — 초상이 빈 canvas 에서 다시 시작하지 않게 (실행 규칙 R4, worklog/records/perf-refactor 1-3).
+// 이 창의 값에는 시간으로 바뀌는 것이 없다(src/shared/model/devices.ts BattleDevicePet). 특성 말풍선은 toggle 이 직접 다시 그린다
+let renderedStructure = "";
 api.onShow((view) => {
-  void frame.fontsReady.then(() => render(view));
+  void frame.fontsReady.then(() => {
+    const structure = structureOf(view);
+    if (structure === renderedStructure) {
+      last = view;
+      return;
+    }
+    renderedStructure = structure;
+    render(view);
+  });
 });

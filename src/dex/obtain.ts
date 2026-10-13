@@ -40,7 +40,12 @@ export function rewardSpecies(opts?: DexOptions): string[] {
 // 단일 포켓몬 전부 — 단일 포켓몬 알의 종, 우편으로만 받는 특수 폼(data/regional.json 의 get "gift" — 마기아나(500년 전의 색) · 피츄(삐쭉귀)),
 // 업적 보상으로 주는 종(data/achievements.json 의 reward.pokemon — 2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
 // 2026-10-03 사용자 결정 "알이나 다른데서 못구하고 이벤트같은거로 우편으로 보낼 예정이긴해. 대신 단일종 그거여야해."
-export function singleSpecies(opts?: DexOptions): Set<string> {
+// 자료만으로 정해지므로 자료 폴더마다 한 번만 만든다 — 스냅샷이 개체마다 부른다(성능 기준선의 3/4, worklog/records/perf-refactor 1-7). 받는 쪽은 고치지 않는다
+const singleMemo = new Map<string, ReadonlySet<string>>();
+export function singleSpecies(opts?: DexOptions): ReadonlySet<string> {
+  const key = opts?.dataDir ?? "";
+  const hit = singleMemo.get(key);
+  if (hit) return hit;
   const out = new Set<string>();
   for (const [kind, pool] of fixedEggs(opts)) if (isSingleEgg(kind, opts)) for (const slug of pool) out.add(slug);
   for (const [slug, form] of Object.entries(regionalTable(opts).forms)) if (!isMetaKey(slug) && form.get === "gift") out.add(slug);
@@ -49,6 +54,7 @@ export function singleSpecies(opts?: DexOptions): Set<string> {
   for (const slug of allRiders(opts)) out.add(slug);
   // 단일 포켓몬이 모습 바꾸기로 오가는 모습(기라티나(오리진폼))도 같은 개체라 단일 포켓몬이다
   for (const slug of [...out]) for (const form of shiftGroupOf(slug, opts)) out.add(form);
+  singleMemo.set(key, out);
   return out;
 }
 

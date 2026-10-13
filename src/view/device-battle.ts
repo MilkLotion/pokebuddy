@@ -12,9 +12,12 @@ export function battleDeviceModel(v: Snapshot, input: BattleDeviceInput): Device
   if (!slot || !pet) return null;
   const typeArt: Record<string, string> = {};
   for (const m of slot.moves) typeArt[m.typeId] = typeArtKey(m.typeId);
+  // 배틀 창이 읽는 값만 싣는다 — 시간으로 바뀌는 개체 값이 빠져 시간이 흘러도 모델이 같다 (src/shared/model/devices.ts BattleDevicePet)
+  const { id, species, name, nameParts, gender, shiny, types, typeIds, mega } = pet;
+  const { index, moves, blocked, stats, ability } = slot;
   return {
     model: {
-      slot,
+      slot: { index, moves, blocked, stats, ability, pet: { id, species, name, nameParts, gender, shiny, types, typeIds, ...(mega ? { mega } : {}) } },
       caption: `배틀 파티 ${slot.index + 1}번`,
       notice: input.notice,
       busy: input.busy,

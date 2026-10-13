@@ -272,7 +272,7 @@ async function boxCommand(cmd: string, target: string, extra: Record<string, unk
   try {
     reply = await requestCommand(cmd, target, extra);
     if (reply.ok) onOk?.();
-    await refreshView();
+    await refreshView(reply.view);
   } finally {
     ui.busy = false;
     unbusy();

@@ -219,7 +219,7 @@ export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceO
   return {
     channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
     size: DEVICE_SIZES.battle,
-    keyOf: (o) => o.slot.pet?.id ?? String(o.slot.index),
+    keyOf: (o) => o.slot.pet.id,
     viewOf: async (o) => {
       const types = Object.keys(o.typeArt);
       const art = await artResolver(deps, [o.art, o.megaArt, ...types.map((t) => o.typeArt[t] ?? null)]);
@@ -227,7 +227,7 @@ export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceO
       return { ...rest, portrait: art(o.art), megaIcon: art(megaArt), typeIcons: Object.fromEntries(types.map((t) => [t, art(typeArt[t] ?? null)])), volume: deps.volume() };
     },
     isAction: isBattleAction,
-    cry: { of: (o) => deps.cry(o.slot.pet?.species ?? ""), volume: deps.volume },
+    cry: { of: (o) => deps.cry(o.slot.pet.species), volume: deps.volume },
   };
 }
 

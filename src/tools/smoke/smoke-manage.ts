@@ -71,7 +71,8 @@ bagSave.bag.mint = 1;
 const bagExtra = snapshotView(bagSave, Date.now()).bag.filter((i) => i.id === "fire-stone" || i.id === "mint");
 
 // 가짜 preload — snapshot·dex 만 값을 준다. 구독(on*)은 콜백만 받아 둔다(window.__cb). 시계(onClock)는 1초마다 울린다
-// 파티 개체의 만복도는 1초마다 1 줄어든다(시간 값). window.__bump 를 올리면 포인트가 바뀌어 모양이 바뀐다(전체 다시 그리기)
+// 파티 개체의 만복도는 1초마다 1 줄어든다(시간 값). window.__bump 를 올리면 모양에 드는 표지(__bump)가 바뀐다(전체 다시 그리기).
+// window.__pts 를 올리면 포인트만 바뀐다 — 포인트는 시간 값이라 머리 글자만 고친다 (src/shared/live-keys.ts SNAPSHOT_LIVE_PATHS)
 const preload = path.join(dir, "fixture.cjs");
 fs.writeFileSync(
   preload,
@@ -81,6 +82,7 @@ const dex = ${JSON.stringify(dex)};
 const bagExtra = ${JSON.stringify(bagExtra)};
 const t0 = Date.now();
 window.__bump = 0;
+window.__pts = 0;
 window.__bagExtra = false;
 window.__cb = {};
 const { ipcRenderer } = require("electron");
@@ -99,7 +101,8 @@ window.pokebuddyManage = new Proxy({}, {
       const s = JSON.parse(JSON.stringify(snap));
       const sec = Math.floor((Date.now() - t0) / 1000);
       for (const slot of s.party.slots) if (slot.pet) slot.pet.fullness = Math.max(1, 90 - sec);
-      s.points += window.__bump;
+      s.points += window.__bump + window.__pts;
+      if (window.__bump) s.__bump = window.__bump;
       if (window.__bagExtra) s.bag = [...bagExtra, ...s.bag];
       if (window.__boxName) s.boxes[0].name = window.__boxName;
       if (window.__screenTut) s.screenTutorials = window.__screenTut;
@@ -164,6 +167,17 @@ void app.whenReady().then(async () => {
     assert.equal(live.sameCard, true, "파티 카드(title)를 새로 만들지 않는다");
     assert.ok(live.title.length > 0);
 
+    // (1b) 포인트만 바뀌면 다시 그리지 않고 머리의 포인트 글자만 고친다
+    const pts = await js<{ before: string; after: string; sameTab: boolean }>(`(async () => {
+      const tab = ${tabBtn("파티")};
+      const before = document.getElementById('points').textContent;
+      window.__pts = 5;
+      await new Promise((r) => setTimeout(r, 1400));
+      return { before, after: document.getElementById('points').textContent, sameTab: ${tabBtn("파티")} === tab };
+    })()`);
+    assert.notEqual(pts.after, pts.before, `포인트 글자가 바뀐다 ${pts.before} → ${pts.after}`);
+    assert.equal(pts.sameTab, true, "포인트만 바뀌면 다시 그리지 않는다");
+
     // (2) 모양이 바뀌면 다시 그린다 — 포커스는 같은 자리의 새 탭 단추로 되돌린다
     const full = await js<{ newTab: boolean; focusedTab: boolean }>(`(async () => {
       const tab = ${tabBtn("파티")};
@@ -173,7 +187,7 @@ void app.whenReady().then(async () => {
       const now = ${tabBtn("파티")};
       return { newTab: now !== tab, focusedTab: document.activeElement === now };
     })()`);
-    assert.equal(full.newTab, true, "포인트가 바뀌면 다시 그린다");
+    assert.equal(full.newTab, true, "모양이 바뀌면 다시 그린다");
     assert.equal(full.focusedTab, true, "다시 그려도 탭 포커스를 되돌린다");
 
     // (3) 도감 격자 넘김 — 한 쪽 30칸 · ◀ ▶ · 1초 시계와 다시 그리기에도 쪽이 남는다 · 넘쳐도 한 줄 안쪽(Figma 99 `Dex / Base · 박스형` 724)

@@ -3,7 +3,7 @@
 //   node dist/tools/selftest/selftest-live-shape.js                     새 경로가 생기면 실패
 //   node dist/tools/selftest/selftest-live-shape.js --update-baseline   기준 목록을 지금 경로로 다시 적는다
 //
-// 모양은 설정창이 다시 그릴지 정하는 값이다 — 렌더러의 structureOf(src/renderer/ui/live-draw.ts)를 그대로 부른다.
+// 모양은 설정창이 다시 그릴지 정하는 값이다 — 렌더러의 structureOf(src/renderer/ui/live-draw.ts)를 설정창과 같은 경로 목록으로 부른다.
 // 모양이 바뀌면 설정창은 본문·모달·기기 창을 통째로 다시 그린다. 시간으로만 바뀌는 값이 모양에 들면 매초 다시 그린다
 // (2026-10-11 cbebb60 이 day.progress·day.leftMs 를 더해 배틀 기기 창 초상이 깜빡였다).
 // 장면: 쇼케이스 + 배틀 파티 + 밥 쿨타임·버프가 있는 파티 개체 + 부화 중인 알. 게임 시간 낮의 한가운데서 90초를 1초씩 흘린다(낮·밤 경계를 넘지 않는다).
@@ -17,6 +17,7 @@ import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { snapshotOfGame } from "../../view/snapshot";
 import { CLOCK_RULES } from "../../main/app/clock";
+import { SNAPSHOT_LIVE_PATHS } from "../../shared/live-keys";
 import { compare, writeBaseline } from "../check/baseline";
 import { applyScene } from "../harness/scenes";
 import { at } from "../harness/clock";
@@ -31,7 +32,9 @@ const RULES = {
   warmup: 3, // 장면을 만든 뒤 첫 틱들은 해금·업적 정리로 모양이 바뀐다 — 재기 전에 흘린다
 };
 
-const { structureOf } = webModule<{ structureOf: (view: unknown) => string }>("renderer/ui/live-draw.js");
+const live = webModule<{ structureOf: (view: unknown, extra?: ReadonlySet<string>, paths?: readonly string[]) => string }>("renderer/ui/live-draw.js");
+// 설정창과 같은 모양 — 시간 값의 경로(src/shared/live-keys.ts SNAPSHOT_LIVE_PATHS)를 뺀다 (src/renderer/manage/live.ts shapeOf)
+const structureOf = (view: unknown): string => live.structureOf(view, undefined, SNAPSHOT_LIVE_PATHS);
 
 // 두 값에서 다른 경로 — 배열 칸 번호는 [] 로 접는다(칸이 달라도 같은 경로로 센다)
 export function diffPaths(a: unknown, b: unknown, at = ""): string[] {

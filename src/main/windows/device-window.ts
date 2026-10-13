@@ -91,7 +91,9 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
     const base = spec.baseOf && current ? spec.baseOf(b, area, current, height) : b;
     const at = dockAt(base, area, { width, height });
     side = at.side;
-    w.setBounds({ x: at.x, y: at.y, width, height });
+    // 자리가 같으면 건너뛴다 — 다시 그릴 때마다 높이를 알려 와도 창을 옮기지 않는다 (worklog/records/perf-refactor 1-3)
+    const now = w.getBounds();
+    if (now.x !== at.x || now.y !== at.y || now.width !== width || now.height !== height) w.setBounds({ x: at.x, y: at.y, width, height });
   }
 
   // 붙은 쪽이 바뀌면 경첩 면을 다시 그리도록 다시 보낸다

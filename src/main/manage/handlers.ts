@@ -46,7 +46,7 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
 
   wireIpc<ManageCoreIpc>(scope, {
     "manage:snapshot": { denied: null, run: () => snapshotReply(game, reads, svc().display) },
-    "manage:command": { denied: DENIED, run: (_e, raw) => commandReply(game, reads, send, raw) },
+    "manage:command": { denied: DENIED, run: (_e, raw) => commandReply(game, reads, send, raw, svc().display) },
     "manage:dex": {
       denied: [],
       run: () => {

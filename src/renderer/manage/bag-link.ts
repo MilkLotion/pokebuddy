@@ -125,10 +125,14 @@ async function bagSend(cmd: string, id: string, extra: Record<string, unknown>):
     bagBusy = true;
     bagLink.sync(true); // 처리 중 점 표시는 보내는 중에도 보낸다
   }, 300);
-  const ok = await sendCommand(cmd, id, extra, { keepOpen: true });
-  clearTimeout(slow);
-  bagSending = false;
-  bagBusy = false;
+  let ok = false;
+  try {
+    ok = await sendCommand(cmd, id, extra, { keepOpen: true });
+  } finally {
+    clearTimeout(slow);
+    bagSending = false; // 던져도 풀어 둔다 — 안 풀면 가방 단추가 다시 눌리지 않는다
+    bagBusy = false;
+  }
   bagNotice = ok ? "" : ui.notice;
   ui.notice = "";
   return ok;
@@ -148,7 +152,7 @@ async function useBag(id: string): Promise<void> {
       bagResultNote = lastReplyOf()?.result?.line ?? "";
       if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
     }
-    redrawBody();
+    afterSend(bagPick === null);
     return;
   }
   const pet = bagTarget ? petInView(bagTarget) : null;
@@ -163,7 +167,7 @@ async function useBag(id: string): Promise<void> {
     bagQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 썼다 — 기기 창을 닫는다
   }
-  redrawBody();
+  afterSend(bagPick === null);
 }
 
 async function sellBag(id: string): Promise<void> {
@@ -179,7 +183,14 @@ async function sellBag(id: string): Promise<void> {
     sellQty = 1;
     if (!ui.view?.bag.some((i) => i.id === id)) bagPick = null; // 다 팔았다 — 기기 창을 닫는다
   }
-  redrawBody();
+  afterSend(bagPick === null);
+}
+
+// 명령 뒤 맞추기 — 본문은 답의 스냅샷으로 이미 다시 그렸다(command.ts). 기기 창만 결과로 맞춘다(상점과 같다).
+// 다 써서 고른 칸이 사라졌으면 본문을 다시 그린다 — 칸 표시가 바뀌고 기기 창이 닫힌다 (worklog/records/perf-refactor 1-5)
+function afterSend(dropped: boolean): void {
+  if (dropped) redrawBody();
+  else syncBagDevice();
 }
 
 // 지금 고른 도구 — 탭이 칸 표시에, 튜토리얼이 단계에 쓴다

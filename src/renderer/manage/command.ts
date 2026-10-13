@@ -1,13 +1,14 @@
 // 설정창 → 메인 명령 — 요청 식별자, 처리 중 표시, 잠금, 다시 읽기, 실패 문구
 // 다시 읽기·도감 비우기는 설정창이 setCommandHooks 로 걸어 준다(뼈대 파일이 나뉘면 직접 가져온다). 모달은 dialog.ts
 import type { ManageReply } from "../../shared/ipc/manage.js";
+import type { Snapshot } from "../../shared/model/snapshot.js";
 import { api } from "./api.js";
 import { failTextOf } from "../../shared/fail-text.js";
 import { closeDialog, drawDialog, openFailBanner } from "./dialog.js";
 import { ui } from "./state.js";
 
 export interface CommandHooks {
-  reload(): Promise<void>; // 스냅샷을 다시 읽고 그린다
+  reload(view?: Snapshot | null): Promise<void>; // 스냅샷으로 다시 그린다 — 주면 그것을, 없으면 새로 읽는다
   touchesDex(): void; // 도감이 함께 바뀌었다 — 다음에 도감을 열 때 다시 읽게 비운다
 }
 let hooks: CommandHooks | null = null;
@@ -116,7 +117,7 @@ export async function sendCommand(cmd: string, target: string, extra: Record<str
   try {
     reply = await requestCommand(cmd, target, extra);
     if (reply.ok && TOUCHES_DEX.has(cmd)) h.touchesDex();
-    await h.reload();
+    await h.reload(reply.view); // 답에 실린 명령 뒤 스냅샷 — 다시 부르지 않는다(실행 규칙 R3)
   } finally {
     ui.busy = false;
     unbusy();

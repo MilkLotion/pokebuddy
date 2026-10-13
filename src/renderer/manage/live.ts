@@ -7,10 +7,12 @@
 // 모양 비교와 시간 필드 목록은 ui/live-draw.ts · shared/live-keys.ts
 import type { PetView, Snapshot } from "../../shared/model/snapshot.js";
 import { clampPercent } from "../ui/fill-bar.js";
+import { SNAPSHOT_LIVE_PATHS } from "../../shared/live-keys.js";
 import { structureOf } from "../ui/live-draw.js";
 import { api } from "./api.js";
 import { drawDialog } from "./dialog.js";
-import { redrawBody } from "./shell.js";
+import { drawHeader, redrawBody } from "./shell.js";
+import { createViewGate } from "./view-gate.js";
 import { ui } from "./state.js";
 
 // 설정창이 거는 고리 — 탭의 상태를 이 파일이 읽지 않게
@@ -28,6 +30,7 @@ function hooksOf(): LiveHooks {
 }
 
 let drawnStructure = ""; // 마지막으로 그린 모양
+const gate = createViewGate(); // 늦게 온 스냅샷은 버린다 — 명령 결과를 옛 시계 값이 덮지 않게
 let clockBusy = false;
 let pointerDown = false;
 let composing = false;
@@ -47,9 +50,13 @@ const typingText = (): boolean => {
 };
 const holdFullDraw = (): boolean => hooksOf().isHolding() || pointerDown || composing || typingText();
 
-// 시간 표시만 고친다 — 개체 막대(data-live-pet)와 알 글자(data-live-egg)
+// 스냅샷의 모양 — 시간 값의 경로(헤더의 포인트·게이지)와 시간 필드를 뺀다
+const shapeOf = (v: Snapshot | null): string => structureOf(v, undefined, SNAPSHOT_LIVE_PATHS);
+
+// 시간 표시만 고친다 — 머리의 포인트·게이지, 개체 막대(data-live-pet)와 알 글자(data-live-egg)
 function applyLive(v: Snapshot | null = ui.view): void {
   if (!v) return;
+  drawHeader(v);
   const pets = new Map<string, PetView>();
   for (const s of v.party.slots) if (s.pet) pets.set(s.pet.id, s.pet);
   for (const b of v.boxes) for (const p of b.slots) if (p) pets.set(p.id, p);
@@ -80,7 +87,8 @@ export async function clockTick(): Promise<void> {
   clockBusy = true;
   try {
     const next = await api.snapshot();
-    const structure = structureOf(next);
+    if (!gate.fresh(next)) return;
+    const structure = shapeOf(next);
     if (structure === drawnStructure) {
       ui.view = next; // 모양이 같다 — 시간 값만 새것으로
       applyLive();
@@ -100,9 +108,12 @@ export async function clockTick(): Promise<void> {
   }
 }
 
-// 스냅샷을 새로 읽어 전체를 다시 그린다 — 명령의 답 뒤, 첫 화면, 바로가기
-export async function refreshView(): Promise<void> {
-  ui.view = await api.snapshot();
-  drawnStructure = structureOf(ui.view);
+// 스냅샷으로 전체를 다시 그린다 — 명령의 답 뒤(답에 실린 스냅샷), 첫 화면, 바로가기(새로 읽는다).
+// 이미 받은 것보다 늦은 스냅샷이면 그리지 않는다
+export async function refreshView(given?: Snapshot | null): Promise<void> {
+  const next = given !== undefined ? given : await api.snapshot();
+  if (!gate.fresh(next)) return;
+  ui.view = next;
+  drawnStructure = shapeOf(ui.view);
   redrawBody();
 }

@@ -106,14 +106,27 @@ export function hatchBaseOf(slug: string, opts?: DexOptions): string | null {
   return null;
 }
 
-// 모습 바꾸기로 오가는 모습 묶음 — 기본 종과 그 모습들. 묶음에 없는 종은 빈 목록 (data/regional.json 의 shift)
-export function shiftGroupOf(slug: string, opts?: DexOptions): string[] {
-  const key = normalizeSlug(slug);
+// 모습 바꾸기 묶음의 색인 — 모습마다 그 묶음. 표의 앞 묶음이 먼저다(같은 모습이 두 묶음에 있으면 앞 것). 자료 폴더마다 한 번 만든다 (worklog/records/perf-refactor 1-7)
+const shiftIndexes = new Map<string, Map<string, readonly string[]>>();
+function shiftIndexOf(opts?: DexOptions): Map<string, readonly string[]> {
+  const key = opts?.dataDir ?? "";
+  const hit = shiftIndexes.get(key);
+  if (hit) return hit;
+  const index = new Map<string, readonly string[]>();
   for (const [base, list] of Object.entries(regionalTable(opts).shift)) {
     if (isMetaKey(base) || !Array.isArray(list)) continue;
-    if (base === key || list.includes(key)) return [base, ...list.filter((s) => typeof s === "string")];
+    const forms = list.filter((s): s is string => typeof s === "string");
+    const group = [base, ...forms];
+    for (const member of [base, ...forms]) if (!index.has(member)) index.set(member, group);
   }
-  return [];
+  shiftIndexes.set(key, index);
+  return index;
+}
+
+// 모습 바꾸기로 오가는 모습 묶음 — 기본 종과 그 모습들. 묶음에 없는 종은 빈 목록 (data/regional.json 의 shift). 받는 쪽이 고쳐도 되게 사본을 준다
+export function shiftGroupOf(slug: string, opts?: DexOptions): string[] {
+  const group = shiftIndexOf(opts).get(normalizeSlug(slug));
+  return group ? [...group] : [];
 }
 
 // 이 모습이 되려면 저장에 있어야 하는 말 — 버드렉스(백마 탄 모습) → 블리자포스. 없으면 null (data/regional.json 의 riders)

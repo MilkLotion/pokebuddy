@@ -4,7 +4,7 @@
 //   node dist/tools/selftest/selftest-perf.js --json     횟수와 ms 를 JSON 한 줄로 찍는다(기준선 기록용)
 //
 // 판정은 횟수로만 한다. ms 는 PC 마다 달라 찍기만 한다. 예산은 "이하"다 — 단계마다 고친 만큼 낮춘다.
-// 흐름은 메인의 실제 처리 순서다: 1초 틱(src/main/app/ticks.ts) → 설정창 시계(manage:snapshot), 명령(manage:command) → 답 뒤 다시 읽기(manage:snapshot) → 기기 창 열기.
+// 흐름은 메인의 실제 처리 순서다: 1초 틱(src/main/app/ticks.ts) → 설정창 시계(manage:snapshot), 명령(manage:command, 답에 스냅샷을 싣는다) → 기기 창 열기.
 // 기기 창 열기는 Electron 창 없이 같은 읽기(스냅샷 한 번)로 대신한다 (src/main/manage/devices.ts openDevice).
 // 알림·코치·말풍선의 읽기는 가짜로 둬 세지 않는다. 15초마다 도는 저장 감시 다시 읽기(worker.refresh)도 세지 않는다
 import "../harness/electron-stub"; // 메인 모듈보다 먼저 — src/main/app/ticks.ts 가 electron 을 부른다
@@ -28,9 +28,10 @@ import { printLine } from "../harness/report";
 const BUDGET: Record<string, Counts> = {
   tick: { "fs.readFileSync": 0, structuredClone: 2, snapshotOfGame: 0 },
   clock: { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 1 },
-  "bag.use": { "fs.readFileSync": 4, structuredClone: 5, snapshotOfGame: 4 },
-  "shop.buy": { "fs.readFileSync": 4, structuredClone: 5, snapshotOfGame: 4 },
-  "tick-after": { "fs.readFileSync": 0, structuredClone: 2, snapshotOfGame: 0 },
+  "bag.use": { "fs.readFileSync": 4, structuredClone: 5, snapshotOfGame: 3 },
+  "shop.buy": { "fs.readFileSync": 4, structuredClone: 5, snapshotOfGame: 3 },
+  // 명령이 쓴 뒤 메모리 값이 비어 다음 틱이 디스크를 읽는다(src/tx/live-save.ts write). 1-4 전에는 답 뒤 다시 읽기가 이 읽기를 했다. 2-1 에서 0 으로
+  "tick-after": { "fs.readFileSync": 2, structuredClone: 2, snapshotOfGame: 0 },
   "clock-after": { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 1 },
 };
 
@@ -92,12 +93,12 @@ async function measure(scene: string): Promise<Flow[]> {
     // 평상시 1초 — 앱 틱, 그다음 설정창 시계가 스냅샷을 읽는다
     await run("tick", () => ticks.clock({ now: clock.now, gap: CLOCK_RULES.periodMs, seq: seq++ }));
     await run("clock", () => void snapshotReply(game, reads));
-    // 명령 한 건 — 명령, 답 뒤 다시 읽기(command.ts reload), 기기 창 열기(devices.ts openDevice)
+    // 명령 한 건 — 명령(답에 스냅샷), 기기 창 열기(devices.ts openDevice). 설정창은 답 뒤에 다시 읽지 않는다(1-4)
     const command = (name: string, raw: unknown) =>
       run(name, async () => {
         const reply = await commandReply(game, reads, send, raw);
         assert.ok(reply.ok, `${name} 성공: ${JSON.stringify(reply)}`);
-        snapshotReply(game, reads);
+        assert.ok(reply.view, "답에 스냅샷이 있다");
         reads.snapshot();
       });
     await command("bag.use", { cmd: "bag.use", target: "exp-candy-s", args: { petId: partyPet, reqId: `perf-bag-${r}` } });

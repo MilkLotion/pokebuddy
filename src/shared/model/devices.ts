@@ -147,8 +147,15 @@ export interface BattleDeviceInput {
   busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
 }
 
+// 배틀 창이 읽는 개체 값만 — 만복도·쿨타임처럼 시간으로 바뀌는 값을 싣지 않는다. 그래야 시간이 흘러도 모델이 같아 다시 그리지 않는다
+// (실행 규칙 R1·R4, worklog/records/perf-refactor 1-3). species 는 울음소리가 쓴다
+export type BattleDevicePet = Pick<PetView, "id" | "species" | "name" | "nameParts" | "gender" | "shiny" | "types" | "typeIds" | "mega">;
+export interface BattleDeviceSlot extends Omit<BattleSlotView, "pet" | "options"> {
+  pet: BattleDevicePet;
+}
+
 export interface BattleDeviceOpen {
-  slot: BattleSlotView; // 개체가 든 칸
+  slot: BattleDeviceSlot; // 개체가 든 칸
   caption: string; // 화면 첫 줄 — "배틀 파티 1번"
   notice: string;
   busy: string | null;

@@ -194,13 +194,13 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 2. 메인 `manage/handlers.ts` 가 요청 모양을 확인하고 흐른 시간을 먼저 적용한다.
 3. `app/commands.ts` 의 디스패처가 writer 가 아니면 명령을 `mailbox/` 로 넘긴다.
 4. `tx/game.ts` → `tx/executor.ts` 가 저장을 읽고, 처리기가 도메인 함수를 부르고, `settle.ts` 후처리를 거쳐 한 번 쓴다.
-5. 답이 돌아오면 렌더러는 실패 시 `shared/fail-text.ts` 문구를 띄우고, 성공 시 스냅샷을 다시 받아 그린다.
+5. 메인은 답에 명령 뒤의 스냅샷을 싣는다(`manage/game-reads.ts`). 렌더러는 실패 시 `shared/fail-text.ts` 문구를 띄운다. 그리고 답의 스냅샷으로 그린다. 답 뒤에 스냅샷을 다시 부르지 않는다.
 
 ### 저장 → 화면
 
-1. 렌더러 `manage/live.ts` 가 스냅샷을 부르면 메인이 `view/snapshot.ts` 로 만들어 돌려준다. `shell.ts` 가 지금 탭을 다시 그린다.
-2. 1초마다 다시 받은 스냅샷에서 시간으로만 바뀌는 필드(`shared/live-keys.ts`)만 달라졌으면 막대와 남은 시간 글자만 고치고, 아니면 다시 그린다.
-3. 기기 창은 설정창의 연결 파일이 연다. 메인 `manage/devices.ts` 가 `view/device-*.ts` 로 모델을 만들고, 기기 창은 새 모델이 올 때마다 통째로 다시 그린다.
+1. 렌더러 `manage/live.ts` 가 스냅샷을 부르면 메인이 `view/snapshot.ts` 로 만들어 돌려준다. 메인은 스냅샷마다 순번(`seq`)을 붙인다. 렌더러는 이미 받은 것보다 낮은 순번을 버린다(`manage/view-gate.ts`). `shell.ts` 가 지금 탭을 다시 그린다.
+2. 1초마다 다시 받은 스냅샷에서 시간으로만 바뀌는 값만 달라졌으면 글자만 고친다. 그 값은 필드 이름(`LIVE_KEYS`)과 경로(`SNAPSHOT_LIVE_PATHS`, 머리의 포인트·낮밤 게이지)로 정한다(`shared/live-keys.ts`). 그 밖의 값이 달라지면 다시 그린다. 시간만 흘러도 모양이 바뀌는 경로는 `selftest-live-shape` 가 잡는다.
+3. 기기 창은 설정창의 연결 파일이 연다. 메인 `manage/devices.ts` 가 `view/device-*.ts` 로 모델을 만든다. 같은 모델이면 다시 보내지 않는다. 파티 상세와 배틀 창은 모양이 같으면 다시 그리지 않는다. 가방·상점·도감 기기 창은 새 모델이 올 때마다 통째로 다시 그린다(`check-runtime` 기준 목록).
 
 ## 어디에 넣나
 

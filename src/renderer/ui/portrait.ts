@@ -4,6 +4,7 @@
 // 그림은 PokeAPI 기본 그림(96 × 96)이고 data URI 로 온다 (src/main/art/portraits.ts)
 import type { OpaqueBox } from "../../shared/model/snapshot.js";
 import { opaqueBoxOf, readPixels } from "./image.js";
+import { createLru } from "./lru.js";
 
 // 불투명한 영역 — 알파 128 이상인 점을 모두 담는 네모. 빈 그림은 null
 function opaqueBox(img: HTMLImageElement): { box: OpaqueBox; canvas: HTMLCanvasElement } | null {
@@ -83,22 +84,35 @@ export interface SpriteBox {
   maxSide?: number;
 }
 
+// 풀어 둔 그림 — 그림 주소마다 불투명 네모와 읽은 그림. 빈 그림은 null. 다시 그릴 때 기다리지 않고 바로 칠한다
+// (배틀 파티 상세 초상이 다시 그릴 때마다 빈 칸에서 시작해 깜빡였다, worklog/records/perf-refactor 1-2)
+const decoded = createLru<{ box: OpaqueBox; canvas: HTMLCanvasElement } | null>(64);
+
+function paint(out: HTMLCanvasElement, found: { box: OpaqueBox; canvas: HTMLCanvasElement }, box: SpriteBox): void {
+  const { x, y, w, h } = found.box;
+  const scale = Math.max(1, Math.min(box.maxScale, Math.floor((box.maxSide ?? box.w) / w), Math.floor((box.maxSide ?? box.h) / h)));
+  out.width = Math.min(w * scale, box.w);
+  out.height = Math.min(h * scale, box.h);
+  const ctx = out.getContext("2d");
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(found.canvas, x, y, w, h, (out.width - w * scale) / 2, (out.height - h * scale) / 2, w * scale, h * scale);
+}
+
 export function spriteCanvas(uri: string, box: SpriteBox): HTMLCanvasElement {
   const out = document.createElement("canvas");
   out.width = 0;
   out.height = 0;
+  if (decoded.has(uri)) {
+    const found = decoded.get(uri);
+    if (found) paint(out, found, box);
+    return out;
+  }
   const img = new Image();
   img.onload = () => {
     const found = opaqueBox(img);
-    if (!found) return;
-    const { x, y, w, h } = found.box;
-    const scale = Math.max(1, Math.min(box.maxScale, Math.floor((box.maxSide ?? box.w) / w), Math.floor((box.maxSide ?? box.h) / h)));
-    out.width = Math.min(w * scale, box.w);
-    out.height = Math.min(h * scale, box.h);
-    const ctx = out.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(found.canvas, x, y, w, h, (out.width - w * scale) / 2, (out.height - h * scale) / 2, w * scale, h * scale);
+    decoded.set(uri, found);
+    if (found) paint(out, found, box);
   };
   img.src = uri;
   return out;

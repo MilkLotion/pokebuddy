@@ -58,7 +58,7 @@ import { petInView, ui } from "./state.js";
 
 // 명령의 뒤처리 — 다시 읽기·도감 비우기는 여기에 있다 (command.ts)
 setCommandHooks({
-  reload: () => refreshView(),
+  reload: (view) => refreshView(view),
   touchesDex: () => forgetDexRows(),
 });
 
@@ -288,7 +288,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 // 첫 화면을 그린 뒤에 옮긴다 — 창을 새로 열면서 온 목적지는 스냅샷보다 먼저 올 수 있다
-const firstDraw = loadArt().then(refreshView);
+const firstDraw = loadArt().then(() => refreshView());
 // 버전·패치노트 — 첫 화면 뒤에 읽는다. 업데이트한 뒤 처음이면 노트를 한 번 띄운다
 void firstDraw.then(loadUpdate).then(openUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다

@@ -101,6 +101,13 @@ export function redrawBody(): void {
   restoreFocusPath(kept);
 }
 
+// 머리의 시간 값 — 포인트·낮·밤 게이지. 본문을 다시 그리지 않고 이것만 고칠 때도 부른다(live.ts applyLive)
+export function drawHeader(view: Snapshot): void {
+  const points = numberText(view.points);
+  if (pointsEl.textContent !== points) pointsEl.textContent = points;
+  drawDayGauge(dayGaugeEl, view.day);
+}
+
 function drawBody(): void {
   drawTabs();
   bodyEl.replaceChildren();
@@ -108,8 +115,7 @@ function drawBody(): void {
     bodyEl.appendChild(el("div", "empty-note", "저장이 없습니다. 첫 포켓몬을 먼저 고르세요."));
     return;
   }
-  pointsEl.textContent = numberText(ui.view.points);
-  drawDayGauge(dayGaugeEl, ui.view.day);
+  drawHeader(ui.view);
   achDotEl.hidden = ui.view.achievements.unclaimed === 0;
   for (const sync of bodySyncs) sync(); // 기기 창 — 고른 것이 사라졌으면 닫는다
   const tab = tabs.find((t) => t.id === ui.tab);
