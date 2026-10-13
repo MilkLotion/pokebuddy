@@ -115,8 +115,12 @@ export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorO
   };
   const reveal = (): void => {
     if (win.isDestroyed()) return;
+    // 예비 창은 미리 만들어 두었다 — 그사이 무대 창이 항상 위를 다시 걸며(src/main/stage/keep-on-top.ts) 앞으로 올라와 예비 창은 그 뒤에 있다.
+    // 포커스 없이 보이면(showInactive) 그 순서대로 뒤에 떴다가 1초 뒤 유지 작업이 앞으로 올린다. 보이기 전후에 맨 위로 올린다 (perf-refactor 8-1 실기)
+    win.moveTop();
     if (opts.inactive) {
       win.showInactive();
+      win.moveTop();
       return;
     }
     win.show();
