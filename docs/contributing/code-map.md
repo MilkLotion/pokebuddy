@@ -200,7 +200,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 1. 렌더러 `manage/live.ts` 가 스냅샷을 부르면 메인이 `view/snapshot.ts` 로 만들어 돌려준다. 스냅샷은 복제하지 않은 메모리 값(`game.peek`)으로 만들고 저장을 고치지 않는다. 시간이 흐르지 않는 개체(박스·쉬는 프리셋)의 화면 값은 저장 문맥이 같으면 지난 값을 쓴다(`view/snapshot.ts`, `selftest-snapshot-cache`). 메인은 스냅샷마다 순번(`seq`)을 붙인다. 렌더러는 이미 받은 것보다 낮은 순번을 버린다(`manage/view-gate.ts`). `shell.ts` 가 지금 탭을 다시 그린다.
 2. 1초마다 다시 받은 스냅샷에서 시간으로만 바뀌는 값만 달라졌으면 글자만 고친다. 그 값은 필드 이름(`LIVE_KEYS`)과 경로(`SNAPSHOT_LIVE_PATHS`, 머리의 포인트·낮밤 게이지)로 정한다(`shared/live-keys.ts`). 그 밖의 값이 달라지면 다시 그린다. 시간만 흘러도 모양이 바뀌는 경로는 `selftest-live-shape` 가 잡는다.
-3. 기기 창은 설정창의 연결 파일이 연다. 메인 `manage/devices.ts` 가 `view/device-*.ts` 로 모델을 만든다. 같은 모델이면 다시 보내지 않는다. 파티 상세와 배틀 창은 모양이 같으면 다시 그리지 않는다. 가방·상점·도감 기기 창은 새 모델이 올 때마다 통째로 다시 그린다(`check-runtime` 기준 목록).
+3. 기기 창은 설정창의 연결 파일이 연다. 메인 `manage/devices.ts` 가 `view/device-*.ts` 로 모델을 만든다. 같은 모델이면 다시 보내지 않는다. 파티 상세와 배틀 창은 모양이 같으면 다시 그리지 않는다. 가방·상점·도감 기기 창은 지난번에 그린 모델과 같으면 그리지 않는다(`device-frame.ts` 의 `showWith`). 설정창 연결은 시간이 흐르면 1초마다 고른 값을 다시 보낸다. 모델에 포인트·쿨타임 같은 시간 값이 들어 있기 때문이다(`check-runtime` 기준 목록 `link-stamp` 4건).
 
 ## 어디에 넣나
 
@@ -213,6 +213,23 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 | 설정창에 대화상자 추가 | `renderer/manage/<이름>.ts` 를 만들고 `manage.ts` 에서 `registerDialog`, 종류는 `dialog-types.ts` |
 | 새 창 | `renderer/<묶음>/` 와 HTML, `shared/ipc/` 계약, `main/windows/` 창 파일, `main/preload.ts` 채널 표 |
 | 서버 호출 추가 | `online/` 에서 `callRpc` 로, 오류 코드는 `online/codes.ts` 와 `shared/names/online-codes.ts` |
+
+## 실행 규칙
+
+폴더와 import 방향은 위의 의존 규칙이 정한다. 아래는 앱이 도는 동안 지키는 규칙이다. 화면이 늦거나 깜빡이는 원인은 대부분 이 규칙을 어긴 곳이었다. 새 화면·창·명령을 만들 때 이 규칙을 따른다. 규칙과 다르게 해야 하면 먼저 이 절을 고친다.
+
+| 번호 | 규칙 | 쓰는 코드 | 지키는 시험 |
+|---|---|---|---|
+| R1 | 시간이 흐르기만 해도 바뀌는 값은 화면 모양에 넣지 않는다. 그 값은 글자만 고친다. 값은 경로로 정한다. | `shared/live-keys.ts` 의 `SNAPSHOT_LIVE_PATHS` | `selftest-live-shape` |
+| R2 | 늦게 온 답은 순번으로 버린다. 문자열이나 객체 참조로 "바뀌었나"를 판정하지 않는다. | 스냅샷의 `seq`, `manage/view-gate.ts`, 기기 창 세대 번호(`main/windows/device-gen.ts`) | `selftest-view-order`, `selftest-device-link` |
+| R3 | 명령의 답에 명령 뒤 스냅샷을 싣는다. 렌더러는 답 뒤에 스냅샷을 다시 부르지 않는다. | `manage/game-reads.ts` 의 `commandReply` | `selftest-command-reply` |
+| R4 | 창은 모양이 바뀔 때만 DOM 을 다시 만든다. 모델이 같으면 아무것도 하지 않는다. 같은 자리·크기면 창을 옮기지 않는다. 한 번 읽은 초상은 다시 그려도 바로 칠한다. | `device-frame.ts` 의 `showWith`, `ui/portrait.ts` 의 캐시 | `selftest-device-link`, `selftest-portrait-cache`, `check-runtime` |
+| R5 | 저장의 정본은 메인 메모리다. 디스크는 보관용이다. 메인은 다른 곳이 쓴 것을 알았을 때만 디스크를 다시 읽는다. 읽기만 하는 곳은 복제하지 않는다. | `tx/live-save.ts`, `save/save-watch.ts` 의 `adopt`, `tx/game.ts` 의 `peek` | `selftest-live-save`, `selftest-perf` |
+| R6 | `data/` 만으로 정해지는 값은 자료 폴더를 열쇠로 기억한다. 메인에서 늘 도는 동기 파일 작업을 새로 만들지 않는다. | `dex/data.ts` 의 `loadJson` 캐시 | `selftest-memo` |
+| R7 | 누르면 뜨는 창은 누를 때 만들지 않는다. 문서를 미리 읽은 숨은 예비 창을 꺼내 쓰고, 쓴 창은 없앤다. 예비 창을 보일 때는 맨 위로 올린다. | `main/windows/device-window.ts`, `main/menus/menu-window.ts` | `smoke-device-open`, `smoke-menu-open`(시간 기록) |
+| R8 | 바깥에서 받는 그림·자료는 실패를 기억한다. 없는 것(404)과 지금 못 받은 것을 가른다. 실패한 것을 도구마다·틱마다 다시 받지 않는다. | `main/art/fetch.ts` 의 `fetchOutcome`, `main/art/asset-cache.ts`, `main/art/stage-art.ts` | `selftest-overworld-art` |
+
+새 창이 이 규칙을 지키는지는 `docs/contributing/development.md` 의 계측 도구로 잰다. 횟수는 `selftest-perf` 가 판정하고, ms 는 기록만 한다.
 
 ## 공통 코드
 
@@ -235,6 +252,8 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **틀** — `device/device-frame.ts` 의 `createDeviceFrame`. 머리·바닥·높이 알림, ←→ 넘기기와 Esc 닫기가 여기 있다. 입력칸 안의 키는 넘기기·닫기에 쓰지 않는다.
 - **상품 화면** — 상점과 가방은 `item-face.ts` 의 `drawItemFace` 를 같이 쓴다. 수량은 `qtyRowEl`(`−`·숫자 칸·`+`·`최대`), 미리보기·합계·결과 상자는 `totalBoxEl`(늘 두 줄 높이), 바닥 주 단추는 `goButtonEl`.
 - **설정창과의 연결** — `manage/device-link.ts` 의 `createDeviceLink`. 명령을 보내는 동안 중간 장면을 보내지 않으려면 `holding` 을 켠다(상점·가방).
+- **같은 값 거르기** — 모델을 받는 기기 창은 `frame.showWith` 로 받는다. 지난번과 같은 값이면 그리지 않는다(R4).
+- **창 만들기** — 기기 창은 `main/windows/device-window.ts` 의 `createDeviceWindow` 로 만든다. 예비 창·세대 번호·자리 붙이기를 이 틀이 한다(R7). 새 기기 창은 명세(`main/windows/devices.ts`)만 더한다.
 
 ### 여러 창이 같이 쓰는 것
 
@@ -242,7 +261,8 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **그림과 표시** — 초상은 `ui/portrait.ts`(`spriteCanvas`, `portraitImg`), 막대는 `ui/fill-bar.ts`, 타입 배지는 `ui/type-badge.ts`(타입 색은 `styles/type-badge.css` 의 `--type`), 기술 칸은 `ui/move-pill.ts`(`styles/move-pill.css`), DPS 표는 `ui/dps-table.ts`(`styles/dps-table.css`, 배틀 창 아래 표와 설정창 배틀 상세가 같이 쓴다), 성별·이로치 아이콘은 `ui/gender-icon.ts`·`ui/shiny-icon.ts`. 선 아이콘(+·자물쇠·✕·꺽쇠·위아래 화살표)은 `ui/line-icons.ts` 다. 순서 바꾸기·교환 표시의 위아래 화살표는 `swapIconEl` 하나를 배틀 파티 상세 기기 창, 기술 바꾸기 모달, 교환 화면이 같이 쓴다.
 - **글자** — 숫자와 포인트, 남은 시간은 `shared/count-text.ts`(`numberText`, `pointText`, `waitText`), 조사는 `shared/josa.ts`. 메인과 `view` 의 문구는 `view/text.ts` 의 `t` 로 `data/i18n/*.json` 에서 읽는다.
 - **알림 배너** — 문구와 목적지는 `view/banner.ts` 가 만든다. `route` 가 없는 배너는 `바로가기` 를 두지 않는다.
-- **메인의 창** — 보안 옵션은 `main/windows/options.ts`(`webPreferencesOf`, 덮개 창은 `createOverlayWindow`), 기기 창은 `device-window.ts`.
+- **메인의 창** — 보안 옵션은 `main/windows/options.ts`(`webPreferencesOf`, 덮개 창은 `createOverlayWindow`), 기기 창은 `device-window.ts`, 메뉴는 `menus/menu-window.ts` 의 `openMenu`(예비 창, R7).
+- **그림 받기** — 초상·도구 그림은 `main/art/services.ts` 의 `artServices` 한 벌을 쓴다. 같은 그림을 두 번 받지 않고, 실패를 기억한다(R8). 렌더러는 그림을 메인의 상한 단위로 나눠 청한다.
 
 ### 시험
 
