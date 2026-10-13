@@ -266,13 +266,15 @@ process.stdin.on("end", () => {
     const file = path.join(STATE_DIR, `${sessionId}.json`);
     const now = Date.now() / 1000;
     const prev = readState(file);
-    // 조상은 한 세션 안에서 바뀌지 않는다. Windows 는 구하는 데 PowerShell 을 띄워야 해서, 도구를 쓸 때마다
-    // 부르지 않고 세션 시작(재개 포함 — 다른 터미널에서 이어 열 수 있다) 때 구한 것을 이어 쓴다
-    const known = prev && Array.isArray(prev.ancestors) && prev.ancestors.length ? prev.ancestors : null;
-    const ancestors = process.platform === "win32" && event !== "SessionStart" && known ? known : ancestorPids();
+    // 조상은 한 세션 안에서 바뀌지 않는다. 구하는 데 프로세스 표를 읽어야 해서(Windows PowerShell 수백 ms, mac·Linux ps),
+    // 도구를 쓸 때마다 부르지 않고 세션 시작(재개 포함 — 다른 터미널에서 이어 열 수 있다) 때 구한 것을 이어 쓴다.
+    // 못 구한 것(빈 목록)도 이어 쓴다 — 실패한 조회를 도구마다 다시 띄우지 않는다 (worklog/records/perf-refactor 8-3, G12-1·2)
+    const knownList = prev && Array.isArray(prev.ancestors) ? prev.ancestors.filter((n): n is number => typeof n === "number") : null;
+    const known = knownList && (knownList.length || prev?.ancestorsTried === true) ? knownList : null;
+    const ancestors = event !== "SessionStart" && known ? known : ancestorPids();
     const { prompt, ...shown } = mapping;
     // cwd·조상 프로세스 기록 — 펫 오버레이가 자기 터미널의 세션만 따라가는 데 씀
-    const base: BaseRecord = { ...shown, cli: CLI, event, at: now, cwd: data.cwd || "", ancestors };
+    const base: BaseRecord = { ...shown, cli: CLI, event, at: now, cwd: data.cwd || "", ancestors, ancestorsTried: true };
 
     // 실패 표시 중에 바로 다음 도구 호출이 와도 실패 동작을 끝까지 보여줌 — 전환 대상만 갱신
     const holding = shown.state === "running" && prev?.state === "failed" && prev.hold !== undefined && prev.hold > 0 && prev.at !== undefined && now - prev.at < prev.hold;

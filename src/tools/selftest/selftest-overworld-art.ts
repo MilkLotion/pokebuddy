@@ -240,6 +240,18 @@ async function main(): Promise<void> {
     assert.strictEqual(await createArtLoader(FAKE_PATHS).loadLook("zz-none"), null);
   });
 
+  await check("(6) 못 구한 모습은 잠시 다시 받지 않는다 (perf-refactor 8-4)", async () => {
+    let clock = 1_000;
+    let asked = 0;
+    const loader = createArtLoader(FAKE_PATHS, { overworld: { load: async () => (asked++, null), prefetch: async () => false }, portrait: async () => null, now: () => clock });
+    assert.strictEqual(await loader.loadLook("zz-none"), null);
+    assert.strictEqual(await loader.loadLook("zz-none"), null);
+    assert.strictEqual(asked, 1, "간격 안에서는 다시 받지 않는다");
+    clock += 15_000;
+    await loader.loadLook("zz-none");
+    assert.strictEqual(asked, 2, "간격이 지나면 다시 받는다");
+  });
+
   if (failures.length) {
     for (const f of failures) out(`실패 — ${f}`);
     process.exit(1);

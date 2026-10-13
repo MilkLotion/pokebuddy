@@ -6,6 +6,8 @@
 // inactive 메뉴(Windows 트레이)는 포커스를 가져오지 않는다 — 가져오면 Windows 가 숨겨진 아이콘 창을 닫는다.
 //   그래서 바깥 클릭·Esc 는 부르는 쪽이 헬퍼의 입력 감시로 알아채 closeMenu 를 부른다 (helpers/winbounds.ps1).
 // 메뉴는 한 번에 하나다. 새로 띄우면 앞의 메뉴를 닫는다
+// 문서를 미리 읽어 둔 숨은 빈 창(예비 창)을 메뉴 종류(포커스 받음·안 받음)마다 하나 둔다 — 열 때 창 만들기·문서 읽기(약 90ms)를 기다리지 않는다 (worklog/records/perf-refactor 8-1).
+//   쓴 창은 지금처럼 닫아 없앤다 — 앞 메뉴의 상태가 남지 않는다. 닫힌 뒤 예비 창을 다시 둔다
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
 //   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
@@ -38,6 +40,41 @@ export interface MenuWindowOptions {
 }
 
 let current: BrowserWindow | null = null;
+
+// 예비 창을 만드는 때 — 닫힌 직후 바로 만들면 닫기와 겹친다
+const SPARE_DELAY_MS = 300;
+// 재기 전 자리 640 × 480 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
+const OPEN_SIZE = { width: 640, height: 480 };
+type MenuFiles = Pick<MenuWindowOptions, "preload" | "html" | "inactive">;
+const spares = new Map<string, BrowserWindow>();
+const spareKey = (o: MenuFiles): string => `${o.preload}|${o.html}|${o.inactive ? "inactive" : "focus"}`;
+const loaded = new WeakSet<BrowserWindow>(); // 문서를 다 읽은 창
+const usable = (w: BrowserWindow | undefined): w is BrowserWindow => !!w && !w.isDestroyed() && !w.webContents.isDestroyed();
+
+function blank(o: MenuFiles, at: { x: number; y: number }): BrowserWindow {
+  const win = createOverlayWindow({ preload: o.preload, layer: "pop-up-menu", bounds: { ...at, ...OPEN_SIZE }, focusable: !o.inactive, firstMouse: true, allWorkspaces: true }); // mac — 놀이공간 위 오버레이 창의 같은 옵션 (src/main/windows/options.ts, 94 문서 4-3·4-4)
+  win.webContents.once("did-finish-load", () => loaded.add(win));
+  void win.loadFile(o.html).catch(() => {
+    if (!win.isDestroyed()) win.destroy();
+  });
+  return win;
+}
+
+// 예비 창을 둔다 — 이미 있으면 하지 않는다. 앱이 시작 뒤 한가할 때와 메뉴가 닫힌 뒤 부른다
+export function warmMenu(o: MenuFiles): void {
+  const key = spareKey(o);
+  if (usable(spares.get(key))) return;
+  spares.set(key, blank(o, { x: 0, y: 0 }));
+}
+
+function takeSpare(o: MenuFiles, at: { x: number; y: number }): BrowserWindow {
+  const key = spareKey(o);
+  const spare = spares.get(key);
+  spares.delete(key);
+  if (!usable(spare)) return blank(o, at);
+  spare.setBounds({ ...at, ...OPEN_SIZE });
+  return spare;
+}
 let closedAt = 0; // 마지막으로 닫힌 시각 — 아이콘을 다시 눌러 닫은 것인지 가른다
 
 export const isMenuOpen = (): boolean => current != null && !current.isDestroyed();
@@ -61,8 +98,7 @@ export function menuRectNow(): Rect | null {
 export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorOptions[], on: string): void {
   if (current && !current.isDestroyed()) current.close();
   const { point: at, workArea: area } = cursorScreen();
-  // 재기 전 자리 640 × 480 — 메뉴와 말풍선이 이 폭에 묶이지 않게 넉넉히. 잰 뒤 줄인다
-  const win = createOverlayWindow({ preload: opts.preload, layer: "pop-up-menu", bounds: { x: at.x, y: at.y, width: 640, height: 480 }, focusable: !opts.inactive, firstMouse: true, allWorkspaces: true }); // mac — 놀이공간 위 오버레이 창의 같은 옵션 (src/main/windows/options.ts, 94 문서 4-3·4-4)
+  const win = takeSpare(opts, at);
   current = win;
   const scope = createIpcScope((sender) => !win.isDestroyed() && sender === win.webContents);
 
@@ -75,6 +111,7 @@ export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorO
     closedAt = Date.now();
     if (!win.isDestroyed()) win.close();
     opts.onClosed?.();
+    setTimeout(() => warmMenu(opts), SPARE_DELAY_MS); // 다음 메뉴를 위해 예비 창을 다시 둔다
   };
   const reveal = (): void => {
     if (win.isDestroyed()) return;
@@ -124,6 +161,8 @@ export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorO
   scope.on(CH.placed, () => reveal());
   win.on("blur", close);
   win.on("closed", close);
-  afterLoad(win, () => win.webContents.send(CH.show, menuView(template, on)));
-  void win.loadFile(opts.html).catch(close);
+  const show = (): void => win.webContents.send(CH.show, menuView(template, on));
+  // 예비 창은 문서를 이미 읽었다. 아직 읽는 중이면 다 읽은 뒤에 보낸다
+  if (loaded.has(win)) show();
+  else afterLoad(win, show);
 }

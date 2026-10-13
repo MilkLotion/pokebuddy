@@ -22,6 +22,7 @@ export interface HookStateRecord {
   at: number; // 초 (Date.now() / 1000)
   cwd: string;
   ancestors: number[];
+  ancestorsTried?: boolean; // 이 세션에서 조상을 구해 봤는가 — 못 구해 ancestors 가 비어도 참. 참이면 세션 시작 전까지 다시 구하지 않는다
   promptAt?: number | null; // 마지막 프롬프트 시각(초) — 이어 간다. 이전 기록이 없으면 null
   usage: Usage;
   usageOffset: number; // 대화 기록에서 읽은 바이트 자리

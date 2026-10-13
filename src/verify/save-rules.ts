@@ -333,11 +333,12 @@ const maxOf = (values: number[]): number => {
 };
 
 // 진화 간선으로 from 에서 to 에 닿는가 — 한 저장 사이에 여러 번 진화할 수 있다
+// 큐는 앞에서 빼지 않고 번호로 읽는다 — shift 는 매번 배열을 당긴다 (worklog/records/perf-refactor 8-5, G81-2)
 function reachable(evo: Record<string, string[]>, from: string, to: string): boolean {
   const seen = new Set<string>([from]);
   const queue = [from];
-  while (queue.length) {
-    const cur = queue.shift() as string;
+  for (let i = 0; i < queue.length; i++) {
+    const cur = queue[i] as string;
     for (const next of evo[cur] ?? []) {
       if (next === to) return true;
       if (!seen.has(next)) {
@@ -649,6 +650,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   for (const p of fresh) {
     if (prevIds.has(p.id) || idNo(p.id) <= prevPetSeq) add("pet-id", 1, 0, p.id);
   }
+  // 같은 id 가 둘 — 있던 개체의 사본을 하나 더 넣으면 새 개체로 세지 않아 new-pets 를 피한다 (G81-6).
+  // 앱의 저장 정리(src/save/normalize.ts)는 같은 id 를 걷으므로 앱이 올린 저장에는 없다
+  const dupIds = nextPets.length - new Set(nextPets.map((p) => p.id)).size;
+  if (dupIds > 0) add("pet-id", dupIds, 0);
   const boughtAndOpened = Math.floor(leftover / minBuy); // 사서 연 알·종 지정 구매 — 두 저장 어디에도 흔적이 없다
   // 말 부르기 — 직전 저장에서 얻지 않았던 말의 새 개체, 그사이 줄어든 유대의고삐 수까지. 같은 틈에 사서 바로 쓴 고삐는 위의 사서 생긴 몫(boughtAndOpened)이 덮는다
   const horses = new Set(Object.values(data.riders ?? {}));
@@ -702,8 +707,17 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     const seed = ctx.seed;
     const toOpen = prevEggs.filter((x) => !nextEggIds.has(x.id));
     const freshEggs = nextEggs.filter((e) => !prevEggIds.has(e.id));
-    const petFits = (p: Pet, species: string, shiny: boolean): boolean =>
-      (p.species === species || reachable(data.evo, species, p.species) || p.forms.includes(species)) && (p.shiny === shiny || potionBudget > 0 || p.shiny === false);
+    // 순서마다 같은 (개체, 종, 이로치)를 다시 본다 — 순서는 최대 720가지라 한 번 본 것을 기억한다 (G81-2)
+    const fitsMemo = new Map<string, boolean>();
+    const petFits = (p: Pet, species: string, shiny: boolean): boolean => {
+      const key = `${p.id}|${species}|${shiny ? 1 : 0}`;
+      let fits = fitsMemo.get(key);
+      if (fits === undefined) {
+        fits = (p.species === species || reachable(data.evo, species, p.species) || p.forms.includes(species)) && (p.shiny === shiny || potionBudget > 0 || p.shiny === false);
+        fitsMemo.set(key, fits);
+      }
+      return fits;
+    };
     // 한 순서의 결과 — 대조하지 못한 알 수
     const tryOrder = (order: typeof toOpen): number => {
       const waiting = [...prevEggs];

@@ -107,12 +107,20 @@ const REFUSAL_OF: Partial<Record<TradeCode, TradeRefusal>> = {
   TRADE_PET_NOT_SYNCED: "save-wait",
 };
 
+// 서버가 요청을 받았는지 모르는 실패 — 망 오류·알 수 없는 오류. 응답만 잃었을 수 있다.
+// 이때 잠금을 풀면 서버만 교환을 끝내 한쪽만 반영될 수 있다 — 잠금과 감시를 그대로 둔다 (worklog/records/perf-refactor 8-2, G33-1)
+const uncertain = (code: TradeCode): boolean => code === "NETWORK" || code === "UNKNOWN";
+
+// 반영 알림(ack) 다시 보내기 — 반영은 끝났는데 서버가 반영 시각을 못 받았다. 앱이 도는 동안 이만큼 다시 보낸다 (G33-2)
+const ACK_TRIES = 10;
+
 export function createTradeSession(o: TradeSessionOptions): TradeSession {
   let state: TradeViewModel = { ...EMPTY };
   let channelId: string | null = null;
   let unsubscribe: (() => void) | null = null;
   let pollTimer: unknown = null;
   let retryTimer: unknown = null;
+  let ackTimer: unknown = null;
   let stopped = false;
   let seq = 0;
   const setTimer = o.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
@@ -187,6 +195,16 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     }
   };
 
+  // 반영을 서버에 알린다. 망 오류면 조금 뒤 다시 보낸다 — 서버는 반영 시각이 있어야 이 교환을 저장된 것으로 본다
+  const ackOf = async (id: string, tries: number): Promise<void> => {
+    const ack = await o.net.ackApplied(id);
+    if (stopped) return;
+    if (ack.ok) { o.onSettled?.(); return; }
+    if (!uncertain(ack.code) || tries >= ACK_TRIES) return; // 서버가 거절했거나 다 써 봤다. 반영은 이 PC 에 끝났다. 앱을 다시 켜면 보내지 않는다 — 저장에 남기지 않는다(G33-2 의 남은 부분)
+    if (ackTimer) clearTimer(ackTimer);
+    ackTimer = setTimer(() => { ackTimer = null; void ackOf(id, tries + 1); }, o.pollMs ?? 30_000);
+  };
+
   // 서버가 끝났다고 알린 채널을 로컬에 맞춘다
   const settle = async (view: ChannelView): Promise<void> => {
     if (view.status === "done") {
@@ -199,8 +217,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
       const refused = result.refused ? { code: "LOCAL" as const, detail: result.refused } : null;
       // 반영은 끝났다 — 서버 확인(최대 15초)을 기다리지 않고 먼저 보인다 (G33-3)
       emit({ phase: "done", channel: view, received: result.petId ? { petId: result.petId } : state.received, busy: false, error: refused ?? state.error });
-      const ack = await o.net.ackApplied(view.id);
-      if (ack.ok) o.onSettled?.();
+      await ackOf(view.id, 1);
       return;
     }
     if (view.status === "cancelled" || view.status === "expired") {
@@ -375,7 +392,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     if (!locked.ok) return fail("LOCAL", String(locked.reason));
     const res = await o.net.setReady(channelId, view.offer_rev);
     if (!res.ok) {
-      if (res.code !== "TRADE_ALREADY_DONE") tx("trade.unlock", { channelId });
+      // 망 오류면 서버가 확정을 받았을 수 있다 — 잠금을 두고 감시로 결과를 기다린다 (G33-1)
+      if (res.code !== "TRADE_ALREADY_DONE" && !uncertain(res.code)) tx("trade.unlock", { channelId });
       if (res.code === "TRADE_OFFER_CHANGED") {
         emit({ busy: false });
         await refresh();
@@ -417,6 +435,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
       await refresh();
       return { ok: false, reason: res.code };
     }
+    // 망 오류면 서버 채널이 그대로일 수 있다 — 잠금·감시를 두고 오류로 돌려준다. 다시 나가기를 누르면 다시 보낸다 (G33-1)
+    if (!res.ok && uncertain(res.code)) return fail(res.code, res.detail);
     tx("trade.unlock", { channelId: id });
     stopWatching();
     channelId = null;
@@ -429,6 +449,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     stopWatching();
     if (retryTimer) clearTimer(retryTimer);
     retryTimer = null;
+    if (ackTimer) clearTimer(ackTimer);
+    ackTimer = null;
   };
 
   return { view: () => state, start, create, join, offer, ready, unready, leave, refresh, stop };

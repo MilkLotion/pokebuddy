@@ -87,7 +87,7 @@ flowchart TB
 - `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), Electron 없이 도는 스냅샷·명령 처리(`game-reads.ts`), 기기 창 다섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
 - `stage/` — 무대. 화면마다 무대 창과 무대를 한 쌍씩 둔다(`stage-group.ts`). `stage.ts` 가 40ms 마다 프레임을 만들어 `stage-window.ts` 로 보낸다. 맨 앞 터미널을 보고 포켓몬을 보일지 정하는 `host-watch.ts`, 말풍선과 바탕화면 튜토리얼도 여기 있다.
 - `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`, 설정창이 뜨면 기기 창마다 문서를 미리 읽은 숨은 예비 창을 둔다), 판을 재생하는 배틀 창(`battle-window.ts`, 설정창 위 가운데에 뜬다), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
-- `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 항목은 `view/menus.ts` 가 만든다.
+- `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 창은 기기 창처럼 문서를 미리 읽은 숨은 예비 창을 꺼내 쓴다. 메뉴 항목은 `view/menus.ts` 가 만든다.
 - `services/` — 온라인, 친구 교환, OS 키 저장소, 자동 업데이트를 켜고 끈다. 묶음의 주인은 `registry.ts`.
 - `art/` — 포켓몬 그림과 울음소리를 받아 캐시한다. 받을 주소는 `sources.ts` 한 곳이다.
 - `update/` — 업데이트 엔진(Windows `updater.ts`, mac `mac-updater.ts`)과 패치노트.

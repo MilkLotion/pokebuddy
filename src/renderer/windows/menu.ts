@@ -8,6 +8,7 @@ import { MENU_METRICS } from "../../shared/window-metrics.js";
 import { needBridge } from "../ui/bridge.js";
 import { portraitImg } from "../ui/portrait.js";
 import { needEl } from "../ui/dom.js";
+import { whenFontsReady } from "../ui/fonts.js";
 
 const wrap = needEl("wrap", HTMLElement, "menu");
 const menu = needEl("menu", HTMLElement, "menu");
@@ -24,6 +25,9 @@ let rows: HTMLButtonElement[] = [];
 let rowAt = -1; // 말풍선 안에서 가리킨 줄
 let opener: HTMLButtonElement | null = null; // 말풍선이 달린 항목
 let opened = false;
+
+// 메뉴가 쓰는 글꼴 — 잰 폭이 대체 글꼴 폭이면 창이 메뉴와 어긋난다. 예비 창은 메뉴를 받기 전에 다 읽어 둔다 (G51-1)
+const fontsReady = whenFontsReady(['400 12px "Galmuri11"', '700 12px "Galmuri11"']);
 
 function point(i: number): void {
   at = i;
@@ -103,13 +107,28 @@ function bubbleTop(item: HTMLElement): number {
   return top;
 }
 
-api.onShow((items: MenuView[]) => {
+// 앞 메뉴의 상태를 한곳에서 비운다 — 가리킨 항목·말풍선 줄·말풍선 쪽·잰 크기 (G61-1)
+function resetMenu(): void {
   menu.replaceChildren();
   bubble.replaceChildren();
   buttons = [];
   rows = [];
+  at = -1;
+  rowAt = -1;
   opener = null;
   opened = false;
+  wrap.classList.remove("side-left");
+  menu.style.marginLeft = "";
+  wrap.style.width = "";
+  wrap.style.height = "";
+  bubble.style.top = "";
+  bubble.style.left = "";
+}
+
+api.onShow((items: MenuView[]) => void fontsReady.then(() => drawMenu(items)));
+
+function drawMenu(items: MenuView[]): void {
+  resetMenu();
   for (const item of items) {
     if (item.kind === "status") {
       const box = document.createElement("div");
@@ -181,7 +200,7 @@ api.onShow((items: MenuView[]) => {
   wrap.style.width = `${w + SUB_GAP + bubble.offsetWidth}px`;
   wrap.style.height = `${Math.max(h, top + bubble.offsetHeight)}px`;
   api.size(w, h, { w: bubble.offsetWidth, h: bubble.offsetHeight, top });
-});
+}
 
 // 말풍선이 뜰 쪽 — 오른쪽이면 메뉴가 틀의 왼쪽에, 왼쪽이면 메뉴가 틀의 오른쪽에 앉는다
 api.onSide((side) => {

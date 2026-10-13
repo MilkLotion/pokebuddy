@@ -15,6 +15,7 @@ import { battleLookTable } from "../../dex/tables";
 import { dexFolderOf, lookOf } from "../../dex/look";
 import type { OverworldSource } from "./overworld-art";
 import { portraitArt } from "./portrait-art";
+import { ASSET_RULES } from "./asset-cache";
 import { loadPmd, prefetchPmd } from "./pmd-load";
 
 export const ART_RULES = {
@@ -128,11 +129,15 @@ export type PortraitSource = (look: string) => Promise<Buffer | null>;
 export interface FallbackSources {
   overworld?: OverworldSource;
   portrait?: PortraitSource;
+  now?: () => number; // 시험용 시계
 }
 
-export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackSources = {}): ArtLoader {
+export function createArtLoader(paths: Paths, { overworld, portrait, now = Date.now }: FallbackSources = {}): ArtLoader {
   const pending = new Map<string, Promise<Look | null>>();
   const done = new Map<string, Look | null>();
+  // 그림을 하나도 못 구한 모습 → 시각. 이 동안은 다시 받지 않는다 — 오프라인이면 받을 때마다 PMD 후보마다 시간 초과를 기다린다
+  // (worklog/records/perf-refactor 8-4, G17-4). 초상 받기와 같은 간격이다(asset-cache ASSET_RULES.retryMs)
+  const failedAt = new Map<string, number>();
   const tried = new Set<string>(); // 미리 받기를 시도한 모습
   const queue: string[] = [];
   let prefetching: { look: string; job: Promise<unknown> } | null = null; // 지금 미리 받는 모습 — 무대가 같은 모습을 겹쳐 받지 않게 기다린다
@@ -186,9 +191,17 @@ export function createArtLoader(paths: Paths, { overworld, portrait }: FallbackS
     loadLook(look) {
       const key = normalizeLook(look);
       if (done.has(key)) return Promise.resolve(done.get(key) ?? null);
+      const failed = failedAt.get(key);
+      if (failed !== undefined && now() - failed < ASSET_RULES.retryMs) return Promise.resolve(null);
       let p = pending.get(key);
       if (!p) {
-        p = fetchLook(key).finally(() => pending.delete(key));
+        p = fetchLook(key)
+          .then((got) => {
+            if (got) failedAt.delete(key);
+            else failedAt.set(key, now());
+            return got;
+          })
+          .finally(() => pending.delete(key));
         pending.set(key, p);
       }
       return p;

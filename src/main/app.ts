@@ -44,7 +44,7 @@ import { createStageWindow } from "./stage/stage-window";
 import { currentLang, langOf, petLabel, petName, setLang, t } from "../view/text";
 import { failTextOf } from "../shared/fail-text";
 import { createTray, type TrayHandle } from "./menus/tray";
-import { closeMenu, closedWithin, isMenuOpen } from "./menus/menu-window";
+import { closeMenu, closedWithin, isMenuOpen, warmMenu } from "./menus/menu-window";
 import { createPetMenu } from "./menus/pet-menu";
 import { createTrayMenu } from "./menus/tray-menu";
 import { gainOf } from "../state/settings";
@@ -670,6 +670,9 @@ function bootServices(saveSource: SaveParty): void {
 
 }
 
+// 메뉴 예비 창을 만드는 때 — 시작 직후의 다른 일과 겹치지 않게
+const MENU_WARM_MS = 2000;
+
 // 트레이·첫 동기화·준비 알림·주기 작업·화면 변화 구독
 function bootFinish(saveSource: SaveParty, group: StageGroup, watch: HostWatch, life: Lifetime): void {
   rt.tray = createTray({
@@ -681,6 +684,15 @@ function bootFinish(saveSource: SaveParty, group: StageGroup, watch: HostWatch, 
     closeMenu,
     closedWithin,
   });
+
+  // 메뉴 예비 창 — 첫 우클릭·트레이 클릭도 창 만들기를 기다리지 않게. 시작을 막지 않게 뒤로 미룬다 (worklog/records/perf-refactor 8-1)
+  // 포켓몬 메뉴는 포커스를 받는다. Windows 트레이 메뉴는 받지 않는다(src/main/menus/tray-menu.ts) — 다른 창이라 따로 둔다
+  setTimeout(() => {
+    if (run.quitting()) return;
+    const files = { preload: preloadFile(), html: rendererFile("menu.html") };
+    warmMenu(files);
+    if (process.platform === "win32") warmMenu({ ...files, inactive: true });
+  }, MENU_WARM_MS);
 
   display.setGhost(display.ghost());
   // 옛 버전이 만든 작업 표시줄 점프 목록을 비운다 — Windows 는 앱이 지울 때까지 남겨 둔다 (2026-10-08 사용자 결정으로 점프 목록을 뺐다)

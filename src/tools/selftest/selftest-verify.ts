@@ -509,6 +509,10 @@ out("0 supabase/functions/_shared 가 최신");
   const reused = clone(sold);
   reused.pets.push(pet("p3", "bulbasaur", { since: T0 + 5 }));
   assert.ok(rules(prev, reused, ctx(1_000)).includes("pet-id"), "판 번호를 다시 썼다");
+  // 있던 개체의 사본을 하나 더 넣었다 — 같은 id·since 라 새 개체로 세지 않는다 (perf-refactor 8-5, G81-6)
+  const copied = clone(prev);
+  copied.pets.push(structuredClone(copied.pets[0]!));
+  assert.ok(rules(prev, copied, ctx(1_000)).includes("pet-id"), "같은 id 가 둘");
   // 같은 틈에 알을 열어 나온 개체를 팔았다 — 번호만 늘고 개체는 없다
   const hatchPrev = base();
   hatchPrev.eggs.push(egg("e1"));
