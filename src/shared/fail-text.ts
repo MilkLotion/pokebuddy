@@ -143,6 +143,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   BATTLE_COOLDOWN: { ko: "아직 다음 배틀을 할 수 없어요.", en: "You can't start the next battle yet." },
   BATTLE_OFFER_GONE: { ko: "상대 목록이 바뀌었어요. 새로고침해 주세요.", en: "The opponent list changed. Please refresh." },
   BATTLE_PARTY_INVALID: { ko: "배틀 파티를 확인해 주세요. 비었거나 출전 불가 포켓몬이 있어요.", en: "Check your battle party. It's empty or has a Pokémon that can't battle." },
+  BATTLE_REROLL_USED: { ko: "새로고침은 한 판에 한 번만 할 수 있어요.", en: "You can refresh only once per battle." },
   BATTLE_TOO_FAST: { ko: "너무 빨라요. 잠시 뒤 다시 해 주세요.", en: "Too fast. Please try again in a moment." },
   // 친선 배틀 — 첫 문장이 배너 제목, 나머지가 설명 (Figma 05 `15 모험` 오류 1879:7874·주석 1879:8591)
   FRIENDLY_BAD_ARGS: { ko: "친선 배틀 요청이 올바르지 않아요.", en: "The friendly battle request is not valid." },

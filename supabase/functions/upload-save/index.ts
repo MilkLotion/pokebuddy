@@ -141,8 +141,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!code) return /invalid input syntax/i.test(res.error.message) ? fail("CLOUD_BAD_ARGS") : serverError(res.error.message);
     return fail(code);
   }
-  // 배틀 파티 자동 등록(E3) — 받아들인 저장의 배틀 파티를 상대 후보로. 비었거나 출전 불가면 지운다. 실패해도 올리기는 성공이다
+  // 배틀 파티 자동 등록(E3) — 받아들인 저장의 배틀 파티를 상대 후보로. 6칸이 다 차지 않았거나 출전 불가면 지운다. 실패해도 올리기는 성공이다
+  // 6칸 조건은 2026-10-14 사용자 "6마리 다 스쿼드를 안채우면 랜덤배틀에 안나오게"
   const mine = partyOf(body.save, battle.data);
-  await admin.rpc("battle_register", { p_user: user.id, p_party: mine.count > 0 && !mine.blocked ? mine.party : null });
+  await admin.rpc("battle_register", { p_user: user.id, p_party: mine.count === mine.party.length && !mine.blocked ? mine.party : null });
   return json({ rev: Number(res.data), violations: violations.length });
 });

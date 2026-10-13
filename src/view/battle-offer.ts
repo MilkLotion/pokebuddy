@@ -22,7 +22,7 @@ export function battleOfferView(data: OfferData): BattleOfferView {
     const pick = data.picks[i];
     return { slot: i + 1, party: pick ? pick.party.map(slotOf) : null };
   });
-  return { offerId: data.offerId, rows, cooldownMs: data.cooldownMs };
+  return { offerId: data.offerId, rows, cooldownMs: data.cooldownMs, rerollLeft: data.rerollLeft ?? 1 };
 }
 
 // 배틀 창 결과 대화상자의 보상 줄 — Figma 05 `16 배틀` 결과 1791:10820. detail `다음 랜덤 배틀은 5분 뒤에 할 수 있어요.`

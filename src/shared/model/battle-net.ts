@@ -20,6 +20,7 @@ export interface BattleOfferView {
   offerId: string;
   rows: { slot: number; party: (BattlePickSlotView | null)[] | null }[];
   cooldownMs: number; // 남은 쿨타임. 0 이면 시작할 수 있다
+  rerollLeft: number; // 남은 새로고침 — 판마다 1번. 0 이면 `새로고침` 을 흐린다
 }
 
 // 배틀 기록 — 서버 battle_record_view (supabase/migrations/20261010110000_battle_record_view.sql). 규칙 docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기"
@@ -80,7 +81,7 @@ export interface BattleDetailView {
   sides: [BattleDpsRow[], BattleDpsRow[]] | null;
 }
 
-export type BattleAction = { action: "offer" } | { action: "start"; offerId: string; pick: number } | { action: "record" } | { action: "detail"; id: string };
+export type BattleAction = { action: "offer"; reroll?: boolean } | { action: "start"; offerId: string; pick: number } | { action: "record" } | { action: "detail"; id: string };
 
 export interface BattleReply {
   ok: boolean;

@@ -13,6 +13,7 @@ export interface OfferData {
   offerId: string;
   picks: { slot: number; party: ({ species: string; form: string | null; types: string[]; shiny?: boolean } | null)[] }[];
   cooldownMs: number;
+  rerollLeft?: number; // 남은 새로고침 — 옛 서버면 없다(제한 없음)
 }
 // battle-start 의 답 — 엔진 결과·이벤트·두 쪽 전투 개체(모양은 src/battle/engine.ts)
 export interface StartData {
@@ -92,7 +93,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
     try {
       if (a.action === "offer") {
         await d.beforeSend?.().catch(() => undefined); // 올리지 못해도 서버 저장의 배틀 파티로 판정한다
-        const r = await call<OfferData>("battle-offer", {});
+        const r = await call<OfferData>("battle-offer", a.reroll ? { reroll: true } : {}); // reroll 은 새로고침 — 판마다 1번
         if (!r.ok) return fail(r);
         return { ok: true, code: null, offer: d.offerView(r.data) };
       }

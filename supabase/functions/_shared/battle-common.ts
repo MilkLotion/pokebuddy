@@ -5,6 +5,7 @@
 //   BATTLE_COOLDOWN       409 — 쿨타임이 남았다. remainMs 를 함께 준다
 //   BATTLE_OFFER_GONE     409 — 보인 3개가 바뀌었거나 이미 썼다. 앱은 새로 받는다
 //   BATTLE_TOO_FAST       429 — 새로고침이 1초에 두 번
+//   BATTLE_REROLL_USED    409 — 이 판의 새로고침 1번을 이미 썼다
 //   BATTLE_BAD_ARGS       400 — 요청 모양이 틀렸다
 //   CLOUD_ACCOUNT_HELD    403 — 이용 정지
 //   FRIENDLY_*            친선 배틀(friendly-battle) — 링크·채널·준비 오류. 상태는 아래 표
@@ -24,6 +25,7 @@ const STATUS: Readonly<Record<string, number>> = {
   BATTLE_COOLDOWN: 409,
   BATTLE_OFFER_GONE: 409,
   BATTLE_TOO_FAST: 429,
+  BATTLE_REROLL_USED: 409,
   CLOUD_ACCOUNT_HELD: 403,
   CLOUD_LOGIN_REQUIRED: 401,
   FRIENDLY_LOGIN_REQUIRED: 403,

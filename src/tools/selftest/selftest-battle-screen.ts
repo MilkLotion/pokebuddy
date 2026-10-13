@@ -357,7 +357,7 @@ void (async () => {
   const client = {
     rpc: async (fn: string) => (fn === "battle_record_view" ? { data: { mine: { wins: 0, losses: 0, draws: 0 }, def: { wins: 1, losses: 0, draws: 0 }, recent: [], unseen }, error: null } : { data: null, error: null }),
   } as unknown as SupabaseClient;
-  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }), detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }), show: () => {} });
+  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }), detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }), show: () => {} });
   const rec = await net.act({ action: "record" });
   assert.ok(rec.ok && rec.record?.def.wins === 1, "record 동작은 기록을 돌려준다");
 
@@ -379,7 +379,7 @@ void (async () => {
     signedIn: () => true,
     run: () => ({ ok: true, result: null, replayed: false }),
     onChanged: () => {},
-    offerView: () => ({ offerId: "", rows: [], cooldownMs: 0 }),
+    offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }),
     detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }),
     show: () => steps.push("show"),
     prepare: () => steps.push("prepare"),
