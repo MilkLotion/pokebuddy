@@ -44,6 +44,7 @@ body {
   flex-direction: column;
   gap: 3px;
   margin: 0 16px;
+  padding-right: 4px; /* 줄과 공통 스크롤 막대(tokens.css) 사이 */
   overflow-y: auto;
   color: var(--ink);
   font: 12px/18px var(--font-body, "Galmuri11", "Malgun Gothic", sans-serif);

@@ -1,4 +1,4 @@
-/* manage.html 의 바탕(변수·헤더·탭 줄·본문·스크롤 막대·머리 줄) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
+/* manage.html 의 바탕(변수·헤더·탭 줄·본문·머리 줄) — 공용 CSS 와 manage/ 의 앞 파일 다음에 읽는다 */
 /* 관리 창 — 값은 화면 스냅샷이 준다 (manage.ts). 색은 Figma `PB / Color` 변수와 같다 */
 :root {
   --subtle: #dde1db;
@@ -198,32 +198,14 @@ nav .nav-actions {
 }
 
 /* 본문 — 여기만 스크롤한다. 스크롤 막대 자리를 늘 비워 둔다 — 탭마다 막대가 생겼다 없어지면 카드 폭이 흔들린다.
-   막대는 6px 로 얇게 하고, 그만큼 오른쪽 여백을 줄여 내용이 가운데에 오게 한다(20 - 6 = 14).
+   막대는 공통 막대(tokens.css, 폭 10)이고, 그만큼 오른쪽 여백을 줄여 내용이 가운데에 오게 한다(20 - 10 = 10).
    아래 여백은 30 이다 — 파티 탭 여섯 칸이 기본 창 높이(682)에서 스크롤 없이 맞는다(16 + 머리 36 + 16 + 칸 504 + 30 = 602).
    2026-10-01 에 머리 아래 간격을 14 → 16 으로 올린 뒤 32 로는 2px 넘쳤다 */
 main {
   flex: 1;
   overflow-y: auto;
   scrollbar-gutter: stable;
-  padding: 16px 14px 30px 20px;
-}
-/* 스크롤 막대 — 창 안의 모든 스크롤(본문·모달)에 얇은 막대를 쓴다 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  border-radius: 3px;
-  background: var(--line);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--disabled);
-}
-::-webkit-scrollbar-button {
-  display: none;
+  padding: 16px 10px 30px 20px;
 }
 /* 줄 사이는 16 — Figma 템플릿(Party·Box·Dex·Shop Layout)의 content-viewport 간격 (2026-09-30 전체 점검) */
 .head {

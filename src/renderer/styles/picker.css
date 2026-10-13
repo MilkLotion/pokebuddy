@@ -42,20 +42,13 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   padding-right: 4px;
-  margin-right: -10px;
+  margin-right: -14px; /* 막대 앞 간격 4 + 공통 막대 폭 10 만큼 밖으로 — 카드 오른쪽 끝이 머리 줄과 맞는다 (tokens.css) */
   scrollbar-gutter: stable;
   grid-auto-rows: 104px;
   gap: 10px;
   align-content: start;
   overflow-y: auto;
   min-height: 0;
-}
-#list::-webkit-scrollbar {
-  width: 6px;
-}
-#list::-webkit-scrollbar-thumb {
-  border-radius: 3px;
-  background: var(--line);
 }
 .card {
   position: relative;

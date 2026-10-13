@@ -60,3 +60,29 @@
   --success: #10b981;
   --scrim: rgba(26, 51, 48, 0.45);
 }
+
+/* 스크롤 막대 — 모든 창의 스크롤 영역이 같은 막대를 쓴다 (docs/specs/ui-components.md 공통 규칙, Figma 01 `Scrollbar` 2000:104078)
+   폭 10. 홈은 옅은 민트 알약(--accent), 막대는 청록(--primary)이고 홈 안쪽 2 를 띄운다 — 배틀 창 배속 토글과 같은 짜임 (2026-10-14 사용자 "b로 진행")
+   막대 자리를 바꾸면 그 자리를 계산에 넣은 여백(manage/base.css main, picker.css #list)도 고친다 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  border-radius: 5px;
+  background: var(--accent);
+}
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 5px;
+  background: var(--primary) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover) padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
