@@ -110,7 +110,10 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
   updater.on("download-progress", (p) => {
     if (view.status === "ready") return;
     const percent = (p as { percent?: unknown } | null)?.percent;
-    set({ status: "downloading", percent: typeof percent === "number" ? Math.max(0, Math.min(100, Math.floor(percent))) : view.percent });
+    const next = typeof percent === "number" ? Math.max(0, Math.min(100, Math.floor(percent))) : view.percent;
+    // 받는 조각마다 온다(큰 파일이면 수천 번) — 정수 퍼센트가 같으면 화면에 보내지 않는다 (worklog/records/perf-refactor 2-5, G25-1)
+    if (view.status === "downloading" && next === view.percent) return;
+    set({ status: "downloading", percent: next });
   });
   updater.on("update-downloaded", (p) => set({ status: "ready", next: versionOf(p) ?? view.next, percent: 100, error: null }));
   updater.on("update-manual", (p) => set({ status: "manual", next: versionOf(p), percent: null, error: null }));

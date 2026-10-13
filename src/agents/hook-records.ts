@@ -51,6 +51,42 @@ export function readHookFiles(stateDir: string, { skipPrefix, newestFirst = fals
 export const readHookRecords = (stateDir: string, opts: Omit<HookReadOptions, "newestFirst"> = {}): HookStateRead[] =>
   readHookFiles(stateDir, { ...opts, newestFirst: true }).map((f) => f.record);
 
+// 기록 전부를 되풀이해 읽는 쪽 — 결과는 readHookRecords 와 같다(최신순). 파일마다 수정 시각·크기를 기억해, 바뀐 파일만 다시 읽고 파싱한다.
+// 동반자가 400ms 마다 부른다(src/main/stage/host-watch.ts) — 폴더 목록과 파일 stat 은 그대로 하고 읽기·파싱만 줄인다 (worklog/records/perf-refactor 2-6, G02-1)
+export function hookRecordReader(stateDir: string, opts: Omit<HookReadOptions, "newestFirst"> = {}): () => HookStateRead[] {
+  const cache = new Map<string, { key: string; mtimeMs: number; record: HookStateRead }>();
+  return () => {
+    let names: string[];
+    try {
+      names = fs.readdirSync(stateDir).filter((n) => n.endsWith(".json") && !(opts.skipPrefix && n.startsWith(opts.skipPrefix)));
+    } catch {
+      cache.clear();
+      return []; // 폴더 없음
+    }
+    const seen = new Set(names);
+    for (const name of [...cache.keys()]) if (!seen.has(name)) cache.delete(name);
+    const rows: { mtimeMs: number; record: HookStateRead }[] = [];
+    for (const name of names) {
+      const file = path.join(stateDir, name);
+      try {
+        const st = fs.statSync(file);
+        const key = `${st.mtimeMs}:${st.size}`;
+        const hit = cache.get(name);
+        if (hit && hit.key === key) {
+          rows.push(hit);
+          continue;
+        }
+        const row = { key, mtimeMs: st.mtimeMs, record: JSON.parse(fs.readFileSync(file, "utf8")) as HookStateRead };
+        cache.set(name, row);
+        rows.push(row);
+      } catch {
+        cache.delete(name); // 쓰는 중·파손·사라짐 — 이 파일만 건너뛴다. 다음에 다시 읽는다
+      }
+    }
+    return rows.sort((a, b) => b.mtimeMs - a.mtimeMs).map((r) => r.record);
+  };
+}
+
 // 기록의 CLI — 없던 옛 등록은 claude
 export const cliOf = (record: HookStateRead): string => (typeof record.cli === "string" && record.cli ? record.cli : "claude");
 

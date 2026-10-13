@@ -54,11 +54,24 @@ export async function loadPmd(config: PmdConfig, PATHS: PmdPaths): Promise<PmdAr
   const credJob = credText ? null : fetchCredits(d, credFile);
 
   const zipFile = path.join(PATHS.pmd, `${d}.zip`);
-  const hit = await fetchCached(zipFile, ZIP_URL(d), looksLikeSprites);
+  // 작업 동작은 buddy 가 켜져 있을 때만 — 꺼져 있으면 상태 동작만 돌아 쓸 일이 없다
+  const work = config.buddy !== "off";
+  // 검사하며 푼 결과를 그대로 쓴다 — 같은 zip 을 두 번 풀지 않는다(동기 inflate, worklog/records/perf-refactor 2-6 G17-1)
+  let checked: { buf: Buffer; clips: ReturnType<typeof readZipClips> } | null = null;
+  const valid = (buf: Buffer): boolean => {
+    if (!buf || buf.length < 1024) return false;
+    try {
+      checked = { buf, clips: readZipClips(buf, { work }) };
+      return !!checked.clips;
+    } catch {
+      return false;
+    }
+  };
+  const hit = await fetchCached(zipFile, ZIP_URL(d), valid);
   if (!hit) return null; // 없는 종이거나 못 받음 — 호출한 쪽이 다른 그림으로 넘어간다
 
-  // 작업 동작은 buddy 가 켜져 있을 때만 — 꺼져 있으면 상태 동작만 돌아 쓸 일이 없다
-  const built = readZipClips(hit.buf, { work: config.buddy !== "off" });
+  const last = checked as { buf: Buffer; clips: ReturnType<typeof readZipClips> } | null;
+  const built = last && last.buf === hit.buf ? last.clips : readZipClips(hit.buf, { work });
   if (!built) return null;
 
   if (credJob) credText = await credJob;

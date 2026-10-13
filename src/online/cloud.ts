@@ -21,6 +21,7 @@ import { cloudCodeOf as codeOf } from "./codes.js";
 import type { CloudCode, CloudErrorCode } from "../shared/names/online-codes.js";
 import { callRpc, isUnreachable, messageOf, readFunctionError, withTimeout } from "./server-call.js";
 import { ONLINE_TIMING } from "./timing.js";
+import { createChangeMark } from "./change-mark.js";
 import {
   freshCloudState, hasPets, normalizeCloudState,
   type ClaimRow, type Cloud, type CloudMode, type CloudOptions, type CloudStatus, type CloudSyncState, type CloudView, type OtherDevice, type OwnerKind, type TouchRow,
@@ -33,10 +34,12 @@ export function createCloud(o: CloudOptions): Cloud {
   const clearTimer = o.clearTimer ?? ((t) => clearTimeout(t as ReturnType<typeof setTimeout>));
   const heartbeatMs = o.heartbeatMs ?? ONLINE_TIMING.heartbeatMs;
   const throttleMs = o.throttleMs ?? ONLINE_TIMING.uploadThrottleMs;
+  const tickThrottleMs = o.tickThrottleMs ?? ONLINE_TIMING.tickThrottleMs;
   const eventDelayMs = o.eventDelayMs ?? ONLINE_TIMING.eventDelayMs;
   const retryMs = o.retryMs ?? ONLINE_TIMING.retryMs;
 
   let state: CloudSyncState = normalizeCloudState(o.io.loadState()) ?? freshCloudState(randomUUID());
+  const changes = createChangeMark(state.dirty); // 마지막 올리기 뒤 명령·사건 쓰기가 있었나 — 배틀 전 올리기가 본다 (./change-mark.ts)
   let status: CloudStatus = "off";
   let busy = false;
   let error: CloudErrorCode | null = null;
@@ -263,6 +266,7 @@ export function createCloud(o: CloudOptions): Cloud {
     if (state.userId && state.seedOwner !== state.userId) await fetchSeed();
     const gen = generation;
     const mark = seq;
+    const changeMark = changes.start();
     // 결과를 모르는 올리기가 있으면 그 키로 다시 보낸다 — 서버가 이미 썼으면 그때의 rev 를 돌려준다
     const reused = state.pendingOp != null;
     const op = state.pendingOp ?? randomUUID();
@@ -279,6 +283,7 @@ export function createCloud(o: CloudOptions): Cloud {
     if (res.ok) {
       // 다시 쓴 키면 서버에 든 것이 지금 저장인지 모른다 — 새 키로 한 번 더 올린다
       state = { ...state, syncedRev: Number(res.data), pendingOp: null, dirty: reused || seq !== mark, lastSavedAt: now() };
+      if (!reused) changes.done(changeMark); // 다시 쓴 키면 무엇이 올라갔는지 모른다 — 바뀐 것으로 둔다
       persist();
       tradedOut = false;
       set("online", null);
@@ -668,7 +673,10 @@ export function createCloud(o: CloudOptions): Cloud {
       persist();
       emit();
     }
-    if (status === "online") schedule(kind === "event" ? eventDelayMs : Math.max(eventDelayMs, lastUploadAt + throttleMs - now()));
+    changes.note(kind);
+    // 사건은 바로, 명령은 2분, 시간 진행만은 10분 간격으로 모아 올린다. 예약은 가장 이른 것을 남긴다
+    const gap = kind === "tick" ? tickThrottleMs : throttleMs;
+    if (status === "online") schedule(kind === "event" ? eventDelayMs : Math.max(eventDelayMs, lastUploadAt + gap - now()));
   };
 
   const confirm: Cloud["confirm"] = async (go) => {
@@ -685,6 +693,12 @@ export function createCloud(o: CloudOptions): Cloud {
     clearUpload();
     if (uploading) await uploading;
     if (canUpload() && state.dirty) await upload();
+  };
+
+  // 배틀 전 — 서버 저장의 배틀 파티로 싸운다. 마지막 올리기 뒤 명령·사건 쓰기가 없으면(시간 진행만) 기다리지 않는다
+  const flushChanges: Cloud["flushChanges"] = async () => {
+    if (uploading) await uploading;
+    if (changes.pending()) await flush();
   };
 
   const sleep: Cloud["sleep"] = async () => {
@@ -818,7 +832,7 @@ export function createCloud(o: CloudOptions): Cloud {
   };
 
   return {
-    view, start, noteSaved, confirm, sleep, wake, release, announceRelease, released: () => releasedFlag, unsaved, flush, stop,
+    view, start, noteSaved, confirm, sleep, wake, release, announceRelease, released: () => releasedFlag, unsaved, flush, flushChanges, stop,
     owner, synced: () => state.syncedRev, pendingHandoff: () => state.handoff, rebind, applyHandoff, reset,
     seed: () => (state.seed && state.owner && state.seedOwner === state.owner ? state.seed : null),
     held: () => state.accountHeld,

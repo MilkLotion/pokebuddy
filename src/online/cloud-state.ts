@@ -39,8 +39,9 @@ export type CloudStatus = "off" | "connecting" | "online" | "offline" | "confirm
 
 // boot: 앱을 켤 때·로그인할 때. late: 오프라인으로 켠 뒤 처음 서버에 닿을 때(F3)
 export type CloudMode = "boot" | "late";
-// tick: 주기 저장(2분 스로틀). event: 교환·부화 등 사건(약 1초 모아 바로)
-export type SaveKind = "tick" | "event";
+// tick: 시간 진행만(10분 스로틀). change: 명령 쓰기(2분 스로틀). event: 교환·부화 등 사건(약 1초 모아 바로)
+// (2026-10-14 사용자 결정 "추천대로" — 시간 진행만 바뀐 저장은 10분, worklog/records/perf-refactor 2-9)
+export type SaveKind = "tick" | "change" | "event";
 export type HaltReason = "superseded" | "confirm" | "blocked" | "held";
 
 // 넘겨받거나 확인·양보할 상대 PC
@@ -87,7 +88,8 @@ export interface CloudOptions {
   // 남은 이관 티켓을 start 가 다시 옮겼다 — 앱은 discarded 면 이 PC 진행을 백업했다고 알린다
   onHandoff?: (outcome: "moved" | "discarded" | "empty") => void;
   heartbeatMs?: number; // 하트비트 간격 (기본 60초)
-  throttleMs?: number; // 주기 저장 올리기 최소 간격 (기본 2분)
+  throttleMs?: number; // 명령 쓰기 올리기 최소 간격 (기본 2분)
+  tickThrottleMs?: number; // 시간 진행만 바뀐 저장 올리기 최소 간격 (기본 10분)
   eventDelayMs?: number; // 사건 저장을 모으는 시간 (기본 1초)
   retryMs?: number; // 오프라인일 때 다시 연결을 시도하는 간격 (기본 60초)
   now?: () => number;
@@ -110,6 +112,7 @@ export interface Cloud {
   released: () => boolean; // announceRelease 로 released 를 알린 뒤 아직 active 로 되돌리지 않았다
   unsaved: () => "none" | "dirty"; // 끄기·로그아웃 전 확인용 — 온라인이고 올리지 않은 진행이 있다
   flush: () => Promise<void>; // 온라인이고 바뀌었으면 지금 한 번 올린다
+  flushChanges: () => Promise<void>; // 마지막 올리기 뒤 명령·사건 쓰기가 있었을 때만 flush — 시간 진행만 바뀌었으면 기다리지 않는다(배틀 전)
   stop: (forget?: boolean) => void; // 멈춤. forget 이면 로그아웃 — userId 만 지우고 owner 는 남긴다
   // 로컬 저장의 주인 — 부팅 판단용(세션 없음 + 주인 있음 → 분실). 없으면 null
   owner: () => { id: string; kind: OwnerKind | null } | null;

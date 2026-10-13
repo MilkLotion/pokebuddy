@@ -43,9 +43,9 @@ function sealed(view: Snapshot | null, display?: () => Snapshot["display"]): Sna
   return display ? { ...view, display: display(), seq } : { ...view, seq };
 }
 
-// `manage:snapshot` — 본 값이 지금 값이 되도록 먼저 시간을 적용한다
-export function snapshotReply(game: GameV3, reads: GameReads, display?: () => Snapshot["display"]): Snapshot | null {
-  game.tick();
+// `manage:snapshot` — 지금 메모리 값으로 만든다. 시간은 앱의 1초 틱이 적용한다(src/main/app/ticks.ts) — 설정창의 시계 신호는 그 틱 뒤에 온다.
+// 게임 시각(game.now)이 그 틱의 시각이라 여기서 다시 적용해도 흐른 시간은 0 이고 정리 단계만 한 번 더 돈다 (worklog/records/perf-refactor 2-4)
+export function snapshotReply(_game: GameV3, reads: GameReads, display?: () => Snapshot["display"]): Snapshot | null {
   return sealed(reads.snapshot(), display);
 }
 

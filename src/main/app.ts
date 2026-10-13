@@ -130,7 +130,7 @@ const duplicate = !claimSingleInstance({
 // 콜백은 아래에 정의한 핸들을 부를 때 읽는다 — 부팅 전에는 부르지 않는다
 const display = createDisplayState({
   ghost: !!config.clickThrough,
-  settings: () => rt.game?.read()?.settings ?? null,
+  settings: () => rt.game?.peek()?.settings ?? null, // 설정 몇 칸만 읽는다 — 저장 전체를 복제하지 않는다
   screens: currentScreens,
   mayLogin: app.isPackaged && !updateTestBuild,
   onPlayArea: () => rt.hostWatch?.poll(), // 무대 사각형을 바로 다시 정한다
@@ -279,7 +279,7 @@ const picker = (): ScreenPicker => (rt.screenPicker ??= createScreenPicker({ pre
 
 // 바탕화면 튜토리얼 말풍선과 첫 돌봄 단계 (src/main/stage/coach.ts). 저장을 새로 읽는 때(게임 틱·명령 뒤·파티 변경)에 sync 를 부른다
 const coach = createCoach({
-  read: () => rt.game?.read() ?? null,
+  read: () => rt.game?.peek() ?? null, // 읽기만 한다
   stages: () => rt.stages,
   quiet: () => display.ghost() || display.hidden(),
   areaMode: () => display.playArea().mode,
@@ -423,7 +423,7 @@ const petMenu = createPetMenu({
 async function refreshParty(): Promise<void> {
   if (!rt.party || !rt.stages) return;
   await rt.stages.setParty(partyPetsOf(rt.party.save(), true));
-  rt.tray?.setIcon(logoFile(256));
+  // 트레이 아이콘은 앱 로고로 고정이라 createTray 에서 한 번 정한다 — 여기서 다시 걸지 않는다 (worklog/records/perf-refactor 2-5, G14-2)
 }
 
 // 아이콘 말풍선 — 줍기·배고픔 (src/main/stage/bubbles.ts)
@@ -477,19 +477,19 @@ function bootCore(): { reader: GameV3; saveSource: SaveParty } {
     const seed = on ? on.cloud.seed() : readCloudSeed(PATHS.save);
     return seed ? seededRand(seed, `egg:${eggId}`) : null;
   };
-  const reader = createGame({ petName, file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), flushMs: CLOCK_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
+  const reader = createGame({ petName, file: PATHS.save, eggRand, canWrite: () => !frozen() && (saveParty()?.isWriter() ?? false), onWrite: (kind) => services.current()?.noteSaved(kind), onWritten: (stamp, save) => rt.party?.adopt(stamp, save), flushMs: CLOCK_RULES.saveMs, now: () => clock.last()?.now ?? Date.now() });
   rt.game = reader;
   rt.bannerWin = createBannerWindow({
     preload: preloadFile(),
     html: rendererFile("banner.html"),
     chime: () => {
-      const s = reader.read()?.settings;
+      const s = reader.peek()?.settings;
       return s ? gainOf(s, SOUND_RULES.chimeMax) : 0;
     },
     onGo: (route) => openManageWindow(route),
     onDone: () => rt.notifier?.done(),
   });
-  rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.read, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b), readJson: readJsonFile, write: writeAtomic, bannerOf }); // 시각은 전역 시계의 틱 시각
+  rt.notifier = createNotifier({ file: path.join(path.dirname(PATHS.save), "notify.json"), read: reader.peek, now: () => clock.last()?.now ?? Date.now(), show: (b) => rt.bannerWin?.show(b), readJson: readJsonFile, write: writeAtomic, bannerOf }); // 시각은 전역 시계의 틱 시각
   const saveSource = createSaveParty({ send: reader.send, paths: PATHS, log });
   rt.party = saveSource;
 
@@ -505,7 +505,15 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
   });
   // 무대 그림 미리 받기 — 가진 개체 전부의 PMD 묶음을 뒤에서 디스크에 둔다. 교체·배치로 처음 나오는 종을 받느라 늦게 뜨지 않게 한다.
   // 부화·교환·줍기로 새 개체가 생기면 저장 변경 알림에서 그 종을 더 받는다 (worklog/records/response-latency/response-latency.md)
-  const prefetchOwned = (): void => art.prefetch((saveSource.save()?.pets ?? []).map(appearanceOf));
+  // 개체 모습 목록이 지난번과 같으면 건너뛴다 — 저장 변경 알림은 15초 쓰기마다 오지만 개체가 늘거나 모습이 바뀌는 일은 드물다 (worklog/records/perf-refactor 2-5, G14-6)
+  let ownedKey = "";
+  const prefetchOwned = (): void => {
+    const looks = (saveSource.save()?.pets ?? []).map(appearanceOf);
+    const key = JSON.stringify(looks);
+    if (key === ownedKey) return;
+    ownedKey = key;
+    art.prefetch(looks);
+  };
   saveSource.onChange(prefetchOwned);
   prefetchOwned();
   // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage/stage-group.ts)

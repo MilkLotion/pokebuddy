@@ -88,12 +88,12 @@ export function createTicks(deps: TicksDeps): Ticks {
       // 줍기 — 깨어 있는 마리 각각을 이 틱의 간격으로 따로 굴린다. 주우면 그 틱에 저장하고 말풍선·배너를 띄운다.
       // 직접 숨긴 동안은 무대에 아무도 없는 것으로 본다 (src/find/core.ts rollHits)
       if (counted && !deps.hidden()) {
-        const save = game.read();
+        const save = game.peek(); // 읽기만 한다 — 복제하지 않는다 (src/tx/live-save.ts peek)
         const hits = rollHits(Object.fromEntries(stages.awakeIds().map((id) => [id, gap])), Math.random, findRate() ?? 1, save ? caredIds(save) : new Set()); // 잘 돌본 마리는 1/2000
         const found = hits.length ? game.find(hits) : null; // 쓰지 못하면 null — 그 건은 버린다
         if (found?.length) {
           worker.refresh();
-          deps.bubbles.found(found, game.read());
+          deps.bubbles.found(found, game.peek());
         }
       }
 
@@ -102,7 +102,7 @@ export function createTicks(deps: TicksDeps): Ticks {
       if (events) workMs = 0; // 쓰지 못했으면 다음 틱에 흐른 시간과 함께 다시 넘긴다
 
       // 배고픔 말풍선 — 무대에 나와 있는 포켓몬만, 직접 숨긴 동안은 띄우지 않는다 (src/main/stage/bubbles.ts onTick)
-      if (!deps.hidden()) deps.bubbles.onTick(now, game.read()?.pets ?? []);
+      if (!deps.hidden()) deps.bubbles.onTick(now, game.peek()?.pets ?? []);
       deps.notifierTick(); // 1초 안에 뜬다 (src/notify)
       deps.syncCoach();
 

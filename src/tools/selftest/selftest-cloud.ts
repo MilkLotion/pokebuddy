@@ -110,6 +110,7 @@ function pc(url: string, key: string, label: string, points: number, pets: unkno
       onHandoff: (outcome) => void handoffs.push(outcome),
       heartbeatMs: 500,
       throttleMs: 1_500,
+      tickThrottleMs: 1_500, // 시간 진행만 바뀐 저장(앱 10분)도 시험에서는 같은 간격으로
       eventDelayMs: 150,
       retryMs: 300,
     });

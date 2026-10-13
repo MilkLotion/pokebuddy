@@ -5,6 +5,8 @@
 // 다른 곳이 파일을 바꾸면(클라우드 저장 받기 등) pending 을 버리고 파일을 따른다. 시간 진행은 잃지 않는다 — 다음 틱이
 // 파일의 lastTickAt 부터 다시 적용한다(flushMs 15초 < 시간 적용 상한 30초). 파일에 아직 안 쓴 작업 시간(workMs)은
 // 따로 들고 있다가(carriedWorkMs) 다음 틱에 다시 넘긴다.
+// 쓴 뒤에도 그 값을 메모리에 둔다 — 저장 정본은 메모리다(실행 규칙 R5, worklog/records/perf-refactor 2-1). 파일 stamp 는 rename 직전 tmp 에서 잰다.
+// 쓴 값은 부르는 쪽이 쓴 뒤에 고치지 않는다(실행기 draft·줍기 사본). 틱은 edit() 로 받은 pending 을 다음 틱에 고친다 — 그 값은 파일보다 새 값이다
 // 쓰기 간격은 단조 시계(mono)로 잰다 — 시스템 시각을 뒤로 돌려도 쓰기가 멈추지 않는다.
 // 쓰기는 잠금을 잡은 프로세스만 한다. `canWrite` 를 주지 않으면 늘 쓴다 (자체 검사와 개발용 실행기).
 import type { SaveV3 } from "../shared/save-v3";
@@ -17,10 +19,12 @@ export interface LiveSaveOptions {
   flushMs?: number; // 시간 진행을 파일에 쓰는 간격. 0 이면 틱마다 쓴다
   mono?: () => number; // 단조 시계 ms. 기본 performance.now
   onWrite?: (name: string | undefined) => void; // 쓴 뒤 — name 은 거래 이름·FIND_POKEMON, 시간 진행은 없음. 올리기 종류는 받는 쪽이 가른다
+  onWritten?: (stamp: string, save: SaveV3) => void; // 쓴 뒤 — 파일 stamp 와 쓴 값. 저장 감시가 자기 쓰기를 다시 읽지 않게 받는다(src/save/save-watch.ts adopt). save 는 고치지 않는다
 }
 
 export interface LiveSave {
   read(): SaveV3 | null; // 읽는 쪽에 주는 사본 — 거래가 검사 중에 값을 바꾸고 실패해도 메모리 값이 더럽혀지지 않게
+  peek(): SaveV3 | null; // 복제하지 않은 지금 값 — 읽기만 하는 쪽(틱의 줍기·말풍선·알림·코치, 설정 한 칸)이 쓴다. 받은 값을 고치지 않는다 (worklog/records/perf-refactor 2-3)
   writable(): boolean; // 쓰는 프로세스인가 — 아니면 메모리 진행을 버리고 false
   edit(): SaveV3 | null; // 틱이 고칠 값. 메모리 값이 없으면 파일에서 읽는다
   carriedWorkMs(): number; // 파일이 밖에서 바뀌어 메모리 값을 버릴 때 건진 작업 시간
@@ -30,7 +34,7 @@ export interface LiveSave {
   failing(): boolean; // 이어서 실패한 횟수가 SAVE_RULES.saveFailNotifyAfter 이상이다
 }
 
-export function createLiveSave({ file, canWrite, flushMs = 0, mono = () => performance.now(), onWrite }: LiveSaveOptions): LiveSave {
+export function createLiveSave({ file, canWrite, flushMs = 0, mono = () => performance.now(), onWrite, onWritten }: LiveSaveOptions): LiveSave {
   // 메모리에만 있는 시간 진행 — 파일보다 새 저장. diskKey 는 그 저장의 바탕이 된 파일의 수정 시각·크기다
   let pending: SaveV3 | null = null;
   let diskKey: string | null = null;
@@ -73,19 +77,24 @@ export function createLiveSave({ file, canWrite, flushMs = 0, mono = () => perfo
       dropPending(); // 쓰는 프로세스가 아니다 — 메모리 진행도 들고 있지 않는다
       return false;
     }
-    const ok = writeSave(file, s);
+    let written: string | null = null;
+    const ok = writeSave(file, s, (stamp) => (written = stamp));
     failStreak = ok ? 0 : failStreak + 1;
     if (ok) {
-      pending = null; // 파일이 가장 새 저장이다
+      // 쓴 값을 메모리에 둔다 — 다음 읽기는 디스크를 읽지 않는다. stamp 를 못 쟀으면 예전처럼 비워 파일을 따른다(G80 R7)
+      const stamp: string | null = written ?? statKey();
+      pending = stamp ? s : null;
       pendingWorkMs = 0;
-      diskKey = statKey();
+      diskKey = stamp;
       onWrite?.(name);
+      if (stamp) onWritten?.(stamp, s);
     }
     return ok;
   };
 
   return {
     read,
+    peek: () => livePending() ?? readDisk(),
     writable() {
       if (canWrite && !canWrite()) {
         dropPending();

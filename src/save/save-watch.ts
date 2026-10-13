@@ -29,7 +29,8 @@ export interface SaveWatch {
   save(): SaveV3 | null; // 마지막으로 읽은 값
   holdsRole(): boolean; // writer 역할을 맡았다고 알고 있다 — 잠금 파일은 보지 않는다
   isWriter(): boolean; // writer 역할이고 잠금 파일에 내 pid 가 적혀 있다
-  refresh(): void; // 바뀐 것이 없어도 다시 읽는다 — 명령을 보낸 뒤 감시를 기다리지 않게
+  refresh(): void; // 파일이 바뀌었으면 지금 읽는다 — 감시 이벤트를 기다리지 않게. stamp 가 같으면 읽지 않는다
+  adopt(stamp: string, save: SaveV3): void; // 이 프로세스가 방금 쓴 값 — 파일을 다시 읽지 않고 받는다 (src/tx/live-save.ts onWritten)
   onChange(cb: () => void): () => void;
   onRole(cb: (isWriter: boolean) => void): () => void;
   stop(): void; // 감시를 멈추고 잠금을 놓는다
@@ -134,7 +135,14 @@ export function createSaveWatch(opts: SaveWatchOptions): SaveWatch {
     save: () => state,
     holdsRole: () => amWriter,
     isWriter: () => amWriter && ownsLock(paths.saveLock, pid),
-    refresh: () => reload(true),
+    // stamp 에 파일 번호가 있어 바뀐 파일은 stamp 가 다르다 — 강제로 다시 읽지 않는다 (worklog/records/perf-refactor 2-2)
+    refresh: () => reload(),
+    adopt(stamp, save) {
+      if (closed) return;
+      cacheKey = stamp;
+      state = structuredClone(save); // 쓴 쪽은 그 값을 다음 틱에 고친다 — 감시는 따로 쥔다
+      emitChange();
+    },
     onChange(cb) {
       changeCbs.add(cb);
       return () => changeCbs.delete(cb);

@@ -121,11 +121,13 @@ const parse = (text: string): unknown => {
   }
 };
 
-// 파일의 수정 시각과 크기 — 다른 곳이 파일을 바꿨는지 본다. 파일이 없거나 못 읽으면 null (src/tx/live-save.ts, ./save-watch.ts)
+// 파일의 수정 시각·크기·파일 번호 — 다른 곳이 파일을 바꿨는지 본다. 파일이 없거나 못 읽으면 null (src/tx/live-save.ts, ./save-watch.ts)
+// 쓰기는 늘 tmp 에 쓰고 rename 한다(src/platform/atomic-write.ts) — 쓸 때마다 파일 번호가 바뀌어, 같은 ms 안의 같은 크기 쓰기도 가른다.
+// 바뀜 시각(ctime)은 넣지 않는다 — Windows 는 rename 에서 바뀔 수 있어 tmp 에서 잰 값과 어긋난다 (worklog/records/perf-refactor 2-1, G80 R2)
 export function saveStampOf(file: string): string | null {
   try {
     const st = fs.statSync(file);
-    return `${st.mtimeMs}:${st.size}`;
+    return `${st.mtimeMs}:${st.size}:${st.ino}`;
   } catch {
     return null;
   }
@@ -189,11 +191,14 @@ export function isSealedOnDisk(file: string): boolean {
   }
 }
 
-export function writeSave(file: string, state: SaveV3): boolean {
+// onStamp 을 주면 쓴 파일의 stamp(saveStampOf 와 같은 꼴)를 rename 직전에 받는다
+export function writeSave(file: string, state: SaveV3, onStamp?: (stamp: string | null) => void): boolean {
   const key = currentSaveKey();
-  if (key) return writeAtomic(file, sealText(key, `${JSON.stringify(state, null, 2)}\n`));
+  const beforeRename = onStamp ? (tmp: string): void => onStamp(saveStampOf(tmp)) : undefined;
+  // 암호화하는 저장은 들여쓰지 않는다 — 사람이 읽는 파일이 아니고 크기가 4할 준다(400마리 296KB → 176KB). 읽는 쪽은 둘 다 읽는다 (worklog/records/perf-refactor 2-9)
+  if (key) return writeAtomic(file, sealText(key, `${JSON.stringify(state)}\n`), { beforeRename });
   if (isSealedOnDisk(file)) return false;
-  return writeAtomic(file, state);
+  return writeAtomic(file, state, { beforeRename });
 }
 
 // 저장이 없을 때 빈 저장을 만든다 — 실행기는 읽을 것이 있어야 돈다

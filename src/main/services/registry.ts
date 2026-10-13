@@ -236,7 +236,7 @@ export function createServices(deps: ServicesDeps): Services {
         offerView: battleOfferView,
         detailView: battleDetailView,
         show: (data, pick) => deps.openBattle(screenInputOf(data, pick)),
-        beforeSend: () => on.flush(), // 바꾼 배틀 파티를 서버 저장에 먼저 올린다 — 주기 저장(2분)을 기다리면 이전 파티로 싸운다
+        beforeSend: () => on.flushChanges(), // 바꾼 배틀 파티를 서버 저장에 먼저 올린다 — 주기 저장을 기다리면 이전 파티로 싸운다. 시간 진행만 바뀌었으면 기다리지 않는다
         prepare: () => deps.prepareBattle("랜덤 배틀"),
         cancel: () => deps.cancelBattle(),
       });
@@ -253,7 +253,7 @@ export function createServices(deps: ServicesDeps): Services {
       mainFriendly = createFriendlySession({
         client: on.client,
         signedIn: () => on.screen().signedIn,
-        beforeReady: () => on.flush(), // 준비 직전 저장 올리기 — 서버 저장의 배틀 파티로 싸운다
+        beforeReady: () => on.flushChanges(), // 준비 직전 저장 올리기 — 서버 저장의 배틀 파티로 싸운다. 시간 진행만 바뀌었으면 기다리지 않는다
         linkBase: friendlyLinkBase(config.linkBase),
         slotView: slotOf,
         onScreen: (screen) => deps.sendFriendly(screen),

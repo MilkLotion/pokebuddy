@@ -42,7 +42,8 @@ export interface SaveParty {
   setSize(id: string, size: number, req?: PartyRequest): Promise<CommandResult>; // 그림 크기 단계 번호. 규칙은 src/party/home.ts · src/save/rules.ts SIZE_STEPS
   setShown(id: string, shown: boolean, req?: PartyRequest): Promise<CommandResult>;
   save(): SaveV3 | null;
-  refresh(): void; // 명령을 보낸 뒤 바로 다시 읽는다 — 감시를 기다리지 않는다
+  refresh(): void; // 파일이 바뀌었으면 바로 읽는다 — 감시를 기다리지 않는다
+  adopt(stamp: string, save: SaveV3): void; // 이 프로세스가 방금 쓴 값 — 다시 읽지 않는다 (src/save/save-watch.ts)
   onChange(cb: () => void): () => void;
   onRole(cb: (isWriter: boolean) => void): () => void;
   stop(): void;
@@ -108,6 +109,7 @@ export function createSaveParty(opts: SavePartyOptions): SaveParty {
     },
     save: sw.save,
     refresh: sw.refresh,
+    adopt: sw.adopt,
     onChange: sw.onChange,
     onRole: sw.onRole,
     stop: sw.stop,

@@ -67,8 +67,9 @@ export interface MainOnline {
   onScreen: (fn: (screen: AccountScreen) => void) => () => void;
   // 세션을 확인해 클라우드 저장을 시작한다(부팅 판단). 오프라인으로 켠 뒤 이어받으면 late
   start: (mode: CloudMode) => Promise<void>;
-  noteSaved: (kind: SaveKind) => void; // 로컬 저장을 썼다 — tick 은 2분 스로틀, event 는 바로
+  noteSaved: (kind: SaveKind) => void; // 로컬 저장을 썼다 — tick 은 10분, change 는 2분 스로틀, event 는 바로
   flush: (timeoutMs?: number) => Promise<void>; // 온라인이고 바뀌었으면 올린다(최대 timeoutMs)
+  flushChanges: (timeoutMs?: number) => Promise<void>; // 마지막 올리기 뒤 명령·사건 쓰기가 있을 때만 올린다(최대 timeoutMs) — 배틀 전
   sleep: () => Promise<void>; // 잠금·절전 직전
   wake: () => Promise<void>; // 잠금 해제·깨어남
   release: (timeoutMs?: number) => Promise<void>; // 정상 종료·업데이트 재시작 전 — 올리고 released 를 알린다(최대 timeoutMs)
@@ -441,12 +442,15 @@ export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
   const flush: MainOnline["flush"] = async (timeoutMs = 3_000) => {
     await withTimeout(cloud.flush(), timeoutMs);
   };
+  const flushChanges: MainOnline["flushChanges"] = async (timeoutMs = 3_000) => {
+    await withTimeout(cloud.flushChanges(), timeoutMs);
+  };
 
   const isAnonymous: MainOnline["isAnonymous"] = async () => (await gate.current())?.is_anonymous === true;
   const mayIssue: MainOnline["mayIssue"] = () => !lost && !disposed && cloud.owner() == null;
 
   return {
-    client, gate, account, cloud, screen, act, start, flush, isAnonymous, mayIssue, continueLocal, fresh,
+    client, gate, account, cloud, screen, act, start, flush, flushChanges, isAnonymous, mayIssue, continueLocal, fresh,
     onScreen: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     noteSaved: (kind) => cloud.noteSaved(kind),
     sleep: () => cloud.sleep(),

@@ -49,7 +49,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   const portraits = artServices().portraits;
   const cries = artServices().cries;
   const volume = (): number => {
-    const s = game.read()?.settings;
+    const s = game.peek()?.settings; // 설정 한 칸만 읽는다 — 저장 전체를 복제하지 않는다
     return s ? gainOf(s, SOUND_RULES.cryMax) : 0;
   };
   // 기기 창에 마지막으로 띄운 모델(세대 번호와 함께) — 설정창은 스냅샷이 바뀔 때마다 고른 값을 다시 보낸다. 모델이 그대로면 다시 그리지 않는다

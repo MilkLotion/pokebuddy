@@ -25,7 +25,9 @@ export function sleepSync(ms: number): void {
 // 파일 하나를 원자적으로 쓴다 — tmp + rename, 실패하면 잠깐 뒤 다시. 끝내 실패하면 false (조용히)
 // 문자열·Buffer(암호화한 저장, src/save/crypt.ts)는 그대로, 그 밖은 JSON 으로 쓴다.
 // mode 를 주면 tmp 를 그 권한으로 만든다 — rename 뒤 파일도 그 권한이다(평문 세션 파일 0600, src/online/session-storage.ts)
-export function writeAtomic(file: string, data: unknown, { mode }: { mode?: number } = {}): boolean {
+// beforeRename 을 주면 tmp 를 다 쓴 뒤 rename 직전에 부른다 — 저장이 자기 쓰기의 stamp 를 tmp 에서 잰다(rename 은 수정 시각·크기·파일 번호를 지킨다).
+// rename 뒤에 재면 그 사이 다른 곳의 쓰기를 자기 것으로 볼 수 있다 (worklog/records/perf-refactor 2-1, G80 R1)
+export function writeAtomic(file: string, data: unknown, { mode, beforeRename }: { mode?: number; beforeRename?: (tmp: string) => void } = {}): boolean {
   const text = typeof data === "string" || Buffer.isBuffer(data) ? data : `${JSON.stringify(data, null, 2)}\n`;
   const tmp = `${file}.${process.pid}.tmp`;
   try {
@@ -37,6 +39,7 @@ export function writeAtomic(file: string, data: unknown, { mode }: { mode?: numb
   for (let i = 0; i < writeRetries; i++) {
     try {
       fs.writeFileSync(tmp, text, mode === undefined ? undefined : { mode });
+      beforeRename?.(tmp);
       fs.renameSync(tmp, file);
       return true;
     } catch (e) {

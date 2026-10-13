@@ -35,6 +35,7 @@ export interface TxPorts {
   rand: () => number; // 난수 — 앱은 Math.random 을 넘긴다(src/tx/game.ts). 도메인은 난수를 주입받는다
   eggRand?: (eggId: string) => (() => number) | null; // 알 열기의 결정적 난수(P4b). 없으면 rand
   petName?: (slug: string) => string; // 종의 화면 이름. 없으면 슬러그 그대로(자체 검사)
+  readsCopy?: boolean; // read 가 늘 새 사본을 준다 — 그러면 실행기가 다시 복제하지 않고 그 값을 고친다(앱, src/tx/live-save.ts). 없으면 복제한다
 }
 
 export interface Executor {
@@ -63,12 +64,14 @@ export function createExecutor(ports: TxPorts, handlers: Record<string, TxHandle
     if (!handler) return { ok: false, reason: "unknown-cmd" };
 
     const now = ports.now();
-    const draft = structuredClone(save);
+    // 거래는 draft 를 고친다. 실패하면 버린다. read 가 사본이면 그대로 쓰고, 거래 전 값은 개체만 얕게 떠 둔다(레벨업 업적이 레벨을 견준다, ./settle.ts)
+    const draft = ports.readsCopy ? save : structuredClone(save);
+    const before: SaveV3 = ports.readsCopy ? { ...save, pets: save.pets.map((p) => ({ ...p })) } : save;
     const out = handler(draft, req.args, { now, rand: ports.rand, ...(ports.eggRand ? { eggRand: ports.eggRand } : {}), petName: ports.petName ?? ((slug) => slug) });
     if (!out.ok) return { ok: false, reason: out.reason };
 
     // 상태가 바뀌었으니 메가 모습·메가스톤·해금·튜토리얼·업적을 다시 본다 (./settle.ts). save 는 거래 전 — 레벨업 업적이 비교한다
-    const { achieved } = applySettle(draft, now, { prev: save, revertMega: true });
+    const { achieved } = applySettle(draft, now, { prev: before, revertMega: true });
 
     const result = out.result ?? null;
     draft.tx = trimTx([...draft.tx, { id: req.id, at: now, result }], now);

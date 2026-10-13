@@ -3,7 +3,8 @@
 export const ONLINE_TIMING = {
   fetchTimeoutMs: 15_000, // 모든 서버 요청의 상한 (client.ts)
   heartbeatMs: 60_000, // 활성 기기 하트비트 간격
-  uploadThrottleMs: 120_000, // 주기 저장 올리기의 최소 간격
+  uploadThrottleMs: 120_000, // 명령 쓰기 올리기의 최소 간격
+  tickThrottleMs: 600_000, // 시간 진행만 바뀐 저장 올리기의 최소 간격 (2026-10-14 사용자 결정, worklog/records/perf-refactor 2-9)
   eventDelayMs: 1_000, // 사건 저장을 모으는 시간
   retryMs: 60_000, // 오프라인일 때 다시 연결을 시도하는 간격. 세션 확인·익명 발급의 다시 시도도 같다
   subscribeWaitMs: 5_000, // 밀려남 신호 구독을 기다리는 시간
