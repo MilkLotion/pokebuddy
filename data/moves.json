@@ -69,7 +69,7 @@
   "clanging-scales": {"ko":"스케일노이즈","en":"Clanging Scales","type":"dragon","class":"special","power":110,"accuracy":100,"cooldown":6.6,"traits":["sound"],"effects":{"stats":[{"who":"self","stat":"def","change":-1,"chance":100}]}},
   "clear-smog": {"ko":"클리어스모그","en":"Clear Smog","type":"poison","class":"special","power":50,"accuracy":null,"cooldown":3.4},
   "close-combat": {"ko":"인파이트","en":"Close Combat","type":"fighting","class":"physical","power":120,"accuracy":100,"cooldown":6.5,"traits":["contact"],"effects":{"stats":[{"who":"self","stat":"def","change":-1,"chance":100},{"who":"self","stat":"spd","change":-1,"chance":100}]}},
-  "collision-course": {"ko":"엑셀브레이크","en":"Collision Course","type":"fighting","class":"physical","power":100,"accuracy":100,"cooldown":6.7,"traits":["contact"]},
+  "collision-course": {"ko":"액셀브레이크","en":"Collision Course","type":"fighting","class":"physical","power":100,"accuracy":100,"cooldown":6.7,"traits":["contact"]},
   "confusion": {"ko":"염동력","en":"Confusion","type":"psychic","class":"special","power":50,"accuracy":100,"cooldown":3.4,"effects":{"status":{"kind":"confusion","chance":10}}},
   "core-enforcer": {"ko":"코어퍼니셔","en":"Core Enforcer","type":"dragon","class":"special","power":100,"accuracy":100,"cooldown":6.7},
   "counter": {"ko":"카운터","en":"Counter","type":"fighting","class":"physical","accuracy":100,"cooldown":16,"traits":["contact"]},

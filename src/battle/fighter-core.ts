@@ -83,11 +83,19 @@ export function realStat(base: number, index: number, basis: StatBasis = BATTLE_
 
 const ceilTick = (sec: number): number => Math.ceil((sec * 1000) / ENGINE_RULES.tickMs) * ENGINE_RULES.tickMs;
 
-// 개체가 고른 기술 2개가 그 종에서 쓸 수 있는가 — 기본 2개 + 후보 안의 서로 다른 2개. 특수 종(병풍·킬가르도 등)은 고르지 않는다
+// 1번 칸에 고정한 기술 — 킬가르도(stance)의 킹실드. 2번 칸만 고른다 (docs/specs/moves.md "킬가르도", 2026-10-14)
+export const fixedMoveOfRow = (row: BattleSpeciesRow | undefined): string | null => {
+  const first = row?.special === "stance" ? row.moves[0] : undefined;
+  return first == null ? null : typeof first === "string" ? first : first.id;
+};
+
+// 개체가 고른 기술 2개가 그 종에서 쓸 수 있는가 — 기본 2개 + 후보 안의 서로 다른 2개. 킬가르도 밖의 특수 종(병풍 등)은 고르지 않는다
 export function validPicks(row: BattleSpeciesRow | undefined, chosen: readonly unknown[] | null | undefined): [string, string] | null {
-  if (!row || row.special || !Array.isArray(chosen) || chosen.length !== 2) return null;
+  if (!row || (row.special && row.special !== "stance") || !Array.isArray(chosen) || chosen.length !== 2) return null;
   const [a, b] = chosen;
   if (typeof a !== "string" || typeof b !== "string" || a === b) return null;
+  const fixed = fixedMoveOfRow(row);
+  if (fixed && a !== fixed) return null;
   const ids = new Set([...row.moves.map((c) => (typeof c === "string" ? c : c.id)), ...(row.picks ?? [])]);
   return ids.has(a) && ids.has(b) ? [a, b] : null;
 }
@@ -118,7 +126,7 @@ export function movesOf(data: BattleData, species: string, swap: boolean, chosen
       effects: (row.effects ?? {}) as EngineMove["effects"],
     });
   }
-  return swap && !picked ? out.reverse() : out;
+  return swap && !picked && !fixedMoveOfRow(sp) ? out.reverse() : out; // 고정 기술이 있으면 순서를 바꾸지 않는다
 }
 
 // 개체 하나 → 전투 개체. 표에 종이나 종족값이 없으면 null

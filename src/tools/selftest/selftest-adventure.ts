@@ -4,9 +4,9 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import { moveOptions, petMoves, speciesMoves } from "../../battle/moves";
-import { applyBattleReward, battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot, setMoves } from "../../battle/party";
+import { applyBattleReward, battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle, dropMissingBattlePets, importPreset, isInBattle, setBattleSlot, setMoves, swapMoves } from "../../battle/party";
 import { battleData } from "../../battle/fighter";
-import { lookOfSource, partyOf } from "../../battle/fighter-core";
+import { lookOfSource, movesOf, partyOf } from "../../battle/fighter-core";
 import { realStat, realStatsOf } from "../../battle/stats";
 import { tierOf } from "../../battle/tier";
 import { BATTLE_RULES } from "../../battle/rules";
@@ -68,7 +68,7 @@ assert.equal(volt[0]!.name, "볼트태클");
 assert.ok(volt[0]!.text && volt[0]!.text.includes("돌진"), "기술 설명");
 assert.equal(moveMeta(volt[0]!), "물리 · 위력 120 · 명중 100 · 쿨타임 8초");
 assert.equal(speciesMoves("kadabra")[0]!.class, "special", "객체 칸은 기본값을 덮는다");
-assert.equal(speciesMoves("miraidon")[0]!.text, null, "설명 없는 기술은 null");
+assert.ok(speciesMoves("miraidon")[0]!.text?.includes("변형"), "PokeAPI 에 한국어 문장이 없는 9세대 기술은 보충 파일의 원작 문장 (data/move-text-extra.ko.json)");
 
 // ── 기술 상세 — 기술 바꾸기 모달 (docs/specs/adventure.md "기술 바꾸기") ──
 {
@@ -280,6 +280,27 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   // 쓸 수 없는 값이면 기본 2개 — 저장에 남은 낡은 값(다른 종의 기술)
   pet.moves = ["flamethrower", "surf"];
   assert.deepEqual(petMoves(pet).map((m) => m.id), speciesMoves("raichu").map((m) => m.id));
+}
+
+// ── 킬가르도 — 킹실드는 1번 고정, 2번만 섀도볼과 후보 4개에서 고른다 (2026-10-14 사용자 "킬가르도는 제안대로") ──
+{
+  const s = seed(["aegislash"]);
+  s.battle = { slots: ["p1", null, null, null, null, null] };
+  const pet = s.pets[0]!;
+  assert.deepEqual(moveOptions("aegislash").map((m) => m.id), ["kings-shield", "shadow-ball", "poltergeist", "flash-cannon", "iron-head", "close-combat"]);
+  assert.ok(setMoves(s, "p1", ["kings-shield", "iron-head"]).ok);
+  assert.deepEqual(petMoves(pet).map((m) => m.id), ["kings-shield", "iron-head"]);
+  assert.equal(setMoves(s, "p1", ["iron-head", "kings-shield"]).ok, false, "킹실드는 1번");
+  assert.equal(setMoves(s, "p1", ["shadow-ball", "iron-head"]).ok, false, "킹실드를 뺄 수 없다");
+  assert.equal(swapMoves(s, "p1").ok, false, "순서 바꾸기 없음");
+  assert.equal(snapshotView(s, T0).battle.slots[0]!.fixedFirst, true, "화면 값 — 1번 고정");
+  assert.equal(snapshotView(seed(["raichu"]), T0).battle.slots[0]?.fixedFirst, undefined);
+  // 엔진 — 고른 2개를 그 순서로, 1번이 킹실드가 아니면 기본 2개. moveSwap 은 보지 않는다
+  const data = battleData();
+  assert.deepEqual(partyOf(JSON.parse(JSON.stringify(s)), data).party[0]?.moves, ["kings-shield", "iron-head"]);
+  assert.deepEqual(movesOf(data, "aegislash", false, ["kings-shield", "close-combat"]).map((m) => m.id), ["kings-shield", "close-combat"]);
+  assert.deepEqual(movesOf(data, "aegislash", true, ["close-combat", "kings-shield"]).map((m) => m.id), ["kings-shield", "shadow-ball"]);
+  assert.deepEqual(moveEffects(moveOptions("aegislash")[0]!), ["쓴 뒤 2초 동안 상대 기술을 막음 (평타는 못 막음)", "막은 기술이 접촉이면 상대 공격 1단계 하락 (10초)"], "킹실드 효과 줄");
 }
 
 // ── 개체가 사라지면 칸에서 빠진다 (교환으로 보낸 개체) ──

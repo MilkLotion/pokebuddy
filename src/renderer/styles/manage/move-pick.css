@@ -123,8 +123,16 @@
   color: var(--muted);
   cursor: pointer;
 }
-.mp-swap:hover {
+.mp-swap:hover:not(:disabled) {
   background: var(--accent-bg);
+}
+/* 고정 기술 칸·순서 바꾸기 — 킬가르도의 킹실드(1번 고정). 칸은 누르면 상세만 보이고 고르지 않는다 */
+.mp-slot.fixed {
+  cursor: default;
+}
+.mp-swap:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .mp-swap svg {
   fill: none;

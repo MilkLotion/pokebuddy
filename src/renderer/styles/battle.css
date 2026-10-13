@@ -159,3 +159,8 @@
 .swap[aria-busy="true"] svg {
   opacity: 0.4;
 }
+/* 킬가르도 — 킹실드는 1번 고정이라 순서를 바꾸지 못한다 (docs/specs/moves.md "킬가르도") */
+.swap:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

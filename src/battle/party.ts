@@ -8,7 +8,7 @@ import { presetName, slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
-import { moveOptions, pickedIn } from "./moves.js";
+import { fixedMoveOf, moveOptions, pickedIn } from "./moves.js";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
@@ -119,6 +119,7 @@ export function importPreset(save: Pick<SaveV3, "battle" | "party" | "pets">, pr
 export function swapMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, opts?: DexOptions): Outcome<BattleFailure> & { swapped?: boolean } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
+  if (fixedMoveOf(battleSpeciesOf(save, pet, opts), opts)) return { ok: false, reason: "bad-args" }; // 킬가르도 — 킹실드는 1번 칸에 고정
   if (pet.moves && pickedIn(moveOptions(battleSpeciesOf(save, pet, opts), opts), pet.moves)) {
     pet.moves = [pet.moves[1], pet.moves[0]];
     return { ok: true, swapped: true };
@@ -134,7 +135,8 @@ export function swapMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, 
 export function setMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, moves: readonly string[], opts?: DexOptions): Outcome<BattleFailure> {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
-  const picked = pickedIn(moveOptions(battleSpeciesOf(save, pet, opts), opts), moves);
+  const species = battleSpeciesOf(save, pet, opts);
+  const picked = pickedIn(moveOptions(species, opts), moves, fixedMoveOf(species, opts));
   if (!picked) return { ok: false, reason: "bad-args" };
   pet.moves = [picked[0]!.id, picked[1]!.id];
   delete pet.moveSwap;

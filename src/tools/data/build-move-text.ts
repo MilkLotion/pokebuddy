@@ -10,13 +10,16 @@
 // 결과: { "<기술 id>": "<설명문>" } — data/moves.json 의 기술만, 키 순서도 moves.json 과 같다
 //   - 한국어 설명문이 있는 버전 그룹 가운데 order 가 가장 큰 것(가장 최근 게임)의 문장을 쓴다
 //   - 줄바꿈·쪽바꿈·소프트 하이픈은 빈칸 하나로 바꿔 한 문단으로 둔다
-//   - 한국어 설명문이 없는 기술은 키를 두지 않고 개수와 id 를 출력한다 — 문장을 지어내지 않는다
+//   - PokeAPI 에 한국어 설명문이 없는 기술은 보충 파일(data/move-text-extra.ko.json)의 원작 문장을 쓴다
+//     9세대·레전드 아르세우스 기술은 PokeAPI 에 한국어 문장이 없다(2026-10-14 확인). 보충 파일은 한국어 포켓몬 위키에서 받아 손으로 둔다
+//   - 둘 다 없는 기술은 키를 두지 않고 개수와 id 를 출력한다 — 문장을 지어내지 않는다
 import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, runBuild, writeLineJson } from "./pokeapi-csv";
 
 const OUT = path.join(DATA_DIR, "move-text.ko.json");
 const MOVES = path.join(DATA_DIR, "moves.json");
+const EXTRA = path.join(DATA_DIR, "move-text-extra.ko.json");
 const KO = "3";
 
 const clean = (text: string): string => text.replace(/[\s\u000c­]+/g, " ").trim();
@@ -31,6 +34,7 @@ export async function build(): Promise<void> {
   const moveNo = new Map(moveRows.map((r) => [r.identifier, r.id]));
   const order = new Map(groupRows.map((r) => [r.id, Number(r.order)]));
   const groupName = new Map(groupRows.map((r) => [r.id, r.identifier]));
+  const extra = JSON.parse(fs.readFileSync(EXTRA, "utf8")) as Record<string, string>;
 
   // 기술 번호 → 가장 최근 버전 그룹의 한국어 문장
   const latest = new Map<string, { order: number; group: string; text: string }>();
@@ -48,7 +52,10 @@ export async function build(): Promise<void> {
     const no = moveNo.get(id);
     const hit = no ? latest.get(no) : undefined;
     if (!hit) {
-      missing.push(id);
+      if (extra[id]) {
+        out[id] = extra[id];
+        byGroup.set("보충", (byGroup.get("보충") ?? 0) + 1);
+      } else missing.push(id);
       continue;
     }
     out[id] = hit.text;

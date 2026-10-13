@@ -1,8 +1,8 @@
 // 배틀 파티 화면 값 — 모험 탭의 배틀 칸 카드와 배틀 파티 상세 기기 창이 쓴다 (docs/specs/adventure.md)
 // 저장을 읽기만 한다
-import { moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
+import { fixedMoveOf, moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
 import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
-import { AURA_ABILITY, FIELD_ABILITY, WEATHER_ABILITY } from "../battle/engine.js";
+import { AURA_ABILITY, ENGINE_RULES, FIELD_ABILITY, WEATHER_ABILITY } from "../battle/engine.js";
 import { rouletteTickets } from "../battle/fighter-core.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { baseStatsOf } from "../battle/stats.js";
@@ -74,6 +74,11 @@ export function moveEffects(m: MoveInfo): string[] {
   if (e.recharge) out.push("쓴 뒤 다음 기술 쿨타임 2배");
   if (e.rampage) out.push("쓴 뒤 2초 동안 행동하지 못함");
   if (e.hpScale) out.push("HP 가 줄수록 위력이 약해짐");
+  // 킹실드 — 엔진의 막기(src/battle/engine.ts shieldMs). 효과 값이 아니라 기술 id 로 건다 (2026-10-14 사용자 "효과막는다 문구 추가")
+  if (m.id === "kings-shield") {
+    out.push(`쓴 뒤 ${ENGINE_RULES.shieldMs / 1000}초 동안 상대 기술을 막음 (평타는 못 막음)`);
+    out.push(`막은 기술이 접촉이면 상대 공격 1단계 하락 (${ENGINE_RULES.stageMs / 1000}초)`);
+  }
   return out;
 }
 
@@ -140,6 +145,7 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
       pet: view,
       moves: petMoves(asPet).map(withDetail),
       options: moveOptions(asPet.species).map(withDetail),
+      ...(fixedMoveOf(asPet.species) ? { fixedFirst: true as const } : {}),
       blocked: tier ? blockedText(tier) : null,
       stats: statRows(shown),
       ability: abilityOf(shown, asPet.species),

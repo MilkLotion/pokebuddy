@@ -1,5 +1,5 @@
 {
-  "_comment": "종 기술 — 기본 2개(moves)와 마지막 진화체의 후보 4개(candidates, 앞 3개 자기 타입 + 다른 타입 1개). 칸이 객체면 type 만 덮는다(모습에 따라 타입이 바뀌는 전용기). special: transform(메타몽)·reflect(마자용·마자)·sketch(루브도)·wall(병풍)·stance(킬가르도). 규칙은 docs/specs/moves.md. 손으로 고친다",
+  "_comment": "종 기술 — 기본 2개(moves)와 마지막 진화체의 후보 4개(candidates, 앞 3개 자기 타입 + 다른 타입 1개). 칸이 객체면 type 만 덮는다(모습에 따라 타입이 바뀌는 전용기). special: transform(메타몽)·reflect(마자용·마자)·sketch(루브도)·wall(병풍)·stance(킬가르도). stance 는 후보가 있고 첫 기술(킹실드)을 1번 칸에 고정한다. 규칙은 docs/specs/moves.md. 손으로 고친다",
   "bulbasaur": {"moves":["vine-whip","acid-spray"]},
   "ivysaur": {"moves":["giga-drain","venoshock"]},
   "venusaur": {"moves":["leaf-storm","sludge-bomb"],"candidates":["giga-drain","energy-ball","poison-jab","earth-power"]},
@@ -825,7 +825,7 @@
   "meowstic": {"moves":["expanding-force","psychic"],"candidates":["psychic-noise","psyshock","zen-headbutt","alluring-voice"]},
   "honedge": {"moves":["iron-head","shadow-sneak"]},
   "doublade": {"moves":["iron-head","shadow-claw"]},
-  "aegislash": {"moves":["kings-shield","shadow-ball"],"special":"stance"},
+  "aegislash": {"moves":["kings-shield","shadow-ball"],"candidates":["poltergeist","flash-cannon","iron-head","close-combat"],"special":"stance"},
   "spritzee": {"moves":["draining-kiss","fairy-wind"]},
   "aromatisse": {"moves":["dazzling-gleam","moonblast"],"candidates":["alluring-voice","draining-kiss","flash-cannon"]},
   "swirlix": {"moves":["draining-kiss","fairy-wind"]},

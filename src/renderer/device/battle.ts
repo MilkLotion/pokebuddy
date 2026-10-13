@@ -168,7 +168,7 @@ function render(v: BattleDeviceView): void {
   slot.moves.forEach((m, i) => {
     if (i === 1) {
       const row = el("div", "swap-row");
-      const swap = buttonEl("swap", "", () => api.act({ kind: "swap", petId: pet.id }));
+      const swap = buttonEl("swap", "", () => api.act({ kind: "swap", petId: pet.id }), slot.fixedFirst === true); // 킬가르도 — 킹실드는 1번 고정
       swap.appendChild(swapIconEl());
       swap.title = "기술 순서 바꾸기";
       swap.setAttribute("aria-label", "기술 순서 바꾸기");

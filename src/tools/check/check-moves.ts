@@ -16,7 +16,7 @@
 //   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
 //  10. 타입 상성표(type-chart.json)는 18 × 18 이고 배율은 0·0.5·1·2 뿐이다
 //  11. 메가 배틀 값(mega-battle.json)의 키는 mega.json 의 모습과 같다. 종족값 6개, 특성은 abilities.json 에 있다
-//  12. 후보(candidates)는 4개까지, 공격기, 기본 2개·서로와 겹치지 않고, 종 타입과 다른 후보는 하나까지. 특수 종에는 없다
+//  12. 후보(candidates)는 4개까지, 공격기, 기본 2개·서로와 겹치지 않고, 종 타입과 다른 후보는 하나까지. 킬가르도(stance) 밖의 특수 종에는 없다
 // 어긋남이 있으면 모두 찍고 종료 코드 1
 import fs from "node:fs";
 import path from "node:path";
@@ -177,7 +177,7 @@ export function moveDataFindings(): string[] {
     const ids = entry.moves.map((s) => (typeof s === "string" ? s : s.id));
     for (const id of ids) if (!moves[id]) bad.push(`종 ${key}: 기술 ${id} 가 moves.json 에 없음`);
     if (new Set(ids).size !== ids.length) bad.push(`종 ${key}: 겹친 기술 ${ids.join("·")}`);
-    if (entry.special && entry.candidates?.length) bad.push(`종 ${key}: 특수 종에 후보`);
+    if (entry.special && entry.special !== "stance" && entry.candidates?.length) bad.push(`종 ${key}: 특수 종에 후보`); // 킬가르도는 2번 칸만 고른다(2026-10-14)
     if (entry.special) {
       if (!(entry.special in SPECIAL_SLOTS)) bad.push(`종 ${key}: special ${entry.special}`);
       else if (ids.length !== SPECIAL_SLOTS[entry.special]) bad.push(`종 ${key}: ${entry.special} 칸 ${ids.length}개`);

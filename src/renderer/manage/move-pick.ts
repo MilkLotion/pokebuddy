@@ -3,6 +3,7 @@
 //   왼쪽 기술 목록       고를 수 있는 기술 — 기본 2개 뒤에 후보 4개. 쓰는 중인 기술은 흐리고 `사용 중`. 진화 전 종은 기본 2개뿐이다
 //   오른쪽 사용 중인 기술  1번·2번 칸, 사이에 순서 바꾸기(battle.moves), 아래에 기술 상세(타입·분류·위력·명중·쿨타임·효과·원작 설명)
 //   내 칸을 누르면        그 칸을 고른다(톤 바탕). 같은 칸을 다시 누르면 푼다. 처음은 고른 칸이 없다
+//   고정 기술(fixedFirst)  킬가르도의 킹실드 — 1번 칸은 고르지 못하고 `1번 · 고정`, 순서 바꾸기는 흐린다(2026-10-14 사용자 "킬가르도는 제안대로")
 //   목록의 기술을 누르면   고른 칸이 없으면 상세만 바꾼다. 있으면 그 칸을 바꾸고(battle.pick, 다른 칸의 기술이면 순서 바꾸기) 고르기를 푼다
 // 끌어 놓기는 없다 — 교체·고르기 모달은 누르기만(2026-10-10 사용자 결정, worklog/records/interaction-audit). 순서는 가운데 순서 바꾸기 단추
 // (2026-10-10 사용자 "사용중인기술을 누르고 목록에서 눌러야 바뀌게. 1번 바뀌면 사용중인기술 클릭한거 해제.(목록 눌러도 설명보이게)", Figma 05 `Adventure / Move Pick`·`· Slot Picked`)
@@ -75,11 +76,17 @@ function optionEl(slot: BattleSlotView, m: MoveView): HTMLElement {
 
 function slotEl(slot: BattleSlotView, at: number): HTMLElement {
   const m = slot.moves[at]!;
-  const cell = buttonEl("mp-slot");
+  const fixed = at === 0 && slot.fixedFirst === true;
+  const cell = buttonEl(fixed ? "mp-slot fixed" : "mp-slot");
   cell.setAttribute("aria-pressed", String(at === target));
-  cell.setAttribute("aria-label", `${at + 1}번 기술 ${m.name}`);
-  cell.append(el("span", "mp-slot-no", `${at + 1}번`), pill(m));
+  cell.setAttribute("aria-label", fixed ? `1번 기술 ${m.name}, 바꿀 수 없음` : `${at + 1}번 기술 ${m.name}`);
+  cell.append(el("span", "mp-slot-no", fixed ? "1번 · 고정" : `${at + 1}번`), pill(m));
   cell.addEventListener("click", () => {
+    if (fixed) {
+      shown = m.id; // 고정 칸 — 상세만 보인다
+      drawDialog();
+      return;
+    }
     target = target === at ? null : at;
     shown = m.id;
     drawDialog();
@@ -144,7 +151,7 @@ export function drawMovePick(): void {
   side.appendChild(el("strong", "mp-label", "사용 중인 기술"));
   side.appendChild(slotEl(slot, 0));
   const swapRow = el("div", "mp-swap-row");
-  const swap = buttonEl("mp-swap", "", () => void sendCommand("battle.moves", petId, {}, { keepOpen: true }));
+  const swap = buttonEl("mp-swap", "", () => void sendCommand("battle.moves", petId, {}, { keepOpen: true }), slot.fixedFirst === true);
   swap.appendChild(swapIconEl());
   swap.title = "기술 순서 바꾸기";
   swap.setAttribute("aria-label", "기술 순서 바꾸기");
