@@ -31,9 +31,10 @@ export interface Product {
 export function toolPrice(id: string, opts?: DexOptions): number | null {
   if (isMetaKey(id)) return null;
   if (MINT_RETIRED && id === MINT_ID) return null; // 성격민트 은퇴 — 사지도 팔지도 않는다 (src/bag/mint.ts)
-  const item = itemTable(opts)[id];
+  // 표에 자기 키로 있는 것만 — constructor 같은 이름이면 상속된 함수를 꺼내 undefined 가격을 돌려줬다 (worklog/records/perf-refactor 5-1, G73-5)
+  const item = Object.hasOwn(itemTable(opts), id) ? itemTable(opts)[id] : undefined;
   if (item) return item.price;
-  return evoItemTable(opts)[id] ? evoItemPriceOf(id) : null;
+  return Object.hasOwn(evoItemTable(opts), id) ? evoItemPriceOf(id) : null;
 }
 
 export function toolName(id: string, opts?: DexOptions): string | null {

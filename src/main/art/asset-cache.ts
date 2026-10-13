@@ -6,7 +6,7 @@
 // PMD 묶음(./pmd-load.ts)과 무대 그림 로더(./stage-art.ts)의 기억은 여기에 넣지 않는다 — 묶음 단위이고 실패 기억의 뜻이 다르다
 import fs from "node:fs";
 import path from "node:path";
-import { fetchCached } from "./fetch";
+import { fetchCachedOutcome } from "./fetch";
 
 export interface AssetCacheOptions {
   dir: string; // 사용자 캐시 폴더
@@ -20,6 +20,7 @@ export interface AssetCacheOptions {
 export interface AssetCache {
   // 캐시 → 네트워크. 같은 파일은 한 번만 받는다. 앱에 든 폴더는 보지 않는다(부르는 쪽이 먼저 has 로 본다)
   fetchBuffer(rel: string, url: string): Promise<Buffer | null>;
+  fetchOutcome(rel: string, url: string): Promise<Buffer | "absent" | null>; // 받기 결과 — "absent" 는 서버에 없음(404·410·검증 실패), null 은 지금 못 받음
   // 앱에 든 폴더 → 캐시 → 네트워크, data URI 로. 메모하고, 못 받은 것은 retryMs 동안 기억한다. parallel 만큼만 동시에 받는다
   fetchUri(rel: string, url: string): Promise<string | null>;
   // fetchUri 와 같은 순서·규칙(앱에 든 폴더 → 캐시 → 네트워크, 못 받은 것 기억, parallel)으로 받아 버퍼로. data URI 메모는 하지 않는다
@@ -40,7 +41,7 @@ export function createAssetCache(o: AssetCacheOptions): AssetCache {
   const roots = o.bundled ? [o.bundled, o.dir] : [o.dir];
   const memo = new Map<string, string>(); // 캐시 경로 → 이미 만든 data URI
   const missing = new Map<string, number>(); // 못 받은 캐시 경로 → 시각
-  const inflight = new Map<string, Promise<Buffer | null>>(); // 받는 중인 파일
+  const inflight = new Map<string, Promise<Buffer | "absent" | null>>(); // 받는 중인 파일
   let running = 0;
   const waiting: (() => void)[] = [];
   const slot = async <T>(job: () => Promise<T>): Promise<T> => {
@@ -57,14 +58,26 @@ export function createAssetCache(o: AssetCacheOptions): AssetCache {
 
   const fileOf = (rel: string): string => path.join(o.dir, rel);
 
-  function fetchBuffer(rel: string, url: string): Promise<Buffer | null> {
+  function fetchOutcome(rel: string, url: string): Promise<Buffer | "absent" | null> {
     const file = fileOf(rel);
     const going = inflight.get(file);
     if (going) return going;
-    const job = fetchCached(file, url, o.validate)
-      .then((got) => got?.buf ?? null)
+    const job = fetchCachedOutcome(file, url, o.validate)
+      .then((got): Buffer | "absent" | null => ("buf" in got ? got.buf : got.absent ? "absent" : null))
       .finally(() => inflight.delete(file));
     inflight.set(file, job);
+    return job;
+  }
+  // 버퍼만 주는 받기 — 받는 동안은 같은 약속을 준다(겹쳐 받기 막기)
+  const bufInflight = new Map<string, Promise<Buffer | null>>();
+  function fetchBuffer(rel: string, url: string): Promise<Buffer | null> {
+    const file = fileOf(rel);
+    const going = bufInflight.get(file);
+    if (going) return going;
+    const job = fetchOutcome(rel, url)
+      .then((got) => (got === "absent" ? null : got))
+      .finally(() => bufInflight.delete(file));
+    bufInflight.set(file, job);
     return job;
   }
 
@@ -87,9 +100,13 @@ export function createAssetCache(o: AssetCacheOptions): AssetCache {
         // 앱에 없는 그림 — 캐시와 네트워크로 간다
       }
     }
-    const got = await slot(() => fetchBuffer(rel, url));
+    const got = await slot(() => fetchOutcome(rel, url));
+    if (got === "absent") {
+      missing.set(file, o.retryMs === 0 ? Date.now() : Infinity); // 서버에 없다 — 이 실행 동안 다시 묻지 않는다(늘 다시 보는 캐시는 그대로) (worklog/records/perf-refactor 5-5, G18-5)
+      return null;
+    }
     if (!got) {
-      missing.set(file, Date.now());
+      missing.set(file, Date.now()); // 지금 못 받았다 — retryMs 뒤 다시 묻는다
       return null;
     }
     missing.delete(file);
@@ -98,6 +115,7 @@ export function createAssetCache(o: AssetCacheOptions): AssetCache {
 
   return {
     fetchBuffer,
+    fetchOutcome,
     fetchFile,
     fileOf,
     async fetchUri(rel, url) {

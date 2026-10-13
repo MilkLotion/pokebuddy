@@ -31,8 +31,9 @@ export const rankOf = (slug: string, opts?: DexOptions): number => defaults(opts
 // 합친 프로필 — 배열은 새로 만들어 돌려준다 (캐시를 건드리지 못하게)
 export function profileOf(slug: string, opts?: DexOptions): SpeciesProfile {
   const key = normalizeSlug(slug);
-  const base = isMetaKey(key) ? undefined : defaults(opts)[key];
-  const over = isMetaKey(key) ? undefined : overrides(opts)[key];
+  // 표에 자기 키로 있는 것만 — constructor 같은 이름이 상속된 값을 꺼내지 않게 (worklog/records/perf-refactor 5-1)
+  const base = isMetaKey(key) || !Object.hasOwn(defaults(opts), key) ? undefined : defaults(opts)[key];
+  const over = isMetaKey(key) || !Object.hasOwn(overrides(opts), key) ? undefined : overrides(opts)[key];
   const merged: SpeciesProfile = { slug: key, dex: 0, ...DEFAULT_PROFILE, ...base, ...over };
   merged.likes = [...merged.likes];
   merged.types = [...merged.types];
@@ -43,7 +44,7 @@ export function profileOf(slug: string, opts?: DexOptions): SpeciesProfile {
 export function hasProfile(slug: string, opts?: DexOptions): boolean {
   const key = normalizeSlug(slug);
   if (isMetaKey(key)) return false;
-  return key in defaults(opts) || key in overrides(opts);
+  return Object.hasOwn(defaults(opts), key) || Object.hasOwn(overrides(opts), key); // in 은 constructor 같은 상속 이름에도 참이었다(교환·편지 검사를 통과시켰다)
 }
 
 // 표에 있는 슬러그 전부 — 정렬

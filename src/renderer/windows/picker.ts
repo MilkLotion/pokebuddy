@@ -61,7 +61,13 @@ function render(payload: PickerPayload) {
 // 초상 — 받는 대로 원을 채운다. 못 받은 칸은 잠시 뒤 다시 청한다(첫 실행은 그림을 받는 중일 수 있다)
 const PORTRAIT_RETRY = { times: 4, waitMs: 4000 };
 async function fillPortraits(slugs: string[], tried: number): Promise<void> {
-  const got = await api.portraits(slugs);
+  // 요청이 던져도(첫 실행에 그림을 받는 중 등) 이번에 못 받은 것으로 보고 다시 시도한다 — 예전에는 고리가 끊겨 자리표시가 영영 깜빡였다 (worklog/records/perf-refactor 5-7, G61-3)
+  let got: Record<string, string | null> = {};
+  try {
+    got = await api.portraits(slugs);
+  } catch (e) {
+    console.error("첫 포켓몬 초상을 받지 못해 다시 시도한다", e);
+  }
   const left: string[] = [];
   for (const slug of slugs) {
     const b = list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"]`);
@@ -84,7 +90,7 @@ async function fillPortraits(slugs: string[], tried: number): Promise<void> {
   for (const slug of left) list.querySelector<HTMLElement>(`.card[data-slug="${CSS.escape(slug)}"] .portrait`)?.classList.add("no-art");
 }
 
-void api.list().then(render);
+void api.list().then(render).catch((e: unknown) => console.error("첫 포켓몬 목록을 받지 못했다", e));
 
 start.addEventListener("click", () => {
   if (picked) api.start(picked);

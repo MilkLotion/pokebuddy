@@ -389,8 +389,9 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const mailItems: Record<string, number> = {};
   for (const id of new Set(appliedOf(next))) {
     if (prevApplied.has(id)) continue;
-    const gifts = ctx.letters[id];
-    if (!gifts) {
+    // 자기 키만 본다 — 편지 id 가 constructor 같은 이름이면 상속된 함수를 꺼내 아래 for 에서 TypeError 로 500 이 났다 (worklog/records/perf-refactor 5-2, G81-3)
+    const gifts = Object.hasOwn(ctx.letters, id) ? ctx.letters[id] : undefined;
+    if (!Array.isArray(gifts)) {
       add("mail", 1, 0);
       continue;
     }
@@ -485,7 +486,9 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const newEggs = nextEggs.filter((e) => !prevEggIds.has(e.id)).map((e) => data.eggs[e.kind] ?? 0).sort((a, b) => a - b);
   for (const price of newEggs.slice(0, pos(newEggs.length - opened - achievedEggs))) cost += price;
   // 같은 틈에 만들어 연 알 — 번호만 늘고 두 저장 어디에도 없다. 연 알 수만큼은 보너스 알일 수 있고 나머지는 산 것이다
-  const minEgg = Math.min(...Object.values(data.eggs).filter((p) => p > 0));
+  // 값이 양수인 알이 없으면 0 — Infinity 면 0 × Infinity = NaN 으로 spend 검사가 조용히 꺼졌다 (worklog/records/perf-refactor 5-8, G81-5)
+  const eggPrices = Object.values(data.eggs).filter((p) => p > 0);
+  const minEgg = eggPrices.length ? Math.min(...eggPrices) : 0;
   const created = pos(eggSeqOf(next) - eggSeqOf(prev));
   const vanished = pos(created - newEggs.length);
   cost += pos(vanished - opened - achievedEggs) * minEgg;
@@ -516,6 +519,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   const prevById = new Map(prevPets.map((p) => [p.id, p]));
   const same = nextPets.map((p) => ({ p, q: prevById.get(p.id) })).filter((x): x is { p: Pet; q: Pet } => x.q != null && x.q.since === x.p.since);
   const fresh = nextPets.filter((p) => prevById.get(p.id)?.since !== p.since);
+  // 같은 개체의 거래 전 값 — 반복 안에서 same.find 로 찾던 것을 한 번에 (n×n → n, worklog/records/perf-refactor 5-8, G81-1)
+  const prevOfSame = new Map<string, Pet>();
+  for (const x of same) if (!prevOfSame.has(x.p.id)) prevOfSame.set(x.p.id, x.q); // 같은 id 가 둘이면 find 처럼 앞의 것
+  const nextSpecies = new Set(nextPets.map((p) => p.species));
   // 교환으로 받은 개체 — 서버 제안과 종(같은 틈의 진화 포함)·성격이 같고 레벨이 제안 이상이어야 한다(P5).
   // 이로치는 같은 틈에 약으로 켜거나 껐을 수 있다 — 켠 수는 아래 약 예산으로 센다(검수 P5 M1).
   // 맞은 개체는 제안 값에서 늘어난 경험치·친밀도만 예산으로 센다. 나머지 새 개체는 새로 얻어 키운 개체다.
@@ -592,7 +599,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   if (data.shiftRules) {
     const workGain = pos(workOf(next) - workOf(prev)) + r.slackMs * m;
     const changed: Record<string, number> = {}; // 도구 → 새로 바뀐 개체 수
-    const prevPet = (id: string): Pet | undefined => same.find((x) => x.p.id === id)?.q;
+    const prevPet = (id: string): Pet | undefined => prevOfSame.get(id);
     for (const p of nextPets) {
       const rule = data.shiftRules[p.species];
       const q = prevPet(p.id);
@@ -611,7 +618,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   // pet-party — 파티 시간 업적의 개체 시간. 종이 바뀌어도(지우의모자) 값은 남으므로 가장 큰 기준과 견준다
   if (r.petPartyMs != null) {
     for (const p of nextPets) {
-      const q = same.find((x) => x.p.id === p.id)?.q;
+      const q = prevOfSame.get(p.id);
       add("pet-party", pos(p.partyMs - (q?.partyMs ?? 0)), hours * HOUR * m, p.id);
       add("pet-party", p.partyMs, r.petPartyMs, p.id);
     }
@@ -622,7 +629,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     const careCap = r.careCountPerHour * hours * m + 2; // 쿨타임마다 밥 한 번·놀기 한 번, 짧은 틈에도 한 번씩
     let careOver = 0;
     for (const p of nextPets) {
-      const q = same.find((x) => x.p.id === p.id)?.q;
+      const q = prevOfSame.get(p.id);
       // 교환으로 받은 개체는 제안의 메가 진행에서 센다 — 메가스톤이 진행과 함께 교환을 따라온다 (2026-10-11, src/trade/exchange.ts TradePet.mega)
       const o = tradedFrom.get(p.id);
       const base = q ?? o;
@@ -653,18 +660,18 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   add("new-pets", fresh.length + vanishedPets, opened + vanished + findPets + achievedPets + mailPets + traded + boughtAndOpened + calledPets);
   // rider — 새 말은 버드렉스 계열이 있어야, 백마·흑마 모습은 그 말이 있어야 한다
   if (data.riders) {
-    const hasOwner = nextPets.some((p) => owners.has(p.species));
+    const hasOwner = [...owners].some((o) => nextSpecies.has(o));
     for (const p of freshHorses) if (!hasOwner) add("rider", 1, 0, p.id);
     for (const p of nextPets) {
       const horse = data.riders[p.species];
-      if (horse && !nextPets.some((q) => q.species === horse)) add("rider", 1, 0, p.id);
+      if (horse && !nextSpecies.has(horse)) add("rider", 1, 0, p.id);
     }
   }
   // partner — 블랙·화이트큐레무는 짝 개체가 저장에 있어야 한다. 짝은 묶이지 않는다 (2026-10-09 사용자 결정)
   if (data.partners) {
     for (const p of nextPets) {
       const mate = data.partners[p.species];
-      if (mate && !nextPets.some((q) => q.species === mate)) add("partner", 1, 0, p.id);
+      if (mate && !nextSpecies.has(mate)) add("partner", 1, 0, p.id);
     }
   }
   add("shiny", fresh.filter((p) => p.shiny).length, opened + vanished + findPets + traded + boughtAndOpened);

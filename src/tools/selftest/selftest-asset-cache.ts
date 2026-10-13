@@ -4,6 +4,7 @@
 // 끝에 "통과" 한 줄. 실패하면 어디서 깨졌는지와 함께 종료 코드 1
 import assert from "node:assert";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import { createAssetCache, dataUriOf } from "../../main/art/asset-cache";
 import { makeTmp } from "../harness/tmp-dir";
@@ -69,10 +70,39 @@ async function main(): Promise<void> {
     assert.deepEqual(cache.names("sub").sort(), ["x.bin", "y.bin"]);
     assert.deepEqual(cache.names("none"), []);
     process.stdout.write("(5) has·names  ok\n");
+
+    // (6) 없는 것과 못 받은 것 — 404 는 "absent" 이고 그 실행 동안 다시 묻지 않는다. 500·네트워크는 null 이고 retryMs 뒤 다시 묻는다 (worklog/records/perf-refactor 5-5)
+    const hits: Record<string, number> = {};
+    const server = http.createServer((req, res) => {
+      hits[req.url ?? ""] = (hits[req.url ?? ""] ?? 0) + 1;
+      if (req.url === "/missing") res.writeHead(404).end();
+      else if (req.url === "/broken") res.writeHead(500).end();
+      else res.writeHead(200).end("OK:net");
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    try {
+      const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+      const net = createAssetCache({ dir: path.join(root, "net"), validate: isGood, mime: () => "application/test", retryMs: 1 });
+      assert.equal(await net.fetchOutcome("m.bin", `${base}/missing`), "absent", "404 는 없음");
+      assert.equal(await net.fetchOutcome("b.bin", `${base}/broken`), null, "500 은 지금 못 받음");
+      assert.equal(await net.fetchOutcome("d.bin", DEAD), null, "네트워크 오류는 지금 못 받음");
+      assert.equal((await net.fetchOutcome("o.bin", `${base}/ok`)) instanceof Buffer, true, "받은 것은 버퍼");
+      assert.equal(await net.fetchFile("m2.bin", `${base}/missing`), null);
+      assert.equal(await net.fetchFile("b2.bin", `${base}/broken`), null);
+      await new Promise((r) => setTimeout(r, 10));
+      const before = { missing: hits["/missing"] ?? 0, broken: hits["/broken"] ?? 0 };
+      await net.fetchFile("m2.bin", `${base}/missing`);
+      await net.fetchFile("b2.bin", `${base}/broken`);
+      assert.equal(hits["/missing"], before.missing, "없는 그림은 다시 묻지 않는다");
+      assert.equal(hits["/broken"], before.broken + 1, "못 받은 그림은 retryMs 뒤 다시 묻는다");
+    } finally {
+      server.close();
+    }
+    process.stdout.write("(6) 없는 것과 못 받은 것  ok\n");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
-  process.stdout.write("selftest-asset-cache: 통과 (읽는 순서·메모·못 받은 것 기억·겹쳐 받기 막기·has·names)\n");
+  process.stdout.write("selftest-asset-cache: 통과 (읽는 순서·메모·못 받은 것 기억·겹쳐 받기 막기·has·names·없는 것과 못 받은 것)\n");
 }
 
 main().catch((e: unknown) => {

@@ -30,15 +30,24 @@ export interface GetOptions {
   timeout?: number;
 }
 
-// 받아서 Buffer 로. 실패하면 null — 왜 실패했는지는 호출한 쪽이 판단한다
-export async function fetchBuffer(url: string, { timeout = TIMEOUT_MS }: GetOptions = {}): Promise<Buffer | null> {
+// 받기의 결과 — 받았다, 서버에 없다(404·410), 지금은 못 받았다(네트워크 없음·타임아웃·그 밖의 HTTP 오류).
+// 없는 것과 못 받은 것을 가른다 — 예전에는 둘 다 null 이라 첫 실행이 오프라인이면 그림 목록이 "없음" 으로 영구 기록됐다 (worklog/records/perf-refactor 5-5, G18-1)
+export type FetchOutcome = { buf: Buffer } | { absent: boolean };
+
+export async function fetchOutcome(url: string, { timeout = TIMEOUT_MS }: GetOptions = {}): Promise<FetchOutcome> {
   try {
     const res = await httpFetch(url, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(timeout) });
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    if (!res.ok) return { absent: res.status === 404 || res.status === 410 };
+    return { buf: Buffer.from(await res.arrayBuffer()) };
   } catch {
-    return null; // 네트워크 없음·타임아웃·중단
+    return { absent: false }; // 네트워크 없음·타임아웃·중단
   }
+}
+
+// 받아서 Buffer 로. 실패하면 null — 왜 실패했는지가 필요하면 fetchOutcome
+export async function fetchBuffer(url: string, opts: GetOptions = {}): Promise<Buffer | null> {
+  const got = await fetchOutcome(url, opts);
+  return "buf" in got ? got.buf : null;
 }
 
 // 원자적으로 저장한다. 중간에 죽으면 .tmp 만 남고 정상 파일은 생기지 않는다
@@ -71,11 +80,18 @@ export interface CachedHit {
 // 캐시 → 없으면 받기. validate 가 false 를 주면 캐시하지 않고 버린다.
 // 검증을 읽을 때도 돌리므로, 옛 버전이 남긴 오염된 캐시는 저절로 복구된다
 export async function fetchCached(file: string, url: string, validate: (buf: Buffer) => boolean = () => true, opts?: GetOptions): Promise<CachedHit | null> {
+  const got = await fetchCachedOutcome(file, url, validate, opts);
+  return "buf" in got ? got : null;
+}
+
+// fetchCached 와 같고, 못 받았을 때 없는 것(absent: 404·410·받았는데 검증 실패)인지 지금 못 받은 것인지를 준다
+export async function fetchCachedOutcome(file: string, url: string, validate: (buf: Buffer) => boolean = () => true, opts?: GetOptions): Promise<CachedHit | { absent: boolean }> {
   const hit = readCache(file);
   if (hit && validate(hit)) return { buf: hit, from: file, cached: true };
 
-  const got = await fetchBuffer(url, opts);
-  if (!got || !validate(got)) return null;
-  saveAtomic(file, got);
-  return { buf: got, from: url, cached: false };
+  const got = await fetchOutcome(url, opts);
+  if (!("buf" in got)) return got;
+  if (!validate(got.buf)) return { absent: true };
+  saveAtomic(file, got.buf);
+  return { buf: got.buf, from: url, cached: false };
 }

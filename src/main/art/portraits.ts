@@ -248,14 +248,14 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
           else if (absent.has(job.url)) count.missing++;
           else {
             try {
-              const got = await cache.fetchBuffer(job.rel, job.url);
-              if (got) count.got++;
-              else {
-                count.missing++; // 404 — 그림이 없는 도구 등
+              const got = await cache.fetchOutcome(job.rel, job.url);
+              if (got === "absent") {
+                count.missing++; // 404·410 — 그림이 없는 도구 등. 이것만 영구히 적는다
                 absent.add(job.url);
-              }
+              } else if (got) count.got++;
+              else count.failed++; // 네트워크·타임아웃 — 다음 실행에서 다시 받는다(예전에는 404 로 영구히 적었다, worklog/records/perf-refactor 5-5)
             } catch {
-              count.failed++; // 네트워크 — 다음 실행에서 다시 받는다
+              count.failed++;
             }
           }
           onProgress?.(++done, jobs.length);

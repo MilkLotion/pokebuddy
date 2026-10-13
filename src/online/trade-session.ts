@@ -193,11 +193,14 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
       if (pendingNow()?.channelId === view.id && o.beforeApply?.() === true) return;
       const res = tx("trade.apply", { channelId: view.id, received: view.friend_offer });
       if (!res.ok) { fail("LOCAL", String(res.reason)); return; }
-      const result = res.result as { applied: boolean; petId?: string };
+      const result = res.result as { applied: boolean; petId?: string; refused?: string };
+      stopWatching();
+      // 받지 않았으면(받은 값이 규칙 밖·빈 칸 없음) 잠금은 풀렸고 화면에 이 PC 의 반영 실패로 알린다 (worklog/records/perf-refactor 5-4)
+      const refused = result.refused ? { code: "LOCAL" as const, detail: result.refused } : null;
+      // 반영은 끝났다 — 서버 확인(최대 15초)을 기다리지 않고 먼저 보인다 (G33-3)
+      emit({ phase: "done", channel: view, received: result.petId ? { petId: result.petId } : state.received, busy: false, error: refused ?? state.error });
       const ack = await o.net.ackApplied(view.id);
       if (ack.ok) o.onSettled?.();
-      stopWatching();
-      emit({ phase: "done", channel: view, received: result.petId ? { petId: result.petId } : state.received, busy: false, error: ack.ok ? null : state.error });
       return;
     }
     if (view.status === "cancelled" || view.status === "expired") {

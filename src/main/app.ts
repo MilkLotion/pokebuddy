@@ -423,7 +423,9 @@ const petMenu = createPetMenu({
 async function refreshParty(): Promise<void> {
   if (!rt.party || !rt.stages) return;
   await rt.stages.setParty(partyPetsOf(rt.party.save(), true));
-  // 트레이 아이콘은 앱 로고로 고정이라 createTray 에서 한 번 정한다 — 여기서 다시 걸지 않는다 (worklog/records/perf-refactor 2-5, G14-2)
+  // 트레이 아이콘은 앱 로고로 고정이라 createTray 에서 한 번 정한다 — 여기서 다시 걸지 않는다 (worklog/records/perf-refactor 2-5, G14-2).
+  // 툴팁은 파티 첫 마리 이름을 따라간다(docs/specs/companion.md, 2026-10-14 사용자 결정 3) — 같은 글자면 트레이가 다시 걸지 않는다
+  rt.tray?.setTooltip(t("tray.title", { name: displayName() }));
 }
 
 // 아이콘 말풍선 — 줍기·배고픔 (src/main/stage/bubbles.ts)

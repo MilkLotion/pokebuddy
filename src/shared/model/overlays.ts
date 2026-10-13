@@ -54,7 +54,7 @@ export type MenuView =
 // 줄의 id 는 menu:pick 으로 돌려보내는 번호다. icon 은 그림의 data URI
 export interface MenuSubView {
   title: string;
-  rows: { id: number; label: string; note: string; current: boolean; icon?: string }[];
+  rows: { id: number; label: string; note: string; current: boolean; disabled: boolean; icon?: string }[]; // current — 지금 모습, disabled — 누를 수 없음(지금 모습·도구 없음)
 }
 
 // 알림 창 — OS 대화상자 대신 띄우는 멈춤·분실·저장 잠김·정지·업데이트 창

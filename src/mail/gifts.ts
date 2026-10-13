@@ -7,7 +7,7 @@
 //   포켓몬 선물의 gender(male·female)는 선택 값이다. 있으면 그 성별로 넣는다. 그 종이 가질 수 없는 성별이면 모르는 선물이다. 옛 앱은 gender 를 모르고 성비대로 넣는다
 //   넣은 편지 id 는 save.mail.applied 에 남긴다. 같은 편지는 두 번 넣지 않는다(서버가 끊김 복구로 같은 선물을 다시 돌려줘도)
 //   읽은 편지 id 는 save.mail.read — 목록의 안 읽음 점과 헤더 점
-import { isMetaKey, loadJson, type DexOptions } from "../dex/data.js";
+import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
 import { isSingleSpecies } from "../dex/forms.js";
 import { boxRoom } from "../box/slots.js";
@@ -61,9 +61,11 @@ export function parseGifts(raw: unknown, opts?: DexOptions): Gift[] | null {
     else if (g.kind === "item" && id && giftItemName(id, opts) && intIn(g.count, MAIL_RULES.itemMax)) out.push({ kind: "item", id, count: g.count });
     else if (g.kind === "points" && intIn(g.count, MAIL_RULES.pointsMax)) out.push({ kind: "points", count: g.count });
     else if (g.kind === "pokemon" && typeof g.species === "string" && hasProfile(g.species, opts) && intIn(g.count, MAIL_RULES.pokemonMax)) {
-      const gender = giftGender(g.species, g.gender, opts);
+      // 종 이름은 정규화해 받는다 — 대문자·`-3d` 를 그대로 저장하면 단일 포켓몬 검사 등을 피해 갔다 (worklog/records/perf-refactor 5-3, G13-2)
+      const species = normalizeSlug(g.species);
+      const gender = giftGender(species, g.gender, opts);
       if (gender === null) return null;
-      out.push(gender ? { kind: "pokemon", species: g.species, count: g.count, gender } : { kind: "pokemon", species: g.species, count: g.count });
+      out.push(gender ? { kind: "pokemon", species, count: g.count, gender } : { kind: "pokemon", species, count: g.count });
     } else return null;
   }
   return out;

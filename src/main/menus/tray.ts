@@ -21,6 +21,7 @@ export interface TrayHandle {
   bounds(): Electron.Rectangle | null; // 아이콘 자리(화면 DIP) — 트레이 메뉴의 "아이콘 다시 누르기"를 가른다
   holdClick(ms: number): void; // 이만큼 동안 아이콘 클릭 신호를 무시한다 — 앱이 더블클릭을 직접 알아챘을 때
   setIcon(file: string | null): void;
+  setTooltip(text: string): void; // 툴팁 — 같은 글자면 다시 걸지 않는다
   destroy(): void;
 }
 
@@ -40,9 +41,10 @@ export function trayIcon(file: string | null): NativeImage {
 export function createTray(opts: TrayOptions): TrayHandle | null {
   let tray: Tray | null = null;
   let holdUntil = 0;
+  let tooltip = opts.tooltip;
   try {
     tray = new Tray(trayIcon(opts.icon));
-    tray.setToolTip(opts.tooltip);
+    tray.setToolTip(tooltip);
     const popup = opts.popup;
     // Windows 기본 트레이 아이콘처럼 — 우클릭은 메뉴, 왼쪽 클릭(한 번·더블)은 설정창
     // (2026-09-28 사용자 "윈도우기본앱은 아이콘 좌클릭이 그냥 바로 켜기구나"). 떠 있는 메뉴는 아이콘을 다시 누르면 닫히기만 한다
@@ -80,6 +82,11 @@ export function createTray(opts: TrayOptions): TrayHandle | null {
     },
     setIcon(file) {
       tray?.setImage(trayIcon(file));
+    },
+    setTooltip(text) {
+      if (!tray || text === tooltip) return;
+      tooltip = text;
+      tray.setToolTip(text);
     },
     destroy() {
       tray?.destroy();

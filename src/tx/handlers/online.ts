@@ -37,7 +37,8 @@ export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
   if (!channelId) return { ok: false, reason: "bad-args" };
   const res = applyTrade(draft, channelId, isArgsRecord(args) ? args.received : undefined, ctx.now);
   if (!res.ok) return { ok: false, reason: res.reason };
-  return { ok: true, result: res.applied ? { channelId, applied: true, petId: res.newPetId, where: res.where } : { channelId, applied: false } };
+  // refused — 받은 개체를 넣지 않고 잠금만 풀었다(받은 값이 규칙 밖·빈 칸 없음). 교환 세션이 화면에 알린다 (src/online/trade-session.ts settle)
+  return { ok: true, result: res.applied ? { channelId, applied: true, petId: res.newPetId, where: res.where } : { channelId, applied: false, ...(res.refused ? { refused: res.refused } : {}) } };
 };
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────

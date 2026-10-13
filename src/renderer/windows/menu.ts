@@ -66,7 +66,7 @@ function drawBubble(sub: MenuSubView): void {
     b.type = "button";
     b.className = "row";
     b.setAttribute("role", "menuitem");
-    b.disabled = row.current;
+    b.disabled = row.disabled;
     if (row.current) b.setAttribute("aria-current", "true");
     const face = document.createElement("span");
     face.className = "face";

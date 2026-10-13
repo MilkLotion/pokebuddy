@@ -15,12 +15,13 @@ import { hasProfile } from "../dex/species.js";
 import { slotsOfPreset } from "../party/presets.js";
 import { locatePet } from "../party/locate.js";
 import { newPet, nextPetId } from "../party/create.js";
+import { maxIdNo } from "../shared/ids.js";
 import { recordDex } from "../dex/record.js";
 import { dropMissingBattlePets } from "../battle/party.js";
 import { megaFormsOf } from "../dex/mega.js";
 import { MEGA_RULES } from "../dex/rules.js";
 import { snapSize } from "../party/size.js";
-import type { DexOptions } from "../dex/data";
+import { normalizeSlug, type DexOptions } from "../dex/data.js";
 import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
@@ -97,10 +98,11 @@ export const refOf = (pet: Pick<PetV3, "id" | "since">): PetRef => ({ id: pet.id
 // 친구가 올린 값 검사. 친구 사이라 조작을 완전히 막지는 않는다. 깨진 값과 규칙 밖 개체를 거른다
 export function validateReceived(raw: unknown, opts?: DexOptions): { ok: true; pet: TradePet } | { ok: false; reason: ReceiveFailure } {
   if (!isObj(raw)) return { ok: false, reason: "not-object" };
-  const species = raw.species;
-  const evolved = raw.evolved;
-  if (typeof species !== "string" || !hasProfile(species, opts)) return { ok: false, reason: "unknown-species" };
-  if (!Array.isArray(evolved) || !evolved.every((s) => typeof s === "string" && hasProfile(s, opts))) return { ok: false, reason: "unknown-species" };
+  if (typeof raw.species !== "string" || !hasProfile(raw.species, opts)) return { ok: false, reason: "unknown-species" };
+  if (!Array.isArray(raw.evolved) || !raw.evolved.every((s) => typeof s === "string" && hasProfile(s, opts))) return { ok: false, reason: "unknown-species" };
+  // 종 이름은 정규화해 받는다 — 대문자·`-3d` 를 그대로 저장하면 단일 포켓몬 검사를 피해 갔다 (worklog/records/perf-refactor 5-3, G76-1)
+  const species = normalizeSlug(raw.species);
+  const evolved = (raw.evolved as string[]).map(normalizeSlug);
   if (isSinglePet({ species, evolved: evolved as string[] }, opts)) return { ok: false, reason: "single" };
   if (!intIn(raw.level, 1, MAX_LEVEL)) return { ok: false, reason: "bad-level" };
   if (typeof raw.nature !== "string" || !isNatureId(raw.nature, opts)) return { ok: false, reason: "bad-nature" };
@@ -150,28 +152,33 @@ export function unlockTrade(save: SaveV3, channelId: string): boolean {
 // 받은 개체가 들어간 자리 — party 는 적용한 프리셋의 칸, preset 은 그 밖의 프리셋의 칸
 export type TradeWhere = { party: number } | { preset: number; slot: number } | { box: number; slot: number };
 
+// refused — 서버는 교환을 끝냈지만 받은 개체를 넣지 않았다. 잠금은 풀었다 (2026-10-14 사용자 결정 4 "추천대로", worklog/records/perf-refactor 5-4)
+//   bad-received  받은 값이 규칙 밖 — 받지 않는다
+//   no-room       보낸 개체가 없어 받은 개체를 새로 넣어야 하는데 파티·박스에 빈 칸이 없다
 export type ApplyResult =
-  | { ok: true; applied: false }
+  | { ok: true; applied: false; refused?: "bad-received" | "no-room" }
   | { ok: true; applied: true; newPetId: string; where: TradeWhere }
-  | { ok: false; reason: "bad-received" | "no-pet" };
+  | { ok: false; reason: "no-pet" };
 
-// 서버가 완료를 알렸다. 보낸 개체를 빼고 받은 개체를 그 자리에 넣는다. 도감에 기록한다
+// 서버가 완료를 알렸다. 보낸 개체를 빼고 받은 개체를 그 자리에 넣는다. 도감에 기록한다.
+// 반영하지 못해도 잠금은 푼다 — 예전에는 잠금이 남아 앱을 다시 켜도 같은 실패를 되풀이하고 새 교환이 영영 막혔다(G33·G76-4)
 export function applyTrade(save: SaveV3, channelId: string, received: unknown, now: number, opts?: DexOptions): ApplyResult {
   const pending = pendingTradeOf(save);
   if (!pending || pending.channelId !== channelId) return { ok: true, applied: false }; // 이미 반영했다
   const check = validateReceived(received, opts);
-  if (!check.ok) return { ok: false, reason: "bad-received" };
+  if (!check.ok) {
+    // 받지 않는다. 보낸 개체는 서버가 이미 상대에게 넘긴 것으로 적었으므로 이 저장에서도 뺀다 — 남기면 클라우드가 올리기를 거절한다(CLOUD_PET_TRADED_OUT)
+    // (2026-10-14 사용자 결정 "보낸 포켓몬도 뺀다")
+    removeSentPet(save, pending.petId);
+    save.trade = { pending: null };
+    return { ok: true, applied: false, refused: "bad-received" };
+  }
   const sentIndex = save.pets.findIndex((p) => p.id === pending.petId);
-  if (sentIndex < 0) return { ok: false, reason: "no-pet" };
+  if (sentIndex < 0) return placeReceivedOnly(save, check.pet, now, opts); // 보낸 개체가 이미 없다 — 받은 개체만 넣는다
 
   const got = check.pet;
   const id = nextPetId(save); // 보낸 개체를 빼기 전에 정한다 — 같은 번호를 다시 쓰지 않는다
-  const pet: PetV3 = {
-    ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, gender: got.gender ?? legacyGender({ id, species: got.species, since: now }, opts), now }),
-    size: got.size, level: got.level, exp: got.exp, affinity: got.affinity,
-    fullness: got.fullness, stage: got.stage, evolved: [...got.evolved],
-    ...(got.mega ? { mega: { bondMs: got.mega.bondMs, care: got.mega.care, stone: true } } : {}), // 원래 모습으로 받는다 — on 은 두지 않는다
-  };
+  const pet = receivedPetOf(got, id, now, opts);
 
   // 받은 개체는 보낸 개체의 자리를 물려받는다 — 적용한 프리셋(파티), 다른 프리셋, 박스 (src/party/presets.ts locatePet)
   let where: TradeWhere | null = null;
@@ -189,14 +196,78 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
       where = { box: place.box, slot: place.slot };
     }
   }
-  if (!where) return { ok: false, reason: "no-pet" };
+  if (!where) {
+    // 보낸 개체가 어느 칸에도 없다 — 서버는 그 개체를 보냈으므로 빼고(번호는 다시 쓰지 않는다), 받은 개체는 빈 칸에 넣는다
+    removeSentPet(save, pending.petId);
+    return placeReceivedOnly(save, got, now, opts);
+  }
 
   save.pets.splice(sentIndex, 1, pet);
-  dropMissingBattlePets(save); // 보낸 개체의 배틀 파티 칸은 빈 칸이 된다 — 받은 개체는 물려받지 않는다
   if (save.starterPetId === pending.petId) save.starterPetId = null;
+  finishTrade(save, pet);
+  return { ok: true, applied: true, newPetId: id, where };
+}
+
+// 보낸 개체를 칸과 저장에서 뺀다 — 받지 않고 끝낸 교환(bad-received). 프리셋 칸은 빈 칸, 박스 칸은 null.
+// 뺀 번호는 새 개체가 다시 쓰지 않는다(서버 검증의 pet-id 규칙, src/shop/sell-pet.ts sellPet 과 같다)
+function removeSentPet(save: SaveV3, petId: string): void {
+  const place = locatePet(save, petId);
+  if (place?.kind === "preset") {
+    const slots = slotsOfPreset(save, place.preset);
+    if (slots?.[place.slot]) slots[place.slot] = { state: "empty" };
+  } else if (place?.kind === "box") {
+    const box = save.boxes[place.box];
+    if (box) box.slots[place.slot] = null;
+  }
+  const at = save.pets.findIndex((p) => p.id === petId);
+  if (at < 0) return;
+  save.petSeq = Math.max(save.petSeq ?? 0, maxIdNo(save.pets, "p"));
+  save.pets.splice(at, 1);
+  if (save.starterPetId === petId) save.starterPetId = null;
+  dropMissingBattlePets(save);
+}
+
+// 받은 값으로 새 개체를 만든다 — 원래 모습으로 받는다(메가 on 은 두지 않는다)
+function receivedPetOf(got: TradePet, id: string, now: number, opts?: DexOptions): PetV3 {
+  return {
+    ...newPet({ id, species: got.species, shiny: got.shiny, nature: got.nature, gender: got.gender ?? legacyGender({ id, species: got.species, since: now }, opts), now }),
+    size: got.size, level: got.level, exp: got.exp, affinity: got.affinity,
+    fullness: got.fullness, stage: got.stage, evolved: [...got.evolved],
+    ...(got.mega ? { mega: { bondMs: got.mega.bondMs, care: got.mega.care, stone: true } } : {}),
+  };
+}
+
+// 교환 마무리 — 배틀 파티 정리, 도감, 메가스톤 기록, 교환 수, 잠금 풀기
+function finishTrade(save: SaveV3, pet: PetV3): void {
+  dropMissingBattlePets(save); // 보낸 개체의 배틀 파티 칸은 빈 칸이 된다 — 받은 개체는 물려받지 않는다
   recordDex(save, pet.species, pet.shiny);
   if (pet.mega?.stone) { const opened = (save.dex.megaOpened ??= []); if (!opened.includes(pet.species)) opened.push(pet.species); } // 받은 쪽 도감에도 메가스톤을 적는다 (src/dex/mega.ts settleMega 와 같은 기록)
   save.counts.traded += 1; // 교환 업적이 센다
   save.trade = { pending: null };
+}
+
+// 보낸 개체가 없을 때 — 서버 결과를 따라 받은 개체만 넣는다. 적용한 프리셋의 빈 칸, 없으면 박스. 둘 다 없으면 받지 않고 잠금만 푼다
+// (2026-10-14 사용자 결정 4 "추천대로", worklog/records/perf-refactor 5-4)
+function placeReceivedOnly(save: SaveV3, got: TradePet, now: number, opts?: DexOptions): ApplyResult {
+  const id = nextPetId(save);
+  const slot = save.party.slots.findIndex((s) => s.state === "empty");
+  const boxSpot = slot < 0 ? save.boxes.findIndex((b) => b.slots.includes(null)) : -1;
+  if (slot < 0 && boxSpot < 0) {
+    save.trade = { pending: null };
+    return { ok: true, applied: false, refused: "no-room" };
+  }
+  const pet = receivedPetOf(got, id, now, opts);
+  save.pets.push(pet);
+  let where: TradeWhere;
+  if (slot >= 0) {
+    save.party.slots[slot] = { state: "pokemon", petId: id, hidden: false };
+    where = { party: slot };
+  } else {
+    const box = save.boxes[boxSpot]!;
+    const i = box.slots.indexOf(null);
+    box.slots[i] = id;
+    where = { box: boxSpot, slot: i };
+  }
+  finishTrade(save, pet);
   return { ok: true, applied: true, newPetId: id, where };
 }

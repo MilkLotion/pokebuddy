@@ -170,6 +170,8 @@ function ancestorPids(): number[] {
 }
 
 // 대화 기록의 fromOffset 뒤를 읽어 assistant 응답의 usage 를 더한다. 반환 { usage, offset }.
+// claude 기록은 한 응답(message.id)을 콘텐츠 블록마다 한 줄씩 쓰고 줄마다 같은 usage 를 되풀이한다 — 응답마다 마지막 줄의 usage 한 번만 센다.
+// 예전에는 줄마다 더해 실제의 약 2.7배였다 (worklog/records/perf-refactor 5-6, G12-3). id 가 없는 줄은 줄마다 센다.
 // 파일이 줄었으면(새 기록) 처음부터. 마지막 줄이 아직 쓰는 중이면 그 줄은 다음에 (offset 을 그 앞에 둔다)
 function readUsageDelta(file: string, fromOffset: number): { usage: Usage; offset: number } {
   const zero: Usage = { ...ZERO_USAGE };
@@ -187,6 +189,8 @@ function readUsageDelta(file: string, fromOffset: number): { usage: Usage; offse
     text = text.slice(0, lastNl + 1);
     offset += Buffer.byteLength(text, "utf8");
     const usage: Usage = { ...zero };
+    const byMessage = new Map<string, Record<string, unknown>>(); // 응답 id → 마지막 usage
+    const loose: Record<string, unknown>[] = []; // id 가 없는 줄의 usage
     for (const line of text.split("\n")) {
       if (!line) continue;
       let j: unknown;
@@ -196,7 +200,11 @@ function readUsageDelta(file: string, fromOffset: number): { usage: Usage; offse
         continue;
       }
       if (!isObj(j) || j.type !== "assistant" || !isObj(j.message) || !isObj(j.message.usage)) continue;
-      const u = j.message.usage;
+      const id = j.message.id;
+      if (typeof id === "string" && id) byMessage.set(id, j.message.usage);
+      else loose.push(j.message.usage);
+    }
+    for (const u of [...byMessage.values(), ...loose]) {
       usage.in += Number(u.input_tokens) || 0;
       usage.out += Number(u.output_tokens) || 0;
       usage.cacheRead += Number(u.cache_read_input_tokens) || 0;

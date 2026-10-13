@@ -52,7 +52,9 @@ export function runStatus(petArg?: string): void {
       process.platform === "win32"
         ? ["powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(PROJECT, "helpers", "winbounds.ps1")]]
         : [path.join(PROJECT, "helpers", "winbounds"), []];
-    const info = JSON.parse(execFileSync(cmd, args, { encoding: "utf8", windowsHide: true }));
+    // 헬퍼가 걸려도 진단 명령이 멈추지 않게 시간을 둔다 — 첫 답은 PowerShell 기동·C# 컴파일이 껴 동반자도 20초를 준다(src/terminal/winbounds.ts HELPER_START_TIMEOUT_MS).
+    // 넘으면 던지고 아래 catch 가 "읽지 못했다" 로 알린다 (worklog/records/perf-refactor 5-9, G06-1)
+    const info = JSON.parse(execFileSync(cmd, args, { encoding: "utf8", windowsHide: true, timeout: 20_000 }));
     // 이 명령을 띄운 창이 맨 앞이다 — 펫 자신을 가리는 표는 필요 없다
     const top = frontWindow(info, info.windows);
     const host = hostOf(top, records);

@@ -174,8 +174,8 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   eq(
     sub?.rows,
     [
-      { id: subId(formAt, 0), label: "코스모그", note: t("menu.form.go"), current: false, icon: "data:image/png;base64,AA" },
-      { id: subId(formAt, 1), label: "코스모움", note: t("menu.form.now"), current: true },
+      { id: subId(formAt, 0), label: "코스모그", note: t("menu.form.go"), current: false, disabled: false, icon: "data:image/png;base64,AA" },
+      { id: subId(formAt, 1), label: "코스모움", note: t("menu.form.now"), current: true, disabled: true },
     ],
     "모습 말풍선의 줄 — 이름·바꾸기/지금·초상",
   );
@@ -183,6 +183,10 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   (pickOf(boxed, subId(formAt, 0))!.click as () => void)();
   eq(formed, "cosmog", "모습 줄의 번호로 그 모습의 동작을 찾는다");
   eq(pickOf(boxed, subId(formAt, 1))?.enabled, false, "지금 모습 줄은 비활성");
+  // 도구·말·짝이 없어 못 고르는 줄은 누를 수 없을 뿐 지금 모습이 아니다 (worklog/records/perf-refactor 5-7, G84-13)
+  const noItem = menuView([{ label: "모습", submenu: [{ label: "로토무(히트)", enabled: false }, { label: "로토무", enabled: false, checked: true }] }], "");
+  const noItemRows = noItem[0]?.kind === "item" ? noItem[0].sub?.rows : undefined;
+  eq(noItemRows?.map((r) => [r.current, r.disabled]), [[false, true], [true, true]], "못 고르는 줄은 지금 모습 표시가 없다");
   eq(pickOf(boxed, formAt)?.label, t("menu.form"), "pickOf — 하위 줄이 아니면 모델의 자리");
   // 옮기기·팔기 — 동작을 꽂으면 켜진다. 옮기기는 모델에 있을 때만(박스 개체) 나온다
   const wired = petMenu({ name: "꼬렛", nature: null, move: { enabled: true }, sell: { enabled: true } }, { detail: () => undefined, move: () => undefined, sell: () => undefined });

@@ -142,9 +142,44 @@ const eevee: TradePet = {
   assert.deepStrictEqual(applyTrade(seed(), "ch9", eevee, T0), { ok: true, applied: false }, "pending 이 없으면 아무것도 하지 않는다");
   const bad = seed();
   lockTrade(bad, "ch9", "p2", 1);
-  assert.deepStrictEqual(applyTrade(bad, "ch9", { ...eevee, species: "mewtwo" }, T0), { ok: false, reason: "bad-received" });
-  assert.equal(bad.trade?.pending?.channelId, "ch9", "반영하지 못하면 pending 을 남긴다");
-  process.stdout.write("(5) 박스 칸 반영  ok\n");
+  const before = bad.pets.length;
+  assert.deepStrictEqual(applyTrade(bad, "ch9", { ...eevee, species: "mewtwo" }, T0), { ok: true, applied: false, refused: "bad-received" });
+  assert.equal(bad.trade?.pending ?? null, null, "받은 값이 규칙 밖이면 받지 않고 잠금을 푼다 — 새 교환이 막히지 않는다 (2026-10-14 사용자 결정 4)");
+  assert.equal(bad.pets.length, before - 1, "보낸 개체도 뺀다 — 서버가 이미 넘긴 것으로 적었다 (2026-10-14 사용자 결정 \"보낸 포켓몬도 뺀다\")");
+  assert.equal(bad.pets.some((p) => p.id === "p2"), false);
+  assert.equal(bad.boxes.some((b) => b.slots.includes("p2")), false, "박스 칸도 비운다");
+  assert.ok((bad.petSeq ?? 0) >= 2, "뺀 번호는 다시 쓰지 않는다");
+  process.stdout.write("(5) 박스 칸 반영 · 규칙 밖 값은 받지 않고 잠금 풀기  ok\n");
+}
+
+// (5b) 보낸 개체가 없을 때 — 받은 개체만 넣고 끝낸다. 빈 칸이 없으면 받지 않고 잠금만 푼다 (2026-10-14 사용자 결정 4, worklog/records/perf-refactor 5-4)
+{
+  const gone = seed();
+  lockTrade(gone, "ch7", "p2", 1);
+  gone.pets = gone.pets.filter((p) => p.id !== "p2");
+  for (const b of gone.boxes) b.slots = b.slots.map((x) => (x === "p2" ? null : x));
+  const traded = gone.counts.traded;
+  const res = applyTrade(gone, "ch7", eevee, T0);
+  if (!res.ok || !res.applied) throw new Error(`받은 개체만 넣기 실패: ${JSON.stringify(res)}`);
+  assert.ok(gone.pets.some((p) => p.id === res.newPetId && p.species === "eevee"), "받은 개체가 들어온다");
+  assert.equal(gone.trade?.pending ?? null, null, "잠금을 푼다");
+  assert.equal(gone.counts.traded, traded + 1, "교환 수를 센다");
+
+  const full = seed();
+  lockTrade(full, "ch8", "p2", 1);
+  full.pets = full.pets.filter((p) => p.id !== "p2");
+  full.party.slots = full.party.slots.map((x) => (x.state === "empty" ? { state: "locked" as const } : x)) as typeof full.party.slots;
+  for (const b of full.boxes) b.slots = b.slots.map((x) => x ?? "filler");
+  assert.deepStrictEqual(applyTrade(full, "ch8", eevee, T0), { ok: true, applied: false, refused: "no-room" });
+  assert.equal(full.trade?.pending ?? null, null, "빈 칸이 없어도 잠금을 푼다");
+
+  const orphan = seed();
+  lockTrade(orphan, "ch6", "p2", 1);
+  for (const b of orphan.boxes) b.slots = b.slots.map((x) => (x === "p2" ? null : x)); // 개체는 있는데 어느 칸에도 없다
+  const r3 = applyTrade(orphan, "ch6", eevee, T0);
+  assert.ok(r3.ok && r3.applied, "받은 개체를 빈 칸에 넣는다");
+  assert.equal(orphan.pets.some((p) => p.id === "p2"), false, "보낸 개체는 뺀다");
+  process.stdout.write("(5b) 보낸 개체가 없을 때 받은 개체만 · 빈 칸 없으면 잠금만 풀기  ok\n");
 }
 
 // (6) 저장 읽기 — 깨진 pending 은 비운다

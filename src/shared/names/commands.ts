@@ -106,7 +106,7 @@ export type CommandFlag = "cli" | "slow" | "detached" | "haltOpen" | "internal";
 const SPECS: Readonly<Record<string, CommandSpec>> = COMMANDS;
 
 // 그 속성이 켜진 명령인가 — 모르는 이름이면 거짓
-export const hasCommandFlag = (name: string, flag: CommandFlag): boolean => SPECS[name]?.[flag] === true;
+export const hasCommandFlag = (name: string, flag: CommandFlag): boolean => Object.hasOwn(SPECS, name) && SPECS[name]?.[flag] === true; // 표에 자기 키로 있는 것만
 
 // 그 속성이 켜진 명령의 이름 — 표의 순서
 export const commandNamesWhere = (flag: CommandFlag): AnyCommandName[] =>

@@ -24,7 +24,9 @@ function subView(parent: number, m: MenuItemConstructorOptions): MenuSubView | n
       id: subId(parent, i),
       label: row.label ?? "",
       note: row.sublabel ?? "",
-      current: row.enabled === false,
+      // 지금 모습은 checked 로 따로 받는다 — 예전에는 누를 수 없는 줄(도구·말·짝 없음)까지 지금 모습으로 보였다 (worklog/records/perf-refactor 5-7, G84-13)
+      current: row.checked === true,
+      disabled: row.enabled === false,
       ...(typeof row.icon === "string" ? { icon: row.icon } : {}),
     })),
   };
