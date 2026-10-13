@@ -243,7 +243,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
 - 빌드는 `npm run build` 로 한다. `tsconfig.json` 이 메인·CLI 가 부르는 모듈·도구를 `dist/` 로 만든다(CJS). `tsconfig.renderer.json` 이 화면 스크립트를
   `dist/web/` 로 만든다(ESM, `src/renderer/` 와 `src/shared/` 를 같은 폴더 모양으로). HTML 은 빌드하지 않는다. `src/renderer/*.html` 에 그대로 둔다. 이 HTML 은 `../../dist/web/renderer/<폴더>/*.js` 를 부른다. 스타일은 `src/renderer/styles/` 의 CSS 파일이다
 - 무대·선택 창 문서에는 CSP 가 있다. 스크립트는 자기 파일에서만 부른다. 그림은 data URL 만 쓴다(`default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src data:`, 무대는 `media-src data:` 를 더한다)
-- 창 아이콘은 다음과 같다 — Windows 는 `assets/logo/out/logo-256.png` 를 쓴다. mac 은 Dock 아이콘을 `logo-512.png` 로 정한다. 그 뒤 Dock 에서 숨긴다. 트레이 아이콘은 첫 마리 그림을 쓴다
+- 창 아이콘은 다음과 같다 — Windows 는 `assets/logo/out/logo-256.png` 를 쓴다. mac 은 Dock 아이콘을 `logo-512.png` 로 정한다. 그 뒤 Dock 에서 숨긴다. 트레이 아이콘은 앱 로고(`logo-256.png`)로 고정한다(2026-10-14 사용자 결정)
 - 자체 확인은 `npm run selftest` 로 한다. 검사 목록은 `src/tools/selftest/list.ts` 의 `SELFTESTS` 에 있다. 실행기는 `src/tools/selftest/run.ts` 다
   - 목록에 없는 `selftest-*.ts` 가 하나라도 있으면 검사를 하나도 돌리지 않고 실패한다. 새 검사를 만들면 목록에 더한다
   - 검사가 하나라도 실패하면 종료 코드는 1 이다. 실패한 검사의 종료 코드를 그대로 내지 않는다
