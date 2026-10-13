@@ -10,17 +10,23 @@ export interface DexOptions {
 
 export const DEFAULT_DATA_DIR = path.join(__dirname, "..", "..", "data");
 
-// 파일 절대 경로 → 파싱 결과. 같은 경로는 다시 읽지 않는다
-const cache = new Map<string, unknown>();
+// 자료 폴더 → 파일 이름 → 파싱 결과. 같은 파일은 다시 읽지 않는다.
+// 맞을 때는 경로를 만들지 않는다 — 스냅샷 한 번에 수천 번 불려 path.join 이 스냅샷 시간의 3할이었다 (worklog/records/perf-refactor 3-1)
+const cache = new Map<string, Map<string, unknown>>();
 
 export const dataDirOf = (opts?: DexOptions): string => opts?.dataDir ?? DEFAULT_DATA_DIR;
 
 export function loadJson<T>(name: string, opts?: DexOptions): T {
-  const file = path.join(dataDirOf(opts), name);
-  const hit = cache.get(file);
+  const dir = dataDirOf(opts);
+  let byName = cache.get(dir);
+  if (!byName) {
+    byName = new Map();
+    cache.set(dir, byName);
+  }
+  const hit = byName.get(name);
   if (hit !== undefined) return hit as T;
-  const parsed = JSON.parse(readFileSync(file, "utf8")) as T;
-  cache.set(file, parsed);
+  const parsed = JSON.parse(readFileSync(path.join(dir, name), "utf8")) as T;
+  byName.set(name, parsed);
   return parsed;
 }
 

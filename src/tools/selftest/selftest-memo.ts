@@ -6,7 +6,11 @@
 // 메모는 자료 폴더(dataDir)마다 한 번 만든다 — 다른 자료 폴더는 다른 값을 준다
 import assert from "node:assert";
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "../../dex/data";
-import { fixedEggs, isSingleEgg, rewardSpecies, singleSpecies } from "../../dex/obtain";
+import { eggPool, fixedEggs, inRandomEgg, isSingleEgg, rewardSpecies, singleSpecies } from "../../dex/obtain";
+import { eggTable } from "../../dex/tables";
+import { sellsSpecies } from "../../shop/catalog";
+import { evoPairs } from "../../view/shop-detail";
+import { emptySave } from "../../save/normalize";
 import { allRiders, regionalTable, shiftGroupOf } from "../../dex/regional";
 import { okCounter, printLine } from "../harness/report";
 
@@ -67,6 +71,43 @@ t.ok("자료 폴더가 다르면 따로 메모한다", () => {
   const empty = { dataDir: "no-such-data-dir" };
   assert.deepStrictEqual(shiftGroupOf("giratina", empty), []);
   assert.deepStrictEqual(shiftGroupOf("giratina"), ["giratina", "giratina-origin"]);
+});
+
+// 메모 전의 fixedEggs
+function fixedRef(): [string, string[]][] {
+  const out: [string, string[]][] = [];
+  for (const kind of Object.keys(eggTable())) {
+    const pool = eggPool(kind);
+    if (pool) out.push([kind, pool]);
+  }
+  return out;
+}
+
+t.ok("fixedEggs — 메모 전과 같고, 두 번 불러도 다시 만들지 않는다", () => {
+  assert.deepStrictEqual(fixedEggs(), fixedRef());
+  assert.strictEqual(fixedEggs(), fixedEggs());
+});
+
+t.ok(`sellsSpecies — ${names.size}개 이름에서 메모 전과 같다`, () => {
+  for (const n of names) {
+    const ref = !isMetaKey(n) && (inRandomEgg(n) || fixedRef().some(([kind, pool]) => !isSingleEgg(kind) && pool.includes(n)));
+    assert.equal(sellsSpecies(n), ref, n);
+    assert.equal(sellsSpecies(n), ref, `${n} 두 번째`);
+  }
+});
+
+t.ok("evoPairs — 두 번 불러도 같고, 해금한 종만 이름을 보인다", () => {
+  const items = Object.keys(loadJson<Record<string, unknown>>("evo-items.json")).filter((k) => !isMetaKey(k));
+  const locked = emptySave(0);
+  const open = emptySave(0);
+  for (const id of items) {
+    const a = evoPairs(open, id);
+    assert.deepStrictEqual(evoPairs(open, id), a, id);
+    for (const p of evoPairs(locked, id)) assert.ok(p.from.locked && p.to.locked, `${id} 해금 없음은 가린다`);
+  }
+  open.dex.unlocked = Object.keys(loadJson<Record<string, unknown>>("unlocks.json")).filter((k) => !isMetaKey(k));
+  const stone = evoPairs(open, "fire-stone");
+  assert.ok(stone.some((p) => !p.from.locked), "해금한 종은 이름을 보인다");
 });
 
 printLine(`selftest-memo: 통과 (${t.count()}건)`);

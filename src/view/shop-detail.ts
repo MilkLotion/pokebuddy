@@ -7,7 +7,7 @@
 import { profileOf } from "../dex/species.js";
 import { nextOf, type EvoStep, rootOf } from "../dex/evo.js";
 import { type DexOptions, loadJson, isMetaKey } from "../dex/data.js";
-import { genderText, itemName, petName, typeName, t } from "./text.js";
+import { currentLang, genderText, itemName, petName, typeName, t } from "./text.js";
 import type { SaveV3 } from "../shared/save-v3";
 import { needIsMap, regionalOf, REGION_MAP } from "../dex/regional.js";
 import type { EvoNodeView, EvoPairView, ShopDetail } from "../shared/model/detail";
@@ -62,11 +62,17 @@ function node(save: SaveV3, slug: string, current: string, need: string | undefi
 }
 
 // 진화용 도구로 진화하는 쌍 — 진화 전 도감 번호, 같으면 진화 후 번호순. 지도는 map 간선(기본형 → 리전폼)의 쌍이다
-export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPairView[] {
+// 도구 하나의 진화 쌍 뼈대 — 종 슬러그와 설명, 도감 번호순. 자료와 언어만으로 정해져 (자료 폴더·언어·도구)마다 한 번 만든다.
+// 상점 목록이 매초 진화 도구마다 부른다 (worklog/records/perf-refactor 3-1)
+type EvoPairBase = { from: string; to: string; note?: string };
+const evoPairMemo = new Map<string, readonly EvoPairBase[]>();
+function evoPairBases(itemId: string, opts?: DexOptions): readonly EvoPairBase[] {
+  const key = `${opts?.dataDir ?? ""}|${currentLang()}|${itemId}`;
+  const hit = evoPairMemo.get(key);
+  if (hit) return hit;
   const table = loadJson<Record<string, EvoStep[]>>("evo.json", opts);
   const dexOf = (slug: string): number => profileOf(slug, opts).dex || Number.MAX_SAFE_INTEGER;
-  const side = (slug: string): EvoPairView["from"] => ({ slug, name: isKnownSpecies(save, slug) ? petName(slug) : LOCKED_NAME, locked: !isKnownSpecies(save, slug) });
-  const pairs: EvoPairView[] = [];
+  const pairs: EvoPairBase[] = [];
   for (const [from, steps] of Object.entries(table)) {
     if (isMetaKey(from)) continue;
     for (const step of steps) {
@@ -75,10 +81,17 @@ export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPa
       // 쌍의 설명은 그 도구 밖의 조건이다 — 돌 쌍의 "수컷"처럼. 지도 쌍이면 레벨 간선은 "Lv.36", 돌 대신 지도인 간선은 설명 없음
       //   돌 쌍에는 지도 간선이 없다 — 돌 대신 지도라 조건이 지도다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
       const note = itemId === REGION_MAP && !needIsMap(step.need) ? needLabel({ ...step, map: undefined }, opts) : extras(step).join(" · ");
-      pairs.push({ from: side(from), to: side(step.to), ...(note ? { note } : {}) });
+      pairs.push({ from, to: step.to, ...(note ? { note } : {}) });
     }
   }
-  return pairs.sort((a, b) => dexOf(a.from.slug) - dexOf(b.from.slug) || dexOf(a.to.slug) - dexOf(b.to.slug));
+  pairs.sort((a, b) => dexOf(a.from) - dexOf(b.from) || dexOf(a.to) - dexOf(b.to));
+  evoPairMemo.set(key, pairs);
+  return pairs;
+}
+
+export function evoPairs(save: SaveV3, itemId: string, opts?: DexOptions): EvoPairView[] {
+  const side = (slug: string): EvoPairView["from"] => ({ slug, name: isKnownSpecies(save, slug) ? petName(slug) : LOCKED_NAME, locked: !isKnownSpecies(save, slug) });
+  return evoPairBases(itemId, opts).map((p) => ({ from: side(p.from), to: side(p.to), ...(p.note ? { note: p.note } : {}) }));
 }
 
 // 진화 탭 상품 줄의 한 줄 설명 — "피카츄·레어코일 외 5종" · "야돈 → 야도킹" (2026-09-30 사용자 결정)

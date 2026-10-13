@@ -12,13 +12,19 @@ export function eggPool(kind: string, opts?: DexOptions): string[] | null {
   return Array.isArray(raw) ? raw.filter((s): s is string => typeof s === "string") : null;
 }
 
-// 종 목록을 가진 알 전부 — [알 종류, 종 목록]. 태고의돌과 단일 포켓몬 알이다
-export function fixedEggs(opts?: DexOptions): [string, string[]][] {
+// 종 목록을 가진 알 전부 — [알 종류, 종 목록]. 태고의돌과 단일 포켓몬 알이다.
+// 자료만으로 정해져 자료 폴더마다 한 번 만든다(상점 목록이 상품마다 부른다, worklog/records/perf-refactor 3-1). 받는 쪽은 고치지 않는다
+const fixedMemo = new Map<string, ReadonlyArray<readonly [string, readonly string[]]>>();
+export function fixedEggs(opts?: DexOptions): ReadonlyArray<readonly [string, readonly string[]]> {
+  const key = opts?.dataDir ?? "";
+  const hit = fixedMemo.get(key);
+  if (hit) return hit;
   const out: [string, string[]][] = [];
   for (const kind of Object.keys(eggTable(opts))) {
     const pool = eggPool(kind, opts);
     if (pool) out.push([kind, pool]);
   }
+  fixedMemo.set(key, out);
   return out;
 }
 

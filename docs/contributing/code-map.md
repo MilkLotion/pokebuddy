@@ -198,7 +198,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 ### 저장 → 화면
 
-1. 렌더러 `manage/live.ts` 가 스냅샷을 부르면 메인이 `view/snapshot.ts` 로 만들어 돌려준다. 메인은 스냅샷마다 순번(`seq`)을 붙인다. 렌더러는 이미 받은 것보다 낮은 순번을 버린다(`manage/view-gate.ts`). `shell.ts` 가 지금 탭을 다시 그린다.
+1. 렌더러 `manage/live.ts` 가 스냅샷을 부르면 메인이 `view/snapshot.ts` 로 만들어 돌려준다. 스냅샷은 복제하지 않은 메모리 값(`game.peek`)으로 만들고 저장을 고치지 않는다. 시간이 흐르지 않는 개체(박스·쉬는 프리셋)의 화면 값은 저장 문맥이 같으면 지난 값을 쓴다(`view/snapshot.ts`, `selftest-snapshot-cache`). 메인은 스냅샷마다 순번(`seq`)을 붙인다. 렌더러는 이미 받은 것보다 낮은 순번을 버린다(`manage/view-gate.ts`). `shell.ts` 가 지금 탭을 다시 그린다.
 2. 1초마다 다시 받은 스냅샷에서 시간으로만 바뀌는 값만 달라졌으면 글자만 고친다. 그 값은 필드 이름(`LIVE_KEYS`)과 경로(`SNAPSHOT_LIVE_PATHS`, 머리의 포인트·낮밤 게이지)로 정한다(`shared/live-keys.ts`). 그 밖의 값이 달라지면 다시 그린다. 시간만 흘러도 모양이 바뀌는 경로는 `selftest-live-shape` 가 잡는다.
 3. 기기 창은 설정창의 연결 파일이 연다. 메인 `manage/devices.ts` 가 `view/device-*.ts` 로 모델을 만든다. 같은 모델이면 다시 보내지 않는다. 파티 상세와 배틀 창은 모양이 같으면 다시 그리지 않는다. 가방·상점·도감 기기 창은 새 모델이 올 때마다 통째로 다시 그린다(`check-runtime` 기준 목록).
 

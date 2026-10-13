@@ -56,10 +56,21 @@ export function speciesPrice(slug: string, opts?: DexOptions): number | null {
 //   랜덤알 후보            inRandomEgg (src/dex/obtain.ts)
 //   화석                   단일 포켓몬 알이 아닌 종 목록 알(태고의돌)의 종
 //   단일 포켓몬 알의 종    팔지 않는다 — 준전설·전설·환상·울트라비스트·패러독스
+// 자료만으로 정해져 자료 폴더·종마다 한 번만 계산한다 (상점 목록이 매초 종마다 부른다, worklog/records/perf-refactor 3-1)
+const sellsMemo = new Map<string, Map<string, boolean>>();
 export function sellsSpecies(slug: string, opts?: DexOptions): boolean {
   if (isMetaKey(slug)) return false;
-  if (inRandomEgg(slug, opts)) return true;
-  return fixedEggs(opts).some(([kind, pool]) => !isSingleEgg(kind, opts) && pool.includes(slug));
+  const dir = opts?.dataDir ?? "";
+  let bySlug = sellsMemo.get(dir);
+  if (!bySlug) {
+    bySlug = new Map();
+    sellsMemo.set(dir, bySlug);
+  }
+  const hit = bySlug.get(slug);
+  if (hit !== undefined) return hit;
+  const sells = inRandomEgg(slug, opts) || fixedEggs(opts).some(([kind, pool]) => !isSingleEgg(kind, opts) && pool.includes(slug));
+  bySlug.set(slug, sells);
+  return sells;
 }
 
 export function eggPrice(kind: string, opts?: DexOptions): number | null {

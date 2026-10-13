@@ -5,7 +5,7 @@
 // 모양은 src/shared/model/snapshot.ts 가 가진다. 렌더러와 같은 타입을 본다.
 // 저장을 쓰지 않는다. 읽기만 한다.
 // 시간 표기는 올림한다. 저장은 ms 정수로 두고 화면만 사람이 읽는 단위로 본다 (docs/specs/modules.md "저장 시점")
-import { achievementName, itemName, petName, natureName } from "./text.js";
+import { achievementName, currentLang, itemName, petName, natureName } from "./text.js";
 import { eggName, toolPrice } from "../shop/catalog.js";
 import { duplicateCandidates } from "../shop/sell-pet.js";
 import type { SaveV3 } from "../shared/save-v3";
@@ -25,8 +25,8 @@ import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
 import { SETTING_CHOICES } from "../state/settings.js";
-import type { AchievementView, BagItemView, BoxView, EggView, NatureOption, PresetView, RiderCallView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
-import type { PartySlotV3 } from "../shared/save-v3";
+import type { AchievementView, BagItemView, BoxView, EggView, NatureOption, PetView, PresetView, RiderCallView, SettingsView, SlotView, Snapshot } from "../shared/model/snapshot";
+import type { PartySlotV3, PetV3 } from "../shared/save-v3";
 import { unclaimedAchievementIds } from "../dex/tables.js";
 import { SCREEN_TUTORIALS } from "../tutorial/conditions.js";
 import { canShow, currentTutorial, replayableNow } from "../tutorial/queue.js";
@@ -63,6 +63,30 @@ const eggPercent = (remainMs: number, readyMs: number): number =>
 // 잠들기 기준 선택지 — 0 은 잠들지 않음
 const sleepChoices = (): SettingsView["sleepChoices"] => SETTING_CHOICES.sleepAfterMin.map((min) => ({ value: min, label: min === 0 ? "잠들지 않음" : `${min}분` }));
 
+// 시간이 흘러도 바뀌지 않는 개체(박스·쉬는 프리셋)의 화면 값 캐시 — 개체 id → { 열쇠, 값 }.
+// 시간은 활성 파티 개체에만 흐른다(src/state/time.ts). 그 밖의 개체 화면 값은 개체 값·저장의 나머지·낮밤·남은 분·숨김·언어로만 정해진다.
+// 열쇠는 그 입력 전부다 — 저장에서 매 틱 바뀌는 시각·누적·포인트만 뺀다(petView 와 그 아래 함수는 이 셋을 읽지 않는다).
+// 활성 파티 개체는 다른 개체의 화면 값에 종·모습·메가만 쓰이므로 그것만 넣는다. 빠진 입력이 있으면 옛 값을 보인다 —
+// selftest-snapshot-cache 가 무작위 명령과 시간을 섞어 "캐시 = 새로 만든 값" 을 본다 (worklog/records/perf-refactor 3-3)
+const restViews = new Map<string, { key: string; view: PetView }>();
+let restContext = ""; // 캐시를 만든 저장 문맥 — 다르면 캐시를 통째로 비운다(문맥은 스냅샷마다 한 번만 견준다)
+let restCache = true;
+// 캐시 없이 만든다 — 캐시는 지우지 않는다. 자체 검사가 캐시한 값과 견준다 (selftest-snapshot-cache)
+export function withoutPetViewCache<T>(fn: () => T): T {
+  const was = restCache;
+  restCache = false;
+  try {
+    return fn();
+  } finally {
+    restCache = was;
+  }
+}
+
+function contextKeyOf(save: SaveV3, partyIds: ReadonlySet<string>): string {
+  const { pets, lastTickAt: _tick, savedAt: _saved, totals: _totals, points: _points, ...rest } = save;
+  return JSON.stringify([currentLang(), rest, pets.map((p) => (partyIds.has(p.id) ? [p.id, p.species, p.mega ?? null, p.evolved, p.forms ?? null] : p))]);
+}
+
 // 시각은 부르는 쪽이 준다(메인은 게임 시계, 시험은 고정 시각) — 진화 후보의 낮·밤을 정한다.
 // 전체 준비 시간과 칸 수는 규칙표에서 온다(예전에는 인자로도 받았지만 다른 값을 넘기는 곳이 없었다)
 export function snapshotView(save: SaveV3, now: number): Snapshot {
@@ -73,17 +97,39 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
   const dayLeftMs = gameDayLeftMs(now);
   const byId = new Map(save.pets.map((p) => [p.id, p]));
 
-  const slotViews = (list: PartySlotV3[]): SlotView[] =>
+  // 시간이 흐르지 않는 개체의 화면 값 — 열쇠가 같으면 지난 값을 쓴다. 이번에 쓰지 않은 개체는 캐시에서 지운다
+  const partyIds = new Set(save.party.slots.flatMap((s) => (s.state === "pokemon" && s.petId ? [s.petId] : [])));
+  if (restCache) {
+    const context = `${contextKeyOf(save, partyIds)}|${dayPart}|${Math.ceil(dayLeftMs / 60_000)}`;
+    if (context !== restContext) {
+      restViews.clear();
+      restContext = context;
+    }
+  }
+  const used = new Set<string>();
+  const restView = (pet: PetV3, hidden: boolean): PetView => {
+    if (!restCache) return petView(save, pet, hidden, dayPart, dayLeftMs);
+    const key = `${JSON.stringify(pet)}|${hidden}`;
+    used.add(pet.id);
+    const hit = restViews.get(pet.id);
+    if (hit && hit.key === key) return hit.view;
+    const view = petView(save, pet, hidden, dayPart, dayLeftMs);
+    restViews.set(pet.id, { key, view });
+    return view;
+  };
+
+  const slotViews = (list: PartySlotV3[], resting: boolean): SlotView[] =>
     list.map((s, index) => {
       if (s.state !== "pokemon" || !s.petId) return { index, state: s.state };
       const pet = byId.get(s.petId);
       if (!pet) return { index, state: "empty" };
-      return { index, state: "pokemon", pet: petView(save, pet, s.hidden === true, dayPart, dayLeftMs) };
+      const hidden = s.hidden === true;
+      return { index, state: "pokemon", pet: resting && !partyIds.has(pet.id) ? restView(pet, hidden) : petView(save, pet, hidden, dayPart, dayLeftMs) };
     });
-  const slots = slotViews(save.party.slots);
-  // 가진 프리셋 전부 — 적용한 프리셋은 위의 slots 를 그대로 쓴다
+  const slots = slotViews(save.party.slots, false);
+  // 가진 프리셋 전부 — 적용한 프리셋은 위의 slots 를 그대로 쓴다. 쉬는 프리셋의 개체는 시간이 흐르지 않는다
   const active = activePreset(save);
-  const presets: PresetView[] = allPresets(save).map((p) => ({ index: p.preset, name: presetName(save, p.preset), slots: p.preset === active ? slots : slotViews(p.slots) }));
+  const presets: PresetView[] = allPresets(save).map((p) => ({ index: p.preset, name: presetName(save, p.preset), slots: p.preset === active ? slots : slotViews(p.slots, true) }));
 
   const boxes: BoxView[] = save.boxes.map((b, i) => ({
     id: b.id,
@@ -92,9 +138,10 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     size: boxSize,
     slots: b.slots.map((id) => {
       const pet = id ? byId.get(id) : undefined;
-      return pet ? petView(save, pet, true, dayPart, dayLeftMs) : null;
+      return pet ? (partyIds.has(pet.id) ? petView(save, pet, true, dayPart, dayLeftMs) : restView(pet, true)) : null;
     }),
   }));
+  if (restCache) for (const id of [...restViews.keys()]) if (!used.has(id)) restViews.delete(id);
 
   const eggs: EggView[] = save.eggs.map((e) => ({
     id: e.id,
@@ -198,8 +245,9 @@ function natureOptions(): NatureOption[] {
 // 형식은 구조로만 받는다 — 화면 값은 실행기(tx)를 가져오지 않는다. 저장이 없으면 null
 // 부르는 곳: src/main/manage/window.ts, 도구 selftest-manage·selftest-play
 // (예전 src/main/game.ts 의 game.view. 메인 레인 M8-9 에서 화면 값으로 옮겼다)
-export function snapshotOfGame(game: { read(): SaveV3 | null; now(): number; saveFailing(): boolean }): Snapshot | null {
-  const save = game.read();
+// 스냅샷 만들기는 저장을 고치지 않는다(selftest-snapshot-cache 가 얼린 저장으로 본다) — 복제하지 않은 값(peek)이 있으면 그것을 읽는다 (worklog/records/perf-refactor 3-3)
+export function snapshotOfGame(game: { read(): SaveV3 | null; peek?(): SaveV3 | null; now(): number; saveFailing(): boolean }): Snapshot | null {
+  const save = game.peek ? game.peek() : game.read();
   if (!save) return null;
   const snap = snapshotView(save, game.now());
   return game.saveFailing() ? { ...snap, saveFailing: true } : snap;

@@ -27,12 +27,12 @@ import { printLine } from "../harness/report";
 // 흐름별 예산 — 0단계 기준선(2026-10-14)의 횟수. 고친 단계에서 낮춘다. 키가 없으면 보지 않는다
 const BUDGET: Record<string, Counts> = {
   tick: { "fs.readFileSync": 0, structuredClone: 0, snapshotOfGame: 0 }, // 틱 안의 읽기는 복제하지 않는다(peek, 2-3)
-  clock: { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 1 },
+  clock: { "fs.readFileSync": 0, structuredClone: 0, snapshotOfGame: 1 }, // 스냅샷은 복제 없이 읽는다(peek, 3-3)
   // 명령은 쓴 값을 메모리에 둔다 — 디스크를 다시 읽지 않는다(2-1). 복제는 명령 앞뒤 스냅샷·실행기 읽기·기기 창 열기
-  "bag.use": { "fs.readFileSync": 0, structuredClone: 4, snapshotOfGame: 3 },
-  "shop.buy": { "fs.readFileSync": 0, structuredClone: 4, snapshotOfGame: 3 },
+  "bag.use": { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 3 }, // 복제는 실행기의 읽기 하나
+  "shop.buy": { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 3 },
   "tick-after": { "fs.readFileSync": 0, structuredClone: 0, snapshotOfGame: 0 },
-  "clock-after": { "fs.readFileSync": 0, structuredClone: 1, snapshotOfGame: 1 },
+  "clock-after": { "fs.readFileSync": 0, structuredClone: 0, snapshotOfGame: 1 },
 };
 
 const ROUNDS = 3;
