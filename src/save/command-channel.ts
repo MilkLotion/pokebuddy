@@ -16,6 +16,7 @@ import { hasCommandFlag, isCommandSource } from "../shared/names/commands.js";
 import { SAVE_RULES } from "./rules.js";
 import { writeAtomic } from "../platform/atomic-write.js";
 import { watchDir } from "../platform/watch-dir.js";
+import { isObj } from "../shared/raw.js";
 
 export type ChannelLog = (entry: Record<string, unknown>) => void;
 export type CommandHandler = (command: Command) => CommandResult | Promise<CommandResult>;
@@ -53,7 +54,6 @@ const detached = (cmd: string): boolean => hasCommandFlag(cmd, "detached");
 // 같은 밀리초에 같은 명령이 여러 번 와도 요청·회신 파일을 공유하지 않음
 let sequence = 0;
 
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const isResult = (v: unknown): v is CommandResult => isObj(v) && typeof v.ok === "boolean";
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 

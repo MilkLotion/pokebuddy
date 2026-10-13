@@ -35,12 +35,11 @@
 import { isMetaKey, type DexOptions } from "../dex/data.js";
 import { rewardSpecies } from "../dex/obtain.js";
 import { achievementTable, type AchievementCond, type AchievementDef, type AchievementGroup } from "../dex/tables.js";
+import { isObj } from "../shared/raw.js";
 
 // 업적 표의 타입은 src/dex/tables.ts 에 있다 — 도감(src/dex/obtain.ts)도 같은 표를 읽는다
 // 업적창의 분류 칩 — 순서는 GROUPS
 export const GROUPS: readonly AchievementGroup[] = ["dex", "grow", "egg", "find", "together"];
-
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 
 // 보상을 종류별로 읽는다 — 그 종류가 아니면 null. 손으로 쓰는 데이터라 값의 모양도 본다
 const rewardOf = (def: AchievementDef): Record<string, unknown> => (isObj(def.reward) ? def.reward : {});

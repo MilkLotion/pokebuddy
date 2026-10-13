@@ -46,8 +46,6 @@ export function addToBox(boxes: BoxV3[], petId: string): BoxSpot | null {
   return null;
 }
 
-export const usedCount = (box: BoxV3): number => box.slots.filter((s) => s !== null).length;
-
 // 모든 박스의 빈 칸 수
 export const boxRoom = (boxes: BoxV3[]): number => boxes.reduce((n, b) => n + b.slots.filter((s) => s === null).length, 0);
 

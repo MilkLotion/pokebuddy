@@ -9,6 +9,7 @@
 import type { Command, CommandResult } from "../shared/command.js";
 import { COMMANDS, type CommandName, type TxName } from "../shared/names/commands.js";
 import type { Reason } from "../shared/names/reasons.js";
+import { isObj } from "../shared/raw.js";
 
 export type CommandHandler = (command: Command) => CommandResult | Promise<CommandResult>;
 export type DispatchLog = (entry: Record<string, unknown>) => void;
@@ -27,7 +28,6 @@ export interface Dispatcher {
   dispatch(command: Command): Promise<CommandResult>;
 }
 
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const isResult = (v: unknown): v is CommandResult => isObj(v) && typeof v.ok === "boolean";
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 

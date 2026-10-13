@@ -5,8 +5,7 @@ import type { ResultLine } from "../shared/model/devices.js";
 import type { BagItemView, PetView, Snapshot } from "../shared/model/snapshot.js";
 import { josa } from "../shared/josa.js";
 import { numberText, pointText, waitText } from "../shared/count-text.js";
-
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
+import { isObj } from "../shared/raw.js";
 
 // 명령의 수량 — 없으면 1
 const countOf = (args: unknown): number => (isObj(args) && typeof args.count === "number" && args.count > 0 ? args.count : 1);

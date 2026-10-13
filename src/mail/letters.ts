@@ -1,8 +1,8 @@
 // 받은 편지와 읽은 편지의 기록 — save.mail. 선물 넣기는 src/mail/gifts.ts
 import type { SaveV3 } from "../shared/save-v3";
 import { MAIL_RULES } from "./rules.js";
+import { isObj } from "../shared/raw.js";
 
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 export const mailOf = (save: SaveV3): { applied: string[]; read: string[] } => (save.mail ??= { applied: [], read: [] });
 export const rememberId = (list: string[], id: string): void => {
   if (list.includes(id)) return;

@@ -56,9 +56,3 @@ export type HandlersOf<C extends Contract, E> = {
 
 // 메인이 보내는 쪽 — push 채널과 그 인자
 export type PushOf<C extends Contract> = { [K in keyof C as C[K] extends Push<string, any[]> ? K : never]: C[K]["args"] };
-
-export type InvokeChannel<C extends Contract> = { [K in keyof C]: C[K] extends Invoke<string, any[], any> ? K : never }[keyof C];
-export type SendChannel<C extends Contract> = { [K in keyof C]: C[K] extends Send<string, any[]> ? K : never }[keyof C];
-export type PushChannel<C extends Contract> = keyof PushOf<C>;
-export type ArgsOf<C extends Contract, K extends keyof C> = C[K]["args"];
-export type RetOf<C extends Contract, K extends InvokeChannel<C>> = C[K] extends Invoke<string, any[], infer R> ? R : never;

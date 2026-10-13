@@ -6,8 +6,6 @@ import type { Rect } from "../geometry.js";
 import type { ScreenRefV3 } from "../save-v3.js";
 
 // 놀이공간 영역 그리기 창 — Figma `Playground / Region Draw` `396:8541`. 좌표는 창 안 좌표(DIP)다
-export type RegionRect = Rect; // 원본은 ../geometry.ts
-
 export interface RegionInit {
   current: Rect | null; // 지금 영역 (이 화면과 겹칠 때만)
   min: { area: number; side: number }; // 최소 넓이와 한 변 — 이보다 작으면 적용할 수 없다 (src/state/settings.ts REGION_MIN)

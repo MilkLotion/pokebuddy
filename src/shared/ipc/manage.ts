@@ -98,6 +98,5 @@ export type ManageDeviceLinkIpc = {
 };
 
 export type ManageIpc = ManageCoreIpc & ManageDeviceLinkIpc;
-export type ManageChannel = keyof ManageIpc;
 export type ManageBridge = BridgeOf<ManageIpc>;
 export type ManagePush = PushOf<ManageIpc>; // 메인이 설정창에 보내는 채널과 그 인자

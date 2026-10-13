@@ -25,6 +25,7 @@ import { normalizeSlug, type DexOptions } from "../dex/data.js";
 import type { Gender, NatureId } from "../shared/species";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
+import { isObj } from "../shared/raw.js";
 
 // 교환으로 옮기는 값. 나머지(쿨타임·버프·위치·하루 기록)는 받는 쪽에서 처음 값으로 둔다
 export interface TradePet {
@@ -51,7 +52,6 @@ export type ReceiveFailure = "not-object" | "unknown-species" | "single" | "bad-
 export type LockFailure = OfferFailure | "busy";
 
 
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, lo: number, hi: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= lo && v <= hi;
 
 // 올릴 수 있는가

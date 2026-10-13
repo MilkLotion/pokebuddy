@@ -22,6 +22,7 @@ import { itemOf } from "../../bag/items";
 import { argsFromCommand } from "../../tx/args";
 import type { SaveV3 } from "../../shared/save-v3";
 import type { TradeActionResult, TradeSession } from "../../online/trade-session";
+import { isObj } from "../../shared/raw";
 
 export interface CommandSettings {
   hidden(): boolean;
@@ -55,8 +56,6 @@ export interface Commands {
   click(id: string): Promise<CommandResult>; // 포켓몬 클릭 — 놀아주기
   stop(): void;
 }
-
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 
 // on/off · true/false · 1/0 · yes/no. 모르면 null
 export function asBool(value: unknown): boolean | null {

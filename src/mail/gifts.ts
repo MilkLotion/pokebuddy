@@ -21,6 +21,7 @@ import type { Gender } from "../shared/species";
 import { MAIL_RULES } from "./rules.js";
 import { MINT_ID, MINT_REFUND_EACH, MINT_RETIRED, currentItemId } from "../bag/mint.js";
 import { isApplied, mailOf, rememberId } from "./letters.js";
+import { isObj } from "../shared/raw.js";
 
 export type Gift = { kind: "item"; id: string; count: number } | { kind: "points"; count: number } | { kind: "pokemon"; species: string; count: number; gender?: GiftGender };
 export type GiftGender = Exclude<Gender, "none">;
@@ -37,7 +38,6 @@ export function giftItemName(id: string, opts?: DexOptions): string | null {
   return items(opts)[id]?.ko ?? evoItems(opts)[id]?.ko ?? null;
 }
 
-const isObj = (v: unknown): v is Record<string, unknown> => v != null && typeof v === "object" && !Array.isArray(v);
 const intIn = (v: unknown, max: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= max;
 
 // 포켓몬 선물의 성별 — 없으면 undefined(성비대로), 그 종이 가질 수 없으면 null

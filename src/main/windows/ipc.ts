@@ -5,11 +5,6 @@
 import { ipcMain, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron";
 import type { Contract, HandlersOf } from "../../shared/ipc/kinds";
 
-// 창이 살아 있고 그 창의 문서가 보낸 것인가
-export function isFromWindow(win: BrowserWindow | null | undefined, e: { sender: unknown }): boolean {
-  return !!win && !win.isDestroyed() && e.sender === win.webContents;
-}
-
 export interface IpcScope {
   // 내 창이 보낸 것만 fn 에 넘긴다. 아니면 버린다
   on(channel: string, fn: (e: IpcMainEvent, ...args: unknown[]) => void): void;
