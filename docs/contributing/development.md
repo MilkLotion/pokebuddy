@@ -255,6 +255,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
   - `selftest-live-shape` 는 시간만 흐를 때 설정창 스냅샷의 모양이 바뀌는 경로를 찾는다. 기준 목록(`src/tools/check/baseline/live-shape.txt`)에 없는 경로가 생기면 실패한다
   - `check-runtime` 은 기기 창 연결이 매초 새 객체로 비교하는 곳과 모양 비교 없이 그리는 기기 창을 센다. 기준 목록보다 늘면 실패한다
   - 설정창 다시 그리기 횟수는 빌드한 뒤 `electron dist/tools/smoke/smoke-perf.js` 로 잰다. 판정은 하지 않고 JSON 한 줄을 적는다
+  - 기기 창이 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-device-open.js` 로 잰다. 파티 상세·도감 기기 창을 예비 창 없이, 예비 창으로, 닫은 뒤 다시, 떠 있는 창에서 바꿔 연다. 판정은 하지 않고 JSON 한 줄을 적는다
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `dist/tools/e2e/e2e-companion.js` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다

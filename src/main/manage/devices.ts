@@ -38,7 +38,12 @@ export interface ManageDevices {
   battleScreen: BattleScreen; // 배틀 창 — 판 재생. 기기 창과 같은 그림 풀기를 쓴다 (src/main/manage/battle-screen.ts)
   forget(): void; // 설정창이 닫혔다 — 마지막으로 띄운 모델을 잊는다
   reset(): void; // 설정창 문서를 (다시) 읽기 시작했다 — 렌더러의 세대 번호가 0 부터라 기기 창 번호도 맞춘다
+  warm(): void; // 설정창 문서를 다 읽었다 — 기기 창마다 예비 창을 미리 만든다
 }
+
+// 예비 창 만들기 간격 — 설정창이 막 뜬 때 다섯 창을 한꺼번에 만들어 첫 조작을 늦추지 않게 하나씩
+const WARM_FIRST_MS = 500;
+const WARM_GAP_MS = 200;
 
 type Shown = "pet" | "shop" | "bag" | "party" | "battle";
 
@@ -198,13 +203,29 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   });
 
+  const devicesInOrder = [petWin, dexWin, shopWin, bagWin, battleWin]; // 자주 여는 것부터
+  let warmTimers: NodeJS.Timeout[] = [];
+
   return {
     battleScreen,
-    forget: () => shownModel.clear(),
+    forget: () => {
+      shownModel.clear();
+      for (const t of warmTimers) clearTimeout(t);
+      warmTimers = [];
+    },
+    warm: () => {
+      for (const t of warmTimers) clearTimeout(t);
+      warmTimers = devicesInOrder.map((w, i) =>
+        setTimeout(() => {
+          const parent = deps.parent();
+          if (parent && !parent.isDestroyed()) w.warm(parent);
+        }, WARM_FIRST_MS + i * WARM_GAP_MS),
+      );
+    },
     // 설정창을 다시 읽으면(Ctrl+R 등) 고른 개체·옆 도감이 비므로 떠 있던 기기 창을 닫는다 — 남겨 두면 설정창과 어긋난다
     reset: () => {
       shownModel.clear();
-      for (const w of [petWin, dexWin, shopWin, bagWin, battleWin]) w.discard();
+      for (const w of devicesInOrder) w.discard();
       battleScreen.close();
     },
   };

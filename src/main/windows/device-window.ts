@@ -3,6 +3,8 @@
 // 무엇을 보일지는 설정창이 고른 값으로 정한다 — 도감은 종을, 파티 상세·상점·가방·파티 교체는 고른 값을 받아 메인이 모델을 만든다(src/view/device-*.ts). 누른 단추와 이전·다음은 설정창으로 돌려보낸다 — 명령과 대화상자는 설정창이 처리한다.
 // 폭은 고정, 높이는 렌더러가 그린 높이다. 설정창 내용 영역 옆에 붙인다. 오른쪽에 자리가 없으면 왼쪽에 붙인다.
 // 설정창을 옮기면 따라가고, 최소화하면 같이 숨고, 닫히면 같이 닫힌다(parent). 종류마다 창은 하나만 둔다.
+// 문서를 미리 읽어 둔 숨은 빈 창(예비 창)을 하나 둔다 — 열 때 창 만들기·문서 읽기(약 140ms)를 기다리지 않는다 (worklog/records/perf-refactor 7단계).
+// 닫은 창은 지금처럼 없앤다 — 다시 쓰지 않으므로 앞의 상태(말풍선·코치마크·수량 칸)가 남지 않는다. 예비 창은 아직 아무것도 그리지 않은 투명 창이다
 // 창마다 다른 것(채널·폭·열쇠·보낼 값·붙는 기준·단추 검사·울음소리)은 명세(src/main/windows/devices.ts)가 준다
 import { BrowserWindow, type Rectangle } from "electron";
 import { createGenGate } from "./device-gen.js";
@@ -50,7 +52,11 @@ export interface DeviceWindow<Open> {
   // 설정창 문서를 새로 읽었다 — 떠 있던 창을 없애고 세대 번호를 0 으로. 닫힘 알림(세대 번호 올림)은 보내지 않는다.
   // close() 뒤 세대 번호만 0 으로 돌리면 늦게 오는 closed 가 번호를 1 로 올려, 0 에서 시작하는 새 문서의 열기 요청을 버린다
   discard(): void;
+  warm(parent: BrowserWindow): void; // 예비 창을 미리 만든다 — 이미 있거나 떠 있는 창이 있으면 하지 않는다
 }
+
+// 예비 창을 만드는 때 — 닫힌 직후 바로 만들면 닫기와 겹친다
+const SPARE_DELAY_MS = 300;
 
 // 사용자가 연 기기 창에 키보드 초점을 준다 — 옆 창을 한 번 더 누르지 않아도 방향키·Esc 가 먹게
 // - show(): 숨은 창을 보이고 앞으로. mac 은 key 창, Windows 는 활성 창이 된다
@@ -76,6 +82,8 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
   let focusNext = false; // 사용자가 연 것을 아직 못 보였다 — 첫 높이를 받으면 초점과 함께 보인다
   let height = spec.size.height;
   let side: DeviceSide = "right";
+  let spare: BrowserWindow | null = null; // 문서를 미리 읽어 둔 숨은 빈 창
+  let spareTimer: NodeJS.Timeout | null = null;
   // 세대 번호 — 닫을 때마다 올린다. 낡은 번호의 show 는 버린다 (src/main/windows/device-gen.ts)
   const gate = createGenGate();
 
@@ -127,21 +135,54 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
     parent.on("restore", showWithOwner);
   }
 
-  function create(parent: BrowserWindow): BrowserWindow {
+  const blank = (parent: BrowserWindow): BrowserWindow => {
     const w = new BrowserWindow({ ...transparentOptionsOf(files.preload), width, height, parent, minimizable: false, maximizable: false, title: "pokebuddy" });
     w.removeMenu();
+    void w.loadFile(files.html);
+    return w;
+  };
+
+  // 예비 창을 꺼낸다 — 같은 설정창의 자식이고 살아 있을 때만. 없으면 새로 만든다
+  function takeSpare(parent: BrowserWindow): BrowserWindow {
+    const s = spare;
+    spare = null;
+    if (s && !s.isDestroyed() && !s.webContents.isDestroyed() && s.getParentWindow() === parent) return s;
+    if (s && !s.isDestroyed()) s.destroy();
+    return blank(parent);
+  }
+
+  function warm(parent: BrowserWindow): void {
+    if (spareTimer) clearTimeout(spareTimer);
+    spareTimer = null;
+    if (parent.isDestroyed()) return;
+    if (spare && !spare.isDestroyed() && spare.getParentWindow() === parent) return;
+    if (spare && !spare.isDestroyed()) spare.destroy();
+    spare = blank(parent);
+  }
+
+  function warmLater(parent: BrowserWindow): void {
+    if (spareTimer) clearTimeout(spareTimer);
+    spareTimer = setTimeout(() => {
+      spareTimer = null;
+      if (!parent.isDestroyed()) warm(parent);
+    }, SPARE_DELAY_MS);
+  }
+
+  function create(parent: BrowserWindow): BrowserWindow {
+    const w = takeSpare(parent);
     w.on("close", () => closing.add(w));
     w.on("closed", () => {
       if (win !== w) return; // 닫히는 동안 새 창을 만들었다 — 그 창의 상태는 두고 간다
       win = null;
       current = null;
       focusNext = false;
+      const was = owner;
       detach();
       owner = null;
       if (CH.coach) hooks.onCoach?.(false); // 창과 함께 코치마크도 사라졌다
       hooks.onClosed(gate.bump());
+      if (was && !was.isDestroyed()) warmLater(was); // 다음 열기를 위해 예비 창을 다시 둔다
     });
-    void w.loadFile(files.html);
     return w;
   }
 
@@ -226,6 +267,9 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
         w.destroy();
       }
       gate.reset();
+    },
+    warm(parent) {
+      if (!alive()) warm(parent);
     },
   };
 }

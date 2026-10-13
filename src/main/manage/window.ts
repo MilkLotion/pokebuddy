@@ -182,6 +182,8 @@ export function createManage(deps: ManageDeps): Manage {
     });
     // 문서를 (다시) 읽기 시작한다 — 렌더러의 세대 번호가 0 에서 다시 시작하므로 기기 창 번호도 맞춘다
     win.webContents.on("did-start-loading", () => devices?.reset());
+    // 문서를 다 읽었다 — 기기 창마다 예비 창을 미리 둔다. 처음 누를 때도 창 만들기를 기다리지 않는다
+    win.webContents.on("did-finish-load", () => devices?.warm());
     // 문서를 다 읽은 뒤에 보낸다. 렌더러는 첫 화면을 그린 뒤에 옮긴다
     if (route) win.webContents.once("did-finish-load", () => toManage("manage:route", route));
     // 개발 실행 전용 — POKEBUDDY_DEV_BATTLE=<시드> 면 설정창을 연 뒤 로컬 엔진 판으로 배틀 창을 띄운다 (src/main/manage/battle-screen.ts)
