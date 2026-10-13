@@ -250,6 +250,11 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
   - `--keep-going` 은 실패한 뒤에도 나머지를 돌린다. `--reverse` 는 거꾸로 돌린다(순서 의존 확인). `--list` 는 목록만 적는다
   - 클라우드·교환·계정 검사는 로컬 Supabase(`npx supabase start`)와 로컬 함수 서버(`npx supabase functions serve`)가 있어야 한다. 올리기가 Edge Function `upload-save` 를 거친다
   - 함수 서버가 "No such container" 로 바로 끝나면 한 번 더 띄운다
+- 성능 검사는 횟수로 판정한다. ms 는 PC 마다 달라 기록만 한다
+  - `selftest-perf` 는 큰 저장 장면(`many-300`·`many-1000`)에서 1초 틱과 명령 한 건의 디스크 읽기·복제·스냅샷 횟수를 센다. 예산(`BUDGET`)을 넘으면 실패한다. `--json` 은 횟수와 ms 를 한 줄로 적는다
+  - `selftest-live-shape` 는 시간만 흐를 때 설정창 스냅샷의 모양이 바뀌는 경로를 찾는다. 기준 목록(`src/tools/check/baseline/live-shape.txt`)에 없는 경로가 생기면 실패한다
+  - `check-runtime` 은 기기 창 연결이 매초 새 객체로 비교하는 곳과 모양 비교 없이 그리는 기기 창을 센다. 기준 목록보다 늘면 실패한다
+  - 설정창 다시 그리기 횟수는 빌드한 뒤 `electron dist/tools/smoke/smoke-perf.js` 로 잰다. 판정은 하지 않고 JSON 한 줄을 적는다
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `dist/tools/e2e/e2e-companion.js` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다

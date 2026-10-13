@@ -84,7 +84,7 @@ flowchart TB
 앱을 켜고, 창을 띄우고, 게임 코어와 바깥을 잇는다. 루트에는 진입점 `app.ts` 와 `preload.ts` 만 있고, 나머지는 하위 폴더에 일 단위로 나뉜다. `app.ts` 는 부팅 단계를 차례로 부르는 배선만 한다.
 
 - `app/` — 앱 전체에 걸친 것. 부팅 단계(`boot.ts`), 1초 시계(`clock.ts`), 명령 등록과 mailbox 연결(`commands.ts`), 1초 틱마다 하는 일(`ticks.ts`), 두 PC 규칙으로 멈추기(`halt.ts`), 동반자 잠금(`lifetime.ts`), 끄는 순서(`quit.ts`).
-- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), 기기 창 다섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
+- `manage/` — 설정창 하나. 창 만들기와 OS 창 단추 색(`window.ts`), 설정창 요청 처리기(`handlers.ts`), Electron 없이 도는 스냅샷·명령 처리(`game-reads.ts`), 기기 창 다섯과 오가는 길(`devices.ts`), 배틀 창에 판을 보내는 길(`battle-screen.ts`), 받은 값의 모양 검사(`requests.ts`).
 - `stage/` — 무대. 화면마다 무대 창과 무대를 한 쌍씩 둔다(`stage-group.ts`). `stage.ts` 가 40ms 마다 프레임을 만들어 `stage-window.ts` 로 보낸다. 맨 앞 터미널을 보고 포켓몬을 보일지 정하는 `host-watch.ts`, 말풍선과 바탕화면 튜토리얼도 여기 있다.
 - `windows/` — 창 공용 도구와 작은 창. 보안 옵션과 덮개 창(`options.ts`), 보낸 창 확인과 IPC 연결(`ipc.ts`), 설정창 옆에 붙는 기기 창 틀(`device-window.ts`), 판을 재생하는 배틀 창(`battle-window.ts`, 설정창 위 가운데에 뜬다), 알림 배너(`banner-window.ts`)와 첫 포켓몬 고르기 창.
 - `menus/` — 포켓몬 메뉴, 트레이, 메뉴 창. 메뉴 항목은 `view/menus.ts` 가 만든다.
@@ -247,4 +247,5 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 시험
 
 - 자체 검사는 `npm run selftest` 다. 서버가 있어야 하는 시험(trade-net 등)은 로컬 `npx supabase functions serve` 를 띄운 뒤 돌린다.
+- 메인 모듈을 node 시험에서 부를 때는 `harness/electron-stub.ts` 를 먼저 import 한다. 렌더러의 순수 모듈은 `harness/web-module.ts` 의 `webModule` 로 부른다. 횟수는 `harness/perf-count.ts` 가 운영 코드를 바꾸지 않고 센다.
 - 시험 저장은 `src/tools/harness/scenes.ts` 의 장면으로 만든다. 시험 계정은 `npm run dev:account` 로 띄운다([개발과 릴리스](development.md)).

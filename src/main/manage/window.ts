@@ -20,7 +20,8 @@ import type { ArtLoader } from "../art/stage-art.js";
 import { windowIcon } from "../windows/files.js";
 import { webPreferencesOf } from "../windows/options.js";
 import { createIpcScope } from "../windows/ipc.js";
-import { gameReads, wireManageHandlers } from "./handlers.js";
+import { gameReads } from "./game-reads.js";
+import { wireManageHandlers } from "./handlers.js";
 import { wireManageDevices, type ManageDevices } from "./devices.js";
 
 // 설정창의 크기 (예전 src/save/rules.ts 의 WINDOW_V3_RULES. 메인 레인 M6b 에서 창 파일로 옮겼다)

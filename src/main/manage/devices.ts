@@ -20,11 +20,11 @@ import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.
 import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPetInput, isShopInput, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import { wireBattleScreen, type BattleScreen } from "./battle-screen.js";
-import type { GameReads } from "./handlers.js";
+import type { GameReads } from "./game-reads.js";
 
 export interface ManageDevicesDeps {
   game: GameV3;
-  reads: GameReads; // 화면 읽기 — 설정창 본 처리기와 같은 한 벌 (src/main/manage/handlers.ts)
+  reads: GameReads; // 화면 읽기 — 설정창 본 처리기와 같은 한 벌 (src/main/manage/game-reads.ts)
   preload: string;
   html: string; // 설정창 문서 — 기기 창 문서는 같은 폴더의 <이름>.html
   parent(): BrowserWindow | null; // 기기 창이 붙을 설정창. 없으면 띄우지 않는다

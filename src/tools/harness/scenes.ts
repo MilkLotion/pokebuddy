@@ -5,12 +5,16 @@ import { rollGender } from "../../dex/gender";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { randomNature } from "../../dex/natures";
 import { addToBox } from "../../box/slots";
+import { pushBox } from "../../box/boxes";
+import { BOX_RULES } from "../../box/rules";
+import { isMetaKey, loadJson } from "../../dex/data";
 import { newPet, nextPetId } from "../../party/create";
 import { applyStarter } from "../../party/starter";
 import { recordDex } from "../../dex/record";
 import { MEGA_RULES } from "../../dex/rules";
 import { newEgg } from "../../egg/pool";
 import { SCREEN_TUTORIALS, TUTORIALS } from "../../tutorial/conditions";
+import { seededRand } from "./clock";
 
 export const SCENE_RULES = {
   starter: "charmander", // 저장이 없을 때 첫 포켓몬
@@ -48,6 +52,28 @@ function addHiddenPet(save: SaveV3, now: number): void {
 }
 
 type Scene = (save: SaveV3, now: number) => void;
+
+// 큰 저장 — 보유 개체를 total 마리까지 박스에 채우고, 해금 표의 종을 모두 해금·얻음으로 적는다. 업적은 받지 않은 채로 둔다.
+// 성능 기준선과 횟수 예산 시험이 쓴다 (worklog/records/perf-refactor 0-3). 씨앗 난수라 실행마다 같은 저장이다
+function manyPets(save: SaveV3, total: number, now: number): void {
+  const rand = seededRand(total);
+  const species = Object.keys(loadJson<Record<string, unknown>>("unlocks.json")).filter((k) => !isMetaKey(k));
+  for (const slug of species) recordDex(save, slug, false);
+  const need = Math.ceil(total / BOX_RULES.size);
+  while (save.boxes.length < Math.min(need + 1, BOX_RULES.max)) pushBox(save.boxes);
+  let i = 0;
+  while (save.pets.length < total) {
+    const slug = species[i % species.length]!;
+    i += 1;
+    const pet = newPet({ id: nextPetId(save), species: slug, shiny: i % 50 === 0, nature: randomNature(rand).id, gender: rollGender(slug, rand), now });
+    const level = 5 + (i % 60);
+    pet.level = level;
+    pet.exp = expForLevel(growthOf(slug), level);
+    pet.affinity = i % 101;
+    save.pets.push(pet);
+    if (!addToBox(save.boxes, pet.id)) throw new Error("박스에 빈칸이 없다");
+  }
+}
 
 // showcase 장면의 내용 — [종, 레벨, 친밀도, 이로치]
 const SHOWCASE: { points: number; bagCount: number; party: [string, number, number, boolean?][]; box: [string, number, number, boolean?][]; bag: string[] } = {
@@ -370,6 +396,17 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
     },
   },
 };
+
+// 큰 저장 장면 — 쇼케이스 위에 개체를 채운다
+const many = (total: number): { note: string; apply: Scene } => ({
+  note: `큰 저장 — 쇼케이스 위에 보유 ${total}마리, 해금 표의 종 전부 해금·얻음 (성능 기준선)`,
+  apply: (s, now) => {
+    applyScene(s, "showcase", now);
+    manyPets(s, total, now);
+  },
+});
+SCENES["many-300"] = many(300);
+SCENES["many-1000"] = many(1000);
 
 export function applyScene(save: SaveV3, name: string, now = Date.now()): SaveV3 {
   const scene = SCENES[name];

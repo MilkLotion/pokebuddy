@@ -4,20 +4,15 @@
 // (예전 src/main/manage-window.ts wire() 안에 있었다. 메인 레인 M6c 에서 나눴다)
 import { clipboard, shell } from "electron";
 import type { ManageCoreIpc, ManageReply, ManageRequest } from "../../shared/ipc/manage";
-import type { DexDetail, ShopDetail } from "../../shared/model/detail";
-import type { Snapshot } from "../../shared/model/snapshot";
 import type { GameV3 } from "../../tx/game.js";
 import { PATHS } from "../../platform/paths.js";
 import { runAgentRequest } from "../../agents/agent-request.js";
-import { dexDetail } from "../../view/dex-detail.js";
 import { dexList } from "../../view/dex-list.js";
-import { resultLineOf } from "../../view/result-lines.js";
-import { shopDetail } from "../../view/shop-detail.js";
-import { snapshotOfGame } from "../../view/snapshot.js";
 import { artServices } from "../art/services.js";
 import { isShortId } from "../windows/input.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
-import { isInternalCommand, parseAccountAction, parseAgentRequest, parseBattleAction, parseCommand, parseFriendlyAction, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
+import { commandReply, gameReads, snapshotReply } from "./game-reads.js";
+import { parseAccountAction, parseAgentRequest, parseBattleAction, parseFriendlyAction, parseCopyText, parseIconKeys, parseMailAction, parseNotesAction, parsePortraitAsks, parseUpdateAction } from "./requests.js";
 import type { ManageServices } from "./window.js";
 
 // 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
@@ -33,30 +28,6 @@ const RIGHTS_URL = `https://github.com/MilkLotion/pokebuddy#${encodeURIComponent
 
 const DENIED: ManageReply = { ok: false, reason: "denied" };
 
-// 성공 답에 결과 줄을 붙이는 명령 — 기기 창의 초록 상자
-const RESULT_COMMANDS = new Set(["bag.use", "bag.sell", "shop.buy"]);
-
-// 화면 읽기 — 저장을 읽어 화면 값을 바로 만든다(실행기는 쓰기만 맡는다). 저장이 없으면 빈 값. 기기 창도 같은 것을 쓴다
-export interface GameReads {
-  snapshot(): Snapshot | null;
-  detailOf(slug: string): DexDetail | null; // 도감 칸 하나의 상세
-  shopDetailOf(id: string): ShopDetail | null; // 상점 구매 창의 상세
-}
-
-export function gameReads(game: GameV3): GameReads {
-  return {
-    snapshot: () => snapshotOfGame(game),
-    detailOf: (slug: string) => {
-      const save = game.read();
-      return save ? dexDetail(save, slug) : null;
-    },
-    shopDetailOf: (id: string) => {
-      const save = game.read();
-      return save ? shopDetail(save, id) : null;
-    },
-  };
-}
-
 export interface ManageHandlerDeps {
   game: GameV3;
   // 명령을 보내는 길 — 앱은 커맨드 처리기를 준다 (src/main/manage/window.ts ManageDeps.send)
@@ -68,36 +39,14 @@ export interface ManageHandlerDeps {
 export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): void {
   const { game, send } = deps;
   const svc = deps.services;
-  const { snapshot, detailOf, shopDetailOf } = gameReads(game);
+  const reads = gameReads(game);
+  const { detailOf, shopDetailOf } = reads;
   // 초상 — 앱과 같은 인스턴스다. 앱 안 그림 폴더 규칙도 그곳에 있다 (src/main/art/services.ts)
   const portraits = artServices().portraits;
 
   wireIpc<ManageCoreIpc>(scope, {
-    "manage:snapshot": {
-      denied: null,
-      run: () => {
-        game.tick(); // 본 값이 지금 값이 되도록 먼저 시간을 적용한다
-        const view = snapshot();
-        const display = svc().display;
-        return view && display ? { ...view, display: display() } : view;
-      },
-    },
-    "manage:command": {
-      denied: DENIED,
-      run: async (_e, raw) => {
-        const req = parseCommand(raw);
-        if (!req) return { ok: false, reason: "bad-request" };
-        // 우편함 넣기와 교환의 잠금·반영은 메인의 우편함·교환 세션만 실행기에 낸다 — 받은 길(send)이 명령 처리기를 거치지 않아도(개발용 실행기) 막는다
-        if (isInternalCommand(req.cmd)) return { ok: false, reason: "unknown-cmd" };
-        game.tick();
-        // 결과 줄이 있는 명령은 거래 앞뒤 화면 값을 견줘 성공 답에 붙인다 (src/view/result-lines.ts)
-        const before = RESULT_COMMANDS.has(req.cmd) ? snapshot() : null;
-        const reply = await send(req);
-        const after = reply.ok && before ? snapshot() : null;
-        const result = before && after ? resultLineOf(req, before, after) : null;
-        return result ? { ...reply, result } : reply;
-      },
-    },
+    "manage:snapshot": { denied: null, run: () => snapshotReply(game, reads, svc().display) },
+    "manage:command": { denied: DENIED, run: (_e, raw) => commandReply(game, reads, send, raw) },
     "manage:dex": {
       denied: [],
       run: () => {
