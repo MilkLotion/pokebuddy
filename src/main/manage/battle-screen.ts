@@ -99,6 +99,7 @@ export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
   const win = createBattleWindow({
     preload: deps.preload,
     html: path.join(path.dirname(deps.html), "battle-screen.html"),
+    logHtml: path.join(path.dirname(deps.html), "battle-log.html"),
     onClosed: () => {
       if (waiting) dropped = true;
       deps.holdStage?.(false);

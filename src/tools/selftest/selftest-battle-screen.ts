@@ -6,7 +6,9 @@
 import assert from "node:assert";
 import { damageLog, damageTally, runBattle, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
+import { battleLogLines } from "../../shared/battle-log";
 import { clockText, createTimeline, popKindOf, rowOf, spriteFrame } from "../../shared/battle-timeline";
+import type { BattleScreenEvent } from "../../shared/model/battle-screen";
 import type { LookSheets, SpriteSheet } from "../../shared/model/stage";
 import { battleScreenArtKeys, battleScreenModel, withBattleScreenArt } from "../../view/battle-screen";
 import { battleDetailView, battleRewardText } from "../../view/battle-offer";
@@ -43,6 +45,53 @@ assert.strictEqual(view.endMs, result.endMs);
 assert.deepStrictEqual(view.field, { w: 20, h: 12, body: 2, stepMs: 300, stageMs: 10_000 }); // 화면 10×6 (2026-10-09)
 assert.strictEqual(view.result.title, result.winner === null ? "비겼어요" : result.winner === 0 ? "이겼어요" : "졌어요");
 assert.strictEqual(view.result.lead, "+50P");
+
+// ── 배틀 로그 (docs/specs/adventure.md "배틀 로그") ──
+{
+  const moves = view.events.filter((e) => e.kind === "move");
+  const faintEvents = view.events.filter((e) => e.kind === "faint");
+  const moveLines = view.log.filter((l) => l.kind === "move");
+  assert.ok(moveLines.length >= moves.length && moves.length > 0, "기술을 쓸 때마다 한 줄 이상");
+  assert.strictEqual(view.log.filter((l) => l.kind === "faint").length, faintEvents.length, "기절마다 한 줄");
+  assert.ok(view.log.every((l, i) => i === 0 || view.log[i - 1]!.t <= l.t), "시각 순서");
+  assert.ok(moveLines.every((l) => l.move && !/^basic$/.test(l.move)), "평타는 줄이 없다");
+  assert.ok(view.log.some((l) => l.kind === "faint" && l.whom && l.tail.endsWith("맞고")), "기술로 쓰러진 줄은 때린 쪽과 기술");
+
+  // 손으로 만든 판 — 0쪽 0번 피카츄, 1쪽 0번 리자몽·1번 갸라도스
+  const ev = (e: Record<string, unknown>): BattleScreenEvent => e as unknown as BattleScreenEvent;
+  const lines = battleLogLines({
+    names: [["피카츄"], ["리자몽", "갸라도스"]],
+    moveNames: { thunderbolt: "10만볼트", "swords-dance": "칼춤", discharge: "방전", "hydro-pump": "하이드로펌프" },
+    events: [
+      ev({ t: 1000, kind: "attack", side: 0, slot: 0 }),
+      ev({ t: 1000, kind: "damage", side: 0, slot: 0, target: 0, amount: 9, mult: 1, hp: 91, source: "basic", hit: 1 }),
+      ev({ t: 2000, kind: "move", side: 0, slot: 0, move: "thunderbolt" }),
+      ev({ t: 2000, kind: "damage", side: 0, slot: 0, target: 1, amount: 50, mult: 2, hp: 50, source: "thunderbolt", hit: 1, crit: true }),
+      ev({ t: 3000, kind: "move", side: 0, slot: 0, move: "swords-dance" }),
+      ev({ t: 3000, kind: "stat", side: 0, slot: 0, stat: 1, stage: 2 }),
+      ev({ t: 4000, kind: "move", side: 0, slot: 0, move: "discharge" }),
+      ev({ t: 4000, kind: "damage", side: 0, slot: 0, target: 0, amount: 20, mult: 0.5, hp: 71, source: "discharge", hit: 1 }),
+      ev({ t: 4000, kind: "miss", side: 0, slot: 0, move: "discharge", target: 1 }),
+      ev({ t: 5000, kind: "move", side: 1, slot: 1, move: "hydro-pump" }),
+      ev({ t: 5000, kind: "damage", side: 1, slot: 1, target: 0, amount: 100, mult: 1, hp: 0, source: "hydro-pump", hit: 1 }),
+      ev({ t: 5000, kind: "faint", side: 0, slot: 0 }),
+      ev({ t: 6000, kind: "damage", side: 0, slot: 0, target: 1, amount: 50, mult: 1, hp: 0, source: "basic", hit: 1 }),
+      ev({ t: 6000, kind: "faint", side: 1, slot: 1 }),
+    ],
+  });
+  const flat = lines.map((l) => [l.who.text, l.whom?.text ?? "", `${l.move ?? ""}${l.tail}`, l.result].filter(Boolean).join(" "));
+  assert.deepStrictEqual(flat, [
+    "피카츄가 갸라도스에게 10만볼트 -50 · 급소",
+    "피카츄가 칼춤",
+    "피카츄가 리자몽에게 방전 -20 · 효과 별로",
+    "피카츄가 갸라도스에게 방전 빗나감",
+    "갸라도스가 피카츄에게 하이드로펌프 -100",
+    "피카츄가 갸라도스의 하이드로펌프를 맞고 기절",
+    "갸라도스가 기절",
+  ], `손 판 로그: ${JSON.stringify(flat)}`);
+  assert.deepStrictEqual(lines.map((l) => l.who.side), [0, 0, 0, 0, 1, 0, 1], "점 색은 쪽");
+  assert.strictEqual(lines[5]?.whom?.side, 1, "기절 줄의 때린 쪽 점");
+}
 
 // ── 그림 열쇠 ──
 const keys = battleScreenArtKeys(view);

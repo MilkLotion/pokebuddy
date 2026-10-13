@@ -1,0 +1,91 @@
+/* battle-log.html 의 창 CSS — 공용 CSS(tokens·device) 다음에 읽는다
+   배틀 로그 창 — Figma 04 `Battle Log Window` 1993:572, 02 `Battle Log Row` 1987:52. 규칙은 docs/specs/adventure.md "배틀 로그"
+   머리 줄은 기기 창 틀(device-frame.ts)의 것을 쓴다. 설정창에 붙지 않으므로 경첩은 숨긴다 (battle-screen.css 와 같다) */
+:root {
+  --ink: #1a3330; /* text/primary */
+  --muted: #4a6663; /* text/secondary */
+  --mine: #6ad06a; /* lime/400 — 내 쪽 HP 와 같은 팀 색 */
+  --opp: #dc2626; /* red/600 — 상대 HP 와 같은 팀 색 */
+  --faint-bg: #dde1db; /* bg/subtle — 기절 줄 바탕 */
+}
+html,
+body {
+  background: var(--canvas);
+}
+.device.battle-log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 440px;
+  height: 615px;
+  padding: 0 0 16px;
+  overflow: hidden;
+}
+.battle-log .hinge {
+  display: none;
+}
+.battle-log .top {
+  padding: 7px 16px 7px 12px;
+  background: var(--primary);
+}
+.light {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #8fe0d6;
+  box-shadow: 0 0 0 3px #ffffff;
+}
+
+/* 줄 목록 — 위에서부터 쌓이고, 넘치면 스크롤. 새 줄을 따라 내려가는 것은 log.ts 가 한다 */
+.log-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 16px;
+  overflow-y: auto;
+  color: var(--ink);
+  font: 12px/18px var(--font-body, "Galmuri11", "Malgun Gothic", sans-serif);
+}
+.log-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.log-row.faint {
+  background: var(--faint-bg);
+}
+.log-row .time {
+  flex: none;
+  width: 32px;
+  color: var(--muted);
+}
+.log-row .name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* 팀 점 — 분류 표시는 점으로 (테두리 강조 금지) */
+.log-row .name::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mine);
+}
+.log-row .name.opp::before {
+  background: var(--opp);
+}
+.log-row .move b,
+.log-row.faint .result {
+  font-weight: 700;
+}
+.log-row.move .result {
+  color: var(--muted);
+}

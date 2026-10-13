@@ -65,6 +65,37 @@ body {
   font-weight: 700;
   text-align: center;
 }
+.hud .right {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* 노트 단추 — 배틀 로그 창 열기. Figma 01 `Icon Button` 을 배속과 같은 높이 30 으로 */
+.hud .log-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.hud .log-open:hover {
+  background: var(--canvas);
+}
+.hud .log-open svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #4a6663; /* text/secondary */
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .hud .speed {
   justify-self: end;
   display: flex;

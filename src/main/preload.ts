@@ -22,6 +22,7 @@ type ShopDeviceIpc = import("../shared/ipc/devices").ShopDeviceIpc;
 type BagDeviceIpc = import("../shared/ipc/devices").BagDeviceIpc;
 type BattleDeviceIpc = import("../shared/ipc/devices").BattleDeviceIpc;
 type BattleScreenIpc = import("../shared/ipc/battle").BattleScreenIpc;
+type BattleLogIpc = import("../shared/ipc/battle").BattleLogIpc;
 
 const { contextBridge, ipcRenderer } = require("electron") as typeof import("electron");
 
@@ -219,6 +220,17 @@ const BATTLE_SCREEN = {
   onShow: ["push", "battlescreen:show"],
   onLoading: ["push", "battlescreen:loading"],
   close: ["send", "battlescreen:close"],
+  logOpen: ["send", "battlescreen:log-open"],
+  logAt: ["send", "battlescreen:log-at"],
 } as const satisfies WireOf<BattleScreenIpc>;
 
 expose("battle-screen.html", "pokebuddyBattleScreen", () => bridgeOf<BattleScreenIpc>(BATTLE_SCREEN));
+
+// 배틀 로그 창 — 배틀 창 옆에 뜬다. 준비됨·닫기를 보내고 보일 줄을 받는다
+const BATTLE_LOG = {
+  ready: ["send", "battlelog:ready"],
+  onShow: ["push", "battlelog:show"],
+  close: ["send", "battlelog:close"],
+} as const satisfies WireOf<BattleLogIpc>;
+
+expose("battle-log.html", "pokebuddyBattleLog", () => bridgeOf<BattleLogIpc>(BATTLE_LOG));

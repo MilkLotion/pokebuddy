@@ -7,6 +7,7 @@ import { appearanceOf } from "../dex/look.js";
 import { abilityTable, moveTable } from "../dex/tables.js";
 import type { BattleLook } from "../shared/model/battle-net.js";
 import { SIZE_STEPS } from "../party/size.js";
+import { battleLogLines } from "../shared/battle-log.js";
 import type { BattleDamageView, BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView } from "../shared/model/battle-screen";
 import type { MoveView } from "../shared/model/snapshot";
 import { moveMeta } from "./battle.js";
@@ -123,6 +124,17 @@ function abilityNamesOf(sides: BattleScreenInput["sides"], r: BattleResult): Rec
   return Object.fromEntries([...keys].map((k) => [k, table[k]?.ko ?? k]));
 }
 
+// 배틀 로그의 기술 이름 — 판에서 쓴 기술(복사한 기술 포함)과 피해를 낸 기술 전부
+function moveNamesOf(r: BattleResult): Record<string, string> {
+  const ids = new Set<string>();
+  for (const e of r.events.map(screenEvent)) {
+    if (e.kind === "move" || e.kind === "miss" || e.kind === "blocked") ids.add(e.move);
+    else if (e.kind === "damage") ids.add(e.source);
+  }
+  const table = moveTable();
+  return Object.fromEntries([...ids].flatMap((id) => (table[id] ? [[id, table[id].ko]] : [])));
+}
+
 // 창 아래 DPS 표 값 — 피해가 난 시각마다 누적 값을 한 단계로 남긴다(같은 시각은 한 단계)
 function damageOf(r: BattleResult): BattleDamageView {
   const log = damageLog(r.events, r.maxHp);
@@ -167,6 +179,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
     roulette,
     result: resultOf(r, input.reward),
     damage: damageOf(r),
+    log: battleLogLines({ events: r.events.map(screenEvent), names: [units[0].map((u) => u?.name ?? null), units[1].map((u) => u?.name ?? null)], moveNames: moveNamesOf(r) }),
   };
 }
 

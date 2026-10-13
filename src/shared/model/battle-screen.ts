@@ -2,6 +2,7 @@
 // 렌더러 빌드는 src/battle 을 보지 못한다. 그래서 이벤트 모양을 여기 다시 적는다 — 엔진과 어긋나면 view 의 변환이 컴파일 오류가 난다
 // 화면 규칙은 docs/specs/ui-components.md "배틀 창으로 더한 것", Figma 05 `16 배틀`
 
+import type { BattleLogLine } from "../battle-log.js";
 import type { MoveView } from "./snapshot.js";
 import type { LookSheets } from "./stage.js";
 
@@ -98,6 +99,7 @@ export interface BattleScreenView {
   roulette: BattleRouletteView[] | null; // 릴 세 개(날씨·필드·오라). 엔진이 룰렛을 주지 않은 판은 null — 룰렛 없이 시작한다
   result: BattleResultView;
   damage: BattleDamageView; // 창 아래 DPS 표 — 재생 시각까지의 누적 피해를 꺼낸다
+  log: BattleLogLine[]; // 배틀 로그 줄 — 시각 순서. 재생 시각까지의 줄을 로그 창에 보인다 (src/shared/battle-log.ts)
 }
 
 // DPS 표 값 — 피해가 난 시각마다 양쪽 칸의 누적 준 피해·받은 피해, 칸마다 기절 시각(없으면 null). 셈은 src/battle/engine.ts damageLog

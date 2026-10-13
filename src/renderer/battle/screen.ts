@@ -14,6 +14,7 @@ import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { dpsTableEl } from "../ui/dps-table.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
+import { noteIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
 
 const api = needBridge("pokebuddyBattleScreen");
@@ -326,7 +327,14 @@ function draw(view: BattleScreenView): void {
     speedBox.appendChild(b);
     return b;
   });
-  hud.append(conditions, clock, speedBox);
+  // 배속 오른쪽 노트 단추 — 배틀 로그 창을 연다 (docs/specs/adventure.md "배틀 로그", Figma 02 `Battle HUD` `log`)
+  const logButton = buttonEl("log-open", undefined, () => api.logOpen());
+  logButton.append(noteIconEl());
+  logButton.title = "배틀 로그";
+  logButton.setAttribute("aria-label", "배틀 로그");
+  const right = el("div", "right");
+  right.append(speedBox, logButton);
+  hud.append(conditions, clock, right);
 
   // 몸통 — 카드 2×3 · 전장 · 카드 2×3
   const body = el("div", "body");
@@ -334,7 +342,9 @@ function draw(view: BattleScreenView): void {
   const sideEl = (side: BattleSide): HTMLElement => {
     const box = el("div", "side");
     const grid = el("div", "cards");
-    for (let slot = 0; slot < 6; slot++) {
+    // 상대 카드는 전장 배치대로 2 1 / 4 3 / 6 5 — 상대는 거울로 서고 앞 열(2·4·6)이 가운데 쪽 (2026-10-14 사용자 "배치대로 2,1 4,3 6,5")
+    const order = side === 1 ? [1, 0, 3, 2, 5, 4] : [0, 1, 2, 3, 4, 5];
+    for (const slot of order) {
       const c = cardEl(view.units[side][slot] ?? null, view);
       cards[side][slot] = c;
       grid.appendChild(c ? c.root : el("div", "card empty"));
@@ -660,6 +670,15 @@ function draw(view: BattleScreenView): void {
   let t = 0;
   let last = rouletteStart + (reels && spinning ? rouletteMs(reels) : 0);
   let resultShown = false;
+  // 배틀 로그 — 재생 시각까지의 줄 수를 메인에 알린다. 바뀔 때만 보낸다
+  let logShown = -1;
+  let logIndex = 0;
+  const sendLog = (shown: number): void => {
+    while (logIndex < view.log.length && view.log[logIndex]!.t <= shown) logIndex++;
+    if (logIndex === logShown) return;
+    logShown = logIndex;
+    api.logAt(logIndex);
+  };
   const tick = (now: number): void => {
     if (myRun !== run) return;
     if (roulette) {
@@ -677,6 +696,7 @@ function draw(view: BattleScreenView): void {
     paintStatus(shown, state);
     paintFx(shown, state);
     paintDps(shown);
+    sendLog(shown);
     if (fieldFx && !stillFx) fieldFx.draw(shown);
     const c = clockText(view.maxMs, shown);
     if (clock.textContent !== c) clock.textContent = c;

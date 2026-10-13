@@ -38,3 +38,7 @@ export const swapIconEl = (): SVGSVGElement => {
 // 위·아래 꺽쇠 — 박스 찾기 줄의 이전·다음 결과. 닫기와 같은 선이다 (Figma 01 `Icon / Chevron Up` `1590:60740`·`Icon / Chevron Down` `1590:60742`)
 export const chevronUpIconEl = (): SVGSVGElement => lineIconEl(["M4 10l4-4 4 4"]);
 export const chevronDownIconEl = (): SVGSVGElement => lineIconEl(["M4 6l4 4 4-4"]);
+
+// 노트 — 둥근 종이와 줄 셋. 배틀 창 판 표시 줄의 배틀 로그 창 열기 (Figma 01 `Icon / Note` `1996:2879`)
+export const noteIconEl = (): SVGSVGElement =>
+  lineIconEl(["M4.5 1.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z", "M5.5 5.5h5", "M5.5 8h5", "M5.5 10.5h3"]);
