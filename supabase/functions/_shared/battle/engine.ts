@@ -292,7 +292,7 @@ interface Unit {
   fainted: boolean;
   x: number;
   y: number;
-  target: Unit | null; // 쓰러질 때까지 바꾸지 않는다
+  target: Unit | null; // 사거리 안이면 쓰러질 때까지 바꾸지 않는다
   nextStep: number;
   range: number;
   ability: string | null; // 지금 특성 — 미라·떠도는영혼·트레이스로 바뀐다
@@ -1110,8 +1110,8 @@ export function runBattle(input: BattleInput): BattleResult {
     return { at, steps };
   }
 
-  // 대상 고르기 — 걸음 수로 가장 가까운 상대. 같으면 같은 줄(위아래 차이가 작은 쪽) → 번호가 작은 쪽. 닿을 길이 없는 상대는 빼다
-  function pickTarget(u: Unit): Unit | null {
+  // 대상 고르기 — 걸음 수로 가장 가까운 상대. 같으면 keep(지금 대상) → 같은 줄(위아래 차이가 작은 쪽) → 번호가 작은 쪽. 닿을 길이 없는 상대는 빼다
+  function pickTarget(u: Unit, keep: Unit | null = null): Unit | null {
     const { dist } = walk(walls, u);
     let best: Unit | null = null, bestSteps = Infinity;
     const foes = foesOf(u);
@@ -1122,7 +1122,8 @@ export function runBattle(input: BattleInput): BattleResult {
       if (steps === Infinity) continue;
       const better =
         steps < bestSteps ||
-        (steps === bestSteps && best !== null && (Math.abs(o.y - u.y) < Math.abs(best.y - u.y) || (Math.abs(o.y - u.y) === Math.abs(best.y - u.y) && o.slot < best.slot)));
+        (steps === bestSteps && best !== null && best !== keep &&
+          (o === keep || Math.abs(o.y - u.y) < Math.abs(best.y - u.y) || (Math.abs(o.y - u.y) === Math.abs(best.y - u.y) && o.slot < best.slot)));
       if (better) {
         best = o;
         bestSteps = steps;
@@ -1131,9 +1132,11 @@ export function runBattle(input: BattleInput): BattleResult {
     return best;
   }
 
-  // 지금 대상 — 쓰러지면 다시 고른다
+  // 지금 대상 — 쓰러지면 다시 고른다. 사거리 밖이면 더 가까운 상대로 바꾼다(걸음 수가 같으면 그대로)
+  // 앞 상대를 지나쳐 한 마리만 쫓아가지 않게 한다 (2026-10-14 사용자 "앞에있는거먼저 공격")
   function targetOf(u: Unit): Unit | null {
     if (!u.target || u.target.hp <= 0) u.target = pickTarget(u);
+    else if (!inRange(u, u.target, u.range)) u.target = pickTarget(u, u.target) ?? u.target;
     return u.target;
   }
 
