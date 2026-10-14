@@ -12,7 +12,7 @@ import { createFieldFx, type FieldFx } from "./field-fx.js";
 import { STATUS_COLOR, createStatusFx, type StatusFxMark, type StatusFxUnit } from "./status-fx.js";
 import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { dpsTableEl } from "../ui/dps-table.js";
+import { dpsTableEl, refreshDpsTable } from "../ui/dps-table.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
 import { noteIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
@@ -443,6 +443,9 @@ function draw(view: BattleScreenView): void {
       img.alt = "";
       return img;
     };
+    // 줄 순서가 그대로면 숫자 글자만 고친다 — 표와 초상을 다시 만들지 않는다 (R4)
+    const tables = [...dpsPanel.children] as HTMLElement[];
+    if (tables.length === 2 && tables.every((tb, i) => refreshDpsTable(tb, sides[i]!))) return;
     dpsPanel.replaceChildren(dpsTableEl(view.sideNames[0], sides[0]!, face), dpsTableEl(view.sideNames[1], sides[1]!, face));
   }
 
@@ -547,8 +550,22 @@ function draw(view: BattleScreenView): void {
   // 칩이 있으면 칩 줄 위로, 특성 알약이 떠 있으면 그 위로 올린다
   const CHIP_LIFT = 16;
   const PILL_LIFT = 17;
+  // 떠 있는 연출 — 타임라인 항목(같은 판 동안 같은 객체)마다 요소 하나. 프레임마다 새로 만들지 않고 자리·투명도만 고친다.
+  // 새로 만든 타입 아이콘 img 가 디코드 전에 비어 보이지 않게 한다 (worklog/records/perf-refactor 4-5, G39-1·G53-1, R4)
+  const fxEls = new Map<object, HTMLElement>();
   function paintFx(t: number, state: ReturnType<Timeline["seek"]>): void {
-    const nodes: HTMLElement[] = [];
+    const live = new Set<object>();
+    const order: HTMLElement[] = []; // 겹침 순서 — 예전처럼 기술 알약 → 특성 → 피해 숫자 차례
+    const fxEl = (item: object, make: () => HTMLElement): HTMLElement => {
+      live.add(item);
+      let n = fxEls.get(item);
+      if (!n) {
+        n = make();
+        fxEls.set(item, n);
+      }
+      order.push(n);
+      return n;
+    };
     const abilities = timeline.abilities(t);
     const head = (side: BattleSide, slot: number): { x: number; y: number; pill: number } | null => {
       const s = state.units[side][slot];
@@ -564,36 +581,48 @@ function draw(view: BattleScreenView): void {
       const m = moveById.get(c.move);
       const h = head(c.side, c.slot);
       if (!m || !h) continue;
-      const pill = movePillEl(m, "small", view.typeIcons[m.typeId] ?? null);
-      pill.classList.add("cast");
+      const pill = fxEl(c, () => {
+        const made = movePillEl(m, "small", view.typeIcons[m.typeId] ?? null);
+        made.classList.add("cast");
+        return made;
+      });
       pill.style.left = `${h.x}px`;
       pill.style.top = `${h.y - 22}px`;
-      nodes.push(pill);
     }
     for (const a of abilities) {
       const h = head(a.side, a.slot);
       if (!h) continue;
       const k = (t - a.t) / TIMELINE_RULES.abilityMs;
-      const pill = el("div", "ability", a.name);
+      const pill = fxEl(a, () => el("div", "ability", a.name));
       pill.style.left = `${h.x + (k < 0.15 ? (1 - k / 0.15) * (a.side === 0 ? -14 : 14) : 0)}px`;
       pill.style.top = `${h.y - 22}px`;
       pill.style.opacity = String(k < 0.12 ? k / 0.12 : k > 0.8 ? (1 - k) / 0.2 : 1);
-      nodes.push(pill);
     }
     for (const p of timeline.pops(t)) {
       const h = head(p.side, p.slot);
       if (!h) continue;
       const k = (t - p.t) / TIMELINE_RULES.popMs;
-      const n = el("div", `pop ${p.kind}`);
-      if (p.label) n.appendChild(el("span", "label", p.label));
-      n.appendChild(document.createTextNode(p.text));
-      if (p.status) n.style.setProperty("--st", STATUS_COLOR[p.status] ?? "");
+      const n = fxEl(p, () => {
+        const made = el("div", `pop ${p.kind}`);
+        if (p.label) made.appendChild(el("span", "label", p.label));
+        made.appendChild(document.createTextNode(p.text));
+        if (p.status) made.style.setProperty("--st", STATUS_COLOR[p.status] ?? "");
+        return made;
+      });
       n.style.left = `${h.x}px`;
       n.style.top = `${h.y - h.pill - (p.kind === "super" ? 34 : 20) - (p.label ? 12 : 0) - k * 16}px`;
       n.style.opacity = String(k > 0.7 ? (1 - k) / 0.3 : 1);
-      nodes.push(n);
     }
-    fx.replaceChildren(...nodes);
+    // 수명이 끝난 연출을 걷고, 차례가 어긋난 요소만 제자리에 끼운다 — 떠 있는 요소는 다시 붙이지 않는다
+    for (const [item, n] of [...fxEls]) {
+      if (live.has(item)) continue;
+      n.remove();
+      fxEls.delete(item);
+    }
+    order.forEach((n, i) => {
+      const here = fx.children[i];
+      if (here !== n) fx.insertBefore(n, here ?? null);
+    });
   }
 
   // 몸 위 연출 — 걸려 있는 동안과 순간(걸림·5초 판정·풀림·능력 꺾쇠). 움직임 줄이기면 그리지 않는다
@@ -670,6 +699,7 @@ function draw(view: BattleScreenView): void {
   let t = 0;
   let last = rouletteStart + (reels && spinning ? rouletteMs(reels) : 0);
   let resultShown = false;
+  let paintedAt = -1; // 마지막으로 칠한 판 시각
   // 배틀 로그 — 재생 시각까지의 줄 수를 메인에 알린다. 바뀔 때만 보낸다
   let logShown = -1;
   let logIndex = 0;
@@ -690,8 +720,18 @@ function draw(view: BattleScreenView): void {
       t = Math.min(view.endMs + RESULT_DELAY_MS, t + (now - last) * speed);
       last = now;
     }
-    const state = timeline.seek(Math.min(t, view.endMs));
     const shown = Math.min(t, view.endMs);
+    // 판 시계가 끝에 멈춘 뒤(결과를 기다리거나 결과가 뜬 동안)는 같은 값이다 — 다시 칠하지 않는다 (worklog/records/perf-refactor 4-5, G39-4)
+    if (shown >= view.endMs && paintedAt === shown) {
+      if (t >= view.endMs + RESULT_DELAY_MS && !resultShown) {
+        resultShown = true;
+        showResult();
+      }
+      requestAnimationFrame(tick);
+      return;
+    }
+    paintedAt = shown;
+    const state = timeline.seek(shown);
     for (const side of [0, 1] as const) state.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, shown));
     paintStatus(shown, state);
     paintFx(shown, state);

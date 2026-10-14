@@ -109,7 +109,7 @@
 | `tutorials` | 튜토리얼별 미시작·진행 중·스킵·완료 |
 | `settings` | 표시, 동작, 언어, 시작, 놀이공간 영역, 알림 소리 |
 | `tx` | 완료한 요청 ID와 결과 |
-| `trade` | 확정했지만 아직 반영하지 않은 교환 하나 |
+| `trade` | 확정했지만 아직 반영하지 않은 교환 하나(`pending`), 반영했지만 서버에 반영 알림이 닿지 않은 채널(`unacked`, 최근 10개) |
 | `find` | 최근 줍기 기록 |
 
 로그인·클라우드 동기화 정보는 `save.json`과 같은 폴더의 `cloud.json`에 둔다. `save.json`에는 필드를 더하지 않는다(`src/online/cloud.ts`).
@@ -284,7 +284,7 @@ V2 `inventory`에는 먹이 재고가 없다. 유일한 키는 `shiny:<개체 �
 | `starter.pick` | 첫 선택 | `src/party` |
 | `box.sort` / `box.move` / `box.rename` / `box.order` | 박스 정렬·칸 옮기기·이름 바꾸기·박스 순서 바꾸기 | `src/box` |
 | `trade.create` / `trade.join` / `trade.offer` / `trade.ready` / `trade.unready` / `trade.leave` / `trade.status` | 친구 교환 조작과 상태. 서버를 타므로 교환 세션(`src/online/trade-session.ts`)이 받는다. 저장은 아래 로컬 거래로만 바꾼다. writer 만 처리하고 reader 는 명령 통로 `mailbox` 로 넘긴다 | `src/trade`, `src/main` |
-| `trade.lock` / `trade.unlock` / `trade.apply` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영. 교환 세션만 부른다 | `src/trade`, `src/tx` |
+| `trade.lock` / `trade.unlock` / `trade.apply` / `trade.acked` | 교환의 로컬 거래 — 확정 때 잠금, 닫힘 때 풀기, 완료 때 같은 칸에 받은 개체 반영, 서버가 반영 알림을 받으면 다시 보낼 목록에서 빼기. 교환 세션만 부른다 | `src/trade`, `src/tx` |
 | `mail.apply` / `mail.read` | 우편함 선물 넣기·읽음 기록. 우편함(`src/online/mail-inbox.ts`)만 부른다. 명령 처리기에 등록하지 않아 설정창·CLI 는 부를 수 없다 | `src/mail`, `src/tx` |
 | `settings.set` | 설정 변경. 설정 창은 명령이 아니라 설정창이 연다 | `src/state`, `src/main` |
 

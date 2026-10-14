@@ -9,12 +9,12 @@
 import type { AccountScreen } from "../../shared/model/account.js";
 import { api } from "./api.js";
 import { liveInputEl } from "./search.js";
-import { alertEl, dialogCloseEl } from "./widgets.js";
+import { alertEl, settingsHeadEl } from "./widgets.js";
 import type { TradeScreen } from "../../shared/model/trade.js";
 import { el } from "../ui/dom.js";
 import { actionButtonEl, closeDialog, dialogEl, openAnyDialog, openSubDialog } from "./dialog.js";
 import { failTextOf } from "../../shared/fail-text.js";
-import { loadTrade, redrawTrade, TRADE_LOCAL, tradeClosedText, tradeSend, tradeUi } from "./trade-state.js";
+import { loadTrade, redrawTrade, TRADE_LOCAL, tradeClosedText, tradeRefusedOf, tradeSend, tradeUi } from "./trade-state.js";
 import { drawTradeDone, drawTradeOffer, leftText, tradeCardHead, tradeState } from "./trade-cards.js";
 
 // manage.ts 에서 빌려 쓰는 것 — 다른 구역도 쓰므로 옮기지 않고 받는다 (P10 안내 4절)
@@ -101,13 +101,7 @@ function drawTradeStart(t: TradeScreen, out: HTMLElement): void {
 
 // 교환 모달 — 머리 "친구 교환" 과 오른쪽 위 ✕, 스크롤 본문. ✕·Esc·바깥 누르기로 닫는다(모달 공통)
 export function drawTradeDialog(): void {
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "친구 교환"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("친구 교환", { onClose: closeDialog });
   const out = el("div", "scroll");
   dialogEl.append(top, out);
   const t = tradeUi.screen;
@@ -128,7 +122,8 @@ export function drawTradeDialog(): void {
     : err.code === "LOCAL"
       ? [TRADE_LOCAL[err.detail ?? ""] ?? "교환을 진행하지 못했어요", err.detail === "locked" ? "" : "다른 포켓몬을 골라 주세요"]
       : ((f) => [f.text, f.detail ?? ""] as [string, string])(failTextOf(err.code, "trade"));
-  if (fail && t.phase !== "trading") {
+  // 받지 못한 교환은 완료 화면이 경고로 알린다 — 떠 있는 오류 배너를 겹쳐 띄우지 않는다
+  if (fail && t.phase !== "trading" && !tradeRefusedOf(t)) {
     const banner = alertEl("bad", fail[0], fail[1]);
     banner.classList.add("float");
     out.appendChild(banner);

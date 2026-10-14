@@ -257,6 +257,10 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
   - 설정창 다시 그리기 횟수는 빌드한 뒤 `electron dist/tools/smoke/smoke-perf.js` 로 잰다. 판정은 하지 않고 JSON 한 줄을 적는다
   - 기기 창이 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-device-open.js` 로 잰다. 파티 상세·도감 기기 창을 예비 창 없이, 예비 창으로, 닫은 뒤 다시, 떠 있는 창에서 바꿔 연다. 판정은 하지 않고 JSON 한 줄을 적는다
   - 메뉴 창이 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-menu-open.js` 로 잰다. 포켓몬 메뉴와 트레이 메뉴를 처음과 닫은 뒤 다시 연다. 판정은 하지 않고 JSON 한 줄을 적는다
+  - 배틀 창은 빌드한 뒤 `electron dist/tools/smoke/smoke-battle-screen.js` 로 로컬 엔진 판 하나를 숨긴 창에서 끝까지 재생한다. DPS 표·초상·연출 요소를 새로 만든 수와 끝난 판의 DPS 표 글자를 적는다. 결과 창이 뜨지 않거나 렌더러 오류가 있으면 실패한다
+- CSS 나 화면 공통 부품을 고칠 때는 화면이 바뀌지 않았는지 픽셀로 견준다
+  - 고치기 전에 `electron dist/tools/smoke/smoke-ui-shots.js <전 폴더>` 로 설정창 탭·모달·기기 창 다섯을 찍는다. 시각을 고정하고 그림은 주지 않아 같은 코드면 같은 그림이 나온다
+  - 고친 뒤 다른 폴더에 다시 찍고 `node dist/tools/dev/compare-shots.js <전> <후> [--diff <폴더>]` 로 견준다. 다른 픽셀이 있는 그림을 적고 종료 코드 1 이다. `--diff` 는 다른 픽셀을 빨갛게 칠한 그림을 남긴다
 - 서버 검증 규칙(`src/verify/save-rules.ts`)이나 가격·진화 데이터를 바꾸면 빌드한 뒤 `node dist/tools/data/build-verify.js` 로 `supabase/functions/_shared/` 를 다시 만든다. `selftest-verify` 가 최신인지 본다
 - 형 검사만 하려면 `npm run check` 를 쓴다. 산출물을 만들지 않는다
 - 동반자 흐름 검사는 `npm run test:e2e` 로 한다. 빌드한 뒤 `dist/tools/e2e/e2e-companion.js` 가 CLI → 선택 창 → 저장 → 종료·복원을 확인한다

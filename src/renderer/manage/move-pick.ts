@@ -18,7 +18,7 @@ import { iconOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 let petId = "";
 let target: number | null = null; // 고른 사용 중인 기술 칸 — 목록의 기술을 누르면 여기를 바꾼다. 없으면 목록은 상세만 바꾼다
@@ -133,13 +133,7 @@ export function drawMovePick(): void {
     return;
   }
   const options = slot.options ?? slot.moves;
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, `기술 바꾸기 · ${pet.name}`));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl(`기술 바꾸기 · ${pet.name}`, { onClose: closeDialog });
 
   const list = el("div", "mp-list");
   // 칸을 고르면 이 자리의 글자만 바꾼다(줄을 끼우지 않는다)

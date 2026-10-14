@@ -13,7 +13,7 @@ import { portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl } from "./dialog.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 // 칸 하나 — 초상만. 빈 칸은 +, 잠긴 칸은 자물쇠 아이콘만 (2026-10-07 사용자 "레벨·이름 안 보이고 프로필만 보이게 하자").
 // 이름·레벨은 마우스를 올린 title 과 읽어 주는 이름(aria-label)에만 둔다
@@ -68,13 +68,7 @@ export function drawPresetOverview(battle = false): void {
     closeDialog();
     return;
   }
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, battle ? "기존 파티 가져오기" : "프리셋 전체보기"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl(battle ? "기존 파티 가져오기" : "프리셋 전체보기", { onClose: closeDialog });
   const list = el("div", "preset-list scroll");
   for (const p of v.party.presets) list.appendChild(presetRow(p, !battle && p.index === v.party.preset.index, battle));
   dialogEl.append(top, list);

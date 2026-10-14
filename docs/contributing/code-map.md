@@ -237,7 +237,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 ### 설정창
 
-- **모달** — `dialog.ts` 의 `registerDialog`·`openAnyDialog`·`closeDialog`. 머리 줄은 `dialogHead`(✕ 가 필요하면 `{ close: true }`), 바닥 단추 줄은 `actionsRowEl`·`actionButtonEl`, ✕ 는 `widgets.ts` 의 `dialogCloseEl`. 실패 문구는 바닥 단추 줄의 빈자리에 `drawDialog` 가 넣으므로 모달이 따로 그리지 않는다. 다른 모달 안에서 여는 모달은 `openSubDialog` 로 열고, ✕·Esc·가림막·확인 창의 `취소` 는 `dismissDialog`(한 단계 물러나기 — 하위 모달이면 부모로)를 쓴다. 모달을 떠날 때 지울 상태는 `registerDialog` 의 `leave` 에 둔다. 형태와 닫기 규칙은 `docs/specs/ui-components.md` C-13 이다.
+- **모달** — `dialog.ts` 의 `registerDialog`·`openAnyDialog`·`closeDialog`. 머리 줄은 `dialogHead`(✕ 가 필요하면 `{ close: true }`), 제목 묶음과 덧붙인 단추·✕ 를 한 줄에 두는 설정형 머리는 `widgets.ts` 의 `settingsHeadEl`(✕ 처리기는 모달이 넘긴다, CSS 는 `manage/dialog.css`), 바닥 단추 줄은 `actionsRowEl`·`actionButtonEl`, ✕ 는 `widgets.ts` 의 `dialogCloseEl`. 실패 문구는 바닥 단추 줄의 빈자리에 `drawDialog` 가 넣으므로 모달이 따로 그리지 않는다. 다른 모달 안에서 여는 모달은 `openSubDialog` 로 열고, ✕·Esc·가림막·확인 창의 `취소` 는 `dismissDialog`(한 단계 물러나기 — 하위 모달이면 부모로)를 쓴다. 모달을 떠날 때 지울 상태는 `registerDialog` 의 `leave` 에 둔다. 형태와 닫기 규칙은 `docs/specs/ui-components.md` C-13 이다.
 - **2단 모달** — 왼쪽 목록과 오른쪽 내용. 패치노트와 가이드북이 같은 틀이다(`update-notes.ts` 의 `notesHead`, CSS `notes-body`·`notes-list`·`notes-item`·`notes-detail`, 묶음 제목은 `guide-group`).
 - **가림막과 OS 창 단추** — 가림막은 `setScrim` 이 켜고 끈다. OS 가 그리는 창 단추 자리는 `tutorial.ts` 가 헤더를 덮은 막의 겹수(0·1·2)를 메인에 보내고, 메인 `manage/window.ts` 가 같은 겹수 색으로 칠한다. 막을 새로 겹치는 화면을 만들면 이 겹수 계산에 넣는다.
 - **헤더 아이콘의 열림 표시** — `registerDialog` 의 `headerButton` 으로 건다. 표시는 `setScrim` 이 맞춘다.
@@ -250,6 +250,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 기기 창
 
 - **틀** — `device/device-frame.ts` 의 `createDeviceFrame`. 머리·바닥·높이 알림, ←→ 넘기기와 Esc 닫기가 여기 있다. 입력칸 안의 키는 넘기기·닫기에 쓰지 않는다.
+- **CSS** — 머리 줄·표시등은 `styles/device.css`(기기 창 일곱 문서), 경첩 이음·베젤·바닥 단추는 `device-body.css`(파티 상세·가방·상점·도감·배틀 파티 상세), 막대·그림 칸·기록 칸은 `device-item.css`(가방·상점·도감), 수량·합계·주 단추는 `item-face.css`(가방·상점)다. 창 CSS 에는 색 변수와 그 창만의 규칙을 둔다.
 - **상품 화면** — 상점과 가방은 `item-face.ts` 의 `drawItemFace` 를 같이 쓴다. 수량은 `qtyRowEl`(`−`·숫자 칸·`+`·`최대`), 미리보기·합계·결과 상자는 `totalBoxEl`(늘 두 줄 높이), 바닥 주 단추는 `goButtonEl`.
 - **설정창과의 연결** — `manage/device-link.ts` 의 `createDeviceLink`. 명령을 보내는 동안 중간 장면을 보내지 않으려면 `holding` 을 켠다(상점·가방).
 - **같은 값 거르기** — 모델을 받는 기기 창은 `frame.showWith` 로 받는다. 지난번과 같은 값이면 그리지 않는다(R4).

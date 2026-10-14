@@ -282,8 +282,12 @@ export function createStatusFx(host: HTMLElement): StatusFx {
   canvas.height = (H + PAD * 2) * dpr;
   host.appendChild(canvas);
   const g = canvas.getContext("2d")!;
+  let blank = true; // 지난번에 아무것도 그리지 않았다 — 이번에도 그릴 것이 없으면 지우지도 않는다 (worklog/records/perf-refactor 4-5, G39-6)
   return {
     draw(t, units, marks, markMs) {
+      const empty = units.length === 0 && marks.length === 0;
+      if (empty && blank) return;
+      blank = empty;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, canvas.width, canvas.height);
       g.setTransform(dpr, 0, 0, dpr, PAD * dpr, PAD * dpr);

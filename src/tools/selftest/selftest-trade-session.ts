@@ -22,10 +22,12 @@ const t = okCounter();
 const ok = <T>(data: T): NetResult<T> => ({ ok: true, data });
 const no = (code: TradeCode): NetResult<never> => ({ ok: false, code });
 
-function world() {
-  let disk: SaveV3 = emptySave(T0);
-  disk.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", gender: "male", now: T0 }));
-  disk.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+function world(from?: SaveV3) {
+  let disk: SaveV3 = from ? structuredClone(from) : emptySave(T0);
+  if (!from) {
+    disk.pets.push(newPet({ id: "p1", species: "pikachu", shiny: false, nature: "hardy", gender: "male", now: T0 }));
+    disk.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  }
   const exec = createExecutor({ read: () => structuredClone(disk), write: (x) => { disk = x; return true; }, now: () => T0, rand: () => 0.5 }, HANDLERS);
   const friend = offerOf(newPet({ id: "f1", species: "eevee", shiny: false, nature: "hardy", gender: "female", now: T0 }));
   let status: ChannelView["status"] = "joined";
@@ -115,6 +117,7 @@ async function main(): Promise<void> {
     }
     assert.equal(w.acks(), 3);
     assert.equal(w.settled(), 1, "알림이 닿으면 한 번 끝낸다");
+    assert.deepEqual(w.save().trade?.unacked ?? [], [], "닿은 알림은 저장의 목록에서 뺀다");
   });
 
   await t.okAsync("반영 알림을 서버가 거절하면 다시 보내지 않는다", async () => {
@@ -126,6 +129,32 @@ async function main(): Promise<void> {
     await w.session.refresh();
     assert.equal(w.acks(), 1);
     assert.equal(w.timers.length, before, "다시 보낼 타이머가 없다");
+  });
+
+  await t.okAsync("알림을 못 보내고 앱이 꺼지면 다시 켤 때 보낸다 (저장 trade.unacked)", async () => {
+    const w = await readyToConfirm();
+    await w.session.ready();
+    w.answer.ack = [no("NETWORK")];
+    w.setStatus("done");
+    await w.session.refresh();
+    assert.deepEqual(w.save().trade?.unacked, ["c1"], "반영했지만 알리지 못한 채널이 저장에 남는다");
+    assert.equal(w.save().trade?.pending ?? null, null, "잠금은 풀렸다");
+    w.session.stop(); // 앱이 꺼진다
+    const again = world(w.save());
+    await again.session.start();
+    await new Promise((r) => setImmediate(r));
+    assert.equal(again.acks(), 1, "켤 때 다시 보낸다");
+    assert.equal(again.settled(), 1);
+    assert.deepEqual(again.save().trade?.unacked ?? [], []);
+  });
+
+  await t.okAsync("서버가 거절한 알림(채널 없음)은 목록에서 뺀다", async () => {
+    const w = await readyToConfirm();
+    await w.session.ready();
+    w.answer.ack = [no("TRADE_NOT_FOUND")];
+    w.setStatus("done");
+    await w.session.refresh();
+    assert.deepEqual(w.save().trade?.unacked ?? [], []);
   });
 
   printLine(`selftest-trade-session: 통과 (${t.count()}건)`);

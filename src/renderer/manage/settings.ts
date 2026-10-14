@@ -11,7 +11,7 @@ import { runLocked, sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import type { SettingsTab, UserTab } from "./dialog-types.js";
 import { ui } from "./state.js";
-import { chipsEl, dialogCloseEl, segmentedEl, settingRow, switchEl } from "./widgets.js";
+import { chipsEl, segmentedEl, settingRow, settingsHeadEl, switchEl } from "./widgets.js";
 import { versionFoot } from "./update-notes.js";
 import { accountOverlayEl } from "./account.js";
 import { accountActionsEl, drawAccount } from "./account-forms.js";
@@ -249,13 +249,7 @@ export function syncIdentify(): void {
 
 // 설정·사용자 모달의 틀 — 제목과 오른쪽 위 닫기, 두 칸 전환, 스크롤 본문. 바닥과 덧창은 모달마다 붙인다
 function drawTabbedHead<T extends string>(title: string, tabs: readonly { id: T; label: string }[], current: T, pick: (id: T) => void): HTMLElement {
-  const head = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, title));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  head.append(titles, x);
+  const head = settingsHeadEl(title, { onClose: closeDialog });
   dialogEl.appendChild(head);
   dialogEl.appendChild(segmentedEl(tabs, current, pick));
   const scroll = el("div", "scroll");

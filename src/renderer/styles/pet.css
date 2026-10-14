@@ -28,33 +28,7 @@
     inset 3px 3px 0 rgba(143, 224, 214, 0.45);
   overflow: hidden;
 }
-.hinge::before,
-.hinge::after {
-  content: "";
-  position: absolute;
-  left: 2px;
-  width: 8px;
-  height: 24px;
-  border-radius: 3px;
-  background: var(--joint);
-}
-.hinge::after {
-  bottom: 60px;
-}
 /* 윗줄 — 창을 끄는 손잡이. 단추는 끌기에서 뺀다 */
-/* 머리의 램프만 — 밥 주기 단추(.key.light)도 light 를 쓴다. 범위를 좁히지 않으면 단추에 흰 테두리가 걸린다 (2026-10-02) */
-.top .light {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #8fe0d6;
-  box-shadow: 0 0 0 3px #ffffff;
-}
-.bezel {
-  padding: 8px;
-  border-radius: 12px;
-  background: var(--bezel);
-}
 .screen {
   position: relative;
   display: flex;
@@ -180,9 +154,6 @@
   border-radius: 6px;
   background: var(--stage);
   overflow: hidden;
-}
-.stage canvas {
-  image-rendering: pixelated;
 }
 .info {
   display: flex;
@@ -502,30 +473,6 @@ button.line.on {
   border-color: var(--primary);
   background: var(--primary);
   color: var(--inverse);
-}
-.controls {
-  display: flex;
-  gap: 8px;
-}
-.controls button {
-  height: 30px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 15px;
-  background: var(--bezel);
-  color: var(--inverse);
-  font-weight: 700;
-  cursor: pointer;
-}
-.controls .cry {
-  flex: 1;
-}
-.controls button:hover:not(:disabled) {
-  background: #56424a;
-}
-.controls button:disabled {
-  background: #8a6a70;
-  cursor: default;
 }
 /* 개체 상세 튜토리얼 — 말풍선과 막은 공용 styles/coach.css (94 4-9) */
 /* 타입 색 — 관리 창 `.type[data-type]` 과 같은 Scarlet·Violet 팔레트. 색 있는 배지 글자는 모두 흰색 (2026-09-30 사용자 결정, Figma `Type Badge` `118:134`) */

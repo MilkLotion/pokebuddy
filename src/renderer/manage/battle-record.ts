@@ -13,7 +13,7 @@ import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
 import { dialogEl, dismissDialog, drawDialog, openSubDialog } from "./dialog.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 const ROWS = 8;
 const LOADING = "불러오는 중…";
@@ -83,13 +83,7 @@ export async function loadBattleDetail(id: string): Promise<void> {
 }
 
 export function drawBattleDetail(id: string): void {
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "배틀 상세"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", dismissDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("배틀 상세", { onClose: dismissDialog });
   const view = detail?.id === id ? detail.view : null;
   // 기록 줄 — 받은 값이 없으면 배틀 기록의 같은 줄
   const row = view?.row ?? data?.recent.find((r) => r.id === id) ?? null;
@@ -106,13 +100,7 @@ export function drawBattleDetail(id: string): void {
 export function drawBattleRecord(): void {
   // 닫기·✕ — 상대 고르기에서 왔으면 그 모달로 돌아간다(고른 줄·쿨타임은 그대로)
   const leave = dismissDialog; // ✕·닫기는 Esc·가림막과 같다 — 상대 고르기에서 열었으면 상대 고르기로, 배너에서 열었으면 닫는다
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "배틀 기록"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", leave);
-  top.append(titles, x);
+  const top = settingsHeadEl("배틀 기록", { onClose: leave });
   const summary = el("div", "br-summaries");
   summary.append(summaryEl("내가 건 배틀", data?.mine ?? null), summaryEl("받은 배틀 · 내 배틀 파티가 막은 판", data?.def ?? null));
   const list = el("div", "br-list");

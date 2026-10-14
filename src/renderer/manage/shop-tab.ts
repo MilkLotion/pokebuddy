@@ -14,7 +14,7 @@ import { findBarEl, matchesName, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { pickShop, shopPickOf } from "./shop-link.js";
 import { ui } from "./state.js";
-import { chipsEl, dialogCloseEl, pageHeadEl } from "./widgets.js";
+import { chipsEl, pageHeadEl, settingsHeadEl } from "./widgets.js";
 import { addTabTip } from "./tab-tips.js";
 
 // 상점 분류 — `전체` 는 두지 않는다. 처음 여는 탭은 첫 탭 `알` (2026-09-29 사용자 결정 "상점에 전체는 없애")
@@ -191,14 +191,7 @@ export function drawPool(productId: string, page: number): void {
     closeDialog();
     return;
   }
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, `${item.name}에서 나오는 포켓몬`));
-  titles.appendChild(el("p", undefined, `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl(`${item.name}에서 나오는 포켓몬`, { sub: `${poolCount(pool)} · ${pool.single ? "얻은 포켓몬은 다시 나오지 않아요" : "얻은 포켓몬도 다시 나와요"}`, subTag: "p", onClose: closeDialog });
   const shown = pageOf(pool.entries, page, GRID_PAGE);
   const grid = el("div", "dex-grid egg-pool-grid");
   for (const e of shown.items) {

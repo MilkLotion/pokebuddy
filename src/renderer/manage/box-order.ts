@@ -8,7 +8,7 @@ import { openSwap } from "./party-swap.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 import { loadTrade, tradeInProgress } from "./trade-state.js";
-import { dialogCloseEl, headMenuEl } from "./widgets.js";
+import { headMenuEl, settingsHeadEl } from "./widgets.js";
 
 // 박스 머리의 햄버거 단추 — 누르면 메뉴가 단추 아래에 뜬다. 메뉴는 떠 있는 층이라 본문을 밀지 않는다. 바깥을 누르면 닫힌다.
 // 교환이 진행 중이면 단추 오른쪽 위에 점을 둔다 (2026-10-02 사용자 결정 "햄버거 버튼 두고, 그거 누르면 메뉴나오게"·"교환도 메뉴로")
@@ -56,13 +56,7 @@ export function drawBoxOrder(): void {
     closeDialog();
     return;
   }
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "박스 순서"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("박스 순서", { onClose: closeDialog });
   const held = hold.slot?.kind === "tile" ? hold.slot : null;
   const grid = el("div", held ? "box-order-grid scroll holding" : "box-order-grid scroll");
   v.boxes.forEach((box, i) => {

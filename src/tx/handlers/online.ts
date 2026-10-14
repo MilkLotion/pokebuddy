@@ -1,5 +1,5 @@
 // 친구 교환·우편 처리기 — 메인의 서비스만 낸다(internal). 명령 통로에 등록하지 않는다
-import { applyTrade, lockTrade, unlockTrade } from "../../trade/exchange.js";
+import { applyTrade, clearUnacked, lockTrade, markUnacked, unlockTrade } from "../../trade/exchange.js";
 import { applyGifts } from "../../mail/gifts.js";
 import { markRead } from "../../mail/letters.js";
 import type { TxHandler } from "../executor";
@@ -37,8 +37,17 @@ export const tradeApplyHandler: TxHandler = (draft, args, ctx) => {
   if (!channelId) return { ok: false, reason: "bad-args" };
   const res = applyTrade(draft, channelId, isArgsRecord(args) ? args.received : undefined, ctx.now);
   if (!res.ok) return { ok: false, reason: res.reason };
+  // 반영을 마쳤다 — 서버가 반영 알림을 받을 때까지 저장에 남긴다. 앱이 그 사이 꺼져도 켤 때 다시 보낸다 (worklog/records/perf-refactor 10단계)
+  markUnacked(draft, channelId);
   // refused — 받은 개체를 넣지 않고 잠금만 풀었다(받은 값이 규칙 밖·빈 칸 없음). 교환 세션이 화면에 알린다 (src/online/trade-session.ts settle)
   return { ok: true, result: res.applied ? { channelId, applied: true, petId: res.newPetId, where: res.where } : { channelId, applied: false, ...(res.refused ? { refused: res.refused } : {}) } };
+};
+
+// 반영 알림이 서버에 닿았다 — 다시 보낼 목록에서 뺀다
+export const tradeAckedHandler: TxHandler = (draft, args) => {
+  const channelId = strOf(args, "channelId");
+  if (!channelId) return { ok: false, reason: "bad-args" };
+  return { ok: true, result: { channelId, cleared: clearUnacked(draft, channelId) } };
 };
 
 // ── 우편함 ─────────────────────────────────────────────────────────────────────

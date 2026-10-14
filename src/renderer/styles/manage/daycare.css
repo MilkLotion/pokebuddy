@@ -10,15 +10,6 @@
   flex-direction: column;
   gap: 16px;
 }
-.dialog.daycare .settings-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.dialog.daycare .titles {
-  flex: 1;
-  min-width: 0;
-}
 /* 모두 열기 — 머리 오른쪽, ✕ 왼쪽. ✕ 와 같은 높이 */
 .dialog.daycare .open-all {
   flex: none;

@@ -12,7 +12,7 @@ import { battleRecordBarEl, loadBattleRecord } from "./battle-record.js";
 import { iconOf, portraitOf } from "./art-cache.js";
 import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 const FAILED_ROW = "상대를 불러오지 못했어요";
 
@@ -128,13 +128,7 @@ function pickRow(row: BattleOfferView["rows"][number] | null, slot: number): HTM
 }
 
 export function drawBattleOpponent(): void {
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "랜덤 배틀"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("랜덤 배틀", { onClose: closeDialog });
   const list = el("div", "preset-list bo-list");
   for (let i = 1; i <= 3; i++) list.appendChild(pickRow(st.offer?.rows[i - 1] ?? null, i));
   const remain = st.coolUntil - Date.now();

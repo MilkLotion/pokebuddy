@@ -7,7 +7,7 @@ import { api } from "./api.js";
 import { setBusy } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, dismissDialog, drawDialog, openAnyDialog, openSubDialog } from "./dialog.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 let upd: UpdateView | null = null;
 let patch: PatchNotesView | null = null;
@@ -119,14 +119,7 @@ function noteDetail(version: string): HTMLElement {
 
 // 2단 모달(패치노트·가이드북)의 머리 — 제목·부제와 ✕
 export function notesHead(title: string, sub: string, onClose: () => void): HTMLElement {
-  const head = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.append(el("h2", undefined, title), el("div", "sub", sub));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", onClose);
-  head.append(titles, x);
-  return head;
+  return settingsHeadEl(title, { sub, onClose });
 }
 
 // ✕ 는 설정으로 돌아간다 — 설정 바닥에서 열었다

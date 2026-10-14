@@ -122,3 +122,12 @@ button[aria-busy="true"]::after {
 .size:not([aria-pressed="true"]):not(:disabled):hover {
   background: color-mix(in srgb, var(--ink) 6%, var(--paper));
 }
+/* 머리 줄 왼쪽 표시등 — 기기 창 일곱 문서가 같은 값을 따로 적던 것을 모았다 (worklog/records/perf-refactor 10단계).
+   머리의 램프만 — 파티 상세의 밥 주기 단추(.key.light)도 light 를 쓴다. 범위를 좁히지 않으면 단추에 흰 테두리가 걸린다 (2026-10-02) */
+.top .light {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #8fe0d6;
+  box-shadow: 0 0 0 3px #ffffff;
+}

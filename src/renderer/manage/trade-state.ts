@@ -29,6 +29,14 @@ const TRADE_CLOSED: Record<TradeCloseReason, [string, string]> = {
 // 서버가 모르는 글자를 보낼 수 있다 — 표에 있는 이유만 글을 돌려준다
 export const tradeClosedText = (reason: string | null): [string, string] | null =>
   reason !== null && Object.hasOwn(TRADE_CLOSED, reason) ? TRADE_CLOSED[reason as TradeCloseReason] : null;
+// 서버는 교환을 끝냈는데 이 PC 가 받지 않았다 — 완료 화면이 경고로 알린다 (src/trade/exchange.ts applyTrade refused).
+// Figma 05 `08 교환` `Trade / Done · 받지 못함 · 규칙 밖 값` `2019:104700`, `… · 빈 칸 없음` `2019:105047` (2026-10-14 사용자 "시안 괜찮아 진행해")
+export const TRADE_REFUSED: Record<string, { reason: string; sent: boolean }> = {
+  "bad-received": { reason: "받은 포켓몬의 정보가 올바르지 않아요", sent: true }, // 보낸 포켓몬은 저장에서도 뺐다
+  "no-room": { reason: "파티와 박스에 빈 칸이 없었어요", sent: false }, // 보낸 포켓몬이 이미 없던 경우다
+};
+export const tradeRefusedOf = (t: { phase: string; error: { code: string; detail?: string } | null }): { reason: string; sent: boolean } | null =>
+  t.phase === "done" && t.error?.code === "LOCAL" && t.error.detail && Object.hasOwn(TRADE_REFUSED, t.error.detail) ? TRADE_REFUSED[t.error.detail]! : null;
 export const TRADE_LOCAL: Record<string, string> = {
   single: "단일 포켓몬은 교환할 수 없어요",
   locked: "확정한 포켓몬은 바꿀 수 없어요",

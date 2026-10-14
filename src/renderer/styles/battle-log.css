@@ -28,13 +28,6 @@ body {
   padding: 7px 16px 7px 12px;
   background: var(--primary);
 }
-.light {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #8fe0d6;
-  box-shadow: 0 0 0 3px #ffffff;
-}
 
 /* 줄 목록 — 위에서부터 쌓이고, 넘치면 스크롤. 새 줄을 따라 내려가는 것은 log.ts 가 한다 */
 .log-list {

@@ -1,5 +1,5 @@
 // 훅 상태 파일(state/<세션>.json) 읽기 한 벌 — 동반자의 따라가기(src/main/stage/host-watch.ts), 진단(src/cli/status.ts),
-// 연결 탭의 마지막 신호(./check.ts lastSignals), 토큰 사용량(./usage.ts)이 같이 쓴다.
+// 연결 탭의 마지막 신호(./check.ts lastSignals)가 같이 쓴다.
 // 쓰는 쪽은 훅(src/hooks/pokebuddy-state.ts)이고 모양은 src/shared/hook-record.ts 다. 읽는 쪽은 모든 필드를 의심한다.
 // 쓰는 중이거나 깨진 파일은 그 파일만 건너뛴다. 폴더가 없으면 빈 목록이다
 // (설계 worklog/records/code-structure/design/40-contracts-save-online.md 3.8절. 상태 환산 agentStateOf 는 따라가기 쪽 src/terminal/state.ts 에 둔다 — 층이 같아 서로 가져오지 않는다)
@@ -88,7 +88,7 @@ export function hookRecordReader(stateDir: string, opts: Omit<HookReadOptions, "
 }
 
 // 기록의 CLI — 없던 옛 등록은 claude
-export const cliOf = (record: HookStateRead): string => (typeof record.cli === "string" && record.cli ? record.cli : "claude");
+const cliOf = (record: HookStateRead): string => (typeof record.cli === "string" && record.cli ? record.cli : "claude");
 
 // CLI 별 마지막 신호 시각(ms) — 기록의 at(초) 가운데 가장 늦은 것
 export function lastSignalsOf(records: readonly HookStateRead[]): Record<string, number> {

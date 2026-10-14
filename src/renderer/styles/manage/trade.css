@@ -337,19 +337,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-.dialog.trade .settings-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dialog.trade .titles {
-  flex: 1;
-  min-width: 0;
-}
-.dialog.trade .titles h2 {
-  margin: 0;
+  /* 위아래 여백 18·줄 사이 14 — Figma `Trade Dialog` `1262:90033` 과 같다. 공통 판으로 바꾼 뒤 제안 화면이 기본 창(682)에서 6 넘쳐 스크롤이 생겼다 (2026-10-14 사용자 "교환모달 스크롤안생기게 수정") */
+  padding: 18px 20px;
+  gap: 14px;
 }
 .dialog.trade .scroll {
   min-height: 0;

@@ -23,6 +23,7 @@ import { FIND_RULES } from "../find/rules.js";
 import { SOUND_RULES } from "../state/rules.js";
 import { BATTLE_RULES } from "../battle/rules.js";
 import { megaChoices } from "../dex/mega.js";
+import { TRADE_UNACKED_MAX } from "../trade/exchange.js";
 import { shiftGroupOf } from "../dex/regional.js";
 import { battleShiftable } from "../battle/party.js";
 import { addStraysToBox, emptyParty, normalizeBoxes, normalizeParty, normalizePet } from "./normalize-pets.js";
@@ -350,10 +351,14 @@ function normalizeBattle(raw: unknown, pets: PetV3[]): BattleV3 {
   return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(Object.keys(forms).length ? { forms } : {}), ...(applied.length ? { applied } : {}) };
 }
 
-function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null } {
+// unacked — 반영 알림을 기다리는 채널. 글자만, 같은 것은 한 번, 마지막 TRADE_UNACKED_MAX 개(src/trade/exchange.ts). 비면 칸을 두지 않는다
+function normalizeTrade(raw: unknown, petIds: Set<string>): { pending: TradePendingV3 | null; unacked?: string[] } {
   const p = isRawObject(raw) && isRawObject(raw.pending) ? raw.pending : null;
-  if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null };
-  return { pending: { channelId: p.channelId, petId: p.petId, offerRev: nonNeg(p.offerRev), received: p.received ?? null } };
+  const given = isRawObject(raw) && Array.isArray(raw.unacked) ? raw.unacked : [];
+  const unacked = [...new Set(given.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 64))].slice(-TRADE_UNACKED_MAX);
+  const extra = unacked.length ? { unacked } : {};
+  if (!p || typeof p.channelId !== "string" || !p.channelId || typeof p.petId !== "string" || !petIds.has(p.petId)) return { pending: null, ...extra };
+  return { pending: { channelId: p.channelId, petId: p.petId, offerRev: nonNeg(p.offerRev), received: p.received ?? null }, ...extra };
 }
 
 function normalizeTotals(raw: Raw): Totals {

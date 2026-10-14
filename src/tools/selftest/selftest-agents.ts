@@ -15,13 +15,12 @@ process.env.CODEX_HOME = path.join(home, ".codex");
 delete process.env.CLAUDE_CONFIG_DIR;
 
 // 배럴 없이 모듈을 직접. HOME 을 바꾼 뒤에 읽어야 해서 import 문이 아니라 require 꼴 — ES import 는 파일 맨 위로 끌어올려진다
-import usage = require("../../agents/usage");
 import registry = require("../../agents/registry");
 import { okCounter, printLine as say } from "../harness/report";
 
 const checks = okCounter();
 const ok = checks.ok;
-const agents = { ...usage, ...registry };
+const agents = registry;
 
 
 // 있어야 하는 값 — 없으면 여기서 실패한다 (없는 값에 점을 찍어 TypeError 로 죽는 대신)
@@ -31,54 +30,6 @@ function some<T>(v: T | null | undefined, what = "값"): T {
 }
 
 try {
-  ok("usage: 더하기·차이·토큰 접기", () => {
-    const a = { in: 10, out: 20, cacheRead: 1000, cacheWrite: 100 };
-    const b = { in: 1, out: 2, cacheRead: 3, cacheWrite: 4 };
-    assert.deepStrictEqual(agents.addUsage(a, b), { in: 11, out: 22, cacheRead: 1003, cacheWrite: 104 });
-    assert.deepStrictEqual(agents.diffUsage(a, b), { in: 9, out: 18, cacheRead: 997, cacheWrite: 96 });
-    // 줄었으면 새 기록 — 지금 값 전체
-    assert.deepStrictEqual(agents.diffUsage(b, a), b);
-    assert.strictEqual(agents.tokensOf(a), 10 + 20 + 100 + 100); // cacheRead 1000 × 0.1
-    assert.strictEqual(agents.tokensOf(a, { in: 1, out: 1, cacheRead: 0, cacheWrite: 0 }), 30);
-  });
-
-  ok("usage: 기록 폴더 읽기 — usage 없는 기록은 뺀다", () => {
-    const dir = path.join(home, "state");
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "s1.json"), JSON.stringify({ cli: "claude", state: "idle", at: 1000, usageAt: 1005, usage: { in: 5, out: 6, cacheRead: 7, cacheWrite: 8 } }));
-    fs.writeFileSync(path.join(dir, "s2.json"), JSON.stringify({ cli: "codex", state: "running", at: 1001 }));
-    fs.writeFileSync(path.join(dir, "bad.json"), "{");
-    fs.writeFileSync(path.join(dir, "negative.json"), JSON.stringify({ usage: { in: -1, out: 0, cacheRead: 0, cacheWrite: 0 } }));
-    fs.writeFileSync(path.join(dir, "infinite.json"), '{"usage":{"in":1e999,"out":0,"cacheRead":0,"cacheWrite":0}}');
-    const list = agents.readSessionUsages(dir);
-    assert.strictEqual(list.length, 1);
-    assert.strictEqual(some(list[0]).sessionId, "s1");
-    assert.strictEqual(some(list[0]).at, 1005000);
-    assert.deepStrictEqual(agents.readSessionUsages(path.join(home, "없음")), []);
-  });
-
-  ok("usage: 기준점과 증분 — 처음엔 0, 늘어난 만큼만, 새 세션은 전부", () => {
-    const cur = [{ sessionId: "a", cli: "claude", usage: { in: 100, out: 50, cacheRead: 0, cacheWrite: 0 }, at: 1 }];
-    const seen = agents.usageBaseline(cur);
-    let r = agents.deltaSince(cur, seen);
-    assert.strictEqual(agents.tokensOf(r.delta), 0);
-    const cur2 = [
-      { sessionId: "a", cli: "claude", usage: { in: 130, out: 60, cacheRead: 0, cacheWrite: 0 }, at: 2 },
-      { sessionId: "b", cli: "claude", usage: { in: 10, out: 10, cacheRead: 0, cacheWrite: 0 }, at: 2 },
-    ];
-    r = agents.deltaSince(cur2, r.seen);
-    assert.deepStrictEqual(r.delta, { in: 40, out: 20, cacheRead: 0, cacheWrite: 0 }); // a 130−100 + b 10, out 60−50 + 10
-    assert.deepStrictEqual(Object.keys(r.perSession).sort(), ["a", "b"]);
-    // 일시적으로 못 읽은 세션의 기준점도 남겨 중복 적립 방지
-    r = agents.deltaSince(cur2.slice(1), r.seen);
-    assert.deepStrictEqual(Object.keys(r.seen).sort(), ["a", "b"]);
-    assert.strictEqual(agents.tokensOf(r.delta), 0);
-    r = agents.deltaSince(cur2, r.seen);
-    assert.strictEqual(agents.tokensOf(r.delta), 0, "다시 읽힌 누적값은 재적립하지 않음");
-    r = agents.deltaSince([{ ...cur2[0]!, usage: { ...cur2[0]!.usage, in: 135 } }], r.seen);
-    assert.strictEqual(agents.tokensOf(r.delta), 5, "복구 후 새 사용량만 적립");
-  });
-
   ok("registry: 세 에이전트, 사용량 출처", () => {
     assert.deepStrictEqual(agents.AGENTS.map((a) => a.name), ["claude", "codex", "gemini"]);
     assert.strictEqual(some(agents.agentInfo("claude")).usage, "transcript");

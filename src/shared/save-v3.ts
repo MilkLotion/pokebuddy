@@ -275,7 +275,8 @@ export interface SaveV3 {
   tx: TxRecordV3[];
   legacy: Record<string, unknown>; // 새 화면에서 쓰지 않는 옛 값. 지우지 않고 보존한다
   log: LogEntry[];
-  trade?: { pending: TradePendingV3 | null };
+  // unacked — 반영은 끝났는데 서버에 반영 알림(ack)이 닿지 않은 채널. 앱을 켜면 다시 보낸다 (2026-10-14 사용자 결정 "저장에 칸 추가", worklog/records/perf-refactor 10단계)
+  trade?: { pending: TradePendingV3 | null; unacked?: string[] };
   mail?: { applied: string[]; read: string[] }; // 우편함 — 선물을 넣은 편지·읽은 편지 id (src/mail/gifts.ts)
   find?: FindV3; // 줍기 — 활동 시간 진행과 최근 기록 (src/find/pickup.ts)
   battle?: BattleV3; // 배틀 파티 (src/battle/party.ts)

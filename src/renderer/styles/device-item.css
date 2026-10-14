@@ -1,0 +1,83 @@
+/* 기기 창 화면 — 막대·그림 칸·정보·설명·기록. bag·shop·dex.html 이 device-body.css 다음, 창 CSS 앞에 싣는다.
+   색은 창 CSS 의 변수(--screen·--bar·--stage·--paper·--records)가 정한다 (worklog/records/perf-refactor 10단계) */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-radius: 6px;
+  background: var(--screen);
+  overflow: hidden;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bar);
+  color: var(--inverse);
+  font-weight: 700;
+}
+.entry {
+  display: flex;
+  gap: 10px;
+  padding: 0 10px;
+}
+.stage {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 150px;
+  height: 124px;
+  border-radius: 6px;
+  background: var(--stage);
+}
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.measure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--paper);
+}
+.measure div {
+  display: flex;
+  justify-content: space-between;
+}
+.measure .key {
+  color: var(--muted);
+}
+.flavor {
+  margin: 0 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--paper);
+}
+.records {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--records);
+}
+.records div {
+  display: flex;
+  gap: 10px;
+}
+.records .key {
+  flex: none;
+  width: 84px;
+  font-weight: 700;
+}
+.records .value {
+  color: var(--soft);
+  min-width: 0;
+}

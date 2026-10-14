@@ -199,6 +199,8 @@ export function createTimeline(view: BattleScreenView): Timeline {
     else if (e.kind === "weather" && e.amount !== 0) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: e.amount < 0 ? "heal" : "weak", text: e.amount < 0 ? `+${-e.amount}` : `-${e.amount}` });
     else if (e.kind === "self" && e.amount !== 0) popList.push({ side: e.side, slot: e.slot, t: e.t, kind: e.amount < 0 ? "heal" : "normal", text: e.amount < 0 ? `+${-e.amount}` : `-${e.amount}` });
   }
+  // 연출 목록을 t 순으로 둔다 — windowOf 가 이진 탐색한다. 사건이 이미 t 순이면 그대로다(안정 정렬)
+  for (const list of [popList, castList, abilityList, markList] as { t: number }[][]) list.sort((a, b) => a.t - b.t);
 
   let state: TimelineState;
   let index = 0;
@@ -360,10 +362,10 @@ export function createTimeline(view: BattleScreenView): Timeline {
       state.t = t;
       return state;
     },
-    pops: (t) => popList.filter((p) => t >= p.t && t < p.t + TIMELINE_RULES.popMs),
-    casts: (t) => castList.filter((c) => t >= c.t && t < c.t + TIMELINE_RULES.castMs),
-    abilities: (t) => abilityList.filter((a) => t >= a.t && t < a.t + TIMELINE_RULES.abilityMs),
-    marks: (t) => markList.filter((m) => t >= m.t && t < m.t + TIMELINE_RULES.markMs),
+    pops: (t) => windowOf(popList, t, TIMELINE_RULES.popMs),
+    casts: (t) => windowOf(castList, t, TIMELINE_RULES.castMs),
+    abilities: (t) => windowOf(abilityList, t, TIMELINE_RULES.abilityMs),
+    marks: (t) => windowOf(markList, t, TIMELINE_RULES.markMs),
     statChips: (u, t) => u.stats.filter((c) => c.until === null || t < c.until),
     gauge(u, t) {
       if (u.gaugeTo === null || u.gaugeTo <= u.gaugeFrom) return u.gaugeTo !== null && t >= u.gaugeTo ? 1 : 0;
@@ -374,6 +376,25 @@ export function createTimeline(view: BattleScreenView): Timeline {
       return { x: u.from.x + (u.to.x - u.from.x) * k, y: u.from.y + (u.to.y - u.from.y) * k };
     },
   };
+}
+
+// t 에 떠 있는 항목 — [p.t, p.t + width) 안. 시작 자리를 이진 탐색으로 찾아 그 뒤만 본다.
+// 프레임마다 목록 전체를 훑지 않는다 (worklog/records/perf-refactor 4-5, G65-2). 목록은 만들 때 t 순으로 정렬해 둔다
+function windowOf<T extends { t: number }>(list: readonly T[], t: number, width: number): T[] {
+  let lo = 0;
+  let hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid]!.t + width <= t) lo = mid + 1;
+    else hi = mid;
+  }
+  const out: T[] = [];
+  for (let i = lo; i < list.length; i++) {
+    const p = list[i]!;
+    if (p.t > t) break;
+    if (t < p.t + width) out.push(p);
+  }
+  return out;
 }
 
 // 남은 시간 글자 — 1:30
@@ -401,7 +422,16 @@ export interface SpriteFrame {
   col: number; // 시트의 열 번호 — 렌더러가 col × fw 로 자른다
 }
 
-const lengthOf = (sheet: SpriteSheet): number => sheet.frames.reduce((n, f) => n + f.ms, 0);
+// 시트 길이 — 판 동안 시트는 바뀌지 않는다. 프레임마다 다시 더하지 않는다 (worklog/records/perf-refactor 4-5, G65-1)
+const sheetLength = new WeakMap<SpriteSheet, number>();
+const lengthOf = (sheet: SpriteSheet): number => {
+  let n = sheetLength.get(sheet);
+  if (n === undefined) {
+    n = sheet.frames.reduce((sum, f) => sum + f.ms, 0);
+    sheetLength.set(sheet, n);
+  }
+  return n;
+};
 
 function pick(sheets: LookSheets, names: readonly string[]): [string, SpriteSheet] | null {
   for (const n of names) {

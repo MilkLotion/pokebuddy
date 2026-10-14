@@ -23,7 +23,7 @@ import { MEGA_RULES } from "../dex/rules.js";
 import { snapSize } from "../party/size.js";
 import { normalizeSlug, type DexOptions } from "../dex/data.js";
 import type { Gender, NatureId } from "../shared/species";
-import type { PetV3, SaveV3 } from "../shared/save-v3";
+import type { PetV3, SaveV3, TradePendingV3 } from "../shared/save-v3";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import { isObj } from "../shared/raw.js";
 
@@ -137,15 +137,34 @@ export function lockTrade(save: SaveV3, channelId: string, petId: string, offerR
   if (pending && pending.channelId !== channelId) return { ok: false, reason: "busy" };
   const res = checkOffer(save, petId, opts);
   if (!res.ok) return res;
-  save.trade = { pending: { channelId, petId, offerRev, received: pending?.received ?? null } };
+  setPending(save, { channelId, petId, offerRev, received: pending?.received ?? null });
   return { ok: true };
+}
+
+// 잠금만 바꾼다 — 반영 알림을 기다리는 채널(unacked)은 그대로 둔다
+function setPending(save: SaveV3, pending: TradePendingV3 | null): void {
+  save.trade = { ...(save.trade ?? {}), pending };
+}
+
+// 반영 알림을 기다리는 채널 — 반영을 마친 교환(받았든 받지 않았든)을 더하고, 서버가 알림을 받으면 뺀다. 오래된 것부터 상한만큼만 둔다
+export const TRADE_UNACKED_MAX = 10;
+export function markUnacked(save: SaveV3, channelId: string): void {
+  const list = (save.trade?.unacked ?? []).filter((id) => id !== channelId);
+  list.push(channelId);
+  save.trade = { pending: save.trade?.pending ?? null, unacked: list.slice(-TRADE_UNACKED_MAX) };
+}
+export function clearUnacked(save: SaveV3, channelId: string): boolean {
+  const list = save.trade?.unacked ?? [];
+  if (!list.includes(channelId)) return false;
+  save.trade = { pending: save.trade?.pending ?? null, unacked: list.filter((id) => id !== channelId) };
+  return true;
 }
 
 // 취소·만료·확정 풀기. 다른 채널의 pending 은 건드리지 않는다
 export function unlockTrade(save: SaveV3, channelId: string): boolean {
   const pending = pendingTradeOf(save);
   if (!pending || pending.channelId !== channelId) return false;
-  save.trade = { pending: null };
+  setPending(save, null);
   return true;
 }
 
@@ -170,7 +189,7 @@ export function applyTrade(save: SaveV3, channelId: string, received: unknown, n
     // 받지 않는다. 보낸 개체는 서버가 이미 상대에게 넘긴 것으로 적었으므로 이 저장에서도 뺀다 — 남기면 클라우드가 올리기를 거절한다(CLOUD_PET_TRADED_OUT)
     // (2026-10-14 사용자 결정 "보낸 포켓몬도 뺀다")
     removeSentPet(save, pending.petId);
-    save.trade = { pending: null };
+    setPending(save, null);
     return { ok: true, applied: false, refused: "bad-received" };
   }
   const sentIndex = save.pets.findIndex((p) => p.id === pending.petId);
@@ -243,7 +262,7 @@ function finishTrade(save: SaveV3, pet: PetV3): void {
   recordDex(save, pet.species, pet.shiny);
   if (pet.mega?.stone) { const opened = (save.dex.megaOpened ??= []); if (!opened.includes(pet.species)) opened.push(pet.species); } // 받은 쪽 도감에도 메가스톤을 적는다 (src/dex/mega.ts settleMega 와 같은 기록)
   save.counts.traded += 1; // 교환 업적이 센다
-  save.trade = { pending: null };
+  setPending(save, null);
 }
 
 // 보낸 개체가 없을 때 — 서버 결과를 따라 받은 개체만 넣는다. 적용한 프리셋의 빈 칸, 없으면 박스. 둘 다 없으면 받지 않고 잠금만 푼다
@@ -253,7 +272,7 @@ function placeReceivedOnly(save: SaveV3, got: TradePet, now: number, opts?: DexO
   const slot = save.party.slots.findIndex((s) => s.state === "empty");
   const boxSpot = slot < 0 ? save.boxes.findIndex((b) => b.slots.includes(null)) : -1;
   if (slot < 0 && boxSpot < 0) {
-    save.trade = { pending: null };
+    setPending(save, null);
     return { ok: true, applied: false, refused: "no-room" };
   }
   const pet = receivedPetOf(got, id, now, opts);

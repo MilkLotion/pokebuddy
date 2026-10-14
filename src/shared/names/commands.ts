@@ -83,6 +83,7 @@ export const COMMANDS = {
   "trade.lock": { via: "tx", internal: true },
   "trade.unlock": { via: "tx", internal: true },
   "trade.apply": { via: "tx", internal: true },
+  "trade.acked": { via: "tx", internal: true }, // 서버가 반영 알림을 받았다 — 다시 보낼 목록에서 뺀다
   "mail.apply": { via: "tx", internal: true },
   "battle.reward": { via: "tx", internal: true }, // 랜덤 배틀 판의 보상 — 배틀 서버 호출(src/online/battle-net.ts)이 낸다
   "mail.read": { via: "tx", internal: true },

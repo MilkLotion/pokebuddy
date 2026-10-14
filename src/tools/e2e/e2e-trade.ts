@@ -211,7 +211,7 @@ async function ui(server: Server): Promise<void> {
   const has = async (X: E2eApp, words: string[]) => { const t = await X.text(); return words.every((w) => t.includes(w)); };
   const opened = (X: E2eApp) => until(async () => { try { return await X.dom('!!document.querySelector("nav .tabs button")'); } catch { return false; } }, `[${X.name}] 관리 창`);
   // 보낼 포켓몬 칸 하나를 누른다
-  const pick = (X: E2eApp, petName: string) => X.dom(`(() => { const c = [...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === ${JSON.stringify(petName)}); if (!c || c.disabled) return false; c.click(); return true; })()`);
+  const pick = (X: E2eApp, petName: string) => X.dom(`(() => { const c = [...document.querySelectorAll('#dialog .pp-cell')].find((x) => x.querySelector('.who')?.textContent === ${JSON.stringify(petName)}); if (!c || c.disabled) return false; c.click(); return true; })()`);
 
   const UA = makeApp("ua", server, [{ id: "p1", species: "charmander", where: "party" }, { id: "p2", species: "pikachu", where: "party" }, { id: "p3", species: "mewtwo", where: "box" }]);
   const UB = makeApp("ub", server, [{ id: "p1", species: "eevee", where: "party" }]);
@@ -238,20 +238,20 @@ async function ui(server: Server): Promise<void> {
   // U3 딥링크로 참가 — B 는 링크로 앱을 연 것처럼 second-instance 를 받는다. A 는 실시간 신호로 바뀐다
   await UB.ui("link", { url: `pokebuddy://trade/${link.split("#")[1]}` });
   await opened(UB);
-  await until(() => has(UB, ["친구 교환", "내 포켓몬", "의 포켓몬", "보낼 포켓몬"]), "U3 B 교환 모달"); // 친구가 로그인했으면 제목은 `<이름>의 포켓몬`
-  await until(() => has(UA, ["내 포켓몬", "보낼 포켓몬"]), "U3 A 가 참가를 본다");
-  // 보낼 포켓몬은 ◀ ▶ 로 파티 → 박스 판을 넘긴다(9ec7581). 뮤츠는 박스에 있다 — 판을 넘겨 찾고, 본 뒤 파티 판으로 돌아온다
+  await until(() => has(UB, ["친구 교환", "내 포켓몬", "의 포켓몬", "파티 프리셋"]), "U3 B 교환 모달"); // 친구가 로그인했으면 제목은 `<이름>의 포켓몬`
+  await until(() => has(UA, ["내 포켓몬", "파티 프리셋"]), "U3 A 가 참가를 본다");
+  // 보낼 포켓몬은 공통 고르기 판(pet-box-panel.ts)의 ◀ ▶ 로 파티 프리셋 → 박스 쪽을 넘긴다(5af5d304). 첫 쪽 이름은 `파티 프리셋`이다. 뮤츠는 박스에 있다 — 판을 넘겨 찾고, 본 뒤 파티 판으로 돌아온다
   const singleBlocked = await UA.dom(`(() => {
     for (let i = 0; i < 10; i++) {
-      const c = [...document.querySelectorAll('.trade-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠');
+      const c = [...document.querySelectorAll('#dialog .pp-cell')].find((x) => x.querySelector('.who')?.textContent === '뮤츠');
       if (c) return c.disabled === true;
-      const n = document.querySelector('.trade-pager button[aria-label="다음 판"]');
+      const n = document.querySelector('.pp-pager button[aria-label="다음 쪽"]');
       if (!n || n.disabled) return 'none';
       n.click();
     }
     return 'none';
   })()`);
-  await UA.dom(`(() => { for (let i = 0; i < 10; i++) { const p = document.querySelector('.trade-pager button[aria-label="앞 판"]'); if (!p || p.disabled) return true; p.click(); } return true; })()`);
+  await UA.dom(`(() => { for (let i = 0; i < 10; i++) { const p = document.querySelector('.pp-pager button[aria-label="앞 쪽"]'); if (!p || p.disabled) return true; p.click(); } return true; })()`);
   assert.equal(singleBlocked, true, "U3 단일 포켓몬 칸은 막힌다");
   checks.push("U3 딥링크(second-instance)로 참가 → B 는 박스 탭 + 교환 모달, 양쪽 교환 화면, 단일 포켓몬 칸 막힘");
 
@@ -297,7 +297,7 @@ async function ui(server: Server): Promise<void> {
   const offered = await bad.rpc("set_offer", { p_channel: ch, p_pet: MEWTWO, p_ref: ref });
   assert.ifError(offered.error);
   await until(async () => (await has(UA, ["단일 포켓몬이라 받을 수 없어요"])) && (await sides(UA))[1]?.[0] === "blocked", "U7 막힘 화면");
-  assert.equal(await pick(UA, "이브이"), true, `U7 이브이 칸: ${JSON.stringify(await UA.dom("[...document.querySelectorAll('.trade-cell')].map((c) => [c.querySelector('.who')?.textContent, c.disabled])"))}`);
+  assert.equal(await pick(UA, "이브이"), true, `U7 이브이 칸: ${JSON.stringify(await UA.dom("[...document.querySelectorAll('#dialog .pp-cell')].map((c) => [c.querySelector('.who')?.textContent, c.disabled])"))}`);
   await until(async () => (await has(UA, ["단일 포켓몬이라 받을 수 없어요"])) && (await sides(UA))[0]?.[1] === "이브이", "U7 내 제안");
   assert.equal(await UA.press("확정"), false, "U7 확정 막힘");
   assert.equal(await fits(UA), true, "U7 스크롤 없음");
@@ -319,8 +319,8 @@ async function ui(server: Server): Promise<void> {
   await UC.start();
   await until(async () => (await UC.status())?.phase === "trading", "U8 C 가 참가한다", 60_000);
   await opened(UC);
-  await until(() => has(UC, ["내 포켓몬", "보낼 포켓몬"]), "U8 C 의 교환 모달이 열린다");
-  await until(() => has(UA, ["내 포켓몬", "보낼 포켓몬"]), "U8 A 가 참가를 본다");
+  await until(() => has(UC, ["내 포켓몬", "파티 프리셋"]), "U8 C 의 교환 모달이 열린다");
+  await until(() => has(UA, ["내 포켓몬", "파티 프리셋"]), "U8 A 가 참가를 본다");
   assert.equal(await UA.press("나가기"), true);
   checks.push("U8 링크로 처음 켜기(인자) → 시작 확인 뒤 참가, 교환 모달 열림");
 }

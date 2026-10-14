@@ -18,7 +18,7 @@ import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import { focusPanel, panelPages, petBoxPanelEl, resetPanel, type PanelAt } from "./pet-box-panel.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 const PANEL_KEY = "party-swap";
 let target: number | null = null; // 고른 파티 칸 — 없으면 판은 누를 수 없다
@@ -103,13 +103,7 @@ export function drawSwap(): void {
     return;
   }
   const active = v.party.preset.index;
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "파티 교체"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("파티 교체", { onClose: closeDialog });
   const slotOf = (index: number | null): SlotView | undefined => (index == null ? undefined : v.party.slots[index]);
   const panel = petBoxPanelEl({
     key: PANEL_KEY,

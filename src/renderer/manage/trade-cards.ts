@@ -12,7 +12,7 @@ import { swapIconEl } from "../ui/line-icons.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { actionButtonEl, drawDialog } from "./dialog.js";
 import { ui } from "./state.js";
-import { tradeSend, tradeUi } from "./trade-state.js";
+import { tradeRefusedOf, tradeSend, tradeUi } from "./trade-state.js";
 
 // 카드 안의 개체 한 줄 — 초상, 이름, 레벨·성격, 타입 배지 (Figma `Trade / Offer` 의 카드)
 function tradePetLine(card: TradeCardView | null, empty: string): HTMLElement {
@@ -147,11 +147,18 @@ export function drawTradeOffer(t: TradeScreen, out: HTMLElement, fail: [string, 
 
 // 교환 완료 — Done
 export function drawTradeDone(t: TradeScreen, out: HTMLElement): void {
-  out.appendChild(alertEl("ok", "교환 완료"));
-  const r = t.received;
+  // 받지 못한 교환 — 위 알림을 경고로, 카드에는 받은 포켓몬이 없다고 적는다 (trade-state.ts TRADE_REFUSED)
+  const refused = tradeRefusedOf(t);
+  out.appendChild(refused ? alertEl("warn", "교환은 끝났지만 받지 못했어요", refused.reason) : alertEl("ok", "교환 완료"));
+  const r = refused ? null : t.received;
   const card = el("div", "trade-card");
   card.appendChild(tradeCardHead("받은 포켓몬"));
-  if (r) {
+  if (refused) {
+    const place = el("div", "trade-place");
+    place.appendChild(el("strong", undefined, "받은 포켓몬이 없어요"));
+    if (refused.sent) place.appendChild(el("div", "trade-desc", "보낸 포켓몬은 상대에게 갔어요"));
+    card.appendChild(place);
+  } else if (r) {
     const big = tradePetLine(r.card, "");
     big.classList.add("big");
     card.appendChild(big);

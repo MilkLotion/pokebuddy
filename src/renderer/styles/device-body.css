@@ -1,0 +1,47 @@
+/* 기기 창 몸통 — 경첩 이음·베젤·바닥 단추 줄. pet·bag·shop·dex·battle.html 이 device.css 다음, 창 CSS 앞에 싣는다.
+   배틀 창·배틀 로그는 싣지 않는다(경첩 이음을 그리지 않는다). 색은 창 CSS 의 변수(--joint·--bezel)가 정한다 (worklog/records/perf-refactor 10단계) */
+.hinge::before,
+.hinge::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  width: 8px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--joint);
+}
+.hinge::after {
+  bottom: 60px;
+}
+.bezel {
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--bezel);
+}
+.stage canvas {
+  image-rendering: pixelated;
+}
+.controls {
+  display: flex;
+  gap: 8px;
+}
+.controls button {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--bezel);
+  color: var(--inverse);
+  font-weight: 700;
+  cursor: pointer;
+}
+.controls .cry {
+  flex: 1;
+}
+.controls button:hover:not(:disabled) {
+  background: #56424a;
+}
+.controls button:disabled {
+  background: #8a6a70;
+  cursor: default;
+}

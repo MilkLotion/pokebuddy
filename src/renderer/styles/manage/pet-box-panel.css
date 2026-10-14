@@ -144,18 +144,6 @@
   flex-direction: column;
   gap: 16px;
 }
-.dialog.swap .settings-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dialog.swap .titles {
-  flex: 1;
-  min-width: 0;
-}
-.dialog.swap .titles h2 {
-  margin: 0;
-}
 .swap-body {
   display: flex;
   align-items: stretch;

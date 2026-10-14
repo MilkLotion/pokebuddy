@@ -14,7 +14,7 @@ import { actionButtonEl, dialogEl, dismissDialog, drawDialog, openSubDialog } fr
 import { liveInputEl } from "./search.js";
 import { ui } from "./state.js";
 import { leftText, tradeCardHead, tradeState } from "./trade-cards.js";
-import { alertEl, dialogCloseEl } from "./widgets.js";
+import { alertEl, settingsHeadEl } from "./widgets.js";
 
 const RULES = ["보상과 쿨타임이 없어요", "둘 다 준비하면 바로 한 판 싸워요", "결과는 내 전적에 넣지 않아요"];
 const CLOSED: Record<string, [string, string]> = {
@@ -153,14 +153,8 @@ function drawMeet(f: FriendlyScreen, out: HTMLElement): void {
 
 export function drawFriendly(): void {
   const f = st.screen;
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "친선 배틀"));
-  if (f?.phase === "meet") titles.appendChild(el("div", "sub", "둘 다 준비하면 바로 시작해요"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", dismissDialog); // ✕ 는 한 단계 물러나기 (docs/specs/ui-components.md C-13 "닫기 규칙")
-  top.append(titles, x);
+  // ✕ 는 한 단계 물러나기 (docs/specs/ui-components.md C-13 "닫기 규칙")
+  const top = settingsHeadEl("친선 배틀", { ...(f?.phase === "meet" ? { sub: "둘 다 준비하면 바로 시작해요" } : {}), onClose: dismissDialog });
   const out = el("div", "scroll");
   dialogEl.append(top, out);
   if (!f) {

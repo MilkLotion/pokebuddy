@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
 import { appearanceOf } from "../dex/look";
+import { formsOf, isFormLocked } from "../dex/forms";
 import type { HelperWindow, SelfMark } from "../terminal/types";
 import { createHostWatch, type HostWatch, type HostWatchUpdate } from "./stage/host-watch";
 import { createArtLoader, type ArtLoader } from "./art/stage-art";
@@ -516,8 +517,26 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
     ownedKey = key;
     art.prefetch(looks);
   };
+  // 모습 말풍선의 초상 미리 읽기 — 무대·배틀 칸 개체 가운데 모습을 고를 수 있는 개체만. 첫 우클릭에 초상을 기다리지 않게 한다
+  // (worklog/records/perf-refactor 10단계, G20-2 — 사용자 결정 "초상 미리 받기", 메뉴 화면은 그대로)
+  let formKey = "";
+  const warmFormIcons = (): void => {
+    const save = saveSource.save();
+    if (!save) return;
+    const ids = new Set<string>([...save.party.slots.flatMap((sl) => (sl.state === "pokemon" && sl.petId ? [sl.petId] : [])), ...(save.battle?.slots ?? []).flatMap((id) => (id ? [id] : []))]);
+    const asks = save.pets.filter((p) => ids.has(p.id) && !isFormLocked(p)).flatMap((p) => {
+      const forms = formsOf(p);
+      return forms.length >= 2 ? forms.map((slug) => ({ slug, shiny: p.shiny })) : [];
+    });
+    const key = JSON.stringify(asks);
+    if (key === formKey) return;
+    formKey = key;
+    if (asks.length) void pics.get(asks).catch(() => undefined); // 못 읽어도 메뉴가 0.4초 뒤 초상 없이 뜬다 — 미리 읽기는 실패를 알리지 않는다
+  };
   saveSource.onChange(prefetchOwned);
+  saveSource.onChange(warmFormIcons);
   prefetchOwned();
+  warmFormIcons();
   // 화면마다 무대 창 한 쌍 — 창과 무대의 알림은 묶음이 그 쌍으로 이어 준다 (src/main/stage/stage-group.ts)
   rt.stages = createStageGroup({
     createWindow: (hooks) =>

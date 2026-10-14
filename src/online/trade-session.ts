@@ -111,7 +111,8 @@ const REFUSAL_OF: Partial<Record<TradeCode, TradeRefusal>> = {
 // 이때 잠금을 풀면 서버만 교환을 끝내 한쪽만 반영될 수 있다 — 잠금과 감시를 그대로 둔다 (worklog/records/perf-refactor 8-2, G33-1)
 const uncertain = (code: TradeCode): boolean => code === "NETWORK" || code === "UNKNOWN";
 
-// 반영 알림(ack) 다시 보내기 — 반영은 끝났는데 서버가 반영 시각을 못 받았다. 앱이 도는 동안 이만큼 다시 보낸다 (G33-2)
+// 반영 알림(ack) 다시 보내기 — 반영은 끝났는데 서버가 반영 시각을 못 받았다. 앱이 도는 동안 이만큼 다시 보낸다 (G33-2).
+// 못 보낸 채널은 저장(trade.unacked)에 남아 앱을 다시 켜면 start 가 다시 보낸다
 const ACK_TRIES = 10;
 
 export function createTradeSession(o: TradeSessionOptions): TradeSession {
@@ -120,7 +121,7 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   let unsubscribe: (() => void) | null = null;
   let pollTimer: unknown = null;
   let retryTimer: unknown = null;
-  let ackTimer: unknown = null;
+  const ackTimers = new Map<string, unknown>(); // 채널마다 다시 보내기 타이머
   let stopped = false;
   let seq = 0;
   const setTimer = o.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
@@ -199,10 +200,16 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
   const ackOf = async (id: string, tries: number): Promise<void> => {
     const ack = await o.net.ackApplied(id);
     if (stopped) return;
-    if (ack.ok) { o.onSettled?.(); return; }
-    if (!uncertain(ack.code) || tries >= ACK_TRIES) return; // 서버가 거절했거나 다 써 봤다. 반영은 이 PC 에 끝났다. 앱을 다시 켜면 보내지 않는다 — 저장에 남기지 않는다(G33-2 의 남은 부분)
-    if (ackTimer) clearTimer(ackTimer);
-    ackTimer = setTimer(() => { ackTimer = null; void ackOf(id, tries + 1); }, o.pollMs ?? 30_000);
+    if (ack.ok) {
+      tx("trade.acked", { channelId: id }); // 저장의 다시 보낼 목록에서 뺀다
+      o.onSettled?.();
+      return;
+    }
+    if (!uncertain(ack.code)) { tx("trade.acked", { channelId: id }); return; } // 서버가 거절했다(채널 없음 등) — 다시 보내도 같으므로 목록에서 뺀다
+    if (tries >= ACK_TRIES) return; // 다 써 봤다 — 저장에 남아 앱을 다시 켜면 다시 보낸다
+    const old = ackTimers.get(id);
+    if (old) clearTimer(old);
+    ackTimers.set(id, setTimer(() => { ackTimers.delete(id); void ackOf(id, tries + 1); }, o.pollMs ?? 30_000));
   };
 
   // 서버가 끝났다고 알린 채널을 로컬에 맞춘다
@@ -289,6 +296,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
       scheduleRetry();
       return;
     }
+    // 반영했지만 서버에 알리지 못한 교환 — 켤 때 다시 보낸다 (worklog/records/perf-refactor 10단계)
+    for (const id of o.read()?.trade?.unacked ?? []) void ackOf(id, 1);
     if (!pending) { emit({ busy: false }); return; }
     // 반영하지 않은 교환을 이어 간다
     const res = await o.net.getChannel(pending.channelId);
@@ -449,8 +458,8 @@ export function createTradeSession(o: TradeSessionOptions): TradeSession {
     stopWatching();
     if (retryTimer) clearTimer(retryTimer);
     retryTimer = null;
-    if (ackTimer) clearTimer(ackTimer);
-    ackTimer = null;
+    for (const t of ackTimers.values()) clearTimer(t);
+    ackTimers.clear();
   };
 
   return { view: () => state, start, create, join, offer, ready, unready, leave, refresh, stop };

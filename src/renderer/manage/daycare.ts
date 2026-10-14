@@ -12,7 +12,7 @@ import { actionButtonEl, actionsRowEl, closeDialog, dialogEl, dialogHead, dismis
 import type { AllCaught, Hatched } from "./dialog-types.js";
 import { redrawBody } from "./shell.js";
 import { petInView, ui } from "./state.js";
-import { BOX_ICON, dialogCloseEl, lvNature } from "./widgets.js";
+import { BOX_ICON, lvNature, settingsHeadEl } from "./widgets.js";
 
 let openingAll = false; // 모두 열기가 알을 차례로 여는 중 — 단추를 다시 누르지 못하게
 
@@ -91,20 +91,12 @@ export function drawDaycare(root: HTMLElement = dialogEl, live = true): void {
     return;
   }
   const ready = v.eggs.list.filter((e) => e.ready).length;
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.append(el("h2", undefined, "돌보미집"), el("div", "sub", `알 ${v.eggs.used} / ${v.eggs.size}${ready ? ` · 부화 준비 ${ready}` : ""}`));
-  top.appendChild(titles);
   // 모두 열기 — 준비된 알을 칸 순서대로 모두 열고 결과를 하나씩 보인다. 준비된 알이 없으면 흐리다. 자리는 늘 있다
   // (2026-10-02 사용자 결정, Figma 05 `Box / Daycare Modal`). 부화 결과 창 뒤에 깔린 모습(live 아님)에도 같은 자리에 그린다
   const all = buttonEl("act open-all", "모두 열기");
   all.disabled = !live || ready === 0 || openingAll;
   all.addEventListener("click", () => void openAllEggs());
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.disabled = !live;
-  x.addEventListener("click", closeDialog);
-  top.append(all, x);
+  const top = settingsHeadEl("돌보미집", { sub: `알 ${v.eggs.used} / ${v.eggs.size}${ready ? ` · 부화 준비 ${ready}` : ""}`, extra: [all], onClose: closeDialog, closeDisabled: !live });
   const grid = el("div", "daycare-grid");
   for (let i = 0; i < v.eggs.size; i++) {
     const egg = v.eggs.list[i];

@@ -12,7 +12,7 @@ import { iconOf, portraitOf } from "./art-cache.js";
 import { actionButtonEl, actionsRowEl, dialogEl, dismissDialog, drawDialog, openDialog, openSubDialog } from "./dialog.js";
 import { refreshView } from "./live.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 let mailView: MailScreen | null = null;
 const mailBtn = needEl("open-mail", HTMLButtonElement, "manage");
@@ -83,13 +83,7 @@ function envelope(cls: string): SVGSVGElement {
 
 // 모달 머리 — 제목과 오른쪽 위 ✕. 편지는 우편함의 하위 모달이라 ✕ 가 우편함으로 돌아간다(C-13 닫기 규칙). ‹ 돌아가기는 두지 않는다
 function mailHead(title: string): void {
-  const head = el("div", "settings-head");
-  const titles = el("div", "titles mail-titles");
-  titles.appendChild(el("h2", undefined, title));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", dismissDialog);
-  head.append(titles, x);
+  const head = settingsHeadEl(title, { onClose: dismissDialog, titlesClass: "mail-titles" });
   dialogEl.appendChild(head);
 }
 

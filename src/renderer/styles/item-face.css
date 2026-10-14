@@ -1,0 +1,124 @@
+/* 상품 화면 — 수량 줄·합계 상자·주 단추. 상점과 가방이 같이 쓴다(렌더러 device/item-face.ts). bag·shop.html 이 device-item.css 다음, 창 CSS 앞에 싣는다 (worklog/records/perf-refactor 10단계) */
+.stage {
+  overflow: hidden;
+}
+.controls .go {
+  flex: 1;
+  background: var(--primary);
+}
+.controls .go:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.controls .go:disabled {
+  background: var(--disabled);
+}
+/* 처리 중 — 글자 대신 점 세 개, 폭 그대로 (docs/specs/ui-components.md 처리 중) */
+.controls .go.is-busy {
+  color: transparent;
+  position: relative;
+}
+.controls .go.is-busy::after {
+  content: "···";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--inverse);
+}
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.qty button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  cursor: pointer;
+}
+.qty button.max {
+  width: auto;
+  padding: 0 12px;
+  font-weight: 700;
+}
+.qty button:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+/* 수량 — 눌러서 직접 적는다. 평소는 숫자만, 가리키면 중립 테두리, 적는 중이면 흰 바탕과 강조 테두리. 높이는 옆 단추와 같은 32 */
+.qty .count {
+  box-sizing: border-box;
+  width: 56px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: text;
+}
+.qty .count:hover:not(:disabled) {
+  border-color: var(--line);
+}
+.qty .count:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--paper);
+}
+.qty .count:disabled {
+  color: var(--disabled);
+  cursor: default;
+}
+.qty .hint {
+  min-width: 0;
+  color: var(--soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--canvas);
+  color: var(--soft);
+}
+.total strong {
+  color: var(--ink);
+}
+/* 두 줄 고정 — 첫 줄과 둘째 줄 모두 한 줄에서 말줄임한다. 둘째 줄이 비어도 자리를 둔다 (item-face.ts totalBoxEl, 2026-10-05) */
+.total strong,
+.total .line {
+  min-height: 1lh;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 실패·막힘 — 새 줄 대신 같은 상자의 색 (2026-09-30 레이아웃 흔들림 금지) */
+.total.bad {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+.total.bad strong,
+.total.ok strong {
+  color: inherit;
+}
+.total.ok {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+/* 쓰면 손해가 있다 — 같은 상자가 주황 경고로 바뀐다. 단추는 그대로 눌린다 (Figma `Result Box` `Tone=Warning`, 2026-10-05) */
+.total.warn {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+.total.warn strong {
+  color: inherit;
+}

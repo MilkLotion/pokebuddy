@@ -12,6 +12,31 @@ export function dialogCloseEl(): HTMLButtonElement {
   return x;
 }
 
+// 설정형 모달 머리 — 제목 묶음(제목, 부제) + 덧붙인 단추 + ✕. 모달 열넷이 같은 뼈대를 따로 만들던 것을 하나로 (worklog/records/perf-refactor 10단계, G46-7)
+// - onClose 는 모달마다 지금 동작 그대로 받는다 — closeDialog(모두 닫기)·dismissDialog(한 단계 물러나기)·제 처리기
+// - sub 가 빈 글자여도 자리를 둔다(undefined 일 때만 뺀다). subTag 가 p 면 class 없는 p 다(상품 풀 모달)
+export interface SettingsHeadOptions {
+  onClose: () => void;
+  sub?: string;
+  subTag?: "div" | "p";
+  titlesClass?: string;
+  extra?: readonly HTMLElement[]; // 제목과 ✕ 사이의 단추(돌보미집 `모두 열기`)
+  closeDisabled?: boolean;
+}
+
+export function settingsHeadEl(title: string, o: SettingsHeadOptions): HTMLElement {
+  const head = el("div", "settings-head");
+  const titles = el("div", o.titlesClass ? `titles ${o.titlesClass}` : "titles");
+  titles.appendChild(el("h2", undefined, title));
+  if (o.sub !== undefined) titles.appendChild(o.subTag === "p" ? el("p", undefined, o.sub) : el("div", "sub", o.sub));
+  const x = dialogCloseEl();
+  x.setAttribute("aria-label", "닫기");
+  if (o.closeDisabled) x.disabled = true;
+  x.addEventListener("click", o.onClose);
+  head.append(titles, ...(o.extra ?? []), x);
+  return head;
+}
+
 // 경고·안내 배너 — Figma 02 Molecules `Alert` `1040:279`
 // - tone: bad 오류 · warn 주의 · ok 완료 · info 안내. 바탕 톤과 아이콘으로 가른다
 // - 제목이 있으면 Banner(제목 + 설명), 빈 제목이면 Inline 한 줄(폼·대화상자의 짧은 실패)

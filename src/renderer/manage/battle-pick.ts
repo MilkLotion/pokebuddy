@@ -15,7 +15,7 @@ import { sendCommand } from "./command.js";
 import { actionButtonEl, closeDialog, dialogEl, drawDialog } from "./dialog.js";
 import { petBoxPanelEl, resetPanel } from "./pet-box-panel.js";
 import { ui } from "./state.js";
-import { dialogCloseEl } from "./widgets.js";
+import { settingsHeadEl } from "./widgets.js";
 
 const PANEL_KEY = "battle-swap";
 let target: number | null = null; // 고른 칸 — 판의 개체를 누르면 여기에 넣는다. 없으면 판은 누를 수 없다
@@ -62,13 +62,7 @@ export function drawBattlePick(): void {
   }
   const inBattle = new Map<string, number>();
   for (const s of v.battle.slots) if (s.pet) inBattle.set(s.pet.id, s.index);
-  const top = el("div", "settings-head");
-  const titles = el("div", "titles");
-  titles.appendChild(el("h2", undefined, "배틀 파티 교체"));
-  const x = dialogCloseEl();
-  x.setAttribute("aria-label", "닫기");
-  x.addEventListener("click", closeDialog);
-  top.append(titles, x);
+  const top = settingsHeadEl("배틀 파티 교체", { onClose: closeDialog });
   const panel = petBoxPanelEl({
     key: PANEL_KEY,
     view: v,

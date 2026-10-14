@@ -7,18 +7,6 @@
   flex-direction: column;
   gap: 16px;
 }
-.dialog.move-pick .settings-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dialog.move-pick .titles {
-  flex: 1;
-  min-width: 0;
-}
-.dialog.move-pick .titles h2 {
-  margin: 0;
-}
 /* 본문 높이 고정 — 기술 6개 목록 높이(이름 줄 18 + 줄 66 × 6 + 사이 4 × 6). 상세 칸 길이나 진화 전 종(목록 2개)으로 모달이 커지거나 움직이지 않게 */
 .mp-body {
   display: flex;

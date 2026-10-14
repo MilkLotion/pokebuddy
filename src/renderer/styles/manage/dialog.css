@@ -55,14 +55,33 @@
   flex-direction: column;
   gap: 16px;
 }
-.dialog.settings .settings-head {
+/* 설정형 모달 머리(widgets.ts settingsHeadEl) — 제목 묶음 + 덧붙인 단추 + ✕. 모달마다 따로 적던 같은 규칙을 여기 모았다 (worklog/records/perf-refactor 10단계)
+   설정·돌보미집은 위 맞춤, 기술 바꾸기·교체·교환은 가운데 맞춤에 제목 여백 0 */
+.dialog.settings .settings-head,
+.dialog.daycare .settings-head {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
-.dialog.settings .titles {
+.dialog.move-pick .settings-head,
+.dialog.swap .settings-head,
+.dialog.trade .settings-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dialog.settings .titles,
+.dialog.daycare .titles,
+.dialog.move-pick .titles,
+.dialog.swap .titles,
+.dialog.trade .titles {
   flex: 1;
   min-width: 0;
+}
+.dialog.move-pick .titles h2,
+.dialog.swap .titles h2,
+.dialog.trade .titles h2 {
+  margin: 0;
 }
 .dialog.settings .titles h2 {
   margin: 0 0 4px;

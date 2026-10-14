@@ -8,7 +8,7 @@ import { petIdOf } from "./handlers/args.js";
 import { battleClearHandler, battleFormHandler, battleImportHandler, battleMegaHandler, battleMoveHandler, battleMovesHandler, battlePickMovesHandler, battleRewardHandler, battleSetHandler } from "./handlers/battle.js";
 import { boxMoveHandler, boxOrderHandler, boxRenameHandler, boxSortHandler } from "./handlers/box.js";
 import { buyHandler, openHandler, sellHandler, sellPetHandler, sellPetsHandler, useHandler } from "./handlers/items.js";
-import { mailApplyHandler, mailReadHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
+import { mailApplyHandler, mailReadHandler, tradeAckedHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
 import { keepHandler, moveHandler, placeHandler, presetApplyHandler, presetRenameHandler, pullHandler, swapHandler, visibilityHandler } from "./handlers/party.js";
 import { evolveHandler, feedHandler, formHandler, homeHandler, playHandler, starterHandler } from "./handlers/pet.js";
 import { claimHandler, settingsHandler, tutorialHandler } from "./handlers/progress.js";
@@ -63,6 +63,7 @@ const TX_COMMANDS = {
   "trade.lock": { handler: tradeLockHandler },
   "trade.unlock": { handler: tradeUnlockHandler },
   "trade.apply": { handler: tradeApplyHandler },
+  "trade.acked": { handler: tradeAckedHandler },
 } satisfies Record<TxName, TxCommandDef>;
 
 // 표의 처리기에 교환 잠금을 씌운다
