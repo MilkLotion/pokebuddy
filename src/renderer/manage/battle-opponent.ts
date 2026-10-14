@@ -1,5 +1,6 @@
 // 랜덤 배틀 상대 고르기 모달 — 서버가 보인 3개 가운데 하나를 골라 `배틀 시작`, `새로고침`으로 다른 3개
 // 새로고침은 판마다 1번이고 이미 보인 상대를 뺀다. 쓰고 나면 단추를 흐린다(2026-10-14 사용자 "리롤은 1번만"). 모달을 다시 열면 서버가 같은 3개를 준다
+// 단추는 `새로고침` · 새로고침 아이콘 · 남은 횟수(2026-10-14 사용자 "새로고침 () 1 이런식으로"). Figma 01 `Reroll Button` 2025:1298
 // 규칙 docs/specs/adventure.md "상대 고르기": 줄은 늘 3개이고 모달 높이는 같다. 후보가 모자란 줄은 같은 크기의 실패 줄(고르지 못함)
 // 줄 이름은 `N번 파티`, 칸은 초상과 타입 배지. 고른 줄은 옅은 바탕(강조 테두리 없음). 쿨타임이 남으면 시작 단추 자리에 `m:ss 남음`
 // 프리셋 전체보기 모달(preset-overview.ts)의 줄·칸 모양을 쓴다. Figma 05 `15 모험` `Adventure / Battle Pick` 5장(1771:88661 등), 줄은 02 `Battle Pick Row` 1771:88109, 칸은 02 `Battle Pick Cell` 1771:87936, 본문은 03 `Battle Pick Panel` 1771:88660
@@ -7,6 +8,7 @@
 import { failTextOf } from "../../shared/fail-text.js";
 import type { BattleOfferView, BattlePickSlotView, BattleReply } from "../../shared/model/battle-net.js";
 import { buttonEl, el } from "../ui/dom.js";
+import { refreshIconEl } from "../ui/line-icons.js";
 import { api } from "./api.js";
 import { battleRecordBarEl, loadBattleRecord } from "./battle-record.js";
 import { iconOf, portraitOf } from "./art-cache.js";
@@ -135,8 +137,11 @@ export function drawBattleOpponent(): void {
   const startLabel = remain > 0 ? remainText(remain) : "배틀 시작";
   const go = actionButtonEl(startLabel, true, st.busy || remain > 0 || st.selected == null || !st.offer, () => void start());
   go.classList.add("bo-start");
-  const again = actionButtonEl("새로고침", false, st.busy || st.offer?.rerollLeft === 0, () => void fetchOffer(true));
+  const left = st.offer?.rerollLeft ?? 1;
+  const again = actionButtonEl("새로고침", false, st.busy || left === 0, () => void fetchOffer(true));
   again.classList.add("bo-refresh");
+  again.append(refreshIconEl(), el("span", "bo-refresh-left", String(left)));
+  again.setAttribute("aria-label", `새로고침 ${left}번 남음`);
   const cancel = actionButtonEl("취소", false, false, closeDialog);
   const row = actionsRowEl(again, el("div", "bo-error", st.error), cancel, go);
   dialogEl.append(top, battleRecordBarEl(), list, row);

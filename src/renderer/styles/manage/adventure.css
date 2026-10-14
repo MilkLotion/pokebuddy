@@ -142,6 +142,22 @@
 .dialog.battle-opponent .bo-start {
   width: 120px;
 }
+/* 새로고침 — 글자 · 아이콘 · 남은 횟수. 폭은 시작 단추와 같다 (Figma 01 `Reroll Button` 2025:1298, 사이 6) */
+.dialog.battle-opponent .bo-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 120px;
+}
+.dialog.battle-opponent .bo-refresh svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 /* 배틀 기록 — 상대 고르기의 `내 전적` 줄과 배틀 기록 모달 (docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기")
    Figma 02 `Battle Record Bar` 1870:12831(36 높이), `Battle Record Summary` 1870:12805(80 높이), `Battle Record Row` 1870:12830(40 높이), 01 `Battle Result Chip` 1870:12804 */

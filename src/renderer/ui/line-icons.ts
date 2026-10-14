@@ -35,6 +35,19 @@ export const swapIconEl = (): SVGSVGElement => {
   return svg;
 };
 
+// 서로 꼬리 무는 두 화살표 — 랜덤 배틀 상대 고르기의 새로고침 단추 (Figma 01 `Icon / Refresh` `2025:1280`, 단추 `Reroll Button` `2025:1298`)
+export const refreshIconEl = (): SVGSVGElement => {
+  const svg = lineIconEl([
+    "M3.07 6.2A5.25 5.25 0 0 1 12.76 5.78",
+    "M13.7 3.2L12.76 5.78L10.17 4.84",
+    "M12.93 9.8A5.25 5.25 0 0 1 3.24 10.22",
+    "M2.3 12.8L3.24 10.22L5.82 11.16",
+  ]);
+  svg.setAttribute("width", "16");
+  svg.setAttribute("height", "16");
+  return svg;
+};
+
 // 위·아래 꺽쇠 — 박스 찾기 줄의 이전·다음 결과. 닫기와 같은 선이다 (Figma 01 `Icon / Chevron Up` `1590:60740`·`Icon / Chevron Down` `1590:60742`)
 export const chevronUpIconEl = (): SVGSVGElement => lineIconEl(["M4 10l4-4 4 4"]);
 export const chevronDownIconEl = (): SVGSVGElement => lineIconEl(["M4 6l4 4 4-4"]);
