@@ -52,6 +52,7 @@ export const ENGINE_RULES = {
   fieldH: 12,
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
+  queueWaitMs: 2000, // 걸어가는 아군 뒤에서 기다리는 최대 시간 — 넘으면 돌아간다
   // 사거리(두 몸 사이 틈, 대각선 포함) — 기술 분류로 정한다: 물리 1, 특수 3. 두 기술 중 짧은 쪽(쌍두형은 근접)
   // (2026-10-09 사용자 "반영해봐" — 밸런스 격자 실험에서 가장 고른 안. 처음은 접촉 1·비접촉 물리 2·특수 3·파동·탄환·소리 5)
   rangePhysical: 1,
@@ -293,6 +294,7 @@ interface Unit {
   y: number;
   target: Unit | null; // 사거리 안이면 쓰러질 때까지 바꾸지 않는다
   nextStep: number;
+  waitFrom: number; // 걸어가는 아군 뒤에서 기다리기 시작한 시각 — -1 이면 기다리지 않는다
   range: number;
   ability: string | null; // 지금 특성 — 미라·떠도는영혼·트레이스로 바뀐다
   perm: number[]; // 판 끝까지 가는 능력 변화(불요의검·불굴의방패·다운로드)
@@ -474,6 +476,7 @@ export function runBattle(input: BattleInput): BattleResult {
       y: 0,
       target: null,
       nextStep: R.stepMs,
+      waitFrom: -1,
       range: f.range,
       ability: f.ability,
       perm: [0, 0, 0, 0, 0, 0],
@@ -1109,9 +1112,25 @@ export function runBattle(input: BattleInput): BattleResult {
     return { at, steps };
   }
 
+  // 벽과 다른 개체가 막은 계산 칸. passWalkers 면 걸어가는 아군(대상이 사거리 밖)은 곧 비킨다고 보고 막지 않는다
+  function occupiedFor(u: Unit, passWalkers = false): Uint8Array {
+    const occupied = new Uint8Array(walls);
+    for (const v of all()) {
+      if (v === u || v.hp <= 0) continue;
+      if (passWalkers && v.side === u.side && v.target && v.target.hp > 0 && !inRange(v, v.target, v.range) && !stunned(v, curT)) continue;
+      for (let dy = 0; dy < R.body; dy++) for (let dx = 0; dx < R.body; dx++) occupied[(v.y + dy) * R.fieldW + v.x + dx] = 1;
+    }
+    return occupied;
+  }
+
   // 대상 고르기 — 걸음 수로 가장 가까운 상대. 같으면 keep(지금 대상) → 같은 줄(위아래 차이가 작은 쪽) → 번호가 작은 쪽. 닿을 길이 없는 상대는 빼다
+  // 걸음 수는 다른 개체를 피한 실제 길로 센다(걸어가는 아군은 지나갈 수 있다고 본다). 그 길로 닿는 상대가 없으면 벽만 본다
+  // 직선으로 가깝지만 무리를 빙 돌아야 닿는 상대를 고르지 않게 한다 (2026-10-14 사용자 "1시에서 11시까지 뺑돌아서 가서 공격")
   function pickTarget(u: Unit, keep: Unit | null = null): Unit | null {
-    const { dist } = walk(walls, u);
+    return pickOn(occupiedFor(u, true), u, keep) ?? pickOn(walls, u, keep);
+  }
+  function pickOn(grid: Uint8Array, u: Unit, keep: Unit | null): Unit | null {
+    const { dist } = walk(grid, u);
     let best: Unit | null = null, bestSteps = Infinity;
     const foes = foesOf(u);
     const hidden = foes.filter((o) => o.illusion && ab(o) === "illusion");
@@ -1156,14 +1175,25 @@ export function runBattle(input: BattleInput): BattleResult {
     return o !== null && inRange(u, o, u.range);
   };
 
-  // 한 걸음 — 다른 개체를 피해 대상에게 닿는 자리로. 막혔으면 개체를 무시한 길의 첫 걸음이 비었을 때만 간다
+  // 한 걸음 — 걸어가는 아군 뒤를 따라가는 길이 먼저다(막히면 queueWaitMs 까지 기다린다). 그다음 다른 개체를 피해 대상에게 닿는 자리로. 막혔으면 개체를 무시한 길의 첫 걸음이 비었을 때만 간다
   function step(u: Unit, t: number): void {
     let o = targetOf(u);
-    if (!o || inRange(u, o, u.range)) return;
-    const occupied = new Uint8Array(walls);
-    for (const v of all()) {
-      if (v === u || v.hp <= 0) continue;
-      for (let dy = 0; dy < R.body; dy++) for (let dx = 0; dx < R.body; dx++) occupied[(v.y + dy) * R.fieldW + v.x + dx] = 1;
+    if (!o || inRange(u, o, u.range)) {
+      u.waitFrom = -1;
+      return;
+    }
+    const occupied = occupiedFor(u);
+    // 걸어가는 아군은 곧 비킨다 — 그 뒤를 따라가는 길이 있으면 막혀도 잠깐 기다린다. 오래 막히면 돌아간다
+    const queued = walk(occupiedFor(u, true), u);
+    const qGoal = reachOf(queued.dist, o, u.range).at;
+    if (qGoal >= 0) {
+      const nq = firstStep(queued.prev, u, qGoal);
+      if (nq >= 0 && fits(occupied, nq % R.fieldW, Math.floor(nq / R.fieldW))) {
+        moveTo(u, nq, t);
+        return;
+      }
+      if (u.waitFrom < 0) u.waitFrom = t;
+      if (t - u.waitFrom < R.queueWaitMs) return;
     }
     let route = walk(occupied, u);
     let goal = reachOf(route.dist, o, u.range).at;
@@ -1197,16 +1227,25 @@ export function runBattle(input: BattleInput): BattleResult {
       goal = reachOf(route.dist, o, u.range).at;
       if (goal < 0) return;
     }
+    const next = firstStep(route.prev, u, goal);
+    if (next < 0 || !fits(occupied, next % R.fieldW, Math.floor(next / R.fieldW))) return;
+    moveTo(u, next, t);
+  }
+
+  // 길의 첫 걸음 — 제자리면 -1
+  function firstStep(prev: Int16Array, u: Unit, goal: number): number {
     const start = u.y * R.fieldW + u.x;
     let next = goal;
-    while (route.prev[next]! !== start && route.prev[next]! >= 0) next = route.prev[next]!;
-    if (next === start) return;
-    const nx = next % R.fieldW, ny = Math.floor(next / R.fieldW);
-    if (!fits(occupied, nx, ny)) return;
-    u.x = nx;
-    u.y = ny;
+    while (prev[next]! !== start && prev[next]! >= 0) next = prev[next]!;
+    return next === start ? -1 : next;
+  }
+
+  function moveTo(u: Unit, cell: number, t: number): void {
+    u.x = cell % R.fieldW;
+    u.y = Math.floor(cell / R.fieldW);
     u.nextStep = t + R.stepMs;
-    events.push({ t, kind: "step", side: u.side, slot: u.slot, x: nx, y: ny });
+    u.waitFrom = -1;
+    events.push({ t, kind: "step", side: u.side, slot: u.slot, x: u.x, y: u.y });
   }
 
   function baseDamage(level: number, power: number, atk: number, def: number): number {

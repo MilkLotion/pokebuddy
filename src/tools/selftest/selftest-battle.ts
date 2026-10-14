@@ -130,7 +130,7 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   const first = (b: (EngineFighter | null)[], pos: Pos[], obstacles: BattleInput["obstacles"] = []) =>
     of(run([me], b, 1, 8000, { positions: [[at(2, 4)], pos], obstacles }).events, "damage").find((e) => e.side === 0)?.target;
   assert.strictEqual(first([foe, foe], [at(12, 2), at(8, 4)]), 1, "걸음 수가 적은 쪽");
-  assert.strictEqual(first([foe, foe], [at(12, 2), at(12, 4)]), 1, "걸음 수가 같으면 같은 줄");
+  assert.strictEqual(first([foe, foe], [at(4, 1), at(4, 4)]), 1, "걸음 수가 같으면 같은 줄");
   assert.strictEqual(first([foe, foe], [at(4, 2), at(4, 6)]), 0, "줄 차이도 같으면 번호가 작은 쪽");
   // 사거리 밖 대상은 걸을 때마다 다시 본다 — 0번을 노리고 걷다가 1번이 먼저 붙으면 1번을 친다 (2026-10-14 사용자 "앞에있는거먼저 공격")
   assert.strictEqual(first([foe, foe], [at(12, 2), at(12, 6)]), 1, "먼저 붙은 상대로 바꾼다");
