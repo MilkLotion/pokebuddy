@@ -53,6 +53,31 @@ button {
   font-weight: 700;
   color: var(--inverse);
 }
+/* 링크 글자 — 다른 대상의 기기를 옆 창으로 연다. 글자색 --primary·밑줄, 가리키면 --primary-hover, 옆 창이 떠 있는 동안 --accent 톤 바탕.
+   좌우 여백 2 를 바깥 여백 −2 로 되돌려 글자 자리는 그대로다 (docs/specs/ui-components.md "링크 글자", Figma 01 `Link Text`) */
+.link-text {
+  display: inline;
+  padding: 0 2px;
+  margin: 0 -2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-text:hover {
+  color: var(--primary-hover);
+}
+.link-text.on {
+  background: var(--accent);
+}
+/* 링크 글자로 연 옆 창 — 이전·다음을 두지 않는다. 가운데 단추(구매)는 그대로 */
+.device.beside .controls .prev,
+.device.beside .controls .next {
+  visibility: hidden;
+}
 /* 머리의 종류 탭 — 제목 자리(LED 오른쪽)에 둔다. 지금 기기는 밝은 바탕·굵은 글자, 나머지는 흰 글자, 볼 수 없으면 흐림.
    세 상태의 여백이 같아 글자가 흔들리지 않는다 (docs/specs/ui-components.md "기기 종류 탭", Figma 01 `Device Kind Tab` `2052:41`) */
 .top .kinds {

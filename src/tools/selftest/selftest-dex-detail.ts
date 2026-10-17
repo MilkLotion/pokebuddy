@@ -31,6 +31,7 @@ function seed(): SaveV3 {
   assert.equal(d.state, "obtained");
   assert.deepStrictEqual(d.types, ["불꽃"]);
   assert.equal(d.methods, "랜덤알", "해금했으니 랜덤알에서 나온다. 첫 선택 후보는 적지 않는다. 상점 줄은 잠시 숨김");
+  assert.deepStrictEqual(d.shopLinks, [{ label: "랜덤알", productId: "random" }], "입수처의 알 이름 → 그 알 상품 — 도감 기기 창의 링크 글자 (docs/specs/ui-components.md 링크 글자)");
   assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
@@ -43,6 +44,7 @@ function seed(): SaveV3 {
   assert.equal(d.state, "unlocked");
   assert.equal(d.owned, 0);
   assert.equal(d.methods, "파이리에서 진화", "진화 전용 종은 랜덤알에서 나오지 않는다");
+  assert.equal(d.shopLinks, undefined, "알이 없으면 링크도 없다");
   assert.equal(d.evolution, "Lv.36에서 리자몽으로 진화");
   process.stdout.write("(2) 해금 · 앞 단계에서 진화  ok\n");
 }
@@ -76,6 +78,7 @@ function seed(): SaveV3 {
   assert.equal(d.name, "???");
   assert.deepStrictEqual(d.types, []);
   assert.equal(d.methods, "태고의돌", "화석은 랜덤알이 붙지 않는다. 상점 줄은 잠시 숨김");
+  assert.deepStrictEqual(d.shopLinks, [{ label: "태고의돌", productId: "ancient-stone" }], "고정 알 — 상품 id 가 알 종류다");
   assert.equal(d.evolution, "???");
   process.stdout.write("(4) 미해금 · 태고의돌  ok\n");
 }

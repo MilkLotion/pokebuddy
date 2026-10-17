@@ -26,6 +26,7 @@ export interface DexDetail {
   shiny: boolean; // 이로치를 얻었는가
   owned: number; // 가진 개체 수
   methods: string; // 입수 방법 — 경로가 없으면 "획득 방법 준비 중"
+  shopLinks?: { label: string; productId: string }[]; // 입수 방법 안의 알 이름 → 그 알 상품 — 도감 기기 창이 링크 글자로 그린다(파는 상품만 메인이 남긴다, docs/specs/ui-components.md "링크 글자")
   evolution: string; // 다음 단계와 조건 — 미해금이면 "해금하면 보여요"
   gimmick: string;
   genus: string; // 공식 분류 — "쥐포켓몬". 미해금이면 빈 문자열

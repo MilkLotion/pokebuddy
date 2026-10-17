@@ -41,7 +41,7 @@ import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, shopPickOf, stepShop, syncShopDevice } from "./shop-link.js";
 import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
 import { onDexAction, onDexClosed, setDexLinkHooks, syncDexDevice } from "./dex-link.js";
-import { fixKind, resetKind, setDeviceKindHooks, swapKind } from "./device-kind.js";
+import { besideOf, fixKind, resetKind, setDeviceKindHooks, swapKind } from "./device-kind.js";
 import { clearDexPick, closeDexRegion, dexPickOf, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, pickDexFromDevice, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature } from "./nature.js";
@@ -85,9 +85,11 @@ setDexTabHooks({
     if (coachIdOf() === "dex") void sendCommand("tutorial.done", "dex");
   },
   syncDevices: () => {
+    fixKind(); // 대상이 바뀌었다 — 링크 글자로 연 옆 창(상점)은 닫는다
     syncPetDevice();
     syncDexDevice();
     syncBattleDevice();
+    syncShopDevice();
   },
 });
 setDexLinkHooks({
@@ -331,7 +333,10 @@ const stepByTab = (delta: -1 | 1): void => {
   else if (ui.tab === "shop") stepShop(delta);
   else stepBag(delta);
 };
-api.onDexStep((delta) => stepByTab(delta));
+// 옆 창(링크 글자)에는 이전·다음이 없다 — 옆 창에서 온 넘기기는 버린다
+api.onDexStep((delta) => {
+  if (!besideOf("dex")) stepByTab(delta);
+});
 api.onDexAct((action) => onDexAction(action));
 api.onDexClosed((gen) => onDexClosed(gen));
 api.onPetStep((delta) => stepByTab(delta));
@@ -340,7 +345,9 @@ api.onPetClosed((gen) => petLink.onClosed(gen));
 api.onBattleStep((delta) => stepByTab(delta));
 api.onBattleAct((action) => onBattleAction(action));
 api.onBattleClosed((gen) => battleLink.onClosed(gen));
-api.onShopStep((delta) => stepByTab(delta));
+api.onShopStep((delta) => {
+  if (!besideOf("shop")) stepByTab(delta);
+});
 api.onShopAct((action) => onShopAction(action));
 api.onShopClosed((gen) => shopLink.onClosed(gen));
 api.onBagStep((delta) => stepByTab(delta));

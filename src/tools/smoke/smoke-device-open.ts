@@ -74,6 +74,7 @@ void app.whenReady().then(async () => {
     },
     cry: async () => null,
     volume: () => 0,
+    products: () => new Set(), // 여는 시간만 잰다 — 입수처 링크는 없다
   }), hooksOf("dex"));
 
   // 한 번 열고 보일 때까지 기다린다 — 모델 만들기(스냅샷 포함)부터 잰다

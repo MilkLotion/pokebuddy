@@ -78,7 +78,7 @@ export type ManageCoreIpc = {
 //   act     기기 창에서 누른 단추 — 설정창이 처리한다
 //   closed  기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts). 고른 칸 표시를 지운다
 export type ManageDeviceLinkIpc = {
-  "manage:dex-open": Send<"dexOpen", [open: { slug: string; kinds: DeviceKindTab[] } | null, gen?: number]>; // null 이면 닫는다. kinds 는 머리의 종류 탭
+  "manage:dex-open": Send<"dexOpen", [open: { slug: string; kinds: DeviceKindTab[]; beside?: boolean; linkOpen?: string | null } | null, gen?: number]>; // null 이면 닫는다. kinds 는 머리의 종류 탭, beside 는 링크 글자로 연 옆 창, linkOpen 은 옆 창으로 띄운 알 상품
   "manage:dex-step": Push<"onDexStep", [delta: -1 | 1]>;
   "manage:dex-closed": Push<"onDexClosed", [gen: number]>;
   "manage:pet-open": Invoke<"petOpen", [input: PetDeviceInput | null, gen?: number], PetDeviceInput | null>;

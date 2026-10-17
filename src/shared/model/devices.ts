@@ -15,11 +15,13 @@ export interface DeviceKindTab {
 }
 export interface DeviceKinds {
   kinds: DeviceKindTab[]; // 머리의 종류 탭. 비면 머리에 제목을 그린다
+  beside?: boolean; // 링크 글자로 연 옆 창 — 지금 기기 창 옆에 붙고, 머리 탭·링크·이전·다음을 두지 않는다 (docs/specs/ui-components.md "링크 글자")
 }
 
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
 // 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/play-bugs.md)
 export interface DexDeviceView extends DeviceKinds {
+  linkOpen: string | null; // 옆 창으로 띄운 알 상품 — 그 링크 글자를 톤 바탕(Open)으로
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   shinyPortrait: string | null; // 이로치 초상 — 이로치를 얻은 종만(detail.shiny). 초상 칸 오른쪽 위 단추로 켜고 끈다 (2026-10-09 사용자 결정, Figma 05 `Dex / Device / Shiny`)
@@ -52,7 +54,7 @@ export interface PetDeviceView extends PetDeviceOpen, DeviceKinds {
 }
 
 // 도감 기기 창에서 한 일 — 진화 트리의 종을 눌렀다. 관리 창이 그 종의 상세로 바꾼다 (2026-10-13 사용자 "도감기기상세에서 진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게 해봐")
-export type DexDeviceAction = { kind: "pick"; slug: string };
+export type DexDeviceAction = { kind: "pick"; slug: string } | { kind: "shop"; productId: string }; // shop — 입수처의 알 링크를 눌렀다. 설정창이 그 상품의 상점 기기 창을 옆 창으로 연다
 
 // 기기 창에서 누른 단추. 명령은 관리 창의 명령 경로로, 대화상자는 관리 창에서 연다
 // petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)

@@ -115,6 +115,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   const state = obtained ? "obtained" : unlocked ? "unlocked" : "locked";
 
   const methods: string[] = [];
+  const shopLinks: { label: string; productId: string }[] = []; // 알 이름 → 알 상품(상품 id 가 알 종류다). 해금 전 "(해금 후)" 는 잇지 않는다
   const prev = prevOf(slug, opts);
   if (prev) methods.push(`${knownName(save, prev)}에서 진화${nextOf(prev, opts).some((s) => s.to === slug && s.map) ? MAP_MARK : ""}`);
   const random = eggName("random", opts) ?? "랜덤알";
@@ -131,7 +132,14 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);
-  for (const [kind, pool] of fixedEggs(opts)) if (pool.includes(slug)) methods.push(eggName(kind, opts) ?? kind);
+  // 랜덤알이 "(해금 후)" 없이 적혔으면 상품으로 잇는다
+  if ((unlocked && inRandomEgg(slug, opts)) || (hatchBase && inRandomEgg(hatchBase, opts))) shopLinks.push({ label: random, productId: "random" });
+  for (const [kind, pool] of fixedEggs(opts)) {
+    if (!pool.includes(slug)) continue;
+    const name = eggName(kind, opts) ?? kind;
+    methods.push(name);
+    shopLinks.push({ label: name, productId: kind });
+  }
   // 버드렉스의 말(블리자포스·레이스포스) — "유대의고삐로 부르기" (data/regional.json riders, 2026-10-07)
   if (riderOwnerOf(slug, opts)) {
     const reins = itemName(RIDER_ITEM, opts);
@@ -168,6 +176,7 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     shiny: hasShiny(save, slug),
     owned: save.pets.filter((p) => p.species === slug).length,
     methods: methods.length ? methods.join(" · ") : NO_METHOD,
+    ...(shopLinks.length ? { shopLinks } : {}),
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
     ...megaLine(slug, obtained, opts),

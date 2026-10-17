@@ -89,8 +89,16 @@ function render(v: DexDeviceView): void {
   rows.push(["특수 기믹", d.gimmick]);
   // 메가진화하는 종 — 얻은 종에만 메가 모습의 이름을 한 줄로 (2026-10-02 사용자 결정 "얻은 종에만", 시안 A, Figma 05 `Dex / Device / Mega` `1380:55226`)
   if (d.mega) rows.push([d.mega.label, d.mega.names]);
-  device.appendChild(pairsEl("records", rows, "value"));
+  const records = pairsEl("records", rows, "value");
+  if (d.shopLinks?.length) linkMethods(records, d.methods, d.shopLinks, v.linkOpen);
+  device.appendChild(records);
   if (v.tree) device.appendChild(evolutionCard(v));
+
+  // 링크 글자로 연 옆 창은 바닥 줄(이전·울음소리·다음)을 두지 않는다 — 넘기기는 지금 기기 창이 한다 (docs/specs/ui-components.md "링크 글자")
+  if (v.beside) {
+    frame.endDraw();
+    return;
+  }
 
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
@@ -98,6 +106,27 @@ function render(v: DexDeviceView): void {
   device.appendChild(frame.controlsEl(cry));
 
   frame.endDraw();
+}
+
+// 입수처의 알 이름을 링크 글자로 — 누르면 그 알 상품의 상점 기기 창을 옆 창으로 연다. 옆 창이 떠 있는 동안 그 링크는 톤 바탕(.on)
+// (docs/specs/ui-components.md "링크 글자", Figma 01 `Link Text`). 입수처 줄은 기록 칸의 둘째 줄이다
+function linkMethods(records: HTMLElement, text: string, links: { label: string; productId: string }[], open: string | null): void {
+  const value = records.children[1]?.querySelector(".value");
+  if (!value) return;
+  value.replaceChildren();
+  let rest = text;
+  while (rest) {
+    const hit = links.map((l) => ({ l, at: rest.indexOf(l.label) })).filter((h) => h.at >= 0).sort((a, b) => a.at - b.at)[0];
+    if (!hit) {
+      value.append(rest);
+      break;
+    }
+    if (hit.at > 0) value.append(rest.slice(0, hit.at));
+    const link = buttonEl(hit.l.productId === open ? "link-text on" : "link-text", hit.l.label, () => api.act({ kind: "shop", productId: hit.l.productId }));
+    link.setAttribute("aria-pressed", String(hit.l.productId === open));
+    value.appendChild(link);
+    rest = rest.slice(hit.at + hit.l.label.length);
+  }
 }
 
 // 진화 카드 — 기록 칸 아래. 상점 구매 창과 같은 트리를 기기 폭에 맞춰 그린다 (2026-09-30 사용자 결정 "도감상세는 a.", Figma 05 `Dex / Device / Unlocked` `1091:23559`)

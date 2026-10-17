@@ -11,6 +11,7 @@ export interface ItemFace {
   side: "right" | "left";
   title: string; // 머리 — 상점 · 가방. kinds 가 있으면 제목 대신 종류 탭
   kinds?: DeviceKindTab[]; // 머리의 종류 탭 — 상점 | 가방
+  beside?: boolean; // 링크 글자로 연 옆 창
   kind: string;
   name: string;
   state: string;
@@ -39,7 +40,7 @@ const STAGE = { w: 150, h: 124, maxScale: 4, maxSide: 96 };
 // 틀 안에 상품 화면을 그린다 — 머리 줄부터 바닥 줄까지, 끝에 높이를 알린다
 export function drawItemFace(frame: DeviceFrame, face: ItemFace, middle: HTMLElement, go: HTMLButtonElement, onLink?: () => void): void {
   const device = frame.device;
-  frame.beginDraw(face.side, face.title, undefined, face.kinds);
+  frame.beginDraw(face.side, face.title, face.beside ? "beside" : undefined, face.kinds); // 옆 창 — 이전·다음을 숨긴다(device.css .beside)
 
   // 화면 — 머리 줄(종류·이름·상태), 그림, 분류·둘째 줄, 설명
   const bezel = el("div", "bezel");

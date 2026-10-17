@@ -8,7 +8,8 @@
   margin: 0;
   color: var(--soft);
 }
-.egg-pool-grid .dex-cell {
+/* 얻지 않은 칸은 누를 수 없다. 얻은 칸은 링크 — 옆 창이 떠 있는 동안 옅은 바탕(.dex-cell[aria-pressed]) */
+.egg-pool-grid .dex-cell.locked {
   cursor: default;
 }
 .egg-pool-grid .dex-cell.blank {

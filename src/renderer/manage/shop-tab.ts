@@ -8,7 +8,8 @@ import type { EggPoolView, ShopItemView, Snapshot } from "../../shared/model/sna
 import { pointText } from "../../shared/count-text.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { iconOf, portraitOf } from "./art-cache.js";
-import { closeDialog, dialogEl, openAnyDialog } from "./dialog.js";
+import { besideOf, openBeside } from "./device-kind.js";
+import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import { dexNoText, GRID_PAGE, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
 import { findBarEl, matchesName, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
@@ -195,7 +196,13 @@ export function drawPool(productId: string, page: number): void {
   const shown = pageOf(pool.entries, page, GRID_PAGE);
   const grid = el("div", "dex-grid egg-pool-grid");
   for (const e of shown.items) {
-    const cell = el("div", e.obtained ? "dex-cell dex-box" : "dex-cell dex-box locked");
+    // 얻은 종의 칸은 링크 — 누르면 상점 기기 창 옆에 그 종의 도감 기기 창(옆 창), 다시 누르면 닫는다. 얻지 않은 칸은 누를 수 없다
+    // (2026-10-18 사용자 "둘 다 진행", docs/specs/ui-components.md "링크 글자")
+    const cell = e.obtained ? buttonEl("dex-cell dex-box", undefined, () => {
+      openBeside("dex", e.slug);
+      drawDialog();
+    }) : el("div", "dex-cell dex-box locked");
+    if (e.obtained) cell.setAttribute("aria-pressed", String(besideOf("dex") === e.slug));
     cell.append(portraitOf(e.slug, false, "dot", "", true), el("div", "who", e.obtained ? e.name : "???"), el("div", "no", `#${dexNoText(e.dex, e.form, 4)}`));
     if (e.obtained) {
       const got = el("span", "got");

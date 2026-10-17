@@ -4,7 +4,7 @@
 // - 2026-10-01 의 옆 도감(파티 상세의 `도감 보기`)은 2026-10-17 머리의 종류 탭으로 바꿨다
 import type { DexDeviceAction } from "../../shared/model/devices.js";
 import { api } from "./api.js";
-import { deviceClosed, dexTarget, kindsOf } from "./device-kind.js";
+import { besideOf, deviceClosed, dexTarget, kindsOf, moveBeside, openBeside } from "./device-kind.js";
 import { closeLayer, openLayer } from "./layers.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
@@ -46,7 +46,9 @@ export function syncDexDevice(force = false): void {
     closeLayer("device:dex");
     return;
   }
-  const input = { slug, kinds: kindsOf() };
+  // 알 목록 칸의 링크로 연 옆 창이면 머리 탭·링크 없이 옆에 붙인다. 지금 기기 창이면 옆 창으로 띄운 알 상품(linkOpen)을 알린다
+  const asBeside = besideOf("dex") != null;
+  const input = asBeside ? { slug, kinds: [], beside: true } : { slug, kinds: kindsOf(), linkOpen: besideOf("shop") };
   const key = JSON.stringify(input);
   if (open && key === sent && !force) return;
   if (!open) openLayer("device:dex", closeByEscape);
@@ -58,7 +60,16 @@ export function syncDexDevice(force = false): void {
 // 도감 기기 창에서 한 일 — 진화 트리의 종을 눌러 그 종의 상세로 바꾼다 (2026-10-13 사용자 "진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게")
 // 도감 탭에서 연 창이면 탭이 그 종을 고른다. 다른 탭에서 연 창이면 대상이 바뀔 때까지 그 종을 보인다
 export function onDexAction(action: DexDeviceAction): void {
-  if (action.kind !== "pick") return;
+  // 입수처의 알 링크 — 그 상품의 상점 기기 창을 옆 창으로 연다. 다시 누르면 닫는다 (docs/specs/ui-components.md "링크 글자")
+  if (action.kind === "shop") {
+    openBeside("shop", action.productId);
+    return;
+  }
+  // 옆 창의 진화 트리 — 옆 창이 그 종으로 바뀐다
+  if (besideOf("dex")) {
+    moveBeside(action.slug);
+    return;
+  }
   if (ui.tab === "dex") {
     hooksOf().picked(action.slug);
     return;

@@ -254,7 +254,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - **CSS** — 머리 줄·표시등은 `styles/device.css`(기기 창 일곱 문서), 경첩 이음·베젤·바닥 단추는 `device-body.css`(파티 상세·가방·상점·도감·배틀 파티 상세), 막대·그림 칸·기록 칸은 `device-item.css`(가방·상점·도감), 수량·합계·주 단추는 `item-face.css`(가방·상점)다. 창 CSS 에는 색 변수와 그 창만의 규칙을 둔다.
 - **상품 화면** — 상점과 가방은 `item-face.ts` 의 `drawItemFace` 를 같이 쓴다. 수량은 `qtyRowEl`(`−`·숫자 칸·`+`·`최대`), 미리보기·합계·결과 상자는 `totalBoxEl`(늘 두 줄 높이), 바닥 주 단추는 `goButtonEl`.
 - **설정창과의 연결** — `manage/device-link.ts` 의 `createDeviceLink`. 명령을 보내는 동안 중간 장면을 보내지 않으려면 `holding` 을 켠다(상점·가방).
-- **기기 종류 탭** — `manage/device-kind.ts`. 탭마다 본래 기기(파티·박스 → 파티 상세, 도감 → 도감, 모험 → 배틀, 상점 → 상점, 가방 → 가방)와 대상(고른 개체·종·배틀 칸·상품·도구)을 두고, 머리 탭으로 바꾼 기기를 든다. 기기 연결은 띄울 것을 `petTarget`·`dexTarget`·`battleTarget`·`shopTarget`·`bagTarget` 에 묻고, 고른 값에 `kindsOf()`(머리 탭 목록)를 싣고, 닫힘에서 `deviceClosed` 를 부른다. 기기 창의 머리 줄은 `device-frame.ts` `beginDraw` 의 `kinds` 로 그린다. 규칙은 `docs/specs/ui-components.md` "기기 종류 탭" 이다.
+- **기기 종류 탭** — `manage/device-kind.ts`. 탭마다 본래 기기(파티·박스 → 파티 상세, 도감 → 도감, 모험 → 배틀, 상점 → 상점, 가방 → 가방)와 대상(고른 개체·종·배틀 칸·상품·도구)을 두고, 머리 탭으로 바꾼 기기를 든다. 기기 연결은 띄울 것을 `petTarget`·`dexTarget`·`battleTarget`·`shopTarget`·`bagTarget` 에 묻고, 고른 값에 `kindsOf()`(머리 탭 목록)를 싣고, 닫힘에서 `deviceClosed` 를 부른다. 기기 창의 머리 줄은 `device-frame.ts` `beginDraw` 의 `kinds` 로 그린다. 규칙은 `docs/specs/ui-components.md` "기기 종류 탭" 이다. 다른 대상의 기기를 옆에 붙이는 링크 글자(옆 창)도 여기서 든다 — `openBeside`·`besideOf`·`moveBeside`. 옆 창의 자리는 메인 `windows/devices.ts` `besideBase`, 링크 모양은 기기 창 공통 CSS `.link-text` 다("링크 글자").
 - **같은 값 거르기** — 모델을 받는 기기 창은 `frame.showWith` 로 받는다. 지난번과 같은 값이면 그리지 않는다(R4).
 - **창 만들기** — 기기 창은 `main/windows/device-window.ts` 의 `createDeviceWindow` 로 만든다. 예비 창·세대 번호·자리 붙이기를 이 틀이 한다(R7). 새 기기 창은 명세(`main/windows/devices.ts`)만 더한다.
 

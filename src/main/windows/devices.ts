@@ -32,10 +32,13 @@ import type {
 } from "../../shared/model/devices";
 import { PARTY_RULES } from "../../party/rules.js";
 import { BATTLE_RULES } from "../../battle/rules.js";
+import type { Rectangle } from "electron";
 import type { DeviceSpec } from "./device-window.js";
+import { dockAt } from "./placement.js";
 import { INPUT_LIMITS, isDeviceKindTabs, isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
 
 // 창 크기 — 폭은 Figma 기기 폭, 높이는 첫 그림 전 어림값이다
+const DEVICE_WIDTH = 380; // 기기 창 폭 — 다섯이 같다(Figma 기기 폭)
 const DEVICE_SIZES = {
   dex: { width: 380, height: 508 }, // Figma `Dex Device`
   pet: { width: 380, height: 682 }, // Figma `A안 · 파티 상세 기기`
@@ -46,9 +49,10 @@ const DEVICE_SIZES = {
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
-// kinds — 머리의 종류 탭 (docs/specs/ui-components.md "기기 종류 탭")
+// kinds — 머리의 종류 탭 (docs/specs/ui-components.md "기기 종류 탭"). beside — 링크 글자로 연 옆 창. linkOpen — 옆 창으로 띄운 알 상품
 export interface DexDeviceOpen extends DeviceKinds {
   slug: string;
+  linkOpen?: string | null;
 }
 
 export interface DexDeviceDeps {
@@ -58,11 +62,21 @@ export interface DexDeviceDeps {
   portraits(slugs: string[]): Promise<Record<string, string>>; // 트리 종들의 그림을 한 번에
   cry(slug: string): Promise<string | null>;
   volume(): number; // 울음소리 음량 0~1
+  products(): ReadonlySet<string>; // 지금 상점에서 파는 상품 — 입수처의 알 링크는 이것만 남긴다
+}
+
+// 링크 글자로 연 옆 창의 자리 — 설정창과 지금 기기 창(폭 380, 같은 규칙 dockAt)을 한 덩어리로 보고 그 옆에 붙인다 (docs/specs/ui-components.md "링크 글자").
+// 지금 기기 창의 실제 위치를 읽지 않는다 — 설정창을 옮길 때 두 창이 따라가는 순서와 상관없이 같은 자리가 나온다
+function besideBase(owner: Rectangle, area: Rectangle, o: DeviceKinds, height: number): Rectangle {
+  if (!o.beside) return owner;
+  const main = dockAt(owner, area, { width: DEVICE_WIDTH, height });
+  return { x: Math.min(owner.x, main.x), y: owner.y, width: owner.width + DEVICE_WIDTH, height: owner.height };
 }
 
 // 렌더러가 보낸 값은 믿지 않는다 — 종 식별자는 짧은 글자만
 function isDexAction(v: unknown): v is DexDeviceAction {
   const a = v as { kind?: unknown; slug?: unknown } | null;
+  if (a?.kind === "shop") return isShortId((v as { productId?: unknown }).productId);
   return !!a && a.kind === "pick" && typeof a.slug === "string" && /^[a-z0-9-]{1,64}$/.test(a.slug);
 }
 
@@ -83,17 +97,24 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         n.children.forEach(walk);
       };
       if (tree) walk(tree);
+      // 입수처의 알 링크 — 지금 상점에서 파는 상품만. 옆 창에는 링크를 두지 않는다
+      const products = deps.products();
+      const links = o.beside ? [] : (detail.shopLinks ?? []).filter((l) => products.has(l.productId));
+      const { shopLinks: _links, ...base } = detail;
       // 이로치를 얻은 종은 이로치 초상도 보낸다 — 기기 창의 이로치 단추가 바꿔 그린다
       return Promise.all([deps.portrait(o.slug), detail.shiny ? deps.portrait(o.slug, true) : Promise.resolve(null), shown.length ? deps.portraits(shown) : Promise.resolve({})]).then(([portrait, shinyPortrait, treePortraits]) => ({
-        detail,
+        detail: links.length ? { ...base, shopLinks: links } : base,
         portrait,
         shinyPortrait,
         volume: deps.volume(),
         tree,
         treePortraits,
         kinds: o.kinds,
+        beside: o.beside === true,
+        linkOpen: o.linkOpen ?? null,
       }));
     },
+    baseOf: besideBase,
     cry: { of: (o) => deps.cry(o.slug), volume: deps.volume },
   };
 }
@@ -162,6 +183,7 @@ export function shopDeviceOf(deps: DeviceArtDeps): DeviceSpec<ShopDeviceOpen & D
     channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", escape: "shopdev:escape", kind: "shopdev:kind", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
     size: DEVICE_SIZES.shop,
     keyOf: (o) => o.productId,
+    baseOf: besideBase, // 링크 글자로 연 옆 창 — 도감 기기 창 옆
     viewOf: async (o) => {
       const art = await artResolver(deps, [o.art]);
       return { ...o, art: art(o.art) };
@@ -236,7 +258,7 @@ export function isBagInput(v: unknown): v is BagDeviceInput {
 
 export function isShopInput(v: unknown): v is ShopDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy) && isDeviceKindTabs(v.kinds);
+  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy) && isDeviceKindTabs(v.kinds) && (v.beside === undefined || isFlag(v.beside));
 }
 
 export function isBattleInput(v: unknown): v is BattleDeviceInput {

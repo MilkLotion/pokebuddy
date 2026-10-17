@@ -18,7 +18,7 @@ import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
 import type { ArtLoader } from "../art/stage-art.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
-import { isDeviceKindTabs } from "../windows/input.js";
+import { isDeviceKindTabs, isShortId } from "../windows/input.js";
 import { bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPetInput, isShopInput, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import { wireBattleScreen, type BattleScreen } from "./battle-screen.js";
@@ -94,6 +94,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
     cry: (slug) => cries.get(slug),
     volume,
+    products: () => new Set((snapshot()?.shop ?? []).map((p) => p.id)), // 입수처의 알 링크는 지금 파는 상품만
   }), {
     onStep: (delta) => send("manage:dex-step", delta),
     onEscape: escapeOr(() => dexWin.close()),
@@ -199,7 +200,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
       w.close();
       return null;
     }
-    showDevice(name, w, { ...r.model, kinds: input!.kinds }, gen);
+    showDevice(name, w, { ...r.model, kinds: input!.kinds, ...(input!.beside ? { beside: true } : {}) }, gen);
     return r.input;
   }
 
@@ -214,9 +215,10 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;
-      // open 은 렌더러가 보낸 값이다 — { slug, kinds } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
-      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; kinds?: unknown }) : null;
-      if (o && typeof o.slug === "string" && isDeviceKindTabs(o.kinds)) dexWin.show(parent, { slug: o.slug, kinds: o.kinds }, gen);
+      // open 은 렌더러가 보낸 값이다 — { slug, kinds, beside?, linkOpen? } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
+      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; kinds?: unknown; beside?: unknown; linkOpen?: unknown }) : null;
+      const linkOpen = typeof o?.linkOpen === "string" && isShortId(o.linkOpen) ? o.linkOpen : null;
+      if (o && typeof o.slug === "string" && isDeviceKindTabs(o.kinds)) dexWin.show(parent, { slug: o.slug, kinds: o.kinds, beside: o.beside === true, linkOpen }, gen);
       else dexWin.close();
     },
   });

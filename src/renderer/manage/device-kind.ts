@@ -3,6 +3,8 @@
 // - 대상은 연 탭이 고른 것 그대로다(개체·종·배틀 칸·상품·도구). 기기 연결 다섯은 여기에 "지금 띄울 것"을 묻는다 — 연결마다 사본을 두지 않는다
 // - 탭 자리는 고정이다: 포켓몬 기기 파티|도감|배틀, 도구 기기 상점|가방. 지금 기기만 current, 볼 수 없는 기기는 disabled
 // - 다른 탭의 고른 값(도감 칸·배틀 칸·상품·도구)은 그 파일을 import 하지 않고 고리로 받는다 — 연결 파일들이 이 파일을 import 한다
+// - 옆 창: 링크 글자로 다른 대상의 기기를 지금 기기 창 옆에 연다(도감 입수처 → 상점 상품, 알 목록 칸 → 도감). 한 겹이고, 지금 기기의 대상이 바뀌면 닫힌다
+//   (docs/specs/ui-components.md "링크 글자")
 import type { DeviceKind, DeviceKindTab } from "../../shared/model/devices.js";
 import type { PetView } from "../../shared/model/snapshot.js";
 import type { TabId } from "./dialog-types.js";
@@ -31,12 +33,16 @@ function hooksOf(): DeviceKindHooks {
 }
 
 let swapped: DeviceKind | null = null; // 머리 탭으로 바꾼 기기. null 이면 탭의 본래 기기
+export type BesideKind = "shop" | "dex";
+// 링크 글자로 연 옆 창 — 연 탭과 그때 지금 기기의 대상(base)이 바뀌면 닫는다
+let beside: { kind: BesideKind; id: string; tab: TabId; base: string } | null = null;
 
 export const shownKind = (): DeviceKind => swapped ?? HOME[ui.tab];
 
-// 탭을 나갔다·상세 보기로 왔다 — 다음에는 본래 기기로 연다
+// 탭을 나갔다·상세 보기로 왔다 — 다음에는 본래 기기로 연다. 옆 창도 닫는다
 export function resetKind(): void {
   swapped = null;
+  beside = null;
 }
 
 // 연 탭이 고른 것이 있다 — 없으면 기기 창을 띄우지 않는다
@@ -115,6 +121,30 @@ function canShow(kind: DeviceKind): boolean {
   return subjectItem() != null;
 }
 
+// 지금 기기와 그 대상 — 옆 창이 따라가는 열쇠
+function mainKey(): string {
+  const h = hooksOf();
+  const id = ui.tab === "party" || ui.tab === "box" ? ui.detailPet : ui.tab === "dex" ? h.dexPick() : ui.tab === "adventure" ? String(h.battleSlot()) : ui.tab === "shop" ? h.shopPick() : h.bagPick();
+  return `${shownKind()}:${id ?? ""}`;
+}
+
+// 링크 글자를 눌렀다 — 같은 링크면 옆 창을 닫고, 다른 링크면 그것으로 바꾼다. 지금 기기와 같은 종류는 옆 창으로 열지 않는다
+export function openBeside(kind: BesideKind, id: string): void {
+  if (!hasSubject() || kind === shownKind()) return;
+  beside = beside?.kind === kind && beside.id === id ? null : { kind, id, tab: ui.tab, base: mainKey() };
+  hooksOf().redraw();
+}
+
+// 옆 창으로 띄운 대상 — 그 종류의 옆 창이 없으면 null
+export const besideOf = (kind: BesideKind): string | null => (beside?.kind === kind ? beside.id : null);
+
+// 옆 창 안에서 대상을 바꿨다 — 도감 옆 창의 진화 트리에서 다른 종을 눌렀다
+export function moveBeside(id: string): void {
+  if (!beside) return;
+  beside = { ...beside, id };
+  hooksOf().redraw();
+}
+
 // 머리의 종류 탭 — 지금 기기가 속한 묶음의 고정 순서
 export function kindsOf(): DeviceKindTab[] {
   const now = shownKind();
@@ -134,11 +164,17 @@ export function swapKind(to: DeviceKind): void {
 // 본문 맞추기 — 고른 것이 없어졌거나 바꾼 기기를 더 볼 수 없으면(도구를 다 썼다 등) 본래 기기로 돌아간다
 export function fixKind(): void {
   if (swapped && (!hasSubject() || !canShow(swapped))) swapped = null;
+  if (beside && (beside.tab !== ui.tab || beside.base !== mainKey())) beside = null; // 지금 기기의 대상이 바뀌었다·탭을 나갔다
 }
 
 // 기기 창이 닫혔다(✕·Esc·메인이 닫음). 그 기기가 지금 보이던 것이면 탭의 고른 것을 비우고 true(다시 그린다).
 // 머리 탭으로 바꿔 닫힌 앞 기기면 false — 고른 것을 그대로 둔다
 export function deviceClosed(kind: DeviceKind): boolean {
+  // 옆 창의 ✕ — 옆 창만 닫는다
+  if (beside?.kind === kind) {
+    beside = null;
+    return true;
+  }
   if (kind !== shownKind() || !hasSubject()) return false;
   swapped = null;
   hooksOf().closeSubject(ui.tab);
@@ -147,7 +183,7 @@ export function deviceClosed(kind: DeviceKind): boolean {
 
 // 기기 연결이 띄울 것 — 지금 기기가 그 종류일 때만. 아니면 null(닫는다)
 export const petTarget = (): string | null => (shownKind() === "pet" ? (subjectPet()?.id ?? null) : null);
-export const dexTarget = (): string | null => (shownKind() === "dex" && hasSubject() ? subjectSpecies() : null);
+export const dexTarget = (): string | null => besideOf("dex") ?? (shownKind() === "dex" && hasSubject() ? subjectSpecies() : null);
 export const battleTarget = (): number | null => (shownKind() === "battle" && hasSubject() ? subjectBattleSlot() : null);
-export const shopTarget = (): string | null => (shownKind() === "shop" ? subjectProduct() : null);
+export const shopTarget = (): string | null => besideOf("shop") ?? (shownKind() === "shop" ? subjectProduct() : null);
 export const bagTarget = (): string | null => (shownKind() === "bag" ? subjectItem() : null);

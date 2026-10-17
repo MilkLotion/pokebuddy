@@ -6,7 +6,7 @@ import type { ShopItemView } from "../../shared/model/snapshot.js";
 import type { ShopDeviceAction, ShopDeviceInput } from "../../shared/model/devices.js";
 import { api } from "./api.js";
 import { lastReplyOf, sendCommand } from "./command.js";
-import { deviceClosed, kindsOf, shopTarget } from "./device-kind.js";
+import { besideOf, deviceClosed, kindsOf, shopTarget } from "./device-kind.js";
 import { createDeviceLink } from "./device-link.js";
 import { openAnyDialog } from "./dialog.js";
 import { fromLayer } from "./layers.js";
@@ -68,6 +68,8 @@ function shopDeviceBuild(): ShopDeviceInput | null {
     shopNotice = "";
     shopDone = null;
   }
+  // 도감 입수처의 링크 글자로 연 옆 창 — 머리 탭 없이 제목, 옆에 붙인다 (docs/specs/ui-components.md "링크 글자")
+  if (besideOf("shop")) return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, kinds: [], beside: true };
   return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, kinds: kindsOf() }; // 그림은 메인이 icon 열쇠로 붙인다
 }
 
