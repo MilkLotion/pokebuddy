@@ -190,6 +190,15 @@ Figma: C-01~C-29는 Figma에 있다. 노드는 각 계약의 `Figma` 줄을 따�
 | 04 Templates | `01 탭 틀`: `Battle Window` `1787:9967`(1116×615 — 아래 `dps · 나 · 상대` 에 `Battle DPS Table` 둘, 2026-10-12). 맨 위 `head` 는 청록 띠에 02 `Device Top`(상태 등·LED 셋·제목·✕)이다. `Battle Log Window` `1993:572`(440×615, 머리 줄 + 03 `Battle Log`, 2026-10-14). |
 | 05 Screens | `16 배틀` `1795:94679`: `Battle / Window · 시작` `1791:10278`, `· 진행 중` `1787:10944`, `· 진행 중 · 기술 호버` `1791:11625`, `· 결과` `1791:10820`. 줄 2: `Battle / Window · 룰렛 · 도는 중` `1796:3761`, `· 룰렛 · 멈춤` `1796:5432`, `Battle / Window · 룰렛 뒤 · 판 시작` `1796:6152`(룰렛 예시 팀은 카드 셋을 후보 종으로 바꿨다). 줄 3: `Battle / Window · 진행 중 · 로그 창` `1998:106563`(오른쪽 16 띄워 `Battle Log Window`, 2026-10-14). 포켓몬 그림은 `Portrait` 자리표시다. |
 
+기기 창 잇기로 더한 것(2026-10-18, 사용자 확정 "둘 다 진행"). 규칙은 [기기 종류 탭](#기기-종류-탭)과 [링크 글자](#링크-글자)에 있다.
+
+| 층 | 컴포넌트 (노드, 변형) |
+|---|---|
+| 01 Atoms | `03 단추·고르기`: `Device Kind Tab` `2052:41`(`State=Current\|Default\|Disabled`, 글자 속성 `Label`), `Link Text` `2038:116496`(`Size=Body\|Title` × `State=Default\|Hover\|Open`. 글자 속성은 Body 가 `Label`, Title 이 `Title Label` 이다. 한 글자 속성에 묶인 변형은 글자 스타일을 함께 쓰므로 크기별로 나눴다). |
+| 02 Molecules | `04 기기 창`: `Device Top` `1262:75071` 에 `kinds · 기기 종류`(속성 `Show Kinds`·`Show Title`·`Show Kind 3`). |
+| 03 Organisms | `04 기기 창`: `Party Detail Device`·`Dex Device`·`Shop Device`·`Bag Device`·`Battle Party Device` 가 종류 탭을 켰다. `Party Detail Device` 는 도감 보기 줄을 빼서 높이가 651 에서 598 이 됐다. `Dex Device` 의 `State=Beside` 는 뺐다. |
+| 05 Screens | `05 도감` `Dex / Device / 입수처 링크 → 상점 (옆 창)` `2066:105138`, `06 상점` `Shop / Egg Pool Dialog · 칸 → 도감 (옆 창)` `2066:105979`. `Party / Detail Device / Dex Beside` 는 뺐다. |
+
 페이지 배치(2026-10-02): 01~04 페이지는 갈래별 섹션으로 묶는다. 새 컴포넌트는 맞는 섹션 안에 둔다.
 
 | 페이지 | 섹션 |
@@ -635,7 +644,7 @@ Figma: 01 `Device Kind Tab` `2052:41`(`State=Current|Default|Disabled`, 글자 �
 옆 창: 설정창과 지금 기기 창을 한 덩어리로 보고 그 오른쪽에 붙는다. 오른쪽에 자리가 없으면 왼쪽에 붙는다. 옆 창은 한 겹이다. 옆 창의 머리는 종류 탭 대신 제목이고, 옆 창에는 링크 글자를 두지 않는다. 옆 창에는 이전·다음을 두지 않는다. 상점 옆 창에서도 수량을 고르고 산다. 도감 옆 창의 진화 트리에서 다른 종을 누르면 옆 창이 그 종으로 바뀐다.
 여닫기: 같은 링크를 다시 누르면 닫는다. 다른 링크를 누르면 옆 창을 그것으로 바꾼다. 지금 기기 창의 대상이 바뀌거나 지금 기기 창이 닫히거나 탭을 나가면 옆 창도 닫힌다. 옆 창의 `✕` 는 옆 창만 닫는다. Esc 는 옆 창부터 닫는다([닫기 규칙](#닫기-규칙) 9).
 구현은 `src/renderer/manage/device-kind.ts`(`openBeside`·`besideOf`), 도감 링크는 `src/renderer/device/dex.ts`, 알 목록 칸은 `src/renderer/manage/shop-tab.ts` `drawPool`, 자리는 `src/main/windows/devices.ts` 의 `baseOf` 다.
-Figma: 01 `Link Text`(`Size=Body|Title` × `State=Default|Hover|Open`). 화면은 05 `05 도감` `Dex / Device / 입수처 링크 → 상점 (옆 창)`, `06 상점` `Shop / Egg Pool Dialog · 칸 → 도감 (옆 창)` 이다.
+Figma: 01 `Link Text` `2038:116496`(`Size=Body|Title` × `State=Default|Hover|Open`). 화면은 05 `05 도감` `Dex / Device / 입수처 링크 → 상점 (옆 창)`, `06 상점` `Shop / Egg Pool Dialog · 칸 → 도감 (옆 창)` 이다.
 
 ### 포켓몬 고르기 판
 
