@@ -1,5 +1,5 @@
 // 배틀 파티 처리기 — 칸 넣기·비우기, 프리셋 가져오기, 기술 순서 (src/battle/party.ts)
-import { applyBattleReward, clearBattleSlot, importPreset, moveBattleSlot, setBattleForm, setBattleMega, setBattleSlot, setMoves, swapMoves } from "../../battle/party.js";
+import { claimBattleRewards, clearBattleSlot, holdBattleReward, importPreset, moveBattleSlot, setBattleForm, setBattleMega, setBattleSlot, setMoves, swapMoves } from "../../battle/party.js";
 import type { TxHandler } from "../executor";
 import { intOf, isArgsRecord, petIdOf, reasonOf, slotIndexOf } from "./args.js";
 
@@ -82,10 +82,17 @@ export const battleFormHandler: TxHandler = (draft, args) => {
 };
 
 // 랜덤 배틀 보상 — 서버 호출은 온라인 층(src/online/battle-net.ts)이 한다. 표면 명령이 아니다(internal) — 설정창·CLI 가 보상을 만들어 넣지 못하게
+// 판을 받으면 받을 판에 적기만 한다. 포인트는 배틀 창이 닫힐 때 battle.claim 이 더한다 (2026-10-18)
 export const battleRewardHandler: TxHandler = (draft, args) => {
   const battleId = isArgsRecord(args) && typeof args.battleId === "string" ? args.battleId : "";
   const reward = isArgsRecord(args) && typeof args.reward === "number" ? args.reward : -1;
-  const res = applyBattleReward(draft, battleId, reward);
+  const res = holdBattleReward(draft, battleId, reward);
   if (!res.ok) return { ok: false, reason: res.reason };
-  return { ok: true, result: { battleId, applied: res.applied === true } };
+  return { ok: true, result: { battleId, held: res.held === true } };
+};
+
+// 받을 판을 받는다 — 배틀 창이 닫힐 때·앱을 켤 때·다음 판을 시작할 때 (src/main/app.ts, src/online/battle-net.ts). 받을 판이 없으면 바꾸지 않는다
+export const battleClaimHandler: TxHandler = (draft) => {
+  if (!draft.battle?.pending?.length) return { ok: false, reason: "no-pending" };
+  return { ok: true, result: { points: claimBattleRewards(draft) } };
 };

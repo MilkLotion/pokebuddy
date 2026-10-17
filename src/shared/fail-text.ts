@@ -75,6 +75,7 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   "last-pet": { ko: "마지막 한 마리는 팔 수 없어요.", en: "You can't sell your last Pokémon." },
   "in-preset": { ko: "파티에 든 포켓몬은 팔 수 없어요. 박스로 옮긴 뒤 팔아 주세요.", en: "Pokémon in a party can't be sold. Move it to the box first." },
   "in-battle": { ko: "배틀 파티에 든 포켓몬은 팔 수 없어요. 배틀 파티에서 뺀 뒤 팔아 주세요.", en: "Pokémon in the battle party can't be sold. Remove it from the battle party first." },
+  "no-pending": { ko: "받을 배틀 보상이 없어요.", en: "There is no battle reward to claim." }, // 내부 거래(battle.claim)만 쓴다 — 화면에 뜨지 않는다
   "no-step": { ko: "더 진화하지 않아요.", en: "It doesn't evolve any further." },
   "need-choice": { ko: "진화할 모습을 골라 주세요.", en: "Choose the form to evolve into." },
   "bad-choice": { ko: "고른 모습으로는 지금 진화할 수 없어요.", en: "It can't evolve into that form right now." },

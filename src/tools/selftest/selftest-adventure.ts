@@ -433,6 +433,28 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   assert.equal(save.battle!.applied!.length, 200, "최근 200개만");
   assert.equal(normalize(JSON.parse(JSON.stringify(save)), T0)!.battle?.applied?.length, 200, "정규화도 남긴다");
 }
+// ── 받을 판 — 판을 받으면 적기만 하고 배틀 창이 닫힐 때 받는다 (2026-10-18 사용자 "포인트는 배틀이 끝나고 확인버튼 누를때") ──
+{
+  let save = seed(["pikachu"]);
+  save.points.balance = 100;
+  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
+  assert.equal(ex.run({ id: "battle-reward:b1", name: "battle.reward", args: { battleId: "b1", reward: 300 } }).ok, true);
+  assert.equal(save.points.balance, 100, "재생 중에는 포인트가 그대로");
+  assert.deepEqual(save.battle!.pending, [{ id: "b1", reward: 300 }]);
+  assert.equal(ex.run({ id: "battle-reward:b1-again", name: "battle.reward", args: { battleId: "b1", reward: 300 } }).ok, true);
+  assert.equal(save.battle!.pending!.length, 1, "같은 판은 한 번만 적는다");
+  assert.deepEqual(normalize(JSON.parse(JSON.stringify(save)), T0)!.battle?.pending, [{ id: "b1", reward: 300 }], "정규화가 받을 판을 지킨다(앱을 껐다 켜도 남는다)");
+  assert.equal(ex.run({ id: "battle-claim:1", name: "battle.claim", args: {} }).ok, true);
+  assert.equal(save.points.balance, 400, "창이 닫히면 받는다");
+  assert.ok(save.battle!.applied!.includes("b1"), "받은 판 id 를 남긴다 — 서버 검증이 대조한다");
+  assert.equal(save.battle!.pending, undefined);
+  assert.equal(ex.run({ id: "battle-claim:2", name: "battle.claim", args: {} }).ok, false, "받을 판이 없으면 저장을 바꾸지 않는다");
+  assert.equal(ex.run({ id: "battle-reward:b1-late", name: "battle.reward", args: { battleId: "b1", reward: 300 } }).ok, true);
+  assert.equal(save.battle!.pending, undefined, "이미 받은 판은 다시 적지 않는다");
+  assert.equal(save.points.balance, 400);
+  const raw = JSON.parse(JSON.stringify({ ...save, battle: { ...save.battle, pending: [{ id: "b1", reward: 300 }, { id: "b2", reward: 999 }, { id: "b3", reward: 50 }, { id: "b3", reward: 50 }] } })) as Record<string, unknown>;
+  assert.deepEqual(normalize(raw, T0)!.battle?.pending, [{ id: "b3", reward: 50 }], "받은 판·값이 틀린 판·겹친 판은 정규화가 뺀다");
+}
 // ── 배틀 기기 창 — 그래프 종족값(암컷 능력치)과 상성 말풍선 줄 (docs/specs/adventure.md "능력치 그래프", "타입 상성") ──
 {
   const save = seed(["charizard", "indeedee", "indeedee"]);

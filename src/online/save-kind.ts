@@ -11,6 +11,7 @@ const EVENT_WRITES: ReadonlySet<string> = new Set<WriteName>([
   "trade.apply",
   "mail.apply",
   "battle.reward",
+  "battle.claim",
   "egg.open",
   "evolve",
   "starter.pick",

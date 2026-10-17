@@ -34,6 +34,7 @@ export interface ManageDevicesDeps {
   stageArt(): ArtLoader | null; // 무대 그림 불러오기 — 배틀 창의 PMD 그림
   setPetCoach(on: boolean): void; // 파티 상세 기기 창의 코치마크 — 설정창 창 단추 자리도 함께 어둡게 한다
   holdStage?(on: boolean): void; // 배틀 창이 떠 있는 동안 바탕화면의 포켓몬을 숨긴다
+  onBattleClosed?(): void; // 배틀 창이 닫혔다(결과의 `확인`·✕·재생 중 닫기) — 받을 랜덤 배틀 판의 포인트를 받는다 (2026-10-18 사용자 "확인버튼 누를때")
 }
 
 export interface ManageDevices {
@@ -144,7 +145,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
   };
   // 상점 기기 창 — 관리 창이 상품을 정해 보낸다. 수량·구매·이전·다음은 관리 창으로 돌려보낸다
-  const battleScreen = wireBattleScreen({ preload: deps.preload, html: deps.html, parent: deps.parent, art: deviceArt.art, stageArt: deps.stageArt, holdStage: deps.holdStage });
+  const battleScreen = wireBattleScreen({ preload: deps.preload, html: deps.html, parent: deps.parent, art: deviceArt.art, stageArt: deps.stageArt, holdStage: deps.holdStage, onClosed: deps.onBattleClosed });
 
   const shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:shop-step", delta),

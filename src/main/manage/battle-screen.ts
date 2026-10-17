@@ -26,6 +26,7 @@ export interface BattleScreenDeps {
   art(keys: string[]): Promise<Record<string, string | null>>; // 기기 창과 같은 그림 풀기 (src/main/manage/devices.ts deviceArt)
   stageArt(): ArtLoader | null; // 무대 그림 불러오기 — 없으면 초상으로 그린다
   holdStage?(on: boolean): void; // 배틀 창이 떠 있는 동안 바탕화면의 포켓몬을 숨긴다
+  onClosed?(): void; // 배틀 창이 닫혔다(결과의 `확인`·✕·재생 중 닫기) — 받을 랜덤 배틀 판의 포인트를 받는다 (2026-10-18 사용자 "확인버튼 누를때")
 }
 
 export interface BattleScreen {
@@ -103,6 +104,7 @@ export function wireBattleScreen(deps: BattleScreenDeps): BattleScreen {
     onClosed: () => {
       if (waiting) dropped = true;
       deps.holdStage?.(false);
+      deps.onClosed?.();
     },
   });
 

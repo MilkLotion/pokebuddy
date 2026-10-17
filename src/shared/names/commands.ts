@@ -85,7 +85,8 @@ export const COMMANDS = {
   "trade.apply": { via: "tx", internal: true },
   "trade.acked": { via: "tx", internal: true }, // 서버가 반영 알림을 받았다 — 다시 보낼 목록에서 뺀다
   "mail.apply": { via: "tx", internal: true },
-  "battle.reward": { via: "tx", internal: true }, // 랜덤 배틀 판의 보상 — 배틀 서버 호출(src/online/battle-net.ts)이 낸다
+  "battle.reward": { via: "tx", internal: true }, // 랜덤 배틀 판의 보상을 받을 판에 적는다 — 배틀 서버 호출(src/online/battle-net.ts)이 낸다
+  "battle.claim": { via: "tx", internal: true }, // 받을 판을 포인트로 받는다 — 배틀 창 닫힘·앱 시작·다음 판 시작 (2026-10-18)
   "mail.read": { via: "tx", internal: true },
 } as const satisfies Record<string, CommandSpec>;
 

@@ -316,6 +316,12 @@ function holdStageForBattle(on: boolean): void {
   battleHold = on;
   if (!quitting()) rt.stages?.setVisible(stageShown && !battleHold);
 }
+// 받을 랜덤 배틀 판의 포인트를 받는다 — 배틀 창이 닫힐 때와 앱을 켤 때. 다음 판을 시작할 때는 배틀 서버 호출이 받는다 (src/online/battle-net.ts)
+// 받을 판이 없으면 거래가 저장을 바꾸지 않는다 (2026-10-18 사용자 "포인트는 배틀이 끝나고 확인버튼 누를때 오르면 좋겠어")
+function claimBattleRewards(): void {
+  if (quitting() || !rt.game || !rt.party?.isWriter()) return;
+  rt.game.executor.run({ id: `battle-claim:${Date.now()}`, name: "battle.claim", args: {} });
+}
 
 
 const firstPet = (): PartyPet | null => {
@@ -336,6 +342,7 @@ const manage = createManage({
   html: rendererFile("manage.html"),
   game: () => rt.game,
   holdStage: holdStageForBattle,
+  onBattleClosed: claimBattleRewards,
   devBattleSeed: devNumber("POKEBUDDY_DEV_BATTLE"), // 개발 실행 전용 배틀 창 (src/main/manage/battle-screen.ts)
   stageArt: () => stageArt,
   send: async (req) => {
@@ -771,6 +778,7 @@ async function main(): Promise<void> {
   stageArt = art;
   const watch = bootCommands(saveSource, reader, art);
   if (!(await bootClaim(steps, saveSource, group, life, refreshParty))) return;
+  claimBattleRewards(); // 지난 실행에서 받지 못한 판 — 창이 닫히기 전에 앱이 꺼졌다
   bootServices(saveSource);
   bootFinish(saveSource, group, watch, life);
 }

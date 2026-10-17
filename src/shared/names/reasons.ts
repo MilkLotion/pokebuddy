@@ -76,6 +76,7 @@ export const REASONS = [
   "last-pet",
   "in-preset",
   "in-battle", // 배틀 파티에 든 개체 (src/battle/party.ts)
+  "no-pending", // 받을 랜덤 배틀 판이 없다 — battle.claim 이 저장을 바꾸지 않는다 (src/tx/handlers/battle.ts)
   // 진화·모습·메가
   "no-step",
   "need-choice",

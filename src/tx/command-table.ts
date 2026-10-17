@@ -5,7 +5,7 @@ import type { TxName } from "../shared/names/commands.js";
 import { checkPetFree, type PetAction } from "../party/pet-actions.js";
 import type { TxHandler } from "./executor";
 import { petIdOf } from "./handlers/args.js";
-import { battleClearHandler, battleFormHandler, battleImportHandler, battleMegaHandler, battleMoveHandler, battleMovesHandler, battlePickMovesHandler, battleRewardHandler, battleSetHandler } from "./handlers/battle.js";
+import { battleClearHandler, battleFormHandler, battleImportHandler, battleMegaHandler, battleMoveHandler, battleMovesHandler, battlePickMovesHandler, battleRewardHandler, battleSetHandler, battleClaimHandler } from "./handlers/battle.js";
 import { boxMoveHandler, boxOrderHandler, boxRenameHandler, boxSortHandler } from "./handlers/box.js";
 import { buyHandler, openHandler, sellHandler, sellPetHandler, sellPetsHandler, useHandler } from "./handlers/items.js";
 import { mailApplyHandler, mailReadHandler, tradeAckedHandler, tradeApplyHandler, tradeLockHandler, tradeUnlockHandler } from "./handlers/online.js";
@@ -37,6 +37,7 @@ const TX_COMMANDS = {
   "battle.mega": { handler: battleMegaHandler },
   "battle.form": { handler: battleFormHandler },
   "battle.reward": { handler: battleRewardHandler },
+  "battle.claim": { handler: battleClaimHandler },
   "mail.apply": { handler: mailApplyHandler },
   "mail.read": { handler: mailReadHandler },
   "egg.open": { handler: openHandler },

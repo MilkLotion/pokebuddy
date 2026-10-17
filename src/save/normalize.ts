@@ -348,7 +348,15 @@ function normalizeBattle(raw: unknown, pets: PetV3[]): BattleV3 {
   }
   // 보상을 받은 판 id — 글자만, 최근 200개 (서버 검증이 판 기록과 대조한다)
   const applied = isRawObject(raw) && Array.isArray(raw.applied) ? raw.applied.filter((x): x is string => typeof x === "string").slice(-200) : [];
-  return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(Object.keys(forms).length ? { forms } : {}), ...(applied.length ? { applied } : {}) };
+  // 받을 판 — 판 id(글자)와 포인트(0~500 정수)만, 같은 판은 한 번, 받은 판은 뺀다, 최근 20개 (src/battle/party.ts holdBattleReward)
+  const rawPending = isRawObject(raw) && Array.isArray(raw.pending) ? raw.pending : [];
+  const pending: { id: string; reward: number }[] = [];
+  for (const p of rawPending) {
+    if (!isRawObject(p) || typeof p.id !== "string" || !p.id || applied.includes(p.id) || pending.some((x) => x.id === p.id)) continue;
+    if (typeof p.reward === "number" && Number.isInteger(p.reward) && p.reward >= 0 && p.reward <= 500) pending.push({ id: p.id, reward: p.reward });
+  }
+  const keep = pending.slice(-20);
+  return { slots, ...(Object.keys(mega).length ? { mega } : {}), ...(Object.keys(forms).length ? { forms } : {}), ...(applied.length ? { applied } : {}), ...(keep.length ? { pending: keep } : {}) };
 }
 
 // unacked — 반영 알림을 기다리는 채널. 글자만, 같은 것은 한 번, 마지막 TRADE_UNACKED_MAX 개(src/trade/exchange.ts). 비면 칸을 두지 않는다

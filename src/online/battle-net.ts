@@ -1,5 +1,5 @@
 // 랜덤 배틀 서버 호출 — 상대 3개 받기(battle-offer)와 한 판(battle-start). 서버는 supabase/functions/battle-*
-// 판정·보상은 서버가 한다. 앱은 받은 판의 보상을 저장에 넣고(battle.reward 거래) 판을 배틀 창으로 재생한다
+// 판정·보상은 서버가 한다. 앱은 받은 판의 보상을 받을 판에 적고(battle.reward 거래) 판을 배틀 창으로 재생한다. 포인트는 창이 닫힐 때 받는다(battle.claim)
 // 규칙은 docs/specs/adventure.md "상대 고르기", "서버", 설계는 worklog/records/battle-server/battle-server.md "E3 서버 설계"
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCode } from "../shared/names/online-codes.js";
@@ -97,6 +97,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
         if (!r.ok) return fail(r);
         return { ok: true, code: null, offer: d.offerView(r.data) };
       }
+      d.run(`battle-claim:${Date.now()}`, "battle.claim", {}); // 앞 판에서 받지 못한 포인트를 먼저 받는다 — 없으면 바꾸지 않는다
       d.prepare?.(); // call 은 예외를 실패 답으로 바꾼다 — 실패면 아래에서 닫는다
       await d.beforeSend?.().catch(() => undefined);
       const r = await call<StartData>("battle-start", { offerId: a.offerId, pick: a.pick });
@@ -104,7 +105,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
         d.cancel?.();
         return fail(r);
       }
-      // 보상을 넣는다 — 거래 id 가 판 id 라 같은 판은 한 번만 들어간다. 넣지 못해도 판은 보여 준다
+      // 보상을 받을 판에 적는다 — 포인트는 배틀 창이 닫힐 때 오른다(2026-10-18 사용자 "확인버튼 누를때"). 거래 id 가 판 id 라 같은 판은 한 번만 적는다. 적지 못해도 판은 보여 준다
       const put = d.run(`battle-reward:${r.data.battleId}`, "battle.reward", { battleId: r.data.battleId, reward: r.data.reward });
       if (put.ok) d.onChanged();
       d.show(r.data, a.pick);

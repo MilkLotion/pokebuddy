@@ -217,9 +217,12 @@ export const canStartBattle = (save: Pick<SaveV3, "battle" | "pets">, opts?: Dex
   battleSlots(save).some((id) => id != null) && blockedSlots(save, opts).every((b) => b == null);
 
 // ── 랜덤 배틀 보상 ── 서버가 정한 판의 포인트를 넣고 판 id 를 남긴다. 같은 판은 두 번 넣지 않는다(applied: false)
+// 판을 받으면 받을 판(pending)에 적기만 하고, 배틀 창이 닫힐 때(결과의 `확인` 포함)·앱을 켤 때·다음 판을 시작할 때 받는다
+// (2026-10-18 사용자 "포인트는 배틀이 끝나고 확인버튼 누를때 오르면 좋겠어")
 // 서버 저장 검증이 battle.applied 의 새 판 id 를 판 기록과 대조한다 (src/verify/save-rules.ts battle)
 const BATTLE_REWARD_MAX = 500; // 그날 첫 판 — docs/specs/balance.md "배틀 보상"
 const APPLIED_KEEP = 200;
+const PENDING_KEEP = 20; // 받을 판 — 창을 닫지 못한 채 쌓여도 이만큼만(쿨타임 5분이라 넘을 일이 드물다)
 export function applyBattleReward(save: Battle & Pick<SaveV3, "points">, battleId: string, reward: number): Outcome<BattleFailure> & { applied?: boolean } {
   if (!battleId || !Number.isInteger(reward) || reward < 0 || reward > BATTLE_REWARD_MAX) return { ok: false, reason: "bad-args" };
   const battle = (save.battle ??= emptyBattle());
@@ -229,4 +232,24 @@ export function applyBattleReward(save: Battle & Pick<SaveV3, "points">, battleI
   applied.push(battleId);
   if (applied.length > APPLIED_KEEP) applied.splice(0, applied.length - APPLIED_KEEP);
   return { ok: true, applied: true };
+}
+
+// 받을 판에 적는다 — 포인트는 그대로다. 이미 받았거나 적은 판은 다시 적지 않는다(held: false)
+export function holdBattleReward(save: Battle, battleId: string, reward: number): Outcome<BattleFailure> & { held?: boolean } {
+  if (!battleId || !Number.isInteger(reward) || reward < 0 || reward > BATTLE_REWARD_MAX) return { ok: false, reason: "bad-args" };
+  const battle = (save.battle ??= emptyBattle());
+  if (battle.applied?.includes(battleId) || battle.pending?.some((p) => p.id === battleId)) return { ok: true, held: false };
+  const pending = (battle.pending ??= []);
+  pending.push({ id: battleId, reward });
+  if (pending.length > PENDING_KEEP) pending.splice(0, pending.length - PENDING_KEEP);
+  return { ok: true, held: true };
+}
+
+// 받을 판을 모두 받는다 — 판마다 applyBattleReward(같은 판은 한 번). 받은 포인트 합을 돌려준다. 받을 판이 없으면 0
+export function claimBattleRewards(save: Battle & Pick<SaveV3, "points">): number {
+  const pending = save.battle?.pending ?? [];
+  let points = 0;
+  for (const p of pending) if (applyBattleReward(save, p.id, p.reward).applied) points += p.reward;
+  if (save.battle) delete save.battle.pending;
+  return points;
 }
