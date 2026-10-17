@@ -5,6 +5,7 @@
 // - 창을 보내는 일은 파티 상세 기기 창 맞추기(syncPetDevice)가 한다 — 여기는 상태와 여닫기만
 import type { DexDeviceAction } from "../../shared/model/devices.js";
 import { api } from "./api.js";
+import { closeLayer, openLayer } from "./layers.js";
 
 export interface DexLinkHooks {
   pickClosed(): void; // 창이 닫혔다 — 도감 탭의 고른 칸을 비운다
@@ -26,7 +27,10 @@ let dexBesideSent: string | null = null; // 마지막으로 보낸 종
 let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
 
 // 도감 탭에서 고른 종을 띄운다. null 이면 닫는다
+// 열림 스택의 겹(layers.ts) — Esc 가 이 겹에 오면 ✕ 와 같이 닫으라고 보낸다. 메인의 닫힘 알림이 고른 칸을 비운다
 export function openDexPick(slug: string | null): void {
+  if (slug) openLayer("device:dex", () => openDexPick(null));
+  else closeLayer("device:dex");
   api.dexOpen(slug ? { slug, beside: false } : null, dexGen);
 }
 
@@ -53,6 +57,7 @@ export function syncDexBeside(species: string): boolean {
 
 export function closeDexBeside(): void {
   if (!dexBeside) return;
+  closeLayer("beside:dex");
   if (dexBesideSent) dexBesideClosing = true;
   dexBeside = false;
   dexBesideSent = null;
@@ -60,9 +65,13 @@ export function closeDexBeside(): void {
 }
 
 // 도감 보기 — 떠 있으면 닫는다. 관리 창 탭은 그대로다
+// 옆 도감은 파티 상세 겹에서 연 겹이다 — 파티 상세를 닫으면 같이 닫힌다(layers.ts)
 export function toggleDexBeside(): void {
   if (dexBeside) closeDexBeside();
-  else dexBeside = true;
+  else {
+    dexBeside = true;
+    openLayer("beside:dex", toggleDexBeside, { owner: "device:pet" });
+  }
   hooksOf().besideChanged();
 }
 
@@ -75,6 +84,7 @@ export function resendDex(pick: string | null): void {
 // 메인의 닫힘 알림
 export function onDexClosed(gen: number): void {
   dexGen = gen;
+  closeLayer("device:dex");
   hooksOf().pickClosed();
   // 우리가 닫은 창이다. 그사이 다시 켰으면 새 세대 번호로 다시 연다 — 닫히기 전에 보낸 여는 요청은 메인이 버렸다
   if (dexBesideClosing) {
@@ -87,6 +97,7 @@ export function onDexClosed(gen: number): void {
   }
   // 옆 도감 기기 창을 ✕·Esc 로 닫았다 — 파티 상세의 `도감 보기` 줄 톤을 끈다
   if (!dexBeside) return;
+  closeLayer("beside:dex");
   dexBeside = false;
   dexBesideSent = null;
   hooksOf().besideChanged();

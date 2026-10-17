@@ -7,10 +7,11 @@ import type { BridgeOf, Invoke, Push, Send } from "./kinds.js";
 //   show   창에 띄울 값
 //   size   그린 높이 — 창 높이를 내용에 맞춘다
 //   step   이전(-1) · 다음(1)
-//   close  닫기
+//   close  닫기(✕)
+//   escape Esc — 창을 닫지 않고 설정창에 알린다. 설정창이 열림 스택의 맨 위 겹을 닫는다 (src/renderer/manage/layers.ts)
 export type DeviceIpc<P extends string, View> = { [K in `${P}:show`]: Push<"onShow", [view: View]> } & { [K in `${P}:size`]: Send<"size", [height: number]> } & {
   [K in `${P}:step`]: Send<"step", [delta: -1 | 1]>;
-} & { [K in `${P}:close`]: Send<"close", []> };
+} & { [K in `${P}:close`]: Send<"close", []> } & { [K in `${P}:escape`]: Send<"escape", []> };
 // 누른 단추 — 설정창이 처리한다
 export type DeviceActIpc<P extends string, Action> = { [K in `${P}:act`]: Send<"act", [action: Action]> };
 // 코치마크(튜토리얼 말풍선)가 떴다·사라졌다 — 메인이 설정창의 창 단추 자리도 함께 어둡게 한다

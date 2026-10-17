@@ -9,7 +9,7 @@ import { drawSellPet } from "./pet-menu.js";
 import { drawSellDuplicates } from "./sell-dup.js";
 import { drawDaycare, drawHatched, drawUnder } from "./daycare.js";
 import { goTo, openDialogOrPet } from "./routes.js";
-import { coachIdOf, drawTutorial, restartAreaTutorial } from "./tutorial.js";
+import { coachIdOf, coachShown, drawTutorial, restartAreaTutorial } from "./tutorial.js";
 import { boxSlot, drawBox } from "./box-tab.js";
 import { drawBoxOrder } from "./box-order.js";
 import { drawPresetOverview } from "./preset-overview.js";
@@ -29,6 +29,7 @@ import { drawNotes, drawNotesNew, loadUpdate, openUnseenNotes, peekUpdate } from
 import { drawAchievements } from "./achievements.js";
 import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
+import { escapeTop } from "./layers.js";
 import { closeTabTip } from "./tab-tips.js";
 import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
@@ -276,9 +277,11 @@ needEl("open-user", HTMLButtonElement, "manage").addEventListener("click", () =>
 scrimEl.addEventListener("click", (e) => {
   if (e.target === scrimEl) dismissDialog();
 });
+// Esc — 열림 스택의 맨 위 겹을 한 단계 닫는다(layers.ts, C-13 닫기 규칙 9). 기기 창의 Esc 도 메인을 거쳐 여기로 온다(manage:escape).
+// 탭 화면의 입력칸(프리셋·박스 이름, 찾기 줄)은 그 칸이 Esc 를 쓴다 — 모달 안 입력칸은 지금처럼 모달을 물러난다
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && ui.dialog) dismissDialog();
-  else if (e.key === "Escape" && closeTabTip()) redrawBody(); // 모달이 없을 때 Esc 는 탭 팁 말풍선을 닫는다
+  const field = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+  if (e.key === "Escape" && (!field || (e.target instanceof Element && dialogEl.contains(e.target)))) escapeTop();
   // 부화 결과 창 — Space·Enter 는 `확인` 을 누른 것과 같다 (2026-10-02 사용자 결정). 누르고 있는 동안의 반복은 받지 않는다.
   // 단추에 포커스가 있을 때 브라우저가 한 번 더 누르지 않게 기본 동작을 막는다
   if (ui.dialog?.kind === "hatched" && (e.key === "Enter" || e.key === " ") && !e.isComposing) {
@@ -293,6 +296,9 @@ const firstDraw = loadArt().then(() => refreshView());
 void firstDraw.then(loadUpdate).then(openUnseenNotes);
 // 교환 상태 — 박스 머리 햄버거 단추의 진행 중 점에 쓴다. 뒤의 변경은 onTrade 로 온다
 void firstDraw.then(loadTrade);
+api.onEscape(() => {
+  if (!coachShown()) escapeTop();
+});
 api.onDexStep((delta) => stepDex(delta));
 api.onDexAct((action) => onDexAction(action));
 api.onDexClosed((gen) => onDexClosed(gen));

@@ -69,6 +69,8 @@ interface CoachSpec {
 const COACH = { pad: 8, gap: 12, ...COACH_SIZE };
 
 let coachEl: HTMLElement | null = null;
+// 코치마크가 떠 있다 — 기기 창에서 온 Esc 도 받지 않는다(설정창의 Esc 는 아래 잡는 단계에서 삼킨다)
+export const coachShown = (): boolean => coachEl !== null;
 // coachEl 의 초점 규칙과 대상 크기 감시 — 초점은 말풍선, 그리고 목표 행동이면 대상. 막 밖으로 Tab 이 나가면 말풍선 단추로 되돌린다
 let coachNow: CoachLayer | null = null;
 

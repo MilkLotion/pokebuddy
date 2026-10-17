@@ -61,6 +61,12 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   const shownModel = new Map<Shown, string>();
   const deviceFiles = (name: string) => ({ preload: deps.preload, html: path.join(path.dirname(deps.html), `${name}.html`) });
 
+  // 기기 창의 Esc — 설정창이 열림 스택의 맨 위 겹을 닫는다(모달이 위에 있으면 모달부터, src/renderer/manage/layers.ts). 설정창이 없으면 그 창만 닫는다
+  const escapeOr = (close: () => void) => (): void => {
+    if (deps.parent()) send("manage:escape");
+    else close();
+  };
+
   // 도감 기기 창 — 칸을 누르면 띄우고, 이전·다음은 관리 창 목록 순서를 따른다
   const dexWin = createDeviceWindow(deviceFiles("dex"), dexDeviceOf({
     detail: (slug) => detailOf(slug),
@@ -88,6 +94,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     volume,
   }), {
     onStep: (delta) => send("manage:dex-step", delta),
+    onEscape: escapeOr(() => dexWin.close()),
     onAct: (action) => send("manage:dex-act", action),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
     onClosed: (gen) => send("manage:dex-closed", gen),
@@ -104,6 +111,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     volume,
   }), {
     onStep: (delta) => send("manage:pet-step", delta),
+    onEscape: escapeOr(() => petWin.close()),
     onAct: (action) => send("manage:pet-act", action),
     onCoach: (on) => deps.setPetCoach(on),
     onClosed: (gen) => {
@@ -135,6 +143,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
 
   const shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:shop-step", delta),
+    onEscape: escapeOr(() => shopWin.close()),
     onAct: (action) => send("manage:shop-act", action),
     onClosed: (gen) => {
       shownModel.delete("shop");
@@ -144,6 +153,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   // 가방 기기 창 — 관리 창이 도구를 정해 보낸다. 사용·판매·파티 고르기·수량·이전·다음은 관리 창으로 돌려보낸다
   const bagWin = createDeviceWindow(deviceFiles("bag"), bagDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:bag-step", delta),
+    onEscape: escapeOr(() => bagWin.close()),
     onAct: (action) => send("manage:bag-act", action),
     onClosed: (gen) => {
       shownModel.delete("bag");
@@ -154,6 +164,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   // 배틀 파티 상세 기기 창 — 관리 창이 배틀 파티 칸을 정해 보낸다. 기술 순서 바꾸기·이전·다음은 관리 창으로 돌려보낸다
   const battleWin = createDeviceWindow(deviceFiles("battle"), battleDeviceOf({ ...deviceArt, cry: (slug) => cries.get(slug), volume }), {
     onStep: (delta) => send("manage:battle-step", delta),
+    onEscape: escapeOr(() => battleWin.close()),
     onAct: (action) => send("manage:battle-act", action),
     onClosed: (gen) => {
       shownModel.delete("battle");

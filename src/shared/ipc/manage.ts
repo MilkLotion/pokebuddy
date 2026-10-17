@@ -54,6 +54,8 @@ export type ManageCoreIpc = {
   "manage:trade": Push<"onTrade", [screen: TradeScreen]>; // 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과)
   "manage:copy": Send<"copyText", [text: string]>; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   "manage:guide": Send<"openGuide", [topic: string]>; // 탭 팁 말풍선의 `웹 가이드에서 더 보기` — 탭 이름만 보낸다. 주소와 절 앵커는 메인에 고정돼 있다
+  "manage:escape": Push<"onEscape", []>; // 기기 창에서 Esc 를 눌렀다 — 설정창이 열림 스택의 맨 위 겹을 닫는다 (layers.ts)
+  "manage:focus": Send<"focusManage", []>; // 설정창에 키 초점을 가져온다 — 기기 창 단추로 모달을 열었을 때. 인자 없음
   "manage:rights": Send<"openRights", []>; // 설정 바닥의 `저작권 안내` — 주소는 메인에 고정돼 있다. 렌더러는 주소를 넘기지 않는다
   "manage:account": Invoke<"account", [req: AccountAction], AccountReply | null>; // 계정 기능이 없거나 요청 모양이 틀리면 null(렌더러는 이미 null 을 다룬다)
   "manage:account-view": Push<"onAccount", [screen: AccountScreen]>; // 계정·저장 상태가 바뀌었다

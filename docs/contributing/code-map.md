@@ -238,6 +238,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 ### 설정창
 
 - **모달** — `dialog.ts` 의 `registerDialog`·`openAnyDialog`·`closeDialog`. 머리 줄은 `dialogHead`(✕ 가 필요하면 `{ close: true }`), 제목 묶음과 덧붙인 단추·✕ 를 한 줄에 두는 설정형 머리는 `widgets.ts` 의 `settingsHeadEl`(✕ 처리기는 모달이 넘긴다, CSS 는 `manage/dialog.css`), 바닥 단추 줄은 `actionsRowEl`·`actionButtonEl`, ✕ 는 `widgets.ts` 의 `dialogCloseEl`. 실패 문구는 바닥 단추 줄의 빈자리에 `drawDialog` 가 넣으므로 모달이 따로 그리지 않는다. 다른 모달 안에서 여는 모달은 `openSubDialog` 로 열고, ✕·Esc·가림막·확인 창의 `취소` 는 `dismissDialog`(한 단계 물러나기 — 하위 모달이면 부모로)를 쓴다. 모달을 떠날 때 지울 상태는 `registerDialog` 의 `leave` 에 둔다. 형태와 닫기 규칙은 `docs/specs/ui-components.md` C-13 이다.
+- **열림 스택(Esc)** — `layers.ts` 의 `openLayer`·`closeLayer`·`fromLayer`·`escapeTop`. 기기 창·옆 도감·모달·탭 팁·들기·타일 메뉴가 열고 닫을 때 겹을 넣고 뺀다. Esc 는 설정창 keydown 과 기기 창(`<기기>dev:escape` → 메인 → `manage:escape`) 모두 `escapeTop` 하나로 와서 맨 위 겹을 한 단계 닫는다. 기기 창 연결은 `createDeviceLink` 의 `layer` 로 겹을 정하고, 기기 창 단추로 연 모달은 `fromLayer` 로 그 기기 창 겹에 딸린다. 새로 Esc 로 닫히는 것을 만들면 따로 keydown 을 걸지 말고 겹을 넣는다. 규칙은 `docs/specs/ui-components.md` C-13 닫기 규칙 9 다.
 - **2단 모달** — 왼쪽 목록과 오른쪽 내용. 패치노트와 가이드북이 같은 틀이다(`update-notes.ts` 의 `notesHead`, CSS `notes-body`·`notes-list`·`notes-item`·`notes-detail`, 묶음 제목은 `guide-group`).
 - **가림막과 OS 창 단추** — 가림막은 `setScrim` 이 켜고 끈다. OS 가 그리는 창 단추 자리는 `tutorial.ts` 가 헤더를 덮은 막의 겹수(0·1·2)를 메인에 보내고, 메인 `manage/window.ts` 가 같은 겹수 색으로 칠한다. 막을 새로 겹치는 화면을 만들면 이 겹수 계산에 넣는다.
 - **헤더 아이콘의 열림 표시** — `registerDialog` 의 `headerButton` 으로 건다. 표시는 `setScrim` 이 맞춘다.

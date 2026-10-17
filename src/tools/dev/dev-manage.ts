@@ -41,12 +41,15 @@
 // `--scene <이름>` 을 주면 공용 틀의 장면(harness/scenes.ts)을 저장에 입힌다(여러 번). 예: done-all(튜토리얼 모두 끝남), rich(포인트 넉넉)
 // `--docs` 를 주면 문서 캡처용 저장으로 연다 — 파티 4마리를 모두 꺼내 두고 숨긴 마리가 없다. 교환 모달은 서버 없이 첫 화면을 보인다 (docs/images/README.md)
 // `--trade <offer|blocked|ready|error|empty>` 를 주면 교환 서버 없이 교환 모달의 제안·확정 화면을 보인다. 박스 탭의 `교환` 단추를 누른 뒤에 쓴다
+// `--key <키>` 를 주면 관리 창의 초점 있는 요소(없으면 문서)에 그 키의 keydown 을 보낸다(예: Escape). `--click` 과 적은 순서대로 한다.
+// `--device-key <창>=<키>` 를 주면 보이는 기기 창(예: pet.html)의 문서에 그 키의 keydown 을 보낸다 — 기기 창의 Esc 가 열림 스택을 따르는지 볼 때.
+// `--list-windows` 를 주면 찍기 직전에 보이는 창(페이지 이름)과 관리 창 모달이 떠 있는지를 `windows: …` 로 출력한다.
 // `--eval <js>` 를 주면 찍기 직전에 관리 창에서 그 식을 돌려 결과를 `eval: …` 로 출력한다 — 스크롤 높이 같은 값을 잴 때 쓴다
 // `--agents-connected` 를 주면 임시 HOME 의 Claude Code 에 우리 훅을 등록해 연결 탭의 `연결됨` 을 보인다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
 import fs from "node:fs";
 import path from "node:path";
-import { app, type WebContents } from "electron";
+import { app, BrowserWindow, type WebContents } from "electron";
 import type { SaveV3 } from "../../shared/save-v3";
 import { seededRand } from "../harness/clock";
 import { argAfter, argsAfter, hasFlag, windowOf } from "../harness/shot";
@@ -200,6 +203,9 @@ function seed(empty: (now: number) => SaveV3, now: number): SaveV3 {
 }
 
 // 기기 창 안의 요소를 누른다 — 칸을 누른 직후에는 기기 창이 아직 없거나 그리는 중이라 요소가 생길 때까지 잠깐 기다린다
+// 보이는 기기 창 — 예비 창(숨은 빈 창)도 같은 페이지라 보이는 것만 고른다
+const shownWindowOf = (page: string): BrowserWindow | undefined => BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && w.isVisible() && w.webContents.getURL().endsWith(page));
+
 async function clickInDevice(page: string, selector: string): Promise<void> {
   for (let n = 0; n < 20; n += 1) {
     const w = windowOf(page);
@@ -437,6 +443,18 @@ void app.whenReady().then(async () => {
       process.argv.forEach((flag, at) => {
         const value = process.argv[at + 1];
         if (flag === "--click" && value) step = step.then(() => click(`document.querySelector(${JSON.stringify(value)}).click(); true`));
+        // --key 는 관리 창 문서에 keydown 을, --device-key 는 보이는 기기 창 문서에 keydown 을 보낸다(Esc 열림 스택 확인)
+        if (flag === "--key" && value) step = step.then(() => click(`(document.activeElement ?? document).dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(value)}, bubbles: true })); true`));
+        if (flag === "--device-key" && value) {
+          const [page, key] = value.split("=");
+          step = step.then(() => {
+            const w = shownWindowOf(page ?? "");
+            if (!w) return undefined;
+            return w.webContents
+              .executeJavaScript(`document.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true })); true`)
+              .then(() => new Promise((r) => setTimeout(r, 800)));
+          });
+        }
         // --context 는 그 요소에 우클릭(contextmenu)을 보낸다 — 박스 순서 타일 메뉴처럼 창 안에서 여는 우클릭 메뉴를 찍을 때
         if (flag === "--context" && value)
           step = step.then(() =>
@@ -489,6 +507,11 @@ void app.whenReady().then(async () => {
       const wait = Number(argAfter("--wait")) || 0;
       step
         .then(() => new Promise((r) => setTimeout(r, wait)))
+        .then(() => {
+          if (!hasFlag("--list-windows")) return undefined;
+          const shown = BrowserWindow.getAllWindows().filter((w) => w.isVisible() && !w.isDestroyed()).map((w) => path.basename(w.webContents.getURL()));
+          return win.webContents.executeJavaScript("document.getElementById(\"scrim\")?.classList.contains(\"open\") ?? false").then((dialog: unknown) => void process.stdout.write(`windows: ${JSON.stringify(shown)} dialog: ${String(dialog)}\n`));
+        })
         .then(() => {
           const js = argAfter("--eval");
           // 실패하면 받은 식 글자를 같이 알린다 — 셸이 식을 공백에서 나눠 반쪽만 온 경우를 바로 가린다 (2026-10-04 렌더러 레인 탐침)

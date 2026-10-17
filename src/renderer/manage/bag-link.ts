@@ -53,6 +53,7 @@ export const bagLink = createDeviceLink<BagDeviceInput>({
   build: bagDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.bagOpen(input, gen),
+  layer: "device:bag",
   holding: () => bagSending, // 쓰기·팔기 중 — 결과가 붙은 뒤 한 번 보낸다 (device-link.ts)
   apply: (input) => {
     bagMode = input.mode;

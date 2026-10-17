@@ -9,6 +9,7 @@ import { sendCommand, whenSlow } from "./command.js";
 import { closeDexBeside, syncDexBeside, toggleDexBeside } from "./dex-link.js";
 import { createDeviceLink } from "./device-link.js";
 import { leavePet, openAnyDialog } from "./dialog.js";
+import { fromLayer } from "./layers.js";
 import { redrawBody } from "./shell.js";
 import { boxPets, findPartySlot, partyPets, petInView, ui } from "./state.js";
 
@@ -17,6 +18,7 @@ export const petLink = createDeviceLink<PetDeviceInput>({
   build: petDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.petOpen(input, gen),
+  layer: "device:pet",
   afterClosed: () => {
     if (!ui.detailPet) return false;
     ui.detailPet = null;
@@ -71,9 +73,12 @@ export function onPetAction(action: PetDeviceAction): void {
     toggleDexBeside();
     return;
   }
-  if (action.dialog === "evolve") openAnyDialog({ kind: "evolve", petId: id });
-  else if (action.dialog === "mega") openAnyDialog({ kind: "mega", petId: id });
-  else openAnyDialog({ kind: "nature", petId: id });
+  // 이 기기 창에서 연 모달 — 기기 창을 닫으면 같이 닫힌다(layers.ts)
+  fromLayer("device:pet", () => {
+    if (action.dialog === "evolve") openAnyDialog({ kind: "evolve", petId: id });
+    else if (action.dialog === "mega") openAnyDialog({ kind: "mega", petId: id });
+    else openAnyDialog({ kind: "nature", petId: id });
+  });
 }
 
 // 기기 창 단추의 명령 — 답이 늦으면 누른 단추만 처리 중 (94 2-1)

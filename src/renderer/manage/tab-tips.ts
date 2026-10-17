@@ -6,6 +6,7 @@
 import { buttonEl, el } from "../ui/dom.js";
 import { api } from "./api.js";
 import type { TabId } from "./dialog-types.js";
+import { closeLayer, openLayer } from "./layers.js";
 import { redrawBody } from "./shell.js";
 
 // 탭마다 제목과 세 줄 — 근거 수치는 docs/specs/balance.md, 배틀은 worklog/records/battle-balance 의 한 가지만 바꾼 실험
@@ -64,6 +65,7 @@ let open: TabId | null = null;
 export function closeTabTip(): boolean {
   if (!open) return false;
   open = null;
+  closeLayer("tip");
   return true;
 }
 
@@ -75,7 +77,14 @@ export function addTabTip(head: HTMLElement, tab: TabId): void {
   help.setAttribute("aria-expanded", String(open === tab));
   help.addEventListener("click", (e) => {
     e.stopPropagation(); // 바깥 누르기 닫기와 겹치지 않게
-    open = open === tab ? null : tab;
+    if (open === tab) closeTabTip();
+    else {
+      open = tab;
+      // 열림 스택의 겹(layers.ts) — Esc 가 이 겹에 오면 말풍선만 닫는다
+      openLayer("tip", () => {
+        if (closeTabTip()) redrawBody();
+      });
+    }
     redrawBody();
   });
   const title = head.querySelector("h1");

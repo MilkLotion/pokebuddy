@@ -6,7 +6,9 @@
 // - 아직 나뉘지 않은 쪽(검색·돌보미집 겹침·설정의 화면 표시·튜토리얼·경고 배너)은 설정창이 setDialogHooks 로 걸어 준다
 import { buttonEl, el, needEl } from "../ui/dom.js";
 import { closeIconEl } from "../ui/line-icons.js";
+import { api } from "./api.js";
 import type { Dialog } from "./dialog-types.js";
+import { closeLayer, openLayer } from "./layers.js";
 import { ui } from "./state.js";
 
 export const scrimEl = needEl("scrim", HTMLElement, "manage");
@@ -153,7 +155,12 @@ function leaveCurrent(next: Dialog | null): void {
 // 다른 모달로 바꾸면 부모 스택을 비운다. 같은 모달 안에서 값만 바꾸면(패치노트의 버전 고르기 등) 부모를 그대로 둔다
 // 개체 상세(`pet`)는 모달이 아니다 — routes.ts openDialogOrPet 이 먼저 가른다
 export function openDialog(next: Dialog): void {
-  if (ui.dialog?.kind !== next.kind) parents = [];
+  if (ui.dialog?.kind !== next.kind) {
+    parents = [];
+    // 열림 스택의 모달 겹 — 처음 뜨거나 다른 모달로 바뀌면 맨 위로(layers.ts). 기기 창 단추로 열었으면 키 초점이 그 기기 창에 있다 — 설정창으로 가져온다
+    openLayer("dialog", dismissDialog, { close: closeDialog, raise: true });
+    if (!document.hasFocus()) api.focusManage();
+  }
   leaveCurrent(next);
   moduleOf(next.kind).enter?.(next, ui.dialog);
   ui.dialog = next;
@@ -173,6 +180,7 @@ export function closeDialog(): void {
   leaveCurrent(null);
   parents = [];
   ui.dialog = null;
+  closeLayer("dialog");
   ui.notice = "";
   setScrim(false);
   hooksOf().afterEmpty();

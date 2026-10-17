@@ -4,6 +4,7 @@ import type { BattleDeviceAction, BattleDeviceInput } from "../../shared/model/d
 import { api } from "./api.js";
 import { createDeviceLink } from "./device-link.js";
 import { leavePet, openAnyDialog } from "./dialog.js";
+import { fromLayer } from "./layers.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 
@@ -19,6 +20,7 @@ export const battleLink = createDeviceLink<BattleDeviceInput>({
   },
   stamp: () => ui.view,
   open: (input, gen) => api.battleOpen(input, gen),
+  layer: "device:battle",
   afterClosed: () => {
     if (shownSlot == null) return false;
     shownSlot = null;
@@ -61,9 +63,9 @@ export function stepBattle(delta: -1 | 1): void {
 export function onBattleAction(action: BattleDeviceAction): void {
   const id = petAt(shownSlot);
   if (!id || action.petId !== id) return;
-  if (action.kind === "mega") {
-    openAnyDialog({ kind: "mega", petId: id, battle: true }); // 바탕화면 파티 상세와 같은 메가진화 창 — 배틀 파티의 메가 상태를 바꾼다
-    return;
-  }
-  openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 고른 칸 없이 열고, 상세 칸에 누른 칸의 기술을 보인다
+  // 이 기기 창에서 연 모달 — 기기 창을 닫으면 같이 닫힌다(layers.ts)
+  fromLayer("device:battle", () => {
+    if (action.kind === "mega") openAnyDialog({ kind: "mega", petId: id, battle: true }); // 바탕화면 파티 상세와 같은 메가진화 창 — 배틀 파티의 메가 상태를 바꾼다
+    else openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 고른 칸 없이 열고, 상세 칸에 누른 칸의 기술을 보인다
+  });
 }

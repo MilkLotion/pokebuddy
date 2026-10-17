@@ -4,6 +4,7 @@ import { boxUi, hold } from "./box-state.js";
 import { drawSlotGhost, dropZone, endHold, startDrag, startSlotHold } from "./box-move.js";
 import { sendCommand } from "./command.js";
 import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
+import { closeLayer, openLayer } from "./layers.js";
 import { openSwap } from "./party-swap.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
@@ -81,6 +82,8 @@ export function drawBoxOrder(): void {
       e.preventDefault();
       if (held) return;
       tileMenu = { boxId: box.id, x: e.clientX, y: e.clientY };
+      // 열림 스택의 겹 — 박스 순서 모달에서 연 메뉴라 모달이 닫히면 같이 닫힌다. Esc 는 메뉴만 닫는다(layers.ts)
+      openLayer("tile-menu", closeTileMenu, { owner: "dialog" });
       drawDialog();
     });
     tile.addEventListener("pointerdown", (e) => startDrag(e, tile, { box: box.id }));
@@ -114,22 +117,23 @@ function tileMenuEl(m: { boxId: string; x: number; y: number }): HTMLElement {
   move.addEventListener("click", (e) => {
     e.stopPropagation();
     tileMenu = null;
+    closeLayer("tile-menu");
     startSlotHold({ kind: "tile", boxId: m.boxId });
   });
   menu.appendChild(move);
   wrap.appendChild(menu);
   return wrap;
 }
-// 메뉴 밖을 누르거나 Esc 면 닫는다
+// 메뉴를 닫는다 — 메뉴 밖 누르기와 Esc(열림 스택의 맨 위일 때)
+function closeTileMenu(): void {
+  if (!tileMenu) return;
+  tileMenu = null;
+  closeLayer("tile-menu");
+  if (ui.dialog?.kind === "box-order") drawDialog();
+}
 document.addEventListener("click", (e) => {
   if (!tileMenu || (e.target instanceof Element && e.target.closest(".tile-menu"))) return;
-  tileMenu = null;
-  if (ui.dialog?.kind === "box-order") drawDialog();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape" || !tileMenu) return;
-  tileMenu = null;
-  if (ui.dialog?.kind === "box-order") drawDialog();
+  closeTileMenu();
 });
 
 // 박스를 to 자리로 옮긴다 — 보던 박스는 옮긴 뒤에도 같은 박스다

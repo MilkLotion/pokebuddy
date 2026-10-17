@@ -2,7 +2,7 @@
 // 계약 한 장을 wireIpc 로 건다 — 빠진 채널과 인자 모양은 컴파일이 잡는다. 보낸 창 검사는 묶음(scope)이 한다(내 창이 아니면 각 채널의 denied)
 // 기기 창 다섯과의 길(ManageDeviceLinkIpc)은 창 파일이 건다 (src/main/manage/window.ts)
 // (예전 src/main/manage-window.ts wire() 안에 있었다. 메인 레인 M6c 에서 나눴다)
-import { clipboard, shell } from "electron";
+import { BrowserWindow, clipboard, shell } from "electron";
 import type { ManageCoreIpc, ManageReply, ManageRequest } from "../../shared/ipc/manage";
 import type { GameV3 } from "../../tx/game.js";
 import { PATHS } from "../../platform/paths.js";
@@ -119,6 +119,10 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
     // 웹 가이드 — 탭 이름만 받는다. 정해 둔 주소만 기본 브라우저로 연다
     "manage:guide": (_e, topic) => {
       void shell.openExternal(guideUrl(topic));
+    },
+    // 설정창에 키 초점 — 기기 창 단추로 모달을 열었을 때. 인자를 받지 않고 보낸 창만 앞으로
+    "manage:focus": (e) => {
+      BrowserWindow.fromWebContents(e.sender)?.focus();
     },
     // 저작권 안내 — 인자를 받지 않는다. 정해 둔 주소만 기본 브라우저로 연다
     "manage:rights": () => {

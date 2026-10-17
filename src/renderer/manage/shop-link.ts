@@ -8,6 +8,7 @@ import { api } from "./api.js";
 import { lastReplyOf, sendCommand } from "./command.js";
 import { createDeviceLink } from "./device-link.js";
 import { openAnyDialog } from "./dialog.js";
+import { fromLayer } from "./layers.js";
 import { bodyEl, redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 
@@ -35,6 +36,7 @@ export const shopLink = createDeviceLink<ShopDeviceInput>({
   build: shopDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.shopOpen(input, gen),
+  layer: "device:shop",
   holding: () => shopSending, // 사는 중 — 결과가 붙은 뒤 한 번 보낸다 (device-link.ts)
   apply: (input) => {
     shopQty = input.qty;
@@ -95,7 +97,8 @@ export function onShopAction(action: ShopDeviceAction): void {
     return;
   }
   if (action.kind === "pool") {
-    openAnyDialog({ kind: "pool", productId: shopPick, page: 0 });
+    const productId = shopPick;
+    fromLayer("device:shop", () => openAnyDialog({ kind: "pool", productId, page: 0 })); // 기기 창을 닫으면 같이 닫힌다(layers.ts)
     return;
   }
   void buyShop(shopPick);

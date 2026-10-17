@@ -69,7 +69,7 @@ function isDexAction(v: unknown): v is DexDeviceAction {
 
 export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexDeviceView, DexDeviceAction> {
   return {
-    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close", act: "dexdev:act" } satisfies Record<string, DexDeviceChannel>,
+    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close", escape: "dexdev:escape", act: "dexdev:act" } satisfies Record<string, DexDeviceChannel>,
     isAction: isDexAction,
     size: DEVICE_SIZES.dex,
     keyOf: (o) => o.slug,
@@ -131,7 +131,7 @@ function isPetAction(v: unknown): v is PetDeviceAction {
 
 export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen, PetDeviceView, PetDeviceAction> {
   return {
-    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", act: "petdev:act", coach: "petdev:coach" } satisfies Record<string, PetDeviceChannel>,
+    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", escape: "petdev:escape", act: "petdev:act", coach: "petdev:coach" } satisfies Record<string, PetDeviceChannel>,
     size: DEVICE_SIZES.pet,
     keyOf: (o) => o.pet.id,
     // 메가 모습이면 그 초상이다 (PetView.look)
@@ -168,7 +168,7 @@ function isShopAction(v: unknown): v is ShopDeviceAction {
 
 export function shopDeviceOf(deps: DeviceArtDeps): DeviceSpec<ShopDeviceOpen, ShopDeviceView, ShopDeviceAction> {
   return {
-    channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
+    channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", escape: "shopdev:escape", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
     size: DEVICE_SIZES.shop,
     keyOf: (o) => o.productId,
     viewOf: async (o) => {
@@ -192,7 +192,7 @@ function isBagAction(v: unknown): v is BagDeviceAction {
 
 export function bagDeviceOf(deps: DeviceArtDeps): DeviceSpec<BagDeviceOpen, BagDeviceView, BagDeviceAction> {
   return {
-    channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
+    channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", escape: "bagdev:escape", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
     size: DEVICE_SIZES.bag,
     keyOf: (o) => o.itemId,
     viewOf: async (o) => {
@@ -217,7 +217,7 @@ function isBattleAction(v: unknown): v is BattleDeviceAction {
 
 export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen, BattleDeviceView, BattleDeviceAction> {
   return {
-    channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
+    channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", escape: "battledev:escape", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
     size: DEVICE_SIZES.battle,
     keyOf: (o) => o.slot.pet.id,
     viewOf: async (o) => {

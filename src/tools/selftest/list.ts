@@ -47,6 +47,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("snapshot-cache"),
   tool("devices"),
   tool("device-link"),
+  tool("layers"),
   tool("portrait-cache"),
   tool("view-order"),
   tool("command-reply"),

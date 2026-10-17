@@ -7,6 +7,8 @@
 // - holding: 그 기기 창의 명령을 보내는 중이면 true. 그동안 스냅샷이 바뀌어도 새로 보내지 않는다 — 결과가 붙기 전의 중간 장면을 한 번 그려
 //   상자 높이가 들썩이지 않게(상점·가방 결과 상자, 2026-10-05). 처리 중 점 표시는 sync(true) 로 보낸다. 닫기는 늘 보낸다
 // - 세대 번호 — 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다. 닫힘을 알기 전에 보낸 요청은 메인이 버린다 (src/main/device-gen.ts)
+// - layer — 열림 스택의 겹 이름(layers.ts). 창을 열면 겹을 넣고 닫히면 뺀다. Esc 가 이 겹에 오면 ✕ 와 같이 닫으라고 보낸다
+import { closeLayer, openLayer } from "./layers.js";
 
 export interface DeviceLink {
   sync(force?: boolean): void; // force — holding 중에도 보낸다(처리 중 점 표시)
@@ -22,6 +24,7 @@ export interface DeviceLinkOptions<I> {
   afterClosed: () => boolean; // 기기 창이 닫혔다 — 고른 것을 비운다. 다시 그릴 것이면 true
   redraw: () => void; // afterClosed 가 true 면 부른다
   holding?: () => boolean; // 명령을 보내는 중 — 새로 보내지 않는다
+  layer: string; // 열림 스택의 겹 이름 — "device:pet"
 }
 
 export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
@@ -30,6 +33,12 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
   let sent = ""; // 마지막으로 보낸 내용(바로잡은 값을 받으면 그 값) — 같으면 다시 보내지 않는다
   let asked = 0; // 보낸 요청 번호 — 늦은 답을 가린다
   let stamped: unknown = undefined; // 마지막으로 보낼 때의 스냅샷
+
+  // Esc 가 이 겹에 왔다 — 기기 창의 ✕ 와 같다. 메인이 창을 닫으면 onClosed 가 고른 것을 비운다
+  const closeByEscape = (): void => {
+    closeLayer(opts.layer);
+    void opts.open(null);
+  };
 
   function sync(force = false): void {
     const input = opts.build();
@@ -40,12 +49,14 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
       asked += 1;
       open = false;
       sent = "";
+      closeLayer(opts.layer);
       return;
     }
     const key = JSON.stringify(input);
     const stamp = opts.stamp();
     if (open && key === sent && stamp === stamped) return;
     const ask = ++asked;
+    if (!open) openLayer(opts.layer, closeByEscape);
     open = true;
     sent = key;
     stamped = stamp;
@@ -55,6 +66,7 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
         // 메인이 띄울 것이 없다고 닫았다
         open = false;
         sent = "";
+        closeLayer(opts.layer);
         return;
       }
       const fixedKey = JSON.stringify(fixed);
@@ -68,7 +80,10 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
     gen = next;
     open = false;
     sent = "";
-    if (opts.afterClosed()) opts.redraw();
+    // 고른 것을 먼저 비우고 겹을 뺀다 — 딸린 겹(옆 도감)을 닫으며 이 창을 다시 맞출 때 닫힌 창을 다시 열지 않게
+    const again = opts.afterClosed();
+    closeLayer(opts.layer);
+    if (again) opts.redraw();
   }
 
   return { sync, onClosed, isOpen: () => open };

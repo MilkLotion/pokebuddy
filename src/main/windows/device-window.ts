@@ -21,6 +21,7 @@ export interface DeviceChannels {
   size: string;
   step: string;
   close: string;
+  escape: string; // Esc — 설정창이 열림 스택으로 처리한다 (src/renderer/manage/layers.ts)
   act?: string; // 누르는 단추가 있는 창만
   cry?: string; // 울음소리를 내는 창만
   coach?: string; // 튜토리얼 코치마크를 띄우는 창만 — 떴다·사라졌다를 알린다
@@ -44,6 +45,7 @@ export interface DeviceHooks<Action> {
   onAct?(action: Action): void; // 누른 단추 — 설정창이 처리한다
   onCoach?(on: boolean): void; // 코치마크가 떴다·사라졌다. 창이 닫히면 false
   onClosed(gen: number): void; // 닫혔다 — 새 세대 번호를 설정창에 준다
+  onEscape?(): void; // Esc — 설정창에 알린다. 없으면 이 창을 닫는다
 }
 
 export interface DeviceWindow<Open> {
@@ -221,6 +223,7 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
     if (isStep(delta)) hooks.onStep(delta);
   });
   scope.on(CH.close, () => alive()?.close());
+  scope.on(CH.escape, () => (hooks.onEscape ? hooks.onEscape() : alive()?.close()));
   const act = CH.act;
   if (act && spec.isAction) {
     const isAction = spec.isAction;

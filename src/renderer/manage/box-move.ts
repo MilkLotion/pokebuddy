@@ -6,6 +6,7 @@
 import type { PetView } from "../../shared/model/snapshot.js";
 import { boxUi, hold, type DragFrom, type HeldSlot } from "./box-state.js";
 import { closeDialog, drawDialog } from "./dialog.js";
+import { closeLayer, openLayer } from "./layers.js";
 import { redrawBody, setTab } from "./shell.js";
 import { petInView, ui } from "./state.js";
 
@@ -44,6 +45,7 @@ export function startHold(petId: string): void {
     boxUi.renaming = false;
     boxUi.note = "";
     hold.box = { petId, boxId: box.id, slot, ghost: true };
+    openLayer("hold", cancelHold); // 열림 스택의 겹 — Esc 는 내려놓기(layers.ts)
     redrawBody();
     return;
   }
@@ -59,6 +61,7 @@ export function startSlotHold(next: HeldSlot, tab?: "party" | "adventure"): void
     ui.detailPet = null;
   }
   hold.slot = next;
+  openLayer("hold", cancelHold); // 열림 스택의 겹 — Esc 는 내려놓기(layers.ts)
   redrawBody();
   if (next.kind === "tile") drawDialog();
 }
@@ -67,6 +70,7 @@ export function startSlotHold(next: HeldSlot, tab?: "party" | "adventure"): void
 export function endHold(): void {
   hold.box = null;
   hold.slot = null;
+  closeLayer("hold");
   holdAt = null;
   holdGhost?.remove();
   holdGhost = null;
@@ -139,9 +143,6 @@ document.addEventListener("click", (e) => {
   if (!hold.box && !hold.slot) return;
   if (e.target instanceof Element && e.target.closest("[data-hold]")) return;
   cancelHold();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && (hold.box || hold.slot)) cancelHold();
 });
 
 // 끌어 놓을 수 있는 곳 — 끄는 중에 커서 아래에 오면 옅은 바탕(.drop-on)
