@@ -83,16 +83,21 @@ function subjectSpecies(): string | null {
   return ui.tab === "dex" ? hooksOf().dexPick() : (subjectPet()?.species ?? null);
 }
 
-// 대상의 배틀 파티 칸 — 모험은 고른 칸, 개체는 그 개체가 든 칸, 도감은 그 종이 든 첫 칸. 없으면 null (종 보기가 들어오면 바뀐다)
-function subjectBattleSlot(): number | null {
-  if (ui.tab === "adventure") return hooksOf().battleSlot();
-  const slots = ui.view?.battle.slots ?? [];
+// 대상의 배틀 정보 — 모험은 고른 칸, 개체는 배틀 파티에 들었으면 그 칸·아니면 그 개체의 종 보기(그 개체의 기술),
+// 도감은 그 종의 종 보기(종 기본 기술). 없으면 null (docs/specs/ui-components.md "기기 종류 탭", 배틀 기기 창 종 보기는 agent3 — adventure.md)
+function subjectBattle(): BattleTarget | null {
+  if (ui.tab === "adventure") {
+    const slot = hooksOf().battleSlot();
+    return slot == null ? null : { slot };
+  }
   if (ui.tab === "dex") {
     const slug = hooksOf().dexPick();
-    return slots.find((s) => s.pet && s.pet.species === slug)?.index ?? null;
+    return slug ? { species: slug, petId: null } : null;
   }
-  const id = subjectPet()?.id;
-  return id ? (slots.find((s) => s.pet?.id === id)?.index ?? null) : null;
+  const pet = subjectPet();
+  if (!pet) return null;
+  const slot = ui.view?.battle.slots.find((x) => x.pet?.id === pet.id)?.index;
+  return slot != null ? { slot } : { species: pet.species, petId: pet.id };
 }
 
 // 대상 상품 — 상점은 고른 상품, 가방은 그 도구를 파는 상품
@@ -116,7 +121,7 @@ function subjectItem(): string | null {
 function canShow(kind: DeviceKind): boolean {
   if (kind === "pet") return subjectPet() != null;
   if (kind === "dex") return subjectSpecies() != null;
-  if (kind === "battle") return subjectBattleSlot() != null;
+  if (kind === "battle") return subjectBattle() != null;
   if (kind === "shop") return subjectProduct() != null;
   return subjectItem() != null;
 }
@@ -184,10 +189,7 @@ export function deviceClosed(kind: DeviceKind): boolean {
 // 기기 연결이 띄울 것 — 지금 기기가 그 종류일 때만. 아니면 null(닫는다)
 export const petTarget = (): string | null => (shownKind() === "pet" ? (subjectPet()?.id ?? null) : null);
 export const dexTarget = (): string | null => besideOf("dex") ?? (shownKind() === "dex" && hasSubject() ? subjectSpecies() : null);
-// 배틀은 배틀 파티 칸({ slot }). 배틀 파티 밖의 종 보기({ species, petId })는 탭 배선에서 더한다 (BattleTarget, src/shared/model/devices.ts)
-export const battleTarget = (): BattleTarget | null => {
-  const slot = shownKind() === "battle" && hasSubject() ? subjectBattleSlot() : null;
-  return slot == null ? null : { slot };
-};
+// 배틀은 배틀 파티 칸({ slot }) 또는 배틀 파티 밖의 종 보기({ species, petId }) (BattleTarget, src/shared/model/devices.ts)
+export const battleTarget = (): BattleTarget | null => (shownKind() === "battle" && hasSubject() ? subjectBattle() : null);
 export const shopTarget = (): string | null => besideOf("shop") ?? (shownKind() === "shop" ? subjectProduct() : null);
 export const bagTarget = (): string | null => (shownKind() === "bag" ? subjectItem() : null);
