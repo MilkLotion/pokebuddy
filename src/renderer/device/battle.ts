@@ -1,6 +1,6 @@
 // 배틀 파티 상세 기기 창 — 메인이 만들어 보낸 배틀 파티 칸 하나를 그린다 (src/view/device-battle.ts, docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
-//   화면  `배틀 파티 N번` → 초상·이름·타입·특성 → 종족값 방사형 그래프(가운데 합계 숫자)
+//   화면  초상·이름·타입·특성 → 종족값 방사형 그래프(가운데 합계 숫자). 첫 줄은 없다(2026-10-18)
 //   특성 줄을 누르면 그 아래에 특성 설명 말풍선(Figma 05 `Adventure / Battle Party Device · Ability Info` `1896:984`)
 //   타입 줄 `상세보기` 를 누르면 그 아래에 상성 말풍선 — 방어 | 공격(자기 타입마다) (Figma 99 `Draft / Type Matchup Bubble` `2042:16836`, 2026-10-17)
 //   흰 판 기술 두 개(큰 기술 칸 + 분류·위력·명중·쿨타임)
@@ -147,10 +147,8 @@ function render(v: BattleDeviceView): void {
 
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
-  // 첫 줄 — `배틀 파티 N번`. 실패하면 이 자리의 글자·색만 실패 문구로 바꾼다(파티 상세와 같은 방식)
-  const where = el("div", v.notice ? "where bad" : "where", v.notice || v.caption);
-  if (v.notice) where.title = v.notice;
-  screen.appendChild(where);
+  // 첫 줄(`배틀 파티 N번`·실패 문구)은 두지 않는다 — 무엇을 보는지는 머리 탭이 말한다(2026-10-18 사용자 "배틀상세기기에도 똑같이 첫줄은 필요없어보여").
+  // 이 창의 단추(기술 칸·메가 표식)는 설정창 모달을 열 뿐이라 실패는 그 모달이 보인다
   const entry = el("div", "entry");
   const portrait = el("div", "portrait");
   const stage = el("div", "stage");

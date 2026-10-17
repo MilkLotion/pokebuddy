@@ -80,11 +80,92 @@
   background: var(--danger);
 }
 
-/* 랜덤 배틀 상대 고르기 — 프리셋 전체보기의 줄·칸 모양에 타입 배지와 실패 줄을 더한다 (docs/specs/adventure.md "상대 고르기")
-   줄은 늘 3개, 모달 높이는 같다. 실패 줄은 칸 자리에 회색 상자 하나 (Figma 99 `Draft / Battle Pick Row` Failed) */
-.dialog.battle-opponent .bo-list {
-  max-height: none;
-  overflow: visible;
+/* 랜덤 배틀 상대 고르기 — 내 파티 | VS | 상대 3파티, 파티마다 2열 3줄 전장 배치 (docs/specs/adventure.md "상대 고르기")
+   상대 묶음은 늘 3개, 모달 높이는 같다. 실패 묶음은 칸 자리에 회색 상자 하나
+   (Figma 99 `Draft / Battle Formation`·`Draft / VS Divider · Vertical` — 칸 48×62, 묶음 폭 내 100·상대 112, 2026-10-18) */
+.dialog.battle-opponent .bo-field {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+}
+.bo-foes {
+  display: flex;
+  gap: 4px;
+}
+.bo-party {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+  width: 112px;
+  padding: 4px 6px 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.bo-party:hover,
+.bo-party.on {
+  background: var(--accent-bg);
+}
+/* 내 파티 — 판(테두리·바탕) 없이 (2026-10-17 사용자 "내 파티는 박스로 하지말고") */
+.bo-party.mine {
+  width: 100px;
+  padding: 4px 0 0;
+  background: none;
+  border: 0;
+  cursor: default;
+}
+.bo-party.failed {
+  cursor: default;
+}
+.bo-party.failed:hover {
+  background: var(--surface);
+}
+.bo-party .po-name {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+.bo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  gap: 4px;
+}
+.bo-grid .bo-cell {
+  width: 48px;
+  height: 62px;
+  padding: 0;
+}
+/* 든 내 칸 — 톤 바탕만(색 테두리 없음). 빈 칸은 든 동안에만 놓을 자리로 누른다 */
+.bo-party.mine .bo-cell {
+  font: inherit;
+  cursor: pointer;
+}
+.bo-party.mine .bo-cell.held,
+.bo-party.mine .bo-cell:not(:disabled):hover {
+  background: var(--accent-bg);
+}
+.bo-party.mine .bo-cell:disabled {
+  cursor: default;
+}
+.bo-party.mine .bo-cell.blocked {
+  opacity: 0.45;
+}
+/* VS — 친선 배틀 만남 화면의 .fb-vs 를 세운 모양 */
+.fb-vs.vertical {
+  flex-direction: column;
+  width: 42px;
+  height: auto;
+}
+.fb-vs.vertical i {
+  flex: 1;
+  width: 1px;
+  height: auto;
 }
 .bo-cell {
   height: 74px;
@@ -118,7 +199,10 @@
   background: var(--surface);
 }
 .bo-failed {
-  height: 74px;
+  height: 194px; /* 칸 3줄(62×3 + 4×2) */
+  padding: 0 8px;
+  text-align: center;
+  word-break: keep-all;
   display: grid;
   place-items: center;
   background: var(--subtle);

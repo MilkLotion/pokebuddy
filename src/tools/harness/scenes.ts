@@ -395,6 +395,23 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, ids[3]!, ids[4]!, ids[5]!], mega: { [ids[5]!]: "charizard-mega-x" } };
     },
   },
+  "battle-ready": {
+    note: "랜덤 배틀을 걸 수 있는 배틀 파티 — battle 장면 뒤에 쓴다. 출전 불가(루기아·미라이돈) 칸을 이브이·팬텀으로 바꾼다. 상대 고르기 모달 확인용 (battle-ui-1017)",
+    apply: (s, now) => {
+      const slots = s.battle?.slots;
+      if (!slots) return;
+      for (const [at, species] of [[2, "eevee"], [4, "gengar"]] as const) {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
+        pet.level = 40;
+        pet.exp = expForLevel(growthOf(species), 40);
+        s.pets.push(pet);
+        s.petSeq = Math.max(s.petSeq, Number(pet.id.slice(1)));
+        addToBox(s.boxes, pet.id);
+        recordDex(s, species, false);
+        slots[at] = pet.id;
+      }
+    },
+  },
 };
 
 // 큰 저장 장면 — 쇼케이스 위에 개체를 채운다
