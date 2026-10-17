@@ -54,7 +54,7 @@
   "eelektross-mega": {"stats":[85,145,80,135,90,80],"ability":"eelevate"},
   "floette-mega": {"stats":[74,85,87,155,148,102],"ability":"fairy-aura"},
   "dragalge-mega": {"stats":[65,85,105,132,163,44],"ability":"regenerator"},
-  "zygarde-mega": {"stats":[216,70,91,216,85,100],"ability":"aura-break","baseAbility":true},
+  "zygarde-mega": {"stats":[216,70,91,216,85,100],"ability":"aura-break"},
   "diancie-mega": {"stats":[50,160,110,160,110,110],"ability":"magic-bounce"},
   "drampa-mega": {"stats":[78,85,110,160,116,36],"ability":"berserk"},
   "zeraora-mega": {"stats":[88,157,75,147,80,153],"ability":"volt-absorb","baseAbility":true},

@@ -12,6 +12,7 @@
 //   - 메가 모습은 종이 아니다(src/dex/mega.ts). 메가 개체는 배틀·탐험에서 이 값으로 싸운다 (2026-10-08 사용자 결정)
 //   - PokeAPI 에 특성이 없는 모습(레전드 Z-A 메가)은 기본 종(base)의 data/species-abilities.json 특성을 쓰고 baseAbility 를 적는다
 //     (2026-10-08 사용자 결정 "제안대로"). PokeAPI 에 생기면 그쪽을 쓴다
+//   - 기본 종 특성이 메가와 맞지 않는 모습은 PICKED_ABILITY 의 특성을 쓴다. 원작 특성이 공개되면 지운다
 import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
@@ -19,6 +20,10 @@ import { DATA_DIR, csv, must, runBuild, writeLineJson } from "./pokeapi-csv";
 const OUT = path.join(DATA_DIR, "mega-battle.json");
 const MEGA = path.join(DATA_DIR, "mega.json");
 const SPECIES_ABILITIES = path.join(DATA_DIR, "species-abilities.json");
+
+// 원작 특성이 공개되지 않은 메가 모습의 임의 특성
+// - zygarde-mega: 기본 종 특성(스웜체인지)을 쓰면 메가인 채로 퍼펙트폼으로 바뀌어 오라브레이크로 둔다 (2026-10-18 사용자 "임의로 오라브레이크넣자")
+const PICKED_ABILITY: Readonly<Record<string, string>> = { "zygarde-mega": "aura-break" };
 
 interface MegaBattle {
   stats: number[];
@@ -61,6 +66,7 @@ export async function build(): Promise<void> {
     if (!stats || stats.some((v) => !v)) throw new Error(`종족값이 없다: ${slug} ${no}`);
     const hit = firstAbility.get(no);
     if (hit) out[slug] = { stats, ability: hit.id };
+    else if (PICKED_ABILITY[slug]) out[slug] = { stats, ability: PICKED_ABILITY[slug] };
     else {
       out[slug] = { stats, ability: must(baseAbility[f.base], `기본 종 특성 ${f.base}`), baseAbility: true };
       fallback.push(slug);
