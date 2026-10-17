@@ -92,7 +92,7 @@ export function drawAgents(scroll: HTMLElement): void {
     return;
   }
   // Node.js 가 없는 동안 늘 보이는 경고 — 누를 때마다 생겼다 사라지는 것이 아니다 (Figma 05 `User / Connect · Node.js 없음` `1079:2477`)
-  if (agentNode === null) scroll.appendChild(alertEl("warn", "Node.js 가 없어요", "연결하려면 Node.js 를 설치한 뒤 다시 확인을 눌러 주세요"));
+  if (agentNode === null) scroll.appendChild(alertEl("warn", "Node.js 가 없어요", "연결하려면 Node.js 가 필요해요"));
   for (const row of agentRows) scroll.appendChild(agentRow(row));
   scroll.appendChild(el("div", "agents-note hint", "연결하면 각 CLI 설정에 훅을 넣어요. 해제하면 다시 빼요."));
 }

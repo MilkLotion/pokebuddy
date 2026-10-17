@@ -137,7 +137,7 @@ export function drawMovePick(): void {
 
   const list = el("div", "mp-list");
   // 칸을 고르면 이 자리의 글자만 바꾼다(줄을 끼우지 않는다)
-  list.appendChild(el("strong", "mp-label", target == null ? "기술 목록" : `기술 목록 · ${target + 1}번에 넣을 기술을 누르세요`));
+  list.appendChild(el("strong", "mp-label", "기술 목록")); // 조작 설명 글은 두지 않는다(2026-10-18 사용자 "그렇게 진행", worklog/records/battle-ui-1017 조작 설명 글 목록)
   for (const m of options) list.appendChild(optionEl(slot, m));
   if (options.length <= 2) list.appendChild(el("div", "mp-note", "진화하면 고를 수 있는 기술이 늘어나요"));
 

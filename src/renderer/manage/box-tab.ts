@@ -168,7 +168,7 @@ export function drawBox(v: Snapshot): void {
     if (pet.id === ui.detailPet) cell.classList.add("selected"); // 옆 기기 창에 떠 있는 개체
     if (pet.id === boxUi.find.pet) cell.classList.add("found"); // 박스 찾기의 지금 결과 — 옅은 바탕만
     if (boxHeld && boxHeld.boxId === box.id && boxHeld.slot === slot) cell.classList.add("dragging"); // 든 개체의 원래 칸 — 빈 칸처럼 흐리다
-    cell.title = `${pet.name} · 끌어서 옮기기`;
+    cell.title = pet.name;
     cell.addEventListener("pointerdown", (e) => {
       if (!hold.box) startDrag(e, cell, { boxId: box.id, slot });
     });
@@ -184,7 +184,6 @@ export function drawBox(v: Snapshot): void {
 function boxNameEl(box: BoxView): HTMLElement {
   if (!boxUi.renaming) {
     const name = buttonEl("label box-name", box.name);
-    name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
       boxUi.renaming = true;
       boxUi.sortOpen = false;

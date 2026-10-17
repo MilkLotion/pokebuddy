@@ -8,7 +8,7 @@ import type { BattleScreenInput } from "./battle-screen.js";
 export const FRIENDLY_TEXT = {
   title: "친선 배틀",
   friend: "친구", // 친구가 표시 이름이 없을 때
-  detail: "확인을 누르면 친구와 다시 준비할 수 있어요.",
+  detail: "", // 결과 대화상자 안내 줄 — 조작 설명이라 두지 않는다(2026-10-18 사용자 "이런것도 지워")
 } as const;
 
 type Pair<T> = [T, T];

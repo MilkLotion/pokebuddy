@@ -154,7 +154,7 @@ function drawMeet(f: FriendlyScreen, out: HTMLElement): void {
 export function drawFriendly(): void {
   const f = st.screen;
   // ✕ 는 한 단계 물러나기 (docs/specs/ui-components.md C-13 "닫기 규칙")
-  const top = settingsHeadEl("친선 배틀", { ...(f?.phase === "meet" ? { sub: "둘 다 준비하면 바로 시작해요" } : {}), onClose: dismissDialog });
+  const top = settingsHeadEl("친선 배틀", { onClose: dismissDialog });
   const out = el("div", "scroll");
   dialogEl.append(top, out);
   if (!f) {

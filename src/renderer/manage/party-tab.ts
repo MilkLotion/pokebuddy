@@ -121,7 +121,6 @@ function blankCard(slot: SlotView): HTMLElement {
 function presetNameEl(preset: Snapshot["party"]["preset"]): HTMLElement {
   if (!presetRenaming) {
     const name = buttonEl("label box-name", preset.name);
-    name.title = "눌러서 이름 바꾸기";
     name.addEventListener("click", () => {
       presetRenaming = true;
       redrawBody();

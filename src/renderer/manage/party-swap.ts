@@ -114,7 +114,7 @@ export function drawSwap(): void {
       return {
         disabled: mine || !slot, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
         off: mine,
-        ...(mine ? { title: `${pet.name} · 지금 파티에 있어요` } : !slot ? { title: `${pet.name} · 오른쪽에서 넣을 칸을 먼저 누르세요` } : {}),
+        ...(mine ? { title: `${pet.name} · 지금 파티에 있어요` } : {}),
         pick: () => {
           if (slot) bring(v, pet.id, slot);
         },

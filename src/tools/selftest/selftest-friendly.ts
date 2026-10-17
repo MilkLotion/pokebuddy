@@ -44,7 +44,7 @@ process.stdout.write("(1) 링크  ok\n");
   assert.equal(host.result.winner, 0);
   assert.equal(host.opponentName, "지우");
   assert.equal(host.title, FRIENDLY_TEXT.title);
-  assert.deepEqual(host.reward, { lead: "", detail: "확인을 누르면 친구와 다시 준비할 수 있어요." }, "보상 줄 없음 (2026-10-10 사용자 \"친선 배틀이라 보상은 없어요 삭제\")");
+  assert.deepEqual(host.reward, { lead: "", detail: "" }, "보상 줄·안내 줄 없음 (2026-10-10 사용자 \"친선 배틀이라 보상은 없어요 삭제\", 2026-10-17 \"이런것도 지워\")");
   const guest = friendlyScreenInput(fake, "guest", null);
   assert.equal(guest.result.winner, 1, "참가자에게는 방장의 승리가 패배");
   assert.deepEqual(guest.sides, [["guest"], ["host"]]);

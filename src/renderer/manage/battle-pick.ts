@@ -72,7 +72,7 @@ export function drawBattlePick(): void {
       return {
         disabled: other || target == null, // 처리 중 막기는 sendCommand 가 한다 — 칸에 굳혀 두면 명령 뒤 다시 그린 칸이 계속 막힌다
         off: other,
-        ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : target == null ? { title: `${pet.name} · 오른쪽에서 넣을 칸을 먼저 누르세요` } : {}),
+        ...(other ? { title: `배틀 파티 ${at + 1}번 칸에 있어요` } : {}),
         pick: () => {
           if (target != null) change("battle.set", { slotIndex: target, petId: pet.id });
         },

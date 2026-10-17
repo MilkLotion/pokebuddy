@@ -8,7 +8,7 @@ import { goTo, openDialogOrPet } from "./routes.js";
 import { redrawBody, setTab } from "./shell.js";
 import { ui } from "./state.js";
 import { restartTutorialSteps } from "./tutorial.js";
-import { notesHead } from "./update-notes.js";
+import { settingsHeadEl } from "./widgets.js";
 import { NATURE_SHOWN } from "../../shared/features.js";
 
 // 가이드 — 다섯 주제. 숫자는 적지 않는다. 밸런스 값이 바뀌어도 이 문구가 어긋나지 않게 한다
@@ -124,7 +124,7 @@ function guideDetail(pick: string): HTMLElement {
 // ✕ 는 설정으로 돌아간다 — 설정에서 열었다
 export function drawGuide(pick?: string): void {
   const current = pick ?? GUIDE[0]!.title;
-  dialogEl.appendChild(notesHead("가이드북", "궁금한 것을 고르세요", dismissDialog)); // ✕ 는 Esc·가림막과 같다 — 설정으로 돌아간다
+  dialogEl.appendChild(settingsHeadEl("가이드북", { onClose: dismissDialog })); // ✕ 는 Esc·가림막과 같다 — 설정으로 돌아간다
   const body = el("div", "notes-body");
   const list = el("div", "notes-list scroll");
   const item = (key: string, label: string): void => {
