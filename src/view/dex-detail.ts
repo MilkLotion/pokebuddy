@@ -2,7 +2,7 @@
 //
 // 1000종이 넘는 목록에 상세를 모두 싣지 않는다. 칸을 누를 때 한 종만 만든다.
 // 입수 경로는 코드가 실제로 쓰는 규칙을 따른다
-//   첫 선택 후보   data/unlocks.json 의 starter
+//   첫 선택 후보는 적지 않는다 — 첫 실행의 고르기는 입수처로 보이지 않는다 (2026-10-18 사용자 "스타팅포켓몬들 입수처에 첫 선택 후보 제거")
 //   랜덤알         해금한 종 가운데 랜덤알에서 나올 수 있는 종이 후보다 (src/shop/catalog.ts inRandomEgg)
 //   종 목록 알     data/eggs.json 의 종 목록 — 태고의돌(화석)과 단일 포켓몬 알(전설·준전설·환상·울트라비스트)
 //   진화           data/evo.json 을 거꾸로 — 앞 단계 종에서 진화한다
@@ -11,7 +11,6 @@
 // 미해금 종은 이름·타입과 진화 줄을 숨긴다. 진화 줄은 다음 종 이름을 드러내기 때문이다.
 // 입수 방법은 보인다 (docs/specs/game.md "도감에서 구매·알·진화의 입수 조건은 명확히 표시한다")
 import { profileOf } from "../dex/species.js";
-import { unlockRules } from "../dex/unlocks.js";
 import { nextOf, prevOf } from "../dex/evo.js";
 import type { DexOptions } from "../dex/data.js";
 import { hasObtained, hasShiny, hasUnlocked } from "../dex/record.js";
@@ -116,7 +115,6 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
   const state = obtained ? "obtained" : unlocked ? "unlocked" : "locked";
 
   const methods: string[] = [];
-  if (unlockRules(opts)[slug]?.starter) methods.push("첫 선택 후보");
   const prev = prevOf(slug, opts);
   if (prev) methods.push(`${knownName(save, prev)}에서 진화${nextOf(prev, opts).some((s) => s.to === slug && s.map) ? MAP_MARK : ""}`);
   const random = eggName("random", opts) ?? "랜덤알";

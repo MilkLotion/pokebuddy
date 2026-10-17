@@ -23,14 +23,14 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 획득한 첫 선택 후보 — 파이리
+// (1) 획득한 첫 선택 후보 — 파이리. 입수처에 첫 선택 후보는 적지 않는다 (2026-10-18)
 {
   const d = dexDetail(seed(), "charmander");
   assert.ok(d);
   assert.equal(d.name, "파이리");
   assert.equal(d.state, "obtained");
   assert.deepStrictEqual(d.types, ["불꽃"]);
-  assert.equal(d.methods, "첫 선택 후보 · 랜덤알", "첫 선택 후보이고 해금했으니 랜덤알에서 나온다. 상점 줄은 잠시 숨김");
+  assert.equal(d.methods, "랜덤알", "해금했으니 랜덤알에서 나온다. 첫 선택 후보는 적지 않는다. 상점 줄은 잠시 숨김");
   assert.equal(d.evolution, "Lv.16에서 리자드로 진화");
   assert.equal(d.gimmick, "없음");
   process.stdout.write("(1) 획득 · 첫 선택 후보와 진화 조건  ok\n");
