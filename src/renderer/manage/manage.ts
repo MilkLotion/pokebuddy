@@ -110,6 +110,10 @@ setDeviceKindHooks({
     else leaveBag();
   },
   redraw: () => redrawBody(),
+  syncBeside: () => {
+    syncDexDevice();
+    syncShopDevice();
+  },
 });
 
 // 상점 기기 창의 이전·다음 — 상점 탭이 보이는 순서로 돈다

@@ -27,6 +27,19 @@ import { formFields } from "./dex-list.js";
 import { shopIconKey } from "./device-art.js";
 import { numberText } from "../shared/count-text.js";
 
+// 상점에서 파는 알 상품 id — 저장과 상관없이 자료(data/eggs.json 의 가격)만으로 정해진다. 자료 표를 열쇠로 한 번 만든다 (실행 규칙 R6).
+// 도감 기기 창의 입수처 알 링크도 이것으로 거른다 — 스냅샷을 만들지 않는다 (src/main/manage/devices.ts products)
+const eggSaleMemo = new WeakMap<object, ReadonlySet<string>>();
+export function eggProductIds(opts?: DexOptions): ReadonlySet<string> {
+  const table = eggTable(opts);
+  let ids = eggSaleMemo.get(table);
+  if (!ids) {
+    ids = new Set(Object.keys(table).filter((kind) => eggPrice(kind, opts) !== null));
+    eggSaleMemo.set(table, ids);
+  }
+  return ids;
+}
+
 // 상점에 늘어놓을 상품. 살 수 없으면 이유를 함께 준다 — 화면이 비활성으로 그린다
 export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
   const out: ShopItemView[] = [];
@@ -68,8 +81,7 @@ export function shopList(save: SaveV3, opts?: DexOptions): ShopItemView[] {
     entries.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0)); // 도감 번호 순 — 도감과 같다
     return { pool: { single: isSingleEgg(kind, opts), entries } };
   };
-  for (const kind of Object.keys(eggTable(opts))) {
-    if (isMetaKey(kind)) continue;
+  for (const kind of eggProductIds(opts)) {
     const price = eggPrice(kind, opts);
     if (price === null) continue;
     add({

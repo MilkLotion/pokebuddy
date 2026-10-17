@@ -12,6 +12,7 @@ import { gainOf } from "../../state/settings.js";
 import { SOUND_RULES } from "../../state/rules.js";
 import { bagDeviceModel } from "../../view/device-bag.js";
 import { battleDeviceModel } from "../../view/device-battle.js";
+import { eggProductIds } from "../../view/shop-list.js";
 import { petDeviceModel } from "../../view/device-pet.js";
 import { shopDeviceModel } from "../../view/device-shop.js";
 import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
@@ -95,7 +96,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     },
     cry: (slug) => cries.get(slug),
     volume,
-    products: () => new Set((snapshot()?.shop ?? []).map((p) => p.id)), // 입수처의 알 링크는 지금 파는 상품만
+    products: () => eggProductIds(), // 입수처의 알 링크는 상점에서 파는 알만 — 자료로 정해져 스냅샷을 만들지 않는다 (src/view/shop-list.ts)
   }), {
     onStep: (delta) => send("manage:dex-step", delta),
     onEscape: escapeOr(() => dexWin.close()),

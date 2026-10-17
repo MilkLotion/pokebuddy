@@ -20,6 +20,18 @@ export const partyPets = (): PetView[] => (ui.view ? ui.view.party.slots.map((s)
 
 export const boxPets = (): PetView[] => (ui.view ? ui.view.boxes.flatMap((b) => b.slots.filter((p): p is PetView => p != null)) : []);
 
-export const petInView = (id: string): PetView | null => [...partyPets(), ...boxPets()].find((p) => p.id === id) ?? null;
+// 스냅샷 객체를 열쇠로 id 색인을 한 번 만든다 — 기기 연결 한 번에 여러 번 찾아도 파티·박스를 한 번만 펼친다.
+// ui.view 는 새 스냅샷으로만 바뀌고 제자리에서 고치지 않는다(live.ts). 같은 id 면 파티 쪽이 먼저다
+const petIndex = new WeakMap<object, Map<string, PetView>>();
+export const petInView = (id: string): PetView | null => {
+  if (!ui.view) return null;
+  let index = petIndex.get(ui.view);
+  if (!index) {
+    index = new Map();
+    for (const p of [...partyPets(), ...boxPets()]) if (!index.has(p.id)) index.set(p.id, p);
+    petIndex.set(ui.view, index);
+  }
+  return index.get(id) ?? null;
+};
 
 export const findPartySlot = (id: string): number | null => ui.view?.party.slots.find((s) => s.pet?.id === id)?.index ?? null;

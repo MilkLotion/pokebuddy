@@ -22,6 +22,7 @@ export interface DeviceKindHooks {
   bagPick(): string | null; // 가방 탭의 고른 도구
   closeSubject(tab: TabId): void; // 보이던 기기 창을 닫았다 — 그 탭의 고른 것을 비운다
   redraw(): void;
+  syncBeside(): void; // 옆 창과 그 링크를 그리는 기기 창(도감·상점)만 맞춘다 — 본문은 옆 창 상태를 그리지 않는다
 }
 let hooks: DeviceKindHooks | null = null;
 export function setDeviceKindHooks(next: DeviceKindHooks): void {
@@ -137,7 +138,7 @@ function mainKey(): string {
 export function openBeside(kind: BesideKind, id: string): void {
   if (!hasSubject() || kind === shownKind()) return;
   beside = beside?.kind === kind && beside.id === id ? null : { kind, id, tab: ui.tab, base: mainKey() };
-  hooksOf().redraw();
+  hooksOf().syncBeside();
 }
 
 // 옆 창으로 띄운 대상 — 그 종류의 옆 창이 없으면 null
@@ -147,7 +148,7 @@ export const besideOf = (kind: BesideKind): string | null => (beside?.kind === k
 export function moveBeside(id: string): void {
   if (!beside) return;
   beside = { ...beside, id };
-  hooksOf().redraw();
+  hooksOf().syncBeside();
 }
 
 // 머리의 종류 탭 — 지금 기기가 속한 묶음의 고정 순서

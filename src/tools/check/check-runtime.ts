@@ -25,10 +25,9 @@ const tsFiles = (root: string, dir: string): string[] => {
 export function findRuntime(root: string = ROOT): string[] {
   const found: string[] = [];
   for (const name of tsFiles(root, LINK_DIR)) {
-    const lines = fs.readFileSync(path.join(root, LINK_DIR, name), "utf8").split(/\r?\n/);
-    lines.forEach((line, i) => {
-      if (/stamp:\s*\(\)\s*=>\s*ui\.view\b/.test(line)) found.push(`link-stamp: ${slash(path.join(LINK_DIR, name))}:${i + 1}`);
-    });
+    // 줄 번호는 적지 않는다 — 같은 파일의 다른 곳을 고쳐 줄이 밀려도 기준이 낡지 않는다 (2026-10-18)
+    const text = fs.readFileSync(path.join(root, LINK_DIR, name), "utf8");
+    if (/stamp:\s*\(\)\s*=>\s*ui\.view\b/.test(text)) found.push(`link-stamp: ${slash(path.join(LINK_DIR, name))}`);
   }
   for (const name of tsFiles(root, DEVICE_DIR)) {
     if (name === FRAME) continue;
