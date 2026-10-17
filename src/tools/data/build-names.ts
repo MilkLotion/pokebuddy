@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Lang } from "../../shared/species";
 import { DATA_DIR, csv, readDex, runBuild } from "./pokeapi-csv";
-import { regionalOf } from "../../dex/regional";
+import { formLabelOf, lookFormOf, regionalOf } from "../../dex/regional";
 import { writeTextIfChanged } from "./write-text";
 
 const LANG: Record<Lang, string> = { ko: "3", en: "9" };
@@ -94,6 +94,17 @@ export async function build(): Promise<void> {
     return [base, f.form].filter(Boolean).join(" ").trim() || f.pokemon || base;
   };
 
+  // 한국어 모습 이름은 `<종 이름>(<모습>)` 이다 — 특수 폼과 같은 규칙(docs/specs/game.md 특수 폼). 겉모습은 data/regional.json labels, 그 밖의 폼은 PokeAPI 폼 이름.
+  // 모습 이름이 종 이름을 품으면(지우개굴닌자) 그대로 쓴다 (2026-10-18 사용자 "진행" — 케르디오 각오의 모습 → 케르디오(각오의 모습))
+  const koFormName = (key: string, sp: Partial<NameEntry> | undefined, fn: Partial<Record<Lang, FormName>> | undefined): string | null => {
+    const base = sp?.ko;
+    const label = (lookFormOf(key) ? formLabelOf(key) : null) ?? fn?.ko?.form ?? null;
+    if (!base || !label || !key.includes("-")) return null;
+    if (label.includes(base)) return label;
+    if (fn?.ko?.pokemon && fn.ko.pokemon !== base && fn.ko.pokemon.includes(base) && !lookFormOf(key)) return null; // 온전한 이름(히트로토무)은 pick 이 고른다
+    return `${base}(${label})`;
+  };
+
   const out: Record<string, NameEntry> = {};
   const missing: string[] = [];
   for (const slug of Object.keys(dex).sort()) {
@@ -103,7 +114,7 @@ export async function build(): Promise<void> {
     const fid = key.includes("-") ? formId[key] : undefined;
     const fn = fid ? formNames[fid] : undefined;
     const form = regionalOf(key);
-    const entry = (form ? { ko: form.ko, en: form.en } : undefined) ?? OVERRIDES[key] ?? { ko: pick("ko", sp, fn), en: pick("en", sp, fn) };
+    const entry = (form ? { ko: form.ko, en: form.en } : undefined) ?? OVERRIDES[key] ?? { ko: koFormName(key, sp, fn) ?? pick("ko", sp, fn), en: pick("en", sp, fn) };
     if (!entry.ko || !entry.en) missing.push(key);
     if (entry.ko || entry.en) out[key] = entry;
   }

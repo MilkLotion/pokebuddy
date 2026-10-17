@@ -17,6 +17,7 @@ const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.rea
 import { formsOf, isFormLocked, tickFormWork, isSinglePet, setForm } from "../../dex/forms";
 import { SHIFT_RULES } from "../../dex/rules";
 import { recordDex } from "../../dex/record";
+import { addToBox } from "../../box/slots";
 import { formLabelOf, hatchVariants, isDexEntry, otherFormsOf } from "../../dex/regional";
 import { callRider, riderCall } from "../../party/riders";
 import { snapshotView } from "../../view/snapshot";
@@ -341,6 +342,16 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(["burmy", "burmy-sandy", "unown-b", "meowth-alola"].map((s) => isDexEntry(s)), [true, false, false, true], "도감 칸은 기본 종·리전폼");
   assert.equal(formLabelOf("vivillon-polar"), "설국의 모양");
   assert.ok(hatchVariants("oricorio").length === 4 && hatchVariants("flabebe").length === 5, "춤추새·플라베베 알 모습");
+  // 모습 이름은 `<종>(<모습>)` — 파티·박스·도감이 같은 이름이고, 파티·박스 칸은 이름과 모습을 두 줄로 나눈다 (2026-10-18 사용자 "진행")
+  const nm = empty(T0);
+  nm.pets.push(pet({ id: "k1", species: "keldeo-resolute" }), pet({ id: "u1", species: "unown-b" }));
+  nm.party.slots[0] = { state: "pokemon", petId: "k1", hidden: false };
+  addToBox(nm.boxes, "u1");
+  recordDex(nm, "keldeo-resolute", false);
+  const nv = snapshotView(nm, T0);
+  assert.deepStrictEqual([nv.party.slots[0]?.pet?.name, nv.party.slots[0]?.pet?.nameParts], ["케르디오(각오의 모습)", { name: "케르디오", form: "각오의 모습" }], "파티 칸 이름");
+  assert.equal(nv.boxes[0]?.slots.find((p) => p?.id === "u1")?.name, "안농(B)", "박스 칸 이름");
+  assert.equal(dexDetail(nm, "keldeo-resolute")?.name, "케르디오(각오의 모습)", "도감 이름");
   process.stdout.write("(12c-2d) 진화 모습·알 모습·다른 모습·도감 칸  ok\n");
 }
 
