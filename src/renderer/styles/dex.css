@@ -59,9 +59,133 @@
 .stage .shiny-toggle.on svg {
   opacity: 1;
 }
+/* 울음소리 — 초상 칸 오른쪽 위 음표 둥근 단추, 이로치 단추는 그 아래 (2026-10-18 사용자 "울음소리는 프로필의 우상단에 … 이로치를 아래로", Figma 99 `cry-button`).
+   이로치 단추와 같은 28 원 */
+.stage .cry-toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.stage .cry-toggle:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.stage .cry-toggle + .shiny-toggle {
+  top: 40px;
+}
 /* 미해금 — 모양만 검게 보인다 (2026-09-27 사용자 결정 "모든 미해금에 다 하자") */
 .locked .stage canvas {
   filter: brightness(0);
+}
+/* 바닥 줄 가운데 — 쪽 점. 지금 쪽만 머리 표시등 색, 나머지는 흰색 30%. 다른 모습이 없는 종은 빈 칸 (Figma 99 `Draft / Device Controls · Pages`) */
+.controls .pages {
+  flex: 1;
+  height: 30px;
+  border-radius: 15px;
+  background: var(--bezel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.controls .pages .page-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+.controls .pages .page-dot.on {
+  background: #8fe0d6;
+}
+.controls .pages .page-dot:hover:not(.on) {
+  background: rgba(255, 255, 255, 0.55);
+}
+/* 2쪽(모습) — 화면이 1쪽 높이를 채우고, 요약 줄 아래 모습 칸이 도감 탭 칸처럼 셋씩 (Figma 99 `Draft / Dex Device · 모습 모아 보기`) */
+.forms-bezel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.forms-bezel .screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.forms-bezel .form-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+}
+.forms-summary {
+  padding: 8px 10px 0;
+  font-family: var(--font-small);
+  font-size: 10px;
+  color: var(--soft);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+.form-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.form-card.on {
+  background: #e3efe9;
+}
+.form-card.locked {
+  background: #e6e4dc;
+}
+.form-card .form-art {
+  width: 40px;
+  height: 40px;
+}
+.form-card .art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-view-box: inset(14%);
+  image-rendering: pixelated;
+}
+.form-card.locked .art {
+  filter: brightness(0);
+}
+.form-card .form-name {
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+.form-card .form-no {
+  font-family: var(--font-small);
+  font-size: 10px;
+  color: var(--muted);
 }
 .types {
   display: flex;

@@ -26,6 +26,8 @@ let open = false;
 let sent = ""; // 마지막으로 보낸 값(종·종류 탭) — 같으면 다시 보내지 않는다
 // 도감 탭 밖에서 연 도감의 진화 트리에서 누른 종 — 대상(base)이 바뀌면 버린다
 let treePick: { base: string; slug: string } | null = null;
+// 2쪽(모습)에서 누른 모습 — 격자의 고른 칸(기본 종)은 그대로 두고 기기 창만 그 모습을 보인다. 대상(base)이 바뀌면 버린다 (2026-10-18)
+let formPick: { base: string; slug: string } | null = null;
 
 // Esc 가 이 겹에 왔다 — 기기 창의 ✕ 와 같다. 메인의 닫힘 알림이 고른 것을 비운다
 function closeByEscape(): void {
@@ -38,7 +40,8 @@ function closeByEscape(): void {
 export function syncDexDevice(force = false): void {
   const base = dexTarget();
   if (treePick && treePick.base !== base) treePick = null;
-  const slug = base ? (treePick?.slug ?? base) : null;
+  if (formPick && formPick.base !== base) formPick = null;
+  const slug = base ? (formPick?.slug ?? treePick?.slug ?? base) : null;
   if (!slug) {
     if (open || sent) api.dexOpen(null, dexGen);
     open = false;
@@ -63,6 +66,14 @@ export function onDexAction(action: DexDeviceAction): void {
   // 입수처의 알 링크 — 그 상품의 상점 기기 창을 옆 창으로 연다. 다시 누르면 닫는다 (docs/specs/ui-components.md "링크 글자")
   if (action.kind === "shop") {
     openBeside("shop", action.productId);
+    return;
+  }
+  // 2쪽(모습)의 칸 — 기본 종 칸이면 고른 모습을 지운다
+  if (action.kind === "form") {
+    const base = dexTarget();
+    if (!base) return;
+    formPick = action.slug === base ? null : { base, slug: action.slug };
+    syncDexDevice();
     return;
   }
   // 옆 창의 진화 트리 — 옆 창이 그 종으로 바뀐다

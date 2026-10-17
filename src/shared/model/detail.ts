@@ -14,6 +14,15 @@ export interface DexEntry {
 }
 
 // 도감 상세 — 칸을 누를 때 한 종만 따로 읽는다. 문구는 화면이 그대로 쓴다 (Figma Dex / Base 상세 패널)
+// 도감 기기 창 2쪽(모습)의 칸 하나 — 기본 종과 그 다른 모습(특수 폼·겉모습) (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기", Figma 99 `Draft / 모습 모아 보기`)
+export interface DexFormView {
+  slug: string;
+  name: string; // 종 이름 — 2쪽 머리 줄이 기본 종(맨 앞 칸)의 이름을 쓴다. 얻지 못했으면 "???"
+  label: string; // 모습 이름 — "화원의 모양" (data/regional.json labels). 얻지 못한 모습은 "???"
+  obtained: boolean; // 얻은 모습인가 — 도감 기록이나 지금 가진 개체
+  current: boolean; // 기기 창이 지금 보는 모습
+}
+
 export interface DexDetail {
   slug: string;
   dex: number;
@@ -35,6 +44,7 @@ export interface DexDetail {
   weight: string; // "19.0kg". 미해금이면 빈 문자열
   megaTree?: EvoNodeView; // 메가·원시회귀 칸만 — 기본 종 → 메가 모습 한 단계(조건 `메가스톤`). 도감 기기 창의 진화 칸이 상점 사슬 대신 쓴다
   mega?: { label: string; names: string }; // 얻은 종이 메가진화하는 종일 때만 — 줄 머리(`메가진화`·`원시회귀`)와 메가 모습의 이름(`메가리자몽X · 메가리자몽Y`).
+  forms?: DexFormView[]; // 다른 모습이 있는 종만 — 기본 종이 맨 앞. 해금 전이면 없다. 기기 창이 2쪽(모습)과 `다른 모습 n` 링크로 그린다
   // 로토무(작업 시간 조건이 있는 모습 바꾸기 종)도 같은 줄 자리를 쓴다 — `모습 바꾸기` · `다섯 모습(에이전트 작업 50시간)` (src/view/dex-detail.ts shiftLine)
 }
 

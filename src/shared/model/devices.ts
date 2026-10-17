@@ -29,7 +29,7 @@ export interface DexDeviceView extends DeviceKinds {
   volume: number; // 울음소리 음량 0~1 — 0 이면 울음소리 단추를 막는다
   // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 검은 실루엣으로 그린다. 사슬이 없으면 null
   tree: EvoNodeView | null;
-  treePortraits: Record<string, string>; // 트리의 종 그림 — slug → data URI. 미해금 종의 그림도 든다(실루엣으로 그린다)
+  treePortraits: Record<string, string>; // 트리의 종 그림과 2쪽(모습) 칸 그림 — slug → data URI. 미해금 종·얻지 못한 모습의 그림도 든다(실루엣으로 그린다)
 }
 
 // 파티 상세 기기 창 — 관리 창이 정해 보내는 것(PetDeviceOpen)에 메인이 그림·붙은 쪽·음량을 더한다 (src/main/windows/devices.ts petDeviceOf)
@@ -54,7 +54,7 @@ export interface PetDeviceView extends PetDeviceOpen, DeviceKinds {
 }
 
 // 도감 기기 창에서 한 일 — 진화 트리의 종을 눌렀다. 관리 창이 그 종의 상세로 바꾼다 (2026-10-13 사용자 "도감기기상세에서 진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게 해봐")
-export type DexDeviceAction = { kind: "pick"; slug: string } | { kind: "shop"; productId: string }; // shop — 입수처의 알 링크를 눌렀다. 설정창이 그 상품의 상점 기기 창을 옆 창으로 연다
+export type DexDeviceAction = { kind: "pick"; slug: string } | { kind: "shop"; productId: string } | { kind: "form"; slug: string }; // shop — 입수처의 알 링크를 눌렀다. 설정창이 그 상품의 상점 기기 창을 옆 창으로 연다. form — 2쪽(모습)의 칸을 눌렀다. 격자의 고른 칸은 그대로 두고 기기 창만 그 모습을 보인다 (2026-10-18)
 
 // 기기 창에서 누른 단추. 명령은 관리 창의 명령 경로로, 대화상자는 관리 창에서 연다
 // petId 는 기기 창에 떠 있던 개체 — 관리 창의 지금 개체와 다르면 버린다(빠르게 넘길 때 다른 개체에 쓰이지 않게)

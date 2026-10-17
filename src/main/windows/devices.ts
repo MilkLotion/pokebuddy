@@ -97,6 +97,8 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         n.children.forEach(walk);
       };
       if (tree) walk(tree);
+      // 2쪽(모습)의 칸 그림도 같은 표로 보낸다 — 얻지 못한 모습은 기기 창이 검은 실루엣으로 그린다 (2026-10-18)
+      for (const f of detail.forms ?? []) if (!shown.includes(f.slug)) shown.push(f.slug);
       // 입수처의 알 링크 — 지금 상점에서 파는 상품만. 옆 창에는 링크를 두지 않는다
       const products = deps.products();
       const links = o.beside ? [] : (detail.shopLinks ?? []).filter((l) => products.has(l.productId));

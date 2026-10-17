@@ -17,10 +17,10 @@ import { hasObtained, hasShiny, hasUnlocked } from "../dex/record.js";
 import { achievementName, itemName, petName, typeName, t } from "./text.js";
 import { fixedEggs, inRandomEgg, rewardSpecies } from "../dex/obtain.js";
 import { eggName, speciesPrice } from "../shop/catalog.js";
-import type { DexDetail } from "../shared/model/detail";
+import type { DexDetail, DexFormView } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { hatchBaseOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
+import { dexSlugOf, evolveLookVariants, formLabelOf, hatchBaseOf, lookFormOf, otherFormsOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
 import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
 import { megaFormsOf, megaOf, megaTagOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
@@ -129,6 +129,11 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     const base = knownName(save, shiftForm.base);
     methods.push(`${base}${josa(base, "을/를")} 얻으면 함께`);
   }
+  // 겉모습의 입수처 — 모습 바꾸기로 오가는 모습(아르세우스 타입)과 진화할 때 정하는 모습(비비용 무늬) (2026-10-17)
+  const look = lookFormOf(slug, opts);
+  if (look && shiftGroupOf(look.base, opts).includes(slug)) methods.push(`${knownName(save, look.base)}의 모습 바꾸기`);
+  const lookPrev = look && evolveLookVariants(look.base, opts).some(([s]) => s === slug) ? prevOf(look.base, opts) : null;
+  if (lookPrev) methods.push(`${knownName(save, lookPrev)}에서 진화`);
   // 알에서 기본형 대신 나오는 모습(배쓰나이(백색근의 모습)) — 기본 종이 나오는 알을 적는다
   const hatchBase = hatchBaseOf(slug, opts);
   if (hatchBase && inRandomEgg(hatchBase, opts)) methods.push(random);
@@ -175,16 +180,35 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
     typeIds: unlocked ? [...row.types] : [],
     shiny: hasShiny(save, slug),
     owned: save.pets.filter((p) => p.species === slug).length,
-    methods: methods.length ? methods.join(" · ") : NO_METHOD,
+    methods: methods.length ? [...new Set(methods)].join(" · ") : NO_METHOD, // 같은 길이 둘이면 하나만(겉모습의 진화 줄)
     ...(shopLinks.length ? { shopLinks } : {}),
     evolution,
     gimmick: "없음", // 특수 기믹은 아직 없다
+    ...(unlocked ? formsOfDetail(save, slug, opts) : {}),
     ...megaLine(slug, obtained, opts),
     ...shiftLine(slug, obtained, opts),
     // 미해금 종은 분류·설명을 숨긴다 — 이름을 숨기는 것과 같다. 한국어 설명문이 없는 종은 영어로 대신한다(899번부터는 data/dex-text.ko.json 으로 채워 지금은 없다)
     ...officialText(unlocked ? textOf(slug, row.dex, opts) : undefined),
     ...bodySize(unlocked ? textOf(slug, row.dex, opts) : undefined),
   };
+}
+
+// 도감 기기 창 2쪽(모습) — 기본 종과 그 다른 모습. 다른 모습이 없는 종은 없다 (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기", 2026-10-18 "1페이지 2페이지 느낌")
+// 기본 종은 겉모습이면 looks 의 base, 특수 폼이면 forms 의 base 다. 얻음은 도감 기록이나 지금 가진 개체의 종으로 본다(옛 저장은 겉모습을 기본 종으로만 적었다)
+function formsOfDetail(save: SaveV3, slug: string, opts?: DexOptions): { forms?: DexFormView[] } {
+  const special = regionalOf(slug, opts);
+  const base = special?.special ? special.base : dexSlugOf(slug, opts);
+  const others = otherFormsOf(base, opts);
+  if (!others.length) return {};
+  const owned = new Set(save.pets.map((p) => p.species));
+  const forms = [base, ...others].map((s) => {
+    const got = hasObtained(save, s) || owned.has(s);
+    // 이름 표에 없으면 화면 이름의 괄호 안(도롱충이(초목도롱) → 초목도롱), 그것도 없으면 화면 이름
+    const name = petName(s);
+    const label = formLabelOf(s, opts) ?? name.match(/\(([^)]+)\)$/)?.[1] ?? name;
+    return { slug: s, name: got || hasUnlocked(save, s) ? name : "???", label: got ? label : "???", obtained: got, current: s === slug };
+  });
+  return { forms };
 }
 
 // 입수 경로가 하나도 없을 때 — 첫 선택·진화·알·상점 어디에도 없는 종

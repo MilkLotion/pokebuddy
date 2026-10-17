@@ -7,6 +7,7 @@ import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { SaveV3 } from "../../shared/save-v3";
 import { dexDetail } from "../../view/dex-detail";
+import { recordDex } from "../../dex/record";
 import { onlyStepText, stepText } from "../../view/evo-text";
 import { evoItemNote, shopDetail } from "../../view/shop-detail";
 import { josa } from "../../shared/josa";
@@ -311,6 +312,27 @@ function seed(): SaveV3 {
   assert.deepEqual(dexDetail(s, "rotom")?.mega, { label: "모습 바꾸기", names: "다섯 모습(파티에서 작업 2시간 · 로토무카탈로그)" });
   assert.equal(dexDetail(s, "rotom-heat")?.mega, undefined, "모습 쪽에는 줄이 없다");
   process.stdout.write("(13) 로토무 모습 바꾸기 · 입수 방법과 기록 줄  ok\n");
+}
+
+// (모습) 2쪽 — 기본 종과 다른 모습, 이름·얻음·지금 모습. 다른 모습이 없는 종과 해금 전 종은 없다 (2026-10-17 "리전폼 빼고 다 합치기", 2026-10-18 "1페이지 2페이지 느낌")
+{
+  const s = empty(0);
+  recordDex(s, "burmy", false);
+  recordDex(s, "burmy-sandy", false);
+  const forms = dexDetail(s, "burmy-sandy")?.forms;
+  assert.deepStrictEqual(forms?.map((f) => [f.slug, f.label, f.obtained, f.current]), [["burmy", "초목도롱", true, false], ["burmy-sandy", "모래땅도롱", true, true], ["burmy-trash", "???", false, false]], "도롱충이 세 모습");
+  assert.equal(forms?.[0]?.name, "도롱충이(초목도롱)", "머리 줄은 맨 앞 칸(기본 종)의 이름");
+  assert.equal(dexDetail(s, "charmander")?.forms, undefined, "다른 모습이 없는 종");
+  assert.equal(dexDetail(empty(0), "burmy")?.forms, undefined, "해금 전에는 모습 목록이 없다");
+  s.pets.push({ ...s.pets[0]!, id: "pv", species: "vivillon-polar" } as never);
+  recordDex(s, "vivillon", false);
+  const viv = dexDetail(s, "vivillon")?.forms;
+  assert.equal(viv?.length, 20);
+  assert.ok(viv?.find((f) => f.slug === "vivillon-polar")?.obtained, "기록이 없어도 가진 개체의 모습은 얻음(옛 저장)");
+  assert.equal(dexDetail(s, "vivillon-polar")?.methods, "???에서 진화", "진화 전 종을 발견하지 못했으면 ???");
+  recordDex(s, "spewpa", false);
+  assert.equal(dexDetail(s, "vivillon-polar")?.methods, "분떠도리에서 진화", "진화할 때 정하는 모습의 입수처");
+  process.stdout.write("(모습) 2쪽 모습 목록  ok\n");
 }
 
 process.stdout.write("selftest-dex-detail: 통과 (획득·해금·최종·미해금·알 조건·경로 없음·상점·타입 키·그림·소리 주소·공식 설명·키 몸무게·기기 창 자리)\n");
