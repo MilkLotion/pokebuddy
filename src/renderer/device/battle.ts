@@ -143,7 +143,7 @@ function render(v: BattleDeviceView): void {
   if (shownPetId !== pet.id) open = null;
   shownPetId = pet.id;
   cryPlayer.setVolume(v.volume);
-  frame.beginDraw(v.side, "배틀");
+  frame.beginDraw(v.side, "배틀", undefined, v.kinds);
 
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");

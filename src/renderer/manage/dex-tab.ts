@@ -6,7 +6,7 @@ import { buttonEl, el } from "../ui/dom.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { api } from "./api.js";
 import { portraitOf } from "./art-cache.js";
-import { openDexPick, resendDex } from "./dex-link.js";
+import { syncDexDevice } from "./dex-link.js";
 import { DEX_PAGE, dexNoText, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
 import { findBarEl, matchesDex, normQuery } from "./search.js";
 import { bodyEl, redrawBody } from "./shell.js";
@@ -16,6 +16,7 @@ import { addTabTip } from "./tab-tips.js";
 
 export interface DexTabHooks {
   onPicked(): void; // 칸을 눌렀다 — 도감 튜토리얼의 목표 행동
+  syncDevices(): void; // 고른 칸이 바뀌었다 — 지금 보이는 기기 창(도감·머리 탭으로 바꾼 파티 상세·배틀)을 맞춘다
 }
 let hooks: DexTabHooks | null = null;
 export function setDexTabHooks(next: DexTabHooks): void {
@@ -53,8 +54,10 @@ export function enterDex(): void {
 export function leaveDex(): void {
   if (!dexPick) return;
   dexPick = null;
-  openDexPick(null);
+  syncDexDevice();
 }
+// 지금 고른 칸 — 기기 종류 탭이 대상으로 쓴다 (device-kind.ts)
+export const dexPickOf = (): string | null => dexPick;
 // 기기 창이 닫혔다 — 고른 칸을 비운다
 export function clearDexPick(): void {
   dexPick = null;
@@ -99,7 +102,7 @@ function markDexPick(): void {
 function pickDex(slug: string): void {
   hooksOf().onPicked(); // 칸을 눌러 본 것이 튜토리얼 목표 행동이다
   dexPick = dexPick === slug ? null : slug;
-  openDexPick(dexPick);
+  hooksOf().syncDevices();
   markDexPick();
 }
 
@@ -120,7 +123,7 @@ const dexRegionEl = (): HTMLElement =>
 export function pickDexFromDevice(slug: string): void {
   if (slug === dexPick) return;
   dexPick = slug;
-  openDexPick(dexPick);
+  hooksOf().syncDevices();
   const at = dexShown().findIndex((r) => r.slug === slug);
   if (at >= 0 && dexView === "grid" && ui.tab === "dex") {
     const page = Math.floor(at / DEX_PAGE);
@@ -139,7 +142,7 @@ export function stepDex(delta: -1 | 1): void {
   const next = rows[at < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, at + delta))];
   if (!next || next.slug === dexPick) return;
   dexPick = next.slug;
-  openDexPick(dexPick);
+  hooksOf().syncDevices();
   // 쪽 방식 — 다음 종이 다른 쪽이면 그 쪽으로 넘긴다. 스크롤 방식 — 그 칸이 보이게 스크롤한다
   const page = Math.floor(rows.indexOf(next) / DEX_PAGE);
   if (dexView === "grid" && page !== dexPageNo && ui.tab === "dex") {
@@ -224,6 +227,6 @@ export function drawDex(v: Snapshot): void {
 
 export async function loadDex(): Promise<void> {
   dexRows = await api.dex();
-  resendDex(dexPick); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
+  syncDexDevice(true); // 부화·해금으로 바뀐 항목을 기기 창에 다시 보낸다
   if (ui.tab === "dex") redrawBody();
 }

@@ -22,6 +22,7 @@ interface LinkOptions<I> {
   afterClosed: () => boolean;
   redraw: () => void;
   holding?: () => boolean;
+  layer?: string; // 열림 스택의 겹 이름 — 시험 몇 개만 쓴다
 }
 const { createDeviceLink } = webModule<{ createDeviceLink: <I>(o: LinkOptions<I>) => DeviceLink }>("renderer/manage/device-link.js");
 
@@ -89,14 +90,35 @@ async function main(): Promise<void> {
     assert.deepEqual(applied, [], "늦은 답은 버리고, 뒤 답은 보낸 값과 같아 되돌릴 것이 없다");
   });
 
-  await t.okAsync("닫힘을 받으면 같은 값도 다시 연다", async () => {
+  await t.okAsync("닫힘을 받았는데 고른 값이 남아 있으면 새 번호로 곧바로 다시 연다", async () => {
+    // 머리의 종류 탭으로 바꿨다가 닫힘 알림 전에 돌아왔다 — 닫히기 전에 보낸 여는 요청은 낡은 번호라 메인이 버렸다 (device-kind.ts)
     const m = fakeMain();
-    const link = createDeviceLink<Input>({ build: () => ({ id: "p1", qty: 1 }), stamp: () => 0, open: m.open, afterClosed: () => false, redraw: () => {} });
+    const link = createDeviceLink<Input>({ build: () => ({ id: "p1", qty: 1 }), stamp: () => 0, open: m.open, afterClosed: () => false, redraw: () => {}, layer: "device:t" });
+    link.sync();
+    link.onClosed(5);
+    assert.equal(m.sent.length, 2, "닫힘 알림을 받자마자 다시 연다");
+    assert.equal(link.isOpen(), true);
+  });
+
+  await t.okAsync("닫힘에서 고른 것을 비우면 다시 열지 않는다", async () => {
+    // ✕·Esc 로 닫았다 — afterClosed 가 고른 것을 비우고 다시 그린다
+    const m = fakeMain();
+    let picked: Input | null = { id: "p1", qty: 1 };
+    const link = createDeviceLink<Input>({
+      build: () => picked,
+      stamp: () => 0,
+      open: m.open,
+      afterClosed: () => {
+        picked = null;
+        return true;
+      },
+      redraw: () => link.sync(),
+      layer: "device:t",
+    });
     link.sync();
     link.onClosed(5);
     assert.equal(link.isOpen(), false);
-    link.sync();
-    assert.equal(m.sent.length, 2, "닫힌 뒤에는 다시 연다");
+    assert.equal(m.sent.filter((x) => x !== null).length, 1, "다시 열지 않는다");
   });
 
   printLine(`selftest-device-link: 통과 (${t.count()}건)`);

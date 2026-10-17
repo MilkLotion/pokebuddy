@@ -14,9 +14,8 @@ import { createDeviceFrame } from "./device-frame.js";
 import { pairsEl } from "./item-face.js";
 
 const api = needBridge("pokebuddyDex");
-// 방향키로도 넘긴다. Esc 는 닫는다. 파티 상세 옆에 붙은 창은 넘기지 않는다
-let besideNow = false;
-const frame = createDeviceFrame({ api, windowName: "dex", canKey: (key) => !(besideNow && key !== "Escape") });
+// 방향키로도 넘긴다. Esc 는 열림 스택을 따른다(device-frame.ts)
+const frame = createDeviceFrame({ api, windowName: "dex" });
 const device = frame.device;
 
 const UNKNOWN = "???";
@@ -43,7 +42,7 @@ function render(v: DexDeviceView): void {
   }
   cryPlayer.setVolume(v.volume);
   const locked = d.state === "locked";
-  frame.beginDraw(v.side, "도감", locked ? "locked" : undefined);
+  frame.beginDraw(v.side, "도감", locked ? "locked" : undefined, v.kinds);
 
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
@@ -93,12 +92,6 @@ function render(v: DexDeviceView): void {
   device.appendChild(pairsEl("records", rows, "value"));
   if (v.tree) device.appendChild(evolutionCard(v));
 
-  besideNow = v.beside;
-  // 파티 상세 옆에 붙은 창은 바닥 단추 줄을 두지 않는다 — 울음소리는 파티 상세에 있고, 넘기기는 파티 상세가 한다 (2026-10-01 사용자 "이 도감상세에는 울음소리 없어도 될듯")
-  if (v.beside) {
-    frame.endDraw();
-    return;
-  }
   const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play());
   // 미해금 종은 울음소리도 숨긴다. 설정에서 소리를 끄면 막는다
   cry.disabled = locked || v.volume <= 0;

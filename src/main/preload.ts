@@ -117,6 +117,7 @@ const MANAGE = {
   openGuide: ["send", "manage:guide"],
   openRights: ["send", "manage:rights"],
   onEscape: ["push", "manage:escape"],
+  onDeviceKind: ["push", "manage:device-kind"],
   focusManage: ["send", "manage:focus"],
   account: ["invoke", "manage:account"],
   onAccount: ["push", "manage:account-view"],
@@ -187,6 +188,7 @@ const deviceWire = <P extends string>(prefix: P) =>
     step: ["send", `${prefix}:step`],
     close: ["send", `${prefix}:close`],
     escape: ["send", `${prefix}:escape`],
+    kind: ["send", `${prefix}:kind`],
   }) as const;
 
 // 도감 기기 창 — 한 종의 항목. 울음소리와 진화 트리에서 누른 종을 부른다

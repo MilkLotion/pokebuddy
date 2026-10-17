@@ -1,6 +1,6 @@
 // 기기 창 다섯의 IPC 계약 — 메인 · preload · 렌더러가 같은 모양을 본다. 타입만 둔다
 
-import type { BagDeviceAction, BagDeviceView, BattleDeviceAction, BattleDeviceView, DexDeviceAction, DexDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceView, BattleDeviceAction, BattleDeviceView, DeviceKind, DexDeviceAction, DexDeviceView, PetDeviceAction, PetDeviceView, ShopDeviceAction, ShopDeviceView } from "../model/devices.js";
 import type { BridgeOf, Invoke, Push, Send } from "./kinds.js";
 
 // 기기 창 다섯이 같은 틀이다 — 접두사(P)와 보이는 값(View)만 다르다. show 는 메인 → 렌더러, 나머지는 렌더러 → 메인
@@ -8,10 +8,11 @@ import type { BridgeOf, Invoke, Push, Send } from "./kinds.js";
 //   size   그린 높이 — 창 높이를 내용에 맞춘다
 //   step   이전(-1) · 다음(1)
 //   close  닫기(✕)
+//   kind   머리의 종류 탭을 눌렀다 — 설정창이 같은 대상의 그 기기로 바꾼다 (src/renderer/manage/device-kind.ts)
 //   escape Esc — 창을 닫지 않고 설정창에 알린다. 설정창이 열림 스택의 맨 위 겹을 닫는다 (src/renderer/manage/layers.ts)
 export type DeviceIpc<P extends string, View> = { [K in `${P}:show`]: Push<"onShow", [view: View]> } & { [K in `${P}:size`]: Send<"size", [height: number]> } & {
   [K in `${P}:step`]: Send<"step", [delta: -1 | 1]>;
-} & { [K in `${P}:close`]: Send<"close", []> } & { [K in `${P}:escape`]: Send<"escape", []> };
+} & { [K in `${P}:close`]: Send<"close", []> } & { [K in `${P}:escape`]: Send<"escape", []> } & { [K in `${P}:kind`]: Send<"kind", [to: DeviceKind]> };
 // 누른 단추 — 설정창이 처리한다
 export type DeviceActIpc<P extends string, Action> = { [K in `${P}:act`]: Send<"act", [action: Action]> };
 // 코치마크(튜토리얼 말풍선)가 떴다·사라졌다 — 메인이 설정창의 창 단추 자리도 함께 어둡게 한다

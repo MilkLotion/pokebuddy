@@ -18,6 +18,7 @@ import type {
   BattleDeviceInput,
   BattleDeviceOpen,
   BattleDeviceView,
+  DeviceKinds,
   DexDeviceView,
   DexDeviceAction,
   PetDeviceAction,
@@ -32,11 +33,10 @@ import type {
 import { PARTY_RULES } from "../../party/rules.js";
 import { BATTLE_RULES } from "../../battle/rules.js";
 import type { DeviceSpec } from "./device-window.js";
-import { INPUT_LIMITS, isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
-import { dockAt } from "./placement.js";
+import { INPUT_LIMITS, isDeviceKindTabs, isIndexBelow, isQty, isRecord, isShortId, isStep } from "./input.js";
 
 // 창 크기 — 폭은 Figma 기기 폭, 높이는 첫 그림 전 어림값이다
-export const DEVICE_SIZES = {
+const DEVICE_SIZES = {
   dex: { width: 380, height: 508 }, // Figma `Dex Device`
   pet: { width: 380, height: 682 }, // Figma `A안 · 파티 상세 기기`
   shop: { width: 380, height: 594 }, // Figma `Shop / Device / Tool`
@@ -46,10 +46,9 @@ export const DEVICE_SIZES = {
 
 // ── 도감 ───────────────────────────────────────────────────────────────────────
 
-// beside — 설정창 옆에 먼저 붙은 창(파티 상세 기기 창)의 폭. 0 이면 설정창에 바로 붙는다
-export interface DexDeviceOpen {
+// kinds — 머리의 종류 탭 (docs/specs/ui-components.md "기기 종류 탭")
+export interface DexDeviceOpen extends DeviceKinds {
   slug: string;
-  beside: number;
 }
 
 export interface DexDeviceDeps {
@@ -69,7 +68,7 @@ function isDexAction(v: unknown): v is DexDeviceAction {
 
 export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexDeviceView, DexDeviceAction> {
   return {
-    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close", escape: "dexdev:escape", act: "dexdev:act" } satisfies Record<string, DexDeviceChannel>,
+    channels: { show: "dexdev:show", size: "dexdev:size", step: "dexdev:step", cry: "dexdev:cry", close: "dexdev:close", escape: "dexdev:escape", kind: "dexdev:kind", act: "dexdev:act" } satisfies Record<string, DexDeviceChannel>,
     isAction: isDexAction,
     size: DEVICE_SIZES.dex,
     keyOf: (o) => o.slug,
@@ -92,15 +91,8 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         volume: deps.volume(),
         tree,
         treePortraits,
-        beside: o.beside > 0,
+        kinds: o.kinds,
       }));
-    },
-    // 파티 상세 옆 — 파티 상세 기기 창 자리를 같은 규칙(dockAt)으로 셈해 설정창과 합친 덩어리 옆에 붙인다.
-    // 파티 상세 창의 지금 위치를 읽지 않는다 — 설정창을 옮길 때 두 창이 따라가는 순서와 상관없이 같은 자리가 나온다
-    baseOf(owner, area, o, height) {
-      if (!o.beside) return owner;
-      const pet = dockAt(owner, area, { width: o.beside, height });
-      return { x: Math.min(owner.x, pet.x), y: owner.y, width: owner.width + o.beside, height: owner.height };
     },
     cry: { of: (o) => deps.cry(o.slug), volume: deps.volume },
   };
@@ -124,14 +116,13 @@ function isPetAction(v: unknown): v is PetDeviceAction {
   if (!isShortId(a.petId)) return false; // 누른 개체 — 관리 창이 지금 개체와 같은지 본다
   if (a.kind === "dialog") return typeof a.dialog === "string" && PET_DIALOGS.has(a.dialog);
   if (a.kind === "tutorial") return a.action === "done" || a.action === "skip";
-  if (a.kind === "dex") return true;
   if (a.kind === "cmd") return typeof a.cmd === "string" && PET_CMDS.has(a.cmd) && (a.args === undefined || (typeof a.args === "object" && a.args !== null));
   return false;
 }
 
-export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen, PetDeviceView, PetDeviceAction> {
+export function petDeviceOf(deps: PetDeviceDeps): DeviceSpec<PetDeviceOpen & DeviceKinds, PetDeviceView, PetDeviceAction> {
   return {
-    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", escape: "petdev:escape", act: "petdev:act", coach: "petdev:coach" } satisfies Record<string, PetDeviceChannel>,
+    channels: { show: "petdev:show", size: "petdev:size", step: "petdev:step", cry: "petdev:cry", close: "petdev:close", escape: "petdev:escape", kind: "petdev:kind", act: "petdev:act", coach: "petdev:coach" } satisfies Record<string, PetDeviceChannel>,
     size: DEVICE_SIZES.pet,
     keyOf: (o) => o.pet.id,
     // 메가 모습이면 그 초상이다 (PetView.look)
@@ -166,9 +157,9 @@ function isShopAction(v: unknown): v is ShopDeviceAction {
   return a.kind === "buy" || a.kind === "pool";
 }
 
-export function shopDeviceOf(deps: DeviceArtDeps): DeviceSpec<ShopDeviceOpen, ShopDeviceView, ShopDeviceAction> {
+export function shopDeviceOf(deps: DeviceArtDeps): DeviceSpec<ShopDeviceOpen & DeviceKinds, ShopDeviceView, ShopDeviceAction> {
   return {
-    channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", escape: "shopdev:escape", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
+    channels: { show: "shopdev:show", size: "shopdev:size", step: "shopdev:step", close: "shopdev:close", escape: "shopdev:escape", kind: "shopdev:kind", act: "shopdev:act" } satisfies Record<string, ShopDeviceChannel>,
     size: DEVICE_SIZES.shop,
     keyOf: (o) => o.productId,
     viewOf: async (o) => {
@@ -190,9 +181,9 @@ function isBagAction(v: unknown): v is BagDeviceAction {
   return a.kind === "go";
 }
 
-export function bagDeviceOf(deps: DeviceArtDeps): DeviceSpec<BagDeviceOpen, BagDeviceView, BagDeviceAction> {
+export function bagDeviceOf(deps: DeviceArtDeps): DeviceSpec<BagDeviceOpen & DeviceKinds, BagDeviceView, BagDeviceAction> {
   return {
-    channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", escape: "bagdev:escape", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
+    channels: { show: "bagdev:show", size: "bagdev:size", step: "bagdev:step", close: "bagdev:close", escape: "bagdev:escape", kind: "bagdev:kind", act: "bagdev:act" } satisfies Record<string, BagDeviceChannel>,
     size: DEVICE_SIZES.bag,
     keyOf: (o) => o.itemId,
     viewOf: async (o) => {
@@ -215,9 +206,9 @@ function isBattleAction(v: unknown): v is BattleDeviceAction {
   return v.kind === "mega";
 }
 
-export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen, BattleDeviceView, BattleDeviceAction> {
+export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen & DeviceKinds, BattleDeviceView, BattleDeviceAction> {
   return {
-    channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", escape: "battledev:escape", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
+    channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", escape: "battledev:escape", kind: "battledev:kind", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
     size: DEVICE_SIZES.battle,
     keyOf: (o) => o.slot.pet.id,
     viewOf: async (o) => {
@@ -240,20 +231,20 @@ const isBusyKey = (v: unknown): v is string | null => v === null || (typeof v ==
 
 export function isBagInput(v: unknown): v is BagDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.itemId) && (v.mode === "use" || v.mode === "sell") && (v.targetPetId === null || isShortId(v.targetPetId)) && isQty(v.qty) && isQty(v.sellQty) && isText(v.notice) && isResultLine(v.result) && isFlag(v.busy);
+  return isShortId(v.itemId) && (v.mode === "use" || v.mode === "sell") && (v.targetPetId === null || isShortId(v.targetPetId)) && isQty(v.qty) && isQty(v.sellQty) && isText(v.notice) && isResultLine(v.result) && isFlag(v.busy) && isDeviceKindTabs(v.kinds);
 }
 
 export function isShopInput(v: unknown): v is ShopDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy);
+  return isShortId(v.productId) && isQty(v.qty) && isText(v.notice) && isResultLine(v.done) && isFlag(v.busy) && isDeviceKindTabs(v.kinds);
 }
 
 export function isBattleInput(v: unknown): v is BattleDeviceInput {
   if (!isRecord(v)) return false;
-  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice);
+  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice) && isDeviceKindTabs(v.kinds);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {
   if (!isRecord(v)) return false;
-  return isShortId(v.petId) && isText(v.notice) && isFlag(v.dexOpen) && isBusyKey(v.busy);
+  return isShortId(v.petId) && isText(v.notice) && isBusyKey(v.busy) && isDeviceKindTabs(v.kinds);
 }

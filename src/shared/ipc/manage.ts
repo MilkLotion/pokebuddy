@@ -4,7 +4,7 @@ import type { CommandResult } from "../command.js";
 import type { AccountAction, AccountReply, AccountScreen, PatchNotesView, UpdateAction, UpdateView } from "../model/account.js";
 import type { AgentAction, AgentReply } from "../model/agents.js";
 import type { DexDetail, DexEntry, ShopDetail } from "../model/detail.js";
-import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, DexDeviceAction, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
+import type { BagDeviceAction, BagDeviceInput, BattleDeviceAction, BattleDeviceInput, DeviceKind, DeviceKindTab, DexDeviceAction, PetDeviceAction, PetDeviceInput, ResultLine, ShopDeviceAction, ShopDeviceInput } from "../model/devices.js";
 import type { MailAction, MailReply, MailScreen } from "../model/mail.js";
 import type { BattleAction, BattleReply } from "../model/battle-net.js";
 import type { FriendlyAction, FriendlyScreen } from "../model/friendly.js";
@@ -54,6 +54,7 @@ export type ManageCoreIpc = {
   "manage:trade": Push<"onTrade", [screen: TradeScreen]>; // 교환 보기가 바뀌었다(실시간 신호·주기 새로 고침·조작 결과)
   "manage:copy": Send<"copyText", [text: string]>; // 교환 링크 복사 — 메인의 clipboard 로 쓴다
   "manage:guide": Send<"openGuide", [topic: string]>; // 탭 팁 말풍선의 `웹 가이드에서 더 보기` — 탭 이름만 보낸다. 주소와 절 앵커는 메인에 고정돼 있다
+  "manage:device-kind": Push<"onDeviceKind", [to: DeviceKind]>; // 기기 창 머리의 종류 탭을 눌렀다 — 설정창이 같은 대상의 그 기기로 바꾼다 (device-kind.ts)
   "manage:escape": Push<"onEscape", []>; // 기기 창에서 Esc 를 눌렀다 — 설정창이 열림 스택의 맨 위 겹을 닫는다 (layers.ts)
   "manage:focus": Send<"focusManage", []>; // 설정창에 키 초점을 가져온다 — 기기 창 단추로 모달을 열었을 때. 인자 없음
   "manage:rights": Send<"openRights", []>; // 설정 바닥의 `저작권 안내` — 주소는 메인에 고정돼 있다. 렌더러는 주소를 넘기지 않는다
@@ -77,7 +78,7 @@ export type ManageCoreIpc = {
 //   act     기기 창에서 누른 단추 — 설정창이 처리한다
 //   closed  기기 창이 닫혔다 — 새 세대 번호 (src/main/device-gen.ts). 고른 칸 표시를 지운다
 export type ManageDeviceLinkIpc = {
-  "manage:dex-open": Send<"dexOpen", [open: { slug: string; beside: boolean } | null, gen?: number]>; // null 이면 닫는다. beside 면 파티 상세 기기 창 옆에 붙인다
+  "manage:dex-open": Send<"dexOpen", [open: { slug: string; kinds: DeviceKindTab[] } | null, gen?: number]>; // null 이면 닫는다. kinds 는 머리의 종류 탭
   "manage:dex-step": Push<"onDexStep", [delta: -1 | 1]>;
   "manage:dex-closed": Push<"onDexClosed", [gen: number]>;
   "manage:pet-open": Invoke<"petOpen", [input: PetDeviceInput | null, gen?: number], PetDeviceInput | null>;

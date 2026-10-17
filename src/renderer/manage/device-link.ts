@@ -84,6 +84,8 @@ export function createDeviceLink<I>(opts: DeviceLinkOptions<I>): DeviceLink {
     const again = opts.afterClosed();
     closeLayer(opts.layer);
     if (again) opts.redraw();
+    // 머리의 종류 탭으로 바꿔 닫힌 창에 그사이 다시 돌아왔다 — 닫히기 전에 보낸 여는 요청은 낡은 번호라 메인이 버렸다. 새 번호로 다시 연다
+    else if (opts.build() !== null) sync();
   }
 
   return { sync, onClosed, isOpen: () => open };

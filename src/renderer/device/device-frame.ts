@@ -1,6 +1,7 @@
 // 기기 창 틀 — 기기 창 다섯(pet·dex·shop·bag·party)이 같은 뼈대를 쓴다
 // - #device 찾기, 높이 알림, 글꼴 기다리기, 키보드(◀·▶·Esc), 머리 줄(경첩·LED 셋·제목·✕), 바닥 줄(◀ 이전 · 가운데 · 다음 ▶)
 // - 창마다 다른 것은 옵션으로 받는다(글꼴, 막을 키, 높이가 바뀐 뒤 할 일). 화면 본문은 창이 그린다
+import type { DeviceKind, DeviceKindTab } from "../../shared/model/devices.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { DEVICE_FONTS, whenFontsReady } from "../ui/fonts.js";
 
@@ -10,6 +11,7 @@ export interface DeviceBridge {
   step(delta: -1 | 1): void;
   close(): void;
   escape?(): void; // Esc — 설정창에 알린다(열림 스택). 없는 창(배틀 화면·로그)은 Esc 가 close 다
+  kind?(to: DeviceKind): void; // 머리의 종류 탭 — 설정창이 같은 대상의 그 기기로 바꾼다. 없는 창은 탭을 두지 않는다
 }
 
 export type DeviceKey = "ArrowLeft" | "ArrowRight" | "Escape";
@@ -25,8 +27,8 @@ export interface DeviceFrameOptions {
 export interface DeviceFrame {
   device: HTMLElement;
   fontsReady: Promise<unknown>;
-  // #device 를 비우고 className(left·extraClass), 경첩, 머리 줄(LED 셋·제목·✕)을 그린다
-  beginDraw(side: "left" | "right", title: string, extraClass?: string): void;
+  // #device 를 비우고 className(left·extraClass), 경첩, 머리 줄(LED 셋·제목 또는 종류 탭·✕)을 그린다. kinds 가 있으면 제목 대신 종류 탭
+  beginDraw(side: "left" | "right", title: string, extraClass?: string, kinds?: DeviceKindTab[]): void;
   // 바닥 줄 — ◀ 이전 · middle · 다음 ▶
   controlsEl(middle: HTMLElement): HTMLElement;
   // 그린 뒤 높이를 알린다. 같은 높이여도 보낸다(숨은 새 창은 이 값을 받아야 보인다)
@@ -36,6 +38,21 @@ export interface DeviceFrame {
 }
 
 const LED_COLORS = ["#ff6b6b", "#ffd84a", "#6ad06a"] as const;
+
+// 머리의 종류 탭 — 자리는 고정(파티|도감|배틀, 상점|가방), 지금 기기만 밝은 바탕 (docs/specs/ui-components.md "기기 종류 탭", Figma 01 `Device Kind Tab` `2052:41`)
+const KIND_LABELS: Record<DeviceKind, string> = { pet: "파티", dex: "도감", battle: "배틀", shop: "상점", bag: "가방" };
+function kindTabsEl(kinds: DeviceKindTab[], pick: (to: DeviceKind) => void): HTMLElement {
+  const row = el("div", "kinds");
+  row.setAttribute("role", "tablist");
+  for (const k of kinds) {
+    // 지금 기기는 누를 일이 없다 — 누르지 못하게만 하고 흐리게 그리지 않는다(.kind.on)
+    const tab = buttonEl(k.current ? "kind on" : "kind", KIND_LABELS[k.id], k.current ? undefined : () => pick(k.id), k.disabled);
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(k.current));
+    row.appendChild(tab);
+  }
+  return row;
+}
 
 export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
   const { api } = opts;
@@ -75,7 +92,7 @@ export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
     else api.close();
   });
 
-  function beginDraw(side: "left" | "right", title: string, extraClass?: string): void {
+  function beginDraw(side: "left" | "right", title: string, extraClass?: string, kinds?: DeviceKindTab[]): void {
     device.className = `device${side === "left" ? " left" : ""}${extraClass ? ` ${extraClass}` : ""}`;
     device.replaceChildren();
     device.appendChild(el("div", "hinge"));
@@ -86,7 +103,8 @@ export function createDeviceFrame(opts: DeviceFrameOptions): DeviceFrame {
       led.style.background = c;
       top.appendChild(led);
     }
-    top.appendChild(el("div", "title", title));
+    if (kinds?.length && api.kind) top.appendChild(kindTabsEl(kinds, api.kind));
+    else top.appendChild(el("div", "title", title));
     const close = buttonEl("close", "✕", () => api.close());
     close.title = "닫기";
     top.appendChild(close);

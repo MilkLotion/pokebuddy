@@ -146,7 +146,7 @@ void app.whenReady().then(async () => {
     const bjs = <T>(code: string): Promise<T> => bw.webContents.executeJavaScript(code) as Promise<T>;
     await bjs(`(() => { window.__b = { renders: 0, blank: 0 }; new MutationObserver(() => { window.__b.renders += 1; window.__b.blank += [...document.querySelectorAll(".stage canvas")].filter((c) => c.width === 0).length; }).observe(document.getElementById("device"), { childList: true }); return 0; })()`);
     const battleView = (notice = ""): unknown => {
-      const r = battleDeviceModel(snapshotReply(game, reads)!, { slot: 0, notice });
+      const r = battleDeviceModel(snapshotReply(game, reads)!, { slot: 0, notice, kinds: [] });
       if (!r) throw new Error("배틀 모델이 없다");
       const { art: _a, typeArt: _t, megaArt: _m, ...rest } = r.model;
       return { ...rest, portrait: PORTRAIT, megaIcon: null, typeIcons: {}, side: "right", volume: 0 };

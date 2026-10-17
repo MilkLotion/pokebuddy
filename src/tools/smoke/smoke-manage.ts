@@ -92,7 +92,7 @@ async function device(kind, input, put) {
     return null;
   }
   const r = await ipcRenderer.invoke("smoke:device", kind, await window.pokebuddyManage.snapshot(), input);
-  put(r ? r.model : null);
+  put(r ? { ...r.model, kinds: input.kinds } : null); // 머리의 종류 탭은 앱 메인처럼 고른 값 그대로 붙인다 (src/main/manage/devices.ts openDevice)
   return r ? r.input : null;
 }
 window.pokebuddyManage = new Proxy({}, {
@@ -111,7 +111,7 @@ window.pokebuddyManage = new Proxy({}, {
       return s;
     };
     if (name === "dex") return async () => dex;
-    if (name === "dexOpen") return (open) => { window.__dexOpen = open ? open.slug : null; window.__dexBeside = !!open && open.beside === true; }; // 열기 인자는 { slug, beside } | null (마 ⑤)
+    if (name === "dexOpen") return (open) => { window.__dexOpen = open ? open.slug : null; window.__dexKinds = open ? open.kinds : null; }; // 열기 인자는 { slug, kinds } | null
     // 기기 창 넷 — 설정창은 고른 값만 보낸다. 시험 메인이 앱 메인처럼 모델을 만들고(smoke:device), 받은 모델은 window.__<기기>Open 에 둔다
     if (name === "petOpen") return (input) => device("pet", input, (m) => { window.__petOpen = m; });
     if (name === "petMenu") return async (id) => { window.__petMenu = id; return window.__menuOn === true; }; // 메뉴를 띄운 것으로 칠지는 window.__menuOn
@@ -606,41 +606,42 @@ void app.whenReady().then(async () => {
     await wait(300);
     assert.equal(await js<unknown>(`window.__petOpen`), null, "파티 탭을 나가면 개체 상세 기기 창을 닫는다");
 
-    // (15) 도감 보기 — 파티 상세 기기 창 옆에 그 종의 도감 기기 창. 관리 창 탭과 파티 상세는 그대로. 다시 누르면 닫는다 (2026-10-01 사용자 결정)
+    // (15) 기기 종류 탭 — 같은 개체를 파티 상세 · 도감으로 같은 자리에서 바꾼다. 관리 창 탭과 고른 칸은 그대로 (2026-10-17 사용자 확정, docs/specs/ui-components.md "기기 종류 탭")
     await js(`${tabBtn("파티")}.click()`);
     await wait(200);
     await js(`document.querySelector('#body .slot[data-pet]').click()`);
     await wait(300);
     const shown = await js<{ id: string; species: string } | null>(`window.__petOpen?.pet ? { id: window.__petOpen.pet.id, species: window.__petOpen.pet.species } : null`);
     assert.ok(shown, "파티 칸을 누르면 개체 상세 기기 창");
-    await js(`window.__cb.onPetAct({ petId: '${shown!.id}', kind: 'dex' })`);
+    assert.deepEqual(await js<string[]>(`window.__petOpen.kinds.map((k) => k.id + (k.current ? "*" : ""))`), ["pet*", "dex", "battle"], "머리 탭은 파티 | 도감 | 배틀, 지금 파티");
+    await js(`window.__cb.onDeviceKind("dex")`);
     await wait(500);
-    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), shown!.id, "도감 보기 — 개체 상세 기기 창은 그대로");
-    assert.equal(await js<boolean>(`window.__petOpen.dexOpen`), true, "도감 보기 — 줄이 열린 표시");
-    assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 보기 — 그 종의 도감 기기 창");
-    assert.equal(await js<boolean>(`window.__dexBeside`), true, "도감 보기 — 파티 상세 옆에 붙인다");
+    assert.equal(await js<unknown>(`window.__petOpen`), null, "도감 탭 — 파티 상세는 닫는다");
+    assert.equal(await js<string | null>(`window.__dexOpen`), shown!.species, "도감 탭 — 그 종의 도감 기기 창");
+    assert.deepEqual(await js<string[]>(`window.__dexKinds.map((k) => k.id + (k.current ? "*" : ""))`), ["pet", "dex*", "battle"], "도감 창의 머리 탭 — 자리는 같고 지금 도감");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`), 0, "관리 창은 파티 탭 그대로");
     await js(`window.__cb.onDexAct({ kind: 'pick', slug: 'pikachu' }); 0`);
     await wait(100);
-    assert.equal(await js<string | null>(`window.__dexOpen`), "pikachu", "옆 도감에서도 진화 트리의 종을 누르면 그 종으로");
-    assert.equal(await js<boolean>(`window.__dexBeside`), true, "옆 도감은 옆에 붙은 채로");
-    assert.equal(await js<number>(`document.querySelectorAll('#body .dex-cell').length`), 0, "관리 창은 파티 탭 그대로");
+    assert.equal(await js<string | null>(`window.__dexOpen`), "pikachu", "진화 트리의 종을 누르면 그 종으로");
     const partyPetIds = await js<string[]>(`[...document.querySelectorAll('#body .slot[data-pet]')].map((s) => s.dataset.pet)`);
+    let nowId = shown!.id;
     if (partyPetIds.length > 1) {
-      await js(`window.__cb.onPetStep(1)`);
+      await js(`window.__cb.onDexStep(1)`);
       await wait(300);
-      const stepped = await js<{ id: string; species: string }>(`({ id: window.__petOpen.pet.id, species: window.__petOpen.pet.species })`);
-      assert.notEqual(stepped.id, shown!.id, "개체 넘기기");
-      assert.equal(await js<string | null>(`window.__dexOpen`), stepped.species, "개체를 넘기면 옆 도감 기기 창도 그 종으로");
+      const nextId = partyPetIds[(partyPetIds.indexOf(shown!.id) + 1) % partyPetIds.length]!;
+      assert.notEqual(await js<string | null>(`window.__dexOpen`), null, "넘겨도 도감 기기 창 그대로");
+      nowId = nextId; // 넘기기는 파티 칸 순서다 — 지금 보이는 기기가 도감이어도
     }
-    await js(`window.__cb.onPetAct({ petId: window.__petOpen.pet.id, kind: 'dex' })`);
+    await js(`window.__cb.onDeviceKind("pet")`);
+    await wait(500);
+    assert.equal(await js<string | null>(`window.__petOpen?.pet?.id ?? null`), nowId, "파티 탭 — 넘긴 개체의 파티 상세");
+    assert.equal(await js<string | null>(`window.__dexOpen`), null, "파티 탭 — 도감 기기 창은 닫는다");
+    await js(`window.__cb.onDeviceKind("dex")`);
     await wait(300);
-    assert.equal(await js<string | null>(`window.__dexOpen`), null, "도감 보기를 다시 누르면 옆 도감 기기 창을 닫는다");
-    assert.equal(await js<boolean>(`window.__petOpen.dexOpen`), false, "줄 열린 표시를 끈다");
-    await js(`window.__cb.onPetAct({ petId: window.__petOpen.pet.id, kind: 'dex' })`);
+    await js(`window.__cb.onDexClosed(99)`);
     await wait(300);
-    await js(`window.__cb.onPetClosed(99)`);
-    await wait(300);
-    assert.equal(await js<string | null>(`window.__dexOpen`), null, "파티 상세를 닫으면 옆 도감 기기 창도 닫는다");
+    assert.equal(await js<unknown>(`window.__petOpen`), null, "보이던 도감 창을 닫으면 파티 상세로 돌아가지 않고 고른 칸을 비운다");
+    assert.equal(await js<number>(`document.querySelectorAll('#body .slot[aria-pressed="true"], #body .slot.selected').length`), 0, "고른 칸 표시도 없다");
 
     // (16) 실패는 새 줄을 끼우지 않는다 (2026-09-30 사용자 결정 "레이아웃 왔다갔다하는건데? 나 이런거 싫어한다니까?").
     //      가짜 명령은 늘 실패한다(`mock`). 가방 사용 실패는 (10) 이 기기 창 미리보기 상자로 본다. 관리 창 본문 높이는 그대로다.
@@ -1114,7 +1115,7 @@ void app.whenReady().then(async () => {
     await wait(400);
     assert.deepEqual((await cmds()).map((c) => [c.cmd, c.args.preset]), [["party.preset", 1]], "가방의 ▶ — 다음 프리셋을 적용한다");
 
-    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 도감 보기 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기·머리 메뉴·순서 모달) · 돌보미집 모두 열기 · 이로치 아이콘 · 파티 프리셋(머리 줄·이름·교체 모달·가방 넘김) · 그림 ${shots}\n`);
+    process.stdout.write(`관리 창 검사 통과: 1초 시계 표시 고치기·포커스 · 격자 넘김 · 검색 칸 · 성격 창 · 보는 방식 · 가방 기기 창 · 상점 기기 창 · 진화 도구 판매만 · 교환 링크 · 탭 나가면 상세 닫기 · 기기 종류 탭 · 실패 표시 높이 · 포켓몬 메뉴 · 박스(칸·넘김 줄·옮기기·팔기·머리 메뉴·순서 모달) · 돌보미집 모두 열기 · 이로치 아이콘 · 파티 프리셋(머리 줄·이름·교체 모달·가방 넘김) · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

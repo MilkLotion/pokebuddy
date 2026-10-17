@@ -6,39 +6,34 @@ import type { PetDeviceAction, PetDeviceInput } from "../../shared/model/devices
 import { api } from "./api.js";
 import { boxUi } from "./box-state.js";
 import { sendCommand, whenSlow } from "./command.js";
-import { closeDexBeside, syncDexBeside, toggleDexBeside } from "./dex-link.js";
+import { deviceClosed, kindsOf, petTarget } from "./device-kind.js";
 import { createDeviceLink } from "./device-link.js";
 import { leavePet, openAnyDialog } from "./dialog.js";
 import { fromLayer } from "./layers.js";
 import { redrawBody } from "./shell.js";
 import { boxPets, findPartySlot, partyPets, petInView, ui } from "./state.js";
 
-// 파티 상세 기기 창 연결 — 개체를 고른 동안 연다 (petDeviceBuild). 세대 번호·보낸 값은 device-link.ts 가 든다
+// 파티 상세 기기 창 연결 — 지금 기기가 파티 상세이고 대상 개체가 있는 동안 연다 (petDeviceBuild, device-kind.ts petTarget). 세대 번호·보낸 값은 device-link.ts 가 든다
 export const petLink = createDeviceLink<PetDeviceInput>({
   build: petDeviceBuild,
   stamp: () => ui.view,
   open: (input, gen) => api.petOpen(input, gen),
   layer: "device:pet",
-  afterClosed: () => {
-    if (!ui.detailPet) return false;
-    ui.detailPet = null;
-    return true;
-  },
+  afterClosed: () => deviceClosed("pet"), // 머리 탭으로 바꿔 닫혔으면 고른 것을 그대로 둔다
   redraw: () => redrawBody(),
 });
 let petBusy: string | null = null; // 0.3초 넘게 답이 없는 기기 창 단추의 열쇠 — 기기 창이 그것만 점 세 개로
 
-// 파티 상세 기기 창에 보낼 고른 값 — 고른 개체가 없으면 null(닫는다). 옆 도감 기기 창이 켜 있으면 그 종을 먼저 보낸다
+// 파티 상세 기기 창에 보낼 고른 값 — 띄울 개체가 없으면 null(닫는다). 머리의 종류 탭(kinds)을 함께 싣는다
 function petDeviceBuild(): PetDeviceInput | null {
-  const pet = ui.detailPet ? petInView(ui.detailPet) : null;
+  const id = petTarget();
+  const pet = id ? petInView(id) : null;
   if (!pet || !ui.view) return null;
-  const dexOpen = syncDexBeside(pet.species);
-  return { petId: pet.id, notice: ui.notice, dexOpen, busy: petBusy };
+  return { petId: pet.id, notice: ui.notice, busy: petBusy, kinds: kindsOf() };
 }
 
 export function syncPetDevice(): void {
   petLink.sync();
-  if (!petLink.isOpen()) closeDexBeside(); // 파티 상세를 닫으면 옆 도감 기기 창도 닫는다
 }
 
 // 이전·다음 — 파티 개체는 파티 칸 순서, 박스 개체는 박스 순서로 돈다
@@ -59,7 +54,7 @@ export function stepPet(delta: -1 | 1): void {
 
 // 기기 창에서 누른 단추 — 명령은 그 개체에, 대화상자는 여기서 연다
 export function onPetAction(action: PetDeviceAction): void {
-  const id = ui.detailPet;
+  const id = petTarget();
   if (!id || action.petId !== id) return; // 기기 창이 다른 개체를 보이던 때 누른 것 — 버린다
   if (action.kind === "cmd") {
     void petSend(action, id);
@@ -67,10 +62,6 @@ export function onPetAction(action: PetDeviceAction): void {
   }
   if (action.kind === "tutorial") {
     void sendCommand(action.action === "done" ? "tutorial.done" : "tutorial.skip", "detail");
-    return;
-  }
-  if (action.kind === "dex") {
-    toggleDexBeside();
     return;
   }
   // 이 기기 창에서 연 모달 — 기기 창을 닫으면 같이 닫힌다(layers.ts)

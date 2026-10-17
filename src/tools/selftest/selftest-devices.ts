@@ -36,7 +36,7 @@ function seed(): SaveV3 {
 }
 
 const v = snapshotView(seed(), T0);
-const bagIn = (over: Partial<BagDeviceInput>): BagDeviceInput => ({ itemId: "rare-candy", mode: "use", targetPetId: "p1", qty: 1, sellQty: 1, notice: "", result: null, busy: false, ...over });
+const bagIn = (over: Partial<BagDeviceInput>): BagDeviceInput => ({ itemId: "rare-candy", mode: "use", targetPetId: "p1", qty: 1, sellQty: 1, notice: "", result: null, busy: false, kinds: [], ...over });
 const bag = (over: Partial<BagDeviceInput>) => {
   const r = bagDeviceModel(v, bagIn(over));
   assert.ok(r, `가방 모델이 있다 (${JSON.stringify(over)})`);
@@ -138,7 +138,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (6) 상점 — 수량 상한과 까닭, 포인트 부족, 그림 열쇠, 하나씩만 사는 상품
 {
-  const shopIn = (productId: string, over: Partial<ShopDeviceInput> = {}): ShopDeviceInput => ({ productId, qty: 1, notice: "", done: null, busy: false, ...over });
+  const shopIn = (productId: string, over: Partial<ShopDeviceInput> = {}): ShopDeviceInput => ({ productId, qty: 1, notice: "", done: null, busy: false, kinds: [], ...over });
   const shop = (productId: string, over: Partial<ShopDeviceInput> = {}) => {
     const r = shopDeviceModel(v, shopIn(productId, over));
     assert.ok(r, `상점 모델이 있다 (${productId})`);
@@ -166,9 +166,9 @@ const bag = (over: Partial<BagDeviceInput>) => {
 
 // (8) 파티 상세 — 자리 글자, 튜토리얼은 파티 개체만
 {
-  const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", dexOpen: false, busy: null })?.model;
+  const where = (id: string) => petDeviceModel(v, { petId: id, notice: "", busy: null, kinds: [] })?.model;
   // 처리 중 열쇠 — 명령 단추만 열쇠가 있고, 볼 토글은 꺼내기·넣기가 같은 열쇠다 (94 2-1)
-  assert.equal(petDeviceModel(v, { petId: "p1", notice: "", dexOpen: false, busy: "feed" })?.model.busy, "feed");
+  assert.equal(petDeviceModel(v, { petId: "p1", notice: "", busy: "feed", kinds: [] })?.model.busy, "feed");
   assert.deepEqual(
     [
       petBusyKey({ petId: "p1", kind: "cmd", cmd: "feed" }),
@@ -225,7 +225,7 @@ const bag = (over: Partial<BagDeviceInput>) => {
 {
   const shopIcon = (id: string) => v.shop.find((i) => i.id === id)?.icon;
   assert.deepEqual([shopIcon("random"), shopIcon("ancient-stone"), shopIcon("premium-food"), shopIcon("party-slot")], ["egg:random", "item:ancient-stone", "item:premium-food", null]);
-  assert.equal(shopDeviceModel(v, { productId: "random", qty: 1, notice: "", done: null, busy: false })?.model.art, "egg:random");
+  assert.equal(shopDeviceModel(v, { productId: "random", qty: 1, notice: "", done: null, busy: false, kinds: [] })?.model.art, "egg:random");
   assert.ok(v.bag.every((i) => i.icon === `item:${i.id}`), "가방 도구는 item:<id>");
   const s = seed();
   s.eggs.push({ id: "e1", kind: "random", boughtAt: T0, remainMs: 1, ready: false, candidates: [], careCooldownMs: 0, actions: { pat: 0, song: 0 } });

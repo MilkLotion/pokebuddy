@@ -347,7 +347,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
 {
   const s = seed({ species: "calyrex", level: 50 }, { "reins-of-unity": 2 });
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
-  const input = (over: Partial<BagDeviceInput> = {}): BagDeviceInput => ({ itemId: "reins-of-unity", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, ...over });
+  const input = (over: Partial<BagDeviceInput> = {}): BagDeviceInput => ({ itemId: "reins-of-unity", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, kinds: [], ...over });
   const v = snapshotView(s, T0);
   const item = v.bag.find((i) => i.id === "reins-of-unity");
   assert.ok(item?.evolution && bagUsable(item), "진화 분류인데 사용 쪽이 있다");

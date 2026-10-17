@@ -440,7 +440,7 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   save.pets[2]!.gender = "male";
   save.pets.forEach((p, i) => setBattleSlot(save, i, p.id));
   const v = snapshotView(save, T0);
-  const model = (i: number) => battleDeviceModel(v, { slot: i, notice: "" })!.model;
+  const model = (i: number) => battleDeviceModel(v, { slot: i, notice: "", kinds: [] })!.model;
   const lines = (rows: { mul: number; types: string[] }[]) => rows.map((r) => `${r.mul}:${r.types.join("/")}`);
   const zard = model(0);
   assert.deepEqual(lines(zard.matchup.defense), ["4:rock", "2:water/electric", "0.5:fighting/steel/fire/fairy", "0.25:bug/grass", "0:ground"], "리자몽 방어 — 두 타입을 곱한다");

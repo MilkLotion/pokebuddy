@@ -2,6 +2,7 @@
 // Electron 을 모른다 — 자체 검사가 직접 부른다. 액션 종류를 가르는 본문(창마다 다른 isAction)은 그 창 파일에 남는다
 
 import { ART_ASK_LIMITS } from "../../shared/art-limits.js";
+import type { DeviceKind, DeviceKindTab } from "../../shared/model/devices";
 
 // 받는 값의 상한 — 지금까지 창 파일마다 숫자로 적던 것
 export const INPUT_LIMITS = {
@@ -24,6 +25,13 @@ export const isQty = (v: unknown): v is number => typeof v === "number" && Numbe
 
 // 이전·다음
 export const isStep = (v: unknown): v is -1 | 1 => v === 1 || v === -1;
+
+// 기기 종류 탭 — 다섯 기기 중 하나 (src/shared/model/devices.ts DeviceKind)
+const DEVICE_KINDS: readonly DeviceKind[] = ["pet", "dex", "battle", "shop", "bag"];
+export const isDeviceKind = (v: unknown): v is DeviceKind => typeof v === "string" && (DEVICE_KINDS as readonly string[]).includes(v);
+// 머리의 종류 탭 목록 — 셋까지, 칸마다 종류·지금·흐림
+export const isDeviceKindTabs = (v: unknown): v is DeviceKindTab[] =>
+  Array.isArray(v) && v.length <= 3 && v.every((t) => isRecord(t) && isDeviceKind(t.id) && typeof t.current === "boolean" && typeof t.disabled === "boolean");
 
 // 0 이상 count 미만의 정수
 export const isIndexBelow = (v: unknown, count: number): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0 && v < count;

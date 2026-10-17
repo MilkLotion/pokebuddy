@@ -13,6 +13,7 @@ import { redrawBody, setTab } from "./shell.js";
 import { findPartySlot, petInView, ui } from "./state.js";
 import { loadTrade } from "./trade-state.js";
 import { coachIdOf } from "./tutorial.js";
+import { resetKind } from "./device-kind.js";
 
 // 개체 상세는 관리 창 옆의 기기 창이다 — 모달을 닫고 그 개체가 있는 탭을 그린 뒤 기기 창에 띄운다
 // (2026-09-28 사용자 "파티상세페이지도 도감상세처럼 옆에 뜨는거로 바꾸자", A안 기기형). 나머지는 모달이다 (dialog.ts openDialog)
@@ -21,6 +22,7 @@ export function openDialogOrPet(next: Dialog): void {
     if (coachIdOf() === "evolution") void sendCommand("tutorial.done", "evolution"); // 기기 창의 진화 단추를 보는 것이 목표 행동이다 — 카드를 눌러 온다
     closeDialog(); // 부모 스택·떠나는 모달의 정리도 함께 (dialog.ts)
     setTab(findPartySlot(next.petId) != null ? "party" : "box");
+    resetKind(); // 상세 보기는 파티 상세로 연다 — 같은 탭에서 머리 탭으로 바꿔 두었어도
     ui.detailPet = next.petId;
     redrawBody();
     return;

@@ -5,6 +5,7 @@
 import path from "node:path";
 import type { BrowserWindow } from "electron";
 import type { ManageDeviceLinkIpc, ManagePush } from "../../shared/ipc/manage";
+import type { DeviceKinds } from "../../shared/model/devices";
 import type { Snapshot } from "../../shared/model/snapshot";
 import type { GameV3 } from "../../tx/game.js";
 import { gainOf } from "../../state/settings.js";
@@ -17,7 +18,8 @@ import { MEGA_STONE_ICON, portraitKey } from "../art/portraits.js";
 import { artServices } from "../art/services.js";
 import type { ArtLoader } from "../art/stage-art.js";
 import { createDeviceWindow, type DeviceWindow } from "../windows/device-window.js";
-import { DEVICE_SIZES, bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPetInput, isShopInput, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
+import { isDeviceKindTabs } from "../windows/input.js";
+import { bagDeviceOf, battleDeviceOf, dexDeviceOf, isBagInput, isBattleInput, isPetInput, isShopInput, petDeviceOf, shopDeviceOf, type DeviceArtDeps } from "../windows/devices.js";
 import { wireIpc, type IpcScope } from "../windows/ipc.js";
 import { wireBattleScreen, type BattleScreen } from "./battle-screen.js";
 import type { GameReads } from "./game-reads.js";
@@ -95,6 +97,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   }), {
     onStep: (delta) => send("manage:dex-step", delta),
     onEscape: escapeOr(() => dexWin.close()),
+    onKind: (to) => send("manage:device-kind", to),
     onAct: (action) => send("manage:dex-act", action),
     // 관리 창을 닫으면 자식인 기기 창도 같이 닫힌다. 그때는 관리 창 문서가 먼저 없어져 보낼 곳이 없다
     onClosed: (gen) => send("manage:dex-closed", gen),
@@ -112,6 +115,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   }), {
     onStep: (delta) => send("manage:pet-step", delta),
     onEscape: escapeOr(() => petWin.close()),
+    onKind: (to) => send("manage:device-kind", to),
     onAct: (action) => send("manage:pet-act", action),
     onCoach: (on) => deps.setPetCoach(on),
     onClosed: (gen) => {
@@ -144,6 +148,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   const shopWin = createDeviceWindow(deviceFiles("shop"), shopDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:shop-step", delta),
     onEscape: escapeOr(() => shopWin.close()),
+    onKind: (to) => send("manage:device-kind", to),
     onAct: (action) => send("manage:shop-act", action),
     onClosed: (gen) => {
       shownModel.delete("shop");
@@ -154,6 +159,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   const bagWin = createDeviceWindow(deviceFiles("bag"), bagDeviceOf(deviceArt), {
     onStep: (delta) => send("manage:bag-step", delta),
     onEscape: escapeOr(() => bagWin.close()),
+    onKind: (to) => send("manage:device-kind", to),
     onAct: (action) => send("manage:bag-act", action),
     onClosed: (gen) => {
       shownModel.delete("bag");
@@ -165,6 +171,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   const battleWin = createDeviceWindow(deviceFiles("battle"), battleDeviceOf({ ...deviceArt, cry: (slug) => cries.get(slug), volume }), {
     onStep: (delta) => send("manage:battle-step", delta),
     onEscape: escapeOr(() => battleWin.close()),
+    onKind: (to) => send("manage:device-kind", to),
     onAct: (action) => send("manage:battle-act", action),
     onClosed: (gen) => {
       shownModel.delete("battle");
@@ -183,7 +190,8 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
   }
 
   // 고른 값(…DeviceInput)으로 모델을 만들어 띄운다. 띄울 것이 없으면 닫고 null. 답은 바로잡은 입력이다
-  function openDevice<I, M>(name: Shown, w: DeviceWindow<M>, input: I | null, make: (v: Snapshot, input: I) => { model: M; input: I } | null, gen: unknown): I | null {
+  // 머리의 종류 탭(kinds)은 설정창이 정한 그대로 모델에 붙인다 — 모델 함수(src/view/device-*.ts)는 모른다
+  function openDevice<I extends DeviceKinds, M>(name: Shown, w: DeviceWindow<M & DeviceKinds>, input: I | null, make: (v: Snapshot, input: I) => { model: M; input: I } | null, gen: unknown): I | null {
     const v = input ? snapshot() : null;
     const r = v && input ? make(v, input) : null;
     if (!r) {
@@ -191,7 +199,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
       w.close();
       return null;
     }
-    showDevice(name, w, r.model, gen);
+    showDevice(name, w, { ...r.model, kinds: input!.kinds }, gen);
     return r.input;
   }
 
@@ -206,10 +214,9 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;
-      // open 은 렌더러가 보낸 값이다 — { slug, beside } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
-      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; beside?: unknown }) : null;
-      // beside — 파티 상세의 `도감 보기`. 관리 창과 파티 상세 기기 창을 한 덩어리로 보고 그 옆에 붙인다
-      if (o && typeof o.slug === "string") dexWin.show(parent, { slug: o.slug, beside: o.beside === true ? DEVICE_SIZES.pet.width : 0 }, gen);
+      // open 은 렌더러가 보낸 값이다 — { slug, kinds } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
+      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; kinds?: unknown }) : null;
+      if (o && typeof o.slug === "string" && isDeviceKindTabs(o.kinds)) dexWin.show(parent, { slug: o.slug, kinds: o.kinds }, gen);
       else dexWin.close();
     },
   });

@@ -4,9 +4,22 @@ import type { DexDetail, EvoNodeView } from "./detail.js";
 import type { BattleSlotView, PetView } from "./snapshot.js";
 import type { SlotState } from "../save-v3.js";
 
+// ── 기기 종류 탭 ────────────────────────────────────────────────────────────────
+// 기기 창 머리의 종류 탭 — 같은 대상을 다른 기기로 같은 자리에서 본다 (docs/specs/ui-components.md "기기 종류 탭", 2026-10-17 사용자 확정).
+// 포켓몬 기기는 pet·dex·battle, 도구 기기는 shop·bag. 자리는 고정이고 지금 기기만 current 다. 설정창이 정해 고른 값(…Input)에 싣고, 메인이 모델에 그대로 붙인다
+export type DeviceKind = "pet" | "dex" | "battle" | "shop" | "bag";
+export interface DeviceKindTab {
+  id: DeviceKind;
+  current: boolean; // 지금 보이는 기기
+  disabled: boolean; // 볼 수 없다 — 흐리고 누를 수 없다
+}
+export interface DeviceKinds {
+  kinds: DeviceKindTab[]; // 머리의 종류 탭. 비면 머리에 제목을 그린다
+}
+
 // ── 도감 기기 창 ────────────────────────────────────────────────────────────────
 // 관리 창 옆에 붙어 한 종의 도감 항목을 보이는 창 — Figma `99 · 시안` `579:17691` (worklog/records/play-bugs/play-bugs.md)
-export interface DexDeviceView {
+export interface DexDeviceView extends DeviceKinds {
   detail: DexDetail;
   portrait: string | null; // data URI. 미해금이면 화면이 검은 실루엣으로 칠한다
   shinyPortrait: string | null; // 이로치 초상 — 이로치를 얻은 종만(detail.shiny). 초상 칸 오른쪽 위 단추로 켜고 끈다 (2026-10-09 사용자 결정, Figma 05 `Dex / Device / Shiny`)
@@ -15,7 +28,6 @@ export interface DexDeviceView {
   // 진화 트리 — 상점 구매 창과 같은 사슬이다(src/tx/shop-detail.ts). 미해금 종도 보낸다 — 트리 안의 미해금 종은 기기 창이 ??? 와 검은 실루엣으로 그린다. 사슬이 없으면 null
   tree: EvoNodeView | null;
   treePortraits: Record<string, string>; // 트리의 종 그림 — slug → data URI. 미해금 종의 그림도 든다(실루엣으로 그린다)
-  beside: boolean; // 파티 상세 기기 창 옆에 붙었다 — 바닥 단추 줄(이전·울음소리·다음)을 두지 않는다
 }
 
 // 파티 상세 기기 창 — 관리 창이 정해 보내는 것(PetDeviceOpen)에 메인이 그림·붙은 쪽·음량을 더한다 (src/main/windows/devices.ts petDeviceOf)
@@ -27,13 +39,12 @@ export interface PetDeviceOpen {
   sizeLevels: number;
   notice: string; // 마지막 실패 문구
   tutorial: boolean; // 개체 상세 튜토리얼을 보일 차례 — 파티 개체이고 아직 끝내거나 건너뛰지 않았다
-  dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다 — `도감 보기` 줄을 톤 배경으로
   careLine: { title: string; desc: string }; // `포인트 적립` 줄 — 제목(합)과 설명(버프·손해 내역)
   bars: { affinity: string; fullness: string; boredom: string }; // 막대 오른쪽 글자 — "80" · "55 · 보통" · "20 · 보통". 시간으로만 바뀌어 1초 시계가 글자만 고친다
   busy: string | null; // 처리 중인 단추의 열쇠(src/shared/device-busy.ts petBusyKey) — 그 단추만 점 세 개
 }
 
-export interface PetDeviceView extends PetDeviceOpen {
+export interface PetDeviceView extends PetDeviceOpen, DeviceKinds {
   portrait: string | null; // data URI
   megaIcon: string | null; // 메가스톤 표식 그림(키스톤) data URI — 메가스톤을 지녔거나 메가진화하는 종의 개체일 때만 받는다
   side: "right" | "left";
@@ -49,7 +60,6 @@ export type PetDeviceAction = { petId: string } & (
   | { kind: "cmd"; cmd: "feed" | "play" | "party.show" | "party.hide" | "pet.set"; args?: Record<string, unknown> }
   | { kind: "dialog"; dialog: "evolve" | "nature" | "mega" } // mega — 초상의 메가스톤 표식을 눌렀다 (src/dex/mega.ts)
   | { kind: "tutorial"; action: "done" | "skip" } // 개체 상세 튜토리얼을 끝냈다·닫았다
-  | { kind: "dex" } // 도감 보기 — 기기 창을 닫고 그 종의 도감 기기 창을 연다 (2026-09-30)
 );
 
 // 상점 기기 창 — 관리 창이 정해 보내는 것(ShopDeviceOpen)에 메인이 붙은 쪽을 더한다 (src/main/windows/devices.ts shopDeviceOf, Figma 05 `Shop / Device / Tool`)
@@ -74,7 +84,7 @@ export interface ShopDeviceOpen extends ItemFace {
   buy: { label: string; disabled: boolean; busy: boolean };
 }
 
-export interface ShopDeviceView extends ShopDeviceOpen {
+export interface ShopDeviceView extends ShopDeviceOpen, DeviceKinds {
   side: "right" | "left";
 }
 
@@ -96,7 +106,7 @@ export interface BagDeviceOpen extends ItemFace {
   go: { label: string; disabled: boolean; busy: boolean }; // 바닥 가운데 주 단추 — `N개 사용` · `NP에 팔기`
 }
 
-export interface BagDeviceView extends BagDeviceOpen {
+export interface BagDeviceView extends BagDeviceOpen, DeviceKinds {
   side: "right" | "left";
 }
 
@@ -111,7 +121,7 @@ export interface ResultLine {
 // ── 기기 창 입력 — 설정창이 고른 값 ─────────────────────────────────────────────
 // 설정창은 이것만 보내고, 메인이 모델을 만든다 (src/view/device-*.ts). 메인은 바로잡은 입력(수량을 상한으로 자르기, 없는 대상 바꾸기)을 돌려준다
 
-export interface BagDeviceInput {
+export interface BagDeviceInput extends DeviceKinds {
   itemId: string;
   mode: "use" | "sell";
   targetPetId: string | null; // 사용 쪽 대상 개체. 파티에 없으면 첫 개체로 바꾼다
@@ -122,7 +132,7 @@ export interface BagDeviceInput {
   busy: boolean; // 0.3초 넘게 답이 없다 — 주 단추가 점 세 개
 }
 
-export interface ShopDeviceInput {
+export interface ShopDeviceInput extends DeviceKinds {
   productId: string;
   qty: number;
   notice: string; // 마지막 구매 실패 — 합계 상자가 빨강
@@ -130,10 +140,9 @@ export interface ShopDeviceInput {
   busy: boolean; // 0.3초 넘게 답이 없다 — 구매 단추가 점 세 개
 }
 
-export interface PetDeviceInput {
+export interface PetDeviceInput extends DeviceKinds {
   petId: string;
   notice: string; // 마지막 실패 문구
-  dexOpen: boolean; // 옆에 이 종의 도감 기기 창이 떠 있다
   busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
 }
 
@@ -141,7 +150,7 @@ export interface PetDeviceInput {
 // 모험 탭의 배틀 칸 카드를 누르면 뜬다. 종족값(방사형 그래프)·특성·보유 기술을 보인다 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // 설정창은 칸 번호만 보내고(BattleDeviceInput), 메인이 지금 스냅샷으로 모델을 만든다 (src/view/device-battle.ts)
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1662:224`
-export interface BattleDeviceInput {
+export interface BattleDeviceInput extends DeviceKinds {
   slot: number; // 배틀 파티 칸 0~5
   notice: string; // 마지막 실패 문구
 }
@@ -173,7 +182,7 @@ export interface BattleDeviceMatchup {
   attack: { typeId: string; name: string; rows: MatchupLine[] }[];
 }
 
-export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt" | "megaArt"> {
+export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt" | "megaArt">, DeviceKinds {
   portrait: string | null; // data URI
   megaIcon: string | null; // 메가스톤 표식 data URI
   typeIcons: Record<string, string | null>; // 타입 → 흰 타입 아이콘 data URI

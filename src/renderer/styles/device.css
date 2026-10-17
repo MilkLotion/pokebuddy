@@ -53,6 +53,37 @@ button {
   font-weight: 700;
   color: var(--inverse);
 }
+/* 머리의 종류 탭 — 제목 자리(LED 오른쪽)에 둔다. 지금 기기는 밝은 바탕·굵은 글자, 나머지는 흰 글자, 볼 수 없으면 흐림.
+   세 상태의 여백이 같아 글자가 흔들리지 않는다 (docs/specs/ui-components.md "기기 종류 탭", Figma 01 `Device Kind Tab` `2052:41`) */
+.top .kinds {
+  display: flex;
+  gap: 2px;
+  margin-right: auto;
+  -webkit-app-region: no-drag;
+}
+.top .kind {
+  height: 22px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--inverse);
+  font: inherit;
+  cursor: pointer;
+}
+.top .kind:hover:not(:disabled):not(.on) {
+  background: rgba(0, 0, 0, 0.15);
+}
+.top .kind.on {
+  background: var(--records);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: default;
+}
+.top .kind:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .close {
   -webkit-app-region: no-drag;
   width: 24px;

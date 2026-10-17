@@ -188,12 +188,12 @@ void app.whenReady().then(async () => {
     const reads = gameReads(createGame({ file, now: () => NOW, flushMs: 60_000, petName }));
     const v = reads.snapshot();
     if (!v) throw new Error("스냅샷이 없다");
-    const pet = petDeviceModel(v, { petId, notice: "", dexOpen: false, busy: null })?.model;
-    const bag = bagDeviceModel(v, { itemId: "exp-candy-s", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false })?.model;
-    const stone = bagDeviceModel(v, { itemId: "fire-stone", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false })?.model;
+    const pet = petDeviceModel(v, { petId, notice: "", busy: null, kinds: [] })?.model;
+    const bag = bagDeviceModel(v, { itemId: "exp-candy-s", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, kinds: [] })?.model;
+    const stone = bagDeviceModel(v, { itemId: "fire-stone", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, kinds: [] })?.model;
     const product = v.shop.find((i) => i.about) ?? v.shop[0];
-    const shop = product ? shopDeviceModel(v, { productId: product.id, qty: 1, notice: "", done: null, busy: false })?.model : null;
-    const battle = battleDeviceModel(v, { slot: 0, notice: "" })?.model;
+    const shop = product ? shopDeviceModel(v, { productId: product.id, qty: 1, notice: "", done: null, busy: false, kinds: [] })?.model : null;
+    const battle = battleDeviceModel(v, { slot: 0, notice: "", kinds: [] })?.model;
     const slug = save.pets[0]!.species;
     const detail = reads.detailOf(slug);
     const shopDetail = reads.shopDetailOf(slug);
@@ -205,7 +205,7 @@ void app.whenReady().then(async () => {
       ["bag-candy", "bag.html", "pokebuddyBag", bag && noArt(bag)],
       ["bag-stone", "bag.html", "pokebuddyBag", stone && noArt(stone)],
       ["shop", "shop.html", "pokebuddyShop", shop && noArt(shop)],
-      ["dex", "dex.html", "pokebuddyDex", detail && { detail, portrait: null, shinyPortrait: null, volume: 0, tree, treePortraits: {}, beside: false }],
+      ["dex", "dex.html", "pokebuddyDex", detail && { detail, portrait: null, shinyPortrait: null, volume: 0, tree, treePortraits: {}, kinds: [] }],
       ["battle", "battle.html", "pokebuddyBattle", battle && { ...(noArt(battle) as object), portrait: null, megaIcon: null, typeIcons: {}, volume: 0 }],
     ];
     for (const [name, html, bridge, model] of devices) {

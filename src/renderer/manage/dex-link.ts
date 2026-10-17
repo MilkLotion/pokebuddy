@@ -1,16 +1,16 @@
-// 설정창의 도감 기기 창 연결 — 도감 탭에서 고른 종과, 파티 상세 옆에 붙는 도감(`도감 보기`)이 창 하나를 같이 쓴다 (P10q)
+// 설정창의 도감 기기 창 연결 — 지금 기기가 도감일 때 대상의 종을 띄운다 (P10q)
+// - 띄울 종은 device-kind.ts 가 정한다: 도감 탭은 고른 칸, 파티·박스·모험 탭은 머리 탭으로 바꾼 대상 개체의 종 (docs/specs/ui-components.md "기기 종류 탭")
 // - 세대 번호: 메인이 닫힘 알림에 실어 준 마지막 번호. 여는 요청에 싣는다 (src/main/device-gen.ts)
-// - 옆 도감: 파티 상세의 `도감 보기` 로 켠다. 켜 있는 동안 파티 상세에서 개체를 넘기면 그 종으로 바뀐다
-//   (2026-10-01 사용자 결정 "도감창으로 가는게 별로인거같아. 그냥 옆에 그 포켓몬 상세도감기기를 띄울까", Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
-// - 창을 보내는 일은 파티 상세 기기 창 맞추기(syncPetDevice)가 한다 — 여기는 상태와 여닫기만
+// - 2026-10-01 의 옆 도감(파티 상세의 `도감 보기`)은 2026-10-17 머리의 종류 탭으로 바꿨다
 import type { DexDeviceAction } from "../../shared/model/devices.js";
 import { api } from "./api.js";
+import { deviceClosed, dexTarget, kindsOf } from "./device-kind.js";
 import { closeLayer, openLayer } from "./layers.js";
+import { redrawBody } from "./shell.js";
+import { ui } from "./state.js";
 
 export interface DexLinkHooks {
-  pickClosed(): void; // 창이 닫혔다 — 도감 탭의 고른 칸을 비운다
-  besideChanged(): void; // 옆 도감을 켜거나 껐다, 또는 새 세대 번호로 다시 열어야 한다 — 파티 상세 기기 창을 맞춘다
-  picked(slug: string): void; // 기기 창의 진화 트리에서 종을 눌렀다 — 도감 탭이 그 종을 고른다
+  picked(slug: string): void; // 도감 탭에서 연 창의 진화 트리에서 종을 눌렀다 — 도감 탭이 그 종을 고른다
 }
 let hooks: DexLinkHooks | null = null;
 export function setDexLinkHooks(next: DexLinkHooks): void {
@@ -22,83 +22,60 @@ function hooksOf(): DexLinkHooks {
 }
 
 let dexGen = 0;
-let dexBeside = false;
-let dexBesideSent: string | null = null; // 마지막으로 보낸 종
-let dexBesideClosing = false; // 우리가 닫으라고 보냈다 — 오는 닫힘 알림은 사용자의 ✕ 가 아니다
+let open = false;
+let sent = ""; // 마지막으로 보낸 값(종·종류 탭) — 같으면 다시 보내지 않는다
+// 도감 탭 밖에서 연 도감의 진화 트리에서 누른 종 — 대상(base)이 바뀌면 버린다
+let treePick: { base: string; slug: string } | null = null;
 
-// 도감 탭에서 고른 종을 띄운다. null 이면 닫는다
-// 열림 스택의 겹(layers.ts) — Esc 가 이 겹에 오면 ✕ 와 같이 닫으라고 보낸다. 메인의 닫힘 알림이 고른 칸을 비운다
-export function openDexPick(slug: string | null): void {
-  if (slug) openLayer("device:dex", () => openDexPick(null));
-  else closeLayer("device:dex");
-  api.dexOpen(slug ? { slug, beside: false } : null, dexGen);
-}
-
-// 도감 기기 창에서 한 일 — 진화 트리의 종을 눌러 그 종의 상세로 바꾼다 (2026-10-13 사용자 "진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게")
-// 옆 도감이면 그 종을 그대로 보내고, 도감 탭에서 연 창이면 탭이 그 종을 고른다
-export function onDexAction(action: DexDeviceAction): void {
-  if (action.kind !== "pick") return;
-  if (dexBeside) {
-    api.dexOpen({ slug: action.slug, beside: true }, dexGen);
-    dexBesideSent = action.slug;
-    return;
-  }
-  hooksOf().picked(action.slug);
-}
-
-// 파티 상세 기기 창을 보내기 전 — 옆 도감이 켜 있으면 그 종을 먼저 보낸다(같은 종이면 다시 보내지 않는다). 켜 있는지 돌려준다
-export function syncDexBeside(species: string): boolean {
-  if (dexBeside && dexBesideSent !== species) {
-    api.dexOpen({ slug: species, beside: true }, dexGen);
-    dexBesideSent = species;
-  }
-  return dexBeside;
-}
-
-export function closeDexBeside(): void {
-  if (!dexBeside) return;
-  closeLayer("beside:dex");
-  if (dexBesideSent) dexBesideClosing = true;
-  dexBeside = false;
-  dexBesideSent = null;
+// Esc 가 이 겹에 왔다 — 기기 창의 ✕ 와 같다. 메인의 닫힘 알림이 고른 것을 비운다
+function closeByEscape(): void {
+  closeLayer("device:dex");
   api.dexOpen(null, dexGen);
 }
 
-// 도감 보기 — 떠 있으면 닫는다. 관리 창 탭은 그대로다
-// 옆 도감은 파티 상세 겹에서 연 겹이다 — 파티 상세를 닫으면 같이 닫힌다(layers.ts)
-export function toggleDexBeside(): void {
-  if (dexBeside) closeDexBeside();
-  else {
-    dexBeside = true;
-    openLayer("beside:dex", toggleDexBeside, { owner: "device:pet" });
-  }
-  hooksOf().besideChanged();
-}
-
-// 도감을 다시 읽었다 — 부화·해금으로 바뀐 항목을 떠 있는 창에 다시 보낸다
-export function resendDex(pick: string | null): void {
-  if (pick) openDexPick(pick);
-  else if (dexBeside && dexBesideSent) api.dexOpen({ slug: dexBesideSent, beside: true }, dexGen);
-}
-
-// 메인의 닫힘 알림
-export function onDexClosed(gen: number): void {
-  dexGen = gen;
-  closeLayer("device:dex");
-  hooksOf().pickClosed();
-  // 우리가 닫은 창이다. 그사이 다시 켰으면 새 세대 번호로 다시 연다 — 닫히기 전에 보낸 여는 요청은 메인이 버렸다
-  if (dexBesideClosing) {
-    dexBesideClosing = false;
-    if (dexBeside) {
-      dexBesideSent = null;
-      hooksOf().besideChanged();
-    }
+// 도감 기기 창 맞추기 — 띄울 종이 없으면 닫는다. force 면 같은 값도 다시 보낸다(부화·해금으로 항목이 바뀌었다)
+// 열림 스택의 겹(layers.ts)을 열 때 넣고 닫을 때 뺀다
+export function syncDexDevice(force = false): void {
+  const base = dexTarget();
+  if (treePick && treePick.base !== base) treePick = null;
+  const slug = base ? (treePick?.slug ?? base) : null;
+  if (!slug) {
+    if (open || sent) api.dexOpen(null, dexGen);
+    open = false;
+    sent = "";
+    closeLayer("device:dex");
     return;
   }
-  // 옆 도감 기기 창을 ✕·Esc 로 닫았다 — 파티 상세의 `도감 보기` 줄 톤을 끈다
-  if (!dexBeside) return;
-  closeLayer("beside:dex");
-  dexBeside = false;
-  dexBesideSent = null;
-  hooksOf().besideChanged();
+  const input = { slug, kinds: kindsOf() };
+  const key = JSON.stringify(input);
+  if (open && key === sent && !force) return;
+  if (!open) openLayer("device:dex", closeByEscape);
+  open = true;
+  sent = key;
+  api.dexOpen(input, dexGen);
+}
+
+// 도감 기기 창에서 한 일 — 진화 트리의 종을 눌러 그 종의 상세로 바꾼다 (2026-10-13 사용자 "진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게")
+// 도감 탭에서 연 창이면 탭이 그 종을 고른다. 다른 탭에서 연 창이면 대상이 바뀔 때까지 그 종을 보인다
+export function onDexAction(action: DexDeviceAction): void {
+  if (action.kind !== "pick") return;
+  if (ui.tab === "dex") {
+    hooksOf().picked(action.slug);
+    return;
+  }
+  const base = dexTarget();
+  if (!base) return;
+  treePick = { base, slug: action.slug };
+  syncDexDevice();
+}
+
+// 메인의 닫힘 알림 — 보이던 기기면 탭의 고른 것을 비운다. 머리 탭으로 바꿔 닫혔는데 그사이 다시 도감으로 왔으면 새 번호로 다시 연다
+export function onDexClosed(gen: number): void {
+  dexGen = gen;
+  open = false;
+  sent = "";
+  const again = deviceClosed("dex");
+  closeLayer("device:dex");
+  if (again) redrawBody();
+  else if (dexTarget()) syncDexDevice();
 }

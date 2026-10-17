@@ -6,6 +6,7 @@ import type { BagDeviceAction, BagDeviceInput } from "../../shared/model/devices
 import type { BagItemView } from "../../shared/model/snapshot.js";
 import { api } from "./api.js";
 import { lastReplyOf, sendCommand } from "./command.js";
+import { bagTarget as itemTarget, deviceClosed, kindsOf } from "./device-kind.js";
 import { createDeviceLink } from "./device-link.js";
 import { redrawBody } from "./shell.js";
 import { petInView, ui } from "./state.js";
@@ -24,7 +25,8 @@ function hooksOf(): BagLinkHooks {
   return hooks;
 }
 
-let bagPick: string | null = null; // 가방 기기 창에 띄운 도구
+let bagPick: string | null = null; // 가방 탭에서 고른 도구 — 띄울 도구는 device-kind.ts bagTarget 이 정한다(상점 탭에서 머리 탭으로 바꾼 상품의 도구)
+let shownItem: string | null = null; // 마지막으로 띄운 도구 — 바뀌면 갈래·수량·결과를 처음으로
 let bagTarget: string | null = null; // 사용 쪽에서 고른 파티 개체
 let bagQty = 1;
 // 방금 쓴 결과 — 미리보기 상자가 초록으로 보인다. 도구·대상·갈래·수량·탭을 바꾸면 지운다 (2026-09-30 사용자 결정 "추천대로 진행해")
@@ -61,17 +63,23 @@ export const bagLink = createDeviceLink<BagDeviceInput>({
     bagQty = input.qty;
     sellQty = input.sellQty;
   },
-  afterClosed: () => {
-    if (!bagPick) return false;
-    bagPick = null;
-    return true;
-  },
+  afterClosed: () => deviceClosed("bag"), // 머리 탭으로 바꿔 닫혔으면 고른 도구를 그대로 둔다
   redraw: () => redrawBody(),
 });
 // 가방 기기 창에 보낼 고른 값 — 고른 도구가 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-bag.ts)
 function bagDeviceBuild(): BagDeviceInput | null {
-  if (!bagPick || !ui.view?.bag.some((i) => i.id === bagPick)) return null;
-  return { itemId: bagPick, mode: bagMode, targetPetId: bagTarget, qty: bagQty, sellQty, notice: bagNotice, result: bagResult ? { lead: bagResult, line: bagResultNote } : null, busy: bagBusy };
+  const id = itemTarget();
+  if (!id || !ui.view?.bag.some((i) => i.id === id)) return null;
+  // 다른 도구가 됐다(머리 탭으로 상점에서 왔다) — 고를 때(pickBag)와 같이 갈래·수량·결과를 처음으로
+  if (id !== shownItem) {
+    shownItem = id;
+    bagMode = "use";
+    bagQty = 1;
+    sellQty = 1;
+    bagNotice = "";
+    bagResult = "";
+  }
+  return { kinds: kindsOf(), itemId: id, mode: bagMode, targetPetId: bagTarget, qty: bagQty, sellQty, notice: bagNotice, result: bagResult ? { lead: bagResult, line: bagResultNote } : null, busy: bagBusy };
 }
 
 export function syncBagDevice(): void {
@@ -92,9 +100,10 @@ export function stepBag(delta: -1 | 1): void {
 
 // 기기 창에서 누른 단추 — 기기 창이 다른 도구를 보이던 때 누른 것은 버린다
 export function onBagAction(action: BagDeviceAction): void {
-  if (!bagPick || action.itemId !== bagPick) return;
+  const target = itemTarget();
+  if (!target || action.itemId !== target) return;
   if (action.kind === "go") {
-    void (bagMode === "sell" ? sellBag(bagPick) : useBag(bagPick));
+    void (bagMode === "sell" ? sellBag(target) : useBag(target));
     return;
   }
   if (action.kind === "preset") {

@@ -31,17 +31,18 @@ import { onPetAction, petLink, stepPet, syncPetDevice } from "./pet-link.js";
 import { closeAdventureMenu, drawAdventure } from "./adventure-tab.js";
 import { escapeTop } from "./layers.js";
 import { closeTabTip } from "./tab-tips.js";
-import { battleLink, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
+import { battleLink, battleShown, clearBattlePick, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
 import { drawBattleStart } from "./battle-start.js";
 import { drawMovePick, startMovePick } from "./move-pick.js";
 import { drawSwap, startSwap } from "./party-swap.js";
-import { bagLink, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
+import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
-import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, stepShop, syncShopDevice } from "./shop-link.js";
+import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, shopPickOf, stepShop, syncShopDevice } from "./shop-link.js";
 import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
-import { onDexAction, onDexClosed, setDexLinkHooks } from "./dex-link.js";
-import { clearDexPick, closeDexRegion, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, pickDexFromDevice, setDexTabHooks, stepDex } from "./dex-tab.js";
+import { onDexAction, onDexClosed, setDexLinkHooks, syncDexDevice } from "./dex-link.js";
+import { fixKind, resetKind, setDeviceKindHooks, swapKind } from "./device-kind.js";
+import { clearDexPick, closeDexRegion, dexPickOf, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, pickDexFromDevice, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature } from "./nature.js";
 import { accountUi } from "./account-state.js";
@@ -78,16 +79,35 @@ setDialogHooks({
   openAny: (next) => openDialogOrPet(next),
 });
 
-// 도감 — 칸을 누른 것은 도감 튜토리얼의 목표 행동이다. 기기 창이 닫히면 고른 칸을 비우고, 옆 도감이 바뀌면 파티 상세 기기 창을 맞춘다
+// 도감 — 칸을 누른 것은 도감 튜토리얼의 목표 행동이다. 고른 칸이 바뀌면 지금 보이는 기기 창(도감, 또는 머리 탭으로 바꾼 파티 상세·배틀)을 맞춘다
 setDexTabHooks({
   onPicked: () => {
     if (coachIdOf() === "dex") void sendCommand("tutorial.done", "dex");
   },
+  syncDevices: () => {
+    syncPetDevice();
+    syncDexDevice();
+    syncBattleDevice();
+  },
 });
 setDexLinkHooks({
-  pickClosed: () => clearDexPick(),
-  besideChanged: () => syncPetDevice(),
   picked: (slug) => pickDexFromDevice(slug),
+});
+
+// 기기 종류 탭 — 탭마다 고른 것이 대상이다. 보이던 기기 창을 닫으면 그 탭의 고른 것을 비운다 (device-kind.ts, docs/specs/ui-components.md "기기 종류 탭")
+setDeviceKindHooks({
+  dexPick: () => dexPickOf(),
+  battleSlot: () => battleShown(),
+  shopPick: () => shopPickOf(),
+  bagPick: () => bagPickOf(),
+  closeSubject: (tab) => {
+    if (tab === "party" || tab === "box") ui.detailPet = null;
+    else if (tab === "dex") clearDexPick();
+    else if (tab === "adventure") clearBattlePick();
+    else if (tab === "shop") leaveShop();
+    else leaveBag();
+  },
+  redraw: () => redrawBody(),
 });
 
 // 상점 기기 창의 이전·다음 — 상점 탭이 보이는 순서로 돈다
@@ -120,6 +140,7 @@ setAccountHooks({
 setShellHooks({
   isTyping: (root) => typingSearch(root),
   beforeTabChange: () => {
+    resetKind(); // 머리 탭으로 바꾼 기기는 그 탭 안에서만 — 다른 탭은 본래 기기로 연다
     ui.detailPet = null; // 개체 상세는 파티·박스에서만 열린다 — 다음 그리기의 syncPetDevice 가 기기 창을 닫는다
     if (hold.box) endHold(); // 옮기기로 든 개체는 박스 탭을 나가면 내려놓는다
     stopPresetRename();
@@ -194,7 +215,9 @@ registerTab({
 // 본문을 그리기 전 기기 창 맞추기 — 고른 것이 사라졌으면 닫는다. 순서: 파티 상세 → 상점 → 가방 → 파티
 registerBodySync(() => {
   if (ui.detailPet && !petInView(ui.detailPet)) ui.detailPet = null; // 개체 상세 — 옆 기기 창. 개체가 사라졌으면 닫는다
+  fixKind(); // 머리 탭으로 바꾼 기기를 더 볼 수 없으면 본래 기기로
   syncPetDevice();
+  syncDexDevice();
 });
 registerBodySync(() => {
   dropGoneShopPick();
@@ -299,19 +322,28 @@ void firstDraw.then(loadTrade);
 api.onEscape(() => {
   if (!coachShown()) escapeTop();
 });
-api.onDexStep((delta) => stepDex(delta));
+api.onDeviceKind((to) => swapKind(to));
+// 기기 창의 이전·다음 — 지금 보이는 기기와 상관없이 연 탭의 순서로 돈다 (docs/specs/ui-components.md "기기 종류 탭")
+const stepByTab = (delta: -1 | 1): void => {
+  if (ui.tab === "party" || ui.tab === "box") stepPet(delta);
+  else if (ui.tab === "dex") stepDex(delta);
+  else if (ui.tab === "adventure") stepBattle(delta);
+  else if (ui.tab === "shop") stepShop(delta);
+  else stepBag(delta);
+};
+api.onDexStep((delta) => stepByTab(delta));
 api.onDexAct((action) => onDexAction(action));
 api.onDexClosed((gen) => onDexClosed(gen));
-api.onPetStep((delta) => stepPet(delta));
+api.onPetStep((delta) => stepByTab(delta));
 api.onPetAct((action) => onPetAction(action));
 api.onPetClosed((gen) => petLink.onClosed(gen));
-api.onBattleStep((delta) => stepBattle(delta));
+api.onBattleStep((delta) => stepByTab(delta));
 api.onBattleAct((action) => onBattleAction(action));
 api.onBattleClosed((gen) => battleLink.onClosed(gen));
-api.onShopStep((delta) => stepShop(delta));
+api.onShopStep((delta) => stepByTab(delta));
 api.onShopAct((action) => onShopAction(action));
 api.onShopClosed((gen) => shopLink.onClosed(gen));
-api.onBagStep((delta) => stepBag(delta));
+api.onBagStep((delta) => stepByTab(delta));
 api.onBagAct((action) => onBagAction(action));
 api.onBagClosed((gen) => bagLink.onClosed(gen));
 api.onRoute((route) => void firstDraw.then(() => refreshView()).then(() => goTo(route)));

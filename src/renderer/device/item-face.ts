@@ -1,6 +1,7 @@
 // 상품 기기 창의 화면 — 상점(shop.ts)·가방(bag.ts)이 같은 화면을 그린다 (Figma 05 `Shop / Device / …`·`Bag / Device / …`).
 // 틀(머리·바닥·높이 알림)은 device-frame.ts. 여기는 화면(머리 줄·그림·분류·둘째 줄·설명), 정보 줄(효과·쓰는 곳), 가운데 조작 칸, 바닥(◀ 이전 · 주 단추 · 다음 ▶)
 
+import type { DeviceKindTab } from "../../shared/model/devices.js";
 import { spriteCanvas } from "../ui/portrait.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { numberText } from "../../shared/count-text.js";
@@ -8,7 +9,8 @@ import type { DeviceFrame } from "./device-frame.js";
 
 export interface ItemFace {
   side: "right" | "left";
-  title: string; // 머리 — 상점 · 가방
+  title: string; // 머리 — 상점 · 가방. kinds 가 있으면 제목 대신 종류 탭
+  kinds?: DeviceKindTab[]; // 머리의 종류 탭 — 상점 | 가방
   kind: string;
   name: string;
   state: string;
@@ -37,7 +39,7 @@ const STAGE = { w: 150, h: 124, maxScale: 4, maxSide: 96 };
 // 틀 안에 상품 화면을 그린다 — 머리 줄부터 바닥 줄까지, 끝에 높이를 알린다
 export function drawItemFace(frame: DeviceFrame, face: ItemFace, middle: HTMLElement, go: HTMLButtonElement, onLink?: () => void): void {
   const device = frame.device;
-  frame.beginDraw(face.side, face.title);
+  frame.beginDraw(face.side, face.title, undefined, face.kinds);
 
   // 화면 — 머리 줄(종류·이름·상태), 그림, 분류·둘째 줄, 설명
   const bezel = el("div", "bezel");

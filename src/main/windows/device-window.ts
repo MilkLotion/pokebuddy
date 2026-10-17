@@ -9,7 +9,8 @@
 import { BrowserWindow, type Rectangle } from "electron";
 import { createGenGate } from "./device-gen.js";
 import { workAreaAt } from "./display.js";
-import { deviceHeightOf, isStep } from "./input.js";
+import type { DeviceKind } from "../../shared/model/devices";
+import { deviceHeightOf, isDeviceKind, isStep } from "./input.js";
 import { createIpcScope } from "./ipc.js";
 import { transparentOptionsOf } from "./options.js";
 import { dockAt } from "./placement.js";
@@ -22,6 +23,7 @@ export interface DeviceChannels {
   step: string;
   close: string;
   escape: string; // Esc — 설정창이 열림 스택으로 처리한다 (src/renderer/manage/layers.ts)
+  kind: string; // 머리의 종류 탭 — 설정창이 같은 대상의 그 기기로 바꾼다 (src/renderer/manage/device-kind.ts)
   act?: string; // 누르는 단추가 있는 창만
   cry?: string; // 울음소리를 내는 창만
   coach?: string; // 튜토리얼 코치마크를 띄우는 창만 — 떴다·사라졌다를 알린다
@@ -46,6 +48,7 @@ export interface DeviceHooks<Action> {
   onCoach?(on: boolean): void; // 코치마크가 떴다·사라졌다. 창이 닫히면 false
   onClosed(gen: number): void; // 닫혔다 — 새 세대 번호를 설정창에 준다
   onEscape?(): void; // Esc — 설정창에 알린다. 없으면 이 창을 닫는다
+  onKind?(to: DeviceKind): void; // 머리의 종류 탭을 눌렀다
 }
 
 export interface DeviceWindow<Open> {
@@ -224,6 +227,9 @@ export function createDeviceWindow<Open extends object, View extends { side: Dev
   });
   scope.on(CH.close, () => alive()?.close());
   scope.on(CH.escape, () => (hooks.onEscape ? hooks.onEscape() : alive()?.close()));
+  scope.on(CH.kind, (_e, to) => {
+    if (isDeviceKind(to)) hooks.onKind?.(to);
+  });
   const act = CH.act;
   if (act && spec.isAction) {
     const isAction = spec.isAction;

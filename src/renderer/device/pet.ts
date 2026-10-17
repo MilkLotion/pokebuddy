@@ -250,7 +250,7 @@ function renderBody(v: PetDeviceView): void {
   const pet = v.pet;
   shownPetId = pet.id;
   cryPlayer.setVolume(v.volume);
-  frame.beginDraw(v.side, "파티");
+  frame.beginDraw(v.side, "파티", undefined, v.kinds);
 
   // 화면 — 자리·상태, 초상·이름·레벨·성격·타입, 볼 토글
   const bezel = el("div", "bezel");
@@ -369,16 +369,9 @@ function renderBody(v: PetDeviceView): void {
       : line("진화", "진화 트리에서 확인해요", readyChip, evolve);
   const growth = el("div", "group");
   growth.dataset.tut = "detail-growth";
-  // 성격 줄 자리에 도감 보기 — 누르면 이 기기 창 옆에 그 종의 도감 기기 창을 띄운다. 다시 누르면 닫는다.
-  // 떠 있는 동안 줄은 톤 배경 (2026-10-01 사용자 결정, Figma 05 `Party / Detail Device / Dex Beside` `1143:20169`)
-  const second = NATURE_SHOWN
-    ? line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" }))
-    : line("도감 보기", null, [], () => act({ kind: "dex" }));
-  if (!NATURE_SHOWN) {
-    second.classList.toggle("on", v.dexOpen);
-    second.setAttribute("aria-pressed", String(v.dexOpen));
-  }
-  growth.append(careLine(v), evoLine, second);
+  // 성격 줄 — 성격을 보일 때만. 도감은 머리의 종류 탭으로 본다(2026-10-17, `도감 보기` 줄을 없앴다 — docs/specs/ui-components.md "기기 종류 탭")
+  growth.append(careLine(v), evoLine);
+  if (NATURE_SHOWN) growth.appendChild(line(`성격 · ${pet.nature}`, null, [], () => act({ kind: "dialog", dialog: "nature" })));
   actions.appendChild(growth);
   {
     const sizes = el("div", "sizes");

@@ -6,6 +6,7 @@ import type { ShopItemView } from "../../shared/model/snapshot.js";
 import type { ShopDeviceAction, ShopDeviceInput } from "../../shared/model/devices.js";
 import { api } from "./api.js";
 import { lastReplyOf, sendCommand } from "./command.js";
+import { deviceClosed, kindsOf, shopTarget } from "./device-kind.js";
 import { createDeviceLink } from "./device-link.js";
 import { openAnyDialog } from "./dialog.js";
 import { fromLayer } from "./layers.js";
@@ -25,7 +26,8 @@ function hooksOf(): ShopLinkHooks {
   return hooks;
 }
 
-let shopPick: string | null = null; // 기기 창에 띄운 상품
+let shopPick: string | null = null; // 상점 탭에서 고른 상품 — 띄울 상품은 device-kind.ts shopTarget 이 정한다(가방 탭에서 머리 탭으로 바꾼 도구의 상품)
+let shownProduct: string | null = null; // 마지막으로 띄운 상품 — 바뀌면 수량·결과를 처음으로
 let shopQty = 1;
 let shopNotice = ""; // 마지막 구매 실패 — 기기 창의 합계 상자가 빨강으로 보인다
 let shopDone: { lead: string; line: string } | null = null; // 방금 산 결과 — 합계 상자가 초록으로 보인다. 수량을 바꾸거나 다른 상품으로 가면 지운다
@@ -41,11 +43,7 @@ export const shopLink = createDeviceLink<ShopDeviceInput>({
   apply: (input) => {
     shopQty = input.qty;
   },
-  afterClosed: () => {
-    if (!shopPick) return false;
-    shopPick = null;
-    return true;
-  },
+  afterClosed: () => deviceClosed("shop"), // 머리 탭으로 바꿔 닫혔으면 고른 상품을 그대로 둔다
   redraw: () => redrawBody(),
 });
 
@@ -60,9 +58,17 @@ export function pickShop(id: string): void {
 
 // 상점 기기 창에 보낼 고른 값 — 고른 상품이 없으면 null(닫는다). 모델은 메인이 만든다 (src/view/device-shop.ts)
 function shopDeviceBuild(): ShopDeviceInput | null {
-  const item = shopPick && ui.view ? ui.view.shop.find((i) => i.id === shopPick) : undefined;
+  const id = shopTarget();
+  const item = id && ui.view ? ui.view.shop.find((i) => i.id === id) : undefined;
   if (!item) return null;
-  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy }; // 그림은 메인이 icon 열쇠로 붙인다
+  // 다른 상품이 됐다(머리 탭으로 가방에서 왔다) — 고를 때(pickShop)와 같이 수량·결과를 처음으로
+  if (item.id !== shownProduct) {
+    shownProduct = item.id;
+    shopQty = 1;
+    shopNotice = "";
+    shopDone = null;
+  }
+  return { productId: item.id, qty: shopQty, notice: shopNotice, done: shopDone, busy: shopBusy, kinds: kindsOf() }; // 그림은 메인이 icon 열쇠로 붙인다
 }
 
 export function syncShopDevice(): void {
@@ -88,7 +94,8 @@ export function stepShop(delta: -1 | 1): void {
 
 // 기기 창에서 누른 단추 — 기기 창이 다른 상품을 보이던 때 누른 것은 버린다
 export function onShopAction(action: ShopDeviceAction): void {
-  if (!shopPick || action.productId !== shopPick) return;
+  const target = shopTarget();
+  if (!target || action.productId !== target) return;
   if (action.kind === "qty") {
     shopQty = action.qty;
     shopNotice = "";
@@ -97,11 +104,11 @@ export function onShopAction(action: ShopDeviceAction): void {
     return;
   }
   if (action.kind === "pool") {
-    const productId = shopPick;
+    const productId = target;
     fromLayer("device:shop", () => openAnyDialog({ kind: "pool", productId, page: 0 })); // 기기 창을 닫으면 같이 닫힌다(layers.ts)
     return;
   }
-  void buyShop(shopPick);
+  void buyShop(target);
 }
 
 // 사기 — 여러 개도 명령 하나다. 하나라도 못 사면 실행기가 전부 되돌린다

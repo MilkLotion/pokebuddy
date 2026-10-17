@@ -87,11 +87,11 @@ void app.whenReady().then(async () => {
   const petIds = save.pets.slice(0, 6).map((p) => p.id);
   const openPet = (petId: string) => (): void => {
     const v = snapshotReply(game, reads);
-    const r = v ? petDeviceModel(v, { petId, notice: "", dexOpen: false, busy: null }) : null;
-    if (r) petWin.show(parent, r.model, gen.pet);
+    const r = v ? petDeviceModel(v, { petId, notice: "", busy: null, kinds: [] }) : null;
+    if (r) petWin.show(parent, { ...r.model, kinds: [] }, gen.pet);
   };
   const slugs = [...new Set(save.pets.map((p) => p.species))].slice(0, 6);
-  const openDex = (slug: string) => (): void => dexWin.show(parent, { slug, beside: 0 }, gen.dex);
+  const openDex = (slug: string) => (): void => dexWin.show(parent, { slug, kinds: [] }, gen.dex);
 
   const result: Record<string, unknown> = { scene: SCENE, pets: save.pets.length };
   try {
