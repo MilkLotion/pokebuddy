@@ -77,7 +77,8 @@ function besideBase(owner: Rectangle, area: Rectangle, o: DeviceKinds, height: n
 function isDexAction(v: unknown): v is DexDeviceAction {
   const a = v as { kind?: unknown; slug?: unknown } | null;
   if (a?.kind === "shop") return isShortId((v as { productId?: unknown }).productId);
-  return !!a && a.kind === "pick" && typeof a.slug === "string" && /^[a-z0-9-]{1,64}$/.test(a.slug);
+  // form — 2쪽(모습) 칸. pick 과 같은 종 식별자 검사 (2026-10-18)
+  return !!a && (a.kind === "pick" || a.kind === "form") && typeof a.slug === "string" && /^[a-z0-9-]{1,64}$/.test(a.slug);
 }
 
 export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexDeviceView, DexDeviceAction> {
