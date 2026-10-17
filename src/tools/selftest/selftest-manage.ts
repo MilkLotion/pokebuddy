@@ -185,9 +185,8 @@ try {
   // (11) 도감은 따로 부른다. 도감 번호 순이며 상태가 세 가지다
   {
     const rows = dexList(game.read()!);
-    assert.equal(rows.length, 1192, "폼을 뺀 기본 종 1025 + 리전폼 57 + 특수 폼 50 + 메가·원시회귀 60 — 리전폼·특수 폼·메가는 따로 보인다. 겉모습(안농 B 등)은 칸이 없다 (2026-10-09 공식 도감 기준)");
-    assert.ok(!rows.some((r) => r.slug === "unown-b" || r.slug === "arceus-fire"), "겉모습은 기본 종 칸 하나");
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 351).map((r) => [r.slug, r.form, r.region]), [["castform", undefined, undefined], ["castform-sunny", 1, "hoenn"], ["castform-rainy", 2, "hoenn"], ["castform-snowy", 3, "hoenn"]], "전투 모습도 칸이 있다");
+    assert.equal(rows.length, 1142, "폼을 뺀 기본 종 1025 + 리전폼 57 + 메가·원시회귀 60 — 리전폼·메가는 따로 보인다. 특수 폼과 겉모습은 기본 종 칸의 다른 모습이다 (2026-10-17 사용자 결정 '리전폼 빼고 다 합치기')");
+    assert.ok(!rows.some((r) => r.slug === "unown-b" || r.slug === "arceus-fire" || r.slug === "castform-sunny" || r.slug === "dialga-origin"), "겉모습·특수 폼은 칸이 없다");
     assert.equal(rows[0]?.slug, "bulbasaur", "1번은 이상해씨");
     let prev = 0;
     let prevForm = 0;
@@ -199,14 +198,9 @@ try {
     }
     const meowths = rows.filter((r) => r.dex === 52).map((r) => [r.slug, r.form, r.region]);
     assert.deepStrictEqual(meowths, [["meowth", undefined, undefined], ["meowth-alola", 1, "alola"], ["meowth-galar", 2, "galar"]], "같은 번호는 기본형 → 폼 순번");
-    // 특수 폼 — 기본형 다음 칸, 도감 지방 칸은 항목의 지방
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 670).map((r) => [r.slug, r.form, r.region]), [["floette", undefined, undefined], ["floette-eternal", 1, "kalos"], ["floette-mega", undefined, undefined]], "메가플라엣테는 플라엣테(영원의 꽃) 바로 뒤");
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 901).map((r) => [r.slug, r.form, r.region]), [["ursaluna", undefined, undefined], ["ursaluna-bloodmoon", 1, "paldea"]]);
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 745).map((r) => [r.slug, r.form, r.region]), [["lycanroc", undefined, undefined], ["lycanroc-midnight", 1, "alola"], ["lycanroc-dusk", 2, "alola"]]);
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 172).map((r) => [r.slug, r.form, r.region]), [["pichu", undefined, undefined], ["pichu-spiky-eared", 1, "johto"]]);
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 550).map((r) => [r.slug, r.form, r.region]), [["basculin", undefined, undefined], ["basculin-blue-striped", 1, "unova"], ["basculin-white-striped", 2, "hisui"]]);
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 483).map((r) => [r.slug, r.form, r.region]), [["dialga", undefined, undefined], ["dialga-origin", 1, "hisui"]]);
-    assert.deepStrictEqual(rows.filter((r) => r.dex === 484).map((r) => [r.slug, r.form, r.region]), [["palkia", undefined, undefined], ["palkia-origin", 1, "hisui"]]);
+    // 특수 폼의 메가는 기본 종 칸 뒤 — 메가플라엣테는 플라엣테 바로 뒤
+    assert.deepStrictEqual(rows.filter((r) => r.dex === 670).map((r) => [r.slug, r.form, r.region]), [["floette", undefined, undefined], ["floette-mega", undefined, undefined]], "메가플라엣테는 플라엣테 바로 뒤");
+    for (const d of [172, 351, 483, 484, 550, 745, 901]) assert.equal(rows.filter((r) => r.dex === d).length, 1, `${d}번은 기본 종 칸 하나`);
     const pika = rows.find((r) => r.slug === "pikachu");
     assert.equal(pika?.name, "피카츄");
     assert.equal(pika?.state, "obtained", "가지고 있는 종");

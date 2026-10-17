@@ -18,7 +18,7 @@ export const evolveHandler: TxHandler = (draft, args, ctx) => {
   if (!petId) return { ok: false, reason: "bad-args" };
   const choice = isArgsRecord(args) && typeof args.to === "string" ? args.to : undefined;
   const part = gameDayPart(ctx.now);
-  const res = evolvePet(draft, petId, part, choice);
+  const res = evolvePet(draft, petId, part, choice, undefined, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res), ...(res.choices ? { choices: res.choices } : {}) };
   return { ok: true, result: { petId, from: res.from, to: res.to, usedItem: res.usedItem, ...(res.usedItems ? { usedItems: res.usedItems } : {}) } }; // 돌 + 지도면 usedItems 가 둘
 };

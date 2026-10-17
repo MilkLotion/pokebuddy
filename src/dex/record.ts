@@ -12,11 +12,13 @@ export const hasObtained = (save: Dex, slug: string): boolean => save.dex.obtain
 export const hasShiny = (save: Dex, slug: string): boolean => save.dex.shinyObtained.includes(normalizeSlug(slug));
 
 // 얻은 종 — 해금 기록이 없으면 함께 남긴다(조건으로 나온 종은 해금 기록이 없을 수 있다). 이로치면 이로치 기록도
-// 도감 칸 없는 겉모습(안농 B)은 기본 종으로 적는다. 전투 중에만 바뀌는 모습(메로엣타(스텝폼))은 기본 종과 함께 적는다
-// (2026-10-09 사용자 결정 "공식기준으로 하자", "메로엣타를 얻으면 같이", data/regional.json looks · get battle)
+// 도감 칸 없는 겉모습(안농 B)은 기본 종과 그 모습을 함께 적는다 — 모습은 도감 기기 창 2쪽(모습)의 얻음 표시가 쓴다(2026-10-17).
+// 전투 중에만 바뀌는 모습(메로엣타(스텝폼))은 기본 종과 함께 적는다
+// (2026-10-09 사용자 결정 "공식기준으로 하자", "메로엣타를 얻으면 같이", data/regional.json looks · get battle). 도감 수는 도감 칸만 센다(isDexEntry)
 export function recordDex(save: Dex, species: string, shiny: boolean, opts?: DexOptions): void {
   const slug = dexSlugOf(species, opts);
-  for (const one of [slug, ...battleFormsOf(slug, opts)]) {
+  const own = normalizeSlug(species);
+  for (const one of [slug, ...(own !== slug ? [own] : []), ...battleFormsOf(slug, opts)]) {
     if (!save.dex.unlocked.includes(one)) save.dex.unlocked.push(one);
     if (!save.dex.obtained.includes(one)) save.dex.obtained.push(one);
     if (shiny) recordShiny(save, one);

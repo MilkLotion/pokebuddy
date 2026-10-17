@@ -22,7 +22,8 @@ function baseForms(rows: Record<string, SpeciesRow>, opts?: DexOptions): { slug:
   for (const [slug, row] of Object.entries(rows)) {
     if (isMetaKey(slug) || !row.dex) continue;
     if (isRegional(slug, opts)) {
-      regional.push({ slug, dex: row.dex });
+      // 특수 폼은 칸이 없다 — 기본 종 칸의 "다른 모습" 에서 본다 (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기")
+      if (!regionalOf(slug, opts)?.special) regional.push({ slug, dex: row.dex });
       continue;
     }
     const kept = byDex.get(row.dex);
@@ -66,7 +67,9 @@ export function dexList(save: SaveV3, opts?: DexOptions): DexEntry[] {
   out.sort((a, b) => a.dex - b.dex || (a.form ?? 0) - (b.form ?? 0));
   // 메가 칸은 그 기본 종 칸 바로 뒤 — 리자몽 → 메가리자몽X → 메가리자몽Y, 플라엣테(영원의 꽃) → 메가플라엣테. 같은 기본 종의 메가끼리는 표 순서다
   for (const { base, ...mega } of megaEntries(save, opts)) {
-    let at = out.findIndex((r) => r.slug === base);
+    // 특수 폼의 메가(메가플라엣테 — 플라엣테(영원의 꽃))는 그 특수 폼 칸이 없으므로 기본 종 칸 뒤에 둔다 (2026-10-17 "리전폼 빼고 다 합치기")
+    const anchor = out.some((r) => r.slug === base) ? base : (regionalOf(base, opts)?.base ?? base);
+    let at = out.findIndex((r) => r.slug === anchor);
     if (at < 0) continue;
     while (out[at + 1]?.tag && megaOf(out[at + 1]!.slug, opts)?.base === base) at += 1;
     out.splice(at + 1, 0, mega);

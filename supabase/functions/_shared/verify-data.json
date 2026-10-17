@@ -1,5 +1,5 @@
 {
- "hash": "5a7a986f27836cf1",
+ "hash": "a0b82795f8a1c6e4",
  "items": {
   "basic-food": {
    "price": null,
@@ -689,6 +689,18 @@
   "flabebe": [
    "floette"
   ],
+  "flabebe-blue": [
+   "floette-blue"
+  ],
+  "flabebe-orange": [
+   "floette-orange"
+  ],
+  "flabebe-white": [
+   "floette-white"
+  ],
+  "flabebe-yellow": [
+   "floette-yellow"
+  ],
   "fletchinder": [
    "talonflame"
   ],
@@ -700,6 +712,18 @@
   ],
   "floette": [
    "florges"
+  ],
+  "floette-blue": [
+   "florges-blue"
+  ],
+  "floette-orange": [
+   "florges-orange"
+  ],
+  "floette-white": [
+   "florges-white"
+  ],
+  "floette-yellow": [
+   "florges-yellow"
   ],
   "floragato": [
    "meowscarada"
@@ -744,6 +768,9 @@
    "gabite"
   ],
   "gimmighoul": [
+   "gholdengo"
+  ],
+  "gimmighoul-roaming": [
    "gholdengo"
   ],
   "girafarig": [
@@ -1221,6 +1248,9 @@
   "poltchageist": [
    "sinistcha"
   ],
+  "poltchageist-artisan": [
+   "sinistcha-masterpiece"
+  ],
   "ponyta": [
    "rapidash"
   ],
@@ -1250,6 +1280,15 @@
   ],
   "pumpkaboo": [
    "gourgeist"
+  ],
+  "pumpkaboo-large": [
+   "gourgeist-large"
+  ],
+  "pumpkaboo-small": [
+   "gourgeist-small"
+  ],
+  "pumpkaboo-super": [
+   "gourgeist-super"
   ],
   "pupitar": [
    "tyranitar"
@@ -1411,6 +1450,9 @@
   ],
   "sinistea": [
    "polteageist"
+  ],
+  "sinistea-antique": [
+   "polteageist-antique"
   ],
   "sizzlipede": [
    "centiskorch"
@@ -2041,6 +2083,68 @@
   "aipom": "fast",
   "alakazam": "medium-slow",
   "alcremie": "medium-fast",
+  "alcremie-caramel-swirl-berry-sweet": "medium-fast",
+  "alcremie-caramel-swirl-clover-sweet": "medium-fast",
+  "alcremie-caramel-swirl-flower-sweet": "medium-fast",
+  "alcremie-caramel-swirl-love-sweet": "medium-fast",
+  "alcremie-caramel-swirl-ribbon-sweet": "medium-fast",
+  "alcremie-caramel-swirl-star-sweet": "medium-fast",
+  "alcremie-caramel-swirl-strawberry-sweet": "medium-fast",
+  "alcremie-lemon-cream-berry-sweet": "medium-fast",
+  "alcremie-lemon-cream-clover-sweet": "medium-fast",
+  "alcremie-lemon-cream-flower-sweet": "medium-fast",
+  "alcremie-lemon-cream-love-sweet": "medium-fast",
+  "alcremie-lemon-cream-ribbon-sweet": "medium-fast",
+  "alcremie-lemon-cream-star-sweet": "medium-fast",
+  "alcremie-lemon-cream-strawberry-sweet": "medium-fast",
+  "alcremie-matcha-cream-berry-sweet": "medium-fast",
+  "alcremie-matcha-cream-clover-sweet": "medium-fast",
+  "alcremie-matcha-cream-flower-sweet": "medium-fast",
+  "alcremie-matcha-cream-love-sweet": "medium-fast",
+  "alcremie-matcha-cream-ribbon-sweet": "medium-fast",
+  "alcremie-matcha-cream-star-sweet": "medium-fast",
+  "alcremie-matcha-cream-strawberry-sweet": "medium-fast",
+  "alcremie-mint-cream-berry-sweet": "medium-fast",
+  "alcremie-mint-cream-clover-sweet": "medium-fast",
+  "alcremie-mint-cream-flower-sweet": "medium-fast",
+  "alcremie-mint-cream-love-sweet": "medium-fast",
+  "alcremie-mint-cream-ribbon-sweet": "medium-fast",
+  "alcremie-mint-cream-star-sweet": "medium-fast",
+  "alcremie-mint-cream-strawberry-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-berry-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-clover-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-flower-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-love-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-ribbon-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-star-sweet": "medium-fast",
+  "alcremie-rainbow-swirl-strawberry-sweet": "medium-fast",
+  "alcremie-ruby-cream-berry-sweet": "medium-fast",
+  "alcremie-ruby-cream-clover-sweet": "medium-fast",
+  "alcremie-ruby-cream-flower-sweet": "medium-fast",
+  "alcremie-ruby-cream-love-sweet": "medium-fast",
+  "alcremie-ruby-cream-ribbon-sweet": "medium-fast",
+  "alcremie-ruby-cream-star-sweet": "medium-fast",
+  "alcremie-ruby-cream-strawberry-sweet": "medium-fast",
+  "alcremie-ruby-swirl-berry-sweet": "medium-fast",
+  "alcremie-ruby-swirl-clover-sweet": "medium-fast",
+  "alcremie-ruby-swirl-flower-sweet": "medium-fast",
+  "alcremie-ruby-swirl-love-sweet": "medium-fast",
+  "alcremie-ruby-swirl-ribbon-sweet": "medium-fast",
+  "alcremie-ruby-swirl-star-sweet": "medium-fast",
+  "alcremie-ruby-swirl-strawberry-sweet": "medium-fast",
+  "alcremie-salted-cream-berry-sweet": "medium-fast",
+  "alcremie-salted-cream-clover-sweet": "medium-fast",
+  "alcremie-salted-cream-flower-sweet": "medium-fast",
+  "alcremie-salted-cream-love-sweet": "medium-fast",
+  "alcremie-salted-cream-ribbon-sweet": "medium-fast",
+  "alcremie-salted-cream-star-sweet": "medium-fast",
+  "alcremie-salted-cream-strawberry-sweet": "medium-fast",
+  "alcremie-vanilla-cream-berry-sweet": "medium-fast",
+  "alcremie-vanilla-cream-clover-sweet": "medium-fast",
+  "alcremie-vanilla-cream-flower-sweet": "medium-fast",
+  "alcremie-vanilla-cream-love-sweet": "medium-fast",
+  "alcremie-vanilla-cream-ribbon-sweet": "medium-fast",
+  "alcremie-vanilla-cream-star-sweet": "medium-fast",
   "alomomola": "fast",
   "altaria": "erratic",
   "amaura": "medium-fast",
@@ -2313,6 +2417,7 @@
   "dubwool": "medium-fast",
   "ducklett": "medium-fast",
   "dudunsparce": "medium-fast",
+  "dudunsparce-three-segment": "medium-fast",
   "dugtrio": "medium-fast",
   "dugtrio-alola": "medium-fast",
   "dunsparce": "medium-fast",
@@ -2369,6 +2474,10 @@
   "finneon": "erratic",
   "flaaffy": "medium-slow",
   "flabebe": "medium-fast",
+  "flabebe-blue": "medium-fast",
+  "flabebe-orange": "medium-fast",
+  "flabebe-white": "medium-fast",
+  "flabebe-yellow": "medium-fast",
   "flamigo": "medium-slow",
   "flapple": "erratic",
   "flareon": "medium-fast",
@@ -2377,9 +2486,17 @@
   "flittle": "medium-slow",
   "floatzel": "medium-fast",
   "floette": "medium-fast",
+  "floette-blue": "medium-fast",
   "floette-eternal": "medium-fast",
+  "floette-orange": "medium-fast",
+  "floette-white": "medium-fast",
+  "floette-yellow": "medium-fast",
   "floragato": "medium-slow",
   "florges": "medium-fast",
+  "florges-blue": "medium-fast",
+  "florges-orange": "medium-fast",
+  "florges-white": "medium-fast",
+  "florges-yellow": "medium-fast",
   "flutter-mane": "slow",
   "flygon": "medium-slow",
   "fomantis": "medium-fast",
@@ -2394,6 +2511,15 @@
   "frosmoth": "medium-fast",
   "fuecoco": "medium-slow",
   "furfrou": "medium-fast",
+  "furfrou-dandy": "medium-fast",
+  "furfrou-debutante": "medium-fast",
+  "furfrou-diamond": "medium-fast",
+  "furfrou-heart": "medium-fast",
+  "furfrou-kabuki": "medium-fast",
+  "furfrou-la-reine": "medium-fast",
+  "furfrou-matron": "medium-fast",
+  "furfrou-pharaoh": "medium-fast",
+  "furfrou-star": "medium-fast",
   "furret": "medium-fast",
   "gabite": "slow",
   "gallade": "slow",
@@ -2417,6 +2543,7 @@
   "gible": "slow",
   "gigalith": "medium-slow",
   "gimmighoul": "slow",
+  "gimmighoul-roaming": "slow",
   "girafarig": "medium-fast",
   "giratina": "slow",
   "giratina-origin": "slow",
@@ -2448,6 +2575,9 @@
   "gothorita": "medium-slow",
   "gouging-fire": "slow",
   "gourgeist": "medium-fast",
+  "gourgeist-large": "medium-fast",
+  "gourgeist-small": "medium-fast",
+  "gourgeist-super": "medium-fast",
   "grafaiai": "medium-slow",
   "granbull": "fast",
   "grapploct": "medium-slow",
@@ -2651,6 +2781,7 @@
   "maschiff": "medium-slow",
   "masquerain": "medium-fast",
   "maushold": "fast",
+  "maushold-family-of-three": "fast",
   "mawile": "fast",
   "medicham": "medium-fast",
   "meditite": "medium-fast",
@@ -2680,6 +2811,12 @@
   "mimikyu": "medium-fast",
   "minccino": "fast",
   "minior": "medium-slow",
+  "minior-blue-meteor": "medium-slow",
+  "minior-green-meteor": "medium-slow",
+  "minior-indigo-meteor": "medium-slow",
+  "minior-orange-meteor": "medium-slow",
+  "minior-violet-meteor": "medium-slow",
+  "minior-yellow-meteor": "medium-slow",
   "minun": "medium-fast",
   "miraidon": "slow",
   "misdreavus": "fast",
@@ -2745,6 +2882,9 @@
   "oranguru": "slow",
   "orbeetle": "medium-fast",
   "oricorio": "medium-fast",
+  "oricorio-pau": "medium-fast",
+  "oricorio-pom-pom": "medium-fast",
+  "oricorio-sensu": "medium-fast",
   "orthworm": "slow",
   "oshawott": "medium-slow",
   "overqwil": "medium-fast",
@@ -2798,7 +2938,9 @@
   "poliwhirl": "medium-slow",
   "poliwrath": "medium-slow",
   "poltchageist": "slow",
+  "poltchageist-artisan": "slow",
   "polteageist": "medium-fast",
+  "polteageist-antique": "medium-fast",
   "ponyta": "medium-fast",
   "ponyta-galar": "medium-fast",
   "poochyena": "medium-fast",
@@ -2812,6 +2954,9 @@
   "probopass": "medium-fast",
   "psyduck": "medium-fast",
   "pumpkaboo": "medium-fast",
+  "pumpkaboo-large": "medium-fast",
+  "pumpkaboo-small": "medium-fast",
+  "pumpkaboo-super": "medium-fast",
   "pupitar": "slow",
   "purrloin": "medium-fast",
   "purugly": "fast",
@@ -2957,7 +3102,9 @@
   "simisage": "medium-fast",
   "simisear": "medium-fast",
   "sinistcha": "slow",
+  "sinistcha-masterpiece": "slow",
   "sinistea": "medium-fast",
+  "sinistea-antique": "medium-fast",
   "sirfetchd": "medium-fast",
   "sizzlipede": "medium-fast",
   "skarmory": "slow",
@@ -3010,6 +3157,9 @@
   "sprigatito": "medium-slow",
   "spritzee": "medium-fast",
   "squawkabilly": "erratic",
+  "squawkabilly-blue-plumage": "erratic",
+  "squawkabilly-white-plumage": "erratic",
+  "squawkabilly-yellow-plumage": "erratic",
   "squirtle": "medium-slow",
   "stakataka": "slow",
   "stantler": "slow",
@@ -3053,6 +3203,8 @@
   "tapu-lele": "slow",
   "tarountula": "erratic",
   "tatsugiri": "medium-slow",
+  "tatsugiri-droopy": "medium-slow",
+  "tatsugiri-stretchy": "medium-slow",
   "tauros": "slow",
   "tauros-paldea-aqua-breed": "slow",
   "tauros-paldea-blaze-breed": "slow",
@@ -3168,6 +3320,25 @@
   "vileplume": "medium-slow",
   "virizion": "slow",
   "vivillon": "medium-fast",
+  "vivillon-archipelago": "medium-fast",
+  "vivillon-continental": "medium-fast",
+  "vivillon-elegant": "medium-fast",
+  "vivillon-fancy": "medium-fast",
+  "vivillon-garden": "medium-fast",
+  "vivillon-high-plains": "medium-fast",
+  "vivillon-icy-snow": "medium-fast",
+  "vivillon-jungle": "medium-fast",
+  "vivillon-marine": "medium-fast",
+  "vivillon-modern": "medium-fast",
+  "vivillon-monsoon": "medium-fast",
+  "vivillon-ocean": "medium-fast",
+  "vivillon-poke-ball": "medium-fast",
+  "vivillon-polar": "medium-fast",
+  "vivillon-river": "medium-fast",
+  "vivillon-sandstorm": "medium-fast",
+  "vivillon-savanna": "medium-fast",
+  "vivillon-sun": "medium-fast",
+  "vivillon-tundra": "medium-fast",
   "volbeat": "erratic",
   "volcanion": "slow",
   "volcarona": "slow",
@@ -4075,6 +4246,68 @@
   "aggron": 3,
   "alakazam": 3,
   "alcremie": 2,
+  "alcremie-caramel-swirl-berry-sweet": 2,
+  "alcremie-caramel-swirl-clover-sweet": 2,
+  "alcremie-caramel-swirl-flower-sweet": 2,
+  "alcremie-caramel-swirl-love-sweet": 2,
+  "alcremie-caramel-swirl-ribbon-sweet": 2,
+  "alcremie-caramel-swirl-star-sweet": 2,
+  "alcremie-caramel-swirl-strawberry-sweet": 2,
+  "alcremie-lemon-cream-berry-sweet": 2,
+  "alcremie-lemon-cream-clover-sweet": 2,
+  "alcremie-lemon-cream-flower-sweet": 2,
+  "alcremie-lemon-cream-love-sweet": 2,
+  "alcremie-lemon-cream-ribbon-sweet": 2,
+  "alcremie-lemon-cream-star-sweet": 2,
+  "alcremie-lemon-cream-strawberry-sweet": 2,
+  "alcremie-matcha-cream-berry-sweet": 2,
+  "alcremie-matcha-cream-clover-sweet": 2,
+  "alcremie-matcha-cream-flower-sweet": 2,
+  "alcremie-matcha-cream-love-sweet": 2,
+  "alcremie-matcha-cream-ribbon-sweet": 2,
+  "alcremie-matcha-cream-star-sweet": 2,
+  "alcremie-matcha-cream-strawberry-sweet": 2,
+  "alcremie-mint-cream-berry-sweet": 2,
+  "alcremie-mint-cream-clover-sweet": 2,
+  "alcremie-mint-cream-flower-sweet": 2,
+  "alcremie-mint-cream-love-sweet": 2,
+  "alcremie-mint-cream-ribbon-sweet": 2,
+  "alcremie-mint-cream-star-sweet": 2,
+  "alcremie-mint-cream-strawberry-sweet": 2,
+  "alcremie-rainbow-swirl-berry-sweet": 2,
+  "alcremie-rainbow-swirl-clover-sweet": 2,
+  "alcremie-rainbow-swirl-flower-sweet": 2,
+  "alcremie-rainbow-swirl-love-sweet": 2,
+  "alcremie-rainbow-swirl-ribbon-sweet": 2,
+  "alcremie-rainbow-swirl-star-sweet": 2,
+  "alcremie-rainbow-swirl-strawberry-sweet": 2,
+  "alcremie-ruby-cream-berry-sweet": 2,
+  "alcremie-ruby-cream-clover-sweet": 2,
+  "alcremie-ruby-cream-flower-sweet": 2,
+  "alcremie-ruby-cream-love-sweet": 2,
+  "alcremie-ruby-cream-ribbon-sweet": 2,
+  "alcremie-ruby-cream-star-sweet": 2,
+  "alcremie-ruby-cream-strawberry-sweet": 2,
+  "alcremie-ruby-swirl-berry-sweet": 2,
+  "alcremie-ruby-swirl-clover-sweet": 2,
+  "alcremie-ruby-swirl-flower-sweet": 2,
+  "alcremie-ruby-swirl-love-sweet": 2,
+  "alcremie-ruby-swirl-ribbon-sweet": 2,
+  "alcremie-ruby-swirl-star-sweet": 2,
+  "alcremie-ruby-swirl-strawberry-sweet": 2,
+  "alcremie-salted-cream-berry-sweet": 2,
+  "alcremie-salted-cream-clover-sweet": 2,
+  "alcremie-salted-cream-flower-sweet": 2,
+  "alcremie-salted-cream-love-sweet": 2,
+  "alcremie-salted-cream-ribbon-sweet": 2,
+  "alcremie-salted-cream-star-sweet": 2,
+  "alcremie-salted-cream-strawberry-sweet": 2,
+  "alcremie-vanilla-cream-berry-sweet": 2,
+  "alcremie-vanilla-cream-clover-sweet": 2,
+  "alcremie-vanilla-cream-flower-sweet": 2,
+  "alcremie-vanilla-cream-love-sweet": 2,
+  "alcremie-vanilla-cream-ribbon-sweet": 2,
+  "alcremie-vanilla-cream-star-sweet": 2,
   "alomomola": 2,
   "altaria": 2,
   "ambipom": 2,
@@ -4235,6 +4468,7 @@
   "druddigon": 2,
   "dubwool": 2,
   "dudunsparce": 3,
+  "dudunsparce-three-segment": 3,
   "dugtrio": 2,
   "dugtrio-alola": 2,
   "duraludon": 2,
@@ -4272,12 +4506,25 @@
   "floatzel": 2,
   "floette-eternal": 2,
   "florges": 3,
+  "florges-blue": 3,
+  "florges-orange": 3,
+  "florges-white": 3,
+  "florges-yellow": 3,
   "flutter-mane": 4,
   "flygon": 3,
   "forretress": 2,
   "froslass": 2,
   "frosmoth": 2,
   "furfrou": 2,
+  "furfrou-dandy": 2,
+  "furfrou-debutante": 2,
+  "furfrou-diamond": 2,
+  "furfrou-heart": 2,
+  "furfrou-kabuki": 2,
+  "furfrou-la-reine": 2,
+  "furfrou-matron": 2,
+  "furfrou-pharaoh": 2,
+  "furfrou-star": 2,
   "furret": 2,
   "gallade": 3,
   "galvantula": 2,
@@ -4314,6 +4561,9 @@
   "gothitelle": 2,
   "gouging-fire": 4,
   "gourgeist": 2,
+  "gourgeist-large": 2,
+  "gourgeist-small": 2,
+  "gourgeist-super": 2,
   "grafaiai": 2,
   "granbull": 2,
   "grapploct": 2,
@@ -4437,6 +4687,7 @@
   "marshadow": 5,
   "masquerain": 2,
   "maushold": 2,
+  "maushold-family-of-three": 2,
   "medicham": 2,
   "meganium": 3,
   "melmetal": 5,
@@ -4455,6 +4706,12 @@
   "miltank": 2,
   "mimikyu": 2,
   "minior": 2,
+  "minior-blue-meteor": 2,
+  "minior-green-meteor": 2,
+  "minior-indigo-meteor": 2,
+  "minior-orange-meteor": 2,
+  "minior-violet-meteor": 2,
+  "minior-yellow-meteor": 2,
   "minun": 2,
   "miraidon": 5,
   "mismagius": 2,
@@ -4492,6 +4749,9 @@
   "oranguru": 2,
   "orbeetle": 3,
   "oricorio": 2,
+  "oricorio-pau": 2,
+  "oricorio-pom-pom": 2,
+  "oricorio-sensu": 2,
   "orthworm": 2,
   "overqwil": 3,
   "pachirisu": 2,
@@ -4518,6 +4778,7 @@
   "politoed": 3,
   "poliwrath": 3,
   "polteageist": 3,
+  "polteageist-antique": 3,
   "porygon-z": 3,
   "porygon2": 2,
   "primarina": 3,
@@ -4614,6 +4875,7 @@
   "simisage": 2,
   "simisear": 2,
   "sinistcha": 3,
+  "sinistcha-masterpiece": 3,
   "sirfetchd": 3,
   "skarmory": 2,
   "skeledirge": 3,
@@ -4633,6 +4895,9 @@
   "spidops": 2,
   "spiritomb": 2,
   "squawkabilly": 2,
+  "squawkabilly-blue-plumage": 2,
+  "squawkabilly-white-plumage": 2,
+  "squawkabilly-yellow-plumage": 2,
   "stakataka": 4,
   "staraptor": 2,
   "starmie": 3,
@@ -4657,6 +4922,8 @@
   "tapu-koko": 5,
   "tapu-lele": 5,
   "tatsugiri": 2,
+  "tatsugiri-droopy": 2,
+  "tatsugiri-stretchy": 2,
   "tauros": 2,
   "tauros-paldea-aqua-breed": 2,
   "tauros-paldea-blaze-breed": 2,
@@ -4712,6 +4979,25 @@
   "vileplume": 2,
   "virizion": 5,
   "vivillon": 2,
+  "vivillon-archipelago": 2,
+  "vivillon-continental": 2,
+  "vivillon-elegant": 2,
+  "vivillon-fancy": 2,
+  "vivillon-garden": 2,
+  "vivillon-high-plains": 2,
+  "vivillon-icy-snow": 2,
+  "vivillon-jungle": 2,
+  "vivillon-marine": 2,
+  "vivillon-modern": 2,
+  "vivillon-monsoon": 2,
+  "vivillon-ocean": 2,
+  "vivillon-poke-ball": 2,
+  "vivillon-polar": 2,
+  "vivillon-river": 2,
+  "vivillon-sandstorm": 2,
+  "vivillon-savanna": 2,
+  "vivillon-sun": 2,
+  "vivillon-tundra": 2,
   "volbeat": 2,
   "volcanion": 5,
   "volcarona": 3,
@@ -4930,6 +5216,198 @@
    ],
    [
     "unown-question",
+    1
+   ]
+  ],
+  "oricorio": [
+   [
+    "oricorio",
+    1
+   ],
+   [
+    "oricorio-pom-pom",
+    1
+   ],
+   [
+    "oricorio-pau",
+    1
+   ],
+   [
+    "oricorio-sensu",
+    1
+   ]
+  ],
+  "flabebe": [
+   [
+    "flabebe",
+    1
+   ],
+   [
+    "flabebe-yellow",
+    1
+   ],
+   [
+    "flabebe-orange",
+    1
+   ],
+   [
+    "flabebe-blue",
+    1
+   ],
+   [
+    "flabebe-white",
+    1
+   ]
+  ],
+  "furfrou": [
+   [
+    "furfrou",
+    1
+   ],
+   [
+    "furfrou-heart",
+    1
+   ],
+   [
+    "furfrou-star",
+    1
+   ],
+   [
+    "furfrou-diamond",
+    1
+   ],
+   [
+    "furfrou-debutante",
+    1
+   ],
+   [
+    "furfrou-matron",
+    1
+   ],
+   [
+    "furfrou-dandy",
+    1
+   ],
+   [
+    "furfrou-la-reine",
+    1
+   ],
+   [
+    "furfrou-kabuki",
+    1
+   ],
+   [
+    "furfrou-pharaoh",
+    1
+   ]
+  ],
+  "tatsugiri": [
+   [
+    "tatsugiri",
+    1
+   ],
+   [
+    "tatsugiri-droopy",
+    1
+   ],
+   [
+    "tatsugiri-stretchy",
+    1
+   ]
+  ],
+  "pumpkaboo": [
+   [
+    "pumpkaboo",
+    1
+   ],
+   [
+    "pumpkaboo-small",
+    1
+   ],
+   [
+    "pumpkaboo-large",
+    1
+   ],
+   [
+    "pumpkaboo-super",
+    1
+   ]
+  ],
+  "squawkabilly": [
+   [
+    "squawkabilly",
+    1
+   ],
+   [
+    "squawkabilly-blue-plumage",
+    1
+   ],
+   [
+    "squawkabilly-yellow-plumage",
+    1
+   ],
+   [
+    "squawkabilly-white-plumage",
+    1
+   ]
+  ],
+  "gimmighoul": [
+   [
+    "gimmighoul",
+    1
+   ],
+   [
+    "gimmighoul-roaming",
+    1
+   ]
+  ],
+  "minior": [
+   [
+    "minior",
+    1
+   ],
+   [
+    "minior-orange-meteor",
+    1
+   ],
+   [
+    "minior-yellow-meteor",
+    1
+   ],
+   [
+    "minior-green-meteor",
+    1
+   ],
+   [
+    "minior-blue-meteor",
+    1
+   ],
+   [
+    "minior-indigo-meteor",
+    1
+   ],
+   [
+    "minior-violet-meteor",
+    1
+   ]
+  ],
+  "sinistea": [
+   [
+    "sinistea",
+    1
+   ],
+   [
+    "sinistea-antique",
+    1
+   ]
+  ],
+  "poltchageist": [
+   [
+    "poltchageist",
+    1
+   ],
+   [
+    "poltchageist-artisan",
     1
    ]
   ]

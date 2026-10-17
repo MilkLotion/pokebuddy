@@ -31,6 +31,12 @@ const FORMS: Readonly<Record<string, string>> = {
   aegislash: "aegislash-blade", // 실드폼 → 블레이드폼
   wishiwashi: "wishiwashi-school", // 단독의 모습 → 무리의 모습
   minior: "minior-red", // 유성의 모습 → 코어의 모습 (색은 능력치가 같다)
+  "minior-orange-meteor": "minior-orange", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
+  "minior-yellow-meteor": "minior-yellow", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
+  "minior-green-meteor": "minior-green", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
+  "minior-blue-meteor": "minior-blue", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
+  "minior-indigo-meteor": "minior-indigo", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
+  "minior-violet-meteor": "minior-violet", // 알에서 정한 색의 코어 (2026-10-17 메테노 코어 색)
   palafin: "palafin-hero", // 나이브폼 → 마이티폼
   terapagos: "terapagos-terastal", // 노말폼 → 테라스탈폼
   "darmanitan-galar-standard": "darmanitan-galar-zen", // 가라르 불비달마 → 달마모드 (얼음·불꽃)

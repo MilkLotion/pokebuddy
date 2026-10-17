@@ -173,7 +173,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   // 돌려받은 배열을 고쳐도 표는 그대로
   pika.likes.push("food");
   assert.deepStrictEqual(dex.profileOf("pikachu").likes, ["work", "play"]);
-  assert.strictEqual(dex.speciesSlugs().length, 1211, "표의 종 수 — PokeAPI 종 1025 + 폼 186 (리전폼·특수 폼·겉모습 포함). 2026-10-09 개굴닌자(유대변화)·지우개굴닌자·지가르데 퍼펙트폼 3을, 2026-10-11 테라파고스(테라스탈폼) 1을, 2026-10-17 오거폰 가면 3·러브로스·후파·네크로즈마 2·실버디 17·지가르데 10% 25를 더했다");
+  assert.strictEqual(dex.speciesSlugs().length, 1340, "표의 종 수 — PokeAPI 종 1025 + 폼 315 (리전폼·특수 폼·겉모습 포함). 2026-10-17 알 모습·진화 모습 겉모습 126·춤추새 스타일 3도 더했다. 2026-10-09 개굴닌자(유대변화)·지우개굴닌자·지가르데 퍼펙트폼 3을, 2026-10-11 테라파고스(테라스탈폼) 1을, 2026-10-17 오거폰 가면 3·러브로스·후파·네크로즈마 2·실버디 17·지가르데 10% 25를 더했다");
   assert.ok(!dex.speciesSlugs().includes("_comment"));
   // 모든 종의 값 범위
   for (const s of dex.speciesSlugs()) {
@@ -251,15 +251,15 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   const specials = forms.filter(([, f]) => f.special);
   assert.deepStrictEqual(
     specials.map(([slug, f]) => `${slug}:${f.get}`),
-    ["pichu-spiky-eared:gift", "castform-sunny:battle", "castform-rainy:battle", "castform-snowy:battle", "deoxys-attack:shift", "deoxys-defense:shift", "deoxys-speed:shift", "burmy-sandy:variant", "burmy-trash:variant", "wormadam-sandy:path", "wormadam-trash:path", "shellos-east:variant", "gastrodon-east:path", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "shaymin-sky:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "darmanitan-zen:battle", "tornadus-therian:shift", "thundurus-therian:shift", "landorus-therian:shift", "kyurem-black:shift", "kyurem-white:shift", "meloetta-pirouette:battle", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "urshifu-rapid-strike:branch", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool", "hoopa-unbound:shift", "necrozma-dusk:shift", "necrozma-dawn:shift", "enamorus-therian:shift", "ogerpon-wellspring-mask:shift", "ogerpon-hearthflame-mask:shift", "ogerpon-cornerstone-mask:shift", "terapagos-terastal:shift"],
-    "특수 폼 50종과 얻는 방법",
+    ["pichu-spiky-eared:gift", "castform-sunny:battle", "castform-rainy:battle", "castform-snowy:battle", "deoxys-attack:shift", "deoxys-defense:shift", "deoxys-speed:shift", "burmy-sandy:variant", "burmy-trash:variant", "wormadam-sandy:path", "wormadam-trash:path", "shellos-east:variant", "gastrodon-east:path", "rotom-heat:shift", "rotom-wash:shift", "rotom-frost:shift", "rotom-fan:shift", "rotom-mow:shift", "dialga-origin:shift", "palkia-origin:shift", "giratina-origin:shift", "shaymin-sky:shift", "basculin-blue-striped:variant", "basculin-white-striped:variant", "darmanitan-zen:battle", "tornadus-therian:shift", "thundurus-therian:shift", "landorus-therian:shift", "kyurem-black:shift", "kyurem-white:shift", "meloetta-pirouette:battle", "floette-eternal:tool", "lycanroc-midnight:branch", "lycanroc-dusk:branch", "magearna-original:gift", "toxtricity-low-key:branch", "zacian-crowned:shift", "zamazenta-crowned:shift", "urshifu-rapid-strike:branch", "calyrex-ice:shift", "calyrex-shadow:shift", "ursaluna-bloodmoon:tool", "hoopa-unbound:shift", "necrozma-dusk:shift", "necrozma-dawn:shift", "enamorus-therian:shift", "ogerpon-wellspring-mask:shift", "ogerpon-hearthflame-mask:shift", "ogerpon-cornerstone-mask:shift", "terapagos-terastal:shift", "oricorio-pom-pom:variant", "oricorio-pau:variant", "oricorio-sensu:variant"],
+    "특수 폼 53종과 얻는 방법",
   );
   const isSpecial = (slug: string): boolean => table.forms[slug]?.special === true;
   const specialEdge = (e: { from: string; to: string }): boolean => isSpecial(e.to) || isSpecial(e.from);
   const lookEdge = (e: { from: string; to: string }): boolean => table.looks[e.from] != null; // 겉모습 간선 — 사철록 계절 → 바라철록 계절 (2026-10-09)
   assert.strictEqual(edges.filter((e) => !specialEdge(e) && !lookEdge(e)).length, 38, "리전폼 간선 38개");
   assert.strictEqual(edges.filter(specialEdge).length, 10, "특수 폼 간선 10개(도롱충이 모습 4 · 깝질무 동쪽 1 포함)");
-  assert.strictEqual(edges.filter(lookEdge).length, 3, "겉모습 간선 3개");
+  assert.strictEqual(edges.filter(lookEdge).length, 17, "겉모습 간선 17개(사철록 계절 3 · 2026-10-17 플라베베 계열 8 · 호바귀 3 · 데인차·차데스·모으령 3)");
   const count = (get: string): number => forms.filter(([, f]) => f.get === get && !f.special).length;
   assert.deepStrictEqual([count("map"), count("base"), count("path")], [12, 28, 17]);
   const names = require(path.join(__dirname, "..", "..", "..", "data", "names.json")) as Record<string, { ko: string; en: string }>;
@@ -384,7 +384,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([names["dialga"]?.ko, names["magearna"]?.ko, names["magearna-original"]?.ko], ["디아루가", "마기아나", "마기아나(500년 전의 색)"], "공식 도감에 모습 이름이 없는 기본형은 종 이름 그대로");
   assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
-  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {} });
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, labels: {} });
   out("리전폼 ok");
 }
 

@@ -20,7 +20,8 @@ import { nextOf, type EvoStep } from "./evo.js";
 import type { DexOptions } from "./data";
 import { afterEvolve, formsOf } from "./forms.js";
 import { recordDex } from "./record.js";
-import { REGION_MAP, needIsMap } from "./regional.js";
+import { REGION_MAP, evolveLookVariants, needIsMap } from "./regional.js";
+import { pickByWeight, type Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { Outcome } from "../shared/command.js";
 
@@ -121,7 +122,8 @@ export function evolveCandidates(save: SaveV3, petId: string, dayPart: DayPart, 
 export const canEvolve = (save: SaveV3, petId: string, dayPart: DayPart, opts?: DexOptions): boolean =>
   evolveCandidates(save, petId, dayPart, opts).some((c) => c.ready && (!c.map || needIsMap(c.need)));
 
-export function evolvePet(save: SaveV3, petId: string, dayPart: DayPart, choice?: string, opts?: DexOptions): EvolveResult {
+// rand — 진화할 때 정하는 모습(비비용 무늬 등, data/regional.json evolveLooks)을 뽑는다. 서버 검증은 진화를 다시 계산하지 않아 결정적 난수가 필요 없다
+export function evolvePet(save: SaveV3, petId: string, dayPart: DayPart, choice?: string, opts?: DexOptions, rand: Rand = Math.random): EvolveResult {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
 
@@ -153,14 +155,16 @@ export function evolvePet(save: SaveV3, petId: string, dayPart: DayPart, choice?
   }
 
   const from = pet.species;
+  // 진화할 때 정하는 모습 — 결과 종이 표에 있으면 한 번 더 뽑는다 (2026-10-17 사용자 "진화 때 무작위", 파밀리쥐 세 가족·노고고치 세 마디는 "원작 1%")
+  const to = pickByWeight(evolveLookVariants(picked.to, opts), ([, w]) => w, rand)?.[0] ?? picked.to;
   pet.evolved.push(from);
-  pet.species = picked.to;
+  pet.species = to;
   delete pet.moves; // 고른 기술은 진화 전 종의 것 — 진화하면 새 종의 기본 2개를 쓴다 (docs/specs/moves.md "기술 고르기")
   pet.stage += 1;
   save.counts.evolved += 1; // 진화 업적이 센다
 
-  recordDex(save, picked.to, pet.shiny);
+  recordDex(save, to, pet.shiny);
   afterEvolve(save, pet, from, opts); // 공유 sid 계열이면 이전 종과 갈래의 다른 결과를 고를 종으로 남긴다
 
-  return { ok: true, petId, from, to: picked.to, ...(uses.length ? { usedItem: uses[0], usedItems: uses } : {}) };
+  return { ok: true, petId, from, to, ...(uses.length ? { usedItem: uses[0], usedItems: uses } : {}) };
 }

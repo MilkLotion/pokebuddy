@@ -20,6 +20,7 @@ import type { AchievementDef } from "../dex/tables.js";
 import { progressOf } from "../achievement/progress.js";
 import { SIZE_STEPS } from "../party/size.js";
 import { progressTo } from "../dex/growth.js";
+import { isDexEntry } from "../dex/regional.js";
 import { evoOrder, inEvoCategory, itemOf } from "../bag/items.js";
 import { natureList as natureTable } from "../dex/natures.js";
 import { sellPrice } from "../shop/sell.js";
@@ -200,7 +201,7 @@ export function snapshotView(save: SaveV3, now: number): Snapshot {
     battle: battleView(save, dayPart),
     eggs: { list: eggs, used: eggs.length, size: maxEggs },
     bag,
-    dex: { unlocked: save.dex.unlocked.length, obtained: save.dex.obtained.length, shiny: save.dex.shinyObtained.length },
+    dex: { unlocked: save.dex.unlocked.filter((s) => isDexEntry(s)).length, obtained: save.dex.obtained.filter((s) => isDexEntry(s)).length, shiny: save.dex.shinyObtained.length }, // 도감 칸만 센다 (2026-10-17)
     shop: shopList(save),
     achievements: {
       total: achievements.filter((a) => a.state !== "locked").length, // 표에 있는 업적만 — 목록 수와 같은 기준

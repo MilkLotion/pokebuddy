@@ -55,6 +55,8 @@ export interface RegionalTable {
   partners: Record<string, string>; // 모습 → 그 모습이 되려면 저장에 있어야 하는 짝 (블랙큐레무 → 제크로무). 짝은 따로 쓰이고 묶이지 않는다
   looks: Record<string, LookForm>; // 도감 칸 없이 그림만 다른 모습 (안농 B · 아르세우스 타입 · 사철록 계절) — 도감은 기본 종 칸 하나다
   gender: Record<string, Partial<Record<"male" | "female", GenderLook>>>; // 종 → 성별 → 그 성별의 그림
+  evolveLooks: Record<string, HatchVariants>;
+  labels: Record<string, string>; // 모습 이름 — 도감 기기 창 2쪽(모습) 칸에 보인다 (비비용 → 화원의 모양) // 진화 결과 종 → 진화할 때 정하는 모습과 가중치 (비비용 무늬·마휘핑·파밀리쥐 세 가족·노고고치 세 마디)
 }
 
 // 성별마다 그림이 다른 종의 그림 한 벌 — 종은 그대로이고 그림만 다르다 (대쓰여너 암컷)
@@ -72,7 +74,7 @@ export const REGION_MAP = "region-map";
 //   이런 간선은 돌을 보지도 쓰지도 않는다. 화면도 "지도" 하나만 적는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
 export const needIsMap = (need: EvoNeed | undefined): boolean => need?.kind === "item" && need.item === REGION_MAP;
 
-const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {} };
+const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, labels: {} };
 const tables = new Map<string, RegionalTable>();
 
 // 표 전체 — 파일이 없거나 깨졌으면 빈 표
@@ -83,7 +85,7 @@ export function regionalTable(opts?: DexOptions): RegionalTable {
   let table = EMPTY;
   try {
     const raw = loadJson<Partial<RegionalTable>>("regional.json", opts);
-    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, partners: raw.partners ?? {}, looks: raw.looks ?? {}, gender: raw.gender ?? {} };
+    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, partners: raw.partners ?? {}, looks: raw.looks ?? {}, gender: raw.gender ?? {}, evolveLooks: raw.evolveLooks ?? {}, labels: raw.labels ?? {} };
   } catch {
     table = EMPTY;
   }
@@ -92,6 +94,20 @@ export function regionalTable(opts?: DexOptions): RegionalTable {
 }
 
 // 알에서 이 종이 나올 때의 모습 목록 — 없으면 빈 목록 (data/regional.json 의 hatch)
+// 모습 이름 — 표(data/regional.json 의 labels)에 없으면 null. 화면은 종 이름으로 대신한다
+export function formLabelOf(slug: string, opts?: DexOptions): string | null {
+  const key = normalizeSlug(slug);
+  if (isMetaKey(key)) return null;
+  return regionalTable(opts).labels[key] ?? null;
+}
+
+// 진화 결과 종의 모습 후보 — 표(data/regional.json 의 evolveLooks)에 있는 종만. 없으면 빈 목록 (2026-10-17 사용자 결정 "진화 때 무작위")
+export function evolveLookVariants(slug: string, opts?: DexOptions): HatchVariants {
+  const key = normalizeSlug(slug);
+  if (isMetaKey(key)) return [];
+  return (regionalTable(opts).evolveLooks[key] ?? []).filter(([s, w]) => typeof s === "string" && typeof w === "number" && w > 0);
+}
+
 export function hatchVariants(slug: string, opts?: DexOptions): HatchVariants {
   const key = normalizeSlug(slug);
   if (isMetaKey(key)) return [];
@@ -160,6 +176,18 @@ export function formOverworldOf(slug: string, opts?: DexOptions): string | null 
 
 // 도감에 적는 종 — 겉모습이면 기본 종, 아니면 그대로 (안농 B → 안농)
 export const dexSlugOf = (slug: string, opts?: DexOptions): string => lookFormOf(slug, opts)?.base ?? normalizeSlug(slug);
+
+// 도감 칸이 있는 종인가 — 기본 종과 리전폼. 특수 폼과 겉모습은 기본 종 칸의 "다른 모습" 에서 본다
+// (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기"). 도감 수·업적 "포켓몬 n종 모으기" 도 이 칸만 센다("도감 칸만 세기")
+export const isDexEntry = (slug: string, opts?: DexOptions): boolean => !lookFormOf(slug, opts) && regionalOf(slug, opts)?.special !== true;
+
+// 기본 종 하나의 다른 모습 — 특수 폼(forms 의 special)과 겉모습(looks). 표 순서 그대로
+export function otherFormsOf(base: string, opts?: DexOptions): string[] {
+  const key = normalizeSlug(base);
+  if (isMetaKey(key)) return [];
+  const t = regionalTable(opts);
+  return [...Object.entries(t.forms).filter(([, f]) => f.special && f.base === key).map(([s]) => s), ...Object.entries(t.looks).filter(([, l]) => l.base === key).map(([s]) => s)];
+}
 
 // 전투 중에만 바뀌는 모습 — 기본 종을 얻으면 도감에 함께 남는다 (메로엣타 → 메로엣타(스텝폼)). 없으면 빈 목록
 export function battleFormsOf(base: string, opts?: DexOptions): string[] {

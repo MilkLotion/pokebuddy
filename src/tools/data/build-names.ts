@@ -52,6 +52,7 @@ const OVERRIDES: Record<string, NameEntry> = {
   ogerpon: { ko: "오거폰(벽록의가면)", en: "Ogerpon (Teal Mask)" },
   hoopa: { ko: "후파(굴레에 빠진 후파)", en: "Hoopa (Confined)" },
   enamorus: { ko: "러브로스(화신폼)", en: "Enamorus (Incarnate Forme)" },
+  oricorio: { ko: "춤추새(이글이글스타일)", en: "Oricorio (Baile Style)" },
 };
 
 export async function build(): Promise<void> {

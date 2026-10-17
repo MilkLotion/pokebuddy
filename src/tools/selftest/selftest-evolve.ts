@@ -17,6 +17,7 @@ const missingOf = (c: Candidate | undefined): string | undefined => (c && !c.rea
 import { formsOf, isFormLocked, tickFormWork, isSinglePet, setForm } from "../../dex/forms";
 import { SHIFT_RULES } from "../../dex/rules";
 import { recordDex } from "../../dex/record";
+import { formLabelOf, hatchVariants, isDexEntry, otherFormsOf } from "../../dex/regional";
 import { callRider, riderCall } from "../../party/riders";
 import { snapshotView } from "../../view/snapshot";
 import { dexDetail } from "../../view/dex-detail";
@@ -278,7 +279,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(formsOf(seed({ species: "arceus", level: 50 }).pets[0] as PetV3).length, 18, "아르세우스 17 타입");
   const ar = seed({ species: "arceus", level: 50 });
   assert.equal(setForm(ar, "p1", "arceus-fire").ok, true);
-  assert.ok(!ar.dex.obtained.includes("arceus-fire") && ar.dex.obtained.includes("arceus"), "겉모습은 기본 종 칸으로 적는다");
+  assert.ok(ar.dex.obtained.includes("arceus-fire") && ar.dex.obtained.includes("arceus"), "겉모습은 기본 종 칸과 그 모습을 함께 적는다(2026-10-17 — 2쪽 모습의 얻음 표시)");
   const k = seed({ species: "kyurem", level: 50 });
   assert.deepStrictEqual(setForm(k, "p1", "kyurem-black"), { ok: false, reason: "no-partner" }, "제크로무가 없으면 블랙큐레무 불가");
   k.pets.push({ ...(seed({ species: "zekrom", level: 5 }).pets[0] as PetV3), id: "p2" });
@@ -289,7 +290,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   recordDex(m, "meloetta", false);
   assert.ok(m.dex.obtained.includes("meloetta-pirouette"), "메로엣타를 얻으면 스텝폼도 함께");
   recordDex(m, "unown-question", true);
-  assert.ok(m.dex.obtained.includes("unown") && m.dex.shinyObtained.includes("unown") && !m.dex.obtained.includes("unown-question"), "안농 ? 는 안농 칸");
+  assert.ok(m.dex.obtained.includes("unown") && m.dex.shinyObtained.includes("unown") && m.dex.obtained.includes("unown-question"), "안농 ? 는 안농 칸과 그 모습");
   process.stdout.write("(12c-2b) 전설 모습·큐레무 짝·도감 기록  ok\n");
 }
 
@@ -308,7 +309,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   (sv.pets[0] as PetV3).evolved = ["type-null"];
   assert.equal(formsOf(sv.pets[0] as PetV3).length, 19, "타입:널·실버디·17 타입");
   assert.equal(setForm(sv, "p1", "silvally-fire").ok, true);
-  assert.ok(!sv.dex.obtained.includes("silvally-fire") && sv.dex.obtained.includes("silvally"), "실버디 타입은 겉모습");
+  assert.ok(sv.dex.obtained.includes("silvally-fire") && sv.dex.obtained.includes("silvally") && !isDexEntry("silvally-fire"), "실버디 타입은 겉모습 — 기본 종 칸과 그 모습을 함께 적고 도감 칸은 아니다");
   const nz = seed({ species: "necrozma", level: 50 });
   assert.deepStrictEqual(formsOf(nz.pets[0] as PetV3), ["necrozma", "necrozma-dusk", "necrozma-dawn"]);
   assert.deepStrictEqual(setForm(nz, "p1", "necrozma-dusk"), { ok: false, reason: "no-partner" }, "솔가레오가 없으면 황혼의 갈기 불가");
@@ -316,6 +317,31 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(setForm(nz, "p1", "necrozma-dusk").ok, true, "솔가레오가 있으면 된다");
   assert.equal(setForm(nz, "p1", "necrozma-dawn").reason, "no-partner", "루나아라는 아직 없다");
   process.stdout.write("(12c-2c) 오거폰·러브로스·후파·실버디·지가르데·네크로즈마 모습  ok\n");
+}
+
+// (12c-2d) 진화할 때 정하는 모습·알 모습·다른 모습 목록·도감 칸 (2026-10-17 사용자 "진화 때 무작위", "원작 1%", "리전폼 빼고 다 합치기", worklog/records/form-audit)
+{
+  const evolveWith = (species: string, level: number, r: number): string | undefined => {
+    const s = seed({ species, level });
+    const res = evolvePet(s, "p1", "day", undefined, undefined, () => r);
+    assert.equal(res.ok, true, `${species} 진화`);
+    return s.pets[0]?.species;
+  };
+  assert.equal(evolveWith("spewpa", 12, 0), "vivillon", "비비용 무늬 — 첫 칸은 기본(화원의 모양)");
+  assert.equal(evolveWith("spewpa", 12, 0.999), "vivillon-poke-ball", "비비용 무늬 — 마지막 칸");
+  assert.equal(evolveWith("tandemaus", 25, 0.5), "maushold", "파밀리쥐는 대개 네 가족");
+  assert.equal(evolveWith("tandemaus", 25, 0.995), "maushold-family-of-three", "1% 로 세 가족");
+  const viv = seed({ species: "spewpa", level: 12 });
+  evolvePet(viv, "p1", "day", undefined, undefined, () => 0.5);
+  const got = viv.pets[0]!.species;
+  assert.ok(viv.dex.obtained.includes(got) && viv.dex.obtained.includes("vivillon"), "진화로 얻은 모습과 기본 종 칸을 함께 적는다");
+  assert.deepStrictEqual(otherFormsOf("burmy"), ["burmy-sandy", "burmy-trash"], "도롱충이의 다른 모습");
+  assert.equal(otherFormsOf("vivillon").length, 19, "비비용 다른 무늬 19");
+  assert.equal(otherFormsOf("alcremie").length, 62, "마휘핑 다른 모습 62");
+  assert.deepStrictEqual(["burmy", "burmy-sandy", "unown-b", "meowth-alola"].map((s) => isDexEntry(s)), [true, false, false, true], "도감 칸은 기본 종·리전폼");
+  assert.equal(formLabelOf("vivillon-polar"), "설국의 모양");
+  assert.ok(hatchVariants("oricorio").length === 4 && hatchVariants("flabebe").length === 5, "춤추새·플라베베 알 모습");
+  process.stdout.write("(12c-2d) 진화 모습·알 모습·다른 모습·도감 칸  ok\n");
 }
 
 // (12c-3) 유대의고삐로 말 부르기 — 버드렉스 계열이 있을 때만, 아직 없는 말만, 고삐 1개 소모, 박스로 (src/party/riders.ts, 2026-10-07 사용자 결정)
