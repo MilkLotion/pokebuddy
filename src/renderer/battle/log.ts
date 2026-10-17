@@ -28,17 +28,20 @@ function nameEl(n: BattleLogName): HTMLElement {
   return el("span", `name ${n.side === 0 ? "mine" : "opp"}`, n.text);
 }
 
+// 한 줄 — 시각 칸 + 내용 묶음. 내용이 창 폭을 넘으면 묶음 안에서 다음 줄로 내린다(시각 칸 오른쪽에서 시작, 가로 스크롤 없음)
 function rowEl(line: BattleLogLine, maxMs: number): HTMLElement {
   const row = el("div", `log-row ${line.kind}`);
   row.appendChild(el("span", "time", clockText(maxMs, line.t)));
-  row.appendChild(nameEl(line.who));
-  if (line.whom) row.appendChild(nameEl(line.whom));
+  const body = el("span", "body");
+  body.appendChild(nameEl(line.who));
+  if (line.whom) body.appendChild(nameEl(line.whom));
   if (line.move) {
     const move = el("span", "move");
     move.append(el("b", undefined, line.move), line.tail);
-    row.appendChild(move);
+    body.appendChild(move);
   }
-  if (line.result) row.appendChild(el("span", "result", line.result));
+  if (line.result) body.appendChild(el("span", "result", line.result));
+  row.appendChild(body);
   return row;
 }
 

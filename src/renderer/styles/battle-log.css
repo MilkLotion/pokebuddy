@@ -38,6 +38,7 @@ body {
   gap: 3px;
   margin: 0 16px;
   padding-right: 4px; /* 줄과 공통 스크롤 막대(tokens.css) 사이 */
+  overflow-x: hidden; /* 가로 스크롤 없음 — 긴 줄은 .body 안에서 내린다 (2026-10-17 사용자 "배틀로그에선 가로스크롤없게") */
   overflow-y: auto;
   color: var(--ink);
   font: 12px/18px var(--font-body, "Galmuri11", "Malgun Gothic", sans-serif);
@@ -45,10 +46,21 @@ body {
 .log-row {
   flex: none;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 1px 6px;
   border-radius: 4px;
+}
+/* 내용 묶음 — 이름·기술·결과. 조각 안에서는 끊지 않고, 넘치면 조각째 다음 줄로 */
+.log-row .body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+}
+.log-row .body > * {
   white-space: nowrap;
 }
 .log-row.faint {

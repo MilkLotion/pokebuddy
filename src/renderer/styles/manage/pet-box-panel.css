@@ -135,14 +135,16 @@
   stroke-width: 1.5;
   stroke-linecap: round;
 }
-/* 교체 모달 — 왼쪽 판, 오른쪽 판(세로 6칸), 아래 단추 줄 */
+/* 교체 모달 — 왼쪽 판, 오른쪽 판(세로 6칸), 아래 단추 줄
+   높이 = 여백 20 + 머리 32 + 10 + 판 474 + 10 + 단추 줄 36 + 여백 20 = 602 — 기본 창(682)의 가림막 안 높이와 같아 세로 스크롤이 없다
+   (2026-10-17 사용자 "교체모달에선 세로스크롤 없게", 간격 16 → 10) */
 .dialog.swap {
   flex: none;
   width: min(608px, calc(100vw - 32px));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 .swap-body {
   display: flex;

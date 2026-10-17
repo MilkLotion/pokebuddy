@@ -604,7 +604,7 @@ Figma: 기기는 `Bag Device` `1262:78407`(`State=Use|Sell|Evolution`)이다. �
 찾기: 박스 탭 찾기와 같다. 1초 뒤나 Enter 로 찾고, 결과가 있는 쪽으로 넘겨 그 칸만 옅은 바탕으로 보인다. `^`·`v` 는 쪽을 넘나들며 이전·다음 결과로 간다. 박스 탭과 달리 프리셋의 개체도 찾는다.
 칸: 누르기만 받는다. 끌어 놓기는 없다(2026-10-10 사용자 결정 "교체·고르기 모달은 누르기만"). 개체 칸을 누를 때(`cell.pick`)와 빈 칸을 누를 때(`blank`, 이름은 `blankLabel`) 할 일은 모달이 정한다. 누를 수 있는 빈 칸만 단추이고 가리키면 옅은 바탕이다. 고를 수 없는 칸은 흐리다. 고른 칸·찾은 칸은 톤 바탕이다(색 테두리로 강조하지 않는다). 부화 결과를 아직 확인하지 않은 개체는 빈 칸으로 보인다.
 호버: 고를 수 있는 칸은 가리키면 박스 탭 칸과 같은 중립 회색이다(`Box Slot` State=Hover, 2026-10-10 부터 `bg/canvas`). 고른 칸·찾은 칸의 초록과 나뉜다. 박스 쪽과 프리셋 쪽이 같다. 규칙은 판 CSS(`styles/manage/pet-box-panel.css`) 한 곳에 둔다. 모달마다 따로 두지 않는다(2026-10-10 사용자 "이 호버스타일이 왜 계속 빠지지?" — 박스 탭 호버가 `.box-grid` 에만 걸려 판에서 빠졌다).
-교체 모달: 오른쪽 판은 옅은 초록 바탕에 이름과 6칸 세로 한 줄이다. 아래 줄은 왼쪽 보조 단추(`모두 박스로`·`모두 빼기`)와 오른쪽 `완료` 다. 모달 폭은 608(교환 628)이다.
+교체 모달: 오른쪽 판은 옅은 초록 바탕에 이름과 6칸 세로 한 줄이다. 대화상자 여백은 20, 머리–판–단추 줄 간격은 10 이다. 높이 600 이 기본 창(682)의 가림막 안 높이(602)에 들어 세로 스크롤이 없다(2026-10-17 사용자 "교체모달에선 세로스크롤 없게", 간격 16 → 10, 파티 교체·배틀 파티 교체 모두). 아래 줄은 왼쪽 보조 단추(`모두 박스로`·`모두 빼기`)와 오른쪽 `완료` 다. 모달 폭은 608(교환 628)이다.
 구현은 `src/renderer/manage/pet-box-panel.ts` `petBoxPanelEl`, 모달은 `party-swap.ts`·`battle-pick.ts`·`trade-cards.ts`, CSS 는 `pet-box-panel.css` 다.
 Figma: 03 섹션 `교체 모달 (2026-10-09)` 의 `Pet Box Panel`(`Page=Presets|Box`), `Party Swap Body`, `Battle Swap Body`, `Battle Swap Body · Search`. 교환은 03 `Trade Dialog` 의 `State=Offer|Blocked|Offer Empty|Offer Error` 가 이 판을 쓴다(모달 폭 628, 카드 열은 남는 폭). 화면은 05 `02 파티` `Party / Swap Modal` `1840:6288`, `15 모험` `Adventure / Battle Swap` `1840:7200`·`Adventure / Battle Swap · Search` `1852:8301`, `08 교환` 의 `Trade / Offer · 교환 모달` 등이다. 옛 `Party / Swap · Open|Holding|Preset 2`·`Adventure / Pick Battle Pet` 은 2026-10-09 지웠다.
 
