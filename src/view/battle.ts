@@ -1,6 +1,6 @@
 // 배틀 파티 화면 값 — 모험 탭의 배틀 칸 카드와 배틀 파티 상세 기기 창이 쓴다 (docs/specs/adventure.md)
 // 저장을 읽기만 한다
-import { fixedMoveOf, moveOptions, petMoves, type MoveInfo } from "../battle/moves.js";
+import { fixedMoveOf, moveOptions, petMoves, speciesMoves, type MoveInfo } from "../battle/moves.js";
 import { battleGate, battleMegaOf, battleSlots, battleSpeciesOf, blockedSlots, canStartBattle } from "../battle/party.js";
 import { AURA_ABILITY, ENGINE_RULES, FIELD_ABILITY, WEATHER_ABILITY } from "../battle/engine.js";
 import { rouletteTickets } from "../battle/fighter-core.js";
@@ -8,12 +8,14 @@ import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { baseStatsOf } from "../battle/stats.js";
 import { tierOf } from "../battle/tier.js";
 import { abilityTable, genderBattleTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
+import { profileOf } from "../dex/species.js";
 import { STATUS_NAME } from "../shared/battle-timeline.js";
+import type { BattleDeviceSlot } from "../shared/model/devices.js";
 import type { DayPart } from "../shared/species";
 import type { BattleView, MoveDetail, MoveView, PetView } from "../shared/model/snapshot";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { petView } from "./pet.js";
-import { typeName } from "./text.js";
+import { petName, petNameParts, typeName } from "./text.js";
 
 const CLASS_TEXT: Readonly<Record<MoveInfo["class"], string>> = { physical: "물리", special: "특수", status: "변화" };
 const TIER_TEXT: Readonly<Record<BattleTier, string>> = { legendary: "초전설", sub: "준전설", mega: "메가진화" };
@@ -156,4 +158,25 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
     };
   });
   return { slots, canStart: canStartBattle(save), gate: battleGate(save) };
+}
+
+// 배틀 종 보기 — 배틀 파티 밖의 종(도감) 또는 개체(파티·박스)를 배틀 기준으로 본다 (docs/specs/adventure.md "종 보기", 2026-10-18 사용자 시안 확정)
+// - 개체면 그 개체의 고른 기술 순서·암컷 능력치·이로치 초상. 종이면 종의 기본 기술 2개, 성별 없음
+// - 메가·배틀 파티 모습(battle.form)은 쓰지 않는다 — 배틀 파티에 들어올 때 정하는 값이다. 개체의 지금 종으로 본다
+// - 표에 없는 종이거나 개체가 없으면 null
+export function battleSpeciesSlot(save: SaveV3, species: string, petId: string | null, dayPart: DayPart): { slot: BattleDeviceSlot; look: string } | null {
+  const pet = petId ? save.pets.find((p) => p.id === petId) : undefined;
+  if (petId && !pet) return null;
+  const slug = pet ? pet.species : species;
+  if (!baseStatsOf(slug)) return null;
+  const withDetail = (m: MoveInfo): MoveView => ({ ...moveView(m), detail: moveDetail(m) });
+  const female = pet?.gender === "female" ? genderBattleTable()[slug] : undefined;
+  const base = { index: -1, moves: (pet ? petMoves(pet) : speciesMoves(slug)).map(withDetail), blocked: null, stats: statRows(slug, female?.stats), ability: abilityOf(slug, slug, female?.ability), ...(fixedMoveOf(slug) ? { fixedFirst: true as const } : {}) };
+  if (pet) {
+    const v = battlePetView(save, pet.mega ? { ...pet, mega: { ...pet.mega, on: undefined } } : pet, null, dayPart);
+    const { id, name, nameParts, gender, shiny, types, typeIds } = v;
+    return { slot: { ...base, pet: { id, species: slug, name, nameParts, gender, shiny, types, typeIds } }, look: slug };
+  }
+  const typeIds = [...profileOf(slug).types];
+  return { slot: { ...base, pet: { id: "", species: slug, name: petName(slug), nameParts: petNameParts(slug), gender: "none", shiny: false, types: typeIds.map((t) => typeName(t)), typeIds } }, look: slug };
 }

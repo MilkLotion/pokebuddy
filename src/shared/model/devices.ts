@@ -150,12 +150,14 @@ export interface PetDeviceInput extends DeviceKinds {
 
 // ── 배틀 파티 상세 기기 창 ─────────────────────────────────────────────────────
 // 모험 탭의 배틀 칸 카드를 누르면 뜬다. 종족값(방사형 그래프)·특성·보유 기술을 보인다 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
-// 설정창은 칸 번호만 보내고(BattleDeviceInput), 메인이 지금 스냅샷으로 모델을 만든다 (src/view/device-battle.ts)
-// Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1662:224`
-export interface BattleDeviceInput extends DeviceKinds {
-  slot: number; // 배틀 파티 칸 0~5
-  notice: string; // 마지막 실패 문구
-}
+// 설정창은 무엇을 볼지만 보내고(BattleDeviceInput), 메인이 지금 스냅샷으로 모델을 만든다 (src/view/device-battle.ts)
+// Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1763:75391`(View=Slot|Species)
+// 볼 것 — 배틀 파티 칸, 또는 배틀 파티 밖의 종 보기(도감은 종만, 파티·박스는 그 개체 — 고른 기술·암컷 능력치). 머리 탭이 정한다 (device-kind.ts battleTarget)
+export type BattleTarget = { slot: number } | { species: string; petId: string | null };
+export type BattleDeviceInput = BattleTarget &
+  DeviceKinds & {
+    notice: string; // 마지막 실패 문구
+  };
 
 // 배틀 창이 읽는 개체 값만 — 만복도·쿨타임처럼 시간으로 바뀌는 값을 싣지 않는다. 그래야 시간이 흘러도 모델이 같아 다시 그리지 않는다
 // (실행 규칙 R1·R4, worklog/records/perf-refactor 1-3). species 는 울음소리가 쓴다
@@ -165,9 +167,8 @@ export interface BattleDeviceSlot extends Omit<BattleSlotView, "pet" | "options"
 }
 
 export interface BattleDeviceOpen {
-  slot: BattleDeviceSlot; // 개체가 든 칸
-  caption: string; // 화면 첫 줄 — "배틀 파티 1번"
-  notice: string;
+  slot: BattleDeviceSlot; // 개체가 든 칸. 종 보기는 index -1, 개체가 없으면 pet.id 가 ""
+  view: "slot" | "species"; // 종 보기는 읽기만 한다 — 기술 칸 누르기·메가 표식·넘기기 줄이 없다 (2026-10-18 사용자 시안 확정)
   art: string | null; // 초상 열쇠 portrait:<종>[:shiny] (src/view/device-art.ts)
   typeArt: Record<string, string>; // 기술 타입·상성 타입 → 흰 타입 아이콘 열쇠 type:<타입>
   megaArt: string | null; // 메가스톤 표식 그림 열쇠 — 메가스톤을 지닌 개체만. 없으면 표식을 두지 않는다

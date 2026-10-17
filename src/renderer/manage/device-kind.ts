@@ -5,7 +5,7 @@
 // - 다른 탭의 고른 값(도감 칸·배틀 칸·상품·도구)은 그 파일을 import 하지 않고 고리로 받는다 — 연결 파일들이 이 파일을 import 한다
 // - 옆 창: 링크 글자로 다른 대상의 기기를 지금 기기 창 옆에 연다(도감 입수처 → 상점 상품, 알 목록 칸 → 도감). 한 겹이고, 지금 기기의 대상이 바뀌면 닫힌다
 //   (docs/specs/ui-components.md "링크 글자")
-import type { DeviceKind, DeviceKindTab } from "../../shared/model/devices.js";
+import type { BattleTarget, DeviceKind, DeviceKindTab } from "../../shared/model/devices.js";
 import type { PetView } from "../../shared/model/snapshot.js";
 import type { TabId } from "./dialog-types.js";
 import { boxPets, partyPets, petInView, ui } from "./state.js";
@@ -184,6 +184,10 @@ export function deviceClosed(kind: DeviceKind): boolean {
 // 기기 연결이 띄울 것 — 지금 기기가 그 종류일 때만. 아니면 null(닫는다)
 export const petTarget = (): string | null => (shownKind() === "pet" ? (subjectPet()?.id ?? null) : null);
 export const dexTarget = (): string | null => besideOf("dex") ?? (shownKind() === "dex" && hasSubject() ? subjectSpecies() : null);
-export const battleTarget = (): number | null => (shownKind() === "battle" && hasSubject() ? subjectBattleSlot() : null);
+// 배틀은 배틀 파티 칸({ slot }). 배틀 파티 밖의 종 보기({ species, petId })는 탭 배선에서 더한다 (BattleTarget, src/shared/model/devices.ts)
+export const battleTarget = (): BattleTarget | null => {
+  const slot = shownKind() === "battle" && hasSubject() ? subjectBattleSlot() : null;
+  return slot == null ? null : { slot };
+};
 export const shopTarget = (): string | null => besideOf("shop") ?? (shownKind() === "shop" ? subjectProduct() : null);
 export const bagTarget = (): string | null => (shownKind() === "bag" ? subjectItem() : null);

@@ -16,9 +16,9 @@ const petAt = (slot: number | null): string | null => (slot == null ? null : (ui
 
 export const battleLink = createDeviceLink<BattleDeviceInput>({
   build: () => {
-    const slot = battleTarget();
-    if (slot == null || !petAt(slot)) return null;
-    return { slot, notice: ui.notice, kinds: kindsOf() };
+    const target = battleTarget();
+    if (!target || ("slot" in target && !petAt(target.slot))) return null;
+    return { ...target, notice: ui.notice, kinds: kindsOf() };
   },
   stamp: () => ui.view,
   open: (input, gen) => api.battleOpen(input, gen),
@@ -64,7 +64,8 @@ export function stepBattle(delta: -1 | 1): void {
 
 // 기기 창에서 누른 단추 — 메가스톤 표식·기술 칸. 기기 창이 다른 개체를 보이던 때 누른 것은 버린다
 export function onBattleAction(action: BattleDeviceAction): void {
-  const id = petAt(battleTarget());
+  const target = battleTarget();
+  const id = target && "slot" in target ? petAt(target.slot) : null; // 종 보기는 단추를 보내지 않는다
   if (!id || action.petId !== id) return;
   // 이 기기 창에서 연 모달 — 기기 창을 닫으면 같이 닫힌다(layers.ts)
   fromLayer("device:battle", () => {

@@ -211,7 +211,7 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:pet-open": { denied: null, run: (_e, input, gen) => openDevice("pet", petWin, isPetInput(input) ? input : null, petDeviceModel, gen) },
     "manage:shop-open": { denied: null, run: (_e, input, gen) => openDevice("shop", shopWin, isShopInput(input) ? input : null, shopDeviceModel, gen) },
     "manage:bag-open": { denied: null, run: (_e, input, gen) => openDevice("bag", bagWin, isBagInput(input) ? input : null, bagDeviceModel, gen) },
-    "manage:battle-open": { denied: null, run: (_e, input, gen) => openDevice("battle", battleWin, isBattleInput(input) ? input : null, battleDeviceModel, gen) },
+    "manage:battle-open": { denied: null, run: (_e, input, gen) => openDevice("battle", battleWin, isBattleInput(input) ? input : null, (v, i) => battleDeviceModel(v, i, game.peek(), game.now()), gen) }, // 종 보기는 개체의 고른 기술을 저장에서 읽는다
     "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;

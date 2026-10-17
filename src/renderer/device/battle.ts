@@ -124,9 +124,13 @@ function matchupEl(v: BattleDeviceView): HTMLElement {
   return bubble;
 }
 
-// 기술 한 개 — 누르면 기술 바꾸기 모달(고른 칸 없이 열고 상세 칸에 이 기술)
-function moveEl(m: MoveView, i: number, icon: string | null, petId: string): HTMLElement {
+// 기술 한 개 — 누르면 기술 바꾸기 모달(고른 칸 없이 열고 상세 칸에 이 기술). 종 보기는 읽기만 해 칸이 단추가 아니다
+function moveEl(m: MoveView, i: number, icon: string | null, petId: string | null): HTMLElement {
   const box = el("div", "move");
+  if (petId == null) {
+    box.append(movePillEl(m, "large", icon), el("div", "meta", m.meta));
+    return box;
+  }
   const pick = buttonEl("pick", "", () => api.act({ kind: "moves", petId, slot: i }));
   pick.appendChild(movePillEl(m, "large", icon));
   pick.setAttribute("aria-label", `${i + 1}번 기술 ${m.name} 바꾸기`);
@@ -140,8 +144,10 @@ function render(v: BattleDeviceView): void {
   const slot = v.slot;
   const pet = slot.pet;
   if (!pet) return;
-  if (shownPetId !== pet.id) open = null;
-  shownPetId = pet.id;
+  const shownKey = pet.id || `species:${pet.species}`; // 종 보기(개체 없음)는 종으로 가른다
+  if (shownPetId !== shownKey) open = null;
+  shownPetId = shownKey;
+  const slotView = v.view === "slot"; // 종 보기는 기술 칸 누르기·메가 표식·바닥 줄이 없다 (2026-10-18 사용자 시안 확정)
   cryPlayer.setVolume(v.volume);
   frame.beginDraw(v.side, "배틀", undefined, v.kinds);
 
@@ -156,7 +162,7 @@ function render(v: BattleDeviceView): void {
   portrait.appendChild(stage);
   // 메가스톤 표식 — 초상 오른쪽 아래. 누르면 설정창이 메가진화 창을 연다(배틀 파티의 메가 상태). 켰으면 옅은 바탕
   // (docs/specs/adventure.md "메가진화", Figma 03 `Battle Party Device` `Mega=Off|On`)
-  if (pet.mega) {
+  if (slotView && pet.mega) {
     const word = pet.mega.kind === "primal" ? "원시회귀" : "메가진화";
     const label = pet.mega.on ? "원래 모습으로" : word;
     const stone = buttonEl(pet.mega.on ? "mega-stone on" : "mega-stone", "", () => api.act({ kind: "mega", petId: pet.id }));
@@ -213,11 +219,13 @@ function render(v: BattleDeviceView): void {
 
   // 기술 두 개 — 순서 바꾸기는 기술 바꾸기 모달에만 있다(2026-10-17 사용자 "기술 위아래 변경은 기기에선 빼도되겠다")
   const moves = el("div", "moves");
-  slot.moves.forEach((m, i) => moves.appendChild(moveEl(m, i, v.typeIcons[m.typeId] ?? null, pet.id)));
+  slot.moves.forEach((m, i) => moves.appendChild(moveEl(m, i, v.typeIcons[m.typeId] ?? null, slotView ? pet.id : null)));
   device.appendChild(moves);
 
-  const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0);
-  device.appendChild(frame.controlsEl(cry));
+  if (slotView) {
+    const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0);
+    device.appendChild(frame.controlsEl(cry));
+  }
   frame.endDraw();
   // 상성 말풍선은 기기 가로 가운데 — 타입 줄이 놓인 자리만큼 왼쪽으로 민다
   if (matchup) {

@@ -232,7 +232,7 @@ export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceO
   return {
     channels: { show: "battledev:show", size: "battledev:size", step: "battledev:step", cry: "battledev:cry", close: "battledev:close", escape: "battledev:escape", kind: "battledev:kind", act: "battledev:act" } satisfies Record<string, BattleDeviceChannel>,
     size: DEVICE_SIZES.battle,
-    keyOf: (o) => o.slot.pet.id,
+    keyOf: (o) => o.slot.pet.id || `species:${o.slot.pet.species}`, // 종 보기(개체 없음)는 종으로 가른다
     viewOf: async (o) => {
       const types = Object.keys(o.typeArt);
       const art = await artResolver(deps, [o.art, o.megaArt, ...types.map((t) => o.typeArt[t] ?? null)]);
@@ -263,7 +263,9 @@ export function isShopInput(v: unknown): v is ShopDeviceInput {
 
 export function isBattleInput(v: unknown): v is BattleDeviceInput {
   if (!isRecord(v)) return false;
-  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice) && isDeviceKindTabs(v.kinds);
+  // 칸 보기는 칸 번호, 종 보기는 종 키와 개체 id(없으면 null) — 둘 다 아닌 모양은 닫는다
+  const target = "slot" in v ? isIndexBelow(v.slot, BATTLE_RULES.slots) : isShortId(v.species) && (v.petId === null || isShortId(v.petId));
+  return target && isText(v.notice) && isDeviceKindTabs(v.kinds);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {
