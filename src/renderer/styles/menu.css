@@ -128,6 +128,38 @@ body {
 #bubble.shown {
   visibility: visible;
 }
+/* 타입 모습 격자 — 아르세우스·실버디의 18 모습을 타입 아이콘 칸 6×3 으로 (Figma 99 `Draft / Form Bubble · Type Grid` 218×116, 2026-10-18 사용자 "진행").
+   머리 줄이 없다. 칸 30, 사이 4. 지금 모습 칸은 옅은 배경이고 누를 수 없다 */
+#bubble.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 30px);
+  gap: 4px;
+  min-width: 0;
+}
+.cell {
+  position: relative; /* 꼬리보다 위에 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.cell.on,
+.cell[aria-current="true"] {
+  background: var(--accent-bg);
+}
+.cell[aria-current="true"] {
+  cursor: default;
+}
+.cell:disabled:not([aria-current="true"]) {
+  opacity: 0.4;
+  cursor: default;
+}
 #bubble .head {
   color: var(--muted);
   font-size: 12px;

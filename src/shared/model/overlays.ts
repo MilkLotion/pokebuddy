@@ -49,10 +49,12 @@ export type MenuView =
   | { kind: "item"; id: number; label: string; disabled: boolean; hint?: string; sub?: MenuSubView }; // hint 는 오른쪽의 짧은 글 — 체크 항목의 `켜짐`
 
 // 항목 옆에 붙어 뜨는 말풍선 — 항목을 눌러도 메뉴는 닫히지 않는다 (포켓몬 메뉴의 `모습 바꾸기`, Figma 05 `501:14010`)
-// 줄의 id 는 menu:pick 으로 돌려보내는 번호다. icon 은 그림의 data URI
+// 줄의 id 는 menu:pick 으로 돌려보내는 번호다. icon 은 그림의 data URI. title 이 비면 머리 줄이 없다
+// grid 면 줄 대신 타입 아이콘 칸 6×3 이다(아르세우스·실버디) — 칸은 줄의 type·icon 으로 그리고 이름은 칸의 풀이 글이다
 export interface MenuSubView {
   title: string;
-  rows: { id: number; label: string; note: string; current: boolean; disabled: boolean; icon?: string }[]; // current — 지금 모습, disabled — 누를 수 없음(지금 모습·도구 없음)
+  grid?: boolean;
+  rows: { id: number; label: string; note: string; current: boolean; disabled: boolean; icon?: string; type?: string }[]; // current — 지금 모습, disabled — 누를 수 없음(지금 모습·도구 없음)
 }
 
 // 알림 창 — OS 대화상자 대신 띄우는 멈춤·분실·저장 잠김·정지·업데이트 창

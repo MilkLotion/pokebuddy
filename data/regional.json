@@ -220,7 +220,7 @@
     "kyurem": ["kyurem-black", "kyurem-white"],
     "keldeo": ["keldeo-resolute"],
     "greninja": ["greninja-battle-bond"],
-    "arceus": ["arceus-bug", "arceus-dark", "arceus-dragon", "arceus-electric", "arceus-fighting", "arceus-fire", "arceus-flying", "arceus-ghost", "arceus-grass", "arceus-ground", "arceus-ice", "arceus-poison", "arceus-psychic", "arceus-rock", "arceus-steel", "arceus-water", "arceus-fairy"],
+    "arceus": ["arceus-fighting", "arceus-flying", "arceus-poison", "arceus-ground", "arceus-rock", "arceus-bug", "arceus-ghost", "arceus-steel", "arceus-fire", "arceus-water", "arceus-grass", "arceus-electric", "arceus-psychic", "arceus-ice", "arceus-dragon", "arceus-dark", "arceus-fairy"],
     "genesect": ["genesect-douse", "genesect-shock", "genesect-burn", "genesect-chill"],
     "terapagos": ["terapagos-terastal"],
     "hoopa": ["hoopa-unbound"],

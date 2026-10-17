@@ -7,6 +7,9 @@
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
 import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
+import { shiftGroupOf } from "../dex/regional.js";
+import { profileOf } from "../dex/species.js";
+import { FORM_GRID } from "./menu-view.js";
 import { battleSpeciesOf } from "../battle/party.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
@@ -38,6 +41,7 @@ export interface PetMenuForm {
   portrait?: string; // 초상의 data URI
   back?: boolean; // 도구 없이 돌아가는 기본 종 줄(로토무) — 오른쪽 글자가 `원래대로`
   noItem?: boolean; // 도구가 없어 누를 수 없다 — 이유는 적지 않는다
+  type?: string; // 타입 모습 격자(아르세우스·실버디)의 칸 — 그 모습의 타입. portrait 는 타입 아이콘이다
 }
 export interface TrayMenuModel {
   hidden: boolean;
@@ -75,7 +79,9 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 // 박스 개체는 밥 주기·놀아주기·볼에 넣기가 흐리다. 옮기기는 박스 개체와 관리 창의 파티 개체에, 팔기는 파티·박스 모두에 있다.
 // 모습 바꾸기는 누르는 동작이 없고 하위 줄(submenu)만 있다 — 눌러도 메뉴가 닫히지 않고 옆에 말풍선으로 뜬다.
 //   해금 전(formsLocked)이면 하위 줄 없이 흐린 줄 하나다 (docs/specs/game.md "로토무의 모습 바꾸기", Figma `Menu Item` `State=Disabled`)
-//   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다
+//   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다.
+//   머리 글은 도구를 쓰는 묶음(카탈로그·영원의 꽃)에만 있다 — 그 밖의 말풍선은 줄만 (2026-10-18 사용자 "진행", Figma 99 `Draft / 타입 모습 격자`)
+//   타입 모습 격자 종(아르세우스·실버디)은 줄 대신 타입 아이콘 칸 6×3 이다 — 묶음 줄 id 가 FORM_GRID, 칸 줄 id 가 `type:<타입>` (src/view/menu-view.ts)
 export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
   // 한 방향 묶음(formsItem)은 바뀔 모습 한 줄만 있어도 `모습 바꾸기` 줄을 둔다
   const forms = model.forms && (model.forms.length > 1 || (model.formsItem != null && model.forms.length > 0)) ? model.forms : null;
@@ -97,12 +103,14 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
       ? [
           {
             label: t("menu.form"),
-            toolTip: model.formsItem != null ? t("menu.form.title.item", { item: model.formsItem }) : t(model.formsCatalog ? "menu.form.title.catalog" : "menu.form.title"),
+            ...(model.formsItem != null ? { toolTip: t("menu.form.title.item", { item: model.formsItem }) } : model.formsCatalog ? { toolTip: t("menu.form.title.catalog") } : {}),
+            ...(forms.some((f) => f.type) ? { id: FORM_GRID } : {}),
             submenu: forms.map((f) => ({
               label: f.name,
               sublabel: t(f.current ? "menu.form.now" : f.back ? "menu.form.back" : "menu.form.go"),
               enabled: !f.current && !f.noItem,
               checked: f.current,
+              ...(f.type ? { id: `type:${f.type}` } : {}),
               ...(f.portrait ? { icon: f.portrait } : {}),
               click: () => act.form?.(f.species),
             })),
@@ -142,12 +150,13 @@ export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): Menu
       ? [
           {
             label: t("menu.form"),
-            toolTip: t("menu.form.title"),
+            ...(forms.some((f) => f.type) ? { id: FORM_GRID } : {}),
             submenu: forms.map((f) => ({
               label: f.name,
               sublabel: t(f.current ? "menu.form.now" : "menu.form.go"),
               enabled: !f.current && !f.noItem,
               checked: f.current,
+              ...(f.type ? { id: `type:${f.type}` } : {}),
               ...(f.portrait ? { icon: f.portrait } : {}),
               click: () => act.form(f.species),
             })),
@@ -157,16 +166,38 @@ export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): Menu
   ];
 }
 
+const GRID_SIZE = 18;
+// 타입 모습 격자 종(아르세우스·실버디)이면 칸 순서의 모습과 타입, 아니면 null — 모습이 18개이고 모습마다 단일 타입이 서로 다를 때다
+// (2026-10-18 사용자 "타입 아이콘있잖아. 그거 6*3 의 grid로 제공해서 그거로 바꾸게").
+// 칸 순서는 지금 모습과 상관없이 모습 묶음(data/regional.json) 순서다 — 공유 계열의 모습 목록(formsOf)은 지금 종이 맨 앞이다
+export function typeGridOf(forms: readonly string[]): { forms: string[]; types: string[] } | null {
+  if (forms.length !== GRID_SIZE) return null;
+  const group = shiftGroupOf(forms[0] ?? "");
+  const ordered = group.length === GRID_SIZE && forms.every((slug) => group.includes(slug)) ? group : [...forms];
+  const types = ordered.map((slug) => profileOf(slug).types);
+  if (types.some((list) => list.length !== 1)) return null;
+  const flat = types.map((list) => list[0] as string);
+  return new Set(flat).size === GRID_SIZE ? { forms: ordered, types: flat } : null;
+}
+// 격자 칸이면 타입과 타입 아이콘(icons 의 `type:<타입>`), 아니면 초상
+function formFace(slug: string, grid: string[] | null, i: number, icons: Record<string, string>): Pick<PetMenuForm, "type" | "portrait"> {
+  const type = grid?.[i];
+  const uri = type ? icons[`type:${type}`] : icons[slug];
+  return { ...(type ? { type } : {}), ...(uri ? { portrait: uri } : {}) };
+}
+
 // 배틀 파티의 모습 줄 — 원래 모습 바꾸기의 모습(formsOf) 가운데 도구 없이 오갈 수 있는 것. 한 방향 묶음(영원의 꽃 등)은 도구를 써야 얻으므로 지금 종만 둔다
 // 말(버드렉스)·짝(큐레무)이 없으면 그 줄이 흐리다 (2026-10-09 사용자 결정 "배틀 파티의 모습 바꾸기에는 기존에 해금했으면 되게")
 function battleForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): PetMenuForm[] {
   const now = battleSpeciesOf(save, pet);
-  const list = shiftRuleOf(pet.species)?.oneWay ? [pet.species] : formsOf(pet);
-  return list.map((slug) => ({
+  const all = shiftRuleOf(pet.species)?.oneWay ? [pet.species] : formsOf(pet);
+  const grid = typeGridOf(all);
+  const list = grid?.forms ?? all;
+  return list.map((slug, i) => ({
     species: slug,
     name: petName(slug),
     current: slug === now,
-    ...(icons[slug] ? { portrait: icons[slug] } : {}),
+    ...formFace(slug, grid?.types ?? null, i, icons),
     ...(riderMissing(save, slug) || partnerMissing(save, slug) ? { noItem: true } : {}),
   }));
 }
@@ -232,11 +263,13 @@ export interface PetMenuState {
 function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): PetMenuForm[] {
   const rule = shiftRuleOf(pet.species);
   const have = rule ? (save.bag[rule.item] ?? 0) > 0 : true;
-  const rows = formsOf(pet).map((slug): PetMenuForm => ({
+  const grid = typeGridOf(formsOf(pet));
+  const list = grid?.forms ?? formsOf(pet);
+  const rows = list.map((slug, i): PetMenuForm => ({
     species: slug,
     name: petName(slug),
     current: slug === pet.species,
-    ...(icons[slug] ? { portrait: icons[slug] } : {}),
+    ...formFace(slug, grid?.types ?? null, i, icons),
     ...(rule && slug === rule.base ? { back: true } : {}),
     // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말이 없으면(버드렉스(백마 탄 모습) — 블리자포스) 줄이 흐리다
     ...((rule && slug !== rule.base && !have) || riderMissing(save, slug) ? { noItem: true } : {}),

@@ -7,8 +7,9 @@
 import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
-import { battleMenu, battleMenuOf, petMenu, petMenuOf, trayMenuOf } from "../../view/menus";
+import { battleMenu, battleMenuOf, petMenu, petMenuOf, trayMenuOf, typeGridOf } from "../../view/menus";
 import { menuView } from "../../view/menu-view";
+import { formsOf } from "../../dex/forms";
 import { boredText, t } from "../../view/text";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
@@ -178,4 +179,35 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.equal(battleMenu(battleMenuOf(s, 1)!, noop).some((m) => m.label === t("menu.form")), false, "한 방향 묶음(플라엣테)은 도구를 써야 해서 줄이 없다");
 }
 
-process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금·배틀 파티 칸)\n");
+// (9) 타입 모습 격자 — 아르세우스·실버디는 18 모습이 모두 단일 타입이라 말풍선이 타입 아이콘 칸 6×3 이다. 머리 줄이 없다.
+//     칸의 그림은 타입 아이콘(`type:<타입>`), 순서는 상성표 순서(노말·격투·비행 …) (2026-10-18 사용자 "진행")
+{
+  const order = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"];
+  for (const base of ["arceus", "silvally"]) assert.deepEqual(typeGridOf(formsOf(pet({ species: base })))?.types, order, `${base} — 18 타입 격자, 상성표 순서`);
+  assert.equal(typeGridOf(formsOf(pet({ species: "rotom" }))), null, "로토무는 격자가 아니다");
+  assert.equal(typeGridOf(formsOf(pet({ species: "oricorio" }))), null, "모습이 없거나 18개가 아니면 격자가 아니다");
+  const s = seed();
+  s.pets.push(pet({ id: "p9", species: "arceus-fire", level: 60 }));
+  s.party.slots[2] = { state: "pokemon", petId: "p9", hidden: false };
+  const icons = Object.fromEntries(order.map((type) => [`type:${type}`, `data:${type}`]));
+  const model = petMenuOf(s, "p9", { origin: "manage", stagePet: null, formIcons: icons, now: Date.now() })!.model;
+  const item = petMenu(model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  assert.equal(item?.toolTip, undefined, "격자 말풍선은 머리 글이 없다");
+  const view = menuView(petMenu(model, { form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
+  const sub = view?.kind === "item" ? view.sub : undefined;
+  assert.equal(sub?.grid, true, "격자 말풍선");
+  assert.equal(sub?.title, "", "머리 줄 없음");
+  assert.deepEqual(sub?.rows.map((r) => r.type), order, "칸마다 타입");
+  assert.equal(sub?.rows[9]?.icon, "data:fire", "칸 그림은 타입 아이콘");
+  assert.deepEqual([sub?.rows[9]?.current, sub?.rows[9]?.disabled, sub?.rows[0]?.disabled], [true, true, false], "지금 모습(불꽃) 칸은 누를 수 없다");
+  // 배틀 파티 칸 메뉴도 같은 격자
+  s.battle = { ...(s.battle ?? {}), slots: ["p9", null, null, null, null, null] } as SaveV3["battle"];
+  const b = menuView(battleMenu(battleMenuOf(s, 0, icons)!, { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
+  assert.equal(b?.kind === "item" && b.sub?.grid, true, "배틀 파티 칸 메뉴도 격자");
+  // 격자가 아닌 말풍선도 머리 줄이 없다 — 머리 글은 도구를 쓰는 묶음만
+  s.pets.push(pet({ id: "p10", species: "solgaleo", evolved: ["cosmog", "cosmoem"] }));
+  const plain = menuView(petMenu(menuOf(s, "p10")!.model, { form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
+  assert.deepEqual(plain?.kind === "item" ? [plain.sub?.title, plain.sub?.grid] : null, ["", undefined], "공유 계열 말풍선 — 머리 줄 없음, 줄 목록");
+}
+
+process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금·배틀 파티 칸·타입 모습 격자)\n");

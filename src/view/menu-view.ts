@@ -9,6 +9,8 @@ import type { MenuSubView, MenuView } from "../shared/model/overlays";
 // 누를 수 없고 동작도 없는 항목은 상태 줄이다 — sublabel 을 둘째 줄로 보인다. 누르는 항목의 sublabel 은 오른쪽 짧은 글이다.
 // 하위 줄이 있는 항목은 말풍선(sub)을 단다. 하위 줄의 번호는 subId 로 만든다 — 메뉴 창이 그 번호로 동작을 찾는다 (pickOf)
 const SUB_BASE = 1000;
+// 타입 모습 격자 — 말풍선이 줄 대신 타입 아이콘 칸 6×3 인 묶음 줄의 id. 칸 줄의 id 는 `type:<타입>` 이다 (src/view/menus.ts typeGridOf)
+export const FORM_GRID = "form-grid";
 export const subId = (parent: number, row: number): number => (parent + 1) * SUB_BASE + row;
 // 고른 번호 → 모델의 항목. 하위 줄 번호면 그 줄을 준다
 export function pickOf(template: MenuItemConstructorOptions[], id: number): MenuItemConstructorOptions | undefined {
@@ -18,8 +20,10 @@ export function pickOf(template: MenuItemConstructorOptions[], id: number): Menu
 }
 function subView(parent: number, m: MenuItemConstructorOptions): MenuSubView | null {
   if (!Array.isArray(m.submenu) || !m.submenu.length) return null;
+  // 머리 글은 toolTip 이 있을 때만 — 도구를 쓰는 묶음(카탈로그·영원의 꽃)의 비용 글 (src/view/menus.ts petMenu)
   return {
-    title: m.toolTip ?? m.label ?? "",
+    title: m.toolTip ?? "",
+    ...(m.id === FORM_GRID ? { grid: true } : {}),
     rows: m.submenu.map((row, i) => ({
       id: subId(parent, i),
       label: row.label ?? "",
@@ -28,6 +32,7 @@ function subView(parent: number, m: MenuItemConstructorOptions): MenuSubView | n
       current: row.checked === true,
       disabled: row.enabled === false,
       ...(typeof row.icon === "string" ? { icon: row.icon } : {}),
+      ...(row.id?.startsWith("type:") ? { type: row.id.slice(5) } : {}),
     })),
   };
 }

@@ -18,6 +18,16 @@
   height: 14px;
   image-rendering: pixelated;
 }
+/* 큰 타입 아이콘 20×20 (Figma 01 `Type Icon` Style=Badge 20) — 모습 말풍선의 타입 모습 격자 칸(windows/menu.ts) */
+.type-icon.large {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+.type-icon.large img {
+  width: 18px;
+  height: 18px;
+}
 [data-type="electric"] { --type: #fac000; }
 [data-type="fire"] { --type: #e52829; }
 [data-type="flying"] { --type: #81b9ef; }

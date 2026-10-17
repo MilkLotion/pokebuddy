@@ -9,7 +9,7 @@ import { formsOf, isFormLocked } from "../../dex/forms";
 import type { Command } from "../../shared/command";
 import type { ManageRoute } from "../../shared/model/route";
 import type { SaveV3 } from "../../shared/save-v3";
-import { battleMenu, battleMenuOf, lockExcept, petMenu, petMenuOf } from "../../view/menus";
+import { battleMenu, battleMenuOf, lockExcept, petMenu, petMenuOf, typeGridOf } from "../../view/menus";
 import { openMenu } from "./menu-window";
 import { portraitKey, type Portraits } from "../art/portraits";
 import type { PartyPet } from "../../view/party-pet";
@@ -21,6 +21,23 @@ import { preloadFile, rendererFile } from "../windows/files";
 const PET_MENU_RULES = { formIconWaitMs: 400 } as const;
 
 export type MenuOrigin = "stage" | "manage";
+
+// 모습 말풍선의 그림 — 모습마다 초상, 타입 모습 격자 종(아르세우스·실버디)은 타입 아이콘(`type:<타입>`). 캐시에 없어 오래 걸리면 그림 없이
+function formArt(art: Portraits, forms: string[], shiny: boolean): Promise<Record<string, string>> {
+  const none: Record<string, string> = {};
+  const grid = typeGridOf(forms);
+  const keep = (uris: Record<string, string | null>): Record<string, string> =>
+    Object.fromEntries(Object.entries(uris).flatMap(([k, v]) => (v ? [[k, v]] : [])));
+  const asks = forms.map((slug) => ({ slug, shiny }));
+  const got = grid
+    ? art.icons(grid.types.map((type) => `type:${type}`)).then(keep, () => none)
+    : art.get(asks).then(
+        (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
+        () => none,
+      );
+  const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), PET_MENU_RULES.formIconWaitMs));
+  return Promise.race([got, late]);
+}
 
 export interface PetMenuDeps {
   read(): SaveV3 | null; // 메모리 값 — 파일은 15초마다 쓴다
@@ -104,14 +121,11 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
         show({});
         return;
       }
-      const asks = forms.map((f) => ({ slug: f.species, shiny: pet.shiny }));
-      const none: Record<string, string> = {};
-      const got = art.get(asks).then(
-        (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
-        () => none,
-      );
-      const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), PET_MENU_RULES.formIconWaitMs));
-      void Promise.race([got, late]).then(show);
+      void formArt(
+        art,
+        forms.map((f) => f.species),
+        pet.shiny,
+      ).then(show);
     },
     open(id, origin = "stage") {
       const save = deps.read();
@@ -123,14 +137,7 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
         pop(id, origin, {});
         return;
       }
-      const asks = forms.map((slug) => ({ slug, shiny: pet.shiny }));
-      const none: Record<string, string> = {};
-      const got = art.get(asks).then(
-        (uris) => Object.fromEntries(asks.flatMap((ask) => (uris[portraitKey(ask)] ? [[ask.slug, uris[portraitKey(ask)] as string]] : []))) as Record<string, string>,
-        () => none,
-      );
-      const late = new Promise<Record<string, string>>((resolve) => setTimeout(() => resolve(none), PET_MENU_RULES.formIconWaitMs));
-      void Promise.race([got, late]).then((icons) => pop(id, origin, icons));
+      void formArt(art, forms, pet.shiny).then((icons) => pop(id, origin, icons));
     },
   };
 }

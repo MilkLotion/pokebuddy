@@ -6,12 +6,15 @@
 //   자리       메뉴 오른쪽 8, 아래 끝은 그 항목 아래 끝 + 5. 꼬리의 세로 가운데는 그 항목의 세로 가운데
 //   왼쪽       화면 오른쪽에 자리가 없으면(메인이 left 를 준다) 말풍선이 메뉴 왼쪽에 앉는다
 //   고르기     모습 줄을 누르면 그 줄의 번호를 돌려준다. 지금 모습 줄은 누를 수 없다. 빈 곳을 누르면 닫는다
+//   머리 줄    도구를 쓰는 묶음(카탈로그·영원의 꽃)만 비용 글이 있다. 그 밖의 말풍선은 줄만 (2026-10-18)
+//   타입 격자  아르세우스·실버디는 타입 아이콘 칸 6×3 — 218×116, 칸 30, 방향키는 위·아래 6칸·옆 1칸 (Figma 99 `Draft / Form Bubble · Type Grid`)
 import { app, BrowserWindow } from "electron";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { menuView, subId } from "../../view/menu-view";
 import { petMenu } from "../../view/menus";
+import { TYPES } from "../data/build-type-chart";
 import { t } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";
 import { sleep as wait } from "../harness/wait";
@@ -49,6 +52,9 @@ const forms = [
 const act = { feed: () => undefined, play: () => undefined, ball: () => undefined, detail: () => undefined, form: () => undefined };
 const partyModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 보통", feed: { enabled: true }, play: { enabled: true }, ball: { enabled: true, hidden: false }, forms, sell: { enabled: false } }, act);
 const boxModel = petMenu({ name: "솔가레오", nature: null, status: "배부름 · 보통", feed: off, play: off, ball: { enabled: false, hidden: false }, forms, move: { enabled: true }, sell: { enabled: false } }, act);
+// 타입 모습 격자 — 아르세우스 18 모습, 지금은 불꽃
+const gridForms = TYPES.map((type) => ({ species: type === "normal" ? "arceus" : `arceus-${type}`, name: `아르세우스(${type})`, current: type === "fire", type, portrait: DOT }));
+const gridModel = petMenu({ name: "아르세우스", nature: null, status: "보통", feed: { enabled: true }, play: { enabled: true }, ball: { enabled: true, hidden: false }, forms: gridForms }, act);
 const plainModel = petMenu({ name: "피카츄", nature: null, status: "보통 · 심심해", feed: { enabled: true }, play: off, ball: { enabled: true, hidden: false }, sell: { enabled: true } }, act);
 
 app.setPath("userData", path.join(dir, "user-data"));
@@ -115,12 +121,12 @@ void app.whenReady().then(async () => {
     assert.ok(tailR.x < bubbleR.x && tailR.x > menuR.r - 1, `꼬리는 메뉴와 말풍선 사이 (${tailR.x})`);
     assert.equal(Math.round(bubbleR.w), 198, "말풍선 폭 198");
     assert.equal(size.sub?.top, Math.round(bubbleR.y - menuR.y), "알린 말풍선 자리가 그린 자리와 같다");
-    const bubble = await js<{ head: string; rows: string[]; faces: number }>(`({
-      head: document.querySelector('#bubble .head').textContent,
+    const bubble = await js<{ head: number; rows: string[]; faces: number }>(`({
+      head: document.querySelectorAll('#bubble .head').length,
       rows: [...document.querySelectorAll('#bubble .row')].map((r) => r.querySelector('.name').textContent + ' · ' + r.querySelector('.note').textContent + (r.disabled ? ' (누를 수 없음)' : '')),
       faces: document.querySelectorAll('#bubble .row .face img').length,
     })`);
-    assert.equal(bubble.head, t("menu.form.title"), "말풍선 머리 줄");
+    assert.equal(bubble.head, 0, "말풍선 머리 줄 없음 — 도구를 쓰지 않는 묶음");
     assert.deepEqual(bubble.rows, [`코스모그 · ${t("menu.form.go")}`, `코스모움 · ${t("menu.form.go")}`, `솔가레오 · ${t("menu.form.now")} (누를 수 없음)`, `루나아라 · ${t("menu.form.go")}`], "모습 줄");
     assert.equal(bubble.faces, 4, "모습 줄마다 초상");
     await shot("menu-party-open.png");
@@ -183,7 +189,37 @@ void app.whenReady().then(async () => {
     assert.ok(leftTail.r > leftBubble.r && leftTail.r < leftMenu.x + 1, `왼쪽 — 꼬리는 말풍선과 메뉴 사이 (${leftTail.r})`);
     await shot("menu-party-left.png");
 
-    process.stdout.write(`메뉴 창 검사 통과: 말풍선 없는 메뉴 · 누르기 전 숨김 · 누르면 말풍선(메뉴 그대로) · 자리와 꼬리 · Esc · 모습 고르기 · 박스 메뉴 · 왼쪽 · 그림 ${shots}\n`);
+    // (8) 타입 모습 격자 — 칸 18, 6×3, 머리 줄 없음, 지금 칸은 누를 수 없다. 방향키는 위·아래 6칸, 옆 1칸, 첫 열에서 ← 는 메뉴로
+    await show(gridModel, "right");
+    await js(`${formItem}.click()`);
+    await wait(150);
+    const gridR = await js<Rect>(rect("#bubble"));
+    const gridLook = await js<{ cells: number; rows: number; head: number; icons: number; title: string; current: string; cellW: number; gap: number }>(`(() => {
+      const cells = [...document.querySelectorAll('#bubble .cell')];
+      const a = cells[0].getBoundingClientRect(); const b = cells[1].getBoundingClientRect();
+      return { cells: cells.length, rows: document.querySelectorAll('#bubble .row').length, head: document.querySelectorAll('#bubble .head').length,
+        icons: document.querySelectorAll('#bubble .cell .type-icon.large img').length, title: cells[0].title,
+        current: cells.findIndex((c) => c.getAttribute('aria-current') === 'true') + ':' + cells.find((c) => c.getAttribute('aria-current') === 'true').disabled,
+        cellW: Math.round(a.width), gap: Math.round(b.left - a.right) };
+    })()`);
+    assert.deepEqual(gridLook, { cells: 18, rows: 0, head: 0, icons: 18, title: "아르세우스(normal)", current: `${TYPES.indexOf("fire")}:true`, cellW: 30, gap: 4 }, "격자 — 칸 18·머리 줄 없음·타입 아이콘·풀이 글·지금 칸");
+    assert.deepEqual([Math.round(gridR.w), Math.round(gridR.h)], [218, 116], "격자 말풍선 218×116");
+    const at = `[...document.querySelectorAll('#bubble .cell')].findIndex((c) => c.classList.contains('on'))`;
+    const key = (k: string): Promise<unknown> => js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true })); 0`);
+    await js(`${formItem}.dispatchEvent(new MouseEvent("mouseenter")); 0`); // 메뉴에서 모습 바꾸기를 가리킨 채
+    await key("ArrowRight");
+    const walk = [await js<number>(at)];
+    for (const k of ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "ArrowLeft"]) {
+      await key(k);
+      walk.push(await js<number>(at));
+    }
+    assert.deepEqual(walk, [0, 6, 7, 1, 0, -1], "방향키 — 아래 6칸·옆 1칸, 첫 열에서 ← 는 메뉴로");
+    await js(`document.querySelectorAll('#bubble .cell')[${TYPES.indexOf("fire")}].click(); document.querySelectorAll('#bubble .cell')[2].click(); 0`);
+    const gridAt = gridModel.findIndex((m) => m.label === t("menu.form"));
+    assert.deepEqual(await js<unknown[]>(`window.__picks`), [subId(gridAt, 2)], "격자 — 지금 칸은 누를 수 없고, 다른 칸은 그 번호를 돌려준다");
+    await shot("menu-type-grid.png");
+
+    process.stdout.write(`메뉴 창 검사 통과: 말풍선 없는 메뉴 · 누르기 전 숨김 · 누르면 말풍선(메뉴 그대로) · 자리와 꼬리 · Esc · 모습 고르기 · 박스 메뉴 · 왼쪽 · 타입 격자 · 그림 ${shots}\n`);
     app.exit(0);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);

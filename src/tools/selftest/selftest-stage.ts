@@ -170,7 +170,7 @@ ok(frame.pets[0]?.play?.mode === "loop" && sheets.clips.idle?.anim === "Idle" &&
   const formAt = boxed.findIndex((m) => m.label === t("menu.form"));
   const formView = boxedView.find((v) => v.kind === "item" && v.label === t("menu.form"));
   const sub = formView?.kind === "item" ? formView.sub : undefined;
-  eq(sub?.title, t("menu.form.title"), "모습 말풍선의 머리 줄");
+  eq(sub?.title, "", "모습 말풍선은 머리 줄이 없다 — 머리 글은 도구를 쓰는 묶음의 비용 글만 (2026-10-18)");
   eq(
     sub?.rows,
     [

@@ -7,6 +7,7 @@ import type { MenuSubView, MenuView } from "../../shared/model/overlays.js";
 import { MENU_METRICS } from "../../shared/window-metrics.js";
 import { needBridge } from "../ui/bridge.js";
 import { portraitImg } from "../ui/portrait.js";
+import { typeIconEl } from "../ui/type-badge.js";
 import { needEl } from "../ui/dom.js";
 import { whenFontsReady } from "../ui/fonts.js";
 
@@ -18,12 +19,14 @@ const api = needBridge("pokebuddyMenu");
 const SUB_GAP = MENU_METRICS.subGap; // 메뉴와 말풍선 사이 — 메인(src/main/menus/menu-window.ts)과 같은 값을 src/shared/window-metrics.ts 에서 읽는다
 const SUB_DROP = 5; // 말풍선 아래 끝은 그 항목 아래 끝보다 이만큼 아래 — 메뉴 안쪽 여백 4 + 테두리 1
 const TAIL = 10; // 꼬리 한 변 — menu.html `.tail`
+const GRID_COLS = 6; // 타입 모습 격자의 열 — 6×3 (Figma 99 `Draft / Form Bubble · Type Grid`)
 
 let buttons: HTMLButtonElement[] = [];
 let at = -1; // 가리킨 항목 (buttons 안의 번호)
 let rows: HTMLButtonElement[] = [];
 let rowAt = -1; // 말풍선 안에서 가리킨 줄
 let opener: HTMLButtonElement | null = null; // 말풍선이 달린 항목
+let grid = false; // 말풍선이 타입 모습 격자 — 방향키가 칸을 6열로 옮겨 다닌다
 let opened = false;
 
 // 메뉴가 쓰는 글꼴 — 잰 폭이 대체 글꼴 폭이면 창이 메뉴와 어긋난다. 예비 창은 메뉴를 받기 전에 다 읽어 둔다 (G51-1)
@@ -61,17 +64,33 @@ function drawBubble(sub: MenuSubView): void {
   rows = [];
   const tail = document.createElement("div");
   tail.className = "tail";
-  const head = document.createElement("div");
-  head.className = "head";
-  head.textContent = sub.title;
-  bubble.append(tail, head);
+  bubble.append(tail);
+  // 머리 글은 도구를 쓰는 묶음(카탈로그·영원의 꽃)의 비용 글만 — 비면 줄이 없다
+  if (sub.title) {
+    const head = document.createElement("div");
+    head.className = "head";
+    head.textContent = sub.title;
+    bubble.append(head);
+  }
+  grid = sub.grid === true;
+  bubble.classList.toggle("grid", grid);
   for (const row of sub.rows) {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "row";
+    b.className = grid ? "cell" : "row";
     b.setAttribute("role", "menuitem");
     b.disabled = row.disabled;
     if (row.current) b.setAttribute("aria-current", "true");
+    if (grid) {
+      // 타입 모습 격자의 칸 — 타입 아이콘만. 모습 이름은 풀이 글로 (2026-10-18 사용자 "진행", 머리 줄 없음)
+      b.title = row.label;
+      b.setAttribute("aria-label", row.label);
+      const icon = typeIconEl(row.type ?? "", row.icon);
+      icon.classList.add("large");
+      b.appendChild(icon);
+      addRow(b, row.id);
+      continue;
+    }
     const face = document.createElement("span");
     face.className = "face";
     if (row.icon) {
@@ -84,18 +103,31 @@ function drawBubble(sub: MenuSubView): void {
     note.className = "note";
     note.textContent = row.note;
     b.append(face, name, note);
-    const index = rows.length;
-    b.addEventListener("mouseenter", () => {
-      if (!b.disabled) pointRow(index);
-    });
-    // 마우스가 나가면 가리킨 표시를 지운다 — 남으면 지금 줄과 함께 두 줄이 칠해져 보인다 (2026-10-02 사용자 "호버했다가 치워도 저 배경이 안사라져")
-    b.addEventListener("mouseleave", () => {
-      if (rowAt === index) pointRow(-1);
-    });
-    b.addEventListener("click", () => api.pick(row.id));
-    rows.push(b);
-    bubble.appendChild(b);
+    addRow(b, row.id);
   }
+}
+// 말풍선 줄(격자 칸) 하나를 잇는다 — 가리키기·고르기
+function addRow(b: HTMLButtonElement, id: number): void {
+  const index = rows.length;
+  b.addEventListener("mouseenter", () => {
+    if (!b.disabled) pointRow(index);
+  });
+  // 마우스가 나가면 가리킨 표시를 지운다 — 남으면 지금 줄과 함께 두 줄이 칠해져 보인다 (2026-10-02 사용자 "호버했다가 치워도 저 배경이 안사라져")
+  b.addEventListener("mouseleave", () => {
+    if (rowAt === index) pointRow(-1);
+  });
+  b.addEventListener("click", () => api.pick(id));
+  rows.push(b);
+  bubble.appendChild(b);
+}
+
+// 격자에서 한 칸 옮긴다 — 위·아래는 한 줄(6칸), 누를 수 없는 칸은 건너뛴다. 끝에서는 반대쪽으로 돈다
+function stepGrid(from: number, by: number): number {
+  if (!rows.some((b) => !b.disabled)) return from;
+  let i = from;
+  do i = (i + by + rows.length) % rows.length;
+  while (rows[i]?.disabled);
+  return i;
 }
 
 // 말풍선의 세로 자리 — 아래 끝을 그 항목 아래 끝 + SUB_DROP 에 맞춘다. 메뉴 위로 넘치면 메뉴 위 끝에 붙인다.
@@ -113,6 +145,7 @@ function resetMenu(): void {
   bubble.replaceChildren();
   buttons = [];
   rows = [];
+  grid = false;
   at = -1;
   rowAt = -1;
   opener = null;
@@ -221,9 +254,11 @@ document.addEventListener("keydown", (e) => {
   const back = wrap.classList.contains("side-left") ? "ArrowRight" : "ArrowLeft"; // 말풍선에서 메뉴로 돌아가는 쪽
   const into = back === "ArrowLeft" ? "ArrowRight" : "ArrowLeft";
   if (opened && rowAt >= 0) {
-    // 말풍선 안
-    if (e.key === "ArrowDown") pointRow(step(rows, rowAt, 1));
-    else if (e.key === "ArrowUp") pointRow(step(rows, rowAt, -1));
+    // 말풍선 안 — 격자는 위·아래가 한 줄(6칸), 옆은 한 칸. 첫 열에서 메뉴 쪽으로 가면 메뉴로 돌아간다
+    const edge = back === "ArrowLeft" ? rowAt % GRID_COLS === 0 : rowAt % GRID_COLS === GRID_COLS - 1;
+    if (e.key === "ArrowDown") pointRow(grid ? stepGrid(rowAt, GRID_COLS) : step(rows, rowAt, 1));
+    else if (e.key === "ArrowUp") pointRow(grid ? stepGrid(rowAt, -GRID_COLS) : step(rows, rowAt, -1));
+    else if (grid && (e.key === "ArrowLeft" || e.key === "ArrowRight") && !(e.key === back && edge)) pointRow(stepGrid(rowAt, e.key === "ArrowRight" ? 1 : -1));
     else if (e.key === "Enter") rows[rowAt]?.click();
     else if (e.key === back) pointRow(-1);
     else if (e.key === "Escape") setOpen(false);
