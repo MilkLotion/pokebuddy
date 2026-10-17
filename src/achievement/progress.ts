@@ -3,7 +3,7 @@ import { type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
 import { isSingleSpecies } from "../dex/forms.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { isDexEntry, regionalOf } from "../dex/regional.js";
+import { dexEntryCount, regionalOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
 import { singleSpecies } from "../dex/obtain.js";
 import { type AchievementCond } from "../dex/tables.js";
@@ -45,7 +45,7 @@ function obtainedNumbers(save: SaveV3, opts?: DexOptions): Set<number> {
 // 조건의 지금 값 — 셀 수 없는 조건(레벨업·친밀도)은 null
 function measure(save: SaveV3, cond: AchievementCond, opts?: DexOptions): number | null {
   switch (cond.kind) {
-    case "dex": return save.dex.obtained.filter((s) => isDexEntry(s, opts)).length; // 도감 칸만 센다 (2026-10-17 사용자 "도감 칸만 세기")
+    case "dex": return dexEntryCount(save.dex.obtained, opts); // 도감 칸만 센다 (2026-10-17 사용자 "도감 칸만 세기")
     case "region": {
       const nums = obtainedNumbers(save, opts);
       let n = 0;

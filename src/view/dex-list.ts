@@ -2,7 +2,7 @@
 import { type DexOptions, isMetaKey } from "../dex/data.js";
 import { petName } from "./text.js";
 import type { SaveV3 } from "../shared/save-v3";
-import { regionalOf, isRegional } from "../dex/regional.js";
+import { isDexEntry, regionalOf, isRegional } from "../dex/regional.js";
 import type { DexEntry } from "../shared/model/detail";
 import { speciesTable, type SpeciesRow } from "../dex/tables.js";
 import { megaOf, megaSlugs, megaTagOf } from "../dex/mega.js";
@@ -20,10 +20,10 @@ function baseForms(rows: Record<string, SpeciesRow>, opts?: DexOptions): { slug:
   const byDex = new Map<number, string>();
   const regional: { slug: string; dex: number }[] = [];
   for (const [slug, row] of Object.entries(rows)) {
-    if (isMetaKey(slug) || !row.dex) continue;
+    // 도감 칸이 없는 종(특수 폼·겉모습)은 기본 종 칸의 "다른 모습" 에서 본다 — 판정은 도감 수와 같은 isDexEntry (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기")
+    if (isMetaKey(slug) || !row.dex || !isDexEntry(slug, opts)) continue;
     if (isRegional(slug, opts)) {
-      // 특수 폼은 칸이 없다 — 기본 종 칸의 "다른 모습" 에서 본다 (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기")
-      if (!regionalOf(slug, opts)?.special) regional.push({ slug, dex: row.dex });
+      regional.push({ slug, dex: row.dex });
       continue;
     }
     const kept = byDex.get(row.dex);

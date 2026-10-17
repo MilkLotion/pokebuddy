@@ -195,21 +195,32 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
 
 // 도감 기기 창 2쪽(모습) — 기본 종과 그 다른 모습. 다른 모습이 없는 종은 없다 (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기", 2026-10-18 "1페이지 2페이지 느낌")
 // 기본 종은 겉모습이면 looks 의 base, 특수 폼이면 forms 의 base 다. 얻음은 도감 기록이나 지금 가진 개체의 종으로 본다(옛 저장은 겉모습을 기본 종으로만 적었다)
-function formsOfDetail(save: SaveV3, slug: string, opts?: DexOptions): { forms?: DexFormView[] } {
+// 얻음·해금은 그 종의 모습 Set 으로 목록을 한 번씩만 훑어 찾는다 — 모습이 많은 종(마휘핑 63)도 칸마다 목록을 훑지 않는다 (worklog/records/update-1017/perf-review-agent1.md A4)
+// 2쪽 머리 줄의 종 이름(formsTitle)은 기본 종 화면 이름의 괄호 앞이다 — 괄호를 떼는 곳은 여기 한 곳이다 (A6)
+function formsOfDetail(save: SaveV3, slug: string, opts?: DexOptions): { forms?: DexFormView[]; formsTitle?: string } {
   const special = regionalOf(slug, opts);
   const base = special?.special ? special.base : dexSlugOf(slug, opts);
   const others = otherFormsOf(base, opts);
   if (!others.length) return {};
-  const owned = new Set(save.pets.map((p) => p.species));
-  const forms = [base, ...others].map((s) => {
-    const got = hasObtained(save, s) || owned.has(s);
+  const slugs = [base, ...others];
+  const mine = new Set(slugs);
+  const got = new Set<string>();
+  const seen = new Set<string>();
+  for (const s of save.dex.obtained) if (mine.has(s)) got.add(s);
+  for (const p of save.pets) if (mine.has(p.species)) got.add(p.species);
+  for (const s of save.dex.unlocked) if (mine.has(s)) seen.add(s);
+  const forms = slugs.map((s) => {
+    const has = got.has(s);
     // 이름 표에 없으면 화면 이름의 괄호 안(도롱충이(초목도롱) → 초목도롱), 그것도 없으면 화면 이름
     const name = petName(s);
-    const label = formLabelOf(s, opts) ?? name.match(/\(([^)]+)\)$/)?.[1] ?? name;
-    return { slug: s, name: got || hasUnlocked(save, s) ? name : "???", label: got ? label : "???", obtained: got, current: s === slug };
+    const label = formLabelOf(s, opts) ?? FORM_PAREN.exec(name)?.[2] ?? name;
+    return { slug: s, name: has || seen.has(s) ? name : "???", label: has ? label : "???", obtained: has, current: s === slug };
   });
-  return { forms };
+  const head = forms[0]?.name ?? "???";
+  return { forms, formsTitle: FORM_PAREN.exec(head)?.[1] ?? head };
 }
+// 화면 이름의 `<종>(<모습>)` — 1 종 이름, 2 모습
+const FORM_PAREN = /^(.*)\(([^)]+)\)$/;
 
 // 입수 경로가 하나도 없을 때 — 첫 선택·진화·알·상점 어디에도 없는 종
 const NO_METHOD = "획득 방법 준비 중";

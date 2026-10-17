@@ -451,4 +451,18 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   out("단일 포켓몬 종 ok");
 }
 
+// ── 도감 칸 수 기억 — 같은 목록은 앞의 셈을 쓰고, push 로 늘거나 새 배열이면 다시 센다 (perf-review-agent1.md A1) ──
+{
+  const list = ["burmy", "burmy-sandy", "pikachu"];
+  assert.equal(regional.dexEntryCount(list), 2, "겉모습(모래땅도롱)은 도감 칸이 아니다");
+  list.push("raichu-alola");
+  assert.equal(regional.dexEntryCount(list), 3, "push 로 늘면 다시 센다 — 리전폼은 도감 칸");
+  list.push("vivillon-polar");
+  assert.equal(regional.dexEntryCount(list), 3, "겉모습이 늘어도 칸 수는 그대로");
+  assert.equal(regional.dexEntryCount([...list, "eevee"]), 4, "새 배열은 따로 센다");
+  assert.deepEqual(regional.otherFormsOf("burmy"), ["burmy-sandy", "burmy-trash"], "다른 모습 색인");
+  assert.equal(regional.hatchBaseOf("burmy-sandy"), "burmy", "알 모습 → 기본 종 색인");
+  out("도감 칸 수·모습 색인 ok");
+}
+
 out("통과");

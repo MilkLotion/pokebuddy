@@ -322,6 +322,7 @@ function seed(): SaveV3 {
   const forms = dexDetail(s, "burmy-sandy")?.forms;
   assert.deepStrictEqual(forms?.map((f) => [f.slug, f.label, f.obtained, f.current]), [["burmy", "초목도롱", true, false], ["burmy-sandy", "모래땅도롱", true, true], ["burmy-trash", "???", false, false]], "도롱충이 세 모습");
   assert.equal(forms?.[0]?.name, "도롱충이(초목도롱)", "머리 줄은 맨 앞 칸(기본 종)의 이름");
+  assert.equal(dexDetail(s, "burmy-sandy")?.formsTitle, "도롱충이", "2쪽 머리 줄의 종 이름은 기본 종 이름의 괄호 앞 (perf-review-agent1.md A6)");
   assert.equal(dexDetail(s, "charmander")?.forms, undefined, "다른 모습이 없는 종");
   assert.equal(dexDetail(empty(0), "burmy")?.forms, undefined, "해금 전에는 모습 목록이 없다");
   s.pets.push({ ...s.pets[0]!, id: "pv", species: "vivillon-polar" } as never);

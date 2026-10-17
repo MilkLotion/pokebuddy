@@ -37,6 +37,10 @@ let lastView: DexDeviceView | null = null;
 // (2026-10-18 사용자 "1페이지 2페이지 느낌", "이 울음소리 있는곳에 페이지 바뀌게", Figma 99 `Draft / 모습 모아 보기`)
 let page: 1 | 2 = 1;
 let infoHeight = 0; // 1쪽을 그린 높이 — 2쪽이 같은 높이를 쓴다
+// 쪽 넘김은 다시 그리지 않고 보이기만 바꾼다 — 1쪽 요소는 그릴 때 만들고, 2쪽 요소는 처음 넘길 때 한 번 만든다 (perf-review-agent1.md A3)
+let infoEls: HTMLElement[] = [];
+let formsEls: HTMLElement[] | null = null;
+let controls: HTMLElement | null = null;
 
 function render(v: DexDeviceView): void {
   const d = v.detail;
@@ -52,10 +56,9 @@ function render(v: DexDeviceView): void {
   const locked = d.state === "locked";
   frame.beginDraw(v.side, "도감", locked ? "locked" : undefined, v.kinds);
   device.style.height = "";
-  if (page === 2 && forms) {
-    drawForms(v, forms);
-    return;
-  }
+  infoEls = [];
+  formsEls = null;
+  controls = null;
 
   const bezel = el("div", "bezel");
   const screen = el("div", "screen");
@@ -117,7 +120,8 @@ function render(v: DexDeviceView): void {
   if (d.shopLinks?.length) linkMethods(records, d.methods, d.shopLinks, v.linkOpen);
   if (forms) records.lastElementChild?.querySelector(".value")?.appendChild(buttonEl("link-text", `다른 모습 ${forms.length - 1}`, () => turnTo(2)));
   device.appendChild(records);
-  if (v.tree) device.appendChild(evolutionCard(v));
+  infoEls = [bezel, records];
+  if (v.tree) infoEls.push(device.appendChild(evolutionCard(v)));
 
   // 링크 글자로 연 옆 창은 바닥 줄(이전·울음소리·다음)을 두지 않는다 — 넘기기는 지금 기기 창이 한다 (docs/specs/ui-components.md "링크 글자")
   if (v.beside) {
@@ -125,16 +129,36 @@ function render(v: DexDeviceView): void {
     return;
   }
 
-  device.appendChild(frame.controlsEl(pageDotsEl(forms)));
-
+  controls = device.appendChild(frame.controlsEl(pageDotsEl(forms)));
   infoHeight = device.offsetHeight;
+  if (page === 2 && forms) showPage(v, forms);
   frame.endDraw();
+  // 2쪽인 채로 다른 종으로 넘겼다 — 그 종의 모습 칸 그림을 청한다
+  if (page === 2 && forms && !v.formArt) api.act({ kind: "forms" });
 }
 
+// 쪽 넘김 — 보이기만 바꾼다. 2쪽 모습 칸 그림을 아직 받지 않았으면 청한다 (메인이 그림을 실어 다시 보내면 그때 다시 그린다)
 function turnTo(next: 1 | 2): void {
-  if (page === next) return;
+  const v = lastView;
+  const forms = v && !v.beside ? v.detail.forms : undefined;
+  if (page === next || !v || !forms) return;
   page = next;
-  if (lastView) render(lastView);
+  showPage(v, forms);
+  frame.endDraw();
+  if (next === 2 && !v.formArt) api.act({ kind: "forms" });
+}
+
+function showPage(v: DexDeviceView, forms: DexFormView[]): void {
+  const two = page === 2;
+  if (two && !formsEls) formsEls = formsPage(v, forms);
+  for (const n of infoEls) n.style.display = two ? "none" : "";
+  for (const n of formsEls ?? []) n.style.display = two ? "" : "none";
+  // 2쪽은 1쪽과 같은 높이 — 모습이 많으면(비비용 20·마휘핑 63) 칸 자리만 스크롤한다
+  device.style.height = two && infoHeight ? `${infoHeight}px` : "";
+  controls?.querySelectorAll<HTMLElement>(".page-dot").forEach((dot, i) => {
+    dot.classList.toggle("on", i + 1 === page);
+    dot.setAttribute("aria-selected", String(i + 1 === page));
+  });
 }
 
 // 바닥 줄 가운데 — 쪽 점. 지금 쪽만 LED 색. 다른 모습이 없는 종은 빈 칸(줄 모양을 지킨다) (Figma 99 `Draft / Device Controls · Pages`)
@@ -155,12 +179,13 @@ function pageDotsEl(forms: DexFormView[] | undefined): HTMLElement {
 
 // 2쪽 — 그 종의 모습 격자. 머리 줄은 1쪽과 같고, 요약 줄(`얻음 n · 모습 m`) 아래 칸이 화면을 채운다. 높이는 1쪽과 같다(같은 창에서 바뀌어도 창 크기가 그대로)
 // 얻은 모습은 초상, 못 얻은 모습은 검은 실루엣과 ???. 지금 보는 모습은 톤 바탕. 칸을 누르면 그 모습의 1쪽 (Figma 99 `Draft / Dex Device · 모습 모아 보기`)
-function drawForms(v: DexDeviceView, forms: DexFormView[]): void {
+// 칸 그림을 아직 받지 않았으면(formArt 아님) 빈 그림 자리로 두고, 메인이 다시 보내면 다시 그린다
+function formsPage(v: DexDeviceView, forms: DexFormView[]): HTMLElement[] {
   const d = v.detail;
   const bezel = el("div", "bezel forms-bezel");
   const screen = el("div", "screen");
   const bar = el("div", "bar");
-  bar.append(el("span", undefined, `No.${String(d.dex).padStart(3, "0")}`), el("span", undefined, `${(forms[0]?.name ?? UNKNOWN).replace(/\(.*\)$/, "")} · 모습`), el("span", "state", `${forms.filter((f) => f.obtained).length}/${forms.length}`));
+  bar.append(el("span", undefined, `No.${String(d.dex).padStart(3, "0")}`), el("span", undefined, `${d.formsTitle ?? UNKNOWN} · 모습`), el("span", "state", `${forms.filter((f) => f.obtained).length}/${forms.length}`));
   screen.appendChild(bar);
   screen.appendChild(el("div", "forms-summary", `얻음 ${forms.filter((f) => f.obtained).length} · 모습 ${forms.length}`));
   const grid = el("div", "form-grid");
@@ -178,11 +203,8 @@ function drawForms(v: DexDeviceView, forms: DexFormView[]): void {
   }
   screen.appendChild(grid);
   bezel.appendChild(screen);
-  device.appendChild(bezel);
-  device.appendChild(frame.controlsEl(pageDotsEl(forms)));
-  // 1쪽과 같은 높이 — 모습이 많으면(비비용 20·마휘핑 63) 칸 자리만 스크롤한다
-  if (infoHeight) device.style.height = `${infoHeight}px`;
-  frame.endDraw();
+  device.insertBefore(bezel, controls);
+  return [bezel];
 }
 
 // 음표 그림 — 울음소리 단추 (Figma 99 `cry-button`). 색은 글자색을 따른다

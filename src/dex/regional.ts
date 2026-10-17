@@ -116,11 +116,7 @@ export function hatchVariants(slug: string, opts?: DexOptions): HatchVariants {
 
 // 이 모습이 알에서 대신 나오는 기본 종 — 그런 모습이 아니면 null (배쓰나이(백색근의 모습) → 배쓰나이)
 export function hatchBaseOf(slug: string, opts?: DexOptions): string | null {
-  const key = normalizeSlug(slug);
-  for (const [base, list] of Object.entries(regionalTable(opts).hatch)) {
-    if (!isMetaKey(base) && base !== key && list.some(([s]) => s === key)) return base;
-  }
-  return null;
+  return formIndexOf(opts).hatchBase.get(normalizeSlug(slug)) ?? null;
 }
 
 // 모습 바꾸기 묶음의 색인 — 모습마다 그 묶음. 표의 앞 묶음이 먼저다(같은 모습이 두 묶음에 있으면 앞 것). 자료 폴더마다 한 번 만든다 (worklog/records/perf-refactor 1-7)
@@ -181,20 +177,59 @@ export const dexSlugOf = (slug: string, opts?: DexOptions): string => lookFormOf
 // (2026-10-17 사용자 결정 "리전폼 빼고 다 합치기"). 도감 수·업적 "포켓몬 n종 모으기" 도 이 칸만 센다("도감 칸만 세기")
 export const isDexEntry = (slug: string, opts?: DexOptions): boolean => !lookFormOf(slug, opts) && regionalOf(slug, opts)?.special !== true;
 
-// 기본 종 하나의 다른 모습 — 특수 폼(forms 의 special)과 겉모습(looks). 표 순서 그대로
+// 도감 칸 수 — 해금·획득 목록에서 도감 칸(isDexEntry)만 센다. 스냅샷·업적이 1초마다 여러 번 세므로 목록마다 기억한다
+// 저장은 목록을 push 로 늘리거나 새 배열로 바꾼다 — 배열 참조·길이·끝 원소가 그대로면 앞의 셈을 쓴다 (worklog/records/update-1017/perf-review-agent1.md A1)
+const entryCounts = new WeakMap<readonly string[], { dir: string; len: number; last: string | undefined; n: number }>();
+export function dexEntryCount(list: readonly string[], opts?: DexOptions): number {
+  const dir = opts?.dataDir ?? "";
+  const hit = entryCounts.get(list);
+  if (hit && hit.dir === dir && hit.len === list.length && hit.last === list[list.length - 1]) return hit.n;
+  const n = list.filter((s) => isDexEntry(s, opts)).length;
+  entryCounts.set(list, { dir, len: list.length, last: list[list.length - 1], n });
+  return n;
+}
+
+// 모습 색인 — 기본 종 → 다른 모습(특수 폼·겉모습)·전투 중 모습, 알 모습 → 기본 종. 자료 폴더마다 한 번 만든다 (실행 규칙 R6, perf-review-agent1.md A5)
+interface FormIndex {
+  others: Map<string, string[]>;
+  battle: Map<string, string[]>;
+  hatchBase: Map<string, string>;
+}
+const formIndexes = new Map<string, FormIndex>();
+function formIndexOf(opts?: DexOptions): FormIndex {
+  const dir = opts?.dataDir ?? "";
+  const hit = formIndexes.get(dir);
+  if (hit) return hit;
+  const t = regionalTable(opts);
+  const index: FormIndex = { others: new Map(), battle: new Map(), hatchBase: new Map() };
+  const add = (map: Map<string, string[]>, base: string, slug: string): void => {
+    const list = map.get(base);
+    if (list) list.push(slug);
+    else map.set(base, [slug]);
+  };
+  // 다른 모습은 특수 폼 다음 겉모습 — 표 순서 그대로
+  for (const [slug, f] of Object.entries(t.forms)) if (!isMetaKey(slug) && f.special) add(index.others, f.base, slug);
+  for (const [slug, l] of Object.entries(t.looks)) if (!isMetaKey(slug)) add(index.others, l.base, slug);
+  for (const [slug, f] of Object.entries(t.forms)) if (!isMetaKey(slug) && f.get === "battle") add(index.battle, f.base, slug);
+  // 같은 모습이 두 기본 종에 있으면 표의 앞 것
+  for (const [base, list] of Object.entries(t.hatch)) {
+    if (isMetaKey(base) || !Array.isArray(list)) continue;
+    for (const [s] of list) if (s !== base && !index.hatchBase.has(s)) index.hatchBase.set(s, base);
+  }
+  formIndexes.set(dir, index);
+  return index;
+}
+
+// 기본 종 하나의 다른 모습 — 특수 폼(forms 의 special)과 겉모습(looks). 표 순서 그대로. 받는 쪽이 고쳐도 되게 사본을 준다
 export function otherFormsOf(base: string, opts?: DexOptions): string[] {
   const key = normalizeSlug(base);
   if (isMetaKey(key)) return [];
-  const t = regionalTable(opts);
-  return [...Object.entries(t.forms).filter(([, f]) => f.special && f.base === key).map(([s]) => s), ...Object.entries(t.looks).filter(([, l]) => l.base === key).map(([s]) => s)];
+  return [...(formIndexOf(opts).others.get(key) ?? [])];
 }
 
 // 전투 중에만 바뀌는 모습 — 기본 종을 얻으면 도감에 함께 남는다 (메로엣타 → 메로엣타(스텝폼)). 없으면 빈 목록
 export function battleFormsOf(base: string, opts?: DexOptions): string[] {
-  const key = normalizeSlug(base);
-  return Object.entries(regionalTable(opts).forms)
-    .filter(([slug, f]) => !isMetaKey(slug) && f.get === "battle" && f.base === key)
-    .map(([slug]) => slug);
+  return [...(formIndexOf(opts).battle.get(normalizeSlug(base)) ?? [])];
 }
 
 // 이 종(모습 바꾸기 묶음 전체)이 부를 수 있는 말 — 버드렉스 계열이면 블리자포스·레이스포스, 아니면 빈 목록

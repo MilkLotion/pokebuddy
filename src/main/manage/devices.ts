@@ -217,10 +217,10 @@ export function wireManageDevices(scope: IpcScope, deps: ManageDevicesDeps): Man
     "manage:dex-open": (_e, open, gen) => {
       const parent = deps.parent();
       if (!parent) return;
-      // open 은 렌더러가 보낸 값이다 — { slug, kinds, beside?, linkOpen? } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
-      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; kinds?: unknown; beside?: unknown; linkOpen?: unknown }) : null;
+      // open 은 렌더러가 보낸 값이다 — { slug, kinds, beside?, linkOpen?, formArt? } 가 아니면 닫는다(예전에도 slug 가 글자가 아니면 닫았다)
+      const o = open !== null && typeof open === "object" ? (open as { slug?: unknown; kinds?: unknown; beside?: unknown; linkOpen?: unknown; formArt?: unknown }) : null;
       const linkOpen = typeof o?.linkOpen === "string" && isShortId(o.linkOpen) ? o.linkOpen : null;
-      if (o && typeof o.slug === "string" && isDeviceKindTabs(o.kinds)) dexWin.show(parent, { slug: o.slug, kinds: o.kinds, beside: o.beside === true, linkOpen }, gen);
+      if (o && typeof o.slug === "string" && isDeviceKindTabs(o.kinds)) dexWin.show(parent, { slug: o.slug, kinds: o.kinds, beside: o.beside === true, linkOpen, formArt: o.formArt === true }, gen);
       else dexWin.close();
     },
   });

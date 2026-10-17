@@ -28,6 +28,8 @@
 // `--bag-shot <파일>` 을 주면 가방 기기 창도 PNG 로 저장한다. 가방 칸을 누른 뒤에 쓴다.
 // `--battle-click <선택자>` 는 배틀 파티 상세 기기 창에서 그 요소를 누른다(예: .help, .move .pick). 배틀 칸을 누른 뒤에 쓴다.
 // `--battle-shot <파일>` 을 주면 배틀 파티 상세 기기 창도 PNG 로 저장한다. 모험 탭의 배틀 칸을 누른 뒤에 쓴다.
+// `--menu-click <선택자>` 는 포켓몬 메뉴 창에서 그 요소를 누른다(예: 모습 바꾸기 항목, 말풍선 칸). `--context` 로 메뉴를 연 뒤에 쓴다.
+// `--menu-shot <파일>` 을 주면 포켓몬 메뉴 창도 PNG 로 저장한다. `--context` 로 메뉴를 연 뒤에 쓴다.
 // `--route <json>` 을 주면 알림 배너의 `바로가기` 처럼 그 목적지로 연다. 예: '{"to":"pet","petId":"p1"}'
 // `--save-failing` 을 주면 저장이 이어서 실패하는 채로 연다 — 이어진 저장 실패 안내 확인용. 임시 파일 자리를 폴더로 막고, 끝날 때 푼다
 // `--tut <id>=<done|skipped|none>` 을 주면 그 튜토리얼 상태로 연다(여러 번). 새 기능 튜토리얼 화면을 차례로 볼 때 쓴다
@@ -238,6 +240,7 @@ const DEVICE_SHOTS: [flag: string, page: string, label: string][] = [
   ["--shop-shot", "shop.html", "shop"],
   ["--bag-shot", "bag.html", "bag"],
   ["--battle-shot", "battle.html", "battle"],
+  ["--menu-shot", "menu.html", "menu"],
 ];
 
 void app.whenReady().then(async () => {
@@ -407,6 +410,17 @@ void app.whenReady().then(async () => {
         },
       }
     : {};
+  // 포켓몬 메뉴 — 박스 칸·파티 카드 우클릭(--context)이 앱과 같은 메뉴 창을 띄운다. 무대·튜토리얼 말풍선은 없다 (src/main/menus/pet-menu.ts)
+  const { createPetMenu } = require("../../main/menus/pet-menu") as typeof import("../../main/menus/pet-menu");
+  const { artServices } = require("../../main/art/services") as typeof import("../../main/art/services");
+  const petMenu = createPetMenu({
+    read: () => game.read(),
+    stagePet: () => null,
+    portraits: () => artServices().portraits,
+    run: (command) => void devSend(command as { cmd: string; target?: string; args?: Record<string, unknown> }),
+    openManage: (to) => manage?.open(to),
+    coach: { menuStep: () => undefined, menuPlaced: () => undefined, menuClosed: () => undefined } as never,
+  });
   manage = createManage({
     preload: paths.preloadFile(),
     html: paths.rendererFile("manage.html"),
@@ -422,6 +436,8 @@ void app.whenReady().then(async () => {
       identifyScreens: (on: boolean) => picker.identify(on),
       pickScreen,
       display: () => ({ ...shown }),
+      petMenu: (petId: string) => petMenu.open(petId, "manage"),
+      battleMenu: (slot: number) => petMenu.openBattle(slot),
     }),
   } as unknown as Parameters<typeof createManage>[0]);
   const win = manage.open(route)!;
@@ -479,6 +495,7 @@ void app.whenReady().then(async () => {
         if (flag === "--bag-click" && value) step = step.then(() => clickInDevice("bag.html", value));
         if (flag === "--battle-click" && value) step = step.then(() => clickInDevice("battle.html", value));
         if (flag === "--dex-click" && value) step = step.then(() => clickInDevice("dex.html", value));
+        if (flag === "--menu-click" && value) step = step.then(() => clickInDevice("menu.html", value));
         // --shop-click-text·--bag-click-text 는 상점·가방 기기 창에서 그 글자인 마지막 단추를 누른다(바닥 주 단추가 마지막) — 수량(+·최대)·구매·사용·판매를 확인할 때
         if ((flag === "--shop-click-text" || flag === "--bag-click-text") && value)
           step = step.then(() => {

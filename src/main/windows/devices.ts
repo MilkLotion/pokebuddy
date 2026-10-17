@@ -53,6 +53,7 @@ const DEVICE_SIZES = {
 export interface DexDeviceOpen extends DeviceKinds {
   slug: string;
   linkOpen?: string | null;
+  formArt?: boolean; // 2쪽 모습 칸 그림도 싣는다 — 기기 창이 2쪽으로 넘긴 뒤에만 (perf-review-agent1.md A2)
 }
 
 export interface DexDeviceDeps {
@@ -77,6 +78,8 @@ function besideBase(owner: Rectangle, area: Rectangle, o: DeviceKinds, height: n
 function isDexAction(v: unknown): v is DexDeviceAction {
   const a = v as { kind?: unknown; slug?: unknown } | null;
   if (a?.kind === "shop") return isShortId((v as { productId?: unknown }).productId);
+  // forms — 2쪽 모습 칸 그림을 청한다. 값이 없다
+  if (a?.kind === "forms") return true;
   // form — 2쪽(모습) 칸. pick 과 같은 종 식별자 검사 (2026-10-18)
   return !!a && (a.kind === "pick" || a.kind === "form") && typeof a.slug === "string" && /^[a-z0-9-]{1,64}$/.test(a.slug);
 }
@@ -98,8 +101,10 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         n.children.forEach(walk);
       };
       if (tree) walk(tree);
-      // 2쪽(모습)의 칸 그림도 같은 표로 보낸다 — 얻지 못한 모습은 기기 창이 검은 실루엣으로 그린다 (2026-10-18)
-      for (const f of detail.forms ?? []) if (!shown.includes(f.slug)) shown.push(f.slug);
+      // 2쪽(모습)의 칸 그림도 같은 표로 보낸다 — 얻지 못한 모습은 기기 창이 검은 실루엣으로 그린다 (2026-10-18).
+      // 2쪽으로 넘긴 뒤(formArt)에만 싣는다 — 마휘핑 63장을 1쪽만 볼 때 받지 않는다 (perf-review-agent1.md A2)
+      const formArt = o.formArt === true && !!detail.forms;
+      if (formArt) for (const f of detail.forms ?? []) if (!shown.includes(f.slug)) shown.push(f.slug);
       // 입수처의 알 링크 — 지금 상점에서 파는 상품만. 옆 창에는 링크를 두지 않는다
       const products = deps.products();
       const links = o.beside ? [] : (detail.shopLinks ?? []).filter((l) => products.has(l.productId));
@@ -112,6 +117,7 @@ export function dexDeviceOf(deps: DexDeviceDeps): DeviceSpec<DexDeviceOpen, DexD
         volume: deps.volume(),
         tree,
         treePortraits,
+        formArt,
         kinds: o.kinds,
         beside: o.beside === true,
         linkOpen: o.linkOpen ?? null,

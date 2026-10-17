@@ -844,7 +844,9 @@ PC 잠금·절전·앱 종료 중에는 부화 준비를 진행하지 않는다.
 - 링크 글자로 연 옆 창은 바닥 줄이 없어 1쪽만 보이고 `모습` 줄도 없다.
 - 2쪽 칸의 모습 이름은 `data/regional.json` `labels` 다. 없으면 화면 이름의 괄호 안이다.
 - 얻음은 도감 기록이나 지금 가진 개체의 종으로 본다. 옛 저장은 겉모습을 기본 종으로만 적었기 때문이다.
-- 구현은 `src/view/dex-detail.ts` `formsOfDetail`(`DexDetail.forms`), `src/renderer/device/dex.ts`(`page`·`drawForms`·`pageDotsEl`), `src/renderer/styles/dex.css` 다.
+- 쪽 넘김은 기기 창을 다시 그리지 않고 보이는 쪽만 바꾼다. 2쪽 요소는 처음 넘길 때 만든다.
+- 1쪽만 보는 동안은 모습 칸 그림을 받지 않는다. 2쪽으로 처음 넘기면 기기 창이 그림을 청하고(동작 `forms`), 그림은 조금 늦게 칸에 들어온다. 대상이 바뀌면 다시 청한다.
+- 구현은 `src/view/dex-detail.ts` `formsOfDetail`(`DexDetail.forms`·`formsTitle`), `src/renderer/device/dex.ts`(`page`·`showPage`·`formsPage`·`pageDotsEl`), `src/renderer/manage/dex-link.ts`(`formArt`), `src/renderer/styles/dex.css` 다.
 도감 기기 창의 진화 트리에서 지금 종이 아닌 칸을 누르면 그 종의 상세로 바뀐다(2026-10-13 사용자 "도감기기상세에서 진화트리의 해당 포켓몬을 누르면 그 포켓몬 상세로 바뀌게 해봐"). 도감 탭에서 연 창이면 격자의 고른 칸도 그 종으로 옮기고, 그 종이 지금 격자에 없으면(칩·검색·지방으로 걸러졌으면) 기기 창만 바뀐다. 다른 탭에서 머리의 종류 탭으로 연 도감이면 그 종이 보이고, 대상을 넘기면 다시 대상의 종으로 돌아간다. 옆 창으로 연 도감이면 옆 창이 그 종으로 바뀐다. 이전·다음은 연 탭의 순서를 따른다.
 도감 기기 창의 `입수처` 줄에서 상점에서 파는 알의 이름(`랜덤알` 등)은 링크 글자다. 누르면 도감 기기 창 옆에 그 알 상품의 상점 기기 창이 붙고, 거기서 바로 산다(2026-10-18 사용자 "둘 다 진행"). 규칙은 [링크 글자](ui-components.md#링크-글자)를 따른다. 구현은 `src/renderer/ui/evo-tree.ts` `onPick`, `src/renderer/manage/dex-link.ts` `onDexAction`, `src/renderer/manage/dex-tab.ts` `pickDexFromDevice` 다.
 도감 기기 창의 초상 칸 오른쪽 위에는 음표 둥근 단추(울음소리)가 있다. 누르면 울음소리를 낸다. 미해금 종과 소리를 끈 동안은 흐리고 눌리지 않는다. 바닥 줄의 `울음소리` 단추는 없앴다(2026-10-18 사용자 "울음소리는 프로필의 우상단에 … 울음소리라고 적지말고 음표아이콘으로").

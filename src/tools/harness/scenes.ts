@@ -302,7 +302,9 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
         if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
         else addToBox(s.boxes, petId);
       }
+      // 아르세우스(불꽃)·실버디 — 모습 말풍선의 타입 격자(2026-10-18). 박스 맨 앞이라 첫 칸 우클릭이 아르세우스 메뉴다
       const box: Row[] = [
+        ["arceus-fire", 70, 80], ["silvally", 50, 80],
         ["basculin", 20, 100], ["basculin-blue-striped", 20, 100], ["basculin-white-striped", 20, 100], ["basculegion", 40, 80, "male"],
         ["dialga", 50, 80], ["palkia", 50, 80], ["ursaluna-bloodmoon", 50, 80],
         ["lycanroc", 30, 60], ["lycanroc-midnight", 30, 60], ["lycanroc-dusk", 30, 60], ["toxtricity", 35, 60], ["toxtricity-low-key", 35, 60],

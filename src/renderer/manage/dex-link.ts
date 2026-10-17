@@ -28,6 +28,8 @@ let sent = ""; // 마지막으로 보낸 값(종·종류 탭) — 같으면 다�
 let treePick: { base: string; slug: string } | null = null;
 // 2쪽(모습)에서 누른 모습 — 격자의 고른 칸(기본 종)은 그대로 두고 기기 창만 그 모습을 보인다. 대상(base)이 바뀌면 버린다 (2026-10-18)
 let formPick: { base: string; slug: string } | null = null;
+// 2쪽 모습 칸 그림을 청한 대상(base) — 기기 창이 2쪽으로 넘기면 켠다. 대상이 바뀌면 끈다 (perf-review-agent1.md A2)
+let formArt: string | null = null;
 
 // Esc 가 이 겹에 왔다 — 기기 창의 ✕ 와 같다. 메인의 닫힘 알림이 고른 것을 비운다
 function closeByEscape(): void {
@@ -41,6 +43,7 @@ export function syncDexDevice(force = false): void {
   const base = dexTarget();
   if (treePick && treePick.base !== base) treePick = null;
   if (formPick && formPick.base !== base) formPick = null;
+  if (formArt !== base) formArt = null;
   const slug = base ? (formPick?.slug ?? treePick?.slug ?? base) : null;
   if (!slug) {
     if (open || sent) api.dexOpen(null, dexGen);
@@ -51,7 +54,7 @@ export function syncDexDevice(force = false): void {
   }
   // 알 목록 칸의 링크로 연 옆 창이면 머리 탭·링크 없이 옆에 붙인다. 지금 기기 창이면 옆 창으로 띄운 알 상품(linkOpen)을 알린다
   const asBeside = besideOf("dex") != null;
-  const input = asBeside ? { slug, kinds: [], beside: true } : { slug, kinds: kindsOf(), linkOpen: besideOf("shop") };
+  const input = asBeside ? { slug, kinds: [], beside: true } : { slug, kinds: kindsOf(), linkOpen: besideOf("shop"), ...(formArt ? { formArt: true } : {}) };
   const key = JSON.stringify(input);
   if (open && key === sent && !force) return;
   if (!open) openLayer("device:dex", closeByEscape);
@@ -66,6 +69,14 @@ export function onDexAction(action: DexDeviceAction): void {
   // 입수처의 알 링크 — 그 상품의 상점 기기 창을 옆 창으로 연다. 다시 누르면 닫는다 (docs/specs/ui-components.md "링크 글자")
   if (action.kind === "shop") {
     openBeside("shop", action.productId);
+    return;
+  }
+  // 2쪽으로 처음 넘겼다 — 모습 칸 그림을 실어 다시 보낸다
+  if (action.kind === "forms") {
+    const base = dexTarget();
+    if (!base || formArt === base) return;
+    formArt = base;
+    syncDexDevice();
     return;
   }
   // 2쪽(모습)의 칸 — 기본 종 칸이면 고른 모습을 지운다
