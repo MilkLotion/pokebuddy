@@ -7,7 +7,7 @@ import { rouletteTickets } from "../battle/fighter-core.js";
 import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { baseStatsOf } from "../battle/stats.js";
 import { tierOf } from "../battle/tier.js";
-import { abilityTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
+import { abilityTable, genderBattleTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
 import { STATUS_NAME } from "../shared/battle-timeline.js";
 import type { DayPart } from "../shared/species";
 import type { BattleView, MoveDetail, MoveView, PetView } from "../shared/model/snapshot";
@@ -103,8 +103,9 @@ const abilityIdOf = (species: string): string | null => megaBattleTable()[specie
 const rouletteOf = (ability: string): string | null => (ability in WEATHER_ABILITY ? "날씨" : ability in FIELD_ABILITY ? "필드" : ability in AURA_ABILITY ? "오라" : null);
 
 // 특성 이름과 화면 설명. 표에 없으면 null. shown 은 싸우는 모습(메가 포함), base 는 그 기본 종
-function abilityOf(shown: string, base: string): { name: string; text: string } | null {
-  const id = abilityIdOf(shown);
+// femaleAbility — 성별 능력치가 있는 종의 암컷 특성(data/gender-battle.json). 있으면 종의 특성 대신 쓴다
+function abilityOf(shown: string, base: string, femaleAbility?: string): { name: string; text: string } | null {
+  const id = femaleAbility ?? abilityIdOf(shown);
   const row = id ? abilityTable()[id] : undefined;
   if (!row) return null;
   const reel = rouletteOf(id!);
@@ -114,8 +115,9 @@ function abilityOf(shown: string, base: string): { name: string; text: string } 
 
 // shown — 배틀에서 싸우는 모습. 메가를 켰으면 그 메가 모습, 아니면 기본 종
 // 방사형 그래프는 종족값을 보인다. 배틀 계산은 이 값이 아니라 50레벨 실제 능력치다 (2026-10-12 사용자 "저 방사형에 보이는건 종족값으로 보이고, 실제 내부 배틀계산은 50기준으로하자")
-function statRows(shown: string): { label: string; value: number }[] {
-  const base = baseStatsOf(shown);
+// femaleStats — 성별 능력치가 있는 종의 암컷 종족값. 있으면 종의 종족값 대신 쓴다
+function statRows(shown: string, femaleStats?: readonly number[]): { label: string; value: number }[] {
+  const base = femaleStats ?? baseStatsOf(shown);
   return base ? STAT_ORDER.map(([label, i]) => ({ label, value: base[i]! })) : [];
 }
 
@@ -139,6 +141,8 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
     const form = battleMegaOf(save, pet.id);
     const shown = form ?? asPet.species;
     const view = battlePetView(save, asPet, form, dayPart);
+    // 암컷 능력치·특성 — 엔진과 같은 조건(성별이 암컷이고 메가가 아닐 때, src/battle/fighter-core.ts fighterFrom)
+    const female = pet.gender === "female" && !form ? genderBattleTable()[asPet.species] : undefined;
     const withDetail = (m: MoveInfo): MoveView => ({ ...moveView(m), detail: moveDetail(m) });
     return {
       index,
@@ -147,8 +151,8 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
       options: moveOptions(asPet.species).map(withDetail),
       ...(fixedMoveOf(asPet.species) ? { fixedFirst: true as const } : {}),
       blocked: tier ? blockedText(tier) : null,
-      stats: statRows(shown),
-      ability: abilityOf(shown, asPet.species),
+      stats: statRows(shown, female?.stats),
+      ability: abilityOf(shown, asPet.species, female?.ability),
     };
   });
   return { slots, canStart: canStartBattle(save), gate: battleGate(save) };

@@ -1,16 +1,13 @@
-// 설정창의 배틀 파티 상세 기기 창 연결 — 고른 칸, 이전·다음, 기술 순서 바꾸기 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
+// 설정창의 배틀 파티 상세 기기 창 연결 — 고른 칸, 이전·다음, 메가스톤 표식·기술 칸 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
 // 여기서는 칸 번호만 보내고 무엇을 보일지는 메인이 정한다 (src/view/device-battle.ts). 세대 번호·보낸 값은 device-link.ts 가 든다
-import { battleBusyKey } from "../../shared/device-busy.js";
 import type { BattleDeviceAction, BattleDeviceInput } from "../../shared/model/devices.js";
 import { api } from "./api.js";
-import { sendCommand, whenSlow } from "./command.js";
 import { createDeviceLink } from "./device-link.js";
 import { leavePet, openAnyDialog } from "./dialog.js";
 import { redrawBody } from "./shell.js";
 import { ui } from "./state.js";
 
 let shownSlot: number | null = null; // 기기 창에 띄운 배틀 파티 칸
-let busy: string | null = null; // 0.3초 넘게 답이 없는 단추의 열쇠
 
 // 지금 칸의 개체 — 빈 칸이 됐으면 null
 const petAt = (slot: number | null): string | null => (slot == null ? null : (ui.view?.battle.slots[slot]?.pet?.id ?? null));
@@ -18,7 +15,7 @@ const petAt = (slot: number | null): string | null => (slot == null ? null : (ui
 export const battleLink = createDeviceLink<BattleDeviceInput>({
   build: () => {
     if (shownSlot == null || !petAt(shownSlot)) return null;
-    return { slot: shownSlot, notice: ui.notice, busy };
+    return { slot: shownSlot, notice: ui.notice };
   },
   stamp: () => ui.view,
   open: (input, gen) => api.battleOpen(input, gen),
@@ -60,7 +57,7 @@ export function stepBattle(delta: -1 | 1): void {
   redrawBody();
 }
 
-// 기기 창에서 누른 단추 — 기술 순서 바꾸기. 기기 창이 다른 개체를 보이던 때 누른 것은 버린다
+// 기기 창에서 누른 단추 — 메가스톤 표식·기술 칸. 기기 창이 다른 개체를 보이던 때 누른 것은 버린다
 export function onBattleAction(action: BattleDeviceAction): void {
   const id = petAt(shownSlot);
   if (!id || action.petId !== id) return;
@@ -68,20 +65,5 @@ export function onBattleAction(action: BattleDeviceAction): void {
     openAnyDialog({ kind: "mega", petId: id, battle: true }); // 바탕화면 파티 상세와 같은 메가진화 창 — 배틀 파티의 메가 상태를 바꾼다
     return;
   }
-  if (action.kind === "moves") {
-    openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 고른 칸 없이 열고, 상세 칸에 누른 칸의 기술을 보인다
-    return;
-  }
-  void swapSend(action, id);
-}
-
-async function swapSend(action: BattleDeviceAction, id: string): Promise<void> {
-  const settle = whenSlow(() => {
-    busy = battleBusyKey(action);
-    battleLink.sync(true);
-  });
-  await sendCommand("battle.moves", id);
-  settle();
-  busy = null;
-  battleLink.sync();
+  openAnyDialog({ kind: "move-pick", petId: id, slot: action.slot }); // 기술 바꾸기 모달 — 고른 칸 없이 열고, 상세 칸에 누른 칸의 기술을 보인다
 }

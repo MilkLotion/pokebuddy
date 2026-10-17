@@ -212,7 +212,7 @@ export interface BattleDeviceDeps extends DeviceArtDeps {
 function isBattleAction(v: unknown): v is BattleDeviceAction {
   if (!isRecord(v) || !isShortId(v.petId)) return false;
   if (v.kind === "moves") return v.slot === 0 || v.slot === 1;
-  return v.kind === "swap" || v.kind === "mega";
+  return v.kind === "mega";
 }
 
 export function battleDeviceOf(deps: BattleDeviceDeps): DeviceSpec<BattleDeviceOpen, BattleDeviceView, BattleDeviceAction> {
@@ -250,7 +250,7 @@ export function isShopInput(v: unknown): v is ShopDeviceInput {
 
 export function isBattleInput(v: unknown): v is BattleDeviceInput {
   if (!isRecord(v)) return false;
-  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice) && isBusyKey(v.busy);
+  return isIndexBelow(v.slot, BATTLE_RULES.slots) && isText(v.notice);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {

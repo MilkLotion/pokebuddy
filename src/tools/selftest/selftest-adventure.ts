@@ -16,6 +16,7 @@ import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { createExecutor } from "../../tx/executor";
 import { HANDLERS } from "../../tx/command-table";
 import { snapshotView } from "../../view/snapshot";
+import { battleDeviceModel } from "../../view/device-battle";
 import { moveDetail, moveEffects, moveMeta } from "../../view/battle";
 import { testPet } from "../harness/fixtures";
 
@@ -431,6 +432,24 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   for (let i = 0; i < 250; i++) applyBattleReward(save, `x${i}`, 10);
   assert.equal(save.battle!.applied!.length, 200, "최근 200개만");
   assert.equal(normalize(JSON.parse(JSON.stringify(save)), T0)!.battle?.applied?.length, 200, "정규화도 남긴다");
+}
+// ── 배틀 기기 창 — 그래프 종족값(암컷 능력치)과 상성 말풍선 줄 (docs/specs/adventure.md "능력치 그래프", "타입 상성") ──
+{
+  const save = seed(["charizard", "indeedee", "indeedee"]);
+  save.pets[1]!.gender = "female";
+  save.pets[2]!.gender = "male";
+  save.pets.forEach((p, i) => setBattleSlot(save, i, p.id));
+  const v = snapshotView(save, T0);
+  const model = (i: number) => battleDeviceModel(v, { slot: i, notice: "" })!.model;
+  const lines = (rows: { mul: number; types: string[] }[]) => rows.map((r) => `${r.mul}:${r.types.join("/")}`);
+  const zard = model(0);
+  assert.deepEqual(lines(zard.matchup.defense), ["4:rock", "2:water/electric", "0.5:fighting/steel/fire/fairy", "0.25:bug/grass", "0:ground"], "리자몽 방어 — 두 타입을 곱한다");
+  assert.deepEqual(zard.matchup.attack.map((a) => a.typeId), ["fire", "flying"], "공격은 자기 타입마다");
+  assert.deepEqual(lines(zard.matchup.attack[0]!.rows), ["2:bug/steel/grass/ice", "0.5:rock/fire/water/dragon"]);
+  assert.ok(zard.typeArt.ground && zard.typeArt.rock, "상성 타입의 아이콘 열쇠도 싣는다");
+  const stat = (i: number) => model(i).slot.stats.map((x) => x.value);
+  assert.notDeepEqual(stat(1), stat(2), "암컷 에써르는 암컷 종족값");
+  assert.equal(stat(1)[0], 70, "암컷 HP 70");
 }
 
 process.stdout.write("통과\n");

@@ -144,7 +144,6 @@ export interface PetDeviceInput {
 export interface BattleDeviceInput {
   slot: number; // 배틀 파티 칸 0~5
   notice: string; // 마지막 실패 문구
-  busy: string | null; // 0.3초 넘게 답이 없는 단추의 열쇠. 없으면 null
 }
 
 // 배틀 창이 읽는 개체 값만 — 만복도·쿨타임처럼 시간으로 바뀌는 값을 싣지 않는다. 그래야 시간이 흘러도 모델이 같아 다시 그리지 않는다
@@ -158,10 +157,20 @@ export interface BattleDeviceOpen {
   slot: BattleDeviceSlot; // 개체가 든 칸
   caption: string; // 화면 첫 줄 — "배틀 파티 1번"
   notice: string;
-  busy: string | null;
   art: string | null; // 초상 열쇠 portrait:<종>[:shiny] (src/view/device-art.ts)
-  typeArt: Record<string, string>; // 기술 타입 → 흰 타입 아이콘 열쇠 type:<타입>
+  typeArt: Record<string, string>; // 기술 타입·상성 타입 → 흰 타입 아이콘 열쇠 type:<타입>
   megaArt: string | null; // 메가스톤 표식 그림 열쇠 — 메가스톤을 지닌 개체만. 없으면 표식을 두지 않는다
+  matchup: BattleDeviceMatchup; // 타입 줄 `상세보기` 말풍선 (src/battle/matchup.ts)
+}
+
+// 타입 상성 — 방어(받는 배율)와 공격(자기 타입마다). 줄마다 배율과 그 배율의 타입 키. 타입이 없는 줄은 없다
+export interface MatchupLine {
+  mul: number;
+  types: string[];
+}
+export interface BattleDeviceMatchup {
+  defense: MatchupLine[];
+  attack: { typeId: string; name: string; rows: MatchupLine[] }[];
 }
 
 export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeArt" | "megaArt"> {
@@ -172,6 +181,6 @@ export interface BattleDeviceView extends Omit<BattleDeviceOpen, "art" | "typeAr
   volume: number;
 }
 
-// 기기 창에서 누른 단추 — 기술 순서 바꾸기(개체에 저장, src/battle/party.ts swapMoves), 메가스톤 표식(설정창이 메가진화 창을 연다),
-// 기술 칸(설정창이 기술 바꾸기 모달을 연다 — slot 은 누른 칸 0·1)
-export type BattleDeviceAction = { kind: "swap" | "mega"; petId: string } | { kind: "moves"; petId: string; slot: number };
+// 기기 창에서 누른 단추 — 메가스톤 표식(설정창이 메가진화 창을 연다), 기술 칸(설정창이 기술 바꾸기 모달을 연다 — slot 은 누른 칸 0·1)
+// 기술 순서 바꾸기는 기술 바꾸기 모달에만 있다(2026-10-17 사용자 "기술 위아래 변경은 기기에선 빼도되겠다")
+export type BattleDeviceAction = { kind: "mega"; petId: string } | { kind: "moves"; petId: string; slot: number };

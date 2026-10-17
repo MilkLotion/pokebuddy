@@ -1,8 +1,8 @@
 /* battle.html 의 창 CSS — pet.css 다음에 읽는다. 몸통·베젤·화면·초상·이름 줄은 파티 상세 기기 창과 같다
    배틀 파티 상세 기기 — Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`(기기 03 `Battle Party Device` `1662:224`)
-   이 파일에는 배틀에만 있는 것만 둔다: 특성 줄, 방사형 그래프, 기술 목록, 기술 순서 단추, 기술 설명 말풍선 */
+   이 파일에는 배틀에만 있는 것만 둔다: 특성 줄, 상성 상세보기와 말풍선, 방사형 그래프, 기술 목록 */
 
-/* 말풍선 — 특성 줄의 특성 설명. 모양은 styles/bubble.css, 여기는 자리만 */
+/* 말풍선 — 특성 설명과 상성. 모양은 styles/bubble.css, 여기는 자리와 안쪽만 */
 /* 특성 설명 — 특성 줄 바로 아래, 글자 왼쪽이 "특성" 과 맞도록 안쪽 여백만큼 왼쪽으로 (Figma `Ability Info` `1896:984`) */
 .bubble.ability-info {
   top: calc(100% + 4px);
@@ -11,6 +11,87 @@
 }
 .bubble.ability-info .ability-text {
   color: var(--muted);
+}
+
+/* 타입 줄 `상세보기` — 밑줄 글자 링크 (Figma 99 `Draft / Link Text` Size=Body). 누르면 아래에 상성 말풍선 */
+.types {
+  position: relative;
+  align-items: center;
+}
+.matchup-link {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: 12px/18px var(--font-body);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.matchup-link:hover,
+.matchup-link[aria-expanded="true"] {
+  color: var(--primary-hover);
+}
+/* 상성 말풍선 — 방어 | 구분선 | 공격(자기 타입마다). 열 폭 150, 기기 가로 가운데는 battle.ts 가 left 로 맞춘다
+   (Figma 99 `Draft / Type Matchup Bubble` `2042:16836`, 2026-10-17 사용자 "방어랑 공격 상성 툴팁은 좌우로") */
+.bubble.matchup-info {
+  top: calc(100% + 6px);
+  flex-direction: row;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 347px;
+}
+.matchup-info .mt-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 150px;
+}
+.matchup-info .mt-col + .mt-divider + .mt-col {
+  gap: 8px;
+}
+.matchup-info .mt-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.matchup-info strong {
+  font-weight: 700;
+}
+.matchup-info .mt-divider {
+  flex: none;
+  width: 1px;
+  background: var(--line);
+}
+.matchup-info .mt-row {
+  display: flex;
+  gap: 6px;
+}
+.matchup-info .mt-mul {
+  flex: none;
+  width: 30px;
+  color: var(--muted);
+  font: 10px/16px var(--font-small);
+}
+.matchup-info .mt-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  width: 114px;
+}
+/* 타입 아이콘 — 타입 색 네모에 흰 아이콘 (Figma `Type Icon` Style=Badge, 16) */
+.matchup-info .mt-type {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--type, #9fa19f);
+}
+.matchup-info .mt-type img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
 }
 
 /* 특성 줄 — 이름·타입 아래 (Figma `ability · 특성`). 누르면 특성 설명 말풍선 */
@@ -89,7 +170,16 @@
   transform: translate(-100%, -50%);
 }
 
-/* 기술 — 큰 기술 칸 아래 분류·위력·명중·쿨타임 한 줄. 두 기술 사이 가운데에 순서 바꾸기 (Figma `moves · 보유 기술`) */
+/* 그래프 가운데 합계 — 숫자만 (Figma 03 `Battle Party Device` `total · 종족값 합계`, PB/Type/Heading 15) */
+.radar .total {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: var(--ink);
+  font: 15px/20px var(--font-large);
+  pointer-events: none;
+}
+
+/* 기술 — 큰 기술 칸 아래 분류·위력·명중·쿨타임 한 줄. 순서 바꾸기는 기술 바꾸기 모달에만 있다 (Figma `moves · 보유 기술`) */
 .moves {
   display: flex;
   flex-direction: column;
@@ -97,9 +187,6 @@
   padding: 12px;
   border-radius: 10px;
   background: var(--records);
-}
-.moves > strong {
-  font-weight: 700;
 }
 .move {
   position: relative;
@@ -120,47 +207,4 @@
 .move .meta {
   color: var(--ink);
   font: 12px/16px var(--font-body);
-}
-/* 순서 바꾸기 줄 — 구분선 ─ 위아래 화살표 원 ─ 구분선. 원은 교환 화면의 교환 표시와 같은 모양 (Figma 02 `Trade Swap Mark` `1347:49286`) */
-.swap-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.swap-row::before,
-.swap-row::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-.swap {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-}
-.swap:hover:not(:disabled) {
-  background: var(--accent-bg);
-}
-.swap svg {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.25;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.swap[aria-busy="true"] svg {
-  opacity: 0.4;
-}
-/* 킬가르도 — 킹실드는 1번 고정이라 순서를 바꾸지 못한다 (docs/specs/moves.md "킬가르도") */
-.swap:disabled {
-  opacity: 0.4;
-  cursor: default;
 }

@@ -93,7 +93,7 @@ export type ManageDeviceLinkIpc = {
   "manage:bag-closed": Push<"onBagClosed", [gen: number]>;
   "manage:battle-open": Invoke<"battleOpen", [input: BattleDeviceInput | null, gen?: number], BattleDeviceInput | null>; // 배틀 파티 상세 기기 창
   "manage:battle-step": Push<"onBattleStep", [delta: -1 | 1]>; // 이전·다음 — 배틀 파티의 개체가 든 칸 순서
-  "manage:battle-act": Push<"onBattleAct", [action: BattleDeviceAction]>; // 기술 순서 바꾸기
+  "manage:battle-act": Push<"onBattleAct", [action: BattleDeviceAction]>; // 메가스톤 표식·기술 칸
   "manage:battle-closed": Push<"onBattleClosed", [gen: number]>;
 };
 
