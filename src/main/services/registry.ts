@@ -22,6 +22,7 @@ import type { FriendlyScreen } from "../../shared/model/friendly";
 import { friendlyScreenInput } from "../../view/friendly-battle.js";
 import { devEnv } from "../app/dev-run.js";
 import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
+import { hasBattleRewards } from "../../battle/party.js";
 import { battleDetailView, battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
 import type { BattleScreenInput } from "../../view/battle-screen.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
@@ -232,6 +233,7 @@ export function createServices(deps: ServicesDeps): Services {
           return s.signedIn || !!s.anonymous; // 익명 계정도 배틀한다
         },
         run: (id, name, args) => (deps.isWriter() ? g.executor.run({ id, name, args }) : { ok: false, reason: "not-writer" }),
+        hasRewards: () => hasBattleRewards(g.peek()),
         onChanged: () => deps.refreshParty(),
         offerView: battleOfferView,
         detailView: battleDetailView,

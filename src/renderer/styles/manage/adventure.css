@@ -177,21 +177,6 @@
   gap: 2px;
   height: 16px;
 }
-/* 타입 배지 — 흰 아이콘에 타입 색 바탕. 배틀 창 .type-icon(styles/battle-screen.css)과 같은 모양 */
-.bo-cell .bo-type {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  background: var(--type, #9fa19f);
-}
-.bo-cell .bo-type img {
-  width: 14px;
-  height: 14px;
-  image-rendering: pixelated;
-}
 .bo-row.failed {
   cursor: default;
 }

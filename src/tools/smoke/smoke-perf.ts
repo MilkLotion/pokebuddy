@@ -24,7 +24,7 @@ import { createGame } from "../../tx/game";
 import { petName } from "../../view/text";
 import { petDeviceModel } from "../../view/device-pet";
 import { battleDeviceModel } from "../../view/device-battle";
-import type { PetDeviceInput } from "../../shared/model/devices";
+import type { DeviceKindTab, PetDeviceInput } from "../../shared/model/devices";
 import type { Snapshot } from "../../shared/model/snapshot";
 import { CLOCK_RULES } from "../../main/app/clock";
 import { commandReply, gameReads, snapshotReply } from "../../main/manage/game-reads";
@@ -145,20 +145,26 @@ void app.whenReady().then(async () => {
     await wait(800);
     const bjs = <T>(code: string): Promise<T> => bw.webContents.executeJavaScript(code) as Promise<T>;
     await bjs(`(() => { window.__b = { renders: 0, blank: 0 }; new MutationObserver(() => { window.__b.renders += 1; window.__b.blank += [...document.querySelectorAll(".stage canvas")].filter((c) => c.width === 0).length; }).observe(document.getElementById("device"), { childList: true }); return 0; })()`);
-    const battleView = (notice = ""): unknown => {
-      const r = battleDeviceModel(snapshotReply(game, reads)!, { slot: 0, notice, kinds: [] });
+    const battleView = (kinds: DeviceKindTab[] = []): unknown => {
+      const r = battleDeviceModel(snapshotReply(game, reads)!, { slot: 0, kinds });
       if (!r) throw new Error("배틀 모델이 없다");
       const { art: _a, typeArt: _t, megaArt: _m, ...rest } = r.model;
-      return { ...rest, portrait: PORTRAIT, megaIcon: null, typeIcons: {}, side: "right", volume: 0 };
+      // 머리 종류 탭은 메인이 모델에 붙인다 (src/main/manage/devices.ts showDevice)
+      return { ...rest, kinds, portrait: PORTRAIT, megaIcon: null, typeIcons: {}, side: "right", volume: 0 };
     };
     for (let i = 0; i < SECONDS; i += 1) {
       await bjs(`window.__show(${JSON.stringify(battleView())}); 0`);
       await wait(1000);
     }
     const sameModel = await bjs<{ renders: number; blank: number }>(`(() => { const r = { ...window.__b }; window.__b = { renders: 0, blank: 0 }; return r; })()`);
-    // 모양이 바뀌는 모델(실패 문구) — 다시 그려도 한 번 읽은 초상은 바로 칠한다(캐시)
+    // 모양이 바뀌는 모델(머리 종류 탭의 흐림이 바뀐다) — 3번 모두 다시 그린다. 한 번 읽은 초상은 바로 칠한다(캐시)
     for (let i = 0; i < 3; i += 1) {
-      await bjs(`window.__show(${JSON.stringify(battleView(`실패 ${i}`))}); 0`);
+      const kinds: DeviceKindTab[] = [
+        { id: "pet", current: false, disabled: i % 2 === 0 },
+        { id: "dex", current: false, disabled: false },
+        { id: "battle", current: true, disabled: false },
+      ];
+      await bjs(`window.__show(${JSON.stringify(battleView(kinds))}); 0`);
       await wait(300);
     }
     const changed = await bjs<{ renders: number; blank: number }>(`({ ...window.__b })`);

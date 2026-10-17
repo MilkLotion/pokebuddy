@@ -16,6 +16,7 @@ import { dpsTableEl, refreshDpsTable } from "../ui/dps-table.js";
 import { DEVICE_FONTS } from "../ui/fonts.js";
 import { noteIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
+import { typeIconEl } from "../ui/type-badge.js";
 
 const api = needBridge("pokebuddyBattleScreen");
 const frame = createDeviceFrame({
@@ -71,20 +72,6 @@ const TAG_MAX = 3; // 넘으면 앞 2개와 +N
 
 let run = 0; // 판 번호 — 새 판이 오면 지난 재생을 멈춘다
 
-function typeIconEl(type: string, icons: BattleScreenView["typeIcons"]): HTMLElement {
-  const box = el("span", "type-icon");
-  box.dataset.type = type;
-  const uri = icons[type];
-  if (uri) {
-    const img = document.createElement("img");
-    img.src = uri;
-    img.alt = "";
-    img.draggable = false;
-    box.appendChild(img);
-  }
-  return box;
-}
-
 function barEl(cls: string): { root: HTMLElement; fill: HTMLElement; chip: HTMLElement } {
   const root = el("div", `bar ${cls}`);
   const chip = el("i", "chip");
@@ -118,7 +105,7 @@ function hideBubble(): void {
 function conditionEl(reel: BattleRouletteView, view: BattleScreenView): HTMLElement | null {
   if (!reel.name) return null;
   const chip = el("span", "condition");
-  if (reel.type) chip.appendChild(typeIconEl(reel.type, view.typeIcons));
+  if (reel.type) chip.appendChild(typeIconEl(reel.type, view.typeIcons[reel.type]));
   chip.appendChild(document.createTextNode(reel.name));
   return chip;
 }
@@ -193,7 +180,7 @@ function paintReel(r: ReelEls, view: BattleScreenView, elapsed: number): void {
   if (r.result.dataset.done !== "1") {
     r.result.dataset.done = "1";
     r.result.replaceChildren();
-    if (r.reel.type) r.result.appendChild(typeIconEl(r.reel.type, view.typeIcons));
+    if (r.reel.type) r.result.appendChild(typeIconEl(r.reel.type, view.typeIcons[r.reel.type]));
     r.result.appendChild(document.createTextNode(r.reel.name ?? "—"));
   }
 }
@@ -214,7 +201,7 @@ function cardEl(u: BattleUnitView | null, view: BattleScreenView): CardEls | nul
   } else who.appendChild(el("span", "face"));
   const nameBlock = el("div", "name-block");
   const types = el("div", "types");
-  for (const t of u.types) types.appendChild(typeIconEl(t, view.typeIcons));
+  for (const t of u.types) types.appendChild(typeIconEl(t, view.typeIcons[t]));
   nameBlock.append(el("div", "name", u.name), types);
   who.appendChild(nameBlock);
   const hpRow = el("div", "hp-row");
@@ -225,7 +212,7 @@ function cardEl(u: BattleUnitView | null, view: BattleScreenView): CardEls | nul
   const movesRow = el("div", "moves");
   const moves = u.moves.map((m) => {
     const box = el("div", "move");
-    const icon = typeIconEl(m.typeId, view.typeIcons);
+    const icon = typeIconEl(m.typeId, view.typeIcons[m.typeId]);
     icon.addEventListener("mouseenter", () => showBubble(icon, m));
     icon.addEventListener("mouseleave", hideBubble);
     const bar = barEl("cool");

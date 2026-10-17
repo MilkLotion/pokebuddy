@@ -245,6 +245,9 @@ export function holdBattleReward(save: Battle, battleId: string, reward: number)
   return { ok: true, held: true };
 }
 
+// 받을 판이 있는가 — 없으면 battle.claim 을 부르지 않는다(실행기가 저장을 복제하지 않게)
+export const hasBattleRewards = (save: Battle | null): boolean => !!save?.battle?.pending?.length;
+
 // 받을 판을 모두 받는다 — 판마다 applyBattleReward(같은 판은 한 번). 받은 포인트 합을 돌려준다. 받을 판이 없으면 0
 export function claimBattleRewards(save: Battle & Pick<SaveV3, "points">): number {
   const pending = save.battle?.pending ?? [];

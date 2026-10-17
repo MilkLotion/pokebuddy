@@ -30,6 +30,7 @@ export interface BattleNetDeps {
   client: SupabaseClient;
   signedIn: () => boolean; // 익명 계정도 된다 — 세션이 있는가
   run: (id: string, name: string, args: unknown) => TxResult; // 보상 거래 — writer 가 아니면 실패
+  hasRewards: () => boolean; // 받을 판이 있는가 — 없으면 battle.claim 을 부르지 않는다
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
   detailView: (data: BattleDetailData) => BattleDetailView; // 배틀 상세 — 칸 값에 이름을 더하고 DPS 를 셈한다(view 층)
@@ -97,7 +98,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
         if (!r.ok) return fail(r);
         return { ok: true, code: null, offer: d.offerView(r.data) };
       }
-      d.run(`battle-claim:${Date.now()}`, "battle.claim", {}); // 앞 판에서 받지 못한 포인트를 먼저 받는다 — 없으면 바꾸지 않는다
+      if (d.hasRewards()) d.run(`battle-claim:${Date.now()}`, "battle.claim", {}); // 앞 판에서 받지 못한 포인트를 먼저 받는다
       d.prepare?.(); // call 은 예외를 실패 답으로 바꾼다 — 실패면 아래에서 닫는다
       await d.beforeSend?.().catch(() => undefined);
       const r = await call<StartData>("battle-start", { offerId: a.offerId, pick: a.pick });

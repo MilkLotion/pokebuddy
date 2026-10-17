@@ -22,6 +22,7 @@ import { writeLastError } from "../platform/last-error.js";
 import { createSaveParty, type SaveParty } from "../save/save-party.js";
 import { partyPetsOf, type PartyPet } from "../view/party-pet.js";
 import { createGame, type GameV3 } from "../tx/game.js";
+import { hasBattleRewards } from "../battle/party.js";
 import { readCloudSeed } from "../online/cloud-file.js";
 import { seededRand } from "../verify/save-rules";
 import { askSaveLocked, askUpdateRequired } from "./app/halt-dialog";
@@ -317,9 +318,9 @@ function holdStageForBattle(on: boolean): void {
   if (!quitting()) rt.stages?.setVisible(stageShown && !battleHold);
 }
 // 받을 랜덤 배틀 판의 포인트를 받는다 — 배틀 창이 닫힐 때와 앱을 켤 때. 다음 판을 시작할 때는 배틀 서버 호출이 받는다 (src/online/battle-net.ts)
-// 받을 판이 없으면 거래가 저장을 바꾸지 않는다 (2026-10-18 사용자 "포인트는 배틀이 끝나고 확인버튼 누를때 오르면 좋겠어")
+// 받을 판이 없으면 거래를 부르지 않는다 (2026-10-18 사용자 "포인트는 배틀이 끝나고 확인버튼 누를때 오르면 좋겠어")
 function claimBattleRewards(): void {
-  if (quitting() || !rt.game || !rt.party?.isWriter()) return;
+  if (quitting() || !rt.game || !rt.party?.isWriter() || !hasBattleRewards(rt.game.peek())) return;
   rt.game.executor.run({ id: `battle-claim:${Date.now()}`, name: "battle.claim", args: {} });
 }
 

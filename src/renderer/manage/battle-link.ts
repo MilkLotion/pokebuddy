@@ -18,7 +18,7 @@ export const battleLink = createDeviceLink<BattleDeviceInput>({
   build: () => {
     const target = battleTarget();
     if (!target || ("slot" in target && !petAt(target.slot))) return null;
-    return { ...target, notice: ui.notice, kinds: kindsOf() };
+    return { ...target, kinds: kindsOf() };
   },
   stamp: () => ui.view,
   open: (input, gen) => api.battleOpen(input, gen),

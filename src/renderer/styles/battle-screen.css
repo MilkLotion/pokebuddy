@@ -234,23 +234,6 @@ body {
   flex: 1;
 }
 
-/* 타입 칸 — 흰 타입 아이콘을 타입 색 바탕에 (Figma 01 `Type Icon` Style=Badge 16×16) */
-.type-icon {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  background: var(--type, #9fa19f);
-}
-.type-icon img {
-  width: 14px;
-  height: 14px;
-  image-rendering: pixelated;
-}
-
 /* 바 — 짙은 바탕과 테두리, 채움, 깎인 몫. HP(높이 5)와 쿨타임(높이 2)이 같이 쓴다. Figma 01 `Battle HP`·`Battle Cooldown` */
 .bar {
   position: relative;

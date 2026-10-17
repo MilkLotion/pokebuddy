@@ -78,21 +78,6 @@
   gap: 3px;
   width: 114px;
 }
-/* 타입 아이콘 — 타입 색 네모에 흰 아이콘 (Figma `Type Icon` Style=Badge, 16) */
-.matchup-info .mt-type {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  background: var(--type, #9fa19f);
-}
-.matchup-info .mt-type img {
-  width: 14px;
-  height: 14px;
-  image-rendering: pixelated;
-}
 
 /* 특성 줄 — 이름·타입 아래 (Figma `ability · 특성`). 누르면 특성 설명 말풍선 */
 .ability-row {

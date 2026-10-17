@@ -17,7 +17,7 @@ import { structureOf } from "../ui/live-draw.js";
 import { movePillEl } from "../ui/move-pill.js";
 import { spriteCanvas } from "../ui/portrait.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
-import { typeBadgeEl } from "../ui/type-badge.js";
+import { typeBadgeEl, typeIconEl } from "../ui/type-badge.js";
 import { createDeviceFrame } from "./device-frame.js";
 
 const api = needBridge("pokebuddyBattle");
@@ -33,10 +33,18 @@ type Bubble = "ability" | "matchup";
 let open: Bubble | null = null;
 let shownPetId = "";
 let last: BattleDeviceView | null = null;
+// 말풍선이 붙는 자리 — render 가 그릴 때 잡아 둔다. 여닫기는 이 자리만 고친다(창 전체를 다시 그리지 않는다)
+interface BubbleSpots {
+  types: HTMLElement; // 타입 줄 — 상성 말풍선이 붙는다
+  more: HTMLElement; // `상세보기`
+  abilityRow: HTMLElement | null; // 특성 줄 — 특성 말풍선이 붙는다
+  ability: HTMLElement | null;
+}
+let spots: BubbleSpots | null = null;
 
 const toggle = (what: Bubble): void => {
   open = open === what ? null : what;
-  if (last) render(last);
+  if (last && spots) drawBubbles(last, spots);
 };
 
 // ── 방사형 그래프 — 위에서 시계 방향 여섯 꼭짓점. 가장 높은 값이 바깥 육각형에 닿는다 (Figma 02 `Stat Radar`) ──
@@ -86,23 +94,12 @@ function radarEl(stats: BattleSlotView["stats"]): HTMLElement {
   return box;
 }
 
-// 상성 한 줄 — 배율 글자와 타입 아이콘(타입 색 네모에 흰 아이콘, 모달의 상대 칸 .bo-type 과 같은 모양)
+// 상성 한 줄 — 배율 글자와 타입 아이콘(공통 typeIconEl — 배틀 창·랜덤 배틀 모달과 같은 모양)
 function matchupLineEl(line: MatchupLine, icons: Record<string, string | null>): HTMLElement {
   const row = el("div", "mt-row");
   row.appendChild(el("span", "mt-mul", `×${line.mul}`));
   const list = el("div", "mt-types");
-  for (const t of line.types) {
-    const box = el("span", "mt-type");
-    box.dataset.type = t;
-    const src = icons[t];
-    if (src) {
-      const img = document.createElement("img");
-      img.src = src;
-      img.alt = "";
-      box.appendChild(img);
-    }
-    list.appendChild(box);
-  }
+  for (const t of line.types) list.appendChild(typeIconEl(t, icons[t]));
   row.appendChild(list);
   row.setAttribute("aria-label", `×${line.mul} ${line.types.length}타입`);
   return row;
@@ -188,28 +185,18 @@ function render(v: BattleDeviceView): void {
   pet.types.forEach((t, i) => types.appendChild(typeBadgeEl(t, pet.typeIds[i])));
   // 상성 상세보기 — 누르면 타입 줄 아래에 방어 | 공격 말풍선 (2026-10-17 사용자 "타입적잖아. 거기에 상세보기 두고, 툴팁으로 공격/방어 상성")
   const more = buttonEl("matchup-link", "상세보기", () => toggle("matchup"));
-  more.setAttribute("aria-expanded", String(open === "matchup"));
   types.appendChild(more);
   info.appendChild(types);
-  let matchup: HTMLElement | null = null;
-  if (open === "matchup") {
-    matchup = matchupEl(v);
-    types.appendChild(matchup);
-  }
   // 특성 줄 — 누르면 아래에 특성 이름과 이 게임에서의 동작을 말풍선으로 (docs/specs/adventure.md "배틀 파티 상세 기기 창")
+  let abilityRow: HTMLElement | null = null;
+  let ability: HTMLElement | null = null;
   if (slot.ability) {
-    const row = el("div", "ability-row");
-    const ability = buttonEl("ability", "", () => toggle("ability"));
+    abilityRow = el("div", "ability-row");
+    ability = buttonEl("ability", "", () => toggle("ability"));
     ability.append(el("strong", undefined, "특성"), el("span", undefined, slot.ability.name));
     ability.setAttribute("aria-label", `특성 ${slot.ability.name} 설명`);
-    ability.setAttribute("aria-expanded", String(open === "ability"));
-    row.appendChild(ability);
-    if (open === "ability") {
-      const bubble = el("div", "bubble ability-info");
-      bubble.append(el("strong", undefined, slot.ability.name), el("div", "ability-text", slot.ability.text));
-      row.appendChild(bubble);
-    }
-    info.appendChild(row);
+    abilityRow.appendChild(ability);
+    info.appendChild(abilityRow);
   }
   entry.appendChild(info);
   screen.appendChild(entry);
@@ -226,16 +213,36 @@ function render(v: BattleDeviceView): void {
     const cry = buttonEl("cry", "울음소리", () => void cryPlayer.play(), v.volume <= 0);
     device.appendChild(frame.controlsEl(cry));
   }
+  spots = { types, more, abilityRow, ability };
+  drawBubbles(v, spots);
+}
+
+// 열린 말풍선 하나만 붙이고 단추의 펼침 상태를 맞춘다 — 그린 뒤 높이를 알린다
+function drawBubbles(v: BattleDeviceView, at: BubbleSpots): void {
+  for (const b of device.querySelectorAll(".matchup-info, .ability-info")) b.remove();
+  at.more.setAttribute("aria-expanded", String(open === "matchup"));
+  at.ability?.setAttribute("aria-expanded", String(open === "ability"));
+  let matchup: HTMLElement | null = null;
+  if (open === "matchup") {
+    matchup = matchupEl(v);
+    at.types.appendChild(matchup);
+  }
+  const ability = v.slot.ability;
+  if (open === "ability" && ability && at.abilityRow) {
+    const bubble = el("div", "bubble ability-info");
+    bubble.append(el("strong", undefined, ability.name), el("div", "ability-text", ability.text));
+    at.abilityRow.appendChild(bubble);
+  }
   frame.endDraw();
   // 상성 말풍선은 기기 가로 가운데 — 타입 줄이 놓인 자리만큼 왼쪽으로 민다
   if (matchup) {
-    const at = types.getBoundingClientRect().left - device.getBoundingClientRect().left;
-    matchup.style.left = `${Math.round((device.clientWidth - matchup.offsetWidth) / 2 - at)}px`;
+    const left = at.types.getBoundingClientRect().left - device.getBoundingClientRect().left;
+    matchup.style.left = `${Math.round((device.clientWidth - matchup.offsetWidth) / 2 - left)}px`;
   }
 }
 
 // 같은 모델이면 다시 그리지 않는다 — 초상이 빈 canvas 에서 다시 시작하지 않게 (실행 규칙 R4, worklog/records/perf-refactor 1-3).
-// 이 창의 값에는 시간으로 바뀌는 것이 없다(src/shared/model/devices.ts BattleDevicePet). 특성 말풍선은 toggle 이 직접 다시 그린다
+// 이 창의 값에는 시간으로 바뀌는 것이 없다(src/shared/model/devices.ts BattleDevicePet). 말풍선 여닫기는 toggle 이 말풍선 자리만 고친다
 let renderedStructure = "";
 api.onShow((view) => {
   void frame.fontsReady.then(() => {

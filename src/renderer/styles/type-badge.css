@@ -1,6 +1,23 @@
 /* type-badge — 창 dex·pet·manage 이 글자까지 같은 규칙. 창 CSS 앞에 읽는다
    타입 색은 --type 변수로 둔다 — 타입 배지(.type)와 기술 칸의 타입 조각(styles/move-pill.css)이 같은 색을 읽는다 */
 .type[data-type] { color: var(--inverse); background: var(--type); }
+/* 타입 아이콘 — 타입 색 네모에 흰 타입 아이콘 (Figma 01 `Type Icon` Style=Badge 16×16). 만드는 곳은 ui/type-badge.ts typeIconEl,
+   설정창은 그림 캐시(manage/art-cache.ts iconOf)에 같은 class 를 준다. 배틀 창 카드·기술 칸, 배틀 기기 창 상성 말풍선, 랜덤 배틀 모달 칸이 같이 쓴다 */
+.type-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--type, #9fa19f);
+}
+.type-icon img {
+  width: 14px;
+  height: 14px;
+  image-rendering: pixelated;
+}
 [data-type="electric"] { --type: #fac000; }
 [data-type="fire"] { --type: #e52829; }
 [data-type="flying"] { --type: #81b9ef; }

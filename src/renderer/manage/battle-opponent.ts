@@ -32,6 +32,7 @@ interface PickState {
   held: number | null; // 든 내 배틀 파티 칸(0~5)
 }
 const st: PickState = { offer: null, selected: null, busy: false, error: "", coolUntil: 0, held: null };
+let coolButton: HTMLButtonElement | null = null; // 쿨타임 글자를 보이는 시작 단추 — 타이머가 글자만 고친다
 
 // 2열 3줄 배치 — 칸 순서(0~5)를 줄마다 [왼쪽, 오른쪽] 으로. 짝수 칸이 뒤 열, 홀수 칸이 앞 열이다(src/battle/engine.ts startPos)
 const MINE_ORDER = [0, 1, 2, 3, 4, 5]; // 앞 열이 오른쪽(상대 쪽)
@@ -100,7 +101,7 @@ function cellEl(cell: HTMLElement, look: string, shiny: boolean, typeIds: readon
   cell.appendChild(portraitOf(look, shiny, "dot"));
   const types = el("div", "bo-types");
   for (const t of typeIds) {
-    const icon = iconOf(`type:${t}`, "bo-type"); // 흰 아이콘 — 바탕색은 styles/type-badge.css 의 [data-type] 색
+    const icon = iconOf(`type:${t}`, "type-icon"); // 흰 아이콘은 그림 캐시에서 — 모양은 공통 styles/type-badge.css `.type-icon`
     icon.dataset.type = t;
     types.appendChild(icon);
   }
@@ -187,6 +188,7 @@ export function drawBattleOpponent(): void {
   const startLabel = remain > 0 ? remainText(remain) : "배틀 시작";
   const go = actionButtonEl(startLabel, true, st.busy || remain > 0 || st.selected == null || !st.offer, () => void start());
   go.classList.add("bo-start");
+  coolButton = remain > 0 ? go : null;
   const left = st.offer?.rerollLeft ?? 1;
   const again = actionButtonEl("새로고침", false, st.busy || left === 0, () => void fetchOffer(true));
   again.classList.add("bo-refresh");
@@ -197,7 +199,10 @@ export function drawBattleOpponent(): void {
   dialogEl.append(top, battleRecordBarEl(), list, row);
 }
 
-// 쿨타임 글자를 1초마다 바꾼다 — 모달이 열려 있고 쿨타임이 남았을 때만
+// 쿨타임 글자를 1초마다 바꾼다 — 시작 단추 글자만 고치고, 쿨타임이 끝나는 때에만 모달을 다시 그린다(실행 규칙 R1)
 setInterval(() => {
-  if (ui.dialog?.kind === "battle-opponent" && st.coolUntil > Date.now() - 1000) redraw();
+  if (!coolButton?.isConnected || ui.dialog?.kind !== "battle-opponent") return;
+  const remain = st.coolUntil - Date.now();
+  if (remain > 0) coolButton.textContent = remainText(remain);
+  else redraw();
 }, 1000);

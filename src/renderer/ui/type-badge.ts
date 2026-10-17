@@ -6,3 +6,17 @@ export function typeBadgeEl(name: string, id?: string): HTMLElement {
   if (id) badge.dataset.type = id;
   return badge;
 }
+
+// 타입 아이콘 — 타입 색 네모에 흰 타입 아이콘(styles/type-badge.css `.type-icon`). 그림(data URI)이 없으면 색 네모만
+export function typeIconEl(type: string, uri: string | null | undefined): HTMLElement {
+  const box = el("span", "type-icon");
+  box.dataset.type = type;
+  if (uri) {
+    const img = document.createElement("img");
+    img.src = uri;
+    img.alt = "";
+    img.draggable = false;
+    box.appendChild(img);
+  }
+  return box;
+}

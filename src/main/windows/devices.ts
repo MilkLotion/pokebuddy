@@ -268,7 +268,7 @@ export function isBattleInput(v: unknown): v is BattleDeviceInput {
   if (!isRecord(v)) return false;
   // 칸 보기는 칸 번호, 종 보기는 종 키와 개체 id(없으면 null) — 둘 다 아닌 모양은 닫는다
   const target = "slot" in v ? isIndexBelow(v.slot, BATTLE_RULES.slots) : isShortId(v.species) && (v.petId === null || isShortId(v.petId));
-  return target && isText(v.notice) && isDeviceKindTabs(v.kinds);
+  return target && isDeviceKindTabs(v.kinds);
 }
 
 export function isPetInput(v: unknown): v is PetDeviceInput {

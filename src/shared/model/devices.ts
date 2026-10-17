@@ -154,10 +154,8 @@ export interface PetDeviceInput extends DeviceKinds {
 // Figma 05 `15 모험` `Adventure / Battle Party Device` `1662:3180`, 기기는 03 `Battle Party Device` `1763:75391`(View=Slot|Species)
 // 볼 것 — 배틀 파티 칸, 또는 배틀 파티 밖의 종 보기(도감은 종만, 파티·박스는 그 개체 — 고른 기술·암컷 능력치). 머리 탭이 정한다 (device-kind.ts battleTarget)
 export type BattleTarget = { slot: number } | { species: string; petId: string | null };
-export type BattleDeviceInput = BattleTarget &
-  DeviceKinds & {
-    notice: string; // 마지막 실패 문구
-  };
+// 실패 문구는 싣지 않는다 — 이 창의 단추는 설정창 모달을 열 뿐이라 실패는 그 모달이 보인다
+export type BattleDeviceInput = BattleTarget & DeviceKinds;
 
 // 배틀 창이 읽는 개체 값만 — 만복도·쿨타임처럼 시간으로 바뀌는 값을 싣지 않는다. 그래야 시간이 흘러도 모델이 같아 다시 그리지 않는다
 // (실행 규칙 R1·R4, worklog/records/perf-refactor 1-3). species 는 울음소리가 쓴다

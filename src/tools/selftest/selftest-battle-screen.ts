@@ -357,7 +357,7 @@ void (async () => {
   const client = {
     rpc: async (fn: string) => (fn === "battle_record_view" ? { data: { mine: { wins: 0, losses: 0, draws: 0 }, def: { wins: 1, losses: 0, draws: 0 }, recent: [], unseen }, error: null } : { data: null, error: null }),
   } as unknown as SupabaseClient;
-  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }), detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }), show: () => {} });
+  const net = createBattleNet({ client, signedIn: () => true, run: () => ({ ok: true, result: null, replayed: false }), hasRewards: () => false, onChanged: () => {}, offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }), detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }), show: () => {} });
   const rec = await net.act({ action: "record" });
   assert.ok(rec.ok && rec.record?.def.wins === 1, "record 동작은 기록을 돌려준다");
 
@@ -374,10 +374,16 @@ void (async () => {
       },
     },
   } as unknown as SupabaseClient;
+  const runs: string[] = []; // 부른 거래 이름
+  let pendingRewards = false; // 받을 판이 있는가
   const startNet = createBattleNet({
     client: startClient,
     signedIn: () => true,
-    run: () => ({ ok: true, result: null, replayed: false }),
+    run: (_id, name) => {
+      runs.push(name);
+      return { ok: true, result: null, replayed: false };
+    },
+    hasRewards: () => pendingRewards,
     onChanged: () => {},
     offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }),
     detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }),
@@ -393,11 +399,14 @@ void (async () => {
   const failed = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
   assert.ok(!failed.ok, "판을 받지 못했다");
   assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "cancel"], "실패 — 준비 중을 띄우고 올린 뒤 요청, 실패면 닫고 판은 띄우지 않는다");
+  assert.deepStrictEqual(runs, [], "받을 판이 없으면 battle.claim 을 부르지 않는다");
   steps.length = 0;
   startOk = true;
+  pendingRewards = true;
   const okRes = await startNet.act({ action: "start", offerId: "00000000-0000-0000-0000-000000000000", pick: 1 });
   assert.ok(okRes.ok, "판을 받았다");
   assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "show"], "성공 — 준비 중·올리기·요청 뒤 같은 창에 판");
+  assert.deepStrictEqual(runs, ["battle.claim", "battle.reward"], "받을 판이 있으면 판 요청 전에 받고, 받은 판을 적는다");
   console.log("selftest-battle-screen 통과");
 })().catch((e) => {
   console.error(e);

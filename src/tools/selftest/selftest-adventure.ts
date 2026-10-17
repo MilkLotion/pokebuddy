@@ -462,7 +462,7 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   save.pets[2]!.gender = "male";
   save.pets.forEach((p, i) => setBattleSlot(save, i, p.id));
   const v = snapshotView(save, T0);
-  const model = (i: number) => battleDeviceModel(v, { slot: i, notice: "", kinds: [] })!.model;
+  const model = (i: number) => battleDeviceModel(v, { slot: i, kinds: [] })!.model;
   const lines = (rows: { mul: number; types: string[] }[]) => rows.map((r) => `${r.mul}:${r.types.join("/")}`);
   const zard = model(0);
   assert.deepEqual(lines(zard.matchup.defense), ["4:rock", "2:water/electric", "0.5:fighting/steel/fire/fairy", "0.25:bug/grass", "0:ground"], "리자몽 방어 — 두 타입을 곱한다");
@@ -476,18 +476,18 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   const extra = seed(["indeedee"]);
   extra.pets[0]!.gender = "female";
   const sv = snapshotView(extra, T0);
-  const dex = battleDeviceModel(sv, { species: "charizard", petId: null, notice: "", kinds: [] }, extra, T0)!.model;
+  const dex = battleDeviceModel(sv, { species: "charizard", petId: null, kinds: [] }, extra, T0)!.model;
   assert.equal(dex.view, "species");
   assert.equal(dex.slot.index, -1);
   assert.equal(dex.slot.pet.id, "", "종만 보면 개체가 없다");
   assert.equal(dex.slot.moves.length, 2, "종의 기본 기술 2개");
   assert.equal(dex.megaArt, null, "메가 표식 없음");
   assert.deepEqual(lines(dex.matchup.defense), lines(zard.matchup.defense), "상성은 칸 보기와 같다");
-  const own = battleDeviceModel(sv, { species: "indeedee", petId: "p1", notice: "", kinds: [] }, extra, T0)!.model;
+  const own = battleDeviceModel(sv, { species: "indeedee", petId: "p1", kinds: [] }, extra, T0)!.model;
   assert.equal(own.slot.pet.id, "p1");
   assert.equal(own.slot.stats[0]!.value, 70, "개체로 보면 암컷 종족값");
-  assert.equal(battleDeviceModel(sv, { species: "indeedee", petId: "p9", notice: "", kinds: [] }, extra, T0), null, "없는 개체면 닫는다");
-  assert.equal(battleDeviceModel(sv, { species: "charizard", petId: null, notice: "", kinds: [] }), null, "저장이 없으면 종 보기를 못 만든다");
+  assert.equal(battleDeviceModel(sv, { species: "indeedee", petId: "p9", kinds: [] }, extra, T0), null, "없는 개체면 닫는다");
+  assert.equal(battleDeviceModel(sv, { species: "charizard", petId: null, kinds: [] }), null, "저장이 없으면 종 보기를 못 만든다");
 }
 
 process.stdout.write("통과\n");

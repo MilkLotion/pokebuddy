@@ -193,7 +193,7 @@ void app.whenReady().then(async () => {
     const stone = bagDeviceModel(v, { itemId: "fire-stone", mode: "use", targetPetId: null, qty: 1, sellQty: 1, notice: "", result: null, busy: false, kinds: [] })?.model;
     const product = v.shop.find((i) => i.about) ?? v.shop[0];
     const shop = product ? shopDeviceModel(v, { productId: product.id, qty: 1, notice: "", done: null, busy: false, kinds: [] })?.model : null;
-    const battle = battleDeviceModel(v, { slot: 0, notice: "", kinds: [] })?.model;
+    const battle = battleDeviceModel(v, { slot: 0, kinds: [] })?.model;
     const slug = save.pets[0]!.species;
     const detail = reads.detailOf(slug);
     const shopDetail = reads.shopDetailOf(slug);
