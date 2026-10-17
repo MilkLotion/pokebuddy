@@ -9,7 +9,7 @@ import { SIZE_STEPS, snapSize } from "../../party/size.js";
 import type { LookSheets, PlayMode, SpriteSheet, StageSize } from "../../shared/model/stage";
 import type { Paths } from "../../platform/paths";
 import { profileOf } from "../../dex/species";
-import { genderLookInfo, lookFormOf, regionalOf } from "../../dex/regional";
+import { formOverworldOf, genderLookInfo, lookFormOf, regionalOf } from "../../dex/regional";
 import { megaOf } from "../../dex/mega";
 import { battleLookTable } from "../../dex/tables";
 import { dexFolderOf, lookOf } from "../../dex/look";
@@ -97,8 +97,8 @@ export function pmdSources(look: string): PmdSource[] {
   // 전투 중에만 보이는 모습(메로엣타 스텝폼·킬가르도 블레이드폼·캐스퐁 날씨 모습 등) — 폼 폴더, 없으면 기본형 (data/battle-looks.json)
   const battle = slug.startsWith("_") ? undefined : battleLookTable()[slug];
   if (battle) return [...(shiny ? [{ slug, spritePath: `${battle}/0001` }] : []), { slug, spritePath: battle }, ...(base ? [{ slug, spritePath: shiny ? `${base}/0000/0001` : base }] : [])];
-  // PMD 그림이 없고 걷기 그림 폴더가 있는 특수 폼(버드렉스(백마 탄 모습)) — 기본형 PMD 로 떨어지지 않게 빈 목록. 걷기 대체 그림으로 넘어간다 (data/regional.json overworld)
-  if (regionalOf(slug)?.overworld && !regionalOf(slug)?.pmd) return [];
+  // PMD 그림이 없고 걷기 그림 폴더가 있는 모습(버드렉스(백마 탄 모습)·토네로스(영물폼)) — 기본형 PMD 로 떨어지지 않게 빈 목록. 걷기 대체 그림으로 넘어간다 (data/regional.json overworld)
+  if (formOverworldOf(slug)) return [];
   // 도감 칸 없는 겉모습(안농 B · 사철록 계절)도 폼 폴더가 먼저다 (data/regional.json looks)
   const lookForm = lookFormOf(slug);
   const form = regionalOf(slug)?.pmd ?? lookForm?.pmd;
@@ -114,7 +114,7 @@ export function pmdSources(look: string): PmdSource[] {
 // 그림을 찾을 수 있는 모습인가 — PMD 후보가 있거나 메가 모습·걷기 그림 폴더가 있는 특수 폼이다. 둘은 PMD 폴더가 없어도 걷기 대체 그림·초상으로 선다
 const knownLook = (look: string, srcs: PmdSource[]): boolean => {
   const slug = look.replace(/:shiny$/, "");
-  return srcs.length > 0 || megaOf(slug) !== null || regionalOf(slug)?.overworld != null;
+  return srcs.length > 0 || megaOf(slug) !== null || formOverworldOf(slug) != null;
 };
 
 // 그림 묶음에 적는 도감 번호 — 메가 모습은 기본 종의 번호

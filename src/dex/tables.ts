@@ -103,6 +103,15 @@ export interface FormBattleRow {
 }
 export const formBattleTable = (opts?: DexOptions): Record<string, FormBattleRow> => loadJson<Record<string, FormBattleRow>>("form-battle.json", opts);
 
+// ── data/gender-battle.json ── 성별로 능력치·특성이 다른 종의 암컷 배틀 값 (src/tools/data/build-form-battle.ts). 종 표에는 넣지 않는다
+export interface GenderBattleRow {
+  form: string; // PokeAPI 암컷 식별자(meowstic-female)
+  stats: number[];
+  types: string[];
+  ability: string;
+}
+export const genderBattleTable = (opts?: DexOptions): Record<string, GenderBattleRow> => loadJson<Record<string, GenderBattleRow>>("gender-battle.json", opts);
+
 // ── data/battle-looks.json ── 전투 중에만 보이는 모습 → PMD SpriteCollab 폼 경로(무대·배틀 창 그림)
 export const battleLookTable = (opts?: DexOptions): Record<string, string> => loadJson<Record<string, string>>("battle-looks.json", opts);
 

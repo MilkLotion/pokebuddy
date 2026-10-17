@@ -1,9 +1,14 @@
 {
-  "_comment": "전투 중에만 보이고 도감 칸이 없는 모습의 PMD SpriteCollab 폼 경로 — 무대·배틀 창 그림(src/main/art/stage-art.ts pmdSources)이 읽는다. 키는 엔진이 form 이벤트로 내는 종 슬러그(data/form-battle.json 의 form, 체리꼬는 src/battle/engine.ts). 도감 칸이 있는 모습(캐스퐁 날씨 모습·메로엣타 스텝폼·불비달마 달마모드)은 data/regional.json forms 의 pmd 가 정본이라 여기 두지 않는다. 경로는 SpriteCollab tracker.json 으로 확인했다(2026-10-09). 가라르 불비달마 달마모드(0555/0003)·지우개굴닌자(0658/0001, 초상만)는 걷기 그림이 아직 없다 — 기본 그림으로 선다",
+  "_comment": "전투 중에만 보이고 도감 칸이 없는 모습의 PMD SpriteCollab 폼 경로 — 무대·배틀 창 그림(src/main/art/stage-art.ts pmdSources)이 읽는다. 키는 엔진이 form 이벤트로 내는 종 슬러그(data/form-battle.json 의 form, 체리꼬는 src/battle/engine.ts). 도감 칸이 있는 모습(캐스퐁 날씨 모습·메로엣타 스텝폼·불비달마 달마모드)은 data/regional.json forms 의 pmd 가 정본이라 여기 두지 않는다. 경로는 SpriteCollab tracker.json 으로 확인했다(2026-10-09). 가라르 불비달마 달마모드(0555/0003)는 그림이 아직 없다 — 기본 그림으로 선다. 지우개굴닌자는 data/regional.json looks 의 걷기 그림(greninja/ash)이다. 따라큐 들킨 모습·빙큐보 나이스페이스·모르페코 배고픈 모양은 엔진이 특성으로 바꾼다(2026-10-17). 제르네아스는 예외로 기본 종 키 xerneas 가 무대 그림(뉴트럴모드)이고, 배틀이 시작되면 xerneas-active(액티브모드)로 바꾼다(2026-10-17)",
   "aegislash-blade": "0681/0001",
   "wishiwashi-school": "0746/0001",
   "minior-red": "0774/0001",
   "palafin-hero": "0964/0001",
   "cherrim-sunshine": "0421/0001",
-  "zygarde-complete": "0718/0002"
+  "zygarde-complete": "0718/0002",
+  "mimikyu-busted": "0778/0001",
+  "eiscue-noice": "0875/0001",
+  "morpeko-hangry": "0877/0001",
+  "xerneas": "0716/0001",
+  "xerneas-active": "0716"
 }

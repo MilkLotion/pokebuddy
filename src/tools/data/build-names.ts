@@ -48,6 +48,10 @@ const OVERRIDES: Record<string, NameEntry> = {
   meloetta: { ko: "메로엣타(보이스폼)", en: "Meloetta (Aria Forme)" },
   // 지우의모자로 바뀐 개굴닌자 — 공식 도감 항목이 아니어서 특성 이름을 괄호에 적는다 (2026-10-09, battle-261008 요청)
   "greninja-battle-bond": { ko: "개굴닌자(유대변화)", en: "Greninja (Battle Bond)" },
+  // 2026-10-17 모습 바꾸기로 더한 모습의 기본형 — 같은 규칙 (worklog/records/form-audit)
+  ogerpon: { ko: "오거폰(벽록의가면)", en: "Ogerpon (Teal Mask)" },
+  hoopa: { ko: "후파(굴레에 빠진 후파)", en: "Hoopa (Confined)" },
+  enamorus: { ko: "러브로스(화신폼)", en: "Enamorus (Incarnate Forme)" },
 };
 
 export async function build(): Promise<void> {

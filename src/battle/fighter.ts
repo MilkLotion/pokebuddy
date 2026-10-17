@@ -7,7 +7,7 @@ import { megaSlugs, megaOf } from "../dex/mega.js";
 import { regionalTable } from "../dex/regional.js";
 import { SHIFT_RULES } from "../dex/rules.js";
 import { profileOf } from "../dex/species.js";
-import { formBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
+import { formBattleTable, genderBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
 import type { EngineFighter, EngineMove } from "./engine.js";
 import { BATTLE_BASIS, fighterFrom, movesOf, type BattleData, type BattleMoveRow, type FighterSource, type StatBasis } from "./fighter-core.js";
@@ -48,10 +48,12 @@ export function battleData(opts?: DexOptions): BattleData {
   }
   const forms: BattleData["forms"] = {};
   for (const [slug, v] of Object.entries(formBattleTable(opts))) if (!isMetaKey(slug)) forms[slug] = v;
+  const female: BattleData["female"] = {};
+  for (const [slug, v] of Object.entries(genderBattleTable(opts))) if (!isMetaKey(slug)) female[slug] = { stats: [...v.stats], types: [...v.types], ability: v.ability };
   const shift: BattleData["shift"] = {};
   // 한 방향 묶음(도구로 한 번 얻는 모습)은 뺀다 — 배틀 파티가 따로 모습을 가질 수 없다 (src/battle/party.ts battleShiftable)
   for (const [base, list] of Object.entries(regionalTable(opts).shift)) if (!isMetaKey(base) && Array.isArray(list) && !SHIFT_RULES[base]?.oneWay) shift[base] = list.filter((s): s is string => typeof s === "string");
-  const data: BattleData = { species, moves, mega, forms, shift, typeChart: typeChartTable(opts) };
+  const data: BattleData = { species, moves, mega, forms, female, shift, typeChart: typeChartTable(opts) };
   if (!opts) cached = data;
   return data;
 }
@@ -64,7 +66,7 @@ export const buildFighter = (src: FighterSource, basis: StatBasis = BATTLE_BASIS
   fighterFrom(battleData(opts), src, basis);
 
 // 배틀 파티의 개체 하나 → 전투 개체 (50레벨·6V). form 은 배틀 파티에서 켠 메가 모습
-export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "level">, form: string | null, opts?: DexOptions): EngineFighter | null =>
-  buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, ...(pet.moves ? { moves: [...pet.moves] } : {}), level: pet.level }, BATTLE_BASIS, opts);
+export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "level"> & Partial<Pick<PetV3, "gender">>, form: string | null, opts?: DexOptions): EngineFighter | null =>
+  buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, ...(pet.moves ? { moves: [...pet.moves] } : {}), level: pet.level, ...(pet.gender ? { gender: pet.gender } : {}) }, BATTLE_BASIS, opts);
 
 export const battleTypeChart = (opts?: DexOptions): Record<string, Record<string, number>> => battleData(opts).typeChart;

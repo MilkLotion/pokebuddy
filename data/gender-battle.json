@@ -1,0 +1,6 @@
+{
+  "meowstic": {"form":"meowstic-female","stats":[74,48,76,83,81,104],"types":["psychic"],"ability":"competitive"},
+  "indeedee": {"form":"indeedee-female","stats":[70,55,65,95,105,85],"types":["psychic","normal"],"ability":"psychic-surge"},
+  "basculegion": {"form":"basculegion-female","stats":[120,92,65,100,75,78],"types":["water","ghost"],"ability":"adaptability"},
+  "oinkologne": {"form":"oinkologne-female","stats":[115,90,70,59,90,65],"types":["normal"],"ability":"lingering-aroma"}
+}

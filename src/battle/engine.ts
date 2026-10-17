@@ -575,6 +575,11 @@ export function runBattle(input: BattleInput): BattleResult {
       u.species = "cherrim-sunshine";
       events.push({ t: 0, kind: "form", side: u.side, slot: u.slot, species: u.species });
     }
+    // 제르네아스 — 무대는 뉴트럴모드, 배틀이 시작되면 액티브모드(원작). 그림만 바꾼다 (2026-10-17)
+    if (u.base.species === "xerneas") {
+      u.species = "xerneas-active";
+      events.push({ t: 0, kind: "form", side: u.side, slot: u.slot, species: u.species });
+    }
     if (u.ability === "mimicry" && field) {
       abilityFx(u, "mimicry", 0);
       u.hitTypes = [FIELD_TYPE[field]];
@@ -1285,6 +1290,12 @@ export function runBattle(input: BattleInput): BattleResult {
     if (d > 0 && o.disguised && (a === "disguise" || (a === "ice-face" && phys))) {
       abilityFx(o, a, curT);
       o.disguised = false;
+      // 탈이 벗겨진 따라큐는 들킨 모습(그림만), 얼음 얼굴이 깨진 빙큐보는 나이스페이스(능력치도) (2026-10-17 사용자 "5 전투 중 그림")
+      if (a === "disguise" && o.base.species === "mimikyu") {
+        o.species = "mimikyu-busted";
+        events.push({ t: curT, kind: "form", side: o.side, slot: o.slot, species: o.species });
+      }
+      if (a === "ice-face") toForm(o, true, curT);
       return 0;
     }
     if (a === "sturdy" && !o.moveHit && d >= o.hp) {
@@ -1750,7 +1761,14 @@ export function runBattle(input: BattleInput): BattleResult {
           abilityFx(u, "speed-boost", t);
           setStage(u, 5, 1, t, u);
         }
-        if (ab(u) === "hunger-switch") u.hungry = !u.hungry; // 배부른 모양 → 배고픈 모양 → … 5초마다
+        if (ab(u) === "hunger-switch") {
+          u.hungry = !u.hungry; // 배부른 모양 → 배고픈 모양 → … 5초마다
+          // 모르페코 그림도 함께 바꾼다 — 능력치는 같다 (2026-10-17)
+          if (u.base.species === "morpeko") {
+            u.species = u.hungry ? "morpeko-hangry" : "morpeko";
+            events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species });
+          }
+        }
         statusTick(u, t);
         if (u.hp <= 0) continue;
         if (ab(u) === "moody") {

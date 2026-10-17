@@ -40,6 +40,7 @@ export interface LookForm {
   pokemonId?: number; // PokeAPI pokemon.csv id — 따로 번호가 있는 모습만(케르디오(각오의 모습))
   portrait?: string; // 초상 파일 이름(`201-b`) — 번호가 없는 모습
   pmd?: string; // PMD SpriteCollab 폼 경로(`0201/0001`). 없으면 기본형 그림
+  overworld?: string; // PMD 그림이 없는 모습의 걷기 그림 폴더(`greninja/ash`) — 특수 폼의 overworld 와 같다
 }
 
 // 알에서 한 종이 나올 때 대신 나오는 모습 — [슬러그, 가중치]. 기본형 자신도 목록에 든다
@@ -149,6 +150,12 @@ export function lookFormOf(slug: string, opts?: DexOptions): LookForm | null {
   const key = normalizeSlug(slug);
   if (isMetaKey(key)) return null;
   return regionalTable(opts).looks[key] ?? null;
+}
+
+// PMD 그림 대신 쓰는 걷기 그림 폴더 — 특수 폼·리전폼(forms)과 겉모습(looks)의 overworld. PMD 폼 폴더가 있으면 null (2026-10-17 그림 고치기)
+export function formOverworldOf(slug: string, opts?: DexOptions): string | null {
+  const form = regionalOf(slug, opts) ?? lookFormOf(slug, opts);
+  return form?.overworld && !form.pmd ? form.overworld : null;
 }
 
 // 도감에 적는 종 — 겉모습이면 기본 종, 아니면 그대로 (안농 B → 안농)

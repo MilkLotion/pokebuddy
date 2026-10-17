@@ -558,6 +558,35 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(ash[0]!.t >= of(bb.events, "faint").find((e) => e.side === 1)!.t);
 }
 
+// ── 전투 중 그림·능력치 (2026-10-17 사용자 "5 전투 중 그림", "6 성별 능력치") ──
+{
+  const pos = { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>;
+  const smash = unit({ stats: [999, 300, 999, 1, 999, 95], moves: [mv("smash", { type: "dark", power: 80, cooldownMs: 1000 })] }); // 고스트에도 닿는 물리 기술
+  const tough = (species: string): EngineFighter => ({ ...buildFighter({ species })!, stats: [999, 1, 999, 1, 999, 95], moves: [] });
+  // 따라큐 — 탈이 벗겨지면 들킨 모습 그림
+  const mk = run([smash], [tough("mimikyu")], 1, 6000, pos);
+  assert.ok(of(mk.events, "form").some((e) => e.side === 1 && e.species === "mimikyu-busted"), "따라큐 들킨 모습");
+  // 빙큐보 — 물리 기술에 얼음 얼굴이 깨지면 나이스페이스(스피드가 오른 모습)
+  const ice = buildFighter({ species: "eiscue" })!;
+  assert.strictEqual(ice.altForm?.species, "eiscue-noice");
+  const ec = run([smash], [tough("eiscue")], 1, 6000, pos);
+  assert.ok(of(ec.events, "form").some((e) => e.side === 1 && e.species === "eiscue-noice"), "빙큐보 나이스페이스");
+  // 모르페코 — 배고픈 모양 그림을 5초마다 오간다
+  const mp = run([tough("morpeko")], [tough("morpeko")], 1, 11_000, pos);
+  assert.deepStrictEqual(of(mp.events, "form").filter((e) => e.side === 0).slice(0, 2).map((e) => e.species), ["morpeko-hangry", "morpeko"], "모르페코 배고픈 모양");
+  // 제르네아스 — 판 시작에 액티브모드
+  const xr = run([tough("xerneas")], [tough("mimikyu")], 1, 1000, pos);
+  assert.ok(of(xr.events, "form").some((e) => e.side === 0 && e.t === 0 && e.species === "xerneas-active"), "제르네아스 액티브모드");
+  // 성별 능력치 — 암컷은 `<종>-female` 줄, 보이는 종은 그대로
+  const female = buildFighter({ species: "indeedee", gender: "female" })!;
+  const male = buildFighter({ species: "indeedee", gender: "male" })!;
+  assert.strictEqual(female.species, "indeedee");
+  assert.notDeepStrictEqual(female.stats, male.stats, "에써르 암컷 능력치는 수컷과 다르다");
+  assert.strictEqual(buildFighter({ species: "meowstic", gender: "female" })!.ability, "competitive", "냐오닉스 암컷 특성");
+  assert.strictEqual(buildFighter({ species: "meowstic", gender: "male" })!.ability, "keen-eye");
+  assert.ok(buildFighter({ species: "basculegion", gender: "female" })!.stats[3]! > buildFighter({ species: "basculegion", gender: "male" })!.stats[3]!, "대쓰여너 암컷은 특수공격이 높다");
+}
+
 // ── 대상 주위가 막히면 지금 닿는 다른 상대로 바꾼다 (2026-10-09 사용자 "A+B로 진행해") ──
 {
   // 상대 T(오른쪽 위 구석)는 내 쪽 셋에게 둘러싸여 빈 자리가 없다. 같은 걸음 수의 F 보다 같은 줄이라 처음 대상은 T

@@ -42,6 +42,7 @@ export interface BattleData {
   moves: Record<string, BattleMoveRow>;
   mega: Record<string, BattleMegaRow>; // 메가·원시회귀 모습
   forms: Record<string, BattleFormRow>; // 전투 중 모습이 바뀌는 종의 다른 모습
+  female?: Record<string, { stats: number[]; types: string[]; ability: string }>; // 성별로 능력치·특성이 다른 종의 암컷 (data/gender-battle.json). 옛 판 데이터에는 없다
   shift: Record<string, string[]>; // 모습 바꾸기 묶음 — 기본 종 → 다른 모습들(로토무 등). 배틀 파티가 적은 모습(battle.forms)을 검사한다
   typeChart: Record<string, Record<string, number>>;
 }
@@ -61,7 +62,7 @@ export interface FighterSource {
   moves?: string[]; // 개체가 고른 기술 2개, 순서대로 (PetV3.moves). 그 종의 기본 2개 + 후보 안이 아니면 버리고 기본 2개를 쓴다. 옛 등록에는 없다
   level?: number; // 개체의 실제 레벨 — 약어리 어군 해금에 쓴다. 없으면 해금 전
   shiny?: boolean; // 그림만 — 이로치. 전투 값에는 쓰지 않는다 (배틀 창 그림, 2026-10-09)
-  gender?: string; // 그림만 — 성별(male·female·unknown). 성별 그림이 따로 있는 종만 다르게 보인다
+  gender?: string; // 성별(male·female·unknown) — 성별 그림이 따로 있는 종의 그림, 성별 능력치가 있는 종(BattleData.female)의 능력치
 }
 
 // 칸의 그림 값 — 이로치·성별. 판 응답(looks)과 상대 고르기 칸이 쓴다. 옛 등록에는 없어 기본 그림이다
@@ -133,20 +134,22 @@ export function movesOf(data: BattleData, species: string, swap: boolean, chosen
 export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBasis = BATTLE_BASIS): EngineFighter | null {
   const sp = data.species[src.species];
   if (!sp) return null;
+  // 성별로 능력치·특성이 다른 종(대쓰여너·에써르·퍼퓨돈·냐오닉스)의 암컷 — 능력치·타입·특성만 바꾼다. 기술과 보이는 종은 그대로다 (2026-10-17 사용자 "6 성별 능력치")
+  const female = src.gender === "female" && !src.form ? data.female?.[src.species] : undefined;
   const mega = src.form ? data.mega[src.form] : undefined;
   const shown = mega ? src.form! : src.species;
-  const baseStats = mega ? mega.stats : sp.stats;
+  const baseStats = mega ? mega.stats : (female?.stats ?? sp.stats);
   if (!Array.isArray(baseStats) || baseStats.length !== 6) return null;
   const real = (six: readonly number[]): number[] => six.map((b, i) => realStat(b, i, basis));
   const alt = mega ? undefined : data.forms[src.species];
   const moves = movesOf(data, src.species, src.moveSwap === true, src.moves);
   return {
     species: shown,
-    types: mega ? mega.types : sp.types,
+    types: mega ? mega.types : (female?.types ?? sp.types),
     level: basis.level,
     stats: real(baseStats),
     moves,
-    ability: mega ? mega.ability : sp.ability,
+    ability: mega ? mega.ability : (female?.ability ?? sp.ability),
     special: sp.special && SPECIALS.has(sp.special) ? (sp.special as EngineFighter["special"]) : null,
     range: rangeOfMoves(moves),
     altForm: alt ? altFormOf(data, alt, real, src.moveSwap === true) : null,

@@ -105,7 +105,7 @@ function readTable<T>(file: string): Record<string, T> {
 }
 
 // 두 타입 종이지만 두 칸이 같은 타입인 종 — 한 타입의 공격기가 무거운 기술(충전·반동으로 쉼·자기 HP 절반)뿐이라 다른 자기 타입에서 골랐다 (docs/specs/moves.md "처음 값을 정한 순서")
-const HEAVY_FILL = new Set(["landorus", "landorus-therian", "enamorus"]);
+const HEAVY_FILL = new Set(["landorus", "landorus-therian", "enamorus", "enamorus-therian"]);
 // 기본 2개에 무거운 기술을 그대로 둔 종 — 그 종 타입에 무겁지 않은 공격기가 없다
 const HEAVY_KEEP = new Set(["meltan"]);
 // 무거운 기술 — 충전·반동으로 쉼·자기 HP 절반. 종 특성이 부르는 날씨로 충전이 없어지면 무겁지 않다

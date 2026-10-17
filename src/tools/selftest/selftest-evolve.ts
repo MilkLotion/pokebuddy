@@ -293,6 +293,31 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(12c-2b) 전설 모습·큐레무 짝·도감 기록  ok\n");
 }
 
+// (12c-2c) 2026-10-17 더한 모습 바꾸기 — 오거폰 가면·러브로스·후파·실버디·지가르데 10%는 조건 없이, 네크로즈마는 솔가레오·루나아라 짝 (worklog/records/form-audit)
+{
+  const og = seed({ species: "ogerpon", level: 50 });
+  assert.deepStrictEqual(formsOf(og.pets[0] as PetV3), ["ogerpon", "ogerpon-wellspring-mask", "ogerpon-hearthflame-mask", "ogerpon-cornerstone-mask"], "오거폰 가면 셋");
+  assert.equal(setForm(og, "p1", "ogerpon-wellspring-mask").ok, true);
+  assert.ok(og.dex.obtained.includes("ogerpon-wellspring-mask"), "가면 모습은 그 칸에 얻음");
+  assert.equal(setForm(og, "p1", "ogerpon").ok, true, "기본 모습으로 돌아간다");
+  assert.deepStrictEqual(formsOf(seed({ species: "enamorus", level: 50 }).pets[0] as PetV3), ["enamorus", "enamorus-therian"]);
+  assert.deepStrictEqual(formsOf(seed({ species: "hoopa", level: 50 }).pets[0] as PetV3), ["hoopa", "hoopa-unbound"]);
+  assert.deepStrictEqual(formsOf(seed({ species: "zygarde", level: 50 }).pets[0] as PetV3), ["zygarde", "zygarde-10"]);
+  // 실버디는 타입:널 계열의 공유 계열 — 거쳐 온 타입:널과 17 타입
+  const sv = seed({ species: "silvally", level: 50 });
+  (sv.pets[0] as PetV3).evolved = ["type-null"];
+  assert.equal(formsOf(sv.pets[0] as PetV3).length, 19, "타입:널·실버디·17 타입");
+  assert.equal(setForm(sv, "p1", "silvally-fire").ok, true);
+  assert.ok(!sv.dex.obtained.includes("silvally-fire") && sv.dex.obtained.includes("silvally"), "실버디 타입은 겉모습");
+  const nz = seed({ species: "necrozma", level: 50 });
+  assert.deepStrictEqual(formsOf(nz.pets[0] as PetV3), ["necrozma", "necrozma-dusk", "necrozma-dawn"]);
+  assert.deepStrictEqual(setForm(nz, "p1", "necrozma-dusk"), { ok: false, reason: "no-partner" }, "솔가레오가 없으면 황혼의 갈기 불가");
+  nz.pets.push({ ...(seed({ species: "solgaleo", level: 5 }).pets[0] as PetV3), id: "p2" });
+  assert.equal(setForm(nz, "p1", "necrozma-dusk").ok, true, "솔가레오가 있으면 된다");
+  assert.equal(setForm(nz, "p1", "necrozma-dawn").reason, "no-partner", "루나아라는 아직 없다");
+  process.stdout.write("(12c-2c) 오거폰·러브로스·후파·실버디·지가르데·네크로즈마 모습  ok\n");
+}
+
 // (12c-3) 유대의고삐로 말 부르기 — 버드렉스 계열이 있을 때만, 아직 없는 말만, 고삐 1개 소모, 박스로 (src/party/riders.ts, 2026-10-07 사용자 결정)
 {
   const s = seed({ species: "calyrex-ice", level: 50 }, { "reins-of-unity": 2 });
@@ -446,7 +471,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.deepStrictEqual(formsOf(s.pets[0] as PetV3), []);
   assert.equal(setForm(s, "p1", "charmander").reason, "not-shared");
   const old = seed({ species: "silvally", evolved: ["type-null"], stage: 1 });
-  assert.deepStrictEqual(formsOf(old.pets[0] as PetV3), ["type-null", "silvally"]);
+  assert.deepStrictEqual(formsOf(old.pets[0] as PetV3).slice(0, 3), ["type-null", "silvally", "silvally-fighting"], "거쳐 온 종 뒤에 실버디 17 타입(2026-10-17)");
   assert.equal(setForm(old, "p1", "type-null").ok, true);
   process.stdout.write("(14) 공유 sid · 일반 개체와 옛 저장  ok\n");
 }
