@@ -1,0 +1,18 @@
+{
+  "pikachu": ["thunderbolt"],
+  "raichu": ["thunderbolt"],
+  "alakazam": ["psychic"],
+  "gengar": ["shadow-ball"],
+  "mewtwo": ["psychic"],
+  "typhlosion": ["eruption"],
+  "scizor": ["bullet-punch"],
+  "heracross": ["close-combat"],
+  "tyranitar": ["crunch"],
+  "gardevoir": ["moonblast"],
+  "metagross": ["meteor-mash"],
+  "lucario": ["aura-sphere"],
+  "zoroark": ["night-daze"],
+  "mimikyu": ["play-rough"],
+  "machamp": ["dynamic-punch"],
+  "snorlax": ["body-slam"]
+}

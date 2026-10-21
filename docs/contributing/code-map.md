@@ -185,6 +185,7 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 
 - `src/verify/save-rules.ts` — 서버가 저장을 받을 때 불가능한 변화를 찾는 규칙.
 - `src/tools/` — 시험과 개발 도구. `selftest/`(자체 검사), `check/`(정적 검사), `smoke/`(창 화면 검사), `e2e/`, `dev/`(창 하나만 띄워 보기, 시험 계정), `data/`(`data/*.json` 생성), `harness/`(시험 공용 틀과 장면).
+- `data-src/` — `data/*.json` 을 만드는 원천 자료와 중간 결과. 배포 패키지에 들어가지 않는다. `moves/` 는 기술 고르기의 습득 목록·결정력·사용률 CSV 다(`src/tools/data/build-move-pool.ts`, [기술과 특성](../specs/moves.md#원천-자료와-도구)).
 
 ## 큰 흐름
 

@@ -1,7 +1,8 @@
 // 종의 보유 기술 — data/species-moves.json 의 칸을 data/moves.json 의 값으로 푼다. 칸이 객체면 기본값을 덮는다 (docs/specs/moves.md)
 // 개체마다 위아래 순서를 바꿀 수 있다(PetV3.moveSwap). 마지막 진화체는 기본 2개 + 후보 4개 가운데 2개를 골라 둔다(PetV3.moves, 2026-10-10)
+// 메가 모습은 자기 기본 2개·후보 4개가 있다(data/mega-moves.json). 메가를 켜면 그 줄과 PetV3.megaMoves 를 쓰고, 끄면 종 줄과 PetV3.moves 로 돌아간다 (2026-10-22)
 import type { DexOptions } from "../dex/data.js";
-import { moveTable, moveTextTable, speciesMoveTable, type MoveClass, type MoveEffects, type SpeciesMoveCell } from "../dex/tables.js";
+import { megaMoveTable, moveTable, moveTextTable, speciesMoveTable, type MoveClass, type MoveEffects, type SpeciesMoveCell, type SpeciesMoveRow } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
 
 export interface MoveInfo {
@@ -19,14 +20,22 @@ export interface MoveInfo {
   effects?: MoveEffects; // 부담과 효과 (docs/specs/moves.md "부담과 효과")
 }
 
+// 기술 줄 — 메가 모습(mega)이 켜져 있고 그 모습의 줄이 있으면 메가 줄, 아니면 종 줄
+export function moveRowOf(slug: string, mega: string | null = null, opts?: DexOptions): SpeciesMoveRow | undefined {
+  return (mega ? megaMoveTable(opts)[mega] : undefined) ?? speciesMoveTable(opts)[slug];
+}
+
+// 메가 줄을 쓰는가 — 메가가 켜져 있고 그 모습의 줄이 있다
+export const usesMegaRow = (mega: string | null | undefined, opts?: DexOptions): mega is string => !!mega && !!megaMoveTable(opts)[mega];
+
 // 종의 기술 — 표 순서. 표에 없는 종이나 기술은 빠진다
-export function speciesMoves(slug: string, opts?: DexOptions): MoveInfo[] {
-  return movesFrom(speciesMoveTable(opts)[slug]?.moves ?? [], opts);
+export function speciesMoves(slug: string, opts?: DexOptions, mega: string | null = null): MoveInfo[] {
+  return movesFrom(moveRowOf(slug, mega, opts)?.moves ?? [], opts);
 }
 
 // 고를 수 있는 기술 — 기본 2개 뒤에 후보 4개. 진화 전 종과 킬가르도 밖의 특수 종은 기본 2개뿐이다 (docs/specs/moves.md "기술 고르기")
-export function moveOptions(slug: string, opts?: DexOptions): MoveInfo[] {
-  const row = speciesMoveTable(opts)[slug];
+export function moveOptions(slug: string, opts?: DexOptions, mega: string | null = null): MoveInfo[] {
+  const row = moveRowOf(slug, mega, opts);
   if (!row) return [];
   return movesFrom(row.special && row.special !== "stance" ? row.moves : [...row.moves, ...(row.candidates ?? [])], opts);
 }
@@ -74,11 +83,16 @@ export function pickedIn(options: readonly MoveInfo[], chosen: readonly string[]
   return got.every((m): m is MoveInfo => m != null) ? got : null;
 }
 
-// 개체의 기술 — 고른 2개가 있으면 그 순서로, 없으면 기본 2개(순서를 바꿨으면 거꾸로)
-export function petMoves(pet: Pick<PetV3, "species" | "moveSwap" | "moves">, opts?: DexOptions): MoveInfo[] {
+// 개체가 고른 기술 2개 — 메가 줄을 쓰면 그 모습의 megaMoves, 아니면 moves
+export const chosenMovesOf = (pet: Pick<PetV3, "moves" | "megaMoves">, mega: string | null = null, opts?: DexOptions): [string, string] | undefined =>
+  usesMegaRow(mega, opts) ? pet.megaMoves?.[mega] : pet.moves;
+
+// 개체의 기술 — 고른 2개가 있으면 그 순서로, 없으면 기본 2개(순서를 바꿨으면 거꾸로). mega 는 배틀 파티에서 켠 메가 모습
+// 메가 줄의 기본 2개는 moveSwap 을 따르지 않는다 — moveSwap 은 종 줄의 순서다
+export function petMoves(pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "megaMoves">, opts?: DexOptions, mega: string | null = null): MoveInfo[] {
   const fixed = fixedMoveOf(pet.species, opts);
-  const picked = pickedIn(moveOptions(pet.species, opts), pet.moves, fixed);
+  const picked = pickedIn(moveOptions(pet.species, opts, mega), chosenMovesOf(pet, mega, opts), fixed);
   if (picked) return picked;
-  const moves = speciesMoves(pet.species, opts);
-  return pet.moveSwap && !fixed ? moves.reverse() : moves;
+  const moves = speciesMoves(pet.species, opts, mega);
+  return pet.moveSwap && !fixed && !usesMegaRow(mega, opts) ? moves.reverse() : moves;
 }

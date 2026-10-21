@@ -30,6 +30,8 @@ export interface BattleMegaRow {
   stats: number[];
   types: string[];
   ability: string;
+  moves?: BattleSpeciesRow["moves"]; // 메가 모습의 기본 2개 (data/mega-moves.json). 없으면 기본 종의 기술을 쓴다. 옛 판 데이터에는 없다
+  picks?: string[]; // 메가 모습의 후보 4개
 }
 export interface BattleFormRow {
   form: string;
@@ -59,7 +61,7 @@ export interface FighterSource {
   species: string; // 기본 종
   form?: string | null; // 배틀에서 켠 메가 모습 슬러그
   moveSwap?: boolean;
-  moves?: string[]; // 개체가 고른 기술 2개, 순서대로 (PetV3.moves). 그 종의 기본 2개 + 후보 안이 아니면 버리고 기본 2개를 쓴다. 옛 등록에는 없다
+  moves?: string[]; // 개체가 고른 기술 2개, 순서대로 — 메가 줄이 있는 메가 모습이면 PetV3.megaMoves[form], 아니면 PetV3.moves. 그 줄의 기본 2개 + 후보 안이 아니면 버리고 기본 2개를 쓴다. 옛 등록에는 없다
   level?: number; // 개체의 실제 레벨 — 약어리 어군 해금에 쓴다. 없으면 해금 전
   shiny?: boolean; // 그림만 — 이로치. 전투 값에는 쓰지 않는다 (배틀 창 그림, 2026-10-09)
   gender?: string; // 성별(male·female·unknown) — 성별 그림이 따로 있는 종의 그림, 성별 능력치가 있는 종(BattleData.female)의 능력치
@@ -103,9 +105,18 @@ export function validPicks(row: BattleSpeciesRow | undefined, chosen: readonly u
 
 // 종의 기술 2개 — 칸이 객체면 기본값을 덮는다. 표에 없는 기술은 빠진다
 // chosen 이 그 종에서 쓸 수 있으면 그 2개를 그 순서로 쓴다. 아니면 기본 2개이고, swap 이면 거꾸로다
-export function movesOf(data: BattleData, species: string, swap: boolean, chosen?: readonly unknown[] | null): EngineMove[] {
-  const out: EngineMove[] = [];
+// 기술 줄 — 메가 모습(form)에 자기 기술 줄이 있으면 그 줄, 아니면 종 줄 (docs/specs/moves.md "메가 모습의 기술", 2026-10-22)
+export function battleMoveRow(data: BattleData, species: string, form?: string | null): BattleSpeciesRow | undefined {
   const sp = data.species[species];
+  const mega = form ? data.mega[form] : undefined;
+  return sp && mega?.moves ? { stats: sp.stats, types: sp.types, ability: sp.ability, moves: mega.moves, ...(mega.picks ? { picks: mega.picks } : {}), tier: sp.tier ?? null } : sp;
+}
+
+// form — 배틀에서 켠 메가 모습. 메가 줄의 기본 2개는 swap 을 따르지 않는다(swap 은 종 줄의 순서다)
+export function movesOf(data: BattleData, species: string, swap: boolean, chosen?: readonly unknown[] | null, form?: string | null): EngineMove[] {
+  const out: EngineMove[] = [];
+  const sp = battleMoveRow(data, species, form);
+  if (sp !== data.species[species]) swap = false;
   const cells = sp?.moves ?? [];
   const picked = validPicks(sp, chosen);
   const list = picked ? picked.map((id) => cells.find((c) => (typeof c === "string" ? c : c.id) === id) ?? id) : cells;
@@ -142,7 +153,7 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
   if (!Array.isArray(baseStats) || baseStats.length !== 6) return null;
   const real = (six: readonly number[]): number[] => six.map((b, i) => realStat(b, i, basis));
   const alt = mega ? undefined : data.forms[src.species];
-  const moves = movesOf(data, src.species, src.moveSwap === true, src.moves);
+  const moves = movesOf(data, src.species, src.moveSwap === true, src.moves, mega ? src.form : null);
   return {
     species: shown,
     types: mega ? mega.types : (female?.types ?? sp.types),
@@ -215,7 +226,10 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
     const tier = tierFrom(data, species);
     if (tier && (count[tier] += 1) > BATTLE_LIMITS[tier]) blocked = true;
     if (form && (count.mega += 1) > BATTLE_LIMITS.mega) blocked = true;
-    const picked = validPicks(data.species[species], Array.isArray(pet.moves) ? pet.moves : null);
+    // 고른 기술 — 메가 줄이 있는 메가 모습이면 그 모습의 고른 기술(megaMoves), 아니면 moves
+    const row = battleMoveRow(data, species, form);
+    const megaPicked = form && row !== data.species[species] && isRec(pet.megaMoves) ? pet.megaMoves[form] : null;
+    const picked = validPicks(row, Array.isArray(megaPicked) ? megaPicked : row === data.species[species] && Array.isArray(pet.moves) ? pet.moves : null);
     return { species, form, moveSwap: pet.moveSwap === true, ...(picked ? { moves: picked } : {}), level: typeof pet.level === "number" ? pet.level : 1, shiny: pet.shiny === true, ...(typeof pet.gender === "string" ? { gender: pet.gender } : {}) };
   });
   return { party, count: n, blocked };

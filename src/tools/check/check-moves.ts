@@ -16,7 +16,8 @@
 //   9. 기술 설명(move-text.ko.json)의 키는 moves.json 에 있고, 설명은 빈 문자열이 아니며 줄바꿈이 없다
 //  10. 타입 상성표(type-chart.json)는 18 × 18 이고 배율은 0·0.5·1·2 뿐이다
 //  11. 메가 배틀 값(mega-battle.json)의 키는 mega.json 의 모습과 같다. 종족값 6개, 특성은 abilities.json 에 있다
-//  12. 후보(candidates)는 4개까지, 공격기, 기본 2개·서로와 겹치지 않고, 종 타입과 다른 후보는 하나까지. 킬가르도(stance) 밖의 특수 종에는 없다
+//  12. 후보(candidates)는 4개까지, 공격기, 기본 2개·서로와 겹치지 않고, 종 타입과 다른 후보는 하나까지. 킬가르도(stance) 밖의 특수 종에는 없다. 스킨 특성 종의 노말 기술은 바뀐 타입으로 본다
+//  13. 메가 기술(mega-moves.json)의 키는 mega.json 의 모습이다. 기본 2개·후보는 12 와 같은 규칙이고, 칸 타입은 메가 타입이다. 스킨 특성(스카이스킨 등)의 노말 기술은 바뀐 타입으로 본다. 무거운 기술은 기본 2개에 없다
 // 어긋남이 있으면 모두 찍고 종료 코드 1
 import fs from "node:fs";
 import path from "node:path";
@@ -104,6 +105,9 @@ function readTable<T>(file: string): Record<string, T> {
   return out;
 }
 
+// 스킨 특성 — 노말 기술이 이 타입이 된다. 메가 기술의 칸 타입에 쓴다 (엔진 attackerMove 와 같다)
+const SKIN_TYPE: Readonly<Record<string, string>> = { aerilate: "flying", pixilate: "fairy", refrigerate: "ice", galvanize: "electric" };
+
 // 두 타입 종이지만 두 칸이 같은 타입인 종 — 한 타입의 공격기가 무거운 기술(충전·반동으로 쉼·자기 HP 절반)뿐이라 다른 자기 타입에서 골랐다 (docs/specs/moves.md "처음 값을 정한 순서")
 const HEAVY_FILL = new Set(["landorus", "landorus-therian", "enamorus", "enamorus-therian"]);
 // 기본 2개에 무거운 기술을 그대로 둔 종 — 그 종 타입에 무겁지 않은 공격기가 없다
@@ -187,11 +191,13 @@ export function moveDataFindings(): string[] {
       bad.push(`종 ${key}: 기술 ${ids.length}개`);
       continue;
     }
-    // 웨더볼·대지의파동은 종 특성이 부르는 날씨·필드의 타입으로 본다 (docs/specs/moves.md "날씨와 필드")
+    // 웨더볼·대지의파동은 종 특성이 부르는 날씨·필드의 타입으로 본다 (docs/specs/moves.md "날씨와 필드"). 스킨 특성의 노말 기술은 바뀐 타입이다
+    const skin = SKIN_TYPE[speciesAbilities[key] ?? ""];
     const slotTypes = entry.moves.map((s) => {
       const id = typeof s === "string" ? s : s.id;
       const envType = ENV_TYPE[id]?.[speciesAbilities[key] ?? ""];
       if (envType) return envType;
+      if (skin && typeof s === "string" && moves[s]?.type === "normal") return skin;
       return (typeof s === "string" ? moves[s]?.type : (s.type ?? moves[s.id]?.type)) ?? "";
     });
     const off = slotTypes.filter((t) => !sp.types.includes(t)).length;
@@ -215,7 +221,7 @@ export function moveDataFindings(): string[] {
       if (!m) bad.push(`종 ${key}: 후보 ${id} 가 moves.json 에 없음`);
       else if (m.class === "status" || !(m.power && m.power > 0)) bad.push(`종 ${key}: 후보 ${id} 가 공격기가 아님`);
     }
-    const candOff = cand.filter((id) => !sp.types.includes(ENV_TYPE[id]?.[speciesAbilities[key] ?? ""] ?? moves[id]?.type ?? "")).length;
+    const candOff = cand.filter((id) => !sp.types.includes(ENV_TYPE[id]?.[speciesAbilities[key] ?? ""] ?? (skin && moves[id]?.type === "normal" ? skin : (moves[id]?.type ?? "")))).length;
     if (candOff > 1) bad.push(`종 ${key}: 종 타입과 다른 후보 ${candOff}개`);
   }
 
@@ -266,13 +272,44 @@ export function moveDataFindings(): string[] {
     if (!m.stats || m.stats.length !== 6 || m.stats.some((v) => !(Number.isInteger(v) && v > 0))) bad.push(`메가 ${slug}: 종족값 ${JSON.stringify(m.stats)}`);
     if (!m.ability || !abilities[m.ability]) bad.push(`메가 ${slug}: 특성 ${m.ability} 가 abilities.json 에 없음`);
   }
+  // 13 메가 기술 — 메가 모습은 종이 아니라 따로 둔다 (docs/specs/moves.md "메가 모습의 기술")
+  const megaMoves = readTable<SpeciesMoves>("mega-moves.json");
+  const megaTypes = readTable<Record<string, { types?: string[] }>>("mega.json").forms ?? {};
+  for (const [slug, entry] of Object.entries(megaMoves)) {
+    const types = megaTypes[slug]?.types;
+    const ability = megaBattle[slug]?.ability ?? "";
+    if (!types) {
+      bad.push(`메가 기술 ${slug}: mega.json 에 없는 모습`);
+      continue;
+    }
+    const slotType = (id: string): string => (SKIN_TYPE[ability] && moves[id]?.type === "normal" ? SKIN_TYPE[ability]! : (ENV_TYPE[id]?.[ability] ?? moves[id]?.type ?? ""));
+    const ids = entry.moves.map((x) => (typeof x === "string" ? x : x.id));
+    const cand = entry.candidates ?? [];
+    if (ids.length !== 2) bad.push(`메가 기술 ${slug}: 기술 ${ids.length}개`);
+    if (cand.length > 4) bad.push(`메가 기술 ${slug}: 후보 ${cand.length}개`);
+    if (new Set([...ids, ...cand]).size !== ids.length + cand.length) bad.push(`메가 기술 ${slug}: 겹친 기술 ${[...ids, ...cand].join("·")}`);
+    for (const id of [...ids, ...cand]) {
+      const m = moves[id];
+      if (!m) bad.push(`메가 기술 ${slug}: ${id} 가 moves.json 에 없음`);
+      else if (m.class === "status" || !(m.power && m.power > 0)) bad.push(`메가 기술 ${slug}: ${id} 가 공격기가 아님`);
+    }
+    const slotTypes = ids.map(slotType);
+    const off = slotTypes.filter((t) => !types.includes(t)).length;
+    if (off > 1) bad.push(`메가 기술 ${slug}(${types.join("/")}): 종 타입과 다른 칸이 ${off}개 — ${slotTypes.join("·")}`);
+    if (types.length === 2 && off === 0 && slotTypes[0] === slotTypes[1]) bad.push(`메가 기술 ${slug}(${types.join("/")}): 두 칸이 같은 타입 ${slotTypes[0]}`);
+    if (types.length === 1 && slotTypes.some((t) => t !== types[0]) && off < 1) bad.push(`메가 기술 ${slug}: 칸 타입 ${slotTypes.join("·")}`);
+    const heavyIds = ids.filter((id) => heavyFor(id, ability, moves[id]));
+    if (heavyIds.length) bad.push(`메가 기술 ${slug}: 기본 2개에 무거운 기술 ${heavyIds.join("·")}`);
+    const candOff = cand.filter((id) => !types.includes(slotType(id))).length;
+    if (candOff > 1) bad.push(`메가 기술 ${slug}: 종 타입과 다른 후보 ${candOff}개`);
+  }
   return bad;
 }
 
 function main(): void {
   const bad = moveDataFindings();
   const count = (file: string): number => Object.keys(readTable<unknown>(file)).length;
-  process.stdout.write(`기술 ${count("moves.json")} · 종 기술 ${count("species-moves.json")} · 특성 ${count("abilities.json")} · 종 특성 ${count("species-abilities.json")} · 기술 설명 ${count("move-text.ko.json")} · 상성 ${count("type-chart.json")}타입 · 메가 배틀 값 ${count("mega-battle.json")}\n`);
+  process.stdout.write(`기술 ${count("moves.json")} · 종 기술 ${count("species-moves.json")} · 특성 ${count("abilities.json")} · 종 특성 ${count("species-abilities.json")} · 기술 설명 ${count("move-text.ko.json")} · 상성 ${count("type-chart.json")}타입 · 메가 배틀 값 ${count("mega-battle.json")} · 메가 기술 ${count("mega-moves.json")}\n`);
   if (bad.length) {
     for (const line of bad) process.stdout.write(`  ${line}\n`);
     process.stdout.write(`어긋남 ${bad.length}\n`);

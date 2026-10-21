@@ -8,7 +8,7 @@ import { presetName, slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
-import { fixedMoveOf, moveOptions, pickedIn } from "./moves.js";
+import { fixedMoveOf, moveOptions, pickedIn, speciesMoves, usesMegaRow } from "./moves.js";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
 
@@ -116,10 +116,20 @@ export function importPreset(save: Pick<SaveV3, "battle" | "party" | "pets">, pr
 
 // 개체의 기술 위아래 순서를 바꾼다 — 개체에 저장한다 (어디서 보든 같은 순서)
 // 고른 기술(PetV3.moves)이 있으면 그 2개를 맞바꾼다. 배틀 파티의 모습에서 쓸 수 없는 값이면 지우고 기본 2개의 순서(moveSwap)를 바꾼다
+// 메가 줄을 쓰면(배틀 파티에서 켠 메가 모습) 그 모습의 고른 기술(PetV3.megaMoves)을 맞바꾼다. 없으면 메가 기본 2개를 거꾸로 적는다 — moves 는 그대로 둔다
 export function swapMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, opts?: DexOptions): Outcome<BattleFailure> & { swapped?: boolean } {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   if (fixedMoveOf(battleSpeciesOf(save, pet, opts), opts)) return { ok: false, reason: "bad-args" }; // 킬가르도 — 킹실드는 1번 칸에 고정
+  const mega = battleMegaOf(save, pet.id);
+  if (usesMegaRow(mega, opts)) {
+    const species = battleSpeciesOf(save, pet, opts);
+    const cur = pet.megaMoves?.[mega];
+    const now = (cur && pickedIn(moveOptions(species, opts, mega), cur)) ?? speciesMoves(species, opts, mega);
+    if (now.length !== 2) return { ok: false, reason: "bad-args" };
+    pet.megaMoves = { ...(pet.megaMoves ?? {}), [mega]: [now[1]!.id, now[0]!.id] };
+    return { ok: true, swapped: true };
+  }
   if (pet.moves && pickedIn(moveOptions(battleSpeciesOf(save, pet, opts), opts), pet.moves)) {
     pet.moves = [pet.moves[1], pet.moves[0]];
     return { ok: true, swapped: true };
@@ -132,10 +142,18 @@ export function swapMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, 
 
 // 개체의 기술 2개를 고른다 — 배틀 파티의 모습(battleSpeciesOf)의 기본 2개 + 후보 가운데 서로 다른 2개, 순서대로. 개체에 저장한다
 // 기술 바꾸기 모달이 쓴다 (docs/specs/adventure.md "보유 기술"). 쓸 수 없는 기술이면 bad-args
+// 메가 줄을 쓰면 그 모습의 6개 가운데 고르고 PetV3.megaMoves 에 적는다. 기본 모습의 고른 기술(moves)은 건드리지 않는다 (2026-10-22)
 export function setMoves(save: Pick<SaveV3, "battle" | "pets">, petId: string, moves: readonly string[], opts?: DexOptions): Outcome<BattleFailure> {
   const pet = save.pets.find((p) => p.id === petId);
   if (!pet) return { ok: false, reason: "no-pet" };
   const species = battleSpeciesOf(save, pet, opts);
+  const mega = battleMegaOf(save, pet.id);
+  if (usesMegaRow(mega, opts)) {
+    const got = pickedIn(moveOptions(species, opts, mega), moves);
+    if (!got) return { ok: false, reason: "bad-args" };
+    pet.megaMoves = { ...(pet.megaMoves ?? {}), [mega]: [got[0]!.id, got[1]!.id] };
+    return { ok: true };
+  }
   const picked = pickedIn(moveOptions(species, opts), moves, fixedMoveOf(species, opts));
   if (!picked) return { ok: false, reason: "bad-args" };
   pet.moves = [picked[0]!.id, picked[1]!.id];

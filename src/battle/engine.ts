@@ -140,6 +140,8 @@ export function startPos(side: Side, slot: number): Pos {
 // 능력 변화 단계 → 배율. 오르면 1.2·1.4, 내리면 그 역수 [스펙 미확정: 내림 배율]
 // 능력 변화 — 단계당 25%, 최대 ±3. 오르면 1 + 0.25 × 단계, 내리면 1 ÷ (1 + 0.25 × 단계)
 // (docs/specs/moves.md "능력 변화", 2026-10-08 사용자 "25%로 하고", 2026-10-10 사용자 "배틀 랭크업 6에서 3으로 제한")
+// 지우개굴닌자 — 유대변화로 바뀐 모습과 처음부터 그 모습인 개체 모두 이 종 키다. 물수리검이 위력 20·3회가 된다(원작 7세대)
+const ASH_GRENINJA = "greninja-ash";
 const STAGE_STEP = 0.25;
 const STAGE_MAX = 3;
 const stageMul = (stage: number): number => (stage >= 0 ? 1 + STAGE_STEP * stage : 1 / (1 + STAGE_STEP * -stage));
@@ -737,6 +739,7 @@ export function runBattle(input: BattleInput): BattleResult {
     if (field === "electric" && m.id === "rising-voltage" && grounded(o)) power = 140;
     if (field === "electric" && m.id === "psyblade") power = 120;
     if (field === "psychic" && m.id === "expanding-force" && grounded(u)) power = 120;
+    if (m.id === "water-shuriken" && u.species === ASH_GRENINJA) power = 20; // 지우개굴닌자 물수리검 — 원작 7세대 위력 20(hitsOf 의 3회와 짝)
     if (m.id === "thunder" || m.id === "hurricane") accuracy = sunny ? 50 : rainy ? null : accuracy;
     if (m.id === "blizzard" && weather === "snow") accuracy = null;
     let mul = 1;
@@ -1484,6 +1487,7 @@ export function runBattle(input: BattleInput): BattleResult {
   function hitsOf(u: Unit, m: EngineMove, stacks: number): number {
     if (!m.hits) return 1;
     const [lo, hi] = m.hits;
+    if (m.id === "water-shuriken" && u.species === ASH_GRENINJA) return 3; // 지우개굴닌자 물수리검 — 원작 7세대 반드시 3회
     if (isSkillLinkMove(u, m)) return stacks;
     if (lo === hi) return lo;
     if (lo === 2 && hi === 5) {

@@ -1,0 +1,1368 @@
+모습 1400(종 1340, 메가 60), 사용률 읽힘 1275, 없음 125
+손 예외로 지금 값을 두는 종 91
+기본 2개가 다른 줄 244, 후보가 다른 줄 386
+새 기술 3: hyperspace-fury payback grass-pledge
+계산 못 한 모습: 없음
+
+venusaur
+  지금: leaf-storm·sludge-bomb / giga-drain·energy-ball·poison-jab·earth-power
+  도구: leaf-storm·sludge-bomb / giga-drain·energy-ball·sludge-wave·earth-power
+butterfree
+  지금: bug-buzz·air-slash / bug-bite·aerial-ace·gust·giga-drain
+  도구: bug-buzz·air-slash / u-turn·bug-bite·aerial-ace·giga-drain
+pidgey
+  지금: quick-attack·aerial-ace / 
+  도구: quick-attack·wing-attack / 
+raticate
+  지금: facade·double-edge / giga-impact·strength·take-down·crunch
+  도구: double-edge·strength / facade·giga-impact·take-down·crunch
+raticate-alola
+  지금: crunch·uproar / double-edge·dark-pulse·facade·stomping-tantrum
+  도구: crunch·uproar / double-edge·dark-pulse·throat-chop·stomping-tantrum
+ekans
+  지금: venoshock·poison-fang / 
+  도구: venoshock·poison-tail / 
+sandslash
+  지금: earthquake·high-horsepower / drill-run·earth-power·stomping-tantrum·leech-life
+  도구: earthquake·high-horsepower / drill-run·stomping-tantrum·bulldoze·leech-life
+wigglytuff
+  지금: hyper-voice·dazzling-gleam / alluring-voice·play-rough·uproar·flamethrower
+  도구: hyper-voice·dazzling-gleam / alluring-voice·uproar·tera-blast·flamethrower
+zubat (사용률 없음)
+  지금: venoshock·aerial-ace / 
+  도구: venoshock·wing-attack / 
+golbat
+  지금: poison-fang·air-slash / 
+  도구: poison-fang·air-cutter / 
+parasect
+  지금: x-scissor·bullet-seed / giga-drain·energy-ball·fury-cutter·brick-break
+  도구: x-scissor·energy-ball / giga-drain·bullet-seed·fury-cutter·brick-break
+venomoth
+  지금: bug-buzz·sludge-wave / sludge-bomb·venoshock·leech-life·giga-drain
+  도구: bug-buzz·sludge-wave / sludge-bomb·lunge·leech-life·giga-drain
+persian
+  지금: body-slam·hyper-voice / double-edge·facade·swift·bite
+  도구: body-slam·swift / double-edge·hyper-voice·slash·bite
+persian-alola
+  지금: foul-play·dark-pulse / snarl·lash-out·bite·power-gem
+  도구: foul-play·snarl / dark-pulse·throat-chop·lash-out·power-gem
+golduck
+  지금: surf·hydro-pump / muddy-water·liquidation·water-pulse·ice-beam
+  도구: surf·hydro-pump / muddy-water·liquidation·waterfall·ice-beam
+arcanine
+  지금: burn-up·flamethrower / flare-blitz·raging-fury·heat-wave·close-combat
+  도구: burn-up·overheat / flare-blitz·flamethrower·raging-fury·close-combat
+kadabra
+  지금: psyshock·psychic / 
+  도구: psychic·psycho-cut / 
+machamp
+  지금: dynamic-punch·close-combat / cross-chop·brick-break·focus-blast·stone-edge
+  도구: dynamic-punch·close-combat / cross-chop·brick-break·superpower·stone-edge
+graveler
+  지금: rock-blast·stomping-tantrum / 
+  도구: rock-slide·stomping-tantrum / 
+graveler-alola
+  지금: rock-slide·thunder-punch / 
+  도구: rock-slide·body-slam / 
+golem
+  지금: stone-edge·earthquake / rock-slide·rock-blast·high-horsepower·body-press
+  도구: stone-edge·earthquake / rock-slide·rock-blast·high-horsepower·fire-punch
+golem-alola
+  지금: stone-edge·supercell-slam / rock-slide·thunder-punch·rock-blast·earthquake
+  도구: stone-edge·body-slam / double-edge·supercell-slam·rock-blast·earthquake
+doduo
+  지금: quick-attack·acrobatics / 
+  도구: quick-attack·pluck / 
+drowzee
+  지금: stored-power·psybeam / 
+  도구: psybeam·confusion / 
+krabby (사용률 없음)
+  지금: bubble-beam·brine / 
+  도구: bubble-beam·water-pulse / 
+electrode
+  지금: thunderbolt·discharge / thunder·electroweb·supercell-slam·foul-play
+  도구: thunderbolt·discharge / thunder·electroweb·supercell-slam·hyper-beam
+electrode-hisui
+  지금: thunderbolt·leaf-storm / chloroblast·giga-drain·discharge·foul-play
+  도구: thunderbolt·leaf-storm / chloroblast·giga-drain·discharge·tera-blast
+koffing
+  지금: clear-smog·venoshock / 
+  도구: clear-smog·sludge / 
+mr-mime
+  지금: psychic·dazzling-gleam / future-sight·confusion·thunderbolt
+  도구: psychic·dazzling-gleam / future-sight·psybeam·thunderbolt
+jolteon
+  지금: thunderbolt·discharge / thunder·electroweb·rising-voltage·alluring-voice
+  도구: thunderbolt·discharge / thunder·electroweb·volt-switch·alluring-voice
+flareon
+  지금: flare-blitz·flame-charge / fire-fang·fire-blast·temper-flare·facade
+  도구: flare-blitz·flame-charge / fire-fang·fire-blast·temper-flare·superpower
+snorlax
+  지금: body-slam·double-edge / giga-impact·facade·hyper-voice·earthquake
+  도구: body-slam·double-edge / giga-impact·facade·uproar·earthquake
+zapdos
+  지금: thunderbolt·hurricane / discharge·thunder·air-cutter·heat-wave
+  도구: thunderbolt·hurricane / discharge·thunder·brave-bird·heat-wave
+moltres-galar
+  지금: fiery-wrath·air-slash / hurricane·dark-pulse·brave-bird·shadow-ball
+  도구: fiery-wrath·air-slash / hurricane·dark-pulse·foul-play·shadow-ball
+dratini
+  지금: dragon-tail·breaking-swipe / 
+  도구: breaking-swipe·dragon-breath / 
+dragonair
+  지금: dragon-tail·dragon-pulse / 
+  도구: dragon-pulse·scale-shot / 
+dragonite
+  지금: outrage·aerial-ace / dragon-claw·scale-shot·air-slash·earthquake
+  도구: outrage·hurricane / dragon-claw·scale-shot·aerial-ace·earthquake
+mew
+  지금: psychic·stored-power / psyshock·psychic-fangs·expanding-force·ice-beam
+  도구: psychic·psyshock / psychic-fangs·expanding-force·psychic-noise·ice-beam
+meganium
+  지금: leaf-storm·petal-blizzard / giga-drain·energy-ball·seed-bomb·earthquake
+  도구: leaf-storm·giga-drain / petal-blizzard·energy-ball·seed-bomb·earthquake
+furret
+  지금: body-slam·double-edge / tera-blast·facade·giga-impact·play-rough
+  도구: body-slam·double-edge / slash·facade·hyper-voice·play-rough
+noctowl
+  지금: uproar·air-slash / hyper-voice·hurricane·tera-blast·moonblast
+  도구: uproar·air-slash / hyper-voice·hurricane·hyper-beam·moonblast
+spinarak
+  지금: bug-bite·venoshock / 
+  도구: bug-bite·acid-spray / 
+crobat
+  지금: cross-poison·aerial-ace / sludge-bomb·air-slash·venoshock·leech-life
+  도구: cross-poison·air-slash / sludge-bomb·aerial-ace·pluck·leech-life
+sudowoodo
+  지금: stone-edge·rock-blast / head-smash·rock-slide·rock-tomb·wood-hammer
+  도구: stone-edge·rock-slide / head-smash·rock-blast·rock-tomb·wood-hammer
+hoppip
+  지금: magical-leaf·acrobatics / 
+  도구: magical-leaf·aerial-ace / 
+skiploom
+  지금: magical-leaf·acrobatics / 
+  도구: magical-leaf·aerial-ace / 
+jumpluff
+  지금: energy-ball·acrobatics / giga-drain·seed-bomb·aerial-ace·pollen-puff
+  도구: energy-ball·aerial-ace / giga-drain·seed-bomb·acrobatics·dazzling-gleam
+aipom
+  지금: fury-swipes·tera-blast / 
+  도구: fury-swipes·double-hit / 
+sunflora
+  지금: energy-ball·leaf-storm / solar-beam·giga-drain·petal-dance·earth-power
+  도구: energy-ball·leaf-storm / solar-beam·giga-drain·petal-blizzard·earth-power
+wooper-paldea
+  지금: venoshock·bulldoze / 
+  도구: poison-tail·bulldoze / 
+umbreon
+  지금: foul-play·dark-pulse / crunch·throat-chop·lash-out·alluring-voice
+  도구: dark-pulse·snarl / crunch·foul-play·throat-chop·alluring-voice
+slowking
+  지금: surf·psychic / scald·future-sight·psychic-noise·ice-beam
+  도구: scald·psychic / psychic-noise·surf·hydro-pump·ice-beam
+forretress
+  지금: lunge·iron-head / bug-buzz·bug-bite·steel-beam·body-press
+  도구: lunge·iron-head / pin-missile·bug-buzz·smart-strike·earthquake
+steelix
+  지금: iron-head·earthquake / high-horsepower·flash-cannon·bulldoze·body-press
+  도구: iron-head·earthquake / high-horsepower·flash-cannon·drill-run·rock-slide
+ursaring
+  지금: facade·body-slam / 
+  도구: body-slam·thrash / 
+swinub
+  지금: avalanche·mud-slap / 
+  도구: ice-fang·mud-slap / 
+delibird
+  지금: ice-beam·brave-bird / ice-spinner·air-slash·freeze-dry·foul-play
+  도구: ice-beam·brave-bird / ice-spinner·air-slash·freeze-dry·drill-run
+skarmory
+  지금: iron-head·brave-bird / drill-peck·steel-wing·dual-wingbeat·body-press
+  도구: iron-head·brave-bird / drill-peck·dual-wingbeat·steel-wing·drill-run
+miltank
+  지금: body-slam·double-edge / facade·giga-impact·stomp·earthquake
+  도구: body-slam·double-edge / strength·headbutt·facade·earthquake
+raikou
+  지금: thunderbolt·discharge / thunder·electroweb·supercell-slam·scald
+  도구: thunderbolt·discharge / thunder·supercell-slam·volt-switch·scald
+entei
+  지금: sacred-fire·flare-blitz / eruption·lava-plume·flamethrower·stone-edge
+  도구: sacred-fire·flare-blitz / eruption·flamethrower·overheat·stone-edge
+linoone
+  지금: facade·double-edge / slash·strength·headbutt·shadow-claw
+  도구: double-edge·strength / slash·headbutt·facade·shadow-claw
+shiftry
+  지금: leaf-blade·foul-play / petal-blizzard·dark-pulse·throat-chop·rock-slide
+  도구: leaf-blade·dark-pulse / petal-blizzard·throat-chop·giga-drain·rock-slide
+taillow
+  지금: quick-attack·aerial-ace / 
+  도구: quick-attack·wing-attack / 
+swellow
+  지금: facade·brave-bird / air-slash·aerial-ace·hyper-beam·steel-wing
+  도구: facade·brave-bird / air-slash·aerial-ace·giga-impact·steel-wing
+vigoroth
+  지금: body-slam·facade / 
+  도구: body-slam·slash / 
+ninjask
+  지금: x-scissor·aerial-ace / bug-bite·bug-buzz·facade
+  도구: x-scissor·aerial-ace / u-turn·bug-buzz·slash
+shedinja
+  지금: x-scissor·shadow-claw / bug-buzz·phantom-force·shadow-ball·aerial-ace
+  도구: x-scissor·shadow-claw / bug-buzz·phantom-force·shadow-ball·facade
+exploud
+  지금: hyper-voice·boomburst / hyper-beam·uproar·strength·flamethrower
+  도구: boomburst·hyper-voice / uproar·strength·rock-climb·flamethrower
+hariyama
+  지금: drain-punch·close-combat / brick-break·focus-punch·body-press·facade
+  도구: drain-punch·close-combat / brick-break·body-press·focus-punch·earthquake
+skitty
+  지금: covet·fury-swipes / 
+  도구: covet·tackle / 
+delcatty
+  지금: double-edge·strength / giga-impact·facade·hyper-beam·play-rough
+  도구: double-edge·strength / giga-impact·facade·covet·play-rough
+sableye
+  지금: foul-play·poltergeist / hex·dark-pulse·shadow-claw·drain-punch
+  도구: foul-play·poltergeist / throat-chop·lash-out·shadow-ball·body-slam
+aggron
+  지금: iron-head·rock-slide / head-smash·stone-edge·iron-tail·body-press
+  도구: iron-head·rock-slide / head-smash·stone-edge·iron-tail·earthquake
+manectric
+  지금: discharge·thunderbolt / thunder·rising-voltage·wild-charge·flamethrower
+  도구: thunderbolt·discharge / thunder·rising-voltage·supercell-slam·flamethrower
+plusle
+  지금: discharge·thunderbolt / electroweb·thunder·thunder-punch·alluring-voice
+  도구: thunderbolt·discharge / electroweb·thunder·volt-switch·alluring-voice
+minun
+  지금: thunderbolt·discharge / electroweb·thunder·thunder-punch·alluring-voice
+  도구: thunderbolt·thunder / discharge·volt-switch·thunder-punch·alluring-voice
+volbeat
+  지금: bug-buzz·lunge / pounce·bug-bite·skitter-smack·dazzling-gleam
+  도구: lunge·bug-buzz / u-turn·skitter-smack·bug-bite·dazzling-gleam
+illumise
+  지금: bug-buzz·struggle-bug / pounce·skitter-smack·bug-bite·dazzling-gleam
+  도구: bug-buzz·struggle-bug / u-turn·skitter-smack·bug-bite·dazzling-gleam
+swalot
+  지금: sludge-wave·sludge-bomb / gunk-shot·poison-jab·venoshock·body-press
+  도구: sludge-wave·sludge-bomb / gunk-shot·poison-jab·sludge·giga-drain
+wailord
+  지금: water-spout·scald / hydro-pump·surf·waterfall·ice-beam
+  도구: water-spout·hydro-pump / scald·surf·waterfall·ice-beam
+spinda
+  지금: uproar·double-edge / facade·thrash·body-slam·drain-punch
+  도구: uproar·body-slam / double-edge·thrash·strength·drain-punch
+vibrava
+  지금: bulldoze·dragon-tail / 
+  도구: bulldoze·dragon-breath / 
+swablu
+  지금: swift·acrobatics / 
+  도구: round·aerial-ace / 
+zangoose
+  지금: facade·double-edge / crush-claw·body-slam·slash·close-combat
+  도구: double-edge·crush-claw / body-slam·slash·facade·close-combat
+crawdaunt
+  지금: crabhammer·crunch / liquidation·waterfall·dark-pulse·close-combat
+  도구: crabhammer·crunch / liquidation·waterfall·lash-out·close-combat
+kecleon
+  지금: slash·strength / facade·cut·fury-swipes·drain-punch
+  도구: strength·slash / facade·cut·scratch·drain-punch
+dusclops
+  지금: hex·shadow-ball / 
+  도구: shadow-ball·shadow-punch / 
+absol
+  지금: night-slash·foul-play / throat-chop·dark-pulse·bite·psycho-cut
+  도구: night-slash·throat-chop / foul-play·knock-off·bite·psycho-cut
+glalie
+  지금: freeze-dry·ice-beam / frost-breath·blizzard·avalanche·earthquake
+  도구: freeze-dry·ice-beam / frost-breath·blizzard·ice-spinner·earthquake
+walrein
+  지금: blizzard·surf / ice-beam·brine·waterfall·earthquake
+  도구: blizzard·surf / ice-beam·waterfall·aurora-beam·earthquake
+gorebyss
+  지금: surf·scald / hydro-pump·waterfall·aqua-tail·ice-beam
+  도구: surf·scald / hydro-pump·waterfall·brine·ice-beam
+relicanth
+  지금: waterfall·head-smash / aqua-tail·stone-edge·surf·earthquake
+  도구: aqua-tail·head-smash / waterfall·stone-edge·surf·earthquake
+shelgon
+  지금: dragon-tail·dragon-claw / 
+  도구: dragon-claw·dragon-pulse / 
+regirock
+  지금: rock-slide·stone-edge / rock-blast·rock-tomb·smack-down·body-press
+  도구: rock-slide·stone-edge / rock-blast·rock-tomb·power-gem·earthquake
+regice
+  지금: ice-beam·blizzard / icy-wind·avalanche·ice-spinner·thunderbolt
+  도구: ice-beam·blizzard / icy-wind·ice-spinner·icicle-spear·thunderbolt
+registeel
+  지금: iron-head·flash-cannon / steel-beam·metal-claw·body-press
+  도구: iron-head·flash-cannon / steel-beam·metal-claw·earthquake
+kyogre
+  지금: origin-pulse·water-spout / surf·hydro-pump·liquidation·ice-beam
+  도구: origin-pulse·water-spout / surf·hydro-pump·muddy-water·ice-beam
+deoxys
+  지금: expanding-force·psycho-boost / psychic·zen-headbutt·psychic-noise·ice-beam
+  도구: expanding-force·psycho-boost / psychic·zen-headbutt·psyshock·ice-beam
+deoxys-defense
+  지금: stored-power·psycho-boost / psychic·psychic-noise·expanding-force·drain-punch
+  도구: psycho-boost·psychic / psychic-noise·expanding-force·future-sight·drain-punch
+deoxys-speed
+  지금: psycho-boost·expanding-force / psychic·zen-headbutt·psyshock·ice-beam
+  도구: psycho-boost·expanding-force / psychic·psyshock·psychic-noise·ice-beam
+empoleon
+  지금: surf·flash-cannon / hydro-pump·liquidation·steel-beam·ice-beam
+  도구: surf·flash-cannon / hydro-pump·wave-crash·steel-beam·ice-beam
+starly
+  지금: quick-attack·acrobatics / 
+  도구: quick-attack·aerial-ace / 
+staravia
+  지금: tackle·aerial-ace / 
+  도구: tackle·wing-attack / 
+staraptor
+  지금: double-edge·brave-bird / dual-wingbeat·facade·acrobatics·close-combat
+  도구: double-edge·brave-bird / dual-wingbeat·facade·giga-impact·close-combat
+bibarel
+  지금: strength·waterfall / headbutt·facade·scald·crunch
+  도구: strength·waterfall / rock-climb·headbutt·surf·crunch
+bastiodon
+  지금: stone-edge·iron-head / flash-cannon·rock-slide·ancient-power·body-press
+  도구: stone-edge·iron-head / flash-cannon·rock-slide·ancient-power·earthquake
+burmy-sandy (사용률 없음)
+  지금: bug-bite·struggle-bug / tackle
+  도구: bug-bite·struggle-bug / 
+burmy-trash (사용률 없음)
+  지금: bug-bite·struggle-bug / tackle
+  도구: bug-bite·struggle-bug / 
+mothim
+  지금: bug-buzz·air-slash / lunge·bug-bite·aerial-ace·giga-drain
+  도구: bug-buzz·air-slash / lunge·u-turn·aerial-ace·giga-drain
+vespiquen
+  지금: attack-order·air-slash / pollen-puff·hurricane·bug-buzz·power-gem
+  도구: attack-order·air-slash / hurricane·bug-buzz·lunge·power-gem
+floatzel
+  지금: wave-crash·liquidation / waterfall·aqua-tail·hydro-pump·ice-spinner
+  도구: wave-crash·liquidation / waterfall·aqua-tail·surf·ice-spinner
+cherrim
+  지금: giga-drain·energy-ball / solar-beam·petal-blizzard·bullet-seed·dazzling-gleam
+  도구: energy-ball·giga-drain / solar-beam·petal-blizzard·petal-dance·dazzling-gleam
+cherrim-sunshine
+  지금: giga-drain·energy-ball / solar-beam·petal-blizzard·bullet-seed·dazzling-gleam
+  도구: energy-ball·giga-drain / solar-beam·petal-blizzard·petal-dance·dazzling-gleam
+shellos-east
+  지금: surf·liquidation / hydro-pump·waterfall·muddy-water·earth-power
+  도구: chilling-water·water-pulse / 
+ambipom
+  지금: double-hit·double-edge / facade·swift·giga-impact·triple-axel
+  도구: double-hit·double-edge / covet·facade·swift·triple-axel
+drifloon
+  지금: hex·acrobatics / 
+  도구: hex·air-cutter / 
+drifblim
+  지금: shadow-ball·air-slash / hex·acrobatics·air-cutter·thunderbolt
+  도구: shadow-ball·air-slash / hex·air-cutter·aerial-ace·thunderbolt
+lopunny
+  지금: facade·mega-kick / giga-impact·hyper-voice·double-hit·close-combat
+  도구: mega-kick·uproar / hyper-voice·facade·giga-impact·close-combat
+mismagius
+  지금: shadow-ball·hex / poltergeist·phantom-force·astonish·dazzling-gleam
+  도구: shadow-ball·poltergeist / hex·phantom-force·astonish·dazzling-gleam
+honchkrow
+  지금: night-slash·brave-bird / dark-pulse·foul-play·dual-wingbeat·heat-wave
+  도구: night-slash·brave-bird / dark-pulse·lash-out·dual-wingbeat·heat-wave
+purugly
+  지금: body-slam·facade / slash·giga-impact·retaliate·play-rough
+  도구: body-slam·slash / retaliate·facade·giga-impact·play-rough
+bronzor
+  지금: flash-cannon·stored-power / 
+  도구: iron-head·confusion / 
+bronzong
+  지금: flash-cannon·psychic-noise / iron-head·psychic·zen-headbutt·body-press
+  도구: flash-cannon·psychic-noise / iron-head·psychic·zen-headbutt·ice-spinner
+chatot
+  지금: chatter·boomburst / hyper-voice·uproar·air-cutter·steel-wing
+  도구: chatter·boomburst / hyper-voice·uproar·air-cutter·u-turn
+spiritomb
+  지금: poltergeist·foul-play / dark-pulse·shadow-ball·hex·psychic
+  도구: poltergeist·dark-pulse / shadow-ball·foul-play·lash-out·psychic
+riolu
+  지금: circle-throw·rock-smash / 
+  도구: rock-smash·low-sweep / 
+hippowdon
+  지금: earthquake·high-horsepower / scorching-sands·earth-power·bulldoze·body-press
+  도구: earthquake·high-horsepower / stomping-tantrum·earth-power·bulldoze·stone-edge
+skorupi (사용률 없음)
+  지금: venoshock·bug-bite / 
+  도구: poison-tail·bug-bite / 
+mantyke
+  지금: bubble-beam·aerial-ace / 
+  도구: bubble-beam·wing-attack / 
+lickilicky
+  지금: strength·rock-climb / hyper-beam·stomp·slam·power-whip
+  도구: strength·rock-climb / facade·stomp·giga-impact·power-whip
+yanmega
+  지금: bug-buzz·air-slash / leech-life·dual-wingbeat·air-cutter·shadow-ball
+  도구: bug-buzz·air-slash / leech-life·dual-wingbeat·lunge·shadow-ball
+leafeon
+  지금: leaf-blade·leaf-storm / solar-blade·bullet-seed·energy-ball·x-scissor
+  도구: leaf-blade·leaf-storm / solar-blade·seed-bomb·bullet-seed·x-scissor
+gliscor
+  지금: earthquake·dual-wingbeat / high-horsepower·bulldoze·aerial-ace·facade
+  도구: earthquake·dual-wingbeat / high-horsepower·bulldoze·aerial-ace·crabhammer
+porygon-z
+  지금: uproar·tri-attack / hyper-beam·tera-blast·double-edge·ice-beam
+  도구: tri-attack·uproar / hyper-beam·tera-blast·swift·ice-beam
+probopass
+  지금: power-gem·flash-cannon / meteor-beam·steel-beam·rock-tomb·body-press
+  도구: power-gem·flash-cannon / meteor-beam·steel-beam·iron-head·earth-power
+rotom
+  지금: thunderbolt·shadow-ball / hex·discharge·thunder·dark-pulse
+  도구: thunderbolt·shadow-ball / discharge·thunder·poltergeist·dark-pulse
+rotom-fan
+  지금: discharge·air-slash / thunderbolt·thunder·hex
+  도구: discharge·air-slash / thunderbolt·thunder·shadow-ball
+regigigas
+  지금: body-slam·double-edge / facade·giga-impact·tera-blast·drain-punch
+  도구: body-slam·double-edge / giga-impact·facade·stomp·drain-punch
+giratina
+  지금: hex·dragon-tail / shadow-force·draco-meteor·shadow-ball·aura-sphere
+  도구: shadow-ball·draco-meteor / shadow-force·dragon-pulse·poltergeist·aura-sphere
+giratina-origin
+  지금: hex·draco-meteor / shadow-force·poltergeist·dragon-pulse·earthquake
+  도구: poltergeist·draco-meteor / shadow-force·dragon-pulse·shadow-ball·earthquake
+phione
+  지금: surf·liquidation / scald·hydro-pump·waterfall·ice-beam
+  도구: scald·surf / hydro-pump·waterfall·liquidation·ice-beam
+manaphy
+  지금: liquidation·surf / scald·hydro-pump·waterfall·ice-beam
+  도구: surf·scald / hydro-pump·liquidation·waterfall·ice-beam
+arceus
+  지금: judgment·double-edge / tera-blast·body-slam·hyper-voice·shadow-claw
+  도구: judgment·double-edge / extreme-speed·hyper-voice·body-slam·shadow-claw
+victini
+  지금: v-create·stored-power / searing-shot·zen-headbutt·flamethrower·scorching-sands
+  도구: v-create·zen-headbutt / searing-shot·flamethrower·expanding-force·scorching-sands
+serperior
+  지금: leaf-storm·leaf-blade / giga-drain·energy-ball·frenzy-plant·dragon-pulse
+  도구: leaf-storm·giga-drain / leaf-blade·energy-ball·petal-blizzard·dragon-pulse
+emboar
+  지금: flare-blitz·close-combat / superpower·body-press·burn-up·wild-charge
+  도구: flare-blitz·close-combat / superpower·burn-up·storm-throw·wild-charge
+samurott-hisui
+  지금: ceaseless-edge·razor-shell / aqua-cutter·surf·night-slash·sacred-sword
+  도구: ceaseless-edge·razor-shell / aqua-cutter·night-slash·liquidation·sacred-sword
+stoutland
+  지금: facade·retaliate / giga-impact·take-down·hyper-voice·superpower
+  도구: retaliate·facade / giga-impact·uproar·hyper-voice·superpower
+liepard
+  지금: dark-pulse·foul-play / throat-chop·night-slash·lash-out·burning-jealousy
+  도구: foul-play·dark-pulse / crunch·throat-chop·lash-out·burning-jealousy
+simisear
+  지금: overheat·flamethrower / fire-blast·flare-blitz·fire-punch·focus-blast
+  도구: overheat·fire-blast / flamethrower·flare-blitz·fire-punch·focus-blast
+musharna
+  지금: psychic·stored-power / expanding-force·psyshock·future-sight·moonblast
+  도구: psychic·expanding-force / psyshock·future-sight·zen-headbutt·moonblast
+gigalith
+  지금: rock-slide·stone-edge / rock-blast·rock-tomb·smack-down·earthquake
+  도구: rock-slide·stone-edge / rock-blast·weather-ball·rock-tomb·earthquake
+swoobat
+  지금: psychic·air-slash / psyshock·expanding-force·dual-wingbeat·heat-wave
+  도구: psychic·air-slash / psyshock·expanding-force·air-cutter·heat-wave
+audino
+  지금: uproar·hyper-voice / body-slam·double-edge·facade·dazzling-gleam
+  도구: uproar·hyper-voice / body-slam·double-edge·mega-kick·dazzling-gleam
+conkeldurr
+  지금: drain-punch·close-combat / hammer-arm·brick-break·focus-punch·ice-punch
+  도구: drain-punch·close-combat / hammer-arm·superpower·focus-punch·ice-punch
+throh
+  지금: superpower·storm-throw / brick-break·revenge·vital-throw·facade
+  도구: superpower·storm-throw / brick-break·vital-throw·low-sweep·earthquake
+scolipede
+  지금: megahorn·poison-jab / x-scissor·cross-poison·pin-missile·earthquake
+  도구: megahorn·poison-jab / x-scissor·cross-poison·gunk-shot·earthquake
+whimsicott
+  지금: giga-drain·moonblast / dazzling-gleam·energy-ball·play-rough·shadow-ball
+  도구: giga-drain·moonblast / dazzling-gleam·energy-ball·seed-bomb·shadow-ball
+lilligant-hisui
+  지금: axe-kick·leaf-blade / close-combat·brick-break·petal-blizzard·ice-spinner
+  도구: leaf-blade·close-combat / axe-kick·brick-break·petal-blizzard·ice-spinner
+darmanitan
+  지금: flare-blitz·fire-punch / fire-fang·flamethrower·fire-blast·earthquake
+  도구: flare-blitz·fire-punch / fire-fang·flamethrower·overheat·earthquake
+darmanitan-zen (사용률 없음)
+  지금: flamethrower·psychic / fire-blast·heat-wave·expanding-force·focus-blast
+  도구: flamethrower·psychic / overheat·fire-blast·expanding-force·uproar
+scrafty
+  지금: crunch·high-jump-kick / drain-punch·close-combat·foul-play·poison-jab
+  도구: crunch·high-jump-kick / drain-punch·close-combat·throat-chop·poison-jab
+cofagrigus
+  지금: shadow-ball·hex / poltergeist·shadow-claw·shadow-punch·psychic
+  도구: shadow-ball·poltergeist / hex·shadow-claw·shadow-punch·psychic
+archeops
+  지금: stone-edge·dual-wingbeat / rock-slide·acrobatics·air-slash·earthquake
+  도구: stone-edge·dual-wingbeat / rock-slide·air-slash·meteor-beam·earthquake
+zorua
+  지금: knock-off·thief / 
+  도구: knock-off·snarl / 
+zoroark-hisui
+  지금: bitter-malice·hyper-voice / shadow-ball·hyper-beam·hex·flamethrower
+  도구: bitter-malice·hyper-voice / shadow-ball·hyper-beam·poltergeist·flamethrower
+cinccino
+  지금: tail-slap·double-edge / facade·hyper-voice·swift·bullet-seed
+  도구: tail-slap·double-edge / swift·hyper-voice·uproar·bullet-seed
+gothita
+  지금: stored-power·psybeam / 
+  도구: psybeam·confusion / 
+gothorita
+  지금: stored-power·expanding-force / 
+  도구: expanding-force·psyshock / 
+gothitelle
+  지금: psychic·stored-power / expanding-force·psyshock·psychic-noise·dark-pulse
+  도구: psychic·expanding-force / psyshock·psychic-noise·future-sight·dark-pulse
+solosis
+  지금: psybeam·stored-power / 
+  도구: psybeam·confusion / 
+duosion
+  지금: psychic·stored-power / 
+  도구: psychic·psyshock / 
+ducklett
+  지금: chilling-water·aerial-ace / 
+  도구: chilling-water·wing-attack / 
+vanillish (사용률 없음)
+  지금: icicle-spear·avalanche / 
+  도구: icicle-spear·icy-wind / 
+deerling-autumn
+  지금: body-slam·seed-bomb / headbutt·tera-blast·giga-drain·zen-headbutt
+  도구: tackle·trailblaze / 
+deerling-spring
+  지금: body-slam·seed-bomb / headbutt·tera-blast·giga-drain·zen-headbutt
+  도구: body-slam·seed-bomb / headbutt·giga-drain·double-edge·zen-headbutt
+deerling-summer
+  지금: body-slam·seed-bomb / headbutt·tera-blast·giga-drain·zen-headbutt
+  도구: tackle·trailblaze / 
+deerling-winter
+  지금: body-slam·seed-bomb / headbutt·tera-blast·giga-drain·zen-headbutt
+  도구: tackle·trailblaze / 
+sawsbuck
+  지금: body-slam·petal-blizzard / horn-leech·double-edge·energy-ball·high-horsepower
+  도구: body-slam·petal-blizzard / horn-leech·double-edge·seed-bomb·high-horsepower
+sawsbuck-autumn
+  지금: body-slam·petal-blizzard / horn-leech·double-edge·energy-ball·high-horsepower
+  도구: body-slam·petal-blizzard / horn-leech·double-edge·seed-bomb·high-horsepower
+sawsbuck-spring
+  지금: body-slam·petal-blizzard / horn-leech·double-edge·energy-ball·high-horsepower
+  도구: body-slam·petal-blizzard / horn-leech·double-edge·seed-bomb·high-horsepower
+sawsbuck-summer
+  지금: body-slam·petal-blizzard / horn-leech·double-edge·energy-ball·high-horsepower
+  도구: body-slam·petal-blizzard / horn-leech·double-edge·seed-bomb·high-horsepower
+sawsbuck-winter
+  지금: body-slam·petal-blizzard / horn-leech·double-edge·energy-ball·high-horsepower
+  도구: body-slam·petal-blizzard / horn-leech·double-edge·seed-bomb·high-horsepower
+amoonguss
+  지금: energy-ball·sludge-bomb / giga-drain·leaf-storm·venoshock·pollen-puff
+  도구: energy-ball·sludge-bomb / giga-drain·leaf-storm·venoshock·stomping-tantrum
+frillish
+  지금: brine·hex / 
+  도구: water-pulse·hex / 
+jellicent
+  지금: water-spout·hex / scald·shadow-ball·surf·ice-beam
+  도구: water-spout·shadow-ball / scald·surf·poltergeist·ice-beam
+alomomola
+  지금: surf·liquidation / scald·waterfall·hydro-pump·body-slam
+  도구: surf·scald / liquidation·waterfall·flip-turn·body-slam
+ferrothorn
+  지금: power-whip·iron-head / seed-bomb·flash-cannon·energy-ball·body-press
+  도구: power-whip·iron-head / seed-bomb·bullet-seed·flash-cannon·poison-jab
+litwick
+  지금: hex·flame-charge / 
+  도구: astonish·flame-charge / 
+beartic
+  지금: icicle-crash·icicle-spear / ice-punch·avalanche·ice-fang·close-combat
+  도구: icicle-crash·icicle-spear / ice-punch·ice-fang·ice-beam·close-combat
+stunfisk
+  지금: earth-power·thunderbolt / discharge·earthquake·thunder·scald
+  도구: earth-power·thunderbolt / discharge·earthquake·stomping-tantrum·scald
+stunfisk-galar
+  지금: earthquake·flash-cannon / stomping-tantrum·earth-power·steel-beam·foul-play
+  도구: earthquake·flash-cannon / stomping-tantrum·earth-power·steel-beam·crunch
+mienshao
+  지금: close-combat·high-jump-kick / drain-punch·brick-break·aura-sphere·ice-spinner
+  도구: close-combat·high-jump-kick / drain-punch·focus-punch·brick-break·ice-spinner
+druddigon
+  지금: dragon-tail·dragon-claw / outrage·scale-shot·draco-meteor·earthquake
+  도구: dragon-claw·outrage / scale-shot·draco-meteor·dragon-pulse·earthquake
+golurk
+  지금: earthquake·poltergeist / high-horsepower·stomping-tantrum·shadow-punch·dynamic-punch
+  도구: earthquake·poltergeist / high-horsepower·headlong-rush·shadow-punch·dynamic-punch
+bouffalant
+  지금: head-charge·body-slam / facade·skull-bash·retaliate·earthquake
+  도구: head-charge·body-slam / headbutt·facade·retaliate·earthquake
+braviary
+  지금: body-slam·brave-bird / dual-wingbeat·double-edge·facade·close-combat
+  도구: body-slam·brave-bird / dual-wingbeat·double-edge·sky-attack·close-combat
+mandibuzz
+  지금: foul-play·brave-bird / dark-pulse·air-slash·dual-wingbeat·heat-wave
+  도구: dark-pulse·brave-bird / foul-play·throat-chop·dual-wingbeat·heat-wave
+heatmor
+  지금: overheat·fire-blast / fire-lash·flamethrower·flare-blitz·giga-drain
+  도구: overheat·fire-lash / fire-blast·flamethrower·heat-wave·giga-drain
+durant
+  지금: x-scissor·iron-head / skitter-smack·steel-beam·bug-bite·stomping-tantrum
+  도구: x-scissor·iron-head / flash-cannon·skitter-smack·bug-bite·stomping-tantrum
+deino
+  지금: bite·dragon-tail / 
+  도구: snarl·dragon-breath / 
+hydreigon
+  지금: dark-pulse·draco-meteor / dragon-pulse·crunch·outrage·flash-cannon
+  도구: dark-pulse·draco-meteor / dragon-pulse·crunch·throat-chop·flash-cannon
+cobalion
+  지금: iron-head·body-press / flash-cannon·sacred-sword·close-combat·stone-edge
+  도구: iron-head·sacred-sword / flash-cannon·close-combat·aura-sphere·stone-edge
+chesnaught
+  지금: wood-hammer·body-press / drain-punch·seed-bomb·close-combat·earthquake
+  도구: wood-hammer·drain-punch / seed-bomb·close-combat·superpower·earthquake
+greninja-ash (사용률 없음)
+  지금: surf·dark-pulse / hydro-pump·night-slash·water-shuriken·ice-beam
+  도구: surf·dark-pulse / water-shuriken·water-pledge·night-slash·ice-beam
+greninja-battle-bond (사용률 없음)
+  지금: surf·dark-pulse / hydro-pump·night-slash·water-shuriken·ice-beam
+  도구: surf·dark-pulse / scald·water-shuriken·night-slash·ice-beam
+diggersby
+  지금: body-slam·earthquake / high-horsepower·giga-impact·mega-kick·ice-punch
+  도구: body-slam·earthquake / high-horsepower·mega-kick·stomping-tantrum·ice-punch
+flabebe
+  지금: draining-kiss·disarming-voice / 
+  도구: draining-kiss·fairy-wind / 
+flabebe-blue
+  지금: draining-kiss·disarming-voice / 
+  도구: draining-kiss·fairy-wind / 
+flabebe-orange
+  지금: draining-kiss·disarming-voice / 
+  도구: draining-kiss·fairy-wind / 
+flabebe-white
+  지금: draining-kiss·disarming-voice / 
+  도구: draining-kiss·fairy-wind / 
+flabebe-yellow
+  지금: draining-kiss·disarming-voice / 
+  도구: draining-kiss·fairy-wind / 
+florges
+  지금: moonblast·draining-kiss / dazzling-gleam·alluring-voice·pollen-puff
+  도구: moonblast·draining-kiss / dazzling-gleam·alluring-voice·psychic-noise
+florges-blue
+  지금: moonblast·draining-kiss / dazzling-gleam·alluring-voice·pollen-puff
+  도구: moonblast·draining-kiss / dazzling-gleam·alluring-voice·psychic-noise
+florges-orange
+  지금: moonblast·draining-kiss / dazzling-gleam·alluring-voice·pollen-puff
+  도구: moonblast·draining-kiss / dazzling-gleam·alluring-voice·psychic-noise
+florges-white
+  지금: moonblast·draining-kiss / dazzling-gleam·alluring-voice·pollen-puff
+  도구: moonblast·draining-kiss / dazzling-gleam·alluring-voice·psychic-noise
+florges-yellow
+  지금: moonblast·draining-kiss / dazzling-gleam·alluring-voice·pollen-puff
+  도구: moonblast·draining-kiss / dazzling-gleam·alluring-voice·psychic-noise
+gogoat
+  지금: leaf-storm·leaf-blade / horn-leech·giga-drain·seed-bomb·earthquake
+  도구: leaf-storm·horn-leech / leaf-blade·giga-drain·energy-ball·earthquake
+inkay
+  지금: knock-off·stored-power / 
+  도구: knock-off·psybeam / 
+malamar
+  지금: foul-play·psycho-cut / throat-chop·night-slash·psychic·superpower
+  도구: throat-chop·psycho-cut / night-slash·dark-pulse·psychic·superpower
+tyrunt
+  지금: rock-tomb·dragon-tail / 
+  도구: rock-tomb·dragon-claw / 
+amaura (사용률 없음)
+  지금: rock-blast·freeze-dry / 
+  도구: ancient-power·freeze-dry / 
+sylveon
+  지금: draining-kiss·moonblast / alluring-voice·dazzling-gleam·play-rough·hyper-voice
+  도구: hyper-voice·draining-kiss / hyper-beam·moonblast·alluring-voice·shadow-ball
+hawlucha
+  지금: high-jump-kick·acrobatics / close-combat·drain-punch·brave-bird·stone-edge
+  도구: high-jump-kick·brave-bird / close-combat·drain-punch·dual-wingbeat·stone-edge
+carbink
+  지금: power-gem·moonblast / dazzling-gleam·rock-slide·meteor-beam·body-press
+  도구: power-gem·moonblast / dazzling-gleam·rock-slide·meteor-beam·earth-power
+sliggoo-hisui
+  지금: flash-cannon·dragon-pulse / 
+  도구: flash-cannon·dragon-breath / 
+gourgeist-large
+  지금: poltergeist·power-whip / seed-bomb·shadow-ball·energy-ball·flamethrower
+  도구: poltergeist·seed-bomb / power-whip·bullet-seed·shadow-ball·foul-play
+gourgeist-small
+  지금: poltergeist·power-whip / seed-bomb·shadow-ball·energy-ball·flamethrower
+  도구: poltergeist·power-whip / seed-bomb·giga-drain·shadow-ball·flamethrower
+gourgeist-super
+  지금: poltergeist·power-whip / seed-bomb·shadow-ball·energy-ball·flamethrower
+  도구: poltergeist·power-whip / seed-bomb·shadow-ball·bullet-seed·foul-play
+bergmite
+  지금: avalanche·icy-wind / 
+  도구: icy-wind·ice-fang / 
+avalugg
+  지금: avalanche·ice-spinner / icicle-crash·icicle-spear·ice-fang·body-press
+  도구: ice-spinner·icicle-crash / icicle-spear·ice-fang·avalanche·earthquake
+avalugg-hisui
+  지금: mountain-gale·stone-edge / avalanche·rock-slide·rock-blast·body-press
+  도구: mountain-gale·stone-edge / rock-slide·rock-blast·ice-spinner·earthquake
+noibat
+  지금: acrobatics·dragon-claw / 
+  도구: air-cutter·dragon-claw / 
+yveltal
+  지금: oblivion-wing·dark-pulse / foul-play·dual-wingbeat·air-slash·heat-wave
+  도구: oblivion-wing·dark-pulse / dual-wingbeat·foul-play·lash-out·heat-wave
+zygarde
+  지금: thousand-arrows·draco-meteor / thousand-waves·core-enforcer·lands-wrath·stone-edge
+  도구: thousand-arrows·outrage / thousand-waves·lands-wrath·core-enforcer·stone-edge
+zygarde-10
+  지금: thousand-arrows·draco-meteor / thousand-waves·core-enforcer·lands-wrath·stone-edge
+  도구: thousand-arrows·outrage / thousand-waves·lands-wrath·core-enforcer·superpower
+zygarde-complete (사용률 없음)
+  지금: thousand-arrows·draco-meteor / thousand-waves·core-enforcer·lands-wrath·stone-edge
+  도구: core-enforcer·earthquake / thousand-arrows·thousand-waves·draco-meteor·superpower
+diancie
+  지금: diamond-storm·moonblast / play-rough·meteor-beam·dazzling-gleam·body-press
+  도구: diamond-storm·moonblast / play-rough·meteor-beam·dazzling-gleam·earth-power
+hoopa-unbound
+  지금: hyperspace-hole·dark-pulse / psychic·psyshock·crunch·focus-blast
+  도구: hyperspace-fury·zen-headbutt / dark-pulse·psychic·psychic-noise·drain-punch
+rowlet
+  지금: razor-leaf·aerial-ace / 
+  도구: razor-leaf·pluck / 
+incineroar
+  지금: flare-blitz·darkest-lariat / fire-punch·throat-chop·fire-blast·close-combat
+  도구: flare-blitz·darkest-lariat / fire-punch·crunch·throat-chop·close-combat
+pikipek
+  지금: fury-attack·acrobatics / 
+  도구: fury-attack·pluck / 
+toxapex
+  지금: gunk-shot·liquidation / surf·poison-jab·sludge-bomb·ice-beam
+  도구: poison-jab·surf / liquidation·sludge-bomb·gunk-shot·ice-beam
+mudsdale
+  지금: earthquake·high-horsepower / bulldoze·stomping-tantrum·earth-power·body-press
+  도구: earthquake·high-horsepower / stomping-tantrum·bulldoze·earth-power·stone-edge
+lurantis
+  지금: leaf-blade·leaf-storm / giga-drain·petal-blizzard·energy-ball·leech-life
+  도구: leaf-blade·leaf-storm / giga-drain·petal-blizzard·seed-bomb·leech-life
+shiinotic
+  지금: energy-ball·moonblast / giga-drain·dazzling-gleam·solar-beam·pollen-puff
+  도구: energy-ball·moonblast / giga-drain·dazzling-gleam·solar-beam·sludge-bomb
+comfey
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·disarming-voice·giga-drain
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·disarming-voice·giga-drain
+oranguru
+  지금: psychic·hyper-voice / expanding-force·psychic-noise·hyper-beam·foul-play
+  도구: hyper-voice·psychic / expanding-force·psychic-noise·body-slam·thunderbolt
+passimian
+  지금: close-combat·drain-punch / brick-break·superpower·low-sweep·earthquake
+  도구: close-combat·drain-punch / brick-break·superpower·focus-punch·earthquake
+sandygast
+  지금: bulldoze·hex / 
+  도구: hex·mud-slap / 
+palossand
+  지금: earth-power·shadow-ball / scorching-sands·hex·earthquake·giga-drain
+  도구: shadow-ball·earth-power / scorching-sands·earthquake·poltergeist·giga-drain
+silvally
+  지금: multi-attack·double-edge / hyper-voice·facade·crush-claw·crunch
+  도구: multi-attack·double-edge / hyper-voice·tri-attack·crush-claw·crunch
+minior-blue-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+minior-green-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+minior-indigo-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+minior-orange-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+minior-violet-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+minior-yellow-meteor (사용률 없음)
+  지금: stone-edge·acrobatics / power-gem·rock-slide·earthquake
+  도구: power-gem·acrobatics / stone-edge·rock-blast·earthquake
+turtonator
+  지금: flamethrower·draco-meteor / dragon-pulse·fire-blast·heat-wave·body-press
+  도구: flamethrower·draco-meteor / dragon-pulse·fire-blast·heat-wave·flash-cannon
+togedemaru
+  지금: zing-zap·iron-head / wild-charge·thunderbolt·iron-tail·poison-jab
+  도구: zing-zap·iron-head / wild-charge·spark·iron-tail·poison-jab
+bruxish
+  지금: wave-crash·psychic-fangs / liquidation·waterfall·expanding-force·crunch
+  도구: wave-crash·psychic-fangs / liquidation·waterfall·psychic·crunch
+tapu-bulu
+  지금: horn-leech·dazzling-gleam / wood-hammer·giga-drain·close-combat
+  도구: horn-leech·dazzling-gleam / wood-hammer·seed-bomb·close-combat
+buzzwole
+  지금: leech-life·drain-punch / close-combat·lunge·brick-break·ice-punch
+  도구: leech-life·drain-punch / close-combat·lunge·superpower·ice-punch
+celesteela
+  지금: flash-cannon·air-slash / steel-beam·iron-head·acrobatics·flamethrower
+  도구: flash-cannon·air-slash / iron-head·smart-strike·acrobatics·flamethrower
+necrozma-dawn (사용률 없음)
+  지금: moongeist-beam·photon-geyser / shadow-ball·psyshock·psychic·earth-power
+  도구: photon-geyser·shadow-claw / prismatic-laser·psychic·earth-power
+necrozma-dusk (사용률 없음)
+  지금: sunsteel-strike·photon-geyser / psychic-fangs·iron-head·zen-headbutt·earthquake
+  도구: photon-geyser·iron-head / prismatic-laser·psychic-fangs·smart-strike·earthquake
+stakataka
+  지금: stone-edge·iron-head / rock-blast·rock-slide·flash-cannon·body-press
+  도구: stone-edge·iron-head / rock-blast·rock-slide·flash-cannon·earthquake
+zeraora
+  지금: plasma-fists·thunderbolt / discharge·rising-voltage·thunder·close-combat
+  도구: plasma-fists·thunderbolt / discharge·rising-voltage·thunder-punch·close-combat
+rillaboom
+  지금: drum-beating·grassy-glide / wood-hammer·solar-blade·bullet-seed·high-horsepower
+  도구: drum-beating·grassy-glide / wood-hammer·seed-bomb·bullet-seed·high-horsepower
+cinderace
+  지금: pyro-ball·flare-blitz / fire-punch·fire-blast·flamethrower·high-jump-kick
+  도구: pyro-ball·flare-blitz / fire-punch·temper-flare·flamethrower·high-jump-kick
+inteleon
+  지금: snipe-shot·hydro-pump / surf·scald·muddy-water·ice-beam
+  도구: snipe-shot·hydro-pump / surf·scald·water-pledge·ice-beam
+greedent
+  지금: body-slam·double-edge / facade·tera-blast·hyper-voice·earthquake
+  도구: body-slam·double-edge / facade·hyper-voice·giga-impact·earthquake
+corviknight
+  지금: brave-bird·iron-head / drill-peck·flash-cannon·steel-wing·body-press
+  도구: brave-bird·iron-head / drill-peck·dual-wingbeat·flash-cannon·body-slam
+dottler
+  지금: struggle-bug·stored-power / 
+  도구: struggle-bug·confusion / 
+thievul
+  지금: dark-pulse·foul-play / snarl·crunch·night-slash·psychic
+  도구: dark-pulse·foul-play / snarl·crunch·lash-out·psychic
+eldegoss
+  지금: energy-ball·leaf-storm / giga-drain·leaf-tornado·bullet-seed·pollen-puff
+  도구: energy-ball·leaf-storm / giga-drain·leaf-tornado·seed-bomb·hyper-voice
+dubwool
+  지금: body-slam·facade / double-edge·giga-impact·mega-kick·body-press
+  도구: body-slam·double-edge / mega-kick·headbutt·facade·zen-headbutt
+boltund
+  지금: thunder-fang·thunderbolt / wild-charge·thunder·rising-voltage·psychic-fangs
+  도구: thunder-fang·thunderbolt / wild-charge·rising-voltage·volt-switch·psychic-fangs
+appletun
+  지금: apple-acid·draco-meteor / dragon-pulse·giga-drain·seed-bomb·body-press
+  도구: apple-acid·draco-meteor / dragon-pulse·giga-drain·seed-bomb·earthquake
+sandaconda
+  지금: earthquake·drill-run / high-horsepower·earth-power·bulldoze·body-press
+  도구: earthquake·drill-run / high-horsepower·earth-power·bulldoze·stone-edge
+cramorant
+  지금: brave-bird·surf / hurricane·air-slash·hydro-pump·ice-beam
+  도구: brave-bird·surf / hurricane·air-slash·liquidation·ice-beam
+grapploct
+  지금: close-combat·superpower / drain-punch·revenge·brick-break·brutal-swing
+  도구: drain-punch·close-combat / brick-break·superpower·revenge·brutal-swing
+hattrem
+  지금: psyshock·stored-power / 
+  도구: psyshock·expanding-force / 
+hatterene
+  지금: psychic·dazzling-gleam / psychic-noise·psyshock·play-rough·mystical-fire
+  도구: psychic-noise·draining-kiss / dazzling-gleam·psyshock·expanding-force·mystical-fire
+grimmsnarl
+  지금: foul-play·spirit-break / play-rough·crunch·dazzling-gleam·drain-punch
+  도구: foul-play·spirit-break / play-rough·crunch·throat-chop·drain-punch
+obstagoon
+  지금: throat-chop·body-slam / facade·double-edge·night-slash·close-combat
+  도구: throat-chop·body-slam / double-edge·mega-kick·lash-out·close-combat
+cursola
+  지금: shadow-ball·hex / poltergeist·astonish·ice-beam
+  도구: shadow-ball·poltergeist / hex·astonish·ice-beam
+runerigus
+  지금: earthquake·poltergeist / shadow-claw·earth-power·shadow-ball·body-press
+  도구: earthquake·poltergeist / shadow-claw·bulldoze·earth-power·rock-slide
+alcremie
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-caramel-swirl-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-lemon-cream-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-matcha-cream-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-mint-cream-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-rainbow-swirl-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-cream-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-ruby-swirl-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-salted-cream-strawberry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-berry-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-clover-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-flower-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-love-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-ribbon-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+alcremie-vanilla-cream-star-sweet
+  지금: dazzling-gleam·alluring-voice / draining-kiss·play-rough·mystical-fire
+  도구: draining-kiss·dazzling-gleam / alluring-voice·play-rough·mystical-fire
+pincurchin
+  지금: supercell-slam·thunderbolt / discharge·zing-zap·thunder·scald
+  도구: supercell-slam·thunderbolt / discharge·zing-zap·wild-charge·scald
+stonjourner
+  지금: rock-slide·stone-edge / rock-blast·smack-down·rock-tomb·body-press
+  도구: rock-slide·stone-edge / rock-blast·rock-tomb·smack-down·earthquake
+dracozolt
+  지금: bolt-beak·dragon-claw / outrage·draco-meteor·discharge·earthquake
+  도구: discharge·dragon-claw / outrage·draco-meteor·thunderbolt·earthquake
+dracovish
+  지금: fishious-rend·draco-meteor / outrage·dragon-rush·hydro-pump·psychic-fangs
+  도구: fishious-rend·draco-meteor / outrage·dragon-rush·liquidation·psychic-fangs
+arctovish
+  지금: fishious-rend·icicle-crash / freeze-dry·blizzard·hydro-pump·psychic-fangs
+  도구: hydro-pump·icicle-crash / freeze-dry·blizzard·liquidation·psychic-fangs
+drakloak
+  지금: dragon-tail·hex / 
+  도구: breaking-swipe·shadow-ball / 
+zacian-crowned
+  지금: play-rough·behemoth-blade / iron-head·moonblast·flash-cannon·close-combat
+  도구: play-rough·iron-head / moonblast·flash-cannon·dazzling-gleam·close-combat
+zamazenta-crowned
+  지금: close-combat·behemoth-bash / body-press·iron-head·brick-break·crunch
+  도구: close-combat·iron-head / brick-break·body-press·flash-cannon·crunch
+urshifu-rapid-strike
+  지금: surging-strikes·close-combat / drain-punch·brick-break·liquidation·ice-spinner
+  도구: surging-strikes·close-combat / drain-punch·liquidation·waterfall·ice-spinner
+regieleki
+  지금: thunderbolt·supercell-slam / thunder·electroweb·wild-charge·tera-blast
+  도구: thunderbolt·supercell-slam / thunder·electroweb·volt-switch·extreme-speed
+calyrex
+  지금: psychic·leaf-storm / giga-drain·energy-ball·expanding-force·body-press
+  도구: psychic·leaf-storm / giga-drain·energy-ball·expanding-force·pollen-puff
+calyrex-shadow
+  지금: psychic·astral-barrage / psyshock·future-sight·shadow-ball·dark-pulse
+  도구: astral-barrage·psyshock / psychic·shadow-ball·psybeam·dark-pulse
+ursaluna
+  지금: headlong-rush·facade / earthquake·high-horsepower·body-slam·fire-punch
+  도구: headlong-rush·body-slam / earthquake·high-horsepower·double-edge·fire-punch
+ursaluna-bloodmoon
+  지금: blood-moon·earth-power / hyper-voice·tera-blast·earthquake·moonblast
+  도구: blood-moon·earth-power / hyper-voice·uproar·earthquake·moonblast
+basculegion
+  지금: wave-crash·last-respects / liquidation·waterfall·shadow-ball·psychic-fangs
+  도구: wave-crash·shadow-ball / liquidation·waterfall·hex·psychic-fangs
+enamorus-therian
+  지금: springtide-storm·moonblast / play-rough·dazzling-gleam·fly·earth-power
+  도구: springtide-storm·moonblast / dazzling-gleam·alluring-voice·fly·earth-power
+meowscarada
+  지금: flower-trick·foul-play / throat-chop·dark-pulse·leaf-storm·play-rough
+  도구: flower-trick·foul-play / petal-blizzard·seed-bomb·throat-chop·play-rough
+skeledirge
+  지금: torch-song·hex / burn-up·flamethrower·shadow-ball·earth-power
+  도구: torch-song·shadow-ball / burn-up·flamethrower·poltergeist·earth-power
+oinkologne
+  지금: body-slam·double-edge / facade·uproar·tera-blast·play-rough
+  도구: body-slam·double-edge / headbutt·facade·uproar·play-rough
+spidops
+  지금: x-scissor·lunge / leech-life·bug-buzz·skitter-smack·poison-jab
+  도구: leech-life·lunge / bug-buzz·x-scissor·u-turn·poison-jab
+maushold-family-of-three (사용률 없음)
+  지금: population-bomb·double-hit / hyper-voice·double-edge·facade·bite
+  도구: population-bomb·double-hit / hyper-voice·double-edge·facade·bullet-seed
+dachsbun
+  지금: play-rough·alluring-voice / dazzling-gleam·draining-kiss·body-press
+  도구: play-rough·draining-kiss / alluring-voice·dazzling-gleam·psychic-fangs
+squawkabilly
+  지금: double-edge·brave-bird / facade·dual-wingbeat·giga-impact·foul-play
+  도구: double-edge·brave-bird / dual-wingbeat·giga-impact·hyper-voice·lash-out
+garganacl
+  지금: salt-cure·rock-slide / stone-edge·rock-blast·rock-tomb·body-press
+  도구: salt-cure·rock-slide / stone-edge·rock-blast·rock-tomb·earthquake
+bellibolt
+  지금: parabolic-charge·thunderbolt / discharge·thunder·supercell-slam·muddy-water
+  도구: parabolic-charge·thunderbolt / discharge·thunder·volt-switch·muddy-water
+kilowattrel
+  지금: thunderbolt·hurricane / air-slash·thunder·discharge·tera-blast
+  도구: thunderbolt·hurricane / air-slash·thunder·discharge·uproar
+shroodle
+  지금: venoshock·fury-swipes / 
+  도구: poison-fang·scratch / 
+brambleghast
+  지금: power-whip·poltergeist / seed-bomb·bullet-seed·shadow-ball·tera-blast
+  도구: power-whip·poltergeist / seed-bomb·bullet-seed·shadow-ball·facade
+klawf
+  지금: stone-edge·rock-blast / rock-slide·rock-tomb·power-gem·crabhammer
+  도구: stone-edge·rock-slide / rock-blast·rock-tomb·smack-down·crabhammer
+scovillain
+  지금: energy-ball·flamethrower / giga-drain·overheat·fire-blast·stomping-tantrum
+  도구: leaf-storm·flamethrower / giga-drain·overheat·fire-blast·stomping-tantrum
+flittle
+  지금: stored-power·psybeam / 
+  도구: psybeam·confusion / 
+espathra
+  지금: lumina-crash·stored-power / expanding-force·psychic·psyshock·dazzling-gleam
+  도구: lumina-crash·psychic / psyshock·expanding-force·zen-headbutt·dazzling-gleam
+varoom
+  지금: spin-out·venoshock / 
+  도구: spin-out·sludge / 
+orthworm
+  지금: iron-head·iron-tail / steel-beam·flash-cannon·body-press
+  도구: iron-head·iron-tail / flash-cannon·steel-beam·earthquake
+houndstone
+  지금: last-respects·poltergeist / phantom-force·hex·shadow-ball·play-rough
+  도구: poltergeist·shadow-ball / phantom-force·last-respects·shadow-sneak·play-rough
+flamigo
+  지금: brave-bird·close-combat / acrobatics·dual-wingbeat·low-sweep·throat-chop
+  도구: brave-bird·close-combat / dual-wingbeat·air-slash·low-sweep·throat-chop
+cetitan
+  지금: ice-spinner·icicle-spear / ice-punch·avalanche·ice-beam·earthquake
+  도구: ice-spinner·icicle-spear / ice-punch·ice-fang·avalanche·earthquake
+dondozo
+  지금: order-up·waterfall / wave-crash·liquidation·aqua-tail·body-press
+  도구: order-up·waterfall / wave-crash·liquidation·aqua-tail·earthquake
+tatsugiri-droopy (사용률 없음)
+  지금: draco-meteor·surf / dragon-pulse·hydro-pump·muddy-water·hyper-beam
+  도구: draco-meteor·surf / dragon-pulse·hydro-pump·muddy-water·tera-blast
+tatsugiri-stretchy (사용률 없음)
+  지금: draco-meteor·surf / dragon-pulse·hydro-pump·muddy-water·hyper-beam
+  도구: draco-meteor·surf / dragon-pulse·hydro-pump·muddy-water·tera-blast
+clodsire
+  지금: gunk-shot·earthquake / poison-jab·high-horsepower·earth-power·liquidation
+  도구: gunk-shot·earthquake / poison-jab·high-horsepower·stomping-tantrum·megahorn
+farigiraf
+  지금: twin-beam·hyper-voice / psychic·psychic-noise·body-slam·dazzling-gleam
+  도구: twin-beam·hyper-voice / psychic·psychic-noise·uproar·dazzling-gleam
+dudunsparce
+  지금: hyper-drill·boomburst / body-slam·double-edge·hyper-voice·shadow-ball
+  도구: hyper-drill·boomburst / body-slam·hyper-voice·uproar·shadow-ball
+dudunsparce-three-segment (사용률 없음)
+  지금: hyper-drill·boomburst / body-slam·double-edge·hyper-voice·shadow-ball
+  도구: hyper-drill·boomburst / body-slam·hyper-voice·uproar·earthquake
+kingambit
+  지금: kowtow-cleave·iron-head / foul-play·night-slash·flash-cannon·brick-break
+  도구: kowtow-cleave·iron-head / foul-play·throat-chop·flash-cannon·brick-break
+great-tusk
+  지금: headlong-rush·close-combat / earthquake·body-press·brick-break·ice-spinner
+  도구: headlong-rush·close-combat / earthquake·high-horsepower·body-press·ice-spinner
+slither-wing
+  지금: leech-life·close-combat / brick-break·lunge·body-press·earthquake
+  도구: leech-life·close-combat / brick-break·superpower·lunge·earthquake
+iron-bundle
+  지금: freeze-dry·hydro-pump / ice-beam·blizzard·water-pulse·tera-blast
+  도구: freeze-dry·hydro-pump / ice-beam·blizzard·water-pulse·air-cutter
+frigibax
+  지금: dragon-tail·avalanche / 
+  도구: dragon-tail·icy-wind / 
+gholdengo
+  지금: make-it-rain·shadow-ball / hex·flash-cannon·poltergeist·focus-blast
+  도구: make-it-rain·shadow-ball / flash-cannon·hex·steel-beam·focus-blast
+wo-chien
+  지금: ruination·leaf-storm / giga-drain·foul-play·dark-pulse·pollen-puff
+  도구: ruination·leaf-storm / giga-drain·dark-pulse·energy-ball·pollen-puff
+chien-pao
+  지금: crunch·ice-spinner / icicle-crash·throat-chop·ice-fang·sacred-sword
+  도구: crunch·ice-spinner / icicle-crash·throat-chop·lash-out·sacred-sword
+ting-lu
+  지금: ruination·earthquake / throat-chop·stomping-tantrum·lash-out·body-press
+  도구: ruination·earthquake / throat-chop·stomping-tantrum·lash-out·stone-edge
+dipplin
+  지금: syrup-bomb·dragon-tail / 
+  도구: syrup-bomb·dragon-pulse / 
+okidogi
+  지금: gunk-shot·drain-punch / poison-jab·close-combat·brick-break·ice-punch
+  도구: gunk-shot·drain-punch / poison-jab·close-combat·superpower·ice-punch
+ogerpon
+  지금: ivy-cudgel·horn-leech / wood-hammer·power-whip·bullet-seed·play-rough
+  도구: ivy-cudgel·horn-leech / power-whip·wood-hammer·seed-bomb·play-rough
+gouging-fire
+  지금: flare-blitz·dragon-claw / breaking-swipe·outrage·raging-fury·earthquake
+  도구: flare-blitz·breaking-swipe / dragon-claw·outrage·raging-fury·earthquake
+terapagos
+  지금: tera-starstorm·tri-attack / body-slam·double-edge·hyper-beam·ice-beam
+  도구: tera-starstorm·tri-attack / body-slam·double-edge·headbutt·ice-beam
+terapagos-terastal (사용률 없음)
+  지금: tera-starstorm·tri-attack / body-slam·double-edge·hyper-beam·ice-beam
+  도구: tera-starstorm·tri-attack / body-slam·double-edge·headbutt·earthquake
+pecharunt
+  지금: malignant-chain·shadow-ball / poltergeist·gunk-shot·sludge-bomb·foul-play
+  도구: malignant-chain·shadow-ball / sludge-wave·poltergeist·sludge-bomb·foul-play
+venusaur-mega
+  지금: energy-ball·sludge-wave / sludge-bomb·leaf-storm·power-whip·earth-power
+  도구: giga-drain·sludge-bomb / energy-ball·sludge-wave·leaf-storm·earth-power
+charizard-mega-x
+  지금: flare-blitz·dragon-claw / fire-punch·temper-flare·outrage·body-slam
+  도구: flare-blitz·dragon-claw / fire-punch·outrage·flamethrower·earthquake
+charizard-mega-y
+  지금: weather-ball·air-slash / flamethrower·overheat·air-cutter·solar-beam
+  도구: weather-ball·air-slash / heat-wave·flamethrower·air-cutter·solar-beam
+blastoise-mega
+  지금: wave-crash·water-pulse / surf·water-spout·hydro-pump·dragon-pulse
+  도구: water-pulse·water-spout / hydro-pump·surf·muddy-water·aura-sphere
+beedrill-mega
+  지금: lunge·poison-jab / x-scissor·cross-poison·pin-missile·double-edge
+  도구: fell-stinger·poison-jab / x-scissor·lunge·cross-poison·drill-run
+alakazam-mega
+  지금: psychic·psyshock / expanding-force·future-sight·psycho-cut·energy-ball
+  도구: expanding-force·psychic / psyshock·future-sight·psycho-cut·shadow-ball
+slowbro-mega
+  지금: surf·psychic / scald·psyshock·expanding-force·ice-beam
+  도구: scald·psychic / surf·psyshock·expanding-force·ice-beam
+kangaskhan-mega
+  지금: body-slam·double-edge / mega-kick·facade·giga-impact·earthquake
+  도구: body-slam·double-edge / mega-kick·facade·giga-impact·drain-punch
+pinsir-mega
+  지금: lunge·body-slam / thrash·facade·x-scissor·earthquake
+  도구: x-scissor·body-slam / thrash·facade·lunge·close-combat
+aerodactyl-mega
+  지금: stone-edge·dual-wingbeat / aerial-ace·rock-blast·rock-slide·psychic-fangs
+  도구: stone-edge·dual-wingbeat / rock-slide·aerial-ace·rock-blast·earthquake
+mewtwo-mega-x
+  지금: psystrike·brick-break / psychic·drain-punch·focus-punch·earthquake
+  도구: psystrike·drain-punch / zen-headbutt·psycho-cut·aura-sphere·earthquake
+ampharos-mega
+  지금: thunderbolt·dragon-pulse / discharge·volt-switch·outrage·power-gem
+  도구: thunderbolt·dragon-pulse / thunder·discharge·outrage·focus-blast
+steelix-mega
+  지금: iron-head·earthquake / high-horsepower·drill-run·iron-tail·body-slam
+  도구: iron-head·earthquake / high-horsepower·iron-tail·drill-run·stone-edge
+scizor-mega
+  지금: bug-bite·iron-head / lunge·x-scissor·bullet-punch·dual-wingbeat
+  도구: bug-bite·iron-head / x-scissor·lunge·bullet-punch·close-combat
+heracross-mega
+  지금: pin-missile·close-combat / megahorn·lunge·focus-punch·bullet-seed
+  도구: pin-missile·close-combat / megahorn·brick-break·lunge·rock-blast
+tyranitar-mega
+  지금: stone-edge·foul-play / crunch·lash-out·rock-blast·earthquake
+  도구: stone-edge·crunch / foul-play·lash-out·rock-blast·earthquake
+sceptile-mega
+  지금: energy-ball·dragon-pulse / leaf-storm·leaf-blade·dragon-claw·earth-power
+  도구: giga-drain·dragon-pulse / leaf-storm·energy-ball·dragon-claw·focus-blast
+blaziken-mega
+  지금: flare-blitz·high-jump-kick / superpower·close-combat·flamethrower·earthquake
+  도구: flare-blitz·close-combat / high-jump-kick·superpower·flamethrower·thunder-punch
+swampert-mega
+  지금: wave-crash·earthquake / high-horsepower·liquidation·waterfall·superpower
+  도구: liquidation·earthquake / high-horsepower·wave-crash·waterfall·ice-punch
+gardevoir-mega
+  지금: psychic·hyper-voice / moonblast·psyshock·dazzling-gleam·thunderbolt
+  도구: psyshock·hyper-voice / psychic·expanding-force·moonblast·mystical-fire
+sableye-mega
+  지금: foul-play·poltergeist / shadow-ball·dark-pulse·throat-chop·psychic
+  도구: foul-play·shadow-ball / poltergeist·dark-pulse·throat-chop·psychic
+mawile-mega
+  지금: iron-head·play-rough / flash-cannon·steel-beam·foul-play
+  도구: iron-head·play-rough / flash-cannon·steel-beam·thunder-punch
+medicham-mega
+  지금: high-jump-kick·psycho-cut / axe-kick·close-combat·zen-headbutt·body-slam
+  도구: close-combat·zen-headbutt / high-jump-kick·axe-kick·psycho-cut·ice-punch
+manectric-mega
+  지금: thunderbolt·discharge / volt-switch·rising-voltage·thunder·flamethrower
+  도구: thunderbolt·rising-voltage / discharge·thunder·volt-switch·flamethrower
+camerupt-mega
+  지금: flamethrower·earth-power / fire-blast·heat-wave·scorching-sands·flash-cannon
+  도구: eruption·earth-power / heat-wave·flamethrower·earthquake·ancient-power
+altaria-mega
+  지금: draco-meteor·uproar / hyper-voice·body-slam·dragon-pulse·earthquake
+  도구: dragon-claw·hyper-voice / dragon-pulse·draco-meteor·body-slam·earthquake
+banette-mega
+  지금: poltergeist·shadow-claw / shadow-punch·shadow-ball·shadow-sneak·foul-play
+  도구: poltergeist·shadow-claw / phantom-force·shadow-punch·shadow-ball·gunk-shot
+absol-mega
+  지금: foul-play·throat-chop / night-slash·dark-pulse·knock-off·superpower
+  도구: night-slash·throat-chop / dark-pulse·foul-play·knock-off·close-combat
+glalie-mega
+  지금: body-slam·ice-beam / facade·ice-spinner·icicle-spear·earthquake
+  도구: freeze-dry·body-slam / blizzard·ice-spinner·hyper-beam·earthquake
+salamence-mega
+  지금: dragon-claw·body-slam / double-edge·hyper-voice·draco-meteor·earthquake
+  도구: dragon-claw·double-edge / hyper-voice·draco-meteor·dragon-pulse·earthquake
+metagross-mega
+  지금: iron-head·psychic-fangs / meteor-mash·zen-headbutt·psycho-cut·body-slam
+  도구: meteor-mash·psychic-fangs / zen-headbutt·iron-head·psycho-cut·earthquake
+latias-mega
+  지금: mist-ball·draco-meteor / psychic·dragon-pulse·psyshock·ice-beam
+  도구: mist-ball·draco-meteor / psychic·psyshock·dragon-pulse·aura-sphere
+latios-mega
+  지금: luster-purge·draco-meteor / psychic·dragon-pulse·psyshock·ice-beam
+  도구: luster-purge·draco-meteor / psychic·dragon-pulse·psyshock·aura-sphere
+kyogre-primal
+  지금: origin-pulse·water-spout / surf·hydro-pump·liquidation·thunder
+  도구: origin-pulse·water-spout / surf·hydro-pump·liquidation·ice-beam
+groudon-primal
+  지금: precipice-blades·flamethrower / eruption·overheat·earthquake·solar-beam
+  도구: precipice-blades·overheat / earthquake·fire-punch·eruption·stone-edge
+lopunny-mega
+  지금: mega-kick·high-jump-kick / close-combat·focus-punch·facade·play-rough
+  도구: mega-kick·close-combat / high-jump-kick·focus-punch·facade·ice-punch
+garchomp-mega
+  지금: dragon-claw·earthquake / stomping-tantrum·outrage·earth-power·body-slam
+  도구: scale-shot·earthquake / dragon-claw·draco-meteor·earth-power·iron-head
+lucario-mega
+  지금: high-jump-kick·meteor-mash / close-combat·flash-cannon·aura-sphere·extreme-speed
+  도구: close-combat·meteor-mash / aura-sphere·flash-cannon·high-jump-kick·ice-punch
+abomasnow-mega
+  지금: energy-ball·blizzard / weather-ball·ice-beam·leaf-storm·earthquake
+  도구: giga-drain·blizzard / wood-hammer·energy-ball·ice-spinner·earth-power
+gallade-mega
+  지금: psycho-cut·close-combat / sacred-sword·focus-punch·zen-headbutt·earthquake
+  도구: psycho-cut·close-combat / drain-punch·sacred-sword·zen-headbutt·leaf-blade
+audino-mega
+  지금: uproar·dazzling-gleam / hyper-voice·body-slam·draining-kiss·ice-beam
+  도구: hyper-voice·dazzling-gleam / uproar·body-slam·draining-kiss·flamethrower
+diancie-mega
+  지금: diamond-storm·moonblast / power-gem·dazzling-gleam·play-rough·psychic
+  도구: diamond-storm·moonblast / power-gem·play-rough·dazzling-gleam·earth-power

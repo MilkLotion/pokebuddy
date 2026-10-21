@@ -95,6 +95,7 @@ export interface PetV3 {
   partyMs?: number; // 파티에서 보낸 시간 — 파티 시간 업적(pet-party)의 종만 세고 업적 기준에서 멈춘다 (src/dex/forms.ts tickPartyTime). 2026-10-09 에 더했다
   moveSwap?: true; // 보유 기술 2개의 위아래 순서를 바꿨다 (src/battle/moves.ts). 2026-10-08 에 더했다
   moves?: [string, string]; // 고른 기술 2개, 순서대로 — 그 종의 기본 2개 + 후보 4개 가운데. 있으면 moveSwap 대신 쓴다. 진화하면 지운다 (src/battle/moves.ts). 2026-10-10 에 더했다
+  megaMoves?: Record<string, [string, string]>; // 메가 모습(data/mega.json 슬러그)마다 고른 기술 2개 — 그 모습의 기본 2개 + 후보 4개 가운데(data/mega-moves.json). 메가를 끄면 moves 를 그대로 다시 쓴다. 진화하면 지운다. 2026-10-22 에 더했다
   daily: PetDaily;
 }
 

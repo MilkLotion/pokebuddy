@@ -432,5 +432,8 @@
   "wood-hammer": {"ko":"우드해머","en":"Wood Hammer","type":"grass","class":"physical","power":120,"accuracy":100,"cooldown":8,"traits":["contact"],"effects":{"recoil":33}},
   "x-scissor": {"ko":"시저크로스","en":"X-Scissor","type":"bug","class":"physical","power":80,"accuracy":100,"cooldown":5.4,"traits":["contact","slicing"]},
   "zen-headbutt": {"ko":"사념의박치기","en":"Zen Headbutt","type":"psychic","class":"physical","power":80,"accuracy":90,"cooldown":5.4,"traits":["contact"],"effects":{"flinch":20}},
-  "zing-zap": {"ko":"찌리리따끔따끔","en":"Zing Zap","type":"electric","class":"physical","power":80,"accuracy":100,"cooldown":5.4,"traits":["contact"],"effects":{"flinch":30}}
+  "zing-zap": {"ko":"찌리리따끔따끔","en":"Zing Zap","type":"electric","class":"physical","power":80,"accuracy":100,"cooldown":5.4,"traits":["contact"],"effects":{"flinch":30}},
+  "hyperspace-fury": {"ko":"이차원러시","en":"Hyperspace Fury","type":"dark","class":"physical","accuracy":null,"power":100,"cooldown":6,"effects":{"stats":[{"who":"self","stat":"def","change":-1,"chance":100}]}},
+  "payback": {"ko":"보복","en":"Payback","type":"dark","class":"physical","accuracy":100,"power":50,"cooldown":3.4,"traits":["contact"]},
+  "grass-pledge": {"ko":"풀의맹세","en":"Grass Pledge","type":"grass","class":"special","accuracy":100,"power":80,"cooldown":5.4}
 }

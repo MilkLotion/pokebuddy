@@ -73,6 +73,17 @@ function pickedMoves(raw: unknown): [string, string] | null {
   return typeof a === "string" && typeof b === "string" && a && b && a !== b ? [a, b] : null;
 }
 
+// 메가 모습마다 고른 기술 — 모습 슬러그 → 고른 기술 2개. 모양이 틀린 칸은 버리고, 남은 칸이 없으면 null
+function megaPicked(raw: unknown): Record<string, [string, string]> | null {
+  if (!isRawObject(raw)) return null;
+  const out: Record<string, [string, string]> = {};
+  for (const [form, v] of Object.entries(raw)) {
+    const picked = pickedMoves(v);
+    if (form && picked) out[form] = picked;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 function megaOf(raw: unknown): MegaV3 | null {
   if (!isRawObject(raw)) return null;
   return {
@@ -124,6 +135,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     ...(megaOf(raw.mega) ? { mega: megaOf(raw.mega)! } : {}), // 2026-10-02 에 더했다. 메가진화 진행과 모습
     ...(raw.moveSwap === true ? { moveSwap: true as const } : {}), // 2026-10-08 에 더했다. 보유 기술 위아래 순서 (src/battle/moves.ts)
     ...(pickedMoves(raw.moves) ? { moves: pickedMoves(raw.moves)! } : {}), // 2026-10-10 에 더했다. 고른 기술 2개 — 종의 6개 안인지는 쓰는 곳(src/battle/moves.ts)이 본다
+    ...(megaPicked(raw.megaMoves) ? { megaMoves: megaPicked(raw.megaMoves)! } : {}), // 2026-10-22 에 더했다. 메가 모습마다 고른 기술 2개
     daily: normalizeDaily(raw.daily, date),
   };
 }

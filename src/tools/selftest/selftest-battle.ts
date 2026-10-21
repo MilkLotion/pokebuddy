@@ -16,6 +16,7 @@ import type { SaveV3 } from "../../shared/save-v3";
 import { testPet } from "../harness/fixtures";
 import { BATTLE_RULES } from "../../battle/rules";
 import { BATTLE_OUT, buildBattleFiles } from "../data/build-battle";
+import { megaMoveTable, speciesMoveTable } from "../../dex/tables";
 
 const chart = battleTypeChart();
 // 엔진 파일은 import 가 없어야 서버로 복사된다
@@ -556,6 +557,45 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   const ash = of(bb.events, "form").filter((e) => e.side === 0);
   assert.deepStrictEqual(ash.map((e) => e.species), ["greninja-ash"], "첫 쓰러뜨림 뒤 한 번");
   assert.ok(ash[0]!.t >= of(bb.events, "faint").find((e) => e.side === 1)!.t);
+  // 지우개굴닌자 물수리검 — 위력 20·반드시 3회(원작 7세대). 개굴닌자는 위력 15·2~5회 그대로 (2026-10-22 사용자 "물수리검 데미지가 안바껴있어")
+  const shuriken = mv("water-shuriken", { type: "water", class: "special", power: 15, hits: [2, 5], cooldownMs: 1000 });
+  const wall = unit({ stats: [9999, 1, 999, 1, 999, 1] });
+  const shurikenHits = (species: string): number[][] => {
+    const r = run([{ ...unit({ stats: [999, 1, 999, 300, 999, 95], moves: [shuriken] }), species }], [wall], 1, 8000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+    const uses = new Map<number, number[]>();
+    for (const e of of(r.events, "damage")) if (e.side === 0 && e.source !== "basic") uses.set(e.t, [...(uses.get(e.t) ?? []), e.amount]);
+    return [...uses.values()];
+  };
+  const ashUses = shurikenHits("greninja-ash");
+  const plainUses = shurikenHits("greninja");
+  assert.ok(ashUses.length > 2 && ashUses.every((u) => u.length === 3), "지우개굴닌자 물수리검은 늘 3회");
+  assert.ok(plainUses.some((u) => u.length !== 3), "개굴닌자 물수리검은 2~5회");
+  assert.ok(Math.min(...ashUses.flat()) > Math.min(...plainUses.flat()), "지우개굴닌자 물수리검 한 타가 더 세다(위력 20)");
+}
+
+// ── 메가 모습의 기술 — 다른 포켓몬처럼 자기 줄과 고른 기술(megaMoves). 메가를 끄면 moves 로 돌아간다 (2026-10-22 사용자 "보만다랑 메가보만다랑 다른포켓몬 취급") ──
+{
+  const mega = megaMoveTable()["salamence-mega"]!;
+  const base = speciesMoveTable()["salamence"]!;
+  const ids = (f: EngineFighter | null): string[] => f!.moves.map((m) => m.id);
+  const baseIds = base.moves.map((c) => (typeof c === "string" ? c : c.id));
+  assert.deepStrictEqual(ids(buildFighter({ species: "salamence", form: "salamence-mega" })), mega.moves, "메가보만다는 메가 줄의 기본 2개");
+  assert.deepStrictEqual(ids(buildFighter({ species: "salamence" })), baseIds, "보만다는 종 줄의 기본 2개");
+  const megaPick: [string, string] = [mega.candidates![0]!, mega.moves[0] as string];
+  const basePick: [string, string] = [baseIds[1]!, baseIds[0]!];
+  const pet = { species: "salamence", moves: basePick, megaMoves: { "salamence-mega": megaPick }, level: 50 };
+  assert.deepStrictEqual(ids(petFighter(pet, "salamence-mega")), megaPick, "메가를 켜면 megaMoves");
+  assert.deepStrictEqual(ids(petFighter(pet, null)), basePick, "메가를 끄면 moves 그대로");
+  assert.deepStrictEqual(ids(petFighter({ ...pet, megaMoves: { "salamence-mega": basePick } }, "salamence-mega")).length, 2, "메가 줄에 없는 고른 기술은 버리고 기본 2개");
+  // 서버의 배틀 파티 읽기도 같다
+  const s = emptySave(Date.now());
+  s.pets = [testPet({ id: "p1", species: "salamence" })];
+  s.pets[0]!.moves = basePick;
+  s.pets[0]!.megaMoves = { "salamence-mega": megaPick };
+  s.battle = { slots: ["p1", null, null, null, null, null], mega: { p1: "salamence-mega" } };
+  assert.deepStrictEqual(partyOf(JSON.parse(JSON.stringify(s)), battleData()).party[0]?.moves, megaPick, "partyOf 도 메가 모습의 고른 기술");
+  delete s.battle.mega;
+  assert.deepStrictEqual(partyOf(JSON.parse(JSON.stringify(s)), battleData()).party[0]?.moves, basePick, "partyOf 메가를 끄면 moves");
 }
 
 // ── 전투 중 그림·능력치 (2026-10-17 사용자 "5 전투 중 그림", "6 성별 능력치") ──

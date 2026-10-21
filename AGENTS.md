@@ -49,6 +49,7 @@ Before completion, manually review changed prose with the writing checklist. Rec
 - `src/`: TypeScript runtime. Main process is in `src/main/`; other features are grouped by module.
 - `src/renderer/`: all windows (stage, settings `manage/`, device windows, menus, picker).
 - `data/`: editable rules and species data.
+- `data-src/`: source tables that build `data/` files (not packaged). `data-src/moves/` holds the learnset, power, and usage CSV files for move picks.
 - `assets/`: fonts, item icons, and logo. `scripts/`, `bin/`, `helpers/`: packaging tools. `bin/pokebuddy` is a thin entry; commands live in `src/cli/main.ts`.
 - `docs/`: records.
 

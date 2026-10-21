@@ -86,6 +86,16 @@ export interface SpeciesMoveRow {
 }
 export const speciesMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow> => loadJson<Record<string, SpeciesMoveRow>>("species-moves.json", opts);
 
+// ── data/mega-moves.json ── 메가·원시회귀 모습의 기본 2개와 후보 4개 (docs/specs/moves.md "메가 모습의 기술", 2026-10-22)
+// 파일이 없으면 빈 표 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게. 없는 모습은 기본 종의 기술을 쓴다
+export const megaMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow> => {
+  try {
+    return loadJson<Record<string, SpeciesMoveRow>>("mega-moves.json", opts);
+  } catch {
+    return {};
+  }
+};
+
 // ── data/mega-battle.json ── 메가·원시회귀 모습의 종족값 6개와 특성 (메가 모습은 종 표에 없다)
 export interface MegaBattleRow {
   stats: number[];

@@ -7,9 +7,10 @@ import { megaSlugs, megaOf } from "../dex/mega.js";
 import { regionalTable } from "../dex/regional.js";
 import { SHIFT_RULES } from "../dex/rules.js";
 import { profileOf } from "../dex/species.js";
-import { formBattleTable, genderBattleTable, megaBattleTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
+import { formBattleTable, genderBattleTable, megaBattleTable, megaMoveTable, moveTable, speciesAbilityTable, speciesMoveTable, speciesTable, typeChartTable } from "../dex/tables.js";
 import type { PetV3 } from "../shared/save-v3";
 import type { EngineFighter, EngineMove } from "./engine.js";
+import { chosenMovesOf } from "./moves.js";
 import { BATTLE_BASIS, fighterFrom, movesOf, type BattleData, type BattleMoveRow, type FighterSource, type StatBasis } from "./fighter-core.js";
 import { tierOf } from "./tier.js";
 
@@ -41,10 +42,13 @@ export function battleData(opts?: DexOptions): BattleData {
   for (const [id, m] of Object.entries(moveTable(opts))) if (!isMetaKey(id) && m && typeof m === "object") moves[id] = m as unknown as BattleMoveRow;
   const mega: BattleData["mega"] = {};
   const mb = megaBattleTable(opts);
+  const mm = megaMoveTable(opts);
   for (const slug of megaSlugs(opts)) {
     const f = megaOf(slug, opts);
     const v = mb[slug];
-    if (f && v) mega[slug] = { base: f.base, stats: [...v.stats], types: [...f.types], ability: v.ability };
+    const own = mm[slug];
+    // 메가 모습의 기술 줄 — 있으면 메가진화한 개체가 이 기술을 쓴다 (data/mega-moves.json, 2026-10-22)
+    if (f && v) mega[slug] = { base: f.base, stats: [...v.stats], types: [...f.types], ability: v.ability, ...(own?.moves?.length ? { moves: own.moves as BattleData["species"][string]["moves"], ...(own.candidates?.length ? { picks: [...own.candidates] } : {}) } : {}) };
   }
   const forms: BattleData["forms"] = {};
   for (const [slug, v] of Object.entries(formBattleTable(opts))) if (!isMetaKey(slug)) forms[slug] = v;
@@ -65,8 +69,10 @@ export const engineMoves = (species: string, swap: boolean, opts?: DexOptions): 
 export const buildFighter = (src: FighterSource, basis: StatBasis = BATTLE_BASIS, opts?: DexOptions): EngineFighter | null =>
   fighterFrom(battleData(opts), src, basis);
 
-// 배틀 파티의 개체 하나 → 전투 개체 (50레벨·6V). form 은 배틀 파티에서 켠 메가 모습
-export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "level"> & Partial<Pick<PetV3, "gender">>, form: string | null, opts?: DexOptions): EngineFighter | null =>
-  buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, ...(pet.moves ? { moves: [...pet.moves] } : {}), level: pet.level, ...(pet.gender ? { gender: pet.gender } : {}) }, BATTLE_BASIS, opts);
+// 배틀 파티의 개체 하나 → 전투 개체 (50레벨·6V). form 은 배틀 파티에서 켠 메가 모습 — 메가 줄이 있으면 그 모습의 고른 기술(megaMoves)을 쓴다
+export const petFighter = (pet: Pick<PetV3, "species" | "moveSwap" | "moves" | "level"> & Partial<Pick<PetV3, "gender" | "megaMoves">>, form: string | null, opts?: DexOptions): EngineFighter | null => {
+  const chosen = chosenMovesOf(pet, form, opts);
+  return buildFighter({ species: pet.species, form, moveSwap: pet.moveSwap === true, ...(chosen ? { moves: [...chosen] } : {}), level: pet.level, ...(pet.gender ? { gender: pet.gender } : {}) }, BATTLE_BASIS, opts);
+};
 
 export const battleTypeChart = (opts?: DexOptions): Record<string, Record<string, number>> => battleData(opts).typeChart;

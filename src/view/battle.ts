@@ -149,8 +149,9 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
     return {
       index,
       pet: view,
-      moves: petMoves(asPet).map(withDetail),
-      options: moveOptions(asPet.species).map(withDetail),
+      // 메가 모습은 다른 포켓몬처럼 자기 기술 줄을 쓴다 — 기술 바꾸기 모달도 그 모습의 6개를 보인다 (2026-10-22 사용자 "보만다랑 메가보만다랑 다른포켓몬 취급")
+      moves: petMoves(asPet, undefined, form).map(withDetail),
+      options: moveOptions(asPet.species, undefined, form).map(withDetail),
       ...(fixedMoveOf(asPet.species) ? { fixedFirst: true as const } : {}),
       blocked: tier ? blockedText(tier) : null,
       stats: statRows(shown, female?.stats),
