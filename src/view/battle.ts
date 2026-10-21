@@ -18,7 +18,8 @@ import { petView } from "./pet.js";
 import { petName, petNameParts, typeName } from "./text.js";
 
 const CLASS_TEXT: Readonly<Record<MoveInfo["class"], string>> = { physical: "물리", special: "특수", status: "변화" };
-const TIER_TEXT: Readonly<Record<BattleTier, string>> = { legendary: "초전설", sub: "준전설", mega: "메가진화" };
+// legend 는 초전설·준전설 합 — `전설급 3마리까지` (2026-10-22 사용자 결정, worklog/records/update-1022/update-1022-range-party.md)
+const TIER_TEXT: Readonly<Record<BattleTier, string>> = { legendary: "초전설", legend: "전설급", mega: "메가진화" };
 // 방사형 그래프의 꼭짓점 순서 — 위에서 시계 방향. 값은 저장 순서 [HP, 공격, 방어, 특수공격, 특수방어, 스피드] 의 번호다
 const STAT_ORDER: readonly [string, number][] = [["HP", 0], ["공격", 1], ["방어", 2], ["스피드", 5], ["특수방어", 4], ["특수공격", 3]];
 
@@ -34,7 +35,6 @@ export function moveMeta(m: MoveInfo): string {
 export const moveView = (m: MoveInfo): MoveView => ({ id: m.id, name: m.name, typeId: m.type, typeName: typeName(m.type), meta: moveMeta(m), text: m.text });
 
 const STAT_NAME: Readonly<Record<string, string>> = { atk: "공격", def: "방어", spa: "특수공격", spd: "특수방어", spe: "스피드" };
-const RANGE_TEXT: Readonly<Record<MoveInfo["class"], string | null>> = { physical: "근접", special: "원거리", status: null };
 
 // 날씨로 충전이 없어지는 기술 — 엔진 doMove 의 `instant` 와 같다(쾌청·끝의대지에서 솔라빔·솔라블레이드, 비·시작의바다에서 일렉트로빔). 값을 바꾸면 엔진도 같이 고친다
 const NO_CHARGE_WEATHER: Readonly<Record<string, string>> = { "solar-beam": "쾌청이면", "solar-blade": "쾌청이면", "electro-shot": "비가 오면" };
@@ -86,7 +86,8 @@ export function moveEffects(m: MoveInfo): string[] {
 
 // 기술 상세 — 기술 바꾸기 모달 오른쪽 아래 칸
 export function moveDetail(m: MoveInfo): MoveDetail {
-  const kind = [CLASS_TEXT[m.class], RANGE_TEXT[m.class], m.traits?.includes("contact") ? "접촉" : null].filter((x): x is string => !!x).join(" · ");
+  // 사거리는 칸으로 정해 기술 상세에 적지 않는다 (2026-10-22 사용자 "시안대로 진행", 그 전에는 물리 근접·특수 원거리)
+  const kind = [CLASS_TEXT[m.class], m.traits?.includes("contact") ? "접촉" : null].filter((x): x is string => !!x).join(" · ");
   const stats: MoveDetail["stats"] = [];
   if (m.power != null) stats.push({ label: "위력", value: String(m.power) });
   stats.push({ label: "명중", value: m.accuracy == null ? "반드시" : String(m.accuracy) });
@@ -124,12 +125,13 @@ function statRows(shown: string, femaleStats?: readonly number[]): { label: stri
 }
 
 // 배틀에서 보이는 개체 — 배틀 파티의 메가 상태로 이름·타입·초상을 바꾼다. 프리셋의 메가 모습은 쓰지 않는다.
-// 메가진화 창(renderer/manage/pet-forms.ts drawMega)이 읽는 mega 도 배틀 기준이다 — 늘 바꿀 수 있고, 다른 개체를 끄지 않아 rivals 는 비운다
+// 메가진화 창(renderer/manage/pet-forms.ts drawMega)이 읽는 mega 도 배틀 기준이다 — 늘 바꿀 수 있다
 function battlePetView(save: SaveV3, pet: PetV3, form: string | null, dayPart: DayPart): PetView {
-  const asShown: PetV3 = pet.mega ? { ...pet, mega: { ...pet.mega, ...(form ? { on: form } : {}) } } : pet;
+  const asShown: PetV3 = pet.mega ? { ...pet, mega: { ...pet.mega, ...(form ? { on: form } : {}) } } : { ...pet };
   if (asShown.mega && !form) delete asShown.mega.on;
+  delete asShown.battleLook; // 전투 중 모습 보이기는 일상 파티에만 — 모험은 기본 모습이다 (src/dex/battle-look.ts)
   const view = petView(save, asShown, false, dayPart);
-  return view.mega ? { ...view, mega: { ...view.mega, on: form, canChange: true, rivals: [] } } : view;
+  return view.mega ? { ...view, mega: { ...view.mega, on: form, canChange: true } } : view;
 }
 
 export function battleView(save: SaveV3, dayPart: DayPart): BattleView {

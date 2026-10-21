@@ -5,9 +5,8 @@
 //   조건      친밀도 100 · Lv.60 이상 · 친밀도 100 뒤 파티에서 보낸 시간 · 친밀도 100 뒤 밥 주기와 놀아주기 횟수 (MEGA_RULES)
 //   메가스톤  조건을 모두 채우면 그 개체가 지닌다(mega.stone). 가방에 들어가지 않는다. 한 번 생기면 없어지지 않는다
 //   도감      메가스톤이 생긴 종을 dex.megaOpened 에 적는다. 개체를 팔거나 교환해도 남는다
-//   켜기      적용한 프리셋의 칸에 든 개체만. 한 프리셋에 메가 모습은 한 마리다 — 새로 켜면 먼저 켠 개체가 기본 모습으로 돌아간다
-//   예외      원시회귀(그란돈·가이오가)와 메가레쿠쟈는 한 마리 제한에서 빠진다(표의 free). 다른 개체를 풀지 않고, 다른 개체 때문에 풀리지도 않는다.
-//             원작에서 원시회귀는 메가진화 횟수에 들지 않는다. 레쿠쟈는 메가스톤 없이 메가진화해 도구 칸이 비는 이점이 있는데 이 게임에는 도구가 없어 같은 이점으로 바꿨다 (2026-10-02 사용자 결정)
+//   켜기      프리셋 칸에 든 개체면 켠다. 적용하지 않은 프리셋도 되고, 한 프리셋에 여러 마리도 된다
+//             (2026-10-22 사용자 "적용중인 프리셋에 있는 메가진화로 모습바꾸는거 제한그런거 해제". 그 전에는 적용한 프리셋만, 한 프리셋 한 마리 — 원시회귀·메가레쿠쟈 예외)
 //   풀림      개체가 프리셋을 떠나면(박스) 기본 모습으로 돌아간다. 종이 바뀌어 모습이 맞지 않아도 돌아간다
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기와 시간 적용이 한다
@@ -20,7 +19,6 @@ export type MegaKind = "mega" | "primal";
 export interface MegaForm {
   base: string; // 메가진화하는 종
   kind: MegaKind;
-  free?: true; // 한 프리셋 한 마리 제한에서 빠진다 — 원시회귀와 메가레쿠쟈
   pokemonId: number; // PokeAPI pokemon.csv id — 초상 그림 번호
   pmd?: string; // PMD SpriteCollab 폼 경로(`0006/0001`)
   overworld?: string; // pokeemerald-expansion 의 graphics/pokemon 아래 폴더(`charizard/mega_y`)
@@ -74,11 +72,8 @@ export function megaTagOf(slug: string, opts?: DexOptions): string | null {
 // 그 종의 메가 모습 — 표 순서. 없으면 빈 목록 (리자몽·뮤츠는 둘)
 export const megaFormsOf = (species: string, opts?: DexOptions): string[] => megaSlugs(opts).filter((slug) => megaTable(opts).forms[slug]?.base === species);
 
-// 한 마리 제한에서 빠지는 모습인가
-export const megaFree = (slug: string | undefined, opts?: DexOptions): boolean => slug !== undefined && megaOf(slug, opts)?.free === true;
-
-// 화면에 보이는 종 — 메가 모습이면 그 슬러그, 아니면 종
-export const shownSpecies = (pet: Pick<PetV3, "species" | "mega">): string => pet.mega?.on ?? pet.species;
+// 화면에 보이는 종 — 메가 모습이면 그 슬러그, 전투 중 모습 보이기(src/dex/battle-look.ts)면 그 슬러그, 아니면 종
+export const shownSpecies = (pet: Pick<PetV3, "species" | "mega" | "battleLook">): string => pet.mega?.on ?? pet.battleLook ?? pet.species;
 
 // 조건 하나하나 — 화면에는 보이지 않는다. 자체 확인과 지급 판정이 쓴다
 export interface MegaProgress {

@@ -63,6 +63,7 @@ export interface PetView {
   evolutions: EvolutionView[]; // 다음 한 단계의 후보. 최종 단계면 비어 있다
   forms?: FormView[]; // 공유 sid 계열의 고를 수 있는 종 — 그 밖의 개체에는 없다 (src/dex/forms.ts)
   shiftForms?: FormView[]; // 모습 바꾸기 종(로토무)의 고를 수 있는 모습 — 해금 뒤에만. 박스 칸은 지금 종 그대로라 forms 와 나눈다
+  battleLooks?: FormView[]; // 전투 중 모습 보이기(src/dex/battle-look.ts) — 기본 모습(지금 종)과 전투 중 모습. 도구를 쓰지 않는다. 모습 바꾸기 확인 창이 읽는다
   formItem?: { name: string; base: string; oneWay?: true }; // 모습 바꾸기에 쓰는 도구의 이름과 도구 없이 돌아가는 기본 종(로토무 — 로토무카탈로그). 확인 창 안내 줄이 쓴다. oneWay 는 돌아가지 않는 모습(플라엣테(영원의 꽃))
   look: string; // 초상에 쓰는 종 — 메가 모습이면 그 슬러그, 아니면 species 와 같다. name·types 도 이 모습을 따른다
   mega?: MegaView; // 메가스톤을 지닌 개체만 (src/dex/mega.ts)
@@ -86,8 +87,7 @@ export interface MegaView {
   baseTypes: string[];
   baseTypeIds: string[];
   forms: FormView[]; // 고를 수 있는 메가 모습 — 리자몽·뮤츠는 둘
-  canChange: boolean; // 프리셋 칸에 든 개체만 메가진화한다. 박스 개체는 false
-  rivals: string[]; // 같은 프리셋에서 지금 메가 모습인 다른 개체의 이름 — 이 개체가 메가진화하면 원래 모습으로 돌아간다
+  canChange: boolean; // 프리셋 칸에 든 개체만 메가진화한다(적용하지 않은 프리셋도). 박스 개체는 false
 }
 
 // 메가스톤 조건과 진행 — 파티 상세 기기 창의 흐린 메가스톤 표식과 조건 말풍선이 쓴다 (docs/specs/game.md "조건 말풍선")
@@ -138,7 +138,7 @@ export interface MoveView {
 
 // 기술 상세 — 기술 바꾸기 모달 오른쪽 아래 칸 (docs/specs/adventure.md "기술 바꾸기", 효과 문구는 docs/specs/moves.md "부담과 효과")
 export interface MoveDetail {
-  kind: string; // "물리 · 근접 · 접촉" — 분류, 사거리(물리 근접·특수 원거리), 접촉
+  kind: string; // "물리 · 접촉" — 분류, 접촉. 사거리는 칸으로 정해 적지 않는다(2026-10-22)
   stats: { label: string; value: string }[]; // 위력·명중·쿨타임 세 칸. 변화기는 위력이 없다
   effects: string[]; // 효과 줄 — 자기 타입, 상태 이상·풀죽음, 반동·흡수, 급소, 능력 변화 등. 없으면 빈 목록
 }

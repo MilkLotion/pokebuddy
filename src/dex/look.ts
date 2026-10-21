@@ -7,10 +7,10 @@ import { megaOf, type MegaForm } from "./mega.js";
 import { genderLookInfo, genderLookOf, regionalOf, type GenderLook, type RegionalForm } from "./regional.js";
 import { profileOf } from "./species.js";
 
-// 저장의 모습과 색을 그림 열쇠로 — 메가 모습(mega.on)이 켜져 있으면 그 슬러그가 먼저다.
+// 저장의 모습과 색을 그림 열쇠로 — 메가 모습(mega.on)이 켜져 있으면 그 슬러그가 먼저다. 다음은 전투 중 모습 보이기(battleLook, src/dex/battle-look.ts)다.
 // 성별마다 그림이 다른 종(대쓰여너 암컷)은 그 성별의 그림 이름이 종보다 먼저다
-export const appearanceOf = (pet: { species: string; look?: string; shiny: boolean; gender?: string; mega?: { on?: string } }): string =>
-  joinLookKey(pet.mega?.on ?? pet.look ?? genderLookOf(pet.species, pet.gender) ?? pet.species, pet.shiny);
+export const appearanceOf = (pet: { species: string; look?: string; battleLook?: string; shiny: boolean; gender?: string; mega?: { on?: string } }): string =>
+  joinLookKey(pet.mega?.on ?? pet.battleLook ?? pet.look ?? genderLookOf(pet.species, pet.gender) ?? pet.species, pet.shiny);
 
 export const splitLookKey = (key: string): { slug: string; shiny: boolean } => ({ slug: key.replace(/:shiny$/, ""), shiny: key.endsWith(":shiny") });
 export const joinLookKey = (slug: string, shiny: boolean): string => `${slug}${shiny ? ":shiny" : ""}`;

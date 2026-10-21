@@ -397,6 +397,32 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, ids[3]!, ids[4]!, ids[5]!], mega: { [ids[5]!]: "charizard-mega-x" } };
     },
   },
+  "battle-looks": {
+    note: "전투 중 모습 보이기 — 파티에 개굴닌자(유대변화, 지우개굴닌자 겉모습 켬)·캐스퐁·지가르데를 넣고 배틀 파티에도 넣는다. 배틀 파티는 기본 모습으로 보여야 한다 (update-1022, src/dex/battle-look.ts)",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      applyScene(s, "done-all", now);
+      const add = (species: string, level: number): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        pet.affinity = 80;
+        s.pets.push(pet);
+        s.petSeq = Math.max(s.petSeq, Number(pet.id.slice(1)));
+        recordDex(s, species, false);
+        return pet.id;
+      };
+      const ids = [add("greninja-battle-bond", 50), add("castform", 30), add("zygarde", 60)];
+      s.pets.find((p) => p.id === ids[0])!.battleLook = "greninja-ash";
+      for (const petId of ids) {
+        const at = s.party.slots.findIndex((slot) => slot.state === "empty");
+        const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
+        if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
+        else addToBox(s.boxes, petId);
+      }
+      s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, null, null, null] };
+    },
+  },
   "battle-ready": {
     note: "랜덤 배틀을 걸 수 있는 배틀 파티 — battle 장면 뒤에 쓴다. 출전 불가(루기아·미라이돈) 칸을 이브이·팬텀으로 바꾼다. 상대 고르기 모달 확인용 (battle-ui-1017)",
     apply: (s, now) => {

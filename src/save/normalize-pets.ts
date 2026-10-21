@@ -133,6 +133,7 @@ export function normalizePet(raw: unknown, date: string): PetV3 | null {
     ...(typeof raw.partyMs === "number" && Number.isFinite(raw.partyMs) && raw.partyMs > 0 ? { partyMs: Math.round(raw.partyMs) } : {}), // 2026-10-09 에 더했다. 개굴닌자 파티 시간 업적
     ...(typeof raw.workMs === "number" && Number.isFinite(raw.workMs) && raw.workMs > 0 ? { workMs: Math.round(raw.workMs) } : {}), // 2026-10-05 에 더했다. 로토무 모습 바꾸기 해금
     ...(megaOf(raw.mega) ? { mega: megaOf(raw.mega)! } : {}), // 2026-10-02 에 더했다. 메가진화 진행과 모습
+    ...(typeof raw.battleLook === "string" && raw.battleLook ? { battleLook: raw.battleLook } : {}), // 2026-10-22 에 더했다. 전투 중 모습 보이기 — 종에 맞는지는 src/dex/battle-look.ts settleBattleLook 이 본다
     ...(raw.moveSwap === true ? { moveSwap: true as const } : {}), // 2026-10-08 에 더했다. 보유 기술 위아래 순서 (src/battle/moves.ts)
     ...(pickedMoves(raw.moves) ? { moves: pickedMoves(raw.moves)! } : {}), // 2026-10-10 에 더했다. 고른 기술 2개 — 종의 6개 안인지는 쓰는 곳(src/battle/moves.ts)이 본다
     ...(megaPicked(raw.megaMoves) ? { megaMoves: megaPicked(raw.megaMoves)! } : {}), // 2026-10-22 에 더했다. 메가 모습마다 고른 기술 2개

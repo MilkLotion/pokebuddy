@@ -8,7 +8,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { app, nativeImage, screen, Notification } from "electron";
 import { appearanceOf } from "../dex/look";
-import { formsOf, isFormLocked } from "../dex/forms";
+import { menuFormsOf } from "../dex/battle-look";
+import { isFormLocked } from "../dex/forms";
 import type { HelperWindow, SelfMark } from "../terminal/types";
 import { createHostWatch, type HostWatch, type HostWatchUpdate } from "./stage/host-watch";
 import { createArtLoader, type ArtLoader } from "./art/stage-art";
@@ -533,7 +534,7 @@ function bootStage(saveSource: SaveParty, pics: Portraits): { art: ArtLoader; gr
     if (!save) return;
     const ids = new Set<string>([...save.party.slots.flatMap((sl) => (sl.state === "pokemon" && sl.petId ? [sl.petId] : [])), ...(save.battle?.slots ?? []).flatMap((id) => (id ? [id] : []))]);
     const asks = save.pets.filter((p) => ids.has(p.id) && !isFormLocked(p)).flatMap((p) => {
-      const forms = formsOf(p);
+      const forms = menuFormsOf(p); // 모습 바꾸기 묶음과 전투 중 모습(src/dex/battle-look.ts)
       return forms.length >= 2 ? forms.map((slug) => ({ slug, shiny: p.shiny })) : [];
     });
     const key = JSON.stringify(asks);

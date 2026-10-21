@@ -6,6 +6,7 @@
 // 클릭 통과는 트레이와 관리 창 설정에 — 켜면 펫을 우클릭할 수 없어 우클릭 메뉴에 있어도 끌 수 없다
 import type { MenuItemConstructorOptions } from "electron";
 import { NATURE_SHOWN } from "../shared/features.js";
+import { battleLookChoices, menuFormsOf } from "../dex/battle-look.js";
 import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
 import { shiftGroupOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
@@ -259,20 +260,32 @@ export interface PetMenuState {
   firstCare: { keep: string | null; wait: string | null } | null; // 첫 돌봄 튜토리얼 2/2 — 남길 항목 라벨과 말풍선의 대기 글자
 }
 
+// 메뉴 머리·모습 말풍선의 이름 — 한 방향 묶음의 끝이면서 전투 중 모습이 있는 종(개굴닌자(유대변화))은 묶음의 기본 종 이름으로 줄인다.
+// 말풍선에 그 기본 종 줄이 없어 나눌 필요가 없다. 도감·박스·상세는 원래 이름 그대로다 (2026-10-22 사용자 "그렇게 해. 말풍선이랑 메뉴 머리만 빼줘")
+function menuNameOf(slug: string): string {
+  const rule = shiftRuleOf(slug);
+  return rule?.oneWay && slug !== rule.base && battleLookChoices(slug).length ? petName(rule.base) : petName(slug);
+}
+
+// 이 개체 메뉴의 모습 바꾸기 규칙 — 한 방향 묶음을 이미 지난 개체(개굴닌자(유대변화))는 묶음 규칙이 없는 것으로 본다. 남은 줄은 전투 중 모습뿐이다
+const menuRuleOf = (pet: PetV3): ReturnType<typeof shiftRuleOf> => (formsOf(pet).length ? shiftRuleOf(pet.species) : null);
+
 // 모습 줄 — 도구를 쓰는 묶음(로토무)은 다섯 모습 다음 맨 아래에 기본 종을 `원래대로` 로 둔다. 도구가 없으면 모습 줄을 흐리게 (2026-10-05 사용자 결정)
+// 전투 중 모습(지우개굴닌자 등)은 묶음 다음에 둔다. 도구가 필요 없다. 켜져 있으면 그 줄이 지금 모습이다 (src/dex/battle-look.ts, 2026-10-22 사용자 "시안대로 진행")
 function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): PetMenuForm[] {
-  const rule = shiftRuleOf(pet.species);
+  const rule = menuRuleOf(pet);
   const have = rule ? (save.bag[rule.item] ?? 0) > 0 : true;
-  const grid = typeGridOf(formsOf(pet));
-  const list = grid?.forms ?? formsOf(pet);
+  const looks = new Set(battleLookChoices(pet.species));
+  const grid = typeGridOf(menuFormsOf(pet));
+  const list = grid?.forms ?? menuFormsOf(pet);
   const rows = list.map((slug, i): PetMenuForm => ({
     species: slug,
-    name: petName(slug),
-    current: slug === pet.species,
+    name: menuNameOf(slug),
+    current: slug === (pet.battleLook ?? pet.species),
     ...formFace(slug, grid?.types ?? null, i, icons),
     ...(rule && slug === rule.base ? { back: true } : {}),
     // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말이 없으면(버드렉스(백마 탄 모습) — 블리자포스) 줄이 흐리다
-    ...((rule && slug !== rule.base && !have) || riderMissing(save, slug) ? { noItem: true } : {}),
+    ...((rule && slug !== rule.base && !looks.has(slug) && !have) || riderMissing(save, slug) ? { noItem: true } : {}),
   }));
   // 한 방향 묶음(플라엣테·다투곰)은 바뀔 모습만 — 지금 모습 줄과 `원래대로` 줄이 없다 (2026-10-08 사용자 지시 "모습바꾸기 말풍선에 플라엣테(영원의 꽃) 만 있어야지")
   if (rule?.oneWay) return rows.filter((f) => !f.current);
@@ -288,7 +301,8 @@ export function petMenuOf(
   const pet = save?.pets.find((row) => row.id === petId) ?? null;
   if (!o.stagePet && !(o.origin === "manage" && pet)) return null;
   const nature = o.stagePet?.nature ?? pet?.nature ?? null;
-  const base = { name: petName(o.stagePet?.species ?? pet?.species ?? ""), nature: nature ? natureName(nature) : null };
+  // 전투 중 모습을 켰으면 그 이름이다(Figma 99 시안 C2 — 지우개굴닌자)
+  const base = { name: menuNameOf(pet?.battleLook ?? o.stagePet?.species ?? pet?.species ?? ""), nature: nature ? natureName(nature) : null };
   if (!save || !pet) return { model: base, inSave: false, hidden: false, sale: null, firstCare: null };
   const slot = save.party.slots.find((s) => s.petId === petId) ?? null;
   const off: { enabled: boolean; reason?: string } = { enabled: false };
@@ -304,8 +318,8 @@ export function petMenuOf(
     ball: { enabled: slot != null, hidden: slot?.hidden === true },
     forms: menuForms(save, pet, o.formIcons),
     ...(isFormLocked(pet) ? { formsLocked: true } : {}),
-    ...(shiftRuleOf(pet.species) && !shiftRuleOf(pet.species)?.oneWay ? { formsCatalog: true } : {}),
-    ...(shiftRuleOf(pet.species)?.oneWay ? { formsItem: itemName(shiftRuleOf(pet.species)!.item) } : {}),
+    ...(menuRuleOf(pet) && !menuRuleOf(pet)?.oneWay ? { formsCatalog: true } : {}),
+    ...(menuRuleOf(pet)?.oneWay ? { formsItem: itemName(menuRuleOf(pet)!.item) } : {}),
     // 옮기기는 박스 개체와, 관리 창에서 연 파티 개체에 있다 — 파티 칸 순서를 누르기로도 바꾸게(2026-10-10 사용자 결정 "우클릭 `옮기기` 로 들기").
     // 무대의 포켓몬 메뉴에는 파티 개체 옮기기를 두지 않는다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)
     ...(!slot || o.origin === "manage" ? { move: { enabled: true } } : {}),

@@ -53,11 +53,11 @@ export const ENGINE_RULES = {
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
   queueWaitMs: 2000, // 걸어가는 아군 뒤에서 기다리는 최대 시간 — 넘으면 돌아간다
-  // 사거리(두 몸 사이 틈, 대각선 포함) — 기술 분류로 정한다: 물리 1, 특수 3. 두 기술 중 짧은 쪽(쌍두형은 근접)
-  // (2026-10-09 사용자 "반영해봐" — 밸런스 격자 실험에서 가장 고른 안. 처음은 접촉 1·비접촉 물리 2·특수 3·파동·탄환·소리 5)
-  rangePhysical: 1,
-  rangeSpecial: 3,
-  rangeDamage: { 1: 1, 3: 0.9 } as Readonly<Record<number, number>>, // 사거리별 주는 피해 배율(기술·평타) — 특수(사거리 3) ×0.9
+  // 사거리(두 몸 사이 틈, 대각선 포함) — 칸으로 정한다: 앞 열(2·4·6번) 1, 뒤 열(1·3·5번) 3. 피해 배율 없음
+  // (2026-10-22 사용자 "앞라인(상대방과 마주보는 2,4,6번 자리)은 사거리 1. 뒷라인은 3으로", "사거리 칸으로 바꾸니까 위혁 감소는 없애".
+  //  그 전은 기술 분류 — 물리 1·특수 3, 특수 피해 ×0.9)
+  rangeFront: 1,
+  rangeBack: 3,
 } as const;
 
 // ── 날씨·필드·오라 (docs/specs/moves.md "날씨, 필드, 오라") ──
@@ -115,17 +115,8 @@ export interface Obstacle extends Pos {
   size: 1 | 2;
 }
 
-// 기술 하나의 사거리 — 물리 1, 특수 3. 변화기는 null(사거리를 정하지 않는다)
-export function moveRange(m: Pick<EngineMove, "class" | "power">): number | null {
-  if (m.class === "status" || !m.power) return null;
-  return m.class === "physical" ? ENGINE_RULES.rangePhysical : ENGINE_RULES.rangeSpecial;
-}
-// 포켓몬의 사거리 — 공격기 사거리 중 짧은 쪽(물리기 하나·특수기 하나면 1). 공격기가 없으면 1(병풍 등)
-export function rangeOfMoves(moves: readonly Pick<EngineMove, "class" | "power">[]): number {
-  const list = moves.map(moveRange).filter((r): r is number => r !== null);
-  return list.length ? Math.min(...list) : ENGINE_RULES.rangePhysical;
-}
-const rangeMul = (range: number): number => ENGINE_RULES.rangeDamage[range] ?? 1;
+// 칸의 사거리 — 앞 열(startPos 의 col 1, 곧 2·4·6번 칸) 1, 뒤 열 3. 판 내내 그대로다(걸어서 자리가 바뀌어도, 메타몽·모습이 바뀌어도)
+export const slotRange = (slot: number): number => (slot % 2 === 1 ? ENGINE_RULES.rangeFront : ENGINE_RULES.rangeBack);
 
 // 처음 자리 — 각 쪽 `1 2 / 3 4 / 5 6`, 상대는 거울. 2·4·6 이 앞 열이다. 팀은 화면 가운데 3줄(위아래 빈 줄)에 선다
 export function startPos(side: Side, slot: number): Pos {
@@ -180,8 +171,7 @@ export interface EngineForm {
   species: string;
   stats: readonly number[]; // 실제 능력치 6개
   types?: readonly string[]; // 모습의 타입이 다르면(달마모드)
-  moves?: readonly EngineMove[]; // 모습이 자기 기술을 쓰면(메로엣타 스텝폼) — 바뀌면 기술과 사거리도 바뀐다
-  range?: number;
+  moves?: readonly EngineMove[]; // 모습이 자기 기술을 쓰면(메로엣타 스텝폼) — 바뀌면 기술도 바뀐다. 사거리는 칸이라 그대로다
 }
 
 export interface EngineFighter {
@@ -192,7 +182,6 @@ export interface EngineFighter {
   moves: readonly EngineMove[]; // 쓰는 순서 — 개체의 기술 순서를 이미 적용한 값
   ability: string | null;
   special: "wall" | "reflect" | "sketch" | "transform" | "stance" | null;
-  range: number; // 사거리(계산 칸) — 평타와 기술이 같이 쓴다. 물리 1, 특수 3
   altForm?: EngineForm | null; // 모습이 바뀌는 종의 다른 모습
   schoolingReady?: boolean; // 약어리 어군 해금(Lv.60) — 해금 전에는 단독의 모습으로만 싸운다
   tickets?: number; // 날씨·필드·오라 룰렛 칸 수 — 일반 1, 메가 2, 전설급 2, 메가이면서 전설급 3. 없으면 1
@@ -297,7 +286,7 @@ interface Unit {
   target: Unit | null; // 사거리 안이면 쓰러질 때까지 바꾸지 않는다
   nextStep: number;
   waitFrom: number; // 걸어가는 아군 뒤에서 기다리기 시작한 시각 — -1 이면 기다리지 않는다
-  range: number;
+  range: number; // 사거리(계산 칸) — 평타와 기술이 같이 쓴다. 칸으로 정한다(slotRange)
   ability: string | null; // 지금 특성 — 미라·떠도는영혼·트레이스로 바뀐다
   perm: number[]; // 판 끝까지 가는 능력 변화(불요의검·불굴의방패·다운로드)
   disguised: boolean; // 탈·아이스페이스가 아직 남았는가
@@ -479,7 +468,7 @@ export function runBattle(input: BattleInput): BattleResult {
       target: null,
       nextStep: R.stepMs,
       waitFrom: -1,
-      range: f.range,
+      range: slotRange(slot),
       ability: f.ability,
       perm: [0, 0, 0, 0, 0, 0],
       disguised: f.ability === "disguise" || f.ability === "ice-face",
@@ -516,7 +505,6 @@ export function runBattle(input: BattleInput): BattleResult {
         u.stats = [u.stats[0]!, ...src.stats.slice(1)];
         u.types = src.types;
         u.moves = [...src.moves];
-        u.range = src.range;
         events.push({ t: 0, kind: "copy", side: u.side, slot: u.slot, from: u.slot, moves: u.moves.map((m) => m.id) });
       }
     } else if (u.base.special === "sketch") {
@@ -525,7 +513,6 @@ export function runBattle(input: BattleInput): BattleResult {
       const picked: EngineMove[] = [];
       for (let i = 0; i < 2 && cells.length; i++) picked.push(cells.splice(Math.floor(rand() * cells.length), 1)[0]!);
       u.moves = picked;
-      u.range = rangeOfMoves(picked);
       if (picked.length) events.push({ t: 0, kind: "copy", side: u.side, slot: u.slot, from: -1, moves: picked.map((m) => m.id) });
     }
   }
@@ -1426,11 +1413,8 @@ export function runBattle(input: BattleInput): BattleResult {
       u.maxHp = grown;
       u.stats = [f.stats[0]!, ...u.stats.slice(1)];
     }
-    // 자기 기술을 쓰는 모습(메로엣타) — 기술과 사거리도 바꾼다. 차례 번호는 그대로라 다음 차례는 새 기술 칸의 같은 자리다
-    if (f.moves?.length) {
-      u.moves = alt ? [...f.moves] : [...u.base.moves];
-      u.range = alt ? (f.range ?? u.base.range) : u.base.range;
-    }
+    // 자기 기술을 쓰는 모습(메로엣타) — 기술을 바꾼다. 사거리는 칸이라 그대로다. 차례 번호는 그대로라 다음 차례는 새 기술 칸의 같은 자리다
+    if (f.moves?.length) u.moves = alt ? [...f.moves] : [...u.base.moves];
     events.push({ t, kind: "form", side: u.side, slot: u.slot, species: u.species, ...(grew ? { maxHp: u.maxHp } : {}) });
   }
 
@@ -1477,7 +1461,7 @@ export function runBattle(input: BattleInput): BattleResult {
     const atk = statNow(u, 1, t, defAb(o, u) === "unaware"), spa = statNow(u, 3, t, defAb(o, u) === "unaware");
     const phys = atk >= spa;
     const burnMul = phys && u.major?.kind === "burn" && ab(u) !== "guts" ? 0.5 : 1;
-    const raw = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t, ab(u) === "unaware")) * guardMul(o, u) * rangeMul(u.range) * burnMul * roll()));
+    const raw = Math.max(1, Math.floor(baseDamage(u.base.level, R.basicPower, phys ? atk : spa, statNow(o, phys ? 2 : 4, t, ab(u) === "unaware")) * guardMul(o, u) * burnMul * roll()));
     const d = raw;
     hurt(o, d, t, false);
     events.push({ t, kind: "damage", side: u.side, slot: u.slot, target: o.slot, amount: d, mult: 1, hp: o.hp, source: "basic", hit: 1 });
@@ -1653,7 +1637,7 @@ export function runBattle(input: BattleInput): BattleResult {
       const defStat = crit ? Math.min(defNow, statNow(o, phys ? 2 : 4, t, true)) : defNow;
       const raw = baseDamage(u.base.level, power, atkStat, defStat);
       const burnMul = phys && u.major?.kind === "burn" && ua !== "guts" ? 0.5 : 1; // 화상 — 물리 피해 ×0.5, 근성은 받지 않음
-      const critMul = (crit ? (ua === "sniper" ? R.sniperMul : R.critMul) : 1) * rangeMul(u.range) * burnMul;
+      const critMul = (crit ? (ua === "sniper" ? R.sniperMul : R.critMul) : 1) * burnMul;
       const d = eff === 0 ? 0 : shield(o, u, Math.max(1, Math.floor(raw * mult * critMul * roll())), phys);
       hurt(o, d, t);
       o.moveHit = true;

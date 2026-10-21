@@ -13,9 +13,9 @@ import { BOREDOM_RULES, TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
 import type { CareView, EvolutionView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
+import { battleLookChoices } from "../dex/battle-look.js";
 import { formsOf, isFormLocked, isShared, shiftRuleOf } from "../dex/forms.js";
 import { genderLookOf, REGION_MAP } from "../dex/regional.js";
-import { megaRivals } from "../party/mega-form.js";
 import { checkPetFree } from "../party/pet-actions.js";
 import { failTextOf } from "../shared/fail-text.js";
 import { evolveCandidates, type EvoMissing } from "../dex/evolve.js";
@@ -74,14 +74,17 @@ function evolutionsOf(save: SaveV3, pet: PetV3, dayPart: DayPart, dayLeftMs?: nu
 // 고를 수 있는 종 — 공유 sid 계열은 forms(박스 칸이 단체사진과 툴팁으로 보인다).
 // 모습 바꾸기 종(로토무)은 박스 칸이 지금 종 그대로라 shiftForms 에 둔다 — 모습 바꾸기 확인 창이 읽는다. 해금 전에는 없다
 // 규칙이 있는 묶음(로토무)은 업적 보상 종이라 공유 계열로도 판정된다 — 그래도 박스 칸은 단체사진이 아니라 지금 종이다. 그래서 규칙을 먼저 본다
-function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForms" | "formItem"> {
+// 전투 중 모습(src/dex/battle-look.ts)은 battleLooks 에 따로 둔다 — 도구가 없고 박스 칸도 그대로라 forms·shiftForms·formItem 과 섞지 않는다
+function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForms" | "formItem" | "battleLooks"> {
+  const looks = battleLookChoices(pet.species);
+  const lookView = looks.length ? { battleLooks: [pet.species, ...looks].map(formView) } : {};
   const list = formsOf(pet);
-  if (list.length < 2) return {};
+  if (list.length < 2) return lookView;
   const views = list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] }));
   const rule = shiftRuleOf(pet.species);
-  if (rule) return isFormLocked(pet) ? {} : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base, ...(rule.oneWay ? { oneWay: true as const } : {}) } };
-  if (isShared(pet)) return { forms: views };
-  return isFormLocked(pet) ? {} : { shiftForms: views };
+  if (rule) return isFormLocked(pet) ? lookView : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base, ...(rule.oneWay ? { oneWay: true as const } : {}) }, ...lookView };
+  if (isShared(pet)) return { forms: views, ...lookView };
+  return isFormLocked(pet) ? lookView : { shiftForms: views, ...lookView };
 }
 
 // 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다
@@ -101,8 +104,7 @@ function megaView(save: SaveV3, pet: PetV3): { mega?: MegaView } {
       baseTypes: base.types,
       baseTypeIds: base.typeIds,
       forms: choices.map(formView),
-      canChange: (() => { const at = locatePet(save, pet.id); return at?.kind === "preset" && at.active; })(), // 적용한 프리셋의 개체만 (94 항목 9-2-1)
-      rivals: megaRivals(save, pet.id).map((p) => petName(shownSpecies(p))),
+      canChange: locatePet(save, pet.id)?.kind === "preset", // 프리셋에 든 개체면 — 적용하지 않은 프리셋도 (2026-10-22 사용자 "적용중인 프리셋에 있는 메가진화로 모습바꾸는거 제한그런거 해제")
     },
   };
 }

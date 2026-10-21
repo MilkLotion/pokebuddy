@@ -13,7 +13,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
-import { runBattle, type EngineFighter } from "../../battle/engine";
+import { runBattle, slotRange, type EngineFighter } from "../../battle/engine";
+import { blockedOf } from "../../battle/fighter-core";
 import { battleTypeChart, buildFighter, type FighterSource } from "../../battle/fighter";
 import { tierOf } from "../../battle/tier";
 import { DEFAULT_DATA_DIR, isMetaKey } from "../../dex/data";
@@ -253,18 +254,10 @@ async function main(): Promise<void> {
   const ok = (team: Team): boolean => {
     const sp = team.map((t) => t.species);
     if (new Set(sp).size !== sp.length) return false;
-    let leg = 0;
-    let sub = 0;
-    let mg = 0;
-    for (const t of team) {
-      const ti = tier(t.species);
-      if (ti === "legendary") leg++;
-      else if (ti === "sub") sub++;
-      if (t.form) mg++;
-    }
-    return leg <= 1 && sub <= 2 && mg <= 1;
+    // 출전 제한은 앱·서버와 같은 blockedOf 로 센다
+    return blockedOf(team.map((t) => ({ tier: tier(t.species), mega: !!t.form }))).every((b) => b === null);
   };
-  if (anchors.length && !ok(anchors)) throw new Error("중심끼리 출전 제한(초전설 1·준전설 2·메가 1·중복 없음)에 걸린다");
+  if (anchors.length && !ok(anchors)) throw new Error("중심끼리 출전 제한(초전설 1·전설급 합 3·메가 1·중복 없음)에 걸린다");
 
   // ① 후보 하나씩 재기 — [후보, 중심, 무작위 4] 를 기록·무작위 상대와
   const poolRand = eligible.filter((s) => bstOf(s) >= 400 && !tier(s));
@@ -457,7 +450,7 @@ async function main(): Promise<void> {
       const f = fighterOf(s);
       if (!f) return;
       const tr = tier(s.species);
-      say(`  ${k + 1}번 ${labelOf(s)}${tr === "legendary" ? "(초전설)" : tr === "sub" ? "(준전설)" : ""} [${f.types.join("/")}] ${abilities[f.ability ?? ""]?.ko ?? f.ability} · 사거리 ${f.range} · ${f.moves.map((m) => movesT[m.id]?.ko ?? m.id).join(" + ")}${s.moves ? " (고른 기술)" : ""}`);
+      say(`  ${k + 1}번 ${labelOf(s)}${tr === "legendary" ? "(초전설)" : tr === "sub" ? "(준전설)" : ""} [${f.types.join("/")}] ${abilities[f.ability ?? ""]?.ko ?? f.ability} · 사거리 ${slotRange(k)} · ${f.moves.map((m) => movesT[m.id]?.ko ?? m.id).join(" + ")}${s.moves ? " (고른 기술)" : ""}`);
     });
     if (r.bestResponseTeam.length) say(`  최선 응수: ${teamLabel(r.bestResponseTeam)}`);
   });

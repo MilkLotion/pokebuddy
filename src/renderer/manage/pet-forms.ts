@@ -93,7 +93,7 @@ export function drawMega(petId: string, to?: string, battle = false): void {
     dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), actionButtonEl(label, true, false, () => change(form.species))));
   };
   const place = battle ? "배틀 파티에서만 바뀌어요. 바탕화면은 그대로예요" : "같은 칸에서 바뀌어요";
-  const rival = battle ? `배틀 파티에서 ${word}는 한 마리만 출전해요` : mega.rivals.length ? `${mega.rivals.join(" · ")}${josa(mega.rivals[mega.rivals.length - 1] ?? "", "은/는")} 원래 모습으로 돌아가요` : null;
+  const rival = battle ? `배틀 파티에서 ${word}는 한 마리만 출전해요` : null; // 바탕화면 프리셋은 여러 마리 켠다 (2026-10-22)
 
   if (mega.on) {
     const base: FormView = { species: pet.species, name: mega.baseName, types: mega.baseTypes, typeIds: mega.baseTypeIds };
@@ -189,13 +189,15 @@ function compareEl(pet: PetView, after: HTMLElement, uses: readonly string[] = [
 // 한 방향 모습(플라엣테(영원의 꽃)·다투곰(붉은 달))은 넷째 줄 `원래 모습으로 돌아갈 수 없어요` (2026-10-08 사용자 확인, Figma 05 `Box / Form Confirm · 영원의 꽃`)
 export function drawForm(petId: string, to: string): void {
   const pet = petInView(petId);
-  const form = (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
+  // 전투 중 모습(지우개굴닌자 등)은 도구 없이 바꾼다 — 묶음의 도구 줄을 붙이지 않는다 (src/dex/battle-look.ts)
+  const look = pet?.battleLooks?.find((f) => f.species === to);
+  const form = look ?? (pet?.forms ?? pet?.shiftForms)?.find((f) => f.species === to); // 공유 계열 또는 모습 바꾸기 종(로토무)
   if (!pet || !form) {
     closeDialogKeepNotice();
     return;
   }
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
-  const item = pet.formItem && to !== pet.formItem.base ? pet.formItem.name : null;
+  const item = !look && pet.formItem && to !== pet.formItem.base ? pet.formItem.name : null;
   const row = compareEl(pet, formCardEl(pet, form.species, form.name, form.types, form.typeIds), item ? [item] : []);
   const info = el("div", "info-box");
   info.appendChild(el("div", undefined, `지금 ${pet.name} · ${whereText(pet)}`));

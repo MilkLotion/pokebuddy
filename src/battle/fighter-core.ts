@@ -2,7 +2,7 @@
 // 앱(./fighter.ts)과 서버 함수(supabase/functions/_shared/battle)가 같은 코드를 쓴다 — 같은 개체면 같은 전투 개체가 나온다
 // import 는 엔진 하나뿐이다. 서버로 복사할 때 엔진 경로의 .js 를 .ts 로 바꾼다(src/tools/data/build-battle.ts). 주석에 따옴표 경로를 쓰지 않는다 — 함수 서버가 주석 속 경로도 읽는다
 // 규칙은 docs/specs/adventure.md "배틀 엔진", "실제 능력치"
-import { ENGINE_RULES, rangeOfMoves, type EngineFighter, type EngineMove } from "./engine.js";
+import { ENGINE_RULES, type EngineFighter, type EngineMove } from "./engine.js";
 
 // ── 표 ──
 export interface BattleMoveRow {
@@ -162,21 +162,20 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
     moves,
     ability: mega ? mega.ability : (female?.ability ?? sp.ability),
     special: sp.special && SPECIALS.has(sp.special) ? (sp.special as EngineFighter["special"]) : null,
-    range: rangeOfMoves(moves),
     altForm: alt ? altFormOf(data, alt, real, src.moveSwap === true) : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
     tickets: rouletteTickets(!!mega, !!sp.tier),
   };
 }
 
-// 전투 중 바뀌는 다른 모습 — 자기 기술을 쓰는 모습(메로엣타)은 그 모습 칸의 기술과 사거리를 함께 싣는다
+// 전투 중 바뀌는 다른 모습 — 자기 기술을 쓰는 모습(메로엣타)은 그 모습 칸의 기술을 함께 싣는다
 function altFormOf(data: BattleData, alt: BattleFormRow, real: (six: readonly number[]) => number[], swap: boolean): NonNullable<EngineFighter["altForm"]> {
   const own = alt.ownMoves ? movesOf(data, alt.form, swap) : [];
   return {
     species: alt.form,
     stats: real(alt.stats),
     ...(alt.types ? { types: alt.types } : {}),
-    ...(own.length ? { moves: own, range: rangeOfMoves(own) } : {}),
+    ...(own.length ? { moves: own } : {}),
   };
 }
 
@@ -185,7 +184,37 @@ export const tierFrom = (data: BattleData, species: string): "legendary" | "sub"
 
 // ── 저장 → 배틀 파티 ── 서버가 서버 저장에서 배틀 파티를 읽을 때 쓴다(손으로 만든 저장도 받으므로 모든 값을 의심한다)
 // 출전 제한 마릿수 — src/battle/rules.ts BATTLE_RULES.limits 와 같다(selftest-battle 이 대조)
-export const BATTLE_LIMITS = { legendary: 1, sub: 2, mega: 1 } as const;
+//   legendary 초전설, legend 초전설·준전설 합, mega 메가진화·원시회귀
+//   (2026-10-22 사용자 "전설1,준전설2으로하거나 준전설3 으로 되게 해" — 초전설 1 + 준전설 2, 또는 준전설 3)
+export const BATTLE_LIMITS = { legendary: 1, legend: 3, mega: 1 } as const;
+export type LimitKind = keyof typeof BATTLE_LIMITS;
+
+// 출전 불가 — 칸마다 넘은 제한 또는 null. 칸 순서대로 세고, 넘은 칸이 뒤인 개체가 출전 불가다.
+// 출전 불가가 된 개체는 마릿수에 넣지 않는다 — 한 마리를 빼면 나머지는 그대로 나간다.
+// 종의 칸(초전설·합)과 메가 칸을 따로 센다. 둘 다 넘으면 종의 칸을 알린다
+// 앱(src/battle/party.ts blockedSlots)·서버(partyOf)·샘플 파티가 같이 쓴다
+export function blockedOf(rows: readonly ({ tier: "legendary" | "sub" | null; mega: boolean } | null)[]): (LimitKind | null)[] {
+  let legendary = 0;
+  let legend = 0;
+  let mega = 0;
+  return rows.map((row) => {
+    if (!row) return null;
+    let over: LimitKind | null = null;
+    if (row.tier) {
+      if (row.tier === "legendary" && legendary + 1 > BATTLE_LIMITS.legendary) over = "legendary";
+      else if (legend + 1 > BATTLE_LIMITS.legend) over = "legend";
+      else {
+        if (row.tier === "legendary") legendary += 1;
+        legend += 1;
+      }
+    }
+    if (row.mega) {
+      if (mega + 1 > BATTLE_LIMITS.mega) over ??= "mega";
+      else mega += 1;
+    }
+    return over;
+  });
+}
 const BATTLE_SLOTS = 6;
 
 export interface PartyRead {
@@ -209,13 +238,15 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
   for (const p of save.pets) if (isRec(p) && typeof p.id === "string") pets.set(p.id, p);
   const mega = isRec(save.battle.mega) ? save.battle.mega : {};
   const forms = isRec(save.battle.forms) ? save.battle.forms : {};
-  const count = { legendary: 0, sub: 0, mega: 0 };
-  let blocked = false;
+  const rows: ({ tier: "legendary" | "sub" | null; mega: boolean } | null)[] = [];
   let n = 0;
   const party = Array.from({ length: BATTLE_SLOTS }, (_, i): FighterSource | null => {
     const id = (save.battle as { slots: unknown[] }).slots[i];
     const pet = typeof id === "string" ? pets.get(id) : undefined;
-    if (!pet || typeof pet.species !== "string" || !data.species[pet.species]) return null;
+    if (!pet || typeof pet.species !== "string" || !data.species[pet.species]) {
+      rows.push(null);
+      return null;
+    }
     // 배틀 파티의 모습 — 칸에 들어올 때 적은 모습 바꾸기 종. 같은 묶음이 아니면 지금 종 (src/battle/party.ts battleSpeciesOf 와 같다)
     const keptRaw = forms[id as string];
     const group = shiftGroup(data, pet.species);
@@ -223,14 +254,12 @@ export function partyOf(save: unknown, data: BattleData): PartyRead {
     const formRaw = mega[id as string];
     const form = typeof formRaw === "string" && data.mega[formRaw]?.base === pet.species ? formRaw : null;
     n++;
-    const tier = tierFrom(data, species);
-    if (tier && (count[tier] += 1) > BATTLE_LIMITS[tier]) blocked = true;
-    if (form && (count.mega += 1) > BATTLE_LIMITS.mega) blocked = true;
+    rows.push({ tier: tierFrom(data, species), mega: form !== null });
     // 고른 기술 — 메가 줄이 있는 메가 모습이면 그 모습의 고른 기술(megaMoves), 아니면 moves
     const row = battleMoveRow(data, species, form);
     const megaPicked = form && row !== data.species[species] && isRec(pet.megaMoves) ? pet.megaMoves[form] : null;
     const picked = validPicks(row, Array.isArray(megaPicked) ? megaPicked : row === data.species[species] && Array.isArray(pet.moves) ? pet.moves : null);
     return { species, form, moveSwap: pet.moveSwap === true, ...(picked ? { moves: picked } : {}), level: typeof pet.level === "number" ? pet.level : 1, shiny: pet.shiny === true, ...(typeof pet.gender === "string" ? { gender: pet.gender } : {}) };
   });
-  return { party, count: n, blocked };
+  return { party, count: n, blocked: blockedOf(rows).some((b) => b !== null) };
 }

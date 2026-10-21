@@ -6,7 +6,7 @@
 // 파티: 풀에서 6마리를 무작위로 고른다(겹칠 수 있다). 출전 제한·메가는 보지 않는다
 // 집계: 판 길이 분포, 90초 도달 비율, 평타·기술 피해 몫, 마리당 기술 사용, 스피드 5분위 승률, 종별 승률 상하위
 import fs from "node:fs";
-import { runBattle, type BattleEvent, type EngineFighter } from "../../battle/engine";
+import { runBattle, slotRange, type BattleEvent, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
 import { tierOf } from "../../battle/tier";
 import { isMetaKey } from "../../dex/data";
@@ -68,7 +68,7 @@ for (let i = 0; i < N; i++) {
     if (e.kind === "move") uses++;
   }
   sides.forEach((team, s) =>
-    team.forEach((f) => {
+    team.forEach((f, slot) => {
       fighters++;
       const won = r.winner === s ? 1 : 0;
       const qq = q[quintile.get(f)!]!;
@@ -78,10 +78,10 @@ for (let i = 0; i < N; i++) {
       row.n++;
       row.win += won;
       species.set(f.species, row);
-      const rr = byRange.get(f.range) ?? { win: 0, n: 0 };
+      const rr = byRange.get(slotRange(slot)) ?? { win: 0, n: 0 };
       rr.n++;
       rr.win += won;
-      byRange.set(f.range, rr);
+      byRange.set(slotRange(slot), rr);
       for (const ty of f.types) {
         const tr = byType.get(ty) ?? { win: 0, n: 0 };
         tr.n++;
@@ -101,7 +101,7 @@ out.push(`판 길이 p10 ${at(0.1)} · p25 ${at(0.25)} · 중앙 ${at(0.5)} · p
 out.push(`90초 도달 ${pct(timeouts, N)} · 무승부 ${pct(draws, N)}`);
 out.push(`평타 피해 몫 ${pct(basic, basic + skill)} · 마리당 기술 사용 ${(uses / fighters).toFixed(1)}번`);
 out.push(`스피드 5분위 승률(느림→빠름) ${q.map((x) => pct(x.win, x.n)).join(" / ")} · 경계 ${[0.2, 0.4, 0.6, 0.8].map((x) => bySpeed[Math.floor(bySpeed.length * x)]!.stats[5]).join(", ")}`);
-out.push(`사거리별 승률: ${[...byRange.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `사거리 ${k} ${pct(v.win, v.n)} (${pool.filter((f) => f.range === k).length}종)`).join(" · ")}`);
+out.push(`사거리별 승률: ${[...byRange.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => `사거리 ${k} ${pct(v.win, v.n)}`).join(" · ")}`);
 out.push(`타입별 승률: ${[...byType.entries()].map(([k, v]) => ({ k, r: v.win / v.n })).sort((a, b) => b.r - a.r).map((x) => `${x.k} ${(x.r * 100).toFixed(0)}%`).join(", ")}`);
 // 종 쏠림 — 종족값 합 직선을 뺀 종 승률 잔차의 표준편차(표본 30 이상, 판 수 가중). 밸런스 지표 (worklog/records/battle-balance)
 const fit = [...species.entries()].filter(([, v]) => v.n >= 30).map(([k, v]) => ({ x: profileOf(k).bst ?? 0, y: v.win / v.n, w: v.n }));

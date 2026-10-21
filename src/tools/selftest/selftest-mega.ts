@@ -7,7 +7,10 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { hasProfile } from "../../dex/species";
-import { countCare, grantStones, megaFormsOf, megaFree, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
+import { battleLookChoices } from "../../dex/battle-look";
+import { battleSpeciesOf } from "../../battle/party";
+import { petMenuOf } from "../../view/menus";
+import { countCare, grantStones, megaFormsOf, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
 import { pmdSources } from "../../main/art/stage-art";
 import { overworldUrl } from "../../main/art/sources";
 import { portraitIds } from "../../main/art/portraits";
@@ -26,7 +29,7 @@ import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { appearanceOf } from "../../dex/look";
 import { MEGA_RULES } from "../../dex/rules";
 import { pendingOf } from "../../notify/pending";
-import { megaRivals, setMega, settleMega } from "../../party/mega-form";
+import { setMega, settleMega } from "../../party/mega-form";
 import { HANDLERS } from "../../tx/command-table";
 import { testPet } from "../harness/fixtures";
 
@@ -158,43 +161,26 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   process.stdout.write("(5) 시간 적용과 지급  ok\n");
 }
 
-// (6) 켜고 끄기 — 메가스톤이 있어야 하고, 한 프리셋에 한 마리다
+// (6) 켜고 끄기 — 메가스톤이 있어야 한다. 한 프리셋에 여러 마리 켠다 (2026-10-22 — 그 전에는 한 마리)
 {
   const s = seed(pet({ mega: { ...full, stone: true } }), pet({ id: "p2", species: "gengar", evolved: [], mega: { ...full, stone: true } }), pet({ id: "p3", species: "lucario", evolved: [] }));
   assert.equal(setMega(s, "p3", "lucario-mega").reason, "no-stone");
   assert.equal(setMega(s, "p1", "gengar-mega").reason, "bad-form", "다른 종의 모습");
   assert.equal(setMega(s, "p1", null).reason, "already");
-  assert.deepStrictEqual(setMega(s, "p1", "charizard-mega-x"), { ok: true, petId: "p1", on: "charizard-mega-x", reverted: [] });
+  assert.deepStrictEqual(setMega(s, "p1", "charizard-mega-x"), { ok: true, petId: "p1", on: "charizard-mega-x" });
   assert.equal(shownSpecies(s.pets[0]!), "charizard-mega-x");
   assert.equal(s.pets[0]?.species, "charizard", "종은 그대로다");
   assert.equal(setMega(s, "p1", "charizard-mega-x").reason, "already");
   assert.deepStrictEqual(setMega(s, "p1", "charizard-mega-y").on, "charizard-mega-y", "X 에서 Y 로 바로");
-  const res = setMega(s, "p2", "gengar-mega");
-  assert.deepStrictEqual(res.reverted, ["p1"], "먼저 켠 개체가 기본 모습으로 돌아간다");
-  assert.equal(s.pets[0]?.mega?.on, undefined);
-  assert.equal(s.pets[0]?.mega?.stone, true, "메가스톤은 남는다");
-  assert.deepStrictEqual(setMega(s, "p2", null), { ok: true, petId: "p2", on: null, reverted: [] });
-  process.stdout.write("(6) 켜기 · 끄기 · 프리셋당 한 마리  ok\n");
-}
-
-// (6b) 원시회귀와 메가레쿠쟈는 한 마리 제한에서 빠진다 — 다른 개체를 풀지 않고, 다른 개체 때문에 풀리지도 않는다
-{
-  assert.deepStrictEqual(megaSlugs().filter((s) => megaFree(s)), ["kyogre-primal", "groudon-primal", "rayquaza-mega"]);
-  const stone = { ...full, stone: true as const };
-  const s = seed(pet({ mega: { ...stone } }), pet({ id: "p2", species: "groudon", evolved: [], mega: { ...stone } }), pet({ id: "p3", species: "rayquaza", evolved: [], mega: { ...stone } }), pet({ id: "p4", species: "gengar", evolved: [], mega: { ...stone } }));
-  setMega(s, "p1", "charizard-mega-x");
-  assert.deepStrictEqual(setMega(s, "p2", "groudon-primal").reverted, [], "원시회귀는 메가리자몽X 를 풀지 않는다");
-  assert.deepStrictEqual(setMega(s, "p3", "rayquaza-mega").reverted, [], "메가레쿠쟈도 풀지 않는다");
-  assert.deepStrictEqual(s.pets.map((p) => p.mega?.on ?? null), ["charizard-mega-x", "groudon-primal", "rayquaza-mega", null]);
-  assert.deepStrictEqual(megaRivals(s, "p2"), [], "원시회귀의 확인 창에는 풀리는 개체가 없다");
-  assert.deepStrictEqual(megaRivals(s, "p4").map((p) => p.id), ["p1"], "팬텀이 메가진화하면 리자몽만 풀린다");
-  assert.deepStrictEqual(setMega(s, "p4", "gengar-mega").reverted, ["p1"]);
-  assert.deepStrictEqual(s.pets.map((p) => p.mega?.on ?? null), [null, "groudon-primal", "rayquaza-mega", "gengar-mega"], "원시회귀와 메가레쿠쟈는 그대로다");
+  assert.ok(setMega(s, "p2", "gengar-mega").ok);
+  assert.deepStrictEqual(s.pets.map((p) => p.mega?.on ?? null), ["charizard-mega-y", "gengar-mega", null], "먼저 켠 개체도 그대로다");
+  assert.deepStrictEqual(setMega(s, "p2", null), { ok: true, petId: "p2", on: null });
+  assert.equal(s.pets[1]?.mega?.stone, true, "메가스톤은 남는다");
   assert.deepStrictEqual(settleMega(s), []);
-  process.stdout.write("(6b) 원시회귀 · 메가레쿠쟈는 제한 밖  ok\n");
+  process.stdout.write("(6) 켜기 · 끄기 · 여러 마리  ok\n");
 }
 
-// (7) 박스 개체는 켜지 못한다. 프리셋을 떠나면 풀린다. 종이 바뀌어도 풀린다
+// (7) 박스 개체는 켜지 못한다. 적용하지 않은 프리셋의 개체는 켠다. 프리셋을 떠나면 풀린다. 종이 바뀌어도 풀린다
 {
   const s = seed(pet({ mega: { ...full, stone: true } }));
   s.pets.push(pet({ id: "box", species: "gengar", evolved: [], mega: { ...full, stone: true } }));
@@ -204,7 +190,9 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   s.party.presetCount = 2;
   s.party.presets = [null, s.party.slots.map((x, i) => (i === 0 ? { state: "pokemon" as const, petId: "box", hidden: false } : { state: "empty" as const }))];
   s.boxes[0]!.slots[0] = null;
-  assert.equal(setMega(s, "box", "gengar-mega").reason, "not-in-party", "다른 프리셋의 개체");
+  assert.ok(setMega(s, "box", "gengar-mega").ok, "다른 프리셋의 개체도 켠다 (2026-10-22 사용자 \"적용중인 프리셋에 있는 메가진화로 모습바꾸는거 제한그런거 해제\")");
+  assert.deepStrictEqual(settleMega(s), [], "다른 프리셋에 있으면 풀리지 않는다");
+  delete s.pets[1]!.mega!.on;
   s.party.presetCount = 1;
   delete s.party.presets;
   s.boxes[0]!.slots[0] = "box";
@@ -260,10 +248,8 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.deepStrictEqual(a?.mega?.forms.map((f) => f.name), ["메가리자몽X", "메가리자몽Y"]);
   assert.equal(a?.mega?.on, "charizard-mega-x");
   assert.equal(a?.mega?.baseName, "리자몽");
-  assert.deepStrictEqual(a?.mega?.rivals, []);
   assert.equal(b?.look, "gengar");
   assert.equal(b?.mega?.on, null);
-  assert.deepStrictEqual(b?.mega?.rivals, ["메가리자몽X"], "팬텀이 메가진화하면 리자몽이 돌아간다");
   assert.equal(b?.mega?.canChange, true);
   assert.equal(c?.mega, undefined);
   assert.equal(c?.look, "pikachu");
@@ -372,6 +358,66 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(megaRule(pet({ mega: { ...full, on: "charizard-mega-x" } })), 1, "메가스톤 없이 메가 모습");
   assert.equal(megaRule(pet({ mega: { ...full, stone: true, on: "gengar-mega" } })), 1, "다른 종의 모습");
   process.stdout.write("(12) 서버 검증 mega 규칙  ok\n");
+}
+
+// (13) 전투 중 모습 보이기 — 일상 파티에서 겉모습만 바꾸고, 배틀은 기본 모습이다 (2026-10-22 사용자 "모험에서는 개굴닌자로만 쓸수있는거지")
+{
+  assert.deepStrictEqual(battleLookChoices("greninja-battle-bond"), ["greninja-ash"]);
+  assert.deepStrictEqual(battleLookChoices("zygarde"), ["zygarde-complete"]);
+  assert.deepStrictEqual(battleLookChoices("zygarde-10"), ["zygarde-complete"]);
+  assert.deepStrictEqual(battleLookChoices("darmanitan"), ["darmanitan-zen"]);
+  assert.deepStrictEqual(battleLookChoices("meloetta"), ["meloetta-pirouette"]);
+  assert.deepStrictEqual(battleLookChoices("castform"), ["castform-sunny", "castform-rainy", "castform-snowy"]);
+  assert.deepStrictEqual(battleLookChoices("cherrim"), ["cherrim-sunshine"]);
+  assert.deepStrictEqual(battleLookChoices("terapagos"), [], "모습 바꾸기 묶음에 든 모습은 뺀다");
+  assert.deepStrictEqual(battleLookChoices("aegislash"), [], "종이 없는 모습(블레이드폼)은 뺀다");
+  assert.deepStrictEqual(battleLookChoices("greninja"), [], "유대변화 전 개굴닌자는 없다");
+  let save: SaveV3 = seed(pet({ id: "p1", species: "greninja-battle-bond", evolved: ["froakie", "frogadier"] }), pet({ id: "p2", species: "zygarde", evolved: [], mega: { ...full, stone: true } }));
+  const ex = createExecutor({ read: () => save, write: (next) => ((save = next), true), now: () => T0, rand: Math.random }, HANDLERS);
+  let n = 0;
+  const run = (name: string, args: unknown) => ex.run({ id: `bl${(n += 1)}`, name, args });
+  assert.ok(run("pet.form", { petId: "p1", species: "greninja-ash" }).ok);
+  assert.equal(save.pets[0]!.battleLook, "greninja-ash");
+  assert.equal(save.pets[0]!.species, "greninja-battle-bond", "종은 그대로다");
+  assert.equal(shownSpecies(save.pets[0]!), "greninja-ash");
+  assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.name, "지우개굴닌자");
+  assert.equal(run("pet.form", { petId: "p1", species: "greninja-ash" }).ok, false, "같은 모습");
+  assert.equal(run("pet.form", { petId: "p1", species: "zygarde-complete" }).ok, false, "다른 종의 모습");
+  // 배틀 파티는 기본 모습이다
+  save.battle = { slots: ["p1", null, null, null, null, null] };
+  assert.equal(battleSpeciesOf(save, save.pets[0]!), "greninja-battle-bond");
+  assert.equal(snapshotView(save, T0).battle.slots[0]!.pet?.name, petName("greninja-battle-bond"));
+  assert.ok(run("pet.form", { petId: "p1", species: "greninja-battle-bond" }).ok, "지금 종을 주면 끈다");
+  assert.equal(save.pets[0]!.battleLook, undefined);
+  // 메가와 함께 켜지 않는다
+  assert.ok(run("pet.form", { petId: "p2", species: "zygarde-complete" }).ok);
+  assert.ok(run("pet.form", { petId: "p2", species: "zygarde-mega" }).ok);
+  assert.deepStrictEqual([save.pets[1]!.mega?.on, save.pets[1]!.battleLook], ["zygarde-mega", undefined], "메가를 켜면 전투 중 모습이 꺼진다");
+  assert.ok(run("pet.form", { petId: "p2", species: "zygarde-complete" }).ok);
+  assert.deepStrictEqual([save.pets[1]!.mega?.on, save.pets[1]!.battleLook], [undefined, "zygarde-complete"], "전투 중 모습을 켜면 메가가 꺼진다");
+  // 포켓몬 메뉴의 모습 말풍선 — 묶음 줄 다음에 전투 중 모습, 도구 머리 없음 (Figma 05 `Party / Form Tip · 개굴닌자(유대변화)` 등)
+  const menuOf = (id: string) => petMenuOf(save, id, { origin: "manage", stagePet: null, formIcons: {}, now: T0 })!.model;
+  const gm = menuOf("p1");
+  // 말풍선·메뉴 머리는 `(유대변화)` 를 뺀다 — 도감·상세는 그대로 (2026-10-22 사용자 "말풍선이랑 메뉴 머리만 빼줘")
+  assert.deepStrictEqual(gm.forms?.map((f) => [f.name, f.current, !!f.noItem]), [["개굴닌자", true, false], ["지우개굴닌자", false, false]], "한 방향 묶음의 끝 — 지금 종과 전투 중 모습");
+  assert.equal(gm.name, "개굴닌자", "메뉴 머리");
+  assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.name, "개굴닌자(유대변화)", "파티 카드·상세는 그대로");
+  assert.equal(gm.formsItem, undefined, "지우의모자 머리가 없다");
+  assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.battleLooks?.map((f) => f.species).join(","), "greninja-battle-bond,greninja-ash", "확인 창이 읽는 목록");
+  assert.ok(run("pet.form", { petId: "p1", species: "greninja-ash" }).ok);
+  assert.equal(menuOf("p1").name, "지우개굴닌자", "켜면 메뉴 머리도 그 이름");
+  assert.deepStrictEqual(menuOf("p1").forms?.map((f) => f.current), [false, true]);
+  assert.ok(run("pet.form", { petId: "p1", species: "greninja-battle-bond" }).ok);
+  assert.deepStrictEqual(menuOf("p2").forms?.map((f) => f.species), ["zygarde", "zygarde-10", "zygarde-complete"], "지가르데 — 묶음 다음에 퍼펙트폼");
+  // 다른 모습을 고르면 전투 중 모습이 꺼진다
+  assert.ok(run("pet.form", { petId: "p2", species: "zygarde-10" }).ok);
+  assert.deepStrictEqual([save.pets[1]!.species, save.pets[1]!.battleLook], ["zygarde-10", undefined], "10%폼으로 바꾸면 퍼펙트폼 겉모습이 꺼진다");
+  // 종이 바뀌면 지운다
+  assert.ok(run("pet.form", { petId: "p2", species: "zygarde-complete" }).ok);
+  save.pets[1]!.species = "pikachu";
+  assert.ok(run("party.keep", { petId: "p1" }).ok);
+  assert.equal(save.pets[1]!.battleLook, undefined, "종에 맞지 않으면 지운다");
+  process.stdout.write("(13) 전투 중 모습 보이기  ok\n");
 }
 
 process.stdout.write("통과\n");

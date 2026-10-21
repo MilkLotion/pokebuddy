@@ -6,9 +6,9 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE_RULES, rangeOfMoves, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
+import { ENGINE_RULES, slotRange, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
-import { BATTLE_BASIS, BATTLE_LIMITS, partyOf } from "../../battle/fighter-core";
+import { BATTLE_BASIS, BATTLE_LIMITS, blockedOf, partyOf } from "../../battle/fighter-core";
 import { battleData } from "../../battle/fighter";
 import { blockedSlots, canStartBattle } from "../../battle/party";
 import { emptySave } from "../../save/normalize";
@@ -27,7 +27,7 @@ const mv = (id: string, over: Partial<EngineMove> = {}): EngineMove => ({
   id, type: "normal", class: "physical", power: 50, accuracy: null, priority: 0, cooldownMs: 4000, hits: null, traits: [], effects: {}, ...over,
 });
 const unit = (over: Partial<EngineFighter> = {}): EngineFighter => ({
-  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 95], moves: [], ability: null, special: null, range: 1, ...over,
+  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 95], moves: [], ability: null, special: null, ...over,
 });
 const of = <K extends BattleEvent["kind"]>(evs: BattleEvent[], kind: K): Extract<BattleEvent, { kind: K }>[] =>
   evs.filter((e): e is Extract<BattleEvent, { kind: K }> => e.kind === kind);
@@ -157,17 +157,34 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(of(r.events, "step").every((e, i, list) => list.findIndex((x) => x.side === e.side && x.slot === e.slot && x.t === e.t) === i), "한 틱에 한 걸음");
 }
 
-// ── 사거리 — 물리 기술 1, 특수 기술 3, 두 기술 중 짧은 쪽(쌍두형은 1). 원거리는 사거리 안에서 멈춰 쏜다 (2026-10-09) ──
+// ── 사거리 — 칸으로 정한다: 앞 열(2·4·6번 칸, slot 1·3·5) 1, 뒤 열(1·3·5번 칸) 3. 피해 배율 없음 (2026-10-22) ──
 {
-  assert.strictEqual(buildFighter({ species: "machamp" })!.range, 1, "물리");
-  assert.strictEqual(buildFighter({ species: "garchomp" })!.range, 1, "접촉 없는 물리(지진)도 1");
-  assert.strictEqual(buildFighter({ species: "alakazam" })!.range, 3, "특수");
-  assert.strictEqual(buildFighter({ species: "spectrier" })!.range, 3, "특수 둘 — 섀도볼·병상첨병 모두 3");
-  assert.strictEqual(buildFighter({ species: "lucario" })!.range, 1, "쌍두형 — 파동탄 3 과 코멧펀치 1 → 1");
-  assert.strictEqual(rangeOfMoves([mv("aura", { class: "special", traits: ["pulse"] })]), 3, "파동·탄환·소리도 특수 3");
-  assert.strictEqual(ENGINE_RULES.rangeDamage[3], 0.9, "특수(사거리 3) 피해 ×0.9");
-  assert.strictEqual(rangeOfMoves([]), 1, "공격기가 없으면 1");
-  const shooter = unit({ range: 6, stats: [999, 1, 999, 1, 999, 100] });
+  assert.deepStrictEqual([0, 1, 2, 3, 4, 5].map(slotRange), [3, 1, 3, 1, 3, 1], "뒤 열 3 · 앞 열 1");
+  assert.ok(!("rangeDamage" in ENGINE_RULES), "사거리 피해 배율은 없다");
+  // 같은 물리형이 뒤 칸이면 떨어져서, 앞 칸이면 붙어서 친다
+  const gapAtFirstHit = (slot: number): number => {
+    const shooter = unit({ moves: [mv("tackle")], stats: [999, 1, 999, 1, 999, 100] });
+    const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
+    const mine: (EngineFighter | null)[] = [null, null, null, null, null, null];
+    const theirs: (EngineFighter | null)[] = [null, null, null, null, null, null];
+    mine[slot] = shooter;
+    theirs[slot] = still;
+    const pos: [(Pos | null)[], (Pos | null)[]] = [mine.map((f) => (f ? at(0, 4) : null)), theirs.map((f) => (f ? at(14, 4) : null))];
+    const r = run(mine, theirs, 1, 6000, { positions: pos });
+    const hit = of(r.events, "damage").find((e) => e.side === 0)!;
+    const start = of(r.events, "start")[0]!;
+    let me = start.pos[0][slot]!, foe = start.pos[1][slot]!;
+    for (const e of r.events) {
+      if (e.t >= hit.t) break;
+      if (e.kind === "step") e.side === 0 ? (me = e) : (foe = e);
+    }
+    return Math.max(0, Math.abs(foe.x - me.x) - ENGINE_RULES.body);
+  };
+  assert.ok(gapAtFirstHit(0) > 1 && gapAtFirstHit(0) <= 3, `뒤 칸은 물리형도 떨어져서 친다 (틈 ${gapAtFirstHit(0)})`);
+  assert.ok(gapAtFirstHit(1) <= 1, `앞 칸은 붙어서 친다 (틈 ${gapAtFirstHit(1)})`);
+}
+{
+  const shooter = unit({ stats: [999, 1, 999, 1, 999, 100] });
   const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
   const r = run([shooter], [still], 1, 6000, { positions: [[at(0, 4)], [at(14, 4)]] });
   const hit = of(r.events, "damage").find((e) => e.side === 0)!;
@@ -178,7 +195,7 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
     if (e.kind === "step") e.side === 0 ? (me = e) : (foe = e);
   }
   const gap = Math.max(0, Math.abs(foe.x - me.x) - ENGINE_RULES.body);
-  assert.ok(gap > 1 && gap <= 6, `원거리는 떨어져서 쏜다 (틈 ${gap})`);
+  assert.ok(gap > 1 && gap <= 3, `뒤 칸(1번)은 떨어져서 친다 (틈 ${gap})`);
 }
 
 // ── 능력 변화 — 단계당 25%, 최대 ±3(2026-10-10), 쌓임 ──
@@ -482,7 +499,17 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
     s.battle = { slots: Array.from({ length: 6 }, (_, i) => s.pets[i]?.id ?? null) };
     return s;
   };
-  for (const team of [["garchomp", "lucario"], ["mewtwo", "lugia"], ["mewtwo", "celebi", "jirachi", "pikachu"], ["celebi", "jirachi", "mew"], []]) {
+  // 출전 제한 — (초전설 1 + 준전설 2) 또는 (준전설 3) (2026-10-22)
+  const L = { tier: "legendary" as const, mega: false };
+  const S = { tier: "sub" as const, mega: false };
+  assert.deepStrictEqual(blockedOf([L, S, S]), [null, null, null], "초전설 1 + 준전설 2");
+  assert.deepStrictEqual(blockedOf([S, S, S]), [null, null, null], "준전설 3");
+  assert.deepStrictEqual(blockedOf([S, S, S, S]), [null, null, null, "legend"], "준전설 넷째");
+  assert.deepStrictEqual(blockedOf([L, L, S]), [null, "legendary", null], "초전설 둘째 — 센 수에 넣지 않는다");
+  assert.deepStrictEqual(blockedOf([S, S, S, L]), [null, null, null, "legend"], "준전설 3 뒤의 초전설");
+  assert.deepStrictEqual(blockedOf([L, S, S, S]), [null, null, null, "legend"], "초전설 1 + 준전설 3 의 넷째");
+  assert.deepStrictEqual(blockedOf([{ tier: null, mega: true }, null, { tier: "legendary", mega: true }]), [null, null, "mega"], "메가 칸은 따로 센다");
+  for (const team of [["garchomp", "lucario"], ["mewtwo", "lugia"], ["mewtwo", "celebi", "jirachi", "pikachu"], ["mewtwo", "celebi", "jirachi", "mew"], ["celebi", "jirachi", "mew"], ["celebi", "jirachi", "mew", "victini"], []]) {
     const s = make(team);
     const read = partyOf(JSON.parse(JSON.stringify(s)), data);
     assert.strictEqual(read.blocked, blockedSlots(s).some((b) => b !== null), `출전 불가 판정이 같다: ${team.join(",")}`);
@@ -490,14 +517,12 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   }
 }
 
-// ── 메로엣타 — 루미나코러스를 쓰면 보이스폼 ↔ 스텝폼, 스텝폼은 자기 기술(인파이트)·사거리 1 (2026-10-09) ──
+// ── 메로엣타 — 루미나코러스를 쓰면 보이스폼 ↔ 스텝폼, 스텝폼은 자기 기술(인파이트). 사거리는 칸이라 그대로 (2026-10-09, 사거리 2026-10-22) ──
 {
   const mel = buildFighter({ species: "meloetta" })!;
   assert.deepStrictEqual(mel.moves.map((m) => m.id), ["relic-song", "psychic"]);
   assert.strictEqual(mel.altForm?.species, "meloetta-pirouette");
   assert.deepStrictEqual(mel.altForm?.moves?.map((m) => m.id), ["relic-song", "close-combat"], "스텝폼 기술");
-  assert.strictEqual(mel.range, 3);
-  assert.strictEqual(mel.altForm?.range, 1, "스텝폼은 쌍두형이라 1");
   const sturdy = unit({ stats: [999, 1, 999, 1, 999, 95] });
   const r = run([mel], [sturdy], 1, 20_000, { positions: [[at(6, 4)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
   const forms = of(r.events, "form").filter((e) => e.side === 0).map((e) => e.species);

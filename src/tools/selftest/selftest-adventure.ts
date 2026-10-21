@@ -74,10 +74,10 @@ assert.ok(speciesMoves("miraidon")[0]!.text?.includes("변형"), "PokeAPI 에 �
 // ── 기술 상세 — 기술 바꾸기 모달 (docs/specs/adventure.md "기술 바꾸기") ──
 {
   const d = moveDetail(volt[0]!);
-  assert.equal(d.kind, "물리 · 근접 · 접촉");
+  assert.equal(d.kind, "물리 · 접촉", "사거리는 적지 않는다 — 칸으로 정한다 (2026-10-22)");
   assert.deepEqual(d.stats, [{ label: "위력", value: "120" }, { label: "명중", value: "100" }, { label: "쿨타임", value: "8초" }]);
   assert.deepEqual(d.effects, ["10% 확률로 상대를 마비", "준 피해의 33% 를 자신도 받음"], "자기 타입 위력 줄은 없다(2026-10-10)");
-  assert.equal(moveDetail(volt[1]!).kind, "특수 · 원거리", "특수는 원거리, 접촉 없음");
+  assert.equal(moveDetail(volt[1]!).kind, "특수", "접촉 없음");
   const base = { id: "x", name: "x", type: "normal", class: "physical" as const, power: 50, accuracy: null, cooldown: 3, text: null };
   assert.equal(moveDetail(base).stats[1]!.value, "반드시", "명중 없음");
   assert.deepEqual(
@@ -128,11 +128,12 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   }
 }
 
-// ── 출전 불가 — 칸 순서가 뒤인 개체 ──
+// ── 출전 불가 — 칸 순서가 뒤인 개체. 초전설 1마리, 초전설·준전설 합 3마리 (2026-10-22) ──
 {
+  // 출전 불가가 된 개체(3번 루기아)는 마릿수에 넣지 않는다 — 합은 뮤츠·세레비·텅비드 3, 매시붕이 넷째
   const s = seed(["mewtwo", "celebi", "lugia", "nihilego", "buzzwole", "pikachu"]);
   s.battle = { slots: ["p1", "p2", "p3", "p4", "p5", "p6"] };
-  assert.deepEqual(blockedSlots(s), [null, null, "legendary", null, "sub", null]);
+  assert.deepEqual(blockedSlots(s), [null, null, "legendary", null, "legend", null]);
   assert.equal(canStartBattle(s), false);
   s.battle.slots[2] = null;
   s.battle.slots[4] = null;

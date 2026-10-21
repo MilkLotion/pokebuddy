@@ -8,6 +8,7 @@ import { presetName, slotsOfPreset } from "../party/presets.js";
 import type { Outcome } from "../shared/command.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import type { BattleV3, PetV3, SaveV3 } from "../shared/save-v3";
+import { blockedOf } from "./fighter-core.js";
 import { fixedMoveOf, moveOptions, pickedIn, speciesMoves, usesMegaRow } from "./moves.js";
 import { BATTLE_RULES, type BattleTier } from "./rules.js";
 import { tierOf } from "./tier.js";
@@ -206,19 +207,13 @@ export function setBattleForm(save: Pick<SaveV3, "battle" | "pets">, petId: stri
   return { ok: true };
 }
 
-// 출전 불가 — 칸마다 넘은 칸(초전설·준전설·메가) 또는 null. 한 칸의 마릿수를 넘으면 칸 순서가 뒤인 개체가 출전 불가다.
-// 한 개체가 종의 칸과 메가 칸을 함께 센다(메가레쿠쟈·원시회귀). 둘 다 넘으면 종의 칸을 알린다
+// 출전 불가 — 칸마다 넘은 제한(초전설·전설급 합·메가) 또는 null. 칸 순서가 뒤인 개체가 출전 불가다.
+// 세기는 서버(partyOf)와 같은 blockedOf 다. 한 개체가 종의 칸과 메가 칸을 함께 센다(메가레쿠쟈·원시회귀). 둘 다 넘으면 종의 칸을 알린다
 export function blockedSlots(save: Pick<SaveV3, "battle" | "pets">, opts?: DexOptions): (BattleTier | null)[] {
-  const count: Record<BattleTier, number> = { legendary: 0, sub: 0, mega: 0 };
-  return battleSlots(save).map((id) => {
+  return blockedOf(battleSlots(save).map((id) => {
     const pet = id ? save.pets.find((p) => p.id === id) : undefined;
-    if (!pet) return null;
-    const over: BattleTier[] = [];
-    const tier = tierOf(battleSpeciesOf(save, pet, opts), opts);
-    if (tier && (count[tier] += 1) > BATTLE_RULES.limits[tier]) over.push(tier);
-    if (battleMegaOf(save, pet.id) && (count.mega += 1) > BATTLE_RULES.limits.mega) over.push("mega");
-    return over[0] ?? null;
-  });
+    return pet ? { tier: tierOf(battleSpeciesOf(save, pet, opts), opts), mega: !!battleMegaOf(save, pet.id) } : null;
+  }));
 }
 
 // 배틀 문 — 첫 프리셋(새 게임에 주는 프리셋)의 6칸이 모두 열려야 배틀(랜덤·친선)을 한다. 다른 프리셋은 보지 않는다

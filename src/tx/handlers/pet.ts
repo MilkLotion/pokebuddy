@@ -1,6 +1,7 @@
 // 개체 처리기 — 진화, 돌봄, 첫 선택, 자리·크기, 모습 바꾸기
 import { evolvePet } from "../../dex/evolve.js";
 import { gameDayPart } from "../../shared/clock.js";
+import { battleLookChoices, setBattleLook } from "../../dex/battle-look.js";
 import { setForm } from "../../dex/forms.js";
 import { megaOf } from "../../dex/mega.js";
 import { setMega } from "../../party/mega-form.js";
@@ -81,9 +82,15 @@ export const formHandler: TxHandler = (draft, args) => {
   if (off || (typeof want === "string" && megaOf(want))) {
     const res = setMega(draft, petId, off ? null : want);
     if (!res.ok) return { ok: false, reason: reasonOf(res) };
-    return { ok: true, result: { petId, mega: res.on, reverted: res.reverted } };
+    return { ok: true, result: { petId, mega: res.on } };
+  }
+  // 전투 중 모습 보이기(src/dex/battle-look.ts) — species 가 그 모습이면 켜고, 켠 개체에 지금 종을 주면 끈다
+  if (target && typeof want === "string" && (battleLookChoices(target.species).includes(want) || (target.battleLook && want === target.species))) {
+    if (!setBattleLook(target, want === target.species ? null : want)) return { ok: false, reason: "already" };
+    return { ok: true, result: { petId, look: target.battleLook ?? null } };
   }
   const res = setForm(draft, petId, isArgsRecord(args) ? args.species : undefined);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
+  if (target) delete target.battleLook; // 다른 모습을 고르면 전투 중 모습 보이기를 끈다 — 지가르데(10%폼)로 바꿨는데 퍼펙트폼으로 보이지 않게
   return { ok: true, result: { petId, from: res.from, to: res.to } };
 };
