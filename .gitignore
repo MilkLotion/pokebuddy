@@ -10,6 +10,7 @@ release/
 # PC Settings
 .playwright-mcp/
 .claude/
+.codex/
 .supabase
 # PowerShell 모듈 분석 캐시 — 저장소를 작업 폴더로 둔 PowerShell 이 가끔 쓴다. 원인 미확정 (2026-10-07 사용자 "진행")
 /Microsoft/
