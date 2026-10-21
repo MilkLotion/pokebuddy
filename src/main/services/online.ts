@@ -25,7 +25,7 @@ import { withTimeout } from "../../online/server-call.js";
 import { ONLINE_TIMING } from "../../online/timing.js";
 import { onlineConfig } from "../../online/config.js";
 import type { SessionStorage } from "../../online/client.js";
-import { devEnv, devNumber } from "../app/dev-run.js";
+import { devNumber, onlineEnv } from "../app/dev-run.js";
 import { readSaveRaw, replaceSave, setAsideSave } from "../../save/save-file.js";
 import { readCloudFile, writeCloudFile } from "../../online/cloud-file.js";
 import { cloudFileOf } from "../../platform/paths.js";
@@ -91,7 +91,7 @@ const deviceLabel = (): string => (process.platform === "win32" ? "Windows PC" :
 const SESSION_RETRY_MS = ONLINE_TIMING.retryMs;
 
 export function createMainOnline(o: MainOnlineOptions): MainOnline | null {
-  const config = onlineConfig(undefined, devEnv());
+  const config = onlineConfig(undefined, onlineEnv());
   if (!config.url || !config.publishableKey) return null;
   const client = createOnlineClient({ url: config.url, key: config.publishableKey, storage: o.storage });
   const gate = createSessionGate(client);

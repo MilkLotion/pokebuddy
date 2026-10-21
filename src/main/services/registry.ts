@@ -20,7 +20,7 @@ import { onlineConfig } from "../../online/config.js";
 import { friendlyLinkBase } from "../../trade/link.js";
 import type { FriendlyScreen } from "../../shared/model/friendly";
 import { friendlyScreenInput } from "../../view/friendly-battle.js";
-import { devEnv } from "../app/dev-run.js";
+import { onlineEnv } from "../app/dev-run.js";
 import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
 import { hasBattleRewards } from "../../battle/party.js";
 import { battleDetailView, battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
@@ -251,7 +251,7 @@ export function createServices(deps: ServicesDeps): Services {
     const on = online();
     if (!on || !deps.game()) return null;
     if (!mainFriendly) {
-      const config = onlineConfig(undefined, devEnv());
+      const config = onlineConfig(undefined, onlineEnv());
       mainFriendly = createFriendlySession({
         client: on.client,
         signedIn: () => on.screen().signedIn,

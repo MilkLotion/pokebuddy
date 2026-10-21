@@ -135,7 +135,7 @@ npm 이 만든 `pokebuddy.ps1` 이 실행 정책에 걸린 것이다. `pokebuddy
 | `POKEBUDDY_DEBUG=1` | 판정 로그를 저장 폴더의 `debug-companion.log` 에 남긴다 |
 | `POKEBUDDY_SLUG` | 개발 실행(`npm start`)의 첫 스타터. `pokebuddy companion` 은 이 값을 넘기지 않는다 |
 
-교환·계정·클라우드 저장 서버를 바꾸는 `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY` 와 시험용 `POKEBUDDY_TRADE_*`·`POKEBUDDY_CLOUD_*` 는 저장소에서 직접 띄운 개발 실행에서만 읽는다. exe 설치본과 npm 설치본은 무시한다. 판정 기준은 앱 폴더에 `src/main/app.ts` 원본이 있는가다(`src/platform/dev-run.ts` `isRepoRun`). 설치본에는 이 파일이 들어가지 않는다.
+교환·계정·클라우드 저장 서버를 바꾸는 `POKEBUDDY_SUPABASE_URL`·`POKEBUDDY_SUPABASE_KEY` 와 시험용 `POKEBUDDY_TRADE_*`·`POKEBUDDY_CLOUD_*` 는 저장소에서 직접 띄운 개발 실행에서만 읽는다. exe 설치본과 npm 설치본은 무시한다. 판정 기준은 앱 폴더에 `src/main/app.ts` 원본이 있는가다(`src/platform/dev-run.ts` `isRepoRun`). 설치본에는 이 파일이 들어가지 않는다. `POKEBUDDY_ONLINE=off` 는 설치본도 읽는다. 이 값은 온라인 기능을 끄기만 하고 서버를 바꾸지 않는다(`src/main/app/dev-run.ts` `onlineEnv`).
 
 - 포켓몬을 드래그해 원하는 자리에 놓으면 위치가 기억된다. 마리마다 따로 기억한다(`save.json` 의 마리 `home`, 놀이공간 오른쪽 아래 기준 오프셋). buddy 는 거기를 집으로 삼는다.
 - 한 무대의 여러 마리는 겹칠 수 있다. 나중에 소환한 마리가 앞에 보인다.
@@ -435,6 +435,7 @@ npm run dist:win    # release/pokebuddy-Setup-<버전>.exe
 - 처음 만들 때 Electron 과 NSIS 를 내려받는다. 인터넷이 필요하다.
 - 설치 파일에는 포켓몬 그림을 넣지 않는다. 앱이 처음 켜질 때 받는다. `dist/tools/data/fetch-sprites.js` 는 저장소 실행용으로 `.cache/sprites/`(git 제외)에 받는다.
 - 코드 서명을 하지 않는다. 설치 확인은 `release/win-unpacked/pokebuddy.exe` 를 먼저 띄워 본 뒤 설치 파일로 한다.
+- 새 HOME 으로 설치본을 띄워 확인할 때는 `POKEBUDDY_ONLINE=off` 를 준다. 이 값이 없으면 띄울 때마다 운영 서버에 익명 계정이 하나 생긴다.
 - 공개용 빌드는 운영 `upload-save` 의 규칙 데이터 지문이 로컬 `supabase/functions/_shared/verify-data.json` 의 `hash` 와 같아야 만든다(`scripts/check-verify-deploy.cjs`). 다르면 빌드가 멈춘다. 이때 `npx supabase functions deploy upload-save --use-api` 로 함수를 먼저 배포한다. 앱이 규칙 데이터보다 먼저 나가면 정상 사용자의 올리기가 위반으로 적힌다. Mac 빌드(`release-mac`)도 같은 대조를 한다.
 - 릴리스 전에 `data/patch-notes.json` 맨 앞에 새 버전의 날짜와 바뀐 것을 적는다. `selftest-patch-notes` 는 `package.json` 버전의 노트가 없으면 실패한다.
 - GitHub Release 에는 설치 파일과 함께 `release/latest.yml` 과 `release/pokebuddy-Setup-<버전>.exe.blockmap` 을 올린다. 설치본은 이 `latest.yml` 로 새 버전을 찾는다. 올린 파일 이름은 `latest.yml` 안의 이름과 같아야 한다.

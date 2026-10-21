@@ -9,7 +9,7 @@ import type { SessionGate } from "../../online/session.js";
 import { createTradeSession, type TradeSession, type TradeViewModel } from "../../online/trade-session.js";
 import { onlineConfig } from "../../online/config.js";
 import { dataVersion } from "../../trade/data-version.js";
-import { devEnv, isDevRun } from "../app/dev-run.js";
+import { isDevRun, onlineEnv } from "../app/dev-run.js";
 import { linkOf } from "../../trade/link.js";
 import type { GameV3 } from "../../tx/game";
 
@@ -56,7 +56,7 @@ export function createMainTrade(
   hold?: () => boolean | Promise<boolean>,
   account?: { isAnonymous: () => boolean | Promise<boolean>; beforeOffer: () => Promise<void>; mayIssue?: () => boolean },
 ): MainTrade | null {
-  const config = onlineConfig(undefined, devEnv());
+  const config = onlineConfig(undefined, onlineEnv());
   if (!config.url || !config.publishableKey) return null;
   const dev = devHooks();
   const listeners = new Set<(view: TradeViewModel) => void>();
