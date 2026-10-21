@@ -7,13 +7,13 @@ import { openSlot } from "../party/slots.js";
 import { countParty, slotsOfPreset } from "../party/presets.js";
 import { addNewPet } from "../party/create.js";
 import { addItem } from "../bag/items.js";
-import { checkGiveEgg, newEgg } from "../egg/pool.js";
+import { allCaughtPoints, canGiveEgg, checkGiveEgg, newEgg } from "../egg/pool.js";
 import type { Rand } from "../shared/rand.js";
 import type { ReasonOf } from "../shared/names/reasons.js";
 import { defOf, rewardEgg, rewardItem, rewardPoints, rewardPokemon } from "./defs.js";
 import type { Outcome } from "../shared/command.js";
 
-export type ClaimFailure = ReasonOf<"no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full" | "egg-none">;
+export type ClaimFailure = ReasonOf<"no-achievement" | "not-achieved" | "already-claimed" | "no-locked-slot" | "box-full" | "daycare-full">;
 
 export type ClaimResult = Outcome<ClaimFailure> & {
   id?: string;
@@ -22,6 +22,7 @@ export type ClaimResult = Outcome<ClaimFailure> & {
   toBox?: boolean; // 포켓몬 보상이 박스로 갔다
   points?: number; // 포인트 보상으로 받은 양
   eggId?: string; // 알 보상으로 넣은 알
+  allCaught?: { kind: string; points: number }; // 다 모은 알 보상 대신 받은 포인트 — 이때 eggId 는 비어 있다
   item?: { id: string; count: number }; // 도구 보상
   skipped?: boolean; // 단일 포켓몬을 이미 얻어 개체를 주지 않았다
 };
@@ -29,7 +30,9 @@ export type ClaimResult = Outcome<ClaimFailure> & {
 //   파티 칸   칸 +1 — 첫 잠긴 칸을 연다
 //   포켓몬    새 개체를 빈 파티 칸에 꺼낸 상태로, 없으면 박스로. 둘 곳이 없으면 받지 못한다(box-full) — 미수령으로 남는다
 //   포인트    잔액에 더한다
-//   알        돌보미집에 넣는다. 빈 칸이 없으면 daycare-full, 단일 포켓몬 알의 남은 종이 없으면 egg-none — 미수령으로 남는다
+//   알        돌보미집에 넣는다. 빈 칸이 없으면 daycare-full — 미수령으로 남는다.
+//             단일 포켓몬 알의 남은 종이 없으면 알 대신 포인트(allCaughtPoints, 상점가의 절반)를 주고 수령한다 — 빈 칸을 보지 않는다.
+//             랜덤알에서 다 모은 알이 나올 때와 같은 값이다 (src/egg/open.ts, 2026-10-21 사용자 결정 "1번은 그렇게 수정.")
 //   도구      가방에 더한다
 export function claimAchievement(save: SaveV3, id: string, now: number, opts: DexOptions | undefined, rand: Rand): ClaimResult {
   const def = defOf(id, opts);
@@ -63,8 +66,14 @@ export function claimAchievement(save: SaveV3, id: string, now: number, opts: De
 
   const eggKind = rewardEgg(def);
   if (eggKind) {
+    if (!canGiveEgg(save, eggKind, opts)) {
+      const caught = allCaughtPoints(eggKind, opts);
+      save.points.balance += caught;
+      done();
+      return { ok: true, id, allCaught: { kind: eggKind, points: caught } };
+    }
     const can = checkGiveEgg(save, eggKind, opts);
-    if (!can.ok) return { ok: false, reason: can.reason === "sold-out" ? "egg-none" : can.reason };
+    if (!can.ok) return { ok: false, reason: "daycare-full" };
     const egg = newEgg(save, eggKind, now, opts);
     save.eggs.push(egg);
     done();

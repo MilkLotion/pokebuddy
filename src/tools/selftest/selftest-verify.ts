@@ -281,6 +281,14 @@ out("0 supabase/functions/_shared 가 최신");
   assert.ok(rules(prev, egged, ctx(60_000)).includes("spend"), "출처 없는 준전설알");
   egged.achievements["dex-300"] = { achievedAt: T0, claimedAt: T0 };
   assert.deepEqual(rules(prev, egged, ctx(60_000)), [], "업적 보상 알");
+  // 다 모은 알 보상 — 알 대신 상점가의 절반(준전설 1,000P)을 받는다 (2026-10-21 사용자 결정)
+  const caught = clone(prev);
+  caught.points.balance += 1000;
+  assert.ok(rules(prev, caught, ctx(60_000)).includes("points"), "출처 없는 1000P");
+  caught.achievements["dex-300"] = { achievedAt: T0, claimedAt: T0 };
+  assert.deepEqual(rules(prev, caught, ctx(60_000)), [], "다 모은 알 보상 1000P");
+  caught.points.balance += 1000;
+  assert.ok(rules(prev, caught, ctx(60_000)).includes("points"), "다 모은 알 보상보다 많은 포인트");
   out("8 알·업적");
 }
 

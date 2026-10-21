@@ -91,7 +91,6 @@ const FAIL_TEXT: Record<FailCode, { ko: string; en: string }> = {
   "no-achievement": { ko: "그 업적이 없어요.", en: "That achievement doesn't exist." },
   "not-achieved": { ko: "아직 달성하지 않았어요.", en: "Not achieved yet." },
   "already-claimed": { ko: "이미 받았어요.", en: "Already claimed." },
-  "egg-none": { ko: "이 알에서 나올 포켓몬을 모두 모았어요.", en: "You've collected every Pokémon from this egg." },
   "bad-id": { ko: "알 수 없는 항목이에요.", en: "Unknown item." },
   "trade-not-ready": { ko: "아직 확정할 수 없어요. 두 사람 모두 포켓몬을 올려야 확정할 수 있어요.", en: "You can't confirm yet. Both of you need to offer a Pokémon first." },
   busy: { ko: "잠시 뒤에 다시 해 주세요. 앞의 조작을 처리하는 중이에요.", en: "Please try again in a moment. The previous action is still being handled." },

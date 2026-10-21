@@ -417,6 +417,7 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   }
 
   // 업적 — 새로 받은 업적의 보상. 포인트는 포인트 예산에, 도구는 받은 도구에, 알은 값 없이 생긴 알에, 포켓몬은 새 개체 출처에 더한다
+  //   다 모은 단일 포켓몬 알 보상은 알 대신 상점가의 절반을 포인트로 준다 — 알 보상의 그 포인트도 예산에 더한다
   const prevClaimed = claimed(prev);
   let achievedPets = 0;
   let achievedPoints = 0;
@@ -431,7 +432,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     const [kind, a, b] = reward.split(":");
     if (kind === "pokemon") achievedPets += 1;
     else if (kind === "points") achievedPoints += pos(Number(a) || 0);
-    else if (kind === "egg") achievedEggs += 1;
+    else if (kind === "egg") {
+      achievedEggs += 1;
+      achievedPoints += pos(data.allCaught?.[a ?? ""] ?? 0); // 다 모은 알이면 알 대신 포인트를 받는다(src/achievement/claim.ts). 어느 쪽인지 몰라 둘 다 몫으로 센다(넉넉히)
+    }
     else if (kind === "item" && a) mailItems[a] = (mailItems[a] ?? 0) + (Number(b) || 1);
   }
 

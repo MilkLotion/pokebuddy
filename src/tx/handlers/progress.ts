@@ -19,7 +19,7 @@ export const claimHandler: TxHandler = (draft, args, ctx) => {
   if (!id) return { ok: false, reason: "bad-args" };
   const res = claimAchievement(draft, id, ctx.now, undefined, ctx.rand);
   if (!res.ok) return { ok: false, reason: reasonOf(res) };
-  return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox, points: res.points, eggId: res.eggId, item: res.item, skipped: res.skipped } };
+  return { ok: true, result: { id, slotIndex: res.slotIndex, petId: res.petId, toBox: res.toBox, points: res.points, eggId: res.eggId, allCaught: res.allCaught, item: res.item, skipped: res.skipped } };
 };
 
 export const tutorialHandler = (kind: "skip" | "done" | "replay"): TxHandler => (draft, args) => {

@@ -34,7 +34,7 @@ export function eggRoomOf(save: SaveV3, kind: string, opts?: DexOptions): number
 }
 
 // 이 알을 하나 줄 수 있는가 — 돌보미집이 가득이면 daycare-full, 단일 포켓몬 알의 남은 종이 없으면 sold-out.
-// 업적은 sold-out 을 egg-none 으로 바꿔 돌려준다
+// 업적은 sold-out 이면 알 대신 포인트를 준다 (src/achievement/claim.ts)
 export function checkGiveEgg(save: SaveV3, kind: string, opts?: DexOptions): Check<"daycare-full" | "sold-out"> {
   if (save.eggs.length >= EGG_RULES.maxEggs) return { ok: false, reason: "daycare-full" };
   if (!canGiveEgg(save, kind, opts)) return { ok: false, reason: "sold-out" };

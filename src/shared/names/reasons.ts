@@ -94,7 +94,6 @@ export const REASONS = [
   "no-achievement",
   "not-achieved",
   "already-claimed",
-  "egg-none",
   "bad-id",
   // 교환 — 로컬 판정
   "busy",

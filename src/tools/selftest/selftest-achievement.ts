@@ -25,6 +25,7 @@ import { isSinglePet, tickPartyTime } from "../../dex/forms";
 import { applyTime } from "../../state/time";
 import { eggPool, rewardSpecies, singleSpecies } from "../../dex/obtain";
 import { EGG_RULES } from "../../egg/rules";
+import { allCaughtPoints } from "../../egg/pool";
 import { pendingOf } from "../../notify/pending";
 import { PET_RULES } from "../../party/rules";
 import { canShow, currentTutorial, doneTutorial, queueTutorials, skipTutorial } from "../../tutorial/queue";
@@ -599,10 +600,23 @@ function seed(): SaveV3 {
   assert.equal(claimAchievement(s, "hatch-200", T0 + 1, undefined, () => 0.5).reason, "daycare-full");
   assert.equal(s.achievements["hatch-200"]?.claimedAt, null, "미수령으로 남는다");
   s.eggs.length = 0;
+  assert.equal(claimAchievement(s, "hatch-200", T0 + 1, undefined, () => 0.5).ok, true, "남은 종이 있으면 알을 준다");
+  assert.equal(s.eggs[0]?.kind, "sub-legendary");
+
+  // 다 모은 알 보상 — 알 대신 상점가의 절반을 포인트로 주고 수령한다. 돌보미집이 가득이어도 받는다 (2026-10-21 사용자 결정)
+  got(s, "work-50h");
+  while (s.eggs.length < EGG_RULES.maxEggs) s.eggs.push({ ...s.eggs[0]!, id: `e${s.eggs.length + 20}`, kind: "random" });
   s.dex.obtained = [...(eggPool("sub-legendary") ?? [])];
-  assert.equal(claimAchievement(s, "hatch-200", T0 + 1, undefined, () => 0.5).reason, "egg-none");
+  const balance = s.points.balance;
+  const eggs = s.eggs.length;
+  const caught = claimAchievement(s, "work-50h", T0 + 1, undefined, () => 0.5);
+  assert.deepStrictEqual(caught, { ok: true, id: "work-50h", allCaught: { kind: "sub-legendary", points: allCaughtPoints("sub-legendary") } });
+  assert.equal(allCaughtPoints("sub-legendary"), 1000);
+  assert.equal(s.points.balance, balance + 1000);
+  assert.equal(s.eggs.length, eggs, "알은 늘지 않는다");
+  assert.equal(s.achievements["work-50h"]?.claimedAt, T0 + 1, "수령으로 바뀐다");
   s.dex.obtained = [];
-  assert.equal(claimAchievement(s, "hatch-200", T0 + 1, undefined, () => 0.5).ok, true);
+  s.eggs.length = 0;
 
   got(s, "shiny-10");
   assert.deepStrictEqual(claimAchievement(s, "shiny-10", T0 + 1, undefined, () => 0.5).item, { id: "shiny-potion", count: 1 });

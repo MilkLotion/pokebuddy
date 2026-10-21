@@ -1,8 +1,8 @@
 // 설정창의 업적창 — 업적 줄(진행도·보상 받기), 분류 칩, 미수령 → 미달성 → 받음 순서 (P10j)
 import type { AchievementView } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
-import { sendCommand } from "./command.js";
-import { closeDialog, dialogEl, dialogHead, drawDialog, resetDialogScroll } from "./dialog.js";
+import { lastReplyOf, sendCommand } from "./command.js";
+import { closeDialog, dialogEl, dialogHead, drawDialog, openSubDialog, resetDialogScroll } from "./dialog.js";
 import { ui } from "./state.js";
 import { chipsEl } from "./widgets.js";
 
@@ -30,10 +30,17 @@ function achievementRow(a: AchievementView): HTMLElement {
   row.appendChild(el("span", "done", a.state === "claimed" ? `${a.reward} 받음` : a.reward));
   if (a.state === "achieved") {
     const claim = buttonEl("act primary", "보상 받기");
-    claim.addEventListener("click", () => void sendCommand("achievement.claim", a.id));
+    claim.addEventListener("click", () => void claimAndShow(a.id));
     row.appendChild(claim);
   }
   return row;
+}
+
+// 보상 받기 — 다 모은 알 보상이 포인트로 바뀌었으면 부화 결과 창의 "알을 모두 모았어요" 로 알린다. 확인하면 업적창으로 돌아간다
+async function claimAndShow(id: string): Promise<void> {
+  if (!(await sendCommand("achievement.claim", id))) return;
+  const caught = lastReplyOf()?.allCaught as { kind?: unknown; points?: unknown } | undefined;
+  if (caught && typeof caught.kind === "string" && typeof caught.points === "number") openSubDialog({ kind: "hatched", allCaught: { kind: caught.kind, points: caught.points } });
 }
 
 // 업적창의 분류 칩 — `전체` 와 분류 다섯 (2026-10-03 사용자 결정 "전체 + chip으로 볼수 있게"). 탐험·배틀은 그 기능이 생길 때 더한다
