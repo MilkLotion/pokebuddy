@@ -421,7 +421,7 @@ function runGameCommand(command: Command, then?: () => Command): void {
 
 // 포켓몬 메뉴 — 무대의 우클릭과 관리 창의 파티 카드·박스 칸 우클릭이 같은 메뉴를 쓴다 (src/main/menus/pet-menu.ts)
 const petMenu = createPetMenu({
-  read: () => rt.game?.read() ?? null,
+  read: () => rt.game?.peek() ?? null, // 읽기만 한다 — 메뉴 모델(src/view/menus.ts)은 받은 저장을 고치지 않는다(R5)
   stagePet: (petId) => rt.stages?.petOf(petId) ?? null,
   portraits: () => rt.portraits,
   run: runGameCommand,

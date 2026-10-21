@@ -41,7 +41,7 @@ function formArt(art: Portraits, forms: string[], shiny: boolean): Promise<Recor
 }
 
 export interface PetMenuDeps {
-  read(): SaveV3 | null; // 메모리 값 — 파일은 15초마다 쓴다
+  read(): SaveV3 | null; // 메모리 값(복제하지 않은 peek) — 메뉴는 읽기만 한다. 받은 값을 고치지 않는다(R5). 파일은 15초마다 쓴다
   stagePet(petId: string): PartyPet | null; // 무대에 나와 있는 마리
   portraits(): Portraits | null;
   run(command: Command, then?: () => Command): void; // then — 성공하면 이어서 보낼 명령(첫 돌봄 튜토리얼 완료)
@@ -115,8 +115,11 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
         openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
       };
       // 모습 말풍선의 초상 — 포켓몬 메뉴와 같이 잠깐만 기다린다
-      const forms = battleMenuOf(deps.read(), slot)?.forms ?? [];
-      const pet = deps.read()?.pets.find((p) => p.id === deps.read()?.battle?.slots?.[slot]);
+      // 저장은 한 번만 읽는다 — 비교식 안에서 읽으면 개체마다 읽어 큰 저장에서 메뉴가 2초 넘게 늦었다 (worklog/records/update-1022/update-1022-menu-delay.md)
+      const save = deps.read();
+      const forms = battleMenuOf(save, slot)?.forms ?? [];
+      const petId = save?.battle?.slots?.[slot] ?? null;
+      const pet = petId ? save?.pets.find((p) => p.id === petId) : undefined;
       const art = deps.portraits();
       if (forms.length < 2 || !art || !pet) {
         show({});

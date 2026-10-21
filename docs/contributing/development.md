@@ -257,6 +257,7 @@ buddy 가 켜져 있으면 마리마다 `{pet: 마리, motion: 단계, rhythm: i
   - 설정창 다시 그리기 횟수는 빌드한 뒤 `electron dist/tools/smoke/smoke-perf.js` 로 잰다. 판정은 하지 않고 JSON 한 줄을 적는다
   - 기기 창이 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-device-open.js` 로 잰다. 파티 상세·도감 기기 창을 예비 창 없이, 예비 창으로, 닫은 뒤 다시, 떠 있는 창에서 바꿔 연다. 판정은 하지 않고 JSON 한 줄을 적는다
   - 메뉴 창이 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-menu-open.js` 로 잰다. 포켓몬 메뉴와 트레이 메뉴를 처음과 닫은 뒤 다시 연다. 판정은 하지 않고 JSON 한 줄을 적는다
+  - 우클릭 메뉴가 뜨는 시간은 빌드한 뒤 `electron dist/tools/smoke/smoke-pet-menu-open.js` 로 잰다. 실제 메뉴 잇기로 파티 카드·박스 칸·모험 탭 배틀 칸의 메뉴를 연다. 모습 말풍선 그림 받기 시간을 따로 적는다. 큰 저장은 `POKEBUDDY_SMOKE_SCENE=many-1000` 으로 깐다. 같은 개체의 박스 칸 줄과 배틀 칸 줄을 견준다. 판정은 하지 않고 JSON 한 줄을 적는다
   - 배틀 창은 빌드한 뒤 `electron dist/tools/smoke/smoke-battle-screen.js` 로 로컬 엔진 판 하나를 숨긴 창에서 끝까지 재생한다. DPS 표·초상·연출 요소를 새로 만든 수와 끝난 판의 DPS 표 글자를 적는다. 결과 창이 뜨지 않거나 렌더러 오류가 있으면 실패한다
 - CSS 나 화면 공통 부품을 고칠 때는 화면이 바뀌지 않았는지 픽셀로 견준다
   - 고치기 전에 `electron dist/tools/smoke/smoke-ui-shots.js <전 폴더>` 로 설정창 탭·모달·기기 창 다섯을 찍는다. 시각을 고정하고 그림은 주지 않아 같은 코드면 같은 그림이 나온다
