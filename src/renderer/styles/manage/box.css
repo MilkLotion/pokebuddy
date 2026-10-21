@@ -166,7 +166,6 @@ button.icon-button,
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  max-height: calc(100vh - 200px);
   overflow-y: auto;
 }
 .box-tile {
@@ -368,14 +367,18 @@ button.icon-button,
 }
 /* 중복 팔기 모달 — Figma 05 `Box / Sell Duplicates`, 03 `Sell Duplicates Body` (2026-10-05). 폭 560, 안내 한 줄, 후보 칸 5열(Box Slot Compact 86×66),
    마릿수와 받는 포인트. 팔 칸은 톤 배경(.cell.selected), 뺀 칸은 흰 칸이다. 테두리로 강조하지 않는다 */
+/* 세로 flex — 칸이 많으면 격자(.scroll)만 줄어 스크롤한다(dialog.css .dialog .scroll) */
 .dialog.sell-dup {
   width: min(560px, calc(100vw - 40px));
+  display: flex;
+  flex-direction: column;
 }
 .sell-dup-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin: 12px 0 20px;
+  min-height: 0;
 }
 .sell-dup-body .hint,
 .sell-dup-body .sum {
@@ -391,7 +394,6 @@ button.icon-button,
   display: grid;
   grid-template-columns: repeat(5, 86px);
   gap: 8px;
-  max-height: calc(100vh - 260px);
   overflow-y: auto;
 }
 .sell-dup-grid .cell.tall {

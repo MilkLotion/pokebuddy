@@ -47,6 +47,7 @@
 // `--key <키>` 를 주면 관리 창의 초점 있는 요소(없으면 문서)에 그 키의 keydown 을 보낸다(예: Escape). `--click` 과 적은 순서대로 한다.
 // `--device-key <창>=<키>` 를 주면 보이는 기기 창(예: pet.html)의 문서에 그 키의 keydown 을 보낸다 — 기기 창의 Esc 가 열림 스택을 따르는지 볼 때.
 // `--list-windows` 를 주면 찍기 직전에 보이는 창(페이지 이름)과 관리 창 모달이 떠 있는지를 `windows: …` 로 출력한다.
+// `--height <px>` 를 주면 관리 창 안쪽 높이를 그 값으로 바꿔 연다(폭은 그대로). 최소 높이(560) 같은 작은 창의 스크롤 확인용
 // `--eval <js>` 를 주면 찍기 직전에 관리 창에서 그 식을 돌려 결과를 `eval: …` 로 출력한다 — 스크롤 높이 같은 값을 잴 때 쓴다
 // `--agents-connected` 를 주면 임시 HOME 의 Claude Code 에 우리 훅을 등록해 연결 탭의 `연결됨` 을 보인다
 // `--agents-outdated` 를 주면 임시 HOME 의 codex 에 옛 등록(PreToolUse 포함)을 깔아 연결 탭의 "갱신 필요" 를 보인다
@@ -442,6 +443,12 @@ void app.whenReady().then(async () => {
     }),
   } as unknown as Parameters<typeof createManage>[0]);
   const win = manage.open(route)!;
+  const heightArg = Number(argAfter("--height") ?? NaN);
+  if (Number.isFinite(heightArg) && heightArg > 0) {
+    const [w] = win.getContentSize();
+    win.setMinimumSize(1, 1); // 창 규칙의 최소 높이보다 작게도 잰다
+    win.setContentSize(w ?? 640, Math.round(heightArg));
+  }
   if (!shotFile) return;
 
   // 탭 전환과 개체 상세는 그려진 뒤에야 누를 수 있다. 누른 뒤에도 다시 그릴 틈을 준다

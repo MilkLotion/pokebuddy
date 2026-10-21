@@ -176,6 +176,24 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       });
     },
   },
+  "sell-dup-many": {
+    note: "중복 팔기 6줄 이상 — 박스를 모두 비우고 5종 41마리를 넣는다(중복 후보 36마리, 한 줄 5칸이면 8줄). 모달의 이중 스크롤 확인용 (update-1022 double-scroll)",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      const inBox = new Set(s.boxes.flatMap((b) => b.slots).filter((id): id is string => id != null));
+      s.pets = s.pets.filter((p) => !inBox.has(p.id));
+      for (const b of s.boxes) b.slots = b.slots.map(() => null);
+      const kinds = ["bulbasaur", "charmander", "squirtle", "pikachu", "eevee"];
+      for (let i = 0; i < 41; i++) {
+        const species = kinds[i % kinds.length] ?? "pikachu";
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now: now - (41 - i) * 60_000 });
+        pet.level = 1 + ((i * 7) % 40);
+        s.pets.push(pet);
+        addToBox(s.boxes, pet.id);
+        recordDex(s, species, false);
+      }
+    },
+  },
   boxes: {
     note: "박스 넘기기·가득 참 — 박스를 모두 비우고 첫 박스 30칸을 채운 뒤 둘째 박스에 3마리",
     apply: (s, now) => {
