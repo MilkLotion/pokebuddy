@@ -4,6 +4,7 @@
 //   BATTLE_PARTY_INVALID  400 — 배틀 파티가 비었거나 출전 불가가 있다
 //   BATTLE_COOLDOWN       409 — 쿨타임이 남았다. remainMs 를 함께 준다
 //   BATTLE_OFFER_GONE     409 — 보인 3개가 바뀌었거나 이미 썼다. 앱은 새로 받는다
+//   BATTLE_NO_OPPONENT    409 — 바로 랜덤에 실제 후보도 샘플 파티도 없다(샘플을 싣지 않은 서버 데이터)
 //   BATTLE_TOO_FAST       429 — 새로고침이 1초에 두 번
 //   BATTLE_REROLL_USED    409 — 이 판의 새로고침 1번을 이미 썼다
 //   BATTLE_BAD_ARGS       400 — 요청 모양이 틀렸다
@@ -11,10 +12,17 @@
 //   FRIENDLY_*            친선 배틀(friendly-battle) — 링크·채널·준비 오류. 상태는 아래 표
 //   AUTH_TOKEN 401 · CLOUD_LOGIN_REQUIRED 401 · SERVER_BUSY 503 · SERVER_ERROR 500 — upload-save 와 같다
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import type { BattleData } from "./battle/fighter-core.ts";
+import type { BattleData, FighterSource } from "./battle/fighter-core.ts";
 import battleJson from "./battle/battle-data.json" with { type: "json" };
 
-export const battle = battleJson as unknown as { hash: string; data: BattleData };
+// 샘플 파티 — 랜덤 배틀 상대 풀에 실제 사용자 파티와 섞는다 (data/battle-samples.json, docs/specs/adventure.md "샘플 파티")
+export interface BattleSample {
+  id: string; // `<level>-NN` — battles.opponent_sample
+  level: "hard" | "normal" | "easy";
+  name: string; // 상대 이름 — 배틀 창 머리·배틀 기록
+  slots: FighterSource[];
+}
+export const battle = battleJson as unknown as { hash: string; data: BattleData; samples?: BattleSample[] };
 
 export const json = (body: Record<string, unknown>, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -24,6 +32,7 @@ const STATUS: Readonly<Record<string, number>> = {
   BATTLE_BAD_ARGS: 400,
   BATTLE_COOLDOWN: 409,
   BATTLE_OFFER_GONE: 409,
+  BATTLE_NO_OPPONENT: 409,
   BATTLE_TOO_FAST: 429,
   BATTLE_REROLL_USED: 409,
   CLOUD_ACCOUNT_HELD: 403,

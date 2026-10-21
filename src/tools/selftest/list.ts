@@ -41,6 +41,7 @@ export const SELFTESTS: readonly SelftestEntry[] = [
   tool("adventure"),
   tool("battle"),
   tool("battle-screen"),
+  tool("battle-samples"),
   tool("friendly"),
   tool("achievement"),
   tool("snapshot"),

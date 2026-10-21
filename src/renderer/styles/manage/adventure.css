@@ -468,6 +468,10 @@
   color: var(--muted);
   font-size: 12px;
 }
+/* 랜덤 배틀 실패 글자 — 설명 자리의 글자 색만 바꾼다(줄을 끼우지 않는다). Figma 03 `Battle Mode Body` State=Failed (status/error-text) */
+.battle-mode span.error {
+  color: var(--danger-ink);
+}
 .battle-mode:disabled {
   cursor: default;
 }

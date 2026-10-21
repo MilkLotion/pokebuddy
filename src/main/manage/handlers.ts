@@ -160,7 +160,7 @@ export function wireManageHandlers(scope: IpcScope, deps: ManageHandlerDeps): vo
         return friendly && action ? friendly(action) : null;
       },
     },
-    // 랜덤 배틀 — 상대 받기와 한 판. offerId 는 uuid, pick 은 1~3 만. 보상 값은 렌더러에서 받지 않는다
+    // 랜덤 배틀 — 바로 랜덤 한 판, 상대 받기와 한 판. offerId 는 uuid, pick 은 1~3 만. 보상 값은 렌더러에서 받지 않는다
     "manage:battle": {
       denied: null,
       run: async (_e, req) => {

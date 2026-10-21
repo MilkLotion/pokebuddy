@@ -364,10 +364,12 @@ void (async () => {
   // 판 요청 — 요청 직전에 준비 중(prepare), 실패면 닫고(cancel) 판을 띄우지 않는다. 성공이면 같은 창에 판(show) (2026-10-10)
   const steps: string[] = [];
   let startOk = false;
+  let lastBody: unknown = null; // 마지막 요청 본문
   const startClient = {
     functions: {
-      invoke: async (fn: string) => {
+      invoke: async (fn: string, opts?: { body?: unknown }) => {
         steps.push(fn);
+        lastBody = opts?.body ?? null;
         if (fn === "battle-offer") return { data: { offerId: "o1", picks: [], cooldownMs: 0 }, error: null };
         if (!startOk) throw new Error("연결 끊김");
         return { data: { battleId: "b1", reward: { points: 50 } }, error: null };
@@ -375,6 +377,7 @@ void (async () => {
     },
   } as unknown as SupabaseClient;
   const runs: string[] = []; // 부른 거래 이름
+  let shownPick: number | null | undefined; // show 가 받은 줄 번호 — 바로 랜덤이면 null
   let pendingRewards = false; // 받을 판이 있는가
   const startNet = createBattleNet({
     client: startClient,
@@ -387,7 +390,10 @@ void (async () => {
     onChanged: () => {},
     offerView: () => ({ offerId: "", rows: [], cooldownMs: 0, rerollLeft: 1 }),
     detailView: () => ({ row: { at: "", mine: true, result: "win", reward: null, endMs: 0 }, sides: null }),
-    show: () => steps.push("show"),
+    show: (_data, pick) => {
+      steps.push("show");
+      shownPick = pick;
+    },
     prepare: () => steps.push("prepare"),
     cancel: () => steps.push("cancel"),
     beforeSend: async () => void steps.push("upload"),
@@ -407,6 +413,14 @@ void (async () => {
   assert.ok(okRes.ok, "판을 받았다");
   assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "show"], "성공 — 준비 중·올리기·요청 뒤 같은 창에 판");
   assert.deepStrictEqual(runs, ["battle.claim", "battle.reward"], "받을 판이 있으면 판 요청 전에 받고, 받은 판을 적는다");
+  assert.strictEqual(shownPick, 1, "고른 판은 줄 번호로 창을 연다");
+  // 바로 랜덤 — 상대를 고르지 않고 { random: true } 한 번으로 판을 받는다. 창은 줄 번호 없이(null) 연다 (2026-10-22 사용자 "상대방 고르지 않고 랜덤으로")
+  steps.length = 0;
+  const randomRes = await startNet.act({ action: "random" });
+  assert.ok(randomRes.ok, "바로 랜덤 판을 받았다");
+  assert.deepStrictEqual(steps, ["prepare", "upload", "battle-start", "show"], "바로 랜덤 — 상대 받기 없이 준비 중·올리기·요청 뒤 판");
+  assert.deepStrictEqual(lastBody, { random: true }, "바로 랜덤 요청 본문");
+  assert.strictEqual(shownPick, null, "바로 랜덤은 줄 번호가 없다");
   console.log("selftest-battle-screen 통과");
 })().catch((e) => {
   console.error(e);

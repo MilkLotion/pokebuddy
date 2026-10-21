@@ -23,6 +23,7 @@ import { friendlyScreenInput } from "../../view/friendly-battle.js";
 import { onlineEnv } from "../app/dev-run.js";
 import type { EngineFighter, BattleResult, BattleEvent, Obstacle } from "../../battle/engine.js";
 import { hasBattleRewards } from "../../battle/party.js";
+import { ANONYMOUS_NAME } from "../../shared/battle-record-text.js";
 import { battleDetailView, battleOfferView, battleRewardText, slotOf } from "../../view/battle-offer.js";
 import type { BattleScreenInput } from "../../view/battle-screen.js";
 import { createMainOnline, type MainOnline, type MainOnlineOptions } from "./online";
@@ -345,8 +346,8 @@ export function createServices(deps: ServicesDeps): Services {
   };
 }
 
-// 서버가 준 판 → 배틀 창 입력. 상대 이름은 보인 줄 번호다(상대 계정 이름은 서버가 주지 않는다)
-function screenInputOf(data: StartData, pick: number): BattleScreenInput {
+// 서버가 준 판 → 배틀 창 입력. 상대 이름은 바로 랜덤이면 서버가 준 이름(샘플 이름 또는 계정 표시 이름, 없으면 익명 트레이너), 고른 판이면 보인 줄 번호다
+function screenInputOf(data: StartData, pick: number | null): BattleScreenInput {
   const result: BattleResult = {
     winner: data.result.winner,
     timeout: data.result.timeout,
@@ -357,5 +358,5 @@ function screenInputOf(data: StartData, pick: number): BattleScreenInput {
     events: data.events as BattleEvent[],
   };
   const sides = data.sides as unknown as [(EngineFighter | null)[], (EngineFighter | null)[]];
-  return { sides, result, ...(data.looks ? { looks: data.looks } : {}), opponentName: `상대 · ${pick}번 파티`, reward: battleRewardText(data.reward) };
+  return { sides, result, ...(data.looks ? { looks: data.looks } : {}), opponentName: pick == null ? `상대 · ${data.foe?.name ?? ANONYMOUS_NAME}` : `상대 · ${pick}번 파티`, reward: battleRewardText(data.reward) };
 }

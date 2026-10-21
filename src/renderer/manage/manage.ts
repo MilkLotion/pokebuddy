@@ -33,7 +33,7 @@ import { escapeTop } from "./layers.js";
 import { closeTabTip } from "./tab-tips.js";
 import { battleLink, battleShown, clearBattlePick, leaveBattle, onBattleAction, stepBattle, syncBattleDevice } from "./battle-link.js";
 import { drawBattlePick, startBattlePick } from "./battle-pick.js";
-import { drawBattleStart } from "./battle-start.js";
+import { drawBattleStart, enterBattleStart } from "./battle-start.js";
 import { drawMovePick, startMovePick } from "./move-pick.js";
 import { drawSwap, startSwap } from "./party-swap.js";
 import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
@@ -278,7 +278,9 @@ registerDialog({ kind: "hatched", shape: "dialog hatched", draw: (d) => drawHatc
 registerDialog({ kind: "daycare", shape: "dialog daycare", draw: () => drawDaycare() });
 registerDialog({ kind: "box-order", shape: "dialog daycare box-order", draw: () => drawBoxOrder() });
 registerDialog({ kind: "preset-overview", shape: "dialog daycare preset-overview", draw: (d) => drawPresetOverview(d.battle === true) });
-registerDialog({ kind: "battle-start", shape: "dialog battle-start", draw: () => drawBattleStart() });
+registerDialog({ kind: "battle-start", shape: "dialog battle-start", draw: () => drawBattleStart(), enter: (_d, prev) => {
+  if (prev?.kind !== "battle-record") enterBattleStart(); // 배틀 기록(하위 모달)에서 돌아올 때는 실패 글자를 지우지 않는다
+} });
 registerDialog({ kind: "battle-opponent", shape: "dialog daycare preset-overview battle-opponent", draw: () => drawBattleOpponent() });
 registerDialog({ kind: "battle-record", shape: "dialog daycare preset-overview battle-record", draw: () => drawBattleRecord(), enter: () => void loadBattleRecord() });
 registerDialog({ kind: "battle-detail", shape: "dialog daycare preset-overview battle-record battle-detail", draw: (d) => drawBattleDetail(d.id), enter: (d) => void loadBattleDetail(d.id) });

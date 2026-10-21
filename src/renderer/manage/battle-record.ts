@@ -1,4 +1,4 @@
-// 배틀 기록 — 상대 고르기 모달의 `내 전적` 줄, 배틀 기록 모달, 배틀 상세 모달
+// 배틀 기록 — 배틀 고르기 모달의 `내 전적` 줄, 배틀 기록 모달, 배틀 상세 모달
 // 규칙 docs/specs/adventure.md "배틀 기록" 의 "앱에서 보이기"(2026-10-10 사용자 확정 "이렇게 진행").
 // Figma 05 `15 모험` `Adventure / Battle Pick · 전적` 1870:12835·`Adventure / Battle Record` 1959:103319·`Adventure / Battle Detail` 1959:103338,
 //   부품 01 `Battle Result Chip` 1870:12804, 02 `Battle Record Summary` 1870:12805·`Battle Record Bar` 1870:12831·`Battle Record Row` 1870:12830
@@ -23,7 +23,11 @@ let data: BattleRecordData | null = null;
 let failed = false;
 let loading = false;
 
-// 서버에서 다시 읽는다 — 상대 고르기 모달을 열 때와 배틀 기록 모달을 열 때
+// 지금 가진 기록 — 배틀 고르기 모달이 마지막 건 판 시각으로 쿨타임을 셈한다. 읽기 전·실패면 null
+export const battleRecordData = (): BattleRecordData | null => data;
+
+// 서버에서 다시 읽는다 — 배틀 고르기 모달을 열 때와 배틀 기록 모달을 열 때
+// (상대 고르기 모달도 연다 — 지금 앱은 그 모달을 쓰지 않는다)
 export async function loadBattleRecord(): Promise<void> {
   if (loading) return;
   loading = true;
@@ -33,16 +37,17 @@ export async function loadBattleRecord(): Promise<void> {
     data = r.record;
     failed = false;
   } else failed = true;
-  if (ui.dialog?.kind === "battle-opponent" || ui.dialog?.kind === "battle-record") drawDialog();
+  const k = ui.dialog?.kind;
+  if (k === "battle-start" || k === "battle-opponent" || k === "battle-record") drawDialog();
 }
 
-// 상대 고르기 모달의 파티 목록 위 줄 — `내 전적 12승 8패 1무 · 승률 57%` 와 `기록 보기 ›`
+// 배틀 고르기 모달(과 상대 고르기 모달)의 맨 위 줄 — `내 전적 12승 8패 1무 · 승률 57%` 와 `기록 보기 ›`
 export function battleRecordBarEl(): HTMLElement {
   const bar = el("div", "br-bar");
   bar.appendChild(el("span", "br-label", "내 전적"));
   bar.appendChild(el("span", "br-value", data ? recordBarText(data.mine) : failed ? FAILED : LOADING));
   const go = buttonEl("br-go", "기록 보기 ›");
-  go.addEventListener("click", () => openSubDialog({ kind: "battle-record" })); // 상대 고르기의 하위 모달 — 물러나면 상대 고르기로
+  go.addEventListener("click", () => openSubDialog({ kind: "battle-record" })); // 하위 모달 — 물러나면 연 모달(배틀 고르기)로
   bar.appendChild(go);
   return bar;
 }

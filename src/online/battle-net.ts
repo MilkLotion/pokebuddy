@@ -1,6 +1,6 @@
-// 랜덤 배틀 서버 호출 — 상대 3개 받기(battle-offer)와 한 판(battle-start). 서버는 supabase/functions/battle-*
+// 랜덤 배틀 서버 호출 — 바로 랜덤 한 판(battle-start { random }), 상대 3개 받기(battle-offer)와 고른 한 판(battle-start). 서버는 supabase/functions/battle-*
 // 판정·보상은 서버가 한다. 앱은 받은 판의 보상을 받을 판에 적고(battle.reward 거래) 판을 배틀 창으로 재생한다. 포인트는 창이 닫힐 때 받는다(battle.claim)
-// 규칙은 docs/specs/adventure.md "상대 고르기", "서버", 설계는 worklog/records/battle-server/battle-server.md "E3 서버 설계"
+// 규칙은 docs/specs/adventure.md "바로 랜덤 상대", "상대 고르기", "서버", 설계는 worklog/records/battle-server/battle-server.md "E3 서버 설계"
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BattleCode } from "../shared/names/online-codes.js";
 import { SERVER_BATTLE_CODES } from "../shared/names/online-codes.js";
@@ -24,6 +24,7 @@ export interface StartData {
   sides: [unknown[], unknown[]];
   looks?: [(BattleLook | null)[], (BattleLook | null)[]]; // 칸마다 이로치·성별 — 옛 서버면 없다
   dataHash: string;
+  foe?: { name: string | null }; // 바로 랜덤 판의 상대 이름 — 샘플 이름 또는 계정 표시 이름(없으면 null). 고른 판·옛 서버면 없다
 }
 
 export interface BattleNetDeps {
@@ -34,10 +35,10 @@ export interface BattleNetDeps {
   onChanged: () => void; // 포인트가 바뀌었다 — 설정창을 다시 그린다
   offerView: (data: OfferData) => BattleReply["offer"]; // 칸 값에 이름·그림 열쇠를 더한다(view 층)
   detailView: (data: BattleDetailData) => BattleDetailView; // 배틀 상세 — 칸 값에 이름을 더하고 DPS 를 셈한다(view 층)
-  show: (data: StartData, pick: number) => void; // 배틀 창을 연다
+  show: (data: StartData, pick: number | null) => void; // 배틀 창을 연다 — pick 은 고른 줄, 바로 랜덤이면 null
   beforeSend?: () => Promise<void>; // 상대 받기·판 요청 직전 저장 올리기 — 서버가 서버 저장의 배틀 파티를 읽는다. 친선 배틀의 beforeReady 와 같다
   prepare?: () => void; // 판을 요청하기 직전 — 바탕화면 포켓몬을 숨기고 배틀 창을 준비 중으로 띄운다 (2026-10-10)
-  cancel?: () => void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다. 실패 문구는 상대 고르기 모달이 보인다
+  cancel?: () => void; // 판을 받지 못했다 — 준비 중 창을 닫고 포켓몬을 되돌린다. 실패 문구는 배틀 고르기 모달이 보인다
 }
 
 type Call<T> = { ok: true; data: T } | { ok: false; code: BattleCode; detail?: string; remainMs?: number };
@@ -101,7 +102,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
       if (d.hasRewards()) d.run(`battle-claim:${Date.now()}`, "battle.claim", {}); // 앞 판에서 받지 못한 포인트를 먼저 받는다
       d.prepare?.(); // call 은 예외를 실패 답으로 바꾼다 — 실패면 아래에서 닫는다
       await d.beforeSend?.().catch(() => undefined);
-      const r = await call<StartData>("battle-start", { offerId: a.offerId, pick: a.pick });
+      const r = await call<StartData>("battle-start", a.action === "random" ? { random: true } : { offerId: a.offerId, pick: a.pick });
       if (!r.ok) {
         d.cancel?.();
         return fail(r);
@@ -109,7 +110,7 @@ export function createBattleNet(d: BattleNetDeps): BattleNet {
       // 보상을 받을 판에 적는다 — 포인트는 배틀 창이 닫힐 때 오른다(2026-10-18 사용자 "확인버튼 누를때"). 거래 id 가 판 id 라 같은 판은 한 번만 적는다. 적지 못해도 판은 보여 준다
       const put = d.run(`battle-reward:${r.data.battleId}`, "battle.reward", { battleId: r.data.battleId, reward: r.data.reward });
       if (put.ok) d.onChanged();
-      d.show(r.data, a.pick);
+      d.show(r.data, a.action === "random" ? null : a.pick);
       return put.ok ? { ok: true, code: null, reward: r.data.reward } : { ok: false, code: "LOCAL", reward: r.data.reward };
     } finally {
       busy = false;

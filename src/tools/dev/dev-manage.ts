@@ -5,7 +5,8 @@
 // 사용자의 저장(데이터 폴더)과 CLI 설정은 건드리지 않는다. HOME 도 임시 폴더로 바꾼다 — 설정의 "연결" 이 훅을 쓰기 때문이다.
 // `--shot <파일>` 을 주면 창을 그려 PNG 로 저장하고 끝낸다. 화면을 눈으로 확인할 때 쓴다.
 // `--tab <파티|박스|도감|상점|가방>` 을 주면 그 탭을 눌러 놓고 찍는다.
-// `--fake-battle-record` 를 주면 랜덤 배틀 서버 대신 예시 배틀 기록·배틀 상세를 답한다(내 전적·배틀 상세 화면 확인용).
+// `--fake-battle-record` 를 주면 랜덤 배틀 서버 대신 예시 배틀 기록·배틀 상세를 답한다(내 전적·배틀 상세 화면 확인용). 바로 랜덤 판은 연결 실패(NETWORK)로 답한다(배틀 고르기의 실패 글자 확인용).
+// `--fake-battle-cool` 을 함께 주면 마지막 건 판을 1분 전으로 해 배틀 고르기의 쿨타임 글자를 본다.
 // `--detail` 을 주면 첫 칸을 눌러 개체 상세까지 찍는다.
 // `--click <선택자>` 를 주면 그 요소를 한 번 눌러 놓고 찍는다. 여러 번 주면 순서대로 누른다.
 // `--context <선택자>` 를 주면 그 요소에 우클릭을 보낸다(창 안의 우클릭 메뉴). `--click` 과 적은 순서대로 한다.
@@ -386,7 +387,7 @@ void app.whenReady().then(async () => {
           const { battleDetailView } = require("../../view/battle-offer") as typeof import("../../view/battle-offer");
           const at = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
           const recent = [
-            { id: "20000000-0000-0000-0000-000000000001", name: "지우", detail: true, at: at(5), mine: true, result: "win", reward: 500, endMs: 92_000 },
+            { id: "20000000-0000-0000-0000-000000000001", name: "지우", detail: true, at: at(hasFlag("--fake-battle-cool") ? 1 : 5), mine: true, result: "win", reward: 500, endMs: 92_000 },
             { id: "20000000-0000-0000-0000-000000000002", name: null, detail: true, at: at(40), mine: false, result: "lose", reward: null, endMs: 125_000 },
             { id: "20000000-0000-0000-0000-000000000003", name: "이슬", detail: false, at: at(300), mine: true, result: "draw", reward: 10, endMs: 180_000 },
           ];

@@ -1,0 +1,825 @@
+{
+  "_comment": "랜덤 배틀 샘플 파티 — 규칙은 docs/specs/adventure.md '샘플 파티'. 손으로 다듬는 콘텐츠 데이터다. level 은 hard(상)·normal(중)·easy(하)다. 칸 순서가 배치다. 2·4·6번 칸이 앞라인(상대와 마주봄), 1·3·5번 칸이 뒷라인이다. 칸에 기술을 적지 않는다 — 종의 기본 기술 2개를 쓴다. 검사 src/tools/selftest/selftest-battle.ts, 난이도 측정 src/tools/battle/sample-rate.ts",
+  "version": 1,
+  "samples": [
+    {
+      "id": "hard-01",
+      "level": "hard",
+      "name": "드래곤 중심",
+      "kind": "type-concept",
+      "note": "드래곤 5마리. 초전설 레쿠쟈와 준전설 라티오스·라티아스, 메가 한카리아스",
+      "slots": [
+        {
+          "species": "latios"
+        },
+        {
+          "species": "garchomp",
+          "form": "garchomp-mega"
+        },
+        {
+          "species": "dragapult"
+        },
+        {
+          "species": "rayquaza"
+        },
+        {
+          "species": "hydreigon"
+        },
+        {
+          "species": "latias"
+        }
+      ]
+    },
+    {
+      "id": "hard-02",
+      "level": "hard",
+      "name": "비 파티",
+      "kind": "weather",
+      "note": "가이오가 잔비와 물 타입. 메가 대짱이가 앞에서 버틴다",
+      "slots": [
+        {
+          "species": "kyogre"
+        },
+        {
+          "species": "politoed"
+        },
+        {
+          "species": "barraskewda"
+        },
+        {
+          "species": "swampert",
+          "form": "swampert-mega"
+        },
+        {
+          "species": "tapu-koko"
+        },
+        {
+          "species": "ferrothorn"
+        }
+      ]
+    },
+    {
+      "id": "hard-03",
+      "level": "hard",
+      "name": "쾌청 파티",
+      "kind": "weather",
+      "note": "그란돈 가뭄과 불꽃 타입. 메가 리자몽Y 가 뒤에서 친다",
+      "slots": [
+        {
+          "species": "charizard",
+          "form": "charizard-mega-y"
+        },
+        {
+          "species": "groudon"
+        },
+        {
+          "species": "volcarona"
+        },
+        {
+          "species": "heatran"
+        },
+        {
+          "species": "entei"
+        },
+        {
+          "species": "venusaur"
+        }
+      ]
+    },
+    {
+      "id": "hard-04",
+      "level": "hard",
+      "name": "드래곤·강철·페어리",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 세 타입. 디아루가·카푸나비나·마기아나",
+      "slots": [
+        {
+          "species": "dialga"
+        },
+        {
+          "species": "metagross",
+          "form": "metagross-mega"
+        },
+        {
+          "species": "tapu-lele"
+        },
+        {
+          "species": "dragonite"
+        },
+        {
+          "species": "magearna"
+        },
+        {
+          "species": "clefable"
+        }
+      ]
+    },
+    {
+      "id": "hard-05",
+      "level": "hard",
+      "name": "준전설 셋",
+      "kind": "legend",
+      "note": "초전설 없이 준전설 3마리. 메가 마기라스가 앞에서 버틴다",
+      "slots": [
+        {
+          "species": "tapu-koko"
+        },
+        {
+          "species": "landorus"
+        },
+        {
+          "species": "zapdos"
+        },
+        {
+          "species": "tyranitar",
+          "form": "tyranitar-mega"
+        },
+        {
+          "species": "gengar"
+        },
+        {
+          "species": "ferrothorn"
+        }
+      ]
+    },
+    {
+      "id": "hard-06",
+      "level": "hard",
+      "name": "물리 속공",
+      "kind": "offense",
+      "note": "공격·스피드가 높은 물리 종. 자시안·테라카틴·우라오스",
+      "slots": [
+        {
+          "species": "dragapult"
+        },
+        {
+          "species": "zacian"
+        },
+        {
+          "species": "kartana"
+        },
+        {
+          "species": "urshifu"
+        },
+        {
+          "species": "weavile"
+        },
+        {
+          "species": "lucario",
+          "form": "lucario-mega"
+        }
+      ]
+    },
+    {
+      "id": "hard-07",
+      "level": "hard",
+      "name": "특수 화력",
+      "kind": "offense",
+      "note": "특공이 높은 종. 메가 뮤츠Y 와 라티아스·볼케니온",
+      "slots": [
+        {
+          "species": "mewtwo",
+          "form": "mewtwo-mega-y"
+        },
+        {
+          "species": "latias"
+        },
+        {
+          "species": "hydreigon"
+        },
+        {
+          "species": "volcanion"
+        },
+        {
+          "species": "chandelure"
+        },
+        {
+          "species": "blissey"
+        }
+      ]
+    },
+    {
+      "id": "hard-08",
+      "level": "hard",
+      "name": "내구 버티기",
+      "kind": "bulk",
+      "note": "HP·방어·특방이 높은 종. 기라티나·크레세리아·스이쿤",
+      "slots": [
+        {
+          "species": "cresselia"
+        },
+        {
+          "species": "giratina"
+        },
+        {
+          "species": "suicune"
+        },
+        {
+          "species": "toxapex"
+        },
+        {
+          "species": "blissey"
+        },
+        {
+          "species": "corviknight"
+        }
+      ]
+    },
+    {
+      "id": "hard-09",
+      "level": "hard",
+      "name": "불·물·풀",
+      "kind": "type-cover",
+      "note": "칠색조·케르디오·카푸브루루로 세 타입을 맞춘다. 메가 거북왕",
+      "slots": [
+        {
+          "species": "blastoise",
+          "form": "blastoise-mega"
+        },
+        {
+          "species": "ho-oh"
+        },
+        {
+          "species": "keldeo"
+        },
+        {
+          "species": "tapu-bulu"
+        },
+        {
+          "species": "serperior"
+        },
+        {
+          "species": "swampert"
+        }
+      ]
+    },
+    {
+      "id": "hard-10",
+      "level": "hard",
+      "name": "모래바람",
+      "kind": "weather",
+      "note": "마기라스 모래바람과 바위·땅·강철 타입. 메가 보스로라",
+      "slots": [
+        {
+          "species": "excadrill"
+        },
+        {
+          "species": "tyranitar"
+        },
+        {
+          "species": "terrakion"
+        },
+        {
+          "species": "hippowdon"
+        },
+        {
+          "species": "landorus"
+        },
+        {
+          "species": "aggron",
+          "form": "aggron-mega"
+        }
+      ]
+    },
+    {
+      "id": "normal-01",
+      "level": "normal",
+      "name": "물 타입",
+      "kind": "type-concept",
+      "note": "최종 진화 물 타입 6마리",
+      "slots": [
+        {
+          "species": "starmie"
+        },
+        {
+          "species": "gyarados"
+        },
+        {
+          "species": "kingdra"
+        },
+        {
+          "species": "milotic"
+        },
+        {
+          "species": "primarina"
+        },
+        {
+          "species": "swampert"
+        }
+      ]
+    },
+    {
+      "id": "normal-02",
+      "level": "normal",
+      "name": "불꽃 타입",
+      "kind": "type-concept",
+      "note": "최종 진화 불꽃 타입 6마리",
+      "slots": [
+        {
+          "species": "chandelure"
+        },
+        {
+          "species": "arcanine"
+        },
+        {
+          "species": "delphox"
+        },
+        {
+          "species": "infernape"
+        },
+        {
+          "species": "houndoom"
+        },
+        {
+          "species": "incineroar"
+        }
+      ]
+    },
+    {
+      "id": "normal-03",
+      "level": "normal",
+      "name": "비 파티",
+      "kind": "weather",
+      "note": "늑구리·왕구리 잔비와 물 타입",
+      "slots": [
+        {
+          "species": "pelipper"
+        },
+        {
+          "species": "politoed"
+        },
+        {
+          "species": "kingdra"
+        },
+        {
+          "species": "swampert"
+        },
+        {
+          "species": "ludicolo"
+        },
+        {
+          "species": "toxapex"
+        }
+      ]
+    },
+    {
+      "id": "normal-04",
+      "level": "normal",
+      "name": "쾌청 파티",
+      "kind": "weather",
+      "note": "코터스·나인테일 가뭄과 엽록소 풀 타입",
+      "slots": [
+        {
+          "species": "ninetales"
+        },
+        {
+          "species": "torkoal"
+        },
+        {
+          "species": "venusaur"
+        },
+        {
+          "species": "arcanine"
+        },
+        {
+          "species": "leafeon"
+        },
+        {
+          "species": "tangrowth"
+        }
+      ]
+    },
+    {
+      "id": "normal-05",
+      "level": "normal",
+      "name": "불·물·풀",
+      "kind": "type-cover",
+      "note": "스타팅 최종 진화로 세 타입을 맞춘다",
+      "slots": [
+        {
+          "species": "charizard"
+        },
+        {
+          "species": "blastoise"
+        },
+        {
+          "species": "sceptile"
+        },
+        {
+          "species": "torterra"
+        },
+        {
+          "species": "typhlosion"
+        },
+        {
+          "species": "feraligatr"
+        }
+      ]
+    },
+    {
+      "id": "normal-06",
+      "level": "normal",
+      "name": "드래곤·강철·페어리",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 세 타입",
+      "slots": [
+        {
+          "species": "noivern"
+        },
+        {
+          "species": "goodra"
+        },
+        {
+          "species": "sylveon"
+        },
+        {
+          "species": "skarmory"
+        },
+        {
+          "species": "togekiss"
+        },
+        {
+          "species": "bronzong"
+        }
+      ]
+    },
+    {
+      "id": "normal-07",
+      "level": "normal",
+      "name": "물리 속공",
+      "kind": "offense",
+      "note": "공격·스피드가 높은 물리 종",
+      "slots": [
+        {
+          "species": "weavile"
+        },
+        {
+          "species": "lucario"
+        },
+        {
+          "species": "crobat"
+        },
+        {
+          "species": "scizor"
+        },
+        {
+          "species": "staraptor"
+        },
+        {
+          "species": "bisharp"
+        }
+      ]
+    },
+    {
+      "id": "normal-08",
+      "level": "normal",
+      "name": "내구 버티기",
+      "kind": "bulk",
+      "note": "HP·방어·특방이 높은 종",
+      "slots": [
+        {
+          "species": "blissey"
+        },
+        {
+          "species": "toxapex"
+        },
+        {
+          "species": "umbreon"
+        },
+        {
+          "species": "corviknight"
+        },
+        {
+          "species": "mandibuzz"
+        },
+        {
+          "species": "hippowdon"
+        }
+      ]
+    },
+    {
+      "id": "normal-09",
+      "level": "normal",
+      "name": "전기 타입",
+      "kind": "type-concept",
+      "note": "전기 타입과 준전설 카푸꼬꼬꼭 1마리",
+      "slots": [
+        {
+          "species": "jolteon"
+        },
+        {
+          "species": "luxray"
+        },
+        {
+          "species": "tapu-koko"
+        },
+        {
+          "species": "magnezone"
+        },
+        {
+          "species": "ampharos"
+        },
+        {
+          "species": "electivire"
+        }
+      ]
+    },
+    {
+      "id": "normal-10",
+      "level": "normal",
+      "name": "에스퍼·고스트",
+      "kind": "type-concept",
+      "note": "에스퍼·고스트 타입",
+      "slots": [
+        {
+          "species": "gengar"
+        },
+        {
+          "species": "dusknoir"
+        },
+        {
+          "species": "alakazam"
+        },
+        {
+          "species": "slowking"
+        },
+        {
+          "species": "espeon"
+        },
+        {
+          "species": "gallade"
+        }
+      ]
+    },
+    {
+      "id": "easy-01",
+      "level": "easy",
+      "name": "노말 타입",
+      "kind": "type-concept",
+      "note": "진화를 마친 가벼운 노말 타입",
+      "slots": [
+        {
+          "species": "furret"
+        },
+        {
+          "species": "linoone"
+        },
+        {
+          "species": "delcatty"
+        },
+        {
+          "species": "bibarel"
+        },
+        {
+          "species": "noctowl"
+        },
+        {
+          "species": "stoutland"
+        }
+      ]
+    },
+    {
+      "id": "easy-02",
+      "level": "easy",
+      "name": "벌레 타입",
+      "kind": "type-concept",
+      "note": "초반 벌레 타입",
+      "slots": [
+        {
+          "species": "butterfree"
+        },
+        {
+          "species": "beedrill"
+        },
+        {
+          "species": "beautifly"
+        },
+        {
+          "species": "ariados"
+        },
+        {
+          "species": "ledian"
+        },
+        {
+          "species": "kricketune"
+        }
+      ]
+    },
+    {
+      "id": "easy-03",
+      "level": "easy",
+      "name": "풀 타입",
+      "kind": "type-concept",
+      "note": "중간 진화 풀 타입",
+      "slots": [
+        {
+          "species": "gloom"
+        },
+        {
+          "species": "ivysaur"
+        },
+        {
+          "species": "skiploom"
+        },
+        {
+          "species": "bayleef"
+        },
+        {
+          "species": "lombre"
+        },
+        {
+          "species": "cacturne"
+        }
+      ]
+    },
+    {
+      "id": "easy-04",
+      "level": "easy",
+      "name": "불·물·풀",
+      "kind": "type-cover",
+      "note": "중간 진화 스타팅으로 세 타입을 맞춘다",
+      "slots": [
+        {
+          "species": "charmeleon"
+        },
+        {
+          "species": "wartortle"
+        },
+        {
+          "species": "grovyle"
+        },
+        {
+          "species": "croconaw"
+        },
+        {
+          "species": "quilava"
+        },
+        {
+          "species": "grotle"
+        }
+      ]
+    },
+    {
+      "id": "easy-05",
+      "level": "easy",
+      "name": "비 파티",
+      "kind": "weather",
+      "note": "늑구리 잔비와 가벼운 물 타입",
+      "slots": [
+        {
+          "species": "pelipper"
+        },
+        {
+          "species": "quagsire"
+        },
+        {
+          "species": "lombre"
+        },
+        {
+          "species": "marshtomp"
+        },
+        {
+          "species": "lanturn"
+        },
+        {
+          "species": "seaking"
+        }
+      ]
+    },
+    {
+      "id": "easy-06",
+      "level": "easy",
+      "name": "공격 쏠림",
+      "kind": "offense",
+      "note": "스피드·공격이 높은 가벼운 종",
+      "slots": [
+        {
+          "species": "persian"
+        },
+        {
+          "species": "primeape"
+        },
+        {
+          "species": "fearow"
+        },
+        {
+          "species": "sandslash"
+        },
+        {
+          "species": "electrode"
+        },
+        {
+          "species": "golbat"
+        }
+      ]
+    },
+    {
+      "id": "easy-07",
+      "level": "easy",
+      "name": "내구 버티기",
+      "kind": "bulk",
+      "note": "HP·방어가 높은 가벼운 종",
+      "slots": [
+        {
+          "species": "chansey"
+        },
+        {
+          "species": "sudowoodo"
+        },
+        {
+          "species": "wigglytuff"
+        },
+        {
+          "species": "forretress"
+        },
+        {
+          "species": "hypno"
+        },
+        {
+          "species": "graveler"
+        }
+      ]
+    },
+    {
+      "id": "easy-08",
+      "level": "easy",
+      "name": "전기·강철",
+      "kind": "type-cover",
+      "note": "전기와 강철 타입",
+      "slots": [
+        {
+          "species": "magneton"
+        },
+        {
+          "species": "electabuzz"
+        },
+        {
+          "species": "flaaffy"
+        },
+        {
+          "species": "metang"
+        },
+        {
+          "species": "manectric"
+        },
+        {
+          "species": "bronzor"
+        }
+      ]
+    },
+    {
+      "id": "easy-09",
+      "level": "easy",
+      "name": "독·땅",
+      "kind": "type-cover",
+      "note": "독과 땅 타입",
+      "slots": [
+        {
+          "species": "arbok"
+        },
+        {
+          "species": "marowak"
+        },
+        {
+          "species": "weezing"
+        },
+        {
+          "species": "dugtrio"
+        },
+        {
+          "species": "venomoth"
+        },
+        {
+          "species": "rhyhorn"
+        }
+      ]
+    },
+    {
+      "id": "easy-10",
+      "level": "easy",
+      "name": "모래바람",
+      "kind": "weather",
+      "note": "하마돈 모래바람과 바위·땅 타입",
+      "slots": [
+        {
+          "species": "sandslash"
+        },
+        {
+          "species": "hippopotas"
+        },
+        {
+          "species": "krokorok"
+        },
+        {
+          "species": "pupitar"
+        },
+        {
+          "species": "drilbur"
+        },
+        {
+          "species": "boldore"
+        }
+      ]
+    }
+  ]
+}

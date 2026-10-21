@@ -63,9 +63,10 @@ export function parseMailAction(v: unknown): MailAction | null {
   return null;
 }
 
-// 랜덤 배틀 — offer(reroll 이면 새로고침), 또는 start(offerId 는 uuid, pick 은 1~3)
+// 랜덤 배틀 — random(바로 랜덤 상대), offer(reroll 이면 새로고침), 또는 start(offerId 는 uuid, pick 은 1~3)
 export function parseBattleAction(v: unknown): BattleAction | null {
   if (!isObj(v)) return null;
+  if (v.action === "random") return { action: "random" };
   if (v.action === "offer") return v.reroll === true ? { action: "offer", reroll: true } : { action: "offer" };
   if (v.action === "record") return { action: "record" };
   if (v.action === "detail" && typeof v.id === "string" && /^[0-9a-f-]{36}$/i.test(v.id)) return { action: "detail", id: v.id };

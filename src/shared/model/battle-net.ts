@@ -81,7 +81,11 @@ export interface BattleDetailView {
   sides: [BattleDpsRow[], BattleDpsRow[]] | null;
 }
 
-export type BattleAction = { action: "offer"; reroll?: boolean } | { action: "start"; offerId: string; pick: number } | { action: "record" } | { action: "detail"; id: string };
+// random 은 바로 랜덤 상대 — 서버가 상대를 골라 한 판을 판정한다(2026-10-22 사용자 "상대방 고르지 않고 랜덤으로"). offer·start 는 상대 고르기 모달(지금 앱은 쓰지 않는다)
+export type BattleAction = { action: "random" } | { action: "offer"; reroll?: boolean } | { action: "start"; offerId: string; pick: number } | { action: "record" } | { action: "detail"; id: string };
+
+// 랜덤 배틀 쿨타임 — 서버 설정 battle_cooldown_sec 기본값과 같다. 배틀 고르기 모달이 마지막 건 판 시각에서 남은 시간을 셈한다. 서버가 BATTLE_COOLDOWN 으로 준 remainMs 가 앞선다
+export const RANDOM_BATTLE_COOLDOWN_MS = 5 * 60_000;
 
 export interface BattleReply {
   ok: boolean;
@@ -89,7 +93,7 @@ export interface BattleReply {
   detail?: string; // 목록 밖 코드의 원래 글자
   remainMs?: number; // BATTLE_COOLDOWN 이면 남은 쿨타임
   offer?: BattleOfferView; // offer 의 답
-  reward?: number; // start 의 답 — 받은 포인트
+  reward?: number; // start·random 의 답 — 받은 포인트
   record?: BattleRecordData; // record 의 답
   battle?: BattleDetailView | null; // detail 의 답 — 없는 판이면 null
 }
