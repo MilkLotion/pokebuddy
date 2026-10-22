@@ -9,7 +9,7 @@ import { app, shell } from "electron";
 import type { PatchNotesView, UpdateAction, UpdateView } from "../../shared/model/account";
 import { createPatchNotes, type PatchNotes } from "../update/patch-notes";
 import { createMacUpdater } from "../update/mac-updater";
-import { createAppUpdater, urgentStep, type AppUpdater } from "../update/updater";
+import { createAppUpdater, readyNotice, urgentStep, type AppUpdater } from "../update/updater";
 
 export interface UpdateDeps {
   notesFile: string; // data/patch-notes.json
@@ -18,6 +18,7 @@ export interface UpdateDeps {
   onView(view: UpdateView): void; // 상태가 바뀌었다 — 관리 창에 밀어 보낸다
   beforeInstall(): Promise<void>; // 다시 시작 전 — 진행을 쓰고 클라우드에 알린다
   askRequired(version: string, manual: boolean): Promise<boolean>; // 업데이트 필요 창 — [지금 다시 시작]이면 참
+  askReady(version: string, manual: boolean): Promise<boolean>; // 새 버전 준비됨 창 — [지금 다시 시작]·[받기]면 참
 }
 
 export interface UpdateService {
@@ -36,6 +37,8 @@ export function createUpdateService(deps: UpdateDeps): UpdateService {
   let urgent = false;
   let checked = false;
   let asked = false;
+  // 이번 실행에 알린 새 버전 — 같은 버전으로 창을 두 번 띄우지 않는다. 더 새 버전을 받으면 다시 띄운다
+  let noticed: string | null = null;
 
   // 업데이트 필요를 받았거나 그 뒤 업데이트 상태가 바뀌었다 — 확인·창 띄우기 (worklog/records/app-update/app-update.md "업데이트 필요 때 바로 받기")
   //   창은 게임을 멈추지 않는다. 나중에를 고르면 설정의 다시 시작·끌 때 적용이 남는다
@@ -52,6 +55,18 @@ export function createUpdateService(deps: UpdateDeps): UpdateService {
         if (go) void updater?.install();
       });
     }
+  }
+
+  // 업데이트 필요가 아닐 때 — 새 버전을 다 받았으면(mac 수동이면 찾았으면) 창을 한 번 띄운다
+  //   (2026-10-23 사용자 "앱시작전에 패치검사(반강제)" → 안 A. 나중에를 고르면 설정의 다시 시작·끌 때 적용이 남는다)
+  function readyUpdate(): void {
+    if (!updater) return;
+    const view = updater.view();
+    if (!readyNotice(view.status, view.next, noticed, urgent)) return;
+    noticed = view.next;
+    void deps.askReady(view.next ?? "", view.status === "manual").then((go) => {
+      if (go) void updater?.install();
+    });
   }
 
   return {
@@ -86,6 +101,7 @@ export function createUpdateService(deps: UpdateDeps): UpdateService {
         onView: (view) => {
           deps.onView(view);
           if (urgent) urgentUpdate();
+          else readyUpdate();
         },
         // 다시 시작 전 — 메모리 진행을 쓰고 클라우드에 올린 뒤 released 를 알린다(최대 3초). 클라우드는 멈추지 않는다 —
         // 설치가 실패해 앱이 계속 돌면 다음 하트비트가 active 로 되돌린다. 이어지는 before-quit 은 기다리지 않는다

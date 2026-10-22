@@ -26,7 +26,7 @@ import { createGame, type GameV3 } from "../tx/game.js";
 import { hasBattleRewards } from "../battle/party.js";
 import { readCloudSeed } from "../online/cloud-file.js";
 import { seededRand } from "../verify/save-rules";
-import { askSaveLocked, askUpdateRequired } from "./app/halt-dialog";
+import { askSaveLocked, askUpdateReady, askUpdateRequired } from "./app/halt-dialog";
 import { createManage } from "./manage/window.js";
 import { createUpdateService } from "./services/update";
 import { createServices } from "./services/registry";
@@ -250,6 +250,7 @@ const update = createUpdateService({
     await halt.announceRelease();
   },
   askRequired: askUpdateRequired,
+  askReady: askUpdateReady,
 });
 
 // ── Electron 이 필요한 화면 계산 (anchor 의 host) ──────────────────────────────

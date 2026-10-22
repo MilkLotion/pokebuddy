@@ -2,10 +2,11 @@
 // 설계는 worklog/records/app-update/app-update.md. 엔진은 Windows 가 electron-updater(2026-09-28 사용자 승인),
 // mac 이 src/main/update/mac-updater.ts(Squirrel.Mac 은 정식 서명이 필요해 직접 한다, 2026-09-28 사용자 승인). 화면 흐름은 같다
 //
-//   확인    켜진 뒤 1분, 그 뒤 6시간마다 GitHub Release 의 latest.yml 을 본다(설치본의 app-update.yml 이 주소를 준다)
+//   확인    켜진 뒤 5초, 그 뒤 6시간마다 GitHub Release 의 latest.yml 을 본다(설치본의 app-update.yml 이 주소를 준다)
+//           (2026-10-23 사용자 "앱시작전에 패치검사(반강제)" → 안 A "켜자마자 확인·받으면 창". 그 전에는 1분 뒤)
 //   받기    새 버전이 있으면 백그라운드로 받는다. 전 설치 파일의 블록맵과 견줘 바뀐 부분만 받는다. sha512 로 검사한다
-//   적용    준비되면 설정 모달 바닥이 "다시 시작"이 된다. 누르면 클라우드 저장을 올린 뒤 조용히 설치하고 다시 켠다.
-//           누르지 않고 끄면 끌 때 적용한다
+//   적용    준비되면 알림 창을 버전마다 한 번 띄운다(readyNotice). 설정 모달 바닥도 "다시 시작"이 된다. 누르면 클라우드 저장을 올린 뒤
+//           조용히 설치하고 다시 켠다. 누르지 않고 끄면 끌 때 적용한다
 // mac 은 앱을 그 자리에서 바꿀 수 없으면(dmg 안·쓰기 불가) 받지 않고 새 버전만 알린다(manual) — `받기` 가 dmg 주소를 연다
 // 설치본(Windows exe·mac 앱)에서만 켠다. 개발 실행·npm 설치본은 버전만 보인다
 import type { UpdateView } from "../../shared/model/account";
@@ -63,6 +64,13 @@ export interface AppUpdater {
 //          클라우드 표시는 자주 바뀌므로 매번 GitHub 를 부르지 않는다. 그 뒤는 6시간 주기가 맡는다
 //   none   확인·받는 중(끝나면 다시 판단), 꺼짐(개발 실행·npm 설치본), 이미 창을 띄웠거나 확인했다
 export type UrgentStep = "ask" | "check" | "none";
+
+// 업데이트 필요가 아닐 때 받은 새 버전을 알릴까 — 준비됨(ready)·수동(manual)이고 그 버전을 이번 실행에 아직 알리지 않았을 때.
+// 업데이트 필요(urgent)인 실행은 urgentStep 이 따로 띄운다 (worklog/records/app-update/app-update.md "켜자마자 확인하고 받으면 창")
+export function readyNotice(status: UpdateView["status"], next: string | null, noticed: string | null, urgent: boolean): boolean {
+  if (urgent || next == null) return false;
+  return (status === "ready" || status === "manual") && next !== noticed;
+}
 
 export function urgentStep(status: UpdateView["status"], asked: boolean, checked: boolean): UrgentStep {
   if (status === "ready" || status === "manual") return asked ? "none" : "ask";
@@ -145,7 +153,7 @@ export function createAppUpdater(o: AppUpdaterOptions): AppUpdater {
       void check().finally(() => schedule(o.everyMs ?? 6 * 60 * 60_000));
     }, ms);
   };
-  schedule(o.firstCheckMs ?? 60_000);
+  schedule(o.firstCheckMs ?? 5_000);
 
   const install: AppUpdater["install"] = async () => {
     // 수동 — 앱을 끄지 않고 받을 곳만 연다

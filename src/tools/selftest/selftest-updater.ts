@@ -3,7 +3,7 @@
 // 실제 받기·설치는 업데이트 실기 시험(worklog/records/app-update/app-update.md "검사 계획")이 본다
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { createAppUpdater, PEEK_GAP_MS, urgentStep, type UpdaterLike } from "../../main/update/updater";
+import { createAppUpdater, PEEK_GAP_MS, readyNotice, urgentStep, type UpdaterLike } from "../../main/update/updater";
 import type { UpdateView } from "../../shared/model/account";
 
 class FakeUpdater extends EventEmitter implements UpdaterLike {
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   assert.equal(fake.autoDownload, true);
   assert.equal(fake.autoInstallOnAppQuit, true, "끌 때 적용");
   assert.equal(fake.logger, null);
-  assert.equal(timers[0]?.ms, 60_000, "켜진 뒤 1분에 첫 확인");
+  assert.equal(timers[0]?.ms, 5_000, "켜진 뒤 5초에 첫 확인 (2026-10-23, 그 전에는 1분)");
   timers[0]!.fn();
   await new Promise((r) => setImmediate(r));
   assert.equal(fake.checks, 1);
@@ -118,6 +118,15 @@ async function main(): Promise<void> {
   assert.deepEqual(steps(false, true), { off: "none", idle: "none", checking: "none", latest: "none", downloading: "none", ready: "ask", manual: "ask", error: "none" }, "확인은 실행마다 한 번");
   assert.deepEqual(steps(true, true), { off: "none", idle: "none", checking: "none", latest: "none", downloading: "none", ready: "none", manual: "none", error: "none" }, "창은 실행마다 한 번");
   process.stdout.write("(7) 업데이트 필요 — 바로 확인·창 한 번  ok\n");
+
+  // (7b) 평소 받은 새 버전 — 준비됨·수동이면 그 버전마다 창 한 번. 업데이트 필요인 실행은 (7) 이 띄운다 (2026-10-23 사용자 "a로 진행")
+  assert.equal(readyNotice("ready", "0.23.0", null, false), true, "받으면 띄운다");
+  assert.equal(readyNotice("manual", "0.23.0", null, false), true, "mac 수동도 띄운다");
+  assert.equal(readyNotice("ready", "0.23.0", "0.23.0", false), false, "같은 버전은 한 번");
+  assert.equal(readyNotice("ready", "0.24.0", "0.23.0", false), true, "더 새 버전을 받으면 다시");
+  assert.equal(readyNotice("ready", "0.23.0", null, true), false, "업데이트 필요인 실행은 그쪽 창");
+  for (const st of ["off", "idle", "checking", "latest", "downloading", "error"] as const) assert.equal(readyNotice(st, "0.23.0", null, false), false, `${st} 는 띄우지 않는다`);
+  process.stdout.write("(7b) 받은 새 버전 창 — 버전마다 한 번  ok\n");
 
   // (8) 설정창을 열 때(peek) — 첫 번째는 확인, 10분 안에 다시 열면 건너뜀, 10분 지나면 다시 확인
   {

@@ -86,6 +86,22 @@ export function updateRequiredAlert(version: string, manual: boolean): AlertSpec
   };
 }
 
+// 새 버전 준비됨 창 — 업데이트 필요가 아닐 때 받은 새 버전을 알린다. 0 나중에(Esc), 1 지금 다시 시작·받기(오른쪽 주 단추)
+//   ready   [나중에] [지금 다시 시작] — 나중에 하면 끌 때 바뀐다
+//   manual  [나중에] [받기] — mac 이 앱을 그 자리에서 바꿀 수 없다(받을 곳을 연다)
+// (2026-10-23 사용자 "진행", Figma 05 `Alert / Update Ready`·`Alert / Update Manual`)
+export function updateReadyAlert(version: string, manual: boolean): AlertSpec {
+  return {
+    type: "info",
+    title: manual ? t("update.ready.manual.title") : t("update.ready.title"),
+    message: manual ? t("update.ready.manual", { version }) : t("update.ready.message", { version }),
+    detail: manual ? t("update.ready.manual.detail") : t("update.ready.detail"),
+    buttons: [t("update.required.later"), manual ? t("update.required.get") : t("update.required.restart")],
+    primary: 1,
+    cancelId: 0,
+  };
+}
+
 // 연결 끊긴 다른 PC 를 넘겨받을지 묻는다(G2) — 0 여기서 시작, 1 취소
 export function confirmAlert(info: HaltInfo, now: number): AlertSpec {
   return goStop({

@@ -8,7 +8,7 @@
 // 이 파일은 창마다 띄우는 때의 규칙(저절로 닫힘·밖에서 닫기)과 고른 단추를 답으로 읽는 규칙만 둔다.
 // 글자는 화면 값(src/view/halt.ts), 창 띄우기는 src/main/windows/alert-ask.ts 가 맡는다
 import type { HaltInfo, OwnerKind } from "../../online/cloud-state.js";
-import { blockedAlert, confirmAlert, heldAlert, kickedAlert, lostAlert, saveLockedAlert, updateRequiredAlert, type AlertSpec } from "../../view/halt";
+import { blockedAlert, confirmAlert, heldAlert, kickedAlert, lostAlert, saveLockedAlert, updateReadyAlert, updateRequiredAlert, type AlertSpec } from "../../view/halt";
 import { askChoice } from "../windows/alert-ask";
 
 // 밀려남 안내가 저절로 닫히는 시간 — 자리에 없는 PC 도 종료까지 간다
@@ -38,6 +38,11 @@ export function askHeld(): Promise<HaltAnswer> {
 //   Esc 는 나중에 — 게임은 멈추지 않고, 설정의 다시 시작·끌 때 적용이 남는다. 알림 창은 단추에 처음 포커스를 두지 않는다
 export async function askUpdateRequired(version: string, manual: boolean): Promise<boolean> {
   return (await askChoice(updateRequiredAlert(version, manual))) === 1;
+}
+
+// 새 버전 준비됨 창 — 업데이트 필요가 아닐 때 받은 새 버전을 버전마다 한 번 알린다. Esc 는 나중에(끌 때 적용)
+export async function askUpdateReady(version: string, manual: boolean): Promise<boolean> {
+  return (await askChoice(updateReadyAlert(version, manual))) === 1;
 }
 
 // 연결 끊긴 다른 PC 를 넘겨받을지 묻는다(G2) — go 면 여기서 시작, stop 이면 종료(D22)

@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { ALERT_RULES, askAlert } from "../../main/windows/alert-window";
-import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateRequired, askHeld, askKicked } from "../../main/app/halt-dialog";
+import { askBlocked, askConfirm, askLost, askSaveLocked, askUpdateReady, askUpdateRequired, askHeld, askKicked } from "../../main/app/halt-dialog";
 import { preloadFile, rendererFile } from "../../main/windows/files";
 import { setLang } from "../../view/text";
 import { makeTmp } from "../harness/tmp-dir";
@@ -115,6 +115,9 @@ void app.whenReady().then(async () => {
     step("이용 정지 — 단추 하나");
     assert.equal(await run("update-ready", () => askUpdateRequired("0.15.0", false), { title: "새 버전으로 바꿔야 해요", buttons: ["나중에", "지금 다시 시작"], primary: "지금 다시 시작" }, "지금 다시 시작"), true);
     assert.equal(await run("update-manual", () => askUpdateRequired("0.15.0", true), { title: "새 버전으로 바꿔야 해요", buttons: ["나중에", "받기"], primary: "받기" }, null), false, "Esc 는 나중에");
+    // 평소 받은 새 버전 — 업데이트 필요가 아니어도 뜨는 창 (2026-10-23 사용자 "a로 진행", Figma 05 `Alert / Update Ready`·`Alert / Update Manual`)
+    assert.equal(await run("update-new-ready", () => askUpdateReady("0.23.0", false), { title: "새 버전이 준비됐어요", buttons: ["나중에", "지금 다시 시작"], primary: "지금 다시 시작" }, "지금 다시 시작"), true);
+    assert.equal(await run("update-new-manual", () => askUpdateReady("0.23.0", true), { title: "새 버전이 나왔어요", buttons: ["나중에", "받기"], primary: "받기" }, null), false, "Esc 는 나중에");
     step("업데이트 필요 — 지금 다시 시작·수동 Esc");
 
     // 설명이 비면 줄을 숨긴다(업데이트 수동)
