@@ -50,7 +50,8 @@ export interface VerifyData {
   items: Record<string, VerifyItem>;
   eggs: Record<string, number>; // 알 종류 → 값
   achievements: Record<string, string>; // 업적 → 보상. pokemon · party-slot · points:<양> · egg:<알 종류> · item:<도구>:<개수> (src/tools/data/build-verify.ts)
-  evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종
+  evo: Record<string, string[]>; // 종(모습 슬러그 포함) → 한 단계 진화 종. 진화 때 정하는 겉모습(비비용 무늬 등)도 든다
+  genderless?: string[]; // 성별이 없는 종 — 그 종이 된 개체의 성별 none 은 성별 변경이 아니다. 없으면 빈 목록
   megaForms?: Record<string, string[]>; // 종 → 메가 모습 슬러그 (data/mega.json). 없으면 mega 규칙을 보지 않는다
   riders?: Record<string, string>; // 모습 → 그 모습에 있어야 하는 말 (data/regional.json riders). 없으면 rider 규칙과 말 부르기 몫을 보지 않는다
   riderOwners?: string[]; // 말을 부를 수 있는 종 — 버드렉스와 그 모습들
@@ -202,6 +203,8 @@ const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v)
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 const pos = (n: number): number => (n > 0 ? n : 0);
+// 옛 앱(2026-10-05 ~ 0.22.0)의 로토무 개체 작업 시간 상한 — 지금 조건은 0 이다(src/dex/rules.ts SHIFT_RULES rotom)
+const LEGACY_ROTOM_WORK_MS = 2 * 60 * 60_000;
 const HOUR = 3_600_000;
 const isMint = (id: string): boolean => id === "mint" || id.endsWith("-mint"); // 성격민트 은퇴 — 저장을 읽을 때 개당 환불(src/bag/mint.ts)
 
@@ -589,7 +592,8 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   let turnedShiny = 0;
   for (const { p, q } of same) {
     if (p.nature !== q.nature) add("identity", 1, 0, p.id);
-    if (q.gender && p.gender !== q.gender) add("identity", 1, 0, p.id);
+    // 성별 없는 종(껍질몬 등)으로 바뀌면 성별이 none 이 된다 — 변경으로 보지 않는다 (2026-10-23 위반 조사)
+    if (q.gender && p.gender !== q.gender && !(p.gender === "none" && (data.genderless ?? []).includes(p.species))) add("identity", 1, 0, p.id);
     if (p.species !== q.species) {
       // 한 방향 모습(플라엣테(영원의 꽃))에서 시작 모습으로 돌아가는 것은 종 위반이다 (2026-10-08 사용자 결정 "이전으로 못돌아가는 모습바꾸기")
       // 시작 모습은 기본 종(플라엣테)과 겉모습(노란 꽃 플라엣테 — 규칙의 base 가 자기 자신)이다 (2026-10-22, worklog/records/look-shift-gaps)
@@ -612,7 +616,8 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
       const q = prevPet(p.id);
       add("form-work", pos(p.workMs - (q?.workMs ?? 0)), workGain, p.id);
       // 상한은 조건 값이다. 조건을 낮췄으면(로토무 2시간 → 0, 2026-10-22) 옛 저장에 쌓인 값은 그대로 받고 늘지만 않게 본다
-      if (rule) add("form-work", p.workMs, Math.max(rule.workMs, q?.workMs ?? 0), p.id);
+      // 옛 앱(0.22.0 이하)은 로토무 작업 시간을 2시간까지 센다 — 앱이 다 바뀔 때까지 그 값까지 받는다 [리팩토링 대상: 옛 앱이 없어지면 뺀다]
+      if (rule) add("form-work", p.workMs, Math.max(rule.workMs, rule.item === "rotom-catalog" ? LEGACY_ROTOM_WORK_MS : 0, q?.workMs ?? 0), p.id);
       if (!rule || p.species === rule.base || (q && q.species === p.species)) continue;
       add("form-lock", rule.workMs, p.workMs, p.id);
       changed[rule.item] = (changed[rule.item] ?? 0) + 1;

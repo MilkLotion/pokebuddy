@@ -168,7 +168,23 @@ out("0 supabase/functions/_shared 가 최신");
   const nat = clone(prev);
   nat.pets[0] = { ...nat.pets[0]!, nature: "adamant" };
   assert.deepEqual(rules(prev, nat, ctx(HOUR)), ["identity"], "성격 바꾸기");
-  out("6 종·성격 — 모습 슬러그 포함");
+  // 진화 때 정하는 겉모습 — 도롱마담이 비비용(툰드라 무늬)으로, 마빌크가 마휘핑 모양으로 (2026-10-23 위반 조사, 0.21.0 evolveLooks)
+  const spewpa = base();
+  spewpa.pets[0] = { ...spewpa.pets[0]!, species: "spewpa", evolved: ["scatterbug"] };
+  const tundra = clone(spewpa);
+  tundra.pets[0] = { ...tundra.pets[0]!, species: "vivillon-tundra", evolved: ["scatterbug", "spewpa"] };
+  assert.deepEqual(rules(spewpa, tundra, ctx(HOUR)).filter((r) => r !== "level"), [], "진화 겉모습은 종 위반이 아니다");
+  assert.ok(data.evo.milcery?.includes("alcremie-ruby-swirl-flower-sweet"), "마빌크 → 마휘핑 겉모습 간선");
+  // 성별 없는 종으로 진화 — 성별이 none 이 된다(아이스크로스 → 껍질몬). 그 밖의 성별 변경은 위반
+  const nincada = base();
+  nincada.pets[0] = { ...nincada.pets[0]!, species: "nincada", gender: "female" };
+  const shed = clone(nincada);
+  shed.pets[0] = { ...shed.pets[0]!, species: "shedinja", gender: "none", evolved: ["nincada"] };
+  assert.deepEqual(rules(nincada, shed, ctx(HOUR)).filter((r) => r !== "level"), [], "껍질몬의 성별 none 은 성별 변경이 아니다");
+  const ninjask = clone(nincada);
+  ninjask.pets[0] = { ...ninjask.pets[0]!, species: "ninjask", gender: "none", evolved: ["nincada"] };
+  assert.deepEqual(rules(nincada, ninjask, ctx(HOUR)).filter((r) => r !== "level"), ["identity"], "성별이 있는 종의 성별을 지우면 위반");
+  out("6 종·성격 — 모습 슬러그·진화 겉모습·성별 없는 종 포함");
 }
 
 // 7. 새 개체 — 출처·시작값
@@ -613,13 +629,17 @@ out("0 supabase/functions/_shared 가 최신");
   const yBack = { prev: clone(yOk.next), next: clone(yOk.next) };
   yBack.next.pets[1]!.species = "floette-yellow";
   assert.deepEqual(rules(yBack.prev, yBack.next, ctx(60_000)), ["species"], "노란 꽃으로 되돌리면 종 위반");
-  // form-work — 개체 작업 시간은 더 늘지 않는다. 옛 저장(2시간 조건 때)에 쌓인 값은 그대로 받는다
+  // form-work — 지금 앱은 개체 작업 시간을 세지 않는다. 옛 앱(0.22.0 이하)은 2시간까지 세므로 그만큼은 받는다(계정 작업 시간만큼만 늘 수 있다)
   const grow = at(0, 1);
   grow.next.pets[1]!.species = "rotom";
   grow.next.bag["rotom-catalog"] = 1;
   grow.next.pets[1]!.workMs = 2 * HOUR;
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(60_000)), ["form-work"], "계정 작업 시간이 늘지 않았는데 개체만 늘었다");
   grow.next.totals.workMs = grow.prev.totals.workMs + 2 * HOUR;
-  assert.deepEqual(rules(grow.prev, grow.next, ctx(2 * HOUR)), ["form-work"], "조건이 0 이라 개체 작업 시간이 늘면 위반");
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(2 * HOUR)), [], "옛 앱이 2시간까지 센 값은 받는다");
+  grow.next.pets[1]!.workMs = 3 * HOUR;
+  grow.next.totals.workMs = grow.prev.totals.workMs + 3 * HOUR;
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(3 * HOUR)), ["form-work"], "2시간을 넘을 수는 없다");
   const old = at(2 * HOUR, 1);
   old.next.pets[1]!.species = "rotom";
   old.next.bag["rotom-catalog"] = 1;

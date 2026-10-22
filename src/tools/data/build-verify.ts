@@ -13,6 +13,8 @@ import path from "node:path";
 import { MINT_REFUND_EACH } from "../../bag/mint";
 import { BAG_RULES } from "../../bag/rules";
 import { nextOf } from "../../dex/evo";
+import { fixedGender } from "../../dex/gender";
+import { evolveLookVariants } from "../../dex/regional";
 import { partyGoalsMs } from "../../dex/forms";
 import { expForLevel, growthOf } from "../../dex/growth";
 import { megaFormsOf, megaOf, megaSlugs } from "../../dex/mega";
@@ -92,10 +94,14 @@ export function buildVerifyFiles(): Record<string, string> {
   // 진화 간선 — 앱과 같은 nextOf 로 뽑는다. 모습 슬러그(burmy-sandy 등)는 기본 종의 간선을 받는다
   const evo: Record<string, string[]> = {};
   const species = new Set([...speciesSlugs(), ...Object.keys(load("evo.json")).filter((k) => !k.startsWith("_"))]);
+  // 진화 결과 종에서 정하는 겉모습(비비용 무늬·마휘핑 등, data/regional.json evolveLooks)도 그 간선의 결과로 넣는다 — 앱은 진화할 때 그 겉모습 종으로 바꾼다(src/dex/evolve.ts)
+  // (2026-10-23 위반 조사: 0.21.0 부터 `spewpa → vivillon-tundra` 가 종 위반이었다, worklog/records/look-shift-gaps)
   for (const slug of species) {
-    const to = [...new Set(nextOf(slug).map((e) => e.to))];
+    const to = [...new Set(nextOf(slug).flatMap((e) => [e.to, ...evolveLookVariants(e.to).map(([look]) => look)]))];
     if (to.length) evo[slug] = to;
   }
+  // 성별이 없는 종 — 그 종으로 바뀐 개체는 성별이 none 이 된다(껍질몬·데인차). identity 규칙이 성별 변경으로 보지 않는다
+  const genderless = [...species].filter((slug) => fixedGender(slug) === "none").sort();
   const growth: Record<string, unknown> = {};
   for (const slug of species) growth[slug] = growthOf(slug);
   const rates = ["fast", "medium-fast", "medium-slow", "slow", "erratic", "fluctuating"] as const;
@@ -152,6 +158,7 @@ export function buildVerifyFiles(): Record<string, string> {
     eggs,
     achievements,
     evo,
+    genderless,
     megaForms,
     riders,
     riderOwners: [...riderOwners].sort(),
