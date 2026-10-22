@@ -103,6 +103,19 @@ export interface MegaGoalView {
 // 공유 sid 계열의 모습 하나 — 박스 칸의 단체사진·툴팁과 바꾸기 확인 창이 쓴다
 export interface FormView extends SpeciesLine {
   species: string;
+  need?: FormNeedView; // 이 모습으로 바꾸는 데 모자란 것 — 있으면 확인 창 대신 실패 안내 창을 띄운다 (docs/specs/game.md "모습 바꾸기 조건 안내")
+}
+
+// 모습 바꾸기에 모자란 것 하나 — 도구(영원의 꽃·로토무카탈로그 등)나 있어야 하는 포켓몬(버드렉스의 말·큐레무의 짝)
+// 안내 첫 줄은 `${name}${tail}` 이고 name 만 굵다. note 는 얻는 곳 줄이다. 모르는 포켓몬은 name 이 `???` 이고 known 이 false 다
+export interface FormNeedView {
+  kind: "item" | "pokemon";
+  id: string; // 도구 id 또는 종 슬러그 — 그림 열쇠
+  name: string;
+  known: boolean;
+  tail: string; // "이 필요해요" · "가 있어야 해요"
+  sold?: true; // 상점에서 파는 도구 — 안내 창에 `상점으로` 단추를 둔다
+  note: string;
 }
 
 // 종 한 줄 — 화면 이름과 타입. 모습(FormView)과 교환 카드(TradeCardView)가 같이 쓴다

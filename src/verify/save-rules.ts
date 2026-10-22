@@ -591,8 +591,10 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
     if (p.nature !== q.nature) add("identity", 1, 0, p.id);
     if (q.gender && p.gender !== q.gender) add("identity", 1, 0, p.id);
     if (p.species !== q.species) {
-      // 한 방향 모습(플라엣테(영원의 꽃))에서 기본 종으로 돌아가는 것은 종 위반이다 (2026-10-08 사용자 결정 "이전으로 못돌아가는 모습바꾸기")
-      const back = data.shiftRules?.[q.species]?.oneWay === true && q.species !== data.shiftRules[q.species]?.base && p.species === data.shiftRules[q.species]?.base;
+      // 한 방향 모습(플라엣테(영원의 꽃))에서 시작 모습으로 돌아가는 것은 종 위반이다 (2026-10-08 사용자 결정 "이전으로 못돌아가는 모습바꾸기")
+      // 시작 모습은 기본 종(플라엣테)과 겉모습(노란 꽃 플라엣테 — 규칙의 base 가 자기 자신)이다 (2026-10-22, worklog/records/look-shift-gaps)
+      const was = data.shiftRules?.[q.species];
+      const back = was?.oneWay === true && q.species !== was.base && data.shiftRules?.[p.species]?.base === p.species;
       const ok = !back && (reachable(data.evo, q.species, p.species) || q.forms.includes(p.species) || p.forms.includes(q.species));
       if (!ok) add("species", 1, 0, p.id);
     }
@@ -609,7 +611,8 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
       const rule = data.shiftRules[p.species];
       const q = prevPet(p.id);
       add("form-work", pos(p.workMs - (q?.workMs ?? 0)), workGain, p.id);
-      if (rule) add("form-work", p.workMs, rule.workMs, p.id);
+      // 상한은 조건 값이다. 조건을 낮췄으면(로토무 2시간 → 0, 2026-10-22) 옛 저장에 쌓인 값은 그대로 받고 늘지만 않게 본다
+      if (rule) add("form-work", p.workMs, Math.max(rule.workMs, q?.workMs ?? 0), p.id);
       if (!rule || p.species === rule.base || (q && q.species === p.species)) continue;
       add("form-lock", rule.workMs, p.workMs, p.id);
       changed[rule.item] = (changed[rule.item] ?? 0) + 1;

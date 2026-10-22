@@ -12,7 +12,7 @@ import { besideOf, openBeside } from "./device-kind.js";
 import { closeDialog, dialogEl, drawDialog, openAnyDialog } from "./dialog.js";
 import { dexNoText, GRID_PAGE, gridPager, inDexRegion, loadView, pageOf, regionEl, saveView, scrollListAfterSwitch, switchView, viewToggle, type ViewMode } from "./grid-view.js";
 import { findBarEl, matchesName, normQuery } from "./search.js";
-import { bodyEl, redrawBody } from "./shell.js";
+import { bodyEl, redrawBody, setTab } from "./shell.js";
 import { pickShop, shopPickOf } from "./shop-link.js";
 import { ui } from "./state.js";
 import { chipsEl, pageHeadEl, settingsHeadEl } from "./widgets.js";
@@ -38,6 +38,15 @@ let shopView: ViewMode = loadView("shop");
 export const isShopRegionOpen = (): boolean => shopRegionOpen;
 export function closeShopRegion(): void {
   shopRegionOpen = false;
+}
+// 다른 곳에서 상품 하나를 보이러 온다 — 그 분류로 바꾸고 상품을 고른다(기기 창이 뜬다).
+// 모습 바꾸기 실패 안내 창의 `상점으로` 가 쓴다 (docs/specs/game.md "모습 바꾸기 조건 안내")
+export function focusShopProduct(id: string, category: string): void {
+  shopFilter = category;
+  shopPageNo = 0;
+  setTab("shop");
+  if (shopPickOf() !== id) pickShop(id);
+  else redrawBody();
 }
 // 기기 창의 이전·다음이 도는 순서 — 지금 분류의 상품. 포켓몬 분류는 지방·검색으로 좁힌 순서
 export function shopStepRows(shop: readonly ShopItemView[]): ShopItemView[] {

@@ -79,9 +79,12 @@ function subjectPet(): PetView | null {
   return null;
 }
 
-// 대상 종 — 도감 탭은 고른 칸, 그 밖은 대상 개체의 종
+// 대상 종 — 도감 탭은 고른 칸, 그 밖은 대상 개체의 종. 메가 모습을 켠 개체는 그 메가 모습의 도감 칸이다 — 파티 탭과 같은 모습
+// (2026-10-22 사용자 "파티에선 메가몬인데, 도감/배틀은 메가몬이 아니야". 모험 탭 칸은 배틀 파티의 메가다 — battlePetView)
 function subjectSpecies(): string | null {
-  return ui.tab === "dex" ? hooksOf().dexPick() : (subjectPet()?.species ?? null);
+  if (ui.tab === "dex") return hooksOf().dexPick();
+  const pet = subjectPet();
+  return pet ? (pet.mega?.on ?? pet.species) : null;
 }
 
 // 대상의 배틀 정보 — 모험은 고른 칸, 개체는 배틀 파티에 들었으면 그 칸·아니면 그 개체의 종 보기(그 개체의 기술),

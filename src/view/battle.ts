@@ -8,6 +8,7 @@ import { BATTLE_RULES, type BattleTier } from "../battle/rules.js";
 import { baseStatsOf } from "../battle/stats.js";
 import { tierOf } from "../battle/tier.js";
 import { abilityTable, genderBattleTable, megaBattleTable, speciesAbilityTable } from "../dex/tables.js";
+import { megaChoices } from "../dex/mega.js";
 import { profileOf } from "../dex/species.js";
 import { STATUS_NAME } from "../shared/battle-timeline.js";
 import type { BattleDeviceSlot } from "../shared/model/devices.js";
@@ -165,7 +166,9 @@ export function battleView(save: SaveV3, dayPart: DayPart): BattleView {
 
 // 배틀 종 보기 — 배틀 파티 밖의 종(도감) 또는 개체(파티·박스)를 배틀 기준으로 본다 (docs/specs/adventure.md "종 보기", 2026-10-18 사용자 시안 확정)
 // - 개체면 그 개체의 고른 기술 순서·암컷 능력치·이로치 초상. 종이면 종의 기본 기술 2개, 성별 없음
-// - 메가·배틀 파티 모습(battle.form)은 쓰지 않는다 — 배틀 파티에 들어올 때 정하는 값이다. 개체의 지금 종으로 본다
+// - 배틀 파티 모습(battle.form)은 쓰지 않는다 — 배틀 파티에 들어올 때 정하는 값이다. 개체의 지금 종으로 본다
+// - 개체가 일상 파티에서 메가 모습을 켰으면(mega.on) 그 메가 모습의 능력치·특성·기술·이름·초상이다 — 파티 탭과 같은 모습
+//   (2026-10-22 사용자 "파티에선 메가몬인데, 도감/배틀은 메가몬이 아니야". 그 전에는 메가를 쓰지 않았다)
 // - 표에 없는 종이거나 개체가 없으면 null
 export function battleSpeciesSlot(save: SaveV3, species: string, petId: string | null, dayPart: DayPart): { slot: BattleDeviceSlot; look: string } | null {
   const pet = petId ? save.pets.find((p) => p.id === petId) : undefined;
@@ -173,12 +176,16 @@ export function battleSpeciesSlot(save: SaveV3, species: string, petId: string |
   const slug = pet ? pet.species : species;
   if (!baseStatsOf(slug)) return null;
   const withDetail = (m: MoveInfo): MoveView => ({ ...moveView(m), detail: moveDetail(m) });
-  const female = pet?.gender === "female" ? genderBattleTable()[slug] : undefined;
-  const base = { index: -1, moves: (pet ? petMoves(pet) : speciesMoves(slug)).map(withDetail), blocked: null, stats: statRows(slug, female?.stats), ability: abilityOf(slug, slug, female?.ability), ...(fixedMoveOf(slug) ? { fixedFirst: true as const } : {}) };
+  const on = pet?.mega?.on;
+  const form = pet && on && megaChoices(pet).includes(on) ? on : null;
+  const shown = form ?? slug;
+  // 암컷 능력치는 메가가 아닐 때만 — 배틀 파티 칸(battleView)과 같다
+  const female = pet?.gender === "female" && !form ? genderBattleTable()[slug] : undefined;
+  const base = { index: -1, moves: (pet ? petMoves(pet, undefined, form) : speciesMoves(slug)).map(withDetail), blocked: null, stats: statRows(shown, female?.stats), ability: abilityOf(shown, slug, female?.ability), ...(fixedMoveOf(slug) ? { fixedFirst: true as const } : {}) };
   if (pet) {
-    const v = battlePetView(save, pet.mega ? { ...pet, mega: { ...pet.mega, on: undefined } } : pet, null, dayPart);
+    const v = battlePetView(save, pet, form, dayPart);
     const { id, name, nameParts, gender, shiny, types, typeIds } = v;
-    return { slot: { ...base, pet: { id, species: slug, name, nameParts, gender, shiny, types, typeIds } }, look: slug };
+    return { slot: { ...base, pet: { id, species: slug, name, nameParts, gender, shiny, types, typeIds } }, look: shown };
   }
   const typeIds = [...profileOf(slug).types];
   return { slot: { ...base, pet: { id: "", species: slug, name: petName(slug), nameParts: petNameParts(slug), gender: "none", shiny: false, types: typeIds.map((t) => typeName(t)), typeIds } }, look: slug };

@@ -410,32 +410,24 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   process.stdout.write("(12c-4) 유대의고삐 가방 사용  ok\n");
 }
 
-// (12d) 로토무 — 다섯 모습과 모습 바꾸기로 오간다. 그 개체가 파티에서 받은 작업 시간 2시간부터 열린다.
+// (12d) 로토무 — 다섯 모습과 모습 바꾸기로 오간다. 작업 시간 조건은 없다.
 // 기본 종이 아닌 모습으로 바꿀 때마다 로토무카탈로그 1개를 쓰고, 로토무로 돌아갈 때는 쓰지 않는다
-// (2026-10-05 사용자 결정 "구한 후 2시간으로(로토무가 파티에 있던채로 2시간)", "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게")
+// (2026-10-05 사용자 결정 "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게". 2026-10-22 사용자 "로토무는 2시간 그거 풀어버리자. 카탈로그만 필요하게")
 {
   const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
-  assert.deepStrictEqual(SHIFT_RULES.rotom, { workMs: 7_200_000, item: "rotom-catalog" }, "2시간 · 로토무카탈로그");
+  assert.deepStrictEqual(SHIFT_RULES.rotom, { workMs: 0, item: "rotom-catalog" }, "작업 시간 없음 · 로토무카탈로그");
   const s = seed({ species: "rotom", level: 20 });
   const p = s.pets[0] as PetV3;
   assert.deepStrictEqual(formsOf(p), ROTOM, "로토무와 다섯 모습");
   assert.equal(isSinglePet(p), true, "업적 보상 종이라 단일 포켓몬이다 (2026-10-05 CLI 첫 연결 보상)");
-  s.totals.workMs = 999 * 3_600_000; // 계정 작업 시간은 보지 않는다
-  p.workMs = 7_200_000 - 1;
-  assert.equal(isFormLocked(p), true, "개체 작업 시간 2시간 미만은 잠김");
-  assert.equal(setForm(s, "p1", "rotom-heat").reason, "form-locked");
-  assert.equal(p.species, "rotom");
-  assert.ok(!s.dex.obtained.includes("rotom-heat"));
-  assert.equal(setForm(s, "p1", "pikachu").reason, "bad-form", "묶음 밖의 종은 해금과 무관하게 bad-form");
-  // 작업 시간은 2시간에서 멈춘다. 규칙이 없는 종은 세지 않는다
+  assert.equal(isFormLocked(p), false, "얻자마자 열려 있다");
+  assert.equal(setForm(s, "p1", "pikachu").reason, "bad-form", "묶음 밖의 종은 bad-form");
+  // 작업 시간은 더 세지 않는다. 옛 저장에 쌓인 값은 그대로 둔다
   tickFormWork(p, 60_000);
-  assert.equal(p.workMs, 7_200_000, "조건 값에서 멈춘다");
+  assert.equal(p.workMs, undefined, "조건이 0 이라 세지 않는다");
+  p.workMs = 3_600_000;
   tickFormWork(p, 60_000);
-  assert.equal(p.workMs, 7_200_000);
-  const pika = seed({ species: "pikachu", level: 5 }).pets[0] as PetV3;
-  tickFormWork(pika, 60_000);
-  assert.equal(pika.workMs, undefined, "로토무가 아니면 세지 않는다");
-  assert.equal(isFormLocked(p), false, "2시간이면 열림");
+  assert.equal(p.workMs, 3_600_000, "옛 값은 그대로");
   assert.equal(setForm(s, "p1", "rotom-heat").reason, "no-item", "카탈로그가 없으면 거절");
   s.bag["rotom-catalog"] = 2;
   assert.deepStrictEqual(setForm(s, "p1", "rotom-heat"), { ok: true, petId: "p1", from: "rotom", to: "rotom-heat" });
@@ -447,13 +439,13 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   assert.equal(setForm(s, "p1", "rotom-wash").reason, "no-item");
   assert.equal(setForm(s, "p1", "rotom").ok, true, "원래 모습으로는 카탈로그 없이 돌아간다");
   assert.equal(isFormLocked(seed({ species: "giratina", level: 50 }).pets[0] as PetV3), false, "규칙이 없는 묶음(오리진폼)은 잠그지 않는다");
-  process.stdout.write("(12d) 로토무 모습 바꾸기 · 개체 작업 2시간 · 카탈로그  ok\n");
+  process.stdout.write("(12d) 로토무 모습 바꾸기 · 카탈로그  ok\n");
 }
 
 // (12e) 한 방향 모습 바꾸기 — 플라엣테 → 플라엣테(영원의 꽃), 다투곰 → 다투곰(붉은 달). 도구 1개, 작업 시간 조건 없음, 되돌리지 않는다. 진화가 아니다
 // (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
 {
-  assert.deepStrictEqual(SHIFT_RULES.floette, { workMs: 0, item: "eternal-flower", oneWay: true });
+  assert.deepStrictEqual(SHIFT_RULES.floette, { workMs: 0, item: "eternal-flower", oneWay: true, looks: true });
   const s = seed({ species: "floette", level: 30 });
   const p = s.pets[0] as PetV3;
   assert.deepStrictEqual(formsOf(p), ["floette", "floette-eternal"], "플라엣테는 영원의 꽃 모습을 고를 수 있다");
@@ -477,6 +469,36 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   view.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
   const pv = snapshotView(view, T0).party.slots[0]?.pet;
   assert.deepStrictEqual(pv?.formItem, { name: "영원의 꽃", base: "floette", oneWay: true }, "확인 창의 도구와 한 방향 표시");
+  // 색 플라엣테 — 꽃 색과 상관없이 영원의 꽃을 쓴다. 바뀐 뒤 노란 꽃으로 돌아가지 않는다 (2026-10-22 사용자 결정 "모든 색에 쓸 수 있게")
+  for (const color of ["floette-yellow", "floette-orange", "floette-blue", "floette-white"]) {
+    const c = seed({ species: color, level: 30, evolved: [color.replace("floette", "flabebe")] });
+    const cp = c.pets[0] as PetV3;
+    assert.deepStrictEqual(formsOf(cp), [color, "floette-eternal"], `${color} 도 영원의 꽃 모습을 고른다`);
+    assert.deepStrictEqual(evolveCandidates(c, "p1", "day").map((x) => x.to), [color.replace("floette", "florges")], `${color} 의 진화 후보는 그대로`);
+    c.bag["eternal-flower"] = 1;
+    assert.deepStrictEqual(setForm(c, "p1", "floette-eternal"), { ok: true, petId: "p1", from: color, to: "floette-eternal" });
+    assert.equal(c.bag["eternal-flower"], undefined, "영원의 꽃 1개를 쓴다");
+    assert.deepStrictEqual(formsOf(cp), [], "바뀐 개체는 고를 모습이 없다");
+    assert.equal(setForm(c, "p1", color).reason, "not-shared", "노란 꽃 등으로 돌아가지 않는다");
+  }
+  const yv = seed({ species: "floette-yellow", level: 30 });
+  yv.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  assert.deepStrictEqual(snapshotView(yv, T0).party.slots[0]?.pet?.formItem, { name: "영원의 꽃", base: "floette-yellow", oneWay: true }, "노란 꽃의 확인 창도 도구 줄과 한 방향 표시");
+  // 모자란 것(need) — 도구가 없으면 실패 안내 창이 읽는 값, 있으면 없다 (2026-10-22 docs/specs/game.md "모습 바꾸기 조건 안내")
+  const needOf = (s: SaveV3, to: string) => snapshotView(s, T0).party.slots[0]?.pet?.shiftForms?.find((f) => f.species === to)?.need;
+  assert.deepStrictEqual(needOf(yv, "floette-eternal"), { kind: "item", id: "eternal-flower", name: "영원의 꽃", known: true, tail: "이 필요해요", note: "상점 진화 분류에서 살 수 있어요", sold: true });
+  assert.equal(needOf(yv, "floette-yellow"), undefined, "지금 모습에는 없다");
+  yv.bag["eternal-flower"] = 1;
+  assert.equal(needOf(yv, "floette-eternal"), undefined, "도구가 있으면 없다");
+  const gk = seed({ species: "greninja", level: 40 });
+  gk.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  assert.deepStrictEqual(needOf(gk, "greninja-battle-bond"), { kind: "item", id: "ash-cap", name: "지우의모자", known: true, tail: "가 필요해요", note: "업적 보상으로 받아요" }, "상점에서 팔지 않는 도구는 업적 보상 안내, 상점으로 단추 없음");
+  const ky = seed({ species: "kyurem", level: 60 });
+  ky.party.slots[0] = { state: "pokemon", petId: "p1", hidden: false };
+  const kyNeed = (to: string) => snapshotView(ky, T0).party.slots[0]?.pet?.forms?.find((f) => f.species === to)?.need;
+  assert.deepStrictEqual(kyNeed("kyurem-black"), { kind: "pokemon", id: "zekrom", name: "???", known: false, tail: "가 있어야 해요", note: "알에서 얻을 수 있어요. 바꿀 때 쓰지 않아요" }, "모르는 짝은 ??? — 도감 입수처와 같다");
+  ky.dex.unlocked.push("zekrom");
+  assert.equal(kyNeed("kyurem-black")?.name, "제크로무", "발견했으면 이름");
   const u = seed({ species: "ursaluna", level: 40 });
   u.bag["red-moon"] = 2;
   assert.equal(setForm(u, "p1", "ursaluna-bloodmoon").ok, true, "붉은 달로 다투곰(붉은 달)");

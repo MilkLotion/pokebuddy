@@ -18,18 +18,22 @@ export const QUIRK_RULES = { periodMs: 90_000, durationMs: 10_000 };
 //   workMs  그 개체가 지금 파티에 있는 동안 받은 에이전트 작업 시간(PetV3.workMs)이 이 값 이상이면 모든 모습이 열린다
 //   item    기본 종이 아닌 모습으로 바꿀 때마다 쓰는 도구. 기본 종으로 돌아갈 때는 쓰지 않는다
 //   oneWay  한 방향 — 기본 종에서 모습으로 한 번 바꾸고 돌아가지 않는다. 바뀐 개체에는 모습 바꾸기가 없다
-// (2026-10-05 사용자 결정 "누적말고, 구한 후 2시간으로(로토무가 파티에 있던채로 2시간)", "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게".
-//  그 전에는 계정 작업 시간 50시간이었다)
+//   looks   기본 종의 겉모습(data/regional.json looks — 노란 꽃 플라엣테 등)도 기본 종처럼 묶음의 시작 모습이다 (src/dex/regional.ts shiftIndexOf)
+//           (2026-10-22 사용자 결정 "모든 색에 쓸 수 있게", worklog/records/look-shift-gaps)
+// (2026-10-05 사용자 결정 "모습바꾸기때 카탈로그 필요하게", "원래모습 … 이때는 안들게".
+//  로토무 작업 시간은 2026-10-22 사용자 "로토무는 2시간 그거 풀어버리자. 카탈로그만 필요하게" 로 0 이다.
+//  그 전에는 개체 파티 작업 2시간(2026-10-05), 계정 작업 시간 50시간(2026-10-04)이었다)
 // 플라엣테·다투곰 — 영원의 꽃·붉은 달로 플라엣테(영원의 꽃)·다투곰(붉은 달)이 된다. 작업 시간 조건은 없다
 // (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
 export interface ShiftRule {
   workMs: number;
   item: string;
   oneWay?: true;
+  looks?: true;
 }
 export const SHIFT_RULES: Readonly<Record<string, ShiftRule>> = {
-  rotom: { workMs: 2 * 60 * 60_000, item: "rotom-catalog" },
-  floette: { workMs: 0, item: "eternal-flower", oneWay: true },
+  rotom: { workMs: 0, item: "rotom-catalog" },
+  floette: { workMs: 0, item: "eternal-flower", oneWay: true, looks: true },
   ursaluna: { workMs: 0, item: "red-moon", oneWay: true },
   // 개굴닌자 → 개굴닌자(유대변화) — 지우의모자 하나로 한 번, 특성만 유대변화가 된다 (2026-10-09 사용자 결정 "지우의모자 추가하고, 그걸 써야 특성이 유대변화로 되게. 기본은 급류", "모습 도구로 1회")
   greninja: { workMs: 0, item: "ash-cap", oneWay: true },

@@ -8,7 +8,7 @@ import assert from "node:assert";
 import { emptySave as empty } from "../../save/normalize";
 import type { PetV3, SaveV3 } from "../../shared/save-v3";
 import { battleMenu, battleMenuOf, petMenu, petMenuOf, trayMenuOf, typeGridOf } from "../../view/menus";
-import { menuView } from "../../view/menu-view";
+import { FORM_NEED, menuView } from "../../view/menu-view";
 import { formsOf } from "../../dex/forms";
 import { boredText, t } from "../../view/text";
 
@@ -108,30 +108,27 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   assert.deepEqual(tray.map((m) => m.label ?? m.type), [t("menu.manage"), "separator", t("menu.hide"), t("menu.ghost"), "separator", t("menu.quit")]);
 }
 
-// (6) 로토무 — 해금 전에는 `모습 바꾸기` 줄만 흐리고 말풍선(하위 줄)이 없다. 개체 작업 2시간이면 다섯 모습 + 맨 아래 `로토무 · 원래대로` 말풍선.
-//     카탈로그가 없으면 모습 줄이 흐리고, 누를 줄이 없으면 `모습 바꾸기` 줄도 흐리다 (2026-10-05, Figma 03 `Form Bubble / Rotom`)
+// (6) 로토무 — 작업 시간 조건이 없어 얻자마자 다섯 모습 + 맨 아래 `로토무 · 원래대로` 말풍선 (2026-10-22 사용자 "로토무는 2시간 그거 풀어버리자").
+//     카탈로그가 없으면 모습 줄이 흐리지만 누를 수 있다(실패 안내 창). `모습 바꾸기` 줄은 살아 있고 머리 글은 `모습 바꾸기` 만 (2026-10-22, Figma 99 `2107:113348`)
 {
   const s = seed();
   s.pets.push(pet({ id: "p4", species: "rotom", level: 20 }));
   s.party.slots[2] = { state: "pokemon", petId: "p4", hidden: false };
-  const shut = menuOf(s, "p4")!.model;
-  assert.equal(shut.formsLocked, true, "개체 작업 2시간 미만은 잠김");
-  assert.equal(shut.forms?.length, 6);
-  const shutItem = petMenu(shut, { form: () => undefined }).find((m) => m.label === t("menu.form"));
-  assert.equal(shutItem?.enabled, false, "흐린 줄");
-  assert.equal(shutItem?.submenu, undefined, "말풍선(하위 줄) 없음");
-  assert.equal(shutItem?.sublabel, undefined, "이유를 적지 않는다");
-  const shutRow = menuView(petMenu(shut, { form: () => undefined }), "켜짐").find((r) => r.kind === "item" && r.label === t("menu.form"));
-  assert.ok(shutRow && shutRow.kind === "item" && shutRow.disabled && !shutRow.sub, "메뉴 창에서도 머리 줄이 아니라 흐린 항목이다 (menu-view)");
-  s.pets.find((p) => p.id === "p4")!.workMs = 7_200_000;
   const noBook = menuOf(s, "p4")!.model;
-  assert.equal(noBook.formsLocked, undefined, "2시간이면 열림");
-  assert.equal(petMenu(noBook, { form: () => undefined }).find((m) => m.label === t("menu.form"))?.enabled, false, "카탈로그가 없고 지금 로토무면 누를 줄이 없다");
+  assert.equal(noBook.formsLocked, undefined, "작업 시간 없이 열려 있다");
+  assert.equal(noBook.forms?.length, 6);
+  const noBookItem = petMenu(noBook, { form: () => undefined }).find((m) => m.label === t("menu.form"));
+  assert.equal(noBookItem?.enabled !== false, true, "카탈로그가 없어도 `모습 바꾸기` 줄은 누를 수 있다");
+  assert.equal(noBookItem?.toolTip, t("menu.form"), "도구가 없으면 머리 글은 `모습 바꾸기` 만");
+  const noBookRows = Array.isArray(noBookItem?.submenu) ? noBookItem.submenu : [];
+  assert.deepEqual(noBookRows.map((r) => [r.enabled, r.id]), [[true, FORM_NEED], [true, FORM_NEED], [true, FORM_NEED], [true, FORM_NEED], [true, FORM_NEED], [false, undefined]], "다섯 모습은 흐리지만 누르고(form-need), 지금 로토무는 누를 수 없다");
+  const dimView = menuView(petMenu(noBook, { form: () => undefined }), "켜짐").find((r) => r.kind === "item" && r.label === t("menu.form"));
+  assert.deepEqual(dimView?.kind === "item" ? dimView.sub?.rows.map((r) => [r.dim === true, r.disabled]) : null, [[true, false], [true, false], [true, false], [true, false], [true, false], [false, true]], "메뉴 창에서는 dim 으로 그린다");
   s.bag["rotom-catalog"] = 1;
   const open = menuOf(s, "p4")!.model;
   const openItem = petMenu(open, { form: () => undefined }).find((m) => m.label === t("menu.form"));
   const rows = Array.isArray(openItem?.submenu) ? openItem.submenu : [];
-  assert.equal(openItem?.toolTip, t("menu.form.title.catalog"), "머리 글 — 카탈로그 1개를 써요");
+  assert.equal(openItem?.toolTip, t("menu.form"), "카탈로그가 있어도 머리 글은 `모습 바꾸기` 만 (2026-10-22)");
   assert.deepEqual(rows.map((r) => r.label), ["히트로토무", "워시로토무", "프로스트로토무", "스핀로토무", "커트로토무", "로토무"], "다섯 모습 다음 맨 아래 로토무");
   assert.deepEqual(rows.map((r) => r.sublabel), [t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.go"), t("menu.form.now")]);
   // 다른 모습이면 맨 아래 줄은 `원래대로`, 카탈로그가 없어도 누를 수 있다
@@ -139,25 +136,27 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   delete s.bag["rotom-catalog"];
   const heat = petMenu(menuOf(s, "p4")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
   const heatRows = Array.isArray(heat?.submenu) ? heat.submenu : [];
-  assert.equal(heat?.enabled !== false, true, "원래대로를 누를 수 있으니 줄이 살아 있다");
-  assert.deepEqual(heatRows.map((r) => r.enabled), [false, false, false, false, false, true], "지금 모습·카탈로그 없는 모습은 흐리고 원래대로만 누른다");
+  assert.equal(heat?.enabled !== false, true, "줄이 살아 있다");
+  assert.deepEqual(heatRows.map((r) => [r.enabled, r.id]), [[false, undefined], [true, FORM_NEED], [true, FORM_NEED], [true, FORM_NEED], [true, FORM_NEED], [true, undefined]], "지금 모습만 누를 수 없고, 카탈로그 없는 모습은 흐린 채 누르며, 원래대로는 그냥 누른다");
   assert.equal(heatRows[5]?.sublabel, t("menu.form.back"));
   assert.equal(menuOf(s, "p1")!.model.forms?.length ?? 0, 0, "모습이 없는 종은 줄이 없다");
 }
 
-// (7) 한 방향 모습 바꾸기 — 플라엣테의 말풍선은 플라엣테(영원의 꽃) 한 줄. 머리 "모습 바꾸기 · 영원의 꽃 1개를 써요". 도구가 없으면 줄이 흐리다.
+// (7) 한 방향 모습 바꾸기 — 플라엣테의 말풍선은 플라엣테(영원의 꽃) 한 줄. 머리는 늘 "모습 바꾸기". 도구가 없으면 흐린 줄(누르면 실패 안내 창).
 //     바뀐 개체(플라엣테(영원의 꽃))에는 "모습 바꾸기" 줄이 없다 (2026-10-08 사용자 결정·지시 "모습바꾸기 말풍선에 플라엣테(영원의 꽃) 만 있어야지")
 {
   const s = seed();
   s.pets.push(pet({ id: "p5", species: "floette", level: 30 }));
   s.party.slots[2] = { state: "pokemon", petId: "p5", hidden: false };
   const none = petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
-  assert.equal(none?.enabled, false, "영원의 꽃이 없으면 누를 줄이 없어 흐리다");
+  assert.equal(none?.enabled !== false, true, "영원의 꽃이 없어도 줄은 누를 수 있다 (2026-10-22)");
+  assert.equal(none?.toolTip, "모습 바꾸기", "도구가 없으면 `· 영원의 꽃 1개를 써요` 를 적지 않는다");
+  const noneRows = Array.isArray(none?.submenu) ? none.submenu : [];
+  assert.deepEqual(noneRows.map((r) => [r.label, r.enabled, r.id]), [["플라엣테(영원의 꽃)", true, FORM_NEED]], "흐린 채 누르는 한 줄");
   s.bag["eternal-flower"] = 1;
   const item = petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
   const rows = Array.isArray(item?.submenu) ? item.submenu : [];
-  assert.equal(item?.toolTip, t("menu.form.title.item", { item: "영원의 꽃" }), "머리 글 — 영원의 꽃 1개를 써요");
-  assert.equal(item?.toolTip, "모습 바꾸기 · 영원의 꽃 1개를 써요");
+  assert.equal(item?.toolTip, "모습 바꾸기", "영원의 꽃이 있어도 도구 수를 적지 않는다 (2026-10-22)");
   assert.deepEqual(rows.map((r) => [r.label, r.sublabel, r.enabled]), [["플라엣테(영원의 꽃)", t("menu.form.go"), true]], "바뀔 모습 한 줄 — 지금 모습·원래대로 줄이 없다");
   s.pets.find((p) => p.id === "p5")!.species = "floette-eternal";
   assert.equal(petMenu(menuOf(s, "p5")!.model, { form: () => undefined }).some((m) => m.label === t("menu.form")), false, "바뀐 개체에는 모습 바꾸기 줄이 없다");
@@ -169,11 +168,17 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const s = seed();
   s.pets.push(pet({ id: "p6", species: "kyurem", level: 60 }), pet({ id: "p7", species: "floette", level: 30 }), pet({ id: "p8", species: "zekrom", level: 60 }));
   s.battle = { ...(s.battle ?? {}), slots: ["p6", "p7", null, null, null, null] } as SaveV3["battle"];
-  const noop = { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined };
+  const noop = { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined, need: () => undefined };
   const k = battleMenu(battleMenuOf(s, 0)!, noop);
   assert.deepEqual(k.filter((m) => m.type !== "separator").map((m) => m.label).slice(1), [t("menu.move"), t("menu.battle.change"), t("menu.battle.clear"), t("menu.form")], "옮기기·바꾸기·빼기·모습 바꾸기");
   const kRows = (k.find((m) => m.label === t("menu.form"))?.submenu ?? []) as { label?: string; enabled?: boolean; sublabel?: string }[];
-  assert.deepEqual(kRows.map((r) => [r.label, r.sublabel, r.enabled]), [["큐레무", t("menu.form.now"), false], ["블랙큐레무", t("menu.form.go"), true], ["화이트큐레무", t("menu.form.go"), false]], "제크로무가 있으면 블랙큐레무만, 레시라무가 없어 화이트는 흐리다");
+  assert.deepEqual(kRows.map((r) => [r.label, r.sublabel, r.enabled]), [["큐레무", t("menu.form.now"), false], ["블랙큐레무", t("menu.form.go"), true], ["화이트큐레무", t("menu.form.go"), true]], "제크로무가 있으면 블랙큐레무, 레시라무가 없는 화이트는 흐린 채 누른다");
+  const asked: string[] = [];
+  const kNeed = battleMenu(battleMenuOf(s, 0)!, { ...noop, form: () => asked.push("form"), need: (sp) => asked.push(`need:${sp}`) });
+  const kNeedRows = (kNeed.find((m) => m.label === t("menu.form"))?.submenu ?? []) as { click?: () => void }[];
+  kNeedRows[2]?.click?.();
+  kNeedRows[1]?.click?.();
+  assert.deepEqual(asked, ["need:kyurem-white", "form"], "흐린 줄은 실패 안내(need), 나머지는 배틀 파티 모습 바꾸기");
   s.battle!.forms = { p6: "kyurem-black" };
   assert.equal(battleMenuOf(s, 0)!.name, "블랙큐레무", "이름은 배틀 파티의 모습");
   assert.equal(battleMenu(battleMenuOf(s, 1)!, noop).some((m) => m.label === t("menu.form")), false, "한 방향 묶음(플라엣테)은 도구를 써야 해서 줄이 없다");
@@ -192,22 +197,23 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const icons = Object.fromEntries(order.map((type) => [`type:${type}`, `data:${type}`]));
   const model = petMenuOf(s, "p9", { origin: "manage", stagePet: null, formIcons: icons, now: Date.now() })!.model;
   const item = petMenu(model, { form: () => undefined }).find((m) => m.label === t("menu.form"));
-  assert.equal(item?.toolTip, undefined, "격자 말풍선은 머리 글이 없다");
+  assert.equal(item?.toolTip, t("menu.form"), "격자 말풍선도 머리 글 `모습 바꾸기` (2026-10-23 사용자 확정)");
   const view = menuView(petMenu(model, { form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
   const sub = view?.kind === "item" ? view.sub : undefined;
   assert.equal(sub?.grid, true, "격자 말풍선");
-  assert.equal(sub?.title, "", "머리 줄 없음");
+  assert.equal(sub?.title, "모습 바꾸기", "머리 줄");
   assert.deepEqual(sub?.rows.map((r) => r.type), order, "칸마다 타입");
   assert.equal(sub?.rows[9]?.icon, "data:fire", "칸 그림은 타입 아이콘");
   assert.deepEqual([sub?.rows[9]?.current, sub?.rows[9]?.disabled, sub?.rows[0]?.disabled], [true, true, false], "지금 모습(불꽃) 칸은 누를 수 없다");
   // 배틀 파티 칸 메뉴도 같은 격자
   s.battle = { ...(s.battle ?? {}), slots: ["p9", null, null, null, null, null] } as SaveV3["battle"];
-  const b = menuView(battleMenu(battleMenuOf(s, 0, icons)!, { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
+  const b = menuView(battleMenu(battleMenuOf(s, 0, icons)!, { move: () => undefined, change: () => undefined, clear: () => undefined, form: () => undefined, need: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
   assert.equal(b?.kind === "item" && b.sub?.grid, true, "배틀 파티 칸 메뉴도 격자");
-  // 격자가 아닌 말풍선도 머리 줄이 없다 — 머리 글은 도구를 쓰는 묶음만
+  assert.equal(b?.kind === "item" ? b.sub?.title : null, "모습 바꾸기", "배틀 파티 칸 메뉴도 머리 줄");
+  // 격자가 아닌 말풍선도 머리 줄이 있다 — 모든 모습 말풍선 (2026-10-23)
   s.pets.push(pet({ id: "p10", species: "solgaleo", evolved: ["cosmog", "cosmoem"] }));
   const plain = menuView(petMenu(menuOf(s, "p10")!.model, { form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
-  assert.deepEqual(plain?.kind === "item" ? [plain.sub?.title, plain.sub?.grid] : null, ["", undefined], "공유 계열 말풍선 — 머리 줄 없음, 줄 목록");
+  assert.deepEqual(plain?.kind === "item" ? [plain.sub?.title, plain.sub?.grid] : null, ["모습 바꾸기", undefined], "공유 계열 말풍선 — 머리 줄 `모습 바꾸기`, 줄 목록");
 }
 
 process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금·배틀 파티 칸·타입 모습 격자)\n");

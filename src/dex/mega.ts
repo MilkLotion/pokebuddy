@@ -11,6 +11,7 @@
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 // 순수 함수이며 저장을 쓰지 않는다. 저장은 거래 실행기와 시간 적용이 한다
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
+import { lookFormOf, shiftGroupOf } from "./regional.js";
 import { MEGA_RULES } from "./rules.js";
 import type { PetV3, SaveV3 } from "../shared/save-v3";
 
@@ -69,8 +70,25 @@ export function megaTagOf(slug: string, opts?: DexOptions): string | null {
   return xy ? `M${(xy[1] ?? "").toUpperCase()}` : "M";
 }
 
-// 그 종의 메가 모습 — 표 순서. 없으면 빈 목록 (리자몽·뮤츠는 둘)
-export const megaFormsOf = (species: string, opts?: DexOptions): string[] => megaSlugs(opts).filter((slug) => megaTable(opts).forms[slug]?.base === species);
+// 표의 base 로 바로 찾은 메가 모습 — 표 순서
+const formsOfBase = (base: string, opts?: DexOptions): string[] => megaSlugs(opts).filter((slug) => megaTable(opts).forms[slug]?.base === base);
+
+// 메가 기준 종 — 지금 종이 표의 base 면 그 종, 아니면 겉모습의 기본 종(싸리용(늘어진 모습) → 싸리용)이나
+// 모습 바꾸기 묶음 머리(지가르데 10%폼 → 지가르데). 그 종에 메가 모습이 없으면 null
+// 플라엣테(영원의 꽃)는 자기 종이 base 다. 빨간 꽃·색 플라엣테의 머리(플라엣테)에는 메가 모습이 없다
+// (2026-10-22 사용자 "지가르데자체는 1개인데", worklog/records/look-shift-gaps 후속 A)
+export function megaBaseOf(species: string, opts?: DexOptions): string | null {
+  const key = normalizeSlug(species);
+  if (formsOfBase(key, opts).length) return key;
+  const head = lookFormOf(key, opts)?.base ?? shiftGroupOf(key, opts)[0];
+  return head && head !== key && formsOfBase(head, opts).length ? head : null;
+}
+
+// 그 종의 메가 모습 — 표 순서. 없으면 빈 목록 (리자몽·뮤츠는 둘). 겉모습·모습 바꾸기 종은 메가 기준 종의 모습이다
+export const megaFormsOf = (species: string, opts?: DexOptions): string[] => {
+  const base = megaBaseOf(species, opts);
+  return base ? formsOfBase(base, opts) : [];
+};
 
 // 화면에 보이는 종 — 메가 모습이면 그 슬러그, 전투 중 모습 보이기(src/dex/battle-look.ts)면 그 슬러그, 아니면 종
 export const shownSpecies = (pet: Pick<PetV3, "species" | "mega" | "battleLook">): string => pet.mega?.on ?? pet.battleLook ?? pet.species;
@@ -119,8 +137,10 @@ export function grantStones(save: SaveV3, opts?: DexOptions): string[] {
     const p = megaProgress(pet);
     if (!p.affinity || !p.level || !p.bond || !p.care) continue;
     pet.mega = { bondMs: pet.mega?.bondMs ?? 0, care: pet.mega?.care ?? 0, stone: true };
+    // 도감에는 메가 기준 종을 적는다 — 도감 칸의 메가스톤 표식이 표의 base 로 찾는다(src/view/dex-detail.ts·dex-list.ts)
     const opened = (save.dex.megaOpened ??= []);
-    if (!opened.includes(pet.species)) opened.push(pet.species);
+    const base = megaBaseOf(pet.species, opts) ?? pet.species;
+    if (!opened.includes(base)) opened.push(base);
     granted.push(pet.id);
   }
   return granted;

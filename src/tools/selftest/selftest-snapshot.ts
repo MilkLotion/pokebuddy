@@ -333,18 +333,14 @@ function seed(): SaveV3 {
   process.stdout.write("(12) 공유 sid 모습 목록  ok\n");
 }
 
-// (12b) 로토무 — 박스 칸은 지금 종 그대로(forms 없음). 모습 바꾸기 확인 창이 읽는 shiftForms 는 해금(개체 작업 2시간) 뒤에만 (docs/specs/game.md "로토무의 모습 바꾸기").
+// (12b) 로토무 — 박스 칸은 지금 종 그대로(forms 없음). 모습 바꾸기 확인 창이 읽는 shiftForms 는 얻자마자 있다 (docs/specs/game.md "로토무의 모습 바꾸기", 2026-10-22 작업 시간 조건 없앰).
 //       업적 보상 종이라 공유 계열로도 판정되지만 단체사진이 아니다 (2026-10-05)
 {
   const s = empty(T0);
   s.pets.push(pet({ id: "p1", species: "rotom", level: 20 }));
   s.boxes[0]!.slots[0] = "p1";
-  const shut = snapshotView(s, T0).boxes[0]?.slots[0];
-  assert.equal(shut?.forms, undefined, "단체사진이 아니다");
-  assert.equal(shut?.shiftForms, undefined, "해금 전에는 고를 모습이 없다");
-  s.pets[0]!.workMs = 7_200_000;
   const open = snapshotView(s, T0).boxes[0]?.slots[0];
-  assert.equal(open?.forms, undefined, "해금 뒤에도 박스 칸은 지금 종 그대로");
+  assert.equal(open?.forms, undefined, "박스 칸은 지금 종 그대로 — 단체사진이 아니다");
   assert.deepStrictEqual(open?.shiftForms?.map((f) => f.name), ["로토무", "히트로토무", "워시로토무", "프로스트로토무", "스핀로토무", "커트로토무"]);
   assert.deepStrictEqual(open?.shiftForms?.[1]?.typeIds, ["electric", "fire"], "바꾸기 확인 창의 타입 배지");
   assert.deepStrictEqual(open?.formItem, { name: "로토무카탈로그", base: "rotom" }, "확인 창 안내 — 카탈로그 1개, 로토무로는 공짜");

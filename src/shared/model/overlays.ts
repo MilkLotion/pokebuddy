@@ -54,7 +54,7 @@ export type MenuView =
 export interface MenuSubView {
   title: string;
   grid?: boolean;
-  rows: { id: number; label: string; note: string; current: boolean; disabled: boolean; icon?: string; type?: string }[]; // current — 지금 모습, disabled — 누를 수 없음(지금 모습·도구 없음)
+  rows: { id: number; label: string; note: string; current: boolean; disabled: boolean; dim?: boolean; icon?: string; type?: string }[]; // current — 지금 모습, disabled — 누를 수 없음(지금 모습), dim — 흐리지만 누름(조건 모자람 → 실패 안내 창)
 }
 
 // 알림 창 — OS 대화상자 대신 띄우는 멈춤·분실·저장 잠김·정지·업데이트 창

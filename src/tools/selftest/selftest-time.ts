@@ -323,21 +323,15 @@ function seed(over: Partial<PetV3> = {}): SaveV3 {
   process.stdout.write("(19) 프리셋 적용 · 숨김 풀림  ok\n");
 }
 
-// (20) 로토무 개체 작업 시간 — 지금 파티(볼 안 포함)에서 받은 작업 시간만, 2시간에서 멈춘다. 박스·다른 프리셋은 멈춘다 (2026-10-05)
+// (20) 로토무 개체 작업 시간 — 작업 시간 조건이 없어 더 세지 않는다. 옛 저장에 쌓인 값은 그대로다 (2026-10-22 사용자 "로토무는 2시간 그거 풀어버리자")
 {
   const s = seed({ species: "rotom" });
   s.party.slots[0] = { state: "pokemon", petId: "p1", hidden: true };
-  applyTime(s, HOUR, T0 + HOUR);
-  assert.equal(s.pets[0]?.workMs, undefined, "작업하지 않으면 늘지 않는다");
-  applyTime(s, HOUR, T0 + 2 * HOUR, { workMs: 30 * MIN });
-  assert.equal(s.pets[0]?.workMs, 30 * MIN, "볼 안이어도 작업한 만큼");
-  applyTime(s, 3 * HOUR, T0 + 5 * HOUR, { workMs: 3 * HOUR });
-  assert.equal(s.pets[0]?.workMs, 2 * HOUR, "2시간에서 멈춘다");
-  const box = empty(T0);
-  box.pets.push(pet({ id: "p2", species: "rotom" }));
-  box.boxes[0]!.slots[0] = "p2";
-  applyTime(box, HOUR, T0 + HOUR, { workMs: HOUR });
-  assert.equal(box.pets[0]?.workMs, undefined, "박스는 멈춘다");
+  applyTime(s, HOUR, T0 + HOUR, { workMs: 30 * MIN });
+  assert.equal(s.pets[0]?.workMs, undefined, "파티에서 작업해도 늘지 않는다");
+  s.pets[0]!.workMs = 2 * HOUR;
+  applyTime(s, HOUR, T0 + 2 * HOUR, { workMs: HOUR });
+  assert.equal(s.pets[0]?.workMs, 2 * HOUR, "옛 값은 그대로");
   process.stdout.write("(20) 로토무 개체 작업 시간  ok\n");
 }
 

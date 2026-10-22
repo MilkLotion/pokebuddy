@@ -128,13 +128,18 @@ body {
 #bubble.shown {
   visibility: visible;
 }
-/* 타입 모습 격자 — 아르세우스·실버디의 18 모습을 타입 아이콘 칸 6×3 으로 (Figma 99 `Draft / Form Bubble · Type Grid` 218×116, 2026-10-18 사용자 "진행").
-   머리 줄이 없다. 칸 30, 사이 4. 지금 모습 칸은 옅은 배경이고 누를 수 없다 */
+/* 타입 모습 격자 — 아르세우스·실버디의 18 모습을 타입 아이콘 칸 6×3 으로 (Figma 03 `Form Bubble · Type Grid` 218×132, 2026-10-18 사용자 "진행").
+   머리 줄 `모습 바꾸기` 가 맨 위 한 줄 전체다(2026-10-23 사용자 확정). 칸 30, 사이 4. 지금 모습 칸은 옅은 배경이고 누를 수 없다 */
 #bubble.grid {
   display: grid;
   grid-template-columns: repeat(6, 30px);
   gap: 4px;
   min-width: 0;
+}
+/* 머리 줄과 첫 칸 줄 사이는 Figma 처럼 2 — 격자 사이 4 에서 2 를 뺀다 */
+#bubble.grid .head {
+  grid-column: 1 / -1;
+  margin-bottom: -2px;
 }
 .cell {
   position: relative; /* 꼬리보다 위에 */
@@ -238,4 +243,9 @@ body {
 }
 .row[aria-current="true"] .note {
   color: var(--primary);
+}
+/* 조건(도구·말·짝)이 모자란 줄 — 흐리지만 누를 수 있다. 누르면 실패 안내 창 (Figma 99 `2107:113348` 줄 투명도 0.45, docs/specs/game.md "모습 바꾸기 조건 안내") */
+.row.dim,
+.cell.dim {
+  opacity: 0.45;
 }

@@ -15,7 +15,7 @@ import { BAG_RULES } from "../../bag/rules";
 import { nextOf } from "../../dex/evo";
 import { partyGoalsMs } from "../../dex/forms";
 import { expForLevel, growthOf } from "../../dex/growth";
-import { megaOf, megaSlugs } from "../../dex/mega";
+import { megaFormsOf, megaOf, megaSlugs } from "../../dex/mega";
 import { inRandomEgg } from "../../dex/obtain";
 import { MEGA_RULES, RIDER_ITEM, SHIFT_RULES } from "../../dex/rules";
 import { speciesSlugs } from "../../dex/species";
@@ -119,12 +119,19 @@ export function buildVerifyFiles(): Record<string, string> {
   // 메가 모습 — 종 → 모습 슬러그 (data/mega.json). mega 규칙이 모습의 종을 본다
   const megaForms: Record<string, string[]> = {};
   for (const slug of megaSlugs()) (megaForms[megaOf(slug)!.base] ??= []).push(slug);
+  // 겉모습·모습 바꾸기 종도 메가 기준 종의 모습을 받는다(싸리용(늘어진 모습)·지가르데 10%폼 — src/dex/mega.ts megaBaseOf)
+  const regionalRaw = load("regional.json") as { looks?: Record<string, unknown>; shift?: Record<string, unknown> };
+  const kin = [...Object.keys(regionalRaw.looks ?? {}), ...Object.values(regionalRaw.shift ?? {}).flatMap((list) => (Array.isArray(list) ? list.filter((s): s is string => typeof s === "string") : []))];
+  for (const slug of kin) if (!slug.startsWith("_") && !megaForms[slug] && megaFormsOf(slug).length) megaForms[slug] = megaFormsOf(slug);
   // 규칙이 있는 모습 바꾸기 묶음 — 종(기본 종 포함) → 규칙. 묶음은 data/regional.json 의 shift, 규칙은 SHIFT_RULES (로토무와 다섯 모습)
   const shiftRules: Record<string, { base: string; workMs: number; item: string; oneWay?: true }> = {};
   for (const [base, list] of Object.entries((load("regional.json").shift ?? {}) as Record<string, unknown>)) {
-    const rule = SHIFT_RULES[base];
-    if (base.startsWith("_") || !rule || !Array.isArray(list)) continue;
+    const found = SHIFT_RULES[base];
+    if (base.startsWith("_") || !found || !Array.isArray(list)) continue;
+    const { looks, ...rule } = found;
     for (const slug of [base, ...list]) if (typeof slug === "string") shiftRules[slug] = { base, ...rule };
+    // 규칙에 looks 가 있으면 기본 종의 겉모습(노란 꽃 플라엣테)도 시작 모습이다 — base 는 그 겉모습 (src/dex/regional.ts shiftIndexOf)
+    if (looks) for (const [slug, look] of Object.entries((load("regional.json").looks ?? {}) as Record<string, { base?: string }>)) if (look?.base === base) shiftRules[slug] = { base: slug, ...rule };
   }
   // 버드렉스의 말 — 모습 → 있어야 하는 말(data/regional.json riders), 말을 부를 수 있는 종(그 모습들의 shift 묶음), 부르기 도구
   const regional = load("regional.json");

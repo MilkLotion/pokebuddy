@@ -12,10 +12,12 @@ import { activeBuffs, boredStepOf, pointIntervalMs, pointParts, pointPercent, zo
 import { BOREDOM_RULES, TIME_RULES } from "../state/rules.js";
 import { buffText, waitText } from "../shared/count-text.js";
 import type { FullnessZone } from "../shared/save-v3.js";
-import type { CareView, EvolutionView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
+import type { CareView, EvolutionView, FormNeedView, FormView, MegaGoalView, MegaView, PetView } from "../shared/model/snapshot";
 import { battleLookChoices } from "../dex/battle-look.js";
-import { formsOf, isFormLocked, isShared, shiftRuleOf } from "../dex/forms.js";
-import { genderLookOf, REGION_MAP } from "../dex/regional.js";
+import { formsOf, isFormLocked, isShared, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
+import { genderLookOf, partnerOf, REGION_MAP, riderOf } from "../dex/regional.js";
+import { itemTable } from "../dex/tables.js";
+import { josa } from "../shared/josa.js";
 import { checkPetFree } from "../party/pet-actions.js";
 import { failTextOf } from "../shared/fail-text.js";
 import { evolveCandidates, type EvoMissing } from "../dex/evolve.js";
@@ -80,11 +82,33 @@ function formsView(save: SaveV3, pet: PetV3): Pick<PetView, "forms" | "shiftForm
   const lookView = looks.length ? { battleLooks: [pet.species, ...looks].map(formView) } : {};
   const list = formsOf(pet);
   if (list.length < 2) return lookView;
-  const views = list.map((slug) => ({ species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types] }));
   const rule = shiftRuleOf(pet.species);
+  const views = list.map((slug): FormView => {
+    const need = formNeedOf(save, pet, slug, rule);
+    return { species: slug, name: petName(slug), types: profileOf(slug).types.map((t) => typeName(t)), typeIds: [...profileOf(slug).types], ...(need ? { need } : {}) };
+  });
   if (rule) return isFormLocked(pet) ? lookView : { shiftForms: views, formItem: { name: itemName(rule.item), base: rule.base, ...(rule.oneWay ? { oneWay: true as const } : {}) }, ...lookView };
   if (isShared(pet)) return { forms: views, ...lookView };
   return isFormLocked(pet) ? lookView : { shiftForms: views, ...lookView };
+}
+
+// 그 모습으로 바꾸는 데 모자란 것 — 도구(지금 종에서 기본 종이 아닌 모습으로 갈 때), 말(버드렉스), 짝(큐레무) 순서로 하나만. 없으면 null
+// 메뉴의 흐린 줄을 누르면 관리 창이 이 값으로 `모습 바꾸기 실패` 안내 창을 그린다 (docs/specs/game.md "모습 바꾸기 조건 안내", Figma 99 `2107:113347`)
+// 모르는 포켓몬은 이름을 `???` 로 둔다 — 도감 입수처와 같다 (src/view/dex-detail.ts knownName)
+function formNeedOf(save: SaveV3, pet: PetV3, slug: string, rule: ReturnType<typeof shiftRuleOf>): FormNeedView | null {
+  if (slug === pet.species) return null;
+  if (rule && slug !== rule.base && (save.bag[rule.item] ?? 0) < 1) {
+    const name = itemName(rule.item);
+    const sold = itemTable()[rule.item]?.price != null;
+    return { kind: "item", id: rule.item, name, known: true, tail: t("form.need.item", { p: josa(name, "이/가") }), note: t(sold ? "form.need.note.shop" : "form.need.note.reward"), ...(sold ? { sold: true as const } : {}) };
+  }
+  const horse = riderMissing(save, slug) ? riderOf(slug) : null;
+  const mate = !horse && partnerMissing(save, slug) ? partnerOf(slug) : null;
+  const who = horse ?? mate;
+  if (!who) return null;
+  const known = isKnownSpecies(save, who);
+  const name = known ? petName(who) : "???";
+  return { kind: "pokemon", id: who, name, known, tail: t("form.need.pokemon", { p: josa(name, "이/가") }), note: t(horse ? "form.need.note.rider" : "form.need.note.partner") };
 }
 
 // 모습 하나 — 이름과 타입. 메가 모습은 data/mega.json 의 타입이다

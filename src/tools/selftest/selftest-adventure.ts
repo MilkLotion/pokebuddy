@@ -407,10 +407,11 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   forged.battle!.slots[5] = "p11";
   assert.equal(battleSpeciesOf(forged, forged.pets.find((p) => p.id === "p11")!), "floette", "저장을 고쳐도 지금 종");
   assert.equal(partyOf(forged, battleData()).party[5]?.species, "floette", "서버도 지금 종");
-  // 해금 — 원래 모습 바꾸기와 같다. 로토무는 작업 시간이 모자라면 form-locked (2026-10-09 사용자 "기존에 해금했으면 되게")
+  // 해금 — 원래 모습 바꾸기와 같다. 로토무는 작업 시간 조건이 없어 개체 작업 시간이 0 이어도 바꾼다 (2026-10-22 사용자 "로토무는 2시간 그거 풀어버리자")
   const rotomWork = save.pets[0]!.workMs;
   save.pets[0]!.workMs = 0;
-  assert.equal(why({ petId: "p1", species: "rotom-mow" }), "form-locked");
+  assert.equal(why({ petId: "p1", species: "rotom-mow" }), null);
+  assert.equal(why({ petId: "p1", species: "rotom-fan" }), null);
   save.pets[0]!.workMs = rotomWork;
   // 다른 개체가 그 종으로 들어오면 — 묶음이 다르면 지금 종으로 본다
   const fake = JSON.parse(JSON.stringify(save)) as SaveV3;
@@ -489,6 +490,17 @@ assert.deepEqual([BATTLE_RULES.level, BATTLE_RULES.iv], [50, 31], "배틀 기준
   assert.equal(own.slot.stats[0]!.value, 70, "개체로 보면 암컷 종족값");
   assert.equal(battleDeviceModel(sv, { species: "indeedee", petId: "p9", kinds: [] }, extra, T0), null, "없는 개체면 닫는다");
   assert.equal(battleDeviceModel(sv, { species: "charizard", petId: null, kinds: [] }), null, "저장이 없으면 종 보기를 못 만든다");
+  // 일상 파티에서 메가를 켠 개체 — 종 보기도 그 메가 모습 (2026-10-22 사용자 "파티에선 메가몬인데, 도감/배틀은 메가몬이 아니야")
+  const mega = seed(["charizard"]);
+  mega.pets[0]!.mega = { bondMs: 0, care: 0, stone: true, on: "charizard-mega-x" };
+  const mv = snapshotView(mega, T0);
+  const shownMega = battleDeviceModel(mv, { species: "charizard", petId: "p1", kinds: [] }, mega, T0)!.model;
+  assert.equal(shownMega.slot.pet.name, "메가리자몽X", "이름은 메가 모습");
+  assert.deepEqual(shownMega.slot.pet.typeIds, ["fire", "dragon"], "타입은 메가 모습");
+  delete mega.pets[0]!.mega!.on;
+  const plain = battleDeviceModel(snapshotView(mega, T0), { species: "charizard", petId: "p1", kinds: [] }, mega, T0)!.model;
+  assert.equal(plain.slot.pet.name, "리자몽", "메가를 끄면 기본 모습");
+  assert.notDeepEqual(shownMega.slot.stats.map((x) => x.value), plain.slot.stats.map((x) => x.value), "능력치는 메가 모습(data/mega-battle.json)");
 }
 
 process.stdout.write("통과\n");

@@ -11,6 +11,8 @@ import type { MenuSubView, MenuView } from "../shared/model/overlays";
 const SUB_BASE = 1000;
 // 타입 모습 격자 — 말풍선이 줄 대신 타입 아이콘 칸 6×3 인 묶음 줄의 id. 칸 줄의 id 는 `type:<타입>` 이다 (src/view/menus.ts typeGridOf)
 export const FORM_GRID = "form-grid";
+// 조건(도구·말·짝)이 모자란 모습 줄의 id — 흐리게 보이지만 누를 수 있다(dim). 누르면 실패 안내 창 (docs/specs/game.md "모습 바꾸기 조건 안내")
+export const FORM_NEED = "form-need";
 export const subId = (parent: number, row: number): number => (parent + 1) * SUB_BASE + row;
 // 고른 번호 → 모델의 항목. 하위 줄 번호면 그 줄을 준다
 export function pickOf(template: MenuItemConstructorOptions[], id: number): MenuItemConstructorOptions | undefined {
@@ -20,7 +22,7 @@ export function pickOf(template: MenuItemConstructorOptions[], id: number): Menu
 }
 function subView(parent: number, m: MenuItemConstructorOptions): MenuSubView | null {
   if (!Array.isArray(m.submenu) || !m.submenu.length) return null;
-  // 머리 글은 toolTip 이 있을 때만 — 도구를 쓰는 묶음(카탈로그·영원의 꽃)의 비용 글 (src/view/menus.ts petMenu)
+  // 머리 글은 toolTip — 모습 말풍선은 늘 `모습 바꾸기` (src/view/menus.ts petMenu·battleMenu). 비면 머리 줄이 없다
   return {
     title: m.toolTip ?? "",
     ...(m.id === FORM_GRID ? { grid: true } : {}),
@@ -31,6 +33,7 @@ function subView(parent: number, m: MenuItemConstructorOptions): MenuSubView | n
       // 지금 모습은 checked 로 따로 받는다 — 예전에는 누를 수 없는 줄(도구·말·짝 없음)까지 지금 모습으로 보였다 (worklog/records/perf-refactor 5-7, G84-13)
       current: row.checked === true,
       disabled: row.enabled === false,
+      ...(row.id === FORM_NEED ? { dim: true } : {}),
       ...(typeof row.icon === "string" ? { icon: row.icon } : {}),
       ...(row.id?.startsWith("type:") ? { type: row.id.slice(5) } : {}),
     })),

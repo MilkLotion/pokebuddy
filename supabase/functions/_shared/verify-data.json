@@ -1,5 +1,5 @@
 {
- "hash": "ef981eb1799813f7",
+ "hash": "66ece6abb9fba97e",
  "items": {
   "basic-food": {
    "price": null,
@@ -1986,6 +1986,18 @@
   ],
   "tatsugiri": [
    "tatsugiri-curly-mega"
+  ],
+  "zygarde-complete": [
+   "zygarde-mega"
+  ],
+  "zygarde-10": [
+   "zygarde-mega"
+  ],
+  "tatsugiri-droopy": [
+   "tatsugiri-curly-mega"
+  ],
+  "tatsugiri-stretchy": [
+   "tatsugiri-curly-mega"
   ]
  },
  "riders": {
@@ -2007,32 +2019,32 @@
  "shiftRules": {
   "rotom": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "rotom-heat": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "rotom-wash": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "rotom-frost": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "rotom-fan": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "rotom-mow": {
    "base": "rotom",
-   "workMs": 7200000,
+   "workMs": 0,
    "item": "rotom-catalog"
   },
   "floette": {
@@ -2043,6 +2055,30 @@
   },
   "floette-eternal": {
    "base": "floette",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "floette-yellow": {
+   "base": "floette-yellow",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "floette-orange": {
+   "base": "floette-orange",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "floette-blue": {
+   "base": "floette-blue",
+   "workMs": 0,
+   "item": "eternal-flower",
+   "oneWay": true
+  },
+  "floette-white": {
+   "base": "floette-white",
    "workMs": 0,
    "item": "eternal-flower",
    "oneWay": true

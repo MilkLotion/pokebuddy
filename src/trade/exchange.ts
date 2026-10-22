@@ -18,7 +18,7 @@ import { newPet, nextPetId } from "../party/create.js";
 import { maxIdNo } from "../shared/ids.js";
 import { recordDex } from "../dex/record.js";
 import { dropMissingBattlePets } from "../battle/party.js";
-import { megaFormsOf } from "../dex/mega.js";
+import { megaBaseOf, megaFormsOf } from "../dex/mega.js";
 import { MEGA_RULES } from "../dex/rules.js";
 import { snapSize } from "../party/size.js";
 import { normalizeSlug, type DexOptions } from "../dex/data.js";
@@ -260,7 +260,7 @@ function receivedPetOf(got: TradePet, id: string, now: number, opts?: DexOptions
 function finishTrade(save: SaveV3, pet: PetV3): void {
   dropMissingBattlePets(save); // 보낸 개체의 배틀 파티 칸은 빈 칸이 된다 — 받은 개체는 물려받지 않는다
   recordDex(save, pet.species, pet.shiny);
-  if (pet.mega?.stone) { const opened = (save.dex.megaOpened ??= []); if (!opened.includes(pet.species)) opened.push(pet.species); } // 받은 쪽 도감에도 메가스톤을 적는다 (src/dex/mega.ts settleMega 와 같은 기록)
+  if (pet.mega?.stone) { const opened = (save.dex.megaOpened ??= []); const base = megaBaseOf(pet.species) ?? pet.species; if (!opened.includes(base)) opened.push(base); } // 받은 쪽 도감에도 메가스톤을 적는다 — 메가 기준 종 (src/dex/mega.ts grantStones 와 같은 기록)
   save.counts.traded += 1; // 교환 업적이 센다
   setPending(save, null);
 }

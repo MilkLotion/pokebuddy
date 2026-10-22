@@ -18,7 +18,7 @@
 //            (2026-10-08 사용자 결정 "모습바꾸기인데, 이전으로 못돌아가는 모습바꾸기인거지. 영꽃이나 달투곰에는 모습바꾸기메뉴가없게")
 import type { DexOptions } from "./data";
 import { nextOf, prevOf } from "./evo.js";
-import { partnerOf, riderOf, shiftGroupOf } from "./regional.js";
+import { dexSlugOf, partnerOf, riderOf, shiftGroupOf } from "./regional.js";
 import { singleSpecies } from "./obtain.js";
 import { recordDex } from "./record.js";
 import { SHIFT_RULES, type ShiftRule } from "./rules.js";
@@ -45,19 +45,22 @@ export function isShared(pet: PetV3, opts?: DexOptions): boolean {
 export function formsOf(pet: PetV3, opts?: DexOptions): string[] {
   if (!isShared(pet, opts)) {
     const group = shiftGroupOf(pet.species, opts);
-    // 한 방향 묶음 — 이미 바뀐 개체(플라엣테(영원의 꽃))는 고를 모습이 없다
+    // 한 방향 묶음 — 이미 바뀐 개체(플라엣테(영원의 꽃))는 고를 모습이 없다. 묶음 머리는 시작 모습이다(노란 꽃 플라엣테면 그 겉모습)
     const base = group[0];
-    return base && SHIFT_RULES[base]?.oneWay && pet.species !== base ? [] : group;
+    return base && ruleOfHead(base, opts)?.oneWay && pet.species !== base ? [] : group;
   }
   const list = pet.forms?.length ? pet.forms : [...pet.evolved, pet.species];
   const own = [...new Set([...list, pet.species])];
   return [...new Set([...own, ...own.flatMap((slug) => shiftGroupOf(slug, opts))])];
 }
 
-// 이 종이 든 모습 바꾸기 묶음의 규칙과 기본 종 — 규칙이 없으면 null
+// 묶음 머리의 규칙 — 머리가 겉모습(노란 꽃 플라엣테)이면 기본 종(플라엣테)의 규칙이다 (src/dex/rules.ts ShiftRule looks)
+const ruleOfHead = (head: string, opts?: DexOptions): ShiftRule | undefined => SHIFT_RULES[head] ?? SHIFT_RULES[dexSlugOf(head, opts)];
+
+// 이 종이 든 모습 바꾸기 묶음의 규칙과 시작 모습 — 규칙이 없으면 null. base 는 묶음 머리다(겉모습에서 시작한 묶음이면 그 겉모습)
 export function shiftRuleOf(slug: string, opts?: DexOptions): ({ base: string } & ShiftRule) | null {
   const base = shiftGroupOf(slug, opts)[0];
-  const rule = base ? SHIFT_RULES[base] : undefined;
+  const rule = base ? ruleOfHead(base, opts) : undefined;
   return base && rule ? { base, ...rule } : null;
 }
 

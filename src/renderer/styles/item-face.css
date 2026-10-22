@@ -30,6 +30,12 @@
   align-items: center;
   gap: 10px;
 }
+/* 단추·숫자 칸은 줄지 않는다 — 안내 글자가 길면 안내 글자만 말줄임으로 줄어든다.
+   예전에는 `최대 0 · 남은 포켓몬 0` 처럼 안내가 길면 `최대` 단추가 `최`/`대` 두 줄로 꺾였다 (2026-10-22 사용자 보고 — 랜덤준전설알을 다 모은 뒤) */
+.qty button,
+.qty .count {
+  flex: none;
+}
 .qty button {
   width: 32px;
   height: 32px;
@@ -43,6 +49,7 @@
   width: auto;
   padding: 0 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 .qty button:disabled {
   color: var(--disabled);
@@ -75,6 +82,7 @@
   cursor: default;
 }
 .qty .hint {
+  flex: 1 1 0;
   min-width: 0;
   color: var(--soft);
   white-space: nowrap;

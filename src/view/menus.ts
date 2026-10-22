@@ -10,7 +10,7 @@ import { battleLookChoices, menuFormsOf } from "../dex/battle-look.js";
 import { formsOf, isFormLocked, partnerMissing, riderMissing, shiftRuleOf } from "../dex/forms.js";
 import { shiftGroupOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
-import { FORM_GRID } from "./menu-view.js";
+import { FORM_GRID, FORM_NEED } from "./menu-view.js";
 import { battleSpeciesOf } from "../battle/party.js";
 import { sellablePet } from "../shop/sell-pet.js";
 import { checkCare } from "../state/care.js";
@@ -29,8 +29,7 @@ export interface PetMenuModel {
   ball?: { enabled: boolean; hidden: boolean }; // 볼 줄의 모양 — 박스 개체는 흐리게, 볼 안의 개체는 `꺼내기`. 없으면 `볼에 넣기`
   forms?: PetMenuForm[]; // 공유 sid 계열·모습 바꾸기 종(로토무)의 모습 — 둘 이상이면 `모습 바꾸기` 줄과 그 옆의 말풍선이 생긴다
   formsLocked?: boolean; // 모습 바꾸기 해금 전(로토무 — 그 개체의 파티 작업 시간) — 줄만 흐리게 두고 말풍선은 없다. 이유는 적지 않는다
-  formsCatalog?: boolean; // 도구를 쓰는 묶음(로토무) — 말풍선 머리가 `모습 바꾸기 · 카탈로그 1개를 써요`, 맨 아래 줄이 `로토무 · 원래대로`
-  formsItem?: string; // 한 방향 묶음(플라엣테·다투곰)의 도구 이름 — 말풍선 머리가 `모습 바꾸기 · 영원의 꽃 1개를 써요`, 줄은 바뀔 모습 하나다 (2026-10-08)
+  formsItem?: string; // 한 방향 묶음(플라엣테·다투곰)의 도구 이름 — 말풍선 머리가 `모습 바꾸기`, 줄은 바뀔 모습 하나다 (2026-10-08)
   move?: { enabled: boolean }; // 옮기기 줄 — 박스 개체, 그리고 관리 창에서 연 파티 개체(2026-10-10)
   swap?: { enabled: boolean }; // 교체 줄 — 관리 창에서 연 메뉴(파티·박스 개체)에만 둔다
   sell?: { enabled: boolean }; // 팔기 줄 — 파티·박스 개체 모두
@@ -41,7 +40,7 @@ export interface PetMenuForm {
   current: boolean; // 지금 모습 — 누를 수 없다
   portrait?: string; // 초상의 data URI
   back?: boolean; // 도구 없이 돌아가는 기본 종 줄(로토무) — 오른쪽 글자가 `원래대로`
-  noItem?: boolean; // 도구가 없어 누를 수 없다 — 이유는 적지 않는다
+  noItem?: boolean; // 조건(도구·말·짝)이 모자라 흐린 줄 — 누를 수는 있고, 누르면 관리 창이 `모습 바꾸기 실패` 안내 창을 띄운다 (docs/specs/game.md "모습 바꾸기 조건 안내")
   type?: string; // 타입 모습 격자(아르세우스·실버디)의 칸 — 그 모습의 타입. portrait 는 타입 아이콘이다
 }
 export interface TrayMenuModel {
@@ -81,13 +80,14 @@ export const petLine = (model: Pick<PetMenuModel, "name" | "nature">): string =>
 // 모습 바꾸기는 누르는 동작이 없고 하위 줄(submenu)만 있다 — 눌러도 메뉴가 닫히지 않고 옆에 말풍선으로 뜬다.
 //   해금 전(formsLocked)이면 하위 줄 없이 흐린 줄 하나다 (docs/specs/game.md "로토무의 모습 바꾸기", Figma `Menu Item` `State=Disabled`)
 //   하위 줄의 sublabel 은 `지금`·`바꾸기`, icon 은 초상의 data URI, 줄 머리(toolTip)는 말풍선의 첫 줄이다.
-//   머리 글은 도구를 쓰는 묶음(카탈로그·영원의 꽃)에만 있다 — 그 밖의 말풍선은 줄만 (2026-10-18 사용자 "진행", Figma 99 `Draft / 타입 모습 격자`)
+//   머리 글은 모든 말풍선에 `모습 바꾸기` 다 (2026-10-23 사용자 확정, Figma 03 `Form Bubble`·`Form Bubble · Type Grid`. 그 전에는 도구를 쓰는 묶음에만)
 //   타입 모습 격자 종(아르세우스·실버디)은 줄 대신 타입 아이콘 칸 6×3 이다 — 묶음 줄 id 가 FORM_GRID, 칸 줄 id 가 `type:<타입>` (src/view/menu-view.ts)
 export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConstructorOptions[] {
   // 한 방향 묶음(formsItem)은 바뀔 모습 한 줄만 있어도 `모습 바꾸기` 줄을 둔다
   const forms = model.forms && (model.forms.length > 1 || (model.formsItem != null && model.forms.length > 0)) ? model.forms : null;
-  // 누를 줄이 하나도 없으면(해금 전, 또는 카탈로그가 없고 지금 기본 종) `모습 바꾸기` 줄을 흐리게 둔다 (Figma 03 `Form Bubble / Rotom`, 2026-10-05)
-  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current || f.noItem));
+  // 고를 모습이 지금 모습뿐이거나 해금 전이면 `모습 바꾸기` 줄을 흐리게 둔다. 조건이 모자란 줄(noItem)은 흐려도 누를 수 있어 줄을 살린다
+  // (2026-10-22 사용자 "그거자체는 활성화하고 안에 목록이 disable처리되게. 누르면 @@가 필요합니다 같이 창뜨게", 그 전에는 2026-10-05 Figma 03 `Form Bubble / Rotom`)
+  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current));
   return [
     { label: petLine(model), ...(model.status ? { sublabel: model.status } : {}), enabled: false },
     { type: "separator" },
@@ -104,14 +104,16 @@ export function petMenu(model: PetMenuModel, act: PetMenuActions): MenuItemConst
       ? [
           {
             label: t("menu.form"),
-            ...(model.formsItem != null ? { toolTip: t("menu.form.title.item", { item: model.formsItem }) } : model.formsCatalog ? { toolTip: t("menu.form.title.catalog") } : {}),
+            // 머리 글은 모든 모습 말풍선에 `모습 바꾸기`. 도구 수(`· 영원의 꽃 1개를 써요`)는 적지 않는다 — 필요한 도구는 확인 창·실패 안내 창이 알린다
+            // (2026-10-22 사용자 "로토무에 모습바꾸기 카탈로그를1개써요 아직 남아있네", 2026-10-23 "우라오스 모습바꾸기에는 왜 헤더 빠졌어?" → 모든 말풍선 "2번" → "확정")
+            toolTip: t("menu.form"),
             ...(forms.some((f) => f.type) ? { id: FORM_GRID } : {}),
             submenu: forms.map((f) => ({
               label: f.name,
               sublabel: t(f.current ? "menu.form.now" : f.back ? "menu.form.back" : "menu.form.go"),
-              enabled: !f.current && !f.noItem,
+              enabled: !f.current,
               checked: f.current,
-              ...(f.type ? { id: `type:${f.type}` } : {}),
+              ...(f.type ? { id: `type:${f.type}` } : f.noItem && !f.current ? { id: FORM_NEED } : {}),
               ...(f.portrait ? { icon: f.portrait } : {}),
               click: () => act.form?.(f.species),
             })),
@@ -136,10 +138,11 @@ export interface BattleMenuActions {
   change(): void; // 바꾸기 — 관리 창이 개체 고르기 모달을 연다
   clear(): void; // 빼기 — 그 칸을 빈 칸으로
   form(species: string): void; // 모습 말풍선에서 고른 모습 — 배틀 파티 모습만 바꾼다(battle.form). 도구를 쓰지 않아 확인 창 없이 바로 바꾼다
+  need(species: string): void; // 조건(말·짝)이 모자란 흐린 줄 — 관리 창이 `모습 바꾸기 실패` 안내 창을 띄운다
 }
 export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): MenuItemConstructorOptions[] {
   const forms = model.forms && model.forms.length > 1 ? model.forms : null;
-  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current || f.noItem));
+  const formsOff = !!forms && (model.formsLocked === true || forms.every((f) => f.current));
   return [
     { label: petLine(model), sublabel: model.status, enabled: false },
     { type: "separator" },
@@ -151,15 +154,16 @@ export function battleMenu(model: BattleMenuModel, act: BattleMenuActions): Menu
       ? [
           {
             label: t("menu.form"),
+            toolTip: t("menu.form"), // 머리 글 — 포켓몬 메뉴의 말풍선과 같다 (2026-10-23)
             ...(forms.some((f) => f.type) ? { id: FORM_GRID } : {}),
             submenu: forms.map((f) => ({
               label: f.name,
               sublabel: t(f.current ? "menu.form.now" : "menu.form.go"),
-              enabled: !f.current && !f.noItem,
+              enabled: !f.current,
               checked: f.current,
-              ...(f.type ? { id: `type:${f.type}` } : {}),
+              ...(f.type ? { id: `type:${f.type}` } : f.noItem && !f.current ? { id: FORM_NEED } : {}),
               ...(f.portrait ? { icon: f.portrait } : {}),
-              click: () => act.form(f.species),
+              click: () => (f.noItem && !f.current ? act.need(f.species) : act.form(f.species)),
             })),
           },
         ]
@@ -260,13 +264,6 @@ export interface PetMenuState {
   firstCare: { keep: string | null; wait: string | null } | null; // 첫 돌봄 튜토리얼 2/2 — 남길 항목 라벨과 말풍선의 대기 글자
 }
 
-// 메뉴 머리·모습 말풍선의 이름 — 한 방향 묶음의 끝이면서 전투 중 모습이 있는 종(개굴닌자(유대변화))은 묶음의 기본 종 이름으로 줄인다.
-// 말풍선에 그 기본 종 줄이 없어 나눌 필요가 없다. 도감·박스·상세는 원래 이름 그대로다 (2026-10-22 사용자 "그렇게 해. 말풍선이랑 메뉴 머리만 빼줘")
-function menuNameOf(slug: string): string {
-  const rule = shiftRuleOf(slug);
-  return rule?.oneWay && slug !== rule.base && battleLookChoices(slug).length ? petName(rule.base) : petName(slug);
-}
-
 // 이 개체 메뉴의 모습 바꾸기 규칙 — 한 방향 묶음을 이미 지난 개체(개굴닌자(유대변화))는 묶음 규칙이 없는 것으로 본다. 남은 줄은 전투 중 모습뿐이다
 const menuRuleOf = (pet: PetV3): ReturnType<typeof shiftRuleOf> => (formsOf(pet).length ? shiftRuleOf(pet.species) : null);
 
@@ -280,12 +277,12 @@ function menuForms(save: SaveV3, pet: PetV3, icons: Record<string, string>): Pet
   const list = grid?.forms ?? menuFormsOf(pet);
   const rows = list.map((slug, i): PetMenuForm => ({
     species: slug,
-    name: menuNameOf(slug),
+    name: petName(slug),
     current: slug === (pet.battleLook ?? pet.species),
     ...formFace(slug, grid?.types ?? null, i, icons),
     ...(rule && slug === rule.base ? { back: true } : {}),
-    // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말이 없으면(버드렉스(백마 탄 모습) — 블리자포스) 줄이 흐리다
-    ...((rule && slug !== rule.base && !looks.has(slug) && !have) || riderMissing(save, slug) ? { noItem: true } : {}),
+    // 도구가 없거나(로토무카탈로그), 그 모습에 있어야 하는 말(버드렉스(백마 탄 모습) — 블리자포스)·짝(블랙큐레무 — 제크로무)이 없으면 줄이 흐리다
+    ...((rule && slug !== rule.base && !looks.has(slug) && !have) || riderMissing(save, slug) || partnerMissing(save, slug) ? { noItem: true } : {}),
   }));
   // 한 방향 묶음(플라엣테·다투곰)은 바뀔 모습만 — 지금 모습 줄과 `원래대로` 줄이 없다 (2026-10-08 사용자 지시 "모습바꾸기 말풍선에 플라엣테(영원의 꽃) 만 있어야지")
   if (rule?.oneWay) return rows.filter((f) => !f.current);
@@ -302,7 +299,7 @@ export function petMenuOf(
   if (!o.stagePet && !(o.origin === "manage" && pet)) return null;
   const nature = o.stagePet?.nature ?? pet?.nature ?? null;
   // 전투 중 모습을 켰으면 그 이름이다(Figma 99 시안 C2 — 지우개굴닌자)
-  const base = { name: menuNameOf(pet?.battleLook ?? o.stagePet?.species ?? pet?.species ?? ""), nature: nature ? natureName(nature) : null };
+  const base = { name: petName(pet?.battleLook ?? o.stagePet?.species ?? pet?.species ?? ""), nature: nature ? natureName(nature) : null };
   if (!save || !pet) return { model: base, inSave: false, hidden: false, sale: null, firstCare: null };
   const slot = save.party.slots.find((s) => s.petId === petId) ?? null;
   const off: { enabled: boolean; reason?: string } = { enabled: false };
@@ -318,7 +315,6 @@ export function petMenuOf(
     ball: { enabled: slot != null, hidden: slot?.hidden === true },
     forms: menuForms(save, pet, o.formIcons),
     ...(isFormLocked(pet) ? { formsLocked: true } : {}),
-    ...(menuRuleOf(pet) && !menuRuleOf(pet)?.oneWay ? { formsCatalog: true } : {}),
     ...(menuRuleOf(pet)?.oneWay ? { formsItem: itemName(menuRuleOf(pet)!.item) } : {}),
     // 옮기기는 박스 개체와, 관리 창에서 연 파티 개체에 있다 — 파티 칸 순서를 누르기로도 바꾸게(2026-10-10 사용자 결정 "우클릭 `옮기기` 로 들기").
     // 무대의 포켓몬 메뉴에는 파티 개체 옮기기를 두지 않는다. 팔 수 없는 개체는 팔기가 흐리다 — 이유는 적지 않는다 (2026-10-02 사용자 결정)

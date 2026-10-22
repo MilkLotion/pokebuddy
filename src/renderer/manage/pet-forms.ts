@@ -2,13 +2,13 @@
 // 규칙은 src/dex/mega.ts. 메가스톤을 지닌 개체는 박스 칸에 메가스톤 표식이 붙고, 파티 상세 기기 창의 초상 표식을 누르면 메가진화한다.
 // 표식 그림은 키스톤이다 (2026-10-02 사용자 결정 "다 키스톤으로"). PokeAPI 그림은 30×30 이고 구슬은 그 안의 14×14(8,9)다 — 구슬만 잘라 보인다
 import type { EvoNodeView } from "../../shared/model/detail.js";
-import type { EvolutionView, FormView, PetView } from "../../shared/model/snapshot.js";
+import type { EvolutionView, FormNeedView, FormView, PetView } from "../../shared/model/snapshot.js";
 import { josa } from "../../shared/josa.js";
 import { el } from "../ui/dom.js";
 import { evoDrawer } from "../ui/evo-tree.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
 import { api } from "./api.js";
-import { iconCache, portraitOf } from "./art-cache.js";
+import { iconCache, iconOf, portraitOf } from "./art-cache.js";
 import { sendCommand } from "./command.js";
 import { actionButtonEl, actionsRowEl, closeDialog, closeDialogKeepNotice, dialogEl, dialogHead, dismissDialog, openAnyDialog } from "./dialog.js";
 import { findPartySlot, petInView, ui } from "./state.js";
@@ -196,6 +196,11 @@ export function drawForm(petId: string, to: string): void {
     closeDialogKeepNotice();
     return;
   }
+  // 조건(도구·말·짝)이 모자란 모습 — 확인 창 대신 실패 안내 창. 메뉴의 흐린 줄을 누르면 여기로 온다
+  if (!look && form.need) {
+    drawFormNeed(form.need);
+    return;
+  }
   dialogEl.append(...dialogHead(`${form.name}${toParticle(form.name)} 바꿀까요?`, ""));
   const item = !look && pet.formItem && to !== pet.formItem.base ? pet.formItem.name : null;
   const row = compareEl(pet, formCardEl(pet, form.species, form.name, form.types, form.typeIds), item ? [item] : []);
@@ -211,6 +216,33 @@ export function drawForm(petId: string, to: string): void {
     });
   });
   dialogEl.append(row, info, actionsRowEl(el("div", "spacer"), actionButtonEl("취소", false, false, closeDialog), go));
+}
+
+// 모습 바꾸기 실패 안내 — 제목 `모습 바꾸기 실패`, 본문 카드(필요한 것의 그림 + 안내 줄 + 얻는 곳 줄), 필요한 이름만 굵게.
+// 도구면 `닫기`·`상점으로`(상점에서 파는 도구만), 포켓몬(말·짝)이면 `확인` 하나
+// (2026-10-22 사용자 "누르면 @@가 필요합니다 같이 창뜨게", "타이틀은 모습바꾸기 실패 … 내용에 필요한거 볼드", "필요한거 이미지도", Figma 99 `2107:113353`·`2107:113358`)
+// `상점으로` 가 부르는 고리 — 상점 탭으로 가서 그 도구를 고른다. 설정창이 건다(shop-tab.ts focusShopProduct). 직접 가져오면 탭 파일과 순환이다
+let openShopItem: ((id: string) => void) | null = null;
+export function setFormNeedShop(next: (id: string) => void): void {
+  openShopItem = next;
+}
+function drawFormNeed(need: FormNeedView): void {
+  dialogEl.append(...dialogHead("모습 바꾸기 실패", "", { close: true }));
+  const card = el("div", "need-card");
+  const art = need.kind === "item" ? iconOf(`item:${need.id}`, "need-art") : portraitOf(need.id, false, need.known ? "need-art" : "need-art locked");
+  const text = el("div", "need-text");
+  const lead = el("div", "need-lead");
+  lead.append(el("b", undefined, need.name), document.createTextNode(need.tail));
+  text.append(lead, el("div", "need-note", need.note));
+  card.append(art, text);
+  const shop = need.kind === "item" && need.sold;
+  const actions = shop
+    ? [actionButtonEl("닫기", false, false, closeDialog), actionButtonEl("상점으로", true, false, () => {
+        closeDialog();
+        openShopItem?.(need.id);
+      })]
+    : [actionButtonEl("확인", true, false, closeDialog)];
+  dialogEl.append(card, actionsRowEl(el("div", "spacer"), ...actions));
 }
 
 // 진화 확인 — 진화 창의 `진화` 가 연다. 지금 종 → (쓰는 도구) → 진화 뒤 종

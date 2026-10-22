@@ -10,7 +10,7 @@ import { hasProfile } from "../../dex/species";
 import { battleLookChoices } from "../../dex/battle-look";
 import { battleSpeciesOf } from "../../battle/party";
 import { petMenuOf } from "../../view/menus";
-import { countCare, grantStones, megaFormsOf, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
+import { countCare, grantStones, megaBaseOf, megaChoices, megaFormsOf, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
 import { pmdSources } from "../../main/art/stage-art";
 import { overworldUrl } from "../../main/art/sources";
 import { portraitIds } from "../../main/art/portraits";
@@ -71,6 +71,11 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   // 메가플라엣테는 플라엣테(영원의 꽃)만 (2026-10-03 사용자 결정 "영꽃전용으로.")
   assert.deepStrictEqual(megaFormsOf("floette-eternal"), ["floette-mega"]);
   assert.deepStrictEqual(megaFormsOf("floette"), [], "일반 플라엣테는 메가진화하지 않는다");
+  assert.deepStrictEqual(megaFormsOf("floette-yellow"), [], "색 플라엣테도 메가진화하지 않는다");
+  // 메가 기준 종 — 겉모습(싸리용 두 모습)과 모습 바꾸기 종(지가르데 10%폼)은 기본 종의 메가 모습 (2026-10-22 사용자 "지가르데자체는 1개인데")
+  assert.deepStrictEqual(["tatsugiri-droopy", "tatsugiri-stretchy", "zygarde-10", "floette-eternal", "floette-yellow", "rotom-heat"].map((s) => megaBaseOf(s)), ["tatsugiri", "tatsugiri", "zygarde", "floette-eternal", null, null]);
+  assert.deepStrictEqual(megaFormsOf("tatsugiri-stretchy"), ["tatsugiri-curly-mega"]);
+  assert.deepStrictEqual(megaFormsOf("zygarde-10"), ["zygarde-mega"]);
   assert.deepStrictEqual(megaFormsOf("pikachu"), []);
   assert.equal(megaOf("groudon-primal")?.kind, "primal");
   process.stdout.write("(1) 모습 표 60개 · 기본 종 58종  ok\n");
@@ -145,6 +150,12 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.equal(s.pets[0]?.mega?.stone, true);
   assert.deepStrictEqual(s.dex.megaOpened, ["charizard"]);
   assert.deepStrictEqual(grantStones(s), [], "두 번 주지 않는다");
+  // 겉모습·모습 바꾸기 종 — 메가 기준 종으로 판정하고 도감에는 기준 종을 적는다 (2026-10-22, worklog/records/look-shift-gaps 후속 A)
+  const kin = seed(pet({ species: "tatsugiri-droopy", evolved: [], mega: { ...full } }), pet({ id: "p2", species: "zygarde-10", evolved: [], mega: { ...full } }));
+  assert.deepStrictEqual(grantStones(kin), ["p1", "p2"], "싸리용(늘어진 모습)·지가르데 10%폼도 메가스톤이 생긴다");
+  assert.deepStrictEqual(kin.dex.megaOpened, ["tatsugiri", "zygarde"], "도감 표식은 기준 종");
+  assert.deepStrictEqual(megaChoices(kin.pets[0]!), ["tatsugiri-curly-mega"]);
+  assert.deepStrictEqual(megaChoices(kin.pets[1]!), ["zygarde-mega"], "10%폼에서도 메가지가르데");
   process.stdout.write("(4) 메가스톤 지급과 도감 기록  ok\n");
 }
 
@@ -398,9 +409,9 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   // 포켓몬 메뉴의 모습 말풍선 — 묶음 줄 다음에 전투 중 모습, 도구 머리 없음 (Figma 05 `Party / Form Tip · 개굴닌자(유대변화)` 등)
   const menuOf = (id: string) => petMenuOf(save, id, { origin: "manage", stagePet: null, formIcons: {}, now: T0 })!.model;
   const gm = menuOf("p1");
-  // 말풍선·메뉴 머리는 `(유대변화)` 를 뺀다 — 도감·상세는 그대로 (2026-10-22 사용자 "말풍선이랑 메뉴 머리만 빼줘")
-  assert.deepStrictEqual(gm.forms?.map((f) => [f.name, f.current, !!f.noItem]), [["개굴닌자", true, false], ["지우개굴닌자", false, false]], "한 방향 묶음의 끝 — 지금 종과 전투 중 모습");
-  assert.equal(gm.name, "개굴닌자", "메뉴 머리");
+  // 말풍선·메뉴 머리도 종 이름 그대로 `개굴닌자(유대변화)` 다 (2026-10-22 사용자 롤백 지시, worklog/records/look-shift-gaps)
+  assert.deepStrictEqual(gm.forms?.map((f) => [f.name, f.current, !!f.noItem]), [["개굴닌자(유대변화)", true, false], ["지우개굴닌자", false, false]], "한 방향 묶음의 끝 — 지금 종과 전투 중 모습");
+  assert.equal(gm.name, "개굴닌자(유대변화)", "메뉴 머리");
   assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.name, "개굴닌자(유대변화)", "파티 카드·상세는 그대로");
   assert.equal(gm.formsItem, undefined, "지우의모자 머리가 없다");
   assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.battleLooks?.map((f) => f.species).join(","), "greninja-battle-bond,greninja-ash", "확인 창이 읽는 목록");

@@ -21,7 +21,7 @@ import type { DexDetail, DexFormView } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
 import { dexSlugOf, evolveLookVariants, formLabelOf, hatchBaseOf, lookFormOf, otherFormsOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
-import { shiftRuleOf, shiftWorkMs } from "../dex/forms.js";
+import { shiftRuleOf } from "../dex/forms.js";
 import { megaFormsOf, megaOf, megaTagOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
 import { MAP_MARK, onlyStepText, stepText } from "./evo-text.js";
@@ -59,13 +59,14 @@ function partnerText(save: SaveV3, slug: string, opts?: DexOptions): string {
   return `(${name}${josa(name, "이/가")} 있어야)`;
 }
 
-// 모습 바꾸기 줄 — 작업 시간 조건이 있는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
-// 값은 모습 수와 조건 — "다섯 모습(파티에서 작업 2시간 · 로토무카탈로그)" (docs/specs/game.md "로토무의 모습 바꾸기")
+// 모습 바꾸기 줄 — 규칙이 있고 오가는 묶음의 기본 종(로토무)에만, 메가진화 줄과 같은 자리·같은 보임(얻은 종에만).
+// 값은 모습 수와 조건 — "다섯 모습(로토무카탈로그)" (docs/specs/game.md "로토무의 모습 바꾸기")
 const COUNT_WORDS = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"];
 function shiftLine(slug: string, obtained: boolean, opts?: DexOptions): Pick<DexDetail, "mega"> {
   const group = shiftGroupOf(slug, opts);
-  // 작업 시간 조건이 없는 한 방향 묶음(플라엣테·다투곰)에는 이 줄이 없다
-  if (!obtained || group[0] !== slug || !(shiftWorkMs(slug, opts) ?? 0)) return {};
+  const rule = shiftRuleOf(slug, opts);
+  // 한 방향 묶음(플라엣테·다투곰)에는 이 줄이 없다
+  if (!obtained || group[0] !== slug || !rule || rule.oneWay) return {};
   const n = group.length - 1;
   return { mega: { label: "모습 바꾸기", names: `${COUNT_WORDS[n] ?? n} 모습${shiftNeedText(slug, opts)}` } };
 }

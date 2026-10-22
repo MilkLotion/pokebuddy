@@ -134,7 +134,10 @@ export function qtyRowEl(q: { count: number; cap: number; hint: string }, set: (
     });
   } else qtyDraft = null;
   const row = el("div", "qty");
-  row.append(minus, count, plus, max, el("span", "hint", q.hint));
+  // 안내 글자는 자리가 모자라면 말줄임이다 — 가리키면 전체 문구 (합계 상자 totalBoxEl 과 같다)
+  const hint = el("span", "hint", q.hint);
+  hint.title = q.hint;
+  row.append(minus, count, plus, max, hint);
   return row;
 }
 

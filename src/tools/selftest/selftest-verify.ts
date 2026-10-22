@@ -540,13 +540,16 @@ out("0 supabase/functions/_shared 가 최신");
   out("13 포켓몬 판매 — 사라진 개체·부화 뒤 판매·번호 재사용·번호 부풀리기");
 }
 
-// 14. 로토무 모습 — 개체 작업 시간 2시간, 바꿀 때마다 로토무카탈로그 1개 (src/dex/rules.ts SHIFT_RULES, 2026-10-05 사용자 결정)
+// 14. 로토무 모습 — 바꿀 때마다 로토무카탈로그 1개, 작업 시간 조건 없음 (src/dex/rules.ts SHIFT_RULES, 2026-10-05 사용자 결정, 2026-10-22 "로토무는 2시간 그거 풀어버리자")
 {
   const ROTOM = ["rotom", "rotom-heat", "rotom-wash", "rotom-frost", "rotom-fan", "rotom-mow"];
   // 로토무와 한 방향 묶음(플라엣테·다투곰 2026-10-08, 개굴닌자 2026-10-09)만 규칙이 있다
-  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM, "floette", "floette-eternal", "ursaluna", "ursaluna-bloodmoon", "greninja", "greninja-battle-bond"].sort(), "규칙이 있는 묶음");
+  // 색 플라엣테 네 겉모습도 시작 모습이다 — base 가 자기 자신 (2026-10-22 사용자 결정 "모든 색에 쓸 수 있게")
+  const COLORS = ["floette-yellow", "floette-orange", "floette-blue", "floette-white"];
+  assert.deepEqual(Object.keys(data.shiftRules ?? {}).sort(), [...ROTOM, "floette", "floette-eternal", ...COLORS, "ursaluna", "ursaluna-bloodmoon", "greninja", "greninja-battle-bond"].sort(), "규칙이 있는 묶음");
   assert.deepEqual(data.shiftRules?.["floette-eternal"], { base: "floette", workMs: 0, item: "eternal-flower", oneWay: true });
-  assert.deepEqual(data.shiftRules?.["rotom-heat"], { base: "rotom", workMs: 7_200_000, item: "rotom-catalog" });
+  assert.deepEqual(data.shiftRules?.["floette-yellow"], { base: "floette-yellow", workMs: 0, item: "eternal-flower", oneWay: true });
+  assert.deepEqual(data.shiftRules?.["rotom-heat"], { base: "rotom", workMs: 0, item: "rotom-catalog" });
   const at = (workMs: number, catalogs: number): { prev: SaveV3; next: SaveV3 } => {
     const prev = base();
     prev.pets.push(pet("p2", "rotom", { workMs }));
@@ -561,8 +564,8 @@ out("0 supabase/functions/_shared 가 최신");
   };
   const open = at(7_200_000, 1);
   assert.deepEqual(rules(open.prev, open.next, ctx(60_000)), [], "2시간이고 카탈로그를 썼으면 통과");
-  const shut = at(7_200_000 - 1, 1);
-  assert.deepEqual(rules(shut.prev, shut.next, ctx(60_000)), ["form-lock"], "개체 작업 시간이 모자라면 위반 — 계정 작업 시간은 보지 않는다");
+  const fresh = at(0, 1);
+  assert.deepEqual(rules(fresh.prev, fresh.next, ctx(60_000)), [], "작업 시간 없이도 카탈로그를 썼으면 통과");
   const free = at(7_200_000, 1);
   free.next.bag["rotom-catalog"] = 1;
   assert.deepEqual(rules(free.prev, free.next, ctx(60_000)), ["form-item"], "카탈로그를 쓰지 않고 바꿨으면 위반");
@@ -599,18 +602,29 @@ out("0 supabase/functions/_shared 가 최신");
   fBack.next.pets[1]!.species = "floette";
   fBack.next.bag["eternal-flower"] = 1;
   assert.deepEqual(rules(fBack.prev, fBack.next, ctx(60_000)), ["species"], "플라엣테로 되돌리면 종 위반");
-  // form-work — 개체 작업 시간은 계정 작업 시간보다 빨리 늘지 않고 2시간을 넘지 않는다
+  // 노란 꽃 플라엣테 — 영원의 꽃 1개로 바뀌고, 노란 꽃으로 되돌리면 종 위반
+  const yOk = flower(1);
+  yOk.prev.pets[1]!.species = "floette-yellow";
+  yOk.next.pets[1]!.forms = ["floette-yellow", "floette-eternal"];
+  assert.deepEqual(rules(clone(yOk.prev), clone(yOk.next), ctx(60_000)), [], "노란 꽃도 영원의 꽃을 썼으면 통과");
+  const yFree = clone(yOk.next);
+  yFree.bag["eternal-flower"] = 1;
+  assert.deepEqual(rules(clone(yOk.prev), yFree, ctx(60_000)), ["form-item"], "노란 꽃도 영원의 꽃을 쓰지 않으면 위반");
+  const yBack = { prev: clone(yOk.next), next: clone(yOk.next) };
+  yBack.next.pets[1]!.species = "floette-yellow";
+  assert.deepEqual(rules(yBack.prev, yBack.next, ctx(60_000)), ["species"], "노란 꽃으로 되돌리면 종 위반");
+  // form-work — 개체 작업 시간은 더 늘지 않는다. 옛 저장(2시간 조건 때)에 쌓인 값은 그대로 받는다
   const grow = at(0, 1);
   grow.next.pets[1]!.species = "rotom";
   grow.next.bag["rotom-catalog"] = 1;
   grow.next.pets[1]!.workMs = 2 * HOUR;
-  assert.deepEqual(rules(grow.prev, grow.next, ctx(60_000)), ["form-work"], "계정 작업 시간이 늘지 않았는데 개체만 늘었다");
   grow.next.totals.workMs = grow.prev.totals.workMs + 2 * HOUR;
-  assert.deepEqual(rules(grow.prev, grow.next, ctx(2 * HOUR)), [], "같이 늘었으면 통과");
-  grow.next.pets[1]!.workMs = 3 * HOUR;
-  grow.next.totals.workMs = grow.prev.totals.workMs + 3 * HOUR;
-  assert.deepEqual(rules(grow.prev, grow.next, ctx(3 * HOUR)), ["form-work"], "2시간을 넘을 수 없다");
-  out("14 로토무 모습 — 개체 작업 2시간·카탈로그");
+  assert.deepEqual(rules(grow.prev, grow.next, ctx(2 * HOUR)), ["form-work"], "조건이 0 이라 개체 작업 시간이 늘면 위반");
+  const old = at(2 * HOUR, 1);
+  old.next.pets[1]!.species = "rotom";
+  old.next.bag["rotom-catalog"] = 1;
+  assert.deepEqual(rules(old.prev, old.next, ctx(60_000)), [], "옛 값 2시간은 그대로 받는다");
+  out("14 로토무 모습 — 카탈로그");
 }
 
 // 15. 메가 — 파티 시간·돌봄 횟수의 증가 상한과 새 메가스톤 조건 (src/dex/rules.ts MEGA_RULES, 2026-10-05 사용자 결정 "메가스톤이랑 … 다 서버에서 검사")

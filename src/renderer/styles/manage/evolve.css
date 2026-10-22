@@ -208,3 +208,41 @@
 .form-compare .portrait.locked .art {
   filter: brightness(0);
 }
+/* 모습 바꾸기 실패 안내의 본문 카드 — 필요한 것의 그림(40) + 안내 줄(필요한 이름만 굵게) + 얻는 곳 줄.
+   Figma 99 `Draft / Form Need Body` `2111:113113`: bg/surface · border/default 1px · radius/lg 12 · 여백 16 · 간격 12 · 글 줄 간격 4 */
+.need-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.need-art {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+}
+.need-art.locked .art {
+  filter: brightness(0);
+}
+.need-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.need-lead {
+  font-size: 12px;
+  line-height: 18px;
+}
+.need-lead b {
+  font-weight: 700;
+}
+.need-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+}

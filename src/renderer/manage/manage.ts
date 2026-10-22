@@ -39,14 +39,14 @@ import { drawSwap, startSwap } from "./party-swap.js";
 import { bagLink, bagPickOf, clearBagResult, dropGoneBagPick, leaveBag, onBagAction, setBagLinkHooks, stepBag, syncBagDevice } from "./bag-link.js";
 import { bagStepRows, drawBag } from "./bag-tab.js";
 import { dropGoneShopPick, leaveShop, onShopAction, setShopLinkHooks, shopLink, shopPickOf, stepShop, syncShopDevice } from "./shop-link.js";
-import { closeShopRegion, drawPool, drawShop, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
+import { closeShopRegion, drawPool, drawShop, focusShopProduct, isShopRegionOpen, shopStepRows } from "./shop-tab.js";
 import { onDexAction, onDexClosed, setDexLinkHooks, syncDexDevice } from "./dex-link.js";
 import { besideOf, fixKind, resetKind, setDeviceKindHooks, swapKind } from "./device-kind.js";
 import { clearDexPick, closeDexRegion, dexPickOf, drawDex, enterDex, forgetDexRows, isDexRegionOpen, leaveDex, pickDexFromDevice, setDexTabHooks, stepDex } from "./dex-tab.js";
 import { drawEvolve } from "./evolve.js";
 import { drawNature } from "./nature.js";
 import { accountUi } from "./account-state.js";
-import { drawEvolveConfirm, drawForm, drawMega } from "./pet-forms.js";
+import { drawEvolveConfirm, drawForm, drawMega, setFormNeedShop } from "./pet-forms.js";
 import { restoreSearchFocus, typingSearch } from "./search.js";
 import { alertEl } from "./widgets.js";
 import { loadArt } from "./art-cache.js";
@@ -118,6 +118,7 @@ setDeviceKindHooks({
 
 // 상점 기기 창의 이전·다음 — 상점 탭이 보이는 순서로 돈다
 setShopLinkHooks({ stepRows: (shop) => shopStepRows(shop) });
+setFormNeedShop((id) => focusShopProduct(id, "evolution")); // 모습 바꾸기 실패 안내 창의 `상점으로` — 모습 도구는 진화 분류에 있다
 
 // 가방 기기 창 — 이전·다음은 가방 탭의 순서, 파티 줄의 ◀ ▶ 는 파티 탭의 프리셋 넘김
 setBagLinkHooks({ stepRows: (bag) => bagStepRows(bag), stepPreset: (delta) => stepPreset(delta) });

@@ -441,6 +441,38 @@ export const SCENES: Record<string, { note: string; apply: Scene }> = {
       s.battle = { slots: [ids[0]!, ids[1]!, ids[2]!, null, null, null] };
     },
   },
+  "form-need": {
+    note: "모습 바꾸기 조건 안내·메가 탭·다 모은 알 — 파티에 노란 꽃 플라엣테(영원의 꽃 없음)·큐레무(제크로무 없음)·메가리자몽X 를 켠 리자몽·로토무(카탈로그 없음)·아르세우스(불꽃, 타입 격자 말풍선), 랜덤준전설알 후보를 모두 얻음 (worklog/records/look-shift-gaps)",
+    apply: (s, now) => {
+      ensureStarter(s, now);
+      applyScene(s, "done-all", now);
+      const add = (species: string, level: number): string => {
+        const pet = newPet({ id: nextPetId(s), species, shiny: false, nature: randomNature(Math.random).id, gender: rollGender(species, Math.random), now });
+        pet.level = level;
+        pet.exp = expForLevel(growthOf(species), level);
+        pet.affinity = 100;
+        s.pets.push(pet);
+        s.petSeq = Math.max(s.petSeq, Number(pet.id.slice(1)));
+        recordDex(s, species, false);
+        return pet.id;
+      };
+      const ids = [add("floette-yellow", 30), add("kyurem", 60), add("charizard", 60), add("arceus-fire", 70), add("rotom", 20)];
+      const zard = s.pets.find((p) => p.id === ids[2])!;
+      zard.mega = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care, stone: true, on: "charizard-mega-x" };
+      if (!(s.dex.megaOpened ??= []).includes("charizard")) s.dex.megaOpened.push("charizard");
+      for (const petId of ids) {
+        const at = s.party.slots.findIndex((slot) => slot.state === "empty");
+        const i = at >= 0 ? at : s.party.slots.findIndex((slot) => slot.state === "locked");
+        if (i >= 0) s.party.slots[i] = { state: "pokemon", petId, hidden: false };
+        else addToBox(s.boxes, petId);
+      }
+      for (const id of ["eternal-flower", "rotom-catalog"]) delete s.bag[id];
+      // 랜덤준전설알 후보를 모두 얻은 것으로 — 상점 구매 칸이 `최대 0 · 남은 포켓몬 0` 이 된다
+      const pool = (loadJson<Record<string, { pool?: unknown }>>("eggs.json")["sub-legendary"]?.pool ?? []) as string[];
+      for (const slug of pool) if (typeof slug === "string") recordDex(s, slug, false);
+      s.points.balance = Math.max(s.points.balance, SCENE_RULES.points * 10);
+    },
+  },
   "battle-ready": {
     note: "랜덤 배틀을 걸 수 있는 배틀 파티 — battle 장면 뒤에 쓴다. 출전 불가(루기아·미라이돈) 칸을 이브이·팬텀으로 바꾼다. 상대 고르기 모달 확인용 (battle-ui-1017)",
     apply: (s, now) => {

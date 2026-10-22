@@ -7,6 +7,7 @@
 // 표가 없으면 빈 표로 본다 — 시험용 dataDir 에 이 파일이 없어도 깨지지 않게
 import { isMetaKey, loadJson, normalizeSlug, type DexOptions } from "./data";
 import type { EvoStep } from "./evo";
+import { SHIFT_RULES } from "./rules.js";
 import type { EvoNeed } from "../shared/species";
 
 // 도감의 지방 칸 — johto · hoenn · sinnoh · unova · kalos 는 특수 폼(피츄(삐쭉귀) · 캐스퐁(태양의 모습) · 기라티나(오리진폼) · 배쓰나이(청색근의 모습) · 플라엣테(영원의 꽃))만 쓴다
@@ -131,6 +132,11 @@ function shiftIndexOf(opts?: DexOptions): Map<string, readonly string[]> {
     const forms = list.filter((s): s is string => typeof s === "string");
     const group = [base, ...forms];
     for (const member of [base, ...forms]) if (!index.has(member)) index.set(member, group);
+    // 규칙에 looks 가 있는 묶음 — 기본 종의 겉모습(노란 꽃 플라엣테)마다 [겉모습, ...모습] 묶음. 머리가 그 개체의 시작 모습이다
+    if (!SHIFT_RULES[base]?.looks) continue;
+    for (const [slug, look] of Object.entries(regionalTable(opts).looks)) {
+      if (!isMetaKey(slug) && look.base === base && !index.has(slug)) index.set(slug, [slug, ...forms]);
+    }
   }
   shiftIndexes.set(key, index);
   return index;

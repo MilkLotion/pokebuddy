@@ -65,7 +65,7 @@ function drawBubble(sub: MenuSubView): void {
   const tail = document.createElement("div");
   tail.className = "tail";
   bubble.append(tail);
-  // 머리 글은 도구를 쓰는 묶음(카탈로그·영원의 꽃)의 비용 글만 — 비면 줄이 없다
+  // 머리 글 — 모습 말풍선은 늘 `모습 바꾸기`(Figma 03 `Form Bubble`). 비면 줄이 없다
   if (sub.title) {
     const head = document.createElement("div");
     head.className = "head";
@@ -80,6 +80,7 @@ function drawBubble(sub: MenuSubView): void {
     b.className = grid ? "cell" : "row";
     b.setAttribute("role", "menuitem");
     b.disabled = row.disabled;
+    if (row.dim) b.classList.add("dim");
     if (row.current) b.setAttribute("aria-current", "true");
     if (grid) {
       // 타입 모습 격자의 칸 — 타입 아이콘만. 모습 이름은 풀이 글로 (2026-10-18 사용자 "진행", 머리 줄 없음)

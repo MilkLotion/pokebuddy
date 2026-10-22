@@ -111,6 +111,8 @@ export function createPetMenu(deps: PetMenuDeps): PetMenu {
           change: () => deps.openManage({ to: "battle-pick", slot }),
           clear: () => deps.run({ cmd: "battle.clear", args: { slotIndex: slot }, from: "menu" }),
           form: (species) => deps.run({ cmd: "battle.form", target: petId, args: { species }, from: "menu" }),
+          // 말·짝이 모자란 흐린 줄 — 관리 창이 그 개체의 `모습 바꾸기 실패` 안내 창을 띄운다 (src/renderer/manage/pet-forms.ts drawForm)
+          need: (species) => deps.openManage({ to: "form", petId, species }),
         });
         openMenu({ preload: preloadFile(), html: rendererFile("menu.html") }, items, t("menu.on"));
       };
