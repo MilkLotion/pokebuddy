@@ -6,7 +6,8 @@
 // 기준 풀: 초전설·준전설 칸을 뺀 종 중 종족값 합 400 이상(모의 대전기 general 풀과 같다). 파티는 풀에서 서로 다른 6마리
 // 판마다 샘플이 건 쪽(0)과 받은 쪽(1)을 번갈아 맡는다 — 쪽에 따른 치우침을 지운다. 무승부는 0.5승
 // 리그: 샘플끼리 짝마다 --league 판(기본 10). 기준 승률이 100% 근처로 몰리는 상 난이도 안의 순서를 본다
-// 수용: 기준·리그 승률 모두 상 최솟값 > 중 중앙값, 중 최솟값 > 하 중앙값. 어기면 종료 코드 1
+// 수용: 리그 승률이 상 최솟값 > 중 중앙값, 중 최솟값 > 하 중앙값. 어기면 종료 코드 1
+//   기준 승률은 참고로만 보인다 — 난이도의 정본 잣대는 이브이 진화형 파티의 승률이다(sample-vs.ts, 2026-10-22 사용자 "하 파티는 이브이즈로 했을때 간당간당하게 승리할 정도로만")
 import fs from "node:fs";
 import { runBattle, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
@@ -118,6 +119,7 @@ for (const key of ["rate", "league"] as const) {
   const s = stat[key];
   const label = key === "rate" ? "기준" : "리그";
   for (const level of SAMPLE_LEVELS) process.stdout.write(`${label} ${level.padEnd(6)} 최소 ${pct(s[level].min)} · 중앙 ${pct(s[level].median)} · 최대 ${pct(s[level].max)}\n`);
+  if (key === "rate") continue; // 참고만
   for (const r of rows) {
     if (r.level === "hard" && r[key] <= s.normal.median) misses.push(`${label}: ${r.id} 이 중 중앙값 이하`);
     if (r.level === "normal" && r[key] <= s.easy.median) misses.push(`${label}: ${r.id} 이 하 중앙값 이하`);

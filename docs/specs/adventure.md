@@ -24,7 +24,7 @@
 | 배틀 엔진 | `src/battle/engine.ts` `runBattle` (import 없음) |
 | 전투 개체 만들기 | `src/battle/fighter-core.ts`(앱·서버 공용) `fighterFrom`·`partyOf`, 앱은 `src/battle/fighter.ts` `buildFighter`·`petFighter` |
 | 서버 | `supabase/functions/battle-offer`, `battle-start`, 표·RPC `supabase/migrations/20261009100000_battle.sql`, 서버 복사본 `npm run battle:build` → `supabase/functions/_shared/battle/` |
-| 샘플 파티 | `data/battle-samples.json`, 읽기·검사 `src/battle/samples.ts`, 난이도 측정 `src/tools/battle/sample-rate.ts` |
+| 샘플 파티 | `data/battle-samples.json`, 읽기·검사 `src/battle/samples.ts`, 난이도 측정 `src/tools/battle/sample-vs.ts`(이브이 기준)·`src/tools/battle/sample-rate.ts`(순서) |
 | 모의 대전기 | `src/tools/battle/sim-battle.ts` |
 | 팀 탐색기 | `src/tools/battle/team-search.ts` |
 | 자체 검사 | `src/tools/selftest/selftest-adventure.ts`, `src/tools/selftest/selftest-battle.ts` |
@@ -337,21 +337,23 @@
 - 데이터는 `data/battle-samples.json` 이다. 난이도 `hard`(상)·`normal`(중)·`easy`(하) 마다 10개다. id 는 `<난이도>-NN` 이다.
 - 칸은 6개이고 모두 찬다. 칸 순서가 배치다. 2·4·6번 칸(앞라인)에는 잘 버티는 종을, 1·3·5번 칸(뒷라인)에는 공격이 높고 내구가 낮은 종을 둔다.
 - 칸에는 종과 메가 모습만 둔다. 기술을 적지 않는다. 종의 기본 기술 2개로 싸운다. 기술 데이터가 바뀌면 샘플도 따라간다.
-- 샘플 파티도 [출전 제한](#출전-제한)을 지킨다. 같은 종은 한 파티에 한 번만 든다. 전투 중에만 나오는 모습은 넣지 않는다.
-- 유형은 `type-concept`(한 타입 중심), `type-cover`(타입 상성 보완), `offense`(공격 쏠림), `bulk`(내구 쏠림), `weather`(같은 날씨 특성), `legend`(전설급 칸을 채움)다. 난이도마다 섞는다.
+- 중·하 샘플은 [출전 제한](#출전-제한)을 지킨다. 상 샘플은 전설과 메가를 자유롭게 쓴다(2026-10-22 사용자 "상 파티는 메가진화,전설 등 자유롭게 쓰고"). 같은 도감 번호는 한 파티에 한 번만 든다. 전투 중에만 나오는 모습과 이브이 진화형(난이도 기준 파티)은 넣지 않는다.
+- 유형은 `type-concept`(한 타입 중심), `type-cover`(타입 상성 보완), `offense`(공격 쏠림), `bulk`(내구 쏠림), `weather`(같은 날씨 특성), `legend`(전설급 위주)다. 난이도마다 섞는다.
 - 난이도 구성 기준은 다음과 같다.
 
-| 난이도 | 구성 |
-|---|---|
-| 상 | 출전 제한 안에서 전설급과 메가를 쓴다. 평균 종족값 합 약 560 이상 |
-| 중 | 최종 진화 일반 종. 준전설 1마리까지, 초전설·메가 없음. 평균 종족값 합 약 500~535 |
-| 하 | 전설급·메가 없음. 중간 진화를 섞는다. 평균 종족값 합 약 380~455 |
+| 난이도 | 구성 | 이브이 기준 파티의 승률 |
+|---|---|---|
+| 상 | 전설·메가 자유. 출전 제한 없음 | 10% 이하 |
+| 중 | 최종 진화 일반 종(600족 포함). 메가·초전설 없음 | 10~45% |
+| 하 | 최종 진화 일반 종. 전설급·메가 없음 | 50~80%, 이긴 판에 남는 HP 가 적다 |
 
-- 난이도 측정 기준은 승률 두 개다. `node dist/tools/battle/sample-rate.js` 가 잰다.
-  - 기준 승률: 샘플마다 기준 풀 파티 200개와 싸운다. 기준 풀은 전설급을 뺀 종족값 합 400 이상의 종에서 서로 다른 6마리를 뽑은 파티다.
-  - 리그 승률: 샘플끼리 짝마다 10판을 싸운다.
-  - 수용 조건은 두 승률 모두 "상 최솟값 > 중 중앙값", "중 최솟값 > 하 중앙값" 이다.
-  - 기술·사거리·엔진이 바뀌면 다시 잰다.
+- 난이도의 정본 잣대는 이브이 진화형 기준 파티의 승률이다. 하는 "이브이 파티가 간당간당하게 이기는" 정도다(2026-10-22 사용자 "하 파티는 이브이즈로 했을때 간당간당하게 승리할 정도로만 해놔").
+  - 기준 파티는 뒷라인 1·3·5번 칸 에브이·쥬피썬더·글레이시아, 앞라인 2·4·6번 칸 샤미드·블래키·님피아다(기본 기술).
+  - `node dist/tools/battle/sample-vs.js --team espeon,vaporeon,jolteon,umbreon,glaceon,sylveon --level easy` 가 샘플마다 승률과 이긴 판에 남은 HP 를 잰다.
+- 난이도 순서는 `node dist/tools/battle/sample-rate.js` 가 잰다.
+  - 리그 승률: 샘플끼리 짝마다 10판을 싸운다. 수용 조건은 "상 최솟값 > 중 중앙값", "중 최솟값 > 하 중앙값" 이다.
+  - 기준 승률(전설급을 뺀 무작위 6마리 파티 200개 상대)은 참고로만 보인다.
+- 기술·사거리·엔진이 바뀌면 다시 잰다.
 - 서버 복사본은 `npm run battle:build` 가 `supabase/functions/_shared/battle/battle-data.json` 의 `samples` 로 싣는다. 샘플이 바뀌면 판의 데이터 지문도 바뀐다.
 - 검사: `src/tools/selftest/selftest-battle-samples.ts`.
 

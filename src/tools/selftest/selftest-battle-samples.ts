@@ -14,7 +14,7 @@ const samples = battleSamples();
 for (const level of SAMPLE_LEVELS) assert.strictEqual(samples.filter((s) => s.level === level).length, SAMPLES_PER_LEVEL, `${level} 샘플 수`);
 assert.strictEqual(new Set(samples.map((s) => s.id)).size, samples.length, "샘플 id 가 겹친다");
 
-// ── 샘플마다 6칸·같은 종 없음·모든 종과 메가 모습이 전투 데이터에 있음·출전 불가 없음·기술 없음 ──
+// ── 샘플마다 6칸·같은 도감 번호 없음·전투 중 모습 없음·모든 종과 메가 모습이 전투 데이터에 있음·기술 없음, 중·하는 출전 불가 없음 ──
 for (const s of samples) {
   assert.deepStrictEqual(sampleProblems(s, data), [], `${s.id}`);
   for (const c of s.slots) assert.ok(buildFighter(c), `${s.id} ${c.species} 전투 개체`);

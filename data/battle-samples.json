@@ -1,5 +1,5 @@
 {
-  "_comment": "랜덤 배틀 샘플 파티 — 규칙은 docs/specs/adventure.md '샘플 파티'. 손으로 다듬는 콘텐츠 데이터다. level 은 hard(상)·normal(중)·easy(하)다. 칸 순서가 배치다. 2·4·6번 칸이 앞라인(상대와 마주봄), 1·3·5번 칸이 뒷라인이다. 칸에 기술을 적지 않는다 — 종의 기본 기술 2개를 쓴다. 검사 src/tools/selftest/selftest-battle.ts, 난이도 측정 src/tools/battle/sample-rate.ts",
+  "_comment": "랜덤 배틀 샘플 파티 — 규칙은 docs/specs/adventure.md '샘플 파티'. 손으로 다듬는 콘텐츠 데이터다. level 은 hard(상)·normal(중)·easy(하)다. 칸 순서가 배치다. 2·4·6번 칸이 앞라인(상대와 마주봄), 1·3·5번 칸이 뒷라인이다. 칸에 기술을 적지 않는다 — 종의 기본 기술 2개를 쓴다. 난이도는 이브이 진화형 기준 파티의 승률로 맞춘다(src/tools/battle/sample-vs.ts). 상은 출전 제한을 따르지 않는다. 검사 src/tools/selftest/selftest-battle-samples.ts, 난이도 측정 src/tools/battle/sample-rate.ts",
   "version": 1,
   "samples": [
     {
@@ -7,26 +7,27 @@
       "level": "hard",
       "name": "드래곤 중심",
       "kind": "type-concept",
-      "note": "드래곤 5마리. 초전설 레쿠쟈와 준전설 라티오스·라티아스, 메가 한카리아스",
+      "note": "한 타입 중심. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "latios"
+          "species": "rayquaza",
+          "form": "rayquaza-mega"
+        },
+        {
+          "species": "giratina"
+        },
+        {
+          "species": "hydrapple"
         },
         {
           "species": "garchomp",
           "form": "garchomp-mega"
         },
         {
-          "species": "dragapult"
+          "species": "tatsugiri-droopy"
         },
         {
-          "species": "rayquaza"
-        },
-        {
-          "species": "hydreigon"
-        },
-        {
-          "species": "latias"
+          "species": "dialga"
         }
       ]
     },
@@ -35,26 +36,27 @@
       "level": "hard",
       "name": "비 파티",
       "kind": "weather",
-      "note": "가이오가 잔비와 물 타입. 메가 대짱이가 앞에서 버틴다",
+      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "kyogre"
+          "species": "miraidon"
         },
         {
-          "species": "politoed"
+          "species": "arceus-water"
         },
         {
-          "species": "barraskewda"
+          "species": "urshifu-rapid-strike"
+        },
+        {
+          "species": "kyogre",
+          "form": "kyogre-primal"
+        },
+        {
+          "species": "manectric"
         },
         {
           "species": "swampert",
           "form": "swampert-mega"
-        },
-        {
-          "species": "tapu-koko"
-        },
-        {
-          "species": "ferrothorn"
         }
       ]
     },
@@ -63,26 +65,27 @@
       "level": "hard",
       "name": "쾌청 파티",
       "kind": "weather",
-      "note": "그란돈 가뭄과 불꽃 타입. 메가 리자몽Y 가 뒤에서 친다",
+      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
       "slots": [
         {
           "species": "charizard",
           "form": "charizard-mega-y"
         },
         {
-          "species": "groudon"
+          "species": "groudon",
+          "form": "groudon-primal"
         },
         {
-          "species": "volcarona"
+          "species": "armarouge"
         },
         {
-          "species": "heatran"
+          "species": "victini"
         },
         {
-          "species": "entei"
+          "species": "infernape"
         },
         {
-          "species": "venusaur"
+          "species": "hydrapple"
         }
       ]
     },
@@ -91,54 +94,55 @@
       "level": "hard",
       "name": "드래곤·강철·페어리",
       "kind": "type-cover",
-      "note": "서로 약점을 막는 세 타입. 디아루가·카푸나비나·마기아나",
+      "note": "서로 약점을 막는 타입 묶음. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "dialga"
+          "species": "zacian-crowned"
+        },
+        {
+          "species": "steelix",
+          "form": "steelix-mega"
+        },
+        {
+          "species": "guzzlord"
         },
         {
           "species": "metagross",
           "form": "metagross-mega"
         },
         {
-          "species": "tapu-lele"
+          "species": "dugtrio-alola"
         },
         {
-          "species": "dragonite"
-        },
-        {
-          "species": "magearna"
-        },
-        {
-          "species": "clefable"
+          "species": "dialga"
         }
       ]
     },
     {
       "id": "hard-05",
       "level": "hard",
-      "name": "준전설 셋",
+      "name": "전설 총출동",
       "kind": "legend",
-      "note": "초전설 없이 준전설 3마리. 메가 마기라스가 앞에서 버틴다",
+      "note": "전설급 위주. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "tapu-koko"
+          "species": "mewtwo",
+          "form": "mewtwo-mega-x"
         },
         {
-          "species": "landorus"
+          "species": "arceus"
         },
         {
-          "species": "zapdos"
+          "species": "silvally-bug"
         },
         {
-          "species": "tyranitar",
-          "form": "tyranitar-mega"
+          "species": "kyogre"
         },
         {
-          "species": "gengar"
+          "species": "tapu-lele"
         },
         {
-          "species": "ferrothorn"
+          "species": "wo-chien"
         }
       ]
     },
@@ -147,26 +151,27 @@
       "level": "hard",
       "name": "물리 속공",
       "kind": "offense",
-      "note": "공격·스피드가 높은 물리 종. 자시안·테라카틴·우라오스",
+      "note": "공격·스피드 쏠림. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "dragapult"
+          "species": "garchomp"
         },
         {
           "species": "zacian"
         },
         {
-          "species": "kartana"
-        },
-        {
-          "species": "urshifu"
-        },
-        {
-          "species": "weavile"
-        },
-        {
           "species": "lucario",
           "form": "lucario-mega"
+        },
+        {
+          "species": "salamence",
+          "form": "salamence-mega"
+        },
+        {
+          "species": "meowscarada"
+        },
+        {
+          "species": "palkia-origin"
         }
       ]
     },
@@ -175,26 +180,27 @@
       "level": "hard",
       "name": "특수 화력",
       "kind": "offense",
-      "note": "특공이 높은 종. 메가 뮤츠Y 와 라티아스·볼케니온",
+      "note": "공격·스피드 쏠림. 상 — 전설·메가 자유",
       "slots": [
+        {
+          "species": "hoopa"
+        },
+        {
+          "species": "arceus-electric"
+        },
+        {
+          "species": "trevenant"
+        },
         {
           "species": "mewtwo",
           "form": "mewtwo-mega-y"
         },
         {
-          "species": "latias"
+          "species": "gengar",
+          "form": "gengar-mega"
         },
         {
-          "species": "hydreigon"
-        },
-        {
-          "species": "volcanion"
-        },
-        {
-          "species": "chandelure"
-        },
-        {
-          "species": "blissey"
+          "species": "iron-crown"
         }
       ]
     },
@@ -203,25 +209,27 @@
       "level": "hard",
       "name": "내구 버티기",
       "kind": "bulk",
-      "note": "HP·방어·특방이 높은 종. 기라티나·크레세리아·스이쿤",
+      "note": "HP·방어·특방 쏠림. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "cresselia"
+          "species": "floette-eternal",
+          "form": "floette-mega"
         },
         {
           "species": "giratina"
         },
         {
-          "species": "suicune"
+          "species": "marshadow"
         },
         {
-          "species": "toxapex"
+          "species": "slowbro",
+          "form": "slowbro-mega"
         },
         {
-          "species": "blissey"
+          "species": "alcremie-rainbow-swirl-flower-sweet"
         },
         {
-          "species": "corviknight"
+          "species": "kyogre"
         }
       ]
     },
@@ -230,26 +238,27 @@
       "level": "hard",
       "name": "불·물·풀",
       "kind": "type-cover",
-      "note": "칠색조·케르디오·카푸브루루로 세 타입을 맞춘다. 메가 거북왕",
+      "note": "서로 약점을 막는 타입 묶음. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "blastoise",
-          "form": "blastoise-mega"
+          "species": "shaymin"
         },
         {
           "species": "ho-oh"
         },
         {
-          "species": "keldeo"
-        },
-        {
-          "species": "tapu-bulu"
-        },
-        {
-          "species": "serperior"
-        },
-        {
           "species": "swampert"
+        },
+        {
+          "species": "venusaur",
+          "form": "venusaur-mega"
+        },
+        {
+          "species": "sinistcha"
+        },
+        {
+          "species": "blastoise",
+          "form": "blastoise-mega"
         }
       ]
     },
@@ -258,53 +267,53 @@
       "level": "hard",
       "name": "모래바람",
       "kind": "weather",
-      "note": "마기라스 모래바람과 바위·땅·강철 타입. 메가 보스로라",
+      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
       "slots": [
         {
-          "species": "excadrill"
+          "species": "forretress"
         },
         {
-          "species": "tyranitar"
+          "species": "tyranitar",
+          "form": "tyranitar-mega"
         },
         {
-          "species": "terrakion"
+          "species": "whiscash"
         },
         {
-          "species": "hippowdon"
+          "species": "garchomp"
         },
         {
-          "species": "landorus"
+          "species": "mamoswine"
         },
         {
-          "species": "aggron",
-          "form": "aggron-mega"
+          "species": "gholdengo"
         }
       ]
     },
     {
       "id": "normal-01",
       "level": "normal",
-      "name": "물 타입",
-      "kind": "type-concept",
-      "note": "최종 진화 물 타입 6마리",
+      "name": "물·땅",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
         {
-          "species": "starmie"
+          "species": "claydol"
         },
         {
-          "species": "gyarados"
+          "species": "dondozo"
         },
         {
-          "species": "kingdra"
+          "species": "sandaconda"
         },
         {
-          "species": "milotic"
+          "species": "rhyperior"
         },
         {
-          "species": "primarina"
+          "species": "cloyster"
         },
         {
-          "species": "swampert"
+          "species": "hippowdon"
         }
       ]
     },
@@ -313,52 +322,52 @@
       "level": "normal",
       "name": "불꽃 타입",
       "kind": "type-concept",
-      "note": "최종 진화 불꽃 타입 6마리",
+      "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
         {
-          "species": "chandelure"
-        },
-        {
-          "species": "arcanine"
-        },
-        {
-          "species": "delphox"
-        },
-        {
-          "species": "infernape"
-        },
-        {
-          "species": "houndoom"
+          "species": "ninetales"
         },
         {
           "species": "incineroar"
+        },
+        {
+          "species": "magmortar"
+        },
+        {
+          "species": "turtonator"
+        },
+        {
+          "species": "rapidash"
+        },
+        {
+          "species": "arcanine-hisui"
         }
       ]
     },
     {
       "id": "normal-03",
       "level": "normal",
-      "name": "비 파티",
+      "name": "모래바람",
       "kind": "weather",
-      "note": "늑구리·왕구리 잔비와 물 타입",
+      "note": "같은 날씨 특성 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
         {
-          "species": "pelipper"
+          "species": "archaludon"
         },
         {
-          "species": "politoed"
+          "species": "tyranitar"
         },
         {
-          "species": "kingdra"
+          "species": "donphan"
         },
         {
-          "species": "swampert"
+          "species": "hippowdon"
         },
         {
-          "species": "ludicolo"
+          "species": "palossand"
         },
         {
-          "species": "toxapex"
+          "species": "relicanth"
         }
       ]
     },
@@ -367,7 +376,304 @@
       "level": "normal",
       "name": "쾌청 파티",
       "kind": "weather",
-      "note": "코터스·나인테일 가뭄과 엽록소 풀 타입",
+      "note": "같은 날씨 특성 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "tauros-paldea-blaze-breed"
+        },
+        {
+          "species": "torkoal"
+        },
+        {
+          "species": "brambleghast"
+        },
+        {
+          "species": "rillaboom"
+        },
+        {
+          "species": "salazzle"
+        },
+        {
+          "species": "arcanine-hisui"
+        }
+      ]
+    },
+    {
+      "id": "normal-05",
+      "level": "normal",
+      "name": "불·물·풀",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "toedscruel"
+        },
+        {
+          "species": "incineroar"
+        },
+        {
+          "species": "samurott-hisui"
+        },
+        {
+          "species": "arboliva"
+        },
+        {
+          "species": "leavanny"
+        },
+        {
+          "species": "rillaboom"
+        }
+      ]
+    },
+    {
+      "id": "normal-06",
+      "level": "normal",
+      "name": "드래곤·강철·페어리",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "gholdengo"
+        },
+        {
+          "species": "goodra-hisui"
+        },
+        {
+          "species": "kingdra"
+        },
+        {
+          "species": "kingambit"
+        },
+        {
+          "species": "alcremie-mint-cream-flower-sweet"
+        },
+        {
+          "species": "florges"
+        }
+      ]
+    },
+    {
+      "id": "normal-07",
+      "level": "normal",
+      "name": "물리 속공",
+      "kind": "offense",
+      "note": "공격·스피드 쏠림. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "pinsir"
+        },
+        {
+          "species": "aggron"
+        },
+        {
+          "species": "lilligant-hisui"
+        },
+        {
+          "species": "obstagoon"
+        },
+        {
+          "species": "lucario"
+        },
+        {
+          "species": "samurott-hisui"
+        }
+      ]
+    },
+    {
+      "id": "normal-08",
+      "level": "normal",
+      "name": "내구 버티기",
+      "kind": "bulk",
+      "note": "HP·방어·특방 쏠림. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "slowking-galar"
+        },
+        {
+          "species": "lapras"
+        },
+        {
+          "species": "magnezone"
+        },
+        {
+          "species": "florges-orange"
+        },
+        {
+          "species": "gardevoir"
+        },
+        {
+          "species": "corviknight"
+        }
+      ]
+    },
+    {
+      "id": "normal-09",
+      "level": "normal",
+      "name": "격투 타입",
+      "kind": "type-concept",
+      "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "sirfetchd"
+        },
+        {
+          "species": "scrafty"
+        },
+        {
+          "species": "toxicroak"
+        },
+        {
+          "species": "machamp"
+        },
+        {
+          "species": "pawmot"
+        },
+        {
+          "species": "pangoro"
+        }
+      ]
+    },
+    {
+      "id": "normal-10",
+      "level": "normal",
+      "name": "에스퍼·고스트",
+      "kind": "type-concept",
+      "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
+      "slots": [
+        {
+          "species": "orbeetle"
+        },
+        {
+          "species": "slowbro"
+        },
+        {
+          "species": "gallade"
+        },
+        {
+          "species": "jellicent"
+        },
+        {
+          "species": "gengar"
+        },
+        {
+          "species": "dusknoir"
+        }
+      ]
+    },
+    {
+      "id": "easy-01",
+      "level": "easy",
+      "name": "노말 타입",
+      "kind": "type-concept",
+      "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
+      "slots": [
+        {
+          "species": "pyroar"
+        },
+        {
+          "species": "snorlax"
+        },
+        {
+          "species": "furfrou-diamond"
+        },
+        {
+          "species": "tauros"
+        },
+        {
+          "species": "dodrio"
+        },
+        {
+          "species": "porygon-z"
+        }
+      ]
+    },
+    {
+      "id": "easy-02",
+      "level": "easy",
+      "name": "벌레 타입",
+      "kind": "type-concept",
+      "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
+      "slots": [
+        {
+          "species": "vikavolt"
+        },
+        {
+          "species": "shuckle"
+        },
+        {
+          "species": "scolipede"
+        },
+        {
+          "species": "golisopod"
+        },
+        {
+          "species": "ninjask"
+        },
+        {
+          "species": "scizor"
+        }
+      ]
+    },
+    {
+      "id": "easy-03",
+      "level": "easy",
+      "name": "풀 타입",
+      "kind": "type-concept",
+      "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
+      "slots": [
+        {
+          "species": "sawsbuck-spring"
+        },
+        {
+          "species": "gogoat"
+        },
+        {
+          "species": "lilligant-hisui"
+        },
+        {
+          "species": "tsareena"
+        },
+        {
+          "species": "carnivine"
+        },
+        {
+          "species": "sinistcha"
+        }
+      ]
+    },
+    {
+      "id": "easy-04",
+      "level": "easy",
+      "name": "불·물·풀",
+      "kind": "type-cover",
+      "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
+      "slots": [
+        {
+          "species": "blaziken"
+        },
+        {
+          "species": "blastoise"
+        },
+        {
+          "species": "cherrim-sunshine"
+        },
+        {
+          "species": "venusaur"
+        },
+        {
+          "species": "breloom"
+        },
+        {
+          "species": "charizard"
+        }
+      ]
+    },
+    {
+      "id": "easy-05",
+      "level": "easy",
+      "name": "쾌청 파티",
+      "kind": "weather",
+      "note": "같은 날씨 특성 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
         {
           "species": "ninetales"
@@ -382,307 +688,10 @@
           "species": "arcanine"
         },
         {
-          "species": "leafeon"
+          "species": "victreebel"
         },
         {
           "species": "tangrowth"
-        }
-      ]
-    },
-    {
-      "id": "normal-05",
-      "level": "normal",
-      "name": "불·물·풀",
-      "kind": "type-cover",
-      "note": "스타팅 최종 진화로 세 타입을 맞춘다",
-      "slots": [
-        {
-          "species": "charizard"
-        },
-        {
-          "species": "blastoise"
-        },
-        {
-          "species": "sceptile"
-        },
-        {
-          "species": "torterra"
-        },
-        {
-          "species": "typhlosion"
-        },
-        {
-          "species": "feraligatr"
-        }
-      ]
-    },
-    {
-      "id": "normal-06",
-      "level": "normal",
-      "name": "드래곤·강철·페어리",
-      "kind": "type-cover",
-      "note": "서로 약점을 막는 세 타입",
-      "slots": [
-        {
-          "species": "noivern"
-        },
-        {
-          "species": "goodra"
-        },
-        {
-          "species": "sylveon"
-        },
-        {
-          "species": "skarmory"
-        },
-        {
-          "species": "togekiss"
-        },
-        {
-          "species": "bronzong"
-        }
-      ]
-    },
-    {
-      "id": "normal-07",
-      "level": "normal",
-      "name": "물리 속공",
-      "kind": "offense",
-      "note": "공격·스피드가 높은 물리 종",
-      "slots": [
-        {
-          "species": "weavile"
-        },
-        {
-          "species": "lucario"
-        },
-        {
-          "species": "crobat"
-        },
-        {
-          "species": "scizor"
-        },
-        {
-          "species": "staraptor"
-        },
-        {
-          "species": "bisharp"
-        }
-      ]
-    },
-    {
-      "id": "normal-08",
-      "level": "normal",
-      "name": "내구 버티기",
-      "kind": "bulk",
-      "note": "HP·방어·특방이 높은 종",
-      "slots": [
-        {
-          "species": "blissey"
-        },
-        {
-          "species": "toxapex"
-        },
-        {
-          "species": "umbreon"
-        },
-        {
-          "species": "corviknight"
-        },
-        {
-          "species": "mandibuzz"
-        },
-        {
-          "species": "hippowdon"
-        }
-      ]
-    },
-    {
-      "id": "normal-09",
-      "level": "normal",
-      "name": "전기 타입",
-      "kind": "type-concept",
-      "note": "전기 타입과 준전설 카푸꼬꼬꼭 1마리",
-      "slots": [
-        {
-          "species": "jolteon"
-        },
-        {
-          "species": "luxray"
-        },
-        {
-          "species": "tapu-koko"
-        },
-        {
-          "species": "magnezone"
-        },
-        {
-          "species": "ampharos"
-        },
-        {
-          "species": "electivire"
-        }
-      ]
-    },
-    {
-      "id": "normal-10",
-      "level": "normal",
-      "name": "에스퍼·고스트",
-      "kind": "type-concept",
-      "note": "에스퍼·고스트 타입",
-      "slots": [
-        {
-          "species": "gengar"
-        },
-        {
-          "species": "dusknoir"
-        },
-        {
-          "species": "alakazam"
-        },
-        {
-          "species": "slowking"
-        },
-        {
-          "species": "espeon"
-        },
-        {
-          "species": "gallade"
-        }
-      ]
-    },
-    {
-      "id": "easy-01",
-      "level": "easy",
-      "name": "노말 타입",
-      "kind": "type-concept",
-      "note": "진화를 마친 가벼운 노말 타입",
-      "slots": [
-        {
-          "species": "furret"
-        },
-        {
-          "species": "linoone"
-        },
-        {
-          "species": "delcatty"
-        },
-        {
-          "species": "bibarel"
-        },
-        {
-          "species": "noctowl"
-        },
-        {
-          "species": "stoutland"
-        }
-      ]
-    },
-    {
-      "id": "easy-02",
-      "level": "easy",
-      "name": "벌레 타입",
-      "kind": "type-concept",
-      "note": "초반 벌레 타입",
-      "slots": [
-        {
-          "species": "butterfree"
-        },
-        {
-          "species": "beedrill"
-        },
-        {
-          "species": "beautifly"
-        },
-        {
-          "species": "ariados"
-        },
-        {
-          "species": "ledian"
-        },
-        {
-          "species": "kricketune"
-        }
-      ]
-    },
-    {
-      "id": "easy-03",
-      "level": "easy",
-      "name": "풀 타입",
-      "kind": "type-concept",
-      "note": "중간 진화 풀 타입",
-      "slots": [
-        {
-          "species": "gloom"
-        },
-        {
-          "species": "ivysaur"
-        },
-        {
-          "species": "skiploom"
-        },
-        {
-          "species": "bayleef"
-        },
-        {
-          "species": "lombre"
-        },
-        {
-          "species": "cacturne"
-        }
-      ]
-    },
-    {
-      "id": "easy-04",
-      "level": "easy",
-      "name": "불·물·풀",
-      "kind": "type-cover",
-      "note": "중간 진화 스타팅으로 세 타입을 맞춘다",
-      "slots": [
-        {
-          "species": "charmeleon"
-        },
-        {
-          "species": "wartortle"
-        },
-        {
-          "species": "grovyle"
-        },
-        {
-          "species": "croconaw"
-        },
-        {
-          "species": "quilava"
-        },
-        {
-          "species": "grotle"
-        }
-      ]
-    },
-    {
-      "id": "easy-05",
-      "level": "easy",
-      "name": "비 파티",
-      "kind": "weather",
-      "note": "늑구리 잔비와 가벼운 물 타입",
-      "slots": [
-        {
-          "species": "pelipper"
-        },
-        {
-          "species": "quagsire"
-        },
-        {
-          "species": "lombre"
-        },
-        {
-          "species": "marshtomp"
-        },
-        {
-          "species": "lanturn"
-        },
-        {
-          "species": "seaking"
         }
       ]
     },
@@ -691,25 +700,25 @@
       "level": "easy",
       "name": "공격 쏠림",
       "kind": "offense",
-      "note": "스피드·공격이 높은 가벼운 종",
+      "note": "공격·스피드 쏠림. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
         {
-          "species": "persian"
+          "species": "skarmory"
         },
         {
-          "species": "primeape"
+          "species": "throh"
         },
         {
-          "species": "fearow"
+          "species": "grimmsnarl"
         },
         {
-          "species": "sandslash"
+          "species": "corviknight"
         },
         {
-          "species": "electrode"
+          "species": "breloom"
         },
         {
-          "species": "golbat"
+          "species": "altaria"
         }
       ]
     },
@@ -718,25 +727,25 @@
       "level": "easy",
       "name": "내구 버티기",
       "kind": "bulk",
-      "note": "HP·방어가 높은 가벼운 종",
+      "note": "HP·방어·특방 쏠림. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
         {
-          "species": "chansey"
+          "species": "arboliva"
         },
         {
-          "species": "sudowoodo"
+          "species": "bastiodon"
         },
         {
-          "species": "wigglytuff"
+          "species": "golem"
         },
         {
-          "species": "forretress"
+          "species": "slowking"
         },
         {
-          "species": "hypno"
+          "species": "stonjourner"
         },
         {
-          "species": "graveler"
+          "species": "dudunsparce"
         }
       ]
     },
@@ -745,25 +754,25 @@
       "level": "easy",
       "name": "전기·강철",
       "kind": "type-cover",
-      "note": "전기와 강철 타입",
+      "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
         {
-          "species": "magneton"
+          "species": "perrserker"
         },
         {
-          "species": "electabuzz"
+          "species": "aggron"
         },
         {
-          "species": "flaaffy"
+          "species": "togedemaru"
         },
         {
-          "species": "metang"
+          "species": "copperajah"
         },
         {
-          "species": "manectric"
+          "species": "raichu"
         },
         {
-          "species": "bronzor"
+          "species": "sandslash-alola"
         }
       ]
     },
@@ -772,25 +781,25 @@
       "level": "easy",
       "name": "독·땅",
       "kind": "type-cover",
-      "note": "독과 땅 타입",
+      "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
         {
-          "species": "arbok"
+          "species": "sneasler"
         },
         {
-          "species": "marowak"
+          "species": "stunfisk-galar"
         },
         {
-          "species": "weezing"
+          "species": "scolipede"
         },
         {
-          "species": "dugtrio"
+          "species": "swalot"
         },
         {
-          "species": "venomoth"
+          "species": "qwilfish"
         },
         {
-          "species": "rhyhorn"
+          "species": "golurk"
         }
       ]
     },
@@ -799,25 +808,25 @@
       "level": "easy",
       "name": "모래바람",
       "kind": "weather",
-      "note": "하마돈 모래바람과 바위·땅 타입",
+      "note": "같은 날씨 특성 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
+        {
+          "species": "magcargo"
+        },
+        {
+          "species": "hippowdon"
+        },
+        {
+          "species": "krookodile"
+        },
+        {
+          "species": "skarmory"
+        },
         {
           "species": "sandslash"
         },
         {
-          "species": "hippopotas"
-        },
-        {
-          "species": "krokorok"
-        },
-        {
-          "species": "pupitar"
-        },
-        {
-          "species": "drilbur"
-        },
-        {
-          "species": "boldore"
+          "species": "drednaw"
         }
       ]
     }

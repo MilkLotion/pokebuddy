@@ -3,6 +3,7 @@
 //   칸에 기술을 두지 않는다 — fighterFrom 이 종의 기본 2개를 쓴다(sub1 의 기술 데이터를 그대로 따른다)
 import type { DexOptions } from "../dex/data.js";
 import { loadJson } from "../dex/data.js";
+import { profileOf } from "../dex/species.js";
 import { partyOf, type BattleData, type FighterSource } from "./fighter-core.js";
 
 export const SAMPLE_LEVELS = ["hard", "normal", "easy"] as const;
@@ -33,15 +34,20 @@ export function sampleProblems(s: BattleSample, data: BattleData): string[] {
   if (!SAMPLE_KINDS.includes(s.kind)) out.push(`kind: ${s.kind}`);
   if (!s.name) out.push("name 없음");
   if (s.slots.length !== 6) out.push(`칸 ${s.slots.length}개`);
-  const seen = new Set<string>();
+  const seen = new Set<number>();
+  const battleOnly = new Set(Object.values(data.forms).map((f) => f.form)); // 전투 중에만 나오는 모습 — 모험에 나가지 않는다
   for (const c of s.slots) {
     if (!data.species[c.species]) out.push(`없는 종: ${c.species}`);
-    if (seen.has(c.species)) out.push(`같은 종 두 번: ${c.species}`);
-    seen.add(c.species);
+    const dex = profileOf(c.species).dex;
+    if (seen.has(dex)) out.push(`같은 도감 번호 두 번: ${c.species}`);
+    seen.add(dex);
+    if (battleOnly.has(c.species)) out.push(`전투 중 모습: ${c.species}`);
     if (c.form && data.mega[c.form]?.base !== c.species) out.push(`메가 모습이 종과 다름: ${c.form}`);
     if ("moves" in c || "moveSwap" in c) out.push(`기술을 적었다: ${c.species}`);
   }
-  // 출전 제한 — 서버가 배틀 파티를 읽는 partyOf 에 샘플을 저장 모양으로 넣어 같은 판정을 받는다(세는 함수를 따로 두지 않는다)
+  // 출전 제한 — 중·하만. 상은 전설·메가를 자유롭게 쓴다(2026-10-22 사용자 "상 파티는 메가진화,전설 등 자유롭게 쓰고")
+  // 서버가 배틀 파티를 읽는 partyOf 에 샘플을 저장 모양으로 넣어 같은 판정을 받는다(세는 함수를 따로 두지 않는다)
+  if (s.level === "hard") return out;
   const ids = s.slots.map((_, i) => `sample-${i}`);
   const save = {
     pets: s.slots.map((c, i) => ({ id: ids[i], species: c.species })),
