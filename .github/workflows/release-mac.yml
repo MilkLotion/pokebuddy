@@ -2,7 +2,7 @@
 #   Windows PC 에서 릴리스를 올려도 mac 앱이 업데이트를 받게 하기 위함이다. 수동 실행(workflow_dispatch)은 기존 태그에 다시 올릴 때 쓴다
 #   필요한 Secrets — MAC_SIGNING_P12: "PokeBuddy Code Signing" 인증서·개인키 p12 의 base64, MAC_SIGNING_PASSWORD: 그 p12 의 암호
 #   Windows 쪽 릴리스에는 latest-mac.yml 을 올리지 않는다 — 이 워크플로가 --clobber 로 올리는 파일이 기준이다
-#   액션은 커밋 SHA 로 고정한다(pages.yml 규칙). setup-node 만 예외 — 아래 주석 참고
+#   액션은 커밋 SHA 로 고정한다(태그가 옮겨져도 바뀌지 않게). setup-node 만 예외 — 아래 주석 참고
 name: release-mac
 
 on:
@@ -35,7 +35,7 @@ jobs:
         with:
           ref: refs/tags/${{ inputs.tag || github.event.release.tag_name }}
 
-      # [임시] 커밋 SHA 로 고정할 것 — SHA 를 확인하지 못해 태그로 둔다(pages.yml 규칙의 예외)
+      # [임시] 커밋 SHA 로 고정할 것 — SHA 를 확인하지 못해 태그로 둔다(SHA 고정 규칙의 예외)
       - uses: actions/setup-node@v4
         with:
           node-version: 22

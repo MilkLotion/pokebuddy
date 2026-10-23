@@ -16,7 +16,7 @@ import { parseAccountAction, parseAgentRequest, parseBattleAction, parseFriendly
 import type { ManageServices } from "./window.js";
 
 // 설정 바닥의 `저작권 안내` 가 여는 곳 — README 의 라이선스 절. 주소는 여기 고정한다 (docs/design.md 제품과 실행 "권리와 배포")
-// 웹 가이드 — docs/guide.md 를 GitHub Pages 로 올린 쪽(scripts/build-guide-site.cjs). 탭마다 그 팁의 절로 연다. 모르는 이름이면 첫머리
+// 웹 가이드 — MilkLotion.github.io 저장소가 docs/guide.md 로 만든 쪽(그 저장소의 npm run sync:pokebuddy). 탭마다 그 팁의 절로 연다. 모르는 이름이면 첫머리
 // 앵커는 guide.md 제목을 빌드 스크립트의 slug 로 바꾼 것이다 — 제목을 바꾸면 여기도 바꾼다
 const GUIDE_URL = "https://milklotion.github.io/pokebuddy/guide/";
 const GUIDE_ANCHOR: Readonly<Record<string, string>> = { party: "포인트가-들어오는-곳", box: "파티와-박스", dex: "도감과-업적", shop: "포인트-모으기", bag: "포인트-모으기", adventure: "배틀-파티-짜기" };

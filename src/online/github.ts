@@ -38,7 +38,7 @@ export interface GithubLoginOptions {
 // 앱으로 돌아가는 딥링크 — 설치본이 pokebuddy:// 를 등록한다. 앱은 관리 창의 계정 탭을 연다 (src/main/app.ts)
 export const APP_LINK = "pokebuddy://account";
 
-// 브라우저에 보이는 마지막 쪽 — 교환 링크 페이지(site/trade)와 같은 색·카드. 외부 자원 없이 이 문자열만 쓴다.
+// 브라우저에 보이는 마지막 쪽 — 교환 링크 페이지(MilkLotion.github.io 저장소의 public/pokebuddy/trade)와 같은 색·카드. 외부 자원 없이 이 문자열만 쓴다.
 // 성공하면 곧바로 앱 링크를 연다 — 브라우저가 "pokebuddy 열기" 알림을 띄운다. 알림을 닫았으면 단추로 다시 연다
 // 문구는 고정 문자열이다. 요청에서 온 값은 넣지 않는다
 export function callbackPage(ok: boolean): string {

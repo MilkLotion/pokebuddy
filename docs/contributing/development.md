@@ -427,6 +427,16 @@ npm install -g ./pokebuddy-<버전>.tgz   # 올리기 전에 이 파일로 설�
 - 배포물은 [권리와 배포 규칙](../design.md#제품과-실행)을 따른다. 포켓몬 그림 파일, 후원 링크, 유료 기능을 넣지 않는다
 - 새 그림 출처를 더하면 [README 의 그림 출처](../../README.md#그림-출처)에 출처, 제작자, 라이선스를 적는다
 
+### 웹 페이지
+
+`https://milklotion.github.io/pokebuddy/` 아래의 웹 페이지는 MilkLotion.github.io 저장소에서 만들고 배포한다(2026-10-24 사용자 결정). 대상은 소개 페이지, `guide/`, `trade/`, `battle/` 이다.
+
+- 교환·배틀 링크 주소는 바꾸지 않는다. 앱이 만든 공유 링크가 `https://milklotion.github.io/pokebuddy/trade#<토큰>` 과 `https://milklotion.github.io/pokebuddy/battle#<토큰>` 을 쓴다
+- 이 저장소에는 웹 페이지 파일과 Pages 배포 워크플로를 두지 않는다. 교환·배틀 페이지의 원본은 MilkLotion.github.io 저장소의 `public/pokebuddy/trade/` 와 `public/pokebuddy/battle/` 이다
+- 설명서 원문은 이 저장소의 `docs/guide.md` 와 `docs/images/` 다. MilkLotion.github.io 저장소의 `npm run sync:pokebuddy` 가 이 파일을 읽어 웹 가이드를 만든다. 자동 연동은 없다
+- `docs/guide.md` 나 설명서 그림을 고치면 MilkLotion.github.io 저장소에서 `npm run sync:pokebuddy` 를 돌려 반영한다. 반영하지 않으면 웹 가이드는 옛 내용으로 남는다
+- 앱에서 교환·배틀 링크 형식(경로, `#` 토큰 구조)이나 설명서 생성 방식을 바꾸면 MilkLotion.github.io 저장소 쪽에 먼저 알린다
+
 ### Windows 실행 파일 만들기
 
 ```powershell

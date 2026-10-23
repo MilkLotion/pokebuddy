@@ -1,6 +1,6 @@
 // 공유 링크의 글자 규칙 — 친구 교환과 친선 배틀이 같은 모양을 쓴다.
 //   앱 실행 인자 pokebuddy://trade/<토큰> · pokebuddy://battle/<토큰>, 공유 주소 <linkBase>#<토큰>, 토큰만 붙여 넣은 것
-// 웹 페이지(site/trade/index.html · site/battle/index.html)의 같은 정규식은 공유하지 못한다 — 바꾸면 그쪽도 같이 바꾼다
+// 웹 페이지(MilkLotion.github.io 저장소의 public/pokebuddy/trade/index.html · battle/index.html)의 같은 정규식은 공유하지 못한다 — 바꾸면 그쪽도 같이 바꾼다
 export type LinkKind = "trade" | "battle";
 
 const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
@@ -25,5 +25,5 @@ export const isFriendlyLink = (arg: string): boolean => arg.startsWith(schemeOf(
 // 친구에게 보낼 주소
 export const linkOf = (linkBase: string, token: string): string => `${linkBase}#${token}`;
 
-// 친선 배틀 공유 주소의 앞부분 — 교환 페이지 주소의 마지막 /trade 를 /battle 로 (site/battle/index.html)
+// 친선 배틀 공유 주소의 앞부분 — 교환 페이지 주소의 마지막 /trade 를 /battle 로 (MilkLotion.github.io 저장소의 public/pokebuddy/battle/index.html)
 export const friendlyLinkBase = (tradeLinkBase: string): string => tradeLinkBase.replace(/\/trade\/?$/, "/battle");
