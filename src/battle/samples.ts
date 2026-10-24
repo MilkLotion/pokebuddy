@@ -6,9 +6,10 @@ import { loadJson } from "../dex/data.js";
 import { profileOf } from "../dex/species.js";
 import { partyOf, type BattleData, type FighterSource } from "./fighter-core.js";
 
-export const SAMPLE_LEVELS = ["hard", "normal", "easy"] as const;
+// champion — 원작 챔피언 파티. 난이도를 맞추지 않는 따로 등급(2026-10-24 사용자 "따로 등급")
+export const SAMPLE_LEVELS = ["hard", "normal", "easy", "champion"] as const;
 export type SampleLevel = (typeof SAMPLE_LEVELS)[number];
-const SAMPLE_KINDS = ["type-concept", "type-cover", "offense", "bulk", "weather", "legend"] as const;
+const SAMPLE_KINDS = ["type-concept", "type-cover", "offense", "bulk", "weather", "legend", "champion"] as const;
 export const SAMPLES_PER_LEVEL = 10;
 
 export interface BattleSample {
@@ -45,9 +46,8 @@ export function sampleProblems(s: BattleSample, data: BattleData): string[] {
     if (c.form && data.mega[c.form]?.base !== c.species) out.push(`메가 모습이 종과 다름: ${c.form}`);
     if ("moves" in c || "moveSwap" in c) out.push(`기술을 적었다: ${c.species}`);
   }
-  // 출전 제한 — 중·하만. 상은 전설·메가를 자유롭게 쓴다(2026-10-22 사용자 "상 파티는 메가진화,전설 등 자유롭게 쓰고")
+  // 출전 제한 — 모든 난이도(2026-10-24 사용자 "다 제한시켜. 모든팀이 똑같이 해야지". 그 전에는 상만 자유)
   // 서버가 배틀 파티를 읽는 partyOf 에 샘플을 저장 모양으로 넣어 같은 판정을 받는다(세는 함수를 따로 두지 않는다)
-  if (s.level === "hard") return out;
   const ids = s.slots.map((_, i) => `sample-${i}`);
   const save = {
     pets: s.slots.map((c, i) => ({ id: ids[i], species: c.species })),

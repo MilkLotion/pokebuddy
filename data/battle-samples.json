@@ -1,75 +1,72 @@
 {
-  "_comment": "랜덤 배틀 샘플 파티 — 규칙은 docs/specs/adventure.md '샘플 파티'. 손으로 다듬는 콘텐츠 데이터다. level 은 hard(상)·normal(중)·easy(하)다. 칸 순서가 배치다. 2·4·6번 칸이 앞라인(상대와 마주봄), 1·3·5번 칸이 뒷라인이다. 칸에 기술을 적지 않는다 — 종의 기본 기술 2개를 쓴다. 난이도는 이브이 진화형 기준 파티의 승률로 맞춘다(src/tools/battle/sample-vs.ts). 상은 출전 제한을 따르지 않는다. 검사 src/tools/selftest/selftest-battle-samples.ts, 난이도 측정 src/tools/battle/sample-rate.ts",
+  "_comment": "랜덤 배틀 샘플 파티 — 규칙은 docs/specs/adventure.md '샘플 파티'. 손으로 다듬는 콘텐츠 데이터다. level 은 hard(상)·normal(중)·easy(하)·champion(챔피언)이다. 칸 순서가 배치다. 2·4·6번 칸이 앞라인(상대와 마주봄), 1·3·5번 칸이 뒷라인이다. 칸에 기술을 적지 않는다 — 종의 기본 기술 2개를 쓴다. 난이도는 이브이 진화형 기준 파티의 승률로 맞춘다(src/tools/battle/sample-vs.ts). 모든 등급이 출전 제한을 따른다. name 은 원작 트레이너 분류·챔피언 이름이다. 챔피언 등급은 난이도를 맞추지 않는다. 검사 src/tools/selftest/selftest-battle-samples.ts, 난이도 측정 src/tools/battle/sample-rate.ts",
   "version": 1,
   "samples": [
     {
       "id": "hard-01",
       "level": "hard",
-      "name": "드래곤 중심",
+      "name": "드래곤조련사",
       "kind": "type-concept",
-      "note": "한 타입 중심. 상 — 전설·메가 자유",
+      "note": "한 타입 중심. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "rayquaza",
           "form": "rayquaza-mega"
         },
         {
-          "species": "giratina"
+          "species": "latios"
         },
         {
-          "species": "hydrapple"
+          "species": "dragapult"
         },
         {
-          "species": "garchomp",
-          "form": "garchomp-mega"
+          "species": "garchomp"
         },
         {
-          "species": "tatsugiri-droopy"
+          "species": "baxcalibur"
         },
         {
-          "species": "dialga"
+          "species": "latias"
         }
       ]
     },
     {
       "id": "hard-02",
       "level": "hard",
-      "name": "비 파티",
+      "name": "수영팬티소년",
       "kind": "weather",
-      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
+      "note": "같은 날씨 특성 묶음. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "miraidon"
         },
         {
-          "species": "arceus-water"
+          "species": "politoed"
         },
         {
           "species": "urshifu-rapid-strike"
         },
         {
-          "species": "kyogre",
-          "form": "kyogre-primal"
-        },
-        {
-          "species": "manectric"
+          "species": "kingdra"
         },
         {
           "species": "swampert",
           "form": "swampert-mega"
+        },
+        {
+          "species": "tapu-koko"
         }
       ]
     },
     {
       "id": "hard-03",
       "level": "hard",
-      "name": "쾌청 파티",
+      "name": "엘리트트레이너",
       "kind": "weather",
-      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
+      "note": "같은 날씨 특성 묶음. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
-          "species": "charizard",
-          "form": "charizard-mega-y"
+          "species": "victini"
         },
         {
           "species": "groudon",
@@ -79,7 +76,7 @@
           "species": "armarouge"
         },
         {
-          "species": "victini"
+          "species": "charizard"
         },
         {
           "species": "infernape"
@@ -92,54 +89,53 @@
     {
       "id": "hard-04",
       "level": "hard",
-      "name": "드래곤·강철·페어리",
+      "name": "과학자",
       "kind": "type-cover",
-      "note": "서로 약점을 막는 타입 묶음. 상 — 전설·메가 자유",
+      "note": "서로 약점을 막는 타입 묶음. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "zacian-crowned"
         },
         {
-          "species": "steelix",
-          "form": "steelix-mega"
-        },
-        {
-          "species": "guzzlord"
+          "species": "steelix"
         },
         {
           "species": "metagross",
           "form": "metagross-mega"
         },
         {
+          "species": "guzzlord"
+        },
+        {
           "species": "dugtrio-alola"
         },
         {
-          "species": "dialga"
+          "species": "tapu-lele"
         }
       ]
     },
     {
       "id": "hard-05",
       "level": "hard",
-      "name": "전설 총출동",
+      "name": "베테랑트레이너",
       "kind": "legend",
-      "note": "전설급 위주. 상 — 전설·메가 자유",
+      "note": "전설급 위주. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "mewtwo",
           "form": "mewtwo-mega-x"
         },
         {
-          "species": "arceus"
-        },
-        {
-          "species": "silvally-bug"
-        },
-        {
-          "species": "kyogre"
+          "species": "tyranitar"
         },
         {
           "species": "tapu-lele"
+        },
+        {
+          "species": "dragonite"
+        },
+        {
+          "species": "kingambit"
         },
         {
           "species": "wo-chien"
@@ -149,96 +145,93 @@
     {
       "id": "hard-06",
       "level": "hard",
-      "name": "물리 속공",
+      "name": "배틀걸",
       "kind": "offense",
-      "note": "공격·스피드 쏠림. 상 — 전설·메가 자유",
+      "note": "공격·스피드 쏠림. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
-          "species": "garchomp"
+          "species": "zacian"
         },
         {
-          "species": "zacian"
+          "species": "garchomp"
         },
         {
           "species": "lucario",
           "form": "lucario-mega"
         },
         {
-          "species": "salamence",
-          "form": "salamence-mega"
+          "species": "salamence"
         },
         {
           "species": "meowscarada"
         },
         {
-          "species": "palkia-origin"
+          "species": "iron-valiant"
         }
       ]
     },
     {
       "id": "hard-07",
       "level": "hard",
-      "name": "특수 화력",
+      "name": "초능력자",
       "kind": "offense",
-      "note": "공격·스피드 쏠림. 상 — 전설·메가 자유",
+      "note": "공격·스피드 쏠림. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "hoopa"
-        },
-        {
-          "species": "arceus-electric"
-        },
-        {
-          "species": "trevenant"
         },
         {
           "species": "mewtwo",
           "form": "mewtwo-mega-y"
         },
         {
-          "species": "gengar",
-          "form": "gengar-mega"
+          "species": "chandelure"
         },
         {
-          "species": "iron-crown"
+          "species": "gardevoir"
+        },
+        {
+          "species": "flutter-mane"
+        },
+        {
+          "species": "volcarona"
         }
       ]
     },
     {
       "id": "hard-08",
       "level": "hard",
-      "name": "내구 버티기",
+      "name": "신사",
       "kind": "bulk",
-      "note": "HP·방어·특방 쏠림. 상 — 전설·메가 자유",
+      "note": "HP·방어·특방 쏠림. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
-          "species": "floette-eternal",
-          "form": "floette-mega"
+          "species": "ting-lu"
         },
         {
           "species": "giratina"
         },
         {
-          "species": "marshadow"
+          "species": "garganacl"
         },
         {
           "species": "slowbro",
           "form": "slowbro-mega"
         },
         {
-          "species": "alcremie-rainbow-swirl-flower-sweet"
+          "species": "corviknight"
         },
         {
-          "species": "kyogre"
+          "species": "dondozo"
         }
       ]
     },
     {
       "id": "hard-09",
       "level": "hard",
-      "name": "불·물·풀",
+      "name": "포켓몬레인저",
       "kind": "type-cover",
-      "note": "서로 약점을 막는 타입 묶음. 상 — 전설·메가 자유",
+      "note": "서로 약점을 막는 타입 묶음. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "shaymin"
@@ -254,20 +247,19 @@
           "form": "venusaur-mega"
         },
         {
-          "species": "sinistcha"
+          "species": "rillaboom"
         },
         {
-          "species": "blastoise",
-          "form": "blastoise-mega"
+          "species": "blastoise"
         }
       ]
     },
     {
       "id": "hard-10",
       "level": "hard",
-      "name": "모래바람",
+      "name": "유적마니아",
       "kind": "weather",
-      "note": "같은 날씨 특성 묶음. 상 — 전설·메가 자유",
+      "note": "같은 날씨 특성 묶음. 상 — 이브이 진화형 파티가 거의 못 이긴다",
       "slots": [
         {
           "species": "forretress"
@@ -293,7 +285,7 @@
     {
       "id": "normal-01",
       "level": "normal",
-      "name": "물·땅",
+      "name": "낚시꾼",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -320,7 +312,7 @@
     {
       "id": "normal-02",
       "level": "normal",
-      "name": "불꽃 타입",
+      "name": "캠핑보이",
       "kind": "type-concept",
       "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -347,7 +339,7 @@
     {
       "id": "normal-03",
       "level": "normal",
-      "name": "모래바람",
+      "name": "등산가",
       "kind": "weather",
       "note": "같은 날씨 특성 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -374,7 +366,7 @@
     {
       "id": "normal-04",
       "level": "normal",
-      "name": "쾌청 파티",
+      "name": "피크닉걸",
       "kind": "weather",
       "note": "같은 날씨 특성 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -401,7 +393,7 @@
     {
       "id": "normal-05",
       "level": "normal",
-      "name": "불·물·풀",
+      "name": "아로마아가씨",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -428,7 +420,7 @@
     {
       "id": "normal-06",
       "level": "normal",
-      "name": "드래곤·강철·페어리",
+      "name": "아가씨",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -455,7 +447,7 @@
     {
       "id": "normal-07",
       "level": "normal",
-      "name": "물리 속공",
+      "name": "폭주족",
       "kind": "offense",
       "note": "공격·스피드 쏠림. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -482,7 +474,7 @@
     {
       "id": "normal-08",
       "level": "normal",
-      "name": "내구 버티기",
+      "name": "포켓몬브리더",
       "kind": "bulk",
       "note": "HP·방어·특방 쏠림. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -509,18 +501,18 @@
     {
       "id": "normal-09",
       "level": "normal",
-      "name": "격투 타입",
+      "name": "태권왕",
       "kind": "type-concept",
       "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
         {
-          "species": "sirfetchd"
+          "species": "conkeldurr"
         },
         {
           "species": "scrafty"
         },
         {
-          "species": "toxicroak"
+          "species": "annihilape"
         },
         {
           "species": "machamp"
@@ -536,7 +528,7 @@
     {
       "id": "normal-10",
       "level": "normal",
-      "name": "에스퍼·고스트",
+      "name": "오컬트마니아",
       "kind": "type-concept",
       "note": "한 타입 중심. 중 — 이브이 진화형 파티가 대체로 진다",
       "slots": [
@@ -563,7 +555,7 @@
     {
       "id": "easy-01",
       "level": "easy",
-      "name": "노말 타입",
+      "name": "반바지꼬마",
       "kind": "type-concept",
       "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -590,7 +582,7 @@
     {
       "id": "easy-02",
       "level": "easy",
-      "name": "벌레 타입",
+      "name": "곤충채집소년",
       "kind": "type-concept",
       "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -617,7 +609,7 @@
     {
       "id": "easy-03",
       "level": "easy",
-      "name": "풀 타입",
+      "name": "짧은치마",
       "kind": "type-concept",
       "note": "한 타입 중심. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -644,7 +636,7 @@
     {
       "id": "easy-04",
       "level": "easy",
-      "name": "불·물·풀",
+      "name": "도련님",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -671,7 +663,7 @@
     {
       "id": "easy-05",
       "level": "easy",
-      "name": "쾌청 파티",
+      "name": "쌍둥이",
       "kind": "weather",
       "note": "같은 날씨 특성 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -698,7 +690,7 @@
     {
       "id": "easy-06",
       "level": "easy",
-      "name": "공격 쏠림",
+      "name": "학원아이",
       "kind": "offense",
       "note": "공격·스피드 쏠림. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -725,7 +717,7 @@
     {
       "id": "easy-07",
       "level": "easy",
-      "name": "내구 버티기",
+      "name": "유치원생",
       "kind": "bulk",
       "note": "HP·방어·특방 쏠림. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -752,7 +744,7 @@
     {
       "id": "easy-08",
       "level": "easy",
-      "name": "전기·강철",
+      "name": "기타리스트",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -779,7 +771,7 @@
     {
       "id": "easy-09",
       "level": "easy",
-      "name": "독·땅",
+      "name": "백팩커",
       "kind": "type-cover",
       "note": "서로 약점을 막는 타입 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -806,7 +798,7 @@
     {
       "id": "easy-10",
       "level": "easy",
-      "name": "모래바람",
+      "name": "작업원",
       "kind": "weather",
       "note": "같은 날씨 특성 묶음. 하 — 이브이 진화형 파티가 간당간당하게 이긴다",
       "slots": [
@@ -827,6 +819,282 @@
         },
         {
           "species": "drednaw"
+        }
+      ]
+    },
+    {
+      "id": "champion-01",
+      "level": "champion",
+      "name": "챔피언 레드",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "pikachu"
+        },
+        {
+          "species": "lapras"
+        },
+        {
+          "species": "snorlax"
+        },
+        {
+          "species": "venusaur"
+        },
+        {
+          "species": "charizard",
+          "form": "charizard-mega-y"
+        },
+        {
+          "species": "blastoise"
+        }
+      ]
+    },
+    {
+      "id": "champion-02",
+      "level": "champion",
+      "name": "챔피언 그린",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "gyarados"
+        },
+        {
+          "species": "alakazam"
+        },
+        {
+          "species": "pidgeot",
+          "form": "pidgeot-mega"
+        },
+        {
+          "species": "rhyperior"
+        },
+        {
+          "species": "exeggutor"
+        },
+        {
+          "species": "arcanine"
+        }
+      ]
+    },
+    {
+      "id": "champion-03",
+      "level": "champion",
+      "name": "챔피언 목호",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "aerodactyl"
+        },
+        {
+          "species": "gyarados",
+          "form": "gyarados-mega"
+        },
+        {
+          "species": "dragonite"
+        },
+        {
+          "species": "kingdra"
+        },
+        {
+          "species": "charizard"
+        },
+        {
+          "species": "salamence"
+        }
+      ]
+    },
+    {
+      "id": "champion-04",
+      "level": "champion",
+      "name": "챔피언 성호",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "armaldo"
+        },
+        {
+          "species": "aggron"
+        },
+        {
+          "species": "skarmory"
+        },
+        {
+          "species": "claydol"
+        },
+        {
+          "species": "metagross",
+          "form": "metagross-mega"
+        },
+        {
+          "species": "cradily"
+        }
+      ]
+    },
+    {
+      "id": "champion-05",
+      "level": "champion",
+      "name": "챔피언 윤진",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "milotic"
+        },
+        {
+          "species": "ludicolo"
+        },
+        {
+          "species": "gyarados"
+        },
+        {
+          "species": "wailord"
+        },
+        {
+          "species": "whiscash"
+        },
+        {
+          "species": "tentacruel"
+        }
+      ]
+    },
+    {
+      "id": "champion-06",
+      "level": "champion",
+      "name": "챔피언 난천",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "garchomp",
+          "form": "garchomp-mega"
+        },
+        {
+          "species": "spiritomb"
+        },
+        {
+          "species": "lucario"
+        },
+        {
+          "species": "roserade"
+        },
+        {
+          "species": "togekiss"
+        },
+        {
+          "species": "milotic"
+        }
+      ]
+    },
+    {
+      "id": "champion-07",
+      "level": "champion",
+      "name": "챔피언 노간주",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "accelgor"
+        },
+        {
+          "species": "bouffalant"
+        },
+        {
+          "species": "escavalier"
+        },
+        {
+          "species": "druddigon"
+        },
+        {
+          "species": "volcarona"
+        },
+        {
+          "species": "vanilluxe"
+        }
+      ]
+    },
+    {
+      "id": "champion-08",
+      "level": "champion",
+      "name": "챔피언 아이리스",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "archeops"
+        },
+        {
+          "species": "hydreigon"
+        },
+        {
+          "species": "aggron"
+        },
+        {
+          "species": "druddigon"
+        },
+        {
+          "species": "haxorus"
+        },
+        {
+          "species": "lapras"
+        }
+      ]
+    },
+    {
+      "id": "champion-09",
+      "level": "champion",
+      "name": "챔피언 카르네",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "gardevoir",
+          "form": "gardevoir-mega"
+        },
+        {
+          "species": "goodra"
+        },
+        {
+          "species": "tyrantrum"
+        },
+        {
+          "species": "hawlucha"
+        },
+        {
+          "species": "gourgeist"
+        },
+        {
+          "species": "aurorus"
+        }
+      ]
+    },
+    {
+      "id": "champion-10",
+      "level": "champion",
+      "name": "챔피언 단델",
+      "kind": "champion",
+      "note": "원작 챔피언 파티와 대표 메가. 난이도를 맞추지 않는다",
+      "slots": [
+        {
+          "species": "charizard"
+        },
+        {
+          "species": "aegislash"
+        },
+        {
+          "species": "dragapult"
+        },
+        {
+          "species": "haxorus"
+        },
+        {
+          "species": "rhyperior"
+        },
+        {
+          "species": "seismitoad"
         }
       ]
     }

@@ -6,7 +6,7 @@
 // 기준 풀: 초전설·준전설 칸을 뺀 종 중 종족값 합 400 이상(모의 대전기 general 풀과 같다). 파티는 풀에서 서로 다른 6마리
 // 판마다 샘플이 건 쪽(0)과 받은 쪽(1)을 번갈아 맡는다 — 쪽에 따른 치우침을 지운다. 무승부는 0.5승
 // 리그: 샘플끼리 짝마다 --league 판(기본 10). 기준 승률이 100% 근처로 몰리는 상 난이도 안의 순서를 본다
-// 수용: 리그 승률이 상 최솟값 > 중 중앙값, 중 최솟값 > 하 중앙값. 어기면 종료 코드 1
+// 수용: 리그 승률이 상 최솟값 > 중 중앙값, 중 최솟값 > 하 중앙값. 어기면 종료 코드 1. 챔피언 등급은 난이도를 맞추지 않아 보이기만 한다
 //   기준 승률은 참고로만 보인다 — 난이도의 정본 잣대는 이브이 진화형 파티의 승률이다(sample-vs.ts, 2026-10-22 사용자 "하 파티는 이브이즈로 했을때 간당간당하게 승리할 정도로만")
 import fs from "node:fs";
 import { runBattle, type EngineFighter } from "../../battle/engine";
@@ -79,19 +79,24 @@ for (const s of battleSamples()) {
 
 // 리그 — 샘플끼리 짝마다 LEAGUE 판(쪽을 번갈아). 기준 풀 승률이 100% 근처로 몰리는 상 난이도 안의 순서를 본다
 const LEAGUE = Number(arg("league", "10"));
+// 상대는 상·중·하 샘플만 — 챔피언 등급은 상대로 세지 않아 난이도 순서를 흔들지 않는다. 챔피언 자신의 리그 승률은 상·중·하 상대로 잰다
 const teams = battleSamples().map((s) => s.slots.map((c) => buildFighter(c)));
+const ranked = rows.map((r) => r.level !== "champion");
 const league = rows.map(() => 0);
 for (let a = 0; a < teams.length; a++)
-  for (let b = a + 1; b < teams.length; b++)
+  for (let b = a + 1; b < teams.length; b++) {
+    if (!ranked[a] && !ranked[b]) continue;
     for (let k = 0; k < LEAGUE; k++) {
       const flip = k % 2 === 1;
       const r = runBattle({ seed: SEED * 7_919 + a * 1_000 + b * 10 + k, sides: flip ? [teams[b]!, teams[a]!] : [teams[a]!, teams[b]!], typeChart: chart });
       const aSide = flip ? 1 : 0;
       const aWin = r.winner === null ? 0.5 : r.winner === aSide ? 1 : 0;
-      league[a]! += aWin;
-      league[b]! += 1 - aWin;
+      if (ranked[b]) league[a]! += aWin;
+      if (ranked[a]) league[b]! += 1 - aWin;
     }
-const leagueRate = (i: number): number => league[i]! / ((teams.length - 1) * LEAGUE);
+  }
+const rankedCount = ranked.filter(Boolean).length;
+const leagueRate = (i: number): number => league[i]! / ((rankedCount - (ranked[i] ? 1 : 0)) * LEAGUE);
 
 const pct = (v: number): string => `${(v * 100).toFixed(1)}%`;
 const median = (xs: number[]): number => {
