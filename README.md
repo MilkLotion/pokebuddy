@@ -11,13 +11,26 @@
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-555)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
-[다운로드](#다운로드) · [게임 방법](#게임-방법) · [설명서](docs/guide.md)
+[홈페이지](https://milklotion.github.io/pokebuddy/) · [다운로드](#다운로드) · [게임 방법](#게임-방법) · [설명서](docs/guide.md)
 
 </div>
 
 <!-- 이미지 [hero]: 바탕화면 위에서 포켓몬 여러 마리가 돌아다니는 GIF — docs/images/README.md -->
 
 ---
+
+## 홈페이지
+
+[![pokebuddy 홈페이지](https://milklotion.github.io/pokebuddy/images/og.png)](https://milklotion.github.io/pokebuddy/)
+
+[milklotion.github.io/pokebuddy](https://milklotion.github.io/pokebuddy/) 에서 받고, 배우고, 찾아본다.
+
+| 쪽 | 할 수 있는 것 |
+|---|---|
+| [소개](https://milklotion.github.io/pokebuddy/) | 내 컴퓨터에 맞는 설치 파일을 바로 받는다. 화면 위를 걷는 포켓몬을 미리 본다 |
+| [공략](https://milklotion.github.io/pokebuddy/guide/) | 이 저장소의 [설명서](docs/guide.md)를 장마다 그림과 함께 본다. [포인트 잘 버는 법](https://milklotion.github.io/pokebuddy/guide/#포인트-잘-버는-법), [메가진화 하는 법](https://milklotion.github.io/pokebuddy/guide/#메가진화-하는-법) 같은 공략 8개가 있다 |
+| [배틀 도감](https://milklotion.github.io/pokebuddy/dex/) | 배틀 기술을 타입·분류로 찾아본다. 랜덤 배틀에 나오는 AI 트레이너 팀과 지방별 챔피언 파티를 본다 |
+| [패치노트](https://milklotion.github.io/pokebuddy/patch-notes/) | 버전마다 바뀐 점을 화면 캡처와 함께 본다 |
 
 ## 다운로드
 
@@ -49,7 +62,9 @@ Mac 은 시스템 설정의 개인정보 보호 및 보안에서 `그래도 열�
 
 파티는 2칸에서 시작해 6칸까지 늘어난다. 나머지 포켓몬은 박스에 둔다.
 
-게임 시간은 앱이 떠 있을 때만 흐른다. PC 를 잠그거나 앱을 끄면 멈춘다. 배틀은 없다.
+게임 시간은 앱이 떠 있을 때만 흐른다. PC 를 잠그거나 앱을 끄면 멈춘다.
+
+모험 탭에서 배틀 파티 6마리를 짜면 다른 트레이너나 AI 트레이너와 랜덤 배틀을 하고, 링크로 친구와 친선 배틀을 한다. 포켓몬은 스스로 싸우고, 배틀 파티는 모두 Lv.50 으로 계산한다.
 
 ![설정창 파티 탭과 옆에 붙은 파티 상세 기기 창](docs/images/settings-party.png)
 
@@ -62,9 +77,9 @@ Mac 은 시스템 설정의 개인정보 보호 및 보안에서 `그래도 열�
 | 파티 | 여섯 칸. 칸을 누르면 옆에 상세 창이 열린다 |
 | 박스 | 파티 밖 포켓몬과 돌보미집 |
 | 도감 | 종마다 얻는 방법과 진화 조건 |
-| 상점 | 알, 포켓몬, 도구, 진화 도구, 파티 칸 |
-| 가방 | 산 도구 쓰기 |
-| 교환 | 친구와 한 마리씩 바꾸기 |
+| 상점 | 알, 도구, 진화 도구, 파티 칸과 프리셋 |
+| 가방 | 산 도구 쓰기와 팔기 |
+| 모험 | 배틀 파티 짜기와 배틀 |
 
 업적, 설정, 우편함, 계정은 헤더에 있다. 처음 쓰는 기능은 튜토리얼이 짚어 준다.
 
@@ -72,13 +87,13 @@ Mac 은 시스템 설정의 개인정보 보호 및 보안에서 `그래도 열�
 
 ## 교환, 계정, AI 도구 연결
 
-설정창 박스 탭의 메뉴 단추에서 `교환`을 골라 교환 모달을 열고 링크를 만들어 친구에게 보내면 포켓몬을 한 마리씩 바꾼다. 로그인은 필요 없다.
+설정창 박스 탭의 메뉴 단추에서 `교환`을 골라 교환 모달을 열고 링크를 만들어 친구에게 보내면 포켓몬을 한 마리씩 바꾼다. 교환은 로그인한 계정만 한다.
 
-로그인은 선택이다. 로그인하면 저장 사본이 서버에 올라가고 우편함 선물을 받는다.
+로그인은 선택이다. 로그인하지 않아도 익명 계정으로 저장 사본이 서버에 올라간다. 로그인하면 교환과 친선 배틀을 하고 우편함 선물을 받는다.
 
 Claude Code, Codex CLI, Gemini CLI 를 쓴다면 사용자 → `연결` 탭에서 연결해 둔다.
 맨 앞 터미널에서 AI 가 일하면 포켓몬도 바쁘게 움직인다. 승인을 기다리면 두리번거리고, 도구가 실패하면 쓰러진다.
-AI 가 일하는 동안에는 친밀도와 포인트가 두 배로 쌓인다. 연결하려면 Node.js 가 있어야 한다.
+AI 가 일하는 동안에는 포켓몬이 더 빨리 심심해진다. 친밀도와 포인트는 더 쌓이지 않는다. 연결하려면 Node.js 가 있어야 한다.
 
 <!-- 이미지 [cli-state]: 터미널에서 AI 가 일하는 동안 포켓몬이 작업 동작을 하는 GIF — docs/images/README.md -->
 
