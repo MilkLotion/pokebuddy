@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | `install-windows-smartscreen` | `install-windows-smartscreen.png` | 설명서 설치 | "Windows의 PC 보호" 첫 화면 | 넣음 (2026-09-29) |
 | `hero` | `hero.gif` | README 머리 | 에디터나 터미널 위에서 포켓몬 3~4마리가 걷고, 두리번거리고, 하나를 끌어 옮기는 장면 | 대기 |
-| `settings-party` | `settings-party.png` | README 이렇게 놀아요 | 설정창 파티 탭에 3마리 이상, 옆에 파티 상세 기기 창이 붙어 열린 화면 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
+| `settings-party` | `settings-party.png` | README 이렇게 놀아요, 설명서 파티와 박스 | 설정창 파티 탭에 3마리 이상, 옆에 파티 상세 기기 창이 붙어 열린 화면 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `shop` | `shop.png` | README 설정창, 설명서 포인트와 상점 | 상점 탭 `알` 분류. 포인트가 넉넉히 보이게 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `cli-state` | `cli-state.gif` | README 함께하면 더 좋은 것 | 터미널에서 Claude Code 가 일하는 동안 포켓몬이 작업 동작을 하고, 끝나면 인사하는 장면 | 대기 |
 | `install-windows-run` | `install-windows-run.png` | 설명서 설치 — Windows | `추가 정보` 를 누른 뒤 `실행` 단추가 보이는 화면 | 대기 |
@@ -45,14 +45,22 @@
 | `install-mac-keychain` | `install-mac-keychain.png` | 설명서 설치 — Mac | `PokeBuddy Safe Storage` 키체인 허용 창 | 대기 |
 | `starter` | `starter.png` | 설명서 처음 시작하기 | 첫 포켓몬 선택 창 | 넣음 (2026-09-30) |
 | `playground` | `playground.png` | 설명서 놀이공간과 포켓몬 | 설정 모달 `화면` 탭의 놀이공간 전환 단추 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
-| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. `팔기` 줄까지 보이게 | 다시 찍기 대기 — 2026-09-30 그림은 옛 메뉴다(남은 시간 글이 있고 `팔기` 줄이 없다) |
+| `care-menu` | `care-menu.png` | 설명서 메뉴 | 포켓몬 우클릭 메뉴. `팔기` 줄까지 보이게 | 넣음 (2026-10-24) |
 | `hatch` | `hatch.png` | 설명서 알과 부화 | 돌보미집 모달 위에 뜬 부화 결과 창 | 넣음 (2026-09-30 다시 찍음, `dist/tools/dev/dev-manage.js --docs --scene done-all --scene hatch --tab 박스 --click-text 돌보미집 --click-text 열기`) |
 | `evolve` | `evolve.png` | 설명서 성장과 진화 | 파티 상세 기기 창에서 진화 대상을 고르는 화면 | 넣음 (2026-09-30) |
 | `dex` | `dex.png` | 설명서 도감과 업적 | 도감 탭 목록. 해금한 종과 해금하지 않은 종이 섞여 보이게 | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `trade` | `trade.png` | 설명서 친구 교환 | 교환 모달(박스 탭 머리 메뉴의 `교환`)의 `공유 채널 만들기`·`링크로 참가` | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `connect` | `connect.png` | 설명서 AI 코딩 도구 연결 | 사용자 모달 `연결` 탭. CLI 하나 이상이 `연결됨` | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
+| `care-detail` | `care-detail.png` | 설명서 돌봄 | 파티 상세 기기 창. 친밀도·만복도·심심함이 보이게 | 넣음 (2026-10-24) |
+| `battle-party` | `battle-party.png` | 설명서 모험과 배틀 | 모험 탭 배틀 파티와 옆에 붙은 배틀 파티 상세 기기 창 | 넣음 (2026-10-24) |
+| `battle` | `battle.png` | 설명서 배틀 시작 | 랜덤 배틀 창. 판이 진행 중이고 기술 이름·피해 숫자가 보이게 | 넣음 (2026-10-24, `POKEBUDDY_DEV_BATTLE` 로컬 엔진 판) |
+| `battle-moves` | `battle-moves.png` | 설명서 기술 | 기술 바꾸기 모달. 고를 기술이 여러 개 보이게 | 넣음 (2026-10-24) |
+| `mail` | `mail.png` | 설명서 계정과 우편함 | 우편함 편지 목록. 계정 아이디·이메일이 보이지 않게 | 넣음 (2026-10-24, 가짜 편지) |
+| `settings-general` | `settings-general.png` | 설명서 설정 | 설정 모달 `일반` 탭 | 넣음 (2026-10-24) |
 
 넣은 뒤에는 `상태` 칸을 `넣음 (날짜)` 로 바꾼다.
+
+2026-10-24 에 설명서의 모든 앱 화면을 Windows 에서 다시 찍었다. 값은 50,000P, 친밀도·만복도 100, 심심함 0 이다. 1배로 찍었고 OS 창 단추는 없다. `install-windows-smartscreen` 은 그대로 두었다.
 
 ## 찍기 전에 준비할 것
 
