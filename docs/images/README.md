@@ -65,6 +65,7 @@
 | `achievements` | `achievements.png` | 설명서 도감과 업적, 팁 업적 | 업적창 진행도 | 넣음 (2026-10-25) |
 | `battle-start` | `battle-start.png` | 설명서 배틀 시작 | 배틀 시작 창. 내 전적은 예시 기록 | 넣음 (2026-10-25) |
 | `battle-record` | `battle-record.png` | 설명서 배틀 시작 | 배틀 기록 모달. 예시 기록, 상대 이름은 가짜 | 넣음 (2026-10-25) |
+| `battle-champion` | `battle-champion.png` | 설명서 배틀 시작 | 챔피언 샘플(난천, Lv.60)과의 랜덤 배틀 창. 개발 로컬 엔진 판 | 넣음 (2026-10-25) |
 | `points-buffs` | `points-buffs.png` | 설명서 팁 포인트 | 든든함·신남이 켜진 파티 상세 기기 창 | 넣음 (2026-10-25) |
 | `bag-toy` | `bag-toy.png` | 설명서 팁 친밀도 | 가방 탭과 장난감 가방 기기 창 | 넣음 (2026-10-25) |
 | `evolve-branches` | `evolve-branches.png` | 설명서 팁 진화 | 이브이 진화 창(갈래 8개) | 넣음 (2026-10-25) |
@@ -99,3 +100,5 @@
 - GIF 는 가로 800px 이하, 5MB 이하로 만든다. 10초 안쪽으로 자른다.
 - 캡처 도구의 예: Mac 은 `Cmd+Shift+5`, Windows 는 `Win+Shift+S` 다. GIF 는 Mac 의 Kap, Windows 의 ScreenToGif 로 만든다.
 - 앱 화면 대신 Figma 시안을 쓰지 않는다. 문서는 지금 앱의 모습을 보여 준다. 화면 모양의 근거는 Figma 파일 `MA3K41Y6omAi5mRu6YDFly` 의 `05 · Screens` 섹션이다. 앱과 시안이 다르면 앱을 찍고, 차이는 따로 알린다.
+
+2026-10-25 에 0.22.2(사거리를 기술 분류로 되돌림, 칸 아이콘 삭제)에 맞춰 `battle-party`·`battle-lineup`·`battle-moves`·`battle-record`·`battle-start` 를 다시 찍었다.
