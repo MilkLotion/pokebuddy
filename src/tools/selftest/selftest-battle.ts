@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { ENGINE_RULES, slotRange, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
+import { ENGINE_RULES, rangeOfMoves, speedCooldownMul, runBattle, startPos, type BattleEvent, type BattleInput, type EngineFighter, type EngineMove, type Pos, type StatusKind } from "../../battle/engine";
 import { battleTypeChart, buildFighter, petFighter } from "../../battle/fighter";
 import { BATTLE_BASIS, BATTLE_LIMITS, blockedOf, partyOf } from "../../battle/fighter-core";
 import { battleData } from "../../battle/fighter";
@@ -27,7 +27,7 @@ const mv = (id: string, over: Partial<EngineMove> = {}): EngineMove => ({
   id, type: "normal", class: "physical", power: 50, accuracy: null, priority: 0, cooldownMs: 4000, hits: null, traits: [], effects: {}, ...over,
 });
 const unit = (over: Partial<EngineFighter> = {}): EngineFighter => ({
-  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 95], moves: [], ability: null, special: null, ...over,
+  species: "test", types: ["normal"], level: 50, stats: [100, 100, 100, 100, 100, 95], moves: [], ability: null, special: null, range: 1, ...over,
 });
 const of = <K extends BattleEvent["kind"]>(evs: BattleEvent[], kind: K): Extract<BattleEvent, { kind: K }>[] =>
   evs.filter((e): e is Extract<BattleEvent, { kind: K }> => e.kind === kind);
@@ -157,34 +157,17 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(of(r.events, "step").every((e, i, list) => list.findIndex((x) => x.side === e.side && x.slot === e.slot && x.t === e.t) === i), "한 틱에 한 걸음");
 }
 
-// ── 사거리 — 칸으로 정한다: 앞 열(2·4·6번 칸, slot 1·3·5) 1, 뒤 열(1·3·5번 칸) 3. 피해 배율 없음 (2026-10-22) ──
+// ── 사거리 — 물리 기술 1, 특수 기술 3, 두 기술 중 짧은 쪽(쌍두형은 1). 원거리는 사거리 안에서 멈춰 쏜다 (2026-10-09, 칸 사거리에서 되돌림 2026-10-25) ──
 {
-  assert.deepStrictEqual([0, 1, 2, 3, 4, 5].map(slotRange), [3, 1, 3, 1, 3, 1], "뒤 열 3 · 앞 열 1");
-  assert.ok(!("rangeDamage" in ENGINE_RULES), "사거리 피해 배율은 없다");
-  // 같은 물리형이 뒤 칸이면 떨어져서, 앞 칸이면 붙어서 친다
-  const gapAtFirstHit = (slot: number): number => {
-    const shooter = unit({ moves: [mv("tackle")], stats: [999, 1, 999, 1, 999, 100] });
-    const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
-    const mine: (EngineFighter | null)[] = [null, null, null, null, null, null];
-    const theirs: (EngineFighter | null)[] = [null, null, null, null, null, null];
-    mine[slot] = shooter;
-    theirs[slot] = still;
-    const pos: [(Pos | null)[], (Pos | null)[]] = [mine.map((f) => (f ? at(0, 4) : null)), theirs.map((f) => (f ? at(14, 4) : null))];
-    const r = run(mine, theirs, 1, 6000, { positions: pos });
-    const hit = of(r.events, "damage").find((e) => e.side === 0)!;
-    const start = of(r.events, "start")[0]!;
-    let me = start.pos[0][slot]!, foe = start.pos[1][slot]!;
-    for (const e of r.events) {
-      if (e.t >= hit.t) break;
-      if (e.kind === "step") e.side === 0 ? (me = e) : (foe = e);
-    }
-    return Math.max(0, Math.abs(foe.x - me.x) - ENGINE_RULES.body);
-  };
-  assert.ok(gapAtFirstHit(0) > 1 && gapAtFirstHit(0) <= 3, `뒤 칸은 물리형도 떨어져서 친다 (틈 ${gapAtFirstHit(0)})`);
-  assert.ok(gapAtFirstHit(1) <= 1, `앞 칸은 붙어서 친다 (틈 ${gapAtFirstHit(1)})`);
-}
-{
-  const shooter = unit({ stats: [999, 1, 999, 1, 999, 100] });
+  assert.strictEqual(buildFighter({ species: "machamp" })!.range, 1, "물리");
+  assert.strictEqual(buildFighter({ species: "garchomp" })!.range, 1, "접촉 없는 물리(지진)도 1");
+  assert.strictEqual(buildFighter({ species: "alakazam" })!.range, 3, "특수");
+  assert.strictEqual(buildFighter({ species: "spectrier" })!.range, 3, "특수 둘 — 섀도볼·병상첨병 모두 3");
+  assert.strictEqual(buildFighter({ species: "lucario" })!.range, 1, "쌍두형 — 파동탄 3 과 코멧펀치 1 → 1");
+  assert.strictEqual(rangeOfMoves([mv("aura", { class: "special", traits: ["pulse"] })]), 3, "파동·탄환·소리도 특수 3");
+  assert.strictEqual(ENGINE_RULES.rangeDamage[3], 0.9, "특수(사거리 3) 피해 ×0.9");
+  assert.strictEqual(rangeOfMoves([]), 1, "공격기가 없으면 1");
+  const shooter = unit({ range: 6, stats: [999, 1, 999, 1, 999, 100] });
   const still = unit({ stats: [999, 1, 999, 1, 999, 95] });
   const r = run([shooter], [still], 1, 6000, { positions: [[at(0, 4)], [at(14, 4)]] });
   const hit = of(r.events, "damage").find((e) => e.side === 0)!;
@@ -195,7 +178,23 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
     if (e.kind === "step") e.side === 0 ? (me = e) : (foe = e);
   }
   const gap = Math.max(0, Math.abs(foe.x - me.x) - ENGINE_RULES.body);
-  assert.ok(gap > 1 && gap <= 3, `뒤 칸(1번)은 떨어져서 친다 (틈 ${gap})`);
+  assert.ok(gap > 1 && gap <= 6, `원거리는 떨어져서 쏜다 (틈 ${gap})`);
+}
+
+// ── 빠른 이동 — 첫 공격 뒤에 틈 4 안에 상대가 있으면 한 걸음이 stepMs ÷ 3 (2026-10-25) ──
+{
+  assert.strictEqual(ENGINE_RULES.rushGap, 4);
+  assert.strictEqual(ENGINE_RULES.rushDiv, 3);
+  const striker = unit({ stats: [999, 300, 999, 1, 999, 95] });
+  const frail = unit({ stats: [10, 1, 10, 1, 10, 95] });
+  const sturdy = unit({ stats: [999, 1, 999, 1, 999, 1] });
+  // 1번 상대는 붙어 있고, 2번 상대는 틈 6 — 1번을 쓰러뜨린 뒤 2번에게 걸어간다
+  const r = run([striker], [frail, sturdy], 1, 8000, { positions: [[at(0, 4)], [at(3, 4), at(8, 8)]] } as unknown as Partial<BattleInput>);
+  const firstAttack = (side: number): number => Math.min(...r.events.filter((e) => (e.kind === "attack" || e.kind === "move") && e.side === side).map((e) => e.t));
+  const steps = of(r.events, "step");
+  assert.ok(steps.filter((e) => e.t < firstAttack(0) || e.side === 1 && e.t < firstAttack(1)).every((e) => e.ms === undefined), "첫 공격 전에는 보통 걸음");
+  assert.ok(steps.some((e) => e.side === 0 && e.ms === ENGINE_RULES.stepMs / 3), "첫 공격 뒤 틈 4 안이면 빠른 걸음");
+  assert.ok(steps.filter((e) => e.ms !== undefined).every((e) => e.ms === ENGINE_RULES.stepMs / 3), "빠른 걸음은 stepMs ÷ 3");
 }
 
 // ── 능력 변화 — 단계당 25%, 최대 ±3(2026-10-10), 쌓임 ──
@@ -379,6 +378,20 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   // 자기과신 — 쓰러뜨리면 공격 +1
   const kill = hitWith(nuke, { ability: "moxie", stats: [999, 999, 999, 1, 999, 95] }, { stats: [10, 1, 10, 1, 10, 95] });
   assert.ok(of(kill.events, "stat").some((e) => e.side === 0 && e.stat === 1 && e.stage === 1), "자기과신");
+  // 쓰러뜨림 기여 — 마지막 타격이 아니어도 받은 피해의 30% 이상을 줬으면 자기과신 (2026-10-25)
+  {
+    assert.strictEqual(ENGINE_RULES.koShare, 0.3);
+    const jab = mv("jab", { power: 40, cooldownMs: 1000 });
+    const helper = unit({ ability: "moxie", stats: [999, 200, 999, 1, 999, 95], moves: [jab] });
+    const finisher = unit({ stats: [999, 200, 999, 1, 999, 95], moves: [jab] });
+    const target = unit({ stats: [400, 1, 100, 1, 100, 95] });
+    const r = run([helper, finisher], [target], 1, 30_000, { positions: [[at(6, 2), at(6, 6)], [at(8, 4)]] } as unknown as Partial<BattleInput>);
+    const faintAt = of(r.events, "faint").find((e) => e.side === 1)!.t;
+    const dealt = [0, 0];
+    for (const e of of(r.events, "damage")) if (e.side === 0 && e.t <= faintAt) dealt[e.slot]! += e.amount;
+    assert.ok(dealt[0]! / (dealt[0]! + dealt[1]!) >= 0.3, `도운 쪽 몫 ${dealt[0]} / ${dealt[0]! + dealt[1]!}`);
+    assert.ok(of(r.events, "stat").some((e) => e.side === 0 && e.slot === 0 && e.stat === 1 && e.stage === 1 && e.t === faintAt), "기여 30% 이상이면 마지막 타격이 아니어도 자기과신");
+  }
   // 재생력 — HP 50% 아래가 처음 되면 1/3 회복
   const half = mv("half", { power: 120, cooldownMs: 1000 });
   const rg = hitWith(half, { stats: [999, 200, 999, 1, 999, 95] }, { ability: "regenerator", stats: [200, 1, 60, 1, 60, 95] }, 5000);
@@ -517,9 +530,11 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   }
 }
 
-// ── 메로엣타 — 루미나코러스를 쓰면 보이스폼 ↔ 스텝폼, 스텝폼은 자기 기술(인파이트). 사거리는 칸이라 그대로 (2026-10-09, 사거리 2026-10-22) ──
+// ── 메로엣타 — 루미나코러스를 쓰면 보이스폼 ↔ 스텝폼, 스텝폼은 자기 기술(인파이트)·사거리 1 (2026-10-09) ──
 {
   const mel = buildFighter({ species: "meloetta" })!;
+  assert.strictEqual(mel.range, 3);
+  assert.strictEqual(mel.altForm?.range, 1, "스텝폼은 쌍두형이라 1");
   assert.deepStrictEqual(mel.moves.map((m) => m.id), ["relic-song", "psychic"]);
   assert.strictEqual(mel.altForm?.species, "meloetta-pirouette");
   assert.deepStrictEqual(mel.altForm?.moves?.map((m) => m.id), ["relic-song", "close-combat"], "스텝폼 기술");

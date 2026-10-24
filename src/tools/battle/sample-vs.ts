@@ -3,12 +3,12 @@
 //
 //   npm run build && node dist/tools/battle/sample-vs.js --team vaporeon,espeon,umbreon,jolteon,sylveon,glaceon [--level easy] [--n 200] [--seed 1]
 //
-// --team 은 칸 순서(1~6번 칸)대로 쉼표로 잇는다. 2·4·6번 칸이 앞라인이다. 메가 모습은 종:메가슬러그(예: garchomp:garchomp-mega)
+// --team 은 칸 순서(1~6번 칸)대로 쉼표로 잇는다. 메가 모습은 종:메가슬러그(예: garchomp:garchomp-mega)
 // 판마다 지정 파티가 건 쪽(0)과 받은 쪽(1)을 번갈아 맡는다. 무승부는 0.5승
 // 남은 HP: 지정 파티가 이긴 판에서 지정 파티 6마리의 남은 HP 합 ÷ 최대 HP 합의 평균
 import { runBattle, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
-import { battleSamples } from "../../battle/samples";
+import { battleSamples, sampleBasis } from "../../battle/samples";
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
@@ -35,7 +35,7 @@ process.stdout.write(`지정 파티 ${TEAM} · 샘플마다 ${N}판 · 시드 ${
 process.stdout.write(`${"id".padEnd(10)} ${"승률".padStart(6)} ${"남은 HP".padStart(7)}\n`);
 const rates: number[] = [];
 for (const s of battleSamples().filter((x) => !LEVEL || x.level === LEVEL)) {
-  const foe = s.slots.map((c) => buildFighter(c));
+  const foe = s.slots.map((c) => buildFighter(c, sampleBasis(s)));
   let win = 0;
   let left = 0;
   let wins = 0;

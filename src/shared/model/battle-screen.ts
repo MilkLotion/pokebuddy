@@ -29,7 +29,7 @@ export interface BattleRoulette {
 // 엔진 BattleEvent 와 같은 모양 (src/battle/engine.ts). nextAt(다음 기술이 준비되는 시각)은 엔진이 줄 때만 있다 — 없으면 다음 기술을 쓴 시각까지로 어림한다
 export type BattleScreenEvent =
   | { t: number; kind: "start"; obstacles: BattleObstacleView[]; pos: [(BattlePos | null)[], (BattlePos | null)[]]; roulette?: { weather?: BattleRoulette; field?: BattleRoulette; aura?: BattleRoulette } }
-  | { t: number; kind: "step"; side: BattleSide; slot: number; x: number; y: number }
+  | { t: number; kind: "step"; side: BattleSide; slot: number; x: number; y: number; ms?: number } // ms — 빠른 이동의 한 걸음 시간. 없으면 field.stepMs
   | { t: number; kind: "move"; side: BattleSide; slot: number; move: string; nextAt?: number }
   | { t: number; kind: "attack"; side: BattleSide; slot: number }
   | { t: number; kind: "charge"; side: BattleSide; slot: number; move: string; nextAt?: number }

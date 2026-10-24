@@ -18,8 +18,9 @@ import battleJson from "./battle/battle-data.json" with { type: "json" };
 // 샘플 파티 — 랜덤 배틀 상대 풀에 실제 사용자 파티와 섞는다 (data/battle-samples.json, docs/specs/adventure.md "샘플 파티")
 export interface BattleSample {
   id: string; // `<level>-NN` — battles.opponent_sample
-  level: "hard" | "normal" | "easy";
+  level: "hard" | "normal" | "easy" | "champion";
   name: string; // 상대 이름 — 배틀 창 머리·배틀 기록
+  battleLevel?: number; // 싸움 레벨 — 챔피언만(60). 없으면 50 (src/battle/samples.ts sampleBasis)
   slots: FighterSource[];
 }
 export const battle = battleJson as unknown as { hash: string; data: BattleData; samples?: BattleSample[] };

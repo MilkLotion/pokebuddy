@@ -4,28 +4,42 @@
 import type { DexOptions } from "../dex/data.js";
 import { loadJson } from "../dex/data.js";
 import { profileOf } from "../dex/species.js";
-import { partyOf, type BattleData, type FighterSource } from "./fighter-core.js";
+import { BATTLE_BASIS, partyOf, type BattleData, type FighterSource, type StatBasis } from "./fighter-core.js";
 
-// champion — 원작 챔피언 파티. 난이도를 맞추지 않는 따로 등급(2026-10-24 사용자 "따로 등급")
+// champion — 원작 챔피언전 파티. 난이도를 맞추지 않는 따로 등급(2026-10-24 사용자 "따로 등급")
 export const SAMPLE_LEVELS = ["hard", "normal", "easy", "champion"] as const;
 export type SampleLevel = (typeof SAMPLE_LEVELS)[number];
 const SAMPLE_KINDS = ["type-concept", "type-cover", "offense", "bulk", "weather", "legend", "champion"] as const;
-export const SAMPLES_PER_LEVEL = 10;
+// 등급마다 샘플 수 — 챔피언은 1세대부터 지방 챔피언 12명(2026-10-25 사용자 "어디지방 챔피언 이런거로 1세대부터 차례대로", 목록 "2번으로")
+export const SAMPLES_PER_LEVEL: Readonly<Record<SampleLevel, number>> = { hard: 10, normal: 10, easy: 10, champion: 12 };
+// 챔피언의 싸움 레벨 — 다른 샘플과 배틀 파티는 BATTLE_BASIS 의 50 (2026-10-25 사용자 "이 챔피언들은 체급높게하게 레벨 60으로 해버려")
+export const CHAMPION_BATTLE_LEVEL = 60;
 
 export interface BattleSample {
-  id: string; // `<level>-NN` — 판 기록(battles.opponent_sample)에 남는 값
+  id: string; // `<level>-NN` — 판 기록(battles.opponent_sample)에 남는 값. 챔피언은 세대 순
   level: SampleLevel;
   name: string; // 화면 이름
+  region?: string; // 챔피언의 지방 이름(예: 관동) — 홈페이지 AI 트레이너 탭이 읽는다
+  battleLevel?: number; // 싸움 레벨 — 챔피언만 둔다. 없으면 BATTLE_BASIS.level
   kind: (typeof SAMPLE_KINDS)[number];
   note: string;
-  slots: FighterSource[]; // 칸 6개, 칸 순서가 배치
+  slots: FighterSource[]; // 칸 6개, 칸 순서가 처음 자리
 }
 
 export const battleSamples = (opts?: DexOptions): BattleSample[] => loadJson<{ samples: BattleSample[] }>("battle-samples.json", opts).samples;
 
-// 서버에 실을 모양 — 화면 이름과 칸만. 유형·설명은 싣지 않는다
-export const samplesForServer = (list: readonly BattleSample[]): { id: string; level: SampleLevel; name: string; slots: FighterSource[] }[] =>
-  list.map((s) => ({ id: s.id, level: s.level, name: s.name, slots: s.slots.map((c) => ({ species: c.species, ...(c.form ? { form: c.form } : {}) })) }));
+// 샘플의 능력치 기준 — 싸움 레벨만 바꾼다(개체값·노력치는 배틀 기준 그대로)
+export const sampleBasis = (s: Pick<BattleSample, "battleLevel">): StatBasis => (s.battleLevel ? { ...BATTLE_BASIS, level: s.battleLevel } : BATTLE_BASIS);
+
+// 서버에 실을 모양 — 화면 이름·싸움 레벨과 칸만. 유형·설명·지방은 싣지 않는다
+export const samplesForServer = (list: readonly BattleSample[]): { id: string; level: SampleLevel; name: string; battleLevel?: number; slots: FighterSource[] }[] =>
+  list.map((s) => ({
+    id: s.id,
+    level: s.level,
+    name: s.name,
+    ...(s.battleLevel ? { battleLevel: s.battleLevel } : {}),
+    slots: s.slots.map((c) => ({ species: c.species, ...(c.form ? { form: c.form } : {}) })),
+  }));
 
 // 샘플 하나의 잘못 — 빈 목록이면 통과
 export function sampleProblems(s: BattleSample, data: BattleData): string[] {
@@ -34,6 +48,10 @@ export function sampleProblems(s: BattleSample, data: BattleData): string[] {
   if (!SAMPLE_LEVELS.includes(s.level)) out.push(`level: ${s.level}`);
   if (!SAMPLE_KINDS.includes(s.kind)) out.push(`kind: ${s.kind}`);
   if (!s.name) out.push("name 없음");
+  // 챔피언만 지방과 싸움 레벨 60 을 둔다
+  const champion = s.level === "champion";
+  if (champion !== !!s.region) out.push(`region: ${s.region ?? "없음"}`);
+  if (champion ? s.battleLevel !== CHAMPION_BATTLE_LEVEL : s.battleLevel !== undefined) out.push(`battleLevel: ${s.battleLevel ?? "없음"}`);
   if (s.slots.length !== 6) out.push(`칸 ${s.slots.length}개`);
   const seen = new Set<number>();
   const battleOnly = new Set(Object.values(data.forms).map((f) => f.form)); // 전투 중에만 나오는 모습 — 모험에 나가지 않는다

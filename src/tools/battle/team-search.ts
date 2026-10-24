@@ -13,7 +13,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
-import { runBattle, slotRange, type EngineFighter } from "../../battle/engine";
+import { runBattle, type EngineFighter } from "../../battle/engine";
 import { blockedOf } from "../../battle/fighter-core";
 import { battleTypeChart, buildFighter, type FighterSource } from "../../battle/fighter";
 import { tierOf } from "../../battle/tier";
@@ -450,7 +450,7 @@ async function main(): Promise<void> {
       const f = fighterOf(s);
       if (!f) return;
       const tr = tier(s.species);
-      say(`  ${k + 1}번 ${labelOf(s)}${tr === "legendary" ? "(초전설)" : tr === "sub" ? "(준전설)" : ""} [${f.types.join("/")}] ${abilities[f.ability ?? ""]?.ko ?? f.ability} · 사거리 ${slotRange(k)} · ${f.moves.map((m) => movesT[m.id]?.ko ?? m.id).join(" + ")}${s.moves ? " (고른 기술)" : ""}`);
+      say(`  ${k + 1}번 ${labelOf(s)}${tr === "legendary" ? "(초전설)" : tr === "sub" ? "(준전설)" : ""} [${f.types.join("/")}] ${abilities[f.ability ?? ""]?.ko ?? f.ability} · 사거리 ${f.range} ·${f.moves.map((m) => movesT[m.id]?.ko ?? m.id).join(" + ")}${s.moves ? " (고른 기술)" : ""}`);
     });
     if (r.bestResponseTeam.length) say(`  최선 응수: ${teamLabel(r.bestResponseTeam)}`);
   });

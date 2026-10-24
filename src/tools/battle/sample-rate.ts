@@ -11,7 +11,7 @@
 import fs from "node:fs";
 import { runBattle, type EngineFighter } from "../../battle/engine";
 import { battleTypeChart, buildFighter } from "../../battle/fighter";
-import { battleSamples, SAMPLE_LEVELS, type SampleLevel } from "../../battle/samples";
+import { battleSamples, SAMPLE_LEVELS, sampleBasis, type SampleLevel } from "../../battle/samples";
 import { tierOf } from "../../battle/tier";
 import { isMetaKey } from "../../dex/data";
 import { profileOf } from "../../dex/species";
@@ -64,7 +64,7 @@ interface Row {
 }
 const rows: Row[] = [];
 for (const s of battleSamples()) {
-  const team = s.slots.map((c) => buildFighter(c));
+  const team = s.slots.map((c) => buildFighter(c, sampleBasis(s)));
   let win = 0;
   let timeouts = 0;
   refs.forEach((ref, i) => {
@@ -80,7 +80,7 @@ for (const s of battleSamples()) {
 // 리그 — 샘플끼리 짝마다 LEAGUE 판(쪽을 번갈아). 기준 풀 승률이 100% 근처로 몰리는 상 난이도 안의 순서를 본다
 const LEAGUE = Number(arg("league", "10"));
 // 상대는 상·중·하 샘플만 — 챔피언 등급은 상대로 세지 않아 난이도 순서를 흔들지 않는다. 챔피언 자신의 리그 승률은 상·중·하 상대로 잰다
-const teams = battleSamples().map((s) => s.slots.map((c) => buildFighter(c)));
+const teams = battleSamples().map((s) => s.slots.map((c) => buildFighter(c, sampleBasis(s))));
 const ranked = rows.map((r) => r.level !== "champion");
 const league = rows.map(() => 0);
 for (let a = 0; a < teams.length; a++)

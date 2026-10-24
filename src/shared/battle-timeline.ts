@@ -64,6 +64,7 @@ export interface UnitState {
   from: BattlePos; // 걷기 보간 — 출발 칸
   to: BattlePos; // 도착 칸
   stepAt: number; // 걷기 시작 시각
+  stepDur: number; // 이번 걸음 시간 — 빠른 이동이면 step 이벤트의 ms, 아니면 field.stepMs
   hp: number;
   maxHp: number; // 지금 최대 HP — 처음은 판 시작 값, 스웜체인지면 form 이벤트로 늘어난다
   chipHp: number; // 깎이기 전 HP — chipUntil 까지 보인다
@@ -214,6 +215,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
           from: at,
           to: at,
           stepAt: 0,
+          stepDur: stepMs,
           hp: u.maxHp,
           maxHp: u.maxHp,
           chipHp: u.maxHp,
@@ -267,7 +269,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
         const u = unit(e.side, e.slot);
         if (u) {
           if (e.x !== u.to.x || e.y !== u.to.y) u.facing = rowOf(e.x - u.to.x, e.y - u.to.y);
-          u.from = u.to; u.to = { x: e.x, y: e.y }; u.stepAt = e.t;
+          u.from = u.to; u.to = { x: e.x, y: e.y }; u.stepAt = e.t; u.stepDur = e.ms ?? stepMs;
         }
         break;
       }
@@ -372,7 +374,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
       return Math.max(0, Math.min(1, (t - u.gaugeFrom) / (u.gaugeTo - u.gaugeFrom)));
     },
     posOf(u, t) {
-      const k = Math.max(0, Math.min(1, (t - u.stepAt) / stepMs));
+      const k = Math.max(0, Math.min(1, (t - u.stepAt) / u.stepDur));
       return { x: u.from.x + (u.to.x - u.from.x) * k, y: u.from.y + (u.to.y - u.from.y) * k };
     },
   };
@@ -475,6 +477,7 @@ export function spriteFrame(sheets: LookSheets, u: UnitState, t: number, stepMs:
   }
   const hurt = pick(sheets, SPRITE_ANIMS.hurt);
   if (hurt && t - u.hitAt < lengthOf(hurt[1])) return out(hurt, t - u.hitAt, false);
-  if (t - u.stepAt < stepMs) return out(pick(sheets, SPRITE_ANIMS.walk), t, true);
+  // 걷는 동안 — 빠른 이동이 이어지면 다음 걸음이 바로 와서 걷기 동작이 끊기지 않게 stepMs 만큼은 걷기로 둔다
+  if (t - u.stepAt < Math.max(stepMs, u.stepDur)) return out(pick(sheets, SPRITE_ANIMS.walk), t, true);
   return out(pick(sheets, SPRITE_ANIMS.idle), t, true);
 }

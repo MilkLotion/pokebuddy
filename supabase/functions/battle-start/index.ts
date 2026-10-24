@@ -12,10 +12,11 @@
 //   6. { battleId, reward, result, events, sides, looks, dataHash, foe } — 앱은 이벤트를 재생하고, 보상을 저장에 더하고 battleId 를 남긴다
 //      foe 는 바로 랜덤 판만 — { name } 상대 이름. 샘플은 샘플 이름, 실제 상대는 표시 이름(없으면 null)
 import { damageLog, damageTally, runBattle, type EngineFighter } from "../_shared/battle/engine.ts";
-import { fighterFrom, lookOfSource, partyOf, type FighterSource } from "../_shared/battle/fighter-core.ts";
+import { BATTLE_BASIS, fighterFrom, lookOfSource, partyOf, type FighterSource, type StatBasis } from "../_shared/battle/fighter-core.ts";
 import { battle, codeOf, fail, json, whoAmI, type BattleContext, type BattleSample } from "../_shared/battle-common.ts";
 
-const fighters = (party: (FighterSource | null)[]): (EngineFighter | null)[] => party.map((s) => (s ? fighterFrom(battle.data, s) : null));
+// basis — 능력치 기준. 챔피언 샘플만 싸움 레벨 60 이고 나머지는 BATTLE_BASIS(50)
+const fighters = (party: (FighterSource | null)[], basis: StatBasis = BATTLE_BASIS): (EngineFighter | null)[] => party.map((s) => (s ? fighterFrom(battle.data, s, basis) : null));
 
 // 판 요약 — 칸마다 { species, form, shiny, dealt, taken, activeMs }, 빈 칸은 null. 앞이 건 쪽(user_id)이다
 function summaryOf(parties: [(FighterSource | null)[], (FighterSource | null)[]], result: ReturnType<typeof runBattle>, foeName: string | null): unknown {
@@ -44,6 +45,7 @@ interface Foe {
   sample: string | null;
   name: string | null;
   party: (FighterSource | null)[];
+  basis?: StatBasis; // 샘플의 싸움 레벨 — 없으면 BATTLE_BASIS
 }
 
 const rand01 = (): number => crypto.getRandomValues(new Uint32Array(1))[0]! / 4294967296;
@@ -58,7 +60,7 @@ function sampleFoe(last: string | null): Foe | null {
   const inLevel = all.filter((s) => s.level === level);
   const rest = inLevel.filter((s) => s.id !== last);
   const s: BattleSample = pickOf(rest.length ? rest : inLevel);
-  return { userId: null, sample: s.id, name: s.name, party: s.slots };
+  return { userId: null, sample: s.id, name: s.name, party: s.slots, ...(s.battleLevel ? { basis: { ...BATTLE_BASIS, level: s.battleLevel } } : {}) };
 }
 
 // 실제 후보가 없으면 샘플, 있으면 rate 확률로 샘플 (2026-10-22 사용자 결정 — 샘플 50%)
@@ -106,7 +108,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     foe = { userId: chosen.user_id, sample: null, name: null, party: chosen.party };
   }
 
-  const sides: [(EngineFighter | null)[], (EngineFighter | null)[]] = [fighters(mine.party), fighters(foe.party)];
+  const sides: [(EngineFighter | null)[], (EngineFighter | null)[]] = [fighters(mine.party), fighters(foe.party, foe.basis)];
   const seed = crypto.getRandomValues(new Uint32Array(1))[0]!;
   const result = runBattle({ seed, sides, typeChart: battle.data.typeChart });
 

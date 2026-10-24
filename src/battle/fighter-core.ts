@@ -2,7 +2,7 @@
 // 앱(./fighter.ts)과 서버 함수(supabase/functions/_shared/battle)가 같은 코드를 쓴다 — 같은 개체면 같은 전투 개체가 나온다
 // import 는 엔진 하나뿐이다. 서버로 복사할 때 엔진 경로의 .js 를 .ts 로 바꾼다(src/tools/data/build-battle.ts). 주석에 따옴표 경로를 쓰지 않는다 — 함수 서버가 주석 속 경로도 읽는다
 // 규칙은 docs/specs/adventure.md "배틀 엔진", "실제 능력치"
-import { ENGINE_RULES, type EngineFighter, type EngineMove } from "./engine.js";
+import { ENGINE_RULES, rangeOfMoves, type EngineFighter, type EngineMove } from "./engine.js";
 
 // ── 표 ──
 export interface BattleMoveRow {
@@ -162,20 +162,21 @@ export function fighterFrom(data: BattleData, src: FighterSource, basis: StatBas
     moves,
     ability: mega ? mega.ability : (female?.ability ?? sp.ability),
     special: sp.special && SPECIALS.has(sp.special) ? (sp.special as EngineFighter["special"]) : null,
+    range: rangeOfMoves(moves),
     altForm: alt ? altFormOf(data, alt, real, src.moveSwap === true) : null,
     schoolingReady: (src.level ?? 0) >= SCHOOLING_LEVEL,
     tickets: rouletteTickets(!!mega, !!sp.tier),
   };
 }
 
-// 전투 중 바뀌는 다른 모습 — 자기 기술을 쓰는 모습(메로엣타)은 그 모습 칸의 기술을 함께 싣는다
+// 전투 중 바뀌는 다른 모습 — 자기 기술을 쓰는 모습(메로엣타)은 그 모습 칸의 기술과 사거리를 함께 싣는다
 function altFormOf(data: BattleData, alt: BattleFormRow, real: (six: readonly number[]) => number[], swap: boolean): NonNullable<EngineFighter["altForm"]> {
   const own = alt.ownMoves ? movesOf(data, alt.form, swap) : [];
   return {
     species: alt.form,
     stats: real(alt.stats),
     ...(alt.types ? { types: alt.types } : {}),
-    ...(own.length ? { moves: own } : {}),
+    ...(own.length ? { moves: own, range: rangeOfMoves(own) } : {}),
   };
 }
 
