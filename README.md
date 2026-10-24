@@ -6,7 +6,7 @@
 
 **바탕화면에서 포켓몬을 키우는 방치형 게임**
 
-일하는 동안 포켓몬이 창 위를 걸어 다닌다. 가끔 밥을 주고 놀아 주면 된다.
+일하는 동안 포켓몬이 화면을 걸어 다닌다. 가끔 밥을 주고 놀아 주면 된다.
 
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-555)
 ![license](https://img.shields.io/badge/license-MIT-blue)
