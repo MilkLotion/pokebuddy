@@ -52,6 +52,8 @@ export function sampleProblems(s: BattleSample, data: BattleData): string[] {
   const champion = s.level === "champion";
   if (champion !== !!s.region) out.push(`region: ${s.region ?? "없음"}`);
   if (champion ? s.battleLevel !== CHAMPION_BATTLE_LEVEL : s.battleLevel !== undefined) out.push(`battleLevel: ${s.battleLevel ?? "없음"}`);
+  // 챔피언 이름 끝에 싸움 레벨 — 일부러 세게 한 상대임을 알린다(2026-10-25 사용자 "챔피언만 이름옆에 (60Lv) 적어놔줘")
+  if (champion && !s.name.endsWith(` (${CHAMPION_BATTLE_LEVEL}Lv)`)) out.push(`이름 끝에 (${CHAMPION_BATTLE_LEVEL}Lv) 없음: ${s.name}`);
   if (s.slots.length !== 6) out.push(`칸 ${s.slots.length}개`);
   const seen = new Set<number>();
   const battleOnly = new Set(Object.values(data.forms).map((f) => f.form)); // 전투 중에만 나오는 모습 — 모험에 나가지 않는다

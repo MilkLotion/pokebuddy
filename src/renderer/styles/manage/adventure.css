@@ -61,29 +61,10 @@
 .battle-card.blocked .battle-body {
   opacity: 0.45;
 }
-/* 칸 아이콘 — 오른쪽 위 구석, 16 선 아이콘. 출전 불가 까닭은 그 왼쪽(오른쪽 12 + 아이콘 16 + 사이 4). Figma 02 `Adventure Slot Card` `line · 칸 아이콘` */
-.battle-line {
-  position: absolute;
-  top: 13px;
-  right: 12px;
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-.battle-line svg {
-  display: block;
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
 .battle-blocked {
   position: absolute;
   top: 12px;
-  right: 32px;
+  right: 12px;
   display: inline-flex;
   align-items: center;
   gap: 5px;

@@ -825,7 +825,7 @@
     {
       "id": "champion-01",
       "level": "champion",
-      "name": "챔피언 그린",
+      "name": "챔피언 그린 (60Lv)",
       "region": "관동",
       "battleLevel": 60,
       "kind": "champion",
@@ -855,7 +855,7 @@
     {
       "id": "champion-02",
       "level": "champion",
-      "name": "레드",
+      "name": "레드 (60Lv)",
       "region": "관동",
       "battleLevel": 60,
       "kind": "champion",
@@ -885,7 +885,7 @@
     {
       "id": "champion-03",
       "level": "champion",
-      "name": "챔피언 목호",
+      "name": "챔피언 목호 (60Lv)",
       "region": "성도",
       "battleLevel": 60,
       "kind": "champion",
@@ -915,7 +915,7 @@
     {
       "id": "champion-04",
       "level": "champion",
-      "name": "챔피언 성호",
+      "name": "챔피언 성호 (60Lv)",
       "region": "호연",
       "battleLevel": 60,
       "kind": "champion",
@@ -945,7 +945,7 @@
     {
       "id": "champion-05",
       "level": "champion",
-      "name": "챔피언 윤진",
+      "name": "챔피언 윤진 (60Lv)",
       "region": "호연",
       "battleLevel": 60,
       "kind": "champion",
@@ -975,7 +975,7 @@
     {
       "id": "champion-06",
       "level": "champion",
-      "name": "챔피언 난천",
+      "name": "챔피언 난천 (60Lv)",
       "region": "신오",
       "battleLevel": 60,
       "kind": "champion",
@@ -1005,7 +1005,7 @@
     {
       "id": "champion-07",
       "level": "champion",
-      "name": "챔피언 노간주",
+      "name": "챔피언 노간주 (60Lv)",
       "region": "하나",
       "battleLevel": 60,
       "kind": "champion",
@@ -1034,7 +1034,7 @@
     {
       "id": "champion-08",
       "level": "champion",
-      "name": "챔피언 아이리스",
+      "name": "챔피언 아이리스 (60Lv)",
       "region": "하나",
       "battleLevel": 60,
       "kind": "champion",
@@ -1064,7 +1064,7 @@
     {
       "id": "champion-09",
       "level": "champion",
-      "name": "챔피언 카르네",
+      "name": "챔피언 카르네 (60Lv)",
       "region": "칼로스",
       "battleLevel": 60,
       "kind": "champion",
@@ -1094,7 +1094,7 @@
     {
       "id": "champion-10",
       "level": "champion",
-      "name": "챔피언 쿠쿠이",
+      "name": "챔피언 쿠쿠이 (60Lv)",
       "region": "알로라",
       "battleLevel": 60,
       "kind": "champion",
@@ -1123,7 +1123,7 @@
     {
       "id": "champion-11",
       "level": "champion",
-      "name": "챔피언 단델",
+      "name": "챔피언 단델 (60Lv)",
       "region": "가라르",
       "battleLevel": 60,
       "kind": "champion",
@@ -1153,7 +1153,7 @@
     {
       "id": "champion-12",
       "level": "champion",
-      "name": "챔피언 테사",
+      "name": "챔피언 테사 (60Lv)",
       "region": "팔데아",
       "battleLevel": 60,
       "kind": "champion",

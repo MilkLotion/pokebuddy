@@ -53,10 +53,5 @@ export const chevronUpIconEl = (): SVGSVGElement => lineIconEl(["M4 10l4-4 4 4"]
 export const chevronDownIconEl = (): SVGSVGElement => lineIconEl(["M4 6l4 4 4-4"]);
 
 // 노트 — 둥근 종이와 줄 셋. 배틀 창 판 표시 줄의 배틀 로그 창 열기 (Figma 01 `Icon / Note` `1996:2879`)
-// 방패·칼 — 모험 탭 배틀 칸 카드 구석의 칸 아이콘. 앞라인(2·4·6번 칸, 사거리 1) 방패, 뒷라인(1·3·5번 칸, 사거리 3) 칼
-// (2026-10-22 사용자 "앞라인 탱커 뒷라인 딜러", Figma 01 `Icon / Shield` `2106:810`·`Icon / Sword` `2106:813`)
-export const shieldIconEl = (): SVGSVGElement => lineIconEl(["M2.8 2.6H13.2V7.4C13.2 10.6 10.9 12.9 8 14.4C5.1 12.9 2.8 10.6 2.8 7.4Z"]);
-export const swordIconEl = (): SVGSVGElement => lineIconEl(["M8 1.5L9.4 3.2V10H6.6V3.2Z", "M4.8 10H11.2", "M8 10V13.2", "M7.2 14.5H8.8"]);
-
 export const noteIconEl = (): SVGSVGElement =>
   lineIconEl(["M4.5 1.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z", "M5.5 5.5h5", "M5.5 8h5", "M5.5 10.5h3"]);

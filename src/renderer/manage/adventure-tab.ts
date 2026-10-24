@@ -5,7 +5,7 @@
 import type { BattleSlotView, Snapshot } from "../../shared/model/snapshot.js";
 import { buttonEl, el } from "../ui/dom.js";
 import { genderIcon } from "../ui/gender-icon.js";
-import { plusIconEl, shieldIconEl, swordIconEl } from "../ui/line-icons.js";
+import { plusIconEl } from "../ui/line-icons.js";
 import { movePillEl } from "../ui/move-pill.js";
 import { shinyIcon } from "../ui/shiny-icon.js";
 import { typeBadgeEl } from "../ui/type-badge.js";
@@ -23,17 +23,6 @@ import { addTabTip } from "./tab-tips.js";
 
 const SOON = "아직 준비 중이에요";
 const pickSlot = (slot: number): void => openAnyDialog({ kind: "battle-pick", slot });
-
-// 칸 아이콘 — 오른쪽 위 구석. 앞라인(2·4·6번 칸, 사거리 1)은 방패, 뒷라인(1·3·5번 칸, 사거리 3)은 칼. 칸의 성질이라 빈 칸·출전 불가 칸에도 둔다
-// 글자는 두지 않는다. 포켓몬별 역할 판정은 없다 (2026-10-22 사용자 "앞라인 탱커 뒷라인 딜러 끝", docs/specs/adventure.md "배틀 파티")
-function lineMarkEl(index: number): HTMLElement {
-  const front = index % 2 === 1; // 칸 번호 2·4·6
-  const mark = el("span", "battle-line");
-  mark.appendChild(front ? shieldIconEl() : swordIconEl());
-  mark.setAttribute("role", "img");
-  mark.setAttribute("aria-label", front ? "앞라인 · 사거리 1" : "뒷라인 · 사거리 3");
-  return mark;
-}
 
 function petCard(slot: BattleSlotView): HTMLElement {
   const pet = slot.pet!;
@@ -57,7 +46,6 @@ function petCard(slot: BattleSlotView): HTMLElement {
   info.appendChild(moves);
   body.appendChild(info);
   card.appendChild(body);
-  card.appendChild(lineMarkEl(slot.index));
   if (slot.blocked) {
     card.classList.add("blocked");
     const why = el("span", "battle-blocked", slot.blocked);
@@ -79,7 +67,7 @@ function blankCard(slot: BattleSlotView): HTMLElement {
   const icon = el("span", "blank-icon");
   icon.appendChild(plusIconEl());
   // 글자는 Figma 02 `Adventure Slot Card` State=Empty 그대로
-  card.append(icon, el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"), lineMarkEl(slot.index));
+  card.append(icon, el("strong", undefined, "빈 칸"), el("small", undefined, "박스에서 배치"));
   card.addEventListener("click", () => pickSlot(slot.index));
   return card;
 }
