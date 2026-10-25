@@ -629,6 +629,12 @@ out("0 supabase/functions/_shared 가 최신");
   const yBack = { prev: clone(yOk.next), next: clone(yOk.next) };
   yBack.next.pets[1]!.species = "floette-yellow";
   assert.deepEqual(rules(yBack.prev, yBack.next, ctx(60_000)), ["species"], "노란 꽃으로 되돌리면 종 위반");
+  // 교환으로 받은 개체 — 받은 제안의 모습이 직전 값이다 (2026-10-25 지우개굴닌자 교환 오탐)
+  const bondOffer = { species: "greninja-battle-bond", shiny: false, nature: "hardy", gender: "male", level: 1, exp: 0, affinity: 0, fullness: 100, mood: 60, stage: 0, evolved: [] };
+  const bondNext = base();
+  bondNext.pets.push(pet("p2", "greninja-battle-bond", { forms: ["greninja", "greninja-battle-bond"] }));
+  assert.deepEqual(rules(base(), clone(bondNext), ctx(60_000, { received: [bondOffer] })), [], "바뀐 모습으로 받은 개체는 지우의모자를 쓰지 않아도 통과");
+  assert.ok(rules(base(), clone(bondNext), ctx(60_000)).includes("form-item"), "교환 기록 없이 나타난 바뀐 모습은 그대로 form-item");
   // form-work — 지금 앱은 개체 작업 시간을 세지 않는다. 옛 앱(0.22.0 이하)은 2시간까지 세므로 그만큼은 받는다(계정 작업 시간만큼만 늘 수 있다)
   const grow = at(0, 1);
   grow.next.pets[1]!.species = "rotom";

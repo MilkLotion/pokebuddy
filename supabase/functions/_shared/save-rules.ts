@@ -611,7 +611,8 @@ export function verifySave(prevRaw: unknown, nextRaw: unknown, ctx: VerifyContex
   if (data.shiftRules) {
     const workGain = pos(workOf(next) - workOf(prev)) + r.slackMs * m;
     const changed: Record<string, number> = {}; // 도구 → 새로 바뀐 개체 수
-    const prevPet = (id: string): Pet | undefined => prevOfSame.get(id);
+    // 교환으로 받은 개체는 받은 제안을 직전 값으로 본다 — 이미 바뀐 모습으로 받은 개체를 새로 바꾼 것으로 세지 않는다 (2026-10-25 지우개굴닌자 교환 오탐)
+    const prevPet = (id: string): Pet | undefined => prevOfSame.get(id) ?? tradedFrom.get(id);
     for (const p of nextPets) {
       const rule = data.shiftRules[p.species];
       const q = prevPet(p.id);
