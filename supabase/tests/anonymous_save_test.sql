@@ -146,10 +146,13 @@ select is(cloud_private.first_trust(pg_temp.fresh()), 'fresh', 'first_trust: fre
 select is(cloud_private.first_trust(pg_temp.fresh_with('{pets,0,level}', '50')), 'legacy', 'fresh 가 아니고 legacy 창 안이면 legacy');
 select ok((select value::timestamptz > now() + interval '29 days' from cloud_private.settings where key = 'legacy_until'), 'legacy_until 초기값은 약 30일 뒤');
 update cloud_private.settings set value = (now() - interval '1 second')::text where key = 'legacy_until';
-select is(cloud_private.first_trust(pg_temp.fresh_with('{pets,0,level}', '50')), 'unverified', 'legacy 창이 지나면 unverified');
+select is(cloud_private.first_trust(pg_temp.fresh_with('{pets,0,level}', '50')), 'legacy', '잠금 off(기본)면 legacy 창이 지나도 legacy');
+update cloud_private.settings set value = 'on' where key = 'verify_lock';
+select is(cloud_private.first_trust(pg_temp.fresh_with('{pets,0,level}', '50')), 'unverified', '잠금 on 이면 legacy 창이 지나면 unverified');
 select is(cloud_private.first_trust(pg_temp.fresh()), 'fresh', '창이 지나도 fresh 는 fresh');
 delete from cloud_private.settings where key = 'legacy_until';
 select is(cloud_private.first_trust(pg_temp.fresh_with('{pets,0,level}', '50')), 'unverified', 'legacy_until 설정이 없으면 unverified');
+update cloud_private.settings set value = 'off' where key = 'verify_lock';
 insert into cloud_private.settings (key, value) values ('legacy_until', (now() + interval '30 days')::text);
 select ok(cloud_private.setting('starter_species') like 'bulbasaur,%,eevee', '첫 선택 후보 설정이 있다');
 select is(array_length(string_to_array(cloud_private.setting('starter_species'), ','), 1), 29, '첫 선택 후보는 29종(data/unlocks.json starter)');

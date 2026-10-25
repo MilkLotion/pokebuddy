@@ -1,5 +1,6 @@
 -- 서버 저장 검증 P4a 검사 — npx supabase test db
 -- 20261003100000_save_verify.sql: accept_save·save_verify_context·reject_save(service_role 전용), 관찰·거부 모드, 옛 upload_save 닫기
+-- 20261025100000_verify_lock.sql: 잠금 스위치(verify_lock) — off 면 위반을 적기만 하고 trust 를 바꾸지 않는다
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
@@ -15,10 +16,12 @@ select ok(not has_function_privilege('authenticated', 'public.reject_save(uuid, 
 select ok(has_function_privilege('service_role', 'public.accept_save(uuid, uuid, bigint, bigint, jsonb, int, text, uuid, jsonb)', 'execute'), 'service_role 은 accept_save');
 select ok(has_function_privilege('service_role', 'public.save_verify_context(uuid)', 'execute'), 'service_role 은 문맥');
 select ok(not has_function_privilege('authenticated', 'public.admin_save_violations(uuid, int)', 'execute'), 'authenticated 는 위반 목록을 못 본다');
-select ok(not has_function_privilege('authenticated', 'public.admin_verify_settings(text, double precision)', 'execute'), 'authenticated 는 검증 설정을 못 바꾼다');
+select ok(not has_function_privilege('authenticated', 'public.admin_verify_settings(text, double precision, text)', 'execute'), 'authenticated 는 검증 설정을 못 바꾼다');
 select throws_ok($$ select public.admin_verify_settings('lenient', null) $$, 'P0001', 'CLOUD_BAD_ARGS', '모르는 모드는 거절');
 select is(public.admin_verify_settings(null, 1.2)->>'margin', '1.2', '여유를 바꾼다');
 select is(public.admin_verify_settings(null, 1.1)->>'mode', 'observe', '모드는 그대로');
+select throws_ok($$ select public.admin_verify_settings(null, null, 'maybe') $$, 'P0001', 'CLOUD_BAD_ARGS', '모르는 잠금 값은 거절');
+select is(public.admin_verify_settings()->>'lock', 'off', '잠금 기본은 off');
 
 -- 옛 upload_save 는 업데이트 안내만
 set local role authenticated;
@@ -52,7 +55,8 @@ select is(public.save_verify_context('00000000-0000-0000-0000-0000000000f0')->>'
 select is((public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->>'trades')::int, 0, '끝난 교환 없음');
 select is(public.save_verify_context('00000000-0000-0000-0000-0000000000e1')->'trades_before', '[]'::jsonb, '직전 저장 전에 끝난 교환 없음');
 
--- 관찰 모드 — 위반이 있어도 받는다. 적고 unverified
+-- 관찰 모드 — 위반이 있어도 받는다. 잠금이 켜져 있으면 적고 unverified
+select is(public.admin_verify_settings(null, null, 'on')->>'lock', 'on', '잠금을 켠다');
 select throws_ok($$ select public.accept_save('00000000-0000-0000-0000-0000000000e1', '11111111-1111-1111-1111-1111111111e1', 1, null,
   '{"v":3,"pets":[{"id":"p1","since":1}],"points":{"balance":99999}}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000013', '[]') $$,
   'P0001', 'CLOUD_REV_CONFLICT', '비교하지 않은 요청(비교한 rev 없음)은 기존 행에 쓰지 못한다');
@@ -118,6 +122,17 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000ff","role":"authenticated","is_anonymous":true}', true);
 select throws_ok($$ select public.account_seed() $$, 'P0001', 'CLOUD_LOGIN_REQUIRED', '없는 계정은 시드를 못 받는다');
 reset role;
+
+-- 잠금 off — 관찰 모드 위반을 적기만 하고 trust 는 그대로
+update cloud_private.settings set value = 'observe' where key = 'verify_mode';
+select is(public.admin_verify_settings(null, null, 'off')->>'lock', 'off', '잠금을 끈다');
+update public.cloud_saves set trust = 'legacy' where user_id = '00000000-0000-0000-0000-0000000000e1';
+select is(public.accept_save('00000000-0000-0000-0000-0000000000e1', '11111111-1111-1111-1111-1111111111e1',
+  (select rev from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'), (select rev from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'),
+  '{"v":3,"pets":[{"id":"p1","since":1}],"points":{"balance":99999}}', 3, '0.13.0', '0e000000-0000-0000-0000-000000000006',
+  '[{"rule":"form-item","value":1,"limit":0}]'), 4::bigint, '잠금 off 도 위반 저장을 받는다 → rev 4');
+select is((select trust from public.cloud_saves where user_id = '00000000-0000-0000-0000-0000000000e1'), 'legacy', '잠금 off 면 trust 그대로');
+select is((select count(*)::int from cloud_private.save_violations where user_id = '00000000-0000-0000-0000-0000000000e1' and rule = 'form-item' and rev = 4), 1, '잠금 off 도 위반은 적는다');
 
 select * from finish();
 rollback;
