@@ -8,9 +8,11 @@ export interface TickEvents extends TimeEvents {
 }
 
 // 흐른 시간 elapsedMs 를 적용한 뒤 상태 판정을 다시 본다. 틱은 메가 풀기를 하지 않는다
+// 시간 경험치로 오른 레벨도 레벨업 업적이 센다 — 시간 적용 전 id·레벨만 남긴다. 1초마다 저장 전체를 복제하지 않는다
 export function applyTimeAndSettle(save: SaveV3, elapsedMs: number, now: number, input: TimeInput = {}): TickEvents {
+  const prev = { pets: save.pets.map((p) => ({ id: p.id, level: p.level })) };
   const events: TickEvents = { achieved: [], ...applyTime(save, elapsedMs, now, input) }; // 필드 순서는 옛 결과와 같다
   if (Math.max(0, Math.round(elapsedMs)) === 0) return events; // 흐른 시간이 없으면 판정도 하지 않는다
-  events.achieved = applySettle(save, now, { revertMega: false }).achieved;
+  events.achieved = applySettle(save, now, { prev, revertMega: false }).achieved;
   return events;
 }

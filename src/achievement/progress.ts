@@ -2,7 +2,7 @@
 import { type DexOptions } from "../dex/data.js";
 import { hasObtained } from "../dex/record.js";
 import { isSingleSpecies } from "../dex/forms.js";
-import type { SaveV3 } from "../shared/save-v3";
+import type { PetV3, SaveV3 } from "../shared/save-v3";
 import { dexEntryCount, regionalOf } from "../dex/regional.js";
 import { profileOf } from "../dex/species.js";
 import { singleSpecies } from "../dex/obtain.js";
@@ -16,8 +16,13 @@ const shownCount = (save: SaveV3): number =>
 // 파티 칸에 든 개체 수 — 숨긴 개체도 센다
 const partyCount = (save: SaveV3): number => save.party.slots.filter((s) => s.state === "pokemon" && s.petId).length;
 
-// 이번 거래에서 기준 레벨 이상으로 레벨업한 개체가 있는가 — 거래 전에도 있던 같은 개체의 레벨이 올랐을 때만 센다
-function leveledTo(save: SaveV3, prev: SaveV3 | undefined, level: number): boolean {
+// 바뀌기 전 개체의 레벨 — 레벨업 조건이 비교한다. 거래는 거래 전 저장을, 시간 틱은 시간 적용 전 id·레벨만 준다 (src/tx/tick.ts)
+export interface LevelBefore {
+  pets: readonly Pick<PetV3, "id" | "level">[];
+}
+
+// 이번 변화에서 기준 레벨 이상으로 레벨업한 개체가 있는가 — 바뀌기 전에도 있던 같은 개체의 레벨이 올랐을 때만 센다
+function leveledTo(save: SaveV3, prev: LevelBefore | undefined, level: number): boolean {
   if (!prev) return false;
   return save.pets.some((p) => {
     const before = prev.pets.find((b) => b.id === p.id);
@@ -101,8 +106,8 @@ export function progressOf(save: SaveV3, id: string, opts?: DexOptions): { now: 
   return { now: Math.min(now, goal), goal, unit: UNIT[cond.kind] ?? "" };
 }
 
-// 업적 하나의 조건을 지금 채웠는가. prev 는 거래 전 저장이다 — 레벨업처럼 변화를 보는 조건이 쓴다
-export function isAchieved(save: SaveV3, id: string, opts?: DexOptions, prev?: SaveV3): boolean {
+// 업적 하나의 조건을 지금 채웠는가. prev 는 바뀌기 전 개체 레벨이다 — 레벨업처럼 변화를 보는 조건이 쓴다
+export function isAchieved(save: SaveV3, id: string, opts?: DexOptions, prev?: LevelBefore): boolean {
   const cond = defOf(id, opts)?.cond;
   if (!cond) return false;
   if (cond.kind === "level") return leveledTo(save, prev, cond.level);

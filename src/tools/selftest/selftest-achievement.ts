@@ -23,6 +23,8 @@ import { isAchieved, progressOf } from "../../achievement/progress";
 import { ACHIEVEMENT_RULES } from "../../achievement/rules";
 import { isSinglePet, tickPartyTime } from "../../dex/forms";
 import { applyTime } from "../../state/time";
+import { applyTimeAndSettle } from "../../tx/tick";
+import { expForLevel, growthOf } from "../../dex/growth";
 import { eggPool, rewardSpecies, singleSpecies } from "../../dex/obtain";
 import { EGG_RULES } from "../../egg/rules";
 import { allCaughtPoints } from "../../egg/pool";
@@ -141,13 +143,13 @@ function seed(): SaveV3 {
   process.stdout.write("(5) 받은 개체는 레벨업해야 센다  ok\n");
 }
 
-// (6) 거래 전 저장이 없으면(시간 흐름) 레벨업 조건은 달성하지 않는다. 옛 달성 기록은 그대로 둔다
+// (6) 바뀌기 전 레벨이 없으면 레벨업 조건은 달성하지 않는다. 옛 달성 기록은 그대로 둔다
 {
   const s = seed();
   const p0 = s.pets[0];
   if (p0) p0.level = 70;
-  assert.equal(isAchieved(s, "starter-final"), false, "비교할 거래 전 저장이 없다");
-  assert.deepStrictEqual(evaluateAchievements(s, T0), [], "시간 흐름만으로는 알리지 않는다");
+  assert.equal(isAchieved(s, "starter-final"), false, "비교할 바뀌기 전 레벨이 없다");
+  assert.deepStrictEqual(evaluateAchievements(s, T0), [], "비교 없이는 알리지 않는다");
   const old = seed();
   old.achievements["starter-final"] = { achievedAt: T0 - 1000, claimedAt: T0 - 500 };
   const again = structuredClone(old);
@@ -155,7 +157,27 @@ function seed(): SaveV3 {
   if (a0) a0.level = 60;
   assert.deepStrictEqual(evaluateAchievements(again, T0, undefined, old), [], "옛 조건으로 받은 기록은 다시 알리지 않는다");
   assert.equal(again.achievements["starter-final"]?.claimedAt, T0 - 500, "옛 수령 기록을 지우지 않는다");
-  process.stdout.write("(6) 시간 흐름과 옛 달성 기록  ok\n");
+  process.stdout.write("(6) 비교 없는 판정과 옛 달성 기록  ok\n");
+}
+
+// (6a) 시간 경험치로 50레벨이 되어도 센다 — 시간 틱이 시간 적용 전 레벨을 준다 (src/tx/tick.ts)
+{
+  const s = seed();
+  const p1 = s.pets[0];
+  assert.ok(p1);
+  p1.level = 49;
+  p1.exp = expForLevel(growthOf(p1.species), 50) - 1;
+  applyTimeAndSettle(s, 3600_000, T0);
+  assert.ok(p1.level >= 50, "시간 경험치로 50레벨이 된다");
+  assert.ok(s.achievements["starter-final"]?.achievedAt != null, "시간 틱으로 오른 레벨도 센다");
+  const again = seed();
+  const a1 = again.pets[0];
+  assert.ok(a1);
+  a1.level = 60;
+  a1.exp = expForLevel(growthOf(a1.species), 60);
+  applyTimeAndSettle(again, 1000, T0);
+  assert.equal(again.achievements["starter-final"]?.achievedAt ?? null, null, "레벨이 오르지 않은 틱은 세지 않는다");
+  process.stdout.write("(6a) 시간 경험치 레벨업  ok\n");
 }
 
 // (6-1) 이상한사탕 거래로 49 → 50 이 되면 거래 결과가 달성을 알린다

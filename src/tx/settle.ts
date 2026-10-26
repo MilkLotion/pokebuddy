@@ -9,10 +9,11 @@ import { unlockByRules } from "../dex/unlocks.js";
 import { settleMega } from "../party/mega-form.js";
 import { queueTutorials } from "../tutorial/queue.js";
 import { evaluateAchievements } from "../achievement/evaluate.js";
+import type { LevelBefore } from "../achievement/progress.js";
 import type { SaveV3 } from "../shared/save-v3";
 
 export interface SettleOptions {
-  prev?: SaveV3; // 바뀌기 전 저장 — 레벨업 업적이 비교한다
+  prev?: LevelBefore; // 바뀌기 전 개체 레벨 — 레벨업 업적이 비교한다. 거래는 거래 전 저장을 그대로 준다
   revertMega: boolean; // 프리셋을 떠났거나 종이 바뀐 개체의 메가 모습을 푼다
   opts?: DexOptions;
 }
