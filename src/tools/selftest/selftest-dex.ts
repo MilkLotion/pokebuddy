@@ -384,7 +384,7 @@ function world(over: Partial<Pick<World, "now">> = {}, save: Partial<SaveV2> = {
   assert.deepStrictEqual([names["dialga"]?.ko, names["magearna"]?.ko, names["magearna-original"]?.ko], ["디아루가", "마기아나", "마기아나(500년 전의 색)"], "공식 도감에 모습 이름이 없는 기본형은 종 이름 그대로");
   assert.deepStrictEqual([names["urshifu"]?.ko, names["urshifu-rapid-strike"]?.ko], ["우라오스(일격의 태세)", "우라오스(연격의 태세)"], "우라오스는 두 태세 모두 이름에 적는다");
   // 표가 없는 dataDir — 빈 표로 본다
-  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, labels: {} });
+  assert.deepStrictEqual(regional.regionalTable({ dataDir: path.join(__dirname, "no-such-dir") }), { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, formOrder: {}, labels: {} });
   out("리전폼 ok");
 }
 

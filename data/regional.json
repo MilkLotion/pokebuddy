@@ -742,6 +742,10 @@
     "ogerpon": "벽록의가면",
     "oricorio": "이글이글스타일"
   },
+  "_comment_formOrder": "formOrder — 도감 기기 창 2쪽(모습) 칸 순서를 바꿀 종. 기본 종 → 칸 순서. 적힌 모습이 앞이고, 나머지는 원래 순서로 뒤에 둔다. 표에 없는 종은 기본 종이 맨 앞이다. 지가르데는 10%폼 · 50%폼 · 퍼펙트폼(2026-11-09 사용자 \"10, 50 퍼펙트순으로\")",
+  "formOrder": {
+    "zygarde": ["zygarde-10", "zygarde", "zygarde-complete"]
+  },
   "gender": {
     "basculegion": {"female": {"look":"basculegion-female","pokemonId":10248,"pmd":"0902/0000/0000/0002","pmdShiny":"0902/0000/0001/0002"}}
   }

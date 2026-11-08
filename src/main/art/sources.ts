@@ -36,6 +36,13 @@ export const portraitFile = (dex: PortraitId, shiny: boolean): string => {
   return shiny ? `${d}-shiny.png` : `${d}.png`;
 };
 
+// 도트 초상이 없어 공식 일러스트로 만드는 초상 — 메가지가르데(10301). PokeAPI sprites/pokemon/10301.png 가 없다(404, 2026-11-09 확인).
+// 앱이 일러스트를 받아 도트로 바꿔 portraitFile 이름으로 캐시에 둔다 (./portrait-from-art.ts, ./portraits.ts)
+export const ARTWORK_PORTRAITS: ReadonlySet<PortraitId> = new Set<PortraitId>([10301]);
+export const artworkUrl = (id: PortraitId, shiny: boolean): string => `${POKEMON}/other/official-artwork/${shiny ? "shiny/" : ""}${id}.png`;
+// 받은 일러스트의 캐시 이름 — 초상과 섞이지 않게 art/ 아래
+export const artworkFile = (id: PortraitId, shiny: boolean): string => `art/${portraitFile(id, shiny)}`;
+
 // 알 그림 — 받을 주소와 캐시 파일 이름
 export const EGG_URL = `${POKEMON}/egg.png`;
 export const EGG_FILE = "egg.png";

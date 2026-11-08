@@ -57,6 +57,7 @@ export interface RegionalTable {
   looks: Record<string, LookForm>; // 도감 칸 없이 그림만 다른 모습 (안농 B · 아르세우스 타입 · 사철록 계절) — 도감은 기본 종 칸 하나다
   gender: Record<string, Partial<Record<"male" | "female", GenderLook>>>; // 종 → 성별 → 그 성별의 그림
   evolveLooks: Record<string, HatchVariants>;
+  formOrder: Record<string, string[]>; // 도감 기기 창 2쪽(모습) 칸 순서를 바꿀 종 — 기본 종 → 칸 순서 (지가르데 10%·50%·퍼펙트)
   labels: Record<string, string>; // 모습 이름 — 도감 기기 창 2쪽(모습) 칸에 보인다 (비비용 → 화원의 모양) // 진화 결과 종 → 진화할 때 정하는 모습과 가중치 (비비용 무늬·마휘핑·파밀리쥐 세 가족·노고고치 세 마디)
 }
 
@@ -75,7 +76,7 @@ export const REGION_MAP = "region-map";
 //   이런 간선은 돌을 보지도 쓰지도 않는다. 화면도 "지도" 하나만 적는다 (2026-09-30 사용자 결정 "아이템1개만쓰는게 나을거같네")
 export const needIsMap = (need: EvoNeed | undefined): boolean => need?.kind === "item" && need.item === REGION_MAP;
 
-const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, labels: {} };
+const EMPTY: RegionalTable = { forms: {}, edges: {}, hatch: {}, shift: {}, riders: {}, partners: {}, looks: {}, gender: {}, evolveLooks: {}, formOrder: {}, labels: {} };
 const tables = new Map<string, RegionalTable>();
 
 // 표 전체 — 파일이 없거나 깨졌으면 빈 표
@@ -86,7 +87,7 @@ export function regionalTable(opts?: DexOptions): RegionalTable {
   let table = EMPTY;
   try {
     const raw = loadJson<Partial<RegionalTable>>("regional.json", opts);
-    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, partners: raw.partners ?? {}, looks: raw.looks ?? {}, gender: raw.gender ?? {}, evolveLooks: raw.evolveLooks ?? {}, labels: raw.labels ?? {} };
+    table = { forms: raw.forms ?? {}, edges: raw.edges ?? {}, hatch: raw.hatch ?? {}, shift: raw.shift ?? {}, riders: raw.riders ?? {}, partners: raw.partners ?? {}, looks: raw.looks ?? {}, gender: raw.gender ?? {}, evolveLooks: raw.evolveLooks ?? {}, formOrder: raw.formOrder ?? {}, labels: raw.labels ?? {} };
   } catch {
     table = EMPTY;
   }
@@ -231,6 +232,14 @@ export function otherFormsOf(base: string, opts?: DexOptions): string[] {
   const key = normalizeSlug(base);
   if (isMetaKey(key)) return [];
   return [...(formIndexOf(opts).others.get(key) ?? [])];
+}
+
+// 도감 기기 창 2쪽(모습)의 칸 순서 — 기본 종과 다른 모습. 표(formOrder)에 적힌 모습이 앞, 나머지는 원래 순서(기본 종 → 특수 폼 → 겉모습)
+export function formPageOf(base: string, opts?: DexOptions): string[] {
+  const key = normalizeSlug(base);
+  const all = [key, ...otherFormsOf(key, opts)];
+  const order = (regionalTable(opts).formOrder[key] ?? []).filter((s) => all.includes(s));
+  return [...new Set([...order, ...all])];
 }
 
 // 전투 중에만 바뀌는 모습 — 기본 종을 얻으면 도감에 함께 남는다 (메로엣타 → 메로엣타(스텝폼)). 없으면 빈 목록

@@ -12,7 +12,9 @@ import { battleSpeciesOf } from "../../battle/party";
 import { petMenuOf } from "../../view/menus";
 import { countCare, grantStones, megaBaseOf, megaChoices, megaFormsOf, megaOf, megaSlugs, shownSpecies, tickMega } from "../../dex/mega";
 import { pmdSources } from "../../main/art/stage-art";
-import { overworldUrl } from "../../main/art/sources";
+import { ARTWORK_PORTRAITS, artworkUrl, overworldUrl } from "../../main/art/sources";
+import { portraitFromArt } from "../../main/art/portrait-from-art";
+import { decodePng, encodePng } from "../../platform/png";
 import { portraitIds } from "../../main/art/portraits";
 import { petName } from "../../view/text";
 import { bannerOf } from "../../view/banner";
@@ -92,7 +94,22 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.ok(overworldUrl("charizard-mega-y", "overworld.png").endsWith("/graphics/pokemon/charizard/mega_y/overworld.png"));
   assert.ok(overworldUrl("mr-rime", "overworld.png").endsWith("/graphics/pokemon/mr_rime/overworld.png"), "다른 종은 그대로");
   assert.deepStrictEqual(portraitIds("charizard-mega-x"), [10034, 6]);
-  assert.deepStrictEqual(portraitIds("zygarde-mega"), [10301, 718], "초상이 없으면 기본 종 초상");
+  assert.deepStrictEqual(portraitIds("zygarde-mega"), [10301, 718], "일러스트로 못 만들면 기본 종 초상");
+  // 메가지가르데 초상은 공식 일러스트를 받아 도트로 바꾼다 (src/main/art/portrait-from-art.ts)
+  assert.ok(ARTWORK_PORTRAITS.has(10301));
+  assert.ok(artworkUrl(10301, true).endsWith("/other/official-artwork/shiny/10301.png"));
+  {
+    const W = 300, art = Buffer.alloc(W * W * 4); // 가짜 일러스트 — 가운데 원, 위아래 두 색
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) if ((x - 150) ** 2 + (y - 160) ** 2 < 120 ** 2) art.set([y < 160 ? 40 : 120, 200, 60, 255], (y * W + x) * 4);
+    const out = portraitFromArt(encodePng({ w: W, h: W, px: art }));
+    const img = out ? decodePng(out) : null;
+    assert.deepStrictEqual(img && [img.w, img.h], [96, 96], "도트 초상 크기");
+    const colors = new Set<string>();
+    for (let i = 0; img && i < img.px.length; i += 4) if (img.px[i + 3]) colors.add(img.px.subarray(i, i + 3).toString("hex"));
+    assert.ok(colors.size >= 3 && colors.size <= 48, `색 수 ${colors.size}`);
+    assert.ok(out!.equals(portraitFromArt(encodePng({ w: W, h: W, px: art }))!), "같은 일러스트면 같은 그림");
+    assert.equal(portraitFromArt(Buffer.from("not png")), null);
+  }
   assert.equal(appearanceOf(pet({ mega: { ...full, stone: true, on: "charizard-mega-x" }, shiny: true })), "charizard-mega-x:shiny");
   assert.equal(appearanceOf(pet()), "charizard");
   // 성별 그림 — 대쓰여너 암컷은 암컷 그림이다. 종·이름은 그대로다 (data/regional.json 의 gender)
@@ -390,6 +407,8 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.ok(run("pet.form", { petId: "p1", species: "greninja-ash" }).ok);
   assert.equal(save.pets[0]!.battleLook, "greninja-ash");
   assert.equal(save.pets[0]!.species, "greninja-battle-bond", "종은 그대로다");
+  assert.ok(save.dex.obtained.includes("greninja-ash"), "켠 모습은 도감에 얻음으로 적는다");
+  assert.equal(dexDetail(save, "greninja")?.forms?.find((f) => f.slug === "greninja-ash")?.obtained, true, "도감 2쪽 칸이 채워진다");
   assert.equal(shownSpecies(save.pets[0]!), "greninja-ash");
   assert.equal(snapshotView(save, T0).party.slots[0]!.pet?.name, "지우개굴닌자");
   assert.equal(run("pet.form", { petId: "p1", species: "greninja-ash" }).ok, false, "같은 모습");
@@ -401,7 +420,16 @@ const full = { bondMs: MEGA_RULES.bondMs, care: MEGA_RULES.care };
   assert.ok(run("pet.form", { petId: "p1", species: "greninja-battle-bond" }).ok, "지금 종을 주면 끈다");
   assert.equal(save.pets[0]!.battleLook, undefined);
   // 메가와 함께 켜지 않는다
+  save.dex.obtained = save.dex.obtained.filter((s) => s !== "zygarde-complete");
+  if (!save.dex.unlocked.includes("zygarde")) save.dex.unlocked.push("zygarde"); // 2쪽은 해금한 종에만 있다
+  save.pets[1]!.battleLook = "zygarde-complete";
+  assert.equal(dexDetail(save, "zygarde")?.forms?.find((f) => f.slug === "zygarde-complete")?.obtained, true, "기록 전에 켠 개체도 2쪽은 얻음");
+  delete save.pets[1]!.battleLook;
   assert.ok(run("pet.form", { petId: "p2", species: "zygarde-complete" }).ok);
+  assert.ok(save.dex.obtained.includes("zygarde-complete"), "퍼펙트폼도 도감에 적는다");
+  const zPage = dexDetail(save, "zygarde");
+  assert.deepStrictEqual(zPage?.forms?.map((f) => f.slug), ["zygarde-10", "zygarde", "zygarde-complete"], "지가르데 2쪽은 10%·50%·퍼펙트 순서");
+  assert.equal(zPage?.formsTitle, "지가르데", "머리 줄은 기본 종 이름");
   assert.ok(run("pet.form", { petId: "p2", species: "zygarde-mega" }).ok);
   assert.deepStrictEqual([save.pets[1]!.mega?.on, save.pets[1]!.battleLook], ["zygarde-mega", undefined], "메가를 켜면 전투 중 모습이 꺼진다");
   assert.ok(run("pet.form", { petId: "p2", species: "zygarde-complete" }).ok);

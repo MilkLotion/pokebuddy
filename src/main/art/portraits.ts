@@ -24,7 +24,9 @@ import { tintEgg } from "./egg-art.js";
 import { whitenTypeIcon } from "./type-icon-art.js";
 import { ASSET_RULES, createAssetCache, dataUriOf } from "./asset-cache.js";
 import { decodePng, isPng, opaqueRectOf } from "../../platform/png.js";
-import { EGG_FILE, EGG_URL, iconFile, iconUrl, itemFile, itemUrl, portraitFile, portraitUrl, type PortraitId, typeIconFile, typeIconTypes, typeIconUrl } from "./sources.js";
+import { portraitFromArt } from "./portrait-from-art.js";
+import { saveAtomic } from "./fetch.js";
+import { ARTWORK_PORTRAITS, artworkFile, artworkUrl, EGG_FILE, EGG_URL, iconFile, iconUrl, itemFile, itemUrl, portraitFile, portraitUrl, type PortraitId, typeIconFile, typeIconTypes, typeIconUrl } from "./sources.js";
 import type { ArtImage, OpaqueBox, PortraitAsk } from "../../shared/model/snapshot";
 
 // 우리가 그린 도구 그림 — 원작에 없는 가상 도구(먹이·장난감·약·연결의끈)와 태고의돌. 저장소에 있고 설치본에도 들어간다.
@@ -59,7 +61,7 @@ export const portraitKey = (a: PortraitAsk): string => (a.shiny ? `${a.slug}:shi
 
 // 초상 그림 번호 — 리전폼·메가 모습이면 PokeAPI 포켓몬 번호, 아니면 도감 번호. 모르는 종은 0.
 // 포켓몬 번호가 따로 없는 폼(피츄(삐쭉귀))은 표의 portrait 파일 이름(`172-spiky-eared`)이 먼저다.
-// 메가 모습의 초상이 없으면(지가르데) 기본 종의 초상이다
+// 메가지가르데(10301)는 도트 초상이 없어 공식 일러스트로 만든다(ARTWORK_PORTRAITS). 그것도 못 만들면 기본 종의 초상이다
 export function portraitIds(slug: string): PortraitId[] {
   // 성별 그림(대쓰여너 암컷) — 그 성별의 포켓몬 번호가 먼저, 없으면 종의 초상
   const byGender = genderLookInfo(slug);
@@ -163,8 +165,31 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
     }
   }
 
-  const one = (dex: PortraitId, shiny: boolean): Promise<string | null> => fileUri(portraitFile(dex, shiny), portraitUrl(dex, shiny));
-  const oneBuffer = (dex: PortraitId, shiny: boolean): Promise<Buffer | null> => cache.fetchFile(portraitFile(dex, shiny), portraitUrl(dex, shiny));
+  // 일러스트로 만드는 초상 — 캐시에 없으면 일러스트를 받아 바꿔 둔다. 그 뒤로는 받은 초상처럼 캐시에서 읽는다
+  const deriving = new Map<string, Promise<void>>();
+  function derive(id: PortraitId, shiny: boolean): Promise<void> {
+    const rel = portraitFile(id, shiny);
+    if (!ARTWORK_PORTRAITS.has(id) || cache.has(rel)) return Promise.resolve();
+    const going = deriving.get(rel);
+    if (going) return going;
+    const job = (async () => {
+      const art = await cache.fetchFile(artworkFile(id, shiny), artworkUrl(id, shiny));
+      const out = art ? portraitFromArt(art) : null;
+      if (out) saveAtomic(cache.fileOf(rel), out);
+    })().finally(() => deriving.delete(rel));
+    deriving.set(rel, job);
+    return job;
+  }
+
+  // 일러스트로 만드는 초상은 도트 주소(404)를 묻지 않는다 — 못 만들었으면 다음 번호(기본 종)로 간다. 다음에 부를 때 다시 만든다
+  const derived = async (dex: PortraitId, shiny: boolean): Promise<boolean> => {
+    await derive(dex, shiny);
+    return !ARTWORK_PORTRAITS.has(dex) || cache.has(portraitFile(dex, shiny));
+  };
+  const one = async (dex: PortraitId, shiny: boolean): Promise<string | null> =>
+    (await derived(dex, shiny)) ? fileUri(portraitFile(dex, shiny), portraitUrl(dex, shiny)) : null;
+  const oneBuffer = async (dex: PortraitId, shiny: boolean): Promise<Buffer | null> =>
+    (await derived(dex, shiny)) ? cache.fetchFile(portraitFile(dex, shiny), portraitUrl(dex, shiny)) : null;
 
   const api: Portraits = {
     async get(asks) {
@@ -225,6 +250,8 @@ export function createPortraits(dir: string, bundled?: string): Portraits {
         const url = typeIconUrl(type);
         if (url) jobs.push({ rel: typeIconFile(type), url }); // 기술 줄의 타입 아이콘 18장
       }
+      // 일러스트로 만드는 초상을 먼저 만든다 — 그러면 아래 일이 캐시에 있는 것으로 센다
+      await Promise.all([...ARTWORK_PORTRAITS].flatMap((id) => [derive(id, false), derive(id, true)]));
       const count = { got: 0, had: 0, missing: 0, failed: 0 };
       // 그림이 없다고(404) 확인한 주소 — 켤 때마다 다시 묻지 않게 캐시 폴더에 적어 둔다.
       // 파일 이름이 아니라 주소로 적는다 — 받을 곳을 바꾸면(경험사탕·민트 → pokesprite) 새 주소로 다시 묻는다

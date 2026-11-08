@@ -20,7 +20,7 @@ import { eggName, speciesPrice } from "../shop/catalog.js";
 import type { DexDetail, DexFormView } from "../shared/model/detail";
 import type { SaveV3 } from "../shared/save-v3";
 import { achievementDefs, rewardPokemon } from "../achievement/defs.js";
-import { dexSlugOf, evolveLookVariants, formLabelOf, hatchBaseOf, lookFormOf, otherFormsOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
+import { dexSlugOf, evolveLookVariants, formLabelOf, formPageOf, hatchBaseOf, lookFormOf, otherFormsOf, partnerOf, regionalOf, riderOwnerOf, shiftGroupOf } from "../dex/regional.js";
 import { shiftRuleOf } from "../dex/forms.js";
 import { megaFormsOf, megaOf, megaTagOf } from "../dex/mega.js";
 import { bodySize, officialText, textOf } from "./dex-text.js";
@@ -201,14 +201,13 @@ export function dexDetail(save: SaveV3, slug: string, opts?: DexOptions): DexDet
 function formsOfDetail(save: SaveV3, slug: string, opts?: DexOptions): { forms?: DexFormView[]; formsTitle?: string } {
   const special = regionalOf(slug, opts);
   const base = special?.special ? special.base : dexSlugOf(slug, opts);
-  const others = otherFormsOf(base, opts);
-  if (!others.length) return {};
-  const slugs = [base, ...others];
+  if (!otherFormsOf(base, opts).length) return {};
+  const slugs = formPageOf(base, opts); // 기본 종이 맨 앞, 순서 표가 있는 종(지가르데)은 표 순서
   const mine = new Set(slugs);
   const got = new Set<string>();
   const seen = new Set<string>();
   for (const s of save.dex.obtained) if (mine.has(s)) got.add(s);
-  for (const p of save.pets) if (mine.has(p.species)) got.add(p.species);
+  for (const p of save.pets) for (const s of [p.species, p.battleLook]) if (s && mine.has(s)) got.add(s); // 전투 중 모습을 켠 개체도 그 모습의 얻음 — 기록 전에 켠 개체
   for (const s of save.dex.unlocked) if (mine.has(s)) seen.add(s);
   const forms = slugs.map((s) => {
     const has = got.has(s);
@@ -217,7 +216,7 @@ function formsOfDetail(save: SaveV3, slug: string, opts?: DexOptions): { forms?:
     const label = formLabelOf(s, opts) ?? FORM_PAREN.exec(name)?.[2] ?? name;
     return { slug: s, name: has || seen.has(s) ? name : "???", label: has ? label : "???", obtained: has, current: s === slug };
   });
-  const head = forms[0]?.name ?? "???";
+  const head = forms.find((f) => f.slug === base)?.name ?? "???"; // 머리 줄은 기본 종 이름 — 순서 표로 다른 모습이 맨 앞이어도
   return { forms, formsTitle: FORM_PAREN.exec(head)?.[1] ?? head };
 }
 // 화면 이름의 `<종>(<모습>)` — 1 종 이름, 2 모습

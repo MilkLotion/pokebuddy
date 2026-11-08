@@ -3,6 +3,7 @@ import { evolvePet } from "../../dex/evolve.js";
 import { gameDayPart } from "../../shared/clock.js";
 import { battleLookChoices, setBattleLook } from "../../dex/battle-look.js";
 import { setForm } from "../../dex/forms.js";
+import { recordDex } from "../../dex/record.js";
 import { megaOf } from "../../dex/mega.js";
 import { setMega } from "../../party/mega-form.js";
 import { feedPet, playWithPet } from "../../state/care.js";
@@ -87,6 +88,8 @@ export const formHandler: TxHandler = (draft, args) => {
   // 전투 중 모습 보이기(src/dex/battle-look.ts) — species 가 그 모습이면 켜고, 켠 개체에 지금 종을 주면 끈다
   if (target && typeof want === "string" && (battleLookChoices(target.species).includes(want) || (target.battleLook && want === target.species))) {
     if (!setBattleLook(target, want === target.species ? null : want)) return { ok: false, reason: "already" };
+    // 켠 모습은 도감 2쪽(모습)의 얻음으로 적는다 (2026-11-09 사용자 결정, worklog/records/zygarde-mega-look)
+    if (target.battleLook) recordDex(draft, target.battleLook, target.shiny);
     return { ok: true, result: { petId, look: target.battleLook ?? null } };
   }
   const res = setForm(draft, petId, isArgsRecord(args) ? args.species : undefined);
