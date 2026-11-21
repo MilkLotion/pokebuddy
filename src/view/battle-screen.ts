@@ -4,11 +4,11 @@
 import type { BattleEvent, BattleResult, EngineFighter } from "../battle/engine.js";
 import { damageLog, ENGINE_RULES } from "../battle/engine.js";
 import { appearanceOf } from "../dex/look.js";
-import { abilityTable, moveTable } from "../dex/tables.js";
+import { abilityTable, moveFxTable, moveTable } from "../dex/tables.js";
 import type { BattleLook } from "../shared/model/battle-net.js";
 import { SIZE_STEPS } from "../party/size.js";
 import { battleLogLines } from "../shared/battle-log.js";
-import type { BattleDamageView, BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView } from "../shared/model/battle-screen";
+import type { BattleDamageView, BattleResultView, BattleRouletteView, BattleScreenEvent, BattleScreenView, BattleUnitView, MoveFxShape, MoveFxView } from "../shared/model/battle-screen";
 import type { MoveView } from "../shared/model/snapshot";
 import { moveMeta } from "./battle.js";
 import { portraitArtKey, typeArtKey } from "./device-art.js";
@@ -135,6 +135,26 @@ function moveNamesOf(r: BattleResult): Record<string, string> {
   return Object.fromEntries([...ids].flatMap((id) => (table[id] ? [[id, table[id].ko]] : [])));
 }
 
+// 기술 연출 — 그리는 방식 규칙(2026-11-10 사용자 감상 14개에서 뽑음, docs/specs/ui-components.md "기술 연출")
+// 기본 섞기. 빛·기운만 있는 기술(전기·고스트·에스퍼·페어리 타입, 소리 기술)은 매끈, 단단한 덩어리가 주인공인 기술은 도트
+const FX_SMOOTH_TYPES = new Set(["electric", "ghost", "psychic", "fairy"]);
+const FX_DOT_MOVES = new Set(["rock-slide", "rock-blast", "stone-edge", "ice-beam"]);
+const FX_SHAPES = new Set<MoveFxShape>(["melee", "projectile", "beam", "cone", "area", "ring", "rush", "drop"]);
+const FX_SUBS = new Set(["slicing", "punch", "bite"]);
+function moveFxOf(r: BattleResult): BattleScreenView["moveFx"] {
+  const ids = new Set<string>();
+  for (const e of r.events) if (e.kind === "move") ids.add(e.move);
+  const moves = moveTable(), fx = moveFxTable();
+  const out: BattleScreenView["moveFx"] = {};
+  for (const id of ids) {
+    const m = moves[id], f = fx[id];
+    if (!m || !f || !FX_SHAPES.has(f.shape as MoveFxShape)) continue;
+    const style = FX_DOT_MOVES.has(id) ? "dot" : FX_SMOOTH_TYPES.has(m.type) || m.traits?.includes("sound") ? "smooth" : "mix";
+    out[id] = { shape: f.shape as MoveFxShape, sub: f.sub && FX_SUBS.has(f.sub) ? (f.sub as MoveFxView["sub"]) : null, type: m.type, style };
+  }
+  return out;
+}
+
 // 창 아래 DPS 표 값 — 피해가 난 시각마다 누적 값을 한 단계로 남긴다(같은 시각은 한 단계)
 function damageOf(r: BattleResult): BattleDamageView {
   const log = damageLog(r.events, r.maxHp);
@@ -172,6 +192,7 @@ export function battleScreenModel(input: BattleScreenInput): BattleScreenView {
     sprites: {}, // 메인이 무대 그림 불러오기로 채운다
     zoom: SIZE_STEPS[1] ?? 1.5, // 크기 2단계 (2026-10-08 사용자 "포켓몬들은 2사이즈를 기본으로 싸우게")
     moveKinds: Object.fromEntries(units.flatMap((side) => side.flatMap((u) => u?.moves ?? [])).map((m) => [m.id, moveTable()[m.id]?.class ?? "physical"])),
+    moveFx: moveFxOf(r),
     abilityNames: abilityNamesOf(input.sides, r),
     maxMs: ENGINE_RULES.maxMs,
     endMs: r.endMs,

@@ -246,7 +246,7 @@ if (wEvent && wEvent.kind === "weather") {
   assert.ok(st.pops(1200).some((p) => p.side === 0 && p.slot === 1 && p.kind === "up" && p.text === "공격 ▲2"), "능력 상승 말");
   // 판정 말
   assert.ok(st.pops(1000).some((p) => p.text === "-40" && p.kind === "super" && p.label === "급소"), "급소가 먼저");
-  assert.ok(st.pops(1500).some((p) => p.text === "-9" && p.label === "효과 별로"), "효과 별로");
+  assert.ok(st.pops(1500).some((p) => p.text === "-9" && p.label === "효과가 별로인 듯하다…"), "효과 별로");
   assert.ok(st.pops(1600).some((p) => p.side === 0 && p.slot === 3 && p.label === "반격"), "반격 피해는 때린 쪽");
   assert.ok(st.pops(1700).some((p) => p.side === 1 && p.slot === 4 && p.text === "막음"), "상태 이상 막음");
   // 상태 이상 — 걸림 이름(상태 색), 5초 판정 숫자, 칩 상태

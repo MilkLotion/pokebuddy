@@ -9,6 +9,7 @@ import { STATUS_NAME, STAT_CHIP, TIMELINE_RULES, clockText, createTimeline, spri
 import type { LookSheets } from "../../shared/model/stage.js";
 import { createDeviceFrame } from "../device/device-frame.js";
 import { createFieldFx, type FieldFx } from "./field-fx.js";
+import { createMoveFx, hitOf, lengthOf, type MoveFxPlay } from "./move-fx.js";
 import { STATUS_COLOR, createStatusFx, type StatusFxMark, type StatusFxUnit } from "./status-fx.js";
 import { needBridge } from "../ui/bridge.js";
 import { buttonEl, el } from "../ui/dom.js";
@@ -384,9 +385,27 @@ function draw(view: BattleScreenView): void {
   const statusFx = createStatusFx(arena); // 몸 위 연출 — 포켓몬 위, 날씨·오라 층 아래 (status-fx.ts)
   const fxOver = el("div", "field-layer");
   arena.appendChild(fxOver);
+  // 기술 연출 — 바닥 층은 포켓몬 아래(첫 포켓몬 앞), 위 층은 날씨·오라 위·알약 아래 (move-fx.ts)
+  const moveFx = createMoveFx(arena, pets.flat().find((p) => p)?.root ?? null);
   const fx = el("div", "fx");
   arena.appendChild(fx);
   body.append(sideEl(0), arena, sideEl(1));
+  // 기술 연출 차례 — 기술 이벤트마다 하나. 대상은 같은 시각 같은 칸의 첫 피해·빗나감·막음. 대상이 없는 기술(변화기)은 없다
+  // 맞는 순간이 damage 시각과 겹치게 hitOf 만큼 앞에서 시작한다. 자리는 처음 그릴 때 정해 둔다
+  const movePlays: { key: string; start: number; fx: MoveFxPlay["fx"]; side: BattleSide; slot: number; target: number; pos: { a: { x: number; y: number }; b: { x: number; y: number } } | null }[] = [];
+  view.events.forEach((e, i) => {
+    if (e.kind !== "move") return;
+    const fx = view.moveFx?.[e.move];
+    if (!fx) return;
+    for (let j = i + 1; j < view.events.length && view.events[j]!.t === e.t; j++) {
+      const x = view.events[j]!;
+      if ((x.kind === "damage" || x.kind === "miss" || x.kind === "blocked") && x.side === e.side && x.slot === e.slot) {
+        movePlays.push({ key: String(i), start: e.t - hitOf(fx), fx, side: e.side, slot: e.slot, target: x.target, pos: null });
+        return;
+      }
+    }
+  });
+
   // 아래 DPS 표 — 재생 시각까지의 누적 피해. 값이 바뀔 때만 다시 그린다 (2026-10-12 사용자 "배틀에서의dps표를 화면밑에 확장하자")
   const dpsPanel = el("div", "dps-panel");
   device.append(hud, body, dpsPanel);
@@ -597,7 +616,7 @@ function draw(view: BattleScreenView): void {
         return made;
       });
       n.style.left = `${h.x}px`;
-      n.style.top = `${h.y - h.pill - (p.kind === "super" ? 34 : 20) - (p.label ? 12 : 0) - k * 16}px`;
+      n.style.top = `${h.y - h.pill - (p.kind === "super" ? 34 : 20) - (p.label ? 14 : 0) - k * 16}px`;
       n.style.opacity = String(k > 0.7 ? (1 - k) / 0.3 : 1);
     }
     // 수명이 끝난 연출을 걷고, 차례가 어긋난 요소만 제자리에 끼운다 — 떠 있는 요소는 다시 붙이지 않는다
@@ -641,6 +660,29 @@ function draw(view: BattleScreenView): void {
       if (c) marks.push({ ...c, kind: m.kind, status: m.status, t: m.t });
     }
     statusFx.draw(t, units, marks, TIMELINE_RULES.markMs);
+  }
+
+  // 기술 연출 — 지금 재생 중인 것만. 움직임 줄이기면 그리지 않는다
+  function paintMoves(t: number, state: ReturnType<Timeline["seek"]>): void {
+    if (stillFx) return;
+    const body = (side: BattleSide, slot: number): { x: number; y: number } | null => {
+      const s = state.units[side][slot];
+      if (!s) return null;
+      const at = timeline.posOf(s, t);
+      return { x: at.x * CELL + CELL, y: at.y * CELL + CELL };
+    };
+    const active: MoveFxPlay[] = [];
+    for (const p of movePlays) {
+      if (t < p.start || t > p.start + lengthOf(p.fx)) continue;
+      if (!p.pos) {
+        const a = body(p.side, p.slot);
+        const b = body(p.side === 0 ? 1 : 0, p.target);
+        if (!a || !b) continue;
+        p.pos = { a, b };
+      }
+      active.push({ key: p.key, start: p.start, fx: p.fx, a: p.pos.a, b: p.pos.b });
+    }
+    moveFx.draw(t, active);
   }
 
   function showResult(): void {
@@ -721,6 +763,7 @@ function draw(view: BattleScreenView): void {
     const state = timeline.seek(shown);
     for (const side of [0, 1] as const) state.units[side].forEach((s, slot) => s && paintUnit(side, slot, s, shown));
     paintStatus(shown, state);
+    paintMoves(shown, state);
     paintFx(shown, state);
     paintDps(shown);
     sendLog(shown);

@@ -96,6 +96,20 @@ export const megaMoveTable = (opts?: DexOptions): Record<string, SpeciesMoveRow>
   }
 };
 
+// ── data/move-fx.json ── 배틀 창의 기술 연출 형태 (docs/specs/ui-components.md "기술 연출", 2026-11-10)
+// 판정과는 상관없다. 파일이 없으면 빈 표 — 연출 없이 지금처럼 알약과 숫자만
+export interface MoveFxRow {
+  shape: string; // melee · projectile · beam · cone · area · ring · rush · drop · none
+  sub?: string; // 근접 세부 — slicing · punch · bite
+}
+export const moveFxTable = (opts?: DexOptions): Record<string, MoveFxRow> => {
+  try {
+    return loadJson<Record<string, MoveFxRow>>("move-fx.json", opts);
+  } catch {
+    return {};
+  }
+};
+
 // ── data/mega-battle.json ── 메가·원시회귀 모습의 종족값 6개와 특성 (메가 모습은 종 표에 없다)
 export interface MegaBattleRow {
   stats: number[];

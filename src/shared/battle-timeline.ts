@@ -24,7 +24,7 @@ export interface Pop {
   t: number;
   kind: PopKind;
   text: string;
-  label?: string; // 숫자 위 작은 판정 말 — 급소·효과 굉장·효과 별로·반격·혼란
+  label?: string; // 숫자 위 판정 말 — 급소·효과가 굉장했다!·효과가 별로인 듯하다…·반격·혼란
   status?: BattleStatusKind; // kind 가 status 일 때 색
 }
 
@@ -107,12 +107,14 @@ export const STATUS_NAME: Readonly<Partial<Record<BattleStatusKind, string>>> = 
 const STAT_NAME: Readonly<Record<number, string>> = { 1: "공격", 2: "방어", 3: "특공", 4: "특방", 5: "스피드" };
 export const STAT_CHIP: Readonly<Record<number, string>> = { 1: "공", 2: "방", 3: "특공", 4: "특방", 5: "스피" };
 
-// 피해 숫자 위 판정 말 — 급소가 먼저다. 보통·효과 없음은 말이 없다
-function judgeLabel(mult: number, crit: boolean): { label?: string } {
+// 피해 숫자 위 판정 말 — 급소가 먼저다(타마다). 상성 문구는 기술의 첫 타에만. 보통·효과 없음은 말이 없다
+// 문구는 원작 대사 (2026-11-10 사용자 "효과문구는 좋아보이긴하네", Figma 01 `Battle Pop Label` 2130:49)
+function judgeLabel(mult: number, crit: boolean, first: boolean): { label?: string } {
   if (mult === 0) return {};
   if (crit) return { label: "급소" };
-  if (mult > 1) return { label: "효과 굉장" };
-  if (mult < 1) return { label: "효과 별로" };
+  if (!first) return {};
+  if (mult > 1) return { label: "효과가 굉장했다!" };
+  if (mult < 1) return { label: "효과가 별로인 듯하다…" };
   return {};
 }
 
@@ -171,7 +173,7 @@ export function createTimeline(view: BattleScreenView): Timeline {
   for (let i = 0; i < events.length; i++) {
     const e = events[i]!;
     if (e.kind === "move") castList.push({ side: e.side, slot: e.slot, t: e.t, move: e.move }); // 혼란으로 실패한 차례는 엔진이 move 를 내지 않아 알약이 없다
-    else if (e.kind === "damage") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: popKindOf(e.mult, e.crit === true), text: e.mult === 0 ? "효과 없음" : `-${e.amount}`, ...judgeLabel(e.mult, e.crit === true) });
+    else if (e.kind === "damage") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: popKindOf(e.mult, e.crit === true), text: e.mult === 0 ? "효과 없음" : `-${e.amount}`, ...judgeLabel(e.mult, e.crit === true, e.hit <= 1) });
     else if (e.kind === "miss") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "miss", text: "빗나감" });
     else if (e.kind === "blocked") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "weak", text: "막음" });
     else if (e.kind === "reflect") popList.push({ side: other(e.side), slot: e.target, t: e.t, kind: "normal", text: `-${e.amount}`, label: "반격" });

@@ -75,6 +75,15 @@ export interface BattleRouletteView {
   picked: { side: BattleSide; slot: number } | null;
 }
 
+// 기술 연출 — 형태(data/move-fx.json)·타입·그리는 방식. 판정과는 상관없다 (docs/specs/ui-components.md "기술 연출")
+export type MoveFxShape = "melee" | "projectile" | "beam" | "cone" | "area" | "ring" | "rush" | "drop";
+export interface MoveFxView {
+  shape: MoveFxShape;
+  sub: "slicing" | "punch" | "bite" | null; // 근접 세부 — 없으면 그냥 타격
+  type: string; // 기술 타입 — 색과 입자 재질
+  style: "mix" | "dot" | "smooth"; // 섞기(도트 + 빛 번짐) · 도트 · 매끈
+}
+
 // 판이 끝난 뒤 대화상자
 export interface BattleResultView {
   title: string; // 이겼어요 · 졌어요 · 비겼어요
@@ -92,6 +101,7 @@ export interface BattleScreenView {
   sprites: Record<string, LookSheets | null>; // 종 → 무대와 같은 PMD 그림 묶음. 없으면 초상으로 그린다
   zoom: number; // 도트 배율 — 크기 2단계(1.5)
   moveKinds: Record<string, "physical" | "special" | "status">; // 기술 → 분류. 공격 동작(Attack·Shoot)을 고른다
+  moveFx: Record<string, MoveFxView>; // 기술 → 연출. 없는 기술은 연출 없이 알약과 숫자만 (docs/specs/ui-components.md "기술 연출")
   abilityNames: Record<string, string>; // 특성 키 → 이름. 특성 알약에 쓴다
   maxMs: number; // 판 길이 상한
   endMs: number;

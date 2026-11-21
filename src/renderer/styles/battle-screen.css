@@ -264,7 +264,7 @@ body {
   background: var(--gauge);
 }
 
-/* 전장 — 화면 칸 56 의 10×6(2026-10-09). 체크 무늬. Figma 03 `Battle Board`
+/* 전장 — 화면 칸 56 의 10×6(2026-10-09). 어두운 경기장(2026-11-10 사용자 "포켓몬 경기장 + 어두운 스타일 크기는 지금거로"). Figma 03 `Battle Board`
    arena 는 포켓몬·연출을 얹는 자리다. board 만 둥근 모서리로 자른다 */
 .arena {
   position: relative;
@@ -277,10 +277,37 @@ body {
   inset: 0;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #f5f3ea;
-  background-image: conic-gradient(rgba(230, 227, 213, 0.6) 0 25%, transparent 0 50%, rgba(230, 227, 213, 0.6) 0 75%, transparent 0);
-  background-size: 112px 112px;
-  background-position: 56px 0;
+  background-color: #1c2a3a; /* navy/900 */
+  /* 가장자리 어둡게 · 아주 옅은 칸 체크(neutral/0 2.5%) */
+  background-image:
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%),
+    conic-gradient(rgba(255, 255, 255, 0.025) 0 25%, transparent 0 50%, rgba(255, 255, 255, 0.025) 0 75%, transparent 0);
+  background-size:
+    100% 100%,
+    112px 112px;
+  background-position:
+    0 0,
+    56px 0;
+}
+/* 경기장 선 — 바깥 선·가운데 선(azure/200 12%) */
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 2px solid rgba(160, 200, 255, 0.12);
+  background: linear-gradient(to right, transparent calc(50% - 1px), rgba(160, 200, 255, 0.12) calc(50% - 1px), rgba(160, 200, 255, 0.12) calc(50% + 1px), transparent calc(50% + 1px));
+}
+/* 경기장 선 — 가운데 원 */
+.board::after {
+  content: "";
+  position: absolute;
+  left: 234px;
+  top: 122px;
+  width: 92px;
+  height: 92px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2px solid rgba(160, 200, 255, 0.12);
 }
 /* 포켓몬 — 몸(계산 칸 2×2 = 56) 가운데에 48 그림. 크기 2단계(배율 1.5) */
 .pet {
@@ -375,6 +402,15 @@ body {
   right: 0;
   background: #9a968c;
 }
+/* 기술 연출 canvas — 바닥 층(포켓몬 아래)·위 층(날씨·오라 위, 알약 아래). 전장보다 32 넓다 (move-fx.ts) */
+.move-fx {
+  position: absolute;
+  left: -32px;
+  top: -32px;
+  width: 624px;
+  height: 400px;
+  pointer-events: none;
+}
 /* 몸 위 연출 canvas — 위쪽 줄의 별·Z 가 잘리지 않게 전장보다 32 넓다 (status-fx.ts) */
 .status-fx {
   position: absolute;
@@ -450,17 +486,17 @@ body {
 .fx .pop.down {
   color: #7fb6ff;
 }
-/* 판정 말 — 숫자 위 작은 글자(급소·효과 굉장·효과 별로·반격·혼란) */
+/* 판정 말 — 숫자 위 글자(급소·효과가 굉장했다!·효과가 별로인 듯하다…·반격·혼란). Figma 01 `Battle Pop Label`(PB/Type/Caption/Semibold) */
 .fx .pop > .label {
   display: block;
-  font: 700 10px/12px var(--font-small);
+  font: 700 12px/14px var(--font-body);
   text-align: center;
 }
 .fx .pop.weak > .label {
   color: #d5d2c6;
 }
 .fx .pop.super > .label {
-  color: #ffffff;
+  color: var(--gauge);
 }
 /* 특성 알약 — 기술 알약 자리. 잉크 바탕·금빛 점·흰 글자라 크림 바탕 기술 알약과 구별된다 */
 .fx .ability {
