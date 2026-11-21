@@ -5,6 +5,7 @@
 //   뜨는 때    마우스를 올려서는 뜨지 않는다. 항목을 눌러야 뜨고, 눌러도 메뉴는 닫히지 않는다. 다시 누르거나 Esc 로 말풍선만 닫는다
 //   자리       메뉴 오른쪽 8, 아래 끝은 그 항목 아래 끝 + 5. 꼬리의 세로 가운데는 그 항목의 세로 가운데
 //   왼쪽       화면 오른쪽에 자리가 없으면(메인이 left 를 준다) 말풍선이 메뉴 왼쪽에 앉는다
+//   올리기     화면 아래로 넘치면(메인이 lift 를 준다) 말풍선만 올리고, 메뉴 위로 넘으면 메뉴를 내려 앉힌다
 //   고르기     모습 줄을 누르면 그 줄의 번호를 돌려준다. 지금 모습 줄은 누를 수 없다. 빈 곳을 누르면 닫는다
 //   머리 줄    도구를 쓰는 묶음(카탈로그·영원의 꽃)만 비용 글이 있다. 그 밖의 말풍선은 줄만 (2026-10-18)
 //   타입 격자  아르세우스·실버디는 타입 아이콘 칸 6×3 — 218×116, 칸 30, 방향키는 위·아래 6칸·옆 1칸 (Figma 99 `Draft / Form Bubble · Type Grid`)
@@ -126,7 +127,7 @@ void app.whenReady().then(async () => {
       rows: [...document.querySelectorAll('#bubble .row')].map((r) => r.querySelector('.name').textContent + ' · ' + r.querySelector('.note').textContent + (r.disabled ? ' (누를 수 없음)' : '')),
       faces: document.querySelectorAll('#bubble .row .face img').length,
     })`);
-    assert.equal(bubble.head, 0, "말풍선 머리 줄 없음 — 도구를 쓰지 않는 묶음");
+    assert.equal(bubble.head, 1, "말풍선 머리 줄 `모습 바꾸기` — 모든 모습 말풍선 (2026-10-23, selftest-menus)");
     assert.deepEqual(bubble.rows, [`코스모그 · ${t("menu.form.go")}`, `코스모움 · ${t("menu.form.go")}`, `솔가레오 · ${t("menu.form.now")} (누를 수 없음)`, `루나아라 · ${t("menu.form.go")}`], "모습 줄");
     assert.equal(bubble.faces, 4, "모습 줄마다 초상");
     await shot("menu-party-open.png");
@@ -189,6 +190,22 @@ void app.whenReady().then(async () => {
     assert.ok(leftTail.r > leftBubble.r && leftTail.r < leftMenu.x + 1, `왼쪽 — 꼬리는 말풍선과 메뉴 사이 (${leftTail.r})`);
     await shot("menu-party-left.png");
 
+    // (7-2) 화면 아래로 넘친 말풍선 — 메인이 올린 양(lift)만큼 말풍선만 올린다. 메뉴 위로 넘으면 메뉴를 내려 앉힌다 (src/main/menus/menu-place.ts)
+    await show(partyModel, null);
+    await js(`window.__side('right', 200); 0`);
+    await wait(150);
+    await js(`${formItem}.click()`);
+    await wait(150);
+    const liftItem = await js<Rect>(`(() => { const r = ${formItem}.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, r: r.right, b: r.bottom }; })()`);
+    const liftBubble = await js<Rect>(rect("#bubble"));
+    const liftTail = await js<Rect>(rect("#bubble .tail"));
+    const liftMenu = await js<Rect>(rect("#menu"));
+    assert.equal(Math.round(liftBubble.b - liftItem.b), 5 - 200, "올린 말풍선 — 아래 끝은 그 항목 아래 끝 + 5 보다 lift 만큼 위");
+    assert.equal(Math.round(liftBubble.y), 8, "메뉴 위로 넘은 말풍선 — 창(그림자 여백 8 안쪽) 위 끝에 붙는다");
+    assert.ok(liftMenu.y > liftBubble.y, "메뉴는 그만큼 내려 앉는다");
+    assert.ok(Math.abs(liftTail.y + liftTail.h / 2 - (liftItem.y + liftItem.h / 2)) <= 1, "올린 말풍선도 꼬리는 그 항목의 세로 가운데");
+    await shot("menu-party-lift.png");
+
     // (8) 타입 모습 격자 — 칸 18, 6×3, 머리 줄 없음, 지금 칸은 누를 수 없다. 방향키는 위·아래 6칸, 옆 1칸, 첫 열에서 ← 는 메뉴로
     await show(gridModel, "right");
     await js(`${formItem}.click()`);
@@ -202,7 +219,7 @@ void app.whenReady().then(async () => {
         current: cells.findIndex((c) => c.getAttribute('aria-current') === 'true') + ':' + cells.find((c) => c.getAttribute('aria-current') === 'true').disabled,
         cellW: Math.round(a.width), gap: Math.round(b.left - a.right) };
     })()`);
-    assert.deepEqual(gridLook, { cells: 18, rows: 0, head: 0, icons: 18, title: "아르세우스(normal)", current: `${TYPES.indexOf("fire")}:true`, cellW: 30, gap: 4 }, "격자 — 칸 18·머리 줄 없음·타입 아이콘·풀이 글·지금 칸");
+    assert.deepEqual(gridLook, { cells: 18, rows: 0, head: 1, icons: 18, title: "아르세우스(normal)", current: `${TYPES.indexOf("fire")}:true`, cellW: 30, gap: 4 }, "격자 — 칸 18·머리 줄 한 줄(2026-10-23 사용자 확정)·타입 아이콘·풀이 글·지금 칸");
     assert.deepEqual([Math.round(gridR.w), Math.round(gridR.h)], [218, 116], "격자 말풍선 218×116");
     const at = `[...document.querySelectorAll('#bubble .cell')].findIndex((c) => c.classList.contains('on'))`;
     const key = (k: string): Promise<unknown> => js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true })); 0`);

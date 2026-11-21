@@ -34,7 +34,7 @@ export type BannerBridge = BridgeOf<BannerIpc>;
 export type MenuIpc = {
   "menu:show": Push<"onShow", [items: MenuView[]]>;
   "menu:size": Send<"size", [w: number, h: number, sub?: { w: number; h: number; top: number }]>; // 그린 뒤의 메뉴 크기 — 메인이 창 크기와 자리를 정한다. sub 는 말풍선의 크기와 메뉴 위 끝에서 잰 자리
-  "menu:side": Push<"onSide", [side: "left" | "right"]>; // 말풍선이 뜰 쪽 — 화면 오른쪽에 자리가 없으면 왼쪽
+  "menu:side": Push<"onSide", [side: "left" | "right", lift: number]>; // 말풍선이 뜰 쪽(화면 오른쪽에 자리가 없으면 왼쪽)과 화면 아래로 넘쳐 올리는 양
   "menu:placed": Send<"placed", []>; // 말풍선 자리를 잡았다 — 메인이 창을 보인다
   "menu:pick": Send<"pick", [id: number | null]>; // null 이면 닫기만 한다
 };

@@ -11,6 +11,7 @@ import { battleMenu, battleMenuOf, petMenu, petMenuOf, trayMenuOf, typeGridOf } 
 import { FORM_NEED, menuView } from "../../view/menu-view";
 import { formsOf } from "../../dex/forms";
 import { boredText, t } from "../../view/text";
+import { placeMenu } from "../../main/menus/menu-place";
 
 const T0 = new Date(2026, 8, 24, 10, 0, 0).getTime();
 
@@ -190,6 +191,11 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   const order = ["normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"];
   for (const base of ["arceus", "silvally"]) assert.deepEqual(typeGridOf(formsOf(pet({ species: base })))?.types, order, `${base} — 18 타입 격자, 상성표 순서`);
   assert.equal(typeGridOf(formsOf(pet({ species: "rotom" }))), null, "로토무는 격자가 아니다");
+  // 타입:널에서 진화한 실버디 — 모습 19개(진화 전 종 포함)여도 18 타입 격자, 타입:널은 말풍선에서 뺀다 (2026-11-22)
+  for (const species of ["silvally-ghost", "type-null"]) {
+    const g = typeGridOf(formsOf(pet({ species, evolved: species === "type-null" ? [] : ["type-null"], forms: ["type-null", "silvally-ghost"] })));
+    assert.deepEqual([g?.types, g?.forms.includes("type-null")], [order, false], `${species} — 타입:널을 거친 실버디 계열도 18칸 격자, 타입:널 칸 없음`);
+  }
   assert.equal(typeGridOf(formsOf(pet({ species: "oricorio" }))), null, "모습이 없거나 18개가 아니면 격자가 아니다");
   const s = seed();
   s.pets.push(pet({ id: "p9", species: "arceus-fire", level: 60 }));
@@ -214,6 +220,29 @@ const menuOf = (s: SaveV3, id: string, origin: "stage" | "manage" = "manage") =>
   s.pets.push(pet({ id: "p10", species: "solgaleo", evolved: ["cosmog", "cosmoem"] }));
   const plain = menuView(petMenu(menuOf(s, "p10")!.model, { form: () => undefined }), "켜짐").find((v) => v.kind === "item" && v.label === t("menu.form"));
   assert.deepEqual(plain?.kind === "item" ? [plain.sub?.title, plain.sub?.grid] : null, ["모습 바꾸기", undefined], "공유 계열 말풍선 — 머리 줄 `모습 바꾸기`, 줄 목록");
+}
+
+// 메뉴 창 자리 (src/main/menus/menu-place.ts) — 메뉴는 커서 자리, 아래가 모자라면 메뉴 높이만큼만 위로. 긴 말풍선은 말풍선만 올린다
+// 2026-11-22 관찰: 타입:널에서 진화한 실버디(모습 19개, 긴 목록 말풍선)의 메뉴가 커서보다 수백 px 위에 떴다
+{
+  const area = { x: 0, y: 0, w: 1920, h: 1032 };
+  const base = { area, shadow: 8, gap: 8, menu: { w: 160, h: 320 } };
+  const low = { x: 207, y: 800 };
+  const plain = placeMenu({ ...base, at: low, bubble: null });
+  assert.deepEqual([plain.menu.y + 320, plain.window.y, plain.window.h], [800, 472, 336], "아래가 모자라면 메뉴 아래 끝이 커서에 붙는다");
+  // 모습 19개 목록 말풍선 — 높이 약 760, 렌더러는 메뉴 위 끝에 붙여 둔다(top 0)
+  const long = placeMenu({ ...base, at: low, bubble: { w: 200, h: 760, top: 0 } });
+  assert.equal(long.menu.y, 480, "긴 말풍선이 있어도 메뉴는 커서 자리 — 말풍선 높이로 뒤집지 않는다");
+  assert.ok(long.window.y >= area.y && long.window.y + long.window.h <= area.y + area.h, "창은 작업 영역 안");
+  assert.equal(long.lift, 480 + 760 + 8 - 1032, "말풍선은 화면 아래로 넘치는 만큼만 올린다");
+  assert.equal(long.menuDrop, long.lift, "말풍선이 메뉴 위로 올라간 만큼 창 안에서 메뉴를 내린다");
+  assert.equal(long.window.y + 8 + long.menuDrop, long.menu.y, "창 안의 메뉴 자리 = 화면의 메뉴 자리");
+  // 넘치지 않으면 지금과 같다
+  const high = placeMenu({ ...base, at: { x: 207, y: 100 }, bubble: { w: 200, h: 132, top: 150 } });
+  assert.deepEqual([high.menu.y, high.lift, high.menuDrop, high.side, high.window.h], [100, 0, 0, "right", 320 + 16], "말풍선이 작업 영역 안이면 그대로");
+  // 오른쪽 끝 — 메뉴는 커서 왼쪽, 말풍선은 왼쪽
+  const edge = placeMenu({ ...base, at: { x: 1900, y: 100 }, bubble: { w: 200, h: 132, top: 150 } });
+  assert.deepEqual([edge.menu.x, edge.side], [1740, "left"], "오른쪽이 모자라면 메뉴와 말풍선이 왼쪽");
 }
 
 process.stdout.write("selftest-menus: 통과 (파티 개체·볼 안과 쿨타임·박스 개체·첫 돌봄 잠금·트레이·로토무 모습 잠금·배틀 파티 칸·타입 모습 격자)\n");

@@ -135,9 +135,14 @@ function stepGrid(from: number, by: number): number {
 // 꼬리는 그 항목의 세로 가운데를 가리킨다
 function bubbleTop(item: HTMLElement): number {
   const top = Math.max(0, item.offsetTop + item.offsetHeight + SUB_DROP - bubble.offsetHeight);
+  pointTail(item, top);
+  return top;
+}
+
+// 꼬리가 그 항목의 세로 가운데를 가리키게 한다 — top 은 틀 안에서 말풍선 위 끝
+function pointTail(item: HTMLElement, top: number): void {
   const tail = bubble.querySelector<HTMLElement>(".tail");
   if (tail) tail.style.top = `${Math.round(item.offsetTop + item.offsetHeight / 2 - top - TAIL / 2 - 1)}px`; // -1 은 말풍선 테두리
-  return top;
 }
 
 // 앞 메뉴의 상태를 한곳에서 비운다 — 가리킨 항목·말풍선 줄·말풍선 쪽·잰 크기 (G61-1)
@@ -153,6 +158,7 @@ function resetMenu(): void {
   opened = false;
   wrap.classList.remove("side-left");
   menu.style.marginLeft = "";
+  menu.style.marginTop = "";
   wrap.style.width = "";
   wrap.style.height = "";
   bubble.style.top = "";
@@ -237,11 +243,20 @@ function drawMenu(items: MenuView[]): void {
 }
 
 // 말풍선이 뜰 쪽 — 오른쪽이면 메뉴가 틀의 왼쪽에, 왼쪽이면 메뉴가 틀의 오른쪽에 앉는다
-api.onSide((side) => {
+// lift — 말풍선이 화면 아래로 넘쳐 메인이 올린 양. 메뉴 위 끝보다 올라가면 메뉴를 그만큼 내려 앉힌다(창 위 끝이 말풍선 위 끝이다)
+api.onSide((side, lift) => {
   const extra = SUB_GAP + bubble.offsetWidth;
   wrap.classList.toggle("side-left", side === "left");
   menu.style.marginLeft = side === "left" ? `${extra}px` : "0";
   bubble.style.left = side === "left" ? "0" : `${menu.offsetWidth + SUB_GAP}px`;
+  if (lift > 0 && opener) {
+    const top = bubble.offsetTop - lift;
+    const drop = Math.max(0, -top);
+    menu.style.marginTop = `${drop}px`;
+    bubble.style.top = `${top + drop}px`;
+    wrap.style.height = `${Math.max(drop + menu.offsetHeight, top + drop + bubble.offsetHeight)}px`;
+    pointTail(opener, top + drop);
+  }
   api.placed();
 });
 

@@ -175,10 +175,12 @@ const GRID_SIZE = 18;
 // 타입 모습 격자 종(아르세우스·실버디)이면 칸 순서의 모습과 타입, 아니면 null — 모습이 18개이고 모습마다 단일 타입이 서로 다를 때다
 // (2026-10-18 사용자 "타입 아이콘있잖아. 그거 6*3 의 grid로 제공해서 그거로 바꾸게").
 // 칸 순서는 지금 모습과 상관없이 모습 묶음(data/regional.json) 순서다 — 공유 계열의 모습 목록(formsOf)은 지금 종이 맨 앞이다
+// 18 모습 묶음이 통째로 들어 있으면 묶음 밖의 모습(진화 전 종)은 격자에서 뺀다 — 타입:널에서 진화한 실버디는 모습이 19개다.
+//   말풍선에서만 빼고 모습 규칙(formsOf·setForm)은 그대로다 (2026-11-22 사용자 "추천대로진행", worklog/records/menu-place)
 export function typeGridOf(forms: readonly string[]): { forms: string[]; types: string[] } | null {
-  if (forms.length !== GRID_SIZE) return null;
-  const group = shiftGroupOf(forms[0] ?? "");
-  const ordered = group.length === GRID_SIZE && forms.every((slug) => group.includes(slug)) ? group : [...forms];
+  const whole = forms.map((slug) => shiftGroupOf(slug)).find((group) => group.length === GRID_SIZE && group.every((slug) => forms.includes(slug)));
+  if (!whole && forms.length !== GRID_SIZE) return null;
+  const ordered = whole ? [...whole] : [...forms];
   const types = ordered.map((slug) => profileOf(slug).types);
   if (types.some((list) => list.length !== 1)) return null;
   const flat = types.map((list) => list[0] as string);

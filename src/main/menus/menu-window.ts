@@ -9,7 +9,8 @@
 // 문서를 미리 읽어 둔 숨은 빈 창(예비 창)을 메뉴 종류(포커스 받음·안 받음)마다 하나 둔다 — 열 때 창 만들기·문서 읽기(약 90ms)를 기다리지 않는다 (worklog/records/perf-refactor 8-1).
 //   쓴 창은 지금처럼 닫아 없앤다 — 앞 메뉴의 상태가 남지 않는다. 닫힌 뒤 예비 창을 다시 둔다
 // 말풍선이 달린 항목(포켓몬 메뉴의 `모습 바꾸기`)이 있으면 창을 말풍선 자리까지 넓혀 둔다 — 말풍선은 메뉴 창 안에 그린다.
-//   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다
+//   말풍선은 메뉴 오른쪽에 뜬다. 화면 오른쪽에 자리가 없으면 왼쪽에 뜬다. 메뉴 자리는 말풍선과 관계없이 커서 자리다.
+//   말풍선이 화면 아래로 넘치면 말풍선만 올린다 (menu-place.ts)
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import type { Rect } from "../../shared/geometry";
 import type { MenuChannel } from "../../shared/ipc/overlays";
@@ -18,6 +19,7 @@ import { menuView, pickOf } from "../../view/menu-view.js";
 import { cursorScreen } from "../windows/display.js";
 import { afterLoad, createIpcScope } from "../windows/ipc.js";
 import { createOverlayWindow } from "../windows/options.js";
+import { placeMenu } from "./menu-place.js";
 
 const CH = {
   show: "menu:show",
@@ -126,34 +128,20 @@ export function openMenu(opts: MenuWindowOptions, template: MenuItemConstructorO
     win.show();
     win.focus(); // 방향키·Enter·Esc 를 받고, 바깥을 누르면 blur 로 닫는다
   };
-  // 그린 크기를 받으면 자리를 정한다 — 오른쪽·아래가 모자라면 커서의 왼쪽·위로 뒤집는다
+  // 그린 크기를 받으면 자리를 정한다 — 오른쪽·아래가 모자라면 커서의 왼쪽·위로 뒤집는다 (src/main/menus/menu-place.ts)
   // sub — 말풍선의 크기와 메뉴 위 끝에서 잰 자리. 있으면 창을 말풍선 쪽으로 넓히고, 렌더러가 자리를 잡은 뒤에 보인다
   const onSize = (w: unknown, h: unknown, sub: unknown): void => {
     if (typeof w !== "number" || typeof h !== "number") return;
-    const menuW = Math.ceil(w);
-    const menuH = Math.ceil(h);
     const s = sub && typeof sub === "object" ? (sub as { w?: unknown; h?: unknown; top?: unknown }) : null;
     const bubble = s && typeof s.w === "number" && typeof s.h === "number" && typeof s.top === "number" ? { w: Math.ceil(s.w), h: Math.ceil(s.h), top: Math.max(0, Math.floor(s.top)) } : null;
-    const height = Math.max(menuH, bubble ? bubble.top + bubble.h : 0) + SHADOW * 2;
-    // 메뉴(그림자 제외)의 자리
-    let mx = at.x;
-    let my = at.y;
-    if (mx + menuW + SHADOW > area.x + area.width) mx = at.x - menuW;
-    if (my - SHADOW + height > area.y + area.height) my = at.y - (height - SHADOW * 2);
-    mx = Math.max(area.x + SHADOW, mx);
-    my = Math.max(area.y + SHADOW, my);
-    opts.onPlaced?.({ x: mx, y: my, w: menuW, h: menuH });
-    if (!bubble) {
-      win.setBounds({ x: mx - SHADOW, y: my - SHADOW, width: menuW + SHADOW * 2, height });
+    const place = placeMenu({ at, area: { x: area.x, y: area.y, w: area.width, h: area.height }, menu: { w: Math.ceil(w), h: Math.ceil(h) }, bubble, shadow: SHADOW, gap: SUB_GAP });
+    opts.onPlaced?.({ ...place.menu, w: Math.ceil(w), h: Math.ceil(h) });
+    win.setBounds({ x: place.window.x, y: place.window.y, width: place.window.w, height: place.window.h });
+    if (!place.side) {
       reveal();
       return;
     }
-    const extra = SUB_GAP + bubble.w;
-    const fitsRight = mx + menuW + extra + SHADOW <= area.x + area.width;
-    const fitsLeft = mx - extra - SHADOW >= area.x;
-    const side = fitsRight || !fitsLeft ? "right" : "left";
-    win.setBounds({ x: (side === "right" ? mx : mx - extra) - SHADOW, y: my - SHADOW, width: menuW + extra + SHADOW * 2, height });
-    win.webContents.send(CH.side, side);
+    win.webContents.send(CH.side, place.side, place.lift);
   };
   const onPick = (id: unknown): void => {
     close();
