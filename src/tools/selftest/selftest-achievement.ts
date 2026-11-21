@@ -49,10 +49,10 @@ function seed(): SaveV3 {
   return s;
 }
 
-// (1) 업적 44개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
+// (1) 업적 45개가 이름·분류·조건·보상을 가진다 (2026-10-03 업적 개선). 옛 업적 네 개의 키와 보상은 그대로다 (2026-09-29 사용자 결정 — 메타몽·라프라스)
 {
   const list = achievementDefs();
-  assert.equal(list.length, 44); // 2026-10-09 개굴닌자 파티 시간(지우의모자) 더함
+  assert.equal(list.length, 45); // 2026-10-09 개굴닌자 파티 시간(지우의모자), 2026-11-22 첫 랜덤 배틀 더함
   for (const [id, def] of list) {
     assert.ok(def.ko.length > 0);
     assert.ok((def.en ?? "").length > 0, `영어 이름 ${id}`);
@@ -62,12 +62,12 @@ function seed(): SaveV3 {
     assert.equal(kinds.filter(Boolean).length, 1, `보상은 한 종류 ${id}`);
   }
   const byGroup = Object.fromEntries(GROUPS.map((g) => [g, list.filter(([, d]) => d.group === g).length]));
-  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 13 });
+  assert.deepStrictEqual(byGroup, { dex: 19, grow: 5, egg: 4, find: 3, together: 14 }); // 함께 — 2026-11-22 첫 랜덤 배틀
   const old = ["show-two", "starter-final", "work-100h", "party-three"];
   const reward = Object.fromEntries(list.filter(([id]) => old.includes(id)).map(([id, def]) => [id, rewardPokemon(def) ?? def.reward]));
   assert.deepStrictEqual(reward, { "show-two": "party-slot", "starter-final": "party-slot", "work-100h": "lapras", "party-three": "ditto" });
   // 업적으로만 얻는 종 — 뮤·토게피, 마기아나(500년 전의 색)·피츄(삐쭉귀) (2026-10-03 사용자 결정). 루가루암(황혼의 모습)은 진화 조건으로 얻는다(같은 날 "추천대로 하자")
-  // 로토무는 CLI 첫 연결(첫 작업 신호) 보상이다 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상으로")
+  // 로토무는 첫 랜덤 배틀 보상이다 (2026-11-22 사용자 "아예 배틀" → "추천대로 1번". 그 전 2026-10-05 ~ 은 CLI 첫 작업 신호 보상)
   assert.deepStrictEqual(rewardSpecies().sort(), ["arceus", "ditto", "lapras", "magearna-original", "mew", "pichu-spiky-eared", "rotom", "togepi"]);
   // 업적 보상 종은 모두 단일 포켓몬이다 — 팔거나 교환할 수 없고 상점에서 팔지 않는다 (2026-10-03 사용자 결정 "업적에서 구하는 포켓몬들도 단일종으로")
   for (const slug of rewardSpecies()) {
@@ -247,11 +247,12 @@ function seed(): SaveV3 {
 // (9-0) 함께 N시간 일하기 사다리 — 1·10·50·300·1000시간 (2026-10-05 사용자 결정, CLI 적립 2배를 업적으로 옮김)
 {
   const s = seed();
-  // 처음 함께 일하기 — 첫 작업 신호(작업 시간 > 0)에 로토무 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상으로")
+  // 처음 함께 일하기 — 첫 작업 신호(작업 시간 > 0)에 100P (2026-11-22 사용자 "포인트로만해도" → "추천대로진행". 그 전에는 로토무)
   s.totals.workMs = 0;
   assert.equal(isAchieved(s, "work-1h"), false, "작업 신호가 없으면 아니다");
   s.totals.workMs = 1;
   assert.equal(isAchieved(s, "work-1h"), true, "첫 작업 신호");
+  assert.equal(rewardPoints(new Map(achievementDefs()).get("work-1h")!), 100, "처음 함께 일하기 보상은 100P");
   const ladder = [10, 50, 100, 300, 500, 1000];
   for (const h of ladder) {
     s.totals.workMs = h * 3600_000 - 1;
@@ -260,6 +261,20 @@ function seed(): SaveV3 {
     assert.equal(isAchieved(s, `work-${h}h`), true, `${h}시간이면 달성`);
   }
   process.stdout.write("(9-0) 함께 N시간 일하기 사다리  ok\n");
+}
+
+// (9-0b) 첫 랜덤 배틀 — 보상을 받은 랜덤 배틀 판(battle.applied)이 하나라도 있으면 로토무. 친선 배틀은 applied 에 들지 않는다
+// (2026-11-22 사용자 "아예 배틀" → "추천대로 1번", 분류는 함께 "1번에 해")
+{
+  const s = seed();
+  const def = new Map(achievementDefs()).get("battle-1");
+  assert.ok(def, "첫 랜덤 배틀 업적이 있다");
+  assert.deepStrictEqual([def.group, rewardPokemon(def)], ["together", "rotom"], "함께 분류 · 보상 로토무");
+  assert.equal(isAchieved(s, "battle-1"), false, "랜덤 배틀 기록이 없으면 아니다");
+  s.battle = { slots: [null, null, null, null, null, null], applied: ["b-1"] };
+  assert.equal(isAchieved(s, "battle-1"), true, "보상을 받은 랜덤 배틀 판이 하나면 달성(승패 무관)");
+  assert.equal(progressOf(s, "battle-1"), null, "한 번에 채우는 조건이라 진행도 줄이 없다");
+  process.stdout.write("(9-0b) 첫 랜덤 배틀 — 로토무  ok\n");
 }
 
 // (9-1) 함께 100시간 일하기 — 일한 누적 시간 100시간이면 달성. 시간 흐름에서도 판정한다(옛 저장은 다음 판정에 달성)

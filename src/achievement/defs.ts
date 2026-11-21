@@ -17,6 +17,7 @@
 //   agent     연결한 CLI 의 첫 작업 신호 — totals.workMs > 0. count 는 1 이다 (2026-10-05 사용자 결정 "로토무는 cli 첫 연결 보상")
 //   streak    이어서 앱이 돈 날 수 counts.streak ≥ days. 하루를 거르면 1 로 돌아간다
 //   trade     끝난 교환 횟수 counts.traded ≥ count
+//   battle    보상을 받은 랜덤 배틀 판 수 battle.applied ≥ count. 친선 배틀은 세지 않는다. applied 는 최근 200개만 남으므로 count 는 200 이하로 쓴다 (2026-11-22 사용자 "추천대로 1번")
 //   shown     파티의 개체를 count 마리 이상 동시에 꺼냈다. 숨긴 채 배치만 한 것은 아니다
 //   party     파티 칸에 든 포켓몬 수 ≥ count. 숨긴 개체도 센다
 //   pet-party 그 종의 개체 하나가 파티에서 보낸 시간 PetV3.partyMs ≥ hours. 메가스톤의 파티 시간처럼 흐른 시간을 센다 (src/dex/forms.ts tickPartyTime)

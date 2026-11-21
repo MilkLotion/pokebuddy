@@ -247,7 +247,7 @@ try {
   // (13) 업적창이 읽는 목록 — 이름·설명·보상과 세 가지 상태
   {
     const list = snapshotOfGame(game)?.achievements.list ?? [];
-    assert.equal(list.length, 44, "업적 44개");
+    assert.equal(list.length, 45, "업적 45개 — 첫 랜덤 배틀(2026-11-22)");
     assert.equal(list.find((a) => a.id === "greninja-party-100h")?.reward, "지우의모자", "도구 보상은 도구 이름으로 — 개굴닌자 파티 시간(2026-10-09)");
     assert.equal(list.find((a) => a.id === "work-100h")?.reward, "라프라스", "포켓몬 보상은 종 이름으로");
     const two = list.find((a) => a.id === "show-two");

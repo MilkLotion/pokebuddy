@@ -55,8 +55,8 @@
     "ko": "파티 세 마리 모으기", "en": "Party of Three", "group": "together", "cond": { "kind": "party", "count": 3 }, "reward": { "pokemon": "ditto" }
   },
   "work-1h": {
-    "_comment": "CLI 연계 보상 사다리 — 작업 시간 적립 2배를 없애고 업적으로 옮겼다 (2026-10-05 사용자 결정 \"cli 적립2배는 없애고 … 예시대로 하면 될듯\"). 첫 칸은 CLI 첫 작업 신호에 로토무를 준다 (같은 날 \"로토무는 cli 첫 연결 보상으로\")",
-    "ko": "처음 함께 일하기", "en": "First Work Together", "group": "together", "cond": { "kind": "agent", "count": 1 }, "reward": { "pokemon": "rotom" }
+    "_comment": "CLI 연계 보상 사다리 — 작업 시간 적립 2배를 없애고 업적으로 옮겼다 (2026-10-05 사용자 결정 \"cli 적립2배는 없애고 … 예시대로 하면 될듯\"). 첫 칸은 CLI 첫 작업 신호. 보상은 로토무였다가 100P 로 바꿨다 — 로토무는 첫 랜덤 배틀 보상으로 옮겼다 (2026-11-22 사용자 \"포인트로만해도\" → \"추천대로진행\")",
+    "ko": "처음 함께 일하기", "en": "First Work Together", "group": "together", "cond": { "kind": "agent", "count": 1 }, "reward": { "points": 100 }
   },
   "work-10h": { "ko": "함께 10시간 일하기", "en": "10 Hours Together", "group": "together", "cond": { "kind": "work", "hours": 10 }, "reward": { "points": 300 } },
   "work-50h": { "ko": "함께 50시간 일하기", "en": "50 Hours Together", "group": "together", "cond": { "kind": "work", "hours": 50 }, "reward": { "egg": "sub-legendary" } },
@@ -73,5 +73,9 @@
   },
   "streak-7": { "ko": "7일 연속 함께하기", "en": "7 Days in a Row", "group": "together", "cond": { "kind": "streak", "days": 7 }, "reward": { "points": 200 } },
   "streak-30": { "ko": "30일 연속 함께하기", "en": "30 Days in a Row", "group": "together", "cond": { "kind": "streak", "days": 30 }, "reward": { "points": 1000 } },
-  "trade-1": { "ko": "첫 교환", "en": "First Trade", "group": "together", "cond": { "kind": "trade", "count": 1 }, "reward": { "points": 300 } }
+  "trade-1": { "ko": "첫 교환", "en": "First Trade", "group": "together", "cond": { "kind": "trade", "count": 1 }, "reward": { "points": 300 } },
+  "battle-1": {
+    "_comment": "로토무는 CLI 첫 작업 신호 보상이었다가 첫 랜덤 배틀 보상으로 옮겼다. 랜덤 배틀만 세고 승패는 보지 않는다. 친선 배틀은 보상이 없다 (2026-11-22 사용자 \"아예 배틀\" → \"추천대로 1번\", 분류는 함께 — \"1번에 해\")",
+    "ko": "첫 랜덤 배틀", "en": "First Random Battle", "group": "together", "cond": { "kind": "battle", "count": 1 }, "reward": { "pokemon": "rotom" }
+  }
 }

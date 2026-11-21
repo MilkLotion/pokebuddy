@@ -162,6 +162,7 @@ export type AchievementCond =
   | { kind: "agent"; count: number }
   | { kind: "streak"; days: number }
   | { kind: "trade"; count: number }
+  | { kind: "battle"; count: number }
   | { kind: "shown"; count: number }
   | { kind: "party"; count: number }
   | { kind: "pet-party"; species: string; hours: number };

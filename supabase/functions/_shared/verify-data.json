@@ -1,5 +1,5 @@
 {
- "hash": "877ccdca4574d974",
+ "hash": "180305c2db27264f",
  "items": {
   "basic-food": {
    "price": null,
@@ -260,7 +260,7 @@
   "find-3000": "points:1500",
   "show-two": "party-slot",
   "party-three": "pokemon",
-  "work-1h": "pokemon",
+  "work-1h": "points:100",
   "work-10h": "points:300",
   "work-50h": "egg:sub-legendary",
   "work-100h": "pokemon",
@@ -270,7 +270,8 @@
   "greninja-party-100h": "item:ash-cap:1",
   "streak-7": "points:200",
   "streak-30": "points:1000",
-  "trade-1": "points:300"
+  "trade-1": "points:300",
+  "battle-1": "pokemon"
  },
  "evo": {
   "abra": [

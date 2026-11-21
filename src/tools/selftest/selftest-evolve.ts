@@ -419,7 +419,7 @@ function seed(over: Partial<PetV3> = {}, bag: Record<string, number> = {}): Save
   const s = seed({ species: "rotom", level: 20 });
   const p = s.pets[0] as PetV3;
   assert.deepStrictEqual(formsOf(p), ROTOM, "로토무와 다섯 모습");
-  assert.equal(isSinglePet(p), true, "업적 보상 종이라 단일 포켓몬이다 (2026-10-05 CLI 첫 연결 보상)");
+  assert.equal(isSinglePet(p), true, "업적 보상 종이라 단일 포켓몬이다 (2026-11-22 첫 랜덤 배틀 보상)");
   assert.equal(isFormLocked(p), false, "얻자마자 열려 있다");
   assert.equal(setForm(s, "p1", "pikachu").reason, "bad-form", "묶음 밖의 종은 bad-form");
   // 작업 시간은 더 세지 않는다. 옛 저장에 쌓인 값은 그대로 둔다
