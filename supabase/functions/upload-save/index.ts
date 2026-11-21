@@ -21,9 +21,10 @@ import { partyOf } from "../_shared/battle/fighter-core.ts";
 import { battle } from "../_shared/battle-common.ts";
 
 const data = rulesData as unknown as VerifyData;
-// 본문 상한 — 규칙을 돌리기 전에 자른다. DB 상한(압축 전 jsonb 1MiB, 20261008100000_save_size_limit.sql)보다 조금 크게.
-//   JSON 글자 수는 압축 전 jsonb 의 약 0.75배다(2026-10-08 계정 저장 196,046자 = 262,012바이트)
-const MAX_BODY = 1_000_000;
+// 본문 상한 — 규칙을 돌리기 전에 자른다. DB 상한(압축 전 jsonb 2MiB, 20261121100000_save_size_2mib.sql)보다 조금 크게.
+//   JSON 글자 수는 개체가 많은 저장에서 압축 전 jsonb 의 약 0.64배다(2026-11-21 1,308마리 저장 660,376자 = 약 1,044,648바이트, 계산)
+//   본문은 2MiB 보다 충분히 작게 둔다 — 호스팅 Edge Function 에서 2MiB 를 넘는 업로드가 멈춘다는 보고(supabase/edge-runtime#737)
+const MAX_BODY = 1_500_000;
 
 const json = (body: Record<string, unknown>, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
