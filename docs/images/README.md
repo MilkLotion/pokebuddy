@@ -53,7 +53,7 @@
 | `connect` | `connect.png` | 설명서 AI 코딩 도구 연결 | 사용자 모달 `연결` 탭. CLI 하나 이상이 `연결됨` | 넣음 (2026-09-30, `dist/tools/dev/dev-manage.js --docs`) |
 | `care-detail` | `care-detail.png` | 설명서 돌봄 | 파티 상세 기기 창. 친밀도·만복도·심심함이 보이게 | 넣음 (2026-10-24) |
 | `battle-party` | `battle-party.png` | 설명서 모험과 배틀 | 모험 탭 배틀 파티와 옆에 붙은 배틀 파티 상세 기기 창 | 넣음 (2026-10-24) |
-| `battle` | `battle.png` | 설명서 배틀 시작 | 랜덤 배틀 창. 판이 진행 중이고 기술 이름·피해 숫자가 보이게 | 넣음 (2026-10-24, `POKEBUDDY_DEV_BATTLE` 로컬 엔진 판) |
+| `battle` | `battle.png` | 설명서 배틀 시작 | 랜덤 배틀 창. 판이 진행 중이고 기술 이름·피해 숫자가 보이게 | 넣음 (2026-11-22 어두운 경기장으로 다시 찍음, 앱 0.23.0 `POKEBUDDY_DEV_BATTLE` 로컬 엔진 판) |
 | `battle-moves` | `battle-moves.png` | 설명서 기술 | 기술 바꾸기 모달. 고를 기술이 여러 개 보이게 | 넣음 (2026-10-24) |
 | `mail` | `mail.png` | 설명서 계정과 우편함 | 우편함 편지 목록. 계정 아이디·이메일이 보이지 않게 | 넣음 (2026-10-24, 가짜 편지) |
 | `settings-general` | `settings-general.png` | 설명서 설정 | 설정 모달 `일반` 탭 | 넣음 (2026-10-24) |
