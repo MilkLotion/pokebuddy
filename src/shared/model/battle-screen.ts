@@ -78,6 +78,7 @@ export interface BattleRouletteView {
 // 기술 연출 — 형태(data/move-fx.json)·타입·그리는 방식. 판정과는 상관없다 (docs/specs/ui-components.md "기술 연출")
 export type MoveFxShape = "melee" | "projectile" | "beam" | "cone" | "area" | "ring" | "rush" | "drop";
 export interface MoveFxView {
+  move: string; // 기술 id — 기술마다 따로 그린 연출(비행 20개)을 고른다
   shape: MoveFxShape;
   sub: "slicing" | "punch" | "bite" | null; // 근접 세부 — 없으면 그냥 타격
   type: string; // 기술 타입 — 색과 입자 재질

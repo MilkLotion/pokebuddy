@@ -101,7 +101,11 @@ HTML 과 그 스크립트다. 메인이 보낸 모델을 DOM 이나 캔버스에
 - `manage/` — 설정창(아래 따로).
 - `stage/` — 무대 캔버스. 그리기 루프(`stage.ts`), 그림 시트 재생(`sprites.ts`), 끌기·클릭(`pointer.ts`).
 - `device/` — 설정창 옆에 붙는 기기 창 다섯(파티 상세, 도감, 상점, 가방, 배틀 파티 상세). 공통 틀은 `device-frame.ts`, 상점·가방이 같이 쓰는 화면은 `item-face.ts`.
-- `battle/` — 배틀 창(`screen.ts`)과 전장의 날씨·필드·오라 연출(`field-fx.ts`, 섞기 방식별 canvas 를 CSS 로 겹친다), 포켓몬 몸 위의 상태 이상·능력 변화 연출(`status-fx.ts`, canvas 한 장), 기술 연출(`move-fx.ts`, 바닥 층·위 층 canvas 두 장, 형태는 `data/move-fx.json`). 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
+- `battle/` — 배틀 창(`screen.ts`)과 전장의 날씨·필드·오라 연출(`field-fx.ts`, 섞기 방식별 canvas 를 CSS 로 겹친다), 포켓몬 몸 위의 상태 이상·능력 변화 연출(`status-fx.ts`, canvas 한 장), 기술 연출(`move-fx.ts`, 바닥 층·위 층 canvas 두 장, 형태는 `data/move-fx.json`). 연출 공용 도구(전장 크기·재질·빛·입자·맞는 시각)는 `move-fx-kit.ts` 에 있다. 머리 줄은 기기 창 틀을 쓴다. 판의 재생 계산은 렌더러와 자체 검사가 같이 쓰도록 `shared/battle-timeline.ts` 에 있다.
+  - 기술마다 따로 그린 연출은 타입별 파일 `move-fx-<타입>.ts` 에 둔다(2026-11-22 사용자 결정). `<타입>` 은 `data/moves.json` 의 타입 id(`fire`·`water` …)다. 지금은 비행 20개의 `move-fx-flying.ts` 하나다.
+  - 타입별 파일은 기술 id → 그리기 함수(`ShapeFn`) 표와, 색이 타입과 다른 기술의 재질 표 둘을 내보낸다(비행은 `FLYING`·`FLYING_MAT`). 맞는 시각은 그 기술 형태의 `HIT` 를 지킨다.
+  - `move-fx.ts` 의 `MOVE_FX`·`MOVE_MAT` 에 그 두 표를 펼친다. 표에 없는 기술은 형태(`SHAPE`)대로 그린다.
+  - 다른 타입의 기술은 그 타입 파일에 넣지 않는다. 그림 도구를 두 타입 이상이 쓰게 되면 `move-fx-kit.ts` 로 옮긴다.
 - `windows/` — 메뉴, 첫 포켓몬 고르기, 놀이공간 그리기, 배너, 알림, 화면 고르기.
 - `ui/` — 여러 창이 같이 쓰는 도구. 브리지(`bridge.ts`), 요소 만들기(`dom.ts`), 초상(`portrait.ts`), 코치마크(`coach.ts`), 막대(`fill-bar.ts`), 타입 배지(`type-badge.ts`).
 - `styles/` — 창 CSS. 모든 창이 `tokens.css` 를 먼저 읽는다.

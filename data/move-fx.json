@@ -216,7 +216,7 @@
   "last-respects": {"shape":"melee"},
   "lava-plume": {"shape":"self-ring"},
   "leaf-blade": {"shape":"melee","sub":"slicing"},
-  "leaf-storm": {"shape":"projectile"},
+  "leaf-storm": {"shape":"cone"},
   "leaf-tornado": {"shape":"projectile"},
   "leech-life": {"shape":"melee"},
   "lick": {"shape":"melee"},

@@ -203,7 +203,7 @@ function sunFx(): WeatherFx {
   return {
     mix: 0.5,
     draw(L, t) {
-      grade(L.get("soft-light"), "rgba(255,196,110,0.9)", "rgba(255,170,90,0.35)");
+      grade(L.get("screen"), "rgba(255,196,110,0.22)", "rgba(255,170,90,0.06)");
       grade(L.get("screen"), "rgba(255,220,160,0.10)", "rgba(255,200,140,0)");
       const g = L.get("plus-lighter");
       const sx = -40;
@@ -235,8 +235,8 @@ function harshFx(): WeatherFx {
   return {
     mix: 0.5,
     draw(L, t) {
-      grade(L.get("soft-light"), "rgba(255,120,40,1)", "rgba(220,60,20,0.8)");
-      grade(L.get("multiply"), "rgba(255,200,170,0.5)", "rgba(255,160,120,0.6)");
+      grade(L.get("screen"), "rgba(255,120,40,0.3)", "rgba(220,60,20,0.14)");
+      grade(L.get("screen"), "rgba(255,170,110,0.08)", "rgba(255,130,80,0.02)");
       const g = L.get("plus-lighter");
       const gr = g.createLinearGradient(0, H, 0, H * 0.45);
       gr.addColorStop(0, `rgba(255,110,30,${0.28 + 0.06 * Math.sin(t / 600)})`);
@@ -259,7 +259,7 @@ function harshFx(): WeatherFx {
 function rainFx(dense: boolean): WeatherFx {
   const spec: [number, number, number, number, number][] = dense
     ? [[120, 0.55, 14, 1, 0.3], [60, 0.85, 24, 1.4, 0.5], [26, 1.3, 38, 2, 0.7]]
-    : [[64, 0.5, 13, 1, 0.26], [34, 0.8, 22, 1.3, 0.45], [12, 1.2, 34, 1.8, 0.62]];
+    : [[64, 0.5, 13, 1, 0.45], [34, 0.8, 22, 1.3, 0.75], [12, 1.2, 34, 1.8, 0.95]];
   const layers = spec.map(([n, v, l, w, a], li) => ({ v, l, w, a, drops: P(n, 70 + li + (dense ? 9 : 0), (r) => ({ x: r(), y: r(), j: 0.85 + r() * 0.3 })) }));
   const splashes = P(dense ? 16 : 9, dense ? 13 : 12, (r) => ({ p: r() * 700 }));
   return {
@@ -267,10 +267,10 @@ function rainFx(dense: boolean): WeatherFx {
     draw(L, t) {
       if (dense) {
         grade(L.get("multiply"), "rgba(110,125,150,1)", "rgba(80,95,125,1)", 0.55);
-        grade(L.get("soft-light"), "rgba(40,60,100,1)", "rgba(30,40,80,1)", 0.45);
+        grade(L.get("screen"), "rgba(60,90,150,1)", "rgba(40,60,110,1)", 0.12);
       } else {
         grade(L.get("multiply"), "rgba(170,185,205,1)", "rgba(150,170,195,1)", 0.4);
-        grade(L.get("soft-light"), "rgba(70,100,150,1)", "rgba(60,80,130,1)", 0.3);
+        grade(L.get("screen"), "rgba(70,100,160,1)", "rgba(60,80,130,1)", 0.08);
       }
       const g = L.get("plus-lighter");
       if (dense) {
@@ -327,8 +327,8 @@ function sandFx(): WeatherFx {
     draw(L, t) {
       const pulse = tick5(t);
       const gust = 0.8 + 0.2 * Math.sin(t / 1700) + pulse * 0.8;
-      grade(L.get("multiply"), "rgba(235,208,165,1)", "rgba(218,180,125,1)", 0.5 + pulse * 0.15);
-      grade(L.get("soft-light"), "rgba(200,140,60,1)", "rgba(170,110,50,1)", 0.35);
+      grade(L.get("screen"), "rgba(200,150,80,1)", "rgba(170,120,60,1)", 0.16 + pulse * 0.06);
+      grade(L.get("screen"), "rgba(220,170,100,1)", "rgba(160,110,50,1)", 0.06);
       const g = L.get("normal");
       for (const b of bands) {
         const run = mod(b.p + t * b.v, W + b.w * 2);
@@ -359,8 +359,8 @@ function snowFx(): WeatherFx {
   return {
     mix: 0.75,
     draw(L, t) {
-      grade(L.get("multiply"), "rgba(200,212,230,1)", "rgba(178,194,218,1)", 0.6);
-      grade(L.get("soft-light"), "rgba(120,150,200,1)", "rgba(100,130,190,1)", 0.3);
+      grade(L.get("screen"), "rgba(200,220,245,1)", "rgba(178,194,218,1)", 0.1);
+      grade(L.get("screen"), "rgba(120,150,200,1)", "rgba(100,130,190,1)", 0.04);
       const g = L.get("normal");
       for (const ly of flakes) {
         for (const f of ly.ps) {
@@ -391,8 +391,8 @@ function windsFx(): WeatherFx {
   return {
     mix: 0.7,
     draw(L, t) {
-      grade(L.get("soft-light"), "rgba(80,200,160,1)", "rgba(40,150,130,1)", 0.35);
-      grade(L.get("multiply"), "rgba(222,242,235,1)", "rgba(205,232,224,1)", 0.4);
+      grade(L.get("screen"), "rgba(80,200,160,1)", "rgba(40,150,130,1)", 0.1);
+      grade(L.get("screen"), "rgba(222,242,235,1)", "rgba(205,232,224,1)", 0.02);
       const g = L.get("normal");
       g.lineCap = "round";
       const N = 24;
@@ -596,8 +596,8 @@ function fairyFx(): WeatherFx {
   return {
     mix: 0.7,
     draw(L, t) {
-      edge(L.get("multiply"), "255,165,215", 0.6 + 0.08 * Math.sin(t / 900), 0.42);
-      edge(L.get("soft-light"), "255,90,180", 0.6, 0.5);
+      edge(L.get("screen"), "255,150,210", 0.32 + 0.06 * Math.sin(t / 900), 0.42);
+      edge(L.get("screen"), "255,90,180", 0.12, 0.5);
       const g = L.get("normal");
       for (const s of st) {
         const a = Math.max(0, Math.sin(t / 650 + s.p));
@@ -622,8 +622,8 @@ function darkFx(): WeatherFx {
   return {
     mix: 0.4,
     draw(L, t) {
-      edge(L.get("multiply"), "60,30,80", 0.75 + 0.08 * Math.sin(t / 1300), 0.42);
-      edge(L.get("soft-light"), "40,10,60", 0.8, 0.5);
+      edge(L.get("screen"), "120,50,170", 0.3 + 0.06 * Math.sin(t / 1300), 0.42);
+      edge(L.get("multiply"), "40,10,60", 0.5, 0.5);
       const g = L.get("normal");
       for (const s of smoke) {
         const k = mod(t + s.p, s.life) / s.life;
@@ -640,7 +640,7 @@ function breakFx(): WeatherFx {
     mix: 0.4,
     draw(L, t) {
       const m = (Math.sin(t / 1400) + 1) / 2;
-      edge(L.get("multiply"), "60,30,80", 0.5 * (1 - m), 0.45);
+      edge(L.get("screen"), "120,50,170", 0.3 * (1 - m), 0.45);
       edge(L.get("screen"), "255,150,215", 0.4 * m, 0.5);
       const k = mod(t, 2600) / 2600;
       if (k >= 0.55) return;

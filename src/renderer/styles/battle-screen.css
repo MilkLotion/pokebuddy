@@ -331,6 +331,10 @@ body {
   height: auto;
   pointer-events: none;
 }
+/* 얼음 상태 — 하늘색으로 물든다. 프레임 멈춤은 battle-timeline.ts spriteFrame (2026-11-22, 11-10 시안 weather-status-dark-v1) */
+.pet.frozen .sprite {
+  filter: grayscale(0.35) sepia(0.45) hue-rotate(160deg) saturate(1.5) brightness(1.1);
+}
 .pet.fainted .sprite {
   opacity: 0.3;
   transition: opacity 0.4s;

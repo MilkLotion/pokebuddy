@@ -485,6 +485,9 @@ function draw(view: BattleScreenView): void {
       const at = timeline.posOf(s, t);
       pet.root.style.transform = `translate(${at.x * CELL}px, ${at.y * CELL}px)`;
       pet.root.classList.toggle("fainted", s.fainted);
+      // 얼음 — 그림을 하늘색으로 물들인다(battle-screen.css .pet.frozen). 프레임 멈춤은 spriteFrame 이 한다 (2026-11-22, 11-10 시안 weather-status-dark-v1)
+      const frozen = !s.fainted && s.major?.kind === "freeze" && (s.major.until === null || t < s.major.until);
+      pet.root.classList.toggle("frozen", frozen);
       if (pet.canvas && pet.sheets) {
         const f = spriteFrame(pet.sheets, s, t, view.field.stepMs);
         const key = f ? `${f.anim}|${f.row}|${f.col}` : "";

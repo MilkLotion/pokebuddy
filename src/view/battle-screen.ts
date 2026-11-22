@@ -150,7 +150,7 @@ function moveFxOf(r: BattleResult): BattleScreenView["moveFx"] {
     const m = moves[id], f = fx[id];
     if (!m || !f || !FX_SHAPES.has(f.shape as MoveFxShape)) continue;
     const style = FX_DOT_MOVES.has(id) ? "dot" : FX_SMOOTH_TYPES.has(m.type) || m.traits?.includes("sound") ? "smooth" : "mix";
-    out[id] = { shape: f.shape as MoveFxShape, sub: f.sub && FX_SUBS.has(f.sub) ? (f.sub as MoveFxView["sub"]) : null, type: m.type, style };
+    out[id] = { move: id, shape: f.shape as MoveFxShape, sub: f.sub && FX_SUBS.has(f.sub) ? (f.sub as MoveFxView["sub"]) : null, type: m.type, style };
   }
   return out;
 }

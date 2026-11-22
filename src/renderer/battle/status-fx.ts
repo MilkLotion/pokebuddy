@@ -38,7 +38,7 @@ export interface StatusFxUnit {
   y: number;
   r: number;
   major: BattleStatusKind | null;
-  majorAt: number; // 걸린 시각 — 얼음이 덮이는 순간
+  majorAt: number; // 걸린 시각
   confused: boolean;
   flinched: boolean;
 }
@@ -56,7 +56,6 @@ export interface StatusFx {
 type Ctx = CanvasRenderingContext2D;
 const mod = (a: number, n: number): number => ((a % n) + n) % n;
 const clamp = (x: number): number => Math.max(0, Math.min(1, x));
-const ease = (u: number): number => 1 - Math.pow(1 - clamp(u), 3);
 function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -115,9 +114,10 @@ function star(g: Ctx, x: number, y: number, r: number): void {
 // ── 걸려 있는 동안 ──
 function flames(g: Ctx, x: number, y: number, t: number): void {
   lighter(g, () => {
-    for (let k = 0; k < 5; k++) {
-      const ph = mod(t / 700 + k / 5, 1);
-      const fx = x - 10 + k * 5 + Math.sin(t / 160 + k) * 1.5;
+    // 불씨 셋, 느리게 — 어두운 경기장에서 과해 보여 5개에서 줄였다 (2026-11-22 사용자 "기존거로 작업 진행", 11-10 시안 weather-status-dark-v1)
+    for (let k = 0; k < 3; k++) {
+      const ph = mod(t / 900 + k / 3, 1);
+      const fx = x - 5 + k * 5 + Math.sin(t / 160 + k) * 1.5;
       const fy = y + 8 - ph * 22;
       const s = (1 - ph) * 4 + 1;
       dot(g, "255,150,60", fx, fy, s * 2.2, 0.75 * (1 - ph));
@@ -169,29 +169,28 @@ function bubbles(g: Ctx, x: number, y: number, t: number, rgb: string, n: number
   }
   g.globalAlpha = 1;
 }
-const ICE: readonly [number, number][] = [[-15, 6], [-13, -12], [-4, -18], [9, -16], [15, -6], [14, 10], [3, 15], [-10, 13]];
-function ice(g: Ctx, x: number, y: number, grow: number): void {
-  const s = ease(grow);
-  g.save();
-  g.translate(x, y);
-  g.scale(s, s);
-  g.fillStyle = "rgba(170,225,250,0.55)";
-  g.beginPath();
-  ICE.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py)));
-  g.closePath();
-  g.fill();
-  g.strokeStyle = "#3a8ab0";
-  g.lineWidth = 1.2;
-  g.stroke();
-  g.strokeStyle = "rgba(255,255,255,0.9)";
-  g.lineWidth = 1;
-  g.beginPath();
-  g.moveTo(-11, -9);
-  g.lineTo(-4, -15);
-  g.moveTo(-12, 0);
-  g.lineTo(-9, -6);
-  g.stroke();
-  g.restore();
+// 얼음 — 몸을 덮던 청록 덩어리 대신 작은 반짝임 둘. 몸은 하늘색으로 물들이고 멈춘다(battle-screen.css .pet.frozen, screen.ts)
+// (2026-11-22 사용자 "기존거로 작업 진행", 11-10 시안 weather-status-dark-v1)
+function iceGlint(g: Ctx, x: number, y: number, t: number): void {
+  for (let k = 0; k < 2; k++) {
+    const ph = mod(t / 1400 + k * 0.5, 1);
+    if (ph > 0.35) continue;
+    const u = Math.sin((ph / 0.35) * Math.PI);
+    const gx = x + (k ? 9 : -10);
+    const gy = y + (k ? -12 : -2);
+    lighter(g, () => {
+      g.globalAlpha = 1;
+      g.fillStyle = `rgba(235,250,255,${u})`;
+      g.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const r = i % 2 ? 1 : 4.5 * u;
+        const a = (i / 8) * Math.PI * 2;
+        g.lineTo(gx + Math.cos(a) * r, gy + Math.sin(a) * r);
+      }
+      g.closePath();
+      g.fill();
+    });
+  }
 }
 function zzz(g: Ctx, x: number, y: number, t: number): void {
   g.textAlign = "center";
@@ -306,7 +305,7 @@ export function createStatusFx(host: HTMLElement): StatusFx {
           else if (u.major === "paralysis") sparks(g, 0, 0, t);
           else if (u.major === "poison") bubbles(g, 0, 0, t, STATUS_RGB.poison ?? "176,90,208", 4);
           else if (u.major === "toxic") bubbles(g, 0, 0, t, STATUS_RGB.toxic ?? "138,58,192", 6);
-          else if (u.major === "freeze") ice(g, 0, 0, (t - u.majorAt) / 250);
+          else if (u.major === "freeze") iceGlint(g, 0, 0, t);
           else if (u.major === "sleep") zzz(g, 0, 0, t);
           if (u.confused) stars(g, 0, 0, t, 0);
           if (u.flinched) sweat(g, 0, 0);
