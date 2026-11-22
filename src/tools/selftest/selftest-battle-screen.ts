@@ -129,7 +129,8 @@ const step = view.events.find((e) => e.kind === "step");
 if (step && step.kind === "step") {
   const st = tl.seek(step.t);
   const u = st.units[step.side][step.slot]!;
-  const mid = tl.posOf(u, step.t + view.field.stepMs / 2);
+  // 걸음 시간은 그 걸음의 ms(빠른 걸음) 또는 field.stepMs — 첫 걸음은 첫 공격 전이라 빠른 걸음이다(2026-11-22)
+  const mid = tl.posOf(u, step.t + (step.ms ?? view.field.stepMs) / 2);
   assert.ok(Math.abs(mid.x - (u.from.x + u.to.x) / 2) < 1e-9 && Math.abs(mid.y - (u.from.y + u.to.y) / 2) < 1e-9, "걸음 중간");
   assert.deepStrictEqual(tl.posOf(u, step.t + view.field.stepMs), { x: step.x, y: step.y }, "걸음 끝");
 }

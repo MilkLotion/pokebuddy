@@ -53,9 +53,10 @@ export const ENGINE_RULES = {
   body: 2, // 개체 하나가 차지하는 계산 칸(2×2)
   stepMs: 300, // 계산 칸 1칸 걷는 시간 — 모두 같다
   queueWaitMs: 2000, // 걸어가는 아군 뒤에서 기다리는 최대 시간 — 넘으면 돌아간다
-  // 빠른 이동 — 첫 공격(평타·기술) 뒤에 틈 rushGap 안에 상대가 있으면 한 걸음 시간이 stepMs ÷ rushDiv
-  // (2026-10-25 사용자 "첫 공격이후 사거리4이내에 적이있으면 이동속도 3배 빠르게")
-  rushGap: 4,
+  // 빠른 이동 — 돌아가는 길을 걸을 때만 한 걸음 시간이 stepMs ÷ rushDiv. 돌아가는 길 = 다른 포켓몬을 무시한 길보다 실제 길이 긴 것
+  // (2026-11-22 사용자: 앞에 멈춘 원거리 아군에 막혀 돌아가는 근접이 늦게 닿는 문제, "애초에 안닿는애들이 움직이는게 더 좋을거같은데" → A안 "a로")
+  // (2026-10-25 ~ 2026-11-22 에는 첫 공격 뒤 틈 4 안에 상대가 있을 때 3배였다 — 사용자 "한대때리면 이동속도 증가하던거 있거든? 그거 없애고"로 뺐다.
+  //  같은 날 잠깐 둔 "첫 공격 전 3배"는 시작할 때 모두가 달려드는 모습이 별로라 뺐다)
   rushDiv: 3,
   // 쓰러뜨림 기여 — 쓰러진 상대가 받은 피해 가운데 이 몫 이상을 준 포켓몬도 쓰러뜨린 것으로 친다(마지막 타격은 늘 친다)
   // (2026-10-25 사용자 "한마리잡아야 공격력오르는 자기과신이나 유대진화같은거, 상대포켓몬 잡는거에 데미지비중30%이상하면 되게")
@@ -304,8 +305,8 @@ interface Unit {
   y: number;
   target: Unit | null; // 사거리 안이면 쓰러질 때까지 바꾸지 않는다
   nextStep: number;
+  detouring: boolean; // 돌아가는 길을 걷는 중 — 대상에 닿거나 공격할 때까지 빠른 걸음을 이어 간다
   waitFrom: number; // 걸어가는 아군 뒤에서 기다리기 시작한 시각 — -1 이면 기다리지 않는다
-  engaged: boolean; // 첫 공격(평타·기술)을 했는가 — 빠른 이동 조건
   dealtBy: Map<Unit, number>; // 상대에게 받은 피해(실제로 깎인 HP) — 쓰러뜨림 기여 판정
   range: number;
   ability: string | null; // 지금 특성 — 미라·떠도는영혼·트레이스로 바뀐다
@@ -488,8 +489,8 @@ export function runBattle(input: BattleInput): BattleResult {
       y: 0,
       target: null,
       nextStep: R.stepMs,
+      detouring: false,
       waitFrom: -1,
-      engaged: false,
       dealtBy: new Map(),
       range: f.range,
       ability: f.ability,
@@ -1200,16 +1201,20 @@ export function runBattle(input: BattleInput): BattleResult {
     let o = targetOf(u);
     if (!o || inRange(u, o, u.range)) {
       u.waitFrom = -1;
+      u.detouring = false;
       return;
     }
     const occupied = occupiedFor(u);
+    // 돌아가는 길인가 — 다른 포켓몬을 무시한 길(벽만 본 길)로 대상에 닿는 걸음 수보다 많으면 빠른 걸음
+    // 한 번 돌기 시작하면 남은 길은 곧은 길과 길이가 같아지므로, 닿을 때까지 detouring 으로 이어 간다
+    const detour = (to: Unit, steps: number): boolean => (u.detouring ||= steps > reachOf(walk(walls, u).dist, to, u.range).steps);
     // 걸어가는 아군은 곧 비킨다 — 그 뒤를 따라가는 길이 있으면 막혀도 잠깐 기다린다. 오래 막히면 돌아간다
     const queued = walk(occupiedFor(u, true), u);
     const qGoal = reachOf(queued.dist, o, u.range).at;
     if (qGoal >= 0) {
       const nq = firstStep(queued.prev, u, qGoal);
       if (nq >= 0 && fits(occupied, nq % R.fieldW, Math.floor(nq / R.fieldW))) {
-        moveTo(u, nq, t);
+        moveTo(u, nq, t, detour(o, queued.dist[qGoal]!));
         return;
       }
       if (u.waitFrom < 0) u.waitFrom = t;
@@ -1249,7 +1254,7 @@ export function runBattle(input: BattleInput): BattleResult {
     }
     const next = firstStep(route.prev, u, goal);
     if (next < 0 || !fits(occupied, next % R.fieldW, Math.floor(next / R.fieldW))) return;
-    moveTo(u, next, t);
+    moveTo(u, next, t, detour(o, route.dist[goal]!));
   }
 
   // 길의 첫 걸음 — 제자리면 -1
@@ -1260,10 +1265,10 @@ export function runBattle(input: BattleInput): BattleResult {
     return next === start ? -1 : next;
   }
 
-  function moveTo(u: Unit, cell: number, t: number): void {
+  // rush — 돌아가는 길의 걸음이면 빠르게(stepMs ÷ rushDiv)
+  function moveTo(u: Unit, cell: number, t: number, rush: boolean): void {
     u.x = cell % R.fieldW;
     u.y = Math.floor(cell / R.fieldW);
-    const rush = u.engaged && foesOf(u).some((o) => gapOf(u, o) <= R.rushGap);
     const ms = rush ? R.stepMs / R.rushDiv : R.stepMs;
     u.nextStep = t + ms;
     u.waitFrom = -1;
@@ -1498,7 +1503,7 @@ export function runBattle(input: BattleInput): BattleResult {
     if (u.slowFirstBasic) u.slowFirstBasic = false;
     const o = hitTarget(u);
     if (!o) return;
-    u.engaged = true;
+    u.detouring = false;
     events.push({ t, kind: "attack", side: u.side, slot: u.slot });
     // 천진 — 상대의 능력 변화를 보지 않는다
     const atk = statNow(u, 1, t, defAb(o, u) === "unaware"), spa = statNow(u, 3, t, defAb(o, u) === "unaware");
@@ -1542,7 +1547,7 @@ export function runBattle(input: BattleInput): BattleResult {
 
   function doMove(u: Unit, t: number): void {
     const m = u.moves[u.turn % u.moves.length]!;
-    u.engaged = true;
+    u.detouring = false;
     // 충전 — 처음 차면 충전하고, 다시 차면 나간다
     // 쾌청의 솔라빔·솔라블레이드, 비의 일렉트릭빔은 충전하지 않는다
     const instant = (sunny && (m.id === "solar-beam" || m.id === "solar-blade")) || (rainy && m.id === "electro-shot");

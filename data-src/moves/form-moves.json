@@ -1,0 +1,5 @@
+{
+  "_comment": "모습이 바뀌면서 바뀌는 전용기 — 모습 → {원래 기술: 바뀐 기술}. 원작은 습득 표·사용률에 원래 기술로만 잡혀 목록에 없다. 고르기 도구가 목록의 원래 기술을 바뀐 기술로 바꾸고 전용기로 센다. 규칙은 docs/specs/moves.md \"최신 기술 목록\". 손으로 고친다",
+  "zacian-crowned": {"iron-head": "behemoth-blade"},
+  "zamazenta-crowned": {"iron-head": "behemoth-bash"}
+}

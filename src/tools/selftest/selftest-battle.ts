@@ -181,20 +181,27 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
   assert.ok(gap > 1 && gap <= 6, `원거리는 떨어져서 쏜다 (틈 ${gap})`);
 }
 
-// ── 빠른 이동 — 첫 공격 뒤에 틈 4 안에 상대가 있으면 한 걸음이 stepMs ÷ 3 (2026-10-25) ──
+// ── 빠른 이동 — 돌아가는 길을 걸을 때만 한 걸음이 stepMs ÷ 3 (2026-11-22) ──
 {
-  assert.strictEqual(ENGINE_RULES.rushGap, 4);
   assert.strictEqual(ENGINE_RULES.rushDiv, 3);
-  const striker = unit({ stats: [999, 300, 999, 1, 999, 95] });
-  const frail = unit({ stats: [10, 1, 10, 1, 10, 95] });
+  const fast = ENGINE_RULES.stepMs / 3;
   const sturdy = unit({ stats: [999, 1, 999, 1, 999, 1] });
-  // 1번 상대는 붙어 있고, 2번 상대는 틈 6 — 1번을 쓰러뜨린 뒤 2번에게 걸어간다
-  const r = run([striker], [frail, sturdy], 1, 8000, { positions: [[at(0, 4)], [at(3, 4), at(8, 8)]] } as unknown as Partial<BattleInput>);
-  const firstAttack = (side: number): number => Math.min(...r.events.filter((e) => (e.kind === "attack" || e.kind === "move") && e.side === side).map((e) => e.t));
+  // 곧은 길 — 둘 다 막힘 없이 다가가면 보통 걸음
+  const straight = run([unit()], [sturdy], 1, 8000, { positions: [[at(0, 4)], [at(14, 4)]] } as unknown as Partial<BattleInput>);
+  const plain = of(straight.events, "step");
+  assert.ok(plain.length > 0 && plain.every((e) => e.ms === undefined), "곧은 길은 보통 걸음");
+  // 막힌 길 — 벽 사이 좁은 길에서 근접(0번)의 바로 앞에 원거리 아군(1번)이 서서 사거리 3 에서 멈춘다. 근접은 벽 바깥으로 돌아간다
+  const melee = unit({ stats: [999, 1, 999, 1, 999, 95] });
+  const ranged = unit({ stats: [999, 1, 999, 1, 999, 95], range: 3 });
+  const corridor = [2, 4, 6].flatMap((x) => [{ x, y: 2, size: 2 as const }, { x, y: 6, size: 2 as const }]);
+  const r = run([melee, ranged], [unit({ stats: [999, 1, 999, 1, 999, 1], range: 12 })], 1, 8000, { obstacles: corridor, positions: [[at(0, 4), at(2, 4)], [at(9, 4)]] } as unknown as Partial<BattleInput>);
   const steps = of(r.events, "step");
-  assert.ok(steps.filter((e) => e.t < firstAttack(0) || e.side === 1 && e.t < firstAttack(1)).every((e) => e.ms === undefined), "첫 공격 전에는 보통 걸음");
-  assert.ok(steps.some((e) => e.side === 0 && e.ms === ENGINE_RULES.stepMs / 3), "첫 공격 뒤 틈 4 안이면 빠른 걸음");
-  assert.ok(steps.filter((e) => e.ms !== undefined).every((e) => e.ms === ENGINE_RULES.stepMs / 3), "빠른 걸음은 stepMs ÷ 3");
+  const meleeFirst = Math.min(...r.events.filter((e) => (e.kind === "attack" || e.kind === "move") && e.side === 0 && e.slot === 0).map((e) => e.t));
+  const around = steps.filter((e) => e.side === 0 && e.slot === 0 && e.ms !== undefined);
+  assert.ok(around.length >= 6, `막혀 돌아가는 근접은 닿을 때까지 빠른 걸음 (${around.length})`);
+  assert.ok(steps.filter((e) => e.side === 0 && e.slot === 0 && e.t < meleeFirst && e.y < 4).every((e) => e.ms === fast), "돌아가는 도중에 보통 걸음으로 돌아가지 않는다");
+  assert.ok(steps.filter((e) => e.slot === 1).every((e) => e.ms === undefined), "막히지 않은 원거리 아군은 보통 걸음");
+  assert.ok(steps.filter((e) => e.ms !== undefined).every((e) => e.ms === fast), "빠른 걸음은 stepMs ÷ 3");
 }
 
 // ── 능력 변화 — 단계당 25%, 최대 ±3(2026-10-10), 쌓임 ──
@@ -702,7 +709,8 @@ assert.deepStrictEqual(startPos(1, 1), at(16, 3), "상대 2번도 앞 열");
 // ── 같은 틱에 둘 다 쓰러지면 무승부 ──
 {
   // 앞 행동으로 쓰러지면 그 틱의 남은 행동은 없다 — 동시 쓰러짐은 반동 같은 자기 피해로만 생긴다
-  const kamikaze = unit({ stats: [1, 200, 1, 1, 1, 1], moves: [mv("brave", { power: 100, cooldownMs: 1000, effects: { recoil: 100 } })] });
+  // 기술이 평타(1초)보다 먼저 준비되게 쿨타임 800 — 첫 공격 전 빠른 걸음(2026-11-22)으로 닿는 시각이 1초 안팎이 되었다
+  const kamikaze = unit({ stats: [1, 200, 1, 1, 1, 1], moves: [mv("brave", { power: 100, cooldownMs: 800, effects: { recoil: 100 } })] });
   const r = run([kamikaze], [unit({ stats: [1, 1, 1, 1, 1, 1] })], 7);
   assert.strictEqual(r.winner, null);
   assert.strictEqual(r.timeout, false);

@@ -7,6 +7,7 @@
 //   smogon-moves.csv     Smogon 사용 통계(chaos JSON)에서 뽑은 종 × 기술 사용 수. --smogon 으로 만든다. 받은 달·형식은 SMOGON_SOURCE
 //   representative.json  대표기술 — 손으로 고른 종 → 기술 (docs/specs/moves.md "처음 값을 정한 순서")
 //   not-signature.json   한 계열만 배우지만 전용기로 보지 않는 기술
+//   form-moves.json      모습이 바뀌면서 바뀌는 전용기(검왕 아이언헤드 → 거수참 등) — 목록의 원래 기술을 바꾸고 전용기로 센다
 //   learnset.csv         앱의 모든 종·모습(종 표 + 메가·원시회귀) × 그 최신 기술 목록의 공격기. 목록 출처 열이 있다
 //   power.csv            같은 행의 결정력·부담 계수·칸 타입·사용률
 //   picks.csv            모습마다 고른 기본 2개·후보 4개와 까닭
@@ -220,6 +221,7 @@ function build(): Promise<void> {
     const EVO = dataTable<unknown[]>("evo.json");
     const REP = readJson<Record<string, string[]>>(path.join(SRC_DIR, "representative.json"));
     const NOT_SIG = new Set(readJson<string[]>(path.join(SRC_DIR, "not-signature.json")));
+    const FORM_MOVE = readJson<Record<string, Record<string, string>>>(path.join(SRC_DIR, "form-moves.json"));
     const usageRows = parseCsvTable(fs.readFileSync(path.join(SRC_DIR, "smogon-moves.csv"), "utf8")).rows;
     const USAGE = new Map<string, Map<string, number>>();
     for (const r of usageRows) USAGE.set(r.species!, (USAGE.get(r.species!) ?? new Map<string, number>()).set(r.move!, Number(r.weight)));
@@ -460,7 +462,17 @@ function build(): Promise<void> {
         for (const v of vgs) for (const [mid, ms] of g?.get(v) ?? []) list.set(mid, new Set([...(list.get(mid) ?? []), ...[...ms].map((m) => (pid === who.pid ? m : `${m}(진화 전)`))]));
       }
       const ids = [...list.keys()].map((mid) => MV.get(mid)?.identifier ?? "").filter((id) => id && ok(id));
-      const scored = ids.map((id) => score(id, who)).filter((x): x is Scored => !!x);
+      // 모습이 바뀌면서 바뀌는 전용기 — 원래 기술의 사용률을 이어받고 전용기로 센다 (docs/specs/moves.md "최신 기술 목록")
+      const swap = Object.entries(FORM_MOVE[who.key] ?? {});
+      const scored = ids
+        .map((id) => {
+          const to = swap.find(([from]) => from === id)?.[1];
+          if (!to) return score(id, who);
+          const x = score(to, who);
+          const u = score(id, who);
+          return x ? { ...x, sig: true, share: u?.share ?? 0, rawShare: u?.rawShare ?? 0 } : null;
+        })
+        .filter((x): x is Scored => !!x);
       for (const x of scored) {
         learnRows.push([who.key, who.kind, PKID.get(who.pid)?.identifier, who.listSource, VG_NAME.get(vg ?? ""), x.id, [...(list.get(MID.get(x.id) ?? "") ?? [])].join("/")]);
         powerRows.push([who.key, x.id, moveOf(x.id)?.type, x.t, x.cls, x.power, x.capPower, who.stats[x.cls === "physical" ? 1 : 3], who.types.includes(x.t) ? 1 : 0, Math.round(x.abilityMul * 1000) / 1000, x.envMul, x.decide, x.burden, x.score, x.heavy ? 1 : 0, x.sig ? 1 : 0, Math.round(x.rawShare * 10000) / 10000, x.share > 0 ? 1 : 0, Number.isFinite(who.cap) ? who.cap : "", MOVES[x.id] ? "" : "새 기술"]);
